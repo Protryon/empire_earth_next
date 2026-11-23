@@ -16,10 +16,7 @@
 
 class LLE_API UITiledBackground : public UIBitmapBackground {
 public:
-    UITiledBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
-                      const GETextureDescription& inDescription, const GERectangle& inTextureRectangle,
-                      const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible,
-                      UITiling inTiling = kTilingBoth, float inAcross = 0.0f, float inDown = 0.0f);
+    UITiledBackground(unsigned long inBackgroundID, const UString& inTextureFileName, const GETextureDescription& inDescription, const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible, UITiling inTiling = kTilingBoth, float inAcross = 0.0f, float inDown = 0.0f) : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm, inDrawPriority, inVisible) { this->Call(EeUiBgCall::TiledInit, inTiling, 0, UIF4(inAcross, inDown)); }
     virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::TiledDraw, inRectangle); }
     // slot 0x20: draws the tiles [inFirstRow, inLastRow] x [inFirstColumn, inLastColumn] clipped to inClip
     virtual long DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,

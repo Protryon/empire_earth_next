@@ -18,7 +18,7 @@ public:
     EEMusicManager(SEConductor* inConductor, long inThreadPriority);
     virtual ~EEMusicManager();              // +0x00 0x131db4 (??_G 0x131d98)
 
-    static unsigned long MusicManagerMain(void* inThis);    // 0x131e0a (the thread function)
+    // (MusicManagerMain 0x131e0a, the thread function: ee_game gamecpp music_io.rs)
     void Pause();                           // 0x131f67: mPause->Set()
     void SetIntensity(unsigned long inIntensity);   // 0x131f87 (then mSetIntensity->Set())
     void Start();                           // 0x132000: mStart->Set() (the settings turn the music on)

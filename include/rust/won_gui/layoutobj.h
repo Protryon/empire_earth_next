@@ -91,6 +91,46 @@ EeWonLayout *ee_won_layout_new(void *comp,
                                EeWonGuiHostFn host,
                                const EeWonLayoutInit *init);
 
+/// `ChildLayoutInstructionBase::Make(k, r0, r1, i0, i1, i2, h, v)`: the Rust instruction of those numbers.
+///
+/// # Safety
+/// As `ee_won_layout_new`'s.
+EeWonLayout *ee_won_layout_new_basic(void *comp,
+                                     EeWonGuiHostFn host,
+                                     EeWonLayoutKind kind,
+                                     void *r0,
+                                     void *r1,
+                                     int32_t i0,
+                                     int32_t i1,
+                                     int32_t i2,
+                                     bool horz,
+                                     bool vert);
+
+/// `ChildLayoutInstruction`'s constructor: the Rust instruction.
+///
+/// # Safety
+/// As `ee_won_layout_new`'s.
+EeWonLayout *ee_won_layout_new_child(void *comp,
+                                     EeWonGuiHostFn host,
+                                     int32_t flags,
+                                     void *child,
+                                     void *reference,
+                                     int32_t x,
+                                     int32_t y,
+                                     int32_t width,
+                                     int32_t height);
+
+/// `PercentLayout`'s constructor: the Rust instruction (`anchors` the param's left, top, right and bottom; `ints`
+/// its px, py, pw, ph, lp, tp, rp, bp).
+///
+/// # Safety
+/// As `ee_won_layout_new`'s; `anchors` four pointers and `ints` eight integers.
+EeWonLayout *ee_won_layout_new_percent(void *comp,
+                                       EeWonGuiHostFn host,
+                                       void *target,
+                                       void *const *anchors,
+                                       const int32_t *ints);
+
 /// Frees a Rust instruction (its list held no references).
 ///
 /// # Safety

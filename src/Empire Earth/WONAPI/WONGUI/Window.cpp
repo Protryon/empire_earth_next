@@ -54,6 +54,9 @@ static intptr_t RootCall(RootContainer* r, intptr_t call, intptr_t b, intptr_t c
     return 0;
 }
 
+// the font a run of ops shares (winobj.rs get_font: the original's local SmartPtr)
+static SmartPtr<Font> sHostFont;
+
 extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     Window* t = (Window*)inWin;
@@ -89,6 +92,21 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     case Op::WinChildSet: ((Window*)a)->WCall(EeWonWinCall::ChildSet, (intptr_t)t, b); return 0;
     case Op::WinStdArrow: return (intptr_t)Cursor::GetStandardCursor(StandardCursor_Arrow);
     case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
+    case Op::WinEvType: return ((InputEvent*)a)->mEventType;
+    case Op::WinKeyEvKeyMod: return static_cast<KeyEvent*>((InputEvent*)a)->mKeyMod;
+    case Op::WinKeyEvKey: return static_cast<KeyEvent*>((InputEvent*)a)->mKey;
+    case Op::WinMouseEvX: return static_cast<MouseEvent*>((InputEvent*)a)->mx;
+    case Op::WinMouseEvY: return static_cast<MouseEvent*>((InputEvent*)a)->my;
+    case Op::WinMouseEvKeyMod: return static_cast<MouseEvent*>((InputEvent*)a)->mKeyMod;
+    case Op::WinMouseEvButton: return static_cast<MouseEvent*>((InputEvent*)a)->mButtonOrAmount;
+    case Op::WinSizeEvWidth: return static_cast<SizeEvent*>((InputEvent*)a)->mWidth;
+    case Op::WinSizeEvHeight: return static_cast<SizeEvent*>((InputEvent*)a)->mHeight;
+    case Op::WinPlatformFont: sHostFont = t->PlatformGetFont(*(const FontDescriptor*)a); return 0;
+    case Op::WinHostFont: return (intptr_t)sHostFont.get();
+    case Op::WinFontHold: ((Font*)a)->AddRef(); return 0;
+    case Op::WinHostFontClear: sHostFont = SmartPtr<Font>(); return 0;
+    case Op::WinHasIcon: return t->mIcon.get() != NULL ? 1 : 0;
+    case Op::WinIconDefault: t->mIcon = t->mManager->mDefaultWindowIcon.get(); return 0;
     default: return 0;
     }
 }
@@ -113,16 +131,7 @@ Window::~Window()
 // is asked again at the next call; the map holds one reference to each font)
 SmartPtr<Font> Window::GetFont(const FontDescriptor &theDescriptor)
 {
-	const std::string& f = theDescriptor.mFace;
-	Font* aFont = (Font*)ee_won_fontmap_lookup(this->mFontMap.p, (const uint8_t*)f.data(), f.size(), theDescriptor.mStyle, theDescriptor.mSize);
-	if(aFont==NULL)
-	{
-		SmartPtr<Font> aNew = this->PlatformGetFont(theDescriptor);
-		aFont = aNew.get();
-		if(aFont!=NULL) aFont->AddRef();
-		ee_won_fontmap_store(this->mFontMap.p, (const uint8_t*)f.data(), f.size(), theDescriptor.mStyle, theDescriptor.mSize, (uintptr_t)aFont);
-	}
-	return aFont;
+	return (Font*)ee_won_win_get_font(this->mWinObj.p, this->mFontMap.p, (intptr_t)&theDescriptor, (const uint8_t*)theDescriptor.mFace.data(), theDescriptor.mFace.size(), theDescriptor.mStyle, theDescriptor.mSize);
 }
 Window::FontMap::~FontMap()
 {
@@ -148,10 +157,7 @@ void Window::SetIcon(NativeIcon *theIcon)
 // Opens the window: default icon, registration with the parent, root sized to the rectangle, added to the manager
 void Window::Create(const WONRectangle& theWindowRectR)
 {
-	if(this->mIcon.get()==NULL)
-		this->mIcon = this->mManager->mDefaultWindowIcon.get();
-
-	this->WCall(EeWonWinCall::Create, theWindowRectR.Width(), theWindowRectR.Height());
+	ee_won_win_create(this->mWinObj.p, theWindowRectR.Width(), theWindowRectR.Height());
 }
 
 // Returns the default window manager's default window
@@ -203,45 +209,20 @@ Graphics& Window::GetGraphics()
     return this->mOffscreenImage->GetGraphics();
 }
 
-// The forwarders that read the events' fields (the others are inline)
-static EeWonWinEvent WinEvent(InputEvent* e)
-{
-    EeWonWinEvent r = {};
-    r.kind = (int32_t)e->mEventType;
-    return r;
-}
+// The handlers over the events' fields, read in Rust (winobj.rs ee_won_win_event; the others are inline)
 void Window::HandleKeyEvent(KeyEvent *e)
 {
-    EeWonWinEvent r = WinEvent(e);
-    r.key_mod = e->mKeyMod;
-    r.key = e->mKey;
-    this->WCall(EeWonWinCall::HandleKeyEvent, (intptr_t)&r);
-}
-static EeWonWinEvent MouseWinEvent(MouseEvent* e)
-{
-    EeWonWinEvent r = WinEvent(e);
-    r.x = e->mx;
-    r.y = e->my;
-    r.key_mod = e->mKeyMod;
-    r.button = e->mButtonOrAmount;
-    return r;
+    ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleKeyEvent, EeWonWinEventShape::Key, (intptr_t)static_cast<InputEvent*>(e));
 }
 void Window::HandleMouseDown(MouseEvent *e)
 {
-    EeWonWinEvent r = MouseWinEvent(e);
-    this->WCall(EeWonWinCall::HandleMouseDown, (intptr_t)&r);
+    ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleMouseDown, EeWonWinEventShape::Mouse, (intptr_t)static_cast<InputEvent*>(e));
 }
 void Window::HandleMouseEvent(MouseEvent *e)
 {
-    EeWonWinEvent r = MouseWinEvent(e);
-    this->WCall(EeWonWinCall::HandleMouseEvent, (intptr_t)&r);
+    ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleMouseEvent, EeWonWinEventShape::Mouse, (intptr_t)static_cast<InputEvent*>(e));
 }
 void Window::HandleInputEvent(InputEvent *e)
 {
-    EeWonWinEvent r = WinEvent(e);
-    if (e->mEventType == InputEvent_SizeChange) {
-        r.width = static_cast<SizeEvent*>(e)->mWidth;
-        r.height = static_cast<SizeEvent*>(e)->mHeight;
-    }
-    this->WCall(EeWonWinCall::HandleInputEvent, (intptr_t)&r);
+    ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleInputEvent, EeWonWinEventShape::Input, (intptr_t)e);
 }

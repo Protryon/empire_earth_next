@@ -14,9 +14,6 @@
 #include <vector>
 
 struct EeDataRules;
-namespace EEDataText {
-class Content;
-}
 
 // A number that is a constant or one of dbworld's values: `fanaticism.F2` (the constant's id, then F, F2, L or L2:
 // mFloatValue, mFloatValue2, mLongValue, mLongValue2). The game reads a world value through gWorldTable when it uses
@@ -56,16 +53,9 @@ struct EERules {
     EERules(const EERules&) = delete;
     EERules& operator=(const EERules&) = delete;
 
-    // reads the rules documents and epochs.yaml's media from the Content (references by id); a document the Content
-    // has no text for keeps its defaults. False with a message ("combat line 12: ...") on the first problem.
-    bool Load(EEDataText::Content& inContent, std::string& outError);
     // the songs from dbmusic's per-epoch flags (the binary load): a song row's flag k -> epoch k (k < 14), the 15th
     // epoch plays the 14th's songs
     void SetMusicFromFlags(long inSong, const bool* inFlags, unsigned long inCount);
-    // the same from a whole dbmusic.dat (the gate's and tools' path); false on a short file
-    bool SetMusicFromDbmusicFile(const unsigned char* inData, size_t inSize);
-    // the content dump of the rules (docs/MODDING_PLAN.md gate G1): `"rules.<doc>":{...}` lines, values resolved
-    void Dump(std::string& outJson) const;
     // the media of an epoch position (past the list: the last epoch's)
     const EEEpochMedia& Epoch(long inEpoch) const;
     // the Rust rules the C++ structs snapshot (ee_tech's civilization manager reads them in place)
@@ -81,8 +71,6 @@ EERules& EEGetRules();
 
 // the computer players' level (0 easy .. 2 hard: their records' values) of a game option difficulty
 long EEDifficultyAILevel(unsigned long inDifficulty);
-// the computer players' cheats (EEAICheat bits) of a game option difficulty
-long EEDifficultyAICheats(unsigned long inDifficulty);
 
 // TEST ONLY (EE-SIM.exe --set, the headless simulation): a rules document's value changed as the document is read,
 // "doc.key.key=value". A key may name a list entry by its id: "aipersonalities.balanced.military.army_floor=0.2" is

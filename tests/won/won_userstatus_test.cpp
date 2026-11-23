@@ -67,6 +67,25 @@ static SmartPtr<UDPManager> sManager;
 static SmartPtr<BlockingSocket> sServer;
 static IPAddr sServerAddr;
 
+#ifdef EE_WON_USER_STATUS_RUST
+// the op's map read and set through its Rust object (the class's GetFriendStatusMap / SetFriendStatusMap copies, as
+// they were until R6 WON round 32 moved them to the routing logic's Rust)
+static void MapSink(void* inContext, uint64_t inId, uint8_t inStatus) { (*static_cast<StatusMap*>(inContext))[(unsigned long)inId] = inStatus; }
+static StatusMap MapOf(RoutingGetUserStatusOp* inOp)
+{
+    StatusMap aMap;
+    ee_won_userstatus_each(inOp->GetRust(), MapSink, &aMap);
+    return aMap;
+}
+static void SetMap(RoutingGetUserStatusOp* inOp, const StatusMap& inMap)
+{
+    ee_won_userstatus_clear(inOp->GetRust());
+    for (StatusMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i) ee_won_userstatus_put(inOp->GetRust(), i->first, i->second);
+}
+#else
+static StatusMap MapOf(RoutingGetUserStatusOp* inOp) { return inOp->GetFriendStatusMap(); }
+#endif
+
 // one query: the op made, its ids added (or its whole map set), run; the scripted replies answer its request
 static void Query(const char* inName, const std::vector<unsigned long>& inIds, bool inWholeMap,
                   const std::vector<std::string>& inReplies, bool inFast = false)
@@ -78,7 +97,7 @@ static void Query(const char* inName, const std::vector<unsigned long>& inIds, b
         for (size_t i = 0; i < inIds.size(); i++)
             m[inIds[i]] = 0;
 #ifdef EE_WON_USER_STATUS_RUST
-        anOp->SetFriendStatusMap(m);
+        SetMap(anOp.get(), m);
 #else
         anOp->mFriendStatusMap = m;
 #endif
@@ -86,7 +105,7 @@ static void Query(const char* inName, const std::vector<unsigned long>& inIds, b
         for (size_t i = 0; i < inIds.size(); i++)
             anOp->AddWONUserId(inIds[i]);
     }
-    Log("before " + Show(anOp->GetFriendStatusMap()) + " retransmits " + N(anOp->GetNumRetransmits()) + " timeout "
+    Log("before " + Show(MapOf(anOp.get())) + " retransmits " + N(anOp->GetNumRetransmits()) + " timeout "
         + N((long long)anOp->GetMsgTimeout()));
     if (inFast) {
         anOp->SetNumRetransmits(0);
@@ -112,7 +131,7 @@ static void Query(const char* inName, const std::vector<unsigned long>& inIds, b
     }
     PumpFor(aDone, 1);
     sCore->Pump(20);
-    Log("done " + N(aDone->mCount) + " status " + St(anOp->GetStatus()) + " map " + Show(anOp->GetFriendStatusMap())
+    Log("done " + N(aDone->mCount) + " status " + St(anOp->GetStatus()) + " map " + Show(MapOf(anOp.get()))
         + " outgoing " + Hex(anOp->GetOutgoing()));
 }
 

@@ -157,17 +157,8 @@ struct RTSColoredRectangle {
 // Names are provisional (the offsets are U2DRectangle<long>'s)
 struct RTSMapVertexColors {
     ~RTSMapVertexColors() { delete[] this->mIndices; }
-    // out of line (0x6c5ce, in an earlier unit's range: copies top, left, bottom, right, then the indices); the
-    // vector's copy 0x124040 calls it (provisional name)
-    RTSMapVertexColors& operator=(const RTSMapVertexColors& inOther)
-    {
-        this->mTop = inOther.mTop;
-        this->mLeft = inOther.mLeft;
-        this->mBottom = inOther.mBottom;
-        this->mRight = inOther.mRight;
-        this->mIndices = inOther.mIndices;
-        return *this;
-    }
+    // (its copy 0x6c5ce, out of line: top, left, bottom, right, then the indices; the implicit one copies the same
+    // members)
 
     long mBottom;                           // +0x00 first y
     long mLeft;                             // +0x04 first x

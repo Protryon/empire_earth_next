@@ -56,34 +56,10 @@
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
 #include "ee/EEStringIDs.h"
-// Sends the new password, e-mail address and e-mail opt-in to WON if both passwords match; else shows a message
-long EEUIEWNMUASubmit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString thePassword;
-    UWideString theConfirmation;
-    UWideString theNewPassword;
-    UWideString theMessage;
-    thePassword = static_cast<UIEditBox*>(inForm->GetControl(kUpdateAccountNewPasswordEditBox))->GetText(0);
-    theConfirmation = static_cast<UIEditBox*>(inForm->GetControl(kUpdateAccountConfirmPasswordEditBox))->GetText(0);
-    theNewPassword = static_cast<UIEditBox*>(inForm->GetControl(kUpdateAccountEnterEmailEditBox))->GetText(0);
-    bool theFlag = static_cast<UICheckBox*>(inForm->GetControl(kUpdateAccountSendMeEmailCheckbox))->GetIsChecked();
-    if (thePassword == theConfirmation)
-        gWonNet->UpdateAccount(thePassword, theNewPassword, theFlag);
-    else {
-        gResource->GetString(IDS_YOUR_TWO_PASSWORDS_DONT_MATCH, theMessage);
-        gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
-    }
-    return kErrorOK;
-}
-
-// Hooks the update-account screen's Update and Don't Update buttons to their events
-long EEUIEWNMUAOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theText;
-    EEUIEWNSetTriggerEvent(new EEUIEWNMUACancel, inForm->GetControl(kUpdateAccountDontUpdateButton), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNMUASubmit, inForm->GetControl(kUpdateAccountUpdateButton), kControlTriggerButtonUp);
-    return kErrorOK;
-}
+#include "rust/won_lobby/wonfront.h"
+// R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs)
+long EEUIEWNMUASubmit::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::MuaSubmit, inForm, (intptr_t)inEntity); }
+long EEUIEWNMUAOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::MuaOpenScreen, inForm, (intptr_t)inEntity); }
 
 // Returns to the previous screen
 // (also EEUIEWNARBack's and EEUIEWNSSCancel's ProcessEvent: ICF keeps this copy)

@@ -501,6 +501,18 @@ pub unsafe extern "C" fn ee_won_authctx_server_context(c: *const EeWonAuthCtx) -
     unsafe { ctx(c) }.server_context()
 }
 
+/// `GetServerContext()`'s object without a reference of its own (R6 WON round 33: the C++ SmartPtr takes one; the
+/// auth context's keeps it alive meanwhile); NULL for none.
+///
+/// # Safety
+/// `c` is a live auth context.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_authctx_server_context_borrowed(c: *const EeWonAuthCtx) -> *mut c_void {
+    let me = unsafe { ctx(c) };
+    let _l = me.lock.lock();
+    *lock(&me.servers.obj) as *mut c_void
+}
+
 /// `Init()`'s verifier file: unless a file was checked already (in this process), `LoadVerifierKey(dir +
 /// "_wonkver.pub")`.
 ///

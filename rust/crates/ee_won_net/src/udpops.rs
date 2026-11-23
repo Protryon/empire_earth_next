@@ -646,6 +646,25 @@ pub unsafe extern "C" fn ee_won_udprecvop_run(r: *const EeWonUdpRecvOp) {
     obj!(r).run()
 }
 
+/// RoutingGetUserStatusOp's constructor's settings (2c6630; R6 WON round 33): the server address, the manager, the
+/// retransmits and the message time-out, in the original's order.
+///
+/// # Safety
+/// `r` is live; `addr` a live address.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_udpsendrecvop_setup(
+    r: *const EeWonUdpSendRecvOp,
+    addr: *const EeWonIpAddr,
+    manager: *mut c_void,
+    retransmits: i32,
+    timeout: u32,
+) {
+    // SAFETY: the caller's value
+    obj!(r).set_address(unsafe { &*addr });
+    obj!(r).set_manager(manager as usize);
+    obj!(r).set_retry_limit(retransmits);
+    obj!(r).set_timeout(timeout);
+}
 /// A request op's object.
 ///
 /// # Safety

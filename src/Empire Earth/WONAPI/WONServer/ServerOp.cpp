@@ -46,9 +46,7 @@ RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp)
 // Sets the connect, send and receive time limits
 void RustServerOp::SetMaxTimes(int inConnect, int inSend, int inRecv)
 {
-    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_CONNECT, (DWORD)inConnect, NULL);
-    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_SEND, (DWORD)inSend, NULL);
-    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_RECV, (DWORD)inRecv, NULL);
+    ee_won_hostop_set_max_times(this->mRustOp, inConnect, inSend, inRecv); // (hostbase.rs: as DWORDs)
 }
 BlockingSocket* RustServerOp::GetSocket() const
 {
@@ -61,31 +59,26 @@ void RustServerOp::SetSocket(BlockingSocket* inSocket)
 }
 void RustServerOp::SetAuthType(AuthType inType, AuthContext* inContext)
 {
-    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_AUTH_TYPE, inType, NULL);
-    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_AUTH_CONTEXT, 0, static_cast<RefCount*>(inContext));
+    ee_won_hostop_set_auth(this->mRustOp, inType, static_cast<RefCount*>(inContext), false, NULL);
 }
 void RustServerOp::SetClientKeySize(unsigned char inSize, bool inUseClientKey)
 {
-    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_CLIENT_KEY_SIZE, inSize, NULL);
-    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_USE_CLIENT_KEY, inUseClientKey, NULL);
+    ee_won_hostop_set_client_key(this->mRustOp, inSize, inUseClientKey);
 }
+// a request's C++ op as reqhost.rs made it (the maker's: NewHostOp above)
+static RustServerOp* MadeOp(void* inOp) { return static_cast<RustServerOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))); }
 RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, ServerContext* inContext)
 {
-    RustServerOp* anOp = new RustServerOp(ee_won_hostop_request(inOp));
-    anOp->Set(EE_WON_REQHOST_CONTEXT, static_cast<RefCount*>(inContext));
-    return anOp;
+    return MadeOp(ee_won_hostop_new_request(inOp, true, static_cast<RefCount*>(inContext), NULL, -1, NULL));
 }
 RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr)
 {
-    RustServerOp* anOp = new RustServerOp(ee_won_hostop_request(inOp));
-    ee_won_hostop_set(anOp->mRustOp, EE_WON_REQHOST_ADDR, 0, NULL, 0, reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()),
-                      NULL);
-    return anOp;
+    return MadeOp(ee_won_hostop_new_request(inOp, false, NULL, reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), -1, NULL));
 }
 GetCertOp::GetCertOp(AuthContext* inContext) : RustServerOp(ee_won_hostop_getcert())
 {
-    this->Set(EE_WON_REQHOST_CONTEXT, inContext->GetServerContext().get());
-    this->Set(EE_WON_GETCERT_AUTH_CONTEXT, inContext);
+    ee_won_hostop_set_two(this->GetRustOp(), EE_WON_REQHOST_CONTEXT, static_cast<RefCount*>(inContext->GetServerContext().get()),
+                          EE_WON_GETCERT_AUTH_CONTEXT, static_cast<RefCount*>(inContext));
 }
 ConstSmartPtr<AuthPeerData> GetCertOp::GetPeerData() const
 {
@@ -96,15 +89,13 @@ PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType in
                        bool inUseAuth2)
     : RustServerOp(ee_won_hostop_peerauth(reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), inUseAuth2))
 {
-    this->SetAuthType(inType, inContext);
-    this->SetSocket(inSocket);
+    ee_won_hostop_set_auth(this->GetRustOp(), inType, static_cast<RefCount*>(inContext), true, static_cast<RefCount*>(inSocket));
 }
 // A server-side peer auth op for an auth context and an accepted socket (ee_won peerop.rs)
 PeerAuthServerOp::PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket)
     : RustServerOp(ee_won_hostop_peerauth_server())
 {
-    this->SetAuthType(AUTH_TYPE_NONE, inContext);
-    this->SetSocket(inSocket);
+    ee_won_hostop_set_auth(this->GetRustOp(), AUTH_TYPE_NONE, static_cast<RefCount*>(inContext), true, static_cast<RefCount*>(inSocket));
 }
 DetectFirewallOp::DetectFirewallOp(ServerContext* inContext) : RustServerOp(ee_won_hostop_firewall())
 {
@@ -167,17 +158,15 @@ RustServerOp* RustServerOp::NewGetMultiDir(ServerContext* inContext, DWORD inFla
 }
 RustServerOp* RustServerOp::NewGetAccount(ServerContext* inContext, AuthContext* inAuth)
 {
-    RustServerOp* anOp = NewRequest(ee_won_reqmake_get_account(), inContext);
-    anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
-    return anOp;
+    return MadeOp(ee_won_hostop_new_request(ee_won_reqmake_get_account(), true, static_cast<RefCount*>(inContext), NULL,
+                                            AUTH_TYPE_SESSION, static_cast<RefCount*>(inAuth)));
 }
 RustServerOp* RustServerOp::NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
                                              const std::string& inEmail)
 {
-    RustServerOp* anOp = NewRequest(ee_won_reqmake_update_account(EE_WON_WIDE(inPassword), sizeof(wchar_t),
-                                                                  WonBytes(inEmail), inEmail.size()), inContext);
-    anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
-    return anOp;
+    return MadeOp(ee_won_hostop_new_request(ee_won_reqmake_update_account(EE_WON_WIDE(inPassword), sizeof(wchar_t), WonBytes(inEmail),
+                                                                          inEmail.size()),
+                                            true, static_cast<RefCount*>(inContext), NULL, AUTH_TYPE_SESSION, static_cast<RefCount*>(inAuth)));
 }
 RustServerOp* RustServerOp::NewCreateAccount(ServerContext* inContext, const std::wstring& inUserName,
                                              const std::wstring& inPassword, const std::string& inEmail,

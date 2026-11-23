@@ -28,11 +28,11 @@ static const char* kKeyFile = "won_cdkeystore.key";
 // ---- the original statements (AuthContext.cpp before net round 29), over the real RegKey and CDKey
 static bool OrigLoadFromRegistry(CDKey& k, long inRoot, const char* inPath)
 {
-    if (k.mProduct.empty()) return false;
+    if (k.GetProduct().empty()) return false;
     RegKey aKey(inRoot, std::string(inPath), false, true);
     if (!aKey.IsOpen()) return false;
     ByteBufferPtr anEncrypted;
-    if (aKey.QueryBinary(k.mProduct, anEncrypted) != 0) return false;
+    if (aKey.QueryBinary(k.GetProduct(), anEncrypted) != 0) return false;
     return k.InitEncrypted(anEncrypted->data(), anEncrypted->length());
 }
 static bool OrigSaveToRegistry(CDKey& k, long inRoot, const char* inPath)
@@ -42,13 +42,13 @@ static bool OrigSaveToRegistry(CDKey& k, long inRoot, const char* inPath)
     if (!aKey.IsOpen()) return false;
     ByteBufferPtr anEncrypted = k.GetEncrypted();
     if (anEncrypted.get() == NULL) return false;
-    return aKey.SetValue(k.mProduct, anEncrypted->data(), anEncrypted->length());
+    return aKey.SetValue(k.GetProduct(), anEncrypted->data(), anEncrypted->length());
 }
 static void OrigClearFromRegistry(CDKey& k, long inRoot, const char* inPath)
 {
-    if (k.mProduct.empty()) return;
+    if (k.GetProduct().empty()) return;
     RegKey aKey(inRoot, inPath, false, true);
-    aKey.DeleteValue(k.mProduct);
+    aKey.DeleteValue(k.GetProduct());
 }
 static bool OrigSaveToFile(CDKey& k, const std::string& inFileName)
 {

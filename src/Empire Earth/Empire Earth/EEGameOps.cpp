@@ -67,7 +67,7 @@ static long ee_gamecpp_mem_position(FSMemoryFile* inFile)
 }
 
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
-static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2 && kCalamityOpHelperUpdate == 1 && kCalamityOpDestroyEffect == 26, "gamecpp calamity.rs");
+static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
 
 // The warped unit's tint, blinking while it is away (EECCTimeWarp's two .bss colours 0x4e5fb8/0x4e5fc8)
 static GEColor sWarpColor(0.484375f, 0.0f, 0.734375f);
@@ -344,10 +344,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CalEffectGenerationZero: *(CL->mEffectGeneration.begin() + a[0]) = 0;
         break;
-    case O::CalRunStart: return EECalamityRunStart(KL, (EECalamity*)a[0], *(const EeCalamityParams*)a[1], (EESoundObject*)a[2], (EESoundObject*)a[3]);
-    case O::CalRunStop: EECalamityRunStop(KL, (EECalamity*)a[0], *(const EeCalamityParams*)a[1], (EESoundObject*)a[2], (EESoundObject*)a[3]);
-        break;
-    case O::CalRunUpdate: return EECalamityRunUpdate(KL, (EECalamity*)a[0], f[0], *(const EeCalamityParams*)a[1], (EESoundObject*)a[2], (EESoundObject*)a[3]);
     case O::KlNew: return P64(new EECalamityClass);
     case O::KlInitialize: KL->Initialize((EECalamityData*)a[0]);
         break;

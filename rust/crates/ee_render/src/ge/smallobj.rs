@@ -66,9 +66,43 @@ impl Host {
     /// # Safety
     /// The operation's arguments are as `EeGeObjOp` describes.
     unsafe fn op(self, op: EeGeObjOp, obj: usize, a: isize, b: isize) -> isize {
+        #[cfg(not(test))]
+        // SAFETY: the caller's contract
+        if let Some(r) = unsafe { platform_op(op, obj, a, b) } {
+            return r;
+        }
         // SAFETY: the host's contract
         unsafe { (self.host)(self.owner as *mut c_void, op, obj as *mut c_void, a, b) }
     }
+}
+
+/// The platform font calls (`PlatFontCreate`, `PlatFontDestroy`, `PlatFontGetMetrics`' height: ee_base, Rust since
+/// the platform layer moved) made here rather than through the C++ host; a test's fake host answers them instead.
+///
+/// # Safety
+/// The operation's arguments are as `EeGeObjOp` describes.
+#[cfg(not(test))]
+unsafe fn platform_op(op: EeGeObjOp, obj: usize, a: isize, b: isize) -> Option<isize> {
+    use ee_base::plat_ui::font::{PlatFont, PlatFontCreate, PlatFontDestroy, PlatFontGetMetrics, PlatFontMetrics};
+    // SAFETY (each call): the caller's contract
+    Some(match op {
+        EeGeObjOp::PlatFontCreate => {
+            let flag = |bit: isize| ((b >> bit) & 1) as std::ffi::c_int;
+            let face = obj as *const std::ffi::c_char;
+            unsafe { PlatFontCreate(face, a as i32, flag(0), flag(1), flag(2), flag(3)) as isize }
+        }
+        EeGeObjOp::PlatFontDestroy => {
+            unsafe { PlatFontDestroy(obj as *mut PlatFont) };
+            0
+        }
+        EeGeObjOp::PlatFontHeight => {
+            // SAFETY: all zeroes is a valid value of the metrics (integers)
+            let mut metrics: PlatFontMetrics = unsafe { std::mem::zeroed() };
+            unsafe { PlatFontGetMetrics(obj as *const PlatFont, &mut metrics) };
+            metrics.height as isize
+        }
+        _ => return None,
+    })
 }
 
 // ---- GEMaterial
@@ -621,6 +655,24 @@ pub unsafe extern "C" fn ee_ge_text_set_text(p: *mut EeGeText, text: *const c_vo
     // SAFETY: the caller's contract
     unsafe {
         cppobj::wstr_assign((*p).text, text as usize);
+        compute_extent(p);
+    }
+}
+
+/// `SetText(UWideString(utf8))`: a temporary wide string of the UTF-8 text assigned, the extent measured again (the
+/// font bitmap's cells, `fbobj.rs`).
+///
+/// # Safety
+/// `p` is live; `utf8` is NUL-terminated.
+pub(crate) unsafe fn text_set_utf8(p: *mut EeGeText, utf8: *const std::ffi::c_char) {
+    use ee_base::ustring::{ee_uwstring_assign, ee_uwstring_assign_text, ee_uwstring_free, ee_uwstring_init};
+    // SAFETY: the caller's contract; `temp` is a fresh record, freed once
+    unsafe {
+        let mut temp = std::mem::zeroed();
+        ee_uwstring_init(&mut temp);
+        ee_uwstring_assign_text(&mut temp, utf8);
+        ee_uwstring_assign(cppobj::wstr((*p).text), &temp);
+        ee_uwstring_free(&mut temp);
         compute_extent(p);
     }
 }

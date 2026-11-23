@@ -101,202 +101,7 @@ void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffect
 
 namespace {
 
-// ------------------------------------------------------------------------------------------------ the checksum line
-
-// The out-of-synch checksum's parts read for the per-CT line: unit hit points and tiles (1), positions, heights,
-// commands and update counts (2), calamities (0x10), air traffic (0x40), the continent manager's checksum (0x100).
-// Left out because reading them is not free of effects: 4, the map's window checksum, advances the map's checksum
-// cursor (EEMap::ComputeChecksum); and 0x20, the goals, copies each goal queue and dereferences goal members the
-// multiplayer game (flag 1 only) never reads. The game's own OOS check uses flag 1.
-const unsigned long kChecksumFlags = 0x1 | 0x2 | 0x10 | 0x40 | 0x100;
-
-// --checksum-trace's fields (the driver writes "CT <n> " or "LOADED " before them; the physics thread, under the
-// world's write lock, after the CT's last physics tick). Only reads: no random draws, no caches filled;
-// EEPhysics::mLastOutOfSynchChecksum, the one member GetOutOfSynchChecksum writes (and nothing reads), is put back:
-//   pt=<ticks done> tick=<current tick> ms=<game ms> rng=<physics random seed>
-//   oos=<GetOutOfSynchChecksum(kChecksumFlags)> units=<count>/<sum of GetChecksum(3)> ai=<EECPOutOfSynchChecksum>
-//   inputs=<user inputs executed>
-std::string ChecksumText()
-{
-    unsigned long theSaved = gPhysics->mLastOutOfSynchChecksum;
-    unsigned long theChecksum = gPhysics->GetOutOfSynchChecksum(false, kChecksumFlags);
-    gPhysics->mLastOutOfSynchChecksum = theSaved;
-    unsigned long theUnits = 0;
-    unsigned long theCount = 0;
-    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
-        theUnits += (unsigned long)static_cast<EEUnit*>(theUnit)->GetChecksum(3);
-        theCount++;
-    }
-    char theText[512];
-    snprintf(theText, sizeof(theText), "pt=%lu tick=%lu ms=%ld rng=%08lx oos=%08lx units=%lu/%08lx ai=%08lx inputs=%ld\n",
-             gPhysics->mNumTicksDone, gPhysics->mCurrentTick, gPhysics->mGameTime,
-             (unsigned long)(uint32_t)gPhysics->mRandom.GetSeed(), (unsigned long)(uint32_t)theChecksum, theCount,
-             (unsigned long)(uint32_t)theUnits, (unsigned long)(uint32_t)EECPOutOfSynchChecksum(),
-             gPhysics->mInputMessagesProcessed);
-    return theText;
-}
-
-// --dump-at / --dump-load (TEST ONLY, the save/load fidelity hunt): the state the checksum line sums, item by item, so
-// two dumps name the units and players that differ. Reads only (the goals' own out-of-synch checksums are read, as
-// the checksum's flag 0x20 would).
-void DumpState(const std::string& inPath)
-{
-    FILE* f = fopen(inPath.c_str(), "w");
-    if (!f)
-        return;
-    fprintf(f, "STATE ");
-    fputs(ChecksumText().c_str(), f);
-    fprintf(f, "physics clock=%a tickrandom=%ld tickstoprocess=%ld\n", (double)gPhysics->mGameClock,
-            (long)gPhysics->mTickRandom, (long)gPhysics->mTicksToProcess);
-    {   // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order)
-        const char* theNames[3] = {"UPDATE", "ACTIVATE", "DEACTIVATE"};
-        for (uint32_t l = 0; l < 3; l++) {   // (ee_sim app active.rs)
-            std::vector<uint32_t> theIDs(ee_app_active_list(l, NULL, 0));
-            ee_app_active_list(l, theIDs.data(), theIDs.size());
-            fprintf(f, "%s %zu:", theNames[l], theIDs.size());
-            for (size_t i = 0; i < theIDs.size(); i++)
-                fprintf(f, " %lu", EEUnitHandle<EEComplexUnit>::FromSavedID(theIDs[i])->mUnitID);
-            fprintf(f, "\n");
-        }
-    }
-    for (unsigned long i = 0; i < gWorld.GetNumPlayers(); i++) {
-        EEPlayer* p = gWorld.GetPlayer(i);
-        if (!p)
-            continue;
-        fprintf(f, "P %lu pop=%ld eog=%ld epoch=%ld res=", i, (long)p->mPopulationCount, (long)p->mEndOfGameCount,
-                p->mTechnologies ? (long)p->mTechnologies->mCurrentEpoch : -1L);
-        for (long r = 0; r < 5; r++)
-            fprintf(f, "%s%a", r ? "," : "", (double)p->mResourceCaps[kResourceFood + r]);
-        fprintf(f, "\n");
-        // the towns (hull, patrol group) and the patrol groups (their points as unit@tile)
-        for (size_t t = 0; t < p->mTowns.size(); t++) {
-            EETown* theTown = p->mTowns[t];
-            if (theTown == NULL)
-                continue;
-            fprintf(f, "TOWN %lu %ld units=%ld patrol=%ld hull=", i, (long)theTown->mTownID, (long)theTown->mNumUnits,
-                    theTown->mPatrolGroup != NULL ? (long)ee_units_pg_id(theTown->mPatrolGroup) : -1L);
-            for (unsigned long v = 0; v < theTown->GetHullPointCount(); v++)
-                fprintf(f, "%ld,%ld ", (long)theTown->GetHullPoint(v).GetX(), (long)theTown->GetHullPoint(v).GetY());
-            fprintf(f, "\n");
-        }
-        for (size_t g = 0; g < p->mPatrolGroups.size(); g++) {
-            EEPPatrolGroup* theGroup = p->mPatrolGroups[g];
-            if (theGroup == NULL)
-                continue;
-            fprintf(f, "PATROL %lu %lu town=%d loop=%d points=", i, (unsigned long)ee_units_pg_id(theGroup), ee_units_pg_is_town_patrol(theGroup) ? 1 : 0,
-                    ee_units_pg_is_loop(theGroup) ? 1 : 0);
-            for (size_t k = 0; k < ee_units_pg_point_count(theGroup); k++) {
-                EEComplexUnit* thePoint = static_cast<EEComplexUnit*>(ee_units_pg_point(theGroup, k));
-                if (thePoint != NULL)
-                    fprintf(f, "%lu@%ld,%ld ", (unsigned long)thePoint->mUnitID, (long)thePoint->mTileX, (long)thePoint->mTileY);
-            }
-            fprintf(f, "\n");
-        }
-    }
-    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {   // each player's unit list in its order (save 0.270)
-        if (gWorld.mPlayers[i] == NULL)
-            continue;
-        fprintf(f, "PLAYERUNITS %lu:", i);
-        for (EEUnit* u = gWorld.mPlayers[i]->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext))
-            fprintf(f, " %lu", (unsigned long)u->mUnitID);
-        fprintf(f, "\n");
-    }
-    EECPOutOfSynchDump(f);   // the "ai" parts per player and the computer players' timers
-    gPathManager.DumpSim(f);   // the searches in progress, the pending requests, the timers
-    for (RTSUnit* r = gWorld.mUnits.mFirst; r != NULL; r = r->mTileNode->mNext) {
-        EEUnit* u = static_cast<EEUnit*>(r);
-        EEComplexUnit* c = dynamic_cast<EEComplexUnit*>(u);
-        fprintf(f, "U %lu type=%ld player=%ld hp=%a tile=%ld,%ld", u->GetUnitID(), (long)u->mUnitClass->mUnitType,
-                u->GetPlayer() ? (long)u->GetPlayer()->mPlayerID : -1L, (double)u->mHitPoints, (long)u->mTileX,
-                (long)u->mTileY);
-        if (c != NULL && c->mComplexUnit != NULL) {
-            EEComplexUnit* x = c->mComplexUnit;
-            fprintf(f, " upd=%lu cmd=%ld grp=%d loc=%a,%a,%a h=%a c1=%08lx c2=%08lx wp=%zu pathdone=%d arrived=%d vel=%a blocked=%lu",
-                    (unsigned long)x->mTimesUpdated,
-                    x->mCommand ? (long)x->mCommand->mType : -1L, x->mActiveGroup != NULL,
-                    (double)x->mPhysicalModel.GetLocation().GetX(), (double)x->mPhysicalModel.GetLocation().GetY(),
-                    (double)x->mPhysicalModel.GetLocation().GetZ(), (double)x->mHeight,
-                    (unsigned long)(uint32_t)c->GetChecksum(1), (unsigned long)(uint32_t)c->GetChecksum(2),
-                    x->mWaypoints.size(), x->mIsPathDone ? 1 : 0, x->mHasArrived ? 1 : 0, (double)x->GetVelocity(),
-                    x->mBlockingUnit != NULL ? x->mBlockingUnit->mUnitID : 0UL);
-            fprintf(f, " anim=%lu/%lu/%lu/%d reload=%ld", (unsigned long)x->GetAnimation(), (unsigned long)x->mPhysicalModel.GetFrame(),
-                    (unsigned long)x->mAnimationTime, x->mIsAnimationPaused ? 1 : 0, (long)x->mReloadTimer);
-            fprintf(f, " wps=");   // the path's points (location, distance, start distance)
-            for (size_t w = 0; w < x->mWaypoints.size(); w++)
-                fprintf(f, "%a,%a,%a/%a/%a;", (double)x->mWaypoints[w].mLocation.GetX(), (double)x->mWaypoints[w].mLocation.GetY(),
-                        (double)x->mWaypoints[w].mLocation.GetZ(), (double)x->mWaypoints[w].mDistance,
-                        (double)x->mWaypoints[w].mStartDistance);
-            for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {
-                const EEGoalDeque& theGoals = x->GetQueueGoals(q);
-                for (size_t g = 0; g < theGoals.size(); g++)
-                    fprintf(f, " g%ld:k%u:%08lx", q, (unsigned)theGoals[g]->mKind,
-                            (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
-            }
-            // what the raw bytes hold only as pointers: the contacts, the last attacker, the area effects
-            fprintf(f, "\n  refs contacts=");
-            for (UListNode<EEComplexUnit*>* n = x->mContacts.mHead; n != NULL; n = n->mNext)
-                fprintf(f, "%lu,", n->mData != NULL ? (unsigned long)n->mData->GetUnitID() : 0UL);
-            fprintf(f, " attacker=%lu owner=%lu holder=%lu ae=%zu/%zu", x->mLastAttacker != NULL ? (unsigned long)x->mLastAttacker->GetUnitID() : 0UL,
-                    x->mOwner != NULL ? (unsigned long)x->mOwner->GetUnitID() : 0UL,
-                    x->mHolder != NULL ? (unsigned long)x->mHolder->GetUnitID() : 0UL,
-                    x->mAreaEffects.mItems.size(), x->mAffectingAreaEffects.mItems.size());
-            for (size_t a = 0; a < x->mAffectingAreaEffects.mItems.size(); a++) {
-                EEAreaEffect* e = x->mAffectingAreaEffects.mItems[a];
-                fprintf(f, " %lu", e->mUnit != NULL ? (unsigned long)e->mUnit->GetUnitID() : 0UL);
-            }
-            for (size_t a = 0; a < x->mAreaEffects.mItems.size(); a++)
-                fprintf(f, " own@%a,%a", (double)x->mAreaEffects.mItems[a]->mLocation.mX, (double)x->mAreaEffects.mItems[a]->mLocation.mY);
-            fprintf(f, "\n  raw ");   // the unit's bytes (pointers differ by run; build/clang/layout.json names offsets)
-            for (size_t b = 0; b < sizeof(EEComplexUnit); b++)
-                fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(c)[b]);
-            fprintf(f, "\n");
-            for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {   // each goal's own out-of-synch dump
-                const EEGoalDeque& theGoals = x->GetQueueGoals(q);
-                for (size_t g = 0; g < theGoals.size(); g++) {
-                    fprintf(f, "  unit %lu goal %ld.%zu\n", u->GetUnitID(), q, g);
-                    theGoals[g]->DumpOutOfSynch(f);
-                }
-            }
-            continue;
-        }
-        fprintf(f, "\n  rawu ");   // a simple unit's bytes (layout.json "EEUnit")
-        for (size_t b = 0; b < sizeof(EEUnit); b++)
-            fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(u)[b]);
-        fprintf(f, "\n");
-    }
-    // the active calamities, in order: their checksum's fields (EECalamity::GetOutOfSynchChecksum) and their units
-    if (EECalamityManager* theCalamities = EECalamityManager::GetInstance()) {
-        for (size_t c = 0; c < theCalamities->mCalamities.size(); c++) {
-            EECalamity* k = theCalamities->mCalamities[c];
-            if (k == NULL)
-                continue;
-            fprintf(f, "CAL %zu class=%ld sum=%08lx target=%a,%a,%a tile=%lu,%lu int=%ld,%ld ids=%lu,%lu units=%lu,%lu "
-                       "player=%lu bools=%d%d%d%d%d floats=%a,%a,%a epi=%a alive=%a discrete=%a elapsed=%a\n",
-                    c, k->mClass != NULL ? (long)k->mClass->mClassEnum : -1L, (unsigned long)(uint32_t)k->GetOutOfSynchChecksum(),
-                    (double)k->mTargetLocation.GetX(), (double)k->mTargetLocation.GetY(), (double)k->mTargetLocation.GetZ(),
-                    (unsigned long)k->mTilePlaceHolder1.mX, (unsigned long)k->mTilePlaceHolder1.mY, k->mIntPlaceHolder1,
-                    k->mIntPlaceHolder2, k->mTargetUnitID, k->mOriginatingUnitID,
-                    k->mTargetUnit != NULL ? (unsigned long)k->mTargetUnit->GetUnitID() : 0UL,
-                    k->mCasterUnit != NULL ? (unsigned long)k->mCasterUnit->GetUnitID() : 0UL, k->mPlayerNumber,
-                    k->mBoolPlaceHolder1, k->mBoolPlaceHolder2, k->mInitialized, k->mHasTargetLocation, k->mHasTargetUnit,
-                    (double)k->mFloatPlaceHolder1, (double)k->mFloatPlaceHolder2, (double)k->mHeight,
-                    (double)k->mEpicenterFactor, (double)k->mTimeAlive, (double)k->mDiscreteUpdateTime,
-                    (double)k->mTimeElapsedSinceLastUpdate);
-        }
-    }
-    // the units of each map region in order (RTSRegionTable: FindImpactUnit and the target searches walk them)
-    // (ee_combat regions.rs's saved order: the count, then each region's index, size and ids, -1 for none)
-    std::vector<uint32_t> theOrder(gWorld.mMap != NULL ? ee_combat_regions_order(gWorld.mMap->mUnitRegions, NULL, 0) : 0);
-    if (!theOrder.empty())
-        ee_combat_regions_order(gWorld.mMap->mUnitRegions, theOrder.data(), theOrder.size());
-    for (size_t k = 1; k < theOrder.size(); k += 2 + theOrder[k + 1]) {
-        fprintf(f, "REGION %lu:", (unsigned long)theOrder[k]);
-        for (uint32_t n = 0; n < theOrder[k + 1]; n++)
-            fprintf(f, " %lu", theOrder[k + 2 + n] != 0xffffffffu ? (unsigned long)theOrder[k + 2 + n] : 0UL);
-        fprintf(f, "\n");
-    }
-    fclose(f);
-}
+// (the per-CT checksum line's fields and the state dump: sim_driver dump.rs, over the Dm cases below)
 
 FILE* sRngFile = NULL;
 // --rng-trace MS=FILE (TEST ONLY, the save/load fidelity hunt): every draw of the physics random stream after game ms
@@ -366,17 +171,7 @@ std::string sDumpLoad;
 void HostDumpAfterLoad(const char* inPath)
 {
     sDumpLoad = inPath;
-    EEAfterLoad([] { DumpState(sDumpLoad); });   // at the first tick, after the load's own fix-ups
-}
-
-size_t HostChecksumFields(char* outBuffer, size_t inCapacity)
-{
-    return PutText(ChecksumText(), outBuffer, inCapacity);
-}
-
-void HostDumpState(const char* inPath)
-{
-    DumpState(inPath);
+    EEAfterLoad([] { ee_sim_driver_dump_state(sDumpLoad.c_str()); });   // at the first tick, after the load's own fix-ups
 }
 
 size_t HostExtension(int inWhich, char* outBuffer, size_t inCapacity)
@@ -524,28 +319,8 @@ void DebugTrampoline(const char* inText)
 // (EESimPreferences is Empire Earth.cpp's, and EERun starts the driver's thread itself, ee_sim_driver_start: so the
 // game's start-up names no symbol of this driver)
 
-#ifdef _WIN32
-// a fault in the simulation: the code, the place and the return addresses (exe addresses: EE-SIM.map) on stderr
-static LONG CALLBACK EESimFault(EXCEPTION_POINTERS* inInfo)
-{
-    DWORD theCode = inInfo->ExceptionRecord->ExceptionCode;
-    if (theCode < 0xC0000000UL || theCode == 0xE06D7363UL)   // not a fault (thread names, debug strings, C++)
-        return EXCEPTION_CONTINUE_SEARCH;
-    static volatile LONG sOnce = 0;
-    if (InterlockedExchange(&sOnce, 1))
-        return EXCEPTION_CONTINUE_SEARCH;
-    void* theFrames[48];
-    USHORT theCount = RtlCaptureStackBackTrace(0, 48, theFrames, NULL);
-    char theText[2048];
-    int n = snprintf(theText, sizeof(theText), "EE-SIM FAULT %08lx at %p thread %lu; frames:", (unsigned long)theCode,
-                     inInfo->ExceptionRecord->ExceptionAddress, (unsigned long)GetCurrentThreadId());
-    for (USHORT k = 0; k < theCount && n < (int)sizeof(theText) - 24; k++)
-        n += snprintf(theText + n, sizeof(theText) - n, " %p", theFrames[k]);
-    fprintf(stderr, "%s\n", theText);
-    fflush(stderr);
-    return EXCEPTION_CONTINUE_SEARCH;
-}
-#else
+#ifndef _WIN32
+// (Windows: the fault report is sim_driver fault.rs's)
 // a fault in the simulation (POSIX): the signal, the address and the return addresses on stderr, then the signal's
 // default action (the handler is reset). Linux prints the frames as ee-sim(+0xOFFSET): addr2line -f -C -e ee-sim
 // 0xOFFSET names them.
@@ -587,7 +362,7 @@ void EESimGameEnded(int inResult);
 int EESimMain(int argc, char** argv)
 {
     static const EeSimDriverHost kHost = {
-        HostLock, HostDumpAfterLoad, HostChecksumFields, HostDumpState, HostExtension, HostSetRun, HostSetAfterTick,
+        HostLock, HostDumpAfterLoad, HostExtension, HostSetRun, HostSetAfterTick,
         HostCancelGame, HostCaptureActive, HostEngineChoice, HostSetEnv, HostDupStderr, HostSetStderr, HostWrite,
         HostRngTrace, HostTickHook, HostQuit, HostWonders};
     EeSimDriverEvents theEvents = {};
@@ -610,7 +385,7 @@ int EESimMain(int argc, char** argv)
         return theCode;
     PlatDebugSetHandler(DebugTrampoline);
 #ifdef _WIN32
-    AddVectoredExceptionHandler(1, EESimFault);
+    ee_sim_driver_fault_install("EE-SIM");
 #else
     EESimInstallFaultHandler();
 #if !defined(__APPLE__)
@@ -872,6 +647,109 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::MapComputeChecksum: gWorld.mMap->ComputeChecksum();
         break;
+    // the state dump (sim_driver dump.rs)
+    case O::DmPhysLastOos: return gPhysics->mLastOutOfSynchChecksum;
+    case O::DmPhysSetLastOos: gPhysics->mLastOutOfSynchChecksum = (unsigned long)a[0];
+        break;
+    case O::DmPhysOos: return gPhysics->GetOutOfSynchChecksum(false, (unsigned long)a[0]);
+    case O::DmPhysTicksDone: return gPhysics->mNumTicksDone;
+    case O::DmPhysCurrentTick: return gPhysics->mCurrentTick;
+    case O::DmPhysSeed: return (uint32_t)gPhysics->mRandom.GetSeed();
+    case O::DmPhysInputs: return gPhysics->mInputMessagesProcessed;
+    case O::DmPhysTickRandom: return (long)gPhysics->mTickRandom;
+    case O::DmPhysTicksToProcess: return (long)gPhysics->mTicksToProcess;
+    case O::DmCpOos: return (uint32_t)EECPOutOfSynchChecksum();
+    case O::DmWorldFirstUnit: return P64(static_cast<EEUnit*>(gWorld.mUnits.mFirst));
+    case O::DmWorldNextUnit: return P64(static_cast<EEUnit*>(UN->mTileNode->mNext));
+    case O::DmUnitChecksum: return (uint32_t)UN->GetChecksum((long)a[0]);
+    case O::DmComplexChecksum: return (uint32_t)CX->GetChecksum((long)a[0]);
+    case O::DmActiveUnitId: return EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0])->mUnitID;
+    case O::DmPlPop: return (long)PL->mPopulationCount;
+    case O::DmPlEog: return (long)PL->mEndOfGameCount;
+    case O::DmPlEpoch: return PL->mTechnologies ? (long)PL->mTechnologies->mCurrentEpoch : -1L;
+    case O::DmPlTownCount: return PL->mTowns.size();
+    case O::DmPlTownAt: return P64(PL->mTowns[a[0]]);
+    case O::DmTownId: return (long)((EETown*)p)->mTownID;
+    case O::DmTownUnits: return (long)((EETown*)p)->mNumUnits;
+    case O::DmTownPatrol: return P64(((EETown*)p)->mPatrolGroup);
+    case O::DmTownHullCount: return ((EETown*)p)->GetHullPointCount();
+    case O::DmTownHullX: return (long)((EETown*)p)->GetHullPoint((unsigned long)a[0]).GetX();
+    case O::DmTownHullY: return (long)((EETown*)p)->GetHullPoint((unsigned long)a[0]).GetY();
+    case O::DmPlPatrolCount: return PL->mPatrolGroups.size();
+    case O::DmPlPatrolAt: return P64(PL->mPatrolGroups[a[0]]);
+    case O::DmPgId: return (unsigned long)ee_units_pg_id((EEPPatrolGroup*)p);
+    case O::DmPgTown: return ee_units_pg_is_town_patrol((EEPPatrolGroup*)p) ? 1 : 0;
+    case O::DmPgLoop: return ee_units_pg_is_loop((EEPPatrolGroup*)p) ? 1 : 0;
+    case O::DmPgCount: return ee_units_pg_point_count((EEPPatrolGroup*)p);
+    case O::DmPgPoint: return P64(static_cast<EEComplexUnit*>(ee_units_pg_point((EEPPatrolGroup*)p, (size_t)a[0])));
+    case O::DmCxUnitId: return CX->mUnitID;
+    case O::DmCxTileYRaw: return CX->mTileY;
+    case O::DmUnitIdRaw: return UN->mUnitID;
+    case O::DmCpDump: EECPOutOfSynchDump((FILE*)a[0]);
+        break;
+    case O::DmPathDump: gPathManager.DumpSim((FILE*)a[0]);
+        break;
+    case O::DmUnitTypeRaw: return (long)UN->mUnitClass->mUnitType;
+    case O::DmUnitPlayerId: return UN->GetPlayer() ? (long)UN->GetPlayer()->mPlayerID : -1L;
+    case O::DmUnitTileXRaw: return (long)UN->mTileX;
+    case O::DmUnitTileYRaw: return (long)UN->mTileY;
+    case O::DmComplexOf: return P64(dynamic_cast<EEComplexUnit*>(UN));
+    case O::DmCxComplex: return P64(CX->mComplexUnit);
+    case O::DmCxUpdated: return (unsigned long)CX->mTimesUpdated;
+    case O::DmCxCommand: return CX->mCommand ? (long)CX->mCommand->mType : -1L;
+    case O::DmCxGroup: return CX->mActiveGroup != NULL;
+    case O::DmCxWpCount: return CX->mWaypoints.size();
+    case O::DmCxPathDone: return CX->mIsPathDone ? 1 : 0;
+    case O::DmCxArrived: return CX->mHasArrived ? 1 : 0;
+    case O::DmCxBlockingId: return CX->mBlockingUnit != NULL ? CX->mBlockingUnit->mUnitID : 0UL;
+    case O::DmCxAnim: return (unsigned long)CX->GetAnimation();
+    case O::DmCxFrame: return (unsigned long)CX->mPhysicalModel.GetFrame();
+    case O::DmCxAnimTime: return (unsigned long)CX->mAnimationTime;
+    case O::DmCxPaused: return CX->mIsAnimationPaused ? 1 : 0;
+    case O::DmCxReload: return (long)CX->mReloadTimer;
+    case O::DmCxQueues: return (long)CX->GetNumGoalQueues();
+    case O::DmCxQueueSize: return CX->GetQueueGoals((long)a[0]).size();
+    case O::DmCxGoal: return P64(CX->GetQueueGoals((long)a[0])[(size_t)a[1]]);
+    case O::DmGoalKind: return (unsigned)((EEUnitGoal*)p)->mKind;
+    case O::DmGoalOos: return (uint32_t)((EEUnitGoal*)p)->GetOutOfSynchChecksum();
+    case O::DmGoalDump: ((EEUnitGoal*)p)->DumpOutOfSynch((FILE*)a[0]);
+        break;
+    case O::DmCxContactHead: return P64(CX->mContacts.mHead);
+    case O::DmNodeNext: return P64(((UListNode<EEComplexUnit*>*)p)->mNext);
+    case O::DmNodeUnitId: return ((UListNode<EEComplexUnit*>*)p)->mData != NULL ? (unsigned long)((UListNode<EEComplexUnit*>*)p)->mData->GetUnitID() : 0UL;
+    case O::DmCxAttackerId: return CX->mLastAttacker != NULL ? (unsigned long)CX->mLastAttacker->GetUnitID() : 0UL;
+    case O::DmCxOwnerId: return CX->mOwner != NULL ? (unsigned long)CX->mOwner->GetUnitID() : 0UL;
+    case O::DmCxHolderId: return CX->mHolder != NULL ? (unsigned long)CX->mHolder->GetUnitID() : 0UL;
+    case O::DmCxAeCount: return CX->mAreaEffects.mItems.size();
+    case O::DmCxAffectingCount: return CX->mAffectingAreaEffects.mItems.size();
+    case O::DmCxAffectingUnitId: return CX->mAffectingAreaEffects.mItems[a[0]]->mUnit != NULL ? (unsigned long)CX->mAffectingAreaEffects.mItems[a[0]]->mUnit->GetUnitID() : 0UL;
+    case O::DmCxSize: return sizeof(EEComplexUnit);
+    case O::DmUnitSize: return sizeof(EEUnit);
+    case O::DmCalManager: return P64(EECalamityManager::GetInstance());
+    case O::DmCalCount: return ((EECalamityManager*)p)->mCalamities.size();
+    case O::DmCalAt: return P64(((EECalamityManager*)p)->mCalamities[a[0]]);
+    case O::DmCalClass: return ((EECalamity*)p)->mClass != NULL ? (long)((EECalamity*)p)->mClass->mClassEnum : -1L;
+    case O::DmCalOos: return (uint32_t)((EECalamity*)p)->GetOutOfSynchChecksum();
+    case O::DmCalTileX: return (unsigned long)((EECalamity*)p)->mTilePlaceHolder1.mX;
+    case O::DmCalTileY: return (unsigned long)((EECalamity*)p)->mTilePlaceHolder1.mY;
+    case O::DmCalInt1: return ((EECalamity*)p)->mIntPlaceHolder1;
+    case O::DmCalInt2: return ((EECalamity*)p)->mIntPlaceHolder2;
+    case O::DmCalTargetId: return ((EECalamity*)p)->mTargetUnitID;
+    case O::DmCalOriginId: return ((EECalamity*)p)->mOriginatingUnitID;
+    case O::DmCalTargetUnitId: return ((EECalamity*)p)->mTargetUnit != NULL ? (unsigned long)((EECalamity*)p)->mTargetUnit->GetUnitID() : 0UL;
+    case O::DmCalCasterId: return ((EECalamity*)p)->mCasterUnit != NULL ? (unsigned long)((EECalamity*)p)->mCasterUnit->GetUnitID() : 0UL;
+    case O::DmCalPlayer: return ((EECalamity*)p)->mPlayerNumber;
+    case O::DmCalBool1: return (int)((EECalamity*)p)->mBoolPlaceHolder1;
+    case O::DmCalBool2: return (int)((EECalamity*)p)->mBoolPlaceHolder2;
+    case O::DmCalInitialized: return (int)((EECalamity*)p)->mInitialized;
+    case O::DmCalHasLocation: return (int)((EECalamity*)p)->mHasTargetLocation;
+    case O::DmCalHasUnit: return (int)((EECalamity*)p)->mHasTargetUnit;
+    case O::DmMapRegions: return gWorld.mMap != NULL ? P64(gWorld.mMap->mUnitRegions) : 0;
+    case O::DmOpen: return P64(fopen(s, "w"));
+    case O::DmPuts: fputs(s, (FILE*)p);
+        break;
+    case O::DmClose: fclose((FILE*)p);
+        break;
     default: break;
     }
     return 0;
@@ -908,6 +786,31 @@ extern "C" double ee_simcpp_sim_float(EeSimDriverSim inOp, uintptr_t p, const in
     case O::TradeStoneIron: return gWorldTable.GetFloatValue(kWorldTradeRateStoneIron);
     case O::TradeStoneIron2: return gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron);
     case O::WonderSightRadius: return gWorldTable.GetFloatValue(kWorldWonderSightRadius);
+    // the state dump (sim_driver dump.rs)
+    case O::DmPhysClock: return (double)gPhysics->mGameClock;
+    case O::DmPlResource: return PL->mResourceCaps[kResourceFood + a[0]];
+    case O::DmUnitHp: return UN->mHitPoints;
+    case O::DmCxLocX: return CX->mPhysicalModel.GetLocation().GetX();
+    case O::DmCxLocY: return CX->mPhysicalModel.GetLocation().GetY();
+    case O::DmCxLocZ: return CX->mPhysicalModel.GetLocation().GetZ();
+    case O::DmCxHeight: return CX->mHeight;
+    case O::DmCxWpX: return CX->mWaypoints[a[0]].mLocation.GetX();
+    case O::DmCxWpY: return CX->mWaypoints[a[0]].mLocation.GetY();
+    case O::DmCxWpZ: return CX->mWaypoints[a[0]].mLocation.GetZ();
+    case O::DmCxWpDistance: return CX->mWaypoints[a[0]].mDistance;
+    case O::DmCxWpStart: return CX->mWaypoints[a[0]].mStartDistance;
+    case O::DmCxAeX: return CX->mAreaEffects.mItems[a[0]]->mLocation.mX;
+    case O::DmCxAeY: return CX->mAreaEffects.mItems[a[0]]->mLocation.mY;
+    case O::DmCalTargetX: return ((EECalamity*)p)->mTargetLocation.GetX();
+    case O::DmCalTargetY: return ((EECalamity*)p)->mTargetLocation.GetY();
+    case O::DmCalTargetZ: return ((EECalamity*)p)->mTargetLocation.GetZ();
+    case O::DmCalFloat1: return ((EECalamity*)p)->mFloatPlaceHolder1;
+    case O::DmCalFloat2: return ((EECalamity*)p)->mFloatPlaceHolder2;
+    case O::DmCalHeight: return ((EECalamity*)p)->mHeight;
+    case O::DmCalEpicenter: return ((EECalamity*)p)->mEpicenterFactor;
+    case O::DmCalTimeAlive: return ((EECalamity*)p)->mTimeAlive;
+    case O::DmCalDiscrete: return ((EECalamity*)p)->mDiscreteUpdateTime;
+    case O::DmCalElapsed: return ((EECalamity*)p)->mTimeElapsedSinceLastUpdate;
     default: break;
     }
     return 0.0;

@@ -78,6 +78,57 @@ constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
 constexpr static const int32_t FRAME_CAPTION = 18;
 
+struct GXCAPS {
+  unsigned long dwSize;
+  unsigned long dwCaps;
+  unsigned long dwFXCaps;
+};
+
+struct GXPIXELFORMAT {
+  unsigned long dwSize;
+  unsigned long dwFlags;
+  unsigned long dwFourCC;
+  unsigned long dwRGBBitCount;
+  unsigned long dwRBitMask;
+  unsigned long dwGBitMask;
+  unsigned long dwBBitMask;
+  unsigned long dwRGBAlphaBitMask;
+};
+
+struct GXDEVICEIDENTIFIER {
+  char szDescription[512];
+  unsigned long dwVendorId;
+  unsigned long dwDeviceId;
+};
+
+struct GXDEVICEDESC {
+  unsigned long dwDevCaps;
+  unsigned long dwDeviceRenderBitDepth;
+};
+
+using GXDDENUMCALLBACKEX = int32_t(*)(void*, char*, char*, void*, void*);
+
+struct GXBLTFX {
+  unsigned long dwSize;
+  unsigned long dwFillColor;
+};
+
+struct GXVIEWPORT {
+  unsigned long dwX;
+  unsigned long dwY;
+  unsigned long dwWidth;
+  unsigned long dwHeight;
+  float dvMinZ;
+  float dvMaxZ;
+};
+
+struct GXRECT {
+  long x1;
+  long y1;
+  long x2;
+  long y2;
+};
+
 extern "C" {
 
 /// Returns `EE_RUST_ABI_VERSION`.
@@ -89,6 +140,24 @@ uint32_t ee_rust_abi_version();
 /// `log` must be callable from any thread for the life of the process, with a NUL-terminated line valid during the
 /// call.
 void ee_rust_init(void (*log)(const char *line));
+
+unsigned long gx_direct_draw_release(void *dd);
+
+unsigned long gx_surface_release(void *surface);
+
+float gx_surface_render_scale(void *surface);
+
+unsigned long gx_vertex_buffer_release(void *buffer);
+
+unsigned long gx_device_release(void *device);
+
+void gx_set_render_percent(unsigned long percent);
+
+void gx_set_frame_limit(long frames_per_second);
+
+void gx_set_texture_filtering(unsigned long mode);
+
+void gx_set_brightness(float gamma);
 
 extern float ee_units_pm_host_random();
 

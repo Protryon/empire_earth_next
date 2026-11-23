@@ -85,7 +85,7 @@ pub(crate) fn form_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isiz
 
 lle_host!(
     /// The form's host: [`form_call`], then `UIForm::HostOp`.
-    ee_ui_form_host => form_call, ee_uicpp_form_host
+    ee_ui_form_host => form_call, [crate::lle_hosts::form]
 );
 
 /// `UIForm::Create(file, manager)`: every forms record read from the file; each with a form id above 0 made by the

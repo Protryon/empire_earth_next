@@ -245,6 +245,15 @@ static void InsertBadUser(void* inTarget, const EeWonRouteRecord* inRecord)
     std::pair<ListArea*, bool>& aTarget = *static_cast<std::pair<ListArea*, bool>*>(inTarget);
     aTarget.first->InsertItem(new BadUserItem(*inRecord, aTarget.second), -1);
 }
+// an object with one reference the Rust gives back (NULL stays NULL)
+static intptr_t Held(RefCount* inObject)
+{
+    if (inObject != NULL)
+        inObject->AddRef();
+    return (intptr_t)inObject;
+}
+static std::string sDlgItemText; // ItemText's text: the Rust copies it before its next op
+
 static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyDlgOp Op;
@@ -258,7 +267,6 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     LobbyGame* aGame = reinterpret_cast<LobbyGame*>(a);
     ListArea* aList = reinterpret_cast<ListArea*>(a);
     MultiListArea* aMulti = reinterpret_cast<MultiListArea*>(a);
-    char aBuf[10];
     switch (inOp) {
     case Op::Find: {
         ComponentConfig* aConfig = reinterpret_cast<ComponentConfig*>(a);
@@ -287,10 +295,7 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::SetEnabled: aComp->SetEnabled(b != 0); return 0;
     case Op::SetVisible: aComp->SetVisible(b != 0); return 0;
     case Op::InputSetNumeric: anInput->mInputFilter = InputBox::NumericFilter; return 0;
-    case Op::LabelSetNumber:
-        sprintf(aBuf, "%d", (int)b);
-        aLabel->SetText(GUIString(new GUIStringData(aBuf)), true);
-        return 0;
+    case Op::LabelSetNumber: aLabel->SetText(GUIString(new GUIStringData(std::to_string((int)b).c_str())), true); return 0;
     // the lobby's strings come as resource rows (lobbydlg.rs string_row), the EE game's two as strings
     case Op::LabelSetRes: aLabel->SetText(gLobbyResources[b].mString, true); return 0;
     case Op::ButtonSetRes: aButton->SetText(gLobbyResources[b].mString, true); return 0;
@@ -303,11 +308,7 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     }
     case Op::LabelSetString: aLabel->SetText(EeString(b), true); return 0;
     case Op::ButtonSetString: aButton->SetText(EeString(b), true); return 0;
-    case Op::GameCreate: {
-        LobbyGame* aNew = LobbyGame::CreateGame(static_cast<LobbyGameType>(b));
-        aNew->AddRef();
-        return (intptr_t)aNew;
-    }
+    case Op::GameCreate: return Held(LobbyGame::CreateGame(static_cast<LobbyGameType>(b)));
     case Op::GameSetName: aGame->SetName(reinterpret_cast<InputBox*>(b)->GetText()); return 0;
     case Op::GameSetPassword: aGame->SetPassword(reinterpret_cast<InputBox*>(b)->GetText()); return 0;
     case Op::GameSetAskToJoin: aGame->SetAskToJoin(b != 0); return 0;
@@ -315,31 +316,23 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::GameSetSkill: aGame->SetSkill((long)b); return 0;
     // round 2: the status and OK/Cancel boxes' sizing (the Component base's reads and calls: lobbydlg.rs comp_op)
     case Op::SetVertPad: aLabel->SetVertPad((int)b, (int)c); return 0;
-    case Op::LabelSetText:
-        aLabel->SetText(b != 0 ? *reinterpret_cast<const GUIString*>(b) : gEmptyGUIString, true);
+    case Op::LabelSetText: aLabel->SetText(b != 0 ? *reinterpret_cast<const GUIString*>(b) : gEmptyGUIString, true);
         return 0;
     case Op::ButtonSetText: aButton->SetText(*reinterpret_cast<const GUIString*>(b), true); return 0;
     case Op::FrameLeft: return WONShell::Op(reinterpret_cast<Component*>(a), EeWonShellOp::GetFrameBorder, 0);
     case Op::FrameRight: return WONShell::Op(reinterpret_cast<Component*>(a), EeWonShellOp::GetFrameBorder, 2);
     case Op::RootWidth: return GetLobbyRoot()->Width();
     case Op::RootHeight: return GetLobbyRoot()->Height();
-    case Op::FontStringWidth:
-        return aLabel->mWrappedText->mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
-    case Op::FontStringWidthRange: {
-        const GUIString& aText = *reinterpret_cast<const GUIString*>(b);
-        Font* aFont = aLabel->mWrappedText->mFont;
-        return aFont->GetStringWidth(aText, 0, aText.length());
-    }
+    case Op::FontStringWidth: return aLabel->mWrappedText->mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
+    case Op::FontStringWidthRange: return aLabel->mWrappedText->mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b), 0, reinterpret_cast<const GUIString*>(b)->length());
     case Op::FontCharWidth: return aLabel->mWrappedText->mFont->GetCharacterWidth((int)b);
     case Op::FontHeight: return aLabel->mWrappedText->mFont->GetHeight();
     case Op::TickCount: return (intptr_t)(uint32_t)WONTickCount();
     case Op::Invalidate: aComp->Invalidate(); return 0;
     case Op::TitleText: return (intptr_t)&aLabel->mWrappedText->mText;
     // round 3: TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog
-    case Op::BrowserShowTou:
-        // as text (WON's HTML rendering is not ported)
-        reinterpret_cast<BrowserComponent*>(a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false);
-        return 0;
+    // as text (WON's HTML rendering is not ported)
+    case Op::BrowserShowTou: reinterpret_cast<BrowserComponent*>(a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false); return 0;
     case Op::BrowserTop: reinterpret_cast<BrowserComponent*>(a)->GetHTMLView()->SetOffsets(0, 0); return 0;
     case Op::HttpDocType: return ((RustServerOp*)LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Op))->GetNum(EE_WON_HTTPDOC_TYPE);
     case Op::BadUsersInsert: {
@@ -363,43 +356,21 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     }
     case Op::AdaptersCount: return (intptr_t)reinterpret_cast<std::vector<LobbyNetAddress>*>(a)->size();
     case Op::AdapterHandle: return (intptr_t)(*reinterpret_cast<std::vector<LobbyNetAddress>*>(a))[b].mHandle;
-    case Op::AdapterNameLength:
-        return (intptr_t)GUIString((*reinterpret_cast<std::vector<LobbyNetAddress>*>(a))[b].mName).length();
+    case Op::AdapterNameLength: return (intptr_t)GUIString((*reinterpret_cast<std::vector<LobbyNetAddress>*>(a))[b].mName).length();
     case Op::AdapterInsertRow: aMulti->InsertItem(new NetworkAdapterListItem((long)b), -1); return 0;
-    case Op::AdapterSetName: {
-        GUIString aName((*reinterpret_cast<std::vector<LobbyNetAddress>*>(b))[c].mName);
-        aMulti->SetString(aMulti->GetNumItems() - 1, 0, aName, NULL);
-        return 0;
-    }
-    case Op::AdapterSetUnknownName:
-        aMulti->SetString(aMulti->GetNumItems() - 1, 0, LOBBY_STRING(ChooseNetworkAdapterDialog_Unknown_String), NULL);
-        return 0;
-    case Op::AdapterSetAddress: {
-        IPAddr anAddress((long)b, 0);
-        aMulti->SetString(aMulti->GetNumItems() - 1, 1, anAddress.GetHostString(true), NULL);
-        return 0;
-    }
+    case Op::AdapterSetName: aMulti->SetString(aMulti->GetNumItems() - 1, 0, GUIString((*reinterpret_cast<std::vector<LobbyNetAddress>*>(b))[c].mName), NULL); return 0;
+    case Op::AdapterSetUnknownName: aMulti->SetString(aMulti->GetNumItems() - 1, 0, LOBBY_STRING(ChooseNetworkAdapterDialog_Unknown_String), NULL); return 0;
+    case Op::AdapterSetAddress: aMulti->SetString(aMulti->GetNumItems() - 1, 1, IPAddr((long)b, 0).GetHostString(true), NULL); return 0;
     case Op::AdaptersFree: delete reinterpret_cast<std::vector<LobbyNetAddress>*>(a); return 0;
     case Op::AdapterHost: return (intptr_t)reinterpret_cast<NetworkAdapterListItem*>(a)->mHost;
     // round 3: CreditsDialog
     case Op::AddRef: aComp->AddRef(); return 0;
-    case Op::CreditsPlace: {
-        Component* aButton = reinterpret_cast<Component*>(b);
-        Component* aParent = aButton->mParent;
-        aDialog->Fn2F6140(reinterpret_cast<Component*>(a), 0x5003, aButton, aParent->Left(), aParent->Top(), 0, 0, 0);
-        return 0;
-    }
+    case Op::CreditsPlace: aDialog->Fn2F6140(reinterpret_cast<Component*>(a), 0x5003, reinterpret_cast<Component*>(b), reinterpret_cast<Component*>(b)->mParent->Left(), reinterpret_cast<Component*>(b)->mParent->Top(), 0, 0, 0); return 0;
     case Op::ScrollStart: reinterpret_cast<ScrollingTextComponent*>(a)->Start(); return 0;
     case Op::ScrollStop: reinterpret_cast<ScrollingTextComponent*>(a)->Stop(); return 0;
     case Op::ScrollReset: reinterpret_cast<ScrollingTextComponent*>(a)->Reset(); return 0;
-    case Op::ScrollAddLine:
-        reinterpret_cast<ScrollingTextComponent*>(a)->AddLine(*reinterpret_cast<const GUIString*>(b),
-                                                             (unsigned long)(uint32_t)c);
-        return 0;
-    case Op::DefaultFontStringWidth: {
-        const GUIString& aText = *reinterpret_cast<const GUIString*>(a);
-        return aDialog->GetDefaultFont()->GetStringWidth(aText, 0, aText.length());
-    }
+    case Op::ScrollAddLine: reinterpret_cast<ScrollingTextComponent*>(a)->AddLine(*reinterpret_cast<const GUIString*>(b), (unsigned long)(uint32_t)c); return 0;
+    case Op::DefaultFontStringWidth: return aDialog->GetDefaultFont()->GetStringWidth(*reinterpret_cast<const GUIString*>(a), 0, reinterpret_cast<const GUIString*>(a)->length());
     // EELobbyConnectDialog
     case Op::GameIsHost: return reinterpret_cast<EELobbyGame*>(a)->GetIsHost() ? 1 : 0;
     case Op::GameRust: return (intptr_t) reinterpret_cast<EELobbyGame*>(a)->mRust;
@@ -412,12 +383,8 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::DoDialog: return LobbyDoDialog(aDialog);
     case Op::EndDialog: reinterpret_cast<Window*>(a)->EndDialog((int)b, aDialog); return 0;
     case Op::ConnectItemSlot: return reinterpret_cast<ConnectListItem*>(a)->mSlot;
-    case Op::ConnectItemSetImage:
-        reinterpret_cast<ConnectListItem*>(a)->mImage =
-            (b == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(ServerListCtrl_PingFailed_Image)).mPtr;
-        return 0;
-    case Op::ConnectItemNotReady:
-        return reinterpret_cast<ConnectListItem*>(a)->mImage.mPtr != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
+    case Op::ConnectItemSetImage: reinterpret_cast<ConnectListItem*>(a)->mImage = (b == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(ServerListCtrl_PingFailed_Image)).mPtr; return 0;
+    case Op::ConnectItemNotReady: return reinterpret_cast<ConnectListItem*>(a)->mImage.mPtr != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
     // EELobbyFileDialog
     case Op::FindFirst: {
         EELobbyFind* aFind = new EELobbyFind;
@@ -434,21 +401,14 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         aList->InsertString(theName, -1);
         return 0;
     }
-    case Op::FindNext:
-        return PlatFindNext(reinterpret_cast<EELobbyFind*>(a)->mFind, &reinterpret_cast<EELobbyFind*>(a)->mData) == PLAT_FILE_OK;
+    case Op::FindNext: return PlatFindNext(reinterpret_cast<EELobbyFind*>(a)->mFind, &reinterpret_cast<EELobbyFind*>(a)->mData) == PLAT_FILE_OK;
     case Op::FindClose:
         PlatFindClose(reinterpret_cast<EELobbyFind*>(a)->mFind);
         delete reinterpret_cast<EELobbyFind*>(a);
         return 0;
-    case Op::ItemText: {
-        static std::string sText; // the Rust copies it before its next op
-        sText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mText.mData->GetString();
-        return (intptr_t)sText.c_str();
-    }
+    case Op::ItemText: return (intptr_t)(sDlgItemText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mText.mData->GetString()).c_str();
     case Op::LoadSavedGame: return EELobbyLoadSavedGame(reinterpret_cast<const char*>(a)) ? 1 : 0;
-    case Op::FileAskDelete:
-        return LobbyMessageBoxYesNo(EE_LOBBY_STRING(gEELobbyFileDialog_DeleteTitle),
-                                    EE_LOBBY_STRING(gEELobbyFileDialog_DeleteDetails), true);
+    case Op::FileAskDelete: return LobbyMessageBoxYesNo(EE_LOBBY_STRING(gEELobbyFileDialog_DeleteTitle), EE_LOBBY_STRING(gEELobbyFileDialog_DeleteDetails), true);
     case Op::FileDelete: WONFile(reinterpret_cast<const char*>(a)).Delete(true); return 0;
     case Op::EventDoubleClick: return reinterpret_cast<ListItemClickedEvent*>(a)->mDoubleClick ? 1 : 0;
     case Op::EventButton: return reinterpret_cast<ListItemClickedEvent*>(a)->mButton;
@@ -483,13 +443,6 @@ void LobbyRustPopup::HandleComponentEvent(ComponentEvent* inEvent)
     this->PCall(EeWonLobbyPopupCall::RawEvent, (intptr_t)inEvent, inEvent->mType);
 }
 
-static intptr_t Held(RefCount* inObject)
-{
-    if (inObject != NULL)
-        inObject->AddRef();
-    return (intptr_t)inObject;
-}
-
 static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
     typedef EeWonLobbyPopupOp Op;
@@ -510,12 +463,7 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::MenuTitleClient: aMenu->AddItem(reinterpret_cast<LobbyClient*>(b)->GetName(), 0)->mSelectable = false; return 0;
     case Op::MenuTitleGame: aMenu->AddItem(reinterpret_cast<LobbyGame*>(b)->GetName(), 0)->mSelectable = false; return 0;
     case Op::MenuTitleFriend: aMenu->AddItem(reinterpret_cast<LobbyFriend*>(b)->GetName(), 0)->mSelectable = false; return 0;
-    case Op::MenuTitleNumber: {
-        char aBuffer[256];
-        sprintf(aBuffer, "%d", (int)b);
-        aMenu->AddItem(GUIString(aBuffer), 0)->mSelectable = false;
-        return 0;
-    }
+    case Op::MenuTitleNumber: aMenu->AddItem(GUIString(std::to_string((int)b).c_str()), 0)->mSelectable = false; return 0;
     case Op::MenuAddRes: aMenu->AddItem(gLobbyResources[b].mString, NULL, NULL, (int)c); return 0;
     case Op::MenuAddSeparator: aMenu->AddSeperator(); return 0;
     case Op::Config: return (intptr_t)GetLobbyConfig();
@@ -523,13 +471,9 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::EventItem: return (intptr_t)anEvent->mItem.get();
     case Op::EventButton: return anEvent->mButton;
     case Op::ItemMenuId: return reinterpret_cast<MenuItem*>(a)->mMenuId;
-    case Op::DeliverClient:
-        aPopup->DeliverEvent(ClientActionEvent((int)a, (int)c, reinterpret_cast<LobbyClient*>(b)), false);
-        return 0;
+    case Op::DeliverClient: aPopup->DeliverEvent(ClientActionEvent((int)a, (int)c, reinterpret_cast<LobbyClient*>(b)), false); return 0;
     case Op::DeliverGame: aPopup->DeliverEvent(GameActionEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;
-    case Op::DeliverFriend:
-        aPopup->DeliverEvent(FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false);
-        return 0;
+    case Op::DeliverFriend: aPopup->DeliverEvent(FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false); return 0;
     case Op::ClosePopup: aPopup->GetRoot()->ClosePopup(aPopup); return 0;
     }
     return 0;

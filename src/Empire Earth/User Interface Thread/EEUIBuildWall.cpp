@@ -17,28 +17,12 @@
 #include "ee/EEUIBuildGate.h"
 #include "ee/EEARust.h"
 
-// Starts wall placement for a player: no points yet, the wall class's media loaded
-void EEUIBuildWall::Initialize(long inPlayer)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayer(inPlayer);
-    this->mStart.SetX(-99.0f);
-    this->mStart.SetY(-99.0f);
-    this->mEnd.SetX(-99.0f);
-    this->mEnd.SetY(-99.0f);
-    this->mState = 0;
-    EETechTreeNode* theNode = thePlayer->mTechnologies->Get(this->mTechnology);
-    thePlayer->SetUnitClassMedia(theNode->mData->mUnitClass, 0x7f);
-    this->mPlayer = inPlayer;
-}
-
-// Ends wall placement: unlocks the cursor and unloads the wall class's media
-void EEUIBuildWall::Terminate()
-{
-    EEPlayer* thePlayer = gWorld.GetPlayer(this->mPlayer);
-    gUIManager->GetMainGameForm()->mIsCursorLocked = false;
-    EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
-    thePlayer->UnloadUnitClassMedia(theNode->mData->mUnitClass);
-}
+// the placements' world calls (placement_ffi.rs: Initialize, Terminate, the gate's ClearGhostUnits)
+extern "C" void ee_screenscpp_pl_wall_load_media(int32_t inPlayer, int32_t inTechnology)
+{ gWorld.GetPlayer(inPlayer)->SetUnitClassMedia(gWorld.GetPlayer(inPlayer)->mTechnologies->Get(inTechnology)->mData->mUnitClass, 0x7f); }
+extern "C" void ee_screenscpp_pl_wall_unload_media(int32_t inPlayer, int32_t inTechnology)
+{ gWorld.GetPlayer(inPlayer)->UnloadUnitClassMedia(gWorld.GetPlayer(inPlayer)->GetTechTree()->Get(inTechnology)->mData->mUnitClass); }
+extern "C" void ee_screenscpp_pl_unlock_cursor() { gUIManager->GetMainGameForm()->mIsCursorLocked = false; }
 
 void EEUIBuildWall::Cancel()
 {

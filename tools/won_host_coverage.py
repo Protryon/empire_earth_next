@@ -93,7 +93,9 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "modelobj.rs", "route_record_op_in"),
                (RS / "ee_won_lobby" / "src" / "routelogic.rs", "conn_request"),
                (RS / "ee_won_lobby" / "src" / "persistobj.rs", "route_op"),
-               (RS / "ee_won_lobby" / "src" / "netops.rs", "route_op")],
+               (RS / "ee_won_lobby" / "src" / "netops.rs", "route_op"),
+               # the cases whose statements are Rust (R6 WON round 32)
+               (RS / "ee_won_lobby" / "src" / "netlogicops.rs", "route_op")],
          allowed={}),
     dict(enum="EeWonLobbyDlgOp", header="won_lobby/lobbydlg.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "EELobbyGameHost.cpp", LOBBY / "EELobbyGlueHost.cpp"],
@@ -117,7 +119,8 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "lobbyops.rs", "lobby_op")], allowed={}),
     dict(enum="EeWonLogicOp", header="won_lobby/logics.h",
          hosts=[LOBBY / "PingLogic.cpp", LOBBY / "AccountLogic.cpp", LOBBY / "InitLogic.cpp"],
-         rust=[], allowed={}),
+         # the cases whose statements are Rust (R6 WON round 32)
+         rust=[(RS / "ee_won_lobby" / "src" / "netlogicops.rs", "logic_op")], allowed={}),
     dict(enum="EeWonEeGameOp", header="won_lobby/eegame.h",
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "eegame_op")], allowed={}),
@@ -126,12 +129,49 @@ CHECKS = [
          hosts=[LOBBY / "EELobbyGameHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "netops.rs", "xfer_op")], allowed={}),
     dict(enum="EeWonEeGlueOp", header="won_lobby/eeglue.h",
-         hosts=[LOBBY / "EELobbyGlueHost.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "EELobbyGlueHost.cpp"],
+         # the multi-statement cases composed in Rust over one-statement cases (R6 WON round 32)
+         rust=[(RS / "ee_won_lobby" / "src" / "gluesplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
          hosts=[LOBBY / "DialogLogic.cpp"], rust=[], allowed={}),
+    # LobbyConfig::PostParse (R6 WON round 32: lobbycfg.rs; LobbyConfig.cpp's host)
+    dict(enum="EeWonLobbyCfgOp", header="won_lobby/lobbycfg.h",
+         hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),
+    # the lobby's network entry points (R6 WON round 32: netdisp.rs; LobbyStagingSupport.cpp's host)
+    dict(enum="EeWonNetDispOp", header="won_lobby/netdisp.h",
+         hosts=[LOBBY / "LobbyStagingSupport.cpp"], rust=[], allowed={}),
+    # running the lobby (R6 WON round 32: lobbyrun.rs; LobbyRunState.cpp's host)
+    dict(enum="EeWonRunOp", header="won_lobby/lobbyrun.h",
+         hosts=[LOBBY / "LobbyRunState.cpp"], rust=[], allowed={}),
+    # the lobby's root screen (R6 WON round 32: rootscreen.rs; RootScreen.cpp's host)
+    dict(enum="EeWonRootScreenOp", header="won_lobby/rootscreen.h",
+         hosts=[LOBBY / "RootScreen.cpp"], rust=[], allowed={}),
     # the game's WON front end (R6 WON round 31: wonnet.rs; its host's statements are ee/EEWonNetHost.inl)
     dict(enum="EeWonNetOp", header="won_lobby/wonnet.h",
          hosts=[ROOT / "include" / "ee" / "EEWonNetHost.inl"], rust=[], allowed={}),
+    # the WONGUI component hosts' one-statement cases (R6 WON round 32: guisplit.rs composes them; checked from the
+    # round's first value on: the older ops are answered by the components' Rust objects and hosts this tool does
+    # not follow)
+    dict(enum="EeWonGuiOp", header="won_gui/guihost.h", since="HostTextSink",
+         hosts=sorted(GUI.glob("*.cpp")),
+         rust=[(RS / "ee_won_gui" / "src" / "guisplit.rs", fn)
+               for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")],
+         allowed={}),
+    # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
+    dict(enum="EeWonFrontOp", header="won_lobby/wonfront.h",
+         hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
+    dict(enum="EeWonFrontEvent", header="won_lobby/wonfront.h",
+         hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
+    # R6 WON round 33 (lobby): WONLobbyPrv (lobbyprv.rs), the model's buffers (modelbuf.rs), ChatCtrl's link
+    # (chatlink.rs), LobbyConfig's constructor (lobbyconf.rs), the controls' config readers (lobbycfgrd.rs: four
+    # units' hosts, the reads in LobbyNetCtrlHost.cpp's)
+    dict(enum="EeWonLobbyPrvOp", header="won_lobby/lobbyprv.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonModelBufOp", header="won_lobby/modelbuf.h", hosts=[LOBBY / "LobbyModelHost.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonChatLinkOp", header="won_lobby/chatlink.h", hosts=[LOBBY / "LobbyNetCtrlHost.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonLobbyConfOp", header="won_lobby/lobbyconf.h", hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonLobbyCfgRdOp", header="won_lobby/lobbycfgrd.h",
+         hosts=[LOBBY / f for f in ("LobbyNetCtrlHost.cpp", "LobbyCtrlHost.cpp", "CrossPromotionButton.cpp", "CreditsDialog.cpp")],
+         rust=[], allowed={}),
 ]
 
 
@@ -192,6 +232,8 @@ def main():
             print(f"{c['enum']}: not in include/rust/{c['header']}")
             bad += 1
             continue
+        if "since" in c:
+            values = values[values.index(c["since"]):]
         cases = host_cases(c["hosts"], c.get("mentions", False))
         rust = set()
         for path, fn, *flag in c["rust"]:

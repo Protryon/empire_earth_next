@@ -178,7 +178,7 @@ static intptr_t TextOut(long inId, intptr_t inSink)
 static bool KeyValid()
 {
     CDKey theKey(kWonProductName);
-    return theKey.LoadFromRegistry() && theKey.mValid;
+    return theKey.LoadFromRegistry() && theKey.IsValid();
 }
 
 #include "ee/EEWonNetHost.inl"

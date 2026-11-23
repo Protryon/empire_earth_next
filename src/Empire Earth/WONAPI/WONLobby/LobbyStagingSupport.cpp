@@ -25,57 +25,56 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONCRC16.h"
 #include "ee/wonapi/EELobbySound.h"
+#include "rust/won_lobby/netdisp.h"
 namespace WONAPI {
-// Returns the network logic for a game type: LAN for LAN and direct-connect games, routing for Internet
-NetLogic* LobbyGetNetLogic(LobbyGameType type)
+// the network entry points' statements (netdisp.rs composes them, R6 WON round 32)
+static intptr_t NetHost(EeWonNetDispOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
-    if(gLobbyData.get()==NULL) return NULL;
-    switch(static_cast<int>(type)) {
-    case 1: case 3: return gLobbyData->mLanLogic.get();
-    case 2: return gLobbyData->mRoutingLogic.get();
-    default: return NULL;
+    typedef EeWonNetDispOp Op;
+    NetLogic* logic = reinterpret_cast<NetLogic*>(a);
+    switch (inOp) {
+    case Op::HasData: return gLobbyData.get() != NULL;
+    case Op::LanLogic: return (intptr_t) static_cast<NetLogic*>(gLobbyData->mLanLogic.get());
+    case Op::RoutingLogic: return (intptr_t) static_cast<NetLogic*>(gLobbyData->mRoutingLogic.get());
+    case Op::CurGameType: return (intptr_t)gLobbyData->mCurGameType;
+    case Op::SetCurGameType: gLobbyData->mCurGameType = static_cast<LobbyGameType>(a); return 0;
+    case Op::GameType: return (intptr_t)reinterpret_cast<LobbyGame*>(a)->GetGameType();
+    case Op::HostGame: return logic->HostGame(reinterpret_cast<LobbyGame*>(b)) ? 1 : 0;
+    case Op::JoinGame: return logic->JoinGame(reinterpret_cast<LobbyGame*>(b)) ? 1 : 0;
+    case Op::MyClient: return (intptr_t)logic->GetMyClient();
+    case Op::OnInternetScreen: return LobbyOnInternetScreen() ? 1 : 0;
+    case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;
+    case Op::RoutingLogout: gLobbyData->mRoutingLogic->Logout(); return 0;
+    case Op::LanLogout: gLobbyData->mLanLogic->Logout(); return 0;
+    case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
+    case Op::MyGame: return (intptr_t)GetMyLobbyGame();
+    case Op::AdvertiseGame: logic->AdvertiseGame(reinterpret_cast<LobbyGame*>(b)); return 0;
+    case Op::MyLobbyClient: return (intptr_t)GetMyLobbyClient();
+    case Op::ClientPlayer: return (intptr_t)reinterpret_cast<LobbyClient*>(a)->GetPlayer().get();
+    case Op::SendToCaptain: logic->SendToCaptain(reinterpret_cast<const ByteBuffer*>(b)); return 0;
+    case Op::BroadcastToGame: logic->BroadcastToGame(reinterpret_cast<const ByteBuffer*>(b)); return 0;
+    case Op::SendToClient: logic->SendToClient(reinterpret_cast<LobbyClient*>(b), reinterpret_cast<const ByteBuffer*>(c)); return 0;
+    case Op::RemoveGameAdvertisement: logic->RemoveGameAdvertisement(reinterpret_cast<LobbyGame*>(b)); return 0;
+    case Op::LeaveGame: logic->LeaveGame(reinterpret_cast<LobbyGame*>(b)); return 0;
+    case Op::KickClient: logic->KickClient(reinterpret_cast<LobbyClient*>(b), c != 0); return 0;
+    case Op::SetGameInProgress: logic->SetGameInProgress(b != 0); return 0;
+    case Op::Suspend: logic->Suspend(); return 0;
+    case Op::Resume: logic->Resume(); return 0;
     }
+    return 0;
 }
+// Returns the network logic for a game type: LAN for LAN and direct-connect games, routing for Internet
+NetLogic* LobbyGetNetLogic(LobbyGameType type) { return (NetLogic*)ee_won_netdisp_call(NetHost, EeWonNetDispCall::NetLogic, (intptr_t)type, 0); }
 // Returns the network logic for the current game type
-NetLogic* LobbyGetCurNetLogic()
-{
-    if(gLobbyData.get()==NULL) return NULL;
-    return LobbyGetNetLogic(gLobbyData->mCurGameType);
-}
+NetLogic* LobbyGetCurNetLogic() { return (NetLogic*)ee_won_netdisp_call(NetHost, EeWonNetDispCall::CurNetLogic, 0, 0); }
 // Makes the game's type current and hosts it on that network; returns whether hosting succeeded
-bool LobbyNetHostGame(LobbyGame* game)
-{
-    if(gLobbyData.get()==NULL)
-        return false;
-    gLobbyData->mCurGameType=static_cast<LobbyGameType>(game->GetGameType());
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) return logic->HostGame(game);
-    return false;
-}
+bool LobbyNetHostGame(LobbyGame* game) { return ee_won_netdisp_call(NetHost, EeWonNetDispCall::HostGame, (intptr_t)game, 0) != 0; }
 // Makes the game's type current and joins it on that network; returns whether joining succeeded
-bool LobbyNetJoinGame(LobbyGame* game)
-{
-    if(gLobbyData.get()==NULL)
-        return false;
-    gLobbyData->mCurGameType=static_cast<LobbyGameType>(game->GetGameType());
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) return logic->JoinGame(game);
-    return false;
-}
+bool LobbyNetJoinGame(LobbyGame* game) { return ee_won_netdisp_call(NetHost, EeWonNetDispCall::JoinGame, (intptr_t)game, 0) != 0; }
 // Returns our own client on the current network, or NULL
-LobbyClient* LobbyGetNetMyClient()
-{
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic==NULL) return NULL;
-    return logic->GetMyClient();
-}
+LobbyClient* LobbyGetNetMyClient() { return (LobbyClient*)ee_won_netdisp_call(NetHost, EeWonNetDispCall::MyClient, 0, 0); }
 // Logs out of the Internet lobby or the LAN, whichever screen is showing
-void LobbyNetLogout()
-{
-    if(gLobbyData.get()==NULL) return;
-    if(LobbyOnInternetScreen()) gLobbyData->mRoutingLogic->Logout();
-    else if(LobbyOnLanScreen()) gLobbyData->mLanLogic->Logout();
-}
+void LobbyNetLogout() { ee_won_netdisp_call(NetHost, EeWonNetDispCall::Logout, 0, 0); }
 // Joins a game through the staging logic
 void LobbyJoinGame(LobbyGame* game) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->JoinGame(game); }
 // Hosts a new game through the staging logic
@@ -102,13 +101,7 @@ void LobbyEnterInternetScreen(bool joinDefault) { if(gLobbyData.get()!=NULL) gLo
 
 namespace WONAPI {
 // Host: advertises our game on the current network
-void LobbyNetAdvertiseGame()
-{
-    if(!LobbyIAmCaptain()) return;
-    NetLogic* logic=LobbyGetCurNetLogic();
-    LobbyGame* game=GetMyLobbyGame();
-    if(logic!=NULL && game!=NULL) logic->AdvertiseGame(game);
-}
+void LobbyNetAdvertiseGame() { ee_won_netdisp_call(NetHost, EeWonNetDispCall::AdvertiseGame, 0, 0); }
 // Clears every player's ready flag in our game
 void LobbyResetReadyFlags()
 {
@@ -169,11 +162,7 @@ bool LobbyIsFirewallTestDone() { return gLobbyData.get()!=NULL?gLobbyData->mFire
 namespace WONAPI {
 // (SDK LobbyStaging::GetMyPlayer)
 // Returns our own player in the current game, or NULL
-LobbyPlayer* GetMyLobbyPlayer()
-{
-    LobbyClient* client=GetMyLobbyClient();
-    return client!=NULL ? client->GetPlayer().get() : NULL;
-}
+LobbyPlayer* GetMyLobbyPlayer() { return (LobbyPlayer*)ee_won_netdisp_call(NetHost, EeWonNetDispCall::MyPlayer, 0, 0); }
 // (SDK LobbyStaging::IAmReady)
 // Returns whether our own player is ready
 bool LobbyIAmReady()
@@ -182,59 +171,23 @@ bool LobbyIAmReady()
 }
 // (SDK LobbyStagingPrv network dispatch)
 // Sends a message to the host over the current network
-void LobbyNetSendToCaptain(const ByteBuffer* message)
-{
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) logic->SendToCaptain(message);
-}
+void LobbyNetSendToCaptain(const ByteBuffer* message) { ee_won_netdisp_call(NetHost, EeWonNetDispCall::SendToCaptain, (intptr_t)message, 0); }
 // Sends a message to everyone in the game over the current network
-void LobbyNetBroadcastToGame(const ByteBuffer* message)
-{
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) logic->BroadcastToGame(message);
-}
+void LobbyNetBroadcastToGame(const ByteBuffer* message) { ee_won_netdisp_call(NetHost, EeWonNetDispCall::BroadcastToGame, (intptr_t)message, 0); }
 // Sends a message to one client over the current network
-void LobbyNetSendToClient(LobbyClient* client,const ByteBuffer* message)
-{
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) logic->SendToClient(client,message);
-}
+void LobbyNetSendToClient(LobbyClient* client,const ByteBuffer* message) { ee_won_netdisp_call(NetHost, EeWonNetDispCall::SendToClient, (intptr_t)client, (intptr_t)message); }
 // Withdraws a game's advertisement on its own network
-void LobbyNetRemoveGameAdvertisement(LobbyGame* game)
-{
-    NetLogic* logic=LobbyGetNetLogic(static_cast<LobbyGameType>(game->GetGameType()));
-    if(logic!=NULL) logic->RemoveGameAdvertisement(game);
-}
+void LobbyNetRemoveGameAdvertisement(LobbyGame* game) { ee_won_netdisp_call(NetHost, EeWonNetDispCall::RemoveGameAdvertisement, (intptr_t)game, 0); }
 // Leaves a game on its own network
-void LobbyNetLeaveGame(LobbyGame* game)
-{
-    NetLogic* logic=LobbyGetNetLogic(static_cast<LobbyGameType>(game->GetGameType()));
-    if(logic!=NULL) logic->LeaveGame(game);
-}
+void LobbyNetLeaveGame(LobbyGame* game) { ee_won_netdisp_call(NetHost, EeWonNetDispCall::LeaveGame, (intptr_t)game, 0); }
 // Kicks or bans a client over the current network
-void LobbyNetKickClient(LobbyClient* client,bool inBan)
-{
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) logic->KickClient(client,inBan);
-}
+void LobbyNetKickClient(LobbyClient* client,bool inBan) { ee_won_netdisp_call(NetHost, EeWonNetDispCall::KickClient, (intptr_t)client, inBan); }
 // Tells the current network whether our game is in progress
-void LobbyNetSetGameInProgress(bool inClose)
-{
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) logic->SetGameInProgress(inClose);
-}
+void LobbyNetSetGameInProgress(bool inClose) { ee_won_netdisp_call(NetHost, EeWonNetDispCall::SetGameInProgress, inClose, 0); }
 // Suspends the current network logic
-void LobbyNetSuspend()
-{
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) logic->Suspend();
-}
+void LobbyNetSuspend() { ee_won_netdisp_call(NetHost, EeWonNetDispCall::Suspend, 0, 0); }
 // Resumes the current network logic
-void LobbyNetResume()
-{
-    NetLogic* logic=LobbyGetCurNetLogic();
-    if(logic!=NULL) logic->Resume();
-}
+void LobbyNetResume() { ee_won_netdisp_call(NetHost, EeWonNetDispCall::Resume, 0, 0); }
 // (SDK LobbyStagingPrv::NotifyPingChange)
 // Reports our new ping to the host of a game we are in
 void LobbyNotifyPingChange(LobbyGame* game)

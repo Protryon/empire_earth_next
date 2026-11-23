@@ -246,7 +246,7 @@ int main(int argc, char** argv)
     FSPath* thePath = new FSPath;
     FSFileSpec theDirectory;   // the startup volume and directory: the Data folder
     thePath->AddDirectory(theDirectory, true);
-    StoreRasterizer* theRasterizer = new StoreRasterizer;
+    GERasterizer* theRasterizer = new GERasterizer(UString("storegate"));   // no device (LLE round 12)
     theRasterizer->Activate();
     StoreScreen* theScreen = new StoreScreen;
 

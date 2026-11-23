@@ -890,6 +890,212 @@ pub enum EeWonGuiOp {
     SegSetLineBreak,
     /// `AddSegment(Seg(a))`.
     AddSegmentOf,
+    /// the host's text (a component op's local GUIString) into the take sink `a`.
+    HostTextSink = 800,
+    /// `sHostText = GUIString()` (the local's end).
+    HostTextClear,
+    /// `sHostText = UnitsText(a, b)`.
+    HostTextUnits,
+    /// `Seg(a)->mFont->GetStringWidth(Seg(a)->mText)`.
+    SegFontStringWidth,
+    /// `Seg(a)->mFont->GetHeight()`.
+    SegFontHeight,
+    /// `Seg(a)->mFont->GetAscent()`.
+    SegFontAscent,
+    /// the draw operation `b` on the Graphics `a` with the segment `c`'s font and text in the slots.
+    TextDrawSeg,
+    /// `mInputFilter != NULL` (0 or 1).
+    InputHasFilter = 820,
+    /// `mInputFilter(this, sHostText)` (0 or 1).
+    InputFilterHostText,
+    /// `IsDisabled()` (0 or 1).
+    InputDisabled,
+    /// `mUseDisabledColors` (0 or 1).
+    InputUseDisabledColors,
+    /// `mIcon.get() != NULL` (0 or 1).
+    InputHasIcon,
+    /// `HasFocus()` (0 or 1).
+    InputHasFocus,
+    /// `(int)mTextColor`.
+    InputTextColor,
+    /// `mDisabledTextColor`.
+    InputDisabledTextColor,
+    /// `mIcon->GetHeight()`.
+    InputIconHeight,
+    /// `*(EeWonSelColor*)a = WONDrawSelOf(mSelColor)`.
+    InputSelColor,
+    /// the draw operation `b` on the Graphics `a` with the icon, the font and the text in the slots.
+    InputDrawSlots,
+    /// `mBackground.Paint(g, 0, 0, o.c, o.d, o.e, 0)` (`a` the Graphics, `b` the draw operation).
+    InputPaintBack,
+    /// `mDisabledBackground.Paint(g, 0, 0, o.c, o.d, o.e, 0)`.
+    InputPaintDisabledBack,
+    /// the draw operation `b` on the Graphics `a` with the wrapped text in the slots (the label).
+    LabelDrawWrapped = 840,
+    /// `new Component` (unheld).
+    NewComponent = 850,
+    /// `((Container*)a)->Fn2F6140(b, 3, a, 0, 0, 0, 0, 0)` (the splitter's drag handle laid over its container).
+    ChildLayoutDrag,
+    /// `((Container*)a)->AddChildEx(b, 0)`.
+    ChildAddEx,
+    /// `Comp(a)->mParent`.
+    ParentOf,
+    /// `dynamic_cast<MultiListHeader*>((Container*)a)`.
+    AsHeader,
+    /// `((MultiListHeader*)a)->DrawSortArrow()` (0 or 1).
+    HeaderDrawsArrow,
+    /// `((MultiListHeader*)a)->GetSortType(((MultiListHeader*)a)->GetColumnIndex(Comp(b)))`.
+    HeaderSortTypeOf,
+    /// `mItemToolTip.get() != NULL` (0 or 1).
+    TipExists = 860,
+    /// `mItemToolTip->EndTip()`.
+    TipEndCall,
+    /// `new ScrollAreaViewport(this)` (unheld).
+    NewViewport,
+    /// `GetViewport()->AddChild((ScrollAreaViewport*)a)`.
+    ViewportAddChild,
+    /// `new TreeItem` (unheld).
+    NewTreeItemRaw,
+    // the window's (winobj.rs ee_won_win_event, ee_won_win_get_font, ee_won_win_create)
+    /// `((InputEvent*)a)->mEventType`.
+    WinEvType = 900,
+    /// `static_cast<KeyEvent*>((InputEvent*)a)->mKeyMod`.
+    WinKeyEvKeyMod,
+    /// `static_cast<KeyEvent*>((InputEvent*)a)->mKey`.
+    WinKeyEvKey,
+    /// `static_cast<MouseEvent*>((InputEvent*)a)->mx`.
+    WinMouseEvX,
+    /// `static_cast<MouseEvent*>((InputEvent*)a)->my`.
+    WinMouseEvY,
+    /// `static_cast<MouseEvent*>((InputEvent*)a)->mKeyMod`.
+    WinMouseEvKeyMod,
+    /// `static_cast<MouseEvent*>((InputEvent*)a)->mButtonOrAmount`.
+    WinMouseEvButton,
+    /// `static_cast<SizeEvent*>((InputEvent*)a)->mWidth`.
+    WinSizeEvWidth,
+    /// `static_cast<SizeEvent*>((InputEvent*)a)->mHeight`.
+    WinSizeEvHeight,
+    /// `sHostFont = PlatformGetFont(*(const FontDescriptor*)a)` (the original's local SmartPtr).
+    WinPlatformFont,
+    /// `sHostFont.get()`.
+    WinHostFont,
+    /// `((Font*)a)->AddRef()`.
+    WinFontHold,
+    /// `sHostFont = SmartPtr<Font>()` (the local's end).
+    WinHostFontClear,
+    /// `mIcon.get() != NULL` (0 or 1).
+    WinHasIcon,
+    /// `mIcon = mManager->mDefaultWindowIcon.get()`.
+    WinIconDefault,
+    // the window manager's (guisplit.rs wm_op)
+    /// `static_cast<MouseEvent*>((WindowEventBase*)a)->mx`.
+    WmMouseEvX = 930,
+    /// `static_cast<MouseEvent*>((WindowEventBase*)a)->my`.
+    WmMouseEvY,
+    /// `static_cast<MouseEvent*>((WindowEventBase*)a)->mx = b`.
+    WmMouseEvSetX,
+    /// `static_cast<MouseEvent*>((WindowEventBase*)a)->my = b`.
+    WmMouseEvSetY,
+    /// `((Font*)a)->AddRef()`.
+    WmFontHold,
+    /// `((Font*)a)->Release()`.
+    WmFontRelease,
+    /// `((RawImage*)a)->AddRef()`.
+    WmRawHold,
+    /// `((RawImage*)a)->Release()`.
+    WmRawRelease,
+    /// `((Image*)a)->AddRef()`.
+    WmImageHold,
+    /// `((Image*)a)->Release()`.
+    WmImageRelease,
+    /// `sHostImage = mImageDecoder.Decode((DisplayContext*)a, the path b of c bytes)` (the original's local SmartPtr).
+    WmDecodeKeep,
+    /// `sHostImage.get()`.
+    WmHostImage,
+    /// `sHostImage = SmartPtr<NativeImage>()`.
+    WmHostImageClear,
+    /// `sHostRaw = mImageDecoder.DecodeRaw(the path a of b bytes)`.
+    WmDecodeRawKeep,
+    /// `sHostRaw.get()`.
+    WmHostRaw,
+    /// `sHostRaw = SmartPtr<RawImage>()`.
+    WmHostRawClear,
+    /// `mImageDecoder.GetImageAttributes(the path a of b bytes, sHostAttr)` (0 or 1).
+    WmImageAttributes,
+    /// `new Image(ee_won_image_new_delay(WONImageHost, a, b, sHostAttr.mWidth, sHostAttr.mHeight))` (unheld).
+    WmNewDelayImage,
+    /// `mColorScheme->SetStandardColor(a, b)`.
+    WmSetStandardColor,
+    // ---- the statements of the cases R6 WON round 33 composes in guisplit.rs (the LAN game reaches none of them;
+    // won_guisplit33_test checks them against the original cases)
+    /// `sHostText = Clipboard::Get()` (ClipboardTake's local).
+    HostTextClipboard = 2000,
+    /// TextArea: `mLinkParam = ((TextSegment*)a)->GetLinkParam()`.
+    TextSetLinkParam,
+    /// TextArea: `DeliverEvent(new TextLinkActivatedEvent(this, (TextSegment*)a), false)`.
+    TextDeliverLinkEvent,
+    /// ListArea: `GetRoot()` (the window).
+    ListRoot,
+    /// `((Window*)a)->GetMouseX()`.
+    WinMouseX,
+    /// `((Window*)a)->GetMouseY()`.
+    WinMouseY,
+    /// ListArea: `mParent`.
+    ListParent,
+    /// `((Container*)a)->RootToChild(((int*)b)[0], ((int*)b)[1])`.
+    ParentRootToChild,
+    /// ListArea: `Contains(a, b)` (0 or 1).
+    ListContains,
+    /// ListArea: `mItemToolTip = new ListAreaToolTip(this)`.
+    TipNew,
+    /// ListArea: `mItemToolTip->DoTip((ListItem*)a)`.
+    TipDo,
+    /// ListArea: `sHostParams = PopupParams((PopupMenu*)a, b, this, c, d)` (QueueSubMenu's local).
+    ParamsMake,
+    /// `sHostParams.mAvoidRect = WONRectangle(the EeWonRect4 at a)`.
+    ParamsAvoid,
+    /// ListArea: `GetRoot()->QueueEvent(new DoPopupEvent(sHostParams))`.
+    QueueDoPopup,
+    /// ListArea: `LocalToRoot(((int*)a)[0], ((int*)a)[1])`.
+    ListLocalToRoot,
+    /// `((Window*)a)->QueueEvent(new MouseEvent(InputEvent_MouseUp, b, c, ((Window*)a)->GetKeyMod(), d))`.
+    WinQueueMouseUp,
+    /// `CreateNativeWindow()` (DoPopup's popup window, unheld).
+    WmNativeWindowNew,
+    /// `((Window*)a)->SetOneComponentWindow(true)`.
+    WinSetOneComponent,
+    /// `((Window*)a)->SetStyle(b)`.
+    WinSetStyle,
+    /// `((Window*)a)->SetParent((Window*)b)`.
+    WinSetParent,
+    /// `((Window*)a)->Create(*(const WONRectangle*)b)`.
+    WinCreate,
+    /// `sHostFont = GetDefaultWindow()->GetFont(FontDescriptor("Tahoma", 0, 8))` (the local SmartPtr).
+    WmFontKeep,
+    /// `sHostFont.get()`.
+    WmHostFont,
+    /// `sHostFont = SmartPtr<Font>()`.
+    WmHostFontClear,
+    /// `GetScreenResolutionHook(*(int*)a, *(int*)b)`.
+    WmScreenResGet,
+    /// `SetScreenResolutionHook(a, b)` (0 or 1).
+    WmScreenResSet,
+    /// `((SizeEvent*)a)->mx`.
+    WmSizeEvX,
+    /// `((SizeEvent*)a)->my`.
+    WmSizeEvY,
+    /// `((SizeEvent*)a)->mWidth`.
+    WmSizeEvW,
+    /// `((SizeEvent*)a)->mHeight`.
+    WmSizeEvH,
+    /// `((SizeEvent*)a)->mx = b`.
+    WmSizeEvSetX,
+    /// `((SizeEvent*)a)->my = b`.
+    WmSizeEvSetY,
+    /// `((SizeEvent*)a)->mWidth = b`.
+    WmSizeEvSetW,
+    /// `((SizeEvent*)a)->mHeight = b`.
+    WmSizeEvSetH,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).

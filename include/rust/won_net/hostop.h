@@ -665,6 +665,9 @@ struct EeWonAsyncOpHooks {
   bool (*callback_hook)(void *op, void *child, int32_t param);
 };
 
+/// A logic's `RemoveTrackedOp(op)`: whether the op was tracked (and is not any more).
+using EeWonRemoveTrackedFn = bool(*)(void *logic, void *op);
+
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
 struct EeWonThreadBody {
@@ -797,6 +800,16 @@ void ee_won_hostop_set(const EeWonHostOp *op,
                        size_t len,
                        const uint8_t *addr,
                        void *obj);
+
+/// Two object setters in order (R6 WON round 33: GetCertOp's constructor's server and auth contexts).
+///
+/// # Safety
+/// As `ee_won_hostop_set`.
+void ee_won_hostop_set_two(const EeWonHostOp *op,
+                           int32_t which1,
+                           void *obj1,
+                           int32_t which2,
+                           void *obj2);
 
 /// The members, one line (the drivers' form).
 ///
@@ -1020,6 +1033,17 @@ void ee_won_completion_run(const EeWonCompletion *c, void *op);
 /// `c` came from [`EeWonCompletion::make`] (or is null), not used after.
 void ee_won_completion_free(EeWonCompletion *c);
 
+/// `LogicCompletion<T>::Run`'s decision (R6 WON round 33): the callback runs unless the logic was killed or, with
+/// `check_tracker`, the op was not tracked by it (`remove` untracks it; not called otherwise).
+///
+/// # Safety
+/// `remove` is valid with `logic` and `op`.
+bool ee_won_logic_completion_runs(bool killed,
+                                  bool check_tracker,
+                                  EeWonRemoveTrackedFn remove,
+                                  void *logic,
+                                  void *op);
+
 EeWonThread *ee_won_thread_new(EeWonThreadBody body);
 
 /// # Safety
@@ -1065,6 +1089,14 @@ bool ee_won_thread_in_this_thread(const EeWonThread *t);
 /// # Safety
 /// `t` is valid.
 void ee_won_thread_wait_for_stop(const EeWonThread *t);
+
+/// `ThreadBase::Stop` (R6 WON round 33): marks the thread stopped, signals it and, when asked, waits for it; nothing
+/// when it was stopped (ThreadBase's `Signal` has no override).
+///
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_stop(const EeWonThread *t,
+                        bool wait_for_stop);
 
 /// # Safety
 /// `t` is valid.

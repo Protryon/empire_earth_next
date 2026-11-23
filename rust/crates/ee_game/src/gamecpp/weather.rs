@@ -484,6 +484,22 @@ fn em<'a, T>(op: O, m: P) -> &'a mut T {
     unsafe { &mut *rec(op, m) }
 }
 
+/// `EEEnvironmentManager()`'s members (game core lane round 11, lane B): disabled, no storms, a calm wind, a
+/// weather step every 5 s, at most three storms at a time.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_env_init(manager: *mut c_void) {
+    let m = manager as P;
+    *em::<f32>(O::DeWind, m) = 1.25e-06f32;
+    *em::<f32>(O::DeWindTarget, m) = 1.25e-06f32;
+    *em::<f32>(O::DeWindRate, m) = 1.3333333e-06f32;
+    *em::<c_ulong>(O::DeNextStep, m) = 0;
+    *em::<bool>(O::DeEnabled, m) = false;
+    *em::<c_long>(O::DeInterval, m) = 5000;
+    *em::<c_long>(O::DeMaxStorms, m) = 3;
+    *em::<f32>(O::EbEnvF40, m) = 0.25;
+    *em::<f32>(O::EbEnvF44, m) = 0.75;
+}
+
 fn storms(m: P) -> i64 {
     h(O::DeStormCount, m, &[])
 }

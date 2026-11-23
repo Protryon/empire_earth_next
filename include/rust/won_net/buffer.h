@@ -139,6 +139,17 @@ void ee_won_writer_append_utf16le(EeWonWriteBuffer *w,
                                   unsigned long length,
                                   uint8_t size);
 
+/// `AppendWString` of `count` `wchar_t`s of `wchar_size` bytes (R6 WON round 33: the conversion to UTF-16, WONBuffer.h's
+/// WideAppendUtf16LE, is here): a unit count field, then the little-endian units.
+///
+/// # Safety
+/// As `ee_won_writer_append`; `wide` holds `count` characters.
+void ee_won_writer_append_wide(EeWonWriteBuffer *w,
+                               const void *wide,
+                               uint32_t wchar_size,
+                               size_t count,
+                               uint8_t size);
+
 /// `SetBytes` (and `SetByte`, `SetShort`).
 ///
 /// # Safety

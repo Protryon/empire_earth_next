@@ -192,9 +192,6 @@ struct UIComboBox::Rust {
     static intptr_t Op(void* inCombo, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t cc, intptr_t d, float* f)
     {
         UIComboBox* c = static_cast<UIComboBox*>(inCombo);
-        intptr_t r = 0;
-        if (UIObjHost::Base(c, inOp, a, f, &r) || UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
-            return r;
         switch (inOp) {
         case EeUiOp::ComboQuery: return Query(c, a >> 24, a & 0xffffff, f);
         case EeUiOp::ComboAct: return Act(c, a, b, cc, d, f);
@@ -208,15 +205,6 @@ struct UIComboBox::Rust {
 };
 
 // Creates a combo box: a text label (type 1) or edit box, a drop button and a hidden list box showing the first entry
-UIComboBox::UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData,
-                       GEFont* inFont, const GERectangle& inRectangle, unsigned long inMaxListBoxHeight,
-                       UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars,
-                       unsigned long inBorderThickness)
-    : UIControl(kControlTypeComboBox, inId, inRectangle, inForm, inIndex, 0)
-{
-    ee_ui_combo_construct(this, inTextBoxType, &inData, inFont, reinterpret_cast<const EeUiRect*>(&inRectangle), inMaxListBoxHeight, inForm, inMaxChars, inBorderThickness);
-}
-
 extern "C" intptr_t ee_uicpp_combo_host(EE_UI_HOST_ARGS) { return UIComboBox::Rust::Op(inObj, inOp, a, b, c, d, f); }
 
 // Destroys the combo box and its text box, list box and drop button

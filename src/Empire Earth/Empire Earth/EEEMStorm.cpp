@@ -99,8 +99,8 @@ long EEEMStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
 
 // ------------------------------------------------------------------------- round 10, lane D: the storm
 
-int64_t EECore10OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEEnvironmentManager.cpp
-double EECore10OpD3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECameraControl.cpp (the environment manager's, the cheats', the civilization's and the wonder's: EEGameLog.cpp)
+double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 static_assert(sizeof(EEEffectHandle) == 4 && kStormRain == 1 && kStormSnow == 2 && kStormHurricane == 3 && kStormBlizzard == 4
                   && kGraphicEffectRain == 0x54 && kGraphicEffectSnow == 0xac
@@ -188,7 +188,7 @@ int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DsPointLoad: return ((U2DPoint<long>*)p)->Load(*(FSFile*)a[0]);
     case O::DsPointSave: return ((U2DPoint<long>*)p)->Save(*(FSFile*)a[0]);
     case O::DsReadHandle: return ((FSFile*)p)->Read(*(uint32_t*)a[0]);
-    default: return EECore10OpD3(inOp, p, a, f);
+    default: return EECore10OpD7(inOp, p, a, f);
     }
     return 0;
 }
@@ -198,6 +198,6 @@ double EECore10OpD2F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     typedef EeGameCpp O;
     switch (inOp) {
     case O::DsGameSpeed: return gWorld.GetGameSpeed();
-    default: return EECore10OpD3F(inOp, p, a, f);
+    default: return EECore10OpD7F(inOp, p, a, f);
     }
 }

@@ -37,7 +37,7 @@ class EEAmbientSound : public EeAppAmbientSoundFields {
 public:
     EEAmbientSound();
     virtual ~EEAmbientSound();
-    void Init(const EEAmbientSoundRecord& inRecord);
+    // (Init: ee_game gamecpp ambient_io.rs, the manager's Load)
     // inline (COMDATs 0x1272c6.. in EEAmbientSoundManager.cpp)
     void ReleaseInstance()
     {

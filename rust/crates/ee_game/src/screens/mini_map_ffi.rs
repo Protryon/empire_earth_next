@@ -81,3 +81,33 @@ pub extern "C" fn ee_screens_mini_map_mouse_l_up(map: *mut c_void) -> i64 {
 pub extern "C" fn ee_screens_mini_map_mouse_move(map: *mut c_void) -> i64 {
     mini_map::mouse_move(&mut MapHost(map))
 }
+
+/// cbindgen:ignore
+mod press_sys {
+    use core::ffi::c_void;
+
+    extern "C" {
+        pub fn ee_screenscpp_mm_release(map: *mut c_void);
+    }
+}
+
+/// `EEUIMiniMap::MouseLButtonDown` (ICF-folded 0x25ae3b): captures the mouse; 0.
+///
+/// # Safety
+/// `map` is the live mini map.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_mini_map_left_down(map: *mut c_void) -> core::ffi::c_long {
+    crate::screens::game_cpp::Cpp::mm_capture(&mut crate::screens::game_cpp::Ffi, map as usize);
+    0
+}
+
+/// `EEUIMiniMap::MouseRButtonUp` (0x275523): releases the captured mouse; 0.
+///
+/// # Safety
+/// `map` is the live mini map.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_mini_map_right_up(map: *mut c_void) -> core::ffi::c_long {
+    // SAFETY: the contract
+    unsafe { press_sys::ee_screenscpp_mm_release(map) };
+    0
+}

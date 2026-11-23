@@ -16,8 +16,7 @@
 #include <string>
 #include <vector>
 
-#include "EEDataText.h"
-#include "ee/EERules.h"
+#include "eedata_gate_text.h"
 
 static bool ReadFile(const std::string& inPath, std::string& outData)
 {
@@ -82,20 +81,20 @@ static int Dump(bool inText, const char* inDir, const char* inOut)
     EERules theRules;
     if (inText) {
         std::string err;
-        if (!theRules.Load(c, err)) {
+        if (!EEDataText::LoadRules(theRules, c, err)) {
             fprintf(stderr, "%s\n", err.c_str());
             return 1;
         }
     } else {
         std::string raw;
         if (!ReadFile(std::string(inDir) + "/dbmusic.dat", raw) ||
-            !theRules.SetMusicFromDbmusicFile(reinterpret_cast<const unsigned char*>(raw.data()), raw.size())) {
+            !EEDataText::RulesMusicFromDbmusicFile(theRules, reinterpret_cast<const unsigned char*>(raw.data()), raw.size())) {
             fprintf(stderr, "dbmusic.dat: cannot be read\n");
             return 1;
         }
     }
     std::string rules;
-    theRules.Dump(rules);
+    EEDataText::DumpRules(theRules, rules);
     for (size_t at = 0, end; at < rules.size(); at = end + 1) {   // one entry per line
         end = rules.find('\n', at);
         json += ",\n" + rules.substr(at, end - at);
@@ -172,9 +171,9 @@ static int RulesBatch(const char* inDir, const char* inTextDir)
         });
         EERules theRules;
         std::string err, dump;
-        bool ok = theRules.Load(c, err);
+        bool ok = EEDataText::LoadRules(theRules, c, err);
         if (ok)
-            theRules.Dump(dump);
+            EEDataText::DumpRules(theRules, dump);
         std::string out = (std::filesystem::path(inDir) / (name + (ok ? ".out" : ".err"))).string();
         FILE* f = fopen(out.c_str(), "wb");
         if (!f)

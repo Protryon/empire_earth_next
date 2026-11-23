@@ -166,11 +166,8 @@ void EEMiniMap::MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, lon
     ee_gamecpp_minimap_move_unit(this, inUnit, inOldX, inOldY, inX, inY);
 }
 
-// ------------------------------------------------------------------------- round 9, lane B: the mini map's bodies' C++
-
-// the tile's cases (EETile.cpp), then lane C's
-int64_t EECore9OpB4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore9OpB4F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+// ------------------------------------------------------------------------- round 9, lane B: the mini map's bodies' C++ (their
+// cases: EEMap.cpp's EECore9OpB2)
 
 // the Rust's constants and the members it reads in place (gamecpp minimap.rs)
 static_assert(kUnitCategoryResource == 1 && kUnitTypeResForageBush == 0x37 && kUnitTypeAirport == 0x42 && kResourceStone == 4 &&
@@ -189,78 +186,3 @@ static_assert(offsetof(EEMiniMap, mPixelToMap) == offsetof(EEMiniMap, mMapToPixe
                   offsetof(EEMiniMap, mCorner2) == offsetof(EEMiniMap, mCorner1) + sizeof(GE2DPoint) &&
                   offsetof(EEMiniMap, mCorner3) == offsetof(EEMiniMap, mCorner2) + sizeof(GE2DPoint),
               "gamecpp minimap.rs: the transformations and corners in order");
-
-#define P64(x) ((int64_t)(intptr_t)(x))
-#define MM ((EEMiniMap*)p)
-
-// The C++ calls and members of the mini map's bodies in Rust (gamecpp minimap.rs; EeGameCpp's lane B section, after
-// EEMap.cpp's EECore9OpB2): one statement each
-int64_t EECore9OpB3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::MmTail: return P64(&MM->mL12174);
-    case O::MmRust: return P64(MM->mRust);
-    case O::MmSetRust: MM->mRust = (EeAppMiniMap*)a[0];
-        break;
-    case O::MmTransforms: return P64(&MM->mMapToPixel);
-    case O::MmCorners: return P64(&MM->mCorner0);
-    case O::MmSetPixels: MM->mPixels = (unsigned short*)a[0];
-        break;
-    case O::MmSetPixelsPerRow: MM->mPixelsPerRow = (long)a[0];
-        break;
-    case O::MmUnitLock: MM->mUnitSurface->Lock();
-        break;
-    case O::MmUnitUnlock: MM->mUnitSurface->Unlock();
-        break;
-    case O::MmUnitMemory: return P64(MM->mUnitSurface->GetMemoryAddress());
-    case O::MmUnitBytesPerRow: return MM->mUnitSurface->GetBytesPerRow();
-    case O::MmUnitCopyToWorld: MM->mUnitSurface->CopyTo(MM->mWorldTexture->GetSurface(), *(GERectangle*)a[0], *(GERectangle*)a[0], false);
-        break;
-    case O::MmUnitClear: MM->mUnitSurface->Clear(*(GEColor*)a[0], 1.0f);
-        break;
-    case O::MmTerrainEnter: MM->mTerrainCriticalSection->Enter();
-        break;
-    case O::MmTerrainLeave: MM->mTerrainCriticalSection->Leave();
-        break;
-    case O::MmTerrainLock: MM->mTerrainTexture->GetSurface()->Lock();
-        break;
-    case O::MmTerrainUnlock: MM->mTerrainTexture->GetSurface()->Unlock();
-        break;
-    case O::MmTerrainMemory: return P64(MM->mTerrainTexture->GetSurface()->GetMemoryAddress());
-    case O::MmTerrainBytesPerRow: return MM->mTerrainTexture->GetSurface()->GetBytesPerRow();
-    case O::MmUiUpdate: gEEGameUI.mMiniMapUpdate(MM);   // EEUIMiniMap::Update (ee/EEGameUI.h)
-        break;
-    case O::MmLight: *(GEVector*)a[0] = gMiniMapLight;
-        break;
-    case O::MmLightSet: gMiniMapLight = GEVector(0.0f, 1.5f, 1.0f);
-        break;
-    case O::MmLightNormalize: gMiniMapLight.Normalize();
-        break;
-    case O::MmViewport: return P64(&gViewport);
-    case O::MmNumPlayers: return gWorld.mNumPlayers;
-    case O::MmDoppUnit: return P64(((EEDoppelganger*)p)->mUnit);
-    case O::MmDoppPlayer: return P64(((EEDoppelganger*)p)->GetPlayer());
-    case O::MmDoppPlayerField: return P64(((EEDoppelganger*)p)->mPlayer);
-    case O::MmDoppIsComplex: return ((EEDoppelganger*)p)->IsComplex();
-    case O::MmDoppOnTile: return ((EEDoppelganger*)p)->GetTile() == (EETile*)a[0];
-    case O::MmPackDark: return GEPackColor(kPixelFormatA4R4G4B4, EEColorTable::GetDarkColor((unsigned long)a[0]), 1.0f);
-    case O::MmPackColor2: return GEPackColor(kPixelFormatA4R4G4B4, EEColorTable::GetColor2((unsigned long)a[0]), 1.0f);
-    case O::MmPackShade: return GEPackColor(kPixelFormatA4R4G4B4, ((EEPlayer*)p)->mShadeColor, 1.0f);
-    case O::MmPackPlayerColor: return GEPackColor(kPixelFormatA4R4G4B4, ((EEPlayer*)p)->mColor, 1.0f);
-    case O::MmTileVisibility: return ((EETile*)p)->GetVisibility((unsigned long)a[0]);
-    case O::MmTileDoppCount: return ((EETile*)p)->GetNumDoppelgangers();
-    case O::MmTileDopp: return P64(((EETile*)p)->mDoppelgangers[a[0]]);
-    case O::MmNodeUnit: return P64(((RTSTileUnitNode*)p)->mUnit);
-    case O::MmNodeNext: return P64(((RTSTileUnitNode*)p)->mNext);
-    case O::MmTerrainColor: *(GEColor*)a[1] = EETerrainTable::Get((long)a[0])->mColor;
-        break;
-    default: return EECore9OpB4(inOp, p, a, f);
-    }
-    return 0;
-}
-
-double EECore9OpB3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpB4F(inOp, p, a, f);
-}

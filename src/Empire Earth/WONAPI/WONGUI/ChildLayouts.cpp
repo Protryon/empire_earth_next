@@ -65,20 +65,11 @@ void ChildLayoutManager::AddChildLayout(ChildLayoutInstructionBase* instr, int i
 
 // Destroys an instruction: its Rust instruction (the list borrows its components)
 ChildLayoutInstructionBase::~ChildLayoutInstructionBase() { ee_won_layout_free(this->mLay); }
+// the record's numbers are layoutobj.rs's (R6 WON round 33)
 void ChildLayoutInstructionBase::Make(EeWonLayoutKind k, Component* r0, Component* r1, int i0, int i1, int i2, bool h,
                                       bool v)
 {
-    EeWonLayoutInit init;
-    memset(&init, 0, sizeof(init));
-    init.kind = k;
-    init.refs[0] = (intptr_t)r0;
-    init.refs[1] = (intptr_t)r1;
-    init.ints[0] = i0;
-    init.ints[1] = i1;
-    init.ints[2] = i2;
-    init.horz = h;
-    init.vert = v;
-    this->Make(init);
+    this->mLay = ee_won_layout_new_basic(this, ee_won_guicpp_layout_call, k, r0, r1, i0, i1, i2, h, v);
 }
 void ChildLayoutInstructionBase::Make(const EeWonLayoutInit& init)
 {
@@ -89,33 +80,13 @@ void ChildLayoutInstructionBase::Make(const EeWonLayoutInit& init)
 ChildLayoutInstruction::ChildLayoutInstruction(int flags, Component* child, Component* reference, int x, int y,
                                                int width, int height)
 {
-    EeWonLayoutInit init;
-    memset(&init, 0, sizeof(init));
-    init.kind = EeWonLayoutKind::Child;
-    init.refs[0] = (intptr_t)child;
-    init.refs[1] = (intptr_t)reference;
-    init.ints[0] = flags;
-    init.ints[1] = x;
-    init.ints[2] = y;
-    init.ints[3] = width;
-    init.ints[4] = height;
-    this->Make(init);
+    this->mLay = ee_won_layout_new_child(this, ee_won_guicpp_layout_call, flags, child, reference, x, y, width, height);
 }
 
 // the target, the param's anchors (after SetBorders), percentages and padding
 PercentLayout::PercentLayout(Component* target, const PercentLayoutParam& param)
 {
-    EeWonLayoutInit init;
-    memset(&init, 0, sizeof(init));
-    init.kind = EeWonLayoutKind::Percent;
-    init.refs[0] = (intptr_t)target;
-    init.refs[1] = (intptr_t)param.left;
-    init.refs[2] = (intptr_t)param.top;
-    init.refs[3] = (intptr_t)param.right;
-    init.refs[4] = (intptr_t)param.bottom;
-    const int n[8] = { param.px, param.py, param.pw, param.ph, param.lp, param.tp, param.rp, param.bp };
-    for (int i = 0; i < 8; i++) init.ints[i] = n[i];
-    this->Make(init);
+    this->mLay = ee_won_layout_new_percent(this, ee_won_guicpp_layout_call, target, (void* const*)&param.left, &param.px);
 }
 
 // Centres a child in its parent once, horizontally and/or vertically (the original's temporary centre layout is the

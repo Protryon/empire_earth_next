@@ -11,7 +11,12 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_ui_manager(call: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64;
+        pub fn ee_screenscpp_um_engine_count() -> i64;
+        pub fn ee_screenscpp_um_music(call: *mut c_void);
+        pub fn ee_screenscpp_um_citizens() -> i64;
+        pub fn ee_screenscpp_um_post_f9();
+        pub fn ee_screenscpp_um_base_keyboard(call: *mut c_void) -> i64;
+        pub fn ee_screenscpp_um_base_mouse(call: *mut c_void) -> i64;
     }
 }
 
@@ -29,7 +34,27 @@ impl UiHost for ManagerHost {
         {
             return r;
         }
-        unsafe { sys::ee_screenscpp_ui_manager(self.0, op, a, b, c) }
+        // SAFETY: the host's live call record (the mouse's location set for the base mouse)
+        unsafe {
+            match op {
+                ui_manager::EE_SCREENS_UM_OP_ENGINE_COUNT => sys::ee_screenscpp_um_engine_count(),
+                ui_manager::EE_SCREENS_UM_OP_MUSIC => {
+                    sys::ee_screenscpp_um_music(self.0);
+                    0
+                }
+                ui_manager::EE_SCREENS_UM_OP_CITIZENS => sys::ee_screenscpp_um_citizens(),
+                ui_manager::EE_SCREENS_UM_OP_POST_F9 => {
+                    sys::ee_screenscpp_um_post_f9();
+                    0
+                }
+                ui_manager::EE_SCREENS_UM_OP_BASE_KEYBOARD => sys::ee_screenscpp_um_base_keyboard(self.0),
+                ui_manager::EE_SCREENS_UM_OP_BASE_MOUSE => sys::ee_screenscpp_um_base_mouse(self.0),
+                _ => {
+                    let _ = (b, c);
+                    0
+                }
+            }
+        }
     }
 }
 

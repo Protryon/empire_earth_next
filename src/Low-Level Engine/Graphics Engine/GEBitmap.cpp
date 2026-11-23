@@ -65,7 +65,7 @@ extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST 
 static intptr_t GEBitmapFloatBits(float inValue) { return UFloatBits(inValue); }
 
 // (C linkage: ee_ge game_hosts.rs names it)
-extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
+extern "C" intptr_t GEVertexHost(void*, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     switch (inOp) {
     case EeGeBmpOp::RasterActive:
@@ -95,7 +95,6 @@ extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, int
     case EeGeBmpOp::TexDropLevels:
         return (intptr_t)((GETexture*)inObj)->GetNumMipLevelsToDrop();
     }
-    (void)inOwner;
     return 0;
 }
 // ---- end of the vertex host
@@ -112,7 +111,7 @@ static_assert(sizeof(UString) == sizeof(void*) + sizeof(EeUString) && sizeof(UWi
 
 // ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects,
 // and GEWindow's forwarders (its header does not include the Rust header)
-extern "C" intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
+extern "C" intptr_t GEObjectHost(void*, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     switch (inOp) {
     case EeGeObjOp::StrNew:
@@ -133,17 +132,7 @@ extern "C" intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, int
     case EeGeObjOp::RefDereference:
         ((UReferenceCounter*)inObj)->Dereference();
         return 0;
-    case EeGeObjOp::PlatFontCreate:
-        return (intptr_t)PlatFontCreate((const char*)inObj, (int32_t)a, (int)(b & 1), (int)((b >> 1) & 1),
-                                        (int)((b >> 2) & 1), (int)((b >> 3) & 1));
-    case EeGeObjOp::PlatFontDestroy:
-        PlatFontDestroy((PlatFont*)inObj);
-        return 0;
-    case EeGeObjOp::PlatFontHeight: {
-        PlatFontMetrics theMetrics;
-        PlatFontGetMetrics((const PlatFont*)inObj, &theMetrics);
-        return theMetrics.mHeight;
-    }
+    // (PlatFontCreate, PlatFontDestroy and PlatFontHeight: ee_base's, called by the Rust objects themselves)
     case EeGeObjOp::TextOps:
         return (intptr_t)GERustTextOps();
     case EeGeObjOp::PlatWindowDestroy:
@@ -156,7 +145,6 @@ extern "C" intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, int
         PlatWindowGetPosition((PlatWindow*)inObj, (int32_t*)a, (int32_t*)b);
         return 0;
     }
-    (void)inOwner;
     return 0;
 }
 
@@ -189,26 +177,9 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     case EeGeFbOp::TextDelete:
         delete ((GEText*)inObj);
         return 0;
-    case EeGeFbOp::TextSetByte: {
-        // a cell is a Windows-1252 byte's character (decision D6: the text is UTF-8, so the cell holds that
-        // character's UTF-8 and Draw maps a drawn character back to its cell)
-        char theByte = (char)a;
-        char theCell[8];
-        PlatCp1252ToUtf8(&theByte, 1, theCell, sizeof(theCell));
-        UWideString theString;
-        theString = theCell;
-        ((GEText*)inObj)->SetText(theString);
-        return 0;
-    }
+    // (TextSetByte and FontRange: the Rust object's own, fbobj.rs)
     case EeGeFbOp::TextOps:
         return (intptr_t)GERustTextOps();
-    case EeGeFbOp::FontRange: {
-        PlatFontMetrics theMetrics;   // the font's character range (TEXTMETRIC's tmFirstChar..tmLastChar)
-        PlatFontGetMetrics(((GEFont*)inObj)->GetOSFont(), &theMetrics);
-        theLongs[0] = theMetrics.mFirstChar;
-        theLongs[1] = theMetrics.mLastChar;
-        return 0;
-    }
     case EeGeFbOp::FontSetBitmap:
         ((GEFont*)inObj)->SetFontBitmap((GEFontBitmap*)inOwner);
         return 0;
@@ -233,39 +204,18 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         return ((GESurface*)inObj)->Lock();
     case EeGeFbOp::SurfUnlock:
         return ((GESurface*)inObj)->Unlock();
-    case EeGeFbOp::SurfPixels:
-        theLongs[0] = ((GESurface*)inObj)->GetWidth();
-        theLongs[1] = ((GESurface*)inObj)->GetHeight();
-        theLongs[2] = ((GESurface*)inObj)->GetBytesPerRow();
-        return (intptr_t)((GESurface*)inObj)->GetMemoryAddress();
-    case EeGeFbOp::SurfClear: {
-        GEColor theBlack(0.0f, 0.0f, 0.0f);
-        return ((GESurface*)inObj)->Clear(theBlack, 1.0f);
-    }
+    case EeGeFbOp::SurfWidth: return (intptr_t)((GESurface*)inObj)->GetWidth();
+    case EeGeFbOp::SurfHeight: return (intptr_t)((GESurface*)inObj)->GetHeight();
+    case EeGeFbOp::SurfBytesPerRow: return (intptr_t)((GESurface*)inObj)->GetBytesPerRow();
+    case EeGeFbOp::SurfMemory: return (intptr_t)((GESurface*)inObj)->GetMemoryAddress();
+    case EeGeFbOp::SurfClear: return ((GESurface*)inObj)->Clear(*(GEColor*)a, 1.0f);
     case EeGeFbOp::ScreenCreateSurface:
         return ((GEScreen*)inObj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
     case EeGeFbOp::ScreenMakeTexture:
         return (intptr_t)((GEScreen*)inObj)->GetTextureManager()->MakeTexture((GESurface*)a);
-    case EeGeFbOp::Verify:
-        ESVerify(__FILE__, a == 0 ? 228 : 235, a == 0 ? "theResult == keseOK" : "((GETexture*)inObj) != NULL");
-        return 0;
+    case EeGeFbOp::VerifySurface: ESVerify(__FILE__, 228, "theResult == keseOK"); return 0;
+    case EeGeFbOp::VerifyTexture: ESVerify(__FILE__, 235, "((GETexture*)inObj) != NULL"); return 0;
     default:
         return 0;
     }
 }
-
-
-// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (Rust: ee_ge fbobj.rs)
-GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
-{
-    this->mRust = NULL;
-    this->mRust = ee_ge_fb_new(&GEFontBitmap::Host, this, inRasterizer, inFont, inScreen);
-}
-
-// Destroys the glyph bitmap, releasing its drawing bitmap
-GEFontBitmap::~GEFontBitmap()
-{
-    ee_ge_fb_destroy(this->mRust);
-}
-
-

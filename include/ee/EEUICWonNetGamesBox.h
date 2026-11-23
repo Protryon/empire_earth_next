@@ -42,6 +42,14 @@ public:
     // members from the ctor 0x25b2ce (ret 0x20: UIListBox's ctor 0x25bb37, then these, then vptr 0x44a154) and the dtor
     // 0x25b63a (??_G 0x25b61e: both texts' ??_G, the three strings in reverse, then ~UIListBox 0x25bdb1). Names
     // (provisional name)
+    // the screens' host's reads of the protected base (R6 WON round 32: ee/EEWonFrontHost.inl)
+    long FrontScrollBarText() { return this->DrawScrollBarText(); }
+    const GERectangle& FrontCopyRect() const { return this->GetCopyTextRectangle(); }
+    unsigned long FrontDrawCount() const { return this->GetDrawCount(); }
+    unsigned long FrontLineHeight() const { return this->GetLineHeight(); }
+    unsigned long FrontCopyCount() const { return (unsigned long)this->mCopyLineArray.size(); }
+    const EEUICWNGBLine& FrontCopyLine(unsigned long inIndex) const { return this->mCopyLineArray[inIndex]; }
+    void FrontClearCopiedSelection() { this->SetCopiedHasSelection(false); }
     UWideString mPasswordLabel;             // +0x134
     UWideString mPrivateLabel;              // +0x148
     UWideString mInProgressLabel;           // +0x15c

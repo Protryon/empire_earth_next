@@ -9,7 +9,7 @@
 
 // port: the visible area's point arrays, 101 x 101 in the original (enough for its closest-to-farthest zoom); larger
 // for the farther zoom-out (EECameraControl gCameraMaxZoom). UpdateVisibleTerrain keeps the view inside them.
-#define GETM_VISIBLE_POINTS 257
+#define GETM_VISIBLE_POINTS EE_GE_TM_SIDE   // 257 (ee_ge tmobj.rs)
 
 #include <stddef.h>
 #include <map>
@@ -30,22 +30,11 @@ template <class T> class U2DPoint;
 
 class LLE_API GETerrainMesh {
 public:
-    // A projected vertex the rasterizer fills in (TransformToCamera); the Rust object's EeGeTmRenderVertex
-    struct GETMRenderVertex {
-        GE3DPoint mPoint;                   // +0x00
-        GEColor mColor;                     // +0x0c
-        float mVisibility;                  // +0x18 fog of war (UpdateFogOfWar)
-        float mFog;                         // +0x1c
-        unsigned long mClipFlags;           // +0x20
-        float* mLinkedVisibility;           // +0x24 cliff vertices: the terrain vertex whose mVisibility they copy
-    };
-
-    // A visible triangle (EeGeTmPolygon)
-    struct GETMPolygon {
-        GETMRenderVertex* mVertices[3];     // +0x00
-        float mAlpha[3];                    // +0x0c
-        GETextureCoordinate mUV[3];         // +0x18
-    };
+    // A projected vertex the rasterizer fills in (TransformToCamera: the point, the colour, the fog of war's
+    // visibility, the fog, the clip flags; a cliff vertex's terrain visibility it copies) and a visible triangle:
+    // the Rust object's records (ee_ge tmobj.rs)
+    typedef EeGeTmRenderVertex GETMRenderVertex;
+    typedef EeGeTmPolygon GETMPolygon;
 
     GETerrainMesh();
     // the mesh's Rust object (the DX7 plug-in's terrain draws read its visible frame there: ee_dx7 draw_ffi.rs)
@@ -109,13 +98,13 @@ public:
     float GetZ(unsigned long inX, unsigned long inY) const { return ee_ge_tm_point(this->mRust, inX, inY)->z; }
     bool Intersects(const GE3DLine& inLine, float& outDistance) const
         { return ee_ge_tm_intersects(this->mRust, GERust(inLine), &outDistance); }
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_ge_tm_load(this->mRust, &inFile); }
     void ReferenceTile(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 0, 0); }
     long RegisterColorSet(std::vector<unsigned long>& inColorSet, unsigned long& outID)
         { return ee_ge_tm_register_color_set_out(this->mRust, inColorSet.data(), inColorSet.size(), &outID); }
     long RegisterTextureSet(GETextureSet* inTextureSet, unsigned long& outID)
         { return ee_ge_tm_register_texture_set_out(this->mRust, inTextureSet, &outID); }
-    long Save(FSFile& inFile) const;
+    long Save(FSFile& inFile) const { return ee_ge_tm_save(this->mRust, &inFile); }
     void SetColorFromColorTableIndex(unsigned long inX, unsigned long inY, unsigned char inIndex)
         { ee_ge_tm_point_edit(this->mRust, inX, inY, 1, inIndex, 0.0f); }
     void SetColorTable(std::vector<GEColor>& inColorTable)
