@@ -46,8 +46,9 @@ struct EEUIManagerCall;                     // (EEUIManager.cpp: the host's reco
 // EeScreensUiManagerFields (ee_screens ui_objects.rs), under their names
 class EEUIManager : public UIManager, public EeScreensUiManagerFields {
 public:
-    // the ee_screens ui_manager.rs host (EE_SCREENS_UM_OP_*; a member: UIManager's updates are protected)
-    static int64_t HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
+    // UIManager's (protected) updates, for the ee_screens ui_manager.rs host's shims (EEUIManager.cpp)
+    static long BaseKeyboard(EEUIManager* inManager) { return inManager->UIManager::UpdateKeyboard(); }
+    static long BaseMouse(EEUIManager* inManager, const GE2DPoint& inMouse) { return inManager->UIManager::UpdateMouse(inMouse); }
     // EEUIManager.cpp: 0x271319 (`ret 0x10`; the fourth argument is unused) registers the event
     // factories, loads the UI database, then the members (store order +0x12c, +0x13c, +0x130, +0x13d, +0x138)
     EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSurfaces, unsigned long inScreen,

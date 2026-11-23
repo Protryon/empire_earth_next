@@ -89,3 +89,43 @@ pub extern "C" fn ee_screens_lobby_update_form() {
 pub extern "C" fn ee_screens_lobby_show_transfer_progress(slot: u8, progress: u8) {
     show_transfer_progress(&mut Form(core::ptr::null_mut(), core::ptr::null_mut()), slot, progress);
 }
+
+/// cbindgen:ignore
+mod options_sys {
+    extern "C" {
+        /// the lobby's options (`gGameOptions`: `EEGameOptions`' Rust base)
+        pub fn ee_screenscpp_lobby_options() -> *mut crate::app::game_options::EeAppOptionsFields;
+    }
+}
+
+/// An option of the lobby's options (`EEMGameOptions`' numbers, `EE_SCREENS_OPTION_*`; 0 the load type, 17 the
+/// victory flag) set to `value` (the C++ `long`'s: truncated to `c_long`; a flag is set when non-zero).
+#[no_mangle]
+pub extern "C" fn ee_screens_lobby_set_option(option: u32, value: i64) {
+    use crate::screens::lobby_options::*;
+    use core::ffi::c_ulong;
+    // SAFETY: the game's live lobby options (the UI thread's)
+    let o = unsafe { &mut *options_sys::ee_screenscpp_lobby_options() };
+    let v = value as c_long;
+    let on = v != 0;
+    match option as c_long {
+        0 => o.mLoadType = v as c_ulong,
+        EE_SCREENS_OPTION_MAP_SIZE => o.mMapSize = v as c_ulong,
+        EE_SCREENS_OPTION_RESOURCES => o.mResources = v as c_ulong,
+        EE_SCREENS_OPTION_EPOCH_START => o.mEpochStart = v,
+        EE_SCREENS_OPTION_EPOCH_END => o.mEpochEnd = v,
+        EE_SCREENS_OPTION_UNIT_LIMIT => o.mUnitLimit = v as c_ulong,
+        EE_SCREENS_OPTION_WONDERS => o.mWondersForVictory = v as c_ulong,
+        EE_SCREENS_OPTION_VARIANT => o.mVariant = v as c_ulong,
+        EE_SCREENS_OPTION_DIFFICULTY => o.mDifficulty = v as c_ulong,
+        EE_SCREENS_OPTION_SPEED => o.mGameSpeed = v as c_ulong,
+        EE_SCREENS_OPTION_RECORD_GAMES => o.mRecordGames = on,
+        EE_SCREENS_OPTION_CUSTOM_CIVS => o.mAllowCustomCivs = on,
+        EE_SCREENS_OPTION_REVEAL_MAP => o.mRevealMap = on,
+        EE_SCREENS_OPTION_LOCK_TEAMS => o.mLockTeams = on,
+        EE_SCREENS_OPTION_LOCK_SPEED => o.mLockSpeed = on,
+        EE_SCREENS_OPTION_CHEAT_CODES => o.mCheatCodes = on,
+        17 => o.mVictory = on,
+        _ => {}
+    }
+}

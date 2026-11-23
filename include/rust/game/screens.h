@@ -11482,6 +11482,18 @@ constexpr static const uint32_t EE_SCREENS_TEXT_PGS_CAMPAIGN_NAME = 145;
 /// The graphs: the line graph's stored 0..=30, its shown one, the form manager's.
 constexpr static const uint32_t PGS_GRAPH_SHOWN = 31;
 
+/// The tables (`EE_SCREENS_QA_*`): the save question's yes (send, post), the in-game options' yeses, the campaign
+/// editor's yeses and noes (by its question index), the boot question's yes and no.
+constexpr static const uint32_t EE_SCREENS_QA_SAVE_YES = 0;
+
+constexpr static const uint32_t EE_SCREENS_QA_GO_YES = 1;
+
+constexpr static const uint32_t EE_SCREENS_QA_CE_YES = 2;
+
+constexpr static const uint32_t EE_SCREENS_QA_CE_NO = 3;
+
+constexpr static const uint32_t EE_SCREENS_QA_BOOT = 4;
+
 /// The save form's activate event (clears the saved flag).
 constexpr static const uint32_t EE_SCREENS_SL_ACTIVATE = 769;
 
@@ -15208,6 +15220,33 @@ struct EeScreensCommandUnitsFields {
   bool mEditor;
 };
 
+/// `EEUIFMainGame`'s plain members (ee/EEUIFMainGame.h), in the class's order.
+struct EeScreensMainFormFields {
+  /// the keyboard and mouse modes of each interface state (`EE_SCREENS_MF_MODE_*`; 2: the cinematic's keys)
+  long mKeyboardModes[22];
+  long mMouseModes[22];
+  /// the interface state (5: gate, 6: wall, 0x11: no scrolling)
+  long mUIState;
+  /// the background media (-1: none)
+  long mMediaID;
+  /// the enabled entity group and the index into the panel groups
+  long mEntityGroup;
+  unsigned long mCurrentGroup;
+  /// the poll's elapsed time
+  unsigned long mElapsed;
+  unsigned long mHotKeyMode;
+  long mClockMode;
+  bool mEntityGroupSet;
+  /// the error log's strings changed
+  bool mStringsChanged;
+  bool mIsCursorLocked;
+  bool mRefreshGroup;
+  bool mB5F0;
+  bool mB5F1;
+  bool mInfoBlinking;
+  bool mIsButtonBlinking;
+};
+
 /// `EEUIBuildWall`'s members from `mState` on (the class's vptr before them): placing (0 no start, 1 dragging),
 /// the tile centres, the wall's technology and player.
 struct EeScreensBuildWallFields {
@@ -15278,33 +15317,6 @@ struct EeScreensStatusButtonFields {
   bool mShowCount;
   bool mAvailable;
   bool mDrawIcon;
-};
-
-/// `EEUIFMainGame`'s plain members (ee/EEUIFMainGame.h), in the class's order.
-struct EeScreensMainFormFields {
-  /// the keyboard and mouse modes of each interface state (`EE_SCREENS_MF_MODE_*`; 2: the cinematic's keys)
-  long mKeyboardModes[22];
-  long mMouseModes[22];
-  /// the interface state (5: gate, 6: wall, 0x11: no scrolling)
-  long mUIState;
-  /// the background media (-1: none)
-  long mMediaID;
-  /// the enabled entity group and the index into the panel groups
-  long mEntityGroup;
-  unsigned long mCurrentGroup;
-  /// the poll's elapsed time
-  unsigned long mElapsed;
-  unsigned long mHotKeyMode;
-  long mClockMode;
-  bool mEntityGroupSet;
-  /// the error log's strings changed
-  bool mStringsChanged;
-  bool mIsCursorLocked;
-  bool mRefreshGroup;
-  bool mB5F0;
-  bool mB5F1;
-  bool mInfoBlinking;
-  bool mIsButtonBlinking;
 };
 
 /// `EEUIFMGMainGroup`'s plain members (ee/EEUIFMGMainGroup.h, the original's +0x0c `mMode` .. +0x25 `mReset`), a
@@ -16016,6 +16028,13 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
 
 /// `EEUIFMainGame::UpdateCursorKind`'s cursor kind, read through the host with `ctx`.
 int32_t ee_screens_cursor_kind(void *ctx);
+
+/// `EEUIFMainGame::UpdateCursorKind` (0x266f8b): picks the mouse cursor for the unit under it from what the local
+/// player's selection can do to it (`cursor_kind` over one read state of `form`).
+///
+/// # Safety
+/// `form` is the live main game form; the world has its local player.
+void ee_screens_update_cursor_kind(void *form);
 
 /// The debug sound panel's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_debug_sound_event_for(unsigned long id);
@@ -17197,6 +17216,18 @@ int64_t ee_screens_command_units(EeScreensCommandUnitsFields *rec,
                                  float x,
                                  float y);
 
+/// `EEUICSelectUnits`' constructor body (0x25958f): hidden, its click and lasso handlers referenced, always dirty.
+///
+/// # Safety
+/// `box_` is the box being constructed (its handlers set).
+void ee_screens_su_construct(void *box_);
+
+/// `EEUICSelectUnits`' destructor body: its click and lasso handlers released.
+///
+/// # Safety
+/// `box_` is the box being destroyed.
+void ee_screens_su_destroy(void *box_);
+
 /// `EEUIRustControl`'s destructor: the control's draw objects freed (nothing for a control with none).
 void ee_screens_hud_draw_free(void *control);
 
@@ -17247,6 +17278,11 @@ void ee_screens_lobby_update_form();
 /// `LobbyShowTransferProgress`: a client's file transfer on its row.
 void ee_screens_lobby_show_transfer_progress(uint8_t slot, uint8_t progress);
 
+/// An option of the lobby's options (`EEMGameOptions`' numbers, `EE_SCREENS_OPTION_*`; 0 the load type, 17 the
+/// victory flag) set to `value` (the C++ `long`'s: truncated to `c_long`; a flag is set when non-zero).
+void ee_screens_lobby_set_option(uint32_t option,
+                                 int64_t value);
+
 /// `EEUIFMainGame::CopyData` over the host's call record: `UIForm::CopyData`'s result.
 int64_t ee_screens_main_form_copy_data(void *call);
 
@@ -17261,6 +17297,14 @@ void ee_screens_main_form_show_information(void *call);
 
 /// `EEUIFMainGame`'s constructor after `UIForm`'s, over the host's call record (it reads no control).
 void ee_screens_main_form_construct(void *call);
+
+/// `EEUIFMainGame`'s constructor body: the form's record registered (`fields`, its `EeScreensMainFormFields` base),
+/// then the construction (`ee_screens_main_form_construct`; `call`'s first word is the form).
+///
+/// # Safety
+/// `call` is the constructor's live call record.
+void ee_screens_main_form_new(void *call,
+                              EeScreensMainFormFields *fields);
 
 /// `EEUIFMainGame::SetHotKeyMode(mode)`.
 void ee_screens_main_form_hot_key_mode(void *call, int64_t mode);
@@ -17411,8 +17455,63 @@ int64_t ee_screens_mini_map_mouse_l_up(void *map);
 /// `EEUIMiniMap::MouseMove` on the control `map`: its result.
 int64_t ee_screens_mini_map_mouse_move(void *map);
 
+/// `EEUIMiniMap::MouseLButtonDown` (ICF-folded 0x25ae3b): captures the mouse; 0.
+///
+/// # Safety
+/// `map` is the live mini map.
+long ee_screens_mini_map_left_down(void *map);
+
+/// `EEUIMiniMap::MouseRButtonUp` (0x275523): releases the captured mouse; 0.
+///
+/// # Safety
+/// `map` is the live mini map.
+long ee_screens_mini_map_right_up(void *map);
+
 /// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
 void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
+
+/// `EEUIFErrorShow` (`EEUIFErrorDisplay` through the game's UI table): the new box `dialog` (its `UIForm*`) shown as
+/// `kind` with the message, its alignment, the callbacks and their data, the form Cancel closes and the flag.
+void ee_screens_dialog_show(void *dialog,
+                            uint32_t kind,
+                            const void *message,
+                            uint32_t alignment,
+                            void *data,
+                            const void *first,
+                            const void *second,
+                            void *close,
+                            bool flag);
+
+/// The box's callback `index` (0 OK/Yes, 1 No).
+size_t ee_screens_dlg_callback(uint32_t index);
+
+/// The callbacks' data.
+size_t ee_screens_dlg_data();
+
+/// The form the box's Cancel closes.
+void *ee_screens_dlg_close_form();
+
+/// The message (a `const UWideString*`).
+const void *ee_screens_dlg_message();
+
+/// `EEUIBuildWall::Initialize`: starts wall placement for a player: no points yet, the wall class's media loaded.
+void ee_screens_wall_initialize(EeScreensBuildWallFields *wall,
+                                int32_t player);
+
+/// `EEUIBuildWall::Terminate`: ends wall placement: unlocks the cursor and unloads the wall class's media.
+void ee_screens_wall_terminate(EeScreensBuildWallFields *wall);
+
+/// `EEUIBuildGate::ClearGhostUnits`: restores the player's wall colours and removes the gate ghost.
+void ee_screens_gate_clear_ghosts(EeScreensBuildGateFields *gate);
+
+/// `EEUIBuildGate::Initialize`: starts gate placement for a player: highlights the walls a gate can go on and loads
+/// the gate's media.
+void ee_screens_gate_initialize(EeScreensBuildGateFields *gate,
+                                int32_t player);
+
+/// `EEUIBuildGate::Terminate`: ends gate placement: removes highlights and ghosts, unlocks the cursor and unloads the
+/// gate's media.
+void ee_screens_gate_terminate(EeScreensBuildGateFields *gate);
 
 /// `EEUICPortrait::Update`.
 void ee_screens_portrait_update(void *portrait);
@@ -17420,8 +17519,13 @@ void ee_screens_portrait_update(void *portrait);
 /// `EEUICPortrait::DrawPolygons`.
 int64_t ee_screens_portrait_draw(void *portrait);
 
-/// `EEUICPortrait::GetHelpString`: whether there is a tooltip (the host builds its text).
-bool ee_screens_portrait_help(void *portrait);
+/// `EEUICPortrait::GetHelpString`: whether there is a tooltip; `out` (a `UWideString*`) emptied, then the host builds
+/// the text there.
+///
+/// # Safety
+/// `out` is the caller's live string.
+bool ee_screens_portrait_help(void *portrait,
+                              void *out);
 
 /// `EEUICPortrait::MouseLButtonDown` (and the right press).
 int64_t ee_screens_portrait_mouse_down(void *portrait);
@@ -17455,6 +17559,17 @@ size_t ee_screens_pgs_format(int axis,
                              float value,
                              uint8_t *out,
                              size_t capacity);
+
+/// A saved game's save message to every player, waiting up to 15 s; the save handed on.
+void ee_screens_save_send(void *message);
+
+/// A scenario's save action posted, our reference dropped; the save handed on.
+void ee_screens_save_post(void *action);
+
+/// The answer `index` of the table `table` (`EE_SCREENS_QA_*`; the boot table's 0 yes, 1 no), NULL for none (the
+/// campaign editor's delete has no "no").
+const void *ee_screens_question_answer(uint32_t table,
+                                       uint32_t index);
 
 /// The save/load form's event code for a control event id (the screen active and the editor on when the form is
 /// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).
@@ -17528,6 +17643,30 @@ EeScreensShell *ee_screens_shell_new(uint32_t kind,
                                      void *ctl,
                                      const int64_t *args,
                                      uint32_t n);
+
+/// A shell's `Make`: the kind made (`ee_screens_shell_new`), stored at `*state` with its override mask at `*over`,
+/// then its constructor body run (`ee_screens_shell_init`: the body may reach the shell through its control, so the
+/// stores come first).
+///
+/// # Safety
+/// `state` and `over` are the shell's members; `args` holds `n` words (or is NULL with `n` 0).
+void ee_screens_shell_make(EeScreensShell **state,
+                           uint64_t *over,
+                           uint32_t kind,
+                           void *ctl,
+                           const int64_t *args,
+                           uint32_t n);
+
+/// `EEUIShell::Op`: the kind's op on the shell whose control (a form shell's `UIForm*`) is at `ctl`, 0 when none is.
+/// `f` is NULL or four floats.
+///
+/// # Safety
+/// `f` is NULL or four floats.
+int64_t ee_screens_shell_op_at(const void *ctl,
+                               uint32_t op,
+                               int64_t a,
+                               int64_t b,
+                               float *f);
 
 /// The kind's override mask (`EE_SCREENS_SV_*` bits).
 ///

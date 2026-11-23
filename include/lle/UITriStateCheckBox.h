@@ -44,13 +44,11 @@ public:
     {
         Call(EeUiButtonCall::TriSetText, (intptr_t)&inText, (intptr_t)inFont);
     }
-protected:
     virtual void ButtonUp() { Call(EeUiButtonCall::TriButtonUp); }   // 0x100805ea: the cycle, then UIButton's
     virtual void TabbedTo() { UIButton::TabbedTo(); }     // ICF-folded (0x1005fcac)
     virtual void TabbedFrom() { UIButton::TabbedFrom(); } // ICF-folded (0x1005fcb1)
     // the original's members (+0x104 mTextLabel, +0x108 mCheckState 0 off, 1 on, 2 "not", +0x10c mHasText; sizeof
     // 0x110) are the Rust button's record (checkobj.rs)
-private:
     intptr_t Call(EeUiButtonCall inCall, intptr_t a = 0, intptr_t b = 0, float f0 = 0.0f, float f1 = 0.0f) const
     {
         return UIButtonRust::Call(this, inCall, a, b, f0, f1);

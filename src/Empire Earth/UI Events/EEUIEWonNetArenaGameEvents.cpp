@@ -1,5 +1,7 @@
 // C:\EEX\Empire Earth\UI Events\EEUIEWonNetArenaGameEvents.cpp (file name inferred: no __FILE__; class prefix
 // EEUIEWNAG). The WON game room form's (0x20) events: 0x1e9fed..0x1eafcb. Unit flags: the exe module set.
+// R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs); each ProcessEvent is one call, and this unit
+// holds the screens' host (ee/EEWonFrontHost.inl), set at static initialisation.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -64,276 +66,30 @@
 #include "ee/EEWonNetAvailableGameFormManager.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEUICWonNetRoomsBox.h"
+#include "ee/EEUICWonNetStatBox.h"
+#include "ee/EEUIEWonNetArenaRoomEvents.h"
+#include "ee/EEUIEWonNetModifyUserAccountEvents.h"
+#include "ee/EEUIEWonNetServerSelectEvents.h"
+#include "rust/won_lobby/wonfront.h"
 static void OnGamePassword(const char* inPassword);
 
-// Refreshes the WON game list each time the game room's poll timer fires, while a game-list server is known
-long EEUIEWNAGUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (!EEWonNetAvailableGameFormManager::Get()->GetPoll()->Poll())
-        return kErrorOK;
-    if (gWonNet->GetGameListPort() != 0xffff) {
-        gWonNet->RefreshGameList(NULL);
-        gWonNet->UpdateGameList();
-    }
-    return kErrorOK;
-}
+#include "ee/EEWonFrontHost.inl"
+static const bool sWonFrontHostSet = (ee_won_front_set_host(WonFrontHost), true);
 
-// Starts the game room's poll timer and, the first time, installs the update event and fetches the game list
-long EEUIEWNAGActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    TMPoll* thePoll = EEWonNetAvailableGameFormManager::Get()->GetPoll();
-    if (!thePoll->GetIsRunning())
-        thePoll->Start();
-    if (inForm->GetFormUpdateEvent() == NULL) {
-        UIEvent* theEvent = new EEUIEWNAGUpdateForm;
-        inForm->SetFormUpdateEvent(theEvent);
-        theEvent->Dereference();
-        gWonNet->RefreshGameList(inForm->GetControl(kAvailableGamesPlayersInRoomListBox));
-        gWonNet->UpdateGameList();
-    }
-    return kErrorOK;
-}
+long EEUIEWNAGUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgUpdateForm, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgActivateForm, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgBack, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGCheckPassword::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgCheckPassword, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGClickGameFilter::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgClickGameFilter, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGCloseForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgCloseForm, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgDeactivateForm, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGDoubleclickUser::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgDoubleclickUser, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGHostOrJoinGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgHostOrJoinGame, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGSendChat::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgSendChat, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGToggleHostScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgToggleHostScreen, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGToggleJoinScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgToggleJoinScreen, inForm, (intptr_t)inEntity); }
+long EEUIEWNAGOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgOpenScreen, inForm, (intptr_t)inEntity); }
 
-// Leaves the WON room and returns to the previous screen
-long EEUIEWNAGBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    gWonNet->LeaveRoom();
-    return inForm->GetManager()->Pop();
-}
-
-// Shows and clears the host-game password and retype boxes when the password box is ticked; hides them otherwise
-long EEUIEWNAGCheckPassword::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UIEditBox* thePassword = static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesPWForHostedGameEditBox));
-    UICheckBox* theCheckBox = static_cast<UICheckBox*>(inForm->GetControl(kAvailableGamesPWForHostedGameCheckbox));
-    UIEditBox* theConfirmation = static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesPWRetypeForHostedGameEditBox));
-    UIControl* thePasswordLabel = inForm->GetControl(kAvailableGamesPWForHostedGameLabel);
-    UIControl* theConfirmationLabel = inForm->GetControl(kAvailableGamesPWRetypeForHostedGameLabel);
-    if (theCheckBox->GetIsChecked()) {
-        thePassword->DeleteText();
-        theConfirmation->DeleteText();
-        thePasswordLabel->SetDisplayMode(kDisplayModeShown);
-        theConfirmationLabel->SetDisplayMode(kDisplayModeShown);
-        thePassword->SetDisplayMode(kDisplayModeShown);
-        theConfirmation->SetDisplayMode(kDisplayModeShown);
-        inForm->SetTabbing(true);
-        inForm->SetTabStop(27);
-    } else {
-        thePasswordLabel->SetDisplayMode(kDisplayModeHidden);
-        theConfirmationLabel->SetDisplayMode(kDisplayModeHidden);
-        thePassword->SetDisplayMode(kDisplayModeHidden);
-        theConfirmation->SetDisplayMode(kDisplayModeHidden);
-    }
-    return kErrorOK;
-}
-
-// Reapplies the game list filters after a filter toggle changes
-long EEUIEWNAGClickGameFilter::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (gWonNet)
-        gWonNet->UpdateGameList();
-    return kErrorOK;
-}
-
-// Stops the game room's poll timer when the form closes
-long EEUIEWNAGCloseForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    TMPoll* thePoll = EEWonNetAvailableGameFormManager::Get()->GetPoll();
-    if (thePoll->GetIsRunning() == true)
-        thePoll->Stop();
-    return kErrorOK;
-}
-
-// Stops the game room's poll timer and removes the current form's update event
-long EEUIEWNAGDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    TMPoll* thePoll = EEWonNetAvailableGameFormManager::Get()->GetPoll();
-    if (thePoll->GetIsRunning() == true)
-        thePoll->Stop();
-    gUIManager->GetCurrentForm()->SetFormUpdateEvent(NULL);
-    return kErrorOK;
-}
-
-// Starts a private message to the double-clicked user: puts /t "name" in the chat box with the caret at the end
-long EEUIEWNAGDoubleclickUser::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theName;
-    UWideString theText;
-    UIListBox<UWideString>* theUsers = (UIListBox<UWideString>*)inForm->GetControl(kAvailableGamesPlayersInRoomListBox);
-    unsigned long theSelection;
-    if (theUsers->GetCurrentSelection(theSelection) == kErrorOK) {
-        theName = UWideString(theUsers->GetData(theSelection));
-        if (EEIsValidName(theName)) {
-            UIEditBox* theChat = static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesChatEditBox));
-            theChat->DeleteText();
-            theText = UWideString("/t \"");
-            theText += theName;
-            theText += UWideString("\" ");
-            theChat->SetText(theText);
-            inForm->SetTabbing(true);
-            inForm->SetTabStop(16);
-            theChat->SetCaretLocation(theText.GetLength(), 0);
-        }
-    }
-    return kErrorOK;
-}
-
-// Hosts a game (with an optional confirmed password) or joins the selected one, at most once every 5 seconds
-// (an in-progress game shows a message and lifts the delay; a password game prompts for its password)
-long EEUIEWNAGHostOrJoinGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static unsigned long sLastTime = 0;
-    long theResult = 0;
-    UWideString theMessage;
-    unsigned long theSelection;
-    unsigned long theTime = TMGetTime();
-    if (theTime - sLastTime > 5000) {
-        sLastTime = theTime;
-        if (inForm->GetEntityGroup(2)->GetIsEnabled()) {
-            UIEditBox* theName = static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesHostGameNameEditBox));
-            UIEditBox* thePassword = static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesPWForHostedGameEditBox));
-            UICheckBox* theCheckBox = static_cast<UICheckBox*>(inForm->GetControl(kAvailableGamesPWForHostedGameCheckbox));
-            UIEditBox* theConfirmation = static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesPWRetypeForHostedGameEditBox));
-            if (theCheckBox->GetIsChecked() && strcmp(thePassword->GetText(0), "") != 0) {
-                if (strcmp(thePassword->GetText(0), theConfirmation->GetText(0)) == 0) {
-                    if (EEIsValidName(theName->GetText(0)))
-                        gWonNet->HostGame(theName->GetText(0), thePassword->GetText(0));
-                    else {
-                        gResource->GetString(IDS_GAME_NAME_IS_INVALID, theMessage);
-                        gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
-                    }
-                } else {
-                    gResource->GetString(IDS_YOUR_TWO_PASSWORDS_DONT_MATCH, theMessage);
-                    gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
-                }
-            } else {
-                if (EEIsValidName(theName->GetText(0)))
-                    gWonNet->HostGame(theName->GetText(0), NULL);
-                else {
-                    gResource->GetString(IDS_GAME_NAME_IS_INVALID, theMessage);
-                    gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
-                }
-            }
-        } else {
-            EEUICWonNetGamesBox* theGames = static_cast<EEUICWonNetGamesBox*>(inForm->GetControl(kAvailableGamesAvalGamesListBox));
-            if (theGames->GetCurrentSelection(theSelection) == kErrorOK) {
-                if (theGames->GetIsInProgress(theSelection)) {
-                    gResource->GetString(IDS_YOU_CANT_JOIN_THAT_GAME, theMessage);
-                    gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
-                    sLastTime = 0;
-                } else if (theGames->GetHasPassword(theSelection)) {
-                    gResource->GetString(IDS_LOBBY_PASSWORD, theMessage);
-                    gUIManager->DisplayPasswordPrompt(theMessage, true, OnGamePassword, true);
-                } else
-                    gWonNet->JoinGame(theGames->GetGameName(theSelection), NULL);
-            }
-        }
-    }
-    return theResult;
-}
-
-// Joins the selected WON game with the password typed in the prompt
-static void OnGamePassword(const char* inPassword)
-{
-    EEUICWonNetGamesBox* theGames = dynamic_cast<EEUICWonNetGamesBox*>(gUIManager->GetFormByID(kFormAvailableGames)->GetControl(kAvailableGamesAvalGamesListBox));
-    unsigned long theSelection;
-    if (theGames->GetCurrentSelection(theSelection) == kErrorOK)
-        gWonNet->JoinGame(theGames->GetGameName(theSelection), inPassword);
-}
-
-// Sends the chat box's text to the WON room (prefixed with ": ") and clears the box
-long EEUIEWNAGSendChat::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UIEditBox* theEdit = static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesChatEditBox));
-    UWideString theText(theEdit->GetText(0));
-    UWideString theLine;
-    if (!gWonNet)
-        return kErrorOK;
-    if (theText.GetLength() > 0) {
-        theLine = ": ";
-        theLine += theText;
-        gWonNet->SendChat(theLine);
-    }
-    theEdit->DeleteText();
-    return kErrorOK;
-}
-
-// Switches the game room to its Host tab: host controls on, button labelled Host, password unticked, caret in the name
-long EEUIEWNAGToggleHostScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theText;
-    inForm->GetEntityGroup(2)->Enable();
-    inForm->GetEntityGroup(1)->Disable();
-    gResource->GetString(IDS_HOST, theText);
-    UIButton* theButton = static_cast<UIButton*>(inForm->GetControl(kAvailableGamesJoinHostGameButton));
-    theButton->SetText(theText, theButton->GetGEText()->GetFont());
-    static_cast<UICheckBox*>(inForm->GetControl(kAvailableGamesPWForHostedGameCheckbox))->SetChecked(false);
-    inForm->SetTabStop(24);
-    UIEditBox* theName = static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesHostGameNameEditBox));
-    theName->SetCaretLocation(UWideString(theName->GetText(0)).GetLength(), 0);
-    return kErrorOK;
-}
-
-// Switches the game room to its Join tab: join controls on, button labelled Join
-long EEUIEWNAGToggleJoinScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theText;
-    inForm->GetEntityGroup(1)->Enable();
-    inForm->GetEntityGroup(2)->Disable();
-    gResource->GetString(IDS_JOIN, theText);
-    UIButton* theButton = static_cast<UIButton*>(inForm->GetControl(kAvailableGamesJoinHostGameButton));
-    theButton->SetText(theText, theButton->GetGEText()->GetFont());
-    inForm->SetTabStop(16);
-    return kErrorOK;
-}
-
-// Sets up the WON game room: hooks every button, list and toggle to its event, opens on the Join tab
-// and shows the user, the room and the last hosted game name
-long EEUIEWNAGOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theText;
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGBack, inForm->GetControl(kAvailableGamesBackButton), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGToggleHostScreen, inForm->GetControl(kAvailableGamesHostGameTab), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGToggleJoinScreen, inForm->GetControl(kAvailableGamesJoinGameTab), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGHostOrJoinGame, inForm->GetControl(kAvailableGamesJoinHostGameButton), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGHostOrJoinGame, inForm->GetControl(kAvailableGamesHostGameNameEditBox), kControlTriggerEnterPressed);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGHostOrJoinGame, inForm->GetControl(kAvailableGamesAvalGamesListBox), kControlTriggerDoubleClicked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGDoubleclickUser, inForm->GetControl(kAvailableGamesPlayersInRoomListBox), kControlTriggerDoubleClicked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGCheckPassword, inForm->GetControl(kAvailableGamesPWForHostedGameCheckbox), kControlTriggerChecked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGCheckPassword, inForm->GetControl(kAvailableGamesPWForHostedGameCheckbox), kControlTriggerUnchecked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGClickGameFilter, inForm->GetControl(kAvailableGamesInProgressToggle), kControlTriggerChecked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGClickGameFilter, inForm->GetControl(kAvailableGamesInProgressToggle), kControlTriggerUnchecked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGClickGameFilter, inForm->GetControl(kAvailableGamesPasswordToggle), kControlTriggerChecked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGClickGameFilter, inForm->GetControl(kAvailableGamesPasswordToggle), kControlTriggerUnchecked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGClickGameFilter, inForm->GetControl(kAvailableGamesPrivateToggle), kControlTriggerChecked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNAGClickGameFilter, inForm->GetControl(kAvailableGamesPrivateToggle), kControlTriggerUnchecked);
-    UIEvent* theEvent = new EEUIEWNAGActivateForm;
-    inForm->SetFormActivateEvent(theEvent);
-    theEvent->Dereference();
-    theEvent = new EEUIEWNAGDeactivateForm;
-    inForm->SetFormDeactivateEvent(theEvent);
-    theEvent->Dereference();
-    theEvent = new EEUIEWNAGCloseForm;
-    inForm->SetFormCloseEvent(theEvent);
-    theEvent->Dereference();
-    theEvent = new EEUIEWNAGSendChat;
-    inForm->GetControl(kAvailableGamesChatEditBox)->SetTriggerEvent(kControlTriggerEnterPressed, theEvent);
-    theEvent->Dereference();
-    inForm->GetEntityGroup(1)->Enable();
-    inForm->GetEntityGroup(2)->Disable();
-    static_cast<UIRadioButton*>(inForm->GetControl(kAvailableGamesJoinGameTab))->Check();
-    gResource->GetString(IDS_JOIN, theText);
-    UIButton* theButton = static_cast<UIButton*>(inForm->GetControl(kAvailableGamesJoinHostGameButton));
-    theButton->SetText(theText, theButton->GetGEText()->GetFont());
-    inForm->SetTabbing(true);
-    inForm->SetTabStop(16);
-    UITextLabel* theUserLabel = static_cast<UITextLabel*>(inForm->GetControl(kAvailableGamesPlayersNameLabel));
-    std::string theUser = WONAPI::WStringToString(gWonNet->mUser->GetName());
-    theUserLabel->SetText(UWideString(theUser.c_str()));
-    UITextLabel* theRoomLabel = static_cast<UITextLabel*>(inForm->GetControl(kAvailableGamesRoomsNameLabel));
-    std::string theRoom = WONAPI::WStringToString(gWonNet->GetRoomName());
-    theRoomLabel->SetText(UWideString(theRoom.c_str()));
-    static_cast<UIEditBox*>(inForm->GetControl(kAvailableGamesHostGameNameEditBox))->SetText(gHostedGameName);
-    static_cast<UICheckBox*>(inForm->GetControl(kAvailableGamesPWForHostedGameCheckbox))->SetChecked(false);
-    return kErrorOK;
-}
+// the password prompt's callback: joins the selected WON game with the password typed
+static void OnGamePassword(const char* inPassword) { ee_won_front_call(EeWonFrontCall::AgOnGamePassword, NULL, (intptr_t)inPassword); }

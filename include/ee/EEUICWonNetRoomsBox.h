@@ -27,6 +27,14 @@ public:
     virtual long DrawTextA();               // +0x1c 0x25d045 (four columns per visible line)
     // sizeof 0x13c (its `new`); the ctor 0x25cead news both texts (GEText(font), 0x50 bytes each; the second one's
     // colour is set to white) after the base ctor. Names are provisional
+    // the screens' host's reads of the protected base (R6 WON round 32: ee/EEWonFrontHost.inl)
+    long FrontScrollBarText() { return this->DrawScrollBarText(); }
+    const GERectangle& FrontCopyRect() const { return this->GetCopyTextRectangle(); }
+    unsigned long FrontDrawCount() const { return this->GetDrawCount(); }
+    unsigned long FrontLineHeight() const { return this->GetLineHeight(); }
+    unsigned long FrontCopyCount() const { return (unsigned long)this->mCopyLineArray.size(); }
+    const EEUICWNRBLine& FrontCopyLine(unsigned long inIndex) const { return this->mCopyLineArray[inIndex]; }
+    void FrontClearCopiedSelection() { this->SetCopiedHasSelection(false); }
     GEText* mCopiedText;                    // +0x134
     GEText* mText;                          // +0x138
 };

@@ -17,7 +17,7 @@ class UIEntity;
 class UIForm;
 class UIManager;
 
-class LLE_API UIEvent : public UReferenceCounter, private EeUiEventFields {
+class LLE_API UIEvent : public UReferenceCounter, public EeUiEventFields {
 public:
     UIEvent() { this->mInitializeCount = 0; }  // body assignment: the store follows the vptr load (exe 0x1aa9ef)
     virtual ~UIEvent() {}
@@ -27,13 +27,10 @@ public:
     long Initialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Initialize); }
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) = 0;   // slot 0x04
     long Uninitialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Uninitialize); }
-protected:
     virtual long InitializeEvent() { return kErrorOK; }
     virtual long UninitializeEvent() { return kErrorOK; }
-public:
     // the Rust record's and loaders' calls out that are not Rust's (UIManager.cpp; ee_ui lle_manager.rs:
     // ee_ui_event_host comes first): the object is the record or the file
-    static intptr_t HostOp(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 };
 
 #endif

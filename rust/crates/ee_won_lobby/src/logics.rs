@@ -305,6 +305,172 @@ pub enum EeWonLogicOp {
     AdapterDialog,
     /// `LobbySetNetworkAdapter(mNetworkAdapterDialog->GetSelectedAddress())`.
     SetAdapter,
+
+    // ---- the hosts' one-statement cases the moved cases' statements became (R6 WON round 32: netlogicops.rs
+    // composes them in the game). AccountLogic's:
+    /// `LobbyDoYesNoDialog(gLobbyResources[a].mString, gLobbyResources[b].mString, true)`.
+    YesNoRes = 200,
+    /// `LobbyMessageBox(gLobbyResources[a].mString, gLobbyResources[b].mString)`.
+    MessageBoxRes,
+    /// `mCreditsDialog->LCall((EeWonLobbyDlgCall)a)`.
+    CreditsLCall,
+    /// `LobbyDoDialog(mCreditsDialog)`: the result.
+    CreditsDo,
+    /// `mTOUDialog->LCall((EeWonLobbyDlgCall)a)`.
+    TouLCall,
+    /// `LobbyDoDialog(mTOUDialog)`: the result.
+    TouDo,
+    /// `LobbyShowCreateAccount()`.
+    ShowCreateAccount,
+    /// `LobbyShowLostPassword()`.
+    ShowLostPassword,
+    /// `LobbyShowLostUsername()`.
+    ShowLostUsername,
+    /// `LobbyRunOpWithStatus(op a, gLobbyResources[b], gLobbyResources[c], d & 0xff, d >> 8)`.
+    RunWithStatusRes,
+    /// `((RustServerOp*)a)->SetNum(b, c)`.
+    OpSetNum,
+    /// `new GetCertOp(a)`, held (a reference the Rust gives back).
+    GetCertNew,
+    /// `RustServerOp::NewGetAccount(a, b)`, held.
+    GetAccountNew,
+    /// `RustServerOp::NewRequest(ee_won_reqop_password_email(a, b), c)`, held.
+    PasswordEmailNew,
+    /// `RustServerOp::NewRequest(ee_won_reqop_info_email(a, b), c)`, held.
+    InfoEmailNew,
+    /// `RustServerOp::NewUpdateAccount(a, b, event c's NewPassword, its Email)`, held.
+    UpdateAccountNew,
+    /// `RustServerOp::NewCreateAccount(a, event b's members)`, held.
+    CreateAccountNew,
+    /// `((AuthContext*)a)->AddCommunity(L"Admin")`.
+    AuthAddAdmin,
+    /// `((AuthContext*)a)->RemoveCommunity(L"Admin")`.
+    AuthRemoveAdmin,
+    /// `LobbyAddUser(event a's UserName, "", false)`.
+    AddUserNamed,
+    /// `LobbyAddUser(event a's UserName, the empty GUIString, false)`.
+    AddUserNoPassword,
+    /// `LobbyAddUser(event a's UserName, its Password, false)`.
+    AddUserWithPassword,
+    /// the user `a`'s terms-of-use times set to the lobby's (`LobbyGetTOUTimes`, `LobbyUserSetTOU`).
+    UserSetTOUNow,
+    /// `LobbySaveGlobalPrefs(true)`.
+    SaveGlobalPrefsNow,
+    /// `LobbySetCurrentUser(a)`.
+    SetCurrentUser,
+    /// `LobbyBroadcastEvent(SetLoginFieldsEvent(event a's UserName, its Password, false), true)`.
+    BroadcastLoginFields,
+    /// `LobbyFindUser(GUIString(new GUIStringData(event a's UserName)))`.
+    FindUserOfEvent,
+    /// `LobbyIsTOUNewer(LobbyUserTOU(a, 0), LobbyUserTOU(a, 1))`.
+    UserTOUNewer,
+    /// `((AuthContext*)a)->SetUserName(event b's UserName)`.
+    AuthSetUserNameOf,
+    /// `((AuthContext*)a)->SetPassword(event b's Password)`.
+    AuthSetPasswordOf,
+    // InitLogic's:
+    /// `InitList(a)` (1 auth, 2 account, 3 firewall detect, 4 patch servers).
+    InitListGet = 240,
+    /// `((ServerContext*)a)->Clear()`.
+    ServerClear,
+    /// `WONFile(LobbyGetSysTOUPath()).GetModifyTime()`.
+    SysTouModifyTime,
+    /// `WONFile(LobbyGetGameTOUPath()).GetModifyTime()`.
+    GameTouModifyTime,
+    /// `LobbySetTOUTimes(a, b)`.
+    SetTOUTimes,
+    /// the lobby music `SetLooping(true)`.
+    MusicSetLooping,
+    /// the lobby music `Play()`.
+    MusicPlay,
+    /// the lobby music `Stop()`.
+    MusicStop,
+    /// an address with `SetRememberHostString(true)` (the original's unused local).
+    RememberHostAddress,
+    /// `LobbyGetDirServers()->RemoveAllAddresses()`.
+    DirServersRemoveAll,
+    /// the config's directory servers added to `LobbyGetDirServers()`.
+    AddAllDir,
+    /// the config's room directory servers added to `LobbyGetRoomDirServers()`.
+    AddAllRoomDir,
+    /// the config's auth servers added to `LobbyGetAuthServers()`.
+    AddAllAuth,
+    /// the picture at the HTTP get op `a`'s local path decoded, held (NULL: none).
+    PromotionDecode,
+    /// `LobbyBroadcastEvent(SetCrossPromotionEvent(a, mCrossPromotion), true)`.
+    PromotionBroadcast,
+    /// `RustServerOp::NewHttpGet(std::string(a, b))`, held.
+    HttpGetNew,
+    /// the HTTP get op `a`'s cache: the global cache in the WON directory.
+    HttpGetSetCache,
+    /// the HTTP get op `a`'s completion: `CrossPromotionImageCompletion`.
+    HttpGetSetPromotionCompletion,
+    /// `mHTTPSession->AddOp(a)`.
+    SessionAddOp,
+    /// `LoginInitStatusEvent(gLobbyResources[a], *(GUIString*)b, d & 1, d >> 8)` broadcast.
+    InitStatusText,
+    /// `LoginInitStatusEvent(gLobbyResources[a], gLobbyResources[c], d & 1, d >> 8)` broadcast.
+    InitStatusRes,
+    /// `LoginInitStatusEvent(gLobbyResources[a], gEmptyGUIString, d & 1, d >> 8)` broadcast.
+    InitStatusEmpty,
+    /// `((ServerContext*)a)->AddAddressesFromDir(op b's directory list c, NULL)`.
+    ServerAddFromDir,
+    /// `((ServerContext*)a)->NotifyFailed(op b's current address)`.
+    ServerNotifyFailed,
+    /// `mAcceptOp = new SocketOp(Accept, socket op a's socket)`.
+    AcceptOpNewFrom,
+    /// `mAcceptOp = new SocketOp(Accept, mFirewallSocket)`.
+    AcceptOpNewFirewall,
+    /// `RunOp(mAcceptOp, AcceptCompletion, gLobbyAcceptTimeout)`.
+    AcceptOpRun,
+    /// `mFirewallAddress = firewall op a's current address`.
+    SetFirewallAddress,
+    /// `config != NULL`.
+    HasConfig,
+    /// `LobbyGetRoomDirServers()`.
+    RoomDirServersGet,
+    /// `new DNSTestOp(config->mDirServers.front())`, held.
+    DnsOpNew,
+    /// `RunTrackedOp(a, DNSCompletion, 0)`.
+    RunTrackedDns,
+    /// `RunTrackedOp(a, HTTPDocumentCompletion, 0)`.
+    RunTrackedDocument,
+    /// `RunTrackedOp(a, DirectoryCompletion, 0)`.
+    RunTrackedDirectory,
+    /// `RunTrackedOp(a, VersionCompletion, 0)`.
+    RunTrackedVersion,
+    /// `RunTrackedOp(a, FirewallCompletion, 0)`.
+    RunTrackedFirewall,
+    /// `RustServerOp::NewHttpDocument(config->mProductName, a)`, held.
+    HttpDocNew,
+    /// `((RustServerOp*)a)->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage)`.
+    HttpDocSetConfig,
+    /// `((RustServerOp*)a)->Set(EE_WON_HTTPDOC_SESSION, mHTTPSession)`.
+    HttpDocSetSession,
+    /// `RustServerOp::NewGetMultiDir(a, 0x04000002, the four paths, b)`, held.
+    DirQueryNew,
+    /// the version check's request (product, config, version) on the patch servers, held.
+    VersionCheckNew,
+    /// `new DetectFirewallOp(a)`, held.
+    FirewallOpNew,
+    /// `((DetectFirewallOp*)a)->SetListenPort(LobbyGetLobbyPort())`.
+    FirewallSetListenPort,
+    /// `((DetectFirewallOp*)a)->SetDoListen(b != 0)`.
+    FirewallSetDoListen,
+    /// `((DetectFirewallOp*)a)->SetWaitForConnect(b != 0)`.
+    FirewallSetWaitForConnect,
+    /// `mAcceptOp.get() != NULL`.
+    HasAcceptOp,
+    /// `mAcceptOp->Kill(true)`.
+    AcceptOpKill,
+    /// `mAcceptOp->GetSocket() != NULL`.
+    AcceptOpHasSocket,
+    /// `mAcceptOp->GetSocket()->Close()`.
+    AcceptOpCloseSocket,
+    /// `mNetworkAdapterDialog->LCall(Reset)`.
+    AdapterReset,
+    /// `LobbyDoDialog(mNetworkAdapterDialog)`: the result.
+    AdapterDo,
 }
 
 /// The inward calls (each a method of the logic, `a`..`c` its arguments).
@@ -345,6 +511,8 @@ pub enum EeWonLogicCall {
     AcctNeedTOU,
     /// `mLastUserName`'s length (a member).
     AcctLastNameLength,
+    /// `HandleControlEvent(a)` (R6 WON round 32): the control's number mapped here, then `AcctControl`.
+    AcctControlId = 30,
     // ---- InitLogic
     /// `Init()`.
     InitInit = 40,
@@ -368,6 +536,8 @@ pub enum EeWonLogicCall {
     InitFirewall,
     /// `mErrors` (a 0) or `mIgnoredErrors` (1) (members).
     InitField,
+    /// `HandleControlEvent(a)` (R6 WON round 32): the control's number mapped here, then `InitControl`.
+    InitControlId = 60,
 }
 
 /// Which logic an object is.
@@ -490,7 +660,11 @@ impl EeWonLogic {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
-        host_call(self.host, self.obj, op, a, b, c, d)
+        let out = |o: Op, a: isize, b: isize, c: isize, d: isize| host_call(self.host, self.obj, o, a, b, c, d);
+        if let Some(r) = crate::netlogicops::game_logic_op(op, a, b, c, d, &out) {
+            return r;
+        }
+        out(op, a, b, c, d)
     }
 
     fn op0(&self, op: Op) -> isize {
@@ -1150,6 +1324,12 @@ impl EeWonLogic {
             C::AcctCheckLogin => return self.check_login_status() as isize,
             C::AcctNeedTOU => return self.need_tou.get() as isize,
             C::AcctLastNameLength => return self.last_user_name.borrow().len() as isize,
+            C::AcctControlId => {
+                let which = crate::netlogicops::account_control_of(a);
+                if which != 0 {
+                    self.acct_control(which);
+                }
+            }
             C::InitInit => self.init(),
             C::InitStart => self.start(a != 0),
             C::InitKillHook => {
@@ -1158,6 +1338,12 @@ impl EeWonLogic {
             }
             C::InitKillFirewall => self.kill_firewall_test(),
             C::InitControl => self.init_control(a),
+            C::InitControlId => {
+                let which = crate::netlogicops::init_control_of(a);
+                if which != 0 {
+                    self.init_control(which);
+                }
+            }
             C::InitEvent => self.init_event(a),
             C::InitDns => self.dns_done(a),
             C::InitDocument => self.document_done(a),

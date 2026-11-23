@@ -88,10 +88,12 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 // The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
 // UpdateMouse's location)
 struct EEUIManagerCall {
-    explicit EEUIManagerCall(EEUIManager* inManager) : mManager(inManager), mMouse(NULL) {}
+    explicit EEUIManagerCall(EEUIManager* inManager, const GE2DPoint* inMouse = NULL) : mManager(inManager), mMouse(inMouse) {}
     EEUIManager* mManager;
     UWideString mNames[2];
     const GE2DPoint* mMouse;
+    // the record of a call (a temporary's, for the full expression)
+    EEUIManagerCall* Ptr() { return this; }
 };
 
 // Creates the game's UI manager: registers the control and form event factories (the game settings one
@@ -105,8 +107,7 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     // settings again, WON server select, debug sound: one Rust table in that order but WON's, whose ids are its own;
     // the port's controls, the forms, the music and the save form's event: ee_screens ui_manager.rs)
     ee_screens_ui_manager_fields(this);
-    EEUIManagerCall theCall(this);
-    ee_screens_ui_manager_construct(&theCall);
+    ee_screens_ui_manager_construct(EEUIManagerCall(this).Ptr());
 }
 
 // Destroys the UI manager and its scenario editor form
@@ -143,52 +144,31 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
 
 // Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
 // (ee_screens ui_manager.rs)
-void EEUIManager::StartScenarioEditor()
-{
-    EEUIManagerCall theCall(this);
-    ee_screens_ui_manager_start_editor(&theCall);
-}
+void EEUIManager::StartScenarioEditor() { ee_screens_ui_manager_start_editor(EEUIManagerCall(this).Ptr()); }
 
 // Handles F9 screenshots outside text entry; then the keys (ee_screens ui_manager.rs; the original first stopped a
 // playing movie on Escape, Return or Space)
-long EEUIManager::UpdateKeyboard()
-{
-    EEUIManagerCall theCall(this);
-    return (long)ee_screens_ui_manager_update_keyboard(&theCall);
-}
+long EEUIManager::UpdateKeyboard() { return (long)ee_screens_ui_manager_update_keyboard(EEUIManagerCall(this).Ptr()); }
 
 // Handles the mouse (ee_screens ui_manager.rs; the original first stopped a playing movie on a click)
 long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 {
-    EEUIManagerCall theCall(this);
-    theCall.mMouse = &inMouseLocation;
-    return (long)ee_screens_ui_manager_update_mouse(&theCall);
+    return (long)ee_screens_ui_manager_update_mouse(EEUIManagerCall(this, &inMouseLocation).Ptr());
 }
 
 // (the ids' agreement with ee_screens ui_manager.rs' is ui_ids.rs' test)
 
-// The Rust's calls on the manager, the toolkit, the world and the threads (EE_SCREENS_UM_OP_*), each the original's
-extern "C" int64_t ee_screenscpp_ui_manager(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    return EEUIManager::HostOp(*static_cast<EEUIManagerCall*>(inCall), inOp, inA, inB, inC);
-}
-
-// (a member: UIManager's UpdateKeyboard and UpdateMouse are protected)
-int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    EEUIManager* theManager = ioCall.mManager;
-    switch (inOp) {   // (the cases of more than one call are Rust's: ee_screens ui_manager_calls.rs)
-    case EE_SCREENS_UM_OP_ENGINE_COUNT: return EECPEngineChoiceCount();
-    case EE_SCREENS_UM_OP_MUSIC:
-        theManager->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume);
-        break;
-    case EE_SCREENS_UM_OP_CITIZENS: return gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-    case EE_SCREENS_UM_OP_POST_F9: EEPostF9Key(); break;
-    case EE_SCREENS_UM_OP_BASE_KEYBOARD: return theManager->UIManager::UpdateKeyboard();
-    case EE_SCREENS_UM_OP_BASE_MOUSE: return theManager->UIManager::UpdateMouse(*ioCall.mMouse);
-    }
-    return 0;
-}
+// The Rust's calls on the manager, the toolkit, the world and the threads (EE_SCREENS_UM_OP_*, ui_manager_ffi.rs
+// picks), each the original's
+extern "C" int64_t ee_screenscpp_um_engine_count() { return EECPEngineChoiceCount(); }
+extern "C" void ee_screenscpp_um_music(void* inCall)
+{ static_cast<EEUIManagerCall*>(inCall)->mManager->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume); }
+extern "C" int64_t ee_screenscpp_um_citizens() { return gWorldTable.GetLongValue(kWorldStartingCitizensDefault); }
+extern "C" void ee_screenscpp_um_post_f9() { EEPostF9Key(); }
+extern "C" int64_t ee_screenscpp_um_base_keyboard(void* inCall)
+{ return EEUIManager::BaseKeyboard(static_cast<EEUIManagerCall*>(inCall)->mManager); }
+extern "C" int64_t ee_screenscpp_um_base_mouse(void* inCall)
+{ return EEUIManager::BaseMouse(static_cast<EEUIManagerCall*>(inCall)->mManager, *static_cast<EEUIManagerCall*>(inCall)->mMouse); }
 
 // ---- the one-statement shims of ee_screens ui_manager_calls.rs (UI lane round 8): each one call, no logic
 #define UMCALL(x) (*reinterpret_cast<EEUIManagerCall*>(x))
@@ -202,21 +182,7 @@ static const unsigned long kUMKeys[] = {kKeyEscape, kKeyReturn, kKeySpace, kKeyF
 static ISEntity* sUMKey;                       // the key um_key_load found
 static GERectangle sUMParent, sUMRect;         // CreateUserDefinedControl's window and control rectangles
 static std::vector<UWideString> sUMStrings;    // and its strings
-static_assert(EE_SCREENS_UMC_WNS_CANCEL == kControlEventWNSCancel &&
-                  EE_SCREENS_UMC_BACKGROUND_GENERIC == kBackgroundGeneric &&
-                  EE_SCREENS_UMC_STATUS_BUTTON == kDbControlStatusButton && EE_SCREENS_UMC_MINI_MAP == kDbControlMiniMap &&
-                  EE_SCREENS_UMC_ERROR_LOG == kDbControlErrorLog && EE_SCREENS_UMC_ATTRIBUTE == kDbControlAttribute &&
-                  EE_SCREENS_UMC_MAIN_GAME_STATUS_BAR == kDbControlMainGameStatusBar &&
-                  EE_SCREENS_UMC_SELECT_UNITS == kDbControlSelectUnits &&
-                  EE_SCREENS_UMC_COMMAND_UNITS == kDbControlCommandUnits && EE_SCREENS_UMC_PORTRAIT == kDbControlPortrait &&
-                  EE_SCREENS_UMC_CHAT_LINE == kDbControlChatLine && EE_SCREENS_UMC_CB_LIST_BOX == kDbControlCBListBox &&
-                  EE_SCREENS_UMC_WON_STAT_BOX == kDbControlWonNetStatBox &&
-                  EE_SCREENS_UMC_UNIT_ICON_BAR == kDbControlUnitIconBar &&
-                  EE_SCREENS_UMC_SAVED_GROUP == kDbControlSavedGroup &&
-                  EE_SCREENS_UMC_PGS_LINE_GRAPH == kDbControlPGSLineGraph && EE_SCREENS_UMC_PING == kDbControlPing &&
-                  EE_SCREENS_UMC_WON_ROOMS_BOX == kDbControlWonNetRoomsBox &&
-                  EE_SCREENS_UMC_WON_GAMES_BOX == kDbControlWonNetGamesBox,
-              "ui_manager_calls.rs' ids");
+// (ui_manager_calls.rs' ids equal the headers': hud_cpp_consts_tests.rs)
 extern "C" uintptr_t ee_screenscpp_um_call_manager(uintptr_t inCall) { return (uintptr_t)UMCALL(inCall).mManager; }
 extern "C" void ee_screenscpp_um_register_game_event(uintptr_t inManager)
 { UMG(inManager)->RegisterControlEventCallback(EECreateGameEvent); }

@@ -497,4 +497,349 @@ inline char* fgets(char* b, int n, FSFileSpecW& f)
 }
 typedef FSFileSpecW FSFileSpec;
 }
+
+// ---- the screens' world (R6 WON round 32): the forms, controls, list boxes, texts, fonts, the poll, the UI manager
+// and a gWonNet the WON front end's screens (won_wonfront_orig.h, the deleted C++; and the host's statements,
+// ee/EEWonFrontHost.inl, under the Rust wonfront.rs) call. Its own namespace, FE: the two sides (FE::Ori, FE::Rus)
+// declare their own event, box and manager classes over these. Getters answer from the step's knobs and are not
+// logged; every change is.
+// the game's name check (ee/EEWonNet.h declares it): not empty, not starting with 'x'
+bool EEIsValidName(const UWideString& s) { return s.GetLength() > 0 && ((const char*)s)[0] != 'x'; }
+
+namespace FE {
+using W::Log;
+using W::N;
+static std::string X(float f) { char b[48]; snprintf(b, sizeof b, "%a", (double)f); return b; }
+static std::string T(const char* s) { return s ? std::string("\"") + s + "\"" : std::string("NULL"); }
+
+enum { kErrorOK = 0, kDisplayModeHidden = 0, kDisplayModeShown = 1, kTextAlignLeft = 0, kFontStyleBold = 1 };
+enum { kFormAvailableRooms = 31, kFormAvailableGames = 32, kFormUpdateSierraAccount = 37, kFormSelectServer = 38, kFormWonStats = 40 };
+enum {
+    kAvailableGamesPlayersNameLabel = 2, kAvailableGamesRoomsNameLabel = 4, kAvailableGamesJoinGameTab = 5,
+    kAvailableGamesHostGameTab = 6, kAvailableGamesPlayersInRoomListBox = 8, kAvailableGamesAvalGamesListBox = 13,
+    kAvailableGamesChatEditBox = 16, kAvailableGamesJoinHostGameButton = 17, kAvailableGamesBackButton = 18,
+    kAvailableGamesHostGameNameEditBox = 24, kAvailableGamesPWForHostedGameEditBox = 27,
+    kAvailableGamesPWForHostedGameCheckbox = 28, kAvailableGamesPWRetypeForHostedGameEditBox = 29,
+    kAvailableGamesPWForHostedGameLabel = 30, kAvailableGamesPWRetypeForHostedGameLabel = 31,
+    kAvailableGamesInProgressToggle = 32, kAvailableGamesPasswordToggle = 33, kAvailableGamesPrivateToggle = 34,
+    kAvailableRoomsPlayersNameLabel = 2, kAvailableRoomsAvailRoomsListBox = 6, kAvailableRoomsJoinRoomButton = 7,
+    kAvailableRoomsBackButton = 8, kAvailableRoomsUpdateMyAccount = 9, kAvailableRoomsTotalGamesNumber = 14,
+    kAvailableRoomsServersNameLabel = 16, kUpdateAccountNewPasswordEditBox = 2, kUpdateAccountConfirmPasswordEditBox = 4,
+    kUpdateAccountEnterEmailEditBox = 6, kUpdateAccountSendMeEmailCheckbox = 7, kUpdateAccountUpdateButton = 8,
+    kUpdateAccountDontUpdateButton = 9, kSelectServerListBox = 1, kSelectServerOKButton = 2,
+    kSelectServerCancelButton = 3, kWonStatsStatBox = 2, kWonStatsMyStatsLine = 22,
+};
+enum { kControlTriggerChecked = 0x3e9, kControlTriggerUnchecked = 0x3ea, kControlTriggerDoubleClicked = 0x3ec,
+       kControlTriggerButtonUp = 0x3f0, kControlTriggerEnterPressed = 0x3f1 };
+// (the strings' ids: ee/EEStringIDs.h's macros)
+
+// ---- the step's knobs (the test draws them before each step)
+struct StatKnob { std::string mText; unsigned long mL14, mL18, mNumGames, mL20, mL24, mL28; long mL2C; unsigned long mTotalTime; };
+struct GameKnob { std::string mName; long mHumans, mPlayers; bool mHasPassword, mIsPrivate, mIsInProgress; };
+struct RoomKnob { std::string mName, mDescription; long mNumPlayers, mNumGames; };
+struct ServerKnob { std::wstring mDisplayName, mName; };
+struct Knobs {
+    unsigned long mTime = 0;
+    bool mWonNet = true;
+    bool mManager = false, mPollRunning = false, mPollFires = false;
+    bool mUpdateEvent = false;
+    bool mGroup2 = false;
+    std::map<long, bool> mChecked;
+    std::map<long, std::string> mTexts;
+    long mUsersSel = -1; std::vector<std::string> mUsers;
+    long mGamesSel = -1; std::vector<GameKnob> mGames;
+    long mRoomsSel = -1; std::vector<RoomKnob> mRooms;
+    std::vector<StatKnob> mStats;
+    std::vector<ServerKnob> mServers;
+    bool mServerHasSel = false; long mServerSel = 0;
+    unsigned short mGameListPort = 0xffff;
+    bool mRoomListChanged = false;
+    long mPop = 0;
+    unsigned long mDrawCount = 0, mLineHeight = 12, mLinesDisplayed = 0, mFontHeight = 12;
+    float mCopyLeft = 0, mCopyTop = 0;
+    long mScrollBar = 0, mBaseCopy = 0;
+    std::string mHosted = "last game";
+    std::wstring mUser = L"me", mRoom = L"Room A";
+};
+static Knobs sK;
+static int sTextIds, sEventIds;
+
+// ---- geometry, colours, fonts and texts
+struct GE2DPoint { float x, y; GE2DPoint(float a, float b) : x(a), y(b) {} };
+struct GERectangle {
+    float mBottom = 0, mLeft = 0, mRight = 0, mTop = 0;   // lle/GERectangle.h's order
+    GERectangle() {}
+    GERectangle(const GE2DPoint& p, float w, float h) : mBottom(p.y + h), mLeft(p.x), mRight(p.x + w), mTop(p.y) {}
+    float GetLeft() const { return mLeft; }
+    float GetTop() const { return mTop; }
+    float GetWidth() const { return mRight - mLeft; }
+    void SetBottom(float v) { mBottom = v; }
+    void SetLeft(float v) { mLeft = v; }
+    void SetRight(float v) { mRight = v; }
+    void SetTop(float v) { mTop = v; }
+    void SetBottom(long v) { mBottom = (float)v; }
+    void SetLeft(long v) { mLeft = (float)v; }
+    void SetRight(long v) { mRight = (float)v; }
+    void SetTop(long v) { mTop = (float)v; }
+    GE2DPoint GetTopLeft() const { return GE2DPoint(mLeft, mTop); }
+    std::string S() const { return X(mLeft) + "," + X(mTop) + "," + X(mRight) + "," + X(mBottom); }
+};
+struct GEColor {
+    std::string mText;
+    GEColor() : mText("default") {}
+    GEColor(float r, float g, float b) : mText(X(r) + "/" + X(g) + "/" + X(b)) {}
+};
+struct GEFont {
+    unsigned long mStyle;
+    unsigned long GetHeight() const { return sK.mFontHeight; }
+    const char* GetFontName() const { return "Arial"; }
+    unsigned long GetFontStyle() const { return mStyle; }
+    unsigned long GetFontQuality() const { return 3; }
+    unsigned long GetFontSize() const { return 10; }
+};
+static GEFont sBaseFont = {0};
+struct UIFontTable {
+    static GEFont* FindOrCreateFont(const char* n, unsigned long style, unsigned long q, unsigned long size)
+    {
+        static std::map<unsigned long, GEFont*> sFonts;
+        Log(std::string("font find ") + n + " " + N(style) + " " + N(q) + " " + N(size));
+        GEFont*& f = sFonts[style];
+        if (f == NULL) f = new GEFont{style};
+        return f;
+    }
+};
+struct GEText {
+    int mId;
+    GEFont* mFont;
+    std::string mText;
+    explicit GEText(GEFont* f) : mId(++sTextIds), mFont(f) { Log("text" + N(mId) + " new font " + N(f->mStyle)); }
+    GEText(const GEText&) = delete;
+    ~GEText() { Log("text" + N(mId) + " delete"); }
+    GEText& operator=(const GEText& o) { Log("text" + N(mId) + " = text" + N(o.mId)); mFont = o.mFont; mText = o.mText; return *this; }
+    void SetText(const UWideString& t) { mText = (const char*)t; Log("text" + N(mId) + " set " + T(t)); }
+    void SetFgColor(const GEColor& c) { Log("text" + N(mId) + " fg " + c.mText); }
+    void SetBgColor(const GEColor& c) { Log("text" + N(mId) + " bg " + c.mText); }
+    void SetLocation(const GE2DPoint& p) { Log("text" + N(mId) + " at " + X(p.x) + "," + X(p.y)); }
+    void SetIsTransparent(bool b) { Log("text" + N(mId) + " transparent " + N(b)); }
+    void SetAlignment(int a) { Log("text" + N(mId) + " align " + N(a)); }
+    GEFont* GetFont() const { return mFont; }
+    void SetFont(GEFont* f) { mFont = f; Log("text" + N(mId) + " font " + N(f->mStyle)); }
+    GERectangle GetTextExtent() const
+    {
+        float w = 0;
+        for (unsigned char c : mText) w += 0.25f * (float)c;   // the width follows the characters, not only their count
+        return GERectangle(GE2DPoint(0, 0), w, 10.0f);
+    }
+};
+
+// ---- events, controls and forms
+struct UIForm;
+struct UIEntity {};
+struct UIEvent {
+    std::string mName;
+    int mId;
+    explicit UIEvent(const char* n) : mName(n), mId(++sEventIds) { Log("event new " + mName + "#" + N(mId)); }
+    virtual ~UIEvent() {}
+    virtual long ProcessEvent(UIForm*, UIEntity*) = 0;
+    void Dereference() { Log("event deref " + mName + "#" + N(mId)); }
+    std::string S() const { return mName + "#" + N(mId); }
+};
+struct UIControl {
+    long mForm, mId;
+    UIControl(long f, long i) : mForm(f), mId(i) {}
+    virtual ~UIControl() {}
+    std::string S() const { return N(mForm) + "/" + N(mId); }
+    void SetTriggerEvent(unsigned long t, UIEvent* e) { Log("ctl " + S() + " trigger " + N(t) + " " + e->S()); }
+    void SetDisplayMode(int m) { Log("ctl " + S() + " mode " + N(m)); }
+    virtual long DrawTextA() { Log("ctl " + S() + " base draw text"); return 0; }
+};
+static GEText* sButtonText;
+// an edit box, check box, radio button, button or label (the screens cast a form's control to the one they know)
+struct UIAnyControl : UIControl {
+    std::string mText;
+    bool mChecked = false;
+    UIAnyControl(long f, long i) : UIControl(f, i)
+    {
+        mText = sK.mTexts.count(i) ? sK.mTexts[i] : std::string();
+        mChecked = sK.mChecked.count(i) ? sK.mChecked[i] : false;
+    }
+    const char* GetText(unsigned long) const { return mText.c_str(); }
+    void DeleteText() { mText.clear(); Log("edit " + S() + " delete text"); }
+    void SetText(const UWideString& t) { mText = (const char*)t; Log("ctl " + S() + " text " + T(t)); }
+    void SetText(const UWideString& t, GEFont* f) { Log("button " + S() + " text " + T(t) + " font " + N(f->mStyle)); }
+    void SetCaretLocation(unsigned long a, unsigned long b) { Log("edit " + S() + " caret " + N(a) + " " + N(b)); }
+    bool GetIsChecked() const { return mChecked; }
+    void SetChecked(bool b) { mChecked = b; Log("check " + S() + " " + N(b)); }
+    void Check() { Log("radio " + S() + " check"); }
+    GEText* GetGEText() const { return sButtonText; }
+};
+typedef UIAnyControl UIEditBox;
+typedef UIAnyControl UICheckBox;
+typedef UIAnyControl UIRadioButton;
+typedef UIAnyControl UIButton;
+typedef UIAnyControl UITextLabel;
+
+struct EEUICWNGBLine { UWideString mName; long mHumans; long mPlayers; bool mHasPassword; bool mIsPrivate; bool mIsInProgress; };
+struct EEUICWNRBLine { UWideString mName; UWideString mDescription; long mNumPlayers; long mNumGames; };
+struct EEUICWNSBStat {
+    UWideString mText;
+    unsigned long mL14, mL18, mNumGames, mL20, mL24, mL28;
+    long mL2C;
+    unsigned long mTotalTime;
+};
+static std::string Describe(const UWideString& s) { return T(s); }
+static std::string Describe(const EEUICWNGBLine& s) { return T(s.mName); }
+static std::string Describe(const EEUICWNRBLine& s) { return T(s.mName); }
+static std::string Describe(const EEUICWNSBStat& s)
+{
+    return T(s.mText) + " " + N(s.mL14) + " " + N(s.mL18) + " " + N(s.mNumGames) + " " + N(s.mL20) + " " + N(s.mL24) + " " +
+           N(s.mL28) + " " + N(s.mL2C) + " " + N(s.mTotalTime);
+}
+struct UIBackground { long mForm, mId; void SetColor(const GEColor& c) { Log("ctl " + N(mForm) + "/" + N(mId) + " selected colour " + c.mText); } };
+template <class T> struct UIListBox : UIControl {
+    std::vector<T> mData;
+    std::vector<T> mCopyLineArray;
+    UIForm* mOwner;
+    UIBackground mBackground;
+    UIListBox(unsigned long id, const std::vector<T>&, unsigned long lineHeight, bool, const GERectangle& r, UIForm* f, unsigned long index, unsigned long border);
+    UIForm* GetForm() const { return mOwner; }
+    long GetCurrentSelection(unsigned long& out) const;
+    const T& GetData(unsigned long i) const { return mData[i]; }
+    bool GetHasSelection() const { return sK.mServerHasSel; }
+    void DeleteAllEntries() { mData.clear(); Log("list " + S() + " clear"); }
+    void AppendLine(const T& l) { mData.push_back(l); Log("list " + S() + " append " + Describe(l)); }
+    void ChangeSelectionIndex(unsigned long i, bool a, bool b) { Log("list " + S() + " select " + N(i) + " " + N(a) + N(b)); }
+    unsigned long GetNumberLinesDisplayed() const { return sK.mLinesDisplayed; }
+    void SetCopiedHasSelection(bool b) { Log("list " + S() + " copied selection " + N(b)); }
+    long CopyData() { Log("list " + S() + " base copy"); return sK.mBaseCopy; }
+    long DrawPolygons() { Log("list " + S() + " base polygons"); return 0; }
+    long DrawScrollBarText() { Log("list " + S() + " scroll bar text"); return sK.mScrollBar; }
+    unsigned long GetDrawCount() const { return sK.mDrawCount < mCopyLineArray.size() ? sK.mDrawCount : (unsigned long)mCopyLineArray.size(); }
+    unsigned long GetLineHeight() const { return sK.mLineHeight; }
+    mutable GERectangle mCopyRect;   // the real one answers a reference to the Rust object's rectangle
+    const GERectangle& GetCopyTextRectangle() const { mCopyRect.mLeft = sK.mCopyLeft; mCopyRect.mTop = sK.mCopyTop; mCopyRect.mRight = mCopyRect.mBottom = 999; return mCopyRect; }
+    UIBackground* GetSelectedBackground() { return &mBackground; }
+    void SetFocusedRectColor(const GEColor& c) { Log("list " + S() + " focus colour " + c.mText); }
+};
+struct UIEntityGroup {
+    long mForm, mGroup;
+    void Enable() { Log("form " + N(mForm) + " group " + N(mGroup) + " enable"); }
+    void Disable() { Log("form " + N(mForm) + " group " + N(mGroup) + " disable"); }
+    bool GetIsEnabled() const { return mGroup == 2 ? sK.mGroup2 : !sK.mGroup2; }
+};
+struct UIFormManager { virtual ~UIFormManager() {} };
+struct FormPopper { long mForm; long Pop() { Log("form " + N(mForm) + " pop"); return sK.mPop; } };
+struct UIForm {
+    long mId;
+    std::map<long, UIControl*> mControls;
+    UIEntityGroup mGroups[3];
+    UIEvent* mUpdateEvent = NULL;
+    UIFormManager* mManager = NULL;
+    FormPopper mPopper;
+    explicit UIForm(long id) : mId(id), mPopper{id} { for (int g = 0; g < 3; g++) mGroups[g] = UIEntityGroup{id, g}; }
+    UIControl* GetControl(unsigned long i) { return mControls.count((long)i) ? mControls[(long)i] : NULL; }
+    UIEntityGroup* GetEntityGroup(unsigned long g) { return &mGroups[g]; }
+    void SetTabbing(bool b) { Log("form " + N(mId) + " tabbing " + N(b)); }
+    void SetTabStop(unsigned long t) { Log("form " + N(mId) + " tab stop " + N(t)); }
+    UIEvent* GetFormUpdateEvent() const { return mUpdateEvent; }
+    void SetFormUpdateEvent(UIEvent* e) { mUpdateEvent = e; Log("form " + N(mId) + " update event " + (e ? e->S() : std::string("NULL"))); }
+    void SetFormActivateEvent(UIEvent* e) { Log("form " + N(mId) + " activate event " + e->S()); }
+    void SetFormDeactivateEvent(UIEvent* e) { Log("form " + N(mId) + " deactivate event " + e->S()); }
+    void SetFormCloseEvent(UIEvent* e) { Log("form " + N(mId) + " close event " + e->S()); }
+    void SetFormOpenEvent(UIEvent* e) { Log("form " + N(mId) + " open event " + e->S()); }
+    FormPopper* GetManager() { return &mPopper; }
+    UIFormManager* GetFormManager() const { return mManager; }
+    void SetFormManager(UIFormManager* m) { mManager = m; Log("form " + N(mId) + " manager set"); }
+    long DrawClippedText(const GERectangle& r, GEText* t, UIControl* c)
+    {
+        Log("form " + N(mId) + " draw " + r.S() + " text" + N(t->mId) + " " + T(t->mText.c_str()) + " by " + c->S());
+        return (long)((int)r.mLeft & 3);
+    }
+};
+template <class T> UIListBox<T>::UIListBox(unsigned long id, const std::vector<T>&, unsigned long lineHeight, bool, const GERectangle& r, UIForm* f, unsigned long index, unsigned long border)
+    : UIControl(f->mId, (long)id), mOwner(f), mBackground{f->mId, (long)id}
+{
+    Log("list " + S() + " new " + N(lineHeight) + " " + r.S() + " " + N(index) + " " + N(border));
+}
+template <> long UIListBox<UWideString>::GetCurrentSelection(unsigned long& out) const
+{
+    long s = mForm == kFormSelectServer ? sK.mServerSel : sK.mUsersSel;
+    if (s < 0) return 1;
+    out = (unsigned long)s;
+    return 0;
+}
+template <> long UIListBox<EEUICWNGBLine>::GetCurrentSelection(unsigned long& out) const { if (sK.mGamesSel < 0) return 1; out = (unsigned long)sK.mGamesSel; return 0; }
+template <> long UIListBox<EEUICWNRBLine>::GetCurrentSelection(unsigned long& out) const { if (sK.mRoomsSel < 0) return 1; out = (unsigned long)sK.mRoomsSel; return 0; }
+template <> long UIListBox<EEUICWNSBStat>::GetCurrentSelection(unsigned long&) const { return 1; }
+
+// ---- the poll, the UI manager, the resources and gWonNet
+struct TMPoll {
+    bool mRunning;
+    TMPoll(unsigned long a, unsigned long b, bool c) : mRunning(sK.mPollRunning) { Log("poll new " + N(a) + " " + N(b) + " " + N(c)); }
+    ~TMPoll() { Log("poll delete"); }
+    bool Poll() { Log("poll poll"); return sK.mPollFires; }
+    bool GetIsRunning() const { return mRunning; }
+    void Start() { mRunning = true; Log("poll start"); }
+    void Stop() { mRunning = false; Log("poll stop"); }
+};
+inline unsigned long TMGetTime() { return sK.mTime; }
+static std::map<long, UIForm*> sForms;   // the side's forms this step
+typedef void (*PromptCallback)(const char*);
+static PromptCallback sPrompt;           // the password prompt's callback (the test answers it)
+static std::function<std::string(PromptCallback)> sPromptName;
+struct UIManagerFE {
+    UIForm* GetFormByID(unsigned long id) { return sForms.count((long)id) ? sForms[(long)id] : NULL; }
+    UIForm* GetCurrentForm() { return sForms[12]; }
+    void LockUIForCopyData() { Log("ui lock"); }
+    void UnlockUIForCopyData() { Log("ui unlock"); }
+    void Push(UIForm* f) { Log("ui push " + N(f->mId)); }
+    long Pop() { Log("ui pop"); return sK.mPop; }
+    void DisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b)
+    { Log("ui message " + T(m) + " " + N(a) + " " + N(f != NULL) + " " + N(cb != NULL) + " " + N(b)); }
+    void DisplayPasswordPrompt(const UWideString& m, bool a, PromptCallback cb, bool b)
+    { sPrompt = cb; Log("ui password prompt " + T(m) + " " + N(a) + " " + sPromptName(cb) + " " + N(b)); }
+};
+static UIManagerFE sUIManagerFE;
+static UIManagerFE* gUIManager = &sUIManagerFE;
+struct ResourceFE { long GetString(unsigned long id, UWideString& out) { out = ("S" + N((long long)id)).c_str(); return 0; } };
+static ResourceFE sResourceFE;
+static ResourceFE* gResource = &sResourceFE;
+static UWideString gHostedGameName;
+static void EEUIEWNSetTriggerEvent(UIEvent* inEvent, UIControl* inControl, unsigned long inTrigger)
+{
+    inControl->SetTriggerEvent(inTrigger, inEvent);
+    inEvent->Dereference();
+}
+namespace WONAPI {
+inline std::string WStringToString(const std::wstring& w) { std::string s; for (wchar_t c : w) s += (char)c; return s; }
+struct IPAddrFE { std::string mText; };
+struct DirEntity : W::RefCount {
+    std::wstring mDisplayName, mName;
+    IPAddrFE GetNetAddrAsIP() const { return IPAddrFE{W::WS(mName) + ":15101"}; }
+};
+typedef std::list<W::SmartPtr<DirEntity> > DirEntityList;
+}
+struct UserFE { std::wstring GetName() const { return sK.mUser; } };
+struct FEWonNet {
+    UserFE* mUser = new UserFE;
+    WONAPI::DirEntityList mServers;
+    static std::string C(UIControl* c) { return c ? c->S() : std::string("NULL"); }
+    unsigned short GetGameListPort() { return sK.mGameListPort; }
+    void RefreshGameList(UIControl* c) { Log("net refresh games " + C(c)); }
+    void UpdateGameList() { Log("net update games"); }
+    void LeaveRoom() { Log("net leave room"); }
+    void HostGame(const char* n, const char* p) { Log("net host " + T(n) + " " + T(p)); }
+    void JoinGame(const char* n, const char* p) { Log("net join game " + T(n) + " " + T(p)); }
+    void JoinRoom(const char* n, const char* p) { Log("net join room " + T(n) + " " + T(p)); }
+    void SendChat(const UWideString& t) { Log("net chat " + T(t)); }
+    std::wstring GetRoomName() { return sK.mRoom; }
+    bool GetRoomListChanged() { return sK.mRoomListChanged; }
+    void UpdateRoomList(UIControl* r, UIControl* l16, UIControl* l14) { Log("net update rooms " + C(r) + " " + C(l16) + " " + C(l14)); }
+    void OpenUpdateAccount() { Log("net open account"); }
+    void ConnectToLobby() { Log("net connect lobby"); }
+    void UpdateAccount(const UWideString& a, const UWideString& b, bool f) { Log("net update account " + T(a) + " " + T(b) + " " + N(f)); }
+    void SelectServer(const std::wstring& n, WONAPI::IPAddrFE a) { Log("net select server " + W::WS(n) + " " + a.mText); }
+};
+static FEWonNet* gWonNet;
+}
 #endif

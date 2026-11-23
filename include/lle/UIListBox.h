@@ -15,6 +15,7 @@
 #define LLE_UILISTBOX_H
 #include "platform/PlatString.h"
 #include "rust/ui/listobj.h"
+#include "rust/ui/lle_hosts.h"
 #include "rust/ui/obj.h"
 #include <stddef.h>
 
@@ -53,35 +54,26 @@ class GERhombus;
 class UIScrollBar;
 // The Rust list box's ops that do not depend on T (UILBString.cpp: UIControl's, the scroll bar's, polls', rhombi's,
 // the focus line's, the keys')
-LLE_API intptr_t UIListBoxHostOp(UIControl* inList, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 
 template <class T> struct UIListBoxRust;
 template <class T> class UILISTBOX_API UIListBox : public UIControl {
-    friend class UIComboBox;                // OpenListBox reads the line height
-    friend struct UIListBoxRust<T>;         // the Rust object's per-T ops (below)
+public:
     typedef EeUiListCall UIListBoxCall;
     intptr_t Call(UIListBoxCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const
     {
         return ee_ui_list_call(this->mRust, inCall, a, b, f);
     }
-    intptr_t CallF(UIListBoxCall inCall, float f0, float f1 = 0.0f, float f2 = 0.0f) const
-    {
-        float f[4] = {f0, f1, f2, 0.0f};
-        return ee_ui_list_call(this->mRust, inCall, 0, 0, f);
-    }
-    GEColor Color(UIListBoxCall inCall) const
-    {
-        float f[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-        ee_ui_list_call(this->mRust, inCall, 0, 0, f);
-        return GEColor(f[0], f[1], f[2]);
-    }
-public:
+    intptr_t CallF(UIListBoxCall inCall, float f0, float f1 = 0.0f, float f2 = 0.0f) const { return ee_ui_list_call(this->mRust, inCall, 0, 0, UIF4(f0, f1, f2)); }
+    GEColor Color(UIListBoxCall inCall) const { return UIOut(ee_ui_list_call, this->mRust, inCall, (intptr_t)0, (intptr_t)0).Color(); }
     UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
-              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-              unsigned long inBorderThickness);
-    UIListBox(const UIListBox&) = delete;
-    UIListBox& operator=(const UIListBox&) = delete;
-    virtual ~UIListBox();
+              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
+        : UIControl(kControlTypeListBox, inId, inRectangle, inForm, inIndex, inBorderThickness),
+          mRust(ee_ui_list_new(this, UIListBoxRust<T>::Op, inLineHeight, inAutoSelect, inBorderThickness)), mData(inData),
+          mCopyLineArray(this->GetNumberLinesDisplayed())
+    {
+        this->CheckScrollBar();
+    }
+    virtual ~UIListBox() { ee_ui_list_free(this->mRust); }
 #ifdef __clang__
     // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
     // forward to them (clang build only; remove once the parameters themselves are const).
@@ -187,7 +179,6 @@ public:
     void SetStartingDisplayLine(unsigned long inLine) { this->Call(UIListBoxCall::SetScrollValue, inLine); }
     void Sort() { std::sort(this->mData.begin(), this->mData.end(), UWSNoCaseAlphaSort()); }
     virtual long UpdateKeyboard() { return (long)this->Call(UIListBoxCall::UpdateKeyboard); }
-public:   // (UI round 13: the hosts' and the game's shims read these; once protected, reached by `using`)
     virtual void ButtonDown() { this->Call(UIListBoxCall::ButtonDown); }   // slot 0xa0
     virtual void ButtonUp() { this->FireTriggerEvent(kControlTriggerButtonUp); }
     long DrawScrollBarText() { return (long)this->Call(UIListBoxCall::DrawScrollBarText); }
@@ -217,11 +208,7 @@ public:   // (UI round 13: the hosts' and the game's shims read these; once prot
     virtual long MouseLButtonDown() { return (long)this->Call(UIListBoxCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(UIListBoxCall::MouseLButtonUp); }
     virtual long MouseLButtonDoublePressed() { return (long)this->Call(UIListBoxCall::MouseDoublePressed); }
-    virtual long MouseMove(const GE2DPoint& inLocation)
-    {
-        float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
-        return (long)this->Call(UIListBoxCall::MouseMove, 0, 0, f);
-    }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->Call(UIListBoxCall::MouseMove, 0, 0, UIF4(inLocation)); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void ProcessDown() { this->Call(UIListBoxCall::ProcessDown); }
@@ -232,10 +219,9 @@ public:   // (UI round 13: the hosts' and the game's shims read these; once prot
     virtual void TabbedTo() { this->SetDirty(true); }
     void CheckScrollBar() { this->Call(UIListBoxCall::CheckScrollBar); }
 
+    EeUiList* mRust;                        // the state (listobj.rs; first: the lines' copy is sized from it)
     std::vector<T> mData;                   // the lines
     std::vector<T> mCopyLineArray;          // the visible lines as of the last CopyData
-private:
-    EeUiList* mRust;                        // the state (listobj.rs)
 };
 
 // The Rust list box's ops that need the instantiation: the virtuals (a subclass's override runs) and the copy of the
@@ -283,29 +269,11 @@ template <class T> struct UIListBoxRust {
             memcpy(&f[0], &theSelection, 4);
             return theResult;
         }
-        default: return UIListBoxHostOp(l, inOp, a, b, c, d, f);
+        default: return ee_ui_list_host(l, inOp, a, b, c, d, f);
         }
         return 0;
     }
 };
 
-template <class T>
-UIListBox<T>::UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
-                        const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                        unsigned long inBorderThickness)
-    : UIControl(kControlTypeListBox, inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    this->mRust = ee_ui_list_new(static_cast<UIListBox<T>*>(this), UIListBoxRust<T>::Op, inLineHeight, inAutoSelect,
-                                 inBorderThickness);
-    this->mCopyLineArray.resize(this->GetNumberLinesDisplayed());
-    this->mData = inData;
-    this->CheckScrollBar();
-}
-
-template <class T> UIListBox<T>::~UIListBox()
-{
-    this->mData.clear();
-    ee_ui_list_free(this->mRust);
-}
 
 #endif

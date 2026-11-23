@@ -58,6 +58,7 @@
 #include "lle/UIShims.h"
 #include "rust/ui/lle_manager.h"
 #include "lle/UIObjHost.h"
+#include "rust/ui/lle_hosts.h"
 
 // the UI database file's calls (UIHotKey.cpp)
 extern "C" void ee_uicpp_file_open(void* inFile);
@@ -77,7 +78,6 @@ static GERectangle UIManagerRect(const float* inF) { return GERectangle(inF[1], 
 #define FILE_SPEC(x) reinterpret_cast<FSFileSpec*>(x)
 static UWideString sUIManagerKey;   // UpdateTranslatedKey's character (the UI thread's)
 // the database's table files in load order, the shared mouse buttons (lle_manager.rs)
-static UString* const kUIManagerDbNames[] = {&gDbUIFontsFileName, &gDbUIFormsFileName, &gDbUIBackgroundFileName, &gDbUIControlsFileName, &gDbUIControlEventsFileName, &gDbUIFormEventsFileName, &gDbUIHotKeyFileName};
 static const unsigned long kUIManagerMouseKeys[] = {kMouseLeftButton, kMouseRightButton, kMouseZAxis};
 extern "C" uint32_t ee_uicpp_mgr_screen(uintptr_t inM) { return MGR(inM)->GetScreen(); }
 extern "C" void ee_uicpp_mgr_rasterizer_screen(uintptr_t inM)
@@ -151,8 +151,8 @@ extern "C" void ee_uicpp_table_add_event(uintptr_t inTable, uint32_t inId, uint3
 { reinterpret_cast<UIControlsTable*>(inTable)->AddEvent(UIEventData{inId, inKind}); }
 extern "C" void ee_uicpp_form_add_event(uintptr_t inForm, uint32_t inId, uint32_t inKind)
 { reinterpret_cast<UIForm*>(inForm)->AddEvent(UIEventData{inId, inKind}); }
-extern "C" long ee_uicpp_db_find(uintptr_t inPath, uintptr_t inDirectory, uint32_t inTable, uintptr_t* inFile)
-{ return EEDbFindFile(reinterpret_cast<FSPath*>(inPath), *reinterpret_cast<const UString*>(inDirectory) + *kUIManagerDbNames[inTable], *reinterpret_cast<FSFileSpec**>(inFile)); }
+extern "C" long ee_uicpp_db_find(uintptr_t inPath, uintptr_t inDirectory, EeUiShimText inName, uintptr_t* inFile)
+{ return EEDbFindFile(reinterpret_cast<FSPath*>(inPath), *reinterpret_cast<const UString*>(inDirectory) + UIShimString(inName), *reinterpret_cast<FSFileSpec**>(inFile)); }
 extern "C" long ee_uicpp_db_fonts(uintptr_t inFile, uintptr_t inM)
 { return UIFontTable::Create(*FILE_SPEC(inFile), MGR(inM)); }
 extern "C" long ee_uicpp_db_forms(uintptr_t inFile, uintptr_t inM)
@@ -184,88 +184,70 @@ struct UIManagerComposition {
 };
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats
-intptr_t UIManager::CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const
-{
-    float f[4] = {inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-    return this->Call(inCall, inA, 0, 0, f);
-}
-intptr_t UIManager::CallPoint(EeUiManagerCall inCall, float inX, float inY) const
-{
-    float f[4] = {inX, inY, 0.0f, 0.0f};
-    return this->Call(inCall, 0, 0, 0, f);
-}
-
-extern "C" intptr_t ee_uicpp_manager_host(EE_UI_HOST_ARGS) { return UIManager::HostOp(inObj, inOp, a, b, c, d, f); }
 #define FORM reinterpret_cast<UIForm*>(a)
 #define INSTANCE reinterpret_cast<SESMInstanceNode*>(a)
-#define SOUNDS static_cast<UIManager*>(inManager)->GetSoundManager()
-intptr_t UIManager::HostOp(void* inManager, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+#define SOUNDS static_cast<UIManager*>(inObj)->GetSoundManager()
+EE_UI_VOID(mgr_form_rect) { UIObjHost::PutRect(f, FORM->GetRectangle()); }
+EE_UI_CASE(mgr_form_id) { return FORM->GetFormID(); }
+EE_UI_CASE(mgr_form_use_gdi) { return FORM->GetUseGDIForText(); }
+EE_UI_CASE(mgr_form_keyboard) { return (intptr_t)FORM->GetKeyboardCaptured(); }
+EE_UI_CASE(mgr_form_mouse) { return (intptr_t)FORM->GetMouseCaptured(); }
+EE_UI_CASE(mgr_form_call)
 {
-    switch (inOp) {
-    // the forms
-    case EeUiOp::MgrFormRect: UIObjHost::PutRect(f, FORM->GetRectangle()); return 0;
-    case EeUiOp::MgrFormId: return FORM->GetFormID();
-    case EeUiOp::MgrFormUseGdi: return FORM->GetUseGDIForText();
-    case EeUiOp::MgrFormKeyboard: return (intptr_t)FORM->GetKeyboardCaptured();
-    case EeUiOp::MgrFormMouse: return (intptr_t)FORM->GetMouseCaptured();
-    case EeUiOp::MgrFormCall:
-        switch (b) {
-        case 0: FORM->Open(); return 0;
-        case 1: FORM->Close(); return 0;
-        case 2: FORM->Activate(); return 0;
-        case 3: FORM->Deactivate(); return 0;
-        case 4: FORM->ClearAllClipRectangles(); return 0;
-        case 5: FORM->SetAllControlsDirty(); return 0;
-        case 6: return FORM->CopyData();
-        case 7: return FORM->DrawPolygons();
-        case 8: return FORM->DrawTextA();
-        case 9: return FORM->UpdateKeyboard();
-        case 10: return FORM->UpdateMouse();
-        default: delete FORM; return 0;
-        }
-    case EeUiOp::MgrFormRectCall:
-        switch (b) {
-        case 0: FORM->AddDirtyRectangle(UIManagerRect(f)); return 0;
-        case 1: FORM->RedrawIntersectControls(UIManagerRect(f)); return 0;
-        case 2: FORM->AddClipRectangle(UIManagerRect(f)); return 0;
-        case 3: FORM->RelayoutForm(UIManagerRect(f)); return 0;
-        default: FORM->UpdateMouseLocation(GE2DPoint(f[0], f[1])); return 0;
-        }
-    case EeUiOp::MgrFormIme:
-        switch (b) {
-        case 0: FORM->AddIMEResultString(*reinterpret_cast<const UWideString*>(c)); return kErrorOK;
-        case 1: return FORM->ChangeIMECompositionString(*reinterpret_cast<const UIManagerComposition*>(c)->mString, *reinterpret_cast<const UIManagerComposition*>(c)->mAttributes, reinterpret_cast<const UIManagerComposition*>(c)->mCursor);
-        case 2: return FORM->CloseIMECompositionString();
-        default: return FORM->OpenIMECompositionString();
-        }
-    case EeUiOp::MgrCtlIme: return reinterpret_cast<UIControl*>(a)->GetIMEEnabled();
-    case EeUiOp::PartRect: UIObjHost::PutRect(f, reinterpret_cast<UIControl*>(a)->GetRectangle()); return 0;
-    // the events
-    case EeUiOp::MgrEventProcess: reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); return 0;
-    // the input
-    case EeUiOp::MgrKeyboardShouldUpdate: return gISKeyboard->GetShouldUpdate();
-    case EeUiOp::MgrMouseShouldUpdate: return gISMouse->GetShouldUpdate();
-    case EeUiOp::MgrHotKeyPoll: UIHotKey::UpdatePressedPollAmount(); return 0;
-    case EeUiOp::MgrHotKeysDelete: UIHotKey::DeleteHotKeys(); return 0;
-    case EeUiOp::MgrVirtUpdateKeyboard: return static_cast<UIManager*>(inManager)->UpdateKeyboard();
-    case EeUiOp::MgrVirtUpdateMouse: return static_cast<UIManager*>(inManager)->UpdateMouse(GE2DPoint(f[0], f[1]));
-    // the rasterizer, the texture and the bitmaps
-    case EeUiOp::MgrSetBlending: static_cast<UIManager*>(inManager)->GetRasterizer()->SetBlending((unsigned long)a, (unsigned long)b, static_cast<UIManager*>(inManager)->GetScreen()); return 0;
-    case EeUiOp::MgrTextureRelease: reinterpret_cast<GETexture*>(a)->Dereference(); return 0;
-    case EeUiOp::BitmapRelease: reinterpret_cast<GEBitmap*>(a)->Dereference(); return 0;
-    // the locks
-    case EeUiOp::MgrLockDelete: TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); return 0;
-    case EeUiOp::FormLockEnter: reinterpret_cast<TSCriticalSection*>(a)->Enter(); return 0;
-    case EeUiOp::FormLockLeave: reinterpret_cast<TSCriticalSection*>(a)->Leave(); return 0;
-    // the music
-    case EeUiOp::MgrSoundStop: SOUNDS->Stop(INSTANCE, false); return 0;
-    case EeUiOp::MgrSoundUnload: SOUNDS->Unload((long)a); return 0;
-    case EeUiOp::MgrSoundLoad: return SOUNDS->Load(reinterpret_cast<const char*>(a), 0, 1);
-    case EeUiOp::MgrSoundPlay: return (intptr_t)SOUNDS->PlayAndReturnReferencedNode((long)a, f[0], 0.0f, 1.0f, true, NULL);
-    case EeUiOp::MgrSoundParameters: SOUNDS->SetSoundParameters(INSTANCE, f[0], 0.0f, 1.0f); return 0;
-    default: return 0;
+    switch (b) {
+    case 0: FORM->Open(); return 0;
+    case 1: FORM->Close(); return 0;
+    case 2: FORM->Activate(); return 0;
+    case 3: FORM->Deactivate(); return 0;
+    case 4: FORM->ClearAllClipRectangles(); return 0;
+    case 5: FORM->SetAllControlsDirty(); return 0;
+    case 6: return FORM->CopyData();
+    case 7: return FORM->DrawPolygons();
+    case 8: return FORM->DrawTextA();
+    case 9: return FORM->UpdateKeyboard();
+    case 10: return FORM->UpdateMouse();
+    default: delete FORM; return 0;
     }
 }
+EE_UI_CASE(mgr_form_rect_call)
+{
+    switch (b) {
+    case 0: FORM->AddDirtyRectangle(UIManagerRect(f)); return 0;
+    case 1: FORM->RedrawIntersectControls(UIManagerRect(f)); return 0;
+    case 2: FORM->AddClipRectangle(UIManagerRect(f)); return 0;
+    case 3: FORM->RelayoutForm(UIManagerRect(f)); return 0;
+    default: FORM->UpdateMouseLocation(GE2DPoint(f[0], f[1])); return 0;
+    }
+}
+EE_UI_CASE(mgr_form_ime)
+{
+    switch (b) {
+    case 0: FORM->AddIMEResultString(*reinterpret_cast<const UWideString*>(c)); return kErrorOK;
+    case 1: return FORM->ChangeIMECompositionString(*reinterpret_cast<const UIManagerComposition*>(c)->mString, *reinterpret_cast<const UIManagerComposition*>(c)->mAttributes, reinterpret_cast<const UIManagerComposition*>(c)->mCursor);
+    case 2: return FORM->CloseIMECompositionString();
+    default: return FORM->OpenIMECompositionString();
+    }
+}
+EE_UI_CASE(mgr_ctl_ime) { return reinterpret_cast<UIControl*>(a)->GetIMEEnabled(); }
+EE_UI_VOID(mgr_part_rect) { UIObjHost::PutRect(f, reinterpret_cast<UIControl*>(a)->GetRectangle()); }
+EE_UI_VOID(mgr_event_process) { reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); }
+EE_UI_CASE(mgr_keyboard_should_update) { return gISKeyboard->GetShouldUpdate(); }
+EE_UI_CASE(mgr_mouse_should_update) { return gISMouse->GetShouldUpdate(); }
+EE_UI_VOID(mgr_hot_key_poll) { UIHotKey::UpdatePressedPollAmount(); }
+EE_UI_VOID(mgr_hot_keys_delete) { UIHotKey::DeleteHotKeys(); }
+EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
+EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(mgr_set_blending) { static_cast<UIManager*>(inObj)->GetRasterizer()->SetBlending((unsigned long)a, (unsigned long)b, static_cast<UIManager*>(inObj)->GetScreen()); }
+EE_UI_VOID(mgr_texture_release) { reinterpret_cast<GETexture*>(a)->Dereference(); }
+EE_UI_VOID(mgr_bitmap_release) { reinterpret_cast<GEBitmap*>(a)->Dereference(); }
+EE_UI_VOID(mgr_lock_delete) { TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); }
+EE_UI_VOID(mgr_form_lock_enter) { reinterpret_cast<TSCriticalSection*>(a)->Enter(); }
+EE_UI_VOID(mgr_form_lock_leave) { reinterpret_cast<TSCriticalSection*>(a)->Leave(); }
+EE_UI_VOID(mgr_sound_stop) { SOUNDS->Stop(INSTANCE, false); }
+EE_UI_VOID(mgr_sound_unload) { SOUNDS->Unload((long)a); }
+EE_UI_CASE(mgr_sound_load) { return SOUNDS->Load(reinterpret_cast<const char*>(a), 0, 1); }
+EE_UI_CASE(mgr_sound_play) { return (intptr_t)SOUNDS->PlayAndReturnReferencedNode((long)a, f[0], 0.0f, 1.0f, true, NULL); }
+EE_UI_VOID(mgr_sound_parameters) { SOUNDS->SetSoundParameters(INSTANCE, f[0], 0.0f, 1.0f); }
 #undef FORM
 #undef INSTANCE
 #undef SOUNDS
@@ -293,20 +275,11 @@ UIManager::~UIManager()
 // UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
 // 0x1006f278..0x1006f4ef): Initialize/Uninitialize over the record, the two loaders over the events file. The calls
 // out: the event's virtuals on the record, the file's reads (UIHotKey.cpp's ee_uicpp_file_*) and the owners'
-extern "C" intptr_t ee_uicpp_event_host(EE_UI_HOST_ARGS) { return UIEvent::HostOp(inObj, inOp, a, b, c, d, f); }
-intptr_t UIEvent::HostOp(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
-{
-    switch (inOp) {
-    case EeUiOp::EvInitialize: return static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj))->InitializeEvent();
-    case EeUiOp::EvUninitialize: return static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj))->UninitializeEvent();
-    case EeUiOp::BgtFileOpen: ee_uicpp_file_open(inObj); return 0;
-    case EeUiOp::BgtFileRead: return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c);
-    case EeUiOp::BgtFileClose: ee_uicpp_file_close(inObj); return 0;
-    default: return 0;
-    }
-}
-
-
+EE_UI_CASE(event_ev_initialize) { return static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj))->InitializeEvent(); }
+EE_UI_CASE(event_ev_uninitialize) { return static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj))->UninitializeEvent(); }
+EE_UI_VOID(event_bgt_file_open) { ee_uicpp_file_open(inObj); }
+EE_UI_CASE(event_bgt_file_read) { return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c); }
+EE_UI_VOID(event_bgt_file_close) { ee_uicpp_file_close(inObj); }
 // TEST ONLY: the harness's presentation bridge (tools/harness/presentation_bridge.c) finds these by name in the map
 // (the manager's and forms' state is Rust's: ee_ui managerobj.rs, formobj.rs): the UI lock it try-enters, the form
 // stack, and a form's id and controls. Kept by the linker for it.

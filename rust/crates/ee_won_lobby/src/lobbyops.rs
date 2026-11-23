@@ -38,6 +38,40 @@ pub(crate) fn game_lobby_op(op: Op, a: *mut c_void, b: *mut c_void, c: isize, d:
 pub(crate) fn lobby_op(op: Op, a: *mut c_void, b: *mut c_void, c: isize, d: isize, out: Out) -> Option<isize> {
     let on = |op: Op, x: *mut c_void| out(op, x, null_mut(), 0, 0);
     let r = match op {
+        // ---- the cases composed over one-statement cases (R6 WON round 32)
+        Op::LanNewClient => {
+            let client = on(Op::LanClientAlloc, null_mut());
+            out(Op::LanClientSetName, p(client), null_mut(), c, d);
+            client
+        }
+        Op::LanPortDialogRun => {
+            on(Op::LanPortSetGamePort, null_mut());
+            out(Op::LanPortSetPort, null_mut(), null_mut(), c, 0);
+            on(Op::LanPortReset, null_mut());
+            on(Op::LanPortDo, null_mut())
+        }
+        Op::LanNewTimer => {
+            let timer = on(Op::LanTimerAlloc, null_mut());
+            out(Op::LanTimerSetCompletion, p(timer), null_mut(), c, 0);
+            timer
+        }
+        Op::StCreateDialogRun => {
+            out(Op::StCreateSetType, null_mut(), null_mut(), c, 0);
+            on(Op::StCreateReset, null_mut());
+            on(Op::StCreateDo, null_mut())
+        }
+        // the dialog's game (held: the original's local SmartPtr's reference handed out) with this machine's address
+        Op::StTakeDialogGame => {
+            let game = on(Op::StDialogGameHeld, null_mut());
+            out(Op::GameSetMyAddress, p(game), null_mut(), c, 0);
+            on(Op::StSetGame, p(game));
+            game
+        }
+        Op::GameNewCopy => {
+            let game = on(Op::GameCreateHeld, a);
+            out(Op::GameCopyFrom, p(game), a, 0, 0);
+            game
+        }
         // ---- StagingLogic's (LobbyLogicHost.cpp)
         Op::StJoinOpFinish => {
             if on(Op::StJoinOpIs, null_mut()) != 0 {
@@ -308,6 +342,54 @@ mod tests {
         };
         let r = lobby_op(op, a as *mut c_void, null_mut(), c, 0, &out);
         (r, log.into_inner())
+    }
+
+    #[test]
+    fn the_round_32_compositions_keep_the_statement_order() {
+        use std::cell::RefCell;
+        let log = RefCell::new(Vec::new());
+        let out = |op: Op, a: *mut c_void, _b: *mut c_void, c: isize, _d: isize| {
+            log.borrow_mut().push(format!("{op:?} {} {c}", a as isize));
+            if matches!(op, Op::LanClientAlloc | Op::LanTimerAlloc | Op::StDialogGameHeld | Op::GameCreateHeld) {
+                77
+            } else {
+                5
+            }
+        };
+        let run = |op: Op, a: isize, c: isize| {
+            log.borrow_mut().clear();
+            let r = lobby_op(op, p(a), null_mut(), c, 3, &out);
+            (r, log.borrow().clone())
+        };
+        assert_eq!(
+            run(Op::LanNewClient, 0, 9),
+            (Some(77), vec!["LanClientAlloc 0 0".into(), "LanClientSetName 77 9".into()])
+        );
+        assert_eq!(
+            run(Op::LanPortDialogRun, 0, 2300),
+            (
+                Some(5),
+                vec![
+                    "LanPortSetGamePort 0 0".into(),
+                    "LanPortSetPort 0 2300".into(),
+                    "LanPortReset 0 0".into(),
+                    "LanPortDo 0 0".into()
+                ]
+            )
+        );
+        assert_eq!(run(Op::LanNewTimer, 0, 1).1, vec!["LanTimerAlloc 0 0", "LanTimerSetCompletion 77 1"]);
+        assert_eq!(
+            run(Op::StCreateDialogRun, 0, 1).1,
+            vec!["StCreateSetType 0 1", "StCreateReset 0 0", "StCreateDo 0 0"]
+        );
+        assert_eq!(
+            run(Op::StTakeDialogGame, 0, 4),
+            (Some(77), vec!["StDialogGameHeld 0 0".into(), "GameSetMyAddress 77 4".into(), "StSetGame 77 0".into()])
+        );
+        assert_eq!(
+            run(Op::GameNewCopy, 40, 0),
+            (Some(77), vec!["GameCreateHeld 40 0".into(), "GameCopyFrom 77 0".into()])
+        );
     }
 
     #[test]

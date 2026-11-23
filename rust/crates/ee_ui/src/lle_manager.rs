@@ -146,7 +146,7 @@ pub(crate) fn new_lock<C: Cpp + ?Sized>(c: &mut C, line: u32) -> usize {
 
 lle_host!(
     /// The UI manager's host: [`manager_call`], then `UIManager::HostOp`.
-    ee_ui_manager_host => manager_call, ee_uicpp_manager_host
+    ee_ui_manager_host => manager_call, [crate::lle_hosts::manager]
 );
 
 /// The events' host's moved cases (`UIEvent::HostOp`: the events file's count, the owner, the event added).
@@ -179,7 +179,7 @@ pub(crate) fn event_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isi
 
 lle_host!(
     /// The events' host: [`event_call`], then `UIEvent::HostOp`.
-    ee_ui_event_host => event_call, ee_uicpp_event_host
+    ee_ui_event_host => event_call, [crate::lle_hosts::event]
 );
 
 /// The database's tables in load order: (their file, the find's two assert lines, the create's).
@@ -193,13 +193,24 @@ const DB_TABLES: [(u32, u32, u32); 7] = [
     (1127, 1128, 0),
 ];
 
+/// The UI database's table files, in load order (once lle/UIManager.h's `gDbUI*FileName` globals).
+const DB_NAMES: [&[u8]; 7] = [
+    b"DB\\dbuifonts.dat",
+    b"DB\\dbuiforms.dat",
+    b"DB\\dbuiback.dat",
+    b"DB\\dbuicontrols.dat",
+    b"DB\\dbuicontrolevents.dat",
+    b"DB\\dbuiformevents.dat",
+    b"DB\\dbuihotkey.dat",
+];
+
 /// `UIManager::LoadDatabase(path, directory)`: the fonts, forms, backgrounds (and their creation), controls, control
 /// and form events and hot keys, each from its table file found under the directory; every find and the first
 /// three creates verified.
 pub(crate) fn load_database<C: Cpp + ?Sized>(c: &mut C, m: usize, path: usize, directory: usize) {
     for (table, &(find_line, file_line, create_line)) in DB_TABLES.iter().enumerate() {
         let mut file = 0usize;
-        let found = c.db_find(path, directory, table as u32, PtrOut::of(&mut file));
+        let found = c.db_find(path, directory, Text::of(DB_NAMES[table]), PtrOut::of(&mut file));
         if found != 0 {
             c.es_verify(find_line, Text::of(b"theResult == keseOK"));
         }

@@ -593,6 +593,37 @@ pub enum EeWonLobbyOp {
     LanPeerAuthDone,
     /// `(LobbyLanSocket*)((PeerAuthServerOp*)a)->GetSocket()`.
     PeerAuthSocket,
+    // ---- the statements of the cases lobbyops.rs composes (R6 WON round 32)
+    /// `new LobbyLanClient`: held.
+    LanClientAlloc = 800,
+    /// `((LobbyLanClient*)a)->SetName(the UTF-16 units c, count d)`.
+    LanClientSetName,
+    /// `mLanPortDialog->LCall(SetGamePort, LobbyGetLobbyPort())`.
+    LanPortSetGamePort,
+    /// `mLanPortDialog->LCall(SetPort, c)`.
+    LanPortSetPort,
+    /// `mLanPortDialog->LCall(Reset)`.
+    LanPortReset,
+    /// `LobbyDoDialog(mLanPortDialog)`.
+    LanPortDo,
+    /// `new AsyncOp`: held.
+    LanTimerAlloc,
+    /// `((AsyncOp*)a)->SetCompletion(the network (c 0) or discovery timer's completion)`.
+    LanTimerSetCompletion,
+    /// `mCreateGameDialog->LCall(SetGameType, c)`.
+    StCreateSetType,
+    /// `mCreateGameDialog->LCall(Reset, false)`.
+    StCreateReset,
+    /// `LobbyDoDialog(mCreateGameDialog)`.
+    StCreateDo,
+    /// `mCreateGameDialog->GetGame()`: held.
+    StDialogGameHeld,
+    /// `((LobbyGame*)a)->SetAddress(LobbyGetMyAddress(c))`.
+    GameSetMyAddress,
+    /// `LobbyGame::CreateGame(((LobbyGame*)a)->GetGameType())`: held.
+    GameCreateHeld,
+    /// `((LobbyGame*)a)->CopyFrom((LobbyGame*)b)`.
+    GameCopyFrom,
 }
 
 /// A Rust lobby object's way out: the host and the C++ object it belongs to.

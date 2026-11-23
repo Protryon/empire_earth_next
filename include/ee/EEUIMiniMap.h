@@ -52,8 +52,7 @@ public:
 protected:
     // the ee_screens mini_map.rs host of the left release and drag (EE_SCREENS_MM_OP_*, EEUIRustControl's the
     // toolkit's)
-    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
-    virtual long MouseLButtonDown();        // +0x34 (ICF-folded 0x25ae3b: CaptureMouse, 0)
+    virtual long MouseLButtonDown() { return ee_screens_mini_map_left_down(this); }   // +0x34 (CaptureMouse, 0)
     // On a left release: in flare mode sends a flare at the clicked tile and leaves flare mode, otherwise centres
     // the camera there (ee_screens mini_map.rs)
     virtual long MouseLButtonUp() { return (long)ee_screens_mini_map_mouse_l_up(this); }          // +0x38 0x275f72
@@ -62,7 +61,7 @@ protected:
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)ee_screens_mini_map_mouse_move(this); }    // +0x40 0x2760af
     // On a right press, posts a mini map action (mode 1) at the clicked map point, clamped to the map
     virtual long MouseRButtonDown() { return (long)ee_screens_mm_mouse_r_down((uintptr_t)this); }        // +0x44 0x275e45
-    virtual long MouseRButtonUp();          // +0x48 0x275523
+    virtual long MouseRButtonUp() { return ee_screens_mini_map_right_up(this); }      // +0x48 0x275523
 public:
     GE2DPoint mOrigin;                      // +0x0a0 the map's top-left (the location plus the border)
     GELine mLines[4];                       // +0x0a8 the camera view's edges

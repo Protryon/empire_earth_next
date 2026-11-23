@@ -11,28 +11,23 @@
 #define LLE_UIGRAPH_H
 
 #include "rust/ui/graphobj.h"
+#include "rust/ui/lle_hosts.h"
 
 class GEFont;
 
 class LLE_API UIGraph : public UIControl {
-    friend struct UIGraphHost;              // UIGraph.cpp: the Rust object's calls out
 public:
-    UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-            unsigned long inBorderThickness, EeUiGraphKind inKind = EeUiGraphKind::Line,
-            EeUiGraphFormatFn inFormat = NULL);
-    UIGraph(const UIGraph&) = delete;
-    UIGraph& operator=(const UIGraph&) = delete;
+    UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, EeUiGraphKind inKind = EeUiGraphKind::Line, EeUiGraphFormatFn inFormat = NULL) : UIControl(kControlTypeGraph, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_graph_new(this, ee_ui_graph_host, inKind, inFormat); }
     virtual ~UIGraph();
     virtual long CopyData() { return (long)this->Call(EeUiGraphCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiGraphCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiGraphCall::DrawText); }
     void SetFont(GEFont* inFont) { this->Call(EeUiGraphCall::SetFont, (intptr_t)inFont); }
-    void SetFontColor(const GEColor& inColor);
+    void SetFontColor(const GEColor& inColor) { this->Call(EeUiGraphCall::SetFontColor, 0, 0, 0, UIF4(inColor)); }
     // the summary's: a series of the inCount (time, value) pairs in a colour, added to stored graph inGraph
-    void AddGraphSeries(const long* inPoints, unsigned long inCount, unsigned long inGraph, const GEColor& inColor);
+    void AddGraphSeries(const long* inPoints, unsigned long inCount, unsigned long inGraph, const GEColor& inColor) { this->Call(EeUiGraphCall::AddGraphSeries, inGraph, (intptr_t)inPoints, inCount, UIF4(inColor)); }
     virtual long UpdateMouse(const GE2DPoint& inLocation) { return kErrorOK; }
     virtual long UpdateKeyboard() { return kErrorOK; }
-protected:
     virtual long MouseLButtonDown() { return kErrorOK; }
     virtual long MouseLButtonUp() { return kErrorOK; }
     virtual long MouseMove(const GE2DPoint& inLocation) { return kErrorOK; }
@@ -41,9 +36,7 @@ protected:
     virtual void TabbedTo() { this->Call(EeUiGraphCall::TabbedTo); }
     virtual void TabbedFrom() { this->Call(EeUiGraphCall::TabbedFrom); }
 
-private:
     intptr_t Call(EeUiGraphCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, float* f = NULL) const { return ee_ui_graph_call(this->mRust, c, a, b, cc, f); }
-protected:
     EeUiGraph* mRust;                       // the state (graphobj.rs)
 };
 

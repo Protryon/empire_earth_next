@@ -7,6 +7,9 @@
 // with a drawn op (status, ids, records, data). The two sides' traces, the objects' data after each step (the Rust's
 // dump against the same text made from the original's members) and the readers' answers must be the same. The exit
 // code is the number of mismatching sequences.
+// R6 WON round 32 adds the front end's screens (EEUIEWonNet*Events.cpp, EEUICWonNet*Box.cpp, the game room form's
+// manager) moved to Rust (wonfront.rs): RunFront runs the deleted C++ (won_wonfront_orig.h) against the forwards over
+// the host's statements (ee/EEWonFrontHost.inl) on won_wonnet_world.h's FE world (argv[2] sequences, 100,000).
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +29,7 @@
 #include "rust/won_net/status_codes.h"
 #include "rust/won_net/routeop_types.h"
 #include "rust/won_lobby/wonnet.h"
+#include "rust/won_lobby/wonfront.h"
 #include "won_wonnet_world.h"
 
 namespace W { namespace Ori {
@@ -97,6 +101,324 @@ static bool KeyValid()
 static int sOpHits[512];   // the host's ops the sequences reached
 static intptr_t WonNetHost(void* inCpp, EeWonNetOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d) { sOpHits[(int)inOp & 511]++; return WonNetHostCall((EEWonNet*)inCpp, inOp, a, b, c, d); }
 }}
+
+// ---- the screens (R6 WON round 32): the deleted C++ (won_wonfront_orig.h) and the forwards to the Rust
+// (wonfront.rs, over the host's very statements, ee/EEWonFrontHost.inl), each over its own classes and the FE world
+namespace FE { namespace Ori {
+#include "won_wonfront_classes.h"
+static void OnGamePassword(const char* inPassword);
+#include "won_wonfront_orig.h"
+}}
+
+namespace FE { namespace Rus {
+#include "won_wonfront_classes.h"
+static void OnGamePassword(const char* inPassword);
+#include "ee/EEWonFrontHost.inl"
+static int sFrontHits[256];   // the host's ops the sequences reached
+static intptr_t FrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t c) { sFrontHits[(int)inOp & 255]++; return WonFrontHost(inOp, a, b, c); }
+// the units' forwards, as the game has them now
+#define FE_FWD(C, K) long C::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::K, inForm, (intptr_t)inEntity); }
+FE_FWD(EEUIEWNAGUpdateForm, AgUpdateForm)
+FE_FWD(EEUIEWNAGActivateForm, AgActivateForm)
+FE_FWD(EEUIEWNAGBack, AgBack)
+FE_FWD(EEUIEWNAGCheckPassword, AgCheckPassword)
+FE_FWD(EEUIEWNAGClickGameFilter, AgClickGameFilter)
+FE_FWD(EEUIEWNAGCloseForm, AgCloseForm)
+FE_FWD(EEUIEWNAGDeactivateForm, AgDeactivateForm)
+FE_FWD(EEUIEWNAGDoubleclickUser, AgDoubleclickUser)
+FE_FWD(EEUIEWNAGHostOrJoinGame, AgHostOrJoinGame)
+FE_FWD(EEUIEWNAGSendChat, AgSendChat)
+FE_FWD(EEUIEWNAGToggleHostScreen, AgToggleHostScreen)
+FE_FWD(EEUIEWNAGToggleJoinScreen, AgToggleJoinScreen)
+FE_FWD(EEUIEWNAGOpenScreen, AgOpenScreen)
+FE_FWD(EEUIEWNARUpdateForm, ArUpdateForm)
+FE_FWD(EEUIEWNARActivateForm, ArActivateForm)
+FE_FWD(EEUIEWNARDeactivateForm, ArDeactivateForm)
+FE_FWD(EEUIEWNARDoubleClickRoom, ArDoubleClickRoom)
+FE_FWD(EEUIEWNARClickUpdateAccount, ArClickUpdateAccount)
+FE_FWD(EEUIEWNARJoinRoom, ArJoinRoom)
+FE_FWD(EEUIEWNAROpenScreen, ArOpenScreen)
+FE_FWD(EEUIEWNMUASubmit, MuaSubmit)
+FE_FWD(EEUIEWNMUAOpenScreen, MuaOpenScreen)
+FE_FWD(EEUIEWNSSOk, SsOk)
+FE_FWD(EEUIEWNSSOpenScreen, SsOpenScreen)
+FE_FWD(EEUIEWNSOpen, StatsOpen)
+FE_FWD(EEUIEWNSCancel, StatsCancel)
+#undef FE_FWD
+long EEUIEWNARBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
+long EEUIEWNMUACancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
+long EEUIEWNSSCancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
+static void OnGamePassword(const char* inPassword) { ee_won_front_call(EeWonFrontCall::AgOnGamePassword, NULL, (intptr_t)inPassword); }
+EEUICWonNetGamesBox::EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
+                                         unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
+    : UIListBox<EEUICWNGBLine>(inId, std::vector<EEUICWNGBLine>(), inFont->GetHeight(), false,
+                               GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, inBorderThickness)
+{
+    ee_won_front_call(EeWonFrontCall::GamesConstruct, this, (intptr_t)inFont);
+}
+EEUICWonNetGamesBox::~EEUICWonNetGamesBox() { ee_won_front_call(EeWonFrontCall::GamesDestruct, this, 0); }
+long EEUICWonNetGamesBox::CopyData() { return (long)ee_won_front_call(EeWonFrontCall::GamesCopyData, this, 0); }
+long EEUICWonNetGamesBox::DrawPolygons() { return UIListBox<EEUICWNGBLine>::DrawPolygons(); }
+long EEUICWonNetGamesBox::DrawTextA() { return (long)ee_won_front_call(EeWonFrontCall::GamesDrawText, this, 0); }
+EEUICWonNetRoomsBox::EEUICWonNetRoomsBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
+                                         unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
+    : UIListBox<EEUICWNRBLine>(inId, std::vector<EEUICWNRBLine>(), inFont->GetHeight(), false,
+                               GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, inBorderThickness)
+{
+    ee_won_front_call(EeWonFrontCall::RoomsConstruct, this, (intptr_t)inFont);
+}
+EEUICWonNetRoomsBox::~EEUICWonNetRoomsBox() { ee_won_front_call(EeWonFrontCall::RoomsDestruct, this, 0); }
+long EEUICWonNetRoomsBox::CopyData() { return (long)ee_won_front_call(EeWonFrontCall::RoomsCopyData, this, 0); }
+long EEUICWonNetRoomsBox::DrawTextA() { return (long)ee_won_front_call(EeWonFrontCall::RoomsDrawText, this, 0); }
+EEUICWonNetStatBox::EEUICWonNetStatBox(unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
+                                       unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorder)
+    : UIListBox<EEUICWNSBStat>(inID, mStats, inFont->GetHeight(), false, GERectangle(inLocation, (float)inWidth, (float)inHeight),
+                               inForm, inIndex, inBorder)
+{
+    ee_won_front_call(EeWonFrontCall::StatConstruct, this, (intptr_t)inFont);
+}
+EEUICWonNetStatBox::~EEUICWonNetStatBox() { delete this->mText; }
+long EEUICWonNetStatBox::CopyData() { return (long)ee_won_front_call(EeWonFrontCall::StatCopyData, this, 0); }
+long EEUICWonNetStatBox::DrawTextA() { return (long)ee_won_front_call(EeWonFrontCall::StatDrawText, this, 0); }
+void EEUICWonNetStatBox::Refresh() { ee_won_front_call(EeWonFrontCall::StatRefresh, this, 0); }
+EEWonNetAvailableGameFormManager::EEWonNetAvailableGameFormManager() { this->mPoll = new TMPoll(3000, 0, false); }
+EEWonNetAvailableGameFormManager::~EEWonNetAvailableGameFormManager() { delete this->mPoll; }
+EEWonNetAvailableGameFormManager* EEWonNetAvailableGameFormManager::Get() { return (EEWonNetAvailableGameFormManager*)ee_won_front_call(EeWonFrontCall::FormManagerGet, NULL, 0); }
+}}
+
+namespace FE {
+static uint64_t sRng;
+static uint32_t R(uint32_t n) { sRng = sRng * 6364136223846793005ull + 1442695040888963407ull; return (uint32_t)(sRng >> 33) % n; }
+static const char* kFrontEvents[] = {"AGActivateForm", "AGBack", "AGCheckPassword", "AGClickGameFilter", "AGCloseForm",
+    "AGDeactivateForm", "AGDoubleclickUser", "AGHostOrJoinGame", "AGOpenScreen", "AGSendChat", "AGToggleHostScreen",
+    "AGToggleJoinScreen", "AGUpdateForm", "ARActivateForm", "ARBack", "ARClickUpdateAccount", "ARDeactivateForm",
+    "ARDoubleClickRoom", "ARJoinRoom", "AROpenScreen", "ARUpdateForm", "MUACancel", "MUAOpenScreen", "MUASubmit",
+    "SSCancel", "SSOk", "SSOpenScreen", "SCancel", "SOpen"};
+static long FormOf(int k) { return k <= 12 ? kFormAvailableGames : k <= 20 ? kFormAvailableRooms : k <= 23 ? kFormUpdateSierraAccount : k <= 26 ? kFormSelectServer : kFormWonStats; }
+// the events that test gWonNet first (the others dereference it, as the game only runs them with one)
+static bool MayLackWonNet(int k) { return k == 3 || k == 9 || k == 13 || k == 17 || k == 18 || k == 20 || k == 28; }
+static const char* kNames[] = {"", "game", "xbad", "b\xc3\xa9" "b", "Joe"};
+static const char* kPasswords[] = {"", "secret", "other"};
+static const float kLefts[] = {0.0f, 10.5f, 37.25f, -3.75f, 2.5e9f, 0.001f, -1.0e10f};
+
+static void DrawKnobs(int what, unsigned long time)
+{
+    sK = Knobs();
+    sK.mTime = time;
+    sK.mWonNet = MayLackWonNet(what) ? R(4) != 0 : true;
+    sK.mManager = R(2) != 0;
+    sK.mPollRunning = R(2) != 0;
+    sK.mPollFires = R(2) != 0;
+    sK.mUpdateEvent = R(2) != 0;
+    sK.mGroup2 = R(2) != 0;
+    sK.mChecked[kAvailableGamesPWForHostedGameCheckbox] = R(2) != 0;
+    sK.mChecked[kUpdateAccountSendMeEmailCheckbox] = R(2) != 0;
+    sK.mTexts[kAvailableGamesHostGameNameEditBox] = kNames[R(5)];
+    sK.mTexts[kAvailableGamesPWForHostedGameEditBox] = kPasswords[R(3)];
+    sK.mTexts[kAvailableGamesPWRetypeForHostedGameEditBox] = kPasswords[R(3)];
+    sK.mTexts[kAvailableGamesChatEditBox] = R(2) ? "hello" : "";
+    sK.mTexts[kUpdateAccountNewPasswordEditBox] = kPasswords[R(3)];   // (the account form's 2, 4, 6 share ids with 31's)
+    sK.mTexts[4] = kPasswords[R(3)];
+    sK.mTexts[6] = R(2) ? "a@b.c" : "";
+    for (int i = R(4); i > 0; i--) sK.mUsers.push_back(kNames[R(5)]);
+    sK.mUsersSel = sK.mUsers.empty() || R(4) == 0 ? -1 : (long)R((uint32_t)sK.mUsers.size());
+    for (int i = R(5); i > 0; i--)
+        sK.mGames.push_back(GameKnob{kNames[R(5)], (long)R(9) - 1, (long)R(9), R(2) != 0, R(2) != 0, R(3) == 0});
+    sK.mGamesSel = R(5) == 0 ? -1 : (long)R((uint32_t)sK.mGames.size() + 2);
+    for (int i = R(4); i > 0; i--)
+        sK.mRooms.push_back(RoomKnob{kNames[R(5)], R(2) ? "a room" : "", (long)R(100) - 5, (long)R(30)});
+    sK.mRoomsSel = sK.mRooms.empty() || R(4) == 0 ? -1 : (long)R((uint32_t)sK.mRooms.size());
+    for (int i = R(4); i > 0; i--) {
+        const unsigned long big[] = {0, 7, 464, 3000000000ul, 8888888};
+        unsigned long games = 1 + R(600), total = R(4) ? (unsigned long)R(3000000) : 4000000000ul;
+        if (R(4) == 0) { games = 1 + R(3); total = games * (3599 + R(3)); }   // an hour's edge
+        sK.mStats.push_back(StatKnob{kNames[R(5)], big[R(5)], big[R(5)], games, (unsigned long)R(700), (unsigned long)R(300),
+                                     big[R(5)], (long)R(20) - 10, total});
+    }
+    for (int i = R(4); i > 0; i--) sK.mServers.push_back(ServerKnob{R(2) ? L"Alpha" : L"", R(2) ? L"srv1" : L"srv2"});
+    sK.mServerHasSel = R(4) != 0;
+    sK.mServerSel = (long)R(5);
+    sK.mGameListPort = R(2) ? 0xffff : (unsigned short)R(100);
+    sK.mRoomListChanged = R(2) != 0;
+    sK.mPop = (long)R(3);
+    sK.mLineHeight = R(4) == 0 ? 0 : 7 + R(10);
+    sK.mLinesDisplayed = R(4);
+    sK.mDrawCount = R(6);
+    sK.mFontHeight = 10 + R(5);
+    sK.mCopyLeft = kLefts[R(7)];
+    sK.mCopyTop = R(2) ? 0.0f : 100.125f;
+    sK.mScrollBar = (long)R(3);
+    sK.mBaseCopy = (long)R(3);
+    sK.mHosted = kNames[R(5)];
+}
+
+struct DummyEvent : UIEvent { DummyEvent() : UIEvent("dummy") {} long ProcessEvent(UIForm*, UIEntity*) { return 0; } };
+
+// one side's classes
+template <class G, class Rm, class S, class M> struct SideWorld {
+    G* mGames = NULL;
+    Rm* mRooms = NULL;
+    S* mStat = NULL;
+    S* mMyStat = NULL;
+    std::vector<UIControl*> mOwned;
+    void Setup()
+    {
+        sTextIds = sEventIds = 0;
+        sForms.clear();
+        sButtonText = new GEText(&sBaseFont);
+        gHostedGameName = sK.mHosted.c_str();
+        const long forms[] = {12, kFormAvailableRooms, kFormAvailableGames, kFormUpdateSierraAccount, kFormSelectServer, kFormWonStats};
+        for (long f : forms) {
+            UIForm* form = new UIForm(f);
+            sForms[f] = form;
+            for (long i = 0; i <= 40; i++) {
+                UIControl* c;
+                if ((f == kFormAvailableGames && i == kAvailableGamesPlayersInRoomListBox) || (f == kFormSelectServer && i == kSelectServerListBox)) {
+                    UIListBox<UWideString>* l = new UIListBox<UWideString>(i, std::vector<UWideString>(), 12, false, GERectangle(), form, 0, 0);
+                    if (f == kFormAvailableGames) for (const std::string& u : sK.mUsers) l->mData.push_back(UWideString(u.c_str()));
+                    c = l;
+                } else if (f == kFormAvailableGames && i == kAvailableGamesAvalGamesListBox) {
+                    G* g = mGames = new G(i, &sBaseFont, GE2DPoint(1.5f, 2.0f), 400, 300, form, 3, 1);
+                    for (const GameKnob& k : sK.mGames)
+                        g->mData.push_back(EEUICWNGBLine{UWideString(k.mName.c_str()), k.mHumans, k.mPlayers, k.mHasPassword, k.mIsPrivate, k.mIsInProgress});
+                    g->mCopyLineArray = g->mData;
+                    c = g;
+                } else if (f == kFormAvailableRooms && i == kAvailableRoomsAvailRoomsListBox) {
+                    Rm* r = mRooms = new Rm(i, &sBaseFont, GE2DPoint(0.0f, 0.0f), 900, 200, form, 1, 0);
+                    for (const RoomKnob& k : sK.mRooms)
+                        r->mData.push_back(EEUICWNRBLine{UWideString(k.mName.c_str()), UWideString(k.mDescription.c_str()), k.mNumPlayers, k.mNumGames});
+                    r->mCopyLineArray = r->mData;
+                    c = r;
+                } else if (f == kFormWonStats && (i == kWonStatsStatBox || i == kWonStatsMyStatsLine)) {
+                    S* s = new S(i, &sBaseFont, GE2DPoint(4.0f, 8.0f), 990, 120, form, 2, 1);
+                    (i == kWonStatsStatBox ? mStat : mMyStat) = s;
+                    for (const StatKnob& k : sK.mStats)
+                        s->mCopyLineArray.push_back(EEUICWNSBStat{UWideString(k.mText.c_str()), k.mL14, k.mL18, k.mNumGames, k.mL20, k.mL24, k.mL28, k.mL2C, k.mTotalTime});
+                    c = s;
+                } else
+                    c = new UIAnyControl(f, i);
+                form->mControls[i] = c;
+                mOwned.push_back(c);
+            }
+            if (sK.mUpdateEvent && (f == kFormAvailableGames || f == kFormAvailableRooms)) form->mUpdateEvent = new DummyEvent;
+        }
+        if (sK.mManager) sForms[kFormAvailableGames]->mManager = new M;
+        gWonNet = NULL;
+        if (sK.mWonNet) {
+            gWonNet = new FEWonNet;
+            for (const ServerKnob& k : sK.mServers) {
+                WONAPI::DirEntity* e = new WONAPI::DirEntity;
+                e->mDisplayName = k.mDisplayName;
+                e->mName = k.mName;
+                gWonNet->mServers.push_back(e);
+            }
+        }
+    }
+    void Teardown()
+    {
+        // the boxes' members (what Log does not see)
+        Log("games labels " + T(mGames->mPasswordLabel) + " " + T(mGames->mPrivateLabel) + " " + T(mGames->mInProgressLabel) + " " +
+            X(mGames->mPasswordWidth) + " " + X(mGames->mPrivateWidth) + " " + X(mGames->mInProgressWidth) + " texts " +
+            N(mGames->mCopiedText->mId) + " " + N(mGames->mText->mId) + " rooms texts " + N(mRooms->mCopiedText->mId) + " " +
+            N(mRooms->mText->mId) + " stat " + N(mStat->mText->mId) + " " + N(mStat->mRowHeight));
+        UIFormManager* m = sForms[kFormAvailableGames]->mManager;
+        if (m) Log("manager poll running " + N(static_cast<M*>(m)->mPoll->mRunning));
+        for (UIControl* c : mOwned) delete c;
+        mOwned.clear();
+        delete static_cast<M*>(m);
+        for (auto& f : sForms) delete f.second;
+        sForms.clear();
+        delete sButtonText;
+        delete gWonNet;
+        gWonNet = NULL;
+        mGames = NULL; mRooms = NULL; mStat = mMyStat = NULL;
+    }
+};
+
+template <class SW, class M> static void RunFrontSide(std::vector<std::string>& outTrace, uint64_t seed, int steps,
+                                                      UIEvent* (*make)(int), PromptCallback& prompt)
+{
+    sRng = seed;
+    W::sTrace.clear();
+    sPrompt = NULL;
+    unsigned long base = R(3) == 0 ? 0xffffe000ul + R(0x2000) : (unsigned long)R(100000);
+    const unsigned long deltas[] = {0, 3000, 5001, 10001, 4999, 5000, 10000};
+    unsigned long time = base;
+    for (int step = 0; step < steps; step++) {
+        int what = (int)R(40);
+        time += deltas[R(7)];
+        DrawKnobs(what < 29 ? what : 99, time);
+        SW w;
+        w.Setup();
+        W::Log("== step " + N(what));
+        if (what < 29) {
+            UIEvent* e = make(what);
+            long r = e->ProcessEvent(sForms[FormOf(what)], NULL);
+            W::Log(std::string(kFrontEvents[what]) + " -> " + N(r));
+        } else {
+            switch (what) {
+            case 29: W::Log("games copy -> " + N(w.mGames->CopyData())); break;
+            case 30: case 31: W::Log("games draw -> " + N(w.mGames->DrawTextA())); break;
+            case 32: W::Log("rooms copy -> " + N(w.mRooms->CopyData())); break;
+            case 33: case 34: W::Log("rooms draw -> " + N(w.mRooms->DrawTextA())); break;
+            case 35: W::Log("stat copy -> " + N(w.mStat->CopyData())); break;
+            case 36: W::Log("stat draw -> " + N(w.mStat->DrawTextA())); break;
+            case 37: w.mMyStat->Refresh(); W::Log("stat refreshed"); break;
+            case 38: { M* m = M::Get(); W::Log("manager " + N(m == static_cast<M*>(sForms[kFormAvailableGames]->mManager))); break; }
+            default:
+                if (sPrompt) { W::Log("prompt answered"); sPrompt(R(2) ? "pw!" : ""); } else W::Log("no prompt");
+                break;
+            }
+        }
+        w.Teardown();
+    }
+    prompt = sPrompt;
+    outTrace = W::sTrace;
+}
+}
+
+static int RunFront(int sequences)
+{
+    using namespace FE;
+    typedef SideWorld<Ori::EEUICWonNetGamesBox, Ori::EEUICWonNetRoomsBox, Ori::EEUICWonNetStatBox, Ori::EEWonNetAvailableGameFormManager> OriWorld;
+    typedef SideWorld<Rus::EEUICWonNetGamesBox, Rus::EEUICWonNetRoomsBox, Rus::EEUICWonNetStatBox, Rus::EEWonNetAvailableGameFormManager> RusWorld;
+    sPromptName = [](PromptCallback cb) -> std::string {
+        return cb == NULL ? "NULL" : cb == Ori::OnGamePassword || cb == Rus::OnGamePassword ? "OnGamePassword" : "?";
+    };
+    ee_won_front_set_host(Rus::FrontHost);
+    int bad = 0;
+    long long steps = 0;
+    for (int s = 0; s < sequences; s++) {
+        uint64_t seed = 0x2545f4914f6cdd1dull * (uint64_t)(s + 1);
+        sRng = seed;
+        int count = 1 + (int)R(6);
+        std::vector<std::string> a, b;
+        PromptCallback pa, pb;
+        RunFrontSide<OriWorld, Ori::EEWonNetAvailableGameFormManager>(a, seed, count, Ori::FrontMakeEvent, pa);
+        RunFrontSide<RusWorld, Rus::EEWonNetAvailableGameFormManager>(b, seed, count, Rus::FrontMakeEvent, pb);
+        steps += count;
+        if (a != b) {
+            if (bad < 3) {
+                printf("screens sequence %d (seed %llx) mismatches\n", s, (unsigned long long)seed);
+                size_t i = 0;
+                while (i < a.size() && i < b.size() && a[i] == b[i]) i++;
+                for (size_t k = i > 8 ? i - 8 : 0; k < i + 4 && (k < a.size() || k < b.size()); k++)
+                    printf("  %c %-70s | %s\n", k == i ? '>' : ' ', k < a.size() ? a[k].c_str() : "-", k < b.size() ? b[k].c_str() : "-");
+            }
+            bad++;
+        }
+    }
+    // the host's ops (EeWonFrontOp's blocks)
+    const int blocks[][2] = {{1, 29}, {40, 43}, {50, 73}, {80, 83}, {90, 110}, {120, 130}, {140, 159}, {170, 185}, {200, 217}};
+    int ops = 0, hit = 0;
+    for (const auto& bl : blocks)
+        for (int i = bl[0]; i <= bl[1]; i++) {
+            ops++;
+            if (Rus::sFrontHits[i]) hit++; else printf("screens host op %d not reached\n", i);
+        }
+    printf("won_wonnet_test screens: %d sequences, %lld steps, host ops reached %d of %d, %d mismatches\n", sequences, steps, hit, ops, bad);
+    return bad;
+}
 
 using namespace W;
 typedef EeWonNetCall Call;
@@ -519,5 +841,6 @@ int main(int argc, char** argv)
         if (Rus::sOpHits[i]) hit++; else printf("host op %d not reached\n", i);
     }
     printf("won_wonnet_test: %d sequences, %lld steps, host ops reached %d of %d, %d mismatches\n", sequences, steps, hit, ops, bad);
+    bad += RunFront(argc > 2 ? atoi(argv[2]) : 100000);
     return bad;
 }
