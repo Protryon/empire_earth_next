@@ -631,7 +631,6 @@ enum class EeSimDriverSim : uint32_t {
   RulesProblemsLoad,
   RulesProblemCount,
   RulesProblem,
-  EngineId,
   UnitNext,
   UnitComplex,
   UnitHitPoints,
@@ -685,28 +684,11 @@ enum class EeSimDriverSim : uint32_t {
   ClassGroundImpact,
   MissileCategory,
   TorpedoCategory,
-  CaptureActive,
-  CaptureFlush,
   PhysicsRandom,
-  CaptureOnly,
-  CaptureOnlyList,
-  CaptureExclusive,
-  CaptureHold,
-  CaptureClose,
-  CombatFlush,
   FormationSweep,
-  TechSweep,
-  CalamitySweep,
   GroupCommandSweep,
-  MessageSweep,
-  CastCalamities,
   MiniMapPresent,
   MiniMapSnapshot,
-  SightSnapshot,
-  CheatSweep,
-  StormSweep,
-  EffectSweep,
-  StatisticsSweep,
   TradeFoodWood,
   TradeFoodWood2,
   TradeStoneIron,
@@ -721,7 +703,6 @@ enum class EeSimDriverSim : uint32_t {
   MapRemoveSight,
   MapExploreUnseen,
   MapFogSeen,
-  MapComputeChecksum,
   WorldNumPlayers,
   WorldPlayersAt,
   DmPhysLastOos,
@@ -733,7 +714,6 @@ enum class EeSimDriverSim : uint32_t {
   DmPhysInputs,
   DmPhysTickRandom,
   DmPhysTicksToProcess,
-  DmCpOos,
   DmWorldFirstUnit,
   DmWorldNextUnit,
   DmUnitChecksum,
@@ -752,11 +732,6 @@ enum class EeSimDriverSim : uint32_t {
   DmTownHullY,
   DmPlPatrolCount,
   DmPlPatrolAt,
-  DmPgId,
-  DmPgTown,
-  DmPgLoop,
-  DmPgCount,
-  DmPgPoint,
   DmCxUnitId,
   DmCxTileYRaw,
   DmUnitIdRaw,
@@ -872,8 +847,6 @@ struct EeSimDriverHost {
   size_t (*extension)(int32_t, char*, size_t);
   /// `gUserInterface->PostCancelGame()`
   void (*cancel_game)();
-  /// `EECPChoiceByName` (-1: none)
-  long (*engine_choice)(const char*);
   /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
   /// node of `technology`, the class's unit type), every resource summed
   long (*wonders)(uint64_t);

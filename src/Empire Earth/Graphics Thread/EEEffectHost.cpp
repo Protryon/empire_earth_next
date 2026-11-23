@@ -111,11 +111,6 @@ U2DPoint<long> EEEffect::GetCenterPoint() const
     return U2DPoint<long>(this->mRecord->storm.center_x, this->mRecord->storm.center_y);
 }
 
-void EEEffectCaptureSweep()
-{
-    ee_gfx_effects_sweep(gEffectManager != NULL ? gEffectManager->mRust : NULL);
-}
-
 // The quad batches' arrays (the camera batch's vertices 0x4e8db8, the ground batch's 0x4e8da8 and their polygons
 // 0x4e8df0: two triangles a quad); their textures, counts, alpha references, quads, flushes and draws are ee_gfx
 // effect_batch.rs's, the shared plane models (0x4e8df4, 0x4e8df8) too. The GE value classes pass as their mirrors.

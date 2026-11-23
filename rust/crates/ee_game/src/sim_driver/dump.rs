@@ -5,6 +5,38 @@
 //! `unsigned long`), `%ld` and `%08lx` are written as the C++ wrote them ([`hexf`], [`lu`], [`ld`], [`x8`]).
 
 use super::sim_ops::{h, hdd, hs, EeSimDriverSim as O};
+use ee_sim::units::patrol_group as pg;
+
+/// cbindgen:ignore
+mod sys {
+    extern "C" {
+        // `EECPOutOfSynchChecksum` (ee_sim ai next_trace.rs)
+        pub fn ee_ai_out_of_synch_checksum() -> std::ffi::c_ulong;
+    }
+}
+
+/// A patrol group's id (`EEPPatrolGroup`: ee_sim units patrol_group.rs).
+fn pg_id(group: usize) -> i64 {
+    // SAFETY: the group the player or town holds
+    unsafe { pg::ee_units_pg_id(group as *const _) as i64 }
+}
+
+/// A patrol group's town and loop flags.
+fn pg_flags(group: usize) -> (i64, i64) {
+    // SAFETY: as pg_id
+    unsafe {
+        (pg::ee_units_pg_is_town_patrol(group as *const _) as i64, pg::ee_units_pg_is_loop(group as *const _) as i64)
+    }
+}
+
+/// A patrol group's points (complex units; 0: none).
+fn pg_points(group: usize) -> Vec<usize> {
+    // SAFETY: as pg_id
+    unsafe {
+        let n = pg::ee_units_pg_point_count(group as *const _) as usize;
+        (0..n).map(|k| pg::ee_units_pg_point(group as *const _, k) as usize).collect()
+    }
+}
 
 /// The out-of-synch checksum's parts read for the per-CT line: unit hit points and tiles (1), positions, heights,
 /// commands and update counts (2), calamities (0x10), air traffic (0x40), the continent manager's checksum (0x100).
@@ -82,7 +114,8 @@ pub fn checksum_text() -> String {
         x8(checksum),
         count,
         x8(i64::from(units)),
-        x8(h(O::DmCpOos, 0, &[])),
+        // SAFETY: the simulation thread's read (the CT's line)
+        x8(unsafe { sys::ee_ai_out_of_synch_checksum() } as i64),
         ld(h(O::DmPhysInputs, 0, &[])),
     )
 }
@@ -202,7 +235,7 @@ fn dump_players(o: &mut Out) {
                 "TOWN {i} {} units={} patrol={} hull=",
                 ld(h(O::DmTownId, town, &[])),
                 ld(h(O::DmTownUnits, town, &[])),
-                if group != 0 { ld(h(O::DmPgId, group as usize, &[])) } else { -1 }
+                if group != 0 { ld(pg_id(group as usize)) } else { -1 }
             ));
             for v in 0..lu(h(O::DmTownHullCount, town, &[])) {
                 s.push_str(&format!(
@@ -220,12 +253,11 @@ fn dump_players(o: &mut Out) {
             }
             s.push_str(&format!(
                 "PATROL {i} {} town={} loop={} points=",
-                lu(h(O::DmPgId, group, &[])),
-                h(O::DmPgTown, group, &[]),
-                h(O::DmPgLoop, group, &[])
+                lu(pg_id(group)),
+                pg_flags(group).0,
+                pg_flags(group).1
             ));
-            for k in 0..h(O::DmPgCount, group, &[]) {
-                let point = h(O::DmPgPoint, group, &[k]) as usize;
+            for point in pg_points(group) {
                 if point != 0 {
                     s.push_str(&format!(
                         "{}@{},{} ",

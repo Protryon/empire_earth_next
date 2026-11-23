@@ -24,7 +24,28 @@ mod sys {
         pub fn ee_units_unit_sweep(call: i64);
         pub fn ee_netmsg_capture_decision_sweep(rates: *const f32);
         pub fn ee_cp_engine_ai_count() -> usize;
+        // the combat formulas' folded records (ee_sim combat capture_fold.rs)
+        pub fn ee_combat_capture_fold_flush();
     }
+}
+
+use crate::gamecpp::{calamity_capture, cheats, msg_capture, stats_capture, tech_capture, weather};
+use ee_sim::app::capture as cap;
+
+/// `kSightSnapshot` (ee/EESightCapture.h): the minute's whole-map sight record.
+const SIGHT_SNAPSHOT: u32 = 19;
+
+/// `EESimCaptureRecord::Only(tag)` (0 clears it).
+fn capture_only(tag: i64) {
+    let tag = tag as u32;
+    // SAFETY: one tag
+    unsafe { cap::ee_app_capture_only(&tag, (tag != 0) as u32) };
+}
+
+/// `EECombatCaptureFlush`.
+fn combat_flush() {
+    // SAFETY: the folders' partial batches written
+    unsafe { sys::ee_combat_capture_fold_flush() };
 }
 
 const TRIGGER_EVENT: i64 = 0x3f0; // kControlTriggerButtonUp
@@ -349,7 +370,13 @@ pub fn rules_problems() -> Vec<String> {
 
 /// The AI manifest's ids.
 pub fn engine_ids() -> Vec<String> {
-    (0..unsafe { sys::ee_cp_engine_ai_count() }).map(|k| ht(O::EngineId, 0, k as i64)).collect()
+    (0..unsafe { sys::ee_cp_engine_ai_count() })
+        .map(|k| {
+            let ai = crate::cp_engine::ee_cp_engine_ai_at(k);
+            // SAFETY: the manifest's entry and its id (bytes, no terminator), alive for the program
+            unsafe { String::from_utf8_lossy(std::slice::from_raw_parts((*ai).id, (*ai).id_len)).into_owned() }
+        })
+        .collect()
 }
 
 /// A unit class's value in a sample: the cost of the player's tech node of the class's technology, every resource.
@@ -374,7 +401,8 @@ fn tag(name: &[u8; 4]) -> i64 {
 
 fn capture_only_list(tags: &[i64]) {
     let list: Vec<u32> = tags.iter().map(|&t| t as u32).collect();
-    h(O::CaptureOnlyList, 0, &[list.as_ptr() as i64, list.len() as i64]);
+    // SAFETY: the list's tags
+    unsafe { cap::ee_app_capture_only(list.as_ptr(), list.len() as u32) };
 }
 
 /// The combat formulas' sweep's host: EECanHeal, a unit's position, a class's projectile's acceleration.
@@ -448,7 +476,7 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
 /// calls), and each unit's ignored targets are put back after it (IgnoreTarget, the expired entries' erase): the game
 /// is over and no other record follows it.
 fn list_search_sweep() {
-    h(O::CaptureOnly, 0, &[tag(b"CBSL")]);
+    capture_only(tag(b"CBSL"));
     for p in 1..h(O::NumPlayers, 0, &[]) {
         let player = h(O::GetPlayer, 0, &[p]) as usize;
         if player == 0 {
@@ -467,7 +495,7 @@ fn list_search_sweep() {
             h(O::IgnoredFree, ignored, &[]);
         }
     }
-    h(O::CaptureOnly, 0, &[0]);
+    capture_only(0);
 }
 
 /// The missile sweep (CBMA, CBMH and the impact tests' records). No game of the capture profiles flies a missile
@@ -484,7 +512,7 @@ fn list_search_sweep() {
 /// simulates after it.
 fn missile_sweep() {
     capture_only_list(&[tag(b"CBMA"), tag(b"CBMH"), tag(b"CBGI"), tag(b"CBWI")]);
-    h(O::CaptureExclusive, 0, &[1]);
+    cap::ee_app_capture_exclusive(true);
     let (missile, torpedo) = (h(O::MissileCategory, 0, &[]), h(O::TorpedoCategory, 0, &[]));
     let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| h(O::ClassAt, 0, &[k]) as usize).collect();
     let mut classes = Vec::new();
@@ -580,13 +608,13 @@ fn missile_sweep() {
         }
         p += 1;
     }
-    h(O::CaptureExclusive, 0, &[0]);
-    h(O::CaptureOnly, 0, &[0]);
+    cap::ee_app_capture_exclusive(false);
+    capture_only(0);
 }
 
 /// TSGT, MAPS, MAPK: the app profile's end sweep of EEMap's sight and out-of-synch checksum (ee/EESightCapture.h).
 pub fn sight_capture_sweep() {
-    if h(O::CaptureActive, 0, &[]) == 0 || h(O::MapPresent, 0, &[]) == 0 {
+    if !cap::ee_app_capture_active() || h(O::MapPresent, 0, &[]) == 0 {
         return;
     }
     let radius = hd(O::WonderSightRadius, 0, &[], &[]);
@@ -613,8 +641,9 @@ pub fn sight_capture_sweep() {
     }
     // two full cycles of the checksum's 64 x 64 windows
     let bands = (map_size + 63) / 64;
+    let map = crate::gamecpp::hp(crate::gamecpp::O::MpWorldMap, 0, &[]) as *mut c_void;
     for _ in 0..2 * bands * bands + 1 {
-        h(O::MapComputeChecksum, 0, &[]);
+        crate::gamecpp::map::ee_gamecpp_map_checksum(map);
     }
 }
 
@@ -625,9 +654,9 @@ pub fn sweep(kind: i32, arg: c_long) {
             // every five game minutes of a captured game
             h(O::FormationSweep, 0, &[]); // (ee/EEFormation.h)
             combat_capture_sweep();
-            h(O::TechSweep, 0, &[]); // the tech trees' sweep (ee/EETechCapture.h)
-            h(O::CalamitySweep, 0, &[]); // CanCastAt over every calamity class (ee/EETechCapture.h)
-                                         // the Execute decisions' sweep (ee_sim netmsg decisions.rs): EEGetTradePrice's rates by resource
+            tech_capture::ee_gamecpp_tech_capture_sweep(); // the tech trees' sweep (ee/EETechCapture.h)
+            calamity_capture::ee_gamecpp_capture_calamity_sweep(); // CanCastAt over every calamity class (ee/EETechCapture.h)
+                                                                   // the Execute decisions' sweep (ee_sim netmsg decisions.rs): EEGetTradePrice's rates by resource
             let rates = [
                 1.0f32,
                 1.0,
@@ -646,10 +675,10 @@ pub fn sweep(kind: i32, arg: c_long) {
             h(O::GroupCommandSweep, 0, &[]); // the group commands' bodies over the dry host (ee/EEUnitHost.h)
         }
         EE_SIM_DRIVER_SWEEP_MESSAGES => {
-            h(O::MessageSweep, 0, &[]); // once (ee/EEMessageCapture.h)
+            msg_capture::ee_gamecpp_msgcap_sweep(); // once (ee/EEMessageCapture.h)
         }
         EE_SIM_DRIVER_SWEEP_CALAMITIES => {
-            h(O::CastCalamities, 0, &[arg as i64]); // --calamities
+            calamity_capture::ee_gamecpp_capture_cast_calamities(arg); // --calamities
         }
         // SAFETY: the unit sweep over the world views
         EE_SIM_DRIVER_SWEEP_UNITS => unsafe { sys::ee_units_unit_sweep(arg as i64) }, // --unit-sweep
@@ -658,17 +687,18 @@ pub fn sweep(kind: i32, arg: c_long) {
             if h(O::MiniMapPresent, 0, &[]) != 0 {
                 h(O::MiniMapSnapshot, 0, &[]);
             }
-            h(O::SightSnapshot, 0, &[]);
+            crate::sight_capture::ee_app_sight_open_whole(SIGHT_SNAPSHOT, std::ptr::null());
+            crate::sight_capture::ee_app_sight_close();
         }
         EE_SIM_DRIVER_SWEEP_CHEATS => {
-            h(O::CheatSweep, 0, &[]); // --app-sweep at five game minutes
+            cheats::ee_gamecpp_capture_cheat_sweep(); // --app-sweep at five game minutes
         }
         EE_SIM_DRIVER_SWEEP_STORMS => {
-            h(O::StormSweep, 0, &[]); // --app-sweep at ten
+            weather::ee_gamecpp_capture_storm_sweep(); // --app-sweep at ten
         }
         EE_SIM_DRIVER_SWEEP_END => end_sweep(arg),
         EE_SIM_DRIVER_SWEEP_HOLD => {
-            h(O::CaptureHold, 0, &[(arg != 0) as i64]);
+            cap::ee_app_capture_hold(arg != 0);
         }
         // --scenario: a shown dialog message ends now (ee/EEScenarioManager.h)
         EE_SIM_DRIVER_SWEEP_DIALOG if h(O::DialogShowing, 0, &[]) != 0 => {
@@ -682,19 +712,20 @@ pub fn sweep(kind: i32, arg: c_long) {
 fn end_sweep(arg: c_long) {
     if arg & 2 != 0 {
         // the 3D effects' sweep alone (the game's own records held since its start)
-        h(O::CaptureHold, 0, &[0]);
-        h(O::EffectSweep, 0, &[]);
-        h(O::CombatFlush, 0, &[]);
-        h(O::CaptureClose, 0, &[]);
+        cap::ee_app_capture_hold(false);
+        // SAFETY: the game's effect manager (null: none)
+        unsafe { ee_render::gfx::effect_sweep::ee_gfx_effects_sweep(crate::gamecpp::fx_world::current()) };
+        combat_flush();
+        cap::ee_app_capture_close();
         return;
     }
     if arg & 4 != 0 {
         // the active groups' sweep alone (the game's own records held since its start)
-        h(O::CaptureHold, 0, &[0]);
+        cap::ee_app_capture_hold(false);
         // SAFETY: the active groups' sweep over the world views (ee_sim units ag_sweep.rs)
         unsafe { sys::ee_units_ag_sweep() };
-        h(O::CombatFlush, 0, &[]);
-        h(O::CaptureClose, 0, &[]);
+        combat_flush();
+        cap::ee_app_capture_close();
         return;
     }
     if arg & 1 != 0 {
@@ -703,25 +734,25 @@ fn end_sweep(arg: c_long) {
     if arg & 8 != 0 {
         // EEMap's sight and out-of-synch checksum (MAPS, MAPK; their TSGT): no game reaches them. The changed sight
         // would reach the other threads: nothing records after it
-        h(O::CombatFlush, 0, &[]);
+        combat_flush();
         capture_only_list(&[tag(b"MAPS"), tag(b"MAPK"), tag(b"TSGT")]);
-        h(O::CaptureExclusive, 0, &[1]);
+        cap::ee_app_capture_exclusive(true);
         sight_capture_sweep();
         // EEWorld::RecordStatistics (WSTA): only a game left runs it (EEWorld::Clear); its random draws and the
         // computers' topped-up totals reach nothing after it
-        h(O::CaptureOnly, 0, &[tag(b"WSTA")]);
-        h(O::StatisticsSweep, 0, &[]);
-        h(O::CaptureExclusive, 0, &[0]);
-        h(O::CaptureOnly, 0, &[0]);
-        h(O::CaptureClose, 0, &[]);
+        capture_only(tag(b"WSTA"));
+        stats_capture::ee_gamecpp_capture_statistics_sweep();
+        cap::ee_app_capture_exclusive(false);
+        capture_only(0);
+        cap::ee_app_capture_close();
     }
     if arg & 16 != 0 {
         missile_sweep();
         // the missiles it made stay on the map (the AI and UI threads would see them): nothing records after it
-        h(O::CombatFlush, 0, &[]);
-        h(O::CaptureClose, 0, &[]);
+        combat_flush();
+        cap::ee_app_capture_close();
     }
-    h(O::CombatFlush, 0, &[]);
+    combat_flush();
 }
 
 #[cfg(test)]
@@ -732,5 +763,21 @@ mod tests {
     fn tags_are_the_cpp_packing() {
         // EE_COMBAT_TAG('C', 'B', 'S', 'L'): a | b << 8 | c << 16 | d << 24
         assert_eq!(tag(b"CBSL"), (b'C' as i64) | (b'B' as i64) << 8 | (b'S' as i64) << 16 | (b'L' as i64) << 24);
+    }
+
+    #[test]
+    fn sight_snapshot_is_the_header_kind() {
+        // the sight kinds' enum of ee/EESightCapture.h: kSightTileAdd = 1, then one each
+        let header =
+            std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/ee/EESightCapture.h"))
+                .expect("the header");
+        let kinds: Vec<&str> = header
+            .lines()
+            .map(str::trim)
+            .filter(|l| l.starts_with("kSight"))
+            .map(|l| l.split(|c: char| !c.is_ascii_alphanumeric()).next().unwrap())
+            .collect();
+        assert_eq!(kinds[0], "kSightTileAdd");
+        assert_eq!(kinds.iter().position(|&k| k == "kSightSnapshot").map(|k| k as u32 + 1), Some(SIGHT_SNAPSHOT));
     }
 }

@@ -317,7 +317,7 @@ fn world() -> EeGfxEffectWorld {
 
 // ---- the manager's world (ee_gfx ffi_manager.rs EeGfxManagerWorld)
 
-extern "C" fn current() -> *mut EeGfxEffectManager {
+pub(crate) extern "C" fn current() -> *mut EeGfxEffectManager {
     hp(O::FwManagerRust, 0, &[]) as *mut EeGfxEffectManager
 }
 extern "C" fn goal_current_player(_: *mut c_void) -> u32 {

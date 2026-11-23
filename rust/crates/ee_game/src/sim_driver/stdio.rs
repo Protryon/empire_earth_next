@@ -186,7 +186,7 @@ pub fn quit(code: i32) -> ! {
     #[cfg(not(test))]
     // SAFETY: the C library's flush and exit; TerminateProcess on this process
     unsafe {
-        super::sim_ops::h(super::sim_ops::EeSimDriverSim::CaptureFlush, 0, &[]);
+        ee_sim::app::capture::ee_app_capture_flush();
         crt::fflush(std::ptr::null_mut());
         #[cfg(windows)]
         windows_sys_059::Win32::System::Threading::TerminateProcess(
