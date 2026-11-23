@@ -18,7 +18,7 @@ class GE2DPoint;
 
 // A unit placed but not yet built (the editor's preview; EEGhostUnit.cpp 0x20360e..0x20560c). Member names and types
 // from the ctor, Reset 0x204208 and the slots (provisional name)
-class EEGhostUnit {
+class EEGhostUnit : public EeUnitsGhostFields {
 public:
     // 0x20360e: loads the class's media (directly when gFreeCamera, else through the pre-loading thread unless
     // inNoMedia)
@@ -54,18 +54,7 @@ public:
     float GetScale();                       // 0x10cb81 (the class upgrade's mF98; out-of-line COMDAT next to GetModel) (provisional name)
 
     GETransformation mTransformation;       // +0x004 (Reset zeroes its translation)
-    float mHeights[144];                     // +0x044 (Reset: memset 0x240)
-    long mTileX;                            // +0x284
-    long mTileY;                            // +0x288
-    long mFrame;                            // +0x28c
-    long mAnimation;                        // +0x290 (= 7)
-    EEPlayer* mPlayer;                      // +0x294
-    EEUnitClass* mUnitClass;                // +0x298 (gUnitClassTable[inUnitClass])
-    long mUnitSet;                          // +0x29c
-    bool mFootprint[12][12];                // +0x2a0 (Reset: memset 0x90; 0x203cb1 fills it with mCanPlace) (provisional name)
-    bool mCanPlace;                         // +0x330
-    bool mNoMedia;                          // +0x331
-    short mU332;                            // +0x332
+    // +0x044 mHeights .. +0x332 mU332: the record EeUnitsGhostFields (ee_sim units obj_fields.rs)
 };
 
 // 0x563240: cleared by EEGhostUnit::Create once the new ghosts are in the world (provisional name)

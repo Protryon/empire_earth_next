@@ -18041,6 +18041,42 @@ struct EeUnitsPlayerUnit {
   long build_queue;
 };
 
+/// `EEGhostUnit`'s plain members (after its vtable; its `mTransformation` follows the record).
+struct EeUnitsGhostFields {
+  /// the footprint's ground heights (Reset zeroes them)
+  float mHeights[144];
+  long mTileX;
+  long mTileY;
+  long mFrame;
+  /// 7 after Reset
+  long mAnimation;
+  class EEPlayer *mPlayer;
+  /// `gUnitClassTable[inUnitClass]`
+  class EEUnitClass *mUnitClass;
+  long mUnitSet;
+  /// per footprint tile: placeable (UpdateFootprint fills it with mCanPlace; Reset clears it)
+  bool mFootprint[12][12];
+  bool mCanPlace;
+  bool mNoMedia;
+  int16_t mU332;
+};
+
+/// `EEComplexDoppelganger`'s plain members (its `mTransformation`, the unit's location, follows the record).
+struct EeUnitsComplexDopFields {
+  class EEGraphicObject *mModel;
+  /// the unit's animation
+  unsigned long mAnimation;
+  /// the unit's model scale
+  float mScale;
+  /// the hit points, bit 31 the built flag
+  long mPackedHitPoints;
+  long mTileX;
+  long mTileY;
+  /// the unit's model frame
+  unsigned long mFrame;
+  bool mIsFoundation;
+};
+
 /// `kWorldHighGroundHeight`, `kWorldLowGroundHeight`, `kWorldHighGroundAttackFactor`, `kWorldLowGroundAttackFactor`
 /// (the world table's rows, ee/EEWorldConstants.h)
 constexpr static const int64_t WORLD_ELEVATION_ROWS[4] = { 53, 54, 55, 56, };

@@ -9,7 +9,7 @@
 #include "ee/EEDoppelganger.h"
 #include "rust/sim/units.h"             // the inline bodies' Rust calls
 
-class EEComplexDoppelganger : public EEDoppelganger {
+class EEComplexDoppelganger : public EEDoppelganger, public EeUnitsComplexDopFields {
 public:
     EEComplexDoppelganger() { this->Reset(); }
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return (long)ee_units_dop_body(EE_UNITS_DOP_DO_LOAD, this, &inFile, inMajorVersion, inMinorVersion); }   // +0x04 0x1f21a3
@@ -35,14 +35,7 @@ public:
     void Reset() { ee_units_dop_more(EE_UNITS_DOPX_DO_RESET, this, 0, 0); }                           // 0x1f1fa0 (the ctor and Clear)
 
     GETransformation mTransformation;       // +0x10 (the unit's location; Initialize, Virtual34)
-    EEModel* mModel;                        // +0x50
-    unsigned long mAnimation;               // +0x54 (the unit's +0x264)
-    float mScale;                           // +0x58 (the unit's model scale)
-    long mPackedHitPoints;                  // +0x5c
-    long mTileX;                            // +0x60 (a tile x: EEDoppelgangerManager 0x202962)
-    long mTileY;                            // +0x64 (its tile y)
-    unsigned long mFrame;                   // +0x68 (the unit's model frame)
-    bool mIsFoundation;                     // +0x6c
+    // +0x50 mModel .. +0x6c mIsFoundation: the record EeUnitsComplexDopFields (ee_sim units obj_fields.rs)
 };
 
 #endif

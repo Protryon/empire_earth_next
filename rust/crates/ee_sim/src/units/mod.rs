@@ -113,6 +113,7 @@ pub mod map_words;
 pub mod motion;
 pub mod msvc_sort;
 pub mod notes;
+pub mod obj_fields;
 pub mod order;
 pub mod order_log;
 pub mod patrol;
