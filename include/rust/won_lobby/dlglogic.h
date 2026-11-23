@@ -93,6 +93,46 @@ enum class EeWonDlgLogicOp : uint32_t {
   RootWindowOf,
   /// `((Container*)a)->InvalidateRect(WONRectangle(*(int(*)[4])b))`.
   InvalidateRect,
+  /// `WindowManager::GetDefaultWindowManager()` (not held).
+  WmDefault,
+  /// `((WindowManager*)a)->GetPopupsInOwnWindow()` (0 or 1).
+  WmPopupsOf,
+  /// `a->GetBounds().x` (a component).
+  BoundsX,
+  /// `a->GetBounds().y`.
+  BoundsY,
+  /// `a->GetBounds().width`.
+  BoundsWidth,
+  /// `a->GetBounds().height`.
+  BoundsHeight,
+  /// `sDlgNewWindow = CreateNativeWindow()` (NewWindow's local).
+  NewWindowMake,
+  /// `sDlgNewWindow->SetOneComponentWindow(true)`.
+  NewWindowOneComponent,
+  /// `sDlgNewWindow.get()`.
+  NewWindowGet,
+  /// `sDlgNewWindow = NULL`.
+  NewWindowDrop,
+  /// `((Window*)a)->SetParent((Window*)b)`.
+  WindowSetParent,
+  /// `((Window*)a)->SetStyle(0x22)`.
+  WindowSetPopupStyle,
+  /// `((Window*)a)->Create(WONRectangle(0, 0, 100, 100))`.
+  WindowCreatePopup,
+  /// `LobbyAddLogicListener(((Window*)a)->mRoot.get())`.
+  WindowListenRoot,
+  /// `((Window*)a)->mRoot->SetColorScheme(LobbyGetColorScheme())`.
+  WindowRootSetScheme,
+  /// `sDlgStatusText = GetWONStatusString(a)` (StatusSetStatus's local).
+  StatusTextOf,
+  /// `((StatusDialog*)a)->SetStatus(sDlgStatusText, false)`.
+  StatusSetHeldText,
+  /// `sDlgStatusText = GUIString()`.
+  StatusTextDrop,
+  /// `sDlgButtons[a] = &gLobbyResources[b].mString` (OkCancelSetText's local).
+  ButtonTextSet,
+  /// `((OkCancelDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, sDlgButtons)`.
+  OkCancelSetHeldText,
 };
 
 /// The inward calls (the C++ class's methods).
