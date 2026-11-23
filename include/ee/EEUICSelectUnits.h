@@ -17,7 +17,10 @@ public:
     // gViewport's view rectangle top-left; references inClick and inLasso
     EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inClick,
                      EEALasso* inLasso);
-    virtual ~EEUICSelectUnits();
+    // Destroys the selection box, releasing its click and lasso handlers (hud_ctl_ffi.rs)
+    virtual ~EEUICSelectUnits() { ee_screens_su_destroy(this); }
+    // the constructor's hiding (StoreDisplayMode is protected)
+    static void Hide(EEUICSelectUnits* inBox) { inBox->StoreDisplayMode(kDisplayModeHidden); }
     virtual long CopyData() { return this->Rust(EE_SCREENS_SU_DO_COPY_DATA); }
     virtual long DrawPolygons() { return this->Rust(EE_SCREENS_SU_DO_DRAW); }
     // 0x259ec5: a left press at inLocation starts a selection (EEUIFMainGame, the scenario editor)
@@ -40,6 +43,7 @@ protected:
         return (long)ee_screens_select_units(this, this->Host(), inWhich, inLocation ? inLocation->GetX() : 0.0f, inLocation ? inLocation->GetY() : 0.0f);
     }
 
+public:   // (the constructor's and destructor's shims: EEUICSelectUnits.cpp)
     EEAMouseClick* mClick;                  // referenced; the mouse click action
     EEALasso* mLasso;                       // referenced
 };

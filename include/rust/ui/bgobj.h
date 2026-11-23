@@ -62,6 +62,8 @@ enum class EeUiBgCall : uint32_t {
   FullLoad = 24,
   /// `UIFullBackground::UnloadBackground()`.
   FullUnload = 25,
+  /// `UITiledBackground`'s constructor: its tiling `a`, the counts across and down in `f[0]`, `f[1]`.
+  TiledInit = 26,
 };
 
 /// `GETextureDescription` (`lle/GETextureManager.h`), copied with the background.
@@ -158,6 +160,12 @@ void ee_ui_bg_full_init(EeUiBackgroundFields *rec,
 /// # Safety
 /// `rec` is a record [`ee_ui_bg_init`] or [`ee_ui_bg_full_init`] set up.
 void ee_ui_bg_free(EeUiBackgroundFields *rec);
+
+/// `UIFullBackground`'s destructor: its tiles released ([`EeUiBgCall::FullRelease`]), then [`ee_ui_bg_free`].
+///
+/// # Safety
+/// As [`ee_ui_bg_free`].
+void ee_ui_bg_full_free(EeUiBackgroundFields *rec);
 
 /// One of the backgrounds' methods ([`EeUiBgCall`]).
 ///

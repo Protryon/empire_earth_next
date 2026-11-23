@@ -12,9 +12,7 @@ class GETexture;
 
 class LLE_API UIBitmapBackground : public UITextureBackground {
 public:
-    UIBitmapBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
-                       const GETextureDescription& inDescription, const GERectangle& inTextureRectangle,
-                       const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible);
+    UIBitmapBackground(unsigned long inBackgroundID, const UString& inTextureFileName, const GETextureDescription& inDescription, const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible) : UITextureBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm, inDrawPriority, inVisible) { this->Call(EeUiBgCall::BitmapInit); }
     virtual ~UIBitmapBackground();
     virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::BitmapDraw, inRectangle); }
     virtual long DrawStrectchedBackground(const GERectangle& inSource, const GERectangle& inDestination);  // 0x1c

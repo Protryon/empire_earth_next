@@ -17,7 +17,10 @@ class GEText;
 // rectangle, the referenced texture, the scales) live in the Rust object (EeGeFbCharacter).
 class LLE_API GEFontBitmap : public UReferenceCounter {   // sizeof 0x24 (vector deleting dtor 0x106be)
 public:
-    GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen);
+    // renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (ee_ge fbobj.rs;
+    // the object is NULL while it is made)
+    GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
+        : mRust(NULL) { this->mRust = ee_ge_fb_new(&GEFontBitmap::Host, this, inRasterizer, inFont, inScreen); }
     bool operator==(GEFont* inFont) { return true; }
     long Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
         { return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen); }
@@ -26,7 +29,8 @@ public:
     GEFontBitmap(const GEFontBitmap&) = delete;
     GEFontBitmap& operator=(const GEFontBitmap&) = delete;
 protected:
-    virtual ~GEFontBitmap();                // 0x159ac (protected: released through Dereference)
+    // 0x159ac (protected: released through Dereference): its drawing bitmap released
+    virtual ~GEFontBitmap() { ee_ge_fb_destroy(this->mRust); }
 private:
     // (CreateNewFontTexture 0x100159cd and CreateSurfaceAlpha 0x10015ac5 are the Rust object's)
     // The calls the font bitmap makes on other objects (EeGeFbOp), in the original's statements

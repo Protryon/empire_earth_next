@@ -16,24 +16,13 @@
 #include "lle/UIControl.h"
 #include "lle/UIScrollBar.h"   // units including this header rely on it for the scroll bar
 #include "rust/ui/labelobj.h"
+#include "rust/ui/lle_hosts.h"
 
 class GEText;
-struct EeUiLabel;
 
 class LLE_API UITextLabel : public UIControl {
-    friend class UIForm;                    // SetText(const UWideString&, bool) is private
-    friend class UIESliderChange;           // ProcessEvent calls SetText(const UWideString&, bool) (0x1006e950)
-    friend class UIComboBox;                // calls SetText(const UWideString&, bool) and MouseLButtonDown (ui-edit)
-    friend class UICheckBox;                // SetText calls SetText(const UWideString&, bool) (0x1006013e)
-    friend class UIRadioButton;             // likewise (0x1007c146)
-    friend class UITriStateCheckBox;        // likewise (0x10080b1c)
-    friend class UITLScrolling;             // its inline forwarders reach mRust
-    friend struct UITextLabelRust;          // UITextLabel.cpp: the Rust object's calls out
 public:
-    UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
-                UIForm* inForm, unsigned long inLabelType, unsigned long inIndex, unsigned long inBorderThickness);
-    UITextLabel(const UITextLabel&) = delete;
-    UITextLabel& operator=(const UITextLabel&) = delete;
+    UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inLabelType, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness), mRust(ee_ui_label_new(this, ee_ui_label_host, UIF4(inRectangle), inFont, inLabelType, inBorderThickness)) { this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText); }
     virtual ~UITextLabel();
     virtual void AppendText(const UWideString& inText) { this->SetText(inText, false); }   // slot 0x88
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiLabelCall::ChangeFont, (intptr_t)inFont); }
@@ -69,7 +58,6 @@ public:
         this->SetText(theText, true);
     }
     virtual long UpdateKeyboard() { return kErrorFailed; }
-protected:
     virtual void CheckScrollBar() { this->Call(EeUiLabelCall::CheckScrollBar); } // slot 0x90
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiLabelCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiLabelCall::MouseLButtonUp); }
@@ -79,12 +67,9 @@ protected:
     void SetTextRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiLabelCall::SetTextRectangle, inRectangle); }
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
-public:   // (the combo box's shims: UIComboBox.cpp)
     void SetText(const UWideString& inText, bool inReplace) { this->Call(EeUiLabelCall::SetText, (intptr_t)(const char*)inText, inReplace); }
-private:
-private:
-    intptr_t Call(EeUiLabelCall c, intptr_t a = 0, intptr_t b = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f) const { float f[4] = {f0, f1, f2, f3}; return ee_ui_label_call(this->mRust, c, a, b, f); }
-    intptr_t CallRect(EeUiLabelCall c, const GERectangle& r) const { float f[4] = {r.GetBottom(), r.GetLeft(), r.GetRight(), r.GetTop()}; return ee_ui_label_call(this->mRust, c, 0, 0, f); }
+    intptr_t Call(EeUiLabelCall c, intptr_t a = 0, intptr_t b = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f) const { return ee_ui_label_call(this->mRust, c, a, b, UIF4(f0, f1, f2, f3)); }
+    intptr_t CallRect(EeUiLabelCall c, const GERectangle& r) const { return ee_ui_label_call(this->mRust, c, 0, 0, UIF4(r)); }
     EeUiLabel* mRust;                       // the state (labelobj.rs)
 };
 

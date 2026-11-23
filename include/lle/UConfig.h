@@ -9,17 +9,11 @@
 
 #include "platform/PlatConfig.h"
 #include "lle/UWideString.h"
+#include "rust/base/util.h"   // the reads (ee_base util config.rs)
 
 class LLE_API UConfig {                     // no data
 public:
-    long GetValue(const char* inBlock, const char* inKey, long& outValue)
-    {
-        int32_t theValue;
-        if (!PlatConfigGetInt(inBlock, inKey, &theValue))
-            return kErrorNotFound;
-        outValue = theValue;
-        return kErrorOK;
-    }
+    long GetValue(const char* inBlock, const char* inKey, long& outValue) { return ee_uconfig_get_long(inBlock, inKey, &outValue); }
     // a string of at most 1023 bytes
     long GetValue(const char* inBlock, const char* inKey, UWideString& outValue)
     {
@@ -34,14 +28,7 @@ public:
     long SetValue(const char* inBlock, const char* inKey, const UWideString& inValue)
         { return PlatConfigSetString(inBlock, inKey, (const char*)inValue) ? kErrorOK : kErrorNotFound; }
     // port: a boolean (true/false; an integer reads as nonzero)
-    long GetFlag(const char* inBlock, const char* inKey, bool& outValue)
-    {
-        int32_t theValue;
-        if (!PlatConfigGetInt(inBlock, inKey, &theValue))
-            return kErrorNotFound;
-        outValue = theValue != 0;
-        return kErrorOK;
-    }
+    long GetFlag(const char* inBlock, const char* inKey, bool& outValue) { return ee_uconfig_get_flag(inBlock, inKey, &outValue); }
     long SetFlag(const char* inBlock, const char* inKey, bool inValue)
         { return PlatConfigSetBool(inBlock, inKey, inValue ? 1 : 0) ? kErrorOK : kErrorNotFound; }
     long DeleteValue(const char* inBlock, const char* inKey)

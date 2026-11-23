@@ -14,6 +14,7 @@
 #include "rust/ui/lle_manager.h"
 #include "rust/ui/lle_control.h"
 #include "rust/ui/obj.h"
+#include "lle/UIObjHost.h"
 
 class FSPath;
 class GEBitmap;
@@ -28,20 +29,10 @@ class UIBackgroundTable;
 class TSCriticalSection;
 class UIControl;
 class UIControlsTable;
-class UIForm;
 class UResourceFile;
 struct UIDbDataForms;
-class UIEntity;
-class UIEvent;
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
-LLE_API extern UString gDbUIHotKeyFileName;
-LLE_API extern UString gDbUIFontsFileName;
-LLE_API extern UString gDbUIFormEventsFileName;
-LLE_API extern UString gDbUIControlEventsFileName;
-LLE_API extern UString gDbUIFormsFileName;
-LLE_API extern UString gDbUIControlsFileName;
-LLE_API extern UString gDbUIBackgroundFileName;
 
 // winspool.h maps AddForm to AddFormA; the export is ?AddForm@UIManager@@
 #ifdef AddForm
@@ -50,7 +41,6 @@ LLE_API extern UString gDbUIBackgroundFileName;
 
 enum class EeUiOp : uint32_t;              // rust/ee_ui.h: the Rust manager's calls out
 enum class EeUiManagerCall : uint32_t;     // rust/ee_ui.h: its methods
-struct EeUiManager;                        // rust/ee_ui.h: the Rust manager (managerobj.rs)
 
 // The class is whole in Rust (rust/crates/ee_ui/src/managerobj.rs, R6 ui round 17): its state (the event factories,
 // the stack, the forms, the visible and copied forms, the queued events, the fonts, the music, the UI texture and the
@@ -195,23 +185,17 @@ public:
     virtual long UpdateUI(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateUi, inMouseLocation.GetX(), inMouseLocation.GetY()); } // slot 0x28
     // Passes a translated character to the top form unless its repeat count is 16 or more; returns its result
     long UpdateTranslatedKey(const char* inKey, short inRepeat) { return (long)this->Call(EeUiManagerCall::UpdateTranslatedKey, (intptr_t)inKey, (intptr_t)inRepeat); }
-protected:
     // Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiManagerCall::UpdateKeyboard); }
     // Passes the mouse location and buttons to the top form when the mouse changed, it is captured, or an update is forced
     virtual long UpdateMouse(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateMouse, inMouseLocation.GetX(), inMouseLocation.GetY()); } // slot 0x30
-public:
     // the Rust manager's calls out that are not Rust's (ee_ui lle_manager.rs: ee_ui_manager_host comes first)
-    static intptr_t HostOp(void* inManager, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,
-                           float* ioF);
-private:
     // the forwarders' one call into the Rust manager (with a rectangle, with two floats)
     intptr_t Call(EeUiManagerCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0, float* ioF = NULL) const { return ee_ui_manager_call(this->mRust, inCall, inA, inB, inC, ioF); }
-    intptr_t CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const;
-    intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const;
+    intptr_t CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const { return this->Call(inCall, inA, 0, 0, UIF4(inRectangle)); }
+    intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const { return this->Call(inCall, 0, 0, 0, UIF4(inX, inY)); }
 
     EeUiManager* mRust;                     // the state (managerobj.rs)
-public:   // the mouse buttons' shims (UIManager.cpp)
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
     // Inferred: visible to its users only (shown to UIControl.cpp it renumbers that unit's $E chains)

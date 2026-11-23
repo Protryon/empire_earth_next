@@ -11,19 +11,34 @@
 #![allow(clippy::unnecessary_cast)]
 
 pub mod abi;
+/// cbindgen:ignore
 pub mod cformat;
+/// cbindgen:ignore
+pub mod consts;
+/// cbindgen:ignore
 pub mod device;
+/// cbindgen:ignore
 pub mod directdraw;
+/// cbindgen:ignore
 pub mod format;
+/// cbindgen:ignore
 pub mod gpu;
+/// cbindgen:ignore
 #[allow(clippy::module_inception)] // the module was the crate ee_gx
 pub mod gx;
+/// cbindgen:ignore
 pub mod keys;
+/// cbindgen:ignore
 pub mod modes;
+/// cbindgen:ignore
 pub mod plat;
+/// cbindgen:ignore
 pub mod shaders;
+/// cbindgen:ignore
 pub mod stats;
+/// cbindgen:ignore
 pub mod surface;
+/// cbindgen:ignore
 pub mod uniform;
 
 #[cfg(not(test))]

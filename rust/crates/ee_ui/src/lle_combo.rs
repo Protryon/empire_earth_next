@@ -139,7 +139,7 @@ fn act<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs, combo: usize) -> Option<isize> 
 
 lle_host!(
     /// The combo box's host: [`combo_call`], then `UIComboBox::Rust::Op`.
-    ee_ui_combo_host => combo_call, ee_uicpp_combo_host
+    ee_ui_combo_host => combo_call, [crate::lle_hosts::base, crate::lle_hosts::part, crate::lle_hosts::combo]
 );
 
 /// The constructor's arguments past the combo box (`UIComboBox::UIComboBox`).

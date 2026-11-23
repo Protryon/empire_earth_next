@@ -11,7 +11,11 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_action(op: u32, action: *mut c_void) -> u32;
+        pub fn ee_screenscpp_action_reference(action: *mut c_void);
+        pub fn ee_screenscpp_action_release(action: *mut c_void);
+        pub fn ee_screenscpp_action_run(action: *mut c_void);
+        pub fn ee_screenscpp_action_undo(action: *mut c_void);
+        pub fn ee_screenscpp_action_undoable(action: *mut c_void) -> bool;
     }
 }
 
@@ -25,7 +29,23 @@ impl ActionHost for Host {
         if let Some(r) = crate::screens::ui_calls::action(&mut crate::screens::game_cpp::Ffi, op) {
             return r;
         }
-        unsafe { sys::ee_screenscpp_action(op, action as *mut c_void) }
+        use crate::screens::actions::{
+            EE_SCREENS_ACTION_DEREFERENCE, EE_SCREENS_ACTION_REFERENCE, EE_SCREENS_ACTION_RUN, EE_SCREENS_ACTION_UNDO,
+            EE_SCREENS_ACTION_UNDOABLE,
+        };
+        let a = action as *mut c_void;
+        // SAFETY: the queues' live action
+        unsafe {
+            match op {
+                EE_SCREENS_ACTION_REFERENCE => sys::ee_screenscpp_action_reference(a),
+                EE_SCREENS_ACTION_DEREFERENCE => sys::ee_screenscpp_action_release(a),
+                EE_SCREENS_ACTION_RUN => sys::ee_screenscpp_action_run(a),
+                EE_SCREENS_ACTION_UNDO => sys::ee_screenscpp_action_undo(a),
+                EE_SCREENS_ACTION_UNDOABLE => return u32::from(sys::ee_screenscpp_action_undoable(a)),
+                _ => {}
+            }
+        }
+        0
     }
 }
 

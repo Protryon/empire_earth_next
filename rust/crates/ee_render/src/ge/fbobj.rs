@@ -86,17 +86,24 @@ pub enum EeGeFbOp {
     SurfLock,
     /// `obj->Unlock()`.
     SurfUnlock,
-    /// `obj->GetMemoryAddress()`, with `GetWidth()`, `GetHeight()` and `GetBytesPerRow()` into
-    /// `*(unsigned long(*)[3])a`.
-    SurfPixels,
-    /// `obj->Clear(GEColor(0, 0, 0), 1.0f)`.
+    /// `obj->GetWidth()`.
+    SurfWidth,
+    /// `obj->GetHeight()`.
+    SurfHeight,
+    /// `obj->GetBytesPerRow()`.
+    SurfBytesPerRow,
+    /// `obj->GetMemoryAddress()`.
+    SurfMemory,
+    /// `obj->Clear(*(GEColor*)a, 1.0f)` (`a` black).
     SurfClear,
     /// `obj->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b)` (a screen) -> its result.
     ScreenCreateSurface,
     /// `obj->GetTextureManager()->MakeTexture((GESurface*)a)` (a screen) -> the texture.
     ScreenMakeTexture,
-    /// `ESVerify` of the constructor's check `a`: 0 the surface's creation (line 228), 1 the texture (235).
-    Verify,
+    /// `ESVerify` of the font texture's surface creation (`theResult == keseOK`, line 228).
+    VerifySurface,
+    /// `ESVerify` of its texture (`((GETexture*)inObj) != NULL`, line 235).
+    VerifyTexture,
 }
 
 /// The host: `owner` is the C++ font bitmap of the object calling.
@@ -233,6 +240,40 @@ unsafe fn direct_op(op: EeGeFbOp, obj: usize, a: isize, b: isize) -> Option<isiz
     Some(0)
 }
 
+/// `FontRange`: the font's character range (TEXTMETRIC's tmFirstChar..tmLastChar: `PlatFontGetMetrics`' first and
+/// last character) into `out[0]` and `out[1]`.
+///
+/// # Safety
+/// `font` is a live C++ `GEFont` with its platform font; `out` holds two.
+unsafe fn font_range(font: usize, out: *mut c_ulong) -> isize {
+    use ee_base::plat_ui::font::{PlatFont, PlatFontGetMetrics, PlatFontMetrics};
+    // SAFETY: the caller's contract; all zeroes is a valid value of the metrics (integers)
+    unsafe {
+        let os = crate::ge::smallobj::ee_ge_font_os(crate::ge::cppobj::counted::<crate::ge::smallobj::EeGeFont>(font));
+        let mut metrics: PlatFontMetrics = std::mem::zeroed();
+        PlatFontGetMetrics(os as *const PlatFont, &mut metrics);
+        *out = metrics.first_char as c_ulong;
+        *out.add(1) = metrics.last_char as c_ulong;
+    }
+    0
+}
+
+/// `TextSetByte`: the working text set to one cell's character (decision D6: the text is UTF-8, so a cell holds its
+/// Windows-1252 byte's character as UTF-8 and Draw maps a drawn character back to its cell), as the original's
+/// `UWideString theString; theString = theCell; SetText(theString)`.
+///
+/// # Safety
+/// `text` is a live C++ `GEText`.
+unsafe fn text_set_byte(text: usize, byte: u8) -> isize {
+    let mut cell = [0 as c_char; 8];
+    // SAFETY: the caller's contract; the cell holds any byte's UTF-8 and its NUL
+    unsafe {
+        ee_base::plat_core::string::PlatCp1252ToUtf8(&byte as *const u8 as *const c_char, 1, cell.as_mut_ptr(), 8);
+        crate::ge::smallobj::text_set_utf8(crate::ge::cppobj::plain(text), cell.as_ptr());
+    }
+    0
+}
+
 unsafe fn fb<'a>(p: *mut EeGeFontBitmap) -> &'a mut EeGeFontBitmap {
     // SAFETY: the caller's contract; the reference is not held across a host call
     unsafe { &mut *p }
@@ -258,6 +299,10 @@ impl EeGeFontBitmap {
                     unsafe { crate::ge::cppobj::reference(obj) };
                     return 0;
                 }
+                // SAFETY: a live GEFont; a holds two unsigned longs
+                EeGeFbOp::FontRange => return unsafe { font_range(obj, a as *mut c_ulong) },
+                // SAFETY: a live GEText
+                EeGeFbOp::TextSetByte => return unsafe { text_set_byte(obj, a as u8) },
                 _ => {}
             }
             // SAFETY: the objects are the C++'s live GE objects the operation names
@@ -430,12 +475,13 @@ impl EeGeFontBitmap {
                 &mut surface as *mut usize as isize,
             ) as c_long;
             if result != 0 {
-                Self::op(p, EeGeFbOp::Verify, 0, 0, 0);
+                Self::op(p, EeGeFbOp::VerifySurface, 0, 0, 0);
             }
-            Self::op(p, EeGeFbOp::SurfClear, surface, 0, 0);
+            let black = [0.0f32; 3];
+            Self::op_ptr(p, EeGeFbOp::SurfClear, surface, black.as_ptr(), 0);
             let texture = Self::op(p, EeGeFbOp::ScreenMakeTexture, screen, surface as isize, 0) as usize;
             if texture == 0 {
-                Self::op(p, EeGeFbOp::Verify, 0, 1, 0);
+                Self::op(p, EeGeFbOp::VerifyTexture, 0, 0, 0);
             }
             for (stage, value) in GLYPH_STAGE {
                 Self::op(p, EeGeFbOp::TexStage, texture, stage as isize, value);
@@ -452,8 +498,12 @@ impl EeGeFontBitmap {
         // SAFETY: the caller's contract; the host answers the locked surface's memory and its sizes
         unsafe {
             Self::op(p, EeGeFbOp::SurfLock, surface, 0, 0);
-            let mut sizes: [c_ulong; 3] = [0; 3];
-            let pixels = Self::op_ptr(p, EeGeFbOp::SurfPixels, surface, sizes.as_mut_ptr(), 0) as *mut u16;
+            let sizes: [c_ulong; 3] = [
+                Self::op(p, EeGeFbOp::SurfWidth, surface, 0, 0) as c_ulong,
+                Self::op(p, EeGeFbOp::SurfHeight, surface, 0, 0) as c_ulong,
+                Self::op(p, EeGeFbOp::SurfBytesPerRow, surface, 0, 0) as c_ulong,
+            ];
+            let pixels = Self::op(p, EeGeFbOp::SurfMemory, surface, 0, 0) as *mut u16;
             let n = font::surface_alpha_len(sizes[0], sizes[1], sizes[2]);
             if n != 0 && !pixels.is_null() {
                 font::surface_alpha(std::slice::from_raw_parts_mut(pixels, n), sizes[0], sizes[1], sizes[2]);

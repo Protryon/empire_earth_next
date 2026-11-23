@@ -2,7 +2,8 @@
 //! its members; the Rust's calls out go to three host functions: the server's (`EeNetSvOp`), the message manager's
 //! that reach the C++ (`EeNetMmOp`: NESynchronousServer::MessageManagerHost) and the queues' common ones (`EeNetQOp`).
 
-use std::ffi::{c_char, c_ulong, c_void, CStr};
+use ee_base::lle_enums::ESError;
+use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 use crate::net::ffi::{EeNetMmHostFn, EeNetMmOp, EeNetQHostFn, QFfiHost};
@@ -939,19 +940,26 @@ pub extern "C" fn ee_net_sv_tune_server(s: *const EeNetServer) -> bool {
     sv(s).tune_server()
 }
 
-/// XferFileToClient: `spec` an FSFileSpec*, copied by the message manager
+/// XferFileToClient: `spec` an FSFileSpec*, copied by the message manager; kErrorOK with the transfer's id in `id`, or
+/// kErrorNotFound (no free transfer: `id` untouched); a long, so that rust/net/net.h needs no rust/base/lle_enums.h
+/// (the NE drivers' original-side headers define the codes themselves)
 ///
 /// # Safety
-/// `id` points at a uint32_t.
+/// `id` points at an unsigned long.
 #[no_mangle]
 pub unsafe extern "C" fn ee_net_sv_xfer_file_to_client(
     s: *const EeNetServer,
     spec: *mut c_void,
     user_data: u32,
     slot: u8,
-    id: *mut u32,
-) -> bool {
-    sv(s).xfer_file_to_client(spec as usize, user_data, slot, &mut *id)
+    id: *mut c_ulong,
+) -> c_long {
+    let mut x = 0;
+    if !sv(s).xfer_file_to_client(spec as usize, user_data, slot, &mut x) {
+        return ESError::kErrorNotFound as c_long;
+    }
+    *id = x as c_ulong;
+    ESError::kErrorOK as c_long
 }
 
 /// The checksums' state (the tests): writes at most `size` bytes of `Server::checks_state` (NUL-terminated) and
