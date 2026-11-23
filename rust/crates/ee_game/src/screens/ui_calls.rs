@@ -12,9 +12,16 @@ use crate::screens::game_calls::string;
 use crate::screens::game_cpp::{Cpp, EeScreensShimOut as Out, EeScreensShimText as Text};
 use crate::screens::ui_game::*;
 use crate::screens::ui_thread::{
-    EE_SCREENS_UI_EV_IME_UPDATE, EE_SCREENS_UI_EV_KEYBOARD, EE_SCREENS_UI_EV_MASTER_VOLUME, EE_SCREENS_UI_EV_MOUSE,
-    EE_SCREENS_UI_EV_MUSIC_VOLUME, EE_SCREENS_UI_OP_DIALOG_LOG, EE_SCREENS_UI_OP_HOST_GONE, EE_SCREENS_UI_OP_LOCK,
-    EE_SCREENS_UI_OP_PROCESS_EVENT, EE_SCREENS_UI_OP_QUICK_LOAD, EE_SCREENS_UI_OP_UNLOCK,
+    EE_SCREENS_UI_EV_CENTER_MOUSE, EE_SCREENS_UI_EV_FULL_SCREEN, EE_SCREENS_UI_EV_HAS, EE_SCREENS_UI_EV_IME_RESULT,
+    EE_SCREENS_UI_EV_IME_UPDATE, EE_SCREENS_UI_EV_KEYBOARD, EE_SCREENS_UI_EV_LOBBY_OPEN, EE_SCREENS_UI_EV_LOBBY_SHOWN,
+    EE_SCREENS_UI_EV_LOBBY_SHUTDOWN, EE_SCREENS_UI_EV_MASTER_VOLUME, EE_SCREENS_UI_EV_MINIMIZE, EE_SCREENS_UI_EV_MOUSE,
+    EE_SCREENS_UI_EV_MUSIC_VOLUME, EE_SCREENS_UI_EV_MUTE, EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND,
+    EE_SCREENS_UI_EV_POINTER_POST, EE_SCREENS_UI_EV_POINTER_SHOWN, EE_SCREENS_UI_EV_SET_MASTER_VOLUME,
+    EE_SCREENS_UI_EV_SET_MUSIC_VOLUME, EE_SCREENS_UI_EV_TRANSLATED_KEY, EE_SCREENS_UI_GLOBAL_CONDUCTOR,
+    EE_SCREENS_UI_GLOBAL_KEYBOARD, EE_SCREENS_UI_GLOBAL_MOUSE, EE_SCREENS_UI_GLOBAL_POINTER,
+    EE_SCREENS_UI_GLOBAL_SOUND, EE_SCREENS_UI_GLOBAL_WINDOW_AND_MOUSE, EE_SCREENS_UI_OP_DIALOG_LOG,
+    EE_SCREENS_UI_OP_HOST_GONE, EE_SCREENS_UI_OP_LOCK, EE_SCREENS_UI_OP_PROCESS_EVENT, EE_SCREENS_UI_OP_QUICK_LOAD,
+    EE_SCREENS_UI_OP_UNLOCK,
 };
 
 // the strings and forms (ee/EEStringIDs.h, ee/EEUIManager.h)
@@ -476,6 +483,59 @@ pub(crate) fn ui_event<C: Cpp + ?Sized>(c: &mut C, op: u32, a: i64, b: i64, cc: 
             let text = unsafe { ee_ui::direct::c_bytes(a as *const core::ffi::c_void) };
             let attributes = ime_attributes(text.len(), b, cc);
             c.ime_composition(Text::of(&text), Text::of(&attributes), b.max(0) as u32);
+            0
+        }
+        // the one-call ops (the C++ host's switch until UI lane round 16)
+        EE_SCREENS_UI_EV_HAS => {
+            (match a {
+                EE_SCREENS_UI_GLOBAL_CONDUCTOR => c.conductor() != 0,
+                EE_SCREENS_UI_GLOBAL_SOUND => c.sound_manager() != 0,
+                EE_SCREENS_UI_GLOBAL_KEYBOARD => c.ui_has_keyboard(),
+                EE_SCREENS_UI_GLOBAL_MOUSE => c.ui_has_mouse(),
+                EE_SCREENS_UI_GLOBAL_WINDOW_AND_MOUSE => c.ui_has_window_and_mouse(),
+                EE_SCREENS_UI_GLOBAL_POINTER => c.ui_has_pointer(),
+                _ => c.ui_has_window(),
+            }) as i64
+        }
+        EE_SCREENS_UI_EV_LOBBY_SHOWN => c.lobby_shown() as i64,
+        EE_SCREENS_UI_EV_LOBBY_OPEN => c.ui_lobby_open() as i64,
+        EE_SCREENS_UI_EV_LOBBY_SHUTDOWN => {
+            c.ui_lobby_shutdown();
+            0
+        }
+        EE_SCREENS_UI_EV_SET_MUSIC_VOLUME => {
+            c.ui_set_music_volume(f32::from_bits(a as u32));
+            0
+        }
+        EE_SCREENS_UI_EV_SET_MASTER_VOLUME => {
+            c.ui_set_master_volume(f32::from_bits(a as u32));
+            0
+        }
+        EE_SCREENS_UI_EV_MUTE => {
+            c.ui_mute(a != 0);
+            0
+        }
+        EE_SCREENS_UI_EV_CENTER_MOUSE => {
+            c.ui_center_mouse();
+            0
+        }
+        EE_SCREENS_UI_EV_POINTER_POST => {
+            c.ui_pointer_post(a);
+            0
+        }
+        EE_SCREENS_UI_EV_POINTER_SHOWN => c.ui_pointer_shown() as i64,
+        EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND => c.ui_mute_in_background() as i64,
+        EE_SCREENS_UI_EV_FULL_SCREEN => c.ui_full_screen() as i64,
+        EE_SCREENS_UI_EV_MINIMIZE => {
+            c.ui_minimize();
+            0
+        }
+        EE_SCREENS_UI_EV_IME_RESULT => {
+            c.ui_ime_result(a as usize);
+            0
+        }
+        EE_SCREENS_UI_EV_TRANSLATED_KEY => {
+            c.ui_translated_key(a as usize);
             0
         }
         _ => return None,

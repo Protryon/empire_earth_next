@@ -7,9 +7,7 @@ use crate::screens::ui_thread::{handle_event, handle_message, plat_utf8_length, 
 
 /// cbindgen:ignore
 mod sys {
-    extern "C" {
-        pub fn ee_screenscpp_ui_event(op: u32, a: i64, b: i64, c: i64) -> i64;
-    }
+    extern "C" {}
 }
 
 struct MessageHost(*mut c_void);
@@ -39,10 +37,7 @@ impl UiHost for EventHost {
         if let Some(r) = crate::screens::ui_objects_ffi::ui_event(op, a) {
             return r;
         }
-        if let Some(r) = crate::screens::ui_calls::ui_event(&mut crate::screens::game_cpp::Ffi, op, a, b, c) {
-            return r;
-        }
-        unsafe { sys::ee_screenscpp_ui_event(op, a, b, c) }
+        crate::screens::ui_calls::ui_event(&mut crate::screens::game_cpp::Ffi, op, a, b, c).unwrap_or(0)
     }
 }
 

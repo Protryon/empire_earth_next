@@ -238,40 +238,28 @@ extern "C" void ee_screenscpp_uim_delete_wstring(uintptr_t inText) { delete rein
 
 // (the posts the game makes, ResumeGraphics and HandleEvent are inline: ee/EEUserInterface.h)
 
-// The window events' calls (EE_SCREENS_UI_EV_*): the globals' NULL tests, the lobby, the volumes, the input
-// devices, the mouse pointer's thread, the input method; inA is the event's text for the IME ops
-extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    switch (inOp) {
-    case EE_SCREENS_UI_EV_HAS:
-        switch (inA) {
-        case EE_SCREENS_UI_GLOBAL_CONDUCTOR: return gConductor != NULL;
-        case EE_SCREENS_UI_GLOBAL_SOUND: return gSoundManager != NULL;
-        case EE_SCREENS_UI_GLOBAL_KEYBOARD: return gISKeyboard != NULL;
-        case EE_SCREENS_UI_GLOBAL_MOUSE: return gISMouse != NULL;
-        case EE_SCREENS_UI_GLOBAL_WINDOW_AND_MOUSE: return gGameWindow != NULL && gMouse != NULL;
-        case EE_SCREENS_UI_GLOBAL_POINTER: return gMousePointer != NULL;
-        default: return gGameWindow != NULL;
-        }
-    case EE_SCREENS_UI_EV_LOBBY_SHOWN: return EELobbyIsShown();
-    case EE_SCREENS_UI_EV_LOBBY_OPEN: return EEIsLobbyOpen();
-    case EE_SCREENS_UI_EV_LOBBY_SHUTDOWN: EELobbyShutdown(); break;
-    case EE_SCREENS_UI_EV_SET_MUSIC_VOLUME: gConductor->GetConductor().SetVolume(EEShimBitsFloat(inA)); break;
-    case EE_SCREENS_UI_EV_SET_MASTER_VOLUME: gSoundManager->SetMasterVolume(EEShimBitsFloat(inA)); break;
-    case EE_SCREENS_UI_EV_MUTE: SPIMSetMuted(inA != 0); break;   // port: "Mute in Background"
-    case EE_SCREENS_UI_EV_CENTER_MOUSE:
-        gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1), (float)(gGameWindow->GetHeight() >> 1)));
-        break;
-    case EE_SCREENS_UI_EV_POINTER_POST: gMousePointer->mThread->Post(inA, NULL, NULL, true); break;
-    case EE_SCREENS_UI_EV_POINTER_SHOWN: return gMousePointer->mIsShown;
-    case EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND: return gGamePreferences.mSettings.mMuteInBackground;   // port
-    case EE_SCREENS_UI_EV_FULL_SCREEN: return gGamePreferences.mSettings.GetFullScreen();
-    case EE_SCREENS_UI_EV_MINIMIZE: PlatWindowMinimize(gGameWindow->GetOSRepresentation()); break;   // CloseWindow
-    case EE_SCREENS_UI_EV_IME_RESULT: gUIManager->AddIMEResultString(reinterpret_cast<const char*>(inA)); break;   // the committed composition
-    case EE_SCREENS_UI_EV_TRANSLATED_KEY: gUIManager->UpdateTranslatedKey(reinterpret_cast<const char*>(inA), 1); break;
-    }
-    return 0;
-}
+// The window events' one-call ops (EE_SCREENS_UI_EV_*; ui_calls.rs ui_event): the globals' NULL tests, the lobby, the
+// volumes, the input devices, the mouse pointer's thread, the input method
+extern "C" bool ee_screenscpp_ui_has_keyboard() { return gISKeyboard != NULL; }
+extern "C" bool ee_screenscpp_ui_has_mouse() { return gISMouse != NULL; }
+extern "C" bool ee_screenscpp_ui_has_window_and_mouse() { return gGameWindow != NULL && gMouse != NULL; }
+extern "C" bool ee_screenscpp_ui_has_pointer() { return gMousePointer != NULL; }
+extern "C" bool ee_screenscpp_ui_has_window() { return gGameWindow != NULL; }
+extern "C" bool ee_screenscpp_ui_lobby_open() { return EEIsLobbyOpen(); }
+extern "C" void ee_screenscpp_ui_lobby_shutdown() { EELobbyShutdown(); }
+extern "C" void ee_screenscpp_ui_set_music_volume(float inVolume) { gConductor->GetConductor().SetVolume(inVolume); }
+extern "C" void ee_screenscpp_ui_set_master_volume(float inVolume) { gSoundManager->SetMasterVolume(inVolume); }
+extern "C" void ee_screenscpp_ui_mute(bool inMuted) { SPIMSetMuted(inMuted); }   // port: "Mute in Background"
+extern "C" void ee_screenscpp_ui_center_mouse()
+{ gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1), (float)(gGameWindow->GetHeight() >> 1))); }
+extern "C" void ee_screenscpp_ui_pointer_post(int64_t inMessage) { gMousePointer->mThread->Post(inMessage, NULL, NULL, true); }
+extern "C" bool ee_screenscpp_ui_pointer_shown() { return gMousePointer->mIsShown; }
+extern "C" bool ee_screenscpp_ui_mute_in_background() { return gGamePreferences.mSettings.mMuteInBackground; }   // port
+extern "C" bool ee_screenscpp_ui_full_screen() { return gGamePreferences.mSettings.GetFullScreen(); }
+extern "C" void ee_screenscpp_ui_minimize() { PlatWindowMinimize(gGameWindow->GetOSRepresentation()); }   // CloseWindow
+// the committed composition
+extern "C" void ee_screenscpp_ui_ime_result(uintptr_t inText) { gUIManager->AddIMEResultString(reinterpret_cast<const char*>(inText)); }
+extern "C" void ee_screenscpp_ui_translated_key(uintptr_t inText) { gUIManager->UpdateTranslatedKey(reinterpret_cast<const char*>(inText), 1); }
 
 // ---- the shims of the moved code (UI lane round 7: ee_game screens ui_calls.rs, game_cpp.rs), each one C++
 // statement

@@ -658,6 +658,25 @@ shims! {
     fn conductor_volume() -> f32 = ee_screenscpp_conductor_volume;
     fn sound_manager() -> usize = ee_screenscpp_sound_manager;
     fn master_volume() -> f32 = ee_screenscpp_master_volume;
+    // the window events' one-call ops (ui_calls.rs ui_event; the C++ switch until UI lane round 16)
+    fn ui_has_keyboard() -> bool = ee_screenscpp_ui_has_keyboard;
+    fn ui_has_mouse() -> bool = ee_screenscpp_ui_has_mouse;
+    fn ui_has_window_and_mouse() -> bool = ee_screenscpp_ui_has_window_and_mouse;
+    fn ui_has_pointer() -> bool = ee_screenscpp_ui_has_pointer;
+    fn ui_has_window() -> bool = ee_screenscpp_ui_has_window;
+    fn ui_lobby_open() -> bool = ee_screenscpp_ui_lobby_open;
+    fn ui_lobby_shutdown() = ee_screenscpp_ui_lobby_shutdown;
+    fn ui_set_music_volume(volume: f32) = ee_screenscpp_ui_set_music_volume;
+    fn ui_set_master_volume(volume: f32) = ee_screenscpp_ui_set_master_volume;
+    fn ui_mute(muted: bool) = ee_screenscpp_ui_mute;
+    fn ui_center_mouse() = ee_screenscpp_ui_center_mouse;
+    fn ui_pointer_post(message: i64) = ee_screenscpp_ui_pointer_post;
+    fn ui_pointer_shown() -> bool = ee_screenscpp_ui_pointer_shown;
+    fn ui_mute_in_background() -> bool = ee_screenscpp_ui_mute_in_background;
+    fn ui_full_screen() -> bool = ee_screenscpp_ui_full_screen;
+    fn ui_minimize() = ee_screenscpp_ui_minimize;
+    fn ui_ime_result(text: usize) = ee_screenscpp_ui_ime_result;
+    fn ui_translated_key(text: usize) = ee_screenscpp_ui_translated_key;
     fn ime_composition(text: EeScreensShimText, attributes: EeScreensShimText, cursor: u32) = ee_screenscpp_ime_composition;
     // EEUIFMainGame.cpp's (main_form_calls.rs)
     fn mf_set_ui_state(rec: usize, state: i32) = ee_screenscpp_mf_set_ui_state;

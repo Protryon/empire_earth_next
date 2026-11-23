@@ -962,21 +962,6 @@ constexpr static const uint32_t EE_SCREENS_PANEL_TECH = 1;
 /// [`EeScreensPanelButton`]: the stop command on the first action button.
 constexpr static const uint32_t EE_SCREENS_PANEL_STOP = 2;
 
-/// `EEUIECancel` (the save and load forms' Cancel): a the form to open.
-constexpr static const uint32_t EE_SCREENS_EV_CANCEL = 2113929217;
-
-/// `EEUIELoadUnit` (the main game form's debug unit reload): the unit hack of the form it runs on loads.
-constexpr static const uint32_t EE_SCREENS_EV_LOAD_UNIT = 2113929218;
-
-/// `EEUIEMGHotKeyStatusButton`: a the command button (`EEUIFMGStatusButton*`), b 1 pressed, 0 released.
-constexpr static const uint32_t EE_SCREENS_EV_HOT_KEY = 2113929219;
-
-/// `EEUIEProcessTimerExpired` (posted by `EEMCivTimerExpired::Execute`): `EEProcessTimerExpired`.
-constexpr static const uint32_t EE_SCREENS_EV_TIMER_EXPIRED = 2113929220;
-
-/// `EEUIEndCinematicModeEvent`: the cinematic ended at its saved end time.
-constexpr static const uint32_t EE_SCREENS_EV_END_CINEMATIC = 2113929221;
-
 /// The facing arrow drawn at f[1..4] turned by f[0], over everything (the rasterizer's state restored after).
 constexpr static const uint32_t EE_SCREENS_CU_DRAW_ARROW = 70;
 
@@ -1029,6 +1014,21 @@ constexpr static const int64_t EE_SCREENS_CU_EXECUTE_HIT = 1;
 constexpr static const int64_t EE_SCREENS_CU_EXECUTE_FACING = 2;
 
 constexpr static const int64_t EE_SCREENS_CU_EXECUTE_DRAGGED = 4;
+
+/// `EEUIECancel` (the save and load forms' Cancel): a the form to open.
+constexpr static const uint32_t EE_SCREENS_EV_CANCEL = 2113929217;
+
+/// `EEUIELoadUnit` (the main game form's debug unit reload): the unit hack of the form it runs on loads.
+constexpr static const uint32_t EE_SCREENS_EV_LOAD_UNIT = 2113929218;
+
+/// `EEUIEMGHotKeyStatusButton`: a the command button (`EEUIFMGStatusButton*`), b 1 pressed, 0 released.
+constexpr static const uint32_t EE_SCREENS_EV_HOT_KEY = 2113929219;
+
+/// `EEUIEProcessTimerExpired` (posted by `EEMCivTimerExpired::Execute`): `EEProcessTimerExpired`.
+constexpr static const uint32_t EE_SCREENS_EV_TIMER_EXPIRED = 2113929220;
+
+/// `EEUIEndCinematicModeEvent`: the cinematic ended at its saved end time.
+constexpr static const uint32_t EE_SCREENS_EV_END_CINEMATIC = 2113929221;
 
 /// Whether the mouse is over no control, or over the command units control.
 constexpr static const uint32_t EE_SCREENS_CURSOR_OP_MOUSE_OK = 1;
@@ -16571,14 +16571,6 @@ void ee_screens_cbl_set_civilization_upgrades(void *list, const uint32_t *ids, s
 /// `ReformatUpgrades`.
 void ee_screens_cbl_reformat(void *list, bool buy);
 
-/// `EEScreenEvent::ProcessEvent`: the event `event` with its arguments on `form` from `entity`; a screen event's
-/// code without arguments goes on to `ee_screens_event`.
-long ee_screens_event_args(uint32_t event,
-                           size_t a,
-                           size_t b,
-                           void *form,
-                           void *entity);
-
 /// The targeting mode of command `button`: false when it starts none.
 bool ee_screens_command_mode(unsigned long button, EeScreensCommandMode *out);
 
@@ -16594,6 +16586,14 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
                                 size_t count,
                                 EeScreensPanelButton *out,
                                 size_t capacity);
+
+/// `EEScreenEvent::ProcessEvent`: the event `event` with its arguments on `form` from `entity`; a screen event's
+/// code without arguments goes on to `ee_screens_event`.
+long ee_screens_event_args(uint32_t event,
+                           size_t a,
+                           size_t b,
+                           void *form,
+                           void *entity);
 
 /// `EEUIFMainGame::UpdateCursorKind`'s cursor kind, read through the host with `ctx`.
 int32_t ee_screens_cursor_kind(void *ctx);
