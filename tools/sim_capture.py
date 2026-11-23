@@ -182,7 +182,7 @@ ApplyUpgrade (the player's fields and the category set's class upgrades before a
 tree's nodes, the media count and HasPower), CVLD every EELoadCivilization, CVAF every EEApplyCivilizationFile with
 the player's civilization after. Their golden lines come from the C++ manager, powers and files before they moved
 (civilization builder lane, round 2; seeds 2-3 of the oracle, late, space, calamity and scenario profiles).
-PLCE is the computer players' placement and resource centres (ee/EECPPlaceCapture.h; every profile): one record at
+PLCE is the computer players' placement and resource centres (ee_sim::cp place_capture.rs; every profile): one record at
 the return of every outermost call into EECPPlacement, an EECPResourceCenter or their free functions (the epoch
 classes, EECPCountOwn, EECPNextPlaceSearch: the Lua verbs' ai.place), with the method, the player, the inputs and the
 outputs (the result, out tiles, counts; the town centre tile and site lists, a centre's units and main unit (its active
@@ -190,7 +190,7 @@ flag in SetActive's and Load's), the player's centres after the searches). The g
 late, space and calamity profiles PLCE holds the centres' bookkeeping only; --profile placement plays the oracle's
 game with the boom and Age of AI scripts, whose verbs place through ai.place (the site searches). Its golden lines
 (seeds 2-3 of the oracle, late, space, calamity and placement profiles) come from the C++ placement and centres before they moved into Rust (ee_sim::cp; AI lane B, round 2).
-CPEV is the computer players' own calls (ee/EECPPlaceCapture.h; every profile, the thread that runs their Update):
+CPEV is the computer players' own calls (ee_sim::cp place_capture.rs; every profile, the thread that runs their Update):
 one record per outermost WorkOutPopulation, Regroup, UpdateGroups, EnterEpoch, ChooseCivilization, EECPPendingEpoch,
 AvoidsEnemies, CanProduce, RestoreManagers, DamageTaken, unit event (placed, taken, completed, goal done, stranded,
 swapped), SetActive, EpochReached and PayImprovement, with its arguments, its result and the player's state when it

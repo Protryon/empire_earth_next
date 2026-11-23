@@ -7,6 +7,7 @@
 // Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
+#include "rust/game/gamecpp.h"   // round 10 (ee_game gamecpp)
 #include <vector>
 #include <algorithm>
 #include <mbstring.h>
@@ -42,6 +43,8 @@
 #include "ee/EEMap.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEARust.h"
+#include "ee/EEEffect.h"
+#include "ee/EEEffectManager.h"
 
 extern EEWorld gWorld;
 extern EEUIManager* gUIManager;
@@ -53,109 +56,26 @@ static const float kGraphicSoundFalloff = 4.0f;
 //   object 0x5319f8  ctor 0x1482ee, registrar 0x148306, atexit dtor 0x148312
 std::vector<EEDisplayRasterizer> gDisplayRasterizers;
 
+// (the bodies: ee_game gamecpp utilities.rs)
+
 // Plays a sound when the player is the local player; returns the sound instance, or -1 when nothing played
 unsigned long EEPlayForLocalPlayer(EEPlayer* inPlayer, EESoundObject* inSound)
 {
-    unsigned long theInstance = -1;
-    if (inPlayer == gWorld.mPlayers[gWorld.mCurrentPlayer] && inSound != NULL)
-        theInstance = gSoundManager->Play(inSound->GetSampleID(), inSound->GetVolume(), 0.0f, 1.0f, false, NULL);
-    return theInstance;
+    return ee_gamecpp_play_for_local(inPlayer, inSound);
 }
 
 // Shows a load or sync failure message in the main game form; with a checksum, appends the game state's checksum
 // and whether it matches (logging the differences in verbose mode), taking the world's read lock when asked
 void EEReportLoadFailure(const UString& inMessage, bool inLock, ESChecksum* inChecksum)
 {
-    UWideString theText;
-    UString theTotal;
-    UString theDebug;
-    UString theUnused;
-    std::vector<UString> theErrors;
-    theText = (const char*)inMessage;
-    if (inChecksum != NULL) {
-        if (inLock)
-            gWorld.mLock->ReadLock();
-        ESChecksum* theChecksum = new ESChecksum(inChecksum->GetIsVerboseMode());
-        gWorld.GetChecksum(*theChecksum);
-        if (inLock)
-            gWorld.mLock->ReadUnlock();
-        sprintf(theTotal, " Game state checksum: %lu ", theChecksum->GetTotalChecksum());
-        theText += (const char*)theTotal;
-        if (inChecksum->Compare(*theChecksum, theErrors)) {
-            theText += " (checksum OK)";
-        } else if (theChecksum->GetIsVerboseMode()) {
-            theText += " (wrong checksum, see error log)";
-            theDebug += (const char*)theText;
-            theDebug += " (wrong checksum, see following errors)\r\n";
-            ESDebugOut("%s", (const char*)theDebug);
-            for (std::vector<UString>::iterator i = theErrors.begin(); i != theErrors.end(); i++)
-                ESDebugOut("%s", (const char*)*i);
-            ESDebugOut("End checksum errors");
-        } else {
-            theText += " (wrong checksum, game saved in release so extended info not available)";
-            theDebug += (const char*)theText;
-            ESDebugOut("%s", (const char*)theDebug);
-        }
-        delete theChecksum;
-    }
-    if (gUIManager != NULL)
-        gUIManager->GetMainGameForm()->SetErrorString(theText, 0x1c);
+    ee_gamecpp_report_load_failure((const char*)inMessage, inLock, inChecksum);
 }
 
 // Lists the display devices: every rasterizer that activates, its screens, and their 16-bit (and supported 32-bit)
 // modes of at least 640x480 that fit three buffers in video memory (at least 0x3e8000 bytes assumed)
 void EEEnumerateDisplayDevices()
 {
-    EEDisplayRasterizer theRasterizer;
-    EEDisplayScreen theScreen;
-    EEDisplayMode theMode;
-    GEVideoMode theLast;
-    unsigned long theMemory;
-    theLast.mWidth = 0;
-    theLast.mHeight = 0;
-    theLast.mBitCount = 0;
-    theLast.mPixelFormat = kPixelFormatA8R8G8B8;
-    if (GERasterizer::GetActiveRasterizer() != NULL)
-        return;
-    gDisplayRasterizers.clear();
-    for (unsigned long i = 0; i < GERasterizer::GetRasterizerCount(); i++) {
-        GERasterizer* theDevice = GERasterizer::GetRasterizer(i);
-        if (theDevice->Activate() != 0)
-            continue;
-        theRasterizer.mIndex = i;
-        theRasterizer.mName.CopyString(theDevice->GetName(), theDevice->GetName().GetLength());
-        gDisplayRasterizers.push_back(theRasterizer);
-        for (unsigned long j = 0; j < theDevice->GetScreenCount(); j++) {
-            GEScreen* theDisplay = theDevice->GetScreen(j);
-            theScreen.mIndex = j;
-            theScreen.mName.CopyString(theDisplay->GetName(), theDisplay->GetName().GetLength());
-            gDisplayRasterizers.back().mScreens.push_back(theScreen);
-            bool theKnown = theDevice->GetTotalVideoMemory(j, theMemory) == 0;
-            if (theMemory < 0x3e8000)
-                theMemory = 0x3e8000;
-            for (unsigned long k = 0; k < theDisplay->GetModeCount(); k++) {
-                GEVideoMode theVideoMode = theDisplay->GetMode(k);
-                if ((theVideoMode.mBitCount == 16
-                     || (theVideoMode.mBitCount == 32 && theDisplay->Get32BitDeviceSupport()))
-                    && theVideoMode.mWidth >= 640 && theVideoMode.mHeight >= 480
-                    && (theVideoMode.mBitCount != theLast.mBitCount || theVideoMode.mHeight != theLast.mHeight
-                        || theVideoMode.mWidth != theLast.mWidth)) {
-                    bool theFits = theKnown
-                        ? theMemory >= theVideoMode.mBitCount / 8 * theVideoMode.mHeight * theVideoMode.mWidth * 3
-                        : true;
-                    if (theFits) {
-                        sprintf(theMode.mName, "%lu x %lu x %lu Bit", theVideoMode.mWidth, theVideoMode.mHeight,
-                                theVideoMode.mBitCount);
-                        theMode.mMode = theVideoMode;
-                        theMode.mIndex = k;
-                        gDisplayRasterizers.back().mScreens.back().mModes.push_back(theMode);
-                    }
-                }
-                theLast = theVideoMode;
-            }
-        }
-        theDevice->Deactivate();
-    }
+    ee_gamecpp_enumerate_display_devices();
 }
 
 // Starts, restarts or updates the sound of a graphic object's animation frame at a location; returns the
@@ -163,74 +83,13 @@ void EEEnumerateDisplayDevices()
 SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
                            SESMInstanceNode* inSound, unsigned long inFrame, bool inStart)
 {
-    SESMInstanceNode* theResult = inSound;
-    if (inSound != NULL)
-        inSound->Reference();
-    float theVolume;
-    float thePan;
-    float thePitch;
-    if (inStart) {
-        EESoundObject* theSound;
-        if (inFrame == inGraphicObject->mSound1Frames[inAnimation])
-            theSound = inGraphicObject->mSounds1[inAnimation];
-        else if (inFrame != inGraphicObject->mSound2Frames[inAnimation])
-            return theResult;
-        else
-            theSound = inGraphicObject->mSounds2[inAnimation];
-        if (theSound == NULL)
-            return theResult;
-        if (theSound->GetSampleID() == gSoundManager->GetSampleID(inSound)) {
-            EEComputeSoundParameters(theSound->GetVolume(), inLocation, theVolume, thePan, thePitch, kGraphicSoundFalloff);
-            if (gSoundManager->GetIsLooping(inSound)) {
-                gSoundManager->SetSoundParameters(inSound, theVolume, thePan, thePitch);
-                return theResult;
-            }
-            if (inSound != NULL)
-                inSound->Dereference();
-            theResult = gSoundManager->PlayAndReturnReferencedNode(theSound->GetSampleID(), theVolume, thePan, thePitch,
-                                                                   theSound->GetLooping(), NULL);
-        } else {
-            gSoundManager->Stop(inSound, !gSoundManager->GetIsLooping(inSound));
-            // drop the reference taken above, as the same-sample branch does (the old sound node used to leak)
-            if (inSound != NULL)
-                inSound->Dereference();
-            EEComputeSoundParameters(theSound->GetVolume(), inLocation, theVolume, thePan, thePitch, kGraphicSoundFalloff);
-            theResult = gSoundManager->PlayAndReturnReferencedNode(theSound->GetSampleID(), theVolume, thePan, thePitch,
-                                                                   theSound->GetLooping(), NULL);
-        }
-    } else if (inSound != NULL) {
-        unsigned long theSampleID = gSoundManager->GetSampleID(inSound);
-        EESoundObject* theSound = inGraphicObject->mSounds1[inAnimation];
-        if (theSound == NULL || theSampleID != theSound->GetSampleID()) {
-            theSound = inGraphicObject->mSounds2[inAnimation];
-            if (theSound == NULL || theSampleID != theSound->GetSampleID())
-                theSound = NULL;
-        }
-        if (theSound != NULL) {
-            EEComputeSoundParameters(theSound->GetVolume(), inLocation, theVolume, thePan, thePitch, kGraphicSoundFalloff);
-            gSoundManager->SetSoundParameters(inSound, theVolume, thePan, thePitch);
-        }
-    }
-    return theResult;
+    return (SESMInstanceNode*)ee_gamecpp_play_animation_sound(&inLocation, inGraphicObject, inAnimation, inSound, inFrame, inStart);
 }
 
 // Maps a world point into camera space, returning it divided by its depth, and the depth
-// inPoint in camera space (outScreen, divided by the depth) and its depth
 void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& outDepth)
 {
-    GE3DPoint theCamera;
-    GE3DPoint theNormalized;
-    float theDepth;
-    gU4E8F08.GetCameraInverse().Apply(inPoint, theCamera);
-    if (!gOrthographicView)
-        gU4E8F08.NormalizePerspectiveCameraPoint(theCamera, theNormalized, theDepth);
-    else
-        gU4E8F08.NormalizeOrthographicCameraPoint(theCamera, theNormalized, theDepth);
-    float theScale = theDepth != 0.0f ? 1.0f / theDepth : 1.0f;
-    outScreen.mX = theNormalized.mX * theScale;
-    outScreen.mY = theNormalized.mY * theScale;
-    outScreen.mZ = theNormalized.mZ * theScale;
-    outDepth = theDepth;
+    ee_gamecpp_camera_point(&inPoint, &outScreen, &outDepth);
 }
 
 // ---- the game's helpers the actions, the ghosts and the data loading thread use (they were
@@ -240,72 +99,32 @@ void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& out
 // Shows the command-confirmation click effect at the ground point under the cursor
 void EEOrderAtCursor(const GE2DPoint& inPoint, EEUnit* inUnit)
 {
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    EETile* theTile;
-    EEPointUnitOrTile(inPoint, theTile, thePoint, true);
-    EEMakeCalamityEffect(thePoint, inUnit);
+    ee_gamecpp_order_at_cursor(&inPoint, inUnit);
 }
 
 // Creates the local-only click confirmation effect on a unit or on the ground
 void EEMakeCalamityEffect(const GE3DPoint& inLocation, EEUnit* inUnit)
 {
-    GE3DPoint theLocation = inLocation;
-    EEGraphicEffect* theEffect;
-    if (inUnit == NULL) {
-        theEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMouseClickNoUnit);
-        theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(inLocation.GetX(), inLocation.GetY()));
-    } else {
-        theEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMouseClickUnit);
-        if (inUnit->mTileNode != NULL)
-            inUnit->mComplexUnit->GetPosition(theLocation);
-        else
-            inUnit->GetPosition(theLocation);
-    }
-    EEEffectHandle theHandle;
-    gEffectManager->CreateEffect(inUnit, theLocation, theEffect, &theHandle, 0);
-    EEEffect* theFlare = gEffectManager->GetEffect(theHandle);
-    unsigned long thePlayerID = ::gWorld.GetCurrentPlayer()->mPlayerID;
-    theFlare->SetLocalTo(thePlayerID);
+    ee_gamecpp_make_click_effect(&inLocation, inUnit);
 }
 
 // Returns the local player's first selected unit; false when nothing is selected
 bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit)
 {
-    EEGroup* theGroup = ::gWorld.GetCurrentPlayer()->mSelectedGroup;
-    bool theResult = false;
-    if (theGroup->GetNumUnits() != 0) {
-        outUnit = theGroup->GetUnit(0);
-        theResult = true;
-    }
-    return theResult;
+    return ee_gamecpp_first_selected_unit((void**)&outUnit);
 }
 
 // Finds the tile under a screen point (picking the visible tile first); false when only the plain map lookup hit
 bool EEPointUnitOrTileXY(const GE2DPoint& inPoint, EETile*& outTile, long& outX, long& outY, bool inFlag)
 {
-    outTile = ::gWorld.mMap->PickScreenTile(inPoint, outX, outY, inFlag);
-    if (outTile != NULL)
-        return true;
-    outTile = ::gWorld.mMap->GetTileAt(inPoint, outX, outY);
-    return false;
+    return ee_gamecpp_point_tile_xy(&inPoint, (void**)&outTile, &outX, &outY, inFlag);
 }
 
-// NEAR: the original stores the tile centre's y to a frame float (inPoint's dead slot) and reloads it for
-// GetMeshZ (fstp/fld); ours keeps it on the FP stack (fst)
 // Finds the ground point under a screen point; without a pick it uses the tile centre at terrain height and
 // returns false
 bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& outPoint, bool inFlag)
 {
-    outTile = ::gWorld.mMap->GetLocationAt(inPoint, outPoint, inFlag);
-    if (outTile != NULL)
-        return true;
-    long theX;
-    long theY;
-    outTile = ::gWorld.mMap->GetTileAt(inPoint, theX, theY);
-    outPoint.SetX(theX + 0.5f);
-    outPoint.SetY(theY + 0.5f);
-    outPoint.SetZ(::gWorld.mMap->GetHeight(outPoint));
-    return false;
+    return ee_gamecpp_point_unit_or_tile(&inPoint, (void**)&outTile, &outPoint, inFlag);
 }
 
 // NEAR: the original pushes mCurrentPlayer as a dword: ExecuteRemovePlayer's first parameter is wider than
@@ -314,20 +133,139 @@ bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& ou
 // of all players when the game is open, running or paused
 void EEExitGame()
 {
-    if (gCommunications->IsClient() == true) {
-        EEClient* theClient = static_cast<EEClient*>(gCommunications);
-        if (theClient->GetConnection() != NULL) {
-            if (theClient->mIsServerLost)
-                gCommunications->ExecuteRemovePlayer(::gWorld.mCurrentPlayer, false, false, true);
-            else
-                gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {true}), kSlotNone);
-        }
-    } else {
-        unsigned char theState = static_cast<NESynchronousServer*>(gCommunications)->GetGameState();
-        if (theState == kServerStateOpen || theState == kServerStateRunning || theState == kServerStatePaused) {
-            EEAction* theAction = new EEARemovePlayer(0xfe, true);
-            gUserInterface->PostAction(theAction);
-            theAction->Dereference();
-        }
+    ee_gamecpp_exit_game();
+}
+
+// ------------------------------------------------------------------------- round 10, lane D: the Empire Earth directory's managers and utilities
+
+int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEEMStorm.cpp
+double EECore10OpD2F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+static_assert(kGraphicEffectCommandConfirmationMouseClickNoUnit == 0xd1 && kGraphicEffectCommandConfirmationMouseClickUnit == 0xd3
+                  && kServerStateOpen == 0 && kServerStateRunning == 3 && kServerStatePaused == 4
+                  && sizeof(GEVideoMode) == 5 * sizeof(unsigned long),
+              "gamecpp utilities.rs");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define RZ ((GERasterizer*)p)
+#define SCR ((GEScreen*)p)
+#define GO ((EEGraphicObject*)p)
+#define NODE ((SESMInstanceNode*)p)
+#define CS ((ESChecksum*)p)
+#define ERRORS ((std::vector<UString>*)p)
+#define SP(i) (*(const GE2DPoint*)a[i])
+#define PT(i) (*(GE3DPoint*)a[i])
+
+// the C++ calls and members of lane D's bodies in Rust (gamecpp utilities.rs; EeGameCpp's round 10 lane D section):
+// one statement each; the other files' cases follow (EEEMStorm.cpp, EEEnvironmentManager.cpp, EECheatCodes.cpp,
+// EECivilization.cpp, EEVCWonder.cpp, EECameraControl.cpp)
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DuLocalPlayer: return P64(gWorld.mPlayers[gWorld.mCurrentPlayer]);
+    case O::DuPlaySound: return gSoundManager->Play(((EESoundObject*)p)->GetSampleID(), ((EESoundObject*)p)->GetVolume(), 0.0f, 1.0f, false, NULL);
+    // the failure report
+    case O::DuWorldReadLock: gWorld.mLock->ReadLock();
+        break;
+    case O::DuWorldReadUnlock: gWorld.mLock->ReadUnlock();
+        break;
+    case O::DuNewChecksum: return P64(new ESChecksum(CS->GetIsVerboseMode()));
+    case O::DuWorldChecksum: gWorld.GetChecksum(*CS);
+        break;
+    case O::DuChecksumTotal: return CS->GetTotalChecksum();
+    case O::DuChecksumCompare: return CS->Compare(*(ESChecksum*)a[0], *(std::vector<UString>*)a[1]);
+    case O::DuChecksumVerbose: return CS->GetIsVerboseMode();
+    case O::DuChecksumDelete: delete CS;
+        break;
+    case O::DuErrorsNew: return P64(new std::vector<UString>);
+    case O::DuErrorsDelete: delete ERRORS;
+        break;
+    case O::DuErrorCount: return (int64_t)ERRORS->size();
+    case O::DuErrorAt: return P64((const char*)(*ERRORS)[a[0]]);
+    case O::DuDebugOut: ESDebugOut("%s", (const char*)a[0]);
+        break;
+    case O::DuHaveUi: return gUIManager != NULL;
+    case O::DuSetErrorString: gUIManager->GetMainGameForm()->SetErrorString(UWideString((const char*)a[0]), 0x1c);
+        break;
+    // the display devices
+    case O::DuPixelFormatA8R8G8B8: return kPixelFormatA8R8G8B8;
+    case O::DuActiveRasterizer: return P64(GERasterizer::GetActiveRasterizer());
+    case O::DuDevicesClear: gDisplayRasterizers.clear();
+        break;
+    case O::DuRasterizerCount: return GERasterizer::GetRasterizerCount();
+    case O::DuRasterizerAt: return P64(GERasterizer::GetRasterizer((unsigned long)a[0]));
+    case O::DuActivate: return RZ->Activate();
+    case O::DuDeactivate: RZ->Deactivate();
+        break;
+    case O::DuPushRasterizer: gDisplayRasterizers.push_back(EEDisplayRasterizer{UWideString(RZ->GetName()), {}, (unsigned long)a[0]});
+        break;
+    case O::DuScreenCount: return RZ->GetScreenCount();
+    case O::DuScreenAt: return P64(RZ->GetScreen((unsigned long)a[0]));
+    case O::DuPushScreen: gDisplayRasterizers.back().mScreens.push_back(EEDisplayScreen{UWideString(SCR->GetName()), {}, (unsigned long)a[0]});
+        break;
+    case O::DuVideoMemory: return RZ->GetTotalVideoMemory((unsigned long)a[0], *(unsigned long*)a[1]);
+    case O::DuModeCount: return SCR->GetModeCount();
+    case O::DuModeAt: *(GEVideoMode*)a[1] = SCR->GetMode((unsigned long)a[0]);
+        break;
+    case O::Du32Bit: return SCR->Get32BitDeviceSupport();
+    case O::DuPushMode: gDisplayRasterizers.back().mScreens.back().mModes.push_back(EEDisplayMode{UWideString((const char*)a[0]), *(const GEVideoMode*)a[1], (unsigned long)a[2]});
+        break;
+    // a graphic object's frame sound
+    case O::DuSound1Frame: return GO->mSound1Frames[a[0]];
+    case O::DuSound2Frame: return GO->mSound2Frames[a[0]];
+    case O::DuSound1: return P64(GO->mSounds1[a[0]]);
+    case O::DuSound2: return P64(GO->mSounds2[a[0]]);
+    case O::DuSoundSample: return ((EESoundObject*)p)->GetSampleID();
+    case O::DuNodeSample: return gSoundManager->GetSampleID(NODE);
+    case O::DuNodeReference: NODE->Reference();
+        break;
+    case O::DuNodeLooping: return gSoundManager->GetIsLooping(NODE);
+    case O::DuNodeSetParameters: gSoundManager->SetSoundParameters(NODE, f[0], f[1], f[2]);
+        break;
+    case O::DuNodeStop: gSoundManager->Stop(NODE, a[0] != 0);
+        break;
+    case O::DuSoundParameters: EEComputeSoundParameters(f[0], PT(0), *(float*)a[1], *(float*)a[2], *(float*)a[3], kGraphicSoundFalloff);
+        break;
+    // the camera point, the click effect, the screen point's tile
+    case O::DuCameraInverseApply: gU4E8F08.GetCameraInverse().Apply(*(GE3DPoint*)p, PT(0));
+        break;
+    case O::DuCameraNormalize: gOrthographicView ? gU4E8F08.NormalizeOrthographicCameraPoint(PT(0), PT(1), *(float*)a[2]) : gU4E8F08.NormalizePerspectiveCameraPoint(PT(0), PT(1), *(float*)a[2]);
+        break;
+    case O::DuCxPosition: ((EEComplexUnit*)p)->GetPosition(PT(0));
+        break;
+    case O::DuSetLocal: ((EEEffect*)p)->SetLocalTo(::gWorld.GetCurrentPlayer()->mPlayerID);
+        break;
+    case O::DuSelectedGroup: return P64(::gWorld.GetCurrentPlayer()->mSelectedGroup);
+    case O::DuGroupCount: return ((EESelectedGroup*)p)->GetNumUnits();
+    case O::DuGroupUnit: return P64(((EESelectedGroup*)p)->GetUnit((unsigned long)a[0]));
+    case O::DuPickScreenTile: return P64(::gWorld.mMap->PickScreenTile(SP(0), *(long*)a[1], *(long*)a[2], a[3] != 0));
+    case O::DuTileAt: return P64(::gWorld.mMap->GetTileAt(SP(0), *(long*)a[1], *(long*)a[2]));
+    case O::DuLocationAt: return P64(::gWorld.mMap->GetLocationAt(SP(0), PT(1), a[2] != 0));
+    // leaving the game
+    case O::DuIsClient: return gCommunications->IsClient() == true;
+    case O::DuClientConnected: return static_cast<EEClient*>(gCommunications)->GetConnection() != NULL;
+    case O::DuServerLost: return static_cast<EEClient*>(gCommunications)->mIsServerLost;
+    case O::DuRemoveSelf: gCommunications->ExecuteRemovePlayer(::gWorld.mCurrentPlayer, false, false, true);
+        break;
+    case O::DuNotifyDisconnect: gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {true}), kSlotNone);
+        break;
+    case O::DuServerState: return static_cast<NESynchronousServer*>(gCommunications)->GetGameState();
+    case O::DuNewRemoveAll: return P64(new EEARemovePlayer(0xfe, true));
+    case O::DuPostAction: gUserInterface->PostAction((EEAction*)p);
+        break;
+    case O::DuActionDereference: ((EEAction*)p)->Dereference();
+        break;
+    default: return EECore10OpD2(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::DuMapHeight: return ::gWorld.mMap->GetHeight(PT(0));
+    default: return EECore10OpD2F(inOp, p, a, f);
     }
 }

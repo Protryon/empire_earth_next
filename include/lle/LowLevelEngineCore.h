@@ -58,6 +58,9 @@ inline void ESVerify(const char* inFile, unsigned long inLine, const char* inExp
 {
     ee_error_verify(inFile, inLine, inExpression);
 }
+// a float's bits and back (the hosts' intptr_t arguments)
+inline uint32_t UFloatBits(float inValue) { return __builtin_bit_cast(uint32_t, inValue); }
+inline float UBitsFloat(intptr_t inBits) { return __builtin_bit_cast(float, (uint32_t)inBits); }
 inline unsigned long ESRecordNativeError(unsigned long inError) { return ee_error_record_native(inError); }
 inline unsigned long ESGetNativeError() { return ee_error_native(); }
 inline void ESInitialize(HINSTANCE) { ee_error_initialize(); }

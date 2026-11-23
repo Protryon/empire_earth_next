@@ -2329,7 +2329,7 @@ pub mod records {
         pub unused_flag_3: [u8; 1],
         pub unused_flag_4: [u8; 1],
         pub unused_flag_5: [u8; 1],
-        pub pad_0_x_0_b_9: [u8; 3],
+        pub pad: [u8; 3],
     }
     const _: () = assert!(core::mem::size_of::<EEAreaEffectData>() == 188);
     const _: () = assert!(core::mem::offset_of!(EEAreaEffectData, name) == 0);
@@ -2357,7 +2357,7 @@ pub mod records {
     const _: () = assert!(core::mem::offset_of!(EEAreaEffectData, unused_flag_3) == 182);
     const _: () = assert!(core::mem::offset_of!(EEAreaEffectData, unused_flag_4) == 183);
     const _: () = assert!(core::mem::offset_of!(EEAreaEffectData, unused_flag_5) == 184);
-    const _: () = assert!(core::mem::offset_of!(EEAreaEffectData, pad_0_x_0_b_9) == 185);
+    const _: () = assert!(core::mem::offset_of!(EEAreaEffectData, pad) == 185);
 
     #[derive(Clone, Copy)]
     #[allow(non_camel_case_types, dead_code)]

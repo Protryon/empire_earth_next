@@ -11,6 +11,7 @@ struct Seen {
     p0: usize,
     p1: usize,
     i: [i32; 4],
+    f: [f32; 4],
     text: Vec<u8>,
 }
 
@@ -113,7 +114,16 @@ impl Fake {
         } else {
             Vec::new()
         };
-        self.seen.push(Seen { op, p0: p[0], p1: p[1], i: *i, text });
+        match op {
+            EE_SCREENS_SEARX_VIEW_LEFT => f[0] = 10.0,
+            EE_SCREENS_SEARX_VIEW_TOP => f[0] = 20.0,
+            EE_SCREENS_SEARX_VIEW_RIGHT => f[0] = 1034.0,
+            EE_SCREENS_SEARX_VIEW_BOTTOM => f[0] = 467.0,
+            EE_SCREENS_SEARX_WINDOW_WIDTH => f[0] = 1024.0,
+            EE_SCREENS_SEARX_WINDOW_HEIGHT => f[0] = 768.0,
+            _ => {}
+        }
+        self.seen.push(Seen { op, p0: p[0], p1: p[1], i: *i, f: *f, text });
         let answer = self.answers.get(&op).copied();
         if FINDS.contains(&op) {
             let v = if answer == Some(0) { 0 } else { 0x1000 + op as usize };
@@ -955,11 +965,26 @@ fn the_paint_ends_with_its_area() {
         fake.ops(),
         [
             EE_SCREENS_SEARX_BOUNDS_WINDOW,
-            EE_SCREENS_SEARX_EDGES_WINDOW,
+            EE_SCREENS_SEARX_WINDOW_WIDTH,
+            EE_SCREENS_SEARX_WINDOW_HEIGHT,
+            EE_SCREENS_SEARX_SET_EDGES,
             EE_SCREENS_SEARX_PAINT_AREA,
             EE_SCREENS_SEARX_PAINT_RELEASE
         ]
     );
+    // the window less one
+    assert_eq!(fake.of(EE_SCREENS_SEARX_SET_EDGES)[0].f, [0.0, 0.0, 1023.0, 767.0]);
+}
+
+#[test]
+fn the_paint_begins_with_the_view_less_one() {
+    let mut out = 0usize;
+    let (_, fake) = with(&[], |x| {
+        let p = [&mut out as *mut usize as usize, 0, 0];
+        sear(x, EE_SCREENS_SEAR_OP_PAINT_BEGIN, p, &mut [4, 5, 0, 0], &mut [0.0; 4])
+    });
+    assert_eq!(fake.of(EE_SCREENS_SEARX_SET_EDGES)[0].f, [10.0, 20.0, 1033.0, 466.0]);
+    assert_eq!(fake.ops()[1], EE_SCREENS_SEARX_BOUNDS_VIEW);
 }
 
 // ---- the instructions tab

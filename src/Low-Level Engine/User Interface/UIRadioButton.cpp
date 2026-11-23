@@ -44,8 +44,6 @@
 #include "lle/UIManager.h"
 #include "lle/UIButtonRust.h"
 
-typedef EeUiButtonCall C;
-#define EE_UI_RADIO(c, ...) UIButtonRust::Call(this, C::c, ##__VA_ARGS__)
 
 // Creates a radio button with the shared radio bitmaps (checked ones when checked), 19x19 unless scaled, and a label
 UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFont* inFont,
@@ -56,42 +54,7 @@ UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFo
                UIButtonRust::Rect(ee_ui_button_box_rect(UIButtonRust::Rect(inRectangle), inScaleBitmap)),
                inForm, inIndex, inBorderThickness)
 {
-    EE_UI_RADIO(RadioInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inIsPushButton ? 1.0f : 0.0f,
+    this->SubCall(EeUiButtonCall::RadioInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inIsPushButton ? 1.0f : 0.0f,
                 inIsChecked ? 1.0f : 0.0f, inScaleBitmap ? 1.0f : 0.0f);
 }
 
-// Checks the button: unchecks its checked neighbour, swaps to the checked bitmaps and fires the checked trigger
-void UIRadioButton::Check() { EE_UI_RADIO(RadioCheck); }
-// Snapshots the button and its label (deleted once its text is cleared); a checked push button loses its border
-long UIRadioButton::CopyData() { return (long)EE_UI_RADIO(RadioCopyData); }
-// Draws the button (its bitmap scaled to the control height when scaled), then its label
-long UIRadioButton::DrawPolygons() { return (long)EE_UI_RADIO(RadioDrawPolygons); }
-// Draws the button's text and its label
-long UIRadioButton::DrawTextA() { return (long)EE_UI_RADIO(RadioDrawText); }
-bool UIRadioButton::GetIsChecked() const { return EE_UI_RADIO(RadioIsChecked) != 0; }
-UITextLabel* UIRadioButton::GetTextLabel() const { return (UITextLabel*)EE_UI_RADIO(TextLabel); }
-bool UIRadioButton::GetTabable() const { return EE_UI_RADIO(RadioTabable) != 0; }
-// Checks the button (the virtual Check), then releases it
-void UIRadioButton::ButtonUp() { EE_UI_RADIO(RadioButtonUp); }
-// Presses the button, except a checked push button
-long UIRadioButton::MouseLButtonDown() { return (long)EE_UI_RADIO(RadioMouseLButtonDown); }
-// Sets the pressed bitmap shown while checked
-void UIRadioButton::SetDownCheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetDownChecked, (intptr_t)inBitmap); }
-// Sets the pressed bitmap shown while unchecked
-void UIRadioButton::SetDownUncheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetDownUnchecked, (intptr_t)inBitmap); }
-// Moves the button, keeping its label to the right of the bitmap
-void UIRadioButton::SetLocation(const GE2DPoint& inLocation)
-{
-    EE_UI_RADIO(RadioSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY());
-}
-// Sets the label text, creating the label right of the bitmap on first use; empty text hides the label
-void UIRadioButton::SetText(const UWideString& inText, GEFont* inFont)
-{
-    EE_UI_RADIO(RadioSetText, (intptr_t)&inText, (intptr_t)inFont);
-}
-// Sets the normal bitmap shown while checked
-void UIRadioButton::SetUpCheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetUpChecked, (intptr_t)inBitmap); }
-// Sets the normal bitmap shown while unchecked
-void UIRadioButton::SetUpUncheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetUpUnchecked, (intptr_t)inBitmap); }
-// Unchecks the button: swaps to the unchecked bitmaps, restores its border and fires the unchecked trigger
-void UIRadioButton::UnCheck() { EE_UI_RADIO(RadioUnCheck); }

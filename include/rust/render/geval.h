@@ -61,27 +61,6 @@ struct EeGeViewport {
   float mFarDepth;
 };
 
-/// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
-struct EeGeFieldIo {
-  void *file;
-  long (*read_u8)(void *file, uint8_t *out);
-  long (*read_u16)(void *file, uint16_t *out);
-  long (*read_u32)(void *file, uint32_t *out);
-  long (*read_f32)(void *file, float *out);
-  long (*write_u8)(void *file, uint8_t value);
-  long (*write_u16)(void *file, uint16_t value);
-  long (*write_u32)(void *file, uint32_t value);
-  long (*write_f32)(void *file, float value);
-  /// `Read(char*, length, read)`.
-  long (*read_bytes)(void *file, uint8_t *out, unsigned long length, unsigned long *read);
-  /// `Write(const char*, length, written)`.
-  long (*write_bytes)(void *file, const uint8_t *data, unsigned long length, unsigned long *written);
-  /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
-  long (*get_position)(void *file, long *out);
-  /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
-  long (*set_position)(void *file, long offset);
-};
-
 extern "C" {
 
 /// `GETransformation()` and `MakeIdentity()`: the identity.
@@ -122,29 +101,131 @@ void ee_ge_t_set_scale(EeGeTransformation *t, float x, float y, float z);
 void ee_ge_t_zero_orientation(const EeGeTransformation *t,
                               EeGeTransformation *out);
 
-/// `Load(FSFile&)` (`write` false) or `Save(FSFile&)`: the sixteen elements row by row through the file's own
-/// float reads or writes, stopping at the first error (a load leaves the elements read so far).
+/// `GETransformation::Load(FSFile&)` over a C++ file ([`t_io`]).
 ///
 /// # Safety
-/// `t` is valid; `io` is a live field stream.
-long ee_ge_t_io(EeGeTransformation *t,
-                const EeGeFieldIo *io,
-                bool write);
+/// `t` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_t_load(EeGeTransformation *t, void *file);
 
-/// The value types' file codecs (`GEVector`, `GE3DPoint`, `GEOrientation`, `GERectangle`, `GEColor`,
-/// `GETextureCoordinate` `Load`/`Save`): the fields in the order given through the file's own float reads or writes,
-/// stopping at the first error. `open` is the file's `GetIsOpen()` (false: `kErrorNotOpen` with no access), or -1 for
-/// the codecs that do not ask (`GEColor`). `restore` (`GETextureCoordinate`): the position is read first (its error
-/// returned as is) and set back after a failed field.
+/// `GETransformation::Save(FSFile&)` over a C++ file ([`t_io`]).
 ///
 /// # Safety
-/// `fields` holds `count` valid float pointers; `io` is a live field stream.
-long ee_ge_fields_io(float *const *fields,
-                     uint32_t count,
-                     const EeGeFieldIo *io,
-                     int32_t open,
-                     bool write,
-                     bool restore);
+/// As [`ee_ge_t_load`].
+long ee_ge_t_save(const EeGeTransformation *t, void *file);
+
+/// `GE2DPoint::Load(F&)`: x, y; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_2d_point_load(EeGe2DPoint *value, void *file);
+
+/// `GE2DPoint::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_2d_point_load`].
+long ee_ge_2d_point_save(const EeGe2DPoint *value, void *file);
+
+/// `GE3DPoint::Load(F&)`: x, y, z; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_3d_point_load(EeGe3DPoint *value, void *file);
+
+/// `GE3DPoint::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_3d_point_load`].
+long ee_ge_3d_point_save(const EeGe3DPoint *value, void *file);
+
+/// `GEVector::Load(F&)`: x, y, z; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_vector_load(EeGeVector *value, void *file);
+
+/// `GEVector::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_vector_load`].
+long ee_ge_vector_save(const EeGeVector *value, void *file);
+
+/// `GEOrientation::Load(F&)`: yaw, pitch, roll; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_orientation_load(EeGeOrientation *value,
+                            void *file);
+
+/// `GEOrientation::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_orientation_load`].
+long ee_ge_orientation_save(const EeGeOrientation *value, void *file);
+
+/// `GERectangle::Load(F&)`: left, top, right, bottom; `kErrorNotOpen` when the file is not open ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_rect_load(EeGeRectangle *value,
+                     void *file);
+
+/// `GERectangle::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_rect_load`].
+long ee_ge_rect_save(const EeGeRectangle *value, void *file);
+
+/// `GEColor::Load(F&)`: red, green, blue (it does not ask whether the file is open) ([`fields_io`]).
+///
+/// # Safety
+/// `value` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_color_load(float (*value)[3],
+                      void *file);
+
+/// `GEColor::Save(F&)`: as the load.
+///
+/// # Safety
+/// As [`ee_ge_color_load`].
+long ee_ge_color_save(const float (*value)[3], void *file);
+
+/// `GE3DLine::Load(F&)`: the start, then (when it loaded) the direction ([`ee_ge_3d_point_load`],
+/// [`ee_ge_vector_load`]).
+///
+/// # Safety
+/// `line` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_3d_line_load(EeGe3DLine *line, void *file);
+
+/// `GE3DLine::Save(F&)`: the start, then the direction.
+///
+/// # Safety
+/// As [`ee_ge_3d_line_load`].
+long ee_ge_3d_line_save(const EeGe3DLine *line, void *file);
+
+/// `GE3DPlane::Load(F&)`: the point, then (when it loaded) the normal.
+///
+/// # Safety
+/// `plane` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_3d_plane_load(EeGe3DPlane *plane, void *file);
+
+/// `GE3DPlane::Save(F&)`: the point, then the normal.
+///
+/// # Safety
+/// As [`ee_ge_3d_plane_load`].
+long ee_ge_3d_plane_save(const EeGe3DPlane *plane, void *file);
+
+/// `GEBoundingBox::Load(F&)`: the two corners (the first error returned as is), then the extents from them (width
+/// x, height z, depth y).
+///
+/// # Safety
+/// `bbox` is valid; `file` is a live C++ `FSFile*`.
+long ee_ge_bbox_load(EeGeBoundingBox *bbox,
+                     void *file);
+
+/// `GEBoundingBox::Save(F&)`: the two corners.
+///
+/// # Safety
+/// As [`ee_ge_bbox_load`].
+long ee_ge_bbox_save(const EeGeBoundingBox *bbox, void *file);
 
 /// `GEViewport::operator=`: every field.
 ///

@@ -80,31 +80,20 @@ UIFontTable::UIFontTable()
 {
 }
 
-// Loads the UI font table from the database file: face name, size, quality and style per entry; returns the read result
-long UIFontTable::Create(FSFileSpec& inFile, UIManager* inManager)
-{
-    return (long)ee_ui_font_tables(EeUiFontsCall::Create, (intptr_t)&inFile, (intptr_t)inManager, 0, 0, UIFontTableHost);
-}
+long UIFontTable::Create(FSFileSpec& inFile, UIManager* inManager) { return (long)ee_ui_font_tables(EeUiFontsCall::Create, (intptr_t)&inFile, (intptr_t)inManager, 0, 0, UIFontTableHost); }
 
-// Returns a shared font for a table entry scaled to a pixel height on the screen (NULL for an empty entry)
+void UIFontTable::DeleteAll() { ee_ui_font_tables(EeUiFontsCall::DeleteAll, 0, 0, 0, 0, UIFontTableHost); }
+
+GEFont* UIFontTable::GetFont(unsigned long inIndex) { return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::GetFont, inIndex, 0, 0, 0, UIFontTableHost)); }
+
 GEFont* UIFontTable::CreateClosestFont(unsigned long inIndex, unsigned long inPixelHeight)
 {
     return reinterpret_cast<GEFont*>(
         ee_ui_font_tables(EeUiFontsCall::CreateClosestFont, inIndex, inPixelHeight, 0, 0, UIFontTableHost));
 }
 
-// Deletes every font table entry, drops one reference to each shared font and empties both lists
-void UIFontTable::DeleteAll() { ee_ui_font_tables(EeUiFontsCall::DeleteAll, 0, 0, 0, 0, UIFontTableHost); }
-
-// Returns the shared font for a table entry (NULL for an empty entry: the original read through it)
-GEFont* UIFontTable::GetFont(unsigned long inIndex)
-{
-    return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::GetFont, inIndex, 0, 0, 0, UIFontTableHost));
-}
-
-// Returns a shared font with the given face, style, quality and size, creating it on first use; adds a reference
 GEFont* UIFontTable::FindOrCreateFont(const UString& inName, unsigned long inStyle, unsigned long inQuality,
-                                      unsigned long inSize)
+    unsigned long inSize)
 {
     return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::FindOrCreateFont, (intptr_t)&inName, inStyle,
                                                        inQuality, inSize, UIFontTableHost));

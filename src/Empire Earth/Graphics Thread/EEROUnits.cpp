@@ -39,11 +39,12 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEROUnits.h"
 #include "ee/EERenderSnapshot.h"
+#include "rust/game/gamecpp.h"
+#include <utility>
 
 extern bool& gShowCollisionSpheres;          // 0x5318dc (the units' collision spheres are drawn; provisional name)
 extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpolated; provisional name)
 extern long& gModelDetail;                   // 0x530898 (0: full opacity, 1: half, else opaque; provisional name)
-extern bool gUnitPanelActive;               // 0x5297a0 (EEROUserInterface.cpp)
 extern GEFont* gU531994;                    // 0x531994 (the labels' default font; before gFontTahoma10; provisional name)
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
 extern const EeGfxRaster gEERustRaster;
@@ -75,62 +76,12 @@ void EEROUnits::FrameStarting()
     this->FillRenderLists();
 }
 
-// the raster table's entries for the bars, the placement lines and the labels (EERenderObject.cpp's table)
-void EEROUnitsBarSet(uint32_t inWhich, const EeGeRectangle* inRect, const EeGfxColor* inColors)
-{
-    if (inRect != NULL)
-        sBars[inWhich]->SetRectangle(*reinterpret_cast<const GERectangle*>(inRect));
-    if (inColors != NULL)
-        sBars[inWhich]->SetColorPerVertex(*reinterpret_cast<const GEColor*>(&inColors[0]),
-                                          *reinterpret_cast<const GEColor*>(&inColors[1]),
-                                          *reinterpret_cast<const GEColor*>(&inColors[2]),
-                                          *reinterpret_cast<const GEColor*>(&inColors[3]));
-}
+// the raster table's bar draw (EERenderObject.cpp's table; the bars' set, the screen lines and the labels are gamecpp
+// ro_units.rs')
 int32_t EEROUnitsBarDraw(uint32_t inWhich)
 {
     return gRasterizer->Draw(sBars[inWhich], gScreenIndex);
 }
-int32_t EEROUnitsScreenLines(const EeGfxScreenLine* inLines, uint32_t inCount, float inStartU, float inEndU)
-{
-    GETextureCoordinate theStart;
-    GETextureCoordinate theEnd;
-    theStart.SetU(inStartU);
-    theEnd.SetU(inEndU);
-    for (uint32_t i = 0; i < inCount; i++) {
-        sLines[i].SetTextureCoordinates(theStart, theEnd);
-        sLines[i].SetColor(*reinterpret_cast<const GEColor*>(&inLines[i].color));
-        sLines[i].SetStartPoint(*reinterpret_cast<const GE2DPoint*>(&inLines[i].start));
-        sLines[i].SetEndPoint(*reinterpret_cast<const GE2DPoint*>(&inLines[i].end));
-    }
-    return gRasterizer->Draw(sLines, inCount, gScreenIndex);
-}
-void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inColor, uint32_t inFont,
-                    const EeGeRectangle* inView, const EeGeRectangle* inStrip, float inBottom)
-{
-    GEText theText(gU531994);
-    theText.SetFgColor(GEColor(inColor.red, inColor.green, inColor.blue));
-    theText.SetIsTransparent(true);
-    theText.SetAlignment(kTextAlignCenter);
-    if (inFont == 2)
-        theText.SetFont(gFontTahoma16);
-    else if (inFont == 1)
-        theText.SetFont(gFontTahoma12);
-    theText.SetText(UWideString(reinterpret_cast<const char*>(inText)));
-    GE2DPoint thePoint;
-    thePoint.SetX(inX);
-    thePoint.SetY(inY);
-    theText.SetLocation(thePoint);
-    const GERectangle& theView = *reinterpret_cast<const GERectangle*>(inView);
-    float theTextHeight = gFreeCamera ? 0.0f : theText.GetTextExtent().GetHeight();
-    uint32_t theTargets = ee_gfx_units_label_targets(inY, theTextHeight, inBottom, gFreeCamera);
-    if (theTargets & 1)
-        gUIManager->GetMainGameForm()->DrawClippedText(theView, &theText, NULL);
-    if (theTargets & 2)
-        gUIManager->GetMainGameForm()->DrawClippedText(*reinterpret_cast<const GERectangle*>(inStrip), &theText, NULL);
-    if (theTargets & 4)
-        gUIManager->GetScenarioEditorForm()->DrawClippedText(theView, &theText, NULL);
-}
-
 extern std::vector<unsigned long> gU4E9230;   // EERenderObject.cpp: the rectangle's picked unit ids
 extern EERenderUnit* gU529044;               // the picked enemy's render unit
 extern UWideString gU529030;                 // its owner's name
@@ -140,6 +91,7 @@ namespace {
 // a texture map in its order, as rfil.rs reads it
 template <class Map> EeGfxRfilPairs Flatten(const Map& inMap, std::vector<EeGfxRfilPair>& outPairs)
 {
+    outPairs.clear();   // (the pairs' storage is reused from view to view: sDrawPairs)
     for (typename Map::const_iterator it = inMap.begin(); it != inMap.end(); ++it)
         outPairs.push_back({it->first, it->second});
     return {outPairs.data(), outPairs.size()};
@@ -149,8 +101,7 @@ template <class T> EeGfxRfilSpan Span(const std::vector<T>& inValues) { return {
 
 EeGfxRfilLayout MakeLayout()
 {
-    static_assert(sizeof(EERenderShadow) == sizeof(EeGfxFillObject) && offsetof(EERenderUnitRecord, mUnit) == 0,
-                  "rfil.rs reads the shadows as EeGfxFillObject, a record's unit first");
+    static_assert(offsetof(EERenderUnitRecord, mUnit) == 0, "rfil.rs reads a record's unit first");
     EeGfxRfilLayout l = {};
     l.size = sizeof(EeGfxRfilLayout);
     l.unit_stride = sizeof(EERenderUnit);
@@ -205,83 +156,25 @@ void EERenderListsView(EeGfxRfilFrame& outFrame, std::vector<EeGfxRfilPair> (&io
     f.lines = Span(gU529050);
 }
 
-namespace {
-// the effects' units pass: queue 3, batched per texture
-void UnitsEffects(void*)
-{
-    ee_gfx_effect_queues_draw(5);
-}
-
-// the frame's render lists drawn by ee_gfx ro_units.rs (the records and indices: units_lists.rs, over the lists'
-// view) with the scene's settings
-void DrawUnits(bool inLabels)
-{
-    std::vector<EeGfxRfilPair> thePairs[6];
-    EeGfxRfilFrame theFrame = {};
-    EERenderListsView(theFrame, thePairs);
-    EeGfxUnitsScene s = {};
-    s.context = NULL;
-    s.viewport = reinterpret_cast<const EeGeViewport*>(&gU4E8F08);
-    s.orthographic = gOrthographicView;
-    s.cinematic = gRenderSnapshot.mInCinematic;
-    s.collision_spheres = gShowCollisionSpheres;
-    s.interpolate_frames = gInterpolateFrames;
-    s.model_detail = (int32_t)gModelDetail;
-    s.free_camera = gFreeCamera;
-    s.panel_active = gUnitPanelActive;
-    s.grid_phase = gU4E9330;
-    s.camera_yaw = gRenderEnvironment.mCameraYaw;
-    s.window_width = (uint32_t)gGameWindow->GetWidth();
-    s.window_height = (uint32_t)gGameWindow->GetHeight();
-    s.draw_effects = UnitsEffects;
-    ee_gfx_ro_units_draw_lists(&gEERustRaster, &theFrame, &s, inLabels);
-}
-}
-
-// Loads the units' media: bar rhombi, command and dotted-line textures, the line buffer, the area-effect
-// ring model and the three selection ring models (segment count by detail level) (ee_gfx ro_units.rs)
+// the media, the frame's draws and the labels: gamecpp ro_units.rs
 void EEROUnits::LoadMedia()
 {
-    GETextureCoordinate theLineStart;
-    GETextureCoordinate theLineEnd(3.0f, 0.0f);
-    sBars[1] = new GERhombus;
-    sBars[0] = new GERhombus;
-    ESVERIFY_AT(sBars[1] != NULL, 1823);
-    ESVERIFY_AT(sBars[0] != NULL, 1824);
-    ee_gfx_ro_units_load(&gEERustRaster, (int32_t)gModelDetail);
-    sLines = new GELine[0x40];
-    for (unsigned long i = 0; i < 0x40; i++) {
-        sLines[i].SetColor(GEColor(0.0f, 1.0f, 0.0f));
-        sLines[i].SetTexture(static_cast<GETexture*>(ee_gfx_ro_units_line_texture()), gScreenIndex);
-        sLines[i].SetTextureCoordinates(theLineStart, theLineEnd);
-    }
+    ee_gamecpp_ru_load_media();
 }
 
-// Draws the selections and rings (not in cinematics), the object and unit models, the buildings being
-// placed, the air selection rings and bars, then the effects' pass 5 (ee_gfx ro_units.rs)
 void EEROUnits::RenderScene()
 {
-    DrawUnits(false);
+    ee_gamecpp_ru_draw(false);
 }
 
-// Draws the unit labels (not in cinematics; ee_gfx ro_units.rs) and the effects' pass 3
 void EEROUnits::FrameDone()
 {
-    if (!gRenderSnapshot.mInCinematic) {
-        DrawUnits(true);
-    }
-    ee_gfx_effect_queues_draw(3);
+    ee_gamecpp_ru_frame_done();
 }
 
-// Releases the units' media: bar rhombi, line buffer, textures, ring and selection models (ee_gfx ro_units.rs)
 void EEROUnits::ReleaseMedia()
 {
-    delete sBars[1];
-    delete sBars[0];
-    if (sLines != NULL)
-        delete[] sLines;
-    sLines = NULL;
-    ee_gfx_ro_units_release(&gEERustRaster);
+    ee_gamecpp_ru_release_media();
 }
 
 // Projects a world point to window coordinates in the game view (ee_gfx units.rs)
@@ -293,4 +186,78 @@ void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
 
 void EEROUnits::SceneStarting()
 {
+}
+
+// ------------------------------------------------------------------------- round 10, lane A: this file's C++ (gamecpp ro_units.rs)
+
+int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the render lists' pairs of the units' draws (valid until the next view)
+static std::vector<EeGfxRfilPair> sDrawPairs[6];
+
+#define RU_P64(x) ((int64_t)(intptr_t)(x))
+#define RU_TEXT ((GEText*)p)
+#define RU_COLOR(k) (*reinterpret_cast<const GEColor*>(&((const EeGfxColor*)a[1])[k]))
+
+// the C++ calls and members of gamecpp ro_units.rs (EECore10OpA's default): one statement each
+int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::RuRaster: return RU_P64(&gEERustRaster);
+    case O::RuListsView: EERenderListsView(*(EeGfxRfilFrame*)a[0], sDrawPairs);
+        break;
+    case O::RuMainViewport: return RU_P64(&gU4E8F08);
+    case O::RuCinematic: return gRenderSnapshot.mInCinematic;
+    case O::RuCollisionSpheres: return gShowCollisionSpheres;
+    case O::RuInterpolateFrames: return gInterpolateFrames;
+    case O::RuModelDetail: return gModelDetail;
+    case O::RuWindowWidth: return gGameWindow->GetWidth();
+    case O::RuWindowHeight: return gGameWindow->GetHeight();
+    case O::RuBarNew: sBars[a[0]] = new GERhombus;
+        break;
+    case O::RuBarPresent: return sBars[a[0]] != NULL;
+    case O::RuBarDelete: delete sBars[a[0]];
+        break;
+    case O::RuBarSetRect: sBars[a[0]]->SetRectangle(*(const GERectangle*)a[1]);
+        break;
+    case O::RuBarSetColors: sBars[a[0]]->SetColorPerVertex(RU_COLOR(0), RU_COLOR(1), RU_COLOR(2), RU_COLOR(3));
+        break;
+    case O::RuLinesNew: sLines = new GELine[a[0]];
+        break;
+    case O::RuLinesDelete: delete[] std::exchange(sLines, nullptr);
+        break;
+    case O::RuLineInitColor: sLines[a[0]].SetColor(GEColor(0.0f, 1.0f, 0.0f));
+        break;
+    case O::RuLineInitTexture: sLines[a[0]].SetTexture((GETexture*)a[1], gScreenIndex);
+        break;
+    case O::RuLineInitCoordinates: sLines[a[0]].SetTextureCoordinates(GETextureCoordinate(), GETextureCoordinate(3.0f, 0.0f));
+        break;
+    case O::RuLineCoordinates: sLines[a[0]].SetTextureCoordinates(GETextureCoordinate(f[0], 0.0f), GETextureCoordinate(f[1], 0.0f));
+        break;
+    case O::RuLineColor: sLines[a[0]].SetColor(*(const GEColor*)a[1]);
+        break;
+    case O::RuLineStart: sLines[a[0]].SetStartPoint(*(const GE2DPoint*)a[1]);
+        break;
+    case O::RuLineEnd: sLines[a[0]].SetEndPoint(*(const GE2DPoint*)a[1]);
+        break;
+    case O::RuLinesDraw: return gRasterizer->Draw(sLines, (unsigned long)a[0], gScreenIndex);
+    case O::RuTextNew: return RU_P64(new GEText(gU531994));
+    case O::RuTextFont16: RU_TEXT->SetFont(gFontTahoma16);
+        break;
+    case O::RuTextFont12: RU_TEXT->SetFont(gFontTahoma12);
+        break;
+    default: return EERoViewsOp(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EERoUnitsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::RuTextHeight: return RU_TEXT->GetTextExtent().GetHeight();
+    default: return EERoViewsOpF(inOp, p, a, f);
+    }
 }

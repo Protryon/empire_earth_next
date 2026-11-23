@@ -17,8 +17,8 @@ const MAKERS: &[u32] = &[
     EE_SCREENS_SEUNX_NEW_BITMAP,
     EE_SCREENS_SEUNX_BUTTON_TEXTURE,
     EE_SCREENS_SEUNX_TYPE_RADIO,
-    EE_SCREENS_SEUNX_REMOVE_CARGO_BUTTON,
-    EE_SCREENS_SEUNX_ROTATION_BUTTON,
+    EE_SCREENS_SEUNX_NEW_BUTTON,
+    EE_SCREENS_SEUNX_BITMAP_RUST,
     EE_SCREENS_SEUNX_ACTION_CLICK,
     EE_SCREENS_SEUNX_ACTION_LASSO,
     EE_SCREENS_SEUNX_ACTION_PLACE_UNIT,
@@ -117,6 +117,15 @@ fn run(fake: &mut Fake, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 
 }
 
 #[test]
+fn sepl_colours_by_the_flags() {
+    use crate::screens::editor_players::EE_SCREENS_SEPL_FG;
+    assert_eq!(sepl_color(0), None);
+    assert_eq!(sepl_color(EE_SCREENS_SEPL_FG), Some([0.996_078_43, 0.968_627_45, 0.125_490_2]));
+    assert_eq!(sepl_color(EE_SCREENS_SEPL_FG | 64 | 256), Some([1.0, 1.0, 1.0]));
+    assert_eq!(sepl_color(256), Some([1.0, 0.0, 0.0]));
+}
+
+#[test]
 fn type_button_cuts_both_bitmaps_and_makes_the_radio() {
     let mut fake = Fake::new();
     fake.answers.insert(EE_SCREENS_SEUNX_TEXTURE_WIDTH, 256);
@@ -126,8 +135,8 @@ fn type_button_cuts_both_bitmaps_and_makes_the_radio() {
     let (r, _) =
         run(&mut fake, EE_SCREENS_SEUN_OP_TYPE_BUTTON, [out.as_mut_ptr() as usize, 0xf0, 0xe0], &mut i, &mut f);
     assert_eq!(r, Some(0));
-    // texture 0x100, normal 0x101, pressed 0x102, the radio 0x103
-    assert_eq!(out, [0x103, 0x101, 0x102]);
+    // texture 0x100, normal 0x101, pressed 0x102, their Rust objects 0x103, 0x104, the radio 0x105
+    assert_eq!(out, [0x105, 0x101, 0x102]);
     let ops = fake.ops();
     assert_eq!(
         ops,
@@ -138,8 +147,10 @@ fn type_button_cuts_both_bitmaps_and_makes_the_radio() {
             EE_SCREENS_SEUNX_NEW_BITMAP,
             EE_SCREENS_SEUNX_BITMAP_TEXTURE_FORM,
             EE_SCREENS_SEUNX_BITMAP_TEXTURE_FORM,
-            EE_SCREENS_SEUNX_BITMAP_COORDS,
-            EE_SCREENS_SEUNX_BITMAP_COORDS,
+            EE_SCREENS_SEUNX_BITMAP_RUST,
+            EE_SCREENS_SEUNX_GE_UVS,
+            EE_SCREENS_SEUNX_BITMAP_RUST,
+            EE_SCREENS_SEUNX_GE_UVS,
             EE_SCREENS_SEUNX_BITMAP_SCALE,
             EE_SCREENS_SEUNX_BITMAP_SCALE,
             EE_SCREENS_SEUNX_TYPE_RADIO,
@@ -156,16 +167,17 @@ fn type_button_cuts_both_bitmaps_and_makes_the_radio() {
     );
     let l = &fake.lines;
     // the corners of the normal cell (10, 20) and the pressed cell (45, 20) over the 256 texture
-    assert_eq!(l[6].1, 0x101);
-    assert_eq!(l[6].4, [10.0 / 256.0, 20.0 / 256.0, 45.0 / 256.0, 45.0 / 256.0]);
-    assert_eq!(l[7].4, [45.0 / 256.0, 20.0 / 256.0, 80.0 / 256.0, 45.0 / 256.0]);
-    assert_eq!(l[8].4, [35.0 / 256.0, 25.0 / 256.0, 0.0, 0.0]);
-    assert_eq!(l[10].3, [9, 2, 0, 140]);
+    assert_eq!((l[6].1, l[8].1), (0x101, 0x102));
+    assert_eq!(l[7].4, [10.0 / 256.0, 20.0 / 256.0, 45.0 / 256.0, 45.0 / 256.0]);
+    assert_eq!(l[9].4, [45.0 / 256.0, 20.0 / 256.0, 80.0 / 256.0, 45.0 / 256.0]);
+    assert_eq!(l[10].4, [35.0 / 256.0, 25.0 / 256.0, 0.0, 0.0]);
+    // id 2 + 0x406, not checked (id 2), 35 x 25 at x 140
+    assert_eq!((l[12].3, l[12].4), ([9, 0x408, 0, 0], [140.0, 0.0, 174.0, 24.0]));
     // the up unchecked bitmap is the normal one, the others the pressed one; the event; the string; layer 6
-    assert_eq!((l[11].2, l[14].2), (0x102, 0x101));
-    assert_eq!(l[17].2, 0xe0);
-    assert_eq!(l[18].3[0], 0x5000);
-    assert_eq!((l[19].1, l[19].2, l[19].3[0]), (0xf0, 0x103, 6));
+    assert_eq!((l[13].2, l[16].2), (0x102, 0x101));
+    assert_eq!(l[19].2, 0xe0);
+    assert_eq!(l[20].3[0], 0x5000);
+    assert_eq!((l[21].1, l[21].2, l[21].3[0]), (0xf0, 0x105, 6));
 }
 
 #[test]
@@ -364,8 +376,9 @@ fn pick_keys_mouse_and_the_rest() {
     );
     assert_eq!(
         fake.ops(),
-        vec![EE_SCREENS_SEUNX_ROTATION_BUTTON, EE_SCREENS_SEUNX_ROTATION_STRING, EE_SCREENS_SEUNX_ADD_BUTTON]
+        vec![EE_SCREENS_SEUNX_NEW_BUTTON, EE_SCREENS_SEUNX_ROTATION_STRING, EE_SCREENS_SEUNX_ADD_BUTTON]
     );
+    assert_eq!((fake.lines[0].3, fake.lines[0].4), ([71, SEUNX_KIND_ROTATION, 0x3f5, 0], [500.0, 633.0, 549.0, 682.0]));
     assert_eq!((fake.lines[2].1, fake.lines[2].2, fake.lines[2].3[0], out), (0x70, 0x100, 6, 0x100));
     let mut fake = Fake::new();
     assert_eq!(run(&mut fake, EE_SCREENS_SEUN_OP_SORT_EVENT, [0; 3], &mut [0; 4], &mut [0.0; 4]).0, None);

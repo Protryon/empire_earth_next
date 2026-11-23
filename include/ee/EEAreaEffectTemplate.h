@@ -12,6 +12,7 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 #include "rust/sim/tech.h"
+#include "rust/game/screens.h"
 
 class EEGraphicEffect;
 class EEMedia;
@@ -21,35 +22,8 @@ class GE2DPoint;
 // One area-effect template record as EEAEManager::Load 0x27b079 reads it (0xbc bytes, zeroed first; its name is
 // printed when Init fails: "Error reading area effect template %s"). Field names follow the template members they
 // fill (Init 0x27c489). Provisional name; layout inferred. The Rust EeAreaEffectData has the same layout.
-struct EEAreaEffectData {
-    char mName[0x68];                       // +0x00
-    int32_t mID;                            // +0x68
-    int32_t mKind;                          // +0x6c (> 0 for a template: EEAEManager::Load skips the others)
-    int32_t mShape;                         // +0x70
-    int32_t mGraphicEffect;                 // +0x74 (EEGraphicEffect::Get index, none if <= 0)
-    int32_t mUnitSet;                       // +0x78
-    int32_t mMode;                          // +0x7c
-    int32_t mGraphicEffect18;               // +0x80 (EEGraphicEffect::Get index)
-    int32_t mMedia;                         // +0x84 (EEMedia::Get index)
-    int32_t mMaxLevel;                      // +0x88
-    int32_t mLevel;                         // +0x8c
-    int32_t mUnusedValue1;                  // +0x90
-    int32_t mUnusedValue2;                  // +0x94
-    int32_t mUnusedValue3;                  // +0x98
-    float mRadius;                          // +0x9c
-    float mRed;                             // +0xa0
-    float mGreen;                           // +0xa4
-    float mBlue;                            // +0xa8
-    float mAlpha;                           // +0xac
-    float mUnusedFloat;                     // +0xb0
-    bool mUnusedFlag1;                      // +0xb4
-    bool mUnusedFlag2;                      // +0xb5
-    bool mUnusedFlag3;                      // +0xb6
-    bool mUnusedFlag4;                      // +0xb7
-    bool mUnusedFlag5;                      // +0xb8
-};
-static_assert(sizeof(EEAreaEffectData) == 188, "on-disk record: 188 bytes on every target");
-static_assert(sizeof(EEAreaEffectData) == sizeof(EeAreaEffectData), "the Rust record's layout");
+// the record is the Rust one (ee_sim tech area_effect.rs: the same field names; 188 bytes on every target)
+typedef EeAreaEffectData EEAreaEffectData;
 
 // Inherited from EeAreaEffectTemplateFields (the original's offsets): mKind +0x20 (EEE2DMarchingIcons's area-effect
 // type), mShape +0x24 (1 a square, 2 a circle), mMode +0x28 (AffectsPlayer's relation), mRadius +0x2c, mColorAlpha
@@ -58,18 +32,28 @@ static_assert(sizeof(EEAreaEffectData) == sizeof(EeAreaEffectData), "the Rust re
 class EEAreaEffectTemplate : public UReferenceCounter, public EeAreaEffectTemplateFields {
 public:
     EEAreaEffectTemplate();
-    virtual ~EEAreaEffectTemplate();        // 0x27c199 (??_G 0x27c17d): dereferences both graphic effects
+    virtual ~EEAreaEffectTemplate() { ee_screens_aet_destroy((uintptr_t)this); }        // 0x27c199 (??_G 0x27c17d): dereferences both graphic effects
     // 0x27c5ab: EEGraphicEffect::Load(inArg) on both graphic effects, then mMedia's LoadMedia
     void Load(bool inIsOnDemand);
-    void Unload();                          // 0x27c5de: EEGraphicEffect::Unload on both, then mMedia's UnloadMedia
+    // Unloads the template's graphic effects and sound media
+    void Unload() { ee_screens_ael_template_unload(this); }                          // 0x27c5de: EEGraphicEffect::Unload on both, then mMedia's UnloadMedia
     // 0x27c1c5: player inOther counts for inPlayer under mMode (4 everyone, 1 itself, 2 allies, 3 players it is at
     // war with)
-    bool AffectsPlayer(long inPlayer, long inOther);
-    bool AffectsPlayerReversed(long inPlayer, long inOther);  // 0x27c233: 1 the others, 2 the enemies, 3 the friends
+    bool AffectsPlayer(long inPlayer, long inOther)
+    {
+        return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, false);
+    }
+    bool AffectsPlayerReversed(long inPlayer, long inOther)
+    {
+        return ee_screens_aet_affects((uintptr_t)this, inPlayer, inOther, true);
+    }  // 0x27c233: 1 the others, 2 the enemies, 3 the friends
     // 0x27c334: inPoint lies within inScale * mRadius of inCenter (a square or a circle), and on inCenter's continent
     // unless mUnitSet is 4 (a space dock or turret inUnit carried by a unit also passes on that unit's planet)
-    bool IsWithin(const GE2DPoint& inCenter, const GE2DPoint& inPoint, float inScale, EEComplexUnit* inUnit);
-    bool Init(const EEAreaEffectData& inData);   // 0x27c489 (EEAEManager::Load): the members from inData
+    bool IsWithin(const GE2DPoint& inCenter, const GE2DPoint& inPoint, float inScale, EEComplexUnit* inUnit)
+    {
+        return ee_screens_aet_is_within((uintptr_t)this, inCenter.mX, inCenter.mY, inPoint.mX, inPoint.mY, inScale, (uintptr_t)inUnit);
+    }
+    bool Init(const EEAreaEffectData& inData) { return ee_screens_aet_init((uintptr_t)this, (uintptr_t)&inData); }   // 0x27c489 (EEAEManager::Load): the members from inData
 
     // +0x14 (referenced; EEComplexUnit::GetEffect 0x1f9df3 hands it out, EEAreaEffect::ShowOn plays it on a unit)
     EEGraphicEffect* mGraphicEffect;

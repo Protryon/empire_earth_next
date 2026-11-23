@@ -7,10 +7,14 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <vector>
+#include "lle/U2DPoint.h"
 
 template <class T> class EEAIListView {
 public:
     EEAIListView(const T* inData, size_t inSize) : mData(inData), mSize(inSize) {}
+    // the list a Rust accessor answers: inGet(inArgs..., &count) -> its data (any element type of T's layout)
+    template <class F, class... A> EEAIListView(F inGet, A... inArgs) : mSize(0)
+        { this->mData = reinterpret_cast<const T*>(inGet(inArgs..., &this->mSize)); }
     const T* begin() const { return this->mData; }
     const T* end() const { return this->mData + this->mSize; }
     size_t size() const { return this->mSize; }
@@ -37,6 +41,8 @@ public:
         const uint64_t* mAt;
     };
     EEAIHandleView(const uint64_t* inData, size_t inSize) : mData(inData), mSize(inSize) {}
+    template <class F, class... A> EEAIHandleView(F inGet, A... inArgs) : mSize(0)
+        { this->mData = inGet(inArgs..., &this->mSize); }
     Iterator begin() const { return Iterator(this->mData); }
     Iterator end() const { return Iterator(this->mData + this->mSize); }
     size_t size() const { return this->mSize; }
@@ -47,5 +53,12 @@ private:
     const uint64_t* mData;
     size_t mSize;
 };
+
+// the C++ lists the Rust fillers write (one call each)
+template <class V> void EEAIClearList(void* inList) { static_cast<V*>(inList)->clear(); }
+inline void EEAIPushPoint(void* inList, long inX, long inY)
+    { static_cast<std::vector<U2DPoint<long> >*>(inList)->push_back(U2DPoint<long>(inX, inY)); }
+inline void EEAIResizeIDs(void* inList, size_t inSize) { static_cast<std::vector<unsigned short>*>(inList)->resize(inSize); }
+inline uint16_t* EEAIIDsData(void* inList) { return static_cast<std::vector<unsigned short>*>(inList)->data(); }
 
 #endif

@@ -2,6 +2,7 @@
 // 0xd6bed..0xd72c1: the effect table of db\dbgfxeffects.dat (EEGraphicEffect : UReferenceCounter, EEMedia). The
 // three statics' init chains (sEffects 0x4e8420, the 0x48 per-kind media vectors 0x4e7f98, the id set 0x4e7f88;
 // guard byte 0x4e8418) open the unit. Unit flags: the exe's module set.
+#include <algorithm>
 #include <windows.h>
 #include <stdio.h>
 #include <vector>
@@ -19,6 +20,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEDbRecords.h"
 #include "rust/render/gfx.h"
+#include "rust/game/preload_media.h"
 
 // The tables (sEffects 0x4e8420, the 0x48 per-kind media vectors 0x4e7f98, the id set 0x4e7f88: the unit's three
 // init chains) and the loads are ee_gfx geffect_table.rs'
@@ -27,13 +29,8 @@ extern std::vector<EEMedia*> gMediaTable;   // 0x4e8448 (EEGraphicObject.cpp)
 // Creates a graphic effect from its table record's members (ee_data tables.rs) and its graphic; LoadTable links the
 // follow-on effects
 EEGraphicEffect::EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject)
-    : EeDataGraphicEffectFields(inFields)
+    : EeDataGraphicEffectFields(inFields), mGraphicObject(inGraphicObject)
 {
-    this->mGraphicObject = inGraphicObject;
-    this->mLinkedEffect1 = NULL;
-    this->mLinkedEffect2 = NULL;
-    this->mLinkedEffect3 = NULL;
-    this->mNumLoads = 0;
 }
 
 // Destroys the graphic effect (nothing of its own to free)
@@ -61,40 +58,22 @@ long EEGraphicEffect::LoadTable(FSFile* inFile)
                     static_cast<EEGraphicObject*>(EEMedia::Get(theLinks[inIndex].media)));
             theEffects[inIndex] = theEffect;
         });
-    for (unsigned long j = 0; j < theEffects.size() && j < theLinks.size(); j++) {
-        EEGraphicEffect* theEffect = theEffects[j];
-        if (theEffect == NULL)
-            continue;
-        EEGraphicEffect** theLinked[3] = {&theEffect->mLinkedEffect1, &theEffect->mLinkedEffect2, &theEffect->mLinkedEffect3};
-        for (int k = 0; k < 3; k++) {
-            unsigned long theIndex = theLinks[j].linked[k];
-            *theLinked[k] = theIndex < theEffects.size() ? theEffects[theIndex] : NULL;
-        }
-    }
+    ee_preload_link_effects(reinterpret_cast<void* const*>(theEffects.data()), theLinks.data(), (std::min)(theEffects.size(), theLinks.size()));
     ee_gfx_geffect_table_set(reinterpret_cast<void* const*>(theEffects.data()), theEffects.size());
     return theResult;
 }
 
 // Writes to the file every graphic effect that was used without being preloaded (the recorded ids, each read as a
-// table index as the original did)
+// table index as the original did; ee_game preload_media.rs)
 void EEGraphicEffect::DumpIDs(FSFileSpec& inFile)
 {
-    std::vector<unsigned long> theIDs(ee_gfx_geffect_ids(NULL, 0));
-    ee_gfx_geffect_ids(theIDs.data(), theIDs.size());
-    fprintf(inFile, "\n\nMEDIA DUMP OF ALL GRAPHIC EFFECTS THAT WERE NOT LOADED CORRECTLY\n\n");
-    for (unsigned long theID : theIDs)
-        fprintf(inFile, "The Graphic Effect %ld (name not available in release) was used without being preloaded, notify a programmer about this.\n",
-                EEGraphicEffect::Get(theID)->mID);
+    ee_preload_dump_effect_ids(&inFile);
 }
 
-// Releases every graphic effect in the table and empties it
+// Releases every graphic effect in the table and empties it (preload_media.rs)
 void EEGraphicEffect::UnloadTable()
 {
-    for (unsigned long i = 0; i < EEGraphicEffect::GetCount(); i++) {
-        if (EEGraphicEffect* theEffect = EEGraphicEffect::Get(i))
-            theEffect->Dereference();
-    }
-    ee_gfx_geffect_table_set(NULL, 0);
+    ee_preload_unload_effects();
 }
 
 EEGraphicEffect* EEGraphicEffect::Get(unsigned long inIndex)
@@ -112,15 +91,10 @@ unsigned long EEGraphicEffect::IndexOf(const EEGraphicEffect* inEffect)
     return ee_gfx_geffect_index_of(inEffect);
 }
 
-// Returns the effect's graphic, or a random graphic of its kind when it has none of its own
+// Returns the effect's graphic, or a random graphic of its kind when it has none of its own (preload_media.rs)
 EEMedia* EEGraphicEffect::GetMedia()
 {
-    if (this->mGraphicObject == NULL) {
-        long theKind = this->mKind;
-        long theCount = (long)ee_gfx_geffect_kind_count(theKind);
-        return static_cast<EEMedia*>(ee_gfx_geffect_kind_at(theKind, gPhysics->GetRandom(0L, theCount - 1)));
-    }
-    return static_cast<EEMedia*>(this->mGraphicObject);
+    return static_cast<EEMedia*>(ee_preload_effect_media(this));
 }
 
 // Files every loaded graphic object under its kind (kinds below 0x48) for kind-only effects

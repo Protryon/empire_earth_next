@@ -57,17 +57,7 @@ struct UISliderHost {
         }
         return 0;
     }
-    static intptr_t Call(const UISlider* s, EeUiSliderCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
-    {
-        return ee_ui_slider_call(s->mRust, c, a, b, f);
-    }
-    static intptr_t CallAt(const UISlider* s, EeUiSliderCall c, const GE2DPoint& p)
-    {
-        float f[4] = {p.GetX(), p.GetY(), 0.0f, 0.0f};
-        return ee_ui_slider_call(s->mRust, c, 0, 0, f);
-    }
 };
-typedef EeUiSliderCall C;
 
 // Creates a horizontal (style 0) or vertical slider with a square thumb, an empty range and no page size
 UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,
@@ -79,19 +69,3 @@ UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned 
 }
 
 UISlider::~UISlider() { ee_ui_slider_free(this->mRust); }
-void UISlider::ButtonUp() { UISliderHost::Call(this, C::ButtonUp); }
-void UISlider::ChangeRange(unsigned long inValue) { UISliderHost::Call(this, C::ChangeRange, inValue); }
-long UISlider::CopyData() { return (long)UISliderHost::Call(this, C::CopyData); }
-void UISlider::DecrementByPageSize() { UISliderHost::Call(this, C::DecrementByPageSize); }
-long UISlider::DrawPolygons() { return (long)UISliderHost::Call(this, C::DrawPolygons); }
-long UISlider::GetCurrentRangeValue() const { return (long)UISliderHost::Call(this, C::CurrentRangeValue); }
-long UISlider::GetMaxRange() const { return (long)UISliderHost::Call(this, C::MaxRange); }
-unsigned long UISlider::GetSliderStyle() const { return (unsigned long)UISliderHost::Call(this, C::Style); }
-void UISlider::IncrementByPageSize() { UISliderHost::Call(this, C::IncrementByPageSize); }
-long UISlider::MouseLButtonDown() { return (long)UISliderHost::Call(this, C::MouseLButtonDown); }
-long UISlider::MouseLButtonUp() { return (long)UISliderHost::Call(this, C::MouseLButtonUp); }
-long UISlider::MouseMove(const GE2DPoint& inLocation) { return (long)UISliderHost::CallAt(this, C::MouseMove, inLocation); }
-void UISlider::SetCurrentRangeValue(long inValue) { UISliderHost::Call(this, C::SetCurrentRangeValue, inValue); }
-void UISlider::SetLocation(const GE2DPoint& inLocation) { UISliderHost::CallAt(this, C::SetLocation, inLocation); }
-void UISlider::SetPageSize(unsigned long inPageSize) { UISliderHost::Call(this, C::SetPageSize, inPageSize); }
-void UISlider::SetRange(unsigned long inMin, unsigned long inMax) { UISliderHost::Call(this, C::SetRange, inMin, inMax); }

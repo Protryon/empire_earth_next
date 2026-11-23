@@ -16,6 +16,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECampaignFormManager.h"
+#include "rust/game/campaign.h"
 
 // Creates the campaign selection form's manager at the current difficulty, with no campaign chosen
 EECampaignFormManager::EECampaignFormManager()
@@ -48,35 +49,14 @@ EECampaignFormManager* EECampaignFormManager::Get()
 }
 
 // Returns the expected checksum of a built-in campaign (the three AoC campaigns, the demo and the tutorial), else 0
+// (ee_game campaign.rs built_in_campaign)
 unsigned long EECampaignFormManager::GetBuiltInCampaign(const UWideString& inName)
 {
-    unsigned long theResult = 0;
-    if (inName.EqualsIgnoreCase(gCampaignAOCRoman))
-        theResult = gAOCRomanChecksum;
-    if (inName.EqualsIgnoreCase(gCampaignAOCPacific))
-        theResult = gAOCPacificChecksum;
-    if (inName.EqualsIgnoreCase(gCampaignAOCAsian))
-        theResult = gAOCAsianChecksum;
-    if (inName.EqualsIgnoreCase(gCampaignEEDemo))
-        theResult = gEEDemoChecksum;
-    if (inName.EqualsIgnoreCase(gCampaignEELearning))
-        theResult = gEELearningChecksum;
-    return theResult;
+    return ee_campaign_built_in((const char*)inName);
 }
 
-// Recomputes the checksum of the chosen campaign's file (0 when it is not found)
+// Recomputes the checksum of the chosen campaign's file (0 when it is not found; ee_game campaign.rs)
 void EECampaignFormManager::UpdateChecksum()
 {
-    UWideString thePath;
-    UString theName;
-    theName = (const char*)(this->mCampaignName + (const char*)gCampaignExtension);
-    thePath = (const char*)("Campaigns\\" + theName);
-    FSFileSpec* theSpec;
-    long theError = gDataPath->FindFile(UString((const char*)thePath), theSpec);
-    if (theError == kErrorOK) {
-        theSpec->SetFile(UString(""));
-        this->mChecksum = EEGetFileChecksum(*theSpec, theName, 0);
-        delete theSpec;
-    } else
-        this->mChecksum = 0;
+    ee_campaign_update_checksum(this);
 }

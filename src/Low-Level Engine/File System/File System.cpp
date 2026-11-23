@@ -34,16 +34,21 @@ UString gStartupDirectory(256);
 // The C++ FSFile's calls that Rust makes on any file it is handed (ee_base fs cppfile.rs: the memory file's and the
 // chunk's loads and saves, the strings' Load and Save, ...), registered once
 static const EeFsFileCalls kFSFileCalls = {
-    [](void* f, uint32_t* v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
-    [](void* f, uint8_t* d, unsigned long n, unsigned long* r) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(d, n, *r); },
-    [](void* f, char* d, unsigned long n, unsigned long* r) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(d, n, *r); },
-    [](void* f, uint32_t v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
-    [](void* f, const uint8_t* d, unsigned long n, unsigned long* w) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(d, n, *w); },
-    [](void* f, const char* d, unsigned long n, unsigned long* w) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(d, n, *w); },
-    [](void* f, int32_t* v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
-    [](void* f, float* v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
-    [](void* f, int32_t v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
-    [](void* f, float v) -> int32_t { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+    [](void* f, uint32_t* v) { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
+    [](void* f, uint8_t* d, unsigned long n, unsigned long* r) { return (int32_t) static_cast<FSFile*>(f)->Read(d, n, *r); },
+    [](void* f, char* d, unsigned long n, unsigned long* r) { return (int32_t) static_cast<FSFile*>(f)->Read(d, n, *r); },
+    [](void* f, uint32_t v) { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+    [](void* f, const uint8_t* d, unsigned long n, unsigned long* w) { return (int32_t) static_cast<FSFile*>(f)->Write(d, n, *w); },
+    [](void* f, const char* d, unsigned long n, unsigned long* w) { return (int32_t) static_cast<FSFile*>(f)->Write(d, n, *w); },
+    [](void* f, int32_t* v) { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
+    [](void* f, float* v) { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
+    [](void* f, int32_t v) { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+    [](void* f, float v) { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+    [](void* f, uint8_t* v) { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
+    [](void* f, uint16_t* v) { return (int32_t) static_cast<FSFile*>(f)->Read(*v); },
+    [](void* f, uint8_t v) { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+    [](void* f, uint16_t v) { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
+    [](void* f) { return static_cast<FSFile*>(f)->GetIsOpen(); },
 };
 static const bool sFSFileCallsRegistered = ee_fs_file_register(&kFSFileCalls);
 

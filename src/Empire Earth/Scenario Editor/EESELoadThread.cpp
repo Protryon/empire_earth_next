@@ -37,7 +37,7 @@
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EESEIAExport.h"
+#include "ee/EESEARust.h"
 #include "ee/EEScenarioManager.h"
 #include "rust/game/screens.h"
 EESELoadThread::EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPriority)
@@ -71,7 +71,6 @@ EEPlayer* P(const uintptr_t* p) { return reinterpret_cast<EEPlayer*>(p[1]); }
 EETerrainTable* R(const uintptr_t* p) { return reinterpret_cast<EETerrainTable*>(p[1]); }
 EEUnitClass* K(const uintptr_t* p) { return reinterpret_cast<EEUnitClass*>(p[1]); }
 FSFileSpec* S(const uintptr_t* p) { return reinterpret_cast<FSFileSpec*>(p[1]); }
-EESEImportInfo* I(const uintptr_t* p) { return reinterpret_cast<EESEImportInfo*>(p[1]); }
 void** Q(const uintptr_t* p) { return reinterpret_cast<void**>(p[2]); }
 EEUIManager* M(const uintptr_t* p) { return static_cast<EEUIManager*>(reinterpret_cast<UIForm*>(p[0])->GetManager()); }
 int64_t H(const void* inObject) { return (int64_t)(uintptr_t)inObject; }
@@ -194,9 +193,6 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
         return 0;
     case EE_SCREENS_SELTX_RELEASE_PENDING: P(p)->ReleasePendingUnits();
         return 0;
-    case EE_SCREENS_SELTX_EXPORT_FILE: return H(&reinterpret_cast<EESEIAExport*>(p[0])->mFile);
-    case EE_SCREENS_SELTX_IMPORT_FILE: return H(&reinterpret_cast<EESEIAImport*>(p[0])->mFile);
-    case EE_SCREENS_SELTX_IMPORT_VALIDATE: return reinterpret_cast<EESEIAImport*>(p[0])->mValidate == true;
     case EE_SCREENS_SELTX_FOPEN_W: return S(p)->FOpen("w");
     case EE_SCREENS_SELTX_FOPEN_R: return S(p)->FOpen("r");
     case EE_SCREENS_SELTX_CLOSE: S(p)->Close();
@@ -207,8 +203,7 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
         return 0;
     case EE_SCREENS_SELTX_RESUME_GROUP: gUIManager->GetScenarioEditorForm()->ResumeCurrentGroup();
         return 0;
-    case EE_SCREENS_SELTX_WRITE_HEADER: return (int64_t)(unsigned long)fprintf((FILE*)*S(p), "{Version_%ld}\n\n", gSETextVersion);
-    case EE_SCREENS_SELTX_TEXT_VERSION: return (int64_t)gSETextVersion;
+    case EE_SCREENS_SELTX_WRITE_HEADER: return (int64_t)(unsigned long)fprintf((FILE*)*S(p), "{Version_%ld}\n\n", (long)a[0]);
     case EE_SCREENS_SELTX_EXPORT_TEXT: return gWorld.mScenarioManager->ExportText(*S(p));
     case EE_SCREENS_SELTX_IMPORT_TEXT: return gWorld.mScenarioManager->ImportTriggerText(*S(p), (unsigned long)a[0], a[1] != 0);
     case EE_SCREENS_SELTX_ERROR_COUNT: return (int64_t)gWorld.mScenarioManager->mImportErrors.size();
@@ -234,12 +229,7 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
         return 0;
     case EE_SCREENS_SELTX_SPEC_FILE: S(p)->SetFile((const char*)Text(p, a));
         return 0;
-    case EE_SCREENS_SELTX_INFO_NEW: return H(new EESEImportInfo{*S(p), a[0] != 0});
-    case EE_SCREENS_SELTX_INFO_DELETE: delete I(p);
-        return 0;
-    case EE_SCREENS_SELTX_POST_EXPORT: gUserInterface->PostAction(new EESEIAExport(*S(p)));
-        return 0;
-    case EE_SCREENS_SELTX_POST_IMPORT: gUserInterface->PostAction(new EESEIAImport(I(p)->mFile, I(p)->mValidate));
+    case EE_SCREENS_SELTX_POST_TEXT_ACTION: gUserInterface->PostAction(new EESEARust((uint32_t)a[0], reinterpret_cast<void*>(p[1])));
         return 0;
     }
     return 0;

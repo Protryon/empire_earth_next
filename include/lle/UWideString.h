@@ -7,6 +7,7 @@
 #define LLE_UWIDESTRING_H
 #include "platform/PlatString.h"
 #include "rust/base/ustring.h"
+#include "lle/UString.h"           // UFormat
 
 #include <vector>
 #include <string.h>
@@ -23,9 +24,8 @@ public:
     // capacity for inLength characters (2 * inLength + 2 bytes)
     UWideString(unsigned long inLength) { ee_uwstring_init_characters(&this->mState, inLength); }
     virtual ~UWideString() { ee_uwstring_free(&this->mState); }
-    UWideString& operator=(const UWideString& inString)
-        { ee_uwstring_assign(&this->mState, &inString.mState); return *this; }
-    UWideString& operator=(const char* inString) { ee_uwstring_assign_text(&this->mState, inString); return *this; }
+    UWideString& operator=(const UWideString& inString) { return this->Do(ee_uwstring_assign, &inString.mState); }
+    UWideString& operator=(const char* inString) { return this->Do(ee_uwstring_assign_text, inString); }
     // exported ??BUWideString@@QBEPBDXZ = `mov eax,[ecx+4]; ret` (ICF-folded with UString's); TCP 0x2539 strcpy
     operator const char*() const { return this->mState.string; }
     void CopyString(const UWideString& inString, unsigned long inCount)
@@ -33,8 +33,8 @@ public:
     void CopyString(const char* inString, unsigned long inCount)
         { ee_uwstring_copy_text(&this->mState, inString, inCount); }
     char operator[](int inIndex) const { return ee_uwstring_at(&this->mState, inIndex); }
-    UWideString& operator+=(const UWideString& inString) { ee_uwstring_append(&this->mState, inString); return *this; }
-    UWideString& operator+=(const char* inString) { ee_uwstring_append(&this->mState, inString); return *this; }
+    UWideString& operator+=(const UWideString& inString) { return this->Do(ee_uwstring_append, (const char*)inString); }
+    UWideString& operator+=(const char* inString) { return this->Do(ee_uwstring_append, inString); }
     void Export(unsigned char* outData) const { ee_uwstring_export(&this->mState, outData); }
     unsigned long Find(const UWideString& inString, unsigned long inStart) const
         { return ee_uwstring_find(&this->mState, &inString.mState, inStart); }
@@ -45,11 +45,7 @@ public:
     void GetChecksum(ESChecksum& ioChecksum);
     unsigned long GetExportSize() const { return ee_uwstring_export_size(&this->mState); }
     UWideString GetIndexedSubstring(unsigned long inFirst, unsigned long inLast) const
-    {
-        UWideString theResult(kUnset);
-        ee_uwstring_indexed_substring(&theResult.mState, &this->mState, inFirst, inLast);
-        return theResult;
-    }
+        { return UWideString(kUnset, ee_uwstring_indexed_substring, &this->mState, inFirst, inLast); }
     unsigned long Import(unsigned char* inData) { return ee_uwstring_import(&this->mState, inData); }
     void InsertString(const UWideString& inString, unsigned long inPosition, bool inReplace)
         { ee_uwstring_insert(&this->mState, inString, inPosition, inReplace); }
@@ -59,17 +55,10 @@ public:
     // empty and the error returned; an old Windows-1252 string is converted, D6)
     long Load(FSFile& inFile);
     long Save(FSFile& inFile) const;
-    // splits at any of the separator characters, skipping empty tokens (ee_uwstring_tokenize: the tokens' first and
+    // splits at any of the separator characters, skipping empty tokens (ee_uwstring_tokens: the tokens' first and
     // last characters); always true
     bool Tokenize(const UWideString& inSeparators, std::vector<UWideString>& outTokens) const
-    {
-        std::vector<uint32_t> thePairs(2 * (this->GetLength() + 1));
-        uint32_t theCount = ee_uwstring_tokenize(&this->mState, &inSeparators.mState, thePairs.data());
-        outTokens.clear();
-        for (uint32_t i = 0; i < theCount; i++)
-            outTokens.push_back(this->GetIndexedSubstring(thePairs[2 * i], thePairs[2 * i + 1]));
-        return true;
-    }
+        { return ee_uwstring_tokens(&this->mState, &inSeparators.mState, &outTokens, PushToken); }
     unsigned long GetLength() const { return this->mState.length; }
     unsigned long GetTCHARLength() const { return this->mState.byte_length; }
     unsigned long GetAllocatedLength() const { return this->mState.capacity; }
@@ -100,6 +89,21 @@ private:
 
     enum Unset { kUnset };                  // a result the Rust side initialises
     explicit UWideString(Unset) {}
+    // a result the Rust call inFill initialises (its first argument the record)
+    template <class F, class... A> UWideString(Unset, F inFill, A... inArguments) { inFill(&this->mState, inArguments...); }
+    // the Rust call inChange on the record, then the string itself (the assignments and appends)
+    template <class F, class... A> UWideString& Do(F inChange, A... inArguments)
+    {
+        inChange(&this->mState, inArguments...);
+        return *this;
+    }
+    // ee_uwstring_tokens' calls: the vector cleared (no record), then each token from its first to its last character
+    static void PushToken(void* inTokens, const EeUWideString* inString, uint32_t inFirst, uint32_t inLast)
+    {
+        inString ? static_cast<std::vector<UWideString>*>(inTokens)->push_back(
+                       UWideString(kUnset, ee_uwstring_indexed_substring, inString, inFirst, inLast))
+                 : static_cast<std::vector<UWideString>*>(inTokens)->clear();
+    }
 
     EeUWideString mState;                   // +0x04 mString, +0x08 mByteLength (_mbsnbcnt), +0x0c mLength
                                             // (_mbslen), +0x10 mCapacity (allocated bytes)
@@ -107,15 +111,13 @@ private:
 
 inline UWideString operator+(const UWideString& inLeft, const UWideString& inRight)
 {
-    UWideString theResult(UWideString::kUnset);
-    ee_uwstring_concat(&theResult.mState, inLeft.GetLength() + inRight.GetLength() + 1, &inLeft.mState, inRight);
-    return theResult;
+    return UWideString(UWideString::kUnset, ee_uwstring_concat, inLeft.GetLength() + inRight.GetLength() + 1,
+                       &inLeft.mState, (const char*)inRight);
 }
 inline UWideString operator+(const UWideString& inLeft, const char* inRight)
 {
-    UWideString theResult(UWideString::kUnset);
-    ee_uwstring_concat(&theResult.mState, inLeft.GetLength() + strlen(inRight) + 1, &inLeft.mState, inRight);
-    return theResult;
+    return UWideString(UWideString::kUnset, ee_uwstring_concat, inLeft.GetLength() + strlen(inRight) + 1,
+                       &inLeft.mState, inRight);
 }
 // the comparisons: multibyte order
 inline int UWCompare(const char* inLeft, const char* inRight)
@@ -140,15 +142,8 @@ inline long sprintf(UWideString& outString, const char* inFormat, ...)
 {
     va_list theArguments;
     va_start(theArguments, inFormat);
-    va_list theCopy;
-    va_copy(theCopy, theArguments);
-    int theNeeded = vsnprintf(NULL, 0, inFormat, theCopy);
-    va_end(theCopy);
-    unsigned long theSize = theNeeded < 0 ? 0 : (unsigned long)theNeeded + 1;
-    char* theBuffer = ee_uwstring_format_buffer(&outString.mState, theSize);
-    long theResult = vsprintf(theBuffer, inFormat, theArguments);
+    long theResult = UFormat(&outString.mState, ee_uwstring_format_buffer, ee_uwstring_format_end, inFormat, theArguments);
     va_end(theArguments);
-    ee_uwstring_format_end(&outString.mState, theBuffer, theSize);
     return theResult;
 }
 

@@ -22,11 +22,11 @@ class EESMObject;
 class EESMTrigger;
 // One element of the +0xd4 vector (8 bytes): a player and a unit class whose media the scenario loaded; the dtor
 // 0x1afe66 and 0x1b28c0 unload each through gWorld.mPlayers[mPlayer]->mUnitClassUpgrades[mUnitClass] (0x23c24f); 0x1b2b43 appends
-// one (provisional names)
-struct EESMUnitClassMedia {
-    long mPlayer;                           // +0x00
-    long mUnitClass;                        // +0x04
-};
+// one (provisional names; the record is Rust's, ee_scenario manager.rs)
+typedef EeScenarioUnitClassMedia EESMUnitClassMedia;
+
+// element inIndex of a list, NULL past the end (the inline getters below, each the original's own COMDAT of this shape)
+template<class T> T* EESMAt(const std::vector<T*>& inList, unsigned long inIndex) { return inIndex < inList.size() ? inList[inIndex] : NULL; }
 
 // TEST ONLY (EE-SIM --scenario): the driver ends each shown dialog message at the next communications tick (as a
 // player who reads every one through), and the UI's end of a message (EEPhysics' message 0x508) is ignored: the
@@ -51,32 +51,17 @@ public:
     void EndCinematic();                    // 0x1b1ae4 (no arguments; EEMEndCinematic::Execute 0xbdf7d)
     void ShowDialogMessage();               // 0x1b481a (no arguments, `ret`; EEPhysics::HandleMessage's message 0x508; provisional name)
     // the cinematic family (provisional names)
-    void ExitCinematic();                   // 0x1b1e47 (Update, once the end-of-cinematic fade is done)
-    void StartCinematic();                  // 0x1b1eee (EESMEffect 0x1bd86c)
     void Update();                          // 0x1b20e6 (EEPhysics 0x153265: the per-tick clock and trigger update)
     long ExportText(FSFileSpec& inFile);    // 0x1b23dc (EESEIAExport 0x16ffd0; `ret 4`)
-    void MoveCameraToStart();               // 0x1b5173 (Update, while mIsMovingCamera; `ret`)
     // the trigger text import (EESEIAImport 0x170439; provisional name; `ret 0xc`; ee_scenario text.rs with
     // ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers 0x1b463b, 0x1b46bf, 0x1b4796)
     long ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate);
     // 0x1b33d7 / 0x1b396b: fill outNames with the scenario's area / object names (EESEEvents' combo helper;
     // provisional names)
     // inline (COMDAT 0x17cadf, emitted by EESETriggerScreen.cpp): condition inIndex, 0 past the end
-    EESMCondition* GetCondition(unsigned long inIndex)
-    {
-        EESMCondition* theCondition = NULL;
-        if (inIndex < this->mConditions.size())
-            theCondition = this->mConditions[inIndex];
-        return theCondition;
-    }
+    EESMCondition* GetCondition(unsigned long inIndex) { return EESMAt(this->mConditions, inIndex); }
     // inline (COMDAT 0x182d82, emitted by EESETSEffect.cpp; GetCondition's shape): effect inIndex, 0 past the end
-    EESMEffect* GetEffect(unsigned long inIndex)
-    {
-        EESMEffect* theEffect = NULL;
-        if (inIndex < this->mEffects.size())
-            theEffect = this->mEffects[inIndex];
-        return theEffect;
-    }
+    EESMEffect* GetEffect(unsigned long inIndex) { return EESMAt(this->mEffects, inIndex); }
     // the condition screen's slots call these with its +0x04 + 1 (provisional names by address)
     // the effect screen's slots (provisional names by address)
 
@@ -89,8 +74,6 @@ public:
     bool DeleteEntry(unsigned long inList, unsigned long inIndex);
     void* DuplicateEntry(unsigned long inList, unsigned long inIndex);
     void GetNames(unsigned long inWhich, std::vector<UWideString>& outNames);
-    void ObjectChanged(EESMObject* inObject, bool inParent, long inValue);   // EESMObject::SetName, SetParent
-    void AddMessage(const EESMDialogMessage& inMessage);
     void AddV134Effect(const EESMEffect& inEffect);   // 0x1b000d (not while mB234)
     void AddTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic);  // 0x1b005b (EESMTrigger 0x1c9c84)
     // 0x1b260a: a scenario player choice (0 nature, 1/3 humans, 2/4 computers, 5/6 random, 7.. player n - 6) as one
@@ -100,38 +83,17 @@ public:
     EESMObject* FindObjectByID(long inID);  // 0x1b32a8 (mL64)
     long GetObjectIndex(EESMObject* inObject);  // 0x1b32e4 (-1 if none; EESMObject::SetName)
     // the editor's name lists ("[id]" prefixes while mShowDebugIDs; provisional names)
-    void SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag);  // 0x1b45cb (EESMEffect 0x1bd860)
     unsigned long GetNumTimedEffects() { return (unsigned long)ee_scenario_timed_count(this->mTimedEffects); }
     EeScenarioTimedEntry GetTimedEntry(unsigned long inIndex) { return ee_scenario_timed_at(this->mTimedEffects, inIndex); }
     void ApplyPendingEffects();             // 0x1b286d (EEWorld 0x13a0e6; runs every mPendingEffects effect, clears mB234)
     // inline (COMDATs 0x17da08 / 0x188edd / 0x18ef8a, emitted by the editor's area / object / trigger screens;
     // GetCondition's shape; provisional names)
-    EESMArea* GetArea(unsigned long inIndex)
-    {
-        EESMArea* theArea = NULL;
-        if (inIndex < this->mAreas.size())
-            theArea = this->mAreas[inIndex];
-        return theArea;
-    }
-    EESMObject* GetScenarioObject(unsigned long inIndex)
-    {
-        EESMObject* theObject = NULL;
-        if (inIndex < this->mObjects.size())
-            theObject = this->mObjects[inIndex];
-        return theObject;
-    }
-    EESMTrigger* GetTrigger(unsigned long inIndex)
-    {
-        EESMTrigger* theTrigger = NULL;
-        if (inIndex < this->mTriggers.size())
-            theTrigger = this->mTriggers[inIndex];
-        return theTrigger;
-    }
+    EESMArea* GetArea(unsigned long inIndex) { return EESMAt(this->mAreas, inIndex); }
+    EESMObject* GetScenarioObject(unsigned long inIndex) { return EESMAt(this->mObjects, inIndex); }
+    EESMTrigger* GetTrigger(unsigned long inIndex) { return EESMAt(this->mTriggers, inIndex); }
     // inline (out-of-line COMDAT 0x1c5152, emitted by EESMEffect.cpp: Execute's inline budget refuses it)
     // (provisional name)
-    unsigned long GetNumMessages() { return this->mMessages.size(); }
     unsigned long GetNumEffects() { return this->mEffects.size(); }
-    unsigned long GetNumTriggers() { return this->mTriggers.size(); }
     // Layout: the ctor 0x1afa90 (member ctors in order) and the Save/Load field census of
     // Vector element types are unproven unless stated (4-byte elements: `_Buy` ICF-folded with vector<long>'s);
     // member names by offset.

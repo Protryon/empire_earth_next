@@ -1234,6 +1234,13 @@ struct EeGfxEffectQuad {
   float opacities[4];
 };
 
+/// One screen line of a batch (`screen_lines`): its colour and ends.
+struct EeGfxScreenLine {
+  EeGfxColor color;
+  EeGe2DPoint start;
+  EeGe2DPoint end;
+};
+
 /// The tick facts the effects read besides their graphic effect's (`gPhysics`, `gWorld`, `gFreeCamera`).
 struct EeGfxEffectTick {
   float tick_seconds;
@@ -1293,13 +1300,6 @@ struct EeGfxTextureLoad {
   uint32_t addressing;
   /// the texture is referenced once loaded (`Reference`)
   bool reference;
-};
-
-/// One screen line of a batch (`screen_lines`): its colour and ends.
-struct EeGfxScreenLine {
-  EeGfxColor color;
-  EeGe2DPoint start;
-  EeGe2DPoint end;
 };
 
 /// The C++'s rasterizer calls, each on the current screen.

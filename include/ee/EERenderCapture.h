@@ -22,10 +22,7 @@ struct EERenderFrameInfo;
 // the capture)
 void EERenderListsView(EeGfxRfilFrame& outFrame, std::vector<EeGfxRfilPair> (&ioPairs)[6]);
 
-// FillRenderLists, once the lists are filled (the world's lock still held): inSwayClock is the objects' sway clock.
-// The renderer calls it through gEERenderCaptureFill (EEGlobals.cpp), which EERenderCapture.cpp sets at static
-// initialization: the renderer names no symbol of the capture's record
-void EERenderCaptureFill(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount);
-extern void (*gEERenderCaptureFill)(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount);
+// FillRenderLists, once the lists are filled (the world's lock still held), writes the record: gamecpp ro_views.rs'
+// rc_fill. (gEERenderCaptureFill, EEGlobals.cpp, is no longer set or read.)
 
 #endif

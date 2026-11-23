@@ -101,12 +101,7 @@ struct UIBackgroundTableHost {
 
 // Creates an empty background table entry (IDs -1, bitmap type, hidden, full opacity, draw priority 1)
 UIBackgroundTable::UIBackgroundTable() { ee_ui_bgtable_init(this); }
-// Loads every background table entry from the file (NULL for nameless records); returns the last read result
+
 long UIBackgroundTable::Create(FSFileSpec& inFile) { return ee_ui_bgtable_create(&inFile, UIBackgroundTableHost::Op); }
-// Deletes every background table entry and empties the table
+void UIBackgroundTable::CreateBackgrounds(UIManager* inManager) { ee_ui_bgtable_create_backgrounds(inManager, UIBackgroundTableHost::Op); }
 void UIBackgroundTable::DeleteAll() { ee_ui_bgtable_delete_all(UIBackgroundTableHost::Op); }
-// Creates every background in the UI background database on its form, by type (UIManager::CreateBackgrounds)
-void UIBackgroundTable::CreateBackgrounds(UIManager* inManager)
-{
-    ee_ui_bgtable_create_backgrounds(inManager, UIBackgroundTableHost::Op);
-}

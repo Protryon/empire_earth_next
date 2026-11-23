@@ -21,10 +21,12 @@ public:
         this->mState = 0;
     }
     virtual ~EEUIBuildWall() {}             // +0x00 (??_G 0x19cbff in the scenario editor form's unit)
+    // Leaves the placement mode (ICF-folded into EEUIBuildGate::Cancel 0x2561b6)
     virtual void Cancel();                  // +0x04 (ICF-folded into EEUIBuildGate's 0x2561b6)
     virtual void Initialize(long inPlayer); // +0x08 0x256456
     virtual void Terminate();               // +0x0c 0x2564a2
     virtual void Update(const GE2DPoint& inLocation);   // +0x10 0x2564df (the mouse location)
+    // Asks the main game form's build action to build a wall from the start to the end point
     virtual void Build();                   // +0x14 0x25643d (mStart..mEnd)
 
     unsigned long mState;                   // +0x04 0: no start yet, 1: dragging (unsigned: `cmp 1; ja`)

@@ -11,6 +11,7 @@
 
 #include "lle/UIControl.h"
 #include "lle/GEText.h"
+#include "rust/ui/statusobj.h"
 
 struct EeUiStatusBar;
 
@@ -22,22 +23,22 @@ public:
     UIStatusBar(const UIStatusBar&) = delete;
     UIStatusBar& operator=(const UIStatusBar&) = delete;
     virtual ~UIStatusBar();
-    virtual void ChangeFont(GEFont* inFont);
-    virtual long CopyData();
-    virtual long DrawPolygons();
-    virtual long DrawTextA();
-    long GetCurrentRangeValue() const;
-    GEText* GetGEText();
-    long GetMaxRange() const;
-    unsigned long GetRange() const;
+    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiStatusBarCall::ChangeFont, (intptr_t)inFont); }
+    virtual long CopyData() { return (long)this->Call(EeUiStatusBarCall::CopyData); }
+    virtual long DrawPolygons() { return (long)this->Call(EeUiStatusBarCall::DrawPolygons); }
+    virtual long DrawTextA() { return (long)this->Call(EeUiStatusBarCall::DrawText); }
+    long GetCurrentRangeValue() const { return (long)this->Call(EeUiStatusBarCall::CurrentRangeValue); }
+    GEText* GetGEText() { return reinterpret_cast<GEText*>(this->Call(EeUiStatusBarCall::Text)); }
+    long GetMaxRange() const { return (long)this->Call(EeUiStatusBarCall::MaxRange); }
+    unsigned long GetRange() const { return (unsigned long)this->Call(EeUiStatusBarCall::Range); }
     virtual bool GetTabable() const { return false; }
-    void SetCurrentRangeValue(long inValue);
-    void SetFocusedTextColor(const GEColor& inColor);
-    virtual void SetLocation(const GE2DPoint& inLocation);
-    void SetRange(unsigned long inMin, unsigned long inMax);
-    void SetStatusBarOpacity(float inOpacity);
-    void SetStatusBarColor(const GEColor& inColor);
-    void SetText(const UWideString& inText, GEFont* inFont);
+    void SetCurrentRangeValue(long inValue) { this->Call(EeUiStatusBarCall::SetCurrentRangeValue, inValue); }
+    void SetFocusedTextColor(const GEColor& inColor) { this->CallF(EeUiStatusBarCall::SetFocusedTextColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->CallF(EeUiStatusBarCall::SetLocation, inLocation.GetX(), inLocation.GetY()); }
+    void SetRange(unsigned long inMin, unsigned long inMax) { this->Call(EeUiStatusBarCall::SetRange, inMin, inMax); }
+    void SetStatusBarOpacity(float inOpacity) { this->CallF(EeUiStatusBarCall::SetStatusBarOpacity, inOpacity); }
+    void SetStatusBarColor(const GEColor& inColor) { this->CallF(EeUiStatusBarCall::SetStatusBarColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
+    void SetText(const UWideString& inText, GEFont* inFont) { this->Call(EeUiStatusBarCall::SetText, (intptr_t)&inText, (intptr_t)inFont); }
     virtual long UpdateKeyboard() { return kErrorOK; }
 protected:
     virtual long MouseLButtonDown() { return kErrorOK; }
@@ -50,6 +51,10 @@ protected:
 
     GERhombus mStatusRhombus;               // the bar
     GERhombus mCopiedStatusRhombus;         // the bar as of the last CopyData (inset by the border)
+private:
+    intptr_t Call(EeUiStatusBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_status_bar_call(this->mRust, c, a, b, f); }
+    intptr_t CallF(EeUiStatusBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_status_bar_call(this->mRust, c, 0, 0, f); }
+protected:
     EeUiStatusBar* mRust;                   // the state (statusobj.rs)
 };
 

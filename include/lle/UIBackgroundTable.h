@@ -10,6 +10,7 @@
 #define LLE_UIBACKGROUNDTABLE_H
 
 #include "rust/ui/bgtableobj.h"
+#include "rust/ui/ids.h"
 #include "lle/UILayoutUtility.h"
 
 class FSFileSpec;
@@ -20,8 +21,11 @@ class LLE_API UIBackgroundTable : private EeUiBgTableFields {
 public:
     UIBackgroundTable();
     virtual ~UIBackgroundTable() {}
+    // Loads every background table entry from the file (NULL for nameless records); returns the last read result
     static long Create(FSFileSpec& inFile);
+    // Creates every background in the UI background database on its form, by type (UIManager::CreateBackgrounds)
     static void CreateBackgrounds(UIManager* inManager);
+    // Deletes every background table entry and empties the table
     static void DeleteAll();
     bool GetAttribute1() const { return this->mAttribute1; }
     bool GetAttribute2() const { return this->mAttribute2; }
@@ -46,15 +50,5 @@ private:
     UString mTextureFile;
 };
 
-// UI database background type (UIBackgroundTable::mBackgroundType): CreateBackgrounds creates the class named here; others go to CreateUserDefinedBackground
-enum UIBackgroundType {
-    kBackgroundBitmap = 0,        // CreateBackgrounds case: new UIBitmapBackground
-    kBackgroundTiled = 1,         // CreateBackgrounds case: new UITiledBackground
-    kBackgroundFull = 2,          // CreateBackgrounds case: new UIBFull
-    kBackgroundLRTiled = 3,       // CreateBackgrounds case: new UITiledBackground (kTilingLeftRight)
-    kBackgroundTBTiled = 4,       // CreateBackgrounds case: new UITiledBackground (kTilingTopBottom)
-    kBackgroundStretchedTiled = 5,  // CreateBackgrounds case: new UITiledBackground (kTilingStretched)
-    kBackgroundGeneric = 101,     // CreateBackgrounds case: EEUIManager::CreateUserDefinedBackground: new EEUIBGenericBackground
-};
-
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 #endif

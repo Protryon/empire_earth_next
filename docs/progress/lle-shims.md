@@ -1,7 +1,7 @@
-# LLE: bodies over one-statement shims (rounds 8-10)
+# LLE: bodies over one-statement shims (rounds 8-11)
 
-The lane's state after LLE round 10 (branch `rust-lle10`, 2026-11-21). The rounds' stories are PORT_LEARNINGS.md
-"LLE round 8", "LLE round 9" and "LLE round 10". Earlier state: [lle-rest.md](lle-rest.md) (rounds 1-2),
+The lane's state after LLE round 11 (branch `rust-lle11`, 2026-11-22). The rounds' stories are PORT_LEARNINGS.md
+"LLE round 8" to "LLE round 11". Earlier state: [lle-rest.md](lle-rest.md) (rounds 1-2),
 [gfx-lle-cluster.md](gfx-lle-cluster.md), [lle-network-engine-whole-classes.md](lle-network-engine-whole-classes.md),
 [game-leaves.md](game-leaves.md).
 
@@ -19,6 +19,30 @@ function of one statement per shim (a member's slot, a virtual call, a `new`/`de
 Plain members a body reads and writes become a `#[repr(C)]` record the C++ class derives from (as the units' and
 the players' records before): `EeRtsPhysicsFields`, `EeRtsGraphicsFields`, `EeRtsMouseFields`. The Thread System,
 Time Manager, Input System and sound samples are Rust objects already: the bodies call them directly.
+
+## Round 11 (branch `rust-lle11`)
+
+| Commit | What | Logic (whole tree) | Net C++ (src, include but include/rust) |
+|---|---|---|---|
+| bc5f685a7 | UString/UWideString: results the Rust call fills (`UString(kUnset, fill, args...)`), `Do` for the self-returning changes, the tokens pushed from Rust (`ee_ustring_tokens`), one `sprintf` formatter (`UFormat`) | -54 | -10 |
+| 5a07b4202 | the value types' codecs over the C++ FSFile from Rust (ee_render geval values.rs over ee_base `CppFile`; io.rs `cpp_file_io`): points, vectors, orientation, rectangle, colour, transformation, lines, planes, boxes, the terrain mesh; GERust.h's `GERustIO` field stream deleted; the FSFile calls table gains u8/u16 and `GetIsOpen` | -76 | -87 |
+| ce0e08adf | U2DPoint's Load/Save in Rust (math u2d.rs `ee_u2d_point_io`) | -18 | -16 |
+| d77b3e8c5 | RTSMap's `IsAreaOnMap` and raise bounds (map_raise.rs), its hosts in one expression; RTSUnit's registry entry points, handle id report and descriptions (ee_game rts units.rs) | -70 | -63 |
+| ea9ad590f | the interpolations clear their vector from Rust; a float's bits through `__builtin_bit_cast`; the water ripple's values | -26 | -16 |
+| b3860bb57 | GEPhysicalModel's model reference in Rust (`ee_ge_pm_set_model`); GETexture's copy rectangles; GEPolygon.h, GEPolygonGroup.h, GEVertex.h deleted (unused) | -83 | -145 |
+| 30773a308 | U2DRectangle, U2DPoint, GEColor, GETextureCoordinate, RTSRegionTable without member-by-member copies (initializer lists, one-expression component-wise members) | -59 | -54 |
+| 491c1dd82 | **the value types derive from their Rust records**: GE2DPoint, GE3DPoint, GEVector, GE3DLine, GE3DPlane, GETransformation, GEOrientation, GEQuaternion, GEBoundingBox, GERectangle (`cbindgen:field-names` on ee_base math types.rs); member lists, user copies, `GERustLayout` and GERustMath.h's pins gone; `ee_ge_bbox_define` | -155 (with the next) | -236 (with the next) |
+| ca6eeffbd | the rename outside the LLE (mechanical, clang's positions): EECameraControl.cpp, EERenderObject.cpp, EEEffectHost.cpp, EEEffectMesh.h, 25 lines `x/y/z` -> `mX/mY/mZ` | | 0 |
+| | **the round** (2cdafaff9 -> ca6eeffbd: 60,680 -> 60,139) | **-541** | **-627** |
+
+In scope (with include/gx, include/dx7): 3,057 -> 2,516. Shims added: the FSFile calls table's five entries,
+`UString`/`UWideString::PushToken`, the interpolations' `Push` clear branch, `EEMapRaiseOps::Ptr`; deleted: none.
+No class moved wholly; the ten value types are now their Rust records with inline C++ members. The merge of
+origin/rust 5143a9696 needed no further rename (no new reader of the records' fields).
+
+Speed (EE-SIM, the oracle's seeds 2-7 at --jobs 2, whole-run wall time, the machine shared): the value types before
+the derive (b3860bb57) 339 s and 335 s, after (ca6eeffbd) 337 s and 327 s: no slowdown. The hot inline math stays
+inline; the component-wise members are one expression with the same float operations in the same order.
 
 ## Round 10 (branch `rust-lle10`)
 
@@ -71,47 +95,52 @@ host's split cases); the moved one-liners are moves, not new shims. Deleted: the
 | b03aad460 | RTSMap's own bodies (ee_game rts map.rs) | -66 | -61 |
 | | **the round** (old measure) | **-1,722** | **-2,188** |
 
-## Gates (round 10, on the tree merged with origin/rust 8830a1187)
+## Gates (round 11)
 
-- both builds 0/0 (EE-AOC 414 inputs, EE-SIM 415) and the test profile 0/0 (414); the headers current (299); the
-  Rust gate PASS (5,607 tests, 0 failed; test, clippy, rustfmt, header). Earlier runs under load failed on
-  plat_sys::thread's 10 s waits twice and once with an access violation in the ee_base test binary; ee_base passed
-  alone, serially and ten times in parallel, and the final run passed whole;
-- the NE drivers (`xbuild.py nettest ne_client_test ne_server_test`): 1500 sequences each, 0 differing; `--print`
-  writes golden_client.txt and golden_server.txt byte for byte;
+On the tree merged with origin/rust 5143a9696:
+
+- both builds 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0 (412); the headers current (308); the
+  Rust gate PASS (5,734 tests, 0 failed; test, clippy, rustfmt, header). Earlier runs: the first failed to compile tmobj_tests.rs
+  (fixed, aca16a8e2), the second on rustfmt (fixed, d65fe6f6a), the third on plat_sys::thread
+  `set_from_another_thread_wakes_a_waiter` (the known 10 s flake: it passed alone, and the next whole run passed);
+- the NE drivers (`xbuild.py nettest`): ne_msgmgr_test 20000 sequences, ne_queues_test 1500, ne_client_test
+  1500, ne_tune_test 20000, ne_server_test 1500: each 0 differing. Two drivers no longer compiled since earlier rounds and are fixed
+  here: ne_queues_test defined URandom's draws (inline over Rust since round 9), ne_tune_test the slots and server
+  states (Rust enums since round 10);
 - the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
 - the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
-  6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests); run dirs deleted;
-- the plain saveload PASS (seeds 2-7, every save identical); the matrix `--settings all --seeds 2-3 --at 1000,1900
-  --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` (calamity 2/1900 missing and next 915/276 as
-  expected); scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062); eedata check PASS,
-  cppgate PASS;
+  6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests); run dirs deleted;
+- the plain saveload PASS (seeds 2-7 at 600, 1350, 2100 s: 18 identical); the matrix `--settings all --seeds 2-3 --at
+  1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` (calamity 3/4: 2/1900 missing; next 2/4:
+  seed 2 diverges 915 and 276 ticks after its loads, as expected); scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062); eedata check
+  PASS, cppgate PASS;
 - through slot.py, the test profile: the tour `--input-check --view-check --play-seconds 120 --seed 7` (F3 ok, VIEW
-  CHECK PASS, RENDER CHECK ok: view 88.8% lit, 3,881 colours, mini map ok; RESULT PASS, no GX errors);
+  CHECK PASS, RENDER CHECK ok: view 88.8% lit, 3,899 colours, mini map ok; RESULT PASS, no GX errors);
   `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move;
   RESULT PASS);
 - `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS at the first run (tour; ai-game time-cap
-  PT 12346, units [4, 38, 38], alive [2, 3], classic_lua x 2; lan-game PT 2837/2836).
-- Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py: it would need the FSFile calls table's four
-  new entries if it links FSFile's long reads), `gates.sh --legacy`.
+  PT 12337, units [4, 38, 38], alive [2, 3], classic_lua x 2; lan-game PT 2819/2820).
+- Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py: it links FSFile through the calls table,
+  which gained five entries), `gates.sh --legacy`.
 
-## What is left, by directory (logic lines, round 10's end; in scope 2,759)
+## What is left, by directory (logic lines, round 11's end; in scope with gx/dx7 2,516)
 
-- src/Low-Level Engine/Graphics Engine: GEModel.cpp 113 (GEPhysicalModel's reference-counting constructor,
-  assignment and SetModel; the PM table and its retry line; the model manager's lock, dump line and create
-  arguments; ModelNewSub; the terrain mesh's layout pins and Load/Save field streams), GETexture.cpp 86 (GEStoreFrame:
-  the texobj_tex tests fake its op whole; the copy cases' rectangles; the surface description fill; the pack log; the
-  lock), DX7Rasterizer.cpp 57 (the surface metrics and probe-window cases, the layout pins), GEBitmap.cpp 54.
-- src/Low-Level Engine/Network Engine: NESynchronousServer.cpp 47: the message manager's compound cases (NewResponse,
-  XferStatus, FileClone/Length/Read) are recorded at the op level by tests_server.rs `mm` (golden_server.txt):
-  changing their arguments changes the golden's lines; ReportLaggers builds the C++ vector.
-- src/RTS Engine: RTSMap.cpp 82 (EEMap's raise host, area outlines, vertex-colour corners, Load/Save contexts),
-  RTSUnit.cpp 42 (the id registry, Describe, the save contexts).
-- include/lle: class declarations the C++ users hold (GERasterizer.h 82, GESurface.h 48 and FSFile.h 44 pure virtual
-  interfaces, UString.h 58 / UWideString.h 50 members returning `*this`, NESynchronousServer.h 48), the value types'
-  members and inline math (GERectangle.h 77, U2DRectangle.h 56, U2DPoint.h 40, GE3DPoint, GEVector, ...: their Rust
-  mirrors' C field names are snake_case and game-core code reads them, so deriving from the records is a cross-lane
-  rename; the UM rounding inlines are the simulation's hottest code), forward declarations.
+- src/Low-Level Engine/Graphics Engine: GEModel.cpp 89 (the PM table and its retry line; the model manager's lock,
+  dump line and create arguments; ModelNewSub; the terrain mesh's layout pins), GETexture.cpp 79 (GEStoreFrame: the
+  texobj_tex tests fake its op whole, so moving it means splitting the op into the surface getters and updating the
+  fake; the surface description fill; the pack log; the lock), DX7Rasterizer.cpp 57 (the surface metrics and probe
+  window cases, the layout pins), GEBitmap.cpp 50 (the hosts' metric and text cases: PlatFont* is Rust, so these can
+  call it directly once the smallobj/fbobj fakes answer the new calls).
+- include/lle: interfaces the C++ users hold: GERasterizer.h 82 (one implementation, DX7Rasterizer: the virtuals
+  could become inline forwarders to ee_dx7r_* with DX7Rasterizer.h's overrides deleted), GESurface.h 48 (two
+  implementations: DX7Surface and the store gate's), FSFile.h 44, FSArchive.h 42, FSFileSpec.h 32; the NE server
+  and client 48/35; LowLevelEngineCore.h 41 (the UM rounding inlines, hot: kept); GETransformation's `Apply` rows (they
+  read the output, hot: kept).
+- src/Low-Level Engine/Network Engine: NESynchronousServer.cpp 47 (the message manager's compound cases are recorded
+  at the op level by tests_server.rs `mm`; XferFileToClient's out argument is read by tests/net's driver).
+- src/RTS Engine: RTSMap.cpp 40 (SettleTile's unit loop, the Load/Save contexts), RTSPlayer.cpp 30 (the save
+  context, the shade colour), RTSUnit.cpp (the save contexts); include/ee: RTSGraphics.h 44, RTSUnit.h 40, RTSWorld.h 30
+  (declarations other lanes read).
 
 ## The measure (round 8)
 

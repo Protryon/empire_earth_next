@@ -40,9 +40,21 @@ impl Record {
     pub(crate) fn f32(&mut self, v: f32) {
         self.0.extend_from_slice(&v.to_le_bytes());
     }
+    /// The payload so far.
+    #[cfg(test)]
+    pub(crate) fn payload(&self) -> &[u8] {
+        &self.0
+    }
+    pub(crate) fn bytes(&mut self, b: &[u8]) {
+        self.0.extend_from_slice(b);
+    }
     pub(crate) fn commit(self, tag: &[u8; 4]) {
+        self.commit_tag(u32::from_le_bytes(*tag));
+    }
+    /// The record under a tag's number (EECaptureTag's value).
+    pub(crate) fn commit_tag(self, tag: u32) {
         // SAFETY: our payload
-        unsafe { ee_sim::app::capture::ee_app_capture_commit(u32::from_le_bytes(*tag), self.0.as_ptr(), self.0.len()) };
+        unsafe { ee_sim::app::capture::ee_app_capture_commit(tag, self.0.as_ptr(), self.0.len()) };
     }
 }
 

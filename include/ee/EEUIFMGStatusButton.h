@@ -17,29 +17,56 @@ class EEUIFMGStatusButton : public UIButton, public EeScreensStatusButtonFields 
 public:
     // 0x26de97 (ret 0xc; the user-defined control factory)
     EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable);
-    virtual ~EEUIFMGStatusButton();
+    // Destroys the command button and its parts
+    virtual ~EEUIFMGStatusButton() { ee_screens_sbt_destroy((uintptr_t)this); }
+    // Presses a command or tech button: runs the command, starts placing a building, wall or gate, queues the
+    // research (Shift: five), or starts a calamity when a selected unit can pay it; refusals beep and explain in the chat
+    // (ee_screens status_button.rs)
     virtual void ButtonUp();                // +0x8c 0x26e274
-    void ReleaseButton();                   // 0x26e71d (the main group hides every button, then calls it)
+    // Releases the button's button object
+    void ReleaseButton() { ee_screens_sbt_release((uintptr_t)this); }                   // 0x26e71d (the main group hides every button, then calls it)
+    // Snapshots the button for drawing: whether it is available, its icon and the queued count; the availability of the button: a command button by its own test (mB148), else its technology through the
+    // player's WriteDetailsHook, or for a calamity with a cost whether a selected unit can pay it (each branch stores
+    // mAvailable; VC6 merges the stores)
     virtual long CopyData();                // +0x14 0x26e734
-    virtual long DrawPolygons();            // +0x18 0x26eaf4
-    virtual long DrawTextA();               // +0x1c 0x26ebb5
+    // Draws the button's icon, dithered over the last drawn rectangle when unavailable (status_button_calls.rs)
+    virtual long DrawPolygons() { return (long)ee_screens_sbt_draw_polygons((uintptr_t)this); }            // +0x18 0x26eaf4
+    // Draws the queued count over the button
+    virtual long DrawTextA() { return (long)ee_screens_sbt_draw_text((uintptr_t)this); }               // +0x1c 0x26ebb5
     virtual bool GetHelpString(UWideString& outString) const;   // +0x20 0x26ebdf
-    void HotKeyDown();                      // 0x26f16c (the hot-key event, pressed)
-    void HotKeyUp();                        // 0x26f174 (the hot-key event, released)
-    virtual long MouseRButtonDown();        // +0x44 0x26f186
+    // Presses the button from its hot key
+    void HotKeyDown() { this->ButtonDown(); }                      // 0x26f16c (the hot-key event, pressed)
+    // Releases the button from its hot key
+    void HotKeyUp() { ee_screens_sbt_hot_key_up((uintptr_t)this); }                        // 0x26f174 (the hot-key event, released)
+    // Presses a tech button on a right press (ee_screens hud_more.rs)
+    virtual long MouseRButtonDown() { return (long)ee_screens_sbm_right_down((uintptr_t)this); }   // +0x44 0x26f186
     virtual long MouseRButtonUp();          // +0x48 0x26f1a4
     // for the presses' host (ee_screens status_button.rs): UIButton::ButtonUp, and the mouse in the rectangle
     bool IsMouseInside() const { return this->GetRectangle().Contains(this->GetMouseLocation()); }
-    void SetCommandButton(unsigned long inButton);  // 0x26fa82 (an EEButtonObject index)
+    // Makes the button a command button showing a button object
+    void SetCommandButton(unsigned long inButton) { ee_screens_sbt_set_command((uintptr_t)this, (uint32_t)inButton); }  // 0x26fa82 (an EEButtonObject index)
     // 0x26faba (ret 0xc): a technology button (the unit class's technology, its unit type, the unit's id)
-    void SetTechButton(long inTechnology, unsigned long inUnitType, unsigned long inUnitID);
-    virtual void SetLocation(const GE2DPoint& inLocation);   // +0x6c 0x26fb19
-    virtual void TabbedFrom();              // +0x78 0x26fb79
-    virtual void TabbedTo();                // +0x74 0x26fb8d
+    // Makes the button a tech button for a unit's technology, showing the tech's button
+    void SetTechButton(long inTechnology, unsigned long inUnitType, unsigned long inUnitID)
+    {
+        ee_screens_sbt_set_tech((uintptr_t)this, inTechnology, (uint32_t)inUnitType, (uint32_t)inUnitID);
+    }
+    // Moves the button, its icon and its queue count text
+    virtual void SetLocation(const GE2DPoint& inLocation)
+    {
+        ee_screens_sbt_set_location((uintptr_t)this, inLocation.GetX(), inLocation.GetY());
+    }   // +0x6c 0x26fb19
+    // Releases a pressed button when tabbing away (ee_screens hud_more.rs)
+    virtual void TabbedFrom() { ee_screens_sbm_tabbed_from((uintptr_t)this); }   // +0x78 0x26fb79
+    // the base's press and tab for the Rust bodies' shims
+    void BaseButtonDown() { UIButton::ButtonDown(); }
+    void BaseTabbedFrom() { UIButton::TabbedFrom(); }
+    void BaseCaptureMouse() { this->CaptureMouse(); }
+    // Handles tabbing to the button
+    virtual void TabbedTo() { UIButton::TabbedTo(); }                // +0x74 0x26fb8d
 
     // the plain members (+0x118 mLastErrorTime, +0x12c mTechnology .. +0x14b mDrawIcon) are the Rust record
     // EeScreensStatusButtonFields' (ee_screens main_form_fields.rs), under their names
-    UWideString mU104;                      // +0x104 (constructed and destroyed only)
     EEButtonObject* mButtonObject;          // +0x11c
     GEBitmap* mDither;                      // +0x120 textures\Dither over a disabled button
     GEBitmap* mIcon;                        // +0x124

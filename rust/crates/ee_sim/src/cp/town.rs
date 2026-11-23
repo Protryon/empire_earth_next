@@ -163,9 +163,13 @@ impl<'h, H: TownHost + ?Sized> Town<'h, H> {
         self.h.call(op, a, 0, &mut io);
         rows.iter().map(|r| (r[0] as c_long, r[1] as c_long)).collect()
     }
+    /// The points as (x, y) pairs in `input`, and as `U2DPoint<long>`s (two `c_long`s each) at `v0`, `v1` of them.
     fn with_points(&mut self, op: i32, points: &[Point]) {
         let flat: Vec<i64> = points.iter().flat_map(|p| [i64::from(p.0), i64::from(p.1)]).collect();
+        let longs: Vec<[c_long; 2]> = points.iter().map(|p| [p.0, p.1]).collect();
         let mut io = TownIo { input: flat.as_ptr(), input_len: points.len(), ..Default::default() };
+        io.v[0] = longs.as_ptr() as usize as i64;
+        io.v[1] = longs.len() as i64;
         self.h.call(op, 0, 0, &mut io);
     }
     fn unit(&mut self, u: u64) -> EeTownUnit {

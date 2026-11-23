@@ -41,19 +41,6 @@ EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, uns
                              inRectangle.GetBottom(), inShowLevel);
 }
 
-// Destroys the portrait, releasing its unit and button
-EEUICPortrait::~EEUICPortrait()
-{
-    ee_screens_portrait_free(this);
-}
-
-// The bars' rectangles, the drawing, the tooltip, the click and the update from the unit (the original's
-// GetBarRectangles, DrawPolygons, GetHelpString, MouseLButtonDown and Update): ee_screens portrait.rs over the host
-// below
-long EEUICPortrait::DrawPolygons() { return ee_screens_portrait_draw(this); }
-long EEUICPortrait::MouseLButtonDown() { return ee_screens_portrait_mouse_down(this); }
-void EEUICPortrait::Update() { ee_screens_portrait_update(this); }
-
 // the tooltip being built (the UI thread's)
 static UWideString* sPortraitHelp;
 
@@ -64,24 +51,6 @@ bool EEUICPortrait::GetHelpString(UWideString& outString) const
     bool theFound = ee_screens_portrait_help(const_cast<EEUICPortrait*>(this));
     outString = theResult;
     return theFound;
-}
-
-// Draws the improvement level when it is above 0
-long EEUICPortrait::DrawTextA()
-{
-    return ee_screens_portrait_draw_text(this);
-}
-
-// Updates the help text while the mouse moves over a portrait showing both bars
-long EEUICPortrait::MouseMove(const GE2DPoint& inLocation)
-{
-    return ee_screens_portrait_mouse_move(this);
-}
-
-// Shows a unit's portrait (button face), taking references, and updates the bars (ee_screens portrait.rs)
-void EEUICPortrait::SetUnit(EEUnit* inUnit)
-{
-    ee_screens_portrait_set_unit(this, inUnit);
 }
 
 // The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*: units and nodes as handles), its constructor's,

@@ -261,3 +261,16 @@ fn a_pick_off_the_map_writes_the_terrain_hit_but_finds_no_tile() {
     let flat = line([0.5, 0.5, 1.0], [1.0, 0.0, 0.0]);
     assert_eq!(tile_on_line(&Picks { terrain: None }, &flat, true), (0, None));
 }
+
+#[test]
+fn an_area_is_on_the_map_when_its_diagonal_reaches_a_tile_on_every_side() {
+    let g = Grid::new(10);
+    // radius 2: the diagonal sqrt(8) = 2.83 + 0.5 floors to 3
+    assert!(area_on_map(&g, 3, 3, 2));
+    assert!(!area_on_map(&g, 2, 5, 2));
+    assert!(!area_on_map(&g, 5, 7, 2));
+    assert!(area_on_map(&g, 6, 6, 2));
+    // radius 0: the tile itself
+    assert!(area_on_map(&g, 0, 0, 0));
+    assert!(!area_on_map(&g, 10, 0, 0));
+}

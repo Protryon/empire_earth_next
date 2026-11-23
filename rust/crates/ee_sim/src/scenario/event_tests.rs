@@ -285,3 +285,33 @@ fn the_load_reads_the_effects_then_every_event() {
     assert_eq!(h.has(EE_SCENARIO_EV_EVENT_NO_EFFECTS).len(), 2);
     assert_eq!(h.has(EE_SCENARIO_EV_FILE_LENGTH), vec![[0xf, 0, 0, 0], [0xe, 216, 0, 0]]);
 }
+
+#[test]
+fn compose_splits_length_and_name() {
+    let mut log: Vec<(u32, [i64; 4])> = Vec::new();
+    let mut call = |op: u32, a: [i64; 4]| {
+        log.push((op, a));
+        if op == EE_SCENARIO_EV_FILE_LENGTH_INTO {
+            // the C++ writes the length through the pointer
+            // SAFETY: the adapter hands a live value
+            unsafe { *(a[1] as usize as *mut std::os::raw::c_ulong) = 216 };
+        }
+        7
+    };
+    assert_eq!(ev_compose(EE_SCENARIO_EV_FILE_LENGTH, [0xe, 108, 0, 0], &mut call), 216);
+    assert_eq!(ev_compose(EE_SCENARIO_EV_SET_NAME, [0x50, 0x3f80_0000, 0, 0], &mut call), 7);
+    assert_eq!(ev_compose(EE_SCENARIO_EV_FILE_OPEN, [0xe, 0, 0, 0], &mut call), 7);
+    let ops: Vec<u32> = log.iter().map(|e| e.0).collect();
+    assert_eq!(
+        ops,
+        vec![
+            EE_SCENARIO_EV_FILE_LENGTH_INTO,
+            EE_SCENARIO_EV_NAME_TEXT,
+            EE_SCENARIO_EV_SET_NAME_TEXT,
+            EE_SCENARIO_EV_FILE_OPEN
+        ]
+    );
+    assert_eq!(log[0].1[0], 0xe);
+    assert_eq!(log[1].1, [0x3f80_0000, 0, 0, 0]);
+    assert_eq!(log[2].1, [0x50, 0, 0, 0]);
+}

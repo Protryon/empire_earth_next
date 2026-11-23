@@ -74,15 +74,7 @@ static long GEStoreFrame(GESurface* inSurface, const EeOfTextureFrame& inFrame)
     return inSurface->Unlock();
 }
 
-static GERectangle GERectangleOf(const float* inRect)
-{
-    GERectangle theRectangle;
-    theRectangle.SetLeft(inRect[0]);
-    theRectangle.SetTop(inRect[1]);
-    theRectangle.SetRight(inRect[2]);
-    theRectangle.SetBottom(inRect[3]);
-    return theRectangle;
-}
+static GERectangle GERectangleOf(const float* inRect) { return GERectangle(inRect[0], inRect[1], inRect[2], inRect[3]); }
 
 GERasterizer* GETexture::sRasterizer;
 

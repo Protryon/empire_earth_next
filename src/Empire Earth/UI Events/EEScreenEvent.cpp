@@ -10,11 +10,6 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"
 
-long EEScreenEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    return ee_screens_event(this->mEvent, inForm, inEntity);
-}
-
 UIEvent* EECreateScreenEvent(unsigned long inEvent)
 {
     if (inEvent == 0)

@@ -24,6 +24,9 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
 
+/// `UILayoutUtility::SetLeft`/`SetRight`/`SetTop`/`SetBottom`: an edge's offset type and offset.
+void ee_ui_layout_set(EeUiLayout *layout, EeUiEdge edge, unsigned long kind, float offset);
+
 }  // extern "C"
 
 #endif  // EE_RUST_UI_LAYOUT_FFI_H

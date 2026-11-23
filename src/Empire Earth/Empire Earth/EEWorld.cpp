@@ -469,97 +469,13 @@ long EEWorld::PauseGame()
     return ee_gamecpp_world_pause(true);
 }
 
-// RecordStatistics' C++ calls (ee_sim app statistics.rs): the physics random draw, a player's statistics Set (its
-// gate and the game time) and resources
-static float EEStatsRandom(void*, float inLow, float inHigh)
-{
-    return gPhysics->GetRandom(inLow, inHigh);
-}
-
-static void EEStatsSet(void*, uint32_t inSlot, long inSeries, long inValue)
-{
-    gWorld.mPlayers[inSlot]->mSavedGroups.Set(inSeries, inValue);
-}
-
-static long EEStatsCap(void*, uint32_t inSlot, uint32_t inResource)
-{
-    return gWorld.mPlayers[inSlot]->mResourceCaps[inResource];
-}
-
-static void EEStatsSetCap(void*, uint32_t inSlot, uint32_t inResource, long inValue)
-{
-    gWorld.mPlayers[inSlot]->mResourceCaps[inResource] = inValue;
-}
-
 // Builds the post-game statistics: the history's fields here, the scores, the computers' top-ups, the records' order
 // and flags and the computers' play times in Rust (ee_sim app statistics.rs), then the records filled
+extern "C" void ee_gamecpp_world_record_statistics(uintptr_t inWorld);   // gamecpp world_stats.rs (cbindgen:ignore: its
+                                                                        // statistics imports name a generic)
 void EEWorld::RecordStatistics()
 {
-    this->mStatistics.mStartTime = this->mStartTime;
-    this->mStatistics.mTileCount = this->mMap->GetTileCount();
-    this->mStatistics.mVictoryEnabled = this->mVictoryEnabled;
-    this->mStatistics.mTeamsLocked = this->mTeamsLocked;
-    this->mStatistics.mIsScenario = this->mGameOptions.mIsScenarioGame || (this->mGameOptions.mCampaignName.GetLength() > 0 && this->mGameOptions.mCampaignChecksum > 0);
-    this->mStatistics.mIsCampaign = this->mGameOptions.mCampaignName.GetLength() > 0 && this->mGameOptions.mCampaignChecksum > 0;
-    this->mStatistics.mEndTime = gPhysics->mGameTime;
-    if (this->mStatistics.mIsCampaign)
-        this->mStatistics.mCampaignName = this->mGameOptions.mCampaignName;
-    UWideString theDefault;
-    gResource->GetString(IDS_COMPUTER, theDefault);
-    std::vector<EeAppStatsPlayer> thePlayers(this->mNumPlayers);
-    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
-        EEPlayer* p = this->mPlayers[i];
-        thePlayers[i] = {p->GetPlayerID(), p->IsHuman(),
-                         PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)p->mName),
-                                    reinterpret_cast<const unsigned char*>((const char*)theDefault)) == 0,
-                         p->mObserverMode, p->mDisconnected, p->mGameResult, p->mSavedGroups.mStats};
-    }
-    EeAppStatsWorld theWorld = {};
-    theWorld.current = this->mCurrentPlayer;
-    theWorld.is_scenario = this->mStatistics.mIsScenario;
-    theWorld.end_time = this->mStatistics.mEndTime;
-    for (long r = 0; r < 5; r++) {
-        theWorld.base[r] = EEStartingResources::sTable[this->mGameOptions.mResources]->mAmounts[r];
-        theWorld.level[r] = EEGetResourceLevel(this->mGameOptions.mResources)->mAmounts[r];
-    }
-    const EeAppStatsHost theHost = {NULL, EEStatsRandom, EEStatsSet, EEStatsCap, EEStatsSetCap};
-    std::vector<EeAppStatsRecord> theOrder(thePlayers.size());
-    long theCurrent = -1;
-    bool theScenario = this->mStatistics.mIsScenario;
-    size_t n = ee_app_record_statistics(&theWorld, thePlayers.data(), thePlayers.size(), &theHost, theOrder.data(),
-                                             theOrder.size(), &theCurrent, &theScenario);
-    this->mStatistics.mRecords.clear();
-    this->mStatistics.mRecords.resize(n);
-    for (size_t k = 0; k < n; k++) {
-        const EeAppStatsRecord& o = theOrder[k];
-        EEStatisticsRecord& e = this->mStatistics.mRecords[k];
-        EEPlayer* thePlayer = this->mPlayers[o.slot];
-        UWideString theSuffix;
-        if (o.suffix != 0)
-            sprintf(theSuffix, " #%ld", o.suffix);
-        e.mScore = o.score;
-        e.mEconomyScore = o.economy_score;
-        e.mEpochScore = o.epoch_score;
-        e.mMilitaryScore = o.military_score;
-        e.mTechScore = o.tech_score;
-        e.mColor = thePlayer->mColor;
-        e.mName = thePlayer->mName + theSuffix;
-        e.mStatistics = thePlayer->mSavedGroups;
-        e.mSlot = thePlayer->mSlot;
-        e.mResult = thePlayer->mGameResult;
-        e.mEndTime = thePlayer->mSavedGroups.mEndTime != 0 ? thePlayer->mSavedGroups.mEndTime : this->mStatistics.mEndTime;
-        e.mTeam = thePlayer->GetPlayerID() > 0 ? this->mGameOptions.mPlayers[thePlayer->GetPlayerID() - 1].mTeam : 0;
-        for (unsigned long r = 2; r < 7; r++)
-            e.mResources[r] = thePlayer->mResourceCaps[r];
-        e.mIsLocal = o.is_local;
-        e.mIsHuman = o.is_human;
-    }
-    if (theCurrent >= 0)
-        this->mStatistics.mCurrentRecordIndex = theCurrent;
-    for (size_t k = 0; k < n; k++)
-        if (theOrder[k].has_play_time)
-            this->mStatistics.mRecords[k].mStatistics.Set(0x18, theOrder[k].play_time);
-    this->mStatistics.mIsScenario = theScenario;
+    ee_gamecpp_world_record_statistics((uintptr_t)this);
 }
 
 // Creates an empty statistics record
@@ -1381,6 +1297,100 @@ double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::ViewportXCenter: return gViewport.GetXCenter();
     case O::ViewportYCenter: return gViewport.GetYCenter();
     default: return EEGameStateOpF(inOp, p, a, f);
+    }
+    return 0.0;
+}
+
+// ------------------------------------------------------------------------- round 10, lane E: world_stats.rs's C++
+
+#define W ((EEWorld*)p)
+#define REC (W->mStatistics.mRecords[(size_t)a[0]])
+#define PL0 (W->mPlayers[a[0]])
+#define PL1 (W->mPlayers[a[1]])
+
+// RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world): one statement each; the end of the
+// chain
+int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::WsStart: W->mStatistics.mStartTime = W->mStartTime;
+        break;
+    case O::WsTiles: W->mStatistics.mTileCount = W->mMap->GetTileCount();
+        break;
+    case O::WsVictory: W->mStatistics.mVictoryEnabled = W->mVictoryEnabled;
+        break;
+    case O::WsTeamsLocked: W->mStatistics.mTeamsLocked = W->mTeamsLocked;
+        break;
+    case O::WsScenarioGame: return W->mGameOptions.mIsScenarioGame;
+    case O::WsCampaignOptions: return W->mGameOptions.mCampaignName.GetLength() > 0 && W->mGameOptions.mCampaignChecksum > 0;
+    case O::WsSetScenario: W->mStatistics.mIsScenario = a[0] != 0;
+        break;
+    case O::WsSetCampaign: W->mStatistics.mIsCampaign = a[0] != 0;
+        break;
+    case O::WsEndTime: return W->mStatistics.mEndTime = gPhysics->mGameTime;
+    case O::WsCampaignName: W->mStatistics.mCampaignName = W->mGameOptions.mCampaignName;
+        break;
+    case O::WsNumPlayers: return W->mNumPlayers;
+    case O::WsPlayer: *(EeAppStatsPlayer*)a[2] = {PL0->GetPlayerID(), PL0->IsHuman(), PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)PL0->mName), reinterpret_cast<const unsigned char*>((const char*)*(UWideString*)a[1])) == 0, PL0->mObserverMode, PL0->mDisconnected, PL0->mGameResult, PL0->mSavedGroups.mStats};
+        break;
+    case O::WsCurrent: return W->mCurrentPlayer;
+    case O::WsBase: return EEStartingResources::sTable[W->mGameOptions.mResources]->mAmounts[a[0]];
+    case O::WsLevel: return EEGetResourceLevel(W->mGameOptions.mResources)->mAmounts[a[0]];
+    case O::WsStatsSet: gWorld.mPlayers[a[0]]->mSavedGroups.Set((long)a[1], (long)a[2]);
+        break;
+    case O::WsStatsCap: return gWorld.mPlayers[a[0]]->mResourceCaps[a[1]];
+    case O::WsStatsSetCap: gWorld.mPlayers[a[0]]->mResourceCaps[a[1]] = (long)a[2];
+        break;
+    case O::WsRecordsAssign: W->mStatistics.mRecords.assign((size_t)a[0], EEStatisticsRecord());
+        break;
+    case O::WsRecScore: REC.mScore = (unsigned long)a[1];
+        break;
+    case O::WsRecEconomy: REC.mEconomyScore = (unsigned long)a[1];
+        break;
+    case O::WsRecEpoch: REC.mEpochScore = (unsigned long)a[1];
+        break;
+    case O::WsRecMilitary: REC.mMilitaryScore = (unsigned long)a[1];
+        break;
+    case O::WsRecTech: REC.mTechScore = (unsigned long)a[1];
+        break;
+    case O::WsRecColor: REC.mColor = PL1->mColor;
+        break;
+    case O::WsRecName: REC.mName = PL1->mName + UWideString((const char*)a[2]);
+        break;
+    case O::WsRecStatistics: REC.mStatistics = PL1->mSavedGroups;
+        break;
+    case O::WsRecSlot: REC.mSlot = PL1->mSlot;
+        break;
+    case O::WsRecResult: REC.mResult = PL1->mGameResult;
+        break;
+    case O::WsRecEndTime: REC.mEndTime = PL1->mSavedGroups.mEndTime != 0 ? PL1->mSavedGroups.mEndTime : W->mStatistics.mEndTime;
+        break;
+    case O::WsRecTeam: REC.mTeam = PL1->GetPlayerID() > 0 ? W->mGameOptions.mPlayers[PL1->GetPlayerID() - 1].mTeam : 0;
+        break;
+    case O::WsRecResource: REC.mResources[a[2]] = PL1->mResourceCaps[a[2]];
+        break;
+    case O::WsRecLocal: REC.mIsLocal = a[1] != 0;
+        break;
+    case O::WsRecHuman: REC.mIsHuman = a[1] != 0;
+        break;
+    case O::WsSetCurrentRecord: W->mStatistics.mCurrentRecordIndex = (long)a[0];
+        break;
+    case O::WsRecPlayTime: REC.mStatistics.Set(0x18, (long)a[1]);
+        break;
+    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+        break;
+    }
+    return 0;
+}
+
+double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::WsRandom: return gPhysics->GetRandom(f[0], f[1]);
+    default: ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
+        break;
     }
     return 0.0;
 }

@@ -136,8 +136,56 @@ fn world() -> P {
     hp(O::WorldAddr, 0, &[])
 }
 
+/// `gRenderEnvironment` (0x528ce0; its ctor 0x111722): the graphics thread's lighting and sky state, Rust's since
+/// round 10 (no C++ reads it).
+struct RenderEnvCell(std::cell::UnsafeCell<RenderEnv>);
+// SAFETY: the graphics thread's (the C++ global's access, unchanged)
+unsafe impl Sync for RenderEnvCell {}
+const RO_WHITE: [f32; 3] = [1.0, 1.0, 1.0];
+static RENDER_ENV: RenderEnvCell = RenderEnvCell(std::cell::UnsafeCell::new(RenderEnv {
+    direction: [0.0; 3],
+    terrain_ambient_color: RO_WHITE,
+    terrain_light_color: RO_WHITE,
+    unit_ambient_color: RO_WHITE,
+    unit_light_color: RO_WHITE,
+    prelit_color: RO_WHITE,
+    dim_prelit_color: RO_WHITE,
+    color54: RO_WHITE,
+    unit_ambient_intensity: 0.0,
+    unit_light_intensity: 0.0,
+    terrain_ambient_intensity: 0.0,
+    terrain_light_intensity: 0.0,
+    sea_level: 0.0,
+    time_of_day: 0.0,
+    water_phase: 0.0,
+    cloud_offset: 0.0,
+    wind_speed: 1.25e-6,
+    camera_yaw: 0.0,
+    show_hidden_units: 1,
+    b8c: false,
+    time_of_day_changed: true,
+}));
+
 fn env() -> *mut RenderEnv {
-    hp(O::RoEnvironment, 0, &[]) as *mut RenderEnv
+    RENDER_ENV.0.get()
+}
+
+/// `gRenderEnvironment.mCameraYaw` (the units' scene).
+pub fn camera_yaw() -> f32 {
+    // SAFETY: gRenderEnvironment
+    unsafe { (*env()).camera_yaw }
+}
+
+/// `gRenderEnvironment.mTimeOfDay` and `mCloudOffset` (the terrain's frame).
+pub fn time_of_day_and_cloud_offset() -> (f32, f32) {
+    // SAFETY: gRenderEnvironment
+    unsafe { ((*env()).time_of_day, (*env()).cloud_offset) }
+}
+
+/// `gRenderEnvironment.mCloudOffset = offset` (the terrain's frame).
+pub fn set_cloud_offset(offset: f32) {
+    // SAFETY: gRenderEnvironment
+    unsafe { (*env()).cloud_offset = offset };
 }
 
 /// A C++ bool global by its address op.
@@ -871,7 +919,9 @@ fn fill_frame(info: &FrameInfo) -> EeGfxFillFrame {
 
 /// A unit's opacity this frame (EERenderObject::GetUnitOpacity, the C++'s); whether it is drawn translucent.
 fn unit_opacity(unit: P, opacity: *mut f32) -> bool {
-    h(O::RoUnitOpacity, unit, &[opacity as usize as i64]) != 0
+    // SAFETY: gRenderEnvironment
+    let show_hidden = unsafe { (*env()).show_hidden_units };
+    h(O::RoUnitOpacity, unit, &[opacity as usize as i64, show_hidden as i64]) != 0
 }
 
 /// A render map's insert: the units' (`objects` false) or the map objects' map `k` (0..2) by texture.
@@ -1400,10 +1450,16 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
         // SAFETY: as above
         unsafe { (*head).second_full_opacity = second };
     }
-    if h(O::RoCaptureFillPresent, 0, &[]) != 0 {
-        // RFIL (TEST ONLY)
-        hf(O::RoCaptureFill, 0, &[ptr(&mut info), SWAY_CLOCK.load(Relaxed) as i64], &[count]);
-    }
+    // RFIL (TEST ONLY)
+    super::ro_views::rc_fill(
+        info.picked_unit,
+        info.yaw,
+        info.fighting,
+        info.frame as u32,
+        info.ambient,
+        SWAY_CLOCK.load(Relaxed),
+        count,
+    );
     set_flag(O::RoFlag529068, true);
     let music_due = {
         let last = *MUSIC_LAST.lock().unwrap();
