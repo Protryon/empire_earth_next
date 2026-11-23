@@ -99,7 +99,7 @@ void EEPCalamityHelper::Virtual1C(long)
 
 
 // the calamity manager's active calamities (GetCalamities' out value)
-static std::vector<EECalamity*>* EEActiveCalamities()
+std::vector<EECalamity*>* EEActiveCalamities()
 {
     std::vector<EECalamity*>* theList;
     USingleton<EECalamityManager>::GetInstance()->GetCalamities(theList);
@@ -110,59 +110,8 @@ static std::vector<EECalamity*>* EEActiveCalamities()
 #define PCH ((EEPCalamityHelper*)p)
 #define CL ((EECalamity*)p)
 #define CALAMITIES (*(std::vector<EECalamity*>*)p)
-#define AFILE (*(FSFile*)a[2])
+#define CAFILE (*(FSFile*)a[2])
 
 // ------------------------------------------------------------------------- round 10, lane B: the chunk's own C++
 
-int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
-// the chunk's constructor's, destructor's, Reset's and copy's C++ (gamecpp persist_more.rs; p the chunk): one
-// statement each
-int64_t EECore10OpB8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::PchClearContagion: PCH->ClearContagionManager();
-        break;
-    case O::PchNewContagion: PCH->mContagionManager = new EEContagionManager;
-        break;
-    case O::PchContagion: return P64(PCH->mContagionManager);
-    case O::PchCopyCalamities: *PCH->mCalamities = *((const EEPCalamityHelper*)a[0])->mCalamities;
-        break;
-    case O::PchCopyContagion: *PCH->mContagionManager = *((const EEPCalamityHelper*)a[0])->mContagionManager;
-        break;
-    // (EEPCalamityOp) The calamities' C++ calls and members (EEPMultiplayerHelper.cpp's EEPMultiplayerOp default): one statement each
-    case O::PchClearCalamities: PCH->ClearCalamities();
-        break;
-    case O::PchCalamities: return P64(PCH->mCalamities);
-    case O::PchNewCalamities: PCH->mCalamities = new std::vector<EECalamity*>;
-        break;
-    case O::PchNewCalamity: return P64(new EECalamity);
-    case O::PchCalamityLoad: return CL->Load((unsigned long)a[0], (unsigned long)a[1], AFILE);
-    case O::PchCalamitySave: return CL->Save((unsigned long)a[0], (unsigned long)a[1], AFILE);
-    case O::PchPush: PCH->mCalamities->push_back((EECalamity*)a[0]);
-        break;
-    case O::PchContagionLoad: return PCH->mContagionManager->Load((unsigned long)a[0], (unsigned long)a[1], AFILE);
-    case O::PchCount: return (int64_t)PCH->mCalamities->size();
-    case O::PchAt: return P64((*PCH->mCalamities)[a[0]]);
-    case O::PchSetCaster: CL->SetCasterUnit((EEUnit*)a[0]);
-        break;
-    case O::PchPlaySound: CL->PlaySound();
-        break;
-    case O::PchDeleteAt: delete std::exchange((*PCH->mCalamities)[a[0]], nullptr);
-        break;
-    case O::PchRestoreContagions: return PCH->mContagionManager->RestorePointers(*PCH->mCalamities);
-    case O::PchActive: return P64(EEActiveCalamities());
-    case O::PchVerifyActive: ESVERIFY_AT(a[0] != 0, 334);
-        break;
-    case O::VecCalamitiesCount: return (int64_t)CALAMITIES.size();
-    case O::VecCalamitiesAt: return P64(CALAMITIES[a[0]]);
-    case O::PchClassIndex: return USingleton<EECalamityManager>::GetInstance()->GetCalamityClassIndex(CL->mClass, *(long*)a[0]);
-    case O::PchVerifyClassIndex: ESVerify(__FILE__, 349, "EECalamityManager::Instance()->GetCalamityClassOffsetToSave(theCurrentCalamityClass, theCurrentClassOffset)");   // the original assert text
-        break;
-    case O::PchGetTarget: return CL->GetTargetUnit(*(EEUnit**)a[0]);
-    case O::PchContagionSave: return gWorld.GetContagionManager()->Save((unsigned long)a[0], (unsigned long)a[1], AFILE);
-    default: return EECore10OpD(inOp, p, a, f);
-    }
-    return 0;
-}

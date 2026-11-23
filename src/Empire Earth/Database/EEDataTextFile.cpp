@@ -84,7 +84,7 @@ void EEDumpRules()
 
 // ------------------------------------------------------------------------- round 10, lane B: the text tables' C++
 
-int64_t EECore10OpB8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define XSPEC ((FSFileSpec*)p)
@@ -277,7 +277,7 @@ int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DcAt: return P64(EETerrainColorTable::sTable[a[0]]);
     case O::DcSet: EETerrainColorTable::sTable[a[0]] = (EETerrainColorTable*)a[1];
         break;
-    default: return EECore10OpB8(inOp, p, a, f);
+    default: return EECore10OpD(inOp, p, a, f);
     }
     return 0;
 }

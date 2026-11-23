@@ -48,6 +48,11 @@
 #include "ee/EEUnitKind.h"
 #include "ee/EEEffect.h"
 #include "ee/EECalamityUpdate.h"
+#include "lle/UIForm.h"
+#include "lle/UIManager.h"
+#include "ee/EEUserInterface.h"
+#include "ee/EEUIManager.h"
+#include "ee/EEUIFMainGame.h"
 
 // the node's, epoch's and tree's states: their Rust records (ee_sim tech capture_rec.rs)
 static void EETechCaptureNodeImpl(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
@@ -177,6 +182,7 @@ static void EECalamityCaptureContagionImpl(EeContagionHelper* inHelper, float in
 
 
 #define P64(x) ((int64_t)(intptr_t)(x))
+int32_t EETechEpochNodes(EETechTreeEpoch* inEpoch, EeTechHostIo* io);   // EETechTree.cpp
 #define TC_UPGRADE ((EEUnitClassUpgrade*)p)
 #define TC_PLAYER ((EEPlayer*)p)
 
@@ -209,7 +215,7 @@ static const bool sCaptureHooksSet = (EECalamityCanCastEnter = CanCastEnter, EEC
 
 // ------------------------------------------------------------------------- round 11, lane C: the hooks' C++
 
-int64_t EECore11OpC8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameStateLoader.cpp
+int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define TCU ((EEUnit*)p)
 #define TCX ((EEComplexUnit*)p)
@@ -220,6 +226,10 @@ int64_t EECore11OpC8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
 #define TNODE ((EETechTreeNode*)p)
 #define TEPOCH ((EETechTreeEpoch*)p)
 #define TVARIANT EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)
+#define TREE ((EETechTree*)p)
+#define TPL ((EEPlayer*)p)
+#define TFILE ((FSFileSpec*)p)
+#define TEFFECT ((EEEventEffect*)p)
 // the EVUN unit step's members (gamecpp tech_hooks.rs; p the unit or its complex unit; EECalamityUpdate.cpp's
 // EECore11OpC6 default): one statement each
 int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
@@ -330,7 +340,103 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::C11CalHostNew: return P64((new EECalamityUpdateHost{(EECalamityClass*)p, (EECalamity*)a[0], {(EESoundObject*)a[1], (EESoundObject*)a[2]}, {}, NULL, {}, {}}));
     case O::C11CalHostDelete: delete (EECalamityUpdateHost*)p;
         break;
-    default: return EECore11OpC8(inOp, p, a, f);
+    // (EECore9OpD6) the C++ calls and members of the tech tree's host in Rust (gamecpp tech.rs; p the tree unless noted): one statement
+    // each
+    case O::TkTreeFields: return P64(static_cast<EeTechTreeFields*>(TREE));
+    case O::TkCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
+    case O::TkPlayerIndex: return TREE->mPlayerIndex;
+    case O::TkPlId: return (int64_t)TPL->mPlayerID;
+    case O::TkEpochTitle: return EEEpochTitleID((long)a[0]);
+    case O::TkPostShowEpochName: gUserInterface->PostShowEpochName();
+        break;
+    case O::TkMainGameForm: return P64(gUIManager->GetMainGameForm());
+    case O::TkRefreshGroup: gUIManager->GetMainGameForm()->mRefreshGroup = true;
+        break;
+    case O::TkEpochCount: return TREE->mEpochs.size();
+    case O::TkEpochAt: return P64(&TREE->mEpochs[(long)a[0]]);
+    case O::TkEpochRef: ((EeTechHostIo*)a[1])->node = EETechRef(&TREE->mEpochs[(long)a[0]]);
+        break;
+    case O::TkEpochNodes: return EETechEpochNodes((EETechTreeEpoch*)p, (EeTechHostIo*)a[0]);
+    case O::TkUnitId: return (int64_t)((EEComplexUnit*)p)->mUnitID;
+    case O::TkGet: return P64(TREE->Get((long)a[0]));
+    case O::TkSetRef: ((EeTechHostIo*)a[0])->node = EETechRef(TNODE);
+        break;
+    case O::TkNeedsUnitMedia: return TNODE->NeedsUnitMedia();
+    case O::TkTrigger: EEEvent::Trigger((long)a[0], TREE->mPlayerIndex, (long)a[1], TREE->mPlayer, (EEComplexUnit*)a[2]);
+        break;
+    case O::TkGetPlayer: return P64(TREE->GetPlayer());
+    case O::TkTreePlayer: return P64(TREE->mPlayer);
+    case O::TkEpochReached: TPL->EpochReached((long)a[0]);
+        break;
+    case O::TkStatReset: TPL->mSavedGroups.Reset((long)a[0], 1);
+        break;
+    case O::TkStatSet: TPL->mSavedGroups.Set((long)a[0], (long)a[1]);
+        break;
+    case O::TkUnloadClassMedia: TPL->UnloadUnitClassMedia((long)a[0]);
+        break;
+    case O::TkClassMedia: TPL->SetUnitClassMedia((long)a[0], 0x7f);
+        break;
+    case O::TkClassButtonsLoad: TPL->LoadUnitClassButtons((long)a[0]);
+        break;
+    case O::TkClassButtonsUnload: TPL->UnloadUnitClassButtons((long)a[0]);
+        break;
+    case O::TkEpochMediaLoaded: TPL->EpochMediaLoaded((long)a[0]);
+        break;
+    case O::TkEpochMediaUnloaded: TPL->EpochMediaUnloaded((long)a[0]);
+        break;
+    case O::TkEventsEnabled: gEventsEnabled = a[0] != 0;
+        break;
+    case O::TkIsLocal: return gWorld.mPlayers[TREE->mPlayerIndex] == gWorld.GetCurrentPlayer();
+    case O::TkAssert: ESVERIFY_AT(false, a[0]);
+        break;
+    case O::TkEvent: return P64(EEEvent::Get(TNODE->mData->mResearchedEvent));
+    case O::TkEventEffects: return (int64_t)((EEEvent*)p)->GetNumEffects();
+    case O::TkEventEffect: return P64(EEEvent::GetEventEffect(((EEEvent*)p)->GetEffect((long)a[0])));
+    case O::TkEffKind: return TEFFECT->mKind;
+    case O::TkEffUnitClass: return TEFFECT->mUnitClass;
+    case O::TkEffTechnology: return TEFFECT->mTechnology;
+    case O::TkEffButton: return TEFFECT->mButton;
+    case O::TkEffAreaEffect: return TEFFECT->mAreaEffect;
+    case O::TkEffMediaIndex: return TEFFECT->mMediaIndex;
+    case O::TkEffNewUnitClass: return TEFFECT->mNewUnitClass;
+    case O::TkEffSoundId: return TEFFECT->mSoundID;
+    case O::TkEffAttribute: return TEFFECT->mAttribute;
+    case O::TkButtonAcquire: EEButtonObject::Get(a[0])->Acquire();
+        break;
+    case O::TkButtonRelease: EEButtonObject::Get(a[0])->Release();
+        break;
+    case O::TkItemLoad: EEMedia::Get(a[0])->LoadMedia();
+        break;
+    case O::TkItemUnload: EEMedia::Get(a[0])->UnloadMedia();
+        break;
+    case O::TkAeTemplateLoad: gAEManager.LoadTemplateMedia((unsigned long)a[0]);
+        break;
+    case O::TkAeTemplateUnload: gAEManager.UnloadTemplateMedia((unsigned long)a[0]);
+        break;
+    case O::TkSoundLoad: EESoundObject::Get(a[0])->LoadMedia();
+        break;
+    case O::TkSoundUnload: EESoundObject::Get(a[0])->UnloadMedia();
+        break;
+    case O::TkClassCount: return (int64_t)EEUnitClassCount();
+    case O::TkClassAt: return P64(gUnitClassTable[a[0]]);
+    case O::TkClassType: return (int64_t)((EEUnitClass*)p)->mUnitType;
+    case O::TkClassTechnology: return gUnitClassTable[a[0]] != NULL ? gUnitClassTable[a[0]]->mTechnology : 100000;
+    case O::TkFileOpenRead: TFILE->Open(kFileAccessRead);
+        break;
+    case O::TkFileLength: TFILE->GetLength(*(unsigned long*)a[0]);
+        break;
+    case O::TkFilePosition: return TFILE->GetPosition(*(long*)a[0]);
+    case O::TkFileClose: TFILE->Close();
+        break;
+    case O::TkEpochsResize: TREE->mEpochs.Resize((long)a[0]);
+        break;
+    case O::TkEpochLoad: return TREE->mEpochs[(long)a[0]].Load(*(FSFileSpec*)a[1], TREE);
+    case O::TkEpochUnload: TREE->mEpochs[(long)a[0]].Unload();
+        break;
+    case O::TkNodeUnitClass0: return TNODE->GetUnitClass(0);
+    case O::TkNodeIsAvailable: return TNODE->GetIsAvailable();
+    case O::TkNodeGetCost: return TNODE->GetCost((long)a[0], (long)a[1], 1.0f);
+    default: return EECore11OpE(inOp, p, a, f);
     }
     return 0;
 }

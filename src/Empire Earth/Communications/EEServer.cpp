@@ -43,6 +43,11 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
 #include "rust/game/gamecpp.h"
+#include "ee/EEUnit.h"
+#include "ee/EESMMediaStrings.h"
+#include "rust/sim/netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
+#include <list>
+#include <string>
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
 void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)
@@ -307,7 +312,7 @@ double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
 
 // ------------------------------------------------------------------------- round 11, lane C: the server's bodies' C++
 
-int64_t EECore11OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEClient.cpp
+int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 static_assert(kConnectionRemovedByHost == 5 && kMessageUpdatePingStat == 0x7a, "gamecpp session_objs.rs");
 // the server's plain tail (gamecpp session_objs.rs EeGamecppServerTail): mVoted .. mHasLeftGame
@@ -324,6 +329,9 @@ static_assert(offsetof(EEServer, mVoteEdict) - offsetof(EEServer, mVoted) == 256
 #define GOP ((EEGameOptionsPlayer*)p)
 #define REQ ((NEMRecord*)a[0])
 
+#define FILESPEC ((FSFileSpec*)a[0])
+#define CL ((EEClient*)p)
+extern UString gCampaignExtension;          // 0x530b78 (ee/EECampaignFormManager.h, which needs the UI form headers)
 // the C++ calls and members of the server's bodies in Rust (gamecpp session_objs.rs): p the server unless noted, one
 // statement each
 int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
@@ -722,7 +730,49 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsTimerRunning: return gPhysics->mTimerRunning;
     case O::SsMainGameUiState0: gUIManager->GetMainGameForm()->SetUIState(0);
         break;
-    default: return EECore11OpC3(inOp, p, a, f);
+    // (EECore11OpC3) the C++ calls and members of the client's bodies in Rust (gamecpp session_objs.rs; EEServer.cpp's EECore11OpC2
+    // default): p the client, one statement each
+    case O::C11ClTail: return P64(&CL->mHasLeftGame);
+    case O::C11ClCreateLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(CL->mFastSelectionLock) == keseOK, 67);
+        break;
+    case O::C11ClStopThreads: CL->StopThreads();
+        break;
+    case O::C11ClDestroyLock: TSScheduler::DestroyCriticalSection(CL->mFastSelectionLock);
+        break;
+    // (EECore9OpD3) the C++ calls of the client's bodies in Rust (gamecpp server.rs; EEServer.cpp's EECore9OpD2 default): one statement
+    // each
+    case O::ClNewBootDefault: return P64(static_cast<EEAction*>(new EEABootClientFromCanceledGame));
+    case O::ClNameLength: return WSTR(0).GetLength();
+    case O::ClExtension: WSTR(1) = WSTR(0).GetIndexedSubstring(WSTR(0).GetLength() - 4, WSTR(0).GetLength());
+        break;
+    case O::ClExtIsSaved: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gSavedGameExtension)) == 0;
+    case O::ClExtIsScenario: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gScenarioExtension)) == 0;
+    case O::ClExtIsCampaign: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)WSTR(0)), reinterpret_cast<const unsigned char*>((const char*)gCampaignExtension)) == 0;
+    case O::ClNewFileSpec: return P64(new FSFileSpec);
+    case O::ClFileSetVolume: FILESPEC->SetVolume(gStartupVolume);
+        break;
+    case O::ClFileSetDirectory: FILESPEC->SetDirectory(gStartupDirectory + "data\\" + (a[1] == 0 ? "Saved Games\\" : a[1] == 1 ? "Scenarios\\" : "Campaigns\\"));
+        break;
+    case O::ClFileSetFile: FILESPEC->SetFile((const char*)WSTR(1));
+        break;
+    case O::ClFileFree: delete FILESPEC;
+        break;
+    case O::ClFileOpenRead: return FILESPEC->Open(kFileAccessRead) == kErrorOK;
+    case O::ClFileClose: FILESPEC->Close();
+        break;
+    case O::ClFileDeleteOnDisk: FILESPEC->Delete();
+        break;
+    case O::ClFileCreateWrite: return FILESPEC->Create() == kErrorOK && FILESPEC->Open(kFileAccessWrite) == kErrorOK;
+    case O::ClHeaderLoad: ((EEPSaveGameHeader*)a[1])->LoadFromFile(*FILESPEC);
+        break;
+    case O::ClHeaderChecksum: return (long long)((EEPSaveGameHeader*)a[0])->mChecksum;
+    case O::ClIdsNotResponding: return IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT;
+    case O::ClIdsSeconds: return IDS_SECONDS;
+    case O::ClTimeoutFormat: WSTR(0) = WSTR(1) + UWideString("  (%d ") + WSTR(2) + UWideString(")");
+        break;
+    case O::ClSprintfSeconds: sprintf(WSTR(0), WSTR(1), (unsigned long)a[2]);
+        break;
+    default: return EECore11OpC7(inOp, p, a, f);
     }
     return 0;
 }

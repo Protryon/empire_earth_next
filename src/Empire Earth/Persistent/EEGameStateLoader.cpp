@@ -46,7 +46,7 @@
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // 0x148362 (EEWorld.cpp's prototype)
 
 // 0x531a40: set while Load reads a scenario (GetIsLoadingScenario's byte; provisional name)
-static bool sLoadingScenario;
+bool sLoadingScenario;
 
 // Creates a loader that restores a saved game into the given game state
 EEGameStateLoader::EEGameStateLoader(EEGameState* inState)
@@ -124,20 +124,4 @@ double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 
 // ------------------------------------------------------------------------- round 11, lane C: the loader's C++
 
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
-// the scenario extension's text (gamecpp persist_text.rs; EETechCapture.cpp's EECore11OpC7 default)
-int64_t EECore11OpC8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::C11ScenarioExtension: return (int64_t)(intptr_t)(const char*)gScenarioExtension;
-    // (EEPLoaderOp) The loader's C++ (EEPWorldHelper.cpp's EEPWorldOp default): one statement each
-    case O::PsSetLoadingScenario: sLoadingScenario = EEIsScenarioFile(((FSFile*)p)->GetFile());
-        break;
-    case O::PsClearLoadingScenario: sLoadingScenario = false;
-        break;
-    default: return EECore11OpE(inOp, p, a, f);
-    }
-    return 0;
-}
