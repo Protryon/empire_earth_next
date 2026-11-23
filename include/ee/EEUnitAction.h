@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 
-class EEComplexUnit;
 class UString;
 
 class EEUnitAction {
@@ -26,9 +25,5 @@ private:
 
 // The action and trigger ids: Rust's enums (ee_sim unit_ids.rs), emitted back as plain C++ enums with their evidence comments.
 #include "rust/sim/unit_ids.h"
-
-// New (R5b.4 leaf 6): the C++ calls of AIStep and the script's decision for a unit (EEUnitAction.cpp; ee_units ai.rs)
-struct EeUnitsAIHost;
-void EEUnitAIHostFor(EEComplexUnit* inUnit, EeUnitsAIHost& outHost);
 
 #endif
