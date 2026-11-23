@@ -85,6 +85,39 @@ size_t ee_won_utf16le_from_wide(const void *wide,
                                 uint8_t *out,
                                 size_t capacity);
 
+/// `WideAppendUtf16LE` (R6 WON round 33): the UTF-16 little-endian bytes of `count` `wchar_t`s, given to `sink` once
+/// (WONBuffer.h's sink appends them).
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` bytes; `sink` is valid with `context`.
+void ee_won_utf16le_from_wide_sink(const void *wide,
+                                   uint32_t wchar_size,
+                                   size_t count,
+                                   EeWonByteSink sink,
+                                   void *context);
+
+/// `wchar_t` text (`wchar_size` bytes a character) of `count` UTF-16 units given to `sink` once (R6 WON round 33:
+/// WONBuffer.h's WonWideSink).
+///
+/// # Safety
+/// `data` holds `count` units; `sink` is valid with `context`.
+void ee_won_wide_from_utf16_sink(const uint16_t *data,
+                                 size_t count,
+                                 uint32_t wchar_size,
+                                 EeWonWideSink sink,
+                                 void *context);
+
+/// `WideAssignUtf16LE` (R6 WON round 33): the text of `count` UTF-16 little-endian units (`2 * count` bytes) given to
+/// `sink` once; see `ee_won_wide_from_utf16_sink`.
+///
+/// # Safety
+/// `data` holds `2 * count` bytes; `sink` is valid with `context`.
+void ee_won_wide_from_utf16le_sink(const uint8_t *data,
+                                   size_t count,
+                                   uint32_t wchar_size,
+                                   EeWonWideSink sink,
+                                   void *context);
+
 /// The code point a UTF-16 unit makes with the last character of a UTF-32 text: the joined code point when `last`
 /// is a high surrogate and `unit` a low one, else 0 (append the unit as it is).
 uint32_t ee_won_utf16_join(uint32_t last,

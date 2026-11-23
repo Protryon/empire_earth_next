@@ -17,6 +17,9 @@ constexpr static const int32_t EE_WON_URL_HTTP = 2;
 
 constexpr static const int32_t EE_WON_URL_FTP = 3;
 
+/// A URL (0x28 bytes in the original: the type, two strings, the absolute flag).
+struct EeWonUrlObj;
+
 /// One header line's reading.
 struct EeWonHttpHeader {
   /// false: no colon (the line is ignored)
@@ -161,6 +164,48 @@ void ee_won_url_relative(const EeWonUrl *url,
 /// # Safety
 /// `url` is valid; `sink` accepts `context`.
 void ee_won_url_entire(const EeWonUrl *url, EeWonByteSink sink, void *context);
+
+/// `URL()` (no text: `URLType_None`), or `URL(text)` when `text` is not NULL.
+///
+/// # Safety
+/// `text` is NULL or holds `len` bytes.
+EeWonUrlObj *ee_won_url_obj_new(const uint8_t *text, size_t len);
+
+/// A copy (the C++ copy constructor).
+///
+/// # Safety
+/// `u` is a live URL.
+EeWonUrlObj *ee_won_url_obj_clone(const EeWonUrlObj *u);
+
+/// `*to = *from`.
+///
+/// # Safety
+/// Both are live URLs.
+void ee_won_url_obj_assign(EeWonUrlObj *to, const EeWonUrlObj *from);
+
+/// Frees a URL.
+///
+/// # Safety
+/// `u` came from `ee_won_url_obj_new` or `_clone`, freed once.
+void ee_won_url_obj_free(EeWonUrlObj *u);
+
+/// `GetType()`.
+///
+/// # Safety
+/// `u` is a live URL.
+int32_t ee_won_url_obj_kind(const EeWonUrlObj *u);
+
+/// `CalcRelativeTo(base)`.
+///
+/// # Safety
+/// Both are live URLs.
+void ee_won_url_obj_relative(EeWonUrlObj *u, const EeWonUrlObj *base);
+
+/// A URL's text to `sink`: 0 the address, 1 the path, 2 the whole URL (`GetEntire`).
+///
+/// # Safety
+/// `u` is a live URL; `sink` accepts `context`.
+void ee_won_url_obj_text(const EeWonUrlObj *u, int32_t which, EeWonByteSink sink, void *context);
 
 /// `HTTPCache::GetFreeId` over the sorted ids.
 ///

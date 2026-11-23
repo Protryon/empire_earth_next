@@ -118,6 +118,13 @@ void ee_won_authctx_set_server_context(const EeWonAuthCtx *c,
 /// `c` a live context.
 void *ee_won_authctx_server_context(const EeWonAuthCtx *c);
 
+/// `GetServerContext()`'s object without a reference of its own (R6 WON round 33: the C++ SmartPtr takes one; the
+/// auth context's keeps it alive meanwhile); NULL for none.
+///
+/// # Safety
+/// `c` is a live auth context.
+void *ee_won_authctx_server_context_borrowed(const EeWonAuthCtx *c);
+
 /// `Init()`'s verifier file: unless a file was checked already (in this process), `LoadVerifierKey(dir +
 /// "_wonkver.pub")`.
 ///
