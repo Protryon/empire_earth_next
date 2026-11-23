@@ -1,7 +1,7 @@
 # The UI cluster lane (the main game HUD, the menus, the UI events, the LLE UI's hosts)
 
 The lane's state. Each round rewrites this file to the current state; the round's story goes in PORT_LEARNINGS.md
-("The UI cluster lane, round 1" .. "round 5", "The UI lane, round 6" .. "round 13").
+("The UI cluster lane, round 1" .. "round 5", "The UI lane, round 6" .. "round 15").
 
 **Scope (the lane scopes of 2026-11-19).** `src/Empire Earth/User Interface Thread/*` but the editor-only
 controls (`EESE*`, `EEUIFSE*`), `EEFOFindNewTargetNearOldTarget.cpp` (the units' lane) and the WON boxes
@@ -83,14 +83,29 @@ The totals are in PORT_LEARNINGS.md "The UI lane, round 13".
 
 The totals are in PORT_LEARNINGS.md "The UI lane, round 14".
 
+## Round 15 (branches `rust-ui15a` toolkit, `rust-ui15b` game, merged on `rust-ui15`, 2026-11-23)
+
+| Piece | What moved |
+|---|---|
+| ee_ui `listobj.rs` | the list boxes' lines are the Rust list's: `UIListBox<T>`'s `mData` and `mCopyLineArray` are views (`UILines<T>`: `size()`, `[i]`) of boxed Ts the Rust list owns, made, copied and freed through `UILineOps<T>`; the template host `UIListBoxRust` and the T-dependent line methods are gone; UILBString's draw and type-to-find in Rust |
+| ee_ui `slider_change.rs` | `UIESliderChange` whole in Rust (the value texts, the label, the modifier and offset, ProcessEvent); `UIEPolledEvent` deleted (no user) |
+| ee_ui hosts | UIForm's and UIManager's bodies of more than one call, the toolkit's remaining host switches and scratch statics, the combo box's C++ host (`UIComboBox::Rust`, `ee_uicpp_combo_host`) in Rust |
+| ee_game `scratch.rs` | the game UI files' 154 scratch statics are slots of a Rust-owned table (`EEScratch<T>`, ee/EEScreensShims.h): zeroed memory Rust allocates on first use, the C++ object placement-constructed in it |
+| ee_game `hud_fields.rs` | the game UI classes' members as Rust records under the C++ names (a second base): EEUIFMainGame (but `mGroups`, `mStrings`), the improvement button, status bar, mini map, portrait, attribute, status button, select and command units, generic background, unit hack, the SCI form manager's flags; the status box's 50 icons a Rust array (`EEUIFMGIconBitmap` gone) |
+| call records | `EEUIFMGFormCall` derives from the Rust `EeScreensFormCallObjects` and keeps its three strings; the upgrade, UI manager and status box call records' pointers Rust records; the cursor's read state `EeScreensCursorRead` |
+| ee_game `panel_groups.rs` | the panel groups' texts printed in Rust (`c_printf`: the CRT's `%s/%d/%u` with flags, width and precision), `shown_epoch` |
+
+The totals are in PORT_LEARNINGS.md "The UI lane, round 15".
+
 ## What is left (the lane's part)
 
-Lane logic 1,553 (from 2,718 at round 13's end), 865 of it in headers; toolkit 673, game 880. The biggest: UIListBox.h
-(99: the template's inline bodies), UIForm's and UIManager's declarations, UILBString, the combo box's and the
-controls table's C++ hosts; EEScreens.cpp's about 45 scratch statics holding C++ objects (strings, vectors,
-FSFileSpec), EEUIFMainGame's form-call record fields and own members, the main group's print host, the status box's
-icon struct.
-- Left on purpose (as rounds 7-13): the printfs of a resource format (`EEAreaEffect::Dump`), qualified base-class
+Lane logic 973 (from 1,553 at round 14's end), 629 of it in headers; toolkit 398, game 575. The biggest: EEUIShell.h's
+switch frames (44), UIForm's, UIControl's and UIManager's class skeletons, UIControlsTable's three host switches,
+UIControl's out-of-line lookups; EEUIFMainGame's `mStrings`, `mGroups` (other lanes read them typed), the unit-hack
+and cursor op switches; EEUIBuildWall's and EEUIBuildGate's members (the scenario editor and sim_editor use them by
+name: a cross-lane move); EECBCivilizationFiles' context and directory code; EEUserInterface's and EEUIManager's
+prototypes and the ui-event switch; one-line prototypes of functions with no header.
+- Left on purpose (as rounds 7-14): the printfs of a resource format (`EEAreaEffect::Dump`), qualified base-class
   calls, the collectors' predicates (C++ templates).
 
 ## Checks
