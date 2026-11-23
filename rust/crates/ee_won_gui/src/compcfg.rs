@@ -920,6 +920,20 @@ fn allocators() -> std::sync::MutexGuard<'static, NoCaseMap<(usize, usize)>> {
     ALLOCATORS.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// `ResourceConfigTable::AddAllocator`: the name's config and component factories (the first one with a config
+/// factory stays).
+pub(crate) fn add_allocator(name: &[u8], config: usize, component: usize) {
+    let mut m = allocators();
+    if m.get(name).is_none_or(|&(cf, _)| cf == 0) {
+        m.set(name, (config, component));
+    }
+}
+
+/// `ResourceConfigTable::RegisterControlId`.
+pub(crate) fn register_control_id(name: &[u8], id: i32) {
+    control_ids().set(name, id);
+}
+
 impl EeWonResTable {
     /// `AddConfig`: the named group, made (and named) when absent; whether it existed.
     fn add_config(&self, cx: &Cx, name: &[u8]) -> (*mut c_void, bool) {
@@ -2263,16 +2277,8 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
                 }
             }
             C::TableGlue => table().glue_all(cx)?,
-            C::AddAllocator => {
-                let mut m = allocators();
-                let k = txt();
-                if m.get(k).is_none_or(|&(cf, _)| cf == 0) {
-                    m.set(k, (a as usize, d as usize));
-                }
-            }
-            C::RegisterControlId => {
-                control_ids().set(txt(), a as i32);
-            }
+            C::AddAllocator => add_allocator(txt(), a as usize, d as usize),
+            C::RegisterControlId => register_control_id(txt(), a as i32),
             C::AllocateConfig => match allocate(cx, txt())? {
                 Some(two) => {
                     *(d as *mut [*mut c_void; 2]) = two;

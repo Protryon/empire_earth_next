@@ -28,7 +28,10 @@ public:
     virtual long DrawPolygons() { return ee_screens_portrait_draw(this); }            // +0x18 0x258987
     // Draws the improvement level when it is above 0
     virtual long DrawTextA() { return ee_screens_portrait_draw_text(this); }               // +0x1c 0x258ad0
-    virtual bool GetHelpString(UWideString& outString) const;   // +0x20 0x258af7
+    virtual bool GetHelpString(UWideString& outString) const   // +0x20 0x258af7
+    {
+        return ee_screens_portrait_help(const_cast<EEUICPortrait*>(this), &outString);
+    }
     // 0x258f82: shows inUnit (EEUIFMainGame 0x26bfe2, 0x26c38b)
     // Shows a unit's portrait (button face), taking references, and updates the bars (ee_screens portrait.rs)
     void SetUnit(EEUnit* inUnit) { ee_screens_portrait_set_unit(this, inUnit); }

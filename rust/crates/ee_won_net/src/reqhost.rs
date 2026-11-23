@@ -18,6 +18,7 @@
 //! a contest call, a ping and a user id lookup as the derived ops. Reached by nothing in the game but the lobby's
 //! version check, add friend and lost password and user name requests (an Internet login; the servers are gone).
 
+use std::ffi::c_void;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::hostop::{
@@ -725,6 +726,59 @@ pub unsafe extern "C" fn ee_won_hostop_request(op: *mut EeWonReqOp) -> *mut EeWo
     // SAFETY: the constructors' box, taken
     let b = unsafe { Box::from_raw(op) };
     EeWonHostOp::boxed(ReqPlan::new(Box::new(Plain(b.op))))
+}
+
+/// `RustServerOp::NewRequest` (R6 WON round 33): the C++ op of a request op (the maker's `new RustServerOp`, bound),
+/// then its server context (`context` true: `obj`, NULL too) or its first server's six address bytes, then, when
+/// `auth_type` is not negative, the auth type and context (`SetAuthType`: the account requests'). Returns the C++
+/// op (`RefCount*`, no reference yet; NULL without a maker).
+///
+/// # Safety
+/// `op` came from a Rust op constructor and is not used after; `obj` and `auth` NULL or live `RefCount*`s; `addr`
+/// six bytes when `context` is false.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_new_request(
+    op: *mut EeWonReqOp,
+    context: bool,
+    obj: *mut c_void,
+    addr: *const u8,
+    auth_type: i32,
+    auth: *mut c_void,
+) -> *mut c_void {
+    // SAFETY: the caller's request op
+    let host = unsafe { ee_won_hostop_request(op) };
+    let cpp = crate::cppcore::new_host_op(host);
+    if cpp.is_null() {
+        return cpp;
+    }
+    // SAFETY: the C++ op owns `host`, bound by its constructor
+    unsafe {
+        if context {
+            crate::hostop::ee_won_hostop_set(
+                host,
+                EE_WON_REQHOST_CONTEXT,
+                0,
+                std::ptr::null(),
+                0,
+                std::ptr::null(),
+                obj,
+            );
+        } else {
+            crate::hostop::ee_won_hostop_set(
+                host,
+                EE_WON_REQHOST_ADDR,
+                0,
+                std::ptr::null(),
+                0,
+                addr,
+                std::ptr::null_mut(),
+            );
+        }
+        if auth_type >= 0 {
+            crate::hostbase::ee_won_hostop_set_auth(host, auth_type, auth, false, std::ptr::null_mut());
+        }
+    }
+    cpp
 }
 
 #[cfg(test)]

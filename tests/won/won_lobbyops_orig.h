@@ -79,6 +79,12 @@ static intptr_t Lan(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* inB, in
     LobbyGame* g = static_cast<LobbyGame*>(inA);
     (void)inD;
     switch (inOp) {
+    // R6 WON round 32's (LanLogicHost.cpp at af02fb9a5; lobbyops.rs composes it)
+    case EeWonLobbyOp::LanPortDialogRun:
+        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetGamePort, (unsigned short)LobbyGetLobbyPort());
+        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetPort, (unsigned short)(int)inC);
+        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::Reset);
+        return LobbyDoDialog(l->mLanPortDialog.get());
     case EeWonLobbyOp::LanAuthAutoRefreshOff: {
         AuthContext* anAuthContext = GetLobbyAuthContext();
         if (anAuthContext != NULL)

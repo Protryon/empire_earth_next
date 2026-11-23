@@ -319,6 +319,24 @@ pub unsafe extern "C" fn ee_won_thread_wait_for_stop(t: *const EeWonThread) {
     unsafe { (*t).wait_for_stop() }
 }
 
+/// `ThreadBase::Stop` (R6 WON round 33): marks the thread stopped, signals it and, when asked, waits for it; nothing
+/// when it was stopped (ThreadBase's `Signal` has no override).
+///
+/// # Safety
+/// `t` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_thread_stop(t: *const EeWonThread, wait_for_stop: bool) {
+    // SAFETY: the caller's contract
+    let t = unsafe { &*t };
+    if !t.mark_stopped() {
+        return;
+    }
+    t.signal();
+    if wait_for_stop {
+        t.wait_for_stop();
+    }
+}
+
 /// # Safety
 /// `t` is valid.
 #[no_mangle]

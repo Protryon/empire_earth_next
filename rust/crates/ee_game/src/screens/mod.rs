@@ -189,6 +189,7 @@ pub mod editor_conditions;
 pub mod editor_controls;
 #[cfg(test)]
 mod editor_cpp_consts_tests;
+// the game UI's numbers against the C++ headers' (once its static_asserts)
 mod editor_direct;
 pub mod editor_effects;
 #[cfg(not(test))]
@@ -272,6 +273,8 @@ mod game_actions_golden;
 pub mod game_actions_host;
 #[cfg(test)]
 mod game_actions_tests;
+#[cfg(test)]
+mod hud_cpp_consts_tests;
 // the moved C++ host cases (UI lane round 7) and their one-statement C++ shims
 pub(crate) mod backgrounds_calls;
 pub(crate) mod campaign_model_calls;
@@ -331,12 +334,21 @@ pub mod panel_groups;
 #[cfg(not(test))]
 mod panel_groups_ffi;
 pub mod ping;
+// the message box's Display inputs, absent from a test binary
+#[cfg(not(test))]
+mod dialog_inputs_ffi;
+// the wall and gate placements' start and end, absent from a test binary
+#[cfg(not(test))]
+mod placement_ffi;
+// the screens' question answers (the C++ question shims' callbacks), absent from a test binary
 pub mod portrait;
 #[cfg(not(test))]
 mod portrait_ffi;
 pub mod post_game;
 #[cfg(not(test))]
 mod post_game_ffi;
+#[cfg(not(test))]
+mod question_answers_ffi;
 pub mod save_load;
 #[cfg(not(test))]
 mod save_load_ffi;

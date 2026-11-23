@@ -530,7 +530,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RrDrawSky: return (int32_t)gRasterizer->DrawSky((GEModel*)p, gScreenIndex, 1.0f, a[0] != 0);
     case O::RrTexture32: return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport();
     case O::RrScreen: return (uint32_t)gScreenIndex;
-    case O::RrObjects: return RO_P64(DX7Rasterizer::RustObjects(gRasterizer, (void**)a[0]));
+    case O::RrObjects: return RO_P64(GERasterizer::RustObjects(gRasterizer, (void**)a[0]));
     case O::RrOpacityOwn: return Fn23CEE2((EEComplexUnit*)p, a[0] != 0, *(float*)a[1]);
     case O::RrModelCenter: *(GE3DPoint*)a[1] = RO_UN->GetModel()->mModels[a[0]]->GetCenterPoint();
         break;

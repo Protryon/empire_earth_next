@@ -15,14 +15,18 @@
 
 use std::ffi::{c_long, c_ulong, c_void};
 
+use crate::ge::pixel;
 use crate::ge::texobj::EeGeSurfaceDescription;
 use crate::ge::texture;
-use crate::openformats::EeOfTextureInfo;
+use crate::openformats::{EeOfTextureFrame, EeOfTextureInfo};
+use ee_base::math::types::GeRectangle;
 
 /// `kErrorOK`, `kErrorAlreadyExists`, `kErrorOutOfMemory` (lle/LowLevelEngineCore.h).
 const OK: c_long = 0;
 const ALREADY_EXISTS: c_long = 2;
 const OUT_OF_MEMORY: c_long = 8;
+/// `kErrorFailed`.
+const FAILED: c_long = 9;
 /// `kStageOpTexture`, `kAddressingClamp`, `kMinFilterPoint`, `kMagFilterPoint`, `kMipFilterPoint`
 /// (lle/GERenderState.h).
 const STAGE_OP_TEXTURE: c_ulong = 1;
@@ -62,14 +66,18 @@ pub struct EeGeTexCoord {
 /// A rectangle as GERectangle's setters fill it: left, top, right, bottom.
 pub type EeGeTexRect = [f32; 4];
 
-/// A copy between two surfaces (`EeGeTexOp::SurfCopyTo` / `SurfCopyWithFilter`'s `b`).
+/// A copy between two surfaces (`EeGeTexOp::SurfCopyTo` / `SurfCopyWithFilter`'s `b`): the C++ reads it as two
+/// `GERectangle`s (the records its class derives from); `CopyTo`'s `inTransparent` is the operation's `c`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EeGeTexCopy {
-    pub source: EeGeTexRect,
-    pub destination: EeGeTexRect,
-    /// `CopyTo`'s `inTransparent` (always false here).
-    pub transparent: bool,
+    pub source: GeRectangle,
+    pub destination: GeRectangle,
+}
+
+/// A rectangle as GERectangle's (left, top, right, bottom) constructor makes it.
+pub fn ge_rect(r: &EeGeTexRect) -> GeRectangle {
+    GeRectangle { bottom: r[3], left: r[0], right: r[2], top: r[1] }
 }
 
 /// The calls a texture makes on other objects. `obj` is the object called; `a`..`c` as each says.
@@ -108,14 +116,14 @@ pub enum EeGeTexOp {
     SurfHeight,
     /// `obj->CopyWithFilter(a, b's source, b's destination)` (`b` an `EeGeTexCopy`).
     SurfCopyWithFilter,
-    /// `obj->CopyTo(a, b's source, b's destination, b's transparent)`.
+    /// `obj->CopyTo(a, b's source, b's destination, c != 0)` (always false here).
     SurfCopyTo,
     /// `((GEScreen*)obj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b)`.
     ScreenCreateSurface,
     /// `ee_of_texture_info(obj, (EeOfTextureInfo*)a)`: the decoded file's width, height and frame count.
     FileInfo,
-    /// `ee_of_texture_frame(a, b, &frame)`, then `GEStoreFrame(obj, frame)`: frame `b` of file `a` into surface `obj`.
-    StoreFrame,
+    /// `ee_of_texture_frame(obj, a, (EeOfTextureFrame*)b)`: frame `a` of the decoded file `obj`.
+    FileFrame,
     /// `new GETexture((GETextureManager*)obj)`: a frame's texture.
     TexNew,
     /// The Rust object of texture `obj`.
@@ -130,10 +138,21 @@ pub enum EeGeTexOp {
     ManagerRemove,
     /// `((GETextureManager*)obj)->PromoteTexture((GETexture*)a)`.
     ManagerPromote,
-    /// `GETexture::sRasterizer->CreateTextureHandle((GETexture*)obj)`.
+    /// `((GERasterizer*)a)->CreateTextureHandle((GETexture*)obj)`: `a` the original's `GETexture::sRasterizer`
+    /// (`RASTERIZER`).
     RasterCreate,
-    /// `GETexture::sRasterizer->DestroyTextureHandle((GETexture*)obj)`.
+    /// `((GERasterizer*)a)->DestroyTextureHandle((GETexture*)obj)`.
     RasterDestroy,
+    /// `obj->GetPixelFormat()` (a surface).
+    SurfPixelFormat,
+    /// `obj->GetPixelDepth()`.
+    SurfPixelDepth,
+    /// `obj->GetSurfaceVolatility()`.
+    SurfVolatility,
+    /// `obj->GetIs3DRenderable()`.
+    SurfIs3DRenderable,
+    /// `obj->GetIsTransparencyEnabled()`.
+    SurfIsTransparencyEnabled,
 }
 
 /// The host: `owner` is the C++ texture of the object calling.
@@ -239,6 +258,15 @@ pub struct EeGeTexture {
     direct: bool,
 }
 
+/// The original's `GETexture::sRasterizer`: the active rasterizer when the last C++ texture was made (each
+/// constructor set it first), the one the textures' handles are made and destroyed on.
+static RASTERIZER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// `RASTERIZER`, as a host operation's `a`.
+fn rasterizer() -> isize {
+    RASTERIZER.load(std::sync::atomic::Ordering::SeqCst) as isize
+}
+
 /// Every access to an object is one short statement: a host call may come back in and use it.
 ///
 /// # Safety
@@ -335,9 +363,88 @@ impl EeGeTexture {
         source: EeGeTexRect,
         destination: EeGeTexRect,
     ) -> c_long {
-        let copy = EeGeTexCopy { source, destination, transparent: false };
+        let mut copy = EeGeTexCopy { source: ge_rect(&source), destination: ge_rect(&destination) };
         // SAFETY: the caller's contract
-        unsafe { Self::op(p, op, from, to as isize, &copy as *const EeGeTexCopy as isize) as c_long }
+        unsafe { Self::op(p, op, from, to as isize, &mut copy as *mut EeGeTexCopy as isize) as c_long }
+    }
+
+    /// `GEStoreFrame(surface, frame)`: frame `frame` of the decoded file `file` stored into `surface` as the
+    /// original's Targa reader stored a texture file's frame (`pixel::store_frame`); a frame larger than the surface's
+    /// pixels is refused (`kErrorFailed`) before the lock.
+    ///
+    /// # Safety
+    /// `p` is live; `surface` a surface, `file` a decoded file with that frame.
+    unsafe fn store_frame(p: *mut Self, surface: usize, file: usize, frame: u32) -> c_long {
+        let mut f = EeOfTextureFrame { width: 0, height: 0, channels: 0, pixels: std::ptr::null() };
+        let mut desc = EeGeSurfaceDescription::default();
+        // SAFETY: the caller's contract; each out value is a local
+        unsafe {
+            Self::op(p, EeGeTexOp::FileFrame, file, frame as isize, &mut f as *mut EeOfTextureFrame as isize);
+            let pixel_depth = Self::surf(p, EeGeTexOp::SurfPixelDepth, surface) as c_ulong;
+            let pixel_format = Self::surf(p, EeGeTexOp::SurfPixelFormat, surface) as c_ulong;
+            Self::op(p, EeGeTexOp::SurfDescription, surface, &mut desc as *mut EeGeSurfaceDescription as isize, 0);
+            let mut target = pixel::StoreTarget {
+                pixel_depth,
+                pixel_format,
+                no_alpha: desc.no_alpha,
+                pixel_width: desc.width,
+                pixel_height: desc.height,
+                bytes_per_row: 0,
+            };
+            if !pixel::frame_fits(&target, f.width, f.height) {
+                return FAILED;
+            }
+            let result = Self::surf(p, EeGeTexOp::SurfLock, surface) as c_long;
+            if result != OK {
+                return result;
+            }
+            target.bytes_per_row = Self::surf(p, EeGeTexOp::SurfBytesPerRow, surface) as c_ulong;
+            let memory = Self::surf(p, EeGeTexOp::SurfMemory, surface) as *mut u8;
+            pixel::store_frame(&target, f.width, f.height, f.channels, f.pixels, memory);
+            Self::surf(p, EeGeTexOp::SurfUnlock, surface) as c_long
+        }
+    }
+
+    /// The texture manager's surface description of `p` (its host's `TexSurfaceDescription`): `GetSurface()`'s pixel
+    /// format, depth, volatility and 3D and transparency flags into `desc`, the rest as it was.
+    ///
+    /// # Safety
+    /// `p` is live with a surface.
+    pub(crate) unsafe fn surface_description(p: *mut Self, desc: &mut EeGeSurfaceDescription) {
+        // SAFETY: the caller's contract
+        unsafe {
+            let s = tx(p).surface;
+            desc.pixel_format = Self::surf(p, EeGeTexOp::SurfPixelFormat, s) as c_ulong;
+            desc.pixel_depth = Self::surf(p, EeGeTexOp::SurfPixelDepth, s) as c_ulong;
+            desc.surface_volatility = Self::surf(p, EeGeTexOp::SurfVolatility, s) as c_ulong;
+            desc.is_3d_renderable = Self::surf(p, EeGeTexOp::SurfIs3DRenderable, s) != 0;
+            desc.is_transparency_enabled = Self::surf(p, EeGeTexOp::SurfIsTransparencyEnabled, s) != 0;
+        }
+    }
+
+    /// The texture pack's log line of `p` named `name` with `dropped` MIP levels dropped (`EE_TEXTURE_PACK_LOG` set:
+    /// the test's evidence, posix_game.py): its logical and pixel sizes.
+    ///
+    /// # Safety
+    /// `p` is live with a surface.
+    pub(crate) unsafe fn pack_log(p: *mut Self, name: &[u8], dropped: c_long) {
+        if std::env::var_os("EE_TEXTURE_PACK_LOG").is_none() {
+            return;
+        }
+        // SAFETY: the caller's contract
+        unsafe {
+            let s = tx(p).surface;
+            let (w, h) =
+                (Self::surf(p, EeGeTexOp::SurfWidth, s) as c_ulong, Self::surf(p, EeGeTexOp::SurfHeight, s) as c_ulong);
+            let mut desc = EeGeSurfaceDescription::default();
+            Self::op(p, EeGeTexOp::SurfDescription, s, &mut desc as *mut EeGeSurfaceDescription as isize, 0);
+            eprintln!(
+                "texture pack: {} logical {w}x{h} pixels {}x{} ({dropped} MIP levels dropped)",
+                String::from_utf8_lossy(name),
+                desc.width,
+                desc.height
+            );
+        }
     }
 
     /// The constructor from a manager: an empty single-frame texture, point filtering, clamped addressing.
@@ -392,7 +499,7 @@ impl EeGeTexture {
             let screen = Self::surf(p, EeGeTexOp::SurfParentScreen, surface) as usize;
             tx(p).screen = screen;
             let owner = tx(p).owner;
-            Self::op(p, EeGeTexOp::RasterCreate, owner, 0, 0);
+            Self::op(p, EeGeTexOp::RasterCreate, owner, rasterizer(), 0);
         }
     }
 
@@ -417,7 +524,7 @@ impl EeGeTexture {
                 tx(p).frames = None;
             }
             let owner = tx(p).owner;
-            Self::op(p, EeGeTexOp::RasterDestroy, owner, 0, 0);
+            Self::op(p, EeGeTexOp::RasterDestroy, owner, rasterizer(), 0);
             let surface = tx(p).surface;
             if surface != 0 {
                 Self::surf(p, EeGeTexOp::SurfDereference, surface);
@@ -546,7 +653,7 @@ impl EeGeTexture {
                 for frame in 0..count {
                     let mut surface = 0usize;
                     if Self::create_surface(p, screen, &mut desc, &mut surface) == OK {
-                        if Self::op(p, EeGeTexOp::StoreFrame, surface, file as isize, frame as isize) as c_long == OK {
+                        if Self::store_frame(p, surface, file, frame) == OK {
                             let mut mip = surface;
                             let mut j: c_long = 1;
                             while j < desc.mip_level_count {
@@ -620,7 +727,7 @@ impl EeGeTexture {
                         while i < count && result == OK {
                             let mut mip = surface;
                             let mut target = grid_surface;
-                            result = Self::op(p, EeGeTexOp::StoreFrame, mip, file as isize, i as isize) as c_long;
+                            result = Self::store_frame(p, mip, file, i);
                             if result == OK {
                                 let (w, h) = Self::surf_size(p, mip);
                                 source = [0.0, 0.0, w, h];
@@ -837,7 +944,7 @@ impl EeGeTexture {
             }
             let owner = tx(p).owner;
             if tx(p).surface != 0 {
-                Self::op(p, EeGeTexOp::RasterDestroy, owner, 0, 0);
+                Self::op(p, EeGeTexOp::RasterDestroy, owner, rasterizer(), 0);
                 let old = tx(p).surface;
                 Self::surf(p, EeGeTexOp::SurfDereference, old);
             }
@@ -846,7 +953,7 @@ impl EeGeTexture {
             let screen = Self::surf(p, EeGeTexOp::SurfParentScreen, surface) as usize;
             tx(p).screen = screen;
             tx(p).is_promoted = false;
-            Self::op(p, EeGeTexOp::RasterCreate, owner, 0, 0);
+            Self::op(p, EeGeTexOp::RasterCreate, owner, rasterizer(), 0);
             tx(p).has_changed = true;
             OK
         }
@@ -950,20 +1057,31 @@ pub unsafe extern "C" fn ee_ge_tex_new(
     owner: *mut c_void,
     manager: *mut c_void,
 ) -> *mut EeGeTexture {
+    RASTERIZER.store(crate::ge::rastobj::ee_ge_rast_active() as usize, std::sync::atomic::Ordering::SeqCst);
     let p = EeGeTexture::create(host, owner as usize, manager as usize);
     // SAFETY: just made
     unsafe { (*p).direct = true };
     p
 }
 
-/// `GETexture::GETexture(surface, manager)`'s statements after the fields (`ee_ge_tex_new` first).
+/// `GETexture::GETexture(surface, manager)`: `ee_ge_tex_new`, then the texture around the surface (referenced) and
+/// registered with the rasterizer.
 ///
 /// # Safety
-/// `p` is live; `surface` a surface.
+/// As `ee_ge_tex_new`; `surface` a surface.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ge_tex_construct_on_surface(p: *mut EeGeTexture, surface: *mut c_void) {
+pub unsafe extern "C" fn ee_ge_tex_new_on_surface(
+    host: EeGeTexHostFn,
+    owner: *mut c_void,
+    manager: *mut c_void,
+    surface: *mut c_void,
+) -> *mut EeGeTexture {
     // SAFETY: the caller's contract
-    unsafe { EeGeTexture::construct_on_surface(p, surface as usize) }
+    unsafe {
+        let p = ee_ge_tex_new(host, owner, manager);
+        EeGeTexture::construct_on_surface(p, surface as usize);
+        p
+    }
 }
 
 /// `~GETexture`: the releases, then the object freed.

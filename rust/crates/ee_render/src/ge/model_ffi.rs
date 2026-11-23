@@ -26,6 +26,20 @@ impl EeGeSharedFrames {
     /// None shared.
     pub const NONE: EeGeSharedFrames = EeGeSharedFrames { frames: std::ptr::null(), count: 0 };
 
+    /// The entries of `shared` (none for NULL, a NULL list or a count of 0).
+    ///
+    /// # Safety
+    /// `shared` is NULL or valid, its frames NULL or holding its count of entries.
+    pub unsafe fn entries<'a>(shared: *const EeGeSharedFrames) -> &'a [EeGeSharedFrame] {
+        // SAFETY: the caller's contract
+        unsafe {
+            match shared.as_ref() {
+                Some(s) if !s.frames.is_null() && s.count != 0 => std::slice::from_raw_parts(s.frames, s.count),
+                _ => &[],
+            }
+        }
+    }
+
     /// The entries of `frames` (which must outlive the load).
     pub fn of(frames: &[EeGeSharedFrame]) -> EeGeSharedFrames {
         if frames.is_empty() {

@@ -16,8 +16,7 @@ pub mod gestate;
 pub mod geval;
 /// The crate ee_gfx before the restructure.
 pub mod gfx;
-/// The crate ee_gx before the restructure.
-/// cbindgen:ignore
+/// The crate ee_gx before the restructure (its C ABI: abi.rs, ffi.rs; the rest is cbindgen:ignore).
 pub mod gx;
 /// The crate ee_openformats before the restructure.
 pub mod openformats;

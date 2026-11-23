@@ -60,6 +60,27 @@ enum class EeWonSmartNumber {
   LastCommand = 5,
 };
 
+/// The smart connection's calls made under its socket's lock (R6 WON round 32: SmartRoutingConnection's inline
+/// bodies, each `AutoCrit aCrit(GetDataLock()); ee_won_smart_...;`, are one call here).
+enum class EeWonSmartLocked : uint32_t {
+  /// `ee_won_smart_start(r, a, b)`.
+  Start = 1,
+  /// `ee_won_smart_ignore(r, a, b != 0)`.
+  Ignore,
+  /// `ee_won_smart_add_command(r, a, b, c)`.
+  AddCommand,
+  /// `ee_won_smart_clear_commands(r)`.
+  ClearCommands,
+  /// `ee_won_smart_handle_input(r, a, b, c, d)`.
+  HandleInput,
+  /// `ee_won_smart_set_path(r, a, b)`.
+  SetPath,
+  /// `ee_won_smart_number(r, ClientId)` as an `unsigned short`.
+  ClientId,
+  /// `ee_won_smart_set(r, a, b)`.
+  Set,
+};
+
 /// The model (opaque): `SmartRoutingConnection::mModel`.
 struct EeWonSmartRoute;
 
@@ -209,6 +230,19 @@ void ee_won_smart_dump(EeWonSmartRoute *r,
                        bool flag,
                        EeWonByteSink sink,
                        void *context);
+
+/// One of the smart connection's calls (`call`, its arguments `a`..`d`) with the connection's lock `lock` held
+/// around it, as the C++ bodies held it (`AutoCrit`).
+///
+/// # Safety
+/// `lock` is the connection's live mutex, `r` its model; the arguments are each call's.
+int64_t ee_won_smart_locked(void *lock,
+                            EeWonSmartRoute *r,
+                            EeWonSmartLocked call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c,
+                            ptrdiff_t d);
 
 }  // extern "C"
 

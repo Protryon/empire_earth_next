@@ -19,6 +19,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEDoppelganger.h"
 #include "ee/EEDoppelgangerManager.h"
+#include "rust/sim/units.h"
 
 // Creates an empty doppelganger with no unit, viewing player or tile
 EEDoppelganger::EEDoppelganger()
@@ -66,20 +67,13 @@ EEDoppelganger::~EEDoppelganger()
 // Forgets the unit, viewing player and tile without releasing anything
 void EEDoppelganger::Reset()
 {
-    this->mUnit = NULL;
-    this->mPlayer = NULL;
-    this->mTile = NULL;
+    ee_units_dm_dop(EE_UNITS_DM_DG_DO_RESET, this, NULL, NULL, NULL);   // dm_dop.rs
 }
 
 // Releases the remembered unit (and a simple doppelganger's model media), then resets
 void EEDoppelganger::Clear()
 {
-    if (this->mUnit != NULL) {
-        if (!this->IsComplex())
-            this->mUnit->mStats->mModel->UnloadMedia();
-        this->mUnit->Dereference();
-    }
-    this->Reset();
+    ee_units_dm_dop(EE_UNITS_DM_DG_DO_CLEAR, this, NULL, NULL, NULL);   // dm_dop.rs
 }
 
 // Returns whether the remembered unit is still valid
@@ -97,89 +91,32 @@ EEPlayer* EEDoppelganger::GetPlayer()
 // Remembers a unit on a tile for a viewing player, referencing it (and loading a simple one's media)
 void EEDoppelganger::Initialize(EEUnit* inUnit, EEPlayer* inPlayer, RTSTile* inTile)
 {
-    this->mPlayer = inPlayer;
-    this->mUnit = inUnit;
-    if (!this->IsComplex())
-        this->mUnit->mStats->mModel->LoadMedia();
-    this->mUnit->Reference();
-    this->mTile = inTile;
+    ee_units_dm_dop(EE_UNITS_DM_DG_DO_INITIALIZE, this, inUnit, inPlayer, inTile);   // dm_dop.rs
 }
 
 // Copies another doppelganger's unit and tile for a new viewing player (the tile argument is unused)
 void EEDoppelganger::Initialize(EEDoppelganger* inOther, EEPlayer* inPlayer, RTSTile* inTile)
 {
-    this->mPlayer = inPlayer;
-    inOther->mUnit->Reference();
-    this->mUnit = inOther->mUnit;
-    this->mTile = inOther->mTile;
-    if (!this->IsComplex())
-        this->mUnit->mStats->mModel->LoadMedia();
+    ee_units_dm_dop(EE_UNITS_DM_DG_DO_INITIALIZE_COPY, this, inOther, inPlayer, inTile);   // dm_dop.rs
 }
 
 // Reads the unit id and viewing player id from the saved game; returns the second read's result
 long EEDoppelganger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theUnitID;
-    long thePlayer;
-    inFile.Read(theUnitID);
-    this->mUnit = reinterpret_cast<EEUnit*>(theUnitID);
-    long theResult = inFile.Read(thePlayer);
-    this->mPlayer = reinterpret_cast<EEPlayer*>(thePlayer);
-    return theResult;
+    return (long)ee_units_dm_dop(EE_UNITS_DM_DG_DO_LOAD, this, &inFile, NULL, NULL);   // dm_dop.rs
 }
 
 // Turns the loaded ids back into unit and player and puts a simple doppelganger on its tile; frees a
 // simple one that lost either (returning 0), a complex one returns 9
 long EEDoppelganger::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    long theResult = 0;
-    long thePlayer = (int32_t)USavedID(this->mPlayer);
-    EEUnit* theUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mUnit)));
-    if (theUnit != NULL) {
-        this->mUnit = theUnit;
-        theUnit->Reference();
-    } else {
-        this->mUnit = NULL;
-        theResult = 9;
-    }
-    EEPlayer* theOwner = ::gWorld.mPlayers[thePlayer];
-    if (theOwner != NULL)
-        this->mPlayer = theOwner;
-    else {
-        this->mPlayer = NULL;
-        theResult = 9;
-    }
-    if (theResult == 9) {
-        if (!this->IsComplex()) {
-            theResult = 0;
-            if (this->mUnit != NULL)
-                this->mUnit->mStats->mModel->LoadMedia();
-            gDoppelgangerManager.Free(this);
-        }
-    } else if (!this->IsComplex()) {
-        static_cast<EETile*>(this->mTile)->AddDoppelganger(this);
-        this->mUnit->mStats->mModel->LoadMedia();
-    }
-    return theResult;
+    return (long)ee_units_dm_dop(EE_UNITS_DM_DG_DO_REPAIR_POINTERS, this, NULL, NULL, NULL);   // dm_dop.rs
 }
 
 // Writes the complex flag, unit id and viewing player id if the unit is valid; returns the first write error
 long EEDoppelganger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    bool theFlag = this->IsComplex();
-    long theResult = 0;
-    if (this->GetIsValid() == true) {
-        theResult = outFile.Write(theFlag);
-        if (theResult == 0) {
-            unsigned long theID = this->mUnit->mUnitID;
-            theResult = outFile.Write(theID);
-            if (theResult == 0) {
-                theID = this->mPlayer->mPlayerID;
-                theResult = outFile.Write(theID);
-            }
-        }
-    }
-    return theResult;
+    return (long)ee_units_dm_dop(EE_UNITS_DM_DG_DO_SAVE, this, &outFile, NULL, NULL);   // dm_dop.rs
 }
 
 // The trivial slots, ICF-folded into other units' identical bodies: a simple doppelganger has no animation, frame

@@ -75,10 +75,7 @@ const UString EEUnit::sData("EEUnit-Data");
 // Creates an empty unit with no class, player, resources or hit points and no references
 EEUnit::EEUnit()
 {
-    this->mObjectKind.mValue = 1;   // New (port): an EEUnit (ee/EEUnitKind.h)
-    this->Reset();
-    this->ResetEEUnit();
-    this->mReferenceCount = 0;
+    ee_units_eu_more(EE_UNITS_EUM_DO_CONSTRUCT, this, NULL, 0, 0);   // eu_more.rs
 }
 
 // Removes the unit from the game, unloading its class media at once
@@ -96,16 +93,13 @@ EEModel* EEUnit::GetModel()
 // Resets the unit to an empty, invalid unit
 void EEUnit::Clear()
 {
-    this->ResetEEUnit();
-    this->Reset();
-    this->mIsValid = false;
+    ee_units_eu_more(EE_UNITS_EUM_DO_CLEAR, this, NULL, 0, 0);   // eu_more.rs
 }
 
 // Destroys the unit, freeing its tile node
 EEUnit::~EEUnit()
 {
-    this->mObjectKind.mValue = 1;   // New (port): an EEUnit again (ee/EEUnitKind.h)
-    this->FreeNode();
+    ee_units_eu_more(EE_UNITS_EUM_DO_DESTROY, this, NULL, 0, 0);   // eu_more.rs
 }
 
 // Adds inValue (negative: takes it) to the resource amount the unit holds
@@ -192,38 +186,13 @@ float EEUnit::GetNearestFootprintTile(EEUnit* inUnit, long* outX, long* outY)
 // Appends the unit's one-line debug text: base text, resource type and amount, class type, hit points
 void EEUnit::Describe(UWideString& ioString)
 {
-    UWideString theString;
-    RTSUnit::Describe(theString);
-    ioString += theString;
-    sprintf(theString, "res %ld / %ld:", this->mResourceType, this->mResourceAmount);
-    ioString += theString;
-    sprintf(theString, "obj %ld:", this->mUnitClass->mUnitType);
-    ioString += theString;
-    sprintf(theString, "hp %ld:", this->mHitPoints);
-    ioString += theString;
+    ee_units_eu_describe(this, &ioString, false);   // eu_describe.rs
 }
 
 // Appends the unit's long debug text: base text, class (simple units), resource and health
 void EEUnit::DescribeLong(UWideString& ioString)
 {
-    UWideString theString;
-    if (this->mComplexUnit == NULL) {
-        sprintf(theString, "\n======] SIMPLE UNIT [======\n");
-        ioString += theString;
-    }
-    RTSUnit::DescribeLong(theString);
-    ioString += theString;
-    if (this->mComplexUnit == NULL) {
-        sprintf(theString, "Object Type and Name: %ld, %s\n", this->mUnitClass->mUnitType, (const char*)this->mUnitClass->mName);
-        ioString += theString;
-    }
-    if (this->mResourceType != kResourceNone) {
-        sprintf(theString, "Resource Type/Amount:%ld / %ld\n", this->mResourceType, this->mResourceAmount);
-        ioString += theString;
-    }
-    sprintf(theString, "Health: %ld / %ld (%.2f%%)\n", this->mHitPoints, this->mStats->mMaxHitPoints,
-            (float)this->mHitPoints / (float)this->mStats->mMaxHitPoints);
-    ioString += theString;
+    ee_units_eu_describe(this, &ioString, true);   // eu_describe.rs
 }
 
 // Returns the unit's tile, or for a multi-tile unit off a continent of kind inFlag, the first tile within inRange
@@ -275,9 +244,7 @@ void EEUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
 // Frees the unit's tile node and deletes the unit once its last reference goes
 void EEUnit::LastDereference()
 {
-    this->FreeNode();
-    this->mReferenceCount = 0;
-    delete this;
+    ee_units_eu_more(EE_UNITS_EUM_DO_LAST_DEREFERENCE, this, NULL, 0, 0);   // eu_more.rs
 }
 
 // Reads the unit from a saved game (resource type, health fraction held in mHitPoints until FinishLoad, amount);
@@ -351,6 +318,8 @@ static EeCombatHitPointsOut sHitOut;
 static float sDeathVolume;
 static float sDeathPan;
 static float sDeathPitch;
+// Describe's and DescribeLong's text (their theString)
+static UWideString sEuText;
 
 template <class T> static T* EEEuObject(uint64_t inHandle)
 {
@@ -578,6 +547,28 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_EUM_DEREFERENCE_LAST_ATTACKER: static_cast<EEComplexUnit*>(theUnit)->mLastAttacker->Dereference(); return 0;
     case EE_UNITS_EUM_SET_LAST_ATTACKER: static_cast<EEComplexUnit*>(theUnit)->mLastAttacker = EEEuObject<EEComplexUnit>(inA); return 0;
     case EE_UNITS_EUM_REFERENCE_OF: EEEuObject<EEComplexUnit>(inA)->Reference(); return 0;
+    case EE_UNITS_EUM_SET_OBJECT_KIND: theUnit->mObjectKind.mValue = (uint8_t)inB; return 0;
+    case EE_UNITS_EUM_CX_ZERO_DISABLED_REASON: static_cast<EEComplexUnit*>(theUnit)->mDisabledReason = 0; return 0;
+    case EE_UNITS_EUM_CX_RESET_COMPLEX: static_cast<EEComplexUnit*>(theUnit)->ResetEEComplexUnit(true, false); return 0;
+    case EE_UNITS_EUM_RESET_EE_UNIT: theUnit->ResetEEUnit(); return 0;
+    case EE_UNITS_EUM_RTS_RESET: theUnit->Reset(); return 0;
+    case EE_UNITS_EUM_SET_INVALID: theUnit->mIsValid = false; return 0;
+    case EE_UNITS_EUM_FREE_NODE: theUnit->FreeNode(); return 0;
+    case EE_UNITS_EUM_ZERO_REFERENCES: theUnit->mReferenceCount = 0; return 0;
+    case EE_UNITS_EUM_DELETE: delete theUnit; return 0;
+    // eu_describe.rs's (sEuText: the originals' theString)
+    case EE_UNITS_EUM_TEXT_NEW: sEuText = UWideString(); return 0;
+    case EE_UNITS_EUM_TEXT_RTS_DESCRIBE: theUnit->RTSUnit::Describe(sEuText); return 0;
+    case EE_UNITS_EUM_TEXT_APPEND: *EEEuObject<UWideString>(inA) += sEuText; return 0;
+    case EE_UNITS_EUM_TEXT_RESOURCE: sprintf(sEuText, "res %ld / %ld:", theUnit->mResourceType, theUnit->mResourceAmount); return 0;
+    case EE_UNITS_EUM_TEXT_OBJECT: sprintf(sEuText, "obj %ld:", theUnit->mUnitClass->mUnitType); return 0;
+    case EE_UNITS_EUM_TEXT_HIT_POINTS: sprintf(sEuText, "hp %ld:", theUnit->mHitPoints); return 0;
+    case EE_UNITS_EUM_TEXT_SIMPLE: sprintf(sEuText, "\n======] SIMPLE UNIT [======\n"); return 0;
+    case EE_UNITS_EUM_TEXT_RTS_DESCRIBE_LONG: theUnit->RTSUnit::DescribeLong(sEuText); return 0;
+    case EE_UNITS_EUM_TEXT_CLASS: sprintf(sEuText, "Object Type and Name: %ld, %s\n", theUnit->mUnitClass->mUnitType, (const char*)theUnit->mUnitClass->mName); return 0;
+    case EE_UNITS_EUM_HAS_RESOURCE: return theUnit->mResourceType != kResourceNone;
+    case EE_UNITS_EUM_TEXT_RESOURCE_LONG: sprintf(sEuText, "Resource Type/Amount:%ld / %ld\n", theUnit->mResourceType, theUnit->mResourceAmount); return 0;
+    case EE_UNITS_EUM_TEXT_HEALTH: sprintf(sEuText, "Health: %ld / %ld (%.2f%%)\n", theUnit->mHitPoints, theUnit->mStats->mMaxHitPoints, (float)theUnit->mHitPoints / (float)theUnit->mStats->mMaxHitPoints); return 0;
     default: return 0;
     }
 }

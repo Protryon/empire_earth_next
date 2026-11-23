@@ -137,14 +137,7 @@ UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 // Creates a complex unit with every unit, mobile-unit and reference state reset to defaults
 EEComplexUnit::EEComplexUnit()
 {
-    this->mObjectKind.mValue = 2;   // New (port): an EEComplexUnit (ee/EEUnitKind.h)
-    // none of the resets below sets the disable reason, which saved games store: start a new unit at 0
-    // (a unit reused from the pool keeps its last reason, as before)
-    this->mDisabledReason = 0;
-    this->Reset();
-    this->ResetEEUnit();
-    this->ResetEEComplexUnit(true, false);
-    this->mReferenceCount = 0;
+    ee_units_eu_more(EE_UNITS_EUM_DO_CONSTRUCT_COMPLEX, static_cast<EEUnit*>(this), NULL, 0, 0);   // eu_more.rs
 }
 
 // Adds the unit's line of sight at its current tile
@@ -162,10 +155,7 @@ bool EEComplexUnit::IsFoundation()
 // Resets the unit to its default state and marks it invalid (back in the pool)
 void EEComplexUnit::Clear()
 {
-    this->ResetEEComplexUnit(true, false);
-    this->ResetEEUnit();
-    this->Reset();
-    this->mIsValid = false;
+    ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR, this, NULL, 0);   // cu_small.rs
 }
 
 // Removes the unit's line of sight at its current tile
@@ -188,10 +178,7 @@ struct EEComplexUnitGrowthLess {
 
 void EEComplexUnit::HoldUnit(EEComplexUnit* inUnit)
 {
-    inUnit->Reference();
-    inUnit->SetHolder(this);
-    this->mHeldUnits.push_back(inUnit);
-    std::sort(this->mHeldUnits.begin(), this->mHeldUnits.end(), EEComplexUnitGrowthLess());
+    ee_units_cu_small(EE_UNITS_CU_S_DO_HOLD_UNIT, this, inUnit, 0);   // cu_small.rs
 }
 
 // Sets the unit that holds this one, swapping the references
@@ -203,20 +190,7 @@ void EEComplexUnit::SetHolder(EEComplexUnit* inUnit)
 // Ignores a target for 30 seconds from both units' current tiles, or renews an existing ignore entry
 void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
 {
-    // ee_combat world.rs ignore_target over the world host (EECombatGoals.cpp); CBXR records the outcome
-    EECombatWorld(EE_COMBAT_WORLD_IGNORE, this, inTarget);
-    EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, this, inTarget, 0, 0);
-}
-
-// Creates an empty ignored-target entry
-EEComplexUnitAttacker::EEComplexUnitAttacker()
-{
-    this->mTileX = 0;
-    this->mTileY = 0;
-    this->mFromX = 0;
-    this->mFromY = 0;
-    this->mUnitID = 0;
-    this->mTime = 0;
+    ee_units_cu_small(EE_UNITS_CU_S_DO_IGNORE_TARGET, this, inTarget, 0);   // cu_small.rs (CBXR after the world call)
 }
 
 // Loads a living unit as cargo if there is room (or room is ignored), taking it off the map; returns 0 or 7
@@ -331,16 +305,13 @@ void EEComplexUnit::Invalidate()
 // Releases the unit's sound instance
 void EEComplexUnit::ReleaseSound()
 {
-    if (this->mSound)
-        this->mSound->Dereference();
-    this->mSound = NULL;
+    ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_SOUND, this, NULL, 0);   // cu_small.rs
 }
 
 // Clears every goal queue of the unit
 void EEComplexUnit::ClearAllGoalQueues()
 {
-    for (unsigned long i = 0; i < this->GetNumGoalQueues(); i++)
-        this->ClearGoalQueue(i);
+    ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES, this, NULL, 0);   // cu_small.rs
 }
 
 // Releases every held unit, detaching those this unit holds
@@ -388,11 +359,7 @@ void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
 // Destroys the unit's heal graphic effect, if any
 void EEComplexUnit::ReleaseHealEffect()
 {
-    EEEffectHandle theHandle = this->mHealEffect;
-    if (!UIsNone32(theHandle.mValue)) {
-        gEffectManager->DestroyEffect(theHandle);
-        this->mHealEffect.mValue = -1;
-    }
+    ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT, this, NULL, 0);   // cu_small.rs
 }
 
 // Destroys the fire effect of a citizen, gate or wall, or removes a cloak effect from a CP market
@@ -410,10 +377,7 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
 // Replaces the unit's sound instance, referencing the new one
 void EEComplexUnit::SetSound(SESMInstanceNode* inSound)
 {
-    this->ReleaseSound();
-    this->mSound = inSound;
-    if (inSound)
-        inSound->Reference();
+    ee_units_cu_small(EE_UNITS_CU_S_DO_SET_SOUND, this, inSound, 0);   // cu_small.rs
 }
 
 // New (debugging): EE_UNIT_POOL=0 takes every unit from operator new instead of the pool (UMemoryPool::Delete deletes
@@ -503,42 +467,19 @@ void EEComplexUnit::ClearGarrison()
 // Dumps the unit pool's statistics and releases the pool
 void EEComplexUnit::ReleasePool()
 {
-    UWideString theReport(1000);
-    UWideString theLine;
     EEComplexUnit::sMemoryPool.DumpStats(false);
     EEComplexUnit::sMemoryPool.Release();
 }
 
-// Builds a "!Leaking Unit" line per used pool unit and clears its reference count (the report is gone)
-// The reference-counter buckets are walked too, their report compiled away (provisional name, from Empire Earth.cpp)
+// Clears every used pool unit's reference count. The original also built a "!Leaking Unit" line per unit and walked
+// the reference-counter buckets, but its report was compiled away: neither had an effect (provisional name, from
+// Empire Earth.cpp)
 void EEReportLeakingUnits()
 {
     std::vector<EEComplexUnit*> theUnits;
-    UReferenceCounter::CounterMap::iterator theCounter;
-    UReferenceCounter::FileCountMap::iterator theFile;
-    UWideString theText(1000);
-    UWideString theLine;
     EEComplexUnit::sMemoryPool.GetUsed(theUnits);
-    for (long i = (long)theUnits.size() - 1; i >= 0; i--) {
-        theText.Clear();
-        theLine = "!Leaking Unit: ";
-        sprintf(theText, "%s at (%ld,%ld). UnitID: %ld with action:%s\n", (const char*)theUnits[i]->GetUnitClass()->mName,
-                theUnits[i]->GetTileX(), theUnits[i]->GetTileY(), theUnits[i]->GetUnitID(),
-                (const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType));
-        theLine += (const char*)theText;
+    for (long i = (long)theUnits.size() - 1; i >= 0; i--)
         theUnits[i]->mReferenceCount = 0;
-    }
-    UReferenceCounter::CounterMap* theCounters = UReferenceCounter::GetBucketMap(0);
-    if (theCounters == NULL)
-        return;
-    for (theCounter = theCounters->begin(); theCounter != theCounters->end(); theCounter++) {
-        UReferenceCounter::FileCountMap* theFiles = theCounter->second;
-        EEUnit* theUnit = dynamic_cast<EEUnit*>(theCounter->first);
-        if (theFiles != NULL && theUnit != NULL) {
-            for (theFile = theFiles->begin(); theFile != theFiles->end(); theFile++) {
-            }
-        }
-    }
 }
 
 // Writes every used pool unit to the dump file with its class, tile, id, action and growth
@@ -546,15 +487,7 @@ void EEReportLeakingUnits()
 // (provisional name)
 void EEDumpLeakedUnits(FSFileSpec& inFile)
 {
-    std::vector<EEComplexUnit*> theUnits;
-    EEComplexUnit::sMemoryPool.GetUsed(theUnits);
-    fprintf(inFile, "\n\n**********LEAKED UNITS*********\n\n");
-    for (long i = (long)theUnits.size() - 1; i >= 0; i--) {
-        fprintf(inFile, "Leaking Unit: %s at (%ld,%ld). UnitID: %ld with action:%s, with %6.6f growth rate\n",
-                (const char*)theUnits[i]->GetUnitClass()->GetName(), theUnits[i]->GetTileX(), theUnits[i]->GetTileY(),
-                theUnits[i]->GetUnitID(), (const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType),
-                theUnits[i]->GetGrowth());
-    }
+    ee_units_cu_small(EE_UNITS_CU_S_DO_DUMP_LEAKED, NULL, &inFile, 0);   // cu_small.rs
 }
 
 // the Rust dump's text into the out-of-sync file
@@ -578,9 +511,7 @@ void EEComplexUnit::ApplyAreaEffects()
 // Adds the finished building's sight and, for other players' units, shows it on the minimap
 void EEComplexUnit::PartFinished()
 {
-    this->SightOn(this->GetTileX(), this->GetTileY());
-    if (::gWorld.GetCurrentPlayer() != this->mPlayer)
-        gMiniMap->MoveUnit(this, -10000, -10000, this->GetTileX(), this->GetTileY());
+    ee_units_cu_small(EE_UNITS_CU_S_DO_PART_FINISHED, this, NULL, 0);   // cu_small.rs
 }
 
 // Returns the unit's line of sight: its upgraded stat plus its sight bonus
@@ -674,11 +605,7 @@ float EEComplexUnit::GetEffectHeight(bool inUseCurrentFrame)
 // Returns whether a target is ignored (optionally only from the same tiles), dropping expired entries
 bool EEComplexUnit::IsTargetIgnored(EEComplexUnit* inTarget, bool inCheckLocation)
 {
-    // ee_combat world.rs is_target_ignored over the world host; CBXR records the outcome
-    bool theResult = EECombatWorld(inCheckLocation ? EE_COMBAT_WORLD_IS_IGNORED : EE_COMBAT_WORLD_IS_IGNORED_ANYWHERE, this,
-                                   inTarget) != 0;
-    EECombatCaptureIgnored(EE_COMBAT_XR_IS_IGNORED, this, inTarget, theResult, inCheckLocation);
-    return theResult;
+    return ee_units_cu_small(EE_UNITS_CU_S_DO_IS_TARGET_IGNORED, this, inTarget, inCheckLocation) != 0;   // cu_small.rs (CBXR after the world call)
 }
 
 // Returns whether the unit is disabled by a time warp (reasons 0x1a / 0x1c)
@@ -708,10 +635,7 @@ bool EEComplexUnit::IsOnOtherContinent(long inTileX, long inTileY)
 // Returns whether the unit can get to a target, directly or through connected continents
 bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
 {
-    // ee_combat world.rs can_reach_unit over the world host; CBXR records the outcome
-    bool theResult = EECombatWorld(EE_COMBAT_WORLD_CAN_REACH_UNIT, this, inTarget) != 0;
-    EECombatCaptureXRead(EE_COMBAT_XR_CAN_REACH_UNIT, this, inTarget, theResult);
-    return theResult;
+    return ee_units_cu_small(EE_UNITS_CU_S_DO_CAN_REACH_UNIT, this, inTarget, 0) != 0;   // cu_small.rs (CBXR after the world call)
 }
 
 // Returns the player's town containing the unit's tile, else the town whose outline is nearest
@@ -776,9 +700,7 @@ void EEComplexUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
 // Returns the unit to the complex-unit memory pool when its last reference goes
 void EEComplexUnit::LastDereference()
 {
-    this->FreeNode();
-    this->mReferenceCount = 0;
-    EEComplexUnit::sMemoryPool.Delete(this);
+    ee_units_cu_small(EE_UNITS_CU_S_DO_LAST_DEREFERENCE, this, NULL, 0);   // cu_small.rs
 }
 
 // Loads the unit's model (the foundation model, or the animation model with turret angles, orbitals and wheels)
@@ -910,20 +832,15 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     float* f = *ioF;
     // (the world's and the players' plain reads are Rust's: ee_units sight_host.rs)
     switch (inOp) {
-    case EE_UNITS_SIGHT_UNIT: {
-        EEUnitClass* theClass = theUnit->GetUnitClass();
-        EETechTreeNode* theNode = theUnit->GetTechTreeNode();
-        outUnit->line_of_sight = theUnit->GetLineOfSight();
-        outUnit->player = EEObj(theUnit->mPlayer);
-        outUnit->save_vis_map = theUnit->mPlayer != NULL && theUnit->mPlayer->mSaveVisMap;
-        outUnit->hit_points = (int32_t)theUnit->mHitPoints;
-        outUnit->is_built = theUnit->mIsBuilt;
-        outUnit->land_building = theClass->IsLandBuilding();
-        outUnit->tile_size = (int32_t)theClass->mTileSize;
-        outUnit->wonder_bonus = (int32_t)theClass->mWonderBonus;
-        outUnit->node_kind = theNode != NULL ? (int32_t)theNode->mData->mKind : -1;
-        return 0;
-    }
+    case EE_UNITS_SIGHT_U_LINE_OF_SIGHT: f[0] = theUnit->GetLineOfSight(); return 0;
+    case EE_UNITS_SIGHT_U_PLAYER: return EEObj(theUnit->mPlayer);
+    case EE_UNITS_SIGHT_U_SAVE_VIS_MAP: return theUnit->mPlayer != NULL && theUnit->mPlayer->mSaveVisMap;
+    case EE_UNITS_SIGHT_U_HIT_POINTS: return (int32_t)theUnit->mHitPoints;
+    case EE_UNITS_SIGHT_U_IS_BUILT: return theUnit->mIsBuilt;
+    case EE_UNITS_SIGHT_U_LAND_BUILDING: return theUnit->GetUnitClass()->IsLandBuilding();
+    case EE_UNITS_SIGHT_U_TILE_SIZE: return (int32_t)theUnit->GetUnitClass()->mTileSize;
+    case EE_UNITS_SIGHT_U_WONDER_BONUS: return (int32_t)theUnit->GetUnitClass()->mWonderBonus;
+    case EE_UNITS_SIGHT_U_NODE_KIND: return theUnit->GetTechTreeNode() != NULL ? (int32_t)theUnit->GetTechTreeNode()->mData->mKind : -1;
     case EE_UNITS_SIGHT_ENABLED:
         return gSightUpdatesEnabled;
     case EE_UNITS_SIGHT_FOUNDATION:
@@ -1162,43 +1079,20 @@ bool EEComplexUnit::CanReachTile(long inX, long inY)
 }
 
 
-// TEST ONLY (USST): AIStep's call as words: the inputs, the path, the results, the outputs
-static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
-{
-    ioWords[7] = (uint32_t)(inUnit->mCommand ? inUnit->mCommand->mType : 0);
-    ioWords[8] = (uint32_t)inUnit->mNextTriggerTime;
-    ee_units_note_state(kUnitStateAIStep, (uint32_t)inUnit->mUnitID, ioWords, 9);
-}
-
 // Evaluates the unit's current action and switches to the next one (dropping finished goals); an idle unit stops
 // evaluating 350 ticks after it went idle until its trigger time is reset
-// New (R5b.4 leaf 6): Rust over the unit store (ee_units ai.rs ai_step), the goal's activity, the actions' starts and
-// changes, the finished goals' drop, the camouflage and the command's write host calls (EEUnitAction.cpp)
+// Rust over the unit store (ee_units ai.rs ai_step_noted, with its USST note); the reads, the goal's activity, the
+// actions' starts and changes, the finished goals' drop, the camouflage and the command's write are
+// ee_units_ai_host's statements (EEUnitAction.cpp)
 void EEComplexUnit::AIStep()
 {
-    bool theNoting = ee_units_note_noting();   // TEST ONLY (USST)
-    uint32_t theWords[9] = {(uint32_t)(this->mCommand ? this->mCommand->mType : 0), (uint32_t)this->mNextTriggerTime,
-                            (uint32_t)gPhysics->mGameTime, 0, 0, 0xffffffffu, 0xffffffffu, 0, 0};
-    EeUnitsAIHost theHost;
-    EEUnitAIHostFor(this, theHost);
-    EeUnitsAIStepOut theOut = ee_units_ai_step(&theHost, static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
-                                               this->mIsCitizen ? 1 : 0, gPhysics->mGameTime);
-    if (theNoting) {
-        theWords[3] = theOut.path;
-        theWords[4] = theOut.action;
-        theWords[5] = theOut.first;
-        theWords[6] = theOut.second;
-        NoteAIStep(this, theWords);
-    }
+    ee_units_cu_ai_step(this);   // ai.rs
 }
 
 // Returns true if a range-1 unit stands on the target's tile or a tile along its sides or corners
 bool EEComplexUnit::IsOnTileBorderingTarget(EEUnit* inTarget)
 {
-    // ee_combat world.rs on_tile_bordering over the world host; CBXR records the outcome
-    bool theResult = EECombatWorld(EE_COMBAT_WORLD_BORDERING, this, inTarget) != 0;
-    EECombatCaptureXRead(EE_COMBAT_XR_BORDERING, this, inTarget, theResult);
-    return theResult;
+    return ee_units_cu_small(EE_UNITS_CU_S_DO_IS_ON_TILE_BORDERING, this, inTarget, 0) != 0;   // cu_small.rs (CBXR after the world call)
 }
 
 // Replaces a unit in the cargo, and relinks this unit to the new one if the old one was its previous part
@@ -1253,19 +1147,6 @@ void EEComplexUnit::MakeAreaEffects()
     ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, this, 0, 0, 0);   // cu_world.rs
 }
 
-// Copies an attacker record (tile, origin, unit id and time)
-// (ICF-folded with EESEAPlaceWallEntry's copy; the deque copies call it)
-EEComplexUnitAttacker& EEComplexUnitAttacker::operator=(const EEComplexUnitAttacker& inOther)
-{
-    this->mTileX = inOther.mTileX;
-    this->mTileY = inOther.mTileY;
-    this->mFromX = inOther.mFromX;
-    this->mFromY = inOther.mFromY;
-    this->mUnitID = inOther.mUnitID;
-    this->mTime = inOther.mTime;
-    return *this;
-}
-
 // Returns the number of wheels on the graphic object
 // Declared out of line in ee/EEGraphicObject.h like GetOrbitalCount; its only out-of-line copy follows this
 // unit's template block (provisional name)
@@ -1282,28 +1163,17 @@ void EEComplexUnit::FnE123D()
 {
 }
 
-// PayInsurance's notice: "You have received <amount> <resource> in insurance" in the player's colour
-static void EEInsuranceChat(EEPlayer* inPlayer, unsigned long inResource, long inShownValue)
-{
-    char theAmount[64];
-    sprintf(theAmount, "%ld", inShownValue);
-    UWideString theText;
-    UWideString thePart;
-    gResource->GetString(IDS_YOU_HAVE_RECEIVED, theText);
-    theText += theAmount;
-    theText += " ";
-    gResource->GetString(inResource + IDS_RESOURCE_NAME_BASE, thePart);
-    theText += thePart;
-    gResource->GetString(IDS_IN_INSURANCE, thePart);
-    theText += thePart;
-    gUserInterface->AddChatLogEntry(inPlayer->mColor, UWideString(gEmptyString), theText, 5000, 2);
-}
-
 // FleeAfterCalamity's point ahead is the body's first two floats
 static_assert(sizeof(GE2DPoint) == 2 * sizeof(float), "a GE2DPoint is two floats");
 
 // Kill's civilization power (EE_UNITS_CU_GET_INSURANCE fills it for the two reads after it)
 static EECivPower sInsurancePower;
+// the insurance chat line's locals (cu_small.rs: theAmount, theText, thePart)
+static char sCuInsuranceAmount[64];
+static UWideString sCuInsuranceText;
+static UWideString sCuInsurancePart;
+// EEDumpLeakedUnits' list (its theUnits)
+static std::vector<EEComplexUnit*> sCuLeaked;
 
 // a build queue entry of cu_cargo.rs's (technology, flag)
 static EEProductionEntry EECuEntry(int64_t inTechnology, int64_t inFlag)
@@ -1333,29 +1203,6 @@ static void EECuSetTransformationAtZ(EEComplexUnit* inUnit, const GETransformati
 static EeUnitsComplexDumpIn sCuDumpIn;
 static GE3DPoint sCuDumpLocation;
 static UWideString sCuText;
-
-// the out-of-sync dump's input record from the unit (the record's lines: ee_units unit_bulk.rs dump)
-static void EECuDumpFill(EEComplexUnit* inUnit)
-{
-    EeUnitsComplexDumpIn& theIn = sCuDumpIn;
-    theIn.player_id = inUnit->mPlayer->mPlayerID;
-    theIn.tile_x = inUnit->GetTileX();
-    theIn.tile_y = inUnit->GetTileY();
-    theIn.angular_velocity[0] = inUnit->mAngularVelocity.GetYaw();
-    theIn.angular_velocity[1] = inUnit->mAngularVelocity.GetPitch();
-    theIn.angular_velocity[2] = inUnit->mAngularVelocity.GetRoll();
-    theIn.build_queue = inUnit->mBuildQueue.size();
-    theIn.citizen_build_queue = inUnit->mCitizenBuildQueue.size();
-    theIn.collision_tile[0] = inUnit->mCollisionTile.mX;
-    theIn.collision_tile[1] = inUnit->mCollisionTile.GetY();
-    theIn.frame = inUnit->mPhysicalModel.GetFrame();
-    theIn.projectile_start[0] = inUnit->mProjectileStart.GetX();
-    theIn.projectile_start[1] = inUnit->mProjectileStart.GetY();
-    theIn.projectile_start[2] = inUnit->mProjectileStart.GetZ();
-    for (unsigned long r = 0; r < 4; r++)
-        for (unsigned long c = 0; c < 4; c++)
-            theIn.location[r][c] = inUnit->mPhysicalModel.GetLocation().GetElement(r, c);
-}
 
 // cu_world.rs's scratch values: CanReachTile's destination, attach point, position and pitch, MoveToLocation's
 // waypoint point, ApplyAreaEffects' location, ReleaseConversionEffect's handle (the originals' locals)
@@ -1451,6 +1298,55 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     FILE* theFile = EECuObject<FILE>(inA);
     float* f = *ioF;
     switch (inOp) {
+    // cu_small.rs's
+    case EE_UNITS_CU_S_ANIMATION_MODEL: theUnit->mPhysicalModel.SetModel(theUnit->GetModel()->mModels[theUnit->mAnimation]); return 0;
+    case EE_UNITS_CU_S_SET_MODEL_FRAME: theUnit->mPhysicalModel.SetFrame((unsigned long)inB); return 0;
+    case EE_UNITS_CU_S_LEAKED_CLEAR: sCuLeaked.clear(); return 0;
+    case EE_UNITS_CU_S_LEAKED_GET: EEComplexUnit::sMemoryPool.GetUsed(sCuLeaked); return 0;
+    case EE_UNITS_CU_S_LEAKED_COUNT: return (int64_t)sCuLeaked.size();
+    case EE_UNITS_CU_S_LEAKED_HEADER: fprintf(*EECuObject<FSFileSpec>(inA), "\n\n**********LEAKED UNITS*********\n\n"); return 0;
+    case EE_UNITS_CU_S_LEAKED_LINE: fprintf(*EECuObject<FSFileSpec>(inA), "Leaking Unit: %s at (%ld,%ld). UnitID: %ld with action:%s, with %6.6f growth rate\n", (const char*)sCuLeaked[inB]->GetUnitClass()->GetName(), sCuLeaked[inB]->GetTileX(), sCuLeaked[inB]->GetTileY(), sCuLeaked[inB]->GetUnitID(), (const char*)EEUnitAction::GetActionName(sCuLeaked[inB]->mCommand->mType), sCuLeaked[inB]->GetGrowth()); return 0;
+    case EE_UNITS_CU_S_HAS_SOUND: return theUnit->mSound != NULL;
+    case EE_UNITS_CU_S_SOUND_DEREFERENCE: theUnit->mSound->Dereference(); return 0;
+    case EE_UNITS_CU_S_SET_SOUND: theUnit->mSound = EECuObject<SESMInstanceNode>(inA); return 0;
+    case EE_UNITS_CU_S_SOUND_REFERENCE: theUnit->mSound->Reference(); return 0;
+    case EE_UNITS_CU_S_HEAL_EFFECT_NONE: return UIsNone32(theUnit->mHealEffect.mValue);
+    case EE_UNITS_CU_S_DESTROY_HEAL_EFFECT: gEffectManager->DestroyEffect(theUnit->mHealEffect); return 0;
+    case EE_UNITS_CU_S_CLEAR_HEAL_EFFECT: theUnit->mHealEffect.mValue = -1; return 0;
+    case EE_UNITS_CU_S_REFERENCE_OTHER: theOther->Reference(); return 0;
+    case EE_UNITS_CU_S_SET_HOLDER_OF: theOther->SetHolder(theUnit); return 0;
+    case EE_UNITS_CU_S_HELD_PUSH: theUnit->mHeldUnits.push_back(theOther); return 0;
+    case EE_UNITS_CU_S_HELD_SORT: std::sort(theUnit->mHeldUnits.begin(), theUnit->mHeldUnits.end(), EEComplexUnitGrowthLess()); return 0;
+    case EE_UNITS_CU_S_NUM_GOAL_QUEUES: return (int64_t)theUnit->GetNumGoalQueues();
+    case EE_UNITS_CU_S_CLEAR_GOAL_QUEUE: theUnit->ClearGoalQueue((unsigned long)inB); return 0;
+    case EE_UNITS_CU_S_SIGHT_ON_HERE: theUnit->SightOn(theUnit->GetTileX(), theUnit->GetTileY()); return 0;
+    case EE_UNITS_CU_S_NOT_CURRENT_PLAYER: return ::gWorld.GetCurrentPlayer() != theUnit->mPlayer;
+    case EE_UNITS_CU_S_MINIMAP_SHOW: gMiniMap->MoveUnit(theUnit, -10000, -10000, theUnit->GetTileX(), theUnit->GetTileY()); return 0;
+    case EE_UNITS_CU_S_WORLD_IGNORE: EECombatWorld(EE_COMBAT_WORLD_IGNORE, theUnit, theOther); return 0;
+    case EE_UNITS_CU_S_CAPTURE_IGNORE: EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, theUnit, theOther, 0, 0); return 0;
+    case EE_UNITS_CU_S_WORLD_IS_IGNORED: return EECombatWorld(inB != 0 ? EE_COMBAT_WORLD_IS_IGNORED : EE_COMBAT_WORLD_IS_IGNORED_ANYWHERE, theUnit, theOther) != 0;
+    case EE_UNITS_CU_S_CAPTURE_IS_IGNORED: EECombatCaptureIgnored(EE_COMBAT_XR_IS_IGNORED, theUnit, theOther, (int32_t)inB, inC != 0); return 0;
+    case EE_UNITS_CU_S_WORLD_CAN_REACH: return EECombatWorld(EE_COMBAT_WORLD_CAN_REACH_UNIT, theUnit, EECuObject<EEUnit>(inA)) != 0;
+    case EE_UNITS_CU_S_CAPTURE_CAN_REACH: EECombatCaptureXRead(EE_COMBAT_XR_CAN_REACH_UNIT, theUnit, EECuObject<EEUnit>(inA), (int32_t)inB); return 0;
+    case EE_UNITS_CU_S_WORLD_BORDERING: return EECombatWorld(EE_COMBAT_WORLD_BORDERING, theUnit, EECuObject<EEUnit>(inA)) != 0;
+    case EE_UNITS_CU_S_CAPTURE_BORDERING: EECombatCaptureXRead(EE_COMBAT_XR_BORDERING, theUnit, EECuObject<EEUnit>(inA), (int32_t)inB); return 0;
+    case EE_UNITS_CU_S_RESET_COMPLEX: theUnit->ResetEEComplexUnit(true, false); return 0;
+    case EE_UNITS_CU_S_RESET_UNIT: theUnit->ResetEEUnit(); return 0;
+    case EE_UNITS_CU_S_RESET: theUnit->Reset(); return 0;
+    case EE_UNITS_CU_S_SET_INVALID: theUnit->mIsValid = false; return 0;
+    case EE_UNITS_CU_S_FREE_NODE: theUnit->FreeNode(); return 0;
+    case EE_UNITS_CU_S_ZERO_REFERENCES: theUnit->mReferenceCount = 0; return 0;
+    case EE_UNITS_CU_S_POOL_DELETE: EEComplexUnit::sMemoryPool.Delete(theUnit); return 0;
+    case EE_UNITS_CU_S_INSURANCE_AMOUNT: sprintf(sCuInsuranceAmount, "%ld", (long)inB); return 0;
+    case EE_UNITS_CU_S_INSURANCE_TEXT_NEW: sCuInsuranceText = UWideString(); return 0;
+    case EE_UNITS_CU_S_INSURANCE_PART_NEW: sCuInsurancePart = UWideString(); return 0;
+    case EE_UNITS_CU_S_INSURANCE_RECEIVED: gResource->GetString(IDS_YOU_HAVE_RECEIVED, sCuInsuranceText); return 0;
+    case EE_UNITS_CU_S_INSURANCE_APPEND_AMOUNT: sCuInsuranceText += sCuInsuranceAmount; return 0;
+    case EE_UNITS_CU_S_INSURANCE_APPEND_SPACE: sCuInsuranceText += " "; return 0;
+    case EE_UNITS_CU_S_INSURANCE_RESOURCE_NAME: gResource->GetString((unsigned long)inB + IDS_RESOURCE_NAME_BASE, sCuInsurancePart); return 0;
+    case EE_UNITS_CU_S_INSURANCE_APPEND_PART: sCuInsuranceText += sCuInsurancePart; return 0;
+    case EE_UNITS_CU_S_INSURANCE_IN_INSURANCE: gResource->GetString(IDS_IN_INSURANCE, sCuInsurancePart); return 0;
+    case EE_UNITS_CU_S_INSURANCE_CHAT_LINE: gUserInterface->AddChatLogEntry(thePlayer->mColor, UWideString(gEmptyString), sCuInsuranceText, 5000, 2); return 0;
     // Kill's
     case EE_UNITS_CU_HIT_POINTS: return theUnit->mHitPoints;
     case EE_UNITS_CU_UNIT_TAKEN: theUnit->mPlayer->UnitTaken(theUnit, inB != 0); return 0;
@@ -1641,7 +1537,6 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_DISBAND_EFFECT:
         gEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, true, 0, 0);
         return 0;
-    case EE_UNITS_CU_INSURANCE_CHAT: EEInsuranceChat(thePlayer, (unsigned long)inB, (long)inC); return 0;
     case EE_UNITS_CU_INSURANCE_SOUND: return (uint64_t)(uintptr_t)EESoundObject::Get(kSoundInsuranceCollected);
     case EE_UNITS_CU_PLAY_AT_VOLUME:
         EECuObject<EESoundObject>(inA)->Play(EECuObject<EESoundObject>(inA)->GetVolume(), 0.0f, 1.0f);
@@ -1880,7 +1775,15 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CIRCLES:
         return theUnit->GetUnitClass()->mCategory == kUnitCategoryAirplane || theUnit->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship;
     // cu_dump.rs's
-    case EE_UNITS_CU_DUMP_FILL: EECuDumpFill(theUnit); return 0;
+    case EE_UNITS_CU_DUMP_IN: return (int64_t)(uintptr_t)&sCuDumpIn;
+    case EE_UNITS_CU_DUMP_PLAYER_ID: return (int64_t)theUnit->mPlayer->mPlayerID;
+    case EE_UNITS_CU_DUMP_TILE: return inB == 0 ? theUnit->GetTileX() : theUnit->GetTileY();
+    case EE_UNITS_CU_DUMP_ANGULAR_VELOCITY: f[0] = inB == 0 ? theUnit->mAngularVelocity.GetYaw() : inB == 1 ? theUnit->mAngularVelocity.GetPitch() : theUnit->mAngularVelocity.GetRoll(); return 0;
+    case EE_UNITS_CU_DUMP_QUEUE_SIZE: return (int64_t)(inB == 0 ? theUnit->mBuildQueue.size() : theUnit->mCitizenBuildQueue.size());
+    case EE_UNITS_CU_DUMP_COLLISION_TILE: return inB == 0 ? theUnit->mCollisionTile.mX : theUnit->mCollisionTile.GetY();
+    case EE_UNITS_CU_DUMP_FRAME: return (int64_t)theUnit->mPhysicalModel.GetFrame();
+    case EE_UNITS_CU_DUMP_PROJECTILE_START: f[0] = inB == 0 ? theUnit->mProjectileStart.GetX() : inB == 1 ? theUnit->mProjectileStart.GetY() : theUnit->mProjectileStart.GetZ(); return 0;
+    case EE_UNITS_CU_DUMP_LOCATION_ELEMENT: f[0] = theUnit->mPhysicalModel.GetLocation().GetElement((unsigned long)inB, (unsigned long)inC); return 0;
     case EE_UNITS_CU_DUMP_PART:
         ee_units_complex_dump((uint32_t)inB, theUnit, theUnit, theUnit, theUnit->GetUnitClass(), theUnit->GetStats(), &sCuDumpIn, &EEDumpWrite, theFile);
         return 0;

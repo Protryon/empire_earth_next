@@ -58,6 +58,10 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUICWonNetGamesBox.h"
 #include "ee/EEStringIDs.h"
+#include "rust/won_lobby/wonfront.h"
+// R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs), over the screens' host
+// (EEUIEWonNetArenaGameEvents.cpp)
+
 // Creates the WON game room's game list with its [password], [private] and [in progress] labels measured
 EEUICWonNetGamesBox::EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation,
                                          unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
@@ -66,41 +70,11 @@ EEUICWonNetGamesBox::EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, con
                                GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex,
                                inBorderThickness)
 {
-    UWideString theText;
-    this->mCopiedText = new GEText(inFont);
-    this->mText = new GEText(inFont);
-    this->mText->SetFgColor(GEColor());
-    this->mText->SetIsTransparent(true);
-    this->GetSelectedBackground()->SetColor(GEColor(0.0f, 0.0f, 0.0f));
-    this->SetFocusedRectColor(GEColor(0.0f, 0.0f, 0.0f));
-    gResource->GetString(IDS_CIV_POWER_PASSWORD, theText);
-    this->mPasswordLabel = UWideString("[") + theText + UWideString("]");
-    this->mCopiedText->SetText(this->mPasswordLabel);
-    this->mPasswordWidth = this->mCopiedText->GetTextExtent().GetWidth() + 8.0f;
-    gResource->GetString(IDS_PRIVATE, theText);
-    this->mPrivateLabel = UWideString("[") + theText + UWideString("]");
-    this->mCopiedText->SetText(this->mPrivateLabel);
-    this->mPrivateWidth = this->mCopiedText->GetTextExtent().GetWidth() + 8.0f;
-    gResource->GetString(IDS_IN_PROGRESS, theText);
-    this->mInProgressLabel = UWideString("[") + theText + UWideString("]");
-    this->mCopiedText->SetText(this->mInProgressLabel);
-    this->mInProgressWidth = this->mCopiedText->GetTextExtent().GetWidth() + 8.0f;
+    ee_won_front_call(EeWonFrontCall::GamesConstruct, this, (intptr_t)inFont);
 }
 
-// Destroys the game list and its texts
-EEUICWonNetGamesBox::~EEUICWonNetGamesBox()
-{
-    delete this->mCopiedText;
-    delete this->mText;
-}
-
-// Snapshots the list and its text style for drawing
-long EEUICWonNetGamesBox::CopyData()
-{
-    long theResult = UIListBox<EEUICWNGBLine>::CopyData();
-    *this->mCopiedText = *this->mText;
-    return theResult;
-}
+EEUICWonNetGamesBox::~EEUICWonNetGamesBox() { ee_won_front_call(EeWonFrontCall::GamesDestruct, this, 0); }
+long EEUICWonNetGamesBox::CopyData() { return (long)ee_won_front_call(EeWonFrontCall::GamesCopyData, this, 0); }
 
 // Draws the game list's background and selection
 long EEUICWonNetGamesBox::DrawPolygons()
@@ -108,72 +82,5 @@ long EEUICWonNetGamesBox::DrawPolygons()
     return UIListBox<EEUICWNGBLine>::DrawPolygons();
 }
 
-// Draws each game line: player count, name and its in-progress, password and private tags; joinable games
-// (not in progress, not full) in bold black, the others in grey
-long EEUICWonNetGamesBox::DrawTextA()
-{
-    GERectangle theRect;
-    UWideString theText;
-    long theResult = this->DrawScrollBarText();
-    UIControl::DrawTextA();
-    theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->GetDrawCount(); i++) {
-        theRect.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->GetLineHeight() * i));
-        theRect.SetBottom(theRect.GetTop() + (float)this->GetLineHeight());
-        GEFont* theFont;
-        if (!this->mCopyLineArray[i].mIsInProgress
-            && this->mCopyLineArray[i].mHumans != this->mCopyLineArray[i].mPlayers) {
-            this->mCopiedText->SetFgColor(GEColor());
-            theFont = this->mCopiedText->GetFont();
-            this->mCopiedText->SetFont(UIFontTable::FindOrCreateFont(theFont->GetFontName(), theFont->GetFontStyle() | kFontStyleBold,
-                                                             theFont->GetFontQuality(), theFont->GetFontSize()));
-        } else {
-            this->mCopiedText->SetFgColor(GEColor(0.8f, 0.8f, 0.8f));
-            theFont = this->mCopiedText->GetFont();
-            this->mCopiedText->SetFont(UIFontTable::FindOrCreateFont(theFont->GetFontName(), theFont->GetFontStyle() & ~kFontStyleBold,
-                                                             theFont->GetFontQuality(), theFont->GetFontSize()));
-        }
-        for (unsigned long j = 0; j < 6; j++) {
-            switch (j) {
-            case 0:
-                theRect.SetLeft(this->GetCopyTextRectangle().GetLeft() + 57.0f);
-                theRect.SetRight(theRect.GetLeft() + 350.0f);
-                this->mCopiedText->SetText(this->mCopyLineArray[i].mName);
-                break;
-            case 1:
-                theRect.SetLeft(this->GetCopyTextRectangle().GetLeft() + 2.0f);
-                theRect.SetRight(theRect.GetLeft() + 55.0f);
-                sprintf(theText, "[%02ld/%02ld]", this->mCopyLineArray[i].mHumans, this->mCopyLineArray[i].mPlayers);
-                this->mCopiedText->SetText(theText);
-                break;
-            case 3:
-                theRect.SetLeft(this->GetCopyTextRectangle().GetLeft() + this->mInProgressWidth + 415.0f);
-                theRect.SetRight(theRect.GetLeft() + this->mPasswordWidth);
-                if ((this->mCopyLineArray.begin() + i)->mHasPassword)
-                    this->mCopiedText->SetText(this->mPasswordLabel);
-                else
-                    this->mCopiedText->SetText(UWideString(""));
-                break;
-            case 5:
-                theRect.SetLeft(this->GetCopyTextRectangle().GetLeft() + 415.0f);
-                theRect.SetRight(theRect.GetLeft() + this->mInProgressWidth);
-                if (this->mCopyLineArray[i].mIsInProgress)
-                    this->mCopiedText->SetText(this->mInProgressLabel);
-                else
-                    this->mCopiedText->SetText(UWideString(""));
-                break;
-            case 4:
-                theRect.SetLeft(this->GetCopyTextRectangle().GetLeft() + this->mInProgressWidth + this->mPasswordWidth + 415.0f);
-                theRect.SetRight(theRect.GetLeft() + this->mPrivateWidth);
-                if (this->mCopyLineArray[i].mIsPrivate)
-                    this->mCopiedText->SetText(this->mPrivateLabel);
-                else
-                    this->mCopiedText->SetText(UWideString(""));
-                break;
-            }
-            this->mCopiedText->SetLocation(GE2DPoint(theRect.GetLeft(), theRect.GetTop()));
-            theResult = this->GetForm()->DrawClippedText(theRect, this->mCopiedText, this);
-        }
-    }
-    return theResult;
-}
+// six columns per line; joinable games (not in progress, not full) in bold black, the others in grey
+long EEUICWonNetGamesBox::DrawTextA() { return (long)ee_won_front_call(EeWonFrontCall::GamesDrawText, this, 0); }

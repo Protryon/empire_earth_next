@@ -255,16 +255,7 @@ public:
 // port: EEUserInterface::ProcessActions holds the UI manager's copy lock and the world's write lock around every
 // action, and the lobby runs inside one; the graphics thread presents the lobby (RTSGraphics::RenderLobby), so the run
 // loop releases them while the lobby runs and takes them back, in ProcessActions' order, before the action returns
-static void EELobbyLocks(bool inRelease)
-{
-    if (inRelease) {
-        gWorld.mLock->WriteUnlock();
-        gUIManager->UnlockUIForCopyData();
-    } else {
-        gUIManager->LockUIForCopyData();
-        gWorld.mLock->WriteLock();
-    }
-}
+// (the locks are gluesplit.rs's LocksRelease and LocksRetake, one op per lock: R6 WON round 32)
 
 static LobbyPlayer* EELobbyNewPlayer() { return new EELobbyPlayer; }
 static LobbyGame* EELobbyNewGame() { return new EELobbyGame; }
@@ -367,7 +358,25 @@ static long PlayerField(EEGameOptionsPlayer& p, EeWonEeGlueField inField, bool i
     }
 }
 
-static EEGameOptionsPlayer sEELobbyPlayer;  // the game player being made (EELobbyFillPlayers' local)
+static EEGameOptionsPlayer sEELobbyPlayer;
+// the locals of the cases gluesplit.rs composes (R6 WON round 32)
+static ResourceConfigTablePtr sEELobbyResources;
+static GEColor sEELobbyColor;
+static unsigned long sEELobbySaveLength;
+static std::list<LobbyNetAddress> sEELobbyAddressList;
+// a text with one reference the Rust gives back
+static intptr_t HeldData(const GUIString& inText)
+{
+    inText.mData->AddRef();
+    return (intptr_t)inText.mData.get();
+}
+template <class T> static intptr_t FindHeldDialog(ComponentConfig* inConfig, const char* inName, int inLine)
+{
+    SmartPtr<T> aPtr;
+    SafeGetComponent(inConfig, aPtr, inName, "EELobbyInit.cpp", inLine);
+    if (aPtr.get() != NULL) aPtr->AddRef();
+    return (intptr_t)aPtr.get();
+}  // the game player being made (EELobbyFillPlayers' local)
 
 // the lobby's window and WONAPI core (the game's; eewindow.rs's functions over them, the renderer under the lock)
 SmartPtr<PlatWindowManager> gEELobbyRootWindow;
@@ -412,68 +421,17 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::SetColor: g->SetColor((unsigned long)b); return 0;
     case Op::DrawText: g->DrawString(GlueText(b, c), (int)d, (int)e); return 0;
-    case Op::TextWidth: {
-        GUIString aText = GlueText(b, c);
-        return g->mFont->GetStringWidth(aText, 0, aText.length());
-    }
     case Op::FontHeight: return g->mFont->GetHeight();
     case Op::ListFontHeight: return reinterpret_cast<MultiListArea*>(a)->mFont->GetHeight();
     case Op::TextFind: return GlueText(b, c).findNoCase(*reinterpret_cast<const GUIString*>(d), 0);
     case Op::TextCompareNoCase: return GlueText(a, b).CompareNoCase(GlueText(c, d));
-    case Op::StringUnits: {
-        GUIStringData* aData = reinterpret_cast<GUIStringData*>(a);
-        if (b != 0)
-            for (unsigned i = 0; i < aData->mLength; i++) reinterpret_cast<uint32_t*>(b)[i] = (uint32_t)aData->mText[i];
-        return aData->mLength;
-    }
     // the column's handlers are srvlistctl.rs's calls into this glue (LobbyNetCtrlHost.cpp's EeColumn)
     case Op::SetColumnHandlers: ee_won_lobbyctl_ee_column((int)a); return 0;
-    case Op::SetFactories:
-        LobbyGame::SetGameFactory(EELobbyNewGame);
-        LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer);
-        ee_won_lobby_rows_ee_details(); // the game list's rows paint the EE game's details (rows.rs)
-        LobbyConfig::SetAllocator(EELobbyNewConfig);
-        return 0;
-    case Op::AddResources: {
-        ResourceConfigTablePtr theCollection = EELobbyResource_Init(NULL);
-        theCollection->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl);
-        theCollection->AddAllocator("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl);
-        theCollection->AddAllocator("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton);
-        theCollection->AddAllocator("EELobbyFileDialog", EELobbyNewDialogConfig, EELobbyNewFileDialog);
-        theCollection->AddAllocator("EELobbyConnectDialog", EELobbyNewDialogConfig, EELobbyNewConnectDialog);
-        // EELobbyAddResources: the LobbyGlobal section with the lobby music
-        theCollection->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(SoundDescriptor("", 2)));
-        LobbyAddComponentLoader(theCollection.mPtr, EELobbyGetComponents);
-        return 0;
-    }
     case Op::AddGameOption: LobbyAddGameOption(a ? "MapType" : "Epoch", GlueText(b, c), true); return 0;
     case Op::NumMapTypes: return (intptr_t)EERMGetNumberOfGenerators();
-    case Op::PlayerColor: {
-        GEColor theColor = EEGetPlayerColor((long)a);
-        float* aRgb = reinterpret_cast<float*>(b);
-        aRgb[0] = theColor.GetRed();
-        aRgb[1] = theColor.GetGreen();
-        aRgb[2] = theColor.GetBlue();
-        return 0;
-    }
     case Op::SetProductName: LobbySetProductName(L"EEAOC", NULL); return 0;
     case Op::ComboClear: reinterpret_cast<ComboBox*>(a)->Clear(true); return 0;
     case Op::ComboAddMapType: reinterpret_cast<ComboBox*>(a)->AddString(GlueText((intptr_t)EeWonEeGlueText::MapType, b)); return 0;
-    case Op::FindDialog: {
-        // EELobbyInit.cpp's lines 328/329
-        Component* aDialog;
-        if (b) {
-            SmartPtr<EELobbyConnectDialog> aPtr;
-            SafeGetComponent(reinterpret_cast<ComponentConfig*>(a), aPtr, "EELobbyConnectDialog", "EELobbyInit.cpp", 329);
-            aDialog = aPtr.get();
-        } else {
-            SmartPtr<EELobbyFileDialog> aPtr;
-            SafeGetComponent(reinterpret_cast<ComponentConfig*>(a), aPtr, "EELobbyFileDialog", "EELobbyInit.cpp", 328);
-            aDialog = aPtr.get();
-        }
-        if (aDialog != NULL) aDialog->AddRef();
-        return (intptr_t)aDialog;
-    }
     case Op::LobbyClose: EELobbyClose(); return 0;
     case Op::ResourceDestroy: EELobbyResource_Destroy(); return 0;
     case Op::Config: return (intptr_t)GetLobbyConfig();
@@ -485,55 +443,23 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::PostSendConnectStatus:
         reinterpret_cast<WindowManager*>(a)->PostEvent(new UserEvent(EELobbySendConnectStatus, (int)b), true);
         return 0;
-    case Op::SaveNew: {
-        EELobbySavedGame* aNew = new EELobbySavedGame;
-        aNew->mSpec.SetFile(reinterpret_cast<const char*>(a));
-        return (intptr_t)aNew;
-    }
     case Op::SaveOpen: return aSave->mSpec.Open(1) == keseOK ? 1 : 0;
-    case Op::SaveLength: {
-        unsigned long theLength = 0;
-        aSave->mSpec.GetLength(theLength);
-        return (intptr_t)theLength;
-    }
     case Op::SaveClose: aSave->mSpec.Close(); return 0;
-    case Op::SaveLoadHeader:
-        aSave->mHeader.SetMajorVersion(kSaveGameMajorVersion);
-        aSave->mHeader.SetMinorVersion(kSaveGameMinorVersion);
-        return aSave->mHeader.LoadFromFile(aSave->mSpec) == keseOK ? 1 : 0;
     case Op::SaveChecksum: return (intptr_t)aSave->mHeader.mChecksum;
     case Op::SaveOptions: aSave->mOptions = aSave->mHeader.mGameOptions; return (intptr_t)&aSave->mOptions;
     case Op::SaveFree: delete aSave; return 0;
     case Op::BoxReadError:
         LobbyMessageBox(EE_LOBBY_STRING(gEELobbyInterface_LoadGameError), EE_LOBBY_STRING(gEELobbyInterface_ErrorReadingFile));
         return 0;
-    case Op::BoxNotInGame:
-        LobbyMessageBox(EE_LOBBY_STRING(gEELobbyInterface_LoadGameError),
-                        LobbyFormatString(EE_LOBBY_STRING(gEELobbyInterface_PlayerNotInGame), EELobbyStr(a)));
+    case Op::BoxNotInGame: LobbyMessageBox(EE_LOBBY_STRING(gEELobbyInterface_LoadGameError), LobbyFormatString(EE_LOBBY_STRING(gEELobbyInterface_PlayerNotInGame), EELobbyStr(a)));
         return 0;
     case Op::OptionsField: return OptionsField(*reinterpret_cast<const EEGameOptions*>(a), (EeWonEeGlueField)b);
-    case Op::OptionsPlayer:
-        return PlayerField(reinterpret_cast<EEGameOptions*>(a)->mPlayers[b], (EeWonEeGlueField)c, false, 0);
-    case Op::OptionsPlayerName: {
-        GUIStringData* aData = EELobbyToGUIString(reinterpret_cast<const EEGameOptions*>(a)->mPlayers[b].mName).mData.get();
-        aData->AddRef();
-        return (intptr_t)aData;
-    }
-    case Op::FileName: {
-        WONFile theFile(reinterpret_cast<const char*>(a));
-        GUIStringData* aData = GUIString(theFile.GetFileName()).mData.get();
-        aData->AddRef();
-        return (intptr_t)aData;
-    }
+    case Op::OptionsPlayer: return PlayerField(reinterpret_cast<EEGameOptions*>(a)->mPlayers[b], (EeWonEeGlueField)c, false, 0);
+    case Op::OptionsPlayerName: return HeldData(EELobbyToGUIString(reinterpret_cast<const EEGameOptions*>(a)->mPlayers[b].mName));
+    case Op::FileName: return HeldData(GUIString(WONFile(reinterpret_cast<const char*>(a)).GetFileName()));
     case Op::FileSize: return (intptr_t)WONFile(reinterpret_cast<const char*>(a)).GetSize();
     case Op::ClientPlayer: return (intptr_t)(EELobbyPlayer*)reinterpret_cast<LobbyClient*>(a)->GetPlayer().mPtr;
     case Op::DefaultOptions: return (intptr_t)&gGamePreferences.GetSettings().mGameOptions;
-    case Op::OptionsBegin:
-        gGameOptions.mLock->WriteLock();
-        gGameOptions = gLobbyGameOptions;
-        gGameOptions.mIsMultiplayer = true;
-        gGameOptions.mCheatCodes = false;
-        return 0;
     case Op::OptionSet: OptionSet((EeWonEeGlueField)a, (long)b); return 0;
     case Op::OptionMapTypeName: gGameOptions.mMapType = EELobbyToWideString(EELobbyStr(a)); return 0;
     case Op::OptionMapTypeGenerator: gGameOptions.mMapType = EERMGetGeneratorName((unsigned long)a); return 0;
@@ -545,11 +471,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::PlayerCommit: gGameOptions.mPlayers[a] = sEELobbyPlayer; return 0;
     case Op::PlayerCopyTo: *reinterpret_cast<EEGameOptionsPlayer*>(a) = sEELobbyPlayer; return 0;
     case Op::LocalHost: return (intptr_t)WONAPI::IPAddr::GetLocalHost();
-    case Op::AddressesGet: {
-        std::list<LobbyNetAddress> theAddresses;
-        LobbyGetNetAddresses(theAddresses, false);
-        return (intptr_t)new std::vector<LobbyNetAddress>(theAddresses.begin(), theAddresses.end());
-    }
     case Op::AddressesCount: return (intptr_t)anAddresses->size();
     case Op::AddressHandle: return (intptr_t)(*anAddresses)[b].mHandle;
     case Op::AddressesFree: delete anAddresses; return 0;
@@ -558,8 +479,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::IsLobbyOpen: return EEIsLobbyOpen() ? 1 : 0;
     case Op::IsShown: return EELobbyIsShown() ? 1 : 0;
     case Op::PostReturnFromGame: EELobbyPostReturnFromGame(); return 0;
-    case Op::LocksRelease: EELobbyLocks(true); return 0;
-    case Op::LocksRetake: EELobbyLocks(false); return 0;
     case Op::LobbyRun: return LobbyRun();
     case Op::PostStartHostedGame: EELobbyPostAction(EELobbyStartHostedGame); return 0;
     case Op::ShowGameScreen: EELobbyShowGameScreen(); return 0;
@@ -567,10 +486,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::Hide: EELobbyHide(); return 0;
     case Op::JoinGame: EELobbyJoinGame(); return 0;
     case Op::SierraUpdate: EELobbyRunSierraUpdate(); return 0;
-    case Op::DeleteCommunications:
-        delete gCommunications;
-        gCommunications = NULL;
-        return 0;
     case Op::Show: EELobbyShow(true); return 0;
     case Op::GameForm: return (intptr_t)gUIManager->GetFormByID(30);
     case Op::CurrentForm: return (intptr_t)gUIManager->GetCurrentForm();
@@ -791,13 +706,57 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::GameAddressSet: sEELocalAddress = reinterpret_cast<LobbyGame*>(a)->GetAddress().GetHostString(true).c_str();
         return 0;
     case Op::GameAddressRef: return (intptr_t)&sEELocalAddress;
+    // the statements of the cases gluesplit.rs composes (R6 WON round 32)
+    case Op::TextHeld: return HeldData(GlueText(a, b));
+    case Op::GfxTextWidthHeld: return g->mFont->GetStringWidth(GUIString(reinterpret_cast<GUIStringData*>(b)), 0, reinterpret_cast<GUIStringData*>(b)->mLength);
+    case Op::FactoryGame: LobbyGame::SetGameFactory(EELobbyNewGame); return 0;
+    case Op::FactoryPlayer: LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer); return 0;
+    case Op::FactoryConfig: LobbyConfig::SetAllocator(EELobbyNewConfig); return 0;
+    case Op::ResInit: sEELobbyResources = EELobbyResource_Init(NULL); return 0;
+    case Op::ResAllocGameOptions: sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl); return 0;
+    case Op::ResAllocPlayerOptions: sEELobbyResources->AddAllocator("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl); return 0;
+    case Op::ResAllocColorButton: sEELobbyResources->AddAllocator("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton); return 0;
+    case Op::ResAllocFileDialog: sEELobbyResources->AddAllocator("EELobbyFileDialog", EELobbyNewDialogConfig, EELobbyNewFileDialog); return 0;
+    case Op::ResAllocConnectDialog: sEELobbyResources->AddAllocator("EELobbyConnectDialog", EELobbyNewDialogConfig, EELobbyNewConnectDialog); return 0;
+    // EELobbyAddResources: the LobbyGlobal section with the lobby music
+    case Op::ResAddMusic: sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(SoundDescriptor("", 2))); return 0;
+    case Op::ResAddLoader: LobbyAddComponentLoader(sEELobbyResources.mPtr, EELobbyGetComponents); return 0;
+    case Op::ResDone: sEELobbyResources = NULL; return 0;
+    case Op::PlayerColorGet: sEELobbyColor = EEGetPlayerColor((long)a); return 0;
+    case Op::PlayerColorRed: *reinterpret_cast<float*>(a) = sEELobbyColor.GetRed(); return 0;
+    case Op::PlayerColorGreen: *reinterpret_cast<float*>(a) = sEELobbyColor.GetGreen(); return 0;
+    case Op::PlayerColorBlue: *reinterpret_cast<float*>(a) = sEELobbyColor.GetBlue(); return 0;
+    case Op::FindConnectDialog: return FindHeldDialog<EELobbyConnectDialog>(reinterpret_cast<ComponentConfig*>(a), "EELobbyConnectDialog", 329);
+    case Op::FindFileDialog: return FindHeldDialog<EELobbyFileDialog>(reinterpret_cast<ComponentConfig*>(a), "EELobbyFileDialog", 328);
+    case Op::SaveAlloc: return (intptr_t)new EELobbySavedGame;
+    case Op::SaveSetFile: aSave->mSpec.SetFile(reinterpret_cast<const char*>(b)); return 0;
+    case Op::SaveLengthClear: sEELobbySaveLength = 0; return 0;
+    case Op::SaveGetLength: aSave->mSpec.GetLength(sEELobbySaveLength); return 0;
+    case Op::SaveLengthValue: return (intptr_t)sEELobbySaveLength;
+    case Op::SaveSetMajor: aSave->mHeader.SetMajorVersion(kSaveGameMajorVersion); return 0;
+    case Op::SaveSetMinor: aSave->mHeader.SetMinorVersion(kSaveGameMinorVersion); return 0;
+    case Op::SaveLoadFile: return aSave->mHeader.LoadFromFile(aSave->mSpec) == keseOK ? 1 : 0;
+    case Op::OptionsWriteLock: gGameOptions.mLock->WriteLock(); return 0;
+    case Op::OptionsCopyLobby: gGameOptions = gLobbyGameOptions; return 0;
+    case Op::OptionsSetMultiplayer: gGameOptions.mIsMultiplayer = true; return 0;
+    case Op::OptionsClearCheats: gGameOptions.mCheatCodes = false; return 0;
+    case Op::AddressListFill: LobbyGetNetAddresses(sEELobbyAddressList, false); return 0;
+    case Op::AddressVectorNew: return (intptr_t)new std::vector<LobbyNetAddress>(sEELobbyAddressList.begin(), sEELobbyAddressList.end());
+    case Op::AddressListClear: sEELobbyAddressList.clear(); return 0;
+    case Op::WorldWriteUnlock: gWorld.mLock->WriteUnlock(); return 0;
+    case Op::UiUnlockCopy: gUIManager->UnlockUIForCopyData(); return 0;
+    case Op::UiLockCopy: gUIManager->LockUIForCopyData(); return 0;
+    case Op::WorldWriteLock: gWorld.mLock->WriteLock(); return 0;
+    // StringUnits' (gluesplit.rs composes it, R6 WON round 33)
+    case Op::StringLength: return (intptr_t)reinterpret_cast<GUIStringData*>(a)->mLength;
+    case Op::StringUnitAt: return (intptr_t)(uint32_t)reinterpret_cast<GUIStringData*>(a)->mText[b];
     case Op::BoxDissolved: LobbyMessageBox(LOBBY_STRING(RoutingLogic_GameDissolvedTitle_String), LOBBY_STRING(RoutingLogic_GameDissolvedDetails_String)); return 0;
     }
     return 0;
 }
 
 // the host from the start: EELobbyOpen's statements are the Rust's before EELobbyInit sets it again (R6 WONLobby round 29)
-[[maybe_unused]] static const bool sGlueHostSet = (ee_won_eeglue_set_host(GlueHost), true);
+[[maybe_unused]] static const bool sGlueHostSet = (ee_won_eeglue_set_game_host(GlueHost), true);
 
 // ---- the entry points (EELobbyInit.cpp's and EELobbyMisc.cpp's; the Rust's)
 
@@ -805,7 +764,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
 // components, resources, epoch and map type options, player colours and the product name
 void EELobbyInit()
 {
-    ee_won_eeglue_set_host(GlueHost);
+    ee_won_eeglue_set_game_host(GlueHost);
     Glue(GL::Init);
 }
 void EELobbyShutdown() { Glue(GL::Shutdown); }

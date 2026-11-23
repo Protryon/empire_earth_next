@@ -653,4 +653,35 @@ mod tests {
             assert_eq!(crate::status::name(value as crate::status::Status), name, "{name}");
         }
     }
+
+    /// The socket errors WON reports are Winsock's, and the platform layer reports them in that numbering
+    /// everywhere: each of include/platform/PlatSocket.h's codes with a WSA twin (all but HOST_NOT_FOUND and
+    /// OTHER) is that `WS_WSA*` constant's value, and ee_base's (AsyncOp.cpp's 47 static_asserts until R6 WON
+    /// round 33).
+    #[test]
+    fn the_socket_errors_are_winsocks_numbering() {
+        let header = include_str!("../../../../include/platform/PlatSocket.h");
+        let mut checked = 0;
+        for line in header.lines() {
+            let Some(rest) = line.strip_prefix("#define PLAT_SOCK_") else { continue };
+            let mut parts = rest.split_whitespace();
+            let (name, value) = (parts.next().unwrap(), parts.next().unwrap().parse::<i32>().unwrap());
+            if name == "HOST_NOT_FOUND" || name == "OTHER" {
+                continue;
+            }
+            let ws = format!("WS_WSA{name}");
+            let found = ALL.iter().find(|(n, _)| *n == ws).unwrap_or_else(|| panic!("{ws}"));
+            assert_eq!(found.1, value, "{ws} against PLAT_SOCK_{name}");
+            checked += 1;
+        }
+        assert_eq!(checked, 47);
+        use ee_base::plat_sys::constants as c;
+        for (ws, plat) in [
+            (super::WS_WSAEINTR, c::PLAT_SOCK_EINTR),
+            (super::WS_WSAEWOULDBLOCK, c::PLAT_SOCK_EWOULDBLOCK),
+            (super::WS_WSAECONNREFUSED, c::PLAT_SOCK_ECONNREFUSED),
+        ] {
+            assert_eq!(ws, plat as i32);
+        }
+    }
 }

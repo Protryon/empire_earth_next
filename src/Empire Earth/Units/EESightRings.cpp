@@ -53,15 +53,10 @@ extern "C" int64_t ee_units_tile_sight_host(int32_t inOp, uint64_t inA, uint64_t
     case EE_UNITS_TILE_SIGHT_FIRST:
         reinterpret_cast<EEPlayer*>((uintptr_t)inA)->mSavedGroups.Reset(0x18, 1);
         return 0;
-    case EE_UNITS_TILE_SIGHT_SHOW:
-        if (inA != 0) {
-            gMiniMap->CountCellOn((long)inC, (long)inD);
-            gWorld.mMap->mTerrainMesh.ReferenceTile((unsigned long)inC, (unsigned long)inD);
-        } else {
-            gMiniMap->CountCellOff((long)inC, (long)inD);
-            gWorld.mMap->mTerrainMesh.DereferenceTile((unsigned long)inC, (unsigned long)inD);
-        }
-        return 0;
+    case EE_UNITS_TILE_SIGHT_CELL_ON: gMiniMap->CountCellOn((long)inC, (long)inD); return 0;
+    case EE_UNITS_TILE_SIGHT_REFERENCE: gWorld.mMap->mTerrainMesh.ReferenceTile((unsigned long)inC, (unsigned long)inD); return 0;
+    case EE_UNITS_TILE_SIGHT_CELL_OFF: gMiniMap->CountCellOff((long)inC, (long)inD); return 0;
+    case EE_UNITS_TILE_SIGHT_DEREFERENCE: gWorld.mMap->mTerrainMesh.DereferenceTile((unsigned long)inC, (unsigned long)inD); return 0;
     }
     return 0;
 }

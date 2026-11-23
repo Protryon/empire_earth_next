@@ -56,6 +56,7 @@ pub mod lle_combo;
 pub mod lle_control;
 pub mod lle_cpp;
 pub mod lle_form;
+pub mod lle_hosts;
 pub mod lle_manager;
 pub mod lle_table;
 pub mod manager;

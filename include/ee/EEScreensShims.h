@@ -26,5 +26,13 @@ inline UString EEShimString(EeScreensShimText inText) { return UString(std::stri
 inline void EEShimOut(void* inOut, const UWideString& inText) { ee_screens_shim_out(inOut, (const uint8_t*)(const char*)inText, inText.GetTCHARLength()); }
 inline void EEShimOutC(void* inOut, const char* inText) { ee_screens_shim_out(inOut, (const uint8_t*)inText, strlen(inText)); }
 inline void EEShimOut(void* inOut, const UString& inText) { EEShimOutC(inOut, (const char*)inText); }
+// a float handed over as its bits in an integer's low 32
+inline float EEShimBitsFloat(int64_t inBits)
+{
+    uint32_t theBits = (uint32_t)inBits;
+    float theFloat;
+    memcpy(&theFloat, &theBits, 4);
+    return theFloat;
+}
 
 #endif

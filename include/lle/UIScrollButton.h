@@ -13,9 +13,7 @@
 #include "lle/UIButtonRust.h"
 
 class LLE_API UIScrollButton : public UIButton {
-    friend class UIScrollBar;
-    friend struct UIScrollBarRust;          // the Rust scroll bar logic's host calls (User Interface/UIScrollBar.cpp)
-private:
+public:
     // A 19 x 19 arrow button at inLocation stepping inSlider down (inDecrement nonzero) or up
     UIScrollButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inPressedBitmap,
                    const GE2DPoint& inLocation, UIForm* inForm, UISlider* inSlider, unsigned long inDecrement,

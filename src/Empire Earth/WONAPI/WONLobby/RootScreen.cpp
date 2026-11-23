@@ -1,4 +1,6 @@
-// The lobby's root screen: the tab control (lobby or LAN and direct connect, game, help, news) and the lower bar
+// The lobby's root screen: the tab control (lobby or LAN and direct connect, game, help, news) and the lower bar.
+// Its bodies are Rust (ee_won_lobby rootscreen.rs, R6 WON round 32): each method one forward, each statement one
+// case of RootHost.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <string>
 #include <list>
@@ -14,195 +16,125 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONGUIShell.h"
+#include "rust/won_lobby/rootscreen.h"
 namespace WONAPI {
-// The original reloads mTabCtrl and its bottom tab bar for every call
-// Enables the game tab and switches to it, or switches back to the previous tab and disables the game tab
-void RootScreen::EnterGameTab(bool enter)
+
+typedef EeWonRootScreenOp RO;
+typedef EeWonRootScreenCall RC;
+
+// InitComponent's local tab and the SWAT resize's window and rectangles (the original's locals)
+static SmartPtr<Container> sRootTab;
+static WONRectangle sRootWindowRect;
+static WONRectangle sRootClientRect;
+static Window* sRootWindow;
+
+static Component* RootPart(RootScreen* s, intptr_t inPart)
 {
-    if(enter)
-    {
-        this->mTabCtrl->EnableTab(this->mGameTab,true);
-        if(this->mTabCtrl->GetCurTabId()!=this->mGameTab)
-        {
-            this->mLastJoinTab=this->mTabCtrl->GetCurTabId();
-            this->mTabCtrl->SetCurTab(this->mGameTab,true);
-        }
+    switch ((EeWonRootScreenPart)inPart) {
+    case EeWonRootScreenPart::LowerLayoutPoint: return s->mLowerLayoutPoint.get();
+    case EeWonRootScreenPart::LowerDivider: return s->mLowerDivider.get();
+    case EeWonRootScreenPart::SierraLogo: return s->mSierraLogo.get();
+    case EeWonRootScreenPart::LowerBanner: return s->mLowerBanner.get();
+    case EeWonRootScreenPart::LowerBannerFrame: return s->mLowerBannerFrame.get();
+    case EeWonRootScreenPart::BackButton: return s->mBackButton.get();
     }
-    else
-    {
-        if(this->mTabCtrl->GetCurTabId()==this->mGameTab)
-            this->mTabCtrl->SetCurTab(this->mLastJoinTab,true);
-        this->mTabCtrl->EnableTab(this->mGameTab,false);
-    }
-}
-// Switches to the Internet lobby tab
-void RootScreen::ShowLobbyTab(){this->mTabCtrl->SetCurTab(this->mLobbyTab,true);}
-// Opens the game tab when the player has joined a game of this screen's kind (Internet or LAN)
-void RootScreen::HandleJoinedGame()
-{
-    LobbyGame* aGame=GetMyLobbyGame();
-    if(aGame!=NULL && aGame->MatchesRoomSpec(this->mRoomSpecFlags)) this->EnterGameTab(true);
-}
-// Leaves and disables the game tab after the player left the game
-void RootScreen::HandleLeftGame(){this->EnterGameTab(false);}
-// The banner height is a function-local static, read from the layout on the first call
-// Lays out the lower bar: hidden, sized for the cross-promotion banner, or for the logo and back button
-void RootScreen::Virtual08()
-{
-    if(this->mLowerLayoutPoint.get()!=NULL)
-    {
-        if(this->mHideLowerControls)
-        {
-            this->mLowerDivider->SetVisible(false);
-            this->mSierraLogo->SetVisible(false);
-            this->mLowerBanner->SetVisible(false);
-            this->mLowerBannerFrame->SetVisible(false);
-            this->mBackButton->SetVisible(false);
-            this->mLowerLayoutPoint->SetPos(this->mLowerLayoutPoint->Left(),this->Height());
-            Container::Virtual08();
-            return;
-        }
-        static int aBannerHeight=this->mLowerBanner->Height();
-        this->mLowerDivider->SetVisible(true);
-        this->mSierraLogo->SetVisible(true);
-        this->mBackButton->SetVisible(true);
-        int aLowerHeight=this->mLowerDivider->Height();
-        if(LobbyGetCrossPromotion())
-        {
-            this->mLowerBannerFrame->SetVisible(true);
-            this->mLowerBanner->SetVisible(true);
-            this->mLowerBanner->SetSize(this->mLowerBanner->Width(),aBannerHeight);
-            aLowerHeight+=aBannerHeight+2*this->mLowerBannerFrame->mThickness;
-        }
-        else
-        {
-            this->mLowerBannerFrame->SetVisible(false);
-            this->mLowerBanner->SetVisible(false);
-            int aHeight=this->mBackButton->Height();
-            if(this->mSierraLogo->Height()>aHeight) aHeight=this->mSierraLogo->Height();
-            aLowerHeight+=aHeight;
-            this->mLowerBanner->SetSize(this->mLowerBanner->Width(),aHeight);
-        }
-        this->mLowerLayoutPoint->SetPos(this->mLowerLayoutPoint->Left(),this->Height()-(this->mLowerDivider->Height()-2)/2-aLowerHeight);
-    }
-    Container::Virtual08();
-}
-// A tab-selected event still goes on to Component::HandleComponentEvent after its handler
-// Handles tab changes, the relayout button and entered-screen/joined-game/left-game events
-void RootScreen::HandleComponentEvent(ComponentEvent* inEvent)
-{
-    switch(inEvent->mType)
-    {
-    case ComponentEvent_TabCtrlTabSelected: this->HandleTabCtrlTabSelected(inEvent); break;
-    case ComponentEvent_ButtonPressed:
-        if(inEvent->GetControlId()==3) { this->Relayout(); return; }
-        break;
-    case 100014: this->HandleEnteredScreen(); return;
-    case 100029: this->HandleJoinedGame(); return;
-    case 100032: this->HandleLeftGame(); return;
-    }
-    Component::HandleComponentEvent(inEvent);
-}
-// The original sets these members in the constructor body, not in an initializer list
-// Creates the root screen for the Internet or the LAN lobby, with no tab ids known yet
-RootScreen::RootScreen(bool inIsLan)
-{
-    this->mIsLan=inIsLan;
-    if(inIsLan) this->mRoomSpecFlags=8;
-    else this->mRoomSpecFlags=4;
-    this->mLobbyTab=this->mLanTab=this->mDirectConnectTab=this->mLastJoinTab=-1;
-    this->mHideLowerControls=false;
-    this->mIsSwat=false;
-}
-// The original stores the class's own vtable, then destroys the members
-// Destroys the root screen (members only)
-RootScreen::~RootScreen() {}
-// Returns whether the LAN screen is showing its direct connect tab
-bool RootScreen::OnDirectConnectTab()
-{
-    return this->mIsLan && this->mTabCtrl->GetCurTabId()==this->mDirectConnectTab;
-}
-// Returns whether the LAN screen is showing its LAN games tab
-bool RootScreen::OnLanTab()
-{
-    return this->mIsLan && this->mTabCtrl->GetCurTabId()==this->mLanTab;
-}
-// Resets the help and news browsers and selects the tab saved in the user's preferences
-void RootScreen::HandleEnteredScreen()
-{
-    this->mHelpTab->ResetBrowser();
-    if(this->mNewsTab.get()!=NULL) this->mNewsTab->ResetBrowser();
-    TabCtrl* aTabs=this->mTabCtrl.get();
-    aTabs->SetCurTabByName(LobbyGetTabSelect(),true);
+    return NULL;
 }
 
-// Finds the screen's tabs and lower bar controls in the layout and tells the children the room kind
-void RootScreen::InitComponent(ComponentInit& inInit)
+static intptr_t RootField(RootScreen* s, intptr_t inField, bool inSet, intptr_t v)
 {
-    if(inInit.mType!=2) return;
-    ComponentConfig* aConfig=static_cast<ComponentConfigInit&>(inInit).mConfig;
-    this->mIsSwat=aConfig->Fn386860("SWATUJDEF")!=NULL;
-    SafeGetComponent(aConfig,this->mTabCtrl,"TabCtrl",__FILE__,79);
-    SafeGetComponent(aConfig,this->mLowerLayoutPoint,"LowerLayoutPoint",__FILE__,80);
-    SafeGetShell(aConfig,this->mLowerDivider,EeWonShellKind::MsSeperator,"LowerDivider",__FILE__,81);
-    SafeGetComponent(aConfig,this->mSierraLogo,"SierraLogo",__FILE__,82);
-    SafeGetComponent(aConfig,this->mLowerBanner,"LowerBanner",__FILE__,83);
-    SafeGetComponent(aConfig,this->mLowerBannerFrame,"LowerBannerFrame",__FILE__,84);
-    SafeGetComponent(aConfig,this->mBackButton,"BackButton",__FILE__,85);
-    SafeGetComponent(aConfig,this->mHelpTab,"HelpTab",__FILE__,86);
-    SmartPtr<Container> aTab;
-    SafeGetComponent(aConfig,aTab,"GameTab",__FILE__,89);
-    this->mGameTab=this->mTabCtrl->GetTabIdForContainer(aTab.get());
-    this->mTabCtrl->EnableTab(this->mGameTab,false);
-    if(!this->mIsLan)
-    {
-        SafeGetComponent(aConfig,this->mNewsTab,"NewsTab",__FILE__,95);
-        SafeGetComponent(aConfig,aTab,"LobbyTab",__FILE__,96);
-        this->mLobbyTab=this->mTabCtrl->GetTabIdForContainer(aTab.get());
-        this->BroadcastEventDown(SetRoomSpecFlagsEvent(4));
+    typedef EeWonRootScreenField F;
+    switch ((F)inField) {
+    case F::IsLan: if (inSet) s->mIsLan = v != 0; return s->mIsLan;
+    case F::HideLowerControls: if (inSet) s->mHideLowerControls = v != 0; return s->mHideLowerControls;
+    case F::IsSwat: if (inSet) s->mIsSwat = v != 0; return s->mIsSwat;
+    case F::LastJoinTab: if (inSet) s->mLastJoinTab = (int)v; return s->mLastJoinTab;
+    case F::GameTab: if (inSet) s->mGameTab = (int)v; return s->mGameTab;
+    case F::DirectConnectTab: if (inSet) s->mDirectConnectTab = (int)v; return s->mDirectConnectTab;
+    case F::LanTab: if (inSet) s->mLanTab = (int)v; return s->mLanTab;
+    case F::LobbyTab: if (inSet) s->mLobbyTab = (int)v; return s->mLobbyTab;
+    case F::RoomSpecFlags: if (inSet) s->mRoomSpecFlags = (int)v; return s->mRoomSpecFlags;
     }
-    else
-    {
-        SafeGetComponent(aConfig,aTab,"LanTab",__FILE__,101);
-        this->mLanTab=this->mTabCtrl->GetTabIdForContainer(aTab.get());
-        SafeGetComponent(aConfig,aTab,"DirectConnectTab",__FILE__,102);
-        this->mDirectConnectTab=this->mTabCtrl->GetTabIdForContainer(aTab.get());
-        this->BroadcastEventDown(SetRoomSpecFlagsEvent(8));
-    }
-    this->SubscribeToBroadcast(1);
+    return 0;
 }
-// Saves the user's preferences on a tab change; in SWAT mode shrinks the window on tab 2 and restores it
-void RootScreen::HandleTabCtrlTabSelected(ComponentEvent* inEvent)
+
+static intptr_t RootHost(void* inScreen, EeWonRootScreenOp inOp, intptr_t a, intptr_t b, intptr_t c)
 {
-    if(inEvent->mComponent!=this->mTabCtrl.get()) return;
-    if(this->mIsSwat)
-    {
-        static bool aResized=false;
-        static int aOldHeight;
-        Window* aWindow=this->GetRoot();
-        WONRectangle aWindowRect;
-        WONRectangle aClientRect;
-        aWindow->GetRect(aWindowRect,false);
-        aWindow->GetRect(aClientRect,true);
-        int aWindowHeight=aWindowRect.height;
-        int aClientHeight=aClientRect.height;
-        if(this->mTabCtrl->GetCurTabId()==2)
-        {
-            this->mHideLowerControls=true;
-            aOldHeight=aWindowRect.height;
-            aResized=true;
-            aWindow->SetPosSize(aWindowRect.x,aWindowRect.y,aWindowRect.width,
-                aWindowHeight-aClientHeight+150);
-        }
-        else if(aResized)
-        {
-            this->mHideLowerControls=false;
-            aResized=false;
-            aWindow->SetPosSize(aWindowRect.x,aWindowRect.y,aWindowRect.width,aOldHeight);
-        }
-        this->Relayout();
+    RootScreen* s = static_cast<RootScreen*>(inScreen);
+    ComponentConfig* aConfig = reinterpret_cast<ComponentConfig*>(a);
+    switch (inOp) {
+    case RO::FieldGet: return RootField(s, a, false, 0);
+    case RO::FieldSet: return RootField(s, a, true, b);
+    case RO::TabCurId: return s->mTabCtrl->GetCurTabId();
+    case RO::TabEnable: s->mTabCtrl->EnableTab((int)a, b != 0); return 0;
+    case RO::TabSetCur: s->mTabCtrl->SetCurTab((int)a, true); return 0;
+    case RO::TabSetCurByPref: s->mTabCtrl->SetCurTabByName(LobbyGetTabSelect(), true); return 0;
+    case RO::TabIdOfFound: return s->mTabCtrl->GetTabIdForContainer(sRootTab.get());
+    case RO::TabFoundClear: sRootTab = NULL; return 0;
+    case RO::PartExists: return RootPart(s, a) != NULL;
+    case RO::PartSetVisible: RootPart(s, a)->SetVisible(b != 0); return 0;
+    case RO::PartHeight: return RootPart(s, a)->Height();
+    case RO::PartWidth: return RootPart(s, a)->Width();
+    case RO::PartLeft: return RootPart(s, a)->Left();
+    case RO::PartSetPos: RootPart(s, a)->SetPos((int)b, (int)c); return 0;
+    case RO::PartSetSize: RootPart(s, a)->SetSize((int)b, (int)c); return 0;
+    case RO::FrameThickness: return s->mLowerBannerFrame->mThickness;
+    case RO::BaseSizeChanged: s->Container::Virtual08(); return 0;
+    case RO::Height: return s->Height();
+    case RO::Relayout: s->Relayout(); return 0;
+    case RO::BaseEvent: s->Component::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
+    case RO::EventControlId: return reinterpret_cast<ComponentEvent*>(a)->GetControlId();
+    case RO::EventFromTabs: return reinterpret_cast<ComponentEvent*>(a)->mComponent == s->mTabCtrl.get();
+    case RO::MyGame: return (intptr_t)GetMyLobbyGame();
+    case RO::GameMatches: return reinterpret_cast<LobbyGame*>(a)->MatchesRoomSpec((int)b) ? 1 : 0;
+    case RO::CrossPromotion: return LobbyGetCrossPromotion() ? 1 : 0;
+    case RO::SaveUserPrefs: LobbySaveUserPrefs(false); return 0;
+    case RO::HelpReset: s->mHelpTab->ResetBrowser(); return 0;
+    case RO::NewsExists: return s->mNewsTab.get() != NULL;
+    case RO::NewsReset: s->mNewsTab->ResetBrowser(); return 0;
+    case RO::InitType: return reinterpret_cast<ComponentInit*>(a)->mType;
+    case RO::InitConfig: return (intptr_t) static_cast<ComponentConfigInit*>(reinterpret_cast<ComponentInit*>(a))->mConfig;
+    case RO::ConfigHasSwat: return aConfig->Fn386860("SWATUJDEF") != NULL;
+    case RO::FindTabCtrl: SafeGetComponent(aConfig, s->mTabCtrl, "TabCtrl", __FILE__, 79); return 0;
+    case RO::FindLowerLayoutPoint: SafeGetComponent(aConfig, s->mLowerLayoutPoint, "LowerLayoutPoint", __FILE__, 80); return 0;
+    case RO::FindLowerDivider: SafeGetShell(aConfig, s->mLowerDivider, EeWonShellKind::MsSeperator, "LowerDivider", __FILE__, 81); return 0;
+    case RO::FindSierraLogo: SafeGetComponent(aConfig, s->mSierraLogo, "SierraLogo", __FILE__, 82); return 0;
+    case RO::FindLowerBanner: SafeGetComponent(aConfig, s->mLowerBanner, "LowerBanner", __FILE__, 83); return 0;
+    case RO::FindLowerBannerFrame: SafeGetComponent(aConfig, s->mLowerBannerFrame, "LowerBannerFrame", __FILE__, 84); return 0;
+    case RO::FindBackButton: SafeGetComponent(aConfig, s->mBackButton, "BackButton", __FILE__, 85); return 0;
+    case RO::FindHelpTab: SafeGetComponent(aConfig, s->mHelpTab, "HelpTab", __FILE__, 86); return 0;
+    case RO::FindGameTab: SafeGetComponent(aConfig, sRootTab, "GameTab", __FILE__, 89); return 0;
+    case RO::FindNewsTab: SafeGetComponent(aConfig, s->mNewsTab, "NewsTab", __FILE__, 95); return 0;
+    case RO::FindLobbyTab: SafeGetComponent(aConfig, sRootTab, "LobbyTab", __FILE__, 96); return 0;
+    case RO::FindLanTab: SafeGetComponent(aConfig, sRootTab, "LanTab", __FILE__, 101); return 0;
+    case RO::FindDirectConnectTab: SafeGetComponent(aConfig, sRootTab, "DirectConnectTab", __FILE__, 102); return 0;
+    case RO::BroadcastRoomSpec: s->BroadcastEventDown(SetRoomSpecFlagsEvent((int)a)); return 0;
+    case RO::Subscribe: s->SubscribeToBroadcast(1); return 0;
+    case RO::WindowGet: sRootWindow = s->GetRoot(); return 0;
+    case RO::WindowRectGet: sRootWindow->GetRect(sRootWindowRect, false); return 0;
+    case RO::ClientRectGet: sRootWindow->GetRect(sRootClientRect, true); return 0;
+    case RO::WindowHeight: return sRootWindowRect.height;
+    case RO::ClientHeight: return sRootClientRect.height;
+    case RO::WindowSetHeight: sRootWindow->SetPosSize(sRootWindowRect.x, sRootWindowRect.y, sRootWindowRect.width, (int)a); return 0;
     }
-    LobbySaveUserPrefs(false);
+    return 0;
 }
+
+static intptr_t RootCall(RootScreen* s, EeWonRootScreenCall inCall, intptr_t a = 0, intptr_t b = 0) { return ee_won_rootscreen_call(s, RootHost, inCall, a, b); }
+
+void RootScreen::EnterGameTab(bool enter) { RootCall(this, RC::EnterGameTab, enter); }
+void RootScreen::ShowLobbyTab() { RootCall(this, RC::ShowLobbyTab); }
+void RootScreen::HandleJoinedGame() { RootCall(this, RC::JoinedGame); }
+void RootScreen::HandleLeftGame() { RootCall(this, RC::LeftGame); }
+void RootScreen::Virtual08() { RootCall(this, RC::SizeChanged); }
+void RootScreen::HandleComponentEvent(ComponentEvent* inEvent) { RootCall(this, RC::Event, (intptr_t)inEvent, inEvent->mType); }
+RootScreen::RootScreen(bool inIsLan) { RootCall(this, RC::Construct, inIsLan); }
+// Destroys the root screen (members only)
+RootScreen::~RootScreen() {}
+bool RootScreen::OnDirectConnectTab() { return RootCall(this, RC::OnDirectConnectTab) != 0; }
+bool RootScreen::OnLanTab() { return RootCall(this, RC::OnLanTab) != 0; }
+void RootScreen::HandleEnteredScreen() { RootCall(this, RC::EnteredScreen); }
+void RootScreen::InitComponent(ComponentInit& inInit) { RootCall(this, RC::InitComponent, (intptr_t)&inInit); }
+void RootScreen::HandleTabCtrlTabSelected(ComponentEvent* inEvent) { RootCall(this, RC::TabSelected, (intptr_t)inEvent); }
 
 }

@@ -14,14 +14,6 @@
 // Constructed and destroyed, referenced by nothing (its chain comes first) (provisional name)
 static UIBackgroundTable sBackgroundTable;
 
-// the UI database file names (declared in lle/UIManager.h; UIManager::Create opens them)
-LLE_API UString gDbUIBackgroundFileName("DB\\dbuiback.dat");
-LLE_API UString gDbUIControlsFileName("DB\\dbuicontrols.dat");
-LLE_API UString gDbUIFormsFileName("DB\\dbuiforms.dat");
-LLE_API UString gDbUIControlEventsFileName("DB\\dbuicontrolevents.dat");
-LLE_API UString gDbUIFormEventsFileName("DB\\dbuiformevents.dat");
-LLE_API UString gDbUIFontsFileName("DB\\dbuifonts.dat");
-LLE_API UString gDbUIHotKeyFileName("DB\\dbuihotkey.dat");
 
 #include "lle/User Interface.h"
 

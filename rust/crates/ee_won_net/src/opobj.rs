@@ -958,6 +958,26 @@ pub unsafe extern "C" fn ee_won_completion_free(c: *mut EeWonCompletion) {
     }
 }
 
+/// A logic's `RemoveTrackedOp(op)`: whether the op was tracked (and is not any more).
+pub type EeWonRemoveTrackedFn = unsafe extern "C" fn(logic: *mut c_void, op: *mut c_void) -> bool;
+
+/// `LogicCompletion<T>::Run`'s decision (R6 WON round 33): the callback runs unless the logic was killed or, with
+/// `check_tracker`, the op was not tracked by it (`remove` untracks it; not called otherwise).
+///
+/// # Safety
+/// `remove` is valid with `logic` and `op`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_logic_completion_runs(
+    killed: bool,
+    check_tracker: bool,
+    remove: EeWonRemoveTrackedFn,
+    logic: *mut c_void,
+    op: *mut c_void,
+) -> bool {
+    // SAFETY: the caller's function
+    !killed && (!check_tracker || unsafe { remove(logic, op) })
+}
+
 #[cfg(test)]
 #[path = "opobj_tests.rs"]
 mod tests;

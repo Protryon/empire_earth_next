@@ -250,6 +250,9 @@ pub(crate) fn rust_op(
             }
         }
         EE_SCREENS_MM_OP_TILE_EXISTS => return Some(c.mm_tile_exists(a, b) as i64),
+        EE_SCREENS_MM_OP_HAS_CAPTURE => return Some(c.mm_has_capture(map) as i64),
+        EE_SCREENS_MM_OP_LEFT_DOWN => return Some(c.mm_left_down(map) as i64),
+        EE_SCREENS_MM_OP_POINTER => return Some(c.mm_pointer()),
         EE_SCREENS_MM_OP_SEND_FLARE => c.mm_send_flare(a, b),
         EE_SCREENS_MM_OP_FLARE_DONE => {
             c.mm_pointer_clear();

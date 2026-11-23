@@ -30,66 +30,46 @@
 #include "lle/UIForm.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIObjHost.h"
+#include "lle/UIShims.h"
+#include "rust/ui/lle_hosts.h"
 
 struct UITextLabelRust {
-    static intptr_t Op(void* inLabel, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
-    {
-        UITextLabel* l = static_cast<UITextLabel*>(inLabel);
-        UIScrollBar* theBar = reinterpret_cast<UIScrollBar*>(a);
-        TMPoll* thePoll = reinterpret_cast<TMPoll*>(a);
-        intptr_t r = 0;
-        if (UIObjHost::Base(l, inOp, a, f, &r) || UIObjHost::Media(l, inOp, a, b, f, &r) ||
-            UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
-            return r;
-        switch (inOp) {
-        case EeUiOp::StringNew: return (intptr_t) new UWideString(reinterpret_cast<const char*>(a));
-        case EeUiOp::StringDelete: delete reinterpret_cast<UWideString*>(a); break;
-        case EeUiOp::StringAssign: *reinterpret_cast<UWideString*>(a) = *reinterpret_cast<const UWideString*>(b); break;
-        case EeUiOp::TextSetBytes: reinterpret_cast<GEText*>(a)->SetText(UWideString(reinterpret_cast<const char*>(b))); break;
-        case EeUiOp::TextFontHeight: return reinterpret_cast<GEText*>(a)->GetFont()->GetHeight();
-        case EeUiOp::DrawCountDecrement: l->UIControl::DrawTextA(); break;
-        case EeUiOp::SetBgRectangle: l->SetBgRectangle(UIObjHost::Rect(f)); break;
-        case EeUiOp::RedrawIntersect: l->GetForm()->RedrawIntersectControls(UIObjHost::Rect(f)); break;
-        case EeUiOp::CreateScrollBar:
-            return (intptr_t) new UIScrollBar(l->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, l->GetForm(), l->GetIndex(),
-                                              l->GetBorderThickness());
-        case EeUiOp::BarSetRange: theBar->SetRange(0, (unsigned long)b); break;
-        case EeUiOp::BarSetPageSize: theBar->SetPageSize((unsigned long)b); break;
-        case EeUiOp::BarValue: return theBar->GetSlider()->GetCurrentRangeValue();
-        case EeUiOp::BarIncrementBy: theBar->IncrementBy((long)b); break;
-        case EeUiOp::BarSetValue: theBar->SetCurrentRangeValue((unsigned long)b); break;
-        case EeUiOp::PartCopiedDrawRect: UIObjHost::PutRect(f, theBar->GetCopiedDrawRectangle()); break;
-        case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
-        case EeUiOp::PollDelete: delete thePoll; break;
-        case EeUiOp::PollRunning: return thePoll->GetIsRunning();
-        case EeUiOp::PollPoll: return thePoll->Poll();
-        case EeUiOp::PollStart: thePoll->Start(); break;
-        case EeUiOp::PollStop: thePoll->Stop(); break;
-        case EeUiOp::PollPause: thePoll->Pause(); break;
-        case EeUiOp::PollResume: thePoll->Resume(); break;
-        case EeUiOp::PollSetDelay: thePoll->SetTimeDelay((unsigned long)b); break;
-        case EeUiOp::VirtCheckScrollBar: l->CheckScrollBar(); break;
-        case EeUiOp::VirtRecompute: l->RecomputeDisplayRange(); break;
-        case EeUiOp::VirtSetLocation: l->SetLocation(GE2DPoint(f[0], f[1])); break;
-        case EeUiOp::VirtSetRectangle: l->SetRectangle(UIObjHost::Rect(f)); break;
-        default: break;
-        }
-        return 0;
-    }
     static const GERectangle& RectAt(intptr_t inAddress) { return *reinterpret_cast<const GERectangle*>(inAddress); }
 };
+#define l static_cast<UITextLabel*>(inObj)
+#define theBar reinterpret_cast<UIScrollBar*>(a)
+#define thePoll reinterpret_cast<TMPoll*>(a)
+EE_UI_CASE(label_string_new) { return (intptr_t) new UWideString(reinterpret_cast<const char*>(a)); }
+EE_UI_VOID(label_string_delete) { delete reinterpret_cast<UWideString*>(a); }
+EE_UI_VOID(label_string_assign) { *reinterpret_cast<UWideString*>(a) = *reinterpret_cast<const UWideString*>(b); }
+EE_UI_VOID(label_text_set_bytes) { reinterpret_cast<GEText*>(a)->SetText(UWideString(reinterpret_cast<const char*>(b))); }
+EE_UI_CASE(label_text_font_height) { return reinterpret_cast<GEText*>(a)->GetFont()->GetHeight(); }
+EE_UI_VOID(label_draw_count_decrement) { l->UIControl::DrawTextA(); }
+EE_UI_VOID(label_set_bg_rectangle) { l->SetBgRectangle(UIObjHost::Rect(f)); }
+EE_UI_VOID(label_redraw_intersect) { l->GetForm()->RedrawIntersectControls(UIObjHost::Rect(f)); }
+EE_UI_CASE(label_create_scroll_bar) { return (intptr_t) new UIScrollBar(l->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, l->GetForm(), l->GetIndex(), l->GetBorderThickness()); }
+EE_UI_VOID(label_bar_set_range) { theBar->SetRange(0, (unsigned long)b); }
+EE_UI_VOID(label_bar_set_page_size) { theBar->SetPageSize((unsigned long)b); }
+EE_UI_CASE(label_bar_value) { return theBar->GetSlider()->GetCurrentRangeValue(); }
+EE_UI_VOID(label_bar_increment_by) { theBar->IncrementBy((long)b); }
+EE_UI_VOID(label_bar_set_value) { theBar->SetCurrentRangeValue((unsigned long)b); }
+EE_UI_VOID(label_part_copied_draw_rect) { UIObjHost::PutRect(f, theBar->GetCopiedDrawRectangle()); }
+EE_UI_CASE(label_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
+EE_UI_VOID(label_poll_delete) { delete thePoll; }
+EE_UI_CASE(label_poll_running) { return thePoll->GetIsRunning(); }
+EE_UI_CASE(label_poll_poll) { return thePoll->Poll(); }
+EE_UI_VOID(label_poll_start) { thePoll->Start(); }
+EE_UI_VOID(label_poll_stop) { thePoll->Stop(); }
+EE_UI_VOID(label_poll_pause) { thePoll->Pause(); }
+EE_UI_VOID(label_poll_resume) { thePoll->Resume(); }
+EE_UI_VOID(label_poll_set_delay) { thePoll->SetTimeDelay((unsigned long)b); }
+EE_UI_VOID(label_virt_check_scroll_bar) { l->CheckScrollBar(); }
+EE_UI_VOID(label_virt_recompute) { l->RecomputeDisplayRange(); }
+EE_UI_VOID(label_virt_set_location) { l->SetLocation(GE2DPoint(f[0], f[1])); }
+EE_UI_VOID(label_virt_set_rectangle) { l->SetRectangle(UIObjHost::Rect(f)); }
+#undef thePoll
+#undef theBar
+#undef l
 
 // Creates a text label (type 0 one line, type 1 multi-line with a scroll bar area) and sets its initial text
-UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle,
-                         UIForm* inForm, unsigned long inLabelType, unsigned long inIndex,
-                         unsigned long inBorderThickness)
-    : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    this->SetBorderType(0);
-    float f[4];
-    UIObjHost::PutRect(f, inRectangle);
-    this->mRust = ee_ui_label_new(this, UITextLabelRust::Op, f, inFont, inLabelType, inBorderThickness);
-    this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText);
-}
-
 UITextLabel::~UITextLabel() { ee_ui_label_free(this->mRust); }

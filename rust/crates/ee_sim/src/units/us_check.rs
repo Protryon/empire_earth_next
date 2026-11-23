@@ -218,7 +218,7 @@ pub fn check<H: UsHost + ?Sized>(h: &mut H, at: u64) -> u64 {
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use crate::units::ffi::*;
     use crate::units::players::ee_units_player_check;
@@ -228,7 +228,8 @@ mod game {
         fn ee_units_us_host(op: i32, a: u64, b: i64, c: u64, out: *mut c_void) -> i64;
     }
 
-    struct Game;
+    /// the game's host (us_fill.rs's too)
+    pub(crate) struct Game;
 
     fn ptr<T>(v: &[T]) -> *const T {
         if v.is_empty() {
