@@ -57,24 +57,13 @@
 // Creates the data pre-loading thread at the given priority and waits until it is running
 EEDataPreLoading::EEDataPreLoading(long inThreadPriority)
 {
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mThreadCreated) == keseOK, 55);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mThreadDone) == keseOK, 56);
-    ESVERIFY_AT(TSScheduler::CreateEvent(this->mMessageQueueDone) == keseOK, 57);
-    ee_preload_reset();
-    ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, EEDataPreLoading::Main, (void*)this) == keseOK, 65);
-    ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 66);
-    this->mThreadCreated->Wait(kTSWaitInfinite);
-    this->mThread->SetName(gDataPreLoadingThreadName);
+    ee_preload_construct(this, inThreadPriority);   // (preload.rs)
 }
 
 // Destroys the pre-loader: frees its events, drops every queued message and destroys the thread
 EEDataPreLoading::~EEDataPreLoading()
 {
-    TSScheduler::DestroyEvent(this->mThreadCreated);
-    TSScheduler::DestroyEvent(this->mThreadDone);
-    TSScheduler::DestroyEvent(this->mMessageQueueDone);
-    ee_preload_reset();
-    TSScheduler::DestroyThread(this->mThread);
+    ee_preload_destruct(this);
 }
 
 unsigned long EEDataPreLoading::Main(void* inThis) { return ee_preload_main(inThis); }
@@ -223,6 +212,19 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::ExitGame: EEExitGame();
         break;
     case O::DisplayError: gUIManager->DisplayMessage(*(UWideString*)p, true, NULL, EEDataPreLoading::LoadGameErrorDone, true);
+        break;
+    case O::CreateEvent: return TSScheduler::CreateEvent(*(a[0] == 0 ? &DP->mThreadCreated : a[0] == 1 ? &DP->mThreadDone : &DP->mMessageQueueDone)) == keseOK;
+    case O::DestroyEvent: TSScheduler::DestroyEvent(*(a[0] == 0 ? &DP->mThreadCreated : a[0] == 1 ? &DP->mThreadDone : &DP->mMessageQueueDone));
+        break;
+    case O::CreateThread: return TSScheduler::CreateThread(DP->mThread, EEDataPreLoading::Main, (void*)DP) == keseOK;
+    case O::DestroyThread: TSScheduler::DestroyThread(DP->mThread);
+        break;
+    case O::SetThreadPriorityOk: return DP->mThread->SetPriority((long)a[0]) == keseOK;
+    case O::ThreadCreatedWait: DP->mThreadCreated->Wait(kTSWaitInfinite);
+        break;
+    case O::SetThreadName: DP->mThread->SetName(gDataPreLoadingThreadName);
+        break;
+    case O::Verify: ESVERIFY_AT(a[0] != 0, (long)a[1]);
         break;
     }
     return 0;
