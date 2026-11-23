@@ -225,6 +225,8 @@ struct DetectFirewallOp : AsyncOp {
 struct HTTPSession : RefCount {
     void AddOp(RustServerOp* o) { Log(Id(this) + " AddOp " + Id(o)); }
 };
+// the hosts' call since R6 WON round 34 (WONRouting.h)
+static void HttpSessionAddOp(HTTPSession* s, RustServerOp* o) { s->AddOp(o); }
 static NativeImage* sImage;
 struct Window {
     static Window* GetDefaultWindow() { static Window w; return &w; }

@@ -317,6 +317,7 @@
 #include "rust/won_net/routeop.h"
 #include "rust/won_net/routeop_types.h"
 #include "rust/won_net/routereq.h"
+#include "rust/won_net/rustref.h"
 #include "rust/won_net/servconn.h"
 #include "rust/won_net/servctx.h"
 #include "rust/won_net/server.h"

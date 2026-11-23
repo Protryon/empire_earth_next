@@ -102,6 +102,7 @@ pub mod routemsg;
 pub mod routeop;
 pub mod routeop_types;
 pub mod routereq;
+pub mod rustref;
 pub mod servconn;
 pub mod servctx;
 pub mod server;

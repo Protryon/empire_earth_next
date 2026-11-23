@@ -5,6 +5,8 @@
 // with rust/crates/ee_won_net/src/golden_httpsession.txt (recorded over HTTPEngine.cpp's hooks before they were answered
 // in Rust: ee_won httpcpp.rs). Waits are on events (pumped until a completion ran), with time limits. `--print`
 // prints the lines instead, `--trace` each line as it is logged. The exit code is the number of failures.
+// R6 WON round 34: the session and its connections are WonRustRef objects (rustref.rs) over the same Rust state; this
+// golden is their check against HTTPEngine.cpp as it was. EE_W34_MUTATE=1 (no kill) or 2 (a get added twice) must fail.
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -139,25 +141,25 @@ int main(int argc, char** argv)
         sPortText = N(sListener->GetLocalPort());
         string aHost = "127.0.0.1:" + sPortText;
 
-        SmartPtr<HTTPSession> aSession = new HTTPSession;
-        Log("session ops " + N(aSession->GetNumOps()));
+        SmartPtr<HTTPSession> aSession = HttpSessionNew();
+        Log("session ops " + N(HttpSessionNumOps(aSession.get())));
 
         // a get on a new connection: prepared, sent, its keep-alive reply read
         SmartPtr<RustServerOp> aOne = RustServerOp::NewHttpGet(aHost, "/one");
         aOne->SetCompletion(new Done("one"));
-        aSession->AddOp(aOne);
-        Log("one added: session ops " + N(aSession->GetNumOps()));
+        HttpSessionAddOp(aSession.get(), aOne);
+        Log("one added: session ops " + N(HttpSessionNumOps(aSession.get())));
         Accept("one");
         ReadRequest("one");
         Answer("one", "HTTP/1.1 200 OK\r\nContent-Length: 5\r\nContent-Type: text/plain\r\n\r\nhello");
         WaitDone(1);
         Results("one", aOne);
-        Log("session ops " + N(aSession->GetNumOps()));
+        Log("session ops " + N(HttpSessionNumOps(aSession.get())));
 
         // the next get to the host reuses the connection's socket
         SmartPtr<RustServerOp> aTwo = RustServerOp::NewHttpGet(aHost, "/two");
         aTwo->SetCompletion(new Done("two"));
-        aSession->AddOp(aTwo);
+        HttpSessionAddOp(aSession.get(), aTwo);
         ReadRequest("two");
         Answer("two", "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nConnection: close\r\n\r\nbye");
         WaitDone(1);
@@ -168,7 +170,7 @@ int main(int argc, char** argv)
         // the server closed: a new socket for the next get; a not found
         SmartPtr<RustServerOp> aThree = RustServerOp::NewHttpGet(aHost, "/three");
         aThree->SetCompletion(new Done("three"));
-        aSession->AddOp(aThree);
+        HttpSessionAddOp(aSession.get(), aThree);
         Accept("three");
         ReadRequest("three");
         Answer("three", "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
@@ -180,15 +182,16 @@ int main(int argc, char** argv)
         aFour->SetCompletion(new Done("four"));
         SmartPtr<RustServerOp> aFive = RustServerOp::NewHttpGet(aHost, "/five");
         aFive->SetCompletion(new Done("five"));
-        aSession->AddOp(aFour);
-        aSession->AddOp(aFive);
+        HttpSessionAddOp(aSession.get(), aFour);
+        HttpSessionAddOp(aSession.get(), aFive);
+        if (getenv("EE_W34_MUTATE") != NULL && atoi(getenv("EE_W34_MUTATE")) == 2) HttpSessionAddOp(aSession.get(), aFour);
         ReadRequest("four");
-        Log("queued: session ops " + N(aSession->GetNumOps()));
-        aSession->KillAll();
+        Log("queued: session ops " + N(HttpSessionNumOps(aSession.get())));
+        if (getenv("EE_W34_MUTATE") == NULL || atoi(getenv("EE_W34_MUTATE")) != 1) HttpSessionKillAll(aSession.get());
         WaitDone(2);
         Results("four", aFour);
         Results("five", aFive);
-        Log("killed: session ops " + N(aSession->GetNumOps()));
+        Log("killed: session ops " + N(HttpSessionNumOps(aSession.get())));
 
         sPeer->Close();
         sPeer = NULL;
