@@ -113,6 +113,7 @@
 #include "rust/ui/tableobj.h"
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/btnobj.h"
+#include "rust/won_gui/cfgbody.h"
 #include "rust/won_gui/cfgcomp.h"
 #include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/cfgload.h"

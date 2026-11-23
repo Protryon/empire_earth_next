@@ -11,20 +11,12 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfigImages.h"
-#include "rust/won_gui/guiconf.h"
-// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+#include "ee/wonapi/WONLayoutConfigs.h" // CfgBodyCall
+// The named values' and the lazy values' bodies are ee_won_gui cfgbody.rs's (R6 WON round 34) over WONCfgBody.inl.
 namespace WONAPI {
 
-// Returns the image's WIDTH or HEIGHT for a named-value lookup; false for any other name
-bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGECONFIG_GETNAMEDVALUE_INNAME,inName.data(),inName.size());
-    if(aKeyIdx==0) outValue=this->mImage->GetWidth();
-    else if(aKeyIdx==1) outValue=this->mImage->GetHeight();
-    else return false;
-    return true;
-}
+// The image's WIDTH or HEIGHT as a named value; false for any other name (cfgbody.rs)
+bool ImageConfig::GetNamedValue(const std::string& n, int& v) { return CfgBodyCall(this, EeWonCfgBody::ImageNamed, (intptr_t)n.data(), (intptr_t)n.size(), (intptr_t)&v) != 0; }
 
 
 // Sets the raw image (also as the current image) and marks the native image as not yet built
@@ -38,15 +30,7 @@ void ImageFilterConfig::SetRawImage(RawImage* inImage)
 // R6 WON round 41: ImageFilterConfig's instructions (SRC, FILTER and HandleFilter's filters, DUPLICATE,
 // MULTIHORZCROP, EXPORT) are programs of ee_won's table reader (cfgtab.rs, cfgimg.rs) over WONCfgTable.inl.
 
-// Returns the image, first converting a pending raw image to a native one on the default window
-Image* ImageFilterConfig::GetImage()
-{
-    if(this->mImageIsRawImage)
-    {
-        this->mImage=this->mRawImage->GetNative(Window::GetDefaultWindow()->mDisplayContext.get()).get();
-        this->mImageIsRawImage=false;
-    }
-    return this->mImage.get();
-}
+// The image, first converting a pending raw image to a native one on the default window (cfgbody.rs)
+Image* ImageFilterConfig::GetImage() { return (Image*)CfgBodyCall(this, EeWonCfgBody::FilterImage); }
 
 }

@@ -7,6 +7,7 @@
 
 pub mod barobj;
 pub mod btnobj;
+pub mod cfgbody;
 pub mod cfgcomp;
 pub mod cfgimg;
 pub mod cfgkind;

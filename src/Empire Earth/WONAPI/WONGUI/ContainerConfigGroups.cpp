@@ -14,33 +14,9 @@
 #include "ee/wonapi/WONLayoutConfigs.h"
 #include "ee/wonapi/WONPercentLayout.h"
 #include "rust/won_gui/guiconf.h"
-// The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
-// (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// The groups' reads and objects are ee_won_gui cfgbody.rs's (R6 WON round 34) over WONCfgBody.inl; this is the forward.
 namespace WONAPI {
-// Reads a PERCENTLAYOUT group into a percent layout (relative to the component if no reference is given)
-// or a COLORSCHEME group into the container's colour scheme; other instructions go to the base config
-bool ContainerConfig::HandleInstruction(ConfigParser* parser,const std::string& type)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CONTAINERCONFIG_HANDLEINSTRUCTION_TYPE,type.data(),type.size());
-    if(aKeyIdx==0) {
-        SmartPtr<PercentLayoutConfig> config=new PercentLayoutConfig;
-        if(this->ParseChild(*parser,config.get(),false,true)) {
-            int i;
-            for(i=0;i<4;++i) if(config->refs[i]!=NULL) break;
-            if(i==4) config->refs[0]=this->mComponent.get();
-            PercentLayoutParam param(config->refs[0],config->refs[1],config->refs[2],config->refs[3],
-                config->params[0],config->params[1],config->params[2],config->params[3],
-                config->params[4],config->params[5],config->params[6],config->params[7]);
-            this->mContainer->AddChildLayout(new PercentLayout(config->target,param),this->mCurLayoutId);
-        }
-        return true;
-    }
-    if(aKeyIdx==1) {
-        SmartPtr<ColorSchemeConfig> config=new ColorSchemeConfig;
-        if(this->ParseChild(*parser,config.get(),false,true))
-            this->mContainer->SetColorScheme(config->mColorScheme.get());
-        return true;
-    }
-    return ComponentConfig::HandleInstruction(parser,type);
-}
+// Reads a PERCENTLAYOUT group into a percent layout (relative to the component if no reference is given) or a
+// COLORSCHEME group into the container's colour scheme; other instructions go to the base config (cfgbody.rs)
+bool ContainerConfig::HandleInstruction(ConfigParser* p, const std::string& t) { return CfgBodyCall(this, EeWonCfgBody::ContainerInstruction, (intptr_t)p, (intptr_t)t.data(), (intptr_t)t.size()) != 0; }
 }
