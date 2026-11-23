@@ -36,7 +36,9 @@ CHECKS = [
                (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_string_op"),
                (RS / "ee_won_lobby" / "src" / "lobbyctl.rs", "game_image_op"),
                # the cases whose statements are Rust (R6 WONLobby round 29)
-               (RS / "ee_won_lobby" / "src" / "hostops.rs", "ctl_op")],
+               (RS / "ee_won_lobby" / "src" / "hostops.rs", "ctl_op"),
+               # LobbyNetCtrlHost.cpp's compound cases (R6 WON round 35)
+               (RS / "ee_won_lobby" / "src" / "hostops.rs", "split_op")],
          allowed={}),
     # the generic widget shells' calls out (R6 WONLobby round 20): the C++ host answers what the base classes'
     # Rust objects do not (shell.rs Sh routes the component's, button's and MS button's calls to them in the game)
@@ -53,11 +55,15 @@ CHECKS = [
     # the lobby events' members are read in Rust (R6 WONLobby round 18)
     dict(enum="EeWonLobbyCtlEvField", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
-         rust=[(RS / "ee_won_lobby" / "src" / "lobbyevt.rs", "ctl_op")],
-         allowed={"TlaLink": "a WONGUI event's chat link: LobbyNetCtrlHost.cpp's EvField (its one test, not a case)"}),
+         rust=[(RS / "ee_won_lobby" / "src" / "lobbyevt.rs", "ctl_op"),
+               # a WONGUI event's chat link: hostops.rs picks it (EvTlaLink, R6 WON round 35)
+               (RS / "ee_won_lobby" / "src" / "hostops.rs", "split_op", True)],
+         allowed={}),
     dict(enum="EeWonLobbyCtlItemField", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
-         rust=[(RS / "ee_won_lobby" / "src" / "rows.rs", "ctl_op")], allowed={}),
+         rust=[(RS / "ee_won_lobby" / "src" / "rows.rs", "ctl_op"),
+               # the host's fields, one op each (R6 WON round 35)
+               (RS / "ee_won_lobby" / "src" / "hostops.rs", "item_op", True)], allowed={}),
     # the C++ makes these (CtlEventOf maps a ComponentEvent's type to one): each must be made somewhere
     dict(enum="EeWonLobbyCtlEvent", header="won_lobby/lobbyctl.h", mentions=True,
          hosts=[LOBBY / "LobbyCtrlHost.cpp"],
@@ -86,7 +92,8 @@ CHECKS = [
          hosts=[LOBBY / "LobbyCtrlHost.cpp"], rust=[(RS / "ee_won_lobby" / "src" / "persistobj.rs", "pref_flag")],
          allowed={}),
     dict(enum="EeWonLobbyCtlLinkField", header="won_lobby/chatctl.h",
-         hosts=[LOBBY / "LobbyNetCtrlHost.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "LobbyNetCtrlHost.cpp"],
+         rust=[(RS / "ee_won_lobby" / "src" / "hostops.rs", "link_op", True)], allowed={}),
     dict(enum="EeWonRouteLogicOp", header="won_lobby/routelogic.h",
          hosts=[LOBBY / "RoutingLogic.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "route_op"),

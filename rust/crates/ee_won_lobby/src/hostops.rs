@@ -134,8 +134,185 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<i
             out(Op::Release, dialog, 0, 0);
             Some(result as i32 as isize)
         }
-        _ => None,
+        _ => split_op(op, a, b, c, out),
     }
+}
+
+/// The R6 WON round 35 cases: LobbyNetCtrlHost.cpp's compound cases, each C++ statement one op of the host (the
+/// cases' locals the host's statics, set where the local was made and emptied where it went out of scope).
+fn split_op(op: Op, a: isize, b: isize, c: isize, out: Out) -> Option<isize> {
+    use crate::lobbyctl::EeWonLobbyCtlEvField as EvF;
+    use crate::lobbyevt::EeWonLobbyEvtField as EF;
+    let r = match op {
+        // a row's members (the friend and user rows' other fields are rows.rs's: the host answered them 0)
+        Op::ItemGet => out(item_op(b, false)?, a, 0, 0),
+        Op::ItemSet => {
+            out(item_op(b, true)?, a, c, 0);
+            0
+        }
+        Op::EvGet if b == EvF::TlaLink as isize => out(Op::EvTlaLink, a, 0, 0),
+        // a chat link's members (an unknown one reads 0 and writes nothing)
+        Op::LinkGet => out(link_op(b, false)?, a, 0, 0),
+        Op::LinkSet => {
+            out(link_op(b, true)?, a, c, 0);
+            0
+        }
+        // a new text with one reference
+        Op::TextNew => {
+            let t = out(Op::TextAlloc, a, b, 0);
+            out(Op::AddRef, t, 0, 0);
+            t
+        }
+        // a text's bytes into the buffer `b` of `c` bytes (as many as fit); their count
+        Op::TextBytes => {
+            out(Op::BytesOfText, a, 0, 0);
+            bytes_into(b, c, out)
+        }
+        // an HTTP document's path (the system's for `b` 0, else the game's) into the 1024 bytes at `c`
+        Op::HttpDocPath => {
+            out(if b == 0 { Op::BytesOfHttpDocSys } else { Op::BytesOfHttpDocGame }, a, 0, 0);
+            bytes_into(c, 1024, out)
+        }
+        // the held text `a` (its reference the local's) with the text `b`, or the bytes `b` of `c`, after it
+        Op::TextAppend | Op::TextAppendBytes => {
+            out(Op::TextTake, a, 0, 0);
+            out(Op::Release, a, 0, 0);
+            if op == Op::TextAppend {
+                out(Op::TextAppendText, b, 0, 0);
+            } else {
+                out(Op::TextAppendRaw, b, c, 0);
+            }
+            text_out(out)
+        }
+        // the prefix, the command, then the quoted name (the target's without one)
+        Op::ParserCommandText => {
+            out(Op::TextStartEmpty, 0, 0, 0);
+            out(Op::TextAppendParserPrefix, a, 0, 0);
+            out(Op::TextAppendParserCommand, a, b, 0);
+            out(Op::TextAppendQuoteOpen, 0, 0, 0);
+            if c != 0 {
+                out(Op::TextAppendText, c, 0, 0);
+            } else {
+                out(Op::TextAppendParserTarget, a, 0, 0);
+            }
+            out(Op::TextAppendQuoteClose, 0, 0, 0);
+            text_out(out)
+        }
+        // the format's strings, links and fonts into the arrays, the texts and links given when counted
+        Op::ChatAddFormatted => {
+            // SAFETY: the caller's format (chatctl.rs's, alive for the op)
+            let f = unsafe { &*(a as *const crate::chatctl::EeWonLobbyCtlFormat) };
+            for (i, &s) in f.strings.iter().enumerate() {
+                out(Op::FmtSetString, i as isize, s, 0);
+            }
+            for (i, &l) in f.links.iter().enumerate() {
+                out(Op::FmtSetLink, i as isize, l, 0);
+            }
+            for (i, &font) in f.fonts.iter().enumerate() {
+                out(Op::FmtSetFont, i as isize, font, 0);
+            }
+            let texts = if f.num_strings != 0 { out(Op::FmtTexts, 0, 0, 0) } else { 0 };
+            let links = if f.num_links != 0 { out(Op::FmtLinks, 0, 0, 0) } else { 0 };
+            out(Op::FmtAppend, a, texts, links);
+            for i in 0..f.strings.len() {
+                out(Op::FmtSetString, i as isize, 0, 0);
+            }
+            0
+        }
+        // the account panel's fields (the inputs and the check box at `a`) in a CreateAccount event, delivered
+        Op::DeliverCreateAccount => {
+            // SAFETY: the caller's seven fields (netctl.rs's)
+            let f = unsafe { std::slice::from_raw_parts(a as *const isize, 7) };
+            let number = |input: isize| out(Op::TextToInt, out(Op::InputText, input, 0, 0), 0, 0);
+            out(Op::EvCreateAccountNew, 0, 0, 0);
+            out(Op::EvSetWide, EF::UserName as isize, f[0], 0);
+            out(Op::EvSetWide, EF::Password as isize, f[1], 0);
+            out(Op::EvSetNarrow, EF::Email as isize, f[2], 0);
+            out(Op::EvSetNum, EF::Day as isize, number(f[3]) as u8 as isize, 0);
+            out(Op::EvSetNum, EF::Month as isize, number(f[4]) as u8 as isize, 0);
+            out(Op::EvSetNum, EF::Year as isize, number(f[5]) as u16 as isize, 0);
+            out(Op::EvSetNum, EF::Newsletter as isize, (out(Op::ButtonIsChecked, f[6], 0, 0) != 0) as isize, 0);
+            out(Op::EvDeliverHeld, 0, 0, 0);
+            out(Op::EvDrop, 0, 0, 0);
+            0
+        }
+        // the EE glue's column call `a` on the row `b`; the keeps' text `c` as a `GUIString*`
+        Op::EeColumn => {
+            use crate::eeglue::EeWonEeGlueCall as GC;
+            let call = glue_call(a)?;
+            if call == GC::EpochKeep || call == GC::MapTypeKeep {
+                out(Op::ColumnTextSet, c, 0, 0);
+                let text = out(Op::ColumnText, 0, 0, 0);
+                // SAFETY: the glue's call over the row and the host's text (its contract)
+                let r = unsafe { crate::eeglue::ee_won_eeglue_call(call, b, text, 0) };
+                out(Op::ColumnTextSet, 0, 0, 0);
+                r
+            } else {
+                // SAFETY: as above, the text the caller's
+                unsafe { crate::eeglue::ee_won_eeglue_call(call, b, c, 0) }
+            }
+        }
+        _ => return None,
+    };
+    Some(r)
+}
+
+/// ItemGet's and ItemSet's field ops (`None`: not the host's field).
+fn item_op(field: isize, set: bool) -> Option<Op> {
+    use crate::lobbyctl::EeWonLobbyCtlItemField as IF;
+    let ops = [
+        (IF::Height, Op::ItemGetHeight, Op::ItemSetHeight),
+        (IF::Top, Op::ItemGetTop, Op::ItemSetTop),
+        (IF::Width, Op::ItemGetWidth, Op::ItemSetWidth),
+        (IF::Selected, Op::ItemGetSelected, Op::ItemSetSelected),
+        (IF::Selectable, Op::ItemGetSelectable, Op::ItemSetSelectable),
+        (IF::Color, Op::ItemGetColor, Op::ItemSetColor),
+    ];
+    ops.iter().find(|o| o.0 as isize == field).map(|o| if set { o.2 } else { o.1 })
+}
+
+/// LinkGet's and LinkSet's member ops (`None`: the original's `default`).
+fn link_op(field: isize, set: bool) -> Option<Op> {
+    use crate::chatctl::EeWonLobbyCtlLinkField as L;
+    let ops = [
+        (L::Kind, Some(Op::LinkGetKind), None),
+        (L::Client, Some(Op::LinkGetClient), None),
+        (L::Friend, Some(Op::LinkGetFriend), None),
+        (L::Color, None, Some(Op::LinkSetColor)),
+        (L::Enabled, None, Some(Op::LinkSetEnabled)),
+        (L::Next, Some(Op::LinkGetNext), Some(Op::LinkSetNext)),
+        (L::Previous, Some(Op::LinkGetPrevious), Some(Op::LinkSetPrevious)),
+    ];
+    let o = ops.iter().find(|o| o.0 as isize == field)?;
+    if set {
+        o.2
+    } else {
+        o.1
+    }
+}
+
+/// The EE glue's call numbered `v` (srvlistctl.rs's column calls), `None` for another number.
+fn glue_call(v: isize) -> Option<crate::eeglue::EeWonEeGlueCall> {
+    use crate::eeglue::EeWonEeGlueCall as GC;
+    [GC::EpochCompare, GC::MapTypeCompare, GC::EpochKeep, GC::MapTypeKeep, GC::EpochPaint, GC::MapTypePaint]
+        .into_iter()
+        .find(|c| *c as isize == v)
+}
+
+/// The held bytes (`sEELobbyBytes`) into `buffer` of `size` bytes (as many as fit), then dropped; their count.
+fn bytes_into(buffer: isize, size: isize, out: Out) -> isize {
+    let n = out(Op::BytesLen, 0, 0, 0);
+    let copied = if (n as usize) < (size as usize) { n } else { size };
+    out(Op::BytesCopy, buffer, copied, 0);
+    out(Op::BytesDrop, 0, 0, 0);
+    n
+}
+
+/// The built text (`sEELobbyText`) with one reference, the local dropped.
+fn text_out(out: Out) -> isize {
+    let t = out(Op::TextHeldOut, 0, 0, 0);
+    out(Op::TextDrop, 0, 0, 0);
+    t
 }
 
 // WONGUI's `WindowEventType` places (ee/wonapi/WONEventTypes.h)
@@ -254,5 +431,30 @@ mod tests {
         assert_eq!(ops[2], format!("GfxDrawImage 0x40 0x99 {:#x}", pack(0, 4)));
         assert!(run(Op::GfxDrawPing, 0x40, 0xfffe, 12, &|_, _| 1).is_empty());
         ee_won_lobby_hostops_reset();
+    }
+
+    #[test]
+    fn the_split_cases_run_their_statements_in_order() {
+        use crate::lobbyctl::EeWonLobbyCtlItemField as IF;
+        assert_eq!(run(Op::ItemGet, 0x10, IF::Top as isize, 0, &|_, _| 0), vec!["ItemGetTop 0x10 0x0 0x0"]);
+        assert_eq!(run(Op::ItemSet, 0x10, IF::Color as isize, 9, &|_, _| 0), vec!["ItemSetColor 0x10 0x9 0x0"]);
+        assert_eq!(ctl_op(Op::ItemGet, 0x10, IF::UserSortKey as isize, 0, &|_, _, _, _| 0), None);
+        assert_eq!(run(Op::TextNew, 0x20, 3, 0, &|_, _| 0x55), vec!["TextAlloc 0x20 0x3 0x0", "AddRef 0x55 0x0 0x0"]);
+        // the bytes: as many as fit, the count all of them
+        let ops = run(Op::TextBytes, 0x30, 0x900, 4, &|op, _| if op == Op::BytesLen { 6 } else { 0 });
+        assert_eq!(ops, vec!["BytesOfText 0x30 0x0 0x0", "BytesLen 0x0 0x0 0x0", "BytesCopy 0x900 0x4 0x0", "BytesDrop 0x0 0x0 0x0"]);
+        let ops = run(Op::HttpDocPath, 0x30, 1, 0x900, &|op, _| if op == Op::BytesLen { 6 } else { 0 });
+        assert_eq!(ops[0], "BytesOfHttpDocGame 0x30 0x0 0x0");
+        assert_eq!(ops[2], "BytesCopy 0x900 0x6 0x0");
+        let ops = run(Op::TextAppendBytes, 0x40, 0x50, 2, &|_, _| 0x60);
+        assert_eq!(ops, vec!["TextTake 0x40 0x0 0x0", "Release 0x40 0x0 0x0", "TextAppendRaw 0x50 0x2 0x0", "TextHeldOut 0x0 0x0 0x0", "TextDrop 0x0 0x0 0x0"]);
+        let ops = run(Op::ParserCommandText, 0x70, 3, 0, &|_, _| 0);
+        assert_eq!(ops[4], "TextAppendParserTarget 0x70 0x0 0x0");
+        assert_eq!(run(Op::ParserCommandText, 0x70, 3, 0x80, &|_, _| 0)[4], "TextAppendText 0x80 0x0 0x0");
+        let fields: [isize; 7] = [1, 2, 3, 4, 5, 6, 7];
+        let ops = run(Op::DeliverCreateAccount, fields.as_ptr() as isize, 0, 0, &|op, _| if op == Op::TextToInt { 300 } else { 1 });
+        assert_eq!(ops.iter().filter(|o| o.starts_with("EvSetNum")).count(), 4);
+        assert!(ops.contains(&format!("EvSetNum {:#x} {:#x} 0x0", crate::lobbyevt::EeWonLobbyEvtField::Day as isize, 300u16 as u8)));
+        assert_eq!(ops.last().unwrap(), "EvDrop 0x0 0x0 0x0");
     }
 }
