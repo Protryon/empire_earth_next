@@ -589,6 +589,115 @@ pub enum EeWonEeGlueOp {
     StringLength = 600,
     /// `(uint32_t)((GUIStringData*)a)->mText[b]`.
     StringUnitAt,
+    /// `new EEALobbyAction((void (*)())a)` (EELobbyPostAction's action; R6 WON round 35).
+    ActionNew = 650,
+    /// `gUserInterface->PostAction((EEALobbyAction*)a)`.
+    UiPostAction,
+    /// `((EEALobbyAction*)a)->Dereference()`.
+    ActionDereference,
+    // ---- R6 WON round 35: the fields of OptionsField, OptionSet, OptionsPlayer and PlayerSet, one op each
+    /// `(long)((const EEGameOptions*)a)->mMapSize`.
+    OptGetMapSize = 700,
+    /// `(long)((const EEGameOptions*)a)->mResources`.
+    OptGetResources,
+    /// `(long)((const EEGameOptions*)a)->mEpochStart`.
+    OptGetEpochStart,
+    /// `(long)((const EEGameOptions*)a)->mEpochEnd`.
+    OptGetEpochEnd,
+    /// `(long)((const EEGameOptions*)a)->mVariant`.
+    OptGetVariant,
+    /// `(long)((const EEGameOptions*)a)->mDifficulty`.
+    OptGetDifficulty,
+    /// `(long)((const EEGameOptions*)a)->mGameSpeed`.
+    OptGetGameSpeed,
+    /// `(long)((const EEGameOptions*)a)->mUnitLimit`.
+    OptGetUnitLimit,
+    /// `(long)((const EEGameOptions*)a)->mWondersForVictory`.
+    OptGetWondersForVictory,
+    /// `(long)((const EEGameOptions*)a)->mRevealMap`.
+    OptGetRevealMap,
+    /// `(long)((const EEGameOptions*)a)->mAllowCustomCivs`.
+    OptGetAllowCustomCivs,
+    /// `(long)((const EEGameOptions*)a)->mLockTeams`.
+    OptGetLockTeams,
+    /// `(long)((const EEGameOptions*)a)->mLockSpeed`.
+    OptGetLockSpeed,
+    /// `(long)((const EEGameOptions*)a)->mVictory`.
+    OptGetVictory,
+    /// `sEELobbyMapIndex = 0` (EERMFindGenerator's index, before the find).
+    MapIndexClear,
+    /// `EERMFindGenerator(((const EEGameOptions*)a)->mMapType, sEELobbyMapIndex)`, then `(long)sEELobbyMapIndex`.
+    OptGetMapTypeIndex,
+    /// `gGameOptions.mLoadType = a`.
+    OptSetLoadType,
+    /// `gGameOptions.mMapSize = a`.
+    OptSetMapSize,
+    /// `gGameOptions.mResources = a`.
+    OptSetResources,
+    /// `gGameOptions.mEpochStart = a`.
+    OptSetEpochStart,
+    /// `gGameOptions.mEpochEnd = a`.
+    OptSetEpochEnd,
+    /// `gGameOptions.mVariant = a`.
+    OptSetVariant,
+    /// `gGameOptions.mDifficulty = a`.
+    OptSetDifficulty,
+    /// `gGameOptions.mGameSpeed = a`.
+    OptSetGameSpeed,
+    /// `gGameOptions.mUnitLimit = a`.
+    OptSetUnitLimit,
+    /// `gGameOptions.mWondersForVictory = a`.
+    OptSetWondersForVictory,
+    /// `gGameOptions.mRevealMap = a != 0`.
+    OptSetRevealMap,
+    /// `gGameOptions.mAllowCustomCivs = a != 0`.
+    OptSetAllowCustomCivs,
+    /// `gGameOptions.mLockTeams = a != 0`.
+    OptSetLockTeams,
+    /// `gGameOptions.mLockSpeed = a != 0`.
+    OptSetLockSpeed,
+    /// `gGameOptions.mVictory = a != 0`.
+    OptSetVictory,
+    /// `&((EEGameOptions*)a)->mPlayers[b]`.
+    OptionsPlayerAt,
+    /// `(long)((EEGameOptionsPlayer*)a)->mType`.
+    PlayerGetType,
+    /// `(long)((EEGameOptionsPlayer*)a)->mLoadedType`.
+    PlayerGetLoadedType,
+    /// `(long)((EEGameOptionsPlayer*)a)->mSlot`.
+    PlayerGetSlot,
+    /// `(long)((EEGameOptionsPlayer*)a)->mColor`.
+    PlayerGetColor,
+    /// `(long)((EEGameOptionsPlayer*)a)->mTeam`.
+    PlayerGetTeam,
+    /// `(long)((EEGameOptionsPlayer*)a)->mStartingCitizens`.
+    PlayerGetStartingCitizens,
+    /// `(long)((EEGameOptionsPlayer*)a)->mIsLocal`.
+    PlayerGetIsLocal,
+    /// `(long)((EEGameOptionsPlayer*)a)->mIsReady`.
+    PlayerGetIsReady,
+    /// `(long)((EEGameOptionsPlayer*)a)->mB36`.
+    PlayerGetB36,
+    /// `((EEGameOptionsPlayer*)a)->mName == ""` (0 or 1).
+    PlayerGetNameEmpty,
+    /// `sEELobbyPlayer.mType = a` (the player being made).
+    PlayerSetType,
+    /// `sEELobbyPlayer.mLoadedType = a` (the player being made).
+    PlayerSetLoadedType,
+    /// `sEELobbyPlayer.mSlot = a` (the player being made).
+    PlayerSetSlot,
+    /// `sEELobbyPlayer.mColor = a` (the player being made).
+    PlayerSetColor,
+    /// `sEELobbyPlayer.mTeam = a` (the player being made).
+    PlayerSetTeam,
+    /// `sEELobbyPlayer.mStartingCitizens = a` (the player being made).
+    PlayerSetStartingCitizens,
+    /// `sEELobbyPlayer.mIsLocal = a != 0` (the player being made).
+    PlayerSetIsLocal,
+    /// `sEELobbyPlayer.mIsReady = a != 0` (the player being made).
+    PlayerSetIsReady,
+    /// `sEELobbyPlayer.mB36 = a != 0` (the player being made).
+    PlayerSetB36,
 }
 
 /// The inward calls (`a`.. as documented).
@@ -676,6 +785,8 @@ pub enum EeWonEeGlueCall {
     RunSierraUpdate,
     /// `EEGetLocalAddress((NEProtocol*)a, b)`: the `UWideString&` as an address.
     LocalAddress,
+    /// `EELobbyPostAction((void (*)())a)`: a new action calling `a`, posted to the user interface (R6 WON round 35).
+    PostAction,
 }
 
 /// The host: `(op, a, b, c, d, e, f) -> result`.
@@ -1510,6 +1621,12 @@ impl EeWonEeGlue {
             C::GameDone => self.game_done(a, b as *mut i32),
             C::RunLoop => self.run_loop(),
             C::ReturnFromGame => self.return_from_game(),
+            // `new EEALobbyAction(a)`, `gUserInterface->PostAction(it)`, `it->Dereference()`
+            C::PostAction => {
+                let action = self.op1(Op::ActionNew, a);
+                self.op1(Op::UiPostAction, action);
+                self.op1(Op::ActionDereference, action);
+            }
             C::SetQuitFlag => {
                 if self.op1(Op::IsShown, 0) == 0 {
                     self.game_done.store(true, Ordering::Relaxed);

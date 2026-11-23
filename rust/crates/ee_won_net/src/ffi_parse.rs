@@ -119,6 +119,26 @@ unsafe fn with<R>(
     r
 }
 
+/// `StringParser(text).ReadValue(std::list<std::string>&)` over a narrow text (cut at its first NUL, as `c_str()`):
+/// a token, then another after each `,` (a string read never fails), R6 WON round 34 (the lobby's address names).
+pub fn read_string_list(text: &[u8]) -> Vec<Vec<u8>> {
+    let end = text.iter().position(|&b| b == 0).unwrap_or(text.len());
+    let mut nul = text[..end].to_vec();
+    nul.push(0);
+    let mut pos = 0i32;
+    let mut out = Vec::new();
+    // SAFETY: a NUL-terminated narrow text and its cursor
+    unsafe {
+        with(nul.as_ptr() as *const c_void, 1, &mut pos, |p| loop {
+            out.push(p.read_string(false));
+            if !p.check_next_char(',' as i32) {
+                break;
+            }
+        })
+    };
+    out
+}
+
 /// `StringParser::GetChar(offset)` at `pos`.
 ///
 /// # Safety

@@ -71,6 +71,7 @@ const EeWonAsyncOpHooks* AsyncOpHooks() { return &kAsyncOpHooks; }
 static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
 {
     RefCount* r=static_cast<RefCount*>(inObject);
+    if (WonRustRef* x=dynamic_cast<WonRustRef*>(r)) return x->Get(inKind); // the HTTP connections and sessions
     switch(inKind) {
 #define EE_WON_CORE_OF(kind,cls,get) case EeWonCoreObject::kind: { cls* x=dynamic_cast<cls*>(r); return x ? (void*)x->get : NULL; }
     EE_WON_CORE_OF(Op,AsyncOp,GetOpObject())
@@ -85,15 +86,9 @@ static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
     EE_WON_CORE_OF(RouteConn,RoutingConnection,GetRouteObject())
     EE_WON_CORE_OF(AuthCtx,AuthContext,Core())
     EE_WON_CORE_OF(HostOp,RustServerOp,GetRustOp())
-    EE_WON_CORE_OF(HttpConn,HTTPConnection,GetConnObject())
-    EE_WON_CORE_OF(HttpSession,HTTPSession,GetSessionObject())
     EE_WON_CORE_OF(Context,ServerContext,GetListObject())
 #undef EE_WON_CORE_OF
-    case EeWonCoreObject::Lock: {
-        if (HTTPConnection* c=dynamic_cast<HTTPConnection*>(r)) return c->GetLock();
-        if (HTTPSession* s=dynamic_cast<HTTPSession*>(r)) return s->GetLock();
-        return NULL;
-    }
+    default: break;
     }
     return NULL;
 }
@@ -188,7 +183,7 @@ static void CoreSocketHook(void* inSocket,int32_t inWhich)
     else if(inWhich==1) aSocket->CloseHook();
     else aSocket->KillHook();
 }
-static void* CoreNewHttpConn() { return static_cast<RefCount*>(new HTTPConnection(NULL)); }
+static void* CoreNewHttpConn() { return static_cast<RefCount*>(new WonRustRef(EeWonCoreObject::HttpConn)); }
 // the routing classes' (ee_won routecpp.rs): a new op on a connection, the connection's two virtuals
 static RoutingConnection* RouteConn(void* inConn)
 { return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(inConn))); }

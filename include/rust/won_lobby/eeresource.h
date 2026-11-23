@@ -7,6 +7,17 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The loader's calls out (EELobbyResource.cpp's host). A read that threw (the table lacks the section or key)
+/// answers [`EE_WON_EERES_THROWN`] with the exception kept; the C++ entry rethrows it.
+enum class EeWonEeResOp : uint32_t {
+  /// `((ResourceConfigTable*)table)->SafeGetConfig((const char*)a)` (the section's config).
+  Config = 0,
+  /// `strings[a] = ((ResourceConfig*)b)->SafeGetString((const char*)c)`.
+  Read,
+  /// `strings[a] = GetEmptyGUIStringData()`.
+  Erase,
+};
+
 /// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
 struct EeWonEeResource {
   const char *section;
@@ -14,6 +25,13 @@ struct EeWonEeResource {
   const char *name;
   bool new_section;
 };
+
+/// The host: `(op, table, a, b, c) -> result`.
+using EeWonEeResHostFn = ptrdiff_t(*)(EeWonEeResOp op,
+                                      void *table,
+                                      ptrdiff_t a,
+                                      ptrdiff_t b,
+                                      ptrdiff_t c);
 
 extern "C" {
 
@@ -32,6 +50,22 @@ bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
 /// # Safety
 /// `name` is NULL or a NUL-terminated string.
 ptrdiff_t ee_won_eeresource_find(const char *name);
+
+/// EELobbyResource_Load: every row's string read from its section's config (a section looked up where it changes,
+/// as the original's statements did); `EE_WON_EERES_THROWN` when a read threw (the rest not read).
+ptrdiff_t ee_won_eeresource_load(void *table,
+                                 size_t strings,
+                                 EeWonEeResHostFn host);
+
+/// EELobbyResource_Destroy: every string reset to the empty one, in the rows' order.
+void ee_won_eeresource_destroy(size_t strings, EeWonEeResHostFn host);
+
+/// EELobbyResource_Named's row: the string of a global's name; the program stops for a name the table lacks.
+///
+/// # Safety
+/// `name` is NULL or a NUL-terminated string.
+size_t ee_won_eeresource_index(const char *name,
+                               size_t strings);
 
 }  // extern "C"
 

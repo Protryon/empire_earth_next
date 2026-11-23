@@ -491,7 +491,7 @@ int main(int argc, char** argv)
         Log("remove " + N(aCounts[5]) + " again " + N(aCounts[6]) + " now " + N(aCounts[7]));
         ctx->RemoveAllAddresses();
         long long aLeft = (long long)aServers->GetNumAddresses();
-        long long aFromDir = ctx->AddAddressesFromDir(DirEntityList());
+        long long aFromDir = ctx->AddAddressesFromDir(DirList());
         Log("remove all " + N(aLeft) + " from dir " + N(aFromDir));
         SmartPtr<ServerContext> aNew = new ServerContext;
         aNew->AddAddress(anOther);

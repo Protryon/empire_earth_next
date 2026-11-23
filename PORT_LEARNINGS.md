@@ -39822,3 +39822,126 @@ list and UIF4 (42); EECBCivilizationFiles' context and directory code (25); EEUI
 (17); UIShims.h's hand-written host declarations (15); EEUIManager.h, EEUserInterface.h, EEScreens.cpp; the status
 box's call record, the status button's declarations, two constructors; the WON glue prototypes (EEIsLobbyOpen,
 EESetQuitFlag, EELobbyShutdown: WON-lane C++ with no header) (docs/progress/ui-cluster.md).
+
+## R6 WON lobby and network, round 34: DirEntity, HTTPConnection/HTTPSession and DNSTestOp whole in Rust; the dialog, EE game, EE glue and net control hosts' compound cases composed in Rust; BadUserItem and ConnectListItem as Rust rows (ee_won_net dirlist.rs, routereq.rs, rustref.rs, dnstest.rs; ee_won_lobby dirread.rs, dlgsplit.rs, eesplit.rs, eeresource.rs, hostops.rs split_op; branch rust-wonnet34, 2026-11-23)
+
+The WON lane is split in two from this round: this half takes the lobby, network and game glue (WONLobby but the
+GUI classes, WONCommon, WONServer, WONDir, WONAuth, WONConfig, the routing and network headers, EEWonNet, the WON UI
+events and boxes, ee_won_net and ee_won_lobby); a parallel lane takes the GUI. The parent made two forks in
+hand-made worktrees with disjoint files (net: WONRouting.h, EEWonNet, the network units, the model's directory
+reads; dlg: the dialog and EE game hosts, then the EE glue and net control hosts), each ran two batches, and the
+parent merged them (--no-ff), merged origin/rust (batch 19) and ran the gates. The aim was -1,200 C++ logic lines.
+
+### What moved (logic: `logic_lines.py` over the whole tree)
+
+| Part | What | Logic |
+|---|---|---|
+| net 95791aaa4 | DirEntity whole in Rust (dirlist.rs, dirread.rs): DirEntity, DirDataObject, DirACL, DirEntityList/Ptr/Map and DirEntityReplyParser::TakeEntity gone; one C++ `DirList` (move-only, owns the Rust list); ServerContext's AddAddressesFromDir / AtomicClearAndAddAddressesFromDir, WONPing.h's MultiPingAddServers, RustServerOp::GetEntities, RoutingLogic's directory cases, EEWonNet's server list, and the model's directory reads (LobbyServerList::UpdateFromDirectory, LobbyServer::ReadDirEntity over a 7-case `DirReadHost`) in Rust | -95 |
+| net af26de9eb, 3a2c1adf5, 34bfe09f1 | RoutingRequestValues a Rust builder (routereq.rs); the NetStats and Event shims deleted (no C++ caller; the Rust stays); MultiPingServerContext's body in Rust | -17 |
+| dlg 7bb423ea7 | the dialog host's compound cases in dlgsplit.rs under `cppnet::bound()`: BadUserItem a Rust row (rows.rs kind BadUser: texts, Paint, CalcDimensions, Compare), BadUsersInsert, BadUserId, AdminTitleRes, AdapterAddDefault, the file dialog's search over ee_base's PlatFind; the Status and Credits dialogs' constructor statements in `ee_won_lobbydlg_new_model` | -109 |
+| dlg 9daeb48c0, 71f23ba9c, 3b1c5cdb0, a5fa96d1b | eesplit.rs: PlayerAttach, the transfer's file info, host, socket, accept, send and download, the message reads under WON_GUARDED; EELobbyPlayerSlot deleted (the player keeps the game and index); ConnectListItem a Rust row; the EE lobby strings' loader in eeresource.rs | -87 |
+| net 5e8d7f486 | HTTPConnection and HTTPSession whole in Rust: one generic C++ `WonRustRef` (RefCount, lock, kind, the Rust object; rustref.rs makes and frees it) that CoreObjectOf finds; the session calls one-statement functions | -14 |
+| net b1528b322 | DNSTestOp and DNSTestThread whole in Rust (dnstest.rs: the run takes a reference to its op, a thread resolves the host and finishes, then gives the reference back) | -15 |
+| dlg a02865c71 | the EE glue host: OptionsField / OptionSet / PlayerField deleted (one case per field, gluesplit.rs, ops from 700), EELobbyPostAction, EELobbyGetVersion, the chooser and the popup (eecolor.rs) in Rust; EELobbyGetSavedGameInfo takes `uint32_t&` | -78 (glue -64, game host -14) |
+| dlg 1b532689e | the net control host: hostops.rs split_op composes the rows' and links' fields, the text builders, ChatAddFormatted, DeliverCreateAccount, HttpDocPath, EeColumn; the three configs' SetComponent through lobbycfgrd.rs; 15 duplicate forward declarations and 3 unused locals dropped (cleanup, about -21) | -84 |
+
+Round total: batch 1 30,337 -> 30,029 (-308), batch 2 (after the merge of origin/rust) 28,384 -> 28,193 (-191):
+**-499**, short of -1,200 (below).
+
+### Goldens (Internet-only and unreached code)
+
+- **won_dir34_test** (net): the DirEntity code as it was at ab1b33bcb against the Rust: entities, server contexts,
+  the multi-ping, the model's reads, the routing requests. 97,000 cases, 0 mismatches, 10 of 10 mutations. The old
+  DirEntity is `tests/won/won_direntity_orig.h` for the drivers that build the C++ objects (won_net33_test's directory
+  phase now compares the old code with itself; won_dir34_test is the check).
+- **won_httpsession_test** (existing, real sockets, against the recorded golden over HTTPEngine.cpp) passes over the
+  new classes; two hand mutations (no kill; a get added twice) fail it 6 and 7 times.
+- **won_net34_test**: DNSTestOp against the classes at ab1b33bcb: 15 host texts, async and blocking, 3 rounds, 90
+  cases, 0 mismatches, 3 of 3 mutations.
+- **won_dlg34_test**: the dialog and game hosts' deleted cases against dlgsplit.rs / eesplit.rs over a stand-in
+  world: 3,393 cases, 0 mismatches, 19 of 19 mutations; every new host op reached (12 dialog, 19 row, 14 transfer,
+  7 game). The file search's temporaries die in another order: the golden sorts its trace.
+- **won_ctl35_test**: the glue and net control hosts' deleted cases (as at the fork's base f2bdb70f7) against the
+  Rust: 2,753 checks, 0 mismatches; each of the 114 new ops skipped in turn, every skip caught (a skipped maker
+  answers another object instead of null, so a skip cannot pass as a null).
+
+### LAN reach (temporary probes over a LAN game, removed)
+
+- Reached and proven by the LAN game and its captures: ConnectInsert / ConnectItemSlot, PlayerAttach, the EE lobby
+  strings' loader; the net control host's TextNew, ItemGet/ItemSet (height, selected, selectable), EeColumn,
+  TextBytes, TextAppend, ChatAddFormatted; the glue's player and option fields and PostAction; the game's Version;
+  the three configs' SetComponent.
+- Not reached (goldens): everything of the net fork (directories, HTTP, routing requests, EEWonNet, the multi-ping;
+  DNSTestOp only from Direct Connect with a host name, which lan_game.py never opens), BadUser*, AdminTitleRes,
+  AdapterAddDefault, the file search, the transfers, links, ParserCommandText, DeliverCreateAccount, HttpDocPath,
+  the chooser and popup.
+- Gap: EeColumn's Keep and Compare branches have neither a golden case nor a probe hit (the probe logged the op, not
+  the call); their new statements are a host static text and its pointer.
+
+### Behaviour changes (all but the first two unreachable today)
+
+- EELobbyFn2988E9's saves directory text is made once at static initialisation (the original emptied and re-appended
+  a function-local static per call; the same text). OpenPopup's PopupParams is on the heap.
+- A read past a message's end rethrows the read's own ReadBufferException (the same type and text).
+- The moved cases' C++ locals are host statics, set where the local was made and emptied where it died.
+- The multi-ping's servers no longer hold a reference to their directory entity (`EE_WON_MULTIPING_ENTITY` reads 0;
+  nothing reads it); an address-list data object without data reads as empty text (the original read through NULL);
+  the DirEntityMap overloads are gone (no caller).
+- The bad-user rows' three unset sort keys are 0 (uninitialised before; never read).
+- The DNS op is a RustServerOp (a ServerOp) rather than a plain AsyncOp (the same status and address, golden-checked);
+  HTTPConnection's unused session back pointer is gone.
+
+### Lessons
+
+- Grep an enum's values, not only its name, before deleting it: HTTPDocType_MOTD is used by LobbyNetCtrlHost.cpp.
+- An `extern "C" { .. }` block in a WON crate needs `/// cbindgen:ignore` on its module, or cbindgen emits a stray
+  `rust/base/plat_sys.h` and the platform structs into another header. A `use .. as Op` alias leaks into a cbindgen
+  signature: spell the full type in `#[no_mangle]` functions.
+- A full `xbuild.py wontest` rebuilds every program from the live tree: no source edits while it runs, and it took
+  hours under three worktrees' load. won_persistobj_test is not hung but slow under load: one thread at about 10 s of CPU per wall minute, about 15
+  minutes in the final run (exit 0); an interim run killed at 10 minutes looked like a hang. Check its CPU time
+  growing before killing it.
+- ee_base's `implode_output_is_byte_identical_to_the_c_encoder` failed once under load with a different hash at the
+  same length and passed alone three times: a byte golden that fails only under load points at nondeterminism in the
+  encoder or its test (ee_base's owner).
+- The disk hit 0 bytes twice tonight across the worktrees: delete build/rust/debug/incremental after each Rust gate and
+  each build/sim_capture/<run> right after its check.
+- Round 33's capture lesson held: the base exe built in this session from ab1b33bcb (build/w34base) gave identical
+  lobby captures to every later exe but the carets.
+
+### Why short (-499 against -1,200)
+
+- What is left in the network headers is the declarations of shim classes the lobby names everywhere (AsyncOp, the
+  sockets, RustServerOp's factories, LogicCompletion, the UDP ops whose virtual CheckResponse PingLogic and the user
+  status op override, AsyncOpTracker as ServerOp's and WONLobbyLogic.h's base); they go only when the ServerOp
+  hierarchy or EEWonNet moves whole. EEWonNet's C++ objects would become host statics and its callers are seven
+  files of other lanes.
+- RecvChunkOp and ServerConnectionConnectOp are already thin (a generic Rust-hooked op would save about 4 lines).
+- The hosts' remaining cases are single statements, renderer API (LockFrame, SetPresentation) or C++ subclasses of
+  GUI bases without a Rust shell (NetworkAdapterListItem, a MultiListItem; FilterListItem needs a row kind and a
+  golden).
+
+### The merges
+
+The forks' first batches (clean), then origin/rust 4a255ad0d (batch 19): rust/cbindgen.toml by cbunion2.py (one
+conflict block, toml checked), PORT_LEARNINGS by `git merge-file --union`; headers current after. The forks merged
+that tip before their second batches; both second batches merged clean. origin/rust did not move again.
+
+### Gates (the merged tip)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 6 --sim` | 0 / 0 (EE-AOC 412 inputs, EE-SIM 413) |
+| `build.py --test-profile windowed-software` | 0 / 0 |
+| `rust_build.py header` | 333 headers current |
+| `rust_build.py gate` | PASS, 6,440 tests |
+| `won_host_coverage.py` | PASS |
+| oracle against the main checkout's `ref` | seeds 2-7 identical (oracle: PASS) |
+| `xbuild.py wontest` | exit 0, every program exits 0 (won_dir34 97,000 cases, won_net34 90, won_dlg34 3,393, won_ctl35 2,753 and 114/114 skips, won_httpsession 0 failures, won_wonnet 167/168 ops 0 mismatches) |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal |
+| saveload | plain seeds 2-7 PASS (18/18 identical); matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` |
+| `scenario_check.py` | PASS 27/27 |
+| `eedata check`, `cppgate` | PASS, PASS |
+| LAN game (slot.py) | `RESULT PASS lan-game` PT host 2813 / joiner 2810 (base exe 3497 / 3479) |
+| `lan_capture_compare.py` against build/w34base's run (ab1b33bcb built this session) | every lobby capture identical but the carets (create dialog x 575..576, staging x 121..122). A first run under load captured the joiner's staging screen while "Getting Game Info..." still showed (lan_game.py captures 1 s after the lobby state says joined; the window had not repainted): the game played on, and the rerun was identical but the caret. The DLG fork's runs (d34_lan, d35_lan) were identical but the carets too |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12250` units [4, 38, 38] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2860 joiner=2871`, GATES PASS |

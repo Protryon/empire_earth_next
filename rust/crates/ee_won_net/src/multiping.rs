@@ -426,3 +426,30 @@ impl Plan for MultiPing {
 pub extern "C" fn ee_won_multiping_new() -> *mut EeWonHostOp {
     EeWonHostOp::boxed(MultiPing::new())
 }
+
+/// `GetServerContext(discardNonResponsiveServers)` (WONPing.h's MultiPingServerContext, R6 WON round 34): the finished
+/// servers in order into the C++ `ServerContext`'s list `ctx` (the unanswered too unless discarded; an element whose
+/// address is not six bytes is left out), then the list's shuffling off.
+///
+/// # Safety
+/// `op` is a live multi-ping op; `ctx` a live server list.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_multiping_fill_context(
+    op: *const EeWonHostOp,
+    ctx: *const crate::servctx::ServerList,
+    discard_non_responsive: bool,
+) {
+    // SAFETY: the contract
+    let (op, ctx) = unsafe { (&*op, &*ctx) };
+    let keep = if discard_non_responsive { EE_WON_MULTIPING_KEEPS } else { EE_WON_MULTIPING_KEEPS_ALL };
+    for i in 0..op.num(EE_WON_MULTIPING_COUNT, 0) {
+        let six = op.bytes(EE_WON_MULTIPING_ADDR, i).unwrap_or_default();
+        if op.num(keep, i) == 0 || six.len() != 6 {
+            continue;
+        }
+        let mut a = crate::ipobj::EeWonIpAddr::default();
+        a.set_six(&[six[0], six[1], six[2], six[3], six[4], six[5]]);
+        ctx.add(&crate::dirlist::address_of(&a));
+    }
+    ctx.set_shuffle(false);
+}

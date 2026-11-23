@@ -27,6 +27,7 @@
 #include "rust/won_lobby/staging.h"
 #include "rust/won_lobby/modelbuf.h"
 #include "rust/won_lobby/lobbyhost.h"
+#include "rust/won_lobby/dirread.h"
 namespace WONAPI {
 
 static_assert(offsetof(LobbyModelObject, mModel) == 2 * sizeof(void*), "modelobj.rs reads the model at this offset");
@@ -82,46 +83,26 @@ LobbyModelObject::LobbyModelObject(EeWonModelKind inKind)
     : mModel(ee_won_model_new(this, inKind, ModelHost, GetEmptyGUIStringData())) {}
 LobbyModelObject::~LobbyModelObject() { ee_won_model_free(this->mModel); }
 
-// ---- the directory's records (the routing server's are read in Rust: modelobj.rs route_record_op)
+// ---- the directory's records (the routing server's are read in Rust: modelobj.rs route_record_op; the directory's
+// listing by ee_won_lobby dirread.rs since R6 WON round 34, ReadDirEntity among it, over these statements)
 
-// Reads the server's name, address, population (_C) and address names (_L) from its directory entry
-void LobbyServer::ReadDirEntity(DirEntity* inEntity)
+static intptr_t DirReadHost(EeWonDirReadOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
-    this->MSetText(LobbyMF::ServerName, GUIString(inEntity->mDisplayName));
-    this->MSetAddr(LobbyMF::ServerAddress, inEntity->GetNetAddrAsIP());
-    const DirDataObjectList& aList = inEntity->mDataObjects;
-    for (DirDataObjectList::const_iterator anItr = aList.begin(); anItr != aList.end(); ++anItr) {
-        const DirDataObject& anObject = *anItr;
-        uint16_t aCount = 0;
-        const ByteBuffer* anData = anObject.mData.get();
-        int aKind = ee_won_model_dir_object(reinterpret_cast<const uint8_t*>(anObject.mDataType.data()),
-                                            anObject.mDataType.length(),
-                                            anData != NULL ? reinterpret_cast<const uint8_t*>(anData->data()) : NULL,
-                                            anData != NULL ? (size_t)anData->length() : 0, &aCount);
-        if (aKind == 1) {
-            this->M(LobbyMC::ServerSetListed, aCount);
-        } else if (aKind == 2) {
-            this->M(LobbyMC::ServerAddressesClear);
-            std::string aText(anObject.mData->data(), anObject.mData->length());
-            StringParser aParser(aText.c_str());
-            std::list<std::string> aNames;
-            aParser.ReadValue(aNames);
-            for (std::list<std::string>::iterator aName = aNames.begin(); aName != aNames.end(); ++aName)
-                this->M(LobbyMC::ServerAddressAdd, (intptr_t)aName->data(), (intptr_t)aName->length());
-        }
+    typedef EeWonDirReadOp O;
+    LobbyServer* aServer = static_cast<LobbyServer*>(inObj);
+    switch (inOp) {
+    case O::ServerListInsert: return static_cast<LobbyServerList*>(inObj)->M(LobbyMC::ServerListInsert, a); // the address's value
+    case O::ServerConnected: return aServer->IsConnected();
+    case O::ServerSetName: aServer->MSetText(LobbyMF::ServerName, GUIString(UnitsText(reinterpret_cast<const uint16_t*>(a), (size_t)b))); return 0;
+    case O::ServerSetAddr: aServer->MSet(LobbyMF::ServerAddress, a); return 0; // MSetAddr: the value copied
+    case O::ServerSetListed: aServer->M(LobbyMC::ServerSetListed, a); return 0;
+    case O::ServerAddressesClear: aServer->M(LobbyMC::ServerAddressesClear); return 0;
+    case O::ServerAddressAdd: aServer->M(LobbyMC::ServerAddressAdd, a, b); return 0;
     }
+    return 0;
 }
-
 // Adds the directory's servers by address and refreshes the listing of each one not connected
-void LobbyServerList::UpdateFromDirectory(const DirEntityList& inEntities)
-{
-    for (DirEntityList::const_iterator it = inEntities.begin(); it != inEntities.end(); ++it) {
-        DirEntity* entity = it->get();
-        IPAddr anAddress = entity->GetNetAddrAsIP();
-        LobbyServer* aServer = (LobbyServer*)this->M(LobbyMC::ServerListInsert, (intptr_t)anAddress.GetValue());
-        if (!aServer->IsConnected()) aServer->ReadDirEntity(entity);
-    }
-}
+void LobbyServerList::UpdateFromDirectory(const DirList& inEntities) { ee_won_lobby_dir_update(this, inEntities.get(), DirReadHost); }
 
 // ---- the game's buffers: their bodies are modelbuf.rs's (R6 WON round 33) over these statements
 
