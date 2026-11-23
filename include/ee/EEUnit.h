@@ -1206,7 +1206,6 @@ public:
     bool NavalHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_ARRIVED, this, inUnit, 0, inValue) != 0; }
     void UpdateResourceUnit(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_UPDATE_RESOURCE_UNIT, this, inUnit, 0, 0.0f); }
     bool NavalBuildingSelectUnitToRelease(EEComplexUnit* inUnit) { return ee_units_ucb_call(EE_UNITS_UCB_DO_NAVAL_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0; }
-    bool NavalBuildingHasSunk(EEComplexUnit* inUnit);
     void NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
     EEUnit* NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
     EEUnit* NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);

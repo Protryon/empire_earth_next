@@ -343,28 +343,6 @@ EEUnit* EEUnitClass::MiningBuildingCreateUnitAt(GETransformation& inTransformati
 // Picks the first fully healed docked ship that should leave (a human's ship whose own or the dock's rally goal is an
 // attack, move or explore goal; any ship with a goal for a computer player); returns whether one was picked
 
-// Returns whether the dock's transformed bounding box lies wholly below the water line
-bool EEUnitClass::NavalBuildingHasSunk(EEComplexUnit* inUnit)
-{
-    GE3DPoint thePosition;
-    GEBoundingBox theBox;
-    GEBoundingBox theTransformedBox;
-    const GEPhysicalModel& thePhysicalModel = inUnit->mPhysicalModel;
-    GEModel* theModel = thePhysicalModel.GetModel();
-    inUnit->GetPosition(thePosition);
-    GETransformation theTransformation(false);
-    thePhysicalModel.GetLocation().Apply(theModel->GetInternalTransform(thePhysicalModel.GetFrame()),
-                                         theTransformation);
-    float theScale = thePhysicalModel.GetScale();
-    theTransformation.Scale(theScale, theScale, theScale);
-    theTransformation.SetX(thePosition.GetX());
-    theTransformation.SetY(thePosition.GetY());
-    theTransformation.SetZ(thePosition.GetZ());
-    theBox = theModel->GetBoundingBox(inUnit->mPhysicalModel.GetFrame());
-    theBox.Transform(theTransformation, theTransformedBox);
-    return theTransformedBox.GetTopRightBack().GetZ() < 0.0f ? true : false;
-}
-
 // ---- EEUCSpaceBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The space
 // building's unit class: 0x219fe3..0x21a219 (after EEUCSeaAnimal.cpp; EEUCSpaceship.cpp follows). Unit flags: the
 // exe's module set. Its ctor is inline. Virtual74/78/88 are also EEUCNavalBuilding's (ICF: these copies are kept);

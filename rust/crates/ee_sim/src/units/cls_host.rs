@@ -296,6 +296,11 @@ pub unsafe extern "C" fn ee_units_cls_push(list: *mut EeUnitsClsListHandle, x: i
 /// The game's world for the class bodies.
 pub struct ClsGame(pub Game);
 
+/// The naval building's `HasSunk` (the dock): the trigger's sunk test ([`cond::sunk`]) over the same statements.
+pub(crate) fn has_sunk(unit: u64) -> bool {
+    cond::sunk(&mut ClsGame(Game), unit)
+}
+
 impl ClsGame {
     pub(crate) fn call(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsClsIo) -> i64 {
         if let Some(v) = cls_view(op, a, b, c, io) {

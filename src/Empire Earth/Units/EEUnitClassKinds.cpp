@@ -192,7 +192,6 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCK_D_AIR_SOUND: theClass->AirGetSoundParameters(EEUckObject<EEUnit>(inA), EEUckObject<EESoundObject>((uint64_t)inB), EEUckObject<float*>((uint64_t)inC)[0], EEUckObject<float*>((uint64_t)inC)[1], EEUckObject<float*>((uint64_t)inC)[2]); return 0;
     case EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION: theClass->BuildingGroundLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION: theClass->SubmergedNavalGroundLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
-    case EE_UNITS_UCK_D_NAVAL_BUILDING_SUNK: return theClass->NavalBuildingHasSunk(theUnit);
     case EE_UNITS_UCK_D_IS_SIDE_PART: return theClass->IsSidePart(theUnit);
     case EE_UNITS_UCK_D_FIRST_PART_COMMAND: return EEGetFirstPart(theUnit)->GetCommandType();
     case EE_UNITS_UCK_D_IS_FLARE: return theClass->mIsFlare;
