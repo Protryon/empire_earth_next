@@ -38226,3 +38226,97 @@ On the tree merged with origin/rust 5143a9696:
   PT 12337, units [4, 38, 38], alive [2, 3], classic_lua x 2; lan-game PT 2819/2820).
 - Not run: the POSIX builds, the store gate (tools/eemodel/storegate.py: it links FSFile through the calls table,
   which gained five entries), `gates.sh --legacy`.
+
+## LLE round 12: GERasterizer without virtuals (DX7Rasterizer folded in), GX.h's declarations from cbindgen, FSFile one class, the GE managers' and texture's compound cases and GEStoreFrame in Rust (ee_render dx7 rastobj.rs, gx abi.rs ffi.rs consts.rs, ge texobj_tex.rs physical_walk.rs; ee_base util config.rs; ee_net ffi_server.rs; branch rust-lle12, 2026-11-22)
+
+The brief: about -1,000 C++ logic lines in the LLE's files (src/Low-Level Engine but User Interface, include/lle but
+UI*, include/gx, include/dx7, the RTS Engine), bodies or whole classes to the Rust crates over one-statement shims.
+**In scope -700** (`logic_lines.py`'s count per file: 2,518 -> 1,818); net C++ -965 (src and include but
+include/rust); the whole-tree count (which leaves out include/gx and include/dx7) 55,758 -> 55,284 at the forks'
+merge. Two forks in
+their own worktrees: a (include/gx, the File System, the U* utilities) and b (the GE model, texture, bitmap and
+their managers); the main branch took the rasterizer, the NE and the store gate. docs/progress/lle-shims.md has the commits and
+what is left. Short of the target: what remains is mostly the structural floor (below).
+
+### What moved
+
+- **GERasterizer is concrete.** It had one implementation (the plug-in boundary went in R4.3 part 14), so its 47
+  virtual slots and DX7Rasterizer.h's overrides were declarations over one-statement bodies. The base now holds
+  `mDX7` beside `mRust` and each member forwards to `ee_dx7r_*` inline; the members that need a complete GE type
+  (ActivateScreen's window size, the bitmap's and the mesh's Rust object, the polygon arrays, the texts through
+  DX7Surface) are GERasterizer's, out of line in DX7Rasterizer.cpp. DX7Rasterizer itself is gone: GERasterizer's
+  constructor makes both Rust objects; the game's one rasterizer is `static GERasterizer gTnLRasterizer(gName, true)`.
+- **Template parameters instead of includes.** Light, TransformToCamera, DrawWater, DrawTerrainGrid,
+  DrawTerrainHighlight, DrawGridLines and Draw3DLine take the mesh (and the runs, rectangle or points) as template
+  parameters: their bodies call `inMesh.GetRust()` or `inLines.data()`, which a non-dependent expression would need
+  complete in every unit that includes GERasterizer.h (GERasterizer.h cannot include GETerrainMesh.h: the LLE's
+  headers are order-dependent). As a bonus DrawGridLines needs no `LLE_EXE_HEADERS` pair of declarations: the game's
+  `vector<RTSMapTileRun>` and the LLE's `vector<pair<U2DPoint<long>, U2DPoint<long> > >` instantiate the same
+  body. A non-virtual member declared two ways would have mangled two ways and left the game's call unresolved;
+  only the virtual call had made that harmless. Only unique names can be templates: an overloaded `Draw(Mesh&, ...)`
+  template of three arguments would compete with `Draw(GELine*, count, screen)`.
+- **GX.h from cbindgen** (fork a): the structures, callback types and the `extern "C"` block are generated
+  (rust/render/gx.h) from ee_render gx abi.rs and ffi.rs, renamed `Gx*` -> `GX*` in cbindgen.toml. Three traps: the
+  global rename `Rect` -> `EeRmapRect` (ee_rmap's) would have renamed gx's RECT mirror, so `Rect` is
+  `cbindgen:ignore` and its alias `RECT` excluded (the signatures name Windows' RECT); the platform mirrors
+  (PlatFontTarget, NativeWindow, PLAT_*) are ignored; cbindgen cannot emit `Option<alias>` of a function type, so
+  `GXTestSetPresentHook` takes an inline fn type. The constants stay GX.h's macros and enums (an ignored consts.rs
+  in Rust). gx_test reads the generated structures (`m[i]` for GXMATRIX, `diffuse` for GXMATERIAL).
+- **FSFile one concrete class** (fork a): FSBasicFile's and FSFileSpec's members and virtual bodies in FSFile; its
+  41 pure virtuals gone. tests/fs/fs_spec_orig.h (the historical driver, in no gate) derives its own FSBasicFile and
+  no longer matches.
+- **GEStoreFrame in Rust** (fork b): the op the texobj_tex tests faked whole is split into `FileFrame` and the
+  surface getters; the fake answers `FileFrame` with an empty frame when the golden locks next, else an oversized
+  one, so the goldens did not change. The managers' dump text, lock (an out pointer and a `LockVerify` op) and
+  create counts (`EeGeModelCreate`) are Rust's; the physical walk table and its retry a Rust static; GETexture's
+  `sRasterizer` Rust's. The GE objects call PlatFont (Rust since the platform rounds) directly outside test builds.
+
+### Lessons
+
+- A header a generated header newly includes can collide with a test's own stand-ins: `ee_net_sv_xfer_file_to_client`
+  first answered `ESError`, so rust/net/net.h included rust/base/lle_enums.h, and the NE drivers' original-side
+  headers (tests/net/orig) define `kErrorOK` themselves: `xbuild.py nettest` failed to compile while every game build
+  linked. It answers a `long` now. Run nettest after any change to an ee_net FFI signature.
+- "One implementation" must count the tools too: the model store gate (tools/eemodel/storegate) derived its own
+  StoreRasterizer from GERasterizer, overriding the virtuals with no-ops so that Activate enumerated no device. The
+  gate's own generated fakes no longer compiled once the virtuals went (it is not in build.py's builds, so only
+  `storegate.py` found it). GERasterizer gained a constructor without a DX7 object (`GERasterizer(name)`: its
+  ActivateRasterizer answers kErrorOK, its destructor skips the DX7 object) and the gate builds that. Search
+  tools/ and tests/ for subclasses before turning an interface concrete.
+- Merging origin/rust over a round whose base had a cross-lane rename (round 11's `x` -> `mX` on the EeGe* records):
+  take the other lane's file and redo the rename where clang points (two lines of EERenderObject.cpp here).
+
+### Behaviour changes
+
+None intended. Small differences: the sparse point set fills its vectors by resize and write instead of clear and
+push_back; FSFile's copy constructor clears the handle and stream before copying the names; the texture-pack log line
+is written by Rust; the physical retry's distance starts at 0.0 instead of uninitialised (written before read).
+
+### Gates
+
+On the tree merged with origin/rust a85f71862 (89bfc6b67), at 6d9d310d2 and the tip 57a81f07f:
+
+- both builds 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0 (412), at the tip; the headers current (310);
+  the Rust gate PASS (test, clippy, rustfmt, header) at 6d9d310d2 (the tip's last commit changes C++ only);
+- the NE drivers (`xbuild.py nettest` with the five named): ne_msgmgr_test 20000 sequences, ne_queues_test 1500,
+  ne_client_test 1500, ne_tune_test 20000, ne_server_test 1500: each 0 differing. Plain `xbuild.py nettest` stops at
+  ne_protocol_test, which does not compile since the utility leaves became inlines (456ed11cb, 2026-11-19: it defines
+  ESRecordNativeError, ESVerify, TMGetTime ... itself): not this round's, not fixed;
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines) at 6d9d310d2 and at the tip;
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6,
+  missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests), at 6d9d310d2;
+- the plain saveload PASS (seeds 2-7 at 600, 1350, 2100 s: 18 identical); the matrix `--settings all --seeds 2-3 --at
+  1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS
+  (14,448 lines), `--civbuilder` PASS (4,062); eedata check PASS, cppgate PASS (at 6d9d310d2);
+- the store gate (tools/eemodel/storegate.py) PASS at the tip: 25,140 lines equal (2,583 model loads, 17,535 texture
+  loads). It failed to compile at 6d9d310d2 (its StoreRasterizer: fixed by 57a81f07f);
+- through slot.py, the test profile, at the tip: the tour `--input-check --view-check --play-seconds 120 --seed 7`
+  (F3 ok, VIEW CHECK PASS, RENDER CHECK ok: view 89.1% lit, 3,924 colours; RESULT PASS, no GX errors);
+  `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move;
+  RESULT PASS); `bash tools/gates.sh` (EE_GATES_TREE the main checkout's tree): GATES PASS (tour; ai-game time-cap PT
+  12586, units [4, 38, 39], alive [2, 3], classic_lua x 2; lan-game PT 2807/2804).
+- Not run: the POSIX builds, `gates.sh --legacy`.
+- Harness note: fixture_game.py builds `build/open_data/tree` in a worktree that has none unless `--data` names a
+  tree (EE_GATES_TREE is gates.sh's); a killed build leaves a partial tree that sim.py then prefers (EE-SIM stops at
+  EETerrainColorTable.cpp 81, no textures). Pass `--data` to the harness sessions in a worktree.
+
