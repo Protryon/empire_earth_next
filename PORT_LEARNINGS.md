@@ -39500,3 +39500,106 @@ commit at the end), and a pointer-only difference in host-lobby-open is not a re
 | `scenario_check.py` | PASS 27/27 |
 | `eedata check`, `cppgate` | PASS, PASS |
 | `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12059` units [4, 36, 37] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2772 joiner=2769`, GATES PASS |
+
+## The UI lane, round 16: the collapse phase: the toolkit's table host and button subclasses, the panel groups, the UI events, the placements, the HUD's op switches and the UI thread's prototypes (ee_ui lle_hosts*.rs, controlobj.rs, scrollbarobj.rs; ee_game screens cpp_events.rs, panel_groups_ffi.rs, placement_ffi.rs, select_units_ops.rs, upgrade_ops.rs, chat_log_ffi.rs, ui_manager_ffi.rs; branches rust-ui16a, rust-ui16b, two passes each, merged on rust-ui16, 2026-11-23)
+
+The brief: about -500 logic lines in the lane's files (round 15 left 973) and as many deleted C++ classes as safe: the
+collapse phase. Two forks in own worktrees (ui16a the LLE toolkit, then the Civilization Builder and the UI thread's
+prototypes; ui16b the game UI's classes, then the HUD), each resumed for a second pass; one heavy job at a time
+(build/ui16/heavy.sh). **Lane logic 973 -> 628 (-345)**: first pass -246 (toolkit -184, game -62), second pass -99
+(ui16a -34, ui16b -65); headers 629 -> 385. **C++ class/struct definitions in the lane 115 -> 96 (-19)**, plus
+EESEUIBuildWall and EESEUIBuildGate outside it; **C++ lines in the lane's files 14,390 -> 13,644 (-746)**; lane files
+125 -> 119 (build/ui16/lane.py, classes.py, at e1f2d82f6, before batch 20). Whole tree (logic_lines.py, af9bdbf47 ->
+e1f2d82f6): 29,093 -> 28,747 (-346). Net C++ +630 -1,400 in src, include/ee and include/lle; Rust +1,371 -167. The
+target was not reached.
+
+### What moved
+
+- **UIControlsTable's host** (ui16a): `UIControlsTableHost`'s Make, Text, Set and Op switches are a Rust table and
+  arrays over one-statement `EE_UI_CASE`/`EE_UI_VOID` shims; SetupGEText is Rust; the `cpp_hosts!` bridge went.
+- **The button subclasses folded into UIButton** (ui16a): UIScalableButton, UIDualButton and UIScrollButton (and their
+  headers) are gone; their state already was the Rust button's, so UIButton's virtuals dispatch on the record
+  (`Sub::Dual`, `Virt*` calls so the plain calls stay UIButton's own); the factories make a UIButton and set its record.
+- **The toolkit's skeletons** (ui16a): UIControl's lookups inline (UIControl.h includes UIForm.h and UIManager.h),
+  DrawPolygons, MouseLButtonDoublePressed and GetBgOpacity in Rust; constructors and destructors of a dozen toolkit
+  classes inline; UICDatabase, UIEventData, UWSNoCaseAlphaSort and UIScrollBarRust gone; UIInitialize and the wheel
+  scroll event Rust's; the toolkit headers' repeated forward declarations one list in lle/UIObjHost.h (about 45 of the
+  -184 are that deduplication; 11 were unused).
+- **The panel groups without classes** (ui16b): EEUIFMGGroup and EEUIFMGGRust deleted; `mGroups[6]` is `mMainGroup`
+  (EEMessage.cpp and EEUnitClass.cpp follow), the five other kinds run in Rust by `mCurrentGroup`.
+- **Five UI event classes as EEScreenEvent codes** (ui16b, cpp_events.rs): EEUIECancel, EEUIELoadUnit,
+  EEUIEMGHotKeyStatusButton, EEUIEProcessTimerExpired, EEUIEndCinematicModeEvent; three headers deleted.
+  EEUIECLEFormManager went (callers call `ee_screens_chat_log_*`), and the chat line `EEChatLogEntry` is the Rust
+  `EeScreensChatEntry` (ui16a).
+- **The placements** (ui16b): EEUIBuildWall and EEUIBuildGate are typedefs of the Rust records (`mEditor` picks the
+  editor's or the main form's shims); EESEUIBuildWall/EESEUIBuildGate and EESEUIBuildWall.h deleted. Cross-lane,
+  mechanical: EESEUnit.cpp/.h, EESimEditor.cpp.
+- **Host switches gone** (ui16b): the unit hack's, the cursor's, the UI events' (`ee_screenscpp_ui_event`), the select
+  control's (`EEUICSelectUnits::RustOp`, select_units_ops.rs) and the improvement button's (`EEUIBUpgrade::HostOp`, 31
+  cases, upgrade_ops.rs): one-statement shims the Rust hosts call.
+- **The HUD's constructors** (ui16b): seven HUD classes' constructors inline one-statement forwards with their Rust
+  records filled in the initializers (a declaration move, counted as such), their protected/public toggles gone, the
+  status box's SetControls Rust's.
+- **The UI thread's prototypes** (ui16a): six functions the shim list now names in Rust; EELoadSavedGameFile declared
+  in ee/EESaveLoad.h and EEMenuWidth/Height in ee/EmpireEarth.h (their own headers, one line each); two externs read
+  through their owners (`gWorld.mInCinematic`, `gGameState.mGameOptions.mIsMultiplayer`); the UI manager's constructor
+  one Rust call.
+- Behaviour: none intended. The placement records start with `mPlayer`/`mWallType` 0 (were uninitialised); a dialog's
+  chat line has kind and time 0; EEUIFMGMainGroup has no vtable; a dual, scalable or scroll button's kind is its Rust
+  record, not its C++ class; the hot-key poll is a file static.
+
+### Lessons
+
+- **Subclasses whose state is already a Rust record fold into the base**: dispatch on the record's kind, and give the
+  virtuals' plain bodies their own names (`Virt*`) so a qualified base call still reaches the base's own behaviour (the
+  scalable golden calls the base DrawPolygons on a scalable button).
+- **An event class with no state of its own is an event code**: one EEScreenEvent with two arguments replaces five
+  classes and their headers.
+- **A shell kind's Make cannot move into a shared template constructor**: the kind would be built before the derived
+  shell's virtuals exist (`Text()`), so EEUIShell.h stayed (44 lines).
+- The second passes found far less than the first: what is left is spread thin (one to five lines a file), mostly
+  declarations a class needs while it exists.
+- The Rust gate's ee_base test exited once with STATUS_HEAP_CORRUPTION (0xc0000374) in a crate no lane edited, as in
+  ui16a's own run; the rerun passed.
+
+### What only the tours (or a person) exercises
+
+Cumulative with rounds 7-15: the table's constructors and setters (every form), the folded buttons (the scalable, dual
+and blinking database buttons, the scroll arrows), UIControl::DrawPolygons, the wheel scroll, the panel group tabs,
+the hot-key events, Cancel on save and load, the end-cinematic and timer events, the upgrade, status bar and attribute
+buttons, the select control's lasso and pick, the chat line (the LAN game's chat), wall and gate placement in the game
+(only a person places a wall; sim_editor covers the editor's).
+
+### Gates
+
+On the final tree (the forks merged at e1f2d82f6, then origin/rust 49707901b, batch 20, at 72961a489: conflicts in
+PORT_LEARNINGS.md (rebuilt with pladd.py: ours plus batch 20's three sections) and rust/cbindgen.toml (cbunion2.py);
+strip_markers then took three trailing address comments the merge brought, a61b3a3e5; `rust_build.py header` current
+(327 headers)):
+- both builds 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0 (412); the Rust gate PASS (its first run in the chain died on the ee_base heap-corruption exit above; the rerun on a61b3a3e5 with the build PASS);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects 6,
+  missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests);
+- the plain saveload exit 0; the matrix `--expect` `saveload expect: PASS`;
+- scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062 lines); `eedata.py check` and
+  `cppgate` PASS;
+- through slot.py, the test profile: the tour `--input-check --view-check --play-seconds 120 --seed 7` RESULT PASS (F3
+  ok, VIEW CHECK PASS); `--exercise editor` (CAMPAIGN EDITOR PASS, RESULT PASS); `random-game --box-select --orders
+  --seed 7` (BOX SELECT PASS; ORDERS PASS: gather, repair, repair-queued, move). The tour's captures against the
+  round's base build (af9bdbf47's test profile, built this session): single player, random map set-up and the three
+  settings tabs equal pixel for pixel, the main menu and closed settings differ only in the build label (205 pixels);
+  the game frames differ as two live games do;
+- the lobby captures (lan_game.py, then lan_capture_compare.py against the base build's): every lobby capture identical
+  but the create-game dialog's blinking caret (15 pixels at x 575); `RESULT PASS lan-game PT host=2793 joiner=2799`;
+- `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 11550, units [4, 34, 37], alive [2, 3], classic_lua x
+  2; lan-game PT 2762/2757);
+- not run: the POSIX builds.
+
+### What is left
+
+Lane logic 628 (385 in headers): EEUIShell.h (44) and EEUIShell.cpp (10); lle/UIObjHost.h's forward-declaration
+list and UIF4 (42); EECBCivilizationFiles' context and directory code (25); EEUIFMainGame's `mStrings` and
+`EEUIFMGFormCall` (24 + 12); EEAreaEffect's predicate structs and Dump (23); UIListBox.h's op switch and UILBNoSort
+(17); UIShims.h's hand-written host declarations (15); EEUIManager.h, EEUserInterface.h, EEScreens.cpp; the status
+box's call record, the status button's declarations, two constructors; the WON glue prototypes (EEIsLobbyOpen,
+EESetQuitFlag, EELobbyShutdown: WON-lane C++ with no header) (docs/progress/ui-cluster.md).
