@@ -24,78 +24,13 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEUGRust.h"
 
-void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
-{
-    ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, this, inUnit, 0, 0, 0, 0.0f);   // uck_kinds.rs
-}
-
-void EEUnitClass::AddToRegion(EEUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_ADD_TO_REGION, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::AddToTile(EEUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_ADD_TO_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::BadlyHurt(EEUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_BADLY_HURT, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::CallParatroopPlane(EEComplexUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_CALL_PARATROOP_PLANE, this, inUnit, 0, 0, 0, NULL);   // uck_dispatch.rs
-}
-
 bool EEUnitClass::CanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
     EEUCNote theNote(2); theNote.C(this).U(inTransport).I(inX).I(inY);   // TEST ONLY (UCBD)
     return theNote.R(ee_units_tr_can_unload_at(EEObj(this), EEObj(inTransport), (int32_t)inX, (int32_t)inY));
 }
 
-void EEUnitClass::CargoAdded(EEComplexUnit* inUnit, EEComplexUnit* inCargo, bool inArg)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_CARGO_ADDED, this, inUnit, EEObj(inCargo), inArg, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::CargoRemoved(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_CARGO_REMOVED, this, inUnit, EEObj(inCargo), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::CargoUnloaded(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_CARGO_UNLOADED, this, inUnit, EEObj(inCargo), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-bool EEUnitClass::CheckGroundImpact(EEComplexUnit* inUnit)
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_CHECK_GROUND_IMPACT, this, inUnit, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
-bool EEUnitClass::CheckWaterImpact(EEComplexUnit* inUnit)
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_CHECK_WATER_IMPACT, this, inUnit, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
-EEUnit* EEUnitClass::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_uck_dispatch(EE_UNITS_BODY_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // uck_dispatch.rs
-}
-
-EEUnit* EEUnitClass::CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_uck_dispatch(EE_UNITS_BODY_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), (int64_t)EEObj(&inTransformation), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // uck_dispatch.rs
-}
-
 // the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
-long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    return (long)ee_units_uck_call(EE_UNITS_UCK_DO_EVALUATE_CONDITION, this, inUnit, 0, (int64_t)inEvent, 0, 0.0f);   // uck_kinds.rs
-}
-
 void EEUnitClass::FilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport, std::vector<EEComplexUnit*>* outRejected)
 {
     EEUCNote theNote(6); theNote.C(this).Us(*ioUnits).U(inTransport).Us(*outRejected);   // TEST ONLY (UCBD)
@@ -126,31 +61,10 @@ void EEUnitClass::FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* in
     theNote.T(*outUnloadTile).T(*outFirstCargoTile).T(*outTile);
 }
 
-bool EEUnitClass::FliesOver()
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_FLIES_OVER, this, NULL, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
-void EEUnitClass::GateReplaced(EEUnit* inGate, EEUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_GATE_REPLACED, this, NULL, EEObj(inGate), (int64_t)EEObj(inUnit), 0, NULL);   // uck_dispatch.rs
-}
-
 float EEUnitClass::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
     EEUCNote theNote(11); theNote.C(this).U(inUnit).P(inLocation);   // TEST ONLY (UCBD)
     return theNote.RF(ee_units_cls_height_at(EEObj(this), EEObj(inUnit), inLocation.mX, inLocation.mY, inLocation.mZ));
-}
-
-long EEUnitClass::GetPopulationCost()
-{
-    // every kind's body is this one (the land and helicopter priests' overrides were the same)
-    return this->mWeight;
-}
-
-void EEUnitClass::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch)
-{
-    ee_units_uck_sound(this, inUnit, inSound, outVolume, outPan, outPitch);   // uck_dispatch.rs
 }
 
 void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
@@ -158,16 +72,6 @@ void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileC
     EEUCNote theNote(31); theNote.C(this).U(inUnit).I(inCorners).I(inAppend).Ts(outTiles);   // TEST ONLY (UCBD)
     ee_units_uck_call(EE_UNITS_UCK_DO_SURROUNDING_TILES, this, inUnit, EEObj(&outTiles), inCorners, inAppend, 0.0f);   // uck_kinds.rs
     theNote.Ts(outTiles);
-}
-
-long EEUnitClass::GetUnloadFailedTextID()
-{
-    return (long)ee_units_uck_dispatch(EE_UNITS_BODY_GET_UNLOAD_FAILED_TEXT_ID, this, NULL, 0, 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::GroundLocation(GE3DPoint& ioLocation)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX);   // uck_dispatch.rs
 }
 
 bool EEUnitClass::HasArrived(EEComplexUnit* inUnit, float inValue)
@@ -182,95 +86,15 @@ bool EEUnitClass::HasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
     return theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_HAS_ROOM, this, inUnit, EEObj(inCargo), 0, 0, 0.0f) != 0);   // uck_kinds.rs
 }
 
-bool EEUnitClass::HasSunk(EEComplexUnit* inUnit)
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_HAS_SUNK, this, inUnit, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
 bool EEUnitClass::IsBuilding()
 {
     return EEClassBody(this, EE_UNITS_BODY_IS_BUILDING) == 1;
-}
-
-bool EEUnitClass::IsLandBuilding()
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_IS_LAND_BUILDING, this, NULL, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
-bool EEUnitClass::IsPartLeftOut(EEComplexUnit* inUnit)
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_IS_PART_LEFT_OUT, this, inUnit, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
-bool EEUnitClass::IsPickable()
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_IS_PICKABLE, this, NULL, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
-bool EEUnitClass::IsSelectable(EEUnit* inUnit)
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_IS_SELECTABLE, this, NULL, EEObj(inUnit), 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
-bool EEUnitClass::LaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    return ee_units_uck_dispatch(EE_UNITS_BODY_LAUNCH_PROJECTILE, this, inUnit, EEObj(&inLocation), 0, 0, NULL) != 0;   // uck_dispatch.rs
-}
-
-void EEUnitClass::LoadMedia(EEPlayer* inPlayer)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_LOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_LOCATION_TO_TILE, this, NULL, EEObj(&inLocation), (int64_t)EEObj(&outX), (int64_t)EEObj(&outY), NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::RemoveFromRegion(EEUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_REMOVE_FROM_REGION, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::RemoveFromTile(EEUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_REMOVE_FROM_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 bool EEUnitClass::SelectUnitToRelease(EEComplexUnit* inUnit)
 {
     EEUCNote theNote(30); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
     return theNote.R(ee_units_uck_call(EE_UNITS_UCK_DO_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, 0.0f) != 0);   // uck_kinds.rs
-}
-
-void EEUnitClass::SimpleUnitCreated(EEUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_SIMPLE_UNIT_CREATED, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::UnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::UnloadAt(EEComplexUnit* inTransport, long inX, long inY)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_UNLOAD_AT, this, inTransport, 0, inX, inY, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::UnloadMedia(EEPlayer* inPlayer)
-{
-    ee_units_uck_dispatch(EE_UNITS_BODY_UNLOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL);   // uck_dispatch.rs
-}
-
-void EEUnitClass::Update(EEComplexUnit* inUnit)
-{
-    ee_units_uck_call(EE_UNITS_UCK_DO_UPDATE, this, inUnit, 0, 0, 0, 0.0f);   // uck_kinds.rs
-}
-
-void EEUnitClass::UpdateEffects(EEComplexUnit* inUnit)
-{
-    ee_units_uck_call(EE_UNITS_UCK_DO_UPDATE_EFFECTS, this, inUnit, 0, 0, 0, 0.0f);   // uck_kinds.rs
 }
 
 long EEUnitClass::Virtual70()

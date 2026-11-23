@@ -72,17 +72,7 @@ void EEUnitClass::RouteDockWaypoint(EEComplexUnit* inUnit)
 
 // Paths a plane from a point to its goal's location (move, patrol, explore, attack ground, unload, attack unit)
 // at cruising height; an explore goal without a target picks a new area first
-void EEUnitClass::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_FLY_TO_GOAL, this, inUnit, 0, 0, 0, &inPoint.mX);   // uca_air.rs
-}
-
 // Gives the ground height under a point (the closest tile's off the map; 0 under water)
-void EEUnitClass::GetGroundHeight(GE3DPoint& inPoint, float* outHeight)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_GROUND_HEIGHT, this, NULL, EEObj(outHeight), 0, 0, &inPoint.mX);   // uca_air.rs
-}
-
 // New (R5b.4, the fourteenth round): EEUCLandable::ActionChanged's operations that are more than a call, each the
 // original's statements of its branch (ee_units actions.rs decides which, in which order; EEUnitUpdate.cpp's host
 // calls this with the operation code). inoutAirport: FIND_NEAREST_AIRPORT's result, for SET_HOME_BASE_FOUND.
@@ -100,11 +90,6 @@ void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
 }
 
 // Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
-void EEUnitClass::LandableUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_CREATED, this, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
-
 // Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
 // half the area effect for the last bomb on a moving target, else 0.25 for the last bomb or none)
 bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
@@ -207,11 +192,6 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer)
 
 // Sends a leaving plane off the map: hands it to player 0, fuels it for 1000 s and flies it out 1000 tiles along
 // its direction from the map origin
-void EEUnitClass::FlyOffMap(EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_FLY_OFF_MAP, this, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
-
 // ---- EEUCAirAnimal.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The flying animal's
 // unit class: 0x20a279..0x20b192 (after EESelectedGroup.cpp's sort COMDATs; EEUCAirplane.cpp follows). One unit per
 // EEUC* class in alphabetical order (AirAnimal, Airplane, Ambient, BasicCitizen, BasicPriest, Bomb, Building, ...).
@@ -221,11 +201,6 @@ void EEUnitClass::FlyOffMap(EEComplexUnit* inUnit)
 
 
 // Lands the animal like a plane: two waypoints ahead (on the ground, then at 3/4 of cruise altitude) and a flight there
-bool EEUnitClass::AirAnimalReturnToAirport(EEComplexUnit* inUnit)
-{
-    return ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_RETURN, this, inUnit, 0, 0, 0, NULL) != 0;   // uca_air.rs
-}
-
 // Gets the base sound parameters, then Doppler-shifts the pitch of a moving animal by its speed toward the camera
 
 
@@ -243,11 +218,6 @@ void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit)
 }
 
 // Sets up a new animal on the ground (height 0)
-void EEUnitClass::AirAnimalUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_CREATED, this, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
-
 // ---- EEUCPlanetSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The planet
 // spaceship's unit class: 0x218e34..0x219143 (after EEUCNavalTransport.cpp; EEUCProjectile.cpp's +0xe0 0x219143
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); one own slot, +0x74.

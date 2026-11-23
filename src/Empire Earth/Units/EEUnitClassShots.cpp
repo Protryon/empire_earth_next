@@ -48,17 +48,7 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
 
 // Returns whether a projectile hit the ground (bombs, low launches, after 1 s of flight): attacks the ground there
 // unless it came down on its target building or wall, and leaves a shell hole on land
-bool EEUnitClass::ProjectileCheckGroundImpact(EEComplexUnit* inUnit)
-{
-    return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_GROUND, this, inUnit);   // ucs_impact.rs
-}
-
 // Returns whether a bomb, or a projectile after 1 s of flight, hit water it cannot cross; if so, it attacks the ground
-bool EEUnitClass::ProjectileCheckWaterImpact(EEComplexUnit* inUnit)
-{
-    return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_WATER, this, inUnit);   // ucs_impact.rs
-}
-
 // Handles the projectile's new action: on a hit plays its effects and sound, drops a parachute's cargo or fires, may
 // set a target on fire (flaming arrows), dies and leaves remains; retargets a dead target's tile or its container
 void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
@@ -72,23 +62,8 @@ void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
 }
 
 // Sets up a new projectile: records its start point, sets it to full speed and starts it advancing
-void EEUnitClass::ProjectileUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_CREATED, this, inUnit, 0, NULL);   // ucs_shots.rs
-}
-
 // Launches the projectile toward a location at the ballistic pitch for its launcher's stats; returns whether one exists
-bool EEUnitClass::ProjectileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    return ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_LAUNCH, this, inUnit, 0, (const float(*)[3])&inLocation.mX) != 0;   // ucs_shots.rs
-}
-
 // Updates a living projectile's trail (when moving) and ripples when the effect detail allows them
-void EEUnitClass::ProjectileUpdateEffects(EEComplexUnit* inUnit)
-{
-    ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_EFFECTS, this, inUnit, 0, NULL);   // ucs_shots.rs
-}
-
 // Steps the projectile's physics, effects and sound, counts down rotting, fades it below z 0 in space, adds flight time
 void EEUnitClass::ProjectileUpdate(EEComplexUnit* inUnit)
 {
@@ -326,23 +301,8 @@ void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inU
 
 // Drops the bomb from its carrier: aims it along the carrier's heading, pitched down by the launcher's tilt (0 to
 // -90 degrees), with the launch speed's horizontal part; always returns true
-bool EEUnitClass::BombLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    return ee_units_ucs_call(EE_UNITS_UCS_DO_BOMB_LAUNCH, this, inUnit, 0, NULL) != 0;   // ucs_shots.rs
-}
-
 // Flies the bomb; an SAS explosive (unit type 0x305) makes its target blink red every half second while it attacks
-void EEUnitClass::BombUpdate(EEComplexUnit* inUnit)
-{
-    ee_units_ucs_call(EE_UNITS_UCS_DO_BOMB_UPDATE, this, inUnit, 0, NULL);   // ucs_shots.rs
-}
-
 // Has a carrier drop its first cargo unit (a bomb) at its target and set it moving
-void EEUnitClass::LaunchStoredMissile(EEComplexUnit* inUnit)
-{
-    ee_units_ucs_call(EE_UNITS_UCS_DO_LAUNCH_STORED, this, inUnit, 0, NULL);   // ucs_shots.rs
-}
-
 // ---- EEUCMissile.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The missile's unit
 // class: 0x217337..0x217c6d (after EEUCMiningBuilding.cpp; EEUCNaval.cpp follows). Unit flags: the exe's module set.
 // Its ctor is inline (vtable 0x448cf8); +0x74/+0x78/+0xac are also EEUCTorpedo's (ICF).
@@ -356,11 +316,6 @@ bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget);
 
 // Returns whether the missile hit the ground after its flight time (0.3 higher over its target): sets it down there
 // and, for an attack-ground goal, leaves a shell hole and returns true (never for a missile base's missiles)
-bool EEUnitClass::MissileCheckGroundImpact(EEComplexUnit* inUnit)
-{
-    return ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_GROUND, this, inUnit);   // ucs_impact.rs
-}
-
 // Returns whether a unit stands on one of the target's tiles (every part of a multi-part target, its whole footprint)
 bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget)
 {
@@ -368,11 +323,6 @@ bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget)
 }
 
 // Returns whether the missile hit water (z 0 or below on terrain it cannot cross); if so, it attacks the ground there
-bool EEUnitClass::MissileCheckWaterImpact(EEComplexUnit* inUnit)
-{
-    return ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_WATER, this, inUnit);   // ucs_impact.rs
-}
-
 
 
 // Handles the missile's new action: on a hit plays the splash or death effect and sound, fires its shot and dies
@@ -388,17 +338,7 @@ void EEUnitClass::MissileActionChanged(EEComplexUnit* inUnit)
 }
 
 // Sets up a new missile: records its start point and stops it; all but the ICBM start the flight animation and advance
-void EEUnitClass::MissileUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_CREATED, this, inUnit, 0, NULL);   // ucs_shots.rs
-}
-
 // Launches the missile: tilts it to its launcher's launch pitch and starts the launch delay and a 300 s lifetime; true
-bool EEUnitClass::MissileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    return ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_LAUNCH, this, inUnit, 0, NULL) != 0;   // ucs_shots.rs
-}
-
 // Answers the missile triggers: hit unit (attacks it; also true when its lifetime ran out), ground and water impact,
 // rotted or dying done (always with an attack-unit goal), target dead or in a container, new target
 long EEUnitClass::MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -424,11 +364,6 @@ void EEUnitClass::MissileUpdate(EEComplexUnit* inUnit)
 
 // When the torpedo has reached ground at or above sea level, gives it an attack-ground goal there and returns
 // true
-bool EEUnitClass::TorpedoCheckGroundImpact(EEComplexUnit* inUnit)
-{
-    return ee_units_ucs_impact(EE_UNITS_UCS_DO_TORPEDO_GROUND, this, inUnit);   // ucs_impact.rs
-}
-
 // Flies the torpedo as a missile and keeps it from rising above the water plane (height 0)
 void EEUnitClass::TorpedoUpdate(EEComplexUnit* inUnit)
 {

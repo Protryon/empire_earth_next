@@ -128,11 +128,6 @@ EESoundObject* EEUnitClassUpgrade::GetAcknowledgeSound(long inIndex)
 }
 
 // Returns the copy's improvement levels
-EEUnitClassImprovement* EEUnitClassUpgrade::GetImprovement()
-{
-    return &this->mImprovement;
-}
-
 // Returns selection sound inIndex; -1 alternates between the two (one turn shared by every class)
 EESoundObject* EEUnitClassUpgrade::GetSelectionSound(long inIndex)
 {
@@ -159,18 +154,8 @@ void EEUnitClassUpgrade::ChangeLevel(long inImprovement, long inDelta)
 
 // Returns the unit class this copy belongs to (the original folded it with EEComplexDoppelganger::GetTileX, the same
 // `mov eax,[ecx+0x60]`; written out so the member is read at this build's offset)
-EEUnitClass* EEUnitClassUpgrade::GetUnitClass()
-{
-    return this->mUnitClass;
-}
-
 // Resets the copy to its unit class: media, button, stats and inverse speeds, area-effect templates and terrain mask
 // (flag 0x4000 added when the class's +0x315 is set), then reapplies the improvement levels
-void EEUnitClassUpgrade::Init()
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_UPGRADE_INIT, NULL, NULL, (uint64_t)(uintptr_t)this, 0, 0, NULL);   // uc_rest.rs
-}
-
 // Reads the copy's name and improvement levels (applied to its stats) from a saved game; returns the first read error
 long EEUnitClassUpgrade::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {

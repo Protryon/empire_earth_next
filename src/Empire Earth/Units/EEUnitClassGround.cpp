@@ -34,33 +34,13 @@ void EEUnitClass::AmbientLocationToTile(const GE3DPoint& inLocation, long& outX,
 }
 
 // Adds the unit to every map tile of its footprint, its own tile first
-void EEUnitClass::AmbientAddToTile(EEUnit* inUnit)
-{
-    ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_ADD, this, NULL, EEObj(inUnit), 0.0f);   // ucg_ground.rs
-}
-
 // Removes the unit from every map tile of its footprint, its own tile first
-void EEUnitClass::AmbientRemoveFromTile(EEUnit* inUnit)
-{
-    ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_REMOVE, this, NULL, EEObj(inUnit), 0.0f);   // ucg_ground.rs
-}
-
 // ---- EEUCResource.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The resource's unit
 // class: 0x219c49..0x219d67 (after EEUCProjectile.cpp; EEUCSeaAnimal.cpp follows). Unit flags: the exe's module set.
 // Its ctor is inline (no new site in the range); +0x70/+0x98 are ICF-folded elsewhere.
 
 // Sets up a new resource unit with the class's resource type and amount
-void EEUnitClass::ResourceSimpleUnitCreated(EEUnit* inUnit)
-{
-    ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_CREATED, this, NULL, EEObj(inUnit), 0.0f);   // ucg_ground.rs
-}
-
 // Adds the resource to every tile of its footprint (its own tile first), unless it is queued for deletion
-void EEUnitClass::ResourceAddToTile(EEUnit* inUnit)
-{
-    ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_ADD, this, NULL, EEObj(inUnit), 0.0f);   // ucg_ground.rs
-}
-
 // ---- EEUCLand.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The land unit class:
 // 0x213866..0x213c60 (after EEUCHelicopterTransport.cpp; EEUCLandable.cpp follows). One unit per EEUC* class in
@@ -74,18 +54,8 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer);
 // 0xde4a9 (EEE2DBattlefieldAmbient.cpp's range): the unit's battlefield ambience (provisional name)
 
 // Sets up a new land unit: its class's resource (and amount when it has one) and, for the radio man, its power
-void EEUnitClass::LandUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucg_call(EE_UNITS_UCG_DO_LAND_CREATED, this, inUnit, 0, 0.0f);   // ucg_ground.rs
-}
-
 // Calls a paratroop plane (class 0x2e1): it appears over the last map tile beyond the unit in +y and flies to the
 // unit's goal location to unload its cargo
-void EEUnitClass::LandCallParatroopPlane(EEComplexUnit* inUnit)
-{
-    ee_units_ucg_call(EE_UNITS_UCG_DO_CALL_PARATROOP_PLANE, this, inUnit, 0, 0.0f);   // ucg_ground.rs
-}
-
 // Updates each of the unit's wheels
 void EEComplexUnit::UpdateWheels()
 {
@@ -106,23 +76,8 @@ void EEComplexUnit::UpdateWheels()
 
 
 // Sets up a new ship at sea level (z 0), with the class's resource type and amount
-void EEUnitClass::NavalUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_CREATED, this, inUnit, 0, 0.0f);   // ucg_ground.rs
-}
-
 // Returns whether the ship may stop: already sinking, a slow request, or at the path's end tile with its speed reached
-bool EEUnitClass::NavalHasArrived(EEComplexUnit* inUnit, float inValue)
-{
-    return ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_ARRIVED, this, inUnit, 0, inValue) != 0;   // ucg_ground.rs
-}
-
 // Updates a fish resource: while its resources rot it loses one every 4 s; a rotting unit counts its rotting time down
-void EEUnitClass::UpdateResourceUnit(EEComplexUnit* inUnit)
-{
-    ee_units_ucg_call(EE_UNITS_UCG_DO_UPDATE_RESOURCE_UNIT, this, inUnit, 0, 0.0f);   // ucg_ground.rs
-}
-
 // ---- EEUCSubmergedNaval.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The submarine's
 // unit class (EEUCSeaAnimal shares most slots by ICF): 0x21ab66..0x21b163 (after EEUCSpaceTransport.cpp;
 // EEUCTorpedo.cpp follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); slots
@@ -131,11 +86,6 @@ void EEUnitClass::UpdateResourceUnit(EEComplexUnit* inUnit)
 // 0x23f27e (cdecl): moves a location to the depth a submerged unit may take at its tile (provisional name)
 
 // Lifts a location that lies below the terrain mesh (the sea floor) up onto it
-void EEUnitClass::SubmergedNavalGroundLocation(GE3DPoint& ioLocation)
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX);   // ucg_sea.rs
-}
-
 // Returns the tile where the view line through a point meets the submarine's cruise depth (or the sea
 // floor where that is higher)
 void EEUnitClass::SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
@@ -151,24 +101,9 @@ EEUnit* EEUnitClass::SubmergedNavalCreateUnitAt(GETransformation& inTransformati
 }
 
 // Creates a submarine on a tile (yaw pi) kept above the sea floor, then moves it to the depth it may take there
-EEUnit* EEUnitClass::SubmergedNavalCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucg_sea.rs
-}
-
 // Adds the submarine to its tile's unit list
-void EEUnitClass::SubmergedNavalAddToTile(EEUnit* inUnit)
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // ucg_sea.rs
-}
-
 // Returns whether the submarine reached its waypoint: on the waypoint's tile with more to go, when its collision
 // radius covers the distance left; otherwise when that distance is at most 0.05 (always in collision state 8)
-bool EEUnitClass::SubmergedNavalHasArrived(EEComplexUnit* inUnit, float inValue)
-{
-    return ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED, this, inUnit, 0, 0, 0, &inValue) != 0;   // ucg_sea.rs
-}
-
 // ---- EEUCSeaAnimal.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The sea animal's unit
 // class: 0x219d67..0x219fe3 (after EEUCResource.cpp; EEUCSpaceBuilding.cpp follows). Unit flags: the exe's module
 // set. Its ctor is inline. Data (.rdata, in order): the four named depth constants 0x447340..0x44734c (ucg_sea.rs).

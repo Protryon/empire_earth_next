@@ -100,11 +100,6 @@ void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect)
 
 // Runs the work timer (working the gather or repair goal when it expires), then finishes a due unit research
 // (instant build: at once); a kind-3 tech tied to the Bundeswehr power goes through EEPlayUnitEffect
-void EEUnitClass::UpdateCitizen(EEComplexUnit* inUnit)
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CITIZEN, this, inUnit, 0, 0);   // ucp_people.rs
-}
-
 // Returns whether the citizen has a gather point beside a resource (not just the resource's own corner tile)
 // (ee_units citizen.rs)
 bool EEUnitClass::HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource)
@@ -169,11 +164,6 @@ void EEUnitClass::NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& 
 }
 
 // Creates a fishing boat on a tile at sea level
-EEUnit* EEUnitClass::NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucg_sea.rs
-}
-
 // ---- EEUCBasicPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The priests' common
 // unit class (conversion): 0x20d571..0x20e2cb (after EEUCBasicCitizen.cpp; EEUCBomb.cpp follows). Unit flags: the
 // exe's module set. Order: the conversion cost (static), UpdateConversion (command 0x7d4), ConvertTarget (the convert), Virtual74,
@@ -197,18 +187,8 @@ long EEGetConversionCost(EEComplexUnit* inUnit)
 
 // Works a conversion with enough faith: stops at an ally or own unit, shows the effects and warns the target's owner,
 // then after the minimum time tries once a second (resistance, owner factor, rate) and converts on success
-void EEUnitClass::BasicPriestUpdateConversion(EEComplexUnit* inUnit)
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CONVERSION, this, inUnit, 0, 0);   // ucp_people.rs
-}
-
 // Converts the target to the priest's player (with area conversion, also every convertible visible unit nearby),
 // spends the faith and plays the converted unit's creation sound for the two players involved
-void EEUnitClass::BasicPriestConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_CONVERT_TARGET, this, inUnit, EEObj(inTarget), 0);   // ucp_people.rs
-}
-
 // Returns whether a priest can convert a target now (enemy, resistance, faith, priests and buildings rules, the
 // temple's range); outFlag is set when the target is shielded
 // (new: the decision is ee_combat's can_convert over a record of pure reads, gathered here; the damage table is
@@ -219,17 +199,7 @@ bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFla
 }
 
 // Loads the conversion indicator effect and the class's media
-void EEUnitClass::BasicPriestLoadMedia(EEPlayer* inPlayer)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_PRIEST_LOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL);   // uc_rest.rs
-}
-
 // Unloads the conversion indicator effect and the class's media
-void EEUnitClass::BasicPriestUnloadMedia(EEPlayer* inPlayer)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_PRIEST_UNLOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL);   // uc_rest.rs
-}
-
 // Updates each of the unit's orbitals
 void EEComplexUnit::UpdateOrbitals()
 {
@@ -283,17 +253,7 @@ void EEComplexUnit::UpdateTurrets()
 }
 
 // For a temple not already showing them, starts the tower swirl and smoke effects and plays the tower convert sound
-void EEUnitClass::BasicPriestShowConversionEffects(EEComplexUnit* inUnit)
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_SHOW_CONVERSION, this, inUnit, 0, 0);   // ucp_people.rs
-}
-
 // For a temple, destroys the tower swirl and smoke effects
-void EEUnitClass::BasicPriestHideConversionEffects(EEComplexUnit* inUnit)
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_HIDE_CONVERSION, this, inUnit, 0, 0);   // ucp_people.rs
-}
-
 // ---- EEUCLandPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The land priest's unit
 // class: 0x216d57..0x216de3 (EEUCLandTransport.cpp's slots follow; the unit map's 0x216d57..0x21880c block is one
@@ -345,11 +305,6 @@ void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 }
 
 // Sets up a new priest helicopter as a priest, then lifts it to its flying height
-void EEUnitClass::HelicopterPriestUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_HELICOPTER_PRIEST_CREATED, this, inUnit, 0, 0, 0, NULL);   // uc_rest.rs
-}
-
 // the people's scratch (ucp_people.rs): the effect handle, the Bundeswehr power, the area conversion's units
 static EEEffectHandle sUcpHandle;
 static EECivPower sUcpPower;

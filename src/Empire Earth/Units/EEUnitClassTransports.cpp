@@ -132,17 +132,7 @@ bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EECo
 }
 
 // Sets up a new transport as any unit, then gives it its class's resource type and amount
-void EEUnitClass::TransportUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_TRANSPORT_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
-}
-
 // Unloads the transport's cargo at a tile (siege towers with the tower flag set)
-void EEUnitClass::TransportUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_UNLOAD_AT, this, inTransport, 0, inX, inY);   // ucx_transports.rs
-}
-
 // ---- EEUCLandTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The land
 // transport's unit class: 0x216de3..0x217085 (after EEUCLandPriest.cpp; EEUCMiningBuilding.cpp follows). Unit flags:
@@ -150,11 +140,6 @@ void EEUnitClass::TransportUnloadAt(EEComplexUnit* inTransport, long inX, long i
 // order. +0x8c and +0xf4 are also EEUCFortress's (ICF).
 
 // Unloads all cargo at once when the transport is badly hurt
-void EEUnitClass::LandTransportBadlyHurt(EEUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_BADLY_HURT, this, NULL, EEObj(inUnit), 0, 0);   // ucx_transports.rs
-}
-
 // ---- EEUCHelicopterTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The transport
 // helicopter's unit class: 0x21339d..0x213866 (after EEUCHelicopterPriest.cpp; EEUCLand.cpp follows). One unit per
@@ -171,11 +156,6 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
 }
 
 // Sets up a new transport helicopter as a transport, then lifts it to its flying height
-void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
-}
-
 // ---- EEUCNavalTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval
 // transport's unit class: 0x218a45..0x218e34 (after EEUCNavalPriest.cpp; EEUCPlanetSpaceship.cpp's +0x74 0x218e34
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory; vtable 0x448718); its
@@ -190,32 +170,12 @@ void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
 // call the spaceship's bodies (helpers ICF-folded into EEUCSpaceship.cpp's slots).
 
 // Sets up a new space transport at its flying height, with the class's resource type and amount
-void EEUnitClass::SpaceTransportUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
-}
-
 // Adds the transport to its own tile only
-void EEUnitClass::SpaceTransportAddToTile(EEUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_ADD, this, NULL, EEObj(inUnit), 0, 0);   // ucx_transports.rs
-}
-
 // Removes the transport from its own tile only
-void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_REMOVE, this, NULL, EEObj(inUnit), 0, 0);   // ucx_transports.rs
-}
-
 void EEUnitClass::SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
 {
     ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
-}
-
-void EEUnitClass::SpaceshipVirtual78(EEComplexUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_SPACESHIP_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
 }
 
 // ---- EEUCFortress.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The fortress (a land
@@ -227,24 +187,9 @@ void EEUnitClass::SpaceshipVirtual78(EEComplexUnit* inUnit)
 unsigned short gFortressUnloadCost = 100;
 
 // Returns whether the player's population has room for the unit's cost
-bool EEUnitClass::FortressHasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
-{
-    return ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_HAS_ROOM, this, inUnit, EEObj(inCargo), 0, 0) != 0;   // ucx_transports.rs
-}
-
 // Sets up a new fortress as built, with a 1 s regeneration timer
-void EEUnitClass::FortressUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_CREATED, this, inUnit, 0, 0, 0);   // ucx_transports.rs
-}
-
 // Unloads at a tile; a teleporter needs 100 faith and spends it in proportion to the cargo unloaded, else warns
 // its owner (event 0x274e)
-void EEUnitClass::FortressUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
-{
-    ee_units_ucx_call(EE_UNITS_UCX_DO_FORTRESS_UNLOAD_AT, this, inTransport, 0, inX, inY);   // ucx_transports.rs
-}
-
 // the boarding location's tiles (ucx_transports.rs)
 static std::vector<EETileCoordinate> sUcxTiles;
 
