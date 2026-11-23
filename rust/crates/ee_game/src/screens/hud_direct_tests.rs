@@ -259,7 +259,15 @@ fn the_status_box_fields_and_formats() {
     use crate::screens::status_box::*;
     let mut r = new_box();
     let mut call =
-        BoxCallHead { record: &mut r, unit: core::ptr::null_mut(), complex: core::ptr::null_mut(), text: wide("x") };
+        BoxCallHead {
+            o: crate::screens::hud_fields::EeScreensStatusBoxCallObjects {
+                mBox: &mut r as *mut _ as *mut c_void,
+                mUnit: core::ptr::null_mut(),
+                mComplex: core::ptr::null_mut(),
+                mTextures: [core::ptr::null_mut(); 4],
+            },
+            text: wide("x"),
+        };
     let op = |call: &mut BoxCallHead, op, a, b, c| unsafe { status_box(call, op, a, b, c) };
     assert_eq!(op(&mut call, EE_SCREENS_BOX_OP_SET, EE_SCREENS_BOX_FIELD_COUNT, 5, 0), Some(0));
     assert_eq!(op(&mut call, EE_SCREENS_BOX_OP_SET, EE_SCREENS_BOX_FIELD_ATTRIBUTES + 3, 9, 0), Some(0));
