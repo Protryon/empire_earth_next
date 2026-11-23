@@ -15,25 +15,30 @@
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_lobby/scrolltext.h"
+#include "ee/wonapi/WONLobbyGuard.h"
+#include "rust/won_lobby/lobbycfgrd.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// Reads an ADDLINE layout key (text, optional colour) into the credits; passes other keys to the dialog config
-bool CreditsDialogConfig::Virtual24(const std::string& inInstruction)
+// the reader's statements (lobbycfgrd.rs composes them, R6 WON round 33)
+// the config readers' reads (LobbyNetCtrlHost.cpp)
+intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc);
+static intptr_t CreditsAddLine(LobbyRustDialog* inCredits, const GUIString& inLine, Component* inComponent, intptr_t inColor) { return inCredits->LCall(EeWonLobbyDlgCall::AddLine, (intptr_t)&inLine, (intptr_t)inComponent, (intptr_t)(uint32_t)inColor); }
+static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
 {
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CREDITSDIALOGCONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
-    if(aKeyIdx==0) {
-    GUIString aLine=this->ReadString(false);
-    DWORD aColor=-1;
-    if(!this->EndOfString()) {
-        this->EnsureComma();
-        aColor=this->ReadColor();
+    typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    CreditsDialogConfig* cr = static_cast<CreditsDialogConfig*>(c);
+    switch (inOp) {
+    case Op::CreditsBase: return WON_GUARDED(cr->ContainerConfig::Virtual24(*(const std::string*)a));
+    case Op::CreditsAddLine: return WON_GUARDED(CreditsAddLine(cr->mCredits, GUIString((GUIStringData*)a), c->Fn386860(std::string("DialogComponent")), b));
+    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
     }
-    this->mCredits->LCall(EeWonLobbyDlgCall::AddLine,(intptr_t)&aLine,(intptr_t)this->Fn386860(std::string("DialogComponent")),(intptr_t)(uint32_t)aColor);
-    return true;
-    }
-    return ContainerConfig::Virtual24(inInstruction);
 }
+static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0) { return WonRethrow(ee_won_lobbycfgrd_call(inCfg, CfgRdHost, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d)); }
+
+// Reads an ADDLINE layout key (text, optional colour) into the credits; passes other keys to the dialog config
+bool CreditsDialogConfig::Virtual24(const std::string& inInstruction) { return CfgRd(this, EeWonLobbyCfgRdCall::Credits, inInstruction) != 0; }
 
 void CreditsDialogConfig::SetComponent(Component* inComponent)
 {
