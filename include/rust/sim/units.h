@@ -18643,6 +18643,20 @@ void ee_units_cu_out_of_synch_dump(void *unit, void *file);
 /// `unit` is a live `EEComplexUnit`, `text` a live `UWideString`.
 void ee_units_cu_describe(void *unit, void *text);
 
+/// `EEComplexUnit::GetOutermostCarrier`.
+///
+/// # Safety
+/// `unit` and its carriers are live complex units.
+class EEComplexUnit *ee_units_cu_outermost_carrier(class EEComplexUnit *unit);
+
+/// `EEComplexUnit::SetVelocity`: `unit` and `cx` are the unit's two records, its `mStats` a live class upgrade.
+///
+/// # Safety
+/// Both records are the same live complex unit's.
+void ee_units_cu_set_velocity(const EeUnitsUnitFields *unit,
+                              EeUnitsComplexUnitFields *cx,
+                              float value);
+
 /// `EEComplexUnit::Init(class, placement, player, goal_queues)` on `unit` (more arguments than
 /// `ee_units_cu_body` carries).
 ///
@@ -22625,11 +22639,15 @@ bool ee_units_waypoints_next_auto(uint64_t unit);
 /// `unit` is a live complex unit; `points` holds `count` points (or is null with none).
 void ee_units_waypoints_group_path_goals(uint64_t unit, const float *points, size_t count);
 
-/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, its index in `index`.
+/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, the waypoint in `out` (valid until the list
+/// changes).
 ///
 /// # Safety
-/// `unit` is a live complex unit; `index` writable.
-bool ee_units_waypoints_at_tile(uint64_t unit, long x, long y, size_t *index);
+/// `unit` is a live complex unit; `out` writable.
+bool ee_units_waypoints_at_tile(uint64_t unit,
+                                long x,
+                                long y,
+                                const EeUnitsWaypoint **out);
 
 /// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
 extern int64_t ee_units_wp_host(int32_t op, uint64_t unit, uint64_t arg, float *point);

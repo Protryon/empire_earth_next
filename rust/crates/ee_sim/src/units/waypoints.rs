@@ -978,22 +978,23 @@ pub unsafe extern "C" fn ee_units_waypoints_group_path_goals(unit: u64, points: 
     unsafe { group_path_goals(unit, &path) }
 }
 
-/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, its index in `index`.
+/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, the waypoint in `out` (valid until the list
+/// changes).
 ///
 /// # Safety
-/// `unit` is a live complex unit; `index` writable.
+/// `unit` is a live complex unit; `out` writable.
 #[cfg(not(test))]
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_waypoints_at_tile(
     unit: u64,
     x: std::os::raw::c_long,
     y: std::os::raw::c_long,
-    index: *mut usize,
+    out: *mut *const EeUnitsWaypoint,
 ) -> bool {
     // SAFETY: the caller's contract
     match unsafe { at_tile(unit, x as i64, y as i64) } {
         Some(i) => {
-            unsafe { *index = i };
+            unsafe { *out = list(unit).get(i).map_or(std::ptr::null(), |w| w as *const EeUnitsWaypoint) };
             true
         }
         None => false,

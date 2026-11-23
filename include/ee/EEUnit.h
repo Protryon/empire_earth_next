@@ -408,19 +408,7 @@ public:
     // inline (the fire functor damages a unit only when it is its own outermost carrier) (provisional name)
     // inline (provisional name; Update 0xb0a60, with GetPlayerNumber)
     bool IsCarried() const { return this->mPreviousPart != NULL || this->mNextPart != NULL; }
-    EEComplexUnit* GetOutermostCarrier()
-    {
-        // through a pointer to the link: the fire functor re-tests *theCarrier after the first test (0xb6ce8)
-        EEComplexUnit* theResult = this;
-        if (this->mPreviousPart != NULL) {
-            EEComplexUnit** theCarrier = &this->mPreviousPart;
-            while (*theCarrier != NULL) {
-                theResult = *theCarrier;
-                theCarrier = &theResult->mPreviousPart;
-            }
-        }
-        return theResult;
-    }
+    EEComplexUnit* GetOutermostCarrier() { return ee_units_cu_outermost_carrier(this); }   // cu_inline.rs
     // 0x1f9df3: the effect of kind inKind in the unit's effect list (+0x100), false if none (provisional name)
     bool GetEffect(long inKind, EEGraphicEffect*& outEffect) { return ee_units_cu_body(EE_UNITS_CU_DO_GET_EFFECT, this, inKind, (int64_t)(uintptr_t)&outEffect, 0) != 0; }
     // the volcano moving a unit off its tiles (provisional names; types inferred)
@@ -509,12 +497,7 @@ public:
     float GetSight() const { return this->mSight; }  // inline (line of sight 0xb1fa5) (provisional name)
     void SetSight(float inSight) { this->mSight = inSight; }
     // inline (COMDAT 0xb021c, first emitted by EECCDropObject.cpp): +0x21c is kept at least mStats->mBC
-    void SetVelocity(float inValue)
-    {
-        if (inValue != this->mVelocity)
-            this->mVelocity = inValue;
-        this->mF21C = max(inValue, this->mStats->mBC);
-    }
+    void SetVelocity(float inValue) { ee_units_cu_set_velocity(this, this, inValue); }   // cu_inline.rs
     // inline in the real header (out-of-line COMDAT 0x5e407; 54 callers): +0x1c8's value when set, else mStats->mFAC;
     // body not reconstructed yet, so declared out of line here provisional name (meteor storm)
     float GetMaxVelocity();
@@ -745,13 +728,7 @@ public:
     void SetNextFrame(long inValue) { if (this->mNextFrame != inValue) this->mNextFrame = inValue; }  // inline (SetAnimation: cmp, lea, store)
     // 0x1fbc3b (ret 0xc): the waypoint on tile (inX, inY), if any
     bool FindWaypointAtTile(long inX, long inY, const EEComplexUnitWaypoint*& outWaypoint)   // waypoints.rs
-    {
-        size_t theIndex = 0;
-        bool theFound = ee_units_waypoints_at_tile((uint64_t)(uintptr_t)this, inX, inY, &theIndex);
-        if (theFound)
-            outWaypoint = &this->mWaypoints[theIndex];
-        return theFound;
-    }
+        { return ee_units_waypoints_at_tile((uint64_t)(uintptr_t)this, inX, inY, reinterpret_cast<const EeUnitsWaypoint**>(&outWaypoint)); }
     void SnapLastWaypoint() { ee_units_waypoints_snap((uint64_t)(uintptr_t)this); }   // 0x1fc507 (EEPathManager 0xa84f6): re-adds the last waypoint at the goal's location
     void PlaceOnGround(const GE3DPoint& inLocation) { ee_units_cu_more(EE_UNITS_CUM_DO_PLACE_ON_GROUND, this, 0, 0, 0, inLocation.GetX(), inLocation.GetY(), inLocation.GetZ(), NULL, NULL); }  // 0x1fc90c (EEPhysicsModel::Move): onto the ground at inLocation
 

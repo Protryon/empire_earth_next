@@ -57,6 +57,7 @@ pub mod commands;
 pub mod cu_body;
 pub mod cu_cargo;
 pub mod cu_dump;
+pub mod cu_inline;
 pub mod cu_life;
 pub mod cu_misc;
 pub mod cu_more;
