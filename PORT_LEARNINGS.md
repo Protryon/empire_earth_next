@@ -39397,3 +39397,55 @@ commit at the end), and a pointer-only difference in host-lobby-open is not a re
 | `scenario_check.py` | PASS 27/27 |
 | `eedata check`, `cppgate` | PASS, PASS |
 | `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12059` units [4, 36, 37] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2772 joiner=2769`, GATES PASS |
+
+## The units' lane, round 10: the unit class record Rust's; EEUnit.h's members inline or in the Rust records; the units' pointers in their records; the unit utilities', goals' and combat queries' entry points inline (ee_data tables.rs DbUnitClass; ee_sim units ucn_noted.rs, uc_is.rs, obj_fields.rs, cu_inline.rs; combat regions walk; branch rust-units10, 2026-11-23)
+
+Numbers: docs/progress/units.md ("Round 10"). C++ logic lines (logic_lines.py, 0e7decbd3 -> the forks' merge
+156f43c46, before origin/rust) 30,371 -> 28,962 (**-1,409**); the lane's files 3,618 -> 2,212; net C++ lines -3,552
+(+1,677 / -5,229); Rust +2,276 / -36. The target was -2,000.
+
+- **Three forks, one heavy lock, the turn limit again.** A (the class family and the record, ops 6000-6999), B (the
+  unit objects, 7000-7999), C (the utilities, goals and combat queries, 8000-8999), each in its own worktree. All three
+  stopped at the 200-turn limit once and were resumed. EEUnit.h was shared by A and B over disjoint line ranges (A the
+  EEUnitClassUpgrade and EEUnitClass parts, B the preamble and the EEUnit/EEComplexUnit parts): git merged both with
+  no conflict. The only conflicts were rust/cbindgen.toml's include list (cbunion2.py, twice).
+- **A record a data tool parses moves with the tool.** Round 9 reverted EEUnitClassRecord.h's move because
+  tools/eedata/overlay.py read the C++ header. This round the record is the hand-written `DbUnitClass` in ee_data
+  tables.rs (0x7a8 bytes asserted), which cbindgen emits under the C++ name. overlay.py's SOURCES and RUST_NAMES point
+  at it, as UI round 13 did for UIDbDataForms, and tools/datafmt/assemble.py and DATA_FORMATS.md follow it. eedata
+  check and cppgate pass.
+- **Most of the count was declarations.** About 190 EEUnitClass/EEUnitClassUpgrade members and the EEUnit,
+  EEComplexUnit, ghost and doppelganger members whose .cpp body was one forward became inline one-statement bodies
+  in their classes (EEUnit.h 743 -> 302). EEUnitHost.h's generated extern block (44 lines) and EEUnitRegions.h's
+  region records (deleted with the dead EECollectRegionUnits) were dead.
+- **Pointer members in Rust records.** EEUnit's and EEComplexUnit's pointers now live in EeUnitsUnitFields and
+  EeUnitsComplexUnitFields, typed `X*` in C++ through cbindgen renames. The world layout derives their offsets from
+  the records, so EEWorldLayout.cpp's offsetof lines for them are gone. The ee_render tests' made-up objects name
+  their own offsets, so the layout derives only the offsets a registration leaves unset.
+- **An inline body can break a caller that declares the function itself.** Four unit utilities (EEGetBallisticPitch,
+  EEFindNearbyTarget, EEFindTargetNear, EEUpgradeHitPoints) went back out of line: other files declare them with
+  their own `extern` and the inline definitions left them unresolved. grep for a function's own declarations before
+  inlining it.
+- **One sunk test.** The dock's NavalBuildingHasSunk and the trigger's COND_SUNK are one Rust function
+  (cls_condition.rs). EEUnitClass::NavalBuildingHasSunk is deleted.
+- **Commits that do not build alone**: C's 1e9ad666d (the four utilities above, fixed in ecd18ca3b). Every other
+  commit builds.
+- **Call-site edits outside the lane**:
+  - EEDataTextFile.cpp's include;
+  - EECPEngineHelpers.cpp and EEARust.cpp: definitions of the inlined members deleted;
+  - tools/eedata overlay.py, specs.json, tools/datafmt/assemble.py, docs/DATA_FORMATS.md, rust/cbindgen.toml;
+  - strip_markers changed EEGameLog.cpp after the origin merge (its own commit).
+  - rust_includes.py wanted edits in tests/won (the WON lane's); I reverted them.
+- **Behaviour changes**: none observed. EEGetUnitsInRectangle copies the region walk before it runs the predicates.
+  FindImpactUnit reads the whole region before its loop instead of on demand. The oracle, the captures and the
+  saveloads are identical.
+  - Only a drawn game reaches some moved code: the sound view (camera point, viewport clip, zoom), the target
+    screens' inline virtuals, and the class media and button members now inline.
+- **Gates** on 63df6887e (the forks, origin/rust 49707901b = batch 20):
+  - builds and the test profile 0/0; headers current (327);
+  - Rust gate PASS; oracle seeds 2-7 identical;
+  - the twelve capture profiles PASS at seeds 2-3;
+  - saveloads plain and matrix (`--expect`) PASS;
+  - scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS;
+  - the tour `random-game --box-select --orders --seed 7` PASS; gates.sh GATES PASS.
+  - Not run: the POSIX builds.
