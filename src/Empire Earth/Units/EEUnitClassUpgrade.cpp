@@ -52,13 +52,6 @@ static_assert(offsetof(EEUnitClassUpgrade, mSelectionSounds) + sizeof(void*) == 
 static_assert(offsetof(EEUnitClassUpgrade, mIsLoadingButtons) == offsetof(EEUnitClassUpgrade, mIsLoadingMedia) + 1,
               "the busy flags are adjacent");
 
-static uint64_t EEUpgradeMedia(EEUnitClassUpgrade* inUpgrade, int32_t inOp, long inArg, EEPlayer* inPlayer, void* inValue)
-{
-    EeUnitsUpgradeMedia theMedia = {reinterpret_cast<void**>(&inUpgrade->mButton), const_cast<bool*>(&inUpgrade->mIsLoadingMedia),
-                                    static_cast<EeUnitsUnitClassUpgradeFields*>(inUpgrade), inUpgrade, inPlayer};
-    return ee_units_upgrade_media(&theMedia, inOp, inArg, inValue);
-}
-
 // The C++ the media bodies call (ee_units upgrade_media.rs; EE_UNITS_UPGRADE_OP_*)
 extern "C" long ee_units_upgrade_host(int32_t inOp, void* inUpgrade, void* inObject, void* inPlayer)
 {
@@ -104,7 +97,7 @@ extern "C" long ee_units_upgrade_host(int32_t inOp, void* inUpgrade, void* inObj
 // Destroys the copy, unloading its sounds and model while its media is loaded
 EEUnitClassUpgrade::~EEUnitClassUpgrade()
 {
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_DESTROY, 0, NULL, NULL);
+    this->Media(EE_UNITS_UPGRADE_MEDIA_DESTROY, 0, NULL, NULL);
 }
 
 // Raises another copy's improvements by this copy's levels above 1, moving its stats
@@ -122,18 +115,8 @@ void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
 }
 
 // Returns acknowledge sound inIndex; -1 alternates between the two (one turn shared by every class)
-EESoundObject* EEUnitClassUpgrade::GetAcknowledgeSound(long inIndex)
-{
-    return reinterpret_cast<EESoundObject*>(EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_ACKNOWLEDGE_SOUND, inIndex, NULL, NULL));
-}
-
 // Returns the copy's improvement levels
 // Returns selection sound inIndex; -1 alternates between the two (one turn shared by every class)
-EESoundObject* EEUnitClassUpgrade::GetSelectionSound(long inIndex)
-{
-    return reinterpret_cast<EESoundObject*>(EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SELECTION_SOUND, inIndex, NULL, NULL));
-}
-
 // Builds the upgrade button's " + n" help text for an improvement's next level
 void EEUnitClassUpgrade::GetImprovementGainText(UWideString& outText, long inImprovement, long inLevel)
 {
@@ -165,18 +148,8 @@ long EEUnitClassUpgrade::Load(unsigned long inMajorVersion, unsigned long inMino
 }
 
 // Loads the class's buttons on the first request; later requests are counted and wait while the first one loads
-void EEUnitClassUpgrade::LoadButtons(EEPlayer* inPlayer)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_LOAD_BUTTONS, 0, inPlayer, NULL);
-}
-
 // On the first request loads the sounds and model chosen by inMediaFlags (dropping sounds that fail), the button,
 // the area-effect templates and the class's media; later requests are counted and wait while the first one loads
-void EEUnitClassUpgrade::LoadMedia(EEPlayer* inPlayer, long inMediaFlags)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_LOAD, inMediaFlags, inPlayer, NULL);
-}
-
 // Writes the copy's name and improvement levels to the saved game; returns the first write error
 long EEUnitClassUpgrade::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -186,29 +159,9 @@ long EEUnitClassUpgrade::Save(unsigned long inMajorVersion, unsigned long inMino
 }
 
 // Replaces acknowledge sound inIndex; while media is loaded, unloads the old sound and loads the new one
-void EEUnitClassUpgrade::SetAcknowledgeSound(EESoundObject* inSound, long inIndex)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_ACKNOWLEDGE + inIndex, NULL, inSound);
-}
-
 // Replaces the creation sound; while media is loaded, unloads the old sound and loads the new one
-void EEUnitClassUpgrade::SetCreationSound(EESoundObject* inSound)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_CREATION, NULL, inSound);
-}
-
 // Replaces the death sound; while media is loaded, unloads the old sound and loads the new one
-void EEUnitClassUpgrade::SetDeathSound(EESoundObject* inSound)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_DEATH, NULL, inSound);
-}
-
 // Replaces the model; while media is loaded, unloads the old model and loads the new one
-void EEUnitClassUpgrade::SetModel(EEModel* inModel)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_MODEL, NULL, inModel);
-}
-
 // Sets the top speed and scales acceleration and turn rates (turret too) by its ratio to the class's; updates the
 // inverses
 void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
@@ -217,11 +170,6 @@ void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
 }
 
 // Replaces the button; while media is loaded, releases the old button and acquires the new one
-void EEUnitClassUpgrade::SetButton(EEButtonObject* inButton)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_BUTTON, NULL, inButton);
-}
-
 // Sets the range and the projectile's launch speed to reach it at 45 degrees (a bomb: its top speed; a Roman
 // Legionnaire aims for its heal range; no projectile: 0)
 void EEUnitClassUpgrade::SetRange(float inValue)
@@ -230,19 +178,5 @@ void EEUnitClassUpgrade::SetRange(float inValue)
 }
 
 // Replaces selection sound inIndex; while media is loaded, unloads the old sound and loads the new one
-void EEUnitClassUpgrade::SetSelectionSound(EESoundObject* inSound, long inIndex)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_SELECTION + inIndex, NULL, inSound);
-}
-
 // Drops one button request; the last one unloads the class's buttons
-void EEUnitClassUpgrade::UnloadButtons(EEPlayer* inPlayer)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_UNLOAD_BUTTONS, 0, inPlayer, NULL);
-}
-
 // Drops one media request; the last one unloads the sounds, model, button, area-effect templates and class media
-void EEUnitClassUpgrade::UnloadMedia(EEPlayer* inPlayer)
-{
-    EEUpgradeMedia(this, EE_UNITS_UPGRADE_MEDIA_UNLOAD, 0, inPlayer, NULL);
-}

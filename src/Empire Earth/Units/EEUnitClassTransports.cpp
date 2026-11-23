@@ -108,12 +108,6 @@ float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
 
 // Finds where cargo leaves the transport: a tile around it for a unit that cannot move, else a free placement
 // near the location (water allowed for non-land units); returns whether one was found
-bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo,
-                              GE3DPoint& inLocation, GE3DPoint& outLocation)
-{
-    return ee_units_ucx_boarding(this, inTransport, inCargo, (const float(*)[3])&inLocation.mX, (float(*)[3])&outLocation.mX);   // ucx_transports.rs
-}
-
 // Sets up a new transport as any unit, then gives it its class's resource type and amount
 // Unloads the transport's cargo at a tile (siege towers with the tower flag set)
 // ---- EEUCLandTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
@@ -155,12 +149,6 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
 // Sets up a new space transport at its flying height, with the class's resource type and amount
 // Adds the transport to its own tile only
 // Removes the transport from its own tile only
-void EEUnitClass::SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
-                              float* outPitch)
-{
-    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
-}
-
 // ---- EEUCFortress.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The fortress (a land
 // transport that garrisons; unit type 0x313 is the teleporter): 0x21013b..0x21048f (after
 // EEUCBuildingPriest.cpp; a globals chain opens the next unit at 0x21048f). Unit flags: the exe's module set. Its ctor

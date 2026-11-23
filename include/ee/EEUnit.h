@@ -77,14 +77,22 @@ public:
     virtual ~EEUnitClassUpgrade();          // +0x00 dtor 0x23b729 (??_G 0x23b70d)
     virtual void CopyUpgradeLevels(EEUnitClassUpgrade* inOther);  // +0x04 0x23b7a4 (forwards to mImprovement)
 
+    // the media bodies (ee_units upgrade_media.rs) over the eight media members (mButton .. mSelectionSounds[1],
+    // contiguous), the busy flags and the record's counts
+    uint64_t Media(int32_t inOp, long inArg, EEPlayer* inPlayer, void* inValue)
+    {
+        EeUnitsUpgradeMedia theMedia = {reinterpret_cast<void**>(&this->mButton), const_cast<bool*>(&this->mIsLoadingMedia),
+                                        static_cast<EeUnitsUnitClassUpgradeFields*>(this), this, inPlayer};
+        return ee_units_upgrade_media(&theMedia, inOp, inArg, inValue);
+    }
     void SetName(UWideString inName) { this->mName = inName; }  // inline COMDAT 0x1bcb00
     void Init() { ee_units_uc_rest(EE_UNITS_UC_DO_R_UPGRADE_INIT, NULL, NULL, (uint64_t)(uintptr_t)this, 0, 0, NULL); }  // 0x23b891 (the fields below from mUnitClass)
-    EESoundObject* GetSelectionSound(long inIndex);  // 0x23b82b (one of mSelectionSounds; EEMSavedGroupSelect passes -1 for EEPlayForLocalPlayer; provisional name)
-    EESoundObject* GetAcknowledgeSound(long inIndex);  // 0x23b806 (one of mAcknowledgeSounds; EEPlayer::PlayAcknowledgement passes -1 for EEPlayForLocalPlayer; provisional name)
+    EESoundObject* GetSelectionSound(long inIndex) { return reinterpret_cast<EESoundObject*>(this->Media(EE_UNITS_UPGRADE_MEDIA_SELECTION_SOUND, inIndex, NULL, NULL)); }  // 0x23b82b (one of mSelectionSounds; EEMSavedGroupSelect passes -1 for EEPlayForLocalPlayer; provisional name)
+    EESoundObject* GetAcknowledgeSound(long inIndex) { return reinterpret_cast<EESoundObject*>(this->Media(EE_UNITS_UPGRADE_MEDIA_ACKNOWLEDGE_SOUND, inIndex, NULL, NULL)); }  // 0x23b806 (one of mAcknowledgeSounds; EEPlayer::PlayAcknowledgement passes -1 for EEPlayForLocalPlayer; provisional name)
     // the per-class forwarders' targets (EEPlayer 0x163db9..0x163e71; provisional names)
-    void LoadButtons(EEPlayer* inPlayer);   // 0x23bc29 (EEPlayer::LoadUnitClassButtons; provisional name)
-    void LoadMedia(EEPlayer* inPlayer, long inMediaFlags);  // 0x23bcc3 (EEPlayer::SetUnitClassMedia; provisional name)
-    void UnloadButtons(EEPlayer* inPlayer);  // 0x23c1ef (EEPlayer::UnloadUnitClassButtons; provisional name)
+    void LoadButtons(EEPlayer* inPlayer) { this->Media(EE_UNITS_UPGRADE_MEDIA_LOAD_BUTTONS, 0, inPlayer, NULL); }  // 0x23bc29 (EEPlayer::LoadUnitClassButtons; provisional name)
+    void LoadMedia(EEPlayer* inPlayer, long inMediaFlags) { this->Media(EE_UNITS_UPGRADE_MEDIA_LOAD, inMediaFlags, inPlayer, NULL); }  // 0x23bcc3 (EEPlayer::SetUnitClassMedia; provisional name)
+    void UnloadButtons(EEPlayer* inPlayer) { this->Media(EE_UNITS_UPGRADE_MEDIA_UNLOAD_BUTTONS, 0, inPlayer, NULL); }  // 0x23c1ef (EEPlayer::UnloadUnitClassButtons; provisional name)
     // EEUnitClassUpgrade.cpp (provisional names)
     EEUnitClassImprovement* GetImprovement() { return &this->mImprovement; }  // 0x23b827 (&mImprovement; defined after its first user Virtual04, so called)
     void DumpMediaCount(FSFileSpec& inFile);  // 0x23b7c1 (the media-count dump line)
@@ -92,15 +100,15 @@ public:
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x23bbf9 (mName, then mImprovement)
     void SetMaxVelocity(float inValue);    // 0x23c005 (EEUnitClassImprovement::ChangeLevel: improvement 14) (provisional name)
     void SetRange(float inValue);          // 0x23c101 (EEUnitClassImprovement::ChangeLevel: improvement 11) (provisional name)
-    void UnloadMedia(EEPlayer* inPlayer);   // 0x23c24f (EEPlayer::UnloadUnitClassMedia; provisional name)
+    void UnloadMedia(EEPlayer* inPlayer) { this->Media(EE_UNITS_UPGRADE_MEDIA_UNLOAD, 0, inPlayer, NULL); }  // 0x23c24f (EEPlayer::UnloadUnitClassMedia; provisional name)
     EEUnitClass* GetUnitClass() { return this->mUnitClass; }  // 0x1f1f81 (mUnitClass; ICF-shared; EEScenarioManager::Prepare's trace) (provisional name)
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x23be43 (EEPlayer::Save; provisional name)
-    void SetAcknowledgeSound(EESoundObject* inSound, long inIndex);  // 0x23be6f (mAcknowledgeSounds[inIndex])
-    void SetCreationSound(EESoundObject* inSound);  // 0x23bed9 (mCreationSound)
-    void SetDeathSound(EESoundObject* inSound);  // 0x23bf3d (mDeathSound)
-    void SetModel(EEModel* inModel);        // 0x23bfa1 (mModel)
-    void SetButton(EEButtonObject* inButton);   // 0x23c09d (sets the button +0x64: Release on the old, Acquire on the new)
-    void SetSelectionSound(EESoundObject* inSound, long inIndex);  // 0x23c185 (mSelectionSounds[inIndex])
+    void SetAcknowledgeSound(EESoundObject* inSound, long inIndex) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_ACKNOWLEDGE + inIndex, NULL, inSound); }  // 0x23be6f (mAcknowledgeSounds[inIndex])
+    void SetCreationSound(EESoundObject* inSound) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_CREATION, NULL, inSound); }  // 0x23bed9 (mCreationSound)
+    void SetDeathSound(EESoundObject* inSound) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_DEATH, NULL, inSound); }  // 0x23bf3d (mDeathSound)
+    void SetModel(EEModel* inModel) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_MODEL, NULL, inModel); }  // 0x23bfa1 (mModel)
+    void SetButton(EEButtonObject* inButton) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_BUTTON, NULL, inButton); }  // 0x23c09d (sets the button +0x64: Release on the old, Acquire on the new)
+    void SetSelectionSound(EESoundObject* inSound, long inIndex) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_SELECTION + inIndex, NULL, inSound); }  // 0x23c185 (mSelectionSounds[inIndex])
     // the improvement button's help text (EEUIBUpgrade 0x256c83; provisional names)
     void GetImprovementName(UWideString& outName, long inImprovement);
     void GetImprovementGainText(UWideString& outText, long inImprovement, long inLevel);
@@ -1137,11 +1145,11 @@ public:
     void AirAnimalUnitCreated(EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_CREATED, this, inUnit, 0, 0, 0, NULL); }
     bool AirAnimalReturnToAirport(EEComplexUnit* inUnit) { return ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_RETURN, this, inUnit, 0, 0, 0, NULL) != 0; }
     void FlyOffMap(EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_FLY_OFF_MAP, this, inUnit, 0, 0, 0, NULL); }
-    void AmbientLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
+    void AmbientLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_AMBIENT_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
     void AmbientAddToTile(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_ADD, this, NULL, H(inUnit), 0.0f); }
     void AmbientRemoveFromTile(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_AMBIENT_REMOVE, this, NULL, H(inUnit), 0.0f); }
     void UpdateCitizen(EEComplexUnit* inUnit) { ee_units_ucp_call(EE_UNITS_UCP_DO_UPDATE_CITIZEN, this, inUnit, 0, 0); }
-    EEUnit* FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource, unsigned long inKind, std::vector<EEUnit*>* ioUnits);
+    EEUnit* FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource, unsigned long inKind, std::vector<EEUnit*>* ioUnits) { return (EEUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FIND_NEXT_RESOURCE, this, inUnit, H(inResource), (int64_t)inKind, (int64_t)H(ioUnits), NULL); }
     EEUnit* FindStorage(EEComplexUnit* inUnit, bool inAnyStorage) { return (EEUnit*)(uintptr_t)ee_units_ucn_find_storage(H(this), H(inUnit), inAnyStorage); }
     bool HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource) { return ee_units_ucn_has_gather_point(H(this), H(inUnit), H(inResource)); }
     EEUnit* FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter, EEUnit* inResource, long inRange, unsigned long inKind, std::vector<EEUnit*>* ioUnits, bool inFarms) { return (EEUnit*)(uintptr_t)ee_units_ucn_resource_of_kind(H(this), (uint32_t)this->mCategory, H(inUnit), H(inCenter), H(inResource), (int32_t)inRange, (uint32_t)inKind, H(ioUnits), inFarms); }
@@ -1156,8 +1164,8 @@ public:
     EEUnit* FindNearestTargetBuilding(EEUnit* inUnit) { return (EEUnit*)(uintptr_t)ee_units_ucn_nearest_target_building(H(this), H(inUnit)); }
     void BuildingGroundLocation(GE3DPoint& ioLocation) { ee_units_ucg_sea(EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX); }
     EEUnit* BuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* BuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
-    void BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend);
+    EEUnit* BuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix); }
+    void BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend) { ee_units_ucb_call(EE_UNITS_UCB_DO_SURROUNDING_TILES, this, inUnit, H(&outTiles), inCorners, inAppend, NULL); }
     void BuildingUnitCreated(EEComplexUnit* inUnit) { ee_units_ucb_call(EE_UNITS_UCB_DO_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL); }
     bool BuildingSelectUnitToRelease(EEComplexUnit* inUnit) { return ee_units_ucb_call(EE_UNITS_UCB_DO_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0; }
     bool EruptVolcano(EEComplexUnit* inUnit) { return ee_units_uc_rest(EE_UNITS_UC_DO_R_ERUPT_VOLCANO, this, inUnit, 0, 0, 0, NULL) != 0; }
@@ -1175,12 +1183,12 @@ public:
     EEComplexUnit* GetPart(EEComplexUnit* inGate, long inIndex);
     bool AreEnemiesNear(EEComplexUnit* inUnit) { return ee_units_ucn_gate_near(H(this), H(inUnit), false); }
     bool IsPasserNear(EEComplexUnit* inUnit) { return ee_units_ucn_gate_near(H(this), H(inUnit), true); }
-    void HelicopterPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
+    void HelicopterPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_HELICOPTER_PRIEST, this, inUnit, inSound, outVolume, outPan, outPitch); }
     void HelicopterPriestUnitCreated(EEComplexUnit* inUnit) { ee_units_uc_rest(EE_UNITS_UC_DO_R_HELICOPTER_PRIEST_CREATED, this, inUnit, 0, 0, 0, NULL); }
     void HelicopterTransportUnitCreated(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_HELICOPTER_CREATED, this, inUnit, 0, 0, 0); }
     void LandUnitCreated(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_LAND_CREATED, this, inUnit, 0, 0.0f); }
     void LandCallParatroopPlane(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_CALL_PARATROOP_PLANE, this, inUnit, 0, 0.0f); }
-    void LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
+    void LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_LAND_PRIEST, this, inUnit, inSound, outVolume, outPan, outPitch); }
     void LandTransportBadlyHurt(EEUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_BADLY_HURT, this, NULL, H(inUnit), 0, 0); }
     void LandableUnitCreated(EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_CREATED, this, inUnit, 0, 0, 0, NULL); }
     void FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit) { ee_units_uca_call(EE_UNITS_UCA_DO_FLY_TO_GOAL, this, inUnit, 0, 0, 0, &inPoint.mX); }
@@ -1194,7 +1202,7 @@ public:
     void TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY) { ee_units_ucn_take_off_from_runway(H(this), H(inUnit), (int32_t)inDX, (int32_t)inDY); }
     bool IsAwayFromGoal(EEComplexUnit* inUnit) { return ee_units_ucn_away_from_goal(H(this), H(inUnit)); }
     EEUnit* MiningBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
+    EEUnit* MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix); }
     void MissileActionChanged(EEComplexUnit* inUnit);
     void MissileUnitCreated(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_CREATED, this, inUnit, 0, NULL); }
     long MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
@@ -1206,9 +1214,9 @@ public:
     bool NavalHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_ARRIVED, this, inUnit, 0, inValue) != 0; }
     void UpdateResourceUnit(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_UPDATE_RESOURCE_UNIT, this, inUnit, 0, 0.0f); }
     bool NavalBuildingSelectUnitToRelease(EEComplexUnit* inUnit) { return ee_units_ucb_call(EE_UNITS_UCB_DO_NAVAL_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0; }
-    void NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
+    void NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
     EEUnit* NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
+    EEUnit* NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT, this, NULL, H(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]); }
     void ProjectileActionChanged(EEComplexUnit* inUnit);
     void ProjectileUnitCreated(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_CREATED, this, inUnit, 0, NULL); }
     bool ProjectileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { return ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_LAUNCH, this, inUnit, 0, (const float(*)[3])&inLocation.mX) != 0; }
@@ -1219,29 +1227,29 @@ public:
     void ResourceSimpleUnitCreated(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_CREATED, this, NULL, H(inUnit), 0.0f); }
     void ResourceAddToTile(EEUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_RESOURCE_ADD, this, NULL, H(inUnit), 0.0f); }
     void SeaAnimalAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth);
-    void SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
+    void SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
     EEUnit* SpaceBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* SpaceBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
+    EEUnit* SpaceBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix); }
     void SpaceBuildingUnitCreated(EEComplexUnit* inUnit) { ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_UNIT_CREATED, this, inUnit, 0, 0, 0, 0.0f); }
     bool SpaceBuildingHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_ARRIVED, this, inUnit, 0, 0, 0, inValue) != 0; }
     void SpaceTransportUnitCreated(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_CREATED, this, inUnit, 0, 0, 0); }
     void SpaceTransportAddToTile(EEUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_ADD, this, NULL, H(inUnit), 0, 0); }
     void SpaceTransportRemoveFromTile(EEUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_SPACE_REMOVE, this, NULL, H(inUnit), 0, 0); }
-    void SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
+    void SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch); }
     void SpaceshipVirtual78(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_SPACESHIP_CREATED, this, inUnit, 0, 0, 0); }
-    void SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
+    void SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch); }
     void AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void SubmergedNavalGroundLocation(GE3DPoint& ioLocation) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX); }
-    void SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
+    void SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
     EEUnit* SubmergedNavalCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
-    EEUnit* SubmergedNavalCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
+    EEUnit* SubmergedNavalCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT_AT, this, NULL, H(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]); }
     void SubmergedNavalAddToTile(EEUnit* inUnit) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE, this, NULL, H(inUnit), 0, 0, NULL); }
     bool SubmergedNavalHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED, this, inUnit, 0, 0, 0, &inValue) != 0; }
     void TorpedoUpdate(EEComplexUnit* inUnit);
     bool TorpedoCheckGroundImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_TORPEDO_GROUND, this, inUnit); }
     void TransportUnitCreated(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_TRANSPORT_CREATED, this, inUnit, 0, 0, 0); }
     bool CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit) { return ee_units_ucn_can_load(H(this), H(inTransport), H(inUnit)); }
-    bool TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo, GE3DPoint& inLocation, GE3DPoint& outLocation);
+    bool TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo, GE3DPoint& inLocation, GE3DPoint& outLocation) { return ee_units_ucx_boarding(this, inTransport, inCargo, (const float(*)[3])&inLocation.mX, (float(*)[3])&outLocation.mX); }
     void TransportUnloadAt(EEComplexUnit* inTransport, long inX, long inY) { ee_units_ucx_call(EE_UNITS_UCX_DO_UNLOAD_AT, this, inTransport, 0, inX, inY); }
     bool CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCargo, U2DPoint<long>* ioUnloadTile, U2DPoint<long>* ioFirstCargoTile, U2DPoint<long>* inDestination) { return ee_units_ucn_can_unload_near(H(this), H(inTransport), H(inCargo), (const long(*)[2])ioUnloadTile, (const long(*)[2])ioFirstCargoTile, (const long(*)[2])inDestination); }
     bool IsSidePart(EEComplexUnit* inGate);    // the gate's (EEAIAStarBoundedPathGoalModifiers.cpp)
@@ -1252,13 +1260,13 @@ public:
     EEUnit* BaseCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_uc_call(EE_UNITS_UC_DO_BASE_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL, NULL); }
     EEUnit* BaseCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_uc_call(EE_UNITS_UC_DO_BASE_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, NULL, &inTransformation.mMatrix); }
     long BaseEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent) { return ee_units_cls_base_condition(H(this), H(inUnit), (uint32_t)inEvent); }
-    void BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
+    void BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_BASE, this, inUnit, inSound, outVolume, outPan, outPitch); }
     void BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend) { ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_SURROUNDING, this, inUnit, H(&outTiles), inCorners, inAppend, NULL); }
     bool BaseHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_mv_has_arrived(H(this), H(inUnit), inValue) != 0; }
     void BaseLoadMedia(EEPlayer* inPlayer) { ee_units_uc_call(EE_UNITS_UC_DO_BASE_LOAD_MEDIA, this, NULL, H(inPlayer), 0, 0, NULL, NULL); }
     void BaseRemoveFromRegion(EEUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_REMOVE_FROM_REGION, this, NULL, H(inUnit), 0, 0, NULL, NULL); }
     void BaseRemoveFromTile(EEUnit* inUnit) { ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_REMOVE_FROM_TILE, this, NULL, H(inUnit), 0, 0, NULL); }
-    void BaseSimpleUnitCreated(EEUnit* inUnit);
+    void BaseSimpleUnitCreated(EEUnit* inUnit) { inUnit->SetHitPoints(inUnit->mStats->mMaxHitPoints); }
     void BaseUnitCreated(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_BASE_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL, NULL); }
     void BaseUnloadMedia(EEPlayer* inPlayer) { ee_units_uc_call(EE_UNITS_UC_DO_BASE_UNLOAD_MEDIA, this, NULL, H(inPlayer), 0, 0, NULL, NULL); }
 
@@ -1279,7 +1287,7 @@ public:
     // 0x211747: the last unit of inUnit's +0x1d0 chain; 0x211723: that unit's +0x1cc (the logic bomb; ecx unused)
     // (provisional names)
     EEComplexUnit* GetLastLinked(EEComplexUnit* inUnit) { return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_LAST_LINKED, this, NULL, H(inUnit), 0, 0, NULL); }
-    EEComplexUnit* GetLastLinkedCarrier(EEComplexUnit* inUnit);
+    EEComplexUnit* GetLastLinkedCarrier(EEComplexUnit* inUnit) { return this->GetLastLinked(inUnit)->mPreviousPart; }
     // the 29 graphic effects (+0x64..+0xd4, mAttachedEffect to mBloodStainEffect) as one array, in member order: the
     // dtor's, LoadClassMedia's and UnloadClassMedia's walks (EEUnitClass.cpp checks the layout)
     EEGraphicEffect** GetEffects() { return &this->mAttachedEffect; }

@@ -53,12 +53,6 @@
 // Erupts a volcano: gives it an attack-ground goal at a random spot near it; returns true
 // Creates a building at a placement: docks and navy yards on the water plane, others (not the camera object) lifted
 // just above it
-EEUnit* EEUnitClass::BuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
-                                   EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
-}
-
 // Creates a building on a tile's centre (docks and navy yards at water level, off-map tiles at the -10000 sentinel)
 // Returns the map quarter facing the most space terrain within 6 tiles of a tile (half weight to the neighbouring
 // sides; its terrain run 0x60ea01 and the side tables 0x4c8ef8/0x4c8f08: ee_units cls_building.rs, R5b.4 round 33)
@@ -96,12 +90,6 @@ long EEGetWallPiecePart(long inIndex, bool* outFlag)
 
 // Returns the first living targetable building found in rings 1..19 around a unit's tile
 // Lists the tiles around a building; an airport's include its runway (four times its size toward its facing)
-void EEUnitClass::BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners,
-                             bool inAppend)
-{
-    ee_units_ucb_call(EE_UNITS_UCB_DO_SURROUNDING_TILES, this, inUnit, EEObj(&outTiles), inCorners, inAppend, NULL);   // ucb_release.rs
-}
-
 // Sets up a new building (built, its resource stock, regeneration); an airport turns to its map quarter, a navy yard
 // picks its facing and a space dock its yaw
 // Launches the exiting unit: places it at the exit (runway, water or tag point), gives it the building's rally
@@ -261,11 +249,6 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection)
 }
 
 // Returns the piece before the last one of a unit's linked chain
-EEComplexUnit* EEUnitClass::GetLastLinkedCarrier(EEComplexUnit* inUnit)
-{
-    return this->GetLastLinked(inUnit)->mPreviousPart;
-}
-
 // Returns gate piece 1 (the piece before piece 3); NULL when the chain is too short (a gate created as a single
 // piece, e.g. by a scenario effect)
 // Returns the last piece of a unit's linked chain
@@ -297,12 +280,6 @@ bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 // EEUCMissile.cpp follows). Unit flags: the exe's module set. Its ctor is inline (vtable 0x44843c).
 
 // Creates a mine at a placement and ties it to the first resource under its footprint that it can gather
-EEUnit* EEUnitClass::MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
-                                         EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
-}
-
 // Creates a mine on a tile, at the tile's height (0 off the map)
 // ---- EEUCNavalBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval building's
 // unit class (a dock): 0x218158..0x218490 (after EEUCNaval.cpp; EEUCNavalCitizen.cpp follows). Unit flags: the exe's
@@ -318,18 +295,7 @@ EEUnit* EEUnitClass::MiningBuildingCreateUnitAt(GETransformation& inTransformati
 // VirtualA0/E0 are EEUCNavalBuilding.cpp's (ICF).
 
 // Returns the tile under a location along the camera line, at the cruise altitude
-void EEUnitClass::SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
-}
-
 // Creates a space building at a placement, at the cruise altitude
-EEUnit* EEUnitClass::SpaceBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
-                                        EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
-}
-
 // Creates a space building on a tile, at the cruise altitude
 // Sets up a new space building as a building, already built
 // Returns whether the space building may stop: already sinking, a slow request, or at its next waypoint's tile

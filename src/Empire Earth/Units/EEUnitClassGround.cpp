@@ -28,11 +28,6 @@
 // source order (unit type 0x234 sits on the water plane).
 
 // For cattails, returns the tile where the view line through a point meets the water plane; otherwise sets nothing
-void EEUnitClass::AmbientLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_AMBIENT_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
-}
-
 // Adds the unit to every map tile of its footprint, its own tile first
 // Removes the unit from every map tile of its footprint, its own tile first
 // ---- EEUCResource.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The resource's unit
@@ -88,18 +83,7 @@ void EEComplexUnit::UpdateWheels()
 // Lifts a location that lies below the terrain mesh (the sea floor) up onto it
 // Returns the tile where the view line through a point meets the submarine's cruise depth (or the sea
 // floor where that is higher)
-void EEUnitClass::SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
-}
-
 // Creates a submarine at a placement kept above the sea floor, then moves it to the depth it may take there
-EEUnit* EEUnitClass::SubmergedNavalCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
-                                         EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]);   // ucg_sea.rs
-}
-
 // Creates a submarine on a tile (yaw pi) kept above the sea floor, then moves it to the depth it may take there
 // Adds the submarine to its tile's unit list
 // Returns whether the submarine reached its waypoint: on the waypoint's tile with more to go, when its collision

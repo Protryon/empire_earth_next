@@ -61,12 +61,6 @@ static_assert(kSoundLightning == 0x176 && kSoundThunder2 == 0x1ba && kGraphicEff
 // (ee_units citizen.rs)
 // Finds the next resource of a kind within five times the citizen's sight: around its gather goal's resource first,
 // then around the citizen
-EEUnit* EEUnitClass::FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource, unsigned long inKind,
-                                   std::vector<EEUnit*>* ioUnits)
-{
-    return (EEUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FIND_NEXT_RESOURCE, this, inUnit, EEObj(inResource), (int64_t)inKind, (int64_t)EEObj(ioUnits), NULL);   // uc_rest.rs
-}
-
 // Returns where the citizen drops its load: its goal's storage, else a farm's nearest drop site within 20, else the
 // owner's nearest built drop site that takes the load (docks and navy yards for boats) (ee_units citizen.rs)
 // Researches a tech on a unit (idling it unless only goal kinds 1, 2, 7, 10 are queued); if that kills the unit,
@@ -133,11 +127,6 @@ void EEComplexUnit::ContinueProduction()
 // inline (EEUnitClass.cpp's factory). Unit flags: the exe's module set.
 
 // Returns the tile under a location along the camera line, at sea level
-void EEUnitClass::NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
-}
-
 // Creates a fishing boat on a tile at sea level
 // ---- EEUCBasicPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The priests' common
 // unit class (conversion): 0x20d571..0x20e2cb (after EEUCBasicCitizen.cpp; EEUCBomb.cpp follows). Unit flags: the
@@ -237,24 +226,12 @@ void EEComplexUnit::UpdateTurrets()
 // (every unit class's vtable points at these copies), then its own slots. vtable 0x447060.
 
 // Gets the sound parameters the common way; silent when the priest is not seen
-void EEUnitClass::LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
-                               float* outPitch)
-{
-    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_LAND_PRIEST, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
-}
-
 // ---- EEUCNavalPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval priest's
 // unit class: 0x21880c..0x218a45 (after EEUCNavalCitizen's slots; EEUCNavalTransport.cpp's +0x04 0x218a45 follows).
 // Unit flags: the exe's module set. Its ctor is out of line (vtable 0x44724c), followed by the ??_G every priest class
 // shares (EEUCBasicPriest's inline dtor), then its own slots +0x0c, +0x34, +0xa0.
 
 // Creates a priest ship at a placement on the water plane (z 0)
-EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
-                                      EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]);   // ucg_sea.rs
-}
-
 // ---- EEUCHelicopterPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The priest
 // helicopter's unit class: 0x212edf..0x21339d (after EEUCHelicopter.cpp; EEUCHelicopterTransport.cpp follows). One unit
@@ -266,12 +243,6 @@ EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation,
 // (provisional name)
 
 // Gets the sound parameters with a Doppler pitch; silent while the helicopter is on the map but not seen
-void EEUnitClass::HelicopterPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
-                                     float* outPitch)
-{
-    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_HELICOPTER_PRIEST, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
-}
-
 // New (R5b.4, the fourteenth round): EEUCHelicopterPriest::ActionChanged's path to the goal when preparing to move
 // (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
 void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)

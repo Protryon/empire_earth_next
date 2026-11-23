@@ -133,12 +133,6 @@ void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 }
 
 // Computes the volume, pan and pitch of a sound played at the unit's position
-void EEUnitClass::BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
-                            float* outPitch)
-{
-    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_BASE, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
-}
-
 // Produces a unit of inClass at the building inUnit: loads aircraft and missiles into it, else places the unit toward
 // the rally point and hands it the queued goals; returns false at the population cap or with no room
 // Creates a unit of the class for a player at a tile's centre with a heading, grounded when a map is given, and
@@ -185,7 +179,6 @@ bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUs
         EECombatCaptureHostRead(EE_COMBAT_HR_FACES_TARGET, inUnit, inTarget, theFaces, 0, 0, inUseTolerance);
     return theFaces;
 }
-
 // Returns whether the unit (or its turrets) faces a point within its firing arc or the fixed tolerance; broadside
 // ships also count the opposite side
 bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
@@ -230,11 +223,6 @@ bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** 
 
 // Sets up a new unit: full hit points, ammunition, behaviour, heal timer, standing still and idle
 // Gives a new simple unit its full hit points
-void EEUnitClass::BaseSimpleUnitCreated(EEUnit* inUnit)
-{
-    inUnit->SetHitPoints(inUnit->mStats->mMaxHitPoints);
-}
-
 // Adds a placed unit (not a path marker) to the map's unit region of its tile
 // Adds the unit to its tile's unit list
 // Adds waypoints along the line to a point at turning-radius steps and cruise altitude (a near point: one waypoint)

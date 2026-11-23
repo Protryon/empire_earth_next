@@ -190,12 +190,6 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 // +0xa0, +0xb8 in source order.
 
 // Returns a sound's volume, pan and pitch, with a doppler shift
-void EEUnitClass::SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
-                              float* outPitch)
-{
-    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
-}
-
 // The air animal's and the landable's sound parameters: the spaceship's Doppler pitch, but (as their own inline
 // bodies were) without the unit utilities' UUTL note of EEGetDopplerPitch
 void EEUnitClass::AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
