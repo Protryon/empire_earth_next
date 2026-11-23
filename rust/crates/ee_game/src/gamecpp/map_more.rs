@@ -17,8 +17,8 @@ use ee_sim::units::map_save::{
     ee_units_map_load, ee_units_map_save, EE_UNITS_MAP_SAVE_CLIFF_VALID, EE_UNITS_MAP_SAVE_CREATE,
     EE_UNITS_MAP_SAVE_FINISH, EE_UNITS_MAP_SAVE_FIRST_CLIFF, EE_UNITS_MAP_SAVE_LOAD_TILE, EE_UNITS_MAP_SAVE_MESH_LOAD,
     EE_UNITS_MAP_SAVE_MESH_SAVE, EE_UNITS_MAP_SAVE_PICK_DEFAULT, EE_UNITS_MAP_SAVE_SET_DEFAULT,
-    EE_UNITS_MAP_SAVE_SET_TYPE, EE_UNITS_MAP_SAVE_SPACE, EE_UNITS_MAP_SAVE_TERRAIN_LOAD, EE_UNITS_MAP_SAVE_TERRAIN_TYPE,
-    EE_UNITS_MAP_SAVE_TILE_SAVE, EE_UNITS_MAP_SAVE_VALID,
+    EE_UNITS_MAP_SAVE_SET_TYPE, EE_UNITS_MAP_SAVE_SPACE, EE_UNITS_MAP_SAVE_TERRAIN_LOAD,
+    EE_UNITS_MAP_SAVE_TERRAIN_TYPE, EE_UNITS_MAP_SAVE_TILE_SAVE, EE_UNITS_MAP_SAVE_VALID,
 };
 use ee_sim::units::player_save::EeUnitsPlayerSaveIo;
 use ee_sim::world::map_fields::{EeUnitsMapFields, EeUnitsRtsMapFields};
@@ -117,7 +117,13 @@ pub extern "C" fn ee_gamecpp_mx_paint(map: *mut c_void, x: c_long, y: c_long, te
 
 /// EEMap::UpdateCliffs: the steep tiles of a rectangle made cliffs.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_mx_update_cliffs(map: *mut c_void, left: c_long, right: c_long, bottom: c_long, top: c_long) {
+pub extern "C" fn ee_gamecpp_mx_update_cliffs(
+    map: *mut c_void,
+    left: c_long,
+    right: c_long,
+    bottom: c_long,
+    top: c_long,
+) {
     let m = map as P;
     let a = [left, right, bottom, top, 0, 0];
     scoped(m, MX_MAPC_UPDATE_CLIFFS, a, [left - 1, right, bottom - 1, top], || edit(m, MX_EDIT_CLIFFS, a));
@@ -208,7 +214,16 @@ pub extern "C" fn ee_gamecpp_mx_sight(
     if ee_app_sight_leave(outer) {
         let kind = if add { MX_SIGHT_MAP_ADD } else { MX_SIGHT_MAP_REMOVE };
         let args = [x, y, 0.0, 0.0, radius];
-        ee_gamecpp_map_sight_record(EE_APP_SIGHT_CIRCLE, kind, player as u64, 0, -1, -1, shared as c_ulong, args.as_ptr());
+        ee_gamecpp_map_sight_record(
+            EE_APP_SIGHT_CIRCLE,
+            kind,
+            player as u64,
+            0,
+            -1,
+            -1,
+            shared as c_ulong,
+            args.as_ptr(),
+        );
     }
 }
 
@@ -269,8 +284,14 @@ pub extern "C" fn ee_gamecpp_mx_load(map: *mut c_void, file: *mut c_void, major:
     let mut c = context(m, file as P, major, minor);
     // SAFETY: the context and the map's records for the call
     unsafe {
-        ee_units_map_load(ptr(&mut c) as usize as *mut c_void, ee_gamecpp_mx_save_op, rts(m), fields(m), major as u32, minor as u32)
-            as c_long
+        ee_units_map_load(
+            ptr(&mut c) as usize as *mut c_void,
+            ee_gamecpp_mx_save_op,
+            rts(m),
+            fields(m),
+            major as u32,
+            minor as u32,
+        ) as c_long
     }
 }
 
@@ -280,7 +301,9 @@ pub extern "C" fn ee_gamecpp_mx_save(map: *mut c_void, file: *mut c_void, major:
     let m = map as P;
     let mut c = context(m, file as P, major, minor);
     // SAFETY: as ee_gamecpp_mx_load
-    unsafe { ee_units_map_save(ptr(&mut c) as usize as *mut c_void, ee_gamecpp_mx_save_op, rts(m), fields(m)) as c_long }
+    unsafe {
+        ee_units_map_save(ptr(&mut c) as usize as *mut c_void, ee_gamecpp_mx_save_op, rts(m), fields(m)) as c_long
+    }
 }
 
 /// `EEMapSaveOperation`: the C++ parts of the maps' Load and Save (the file's primitives, the tiles, the mesh and the
@@ -289,7 +312,12 @@ pub extern "C" fn ee_gamecpp_mx_save(map: *mut c_void, file: *mut c_void, major:
 /// # Safety
 /// `ctx` is a live `EEMapSaveContext`, `io` the call's.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_mx_save_op(ctx: *mut c_void, op: i32, index: u32, io: *mut EeUnitsPlayerSaveIo) -> i32 {
+pub unsafe extern "C" fn ee_gamecpp_mx_save_op(
+    ctx: *mut c_void,
+    op: i32,
+    index: u32,
+    io: *mut EeUnitsPlayerSaveIo,
+) -> i32 {
     // SAFETY: the function's contract
     let (c, io) = unsafe { (&mut *(ctx as *mut EeGamecppMxSaveContext), &mut *io) };
     let map = c.map;

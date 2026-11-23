@@ -203,7 +203,15 @@ thread_local! {
     static SCOPES: RefCell<Vec<Scope>> = const { RefCell::new(Vec::new()) };
 }
 
-fn open(shape: u32, kind: u32, player: *const c_void, tile: *const c_void, at: (c_long, c_long), value: c_ulong, args: [f32; 5]) {
+fn open(
+    shape: u32,
+    kind: u32,
+    player: *const c_void,
+    tile: *const c_void,
+    at: (c_long, c_long),
+    value: c_ulong,
+    args: [f32; 5],
+) {
     let outer = ee_app_sight_enter();
     let (tile_x, tile_y) = at;
     let scope = Scope { outer, shape, kind, player: player as u64, tile: tile as u64, tile_x, tile_y, value, args };

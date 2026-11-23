@@ -4256,6 +4256,9 @@ void ee_gamecpp_picker_add_unit(void *picker,
 /// EEUnitPicker::PickBox (PickUnits and PickUnitsInRectangle): under the lock, the ids of the units inside a screen
 /// rectangle's frustum (`all`: every pickable unit, else `player`'s of a type) into `out` (a
 /// `std::vector<unsigned long>`).
+///
+/// # Safety
+/// `rectangle` is a readable `GERectangle`, `player` a live player or null, `out` a live vector.
 void ee_gamecpp_pz_box(void *picker,
                        const void *rectangle,
                        bool all,

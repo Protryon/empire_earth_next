@@ -273,8 +273,11 @@ fn find_unit(picker: P, point: *const Ge2DPoint, prefer_resources: c_long) -> P 
 /// EEUnitPicker::PickBox (PickUnits and PickUnitsInRectangle): under the lock, the ids of the units inside a screen
 /// rectangle's frustum (`all`: every pickable unit, else `player`'s of a type) into `out` (a
 /// `std::vector<unsigned long>`).
+///
+/// # Safety
+/// `rectangle` is a readable `GERectangle`, `player` a live player or null, `out` a live vector.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_pz_box(
+pub unsafe extern "C" fn ee_gamecpp_pz_box(
     picker: *mut c_void,
     rectangle: *const c_void,
     all: bool,

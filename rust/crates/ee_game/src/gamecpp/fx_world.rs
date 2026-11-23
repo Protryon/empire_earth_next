@@ -34,7 +34,17 @@ use ee_render::gfx::raster::EeGfxModel;
 use ee_sim::world::unit_fields::EeUnitsComplexUnitFields;
 
 use super::effect_host::{
-    ee_gamecpp_fx_animation_sound, ee_gamecpp_fx_capture, ee_gamecpp_fx_confirm_goal, ee_gamecpp_fx_damaged_tick, ee_gamecpp_fx_doppelganger, ee_gamecpp_fx_effect_detail, ee_gamecpp_fx_emitter_sound, ee_gamecpp_fx_farm_doppelganger, ee_gamecpp_fx_farm_drop_site, ee_gamecpp_fx_farm_opacity, ee_gamecpp_fx_farm_terrain, ee_gamecpp_fx_glow_area, ee_gamecpp_fx_goal_count, ee_gamecpp_fx_goal_facts, ee_gamecpp_fx_goal_ground, ee_gamecpp_fx_goal_location, ee_gamecpp_fx_goal_player, ee_gamecpp_fx_goal_step, ee_gamecpp_fx_goal_target, ee_gamecpp_fx_goal_unit_location, ee_gamecpp_fx_ground_at, ee_gamecpp_fx_ground_point, ee_gamecpp_fx_icons_selected, ee_gamecpp_fx_memory_file_data, ee_gamecpp_fx_part_sound, ee_gamecpp_fx_rain_sounds, ee_gamecpp_fx_set_area_effects, ee_gamecpp_fx_sound_object_load, ee_gamecpp_fx_sound_object_unload, ee_gamecpp_fx_sound_release, ee_gamecpp_fx_storm_is_water, ee_gamecpp_fx_storm_ripple, ee_gamecpp_fx_storm_step_toward, ee_gamecpp_fx_tile_seen, ee_gamecpp_fx_volcano_build, ee_gamecpp_fx_wall_gate_posts, ee_gamecpp_fx_wall_piece, ee_gamecpp_fx_weapon_point,
+    ee_gamecpp_fx_animation_sound, ee_gamecpp_fx_capture, ee_gamecpp_fx_confirm_goal, ee_gamecpp_fx_damaged_tick,
+    ee_gamecpp_fx_doppelganger, ee_gamecpp_fx_effect_detail, ee_gamecpp_fx_emitter_sound,
+    ee_gamecpp_fx_farm_doppelganger, ee_gamecpp_fx_farm_drop_site, ee_gamecpp_fx_farm_opacity,
+    ee_gamecpp_fx_farm_terrain, ee_gamecpp_fx_glow_area, ee_gamecpp_fx_goal_count, ee_gamecpp_fx_goal_facts,
+    ee_gamecpp_fx_goal_ground, ee_gamecpp_fx_goal_location, ee_gamecpp_fx_goal_player, ee_gamecpp_fx_goal_step,
+    ee_gamecpp_fx_goal_target, ee_gamecpp_fx_goal_unit_location, ee_gamecpp_fx_ground_at, ee_gamecpp_fx_ground_point,
+    ee_gamecpp_fx_icons_selected, ee_gamecpp_fx_memory_file_data, ee_gamecpp_fx_part_sound, ee_gamecpp_fx_rain_sounds,
+    ee_gamecpp_fx_set_area_effects, ee_gamecpp_fx_sound_object_load, ee_gamecpp_fx_sound_object_unload,
+    ee_gamecpp_fx_sound_release, ee_gamecpp_fx_storm_is_water, ee_gamecpp_fx_storm_ripple,
+    ee_gamecpp_fx_storm_step_toward, ee_gamecpp_fx_tile_seen, ee_gamecpp_fx_volcano_build,
+    ee_gamecpp_fx_wall_gate_posts, ee_gamecpp_fx_wall_piece, ee_gamecpp_fx_weapon_point,
 };
 use super::{cptr, h, hd, hf, hp, ptr, rec, O, P};
 
@@ -432,7 +442,12 @@ pub extern "C" fn ee_gamecpp_fw_file(file_: *mut c_void) -> EeGfxEffectFile {
 
 /// EEEffectManager::Load: the manager's effects from the file.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_fw_load(m: *mut EeGfxEffectManager, file_: *mut c_void, major: c_ulong, minor: c_ulong) -> c_long {
+pub extern "C" fn ee_gamecpp_fw_load(
+    m: *mut EeGfxEffectManager,
+    file_: *mut c_void,
+    major: c_ulong,
+    minor: c_ulong,
+) -> c_long {
     let f = file(file_);
     // SAFETY: a live manager and the file's view for the call
     unsafe { ee_gfx_manager_load(m, &f, major as u32, minor as u32) as c_long }
@@ -440,7 +455,12 @@ pub extern "C" fn ee_gamecpp_fw_load(m: *mut EeGfxEffectManager, file_: *mut c_v
 
 /// EEEffectManager::Save: the manager's effects to the file.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_fw_save(m: *mut EeGfxEffectManager, file_: *mut c_void, major: c_ulong, minor: c_ulong) -> c_long {
+pub extern "C" fn ee_gamecpp_fw_save(
+    m: *mut EeGfxEffectManager,
+    file_: *mut c_void,
+    major: c_ulong,
+    minor: c_ulong,
+) -> c_long {
     let f = file(file_);
     // SAFETY: as ee_gamecpp_fw_load
     unsafe { ee_gfx_manager_save(m, &f, major as u32, minor as u32) as c_long }

@@ -11,8 +11,8 @@ use ee_base::math::types::{Ge3DPoint, GeRectangle, GeTransformation};
 use ee_render::ge::viewport::GeViewport;
 use ee_render::gfx::effects::{EeGfxColor, EeGfxEffectQuad};
 use ee_render::gfx::fill::{ee_gfx_fill_unit_opacity, EeGfxOpacityHost};
-use ee_render::gfx::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex};
 use ee_render::gfx::lighting::EeGfxLighting;
+use ee_render::gfx::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex};
 use ee_render::gfx::raster::{EeGfxModel, EeGfxRaster, EeGfxScreenLine, EeGfxTextureLoad};
 
 use super::effect_host::ee_gamecpp_fx_batch_quad;
@@ -184,7 +184,7 @@ extern "C" fn opacity_mesh_z(_: *mut c_void, x: f32, y: f32) -> f32 {
 
 /// EERenderObject::GetUnitOpacity: a unit's opacity this frame (see-through modes, its own fade, buildings fading in
 /// front of the near clipping plane); whether it is drawn translucent.
-pub fn unit_opacity(unit: P, show_hidden: c_long, opacity: *mut f32) -> bool {
+pub(super) fn unit_opacity(unit: P, show_hidden: c_long, opacity: *mut f32) -> bool {
     let host = EeGfxOpacityHost {
         context: std::ptr::null_mut(),
         own: opacity_own,
