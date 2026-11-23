@@ -13,7 +13,7 @@
 #include "ee/EEUIBuildWall.h"
 #include "rust/ui/formobj.h"
 
-class EEUIFMGGroup;
+class EEUIFMGMainGroup;
 class EEUIFMGStatusButton;
 class EEUIFMGInformation;
 class EEUIFMainGame;
@@ -174,17 +174,15 @@ public:
     }
     void ShowAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_SHOW_BACKGROUNDS); }   // 0x26568e (EERenderObject's)
     void HideAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS); }
-    // UIForm's protected members the host's shims call (main_form_calls.rs)
-    using UIForm::GetDrawToolTipShadow;
-    using UIForm::SetDrawToolTipShadow;
 
     UWideString mStrings[0x24];             // +0x1a0 (CopyData copies them into control 0x1b's list while mStringsChanged)
     EEUIBuildWall mBuildWall;               // +0x494
     EEUIBuildGate mBuildGate;               // +0x4b4
     // (+0x4d4 mUnitInfoBackground .. +0x518 mCalamity but the panel groups: the Rust record
     // EeScreensMainFormObjects, untyped)
-    EEUIFMGGroup* mGroups[6];               // +0x4ec (0: EEUIFMGMainGroup, 1: statistics, 2: chat, 3: diplomacy,
-                                            //  4: options, 5: civilization builder; CreateGroup 0x26522b)
+    // +0x4ec the panel groups (0: the main group, 1: statistics, 2: chat, 3: diplomacy, 4: options, 5: civilization
+    // builder; CreateGroup 0x26522b): the main group's object; the other five are Rust's kinds (panel_groups.rs)
+    EEUIFMGMainGroup* mMainGroup;
 };
 
 #endif

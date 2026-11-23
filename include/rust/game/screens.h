@@ -18009,8 +18009,11 @@ long ee_screens_mini_map_left_down(void *map);
 /// `map` is the live mini map.
 long ee_screens_mini_map_right_up(void *map);
 
-/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
-void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
+/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind, on the main game
+/// form of the form's call record `rec` (an `EEUIFMGFormCall*`).
+void ee_screens_group_call(size_t rec,
+                           uint32_t kind,
+                           uint32_t call);
 
 /// `EEUIFErrorShow` (`EEUIFErrorDisplay` through the game's UI table): the new box `dialog` (its `UIForm*`) shown as
 /// `kind` with the message, its alignment, the callbacks and their data, the form Cancel closes and the flag.

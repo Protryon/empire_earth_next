@@ -779,7 +779,7 @@ extern "C" uintptr_t ee_screenscpp_world_unit(uint64_t inId) { return (uintptr_t
 extern "C" void ee_screenscpp_camera_follow(uintptr_t inUnit, bool inFollow)
 { gWorld.mCameraControl.Follow(reinterpret_cast<EEUnit*>(inUnit), inFollow, 1.0f, 0.0f, 0.0f); }
 extern "C" uintptr_t ee_screenscpp_main_group_selected_unit()
-{ return (uintptr_t)static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0])->GetSelectedUnit(); }
+{ return (uintptr_t)gUIManager->GetMainGameForm()->mMainGroup->GetSelectedUnit(); }
 extern "C" bool ee_screenscpp_unit_has_complex(uintptr_t inUnit)
 { return reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit != NULL; }
 extern "C" bool ee_screenscpp_unit_has_class(uintptr_t inUnit)

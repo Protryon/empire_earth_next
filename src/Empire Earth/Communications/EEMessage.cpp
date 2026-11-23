@@ -782,7 +782,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::MainFormUpdateHelp: MAIN_FORM->UpdateHelpString();
         break;
-    case O::MainFormGroup0: return P64(static_cast<EEUIFMGMainGroup*>(MAIN_FORM->mGroups[0]));
+    case O::MainFormGroup0: return P64(MAIN_FORM->mMainGroup);
     case O::MainGroupReset: ((EEUIFMGMainGroup*)p)->Reset();
         break;
     case O::GameUiShowCommands: gEEGameUI.mShowCommands((EEUIFMGMainGroup*)p, ((EEUIFMGMainGroup*)p)->GetSelectedUnit());

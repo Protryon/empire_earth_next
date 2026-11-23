@@ -203,9 +203,9 @@ extern "C" void ee_screenscpp_sbt_object_pressed_icon(uintptr_t inRec)
 extern "C" void ee_screenscpp_sbt_object_face_icon(uintptr_t inRec)
 { static_cast<EEButtonObject*>(SBRB(inRec)->mButtonObject)->SetFaceBitmap(static_cast<GEBitmap*>(SBRB(inRec)->mIcon), SBRB(inRec)->GetRectangle(), SBRB(inRec)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_sbt_main_group_l1c(int64_t inValue)
-{ static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0])->mL1C = (long)inValue; }
+{ gUIManager->GetMainGameForm()->mMainGroup->mL1C = (long)inValue; }
 extern "C" void ee_screenscpp_sbt_main_group_reset()
-{ static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0])->mReset = true; }
+{ gUIManager->GetMainGameForm()->mMainGroup->mReset = true; }
 extern "C" uintptr_t ee_screenscpp_sbt_object(uintptr_t inButton) { return (uintptr_t)static_cast<EEButtonObject*>(SBB(inButton)->mButtonObject); }
 extern "C" void ee_screenscpp_sbt_object_release(uintptr_t inButton) { static_cast<EEButtonObject*>(SBB(inButton)->mButtonObject)->Release(); }
 extern "C" void ee_screenscpp_sbt_object_clear(uintptr_t inButton) { SBB(inButton)->mButtonObject = NULL; }

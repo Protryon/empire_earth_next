@@ -1440,7 +1440,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_HEAL_HIT_POINTS: return sUcHeal.hit_points;
     case EE_UNITS_UC_IS_CURRENT_PLAYER: return theUnit->GetPlayer() == ::gWorld.GetCurrentPlayer();
     case EE_UNITS_UC_GROUP_CONTAINS: return theUnit->GetPlayer()->mActiveGroup->Contains(theUnit);
-    case EE_UNITS_UC_RESET_GROUP_PANEL: gUIManager->GetMainGameForm()->mGroups[0]->Reset(); return 0;
+    case EE_UNITS_UC_RESET_GROUP_PANEL: gUIManager->GetMainGameForm()->mMainGroup->Reset(); return 0;
     case EE_UNITS_UC_SET_REGENERATION_TIMER: theUnit->SetRegenerationTimer((long)inB); return 0;
     case EE_UNITS_UC_COMBAT_REGENERATE:
         sUcRegen = EECombatRegenerate(EeCombatRegenerateIn{(int32_t)theUnit->mRegenerationTimer, (int32_t)gPhysics->mTickTimeMs, (int32_t)theUnit->mHitPoints, (int32_t)theUnit->mStats->mRegeneration, (int32_t)theUnit->mStats->mMaxHitPoints, (int32_t)EEGetRules().mCombat.mRegenerationInterval});

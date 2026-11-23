@@ -7,20 +7,12 @@
 #![cfg_attr(test, allow(dead_code))]
 
 use crate::screens::game_cpp::{Cpp, EeScreensShimOut, EeScreensShimPtrOut};
-use crate::screens::panel_groups::{
-    EE_SCREENS_GROUP_CHAT, EE_SCREENS_GROUP_CIV_BUILDER, EE_SCREENS_GROUP_DIPLOMACY, EE_SCREENS_GROUP_OPTIONS,
-    EE_SCREENS_GROUP_STATISTICS,
-};
 
 /// `EEUIFMainGame::CreateGroup(index)`: the main panel group (0) or one of the five Rust groups.
 pub(crate) fn main_create_group<C: Cpp + ?Sized>(c: &mut C, form: usize, index: u32) {
     match index {
         0 => c.mfb_group_main(form),
-        EE_SCREENS_GROUP_STATISTICS
-        | EE_SCREENS_GROUP_CHAT
-        | EE_SCREENS_GROUP_DIPLOMACY
-        | EE_SCREENS_GROUP_OPTIONS
-        | EE_SCREENS_GROUP_CIV_BUILDER => c.mfb_group_rust(form, index),
+        // the five others are Rust kinds (panel_groups.rs), no object
         _ => {}
     }
 }
@@ -45,9 +37,7 @@ pub(crate) fn main_destroy<C: Cpp + ?Sized>(c: &mut C, form: usize) {
     c.mfb_mouse_click_dereference(form);
     c.mfb_lasso_dereference(form);
     c.mfb_destroy_error_section(form);
-    for i in 0..6 {
-        c.mfb_group_delete(form, i);
-    }
+    c.mfb_group_delete(form);
     c.mfb_poll_delete(form);
     c.mfb_build_dereference(form);
     c.mfb_calamity_dereference(form);
@@ -182,7 +172,7 @@ mod tests {
         main_create_group(&mut fake, 9, 0);
         main_create_group(&mut fake, 9, 5);
         main_create_group(&mut fake, 9, 6);
-        assert_eq!(fake.calls(), "mfb_group_main(9)\nmfb_group_rust(9, 5)");
+        assert_eq!(fake.calls(), "mfb_group_main(9)");
         let mut fake = Fake::default();
         fake.answer("mfb_unit_info", &[30, 0]).answer("mfb_background_visible", &[1]);
         fake.answer("mfb_background_contains", &[1]).answer("mfb_view_contains", &[1, 1]);
@@ -196,7 +186,7 @@ mod tests {
         main_destroy(&mut fake, 9);
         let calls = fake.calls();
         assert!(calls.starts_with("mfb_grab_scroll_dereference(9)\nmfb_release_grab_scroll()\n"));
-        assert!(calls.contains("mfb_group_delete(9, 5)\nmfb_poll_delete(9)"));
+        assert!(calls.contains("mfb_group_delete(9)\nmfb_poll_delete(9)"));
         assert!(calls.ends_with("mfb_unit_hack_delete(9)"));
     }
 

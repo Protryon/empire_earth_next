@@ -716,7 +716,8 @@ shims! {
     fn mf_error_lock_leave(rec: usize) = ee_screenscpp_mf_error_lock_leave;
     fn mf_group_reset(rec: usize) = ee_screenscpp_mf_group_reset;
     fn mf_group_refresh(rec: usize) = ee_screenscpp_mf_group_refresh;
-    fn mf_group_select(rec: usize) = ee_screenscpp_mf_group_select;
+    fn mf_current_group(rec: usize) -> u32 = ee_screenscpp_mf_current_group;
+    fn panel_group(rec: usize, kind: u32, call: u32) = ee_screens_group_call;
     fn mf_group_wants_refresh(rec: usize) -> bool = ee_screenscpp_mf_group_wants_refresh;
     fn mf_pick(rec: usize) -> usize = ee_screenscpp_mf_pick;
     fn mf_picked_is_wall(rec: usize) -> bool = ee_screenscpp_mf_picked_is_wall;
@@ -2969,7 +2970,6 @@ shims! {
     fn sf_chat_line_new(table: usize, form: usize, opacity_bits: i64) -> usize = ee_screenscpp_sf_chat_line_new;
     // the HUD classes' bodies (hud_bodies.rs, UI lane round 12)
     fn mfb_group_main(form: usize) = ee_screenscpp_mfb_group_main;
-    fn mfb_group_rust(form: usize, index: u32) = ee_screenscpp_mfb_group_rust;
     fn mfb_unit_info(form: usize) -> usize = ee_screenscpp_mfb_unit_info;
     fn mfb_background_visible(background: usize) -> bool = ee_screenscpp_mfb_background_visible;
     fn mfb_background_contains(background: usize, x: f32, y: f32) -> bool = ee_screenscpp_mfb_background_contains;
@@ -2981,7 +2981,7 @@ shims! {
     fn mfb_mouse_click_dereference(form: usize) = ee_screenscpp_mfb_mouse_click_dereference;
     fn mfb_lasso_dereference(form: usize) = ee_screenscpp_mfb_lasso_dereference;
     fn mfb_destroy_error_section(form: usize) = ee_screenscpp_mfb_destroy_error_section;
-    fn mfb_group_delete(form: usize, index: u32) = ee_screenscpp_mfb_group_delete;
+    fn mfb_group_delete(form: usize) = ee_screenscpp_mfb_group_delete;
     fn mfb_poll_delete(form: usize) = ee_screenscpp_mfb_poll_delete;
     fn mfb_build_dereference(form: usize) = ee_screenscpp_mfb_build_dereference;
     fn mfb_calamity_dereference(form: usize) = ee_screenscpp_mfb_calamity_dereference;

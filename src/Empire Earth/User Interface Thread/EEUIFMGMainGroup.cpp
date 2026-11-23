@@ -41,7 +41,7 @@
 
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
-    : EEUIFMGGroup(inOwner), EeScreensMainGroupFields()
+    : EeScreensMainGroupFields(), mOwner(inOwner)
 {
     ee_screens_main_group_fields(this, static_cast<EeScreensMainGroupFields*>(this));   // (the record zeroed)
     this->mStatusBox = new EEUIFMGStatusBox(inOwner);
@@ -63,7 +63,6 @@ EEUnit* EEComplexUnit::GetCitizenBuildTarget(unsigned long inIndex)
 }
 
 // The panel groups' values (ee_screens panel_groups_ffi.rs, which prints their texts): each one call, no logic
-extern "C" uintptr_t ee_screenscpp_group_owner(void* inGroup) { return (uintptr_t)static_cast<EEUIFMGGRust*>(inGroup)->mOwner; }
 extern "C" int32_t ee_screenscpp_group_conversions() { return gWorld.GetCurrentPlayer()->mSavedGroups.GetLastValue(5); }
 extern "C" int32_t ee_screenscpp_group_conversions_max() { return gWorldTable.GetLongValue(kWorldConversionsStatisticMax); }
 extern "C" int32_t ee_screenscpp_group_wonders_to_win() { return gWorld.mNumberOfWondersToWin; }

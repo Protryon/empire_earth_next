@@ -369,14 +369,12 @@ extern "C" void ee_screenscpp_mf_gate_update(uintptr_t inRec)
 { static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mBuildGate.Update(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->GetMouseLocation()); }
 extern "C" void ee_screenscpp_mf_error_lock_enter(uintptr_t inRec) { static_cast<TSCriticalSection*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mErrorCriticalSection)->Enter(); }
 extern "C" void ee_screenscpp_mf_error_lock_leave(uintptr_t inRec) { static_cast<TSCriticalSection*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mErrorCriticalSection)->Leave(); }
-extern "C" void ee_screenscpp_mf_group_reset(uintptr_t inRec)
-{ static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mGroups[static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mCurrentGroup]->Reset(); }
-extern "C" void ee_screenscpp_mf_group_refresh(uintptr_t inRec)
-{ static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mGroups[static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mCurrentGroup]->Refresh(); }
-extern "C" void ee_screenscpp_mf_group_select(uintptr_t inRec)
-{ static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mGroups[static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mCurrentGroup]->Select(); }
+extern "C" uint32_t ee_screenscpp_mf_current_group(uintptr_t inRec)
+{ return (uint32_t)static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mCurrentGroup; }
+extern "C" void ee_screenscpp_mf_group_reset(uintptr_t inRec) { static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mMainGroup->Reset(); }
+extern "C" void ee_screenscpp_mf_group_refresh(uintptr_t inRec) { static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mMainGroup->Refresh(); }
 extern "C" bool ee_screenscpp_mf_group_wants_refresh(uintptr_t inRec)
-{ return static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mGroups[static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mCurrentGroup]->WantsRefresh() == true; }
+{ return static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mMainGroup->WantsRefresh(); }
 extern "C" uintptr_t ee_screenscpp_mf_pick(uintptr_t inRec)
 { return (uintptr_t)(R(inRec)->mPicked = gUnitPicker.PickUnit(gMouse->mPosition, 0)); }
 extern "C" bool ee_screenscpp_mf_picked_is_wall(uintptr_t inRec) { return static_cast<EEUnit*>(R(inRec)->mPicked)->mUnitClass->mIsWall; }
@@ -479,9 +477,9 @@ extern "C" void ee_screenscpp_mf_cancel_button_up(uintptr_t inRec, uintptr_t inE
 extern "C" void ee_screenscpp_mf_cancel_right_button_up(uintptr_t inRec, uintptr_t inEvent)
 { static_cast<EEUIFMainGame*>(R(inRec)->mForm)->GetControl(kMainGameCancelUIMode)->SetTriggerEvent(kControlTriggerRightButtonUp, reinterpret_cast<UIEvent*>(inEvent)); }
 extern "C" void ee_screenscpp_mf_main_group_open(uintptr_t inRec)
-{ static_cast<EEUIFMGMainGroup*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mGroups[0])->Open(static_cast<EEUIFMainGame*>(R(inRec)->mForm)); }
+{ static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mMainGroup->Open(static_cast<EEUIFMainGame*>(R(inRec)->mForm)); }
 extern "C" void ee_screenscpp_mf_main_group_clear_l20(uintptr_t inRec)
-{ static_cast<EEUIFMGMainGroup*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mGroups[0])->mL20 = 0; }
+{ static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mMainGroup->mL20 = 0; }
 extern "C" void ee_screenscpp_post_graphics_all() { EEPostGraphicsAll(); }
 extern "C" void ee_screenscpp_gfx_fade_in(uint32_t inValue) { gGraphics->PostFadeIn(inValue); }
 extern "C" void ee_screenscpp_mf_media_load(uintptr_t inRec) { static_cast<EEMedia*>(R(inRec)->mMedia)->LoadMedia(); }
@@ -666,9 +664,7 @@ extern "C" void ee_screenscpp_md_gate_clear(uintptr_t inRec) { static_cast<EEUIB
 // the destructor's, CreateGroup's and IsInGameView's bodies: hud_bodies.rs over these (UI lane round 12)
 #define MFB(f) ((EEUIFMainGame*)(f))
 extern "C" void ee_screenscpp_mfb_group_main(uintptr_t inForm)
-{ MFB(inForm)->mGroups[0] = new EEUIFMGMainGroup(MFB(inForm)); }
-extern "C" void ee_screenscpp_mfb_group_rust(uintptr_t inForm, uint32_t inIndex)
-{ MFB(inForm)->mGroups[inIndex] = new EEUIFMGGRust(MFB(inForm), inIndex); }
+{ MFB(inForm)->mMainGroup = new EEUIFMGMainGroup(MFB(inForm)); }
 extern "C" uintptr_t ee_screenscpp_mfb_unit_info(uintptr_t inForm)
 { return (uintptr_t)static_cast<UIBackground*>(MFB(inForm)->mUnitInfoBackground); }
 extern "C" bool ee_screenscpp_mfb_background_visible(uintptr_t inBackground)
@@ -685,8 +681,7 @@ extern "C" void ee_screenscpp_mfb_mouse_click_dereference(uintptr_t inForm) { st
 extern "C" void ee_screenscpp_mfb_lasso_dereference(uintptr_t inForm) { static_cast<EEALasso*>(MFB(inForm)->mLasso)->Dereference(); }
 extern "C" void ee_screenscpp_mfb_destroy_error_section(uintptr_t inForm)
 { TSScheduler::DestroyCriticalSection(static_cast<TSCriticalSection*>(MFB(inForm)->mErrorCriticalSection)); }
-extern "C" void ee_screenscpp_mfb_group_delete(uintptr_t inForm, uint32_t inIndex)
-{ delete MFB(inForm)->mGroups[inIndex]; }
+extern "C" void ee_screenscpp_mfb_group_delete(uintptr_t inForm) { delete MFB(inForm)->mMainGroup; }
 extern "C" void ee_screenscpp_mfb_poll_delete(uintptr_t inForm) { delete static_cast<TMPoll*>(MFB(inForm)->mPoll); }
 extern "C" void ee_screenscpp_mfb_build_dereference(uintptr_t inForm) { static_cast<EEABuild*>(MFB(inForm)->mBuild)->Dereference(); }
 extern "C" void ee_screenscpp_mfb_calamity_dereference(uintptr_t inForm) { static_cast<EEACalamity*>(MFB(inForm)->mCalamity)->Dereference(); }
