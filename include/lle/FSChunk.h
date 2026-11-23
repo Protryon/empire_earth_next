@@ -10,7 +10,8 @@
 #include "lle/FSPersistent.h"
 #include "lle/FSPersistentList.h"
 
-// The class forwards to Rust (rust/crates/ee_base/src/fs/chunk.rs); the persistent's virtual Load/Save stay C++.
+// The class forwards to Rust (rust/crates/ee_base/src/fs/chunk.rs, cppobj.rs: the persistent's virtual calls through
+// File System.cpp's table).
 class LLE_API FSChunk {                     // sizeof 0x1c
 public:
     FSChunk() { ee_fs_chunk_init(&this->mState); }                // empty: no header or data loaded
@@ -23,33 +24,14 @@ public:
     long LoadChunkFromFile(FSFile& inFile) { return ee_fs_chunk_load_from_file(&this->mState, &inFile); }
     // creates the persistent object registered for the chunk's tag and loads it from the chunk data
     long LoadPersistentFromChunk(FSPersistent*& outPersistent)
-    {
-        if (this->mState.data == NULL)
-            return kErrorNotSuspended;
-        outPersistent = FSPersistentList::CreateDefaultPersistent(this->mState.tag);
-        if (outPersistent == NULL)
-            return kErrorNotFound;
-        FSMemoryFile theData(this->mState.data, false);
-        return outPersistent->Load(this->mState.major, this->mState.minor, theData);
-    }
+        { return ee_fs_chunk_load_persistent(&this->mState, reinterpret_cast<void**>(&outPersistent)); }
     // the chunk header (versions, tag, size); a size of 2 GB or more fails
     long LoadChunkHeader(FSFile& inFile) { return ee_fs_chunk_load_header(&this->mState, &inFile); }
     // the header and the data
     long SaveChunkToFile(FSFile& outFile) { return ee_fs_chunk_save_to_file(&this->mState, &outFile); }
     // saves a persistent object into new compressed chunk data; the save's error when it fails
     long SavePersistentToChunk(unsigned long inMajorVersion, unsigned long inMinorVersion, FSPersistent* inPersistent)
-    {
-        EeFsMemFile* theData = ee_fs_chunk_begin_save(&this->mState);
-        if (theData == NULL)
-            return kErrorOK;   // a payload exists already
-        FSMemoryFile theFile(theData, false);
-        long theResult = inPersistent->Save(inMajorVersion, inMinorVersion, theFile);
-        if (theResult != kErrorOK)
-            return theResult;   // Fixed: a failed save used to be reported as success
-        ee_fs_chunk_finish_save(&this->mState, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
-                                (int32_t)inPersistent->GetTagID());
-        return kErrorOK;
-    }
+        { return ee_fs_chunk_save_persistent(&this->mState, inMajorVersion, inMinorVersion, inPersistent); }
     // over the chunk's data, loading the header first if needed
     long SkipChunk(FSFile& inFile) { return ee_fs_chunk_skip(&this->mState, &inFile); }
 

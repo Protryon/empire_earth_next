@@ -45,24 +45,11 @@ public:
     long Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
         { return ee_fs_arch_create_list(Rec(this), Spec(&inRoot), Text(inFiles.data()), inFiles.size(), inCompression); }
     // every archived file below a destination directory, creating directories as needed
-    long ExtractAll(const FSFileSpec& inDestination)
-    {
-        fflush(stdout);   // (the progress lines are Rust's: after the C runtime's)
-        return ee_fs_arch_extract_all(Rec(this), Spec(&inDestination), Text(&gStartupVolume), Text(&gStartupDirectory));
-    }
+    long ExtractAll(const FSFileSpec& inDestination)   // (the progress lines are Rust's: after the C runtime's)
+        { return ee_fs_arch_extract_all(Rec(this), Spec(&inDestination), Text(&gStartupVolume), Text(&gStartupDirectory)); }
     // a file by name (case-insensitive), decompressed as a new memory file
     long FindFile(const UString& inName, FSMemoryFile*& outFile)
-    {
-        UString theName(inName);
-        theName.ToLower();
-        EeFsMemFile* theData = NULL;
-        long theResult = ee_fs_arch_find(Rec(this), theName, &theData);
-        if (theData != NULL) {
-            outFile = new FSMemoryFile(theData, true);
-            ee_fs_arch_name_member(Rec(this), Spec(outFile), Text(&theName));
-        }
-        return theResult;
-    }
+        { return ee_fs_arch_find_file(Rec(this), Text(&inName), reinterpret_cast<void**>(&outFile)); }
     long FindFile(const UWideString& inName, FSMemoryFile*& outFile)
         { return this->FindFile(UString((const char*)inName), outFile); }
     const FSFileSpec& GetArchiveFile() const { return this->mArchiveFile; }    // folded 0x40cb (inline)
