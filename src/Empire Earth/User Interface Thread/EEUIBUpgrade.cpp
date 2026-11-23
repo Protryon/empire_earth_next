@@ -113,9 +113,9 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
         theButton->ReleaseCapturedMouse();
         return 0;
     case EE_SCREENS_UP_OP_COST_DIFFERS:
-        return theButton->mCostLabel != NULL && *ioCall.mOut != theButton->mCostLabel->GetText(0);
+        return static_cast<UITextLabel*>(theButton->mCostLabel) != NULL && *ioCall.mOut != static_cast<UITextLabel*>(theButton->mCostLabel)->GetText(0);
     case EE_SCREENS_UP_OP_COST_SET:
-        theButton->mCostLabel->SetText(*ioCall.mOut);
+        static_cast<UITextLabel*>(theButton->mCostLabel)->SetText(*ioCall.mOut);
         return 0;
     case EE_SCREENS_UP_OP_DIRTY:
         theButton->SetDirty(true);
@@ -183,11 +183,11 @@ extern "C" bool ee_screenscpp_up_inside_form_mouse(uintptr_t inCall)
 extern "C" bool ee_screenscpp_up_inside_location(uintptr_t inCall)
 { return UPB(inCall)->GetRectangle().Contains(*UPC(inCall).mLocation); }
 extern "C" float ee_screenscpp_up_icon_left(uintptr_t inCall)
-{ return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->GetRectangle().GetTopLeft().GetX(); }
+{ return static_cast<UIBitmap*>(static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon)->GetRectangle().GetTopLeft().GetX(); }
 extern "C" float ee_screenscpp_up_icon_top(uintptr_t inCall)
-{ return static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->GetRectangle().GetTopLeft().GetY(); }
+{ return static_cast<UIBitmap*>(static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon)->GetRectangle().GetTopLeft().GetY(); }
 extern "C" void ee_screenscpp_up_icon_set_location(uintptr_t inCall, float inX, float inY)
-{ static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon->SetLocation(GE2DPoint(inX, inY)); }
+{ static_cast<UIBitmap*>(static_cast<EEUIFMGStatusBar*>(UPB(inCall))->mIcon)->SetLocation(GE2DPoint(inX, inY)); }
 // the constructor's body and the draw, dirty, mouse and press overrides: hud_bodies.rs over these (UI lane round 12)
 #define UPBB(b) ((EEUIBUpgrade*)(b))
 extern "C" void ee_screenscpp_upb_set_num_queued(uintptr_t inButton, int64_t inValue)
@@ -211,7 +211,7 @@ extern "C" void ee_screenscpp_upb_base_button_down(uintptr_t inButton) { EEUIBUp
 extern "C" void ee_screenscpp_upb_update_help(uintptr_t inButton) { UPBB(inButton)->GetForm()->UpdateHelpString(); }
 extern "C" int64_t ee_screenscpp_upb_base_copy_data(uintptr_t inButton)
 { return (int64_t)UPBB(inButton)->UIButton::CopyData(); }
-extern "C" uintptr_t ee_screenscpp_upb_cost_label(uintptr_t inButton) { return (uintptr_t)UPBB(inButton)->mCostLabel; }
+extern "C" uintptr_t ee_screenscpp_upb_cost_label(uintptr_t inButton) { return (uintptr_t)static_cast<UITextLabel*>(UPBB(inButton)->mCostLabel); }
 extern "C" void ee_screenscpp_upb_label_dirty_rect(uintptr_t inButton, uintptr_t inLabel)
 { UPBB(inButton)->GetForm()->GetManager()->AddDirtyRectangle(((UITextLabel*)inLabel)->GetRectangle(), UPBB(inButton)->GetForm()); }
 extern "C" int64_t ee_screenscpp_upb_label_copy_data(uintptr_t inLabel)

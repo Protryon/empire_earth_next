@@ -296,9 +296,9 @@ extern "C" uintptr_t ee_screenscpp_ct_new_attribute(uintptr_t inTable, uintptr_t
 extern "C" uintptr_t ee_screenscpp_ct_new_status_bar(uintptr_t inTable, uintptr_t inForm)
 { return (uintptr_t)static_cast<UIControl*>(new EEUIFMGStatusBar(UMCT(inTable).GetFormID(), UMCT(inTable).GetFormIndex(), (UILayoutUtility*)&UMCT(inTable).GetLayout(), 800, 600, EEScratch<GERectangle>(kScratchUMRect), UMF(inForm), false, true, UMCT(inTable).GetLoopMovie())); }
 extern "C" uintptr_t ee_screenscpp_ct_new_select_units(uintptr_t inManager, uintptr_t inTable, uintptr_t inForm)
-{ return (uintptr_t)static_cast<UIControl*>(new EEUICSelectUnits(UMF(inForm), UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), UMG(inManager)->GetMainGameForm()->mMouseClick, UMG(inManager)->GetMainGameForm()->mLasso)); }
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICSelectUnits(UMF(inForm), UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), static_cast<EEAMouseClick*>(UMG(inManager)->GetMainGameForm()->mMouseClick), static_cast<EEALasso*>(UMG(inManager)->GetMainGameForm()->mLasso))); }
 extern "C" uintptr_t ee_screenscpp_ct_new_command_units(uintptr_t inManager, uintptr_t inTable, uintptr_t inForm)
-{ return (uintptr_t)static_cast<UIControl*>(new EEUICCommandUnits(UMF(inForm), UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), UMG(inManager)->GetMainGameForm()->mMouseClick)); }
+{ return (uintptr_t)static_cast<UIControl*>(new EEUICCommandUnits(UMF(inForm), UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), static_cast<EEAMouseClick*>(UMG(inManager)->GetMainGameForm()->mMouseClick))); }
 extern "C" uintptr_t ee_screenscpp_ct_new_portrait(uintptr_t inTable, uintptr_t inForm)
 { return (uintptr_t)static_cast<UIControl*>(new EEUICPortrait(UMF(inForm), EEScratch<GERectangle>(kScratchUMRect), UMCT(inTable).GetID(), UMCT(inTable).GetFormIndex(), false)); }
 extern "C" void ee_screenscpp_ct_setup_font(uintptr_t inManager, uintptr_t inTable)

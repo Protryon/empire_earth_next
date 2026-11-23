@@ -28,18 +28,18 @@
 EEUICSelectUnits::EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inClick,
                                    EEALasso* inLasso)
     : EEUIRustControl(inId, GERectangle(GE2DPoint(gViewport.GetViewRectangle().GetTopLeft()), 2.0f, 2.0f), inForm, inIndex, 0),
-      EeScreensSelectUnitsFields(), mClick(inClick), mLasso(inLasso)
+      EeScreensSelectUnitsFields(), EeScreensSelectUnitsObjects{inClick, inLasso}
 {
     ee_screens_su_construct(this);   // (hud_ctl_ffi.rs: hidden, the handlers referenced, always dirty)
 }
 
 // the constructor's and destructor's calls (hud_ctl_ffi.rs)
 extern "C" void ee_screenscpp_su_hide(EEUICSelectUnits* inBox) { EEUICSelectUnits::Hide(inBox); }
-extern "C" void ee_screenscpp_su_click_reference(EEUICSelectUnits* inBox) { inBox->mClick->Reference(); }
-extern "C" void ee_screenscpp_su_lasso_reference(EEUICSelectUnits* inBox) { inBox->mLasso->Reference(); }
+extern "C" void ee_screenscpp_su_click_reference(EEUICSelectUnits* inBox) { static_cast<EEAMouseClick*>(inBox->mClick)->Reference(); }
+extern "C" void ee_screenscpp_su_lasso_reference(EEUICSelectUnits* inBox) { static_cast<EEALasso*>(inBox->mLasso)->Reference(); }
 extern "C" void ee_screenscpp_su_always_dirty(EEUICSelectUnits* inBox) { inBox->SetAlwaysDirty(true); }
-extern "C" void ee_screenscpp_su_click_release(EEUICSelectUnits* inBox) { inBox->mClick->Dereference(); }
-extern "C" void ee_screenscpp_su_lasso_release(EEUICSelectUnits* inBox) { inBox->mLasso->Dereference(); }
+extern "C" void ee_screenscpp_su_click_release(EEUICSelectUnits* inBox) { static_cast<EEAMouseClick*>(inBox->mClick)->Dereference(); }
+extern "C" void ee_screenscpp_su_lasso_release(EEUICSelectUnits* inBox) { static_cast<EEALasso*>(inBox->mLasso)->Dereference(); }
 
 int64_t EEUICSelectUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
@@ -47,13 +47,13 @@ int64_t EEUICSelectUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
     switch (inOp) {
     case EE_SCREENS_SU_PICK: return (int64_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
     case EE_SCREENS_SU_LASSO_TYPE:
-        this->mLasso->SelectUnits(gU4E8F08.GetViewRectangle(), (long)inB, theUnit->GetUnitClass()->mUnitType, theUnit->mUnitID);
+        static_cast<EEALasso*>(this->mLasso)->SelectUnits(gU4E8F08.GetViewRectangle(), (long)inB, theUnit->GetUnitClass()->mUnitType, theUnit->mUnitID);
         break;
     case EE_SCREENS_SU_DEREF: theUnit->Dereference(); break;
     case EE_SCREENS_SU_LASSO_BOX:
-        this->mLasso->SelectUnits(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]), (long)inA, kAnyUnitType, 0);
+        static_cast<EEALasso*>(this->mLasso)->SelectUnits(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]), (long)inA, kAnyUnitType, 0);
         break;
-    case EE_SCREENS_SU_CLICK: this->mClick->SelectAtMouse((unsigned long)inA); break;
+    case EE_SCREENS_SU_CLICK: static_cast<EEAMouseClick*>(this->mClick)->SelectAtMouse((unsigned long)inA); break;
     // the trigger tab's (EESEUICTriggerSelectUnits)
     case EE_SCREENS_SU_POINT_AT: {
         GE3DPoint thePoint;
@@ -64,9 +64,9 @@ int64_t EEUICSelectUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float*
         break;
     }
     case EE_SCREENS_SU_LASSO_IN_RECT:
-        this->mLasso->SelectInRectangle(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]), (long)inA);
+        static_cast<EEALasso*>(this->mLasso)->SelectInRectangle(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]), (long)inA);
         break;
-    case EE_SCREENS_SU_CLICK_EXECUTE: this->mClick->Execute(ioF[0], ioF[1], true, 1, false, 0.0f, false); break;
+    case EE_SCREENS_SU_CLICK_EXECUTE: static_cast<EEAMouseClick*>(this->mClick)->Execute(ioF[0], ioF[1], true, 1, false, 0.0f, false); break;
     case EE_SCREENS_SU_L_DOWN: return this->MouseLButtonDown();
     }
     return 0;

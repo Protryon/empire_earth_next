@@ -288,6 +288,8 @@ pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
 pub mod hud;
+// the game UI classes' members as Rust records (round 15)
+pub mod hud_fields;
 pub mod hud_ctl;
 #[cfg(not(test))]
 mod hud_ctl_ffi;

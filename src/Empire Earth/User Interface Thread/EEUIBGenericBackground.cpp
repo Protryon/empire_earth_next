@@ -46,7 +46,8 @@ EEUIBGenericBackground::EEUIBGenericBackground(unsigned long inBackgroundID, con
                                                unsigned long inDrawPriority, const GEColor& inColor, bool inVisible,
                                                float inOpacity, float inScaleX, float inScaleY, unsigned long inFlags)
     : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, GERectangle(), inLayout, inForm,
-                         inDrawPriority, inVisible)
+                         inDrawPriority, inVisible),
+      EeScreensBackgroundFields()
 {
     ee_screens_gb_construct((uintptr_t)this, inOpacity, (uint32_t)inFlags, (uintptr_t)&inColor, inScaleX, inScaleY);
 }

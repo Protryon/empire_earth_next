@@ -13,19 +13,10 @@
 #include "ee/EEUIBuildWall.h"
 #include "rust/ui/formobj.h"
 
-class EEABuild;
-class EEACalamity;
-class EEALasso;
-class EEAMouseClick;
-class EEAScroll;
 class EEUIFMGGroup;
 class EEUIFMGStatusButton;
 class EEUIFMGInformation;
-class EEUIFMGUnitHack;
 class EEUnit;
-class UIBackground;
-class TMPoll;
-class TSCriticalSection;
 class EEUIFMainGame;
 class EESMDialogMessage;
 class EETechTreeNode;
@@ -76,14 +67,14 @@ struct EEUIFMGFormCall {
 // the plain members (+0x520 mKeyboardModes .. +0x5f3 mIsButtonBlinking: the modes of each interface state, the state,
 // the media, the groups, the poll's time, the hot key and clock modes, the flags) are the Rust record
 // EeScreensMainFormFields (ee_screens main_form_fields.rs), under their names
-class EEUIFMainGame : public UIForm, public EeScreensMainFormFields {
+class EEUIFMainGame : public UIForm, public EeScreensMainFormFields, public EeScreensMainFormObjects {
 public:
     virtual void SetHelpTextPopupLocation() {}   // +0x24 datacmp: slot 9 = 0x4e123d (an empty `ret`)
     // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity), the
     // mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
     // construct; it reads no control: they are made after it)
     EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
-        : UIForm(inManager, inData, true), EeScreensMainFormFields()
+        : UIForm(inManager, inData, true), EeScreensMainFormFields(), EeScreensMainFormObjects()
     {
         ee_screens_main_form_new(EEUIFMGFormCall(this).Ptr(), static_cast<EeScreensMainFormFields*>(this));
     }
@@ -210,19 +201,10 @@ public:
     UWideString mStrings[0x24];             // +0x1a0 (CopyData copies them into control 0x1b's list while mStringsChanged)
     EEUIBuildWall mBuildWall;               // +0x494
     EEUIBuildGate mBuildGate;               // +0x4b4
-    UIBackground* mUnitInfoBackground;      // +0x4d4 the background 0x64 (Open)
-    UIEvent* mWheelZoom;                    // +0x4d8 (EE_SCREENS_CAM_WHEEL_ZOOM)
-    UIEvent* mGrabScroll;                   // +0x4dc (the middle button's pressed and unpressed event: EECreateGrabScroll)
-    TSCriticalSection* mErrorCriticalSection;        // +0x4e4 (guards mStrings)
-    EEUIFMGUnitHack* mUnitHack;             // +0x4e8
+    // (+0x4d4 mUnitInfoBackground .. +0x518 mCalamity but the panel groups: the Rust record
+    // EeScreensMainFormObjects, untyped)
     EEUIFMGGroup* mGroups[6];               // +0x4ec (0: EEUIFMGMainGroup, 1: statistics, 2: chat, 3: diplomacy,
                                             //  4: options, 5: civilization builder; CreateGroup 0x26522b)
-    TMPoll* mPoll;                          // +0x504 (200 ms)
-    EEAScroll* mScroll;                     // +0x508
-    EEAMouseClick* mMouseClick;             // +0x50c
-    EEALasso* mLasso;                       // +0x510
-    EEABuild* mBuild;                       // +0x514
-    EEACalamity* mCalamity;                 // +0x518
 };
 
 #endif

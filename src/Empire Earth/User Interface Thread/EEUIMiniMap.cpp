@@ -51,7 +51,7 @@ static GEColor sFlareColor(1.0f, 0.0f, 0.0f);
 // Creates the mini map control with its click action, the map drawn inside its border
 EEUIMiniMap::EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
                          unsigned long inBorderThickness)
-    : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness)
+    : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness), EeScreensMiniMapFields()
 {
     ee_screens_mm_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uint32_t)inBorderThickness);   // (mini_map_calls.rs)
 }
@@ -93,8 +93,8 @@ extern "C" void ee_screenscpp_mm_set_show_flare(uintptr_t inMap, bool inShow) { 
 extern "C" void ee_screenscpp_mm_set_flare_blink(uintptr_t inMap, bool inBlink) { MM(inMap)->mFlareBlink = inBlink; }
 extern "C" bool ee_screenscpp_mm_show_flare(uintptr_t inMap) { return MM(inMap)->mShowFlare; }
 extern "C" bool ee_screenscpp_mm_flare_blink(uintptr_t inMap) { return MM(inMap)->mFlareBlink; }
-extern "C" uintptr_t ee_screenscpp_mm_action(uintptr_t inMap) { return (uintptr_t)MM(inMap)->mAction; }
-extern "C" void ee_screenscpp_mm_action_dereference(uintptr_t inMap) { MM(inMap)->mAction->Dereference(); }
+extern "C" uintptr_t ee_screenscpp_mm_action(uintptr_t inMap) { return (uintptr_t)static_cast<EEAMiniMap*>(MM(inMap)->mAction); }
+extern "C" void ee_screenscpp_mm_action_dereference(uintptr_t inMap) { static_cast<EEAMiniMap*>(MM(inMap)->mAction)->Dereference(); }
 extern "C" float ee_screenscpp_mm_origin_x(uintptr_t inMap) { return MM(inMap)->mOrigin.GetX(); }
 extern "C" float ee_screenscpp_mm_origin_y(uintptr_t inMap) { return MM(inMap)->mOrigin.GetY(); }
 extern "C" uintptr_t ee_screenscpp_mm_map_rect(uintptr_t inMap) { return (uintptr_t)&MM(inMap)->GetRectangle(); }
@@ -173,12 +173,12 @@ extern "C" float ee_screenscpp_mm_form_mouse_y(uintptr_t inMap)
 extern "C" uintptr_t ee_screenscpp_mm_bounds() { return (uintptr_t)&EEUIMiniMap::sBounds; }
 extern "C" uint32_t ee_screenscpp_mm_modifiers() { return (uint32_t)gISKeyboard->GetModifierState(); }
 extern "C" void ee_screenscpp_mm_action_mode(uintptr_t inMap, int64_t inMode)
-{ MM(inMap)->mAction->mMode = (long)inMode; }
+{ static_cast<EEAMiniMap*>(MM(inMap)->mAction)->mMode = (long)inMode; }
 extern "C" void ee_screenscpp_mm_action_point(uintptr_t inMap, float inX, float inY)
-{ MM(inMap)->mAction->mPoint = GE2DPoint(inX, inY); }
+{ static_cast<EEAMiniMap*>(MM(inMap)->mAction)->mPoint = GE2DPoint(inX, inY); }
 extern "C" void ee_screenscpp_mm_action_modifiers(uintptr_t inMap, uint32_t inModifiers)
-{ MM(inMap)->mAction->mModifiers = inModifiers; }
-extern "C" void ee_screenscpp_mm_post_action(uintptr_t inMap) { gUserInterface->PostAction(MM(inMap)->mAction); }
+{ static_cast<EEAMiniMap*>(MM(inMap)->mAction)->mModifiers = inModifiers; }
+extern "C" void ee_screenscpp_mm_post_action(uintptr_t inMap) { gUserInterface->PostAction(static_cast<EEAMiniMap*>(MM(inMap)->mAction)); }
 extern "C" void ee_screenscpp_mm_capture(uintptr_t inMap) { MM(inMap)->CaptureMouse(); }
 extern "C" void ee_screenscpp_mm_base_set_location(uintptr_t inMap, float inX, float inY)
 { MM(inMap)->UIControl::SetLocation(GE2DPoint(inX, inY)); }

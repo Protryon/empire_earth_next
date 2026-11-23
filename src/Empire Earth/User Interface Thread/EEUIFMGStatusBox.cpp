@@ -128,11 +128,11 @@ extern "C" uintptr_t ee_screenscpp_sb_bar_control(uintptr_t inCall, int64_t inCt
 extern "C" uintptr_t ee_screenscpp_sb_icon_rect(int64_t inIcon)
 { return (uintptr_t)&EEUIFMGStatusBox::sIconBitmaps[inIcon].mRectangle; }
 extern "C" void ee_screenscpp_sb_bar_range(uintptr_t inCall, int64_t inCtl, int64_t inValue)
-{ SBBAR(inCall, inCtl)->mBar->SetRange(0, (unsigned long)(long)inValue); }
+{ static_cast<UIStatusBar*>(SBBAR(inCall, inCtl)->mBar)->SetRange(0, (unsigned long)(long)inValue); }
 extern "C" void ee_screenscpp_sb_bar_value(uintptr_t inCall, int64_t inCtl, int64_t inValue)
-{ SBBAR(inCall, inCtl)->mBar->SetCurrentRangeValue((long)inValue); }
+{ static_cast<UIStatusBar*>(SBBAR(inCall, inCtl)->mBar)->SetCurrentRangeValue((long)inValue); }
 extern "C" void ee_screenscpp_sb_bar_color(uintptr_t inCall, int64_t inCtl, uint32_t inColor)
-{ SBBAR(inCall, inCtl)->mBar->SetStatusBarColor(*kSBBarColors[inColor]); }
+{ static_cast<UIStatusBar*>(SBBAR(inCall, inCtl)->mBar)->SetStatusBarColor(*kSBBarColors[inColor]); }
 extern "C" void ee_screenscpp_sb_bar_enabled(uintptr_t inCall, int64_t inCtl, bool inEnabled)
 { SBBAR(inCall, inCtl)->mEnabled = inEnabled; }
 extern "C" void ee_screenscpp_sb_stretch(uintptr_t inCall, int64_t inIcon, int64_t inRectangle, int64_t inCtl)
@@ -164,9 +164,9 @@ extern "C" bool ee_screenscpp_sb_value_differs(uintptr_t inCall, int64_t inCtl)
 extern "C" bool ee_screenscpp_sb_value2_differs(uintptr_t inCall, int64_t inCtl)
 { return SBC(inCall).mText != SBBAR(inCall, inCtl)->GetValue2Text(); }
 extern "C" void ee_screenscpp_sb_set_value(uintptr_t inCall, int64_t inCtl)
-{ SBBAR(inCall, inCtl)->mValue->SetText(SBC(inCall).mText); }
+{ static_cast<UITextLabel*>(SBBAR(inCall, inCtl)->mValue)->SetText(SBC(inCall).mText); }
 extern "C" void ee_screenscpp_sb_set_value2(uintptr_t inCall, int64_t inCtl)
-{ SBBAR(inCall, inCtl)->mValue2->SetText(SBC(inCall).mText); }
+{ static_cast<UITextLabel*>(SBBAR(inCall, inCtl)->mValue2)->SetText(SBC(inCall).mText); }
 extern "C" int64_t ee_screenscpp_sb_class_armor(uintptr_t inCall, int64_t inIndex)
 { return SBC(inCall).mUnit->GetUnitClass()->mArmor[inIndex]; }
 extern "C" int64_t ee_screenscpp_sb_stats_class_armor(uintptr_t inCall, int64_t inIndex)
@@ -209,9 +209,9 @@ extern "C" void ee_screenscpp_sb_set_reload_description(int32_t inDrop)
 extern "C" int64_t ee_screenscpp_sb_reload(int64_t inIndex)
 { return gTextureManager->ReloadTexture(UString(kSBTextureNames[inIndex]), EEScratch<GETextureDescription>(kScratchSBReload)); }
 extern "C" void ee_screenscpp_sb_bar_bitmap(uintptr_t inBar, uintptr_t inBitmap)
-{ reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon->SetBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
+{ static_cast<UIBitmap*>(reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon)->SetBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
 extern "C" void ee_screenscpp_sb_bar_stretch(uintptr_t inBar, uintptr_t inBitmap, uintptr_t inRectangle)
-{ reinterpret_cast<GEBitmap*>(inBitmap)->ComputeStretchedCoordsAndScale(reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon->GetRectangle(), reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon->GetRectangle(), *reinterpret_cast<const GERectangle*>(inRectangle), reinterpret_cast<EEUIFMGStatusBar*>(inBar)->GetScreenIndex()); }
+{ reinterpret_cast<GEBitmap*>(inBitmap)->ComputeStretchedCoordsAndScale(static_cast<UIBitmap*>(reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon)->GetRectangle(), static_cast<UIBitmap*>(reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon)->GetRectangle(), *reinterpret_cast<const GERectangle*>(inRectangle), reinterpret_cast<EEUIFMGStatusBar*>(inBar)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_sb_bar_dirty(uintptr_t inBar)
 { reinterpret_cast<EEUIFMGStatusBar*>(inBar)->SetDirty(true); }
 

@@ -38,7 +38,6 @@
 #include "rust/sim/tech.h"
 #include "rust/game/screens.h"   // the host (civ_file_calls.rs)
 #include "ee/EEScreensShims.h"
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67fe94 (wrapper)
 //   object 0x965518  ctor __imp_??0FSFileSpec@@QAE@XZ  dtor __imp_??1FSFileSpec@@UAE@XZ

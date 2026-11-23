@@ -15737,6 +15737,154 @@ struct EeScreensUserInterfaceFields {
   bool mIsQuitting;
 };
 
+/// `EEUIFMainGame`'s C++ objects (ee/EEUIFMainGame.h; UI lane round 15), as untyped pointers the C++ casts at
+/// its uses: the unit information background, the wheel zoom and grab scroll events, the error strings' lock, the
+/// unit hack, the 200 ms poll and the mouse actions (scroll, click, lasso, build, calamity). The panel groups stay
+/// the class's (the game's other lanes read them typed).
+struct EeScreensMainFormObjects {
+  /// the background 0x64 (Open)
+  void *mUnitInfoBackground;
+  /// a `UIEvent*` (EE_SCREENS_CAM_WHEEL_ZOOM)
+  void *mWheelZoom;
+  /// a `UIEvent*`: the middle button's pressed and unpressed event (EECreateGrabScroll)
+  void *mGrabScroll;
+  /// a `TSCriticalSection*` guarding the error strings
+  void *mErrorCriticalSection;
+  /// an `EEUIFMGUnitHack*`
+  void *mUnitHack;
+  /// a `TMPoll*` (200 ms)
+  void *mPoll;
+  /// the actions: `EEAScroll*`, `EEAMouseClick*`, `EEALasso*`, `EEABuild*`, `EEACalamity*`
+  void *mScroll;
+  void *mMouseClick;
+  void *mLasso;
+  void *mBuild;
+  void *mCalamity;
+};
+
+/// `EEUIBUpgrade`'s members (ee/EEUIBUpgrade.h).
+struct EeScreensUpgradeFields {
+  /// the improvement (0x10: help string only, 0xc: no cost)
+  long mAttribute;
+  /// a `UITextLabel*`
+  void *mCostLabel;
+  /// `TMGetTime` of the last "cannot" chat line
+  unsigned long mLastMessageTime;
+  /// the level last shown
+  long mLevel;
+  long mNumQueued;
+  /// the button is on the scenario editor's form
+  bool mScenarioEditor;
+  /// `GetDisabled()` as of the last UpdateCost
+  bool mDisabled;
+};
+
+/// `EEUIFMGStatusBar`'s members (ee/EEUIFMGStatusBar.h): its parts (a `UIBitmap*` icon, two `UITextLabel*` value
+/// labels, a `UIStatusBar*`, two `GEBitmap*`s the destructor dereferences, the queued count's `GEText*`) and flags.
+struct EeScreensStatusBarFields {
+  void *mIcon;
+  void *mValue;
+  void *mValue2;
+  void *mBar;
+  void *mBitmap140;
+  void *mBitmap144;
+  void *mCount;
+  /// the icon is moved by (1, 1)
+  bool mPressed;
+  bool mShowCount;
+  /// `mEnabled` as of the last CopyData (DrawPolygons)
+  bool mCopiedEnabled;
+  bool mEnabled;
+};
+
+/// `EEUIMiniMap`'s members but its origin and lines (ee/EEUIMiniMap.h): the `EEAMiniMap*` action, the view
+/// edges drawn, the flare.
+struct EeScreensMiniMapFields {
+  void *mAction;
+  bool mDrawLine0;
+  bool mDrawLine1;
+  bool mDrawLine2;
+  bool mDrawLine3;
+  /// gMiniMap's flare is on (and the camera is not free)
+  bool mShowFlare;
+  /// toggles the flare colour each CopyData
+  bool mFlareBlink;
+};
+
+/// `EEUISCIFormManager`'s flags (ee/EEUISCIFormManager.h).
+struct EeScreensSciFormFields {
+  /// (Clear)
+  bool mBA0;
+  /// the in-game LoadScenario clears it; SIE Back closes the form
+  bool mIsInGame;
+  /// and sets this one; SIE Start posts the saved game
+  bool mIsLoadingFromGame;
+  /// the CSSE StartScenario sets it: a campaign scenario
+  bool mIsCampaign;
+  /// SIE Open sets it, Briefing scrolls to the end and clears it
+  bool mScrollBriefingToEnd;
+};
+
+/// `EEUICPortrait`'s members but its unit (ee/EEUICPortrait.h): the level's `GEText*`, the face's `GEBitmap*`,
+/// the unit class's `EEButtonObject*` (loaded while shown), the level, the bars and the level shown.
+struct EeScreensPortraitFields {
+  void *mText;
+  void *mPortrait;
+  void *mButton;
+  unsigned long mLevel;
+  bool mShowFirstBar;
+  bool mShowSecondBar;
+  bool mShowLevel;
+};
+
+/// `EEUIFMGAttribute`'s members (ee/EEUIFMGAttribute.h): the level's `GEText*`, the level shown.
+struct EeScreensAttributeFields {
+  void *mLevelText;
+  /// `mL128 > 0` as of the last CopyData
+  bool mShowLevel;
+};
+
+/// `EEUIFMGStatusButton`'s C++ objects (ee/EEUIFMGStatusButton.h): the `EEButtonObject*`, the dither and icon
+/// `GEBitmap*`s, the queue count's `GEText*`.
+struct EeScreensStatusButtonObjects {
+  void *mButtonObject;
+  /// textures\Dither over a disabled button
+  void *mDither;
+  void *mIcon;
+  void *mBuildQueue;
+};
+
+/// `EEUIBGenericBackground`'s numbers (ee/EEUIBGenericBackground.h): the opacity, the scale, the frame flags.
+struct EeScreensBackgroundFields {
+  float mOpacity;
+  /// EEUIFError::Open: the game window's width / 1024 and height / 768
+  float mScaleX;
+  float mScaleY;
+  /// (3 from EEUIFError)
+  unsigned long mFrameFlags;
+};
+
+/// `EEUIFMGUnitHack`'s members (ee/EEUIFMGUnitHack.h): its `EEUIFMainGame*` and its Rust record.
+struct EeScreensUnitHackFields {
+  void *mForm;
+  void *mRecord;
+};
+
+/// The box selection's and the right-drag command's C++ objects (ee/EEUICSelectUnits.h, EEUICCommandUnits.h):
+/// the `EEAMouseClick*` (the click; the command's listener), the `EEALasso*`, the arrow's `GEModel*` and
+/// `GETexture*`.
+struct EeScreensSelectUnitsObjects {
+  void *mClick;
+  void *mLasso;
+};
+
+/// The right-drag command's: its listener, the arrow's model and texture.
+struct EeScreensCommandUnitsObjects {
+  void *mListener;
+  void *mModel;
+  void *mTexture;
+};
+
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
 struct EeScreensSinglePlayerSlot {
   /// `EE_SCREENS_SP_*`: whose slot (the human's and the computer's take their names; a closed one keeps a new

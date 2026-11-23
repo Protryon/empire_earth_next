@@ -7,9 +7,8 @@
 #define EE_EEUIFMGATTRIBUTE_H
 #include "rust/game/screens.h"
 
-class GEText;
 
-class EEUIFMGAttribute : public EEUIBUpgrade {
+class EEUIFMGAttribute : public EEUIBUpgrade, public EeScreensAttributeFields {
 public:
     // 0x26783d (callers 0x1a526d, 0x274868)
     EEUIFMGAttribute(GEFont* inFont, UIForm* inForm, const GERectangle& inRectangle, unsigned long inIndex,
@@ -27,8 +26,6 @@ protected:
     virtual void TabbedFrom() {}
     virtual long UpdateKeyboard() { return 0; }
 public:   // (the Rust bodies' shims: EEUIFMGAttribute.cpp)
-    GEText* mLevelText;                     // +0x130
-    bool mShowLevel;                        // +0x134 mL128 > 0 as of the last CopyData
 };
 
 #endif

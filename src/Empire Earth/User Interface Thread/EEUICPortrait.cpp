@@ -35,7 +35,7 @@
 // red background, and a level text
 EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, unsigned long inId,
                              unsigned long inIndex, bool inShowLevel)
-    : EEUIRustControl(inId, inRectangle, inForm, inIndex, 0)
+    : EEUIRustControl(inId, inRectangle, inForm, inIndex, 0), EeScreensPortraitFields()
 {
     ee_screens_portrait_init(this, inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(),
                              inRectangle.GetBottom(), inShowLevel);
@@ -54,17 +54,17 @@ extern "C" void ee_screenscpp_pt_help_clear() { *EEScratch<UWideString*>(kScratc
 #define PT_N(n) ((EETechTreeNode*)(n))
 
 extern "C" bool ee_screenscpp_pt_has_unit(uintptr_t inP) { return PT(inP)->mUnit != NULL; }
-extern "C" void ee_screenscpp_pt_button_release(uintptr_t inP) { PT(inP)->mButton->Release(); }
+extern "C" void ee_screenscpp_pt_button_release(uintptr_t inP) { static_cast<EEButtonObject*>(PT(inP)->mButton)->Release(); }
 extern "C" void ee_screenscpp_pt_unit_release(uintptr_t inP) { PT(inP)->mUnit->Dereference(); }
 extern "C" void ee_screenscpp_pt_set_unit(uintptr_t inP, uintptr_t inUnit)
 { PT(inP)->mUnit = reinterpret_cast<EEUnit*>(inUnit); }
 extern "C" void ee_screenscpp_pt_unit_acquire(uintptr_t inP) { PT(inP)->mUnit->Reference(); }
-extern "C" void ee_screenscpp_pt_button_take(uintptr_t inP) { PT(inP)->mButton = PT(inP)->mUnit->mStats->mButton; }
-extern "C" void ee_screenscpp_pt_button_acquire(uintptr_t inP) { PT(inP)->mButton->Acquire(); }
+extern "C" void ee_screenscpp_pt_button_take(uintptr_t inP) { PT(inP)->mButton = static_cast<EEButtonObject*>(PT(inP)->mUnit->mStats->mButton); }
+extern "C" void ee_screenscpp_pt_button_acquire(uintptr_t inP) { static_cast<EEButtonObject*>(PT(inP)->mButton)->Acquire(); }
 extern "C" void ee_screenscpp_pt_face_texture(uintptr_t inP)
-{ PT(inP)->mPortrait->SetTexture(PT(inP)->mButton->GetTexture(), gScreenIndex); }
+{ static_cast<GEBitmap*>(PT(inP)->mPortrait)->SetTexture(static_cast<EEButtonObject*>(PT(inP)->mButton)->GetTexture(), gScreenIndex); }
 extern "C" void ee_screenscpp_pt_face_bitmap(uintptr_t inP)
-{ PT(inP)->mButton->SetFaceBitmap(PT(inP)->mPortrait, PT(inP)->GetRectangle(), gScreenIndex); }
+{ static_cast<EEButtonObject*>(PT(inP)->mButton)->SetFaceBitmap(static_cast<GEBitmap*>(PT(inP)->mPortrait), PT(inP)->GetRectangle(), gScreenIndex); }
 extern "C" uint64_t ee_screenscpp_pt_level(uintptr_t inP) { return (uint64_t)PT(inP)->mLevel; }
 extern "C" bool ee_screenscpp_pt_first_bar(uintptr_t inP) { return PT(inP)->mShowFirstBar; }
 extern "C" bool ee_screenscpp_pt_second_bar(uintptr_t inP) { return PT(inP)->mShowSecondBar; }
@@ -96,7 +96,7 @@ extern "C" int64_t ee_screenscpp_pt_total_cost(uintptr_t inUnit)
 { return PT_CU(inUnit)->GetStats()->mImprovement.mTotalCost; }
 extern "C" int64_t ee_screenscpp_pt_points_max() { return gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax); }
 extern "C" void ee_screenscpp_pt_text(uintptr_t inP, EeScreensShimText inText)
-{ PT(inP)->mText->SetText(EEShimText(inText)); }
+{ static_cast<GEText*>(PT(inP)->mText)->SetText(EEShimText(inText)); }
 extern "C" void ee_screenscpp_pt_update_help(uintptr_t inP) { PT(inP)->GetForm()->UpdateHelpString(); }
 extern "C" bool ee_screenscpp_pt_contains(uintptr_t inP, float inLeft, float inTop, float inRight, float inBottom)
 { return GERectangle(inLeft, inTop, inRight, inBottom).Contains(PT(inP)->GetMouseLocation()); }
@@ -122,18 +122,18 @@ extern "C" void ee_screenscpp_pt_sound()
 { gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL); }
 extern "C" void ee_screenscpp_pt_new_bitmap(uintptr_t inP) { PT(inP)->mPortrait = new GEBitmap; }
 extern "C" void ee_screenscpp_pt_bitmap_location(uintptr_t inP, float inX, float inY)
-{ PT(inP)->mPortrait->SetLocation(GE2DPoint(inX, inY)); }
+{ static_cast<GEBitmap*>(PT(inP)->mPortrait)->SetLocation(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_pt_draw_init(uintptr_t inP, float* inRect)
-{ ee_screens_portrait_draw_init(PT(inP), PT(inP)->mPortrait, inRect); }
+{ ee_screens_portrait_draw_init(PT(inP), static_cast<GEBitmap*>(PT(inP)->mPortrait), inRect); }
 extern "C" void ee_screenscpp_pt_new_text(uintptr_t inP, float inHeight)
 { PT(inP)->mText = new GEText(UIFontTable::CreateClosestFont(0x36, inHeight)); }
-extern "C" void ee_screenscpp_pt_text_align_right(uintptr_t inP) { PT(inP)->mText->SetAlignment(kTextAlignRight); }
-extern "C" void ee_screenscpp_pt_text_transparent(uintptr_t inP) { PT(inP)->mText->SetIsTransparent(true); }
-extern "C" void ee_screenscpp_pt_text_color(uintptr_t inP) { PT(inP)->mText->SetFgColor(GEColor()); }
+extern "C" void ee_screenscpp_pt_text_align_right(uintptr_t inP) { static_cast<GEText*>(PT(inP)->mText)->SetAlignment(kTextAlignRight); }
+extern "C" void ee_screenscpp_pt_text_transparent(uintptr_t inP) { static_cast<GEText*>(PT(inP)->mText)->SetIsTransparent(true); }
+extern "C" void ee_screenscpp_pt_text_color(uintptr_t inP) { static_cast<GEText*>(PT(inP)->mText)->SetFgColor(GEColor()); }
 extern "C" void ee_screenscpp_pt_text_location(uintptr_t inP, float inX, float inY)
-{ PT(inP)->mText->SetLocation(GE2DPoint(inX, inY)); }
-extern "C" void ee_screenscpp_pt_delete_text(uintptr_t inP) { delete PT(inP)->mText; }
-extern "C" void ee_screenscpp_pt_bitmap_release(uintptr_t inP) { PT(inP)->mPortrait->Dereference(); }
+{ static_cast<GEText*>(PT(inP)->mText)->SetLocation(GE2DPoint(inX, inY)); }
+extern "C" void ee_screenscpp_pt_delete_text(uintptr_t inP) { delete static_cast<GEText*>(PT(inP)->mText); }
+extern "C" void ee_screenscpp_pt_bitmap_release(uintptr_t inP) { static_cast<GEBitmap*>(PT(inP)->mPortrait)->Dereference(); }
 extern "C" void ee_screenscpp_pt_draw_text_base(uintptr_t inP) { PT(inP)->UIControl::DrawTextA(); }
 extern "C" int32_t ee_screenscpp_pt_draw_level(uintptr_t inP)
-{ return PT(inP)->GetForm()->DrawClippedText(PT(inP)->GetCopiedDrawRectangle(), PT(inP)->mText, PT(inP)); }
+{ return PT(inP)->GetForm()->DrawClippedText(PT(inP)->GetCopiedDrawRectangle(), static_cast<GEText*>(PT(inP)->mText), PT(inP)); }
