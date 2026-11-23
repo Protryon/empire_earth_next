@@ -11,13 +11,21 @@
 #define LLE_UICHECKBOX_H
 
 #include "lle/UIButton.h"
+#include "lle/UIButtonRust.h"
+#include "rust/ui/checkobj.h"
 #include "lle/UITextLabel.h"   // the inline dtor deletes the label
 
 
 class LLE_API UICheckBox : public UIButton {
 public:
     UICheckBox(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
-               UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inScaleBitmap);
+               UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inScaleBitmap)
+        : UIButton(inId, inForm->GetManager()->GetCheckOff(), NULL, inForm->GetManager()->GetCheckDownOff(),
+               UIButtonRust::Rect(ee_ui_button_box_rect(UIButtonRust::Rect(inRectangle), inScaleBitmap)),
+               inForm, inIndex, inBorderThickness)
+{
+    this->SubCall(EeUiButtonCall::CheckInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inScaleBitmap ? 1.0f : 0.0f);
+}
     // the dtor (0x1005f9da) deleted the label: the Rust button's release does
     // Resizes the check box and its label to a new width. No marker: ICF-folded into UITriStateCheckBox::ChangeWidth
     // (0x10080916), the same body over the same offsets.

@@ -145,6 +145,13 @@ fn arrow_bitmaps(style: c_ulong) -> [isize; 4] {
     }
 }
 
+/// The arrow button's own part of its constructor (UI round 16: UIScrollButton folded into UIButton): its slider and
+/// direction, its polls (`variantobj.rs` ScrollInit). A button the registry does not know (a test's) is left alone.
+fn scroll_init(button: isize, slider: isize, decrement: isize) {
+    use crate::buttonobj::EeUiButtonCall;
+    let _ = crate::direct::button_call(button as crate::direct::Cpp, EeUiButtonCall::ScrollInit, slider, decrement);
+}
+
 impl EeUiScrollBar {
     /// The constructor's part after `UIControl`'s (made with [`scrollbar::layout`]'s rectangle and border 0): the
     /// arrow bitmaps for the style, then the slider, the decrement button at `at` and the increment button.
@@ -154,8 +161,10 @@ impl EeUiScrollBar {
         let slider = host.op_rect(Op::CreateSlider, style as isize, border as isize, layout.slider);
         let mut f = [at.x, at.y, 0.0, 0.0];
         let decrement = host.op_f(Op::CreateButton, b[1], b[3], slider, 1, &mut f);
+        scroll_init(decrement, slider, 1);
         let mut f = [layout.increment.x, layout.increment.y, 0.0, 0.0];
         let increment = host.op_f(Op::CreateButton, b[0], b[2], slider, 0, &mut f);
+        scroll_init(increment, slider, 0);
         EeUiScrollBar {
             host,
             f: RefCell::new(ScrollBarFields {

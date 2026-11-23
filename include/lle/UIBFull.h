@@ -7,13 +7,11 @@
 
 #include "lle/UITextureBackground.h"
 
-class GEBitmap;
-class GETexture;
 
 class LLE_API UIBFull : public UITextureBackground {
 public:
     UIBFull(unsigned long inBackgroundID, const UString& inTextureFileName, const GETextureDescription& inDescription, const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, unsigned long inColumns, unsigned long inRows, bool inVisible) : UITextureBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm, inDrawPriority, inVisible) { this->Call(EeUiBgCall::BFullInit, inColumns, inRows); }
-    virtual ~UIBFull();
+    virtual ~UIBFull() { this->Call(EeUiBgCall::BFullRelease); }
     virtual long DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(EeUiBgCall::BFullDraw, inRectangle); }
     virtual long LoadBackground() { return (long)this->Call(EeUiBgCall::BFullLoad); }
     virtual void SetBitmapTexture(GETexture* inTexture, unsigned long inColumn, unsigned long inRow) { this->Call(EeUiBgCall::BFullSetBitmapTexture, (intptr_t)inTexture, inColumn, UIF4(UIF4::Bits((int32_t)inRow))); } // slot 0x1c

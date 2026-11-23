@@ -139,9 +139,9 @@ extern "C" uintptr_t ee_uicpp_table_get(uint32_t inIndex)
 extern "C" uintptr_t ee_uicpp_mgr_form_by_id(uintptr_t inM, uint32_t inId)
 { return (uintptr_t)MGR(inM)->GetFormByID(inId); }
 extern "C" void ee_uicpp_table_add_event(uintptr_t inTable, uint32_t inId, uint32_t inKind)
-{ reinterpret_cast<UIControlsTable*>(inTable)->AddEvent(UIEventData{inId, inKind}); }
+{ reinterpret_cast<UIControlsTable*>(inTable)->AddEvent(inId, inKind); }
 extern "C" void ee_uicpp_form_add_event(uintptr_t inForm, uint32_t inId, uint32_t inKind)
-{ reinterpret_cast<UIForm*>(inForm)->AddEvent(UIEventData{inId, inKind}); }
+{ reinterpret_cast<UIForm*>(inForm)->AddEvent(inId, inKind); }
 extern "C" long ee_uicpp_db_find(uintptr_t inPath, uintptr_t inDirectory, EeUiShimText inName, uintptr_t* inFile)
 { return EEDbFindFile(reinterpret_cast<FSPath*>(inPath), *reinterpret_cast<const UString*>(inDirectory) + UIShimString(inName), *reinterpret_cast<FSFileSpec**>(inFile)); }
 extern "C" long ee_uicpp_db_fonts(uintptr_t inFile, uintptr_t inM)
@@ -149,7 +149,7 @@ extern "C" long ee_uicpp_db_fonts(uintptr_t inFile, uintptr_t inM)
 extern "C" long ee_uicpp_db_forms(uintptr_t inFile, uintptr_t inM)
 { return UIForm::Create(*FILE_SPEC(inFile), MGR(inM)); }
 extern "C" long ee_uicpp_db_backgrounds(uintptr_t inFile) { return UIBackgroundTable::Create(*FILE_SPEC(inFile)); }
-extern "C" void ee_uicpp_db_create_backgrounds(uintptr_t inM) { MGR(inM)->CreateBackgrounds(); }
+extern "C" void ee_uicpp_db_create_backgrounds(uintptr_t inM) { ee_ui_bgtable_create_backgrounds(MGR(inM), ee_ui_bg_table_host); }
 extern "C" void ee_uicpp_db_controls(uintptr_t inFile, uintptr_t inM)
 { UIControlsTable::Create(*FILE_SPEC(inFile), MGR(inM)); }
 extern "C" void ee_uicpp_db_control_events(uintptr_t inFile) { UIEvent::CreateControlEvents(*FILE_SPEC(inFile)); }
@@ -204,7 +204,9 @@ EE_UI_VOID(mgr_part_rect) { UIObjHost::PutRect(f, reinterpret_cast<UIControl*>(a
 EE_UI_VOID(mgr_event_process) { reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); }
 EE_UI_CASE(mgr_keyboard_should_update) { return gISKeyboard->GetShouldUpdate(); }
 EE_UI_CASE(mgr_mouse_should_update) { return gISMouse->GetShouldUpdate(); }
-EE_UI_VOID(mgr_hot_key_poll) { UIHotKey::UpdatePressedPollAmount(); }
+// the hot keys' pressed poll (the original's UIHotKey::sPressedPoll: 50 ms), polled once per update
+static TMPoll sHotKeyPressedPoll(50, 0, true);
+EE_UI_VOID(mgr_hot_key_poll) { sHotKeyPressedPoll.Poll(); }
 EE_UI_VOID(mgr_hot_keys_delete) { UIHotKey::DeleteHotKeys(); }
 EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
 EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }
@@ -223,19 +225,6 @@ EE_UI_VOID(mgr_sound_parameters) { SOUNDS->SetSoundParameters(INSTANCE, f[0], 0.
 #undef INSTANCE
 #undef SOUNDS
 
-// Creates the UI manager: its locks, the UIControls texture and the check box, radio, sort and scroll-bar
-// bitmaps cut from it; looks up the shared mouse buttons and wheel on first use; no music playing
-// (ee_ui_manager_start: Init's ops read the manager through the forwarders, so it runs after mRust is set)
-UIManager::UIManager(GERasterizer* inRasterizer, SESoundManager* inSoundManager, unsigned long inNumberOfSurfaces,
-                     unsigned long inUITextureBitDepth, UResourceFile* inStringTable, unsigned long inScreen)
-    : mRust(ee_ui_manager_new(this, ee_ui_manager_host, inRasterizer, inSoundManager, inNumberOfSurfaces,
-                              inUITextureBitDepth, inStringTable, inScreen))
-{
-    ee_ui_manager_start(this->mRust);
-}
-
-// Destroys the UI manager: stops the music, frees the locks, texture, bitmaps, forms, hot keys, IME window and database
-UIManager::~UIManager() { ee_ui_manager_destroy(this->mRust); }
 
 
 // UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
@@ -264,9 +253,4 @@ extern "C" void* EETestUIFormControl(UIForm* inForm, unsigned long inIndex) { re
 #pragma comment(linker, "/include:EETestUIFormControl")
 #endif
 
-long UIManager::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-    unsigned long inCursor) { return ee_ui_manager_change_composition(this->mRust, &(const EeUiImeComposition&)EeUiImeComposition{&inString, &inAttributes, inCursor}); }
 
-void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
-
-long UIManager::GetMouseWheelScrollAmount() { return ee_ui_manager_wheel_scroll_amount(UIControl::Key(EeUiKey::MouseWheel)->GetNormalizedValue()); }

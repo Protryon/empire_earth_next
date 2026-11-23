@@ -9,19 +9,17 @@
 
 #include "rust/ui/bgobj.h"
 #include "rust/ui/lle_hosts.h"
+#include "lle/UIObjHost.h"
 
-class GERectangle;
-class UIForm;
-struct GETextureDescription;
 
 class LLE_API UIFullBackground : public EeUiBackgroundFields {
 public:
     UIFullBackground(const UString& inFileName, unsigned long inColumns, unsigned long inRows, UIForm* inForm, unsigned long inDesignedWidth, unsigned long inDesignedHeight) { ee_ui_bg_full_init(this, static_cast<EeUiBackgroundFields*>(this), ee_ui_background_full_host, inFileName, inColumns, inRows, inForm, inDesignedWidth, inDesignedHeight); }
     UIFullBackground(const UIFullBackground&) = delete;
     UIFullBackground& operator=(const UIFullBackground&) = delete;
-    virtual ~UIFullBackground();
+    virtual ~UIFullBackground() { ee_ui_bg_full_free(this); }
     virtual long LoadBackground(const GETextureDescription& inDescription) { return (long)ee_ui_bg_call(this, EeUiBgCall::FullLoad, (intptr_t)&inDescription, 0, NULL); }
-    virtual long DrawBackground(const GERectangle& inRectangle);
+    virtual long DrawBackground(const GERectangle& inRectangle) { return (long)ee_ui_bg_call(this, EeUiBgCall::FullDraw, 0, 0, UIF4(inRectangle)); }
     virtual long UnloadBackground() { return (long)ee_ui_bg_call(this, EeUiBgCall::FullUnload, 0, 0, NULL); }
 };
 

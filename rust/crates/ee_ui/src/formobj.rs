@@ -185,6 +185,9 @@ pub enum EeUiFormCall {
     UseGdiForText = 92,
     DrawToolTipShadow = 93,
     SetDrawToolTipShadow = 94,
+    /// `UIEMouseWheelScroll::ProcessEvent` (UI round 16): the control under the mouse scrolled by the manager's wheel
+    /// scroll amount -> kErrorOK.
+    WheelScroll = 95,
 }
 
 /// `UIDbDataForms`, the form record the database constructor reads (268 bytes on every target; UI round 13: the C++
@@ -1211,6 +1214,13 @@ impl EeUiForm {
             C::SetHelpTextPopupLocation => self.set_help_text_popup_location(),
             C::UpdateKeyboard => return hotkey::update_keyboard(&mut Life(self)) as isize,
             C::UpdateMouse => return mouse::form_update_mouse(&mut Life(self)) as isize,
+            C::WheelScroll => {
+                let c = self.with(|s| s.mouse_over);
+                if c != 0 {
+                    let amount = self.op(Op::FormWheelAmount, 0, 0);
+                    self.op(Op::FormCtlWheelTurned, c, amount);
+                }
+            }
             C::SetRectangle => self.with(|s| s.rect = rect),
             C::AddBackground => self.add_background(a),
             C::AddClipRectangle => self.with(|s| s.clips.push(rect)),
