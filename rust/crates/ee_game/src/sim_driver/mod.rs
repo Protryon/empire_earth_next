@@ -19,6 +19,7 @@
 pub mod combat_sweep;
 pub mod digest;
 pub mod driver;
+pub mod dump;
 pub mod editor;
 pub mod ffi;
 pub mod host;
