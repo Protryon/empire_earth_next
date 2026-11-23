@@ -13,14 +13,19 @@ use crate::screens::command_panel::*;
 use crate::screens::game_cpp::{Cpp, EeScreensShimText, EeScreensShimULongOut};
 use crate::screens::main_group::*;
 use crate::screens::status_button_calls;
+use crate::screens::ui_ids::EEMainGameControl;
 
 /// `kMainGameActionButton1`: the stop button's control.
-pub const EE_SCREENS_MGC_ACTION_BUTTON1: u32 = 78;
+pub(crate) const EE_SCREENS_MGC_ACTION_BUTTON1: u32 = EEMainGameControl::kMainGameActionButton1 as u32;
 /// The timed rally buttons (`kMainGameTimedFighterRally`, `kMainGameTimedBomberRally`,
 /// `kMainGameTimedAtomicBomberRally`).
-pub const EE_SCREENS_MGC_TIMED_RALLIES: [u32; 3] = [208, 209, 210];
+pub(crate) const EE_SCREENS_MGC_TIMED_RALLIES: [u32; 3] = [
+    EEMainGameControl::kMainGameTimedFighterRally as u32,
+    EEMainGameControl::kMainGameTimedBomberRally as u32,
+    EEMainGameControl::kMainGameTimedAtomicBomberRally as u32,
+];
 /// `kMainGameUnitIconBar`.
-pub const EE_SCREENS_MGC_UNIT_ICON_BAR: u32 = 222;
+pub(crate) const EE_SCREENS_MGC_UNIT_ICON_BAR: u32 = EEMainGameControl::kMainGameUnitIconBar as u32;
 
 /// One host op of the group (0 for an op the host does not know, as the C++'s).
 pub(crate) fn call(c: &mut impl Cpp, group: usize, op: u32, a: i64, b: i64, cc: i64) -> i64 {

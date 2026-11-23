@@ -54,6 +54,8 @@ pub const EE_SCENARIO_IO_ELEMENT_SAVE: u32 = 18;
 pub const EE_SCENARIO_IO_ELEMENT_COUNT: u32 = 19;
 /// The manager's media strings: `Load` (`slot` 0) or `Save` (1).
 pub const EE_SCENARIO_IO_MEDIA: u32 = 20;
+/// The media strings' `Save(major, minor, file)` (`EE_SCENARIO_IO_MEDIA` is their `Load`).
+pub const EE_SCENARIO_IO_MEDIA_SAVE: u32 = 3000;
 /// The manager's dialog messages (`EESMLoadVector` / `EESMSaveVector`): `slot` 0 load, 1 save.
 pub const EE_SCENARIO_IO_MESSAGES: u32 = 21;
 /// The stream's trigger (`EESMTrigger*`) into `*value` (a pointer): the entries are its members'
@@ -236,7 +238,8 @@ impl Stream for EeScenarioStream {
         value
     }
     fn media(&mut self, save: bool) -> i32 {
-        self.call(EE_SCENARIO_IO_MEDIA, save as u32, 0, std::ptr::null_mut())
+        let op = if save { EE_SCENARIO_IO_MEDIA_SAVE } else { EE_SCENARIO_IO_MEDIA };
+        self.call(op, 0, 0, std::ptr::null_mut())
     }
     fn messages(&mut self, save: bool) -> i32 {
         crate::scenario::manager_compose::messages(
@@ -559,6 +562,20 @@ impl Bytes {
 #[allow(clippy::field_reassign_with_default)] // the tests set a few fields of a sample
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_media_strings_load_and_save_are_two_operations() {
+        unsafe extern "C" fn io(ctx: *mut c_void, op: u32, slot: u32, _index: c_ulong, _value: *mut c_void) -> i32 {
+            // SAFETY: the test's log
+            unsafe { (*(ctx as *mut Vec<(u32, u32)>)).push((op, slot)) };
+            0
+        }
+        let mut log: Vec<(u32, u32)> = Vec::new();
+        let mut s = EeScenarioStream { ctx: &mut log as *mut Vec<(u32, u32)> as *mut c_void, io };
+        s.media(false);
+        s.media(true);
+        assert_eq!(log, vec![(EE_SCENARIO_IO_MEDIA, 0), (EE_SCENARIO_IO_MEDIA_SAVE, 0)]);
+    }
 
     #[test]
     fn a_seq_stops_at_the_first_error_and_keeps_it() {

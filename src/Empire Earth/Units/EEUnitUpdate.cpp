@@ -69,22 +69,7 @@ struct EEUpdateContext {
     EEComplexUnit* mAirport;
 };
 
-// the initial contact location and heading from the unit's location (EEUnitClass::ActionChanged's two copies)
-void EEUpdateContact(EEComplexUnit* inUnit, bool inThroughSetter)
-{
-    GEVector theUp(0.0f, 1.0f, 0.0f);
-    GEVector theDirection(0.0f, 0.0f, 0.0f);
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    GE3DPoint thePoint(theLocation.GetX(), theLocation.GetY(), 0.0f);
-    theLocation.Apply(theUp, theDirection);
-    float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    if (inThroughSetter)
-        inUnit->SetInitialContactLocation(thePoint);
-    else if (inUnit->mInitialContactLocation != thePoint)
-        inUnit->mInitialContactLocation = thePoint;
-    if (inUnit->mInitialContactHeading != theYaw)
-        inUnit->mInitialContactHeading = theYaw;
-}
+// (the initial contact location and heading, EEUpdateContact: ee_sim units upd_split.rs update_contact)
 
 int64_t EEUpdateBits(float inValue)
 {
@@ -99,6 +84,11 @@ float EEUpdateFloat(int64_t inBits)
     float theValue;
     memcpy(&theValue, &theBits, sizeof(theValue));
     return theValue;
+}
+
+template <class T> T* EEObjectOf(int64_t inHandle)
+{
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
 }
 
 int64_t EEUpdateRead(void* inContext, int32_t inCode)
@@ -168,11 +158,8 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     EEUpdateContext* theContext = static_cast<EEUpdateContext*>(inContext);
     EEComplexUnit* theUnit = theContext->mUnit;
     EEUnitClass* theClass = theContext->mClass;
-    if (inCode >= EE_UNITS_ACT_RELEASE_HEAL_EFFECT)
-        ee_units_note_action(inCode, inA, inB);   // TEST ONLY (USST kind 13)
-    else
-        ee_units_note_update(inCode, inA, inB);   // TEST ONLY (USST kind 12)
-    // (the one-member stores and the death effect are Rust's: ee_units update_views.rs view_act)
+    // (the one-member stores and the death effect are Rust's: ee_units update_views.rs view_act; the notes (USST
+    // kinds 12, 13) and the compound cases' choices too: update_views.rs, upd_split.rs; each statement a case here)
     switch (inCode) {
     case EE_UNITS_UPD_PHYSICS_STEP:
         theClass->mPhysicsModel->Step(theUnit);
@@ -275,13 +262,9 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_UPD_SAVED_GROUPS_RESET:
         theUnit->mPlayer->mSavedGroups.Reset(7, 1);
         break;
-    case EE_UNITS_UPD_SET_OPEN_FRACTION: {
-        float theOpen = EEUpdateFloat(inA);
-        theUnit->SetOpenFraction(theOpen);
-        theClass->GetLastLinkedCarrier(theUnit)->SetOpenFraction(theOpen);
-        theClass->GetLastLinked(theUnit)->SetOpenFraction(theOpen);
-        break;
-    }
+    case EE_UNITS_UPD_X_OPEN_FRACTION: theUnit->SetOpenFraction(EEUpdateFloat(inA)); break;
+    case EE_UNITS_UPD_X_CARRIER_OPEN_FRACTION: theClass->GetLastLinkedCarrier(theUnit)->SetOpenFraction(EEUpdateFloat(inA)); break;
+    case EE_UNITS_UPD_X_LINKED_OPEN_FRACTION: theClass->GetLastLinked(theUnit)->SetOpenFraction(EEUpdateFloat(inA)); break;
     case EE_UNITS_UPD_DEPLETE_MINE:
         theUnit->mMine->DepleteResource(1);
         break;
@@ -295,12 +278,12 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_HERD_UNIT_HIT:
         theUnit->mHerd->HandleUnitHit(theUnit);
         break;
-    case EE_UNITS_ACT_CONTACT_CHECK_RANGE:
-        EEUpdateContact(theUnit, false);
-        break;
-    case EE_UNITS_ACT_CONTACT_FOLLOW:
-        EEUpdateContact(theUnit, true);
-        break;
+    case EE_UNITS_UPD_X_LOCATION_MATRIX: memcpy(EEObjectOf<float>(inA), theUnit->mPhysicalModel.GetLocation().mMatrix, 16 * sizeof(float)); break;
+    case EE_UNITS_UPD_X_SET_CONTACT_LOCATION: theUnit->SetInitialContactLocation(*EEObjectOf<GE3DPoint>(inA)); break;
+    case EE_UNITS_UPD_X_CONTACT_LOCATION: *EEObjectOf<GE3DPoint>(inA) = theUnit->mInitialContactLocation; break;
+    case EE_UNITS_UPD_X_STORE_CONTACT_LOCATION: theUnit->mInitialContactLocation = *EEObjectOf<GE3DPoint>(inA); break;
+    case EE_UNITS_UPD_X_CONTACT_HEADING: return EEUpdateBits(theUnit->mInitialContactHeading);
+    case EE_UNITS_UPD_X_STORE_CONTACT_HEADING: theUnit->mInitialContactHeading = EEUpdateFloat(inA); break;
     case EE_UNITS_ACT_ATTACKED:
         theClass->Attacked(theUnit);
         break;
@@ -310,12 +293,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_SET_ANIMATION:
         theUnit->SetAnimation((long)inA, -1, inB != 0);
         break;
-    case EE_UNITS_ACT_RETURN_TO_CONTACT: {
-        EEUnitGoal* theLocation = EEUGRust::NewLocation(&theUnit->mInitialContactLocation, false, false, true,
-                                                   theUnit->mInitialContactHeading, false, false);
-        theUnit->SetGoal(theLocation, inA != 0, 0);
-        break;
-    }
+    case EE_UNITS_UPD_X_RETURN_TO_CONTACT: theUnit->SetGoal(EEUGRust::NewLocation(&theUnit->mInitialContactLocation, false, false, true, theUnit->mInitialContactHeading, false, false), inA != 0, 0); break;
     case EE_UNITS_ACT_FLEE_AFTER_CALAMITY:
         theUnit->FleeAfterCalamity(0);
         break;
@@ -334,10 +312,10 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_CLEAR_GOALS:
         theUnit->ClearGoals((long)inA);
         break;
-    case EE_UNITS_ACT_NEXT_PART_ACTION:
-        theUnit->mNextPart->StartAction((unsigned long)inA);
-        theUnit->mNextPart->mUnitClass->ActionChanged(theUnit->mNextPart);
-        break;
+    case EE_UNITS_UPD_X_UNIT: return EEObj(theUnit);
+    case EE_UNITS_UPD_X_NEXT_PART_OF: return EEObj(EEObjectOf<EEComplexUnit>(inA)->mNextPart);
+    case EE_UNITS_UPD_X_START_ACTION_OF: EEObjectOf<EEComplexUnit>(inA)->StartAction((unsigned long)inB); break;
+    case EE_UNITS_UPD_X_ACTION_CHANGED_OF: EEObjectOf<EEComplexUnit>(inA)->mUnitClass->ActionChanged(EEObjectOf<EEComplexUnit>(inA)); break;
     case EE_UNITS_ACT_UNIT_DIED:
         theClass->UnitDied(theUnit);
         break;
@@ -356,15 +334,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_KILL:
         theUnit->Kill(inA != 0, false, false);
         break;
-    case EE_UNITS_ACT_KILL_UNIT_AND_PARTS:
-        theUnit->mPlayer->KillUnit(theUnit, false);
-        for (EEComplexUnit* thePart = theUnit->mNextPart; thePart != NULL; thePart = thePart->mNextPart)
-            theUnit->mPlayer->KillUnit(thePart, false);
-        break;
-    case EE_UNITS_ACT_START_IDLE:
-        theUnit->StartAction(kActionIdle);
-        theUnit->mUnitClass->ActionChanged(theUnit);
-        break;
+    case EE_UNITS_UPD_X_KILL_UNIT: theUnit->mPlayer->KillUnit(EEObjectOf<EEComplexUnit>(inA), false); break;
     case EE_UNITS_ACT_PATH_TO_GOAL:
         theClass->PathToGoal(theUnit);
         break;
@@ -388,17 +358,9 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_HEAL:
         theClass->Heal(theUnit);
         break;
-    case EE_UNITS_ACT_FIND_HEALEE: {
-        EEUnit* theTarget = NULL;
-        bool theFound = theClass->FindTargetNear(theUnit, theUnit->mStats->GetLineOfSight(), &theTarget);
-        theContext->mHealee = theTarget;
-        return theFound ? 1 : 0;
-    }
-    case EE_UNITS_ACT_SET_HEAL_GOAL: {
-        EEUnitGoal* theHeal = EEUGRust::NewHealUnit(static_cast<EEComplexUnit*>(theContext->mHealee), false);
-        theUnit->SetGoal(theHeal, inA != 0, 0);
-        break;
-    }
+    case EE_UNITS_UPD_X_CLEAR_HEALEE: theContext->mHealee = NULL; break;
+    case EE_UNITS_UPD_X_FIND_HEALEE: return theClass->FindTargetNear(theUnit, theUnit->mStats->GetLineOfSight(), &theContext->mHealee);
+    case EE_UNITS_UPD_X_SET_HEAL_GOAL: theUnit->SetGoal(EEUGRust::NewHealUnit(static_cast<EEComplexUnit*>(theContext->mHealee), false), inA != 0, 0); break;
     case EE_UNITS_ACT_GOAL_START_TIME:
         theUnit->mGoalState->SetStartTime(gPhysics->mGameTime);
         break;
@@ -408,15 +370,9 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_PLACE_TRACK_DECAL:
         EEPlaceTrackDecal(theUnit);
         break;
-    case EE_UNITS_ACT_DEATH_SOUND: {
-        EESoundObject* theSound = theUnit->mStats->mDeathSound;
-        float theVolume;
-        float thePan;
-        float thePitch;
-        theClass->GetSoundParameters(theUnit, theSound, &theVolume, &thePan, &thePitch);
-        gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        break;
-    }
+    case EE_UNITS_UPD_X_DEATH_SOUND: return EEObj(theUnit->mStats->mDeathSound);
+    case EE_UNITS_UPD_X_SOUND_PARAMETERS: theClass->GetSoundParameters(theUnit, EEObjectOf<EESoundObject>(inA), EEObjectOf<float>(inB), EEObjectOf<float>(inB) + 1, EEObjectOf<float>(inB) + 2); break;
+    case EE_UNITS_UPD_X_PLAY_SAMPLE: gSoundManager->Play(EEObjectOf<EESoundObject>(inA)->mSampleID, EEObjectOf<float>(inB)[0], EEObjectOf<float>(inB)[1], EEObjectOf<float>(inB)[2], EEObjectOf<EESoundObject>(inA)->mLooping, NULL); break;
     case EE_UNITS_ACT_RELEASE_CONVERSION_EFFECT:
         theUnit->ReleaseConversionEffect();
         break;
@@ -424,87 +380,38 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         // (the temple's too: its copy was the basic priest's body)
         theClass->BasicPriestHideConversionEffects(theUnit);
         break;
-    case EE_UNITS_ACT_FIND_STORAGE_GOAL: {
-        EEUnit* theStorage = theClass->FindStorage(theUnit, inA != 0);
-        if (theStorage != NULL)
-            theUnit->SetGoal(EEUGRust::NewGather(NULL, theStorage, false), 0, 0);
-        break;
-    }
-    case EE_UNITS_ACT_RETARGET_NEAREST_BUILDING: {
-        EEUGRust* theGoal = EEAttackUnitCast(theUnit->GetGoal());
-        if (theGoal != NULL && theGoal->GetAttackTarget() != NULL) {
-            EEUnit* theTarget = theClass->FindNearestTargetBuilding(theGoal->GetAttackTarget());
-            if (theTarget != NULL)
-                theGoal->SetAttackTarget(theTarget);
-        }
-        break;
-    }
-    case EE_UNITS_ACT_QUEUE_TAKEOFF: {
-        EEComplexUnit* theCargo = theUnit->FindPassenger(theUnit->mExitingUnitID);
-        if (theCargo != NULL)
-            ee_units_atc_queue_request(theCargo->mPlayer->mAirTraffic[theCargo->mUnitClass->mAirTrafficType - 1], theUnit, theCargo, 0);
-        break;
-    }
+    case EE_UNITS_UPD_X_FIND_STORAGE: return EEObj(theClass->FindStorage(theUnit, inA != 0));
+    case EE_UNITS_UPD_X_GATHER_AT: theUnit->SetGoal(EEUGRust::NewGather(NULL, EEObjectOf<EEUnit>(inA), false), 0, 0); break;
+    case EE_UNITS_UPD_X_ATTACK_GOAL: return EEObj(EEAttackUnitCast(theUnit->GetGoal()));
+    case EE_UNITS_UPD_X_ATTACK_TARGET: return EEObj(EEObjectOf<EEUGRust>(inA)->GetAttackTarget());
+    case EE_UNITS_UPD_X_NEAREST_TARGET_BUILDING: return EEObj(theClass->FindNearestTargetBuilding(EEObjectOf<EEUnit>(inA)));
+    case EE_UNITS_UPD_X_SET_ATTACK_TARGET: EEObjectOf<EEUGRust>(inA)->SetAttackTarget(EEObjectOf<EEUnit>(inB)); break;
+    case EE_UNITS_UPD_X_EXITING_PASSENGER: return EEObj(theUnit->FindPassenger(theUnit->mExitingUnitID));
+    case EE_UNITS_UPD_X_QUEUE_TAKEOFF: ee_units_atc_queue_request(EEObjectOf<EEComplexUnit>(inA)->mPlayer->mAirTraffic[EEObjectOf<EEComplexUnit>(inA)->mUnitClass->mAirTrafficType - 1], theUnit, EEObjectOf<EEComplexUnit>(inA), 0); break;
     case EE_UNITS_ACT_RELEASE_UNIT:
         theClass->ReleaseUnit(theUnit);
         break;
-    case EE_UNITS_ACT_GATE_SOUND: {
-        EESoundObject* theSound = EESoundObject::Get(kSoundGate);
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            theClass->GetSoundParameters(theUnit, theSound, &theVolume, &thePan, &thePitch);
-            theSound->Play(theVolume, thePan, thePitch);
-        }
-        break;
-    }
-    case EE_UNITS_ACT_GATE_PARTS_ACTION:
-        theUnit->mNextPart->StartAction((unsigned long)inA);
-        theUnit->mNextPart->mNextPart->StartAction((unsigned long)inA);
-        break;
-    case EE_UNITS_ACT_HEIGHT_HERE: {
-        GE3DPoint thePosition(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY(),
-                              theUnit->mPhysicalModel.GetLocation().GetZ());
-        theUnit->SetHeight(theClass->GetHeightAt(theUnit, thePosition));
-        break;
-    }
-    case EE_UNITS_ACT_HEIGHT_AT_NEXT_WAYPOINT: {
-        GE3DPoint thePosition(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY(),
-                              theUnit->mPhysicalModel.GetLocation().GetZ());
-        if (theUnit->GetNextWaypointPoint(thePosition) == 0)
-            theUnit->SetHeight(theClass->GetHeightAt(theUnit, thePosition));
-        break;
-    }
+    case EE_UNITS_UPD_X_GATE_SOUND: return EEObj(EESoundObject::Get(kSoundGate));
+    case EE_UNITS_UPD_X_PLAY_SOUND: EEObjectOf<EESoundObject>(inA)->Play(EEObjectOf<float>(inB)[0], EEObjectOf<float>(inB)[1], EEObjectOf<float>(inB)[2]); break;
+    case EE_UNITS_UPD_X_LOCATION: *EEObjectOf<GE3DPoint>(inA) = GE3DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY(), theUnit->mPhysicalModel.GetLocation().GetZ()); break;
+    case EE_UNITS_UPD_X_NEXT_WAYPOINT_POINT: return theUnit->GetNextWaypointPoint(*EEObjectOf<GE3DPoint>(inA));
+    case EE_UNITS_UPD_X_SET_HEIGHT_AT: theUnit->SetHeight(theClass->GetHeightAt(theUnit, *EEObjectOf<GE3DPoint>(inA))); break;
     case EE_UNITS_ACT_RETURN_TO_AIRPORT:
         theClass->AirAnimalReturnToAirport(theUnit);
         break;
-    case EE_UNITS_ACT_DEATH_ROLL:
-        if (inA == 0)
-            EEAirAnimalDeathRoll(theClass, theUnit);
-        else
-            EELandableActionOperation(inCode, theClass, theUnit, inA, &theContext->mAirport);
-        break;
-    case EE_UNITS_ACT_HELICOPTER_PATH:
-        if (inA == 0)
-            EEHelicopterPathToGoal(theClass, theUnit);
-        else if (inA == 1)
-            EEHelicopterTransportPathToGoal(theClass, theUnit);
-        else
-            EEHelicopterPriestPathToGoal(theClass, theUnit);
-        break;
+    case EE_UNITS_UPD_X_AIR_ANIMAL_DEATH_ROLL: EEAirAnimalDeathRoll(theClass, theUnit); break;
+    case EE_UNITS_UPD_X_LANDABLE: return EELandableActionOperation((int32_t)inA, theClass, theUnit, inB, &theContext->mAirport);
+    case EE_UNITS_UPD_X_HELICOPTER_PATH: EEHelicopterPathToGoal(theClass, theUnit); break;
+    case EE_UNITS_UPD_X_HELICOPTER_TRANSPORT_PATH: EEHelicopterTransportPathToGoal(theClass, theUnit); break;
+    case EE_UNITS_UPD_X_HELICOPTER_PRIEST_PATH: EEHelicopterPriestPathToGoal(theClass, theUnit); break;
     case EE_UNITS_ACT_AIR_ANIMAL_PATH:
         EEAirAnimalPathToGoal(theClass, theUnit);
         break;
     case EE_UNITS_ACT_CIRCLE_SIDE:
         EEAirplaneCircleSide(theClass, theUnit);
         break;
-    case EE_UNITS_ACT_HOLDING_PATTERN:
-        if (inA == 0)
-            EEAirplaneHoldingPattern(theClass, theUnit);
-        else
-            EEPlanetSpaceshipHoldingPattern(theClass, theUnit);
-        break;
+    case EE_UNITS_UPD_X_AIRPLANE_HOLDING: EEAirplaneHoldingPattern(theClass, theUnit); break;
+    case EE_UNITS_UPD_X_SPACESHIP_HOLDING: EEPlanetSpaceshipHoldingPattern(theClass, theUnit); break;
     case EE_UNITS_ACT_FLY_OFF_MAP:
         theClass->FlyOffMap(theUnit);
         break;
@@ -514,21 +421,6 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_CLASS_ACTION_CHANGED:
         theClass->ActionChanged(theUnit);
         break;
-    case EE_UNITS_ACT_APPROACH_CARRIER:
-    case EE_UNITS_ACT_BOARD_CARRIER:
-    case EE_UNITS_ACT_TAKE_OFF_FROM_CARRIER:
-    case EE_UNITS_ACT_FLY_CHECK_PATH:
-    case EE_UNITS_ACT_FIND_NEAREST_AIRPORT:
-    case EE_UNITS_ACT_SET_HOME_BASE_FOUND:
-    case EE_UNITS_ACT_APPROACH_LANDING:
-    case EE_UNITS_ACT_SECONDARY_TARGET:
-    case EE_UNITS_ACT_TAKEOFF:
-    case EE_UNITS_ACT_QUEUE_LANDING:
-    case EE_UNITS_ACT_BOMBER_GROUND_GOAL:
-    case EE_UNITS_ACT_INITIAL_ATTACK_HEIGHT:
-    case EE_UNITS_ACT_CONTACT_HERE:
-    case EE_UNITS_ACT_LANDABLE_PATH:
-        return EELandableActionOperation(inCode, theClass, theUnit, inA, &theContext->mAirport);
     default:
         break;
     }

@@ -65,8 +65,6 @@
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPSaveGameHeader.h"
-#include "ee/EESETSConditionControls.h"
-#include "ee/EESETSEffectControls.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESERBUnitTypes.h"
 #include "ee/EESELoadThread.h"
@@ -83,9 +81,7 @@ long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TES
 // EESaveLoad.cpp: the save's chunks (the map, the scenario, the players, the world, ...), in their order
 void BuildSaveGameChunks(std::vector<FSPersistent*>& outList);
 
-// the plain layouts the Rust reads (sed_host.rs CondControls, EffControls; GERectangle, GEColor, GETransformation)
-static_assert(sizeof(EESETSConditionControls) == 23 * sizeof(void*), "EESETSConditionControls: pointers only");
-static_assert(sizeof(EESETSEffectControls) == 46 * sizeof(void*), "EESETSEffectControls: pointers only");
+// the plain layouts the Rust reads (GERectangle, GEColor, GETransformation)
 static_assert(sizeof(GERectangle) == 16 && sizeof(GEColor) == 12 && sizeof(GETransformation) == 64, "plain layouts");
 
 // ------------------------------------------------------------------------------------------------ the steps

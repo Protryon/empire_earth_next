@@ -10,40 +10,15 @@
 // +4 left, +8 right, +0xc top: U2DConvexHull<float>::SetPoints 0x1002f795, Load 0x1003057d). (provisional names)
 template <class T> class U2DRectangle {
 public:
-    U2DRectangle()
-    {
-        this->mTop = 0;
-        this->mLeft = 0;
-        this->mBottom = 0;
-        this->mRight = 0;
-    }
+    U2DRectangle() : mBottom(0), mLeft(0), mRight(0), mTop(0) {}
+    U2DRectangle(T inLeft, T inTop, T inRight, T inBottom) : mBottom(inBottom), mLeft(inLeft), mRight(inRight), mTop(inTop) {}
 #ifdef LLE_EXE_HEADERS
-    // exe: user-declared empty dtor: a returned rectangle is then built in place, no temporary and movsd copy
-    // (EEGetUnitsInRectangle's GetRegions 0xa50a6, 0x46bace 93 -> 99.66, 0x609847 91 -> 99.63, as U2DPoint's)
-    ~U2DRectangle() {}
-    // exe: user-declared (0x6c5ce, ICF RTSMapVertexColors::operator=: +0c, +04, +00, +08, the ctor's order): it makes
-    // pair<U2DRectangle<long>, unsigned long>'s implicit operator= an out-of-line call (EECPBuildManager), and fill /
-    // copy_backward copy member by member (EESelectedGroup 0x209b5c / 0x209b8a)
-    U2DRectangle& operator=(const U2DRectangle& inOther)
-    {
-        this->mTop = inOther.mTop;
-        this->mLeft = inOther.mLeft;
-        this->mBottom = inOther.mBottom;
-        this->mRight = inOther.mRight;
-        return *this;
-    }
     // exe: tile (inX, inY) lies inside (EEAIAStarBoundedPathGoal::AcceptTile 0xf4bc: Contains' compare order)
     // (provisional name; was EEAIAStarBounds)
     bool Contains(T inX, T inY) const { return inX >= this->mLeft && inX <= this->mRight && inY >= this->mTop && inY <= this->mBottom; }
     // exe: the rectangle of one point (EEAIAStarPathfindingGoalBase::SetStart 0x19c77 / SetGoal 0x19ca1 store in the
     // ctor's order) provisional name (was EEAIAStarBounds)
-    void Set(const U2DPoint<T>& inPoint)
-    {
-        this->mTop = inPoint.mY;
-        this->mLeft = inPoint.mX;
-        this->mBottom = inPoint.mY;
-        this->mRight = inPoint.mX;
-    }
+    void Set(const U2DPoint<T>& inPoint) { *this = U2DRectangle(inPoint.mX, inPoint.mY, inPoint.mX, inPoint.mY); }
     // exe: the edges move out by inMargin, clamped at 0 (out of line 0x19f9d; defined below the class) (provisional
     // name)
     // name (was EEAIAStarBounds)
@@ -61,10 +36,10 @@ public:
     // 0x8070d / 0x8071e out of line) provisional names (bottom-left/top-right)
     // (named local, then the return copy: the same code without the exe view's dtor; with one it is the only form that
     // keeps the original's temporary)
-    U2DPoint<T> GetTopLeft() const { U2DPoint<T> thePoint(this->mLeft, this->mTop); return thePoint; }
-    U2DPoint<T> GetBottomRight() const { U2DPoint<T> thePoint(this->mRight, this->mBottom); return thePoint; }
-    U2DPoint<T> GetBottomLeft() const { U2DPoint<T> thePoint(this->mLeft, this->mBottom); return thePoint; }
-    U2DPoint<T> GetTopRight() const { U2DPoint<T> thePoint(this->mRight, this->mTop); return thePoint; }
+    U2DPoint<T> GetTopLeft() const { return U2DPoint<T>(this->mLeft, this->mTop); }
+    U2DPoint<T> GetBottomRight() const { return U2DPoint<T>(this->mRight, this->mBottom); }
+    U2DPoint<T> GetBottomLeft() const { return U2DPoint<T>(this->mLeft, this->mBottom); }
+    U2DPoint<T> GetTopRight() const { return U2DPoint<T>(this->mRight, this->mTop); }
     // exe: the rectangle's point closest to inPoint: the nearer of the closest points on the two edges at the closest
     // corner (U2DRectangle<float> only: ee_base math u2d.rs)
     U2DPoint<T> GetClosestPoint(const U2DPoint<T>& inPoint) const
@@ -75,19 +50,11 @@ public:
         return thePoint;
     }
 #endif
-    void Clear()
+    void Clear() { *this = U2DRectangle(); }
+    void Extend(const U2DPoint<T>& inPoint)   // just enough to contain the point (each edge reads only its own)
     {
-        this->mTop = 0;
-        this->mLeft = 0;
-        this->mBottom = 0;
-        this->mRight = 0;
-    }
-    void Extend(const U2DPoint<T>& inPoint)   // ICF-folded with GERectangle::Extend (0x1000e586)
-    {
-        this->mLeft = min(this->mLeft, inPoint.GetX());
-        this->mRight = max(this->mRight, inPoint.GetX());
-        this->mTop = min(this->mTop, inPoint.GetY());
-        this->mBottom = max(this->mBottom, inPoint.GetY());
+        *this = U2DRectangle(min(this->mLeft, inPoint.GetX()), min(this->mTop, inPoint.GetY()), max(this->mRight, inPoint.GetX()),
+                             max(this->mBottom, inPoint.GetY()));
     }
     // left, top, right and bottom from (to) an open file, each through its typed call; kErrorNotOpen when it is not
     // open, else the first error (ee_base math u2d.rs; T is long or float)
@@ -123,8 +90,7 @@ void U2DRectangle<T>::Grow(T inMargin, bool inClamp)
 template <class T>
 void U2DRectangle<T>::GetCenter(U2DPoint<T>& outCenter) const
 {
-    outCenter.mX = (this->mRight - this->mLeft) / 2 + this->mLeft;
-    outCenter.mY = (this->mBottom - this->mTop) / 2 + this->mTop;
+    outCenter = U2DPoint<T>((this->mRight - this->mLeft) / 2 + this->mLeft, (this->mBottom - this->mTop) / 2 + this->mTop);
 }
 #endif
 

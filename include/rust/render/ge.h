@@ -1797,6 +1797,31 @@ void ee_ge_map_raise(const EeGeMapHost *host,
                      float edge_slope,
                      bool raise_first);
 
+/// `RTSMap::Raise` with its four in/out bounds (left, right, top, bottom) as the C++ hands them ([`ee_ge_map_raise`]).
+///
+/// # Safety
+/// As [`ee_ge_map_raise`]; the four bounds are valid.
+void ee_ge_map_raise_bounds(const EeGeMapHost *host,
+                            EeUnitsRtsMapFields *fields,
+                            long *left,
+                            long *right,
+                            long *top,
+                            long *bottom,
+                            float height,
+                            float slope,
+                            float edge_height,
+                            float edge_slope,
+                            bool raise_first);
+
+/// `EEMap::IsAreaOnMap` ([`area_on_map`]).
+///
+/// # Safety
+/// As [`ee_ge_map_raise`].
+bool ee_ge_map_area_on_map(const EeGeMapHost *host,
+                           unsigned long x,
+                           unsigned long y,
+                           unsigned long radius);
+
 /// `RTSMap::GetNumRaisedCorners`.
 ///
 /// # Safety
@@ -1919,6 +1944,14 @@ void ee_ge_mod_compute_normals(EeGeModel *p);
 /// # Safety
 /// `p` is live; it may be freed.
 void ee_ge_mod_dereference(EeGeModel *p);
+
+/// `GEPhysicalModel::SetModel` (and its constructor's, assignment's and destructor's model): the old model in
+/// `slot` released (`Dereference`), the new one stored and referenced; NULL for none.
+///
+/// # Safety
+/// `slot` is a placed model's model member; the models are NULL or live C++ `GEModel`s.
+void ee_ge_pm_set_model(void **slot,
+                        void *model);
 
 /// `GetPolygonCount(lod)`.
 ///
@@ -2330,6 +2363,12 @@ void ee_ge_rast_set_ambient_intensity(EeGeRasterizer *p, float intensity);
 /// # Safety
 /// `p` is live; `ripple` points at three floats.
 void ee_ge_rast_ripple(EeGeRasterizer *p, float (*ripple)[3], bool set);
+
+/// `SetWaterRippleEffect(r0, r1, r2)`: the three ripple values.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_rast_ripple_values(EeGeRasterizer *p, float r0, float r1, float r2);
 
 /// One of the base's render state setters on screen `screen` (floats as their bits).
 ///
@@ -3363,14 +3402,14 @@ void ee_ge_tm_update_visible_terrain(EeGeTerrainMesh *p,
 /// `Load(major, minor, file)`.
 ///
 /// # Safety
-/// `p` is live; `io` is a live field stream.
-long ee_ge_tm_load(EeGeTerrainMesh *p, const EeGeFieldIo *io);
+/// `p` is live; `file` is a live C++ `FSFile*`.
+long ee_ge_tm_load(EeGeTerrainMesh *p, void *file);
 
 /// `Save(file)`.
 ///
 /// # Safety
-/// `p` is live; `io` is a live field stream.
-long ee_ge_tm_save(const EeGeTerrainMesh *p, const EeGeFieldIo *io);
+/// `p` is live; `file` is a live C++ `FSFile*`.
+long ee_ge_tm_save(const EeGeTerrainMesh *p, void *file);
 
 /// The visible tile row `index`: (y, first x, last x) into `out`.
 ///

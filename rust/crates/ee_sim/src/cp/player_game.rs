@@ -25,7 +25,9 @@ use super::player_ops::{self as ops, cpev, plce, FavoriteClass};
 use super::save::{self, EeCpLoaded};
 use super::timers::{EE_CP_STATE_PUSH_PLAYER, EE_CP_STATE_PUSH_ZONE, EE_CP_STATE_ZONE, EE_CP_STATE_ZONES};
 use crate::app::capture_record;
-use crate::units::player_save::{EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo};
+use crate::units::player_save::{
+    EeUnitsPlayerSaveFn, EeUnitsPlayerSaveIo, EE_UNITS_PLAYER_SAVE_READ_LONG, EE_UNITS_PLAYER_SAVE_WRITE_LONG,
+};
 use crate::world::layout::layout;
 use crate::world::player_fields::EeUnitsPlayerSaved;
 use crate::world::unit_fields::EeUnitsComplexUnitFields;
@@ -83,11 +85,10 @@ pub const EE_CP_PLAYER_BASE_EPOCH_REACHED: i32 = 372;
 /// `mEpochEnd - mEpochStart + 1`; `gPhysics->GetRandom(v0, v1)`
 pub const EE_CP_PLAYER_EPOCH_SPAN: i32 = 373;
 pub const EE_CP_PLAYER_RANDOM_RANGE: i32 = 374;
-/// `EEPlayer::Load(v0, v1, *(FSFile*)a)`, `Save(..)`; the placement's `Load(*(FSFile*)a)`, `Save(..)`
+/// `EEPlayer::Load(v0, v1, *(FSFile*)a)`, `Save(..)`; `((FSFile*)a)->GetIsOpen()`
 pub const EE_CP_PLAYER_BASE_LOAD: i32 = 375;
 pub const EE_CP_PLAYER_BASE_SAVE: i32 = 376;
-pub const EE_CP_PLAYER_PLACEMENT_LOAD: i32 = 377;
-pub const EE_CP_PLAYER_PLACEMENT_SAVE: i32 = 378;
+pub const EE_CP_PLAYER_FILE_OPEN: i32 = 377;
 /// `&EESaveFilePrimitive`
 pub const EE_CP_PLAYER_SAVE_PRIMITIVE: i32 = 379;
 /// `EEEpochCount()`
@@ -119,9 +120,7 @@ pub const EE_CP_PLAYER_EXPLORE_UNSEEN: i32 = 397;
 pub const EE_CP_PLAYER_ENGINE_NAME: i32 = 398;
 pub const EE_CP_PLAYER_ENGINE_SEES_ALL: i32 = 399;
 pub const EE_CP_PLAYER_ENGINE_FILLS_GARRISON: i32 = 430;
-/// `new EECPPlacement(player)` into `mPlacement`; `delete mPlacement`; `mComputerPlayer = player`
-pub const EE_CP_PLAYER_NEW_PLACEMENT: i32 = 400;
-pub const EE_CP_PLAYER_DELETE_PLACEMENT: i32 = 401;
+/// `mComputerPlayer = player`
 pub const EE_CP_PLAYER_SET_SELF: i32 = 402;
 /// `gCPBehaviors`; `EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty)`
 pub const EE_CP_PLAYER_BEHAVIORS: i32 = 403;
@@ -411,7 +410,7 @@ pub unsafe extern "C" fn ee_cp_pl_init(player: u64) {
         super::ffi::ee_cp_init(cp.ctx.fields, behaviors, level, cp.ctx.player_id as c_ulong, cheat);
         pg::ee_cp_lists_new(cp.ctx.fields);
     }
-    cp.q(EE_CP_PLAYER_NEW_PLACEMENT, 0, 0, &[]);
+    placement_new(player);
     cp.q(EE_CP_PLAYER_SET_SELF, 0, 0, &[]);
 }
 
@@ -425,7 +424,8 @@ pub unsafe extern "C" fn ee_cp_pl_destroy(player: u64) {
     let cp = Cp::of(player);
     // SAFETY: the player's lists, not used again
     unsafe { pg::ee_cp_lists_free(&cp.ctx) };
-    cp.q(EE_CP_PLAYER_DELETE_PLACEMENT, 0, 0, &[]);
+    // SAFETY: the player's placement, made by `placement_new`
+    unsafe { placement_delete(player) };
     cp.q(EE_CP_PLAYER_NEXT_DELETE, 0, 0, &[]);
     cp.q(EE_CP_PLAYER_UNITS_DELETE, 0, 0, &[]);
 }
@@ -1557,6 +1557,76 @@ fn restore_managers(cp: &Cp, major: c_ulong, minor: c_ulong, result: c_long) -> 
 // ---------------------------------------------------------------------------------------------------------------
 // The load and the save
 
+/// `new EECPPlacement(player)` into `mPlacement`: no town centre tile, a new Rust placement.
+fn placement_new(player: u64) {
+    let l = layout();
+    assert!(
+        l.placement_town as usize == std::mem::offset_of!(super::placement::EeCpPlacementObj, town)
+            && l.placement_rust as usize == std::mem::offset_of!(super::placement::EeCpPlacementObj, rust),
+        "ee_sim::cp: EECPPlacement is a view of EeCpPlacementObj"
+    );
+    // the `EEComputerPlayer*` of the `EEPlayer*` (its first base)
+    let object = Box::new(super::placement::EeCpPlacementObj {
+        town: [-10000, -10000],
+        player: player as usize as *mut c_void,
+        rust: pg::ee_cp_placement_new(),
+    });
+    // SAFETY: the player's `mPlacement` slot (the layout's)
+    unsafe {
+        std::ptr::write((player as usize + l.cp_placement as usize) as *mut usize, Box::into_raw(object) as usize)
+    };
+}
+
+/// `delete mPlacement` (the slot keeps the pointer, as the C++ did).
+///
+/// # Safety
+/// `player`'s placement was made by [`placement_new`] and is not used again.
+unsafe fn placement_delete(player: u64) {
+    // SAFETY: the caller's contract
+    unsafe {
+        let at = std::ptr::read((player as usize + layout().cp_placement as usize) as *const usize);
+        if at != 0 {
+            let object = Box::from_raw(at as *mut super::placement::EeCpPlacementObj);
+            pg::ee_cp_placement_free(object.rust);
+        }
+    }
+}
+
+/// `EECPPlacement::Load` and `Save`: the town centre tile (U2DPoint's own: x, then y while the result is 0; 4 when
+/// the file is closed), in its PLCE scope (TEST ONLY: a load records the result and the state after, a save the state
+/// before and the result).
+fn placement_file(c: &SaveCtx, load: bool) -> i32 {
+    let cp = &c.cp;
+    let placement = cp.placement();
+    let s = cp.place_scope(if load { plce::LOAD } else { plce::SAVE });
+    if !load {
+        s.state(placement);
+    }
+    let mut result = 4;
+    if cp.q(EE_CP_PLAYER_FILE_OPEN, c.file, 0, &[]) != 0 {
+        let op = if load { EE_UNITS_PLAYER_SAVE_READ_LONG } else { EE_UNITS_PLAYER_SAVE_WRITE_LONG };
+        for k in 0..2 {
+            // SAFETY: the placement's town tile (a live placement); the save's file and primitive
+            unsafe {
+                let tile = cp.ctx.town.add(k);
+                let mut io = EeUnitsPlayerSaveIo { i: *tile as i64, ..Default::default() };
+                result = (c.primitive)(c.file as usize as *mut c_void, op, 0, &mut io);
+                if load {
+                    *tile = io.i as c_long;
+                }
+            }
+            if result != 0 {
+                break;
+            }
+        }
+    }
+    s.i(i64::from(result));
+    if load {
+        s.state(placement);
+    }
+    result
+}
+
 /// The world's computer player of `id` is still `player` (an after-load fixup's test).
 fn still_computer(id: u32, player: u64) -> bool {
     // SAFETY: the world's players
@@ -1584,8 +1654,8 @@ unsafe extern "C" fn save_op(ctx: *mut c_void, op: i32, index: u32, io: *mut EeU
     let cp = &c.cp;
     let file = c.file as usize as *mut c_void;
     match op {
-        save::EE_CP_SAVE_PLACEMENT_LOAD => cp.q(EE_CP_PLAYER_PLACEMENT_LOAD, c.file, 0, &[]) as i32,
-        save::EE_CP_SAVE_PLACEMENT_SAVE => cp.q(EE_CP_PLAYER_PLACEMENT_SAVE, c.file, 0, &[]) as i32,
+        save::EE_CP_SAVE_PLACEMENT_LOAD => placement_file(c, true),
+        save::EE_CP_SAVE_PLACEMENT_SAVE => placement_file(c, false),
         save::EE_CP_SAVE_TOWN_TILE => {
             // SAFETY: the placement's town tile (the save has a placement)
             unsafe { (*io).i = *cp.ctx.town.add(index as usize) as i64 };

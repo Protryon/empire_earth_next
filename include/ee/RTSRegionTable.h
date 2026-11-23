@@ -30,14 +30,10 @@ class RTSRegionTable {
 public:
     // regions per side = the ceiling of inMap->mSize / inRegionSize (fild/fidiv, the fld/fistp helper, fild qword)
     RTSRegionTable(EEMap* inMap, long inRegionSize)
-    {
-        unsigned long theCount = UMCeilUnsigned((float)inMap->mSize / inRegionSize);
-        this->mRegionsX = theCount;
-        this->mRegionsY = theCount;
-        this->mRegionSize = inRegionSize;
-        this->mRegionArea = inRegionSize * inRegionSize;
-        this->mRegions = new RTSRegion<T>[theCount * theCount];
-    }
+        : RTSRegionTable(UMCeilUnsigned((float)inMap->mSize / inRegionSize), inRegionSize) {}
+    RTSRegionTable(unsigned long inCount, long inRegionSize)   // inCount regions a side
+        : mRegions(new RTSRegion<T>[inCount * inCount]), mRegionSize(inRegionSize), mRegionArea(inRegionSize * inRegionSize),
+          mRegionsX(inCount), mRegionsY(inCount) {}
     virtual ~RTSRegionTable() { delete[] this->mRegions; }  // +0x00
 
     // inline (expanded everywhere in EEInfluenceTable.cpp; out-of-line copy 0x10ae9 takes a U2DPoint<long>): 0 off the grid
@@ -53,12 +49,8 @@ public:
     // (provisional name)
     U2DRectangle<long> GetRegions(const U2DRectangle<long>& inTiles)
     {
-        U2DRectangle<long> theRegions;
-        theRegions.mBottom = inTiles.mBottom / this->mRegionSize;
-        theRegions.mLeft = inTiles.mLeft / this->mRegionSize;
-        theRegions.mRight = inTiles.mRight / this->mRegionSize;
-        theRegions.mTop = inTiles.mTop / this->mRegionSize;
-        return theRegions;
+        return U2DRectangle<long>(inTiles.mLeft / this->mRegionSize, inTiles.mTop / this->mRegionSize,
+                                  inTiles.mRight / this->mRegionSize, inTiles.mBottom / this->mRegionSize);
     }
     void Add(unsigned long inX, unsigned long inY, const T& inValue)
     {

@@ -9,6 +9,7 @@
 #define LLE_UIEVENT_H
 
 #include "rust/ui/eventobj.h"
+#include "lle/UIShims.h"
 #include "rust/ui/obj.h"
 
 class FSFileSpec;
@@ -20,12 +21,12 @@ class LLE_API UIEvent : public UReferenceCounter, private EeUiEventFields {
 public:
     UIEvent() { this->mInitializeCount = 0; }  // body assignment: the store follows the vptr load (exe 0x1aa9ef)
     virtual ~UIEvent() {}
-    static long CreateControlEvents(FSFileSpec& inFile);
-    static long CreateFormEvents(FSFileSpec& inFile, UIManager* inManager);
+    static long CreateControlEvents(FSFileSpec& inFile) { return ee_ui_event_create(&inFile, ee_ui_event_host, 0, NULL); }
+    static long CreateFormEvents(FSFileSpec& inFile, UIManager* inManager) { return ee_ui_event_create(&inFile, ee_ui_event_host, 1, inManager); }
     bool GetIsInitialized() const { return this->mInitializeCount != 0; }
-    long Initialize();
+    long Initialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Initialize); }
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) = 0;   // slot 0x04
-    long Uninitialize();
+    long Uninitialize() { return ee_ui_event_call(this, ee_ui_event_host, EeUiEventCall::Uninitialize); }
 protected:
     virtual long InitializeEvent() { return kErrorOK; }
     virtual long UninitializeEvent() { return kErrorOK; }

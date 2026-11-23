@@ -151,6 +151,19 @@ fn statement(op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 
                 );
                 0
             }
+            // the hide-UI event's two views (`EESETriggerScreen::Enter`'s inline `SetRectangles`): its Rust event
+            // found through the box, the views set in Rust
+            EE_SCREENS_SETSX_HIDE_UI_VIEWS => {
+                let mut event = 0usize;
+                let q = [p[0] as *mut c_void, p[1] as *mut c_void, &mut event as *mut usize as *mut c_void];
+                sys::ee_screenscpp_setsx(EE_SCREENS_SETSX_CHECKED_EVENT, q.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr());
+                crate::screens::editor_whole_ffi::ee_screens_see_hide_ui_views(
+                    event as *mut crate::screens::editor_whole_ffi::EeScreensSeeEvent,
+                    f.as_ptr(),
+                    p[1] as *const f32,
+                );
+                0
+            }
             _ => {
                 let q = p.map(|v| v as *mut c_void);
                 let host = match op {

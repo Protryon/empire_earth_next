@@ -11,6 +11,8 @@
 
 #include "lle/UIEvent.h"
 #include "rust/ui/managerobj.h"
+#include "rust/ui/lle_manager.h"
+#include "rust/ui/lle_control.h"
 #include "rust/ui/obj.h"
 
 class FSPath;
@@ -64,21 +66,34 @@ public:
     UIManager(const UIManager&) = delete;   // holds a Rust object; nothing copied a manager
     UIManager& operator=(const UIManager&) = delete;
     virtual ~UIManager();
-    void AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm);
-    void AddEventToTrigger(UIEvent* inEvent, UIForm* inForm, UIEntity* inEntity);
-    void AddForm(UIForm* inForm);           // 0x1005a006; UIForm::Create calls it
-    void AddIMEResultString(const UWideString& inString);
+    // Marks a rectangle dirty: on the top form directly, else on that form and every visible form above that overlaps it
+    void AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm) { this->CallRect(EeUiManagerCall::AddDirtyRectangle, (intptr_t)inForm, inRectangle); }
+    // Queues an event (referenced) to run on the next update for a form and entity
+    void AddEventToTrigger(UIEvent* inEvent, UIForm* inForm, UIEntity* inEntity) { this->Call(EeUiManagerCall::AddEventToTrigger, (intptr_t)inEvent, (intptr_t)inForm, (intptr_t)inEntity); }
+    void AddForm(UIForm* inForm) { this->Call(EeUiManagerCall::AppendForm, (intptr_t)inForm); } // 0x1005a006; UIForm::Create calls it
+    // Passes an IME result string to the top form, under the UI lock
+    void AddIMEResultString(const UWideString& inString) { this->Call(EeUiManagerCall::AddImeResult, (intptr_t)&inString); }
+    // Passes the IME composition string, attributes and cursor to the top form under the UI lock; returns its result
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                             unsigned long inCursor);
-    void ChangeRasterizer(GERasterizer* inRasterizer);
+    void ChangeRasterizer(GERasterizer* inRasterizer) { this->Call(EeUiManagerCall::ChangeRasterizer, (intptr_t)inRasterizer); }
     // Tells the top form the IME composition string closed, under the UI lock; returns its result
     virtual long CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
     // Snapshots every visible form (and the candidate window when open) for drawing; returns the last copy result
     long CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
+    // (their bodies need the form's, the manager's or the background table's class)
+    // Creates every background in the UI background database on its form, by type (bgtableobj.rs)
     void CreateBackgrounds();
-    GEBitmap* CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle);
-    UIEvent* CreateControlEvent(UIForm* inForm, unsigned long inEventID);
-    UIEvent* CreateFormEvent(unsigned long inEventID);
+    // Creates a copy of a bitmap's texture region scaled to fill a control rectangle (20-pixel source)
+    GEBitmap* CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle) { return reinterpret_cast<GEBitmap*>(this->CallRect(EeUiManagerCall::ScaledBitmap, (intptr_t)inBitmap, inRectangle)); }
+    // Asks each registered control-event factory in turn for a form's event; returns the first one made, or NULL
+    UIEvent* CreateControlEvent(UIForm* inForm, unsigned long inEventID)
+    {
+        return reinterpret_cast<UIEvent*>(
+            this->Call(EeUiManagerCall::CreateControlEvent, (intptr_t)inForm, (intptr_t)inEventID));
+    }
+    // Asks each registered form-event factory in turn for an event; returns the first one made, or NULL
+    UIEvent* CreateFormEvent(unsigned long inEventID) { return reinterpret_cast<UIEvent*>(this->Call(EeUiManagerCall::CreateFormEvent, (intptr_t)inEventID)); }
     virtual UIBackground* CreateUserDefinedBackground(const UIBackgroundTable& inTable) { return NULL; }
     virtual UIControl* CreateUserDefinedControl(UIControlsTable& inTable) { return NULL; }
     // inline: exported 0x1005a028 (UIBackground.cpp's inline block)
@@ -89,55 +104,62 @@ public:
     long DrawTextA() { return (long)this->Call(EeUiManagerCall::DrawText); }
     // The header's getters and setters (the original's inline members, 0x10059fdb..0x1005a269)
     void ForceUIUpdate() { this->Call(EeUiManagerCall::ForceUiUpdate); }
-    GEBitmap* GetAlphaSortDownBitmap() const;
-    GEBitmap* GetAlphaSortUpBitmap() const;
-    GEBitmap* GetCheckDownNot() const;
-    GEBitmap* GetCheckDownOff() const;
-    GEBitmap* GetCheckDownOn() const;
-    GEBitmap* GetCheckNot() const;
-    GEBitmap* GetCheckOff() const;
-    GEBitmap* GetCheckOn() const;
+    GEBitmap* GetAlphaSortDownBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 1)); }
+    GEBitmap* GetAlphaSortUpBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 0)); }
+    GEBitmap* GetCheckDownNot() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 16)); }
+    GEBitmap* GetCheckDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 12)); }
+    GEBitmap* GetCheckDownOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 14)); }
+    GEBitmap* GetCheckNot() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 15)); }
+    GEBitmap* GetCheckOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 11)); }
+    GEBitmap* GetCheckOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 13)); }
     UIForm* GetCurrentForm() const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::CurrentForm)); }
-    GEFont* GetFont(unsigned long inIndex) const;
-    UIForm* GetFormByID(unsigned long inID) const;
+    GEFont* GetFont(unsigned long inIndex) const { return reinterpret_cast<GEFont*>(this->Call(EeUiManagerCall::Font, (intptr_t)inIndex)); }
+    // Returns the form with the given ID (NULL: none)
+    UIForm* GetFormByID(unsigned long inID) const
+    {
+        // an unknown ID gives NULL (the original returned the word one past the end of the form list)
+        return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::FormById, (intptr_t)inID));
+    }
     unsigned long GetFormCount() const { return (unsigned long)this->Call(EeUiManagerCall::FormCount); }
-    UIForm* GetStackedForm(unsigned long inIndex) const;   // port (test fixture)
-    TSCriticalSection* GetUILock() const;                  // port (the harness's bridge: the lock UpdateUI holds)
-    GEBitmap* GetDragBarBitmap() const;
+    UIForm* GetStackedForm(unsigned long inIndex) const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::StackedForm, (intptr_t)inIndex)); } // port (test fixture)
+    TSCriticalSection* GetUILock() const { return reinterpret_cast<TSCriticalSection*>(this->Call(EeUiManagerCall::UiLock)); } // port (the harness's bridge: the lock UpdateUI holds)
+    GEBitmap* GetDragBarBitmap() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 10)); }
     // the bitmap by its index (EeUiManagerCall::Bitmap: GetAlphaSortUpBitmap 0 .. GetRadioDownOn 20)
     GEBitmap* GetBitmap(unsigned long inIndex) const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, (intptr_t)inIndex)); }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sLMouseButton inline (0x17d6a9, 37 sites)
-    static ISEntity* GetLMouseButton() { return UIManager::sLMouseButton; }
+    static ISEntity* GetLMouseButton() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::LeftMouse)); }
 #endif
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
-    static ISEntity* GetMouseWheel() { return UIManager::sMouseWheel; }
+    static ISEntity* GetMouseWheel() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::MouseWheel)); }
 #endif
 #endif
+    // Returns the mouse wheel's scroll step: -1 when rolled forward, 1 when rolled back, 0 when still
     static long GetMouseWheelScrollAmount();
     unsigned long GetNumberOfSurfaces() const { return (unsigned long)this->Call(EeUiManagerCall::NumberOfSurfaces); }
-    GEBitmap* GetRadioDownOff() const;
-    GEBitmap* GetRadioOff() const;
-    GEBitmap* GetRadioDownOn() const;
-    GEBitmap* GetRadioOn() const;
-    GERasterizer* GetRasterizer() const;
+    GEBitmap* GetRadioDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 18)); }
+    GEBitmap* GetRadioOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 17)); }
+    GEBitmap* GetRadioDownOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 20)); }
+    GEBitmap* GetRadioOn() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 19)); }
+    GERasterizer* GetRasterizer() const { return reinterpret_cast<GERasterizer*>(this->Call(EeUiManagerCall::Rasterizer)); }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sRMouseButton inline (27 sites)
-    static ISEntity* GetRMouseButton() { return UIManager::sRMouseButton; }
+    static ISEntity* GetRMouseButton() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::RightMouse)); }
 #endif
-    GEBitmap* GetSBBitmapDownNormal() const;
-    GEBitmap* GetSBBitmapDownPressed() const;
-    GEBitmap* GetSBBitmapLeftNormal() const;
-    GEBitmap* GetSBBitmapLeftPressed() const;
-    GEBitmap* GetSBBitmapRightNormal() const;
-    GEBitmap* GetSBBitmapRightPressed() const;
-    GEBitmap* GetSBBitmapUpNormal() const;
-    GEBitmap* GetSBBitmapUpPressed() const;
+    GEBitmap* GetSBBitmapDownNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 2)); }
+    GEBitmap* GetSBBitmapDownPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 3)); }
+    GEBitmap* GetSBBitmapLeftNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 4)); }
+    GEBitmap* GetSBBitmapLeftPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 5)); }
+    GEBitmap* GetSBBitmapRightNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 6)); }
+    GEBitmap* GetSBBitmapRightPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 7)); }
+    GEBitmap* GetSBBitmapUpNormal() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 8)); }
+    GEBitmap* GetSBBitmapUpPressed() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 9)); }
     unsigned long GetScreen() const { return (unsigned long)this->Call(EeUiManagerCall::Screen); }
-    SESoundManager* GetSoundManager() const;
-    UResourceFile* GetStringTable() const;
+    SESoundManager* GetSoundManager() const { return reinterpret_cast<SESoundManager*>(this->Call(EeUiManagerCall::SoundManager)); }
+    UResourceFile* GetStringTable() const { return reinterpret_cast<UResourceFile*>(this->Call(EeUiManagerCall::StringTable)); }
     unsigned long GetUITextureBitDepth() const { return (unsigned long)this->Call(EeUiManagerCall::TextureBitDepth); }
     bool IsFormVisible(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormVisible, (intptr_t)inForm) != 0; }
-    void LoadDatabase(FSPath* inPath, const UString& inDirectory);
+    // Loads the UI database (fonts, forms, backgrounds, controls, control and form events, hot keys) from a directory
+    void LoadDatabase(FSPath* inPath, const UString& inDirectory) { ee_ui_manager_load_database(this, inPath, &inDirectory); }
     void LockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 0); }
     // Tells the top form an IME composition string opened, under the UI lock; returns its result
     virtual long OpenIMECompositionString() { return (long)this->Call(EeUiManagerCall::OpenComposition); }
@@ -145,53 +167,54 @@ public:
     long Pop() { return (long)this->Call(EeUiManagerCall::Pop); }
     // Pops forms until the given one is on top, when it is on the stack; returns OK (each Pop does)
     long PopTo(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::PopTo, (intptr_t)inForm); }
-    void ProcessAllEventsForForm(UIForm* inForm);
+    // Runs and releases the queued events of one form; the other forms' events stay queued in order
+    void ProcessAllEventsForForm(UIForm* inForm) { this->Call(EeUiManagerCall::ProcessAllEventsForForm, (intptr_t)inForm); }
     // Opens a form on top of the stack (unless already stacked), deactivating the old top; returns OK
     long Push(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::Push, (intptr_t)inForm); }
     // Marks every visible form and all its controls dirty
     void RedrawAll() { this->Call(EeUiManagerCall::RedrawAll); }
-    void RegisterControlEventCallback(UIEvent* (*inCallback)(UIForm*, unsigned long));
-    void RegisterFormEventCallback(UIEvent* (*inCallback)(UIManager*, unsigned long));
+    void RegisterControlEventCallback(UIEvent* (*inCallback)(UIForm*, unsigned long)) { this->Call(EeUiManagerCall::RegisterControlCallback, (intptr_t)inCallback); }
+    void RegisterFormEventCallback(UIEvent* (*inCallback)(UIManager*, unsigned long)) { this->Call(EeUiManagerCall::RegisterFormCallback, (intptr_t)inCallback); }
     // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
     void RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
-    void RemoveDatabase();
-    void SetFont(unsigned long inIndex, GEFont* inFont);
-    static void SetMouseLeftHanded(bool inLeftHanded);
+    // Deletes the UI database tables (controls, backgrounds, fonts)
+    void RemoveDatabase() { ee_ui_manager_remove_database(); }
+    void SetFont(unsigned long inIndex, GEFont* inFont) { this->Call(EeUiManagerCall::SetFont, (intptr_t)inIndex, (intptr_t)inFont); }
+    // Swaps the left and right mouse buttons when the left-handed setting changes
+    static void SetMouseLeftHanded(bool inLeftHanded) { ee_ui_manager_set_mouse_left_handed(inLeftHanded); }
     // Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK
     long SwapForm(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::SwapForm, (intptr_t)inForm); }
-    void SetMusicVolume(float inVolume);
-    void StartMusic(const UWideString& inFileName);
+    // Sets the music volume; stops the music at 0 and restarts the last track (or the intro) when raised from 0
+    void SetMusicVolume(float inVolume) { this->CallPoint(EeUiManagerCall::SetMusicVolume, inVolume, 0.0f); }
+    // Loads and starts a music track unless it is the current one (names compared lower-cased)
+    void StartMusic(const UWideString& inFileName) { this->Call(EeUiManagerCall::StartMusic, (intptr_t)(const char*)inFileName); }
     // Stops the music and unloads the track
     void StopMusic() { this->Call(EeUiManagerCall::StopMusic); }
     void UnlockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 1); }
-    virtual long UpdateUI(const GE2DPoint& inMouseLocation);   // slot 0x28
-    long UpdateTranslatedKey(const char* inKey, short inRepeat);
+    // Runs one UI update: keyboard, mouse, queued events, then any pending music stop or start; returns the mouse result
+    virtual long UpdateUI(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateUi, inMouseLocation.GetX(), inMouseLocation.GetY()); } // slot 0x28
+    // Passes a translated character to the top form unless its repeat count is 16 or more; returns its result
+    long UpdateTranslatedKey(const char* inKey, short inRepeat) { return (long)this->Call(EeUiManagerCall::UpdateTranslatedKey, (intptr_t)inKey, (intptr_t)inRepeat); }
 protected:
     // Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiManagerCall::UpdateKeyboard); }
-    virtual long UpdateMouse(const GE2DPoint& inMouseLocation);   // slot 0x30
+    // Passes the mouse location and buttons to the top form when the mouse changed, it is captured, or an update is forced
+    virtual long UpdateMouse(const GE2DPoint& inMouseLocation) { return (long)this->CallPoint(EeUiManagerCall::UpdateMouse, inMouseLocation.GetX(), inMouseLocation.GetY()); } // slot 0x30
 public:
     // the Rust manager's calls out that are not Rust's (ee_ui lle_manager.rs: ee_ui_manager_host comes first)
     static intptr_t HostOp(void* inManager, EeUiOp inOp, intptr_t inA, intptr_t inB, intptr_t inC, intptr_t inD,
                            float* ioF);
 private:
     // the forwarders' one call into the Rust manager (with a rectangle, with two floats)
-    intptr_t Call(EeUiManagerCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0, float* ioF = NULL) const;
+    intptr_t Call(EeUiManagerCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0, float* ioF = NULL) const { return ee_ui_manager_call(this->mRust, inCall, inA, inB, inC, ioF); }
     intptr_t CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const;
     intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const;
 
     EeUiManager* mRust;                     // the state (managerobj.rs)
 public:   // the mouse buttons' shims (UIManager.cpp)
-#if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
-    // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number); the exe
-    // imports both
-    static ISEntity* sLMouseButton;
-    static ISEntity* sRMouseButton;
-#endif
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
     // Inferred: visible to its users only (shown to UIControl.cpp it renumbers that unit's $E chains)
-    static ISEntity* sMouseWheel;
     static bool sMouseLeftHanded;
 #endif
 #endif

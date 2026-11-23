@@ -181,7 +181,6 @@ inline void EECombatChainCapture(unsigned int inTag, const In& inInput, const st
 // and the outcome are captured. Defined in EEUCMissile.cpp.
 class EEUnitClass;
 class EEComplexUnit;
-EeCombatImpactOut EECombatImpact(EEUnitClass* inClass, EEComplexUnit* inUnit, EeCombatImpactIn& in);
 
 // CBEW: an effect's start at the shooter's weapon tag point (EEE2DLinearProjectile, EEE2DMuzzleFlash,
 // EEE2DSmokeMuzzleBlast, EEE3DPulseCannonBall, EEE3DTracers): the shooter's model data at its frame as

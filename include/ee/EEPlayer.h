@@ -48,7 +48,6 @@ class EEUnit;
 class NEMessage;
 class RTSUnit;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
-template <class T> class U2DPoint;
 typedef U2DPoint<long> EETileLocation;   // ee/EETileLocation.h
 class RTSTile;
 class EETown;                               // (ee/EETown.h)
@@ -58,16 +57,13 @@ class EEUnitClassUpgrade;                   // (ee/EEUnit.h; was `struct EEUnitS
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 typedef EeUnitsOffMapInfo EEWUnitsOffMapInfo;   // (ee/EEWUnitsOffMapInfo.h)
 class EEMedia;
-class EESoundObject;                        // (EEUnitClassUpgrade's sounds: SetClassAcknowledgeSound..SetClassSelectionSound)
 class EEGraphicObject;
 class EEHerd;                               // ee/EEHerd.h (mHerds's elements)
 class EEUnitSet;                            // ee/EEUnitSetManager.h (mHealedUnitSet)
-typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
 template <class T> class UReferenceContainer;
 class EEButtonObject;
 class EEMap;
 class UIHotKey;
-template <class T> class U2DPoint;           // AddEvent / GetMouseChild take a U2DPoint<long>
 
 // A player's event list (RTTI EEPPlayerEventList, vtable 0x442b54): the alerts at a map location (1 under attack, 2 a
 // garrison's message, 3 a flare).
@@ -98,6 +94,7 @@ public:
 
     EeUnitsPlayerEvents* mList;             // the events (Rust)
     SESMInstanceNode* mSound;               // the alert playing (referenced)
+    SESMInstanceNode* mPlayed;              // the alert just played (EE_UNITS_EVENTS_X_PLAY: player_events_split.rs)
     EESoundObject* mSounds[5];              // under attack, garrison, flare, 0x7d0 twice (loaded with the list)
 };
 
@@ -550,12 +547,9 @@ public:
     unsigned long GetNumPendingUnits() const { return this->mPendingUnits.size(); }
     // inline (COMDAT 0x131872 in EEGameState.cpp, its first user Create; EEWorld 0x139264 calls the same copy;
     // the 0.6f constant is loaded once, then three fmul st(1))
-    void SetColor(const GEColor& inColor)
+    void SetColor(const GEColor& inColor)   // (the color and its shade at 0.6: ee_units player_rest.rs)
     {
-        this->mColor = inColor;
-        this->mShadeColor.mRed = inColor.mRed * 0.6f;
-        this->mShadeColor.mGreen = inColor.mGreen * 0.6f;
-        this->mShadeColor.mBlue = inColor.mBlue * 0.6f;
+        ee_units_player_set_color(reinterpret_cast<float(*)[3]>(&this->mColor), reinterpret_cast<float(*)[3]>(&this->mShadeColor), reinterpret_cast<const float(*)[3]>(&inColor));
     }
     void Reset();                           // 0x16f464 (the ctors call it)
     void InsertUnit(RTSUnit* inUnit);       // 0x16f49e (the unit list and the id buckets; Virtual28's)
@@ -601,7 +595,6 @@ public:
     virtual void RemovalsDone();            // +0x34 0x16854e (same RTSPlayer slot)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x165cfa
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond);   // +0x20 0x1690ca
-    bool AdoptTownPatrol(EETown* inTown);   // port: a loaded town takes back its saved patrol group (0.254 saves)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x169c46
     virtual void AddPendingUnits(bool inKeepID, bool inReleasePending);  // +0x04 0x16275a (mPendingGroups into mRunningGroups, then RTSPlayer's)
     virtual void RecountPopulation();       // +0x08 0x16379e (counts the units into mPopulationCount/mEndOfGameCount/mNumVitalBuildings)
@@ -636,13 +629,10 @@ public:
     // inline accessors the diplomacy form expands (EEUIEDSOpen 0x1d4165 reads each through a temporary;
     // provisional names)
     unsigned long GetGameResult() const { return this->mGameResult; }
-    float GetTributeFee() const { return this->mTributeFee; }  // (RefundTributes 0x1d5bfc: fld of the value, then fimul)
     long GetEnemy(unsigned long inPlayer) const { return this->mEnemies[inPlayer]; }
     // inline: inPlayer is this player or not at war with it (EECPCombatManager::IsValidTarget 0x473684 compares the
     // result as a byte: `cmp al, bl` for `== false`) (provisional name)
     bool IsAlly(EEPlayer* inPlayer) { return inPlayer == this || this->mEnemies[inPlayer->mPlayerID] == 0; }
-    long GetResource(long inResource) const { return this->mResourceCaps[inResource]; }
-    bool GetSendChatMessage(unsigned long inPlayer) const { return this->mSendChatMessage[inPlayer]; }
     virtual long GetExtraPopulation(long inUnitClass) { return 1; }  // +0x78 0xa54a1 (`push 1; pop eax; ret 4`: a long, not a bool)
     virtual long GetPopulationLimit(long inArg);  // +0x7c 0x16528b (ret 4: mB24 + mB20 + a global; EECPCombatStrategy 0x771be)
     // +0x80 (conscription 0xafe5f) (provisional name)
@@ -681,7 +671,6 @@ public:
     void LoadUnitClassMedia(long inUnitClass);
     void GetHerdsOfType(std::vector<EEHerd*>& outHerds, long inUnitType);  // 0x164e78 (the herds of inUnitType's animal; EESMObject 0x1c8e37; provisional name)
     void ApplyMapRestrictions();            // 0x16c249 (the space/sea-map techs off, or the unit-selection hot keys for them; 0x13a3f9; provisional name)
-    void DisableCamouflagePower();          // 0x16c5f9 (civ power 0x31: each complex unit in its unit set loses mIsCloakable/mIsCloaked, mCamouflageTimer/mU32C; VirtualXX 0x16b987; provisional name)
     void CheckButtonsPreloaded(long inUnitClass);  // 0x16c6fa (EEUnitClass::CreateUnitAt before a new unit; provisional name)
     void SetUnitClassMedia(long inUnitClass, long inMediaFlags);
     void UnloadUnitClassMedia(long inUnitClass);
@@ -689,6 +678,7 @@ public:
     void AddWonder(EEComplexUnit* inUnit, bool inIsLoading);
     void RemoveWonder(EEComplexUnit* inUnit);
     void DeselectUnit(EEUnit* inUnit);                      // 0x168eb9 (the hurricane's Stop, its unit)
+    void EnableCamouflagePower();           // 0x16c548 (the civilization manager's civ power)
     // 0x164e22: the last town of the vector at +0x7cc whose area holds inUnit's tile, or 0 (the prophet analyzers'
     // 0xaa8b; provisional name)
     unsigned long GetNumTowns() const { return this->mTowns.size(); }   // inline COMDAT 0x4098f0 (emitted after its first out-of-line user, EECPASGUProphet.cpp 0x409831); /Os post-check undoes it where size() expands inside, it stays where size() is refused (provisional name)
@@ -724,15 +714,11 @@ public:
     bool CanImprove(long inUnitType, long inImprovement, UWideString* outReason);
     void Reset();                           // 0x165813 (both ctors call it after the vptr store; the arrays and groups; hides RTSPlayer::Reset)
     const UWideString& GetName();           // 0x167eda (&mName, out of line; Reset's; provisional name)
-    bool AddUnitToTown(EEComplexUnit* inUnit);
     void UpdateFreeUnitPower(); // original Player unit-class update, no arguments
     void PulseSight(bool inByID, float inSight, long inID); // original169b26, three arguments/ret12 // 0x163138 (ret 4; RepairPointers: each unit's complex unit; provisional name)
-    void RecountHeroesAndTeleporters();     // 0x16c427 (RepairPointers' last call; provisional name)
-    void UpdateAirTraffic();                // 0x16b63f (each mAirTraffic's Update; ComputeLoadDistance)
     unsigned long GetTeamIndex();           // 0x165561 (the index of the team holding this player, 0 if none; provisional name)
     // +0x3c 0x16a4b5 (ret 0x10): one unit's type, whether it is a unit (not 0xdf) and complex, then its Save
     virtual long SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    void KillHerdUnits(EEHerd* inHerd, bool inKilled);  // 0x165c3c (ret 8: each unit of a herd in state 0xb: Virtual60(inArg, 0, 0))
     void EraseQueuedImprovements(unsigned long inUnitType);  // 0x163f36 (mQueuedImprovements's entry erased; 0x12ba6d)
     void MoveQueuedImprovements(unsigned long inFrom, unsigned long inTo);  // 0x16419b (mQueuedImprovements's entry moved)
     // inline (out-of-line COMDATs after their first users in EEUICPortrait.cpp: 0x258cb8 / 0x2594e8): the improvement
@@ -743,17 +729,8 @@ public:
     void RestartTowns();                    // 0x1680e4 (each town's UpdateNearWater; EEWorld::StartGame)
     void RegisterTowns();                   // 0x16513d (the towns re-registered with gContinentManager)
     void RegisterHerds();                   // 0x1650dc (player 0 before a scenario starts; provisional name)
-    bool AddUnitToHerd(EEComplexUnit* inUnit);  // 0x162e22 (AddUnit result returned in AL)
     void AssignHerds();                     // 0x164453 (player 0, after RegisterHerds; provisional name)
     void AssignTowns();                     // 0x16451a (the other players, after RegisterTowns; provisional name)
-    // template COMDAT 0xa5313 (EEHerd.cpp's range; ret 8): the herds of mHerds (+0x7dc, EEHerd* elements) inPredicate
-    // holds for, the last first (provisional name)
-    template <class P, class V> void GetHerds(P inPredicate, V& outHerds)
-    {
-        for (long i = this->mHerds.size() - 1; i >= 0; i--)
-            if (inPredicate(this->mHerds[i]))
-                outHerds.push_back(this->mHerds[i]);
-    }
     // inline (out-of-line COMDAT 0xc350f after its first user EEMPayTribute::Execute): the tribute statistics, inDirection
     // 0 paid / 1 received (provisional names)
     void AddTribute(long inDirection, long inResource, long inAmount)
@@ -776,42 +753,30 @@ public:
     void AddSightSharer(EEPlayer* inPlayer);  // 0x1627b9 (pushes inPlayer into mSightSharers between two walks of the units)
     void RemoveSightSharer(EEPlayer* inPlayer);  // 0x1684ab (the mirror: inPlayer out of mSightSharers; RemoveWonderPower, 0x16ab41)
     void AddUnitToRepatrol(EEComplexUnit* inUnit);  // 0x162b35 (one of its own units into mUnitsToRepatrol, referenced)
-    void ClearUnitsToRepatrol();            // 0x163fbb (mUnitsToRepatrol dereferenced and cleared)
     void AddOffMapUnit(RTSUnit* inUnit);    // 0x162dab (a new EEWUnitsOffMapInfo for inUnit into mUnitsOffMap)
     void AddStrandedUnit(EEUnit* inUnit);   // 0x163043 (into mStrandedUnits once, referenced)
     bool TrySelectUnit(EEUnit* inUnit, bool inFlag);  // 0x1630ac (selects inUnit; false when another player's unit meets a selection)
     void AddConstructionSite(EEComplexUnit* inUnit);  // 0x16368f (into mConstructionSites unless it has it)
-    EEComplexUnit* GetNextComplexUnit(EEUnit* inUnit);  // 0x167ede (the next unit with a complex unit after inUnit, from the first when 0)
     void AddSharedSight(EETile* inTile, long inX, long inY);  // 0x168120 (AddOwnSight, then the allies sharing the line of sight)
     void AddOwnSight(EETile* inTile, long inX, long inY);  // 0x16820e (counts this player in at the tile)
     void AddOwnSightAt(const EETileLocation& inLocation);
-    void RemoveConstructionSite(EEComplexUnit* inUnit);  // 0x168fdf (out of mConstructionSites)
     void RemoveAlly(EEPlayer* inPlayer);    // 0x1683da (inPlayer out of mAllies)
     void RemovePatrolGroup(EEPPatrolGroup* inGroup); // 0x168889 (out of mPatrolGroups, dereferenced)
     void RemoveOffMapUnit(RTSUnit* inUnit);  // 0x168e30 (its EEWUnitsOffMapInfo out of mUnitsOffMap, deleted)
-    void ResetTechTree();                   // 0x1697b4 (the player's tech tree from gTechTree)
     void SetAllResources(long inValue);     // 0x16ab1b (mResourceCaps[2..6] = inValue)
-    void ClearFootprint(EEComplexUnit* inUnit);  // 0x16a70a (thiscall: `ret 4`, MarkInvalid passes ecx = this; this unused)
     void SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMap);  // 0x16ab41 (the diplomatic stance towards inOther; EEWorld::SetDiplomaticStance; provisional name)
     void RefreshTerrainVisibility();        // 0x16aec0 (EEWorld::RestartUnits on player 0; provisional name)
     void DumpMedia(FSFileSpec& inFile);     // 0x16436a (EEWorld::DumpMedia; provisional name)
     void RestorePatrols();                  // 0x16bc6e (EEWorld::StartGame after RestartTowns; provisional name)
     void SetCivilizationPoints(long inEpoch);  // 0x16ab2f (mCivilization.SetEpoch)
     void SetEpoch(long inEpoch);            // 0x16addc (the tech tree's SetEpoch)
-    void UnloadAllMedia();                  // 0x16b572 (unloads and clears mLoadedMedia)
     void SetSharedLOS(bool inFlag, EEMap* inArg); // 0x16ae5f (ret 8; sets mSharedLOS around the units' slots +0x24/+0x0c)
     bool HasLoadedUnitID(unsigned long inUnitID);   // 0x16bbf8 (mLoadedUnitIDs has it)
-    void RemoveUnitFromHerd(EEComplexUnit* inUnit);  // 0x168d33: remove a real ComplexUnit from herd ownership
-    void RemoveUnitFromTown(EEComplexUnit* inUnit);  // 0x168f03: remove a real ComplexUnit from town ownership
-    void RefreshUpgrades();                // 0x169990: refresh player upgrades, original this/no args
-    void EnableCamouflagePower();          // 0x16c548: civilization powers, original this/no args
-    void ResetWonderTimers(EEPlayer* inPlayer);  // 0x16c1e1 (both players' mWonders units: mCloaked = the time)
     void NoticeForeignUnit(EEUnit* inUnit);  // 0x16442b (mCombatState = 1 for a unit of a player other than 0)
     EEGroup* GetActiveGroupOf(EEComplexUnit* inUnit) { return static_cast<EEGroup*>(ee_units_group_active_of(this, inUnit)); }  // 0x164b4f (the group of mRunningGroups, else mPendingGroups, holding inUnit)
     long GetCitizenPassability();           // 0x1650a3 (flags 1/2/4/8 from unit class 0x20's upgrade +0x160)
     EEAIArea* GetNearestArea(const EETileCoordinate& inTile, bool inSameContinent);  // 0x164781 (ret 8; EECPResourceManager::FindResourceTarget takes its slot +0x18) (provisional name)
     long GetTotalPopulation(bool inFirst, bool inSecond);  // 0x1651e0 (mPopulationCount plus the units' AddedToParent: mPendingUnits, then those in a 0x1d container)
-    bool CanAffordScaled(EETechTreeNode* inNode, long inUnitClass, float inScale, long inCount);  // 0x16542e (ret 0x10; arg 4 an `imul` count)
     long GetImprovementLevel(unsigned long inUnitType, long inImprovement) const;  // 0x164ed7 (an improvement's level; Virtual40; const: as CountQueuedImprovements)
     // 0x164fac: whether the improvement is at its maximum level (the class's mImprovements->mMaxLevel against
     // GetImprovementLevel; EEUIBUpgrade; provisional name)
@@ -819,10 +784,6 @@ public:
     void KillStrandedUnits();               // 0x165c8c (mStrandedUnits's units back into the world)
     void AddLoadedMedia(EEMedia* inMedia);  // 0x162740 (pushes into mLoadedMedia unless 0; provisional name)
     void DelayWonderTimers(long inAmount);  // 0x162b08 (adds to every unit's mCloaked in mWonders; provisional name)
-    bool RemoveLoadedMedia(EEMedia* inMedia);  // 0x16843f (UnloadPlayerEffects unloads the media when true; provisional name)
-    void LoadPlayerEffects();
-    void UnloadPlayerEffects();
-    long GetNumHeroes(bool inFirst, bool inSecond);   // 0x164223 (mNumHeroes and/or mNumHeroesInProduction; provisional name)
     long GetWonderTime(long inIndex) const;  // 0x165644 (mWonders's unit inIndex's mCloaked; provisional name)
     unsigned long GetNumWonderUnits() const;   // 0x16565f: mWonders->GetSize() (provisional name)
     // per unit class (mUnitClassUpgrades[inUnitClass] when inUnitClass < EEUnitClassCount(); provisional names)
@@ -883,7 +844,6 @@ public:
     EETechnologyTable* mTechnologies;       // +0x9cc (provisional name; conscription 0xafe3b; Reset: new 0x554 bytes)
     RTSUnit* mViewedUnit;                   // +0x9d0 (Reset dereferences it)
     RTSUnit* mSelectedViewedUnit;           // +0x9d4 (a referenced unit: SetSelectedViewedUnit swaps it)
-    long GetMiningLimit() const { return this->mMiningLimit; }  // inline (EEUGBuildRepair::GatherNearBuilding)
 };
 
 

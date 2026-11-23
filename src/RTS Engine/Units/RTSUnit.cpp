@@ -25,42 +25,17 @@
 // New (R5a.4): the unit registry behind EEUnitHandle (ee/EEUnitHandle.h) is Rust (ee_units): a lock-free radix
 // tree over the id's bits, so any thread may resolve a handle while another thread inserts a unit or runs its
 // last Dereference. Looked up only, never iterated.
-RTSUnit* RTSResolveUnitID(uint32_t inUnitID)
-{
-    if (inUnitID == 0xffffffff)
-        return NULL;
-    return static_cast<RTSUnit*>(ee_units_resolve(inUnitID));
-}
+RTSUnit* RTSResolveUnitID(uint32_t inUnitID) { return static_cast<RTSUnit*>(ee_rts_unit_resolve(inUnitID)); }
 
 // A unit's id is final when its player inserts it. A second object with the same id (none in a game: ids count up)
 // replaces the first in the registry; the first one's FreeNode then leaves the entry alone.
-void RTSRegisterUnit(RTSUnit* inUnit)
-{
-    uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
-    if (theID != 0xffffffff)
-        ee_units_register(theID, inUnit);
-}
-
-void RTSUnregisterUnit(RTSUnit* inUnit)
-{
-    uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
-    if (theID != 0xffffffff)
-        ee_units_unregister(theID, inUnit);   // only if the entry is still this unit
-}
+// (ee_game rts units.rs: an unregister leaves the entry alone unless it is still this unit)
+void RTSRegisterUnit(RTSUnit* inUnit) { ee_rts_unit_registry(inUnit, inUnit, true); }
+void RTSUnregisterUnit(RTSUnit* inUnit) { ee_rts_unit_registry(inUnit, inUnit, false); }
 
 // A handle of a unit without an id resolves to nothing: reported once (such a holder must keep its pointer). The
 // EEUnit and EEComplexUnit overloads are in EEUnit.cpp (they need the complete classes).
-uint32_t EEUnitHandleID(const RTSUnit* inUnit)
-{
-    uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
-    static bool sReported = false;
-    if (theID == 0xffffffff && !sReported) {
-        sReported = true;
-        fprintf(stderr, "EE-HANDLE: a handle to a unit without an id (%p): it resolves to nothing\n",
-                (const void*)inUnit);
-    }
-    return theID;
-}
+uint32_t EEUnitHandleID(const RTSUnit* inUnit) { return ee_rts_unit_handle_id(inUnit); }
 
 void EEUnitHandleResolve(uint32_t inUnitID, RTSUnit*& outUnit) { outUnit = RTSResolveUnitID(inUnitID); }
 
@@ -79,20 +54,10 @@ RTSUnit::~RTSUnit()
 
 
 // Appends the unit's id and tile to a debug description
-void RTSUnit::Describe(UWideString& ioString)
-{
-    UWideString theString;
-    sprintf(theString, "uid %ld, at %ld,%ld:", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
-    ioString += theString;
-}
+void RTSUnit::Describe(UWideString& ioString) { ioString += ee_rts_unit_describe(this, false); }
 
 // Appends the unit's id and tile to a multi-line debug description
-void RTSUnit::DescribeLong(UWideString& ioString)
-{
-    UWideString theString;
-    sprintf(theString, "UnitID:%ld\nTile:(%ld,%ld)\n", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
-    ioString += theString;
-}
+void RTSUnit::DescribeLong(UWideString& ioString) { ioString += ee_rts_unit_describe(this, true); }
 
 
 

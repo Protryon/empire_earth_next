@@ -155,14 +155,14 @@ fn the_elevation_slider_and_highlight() {
 #[test]
 fn the_upgrade_panel_counts_its_controls() {
     let (mut id, mut index): (c_ulong, c_ulong) = (100, 10);
+    let mut panel = SeupPanel::default();
     let (_, log) = run(
         |_, op, _| match op {
             EE_SCREENS_SEUPX_PORTRAIT_RIGHT => 0,
-            EE_SCREENS_SEFMX_LABEL_GETEXT | EE_SCREENS_SEUPX_NEW_LAYOUT => MAKE,
+            EE_SCREENS_SEFMX_LABEL_GETEXT | EE_SCREENS_SEUPX_NEW_LAYOUT | EE_SCREENS_SEUPX_NEW_BOX => MAKE,
             o if o == EE_SCREENS_SEUPX_NEW_PORTRAIT
                 || o == EE_SCREENS_SEUPX_NEW_NAME_LABEL
-                || o == EE_SCREENS_SEUPX_NEW_LEFT_BAR
-                || o == EE_SCREENS_SEUPX_NEW_MIDDLE_BAR
+                || o == EE_SCREENS_SEUPX_NEW_BAR
                 || o == EE_SCREENS_SEUPX_NEW_ATTRIBUTE
                 || o == EE_SCREENS_SEUPX_NEW_ROW_LABEL
                 || o == EE_SCREENS_SEUPX_NEW_ARMOR_LABEL =>
@@ -171,22 +171,49 @@ fn the_upgrade_panel_counts_its_controls() {
             }
             _ => 0,
         },
-        |x, y| unsafe { upgrade_panel(x, y, 0x70, &mut id, &mut index, 0x50) },
+        |x, y| unsafe { upgrade_panel(x, y, &mut panel, &mut id, &mut index, 0x50) },
     );
     // the portrait, the name, two bars, nine attribute rows and their labels, the armor title
     assert_eq!((id, index), (123, 33));
     assert_eq!(log.iter().filter(|e| e.1 == EE_SCREENS_SEFMX_HIDE && e.0 == 'x').count(), 23);
-    // the portrait at (6, 619) .. (36, 649) with the first id
+    // the box first; the portrait at (6, 619) .. (36, 649) with the first id, wired into the box
+    assert_eq!((log[0].1, panel.status_box), (EE_SCREENS_SEUPX_NEW_BOX, 0x1001));
     let portrait = log.iter().find(|e| e.1 == EE_SCREENS_SEUPX_NEW_PORTRAIT && e.0 == 'y').unwrap();
     assert_eq!((portrait.3[0], portrait.3[1], portrait.4), (100, 10, [6.0, 619.0, 36.0, 649.0]));
-    // the sixth attribute row: the second column's first line, 48 + 19 wide
+    let wired = log.iter().find(|e| e.1 == EE_SCREENS_SEUPX_BOX_PORTRAIT).unwrap();
+    assert_eq!(wired.2, [panel.status_box, panel.portrait, 0]);
+    // the sixth attribute row: the second column's first line, 48 + 19 wide; its row wires the box, icon and label
     let rows: Vec<_> = log.iter().filter(|e| e.1 == EE_SCREENS_SEUPX_NEW_ATTRIBUTE && e.0 == 'y').collect();
     assert_eq!(rows[5].4, [156.0, 654.0, 223.0, 671.0]);
     assert_eq!(rows[5].3[2], 5);
+    let boxed: Vec<_> = log.iter().filter(|e| e.1 == EE_SCREENS_SEUPX_BOX_ROW).collect();
+    assert_eq!((boxed[5].2, boxed[5].3[2]), ([panel.status_box, panel.attributes[5], panel.labels[5]], 5));
+    // every control kept, distinct
+    let mut all = vec![panel.portrait, panel.name, panel.left_bar, panel.middle_bar, panel.armor];
+    all.extend(panel.attributes);
+    all.extend(panel.labels);
+    assert!(all.iter().all(|&h| h > 0x1000));
+    all.sort_unstable();
+    all.dedup();
+    assert_eq!(all.len(), 23);
     // the layout freed last
     assert_eq!(log.last().unwrap().1, EE_SCREENS_SEUPX_LAYOUT_DELETE);
-    let (_, log) = run(|_, _, _| 0, |_, y| upgrade_panel_free(y, 0x70));
+    let (_, log) = run(|_, _, _| 0, |_, y| upgrade_panel_free(y, &panel));
     assert_eq!(log.len(), 6 + 18);
+    assert_eq!(
+        log[..6].iter().map(|e| (e.1, e.2[0])).collect::<Vec<_>>(),
+        [
+            (EE_SCREENS_SEUPX_DELETE_BOX, panel.status_box),
+            (EE_SCREENS_SEUPX_DELETE_PORTRAIT, panel.portrait),
+            (EE_SCREENS_SEUPX_DELETE_LABEL, panel.armor),
+            (EE_SCREENS_SEUPX_DELETE_BAR, panel.left_bar),
+            (EE_SCREENS_SEUPX_DELETE_BAR, panel.middle_bar),
+            (EE_SCREENS_SEUPX_DELETE_LABEL, panel.name),
+        ]
+    );
+    assert_eq!((log[22].1, log[22].2[0]), (EE_SCREENS_SEUPX_DELETE_ATTRIBUTE, panel.attributes[8]));
+    let (_, log) = run(|_, _, _| 0, |_, y| upgrade_panel_show(y, &panel, 0x77));
+    assert_eq!((log[0].1, log[0].2), (EE_SCREENS_SEUPX_FILL, [panel.status_box, 0x77, 0]));
 }
 
 #[test]

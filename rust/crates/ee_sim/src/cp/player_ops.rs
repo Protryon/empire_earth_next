@@ -39,6 +39,8 @@ pub(crate) mod plce {
     pub(crate) const UNIT_ADDED: u32 = 24;
     pub(crate) const RESET: u32 = 25;
     pub(crate) const RESTORE: u32 = 26;
+    pub(crate) const LOAD: u32 = 27;
+    pub(crate) const SAVE: u32 = 28;
     pub(crate) const COUNT_OWN: u32 = 46;
 }
 

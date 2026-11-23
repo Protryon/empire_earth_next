@@ -62,12 +62,7 @@ extern "C" void (*gURandomTraceHook)(URandom* inRandom) = NULL;   // port, TEST 
 
 // ---- the vertex host: the calls GEBitmap, GELine, GEPoint and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
 
-static intptr_t GEBitmapFloatBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return (intptr_t)theBits;
-}
+static intptr_t GEBitmapFloatBits(float inValue) { return UFloatBits(inValue); }
 
 // (C linkage: ee_ge game_hosts.rs names it)
 extern "C" intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)

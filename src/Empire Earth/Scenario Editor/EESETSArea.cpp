@@ -81,12 +81,16 @@ float sSearT = 0.0f;
 
 }   // namespace
 
-extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i, float* f)
+
+// the sub-screen's single statements (editor_trigx.rs EE_SCREENS_SEARX_*, 500..: p0 the area or the action, p2 the
+// out word of a found or made one or a text's buffer (capacity i3), a text p1's i0 bytes)
+extern "C" int32_t ee_screenscpp_searx(uint32_t inOp, void* const* p, int32_t* i, float* f)
 {
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
+    void** theOut = static_cast<void**>(p[2]);
+    EESMArea* theArea = static_cast<EESMArea*>(p[0]);
     switch (inOp) {
     case EE_SCREENS_SEAR_OP_NAMES:
-        theManager->GetNames(EE_SCENARIO_NAMES_USER_AREAS, *static_cast<std::vector<UWideString>*>(p[0]));
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_AREAS, *static_cast<std::vector<UWideString>*>(p[0]));
         return 0;
     case EE_SCREENS_SEAR_OP_HIGHLIGHT: SearEditor()->GetBrushGroup()->SetIsHighlightShown(i[0] != 0); return 0;
     case EE_SCREENS_SEAR_OP_PAINT_AREA: SearEditor()->SetPaintArea(GERectangle(f[0], f[1], f[2], f[3])); return 0;
@@ -97,17 +101,6 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
         ee_screens_sew_area_corner(static_cast<EESEARust*>(p[0])->mAction, i[0], i[1]);
         return 0;
     case EE_SCREENS_SEAR_OP_PAINT_RELEASE: static_cast<EESEARust*>(p[0])->Dereference(); return 0;
-    }
-    return 0;
-}
-
-// the sub-screen's single statements (editor_trigx.rs EE_SCREENS_SEARX_*, 500..: p0 the area or the action, p2 the
-// out word of a found or made one or a text's buffer (capacity i3), a text p1's i0 bytes)
-extern "C" int32_t ee_screenscpp_searx(uint32_t inOp, void* const* p, int32_t* i, float* f)
-{
-    void** theOut = static_cast<void**>(p[2]);
-    EESMArea* theArea = static_cast<EESMArea*>(p[0]);
-    switch (inOp) {
     case EE_SCREENS_SEARX_AREA:
         *theOut = gWorld.mScenarioManager->GetArea((unsigned long)i[0]);
         return 0;
@@ -180,18 +173,22 @@ extern "C" int32_t ee_screenscpp_searx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEARX_BOUNDS_VIEW:
         gMouse->SetBounds(gViewport.GetViewRectangle());
         return 0;
-    case EE_SCREENS_SEARX_EDGES_VIEW:
-        SearEditor()->GetEdgeScroll()->mEdges = GERectangle(gViewport.GetViewRectangle().GetLeft(),
-                                                        gViewport.GetViewRectangle().GetTop(),
-                                                        gViewport.GetViewRectangle().GetRight() - 1.0f,
-                                                        gViewport.GetViewRectangle().GetBottom() - 1.0f);
+    case EE_SCREENS_SEARX_VIEW_LEFT: f[0] = gViewport.GetViewRectangle().GetLeft();
+        return 0;
+    case EE_SCREENS_SEARX_VIEW_TOP: f[0] = gViewport.GetViewRectangle().GetTop();
+        return 0;
+    case EE_SCREENS_SEARX_VIEW_RIGHT: f[0] = gViewport.GetViewRectangle().GetRight();
+        return 0;
+    case EE_SCREENS_SEARX_VIEW_BOTTOM: f[0] = gViewport.GetViewRectangle().GetBottom();
+        return 0;
+    case EE_SCREENS_SEARX_SET_EDGES: SearEditor()->GetEdgeScroll()->mEdges = GERectangle(f[0], f[1], f[2], f[3]);
         return 0;
     case EE_SCREENS_SEARX_BOUNDS_WINDOW:
         gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
         return 0;
-    case EE_SCREENS_SEARX_EDGES_WINDOW:
-        SearEditor()->GetEdgeScroll()->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
-                                                        (float)gGameWindow->GetHeight() - 1.0f);
+    case EE_SCREENS_SEARX_WINDOW_WIDTH: f[0] = (float)gGameWindow->GetWidth();
+        return 0;
+    case EE_SCREENS_SEARX_WINDOW_HEIGHT: f[0] = (float)gGameWindow->GetHeight();
         return 0;
     case EE_SCREENS_SEARX_PAINT_AREA:   // (left, top, right, bottom)
         ee_screens_sew_area(static_cast<EESEARust*>(p[0])->mAction, i);

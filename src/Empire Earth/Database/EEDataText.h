@@ -41,9 +41,6 @@ class UString;
 // name with .csv/.yaml) compiled to the table's record stream as a new FSMemoryFile. No binary db file is read (RUST_PLAN
 // D9): a missing text table, a table with no text form or a text that does not compile stops the game with its message.
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile);
-// The row ids of dbobjects or dbtechtree by key (the unit class / the tech id), as the last load read them
-// (EEDbFindFile); false and empty before that table was loaded.
-bool EEDbRowIds(const char* inTable, std::map<long, std::string>& outIds);
 
 // Reads the rules documents (ee/EERules.h: db\combat.yaml ... and epochs.yaml's media) from the path into
 // EEGetRules(), through the same Content as the db tables (references by id). A missing document keeps the

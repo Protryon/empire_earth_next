@@ -4,36 +4,18 @@
 #define LLE_GEQUATERNION_H
 #include "lle/GERust.h"
 
-class GEQuaternion {                // sizeof 0x10: x, y, z, w
+class GEQuaternion : public EeGeQuaternion {   // the Rust record (mX, mY, mZ, mW; rust/base/math.h)
 public:
-    GEQuaternion()
-    {
-        this->mW = 1.0f;
-        this->mX = 0.0f;
-        this->mY = 0.0f;
-        this->mZ = 0.0f;
-    }
-    GEQuaternion(const GEQuaternion& inQuaternion) { *this = inQuaternion; }   // ICF-folded with operator=
-    GEQuaternion(const GETransformation& inTransformation) { this->ConvertFrom(inTransformation); }
-    ~GEQuaternion() {}
-    GEQuaternion& operator=(const GEQuaternion& inQuaternion)
-    {
-        this->mW = inQuaternion.mW;
-        this->mX = inQuaternion.mX;
-        this->mY = inQuaternion.mY;
-        this->mZ = inQuaternion.mZ;
-        return *this;
-    }
+    GEQuaternion() : EeGeQuaternion{0.0f, 0.0f, 0.0f, 1.0f} {}
+    GEQuaternion(const GETransformation& inTransformation) : EeGeQuaternion{} { this->ConvertFrom(inTransformation); }
     bool operator==(const GEQuaternion& inQuaternion) const
         { return this->mW == inQuaternion.mW && this->mX == inQuaternion.mX && this->mY == inQuaternion.mY && this->mZ == inQuaternion.mZ; }
     bool operator!=(const GEQuaternion& inQuaternion) const
         { return this->mW != inQuaternion.mW || this->mX != inQuaternion.mX || this->mY != inQuaternion.mY || this->mZ != inQuaternion.mZ; }
-    GEQuaternion& operator+=(const GEQuaternion& inQuaternion)
+    GEQuaternion& operator+=(const GEQuaternion& inQuaternion)   // component by component
     {
-        this->mW += inQuaternion.mW;
-        this->mX += inQuaternion.mX;
-        this->mY += inQuaternion.mY;
-        this->mZ += inQuaternion.mZ;
+        static_cast<EeGeQuaternion&>(*this) = EeGeQuaternion{this->mX + inQuaternion.mX, this->mY + inQuaternion.mY,
+                                                             this->mZ + inQuaternion.mZ, this->mW + inQuaternion.mW};
         return *this;
     }
     // from a transformation's rotation (the vector part negated), normalised
@@ -42,12 +24,6 @@ public:
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
     void Normalize() { ee_ge_quat_normalize(GERust(*this)); }   // to unit length
-private:
-    friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)
-    float mX;                               // +0x00
-    float mY;                               // +0x04
-    float mZ;                               // +0x08
-    float mW;                               // +0x0c
 };
 
 #endif

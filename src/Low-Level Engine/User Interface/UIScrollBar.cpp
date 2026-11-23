@@ -69,15 +69,6 @@ struct UIScrollBarRust {
         }
         return 0;
     }
-    static intptr_t Call(const UIScrollBar* s, EeUiScrollBarCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
-    {
-        return ee_ui_scroll_bar_call(s->mRust, c, a, b, f);
-    }
-    static intptr_t CallF(const UIScrollBar* s, EeUiScrollBarCall c, float f0, float f1 = 0.0f, float f2 = 0.0f)
-    {
-        float f[4] = {f0, f1, f2, 0.0f};
-        return ee_ui_scroll_bar_call(s->mRust, c, 0, 0, f);
-    }
     // the constructor's rectangle, before the Rust object exists
     static GERectangle Layout(const GE2DPoint& inLocation, float inLength, unsigned long inStyle)
     {
@@ -85,7 +76,6 @@ struct UIScrollBarRust {
         return GERectangle(r.left, r.top, r.right, r.bottom);
     }
 };
-typedef EeUiScrollBarCall C;
 
 // Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons
 // Fixed: the rectangle's size was `x + (style == 1) ? 19 : length - 1` (a precedence slip), which made it
@@ -99,26 +89,3 @@ UIScrollBar::UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float 
 }
 
 UIScrollBar::~UIScrollBar() { ee_ui_scroll_bar_free(this->mRust); }
-long UIScrollBar::CopyData() { return (long)UIScrollBarRust::Call(this, C::CopyData); }
-long UIScrollBar::DrawPolygons() { return (long)UIScrollBarRust::Call(this, C::DrawPolygons); }
-long UIScrollBar::DrawTextA() { return (long)UIScrollBarRust::Call(this, C::DrawText); }
-const UISlider* UIScrollBar::GetSlider() const { return reinterpret_cast<const UISlider*>(UIScrollBarRust::Call(this, C::Slider)); }
-void UIScrollBar::IncrementBy(long inAmount) { UIScrollBarRust::Call(this, C::IncrementBy, inAmount); }
-long UIScrollBar::MouseLButtonDown() { return (long)UIScrollBarRust::Call(this, C::MouseLButtonDown); }
-long UIScrollBar::MouseLButtonUp() { return (long)UIScrollBarRust::Call(this, C::MouseLButtonUp); }
-long UIScrollBar::MouseMove(const GE2DPoint& inLocation)
-{
-    return (long)UIScrollBarRust::CallF(this, C::MouseMove, inLocation.GetX(), inLocation.GetY());
-}
-void UIScrollBar::SetCurrentRangeValue(unsigned long inValue) { UIScrollBarRust::Call(this, C::SetCurrentRangeValue, inValue); }
-void UIScrollBar::SetBgColor(const GEColor& inColor)
-{
-    UIScrollBarRust::CallF(this, C::SetBgColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
-}
-void UIScrollBar::SetBgOpacity(float inOpacity) { UIScrollBarRust::CallF(this, C::SetBgOpacity, inOpacity); }
-void UIScrollBar::SetLocation(const GE2DPoint& inLocation)
-{
-    UIScrollBarRust::CallF(this, C::SetLocation, inLocation.GetX(), inLocation.GetY());
-}
-void UIScrollBar::SetPageSize(unsigned long inPageSize) { UIScrollBarRust::Call(this, C::SetPageSize, inPageSize); }
-void UIScrollBar::SetRange(unsigned long inMin, unsigned long inMax) { UIScrollBarRust::Call(this, C::SetRange, inMin, inMax); }

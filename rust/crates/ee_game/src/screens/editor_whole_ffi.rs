@@ -13,6 +13,7 @@ use crate::screens::editor_seax;
 use crate::screens::editor_seax_ffi::Seax;
 use crate::screens::editor_whole::{
     EeScreensSewAction, SewAction, SewElevation, SewGate, SewHost, SewWall, EE_SCREENS_SEW_OP_RANDOM_MAP,
+    EE_SCREENS_SEW_OP_TEXT_FREE, EE_SCREENS_SEW_OP_TEXT_RUN,
 };
 
 /// cbindgen:ignore
@@ -20,9 +21,7 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_sew(op: u32, p: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
-        pub fn ee_screenscpp_see(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
-        pub fn ee_screenscpp_sep(op: u32, p: *mut c_void, t: *mut f32, i: *mut i32, f: *mut f32) -> i32;
+        pub fn ee_screenscpp_seex(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
     }
 }
 
@@ -40,7 +39,10 @@ impl SepHost for Host {
         }
         // a transformation is sixteen floats, row by row (GETransformation's mMatrix)
         let t = t.m.as_mut_ptr().cast::<f32>();
-        unsafe { sys::ee_screenscpp_sep(op, p as *mut c_void, t, i.as_mut_ptr(), f.as_mut_ptr()) }
+        let (op, null) = (editor_seax::EE_SCREENS_SEAX_SEP + op, core::ptr::null_mut());
+        unsafe {
+            crate::screens::editor_seax_ffi::host(op, p as *mut c_void, null, t, i.as_mut_ptr(), f.as_mut_ptr()) as i32
+        }
     }
 }
 
@@ -53,10 +55,28 @@ impl SewHost for Host {
             f[..3].copy_from_slice(&at);
             return 0;
         }
+        if op == EE_SCREENS_SEW_OP_TEXT_RUN {
+            crate::screens::editor_selt_ffi::ee_screens_seia_run(p as *mut c_void, i[0] != 0);
+            return 0;
+        }
+        if op == EE_SCREENS_SEW_OP_TEXT_FREE {
+            crate::screens::editor_selt_ffi::seia_info_free(p as *mut c_void);
+            return 0;
+        }
         if let Some(r) = editor_seax::sew(&mut Seax, op, p, i, f) {
             return r;
         }
-        unsafe { sys::ee_screenscpp_sew(op, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
+        let (op, null) = (editor_seax::EE_SCREENS_SEAX_SEW + op, core::ptr::null_mut());
+        unsafe {
+            crate::screens::editor_seax_ffi::host(
+                op,
+                p as *mut c_void,
+                null,
+                core::ptr::null_mut(),
+                i.as_mut_ptr(),
+                f.as_mut_ptr(),
+            ) as i32
+        }
     }
     fn delete(&mut self, what: crate::screens::editor_actions::SeuDelete) {
         crate::screens::editor_actions::delete_units(&mut crate::screens::editor_actions_ffi::Selection, what);
@@ -294,12 +314,28 @@ impl SeeHost for Host {
         if let Some(r) = crate::screens::editor_direct::see(op, p, i) {
             return r;
         }
+        if op == crate::screens::editor_events::EE_SCREENS_SEE_OP_TERRAIN_CHANGE {
+            use crate::screens::editor_terrain_ffi::{ee_screens_setn_call, EeScreensSeTerrain};
+            let tab = unsafe { crate::screens::editor_groups_ffi::ee_screens_segr_tab(p[0] as *const _) };
+            // the list box as the control the tab's change reads (UIControl and UIEntity share the address)
+            unsafe {
+                ee_screens_setn_call(tab as *const EeScreensSeTerrain, i[0] as u32, p[1] as *mut c_void, 0.0, 0.0)
+            };
+            return 0;
+        }
         use crate::screens::editor_tabsx as tabsx;
         if let Some(r) = unsafe { tabsx::see(&mut crate::screens::editor_sefmx::cpp, &mut tabsx::seex, op, p, i, f) } {
             return r;
         }
+        use crate::screens::editor_events as ev;
+        let statement = match op {
+            ev::EE_SCREENS_SEE_OP_HAS_EDITOR => ev::EE_SCREENS_SEEX_HAS_EDITOR,
+            ev::EE_SCREENS_SEE_OP_EPOCH_COUNT => tabsx::EE_SCREENS_SEEX_EPOCH_COUNT,
+            ev::EE_SCREENS_SEE_OP_MAX_PLAYERS => ev::EE_SCREENS_SEEX_MAX_PLAYERS,
+            _ => return 0,
+        };
         let p = p.map(|x| x as *mut c_void);
-        unsafe { sys::ee_screenscpp_see(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
+        unsafe { sys::ee_screenscpp_seex(statement, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
     }
 }
 
@@ -333,6 +369,9 @@ pub unsafe extern "C" fn ee_screens_see_process(
     let e = unsafe { (*event).0.clone() };
     if e == SeeKind::SaveTriggersOnly {
         return crate::screens::editor_form_ffi::save_triggers();
+    }
+    if let SeeKind::Text { import } = e {
+        return crate::screens::editor_selt_ffi::ee_screens_seia_event(form, import) as i32;
     }
     e.process_in(&mut Host, form as usize, entity as usize)
 }
@@ -426,6 +465,52 @@ pub unsafe extern "C" fn ee_screens_see_objects(
     if !event.is_null() {
         unsafe { (*event).0.set_objects(a as usize, b as usize, c as usize) };
     }
+}
+
+/// A slider event of `kind` (`EE_SCREENS_SEE_SLIDER_CHANGE` or `EE_SCREENS_SEE_UNIT_LIMIT`) made with its label,
+/// format, scale and offset (`EESEENewSliderChange`, `EESEENewUnitLimit`).
+///
+/// # Safety
+/// `format` is NUL-terminated (or NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_new_slider(
+    kind: u32,
+    label: *mut c_void,
+    format: *const core::ffi::c_char,
+    scale: f32,
+    offset: f32,
+) -> *mut EeScreensSeeEvent {
+    let event = ee_screens_see_new(kind, core::ptr::null_mut());
+    unsafe { ee_screens_see_slider(event, label, format, scale, offset) };
+    event
+}
+
+/// An `EESEEUseObjectArea` made with its label, combo box and area control (`EESEENewUseObjectArea`).
+#[no_mangle]
+pub extern "C" fn ee_screens_see_new_object_area(
+    label: *mut c_void,
+    combo: *mut c_void,
+    area: *mut c_void,
+) -> *mut EeScreensSeeEvent {
+    let event =
+        ee_screens_see_new(crate::screens::editor_events::EE_SCREENS_SEE_USE_OBJECT_AREA, core::ptr::null_mut());
+    // SAFETY: the event was just made (or is NULL)
+    unsafe { ee_screens_see_object_area(event, label, combo, area) };
+    event
+}
+
+/// An effect editor's event of `kind` made with its objects (`EESEENewObjects`).
+#[no_mangle]
+pub extern "C" fn ee_screens_see_new_objects(
+    kind: u32,
+    a: *mut c_void,
+    b: *mut c_void,
+    c: *mut c_void,
+) -> *mut EeScreensSeeEvent {
+    let event = ee_screens_see_new(kind, core::ptr::null_mut());
+    // SAFETY: the event was just made (or is NULL)
+    unsafe { ee_screens_see_objects(event, a, b, c) };
+    event
 }
 
 /// The `EESEERust`'s destructor.

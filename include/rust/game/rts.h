@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/math.h"
+#include "rust/sim/world.h"
 
 /// `RTSPhysics`' plain members (`ee/EEPhysics.h`), in the class's order: a base of the class.
 struct EeRtsPhysicsFields {
@@ -393,6 +394,32 @@ void ee_rts_tile_remove_unit(void *tile, void *unit);
 /// # Safety
 /// `tile` is a live tile.
 bool ee_rts_tile_has_unit(void *tile, void *unit);
+
+/// `RTSResolveUnitID`: the registered unit of an id (NULL for the no-id value or an unregistered id).
+void *ee_rts_unit_resolve(uint32_t id);
+
+/// `RTSRegisterUnit` (`register`) and `RTSUnregisterUnit`: the unit `unit` (whose record is `fields`) under its id,
+/// unless it has none; an unregister leaves an entry that is another unit's.
+///
+/// # Safety
+/// `fields` is the live unit's record.
+void ee_rts_unit_registry(const EeUnitsRtsUnitFields *fields,
+                          void *unit,
+                          bool register_);
+
+/// `EEUnitHandleID`: the unit's id; a unit without one is reported once (its handle resolves to nothing).
+///
+/// # Safety
+/// `fields` is the live unit's record.
+uint32_t ee_rts_unit_handle_id(const EeUnitsRtsUnitFields *fields);
+
+/// `RTSUnit::Describe` (`long` false: "uid N, at X,Y:") and `DescribeLong` ("UnitID:N\nTile:(X,Y)\n"): the text
+/// appended, the id's low 24 bits. The text lives until the thread's next call.
+///
+/// # Safety
+/// `fields` is the live unit's record.
+const char *ee_rts_unit_describe(const EeUnitsRtsUnitFields *fields,
+                                 bool long_);
 
 /// `RTSUnit::RTSUnit`'s body.
 void ee_rts_unit_construct(void *unit);

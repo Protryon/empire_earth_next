@@ -9,6 +9,8 @@
 use crate::lle_cpp::{lle_host, Cpp, HostArgs};
 use crate::mouse::{ButtonQuery, ControlMouseCall};
 use crate::obj::EeUiOp as Op;
+use core::ffi::c_void;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 /// The control's host's moved cases (`UIControl::HostOp`); `None` for the C++ host's.
 pub(crate) fn control_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isize> {
@@ -51,6 +53,122 @@ pub(crate) fn fetch_keys<C: Cpp + ?Sized>(c: &mut C) {
     for (slot, &code) in CONTROL_KEYS.iter().enumerate() {
         c.control_key_fetch(slot as u32, code);
     }
+}
+
+/// The shared UI keys and mouse buttons (UI lane round 13: once `UIControl`'s 24 key statics, `UIForm`'s Tab and
+/// Shift and `UIManager`'s mouse buttons and wheel): the slot of each `ISEntity*` in [`ee_ui_key_slot`]'s record. The
+/// first 24 are [`CONTROL_KEYS`]' order (`ee_uicpp_control_key_fetch`'s slot); the mouse three are
+/// `ee_uicpp_mouse_button_fetch`'s order after [`EeUiKey::LeftMouse`].
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeUiKey {
+    Space = 0,
+    Enter,
+    Control,
+    Alt,
+    End,
+    Home,
+    Left,
+    Right,
+    Up,
+    Down,
+    Delete,
+    BackSpace,
+    NumEnd,
+    NumHome,
+    NumLeft,
+    NumRight,
+    NumUp,
+    NumDown,
+    NumDelete,
+    NumEnter,
+    Cut,
+    Copy,
+    Paste,
+    Insert,
+    Tab,
+    Shift,
+    LeftMouse,
+    RightMouse,
+    MouseWheel,
+}
+
+const KEY_COUNT: usize = EeUiKey::MouseWheel as usize + 1;
+#[allow(clippy::declare_interior_mutable_const)]
+const NO_KEY: AtomicUsize = AtomicUsize::new(0);
+/// The keys' `ISEntity*`s (0 until looked up), written by the C++ through [`ee_ui_key_slot`].
+static KEYS: [AtomicUsize; KEY_COUNT] = [NO_KEY; KEY_COUNT];
+
+/// `key`'s slot: the C++ `ISEntity*&` (`UIControl::Key`; `GetEntity`'s out reference).
+#[no_mangle]
+pub extern "C" fn ee_ui_key_slot(key: EeUiKey) -> *mut *mut c_void {
+    KEYS[key as usize].as_ptr().cast()
+}
+
+/// `key`'s entity (0 until looked up).
+pub(crate) fn key(key: EeUiKey) -> usize {
+    KEYS[key as usize].load(Ordering::Relaxed)
+}
+
+/// The key predicates (`UIControl::ControlKeyPressed` .. `UpKeyPressed`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeUiKeyPress {
+    Control = 0,
+    Copy,
+    Cut,
+    Delete,
+    Down,
+    End,
+    Enter,
+    Home,
+    Left,
+    Paste,
+    Right,
+    Shift,
+    Up,
+}
+
+fn held<C: Cpp + ?Sized>(c: &mut C, k: EeUiKey) -> bool {
+    c.entity_long_value(key(k)) != 0
+}
+
+/// Shift held or just pressed (`ShiftKeyPressed`).
+fn shift<C: Cpp + ?Sized>(c: &mut C) -> bool {
+    c.entity_just_pressed(key(EeUiKey::Shift)) || held(c, EeUiKey::Shift)
+}
+
+/// A key or, with Num Lock off, its keypad twin held.
+fn keypad<C: Cpp + ?Sized>(c: &mut C, main: EeUiKey, num: EeUiKey) -> bool {
+    held(c, main) || c.num_lock_off() && held(c, num)
+}
+
+/// `UIControl::<which>KeyPressed()` (the original's bodies, in their order of calls).
+pub(crate) fn key_pressed<C: Cpp + ?Sized>(c: &mut C, which: EeUiKeyPress) -> bool {
+    use EeUiKey as K;
+    use EeUiKeyPress as P;
+    match which {
+        P::Control => c.entity_long_value(key(K::Control)) > 0,
+        P::Copy => held(c, K::Control) && held(c, K::Copy),
+        P::Cut => held(c, K::Control) && held(c, K::Cut) || shift(c) && held(c, K::Delete),
+        P::Paste => held(c, K::Control) && held(c, K::Paste) || shift(c) && held(c, K::Insert),
+        P::Delete => keypad(c, K::Delete, K::NumDelete),
+        P::Down => keypad(c, K::Down, K::NumDown),
+        P::End => keypad(c, K::End, K::NumEnd),
+        P::Home => keypad(c, K::Home, K::NumHome),
+        P::Left => keypad(c, K::Left, K::NumLeft),
+        P::Right => keypad(c, K::Right, K::NumRight),
+        P::Up => keypad(c, K::Up, K::NumUp),
+        P::Enter => c.entity_just_unpressed(key(K::Enter)) || c.entity_just_unpressed(key(K::NumEnter)),
+        P::Shift => shift(c),
+    }
+}
+
+/// `UIControl::<which>KeyPressed()`.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub extern "C" fn ee_ui_key_pressed(which: EeUiKeyPress) -> bool {
+    key_pressed(&mut crate::lle_cpp::Ffi, which)
 }
 
 /// The mouse dispatch's question to a button (`ee_uicpp_control_mouse` 0..7 of old).
@@ -163,5 +281,37 @@ mod tests {
         assert_eq!(ee_ui_obj_manager_bitmap(0), 2);
         assert_eq!(ee_ui_obj_manager_bitmap(7), 5);
         assert_eq!(ee_ui_obj_manager_bitmap(17), 20);
+    }
+
+    #[test]
+    fn key_predicates_read_the_slots_in_the_originals_order() {
+        // the slots of keys no other test looks up
+        let slot = |k: EeUiKey, v: usize| unsafe { *ee_ui_key_slot(k) = v as *mut c_void };
+        slot(EeUiKey::Control, 30);
+        slot(EeUiKey::Cut, 31);
+        slot(EeUiKey::Shift, 32);
+        slot(EeUiKey::Delete, 33);
+        slot(EeUiKey::NumDelete, 34);
+        slot(EeUiKey::Enter, 35);
+        slot(EeUiKey::NumEnter, 36);
+        let mut fake = Fake::default();
+        fake.answer("entity_long_value", &[1, 0, 1, 1]).answer("entity_just_pressed", &[0]);
+        assert!(key_pressed(&mut fake, EeUiKeyPress::Cut));
+        assert_eq!(
+            fake.calls(),
+            "entity_long_value(30)\nentity_long_value(31)\nentity_just_pressed(32)\nentity_long_value(32)\n\
+             entity_long_value(33)"
+        );
+        let mut fake = Fake::default();
+        fake.answer("entity_long_value", &[0, 1]).answer("num_lock_off", &[1]);
+        assert!(key_pressed(&mut fake, EeUiKeyPress::Delete));
+        assert_eq!(fake.calls(), "entity_long_value(33)\nnum_lock_off()\nentity_long_value(34)");
+        let mut fake = Fake::default();
+        fake.answer("entity_long_value", &[-1]);
+        assert!(!key_pressed(&mut fake, EeUiKeyPress::Control));
+        let mut fake = Fake::default();
+        fake.answer("entity_just_unpressed", &[0, 1]);
+        assert!(key_pressed(&mut fake, EeUiKeyPress::Enter));
+        assert_eq!(fake.calls(), "entity_just_unpressed(35)\nentity_just_unpressed(36)");
     }
 }

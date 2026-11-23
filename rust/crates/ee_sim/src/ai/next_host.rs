@@ -20,6 +20,16 @@ use crate::cp::player_game::{self as pl, ctx_of};
 /// false, 0, false, false), 0, 0)`
 pub const EE_AI_NEXT_HOST_SET_ATTACK: i32 = 64;
 pub const EE_AI_NEXT_HOST_SET_LOCATION: i32 = 65;
+/// the units' sim hash (round 9): `gWorld.mUnits.mFirst`; unit `a`'s `mTileNode->mNext`; its `GetChecksum(3)`;
+/// `gPhysics`'s `mCurrentTick`, `mRandom.GetSeed()`, `mInputMessagesProcessed`
+pub const EE_AI_NEXT_HOST_SIM_FIRST_UNIT: i32 = 69;
+pub const EE_AI_NEXT_HOST_SIM_NEXT_UNIT: i32 = 70;
+pub const EE_AI_NEXT_HOST_SIM_CHECKSUM: i32 = 71;
+pub const EE_AI_NEXT_HOST_SIM_TICK: i32 = 72;
+pub const EE_AI_NEXT_HOST_SIM_SEED: i32 = 73;
+pub const EE_AI_NEXT_HOST_SIM_INPUTS: i32 = 74;
+/// player `a`'s `GetNearestArea(EETileCoordinate(b, c), true)` (an `EEAIArea*`)
+pub const EE_AI_NEXT_HOST_NEAREST_AREA: i32 = 75;
 
 fn cpp(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> i64 {
     // SAFETY: the C++ switch over the live game
@@ -63,6 +73,48 @@ fn player_op(me: *mut c_void, op: i32, a: u64, v: &[i64]) -> i64 {
 pub(super) unsafe fn op(op: i32, me: *mut c_void, a: i64, b: i64, c: i64, out: *mut c_void) -> Option<i64> {
     let out64 = out as *mut i64;
     Some(match op {
+        EE_AI_NEXT_HOST_STDERR => {
+            // EE-SIM's stderr line (C's stderr is unbuffered, as Rust's)
+            use std::io::Write;
+            let mut e = std::io::stderr();
+            let _ = e.write_all(std::ffi::CStr::from_ptr(a as usize as *const std::ffi::c_char).to_bytes());
+            let _ = e.flush();
+            0
+        }
+        EE_AI_NEXT_HOST_AREA_HULL => {
+            // the hull point of player `a`'s nearest area closest to (b, c)
+            let area = cpp(EE_AI_NEXT_HOST_NEAREST_AREA, me, a, b, c, std::ptr::null_mut());
+            if area == 0 {
+                return Some(0);
+            }
+            let p = crate::astar::hull::EeHullPoint { x: b as c_long, y: c as c_long };
+            let q = crate::astar::area_ops::ee_astar_area_closest_hull_point(crate::astar::cm_io::area(area as u64), p);
+            *out64 = q.x as i64;
+            *out64.add(1) = q.y as i64;
+            1
+        }
+        EE_AI_NEXT_HOST_SIM_HASH => {
+            // the units' count and checksum sum, the tick, the shared seed, the inputs
+            let null = std::ptr::null_mut();
+            let (mut units, mut count): (std::ffi::c_ulong, std::ffi::c_ulong) = (0, 0);
+            let mut u = cpp(EE_AI_NEXT_HOST_SIM_FIRST_UNIT, me, 0, 0, 0, null);
+            while u != 0 {
+                units = units.wrapping_add(cpp(EE_AI_NEXT_HOST_SIM_CHECKSUM, me, u, 0, 0, null) as std::ffi::c_ulong);
+                count = count.wrapping_add(1);
+                u = cpp(EE_AI_NEXT_HOST_SIM_NEXT_UNIT, me, u, 0, 0, null);
+            }
+            *out64 = cpp(EE_AI_NEXT_HOST_SIM_TICK, me, 0, 0, 0, null);
+            *out64.add(1) = count as i64;
+            *out64.add(2) = units as i64;
+            *out64.add(3) = cpp(EE_AI_NEXT_HOST_SIM_SEED, me, 0, 0, 0, null);
+            *out64.add(4) = cpp(EE_AI_NEXT_HOST_SIM_INPUTS, me, 0, 0, 0, null);
+            0
+        }
+        EE_AI_NEXT_HOST_CLASS_NAME => {
+            // SAFETY: the byte ops' record is a `Vec<u8>`
+            (*(out as *mut Vec<u8>)).extend_from_slice(&crate::ai::names_db::class_name(i64::from(a as c_long)));
+            0
+        }
         EE_AI_NEXT_HOST_FORESTS => cm_table(EeAStarCmTable::Forests).len() as i64,
         EE_AI_NEXT_HOST_FOREST => {
             let h = cm_table(EeAStarCmTable::Forests).get(a as u16 as usize).copied().unwrap_or(0);
