@@ -56,7 +56,7 @@
 #include "ee/EEAnimal.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEUnitClassRecord.h"
+#include "rust/data/tables.h"   // EEUnitClassRecord (ee_data DbUnitClass)
 #include "ee/EEDbObject.h"
 #include "ee/EEDatabase.h"
 #include "ee/EEUnitClassKinds.h"
@@ -868,10 +868,10 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
         ESDebugOut("EEUnitClass::EEUnitClass: unit %s has an LOS of %f.\n", static_cast<EEUnitClassRecord*>(inUnit)->mName, static_cast<EEUnitClassRecord*>(inUnit)->mLineOfSight);
         return 0;
     case EE_UNITS_UC_COPY_SCRIPT_NAME:
-        theClass->mAIScriptName.Copy(static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName, 0, strlen(static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName), 0, true);
+        theClass->mAIScriptName.Copy((const char*)static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName, 0, strlen((const char*)static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName), 0, true);
         return 0;
     case EE_UNITS_UC_COPY_NAME:
-        theClass->mName.Copy(static_cast<EEUnitClassRecord*>(inUnit)->mName, 0, strlen(static_cast<EEUnitClassRecord*>(inUnit)->mName), 0, true);
+        theClass->mName.Copy((const char*)static_cast<EEUnitClassRecord*>(inUnit)->mName, 0, strlen((const char*)static_cast<EEUnitClassRecord*>(inUnit)->mName), 0, true);
         return 0;
     case EE_UNITS_UC_FIND_ANIMAL: return EEObj(EEAnimal::Find(static_cast<EEUnitClassRecord*>(inUnit)->mUnitType));
     case EE_UNITS_UC_ANIMAL_ID: return EEUcObject<EEAnimal>(inA)->mAnimalID;

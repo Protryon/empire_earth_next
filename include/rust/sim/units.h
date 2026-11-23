@@ -21479,7 +21479,7 @@ void ee_units_complex_dump(uint32_t part,
                            void *ctx);
 
 /// `EEUnitClass::EEUnitClass`'s plain stores: `out` (the class's record base) set from the db row `row`
-/// (an `EEUnitClassRecord`, ee/EEUnitClassRecord.h, the layout ee_data's generated record asserts).
+/// (an `EEUnitClassRecord`, ee_data tables.rs `DbUnitClass`, the layout ee_data's generated record asserts).
 ///
 /// # Safety
 /// `out` is a writable `EeUnitsUnitClassFields`; `row` a readable `EEUnitClassRecord`; `input` readable.
