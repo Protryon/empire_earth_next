@@ -6,12 +6,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/ustring.h"
 
 /// A checksum set (`ESChecksum`).
 struct EeErrorChecksum;
-
-/// Error texts from `ee_error_checksum_compare`, read with `ee_error_texts_count` / `_get`, freed with `_free`.
-struct EeErrorTexts;
 
 extern "C" {
 
@@ -133,31 +131,21 @@ void ee_error_checksum_clear(EeErrorChecksum *c);
 /// `c` is a live set; `description` a NUL-terminated string.
 void ee_error_checksum_push(EeErrorChecksum *c, const char *description, uint32_t value);
 
-/// `Compare(other)`: whether they match; the error texts into `*out_texts` (free with `ee_error_texts_free`).
+/// `Compare(other, errors)`: whether they match; each error text (its NULs dropped) handed to `sink` with `target`
+/// in order (`ESChecksum::Compare`'s vector push).
 ///
 /// # Safety
-/// Both are live sets; `out_texts` is valid.
+/// Both are live sets; `sink` takes `target` and a NUL-terminated text valid for the call.
 bool ee_error_checksum_compare(const EeErrorChecksum *c,
                                const EeErrorChecksum *other,
-                               EeErrorTexts **out_texts);
+                               void (*sink)(void *target, const char *text),
+                               void *target);
 
-/// The number of texts.
+/// `UWideString::GetChecksum`: the string's checksum added to the set as "UWideString (<text>)".
 ///
 /// # Safety
-/// `t` is from `ee_error_checksum_compare`.
-size_t ee_error_texts_count(const EeErrorTexts *t);
-
-/// Text `i` (valid until `ee_error_texts_free`).
-///
-/// # Safety
-/// `t` is from `ee_error_checksum_compare`; `i` is below the count.
-const char *ee_error_texts_get(const EeErrorTexts *t, size_t i);
-
-/// Frees the texts.
-///
-/// # Safety
-/// `t` is from `ee_error_checksum_compare` or NULL, not used afterwards.
-void ee_error_texts_free(EeErrorTexts *t);
+/// `c` is a live set, `s` a live string.
+void ee_error_checksum_add_wide(EeErrorChecksum *c, const EeUWideString *s);
 
 }  // extern "C"
 
