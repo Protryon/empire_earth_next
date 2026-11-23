@@ -14,6 +14,13 @@ template<class T> static SmartPtr<T> CcAdopt(T* p) { SmartPtr<T> s = p; if (p) p
 template<class T> static intptr_t CcGive(const SmartPtr<T>& s) { T* p = s.get(); if (p) p->AddRef(); return (intptr_t)p; }
 static void CcAppend(void* v, const std::string& s) { ee_won_cc_append(v, (const uint8_t*)s.data(), s.size()); }
 #define CC_TRY(...) try { __VA_ARGS__ } catch (...) { static_cast<CcFrame*>(inFrame)->mErr = std::current_exception(); *ok = false; return 0; }
+// an op's one statement under a guard: its exception kept in the frame, the op answering 0 with *ok cleared
+template<class F> static intptr_t CcGuard(void* inFrame, bool* ok, F f)
+{
+    try { return (intptr_t)f(); } catch (...) { static_cast<CcFrame*>(inFrame)->mErr = std::current_exception(); *ok = false; return 0; }
+}
+#define CC_G(...) CcGuard(inFrame, ok, [&] { return (intptr_t)(__VA_ARGS__); })
+#define CC_GV(...) CcGuard(inFrame, ok, [&] { __VA_ARGS__; return (intptr_t)0; })
 static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_t b, intptr_t d, intptr_t e, bool* ok)
 {
     typedef EeWonCcOp O;
@@ -47,7 +54,7 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
     case O::CompWantGrab: CcCfg(c)->mComponent->SetWantGrabBG(true); return 0;
     case O::CompInit: CC_TRY(ComponentConfigInit anInit(CcCfg(c)); CcCfg(c)->mComponent->InitComponent(anInit); return 0;)
     case O::CompOf: return (intptr_t)CcCfg(c)->mComponent.get();
-    case O::VNamed: CC_TRY(return CcCfg(c)->GetNamedValue(CcStr(a, b), *(int*)d);)
+    case O::VNamed: return CC_G(CcCfg(c)->GetNamedValue(CcStr(a, b), *(int*)d));
     case O::VCall: {
         const EeWonCcCallArgs* x = (const EeWonCcCallArgs*)a;
         CC_TRY(std::vector<int> v(x->params, x->params + x->count); CcCfg(c)->CallNamedFunction(CcStr((intptr_t)x->key, x->key_len), v, *x->out); return 0;)
@@ -57,17 +64,17 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
         bool r = CcCfg(c)->GetPredefinedComponent(CcStr(a, b), aConfig, aComp);
         ((void**)d)[0] = aConfig ? static_cast<ConfigObject*>(aConfig) : NULL; ((void**)d)[1] = aComp;
         return r;)
-    case O::VSetComponent: CC_TRY(CcCfg(c)->SetComponent((Component*)a); return 0;)
-    case O::V24: CC_TRY(return CcCfg(c)->Virtual24(CcStr(a, b));)
-    case O::CoHandleInstruction: CC_TRY(return co->ConfigObject::HandleInstruction((ConfigParser*)a, CcStr(b, d));)
-    case O::CoHandleValue: CC_TRY(return co->ConfigObject::HandleValueInstruction((ConfigParser*)a, CcStr(b, d), *(StringParser*)e);)
+    case O::VSetComponent: return CC_GV(CcCfg(c)->SetComponent((Component*)a));
+    case O::V24: return CC_G(CcCfg(c)->Virtual24(CcStr(a, b)));
+    case O::CoHandleInstruction: return CC_G(co->ConfigObject::HandleInstruction((ConfigParser*)a, CcStr(b, d)));
+    case O::CoHandleValue: return CC_G(co->ConfigObject::HandleValueInstruction((ConfigParser*)a, CcStr(b, d), *(StringParser*)e));
     case O::ReadGroupStart: CC_TRY(
         std::string n, i; bool r = co->ReadGroupStart(*(ConfigParser*)a, n, i);
         CcAppend((void*)b, n); CcAppend((void*)d, i); return r;)
-    case O::ParseGroup: CC_TRY(return co->ParseGroup(*(ConfigParser*)a, (b & 1) != 0, (b & 2) != 0, (b & 4) != 0, (b & 8) != 0);)
-    case O::ParseChild: CC_TRY(return co->ParseChild(*(ConfigParser*)a, (ConfigObject*)b, (d & 1) != 0, (d & 2) != 0);)
-    case O::IncludeGroup: CC_TRY(return co->IncludeGroup(*(ConfigParser*)a, CcStr(b, d));)
-    case O::AddWarning: CC_TRY(((ConfigParser*)c)->AddWarning(CcStr(a, b)); return 0;)
+    case O::ParseGroup: return CC_G(co->ParseGroup(*(ConfigParser*)a, (b & 1) != 0, (b & 2) != 0, (b & 4) != 0, (b & 8) != 0));
+    case O::ParseChild: return CC_G(co->ParseChild(*(ConfigParser*)a, (ConfigObject*)b, (d & 1) != 0, (d & 2) != 0));
+    case O::IncludeGroup: return CC_G(co->IncludeGroup(*(ConfigParser*)a, CcStr(b, d)));
+    case O::AddWarning: return CC_GV(((ConfigParser*)c)->AddWarning(CcStr(a, b)));
     case O::AsFont: { FontConfig* f = dynamic_cast<FontConfig*>(co); return f ? (intptr_t)f->GetFont() : -1; }
     case O::AsImage: {
         ImageConfig* i = dynamic_cast<ImageConfig*>(co);
@@ -79,7 +86,7 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
         std::string f = CcStr(a, b);
         if (d) return CcGive(Window::GetDefaultWindow()->DecodeImageRaw(f.c_str()));
         return CcGive(WindowManager::GetDefaultWindowManager()->DecodeDelayImage(f.c_str()));)
-    case O::FontGet: CC_TRY(return CcGive(Window::GetDefaultWindow()->GetFont(FontDescriptor(CcStr(a, b), (int)d, (int)e)));)
+    case O::FontGet: return CC_G(CcGive(Window::GetDefaultWindow()->GetFont(FontDescriptor(CcStr(a, b), (int)d, (int)e))));
     case O::SoundDecode: CC_TRY(
         SoundDescriptor aDesc;
         if (e) aDesc.SetSoundFlags((int)d, true);
@@ -99,7 +106,7 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
         ((void**)d)[0] = aConfig.get() ? (void*)static_cast<ConfigObject*>(aConfig.get()) : NULL;
         ((void**)d)[1] = aComp.get();
         CcGive(aConfig); CcGive(aComp); return 0;)
-    case O::Glue: CC_TRY(((ResourceConfigTable::GlueResourceFunc)a)((ResourceConfigTable*)c); return 0;)
+    case O::Glue: return CC_GV(((ResourceConfigTable::GlueResourceFunc)a)((ResourceConfigTable*)c));
     case O::NewRes: { ResourceConfig* r = new ResourceConfig; r->mName = CcStr(a, b); r->AddRef(); return (intptr_t)static_cast<ConfigObject*>(r); }
     case O::SetText: {
         std::wstring w;
