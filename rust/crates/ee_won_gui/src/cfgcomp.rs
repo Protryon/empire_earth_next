@@ -76,6 +76,24 @@ pub enum EeWonCfgComp {
     ReadScrollArea,
     /// The read of WONFrameValueConfig's frame: a stretch image alone, or an image and one border or four.
     ReadFrame,
+    /// ComponentConfig's SIZEATLEAST: the set-size flags from the size read, then the size.
+    SizeAtLeast,
+    /// ComponentConfig's STARTPARSETIMER: the line count reset, the timer started.
+    ParseTimerStart,
+    /// ComponentConfig's STOPPARSETIMER: the timer stopped, the lines parsed kept.
+    ParseTimerStop,
+    /// WONSkinConfig's CURSOR: a standard cursor made of the image (the cursor held while it is set).
+    SkinCursor,
+    /// ContainerConfig's SPACEEVENLYH: a horizontal space-evenly layout of the last component; the ints used.
+    SpaceEvenlyH,
+    /// ContainerConfig's SPACEEVENLYV, vertical.
+    SpaceEvenlyV,
+    /// ContainerConfig's CLEARRIGHT layout; the ints used.
+    ClearRight,
+    /// ContainerConfig's SIZEATLEAST layout; the ints used.
+    SizeAtLeastLayout,
+    /// ContainerConfig's NOOVERLAP layout; the components used.
+    NoOverlap,
 }
 
 /// The host's one-statement ops over its frame (`CfgTabFrame`: the ints `i`, the strings `s`, the raw strings
@@ -242,6 +260,36 @@ pub enum EeWonCfgTabOp {
     FrameFour,
     /// Image holder `x` deleted.
     ImageFree,
+    /// The config's `mHasSetWidth = x != 0`.
+    SetHasWidth,
+    /// The config's `mHasSetHeight = x != 0`.
+    SetHasHeight,
+    /// The component's `SetSizeAtLeast(x, y)`.
+    CompSizeAtLeast,
+    /// `ConfigParser::ResetLineCount()`.
+    ResetLineCount,
+    /// `PerfTimer::GlobalStart(NULL)`.
+    TimerStart,
+    /// `PerfTimer::GlobalStop(NULL)`.
+    TimerStop,
+    /// `gLinesParsed = ConfigParser::GetLineCount()`.
+    KeepLinesParsed,
+    /// A new `SmartPtr<Cursor>` of a new ComponentCursor of a new ImageComponent of the frame's image.
+    CursorNew,
+    /// `Cursor::SetStandardCursor(i[0], cursor holder x's cursor)`.
+    SetStdCursor,
+    /// Cursor holder `x` deleted.
+    CursorFree,
+    /// The frame's layout = a new SpaceEvenlyLayout(c[--nc], i[0], i[1], x != 0).
+    LaySpaceEvenly,
+    /// The frame's layout = a new ClearRightLayout(c[--nc], i[0]).
+    LayClearRight,
+    /// The frame's layout = a new SizeAtLeastLayout(c[--nc], i[0], i[1]).
+    LaySizeAtLeast,
+    /// The frame's layout = a new NoOverlapLayout(c[0], i[2], c[1], i[0], i[1]).
+    LayNoOverlap,
+    /// The components' count = `x`.
+    SetCompCount,
 }
 
 /// The host's op function: `ok` cleared by an op that threw (its exception kept in the frame).
@@ -488,6 +536,39 @@ fn run(o: &Ops, which: EeWonCfgComp) -> R<()> {
                 o.fail(b"Expecting ScrollArea", -1)?;
             }
             o.call(O::PushScrollArea, c, 0);
+        }
+        W::SizeAtLeast => {
+            let (w, h) = (o.int(0), o.int(1));
+            o.call(O::SetHasWidth, (w > 0) as isize, 0);
+            o.call(O::SetHasHeight, (h > 0) as isize, 0);
+            o.call(O::CompSizeAtLeast, w as isize, h as isize);
+        }
+        W::ParseTimerStart => {
+            o.call(O::ResetLineCount, 0, 0);
+            o.call(O::TimerStart, 0, 0);
+        }
+        W::ParseTimerStop => {
+            o.call(O::TimerStop, 0, 0);
+            o.call(O::KeepLinesParsed, 0, 0);
+        }
+        W::SkinCursor => {
+            let cursor = o.call(O::CursorNew, 0, 0);
+            o.call(O::SetStdCursor, cursor, 0);
+            o.call(O::CursorFree, cursor, 0);
+        }
+        W::SpaceEvenlyH | W::SpaceEvenlyV | W::ClearRight | W::SizeAtLeastLayout => {
+            match which {
+                W::SpaceEvenlyH => o.call(O::LaySpaceEvenly, 1, 0),
+                W::SpaceEvenlyV => o.call(O::LaySpaceEvenly, 0, 0),
+                W::ClearRight => o.call(O::LayClearRight, 0, 0),
+                _ => o.call(O::LaySizeAtLeast, 0, 0),
+            };
+            // the ints the layout took are used up
+            o.call(O::SetIntCount, 0, 0);
+        }
+        W::NoOverlap => {
+            o.call(O::LayNoOverlap, 0, 0);
+            o.call(O::SetCompCount, 0, 0);
         }
         W::ReadFrame => {
             let image = o.op(O::ReadImageHold, 0, 0)?;

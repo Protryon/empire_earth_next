@@ -170,6 +170,36 @@ enum class EeWonCfgTabOp : int32_t {
   FrameFour,
   /// Image holder `x` deleted.
   ImageFree,
+  /// The config's `mHasSetWidth = x != 0`.
+  SetHasWidth,
+  /// The config's `mHasSetHeight = x != 0`.
+  SetHasHeight,
+  /// The component's `SetSizeAtLeast(x, y)`.
+  CompSizeAtLeast,
+  /// `ConfigParser::ResetLineCount()`.
+  ResetLineCount,
+  /// `PerfTimer::GlobalStart(NULL)`.
+  TimerStart,
+  /// `PerfTimer::GlobalStop(NULL)`.
+  TimerStop,
+  /// `gLinesParsed = ConfigParser::GetLineCount()`.
+  KeepLinesParsed,
+  /// A new `SmartPtr<Cursor>` of a new ComponentCursor of a new ImageComponent of the frame's image.
+  CursorNew,
+  /// `Cursor::SetStandardCursor(i[0], cursor holder x's cursor)`.
+  SetStdCursor,
+  /// Cursor holder `x` deleted.
+  CursorFree,
+  /// The frame's layout = a new SpaceEvenlyLayout(c[--nc], i[0], i[1], x != 0).
+  LaySpaceEvenly,
+  /// The frame's layout = a new ClearRightLayout(c[--nc], i[0]).
+  LayClearRight,
+  /// The frame's layout = a new SizeAtLeastLayout(c[--nc], i[0], i[1]).
+  LaySizeAtLeast,
+  /// The frame's layout = a new NoOverlapLayout(c[0], i[2], c[1], i[0], i[1]).
+  LayNoOverlap,
+  /// The components' count = `x`.
+  SetCompCount,
 };
 
 /// A composition (one compound case of the host).
@@ -230,6 +260,24 @@ enum class EeWonCfgComp : int32_t {
   ReadScrollArea,
   /// The read of WONFrameValueConfig's frame: a stretch image alone, or an image and one border or four.
   ReadFrame,
+  /// ComponentConfig's SIZEATLEAST: the set-size flags from the size read, then the size.
+  SizeAtLeast,
+  /// ComponentConfig's STARTPARSETIMER: the line count reset, the timer started.
+  ParseTimerStart,
+  /// ComponentConfig's STOPPARSETIMER: the timer stopped, the lines parsed kept.
+  ParseTimerStop,
+  /// WONSkinConfig's CURSOR: a standard cursor made of the image (the cursor held while it is set).
+  SkinCursor,
+  /// ContainerConfig's SPACEEVENLYH: a horizontal space-evenly layout of the last component; the ints used.
+  SpaceEvenlyH,
+  /// ContainerConfig's SPACEEVENLYV, vertical.
+  SpaceEvenlyV,
+  /// ContainerConfig's CLEARRIGHT layout; the ints used.
+  ClearRight,
+  /// ContainerConfig's SIZEATLEAST layout; the ints used.
+  SizeAtLeastLayout,
+  /// ContainerConfig's NOOVERLAP layout; the components used.
+  NoOverlap,
 };
 
 /// The ops `ComponentConfig::Virtual24` makes on its config.

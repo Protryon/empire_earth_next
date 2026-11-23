@@ -118,6 +118,21 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::FrameOne: a.fr=WONFrame(((SmartPtr<Image>*)x)->get(),(int)y); return 0;
     case O::FrameFour: a.fr=WONFrame(((SmartPtr<Image>*)x)->get(),((const int*)y)[0],((const int*)y)[1],((const int*)y)[2],((const int*)y)[3]); return 0;
     case O::ImageFree: delete (SmartPtr<Image>*)x; return 0;
+    case O::SetHasWidth: a.mConfig->mHasSetWidth=x!=0; return 0;
+    case O::SetHasHeight: a.mConfig->mHasSetHeight=x!=0; return 0;
+    case O::CompSizeAtLeast: a.mConfig->mComponent->SetSizeAtLeast((int)x,(int)y); return 0;
+    case O::ResetLineCount: ConfigParser::ResetLineCount(); return 0;
+    case O::TimerStart: PerfTimer::GlobalStart(NULL); return 0;
+    case O::TimerStop: PerfTimer::GlobalStop(NULL); return 0;
+    case O::KeepLinesParsed: gLinesParsed=ConfigParser::GetLineCount(); return 0;
+    case O::CursorNew: return (intptr_t)new SmartPtr<Cursor>(new ComponentCursor(new ImageComponent(a.m[0].get())));
+    case O::SetStdCursor: Cursor::SetStandardCursor((StandardCursor)a.i[0],((SmartPtr<Cursor>*)x)->get()); return 0;
+    case O::CursorFree: delete (SmartPtr<Cursor>*)x; return 0;
+    case O::LaySpaceEvenly: a.lay=new SpaceEvenlyLayout(a.c[--a.nc],a.i[0],a.i[1],x!=0); return 0;
+    case O::LayClearRight: a.lay=new ClearRightLayout(a.c[--a.nc],a.i[0]); return 0;
+    case O::LaySizeAtLeast: a.lay=new SizeAtLeastLayout(a.c[--a.nc],a.i[0],a.i[1]); return 0;
+    case O::LayNoOverlap: a.lay=new NoOverlapLayout(a.c[0],a.i[2],a.c[1],a.i[0],a.i[1]); return 0;
+    case O::SetCompCount: a.nc=(int)x; return 0;
     default: return 0;
     }
 }
@@ -305,9 +320,7 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     case EE_CFG_KEY(kComponent,7): a.mConfig->mComponent->SetPos(i[0],i[1]); break;
     case EE_CFG_KEY(kComponent,8): a.mConfig->mComponent->SetSize(i[0],i[1]); break;
     case EE_CFG_KEY(kComponent,9): a.mConfig->mComponent->SetTranslucentColor(i[0],a.ni>1?i[1]:4); break;
-    case EE_CFG_KEY(kComponent,10):
-        a.mConfig->mHasSetWidth=i[0]>0; a.mConfig->mHasSetHeight=i[1]>0;
-        a.mConfig->mComponent->SetSizeAtLeast(i[0],i[1]); break;
+    case EE_CFG_KEY(kComponent,10): CfgComp(a,EeWonCfgComp::SizeAtLeast); break;
     case EE_CFG_KEY(kComponent,11): a.mConfig->mComponent->SetDesiredSize(i[0],i[1]); break;
     case EE_CFG_KEY(kComponent,12): a.mConfig->mComponent.get()->SetDesiredWidth(i[0]); break;
     case EE_CFG_KEY(kComponent,13): a.mConfig->mComponent.get()->SetDesiredHeight(i[0]); break;
@@ -319,8 +332,8 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     case EE_CFG_KEY(kComponent,19): a.mConfig->mComponent->SetComponentFlags(i[1],i[0]!=0); break;
     case EE_CFG_KEY(kComponent,20): Window::GetDefaultWindow()->SetSkipDecodeImages(!(i[0]!=0)); break;
     case EE_CFG_KEY(kComponent,21): gShowParseTime=i[0]!=0; break;
-    case EE_CFG_KEY(kComponent,22): ConfigParser::ResetLineCount(); PerfTimer::GlobalStart(NULL); break;
-    case EE_CFG_KEY(kComponent,23): PerfTimer::GlobalStop(NULL); gLinesParsed=ConfigParser::GetLineCount(); break;
+    case EE_CFG_KEY(kComponent,22): CfgComp(a,EeWonCfgComp::ParseTimerStart); break;
+    case EE_CFG_KEY(kComponent,23): CfgComp(a,EeWonCfgComp::ParseTimerStop); break;
     case EE_CFG_KEY(kComponent,30): a.mConfig->mHasSetWidth=true; break;
     case EE_CFG_KEY(kComponent,31): a.mConfig->mHasSetHeight=true; break;
     case EE_CFG_KEY(kComponent,32): a.mConfig->mHasSetWidth=a.mConfig->mHasSetHeight=true; break;
@@ -345,10 +358,7 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     case EE_CFG_KEY(kSkin,18): WONSkinSet(EeWonSkinSlot::PopupBack,0,SafeConfigGetSkinPart(c[0],"WONPopupBack")); break;
     case EE_CFG_KEY(kSkin,19): WONSkinSet(EeWonSkinSlot::DialogBack,0,SafeConfigGetSkinPart(c[0],"WONDialogBack")); break;
     case EE_CFG_KEY(kSkin,20): CfgSkinClickSound(a.mConfig); break;
-    case EE_CFG_KEY(kSkin,21): {
-        SmartPtr<Cursor> aCursor=new ComponentCursor(new ImageComponent(a.m[0].get()));
-        Cursor::SetStandardCursor((StandardCursor)i[0],aCursor.get()); break;
-    }
+    case EE_CFG_KEY(kSkin,21): CfgComp(a,EeWonCfgComp::SkinCursor); break;
     case EE_CFG_KEY(kFont,0): EE_CFG(FontConfig)->SetFont(a.f[0].get()); break;
     case EE_CFG_KEY(kFont,1): EE_CFG(FontConfig)->mDescriptor.mSize=i[0]; break;
     case EE_CFG_KEY(kFont,2): CfgComp(a,EeWonCfgComp::FontStyle); break;
@@ -372,10 +382,10 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     case EE_CFG_KEY(kContainer,12): a.lay=new CenterLayout(c[--a.nc],true,true); break;
     case EE_CFG_KEY(kContainer,13): a.lay=new CenterLayout(c[--a.nc],true,false); break;
     case EE_CFG_KEY(kContainer,14): a.lay=new CenterLayout(c[--a.nc],false,true); break;
-    case EE_CFG_KEY(kContainer,15): a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],true); a.ni=0; break;
-    case EE_CFG_KEY(kContainer,16): a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],false); a.ni=0; break;
-    case EE_CFG_KEY(kContainer,17): a.lay=new ClearRightLayout(c[--a.nc],i[0]); a.ni=0; break;
-    case EE_CFG_KEY(kContainer,19): a.lay=new SizeAtLeastLayout(c[--a.nc],i[0],i[1]); a.ni=0; break;
+    case EE_CFG_KEY(kContainer,15): CfgComp(a,EeWonCfgComp::SpaceEvenlyH); break;
+    case EE_CFG_KEY(kContainer,16): CfgComp(a,EeWonCfgComp::SpaceEvenlyV); break;
+    case EE_CFG_KEY(kContainer,17): CfgComp(a,EeWonCfgComp::ClearRight); break;
+    case EE_CFG_KEY(kContainer,19): CfgComp(a,EeWonCfgComp::SizeAtLeastLayout); break;
     case EE_CFG_KEY(kContainer,20): a.lay->AddComponent(c[--a.nc]); break;
     case EE_CFG_KEY(kContainer,21): EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get(),EE_CFG(ContainerConfig)->mCurLayoutId); break;
     case EE_CFG_KEY(kContainer,22): EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get()); break;
@@ -387,7 +397,7 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     case EE_CFG_KEY(kContainer,26): CfgComp(a,EeWonCfgComp::LayoutChain); break;
     case EE_CFG_KEY(kContainer,27): CfgComp(a,EeWonCfgComp::LayoutOffsets); break;
     case EE_CFG_KEY(kContainer,28): CfgComp(a,EeWonCfgComp::LayoutRule); break;
-    case EE_CFG_KEY(kContainer,29): a.lay=new NoOverlapLayout(c[0],i[2],c[1],i[0],i[1]); a.nc=0; break;
+    case EE_CFG_KEY(kContainer,29): CfgComp(a,EeWonCfgComp::NoOverlap); break;
     // StretchImageConfig (round 41; cfgimg.rs): the exports' children by number or column
     case EE_CFG_KEY(kStretchImage,0): EE_CFG(StretchImageConfig)->mStretchImage->SetImage(a.raw.get()); break;
     case EE_CFG_KEY(kStretchImage,1): EE_CFG(StretchImageConfig)->mStretchImage->SetTile(i[a.ni-2]!=0,i[a.ni-1]!=0); break;
