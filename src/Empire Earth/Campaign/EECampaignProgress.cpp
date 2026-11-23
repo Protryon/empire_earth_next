@@ -137,6 +137,11 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
     case O::ArchiveExtension: EECampaignText(a[0], (const char*)gU530B88);
         break;
     case O::PathNew: return (int64_t)(intptr_t)new FSPath;
+    case O::SelectForm: return (int64_t)(intptr_t)gUIManager->GetFormByID(kFormCampaignScenarioSelect);
+    case O::FormManager: return (int64_t)(intptr_t)((UIForm*)p)->GetFormManager();
+    case O::SetFormManager: ((UIForm*)p)->SetFormManager((UIFormManager*)a[0]);
+        break;
+    case O::NewFormManager: return (int64_t)(intptr_t)static_cast<UIFormManager*>(new EECampaignFormManager);
     case O::PathDereference: ((FSPath*)p)->Dereference();
         break;
     case O::PathAddDirectory: ((FSPath*)p)->AddDirectory(*(FSFileSpec*)a[0], true);

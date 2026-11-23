@@ -151,6 +151,14 @@ enum class EeCampaignCpp : uint32_t {
   BuiltInName,
   /// built-in campaign a0's checksum (gAOCRomanChecksum ..)
   BuiltInChecksum,
+  /// `gUIManager->GetFormByID(kFormCampaignScenarioSelect)`
+  SelectForm,
+  /// `((UIForm*)p)->GetFormManager()`
+  FormManager,
+  /// `((UIForm*)p)->SetFormManager((UIFormManager*)a0)`
+  SetFormManager,
+  /// `static_cast<UIFormManager*>(new EECampaignFormManager)`
+  NewFormManager,
 };
 
 /// `EECampaignProgress`' lists (the C++ class's handle).
@@ -172,6 +180,10 @@ void ee_campaign_text_push(EeCampaignText *sink, const uint8_t *bytes, size_t le
 /// # Safety
 /// `file` is a C string; the objects are live.
 bool ee_campaign_load(void *campaign, const char *file, void *error, bool check);
+
+/// `EECampaignFormManager::Get`: the campaign scenario selection form's manager (a `UIFormManager*`), made and
+/// attached on first use.
+void *ee_campaign_form_manager();
 
 /// # Safety
 /// `manager` is a live `EECampaignFormManager`.
