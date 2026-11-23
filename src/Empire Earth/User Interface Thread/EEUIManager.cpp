@@ -88,11 +88,10 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "ee/EEScreensShims.h"
 // The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
 // UpdateMouse's location)
-struct EEUIManagerCall {
-    explicit EEUIManagerCall(EEUIManager* inManager, const GE2DPoint* inMouse = NULL) : mManager(inManager), mMouse(inMouse) {}
-    EEUIManager* mManager;
+struct EEUIManagerCall : public EeScreensManagerCallObjects {   // the pointers: the Rust record (hud_fields.rs)
+    explicit EEUIManagerCall(EEUIManager* inManager, const GE2DPoint* inMouse = NULL)
+        : EeScreensManagerCallObjects{inManager, inMouse} {}
     UWideString mNames[2];
-    const GE2DPoint* mMouse;
     // the record of a call (a temporary's, for the full expression)
     EEUIManagerCall* Ptr() { return this; }
 };
@@ -163,13 +162,13 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 // picks), each the original's
 extern "C" int64_t ee_screenscpp_um_engine_count() { return EECPEngineChoiceCount(); }
 extern "C" void ee_screenscpp_um_music(void* inCall)
-{ static_cast<EEUIManagerCall*>(inCall)->mManager->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume); }
+{ static_cast<EEUIManager*>(static_cast<EEUIManagerCall*>(inCall)->mManager)->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume); }
 extern "C" int64_t ee_screenscpp_um_citizens() { return gWorldTable.GetLongValue(kWorldStartingCitizensDefault); }
 extern "C" void ee_screenscpp_um_post_f9() { EEPostF9Key(); }
 extern "C" int64_t ee_screenscpp_um_base_keyboard(void* inCall)
-{ return EEUIManager::BaseKeyboard(static_cast<EEUIManagerCall*>(inCall)->mManager); }
+{ return EEUIManager::BaseKeyboard(static_cast<EEUIManager*>(static_cast<EEUIManagerCall*>(inCall)->mManager)); }
 extern "C" int64_t ee_screenscpp_um_base_mouse(void* inCall)
-{ return EEUIManager::BaseMouse(static_cast<EEUIManagerCall*>(inCall)->mManager, *static_cast<EEUIManagerCall*>(inCall)->mMouse); }
+{ return EEUIManager::BaseMouse(static_cast<EEUIManager*>(static_cast<EEUIManagerCall*>(inCall)->mManager), *static_cast<const GE2DPoint*>(static_cast<EEUIManagerCall*>(inCall)->mMouse)); }
 
 // ---- the one-statement shims of ee_screens ui_manager_calls.rs (UI lane round 8): each one call, no logic
 #define UMCALL(x) (*reinterpret_cast<EEUIManagerCall*>(x))
@@ -181,7 +180,7 @@ extern "C" int64_t ee_screenscpp_um_base_mouse(void* inCall)
 #define UMMOVE(x) (*reinterpret_cast<const EeScreensManagerMove*>(x))
 static const unsigned long kUMKeys[] = {kKeyEscape, kKeyReturn, kKeySpace, kKeyF9};
 // (ui_manager_calls.rs' ids equal the headers': hud_cpp_consts_tests.rs)
-extern "C" uintptr_t ee_screenscpp_um_call_manager(uintptr_t inCall) { return (uintptr_t)UMCALL(inCall).mManager; }
+extern "C" uintptr_t ee_screenscpp_um_call_manager(uintptr_t inCall) { return (uintptr_t)static_cast<EEUIManager*>(UMCALL(inCall).mManager); }
 extern "C" void ee_screenscpp_um_register_game_event(uintptr_t inManager)
 { UMG(inManager)->RegisterControlEventCallback(EECreateGameEvent); }
 extern "C" void ee_screenscpp_um_register_wns_event(uintptr_t inManager)

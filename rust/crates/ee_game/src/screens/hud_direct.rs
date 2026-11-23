@@ -502,12 +502,10 @@ pub(crate) fn main_group(owner: impl FnOnce() -> Cpp, op: u32, a: i64, b: i64) -
 // --------------------------------------------------------------------------------------------- the status box
 
 /// The head of the status box's call record (`EEUIFMGStatusBoxCall`, EEUIFMGStatusBox.cpp, which asserts it): the
-/// box (its record), the unit, the complex unit, the held text.
+/// record's pointers (the box first: its record), the held text.
 #[repr(C)]
 pub(crate) struct BoxCallHead {
-    pub(crate) record: *mut crate::screens::main_form_fields::EeScreensStatusBoxFields,
-    unit: *mut c_void,
-    complex: *mut c_void,
+    pub(crate) o: crate::screens::hud_fields::EeScreensStatusBoxCallObjects,
     pub(crate) text: CppWide,
 }
 
@@ -519,7 +517,7 @@ pub(crate) struct BoxCallHead {
 pub(crate) unsafe fn status_box(call: *mut BoxCallHead, op: u32, a: i64, b: i64, c: i64) -> Option<i64> {
     use crate::screens::status_box::*;
     // SAFETY: the contract
-    let rec = unsafe { (*call).record };
+    let rec = unsafe { (*call).o.mBox as *mut crate::screens::main_form_fields::EeScreensStatusBoxFields };
     let text = || unsafe { wide_bytes(&(*call).text) };
     let set_text = |t: &[u8]| unsafe { wide_assign(&mut (*call).text, t) };
     if op == EE_SCREENS_BOX_OP_FORMAT {

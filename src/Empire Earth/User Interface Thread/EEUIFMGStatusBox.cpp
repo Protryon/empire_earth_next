@@ -55,29 +55,25 @@ extern char gEmptyString[];
 
 // The host's record of one status box call (ee_screens status_box.rs): the box, the unit (Fill, Refresh), the
 // complex unit (UpdateQueuedCounts), the held text (the original's `theText`), LoadIcons' description and textures
-struct EEUIFMGStatusBoxCall {
-    EEUIFMGStatusBox* mBox;
-    EEUnit* mUnit;
-    EEComplexUnit* mComplex;
+struct EEUIFMGStatusBoxCall : public EeScreensStatusBoxCallObjects {   // the pointers: the Rust record (hud_fields.rs)
     UWideString mText;
     GETextureDescription mDescription;
-    GETexture* mTextures[4];
     // the record of a call (a temporary's, for the full expression)
     EEUIFMGStatusBoxCall* Ptr() { return this; }
 };
-static_assert(offsetof(EEUIFMGStatusBoxCall, mText) == 3 * sizeof(void*), "hud_direct.rs BoxCallHead");
+static_assert(offsetof(EEUIFMGStatusBoxCall, mText) == sizeof(EeScreensStatusBoxCallObjects), "hud_direct.rs BoxCallHead");
 // (status_box.rs' constants equal the headers': hud_cpp_consts_tests.rs)
 
 // The call's unit (an EEUnit*) for the status box's view of it (hud_views.rs status_box_view, the original's
 // EEStatusBoxView), and whether the box has its third and fourth bars
-extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall) { return (int64_t)static_cast<EEUIFMGStatusBoxCall*>(inCall)->mUnit; }
-extern "C" bool ee_screenscpp_status_box_bar3(void* inCall) { return static_cast<EEUIFMGStatusBoxCall*>(inCall)->mBox->mCA8 != NULL; }
-extern "C" bool ee_screenscpp_status_box_bar4(void* inCall) { return static_cast<EEUIFMGStatusBoxCall*>(inCall)->mBox->mCAC != NULL; }
+extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall) { return (int64_t)static_cast<EEUnit*>(static_cast<EEUIFMGStatusBoxCall*>(inCall)->mUnit); }
+extern "C" bool ee_screenscpp_status_box_bar3(void* inCall) { return static_cast<EEUIFMGStatusBox*>(static_cast<EEUIFMGStatusBoxCall*>(inCall)->mBox)->mCA8 != NULL; }
+extern "C" bool ee_screenscpp_status_box_bar4(void* inCall) { return static_cast<EEUIFMGStatusBox*>(static_cast<EEUIFMGStatusBoxCall*>(inCall)->mBox)->mCAC != NULL; }
 
 // ---- the one-statement shims of ee_screens status_box_calls.rs (UI lane round 8; once HostOp's cases and
 // EEUIFMGStatusBar::SetIconBitmap): each one call, no logic
 #define SBC(x) (*reinterpret_cast<EEUIFMGStatusBoxCall*>(x))
-#define SBX(x, i) SBC(x).mBox->GetBoxControl(i)
+#define SBX(x, i) static_cast<EEUIFMGStatusBox*>(SBC(x).mBox)->GetBoxControl(i)
 #define SBBAR(x, i) static_cast<EEUIFMGStatusBar*>(SBX(x, i))
 static const GEColor* const kSBBarColors[3] = {&kStatusColor3, &kStatusColor1, &kStatusColor2};
 static const char* const kSBTextureNames[4] = {"", "textures\\unit improvements_01", "textures\\unit improvements_02",
@@ -99,23 +95,23 @@ extern "C" void ee_screenscpp_sb_upgrade_cost_label(uintptr_t inCall, int64_t in
 extern "C" void ee_screenscpp_sb_upgrade_update_cost(uintptr_t inCall, int64_t inCtl)
 { static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->UpdateCost(SBC(inCall).mText); }
 extern "C" bool ee_screenscpp_sb_name_empty_fill(uintptr_t inCall)
-{ return SBC(inCall).mUnit->mStats->mName == gEmptyString; }
-extern "C" bool ee_screenscpp_sb_name_empty(uintptr_t inCall) { return SBC(inCall).mUnit->GetStats()->mName == ""; }
+{ return static_cast<EEUnit*>(SBC(inCall).mUnit)->mStats->mName == gEmptyString; }
+extern "C" bool ee_screenscpp_sb_name_empty(uintptr_t inCall) { return static_cast<EEUnit*>(SBC(inCall).mUnit)->GetStats()->mName == ""; }
 extern "C" void ee_screenscpp_sb_text_class_name(uintptr_t inCall)
-{ gResource->GetString(SBC(inCall).mUnit->GetUnitClass()->mNameStringID, SBC(inCall).mText); }
+{ gResource->GetString(static_cast<EEUnit*>(SBC(inCall).mUnit)->GetUnitClass()->mNameStringID, SBC(inCall).mText); }
 extern "C" void ee_screenscpp_sb_text_stats_name(uintptr_t inCall)
-{ SBC(inCall).mText = SBC(inCall).mUnit->GetStats()->mName; }
+{ SBC(inCall).mText = static_cast<EEUnit*>(SBC(inCall).mUnit)->GetStats()->mName; }
 extern "C" bool ee_screenscpp_sb_is_gate_fill(uintptr_t inCall)
-{ return SBC(inCall).mUnit->mUnitClass->mCategory == kUnitCategoryGate; }
+{ return static_cast<EEUnit*>(SBC(inCall).mUnit)->mUnitClass->mCategory == kUnitCategoryGate; }
 extern "C" bool ee_screenscpp_sb_is_gate(uintptr_t inCall)
-{ return SBC(inCall).mUnit->GetUnitClass()->mCategory == kUnitCategoryGate; }
-extern "C" bool ee_screenscpp_sb_gate_locked(uintptr_t inCall) { return SBC(inCall).mUnit->mComplexUnit->mIsLocked; }
+{ return static_cast<EEUnit*>(SBC(inCall).mUnit)->GetUnitClass()->mCategory == kUnitCategoryGate; }
+extern "C" bool ee_screenscpp_sb_gate_locked(uintptr_t inCall) { return static_cast<EEUnit*>(SBC(inCall).mUnit)->mComplexUnit->mIsLocked; }
 extern "C" void ee_screenscpp_sb_suffix_clear() { EEScratch<UWideString>(kScratchSBSuffix) = UWideString(); }
 extern "C" void ee_screenscpp_sb_suffix_locked() { gResource->GetString(IDS_MSG_LOCKED, EEScratch<UWideString>(kScratchSBSuffix)); }
 extern "C" void ee_screenscpp_sb_suffix_unlocked() { gResource->GetString(IDS_MSG_UNLOCKED, EEScratch<UWideString>(kScratchSBSuffix)); }
 extern "C" void ee_screenscpp_sb_text_append_suffix(uintptr_t inCall) { SBC(inCall).mText += EEScratch<UWideString>(kScratchSBSuffix); }
 extern "C" void ee_screenscpp_sb_text_civ(uintptr_t inCall)
-{ SBC(inCall).mText = SBC(inCall).mUnit->GetPlayer()->mCivilization.mName; }
+{ SBC(inCall).mText = static_cast<EEUnit*>(SBC(inCall).mUnit)->GetPlayer()->mCivilization.mName; }
 extern "C" uintptr_t ee_screenscpp_sb_bar_control(uintptr_t inCall, int64_t inCtl)
 { return (uintptr_t)SBBAR(inCall, inCtl); }
 extern "C" uintptr_t ee_screenscpp_sb_icon_rect(int64_t inIcon)
@@ -139,11 +135,11 @@ extern "C" bool ee_screenscpp_sb_button_normal_is(uintptr_t inCall, int64_t inCt
 extern "C" bool ee_screenscpp_sb_button_pressed_is(uintptr_t inCall, int64_t inCtl, int64_t inIcon)
 { return static_cast<UIButton*>(SBX(inCall, inCtl))->GetPressedBitmap() == static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap); }
 extern "C" void ee_screenscpp_sb_portrait_set_unit(uintptr_t inCall)
-{ static_cast<EEUICPortrait*>(SBC(inCall).mBox->mC8C)->SetUnit(SBC(inCall).mUnit); }
+{ static_cast<EEUICPortrait*>(static_cast<EEUIFMGStatusBox*>(SBC(inCall).mBox)->mC8C)->SetUnit(static_cast<EEUnit*>(SBC(inCall).mUnit)); }
 extern "C" void ee_screenscpp_sb_portrait_clear(uintptr_t inCall)
-{ static_cast<EEUICPortrait*>(SBC(inCall).mBox->mC8C)->SetUnit(NULL); }
+{ static_cast<EEUICPortrait*>(static_cast<EEUIFMGStatusBox*>(SBC(inCall).mBox)->mC8C)->SetUnit(NULL); }
 extern "C" void ee_screenscpp_sb_portrait_update(uintptr_t inCall)
-{ static_cast<EEUICPortrait*>(SBC(inCall).mBox->mC8C)->Update(); }
+{ static_cast<EEUICPortrait*>(static_cast<EEUIFMGStatusBox*>(SBC(inCall).mBox)->mC8C)->Update(); }
 extern "C" void ee_screenscpp_sb_verify_armor_count()
 { ESVerify(__FILE__, 367, "this->mArmorAttributeCount <= keeuifmgsbMaxAttributes"); }
 extern "C" void ee_screenscpp_sb_verify_count()
@@ -161,15 +157,15 @@ extern "C" void ee_screenscpp_sb_set_value(uintptr_t inCall, int64_t inCtl)
 extern "C" void ee_screenscpp_sb_set_value2(uintptr_t inCall, int64_t inCtl)
 { static_cast<UITextLabel*>(SBBAR(inCall, inCtl)->mValue2)->SetText(SBC(inCall).mText); }
 extern "C" int64_t ee_screenscpp_sb_class_armor(uintptr_t inCall, int64_t inIndex)
-{ return SBC(inCall).mUnit->GetUnitClass()->mArmor[inIndex]; }
+{ return static_cast<EEUnit*>(SBC(inCall).mUnit)->GetUnitClass()->mArmor[inIndex]; }
 extern "C" int64_t ee_screenscpp_sb_stats_class_armor(uintptr_t inCall, int64_t inIndex)
-{ return SBC(inCall).mUnit->mStats->mUnitClass->mArmor[inIndex]; }
+{ return static_cast<EEUnit*>(SBC(inCall).mUnit)->mStats->mUnitClass->mArmor[inIndex]; }
 extern "C" float ee_screenscpp_sb_stats_armor(uintptr_t inCall, int64_t inIndex)
-{ return SBC(inCall).mUnit->mStats->mArmor[inIndex]; }
+{ return static_cast<EEUnit*>(SBC(inCall).mUnit)->mStats->mArmor[inIndex]; }
 extern "C" int64_t ee_screenscpp_sb_complex_unit_type(uintptr_t inCall)
-{ return SBC(inCall).mComplex->GetUnitClass()->mUnitType; }
+{ return static_cast<EEComplexUnit*>(SBC(inCall).mComplex)->GetUnitClass()->mUnitType; }
 extern "C" int64_t ee_screenscpp_sb_count_queued(uintptr_t inCall, int64_t inImprovement, int64_t inKind)
-{ return SBC(inCall).mComplex->GetPlayer()->CountQueuedImprovements((unsigned long)inImprovement, (long)inKind); }
+{ return static_cast<EEComplexUnit*>(SBC(inCall).mComplex)->GetPlayer()->CountQueuedImprovements((unsigned long)inImprovement, (long)inKind); }
 extern "C" void ee_screenscpp_sb_new_bitmap(int64_t inIcon)
 { ee_screens_icon_bitmap(inIcon)->mBitmap = new GEBitmap; }
 extern "C" uint32_t ee_screenscpp_sb_primary_width()
@@ -182,11 +178,11 @@ extern "C" void ee_screenscpp_sb_set_texture(uintptr_t inCall, int64_t inIndex, 
 extern "C" void ee_screenscpp_sb_set_rect(int64_t inIcon, float inLeft, float inTop, float inRight, float inBottom)
 { ee_screens_icon_bitmap(inIcon)->mRectangle = GERectangle(inLeft, inTop, inRight, inBottom); }
 extern "C" uint32_t ee_screenscpp_sb_texture_width(uintptr_t inCall, int64_t inIndex)
-{ return (uint32_t)SBC(inCall).mTextures[inIndex]->GetSurface()->GetWidth(); }
+{ return (uint32_t)static_cast<GETexture*>(SBC(inCall).mTextures[inIndex])->GetSurface()->GetWidth(); }
 extern "C" uint32_t ee_screenscpp_sb_texture_height(uintptr_t inCall, int64_t inIndex)
-{ return (uint32_t)SBC(inCall).mTextures[inIndex]->GetSurface()->GetHeight(); }
+{ return (uint32_t)static_cast<GETexture*>(SBC(inCall).mTextures[inIndex])->GetSurface()->GetHeight(); }
 extern "C" void ee_screenscpp_sb_bitmap_set_texture(int64_t inIcon, uintptr_t inCall, int64_t inIndex)
-{ static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)->SetTexture(SBC(inCall).mTextures[inIndex], gScreenIndex); }
+{ static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)->SetTexture(static_cast<GETexture*>(SBC(inCall).mTextures[inIndex]), gScreenIndex); }
 extern "C" void ee_screenscpp_sb_bitmap_set_coordinates(int64_t inIcon, float inU0, float inV0, float inU1, float inV1)
 { static_cast<GEBitmap*>(ee_screens_icon_bitmap(inIcon)->mBitmap)->SetTextureCoordinates(GETextureCoordinate(inU0, inV0), GETextureCoordinate(inU1, inV0), GETextureCoordinate(inU1, inV1), GETextureCoordinate(inU0, inV1)); }
 extern "C" void ee_screenscpp_sb_bitmap_scale(int64_t inIcon, float inX, float inY)
@@ -215,32 +211,32 @@ extern "C" void ee_screenscpp_sb_bar_dirty(uintptr_t inBar)
 // bars, the improvable attribute buttons and the background panels; clears it without a unit
 void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
 {
-    ee_screens_status_box_fill(EEUIFMGStatusBoxCall{this, inUnit, NULL}.Ptr(), inUnit != NULL);
+    ee_screens_status_box_fill(EEUIFMGStatusBoxCall{{this, inUnit, NULL}}.Ptr(), inUnit != NULL);
 }
 
 // Hides the status box's background panels (all but panel 0x7c)
 void EEUIFMGStatusBox::HideBackgrounds()
 {
-    ee_screens_status_box_hide_backgrounds(EEUIFMGStatusBoxCall{this, NULL, NULL}.Ptr());
+    ee_screens_status_box_hide_backgrounds(EEUIFMGStatusBoxCall{{this, NULL, NULL}}.Ptr());
 }
 
 // Loads the three unit improvement textures and points the 50 attribute icons at their cells
 void EEUIFMGStatusBox::LoadIcons()
 {
-    ee_screens_status_box_load_icons(EEUIFMGStatusBoxCall{NULL, NULL, NULL}.Ptr());
+    ee_screens_status_box_load_icons(EEUIFMGStatusBoxCall{{NULL, NULL, NULL}}.Ptr());
 }
 
 // Refreshes the status box texts for the unit: name, civilization, hit points, attributes, cargo, flight time
 // or power, garrison, and the resource it carries
 void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
 {
-    ee_screens_status_box_refresh(EEUIFMGStatusBoxCall{this, inUnit, NULL}.Ptr());
+    ee_screens_status_box_refresh(EEUIFMGStatusBoxCall{{this, inUnit, NULL}}.Ptr());
 }
 
 // Shows on each visible improvement button how many of its improvements the player has queued
 void EEUIFMGStatusBox::UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement)
 {
-    ee_screens_status_box_update_queued(EEUIFMGStatusBoxCall{this, NULL, inUnit}.Ptr());
+    ee_screens_status_box_update_queued(EEUIFMGStatusBoxCall{{this, NULL, inUnit}}.Ptr());
 }
 
 // the icons' load, unload and reload as the game's media calls them (Empire Earth.cpp: ee/EEGameUI.h)

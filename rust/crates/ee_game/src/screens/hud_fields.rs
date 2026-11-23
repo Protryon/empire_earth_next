@@ -182,3 +182,35 @@ pub extern "C" fn ee_screens_icon_bitmap(icon: i64) -> *mut EeScreensIconBitmap 
     // SAFETY: the index is in the array
     unsafe { (ICONS.0.get() as *mut EeScreensIconBitmap).add(icon as usize) }
 }
+
+/// The improvement button's call record's pointers (the C++ `EEUIBUpgradeCall` derives from it; its held text and
+/// reason follow): the `EEUIBUpgrade*`, the out text (a `UWideString*`: the tooltip, the refusal's reason, the new
+/// cost), the mouse location (a `const GE2DPoint*`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeScreensUpgradeCallObjects {
+    pub mButton: *mut c_void,
+    pub mOut: *mut c_void,
+    pub mLocation: *const c_void,
+}
+
+/// The UI manager's call record's pointers (the C++ `EEUIManagerCall` derives from it; StartScenarioEditor's two
+/// names follow): the `EEUIManager*`, UpdateMouse's location (a `const GE2DPoint*`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeScreensManagerCallObjects {
+    pub mManager: *mut c_void,
+    pub mMouse: *const c_void,
+}
+
+/// The status box's call record's pointers (the C++ `EEUIFMGStatusBoxCall` derives from it; the held text and
+/// LoadIcons' description follow, hud_direct.rs `BoxCallHead`): the box (an `EEUIFMGStatusBox*`, its record
+/// first), the unit (Fill, Refresh), the complex unit (UpdateQueuedCounts), LoadIcons' four `GETexture*`s.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeScreensStatusBoxCallObjects {
+    pub mBox: *mut c_void,
+    pub mUnit: *mut c_void,
+    pub mComplex: *mut c_void,
+    pub mTextures: [*mut c_void; 4],
+}

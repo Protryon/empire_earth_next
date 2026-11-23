@@ -12,15 +12,12 @@ class EEUIBUpgrade;
 
 // One call into ee_screens upgrade.rs: the button, the out text (the tooltip, the refusal's reason, the new cost;
 // NULL for none, the call's own mReason for a reason nobody reads), the held text, the mouse location
-struct EEUIBUpgradeCall {
-    EEUIBUpgrade* mButton;
-    UWideString* mOut;
+struct EEUIBUpgradeCall : public EeScreensUpgradeCallObjects {   // the pointers: the Rust record (hud_fields.rs)
     UWideString mText;
-    const GE2DPoint* mLocation;
     UWideString mReason;
     EEUIBUpgradeCall(EEUIBUpgrade* inButton, UWideString* inOut = NULL, const GE2DPoint* inLocation = NULL)
-        : mButton(inButton), mOut(inOut), mLocation(inLocation) {}
-    EEUIBUpgradeCall(EEUIBUpgrade* inButton, bool) : mButton(inButton), mOut(&mReason), mLocation(NULL) {}
+        : EeScreensUpgradeCallObjects{inButton, inOut, inLocation} {}
+    EEUIBUpgradeCall(EEUIBUpgrade* inButton, bool) : EeScreensUpgradeCallObjects{inButton} { this->mOut = &this->mReason; }
     // the record of a call (a temporary's, for the full expression)
     EEUIBUpgradeCall* Ptr() { return this; }
 };

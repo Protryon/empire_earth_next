@@ -15770,6 +15770,32 @@ struct EeScreensMainFormObjects {
   void *mCalamity;
 };
 
+/// The improvement button's call record's pointers (the C++ `EEUIBUpgradeCall` derives from it; its held text and
+/// reason follow): the `EEUIBUpgrade*`, the out text (a `UWideString*`: the tooltip, the refusal's reason, the new
+/// cost), the mouse location (a `const GE2DPoint*`).
+struct EeScreensUpgradeCallObjects {
+  void *mButton;
+  void *mOut;
+  const void *mLocation;
+};
+
+/// The UI manager's call record's pointers (the C++ `EEUIManagerCall` derives from it; StartScenarioEditor's two
+/// names follow): the `EEUIManager*`, UpdateMouse's location (a `const GE2DPoint*`).
+struct EeScreensManagerCallObjects {
+  void *mManager;
+  const void *mMouse;
+};
+
+/// The status box's call record's pointers (the C++ `EEUIFMGStatusBoxCall` derives from it; the held text and
+/// LoadIcons' description follow, hud_direct.rs `BoxCallHead`): the box (an `EEUIFMGStatusBox*`, its record
+/// first), the unit (Fill, Refresh), the complex unit (UpdateQueuedCounts), LoadIcons' four `GETexture*`s.
+struct EeScreensStatusBoxCallObjects {
+  void *mBox;
+  void *mUnit;
+  void *mComplex;
+  void *mTextures[4];
+};
+
 /// The main game form's call record's pointers and numbers (the C++ `EEUIFMGFormCall` derives from it, UI lane
 /// round 15; its three strings follow): the form (first: main_form_ffi.rs reads it), the picked unit, the chat
 /// line's colour and flags, the dialog message, the start modes' tech tree node, unit, caster and calamity, the old
