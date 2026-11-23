@@ -23,6 +23,7 @@
 #include "rust/ui/lle_control.h"
 #include "rust/ui/ids.h"
 #include "lle/UIEntity.h"
+#include "lle/UIObjHost.h"
 
 class GEFont;
 class GERasterizer;
@@ -37,11 +38,8 @@ class UIHotKey;
 #undef GetForm
 #endif
 
-class LLE_API UIControl : public UIEntity, public EeUiControlFields {   // (public: the toolkit's shims, UIControl.cpp)
-    friend class UIForm;                    // the form's tabbing calls TabbedTo/TabbedFrom (protected)
-    friend class UIComboBox;                // drives its parts' protected mouse/tab handlers (ui-edit)
-    friend struct UIObjHost;                // UIControl.cpp: the whole objects' base ops (ee_ui obj.rs)
-public:
+class LLE_API UIControl : public UIEntity, public EeUiControlFields {
+public:   // (public: the toolkit's shims, UIControl.cpp)
     virtual void AddIMEResultString(const UWideString& inString) {}   // slot 0x04
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                             unsigned long inCursor) { return kErrorFailed; }
@@ -105,7 +103,6 @@ public:
     static bool HomeKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Home); }
     // Returns whether Left (or keypad 4 with Num Lock off) is held
     static bool LeftKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Left); }
-public:   // (the mouse dispatch's shims: UIControl.cpp)
     virtual long MouseLButtonDown() = 0;    // slot 0x34
     virtual long MouseLButtonUp() = 0;
     virtual long MouseLButtonDoublePressed()
@@ -124,31 +121,16 @@ public:   // (the mouse dispatch's shims: UIControl.cpp)
     // Returns whether Right (or keypad 6 with Num Lock off) is held
     static bool RightKeyPressed() { return ee_ui_key_pressed(EeUiKeyPress::Right); }
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
-    virtual void SetBgColor(const GEColor& inColor)
-    {
-        this->BgRhombus()->SetColor(inColor);
-        this->SetDirty(true);
-    }
-    virtual void SetBgOpacity(float inOpacity)
-    {
-        this->mHasBgOpacity = inOpacity != 0.0f;
-        this->BgRhombus()->SetOpacity(inOpacity);
-    }
-    static void SetBorderColors(const GEColor& inDark, const GEColor& inLight)
-    {
-        UIControl::sDarkBorder = inDark;
-        UIControl::sLightBorder = inLight;
-    }
+    virtual void SetBgColor(const GEColor& inColor) { this->Call(EeUiControlCall::SetBgColor, 0, 0, UIF4(inColor)); }
+    virtual void SetBgOpacity(float inOpacity) { this->Call(EeUiControlCall::SetBgOpacity, 0, 0, UIF4(inOpacity)); }
+    // every control's border colours (ee_ui lle_control.rs; black and white until set)
+    static void SetBorderColors(const GEColor& inDark, const GEColor& inLight) { ee_ui_set_border_colors(UIF4(inDark), UIF4(inLight)); }
     void SetBorderOpacity(float inOpacity) { this->mBorderOpacity = inOpacity; }
-    void SetBorderThickness(unsigned long inThickness)
-    {
-        this->mBorderThickness = inThickness;
-        this->SetDirty(true);
-    }
+    void SetBorderThickness(unsigned long inThickness) { this->Call(EeUiControlCall::SetBorderThickness, inThickness); }
     void SetBorderType(unsigned long inType) { this->mBorderType = inType; }
     virtual void SetDirty(bool inDirty) { this->Call(EeUiControlCall::SetDirty, inDirty); }
     virtual void SetDisplayMode(unsigned long inMode) { this->Call(EeUiControlCall::SetDisplayMode, inMode); }
-    virtual void SetLocation(const GE2DPoint& inLocation);
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->Call(EeUiControlCall::SetLocation, 0, 0, UIF4(inLocation)); }
     virtual void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetRectangle, inRectangle); }
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
     void SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent) { this->Call(EeUiControlCall::SetTrigger, inEvent, (intptr_t)inTriggerEvent); }
@@ -157,7 +139,6 @@ public:   // (the mouse dispatch's shims: UIControl.cpp)
     // (public: the game calls slot 0x74 on a form's control, chat 0x1d2e09; the toolkit's shims)
     virtual void TabbedTo() = 0;            // slot 0x74
     virtual void TabbedFrom() = 0;
-public:
     virtual long UpdateKeyboard() = 0;      // slot 0x7c
     // Dispatches left/right mouse button presses, releases and double clicks to the control, then the mouse move
     // (ee_ui mouse.rs)
@@ -168,41 +149,34 @@ public:
     // the shared keys and mouse buttons: a Rust record of ISEntity pointers by EeUiKey (ee_ui lle_control.rs; once
     // the 24 key statics here, UIForm's Tab and Shift and UIManager's mouse buttons and wheel)
     static ISEntity*& Key(EeUiKey inKey) { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(inKey)); }
-    virtual ~UIControl();
-protected:
+    virtual ~UIControl() { ee_ui_control_destruct(this); }
+    // Creates a shown, dirty control with a transparent black background and its two rhombi; the first one looks up
+    // the shared UI keys (ee_ui lle_control.rs, controlobj.rs)
     UIControl(unsigned long inType, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
-              unsigned long inIndex, unsigned long inBorderThickness);
+              unsigned long inIndex, unsigned long inBorderThickness, unsigned long inBorderType = 0)
+        : UIEntity(1)
+    {
+        ee_ui_control_construct(this, this, inType, inId, reinterpret_cast<const float*>(&inRectangle), inForm, inIndex,
+                                inBorderThickness, inBorderType);
+    }
     // The base's logic (ee_ui controlobj.rs)
     void CaptureKeyboard() { this->Call(EeUiControlCall::CaptureKeyboard); }
     void CaptureMouse() { this->Call(EeUiControlCall::CaptureMouse); }
     // Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
     // Rust (ee_ui draw2d.rs, one GELine on the 2D draw list)
     virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness); // slot 0x84
-public:   // (the shims' access)
     // Returns the form's mouse location
     const GE2DPoint& GetMouseLocation() const;
-protected:
     void SetBgRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiControlCall::SetBgRectangle, inRectangle); }
     // port: the display mode stored without SetDisplayMode's dirtying (two game controls' hides)
     void StoreDisplayMode(unsigned long inMode) { this->mDisplayMode = inMode; }
-private:
     // the original's members (+0x08 mDisplayMode .. +0x9e mAlwaysDirty, sizeof 0xa0) are EeUiControlFields'; the
     // rectangles are GERectangle's layout (bottom, left, right, top), the rhombi GERhombus* the constructor makes
     static const GERectangle& AsRect(const EeUiRect& inRect) { return *reinterpret_cast<const GERectangle*>(&inRect); }
     GERhombus* BgRhombus() const { return static_cast<GERhombus*>(this->mBgRhombus); }
     GERhombus* CopiedBgRhombus() const { return static_cast<GERhombus*>(this->mCopiedBgRhombus); }
     intptr_t Call(EeUiControlCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_control_call(const_cast<UIControl*>(this), inCall, a, b, f); }
-    intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const;
-public:
-    // the record's calls out that are not Rust's (EeUiOp 5, 16, 17, 71..74, 169, 218, 245, 520..533; ee_ui
-    // lle_control.rs: ee_ui_control_host comes first)
-    static intptr_t HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
-#if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
-    // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
-private:
-    static GEColor sLightBorder;
-    static GEColor sDarkBorder;
-#endif
+    intptr_t CallRect(EeUiControlCall inCall, const GERectangle& inRectangle) const { return this->Call(inCall, 0, 0, UIF4(inRectangle)); }
 };
 
 #include "lle/UIMultiByte.h"

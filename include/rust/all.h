@@ -95,6 +95,7 @@
 #include "rust/ui/lle_control.h"
 #include "rust/ui/lle_cpp.h"
 #include "rust/ui/lle_form.h"
+#include "rust/ui/lle_hosts.h"
 #include "rust/ui/lle_manager.h"
 #include "rust/ui/lle_table.h"
 #include "rust/ui/manager.h"

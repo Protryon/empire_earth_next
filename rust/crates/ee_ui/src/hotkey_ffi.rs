@@ -31,3 +31,33 @@ pub unsafe extern "C" fn ee_ui_hotkey_name(
     out.add(n).write(0);
     n
 }
+
+/// `UIHotKey::GetHotKeyName`: the record's modifiers' and key's entity names (UIHotKey.cpp's
+/// `ee_uicpp_entity_name`) as the display name, e.g. "Ctrl + Shift + A"; valid until the next call on this thread.
+///
+/// # Safety
+/// `rec` a live hot key record whose key is set.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_hotkey_display_name(rec: *const crate::hotkeyobj::EeUiHotKeyFields) -> *const c_char {
+    extern "C" {
+        fn ee_uicpp_entity_name(entity: *mut core::ffi::c_void) -> *const c_char;
+    }
+    thread_local! {
+        static NAME: core::cell::RefCell<Vec<u8>> = const { core::cell::RefCell::new(Vec::new()) };
+    }
+    // SAFETY: the contract; each entity's name lives as long as the entity
+    let name_of =
+        |e: *mut core::ffi::c_void| if e.is_null() { None } else { unsafe { c_bytes(ee_uicpp_entity_name(e)) } };
+    // SAFETY: the contract
+    let (modifiers, key) = unsafe { ((*rec).mModifiers, (*rec).mKey) };
+    let mut name = hotkey::hot_key_name(
+        [name_of(modifiers[0]), name_of(modifiers[1]), name_of(modifiers[2])],
+        name_of(key).unwrap_or(b""),
+    );
+    name.push(0);
+    NAME.with(|n| {
+        *n.borrow_mut() = name;
+        n.borrow().as_ptr() as *const c_char
+    })
+}

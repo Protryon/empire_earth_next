@@ -148,13 +148,13 @@ fn database_loads_seven_tables_in_order() {
     let calls = fake.calls();
     assert_eq!(
         calls,
-        "db_find(2, 3, 0, out)\ndb_fonts(96, 1)\nfile_delete(96)\n\
-         db_find(2, 3, 1, out)\ndb_forms(96, 1)\nfile_delete(96)\n\
-         db_find(2, 3, 2, out)\ndb_backgrounds(96)\ndb_create_backgrounds(1)\nfile_delete(96)\n\
-         db_find(2, 3, 3, out)\ndb_controls(96, 1)\nfile_delete(96)\n\
-         db_find(2, 3, 4, out)\ndb_control_events(96)\nfile_delete(96)\n\
-         db_find(2, 3, 5, out)\ndb_form_events(96, 1)\nfile_delete(96)\n\
-         db_find(2, 3, 6, out)\ndb_hot_keys(96)\nfile_delete(96)"
+        "db_find(2, 3, \"DB\\\\dbuifonts.dat\", out)\ndb_fonts(96, 1)\nfile_delete(96)\n\
+         db_find(2, 3, \"DB\\\\dbuiforms.dat\", out)\ndb_forms(96, 1)\nfile_delete(96)\n\
+         db_find(2, 3, \"DB\\\\dbuiback.dat\", out)\ndb_backgrounds(96)\ndb_create_backgrounds(1)\nfile_delete(96)\n\
+         db_find(2, 3, \"DB\\\\dbuicontrols.dat\", out)\ndb_controls(96, 1)\nfile_delete(96)\n\
+         db_find(2, 3, \"DB\\\\dbuicontrolevents.dat\", out)\ndb_control_events(96)\nfile_delete(96)\n\
+         db_find(2, 3, \"DB\\\\dbuiformevents.dat\", out)\ndb_form_events(96, 1)\nfile_delete(96)\n\
+         db_find(2, 3, \"DB\\\\dbuihotkey.dat\", out)\ndb_hot_keys(96)\nfile_delete(96)"
     );
 }
 
@@ -165,7 +165,7 @@ fn database_failures_are_verified_at_the_original_lines() {
     load_database(&mut fake, 1, 2, 3);
     let calls = fake.calls();
     assert!(calls.starts_with(
-        "db_find(2, 3, 0, out)\nes_verify(1081, \"theResult == keseOK\")\nes_verify(1082, \"theDbFile != NULL\")\n\
+        "db_find(2, 3, \"DB\\\\dbuifonts.dat\", out)\nes_verify(1081, \"theResult == keseOK\")\nes_verify(1082, \"theDbFile != NULL\")\n\
          db_fonts(0, 1)\nes_verify(1084, \"theResult == keseOK\")\nfile_delete(0)\n"
     ));
 }
