@@ -26,6 +26,7 @@
 #include "ee/EEComplexDoppelganger.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "rust/sim/units.h"
+#include "ee/EEGraphicObject.h"
 #include "ee/EEGameState.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEAreaUtilities.h"
@@ -44,10 +45,7 @@ EEDoppelgangerManager::~EEDoppelgangerManager()
 // Logs the stats of both doppelganger pools and frees them
 void EEDoppelgangerManager::Release()
 {
-    this->mPool.DumpStats(false);
-    this->mPool.Release();
-    this->mComplexPool.DumpStats(false);
-    this->mComplexPool.Release();
+    ee_units_dm_dop(EE_UNITS_DM_DG_DO_MANAGER_RELEASE, NULL, NULL, NULL, NULL);   // dm_dop.rs
 }
 
 // Reads one doppelganger from the saved game into a new pooled one and queues it for pointer repair;
@@ -244,6 +242,26 @@ extern "C" int64_t ee_units_dm_host(int32_t inOp, uint64_t inA, int64_t inB, int
     case EE_UNITS_DM_DOPPELGANGER_TILE: return (uint64_t)(uintptr_t)theDoppelganger->GetTile();
     case EE_UNITS_DM_DOPPELGANGER_GET_PLAYER: return (uint64_t)(uintptr_t)theDoppelganger->GetPlayer();
     case EE_UNITS_DM_DOPPELGANGER_UNIT_TYPE: return theDoppelganger->mUnit->mUnitClass->mUnitType;
+    // EEDoppelganger's (dm_dop.rs)
+    case EE_UNITS_DM_DG_SET_UNIT: theDoppelganger->mUnit = EEDmObject<EEUnit>((uint64_t)inB); return 0;
+    case EE_UNITS_DM_DG_SET_PLAYER: theDoppelganger->mPlayer = EEDmObject<EEPlayer>((uint64_t)inB); return 0;
+    case EE_UNITS_DM_DG_SET_TILE: theDoppelganger->mTile = EEDmObject<RTSTile>((uint64_t)inB); return 0;
+    case EE_UNITS_DM_DG_LOAD_MEDIA: theDoppelganger->mUnit->mStats->mModel->LoadMedia(); return 0;
+    case EE_UNITS_DM_DG_UNLOAD_MEDIA: theDoppelganger->mUnit->mStats->mModel->UnloadMedia(); return 0;
+    case EE_UNITS_DM_DG_REFERENCE: theUnit->Reference(); return 0;
+    case EE_UNITS_DM_DG_DEREFERENCE: theUnit->Dereference(); return 0;
+    case EE_UNITS_DM_DG_VALUE: return sDmValue;
+    case EE_UNITS_DM_DG_COORDINATE: return sDmCoordinate;
+    case EE_UNITS_DM_DG_SAVED_PLAYER: return (int32_t)USavedID(theDoppelganger->mPlayer);
+    case EE_UNITS_DM_DG_SAVED_UNIT: return (uint64_t)(uintptr_t)static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(theDoppelganger->mUnit)));
+    case EE_UNITS_DM_DG_IS_VALID: return theDoppelganger->GetIsValid();
+    case EE_UNITS_DM_DG_WRITE_BOOL: return sDmFile->Write((bool)(inB != 0));
+    case EE_UNITS_DM_DG_WRITE_ULONG: return sDmFile->Write((unsigned long)inB);
+    case EE_UNITS_DM_DG_UNIT_ID: return theDoppelganger->mUnit->mUnitID;
+    case EE_UNITS_DM_DG_POOL_DUMP: theManager.mPool.DumpStats(false); return 0;
+    case EE_UNITS_DM_DG_POOL_RELEASE: theManager.mPool.Release(); return 0;
+    case EE_UNITS_DM_DG_COMPLEX_POOL_DUMP: theManager.mComplexPool.DumpStats(false); return 0;
+    case EE_UNITS_DM_DG_COMPLEX_POOL_RELEASE: theManager.mComplexPool.Release(); return 0;
     default: return 0;
     }
 }

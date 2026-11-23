@@ -30,15 +30,7 @@
 // For cattails, returns the tile where the view line through a point meets the water plane; otherwise sets nothing
 void EEUnitClass::AmbientLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
-    GE3DPoint thePoint;
-    GE3DLine theLine(::gWorld.mLine);
-    if (this->mUnitType != kUnitTypeAmbCattails1)
-        return;
-    theLine.SetStart(inLocation);
-    float theT;
-    theLine.SolveForZ(0.0f, theT, thePoint);
-    outX = UMFloor(thePoint.GetX());
-    outY = UMFloor(thePoint.GetY());
+    ee_units_ucg_sea(EE_UNITS_UCG_DO_AMBIENT_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
 }
 
 // Adds the unit to every map tile of its footprint, its own tile first
@@ -80,7 +72,6 @@ void EEUnitClass::ResourceAddToTile(EEUnit* inUnit)
 void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer);
 
 // 0xde4a9 (EEE2DBattlefieldAmbient.cpp's range): the unit's battlefield ambience (provisional name)
-void EEPlaceTrackDecal(EEComplexUnit* inUnit);
 
 // Sets up a new land unit: its class's resource (and amount when it has one) and, for the radio man, its power
 void EEUnitClass::LandUnitCreated(EEComplexUnit* inUnit)
@@ -98,9 +89,7 @@ void EEUnitClass::LandCallParatroopPlane(EEComplexUnit* inUnit)
 // Updates each of the unit's wheels
 void EEComplexUnit::UpdateWheels()
 {
-    unsigned long theCount = this->mNumWheels;
-    for (unsigned long i = 0; i < theCount; i++)
-        this->mWheels[i]->Update(this);
+    ee_units_ucg_sea(EE_UNITS_UCG_DO_UPDATE_WHEELS, NULL, this, 0, 0, 0, NULL);   // ucg_sea.rs
 }
 
 // ---- EEUCLandMilitaryHero.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
@@ -144,178 +133,45 @@ void EEUnitClass::UpdateResourceUnit(EEComplexUnit* inUnit)
 // Lifts a location that lies below the terrain mesh (the sea floor) up onto it
 void EEUnitClass::SubmergedNavalGroundLocation(GE3DPoint& ioLocation)
 {
-    GETerrainMesh& theMesh = ::gWorld.GetMap()->mTerrainMesh;
-    float theGround = theMesh.GetMeshZ(ioLocation.GetX(), ioLocation.GetY());
-    if (theGround >= ioLocation.GetZ())
-        ioLocation.SetZ(theGround);
+    ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX);   // ucg_sea.rs
 }
 
 // Returns the tile where the view line through a point meets the submarine's cruise depth (or the sea
 // floor where that is higher)
 void EEUnitClass::SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
-    GE3DPoint thePoint;
-    GE3DPoint theGround;
-    GE3DLine theLine(::gWorld.mLine);
-    float theT;
-    float theZ = -this->GetCruiseAltitude();
-    theLine.SetStart(inLocation);
-    EEMap* theMap = ::gWorld.mMap;
-    theLine.SolveForZ(theZ, theT, thePoint);
-    theMap->GetGroundPoint(thePoint, theGround);
-    if (theGround.GetZ() > theZ)
-        theLine.SolveForZ(theGround.GetZ(), theT, thePoint);
-    outX = UMFloor(thePoint.GetX());
-    outY = UMFloor(thePoint.GetY());
+    ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
 }
 
 // Creates a submarine at a placement kept above the sea floor, then moves it to the depth it may take there
 EEUnit* EEUnitClass::SubmergedNavalCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                          EEUnit* inCreator)
 {
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GETransformation theTransformation(inTransformation);
-    thePosition.SetX(theTransformation.GetX());
-    thePosition.SetY(theTransformation.GetY());
-    thePosition.SetZ(theTransformation.GetZ());
-    this->GroundLocation(thePosition);
-    theTransformation.SetX(thePosition.GetX());
-    theTransformation.SetY(thePosition.GetY());
-    theTransformation.SetZ(thePosition.GetZ());
-    EEUnit* theUnit = this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
-    thePosition.SetZ(ee_units_uu_seabed(0, (uint64_t)(uintptr_t)theUnit->mComplexUnit, (const float(*)[3])&thePosition.mX));
-    theUnit->mComplexUnit->SetLocation(thePosition, true);
-    return theUnit;
+    return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]);   // ucg_sea.rs
 }
 
 // Creates a submarine on a tile (yaw pi) kept above the sea floor, then moves it to the depth it may take there
 EEUnit* EEUnitClass::SubmergedNavalCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GETransformation theTransformation(false);
-    float theZ = ::gWorld.mMap->mTerrainMesh.GetZ(inX, inY);
-    thePosition.SetX((float)inX);
-    thePosition.SetY((float)inY);
-    thePosition.SetZ(theZ);
-    this->GroundLocation(thePosition);
-    theTransformation.SetX(thePosition.GetX());
-    theTransformation.SetY(thePosition.GetY());
-    theTransformation.SetZ(thePosition.GetZ());
-    theTransformation.SetOrientationYPR(2.0f * 1.5707964f, 0.0f, 0.0f);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    EEUnit* theUnit = this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
-    thePosition.SetZ(ee_units_uu_seabed(0, (uint64_t)(uintptr_t)theUnit->mComplexUnit, (const float(*)[3])&thePosition.mX));
-    theUnit->mComplexUnit->SetLocation(thePosition, true);
-    return theUnit;
+    return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucg_sea.rs
 }
 
 // Adds the submarine to its tile's unit list
 void EEUnitClass::SubmergedNavalAddToTile(EEUnit* inUnit)
 {
-    EEUnit* theUnit = inUnit->mComplexUnit;
-    EEMapTile* theTile = ::gWorld.mMap->GetTile(inUnit->mTileX, inUnit->mTileY);
-    if (theTile != NULL)
-        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+    ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // ucg_sea.rs
 }
 
 // Returns whether the submarine reached its waypoint: on the waypoint's tile with more to go, when its collision
 // radius covers the distance left; otherwise when that distance is at most 0.05 (always in collision state 8)
 bool EEUnitClass::SubmergedNavalHasArrived(EEComplexUnit* inUnit, float inValue)
 {
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    if (inUnit->mCollisionState == 8)
-        return true;
-    unsigned long theCount = inUnit->mWaypoints.size();
-    inUnit->GetNextWaypointPoint(thePosition);
-    if (inUnit->GetTileX() == UMFloor(thePosition.GetX()) && inUnit->GetTileY() == UMFloor(thePosition.GetY())) {
-        if (theCount > 1
-            || (inUnit->GetQueueGoals(0).size() > 1 && inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalLocation)) {
-            return !(inUnit->mCollisionRadius < inValue);
-        }
-    }
-    return inValue <= 0.05f;
+    return ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED, this, inUnit, 0, 0, 0, &inValue) != 0;   // ucg_sea.rs
 }
 
 // ---- EEUCSeaAnimal.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The sea animal's unit
 // class: 0x219d67..0x219fe3 (after EEUCResource.cpp; EEUCSpaceBuilding.cpp follows). Unit flags: the exe's module
-// set. Its ctor is inline. Data (.rdata, in order): the four named depth constants 0x447340..0x44734c.
-
-// the depths a sea animal swims at (provisional names)
-const float kSeaAnimalBottomClearance = 0.09f;
-
-const float kSeaAnimalMaximumStep = 0.48f;
-
-const float kSeaAnimalMinimumDepth = -0.6f;
-
-const float kSeaAnimalMaximumDepthFactor = 0.81f;
-
-// Gives each path point (from the end back) a depth one random step toward a random depth: dolphins step 0.2..1.2
-// and may dive deeper, others step up to 0.48; kept under -0.1 (dolphins) or -0.6 and 0.09 above the sea floor
-void EEUnitClass::SeaAnimalAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
-{
-    const GETerrainMesh& theMesh = ::gWorld.mMap->mTerrainMesh;
-    float theDepth = inUnit->mPhysicalModel.GetLocation().GetZ();
-    bool theSurfaced = true;
-    for (long i = ioPath.size() - 1; i >= 0; i--) {
-        float theGround = theMesh.GetMeshZ(ioPath[i].GetX(), ioPath[i].GetY());
-        float theTarget;
-        bool theDive = this->GetUnitType() == kUnitTypeResDolphin;
-        if (theDive) {
-            theDive = i != 0;
-            if (theDive) {
-                theDive = !theSurfaced;
-                if (theDive)
-                    theDive = gPhysics->mRandom.Generate() < 0.35f;
-            }
-        }
-        if (!theDive) {
-            theTarget = gPhysics->GetRandom(0.1f, kSeaAnimalMaximumDepthFactor) * theGround;
-            theTarget = min(kSeaAnimalMinimumDepth, theTarget);
-        } else {
-            theTarget = gPhysics->GetRandom(0.45f, 0.85f) * theGround;
-            theSurfaced = true;
-        }
-        if (theSurfaced)
-            theSurfaced = false;
-        float theDistance = UMAbs(theDepth - theTarget);
-        float theLimit;
-        if (this->GetUnitType() == kUnitTypeResDolphin) {
-            float theStep = gPhysics->GetRandom(0.2f, 1.2f);
-            if (theDepth < theTarget)
-                theDepth += theStep;
-            else
-                theDepth -= theStep;
-            theDistance = UMAbs(theDistance - theStep);
-            theLimit = -0.1f;
-        } else {
-            float theStep = gPhysics->GetRandom(0.2f, kSeaAnimalMaximumStep);
-            if (theDepth < theTarget)
-                theDepth += theStep;
-            else
-                theDepth -= theStep;
-            theDistance = UMAbs(theDistance - theStep);
-            theLimit = kSeaAnimalMinimumDepth;
-        }
-        theDepth = min(theLimit, theDepth);
-        if (theDepth <= theGround + kSeaAnimalBottomClearance)
-            theDepth = theGround + kSeaAnimalBottomClearance;
-        ioPath[i].SetZ(theDepth);
-    }
-}
-
-// the sea animals' AdjustPath body for ee_sim::units waypoints.rs (the depths in place)
-extern "C" void ee_units_wp_host_sea_animal_path(uint64_t inClass, uint64_t inUnit, float (*ioPoints)[3], uint32_t inCount)
-{
-    std::vector<GE3DPoint> thePath;
-    for (uint32_t i = 0; i < inCount; i++)
-        thePath.push_back(GE3DPoint(ioPoints[i][0], ioPoints[i][1], ioPoints[i][2]));
-    ((EEUnitClass*)(uintptr_t)inClass)->SeaAnimalAdjustPath((EEComplexUnit*)(uintptr_t)inUnit, thePath, false);
-    for (uint32_t i = 0; i < inCount; i++)
-        ioPoints[i][2] = thePath[i].mZ;
-}
+// set. Its ctor is inline. Data (.rdata, in order): the four named depth constants 0x447340..0x44734c (ucg_sea.rs).
 
 template <class T> static T* EEUcgObject(uint64_t inHandle)
 {
@@ -356,6 +212,16 @@ extern "C" int64_t ee_units_ucg_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCG_NEXT_WAYPOINT: theUnit->GetNextWaypointPoint(*reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UCG_COLLISION_RADIUS: f[0] = theUnit->mCollisionRadius; return 0;
     case EE_UNITS_UCG_RESOURCES_ROTTING: theUnit->UpdateResourcesRotting(); return 0;
+    case EE_UNITS_UCG_WORLD_LINE: memcpy(EEUcgObject<GE3DLine>(inA), &::gWorld.mLine, sizeof(GE3DLine)); return 0;
+    case EE_UNITS_UCG_MESH_Z: f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
+    case EE_UNITS_UCG_GROUND_POINT: ::gWorld.mMap->GetGroundPoint(GE3DPoint(f[0], f[1], f[2]), *reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCG_TERRAIN_Z: f[0] = ::gWorld.mMap->mTerrainMesh.GetZ((unsigned long)inB, (unsigned long)inC); return 0;
+    case EE_UNITS_UCG_BASE_CREATE_AT: return EEObj(theClass->BaseCreateUnitAt(*EEUcgObject<GETransformation>(inA), (long)(inB >> 1), (inB & 1) != 0, EEUcgObject<EEUnit>((uint64_t)inC)));
+    case EE_UNITS_UCG_SET_LOCATION_OF: theOther->SetLocation(GE3DPoint(f[0], f[1], f[2]), true); return 0;
+    case EE_UNITS_UCG_RANDOM_GENERATE: f[0] = gPhysics->mRandom.Generate(); return 0;
+    case EE_UNITS_UCG_RANDOM_RANGE: f[0] = gPhysics->GetRandom(f[0], f[1]); return 0;
+    case EE_UNITS_UCG_WHEEL_COUNT: return theUnit->mNumWheels;
+    case EE_UNITS_UCG_WHEEL_UPDATE: theUnit->mWheels[inB]->Update(theUnit); return 0;
     default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
     }
 }

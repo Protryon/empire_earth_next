@@ -196,10 +196,7 @@ void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
 // Returns whether a tile is on the map, not cliff, deep water or space, and not on the map edge
 bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
-    EEMapTile* theTile = ::gWorld.mMap->GetTile(inX, inY);
-    // The terrain and edge checks keep the original short-circuit order.
-    return theTile != NULL && theTile->mTerrainType != kTerrainCliff && theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainSpace &&
-           !::gWorld.mMap->IsEdgeTile(inX, inY);
+    return ee_units_uc_rest(EE_UNITS_UC_DO_R_TILE_FREE, NULL, inUnit, 0, (int64_t)inX, (int64_t)inY, NULL) != 0;   // uc_rest.rs
 }
 
 // Fills a new carrier with aircraft of the best of three fighter techs its player has (else unit class 0x1f)
@@ -287,8 +284,7 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 void EEUnitClass::SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
 {
-    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
-    EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
+    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
 }
 
 // The air animal's and the landable's sound parameters: the spaceship's Doppler pitch, but (as their own inline

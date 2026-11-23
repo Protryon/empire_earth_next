@@ -319,3 +319,63 @@ fn the_shots_plain_reads_come_from_the_unit_store() {
     let mut m = Mock::with(&[(EE_COMBAT_SHOT_R_COMMAND, 6007)]);
     assert_eq!(StoredShot { host: &mut m, unit: 0x701 }.op(EE_COMBAT_SHOT_R_COMMAND, 0, 0), 6007);
 }
+
+/// The composed operations' statements, in order
+#[derive(Default)]
+struct Statements {
+    log: Vec<(i32, u64, i64)>,
+    answers: std::collections::BTreeMap<i32, i64>,
+    floats: std::collections::BTreeMap<i32, [f32; 4]>,
+}
+
+impl ShotStatements for Statements {
+    fn x(&mut self, op: i32, a: u64, b: i64, f: &mut [f32; 4]) -> i64 {
+        self.log.push((op, a, b));
+        if let Some(out) = self.floats.get(&op) {
+            *f = *out;
+        }
+        *self.answers.get(&op).unwrap_or(&0)
+    }
+}
+
+#[test]
+fn the_splash_is_placed_at_the_water_line() {
+    let mut h = Statements::default();
+    h.floats.insert(EE_COMBAT_SHOT_X_LOCATION, [1.0, 2.0, -3.0, 0.0]);
+    assert_eq!(compose(&mut h, EE_COMBAT_SHOT_SPLASH), Some(0));
+    let ops: Vec<i32> = h.log.iter().map(|e| e.0).collect();
+    assert_eq!(ops, [EE_COMBAT_SHOT_X_LOCATION, EE_COMBAT_SHOT_X_SPLASH_AT]);
+    assert_eq!(compose(&mut h, EE_COMBAT_SHOT_SET_ANIMATION), None);
+}
+
+#[test]
+fn the_dead_target_leaves_an_attack_on_its_tile() {
+    let mut h = Statements::default();
+    h.answers.insert(EE_COMBAT_SHOT_X_ATTACK_GOAL, 5);
+    h.answers.insert(EE_COMBAT_SHOT_X_ATTACK_TARGET, 6);
+    h.answers.insert(EE_COMBAT_SHOT_X_TILE_X_OF, 3);
+    h.answers.insert(EE_COMBAT_SHOT_X_TILE_Y_OF, 4);
+    compose(&mut h, EE_COMBAT_SHOT_ATTACK_TARGET_TILE);
+    assert!(h.log.contains(&(EE_COMBAT_SHOT_X_MAP_TILE, 3, 4)));
+    assert!(!h.log.iter().any(|e| e.0 == EE_COMBAT_SHOT_X_TILE_HEIGHT));
+    assert_eq!(h.log.last().unwrap().0, EE_COMBAT_SHOT_X_ATTACK_GROUND);
+}
+
+#[test]
+fn the_retarget_follows_the_target_into_its_container() {
+    let mut h = Statements::default();
+    h.answers.insert(EE_COMBAT_SHOT_X_ATTACK_GOAL, 5);
+    h.answers.insert(EE_COMBAT_SHOT_X_CONTAINER_OF, 9);
+    compose(&mut h, EE_COMBAT_SHOT_RETARGET_CONTAINER);
+    assert_eq!(h.log.last(), Some(&(EE_COMBAT_SHOT_X_SET_ATTACK_TARGET, 5, 9)));
+}
+
+#[test]
+fn the_flaming_set_asks_for_the_target_type() {
+    let mut h = Statements::default();
+    h.answers.insert(EE_COMBAT_SHOT_X_UNIT_SET, 7);
+    h.answers.insert(EE_COMBAT_SHOT_X_UNIT_TYPE_OF, 0x2d5);
+    h.answers.insert(EE_COMBAT_SHOT_X_SET_CONTAINS, 1);
+    assert_eq!(compose(&mut h, EE_COMBAT_SHOT_R_FLAMING_SET), Some(1));
+    assert_eq!(h.log.last(), Some(&(EE_COMBAT_SHOT_X_SET_CONTAINS, 7, 0x2d5)));
+}

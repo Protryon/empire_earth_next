@@ -166,18 +166,198 @@ pub trait ShotHost {
     fn op(&mut self, op: i32, arg: i32, arg1: i32) -> i32;
 }
 
-/// The C++ host of a shot's plan: `op` reads or acts on the unit and its class over `ctx`.
+/// The C++ host of a shot's plan: `op` reads or acts on the unit and its class over `ctx`; `op64` is one statement
+/// of the operations composed here ([`compose`]: `EE_COMBAT_SHOT_X_*`, an object `a`, a value `b`, floats `f`).
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct EeCombatShotHost {
     pub ctx: *mut c_void,
     pub op: unsafe extern "C" fn(ctx: *mut c_void, op: i32, arg: i32, arg1: i32) -> i32,
+    pub op64: unsafe extern "C" fn(ctx: *mut c_void, op: i32, a: u64, b: i64, f: *mut f32) -> i64,
 }
 
 impl ShotHost for EeCombatShotHost {
     fn op(&mut self, op: i32, arg: i32, arg1: i32) -> i32 {
+        if let Some(answer) = compose(self, op) {
+            return answer;
+        }
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
         unsafe { (self.op)(self.ctx, op, arg, arg1) }
+    }
+}
+
+impl ShotStatements for EeCombatShotHost {
+    fn x(&mut self, op: i32, a: u64, b: i64, f: &mut [f32; 4]) -> i64 {
+        // SAFETY: the table's contract: `ctx` is live for the call that handed it over
+        unsafe { (self.op64)(self.ctx, op, a, b, f.as_mut_ptr()) }
+    }
+}
+
+// ---- the statements of the composed operations (the units' lane, round 9; EEShotOp64, EEUnitClassShots.cpp)
+
+/// `GetCalamityClass(0x17, the class pointer at a)` (the flaming arrows)
+pub const EE_COMBAT_SHOT_X_FLAMING_CLASS: i32 = 3600;
+/// `gUnitSetManager.GetSet(calamity class a->GetUnitSet())`
+pub const EE_COMBAT_SHOT_X_UNIT_SET: i32 = 3601;
+/// `static_cast<EEUGRust*>(unit->mComplexUnit->mGoalState)->GetAttackTarget()`
+pub const EE_COMBAT_SHOT_X_COMPLEX_GOAL_TARGET: i32 = 3602;
+/// unit `a`'s `mUnitClass->mUnitType`
+pub const EE_COMBAT_SHOT_X_UNIT_TYPE_OF: i32 = 3603;
+/// unit set `a`'s `Contains(b)`
+pub const EE_COMBAT_SHOT_X_SET_CONTAINS: i32 = 3604;
+/// `unit->GetPosition(f[0..3])`
+pub const EE_COMBAT_SHOT_X_POSITION: i32 = 3605;
+/// `f[0..3] = EEShotLocation(unit)` (the location's point)
+pub const EE_COMBAT_SHOT_X_LOCATION: i32 = 3606;
+/// `gEffectManager->CreatePlacedEffect(f[0..3], class->mSplashEffect, NULL)`
+pub const EE_COMBAT_SHOT_X_SPLASH_AT: i32 = 3607;
+/// `::gWorld.mMap->GetGroundPoint(f[0..3], f[0..3])`
+pub const EE_COMBAT_SHOT_X_GROUND_POINT: i32 = 3608;
+/// `unit->mPhysicalModel.SetLocationXYZ(f[0..3])`
+pub const EE_COMBAT_SHOT_X_SET_LOCATION_XYZ: i32 = 3609;
+/// `unit->mStats->mDeathSound`
+pub const EE_COMBAT_SHOT_X_DEATH_SOUND: i32 = 3610;
+/// `class->GetSoundParameters(unit, sound a, &f[0], &f[1], &f[2])`
+pub const EE_COMBAT_SHOT_X_SOUND_PARAMETERS: i32 = 3611;
+/// `gSoundManager->Play(sound a's mSampleID, f[0], f[1], f[2], its mLooping, NULL)`
+pub const EE_COMBAT_SHOT_X_PLAY: i32 = 3612;
+/// `EEShotAttack(unit)` (the attack goal)
+pub const EE_COMBAT_SHOT_X_ATTACK_GOAL: i32 = 3613;
+/// attack goal `a`'s `GetAttackTarget()`
+pub const EE_COMBAT_SHOT_X_ATTACK_TARGET: i32 = 3614;
+/// `EEUnitCast<EEComplexUnit>(unit a)`
+pub const EE_COMBAT_SHOT_X_COMPLEX_CAST: i32 = 3615;
+/// complex unit `a`'s `SetIsTinted(false)`
+pub const EE_COMBAT_SHOT_X_UNTINT: i32 = 3616;
+/// unit `a`'s `mTileX`
+pub const EE_COMBAT_SHOT_X_TILE_X_OF: i32 = 3617;
+/// unit `a`'s `mTileY`
+pub const EE_COMBAT_SHOT_X_TILE_Y_OF: i32 = 3618;
+/// `::gWorld.mMap->GetTile(a, b)`
+pub const EE_COMBAT_SHOT_X_MAP_TILE: i32 = 3619;
+/// `f[0] = ` tile `a`'s `GetHeight()`
+pub const EE_COMBAT_SHOT_X_TILE_HEIGHT: i32 = 3620;
+/// `unit->SetGoal(EEUGRust::NewAttackGround(f[0..3], b), 0, 0)`
+pub const EE_COMBAT_SHOT_X_ATTACK_GROUND: i32 = 3621;
+/// unit `a`'s `mComplexUnit`
+pub const EE_COMBAT_SHOT_X_COMPLEX_OF: i32 = 3622;
+/// complex unit `a`'s `mContainer`
+pub const EE_COMBAT_SHOT_X_CONTAINER_OF: i32 = 3623;
+/// attack goal `a`'s `SetAttackTarget(unit b)`
+pub const EE_COMBAT_SHOT_X_SET_ATTACK_TARGET: i32 = 3624;
+/// `unit->mGoalState`
+pub const EE_COMBAT_SHOT_X_GOAL_STATE: i32 = 3625;
+/// goal `a`'s `GetGoalLocation(f[0..3])`
+pub const EE_COMBAT_SHOT_X_GOAL_LOCATION: i32 = 3626;
+/// goal `a`'s `GetB1C()`
+pub const EE_COMBAT_SHOT_X_GOAL_B1C: i32 = 3627;
+/// `*(GETransformation*)a = unit->mPhysicalModel.GetLocation()`
+pub const EE_COMBAT_SHOT_X_LOCATION_MATRIX: i32 = 3628;
+/// `unit->SetTransformation(the transformation at a, true)`
+pub const EE_COMBAT_SHOT_X_SET_TRANSFORMATION: i32 = 3629;
+
+/// One statement of the composed operations (`EEShotOp64`).
+pub trait ShotStatements {
+    fn x(&mut self, op: i32, a: u64, b: i64, f: &mut [f32; 4]) -> i64;
+}
+
+fn xa<H: ShotStatements + ?Sized>(h: &mut H, op: i32, a: u64) -> u64 {
+    h.x(op, a, 0, &mut [0.0; 4]) as u64
+}
+
+/// The C++ host's operations that were more than a statement (`EEShotOp`'s compound cases), each statement one
+/// `EE_COMBAT_SHOT_X_*`; `None` for the others.
+pub fn compose<H: ShotStatements + ?Sized>(h: &mut H, op: i32) -> Option<i32> {
+    match op {
+        EE_COMBAT_SHOT_R_FLAMING_SET => {
+            let mut calamity: u64 = 0;
+            xa(h, EE_COMBAT_SHOT_X_FLAMING_CLASS, std::ptr::addr_of_mut!(calamity) as u64);
+            let target = xa(h, EE_COMBAT_SHOT_X_COMPLEX_GOAL_TARGET, 0);
+            let set = xa(h, EE_COMBAT_SHOT_X_UNIT_SET, calamity);
+            let unit_type = h.x(EE_COMBAT_SHOT_X_UNIT_TYPE_OF, target, 0, &mut [0.0; 4]);
+            Some(h.x(EE_COMBAT_SHOT_X_SET_CONTAINS, set, unit_type, &mut [0.0; 4]) as i32)
+        }
+        EE_COMBAT_SHOT_R_POSITION_Z => {
+            let mut f = [0.0f32; 4];
+            h.x(EE_COMBAT_SHOT_X_POSITION, 0, 0, &mut f);
+            Some(f[2].to_bits() as i32)
+        }
+        EE_COMBAT_SHOT_SPLASH => {
+            let mut f = [0.0f32; 4];
+            h.x(EE_COMBAT_SHOT_X_LOCATION, 0, 0, &mut f);
+            f[2] = 0.0;
+            h.x(EE_COMBAT_SHOT_X_SPLASH_AT, 0, 0, &mut f);
+            Some(0)
+        }
+        EE_COMBAT_SHOT_GROUND_LOCATION => {
+            let mut f = [0.0f32; 4];
+            h.x(EE_COMBAT_SHOT_X_LOCATION, 0, 0, &mut f);
+            h.x(EE_COMBAT_SHOT_X_GROUND_POINT, 0, 0, &mut f);
+            h.x(EE_COMBAT_SHOT_X_SET_LOCATION_XYZ, 0, 0, &mut f);
+            Some(0)
+        }
+        EE_COMBAT_SHOT_SAME_LOCATION => {
+            let mut f = [0.0f32; 4];
+            h.x(EE_COMBAT_SHOT_X_LOCATION, 0, 0, &mut f);
+            h.x(EE_COMBAT_SHOT_X_SET_LOCATION_XYZ, 0, 0, &mut f);
+            Some(0)
+        }
+        EE_COMBAT_SHOT_DEATH_SOUND => {
+            let sound = xa(h, EE_COMBAT_SHOT_X_DEATH_SOUND, 0);
+            let mut f = [0.0f32; 4];
+            h.x(EE_COMBAT_SHOT_X_SOUND_PARAMETERS, sound, 0, &mut f);
+            h.x(EE_COMBAT_SHOT_X_PLAY, sound, 0, &mut f);
+            Some(0)
+        }
+        EE_COMBAT_SHOT_UNTINT_TARGET => {
+            let goal = xa(h, EE_COMBAT_SHOT_X_ATTACK_GOAL, 0);
+            let target = xa(h, EE_COMBAT_SHOT_X_ATTACK_TARGET, goal);
+            let complex = xa(h, EE_COMBAT_SHOT_X_COMPLEX_CAST, target);
+            if complex != 0 {
+                xa(h, EE_COMBAT_SHOT_X_UNTINT, complex);
+            }
+            Some(0)
+        }
+        EE_COMBAT_SHOT_ATTACK_TARGET_TILE => {
+            // the dead target's tile, at the tile's height when it is there
+            let goal = xa(h, EE_COMBAT_SHOT_X_ATTACK_GOAL, 0);
+            let target = xa(h, EE_COMBAT_SHOT_X_ATTACK_TARGET, goal);
+            let x = h.x(EE_COMBAT_SHOT_X_TILE_X_OF, target, 0, &mut [0.0; 4]) as i32;
+            let y = h.x(EE_COMBAT_SHOT_X_TILE_Y_OF, target, 0, &mut [0.0; 4]) as i32;
+            let mut f = [x as f32, y as f32, 0.0, 0.0];
+            let tile = h.x(EE_COMBAT_SHOT_X_MAP_TILE, x as i64 as u64, i64::from(y), &mut [0.0; 4]) as u64;
+            if tile != 0 {
+                let mut height = [0.0f32; 4];
+                h.x(EE_COMBAT_SHOT_X_TILE_HEIGHT, tile, 0, &mut height);
+                f[2] = height[0];
+            }
+            h.x(EE_COMBAT_SHOT_X_ATTACK_GROUND, 0, 0, &mut f);
+            Some(0)
+        }
+        EE_COMBAT_SHOT_RETARGET_CONTAINER => {
+            let goal = xa(h, EE_COMBAT_SHOT_X_ATTACK_GOAL, 0);
+            let target = xa(h, EE_COMBAT_SHOT_X_ATTACK_TARGET, goal);
+            let complex = xa(h, EE_COMBAT_SHOT_X_COMPLEX_OF, target);
+            let container = xa(h, EE_COMBAT_SHOT_X_CONTAINER_OF, complex);
+            h.x(EE_COMBAT_SHOT_X_SET_ATTACK_TARGET, goal, container as i64, &mut [0.0; 4]);
+            Some(0)
+        }
+        EE_COMBAT_SHOT_ATTACK_GOAL_LOCATION => {
+            let goal = xa(h, EE_COMBAT_SHOT_X_GOAL_STATE, 0);
+            let mut f = [0.0f32; 4];
+            h.x(EE_COMBAT_SHOT_X_GOAL_LOCATION, goal, 0, &mut f);
+            let flag = h.x(EE_COMBAT_SHOT_X_GOAL_B1C, goal, 0, &mut [0.0; 4]);
+            h.x(EE_COMBAT_SHOT_X_ATTACK_GROUND, 0, flag, &mut f);
+            Some(0)
+        }
+        EE_COMBAT_SHOT_WATER_PLANE => {
+            let mut m = [[0.0f32; 4]; 4];
+            xa(h, EE_COMBAT_SHOT_X_LOCATION_MATRIX, std::ptr::addr_of_mut!(m) as u64);
+            m[2][3] = 0.0;
+            xa(h, EE_COMBAT_SHOT_X_SET_TRANSFORMATION, std::ptr::addr_of_mut!(m) as u64);
+            Some(0)
+        }
+        _ => None,
     }
 }
 
