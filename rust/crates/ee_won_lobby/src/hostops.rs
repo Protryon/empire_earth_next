@@ -442,19 +442,46 @@ mod tests {
         assert_eq!(run(Op::TextNew, 0x20, 3, 0, &|_, _| 0x55), vec!["TextAlloc 0x20 0x3 0x0", "AddRef 0x55 0x0 0x0"]);
         // the bytes: as many as fit, the count all of them
         let ops = run(Op::TextBytes, 0x30, 0x900, 4, &|op, _| if op == Op::BytesLen { 6 } else { 0 });
-        assert_eq!(ops, vec!["BytesOfText 0x30 0x0 0x0", "BytesLen 0x0 0x0 0x0", "BytesCopy 0x900 0x4 0x0", "BytesDrop 0x0 0x0 0x0"]);
+        assert_eq!(
+            ops,
+            vec![
+                "BytesOfText 0x30 0x0 0x0",
+                "BytesLen 0x0 0x0 0x0",
+                "BytesCopy 0x900 0x4 0x0",
+                "BytesDrop 0x0 0x0 0x0"
+            ]
+        );
         let ops = run(Op::HttpDocPath, 0x30, 1, 0x900, &|op, _| if op == Op::BytesLen { 6 } else { 0 });
         assert_eq!(ops[0], "BytesOfHttpDocGame 0x30 0x0 0x0");
         assert_eq!(ops[2], "BytesCopy 0x900 0x6 0x0");
         let ops = run(Op::TextAppendBytes, 0x40, 0x50, 2, &|_, _| 0x60);
-        assert_eq!(ops, vec!["TextTake 0x40 0x0 0x0", "Release 0x40 0x0 0x0", "TextAppendRaw 0x50 0x2 0x0", "TextHeldOut 0x0 0x0 0x0", "TextDrop 0x0 0x0 0x0"]);
+        assert_eq!(
+            ops,
+            vec![
+                "TextTake 0x40 0x0 0x0",
+                "Release 0x40 0x0 0x0",
+                "TextAppendRaw 0x50 0x2 0x0",
+                "TextHeldOut 0x0 0x0 0x0",
+                "TextDrop 0x0 0x0 0x0"
+            ]
+        );
         let ops = run(Op::ParserCommandText, 0x70, 3, 0, &|_, _| 0);
         assert_eq!(ops[4], "TextAppendParserTarget 0x70 0x0 0x0");
         assert_eq!(run(Op::ParserCommandText, 0x70, 3, 0x80, &|_, _| 0)[4], "TextAppendText 0x80 0x0 0x0");
         let fields: [isize; 7] = [1, 2, 3, 4, 5, 6, 7];
-        let ops = run(Op::DeliverCreateAccount, fields.as_ptr() as isize, 0, 0, &|op, _| if op == Op::TextToInt { 300 } else { 1 });
+        let ops = run(Op::DeliverCreateAccount, fields.as_ptr() as isize, 0, 0, &|op, _| {
+            if op == Op::TextToInt {
+                300
+            } else {
+                1
+            }
+        });
         assert_eq!(ops.iter().filter(|o| o.starts_with("EvSetNum")).count(), 4);
-        assert!(ops.contains(&format!("EvSetNum {:#x} {:#x} 0x0", crate::lobbyevt::EeWonLobbyEvtField::Day as isize, 300u16 as u8)));
+        assert!(ops.contains(&format!(
+            "EvSetNum {:#x} {:#x} 0x0",
+            crate::lobbyevt::EeWonLobbyEvtField::Day as isize,
+            300u16 as u8
+        )));
         assert_eq!(ops.last().unwrap(), "EvDrop 0x0 0x0 0x0");
     }
 }

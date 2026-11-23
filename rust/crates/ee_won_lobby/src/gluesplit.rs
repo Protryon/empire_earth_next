@@ -258,7 +258,13 @@ mod tests {
         assert_eq!(run(Op::OptionSet, [F::MapTypeIndex as isize, 3, 0, 0, 0, 0], &|_| 6), (Some(0), vec![]));
         assert_eq!(run(Op::PlayerSet, [F::NameEmpty as isize, 3, 0, 0, 0, 0], &|_| 6), (Some(0), vec![]));
         assert_eq!(run(Op::OptionsPlayer, [70, 2, F::Victory as isize, 0, 0, 0], &|_| 6), (Some(0), vec![]));
-        let (r, log) = run(Op::OptionsPlayer, [70, 2, F::Team as isize, 0, 0, 0], &|op| if op == Op::OptionsPlayerAt { 900 } else { 3 });
+        let (r, log) = run(Op::OptionsPlayer, [70, 2, F::Team as isize, 0, 0, 0], &|op| {
+            if op == Op::OptionsPlayerAt {
+                900
+            } else {
+                3
+            }
+        });
         assert_eq!((r, log), (Some(3), vec!["OptionsPlayerAt 70 2".into(), "PlayerGetTeam 900 0".into()]));
         let (_, log) = run(Op::OptionSet, [F::LoadType as isize, 5, 0, 0, 0, 0], &|_| 0);
         assert_eq!(log, vec!["OptSetLoadType 5 0"]);
