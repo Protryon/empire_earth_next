@@ -734,4 +734,34 @@ mod tests {
         );
         assert_eq!(r, Some(2));
     }
+
+    #[test]
+    fn the_round_33_compositions_stop_where_the_original_returned() {
+        // no window: nothing else read
+        assert_eq!(
+            run(|o| list_op(Op::PointerOutside, [0; 4], o), |_, _| 0),
+            (Some(0), vec!["ListRoot 0 0 0 0".into()])
+        );
+        // a window, no parent
+        let (r, log) = run(|o| list_op(Op::PointerOutside, [0; 4], o), |op, _| if op == Op::ListRoot { 9 } else { 0 });
+        assert_eq!((r, log.len()), (Some(0), 4));
+        // inside: 0; the tooltip made once
+        let (r, log) = run(|o| list_op(Op::PointerOutside, [0; 4], o), |_, _| 3);
+        assert_eq!((r, log.last().unwrap().as_str()), (Some(0), "ListContains 3 3 0 0"));
+        assert_eq!(
+            run(|o| list_op(Op::TipShow, [5, 0, 0, 0], o), |_, _| 0).1,
+            ["TipExists 0 0 0 0", "TipNew 0 0 0 0", "TipDo 5 0 0 0"]
+        );
+        assert_eq!(run(|o| list_op(Op::TipHide, [0; 4], o), |_, _| 0).1, ["TipExists 0 0 0 0"]);
+        // the popup window: made, held, set up, created
+        let (r, log) =
+            run(|o| wm_op(Op::WmNewPopupWindow, 4, 8, 0, o), |op, _| if op == Op::WmNativeWindowNew { 70 } else { 0 });
+        assert_eq!((r, log.len(), log[6].as_str()), (Some(70), 7, "WinCreate 70 8 0 0"));
+        // the font held only when there is one
+        assert_eq!(run(|o| wm_op(Op::WmDefaultWindowFont, 0, 0, 0, o), |_, _| 0).1.len(), 3);
+        assert_eq!(
+            run(|o| wm_op(Op::WmResolution, 1, 800, 600, o), |_, _| 1),
+            (Some(1), vec!["WmScreenResSet 800 600 0 0".into()])
+        );
+    }
 }

@@ -487,7 +487,16 @@ pub unsafe extern "C" fn ee_won_layout_new(
 /// centre, same-size, clear-right, space-evenly, no-overlap and size-at-least layouts; R6 WON round 33: its
 /// statements filled the record in C++).
 #[allow(clippy::too_many_arguments)]
-pub fn basic_init(kind: EeWonLayoutKind, r0: isize, r1: isize, i0: i32, i1: i32, i2: i32, horz: bool, vert: bool) -> EeWonLayoutInit {
+pub fn basic_init(
+    kind: EeWonLayoutKind,
+    r0: isize,
+    r1: isize,
+    i0: i32,
+    i1: i32,
+    i2: i32,
+    horz: bool,
+    vert: bool,
+) -> EeWonLayoutInit {
     EeWonLayoutInit { kind, refs: [r0, r1, 0, 0, 0], ints: [i0, i1, i2, 0, 0, 0, 0, 0], horz, vert }
 }
 
@@ -515,7 +524,15 @@ pub unsafe extern "C" fn ee_won_layout_new_basic(
 
 /// `ChildLayoutInstruction(flags, child, reference, x, y, width, height)`'s numbers (Fn2F6140's instruction).
 #[allow(clippy::too_many_arguments)]
-pub fn child_init(flags: i32, child: isize, reference: isize, x: i32, y: i32, width: i32, height: i32) -> EeWonLayoutInit {
+pub fn child_init(
+    flags: i32,
+    child: isize,
+    reference: isize,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> EeWonLayoutInit {
     EeWonLayoutInit {
         kind: EeWonLayoutKind::Child,
         refs: [child, reference, 0, 0, 0],
