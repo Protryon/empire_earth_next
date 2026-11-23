@@ -64,7 +64,7 @@ fn the_sockets_ops_in_the_originals_order() {
 fn the_game_ops_split() {
     take();
     assert_eq!(game_op(G::PlayerAttach, 4, 6, 0, 0, &game), Some(0));
-    assert_eq!(take(), ["PlayerSetSlotView 4 6 0 0", "PlayerSetSlot 4 6 0 0"]);
+    assert_eq!(take(), ["PlayerSetSlotGame 4 0 0 0", "PlayerSetSlotIndex 4 6 0 0", "PlayerSetSlot 4 6 0 0"]);
     game_op(G::TransferSetHost, 4, 2300, 0, 0, &game);
     assert_eq!(take(), ["TransferHostFromGame 4 0 0 0", "TransferHostSetPort 4 2300 0 0"]);
     // the transfer's Rust object: none here (a null object's call answers 0)

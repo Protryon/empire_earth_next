@@ -87,7 +87,7 @@ enum class EeWonEeGameOp : uint32_t {
   PlayerTeam,
   /// `a->mPlayerSlot = &this->mSlots[b]; a->mSlot = b` (EELobbyPlayerSlot::SetPlayer's two stores).
   PlayerAttach,
-  /// `a->mPlayerSlot = NULL` (ClearPlayer's store).
+  /// `a->mSlotGame = NULL` (ClearPlayer's store: the slot pointer's NULL).
   PlayerDetach,
   /// `GetMyLobbyPlayer()`.
   MyPlayer,
@@ -153,8 +153,10 @@ enum class EeWonEeGameOp : uint32_t {
   TransferIsFileHere,
   /// `a->Download()`.
   TransferDownload,
-  /// `a->mPlayerSlot = &this->mSlots[b]`.
-  PlayerSetSlotView,
+  /// `a->mSlotGame = this` (the player's slot: the game and its number).
+  PlayerSetSlotGame,
+  /// `a->mSlotIndex = b`.
+  PlayerSetSlotIndex,
   /// `a->mSlot = b`.
   PlayerSetSlot,
   /// `a->mName = GUIString(b)` (the transfer's file name).

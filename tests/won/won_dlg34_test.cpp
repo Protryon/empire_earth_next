@@ -271,7 +271,9 @@ struct EELobbyPlayerSlot {
 };
 struct EELobbyPlayer : RefCount {
     unsigned char mSlot = 0;
-    EELobbyPlayerSlot* mPlayerSlot = NULL;
+    EELobbyPlayerSlot* mPlayerSlot = NULL; // the deleted slot view
+    struct EELobbyGame* mSlotGame = NULL;   // the new members
+    unsigned char mSlotIndex = 0;
 };
 struct EELobbyGame : RefCount {
     EELobbyPlayerSlot mSlots[8];
@@ -669,7 +671,8 @@ static intptr_t NewGame(void* inGame, EeWonEeGameOp inOp, intptr_t a, intptr_t b
     if (sMutate == 17 && inOp == Op::TransferHostSetPort) b ^= 1;
     if (sMutate == 18 && inOp == Op::TransferSetName) return 0;
     switch (inOp) {
-    case Op::PlayerSetSlotView: aPlayer->mPlayerSlot = &aGame->mSlots[b]; return 0;
+    case Op::PlayerSetSlotGame: aPlayer->mSlotGame = aGame; return 0;
+    case Op::PlayerSetSlotIndex: aPlayer->mSlotIndex = (unsigned char)b; return 0;
     case Op::PlayerSetSlot: aPlayer->mSlot = (unsigned char)b; return 0;
     case Op::TransferSetName: aTransfer->mName = EELobbyStr(b); return 0;
     case Op::TransferRust: return (intptr_t)aTransfer->mRust;
@@ -981,7 +984,10 @@ static void Games()
             aPlayer.mSlot = 9;
             if (s == 0) WonDlg34Orig::GameHost(&aGame, Op::PlayerAttach, (intptr_t)&aPlayer, slot, 0, 0);
             else ee_won_eegame_split_op(&aGame, Op::PlayerAttach, (intptr_t)&aPlayer, slot, 0, 0, NewGame);
-            Log(F("player slot %lld view %lld", aPlayer.mSlot, aPlayer.mPlayerSlot != NULL ? aPlayer.mPlayerSlot - aGame.mSlots : -1));
+            // the slot the player names: the view's game and number (the original), the two members (the new)
+            long long aGameOf = s == 0 ? (aPlayer.mPlayerSlot != NULL ? 1 : 0) : (aPlayer.mSlotGame == &aGame ? 1 : aPlayer.mSlotGame != NULL ? 2 : 0);
+            long long aIndex = s == 0 ? (aPlayer.mPlayerSlot != NULL ? aPlayer.mPlayerSlot->mIndex : -1) : (aPlayer.mSlotGame != NULL ? aPlayer.mSlotIndex : -1);
+            Log(F("player slot %lld game %lld index %lld", aPlayer.mSlot, aGameOf, aIndex));
             sides[s] = std::move(sTrace);
         }
         Check("player attach", k++, sides[0], sides[1]);

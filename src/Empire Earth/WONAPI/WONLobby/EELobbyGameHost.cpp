@@ -120,13 +120,9 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
 
 // ---- the shell
 
-// Creates a lobby game with every game option 0, its eight slots numbered and no saved game file here
+// Creates a lobby game with every game option 0, its eight slots (the Rust game's) and no saved game file here
 EELobbyGame::EELobbyGame() : mRust(NULL)
 {
-    for (int i = 0; i < 8; i++) {
-        this->mSlots[i].mGame = this;
-        this->mSlots[i].mIndex = (unsigned char)i;
-    }
     this->mRust = ee_won_eegame_new_model(this, EELobbyGameHost);
 }
 
@@ -182,21 +178,13 @@ GUIString EELobbyGame::GetStatusStringHook(short inStatus)
     return gEmptyGUIString;
 }
 
-// ---- the slot view (EELobbyPlayerSlot's methods on the Rust game's slot)
-
-intptr_t EELobbyPlayerSlot::RCall(EeWonEeGameCall inCall, intptr_t b, intptr_t c)
-{
-    return this->mGame->RCall(inCall, this->mIndex, b, c);
-}
-unsigned char EELobbyPlayerSlot::Option(int inOption) { return (unsigned char)this->RCall(GC::SlotRawOption, inOption); }
-
 // ---- the lobby player (EELobbyPlayer.cpp's)
 
 // Creates a lobby game player in slot 0 with no slot attached
 EELobbyPlayer::EELobbyPlayer()
 {
     this->mSlot = 0;
-    this->mPlayerSlot = NULL;
+    this->mSlotGame = NULL;
 }
 // Destroys the lobby game player (members only)
 EELobbyPlayer::~EELobbyPlayer() {}
@@ -217,8 +205,8 @@ bool EELobbyPlayer::IsTeammate(LobbyPlayer* inOther)
 // Returns the team of the player's slot, or 0 when the player has no slot
 unsigned char EELobbyPlayer::GetTeam()
 {
-    if (this->mPlayerSlot != NULL)
-        return this->mPlayerSlot->Option(1);
+    if (this->mSlotGame != NULL)
+        return (unsigned char)this->mSlotGame->RCall(GC::SlotRawOption, this->mSlotIndex, 1);
     return 0;
 }
 
@@ -267,7 +255,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::CurrentServer: return (intptr_t)LobbyGetCurrentServer();
     case Op::PlayerSlot: return aPlayer->GetSlot();
     case Op::PlayerTeam: return aPlayer->GetTeam();
-    case Op::PlayerDetach: aPlayer->mPlayerSlot = NULL; return 0;
+    case Op::PlayerDetach: aPlayer->mSlotGame = NULL; return 0;
     case Op::MyPlayer: return (intptr_t) static_cast<EELobbyPlayer*>(GetMyLobbyPlayer());
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::NotifyStagingChange: LobbyNotifyStagingChange(); return 0;
@@ -312,7 +300,8 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::TransferIsFileHere: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::IsFileHere, 0, 0);
     case Op::TransferDownload: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Download, 0, 0);
     // R6 WON round 34: the statements of the compound cases eesplit.rs composes
-    case Op::PlayerSetSlotView: aPlayer->mPlayerSlot = &aGame->mSlots[b]; return 0;
+    case Op::PlayerSetSlotGame: aPlayer->mSlotGame = aGame; return 0;
+    case Op::PlayerSetSlotIndex: aPlayer->mSlotIndex = (unsigned char)b; return 0;
     case Op::PlayerSetSlot: aPlayer->mSlot = (unsigned char)b; return 0;
     case Op::TransferSetName: aTransfer->mName = EELobbyStr(b); return 0;
     case Op::TransferRust: return (intptr_t)aTransfer->mRust;

@@ -5,7 +5,7 @@
 //! reach it, so the games' and transfers' goldens see the ops as before. won_dlg34_test runs the deleted cases (as
 //! they were) against these over one stand-in world.
 //!
-//! - PlayerAttach: the slot view's pointer, then the slot number.
+//! - PlayerAttach: the player's slot (its game and number: the original's slot pointer), then the slot number.
 //! - TransferSetFileInfo: the name stored, then the transfer's Rust call; TransferSetHost: the game's address copied,
 //!   then its port.
 //! - The transfer's sockets: NewSocket (the reference the Rust's), RepeatAccept, QueueSend and QueueDownload (the
@@ -58,7 +58,8 @@ pub(crate) fn xfer_op(op: X, a: isize, b: isize, c: isize, out: XferOut) -> Opti
 pub(crate) fn game_op(op: G, a: isize, b: isize, c: isize, d: isize, out: GameOut) -> Option<isize> {
     match op {
         G::PlayerAttach => {
-            out(G::PlayerSetSlotView, a, b, 0, 0);
+            out(G::PlayerSetSlotGame, a, 0, 0, 0);
+            out(G::PlayerSetSlotIndex, a, b, 0, 0);
             out(G::PlayerSetSlot, a, b, 0, 0);
             Some(0)
         }
