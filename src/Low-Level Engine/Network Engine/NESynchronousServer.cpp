@@ -71,11 +71,8 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
         theResponse->SetOriginatingSlot(kSlotServer);
         return reinterpret_cast<ptrdiff_t>(theResponse);
     }
-    case EeNetMmOp::FileClone: {
-        FSFileSpec* theCopy = new FSFileSpec;
-        *theCopy = *reinterpret_cast<FSFileSpec*>(a);
-        return reinterpret_cast<ptrdiff_t>(theCopy);
-    }
+    case EeNetMmOp::FileClone:   // (the copy constructor: the names, closed, read access, as default and assignment)
+        return reinterpret_cast<ptrdiff_t>(new FSFileSpec(*reinterpret_cast<FSFileSpec*>(a)));
     case EeNetMmOp::FileFree:
         delete reinterpret_cast<FSFileSpec*>(a);
         return 0;
