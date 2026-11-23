@@ -144,19 +144,8 @@ private:
 };
 typedef SmartPtr<AsyncOp> AsyncOpPtr;
 
-// Event: 8 bytes (vptr, HANDLE at 4); 29f7c0, embedded in AsyncOpContainer at 0x1c. A platform event (the
-// original's alertable wait had no APC user); the timeout is 32-bit as WaitForSingleObjectEx's was
-class Event {
-public:
-    explicit Event(bool manualReset=false,bool initiallySet=false)
-        { this->mEvent=PlatEventCreate(manualReset,initiallySet); }
-    virtual ~Event() { if(this->mEvent!=NULL) PlatEventDestroy(this->mEvent); }
-    void Set() {PlatEventSet(this->mEvent);}
-    void Reset() {PlatEventReset(this->mEvent);}
-    bool WaitFor(unsigned long milliseconds)
-        {return PlatEventWait(this->mEvent,(uint32_t)milliseconds)==0;}
-    PlatEvent* mEvent; //04
-};
+// Event (8 bytes: vptr, HANDLE at 4; 29f7c0), embedded in AsyncOpContainer at 0x1c, is the Rust container's signal
+// (thread.rs); its C++ shim had no user and went in R6 WON round 34.
 // AsyncOpContainer: a Rust object (ee_won thread.rs EeWonOpContainer: the queue holding a reference per op, the op
 // being pumped, the lock, the signal, the pump and the purge) behind this shim; each op's steps come back through
 // AsyncOp.cpp's hooks. The original unit (AsyncOpContainer.cpp) is deleted.
@@ -181,28 +170,8 @@ inline void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
 class SocketOp;
 // (MsgTransform, 2ad880, and its one class, CryptTransform, are Rust's since net round 29: ee_won cppcore.rs)
 
-// WON SDK NetStats: static functions only. The counters are Rust's (rust/crates/ee_won_net/src/netstats.rs)
-class NetStats
-{
-public:
-	static void Enable(bool isEnabled) { ee_won_netstats_enable(isEnabled); }
-
-	static void IncrementNumConstructedSockets(int theAmount) { ee_won_netstats_add(0, theAmount); }
-	static void IncrementNumOpenSockets(int theAmount) { ee_won_netstats_add(1, theAmount); }
-
-	static void IncrementBytesSent(int theAmount) { ee_won_netstats_add(2, theAmount); }
-	static void IncrementBytesReceived(int theAmount) { ee_won_netstats_add(3, theAmount); }
-	static void IncrementMessagesSent(int theAmount) { ee_won_netstats_add(4, theAmount); }
-	static void IncrementMessagesReceived(int theAmount) { ee_won_netstats_add(5, theAmount); }
-
-	static int GetNumConstructedSockets() { return static_cast<int>(ee_won_netstats_get(0)); }
-	static int GetNumOpenSockets() { return static_cast<int>(ee_won_netstats_get(1)); }
-
-	static __int64 GetNumBytesSent() { return ee_won_netstats_get(2); }
-	static __int64 GetNumBytesReceived() { return ee_won_netstats_get(3); }
-	static __int64 GetNumMessagesSent() { return ee_won_netstats_get(4); }
-	static __int64 GetNumMessagesReceived() { return ee_won_netstats_get(5); }
-};
+// WON SDK NetStats (static functions only) is Rust's (rust/crates/ee_won_net/src/netstats.rs, ee_won_netstats_add /
+// _get / _enable); its C++ shim had no caller and went in R6 WON round 34.
 
 // AsyncSocket.cpp's original addresses: the constructor 2b0340, Duplicate 2b0420, the destructor 2b04a0, the length
 // field 2b0600 / 2b0610, AddMsgTransform 2b0620, the transforms 2b0730 / 2b07e0, GetLastSocketError 2b0890, IsValid
