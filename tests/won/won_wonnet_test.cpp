@@ -39,26 +39,27 @@ static OrigNet* gWonNet;
 }}
 
 namespace W { namespace Rus {
-// the C++ class as EEWonNet.h has it now (the C++ objects and the Rust object)
+// the C++ class as EEWonNet.h has it now: the Rust object, which holds the C++ objects in its slots (R6 WON lobby
+// and network round 35); the world reads and sets them there
+typedef DirEntityList DirList;
 struct EEWonNet {
     EeWonNet* mRust;
-    TSCriticalSection* mLock = NULL;
-    TSCriticalSection* mLock8 = NULL;
-    SmartPtr<SmartRoutingConnection> mRouting;
-    SmartPtr<ServerContext> mDirServers;
-    ServerContext* mAuthServers = NULL;
-    WONAPICore* mLobby = NULL;
-    WONLobbyWindow* mLobbyWindow = NULL;
-    AuthContext* mUser = NULL;
-    DirEntityList mServers;
-    SmartPtr<RustServerOp> mMOTDOp;
-    SmartPtr<GetCertOp> mLoginOp;
-    SmartPtr<RustServerOp> mDirOp;
-    SmartPtr<RustServerOp> mAccountOp;
-    bool mCancelled = false;
-    bool mJoinRoomCancelled = false;
     EEWonNet() : mRust(ee_won_wonnet_new(this)) { ee_won_wonnet_call(this->mRust, EeWonNetCall::Construct, 0, 0, 0); }
     ~EEWonNet() { ee_won_wonnet_free(this->mRust); }
+    EeWonNetObjects* O() const { return ee_won_wonnet_objects(this->mRust); }
+    RefCount* Routing() const { return static_cast<RefCount*>(O()->routing); }
+    AsyncOp* LoginOp() const { return static_cast<GetCertOp*>(static_cast<RefCount*>(O()->login_op)); }
+    AsyncOp* DirOp() const { return static_cast<RustServerOp*>(static_cast<RefCount*>(O()->dir_op)); }
+    void* AccountOp() const { return static_cast<RustServerOp*>(static_cast<RefCount*>(O()->account_op)); }
+    // `mRouting = inNew` as the SmartPtr member was assigned
+    void SetRouting(SmartRoutingConnection* inNew)
+    {
+        RefCount* aOld = Routing();
+        if (aOld == inNew) return;
+        if (aOld != NULL) aOld->Release();
+        if (inNew != NULL) inNew->AddRef();
+        O()->routing = static_cast<RefCount*>(inNew);
+    }
 };
 static EEWonNet* gWonNet;
 typedef EeWonNetCall Call;
@@ -113,6 +114,9 @@ static void OnGamePassword(const char* inPassword);
 namespace FE { namespace Rus {
 #include "won_wonfront_classes.h"
 static void OnGamePassword(const char* inPassword);
+// the stand-in front end's user and server list (the game reads the Rust object's slots)
+static auto WonNetUser() { return gWonNet->mUser; }
+static auto& WonNetServers() { return gWonNet->mServers; }
 #include "ee/EEWonFrontHost.inl"
 static int sFrontHits[256];   // the host's ops the sequences reached
 static intptr_t FrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t c) { sFrontHits[(int)inOp & 255]++; return WonFrontHost(inOp, a, b, c); }
@@ -637,15 +641,15 @@ static void RunSide(Side& side, uint64_t seed, int steps)
         };
     } else {
         Rus::EEWonNet* n = new Rus::EEWonNet;
-        n->mUser = user;
+        n->O()->user = user;
         side.n = n;
-        sRoutingNow = [n]() -> RefCount* { return n->mRouting.get(); };
+        sRoutingNow = [n]() -> RefCount* { return n->Routing(); };
         sFormArgName = [n](UIForm* f) -> std::string {
             if (f == NULL) return "NULL";
-            if ((void*)f == (void*)&n->mCancelled) return "cancelled";
-            if ((void*)f == (void*)&n->mJoinRoomCancelled) return "joincancelled";
+            if ((void*)f == (void*)&n->O()->cancelled) return "cancelled";
+            if ((void*)f == (void*)&n->O()->join_room_cancelled) return "joincancelled";
             if ((void*)f == (void*)n) return "self";
-            if ((void*)f == (void*)n->mAccountOp.get()) return "accountop";
+            if ((void*)f == n->AccountOp()) return "accountop";
             return "?";
         };
     }
@@ -657,9 +661,9 @@ static void RunSide(Side& side, uint64_t seed, int steps)
     // the original dereferenced the routing connection unchecked in SendChat, OnChat, UpdateGameObject and
     // CreateGameCallback's success (a crash without one, both sides): those steps get one first
     auto ensureRouting = [&]() {
-        if (side.orig ? o->mRouting.get() == NULL : n->mRouting.get() == NULL) {
+        if (side.orig ? o->mRouting.get() == NULL : n->Routing() == NULL) {
             Log("routing given");
-            if (side.orig) o->mRouting = new SmartRoutingConnection; else n->mRouting = new SmartRoutingConnection;
+            if (side.orig) o->mRouting = new SmartRoutingConnection; else n->SetRouting(new SmartRoutingConnection);
         }
     };
     for (int step = 0; step < steps; step++) {
@@ -673,7 +677,7 @@ static void RunSide(Side& side, uint64_t seed, int steps)
         const char* pw = R(3) ? NULL : (R(2) ? "secret" : "");
         switch (what) {
         case 0: case 1:   // a routing connection, as SelectServer or Initialize leave one
-            if (side.orig) o->mRouting = new SmartRoutingConnection; else n->mRouting = new SmartRoutingConnection;
+            if (side.orig) o->mRouting = new SmartRoutingConnection; else n->SetRouting(new SmartRoutingConnection);
             break;
         case 2: { std::wstring w = kNames[R(7)]; IPAddr a("9.9.9.9:" + std::to_string(R(9)));
             if (side.orig) o->SelectServer(w, a); else call(Call::SelectServer, (intptr_t)w.data(), w.length(), (intptr_t)&a); break; }
@@ -707,7 +711,7 @@ static void RunSide(Side& side, uint64_t seed, int steps)
         case 26: if (side.orig) o->GetTitanServerList(); else call(Call::GetTitanServerList, 0, 0, 0); break;
         case 27:   // a lobby and its window
             if (side.orig) { o->mLobby = R(2) ? new WONAPICore : NULL; o->mLobbyWindow = R(2) ? new WONLobbyWindow : NULL; }
-            else { n->mLobby = R(2) ? new WONAPICore : NULL; n->mLobbyWindow = R(2) ? new WONLobbyWindow : NULL; }
+            else { n->O()->lobby = R(2) ? new WONAPICore : NULL; n->O()->lobby_window = R(2) ? new WONLobbyWindow : NULL; }
             break;
         case 28: ensureRouting(); if (side.orig) o->UpdateGameObject(); else call(Call::UpdateGameObject, 0, 0, 0); break;
         case 29: if (side.orig) o->LeaveGroups(); else call(Call::LeaveGroups, 0, 0, 0); break;
@@ -762,10 +766,10 @@ static void RunSide(Side& side, uint64_t seed, int steps)
             // a data object without a buffer faulted the original (a NULL read); the Rust reads an empty record
             if (cn == "OnDataObjectCreated" || cn == "OnDataObjectModified" || cn == "JoinGameDataCallback") knob.mHasData = true;
             AsyncOp* op;
-            if (cn == "LoginCallback" && knob.mWhichOp == 1 && (side.orig ? o->mLoginOp.get() : n->mLoginOp.get()))
-                op = side.orig ? (AsyncOp*)o->mLoginOp.get() : (AsyncOp*)n->mLoginOp.get();
-            else if (cn == "GetTitanServerListCompletion" && knob.mWhichOp == 2 && (side.orig ? o->mDirOp.get() : n->mDirOp.get()))
-                op = side.orig ? (AsyncOp*)o->mDirOp.get() : (AsyncOp*)n->mDirOp.get();
+            if (cn == "LoginCallback" && knob.mWhichOp == 1 && (side.orig ? (AsyncOp*)o->mLoginOp.get() : n->LoginOp()))
+                op = side.orig ? (AsyncOp*)o->mLoginOp.get() : n->LoginOp();
+            else if (cn == "GetTitanServerListCompletion" && knob.mWhichOp == 2 && (side.orig ? (AsyncOp*)o->mDirOp.get() : n->DirOp()))
+                op = side.orig ? (AsyncOp*)o->mDirOp.get() : n->DirOp();
             else if (cn == "UpdateAccountCallback" || cn == "GetAccountCallback" || cn == "GetTitanServerListCompletion" || cn == "LoginCallback")
                 op = new RustServerOp;
             else
