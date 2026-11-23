@@ -1,6 +1,6 @@
 //! A unit's AI step (RUST_PLAN R5b.4 leaf 6, "the updated plan" 2): `EEComplexUnit::AIStep` (0x5ff2e8) and the unit
 //! AI script's decision (`EEUnitAction::Evaluate` 0x62cd8b, `EEUnitTrigger::Evaluate` 0x62b9a0) over the unit store
-//! and a host table of the C++ calls they make (EEUnitHost.cpp).
+//! and the C++ statements of the calls they make (`ee_units_ai_host`, EEUnitAction.cpp).
 //!
 //! The script (`Unit AI Scripts\*.tai`) is script.rs's (the twentieth round): an action is a handle, its triggers
 //! are read one at a time as plain views (`EeUnitsTrigger`: the conditions, all of or any of, the true and false
@@ -13,8 +13,6 @@
 //!
 //! Determinism (RUST_PLAN 2.1): no float, no random draw; the next trigger time is compared as the Windows build's
 //! 32-bit unsigned longs (`jb`).
-
-use std::ffi::c_void;
 
 use crate::units::store::EeUnitRecord;
 
@@ -72,29 +70,54 @@ impl EeUnitsAIState {
     }
 }
 
-/// The C++ calls of `AIStep` and the script's decision. `ctx` is the host's (the unit).
-#[repr(C)]
-pub struct EeUnitsAIHost {
-    pub ctx: *mut c_void,
-    /// the members `EeUnitsAIState` mirrors
-    pub members: extern "C" fn(ctx: *mut c_void, out: *mut EeUnitsAIState),
-    /// `mCommand` as a handle (0: none)
-    pub command: extern "C" fn(ctx: *mut c_void) -> u64,
-    /// `!mGoalState->IsActive(&action)`: true and the action when the gather goal is not active
-    pub gather_inactive: extern "C" fn(ctx: *mut c_void, out_action: *mut u32) -> bool,
-    /// the unit class's `EvaluateCondition(unit, trigger)` (the host notes it: USST)
-    pub condition: extern "C" fn(ctx: *mut c_void, trigger: i64) -> i64,
-    /// an action's `mType`
-    pub action_type: extern "C" fn(ctx: *mut c_void, action: u64) -> u32,
-    /// `StartAction(action)`, then `GetUnitClass()->ActionChanged(unit)`
-    pub start_action: extern "C" fn(ctx: *mut c_void, action: u32),
-    /// `DropFinishedGoals(false)`
-    pub drop_finished_goals: extern "C" fn(ctx: *mut c_void),
-    /// `UpdateCamouflage(action_type)`, `mCommand = action`, `GetUnitClass()->ActionChanged(unit)`
-    pub set_command: extern "C" fn(ctx: *mut c_void, action: u64, action_type: u32),
-    /// `mNextTriggerTime = value` (the holder's write)
-    pub set_next_trigger_time: extern "C" fn(ctx: *mut c_void, value: u32),
+/// The C++ statements of `AIStep`'s calls (`ee_units_ai_host`, EEUnitAction.cpp: one statement a case; `a` an
+/// object, `b` a value), the round 9 replacement of the host table: the operations below.
+pub trait AIOps {
+    fn ai(&mut self, op: i32, a: u64, b: i64) -> i64;
 }
+
+/// `mCommand ? mCommand->mType : 0`
+pub const EE_UNITS_AI_H_COMMAND_TYPE: i32 = 4000;
+/// `mNextTriggerTime`
+pub const EE_UNITS_AI_H_NEXT_TRIGGER_TIME: i32 = 4001;
+/// `mGoalState ? mGoalState->mKind : -1`
+pub const EE_UNITS_AI_H_GOAL_KIND: i32 = 4002;
+/// `mCommand` as a handle (0: none)
+pub const EE_UNITS_AI_H_COMMAND: i32 = 4003;
+/// `mGoalState != NULL`
+pub const EE_UNITS_AI_H_HAS_GOAL: i32 = 4004;
+/// `theAction = 0` (the gather test's local)
+pub const EE_UNITS_AI_H_GOAL_ACTION_RESET: i32 = 4005;
+/// `mGoalState->IsActive(&theAction)`
+pub const EE_UNITS_AI_H_GOAL_ACTIVE: i32 = 4006;
+/// `theAction`
+pub const EE_UNITS_AI_H_GOAL_ACTION: i32 = 4007;
+/// `mUnitClass->EvaluateCondition(unit, b)`
+pub const EE_UNITS_AI_H_CONDITION: i32 = 4008;
+/// action `a`'s `mType`
+pub const EE_UNITS_AI_H_ACTION_TYPE: i32 = 4009;
+/// `StartAction(b)`
+pub const EE_UNITS_AI_H_START_ACTION: i32 = 4010;
+/// `GetUnitClass()->ActionChanged(unit)`
+pub const EE_UNITS_AI_H_ACTION_CHANGED: i32 = 4011;
+/// `DropFinishedGoals(false)`
+pub const EE_UNITS_AI_H_DROP_FINISHED_GOALS: i32 = 4012;
+/// `UpdateCamouflage(b)`
+pub const EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: i32 = 4013;
+/// `mCommand = (EEUnitAction*)a`
+pub const EE_UNITS_AI_H_SET_COMMAND: i32 = 4014;
+/// `mNextTriggerTime = b`
+pub const EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME: i32 = 4015;
+/// `mUnitID`
+pub const EE_UNITS_AI_H_UNIT_ID: i32 = 4016;
+/// `mIsCitizen`
+pub const EE_UNITS_AI_H_IS_CITIZEN: i32 = 4017;
+/// `gPhysics->mGameTime`
+pub const EE_UNITS_AI_H_GAME_TIME: i32 = 4018;
+
+/// `kUnitStateAIStep`, `kUnitStateCondition` (ee/EEUnitStore.h: the USST kinds)
+const STATE_AI_STEP: u32 = 1;
+const STATE_CONDITION: u32 = 2;
 
 /// The calls as a trait (the FFI table over the store, the tests' mock).
 pub trait AIHost {
@@ -237,18 +260,27 @@ pub fn ai_step(host: &mut impl AIHost, is_citizen: bool, game_time: i64) -> EeUn
     out
 }
 
-/// The FFI table over the store: `state` reads the members, then the record (under the store's lock, released
-/// before it returns) and counts a record that differs (`step::READS`).
-struct StoreHost<'a> {
-    host: &'a EeUnitsAIHost,
+/// The host's statements over the store: `state` reads the members, then the record (under the store's lock,
+/// released before it returns) and counts a record that differs (`step::READS`).
+struct StoreHost<'a, O: AIOps + ?Sized> {
+    ops: &'a mut O,
     id: u32,
     object: u64,
 }
 
-impl AIHost for StoreHost<'_> {
+impl<O: AIOps + ?Sized> StoreHost<'_, O> {
+    fn q(&mut self, op: i32) -> i64 {
+        self.ops.ai(op, 0, 0)
+    }
+}
+
+impl<O: AIOps + ?Sized> AIHost for StoreHost<'_, O> {
     fn state(&mut self) -> EeUnitsAIState {
-        let mut m = EeUnitsAIState::default();
-        (self.host.members)(self.host.ctx, &mut m);
+        let m = EeUnitsAIState {
+            command: self.q(EE_UNITS_AI_H_COMMAND_TYPE),
+            next_trigger_time: self.q(EE_UNITS_AI_H_NEXT_TRIGGER_TIME),
+            goal_kind: self.q(EE_UNITS_AI_H_GOAL_KIND) as i32,
+        };
         let rec = crate::units::store::with_store(|s| {
             s.get(self.id).filter(|r| r.object == self.object).map(EeUnitsAIState::of)
         });
@@ -256,50 +288,105 @@ impl AIHost for StoreHost<'_> {
         rec.unwrap_or(m)
     }
     fn command(&mut self) -> u64 {
-        (self.host.command)(self.host.ctx)
+        self.q(EE_UNITS_AI_H_COMMAND) as u64
     }
     fn gather_inactive(&mut self) -> Option<u32> {
-        let mut a = 0u32;
-        (self.host.gather_inactive)(self.host.ctx, &mut a).then_some(a)
+        self.q(EE_UNITS_AI_H_GOAL_ACTION_RESET);
+        if self.q(EE_UNITS_AI_H_HAS_GOAL) == 0 || self.q(EE_UNITS_AI_H_GOAL_ACTIVE) != 0 {
+            return None;
+        }
+        Some(self.q(EE_UNITS_AI_H_GOAL_ACTION) as u32)
     }
     fn trigger(&mut self, action: u64, index: u32) -> Option<(EeUnitsTrigger, Vec<i64>)> {
         crate::units::script::trigger_view(action, index)
     }
     fn condition(&mut self, trigger: i64) -> i64 {
-        (self.host.condition)(self.host.ctx, trigger)
+        let event = self.ops.ai(EE_UNITS_AI_H_CONDITION, 0, trigger);
+        if crate::units::notes::noting() {
+            // TEST ONLY (USST): the condition and its event
+            let id = self.q(EE_UNITS_AI_H_UNIT_ID) as u32;
+            crate::units::notes::state(STATE_CONDITION, id, &[trigger as u32, event as u32]);
+        }
+        event
     }
     fn action_type(&mut self, action: u64) -> u32 {
-        (self.host.action_type)(self.host.ctx, action)
+        self.ops.ai(EE_UNITS_AI_H_ACTION_TYPE, action, 0) as u32
     }
     fn start_action(&mut self, action: u32) {
-        (self.host.start_action)(self.host.ctx, action)
+        self.ops.ai(EE_UNITS_AI_H_START_ACTION, 0, i64::from(action));
+        self.q(EE_UNITS_AI_H_ACTION_CHANGED);
     }
     fn drop_finished_goals(&mut self) {
-        (self.host.drop_finished_goals)(self.host.ctx)
+        self.q(EE_UNITS_AI_H_DROP_FINISHED_GOALS);
     }
     fn set_command(&mut self, action: u64, action_type: u32) {
-        (self.host.set_command)(self.host.ctx, action, action_type)
+        self.ops.ai(EE_UNITS_AI_H_UPDATE_CAMOUFLAGE, 0, i64::from(action_type));
+        self.ops.ai(EE_UNITS_AI_H_SET_COMMAND, action, 0);
+        self.q(EE_UNITS_AI_H_ACTION_CHANGED);
     }
     fn set_next_trigger_time(&mut self, value: u32) {
-        (self.host.set_next_trigger_time)(self.host.ctx, value)
+        self.ops.ai(EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME, 0, i64::from(value));
     }
 }
 
-/// `EEComplexUnit::AIStep` over the store and the host's calls.
-///
-/// # Safety
-/// `host` points to a valid table whose calls are valid for its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_ai_step(
-    host: *const EeUnitsAIHost,
-    id: u32,
-    object: u64,
-    is_citizen: u8,
-    game_time: i64,
-) -> EeUnitsAIStepOut {
-    // SAFETY: the caller's contract
-    let host = unsafe { &*host };
-    ai_step(&mut StoreHost { host, id, object }, is_citizen != 0, game_time)
+/// `EEComplexUnit::AIStep()` of the unit at `object` over the store and the host's statements, with its USST note
+/// (the command, the next trigger time and the game time before; the path, the gather's action and the two
+/// evaluations; the command and the next trigger time after).
+pub fn ai_step_noted<O: AIOps + ?Sized>(ops: &mut O, object: u64) -> EeUnitsAIStepOut {
+    let noting = crate::units::notes::noting();
+    let mut words = [
+        ops.ai(EE_UNITS_AI_H_COMMAND_TYPE, 0, 0) as u32,
+        ops.ai(EE_UNITS_AI_H_NEXT_TRIGGER_TIME, 0, 0) as u32,
+        ops.ai(EE_UNITS_AI_H_GAME_TIME, 0, 0) as u32,
+        0,
+        0,
+        u32::MAX,
+        u32::MAX,
+        0,
+        0,
+    ];
+    let id = ops.ai(EE_UNITS_AI_H_UNIT_ID, 0, 0) as u32;
+    let is_citizen = ops.ai(EE_UNITS_AI_H_IS_CITIZEN, 0, 0) != 0;
+    let game_time = ops.ai(EE_UNITS_AI_H_GAME_TIME, 0, 0);
+    let out = ai_step(&mut StoreHost { ops: &mut *ops, id, object }, is_citizen, game_time);
+    if noting {
+        words[3] = out.path;
+        words[4] = out.action;
+        words[5] = out.first;
+        words[6] = out.second;
+        words[7] = ops.ai(EE_UNITS_AI_H_COMMAND_TYPE, 0, 0) as u32;
+        words[8] = ops.ai(EE_UNITS_AI_H_NEXT_TRIGGER_TIME, 0, 0) as u32;
+        crate::units::notes::state(STATE_AI_STEP, id, &words);
+    }
+    out
+}
+
+#[cfg(not(test))]
+mod game {
+    use super::*;
+    use std::ffi::c_void;
+
+    extern "C" {
+        fn ee_units_ai_host(op: i32, unit: *mut c_void, a: u64, b: i64) -> i64;
+    }
+
+    struct Game(*mut c_void);
+
+    impl AIOps for Game {
+        fn ai(&mut self, op: i32, a: u64, b: i64) -> i64 {
+            // SAFETY: the unit stepped, live for the step (its C++ AIStep's)
+            unsafe { ee_units_ai_host(op, self.0, a, b) }
+        }
+    }
+
+    /// `EEComplexUnit::AIStep()` on `unit` (see [`ai_step_noted`]).
+    ///
+    /// # Safety
+    /// `unit` is a live `EEComplexUnit`, on the simulation thread.
+    #[no_mangle]
+    pub unsafe extern "C" fn ee_units_cu_ai_step(unit: *mut c_void) {
+        ai_step_noted(&mut Game(unit), unit as usize as u64);
+    }
 }
 
 #[cfg(test)]
@@ -492,5 +579,109 @@ mod tests {
         let o = ai_step(&mut m, false, 2000);
         assert_eq!((o.first, o.second), (2, u32::MAX));
         assert_eq!(m.log, ["cond 1", "drop", "start 5000", "trigger time 2350"]);
+    }
+}
+
+/// The host statements of the round 9 op host (`StoreHost` over `AIOps`), recorded.
+#[cfg(test)]
+mod ops_tests {
+    use super::*;
+
+    #[derive(Default)]
+    struct Rec {
+        log: Vec<(i32, u64, i64)>,
+        answers: Vec<(i32, i64)>,
+    }
+
+    impl AIOps for Rec {
+        fn ai(&mut self, op: i32, a: u64, b: i64) -> i64 {
+            self.log.push((op, a, b));
+            self.answers.iter().find(|e| e.0 == op).map_or(0, |e| e.1)
+        }
+    }
+
+    fn host(r: &mut Rec) -> StoreHost<'_, Rec> {
+        StoreHost { ops: r, id: 0xfff0_0001, object: 0x5555 }
+    }
+
+    #[test]
+    fn the_members_are_read_when_the_store_has_no_record() {
+        let mut r = Rec {
+            answers: vec![
+                (EE_UNITS_AI_H_COMMAND_TYPE, 5000),
+                (EE_UNITS_AI_H_NEXT_TRIGGER_TIME, 7),
+                (EE_UNITS_AI_H_GOAL_KIND, -1),
+            ],
+            ..Default::default()
+        };
+        let s = host(&mut r).state();
+        assert_eq!(s, EeUnitsAIState { command: 5000, next_trigger_time: 7, goal_kind: -1 });
+    }
+
+    #[test]
+    fn the_gather_test_resets_its_action_and_asks_activity_only_with_a_goal() {
+        let mut r =
+            Rec { answers: vec![(EE_UNITS_AI_H_HAS_GOAL, 1), (EE_UNITS_AI_H_GOAL_ACTION, 42)], ..Default::default() };
+        assert_eq!(host(&mut r).gather_inactive(), Some(42));
+        let ops: Vec<i32> = r.log.iter().map(|e| e.0).collect();
+        assert_eq!(
+            ops,
+            [
+                EE_UNITS_AI_H_GOAL_ACTION_RESET,
+                EE_UNITS_AI_H_HAS_GOAL,
+                EE_UNITS_AI_H_GOAL_ACTIVE,
+                EE_UNITS_AI_H_GOAL_ACTION
+            ]
+        );
+        let mut r = Rec::default();
+        assert_eq!(host(&mut r).gather_inactive(), None);
+        assert_eq!(r.log.len(), 2);
+        let mut r =
+            Rec { answers: vec![(EE_UNITS_AI_H_HAS_GOAL, 1), (EE_UNITS_AI_H_GOAL_ACTIVE, 1)], ..Default::default() };
+        assert_eq!(host(&mut r).gather_inactive(), None);
+    }
+
+    #[test]
+    fn a_command_is_set_after_the_camouflage_and_announced() {
+        let mut r = Rec::default();
+        host(&mut r).set_command(0x77, 2001);
+        assert_eq!(
+            r.log,
+            [
+                (EE_UNITS_AI_H_UPDATE_CAMOUFLAGE, 0, 2001),
+                (EE_UNITS_AI_H_SET_COMMAND, 0x77, 0),
+                (EE_UNITS_AI_H_ACTION_CHANGED, 0, 0)
+            ]
+        );
+        let mut r = Rec::default();
+        host(&mut r).start_action(5000);
+        assert_eq!(r.log, [(EE_UNITS_AI_H_START_ACTION, 0, 5000), (EE_UNITS_AI_H_ACTION_CHANGED, 0, 0)]);
+    }
+
+    #[test]
+    fn a_condition_is_the_classes_answer() {
+        let mut r = Rec { answers: vec![(EE_UNITS_AI_H_CONDITION, 2)], ..Default::default() };
+        assert_eq!(host(&mut r).condition(13000), 2);
+        assert_eq!(r.log[0], (EE_UNITS_AI_H_CONDITION, 0, 13000));
+    }
+
+    #[test]
+    fn a_step_without_a_command_reads_its_words_and_stops() {
+        let mut r =
+            Rec { answers: vec![(EE_UNITS_AI_H_GAME_TIME, 900), (EE_UNITS_AI_H_GOAL_KIND, -1)], ..Default::default() };
+        let out = ai_step_noted(&mut r, 0x5555);
+        assert_eq!(out.path, 2);
+        let ops: Vec<i32> = r.log.iter().map(|e| e.0).collect();
+        assert_eq!(
+            &ops[..6],
+            [
+                EE_UNITS_AI_H_COMMAND_TYPE,
+                EE_UNITS_AI_H_NEXT_TRIGGER_TIME,
+                EE_UNITS_AI_H_GAME_TIME,
+                EE_UNITS_AI_H_UNIT_ID,
+                EE_UNITS_AI_H_IS_CITIZEN,
+                EE_UNITS_AI_H_GAME_TIME
+            ]
+        );
     }
 }

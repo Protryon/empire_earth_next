@@ -87,24 +87,7 @@ void EEUnitStoreLinked(RTSUnit* inUnit)
 // read from its records and pointer members are the store's: ee_units_store_set_fields)
 static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, EeUnitRecord& outRecord)
 {
-    memset(&outRecord, 0, sizeof(outRecord));
-    outRecord.id = static_cast<uint32_t>(inUnit->mUnitID);
-    outRecord.owner = static_cast<uint32_t>(inOwner);
-    outRecord.object = reinterpret_cast<uintptr_t>(inUnit);
-    outRecord.player = reinterpret_cast<uintptr_t>(inPlayer);
-    outRecord.object_kind = inUnit->mObjectKind.mValue;
-    outRecord.on_map = OnMap(inUnit) ? 1 : 0;
-    if (inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT)
-        outRecord.stats = reinterpret_cast<uintptr_t>(static_cast<EEUnit*>(inUnit)->mStats);
-    if (inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT) {
-        const GETransformation& theLocation = static_cast<EEComplexUnit*>(inUnit)->mPhysicalModel.GetLocation();
-        outRecord.location[0] = FloatBits(theLocation.GetX());
-        outRecord.location[1] = FloatBits(theLocation.GetY());
-        outRecord.location[2] = FloatBits(theLocation.GetZ());
-    }
-    // the object's Rust records, and the plain values the store reads from them
-    ee_units_store_set_fields(&outRecord, inUnit, inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT ? static_cast<EEUnit*>(inUnit) : NULL,
-                              inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT ? static_cast<EEComplexUnit*>(inUnit) : NULL);
+    ee_units_store_fill(&outRecord, (uint64_t)(uintptr_t)inUnit, (uint32_t)inOwner, (uint64_t)(uintptr_t)inPlayer);   // us_fill.rs
 }
 
 void EEUnitStoreInsertUnlisted(RTSUnit* inUnit)
@@ -149,25 +132,12 @@ static void PlayerWords(const EEPlayer* inPlayer, uint32_t* outEnemies)
 
 void EEUnitStorePlayerTable(const EEPlayer* inPlayer)
 {
-    uint32_t theEnemies[17];
-    PlayerWords(inPlayer, theEnemies);
-    ee_units_player_set(reinterpret_cast<uintptr_t>(static_cast<const RTSPlayer*>(inPlayer)), (uint32_t)inPlayer->mPlayerID,
-                        theEnemies);
-}
-
-// the deque's ids (the handles' own: a freed unit's handle resolves to NULL but keeps its id)
-static void OrderIDs(std::vector<uint32_t>& outIDs)
-{
-    outIDs.clear();
-    for (size_t i = 0; i < gWorld.GetNumUpdateUnits(); i++)
-        outIDs.push_back(gWorld.GetUpdateUnitID(i));
+    ee_units_store_player_table((uint64_t)(uintptr_t)inPlayer);   // us_fill.rs
 }
 
 void EEUnitOrderReset()
 {
-    std::vector<uint32_t> theIDs;
-    OrderIDs(theIDs);
-    ee_units_order_reset(theIDs.empty() ? NULL : &theIDs[0], theIDs.size());
+    ee_units_order_reset_world();   // us_fill.rs
 }
 
 // TEST ONLY: the check's body is Rust (the units' lane, round 8: ee_units us_check.rs), its world reads this host's
@@ -199,6 +169,12 @@ extern "C" int64_t ee_units_us_host(int32_t inOp, uint64_t inA, int64_t inB, uin
     case EE_UNITS_US_ORDER_ID: return gWorld.GetUpdateUnitID((size_t)inB);
     case EE_UNITS_US_TICK: return gPhysics != NULL ? (int64_t)gPhysics->mNumTicksDone : 0;
     case EE_UNITS_US_EXIT: exit(3);
+    // us_fill.rs's
+    case EE_UNITS_US_F_OBJECT_KIND: return UsUnit(inA)->mObjectKind.mValue;
+    case EE_UNITS_US_F_ON_MAP: return OnMap(UsUnit(inA));
+    case EE_UNITS_US_F_STATS: return (int64_t)reinterpret_cast<uintptr_t>(static_cast<EEUnit*>(UsUnit(inA))->mStats);
+    case EE_UNITS_US_F_LOCATION: return FloatBits(inB == 0 ? static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetX() : inB == 1 ? static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetY() : static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetZ());
+    case EE_UNITS_US_F_FIELDS: return inB == 0 ? (int64_t)reinterpret_cast<uintptr_t>(static_cast<const EeUnitsRtsUnitFields*>(UsUnit(inA))) : inB == 1 ? (int64_t)reinterpret_cast<uintptr_t>(static_cast<const EeUnitsUnitFields*>(static_cast<EEUnit*>(UsUnit(inA)))) : (int64_t)reinterpret_cast<uintptr_t>(static_cast<const EeUnitsComplexUnitFields*>(static_cast<EEComplexUnit*>(UsUnit(inA))));
     default: return 0;
     }
 }

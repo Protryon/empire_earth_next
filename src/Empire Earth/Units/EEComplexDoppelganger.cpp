@@ -254,14 +254,7 @@ template <class T> static T* EEDopObject(uint64_t inHandle)
 // an ignored target of dop_load.rs's six values (tile x, y, from x, y, unit id, time)
 static EEComplexUnitAttacker EEDopAttacker(const int64_t* inValues)
 {
-    EEComplexUnitAttacker theAttacker;
-    theAttacker.mTileX = (long)inValues[0];
-    theAttacker.mTileY = (long)inValues[1];
-    theAttacker.mFromX = (long)inValues[2];
-    theAttacker.mFromY = (long)inValues[3];
-    theAttacker.mUnitID = (unsigned long)inValues[4];
-    theAttacker.mTime = (unsigned long)inValues[5];
-    return theAttacker;
+    return EEComplexUnitAttacker{(long)inValues[0], (long)inValues[1], (long)inValues[2], (long)inValues[3], (unsigned long)inValues[4], (unsigned long)inValues[5]};
 }
 
 template <class T> static uint64_t EEDopHandle(T* inObject)
@@ -581,9 +574,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
 // Shows the model of the unit's current animation state at the given frame
 void EEComplexUnit::SetAnimationFrame(unsigned long inFrame)
 {
-    unsigned long theState = this->mAnimation;
-    this->mPhysicalModel.SetModel(this->GetModel()->mModels[theState]);
-    this->mPhysicalModel.SetFrame(inFrame);
+    ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, this, NULL, (int64_t)inFrame);   // cu_small.rs
 }
 
 // Writes the complex unit's state to the saved game, units and groups as ids and hit points, flight time, garrison

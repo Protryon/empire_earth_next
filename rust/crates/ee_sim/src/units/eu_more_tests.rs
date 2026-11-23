@@ -130,3 +130,58 @@ fn the_last_attacker_moves_its_reference() {
     load_media(&mut h, 1, true);
     assert_eq!(h.ops(), vec![EE_UNITS_EUM_POST_LOAD]);
 }
+
+#[test]
+fn clear_and_last_dereference_in_the_originals_order() {
+    struct R(Vec<i32>);
+    impl EumHost for R {
+        fn eum(&mut self, op: i32, _unit: u64, _a: u64, _b: i64, _c: i64) -> i64 {
+            self.0.push(op);
+            0
+        }
+    }
+    let mut r = R(vec![]);
+    clear(&mut r, 1);
+    last_dereference(&mut r, 1);
+    assert_eq!(
+        r.0,
+        [
+            EE_UNITS_EUM_RESET_EE_UNIT,
+            EE_UNITS_EUM_RTS_RESET,
+            EE_UNITS_EUM_SET_INVALID,
+            EE_UNITS_EUM_FREE_NODE,
+            EE_UNITS_EUM_ZERO_REFERENCES,
+            EE_UNITS_EUM_DELETE
+        ]
+    );
+}
+
+#[test]
+fn the_constructors_and_the_destructor_in_the_originals_order() {
+    struct R(Vec<(i32, i64)>);
+    impl EumHost for R {
+        fn eum(&mut self, op: i32, _unit: u64, _a: u64, b: i64, _c: i64) -> i64 {
+            self.0.push((op, b));
+            0
+        }
+    }
+    let mut r = R(vec![]);
+    construct(&mut r, 1);
+    assert_eq!(
+        r.0,
+        [
+            (EE_UNITS_EUM_SET_OBJECT_KIND, 1),
+            (EE_UNITS_EUM_RTS_RESET, 0),
+            (EE_UNITS_EUM_RESET_EE_UNIT, 0),
+            (EE_UNITS_EUM_ZERO_REFERENCES, 0)
+        ]
+    );
+    let mut r = R(vec![]);
+    construct_complex(&mut r, 1);
+    assert_eq!(r.0[0], (EE_UNITS_EUM_SET_OBJECT_KIND, 2));
+    assert_eq!(r.0[1].0, EE_UNITS_EUM_CX_ZERO_DISABLED_REASON);
+    assert_eq!(r.0[4].0, EE_UNITS_EUM_CX_RESET_COMPLEX);
+    let mut r = R(vec![]);
+    destroy(&mut r, 1);
+    assert_eq!(r.0, [(EE_UNITS_EUM_SET_OBJECT_KIND, 1), (EE_UNITS_EUM_FREE_NODE, 0)]);
+}
