@@ -1139,12 +1139,3 @@ void EEServer::BeforeRemovingPlayers()
 {
 }
 
-bool EEServer::IsClient()
-{
-    return false;
-}
-
-bool EEServer::IsServer()
-{
-    return true;
-}

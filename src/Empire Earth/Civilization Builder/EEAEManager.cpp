@@ -32,6 +32,7 @@
 #include "rust/game/screens.h"   // CollectEffects, FindEffect (area_effect_manager.rs)
 #include <memory>
 #include <stdint.h>
+#include "ee/EEScreensShims.h"
 
 // The unit functors of the manager's passes (the original's ApplyGeneratedEffectsToOthersFunctor,
 // SetAffectedByAreaEffectFunctor, ClearAreaEffectsFunctor, RebuildAreaEffectRegionListFunctor,
@@ -66,18 +67,16 @@ EEAEManager::EEAEManager()
 
 // CollectEffects' and FindEffect's logic: area_effect_manager.rs over the one-statement shims below (UI lane
 // round 11)
-static std::vector<EEComplexUnit*> sAEMUnits;   // the living units around the location
-static U2DRectangle<long> sAEMRect;
 extern "C" int32_t ee_screenscpp_aem_floor(float inV) { return UMFloor(inV); }
-extern "C" void ee_screenscpp_aem_units_clear() { sAEMUnits.clear(); }
-extern "C" void ee_screenscpp_aem_rect_top(int32_t inV) { sAEMRect.mTop = inV; }
-extern "C" void ee_screenscpp_aem_rect_left(int32_t inV) { sAEMRect.mLeft = inV; }
-extern "C" void ee_screenscpp_aem_rect_bottom(int32_t inV) { sAEMRect.mBottom = inV; }
-extern "C" void ee_screenscpp_aem_rect_right(int32_t inV) { sAEMRect.mRight = inV; }
-extern "C" void ee_screenscpp_aem_collect_alive() { EEGetUnitsInRectangle(sAEMRect, sAEMUnits, EEAEAliveUnit(), true); }
-extern "C" uintptr_t ee_screenscpp_aem_units_count() { return sAEMUnits.size(); }
+extern "C" void ee_screenscpp_aem_units_clear() { EEScratch<std::vector<EEComplexUnit*>>(kScratchAEMUnits).clear(); }
+extern "C" void ee_screenscpp_aem_rect_top(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAEMRect).mTop = inV; }
+extern "C" void ee_screenscpp_aem_rect_left(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAEMRect).mLeft = inV; }
+extern "C" void ee_screenscpp_aem_rect_bottom(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAEMRect).mBottom = inV; }
+extern "C" void ee_screenscpp_aem_rect_right(int32_t inV) { EEScratch<U2DRectangle<long>>(kScratchAEMRect).mRight = inV; }
+extern "C" void ee_screenscpp_aem_collect_alive() { EEGetUnitsInRectangle(EEScratch<U2DRectangle<long>>(kScratchAEMRect), EEScratch<std::vector<EEComplexUnit*>>(kScratchAEMUnits), EEAEAliveUnit(), true); }
+extern "C" uintptr_t ee_screenscpp_aem_units_count() { return EEScratch<std::vector<EEComplexUnit*>>(kScratchAEMUnits).size(); }
 extern "C" uintptr_t ee_screenscpp_aem_unit_complex(uintptr_t inIndex)
-{ return (uintptr_t)(EEComplexUnit*)sAEMUnits[inIndex]->mComplexUnit; }
+{ return (uintptr_t)(EEComplexUnit*)EEScratch<std::vector<EEComplexUnit*>>(kScratchAEMUnits)[inIndex]->mComplexUnit; }
 extern "C" uintptr_t ee_screenscpp_aem_list_count(uintptr_t inList)
 { return ((EEUnitAreaEffectList*)inList)->mItems.size(); }
 extern "C" uintptr_t ee_screenscpp_aem_list_at(uintptr_t inList, uintptr_t inIndex)
@@ -143,8 +142,6 @@ long EEAELoadRunningState(FSFile& inFile)
 // lane round 11)
 #define AES_U(u) ((EEComplexUnit*)(u))
 #define AES_E(e) ((EEAreaEffect*)(e))
-static EEAreaEffectData sAESData;       // the record being read
-static unsigned long sAESRead = 0;
 extern "C" uintptr_t ee_screenscpp_aes_unit_complex(uintptr_t inUnit)
 { return (uintptr_t)(EEComplexUnit*)((EEUnit*)inUnit)->mComplexUnit; }
 extern "C" uintptr_t ee_screenscpp_aes_own_count(uintptr_t inUnit) { return AES_U(inUnit)->mAreaEffects.mItems.size(); }
@@ -176,14 +173,14 @@ extern "C" void ee_screenscpp_aes_after_load(uintptr_t inState)
 extern "C" void ee_screenscpp_aes_file_open(uintptr_t inFile) { ((FSFile*)inFile)->Open(kFileAccessRead); }
 extern "C" int32_t ee_screenscpp_aes_file_read_count(uintptr_t inFile, unsigned long* inCount)
 { return ((FSFile*)inFile)->Read(*inCount); }
-extern "C" void ee_screenscpp_aes_data_clear() { memset(&sAESData, 0, sizeof(sAESData)); }
+extern "C" void ee_screenscpp_aes_data_clear() { memset(&EEScratch<EEAreaEffectData>(kScratchAESData), 0, sizeof(EEScratch<EEAreaEffectData>(kScratchAESData))); }
 extern "C" int32_t ee_screenscpp_aes_data_read(uintptr_t inFile)
-{ return ((FSFile*)inFile)->Read(reinterpret_cast<unsigned char*>(&sAESData), sizeof(sAESData), sAESRead); }
-extern "C" int64_t ee_screenscpp_aes_data_id() { return (int64_t)sAESData.mID; }
+{ return ((FSFile*)inFile)->Read(reinterpret_cast<unsigned char*>(&EEScratch<EEAreaEffectData>(kScratchAESData)), sizeof(EEScratch<EEAreaEffectData>(kScratchAESData)), EEScratch<unsigned long>(kScratchAESRead)); }
+extern "C" int64_t ee_screenscpp_aes_data_id() { return (int64_t)EEScratch<EEAreaEffectData>(kScratchAESData).mID; }
 extern "C" uintptr_t ee_screenscpp_aes_template_new() { return (uintptr_t) new EEAreaEffectTemplate; }
-extern "C" bool ee_screenscpp_aes_template_init(uintptr_t inT) { return ((EEAreaEffectTemplate*)inT)->Init(sAESData); }
+extern "C" bool ee_screenscpp_aes_template_init(uintptr_t inT) { return ((EEAreaEffectTemplate*)inT)->Init(EEScratch<EEAreaEffectData>(kScratchAESData)); }
 extern "C" void ee_screenscpp_aes_template_error()
-{ ESDebugOut("Error reading area effect template %s...fix me in EEAEManager.cpp!\n", sAESData.mName); }
+{ ESDebugOut("Error reading area effect template %s...fix me in EEAEManager.cpp!\n", EEScratch<EEAreaEffectData>(kScratchAESData).mName); }
 extern "C" void ee_screenscpp_aes_templates_push(uintptr_t inManager, uintptr_t inT)
 { ((EEAEManager*)inManager)->mTemplates.push_back((EEAreaEffectTemplate*)inT); }
 extern "C" void ee_screenscpp_aes_file_close(uintptr_t inFile) { ((FSFile*)inFile)->Close(); }

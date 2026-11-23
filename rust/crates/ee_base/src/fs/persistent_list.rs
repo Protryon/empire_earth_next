@@ -41,12 +41,17 @@ pub extern "C" fn ee_fs_persistent_take() -> *mut c_void {
     registry().0.pop_first().map_or(std::ptr::null_mut(), |(_, p)| p as *mut c_void)
 }
 
+/// The registry is one per process: the tests that register take this first.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: Mutex<()> = Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn register_find_take() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let (a, b) = (8usize as *mut c_void, 16usize as *mut c_void);
         assert!(ee_fs_persistent_register(4, a));
         assert!(!ee_fs_persistent_register(4, b));

@@ -686,13 +686,13 @@ pub unsafe extern "C" fn ee_time_timer_stop(timer: *const EeTimeTimer) -> c_int 
 #[no_mangle]
 pub unsafe extern "C" fn ee_time_timer_stop_elapsed(
     timer: *const EeTimeTimer,
-    elapsed: *mut u32,
-    remaining: *mut u32,
+    elapsed: *mut std::ffi::c_ulong,
+    remaining: *mut std::ffi::c_ulong,
 ) -> c_int {
     let (result, out) = (*timer).stop_elapsed(&PlatTimers);
     if let Some((e, r)) = out {
-        *elapsed = e;
-        *remaining = r;
+        *elapsed = e as std::ffi::c_ulong;
+        *remaining = r as std::ffi::c_ulong;
     }
     result
 }

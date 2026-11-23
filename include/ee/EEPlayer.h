@@ -425,9 +425,6 @@ public:
     void SetPlayer(EEPlayer* inPlayer);
     void UpdateInterface(bool inEpochChanged);
     EETechTree& operator=(const EETechTree& inOther);
-    // 0x267eaa: the epoch the statistics group shows (inline in the original's EEUIFMGGStatistics.h, the COMDAT after
-    // its Select; defined in EEUIFMGMainGroup.cpp with the panel groups' host; provisional name)
-    long GetShownEpoch() const;
 
     // Layout (from the ctor 0x1cbcc2; provisional names)
     EETechTreeEpochList mEpochs;            // +0x008 one per epoch (the original: 15, the ids below 15)

@@ -11,10 +11,9 @@
 
 #include "ee/EEUIRustControl.h"
 
-class EEAMiniMap;
 class EEMiniMap;
 
-class EEUIMiniMap : public EEUIRustControl {
+class EEUIMiniMap : public EEUIRustControl, public EeScreensMiniMapFields {
 public:
     EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
                 unsigned long inBorderThickness);
@@ -65,13 +64,6 @@ protected:
 public:
     GE2DPoint mOrigin;                      // +0x0a0 the map's top-left (the location plus the border)
     GELine mLines[4];                       // +0x0a8 the camera view's edges
-    EEAMiniMap* mAction;                    // +0x0d8 (new EEAMiniMap; dereferenced by the dtor)
-    bool mDrawLine0;                        // +0x0dc
-    bool mDrawLine1;                        // +0x0dd
-    bool mDrawLine2;                        // +0x0de
-    bool mDrawLine3;                        // +0x0df
-    bool mShowFlare;                        // +0x0e0 gMiniMap's flare is on (and the camera is not free)
-    bool mFlareBlink;                       // +0x0e1 toggles the flare colour each CopyData
 };
 
 #endif

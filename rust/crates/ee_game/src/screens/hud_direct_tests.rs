@@ -65,18 +65,8 @@ fn head(text: &str, chat: &str) -> FormCallHead {
     let mut name = CppWide { vtable: core::ptr::null(), s: unsafe { core::mem::zeroed() } };
     unsafe { ee_uwstring_init(&mut name.s) };
     unsafe { wide_assign(&mut name, b"Somebody") };
-    FormCallHead {
-        form: core::ptr::null_mut(),
-        picked: core::ptr::null_mut(),
-        text: wide(text),
-        color: core::ptr::null(),
-        name,
-        chat: wide(chat),
-        flags: 0,
-        objects: [core::ptr::null_mut(); 11],
-        button: core::ptr::null_mut(),
-        out: core::ptr::null_mut(),
-    }
+    // SAFETY: the objects are pointers and a number, all zero
+    FormCallHead { o: unsafe { core::mem::zeroed() }, text: wide(text), name, chat: wide(chat) }
 }
 
 #[test]
@@ -166,7 +156,7 @@ fn the_controls_base_ops_answer_without_a_control() {
 #[test]
 fn the_cursor_reads_answer_zero_without_units() {
     use crate::screens::cursor::*;
-    let read = CursorRead {
+    let read = EeScreensCursorRead {
         form: core::ptr::null_mut(),
         player: core::ptr::null_mut(),
         group: core::ptr::null_mut(),
@@ -268,8 +258,15 @@ fn the_status_box_record_starts_empty_and_names_its_slots() {
 fn the_status_box_fields_and_formats() {
     use crate::screens::status_box::*;
     let mut r = new_box();
-    let mut call =
-        BoxCallHead { record: &mut r, unit: core::ptr::null_mut(), complex: core::ptr::null_mut(), text: wide("x") };
+    let mut call = BoxCallHead {
+        o: crate::screens::hud_fields::EeScreensStatusBoxCallObjects {
+            mBox: &mut r as *mut _ as *mut c_void,
+            mUnit: core::ptr::null_mut(),
+            mComplex: core::ptr::null_mut(),
+            mTextures: [core::ptr::null_mut(); 4],
+        },
+        text: wide("x"),
+    };
     let op = |call: &mut BoxCallHead, op, a, b, c| unsafe { status_box(call, op, a, b, c) };
     assert_eq!(op(&mut call, EE_SCREENS_BOX_OP_SET, EE_SCREENS_BOX_FIELD_COUNT, 5, 0), Some(0));
     assert_eq!(op(&mut call, EE_SCREENS_BOX_OP_SET, EE_SCREENS_BOX_FIELD_ATTRIBUTES + 3, 9, 0), Some(0));

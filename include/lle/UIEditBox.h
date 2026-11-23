@@ -57,12 +57,7 @@ public:
     virtual void SetLocation(const GE2DPoint& inLocation) { this->CallPoint(EeUiEditCall::SetLocation, inLocation); }
     void SetSelectedBgColor(const GEColor& inColor) { this->CallColor(EeUiEditCall::SetSelectedBgColor, inColor); }
     void SetText(const UWideString& inString) { this->Call(EeUiEditCall::SetText, (intptr_t)(const char*)inString); }
-    void SetText(unsigned long inValue)
-    {
-        char theBuffer[50];
-        PlatIToA(inValue, theBuffer, 10);
-        this->SetText(theBuffer);
-    }
+    void SetText(unsigned long inValue) { ee_ui_edit_set_number(this->mRust, inValue); }   // _itoa's decimal
     virtual long UpdateKeyboard() { return (long)this->Call(EeUiEditCall::UpdateKeyboard); }
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return (long)this->Call(EeUiEditCall::UpdateTranslatedKey, (intptr_t)inKey, inRepeat); }
     virtual void ButtonDown() { this->SetDirty(true); }  // slot 0x88

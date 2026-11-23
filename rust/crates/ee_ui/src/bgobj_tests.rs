@@ -126,7 +126,17 @@ fn replay(golden: &str) -> usize {
                     );
                     return true;
                 }
-                ee_ui_bg_init(rec, THIS as *mut c_void, host, id, &layout, core::ptr::null_mut(), priority, visible);
+                ee_ui_bg_init(
+                    rec,
+                    THIS as *mut c_void,
+                    host,
+                    id,
+                    &layout,
+                    core::ptr::null_mut(),
+                    priority,
+                    visible,
+                    core::ptr::null_mut(),
+                );
                 ee_ui_bg_texture(rec, texture.as_ptr(), &DESCS[desc], name);
                 if kind <= 5 {
                     ee_ui_bg_call(rec, EeUiBgCall::BitmapInit, 0, 0, core::ptr::null_mut());

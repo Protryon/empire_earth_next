@@ -42,6 +42,33 @@ pub struct EeScreensMainFormFields {
     pub mIsButtonBlinking: bool,
 }
 
+/// `EEUIFMainGame`'s C++ objects (ee/EEUIFMainGame.h; UI lane round 15), as untyped pointers the C++ casts at
+/// its uses: the unit information background, the wheel zoom and grab scroll events, the error strings' lock, the
+/// unit hack, the 200 ms poll and the mouse actions (scroll, click, lasso, build, calamity). The panel groups stay
+/// the class's (the game's other lanes read them typed).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeScreensMainFormObjects {
+    /// the background 0x64 (Open)
+    pub mUnitInfoBackground: *mut c_void,
+    /// a `UIEvent*` (EE_SCREENS_CAM_WHEEL_ZOOM)
+    pub mWheelZoom: *mut c_void,
+    /// a `UIEvent*`: the middle button's pressed and unpressed event (EECreateGrabScroll)
+    pub mGrabScroll: *mut c_void,
+    /// a `TSCriticalSection*` guarding the error strings
+    pub mErrorCriticalSection: *mut c_void,
+    /// an `EEUIFMGUnitHack*`
+    pub mUnitHack: *mut c_void,
+    /// a `TMPoll*` (200 ms)
+    pub mPoll: *mut c_void,
+    /// the actions: `EEAScroll*`, `EEAMouseClick*`, `EEALasso*`, `EEABuild*`, `EEACalamity*`
+    pub mScroll: *mut c_void,
+    pub mMouseClick: *mut c_void,
+    pub mLasso: *mut c_void,
+    pub mBuild: *mut c_void,
+    pub mCalamity: *mut c_void,
+}
+
 /// `EEUIFMGStatusButton`'s plain members (ee/EEUIFMGStatusButton.h), in the class's order (the UI cluster lane,
 /// round 1); its C++ objects (the button object, the icon, the dither, the queue text, `mU104`) stay members.
 #[repr(C)]

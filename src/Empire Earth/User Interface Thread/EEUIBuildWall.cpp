@@ -31,5 +31,5 @@ void EEUIBuildWall::Cancel()
 
 void EEUIBuildWall::Build()
 {
-    gUIManager->GetMainGameForm()->mBuild->BuildWall(this->mStart, this->mEnd);
+    static_cast<EEABuild*>(gUIManager->GetMainGameForm()->mBuild)->BuildWall(this->mStart, this->mEnd);
 }

@@ -3,7 +3,6 @@
 // HandleMessage (the 0x401..0x443 switch), the Post* members, the window procedure, then the template COMDATs of
 // the message vector. Unit flags: the exe module set. Names are provisional unless the header says otherwise.
 #include <windows.h>
-extern "C" void SPIMSetMuted(bool inMuted);   // port: the mixer plug-in (lle/SEMixer.h)
 #include "platform/PlatSim.h"
 unsigned long EEMenuWidth();    // port: the menus' resolution (Empire Earth.cpp)
 unsigned long EEMenuHeight();
@@ -91,11 +90,9 @@ long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, 
 bool EEIsLobbyOpen();                       // 0x297eca (the external lobby is running)
 void EESetQuitFlag();
 void EEResetGraphicsValues();               // 0x10fc7e (before a screen capture without the cursor)
-void EEPostGraphicsAll();
 // CivBuilderEditCivilization 0x280faf, CivBuilderCreateCivilization 0x280ffd: ee/EECivilizationBuilder.h; EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h
 void EELobbyShutdown();
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested scenario starts) (provisional name)
-extern RTSRenderObject* gU56534C;           // 0x56534c (the UI's render object; stored in EEGlobals.cpp)
 void EEStopAllSounds();                     // 0x140ceb (Empire Earth.cpp)
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreensShims.h"

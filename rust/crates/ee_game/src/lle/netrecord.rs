@@ -44,8 +44,9 @@ ee_base::cpp_shims! {
 
 /// `kErrorOK`, `kErrorBadPath`, `kErrorBeyondEnd`.
 const OK: c_long = 0;
-const BAD_PATH: c_long = 0x10;
-const BEYOND_END: c_long = 6;
+/// (round 8 had 0x10 and 6, kErrorNotReadable and kErrorBusy: tests/net's ne_message_test golden has the original's)
+const BAD_PATH: c_long = ee_base::lle_enums::ESError::kErrorBadPath as c_long;
+const BEYOND_END: c_long = ee_base::lle_enums::ESError::kErrorBeyondEnd as c_long;
 /// The codec's slots: the header's 4 and the members'.
 pub const SLOTS: usize = 12;
 
@@ -53,18 +54,23 @@ pub const SLOTS: usize = 12;
 #[cfg(not(test))]
 const NEMESSAGE_CPP: &core::ffi::CStr = c"C:\\EEX\\Low-Level Engine\\Network Engine\\NEMessage.cpp";
 
-/// `ESVERIFY_AT` of NEMessage.cpp.
+/// `ESVERIFY_AT` of NEMessage.cpp (no line: the owner dropped line-number parity).
 fn verify(ok: bool, expression: &core::ffi::CStr) {
+    verify_at(ok, 0, expression)
+}
+
+/// `ESVERIFY_AT` of NEMessage.cpp at the original's line (tests/net's golden_message.txt traces the factory's).
+fn verify_at(ok: bool, line: core::ffi::c_ulong, expression: &core::ffi::CStr) {
     if ok {
         return;
     }
     #[cfg(not(test))]
     // SAFETY: C strings
     unsafe {
-        ee_base::error::ee_error_verify(NEMESSAGE_CPP.as_ptr(), 0, expression.as_ptr())
+        ee_base::error::ee_error_verify(NEMESSAGE_CPP.as_ptr(), line, expression.as_ptr())
     };
     #[cfg(test)]
-    panic!("verify: {expression:?}");
+    panic!("verify: {expression:?} {line}");
 }
 
 fn field(t: u8, i: u32) -> EeNetMsgNeField {
@@ -353,7 +359,7 @@ pub unsafe fn build<C: RecordCpp>(c: &mut C, data: *mut u8) -> usize {
     if ee_netmsg_ne_type(unsafe { *data.add(1) }).class_id != u32::MAX {
         return c.record_new(data);
     }
-    verify(false, c"\"Undefined message type\" == NULL");
+    verify_at(false, 227, c"\"Undefined message type\" == NULL");
     0
 }
 

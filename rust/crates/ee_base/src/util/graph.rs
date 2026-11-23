@@ -164,7 +164,7 @@ impl EeUtilSeries {
     }
 }
 
-/// A `UGraph`'s series and range (its strings stay in the C++ object). The series are boxed: the C++ views hold
+/// A `UGraph`'s series and range. The series are boxed: the C++ views hold
 /// their addresses.
 #[derive(Debug)]
 pub struct EeUtilGraph {
@@ -257,7 +257,7 @@ impl EeUtilGraph {
         self.range = range;
     }
 
-    /// `operator=` (the series and the range; the strings are the C++'s).
+    /// `operator=` (the series and the range).
     pub fn assign(&mut self, other: &EeUtilGraph) {
         *self = other.clone();
     }
@@ -459,7 +459,7 @@ pub unsafe extern "C" fn ee_util_series_range(series: *const EeUtilSeries) -> *c
     &(*series).range
 }
 
-/// `UGraph()` (the strings are the C++'s).
+/// `UGraph()`.
 #[no_mangle]
 pub extern "C" fn ee_util_graph_new() -> *mut EeUtilGraph {
     Box::into_raw(Box::default())
