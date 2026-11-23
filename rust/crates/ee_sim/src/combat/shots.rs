@@ -737,7 +737,13 @@ pub unsafe extern "C" fn ee_combat_shot_update(kind: i32, unit: u64, host: *cons
 /// As [`ee_combat_shot_action_changed`]; `unit` is a live complex unit.
 #[cfg(not(test))]
 #[no_mangle]
-pub unsafe extern "C" fn ee_combat_shot_step(kind: i32, update: bool, func: u32, unit: u64, host: *const EeCombatShotHost) {
+pub unsafe extern "C" fn ee_combat_shot_step(
+    kind: i32,
+    update: bool,
+    func: u32,
+    unit: u64,
+    host: *const EeCombatShotHost,
+) {
     let slot = if update { 2 } else { 1 };
     let outer = crate::combat::cg_query::ee_combat_host_read_enter(slot);
     // EECombatCommandOf: the command's type (0: none)

@@ -22,6 +22,7 @@ pub const EE_UNITS_UC_IS_PRIEST: i32 = 4;
 
 /// The predicate `which` of the class record `c`; `land_building` its `IsLandBuilding()` (asked only by the drop
 /// site's test, after its unit type test, as the C++'s `||` did).
+#[allow(clippy::unnecessary_cast)] // c_ulong is 64 bits off Windows
 pub fn is(which: i32, c: &EeUnitsUnitClassFields, land_building: impl FnOnce() -> bool) -> bool {
     let t = c.mUnitType as u32;
     let k = c.mCategory as u32;

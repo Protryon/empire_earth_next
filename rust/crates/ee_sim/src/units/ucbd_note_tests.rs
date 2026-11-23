@@ -107,7 +107,10 @@ fn bits(v: f32) -> u32 {
 fn a_note_writes_the_wrappers_words_in_order() {
     let mut n = on(10);
     n.c(&mut Notes, 7).u(&mut Notes, 2).u(&mut Notes, 0).c(&mut Notes, 0).i(-3).f(1.5).t([2, -4]);
-    assert_eq!(n.words(), [10, 0x42, 102, (-2i32) as u32, (-2i32) as u32, (-3i32) as u32, bits(1.5), 2, (-4i32) as u32]);
+    assert_eq!(
+        n.words(),
+        [10, 0x42, 102, (-2i32) as u32, (-2i32) as u32, (-3i32) as u32, bits(1.5), 2, (-4i32) as u32]
+    );
     let mut n = on(4);
     n.ts(&mut Notes, 9).us(&mut Notes, 9).home(&mut Notes, 2).resource(&mut Notes, 1);
     assert_eq!(n.words(), [4, 2, 3, 4, (-1i32) as u32, 5, 3, 101, (-2i32) as u32, 103, 103, 250, 2]);

@@ -73,7 +73,9 @@ impl NoteWorld for W {
     }
     fn resource(&mut self, unit: u64) -> (i32, u32) {
         // SAFETY: a live unit
-        read(|t| unsafe { UnitView::of(t, unit) }.map_or((0, 0), |u| (u.resource_amount() as i32, u.resource_type() as u32)))
+        read(|t| {
+            unsafe { UnitView::of(t, unit) }.map_or((0, 0), |u| (u.resource_amount() as i32, u.resource_type() as u32))
+        })
     }
 }
 
@@ -94,6 +96,7 @@ fn uck(what: i32, class: u64, unit: u64, a: u64, b: i64, c: i64, f: f32) -> i64 
     unsafe { crate::units::uck_kinds::game::ee_units_uck_call(what, ptr(class), ptr(unit), a, b, c, f) }
 }
 
+#[allow(clippy::unnecessary_cast)] // c_long is 64 bits off Windows
 fn tile_of(p: *const [c_long; 2]) -> [i32; 2] {
     // SAFETY: the caller's live tile
     let t = unsafe { *p };
@@ -134,12 +137,20 @@ pub unsafe extern "C" fn ee_units_ucn_filter_loadable(class: u64, units: u64, tr
 /// # Safety
 /// `at` is a live point, `out` a writable one.
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_ucn_boarding_location(class: u64, unit: u64, transport: u64, at: *const f32, out: *mut f32) -> bool {
+pub unsafe extern "C" fn ee_units_ucn_boarding_location(
+    class: u64,
+    unit: u64,
+    transport: u64,
+    at: *const f32,
+    out: *mut f32,
+) -> bool {
     let mut n = note(32);
     // SAFETY: the caller's contract
     let p = unsafe { [*at, *at.add(1), *at.add(2)] };
     n.c(&mut W, class).u(&mut W, unit).u(&mut W, transport).p(p);
-    let r = uck(k::EE_UNITS_UCK_DO_BOARDING_LOCATION, class, unit, transport, at as usize as i64, out as usize as i64, 0.0) != 0;
+    let r =
+        uck(k::EE_UNITS_UCK_DO_BOARDING_LOCATION, class, unit, transport, at as usize as i64, out as usize as i64, 0.0)
+            != 0;
     n.i(i64::from(r));
     // SAFETY: the caller's contract
     n.p(unsafe { [*out, *out.add(1), *out.add(2)] });
@@ -162,7 +173,9 @@ pub unsafe extern "C" fn ee_units_ucn_rendezvous_tiles(
     let mut n = note(4);
     n.c(&mut W, class).us(&mut W, units).u(&mut W, transport);
     // SAFETY: the caller's contract
-    unsafe { crate::units::cls_host::ee_units_tr_rendezvous_tiles(class, ptr(units), transport, out_transport, out_unit) };
+    unsafe {
+        crate::units::cls_host::ee_units_tr_rendezvous_tiles(class, ptr(units), transport, out_transport, out_unit)
+    };
     n.t(tile_of(out_transport)).t(tile_of(out_unit));
     done(n);
 }
@@ -183,7 +196,9 @@ pub unsafe extern "C" fn ee_units_ucn_unload_tiles(
     let mut n = note(5);
     n.c(&mut W, class).u(&mut W, transport).t(tile_of(destination));
     // SAFETY: the caller's contract
-    unsafe { crate::units::cls_host::ee_units_tr_unload_tiles(class, transport, destination, out_unload, out_first, out_tile) };
+    unsafe {
+        crate::units::cls_host::ee_units_tr_unload_tiles(class, transport, destination, out_unload, out_first, out_tile)
+    };
     n.t(tile_of(out_unload)).t(tile_of(out_first)).t(tile_of(out_tile));
     done(n);
 }
@@ -440,9 +455,16 @@ pub unsafe extern "C" fn ee_units_ucn_can_unload_near(
     destination: *const [c_long; 2],
 ) -> bool {
     let mut n = note(9);
-    n.c(&mut W, class).u(&mut W, transport).u(&mut W, cargo).t(tile_of(unload)).t(tile_of(first)).t(tile_of(destination));
+    n.c(&mut W, class)
+        .u(&mut W, transport)
+        .u(&mut W, cargo)
+        .t(tile_of(unload))
+        .t(tile_of(first))
+        .t(tile_of(destination));
     // SAFETY: the caller's contract
-    let r = unsafe { crate::units::cls_host::ee_units_tr_can_unload_near(class, transport, cargo, unload, first, destination) };
+    let r = unsafe {
+        crate::units::cls_host::ee_units_tr_can_unload_near(class, transport, cargo, unload, first, destination)
+    };
     n.i(i64::from(r));
     n.s(&mut W, cargo);
     done(n);
