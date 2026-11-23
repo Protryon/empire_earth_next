@@ -320,7 +320,7 @@ static int64_t NetOp(EEARust* a, int64_t* i)
         return 0;
     case EE_SCREENS_GA_N_IS_SERVER: return gCommunications->IsServer() == true;
     case EE_SCREENS_GA_N_BOOT_PLAYER:
-        static_cast<NESynchronousServer*>(gCommunications)->BootPlayer(a->mPlayer, a->mB0D, a->mIsExiting);
+        static_cast<EEServer*>(gCommunications)->BootPlayer(a->mPlayer, a->mB0D, a->mIsExiting);
         return 0;
     case EE_SCREENS_GA_N_CTS_PROCESSED: return gCommunications->GetNumberOfCTsProcessedInPhysics() > 0;
     case EE_SCREENS_GA_N_USER_PAUSED: return gWorld.mUserPaused == true;
