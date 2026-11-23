@@ -49,7 +49,8 @@ CHECKS = [
     dict(enum="EeWonCcOp", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"], rust=[],
          allowed={}),
     dict(enum="EeWonCcKind", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"],
-         rust=[], allowed={"Component": "the Ref op's default case (a Component's AddRef / Release)"}),
+         rust=[], allowed={v: "R6 WON round 34: compcfg.rs's ref_op picks the kind's AddRef / Release op (no C++ case)"
+                           for v in ("Config", "Res", "Image", "Font", "Sound", "Component")}),
     # the lobby events' members are read in Rust (R6 WONLobby round 18)
     dict(enum="EeWonLobbyCtlEvField", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
