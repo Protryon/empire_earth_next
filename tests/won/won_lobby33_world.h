@@ -320,7 +320,19 @@ struct LobbyPersistentData : Tracked {
 };
 struct StringParser {
     std::string mText;
+    size_t mAt = 0;
     explicit StringParser(const char* s) : mText(s) {}
+    // a word (or the rest of the line), appended
+    bool ReadString(std::string& out, bool inWord)
+    {
+        while (this->mAt < this->mText.size() && this->mText[this->mAt] == ' ') this->mAt++;
+        size_t e = inWord ? this->mText.find(' ', this->mAt) : std::string::npos;
+        if (e == std::string::npos) e = this->mText.size();
+        out += this->mText.substr(this->mAt, e - this->mAt);
+        Log("StringParser ReadString " + N(inWord) + " '" + out + "'");
+        this->mAt = e;
+        return true;
+    }
     bool ReadValue(std::list<std::string>& l)
     {
         Log("StringParser ReadValue " + this->mText);
@@ -430,7 +442,48 @@ struct IPAddr {
 };
 enum class LobbyMC { GameStoreSummary };
 enum class LobbyMF { GameHaveDetails, GameNumPlayers };
-struct LobbyConfig : Tracked {
+typedef unsigned long DWORD;
+static int sRegistry;     // QueryDWORD's answer (0 found)
+static DWORD sRegistryValue;
+static bool gLobbyUseLocalIP;
+struct RegKey {
+    RegKey(int r, const std::string& p, bool a, bool b) { Log("RegKey " + N(r) + " " + p + " " + N(a) + N(b)); }
+    ~RegKey() { Log("~RegKey"); }
+    int QueryDWORD(const std::string& n, DWORD& v)
+    {
+        Log("RegKey QueryDWORD " + n + " " + N((long long)v));
+        if (sRegistry == 0) v = sRegistryValue;
+        return sRegistry;
+    }
+};
+static int sBaseValue; // ConfigObject::HandleValueInstruction: 0 false, 1 true, 2 a WorldThrow
+struct ConfigObject : Tracked {
+    template <class T, class D> void KeyAddOf(const char* k, T& v, D d, const std::string& kind)
+    {
+        const void* aAt = &v;
+        std::string aWhere = aAt == &gLobbyUseLocalIP ? std::string("gLobbyUseLocalIP") : N((long long)((char*)&v - (char*)this));
+        Log("KeyAdd " + std::string(k) + " " + kind + " at " + aWhere + " default " + d);
+    }
+    void KeyAdd(const char* k, unsigned short& v, unsigned short d) { this->KeyAddOf(k, v, N(d), "ushort"); }
+    void KeyAdd(const char* k, bool& v, bool d) { this->KeyAddOf(k, v, N(d), "bool"); }
+    void KeyAdd(const char* k, std::string& v, const char* d) { this->KeyAddOf(k, v, d ? std::string(d) : "null", "string"); }
+    void KeyAdd(const char* k, std::wstring& v, const wchar_t* d) { this->KeyAddOf(k, v, d ? std::string("w") : "null", "wstring"); }
+    void KeyAdd(const char* k, std::list<std::string>& v, const char* d, bool f) { this->KeyAddOf(k, v, (d ? std::string(d) : "null") + " " + N(f), "list"); }
+    virtual bool HandleValueInstruction(ConfigParser* p, const std::string& k, StringParser& v)
+    {
+        Log("ConfigObject HandleValueInstruction parser " + N(p->mId) + " " + k + " at " + N((long long)v.mAt));
+        if (sBaseValue == 2) throw WorldThrow{6};
+        return sBaseValue != 0;
+    }
+};
+struct LobbyConfig : ConfigObject {
+    // the constructor's
+    std::list<std::string> mDirServers, mRoomDirServers, mAuthServers;
+    std::wstring mProductDirectory;
+    std::string mLanguage;
+    bool mCRCCheck = false, mPublic = false, mUseLocalIP = true, mNoPingInProgress = false, mCheckForInternet = false;
+    bool mAppendNumberToDefaultLanName = false, mAllowJoinGameWithoutPing = false;
+    unsigned short mLanBroadcastPort = 0, mPingCeiling = 0;
     // WONLobbyPrv's
     unsigned short mLobbyPort = 2300;
     std::string mResourceDirectory = "Lobby", mProductName = "EmpireEarth", mVersion = "2.0", mLanVersion = "2.0l";

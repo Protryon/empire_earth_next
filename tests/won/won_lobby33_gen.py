@@ -72,6 +72,11 @@ b = body_at(nc, i)
 b = b[b.index("{"):].replace("this->", "self->")
 out.append("static void ChatLinkInit(ChatLink* self, const EeWonLobbyCtlLink& l)\n{\n    self->mKind = l.kind;\n    "
            + b.strip() + "\n}")
+lc = show(L + "LobbyConfig.cpp")
+out.append(func(lc, "LobbyConfig::LobbyConfig()", "static void ConfConstruct(LobbyConfig* self)"))
+out.append(func(lc, "bool LobbyConfig::HandleValueInstruction(ConfigParser* parser, const std::string& key,\n                           StringParser& values)",
+                "static bool ConfHandleValue(LobbyConfig* self, ConfigParser* parser, const std::string& key, StringParser& values)")
+           .replace("return ConfigObject::", "return self->ConfigObject::"))
 out += ["}", "#endif", ""]
 open(ROOT + "/tests/won/won_lobby33_orig.h", "w", encoding="utf-8", newline="\n").write(
     "\n".join(out[:6]) + "\n\n" + "\n\n".join(out[6:]))
@@ -93,6 +98,10 @@ new.append(cur[i:j].strip())
 cur = open(ROOT + "/" + L + "LobbyNetCtrlHost.cpp", encoding="utf-8").read()
 i = cur.index("// ChatLink's constructor's statements")
 new.append(body_at(cur, cur.index("static intptr_t ChatLinkHost", i)))
+cur = open(ROOT + "/" + L + "LobbyConfig.cpp", encoding="utf-8").read()
+i = cur.index("// the constructor's and HandleValueInstruction's statements")
+new.append("\n".join(l for l in cur[i:cur.index("static intptr_t ConfHost", i)].split("\n") if l.startswith("static")))
+new.append(body_at(cur, cur.index("static intptr_t ConfHost", i)))
 new += ["}", "#endif", ""]
 open(ROOT + "/tests/won/won_lobby33_new.h", "w", encoding="utf-8", newline="\n").write(
     "\n".join(new[:6]) + "\n\n" + "\n\n".join(new[6:]))

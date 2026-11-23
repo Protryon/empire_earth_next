@@ -297,6 +297,53 @@ static intptr_t ChatLinkHost(void* inLink, EeWonChatLinkOp inOp, intptr_t a)
     return 0;
 }
 
+static RegKey* sConfRegistry;
+static DWORD sConfRegistryValue;
+static std::string sConfName, sConfValue;
+
+static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+{
+    typedef EeWonLobbyConfOp Op;
+    LobbyConfig* c = static_cast<LobbyConfig*>(inConfig);
+    switch (inOp) {
+    case Op::KeyDirServer: c->KeyAdd("DirServer", c->mDirServers, NULL, true); return 0;
+    case Op::KeyRoomDirServer: c->KeyAdd("RoomDirServer", c->mRoomDirServers, NULL, true); return 0;
+    case Op::KeyAuthServers: c->KeyAdd("AuthServers", c->mAuthServers, NULL, true); return 0;
+    case Op::KeyProductName: c->KeyAdd("ProductName", c->mProductName, NULL); return 0;
+    case Op::KeyProductDirectory: c->KeyAdd("ProductDirectory", c->mProductDirectory, NULL); return 0;
+    case Op::KeyResourceDirectory: c->KeyAdd("ResourceDirectory", c->mResourceDirectory, NULL); return 0;
+    case Op::KeyVersion: c->KeyAdd("Version", c->mVersion, NULL); return 0;
+    case Op::KeyLanVersion: c->KeyAdd("LanVersion", c->mLanVersion, NULL); return 0;
+    case Op::KeyLanguage: c->KeyAdd("Language", c->mLanguage, ""); return 0;
+    case Op::KeyCrcCheck: c->KeyAdd("CRCCheck", c->mCRCCheck, true); return 0;
+    case Op::KeyCdKeyCheck: c->KeyAdd("CDKeyCheck", c->mCDKeyCheck, true); return 0;
+    case Op::KeyPublic: c->KeyAdd("Public", c->mPublic, false); return 0;
+    case Op::KeyLanBroadcastPort: c->KeyAdd("LanBroadcastPort", c->mLanBroadcastPort, 8585); return 0;
+    case Op::KeyNoPingInProgress: c->KeyAdd("NoPingInProgress", c->mNoPingInProgress, true); return 0;
+    case Op::KeyLobbyPort: c->KeyAdd("LobbyPort", c->mLobbyPort, 8888); return 0;
+    case Op::KeyCheckForInternet: c->KeyAdd("CheckForInternet", c->mCheckForInternet, true); return 0;
+    case Op::KeyPingCeiling: c->KeyAdd("PingCeiling", c->mPingCeiling, 1000); return 0;
+    case Op::KeyAllowDuplicateNames: c->KeyAdd("AllowDuplicateNames", c->mAllowDuplicateNames, true); return 0;
+    case Op::KeyAppendNumberToDefaultLanName: c->KeyAdd("AppendNumberToDefaultLanName", c->mAppendNumberToDefaultLanName, true); return 0;
+    case Op::KeyAllowJoinGameWithoutPing: c->KeyAdd("AllowJoinGameWithoutPing", c->mAllowJoinGameWithoutPing, true); return 0;
+    case Op::RegistryOpen: sConfRegistry = new RegKey(2, "SOFTWARE\\Sierra\\WONLobby", false, true); return 0;
+    case Op::RegistryValueClear: sConfRegistryValue = 0; return 0;
+    case Op::RegistryQuery: return (intptr_t)(sConfRegistry->QueryDWORD("UseLocalIP", sConfRegistryValue));
+    case Op::RegistryValue: return (intptr_t)(sConfRegistryValue);
+    case Op::SetUseLocalIp: c->mUseLocalIP = a != 0; return 0;
+    case Op::KeyUseLocalIp: c->KeyAdd("UseLocalIP", gLobbyUseLocalIP, a != 0); return 0;
+    case Op::RegistryClose: delete sConfRegistry; return 0;
+    case Op::KeyIsLobbyDefine: return (*(const std::string*)a == "LOBBYDEFINE") ? 1 : 0;
+    case Op::DefineLocalsClear: sConfName = sConfValue = std::string(); return 0;
+    case Op::DefineReadName: ((StringParser*)a)->ReadString(sConfName, true); return 0;
+    case Op::DefineReadValue: ((StringParser*)a)->ReadString(sConfValue, false); return 0;
+    case Op::DefineNameEmpty: return (sConfName.empty()) ? 1 : 0;
+    case Op::DefineStore: c->mDefines[sConfName] = sConfValue; return 0;
+    case Op::BaseHandleValue: return WonGuard([&] { return c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc); });
+    }
+    return 0;
+}
+
 }
 
 #endif

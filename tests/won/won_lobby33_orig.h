@@ -407,6 +407,57 @@ static void ChatLinkInit(ChatLink* self, const EeWonLobbyCtlLink& l)
     }
 }
 
+static void ConfConstruct(LobbyConfig* self)
+{
+    self->KeyAdd("DirServer", self->mDirServers, NULL, true);
+    self->KeyAdd("RoomDirServer", self->mRoomDirServers, NULL, true);
+    self->KeyAdd("AuthServers", self->mAuthServers, NULL, true);
+    self->KeyAdd("ProductName", self->mProductName, NULL);
+    self->KeyAdd("ProductDirectory", self->mProductDirectory, NULL);
+    self->KeyAdd("ResourceDirectory", self->mResourceDirectory, NULL);
+    self->KeyAdd("Version", self->mVersion, NULL);
+    self->KeyAdd("LanVersion", self->mLanVersion, NULL);
+    self->KeyAdd("Language", self->mLanguage, "");
+    self->KeyAdd("CRCCheck", self->mCRCCheck, true);
+    self->KeyAdd("CDKeyCheck", self->mCDKeyCheck, true);
+    self->KeyAdd("Public", self->mPublic, false);
+    self->KeyAdd("LanBroadcastPort", self->mLanBroadcastPort, 8585);
+    self->KeyAdd("NoPingInProgress", self->mNoPingInProgress, true);
+    self->KeyAdd("LobbyPort", self->mLobbyPort, 8888);
+    self->KeyAdd("CheckForInternet", self->mCheckForInternet, true);
+    self->KeyAdd("PingCeiling", self->mPingCeiling, 1000);
+    self->KeyAdd("AllowDuplicateNames", self->mAllowDuplicateNames, true);
+    self->KeyAdd("AppendNumberToDefaultLanName", self->mAppendNumberToDefaultLanName, true);
+    self->KeyAdd("AllowJoinGameWithoutPing", self->mAllowJoinGameWithoutPing, true);
+
+    bool useLocalIP = false;
+    const char* regKey = "SOFTWARE\\Sierra\\WONLobby";
+    const char* valueName = "UseLocalIP";
+    int hive = 2;
+    RegKey registry(hive, regKey, false, true);
+    DWORD value = 0;
+    if (registry.QueryDWORD(valueName, value) == 0)
+        useLocalIP = value != 0;
+    self->mUseLocalIP = useLocalIP;
+    // The config key writes the global gLobbyUseLocalIP (0x96634d), which nothing reads, not mUseLocalIP:
+    // a UseLocalIP line in WONLobby.cfg has no effect, only the registry value counts
+    self->KeyAdd(valueName, gLobbyUseLocalIP, useLocalIP);
+}
+
+static bool ConfHandleValue(LobbyConfig* self, ConfigParser* parser, const std::string& key, StringParser& values)
+{
+    if (key == "LOBBYDEFINE") {
+        std::string name;
+        std::string value;
+        values.ReadString(name, true);
+        values.ReadString(value, false);
+        if (!name.empty())
+            self->mDefines[name] = value;
+        return true;
+    }
+    return self->ConfigObject::HandleValueInstruction(parser, key, values);
+}
+
 }
 
 #endif

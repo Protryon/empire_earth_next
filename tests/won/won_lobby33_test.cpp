@@ -17,6 +17,7 @@
 #include "rust/won_lobby/lobbyprv.h"
 #include "rust/won_lobby/modelbuf.h"
 #include "rust/won_lobby/chatlink.h"
+#include "rust/won_lobby/lobbyconf.h"
 #include "won_lobby33_orig.h"
 #include "won_lobby33_new.h"
 
@@ -79,6 +80,15 @@ static intptr_t MutLink(void* inLink, EeWonChatLinkOp inOp, intptr_t a)
     if (sMutate == 15 && inOp == EeWonChatLinkOp::ClearPrevious) return 0;
     if (sMutate == 16 && inOp == EeWonChatLinkOp::AddressOfServer) return 0;
     return L33New::ChatLinkHost(inLink, inOp, a);
+}
+static std::map<int, int> sConfHits;
+static intptr_t MutConf(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intptr_t b, intptr_t c)
+{
+    sConfHits[(int)inOp]++;
+    if (sMutate == 17 && inOp == EeWonLobbyConfOp::KeyPingCeiling) return 0;
+    if (sMutate == 18 && inOp == EeWonLobbyConfOp::DefineLocalsClear) return 0;
+    if (sMutate == 19 && inOp == EeWonLobbyConfOp::RegistryValue) return 0;
+    return L33New::ConfHost(inConfig, inOp, a, b, c);
 }
 static intptr_t NewBuf(void* inObj, EeWonModelBufCall inCall, intptr_t a, intptr_t b, intptr_t c)
 {
@@ -436,16 +446,69 @@ static void LinkCases()
         }
 }
 
+// ---- LobbyConfig: the constructor over the registry's answers, HandleValueInstruction over its lines
+
+static void ConfCases()
+{
+    for (int k = 0; k < 4; k++) {
+        std::vector<std::string> aTraces[2];
+        for (int aSide = 0; aSide < 2; aSide++) {
+            sObjects.clear();
+            sTrace.clear();
+            sRegistry = k < 2 ? 0 : 2;
+            sRegistryValue = (k & 1) ? 5 : 0;
+            gLobbyUseLocalIP = true;
+            LobbyConfig* c = new LobbyConfig;
+            if (aSide == 0) L33Orig::ConfConstruct(c);
+            else ee_won_lobbyconf_call(c, MutConf, EeWonLobbyConfCall::Construct, 0, 0, 0);
+            Log("useLocalIP " + N(c->mUseLocalIP) + " global " + N(gLobbyUseLocalIP));
+            aTraces[aSide].swap(sTrace);
+        }
+        Compare("ConfConstruct", aTraces);
+    }
+    static const char* kKeys[3] = {"LOBBYDEFINE", "LobbyDefine", "DirServer"};
+    static const char* kLines[3] = {"Product EmpireEarth Gold", "", "  lan"};
+    for (int k = 0; k < 27; k++) {
+        std::vector<std::string> aTraces[2];
+        for (int aSide = 0; aSide < 2; aSide++) {
+            sObjects.clear();
+            sTrace.clear();
+            ConfigParser::sNext = 0;
+            sBaseValue = k / 9;
+            LobbyConfig* c = new LobbyConfig;
+            c->mDefines["old"] = "1";
+            ConfigParser aParser;
+            std::string aKey(kKeys[k % 3]);
+            StringParser aValues(kLines[(k / 3) % 3]);
+            sTrace.clear();
+            try {
+                bool r;
+                if (aSide == 0) r = L33Orig::ConfHandleValue(c, &aParser, aKey, aValues);
+                else r = WonRethrow(ee_won_lobbyconf_call(c, MutConf, EeWonLobbyConfCall::HandleValue, (intptr_t)&aParser, (intptr_t)&aKey, (intptr_t)&aValues)) != 0;
+                Log("result " + N(r));
+            } catch (WorldThrow& e) {
+                Log("threw " + N(e.mWhich));
+            }
+            std::string d;
+            for (const auto& e : c->mDefines) d += e.first + "=" + e.second + ";";
+            Log("defines " + d);
+            aTraces[aSide].swap(sTrace);
+        }
+        Compare("ConfHandleValue", aTraces);
+    }
+}
+
 int main()
 {
     const char* m = getenv("EE_L33_MUTATE");
     sMutate = m != NULL ? atoi(m) : 0;
     PrvCases();
     LinkCases();
+    ConfCases();
     int aPrvChecks = sChecks;
     for (int aCall = 0; aCall < 10; aCall++)
         for (unsigned seed = 1; seed <= 3000; seed++) BufCase(aCall, seed * 7919u + (unsigned)aCall);
-    printf("won_lobby33_test: WONLobbyPrv and ChatLink %d cases, the model's buffers %d cases, %d mismatches\n", aPrvChecks,
+    printf("won_lobby33_test: WONLobbyPrv, ChatLink and LobbyConfig %d cases, the model's buffers %d cases, %d mismatches\n", aPrvChecks,
            sChecks - aPrvChecks, sFailures);
     for (const auto& f : sFailed) printf("  %s: %d\n", f.first.c_str(), f.second);
     // every op of the two hosts reached (their enums' last values: AllocPlayerOptionsCtrl, PlayerWriteData)
@@ -460,14 +523,19 @@ int main()
             printf("  buf op %d not reached\n", i);
             aMissed++;
         }
+    for (int i = 1; i <= (int)EeWonLobbyConfOp::BaseHandleValue; i++)
+        if (sConfHits.count(i) == 0) {
+            printf("  conf op %d not reached\n", i);
+            aMissed++;
+        }
     for (int i = 1; i <= (int)EeWonChatLinkOp::ClearPrevious; i++)
         if (sLinkHits.count(i) == 0) {
             printf("  link op %d not reached\n", i);
             aMissed++;
         }
-    printf("ops reached: %d of %d\n", (int)(sPrvHits.size() + sBufHits.size() + sLinkHits.size()),
+    printf("ops reached: %d of %d\n", (int)(sPrvHits.size() + sBufHits.size() + sLinkHits.size() + sConfHits.size()),
            (int)EeWonLobbyPrvOp::AllocPlayerOptionsCtrl + (int)EeWonModelBufOp::PlayerWriteData +
-               (int)EeWonChatLinkOp::ClearPrevious);
+               (int)EeWonChatLinkOp::ClearPrevious + (int)EeWonLobbyConfOp::BaseHandleValue);
     if (sMutate == 0) sFailures += aMissed;
     if (sMutate != 0) {
         printf("mutation %d: %s\n", sMutate, sFailures > 0 ? "caught" : "MISSED");
