@@ -13,6 +13,8 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/guiconf.h"
+#include "ee/wonapi/WONLobbyGuard.h"
+#include "rust/won_lobby/lobbycfgrd.h"
 #include "ee/wonapi/WONGUIShell.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won_gui/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
@@ -61,16 +63,29 @@ void CrossPromotionButton::HandleComponentEvent(ComponentEvent* event) {
     else Component::HandleComponentEvent(event);
 }
 // Reads the DEFAULTIMAGE and DEFAULTBROWSE layout keys; passes other keys to the image button config
-bool CrossPromotionButtonConfig::Virtual24(const std::string& key) {
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CROSSPROMOTIONBUTTONCONFIG_VIRTUAL24_KEY,key.data(),key.size());
-    if(aKeyIdx==0)
-        this->mCrossPromotionButton->SetDefaultImage(this->ReadImage(false));
-    else if(aKeyIdx==1)
-        this->mCrossPromotionButton->SetDefaultBrowse(this->ReadString(false));
-    else
-        return ComponentConfig::Virtual24(key);
-    return true;
+// the readers' statements (lobbycfgrd.rs composes them, R6 WON round 33)
+// the config readers' reads (LobbyNetCtrlHost.cpp)
+intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc);
+static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+{
+    typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    CrossPromotionButtonConfig* cp = static_cast<CrossPromotionButtonConfig*>(c);
+    ImageTextButtonConfig* it = static_cast<ImageTextButtonConfig*>(c);
+    switch (inOp) {
+    case Op::CrossBase: return WonGuard([&] { return (intptr_t)(cp->ComponentConfig::Virtual24(*(const std::string*)a)); });
+    case Op::CrossDefaultImageRead: return WonGuardV([&] { cp->mCrossPromotionButton->SetDefaultImage(c->ReadImage(false)); });
+    case Op::CrossDefaultBrowseRead: return WonGuardV([&] { cp->mCrossPromotionButton->SetDefaultBrowse(c->ReadString(false)); });
+    case Op::ImageTextBase: return WonGuard([&] { return (intptr_t)(it->ComponentConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ImageTextFontRead: return WonGuardV([&] { it->mImageTextButton->mFont = c->ReadFont(); });
+    case Op::ImageTextTextRead: return WonGuardV([&] { it->mImageTextButton->mText = c->ReadString(false); });
+    case Op::ImageTextBrowseRead: return WonGuardV([&] { it->mImageTextButton->mBrowse = c->ReadString(false); });
+    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
+    }
 }
+static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0) { return WonRethrow(ee_won_lobbycfgrd_call(inCfg, CfgRdHost, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d)); }
+
+bool CrossPromotionButtonConfig::Virtual24(const std::string& key) { return CfgRd(this, EeWonLobbyCfgRdCall::CrossPromotion, key) != 0; }
 // Attaches the config to the cross-promotion button it configures
 void CrossPromotionButtonConfig::SetComponent(Component* component) {
     ComponentConfig::SetComponent(component);
@@ -78,18 +93,7 @@ void CrossPromotionButtonConfig::SetComponent(Component* component) {
 }
 
 // Reads the FONT, TEXT and BROWSELOCATION layout keys; passes other keys to the image button config
-bool ImageTextButtonConfig::Virtual24(const std::string& key) {
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGETEXTBUTTONCONFIG_VIRTUAL24_KEY,key.data(),key.size());
-    if(aKeyIdx==0)
-        this->mImageTextButton->mFont=this->ReadFont();
-    else if(aKeyIdx==1)
-        this->mImageTextButton->mText=this->ReadString(false);
-    else if(aKeyIdx==2)
-        this->mImageTextButton->mBrowse=this->ReadString(false);
-    else
-        return ComponentConfig::Virtual24(key);
-    return true;
-}
+bool ImageTextButtonConfig::Virtual24(const std::string& key) { return CfgRd(this, EeWonLobbyCfgRdCall::ImageText, key) != 0; }
 
 void ImageTextButtonConfig::SetComponent(Component* component) {
     ComponentConfig::SetComponent(component);

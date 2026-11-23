@@ -199,6 +199,7 @@
 #include "rust/won_lobby/lanlogic.h"
 #include "rust/won_lobby/lanobj.h"
 #include "rust/won_lobby/lobbycfg.h"
+#include "rust/won_lobby/lobbycfgrd.h"
 #include "rust/won_lobby/lobbyconf.h"
 #include "rust/won_lobby/lobbyctl.h"
 #include "rust/won_lobby/lobbydlg.h"

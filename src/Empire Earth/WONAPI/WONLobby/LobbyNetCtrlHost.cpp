@@ -38,6 +38,8 @@
 #include "rust/won_lobby/chatctl.h"
 #include "rust/won_lobby/rows.h"
 #include "rust/won_net/ipobj.h"
+#include "ee/wonapi/WONLobbyGuard.h"
+#include "rust/won_lobby/lobbycfgrd.h"
 using namespace WONAPI;
 
 // The filter combo's add/remove row (RTTI .?AVFilterListItem@@): a TextListItem with no new virtuals
@@ -290,23 +292,66 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
 
 // ---- the room label's and the user list's config readers (RoomLabelCtrl.cpp's, UserListCtrl.cpp's)
 
-// Reads the PREFIX, GROUPTYPE (CHAT or GAME), SHOWUSERCOUNT and SHOWSERVER layout keys
-bool RoomLabelCtrlConfig::Virtual24(const std::string& inKey)
+// ---- the config readers: their bodies are lobbycfgrd.rs's (R6 WON round 33) over these statements
+
+static intptr_t CfgAddColumn(ServerListCtrl* inList, const std::string& inName) { return inList->Cfg(EeWonLobbyCtlCfg::AddColumn, (intptr_t)inName.data(), (intptr_t)inName.size()); }
+intptr_t LobbyCfgReadHost(ComponentConfig* c, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
 {
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_ROOMLABELCTRLCONFIG_VIRTUAL24_INKEY,inKey.data(),inKey.size());
-    if(aKeyIdx==0) this->mRoomLabel->SetField(0,Dat(this->ReadString(false)));
-    else if(aKeyIdx==1)
-    {
-        GUIString aGroup=this->ReadString(false);
-        if(aGroup.CompareNoCase("CHAT",0)==0) this->mRoomLabel->SetField(1,1);
-        else if(aGroup.CompareNoCase("GAME",0)==0) this->mRoomLabel->SetField(1,2);
-        else throw ConfigObjectException("Invalid Group Type: "+(std::string)aGroup);
+    typedef EeWonLobbyCfgRdOp Op;
+    switch (inOp) {
+    case Op::ReadString: return WonGuard([&] { return (intptr_t)(Held(c->ReadString(false))); });
+    case Op::ReadColor: return WonGuard([&] { return (intptr_t)(c->ReadColor()); });
+    case Op::ReadInt: return WonGuard([&] { return (intptr_t)(c->ReadInt()); });
+    case Op::EnsureComma: return WonGuardV([&] { c->EnsureComma(); });
+    case Op::EndOfString: return WonGuard([&] { return (intptr_t)(c->EndOfString()); });
+    case Op::FindNamed: return WonGuard([&] { return (intptr_t)(c->Fn386860(std::string((const char*)a))); });
+    case Op::FindNamedText: return WonGuard([&] { return (intptr_t)(c->Fn386860((std::string)Txt(a))); });
+    case Op::TextRelease: ((GUIStringData*)a)->Release(); return 0;
+    case Op::TextNameIndex: return (intptr_t)(ee_won_gui_cfg_name((int)b, ((GUIStringData*)a)->mText, ((GUIStringData*)a)->mLength, sizeof(wchar_t)));
+    case Op::TextIsNoCase: return (Txt(a).CompareNoCase((const char*)b, 0) == 0) ? 1 : 0;
+    case Op::Throw: return WonGuardV([&] { throw ConfigObjectException(std::string((const char*)a)); });
+    case Op::ThrowWithText: return WonGuardV([&] { throw ConfigObjectException(std::string((const char*)a) + (std::string)Txt(b)); });
     }
-    else if(aKeyIdx==2) this->mRoomLabel->SetField(2,this->ReadBool());
-    else if(aKeyIdx==3) this->mRoomLabel->SetField(3,this->ReadBool());
-    else return ContainerConfig::Virtual24(inKey);
-    return true;
+    return 0;
 }
+static intptr_t CfgRdHost(void* inCfg, EeWonLobbyCfgRdOp inOp, intptr_t a, intptr_t b, intptr_t cc)
+{
+    typedef EeWonLobbyCfgRdOp Op;
+    ComponentConfig* c = static_cast<ComponentConfig*>(inCfg);
+    ChatCtrlConfig* cc_ = static_cast<ChatCtrlConfig*>(c);
+    RoomLabelCtrlConfig* rl = static_cast<RoomLabelCtrlConfig*>(c);
+    UserListCtrlConfig* ul = static_cast<UserListCtrlConfig*>(c);
+    ServerListCtrlConfig* sl = static_cast<ServerListCtrlConfig*>(c);
+    switch (inOp) {
+    case Op::ChatBase: return WonGuard([&] { return (intptr_t)(cc_->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ChatSetField: cc_->mChatCtrl->SetField((int)a, b); return 0;
+    case Op::RoomBase: return WonGuard([&] { return (intptr_t)(rl->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::RoomSetPrefixRead: return WonGuardV([&] { rl->mRoomLabel->SetField(0, Dat(c->ReadString(false))); });
+    case Op::RoomSetField: rl->mRoomLabel->SetField((int)a, b); return 0;
+    case Op::RoomSetFieldBoolRead: return WonGuardV([&] { rl->mRoomLabel->SetField((int)a, c->ReadBool()); });
+    case Op::UserListBase: return WonGuard([&] { return (intptr_t)(ul->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ServerBase: return WonGuard([&] { return (intptr_t)(sl->ContainerConfig::Virtual24(*(const std::string*)a)); });
+    case Op::ServerNamedBase: return WonGuard([&] { return (intptr_t)(sl->ComponentConfig::GetNamedValue(*(const std::string*)a, *(int*)b)); });
+    case Op::ServerCfg: return (intptr_t)(sl->mServerList->Cfg((EeWonLobbyCtlCfg)a, b));
+    case Op::ServerPushColumn: return (intptr_t)(sl->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, a, b));
+    case Op::ServerAddColumnText: return (intptr_t)(CfgAddColumn(sl->mServerList, (std::string)Txt(a)));
+    case Op::ServerAddGameOption: LobbyAddGameOption(Txt(a), Txt(b), false); return 0;
+    case Op::AsMultiList: return (intptr_t)(dynamic_cast<MultiListArea*>((Component*)a));
+    case Op::ServerHeaderFrom: return (intptr_t)(sl->mHeader = dynamic_cast<MultiListHeader*>((Component*)a));
+    case Op::ServerHeaderIsNull: return (sl->mHeader == NULL) ? 1 : 0;
+    case Op::ReadCombo: return WonGuard([&] { return (intptr_t)(SafeConfigGetComponent<ComboBox*>(c->ReadComponent(), "ComboBox")); });
+    case Op::ServerColumnsInc: ((MultiListArea*)a)->SetNumColumns(++sl->mNumColumns); return 0;
+    case Op::ServerNumColumns: return (intptr_t)(sl->mNumColumns);
+    case Op::ListDynamicColumn: ((MultiListArea*)a)->SetDynamicSizeColumn((int)b); return 0;
+    case Op::ListColumnWidth: ((MultiListArea*)a)->SetColumnWidth((int)b, (int)cc, false); return 0;
+    case Op::ServerHeaderSetColumnItem: sl->mHeader->SetColumnItem(sl->mNumColumns - 1, (Component*)a); return 0;
+    default: return LobbyCfgReadHost(c, inOp, a, b, cc);
+    }
+}
+static intptr_t CfgRd(ComponentConfig* inCfg, EeWonLobbyCfgRdCall inCall, const std::string& inKey, intptr_t d = 0) { return WonRethrow(ee_won_lobbycfgrd_call(inCfg, CfgRdHost, inCall, (intptr_t)inKey.data(), (intptr_t)inKey.size(), (intptr_t)&inKey, d)); }
+
+// Reads the PREFIX, GROUPTYPE (CHAT or GAME), SHOWUSERCOUNT and SHOWSERVER layout keys
+bool RoomLabelCtrlConfig::Virtual24(const std::string& inKey) { return CfgRd(this, EeWonLobbyCfgRdCall::RoomLabel, inKey) != 0; }
 // SetComponent has no address of its own: the linker folded it with the identical body at 0x79afb0
 void RoomLabelCtrlConfig::SetComponent(Component* inComponent)
 {
@@ -314,32 +359,11 @@ void RoomLabelCtrlConfig::SetComponent(Component* inComponent)
     ContainerConfig::SetComponent(inComponent);
 }
 // Accepts (and ignores) the GROUPTYPE and CTRLLINKID layout keys; passes other keys to the container's reader
-bool UserListCtrlConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_USERLISTCTRLCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0 || aKeyIdx==1) return true;
-    return ContainerConfig::Virtual24(instruction);
-}
+bool UserListCtrlConfig::Virtual24(const std::string& instruction) { return CfgRd(this, EeWonLobbyCfgRdCall::UserList, instruction) != 0; }
 
 // ChatCtrlConfig (WONLobbyControlConfig.h): GROUPTYPE (CHAT, GAME or TEAM) and the text colours, stored in the panel's
 // Rust object
-bool ChatCtrlConfig::Virtual24(const std::string& inKey)
-{
-    const int aKeyIdx = ee_won_gui_cfg_key(EE_WON_CFG_KEYS_CHATCTRLCONFIG_VIRTUAL24_INKEY, inKey.data(), inKey.size());
-    if (ContainerConfig::Virtual24(inKey)) return true;
-    if (aKeyIdx == 0) {
-        GUIString group = this->ReadString(false);
-        const int aName = ee_won_gui_cfg_name(EE_WON_CFG_NAMES_CHATCTRLCONFIG_VIRTUAL24_GROUP, group.mData->mText, group.mData->mLength, sizeof(wchar_t));
-        if (aName < 0 || aName > 2) throw ConfigObjectException("Invalid Group Type: " + (std::string)group);
-        this->mChatCtrl->SetField(20, aName == 0 ? 1 : aName == 1 ? 2 : 0x12);
-    } else if (aKeyIdx == 1) {
-    } else if (aKeyIdx >= 2 && aKeyIdx <= 12) {
-        // DEFAULT, ERROR, HELP, USER, EMOTE, WHISPER, WARNING, GROUP, MESSAGE, ACCEPT, REJECT
-        static const int kColor[11] = {0, 5, 6, 1, 3, 2, 4, 7, 8, 9, 10};
-        this->mChatCtrl->SetField(kColor[aKeyIdx - 2], this->ReadColor());
-    } else return false;
-    return true;
-}
+bool ChatCtrlConfig::Virtual24(const std::string& inKey) { return CfgRd(this, EeWonLobbyCfgRdCall::ChatCtrl, inKey) != 0; }
 // Remembers the configured component as the chat panel (the original's body is at 0x7c8380; no marker)
 void ChatCtrlConfig::SetComponent(Component* inComponent)
 {
@@ -524,75 +548,11 @@ void ServerListCtrlConfig::SetComponent(Component* inComponent)
     this->mServerList = static_cast<ServerListCtrl*>(inComponent);
 }
 // Answers NUMCOLUMNS with the list's column count, else asks the base config
-bool ServerListCtrlConfig::GetNamedValue(const std::string& inName, int& outValue)
-{
-    const int aKeyIdx = ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SERVERLISTCTRLCONFIG_GETNAMEDVALUE_INNAME, inName.data(), inName.size());
-    if (aKeyIdx == 0) { outValue = (int)this->mServerList->Cfg(EeWonLobbyCtlCfg::ColumnCount); return true; }
-    return ComponentConfig::GetNamedValue(inName, outValue);
-}
+bool ServerListCtrlConfig::GetNamedValue(const std::string& inName, int& outValue) { return CfgRd(this, EeWonLobbyCfgRdCall::ServerListNamed, inName, (intptr_t)&outValue) != 0; }
 // Handles the LISTID, ADDCOLUMN, DEFAULTFILTER, NUMCOLUMNS and SETCOLUMNFILTERTYPE layout instructions
-bool ServerListCtrlConfig::Virtual24(const std::string& inInstruction)
-{
-    const int aKeyIdx = ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SERVERLISTCTRLCONFIG_VIRTUAL24_ININSTRUCTION, inInstruction.data(), inInstruction.size());
-    if (ContainerConfig::Virtual24(inInstruction)) return true;
-    if (aKeyIdx == 0) {
-        GUIString aType = this->ReadString(false);
-        const int aName = ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_ATYPE, aType.mData->mText, aType.mData->mLength, sizeof(wchar_t));
-        if (aName < 0 || aName > 2) throw ConfigObjectException("Invalid server list id: " + static_cast<std::string>(aType));
-        this->mServerList->Cfg(EeWonLobbyCtlCfg::SetGameType, aName == 0 ? 2 : aName == 1 ? 1 : 3);
-    } else if (aKeyIdx == 1) this->HandleAddColumn();
-    else if (aKeyIdx == 2) {
-        GUIString aColumn = this->ReadString(false);
-        this->EnsureComma();
-        GUIString aFilters = this->ReadString(false);
-        LobbyAddGameOption(aColumn, aFilters, false);
-    } else if (aKeyIdx == 3) this->mServerList->Cfg(EeWonLobbyCtlCfg::SetNumColumns, this->ReadInt());
-    else if (aKeyIdx == 4) {
-        this->ReadInt();
-        this->EnsureComma();
-        GUIString aType = this->ReadString(false);
-        // the filter type is only validated; ReadInt's column and the type are not kept
-        const int aName = ee_won_gui_cfg_name(EE_WON_CFG_NAMES_SERVERLISTCTRLCONFIG_VIRTUAL24_ATYPE, aType.mData->mText, aType.mData->mLength, sizeof(wchar_t));
-        if (aName < 3 || aName > 5) throw ConfigObjectException("Unknown filter type: " + static_cast<std::string>(aType));
-    } else return false;
-    return true;
-}
+bool ServerListCtrlConfig::Virtual24(const std::string& inInstruction) { return CfgRd(this, EeWonLobbyCfgRdCall::ServerList, inInstruction) != 0; }
 // Adds a defined column (header component, width, filter combo) if it applies to the list's game type
-void ServerListCtrlConfig::HandleAddColumn()
-{
-    MultiListArea* aList = (MultiListArea*)this->mServerList->Cfg(EeWonLobbyCtlCfg::List);
-    if (aList == NULL) {
-        Component* aComponent = this->Fn386860(std::string("ServerList"));
-        if (aComponent == NULL) throw ConfigObjectException("Need ServerList before calling AddColumn");
-        aList = dynamic_cast<MultiListArea*>(aComponent);
-        if (aList == NULL) throw ConfigObjectException("ServerList needs to be a MultiListArea");
-        this->mServerList->Cfg(EeWonLobbyCtlCfg::SetList, (intptr_t)aList);
-        aComponent = this->Fn386860(std::string("ServerListHeader"));
-        if (aComponent == NULL) throw ConfigObjectException("Need ServerList header before calling AddColumn");
-        this->mHeader = dynamic_cast<MultiListHeader*>(aComponent);
-        if (this->mHeader == NULL) throw ConfigObjectException("ServerListHeader needs to be a MultiListHeader");
-    }
-    GUIString aColumn = this->ReadString(false);
-    this->EnsureComma();
-    Component* aComponent = this->Fn386860(aColumn);
-    if (aComponent == NULL) throw ConfigObjectException("Component not found: " + static_cast<std::string>(aColumn));
-    int aWidth = this->ReadInt();
-    ComboBox* aCombo = NULL;
-    if (!this->EndOfString()) {
-        this->EnsureComma();
-        aCombo = SafeConfigGetComponent<ComboBox*>(this->ReadComponent(), "ComboBox");
-    }
-    std::string aName = aColumn;
-    intptr_t aDef = this->mServerList->Cfg(EeWonLobbyCtlCfg::AddColumn, (intptr_t)aName.data(), (intptr_t)aName.size());
-    if (aDef < 0) throw ConfigObjectException("Column not defined: " + aName);
-    if (aDef == 0) return;
-    aList->SetNumColumns(++this->mNumColumns);
-    int aCol = this->mNumColumns;
-    if (aWidth == 0) aList->SetDynamicSizeColumn(--aCol);
-    else aList->SetColumnWidth(--aCol, aWidth, false);
-    this->mHeader->SetColumnItem(this->mNumColumns - 1, aComponent);
-    this->mServerList->Cfg(EeWonLobbyCtlCfg::PushColumn, aDef - 1, (intptr_t)aCombo);
-}
+void ServerListCtrlConfig::HandleAddColumn() { CfgRd(this, EeWonLobbyCfgRdCall::ServerListAddColumn, std::string()); }
 // Creates the layout config with no header and no columns
 ServerListCtrlConfig::ServerListCtrlConfig()
 {

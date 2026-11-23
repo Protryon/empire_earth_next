@@ -28,6 +28,7 @@ pub mod lanlogic;
 pub mod lanobj;
 pub mod lanown;
 pub mod lobbycfg;
+pub mod lobbycfgrd;
 pub mod lobbyconf;
 pub mod lobbyctl;
 pub mod lobbydlg;
