@@ -25,6 +25,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
+#include "won_thread_orig.h" // the C++ thread shims as they were (the game's socket thread is Rust's)
 #include "platform/PlatFile.h"
 #include "platform/PlatPath.h"
 
@@ -268,6 +269,9 @@ void OrigCoreEx::SetDoSocketAndTimerThreads(bool doSocketAndTimerThreads)
 
 class PortCore : public WONAPICoreEx {
 public:
+    // over the C++ socket thread table the core had (won_thread_orig.h: SocketThreadSimple by default, the stand-ins
+    // set): the core's calls on its socket thread are what this driver compares
+    PortCore() : WONAPICoreEx(WonApiHooks()) {}
     static void AddSock(SocketOp* inOp) { WONAPICore::AddToSocketThread(inOp); }
     static void RemoveSock(SocketOp* inOp) { WONAPICore::RemoveFromSocketThread(inOp); }
 };
@@ -297,7 +301,7 @@ template <> struct Ops<OrigCore, OrigCoreEx> {
     static void AddSock(SocketOp* o) { OrigCore::AddToSocketThread(o); }
     static void RemoveSock(SocketOp* o) { OrigCore::RemoveFromSocketThread(o); }
 };
-template <> struct Ops<WONAPICore, WONAPICoreEx> {
+template <> struct Ops<WONAPICore, PortCore> {
     static void AddSock(SocketOp* o) { PortCore::AddSock(o); }
     static void RemoveSock(SocketOp* o) { PortCore::RemoveSock(o); }
 };
@@ -411,7 +415,7 @@ int main(int argc, char** argv)
         Sequence<OrigCore, OrigCoreEx>(s);
         std::vector<std::string> aWant = sLines;
         sLines.clear();
-        Sequence<WONAPICore, WONAPICoreEx>(s);
+        Sequence<WONAPICore, PortCore>(s);
         aLines += aWant.size();
         if (aWant != sLines) {
             aDiffering++;

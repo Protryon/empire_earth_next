@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/apicore.h"
 #include "rust/won_net/hostop.h"
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
@@ -60,6 +61,10 @@ size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
 /// `core` is the library's static table; `op` is a live op.
 bool ee_won_socket_thread_do_op(const EeWonCoreHooks *core,
                                 void *op);
+
+/// The core's socket thread table (`WONAPICore`'s): the library's own socket thread, [`EeWonApiSocketThread`].
+/// A socket thread set on a core with this table (`ee_won_api_set_socket_thread`) must be one it made.
+const EeWonApiHooks *ee_won_api_socket_hooks();
 
 }  // extern "C"
 

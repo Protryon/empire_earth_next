@@ -23,6 +23,10 @@ constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
 /// the public address's host, set with port 0 (`ee_won_hostop_num`)
 constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
 
+/// the public address with port 0, six bytes, none without one (`ee_won_hostop_bytes`; DetectFirewallOp's
+/// GetPublicAddr, R6 WON lobby and network round 35: `RustServerOp::AddrOf`)
+constexpr static const int32_t EE_WON_FWOP_PUBLIC_ADDR = 6;
+
 extern "C" {
 
 /// A new `DetectFirewallOp`: its server context (`EE_WON_REQHOST_CONTEXT`) is set after the bind.

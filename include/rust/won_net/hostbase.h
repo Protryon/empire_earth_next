@@ -40,6 +40,15 @@ constexpr static const int32_t EE_WON_HOSTBASE_SEND_TIME = 10;
 
 constexpr static const int32_t EE_WON_HOSTBASE_RECV_TIME = 11;
 
+/// What a new op of the game is given after its bind (R6 WON lobby and network round 35: the constructor of the C++
+/// subclass DetectFirewallOp, deleted; `RustServerOp::NewFirewall`).
+enum class EeWonHostInit {
+  /// nothing more
+  None = 0,
+  /// `DetectFirewallOp(obj)`: the server context `obj` (`Set(EE_WON_REQHOST_CONTEXT, obj)`)
+  Firewall = 1,
+};
+
 extern "C" {
 
 /// The op's member by number (`ServerOp`'s accessors).
@@ -81,6 +90,18 @@ void ee_won_hostop_set_auth(const EeWonHostOp *op,
 void ee_won_hostop_set_client_key(const EeWonHostOp *op,
                                   uint8_t size,
                                   bool use_client_key);
+
+/// The game's op bound as [`ee_won_hostop_bind_native`] (no function; the host is the op), then given `init`'s
+/// members (`RustServerOp`'s constructor with an init).
+///
+/// # Safety
+/// As [`ee_won_hostop_bind_native`] and [`host_init`].
+void ee_won_hostop_bind_init(const EeWonHostOp *op,
+                             void *self_op,
+                             const EeWonAsyncOp *self_obj,
+                             const EeWonOpTracker *tracker,
+                             EeWonHostInit init,
+                             void *obj);
 
 }  // extern "C"
 
