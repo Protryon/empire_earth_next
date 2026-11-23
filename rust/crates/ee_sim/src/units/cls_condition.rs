@@ -543,7 +543,9 @@ fn ship<H: CondHost + ?Sized>(h: &mut H, x: &Ctx, other: fn(&mut H, &Ctx) -> i32
 
 /// Whether the dying ship's bounding box, placed at its position with its model's internal transform and scale, is
 /// below the water (its top right back corner's z under 0).
-fn sunk<H: CondHost + ?Sized>(h: &mut H, unit: u64) -> bool {
+/// Whether the unit's transformed bounding box lies wholly below the water line (`EE_UNITS_COND_SUNK_*`, in
+/// the C++'s order): the trigger's sunk test and the naval building's `HasSunk` (uck_dispatch.rs), one body.
+pub(crate) fn sunk<H: CondHost + ?Sized>(h: &mut H, unit: u64) -> bool {
     for op in [
         EE_UNITS_COND_SUNK_POSITION,
         EE_UNITS_COND_SUNK_LOCATE,

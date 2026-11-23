@@ -678,6 +678,9 @@ impl QueryHost for EeCombatWorldHost {
     fn footprint_tile(&mut self, object: EeCombatHandle) -> (i32, i32) {
         self.query.footprint_tile(object)
     }
+    fn region_units(&mut self, unit: EeCombatHandle) -> Option<Vec<EeCombatHandle>> {
+        self.query.region_units(unit)
+    }
 }
 
 impl WorldHost for EeCombatWorldHost {

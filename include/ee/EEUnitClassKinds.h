@@ -56,9 +56,6 @@ public:
     EEUCNote& C(const EEUnitClass* inClass);
     EEUCNote& P(const GE3DPoint& inPoint) { return this->F(inPoint.mX).F(inPoint.mY).F(inPoint.mZ); }
     EEUCNote& T(const U2DPoint<long>& inTile) { return this->I(inTile.mX).I(inTile.mY); }
-    EEUCNote& Ts(const std::vector<U2DPoint<long> >& inTiles);
-    EEUCNote& Us(const std::vector<EEComplexUnit*>& inUnits);
-    EEUCNote& Us(const std::vector<EEUnit*>& inUnits);
     // a unit's path and goal: its waypoints, its location, its goal's kind and (a location goal) point
     EEUCNote& S(EEComplexUnit* inUnit);
     template <class V> V R(V inValue) { this->I((long)inValue); return inValue; }

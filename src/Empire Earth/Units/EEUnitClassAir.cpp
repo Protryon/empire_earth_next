@@ -51,38 +51,13 @@ EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRang
 
 // Takes off from the ground: rolls 3 ahead, climbs 7 ahead to 3/4 cruising height (plus the ground height when the
 // ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control
-bool EEUnitClass::LandableReturnToAirport(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(19); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
-    bool theResult = theNote.R(ee_units_cr_return_to_airport(EEObj(this), EEObj(inUnit)) != 0);
-    theNote.S(inUnit);
-    return theResult;
-}
-
 // Drops the path and adds a waypoint at the home carrier's take-off point (its tag point 2; its centre without tags)
-void EEUnitClass::RouteDockWaypoint(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(20); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
-    ee_units_cr_route_dock_waypoint(EEObj(inUnit));
-    theNote.S(inUnit);
-}
-
 // Gets the sound parameters, giving a moving plane's sound a Doppler pitch shift against the camera
 
 
 // Paths a plane from a point to its goal's location (move, patrol, explore, attack ground, unload, attack unit)
 // at cruising height; an explore goal without a target picks a new area first
-void EEUnitClass::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_FLY_TO_GOAL, this, inUnit, 0, 0, 0, &inPoint.mX);   // uca_air.rs
-}
-
 // Gives the ground height under a point (the closest tile's off the map; 0 under water)
-void EEUnitClass::GetGroundHeight(GE3DPoint& inPoint, float* outHeight)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_GROUND_HEIGHT, this, NULL, EEObj(outHeight), 0, 0, &inPoint.mX);   // uca_air.rs
-}
-
 // New (R5b.4, the fourteenth round): EEUCLandable::ActionChanged's operations that are more than a call, each the
 // original's statements of its branch (ee_units actions.rs decides which, in which order; EEUnitUpdate.cpp's host
 // calls this with the operation code). inoutAirport: FIND_NEAREST_AIRPORT's result, for SET_HOME_BASE_FOUND.
@@ -100,71 +75,20 @@ void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
 }
 
 // Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
-void EEUnitClass::LandableUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_CREATED, this, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
-
 // Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
 // half the area effect for the last bomb on a moving target, else 0.25 for the last bomb or none)
-bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(17); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_uca_call(EE_UNITS_UCA_DO_BOMB_ON_TARGET, this, inUnit, 0, 0, 0, NULL) != 0);   // uca_air.rs
-}
-
 // Plans a plane's approach to its home carrier's deck (tag point 0): turn, descent and touch-down (inSteep: the
 // full approach whatever the height), or just the deck when braking; makes the deck the move goal
-void EEUnitClass::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
-{
-    EEUCNote theNote(13); theNote.C(this).S(inUnit).U(inUnit->mHomeBase).I(inSteep);   // TEST ONLY (UCBD)
-    ee_units_cr_approach_carrier(EEObj(this), EEObj(inUnit), inSteep);
-    theNote.S(inUnit);
-}
-
 // Plans a take-off from the home carrier: on take-off, sits at the deck start (tag point 0) and heads for the
 // take-off point; otherwise flies off the deck end (tag point 2) towards the goal
-void EEUnitClass::TakeOffFromCarrier(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(14); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
-    ee_units_cr_take_off_from_carrier(EEObj(this), EEObj(inUnit));
-    theNote.S(inUnit).F(inUnit->mPhysicalModel.GetScale());
-}
-
 // Returns 0 (left) or 1 (right) when the next waypoint or goal lies inside the turning circle beside or behind
 // the plane, else 5 (ee_units cls_air.rs, R5b.4 round 33)
-unsigned long EEUnitClass::GetNextFlightState(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(12); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_next_flight_state(EEObj(inUnit)));
-}
-
 // Plans a land plane's runway approach in a direction: turn onto the line, descent and touch-down at the airport
 // (a navy yard: its pier), then makes the airport the move goal (ee_units cls_air.rs, R5b.4 round 33). The four
 // direction wrappers (0x616308..0x616338) and the take-off's (0x616430..0x616460) are the runway direction's table.
-void EEUnitClass::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
-{
-    EEUCNote theNote(15); theNote.C(this).S(inUnit).U(inUnit->mHomeBase).I(inDX).I(inDY);   // TEST ONLY (UCBD)
-    ee_units_cls_approach_runway(EEObj(this), EEObj(inUnit), (int32_t)inDX, (int32_t)inDY);
-    theNote.S(inUnit);   // TEST ONLY (UCBD)
-}
-
 // Plans a runway take-off in a direction: rolls 3 tiles low, climbs to 3/4 cruising height 7 tiles out, then
 // flies to the goal (ee_units cls_air.rs)
-void EEUnitClass::TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY)
-{
-    EEUCNote theNote(16); theNote.C(this).S(inUnit).I(inDX).I(inDY);   // TEST ONLY (UCBD)
-    ee_units_cls_take_off_from_runway(EEObj(this), EEObj(inUnit), (int32_t)inDX, (int32_t)inDY);
-    theNote.S(inUnit);   // TEST ONLY (UCBD)
-}
-
 // Returns whether the move goal is more than 1 from the home carrier's deck point (tag point 0): the carrier moved
-bool EEUnitClass::IsAwayFromGoal(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(18); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cr_is_away_from_goal(EEObj(inUnit)) != 0);
-}
-
 // Sets the opacity of a unit and the pieces linked after it (stops at the first already at the value)
 void EEComplexUnit::SetOpacityChain(float inValue)
 {
@@ -207,11 +131,6 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer)
 
 // Sends a leaving plane off the map: hands it to player 0, fuels it for 1000 s and flies it out 1000 tiles along
 // its direction from the map origin
-void EEUnitClass::FlyOffMap(EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_FLY_OFF_MAP, this, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
-
 // ---- EEUCAirAnimal.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The flying animal's
 // unit class: 0x20a279..0x20b192 (after EESelectedGroup.cpp's sort COMDATs; EEUCAirplane.cpp follows). One unit per
 // EEUC* class in alphabetical order (AirAnimal, Airplane, Ambient, BasicCitizen, BasicPriest, Bomb, Building, ...).
@@ -221,11 +140,6 @@ void EEUnitClass::FlyOffMap(EEComplexUnit* inUnit)
 
 
 // Lands the animal like a plane: two waypoints ahead (on the ground, then at 3/4 of cruise altitude) and a flight there
-bool EEUnitClass::AirAnimalReturnToAirport(EEComplexUnit* inUnit)
-{
-    return ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_RETURN, this, inUnit, 0, 0, 0, NULL) != 0;   // uca_air.rs
-}
-
 // Gets the base sound parameters, then Doppler-shifts the pitch of a moving animal by its speed toward the camera
 
 
@@ -243,11 +157,6 @@ void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit)
 }
 
 // Sets up a new animal on the ground (height 0)
-void EEUnitClass::AirAnimalUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_AIR_ANIMAL_CREATED, this, inUnit, 0, 0, 0, NULL);   // uca_air.rs
-}
-
 // ---- EEUCPlanetSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The planet
 // spaceship's unit class: 0x218e34..0x219143 (after EEUCNavalTransport.cpp; EEUCProjectile.cpp's +0xe0 0x219143
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); one own slot, +0x74.
@@ -281,12 +190,6 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 // +0xa0, +0xb8 in source order.
 
 // Returns a sound's volume, pan and pitch, with a doppler shift
-void EEUnitClass::SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
-                              float* outPitch)
-{
-    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_SPACESHIP, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
-}
-
 // The air animal's and the landable's sound parameters: the spaceship's Doppler pitch, but (as their own inline
 // bodies were) without the unit utilities' UUTL note of EEGetDopplerPitch
 void EEUnitClass::AirGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,

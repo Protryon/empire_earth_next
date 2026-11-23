@@ -7,7 +7,7 @@ importer writes where the text has none, and the TABLES rows describe each file'
 
 # Source files of the on-disk record structs (relative to the repository root).
 STRUCT_SOURCES = {
-    'EEUnitClassRecord': 'include/ee/EEUnitClassRecord.h',
+    'EEUnitClassRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEGraphicObjectRecord': 'rust/crates/ee_data/src/tables.rs',
     'EESoundRecord': 'rust/crates/ee_data/src/tables.rs',
     'EEGraphicEffectRecord': 'rust/crates/ee_data/src/tables.rs',
@@ -79,15 +79,16 @@ RUST_STRUCTS = {
     'UIDbControl': 'DbControl',
     'UIDbDataForms': 'DbForm',
     'EEAreaEffectData': 'EeAreaEffectData',
+    'EEUnitClassRecord': 'DbUnitClass',
     'UIDbDataBackgrounds': 'DbBackground',
     'UIDbDataEvents': 'DbEvent',
     'UIDbDataFonts': 'DbFont',
     'UIDbDataHotKeys': 'DbHotKey',
 }
 
-# Sizes for the struct whose source states the size in a comment instead of a static_assert
-# (EEUnitClassRecord.h: "EEDbObject::mRecord, 0x7a8 bytes").
-COMMENT_SIZES = {'EEUnitClassRecord': 0x7a8}
+# Sizes for a struct whose source states the size in a comment instead of a static_assert (none left: the unit class
+# record, the last, is the Rust DbUnitClass with its assert).
+COMMENT_SIZES = {}
 
 # Records with no source struct (loaded field by field). Fields: (name, type, count, class).
 VIRTUAL_STRUCTS = {

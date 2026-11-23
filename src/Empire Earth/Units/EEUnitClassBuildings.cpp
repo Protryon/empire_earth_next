@@ -48,60 +48,31 @@
 // 0x446dc0: the yaw of each map quarter (EEGetFacingQuarter's 0..3) (provisional name)
 
 // Puts docks and navy yards on the water plane and lifts other buildings just above the ground
-void EEUnitClass::BuildingGroundLocation(GE3DPoint& ioLocation)
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX);   // ucg_sea.rs
-}
-
 // Picks the first fully healed garrisoned unit that should leave (a human's unit whose rally queue has a goal, a unit
 // with a goal, or one with an explore order) as the exiting unit; returns whether one was picked
-bool EEUnitClass::BuildingSelectUnitToRelease(EEComplexUnit* inUnit)
-{
-    return ee_units_ucb_call(EE_UNITS_UCB_DO_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0;   // ucb_release.rs
-}
-
 // Erupts a volcano: gives it an attack-ground goal at a random spot near it; returns true
-bool EEUnitClass::EruptVolcano(EEComplexUnit* inUnit)
-{
-    return ee_units_uc_rest(EE_UNITS_UC_DO_R_ERUPT_VOLCANO, this, inUnit, 0, 0, 0, NULL) != 0;   // uc_rest.rs
-}
-
 // Creates a building at a placement: docks and navy yards on the water plane, others (not the camera object) lifted
 // just above it
-EEUnit* EEUnitClass::BuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
-                                   EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
-}
-
 // Creates a building on a tile's centre (docks and navy yards at water level, off-map tiles at the -10000 sentinel)
-EEUnit* EEUnitClass::BuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucb_release.rs
-}
-
 // Returns the map quarter facing the most space terrain within 6 tiles of a tile (half weight to the neighbouring
 // sides; its terrain run 0x60ea01 and the side tables 0x4c8ef8/0x4c8f08: ee_units cls_building.rs, R5b.4 round 33)
 long EEGetDockFacing(unsigned long inX, unsigned long inY)
 {
-    EEUCNote theNote(23); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_dock_facing((uint32_t)inX, (uint32_t)inY));
+    return ee_units_ucn_facing(0, (int32_t)inX, (int32_t)inY);
 }
 
 // Returns a navy yard's facing at a tile: its map quarter if 5 deep-water tiles follow that way, else the next side
 // that has them, else the side with the longest run (cls_building.rs)
 static long GetNavyYardFacing(unsigned long inX, unsigned long inY)
 {
-    EEUCNote theNote(22); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_navy_yard_facing((uint32_t)inX, (uint32_t)inY));
+    return ee_units_ucn_facing(1, (int32_t)inX, (int32_t)inY);
 }
 
 // Returns the map quarter (0..3) a tile faces from the middle of its continent (space maps) or of the map
 // (cls_building.rs)
 long EEGetFacingQuarter(long inX, long inY)
 {
-    EEUCNote theNote(21); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_facing_quarter((int32_t)inX, (int32_t)inY));
+    return ee_units_ucn_facing(2, (int32_t)inX, (int32_t)inY);
 }
 
 // Returns the map quarter the unit's tile faces
@@ -118,42 +89,13 @@ long EEGetWallPiecePart(long inIndex, bool* outFlag)
 }
 
 // Returns the first living targetable building found in rings 1..19 around a unit's tile
-EEUnit* EEUnitClass::FindNearestTargetBuilding(EEUnit* inUnit)
-{
-    EEUCNote theNote(35); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    EEUnit* theResult = (EEUnit*)(uintptr_t)ee_units_ucb_gate(EE_UNITS_UCB_DO_NEAREST_TARGET_BUILDING, this, NULL, EEObj(inUnit), 0, 0, 0.0f);   // ucb_gate.rs
-    theNote.U(theResult);
-    return theResult;
-}
-
 // Lists the tiles around a building; an airport's include its runway (four times its size toward its facing)
-void EEUnitClass::BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners,
-                             bool inAppend)
-{
-    ee_units_ucb_call(EE_UNITS_UCB_DO_SURROUNDING_TILES, this, inUnit, EEObj(&outTiles), inCorners, inAppend, NULL);   // ucb_release.rs
-}
-
 // Sets up a new building (built, its resource stock, regeneration); an airport turns to its map quarter, a navy yard
 // picks its facing and a space dock its yaw
-void EEUnitClass::BuildingUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucb_call(EE_UNITS_UCB_DO_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL);   // ucb_release.rs
-}
-
 // Launches the exiting unit: places it at the exit (runway, water or tag point), gives it the building's rally
 // goals or its own (else loads it back) and starts its takeoff from this home base
-void EEUnitClass::ReleaseUnit(EEComplexUnit* inUnit)
-{
-    ee_units_ucb_call(EE_UNITS_UCB_DO_RELEASE_UNIT, this, inUnit, 0, 0, 0, NULL);   // ucb_release.rs
-}
-
 // Runs an armed building's tick (physics, turrets, timers, animation, sound) and fires on its attack frame; skips
 // disabled ones and standing foundations
-void EEUnitClass::UpdateArmed(EEComplexUnit* inUnit)
-{
-    ee_units_ucb_call(EE_UNITS_UCB_DO_UPDATE_ARMED, this, inUnit, 0, 0, 0, NULL);   // ucb_release.rs
-}
-
 // ---- EEUCBuildingPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). A building that
 // converts (the temple): 0x21005e..0x21013b (after EEUCBuilding.cpp; EEUCFortress.cpp follows). Unit flags: the exe's
 // module set. Its ctor is inline (EEUnitClass.cpp's factory); the slots pick the building's or the priest's handling
@@ -164,11 +106,6 @@ void EEUnitClass::UpdateArmed(EEComplexUnit* inUnit)
 // (PriestVirtualB8: the basic priest's update is a Rust sequence the temple does not run).
 
 // The temple's copy of EEUCBasicPriest::Update (0x20df05)
-void EEUnitClass::PriestVirtualB8(EEComplexUnit* inUnit)
-{
-    ee_units_ucb_call(EE_UNITS_UCB_DO_PRIEST_UPDATE, this, inUnit, 0, 0, 0, NULL);   // ucb_release.rs
-}
-
 // ---- EEUCGate.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The wall gate's unit class:
 // 0x21048f..0x212a6f (after EEUCFortress.cpp; EEUCHelicopter.cpp follows). One unit per EEUC* class in alphabetical
@@ -203,11 +140,6 @@ void EECreateSpaceGateEnergyWall(EEComplexUnit* inGate);
 
 // Replaces the other four pieces of a gate whose gate piece was replaced (new owner and class), turning and
 // relinking them; the posts go idle and the doors take the new gate piece's action
-void EEUnitClass::GateGateReplaced(EEUnit* inGate, EEUnit* inUnit)
-{
-    ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_REPLACED, this, inUnit, EEObj(inGate), 0, 0, 0.0f);   // ucb_gate.rs
-}
-
 // Turns the five wall pieces across a tile into a closed gate of the technology's class for a player (EEMBuildGate's
 // work): weakest wall's health, posts on the lower ground; adds the energy wall once space gates are available
 void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, long inDirection)
@@ -232,11 +164,6 @@ template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E 
 }
 
 // Collects the footprint tiles of every gate piece not left out (doors and gate piece while open), sorted and unique
-void EEUnitClass::GateGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
-{
-    ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_SURROUNDING, this, inUnit, EEObj(&outTiles), inCorners, inAppend, 0.0f);   // ucb_gate.rs
-}
-
 // Returns whether a gate fits across a wall unit's tile in a direction (1..4), giving the five walls of the type
 // (EECPWallManager.cpp declares it the same way)
 bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType, std::vector<EEUnit*>& outUnits)
@@ -249,12 +176,7 @@ bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType
 bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigned long inUnitType,
                 std::vector<EEUnit*>& outUnits)
 {
-    EEUCNote theNote(25); theNote.T(inTile).I(inDirection).I(inUnitType);   // TEST ONLY (UCBD)
-    bool theResult = theNote.R(ee_units_ucb_gate(EE_UNITS_UCB_DO_WALL_GATE_FIT, NULL, NULL, EEObj(&outUnits),
-                                                 (int64_t)(uint32_t)inTile.mX | (int64_t)((uint64_t)(uint32_t)inTile.mY << 32),
-                                                 (int64_t)(uint32_t)inDirection | (int64_t)((uint64_t)(uint32_t)inUnitType << 32), 0.0f) != 0);   // ucb_gate.rs
-    theNote.Us(outUnits);
-    return theResult;
+    return ee_units_ucn_wall_gate_fit((int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inDirection, (uint32_t)inUnitType, EEObj(&outUnits));
 }
 
 // Returns the first piece of a unit's linked chain (+0x1cc)
@@ -313,27 +235,13 @@ EEComplexUnit* EEUnitClass::GetPart(EEComplexUnit* inGate, long inIndex)
 // (cls_building.rs)
 void EEGetWallGateTiles(const U2DPoint<long>& inTile, long inDirection, std::vector<U2DPoint<long> >& outTiles)
 {
-    EEUCNote theNote(33); theNote.T(inTile).I(inDirection).Ts(outTiles);   // TEST ONLY (UCBD)
-    ee_units_cls_wall_gate_tiles((int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inDirection, &outTiles);
-    theNote.Ts(outTiles);   // TEST ONLY (UCBD)
+    ee_units_ucn_wall_gate_tiles((int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inDirection, EEObj(&outTiles));
 }
 
 // Returns whether a living enemy unit of unit set 0x62 is within reach of the gate or its next two pieces
 // (the squared distance is compared with the unsquared reach; cls_building.rs)
-bool EEUnitClass::AreEnemiesNear(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(27); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_gate_near(EEObj(inUnit), false));
-}
-
 // Returns whether a unit that may pass is within reach of the gate or its next two pieces: a mobile land unit
 // the owner is not hostile to, or an enemy of unit set 0x62 (cls_building.rs)
-bool EEUnitClass::IsPasserNear(EEComplexUnit* inUnit)
-{
-    EEUCNote theNote(28); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_gate_near(EEObj(inUnit), true));
-}
-
 // Returns whether a tile holds a highlighted living wall that can take a gate, giving its gate direction
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection)
 {
@@ -341,31 +249,11 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection)
 }
 
 // Returns the piece before the last one of a unit's linked chain
-EEComplexUnit* EEUnitClass::GetLastLinkedCarrier(EEComplexUnit* inUnit)
-{
-    return this->GetLastLinked(inUnit)->mPreviousPart;
-}
-
 // Returns gate piece 1 (the piece before piece 3); NULL when the chain is too short (a gate created as a single
 // piece, e.g. by a scenario effect)
-EEComplexUnit* EEUnitClass::GetSecondPart(EEComplexUnit* inGate)
-{
-    return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_SECOND_PART, this, NULL, EEObj(inGate), 0, 0, NULL);   // uc_rest.rs
-}
-
 // Returns the last piece of a unit's linked chain
-EEComplexUnit* EEUnitClass::GetLastLinked(EEComplexUnit* inUnit)
-{
-    return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_LAST_LINKED, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uc_rest.rs
-}
-
 // Returns gate piece 3 (two pieces before the end of the chain); NULL when the chain is too short (a gate created
 // as a single piece, e.g. by a scenario effect)
-EEComplexUnit* EEUnitClass::GetFourthPart(EEComplexUnit* inGate)
-{
-    return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FOURTH_PART, this, NULL, EEObj(inGate), 0, 0, NULL);   // uc_rest.rs
-}
-
 // Restores the normal colour of a player's walls of a type and clears their gate direction (after gate placement)
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
 {
@@ -373,11 +261,6 @@ void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
 }
 
 // Sets up a new gate piece the building's way; the chain's first piece starts closed
-void EEUnitClass::GateUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_UNIT_CREATED, this, inUnit, 0, 0, 0, 0.0f);   // ucb_gate.rs
-}
-
 // Highlights the middle wall of a gate line through each of a player's walls of a type when one or three of the
 // four directions fit (an XOR of the four tests); the first fitting direction is used
 void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
@@ -389,8 +272,7 @@ void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
 // 0.6 (0x447014; cls_building.rs) (EECPWallManager.cpp declares it the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 {
-    EEUCNote theNote(26); theNote.Ts(inTiles);   // TEST ONLY (UCBD)
-    return theNote.R(ee_units_cls_tiles_level(&inTiles));
+    return ee_units_ucn_tiles_level(EEObj(&inTiles));
 }
 
 // ---- EEUCMiningBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The mining
@@ -398,18 +280,7 @@ bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 // EEUCMissile.cpp follows). Unit flags: the exe's module set. Its ctor is inline (vtable 0x44843c).
 
 // Creates a mine at a placement and ties it to the first resource under its footprint that it can gather
-EEUnit* EEUnitClass::MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
-                                         EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
-}
-
 // Creates a mine on a tile, at the tile's height (0 off the map)
-EEUnit* EEUnitClass::MiningBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucb_release.rs
-}
-
 // ---- EEUCNavalBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval building's
 // unit class (a dock): 0x218158..0x218490 (after EEUCNaval.cpp; EEUCNavalCitizen.cpp follows). Unit flags: the exe's
 // module set. Its ctor is inline. Virtual74/78/88 are ICF-folded into EEUCSpaceBuilding.cpp's copies; VirtualA0/E0
@@ -417,32 +288,6 @@ EEUnit* EEUnitClass::MiningBuildingCreateUnit(long inX, long inY, long inPlayer,
 
 // Picks the first fully healed docked ship that should leave (a human's ship whose own or the dock's rally goal is an
 // attack, move or explore goal; any ship with a goal for a computer player); returns whether one was picked
-bool EEUnitClass::NavalBuildingSelectUnitToRelease(EEComplexUnit* inUnit)
-{
-    return ee_units_ucb_call(EE_UNITS_UCB_DO_NAVAL_SELECT_TO_RELEASE, this, inUnit, 0, 0, 0, NULL) != 0;   // ucb_release.rs
-}
-
-// Returns whether the dock's transformed bounding box lies wholly below the water line
-bool EEUnitClass::NavalBuildingHasSunk(EEComplexUnit* inUnit)
-{
-    GE3DPoint thePosition;
-    GEBoundingBox theBox;
-    GEBoundingBox theTransformedBox;
-    const GEPhysicalModel& thePhysicalModel = inUnit->mPhysicalModel;
-    GEModel* theModel = thePhysicalModel.GetModel();
-    inUnit->GetPosition(thePosition);
-    GETransformation theTransformation(false);
-    thePhysicalModel.GetLocation().Apply(theModel->GetInternalTransform(thePhysicalModel.GetFrame()),
-                                         theTransformation);
-    float theScale = thePhysicalModel.GetScale();
-    theTransformation.Scale(theScale, theScale, theScale);
-    theTransformation.SetX(thePosition.GetX());
-    theTransformation.SetY(thePosition.GetY());
-    theTransformation.SetZ(thePosition.GetZ());
-    theBox = theModel->GetBoundingBox(inUnit->mPhysicalModel.GetFrame());
-    theBox.Transform(theTransformation, theTransformedBox);
-    return theTransformedBox.GetTopRightBack().GetZ() < 0.0f ? true : false;
-}
 
 // ---- EEUCSpaceBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The space
 // building's unit class: 0x219fe3..0x21a219 (after EEUCSeaAnimal.cpp; EEUCSpaceship.cpp follows). Unit flags: the
@@ -450,36 +295,10 @@ bool EEUnitClass::NavalBuildingHasSunk(EEComplexUnit* inUnit)
 // VirtualA0/E0 are EEUCNavalBuilding.cpp's (ICF).
 
 // Returns the tile under a location along the camera line, at the cruise altitude
-void EEUnitClass::SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE, this, NULL, EEObj(&outX), (int64_t)EEObj(&outY), 0, const_cast<float*>(&inLocation.mX));   // ucg_sea.rs
-}
-
 // Creates a space building at a placement, at the cruise altitude
-EEUnit* EEUnitClass::SpaceBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
-                                        EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix);   // ucb_release.rs
-}
-
 // Creates a space building on a tile, at the cruise altitude
-EEUnit* EEUnitClass::SpaceBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_SPACE_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // ucb_release.rs
-}
-
 // Sets up a new space building as a building, already built
-void EEUnitClass::SpaceBuildingUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_UNIT_CREATED, this, inUnit, 0, 0, 0, 0.0f);   // ucb_gate.rs
-}
-
 // Returns whether the space building may stop: already sinking, a slow request, or at its next waypoint's tile
-bool EEUnitClass::SpaceBuildingHasArrived(EEComplexUnit* inUnit, float inValue)
-{
-    return ee_units_ucb_gate(EE_UNITS_UCB_DO_SPACE_ARRIVED, this, inUnit, 0, 0, 0, inValue) != 0;   // ucb_gate.rs
-}
-
 template <class T> static T* EEUcbObject(uint64_t inHandle)
 {
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));

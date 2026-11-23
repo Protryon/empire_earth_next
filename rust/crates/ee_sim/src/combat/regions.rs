@@ -113,6 +113,21 @@ impl EeCombatUnitRegions {
         found.iter().rev().flat_map(|r| r.iter().rev().copied()).collect()
     }
 
+    /// `EEGetUnitsInRectangle`'s walk (ee/EEUnitCollector.h): the units of the regions under the rectangle (no edge
+    /// clamped: a region off the grid is skipped), column by column, each region from its last unit.
+    pub fn walk(&self, left: i32, top: i32, right: i32, bottom: i32) -> Vec<EeCombatHandle> {
+        let (min_x, min_y, max_x, max_y) = self.rect(left, top, right, bottom);
+        let mut out = Vec::new();
+        for x in min_x..=max_x {
+            for y in min_y..=max_y {
+                if let Some(r) = self.region(x as u32, y as u32) {
+                    out.extend(r.iter().rev().copied());
+                }
+            }
+        }
+        out
+    }
+
     /// `CollectValues(tiles, values, std::less)`: [`Self::values`] sorted by handle (the original's pointer order)
     /// without duplicates.
     pub fn collect(&self, left: i32, top: i32, right: i32, bottom: i32) -> Vec<EeCombatHandle> {
@@ -283,6 +298,25 @@ pub unsafe extern "C" fn ee_combat_regions_collect(
     cap: usize,
 ) -> usize {
     let values = unsafe { &*table }.collect(left, top, right, bottom);
+    unsafe { copy_out(&values, out, cap) }
+}
+
+/// [`EeCombatUnitRegions::walk`] of the tiles (left, top) to (right, bottom) into `out` (up to `cap`); answers the
+/// units' number.
+///
+/// # Safety
+/// `table` is a live table; `out` is null or holds `cap` values.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_regions_walk(
+    table: *const EeCombatUnitRegions,
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+    out: *mut u64,
+    cap: usize,
+) -> usize {
+    let values = unsafe { &*table }.walk(left, top, right, bottom);
     unsafe { copy_out(&values, out, cap) }
 }
 

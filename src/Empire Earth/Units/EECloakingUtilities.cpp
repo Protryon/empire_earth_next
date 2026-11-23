@@ -42,49 +42,44 @@ unsigned short EECountTilesAround(long inX, long inY, bool inAny);  // 0x23d4ba 
 static EEEffectHandle sCkHandle;   // EEAddCloakEffect's new effect
 
 template <class T> static T* CkObj(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
-static int64_t CkBits(float inValue) { uint32_t theBits; memcpy(&theBits, &inValue, 4); return (int64_t)theBits; }
-static float CkFloat(int64_t inBits) { uint32_t theBits = (uint32_t)inBits; float theValue; memcpy(&theValue, &theBits, 4); return theValue; }
 
 extern "C" int64_t ee_units_ck_host(int32_t inOp, uint64_t inA, int64_t inC, int64_t inD, float (*ioF)[4])
 {
-    EEUnit* theUnit = CkObj<EEUnit>(inA);
-    EEComplexUnit* theComplex = CkObj<EEComplexUnit>(inA);
-    float* f = *ioF;
     switch (inOp) {
     case EE_UNITS_CK_TERRAIN:
         return gWorld.mMap->GetTile((long)inC, (long)inD) != NULL ? gWorld.mMap->GetTile((long)inC, (long)inD)->mTerrainType : -1;
     case EE_UNITS_CK_IS_EDGE: return gWorld.mMap->IsEdgeTile((long)inC, (long)inD);
     case EE_UNITS_CK_IS_LAND: return EEIsLandTerrain((long)inC);
-    case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(CkObj<EEPlayer>(inA), kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>(f), (long)inC, (long)inD, 0, 0);
+    case EE_UNITS_CK_CAN_PLACE_DOCK: return EECanPlace(CkObj<EEPlayer>(inA), kUnitTypeSpaceDock, reinterpret_cast<GE3DPoint*>((*ioF)), (long)inC, (long)inD, 0, 0);
     case EE_UNITS_CK_DOCK_FACING: return EEGetDockFacing((long)inC, (long)inD);
-    case EE_UNITS_CK_COMMAND_TYPE: return theComplex->GetCommandType();
-    case EE_UNITS_CK_ROT_FRACTION: return CkBits((float)theComplex->mComplexUnit->mRottingAwayTime / (long)theUnit->mUnitClass->mRottingTime);
-    case EE_UNITS_CK_HAS_ROTTING_TIME: return (long)theUnit->mUnitClass->mRottingTime != 0;
-    case EE_UNITS_CK_IS_CLOAKABLE: return theComplex->mIsCloakable;
-    case EE_UNITS_CK_IS_CLOAKED: return theComplex->mIsCloaked;
+    case EE_UNITS_CK_COMMAND_TYPE: return CkObj<EEComplexUnit>(inA)->GetCommandType();
+    case EE_UNITS_CK_ROT_FRACTION: return (int64_t)UFloatBits((float)CkObj<EEComplexUnit>(inA)->mComplexUnit->mRottingAwayTime / (long)CkObj<EEUnit>(inA)->mUnitClass->mRottingTime);
+    case EE_UNITS_CK_HAS_ROTTING_TIME: return (long)CkObj<EEUnit>(inA)->mUnitClass->mRottingTime != 0;
+    case EE_UNITS_CK_IS_CLOAKABLE: return CkObj<EEComplexUnit>(inA)->mIsCloakable;
+    case EE_UNITS_CK_IS_CLOAKED: return CkObj<EEComplexUnit>(inA)->mIsCloaked;
     case EE_UNITS_CK_FREE_CAMERA: return gFreeCamera;
-    case EE_UNITS_CK_OPACITY: return CkBits(theComplex->mOpacity);
+    case EE_UNITS_CK_OPACITY: return (int64_t)UFloatBits(CkObj<EEComplexUnit>(inA)->mOpacity);
     case EE_UNITS_CK_CURRENT_PLAYER: return (int64_t)(uintptr_t)gWorld.GetCurrentPlayer();
-    case EE_UNITS_CK_PLAYER: return (int64_t)(uintptr_t)theUnit->mPlayer;
-    case EE_UNITS_CK_ENEMY_OF_VIEWER: return theUnit->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID];
+    case EE_UNITS_CK_PLAYER: return (int64_t)(uintptr_t)CkObj<EEUnit>(inA)->mPlayer;
+    case EE_UNITS_CK_ENEMY_OF_VIEWER: return CkObj<EEUnit>(inA)->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID];
     case EE_UNITS_CK_OBSERVER: return gWorld.GetCurrentPlayer()->mObserverMode;
-    case EE_UNITS_CK_SET_FLOAT: *CkObj<float>(inA) = f[0]; return 0;
+    case EE_UNITS_CK_SET_FLOAT: *CkObj<float>(inA) = (*ioF)[0]; return 0;
     case EE_UNITS_CK_CREATE_CLOAK:
-        return gWorld.GetEffectManager()->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &sCkHandle, false, 0, 0);
-    case EE_UNITS_CK_KEEP_CLOAK: EEUnitCast<EEComplexUnit>(theUnit)->mCloaked = sCkHandle.mValue; return 0;
-    case EE_UNITS_CK_CLOAKED: return (long)EEUnitCast<EEComplexUnit>(theUnit)->mCloaked;
+        return gWorld.GetEffectManager()->CreateUnitEffect(CkObj<EEUnit>(inA), EEGraphicEffect::Get(kGraphicEffectMarketTicketTape), &sCkHandle, false, 0, 0);
+    case EE_UNITS_CK_KEEP_CLOAK: EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked = sCkHandle.mValue; return 0;
+    case EE_UNITS_CK_CLOAKED: return (long)EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked;
     case EE_UNITS_CK_DESTROY_EFFECT: gWorld.GetEffectManager()->DestroyEffect((sCkHandle.mValue = (decltype(sCkHandle.mValue))inC, sCkHandle)); return 0;
-    case EE_UNITS_CK_CLEAR_CLOAKED: EEUnitCast<EEComplexUnit>(theUnit)->mCloaked = 0; return 0;
+    case EE_UNITS_CK_CLEAR_CLOAKED: EEUnitCast<EEComplexUnit>(CkObj<EEUnit>(inA))->mCloaked = 0; return 0;
     case EE_UNITS_CK_SPACE_MAP: return gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
-    case EE_UNITS_CK_TILE_X: return theComplex->mTileX;
-    case EE_UNITS_CK_TILE_Y: return theComplex->mTileY;
+    case EE_UNITS_CK_TILE_X: return CkObj<EEComplexUnit>(inA)->mTileX;
+    case EE_UNITS_CK_TILE_Y: return CkObj<EEComplexUnit>(inA)->mTileY;
     case EE_UNITS_CK_CONTINENT: return gContinentManager.GetContinent(EETileCoordinate((long)inC, (long)inD), kAIPathNonSpace);
     case EE_UNITS_CK_FIRST_UNIT: return (int64_t)(uintptr_t)gWorld.mUnits.mFirst;
     case EE_UNITS_CK_NEXT_UNIT: return (int64_t)(uintptr_t)CkObj<RTSUnit>(inA)->mTileNode->mNext;
     case EE_UNITS_CK_COMPLEX_OF: return (int64_t)(uintptr_t)static_cast<EEUnit*>(CkObj<RTSUnit>(inA))->mComplexUnit;
-    case EE_UNITS_CK_DOMAINS: return theComplex->mUnitClass->mDomains;
-    case EE_UNITS_CK_UNIT_TYPE: return theComplex->mUnitClass->mUnitType;
-    case EE_UNITS_CK_SET_PLANET: theComplex->mPlanetID = (unsigned short)inC; return 0;
+    case EE_UNITS_CK_DOMAINS: return CkObj<EEComplexUnit>(inA)->mUnitClass->mDomains;
+    case EE_UNITS_CK_UNIT_TYPE: return CkObj<EEComplexUnit>(inA)->mUnitClass->mUnitType;
+    case EE_UNITS_CK_SET_PLANET: CkObj<EEComplexUnit>(inA)->mPlanetID = (unsigned short)inC; return 0;
     }
     return 0;
 }
@@ -100,7 +95,7 @@ bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity)
 // yaw of EEGetDockFacing
 float EEGetSpaceDockYaw(long inX, long inY, long inSize)
 {
-    return CkFloat(ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, inX, inY));   // uu_cloak.rs
+    return UBitsFloat(ee_units_ck_body(EE_UNITS_CK_DO_SPACE_DOCK_YAW, 0, 0, inX, inY));   // uu_cloak.rs
 }
 
 // Returns whether a space dock (unit type 0x2d8) fits at (inX, inY): its inner 2 x 2 tiles placeable, its border on the
