@@ -647,6 +647,8 @@ WON_TESTS = {
     # PlatGUIWindow as a Rust object (platwin.rs) against its original statements over one stand-in world of the
     # Window base, its root and events, the platform manager and the cursors
     "won_platwin_test": [],
+    # the GUI hosts' cases R6 WON round 33 composed in Rust (guisplit.rs) against the deleted cases over a stand-in world
+    "won_guisplit33_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -756,12 +758,18 @@ WON_TESTS = {
     # StagingLogic's and LanLogic's host cases made Rust (lobbyops.rs, R6 WONLobby round 29) against the deleted
     # cases over a stand-in world (tests/won/won_lobbyops_world.h)
     "won_lobbyops_test": [],
+    # the round 32 moves no LAN game runs (netdisp.rs, lobbyrun.rs, lobbycfg.rs, rootscreen.rs, gluesplit.rs) against
+    # their deleted C++ over a stand-in world, with mutations (R6 WON round 33)
+    "won_split32_test": [],
     # the EE lobby window's functions made Rust (eewindow.rs, R6 WONLobby round 29) against the deleted functions
     # over a stand-in world (tests/won/won_eewindow_world.h)
     "won_eewindow_test": [],
     # the game's WON front end made whole Rust (ee_won_lobby wonnet.rs, R6 WON round 31) against the deleted
     # EEWonNet.cpp over a stand-in world (tests/won/won_wonnet_world.h; the host's statements are ee/EEWonNetHost.inl)
     "won_wonnet_test": [],
+    # WONLobbyPrv's methods and the lobby model's buffer methods made Rust (ee_won_lobby lobbyprv.rs, modelbuf.rs, R6 WON
+    # round 33) against the deleted bodies over a stand-in world (tests/won/won_lobby33_world.h)
+    "won_lobby33_test": [],
     # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
     # rust/crates/ee_won_lobby/src/golden_eexfer.txt)
     "won_eexfer_test": [],
@@ -987,6 +995,9 @@ WON_TESTS["won_gamespy_test"] = WON_TESTS["won_serverop_test"]
 # CDKey's registry and file storage (ee_won cdkeystore.rs) against the original statements of AuthContext.cpp,
 # run against run on a scratch config.yaml; the same units as won_serverop_test
 WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
+# R6 WON round 33's network moves (CDKey whole, DirMakeEntity, RustServerOp's settings and requests, RoutingOp's
+# members, the user status op's settings, ThreadBase::Stop) against the original statements copied into the driver
+WON_TESTS["won_net33_test"] = WON_TESTS["won_serverop_test"]
 # the lobby model reading the routing server's records in Rust (modelobj.rs route_record_op) against RoutingOp.cpp's
 # copies, RoutingLogic.cpp's cases and LobbyModelHost.cpp's reads as they were, on real routing ops (golden:
 # rust/crates/ee_won_lobby/src/golden_routerec.txt); won_servconn_test's units (a connection binds the core)

@@ -173,6 +173,11 @@ static intptr_t World(void* inLogic, EeWonLobbyOp inOp, void* inA, void* inB, in
     case EeWonLobbyOp::LanDirectInputLength: return (intptr_t)l->mDirectConnectDialog->InputText(0).length();
     case EeWonLobbyOp::GameSetDirectName: g->SetName(l->mDirectConnectDialog->InputText((int)inC));
         return 0;
+    // R6 WON round 32's LanPortDialogRun statements (LanLogicHost.cpp)
+    case EeWonLobbyOp::LanPortSetGamePort: l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetGamePort, (unsigned short)LobbyGetLobbyPort()); return 0;
+    case EeWonLobbyOp::LanPortSetPort: l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetPort, (unsigned short)(int)inC); return 0;
+    case EeWonLobbyOp::LanPortReset: l->mLanPortDialog->LCall(EeWonLobbyDlgCall::Reset); return 0;
+    case EeWonLobbyOp::LanPortDo: return LobbyDoDialog(l->mLanPortDialog.get());
     case EeWonLobbyOp::AddDirectConnectNamed: LobbyAddDirectConnect(Addr(inB), l->mDirectConnectDialog->InputText((int)inC));
         return 0;
     default: Log("unexpected op " + N((long long)inOp)); return 0;
@@ -213,6 +218,7 @@ static void Make(Side& s, unsigned k)
     s.mSt.mCreateGameDialog = new Dialog;
     s.mLan.mLanNameDialog = new Dialog;
     s.mLan.mDirectConnectDialog = new Dialog;
+    s.mLan.mLanPortDialog = new Dialog;
     s.mLan.mLanNameDialog->mInputs[0] = GUIString("lanname");
     s.mLan.mDirectConnectDialog->mInputs[0] = GUIString((k >> K_NAME & 1) ? "My game" : "");
     s.mLan.mDirectConnectDialog->mInputs[1] = GUIString("10.0.0.7:2300");
@@ -226,6 +232,7 @@ static void Make(Side& s, unsigned k)
     sParser = (k >> K_PARSER & 1) ? s.mParser : NULL;
     sPermits = (k >> K_PERMITS & 1) != 0;
     sConfig = (k >> K_CONFIG & 1) ? &s.mConfig : NULL;
+    sDoDialogResult = (k >> K_NAME & 1) ? 100001 : 100002;
     if (k >> K_MESSAGE & 1) {
         ByteBuffer* aMessage = new ByteBuffer;
         aMessage->mBytes = "reply";
@@ -392,6 +399,7 @@ static void NMake(NSide& s, unsigned k)
     sNewer = (k >> NK_NEWER & 1) != 0;
     sImage = (k >> NK_IMAGE & 1) ? s.mImage : NULL;
     sDialogResult = (k >> NK_DIALOG & 1) ? 100001 : 100002;
+    sDoDialogResult = sDialogResult;
     sTrace.clear();
 }
 // an argument: a number, or an object of the side (-1000 - n)
@@ -703,6 +711,8 @@ int main()
         {Op::LanPeerAuthDone, true, 4, 0, 0}, {Op::LanListen, true, 2, 0, 0}, {Op::LanNewDiscovery, true, 5, 6, 0},
         {Op::LanArmDiscovery, true, 2, 0, 0}, {Op::LanConnectTo, true, 1, 2, 0}, {Op::LanConnectTo, true, 1, 2, 1},
         {Op::LanRecvReply, true, 2, 7, 0}, {Op::LanArmSocket, true, 2, 0, 0}, {Op::LanDirectSave, true, 1, 5, 0},
+        // R6 WON round 32's LanPortDialogRun (lobbyops.rs), a port past 16 bits and a negative one cut as the original's
+        {Op::LanPortDialogRun, true, 0, 0, 2301}, {Op::LanPortDialogRun, true, 0, 0, 0x12345}, {Op::LanPortDialogRun, true, 0, 0, -7},
     };
     for (const Case& c : kCases)
         for (unsigned k = 0; k < (1u << K_COUNT); k++) Run(c, k);

@@ -483,6 +483,120 @@ pub unsafe extern "C" fn ee_won_layout_new(
     Box::into_raw(Box::new(EeWonLayout::new(comp, host, init)))
 }
 
+/// The numbers of `ChildLayoutInstructionBase::Make(k, r0, r1, i0, i1, i2, h, v)` (the shared constructor of the
+/// centre, same-size, clear-right, space-evenly, no-overlap and size-at-least layouts; R6 WON round 33: its
+/// statements filled the record in C++).
+#[allow(clippy::too_many_arguments)]
+pub fn basic_init(
+    kind: EeWonLayoutKind,
+    r0: isize,
+    r1: isize,
+    i0: i32,
+    i1: i32,
+    i2: i32,
+    horz: bool,
+    vert: bool,
+) -> EeWonLayoutInit {
+    EeWonLayoutInit { kind, refs: [r0, r1, 0, 0, 0], ints: [i0, i1, i2, 0, 0, 0, 0, 0], horz, vert }
+}
+
+/// `ChildLayoutInstructionBase::Make(k, r0, r1, i0, i1, i2, h, v)`: the Rust instruction of those numbers.
+///
+/// # Safety
+/// As `ee_won_layout_new`'s.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_layout_new_basic(
+    comp: *mut c_void,
+    host: EeWonGuiHostFn,
+    kind: EeWonLayoutKind,
+    r0: *mut c_void,
+    r1: *mut c_void,
+    i0: i32,
+    i1: i32,
+    i2: i32,
+    horz: bool,
+    vert: bool,
+) -> *mut EeWonLayout {
+    let init = basic_init(kind, r0 as isize, r1 as isize, i0, i1, i2, horz, vert);
+    Box::into_raw(Box::new(EeWonLayout::new(comp, host, &init)))
+}
+
+/// `ChildLayoutInstruction(flags, child, reference, x, y, width, height)`'s numbers (Fn2F6140's instruction).
+#[allow(clippy::too_many_arguments)]
+pub fn child_init(
+    flags: i32,
+    child: isize,
+    reference: isize,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> EeWonLayoutInit {
+    EeWonLayoutInit {
+        kind: EeWonLayoutKind::Child,
+        refs: [child, reference, 0, 0, 0],
+        ints: [flags, x, y, width, height, 0, 0, 0],
+        horz: false,
+        vert: false,
+    }
+}
+
+/// `ChildLayoutInstruction`'s constructor: the Rust instruction.
+///
+/// # Safety
+/// As `ee_won_layout_new`'s.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_layout_new_child(
+    comp: *mut c_void,
+    host: EeWonGuiHostFn,
+    flags: i32,
+    child: *mut c_void,
+    reference: *mut c_void,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> *mut EeWonLayout {
+    let init = child_init(flags, child as isize, reference as isize, x, y, width, height);
+    Box::into_raw(Box::new(EeWonLayout::new(comp, host, &init)))
+}
+
+/// `PercentLayout(target, param)`'s numbers: the target, the param's anchors, its percentages and padding.
+pub fn percent_init(target: isize, anchors: [isize; 4], ints: [i32; 8]) -> EeWonLayoutInit {
+    EeWonLayoutInit {
+        kind: EeWonLayoutKind::Percent,
+        refs: [target, anchors[0], anchors[1], anchors[2], anchors[3]],
+        ints,
+        horz: false,
+        vert: false,
+    }
+}
+
+/// `PercentLayout`'s constructor: the Rust instruction (`anchors` the param's left, top, right and bottom; `ints`
+/// its px, py, pw, ph, lp, tp, rp, bp).
+///
+/// # Safety
+/// As `ee_won_layout_new`'s; `anchors` four pointers and `ints` eight integers.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_layout_new_percent(
+    comp: *mut c_void,
+    host: EeWonGuiHostFn,
+    target: *mut c_void,
+    anchors: *const *mut c_void,
+    ints: *const i32,
+) -> *mut EeWonLayout {
+    // SAFETY: the contract
+    let (a, n) = unsafe { (std::slice::from_raw_parts(anchors, 4), std::slice::from_raw_parts(ints, 8)) };
+    let init = percent_init(
+        target as isize,
+        [a[0] as isize, a[1] as isize, a[2] as isize, a[3] as isize],
+        [n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7]],
+    );
+    Box::into_raw(Box::new(EeWonLayout::new(comp, host, &init)))
+}
+
 /// Frees a Rust instruction (its list held no references).
 ///
 /// # Safety

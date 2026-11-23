@@ -17,61 +17,32 @@
 #include "rust/won_net/dir.h"
 namespace WONAPI {
 
-static void DirAssign(std::wstring& outText, const uint16_t* inUnits, size_t inCount)
+// DirMakeEntity's members (its decisions are ee_won dir.rs's ee_won_dir_entity_fill, R6 WON round 33)
+static void DirSet(void* inEntity, EeWonDirSet inMember, int64_t inNum, const void* p, size_t n)
 {
-    std::string aBytes;
-    aBytes.reserve(inCount * 2);
-    for (size_t i = 0; i < inCount; i++) {
-        aBytes += (char)(inUnits[i] & 0xff);
-        aBytes += (char)(inUnits[i] >> 8);
+    DirEntity* e = static_cast<DirEntity*>(inEntity);
+    const uint8_t* b = static_cast<const uint8_t*>(p);
+    const EeWonDirAcl* r = static_cast<const EeWonDirAcl*>(p);
+    switch (inMember) {
+    case EeWonDirSet::Kind: e->mType = (char)inNum; return;
+    case EeWonDirSet::Path: WonWideSink(&e->mPath, static_cast<const uint16_t*>(p), n); return;
+    case EeWonDirSet::Name: WonWideSink(&e->mName, static_cast<const uint16_t*>(p), n); return;
+    case EeWonDirSet::NetAddr: e->mNetAddr = new ByteBuffer(b, (unsigned long)n, false); return;
+    case EeWonDirSet::ReqUnique: e->mReqUnique = inNum != 0; return;
+    case EeWonDirSet::DisplayName: WonWideSink(&e->mDisplayName, static_cast<const uint16_t*>(p), n); return;
+    case EeWonDirSet::Lifespan: e->mLifespan = (long)inNum; return;
+    case EeWonDirSet::Created: e->mCreated = (long)inNum; return;
+    case EeWonDirSet::Touched: e->mTouched = (long)inNum; return;
+    case EeWonDirSet::Crc: e->mCRC = (unsigned long)(int32_t)inNum; return;
+    case EeWonDirSet::CreateIp: e->mCreateIP = (unsigned long)(int32_t)inNum; return;
+    case EeWonDirSet::TouchIp: e->mTouchIP = (unsigned long)(int32_t)inNum; return;
+    case EeWonDirSet::CreateId: e->mCreateId = (unsigned long)(int32_t)inNum; return;
+    case EeWonDirSet::TouchId: e->mTouchId = (unsigned long)(int32_t)inNum; return;
+    case EeWonDirSet::ObjectAdd: e->mDataObjects.push_back(DirDataObject{std::string(reinterpret_cast<const char*>(b), n)}); return;
+    case EeWonDirSet::ObjectData: e->mDataObjects.back().mData = new ByteBuffer(b, (unsigned long)n, false); return;
+    // the original's long user, long community and short trust locals, then the unsigned members
+    case EeWonDirSet::Acl: e->mACLs.push_back(DirACL{(char)r->kind, (unsigned long)(long)r->user, (unsigned long)(long)r->community, (unsigned short)(short)r->trust}); return;
     }
-    WideAssignUtf16LE(outText, aBytes.data(), (unsigned long)inCount);
-}
-
-// the read fields onto a new DirEntity (the others keep the constructor's values). The ACL values: the
-// multi-entity reader's locals were long / short, the single-entity reader's unsigned, the same bits in the members.
-static DirEntityPtr DirMakeEntity(const EeWonDirEntity* inEntity)
-{
-    DirEntityPtr anEntity = new DirEntity;
-    uint32_t f = inEntity->fields;
-    if (f & 0x1) anEntity->mType = (char)inEntity->kind;
-    if (f & 0x2) DirAssign(anEntity->mPath, inEntity->path, inEntity->path_len);
-    if (f & 0x4) DirAssign(anEntity->mName, inEntity->name, inEntity->name_len);
-    if (f & 0x8)
-        anEntity->mNetAddr = new ByteBuffer(inEntity->net_addr, (unsigned long)inEntity->net_addr_len, false);
-    if (f & 0x10) anEntity->mReqUnique = inEntity->req_unique;
-    if (f & 0x20) DirAssign(anEntity->mDisplayName, inEntity->display_name, inEntity->display_name_len);
-    if (f & 0x40) anEntity->mLifespan = inEntity->lifespan;
-    if (f & 0x80) anEntity->mCreated = inEntity->created;
-    if (f & 0x100) anEntity->mTouched = inEntity->touched;
-    if (f & 0x200) anEntity->mCRC = inEntity->crc;
-    if (f & 0x400) {
-        anEntity->mCreateIP = inEntity->create_ip;
-        anEntity->mTouchIP = inEntity->touch_ip;
-    }
-    if (f & 0x800) {
-        anEntity->mCreateId = inEntity->create_id;
-        anEntity->mTouchId = inEntity->touch_id;
-    }
-    for (size_t i = 0; i < inEntity->object_count; i++) {
-        const EeWonDirDataObject& anObject = inEntity->objects[i];
-        DirDataObject aData;
-        aData.mDataType.assign(reinterpret_cast<const char*>(anObject.data_type), anObject.data_type_len);
-        if (anObject.has_data)
-            aData.mData = new ByteBuffer(anObject.data, (unsigned long)anObject.data_len, false);
-        anEntity->mDataObjects.push_back(aData);
-    }
-    for (size_t i = 0; i < inEntity->acl_count; i++) {
-        const EeWonDirAcl& aRead = inEntity->acls[i];
-        DirACL acl;
-        acl.mType = (char)aRead.kind;
-        long user = aRead.user;
-        long comm = aRead.community;
-        short trust = aRead.trust;
-        acl.mUser = user; acl.mCommunity = comm; acl.mTrust = trust;
-        anEntity->mACLs.push_back(acl);
-    }
-    return anEntity;
 }
 
 // an empty entity: no type, times, CRC or addresses (DirEntity.cpp is merged here: net round 29)
@@ -81,6 +52,7 @@ DirEntity::DirEntity()
 {
 }
 DirEntity::~DirEntity() {}
+DirEntity::DirEntity(const EeWonDirEntity* inEntity) : DirEntity() { ee_won_dir_entity_fill(inEntity, DirSet, this); }
 // Returns the service's network address as an IP address and port (empty when shorter than 6 bytes; 2f0400)
 IPAddr DirEntity::GetNetAddrAsIP() const
 {
@@ -94,6 +66,6 @@ IPAddr DirEntity::GetNetAddrAsIP() const
 // Appends a DirEntity made of what ee_won read to a DirEntityList
 void DirEntityReplyParser::TakeEntity(void* inList, const EeWonDirEntity* inEntity)
 {
-    static_cast<DirEntityList*>(inList)->push_back(DirMakeEntity(inEntity));
+    static_cast<DirEntityList*>(inList)->push_back(new DirEntity(inEntity));
 }
 }

@@ -55,6 +55,17 @@ pub(crate) fn game_op(op: Op, v: [isize; 6], out: Out) -> Option<isize> {
             o(Op::PlayerColorBlue, b + 8, 0);
             0
         }
+        // `aData->mLength`, and with `b` its units copied to the `uint32_t*` `b` (R6 WON round 33)
+        Op::StringUnits => {
+            let n = o(Op::StringLength, a, 0);
+            if b != 0 {
+                for i in 0..n.max(0) as u32 as isize {
+                    // SAFETY: the caller's buffer of `mLength` units (the op's contract)
+                    unsafe { *(b as *mut u32).offset(i) = o(Op::StringUnitAt, a, i) as u32 };
+                }
+            }
+            n
+        }
         Op::FindDialog => o(if b != 0 { Op::FindConnectDialog } else { Op::FindFileDialog }, a, 0),
         Op::SaveNew => {
             let s = o(Op::SaveAlloc, 0, 0);

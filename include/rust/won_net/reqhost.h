@@ -34,6 +34,21 @@ extern "C" {
 /// `op` came from a Rust op constructor and is not used after.
 EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
 
+/// `RustServerOp::NewRequest` (R6 WON round 33): the C++ op of a request op (the maker's `new RustServerOp`, bound),
+/// then its server context (`context` true: `obj`, NULL too) or its first server's six address bytes, then, when
+/// `auth_type` is not negative, the auth type and context (`SetAuthType`: the account requests'). Returns the C++
+/// op (`RefCount*`, no reference yet; NULL without a maker).
+///
+/// # Safety
+/// `op` came from a Rust op constructor and is not used after; `obj` and `auth` NULL or live `RefCount*`s; `addr`
+/// six bytes when `context` is false.
+void *ee_won_hostop_new_request(EeWonReqOp *op,
+                                bool context,
+                                void *obj,
+                                const uint8_t *addr,
+                                int32_t auth_type,
+                                void *auth);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_NET_REQHOST_H

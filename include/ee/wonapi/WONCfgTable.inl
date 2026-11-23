@@ -160,7 +160,7 @@ static void CfgFilterChild(ImageFilterConfig* k,const GUIString& name,RawImage* 
     SmartPtr<ImageFilterConfig> child=new ImageFilterConfig; child->SetRawImage(image);
     static_cast<ComponentConfig*>(k->GetParentObject())->AddChildToConfigMap(name,child.get());
 }
-#define EE_CFG_SET(t,n) case (t)<<8|(n):
+#define EE_CFG_KEY(t,n) ((t)<<8|(n)) // a setter's number: its table's key and its place
 #define EE_CFG(T) static_cast<T*>(a.mConfig)
 #define EE_C(T) static_cast<T*>(a.mConfig->mComponent.get()) // the config kind's component (the original classes' typed copy)
 // The setters, as each handler called them on its typed component (bools read as 0/1). Those that called an inline
@@ -169,218 +169,218 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
 {
     const int* i=a.i; const GUIString* s=a.s; Component* const* c=a.c;
     switch(inSetter) {
-    EE_CFG_SET(kButton,1) EE_C(Button)->SetText(s[0],true); break;
-    EE_CFG_SET(kButton,3) EE_C(Button)->SetClickSound(a.snd.get()); break;
-    EE_CFG_SET(kButton,4) a.mConfig->HandleFitText(); break;
-    EE_CFG_SET(kMSButton,0) EE_C(MSButtonBase)->SetFont(a.f[0]); break;
-    EE_CFG_SET(kMSButton,6) EE_C(MSButtonBase)->SetWrap(i[0]!=0); break;
-    EE_CFG_SET(kPercent,0) EE_CFG(PercentLayoutConfig)->refs[i[0]]=c[0]; break;
-    EE_CFG_SET(kPercent,1) EE_CFG(PercentLayoutConfig)->params[i[0]]=i[1]; break;
-    EE_CFG_SET(kScheme,0) EE_CFG(ColorSchemeConfig)->mColorScheme.get()->SetStandardColor(i[0],(DWORD)i[1]); break;
-    EE_CFG_SET(kRect,0) EE_C(RectangleComponent)->SetSolidColor(i[0]); break;
-    EE_CFG_SET(kRect,1) EE_C(RectangleComponent)->SetOutlineColor(i[0]); break;
-    EE_CFG_SET(kRect3D,0) EE_C(RectangleComponent3D)->SetSolidColor(i[0]); break;
-    EE_CFG_SET(kRect3D,1) EE_C(RectangleComponent3D)->SetLightColor(i[0]); break;
-    EE_CFG_SET(kRect3D,2) EE_C(RectangleComponent3D)->SetDarkColor(i[0]); break;
-    EE_CFG_SET(kRect3D,3) EE_C(RectangleComponent3D)->SetIsUp(i[0]!=0); break;
-    EE_CFG_SET(kRect3D,4) EE_C(RectangleComponent3D)->SetThickness(i[0]); break;
-    EE_CFG_SET(kImageComp,0) EE_C(ImageComponent)->SetImage(a.m[0]); break;
-    EE_CFG_SET(kImageComp,1) EE_C(ImageComponent)->mTile=i[0]!=0; break;
-    EE_CFG_SET(kImageComp,2) EE_C(ImageComponent)->mStretch=i[0]!=0; break;
-    EE_CFG_SET(kScreen,0) EE_C(ScreenContainer)->AddScreen(c[0]); break;
-    EE_CFG_SET(kScreen,1) EE_C(ScreenContainer)->ShowScreen(c[0],true); break;
-    EE_CFG_SET(kMultiList,4) EE_C(MultiListArea)->SetSortColumnFunc(i[0],ListArea::NumberSortFunc); break;
-    EE_CFG_SET(kBrowser,0) EE_C(BrowserComponent)->SetTransparent(true); break;
-    EE_CFG_SET(kBrowser,1) EE_C(BrowserComponent)->SetScroller(static_cast<Scroller*>(c[0])); break;
-    EE_CFG_SET(kBrowser,2) EE_C(BrowserComponent)->SetFontSize((HTMLFontSize)i[0]); break;
-    EE_CFG_SET(kCombo,7) EE_C(ComboBox)->mEdit.get()->SetMaxChars(i[0]); break;
-    EE_CFG_SET(kDialog,4) EE_C(Dialog)->SetDefaultButton(static_cast<Button*>(c[0])); break;
-    EE_CFG_SET(kImageButton,0) EE_C(ImageButton)->SetImage((ImageButtonType)i[0],a.m[0].get()); break;
-    EE_CFG_SET(kLabel,0) EE_C(Label)->SetText(s[0],true); break;
-    EE_CFG_SET(kLabel,1) EE_C(Label)->SetFont(a.f[0]); break;
-    EE_CFG_SET(kLabel,3) EE_C(Label)->SetBackground(a.bg); break;
-    EE_CFG_SET(kListArea,1) EE_C(ListArea)->InsertString(s[0],-1); break;
-    EE_CFG_SET(kListArea,2) EE_C(ListArea)->SetFont(a.f[0]); break;
-    EE_CFG_SET(kListArea,3) EE_C(ListArea)->mTextColor=i[0]; break;
-    EE_CFG_SET(kListArea,4) EE_C(ListArea)->mSelColor=a.sel; break;
-    EE_CFG_SET(kInput,5) EE_C(InputBox)->SetBackground(a.bg); break;
-    EE_CFG_SET(kInput,6) EE_C(InputBox)->SetDisabledBackground(a.bg); break;
-    EE_CFG_SET(kInput,7) EE_C(InputBox)->SetIcon(a.m[0].get()); break;
-    EE_CFG_SET(kInput,8) EE_C(InputBox)->mTextColor=i[0]; break;
-    EE_CFG_SET(kInput,9) EE_C(InputBox)->mDisabledTextColor=i[0]; break;
-    EE_CFG_SET(kInput,10) EE_C(InputBox)->mSelColor=a.sel; break;
-    EE_CFG_SET(kInput,13) EE_C(InputBox)->mUseDisabledColors=i[0]!=0; break;
-    EE_CFG_SET(kTextArea,1) EE_C(TextArea)->AddSegment(s[0],false); break;
-    EE_CFG_SET(kTextArea,2) EE_C(TextArea)->AddFormatedText(s[0],false); break;
-    EE_CFG_SET(kTextArea,3) EE_C(TextArea)->SetFont(a.f[0]); break;
-    EE_CFG_SET(kTextArea,4) EE_C(TextArea)->mTextColor=i[0]; break;
-    EE_CFG_SET(kTextArea,5) EE_C(TextArea)->mSelColor=a.sel; break;
-    EE_CFG_SET(kTextArea,6) EE_C(TextArea)->SetLinkFont(a.f[0]); break;
-    EE_CFG_SET(kSimple,1)
+    case EE_CFG_KEY(kButton,1): EE_C(Button)->SetText(s[0],true); break;
+    case EE_CFG_KEY(kButton,3): EE_C(Button)->SetClickSound(a.snd.get()); break;
+    case EE_CFG_KEY(kButton,4): a.mConfig->HandleFitText(); break;
+    case EE_CFG_KEY(kMSButton,0): EE_C(MSButtonBase)->SetFont(a.f[0]); break;
+    case EE_CFG_KEY(kMSButton,6): EE_C(MSButtonBase)->SetWrap(i[0]!=0); break;
+    case EE_CFG_KEY(kPercent,0): EE_CFG(PercentLayoutConfig)->refs[i[0]]=c[0]; break;
+    case EE_CFG_KEY(kPercent,1): EE_CFG(PercentLayoutConfig)->params[i[0]]=i[1]; break;
+    case EE_CFG_KEY(kScheme,0): EE_CFG(ColorSchemeConfig)->mColorScheme.get()->SetStandardColor(i[0],(DWORD)i[1]); break;
+    case EE_CFG_KEY(kRect,0): EE_C(RectangleComponent)->SetSolidColor(i[0]); break;
+    case EE_CFG_KEY(kRect,1): EE_C(RectangleComponent)->SetOutlineColor(i[0]); break;
+    case EE_CFG_KEY(kRect3D,0): EE_C(RectangleComponent3D)->SetSolidColor(i[0]); break;
+    case EE_CFG_KEY(kRect3D,1): EE_C(RectangleComponent3D)->SetLightColor(i[0]); break;
+    case EE_CFG_KEY(kRect3D,2): EE_C(RectangleComponent3D)->SetDarkColor(i[0]); break;
+    case EE_CFG_KEY(kRect3D,3): EE_C(RectangleComponent3D)->SetIsUp(i[0]!=0); break;
+    case EE_CFG_KEY(kRect3D,4): EE_C(RectangleComponent3D)->SetThickness(i[0]); break;
+    case EE_CFG_KEY(kImageComp,0): EE_C(ImageComponent)->SetImage(a.m[0]); break;
+    case EE_CFG_KEY(kImageComp,1): EE_C(ImageComponent)->mTile=i[0]!=0; break;
+    case EE_CFG_KEY(kImageComp,2): EE_C(ImageComponent)->mStretch=i[0]!=0; break;
+    case EE_CFG_KEY(kScreen,0): EE_C(ScreenContainer)->AddScreen(c[0]); break;
+    case EE_CFG_KEY(kScreen,1): EE_C(ScreenContainer)->ShowScreen(c[0],true); break;
+    case EE_CFG_KEY(kMultiList,4): EE_C(MultiListArea)->SetSortColumnFunc(i[0],ListArea::NumberSortFunc); break;
+    case EE_CFG_KEY(kBrowser,0): EE_C(BrowserComponent)->SetTransparent(true); break;
+    case EE_CFG_KEY(kBrowser,1): EE_C(BrowserComponent)->SetScroller(static_cast<Scroller*>(c[0])); break;
+    case EE_CFG_KEY(kBrowser,2): EE_C(BrowserComponent)->SetFontSize((HTMLFontSize)i[0]); break;
+    case EE_CFG_KEY(kCombo,7): EE_C(ComboBox)->mEdit.get()->SetMaxChars(i[0]); break;
+    case EE_CFG_KEY(kDialog,4): EE_C(Dialog)->SetDefaultButton(static_cast<Button*>(c[0])); break;
+    case EE_CFG_KEY(kImageButton,0): EE_C(ImageButton)->SetImage((ImageButtonType)i[0],a.m[0].get()); break;
+    case EE_CFG_KEY(kLabel,0): EE_C(Label)->SetText(s[0],true); break;
+    case EE_CFG_KEY(kLabel,1): EE_C(Label)->SetFont(a.f[0]); break;
+    case EE_CFG_KEY(kLabel,3): EE_C(Label)->SetBackground(a.bg); break;
+    case EE_CFG_KEY(kListArea,1): EE_C(ListArea)->InsertString(s[0],-1); break;
+    case EE_CFG_KEY(kListArea,2): EE_C(ListArea)->SetFont(a.f[0]); break;
+    case EE_CFG_KEY(kListArea,3): EE_C(ListArea)->mTextColor=i[0]; break;
+    case EE_CFG_KEY(kListArea,4): EE_C(ListArea)->mSelColor=a.sel; break;
+    case EE_CFG_KEY(kInput,5): EE_C(InputBox)->SetBackground(a.bg); break;
+    case EE_CFG_KEY(kInput,6): EE_C(InputBox)->SetDisabledBackground(a.bg); break;
+    case EE_CFG_KEY(kInput,7): EE_C(InputBox)->SetIcon(a.m[0].get()); break;
+    case EE_CFG_KEY(kInput,8): EE_C(InputBox)->mTextColor=i[0]; break;
+    case EE_CFG_KEY(kInput,9): EE_C(InputBox)->mDisabledTextColor=i[0]; break;
+    case EE_CFG_KEY(kInput,10): EE_C(InputBox)->mSelColor=a.sel; break;
+    case EE_CFG_KEY(kInput,13): EE_C(InputBox)->mUseDisabledColors=i[0]!=0; break;
+    case EE_CFG_KEY(kTextArea,1): EE_C(TextArea)->AddSegment(s[0],false); break;
+    case EE_CFG_KEY(kTextArea,2): EE_C(TextArea)->AddFormatedText(s[0],false); break;
+    case EE_CFG_KEY(kTextArea,3): EE_C(TextArea)->SetFont(a.f[0]); break;
+    case EE_CFG_KEY(kTextArea,4): EE_C(TextArea)->mTextColor=i[0]; break;
+    case EE_CFG_KEY(kTextArea,5): EE_C(TextArea)->mSelColor=a.sel; break;
+    case EE_CFG_KEY(kTextArea,6): EE_C(TextArea)->SetLinkFont(a.f[0]); break;
+    case EE_CFG_KEY(kSimple,1):
         if(!ee_won_skin_copy_type(WONSkinGlobal(),true,&s[0],EE_C(Component)))
             throw ConfigObjectException("Type not found: " + std::string(s[0]));
         break;
-    EE_CFG_SET(kWONButton,1)
+    case EE_CFG_KEY(kWONButton,1):
         if(!ee_won_skin_copy_type(WONSkinGlobal(),false,&s[0],static_cast<Component*>(EE_C(WONButton))))
             throw ConfigObjectException("Type not found: " + std::string(s[0]));
         break;
-    EE_CFG_SET(kWONButton,12) { WONButton* b=EE_C(WONButton); b->SetHorzTextPad(i[0],a.ni>1?i[1]:b->GetRightTextPad()); break; }
-    EE_CFG_SET(kWScrollbar,0) if(i[0]!=0) { Button* rect=new Button; EE_C(Scrollbar)->SetScrollRect(rect); } break;
-    EE_CFG_SET(kWListCtrl,1) static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea())->SetNumColumns(i[0]); break;
-    EE_CFG_SET(kWListCtrl,2) static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea())->SetDynamicSizeColumn(i[0]); break;
-    EE_CFG_SET(kWListCtrl,3) static_cast<ListArea*>(static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea()))->SetListFlags((unsigned long)i[1],i[0]!=0); break;
-    EE_CFG_SET(kWCombo,2) WONShellFrameOp(EE_C(Component),EeWonShellOp::SetFrame,a.fr); break;
-    EE_CFG_SET(kWTabCtrl,2) WONShellFrameOp(EE_C(Component),EeWonShellOp::SetFrame,a.fr); break;
-    EE_CFG_SET(kWScrollCont,0) if(i[0]==0) WONShellFrameOp(EE_C(ScrollbarScroller),EeWonShellOp::SetFrame,WONFrame()); break;
-    EE_CFG_SET(kWScrollCont,2) WONShellFrameOp(EE_C(ScrollbarScroller),EeWonShellOp::SetFrame,a.fr); break;
-    EE_CFG_SET(kScrollArea,0) EE_C(ScrollArea)->SetBackground(a.bg); break;
-    EE_CFG_SET(kStretchCenter,0) EE_CFG(StretchCenterImageConfig)->mStretchCenterImage->SetStretchImage(a.m[0].get()); break;
-    EE_CFG_SET(kStretchCenter,1) EE_CFG(StretchCenterImageConfig)->mStretchCenterImage->SetCenterImage(a.m[0].get()); break;
-    EE_CFG_SET(kComponent,2) a.mConfig->mComponent.get()->mControlId=i[0]; break;
-    EE_CFG_SET(kComponent,3) { Component* p=a.mConfig->mComponent.get(); p->SetPos(i[0],p->Top()); break; }
-    EE_CFG_SET(kComponent,4) { Component* p=a.mConfig->mComponent.get(); p->SetPos(p->Left(),i[0]); break; }
-    EE_CFG_SET(kComponent,5) { Component* p=a.mConfig->mComponent.get(); p->SetSize(i[0],p->Height()); break; }
-    EE_CFG_SET(kComponent,6) { Component* p=a.mConfig->mComponent.get(); p->SetSize(p->Width(),i[0]); break; }
-    EE_CFG_SET(kComponent,7) a.mConfig->mComponent->SetPos(i[0],i[1]); break;
-    EE_CFG_SET(kComponent,8) a.mConfig->mComponent->SetSize(i[0],i[1]); break;
-    EE_CFG_SET(kComponent,9) a.mConfig->mComponent->SetTranslucentColor(i[0],a.ni>1?i[1]:4); break;
-    EE_CFG_SET(kComponent,10)
+    case EE_CFG_KEY(kWONButton,12): { WONButton* b=EE_C(WONButton); b->SetHorzTextPad(i[0],a.ni>1?i[1]:b->GetRightTextPad()); break; }
+    case EE_CFG_KEY(kWScrollbar,0): if(i[0]!=0) { Button* rect=new Button; EE_C(Scrollbar)->SetScrollRect(rect); } break;
+    case EE_CFG_KEY(kWListCtrl,1): static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea())->SetNumColumns(i[0]); break;
+    case EE_CFG_KEY(kWListCtrl,2): static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea())->SetDynamicSizeColumn(i[0]); break;
+    case EE_CFG_KEY(kWListCtrl,3): static_cast<ListArea*>(static_cast<MultiListArea*>(EE_C(ScrollbarScroller)->GetScrollArea()))->SetListFlags((unsigned long)i[1],i[0]!=0); break;
+    case EE_CFG_KEY(kWCombo,2): WONShellFrameOp(EE_C(Component),EeWonShellOp::SetFrame,a.fr); break;
+    case EE_CFG_KEY(kWTabCtrl,2): WONShellFrameOp(EE_C(Component),EeWonShellOp::SetFrame,a.fr); break;
+    case EE_CFG_KEY(kWScrollCont,0): if(i[0]==0) WONShellFrameOp(EE_C(ScrollbarScroller),EeWonShellOp::SetFrame,WONFrame()); break;
+    case EE_CFG_KEY(kWScrollCont,2): WONShellFrameOp(EE_C(ScrollbarScroller),EeWonShellOp::SetFrame,a.fr); break;
+    case EE_CFG_KEY(kScrollArea,0): EE_C(ScrollArea)->SetBackground(a.bg); break;
+    case EE_CFG_KEY(kStretchCenter,0): EE_CFG(StretchCenterImageConfig)->mStretchCenterImage->SetStretchImage(a.m[0].get()); break;
+    case EE_CFG_KEY(kStretchCenter,1): EE_CFG(StretchCenterImageConfig)->mStretchCenterImage->SetCenterImage(a.m[0].get()); break;
+    case EE_CFG_KEY(kComponent,2): a.mConfig->mComponent.get()->mControlId=i[0]; break;
+    case EE_CFG_KEY(kComponent,3): { Component* p=a.mConfig->mComponent.get(); p->SetPos(i[0],p->Top()); break; }
+    case EE_CFG_KEY(kComponent,4): { Component* p=a.mConfig->mComponent.get(); p->SetPos(p->Left(),i[0]); break; }
+    case EE_CFG_KEY(kComponent,5): { Component* p=a.mConfig->mComponent.get(); p->SetSize(i[0],p->Height()); break; }
+    case EE_CFG_KEY(kComponent,6): { Component* p=a.mConfig->mComponent.get(); p->SetSize(p->Width(),i[0]); break; }
+    case EE_CFG_KEY(kComponent,7): a.mConfig->mComponent->SetPos(i[0],i[1]); break;
+    case EE_CFG_KEY(kComponent,8): a.mConfig->mComponent->SetSize(i[0],i[1]); break;
+    case EE_CFG_KEY(kComponent,9): a.mConfig->mComponent->SetTranslucentColor(i[0],a.ni>1?i[1]:4); break;
+    case EE_CFG_KEY(kComponent,10):
         a.mConfig->mHasSetWidth=i[0]>0; a.mConfig->mHasSetHeight=i[1]>0;
         a.mConfig->mComponent->SetSizeAtLeast(i[0],i[1]); break;
-    EE_CFG_SET(kComponent,11) a.mConfig->mComponent->SetDesiredSize(i[0],i[1]); break;
-    EE_CFG_SET(kComponent,12) a.mConfig->mComponent.get()->SetDesiredWidth(i[0]); break;
-    EE_CFG_SET(kComponent,13) a.mConfig->mComponent.get()->SetDesiredHeight(i[0]); break;
-    EE_CFG_SET(kComponent,14) a.mConfig->mComponent->SetPosSize(i[0],i[1],i[2],i[3]); break;
-    EE_CFG_SET(kComponent,15) a.mConfig->mComponent->SetEnabled(i[0]!=0); break;
-    EE_CFG_SET(kComponent,16) a.mConfig->mComponent->SetVisible(i[0]!=0); break;
-    EE_CFG_SET(kComponent,17) if(i[0]!=0) a.mConfig->mComponent->RequestFocus(); break;
-    EE_CFG_SET(kComponent,18) a.mConfig->mComponent->SetDefaultCursor(a.cur); break;
-    EE_CFG_SET(kComponent,19) a.mConfig->mComponent->SetComponentFlags(i[1],i[0]!=0); break;
-    EE_CFG_SET(kComponent,20) Window::GetDefaultWindow()->SetSkipDecodeImages(!(i[0]!=0)); break;
-    EE_CFG_SET(kComponent,21) gShowParseTime=i[0]!=0; break;
-    EE_CFG_SET(kComponent,22) ConfigParser::ResetLineCount(); PerfTimer::GlobalStart(NULL); break;
-    EE_CFG_SET(kComponent,23) PerfTimer::GlobalStop(NULL); gLinesParsed=ConfigParser::GetLineCount(); break;
-    EE_CFG_SET(kComponent,30) a.mConfig->mHasSetWidth=true; break;
-    EE_CFG_SET(kComponent,31) a.mConfig->mHasSetHeight=true; break;
-    EE_CFG_SET(kComponent,32) a.mConfig->mHasSetWidth=a.mConfig->mHasSetHeight=true; break;
-    EE_CFG_SET(kComponent,33) a.mConfig->SetDesiredSizeIfNecessary(); break;
-    EE_CFG_SET(kSkin,1) ee_won_skin_set_type(WONSkinGlobal(),false,&s[0],static_cast<Component*>(SafeConfigGetComponent<WONButton*>(c[0],"WONButton"))); break;
-    EE_CFG_SET(kSkin,2) ee_won_skin_set_type(WONSkinGlobal(),true,&s[0],SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    EE_CFG_SET(kSkin,3) WONSkinSet(EeWonSkinSlot::PushButton,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
-    EE_CFG_SET(kSkin,4) WONSkinSet(EeWonSkinSlot::Checkbox,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
-    EE_CFG_SET(kSkin,5) {
+    case EE_CFG_KEY(kComponent,11): a.mConfig->mComponent->SetDesiredSize(i[0],i[1]); break;
+    case EE_CFG_KEY(kComponent,12): a.mConfig->mComponent.get()->SetDesiredWidth(i[0]); break;
+    case EE_CFG_KEY(kComponent,13): a.mConfig->mComponent.get()->SetDesiredHeight(i[0]); break;
+    case EE_CFG_KEY(kComponent,14): a.mConfig->mComponent->SetPosSize(i[0],i[1],i[2],i[3]); break;
+    case EE_CFG_KEY(kComponent,15): a.mConfig->mComponent->SetEnabled(i[0]!=0); break;
+    case EE_CFG_KEY(kComponent,16): a.mConfig->mComponent->SetVisible(i[0]!=0); break;
+    case EE_CFG_KEY(kComponent,17): if(i[0]!=0) a.mConfig->mComponent->RequestFocus(); break;
+    case EE_CFG_KEY(kComponent,18): a.mConfig->mComponent->SetDefaultCursor(a.cur); break;
+    case EE_CFG_KEY(kComponent,19): a.mConfig->mComponent->SetComponentFlags(i[1],i[0]!=0); break;
+    case EE_CFG_KEY(kComponent,20): Window::GetDefaultWindow()->SetSkipDecodeImages(!(i[0]!=0)); break;
+    case EE_CFG_KEY(kComponent,21): gShowParseTime=i[0]!=0; break;
+    case EE_CFG_KEY(kComponent,22): ConfigParser::ResetLineCount(); PerfTimer::GlobalStart(NULL); break;
+    case EE_CFG_KEY(kComponent,23): PerfTimer::GlobalStop(NULL); gLinesParsed=ConfigParser::GetLineCount(); break;
+    case EE_CFG_KEY(kComponent,30): a.mConfig->mHasSetWidth=true; break;
+    case EE_CFG_KEY(kComponent,31): a.mConfig->mHasSetHeight=true; break;
+    case EE_CFG_KEY(kComponent,32): a.mConfig->mHasSetWidth=a.mConfig->mHasSetHeight=true; break;
+    case EE_CFG_KEY(kComponent,33): a.mConfig->SetDesiredSizeIfNecessary(); break;
+    case EE_CFG_KEY(kSkin,1): ee_won_skin_set_type(WONSkinGlobal(),false,&s[0],static_cast<Component*>(SafeConfigGetComponent<WONButton*>(c[0],"WONButton"))); break;
+    case EE_CFG_KEY(kSkin,2): ee_won_skin_set_type(WONSkinGlobal(),true,&s[0],SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    case EE_CFG_KEY(kSkin,3): WONSkinSet(EeWonSkinSlot::PushButton,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
+    case EE_CFG_KEY(kSkin,4): WONSkinSet(EeWonSkinSlot::Checkbox,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
+    case EE_CFG_KEY(kSkin,5): {
         WONButton* aRadio=SafeConfigGetComponent<WONButton*>(c[0],"WONButton");
         WONSkinSet(EeWonSkinSlot::RadioButton,0,aRadio);
         aRadio->SetButtonFlags(8,true); break;
     }
-    EE_CFG_SET(kSkin,6) WONSkinSet(EeWonSkinSlot::HeaderButton,0,SafeConfigGetSkinPart(c[0],"WONHeaderButton")); break;
-    EE_CFG_SET(kSkin,7) WONSkinSet(EeWonSkinSlot::TabButton,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
-    EE_CFG_SET(kSkin,8) WONSkinSet(EeWonSkinSlot::Arrow0,i[0],SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    EE_CFG_SET(kSkin,9) WONSkinSet(EeWonSkinSlot::ComboButton,0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    EE_CFG_SET(kSkin,10) WONSkinSet(EeWonSkinSlot::CloseButton,0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    EE_CFG_SET(kSkin,11) WONSkinSet(EeWonSkinSlot::ScrollGutter0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    EE_CFG_SET(kSkin,12) WONSkinSet(EeWonSkinSlot::ScrollThumb0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
-    EE_CFG_SET(kSkin,13) WONSkinSet(EeWonSkinSlot::Scrollbar0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONScrollbar")); break;
-    EE_CFG_SET(kSkin,14) WONSkinSet(EeWonSkinSlot::ScrollContainer,0,SafeConfigGetSkinPart(c[0],"WONScrollContainer")); break;
-    EE_CFG_SET(kSkin,15) WONSkinSet(EeWonSkinSlot::ListCtrl,0,SafeConfigGetSkinPart(c[0],"WONListCtrl")); break;
-    EE_CFG_SET(kSkin,16) {
+    case EE_CFG_KEY(kSkin,6): WONSkinSet(EeWonSkinSlot::HeaderButton,0,SafeConfigGetSkinPart(c[0],"WONHeaderButton")); break;
+    case EE_CFG_KEY(kSkin,7): WONSkinSet(EeWonSkinSlot::TabButton,0,SafeConfigGetComponent<WONButton*>(c[0],"WONButton")); break;
+    case EE_CFG_KEY(kSkin,8): WONSkinSet(EeWonSkinSlot::Arrow0,i[0],SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    case EE_CFG_KEY(kSkin,9): WONSkinSet(EeWonSkinSlot::ComboButton,0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    case EE_CFG_KEY(kSkin,10): WONSkinSet(EeWonSkinSlot::CloseButton,0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    case EE_CFG_KEY(kSkin,11): WONSkinSet(EeWonSkinSlot::ScrollGutter0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    case EE_CFG_KEY(kSkin,12): WONSkinSet(EeWonSkinSlot::ScrollThumb0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONSimpleButton")); break;
+    case EE_CFG_KEY(kSkin,13): WONSkinSet(EeWonSkinSlot::Scrollbar0,i[0]?1:0,SafeConfigGetSkinPart(c[0],"WONScrollbar")); break;
+    case EE_CFG_KEY(kSkin,14): WONSkinSet(EeWonSkinSlot::ScrollContainer,0,SafeConfigGetSkinPart(c[0],"WONScrollContainer")); break;
+    case EE_CFG_KEY(kSkin,15): WONSkinSet(EeWonSkinSlot::ListCtrl,0,SafeConfigGetSkinPart(c[0],"WONListCtrl")); break;
+    case EE_CFG_KEY(kSkin,16): {
         Component* aTab=SafeConfigGetSkinPart(c[0],"WONTabCtrl");
         WONSkinSet(EeWonSkinSlot::TabCtrl,0,aTab);
         WONShell::Op(aTab,EeWonShellOp::SetSkin,0); break;
     }
-    EE_CFG_SET(kSkin,17) WONSkinSet(EeWonSkinSlot::ComboBox,0,SafeConfigGetSkinPart(c[0],"WONComboBox")); break;
-    EE_CFG_SET(kSkin,18) WONSkinSet(EeWonSkinSlot::PopupBack,0,SafeConfigGetSkinPart(c[0],"WONPopupBack")); break;
-    EE_CFG_SET(kSkin,19) WONSkinSet(EeWonSkinSlot::DialogBack,0,SafeConfigGetSkinPart(c[0],"WONDialogBack")); break;
-    EE_CFG_SET(kSkin,20) CfgSkinClickSound(a.mConfig); break;
-    EE_CFG_SET(kSkin,21) {
+    case EE_CFG_KEY(kSkin,17): WONSkinSet(EeWonSkinSlot::ComboBox,0,SafeConfigGetSkinPart(c[0],"WONComboBox")); break;
+    case EE_CFG_KEY(kSkin,18): WONSkinSet(EeWonSkinSlot::PopupBack,0,SafeConfigGetSkinPart(c[0],"WONPopupBack")); break;
+    case EE_CFG_KEY(kSkin,19): WONSkinSet(EeWonSkinSlot::DialogBack,0,SafeConfigGetSkinPart(c[0],"WONDialogBack")); break;
+    case EE_CFG_KEY(kSkin,20): CfgSkinClickSound(a.mConfig); break;
+    case EE_CFG_KEY(kSkin,21): {
         SmartPtr<Cursor> aCursor=new ComponentCursor(new ImageComponent(a.m[0].get()));
         Cursor::SetStandardCursor((StandardCursor)i[0],aCursor.get()); break;
     }
-    EE_CFG_SET(kFont,0) EE_CFG(FontConfig)->SetFont(a.f[0].get()); break;
-    EE_CFG_SET(kFont,1) EE_CFG(FontConfig)->mDescriptor.mSize=i[0]; break;
-    EE_CFG_SET(kFont,2)
+    case EE_CFG_KEY(kFont,0): EE_CFG(FontConfig)->SetFont(a.f[0].get()); break;
+    case EE_CFG_KEY(kFont,1): EE_CFG(FontConfig)->mDescriptor.mSize=i[0]; break;
+    case EE_CFG_KEY(kFont,2):
         if(i[0]!=0) EE_CFG(FontConfig)->mDescriptor.mStyle|=i[1];
         else EE_CFG(FontConfig)->mDescriptor.mStyle&=~i[1];
         break;
-    EE_CFG_SET(kFont,3) WindowManager::GetDefaultWindowManager()->SetDefaultFont(a.f[0].get()); break;
-    EE_CFG_SET(kFont,4) WindowManager::GetDefaultWindowManager()->SetNamedFont(s[0],a.f[0].get()); break;
-    EE_CFG_SET(kFont,5) EE_CFG(FontConfig)->mNeedRecalcFont=true; break;
-    EE_CFG_SET(kImage,0) EE_CFG(ImageConfig)->mImage=a.m[0]; break;
-    EE_CFG_SET(kImage,1) EE_CFG(ImageConfig)->mImage->SetSize(i[0],i[1]); break;
+    case EE_CFG_KEY(kFont,3): WindowManager::GetDefaultWindowManager()->SetDefaultFont(a.f[0].get()); break;
+    case EE_CFG_KEY(kFont,4): WindowManager::GetDefaultWindowManager()->SetNamedFont(s[0],a.f[0].get()); break;
+    case EE_CFG_KEY(kFont,5): EE_CFG(FontConfig)->mNeedRecalcFont=true; break;
+    case EE_CFG_KEY(kImage,0): EE_CFG(ImageConfig)->mImage=a.m[0]; break;
+    case EE_CFG_KEY(kImage,1): EE_CFG(ImageConfig)->mImage->SetSize(i[0],i[1]); break;
     default: break;
     // ContainerConfig: the components and layouts read so far taken as each is used (c[--nc], i[--ni]); the
     // layout made by the instruction is the frame's until the container holds it
-    EE_CFG_SET(kContainer,0) EE_CFG(ContainerConfig)->mContainer->AddChild(c[--a.nc]); break;
-    EE_CFG_SET(kContainer,1) EE_CFG(ContainerConfig)->mContainer->AddLayoutPoint(static_cast<LayoutPoint*>(c[--a.nc])); break;
-    EE_CFG_SET(kContainer,2) { // NEWLAYOUTPOINT's name: a layout point, its config registered under the name
+    case EE_CFG_KEY(kContainer,0): EE_CFG(ContainerConfig)->mContainer->AddChild(c[--a.nc]); break;
+    case EE_CFG_KEY(kContainer,1): EE_CFG(ContainerConfig)->mContainer->AddLayoutPoint(static_cast<LayoutPoint*>(c[--a.nc])); break;
+    case EE_CFG_KEY(kContainer,2): { // NEWLAYOUTPOINT's name: a layout point, its config registered under the name
         ContainerConfig* k=EE_CFG(ContainerConfig); SmartPtr<ComponentConfig> config=new ComponentConfig; SmartPtr<LayoutPoint> point=new LayoutPoint;
         config->SetComponent(point.get()); config->mParent=k; k->AddChildToConfigMap(s[--a.ns],config.get(),true); k->mContainer->AddLayoutPoint(point.get());
     } break;
-    EE_CFG_SET(kContainer,4) EE_CFG(ContainerConfig)->mCurLayoutId=i[0]; break;
-    EE_CFG_SET(kContainer,5) { int anId=i[--a.ni]; EE_CFG(ContainerConfig)->mContainer->EnableLayoutInstructions(anId,i[0]!=0); } break;
-    EE_CFG_SET(kContainer,6) EE_CFG(ContainerConfig)->mContainer->Relayout(); break;
-    EE_CFG_SET(kContainer,9) a.lay=new SameSizeLayout(true,true); break;
-    EE_CFG_SET(kContainer,10) a.lay=new SameSizeLayout(true,false); break;
-    EE_CFG_SET(kContainer,11) a.lay=new SameSizeLayout(false,true); break;
-    EE_CFG_SET(kContainer,12) a.lay=new CenterLayout(c[--a.nc],true,true); break;
-    EE_CFG_SET(kContainer,13) a.lay=new CenterLayout(c[--a.nc],true,false); break;
-    EE_CFG_SET(kContainer,14) a.lay=new CenterLayout(c[--a.nc],false,true); break;
-    EE_CFG_SET(kContainer,15) a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],true); a.ni=0; break;
-    EE_CFG_SET(kContainer,16) a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],false); a.ni=0; break;
-    EE_CFG_SET(kContainer,17) a.lay=new ClearRightLayout(c[--a.nc],i[0]); a.ni=0; break;
-    EE_CFG_SET(kContainer,19) a.lay=new SizeAtLeastLayout(c[--a.nc],i[0],i[1]); a.ni=0; break;
-    EE_CFG_SET(kContainer,20) a.lay->AddComponent(c[--a.nc]); break;
-    EE_CFG_SET(kContainer,21) EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get(),EE_CFG(ContainerConfig)->mCurLayoutId); break;
-    EE_CFG_SET(kContainer,22) EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get()); break;
-    EE_CFG_SET(kContainer,23) EE_CFG(ContainerConfig)->mContainer->SetIsolateTabFocus(i[0]!=0); break;
-    EE_CFG_SET(kContainer,24) EE_CFG(ContainerConfig)->mContainer->SetOnlyChildInput(i[0]!=0); break;
+    case EE_CFG_KEY(kContainer,4): EE_CFG(ContainerConfig)->mCurLayoutId=i[0]; break;
+    case EE_CFG_KEY(kContainer,5): { int anId=i[--a.ni]; EE_CFG(ContainerConfig)->mContainer->EnableLayoutInstructions(anId,i[0]!=0); } break;
+    case EE_CFG_KEY(kContainer,6): EE_CFG(ContainerConfig)->mContainer->Relayout(); break;
+    case EE_CFG_KEY(kContainer,9): a.lay=new SameSizeLayout(true,true); break;
+    case EE_CFG_KEY(kContainer,10): a.lay=new SameSizeLayout(true,false); break;
+    case EE_CFG_KEY(kContainer,11): a.lay=new SameSizeLayout(false,true); break;
+    case EE_CFG_KEY(kContainer,12): a.lay=new CenterLayout(c[--a.nc],true,true); break;
+    case EE_CFG_KEY(kContainer,13): a.lay=new CenterLayout(c[--a.nc],true,false); break;
+    case EE_CFG_KEY(kContainer,14): a.lay=new CenterLayout(c[--a.nc],false,true); break;
+    case EE_CFG_KEY(kContainer,15): a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],true); a.ni=0; break;
+    case EE_CFG_KEY(kContainer,16): a.lay=new SpaceEvenlyLayout(c[--a.nc],i[0],i[1],false); a.ni=0; break;
+    case EE_CFG_KEY(kContainer,17): a.lay=new ClearRightLayout(c[--a.nc],i[0]); a.ni=0; break;
+    case EE_CFG_KEY(kContainer,19): a.lay=new SizeAtLeastLayout(c[--a.nc],i[0],i[1]); a.ni=0; break;
+    case EE_CFG_KEY(kContainer,20): a.lay->AddComponent(c[--a.nc]); break;
+    case EE_CFG_KEY(kContainer,21): EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get(),EE_CFG(ContainerConfig)->mCurLayoutId); break;
+    case EE_CFG_KEY(kContainer,22): EE_CFG(ContainerConfig)->mContainer->AddChildLayout(a.lay.get()); break;
+    case EE_CFG_KEY(kContainer,23): EE_CFG(ContainerConfig)->mContainer->SetIsolateTabFocus(i[0]!=0); break;
+    case EE_CFG_KEY(kContainer,24): EE_CFG(ContainerConfig)->mContainer->SetOnlyChildInput(i[0]!=0); break;
     // the LAYOUT family's state (cfgtab.rs layout): the previous rule's instructions and offsets, its reference, the
     // offsets read, the rule added (the frame's last six ints: instructions, offsets, which component stays the reference)
-    EE_CFG_SET(kContainer,25) { ContainerConfig* k=EE_CFG(ContainerConfig); a.i[a.ni++]=k->mLayoutInstruction; for(int j=0;j<4;j++) a.i[a.ni++]=k->mLayoutParams[j]; } break;
-    EE_CFG_SET(kContainer,26) { ContainerConfig* k=EE_CFG(ContainerConfig); if(k->mLayoutRef==NULL) throw ConfigObjectException("Invalid LayoutChain"); a.c[a.nc++]=k->mLayoutRef; } break;
-    EE_CFG_SET(kContainer,27) for(int j=0;j<4;j++) EE_CFG(ContainerConfig)->mLayoutParams[j]=i[a.ni-4+j]; break;
-    EE_CFG_SET(kContainer,28) {
+    case EE_CFG_KEY(kContainer,25): { ContainerConfig* k=EE_CFG(ContainerConfig); a.i[a.ni++]=k->mLayoutInstruction; for(int j=0;j<4;j++) a.i[a.ni++]=k->mLayoutParams[j]; } break;
+    case EE_CFG_KEY(kContainer,26): { ContainerConfig* k=EE_CFG(ContainerConfig); if(k->mLayoutRef==NULL) throw ConfigObjectException("Invalid LayoutChain"); a.c[a.nc++]=k->mLayoutRef; } break;
+    case EE_CFG_KEY(kContainer,27): for(int j=0;j<4;j++) EE_CFG(ContainerConfig)->mLayoutParams[j]=i[a.ni-4+j]; break;
+    case EE_CFG_KEY(kContainer,28): {
         ContainerConfig* k=EE_CFG(ContainerConfig); const int* v=i+a.ni-6;
         for(int j=0;j<4;j++) k->mLayoutParams[j]=v[1+j];
         k->mContainer->Fn2F6140(c[0],v[0],c[1],v[1],v[2],v[3],v[4],k->mCurLayoutId); k->mLayoutRef=c[v[5]]; k->mLayoutInstruction=v[0];
     } break;
-    EE_CFG_SET(kContainer,29) a.lay=new NoOverlapLayout(c[0],i[2],c[1],i[0],i[1]); a.nc=0; break;
+    case EE_CFG_KEY(kContainer,29): a.lay=new NoOverlapLayout(c[0],i[2],c[1],i[0],i[1]); a.nc=0; break;
     // StretchImageConfig (round 41; cfgimg.rs): the exports' children by number or column
-    EE_CFG_SET(kStretchImage,0) EE_CFG(StretchImageConfig)->mStretchImage->SetImage(a.raw.get()); break;
-    EE_CFG_SET(kStretchImage,1) EE_CFG(StretchImageConfig)->mStretchImage->SetTile(i[a.ni-2]!=0,i[a.ni-1]!=0); break;
-    EE_CFG_SET(kStretchImage,2) EE_CFG(StretchImageConfig)->mStretchImage->SetBorders(i[0],i[1],i[2],i[3]); break;
-    EE_CFG_SET(kStretchImage,3) EE_CFG(StretchImageConfig)->mStretchImage->SetSkipCenter(i[0]!=0); break;
-    EE_CFG_SET(kStretchImage,4) {
+    case EE_CFG_KEY(kStretchImage,0): EE_CFG(StretchImageConfig)->mStretchImage->SetImage(a.raw.get()); break;
+    case EE_CFG_KEY(kStretchImage,1): EE_CFG(StretchImageConfig)->mStretchImage->SetTile(i[a.ni-2]!=0,i[a.ni-1]!=0); break;
+    case EE_CFG_KEY(kStretchImage,2): EE_CFG(StretchImageConfig)->mStretchImage->SetBorders(i[0],i[1],i[2],i[3]); break;
+    case EE_CFG_KEY(kStretchImage,3): EE_CFG(StretchImageConfig)->mStretchImage->SetSkipCenter(i[0]!=0); break;
+    case EE_CFG_KEY(kStretchImage,4): {
         char image[512],config[512]; sprintf(image,"%s%d",a.rs[0].c_str(),i[a.ni-2]); sprintf(config,"%s%d",a.rs[1].c_str(),i[a.ni-1]); a.ni-=2;
         StretchImageConfig* k=EE_CFG(StretchImageConfig); SmartPtr<RawImage> raw=k->GetRawImageFromStr(image); CfgStretchAdd(k,config,CfgStretchChild(k),raw.get());
     } break;
-    EE_CFG_SET(kStretchImage,5) a.i[a.ni++]=a.raw->GetWidth()/i[0]; break;
-    EE_CFG_SET(kStretchImage,6) {
+    case EE_CFG_KEY(kStretchImage,5): a.i[a.ni++]=a.raw->GetWidth()/i[0]; break;
+    case EE_CFG_KEY(kStretchImage,6): {
         int n=i[--a.ni];
         char config[512]; sprintf(config,"%s%d",a.rs[0].c_str(),n+1); SmartPtr<RawImage> cut=ImageCrop(a.raw.get(),n*i[1],0,i[1],a.raw->GetHeight());
         CfgStretchAdd(EE_CFG(StretchImageConfig),config,CfgStretchChild(EE_CFG(StretchImageConfig)),cut.get());
     } break;
-    EE_CFG_SET(kStretchImage,7) CfgStretchAdd(EE_CFG(StretchImageConfig),s[0],static_cast<StretchImageConfig*>(a.child.get()),a.raw.get()); break;
-    EE_CFG_SET(kStretchImage,8) a.child=CfgStretchChild(EE_CFG(StretchImageConfig)); break;
+    case EE_CFG_KEY(kStretchImage,7): CfgStretchAdd(EE_CFG(StretchImageConfig),s[0],static_cast<StretchImageConfig*>(a.child.get()),a.raw.get()); break;
+    case EE_CFG_KEY(kStretchImage,8): a.child=CfgStretchChild(EE_CFG(StretchImageConfig)); break;
     // ImageFilterConfig (round 41; cfgimg.rs): the raw image, its copy, the filters by name, the crops' and export's children
-    EE_CFG_SET(kImageFilter,0) EE_CFG(ImageFilterConfig)->SetRawImage(a.raw.get()); break;
-    EE_CFG_SET(kImageFilter,2) EE_CFG(ImageFilterConfig)->SetRawImage(static_cast<RawImage*>(EE_CFG(ImageFilterConfig)->mRawImage->Duplicate().get())); break;
-    EE_CFG_SET(kImageFilter,3) a.i[a.ni++]=EE_CFG(ImageFilterConfig)->mRawImage->GetWidth()/i[0]; break;
-    EE_CFG_SET(kImageFilter,4) {
+    case EE_CFG_KEY(kImageFilter,0): EE_CFG(ImageFilterConfig)->SetRawImage(a.raw.get()); break;
+    case EE_CFG_KEY(kImageFilter,2): EE_CFG(ImageFilterConfig)->SetRawImage(static_cast<RawImage*>(EE_CFG(ImageFilterConfig)->mRawImage->Duplicate().get())); break;
+    case EE_CFG_KEY(kImageFilter,3): a.i[a.ni++]=EE_CFG(ImageFilterConfig)->mRawImage->GetWidth()/i[0]; break;
+    case EE_CFG_KEY(kImageFilter,4): {
         ImageFilterConfig* k=EE_CFG(ImageFilterConfig); int n=i[--a.ni];
         SmartPtr<RawImage> image=ImageCrop(k->mRawImage.get(),n*i[1],0,i[1],k->mRawImage->GetHeight());
         char name[512]; sprintf(name,"%s%d",((std::string)s[0]).c_str(),n+1); CfgFilterChild(k,GUIString(name),image.get());
     } break;
-    EE_CFG_SET(kImageFilter,5) CfgFilterChild(EE_CFG(ImageFilterConfig),s[0],a.raw.get()); break;
-    EE_CFG_SET(kImageFilter,10) a.raw=ImageScalePercent(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-2],i[a.ni-1]); break;
-    EE_CFG_SET(kImageFilter,11) a.raw=ImageScaleTo(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-2],i[a.ni-1]); break;
-    EE_CFG_SET(kImageFilter,12) a.raw=ImageTint(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-3],i[a.ni-2],i[a.ni-1]); break;
-    EE_CFG_SET(kImageFilter,13) a.raw=ImageCrop(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-4],i[a.ni-3],i[a.ni-2],i[a.ni-1]); break;
-    EE_CFG_SET(kImageFilter,14) a.raw=ImageTransparent(EE_CFG(ImageFilterConfig)->mRawImage.get(),(DWORD)i[a.ni-1]); break;
-    EE_CFG_SET(kImageFilter,15) a.raw=NULL; break;
+    case EE_CFG_KEY(kImageFilter,5): CfgFilterChild(EE_CFG(ImageFilterConfig),s[0],a.raw.get()); break;
+    case EE_CFG_KEY(kImageFilter,10): a.raw=ImageScalePercent(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-2],i[a.ni-1]); break;
+    case EE_CFG_KEY(kImageFilter,11): a.raw=ImageScaleTo(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-2],i[a.ni-1]); break;
+    case EE_CFG_KEY(kImageFilter,12): a.raw=ImageTint(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-3],i[a.ni-2],i[a.ni-1]); break;
+    case EE_CFG_KEY(kImageFilter,13): a.raw=ImageCrop(EE_CFG(ImageFilterConfig)->mRawImage.get(),i[a.ni-4],i[a.ni-3],i[a.ni-2],i[a.ni-1]); break;
+    case EE_CFG_KEY(kImageFilter,14): a.raw=ImageTransparent(EE_CFG(ImageFilterConfig)->mRawImage.get(),(DWORD)i[a.ni-1]); break;
+    case EE_CFG_KEY(kImageFilter,15): a.raw=NULL; break;
     }
 }
-#undef EE_CFG_SET
+#undef EE_CFG_KEY
 #undef EE_CFG
 #undef EE_C
 static bool CfgTabApply(void* p,int32_t inSetter)

@@ -1318,6 +1318,43 @@ pub unsafe extern "C" fn ee_won_routeop_set_text(op: *mut EeWonRouteOp, which: i
     unsafe { op_mut(op) }.set_text(which, t);
 }
 
+/// Assigns a text member from `count` `wchar_t`s of `wchar_size` bytes (R6 WON round 33: RoutingOp::SetText's
+/// conversion to UTF-16, WideAppendUtf16LE's, is Rust's).
+///
+/// # Safety
+/// `op` is a live op; `wide` holds `count` characters.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_routeop_set_text_wide(
+    op: *mut EeWonRouteOp,
+    which: i32,
+    wide: *const c_void,
+    wchar_size: u32,
+    count: usize,
+) {
+    // SAFETY: the contract
+    let t = unsafe { crate::ffi::wide_units(wide, wchar_size, count) };
+    unsafe { op_mut(op) }.set_text(which, t);
+}
+
+/// Receives one recipient id.
+pub type EeWonRouteIdSink = unsafe extern "C" fn(context: *mut c_void, id: u16);
+
+/// The recipients, each to `sink` in order (R6 WON round 33: RoutingOp::Recipients' copy).
+///
+/// # Safety
+/// `op` is a live op; `sink` is valid with `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_routeop_ids_each(
+    op: *const EeWonRouteOp,
+    sink: EeWonRouteIdSink,
+    context: *mut c_void,
+) {
+    for &id in &unsafe { op_ref(op) }.ids {
+        // SAFETY: the caller's sink
+        unsafe { sink(context, id) };
+    }
+}
+
 /// `mDataType` into `sink`.
 ///
 /// # Safety

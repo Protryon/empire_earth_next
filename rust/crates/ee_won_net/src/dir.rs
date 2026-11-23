@@ -442,6 +442,114 @@ pub unsafe extern "C" fn ee_won_dir_parse_single(
     reply_of(&r, None)
 }
 
+/// A DirEntity's member that `ee_won_dir_entity_fill` sets (R6 WON round 33: DirEntityReplyParser.cpp's
+/// DirMakeEntity's decisions are Rust's, each assignment one case of the C++ setter).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonDirSet {
+    /// `mType = (char)num`
+    Kind,
+    /// `mPath` of the `n` UTF-16 units at `p`
+    Path,
+    /// `mName`, the same
+    Name,
+    /// `mNetAddr = new ByteBuffer(p, n)`
+    NetAddr,
+    /// `mReqUnique = num != 0`
+    ReqUnique,
+    /// `mDisplayName` of the units at `p`
+    DisplayName,
+    /// `mLifespan = num`
+    Lifespan,
+    /// `mCreated = num`
+    Created,
+    /// `mTouched = num`
+    Touched,
+    /// `mCRC = num`
+    Crc,
+    /// `mCreateIP = num`
+    CreateIp,
+    /// `mTouchIP = num`
+    TouchIp,
+    /// `mCreateId = num`
+    CreateId,
+    /// `mTouchId = num`
+    TouchId,
+    /// a data object of the `n` type bytes at `p` appended to `mDataObjects`
+    ObjectAdd,
+    /// the last data object's `mData = new ByteBuffer(p, n)`
+    ObjectData,
+    /// the ACL `p` (an `EeWonDirAcl`) appended to `mACLs`
+    Acl,
+}
+
+/// The C++ setter: `(entity, member, number, pointer, count)`.
+pub type EeWonDirSetFn =
+    unsafe extern "C" fn(entity: *mut c_void, member: EeWonDirSet, num: i64, p: *const c_void, n: usize);
+
+/// DirMakeEntity's statements: the members `e` read set on the C++ `entity` through `set`, in the original's order
+/// (the flags' members, then the data objects, then the ACLs).
+///
+/// # Safety
+/// `e` is a live entity record (its pointers hold their counts); `set` is valid with `entity`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_dir_entity_fill(e: *const EeWonDirEntity, set: EeWonDirSetFn, entity: *mut c_void) {
+    // SAFETY: the caller's record
+    let e = unsafe { &*e };
+    let f = e.fields;
+    type S = EeWonDirSet;
+    let num = |m: S, v: i64| unsafe { set(entity, m, v, std::ptr::null(), 0) };
+    let ptr = |m: S, p: *const c_void, n: usize| unsafe { set(entity, m, 0, p, n) };
+    if f & 0x1 != 0 {
+        num(S::Kind, e.kind as i64);
+    }
+    if f & 0x2 != 0 {
+        ptr(S::Path, e.path as *const c_void, e.path_len);
+    }
+    if f & 0x4 != 0 {
+        ptr(S::Name, e.name as *const c_void, e.name_len);
+    }
+    if f & 0x8 != 0 {
+        ptr(S::NetAddr, e.net_addr as *const c_void, e.net_addr_len);
+    }
+    if f & 0x10 != 0 {
+        num(S::ReqUnique, e.req_unique as i64);
+    }
+    if f & 0x20 != 0 {
+        ptr(S::DisplayName, e.display_name as *const c_void, e.display_name_len);
+    }
+    for (bit, m, v) in [
+        (0x40, S::Lifespan, e.lifespan),
+        (0x80, S::Created, e.created),
+        (0x100, S::Touched, e.touched),
+        (0x200, S::Crc, e.crc),
+    ] {
+        if f & bit != 0 {
+            num(m, v as i64);
+        }
+    }
+    if f & 0x400 != 0 {
+        num(S::CreateIp, e.create_ip as i64);
+        num(S::TouchIp, e.touch_ip as i64);
+    }
+    if f & 0x800 != 0 {
+        num(S::CreateId, e.create_id as i64);
+        num(S::TouchId, e.touch_id as i64);
+    }
+    for i in 0..e.object_count {
+        // SAFETY: `objects` holds `object_count` records
+        let o = unsafe { &*e.objects.add(i) };
+        ptr(S::ObjectAdd, o.data_type as *const c_void, o.data_type_len);
+        if o.has_data {
+            ptr(S::ObjectData, o.data as *const c_void, o.data_len);
+        }
+    }
+    for i in 0..e.acl_count {
+        // SAFETY: `acls` holds `acl_count` records
+        ptr(S::Acl, unsafe { e.acls.add(i) } as *const c_void, 1);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

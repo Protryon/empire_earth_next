@@ -103,16 +103,18 @@ enum class EeWonRootScreenOp : uint32_t {
   BroadcastRoomSpec,
   /// `this->SubscribeToBroadcast(1)`.
   Subscribe,
-  /// `GetRoot()->GetRect(sRootWindowRect, false)`.
+  /// `sRootWindow->GetRect(sRootWindowRect, false)`.
   WindowRectGet,
-  /// `GetRoot()->GetRect(sRootClientRect, true)`.
+  /// `sRootWindow->GetRect(sRootClientRect, true)`.
   ClientRectGet,
   /// `sRootWindowRect.height`.
   WindowHeight,
   /// `sRootClientRect.height`.
   ClientHeight,
-  /// `GetRoot()->SetPosSize(sRootWindowRect.x, sRootWindowRect.y, sRootWindowRect.width, a)`.
+  /// `sRootWindow->SetPosSize(sRootWindowRect.x, sRootWindowRect.y, sRootWindowRect.width, a)`.
   WindowSetHeight,
+  /// `sRootWindow = GetRoot()` (the SWAT resize's `aWindow`, read once: R6 WON round 33's golden).
+  WindowGet,
 };
 
 /// The calls in (`ee_won_rootscreen_call`).
