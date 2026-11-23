@@ -434,32 +434,29 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     return 0;
 }
 
-// A record message: its members in wire order (EEMRecordValue's conversions)
+// A record value (EEMRecordValue's conversions)
+static EEMRecordValue GaValue(const EeScreensGaValue& inValue)
+{
+    return inValue.kind == EE_SCREENS_GA_VALUE_POINT   ? EEMRecordValue(GE2DPoint(inValue.f[0], inValue.f[1]))
+           : inValue.kind == EE_SCREENS_GA_VALUE_FLOAT ? EEMRecordValue((double)inValue.f[0])
+                                                        : EEMRecordValue((long long)inValue.i);
+}
+
+#define GA_V(k) GaValue(inValues[k])
+
+// A record message: its members in wire order (seven at most)
 extern "C" void* ee_screenscpp_ga_record(uint32_t inKind, const EeScreensGaValue* inValues, uint32_t inCount)
 {
-    EEMRecordValue v[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    for (uint32_t k = 0; k < inCount && k < 8; k++) {
-        const EeScreensGaValue& theValue = inValues[k];
-        if (theValue.kind == EE_SCREENS_GA_VALUE_POINT)
-            v[k] = EEMRecordValue(GE2DPoint(theValue.f[0], theValue.f[1]));
-        else if (theValue.kind == EE_SCREENS_GA_VALUE_FLOAT)
-            v[k] = EEMRecordValue((double)theValue.f[0]);
-        else
-            v[k] = EEMRecordValue((long long)theValue.i);
-    }
-    unsigned char theType = (unsigned char)inKind;
-    EEMessage* theMessage;
     switch (inCount) {
-    case 0: theMessage = new EEMRecord(theType); break;
-    case 1: theMessage = new EEMRecord(theType, {v[0]}); break;
-    case 2: theMessage = new EEMRecord(theType, {v[0], v[1]}); break;
-    case 3: theMessage = new EEMRecord(theType, {v[0], v[1], v[2]}); break;
-    case 4: theMessage = new EEMRecord(theType, {v[0], v[1], v[2], v[3]}); break;
-    case 5: theMessage = new EEMRecord(theType, {v[0], v[1], v[2], v[3], v[4]}); break;
-    case 6: theMessage = new EEMRecord(theType, {v[0], v[1], v[2], v[3], v[4], v[5]}); break;
-    default: theMessage = new EEMRecord(theType, {v[0], v[1], v[2], v[3], v[4], v[5], v[6]}); break;
+    case 0: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind));
+    case 1: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0)}));
+    case 2: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1)}));
+    case 3: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2)}));
+    case 4: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3)}));
+    case 5: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4)}));
+    case 6: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4), GA_V(5)}));
+    default: return static_cast<EEMessage*>(new EEMRecord((unsigned char)inKind, {GA_V(0), GA_V(1), GA_V(2), GA_V(3), GA_V(4), GA_V(5), GA_V(6)}));
     }
-    return theMessage;
 }
 
 // ------------------------------------------------------------------------------------------------ the originals' COMDATs
