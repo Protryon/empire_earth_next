@@ -3478,6 +3478,7 @@ pub enum EeGameCpp {
     // ---- round 11, lane B (EECore11OpB's cases)
     //
     // ---- round 11, lane C (EECore11OpC's cases)
+    C11ScenarioExtension,
     C11TcUnitComplex,
     C11TcUnitId,
     C11TcUnitType,

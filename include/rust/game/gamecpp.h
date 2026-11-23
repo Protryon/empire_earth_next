@@ -3297,6 +3297,7 @@ enum class EeGameCpp : uint32_t {
   WsRecHuman,
   WsSetCurrentRecord,
   WsRecPlayTime,
+  C11ScenarioExtension,
   C11TcUnitComplex,
   C11TcUnitId,
   C11TcUnitType,
@@ -5738,6 +5739,15 @@ bool ee_gamecpp_farm_key_order(long cx,
 /// # Safety
 /// `name` is a C string.
 const char *ee_gamecpp_save_text_name(const char *name, unsigned long length, bool keep);
+
+/// GetDateText: the answer as a C string (the thread's buffer, valid until its next call).
+const char *ee_gamecpp_date_text();
+
+/// EEIsScenarioFile: whether a file name ends in the scenario extension (gScenarioExtension), case-insensitively.
+///
+/// # Safety
+/// `file` is a C string.
+bool ee_gamecpp_is_scenario_file(const char *file);
 
 /// EEServer's constructor body: the members, the fast selection, the three locks (search, fast selection, attempt).
 void ee_gamecpp_server_init(void *server);

@@ -85,13 +85,7 @@ UString GetSaveTextName(const UString& inName, bool inKeep)
 // Returns the current date and time as text (asctime), or "Date/time failed."
 UString GetDateText()
 {
-    UString theDate;
-    time_t theTime;
-    if (time(&theTime) != -1)
-        theDate = asctime(localtime(&theTime));
-    else
-        theDate = "Date/time failed.";
-    return theDate;
+    return UString(ee_gamecpp_date_text());   // gamecpp persist_text.rs
 }
 
 // The old text twin (".txt") of a save deleted, as the original's unused debug file's Delete did (FSBasicFile::Delete:

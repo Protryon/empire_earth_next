@@ -208,7 +208,7 @@ static const bool sCaptureHooksSet = (EECalamityCanCastEnter = CanCastEnter, EEC
 
 // ------------------------------------------------------------------------- round 11, lane C: the hooks' C++
 
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore11OpC8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameStateLoader.cpp
 
 #define TCU ((EEUnit*)p)
 #define TCX ((EEComplexUnit*)p)
@@ -227,7 +227,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::C11TcComplexBuilt: return TCX->mIsBuilt;
     case O::C11TcComplexPrevious: return TCX->mPreviousPart != NULL;
     case O::C11TcComplexFlightTime: return (long)TCX->mFlightTime;
-    default: return EECore11OpE(inOp, p, a, f);
+    default: return EECore11OpC8(inOp, p, a, f);
     }
     return 0;
 }

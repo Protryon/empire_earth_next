@@ -20,7 +20,10 @@ fn bytes(record: P, out: &[u8], n: u32) {
 
 /// EVUN's unit flags: complex, built, on a tile, a multi-part unit's later part.
 pub fn unit_flags(complex: bool, built: bool, tile_node: bool, previous_part: bool) -> u32 {
-    complex as u32 | ((complex && built) as u32) << 1 | (tile_node as u32) << 2 | ((complex && previous_part) as u32) << 3
+    complex as u32
+        | ((complex && built) as u32) << 1
+        | (tile_node as u32) << 2
+        | ((complex && previous_part) as u32) << 3
 }
 
 /// A node's state record (TNRS, TNPR, ...: id, epochs, flags, delay, prerequisites, the tree's epochs).
