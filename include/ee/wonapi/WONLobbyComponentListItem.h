@@ -9,7 +9,6 @@ protected:
 public:
     ComponentListItem(Component* component,bool sizable=false,bool selectable=false)
         :mComponent(component),mIsSizable(sizable) { this->mSelectable=selectable; }
-    void CheckInvalid(ListArea*); // empty, at 0x006fa500
     virtual void Paint(Graphics&,ListArea*);     // at 0x006fa510
     virtual void CalcDimensions(ListArea*); // at 0x006fa480
     virtual void SetViewport(ListArea*,Container*); // at 0x006fa4a0

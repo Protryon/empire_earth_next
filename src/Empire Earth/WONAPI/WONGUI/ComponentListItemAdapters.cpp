@@ -34,44 +34,18 @@ void ComponentListItem::SetPos(int x,int y)
 }
 // Tests the point against the component
 bool ComponentListItem::Contains(int x,int y) { return this->mComponent->Contains(x,y); }
-// Does nothing (component items need no repaint check)
-void ComponentListItem::CheckInvalid(ListArea*) {}
-// Forwards mouse enter to the component, then checks for repaint
-void ComponentListItem::MouseEnter(ListArea* area,int x,int y)
-{
-    this->mComponent->MouseEnter(x,y);
-    this->CheckInvalid(area);
-}
-// Forwards mouse exit to the component, then checks for repaint
-void ComponentListItem::MouseExit(ListArea* area)
-{
-    this->mComponent->MouseExit();
-    this->CheckInvalid(area);
-}
-// Forwards a mouse move to the component, then checks for repaint
-void ComponentListItem::MouseMove(ListArea* area,int x,int y)
-{
-    this->mComponent->MouseMove(x,y);
-    this->CheckInvalid(area);
-}
-// Forwards a mouse drag to the component, then checks for repaint
-void ComponentListItem::MouseDrag(ListArea* area,int x,int y)
-{
-    this->mComponent->MouseDrag(x,y);
-    this->CheckInvalid(area);
-}
-// Forwards a mouse press to the component, then checks for repaint
-void ComponentListItem::MouseDown(ListArea* area,int x,int y,int button)
-{
-    this->mComponent->MouseDown(x,y,button);
-    this->CheckInvalid(area);
-}
-// Forwards a mouse release to the component, then checks for repaint
-void ComponentListItem::MouseUp(ListArea* area,int x,int y,int button)
-{
-    this->mComponent->MouseUp(x,y,button);
-    this->CheckInvalid(area);
-}
+// Forwards mouse enter to the component
+void ComponentListItem::MouseEnter(ListArea*,int x,int y) { this->mComponent->MouseEnter(x,y); }
+// Forwards mouse exit to the component
+void ComponentListItem::MouseExit(ListArea*) { this->mComponent->MouseExit(); }
+// Forwards a mouse move to the component
+void ComponentListItem::MouseMove(ListArea*,int x,int y) { this->mComponent->MouseMove(x,y); }
+// Forwards a mouse drag to the component
+void ComponentListItem::MouseDrag(ListArea*,int x,int y) { this->mComponent->MouseDrag(x,y); }
+// Forwards a mouse press to the component
+void ComponentListItem::MouseDown(ListArea*,int x,int y,int button) { this->mComponent->MouseDown(x,y,button); }
+// Forwards a mouse release to the component
+void ComponentListItem::MouseUp(ListArea*,int x,int y,int button) { this->mComponent->MouseUp(x,y,button); }
 // Destroys the list item, releasing its component (emitted at 0x006fdaa0)
 ComponentListItem::~ComponentListItem() {}
 }
