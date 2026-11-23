@@ -1395,19 +1395,3 @@ double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     }
     return 0.0;
 }
-
-// ------------------------------------------------------------------------- round 11, lane E: the test drivers, the entry, the world (the end of the chain)
-
-// the C++ calls and members of lane E's bodies in Rust (gamecpp; EeGameCpp's round 11 lane E section): one
-// statement each
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
-    return 0;
-}
-
-double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
-    return 0.0;
-}

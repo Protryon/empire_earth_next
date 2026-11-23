@@ -93,6 +93,7 @@
 #include "ee/EEGameLog.h"
 #include "rust/sim/ai.h"   // ee_ai_name_copy
 #include "rust/game/physics.h"
+#include "rust/game/gamecpp.h"   // EeGameCpp (EECore11OpE: the end of the chain)
 #include "rust/sim/app.h"
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
@@ -666,4 +667,20 @@ void EEEnvironmentManager::Tick(unsigned long inTime)
 {
     if (this->mNextStep <= inTime && this->mIsEnabled == true)
         this->Step(inTime);
+}
+
+// ------------------------------------------------------------------------- round 11, lane E; round 12, fork B: the world lane's leftovers (the end of the chain)
+
+// the C++ calls and members of fork B's bodies in Rust (gamecpp; EeGameCpp's round 12 fork B section): one
+// statement each
+int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+    return 0;
+}
+
+double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
+    return 0.0;
 }

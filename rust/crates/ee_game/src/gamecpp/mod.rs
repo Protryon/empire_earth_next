@@ -139,6 +139,22 @@ pub mod tech_hooks;
 //
 //
 
+// ---- round 12, fork A: the Graphics Thread and the Map (EECore11OpA)
+//
+//
+
+// ---- round 12, fork B: Player, Physics Thread, Data Pre-Loading, Campaign, Random Map (EECore11OpE)
+//
+//
+
+// ---- round 12, fork C: Communications, Calamities, Database, Tech Tree, Persistent (EECore11OpC)
+//
+//
+
+// ---- round 12, fork D: the Empire Earth directory (EECore11OpB)
+//
+//
+
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
@@ -3990,6 +4006,14 @@ pub enum EeGameCpp {
     C11UiPost12,
     //
     // ---- round 11, lane E (EECore11OpE's cases)
+    //
+    // ---- round 12, fork A (EECore11OpA's cases)
+    //
+    // ---- round 12, fork B (EECore11OpE's cases)
+    //
+    // ---- round 12, fork C (EECore11OpC's cases)
+    //
+    // ---- round 12, fork D (EECore11OpB's cases)
     //
 }
 
