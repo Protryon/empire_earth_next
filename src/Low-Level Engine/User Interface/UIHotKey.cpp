@@ -25,8 +25,6 @@
 #include "lle/UIShims.h"
 #include "rust/ui/lle_hosts.h"
 
-TMPoll UIHotKey::sPressedPoll(50, 0, true);
-unsigned long UIHotKey::sPressedPollAmount;
 
 // The UI database files' calls (FSFileSpec&): the hot keys' records (hotkeyobj.rs), the events' and the background
 // table's (UIManager.cpp, UIBackgroundTable.cpp)

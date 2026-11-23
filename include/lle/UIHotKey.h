@@ -44,15 +44,9 @@ public:
     void SetKey(unsigned long inKey) { this->Call(EeUiHotKeyCall::SetKey, (intptr_t)inKey); }
     void SetModifier(unsigned long inKey, unsigned char inIndex) { this->Call(EeUiHotKeyCall::SetModifier, (intptr_t)inKey, inIndex); }
     void SetPressedEvent(UIEvent* inEvent) { this->Call(EeUiHotKeyCall::SetEvent, 2, (intptr_t)inEvent); }
-#ifdef LOWLEVELENGINE_EXPORTS
-    static void UpdatePressedPollAmount() { UIHotKey::sPressedPollAmount = UIHotKey::sPressedPoll.Poll(); }
-#endif
     intptr_t Call(EeUiHotKeyCall inCall, intptr_t a = 0, intptr_t b = 0) { return ee_ui_hotkey_call(this, inCall, a, b); }
-
-#ifdef LOWLEVELENGINE_EXPORTS
-    static TMPoll sPressedPoll;
-    static unsigned long sPressedPollAmount;
-#endif
+    // (the original's sPressedPoll is UIManager.cpp's hot key poll; its sPressedPollAmount, written, read by nothing,
+    // went in UI round 16)
 };
 
 #endif

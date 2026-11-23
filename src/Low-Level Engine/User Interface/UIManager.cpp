@@ -204,7 +204,9 @@ EE_UI_VOID(mgr_part_rect) { UIObjHost::PutRect(f, reinterpret_cast<UIControl*>(a
 EE_UI_VOID(mgr_event_process) { reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); }
 EE_UI_CASE(mgr_keyboard_should_update) { return gISKeyboard->GetShouldUpdate(); }
 EE_UI_CASE(mgr_mouse_should_update) { return gISMouse->GetShouldUpdate(); }
-EE_UI_VOID(mgr_hot_key_poll) { UIHotKey::UpdatePressedPollAmount(); }
+// the hot keys' pressed poll (the original's UIHotKey::sPressedPoll: 50 ms), polled once per update
+static TMPoll sHotKeyPressedPoll(50, 0, true);
+EE_UI_VOID(mgr_hot_key_poll) { sHotKeyPressedPoll.Poll(); }
 EE_UI_VOID(mgr_hot_keys_delete) { UIHotKey::DeleteHotKeys(); }
 EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
 EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }
