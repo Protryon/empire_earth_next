@@ -50,9 +50,11 @@ fn value_in(text: &str, name: &str) -> Option<isize> {
 
 #[test]
 fn the_constants_are_the_headers() {
-    let ui = header("ee/EEUIManager.h");
+    // the form and control ids are the UI lane's generated enums since batch 18 (rust/game/screens.h); the older
+    // headers are read too, for a tree from before
+    let ui = header("ee/EEUIManager.h") + &header("rust/game/screens.h");
     let ids = header("ee/EEStringIDs.h");
-    let control = header("lle/UIControl.h");
+    let control = header("lle/UIControl.h") + &header("rust/ui/ids.h");
     if ui.is_empty() || ids.is_empty() {
         return; // a checkout without the headers (the crate alone)
     }
