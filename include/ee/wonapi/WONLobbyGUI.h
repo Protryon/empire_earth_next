@@ -49,77 +49,37 @@
 #include "rust/won_gui/treeobj.h"
 #include "rust/won_gui/winobj.h"
 #include "rust/won_gui/wmobj.h"
+#include "rust/won_gui/guienum.h"
 #include "rust/won_gui/wrapobj.h"
 
 namespace WONAPI {
 
-// SDK LobbyTypes enum; wire values 0/1/2/3
-enum LobbyGameType
-{
-	LobbyGameType_None,
-	LobbyGameType_Lan,
-	LobbyGameType_Internet,
-	LobbyGameType_DirectConnect
-};
-
-// SDK EventTypes.h ControlIdType; the registrar passes 100001/100002
-enum ControlIdType
-	{
-		ControlId_LibMin	= 100000,
-		ControlId_Ok,
-		ControlId_Cancel,
-		ControlId_TreeToggleOpen,
-		ControlId_SplitterMin,
-		ControlId_SplitterMax = ControlId_SplitterMin + 100,
-		ControlId_UserMin	= 200000,
-		ControlId_UserMin2	= 300000,
-		ControlId_UserMin3	= 400000,
-		ControlId_UserMin4	= 500000,
-		ControlId_UserMin5	= 600000
-	};
+// the SDK's enums are Rust's (rust/crates/ee_won_gui/src/guienum.rs, R6 WON GUI round 34): their enumerators are
+// global, the types named here
+typedef EeWonGuiLobbyGameType LobbyGameType;
+typedef EeWonGuiControlIdType ControlIdType;
+typedef EeWonGuiDirection Direction;
+typedef EeWonGuiHorzAlign HorzAlign;
+typedef EeWonGuiVertAlign VertAlign;
+typedef EeWonGuiPopupFlags PopupFlags;
+typedef EeWonGuiStandardCursor StandardCursor;
+typedef EeWonGuiStandardColor StandardColor;
+typedef EeWonGuiMouseButton MouseButton;
+typedef EeWonGuiForegroundSelectionMode ForegroundSelectionMode;
+typedef EeWonGuiScrollbarCondition ScrollbarCondition;
+typedef EeWonGuiScrollButtonCondition ScrollButtonCondition;
+typedef EeWonGuiFontStyles FontStyles;
+typedef EeWonGuiListSortType ListSortType;
+typedef EeWonGuiHTMLFontSize HTMLFontSize;
 
 // Control id set; its members are the game's set<long> COMDATs (insert, _Erase, erase).
 typedef std::set<long> ControlIdSet;
-enum Direction { Direction_Left, Direction_Right, Direction_Up, Direction_Down };
-enum HorzAlign { HorzAlign_Left, HorzAlign_Center, HorzAlign_Right };
-enum VertAlign { VertAlign_Top, VertAlign_Center, VertAlign_Bottom };
 
-enum PopupFlags
-{
-	PopupFlag_EndOnLeftMouseDown			= 0x0001,
-	PopupFlag_EndOnMiddleMouseDown			= 0x0002,
-	PopupFlag_EndOnRightMouseDown			= 0x0004,
-	PopupFlag_EndOnMouseMove				= 0x0008,
-	PopupFlag_EndOnKeyDown					= 0x0010,
-	PopupFlag_EndOnEscape					= 0x0020,
-	PopupFlag_EndOnFocusChange				= 0x0040,
-	PopupFlag_WantInput						= 0x0080,
-	PopupFlag_IsModal						= 0x0100,
-	PopupFlag_AdjustPosition				= 0x0200,
-	PopupFlag_EatMouseDownOnEnd				= 0x0800,
-	PopupFlag_Additional					= 0x1000,
-	PopupFlag_FireEventOnEnd				= 0x2000,
-	PopupFlag_DontWantMouse					= 0x4000,				
-
-	PopupFlag_InOwnWindow				   = 0x10000,
-	PopupFlag_NotInOwnWindow			   = 0x20000,
-
-	PopupFlag_EndOnMouseDown				= 0x0007,
-	PopupFlag_EndOnInput					= 0x001f,
-
-	PopupFlag_StandardPopup					= 0x23e7,
-	PopupFlag_StandardTip					= 0x6247
-};
 
 class WONRectangle;
 class Window;
 class SurfaceBase; // WONSurface.h: the software surface a DisplayContext draws into
 class Component;
-enum StandardCursor {
-    StandardCursor_Arrow,StandardCursor_Hand,StandardCursor_IBeam,
-    StandardCursor_EastWest,StandardCursor_NorthSouth,StandardCursor_NorthSouthEastWest,
-    StandardCursor_Max
-};
 // Cursor (RefCount, 8 bytes); the constructor 0x326540 stores only the inherited refcount and vptr
 class Cursor : public RefCount {
 protected:
@@ -140,35 +100,6 @@ public:
     virtual Cursor* GetNative() { return this->mCursor->GetNative(); }
     virtual Component* GetComponent(int& x,int& y) { return this->mCursor->GetComponent(x,y); }
     void SetCursor(Cursor* cursor) { this->mCursor=cursor; }
-};
-// Only the prefix is declared; 0x326ce0 reads 17 DWORDs from +0x08
-enum StandardColor
-{
-	StandardColor_3DDarkShadow = 0,
-	StandardColor_3DFace,
-	StandardColor_3DHilight,
-	StandardColor_3DShadow,
-	StandardColor_Scrollbar,
-
-	StandardColor_ButtonText,
-	StandardColor_GrayText,
-	StandardColor_Hilight,
-	StandardColor_HilightText,
-
-	StandardColor_ToolTipBack,
-	StandardColor_ToolTipText,
-
-	StandardColor_MenuBack,
-	StandardColor_MenuText,
-
-	StandardColor_Back,
-	StandardColor_Text,
-
-	StandardColor_Link,
-	StandardColor_LinkDown,
-
-
-	StandardColor_Max
 };
 
 enum { COLOR_INVALID = 0xffffffff };
@@ -631,7 +562,6 @@ private:
     intptr_t BCall(EeWonBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_btn_call(this->mBtn,c,a,b,cc); }
 };
 
-enum MouseButton { MouseButton_Left=0,MouseButton_Middle=1,MouseButton_Right=2 };
 // WrappedText (R6 WON round 38): the breaks, size, maximum width and the wrap and centre settings are the Rust
 // object's (rust/crates/ee_won_gui/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
 class WrappedText : public RefCount {
@@ -725,11 +655,6 @@ private:
 
 
 // SelectionColor (0x0c bytes) with read-only color helpers.
-enum ForegroundSelectionMode {
-    ForegroundSelectionMode_UseOriginalColor,
-    ForegroundSelectionMode_InvertOriginalColor,
-    ForegroundSelectionMode_UseForegroundColor
-};
 class SelectionColor {
 public:
     SelectionColor(); //3494a0, back80000007/fore80000008/mode2
@@ -929,7 +854,6 @@ public:
 protected:
     intptr_t SCall(EeWonScrollerCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_scroller_call(this->mRust,c,a,b,cc); }
 };
-enum ScrollbarCondition { ScrollbarCondition_Disable=0,ScrollbarCondition_Enable=1,ScrollbarCondition_Conditional=2 };
 // ScrollbarScroller (0x305700: both conditions Enable, in the Rust scroller)
 class ScrollbarScroller : public Scroller {
 public:
@@ -942,10 +866,6 @@ public:
     void SetBar(bool vertical,Scrollbar* s) { this->SCall(EeWonScrollerCall::SetBar,vertical,(intptr_t)static_cast<Component*>(s)); } // the field only (MSScrollContainer's constructor)
     bool EnableScrollbar(Scrollbar* s,ScrollbarCondition c) { return this->SCall(EeWonScrollerCall::EnableScrollbar,(intptr_t)static_cast<Component*>(s),c)!=0; } //3058d0
     void SetScrollbarConditions(ScrollbarCondition h,ScrollbarCondition v) { this->SCall(EeWonScrollerCall::SetScrollbarConditions,h,v); }
-};
-enum ScrollButtonCondition {
-    ScrollButtonCondition_Disable=0, ScrollButtonCondition_Enable=1,
-    ScrollButtonCondition_Conditional=2, ScrollButtonCondition_PartialConditional=3
 };
 // ComboBox (R6 WON round 28): whether the list is open, no-typing, the button while disabled and the list box's
 // configured size are the Rust ComboBox (rust/crates/ee_won_gui/src/comboobj.rs) with every method; this is the type the
@@ -1530,7 +1450,6 @@ public:
 };
 
 
-enum FontStyles {FontStyle_Plain=0,FontStyle_Bold=1,FontStyle_Italic=2,FontStyle_Underline=4};
 struct FontDescriptor {
     std::string mFace;
     int mStyle;
@@ -2010,7 +1929,6 @@ private:
     intptr_t ACall(EeWonPaneCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_pane_call(this->mPane,c,a,b,cc); }
 };
 
-enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortType_None };
 // ListAreaToolTip (0x38 bytes): allocated at 0x2fbbb6, constructor 0x2fb7b0,
 // Component (0x30) plus the ListArea pointer at +0x30 and the owned item at +0x34; 43 vtable slots.
 // R6 WON round 34: the methods are the Rust tip's (rust/crates/ee_won_gui/src/tipobj.rs) over the host's
@@ -2311,11 +2229,6 @@ struct GUIStringLessNoCase {
 
 // Keyboard.h modifiers; the exe tests bits 1 and 2.
 enum { KEYMOD_SHIFT=0x0001,KEYMOD_ALT=0x0002,KEYMOD_CTRL=0x0004 };
-// The font size a layout gives the page view (FontSize: Smallest..Largest); kept, not used
-enum HTMLFontSize {
-    HTMLFontSize_Smallest,HTMLFontSize_Small,HTMLFontSize_Medium,
-    HTMLFontSize_Large,HTMLFontSize_Largest
-};
 class TextArea;
 // The lobby's page view (layout type BrowserComponent; WONGUI/BrowserComponent.cpp). WON's HTML rendering is not
 // ported (docs/RUST_PLAN.md D8): a page is plain text in a TextArea, an HTML page with its tags dropped and entities

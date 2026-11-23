@@ -30,6 +30,7 @@ pub mod guictl;
 pub mod guictor;
 pub mod guidraw;
 pub mod guiedit;
+pub mod guienum;
 pub mod guievent;
 pub mod guifocus;
 pub mod guihost;
