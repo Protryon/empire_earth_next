@@ -191,12 +191,12 @@ fn op0(o: Out, op: Op) -> R<isize> {
     ok(o(op, 0, 0, 0))
 }
 
-fn throw<T>(o: Out, message: &[u8]) -> R<T> {
+fn throw<T>(o: Out, message: &std::ffi::CStr) -> R<T> {
     o(Op::Throw, message.as_ptr() as isize, 0, 0);
     Err(Thrown)
 }
 
-fn throw_with<T>(o: Out, message: &[u8], text: &Text) -> R<T> {
+fn throw_with<T>(o: Out, message: &std::ffi::CStr, text: &Text) -> R<T> {
     o(Op::ThrowWithText, message.as_ptr() as isize, text.data, 0);
     Err(Thrown)
 }
@@ -218,7 +218,7 @@ fn chat(o: Out, key: i32, k: isize) -> R<bool> {
             let name =
                 o(Op::TextNameIndex, group.data, gc::EE_WON_CFG_NAMES_CHATCTRLCONFIG_VIRTUAL24_GROUP as isize, 0);
             if !(0..=2).contains(&name) {
-                return throw_with(o, b"Invalid Group Type: \0", &group);
+                return throw_with(o, c"Invalid Group Type: ", &group);
             }
             o(Op::ChatSetField, 20, [1, 2, 0x12][name as usize], 0);
         }
@@ -239,12 +239,12 @@ fn room_label(o: Out, key: i32, k: isize) -> R<bool> {
         }
         1 => {
             let group = read_string(o)?;
-            if o(Op::TextIsNoCase, group.data, b"CHAT\0".as_ptr() as isize, 0) != 0 {
+            if o(Op::TextIsNoCase, group.data, c"CHAT".as_ptr() as isize, 0) != 0 {
                 o(Op::RoomSetField, 1, 1, 0);
-            } else if o(Op::TextIsNoCase, group.data, b"GAME\0".as_ptr() as isize, 0) != 0 {
+            } else if o(Op::TextIsNoCase, group.data, c"GAME".as_ptr() as isize, 0) != 0 {
                 o(Op::RoomSetField, 1, 2, 0);
             } else {
-                return throw_with(o, b"Invalid Group Type: \0", &group);
+                return throw_with(o, c"Invalid Group Type: ", &group);
             }
         }
         2 | 3 => {
@@ -269,7 +269,7 @@ fn server_list(o: Out, key: i32, k: isize) -> R<bool> {
             let t = read_string(o)?;
             let name = type_name(&t);
             if !(0..=2).contains(&name) {
-                return throw_with(o, b"Invalid server list id: \0", &t);
+                return throw_with(o, c"Invalid server list id: ", &t);
             }
             o(Op::ServerCfg, Cfg::SetGameType as isize, [2, 1, 3][name as usize], 0);
         }
@@ -290,7 +290,7 @@ fn server_list(o: Out, key: i32, k: isize) -> R<bool> {
             let t = read_string(o)?;
             let name = type_name(&t);
             if !(3..=5).contains(&name) {
-                return throw_with(o, b"Unknown filter type: \0", &t);
+                return throw_with(o, c"Unknown filter type: ", &t);
             }
         }
         _ => return Ok(false),
@@ -298,36 +298,36 @@ fn server_list(o: Out, key: i32, k: isize) -> R<bool> {
     Ok(true)
 }
 
-fn find(o: Out, name: &[u8]) -> R<isize> {
+fn find(o: Out, name: &std::ffi::CStr) -> R<isize> {
     ok(o(Op::FindNamed, name.as_ptr() as isize, 0, 0))
 }
 
 fn add_column(o: Out) -> R<()> {
     let mut list = o(Op::ServerCfg, Cfg::List as isize, 0, 0);
     if list == 0 {
-        let c = find(o, b"ServerList\0")?;
+        let c = find(o, c"ServerList")?;
         if c == 0 {
-            return throw(o, b"Need ServerList before calling AddColumn\0");
+            return throw(o, c"Need ServerList before calling AddColumn");
         }
         list = o(Op::AsMultiList, c, 0, 0);
         if list == 0 {
-            return throw(o, b"ServerList needs to be a MultiListArea\0");
+            return throw(o, c"ServerList needs to be a MultiListArea");
         }
         o(Op::ServerCfg, Cfg::SetList as isize, list, 0);
-        let c = find(o, b"ServerListHeader\0")?;
+        let c = find(o, c"ServerListHeader")?;
         if c == 0 {
-            return throw(o, b"Need ServerList header before calling AddColumn\0");
+            return throw(o, c"Need ServerList header before calling AddColumn");
         }
         o(Op::ServerHeaderFrom, c, 0, 0);
         if o(Op::ServerHeaderIsNull, 0, 0, 0) != 0 {
-            return throw(o, b"ServerListHeader needs to be a MultiListHeader\0");
+            return throw(o, c"ServerListHeader needs to be a MultiListHeader");
         }
     }
     let column = read_string(o)?;
     op0(o, Op::EnsureComma)?;
     let component = ok(o(Op::FindNamedText, column.data, 0, 0))?;
     if component == 0 {
-        return throw_with(o, b"Component not found: \0", &column);
+        return throw_with(o, c"Component not found: ", &column);
     }
     let width = op0(o, Op::ReadInt)? as i32;
     let mut combo = 0;
@@ -337,7 +337,7 @@ fn add_column(o: Out) -> R<()> {
     }
     let def = o(Op::ServerAddColumnText, column.data, 0, 0);
     if def < 0 {
-        return throw_with(o, b"Column not defined: \0", &column);
+        return throw_with(o, c"Column not defined: ", &column);
     }
     if def == 0 {
         return Ok(());
