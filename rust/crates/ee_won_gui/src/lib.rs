@@ -50,6 +50,7 @@ pub mod inputobj;
 pub mod labelobj;
 pub mod layoutobj;
 pub mod listobj;
+pub mod localize;
 pub mod menuobj;
 pub mod msbtnobj;
 pub mod mspaint;

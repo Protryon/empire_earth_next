@@ -155,6 +155,7 @@
 #include "rust/won_gui/labelobj.h"
 #include "rust/won_gui/layoutobj.h"
 #include "rust/won_gui/listobj.h"
+#include "rust/won_gui/localize.h"
 #include "rust/won_gui/menuobj.h"
 #include "rust/won_gui/msbtnobj.h"
 #include "rust/won_gui/mspaint.h"
