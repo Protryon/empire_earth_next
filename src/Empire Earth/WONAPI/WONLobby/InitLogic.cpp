@@ -185,7 +185,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::SetPublicAddress: LobbySetPublicAddress(FW(a)->GetPublicAddr()); return 0;
     case O::HasFirewallSocket: return aLogic->mFirewallSocket.get() != NULL;
     case O::DnsTestReady: return config != NULL && !config->mDirServers.empty();
-    case O::DnsOpNew: return Held(new DNSTestOp(config->mDirServers.front()));
+    case O::DnsOpNew: return Held(NewDnsTestOp(config->mDirServers.front()));
     case O::RunTrackedDns: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DNSCompletion, aLogic), 0); return 0;
     case O::RunTrackedDocument: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, aLogic), 0); return 0;
     case O::RunTrackedDirectory: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DirectoryCompletion, aLogic), 0); return 0;

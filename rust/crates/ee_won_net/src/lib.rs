@@ -43,6 +43,7 @@ pub mod dir;
 pub mod dirchange;
 pub mod dirlist;
 pub mod dirops;
+pub mod dnstest;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_net;

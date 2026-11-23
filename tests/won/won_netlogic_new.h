@@ -128,7 +128,7 @@ static intptr_t Init(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, int
     case O::AcceptOpNewFirewall: aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, aLogic->mFirewallSocket.get()); return 0;
     case O::AcceptOpRun: aLogic->RunOp(aLogic->mAcceptOp.get(), new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion, aLogic), gLobbyAcceptTimeout); return 0;
     case O::SetFirewallAddress: aLogic->mFirewallAddress = FW(a)->GetCurAddr(); return 0;
-    case O::DnsOpNew: return Held(new DNSTestOp(config->mDirServers.front()));
+    case O::DnsOpNew: return Held(NewDnsTestOp(config->mDirServers.front()));
     case O::RunTrackedDns: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DNSCompletion, aLogic), 0); return 0;
     case O::RunTrackedDocument: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, aLogic), 0); return 0;
     case O::RunTrackedDirectory: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DirectoryCompletion, aLogic), 0); return 0;

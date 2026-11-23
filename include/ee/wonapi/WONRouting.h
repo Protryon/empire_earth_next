@@ -41,6 +41,7 @@
 #include "rust/won_net/routeop.h"
 #include "rust/won_net/routereq.h"
 #include "rust/won_net/rustref.h"
+#include "rust/won_net/dnstest.h"
 #include "rust/won_net/servconn.h"
 #include "rust/won_net/smartroute.h"
 #include "rust/won_net/sockobj.h"
@@ -824,6 +825,7 @@ public:
     static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
     IPAddr GetCurAddr() const; // a request's current server (EE_WON_REQHOST_CUR_ADDR)
     IPAddr GetAddr() const; // a request's first server (an invalid address: none)
+    IPAddr AddrOf(int inWhich) const; // an address's six bytes by number (an invalid address: none)
     void Set(int inWhich, RefCount* inObj); // an object setter (the op takes its own reference)
     void SetNum(int inWhich, long long inNum); // a number setter
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
@@ -876,7 +878,6 @@ protected:
     virtual ~RustServerOp();
 private:
     static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
-    IPAddr AddrOf(int inWhich) const;
     EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
@@ -964,37 +965,10 @@ class Thread : public ThreadBase {
 public:
     void SetAutoDelete(bool inAutoDelete) { ee_won_thread_set_auto_delete(this->mThread,inAutoDelete); }
 };
-class DNSTestOp : public AsyncOp {
-    friend class DNSTestThread;
-public:
-    DNSTestOp(const std::string& inHost) { this->mHostString = inHost; } //2d95a0 (header-only since net round 27)
-    // Accessor as in the SDK's DNSTestOp.h; the LAN family 3e28d0 reads
-    // receiver+54 directly (no out-of-line helper).
-    const IPAddr& GetHostAddr() { return this->mHostAddr; }
-protected:
-    virtual ~DNSTestOp() {}                 //2d9740
-    virtual void RunHook();                 //2d97f0: a self-deleting thread resolves the host
-    std::string mHostString;                //44..54
-    IPAddr mHostAddr;                       //54..7c
-};
-typedef SmartPtr<DNSTestOp> DNSTestOpPtr;
-class DNSTestThread : public Thread {
-public:
-    DNSTestThread(DNSTestOp* inOp) : mOp(inOp) {} //inline constructor 2d9826..985d
-    // the op finished with success or the host-lookup failure status
-    virtual void ThreadFunc() //slot10 2d9920
-    {
-        this->mOp->mHostAddr.SetWithDefaultPort(this->mOp->mHostString, 0);
-        this->mOp->Finish(this->mOp->mHostAddr.IsValid() ? WS_Success : WS_InvalidAddress);
-    }
-    DNSTestOpPtr mOp; //1c,owned; full20. Implicit dtor2d98b0 no ownvptr store.
-};
-inline void DNSTestOp::RunHook()
-{
-    DNSTestThread* aThread = new DNSTestThread(this);
-    aThread->SetAutoDelete(true);
-    aThread->Start();
-}
+// DNSTestOp (0x7c bytes; ctor 2d95a0, dtor 2d9740, RunHook 2d97f0) and DNSTestThread (ThreadFunc 2d9920) are a Rust op
+// (rust/crates/ee_won_net/src/dnstest.rs, R6 WON round 34): its run starts a thread holding the op, which resolves
+// the host (SetWithDefaultPort, port 0) and finishes the op; GetHostAddr is AddrOf(EE_WON_DNSTEST_ADDR)
+inline RustServerOp* NewDnsTestOp(const std::string& inHost) { return new RustServerOp(ee_won_dnstest_new(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size())); }
 
 
 // WONAPI's HTTP document request (sizeof 0xdc; implicit dtor 0x4cff46; ctor out of line in the base game,

@@ -267,6 +267,7 @@
 #include "rust/won_net/dirchange.h"
 #include "rust/won_net/dirlist.h"
 #include "rust/won_net/dirops.h"
+#include "rust/won_net/dnstest.h"
 #include "rust/won_net/elgamal.h"
 #include "rust/won_net/ffi.h"
 #include "rust/won_net/ffi_net.h"
