@@ -745,7 +745,13 @@ impl EeScreensCursorRead {
 ///
 /// # Safety
 /// `read` is the host's live read state; its units are live (the UI thread holds the world).
-pub(crate) unsafe fn cursor(read: *const EeScreensCursorRead, op: u32, a: u32, b: u32, f: &mut [f32; 3]) -> Option<i32> {
+pub(crate) unsafe fn cursor(
+    read: *const EeScreensCursorRead,
+    op: u32,
+    a: u32,
+    b: u32,
+    f: &mut [f32; 3],
+) -> Option<i32> {
     use crate::screens::cursor::*;
     use ee_sim::world::{GroupView, PlayerView, UnitView, WorldRead};
     use ee_sim::world_field;

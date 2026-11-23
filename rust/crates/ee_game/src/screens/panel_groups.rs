@@ -221,7 +221,10 @@ pub fn group_line(t: &GroupText, first: &[u8], second: &[u8]) -> Vec<u8> {
     if t.strings[1] != -1 {
         c_printf(format, &[PrintArg::Text(first), PrintArg::Text(second)])
     } else {
-        c_printf(format, &[PrintArg::Text(first), PrintArg::Number(t.values[0] as i64), PrintArg::Number(t.values[1] as i64)])
+        c_printf(
+            format,
+            &[PrintArg::Text(first), PrintArg::Number(t.values[0] as i64), PrintArg::Number(t.values[1] as i64)],
+        )
     }
 }
 
@@ -306,7 +309,10 @@ mod tests {
 
     #[test]
     fn the_groups_formats_print_as_the_crt() {
-        assert_eq!(c_printf(b"%-18.18s  %4.4ld", &[PrintArg::Text(b"Wonders"), PrintArg::Number(2)]), b"Wonders             0002");
+        assert_eq!(
+            c_printf(b"%-18.18s  %4.4ld", &[PrintArg::Text(b"Wonders"), PrintArg::Number(2)]),
+            b"Wonders             0002"
+        );
         assert_eq!(
             c_printf(b"%-18.18s %-18.18s", &[PrintArg::Text(b"Available in the epoch"), PrintArg::Text(b"Bronze")]),
             b"Available in the e Bronze            "
@@ -315,6 +321,12 @@ mod tests {
             c_printf(b"%-18.18s  %4.4ld/%-4.4ld", &[PrintArg::Text(b"C"), PrintArg::Number(3), PrintArg::Number(25)]),
             b"C                   0003/0025"
         );
-        assert_eq!(c_printf(b"%5d|%-5d|%05d|%d%%|%x", &[PrintArg::Number(-12), PrintArg::Number(7), PrintArg::Number(-3), PrintArg::Number(1)]), b"  -12|7    |-0003|1%|%x");
+        assert_eq!(
+            c_printf(
+                b"%5d|%-5d|%05d|%d%%|%x",
+                &[PrintArg::Number(-12), PrintArg::Number(7), PrintArg::Number(-3), PrintArg::Number(1)]
+            ),
+            b"  -12|7    |-0003|1%|%x"
+        );
     }
 }

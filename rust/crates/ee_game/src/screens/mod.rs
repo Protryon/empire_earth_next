@@ -288,13 +288,13 @@ pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
 pub mod hud;
-// the game UI classes' members as Rust records (round 15)
-pub mod hud_fields;
 pub mod hud_ctl;
 #[cfg(not(test))]
 mod hud_ctl_ffi;
 pub(crate) mod hud_direct;
 pub mod hud_draw;
+// the game UI classes' members as Rust records (round 15)
+pub mod hud_fields;
 pub(crate) mod hud_sends;
 pub(crate) mod hud_views;
 pub mod icon_bar;
