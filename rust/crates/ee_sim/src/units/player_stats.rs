@@ -411,6 +411,79 @@ pub unsafe extern "C" fn ee_units_stats_save(
     unsafe { save(&*s, end_time, prim(ctx, f)) }
 }
 
+// ---- the end-of-game record's and the history's plain members (ee/EEStatisticsRecord.h, ee/EEStatisticsHistory.h)
+
+/// `EEStatisticsRecord`'s members from `mColor` (+0x318) to `mIsHuman` (+0x362): the C++ static_asserts the offsets.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeUnitsStatsRecordTail {
+    pub color: [f32; 3],
+    pub result: c_long,
+    pub team: c_ulong,
+    pub end_time: c_ulong,
+    pub resources: [c_ulong; 7],
+    pub score: c_ulong,
+    pub economy_score: c_ulong,
+    pub epoch_score: c_ulong,
+    pub military_score: c_ulong,
+    pub tech_score: c_ulong,
+    pub slot: u8,
+    pub is_local: bool,
+    pub is_human: bool,
+}
+
+/// `EEStatisticsRecord::Clear`'s plain part: white, no result, team, end time, resources or scores, no slot (0xff),
+/// neither local nor human.
+pub const STATS_RECORD_CLEAR: EeUnitsStatsRecordTail = EeUnitsStatsRecordTail {
+    color: [1.0, 1.0, 1.0],
+    result: 0,
+    team: 0,
+    end_time: 0,
+    resources: [0; 7],
+    score: 0,
+    economy_score: 0,
+    epoch_score: 0,
+    military_score: 0,
+    tech_score: 0,
+    slot: 0xff,
+    is_local: false,
+    is_human: false,
+};
+
+/// `EEStatisticsHistory`'s members from `mStartTime` (+0x24) to `mIsCampaign` (+0x37).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeUnitsStatsHistoryTail {
+    pub start_time: c_long,
+    pub current_record_index: c_long,
+    pub end_time: c_long,
+    pub tile_count: c_long,
+    pub teams_locked: bool,
+    pub victory_enabled: bool,
+    pub is_scenario: bool,
+    pub is_campaign: bool,
+}
+
+/// The record's plain members cleared (`EEStatisticsRecord::Clear`; the C++ clears the names and statistics).
+///
+/// # Safety
+/// `tail` is a live record's `mColor`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_stats_record_clear(tail: *mut EeUnitsStatsRecordTail) {
+    // SAFETY: the caller's contract
+    unsafe { *tail = STATS_RECORD_CLEAR };
+}
+
+/// The history's plain members cleared (`EEStatisticsHistory::Reset`; the C++ clears the name and records).
+///
+/// # Safety
+/// `tail` is a live history's `mStartTime`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_stats_history_clear(tail: *mut EeUnitsStatsHistoryTail) {
+    // SAFETY: the caller's contract
+    unsafe { *tail = EeUnitsStatsHistoryTail::default() };
+}
+
 #[cfg(test)]
 #[path = "player_stats_tests.rs"]
 mod tests;

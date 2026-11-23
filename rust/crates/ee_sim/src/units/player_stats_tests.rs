@@ -187,3 +187,20 @@ fn the_ffi_copies_points_and_numbers() {
         ee_units_stats_free(s);
     }
 }
+
+#[test]
+fn a_cleared_record_is_white_slotless_and_zero() {
+    let mut tail = EeUnitsStatsRecordTail { slot: 3, is_human: true, score: 9, ..STATS_RECORD_CLEAR };
+    // SAFETY: a local
+    unsafe { ee_units_stats_record_clear(&mut tail) };
+    assert_eq!(tail, STATS_RECORD_CLEAR);
+    assert_eq!((tail.color, tail.slot, tail.resources), ([1.0; 3], 0xff, [0; 7]));
+}
+
+#[test]
+fn a_cleared_history_is_zero() {
+    let mut tail = EeUnitsStatsHistoryTail { start_time: 5, is_campaign: true, ..Default::default() };
+    // SAFETY: a local
+    unsafe { ee_units_stats_history_clear(&mut tail) };
+    assert_eq!(tail, EeUnitsStatsHistoryTail::default());
+}

@@ -67,26 +67,15 @@ long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
     return ee_units_dead_unit_statistic((uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit));   // ee_units player_rest.rs
 }
 
-// Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources
+// Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources (the plain
+// members from mColor to mIsHuman: ee_units player_stats.rs)
+static_assert(offsetof(EEStatisticsRecord, mResources) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, resources) && offsetof(EEStatisticsRecord, mSlot) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, slot) && offsetof(EEStatisticsRecord, mIsHuman) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, is_human), "EeUnitsStatsRecordTail");
 void EEStatisticsRecord::Clear()
 {
-    this->mColor = GEColor(1.0f, 1.0f, 1.0f);
-    this->mIsLocal = false;
-    this->mIsHuman = false;
     this->mName = gEmptyString;
     this->mNameSuffix = gEmptyString;
-    this->mSlot = 0xff;
-    this->mResult = 0;
-    this->mScore = 0;
-    this->mEconomyScore = 0;
-    this->mEpochScore = 0;
-    this->mMilitaryScore = 0;
-    this->mTechScore = 0;
-    this->mEndTime = 0;
-    this->mTeam = 0;
-    for (long i = 0; i < 7; i++)
-        this->mResources[i] = 0;
     this->mStatistics.Clear();
+    ee_units_stats_record_clear(reinterpret_cast<EeUnitsStatsRecordTail*>(&this->mColor));
 }
 
 // Destroys the end-of-game record
@@ -94,17 +83,12 @@ EEStatisticsRecord::~EEStatisticsRecord()
 {
 }
 
-// Clears the game history: times, map size, flags, campaign name and every record
+// Clears the game history: times, map size, flags (the plain members from mStartTime to mIsCampaign: ee_units
+// player_stats.rs), campaign name and every record
+static_assert(offsetof(EEStatisticsHistory, mTeamsLocked) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, teams_locked) && offsetof(EEStatisticsHistory, mIsCampaign) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, is_campaign), "EeUnitsStatsHistoryTail");
 void EEStatisticsHistory::Reset()
 {
-    this->mStartTime = 0;
-    this->mCurrentRecordIndex = 0;
-    this->mTileCount = 0;
-    this->mEndTime = 0;
-    this->mVictoryEnabled = false;
-    this->mTeamsLocked = false;
-    this->mIsScenario = false;
-    this->mIsCampaign = false;
+    ee_units_stats_history_clear(reinterpret_cast<EeUnitsStatsHistoryTail*>(&this->mStartTime));
     this->mCampaignName.Clear();
     this->mRecords.clear();
 }
