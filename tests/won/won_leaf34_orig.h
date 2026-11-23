@@ -1,4 +1,4 @@
-// BrowserComponent, ListAreaToolTip and StringLocalize::GetStr as they were (WONGUI/BrowserComponent.cpp,
+// BrowserComponent, ListAreaToolTip and StringLocalize::GetStr (and below the paints) as they were (WONGUI/BrowserComponent.cpp,
 // ListAreaToolTip.cpp and StringLocalize.cpp at ab1b33bcb, the statements copied; the classes renamed Browser and Tip,
 // their declarations as WONLobbyGUI.h had them), over won_leaf34_world.h.
 namespace LfOrig {
@@ -228,4 +228,105 @@ GUIString GetStr(const GUIString &theStr, const GUIString **subs, int numSubs)
 
 	return aNewStr;
 }
+} // namespace LfOrig
+
+// ImageButton, TextListItem and MenuItem as they were (ImageButton.cpp, TextListItem.cpp, MenuBehavior.cpp at
+// ab1b33bcb, their measures and paints; Graphics and ListArea are the world's PaintGraphics and PaintList)
+namespace LfOrig {
+using namespace Lf;
+#include "won_leaf34_paint_classes.h"
+void ImageButton::GetDesiredSize(int& outWidth,int& outHeight) {
+    int width=0,height=0;
+    for(int i=0;i<5;++i) {
+        Image* image=this->mImages[i].get();
+        if(image) {
+            if(image->GetWidth()>width) width=image->GetWidth();
+            if(image->GetHeight()>height) height=image->GetHeight();
+        }
+    }
+    outWidth=width;
+    outHeight=height;
+}
+
+void ImageButton::Paint(PaintGraphics& g) {
+    Component::Paint(g);
+    Image* image=NULL;
+    if(this->IsDisabled()) image=this->mImages[ImageButtonType_Disabled].get();
+    else if(this->IsChecked() && this->mImages[ImageButtonType_Checked].get())
+        image=this->mImages[ImageButtonType_Checked].get();
+    else if(this->IsPressed()) image=this->mImages[ImageButtonType_Down].get();
+    else if(this->IsMouseOver()) image=this->mImages[ImageButtonType_Over].get();
+    if(!image) image=this->mImages[ImageButtonType_Normal].get();
+    if(!image) return;
+    if(this->mStretch && (image->GetWidth()!=this->Width() || image->GetHeight()!=this->Height()))
+        image->SetSize(this->Width(),this->Height());
+    g.DrawImage(image,0,0);
+}
+
+void TextListItem::CalcDimensions(PaintList* inList)
+{
+    if(this->mFont.get()==NULL) this->mFont=inList->mFont;
+    if(this->mColor==-1) this->mColor=inList->GetTextColor();
+    Image* i=this->mImage.get(); // the sizes are guidraw.rs text_item_size
+    ee_won_gui_text_item_size(this->mFont->GetStringWidth(this->mText),this->mFont->GetHeight(),i!=NULL,i?i->GetWidth():0,
+                              i?i->GetHeight():0,false,&this->mWidth,&this->mHeight);
+}
+
+void TextListItem::Paint(PaintGraphics& inGraphics,PaintList* inList)
+{
+    // the selection behind a selected item, the image, the text centred on the row (guidraw.rs text_row)
+    Image* anImage=this->mImage.get();
+    EeWonTextRowPaint r;
+    r.selected=this->mSelected;
+    r.full_row_select=inList->ListFlagSet(0x10);
+    r.no_image_select=inList->ListFlagSet(0x20);
+    r.has_image=anImage!=NULL;
+    r.sel=WONDrawSelOf(inList->GetSelColor());
+    r.color=(uint32_t)this->mColor;
+    r.paint_width=inList->GetPaintWidth();
+    r.width=this->mWidth;
+    r.height=this->mHeight;
+    r.image_width=anImage ? anImage->GetWidth() : 0;
+    r.image_height=anImage ? anImage->GetHeight() : 0;
+    r.font_height=this->mFont->GetHeight();
+    WONDrawSlots aSlots;
+    aSlots.mImages[0]=anImage;
+    aSlots.mFont=this->mFont.get();
+    aSlots.mString=&this->mText;
+    WONDrawOps anOps([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_text_row(&r,o,n); });
+    WONDrawRun(inGraphics,anOps,aSlots);
+}
+
+void MenuItem::CalcDimensions(PaintList* area)
+{
+    TextListItem::CalcDimensions(area);
+    ee_won_gui_menu_item_size(&this->mWidth,&this->mHeight);
+}
+
+void MenuItem::Paint(PaintGraphics& g,PaintList* area)
+{
+    // guidraw.rs menu_item
+    Image* anImage=this->mImage.get();
+    EeWonMenuItemPaint r;
+    r.selected=this->mSelected;
+    r.full_row_select=area->ListFlagSet(0x10);
+    r.has_image=anImage!=NULL;
+    r.disabled=this->mDisabled;
+    r.has_submenu=this->mSubMenu.get()!=NULL;
+    r.sel=WONDrawSelOf(area->mSelColor);
+    r.color=(uint32_t)this->mColor;
+    r.paint_width=area->GetPaintWidth();
+    r.width=this->mWidth;
+    r.height=this->mHeight;
+    r.image_height=anImage ? anImage->GetHeight() : 0;
+    r.font_height=this->mFont->GetHeight();
+    r.view_width=area->GetViewWidth();
+    WONDrawSlots aSlots;
+    aSlots.mImages[0]=anImage;
+    aSlots.mFont=this->mFont.get();
+    aSlots.mString=&this->mText;
+    WONDrawOps anOps([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_menu_item(&r,o,n); });
+    WONDrawRun(g,anOps,aSlots);
+}
+
 } // namespace LfOrig

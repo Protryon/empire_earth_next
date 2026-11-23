@@ -35,6 +35,9 @@
 #include "rust/won_gui/tipobj.h"
 #include "rust/won_gui/localize.h"
 #include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/guiwin.h"
+#include "rust/won_gui/mspaint.h"
+#include "rust/won_gui/leafpaint.h"
 #include "rust/won_net/ffi.h"
 wchar_t gEmptyWideString[2]; // EEWonNet.cpp's (GetEmptyGUIStringData)
 #include "won_leaf34_world.h"
@@ -81,6 +84,34 @@ static void* MutNew(const void* inUnits, size_t inLength)
 {
     return LocalizeNew(inUnits, sMutate == 201 && inLength > 0 ? inLength - 1 : inLength);
 }
+static int sJunk[2];
+static bool IsLeafBool(EeWonLeafOp o)
+{
+    return o == Lo::BtnHasImage || (o >= Lo::BtnDisabled && o <= Lo::BtnStretch) || o == Lo::ItemHasFont ||
+           o == Lo::ItemHasImage || o == Lo::ItemSelected || o == Lo::ItemListFlag || o == Lo::MenuDisabled ||
+           o == Lo::MenuHasSubMenu;
+}
+static bool IsLeafNumber(EeWonLeafOp o)
+{
+    return o == Lo::BtnImageWidth || o == Lo::BtnImageHeight || o == Lo::BtnWidth || o == Lo::BtnHeight ||
+           o == Lo::ItemColor || o == Lo::ItemImageWidth || o == Lo::ItemImageHeight || o == Lo::ItemTextWidth ||
+           o == Lo::ItemFontHeight || o == Lo::ItemListPaintWidth || o == Lo::MenuListViewWidth;
+}
+static intptr_t MutLeaf(intptr_t (*inHost)(void*, EeWonLeafOp, intptr_t, intptr_t), void* me, EeWonLeafOp op, intptr_t a, intptr_t b)
+{
+    if ((int)op + 300 != sMutate) return inHost(me, op, a, b);
+    if (IsLeafBool(op)) return 0;
+    if (IsLeafNumber(op)) return inHost(me, op, a, b) + 1;
+    if (op == Lo::ItemTakeListFont) { // (skipped, a font-less item would read through NULL): the colour taken too
+        inHost(me, op, a, b);
+        return inHost(me, Lo::ItemTakeListColor, a, b);
+    }
+    if (op == Lo::ItemWidthAt || op == Lo::ItemHeightAt) return (intptr_t)&sJunk[op == Lo::ItemHeightAt];
+    return 0;
+}
+static intptr_t MutImgBtn(void* me, EeWonLeafOp op, intptr_t a, intptr_t b) { return MutLeaf(HostImgBtn, me, op, a, b); }
+static intptr_t MutTextItem(void* me, EeWonLeafOp op, intptr_t a, intptr_t b) { return MutLeaf(HostTextItem, me, op, a, b); }
+static intptr_t MutMenu(void* me, EeWonLeafOp op, intptr_t a, intptr_t b) { return MutLeaf(HostMenu, me, op, a, b); }
 } // namespace LfNew
 
 // ---- random numbers (one generator, reseeded per sequence so the two sides draw alike)
@@ -282,6 +313,97 @@ template <class T> static std::vector<std::string> TipRun(uint32_t inSeed, int i
     return r;
 }
 
+// ---- the paints' sequences: an image button, a text item and a menu item over one list
+template <class B> static void DumpButton(B& b)
+{
+    std::string s = "state button";
+    for (int i = 0; i < 5; i++) s += b.mImages[i].get() ? " " + N(b.mImages[i]->mW) + "x" + N(b.mImages[i]->mH) : " -";
+    Log(s);
+}
+template <class I> static void DumpItem(const char* inName, I& it)
+{
+    Log(std::string("state ") + inName + " size " + N(it.mWidth) + " " + N(it.mHeight) + " color " + N(it.mColor) + " font " +
+        Id(it.mFont.get()) + " image " + Id(it.mImage.get()));
+}
+template <class B, class T, class M> static std::vector<std::string> PaintRun(uint32_t inSeed, int inCalls)
+{
+    sTrace.clear();
+    sObjects.clear();
+    sSeed = inSeed;
+    {
+        PaintGraphics g;
+        SmartPtr<PaintList> list = new PaintList;
+        SmartPtr<Font> fonts[2] = {new Font, new Font};
+        fonts[1]->mHeight = 9 + Pick(12);
+        list->mFont = fonts[0];
+        list->mTextColor = Pick(3) ? (long)Rand() : -1;
+        SmartPtr<Image> images[3] = {new Image, new Image, new Image};
+        for (auto& i : images) { i->mW = Pick(40); i->mH = Pick(40); }
+        SmartPtr<B> b = new B;
+        b->mWidth = Pick(50);
+        b->mHeight = Pick(50);
+        SmartPtr<T> item = new T;
+        SmartPtr<M> menu = new M;
+        item->mText = GUIString(Pick(2) ? L"Some item" : L"x");
+        menu->mText = GUIString(L"Menu &entry");
+        for (int i = 0; i < inCalls; i++) {
+            const int k = Pick(12);
+            switch (k) {
+            case 0: { int w = -1, h = -1; b->GetDesiredSize(w, h); Log("size " + N(w) + " " + N(h)); break; }
+            case 1: case 2: Log("call button Paint"); b->Paint(g); break;
+            case 3: {
+                const int n = Pick(5);
+                b->mImages[n] = Pick(3) ? images[Pick(3)].get() : NULL;
+                b->mDisabled = Pick(4) == 0; b->mChecked = Pick(3) == 0; b->mPressed = Pick(3) == 0; b->mOver = Pick(2) == 0;
+                b->mStretch = Pick(2) == 0;
+                Log("button world");
+                break;
+            }
+            case 4: Log("call item CalcDimensions"); item->CalcDimensions(list.get()); break;
+            case 5: // (the list measures an item before it paints it: a paint with no font crashed the original too)
+                if (item->mFont.get() == NULL) item->CalcDimensions(list.get());
+                Log("call item Paint");
+                item->Paint(g, list.get());
+                break;
+            case 6: Log("call menu CalcDimensions"); menu->CalcDimensions(list.get()); break;
+            case 7:
+                if (menu->mFont.get() == NULL) menu->CalcDimensions(list.get());
+                Log("call menu Paint");
+                menu->Paint(g, list.get());
+                break;
+            default: {
+                // the items' and the list's members
+                T& it = *item.get();
+                M& mi = *menu.get();
+                it.mFont = Pick(3) ? NULL : fonts[1].get();
+                mi.mFont = Pick(3) ? NULL : fonts[1].get();
+                it.mColor = Pick(2) ? -1 : (long)Rand();
+                mi.mColor = Pick(2) ? -1 : (long)Rand();
+                it.mImage = Pick(2) ? images[Pick(3)].get() : NULL;
+                mi.mImage = Pick(2) ? images[Pick(3)].get() : NULL;
+                it.mSelected = Pick(2) == 0;
+                mi.mSelected = Pick(2) == 0;
+                mi.mDisabled = Pick(3) == 0;
+                mi.mSubMenu = Pick(2) ? new ListItem : NULL;
+                list->mListFlags = Pick(4) << 4;
+                list->mPaintWidth = Pick(300);
+                list->mViewWidth = Pick(300);
+                list->mSelColor.mMode = Pick(4);
+                list->mOtherSel.mMode = Pick(4);
+                Log("item world");
+                break;
+            }
+            }
+            DumpButton(*b.get());
+            DumpItem("item", *item.get());
+            DumpItem("menu", *menu.get());
+        }
+    }
+    std::vector<std::string> r;
+    r.swap(sTrace);
+    return r;
+}
+
 // ---- formatting cases
 static GUIString RandomText(int inMax)
 {
@@ -309,9 +431,11 @@ static std::string FormatNew(int k, const GUIString& f, const GUIString& a, cons
 }
 
 // ---- the runs
-static const int kBrowserRuns = 4000, kTipRuns = 6000, kFormatRuns = 60000;
+static const int kBrowserRuns = 4000, kTipRuns = 6000, kFormatRuns = 60000, kPaintRuns = 6000;
+// inShow: the base pass (every case, the first mismatches printed); a mutation pass runs every tenth case
 static int RunAll(bool inShow, long long* outSteps)
 {
+    const int step = inShow ? 1 : 10;
     int mismatches = 0;
     long long steps = 0;
     auto report = [&](const char* inWhat, uint32_t inSeed, const std::vector<std::string>& a, const std::vector<std::string>& b) {
@@ -324,19 +448,26 @@ static int RunAll(bool inShow, long long* outSteps)
         }
         mismatches++;
     };
-    for (int i = 0; i < kBrowserRuns; i++) {
+    for (int i = 0; i < kBrowserRuns; i += step) {
         const uint32_t seed = 1000u + (uint32_t)i;
         const int calls = 4 + i % 9;
         report("browser", seed, BrowserRun<LfOrig::Browser>(seed, calls), BrowserRun<LfNew::BrowserComponent>(seed, calls));
         steps += calls;
     }
-    for (int i = 0; i < kTipRuns; i++) {
+    for (int i = 0; i < kTipRuns; i += step) {
         const uint32_t seed = 900000u + (uint32_t)i;
         const int calls = 3 + i % 12;
         report("tip", seed, TipRun<LfOrig::Tip>(seed, calls), TipRun<LfNew::ListAreaToolTip>(seed, calls));
         steps += calls;
     }
-    for (int i = 0; i < kFormatRuns; i++) {
+    for (int i = 0; i < kPaintRuns; i += step) {
+        const uint32_t seed = 500000u + (uint32_t)i;
+        const int calls = 6 + i % 14;
+        report("paint", seed, PaintRun<LfOrig::ImageButton, LfOrig::TextListItem, LfOrig::MenuItem>(seed, calls),
+               PaintRun<LfNew::ImageButton, LfNew::TextListItem, LfNew::MenuItem>(seed, calls));
+        steps += calls;
+    }
+    for (int i = 0; i < kFormatRuns; i += step) {
         sSeed = 77u + (uint32_t)i;
         const GUIString f = RandomText(14), a = RandomText(4), b = RandomText(4), c = RandomText(4);
         const int k = i % 4;
@@ -354,11 +485,12 @@ int main()
     MakePages();
     long long steps = 0;
     const int base = RunAll(true, &steps);
-    printf("won_leaf34_test: %d browser, %d tip and %d formatting cases (%lld calls), %d mismatches\n", kBrowserRuns,
-           kTipRuns, kFormatRuns, steps, base);
+    printf("won_leaf34_test: %d browser, %d tip, %d paint and %d formatting cases (%lld calls), %d mismatches\n",
+           kBrowserRuns, kTipRuns, kPaintRuns, kFormatRuns, steps, base);
     std::vector<int> ops;
     for (int o = (int)EeWonBrowserOp::NewView; o <= (int)EeWonBrowserOp::Invalidate; o++) ops.push_back(o);
     for (int o = (int)EeWonTipOp::BasePaint; o <= (int)EeWonTipOp::ClosePopup; o++) ops.push_back(o + 100);
+    for (int o = (int)EeWonLeafOp::BtnHasImage; o <= (int)EeWonLeafOp::MenuListViewWidth; o++) ops.push_back(o + 300);
     ops.push_back(200);
     ops.push_back(201);
     int missed = 0, caught = 0;

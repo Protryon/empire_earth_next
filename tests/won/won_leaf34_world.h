@@ -193,3 +193,126 @@ struct ListArea : Container {
     void ScrollPaint(Graphics& g) { Log(Id(this) + " ScrollPaint scheme " + Id(g.mColorScheme)); }
 };
 } // namespace Lf
+
+// ---- the paints' world (ImageButton, TextListItem, MenuItem): images, fonts, the list's paint members, the
+// Graphics' other calls and WONGUIDraw.h's run over them
+namespace Lf {
+struct Image : RefCount {
+    int mW = 0, mH = 0;
+    int GetWidth() { return mW; }
+    int GetHeight() { return mH; }
+    void SetSize(int w, int h)
+    {
+        Log(Id(this) + " Image::SetSize " + N(w) + " " + N(h));
+        mW = w;
+        mH = h;
+    }
+};
+struct Font : RefCount {
+    int mHeight = 12;
+    int GetStringWidth(const GUIString& s) { return 7 * s.length() + mHeight / 3; }
+    int GetHeight() { return mHeight; }
+};
+struct SelectionColor {
+    long mBackgroundColor, mForegroundColor;
+    int mMode;
+};
+struct PaintGraphics : Graphics {
+    unsigned long mColor = 0;
+    void SetColor(unsigned long c) { Log("SetColor " + N((long long)c)); mColor = c; }
+    void DrawDottedRect(int x, int y, int w, int h) { Log("DrawDottedRect " + N(x) + " " + N(y) + " " + N(w) + " " + N(h)); }
+    void DrawLine(int x, int y, int w, int h) { Log("DrawLine " + N(x) + " " + N(y) + " " + N(w) + " " + N(h)); }
+    void DrawImage(Image* i, int x, int y) { Log("DrawImage " + Id(i) + " " + N(x) + " " + N(y)); }
+    void SetFont(Font* f) { Log("SetFont " + Id(f)); }
+    void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { Log("DrawString " + Text(s) + " " + N(o) + " " + N(n) + " " + N(x) + " " + N(y)); }
+    void DrawString(const GUIString& s, int x, int y) { Log("DrawString " + Text(s) + " " + N(x) + " " + N(y)); }
+    void SetPixel(int x, int y, unsigned long c) { Log("SetPixel " + N(x) + " " + N(y) + " " + N((long long)c)); }
+    unsigned long GetStandardColor(int c) { return 0x100 + c; }
+    void FillEllipse(int x, int y, int w, int h) { Log("FillEllipse " + N(x) + " " + N(y) + " " + N(w) + " " + N(h)); }
+    void DrawArc(int a, int b, int c, int d, int e, int f) { Log("DrawArc " + N(a) + " " + N(b) + " " + N(c) + " " + N(d) + " " + N(e) + " " + N(f)); }
+};
+typedef unsigned long DWORD;
+struct WrappedText;
+struct WONDrawSlots {
+    Image* mImages[4];
+    Font* mFont;
+    const GUIString* mString;
+    WONDrawSlots() : mFont(NULL), mString(NULL) { mImages[0] = mImages[1] = mImages[2] = mImages[3] = NULL; }
+    WONDrawSlots(Font* f, const GUIString* s, Image* i0 = NULL, WrappedText* = NULL) : mFont(f), mString(s) { mImages[0] = i0; mImages[1] = mImages[2] = mImages[3] = NULL; }
+};
+class WONDrawOps {
+public:
+    template <class Plan> explicit WONDrawOps(Plan plan)
+    {
+        mOps.resize(64);
+        mOps.resize(plan(&mOps[0], mOps.size()));
+    }
+    std::vector<EeWonDrawOp> mOps;
+};
+struct WONDrawNoCall {
+    void operator()(const EeWonDrawOp&) {}
+};
+// WONGUIDraw.h's WONDrawOne (the text and wrapped-text kinds left out: the paints here make none)
+template <class Call> inline void WONDrawOne(PaintGraphics& g, const EeWonDrawOp& o, const WONDrawSlots& s, Call&& call)
+{
+    switch (o.kind) {
+        case EE_WON_DRAW_SET_COLOR: g.SetColor((DWORD)(unsigned int)o.a); break;
+        case EE_WON_DRAW_SET_SYS_COLOR: g.SetSysColor(o.a); break;
+        case EE_WON_DRAW_FILL_RECT: g.FillRect(o.a, o.b, o.c, o.d); break;
+        case EE_WON_DRAW_RECT: g.DrawRect(o.a, o.b, o.c, o.d); break;
+        case EE_WON_DRAW_DOTTED_RECT: g.DrawDottedRect(o.a, o.b, o.c, o.d); break;
+        case EE_WON_DRAW_LINE: g.DrawLine(o.a, o.b, o.c, o.d); break;
+        case EE_WON_DRAW_IMAGE: g.DrawImage(s.mImages[o.a], o.b, o.c); break;
+        case EE_WON_DRAW_IMAGE_SIZE: s.mImages[o.a]->SetSize(o.b, o.c); break;
+        case EE_WON_DRAW_PUSH_CLIP: g.PushClipRect(o.a, o.b, o.c, o.d); break;
+        case EE_WON_DRAW_POP_CLIP: g.PopClipRect(); break;
+        case EE_WON_DRAW_TRANSLATE: g.Translate(o.a, o.b); break;
+        case EE_WON_DRAW_SET_FONT: g.SetFont(s.mFont); break;
+        case EE_WON_DRAW_STRING: g.DrawString(*s.mString, (unsigned short)o.b, (unsigned short)o.c, o.d, o.e); break;
+        case EE_WON_DRAW_STRING_ALL: g.DrawString(*s.mString, o.b, o.c); break;
+        case EE_WON_DRAW_CALL: call(o); break;
+        case EE_WON_DRAW_PIXEL: g.SetPixel(o.a, o.b, (DWORD)(unsigned int)o.c); break;
+        case EE_WON_DRAW_SYS_PIXEL: g.SetPixel(o.a, o.b, g.GetStandardColor(o.c)); break;
+        case EE_WON_DRAW_FILL_ELLIPSE: g.FillEllipse(o.a, o.b, o.c, o.d); break;
+        case EE_WON_DRAW_ARC: g.DrawArc(o.a, o.b, o.c, o.d, o.e, o.f); break;
+        default: Log("draw kind " + N(o.kind)); break;
+    }
+}
+inline void WONDrawRun(PaintGraphics& g, const WONDrawOps& ops, const WONDrawSlots& s)
+{
+    for (const EeWonDrawOp& o : ops.mOps) WONDrawOne(g, o, s, WONDrawNoCall());
+}
+inline EeWonSelColor WONDrawSelOf(const SelectionColor& s)
+{
+    EeWonSelColor r;
+    r.background = (uint32_t)s.mBackgroundColor;
+    r.foreground = (uint32_t)s.mForegroundColor;
+    r.mode = (int32_t)s.mMode;
+    return r;
+}
+// the list's members the item paints read
+struct PaintList : ListArea {
+    SmartPtr<Font> mFont;
+    long mTextColor = 0x123456;
+    int mListFlags = 0, mPaintWidth = 0, mViewWidth = 0;
+    SelectionColor mSelColor = {0x00ff00, 0x0000ff, 1};
+    SelectionColor mOtherSel = {0x111111, 0x222222, 2};
+    long GetTextColor() { return mTextColor; }
+    bool ListFlagSet(int f) { return (mListFlags & f) != 0; }
+    const SelectionColor& GetSelColor() { return mOtherSel; }
+    int GetPaintWidth() { return mPaintWidth; }
+    int GetViewWidth() { return mViewWidth; }
+};
+// the list item base the text items derive from (ListItem's members and mSelected)
+struct PaintItem : ListItem {
+    bool mSelected = false;
+};
+// ImageButton's base: the button states the paint reads
+struct ImageButtonBase : Component {
+    bool mDisabled = false, mChecked = false, mPressed = false, mOver = false;
+    bool IsDisabled() { return mDisabled; }
+    bool IsChecked() { return mChecked; }
+    bool IsPressed() { return mPressed; }
+    bool IsMouseOver() { return mOver; }
+};
+} // namespace Lf
