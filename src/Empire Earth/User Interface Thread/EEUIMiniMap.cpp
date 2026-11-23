@@ -49,20 +49,10 @@ GERectangle EEUIMiniMap::sBounds;
 static GEColor sFlareColor(1.0f, 0.0f, 0.0f);
 
 // Creates the mini map control with its click action, the map drawn inside its border
-EEUIMiniMap::EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
-                         unsigned long inBorderThickness)
-    : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness), EeScreensMiniMapFields()
-{
-    ee_screens_mm_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uint32_t)inBorderThickness);   // (mini_map_calls.rs)
-}
 
 // Snapshots the mini map for drawing: refreshes the units texture, scales the map to the window, places the
 // camera outline and the blinking flare (redrawing the screen when the flare leaves the map's inner area); the
 // numbers are ee_screens mini_map.rs', the C++ reads and applies them in the original's order
-long EEUIMiniMap::CopyData()
-{
-    return (long)ee_screens_mm_copy_data((uintptr_t)this);   // (mini_map_calls.rs)
-}
 
 // NEAR: the original's frame has a zeroed dword at -4 (not identified) and builds the message's tile in the
 // tile's slot after operator new

@@ -206,7 +206,8 @@ EE_UI_CASE(form_shift_value) { return UIControl::Key(EeUiKey::Shift)->GetValue()
 EE_UI_CASE(form_event_process) { return theEvent->ProcessEvent(theForm, NULL); }
 EE_UI_CASE(form_wheel_event_new) { return (intptr_t) new UIEMouseWheelScroll; }
 EE_UI_CASE(form_mouse_wheel) { return UIManager::GetMouseWheel() != NULL; }
-EE_UI_CASE(form_wheel_amount) { return UIManager::GetMouseWheelScrollAmount(); }
+// the mouse wheel's scroll step: -1 when rolled forward, 1 when rolled back, 0 when still
+EE_UI_CASE(form_wheel_amount) { return ee_ui_manager_wheel_scroll_amount(UIControl::Key(EeUiKey::MouseWheel)->GetNormalizedValue()); }
 EE_UI_VOID(form_mouse_entity_get) { gISMouse->GetEntity((unsigned long)a, *reinterpret_cast<ISEntity**>(b)); }
 EE_UI_CASE(form_table) { return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)a); }
 EE_UI_CASE(form_table_form_index) { return theTable->GetFormIndex(); }
@@ -252,21 +253,6 @@ EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLa
 #undef thePoll
 #undef theRhombus
 
-// Creates an empty form with the given control and group counts, tool tips and tabbing off
-UIForm::UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
-               unsigned long inFormID, bool inUseGDIForText)
-    : mRust(ee_ui_form_new(this, ee_ui_form_host, inControlCount, inControlGroupCount, inManager, inFormID,
-                           inUseGDIForText)) {}
-
-// Creates a form from its UI database record: counts, layout, tool-tip settings, music file (lower-cased), tabbing
-UIForm::UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIForText)
-    : mRust(ee_ui_form_new_db(this, ee_ui_form_host, inManager, &inData, inUseGDIForText)) {}
-
-// Destroys the form, releasing its events, hot keys, groups, backgrounds, database-created controls and draw lock
-UIForm::~UIForm() { ee_ui_form_free(this->mRust); }
 
 
 // Records the mouse location, finds the control under it, hides a tool tip the mouse enters, updates the mouse-over
-UITextLabel* UIForm::GetHelpTextLabel() const { return static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::HelpTextLabel))); }
-
-void UIForm::SetHelpTextLabel(UITextLabel* inLabel) { this->Call(EeUiFormCall::SetHelpTextLabel, (intptr_t) static_cast<UIControl*>(inLabel)); }

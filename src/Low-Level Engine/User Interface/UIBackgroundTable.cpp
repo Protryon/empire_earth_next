@@ -64,4 +64,3 @@ EE_UI_CASE(bgt_make_user) { return (intptr_t)m->CreateUserDefinedBackground(*t);
 #undef t
 
 // Creates an empty background table entry (IDs -1, bitmap type, hidden, full opacity, draw priority 1)
-void UIBackgroundTable::CreateBackgrounds(UIManager* inManager) { ee_ui_bgtable_create_backgrounds(inManager, ee_ui_bg_table_host); }

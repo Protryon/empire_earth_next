@@ -39,7 +39,7 @@
 #include "ee/EEScreensShims.h"
 
 // 0x24f0e9 (EEFOFindNewTargetNearOldTarget.cpp; as ee/EEUnitUtilities.h and EEWorld.cpp declare it)
-void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);
+#include "ee/EEUnitUtilities.h"   // EEUpgradeHitPoints
 
 // the C++ records are the Rust ones (ee_tech civ.rs), field for field
 static_assert(sizeof(EECivilizationCategoryEntry) == sizeof(EeTechCivCategory) &&

@@ -37,25 +37,18 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UISlider.h"
-#include "lle/UIScrollButton.h"
+#include "lle/UIButton.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIObjHost.h"
 #include "lle/UIShims.h"
 #include "rust/ui/lle_hosts.h"
 
-struct UIScrollBarRust {
-    // the constructor's rectangle, before the Rust object exists
-    static GERectangle Layout(const GE2DPoint& inLocation, float inLength, unsigned long inStyle)
-    {
-        EeUiRect r = ee_ui_scroll_bar_layout(EeUiPoint{inLocation.GetX(), inLocation.GetY()}, inLength, inStyle).rect;
-        return GERectangle(r.left, r.top, r.right, r.bottom);
-    }
-};
 #define s static_cast<UIScrollBar*>(inObj)
 #define theSlider reinterpret_cast<UISlider*>(a)
 EE_UI_CASE(bar_create_slider) { return (intptr_t) new UISlider(s->GetId(), UIObjHost::Rect(f), (unsigned long)a, s->GetForm(), s->GetIndex(), (unsigned long)b); }
-EE_UI_CASE(bar_create_button) { return (intptr_t) new UIScrollButton(s->GetId(), reinterpret_cast<GEBitmap*>(a), reinterpret_cast<GEBitmap*>(b), GE2DPoint(f[0], f[1]), s->GetForm(), reinterpret_cast<UISlider*>(c), (unsigned long)d, s->GetIndex()); }
-EE_UI_VOID(bar_part_button_down) { reinterpret_cast<UIScrollButton*>(a)->ButtonDown(); }
+// a 19 x 19 arrow button at f (its slider and direction set by Rust: scrollbarobj.rs scroll_init)
+EE_UI_CASE(bar_create_button) { return (intptr_t) new UIButton(s->GetId(), reinterpret_cast<GEBitmap*>(a), NULL, reinterpret_cast<GEBitmap*>(b), GERectangle(GE2DPoint(f[0], f[1]), GE2DPoint(f[0] + 19.0f, f[1] + 19.0f)), s->GetForm(), s->GetIndex(), 0); }
+EE_UI_VOID(bar_part_button_down) { reinterpret_cast<UIButton*>(a)->ButtonDown(); }
 EE_UI_CASE(bar_slider_style) { return theSlider->GetSliderStyle(); }
 EE_UI_CASE(bar_slider_value) { return theSlider->GetCurrentRangeValue(); }
 EE_UI_VOID(bar_slider_set_value) { theSlider->SetCurrentRangeValue((long)b); }
@@ -66,14 +59,3 @@ EE_UI_VOID(bar_slider_set_range) { theSlider->SetRange((unsigned long)b, (unsign
 #undef theSlider
 #undef s
 
-// Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons
-// Fixed: the rectangle's size was `x + (style == 1) ? 19 : length - 1` (a precedence slip), which made it
-// 19 x (length - 1) for both styles; a horizontal bar is now (length - 1) x 19
-UIScrollBar::UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float inLength, unsigned long inStyle,
-                         UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
-    : UIControl(kControlTypeScrollBar, inId, UIScrollBarRust::Layout(inLocation, inLength, inStyle), inForm, inIndex, 0),
-      mRust(ee_ui_scroll_bar_new(this, ee_ui_scroll_bar_host, UIF4(inLocation.GetX(), inLocation.GetY(), inLength), inStyle, inBorderThickness))
-{
-}
-
-UIScrollBar::~UIScrollBar() { ee_ui_scroll_bar_free(this->mRust); }

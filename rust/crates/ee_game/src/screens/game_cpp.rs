@@ -551,7 +551,7 @@ shims! {
     fn game_window_height() -> u32 = ee_screenscpp_game_window_height;
     fn pointer_post(message: u32) = ee_screenscpp_pointer_post;
     fn pointer_post_surface(message: u32) = ee_screenscpp_pointer_post_surface;
-    fn change_game_screen(width: u32, height: u32, flag: bool) = ee_screenscpp_change_game_screen;
+    fn change_game_screen(width: u32, height: u32, flag: bool) = ee_screens_change_game_screen;
     fn manager_relayout_all() = ee_screenscpp_manager_relayout_all;
     fn mini_map() -> usize = ee_screenscpp_mini_map;
     fn world_write_lock() = ee_screenscpp_world_write_lock;
@@ -562,7 +562,7 @@ shims! {
     fn game_window_client_origin() = ee_screenscpp_game_window_client_origin;
     fn rasterizer_screen_count() -> u32 = ee_screenscpp_rasterizer_screen_count;
     fn rasterizer_release_screen(index: u32) = ee_screenscpp_rasterizer_release_screen;
-    fn delete_effect_batch_buffers() = ee_screenscpp_delete_effect_batch_buffers;
+    fn delete_effect_batch_buffers() = ee_gamecpp_fx_batch_delete;
     fn rasterizer_deactivate() -> i32 = ee_screenscpp_rasterizer_deactivate;
     fn verify_rasterizer_deactivated(result: i32) = ee_screenscpp_verify_rasterizer_deactivated;
     fn rasterizer_select(index: i32) = ee_screenscpp_rasterizer_select;
@@ -646,11 +646,11 @@ shims! {
     fn player_civilization_locked() = ee_screenscpp_player_civilization_locked;
     fn event_process(event: usize, entity: usize) = ee_screenscpp_event_process;
     fn quick_save_set_load(action: usize) = ee_screenscpp_quick_save_set_load;
-    fn chat_entry_new() -> usize = ee_screenscpp_chat_entry_new;
+    fn chat_entry_new() -> usize = ee_screens_chat_entry_blank;
     fn chat_entry_text_from_dialog(entry: usize, dialog: usize) = ee_screenscpp_chat_entry_text_from_dialog;
-    fn chat_entry_set_type(entry: usize, kind: u32) = ee_screenscpp_chat_entry_set_type;
-    fn chat_log_add(entry: usize) = ee_screenscpp_chat_log_add;
-    fn chat_entry_delete(entry: usize) = ee_screenscpp_chat_entry_delete;
+    fn chat_entry_set_type(entry: usize, kind: u32) = ee_screens_chat_entry_set_kind;
+    fn chat_log_add(entry: usize) = ee_screens_chat_entry_add;
+    fn chat_entry_delete(entry: usize) = ee_screens_chat_entry_delete;
     fn set_quit_flag() = ee_screenscpp_set_quit_flag;
     fn boot_client_host_gone_new() -> usize = ee_screenscpp_boot_client_host_gone_new;
     fn client_disconnect() = ee_screenscpp_client_disconnect;
@@ -658,6 +658,25 @@ shims! {
     fn conductor_volume() -> f32 = ee_screenscpp_conductor_volume;
     fn sound_manager() -> usize = ee_screenscpp_sound_manager;
     fn master_volume() -> f32 = ee_screenscpp_master_volume;
+    // the window events' one-call ops (ui_calls.rs ui_event; the C++ switch until UI lane round 16)
+    fn ui_has_keyboard() -> bool = ee_screenscpp_ui_has_keyboard;
+    fn ui_has_mouse() -> bool = ee_screenscpp_ui_has_mouse;
+    fn ui_has_window_and_mouse() -> bool = ee_screenscpp_ui_has_window_and_mouse;
+    fn ui_has_pointer() -> bool = ee_screenscpp_ui_has_pointer;
+    fn ui_has_window() -> bool = ee_screenscpp_ui_has_window;
+    fn ui_lobby_open() -> bool = ee_screenscpp_ui_lobby_open;
+    fn ui_lobby_shutdown() = ee_screenscpp_ui_lobby_shutdown;
+    fn ui_set_music_volume(volume: f32) = ee_screenscpp_ui_set_music_volume;
+    fn ui_set_master_volume(volume: f32) = ee_screenscpp_ui_set_master_volume;
+    fn ui_mute(muted: bool) = ee_screenscpp_ui_mute;
+    fn ui_center_mouse() = ee_screenscpp_ui_center_mouse;
+    fn ui_pointer_post(message: i64) = ee_screenscpp_ui_pointer_post;
+    fn ui_pointer_shown() -> bool = ee_screenscpp_ui_pointer_shown;
+    fn ui_mute_in_background() -> bool = ee_screenscpp_ui_mute_in_background;
+    fn ui_full_screen() -> bool = ee_screenscpp_ui_full_screen;
+    fn ui_minimize() = ee_screenscpp_ui_minimize;
+    fn ui_ime_result(text: usize) = ee_screenscpp_ui_ime_result;
+    fn ui_translated_key(text: usize) = ee_screenscpp_ui_translated_key;
     fn ime_composition(text: EeScreensShimText, attributes: EeScreensShimText, cursor: u32) = ee_screenscpp_ime_composition;
     // EEUIFMainGame.cpp's (main_form_calls.rs)
     fn mf_set_ui_state(rec: usize, state: i32) = ee_screenscpp_mf_set_ui_state;
@@ -716,7 +735,8 @@ shims! {
     fn mf_error_lock_leave(rec: usize) = ee_screenscpp_mf_error_lock_leave;
     fn mf_group_reset(rec: usize) = ee_screenscpp_mf_group_reset;
     fn mf_group_refresh(rec: usize) = ee_screenscpp_mf_group_refresh;
-    fn mf_group_select(rec: usize) = ee_screenscpp_mf_group_select;
+    fn mf_current_group(rec: usize) -> u32 = ee_screenscpp_mf_current_group;
+    fn panel_group(rec: usize, kind: u32, call: u32) = ee_screens_group_call;
     fn mf_group_wants_refresh(rec: usize) -> bool = ee_screenscpp_mf_group_wants_refresh;
     fn mf_pick(rec: usize) -> usize = ee_screenscpp_mf_pick;
     fn mf_picked_is_wall(rec: usize) -> bool = ee_screenscpp_mf_picked_is_wall;
@@ -1157,8 +1177,11 @@ shims! {
     fn mg_hot_key_event_new(button: usize, pressed: bool) -> usize = ee_screenscpp_mg_hot_key_event_new;
     fn mg_hot_key_pressed_event(key: usize, event: usize) = ee_screenscpp_mg_hot_key_pressed_event;
     fn mg_hot_key_unpressed_event(key: usize, event: usize) = ee_screenscpp_mg_hot_key_unpressed_event;
-    fn mg_event_button(event: usize) -> usize = ee_screenscpp_mg_event_button;
-    fn mg_event_pressed(event: usize) -> bool = ee_screenscpp_mg_event_pressed;
+    // the screen events with arguments (cpp_events.rs)
+    fn ev_open_form(form: usize) -> core::ffi::c_long = ee_screenscpp_ev_open_form;
+    fn ev_load_unit(form: usize) = ee_screenscpp_ev_load_unit;
+    fn ev_timer_expired() -> core::ffi::c_long = ee_screens_cb_timer_expired;
+    fn ev_end_cinematic() = ee_screenscpp_ev_end_cinematic;
     fn mg_button_hot_key_down(button: usize) = ee_screenscpp_mg_button_hot_key_down;
     fn mg_saved_groups_reset() = ee_screenscpp_mg_saved_groups_reset;
     fn mg_remove_cloak(unit: usize) = ee_screenscpp_mg_remove_cloak;
@@ -2154,6 +2177,59 @@ shims! {
     fn uh_point_x() -> f32 = ee_screenscpp_uh_point_x;
     fn uh_point_y() -> f32 = ee_screenscpp_uh_point_y;
     fn uh_point_reset() = ee_screenscpp_uh_point_reset;
+    // the improvement button's one-statement host ops (upgrade_ops.rs)
+    fn upx_allowed(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_allowed;
+    fn upx_can_buy(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_can_buy;
+    fn upx_editor_unit(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_editor_unit;
+    fn upx_can_raise(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_can_raise;
+    fn upx_maxed(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_maxed;
+    fn upx_level(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_level;
+    fn upx_text_name(call: usize, a: i64, b: i64) = ee_screenscpp_upx_text_name;
+    fn upx_text_gain(call: usize, a: i64, b: i64) = ee_screenscpp_upx_text_gain;
+    fn upx_text_string(call: usize, a: i64, b: i64) = ee_screenscpp_upx_text_string;
+    fn upx_out_append(call: usize, a: i64, b: i64) = ee_screenscpp_upx_out_append;
+    fn upx_out_set(call: usize, a: i64, b: i64) = ee_screenscpp_upx_out_set;
+    fn upx_out_bytes(call: usize, a: i64, b: i64) = ee_screenscpp_upx_out_bytes;
+    fn upx_base_help(call: usize, a: i64, b: i64) = ee_screenscpp_upx_base_help;
+    fn upx_upgrade(call: usize, a: i64, b: i64) = ee_screenscpp_upx_upgrade;
+    fn upx_out_length(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_out_length;
+    fn upx_refusal_interval(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_refusal_interval;
+    fn upx_time(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_time;
+    fn upx_chat(call: usize, a: i64, b: i64) = ee_screenscpp_upx_chat;
+    fn upx_update_help(call: usize, a: i64, b: i64) = ee_screenscpp_upx_update_help;
+    fn upx_pressed(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_pressed;
+    fn upx_base_button_up(call: usize, a: i64, b: i64) = ee_screenscpp_upx_base_button_up;
+    fn upx_base_move(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_base_move;
+    fn upx_help_text(call: usize, a: i64, b: i64) = ee_screenscpp_upx_help_text;
+    fn upx_contains(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_contains;
+    fn upx_release_mouse(call: usize, a: i64, b: i64) = ee_screenscpp_upx_release_mouse;
+    fn upx_cost_differs(call: usize, a: i64, b: i64) -> i64 = ee_screenscpp_upx_cost_differs;
+    fn upx_cost_set(call: usize, a: i64, b: i64) = ee_screenscpp_upx_cost_set;
+    fn upx_dirty(call: usize, a: i64, b: i64) = ee_screenscpp_upx_dirty;
+    fn upx_border_thickness(call: usize, a: i64, b: i64) = ee_screenscpp_upx_border_thickness;
+    fn upx_bar_set_pressed(call: usize, a: i64, b: i64) = ee_screenscpp_upx_bar_set_pressed;
+    fn upx_bar_base_l_down(call: usize) -> i64 = ee_screenscpp_upx_bar_base_l_down;
+    fn upx_bar_base_l_up(call: usize) -> i64 = ee_screenscpp_upx_bar_base_l_up;
+    fn upx_bar_base_r_down(call: usize) -> i64 = ee_screenscpp_upx_bar_base_r_down;
+    // the select control's ops (select_units_ops.rs; EEUICSelectUnits::RustOp until UI lane round 16)
+    fn su_pick() -> usize = ee_screenscpp_su_pick;
+    fn su_lasso_type(ctl: usize, unit: usize, mode: i64) = ee_screenscpp_su_lasso_type;
+    fn su_unit_release(unit: usize) = ee_screenscpp_su_unit_release;
+    fn su_lasso_box(ctl: usize, left: f32, top: f32, right: f32, bottom: f32, mode: i64) = ee_screenscpp_su_lasso_box;
+    fn su_click(ctl: usize, mode: u32) = ee_screenscpp_su_click;
+    fn su_point_at(ctl: usize) = ee_screenscpp_su_point_at;
+    fn su_lasso_in_rect(ctl: usize, left: f32, top: f32, right: f32, bottom: f32, mode: i64) = ee_screenscpp_su_lasso_in_rect;
+    fn su_click_execute(ctl: usize, x: f32, y: f32) = ee_screenscpp_su_click_execute;
+    fn su_left_down(ctl: usize) -> i64 = ee_screenscpp_su_left_down;
+    fn uh_class_count() -> i32 = ee_screenscpp_uh_class_count;
+    fn uh_class_category(index: i32) -> i32 = ee_screenscpp_uh_class_category;
+    fn uh_class_type(index: i32) -> i32 = ee_screenscpp_uh_class_type;
+    fn uh_combo_clear(form: usize) = ee_screenscpp_uh_combo_clear;
+    fn uh_tile(x: f32, y: f32) -> bool = ee_screenscpp_uh_tile;
+    fn uh_player_skipped(player: i32) -> bool = ee_screenscpp_uh_player_skipped;
+    fn uh_local_player() -> i32 = ee_screenscpp_uh_local_player;
+    fn uh_send_load(unit_type: i32) = ee_screenscpp_uh_send_load;
+    fn uh_in_view(x: f32, y: f32) -> bool = ee_screenscpp_uh_in_view;
     // EEUIFMainGame.cpp's cursor (cursor_calls.rs)
     fn cur_mouse_over(ctx: usize) -> usize = ee_screenscpp_cur_mouse_over;
     fn cur_command_units(ctx: usize) -> usize = ee_screenscpp_cur_command_units;
@@ -2174,6 +2250,17 @@ shims! {
     fn cur_set_shielded(shielded: bool) = ee_screenscpp_cur_set_shielded;
     fn cur_convert(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_convert;
     fn cur_shielded() -> bool = ee_screenscpp_cur_shielded;
+    fn cur_flags(ctx: usize) -> i32 = ee_screenscpp_cur_flags;
+    fn cur_in_view() -> bool = ee_screenscpp_cur_in_view;
+    fn cur_release(ctx: usize) = ee_screenscpp_cur_release;
+    fn cur_seen(ctx: usize) -> bool = ee_screenscpp_cur_seen;
+    fn cur_t_targetable(ctx: usize) -> bool = ee_screenscpp_cur_t_targetable;
+    fn cur_can_heal(ctx: usize) -> bool = ee_screenscpp_cur_can_heal;
+    fn cur_sel_air_base(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_sel_air_base;
+    fn cur_sel_crusader(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_sel_crusader;
+    fn cur_sel_priest(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_sel_priest;
+    fn cur_sel_can_attack(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_sel_can_attack;
+    fn cur_cargo_can_attack(ctx: usize, index: u32, cargo: u32) -> bool = ee_screenscpp_cur_cargo_can_attack;
     // EEUIFError.cpp's (dialog_calls.rs)
     fn dlg_text_load(ids: u32) = ee_screenscpp_dlg_text_load;
     fn dlg_button_set_text(button: usize) = ee_screenscpp_dlg_button_set_text;
@@ -2711,7 +2798,7 @@ shims! {
     fn uim_gfx_post_pause() -> bool = ee_screenscpp_uim_gfx_post_pause;
     fn uim_gfx_paused() -> bool = ee_screenscpp_uim_gfx_paused;
     fn uim_gfx_post_resume() = ee_screenscpp_uim_gfx_post_resume;
-    fn uim_reset_gfx_values() = ee_screenscpp_uim_reset_gfx_values;
+    fn uim_reset_gfx_values() = ee_screens_reset_graphics_values;
     fn uim_capture_event(capture: usize) -> bool = ee_screenscpp_uim_capture_event;
     fn uim_capture_post(capture: usize) = ee_screenscpp_uim_capture_post;
     fn uim_capture_wait(capture: usize) = ee_screenscpp_uim_capture_wait;
@@ -2726,9 +2813,9 @@ shims! {
     fn uim_delete_form(form: usize) = ee_screenscpp_uim_delete_form;
     fn uim_delete_error_data(data: usize) = ee_screenscpp_uim_delete_error_data;
     fn uim_chat_show(main: usize, entry: usize) = ee_screenscpp_uim_chat_show;
-    fn uim_chat_type(entry: usize) -> i64 = ee_screenscpp_uim_chat_type;
-    fn uim_chat_log(entry: usize) = ee_screenscpp_uim_chat_log;
-    fn uim_delete_chat(entry: usize) = ee_screenscpp_uim_delete_chat;
+    fn uim_chat_type(entry: usize) -> i64 = ee_screens_chat_entry_kind;
+    fn uim_chat_log(entry: usize) = ee_screens_chat_entry_log;
+    fn uim_delete_chat(entry: usize) = ee_screens_chat_entry_free;
     fn uim_show_information(main: usize, info: usize) = ee_screenscpp_uim_show_information;
     fn uim_delete_dialog(dialog: usize) = ee_screenscpp_uim_delete_dialog;
     fn uim_icon_bar_posted_clear(ui: usize) = ee_screenscpp_uim_icon_bar_posted_clear;
@@ -2744,7 +2831,7 @@ shims! {
     fn ug_path_reset() = ee_screenscpp_ug_path_reset;
     fn ug_sight_on() = ee_screenscpp_ug_sight_on;
     fn ug_restart_units() = ee_screenscpp_ug_restart_units;
-    fn ug_land_continents() = ee_screenscpp_ug_land_continents;
+    fn ug_land_continents() = ee_screens_update_land_continents;
     fn ug_resize_game(ui: usize, a: bool, b: bool) = ee_screenscpp_ug_resize_game;
     fn ug_resize_menu(ui: usize, a: bool, b: bool) = ee_screenscpp_ug_resize_menu;
     fn ug_physics_post(message: u64) = ee_screenscpp_ug_physics_post;
@@ -2756,7 +2843,7 @@ shims! {
     fn ug_collect_computers() = ee_screenscpp_ug_collect_computers;
     fn ug_timer_running() -> bool = ee_screenscpp_ug_timer_running;
     fn ug_state_clear() = ee_screenscpp_ug_state_clear;
-    fn ug_stop_sounds() = ee_screenscpp_ug_stop_sounds;
+    fn ug_stop_sounds() = ee_gamecpp_startup_stop_sounds;
     fn ug_options_defaults() = ee_screenscpp_ug_options_defaults;
     fn ug_file_name_length(file: usize) -> u64 = ee_screenscpp_ug_file_name_length;
     fn ug_file_scenario_at(file: usize) -> u64 = ee_screenscpp_ug_file_scenario_at;
@@ -2771,7 +2858,7 @@ shims! {
     fn ug_has_communications() -> bool = ee_screenscpp_ug_has_communications;
     fn ug_is_client() -> bool = ee_screenscpp_ug_is_client;
     fn ug_server_lost_after_loading() -> bool = ee_screenscpp_ug_server_lost_after_loading;
-    fn ug_unload_media() = ee_screenscpp_ug_unload_media;
+    fn ug_unload_media() = ee_gamecpp_startup_unload_media;
     fn ug_lobby_open() -> bool = ee_screenscpp_ug_lobby_open;
     fn ug_create_editor() = ee_screenscpp_ug_create_editor;
     fn ug_load_scendefault() -> i64 = ee_screenscpp_ug_load_scendefault;
@@ -2969,7 +3056,6 @@ shims! {
     fn sf_chat_line_new(table: usize, form: usize, opacity_bits: i64) -> usize = ee_screenscpp_sf_chat_line_new;
     // the HUD classes' bodies (hud_bodies.rs, UI lane round 12)
     fn mfb_group_main(form: usize) = ee_screenscpp_mfb_group_main;
-    fn mfb_group_rust(form: usize, index: u32) = ee_screenscpp_mfb_group_rust;
     fn mfb_unit_info(form: usize) -> usize = ee_screenscpp_mfb_unit_info;
     fn mfb_background_visible(background: usize) -> bool = ee_screenscpp_mfb_background_visible;
     fn mfb_background_contains(background: usize, x: f32, y: f32) -> bool = ee_screenscpp_mfb_background_contains;
@@ -2981,7 +3067,7 @@ shims! {
     fn mfb_mouse_click_dereference(form: usize) = ee_screenscpp_mfb_mouse_click_dereference;
     fn mfb_lasso_dereference(form: usize) = ee_screenscpp_mfb_lasso_dereference;
     fn mfb_destroy_error_section(form: usize) = ee_screenscpp_mfb_destroy_error_section;
-    fn mfb_group_delete(form: usize, index: u32) = ee_screenscpp_mfb_group_delete;
+    fn mfb_group_delete(form: usize) = ee_screenscpp_mfb_group_delete;
     fn mfb_poll_delete(form: usize) = ee_screenscpp_mfb_poll_delete;
     fn mfb_build_dereference(form: usize) = ee_screenscpp_mfb_build_dereference;
     fn mfb_calamity_dereference(form: usize) = ee_screenscpp_mfb_calamity_dereference;

@@ -1015,6 +1015,21 @@ constexpr static const int64_t EE_SCREENS_CU_EXECUTE_FACING = 2;
 
 constexpr static const int64_t EE_SCREENS_CU_EXECUTE_DRAGGED = 4;
 
+/// `EEUIECancel` (the save and load forms' Cancel): a the form to open.
+constexpr static const uint32_t EE_SCREENS_EV_CANCEL = 2113929217;
+
+/// `EEUIELoadUnit` (the main game form's debug unit reload): the unit hack of the form it runs on loads.
+constexpr static const uint32_t EE_SCREENS_EV_LOAD_UNIT = 2113929218;
+
+/// `EEUIEMGHotKeyStatusButton`: a the command button (`EEUIFMGStatusButton*`), b 1 pressed, 0 released.
+constexpr static const uint32_t EE_SCREENS_EV_HOT_KEY = 2113929219;
+
+/// `EEUIEProcessTimerExpired` (posted by `EEMCivTimerExpired::Execute`): `EEProcessTimerExpired`.
+constexpr static const uint32_t EE_SCREENS_EV_TIMER_EXPIRED = 2113929220;
+
+/// `EEUIEndCinematicModeEvent`: the cinematic ended at its saved end time.
+constexpr static const uint32_t EE_SCREENS_EV_END_CINEMATIC = 2113929221;
+
 /// Whether the mouse is over no control, or over the command units control.
 constexpr static const uint32_t EE_SCREENS_CURSOR_OP_MOUSE_OK = 1;
 
@@ -11403,6 +11418,9 @@ constexpr static const int64_t EE_SCREENS_MF_TYPE_FARM = 42;
 
 constexpr static const int64_t EE_SCREENS_MF_TYPE_ROBOTIC_FARM = 826;
 
+/// `kTechNone`: the placements' technology until one is started.
+constexpr static const int32_t EE_SCREENS_PLACEMENT_TECH_NONE = 100000;
+
 /// The flare's colour (`EeScreensMiniMapCopy::flare_color`): none set, `sFlareColor` (red), `sFlareBlinkColor`.
 constexpr static const uint8_t EE_SCREENS_MM_COLOR_NONE = 0;
 
@@ -15655,6 +15673,14 @@ struct EeScreensChatLogHead {
   uint32_t time;
 };
 
+/// A chat line posted to the UI thread (message 0x418; the dialog log's line): the original's `EEChatLogEntry`
+/// (UI round 16), its name and text NUL-terminated (`UWideString`'s bytes).
+struct EeScreensChatEntry {
+  EeScreensChatLogHead head;
+  char *name;
+  char *text;
+};
+
 /// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
 using EeScreensAesIo = long(*)(void *ctx, uint32_t op, void *value);
 
@@ -15890,26 +15916,30 @@ struct EeScreensMainFormFields {
   bool mIsButtonBlinking;
 };
 
-/// `EEUIBuildWall`'s members from `mState` on (the class's vptr before them): placing (0 no start, 1 dragging),
-/// the tile centres, the wall's technology and player.
+/// `EEUIBuildWall` (the C++ name is a typedef of this record; UI lane round 16: the class and its vtable gone): placing
+/// (0 no start, 1 dragging), the tile centres, the wall's technology and player; `editor` the scenario editor's
+/// placement (the original's `EESEUIBuildWall`, whose Cancel and Build were its own).
 struct EeScreensBuildWallFields {
-  uint32_t state;
-  EeScreensPoint start;
-  EeScreensPoint end;
-  int32_t technology;
-  int32_t player;
+  uint32_t mState;
+  EeScreensPoint mStart;
+  EeScreensPoint mEnd;
+  int32_t mTechnology;
+  int32_t mPlayer;
+  bool mEditor;
 };
 
-/// `EEUIBuildGate`'s members from `mUnitClass` on: the gate's class, the tile of the last build, the technology,
-/// the highlighted walls' type, the gate's direction, the player.
+/// `EEUIBuildGate` (a typedef of this record, as the wall's): the gate's class, the tile of the last build, the
+/// technology, the highlighted walls' type, the gate's direction, the player; `editor` the scenario editor's
+/// (`EESEUIBuildGate`).
 struct EeScreensBuildGateFields {
-  void *unit_class;
-  int32_t tile_x;
-  int32_t tile_y;
-  int32_t technology;
-  int32_t wall_type;
-  int32_t direction;
-  int32_t player;
+  void *mUnitClass;
+  int32_t mTileX;
+  int32_t mTileY;
+  int32_t mTechnology;
+  int32_t mWallType;
+  int32_t mDirection;
+  int32_t mPlayer;
+  bool mEditor;
 };
 
 /// `EEUIFMGStatusBox`'s members (ee/EEUIFMGStatusBox.h) as the record the class is (its only base, at offset 0:
@@ -16723,6 +16753,36 @@ long ee_screens_chat_log_load(void *file);
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
 
+/// `new EEChatLogEntry{colour, name, text, kind, time}` (`EEUserInterface::AddChatLogEntry`) -> the entry.
+EeScreensChatEntry *ee_screens_chat_entry_new(EeScreensChatLogHead head,
+                                              const char *name,
+                                              const char *text);
+
+/// `new EEChatLogEntry` (the dialog log's: white, no name or text, kind and time 0; the original left the kind and
+/// time unset) -> the entry.
+size_t ee_screens_chat_entry_blank();
+
+/// The entry's text set from NUL-terminated bytes.
+void ee_screens_chat_entry_set_text(size_t e, const char *text);
+
+/// The entry's kind (`mType`).
+void ee_screens_chat_entry_set_kind(size_t e, uint32_t kind);
+
+/// The entry's kind (`mType`).
+int64_t ee_screens_chat_entry_kind(size_t e);
+
+/// The entry added to the chat log (the original's `EEUIECLEFormManager::AddEntry`).
+void ee_screens_chat_entry_log(size_t e);
+
+/// The entry freed.
+void ee_screens_chat_entry_free(size_t e);
+
+/// The dialog log's add (the shim list's second name for [`ee_screens_chat_entry_log`]).
+void ee_screens_chat_entry_add(size_t e);
+
+/// The dialog log's delete (the shim list's second name for [`ee_screens_chat_entry_free`]).
+void ee_screens_chat_entry_delete(size_t e);
+
 /// The civilization file host (`EeTechCivFileHost`'s call: `ctx` the `EECivFileContext*`, `call` an
 /// `EeTechCivFileCall*`, `reply` an `EeTechCivFileReply*`; `civ_file_calls.rs`).
 void ee_screens_civ_file_host(void *ctx, const void *call, void *reply);
@@ -16878,6 +16938,14 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
                                 size_t count,
                                 EeScreensPanelButton *out,
                                 size_t capacity);
+
+/// `EEScreenEvent::ProcessEvent`: the event `event` with its arguments on `form` from `entity`; a screen event's
+/// code without arguments goes on to `ee_screens_event`.
+long ee_screens_event_args(uint32_t event,
+                           size_t a,
+                           size_t b,
+                           void *form,
+                           void *entity);
 
 /// `EEUIFMainGame::UpdateCursorKind`'s cursor kind, read through the host with `ctx`.
 int32_t ee_screens_cursor_kind(void *ctx);
@@ -18217,6 +18285,15 @@ void ee_screens_gate_update(void *call,
 /// `record` is the new box's record.
 void ee_screens_status_box_init(EeScreensStatusBoxFields *record, void *form);
 
+/// `EEUIFMGStatusBox::SetControls(index, icon, label)`: the attribute row's icon and label controls.
+///
+/// # Safety
+/// `record` is a live box's record; `index` is below 9.
+void ee_screens_status_box_set_controls(EeScreensStatusBoxFields *record,
+                                        int64_t index,
+                                        void *icon,
+                                        void *label);
+
 /// `EEUIFMGStatusBox::GetBoxControl(id)`: the control an `EE_SCREENS_BOX_CTL_*` names.
 ///
 /// # Safety
@@ -18235,9 +18312,6 @@ void ee_screens_main_group_fields(void *group, EeScreensMainGroupFields *fields)
 
 /// `EEUIFMGMainGroup::ShowCommands(unit)`.
 void ee_screens_mg_show_commands(size_t group, size_t unit);
-
-/// `EEUIEMGHotKeyStatusButton::ProcessEvent`.
-int64_t ee_screens_mg_hot_key_event(size_t event);
 
 /// `EEUIFMGMainGroup`'s member `which` (`EE_SCREENS_MGR_DO_*`) on the group with the unit `unit` (an `EEUnit*`) and
 /// `b` (a command button's button | its control << 32): `GetSelectedUnit`'s unit, `WantsRefresh`'s answer, else 0.
@@ -18323,8 +18397,11 @@ long ee_screens_mini_map_left_down(void *map);
 /// `map` is the live mini map.
 long ee_screens_mini_map_right_up(void *map);
 
-/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
-void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
+/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind, on the main game
+/// form of the form's call record `rec` (an `EEUIFMGFormCall*`).
+void ee_screens_group_call(size_t rec,
+                           uint32_t kind,
+                           uint32_t call);
 
 /// `EEUIFErrorShow` (`EEUIFErrorDisplay` through the game's UI table): the new box `dialog` (its `UIForm*`) shown as
 /// `kind` with the message, its alignment, the callbacks and their data, the form Cancel closes and the flag.
@@ -18349,6 +18426,28 @@ void *ee_screens_dlg_close_form();
 
 /// The message (a `const UWideString*`).
 const void *ee_screens_dlg_message();
+
+/// `EEUIBuildWall()` (`editor`: `EESEUIBuildWall()`).
+EeScreensBuildWallFields ee_screens_wall_new(bool editor);
+
+/// `EEUIBuildGate()` (`editor`: `EESEUIBuildGate()`).
+EeScreensBuildGateFields ee_screens_gate_new(bool editor);
+
+/// `EEUIBuildWall::Cancel` (the main game form leaves the mode) or `EESEUIBuildWall::Cancel` (the unit tab's).
+void ee_screens_wall_cancel(EeScreensBuildWallFields *wall);
+
+/// `EEUIBuildWall::Build` (the main game form's build action builds the wall from the start to the end) or
+/// `EESEUIBuildWall::Build` (the unit tab places it).
+void ee_screens_wall_build(EeScreensBuildWallFields *wall);
+
+/// `EEUIBuildGate::Cancel` or `EESEUIBuildGate::Cancel`.
+void ee_screens_gate_cancel(EeScreensBuildGateFields *gate);
+
+/// `EEUIBuildGate::Build(location, direction)` (the main game form's build action) or `EESEUIBuildGate::Build`.
+void ee_screens_gate_build(EeScreensBuildGateFields *gate,
+                           float x,
+                           float y,
+                           int32_t direction);
 
 /// `EEUIBuildWall::Initialize`: starts wall placement for a player: no points yet, the wall class's media loaded.
 void ee_screens_wall_initialize(EeScreensBuildWallFields *wall,
@@ -18921,6 +19020,14 @@ size_t ee_screens_um_create_control(size_t manager, size_t table);
 /// `EEUIManager`'s constructor's work after its base, on the host's call record `call`.
 void ee_screens_ui_manager_construct(void *call);
 
+/// `EEUIManager`'s constructor body (UI round 16): its own members' record `rec` made (the default state, the
+/// manager registered), then [`ee_screens_ui_manager_construct`] on `call`.
+///
+/// # Safety
+/// `rec` is the live manager's record base; `call` its call record.
+void ee_screens_ui_manager_new(EeScreensUiManagerFields *rec,
+                               void *call);
+
 /// `EEUIManager::StartScenarioEditor` on the host's call record `call`.
 void ee_screens_ui_manager_start_editor(void *call);
 
@@ -18929,6 +19036,15 @@ int64_t ee_screens_ui_manager_update_keyboard(void *call);
 
 /// `EEUIManager::UpdateMouse` on the host's call record `call`: its result.
 int64_t ee_screens_ui_manager_update_mouse(void *call);
+
+/// `EEResetGraphicsValues()` (EERenderObject.cpp): the game's render objects posted, not all.
+void ee_screens_reset_graphics_values();
+
+/// `EEChangeGameScreen(width, height, flag)` (Empire Earth.cpp).
+void ee_screens_change_game_screen(uint32_t width, uint32_t height, bool flag);
+
+/// `EEUpdateLandContinents()` (EECloakingUtilities.cpp: the units' cloak body).
+void ee_screens_update_land_continents();
 
 /// `EEUIManager`'s constructor: its members zeroed (the constructor's own stores come in `EE_SCREENS_UM_OP_FORMS`)
 /// and the record registered.

@@ -14,8 +14,6 @@
 #include "rust/ui/comboobj.h"
 #include "rust/ui/lle_combo.h"
 
-class UIEditBox;
-class UITextLabel;
 
 class LLE_API UIComboBox : public UIControl {
 public:

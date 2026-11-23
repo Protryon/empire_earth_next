@@ -18,7 +18,7 @@
 class LLE_API UISlider : public UIControl {
 public:
     UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeSlider, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_slider_new(this, ee_ui_slider_host, inSliderStyle); }
-    virtual ~UISlider();
+    virtual ~UISlider() { ee_ui_slider_free(this->mRust); }
     virtual long CopyData() { return (long)this->Call(EeUiSliderCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiSliderCall::DrawPolygons); }
     long GetCurrentRangeValue() const { return (long)this->Call(EeUiSliderCall::CurrentRangeValue); }

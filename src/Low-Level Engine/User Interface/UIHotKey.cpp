@@ -25,8 +25,6 @@
 #include "lle/UIShims.h"
 #include "rust/ui/lle_hosts.h"
 
-TMPoll UIHotKey::sPressedPoll(50, 0, true);
-unsigned long UIHotKey::sPressedPollAmount;
 
 // The UI database files' calls (FSFileSpec&): the hot keys' records (hotkeyobj.rs), the events' and the background
 // table's (UIManager.cpp, UIBackgroundTable.cpp)
@@ -60,7 +58,6 @@ extern "C" intptr_t ee_uicpp_hk_get_entity(intptr_t inKey, ISEntity** ioEntity) 
 #undef r
 
 
-UIHotKey::~UIHotKey() { this->Call(EeUiHotKeyCall::Release); }
 
 // the entities' names (ee_ui hotkey_ffi.rs: the hot key's display name)
 extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast<ISEntity*>(inEntity)->GetName(); }

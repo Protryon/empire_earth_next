@@ -71,5 +71,3 @@ EE_UI_VOID(label_virt_set_rectangle) { l->SetRectangle(UIObjHost::Rect(f)); }
 #undef theBar
 #undef l
 
-// Creates a text label (type 0 one line, type 1 multi-line with a scroll bar area) and sets its initial text
-UITextLabel::~UITextLabel() { ee_ui_label_free(this->mRust); }

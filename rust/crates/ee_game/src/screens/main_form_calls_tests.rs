@@ -75,7 +75,18 @@ fn the_form() {
     let mut f = Fake::default();
     assert_eq!(run(&mut f, EE_SCREENS_MF_OP_GROUP, EE_SCREENS_MF_GROUP_WANTS_REFRESH, 0).0, Some(0));
     run(&mut f, EE_SCREENS_MF_OP_GROUP, EE_SCREENS_MF_GROUP_SELECT, 0);
-    assert_eq!(f.calls(), "mf_group_wants_refresh(64)\nmf_group_select(64)");
+    assert_eq!(f.calls(), "mf_current_group(64)\nmf_group_wants_refresh(64)\nmf_current_group(64)");
+    // a Rust kind (the statistics group): Refresh and Select are its, Reset and WantsRefresh nothing
+    let mut f = Fake::default();
+    f.answer("mf_current_group", &[1, 1, 1, 1]);
+    assert_eq!(run(&mut f, EE_SCREENS_MF_OP_GROUP, EE_SCREENS_MF_GROUP_WANTS_REFRESH, 0).0, Some(0));
+    run(&mut f, EE_SCREENS_MF_OP_GROUP, EE_SCREENS_MF_GROUP_RESET, 0);
+    run(&mut f, EE_SCREENS_MF_OP_GROUP, EE_SCREENS_MF_GROUP_REFRESH, 0);
+    run(&mut f, EE_SCREENS_MF_OP_GROUP, EE_SCREENS_MF_GROUP_SELECT, 0);
+    assert_eq!(
+        f.calls(),
+        "mf_current_group(64)\nmf_current_group(64)\nmf_current_group(64)\npanel_group(64, 1, 1)\nmf_current_group(64)\npanel_group(64, 1, 2)"
+    );
     let mut f = Fake::default();
     f.answer("unit_class_count", &[10]).answer("unit_class_exists", &[1]);
     f.answer("mf_info_unit_type", &[4]);

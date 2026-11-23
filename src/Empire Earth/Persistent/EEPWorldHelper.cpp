@@ -227,8 +227,8 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwStTeamsFromHelper: ((EEGameState*)p)->mTeams = ((EEPWorldHelper*)a[0])->mTeams;
         break;
     case O::PwHasLiveState: return EESaveHasLiveState(VERSION);
-    case O::PwChatLogLoad: return EEUIECLEFormManager::Load(VERSION, FILE_);
-    case O::PwChatLogSave: return EEUIECLEFormManager::Save(VERSION, FILE_);
+    case O::PwChatLogLoad: return ee_screens_chat_log_load(&FILE_);
+    case O::PwChatLogSave: return ee_screens_chat_log_save(&FILE_);
     case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
     case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
     case O::PwPrimitive: return EESavePrimitive(FILE_, (int32_t)a[0], (EeUnitsPlayerSaveIo*)a[1]);

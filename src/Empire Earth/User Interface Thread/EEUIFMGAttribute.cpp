@@ -14,16 +14,6 @@
 #include "ee/EEScreensShims.h"
 #include "rust/game/screens.h"
 
-// Creates the main game form's attribute upgrade button with a level text in its corner
-EEUIFMGAttribute::EEUIFMGAttribute(GEFont* inFont, UIForm* inForm, const GERectangle& inRectangle,
-                                   unsigned long inIndex, unsigned long inId, const GEColor& inTextColor,
-                                   bool inScenarioEditor, unsigned long inBorderThickness)
-    : EEUIBUpgrade(inId, inRectangle.GetTopLeft(), (unsigned long)inRectangle.GetWidth(),
-                   (unsigned long)inRectangle.GetHeight(), inForm, inIndex, inScenarioEditor, inBorderThickness),
-      EeScreensAttributeFields()
-{
-    ee_screens_att_construct((uintptr_t)this, (uintptr_t)inFont, (uintptr_t)&inTextColor);   // (hud_more.rs)
-}
 
 // Destroys the attribute button and its level text
 EEUIFMGAttribute::~EEUIFMGAttribute()

@@ -10,6 +10,7 @@
 
 #include "lle/UISlider.h"
 #include "rust/ui/scrollbarobj.h"
+#include "rust/ui/lle_hosts.h"
 
 
 // The width of a scroll bar (0x1009916c, one .rdata constant: the edit and list boxes, the scroll bar and the check
@@ -18,9 +19,15 @@
 
 class LLE_API UIScrollBar : public UIControl {
 public:
+    // Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons, in the Rust layout's
+    // rectangle (made before the Rust object exists)
+    // Fixed: the rectangle's size was `x + (style == 1) ? 19 : length - 1` (a precedence slip), which made it
+    // 19 x (length - 1) for both styles; a horizontal bar is now (length - 1) x 19
     UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float inLength, unsigned long inStyle, UIForm* inForm,
-                unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~UIScrollBar();
+                unsigned long inIndex, unsigned long inBorderThickness)
+        : UIControl(kControlTypeScrollBar, inId, UIControl::AsRect(ee_ui_scroll_bar_layout(EeUiPoint{inLocation.GetX(), inLocation.GetY()}, inLength, inStyle).rect), inForm, inIndex, 0),
+          mRust(ee_ui_scroll_bar_new(this, ee_ui_scroll_bar_host, UIF4(inLocation.GetX(), inLocation.GetY(), inLength), inStyle, inBorderThickness)) {}
+    virtual ~UIScrollBar() { ee_ui_scroll_bar_free(this->mRust); }
     virtual long CopyData() { return (long)this->Call(EeUiScrollBarCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiScrollBarCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiScrollBarCall::DrawText); }

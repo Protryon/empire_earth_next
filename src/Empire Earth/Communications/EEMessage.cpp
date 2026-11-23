@@ -41,7 +41,7 @@
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
 #include "ee/EEARust.h"
-#include "ee/EEUIEProcessTimerExpired.h"
+#include "ee/EEScreenEvent.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEAreaUtilities.h"
@@ -307,7 +307,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::NewStartGameRecord: return P64(static_cast<NEMessage*>(new NEMRecord(kNetMessageStartGame, {(unsigned long)a[0]})));
     case O::NewLoadMainScreenRecord: return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadMainScreen, {0})));
     case O::NewChatAction: return P64(static_cast<EEAction*>(new EEAAddChatMessage(MSG->mString, a[0] != 0)));
-    case O::NewTimerExpiredEvent: return P64(static_cast<UIEvent*>(new EEUIEProcessTimerExpired));
+    case O::NewTimerExpiredEvent: return P64(static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_TIMER_EXPIRED)));
     case O::VecCivUpgradesOfMsg: return P64(new std::vector<EECivUpgrade>(MSG->GetList<EECivUpgrade>()));
     case O::VecCivUpgradesDelete: delete (std::vector<EECivUpgrade>*)p;
         break;
@@ -624,7 +624,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::MainFormUpdateHelp: MAIN_FORM->UpdateHelpString();
         break;
-    case O::MainFormGroup0: return P64(static_cast<EEUIFMGMainGroup*>(MAIN_FORM->mGroups[0]));
+    case O::MainFormGroup0: return P64(MAIN_FORM->mMainGroup);
     case O::MainGroupReset: ((EEUIFMGMainGroup*)p)->Reset();
         break;
     case O::GameUiShowCommands: gEEGameUI.mShowCommands((EEUIFMGMainGroup*)p, ((EEUIFMGMainGroup*)p)->GetSelectedUnit());

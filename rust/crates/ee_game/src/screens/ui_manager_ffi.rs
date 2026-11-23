@@ -4,6 +4,7 @@
 use core::ffi::c_void;
 
 use crate::screens::ui_manager;
+use crate::screens::ui_objects::{self, EeScreensUiManagerFields};
 use crate::screens::ui_thread::UiHost;
 
 /// cbindgen:ignore
@@ -64,6 +65,18 @@ pub extern "C" fn ee_screens_ui_manager_construct(call: *mut c_void) {
     ui_manager::construct(&mut ManagerHost(call));
 }
 
+/// `EEUIManager`'s constructor body (UI round 16): its own members' record `rec` made (the default state, the
+/// manager registered), then [`ee_screens_ui_manager_construct`] on `call`.
+///
+/// # Safety
+/// `rec` is the live manager's record base; `call` its call record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_ui_manager_new(rec: *mut EeScreensUiManagerFields, call: *mut c_void) {
+    // SAFETY: the contract
+    unsafe { ui_objects::ee_screens_ui_manager_fields(rec) };
+    ee_screens_ui_manager_construct(call);
+}
+
 /// `EEUIManager::StartScenarioEditor` on the host's call record `call`.
 #[no_mangle]
 pub extern "C" fn ee_screens_ui_manager_start_editor(call: *mut c_void) {
@@ -80,4 +93,34 @@ pub extern "C" fn ee_screens_ui_manager_update_keyboard(call: *mut c_void) -> i6
 #[no_mangle]
 pub extern "C" fn ee_screens_ui_manager_update_mouse(call: *mut c_void) -> i64 {
     ui_manager::update_mouse(&mut ManagerHost(call))
+}
+
+// ---- the UI thread's calls of other units' functions whose bodies are Rust (UI round 16: the shim list names these
+// instead of a C++ shim calling the C++ forwarder)
+
+/// `EEResetGraphicsValues()` (EERenderObject.cpp): the game's render objects posted, not all.
+#[no_mangle]
+pub extern "C" fn ee_screens_reset_graphics_values() {
+    crate::gamecpp::render_object::ee_gamecpp_ro_post_render_objects(false);
+}
+
+/// `EEChangeGameScreen(width, height, flag)` (Empire Earth.cpp).
+#[no_mangle]
+pub extern "C" fn ee_screens_change_game_screen(width: u32, height: u32, flag: bool) {
+    crate::gamecpp::startup::ee_gamecpp_startup_change_screen(
+        width as core::ffi::c_ulong,
+        height as core::ffi::c_ulong,
+        flag,
+    );
+}
+
+/// `EEUpdateLandContinents()` (EECloakingUtilities.cpp: the units' cloak body).
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_screens_update_land_continents() {
+    extern "C" {
+        fn ee_units_ck_body(what: i32, a: u64, b: u64, c: i64, d: i64) -> i64;
+    }
+    // SAFETY: the units' cloak body's op with no arguments
+    unsafe { ee_units_ck_body(ee_sim::units::uu_cloak::EE_UNITS_CK_DO_UPDATE_LAND_CONTINENTS, 0, 0, 0, 0) };
 }

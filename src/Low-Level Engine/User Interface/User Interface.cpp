@@ -9,28 +9,10 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/UIBackgroundTable.h"
-
-// Constructed and destroyed, referenced by nothing (its chain comes first) (provisional name)
-static UIBackgroundTable sBackgroundTable;
-
-
 #include "lle/User Interface.h"
+#include "rust/ui/bgtableobj.h"
 
-static void UIShutdown(bool inForced);
-
-long gUIInitialized;
-
-// Marks the user interface initialized and registers its shutdown hook; always succeeds
-long UIInitialize()
-{
-    gUIInitialized = 1;
-    URegisterShutdown(UIShutdown);
-    return kErrorOK;
-}
-
-// Shutdown hook: deletes every background table
-static void UIShutdown(bool inForced)
-{
-    UIBackgroundTable::DeleteAll();
-}
+// Registers the user interface's shutdown hook (every background table deleted); always succeeds (ee_ui
+// bgtableobj.rs). The original's unreferenced file-static UIBackgroundTable and its gUIInitialized flag (set here,
+// read by nothing) are gone.
+long UIInitialize() { return ee_ui_initialize(); }

@@ -34,12 +34,6 @@ extern "C" void ee_screenscpp_pl_gate_load_media(int32_t inPlayer, EEUnitClass* 
 extern "C" void ee_screenscpp_pl_gate_unload_media(int32_t inPlayer, EEUnitClass* inClass)
 { gWorld.GetPlayer(inPlayer)->UnloadUnitClassMedia(inClass->mUnitType); }
 
-void EEUIBuildGate::Cancel()
-{
-    gUIManager->GetMainGameForm()->SetUIState(0);
-}
-
-void EEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
-{
-    static_cast<EEABuild*>(gUIManager->GetMainGameForm()->mBuild)->BuildGate(inLocation, inDirection);
-}
+// the main game form's Build (0x25619b; its Cancel: EEUIBuildWall.cpp) (placement_ffi.rs)
+extern "C" void ee_screenscpp_pl_main_build_gate(float inX, float inY, int32_t inDirection)
+{ static_cast<EEABuild*>(gUIManager->GetMainGameForm()->mBuild)->BuildGate(GE2DPoint(inX, inY), (long)inDirection); }
