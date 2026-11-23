@@ -25,7 +25,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EETechTreeRecord.h"
-#include "ee/EEUnitClassRecord.h"
+#include "rust/data/tables.h"   // EEUnitClassRecord (ee_data DbUnitClass)
 #include "ee/EERules.h"
 
 #include "EEDataText.h"

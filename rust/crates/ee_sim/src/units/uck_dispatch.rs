@@ -73,8 +73,6 @@ pub const EE_UNITS_UCK_D_AIR_SOUND: i32 = 3528;
 pub const EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION: i32 = 3530;
 /// `class->SubmergedNavalGroundLocation(f[0..3])`
 pub const EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION: i32 = 3531;
-/// `class->NavalBuildingHasSunk(unit)`
-pub const EE_UNITS_UCK_D_NAVAL_BUILDING_SUNK: i32 = 3532;
 /// `class->IsSidePart(unit)`
 pub const EE_UNITS_UCK_D_IS_SIDE_PART: i32 = 3533;
 /// `EEGetFirstPart(unit)->GetCommandType()`
@@ -134,6 +132,8 @@ const ACTION_CLOSED: i64 = 15001;
 pub trait UckRust {
     /// `ee_units_uu_footprint(which, unit)`: 0 link, 1 unlink, 2 the building's region, 3 off it
     fn footprint(&mut self, which: i32, unit: u64);
+    /// The naval building's `HasSunk` (cls_condition.rs `sunk`, the trigger's test)
+    fn has_sunk(&mut self, unit: u64) -> bool;
 }
 
 fn body<H: UcHost + ?Sized>(s: &mut S<'_, H>, row: usize) -> i64 {
@@ -280,7 +280,7 @@ pub unsafe fn dispatch<H: UcHost + UckRust + ?Sized>(
         }
         EE_UNITS_BODY_HAS_SUNK => {
             return match chosen {
-                1 => s.s(EE_UNITS_UCK_D_NAVAL_BUILDING_SUNK),
+                1 => i64::from(h.has_sunk(unit)),
                 2 => 1,
                 _ => 0,
             }
@@ -420,6 +420,9 @@ mod game {
     impl UckRust for GameD {
         fn footprint(&mut self, which: i32, unit: u64) {
             crate::units::uu_ffi::ee_units_uu_footprint(which, unit);
+        }
+        fn has_sunk(&mut self, unit: u64) -> bool {
+            crate::units::cls_host::has_sunk(unit)
         }
     }
 

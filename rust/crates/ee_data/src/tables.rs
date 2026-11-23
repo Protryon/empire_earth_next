@@ -2352,9 +2352,514 @@ pub struct DbTerrainGrayTexture {
 
 const _: () = assert!(core::mem::size_of::<DbTerrainGrayTexture>() == 120);
 
+// ---- EEUnitClass (db\dbobjects): the unit class record
+
+/// One dbobjects record (`EEUnitClassRecord` in the C++, 0x7a8 bytes: `EEDbObject::mRecord`): the class factory
+/// passes each record to the EEUC* constructors and `EEUnitClass`'s constructor copies it field by field
+/// (ee_sim units unit_class_fields.rs). Field names provisional; the flags are bytes (`u8`: a C++ `bool`).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct DbUnitClass {
+    /// +0x000 the unit name (UString::Copy into mName)
+    pub mName: [u8; 100],
+    /// +0x064
+    pub mUnusedRowID: i32,
+    /// +0x068
+    pub mFamily: i32,
+    /// +0x06c
+    pub mUnusedUnitGroup: i32,
+    /// +0x070
+    pub mEpoch: i32,
+    /// +0x074
+    pub mUnitType: i32,
+    /// +0x078
+    pub mHitPoints: i32,
+    /// +0x07c
+    pub mWaterKind: i32,
+    /// +0x080
+    pub mMinRange: f32,
+    /// +0x084
+    pub mRange: f32,
+    /// +0x088
+    pub mLineOfSight: f32,
+    /// +0x08c
+    pub mReloadTime: f32,
+    /// +0x090
+    pub mAreaEffect: f32,
+    /// +0x094
+    pub mMaxVelocity: f32,
+    /// +0x098 (EEUnitClass +0x13c)
+    pub mAcceleration: f32,
+    /// +0x09c
+    pub mAngularAcceleration: f32,
+    /// +0x0a0
+    pub mMaxAngularVelocity: f32,
+    /// +0x0a4
+    pub mTurretMaxAngularVelocity: f32,
+    /// +0x0a8
+    pub mCanFly: u8,
+    /// +0x0ac
+    pub mFlightTime: i32,
+    /// +0x0b0
+    pub mFacingOffset: f32,
+    /// +0x0b4
+    pub mFiringArc: f32,
+    /// +0x0b8
+    pub mFiresBroadside: u8,
+    /// +0x0bc
+    pub mWeapon: i32,
+    /// +0x0c0
+    pub mAttack: i32,
+    /// +0x0c4
+    pub mShockArmor: i32,
+    /// +0x0c8
+    pub mArrowArmor: i32,
+    /// +0x0cc
+    pub mPierceArmor: i32,
+    /// +0x0d0
+    pub mGunArmor: i32,
+    /// +0x0d4
+    pub mLaserArmor: i32,
+    /// +0x0d8
+    pub mMissileArmor: i32,
+    /// +0x0dc
+    pub mProjectileType: i32,
+    /// +0x0e0
+    pub mAmmoType: i32,
+    /// +0x0e4
+    pub mIsEnabled: u8,
+    /// +0x0e8
+    pub mScale: f32,
+    /// +0x0ec a name (UString::Copy into mAIScriptName)
+    pub mAIScriptName: [u8; 52],
+    /// +0x120
+    pub mCategory: i32,
+    /// +0x124
+    pub mUnused1: i32,
+    /// +0x128
+    pub mButton: i32,
+    /// +0x12c
+    pub mGraphic: i32,
+    /// +0x130
+    pub mWorkRate: f32,
+    /// +0x134
+    pub mIronGatherTime: f32,
+    /// +0x138
+    pub mFarmGatherTime: f32,
+    /// +0x13c
+    pub mGoldGatherTime: f32,
+    /// +0x140
+    pub mStoneGatherTime: f32,
+    /// +0x144
+    pub mWoodGatherTime: f32,
+    /// +0x148
+    pub mHuntGatherTime: f32,
+    /// +0x14c
+    pub mForageGatherTime: f32,
+    /// +0x150
+    pub mCreationSound: i32,
+    /// +0x154
+    pub mAcknowledgeSound1: i32,
+    /// +0x158
+    pub mAcknowledgeSound2: i32,
+    /// +0x15c
+    pub mSelectionSound1: i32,
+    /// +0x160
+    pub mSelectionSound2: i32,
+    /// +0x164
+    pub mDeathSound: i32,
+    /// +0x168
+    pub mRepairRate: i32,
+    /// +0x16c
+    pub mCommand0: i32,
+    /// +0x170
+    pub mCommand1: i32,
+    /// +0x174
+    pub mCommand2: i32,
+    /// +0x178
+    pub mCommand3: i32,
+    /// +0x17c
+    pub mCommand4: i32,
+    /// +0x180
+    pub mCommand5: i32,
+    /// +0x184
+    pub mCommand6: i32,
+    /// +0x188
+    pub mCommand7: i32,
+    /// +0x18c
+    pub mCommand8: i32,
+    /// +0x190
+    pub mUnused2: i32,
+    /// +0x194
+    pub mTileSize: i32,
+    /// +0x198
+    pub mResourceType: i32,
+    /// +0x19c
+    pub mResourceAmount: f32,
+    /// +0x1a0
+    pub mFacesCamera: u8,
+    /// +0x1a4
+    pub mUnused3: i32,
+    /// +0x1a8
+    pub mRottingTime: f32,
+    /// +0x1ac
+    pub mTransportSize: i32,
+    /// +0x1b0
+    pub mTransportCapacity: i32,
+    /// +0x1b4
+    pub mCanUpgradeAreaEffect: u8,
+    /// +0x1b5
+    pub mCanUpgradeRepair: u8,
+    /// +0x1b6
+    pub mCanUpgradeShockArmor: u8,
+    /// +0x1b7
+    pub mCanUpgradePierceArmor: u8,
+    /// +0x1b8
+    pub mCanUpgradeArrowArmor: u8,
+    /// +0x1b9
+    pub mCanUpgradeLaserArmor: u8,
+    /// +0x1ba
+    pub mCanUpgradeGunArmor: u8,
+    /// +0x1bb
+    pub mCanUpgradeMissileArmor: u8,
+    /// +0x1bc
+    pub mCanUpgradeRange: u8,
+    /// +0x1c0
+    pub mLeadership: i32,
+    /// +0x1c4
+    pub mUnused4: i32,
+    /// +0x1c8
+    pub mPitchesWithTerrain: u8,
+    /// +0x1c9
+    pub mRollsWithTerrain: u8,
+    /// +0x1cc
+    pub mMaxRoll: f32,
+    /// +0x1d0
+    pub mUnused5: i32,
+    /// +0x1d4
+    pub mCruiseAltitude: f32,
+    /// +0x1d8
+    pub mNameStringID: i32,
+    /// +0x1dc
+    pub mTargetSearchInterval: i32,
+    /// +0x1e0
+    pub mHealingPoints: i32,
+    /// +0x1e4
+    pub mRegeneration: i32,
+    /// +0x1e8
+    pub mCanEnterLandTransports: u8,
+    /// +0x1e9
+    pub mCanEnterAirTransports: u8,
+    /// +0x1ea
+    pub mCanEnterSeaTransports: u8,
+    /// +0x1ec
+    pub mUnused6: i32,
+    /// +0x1f0
+    pub mFiresWhileMoving: u8,
+    /// +0x1f4 (-> EEUnitClass::mSelectionSize, a mov copy)
+    pub mSelectionSize: f32,
+    /// +0x1f8 (EEUnitClass mL16C, a float)
+    pub mShadowScale: f32,
+    /// +0x1fc (EEUnitClass mL170, a float)
+    pub mUnusedShadowOffset: f32,
+    /// +0x200
+    pub mOuterCollisionSphere: f32,
+    /// +0x204
+    pub mInnerCollisionSphere: f32,
+    /// +0x208
+    pub mIsCollidable: u8,
+    /// +0x209
+    pub mUnusedGroundFlag: u8,
+    /// +0x20c
+    pub mMissileDelayTime: f32,
+    /// +0x210
+    pub mLaunchPitch: f32,
+    /// +0x214
+    pub mAmmunition: i32,
+    /// +0x218
+    pub mUsesAmmunition: u8,
+    /// +0x219
+    pub mCanFireOverWalls: u8,
+    /// +0x21a
+    pub mIsAffectedByGravity: u8,
+    /// +0x21b
+    pub mShootsHigh: u8,
+    /// +0x21c
+    pub mUnusedReference: i32,
+    /// +0x220
+    pub mUnusedValue: i32,
+    /// +0x224
+    pub mAIKind: i32,
+    /// +0x228
+    pub mCounterKind1: i32,
+    /// +0x22c
+    pub mCounterKind2: i32,
+    /// +0x230
+    pub mCounterKind3: i32,
+    /// +0x234
+    pub mCanSetRallyPoint: u8,
+    /// +0x238
+    pub mUpgradeTableIndex: i32,
+    /// +0x23c
+    pub mConversionRate: i32,
+    /// +0x240 (a float: EEUnitClass::mConversionResistance's source)
+    pub mConversionResistance: f32,
+    /// +0x244
+    pub mIsPlayerPlaceable: u8,
+    /// +0x245
+    pub mIsGaiaPlaceable: u8,
+    /// +0x246
+    pub mIsVital: u8,
+    /// +0x247
+    pub mUnusedFlag1: i8,
+    /// +0x248
+    pub mIsDeletable: u8,
+    /// +0x249
+    pub mIsDecoration: u8,
+    /// +0x24c
+    pub mDeathEffect: i32,
+    /// +0x250
+    pub mDamageEffect: i32,
+    /// +0x254
+    pub mMuzzleFlashEffect: i32,
+    /// +0x258
+    pub mTrailEffect: i32,
+    /// +0x25c
+    pub mRippleEffect: i32,
+    /// +0x260
+    pub mSplashEffect: i32,
+    /// +0x264
+    pub mHealEffect: i32,
+    /// +0x268
+    pub mUnusedFireTrailEffect: i32,
+    /// +0x26c
+    pub mImpactSparksEffect: i32,
+    /// +0x270
+    pub mImpactBloodEffect: i32,
+    /// +0x274
+    pub mAttachedEffect: i32,
+    /// +0x278
+    pub mUnusedEffect1: i32,
+    /// +0x27c
+    pub mCreationEffect: i32,
+    /// +0x280
+    pub mUnusedEffect2: i32,
+    /// +0x284
+    pub mUnusedEffect3: i32,
+    /// +0x288
+    pub mUnusedEffect4: i32,
+    /// +0x28c
+    pub mUnusedEffect5: i32,
+    /// +0x290
+    pub mUnusedEffect6: i32,
+    /// +0x294
+    pub mSpecialAttackEffect: i32,
+    /// +0x298
+    pub mUnusedEffect7: i32,
+    /// +0x29c
+    pub mShotEffect: i32,
+    /// +0x2a0
+    pub mLeprosyEffect: i32,
+    /// +0x2a4
+    pub mPlagueEffect: i32,
+    /// +0x2a8
+    pub mMoraleEffect: i32,
+    /// +0x2ac
+    pub mPulseCannonEffect: i32,
+    /// +0x2b0
+    pub mBattleCryEffect: i32,
+    /// +0x2b4
+    pub mShellHoleEffect: i32,
+    /// +0x2b8
+    pub mUnusedEffect8: i32,
+    /// +0x2bc
+    pub mBloodStainEffect: i32,
+    /// +0x2c0
+    pub mUnused7: i32,
+    /// +0x2c4
+    pub mUnused8: i32,
+    /// +0x2c8
+    pub mBobPitch: f32,
+    /// +0x2cc
+    pub mUnused9: i32,
+    /// +0x2d0
+    pub mUnused10: i32,
+    /// +0x2d4
+    pub mUnused11: i32,
+    /// +0x2d8
+    pub mUnused12: i32,
+    /// +0x2dc
+    pub mCanMoveOnLand: u8,
+    /// +0x2dd
+    pub mCanMoveOnDeepWater: u8,
+    /// +0x2de
+    pub mCanMoveOnRock: u8,
+    /// +0x2df
+    pub mCanMoveOnTerrainType3: u8,
+    /// +0x2e0
+    pub mUnusedFlag2: i8,
+    /// +0x2e1
+    pub mUnusedFlag3: i8,
+    /// +0x2e2
+    pub mCanMoveOnMud: u8,
+    /// +0x2e3
+    pub mCanEnterFortresses: u8,
+    /// +0x2e4
+    pub mCanMoveOnRoughGrass: u8,
+    /// +0x2e5
+    pub mCanMoveOnTerrainType7: u8,
+    /// +0x2e6
+    pub mCanMoveOnPavement: u8,
+    /// +0x2e7
+    pub mCanMoveOnCliffs: u8,
+    /// +0x2e8
+    pub mCanMoveOnShallowWater: u8,
+    /// +0x2e9
+    pub mUnusedFlag4: i8,
+    /// +0x2ea
+    pub mCanMoveOnSand: u8,
+    /// +0x2eb
+    pub mCanMoveInSpace: u8,
+    /// +0x2ec
+    pub mIsAttackUnit: u8,
+    /// +0x2ed
+    pub mIsDefenseUnit: u8,
+    /// +0x2f0
+    pub mAreaEffectTemplate0: i32,
+    /// +0x2f4
+    pub mAreaEffectTemplate1: i32,
+    /// +0x2f8
+    pub mAreaEffectTemplate2: i32,
+    /// +0x2fc
+    pub mAreaEffectTemplate3: i32,
+    /// +0x300
+    pub mUnused13: i32,
+    /// +0x304
+    pub mUnused14: i32,
+    /// +0x308
+    pub mUnused15: i32,
+    /// +0x30c
+    pub mCarryAmount: f32,
+    /// +0x310
+    pub mUnused16: i32,
+    /// +0x314
+    pub mMaxObjectCarry: i32,
+    /// +0x318
+    pub mIsScenarioSelectable: u8,
+    /// +0x319
+    pub mUnusedFlag6: u8,
+    /// +0x31a
+    pub mBuildsOnElevation: u8,
+    /// +0x31c
+    pub mUnused17: i32,
+    /// +0x320
+    pub mUnused18: i32,
+    /// +0x324
+    pub mScaffoldingType: i32,
+    /// +0x328
+    pub mDeathType: i32,
+    /// +0x32c
+    pub mUnusedSelectionValue: i32,
+    /// +0x330
+    pub mCloakRadius: i32,
+    /// +0x334
+    pub mMiniMapColor: i32,
+    /// +0x338
+    pub mGarrisonCapacity: i32,
+    /// +0x33c
+    pub mInitialGarrisonCount: i32,
+    /// +0x340
+    pub mGarrisonTechnology: i32,
+    /// +0x344
+    pub mAirTrafficType: i32,
+    /// +0x348
+    pub mOverlapUnitSet: i32,
+    /// +0x34c
+    pub mWonderBonus: i32,
+    /// +0x350
+    pub mWonderUnitSet: i32,
+    /// +0x354
+    pub mSlopeSpeedPenalty: f32,
+    /// +0x358 (EEUnitClass +0x190)
+    pub mBobHeight: f32,
+    /// +0x35c (a float: EEUnitClass::mFriendlyDamageFactor's source)
+    pub mFriendlyDamageFactor: f32,
+    /// +0x360 (-> EEUnitClass::mGarrisonBonus)
+    pub mGarrisonBonus: f32,
+    /// +0x364
+    pub mUnused19: i32,
+    /// +0x368
+    pub mUnusedDefaultedValue: f32,
+    /// +0x36c
+    pub mIsInactive: u8,
+    /// +0x370
+    pub mInfluence: i32,
+    /// +0x374
+    pub mNumAttributes: i32,
+    /// +0x378
+    pub mTechnology: i32,
+    /// +0x37c
+    pub mBlocksTile: u8,
+    /// +0x37d
+    pub mIsCloakable: u8,
+    /// +0x37e
+    pub mIsExpansionUnit: u8,
+    /// +0x37f
+    pub mCanEnterAirports: u8,
+    /// +0x380
+    pub mCanEnterCarriers: u8,
+    /// +0x381
+    pub mUnusedFlag5: i8,
+    /// +0x382
+    pub mCanGarrison: u8,
+    /// +0x384
+    pub mDeathSpawnType: i32,
+    /// +0x388
+    pub mPower: i32,
+    /// +0x38c
+    pub mPowerRegeneration: i32,
+    /// +0x390
+    pub mBehavior: i32,
+    /// +0x394
+    pub mMinConversionTime: i32,
+    /// +0x398
+    pub mHealDelay: f32,
+    /// +0x39c
+    pub mHealRange: f32,
+    /// +0x3a0
+    pub mHealThreshold: f32,
+    /// +0x3a4
+    pub mLoadRange: f32,
+    /// +0x3a8
+    pub mUnloadRange: f32,
+    /// +0x3ac
+    pub mCanCrossForest: u8,
+    /// +0x3ad
+    pub mCanDisband: u8,
+    /// +0x3ae
+    pub mIsObstacle: u8,
+    /// +0x3af
+    pub mCanAttackGround: u8,
+    /// +0x3b0
+    pub mIsMelee: u8,
+    /// +0x3b4..+0x47b: not read (stale converter heap values)
+    pub mUnusedConverterScratch: [i32; 50],
+    /// +0x47c
+    pub mPackedType: i32,
+    /// +0x480
+    pub mRemainsType: i32,
+    /// +0x484 mNumAttributes technology ids (the ctor copies them into mResearchTechnologies)
+    pub mAttributes: [u32; 200],
+    /// +0x7a4
+    pub mHasSpecialAttack: u8,
+}
+
+const _: () = assert!(core::mem::size_of::<DbUnitClass>() == 0x7a8);
+const _: () = assert!(core::mem::size_of::<DbUnitClass>() == EE_DATA_OBJECT_RECORD);
+
 // ---- EEDatabase (db\dbobjects): the unit classes' raw records
 
-/// The size of a dbobjects record (`EEDbObject::mRecord`: the unit class record, ee/EEUnitClassRecord.h).
+/// The size of a dbobjects record (`EEDbObject::mRecord`: the unit class record, [`DbUnitClass`]).
 pub const EE_DATA_OBJECT_RECORD: usize = 0x7a8;
 
 /// `gDatabaseObjects`' records (boxed: a record's address is the C++'s `EEDbObject*` until the table is cleared).

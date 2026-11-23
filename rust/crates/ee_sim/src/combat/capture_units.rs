@@ -98,7 +98,7 @@ fn bytes(words: &[u32]) -> Vec<u8> {
 }
 
 #[cfg(not(test))]
-pub use game::ee_combat_capture_x_action;
+pub use game::{ee_combat_capture_shot, ee_combat_capture_x_action};
 
 #[cfg(not(test))]
 #[allow(clippy::unnecessary_cast)] // c_ulong and c_long are 64 bits off Windows

@@ -6710,10 +6710,10 @@
   "EEUnitClassRecord": {
    "name": "EEUnitClassRecord",
    "size": 1960,
-   "source": "include/ee/EEUnitClassRecord.h",
+   "source": "rust/crates/ee_data/src/tables.rs",
    "size_check": [
     1960,
-    "comment"
+    "static_assert"
    ],
    "fields": [
     {

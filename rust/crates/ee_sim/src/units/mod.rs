@@ -171,6 +171,7 @@ pub mod uc_anim;
 pub mod uc_body;
 pub mod uc_class;
 pub mod uc_create;
+pub mod uc_is;
 pub mod uc_media;
 #[cfg(test)]
 mod uc_mock;
@@ -184,6 +185,8 @@ pub mod ucg_ground;
 pub mod ucg_sea;
 pub mod uck_dispatch;
 pub mod uck_kinds;
+#[cfg(not(test))]
+pub mod ucn_noted;
 pub mod ucp_people;
 pub mod ucs_impact;
 pub mod ucs_shots;

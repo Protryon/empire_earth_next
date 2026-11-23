@@ -330,7 +330,7 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 ### 3.1 `db\dbobjects.dat`: Unit classes
 
-* **Loader:** `EEUnitClass::CreateUnitClasses` 0x6358b1 -> `EEDatabase::Load` 0x4d60ae / `EEDbObject::Load` 0x4d689b (src/Empire Earth/Database/EEDatabase.cpp, EEDbObject.cpp); fields consumed by `EEUnitClass::EEUnitClass` 0x62f317 (src/Empire Earth/Units/EEUnitClass.cpp) and the `EEUC*` subclass ctors. Layout: include/ee/EEUnitClassRecord.h
+* **Loader:** `EEUnitClass::CreateUnitClasses` 0x6358b1 -> `EEDatabase::Load` 0x4d60ae / `EEDbObject::Load` 0x4d689b (src/Empire Earth/Database/EEDatabase.cpp, EEDbObject.cpp); fields consumed by `EEUnitClass::EEUnitClass` 0x62f317 (src/Empire Earth/Units/EEUnitClass.cpp) and the `EEUC*` subclass ctors. Layout: rust/crates/ee_data/src/tables.rs DbUnitClass
 * **Container:** `u32 count` + count x 1960-byte `EEUnitClassRecord` (read whole into `EEDbObject::mRecord[0x7a8]`).
 * **AoC data:** 848 records, 1,662,084 bytes unpacked. Bytes per record: read 80%, label 0%, unused 18%, padding 2%.
 * **Semantics:** Rows with `mIsEnabled == 0` or `mUnitType == -1` are skipped. The class factory switches on `mCategory` (0..0x22: ambient, resource, building, airplane, naval, land, citizen, helicopter, projectile, bomb, missile, priest, torpedo...). `gUnitClassTable[mUnitType]` is the class (0x367 slots). Bugs kept by the port: terrain slot 5 copies `mCanMoveOnLand` again, so `mUnusedFlag2`/`mUnusedFlag3` (+0x2e0/+0x2e1) are never read. +0x3b4..+0x47b (`mUnusedConverterScratch`, 200 bytes) is unread and holds stale converter heap values. In the "ctor ->" notes, the left side is the `EEUnitClass` member the field is copied into. Subclass ctors may read more fields.

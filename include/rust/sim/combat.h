@@ -3364,6 +3364,19 @@ void ee_combat_shot_action_changed(int32_t kind, uint64_t unit, const EeCombatSh
 /// As [`ee_combat_shot_action_changed`].
 void ee_combat_shot_update(int32_t kind, uint64_t unit, const EeCombatShotHost *host);
 
+/// A shot's `ActionChanged` (`update` false: the host-read scope's slot 1) or `Update` (slot 2) as the unit class's
+/// members ran it (EEUnitClassShots.cpp: the projectile's, the missile's and the torpedo's): the scope entered, the
+/// unit's command before, the step over the C++ host, the CBSO record (`func`) when the scope is the outermost, the
+/// scope left.
+///
+/// # Safety
+/// As [`ee_combat_shot_action_changed`]; `unit` is a live complex unit.
+void ee_combat_shot_step(int32_t kind,
+                         bool update,
+                         uint32_t func,
+                         uint64_t unit,
+                         const EeCombatShotHost *host);
+
 /// `EEUGHealUnit::Work` over its reads.
 ///
 /// # Safety

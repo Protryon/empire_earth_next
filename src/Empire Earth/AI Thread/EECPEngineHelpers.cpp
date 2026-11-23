@@ -38,20 +38,6 @@ bool EETile::IsSeenBy(EEPlayer* inPlayer)
     return this->GetVisibility(inPlayer->mPlayerID) > 1 || inPlayer->mSeesAll;
 }
 
-// Returns true for the four crusader unit types (short sword, long sword, bronze spear cavalry, knight)
-// An EEUnitClass member (Virtual1C calls it with ecx = the unit's class); its body follows its first user here.
-bool EEUnitClass::IsCrusader()
-{
-    return this->mUnitType == kUnitTypeInf04ShortSwordCrusader || this->mUnitType == kUnitTypeInf06LongSwordCrusader || this->mUnitType == kUnitTypeCav04BronzeSpearCavalryCrusader || this->mUnitType == kUnitTypeCav06KnightCrusader;
-}
-
-// Tells whether the unit class is a land, naval, helicopter or building priest
-bool EEUnitClass::IsPriest()
-{
-    long theCategory = this->mCategory;
-    return theCategory == kUnitCategoryLandPriest || theCategory == kUnitCategoryNavalPriest || theCategory == kUnitCategoryHelicopterPriest || theCategory == kUnitCategoryBuildingPriest;
-}
-
 // Returns the map tile at a tile location
 EETile* EEMap::GetTileAtLocation(const EETileLocation& inLocation)
 {

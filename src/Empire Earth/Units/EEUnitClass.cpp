@@ -56,7 +56,7 @@
 #include "ee/EEAnimal.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEUnitClassRecord.h"
+#include "rust/data/tables.h"   // EEUnitClassRecord (ee_data DbUnitClass)
 #include "ee/EEDbObject.h"
 #include "ee/EEDatabase.h"
 #include "ee/EEUnitClassKinds.h"
@@ -126,11 +126,6 @@ void EEUnitClass::FireShot(EEComplexUnit* inUnit)
 }
 
 // Returns the high-ground damage factor of a land attacker (or a projectile's launcher) on a land unit or building
-float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
-{
-    return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_ELEVATION_FACTOR, this, inUnit, EEObj(inTarget), 0.0f, 0.0f, 0.0f);   // uc_rest.rs
-}
-
 // Fills the AI's per-tile-kind passability flags for the unit or class (an air unit passes everything)
 void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 {
@@ -138,27 +133,10 @@ void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 }
 
 // Computes the volume, pan and pitch of a sound played at the unit's position
-void EEUnitClass::BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
-                            float* outPitch)
-{
-    ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_BASE, this, inUnit, inSound, outVolume, outPan, outPitch);   // uc_rest.rs
-}
-
 // Produces a unit of inClass at the building inUnit: loads aircraft and missiles into it, else places the unit toward
 // the rally point and hands it the queued goals; returns false at the population cap or with no room
-bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool inArg)
-{
-    return ee_units_uc_produce(this, inUnit, inClass, inArg);   // uc_produce.rs
-}
-
 // Creates a unit of the class for a player at a tile's centre with a heading, grounded when a map is given, and
 // queues it in the player's pending units
-EEUnit* EEUnitClass::CreateUnitAtTile(EEPlayer* inPlayer, long inX, long inY, EEMap* inMap, float inHeading)
-{
-    return (EEUnit*)ee_units_uc_create_at(this, inPlayer, (float)(unsigned long)inX + 0.5f, (float)(unsigned long)inY + 0.5f,
-                                          (uint32_t)inX, (uint32_t)inY, inMap, inHeading);   // uc_create.rs
-}
-
 // Creates a unit of the class for a player at a map point with a heading, grounded when a map is given, and queues it
 // in the player's pending units
 EEUnit* EEUnitClass::CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY, EEMap* inMap, float inHeading)
@@ -167,26 +145,8 @@ EEUnit* EEUnitClass::CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY,
 }
 
 // Creates a unit of the class at a transformation for a player and adds it to the world (an airport gets its runways)
-EEUnit* EEUnitClass::BaseCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_uc_call(EE_UNITS_UC_DO_BASE_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), inPlayer,
-                                                inIsFoundation, NULL, &inTransformation.mMatrix);   // uc_create.rs
-}
-
 // Creates a unit of the class at a tile for a player (yaw pi) and adds it to the world (an airport gets its runways)
-EEUnit* EEUnitClass::BaseCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
-{
-    return (EEUnit*)(uintptr_t)ee_units_uc_call(EE_UNITS_UC_DO_BASE_CREATE_UNIT, this, NULL, EEObj(inCreator),
-                                                (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32),
-                                                (int64_t)inPlayer * 2 + inIsFoundation, NULL, NULL);   // uc_create.rs
-}
-
 // Plants the player's farms on the free plots of the 3x3 grid around the unit, each with one hit point
-void EEUnitClass::ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_REPLANT_FARM, this, inUnit, EEObj(inPlayer), 0, 0, NULL, NULL);   // uc_create.rs
-}
-
 // Builds the airport's three runway pieces in its facing direction on levelled ground and links them to it
 void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation)
 {
@@ -194,11 +154,6 @@ void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool 
 }
 
 // Releases every unit class in the class table
-void EEUnitClass::ReleaseUnitClasses()
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_RELEASE_CLASSES, NULL, NULL, 0, 0, 0, NULL);   // uc_rest.rs
-}
-
 // Returns the unit a projectile hits: its attack target first, then the units of its region in storage order (walls,
 // enemies); a hit on a non-target wall makes the launcher fire high
 EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
@@ -216,15 +171,6 @@ EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
 }
 
 // Returns whether the unit faces the target unit (or its tile's centre)
-bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance)
-{
-    EECombatHostReadScope theScope;   // CBQR records the outcome
-    bool theFaces = ee_units_uc_rest(EE_UNITS_UC_DO_R_FACES_TARGET, this, inUnit, EEObj(inTarget), inUseTolerance, 0, NULL) != 0;   // uc_rest.rs
-    if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_FACES_TARGET, inUnit, inTarget, theFaces, 0, 0, inUseTolerance);
-    return theFaces;
-}
-
 // Returns whether the unit (or its turrets) faces a point within its firing arc or the fixed tolerance; broadside
 // ships also count the opposite side
 bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
@@ -245,17 +191,7 @@ bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation,
 
 // Starts a unit's death: spawns the death class, plays the death effect and sound (not for ICBMs), the dying animation,
 // and makes it uncommandable
-void EEUnitClass::UnitDied(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_UNIT_DIED, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_create.rs
-}
-
 // Sends a computer player's unit to an escape point, when one is found
-void EEUnitClass::FindSafeLocation(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_FIND_SAFE_LOCATION, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_create.rs
-}
-
 // Plays the class's creation effect on the unit
 void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
 {
@@ -265,23 +201,8 @@ void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
 
 // Launches a projectile (or carried cargo) from the unit's weapon tag point toward the target or ground point (new:
 // the launch transform, its tile and the special attack's choices are ee_combat's launch_shot)
-void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation, EEComplexUnit* inCargo)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_LAUNCH_SHOT, this, inUnit, EEObj(inTarget), (int64_t)EEObj(inCargo), 0, (const float(*)[3])&inLocation.mX, NULL);   // uc_create.rs
-}
-
 // Plays the class's ripple effect at the model's ripple tag points that are under water, when the player sees the unit
-void EEUnitClass::CreateRipples(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_CREATE_RIPPLES, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // Lists the ring of tiles around the unit's footprint (optionally with corners, appending or replacing)
-void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_SURROUNDING, this, inUnit, EEObj(&outTiles), inCorners, inAppend, NULL);   // uc_rest.rs
-}
-
 // Finds a unit within range (default: line of sight) that the unit can heal and reach; returns whether one was found
 bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** outTarget)
 {
@@ -289,75 +210,17 @@ bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** 
 }
 
 // Returns a land continent beside the unit (the target's, when given); with no match, the last continent examined
-EEAIContinent* EEUnitClass::GetContainerContinent(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
-{
-    return (EEAIContinent*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_CONTAINER_CONTINENT, this, inUnit, EEObj(inTarget), 0, 0, NULL);   // uc_rest.rs
-}
-
 // Lists every unit class whose unit type is in a unit set
-void EEUnitClass::GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>& outClasses)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_CLASSES_IN_SET, NULL, NULL, EEObj(&outClasses), inSet, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // IsImportantUnit reads the heal goal (included here, after the unit's init chains: its class static would renumber them)
 
-// Heals the heal goal's target when in range: plays the healing animation and the class's heal effect
-// The heal effect is drawn between the two units or on the target, by the graphic effect's kind
-void EEUnitClass::Heal(EEComplexUnit* inUnit)
-{
-    ee_units_uc_body(EE_UNITS_UC_DO_HEAL, this, inUnit);   // uc_body.rs
-}
-
 // Sets up a new unit: full hit points, ammunition, behaviour, heal timer, standing still and idle
-void EEUnitClass::BaseUnitCreated(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_BASE_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_create.rs
-}
-
 // Gives a new simple unit its full hit points
-void EEUnitClass::BaseSimpleUnitCreated(EEUnit* inUnit)
-{
-    inUnit->SetHitPoints(inUnit->mStats->mMaxHitPoints);
-}
-
 // Adds a placed unit (not a path marker) to the map's unit region of its tile
-void EEUnitClass::BaseAddToRegion(EEUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_ADD_TO_REGION, this, NULL, EEObj(inUnit), 0, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // Adds the unit to its tile's unit list
-void EEUnitClass::BaseAddToTile(EEUnit* inUnit)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_ADD_TO_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uc_rest.rs
-}
-
 // Adds waypoints along the line to a point at turning-radius steps and cruise altitude (a near point: one waypoint)
-void EEUnitClass::PathToward(EEComplexUnit* inUnit, GE3DPoint& inFrom, GE3DPoint& inTo, bool inSnapToMap)
-{
-    ee_units_mv_path_toward(EEObj(inUnit), inFrom.mX, inFrom.mY, inFrom.mZ, inTo.mX, inTo.mY, inTo.mZ,
-                            inSnapToMap);   // ee_units cls_move.rs
-}
-
 // Loads the class's sounds and model and acquires its button
-void EEUnitClass::LoadClassMedia()
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_LOAD_CLASS_MEDIA, this, NULL, 0, 0, 0, NULL, NULL);   // uc_media.rs
-}
-
 // Loads the buttons of the class's research and commands for a human player, and its calamities' media
-void EEUnitClass::LoadButtons(EEPlayer* inPlayer)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_LOAD_BUTTONS, this, NULL, EEObj(inPlayer), 0, 0, NULL, NULL);   // uc_media.rs
-}
-
 // Loads the class's graphic effects and marks its related classes (projectile, death, farms, runways ...) for loading
-void EEUnitClass::BaseLoadMedia(EEPlayer* inPlayer)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_BASE_LOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL, NULL);   // uc_media.rs
-}
-
 // The order sUnitTypes is sorted in: the unit names (gResource strings of the classes' +0x260); its operator() is
 // emitted out of line among the std::sort COMDATs (0x63a19c) (provisional name)
 struct EEUnitClassNameLess {
@@ -374,66 +237,19 @@ struct EEUnitClassNameLess {
 // Builds every unit class from dbobjects by category, links the related classes and set flags, sorts sUnitTypes by
 // name (the class table has a slot per unit type, sized from the records)
 // The cases are in the order the original lays their bodies out
-void EEUnitClass::CreateUnitClasses()
-{
-    ee_units_uc_class(EE_UNITS_UC_DO_CREATE_UNIT_CLASSES, NULL, NULL, 0, NULL);   // uc_class.rs
-}
-
 // Returns the class's AI script action for a key, or NULL when the class has no script or no such action
-EEUnitAction* EEUnitClass::FindAction(long inKey)
-{
-    // port (R5b.4 round 20): the script is Rust's (ee_units script.rs)
-    return reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(
-        ee_units_script_find(reinterpret_cast<uintptr_t>(this->mAIScript), (int32_t)inKey)));
-}
-
 // Turns each turret of a living unit back toward straight ahead by at most its turn rate for this tick
 // port (R5b.4): the turn is Rust (ee_units turret.rs), as TurnTurrets'
-void EEUnitClass::TurnTurretsBack(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_TURN_TURRETS_BACK, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // Sends a goalless unit to the centre of its tile; with a goal, faces the unit to the centre and places it there
-void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_MOVE_TO_TILE_CENTRE, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_create.rs
-}
-
 #include "ee/EEPathManager.h"
 #include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
 #include "rust/sim/units.h"
 // Counts one unit of the class gone and records the time when the last one goes
-void EEUnitClass::UnitRemoved()
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_UNIT_REMOVED, this, NULL, 0, 0, 0, NULL);   // uc_rest.rs
-}
-
 // Adds a unit class to the class table under its unit type and to the list of unit types, keeping a reference
-void EEUnitClass::RegisterUnitClass(EEUnitClass* inClass)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_REGISTER_CLASS, NULL, NULL, EEObj(inClass), 0, 0, NULL);   // uc_rest.rs
-}
-
 // Removes a placed unit (not a path marker) from the map's unit region that holds its tile
 // NEAR: the original calls a vector remove helper 0x239ee2 (find + erase; a COMDAT of this unit)
-void EEUnitClass::BaseRemoveFromRegion(EEUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_REMOVE_FROM_REGION, this, NULL, EEObj(inUnit), 0, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // Releases the class table's entry for a unit type and clears it
-void EEUnitClass::ReleaseUnitClass(unsigned long inUnitType)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_RELEASE_CLASS, NULL, NULL, 0, (int64_t)inUnitType, 0, NULL);   // uc_rest.rs
-}
-
 // Removes a unit from the tile it stands on, if any
-void EEUnitClass::BaseRemoveFromTile(EEUnit* inUnit)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_REMOVE_FROM_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uc_rest.rs
-}
-
 // the closest tile's x and y (not read), the carrier's tag transformation, the area cloak's modifier
 static long sMvX;
 static long sMvY;
@@ -619,75 +435,20 @@ void EEUnitClass::Attacked(EEComplexUnit* inUnit)
 }
 
 // Creates the class's remains unit for the dead unit's player at a free spot near where it died
-void EEUnitClass::CreateRemainsUnit(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_CREATE_REMAINS_UNIT, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_create.rs
-}
-
 // Spawns the class's death unit where the unit (or its container) was and launches it at that ground point
-void EEUnitClass::CreateDeathUnit(EEComplexUnit* inUnit)
-{
-    ee_units_uc_body(EE_UNITS_UC_DO_CREATE_DEATH_UNIT, this, inUnit);   // uc_body.rs
-}
-
 // Fires the class's projectile from the unit's turret weapon point at a target or ground location;
 // without a turret part, fires a plain shot
 // The launch point is the weapon tag point mWeaponTagPoint scaled by the stats' scale and turned by the turret's
 // yaw, under the unit's transformation; the shot is owned by inUnit (new: the launch is ee_combat's launch_from_turret)
-void EEUnitClass::LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_LAUNCH_FROM_TURRET, this, inUnit, EEObj(inTarget), 0, 0, (const float(*)[3])&inLocation.mX, NULL);   // uc_create.rs
-}
-
 // Unloads the class's acknowledge, selection, death and creation sounds, its model and its button
-void EEUnitClass::UnloadClassMedia()
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_UNLOAD_CLASS_MEDIA, this, NULL, 0, 0, 0, NULL, NULL);   // uc_media.rs
-}
-
 // Releases a human player's buttons for the class's research technologies and commands, and calamity media
-void EEUnitClass::UnloadButtons(EEPlayer* inPlayer)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_UNLOAD_BUTTONS, this, NULL, EEObj(inPlayer), 0, 0, NULL, NULL);   // uc_media.rs
-}
-
 // Unloads a player's media for the classes this class spawns and for all its effects, and marks it unloaded
-void EEUnitClass::BaseUnloadMedia(EEPlayer* inPlayer)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_BASE_UNLOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL, NULL);   // uc_media.rs
-}
-
 // Fires a shot when an attacking unit's animation steps across one of its attack set's sound frames
-void EEUnitClass::FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFrame)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_FIRE_ON_ATTACK_FRAME, this, inUnit, 0, inArg, inFrame, NULL, NULL);   // uc_anim.rs
-}
-
 // Turns each turret toward the unit's attack, heal or calamity target by its turn rate; else turns them back
 // port (R5b.4): the turn is Rust (ee_units turret.rs) over the parts' numbers; the C++ finds the goal's point
-void EEUnitClass::TurnTurrets(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_TURN_TURRETS, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // Advances a unit's animation by this tick, plays the frame sounds and returns the number of frames stepped
-long EEUnitClass::Animate(EEComplexUnit* inUnit)
-{
-    return (long)ee_units_uc_call(EE_UNITS_UC_DO_ANIMATE, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // Counts down a unit's trail timer and creates the class's trail effect each time it runs out
-void EEUnitClass::UpdateTrail(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_UPDATE_TRAIL, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // Creates ripples behind a unit on water at a rate that grows with its speed
-void EEUnitClass::UpdateRipples(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_UPDATE_RIPPLES, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_anim.rs
-}
-
 // Returns one over the unit's top speed, its active group's when it moves in one
 float EEComplexUnit::GetInverseMaxVelocity()
 {
@@ -699,17 +460,7 @@ float EEComplexUnit::GetInverseMaxVelocity()
 // EEUCBuilding::Update; production is instant under the player's mInstantBuild
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
-void EEUnitClass::UpdateBuilding(EEComplexUnit* inUnit)
-{
-    ee_units_uc_body(EE_UNITS_UC_DO_UPDATE_BUILDING, this, inUnit);   // uc_body.rs
-}
-
 // Ticks an animal: physics, effects, timers and animation; fires on attack frames and lets its carcass rot
-void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
-{
-    ee_units_uc_body(EE_UNITS_UC_DO_UPDATE_ANIMAL, this, inUnit);   // uc_body.rs
-}
-
 // Sets or clears the unit's camouflaged flag (the top bit of its camouflage timer)
 void EEComplexUnit::SetCamouflaged(bool inValue)
 {
@@ -720,23 +471,7 @@ extern GEViewport gViewport;
 extern bool& gOrthographicView;
 
 // Updates the volume, pan and pitch of a unit's animation sound every third tick (off-screen every 21st)
-void EEUnitClass::RefreshSound(EEComplexUnit* inUnit)
-{
-    ee_units_uc_body(EE_UNITS_UC_DO_REFRESH_SOUND, this, inUnit);   // uc_body.rs
-}
-
 // Heals the living units garrisoned in a living unit by its healing points each second
-void EEUnitClass::HealGarrison(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_HEAL_GARRISON, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_anim.rs (CBTM, CBHL stay host statements)
-}
-
-// Regenerates a living unit's hit points each second up to its maximum (not during cinematics)
-void EEUnitClass::Regenerate(EEComplexUnit* inUnit)
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_REGENERATE, this, inUnit, 0, 0, 0, NULL, NULL);   // uc_anim.rs (CBRG stays a host statement)
-}
-
 void EEUnitClass::UpdateDone(class EEComplexUnit *)
 {
 }
@@ -746,11 +481,6 @@ void EEUnitClass::UpdateDone(class EEComplexUnit *)
 void EEUnitClass::HandleActionChanged(EEComplexUnit* inUnit)
 {
     EEUnitClassActionChanged(EE_UNITS_ACTION_BASE, this, inUnit);
-}
-
-bool EEUnitClass::Virtual4C(unsigned long)
-{
-    return false;
 }
 
 void EEUnitClass::Virtual50(unsigned long)
@@ -868,10 +598,10 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
         ESDebugOut("EEUnitClass::EEUnitClass: unit %s has an LOS of %f.\n", static_cast<EEUnitClassRecord*>(inUnit)->mName, static_cast<EEUnitClassRecord*>(inUnit)->mLineOfSight);
         return 0;
     case EE_UNITS_UC_COPY_SCRIPT_NAME:
-        theClass->mAIScriptName.Copy(static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName, 0, strlen(static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName), 0, true);
+        theClass->mAIScriptName.Copy((const char*)static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName, 0, strlen((const char*)static_cast<EEUnitClassRecord*>(inUnit)->mAIScriptName), 0, true);
         return 0;
     case EE_UNITS_UC_COPY_NAME:
-        theClass->mName.Copy(static_cast<EEUnitClassRecord*>(inUnit)->mName, 0, strlen(static_cast<EEUnitClassRecord*>(inUnit)->mName), 0, true);
+        theClass->mName.Copy((const char*)static_cast<EEUnitClassRecord*>(inUnit)->mName, 0, strlen((const char*)static_cast<EEUnitClassRecord*>(inUnit)->mName), 0, true);
         return 0;
     case EE_UNITS_UC_FIND_ANIMAL: return EEObj(EEAnimal::Find(static_cast<EEUnitClassRecord*>(inUnit)->mUnitType));
     case EE_UNITS_UC_ANIMAL_ID: return EEUcObject<EEAnimal>(inA)->mAnimalID;
