@@ -218,15 +218,6 @@ void SocketOp::CleanupHook()
 bool SocketOp::mRunAsyncImmediatelyDef; // a zero byte at 565f08 in the original
 static uint32_t AddressOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mAddress; }
 static uint16_t PortOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mPort; }
-static IPAddr MakeAddr(uint32_t inAddress, uint16_t inPort)
-{
-    PlatSockAddrIn anAddress;
-    memset(&anAddress, 0, sizeof(anAddress));
-    anAddress.mFamily = PLAT_AF_INET;
-    anAddress.mAddress = inAddress;
-    anAddress.mPort = inPort;
-    return IPAddr(anAddress);
-}
 
 // up to the time until writable or readable (no wait for 0 or a closed socket)
 void AsyncSocket::WaitForWrite(unsigned long inWaitTime)
@@ -235,14 +226,11 @@ void AsyncSocket::WaitForRead(unsigned long inWaitTime)
 { ee_won_asyncsocket_wait(this->mSock,PLAT_SOCKET_WAIT_READ,static_cast<uint32_t>(inWaitTime)); }
 WONStatus AsyncSocket::SendTo(const void* inData,int inLength,const IPAddr& inAddress)
 { return ee_won_asyncsocket_send_to(this->mSock,inData,inLength,AddressOf(inAddress),PortOf(inAddress)); }
+// the sender assigned as a new address of its platform address (sockobj.rs, R6 WON round 33)
 WONStatus AsyncSocket::RecvFrom(void* outData,int inLength,IPAddr* outAddress,int* outReceived)
 {
-    uint32_t anAddress=0;
-    uint16_t aPort=0;
-    bool aFrom=false;
-    WONStatus aStatus=ee_won_asyncsocket_recv_from(this->mSock,outData,inLength,&anAddress,&aPort,&aFrom,outReceived);
-    if(aFrom && outAddress!=NULL) *outAddress=MakeAddr(anAddress,aPort);
-    return aStatus;
+    return ee_won_asyncsocket_recv_from_ip(this->mSock,outData,inLength,
+                                           outAddress!=NULL ? const_cast<EeWonIpAddr*>(outAddress->GetValue()) : NULL,outReceived);
 }
 WONStatus AsyncSocket::Bind(const IPAddr& inAddress,bool inReuse)
 { return ee_won_asyncsocket_bind(this->mSock,AddressOf(inAddress),PortOf(inAddress),inReuse); }

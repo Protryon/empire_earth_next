@@ -800,6 +800,41 @@ pub unsafe extern "C" fn ee_won_asyncsocket_recv_from(
     }
     r as c_long
 }
+
+/// `AsyncSocket::RecvFrom` (R6 WON round 33): as `ee_won_asyncsocket_recv_from`, the sender (when there is one and
+/// `out` is not NULL) assigned to `out` as a new `IPAddr` of its platform address (AsyncOp.cpp's MakeAddr: the
+/// family, address and port, the rest zero).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_recv_from`; `out` NULL or a live `IPAddr` value.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_asyncsocket_recv_from_ip(
+    s: *const EeWonAsyncSocket,
+    data: *mut c_void,
+    length: i32,
+    out: *mut EeWonIpAddr,
+    received: *mut i32,
+) -> c_long {
+    let (mut address, mut port, mut from) = (0u32, 0u16, false);
+    // SAFETY: the caller's contract
+    let r = unsafe { ee_won_asyncsocket_recv_from(s, data, length, &mut address, &mut port, &mut from, received) };
+    if from && !out.is_null() {
+        let sa = ee_base::plat_sys::constants::PlatSockAddrIn {
+            mFamily: ee_base::plat_sys::constants::PLAT_AF_INET,
+            mPort: port,
+            mAddress: address,
+            mZero: [0; 8],
+        };
+        let fresh = crate::ipobj::ee_won_ipaddr_new();
+        // SAFETY: a new value, assigned to the caller's and freed
+        unsafe {
+            crate::ipobj::ee_won_ipaddr_set_sockaddr(fresh, &sa as *const _ as *const c_void);
+            crate::ipobj::ee_won_ipaddr_assign(out, fresh);
+            crate::ipobj::ee_won_ipaddr_free(fresh);
+        }
+    }
+    r
+}
 /// `Disconnect`.
 ///
 /// # Safety
