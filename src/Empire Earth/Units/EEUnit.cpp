@@ -68,31 +68,12 @@ void EEUnitHandleResolve(uint32_t inUnitID, EEComplexUnit*& outUnit)
     outUnit = static_cast<EEComplexUnit*>(static_cast<EEUnit*>(RTSResolveUnitID(inUnitID)));
 }
 
-// FindAreaTile's tile from eu_body.rs's answer (x in the low 32 bits, y in the high)
-static EETileCoordinate EEEuTile(int64_t inPacked)
-{
-    return EETileCoordinate((long)(int32_t)(uint32_t)inPacked, (long)(int32_t)(uint32_t)((uint64_t)inPacked >> 32));
-}
-
 // Creates a simple unit of inClass for inPlayer at tile (inX, inY)
 EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
 {
     EEUnit* theUnit = new EEUnit;
     theUnit->Init(inClass, inX, inY, inPlayer);
     return theUnit;
-}
-
-// Returns whether inUnit may pass the unit: non-blocking units, dead non-resources, and wood for forest-crossing units
-bool EEUnit::IsPassableBy(EEComplexUnit* inUnit)
-{
-    return !this->mUnitClass->mBlocksTile || (this->mHitPoints == 0 && this->mUnitClass->mCategory != kUnitCategoryResource) || (this->mUnitClass->mResourceType == kResourceWood && inUnit != NULL && (bool)((inUnit->mStats->mTerrainMask >> 14) & 1));
-}
-
-// Returns the unit's tile, or for a multi-tile unit off a continent of kind inFlag, the first tile within inRange
-// of its footprint that lies on such a continent
-EETileCoordinate EEUnit::FindAreaTile(bool inFlag, long inRange)
-{
-    return EEEuTile(ee_units_eu_body(EE_UNITS_EU_DO_FIND_AREA_TILE, this, inFlag, inRange, 0));   // eu_body.rs
 }
 
 // Returns the centre of the unit's tile at ground height
@@ -385,4 +366,10 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_EUM_TEXT_HEALTH: sprintf(sEuText, "Health: %ld / %ld (%.2f%%)\n", theUnit->mHitPoints, theUnit->mStats->mMaxHitPoints, (float)theUnit->mHitPoints / (float)theUnit->mStats->mMaxHitPoints); return 0;
     default: return 0;
     }
+}
+
+// Returns whether inUnit may pass the unit: non-blocking units, dead non-resources, and wood for forest-crossing units
+bool EEUnit::IsPassableBy(EEComplexUnit* inUnit)
+{
+    return !this->mUnitClass->mBlocksTile || (this->mHitPoints == 0 && this->mUnitClass->mCategory != kUnitCategoryResource) || (this->mUnitClass->mResourceType == kResourceWood && inUnit != NULL && (bool)((inUnit->mStats->mTerrainMask >> 14) & 1));
 }

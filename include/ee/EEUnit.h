@@ -16,9 +16,7 @@
 #include "lle/GEColor.h"                // EEComplexUnit+0x1ac
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEResourceType.h"         // kResourceAny (CanTake)
-class GE3DLine;
 template <class T> class U2DPoint;      // (EEComplexUnit::DistanceSquaredToTile)
-class GEViewport;
 class GETerrainMesh;
 #include "lle/GEPhysicalModel.h"        // EEComplexUnit+0x130 (it uses GE3DLine/GEViewport by reference)
 
@@ -27,16 +25,11 @@ class EEHerd;                               // ee/EEHerd.h (EEComplexUnit+0x200)
 struct EEPUnitSwap;                         // ee/EEPhysics.h (ReplaceUnits)
 template <class T> class UMemoryPool;   // lle/UMemoryPool.h (EEComplexUnit::sMemoryPool)
 class EEGraphicEffect;
-class EEMedia;
 class SESMInstanceNode;                 // lle/SESMInstanceNode.h (EEComplexUnit::SetSound)
-class EEOrbital;                            // ee/EEGraphicObject.h (EEComplexUnit+0x1b8)
-class EEWheel;                              // ee/EEWheel.h (EEComplexUnit+0x1bc)
 class EEGraphicObject;                      // ee/EEGraphicObject.h
 typedef EEGraphicObject EEModel;            // (see below: WriteDetailsHook's)
 class EEActiveGroup;
 struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h (EEUnitClass::GetTerrainFlags)
-class EEFleeFromLocationScreenBase;         // ee/EEFleeFromLocationScreenBase.h (EEComplexUnit::FindFleePoint)
-struct EEPlayerUnitInfo;
 class EETechTreeNode;
 class EEUnit;
 typedef struct EeUnitsPatrolGroup EEPPatrolGroup;
@@ -46,12 +39,10 @@ class EEUnitBehavior;                      // ee/EEUnitBehavior.h (EEComplexUnit
 class EEGoalDeque;                          // ee/EEUnitVectorItem.h (EEUnitVectorItem::mGoals' holder)
 class EEUnitVectorItem;                     // the 0x28-byte polymorphic elements of EEComplexUnit+0x90 (ee/EEUnitVectorItem.h)
 class GEModel;
-class EETagPointList;                       // ee/EEGraphicObject.h (EEModel::FnD84EC)
 #include "ee/EETileCoordinate.h"     // RTSUnit::GetTile returns one
 class EEPlayer;
 class EEUnitClass;
 class EEUnitGoal;
-class EETile;
 class EEAIContinent;                        // ee/EEAIContinent.h (EEUnitClass::GetContainerContinent)
 class EEPhysicsModel;                       // ee/EEPhysicsModel.h (EEUnitClass +0x110)
 class EESoundObject;
@@ -147,6 +138,9 @@ typedef EEUnitClassUpgrade EEUnitStats;
 
 #include "ee/RTSUnit.h"                // RTSUnitLink, RTSUnit (the RTS layer's header since R5a.6)
 
+// a tile Rust hands back packed (x in the low 32 bits, y in the high: FindAreaTile)
+inline EETileCoordinate EEUnpackTile(int64_t inPacked) { return EETileCoordinate((long)(int32_t)(uint32_t)inPacked, (long)(int32_t)(uint32_t)((uint64_t)inPacked >> 32)); }
+
 // New (R5b.4, round 26): the plain members (mResourceType, mHitPoints, mResourceAmount, mHiddenFlags: their names, types
 // and order) are the Rust record EeUnitsUnitFields (ee_units unit_fields.rs), the second base after RTSUnit (still at
 // offset 0). The unit store reads the record directly.
@@ -213,7 +207,7 @@ public:
     virtual long GetChecksum(unsigned long) { return 0; }  // +0x4c
     // +0x50 0x229550: the unit's tile, or for a class bigger than one tile not on a continent with mCategory == inFlag,
     // the first tile within inRange of its square that is (inferred types)
-    virtual EETileCoordinate FindAreaTile(bool inFlag, long inRange);
+    virtual EETileCoordinate FindAreaTile(bool inFlag, long inRange) { return EEUnpackTile(ee_units_eu_body(EE_UNITS_EU_DO_FIND_AREA_TILE, this, inFlag, inRange, 0)); }
     // +0x54: mStats's +0x68 (EEComplexUnit 0x1fa473: or a lookup when +0x351 is set; the logic bomb reads its
     // +0x244 part) (provisional name)
     virtual EEModel* GetModel() { return this->mStats->mModel; }
@@ -617,7 +611,7 @@ public:
     virtual void OutOfSynchDump(FILE* inFile, unsigned long inFlags) { ee_units_cu_out_of_synch_dump(this, inFile); }  // +0x44 0x1f908d
     virtual bool IsPassableBy(EEComplexUnit* inUnit) { return ee_units_cu_body(EE_UNITS_CU_DO_IS_PASSABLE_BY, this, (int64_t)(uintptr_t)inUnit, 0, 0) != 0; }  // +0x48 0x1f9e81
     virtual long GetChecksum(unsigned long inFlags) { return (long)ee_units_cu_body(EE_UNITS_CU_DO_GET_CHECKSUM, this, inFlags, 0, 0); }  // +0x4c 0x1fa07f
-    virtual EETileCoordinate FindAreaTile(bool inFlag, long inRange);  // +0x50 0x1fa385
+    virtual EETileCoordinate FindAreaTile(bool inFlag, long inRange) { return EEUnpackTile(ee_units_cu_body(EE_UNITS_CU_DO_FIND_AREA_TILE, this, inFlag, inRange, 0)); }  // +0x50 0x1fa385
     virtual EEModel* GetModel();            // +0x54 0x1fa473
     virtual bool IsFoundation() { return this->mIsFoundation; }            // +0x58 0x1f5b67: mIsFoundation
     virtual void GetPosition(GE3DPoint& outPosition) { this->mPhysicalModel.GetLocation().GetPosition(outPosition); }         // +0x5c 0x1fa493
@@ -641,7 +635,6 @@ public:
     static bool SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks);
     void ClearGarrison();                   // 0x1f8bd8: mL28C = mL288 = 0 (provisional name)
     bool HasEffect(long inKind);            // 0x1f9ddb: GetEffect into a dummy (provisional name)
-    bool IsGathering();                     // 0x1fa67f: the goal's kind is 6 (provisional name)
     bool IsCloaked() { return this->mCloaked > 0; }                       // 0x1fa96c: mCloaked != 0 (provisional name)
     // 0x21ba6f: the squared distance from the position (+0x13c/+0x14c/+0x15c) to inPoint (the attack-ground test;
     // provisional name)

@@ -135,21 +135,9 @@ bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before 
 
 extern char gEmptyString[];
 
-// FindAreaTile's tile from cu_world.rs's answer (x in the low 32 bits, y in the high)
-static EETileCoordinate EECuTile(int64_t inPacked)
-{
-    return EETileCoordinate((long)(int32_t)(uint32_t)inPacked, (long)(int32_t)(uint32_t)((uint64_t)inPacked >> 32));
-}
-
 // Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
 // (cu_body.rs; the thresholds there: 0x4c76f0)
 
-
-// Copies a replaced unit's state into this one: position, timers, scaled hit points, goals, cargo, links
-void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_COPY_FROM, this, (int64_t)(uintptr_t)EEUnitCast<EEComplexUnit>(inUnit), (int64_t)(uintptr_t)inUnit, 0);   // cu_life.rs
-}
 
 // New (debugging): EE_UNIT_POOL=0 takes every unit from operator new instead of the pool (UMemoryPool::Delete deletes
 // what no chunk holds). A pool slot is reused at once, so a unit released one reference too early is read as the
@@ -237,18 +225,6 @@ bool EEComplexUnit::HasEffect(long inKind)
     return this->GetEffect(inKind, theEffect);
 }
 
-// Returns the goals of a goal queue
-EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
-{
-    return this->mGoalQueues[inIndex].mGoals;
-}
-
-// Returns the unit's (or its container's) tile, or a nearby tile on a continent of the wanted kind
-EETileCoordinate EEComplexUnit::FindAreaTile(bool inFlag, long inRange)
-{
-    return EECuTile(ee_units_cu_body(EE_UNITS_CU_DO_FIND_AREA_TILE, this, inFlag, inRange, 0));   // cu_world.rs
-}
-
 
 // Returns the unit's model, or the player's foundation graphic for a foundation
 EEModel* EEComplexUnit::GetModel()
@@ -256,12 +232,6 @@ EEModel* EEComplexUnit::GetModel()
     if (!this->mIsFoundation)
         return this->GetStats()->mModel;
     return EEGetPlayerClassGraphic(this->GetPlayer(), this->GetUnitClass());
-}
-
-// Returns whether the unit's current goal is gathering
-bool EEComplexUnit::IsGathering()
-{
-    return this->mGoalState != NULL && this->mGoalState->mKind == kGoalGather;
 }
 
 
@@ -1489,4 +1459,16 @@ extern "C" int64_t ee_units_wp_host(int32_t inOp, uint64_t inUnit, uint64_t inAr
     }
     }
     return 0;
+}
+
+// Copies a replaced unit's state into this one: position, timers, scaled hit points, goals, cargo, links
+void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
+{
+    ee_units_cu_body(EE_UNITS_CU_DO_COPY_FROM, this, (int64_t)(uintptr_t)EEUnitCast<EEComplexUnit>(inUnit), (int64_t)(uintptr_t)inUnit, 0);   // cu_life.rs
+}
+
+// Returns the goals of a goal queue
+EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
+{
+    return this->mGoalQueues[inIndex].mGoals;
 }
