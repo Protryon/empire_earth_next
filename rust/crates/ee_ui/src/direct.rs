@@ -58,7 +58,7 @@ pub enum Kind {
     Slider,
     /// `UIGraph`'s [`EeUiGraph`] (the line graph's and the post-game summary's).
     Graph,
-    /// `UIListBox<T>`'s [`EeUiList`] (every instantiation; the lines are the C++'s, reached through its host).
+    /// `UIListBox<T>`'s [`EeUiList`] (every instantiation; its lines too, UI round 15).
     List,
     /// `UIStatusBar`'s [`EeUiStatusBar`].
     StatusBar,
@@ -357,17 +357,17 @@ pub fn list_call(control: Cpp, call: EeUiListCall, a: isize, b: isize) -> Option
     Some(unsafe { ee_ui_list_call(o, call, a, b, f.as_mut_ptr()) })
 }
 
-/// An op on the list `control` through its per-type host (`UIListBoxRust<T>::Op`: the lines and the virtuals); the
-/// result and the float buffer; `None` when `control` is not a list box.
+/// An op on the list `control`: the lines' count, text and selection answered by the Rust list, the virtuals
+/// through its per-type host (`UIListBoxRust<T>::Op`); the result and the float buffer; `None` when `control` is
+/// not a list box.
 pub fn list_op(control: Cpp, op: EeUiOp, a: isize, b: isize, c: isize) -> Option<(isize, [f32; 4])> {
     let o = find(Kind::List, control) as *const EeUiList;
     if o.is_null() {
         return None;
     }
-    // SAFETY: a live list box; its host is copied out before the call (which may re-enter)
-    let host = unsafe { (*o).host };
     let mut f = buf();
-    let r = host.op_f(op, a, b, c, 0, &mut f);
+    // SAFETY: a live list box; a shared reference (the call may re-enter)
+    let r = unsafe { (*o).direct_op(op, a, b, c, &mut f) };
     Some((r, f))
 }
 

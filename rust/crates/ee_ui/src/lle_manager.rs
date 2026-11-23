@@ -260,8 +260,9 @@ pub(crate) fn fetch_mouse_buttons<C: Cpp + ?Sized>(c: &mut C) {
     if c.mouse_buttons_ready() {
         return;
     }
-    for which in 0..3 {
-        c.mouse_button_fetch(which);
+    use ee_base::lle_enums::ISMouseEntity as M;
+    for (which, button) in [M::kMouseLeftButton, M::kMouseRightButton, M::kMouseZAxis].into_iter().enumerate() {
+        c.mouse_button_fetch(which as u32, button as u32);
     }
 }
 
@@ -295,11 +296,45 @@ pub extern "C" fn ee_ui_manager_remove_database() {
     remove_database(&mut crate::lle_cpp::Ffi);
 }
 
-/// The constructor's mouse buttons.
+/// The constructor's body after the Rust manager is made: `Init` (its ops read the manager through the C++
+/// forwarders, so `mRust` must be set), then the shared mouse buttons looked up.
+///
+/// # Safety
+/// `manager` is the live manager `ee_ui_manager_new` made.
 #[cfg(not(any(test, feature = "no_cpp")))]
 #[no_mangle]
-pub extern "C" fn ee_ui_manager_fetch_mouse_buttons() {
+pub unsafe extern "C" fn ee_ui_manager_start(manager: *const crate::managerobj::EeUiManager) {
+    use crate::managerobj::{ee_ui_manager_call, EeUiManagerCall};
+    // SAFETY: the contract
+    unsafe { ee_ui_manager_call(manager, EeUiManagerCall::Init, 0, 0, 0, core::ptr::null_mut()) };
     fetch_mouse_buttons(&mut crate::lle_cpp::Ffi);
+}
+
+/// The destructor: the Rust manager released and freed, then the database's tables deleted.
+///
+/// # Safety
+/// `manager` came from `ee_ui_manager_new` (or is NULL) and is not used again.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_manager_destroy(manager: *mut crate::managerobj::EeUiManager) {
+    // SAFETY: the contract
+    unsafe { crate::managerobj::ee_ui_manager_free(manager) };
+    remove_database(&mut crate::lle_cpp::Ffi);
+}
+
+/// `UIManager::sMouseLeftHanded` (the buttons' swap state).
+static MOUSE_LEFT_HANDED: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+
+/// `UIManager::sMouseLeftHanded`.
+#[no_mangle]
+pub extern "C" fn ee_ui_mouse_left_handed() -> bool {
+    MOUSE_LEFT_HANDED.load(core::sync::atomic::Ordering::Relaxed)
+}
+
+/// `UIManager::sMouseLeftHanded = left`.
+#[no_mangle]
+pub extern "C" fn ee_ui_mouse_set_left_handed(left: bool) {
+    MOUSE_LEFT_HANDED.store(left, core::sync::atomic::Ordering::Relaxed)
 }
 
 /// `UIManager::SetMouseLeftHanded` (the C++ member's body).

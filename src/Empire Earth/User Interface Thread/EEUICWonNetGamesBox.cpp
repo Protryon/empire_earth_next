@@ -149,7 +149,7 @@ long EEUICWonNetGamesBox::DrawTextA()
             case 3:
                 theRect.SetLeft(this->GetCopyTextRectangle().GetLeft() + this->mInProgressWidth + 415.0f);
                 theRect.SetRight(theRect.GetLeft() + this->mPasswordWidth);
-                if ((this->mCopyLineArray.begin() + i)->mHasPassword)
+                if (this->mCopyLineArray[i].mHasPassword)
                     this->mCopiedText->SetText(this->mPasswordLabel);
                 else
                     this->mCopiedText->SetText(UWideString(""));

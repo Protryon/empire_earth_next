@@ -201,7 +201,7 @@ void EEAWonNet::Virtual4()
                 if (theGames->GetLineCount() > 0) {
                     sGameDisplayLine = theGames->GetDisplayLine();
                     if (theGames->GetCurrentSelection(theSelection) == kErrorOK)
-                        sSelectedGame = (theGames->Begin() + theSelection)->mName;
+                        sSelectedGame = theGames->GetData(theSelection).mName;
                     else
                         sSelectedGame = "";
                     theGames->DeleteAllEntries();

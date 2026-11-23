@@ -105,6 +105,14 @@ enum class EeUiManagerCall : uint32_t {
 /// The Rust UIManager.
 struct EeUiManager;
 
+/// `ChangeIMECompositionString`'s arguments (the C++ `UWideString`, `UString` and cursor), handed on to the top
+/// form's.
+struct EeUiImeComposition {
+  const void *string;
+  const void *attributes;
+  unsigned long cursor;
+};
+
 extern "C" {
 
 /// A new Rust manager for the C++ `manager`: `UIManager(rasterizer, sound, surfaces, depth, string table, screen)`'s
@@ -124,6 +132,13 @@ EeUiManager *ee_ui_manager_new(void *manager,
 /// `manager` came from `ee_ui_manager_new` (or is NULL) and is not used after this returns (it is during: the forms'
 /// destructors may call the manager).
 void ee_ui_manager_free(EeUiManager *manager);
+
+/// `ChangeIMECompositionString(string, attributes, cursor)` -> the top form's result.
+///
+/// # Safety
+/// `manager` is live; `composition` and what it points at are live for the call.
+long ee_ui_manager_change_composition(const EeUiManager *manager,
+                                      const EeUiImeComposition *composition);
 
 /// One of UIManager's methods ([`EeUiManagerCall`]).
 ///

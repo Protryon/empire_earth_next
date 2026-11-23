@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/ui/managerobj.h"
 
 extern "C" {
 
@@ -18,8 +19,24 @@ void ee_ui_manager_load_database(void *manager, void *path, const void *director
 /// `UIManager::RemoveDatabase` (the C++ member's body).
 void ee_ui_manager_remove_database();
 
-/// The constructor's mouse buttons.
-void ee_ui_manager_fetch_mouse_buttons();
+/// The constructor's body after the Rust manager is made: `Init` (its ops read the manager through the C++
+/// forwarders, so `mRust` must be set), then the shared mouse buttons looked up.
+///
+/// # Safety
+/// `manager` is the live manager `ee_ui_manager_new` made.
+void ee_ui_manager_start(const EeUiManager *manager);
+
+/// The destructor: the Rust manager released and freed, then the database's tables deleted.
+///
+/// # Safety
+/// `manager` came from `ee_ui_manager_new` (or is NULL) and is not used again.
+void ee_ui_manager_destroy(EeUiManager *manager);
+
+/// `UIManager::sMouseLeftHanded`.
+bool ee_ui_mouse_left_handed();
+
+/// `UIManager::sMouseLeftHanded = left`.
+void ee_ui_mouse_set_left_handed(bool left);
 
 /// `UIManager::SetMouseLeftHanded` (the C++ member's body).
 void ee_ui_manager_set_mouse_left_handed(bool left);

@@ -196,12 +196,7 @@ public:
     intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const { return this->Call(inCall, 0, 0, 0, UIF4(inX, inY)); }
 
     EeUiManager* mRust;                     // the state (managerobj.rs)
-#ifdef LOWLEVELENGINE_EXPORTS
-#if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
-    // Inferred: visible to its users only (shown to UIControl.cpp it renumbers that unit's $E chains)
-    static bool sMouseLeftHanded;
-#endif
-#endif
+    // (the original's sMouseLeftHanded is Rust's: ee_ui lle_manager.rs, ee_ui_mouse_left_handed)
 };
 
 #endif

@@ -102,8 +102,7 @@ UIBackground::UIBackground(unsigned long inBackgroundID, const UILayoutUtility& 
                            unsigned long inDrawPriority, bool inVisible)
 {
     ee_ui_bg_init(this, static_cast<EeUiBackgroundFields*>(this), ee_ui_background_host, inBackgroundID,
-                  reinterpret_cast<const EeUiLayout*>(&inLayout), inForm, inDrawPriority, inVisible);
-    ee_ui_direct_background(this, this);   // the direct path's registry (ee_ui direct.rs): this background's record
+                  reinterpret_cast<const EeUiLayout*>(&inLayout), inForm, inDrawPriority, inVisible, this);
 }
 
 UIBackground::~UIBackground() { ee_ui_bg_free(this); }

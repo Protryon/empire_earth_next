@@ -39,37 +39,7 @@
 
 static_assert(sizeof(EeUiLayout) == sizeof(UILayoutUtility) && sizeof(EeUiColor) == sizeof(GEColor), "bgtableobj.rs");
 
-// the database file's calls (UIEvent.cpp)
-extern "C" void ee_uicpp_file_open(void* inFile);
-extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount);
-extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength);
-extern "C" void ee_uicpp_file_close(void* inFile);
-
 // The Rust table's calls out (EeUiOp 590..600): the object is the file (Create) or the manager (CreateBackgrounds)
-struct UIBackgroundTableHost {
-    // A background of the entry's type on the form (others the manager's user-defined backgrounds)
-    static UIBackground* Make(UIManager* m, const UIBackgroundTable& t, UIForm* inForm, const GETextureDescription& d)
-    {
-        const UString& n = t.GetTextureFile();
-        const GERectangle& r = t.GetTextureRect();
-        unsigned long id = t.GetBackgroundID(), p = t.GetDrawPriority();
-        switch (t.GetBackgroundType()) {
-        case kBackgroundBitmap: return new UIBitmapBackground(id, n, d, r, t.GetLayout(), inForm, p, t.GetVisible());
-        // Fixed: the original passed the row ID (GetID) where every other case passes the background ID
-        case kBackgroundTiled: return new UITiledBackground(id, n, d, r, t.GetLayout(), inForm, p, t.GetVisible());
-        case kBackgroundFull:
-            return new UIBFull(id, n, d, r, t.GetLayout(), inForm, p, t.GetNumCols(), t.GetNumRows(), t.GetVisible());
-        case kBackgroundLRTiled:
-            return new UITiledBackground(id, n, d, r, t.GetLayout(), inForm, p, t.GetVisible(), kTilingLeftRight);
-        case kBackgroundTBTiled:
-            return new UITiledBackground(id, n, d, r, t.GetLayout(), inForm, p, t.GetVisible(), kTilingTopBottom);
-        case kBackgroundStretchedTiled:
-            return new UITiledBackground(id, n, d, r, t.GetLayout(), inForm, p, t.GetVisible(), kTilingStretched,
-                                         t.GetTileWidthPercent(), t.GetTileHeightPercent());
-        default: return m->CreateUserDefinedBackground(t);
-        }
-    }
-};
 #define t (static_cast<UIBackgroundTable*>(reinterpret_cast<EeUiBgTableFields*>(a)))
 #define m static_cast<UIManager*>(inObj)
 EE_UI_VOID(bgt_file_open) { ee_uicpp_file_open(inObj); }
@@ -81,7 +51,15 @@ EE_UI_CASE(bgt_form) { return (intptr_t)m->GetFormByID((unsigned long)a); }
 EE_UI_CASE(bgt_texture_depth) { return m->GetUITextureBitDepth(); }
 EE_UI_CASE(bgt_entry_alpha) { return t->GetHasAlpha(); }
 EE_UI_CASE(bgt_entry_form_id) { return t->GetFormID(); }
-EE_UI_CASE(bgt_make) { return (intptr_t)UIBackgroundTableHost::Make(m, *t, reinterpret_cast<UIForm*>(b), *reinterpret_cast<const GETextureDescription*>(c)); }
+// a background of the entry's type on the form b with the texture description c (lle_hosts.rs bgt_make: the type's
+// class; the tiled ones' tiling d and across and down percents f; others the manager's user-defined backgrounds)
+#define BGT_ARGS t->GetBackgroundID(), t->GetTextureFile(), *reinterpret_cast<const GETextureDescription*>(c), t->GetTextureRect(), t->GetLayout(), reinterpret_cast<UIForm*>(b), t->GetDrawPriority()
+EE_UI_CASE(bgt_make_bitmap) { return (intptr_t) static_cast<UIBackground*>(new UIBitmapBackground(BGT_ARGS, t->GetVisible())); }
+// Fixed: the original passed the row ID (GetID) for a tiled background where every other type passes the background ID
+EE_UI_CASE(bgt_make_tiled) { return (intptr_t) static_cast<UIBackground*>(new UITiledBackground(BGT_ARGS, t->GetVisible(), (UITiling)d, f[0], f[1])); }
+EE_UI_CASE(bgt_make_full) { return (intptr_t) static_cast<UIBackground*>(new UIBFull(BGT_ARGS, t->GetNumCols(), t->GetNumRows(), t->GetVisible())); }
+EE_UI_CASE(bgt_make_user) { return (intptr_t)m->CreateUserDefinedBackground(*t); }
+#undef BGT_ARGS
 #undef m
 #undef t
 

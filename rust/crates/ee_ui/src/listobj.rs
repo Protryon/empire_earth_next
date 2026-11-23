@@ -1,16 +1,17 @@
-//! `UIListBox<T>` as a whole Rust object (R6 ui round 15): the template's state that does not depend on `T` (the
-//! text rectangles, the colours, the selection record, the scroll bar, the key-repeat polls and the two selection
-//! rhombi) and every method that does not touch the lines. The C++ template keeps only what depends on `T`: the
-//! lines (`mData`) and their drawn copy (`mCopyLineArray`), the data methods (`AppendLine`, `InsertLine`,
-//! `DeleteLine`'s erase, `FindString`, `Sort`, `ReplaceLine`), and the per-`T` host (`UIListBoxRust<T>::Op`), which
-//! answers the ops that need the instantiation: the virtual `GetNumLines`, `ChangeSelectionIndex`,
-//! `ClearSelection`, `ProcessDown`/`Up`/`Home`/`End`, `ButtonDown`/`ButtonUp` (a subclass's override runs) and the
-//! copy of the visible lines; every other op goes to the shared host (`UIListBoxHostOp`, UILBString.cpp).
+//! `UIListBox<T>` as a whole Rust object (R6 ui round 15): the template's state (the text rectangles, the colours,
+//! the selection record, the scroll bar, the key-repeat polls and the two selection rhombi), every method, and from
+//! UI round 15 the lines: `mData` and its drawn copy `mCopyLineArray` are boxed `T`s this object owns, made, copied
+//! and freed through the line type's C++ members ([`EeUiLineOps`], `UILineOps<T>` in lle/UIListBox.h); the C++
+//! template's members are one call each and `mData`/`mCopyLineArray` are views (`UILines<T>`). The per-`T` host
+//! (`UIListBoxRust<T>::Op`) answers only the virtuals (`GetNumLines`, `ChangeSelectionIndex`, `ClearSelection`,
+//! `ProcessDown`/`Up`/`Home`/`End`, `ButtonDown`/`ButtonUp`, `AppendLine`, `DeleteAllEntries`: a subclass's
+//! override runs); every other op goes to the shared host (`ee_ui_list_host`). The string list's (`UILBString`)
+//! draw and type-to-find are here too.
 //!
 //! The selection and scrolling algorithms are round 4's `list.rs` with their goldens; this object is their host
 //! ([`ListHost`]).
 
-use core::cell::Cell;
+use core::cell::{Cell, RefCell};
 use core::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 
 use crate::draw;
@@ -125,6 +126,35 @@ pub enum EeUiListCall {
     DrawCount = 47,
 }
 
+/// A line type's C++ members (`UILineOps<T>::kOps`, lle/UIListBox.h): the list's lines are `new`ed `T`s.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct EeUiLineOps {
+    /// `new T` (a slot of the drawn copy).
+    pub make: unsafe extern "C" fn() -> *mut c_void,
+    /// `new T(*line)`.
+    pub clone: unsafe extern "C" fn(*const c_void) -> *mut c_void,
+    /// `delete line`.
+    pub free: unsafe extern "C" fn(*mut c_void),
+    /// `*to = *from`.
+    pub assign: unsafe extern "C" fn(*mut c_void, *const c_void),
+    /// A `UWideString` line's NUL-terminated bytes (NULL for another line type).
+    pub text: unsafe extern "C" fn(*const c_void) -> *const c_char,
+    /// `new UWideString(bytes)` (NULL for another line type).
+    pub from_text: unsafe extern "C" fn(*const c_char) -> *mut c_void,
+}
+
+/// An `InsertLine` predicate: `(*sort)(*a, *b)`.
+pub type EeUiLineLess = Option<unsafe extern "C" fn(*mut c_void, *const c_void, *const c_void) -> bool>;
+/// `FindString`'s comparison: `*a == *b`.
+pub type EeUiLineEq = unsafe extern "C" fn(*const c_void, *const c_void) -> bool;
+
+/// `kErrorNotFound`.
+const ERROR_NOT_FOUND: isize = 3;
+
+/// The line array a view names (`UILines<T>`'s `mWhich`): 0 `mData`, 1 `mCopyLineArray`.
+const LINES_DATA: u32 = 0;
+
 /// The Rust UIListBox.
 pub struct EeUiList {
     pub(crate) host: Host,
@@ -144,6 +174,26 @@ pub struct EeUiList {
     /// `mRepeatPoll` (100 ms), `mRepeatDelayPoll` (500 ms).
     repeat: isize,
     delay: isize,
+    /// The line type's members (none in the goldens: their lines were the C++ template's).
+    line_ops: Option<EeUiLineOps>,
+    /// `mData`, `mCopyLineArray`: the boxed lines.
+    lines: RefCell<Vec<*mut c_void>>,
+    copy: RefCell<Vec<*mut c_void>>,
+}
+
+/// The object as the type-to-find's host: the virtual line count, a line's first byte.
+struct Find<'a>(&'a EeUiList);
+
+impl crate::find_key::FindHost for Find<'_> {
+    fn lines(&mut self) -> usize {
+        self.0.num_lines() as usize
+    }
+    fn first(&mut self, i: usize) -> Option<u8> {
+        let t = self.0.line_text(i);
+        // SAFETY: a live line's NUL-terminated bytes
+        let b = if t.is_null() { 0 } else { unsafe { *t as u8 } };
+        (b != 0).then_some(b)
+    }
 }
 
 /// The object as the selection algorithms' host.
@@ -260,7 +310,246 @@ impl EeUiList {
             bar: Cell::new(0),
             repeat,
             delay,
+            line_ops: None,
+            lines: RefCell::new(Vec::new()),
+            copy: RefCell::new(Vec::new()),
         }
+    }
+
+    /// The lines' part of the constructor: `count` lines at `data` (`stride` bytes apart) copied into `mData`, the
+    /// drawn copy made `GetNumberLinesDisplayed()` default lines long.
+    ///
+    /// # Safety
+    /// `data` holds `count` live `T`s of `ops`' type.
+    pub unsafe fn set_lines(&mut self, ops: EeUiLineOps, data: *const c_void, count: usize, stride: usize) {
+        self.line_ops = Some(ops);
+        // SAFETY: the contract
+        let lines = (0..count).map(|i| unsafe { (ops.clone)((data as *const u8).add(i * stride) as *const c_void) });
+        *self.lines.get_mut() = lines.collect();
+        let shown = self.fields().number_lines_displayed as usize;
+        // SAFETY: the line type's own constructor
+        *self.copy.get_mut() = (0..shown).map(|_| unsafe { (ops.make)() }).collect();
+    }
+
+    /// Line `i` of `mData` (`which` 0) or `mCopyLineArray` (1), NULL past the end.
+    pub fn line(&self, which: u32, i: usize) -> *mut c_void {
+        let v = if which == LINES_DATA { self.lines.borrow() } else { self.copy.borrow() };
+        v.get(i).copied().unwrap_or(core::ptr::null_mut())
+    }
+
+    /// The lines of `mData` (`which` 0) or `mCopyLineArray` (1).
+    pub fn line_count(&self, which: u32) -> usize {
+        if which == LINES_DATA {
+            self.lines.borrow().len()
+        } else {
+            self.copy.borrow().len()
+        }
+    }
+
+    fn ops(&self) -> EeUiLineOps {
+        self.line_ops.expect("a list box made with its line type")
+    }
+
+    /// `AppendLine(*line)` (the base class's body): the copy pushed, the box dirty, the scroll bar checked.
+    ///
+    /// # Safety
+    /// `line` is a live `T`.
+    pub unsafe fn append(&self, line: *const c_void) {
+        // SAFETY: the contract
+        let l = unsafe { (self.ops().clone)(line) };
+        self.lines.borrow_mut().push(l);
+        self.op(Op::SetDirty, 1, 0);
+        self.list(|l| l.check_scroll_bar());
+    }
+
+    /// `AppendStringArray(lines)`: each pushed, then the scroll bar checked and the box dirty.
+    ///
+    /// # Safety
+    /// `data` holds `count` live `T`s, `stride` bytes apart.
+    pub unsafe fn append_n(&self, data: *const c_void, count: usize, stride: usize) {
+        let ops = self.ops();
+        for i in 0..count {
+            // SAFETY: the contract
+            let l = unsafe { (ops.clone)((data as *const u8).add(i * stride) as *const c_void) };
+            self.lines.borrow_mut().push(l);
+        }
+        self.list(|l| l.check_scroll_bar());
+        self.op(Op::SetDirty, 1, 0);
+    }
+
+    /// `InsertLine(*line, index, sort)`: `std::lower_bound` (MSVC's halving) from `index` with `less(ctx, line i,
+    /// line)` (no predicate: never less), the copy inserted there, then `Inserted`.
+    ///
+    /// # Safety
+    /// `line` is a live `T`; `less` is NULL or takes `ctx` and two live `T`s.
+    pub unsafe fn insert(&self, line: *const c_void, index: usize, ctx: *mut c_void, less: EeUiLineLess) {
+        let at = {
+            let v = self.lines.borrow();
+            let mut first = index.min(v.len());
+            let mut count = v.len() - first;
+            if let Some(less) = less {
+                while count > 0 {
+                    let step = count / 2;
+                    // SAFETY: the contract; both lines are live
+                    if unsafe { less(ctx, v[first + step], line) } {
+                        first += step + 1;
+                        count -= step + 1;
+                    } else {
+                        count = step;
+                    }
+                }
+            }
+            first
+        };
+        // SAFETY: the contract
+        let l = unsafe { (self.ops().clone)(line) };
+        self.lines.borrow_mut().insert(at, l);
+        self.list(|l| l.inserted(at as c_ulong));
+    }
+
+    /// `DeleteLine(i)` (the base class's body): the line erased and freed, then `DeletedLine`.
+    pub fn delete_line(&self, i: usize) {
+        let gone = {
+            let mut v = self.lines.borrow_mut();
+            (i < v.len()).then(|| v.remove(i))
+        };
+        if let Some(l) = gone {
+            // SAFETY: a line this object made
+            unsafe { (self.ops().free)(l) };
+        }
+        self.list(|l| l.deleted_line(i as c_ulong));
+    }
+
+    /// `DeleteAllEntries()` (the base class's body): the lines freed, then `Cleared`.
+    pub fn delete_all(&self) {
+        self.free_lines(false);
+        self.list(|l| l.cleared());
+    }
+
+    /// The lines (and with `copy` the drawn copy) freed.
+    fn free_lines(&self, copy: bool) {
+        let Some(ops) = self.line_ops else { return };
+        let gone: Vec<_> = if copy { self.copy.borrow_mut().drain(..).collect() } else { Vec::new() };
+        let lines: Vec<_> = self.lines.borrow_mut().drain(..).collect();
+        for l in gone.into_iter().chain(lines) {
+            // SAFETY: lines this object made
+            unsafe { (ops.free)(l) };
+        }
+    }
+
+    /// `FindString(*line, out)`: the first line `i < GetNumLines()` equal to `line` (`eq`).
+    ///
+    /// # Safety
+    /// `line` is a live `T`; `eq` takes two live `T`s.
+    pub unsafe fn find(&self, line: *const c_void, eq: EeUiLineEq) -> Option<usize> {
+        let mut i = 0;
+        while (i as c_ulong) < self.num_lines() {
+            let l = self.line(LINES_DATA, i);
+            // SAFETY: the contract; a live line
+            if !l.is_null() && unsafe { eq(l, line) } {
+                return Some(i);
+            }
+            i += 1;
+        }
+        None
+    }
+
+    /// `GetCurrentSelection(out)`: the result (OK when there are lines and a selection, else 0xd) and the selection.
+    pub fn current_selection(&self) -> (isize, c_ulong) {
+        let f = self.fields();
+        let ok = self.line_count(LINES_DATA) > 0 && f.has_selection;
+        (if ok { 0 } else { 0xd }, f.current_selection)
+    }
+
+    /// The visible lines copied: the drawn copy grown to `shown` lines if shorter, then lines `first .. last` copied
+    /// to its start.
+    fn copy_lines(&self, shown: usize, first: usize, last: usize) {
+        let Some(ops) = self.line_ops else { return };
+        while self.copy.borrow().len() < shown {
+            // SAFETY: the line type's own constructor
+            let l = unsafe { (ops.make)() };
+            self.copy.borrow_mut().push(l);
+        }
+        let (lines, copy) = (self.lines.borrow(), self.copy.borrow());
+        for (j, i) in (first..last).enumerate() {
+            if let (Some(&to), Some(&from)) = (copy.get(j), lines.get(i)) {
+                // SAFETY: lines this object made
+                unsafe { (ops.assign)(to, from) };
+            }
+        }
+    }
+
+    /// Line `i`'s text (a `UIListBox<UWideString>`'s), NULL for another type or past the end.
+    pub fn line_text(&self, i: usize) -> *const c_char {
+        let l = self.line(LINES_DATA, i);
+        match self.line_ops {
+            // SAFETY: a live line of the ops' type
+            Some(ops) if !l.is_null() => unsafe { (ops.text)(l) },
+            _ => core::ptr::null(),
+        }
+    }
+
+    /// The direct path's list ops (`direct::list_op`): the lines' count, text and selection answered here, a line
+    /// appended from text through the virtual `AppendLine`, every other op passed to the host.
+    pub fn direct_op(&self, op: Op, a: isize, b: isize, c: isize, f: &mut [f32; 4]) -> isize {
+        match op {
+            Op::ListLineCount => self.line_count(LINES_DATA) as isize,
+            Op::ListLineText if a >= 0 => self.line_text(a as usize) as isize,
+            Op::ListLineText => 0,
+            Op::ListSelection => {
+                let (r, s) = self.current_selection();
+                #[allow(clippy::unnecessary_cast)] // c_ulong is 64 bits off Windows
+                let bits = s as u32;
+                f[0] = f32::from_bits(bits);
+                r
+            }
+            Op::ListAppendText => {
+                let Some(ops) = self.line_ops else { return 0 };
+                // SAFETY: NUL-terminated bytes (the op's contract)
+                let l = unsafe { (ops.from_text)(a as *const c_char) };
+                if !l.is_null() {
+                    self.host.op(Op::ListAppendLine, l as isize, 0, 0, 0);
+                    // SAFETY: made above
+                    unsafe { (ops.free)(l) };
+                }
+                0
+            }
+            _ => self.host.op_f(op, a, b, c, 0, f),
+        }
+    }
+
+    /// `UILBString::DrawTextA`: the scroll bar's text and the base's draw, then each drawn line in its row (one pixel
+    /// wider than the text rectangle) clipped by the form.
+    fn string_draw(&self) -> isize {
+        self.draw_scroll_bar_text();
+        self.op(Op::DrawCountDecrement, 0, 0);
+        let ctr = self.copy_text.get();
+        let line_height = self.fields().line_height;
+        let mut result = 0;
+        let mut i: c_ulong = 0;
+        while i < self.fields().draw_line_count {
+            let row = draw::string_list_row(&ctr, i, line_height);
+            self.host.op_point(Op::StringListTextAt, 0, UiPoint { x: row.left, y: row.top });
+            self.op(Op::StringListTextLine, i as isize, 0);
+            result = self.host.op_rect(Op::StringListDrawClipped, 0, 0, row);
+            i += 1;
+        }
+        result
+    }
+
+    /// `UILBString::UpdateTranslatedKey`: the next line starting with the key's letter selected and scrolled to
+    /// (`find_key.rs`); kErrorNotFound when none does.
+    fn string_key(&self, key: &[u8]) -> isize {
+        let Some(i) = crate::find_key::find(key, self.fields().current_selection, &mut Find(self)) else {
+            return ERROR_NOT_FOUND;
+        };
+        let bar = self.bar.get();
+        if bar != 0 {
+            self.op(Op::BarSetValue, bar, i as isize);
+        }
+        self.host.op(Op::ListChangeSelection, i as isize, 1, 1, 0);
+        self.op(Op::SetDirty, 1, 0);
+        0
     }
 
     fn op(&self, op: Op, a: isize, b: isize) -> isize {
@@ -303,6 +592,7 @@ impl EeUiList {
         self.op(Op::PollDelete, self.delay, 0);
         self.op(Op::RhombusDelete, self.selected, 0);
         self.op(Op::RhombusDelete, self.copied_selected, 0);
+        self.free_lines(true);
     }
 
     fn copy_data(&self) -> isize {
@@ -329,7 +619,7 @@ impl EeUiList {
         }
         self.update(|f| f.copied_scroll_bar_visible = bar != 0);
         let shown = self.fields().number_lines_displayed;
-        self.host.op(Op::ListCopyLines, shown as isize, first as isize, last as isize, 0);
+        self.copy_lines(shown as usize, first as usize, last as usize);
         let f = self.fields();
         let ctr = self.copy_text.get();
         let lines = self.num_lines();
@@ -412,22 +702,22 @@ impl EeUiList {
         if key(9) {
             handled = true;
             if repeat {
-                self.op(Op::ListProcess, 0, 0);
+                self.op(Op::ListProcessDown, 0, 0);
             }
         }
         if key(8) {
             handled = true;
             if repeat {
-                self.op(Op::ListProcess, 1, 0);
+                self.op(Op::ListProcessUp, 0, 0);
             }
         }
         if key(6) {
             handled = true;
-            self.op(Op::ListProcess, 2, 0);
+            self.op(Op::ListProcessHome, 0, 0);
         }
         if key(7) {
             handled = true;
-            self.op(Op::ListProcess, 3, 0);
+            self.op(Op::ListProcessEnd, 0, 0);
         }
         if key(10) {
             handled = true;
@@ -658,21 +948,161 @@ impl EeUiList {
 
 // ---- the C ABI
 
-/// A new Rust list box for the C++ `list` (its `UIControl` part constructed); the C++ then sizes the copy, assigns
-/// the lines and calls `CheckScrollBar`.
+/// A new Rust list box for the C++ `list` (its `UIControl` part constructed) with a copy of the `count` lines at
+/// `data` (`stride` bytes apart, of the type `ops` makes); the C++ then calls `CheckScrollBar`.
 ///
 /// # Safety
-/// `host` answers the ops for `list`.
+/// `host` answers the ops for `list`; `ops` is live; `data` holds `count` live lines.
 #[no_mangle]
+#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn ee_ui_list_new(
     list: *mut c_void,
     host: EeUiHostFn,
+    ops: *const EeUiLineOps,
+    data: *const c_void,
+    count: usize,
+    stride: usize,
     line_height: c_ulong,
     auto_select: bool,
     border: c_ulong,
 ) -> *mut EeUiList {
-    let obj = Box::into_raw(Box::new(EeUiList::new(Host { obj: list, f: host }, line_height, auto_select, border)));
-    crate::direct::made(crate::direct::Kind::List, list, obj)
+    let mut o = EeUiList::new(Host { obj: list, f: host }, line_height, auto_select, border);
+    // SAFETY: the contract
+    unsafe { o.set_lines(*ops, data, count, stride) };
+    crate::direct::made(crate::direct::Kind::List, list, Box::into_raw(Box::new(o)))
+}
+
+/// The lines of `mData` (`which` 0) or `mCopyLineArray` (1).
+///
+/// # Safety
+/// `list` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_lines(list: *const EeUiList, which: u32) -> usize {
+    // SAFETY: the contract
+    unsafe { (*list).line_count(which) }
+}
+
+/// Line `i` of `mData` (`which` 0) or `mCopyLineArray` (1): the `T` (NULL past the end).
+///
+/// # Safety
+/// `list` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_line(list: *const EeUiList, which: u32, i: usize) -> *mut c_void {
+    // SAFETY: the contract
+    unsafe { (*list).line(which, i) }
+}
+
+/// `AppendLine(*line)` (the base class's).
+///
+/// # Safety
+/// `list` is live; `line` is a live line.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_append(list: *const EeUiList, line: *const c_void) {
+    // SAFETY: the contract
+    unsafe { (*list).append(line) }
+}
+
+/// `AppendStringArray`: the `count` lines at `data`, `stride` bytes apart.
+///
+/// # Safety
+/// `list` is live; `data` holds `count` live lines.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_append_n(list: *const EeUiList, data: *const c_void, count: usize, stride: usize) {
+    // SAFETY: the contract
+    unsafe { (*list).append_n(data, count, stride) }
+}
+
+/// `InsertLine(*line, index, sort)`: `less(sort, a, b)` the predicate (NULL: the line goes in at `index`).
+///
+/// # Safety
+/// `list` is live; `line` is a live line; `less` is NULL or takes `sort` and two live lines.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_insert(
+    list: *const EeUiList,
+    line: *const c_void,
+    index: c_ulong,
+    sort: *mut c_void,
+    less: EeUiLineLess,
+) {
+    // SAFETY: the contract
+    unsafe { (*list).insert(line, index as usize, sort, less) }
+}
+
+/// `DeleteLine(i)` (the base class's).
+///
+/// # Safety
+/// `list` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_delete_line(list: *const EeUiList, i: c_ulong) {
+    // SAFETY: the contract
+    unsafe { (*list).delete_line(i as usize) }
+}
+
+/// `DeleteAllEntries()` (the base class's).
+///
+/// # Safety
+/// `list` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_delete_all(list: *const EeUiList) {
+    // SAFETY: the contract
+    unsafe { (*list).delete_all() }
+}
+
+/// `FindString(*line, *out)`: true with the index in `out` when a line equals `line` (`eq`).
+///
+/// # Safety
+/// `list` is live; `line` is a live line; `eq` takes two live lines; `out` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_find(
+    list: *const EeUiList,
+    line: *const c_void,
+    eq: EeUiLineEq,
+    out: *mut c_ulong,
+) -> bool {
+    // SAFETY: the contract
+    match unsafe { (*list).find(line, eq) } {
+        Some(i) => {
+            // SAFETY: the contract
+            unsafe { *out = i as c_ulong };
+            true
+        }
+        None => false,
+    }
+}
+
+/// `GetCurrentSelection(*out)`: the selection in `out`; OK when there are lines and a selection, else 0xd.
+///
+/// # Safety
+/// `list` is live; `out` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_list_current_selection(list: *const EeUiList, out: *mut c_ulong) -> c_long {
+    // SAFETY: the contract
+    let (r, s) = unsafe { (*list).current_selection() };
+    // SAFETY: the contract
+    unsafe { *out = s };
+    r as c_long
+}
+
+/// `UILBString::DrawTextA`.
+///
+/// # Safety
+/// `list` is a live string list's.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_string_list_draw(list: *const EeUiList) -> c_long {
+    // SAFETY: the contract
+    unsafe { (*list).string_draw() as c_long }
+}
+
+/// `UILBString::UpdateTranslatedKey(key)`: OK, or kErrorNotFound when no line starts with the key's letter.
+///
+/// # Safety
+/// `list` is a live string list's; `key` is NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_string_list_key(list: *const EeUiList, key: *const c_char) -> c_long {
+    // SAFETY: the contract
+    let key = if key.is_null() { &[][..] } else { unsafe { CStr::from_ptr(key) }.to_bytes() };
+    // SAFETY: the contract
+    unsafe { (*list).string_key(key) as c_long }
 }
 
 /// The destructor (after `mData.clear()`): the rest of `DeleteAllEntries`, then the parts deleted; frees the object.
