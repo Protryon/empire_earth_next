@@ -212,6 +212,18 @@ long ee_won_asyncsocket_recv_from(const EeWonAsyncSocket *s,
                                   bool *from,
                                   int32_t *received);
 
+/// `AsyncSocket::RecvFrom` (R6 WON round 33): as `ee_won_asyncsocket_recv_from`, the sender (when there is one and
+/// `out` is not NULL) assigned to `out` as a new `IPAddr` of its platform address (AsyncOp.cpp's MakeAddr: the
+/// family, address and port, the rest zero).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_recv_from`; `out` NULL or a live `IPAddr` value.
+long ee_won_asyncsocket_recv_from_ip(const EeWonAsyncSocket *s,
+                                     void *data,
+                                     int32_t length,
+                                     EeWonIpAddr *out,
+                                     int32_t *received);
+
 /// `Disconnect`.
 ///
 /// # Safety

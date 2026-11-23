@@ -25,6 +25,8 @@ pub mod rmap;
 pub mod scenario;
 /// The crate ee_tech before the restructure.
 pub mod tech;
+/// The units' named constants (unit types, categories, families, class flags, action and trigger ids) for the C++ headers.
+pub mod unit_ids;
 /// The crate ee_units before the restructure.
 pub mod units;
 /// The world's objects as Rust reads them in place: the records, the layout, the views (the world views' lane).

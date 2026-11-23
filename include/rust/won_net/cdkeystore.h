@@ -8,6 +8,39 @@
 #include <stddef.h>
 #include "rust/won_net/ffi.h"
 
+/// The CDKey's calls (`ee_won_cdkey_obj_call`).
+enum class EeWonCdKeyCall {
+  /// `IsValid()`.
+  IsValid,
+  /// `Invalidate()`.
+  Invalidate,
+  /// the key is present (`mKey.get() != NULL`)
+  HasKey,
+  /// `Flag(a)`.
+  Flag,
+  /// `InitRaw(data)` (8 bytes).
+  InitRaw,
+  /// `Init(data, a)`: the key's text.
+  Init,
+  /// `InitEncrypted(data, a)` (`data` NULL: false).
+  InitEncrypted,
+  /// `SetProductString(data, a)`: invalidated, the product set.
+  SetProduct,
+  /// `LoadFromRegistry(a, data)`: `data` the key path (a C string).
+  LoadRegistry,
+  /// `SaveToRegistry(a, data)`.
+  SaveRegistry,
+  /// `ClearFromRegistry(a, data)`.
+  ClearRegistry,
+  /// `SaveToFile(data)`: `data` the file name (a C string).
+  SaveFile,
+  /// `LoadFromFile(data)`.
+  LoadFile,
+};
+
+/// The CDKey's data (0x1c bytes in the original: the product string, the key's ByteBuffer, the validity).
+struct EeWonCdKeyObj;
+
 extern "C" {
 
 /// `LoadFromRegistry`'s read: the product's value as bytes to `sink` (false when the key or value is missing, not
@@ -57,6 +90,52 @@ bool ee_won_cdkey_file_write(const char *path,
 /// # Safety
 /// `path` is a C string; `sink` is valid with `context`.
 bool ee_won_cdkey_file_read(const char *path, EeWonByteSink sink, void *context);
+
+/// `CDKey::GetMachineId`: the machine's id (0 without one), `ok` (when not NULL) whether it has one.
+///
+/// # Safety
+/// `ok` is NULL or a bool.
+uint32_t ee_won_cdkey_machine_id(bool *ok);
+
+/// A new CDKey of the product (`product_len` bytes).
+///
+/// # Safety
+/// `product` holds `product_len` bytes.
+EeWonCdKeyObj *ee_won_cdkey_obj_new(const uint8_t *product, size_t product_len);
+
+/// A copy (the C++ copy constructor).
+///
+/// # Safety
+/// `k` is a live CDKey.
+EeWonCdKeyObj *ee_won_cdkey_obj_clone(const EeWonCdKeyObj *k);
+
+/// `*to = *from` (the C++ assignment).
+///
+/// # Safety
+/// Both are live CDKeys.
+void ee_won_cdkey_obj_assign(EeWonCdKeyObj *to, const EeWonCdKeyObj *from);
+
+/// Frees a CDKey.
+///
+/// # Safety
+/// `k` came from `ee_won_cdkey_obj_new` or `_clone`, freed once.
+void ee_won_cdkey_obj_free(EeWonCdKeyObj *k);
+
+/// One call on a CDKey (`EeWonCdKeyCall`): its truth value.
+///
+/// # Safety
+/// `k` is a live CDKey; `data` as the call documents (`a` bytes, a C string or 8 bytes).
+bool ee_won_cdkey_obj_call(EeWonCdKeyObj *k, EeWonCdKeyCall call, const uint8_t *data, ptrdiff_t a);
+
+/// The CDKey's bytes to `sink`: 0 the product, 1 the raw key (none without one), 2 the text (`GetString`), 3 the
+/// encrypted key (`GetEncrypted`; none when invalid). Returns whether any were given.
+///
+/// # Safety
+/// `k` is a live CDKey; `sink` is valid with `context`.
+bool ee_won_cdkey_obj_bytes(const EeWonCdKeyObj *k,
+                            int32_t which,
+                            EeWonByteSink sink,
+                            void *context);
 
 }  // extern "C"
 

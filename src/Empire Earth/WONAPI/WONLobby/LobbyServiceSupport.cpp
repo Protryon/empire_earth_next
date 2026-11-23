@@ -123,7 +123,7 @@ unsigned short GetLobbyProductId()
 bool LobbyDoCDKeyCheck() { return gLobbyData.get()!=NULL?gLobbyData->mConfig->mCDKeyCheck:false; }
 // (SDK LobbyMisc::IsCDKeyValid)
 // Returns whether the player's CD key is valid
-bool LobbyIsCDKeyValid() { return gLobbyData.get()!=NULL?gLobbyData->mCDKey.mValid:false; }
+bool LobbyIsCDKeyValid() { return gLobbyData.get()!=NULL?gLobbyData->mCDKey.IsValid():false; }
 // Returns the path of the system terms-of-use file, or an empty string without a lobby (SDK LobbyMisc::GetSysTOUPath)
 const std::string& LobbyGetSysTOUPath() { return gLobbyData.get()!=NULL?gLobbyData->mSysTOUPath:GetEmptyStr(); }
 // Returns the path of the game terms-of-use file, or an empty string without a lobby (SDK LobbyMisc::GetGameTOUPath)

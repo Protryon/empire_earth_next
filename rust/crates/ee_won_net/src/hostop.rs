@@ -1101,6 +1101,25 @@ pub unsafe extern "C" fn ee_won_hostop_set(
     unsafe { (*op).op.set(which, &v) }
 }
 
+/// Two object setters in order (R6 WON round 33: GetCertOp's constructor's server and auth contexts).
+///
+/// # Safety
+/// As `ee_won_hostop_set`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_set_two(
+    op: *const EeWonHostOp,
+    which1: i32,
+    obj1: *mut c_void,
+    which2: i32,
+    obj2: *mut c_void,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_won_hostop_set(op, which1, 0, std::ptr::null(), 0, std::ptr::null(), obj1);
+        ee_won_hostop_set(op, which2, 0, std::ptr::null(), 0, std::ptr::null(), obj2);
+    }
+}
+
 /// The members, one line (the drivers' form).
 ///
 /// # Safety

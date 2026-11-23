@@ -7,7 +7,7 @@
 use ee_base::math::types::{Ge3DPoint, GeOrientation};
 
 use crate::units::cls_carrier::{self as cr, CarrierHost};
-use crate::units::cls_host::{ClsGame, EeUnitsClsIo, EE_UNITS_CLS_COMMAND_TYPE, EE_UNITS_CLS_FLY_TO_GOAL};
+use crate::units::cls_host::{ClsGame, EeUnitsClsIo, EE_UNITS_CLS_COMMAND_TYPE};
 use crate::units::cls_host::{EE_UNITS_CLS_HOME_BASE, EE_UNITS_CLS_IS_SPACE_MAP, EE_UNITS_CLS_NEXT_WAYPOINT};
 use crate::units::uu_host::Game;
 use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
@@ -116,7 +116,9 @@ impl CarrierHost for ClsGame {
         self.cr0(EE_UNITS_CLS_CR_ROUTE_DOCK, unit, class);
     }
     fn fly_to_goal(&mut self, class: u64, p: Ge3DPoint, unit: u64) {
-        self.cr(EE_UNITS_CLS_FLY_TO_GOAL, unit, class, 0, 0, p, 0.0);
+        // FlyToGoal's one call (uca_air.rs)
+        let mut f = [p.x, p.y, p.z, 0.0];
+        crate::units::cls_host::uca_call(crate::units::uca_air::EE_UNITS_UCA_DO_FLY_TO_GOAL, class, unit, 0, &mut f);
     }
     fn has_air_traffic(&mut self, unit: u64) -> bool {
         self.cr0(EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC, unit, 0).0 != 0

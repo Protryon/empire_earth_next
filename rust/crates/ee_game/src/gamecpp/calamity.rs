@@ -76,7 +76,7 @@ mod k {
     pub(crate) const CAL_C_START_SOUND: i64 = 2;
 }
 
-/// The CALW events (`EECalamityCaptureOp`, ee/EETechCapture.h).
+/// The CALW events (were ee/EETechCapture.h's `EECalamityCaptureOp`: the helper update 1 .. the destroyed effect 26).
 mod cap {
     pub(crate) const CAL_W_HELPER_UPDATE: i64 = 1;
     pub(crate) const CAL_W_UNITS_NEAR: i64 = 2;

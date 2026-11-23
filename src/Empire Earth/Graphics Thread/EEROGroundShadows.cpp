@@ -25,7 +25,6 @@
 #include "rust/game/gamecpp.h"
 
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
-extern const EeGfxRaster gEERustRaster;
 
 // Creates the ground shadows' render object
 EEROGroundShadows::EEROGroundShadows()
@@ -47,7 +46,7 @@ void EEROGroundShadows::FrameStarting()
 // Creates the shared shadow quad model (StaticShadow): a unit square in the ground plane (ee_gfx shadows.rs)
 void EEROGroundShadows::CreateShadowModel()
 {
-    ee_gfx_ground_shadows_create(&gEERustRaster);
+    ee_gfx_ground_shadows_create(ee_gamecpp_ro_raster());
 }
 
 // Draws the static shadows and unit shadows (when ground shadows are on), then the effects' ground pass (queue 0)
@@ -60,7 +59,7 @@ void EEROGroundShadows::RenderScene()
 // Releases the shared shadow quad model (ee_gfx shadows.rs)
 void EEROGroundShadows::ReleaseShadowModel()
 {
-    ee_gfx_ground_shadows_release(&gEERustRaster);
+    ee_gfx_ground_shadows_release(ee_gamecpp_ro_raster());
 }
 
 void EEROGroundShadows::FrameDone()

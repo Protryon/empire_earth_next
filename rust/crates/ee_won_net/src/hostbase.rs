@@ -397,6 +397,56 @@ pub unsafe extern "C" fn ee_won_hostop_base(op: *const EeWonHostOp, which: i32, 
     unsafe { (*op).base_set(which, num, Obj::of(obj)) }
 }
 
+/// `RustServerOp::SetMaxTimes` (R6 WON round 33): the connect, send and receive time limits, in that order.
+///
+/// # Safety
+/// As `ee_won_hostop_base`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_set_max_times(op: *const EeWonHostOp, connect: i32, send: i32, recv: i32) {
+    for (which, t) in
+        [(EE_WON_HOSTBASE_MAX_CONNECT, connect), (EE_WON_HOSTBASE_MAX_SEND, send), (EE_WON_HOSTBASE_MAX_RECV, recv)]
+    {
+        // SAFETY: the caller's contract; the C++ passed each as a DWORD
+        unsafe { ee_won_hostop_base(op, which, i64::from(t as u32), std::ptr::null_mut()) };
+    }
+}
+
+/// `RustServerOp::SetAuthType` (R6 WON round 33): the auth type, then the auth context; with `set_socket` then the
+/// socket (`SetSocket`: the peer authentication ops' constructors).
+///
+/// # Safety
+/// As `ee_won_hostop_base`; `context` and `socket` NULL or live `RefCount*`s.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_set_auth(
+    op: *const EeWonHostOp,
+    auth_type: i32,
+    context: *mut c_void,
+    set_socket: bool,
+    socket: *mut c_void,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_won_hostop_base(op, EE_WON_HOSTBASE_AUTH_TYPE, i64::from(auth_type), std::ptr::null_mut());
+        ee_won_hostop_base(op, EE_WON_HOSTBASE_AUTH_CONTEXT, 0, context);
+        if set_socket {
+            ee_won_hostop_base(op, EE_WON_HOSTBASE_SOCKET, 0, socket);
+        }
+    }
+}
+
+/// `RustServerOp::SetClientKeySize` (R6 WON round 33): the key size, then whether the client key is used.
+///
+/// # Safety
+/// As `ee_won_hostop_base`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_set_client_key(op: *const EeWonHostOp, size: u8, use_client_key: bool) {
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_won_hostop_base(op, EE_WON_HOSTBASE_CLIENT_KEY_SIZE, i64::from(size), std::ptr::null_mut());
+        ee_won_hostop_base(op, EE_WON_HOSTBASE_USE_CLIENT_KEY, i64::from(use_client_key), std::ptr::null_mut());
+    }
+}
+
 #[cfg(test)]
 #[path = "hostbase_tests.rs"]
 mod tests;

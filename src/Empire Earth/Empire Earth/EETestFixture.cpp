@@ -73,6 +73,7 @@
 #include "ee/EEScreenEvent.h"
 #include <algorithm>
 #include "rust/game/fixture.h"
+#include "rust/game/sim_driver.h"   // the fault report (fault.rs)
 #include "ee/EECombatGoals.h"
 
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open
@@ -141,30 +142,8 @@ void DebugToStderr(const char* inText)
     fflush(stderr);
 }
 
-#ifdef _WIN32
-// TEST ONLY: a fault under the fixture prints its code, place and return addresses (exe addresses: EE-AOC.map) on
-// stderr, which the harness keeps as game.log, as EE-SIM's own handler does: an intermittent crash in a harness run
-// otherwise leaves only its exit code.
-LONG CALLBACK FixtureFault(EXCEPTION_POINTERS* inInfo)
-{
-    DWORD theCode = inInfo->ExceptionRecord->ExceptionCode;
-    if (theCode < 0xC0000000UL || theCode == 0xE06D7363UL)   // not a fault (thread names, debug strings, C++)
-        return EXCEPTION_CONTINUE_SEARCH;
-    static volatile LONG sOnce = 0;
-    if (InterlockedExchange(&sOnce, 1))
-        return EXCEPTION_CONTINUE_SEARCH;
-    void* theFrames[48];
-    USHORT theCount = RtlCaptureStackBackTrace(0, 48, theFrames, NULL);
-    char theText[2048];
-    int n = snprintf(theText, sizeof(theText), "EE-AOC FAULT %08lx at %p thread %lu; frames:", (unsigned long)theCode,
-                     inInfo->ExceptionRecord->ExceptionAddress, (unsigned long)GetCurrentThreadId());
-    for (USHORT k = 0; k < theCount && n < (int)sizeof(theText) - 24; k++)
-        n += snprintf(theText + n, sizeof(theText) - n, " %p", theFrames[k]);
-    fprintf(stderr, "%s\n", theText);
-    fflush(stderr);
-    return EXCEPTION_CONTINUE_SEARCH;
-}
-#endif
+// (TEST ONLY: a fault under the fixture prints its code, place and return addresses on stderr, which the harness
+// keeps as game.log: sim_driver fault.rs, EE-SIM's own report)
 
 const unsigned long kTriggerEvent = 0x3f0;
 
@@ -253,10 +232,7 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     // ---- the compound operations' finer ones (compound.rs)
     case EeFixtureOp::FxInstallDebug: PlatDebugSetHandler(DebugToStderr);
         return 0;
-    case EeFixtureOp::FxInstallFault:
-#ifdef _WIN32
-        AddVectoredExceptionHandler(1, FixtureFault);
-#endif
+    case EeFixtureOp::FxInstallFault: ee_sim_driver_fault_install("EE-AOC");
         return 0;
     case EeFixtureOp::FxInstallLasso: gEESelectUnitsTestHook = LassoHook;   // each box selection's ids (the boxselect command)
         return 0;

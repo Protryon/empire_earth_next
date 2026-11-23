@@ -498,6 +498,24 @@ pub unsafe extern "C" fn ee_won_writer_append_utf16le(
     unsafe { (*w).append_utf16le(crate::ffi::bytes(data, length as usize), size) }
 }
 
+/// `AppendWString` of `count` `wchar_t`s of `wchar_size` bytes (R6 WON round 33: the conversion to UTF-16, WONBuffer.h's
+/// WideAppendUtf16LE, is here): a unit count field, then the little-endian units.
+///
+/// # Safety
+/// As `ee_won_writer_append`; `wide` holds `count` characters.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_writer_append_wide(
+    w: *mut EeWonWriteBuffer,
+    wide: *const std::ffi::c_void,
+    wchar_size: u32,
+    count: usize,
+    size: u8,
+) {
+    // SAFETY: the caller's contract
+    let le = crate::text::utf16_to_le_bytes(&unsafe { crate::ffi::wide_units(wide, wchar_size, count) });
+    unsafe { (*w).append_utf16le(&le, size) }
+}
+
 /// `SetBytes` (and `SetByte`, `SetShort`).
 ///
 /// # Safety

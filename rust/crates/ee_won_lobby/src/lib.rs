@@ -8,6 +8,7 @@
 #[cfg(test)]
 mod chat_golden;
 pub mod chatctl;
+pub mod chatlink;
 pub mod chatobj;
 pub mod dialogs;
 pub mod dlglogic;
@@ -27,6 +28,8 @@ pub mod lanlogic;
 pub mod lanobj;
 pub mod lanown;
 pub mod lobbycfg;
+pub mod lobbycfgrd;
+pub mod lobbyconf;
 pub mod lobbyctl;
 pub mod lobbydlg;
 pub mod lobbyevt;
@@ -34,9 +37,11 @@ pub mod lobbyhost;
 pub mod lobbymap;
 pub mod lobbyops;
 pub mod lobbypopup;
+pub mod lobbyprv;
 pub mod lobbyrun;
 pub mod logics;
 pub mod model;
+pub mod modelbuf;
 pub mod modelobj;
 pub mod netctl;
 pub mod netdisp;

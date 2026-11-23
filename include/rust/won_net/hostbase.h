@@ -54,6 +54,34 @@ int64_t ee_won_hostop_base_get(const EeWonHostOp *op, int32_t which);
 /// `op` is a live, natively bound op; `obj` NULL or a live `RefCount*`.
 void ee_won_hostop_base(const EeWonHostOp *op, int32_t which, int64_t num, void *obj);
 
+/// `RustServerOp::SetMaxTimes` (R6 WON round 33): the connect, send and receive time limits, in that order.
+///
+/// # Safety
+/// As `ee_won_hostop_base`.
+void ee_won_hostop_set_max_times(const EeWonHostOp *op,
+                                 int32_t connect,
+                                 int32_t send,
+                                 int32_t recv);
+
+/// `RustServerOp::SetAuthType` (R6 WON round 33): the auth type, then the auth context; with `set_socket` then the
+/// socket (`SetSocket`: the peer authentication ops' constructors).
+///
+/// # Safety
+/// As `ee_won_hostop_base`; `context` and `socket` NULL or live `RefCount*`s.
+void ee_won_hostop_set_auth(const EeWonHostOp *op,
+                            int32_t auth_type,
+                            void *context,
+                            bool set_socket,
+                            void *socket);
+
+/// `RustServerOp::SetClientKeySize` (R6 WON round 33): the key size, then whether the client key is used.
+///
+/// # Safety
+/// As `ee_won_hostop_base`.
+void ee_won_hostop_set_client_key(const EeWonHostOp *op,
+                                  uint8_t size,
+                                  bool use_client_key);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_NET_HOSTBASE_H

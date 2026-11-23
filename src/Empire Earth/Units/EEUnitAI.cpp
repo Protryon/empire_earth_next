@@ -76,6 +76,9 @@ static EeUnitsAtc* CondTraffic(EEComplexUnit* inUnit) { return inUnit->mPlayer->
 // the statements' shared locals: EECanConvert's flag, the drop location's and the ground point
 static bool sCondFlag;
 static GE3DPoint sCondPoint;
+static GE3DPoint sCondSunkPosition;
+static GETransformation sCondSunkTransformation(false);
+static GEBoundingBox sCondSunkBox;
 
 static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint)
 {
@@ -104,23 +107,21 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     // the waypoints' cases: Rust (cls_host.rs over waypoints.rs)
     case EE_UNITS_COND_CAN_CONVERT: return EECanConvert(theUnit, CondUnit(inB), sCondFlag);
     case EE_UNITS_COND_CONVERSION_COST: return EEGetConversionCost(theUnit);
-    case EE_UNITS_COND_SUNK: {
-        GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-        const GEPhysicalModel& theModel = theUnit->mPhysicalModel;
-        GEModel* theGEModel = theModel.GetModel();
-        GEBoundingBox theTransformedBox;
-        theUnit->GetPosition(thePosition);
-        GETransformation theTransformation(false);
-        theModel.GetLocation().Apply(theGEModel->GetInternalTransform(theModel.GetFrame()), theTransformation);
-        float theScale = theModel.GetScale();
-        theTransformation.Scale(theScale, theScale, theScale);
-        theTransformation.SetX(thePosition.GetX());
-        theTransformation.SetY(thePosition.GetY());
-        theTransformation.SetZ(thePosition.GetZ());
-        GEBoundingBox theBox = theGEModel->GetBoundingBox(theModel.GetFrame());
-        theBox.Transform(theTransformation, theTransformedBox);
-        return theTransformedBox.GetTopRightBack().GetZ() < 0.0f;
-    }
+    // the sunk test's statements (cls_condition.rs sunk; sCondSunk*: its locals)
+    case EE_UNITS_COND_SUNK_POSITION: theUnit->GetPosition(sCondSunkPosition = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
+    case EE_UNITS_COND_SUNK_LOCATE:
+        theUnit->mPhysicalModel.GetLocation().Apply(theUnit->mPhysicalModel.GetModel()->GetInternalTransform(theUnit->mPhysicalModel.GetFrame()), sCondSunkTransformation = GETransformation(false));
+        return 0;
+    case EE_UNITS_COND_SUNK_SCALE:
+        sCondSunkTransformation.Scale(theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale());
+        return 0;
+    case EE_UNITS_COND_SUNK_SET_X: sCondSunkTransformation.SetX(sCondSunkPosition.GetX()); return 0;
+    case EE_UNITS_COND_SUNK_SET_Y: sCondSunkTransformation.SetY(sCondSunkPosition.GetY()); return 0;
+    case EE_UNITS_COND_SUNK_SET_Z: sCondSunkTransformation.SetZ(sCondSunkPosition.GetZ()); return 0;
+    case EE_UNITS_COND_SUNK_BOX:
+        theUnit->mPhysicalModel.GetModel()->GetBoundingBox(theUnit->mPhysicalModel.GetFrame()).Transform(sCondSunkTransformation, sCondSunkBox);
+        return 0;
+    case EE_UNITS_COND_SUNK_TOP_Z: ioIo->f = sCondSunkBox.GetTopRightBack().GetZ(); return 0;
     // ---- uai_cond.rs's statements (the compound answers and AttackNearby)
     case EE_UNITS_UAI_GOAL_KIND: return CondGoal(inB)->mKind;
     case EE_UNITS_UAI_GOAL_FORCED_MOVE: return static_cast<EEUGRust*>(CondGoal(inB))->GetIsForcedMove();

@@ -215,8 +215,6 @@ mod game {
     use std::os::raw::c_long;
 
     extern "C" {
-        /// `SeaAnimalAdjustPath(unit, path)`: the points' depths (EEUnitClassGround.cpp: the physics' random stream)
-        fn ee_units_wp_host_sea_animal_path(class: u64, unit: u64, points: *mut [f32; 3], count: u32);
         /// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
         fn ee_units_wp_host(op: i32, unit: u64, arg: u64, point: *mut f32) -> i64;
     }
@@ -741,8 +739,8 @@ mod game {
                 }
             }
             4 => {
-                // SAFETY: the path's points
-                unsafe { ee_units_wp_host_sea_animal_path(class, unit, path.as_mut_ptr(), path.len() as u32) }
+                // SAFETY: the caller's live class and unit
+                unsafe { crate::units::ucg_sea::sea_animal_path(class, unit, path) }
             }
             _ => {}
         }

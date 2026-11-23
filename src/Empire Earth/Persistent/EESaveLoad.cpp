@@ -79,26 +79,13 @@ extern char gEmptyString[];             // 0x4e5b98 (the empty string; EECampaig
 // Returns a save file's name with its last three characters replaced by "txt", or unchanged when asked to keep it
 UString GetSaveTextName(const UString& inName, bool inKeep)
 {
-    UString theName;
-    if (!inKeep) {
-        theName.Copy((const char*)inName, 0, inName.GetLength() - 3, 0, false);
-        theName += "txt";
-    } else {
-        theName += inName;
-    }
-    return theName;
+    return UString(ee_gamecpp_save_text_name((const char*)inName, inName.GetLength(), inKeep));   // gamecpp persist_text.rs
 }
 
 // Returns the current date and time as text (asctime), or "Date/time failed."
 UString GetDateText()
 {
-    UString theDate;
-    time_t theTime;
-    if (time(&theTime) != -1)
-        theDate = asctime(localtime(&theTime));
-    else
-        theDate = "Date/time failed.";
-    return theDate;
+    return UString(ee_gamecpp_date_text());   // gamecpp persist_text.rs
 }
 
 // The old text twin (".txt") of a save deleted, as the original's unused debug file's Delete did (FSBasicFile::Delete:

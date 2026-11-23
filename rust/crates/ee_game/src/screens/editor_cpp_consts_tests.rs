@@ -27,7 +27,7 @@ const EE_SCREENS_SECC_HEADERS: [&str; 5] = [
     "include/rust/render/gestate.h",
     "include/lle/UIControl.h",
     "include/rust/ui/ids.h",
-    "include/ee/EEUnitClassIDs.h",
+    "include/rust/sim/unit_ids.h",
 ];
 
 /// A C++ constant's value: `#define NAME value` or an enumerator `NAME = value,` of the headers.

@@ -57,17 +57,7 @@ EEGameStateLoader::EEGameStateLoader(EEGameState* inState)
 // Returns whether a file name ends in the scenario extension (case-insensitive)
 bool EEIsScenarioFile(const UString& inFile)
 {
-    UString theFile;
-    UString theExtension;
-    bool theResult = false;
-    theFile = inFile;
-    theFile.ToLower();
-    theExtension = theFile.GetSubstring(theFile.GetLength() - gScenarioExtension.GetLength(),
-                                        gScenarioExtension.GetLength());
-    theExtension.ToLower();
-    if (theExtension.Equals(gScenarioExtension))
-        theResult = true;
-    return theResult;
+    return ee_gamecpp_is_scenario_file(inFile);   // gamecpp persist_text.rs
 }
 
 // Returns whether a scenario file is being loaded right now
@@ -145,4 +135,19 @@ int64_t EEPLoaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     return EEPHelpersOpF(inOp, p, a, f);
+}
+
+// ------------------------------------------------------------------------- round 11, lane C: the loader's C++
+
+int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the scenario extension's text (gamecpp persist_text.rs; EETechCapture.cpp's EECore11OpC7 default)
+int64_t EECore11OpC8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::C11ScenarioExtension: return (int64_t)(intptr_t)(const char*)gScenarioExtension;
+    default: return EECore11OpE(inOp, p, a, f);
+    }
+    return 0;
 }

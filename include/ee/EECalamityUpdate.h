@@ -28,17 +28,6 @@ struct EECalamityUpdateHost {
 };
 
 // runs the class's update in Rust; the calamity's members in and out (EeCalamityState) around it and every host call
-long EECalamityRunUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime, const EeCalamityParams& inParams,
-                         EESoundObject* inSound, EESoundObject* inSecondarySound);
-
-// runs the class's Start / Stop in Rust (ee_tech calamity_start.rs) over the same host: the class's own steps are
-// the EeCalamityOp::ClassStep calls
-bool EECalamityRunStart(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
-                        EESoundObject* inSound, EESoundObject* inSecondarySound);
-void EECalamityRunStop(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
-                       EESoundObject* inSound, EESoundObject* inSecondarySound);
-
-// the cast tests (ee_tech calamity_cast.rs) and their host are Rust (ee_game gamecpp calamity_objects.rs): the
-// class's CanCastAt, IsValidLocation and IsValidTarget forward there
+// (the class's run over this host: gamecpp calamity_io.rs class_run, game core lane round 11)
 
 #endif

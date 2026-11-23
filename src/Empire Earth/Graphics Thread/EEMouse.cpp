@@ -28,10 +28,6 @@ EEMouse::~EEMouse()
     ee_gfx_input_mouse_set(NULL);
 }
 
-// The frame's slots and calls (RTSMouse.cpp)
-GESurface** RTSMouseSlot(RTSMouse* inMouse, unsigned long inIndex);
-long RTSMouseFrameCall(RTSMouse* inMouse, uint32_t inOp, GESurface* inSurface, const GE2DPoint* inOrigin, bool inFlag);
-
 // Loads the 14 extra pointer images (convert, transport, calamity, rally, heal, patrol, garrison, flare,
 // attack ground...), then the engine's pointers; returns the first load error (gamecpp ro_views.rs)
 long EEMouse::Load(GEScreen* inScreen)
@@ -45,28 +41,4 @@ long EEMouse::Release()
     return ee_gamecpp_mo_release(this);
 }
 
-// ------------------------------------------------------------------------- round 10, lane A: the mouse's C++ (gamecpp ro_views.rs)
-
-int64_t EECore10OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore10OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
-#define MO_MOUSE ((EEMouse*)p)
-
-// the C++ calls of gamecpp ro_views.rs' mouse (EERenderSnapshot.cpp's EERoViewsOp default; the lane's last switch,
-// whose default is lane B's link): one statement each
-int64_t EEMouseOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::MoLoadPointer: return MO_MOUSE->LoadPointer((const char*)a[0], (GEScreen*)a[1], RTSMouseSlot(MO_MOUSE, 10 + (unsigned long)a[2]));
-    case O::MoRtsLoad: return MO_MOUSE->RTSMouse::Load((GEScreen*)a[0]);
-    case O::MoReleaseExtra: return RTSMouseFrameCall(MO_MOUSE, 5, NULL, NULL, false);
-    case O::MoRtsRelease: return MO_MOUSE->RTSMouse::Release();
-    default: return EECore10OpB(inOp, p, a, f);
-    }
-}
-
-double EEMouseOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore10OpBF(inOp, p, a, f);
-}
+// (the mouse's C++ calls: EERenderSnapshot.cpp's EERoViewsOp)

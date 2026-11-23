@@ -604,7 +604,7 @@ fn the_message_ids_and_unit_types_equal_the_cpp_enumerators() {
     assert_eq!(m("kMessageSelectUnits"), EE_SCREENS_SEU_MSG_SELECT_UNITS as i64);
     assert_eq!(m("kMessageAddUnitsToSelectedGroup"), EE_SCREENS_SEU_MSG_ADD_UNITS as i64);
     assert_eq!(m("kMessageAddAndRemoveUnitsFromSelectedGroup"), EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS as i64);
-    let u = |n| cpp_enumerator("include/ee/EEUnitClassIDs.h", n);
+    let u = |n| cpp_enumerator("include/rust/sim/unit_ids.h", n);
     assert_eq!(u("kUnitTypeAirport"), i64::from(EE_SCREENS_SEAX_TYPE_AIRPORT));
     assert_eq!(u("kUnitTypeGranary"), i64::from(EE_SCREENS_SEAX_TYPE_GRANARY));
     assert_eq!(u("kUnitTypeGranaryImproved"), i64::from(EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED));

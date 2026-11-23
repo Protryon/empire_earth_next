@@ -477,6 +477,24 @@ pub unsafe extern "C" fn ee_combat_attack_set(goal: u64, value: *const EeCombatA
     put(goal, unsafe { *value });
 }
 
+/// The attack goal's record by value (`EEUnitGoal::Attack()`).
+#[no_mangle]
+pub extern "C" fn ee_combat_attack_of(goal: u64) -> EeCombatAttackGoal {
+    attack_of(goal)
+}
+
+/// `SetAttacker(attacker)` (`which` 0) or `SetSidestepCount(count)` (1): one field of the record.
+#[no_mangle]
+pub extern "C" fn ee_combat_attack_set_field(goal: u64, which: i32, value: u64) {
+    let mut r = attack_of(goal);
+    if which == 0 {
+        r.attacker = value;
+    } else {
+        r.sidestep = value as u32;
+    }
+    put(goal, r);
+}
+
 #[cfg(test)]
 #[path = "goal_attack_tests.rs"]
 mod tests;

@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/buffer.h"
 #include "rust/won_net/ffi.h"
 
 /// `SetUserName(text)`
@@ -91,6 +92,41 @@ void ee_won_auth_login_text(const EeWonAuthLogin *l,
                             int32_t which,
                             EeWonByteSink sink,
                             void *context);
+
+/// `LoginText(which)` as `wchar_t` text (R6 WON round 33): `ee_won_auth_login_text`'s bytes read as their UTF-16
+/// little-endian units (an odd last byte dropped), given to `sink` once.
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_text_wide(const EeWonAuthLogin *l,
+                                 int32_t which,
+                                 uint32_t wchar_size,
+                                 EeWonWideSink sink,
+                                 void *context);
+
+/// `LoginSet` with the key as `wchar_t` text (R6 WON round 33: its UTF-16 conversion is here).
+///
+/// # Safety
+/// `l` is a login; `key` holds `key_count` characters of `wchar_size` bytes; `value` holds `value_len` bytes.
+void ee_won_auth_login_set_wide(const EeWonAuthLogin *l,
+                                int32_t which,
+                                const void *key,
+                                uint32_t wchar_size,
+                                size_t key_count,
+                                const uint8_t *value,
+                                size_t value_len,
+                                int64_t num);
+
+/// `AppendBlock(which, buffer, challenge)` (R6 WON round 33): `ee_won_auth_login_block`'s bytes appended to the
+/// write buffer.
+///
+/// # Safety
+/// `l` is a login; `data` holds `len` bytes; `w` a live write buffer.
+void ee_won_auth_login_block_to(const EeWonAuthLogin *l,
+                                int32_t which,
+                                const uint8_t *data,
+                                size_t len,
+                                EeWonWriteBuffer *w);
 
 /// `SetHashFileList(community, files)`: the files NUL-separated (`files_len` bytes, each path NUL-ended).
 ///

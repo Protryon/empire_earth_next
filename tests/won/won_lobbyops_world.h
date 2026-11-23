@@ -223,7 +223,7 @@ template <class T> struct LogicCompletion : Completion {
     LogicCompletion(void (T::*inFn)(AsyncOp*), T* inLogic);
 };
 struct LanLogic {
-    SmartPtr<Dialog> mLanNameDialog, mDirectConnectDialog;
+    SmartPtr<Dialog> mLanNameDialog, mDirectConnectDialog, mLanPortDialog;
     void HandleAccept(AsyncOp*) {}
     void HandleDiscoveryRecv(AsyncOp*) {}
     void HandleSocketClosed(AsyncOp*) {}
@@ -270,6 +270,9 @@ static bool LobbyIsCDKeyValid() { Log("IsCDKeyValid"); return sCdKeyValid; }
 static void LobbyMessageBox(const GUIString& t, const GUIString& d) { Log("MessageBox " + t.s + " " + d.s); }
 static void LobbyDoErrorDialog(const GUIString& t, WONStatus s) { Log("ErrorDialog " + t.s + " " + N(s)); }
 static int LobbyGetLobbyPort() { Log("GetLobbyPort"); return 3456; }
+// a dialog's answer (the LAN port dialog's here; the Internet logics' set it too: won_netlogic_world.h)
+static int sDoDialogResult = 100001;
+static int LobbyDoDialog(Dialog* d) { Log("DoDialog " + Id(d)); return sDoDialogResult; }
 static int LobbyGetLanBroadcastPort() { Log("GetLanBroadcastPort"); return 4567; }
 static void LobbyAddDirectConnect(const IPAddr& a, const GUIString& n) { Log("AddDirectConnect " + N(a.mValue) + " " + n.s); }
 } // namespace LoWorld

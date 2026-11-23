@@ -235,6 +235,25 @@ pub unsafe extern "C" fn ee_won_socket_thread_pump(t: *const EeWonSocketThread, 
     unsafe { (*t).pump(wait) }
 }
 
+/// `SocketThreadSimple::Pump` (R6 WON round 33): the pump's work, then a wait of the time it gives on the thread's
+/// signal (none for 0).
+///
+/// # Safety
+/// `t` and `thread` are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_socket_thread_pump_wait(
+    t: *const EeWonSocketThread,
+    thread: *const crate::thread::EeWonThread,
+    wait: u32,
+) {
+    // SAFETY: the caller's contract
+    let w = unsafe { (*t).pump(wait) };
+    if w > 0 {
+        // SAFETY: as above
+        unsafe { (*thread).wait_signal(w) };
+    }
+}
+
 /// # Safety
 /// `t` is valid.
 #[no_mangle]

@@ -37,6 +37,15 @@ void ee_won_socket_thread_remove(const EeWonSocketThread *t, void *op);
 /// `t` is valid.
 uint32_t ee_won_socket_thread_pump(const EeWonSocketThread *t, uint32_t wait);
 
+/// `SocketThreadSimple::Pump` (R6 WON round 33): the pump's work, then a wait of the time it gives on the thread's
+/// signal (none for 0).
+///
+/// # Safety
+/// `t` and `thread` are valid.
+void ee_won_socket_thread_pump_wait(const EeWonSocketThread *t,
+                                    const EeWonThread *thread,
+                                    uint32_t wait);
+
 /// # Safety
 /// `t` is valid.
 void ee_won_socket_thread_purge(const EeWonSocketThread *t);

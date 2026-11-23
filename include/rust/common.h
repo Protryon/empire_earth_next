@@ -151,6 +151,14 @@ unsigned long gx_vertex_buffer_release(void *buffer);
 
 unsigned long gx_device_release(void *device);
 
+void gx_set_render_percent(unsigned long percent);
+
+void gx_set_frame_limit(long frames_per_second);
+
+void gx_set_texture_filtering(unsigned long mode);
+
+void gx_set_brightness(float gamma);
+
 extern float ee_units_pm_host_random();
 
 extern int isspace(int c);
