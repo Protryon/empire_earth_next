@@ -97,8 +97,6 @@ void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount)
 
 // ------------------------------------------------------------------------- round 11, lane B: the Empire Earth directory's managers (preferences, game options, sounds, music, the game log, the camera, the app captures)
 
-int64_t EECore11OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore11OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define B_SET ((EEGameSettings*)p)
@@ -123,6 +121,7 @@ double EECore11OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 
 // the C++ calls and members of lane B's bodies in Rust (gamecpp; EeGameCpp's round 11 lane B section): one
 // statement each (the camera's are EECameraControl.cpp's EECore10OpD7)
+int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEServer.cpp
 int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -421,11 +420,12 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DvCanAfford: return B_CV->CanAfford((EECivUpgrade)a[0], (unsigned long*)a[1], NULL);
     case O::DvApplyUpgrade: return gCivilizationManager.ApplyUpgrade((EECivUpgrade)a[0], (long)a[1]);
-    default: return EECore11OpC(inOp, p, a, f);
+    default: return EECore11OpC2(inOp, p, a, f);
     }
     return 0;
 }
 
+double EECore11OpC5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEContagionManager.cpp
 double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -441,6 +441,6 @@ double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EgColorRed: return B_PL->mColor.mRed;
     case O::EgColorGreen: return B_PL->mColor.mGreen;
     case O::EgColorBlue: return B_PL->mColor.mBlue;
-    default: return EECore11OpCF(inOp, p, a, f);
+    default: return EECore11OpC5F(inOp, p, a, f);
     }
 }

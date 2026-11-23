@@ -733,8 +733,6 @@ void EEDeleteDatabase(bool inShutdown)
 #include <utility>
 
 int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EEStartupOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEStartupOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the constants startup.rs passes
 static_assert(IDS_ARIAL == 1 && IDS_TIMES_NEW_ROMAN == 2 && IDS_COURIER_NEW == 3 && IDS_TAHOMA == 4 && IDS_CIVILIZATIONS == 29783 && IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_SOUND == 5865 && IDS_ERROR_CANT_RUN_16EA == 5866 && kSoundHotKeyAlarm == 0x3c2 && kPixelFormatZPrefer16 == 12, "gamecpp startup.rs");
@@ -1381,30 +1379,19 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::CpOnAttackPlayer: EECPUnitsOnAttackPlayer((EEComputerPlayer*)p, (long)a[0], a[1] != 0);
         break;
-    default: return EEStartupOpNext(inOp, p, a, f);
+    default: return EEGraphicsOp(inOp, p, a, f);
     }
     return 0;
 }
 
+double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
     case O::PrefMaxSounds: return gGamePreferences.mSettings.GetMaxNumberOfSounds();
-    default: return EEStartupOpNextF(inOp, p, a, f);
+    default: return EECore9OpAF(inOp, p, a, f);
     }
-}
-
-// the graphics bodies' (EEGraphics.cpp)
-int64_t EEStartupOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEGraphicsOp(inOp, p, a, f);
-}
-
-double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEStartupOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpAF(inOp, p, a, f);
 }
 
 // ------------------------------------------------------------------------- round 9, lane E: this file's bodies' C++
@@ -1515,12 +1502,6 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     return 0;
 }
 
-double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // round 10 (EEGraphics.cpp)
-
-double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore10OpAF(inOp, p, a, f);
-}
 
 // The deferred COMDATs at the end of the unit (0x14494d..0x14622a: the inline-class deleting dtors and every template
 // instantiation) are compiled without /Og, while every user function is -O1: the file ends with an unmatched
@@ -1549,9 +1530,4 @@ int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     }
 }
 
-double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
 
-double EECore10OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore10OpE3F(inOp, p, a, f);
-}

@@ -161,7 +161,6 @@ void EEPWorldHelper::GetChecksum(ESChecksum& ioChecksum) const
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
 
 int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // EEWorld.cpp
@@ -786,6 +785,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     return 0;
 }
 
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
 double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -795,6 +795,6 @@ double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     // (EECore9OpCF)
     case O::PsMasterVolume: return gSoundManager->GetMasterVolume();
     case O::PsMusicVolume: return gConductor->GetConductor().GetVolume();
-    default: return EEPLoaderOpF(inOp, p, a, f);
+    default: return EECore9OpD7F(inOp, p, a, f);
     }
 }

@@ -425,7 +425,7 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     return 0;
 }
 
-double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEPWorldHelper.cpp
 double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -449,6 +449,6 @@ double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::TlHeight: return ((EETile*)p)->GetHeight();
     case O::TlMapTileSize: return gMapTileSize;
     case O::TlMeshZ: return ((EEMap*)p)->mTerrainMesh.GetZ((long)a[0], (long)a[1]);
-    default: return EECore9OpB5F(inOp, p, a, f);
+    default: return EEPWorldOpF(inOp, p, a, f);
     }
 }

@@ -69,7 +69,7 @@ long RTSMouseFrameCall(RTSMouse* inMouse, uint32_t inOp, GESurface* inSurface, c
 #define RV_COLORED(k) (gRenderSnapshot.mColoredRectangles[k])
 
 // the C++ calls and members of gamecpp ro_views.rs (EEROUnits.cpp's EERoUnitsOp default): one statement each
-int64_t EECore10OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEDataTextFile.cpp
 int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -188,12 +188,12 @@ int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MoRtsLoad: return MO_MOUSE->RTSMouse::Load((GEScreen*)a[0]);
     case O::MoReleaseExtra: return RTSMouseFrameCall(MO_MOUSE, 5, NULL, NULL, false);
     case O::MoRtsRelease: return MO_MOUSE->RTSMouse::Release();
-    default: return EECore10OpB(inOp, p, a, f);
+    default: return EECore10OpB5(inOp, p, a, f);
     }
     return 0;
 }
 
-double EECore10OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameUtilities.cpp
 double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -201,6 +201,6 @@ double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GuGetAlphaRef: return gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
     case O::GsClassScale: return gUnitClassTable[a[0]]->GetScale();
     case O::SnMapColoredOpacity: return RV_MAP->mColoredRectangles[a[0]].mOpacity;
-    default: return EECore10OpBF(inOp, p, a, f);
+    default: return EECore10OpDF(inOp, p, a, f);
     }
 }

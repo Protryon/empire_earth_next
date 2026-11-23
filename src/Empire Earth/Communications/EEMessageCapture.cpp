@@ -37,14 +37,9 @@ static const bool sCaptureHooksSet = (EEMessageCaptureImport = EEMessageCaptureI
 
 // ------------------------------------------------------------------------- round 10, lane C: the records' C++ reads
 
-double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // lane D's link
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define MCMSG ((NEMessage*)p)
 #define MCNE (static_cast<NEMRecord*>(MCMSG))
 #define MCMR (static_cast<EEMRecord*>(MCMSG))
 
-double EECore10OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore10OpDF(inOp, p, a, f);
-}

@@ -230,8 +230,6 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
 // ------------------------------------------------------------------------- the message bodies' C++ (gamecpp message.rs)
 
 
-int64_t EEMessageOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEMessageOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the constants message.rs passes
 static_assert(kGraphicEffectCommandConfirmationMove == 0xb8 && kGraphicEffectCommandConfirmationAttack == 0xb9 && kGraphicEffectCommandConfirmationGatherOther == 0xba && kGraphicEffectDisbandUnitEmitter == 0xbc && kAIKindAircraftCarrier == 0xf && kAIKindSpaceCarrier == 0x27 && kUnitTypeAirport == 0x42 && kGoalUnloadTransport == 8 && kUnitCategoryFortress == 0x1d && kActionIdle == 5000 && kSoundButton2 == 0x208 && kSoundIncomingChatMessage == 0x3ae && kSoundClockTick == 0x3a8 && kSoundCashRegister == 0xe && kEECPChoiceClassic == 0, "gamecpp message.rs");
@@ -253,24 +251,8 @@ static_assert(sizeof(EETileCoordinate) == 2 * sizeof(long) && sizeof(GE2DPoint) 
 #define MAIN_FORM gUIManager->GetMainGameForm()
 
 
-double EEMessageOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEMessageOpNextF(inOp, p, a, f);
-}
-
 // the next bodies' cases (Empire Earth.cpp)
 int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EEMessageOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEStartupOp(inOp, p, a, f);   // the start-up bodies' (Empire Earth.cpp)
-}
-
-double EEMessageOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEStartupOpF(inOp, p, a, f);
-}
-
 // ------------------------------------------------------------------------- round 11, lane C: the messages' C++
 
 
@@ -792,7 +774,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::LcLongVecSize: return (int64_t)((std::vector<long>*)p)->size();
     case O::LcLongVecAt: return (*(std::vector<long>*)p)[a[0]];
-    default: return EEMessageOpNext(inOp, p, a, f);
+    default: return EEStartupOp(inOp, p, a, f);
     }
     return 0;
 }

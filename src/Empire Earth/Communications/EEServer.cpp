@@ -304,12 +304,6 @@ static_assert(kSlotServer == 0xfe && kSlotNone == 0xff, "gamecpp server.rs SLOT_
 #define MSG ((NEMessage*)a[0])
 #define WSTR(k) (*(UWideString*)a[k])
 
-double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
-double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpD7F(inOp, p, a, f);
-}
-
 // ------------------------------------------------------------------------- round 11, lane C: the server's bodies' C++
 
 int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);

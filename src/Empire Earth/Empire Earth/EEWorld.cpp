@@ -1274,9 +1274,8 @@ double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 
 // RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world): one statement each; the end of the
 // chain
-int64_t EECore11OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);    // round 11 (EEUnitPicker.cpp)
-double EECore11OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
+int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
 int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -1345,17 +1344,18 @@ int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::WsRecPlayTime: REC.mStatistics.Set(0x18, (long)a[1]);
         break;
-    default: return EECore11OpA(inOp, p, a, f);
+    default: return EECore11OpB(inOp, p, a, f);
     }
     return 0;
 }
 
+double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
 double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
     case O::WsRandom: return gPhysics->GetRandom(f[0], f[1]);
-    default: return EECore11OpAF(inOp, p, a, f);
+    default: return EECore11OpBF(inOp, p, a, f);
     }
     return 0.0;
 }

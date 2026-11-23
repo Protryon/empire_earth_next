@@ -112,7 +112,6 @@ void EEGameState::FinishLoad(unsigned long inMajorVersion, unsigned long inMinor
 // ------------------------------------------------------------------------- the state bodies' C++ (gamecpp state.rs)
 
 int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEMessageOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define ST ((EEGameState*)p)
@@ -274,11 +273,12 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     return 0;
 }
 
+double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // Empire Earth.cpp
 double EEGameStateOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
     case O::RulesSpeedFactor: return EERuleFloat(EEGetRules().mGameOptions.mSpeeds[a[0]].mFactor);
-    default: return EEMessageOpF(inOp, p, a, f);
+    default: return EEStartupOpF(inOp, p, a, f);
     }
 }

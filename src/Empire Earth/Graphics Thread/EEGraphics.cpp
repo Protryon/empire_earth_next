@@ -158,7 +158,6 @@ long EEGraphics::PostMessage50AAndWait()
 // ------------------------------------------------------------------------- the graphics bodies' C++ (gamecpp graphics.rs)
 
 
-int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define GFX ((EEGraphics*)p)
@@ -167,6 +166,7 @@ int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const fl
 
 // The graphics thread object's C++ calls and members (EeGameCpp's graphics section; Empire Earth.cpp's EEStartupOp
 // default): one statement each
+int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -269,31 +269,15 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::RtCopyTo: gRasterizer->GetRenderTarget((unsigned long)a[0])->CopyTo(CAPTURE->mSurface, *(GERectangle*)a[1], *(GERectangle*)a[2], false);
         break;
-    default: return EEGraphicsOpNext(inOp, p, a, f);
+    default: return EECore9OpA(inOp, p, a, f);
     }
     return 0;
 }
 
-// round 9's cases (EERenderObject.cpp's EECore9OpA, then B..E)
-int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpA(inOp, p, a, f);
-}
-
 // ------------------------------------------------------------------------- round 10, lane A: the Graphics Thread (EEGraphics.cpp, the EERO* units, EEMouse, EERenderSnapshot, EEUnitPicker)
-
-// the next switches of the lane (EEROUnits.cpp's, then EERenderSnapshot.cpp's and EEMouse.cpp's, whose default is
-// EECore10OpB)
-int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 10 lane A section): one
 // statement each
-int64_t EECore10OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EERoUnitsOp(inOp, p, a, f);   // (its cases are EEGraphicsOp's)
-}
-
 double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
