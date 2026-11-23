@@ -11,20 +11,9 @@
 #include <string>
 #include <vector>
 
-#include "EEDataText.h"
+#include "EEDataText.h"   // TakeBytes
 
 #include "EERulesGenDecode.h"
-
-const char* const kEERuleCategoryNames[] = {
-    "ambient", "resource", "building", "airplane", "naval", "land", "land_citizen", "helicopter", "land8",
-    "projectile", "submerged_naval", "bomb", "missile", "land_priest", "naval_priest", "land15", "land_transport",
-    "helicopter_transport", "naval_transport", "building19", "torpedo", "naval_building", "naval_citizen",
-    "land_military_hero", "mining_building", "gate", "helicopter_priest", "sea_animal", "air_animal", "fortress",
-    "building_priest", "spaceship", "space_building", "space_transport", "planet_spaceship"};
-const unsigned long kEERuleCategoryCount = sizeof(kEERuleCategoryNames) / sizeof(kEERuleCategoryNames[0]);
-
-const char* const kEEAICheatNames[] = {"cost", "reveal", "epochs", "extra", "popband", "catchup", "retire"};
-const unsigned long kEEAICheatCount = sizeof(kEEAICheatNames) / sizeof(kEEAICheatNames[0]);
 
 EERuleNumber EERuleNumber::Constant(float inValue)
 {
@@ -54,63 +43,6 @@ bool EECombatRules::IsElevationAttacker(long inCategory) const { return Contains
 bool EECombatRules::IsElevationLauncher(long inCategory) const { return Contains(this->mElevationLaunchers, inCategory); }
 bool EECombatRules::IsElevationTarget(long inCategory) const { return Contains(this->mElevationTargets, inCategory); }
 bool EECombatRules::IsMoraleBuilding(long inUnitType) const { return Contains(this->mMoraleBuildings, inUnitType); }
-
-const EECivAttribute* EECivBuilderRules::Find(long inLevel) const
-{
-    for (const EECivAttribute& a : this->mAttributes)
-        if (a.mLevel == inLevel)
-            return &a;
-    return nullptr;
-}
-
-const EECivAttribute* EECivBuilderRules::FindID(const std::string& inID) const
-{
-    for (const EECivAttribute& a : this->mAttributes)
-        if (a.mID == inID)
-            return &a;
-    return nullptr;
-}
-
-const EECivCategoryText* EECivBuilderRules::FindCategory(long inRow) const
-{
-    for (const EECivCategoryText& c : this->mCategories)
-        if (c.mRow == inRow)
-            return &c;
-    return nullptr;
-}
-
-const EECivPowerRule* EECivPowerRules::Find(long inRow) const
-{
-    for (const EECivPowerRule& p : this->mPowers)
-        if (p.mPower == inRow)
-            return &p;
-    return nullptr;
-}
-
-const EEAIPersonalityRule& EEAIPersonalityRules::ForPlayer(unsigned long inPlayerID) const
-{
-    static const EEAIPersonalityRule kNone = [] { EEAIPersonalityRule r; r.mID = "balanced"; return r; }();
-    if (this->mPersonalities.empty())
-        return kNone;
-    long k = 0;
-    if (!this->mAssign.empty())
-        k = this->mAssign[(inPlayerID > 0 ? inPlayerID - 1 : 0) % this->mAssign.size()];
-    return this->mPersonalities[k >= 0 && (size_t)k < this->mPersonalities.size() ? k : 0];
-}
-
-long EEAIPersonalityRules::Find(const std::string& inID) const
-{
-    for (size_t k = 0; k < this->mPersonalities.size(); k++)
-        if (this->mPersonalities[k].mID == inID)
-            return (long)k;
-    return -1;
-}
-
-long EEDifficultyAICheats(unsigned long inDifficulty)
-{
-    const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
-    return inDifficulty < theList.size() ? theList[inDifficulty].mAICheats : 0L;   // none (the original: all)
-}
 
 long EEDifficultyAILevel(unsigned long inDifficulty)
 {
@@ -146,35 +78,10 @@ void EERules::Refresh()
     ee_data_bytes_free(theBytes);
 }
 
-bool EERules::Load(EEDataText::Content& inContent, std::string& outError)
-{
-    EeDataBytes theError{nullptr, 0};
-    if (!ee_data_rules_load(this->mRust, inContent.Handle(), &theError)) {
-        outError = EEDataText::TakeBytes(theError);
-        return false;
-    }
-    this->Refresh();
-    return true;
-}
-
 void EERules::SetMusicFromFlags(long inSong, const bool* inFlags, unsigned long inCount)
 {
     ee_data_rules_set_music_from_flags(this->mRust, (int32_t)inSong, inFlags, inCount);
     this->Refresh();
-}
-
-bool EERules::SetMusicFromDbmusicFile(const unsigned char* inData, size_t inSize)
-{
-    bool theOK = ee_data_rules_music_from_dbmusic(this->mRust, inData, inSize);
-    this->Refresh();
-    return theOK;
-}
-
-void EERules::Dump(std::string& outJson) const
-{
-    EeDataBytes theBytes{nullptr, 0};
-    ee_data_rules_dump(this->mRust, &theBytes);
-    outJson += EEDataText::TakeBytes(theBytes);
 }
 
 EERules& EEGetRules()

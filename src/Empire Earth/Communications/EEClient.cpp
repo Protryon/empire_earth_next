@@ -25,20 +25,9 @@ UWideString gU4E6058;
 // Creates the game client: no lobby slot yet, server migration allowed, fast selection reset, its lock created
 EEClient::EEClient()
 {
-    this->mUISlotNumber = 0xff;
-    this->mHasLeftGame = false;
-    this->mIsMigrating = false;
-    this->mAllowServerMigration = true;
-    this->mIgnoreConnectionTimeout = false;
-    this->mIsServerLost = false;
-    this->mHasLoaded = false;
-    this->mServerLostAfterLoading = false;
-    this->mWasBooted = false;
-    this->ResetFastSelection();
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mFastSelectionLock) == keseOK, 67);
+    ee_gamecpp_client_init(this);   // gamecpp session_objs.rs (the lock's ESVERIFY_AT keeps line 67: EECore11OpC3)
 }
 
-// (included here, below the ctor: placed so that the ctor's ESVERIFY keeps line 67)
 #include <list>
 #include <string>
 #include <mbstring.h>
@@ -50,8 +39,7 @@ extern UString gCampaignExtension;          // 0x530b78 (ee/EECampaignFormManage
 // Destroys the client, stopping its threads and releasing the fast-selection lock
 EEClient::~EEClient()
 {
-    this->StopThreads();
-    TSScheduler::DestroyCriticalSection(this->mFastSelectionLock);
+    ee_gamecpp_client_drop(this);
 }
 
 // Boots this client from the canceled game when the host's slot (0) has become open, else refreshes the slot's line
@@ -140,11 +128,7 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
 // Clears the fast-selection state (no selection executing, id 0, empty table)
 void EEClient::ResetFastSelection()
 {
-    this->mIsExecutingSelection = false;
-    this->mUF2 = 0;
-    this->mFastSelectionID = 0;
-    for (long i = 0; i < 16; ++i)
-        this->mFastSelection[i] = 0;
+    ee_gamecpp_client_reset_fast(this);
 }
 
 // Starts the game: the graphics, the physics loop, the main game UI; humans without a slot dropped
@@ -220,6 +204,37 @@ int64_t EECore9OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::ClSprintfSeconds: sprintf(WSTR(0), WSTR(1), (unsigned long)a[2]);
         break;
     default: return EECore9OpD6(inOp, p, a, f);
+    }
+    return 0;
+}
+
+// ------------------------------------------------------------------------- round 11, lane C: the client's bodies' C++
+
+int64_t EECore11OpC4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEMessage.cpp
+
+// the client's plain tail (gamecpp session_objs.rs EeGamecppClientTail): mHasLeftGame .. mWasBooted
+static_assert(offsetof(EEClient, mUISlotNumber) - offsetof(EEClient, mHasLeftGame) == 1
+                  && offsetof(EEClient, mUF2) - offsetof(EEClient, mHasLeftGame) == 18
+                  && offsetof(EEClient, mIsExecutingSelection) - offsetof(EEClient, mHasLeftGame) == 20
+                  && offsetof(EEClient, mWasBooted) - offsetof(EEClient, mHasLeftGame) == 27,
+              "gamecpp session_objs.rs EeGamecppClientTail");
+
+#define CL ((EEClient*)p)
+
+// the C++ calls and members of the client's bodies in Rust (gamecpp session_objs.rs; EEServer.cpp's EECore11OpC2
+// default): p the client, one statement each
+int64_t EECore11OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::C11ClTail: return P64(&CL->mHasLeftGame);
+    case O::C11ClCreateLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(CL->mFastSelectionLock) == keseOK, 67);
+        break;
+    case O::C11ClStopThreads: CL->StopThreads();
+        break;
+    case O::C11ClDestroyLock: TSScheduler::DestroyCriticalSection(CL->mFastSelectionLock);
+        break;
+    default: return EECore11OpC4(inOp, p, a, f);
     }
     return 0;
 }
