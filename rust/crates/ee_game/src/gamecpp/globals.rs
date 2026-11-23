@@ -121,16 +121,18 @@ mod tests {
     #[test]
     fn initial_values() {
         // the original's .data values (EELoadNetworkSettings' defaults, the space heights); the rest zero
+        // SAFETY: reads of the statics (no writer in the tests)
         unsafe {
-            assert_eq!(gAOCRomanChecksum, 1);
-            assert_eq!(gEELearningChecksum, 1);
-            assert_eq!(gBinaryChecksum, 0);
-            assert_eq!(gSpaceTurretHeight, 0.7f32);
-            assert_eq!(gSpaceStationHeight, 1.5f32);
-            assert!(!gFreeCamera);
-            assert_eq!(gEmptyString, [0; 4]);
-            assert!((*core::ptr::addr_of!(gPhysics)).is_null());
-            assert!((*core::ptr::addr_of!(gFontTahoma72)).is_null());
+            use core::ptr::addr_of;
+            assert_eq!(*addr_of!(gAOCRomanChecksum), 1);
+            assert_eq!(*addr_of!(gEELearningChecksum), 1);
+            assert_eq!(*addr_of!(gBinaryChecksum), 0);
+            assert_eq!(*addr_of!(gSpaceTurretHeight), 0.7f32);
+            assert_eq!(*addr_of!(gSpaceStationHeight), 1.5f32);
+            assert!(!*addr_of!(gFreeCamera));
+            assert_eq!(*addr_of!(gEmptyString), [0; 4]);
+            assert!((*addr_of!(gPhysics)).is_null());
+            assert!((*addr_of!(gFontTahoma72)).is_null());
         }
     }
 

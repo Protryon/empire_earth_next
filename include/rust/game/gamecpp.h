@@ -482,7 +482,6 @@ enum class EeGameCpp : uint32_t {
   WMap,
   WMaxPlayers,
   WMediaLoaded,
-  WMirrorTeams,
   WMoonDirection,
   WNumPlayers,
   WOptions,
@@ -2613,7 +2612,6 @@ enum class EeGameCpp : uint32_t {
   RunFixtureConfigure,
   RunInstanceMutex,
   RunSetEventPump,
-  RunNativeHook,
   RunComInit,
   RunComUninit,
   RunFloatingPoint,
@@ -2624,7 +2622,6 @@ enum class EeGameCpp : uint32_t {
   RunNewResource,
   RunDefaultSettings,
   RunPreferencesLoad,
-  RunSimPreferences,
   RunUserInterface,
   RunUShutdown,
   RunReleaseDataPath,
@@ -3788,6 +3785,14 @@ enum class EeGameCpp : uint32_t {
   C11OptionsPlayerFields,
   C11WarningSound,
   C11UiPost12,
+  C12GameWindowSize,
+  C12DebugText,
+  C12WonNetCffdd,
+  C12WonNetCfff2,
+  C12TeamsResize,
+  C12TeamSetPlayers,
+  C12PlayerObserver,
+  C12PlayerEnemy,
 };
 
 /// A `U2DRectangle<long>` as the C++ stores it: bottom, left, right, top.
@@ -6471,6 +6476,44 @@ void ee_gamecpp_tech_capture_tree_rec(void *record, void *tree);
 /// # Safety
 /// `unit` is a live unit.
 void ee_gamecpp_tech_capture_unit_step(void *unit, bool applies, long value);
+
+/// The POSIX `main`'s start after EE-SIM's turn: -1 and the command line in `out_line` to run the game (EERun);
+/// else the exit code (the smoke test's, 3 for no game data, 1 when the data root cannot be entered).
+///
+/// # Safety
+/// `argv` holds `argc` NUL-ended arguments; `out_line` is writable.
+int ee_gamecpp_posix_start(int argc,
+                           const char *const *argv,
+                           char **out_line);
+
+/// EE-SIM's argument test for the POSIX `main` (see [`sim_skip`]).
+///
+/// # Safety
+/// `argv` holds `argc` NUL-ended arguments.
+int ee_gamecpp_posix_sim_skip(int argc, const char *const *argv);
+
+/// EEMenuWidth: the menus' width at the window's size: the window's when it is at most 768 high, else the width of the
+/// window's shape at 768 high (rounded, even), at least the original's 1024 (a 5:4 screen: 1024x768).
+unsigned long ee_gamecpp_menu_width(unsigned long width,
+                                    unsigned long height);
+
+/// EEWorld::AddTeam: a team of the players, first merging in every team whose players are allied both ways with them.
+void ee_gamecpp_world_teams_add(void *w,
+                                const unsigned long *players,
+                                size_t n);
+
+/// EEWorld::AddAlliance: two players on one team, merging in every team allied both ways with both.
+void ee_gamecpp_world_teams_ally(void *w, uint32_t a, uint32_t b);
+
+/// EEWorld::BreakAlliance.
+void ee_gamecpp_world_teams_break(void *w, uint32_t a, uint32_t b);
+
+/// EEWorld::RemovePlayerFromTeams.
+void ee_gamecpp_world_teams_remove(void *w, uint32_t player);
+
+/// EEWorld::RebuildTeams: the teams from the players' mutual alliances, then Gaia at war with every player.
+void ee_gamecpp_world_teams_rebuild(void *w,
+                                    uint32_t players);
 
 extern int64_t ee_contagion_world(uint32_t op,
                                   uint64_t a,

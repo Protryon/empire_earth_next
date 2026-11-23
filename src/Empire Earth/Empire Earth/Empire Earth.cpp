@@ -276,13 +276,6 @@ void EEEmptyShutdown(bool inShutdown);
 void EESetVideoMode(unsigned long, unsigned long, unsigned long, bool);
 void EEGraphicsShutdown(bool inShutdown); // registered as a shutdown routine (0x543ece)
 // the game view and water ripple constants (.rdata 0x442090..0x4420a8, read from memory by both graphics initializers)
-static const float kStartViewLeft = 0.0f;
-static const float kStartViewRight = 1600.0f;
-static const float kStartViewTop = 35.0f;
-static const float kStartViewBottom = 1085.0f;
-static const float kWaterRipplePeriod = 3.1415927f;
-static const float kWaterRippleSpeed = 0.025f;
-static const float kWaterRippleAmplitude = 0.05f;
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
 
@@ -406,8 +399,6 @@ EEGameState::~EEGameState()
 }
 
 // the game view in 1600 x 1200 layout units -> the window (reloaded at each use: named consts; 0x44217c, 0x4413bc)
-static const float kGameViewScaleX = 0.000625f;
-static const float kGameViewScaleY = 0.00083333335f;
 
 // Sets the viewport to the rectangle (given in 1600x1200 layout units, scaled to the window unless the camera is
 // free) and stops camera following
@@ -590,11 +581,7 @@ unsigned long EEMenuHeight()
 
 unsigned long EEMenuWidth()
 {
-    if (gGameWindowHeight <= 768 || gGameWindowHeight == 0)
-        return gGameWindowWidth;
-    unsigned long theWidth = (gGameWindowWidth * 768 + gGameWindowHeight / 2) / gGameWindowHeight;
-    theWidth &= ~1UL;
-    return theWidth < 1024 ? 1024 : theWidth;   // at least the original's width (a 5:4 screen: 1024x768)
+    return ee_gamecpp_menu_width(gGameWindowWidth, gGameWindowHeight);   // (gamecpp posix_main.rs)
 }
 
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFullScreen)
@@ -618,71 +605,12 @@ bool EEInitializeDisplay()
 #include <objbase.h>
 #endif
 
-bool EEParseCommandLine(const char* inCommandLine); // 0x52d703 (after start-up)
 HINSTANCE gInstance;
 #pragma optimize("g", off)   // rule 4, owner 2026-11-01: WinMain is no-/Og (memory locals, constant push 1/pop eax test)
 // Runs the game: single-instance check, start-up, splash and intro, the user interface loop, then shutdown;
 // returns 1 when the original Empire Earth install is missing, else 0
 // (the previous instance and show command arguments are unused)
-// EESimPreferences (TEST ONLY; was EESim.cpp's): the settings the simulation runs with, over config.yaml (EERun,
-// after gGamePreferences.Load): a window (hidden: DX7Screen::CreateAWindow), the harness's pins (32-bit, Min = Max PTs
-// per Second), no autosave, no music
-static void EESimPreferences()
-{
-    long thePTRate = 40, theAutoSave = 0;
-    ee_sim_driver_preferences(&thePTRate, &theAutoSave);
-    gGamePreferences.mSettings.mFullScreen = false;
-    gGamePreferences.mSettings.mGameBitDepth = 32;
-    gGamePreferences.mSettings.mTextureBitDepth = 32;
-    gGamePreferences.mSettings.mGameWindowWidth = 800;
-    gGamePreferences.mSettings.mGameWindowHeight = 600;
-    gGamePreferences.mSettings.mMinPTsPerSecond = thePTRate;
-    gGamePreferences.mSettings.mMaxPTsPerSecond = thePTRate;
-    gGamePreferences.mSettings.mAutoSaveInMilliseconds = (unsigned long)theAutoSave;
-    gGamePreferences.mSettings.mMusicEnabled = false;
-    gGamePreferences.mSettings.mWaitForVSync = false;
-}
-
-// (They were EEUserInterface.cpp's: tools/cpp_deps.py, PORT_LEARNINGS "Cycle cuts, round 3")
-// Receive's window event pump on the window thread (TSThread::SetEventPump): one event per call
-static bool EEPumpWindowEvent()
-{
-    PlatInputEvent theEvent;
-    if (!PlatWindowPollEvent(&theEvent))
-        return false;
-    if (theEvent.mType == PLAT_EVENT_WAKE)   // the WON lobby's wake-up (PlatWindowWake) while it is not running
-        return true;
-    static const bool sLog = getenv("EE_WINDOW_EVENT_LOG") != NULL;   // opt-in: every event as a debug string
-    if (sLog)
-        ESDebugOut("EE-WINDOW-EVENT %u (key %u/%u, text '%s') ui %d window %lux%lu\n", (unsigned)theEvent.mType,
-                   (unsigned)theEvent.mKey.mScanCode, (unsigned)theEvent.mKey.mVirtualKey,
-                   theEvent.mType == PLAT_EVENT_TEXT ? theEvent.mText.mText : "", gUserInterface != NULL,
-                   gGameWindow ? gGameWindow->GetWidth() : 0, gGameWindow ? gGameWindow->GetHeight() : 0);
-    ISHandleEvent(theEvent);   // the Input System's keyboard and mouse (DirectInput's devices before)
-    EEUserInterface::HandleEvent(theEvent);
-    return true;
-}
-
-#ifdef _WIN32
-// The Win32 messages that are not window events (PlatWindowSetNativeMessageHook): the WON lobby's two messages,
-// handled as the window procedure did; nonzero drops the message. (CD audio's MCI notifications went to SECD, which
-// is gone: the port never opened a CD drive.)
-static int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam)
-{
-    switch (inMessage) {
-    case 0x433:
-        PostMessageA((HWND)inWindow, 0x434, 0, 0);
-        if (gWonNet != NULL)
-            gWonNet->FnCFFDD(0);
-        return 1;
-    case 0x434:
-        if (gWonNet != NULL)
-            gWonNet->FnCFFF2();
-        return 1;
-    }
-    return 0;
-}
-#endif
+// (EESimPreferences, the window's event pump and the native message hook: gamecpp entry.rs, window_pump.rs)
 
 void EERustInit();   // EERust.cpp
 
@@ -700,153 +628,25 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
     return EERun(inInstance, inCommandLine);
 }
 #else
-// The POSIX entry point. The game's data is the data root (EE_DATA_ROOT, else the executable's directory, a macOS app
-// bundle's Contents/Resources: platform/PlatPath.h), which becomes the current directory; the arguments are joined into
-// the command line WinMain gets. --smoke-test checks what needs no game data (CI): the window system, a window, the
-// renderer's wgpu device and presented frames, then reports whether the data root holds the game's data.
-#include "gx/GX.h"
-
-static GXSurface* EESmokeSurface(GXDirectDraw* inDirectDraw, unsigned long inCaps, unsigned long inWidth,
-                                 unsigned long inHeight)
-{
-    GXSURFACEDESC theDescription = {};
-    theDescription.dwSize = sizeof(theDescription);
-    theDescription.dwFlags = GXSD_CAPS | GXSD_WIDTH | GXSD_HEIGHT | GXSD_PIXELFORMAT;
-    theDescription.dwWidth = inWidth;
-    theDescription.dwHeight = inHeight;
-    theDescription.ddsCaps.dwCaps = inCaps;
-    GXPIXELFORMAT& theFormat = theDescription.ddpfPixelFormat;
-    theFormat.dwSize = sizeof(theFormat);
-    theFormat.dwFlags = GXPF_RGB;
-    theFormat.dwRGBBitCount = 32;
-    theFormat.dwRBitMask = 0xff0000;
-    theFormat.dwGBitMask = 0xff00;
-    theFormat.dwBBitMask = 0xff;
-    GXSurface* theSurface = NULL;
-    if (inDirectDraw->CreateSurface(&theDescription, &theSurface, NULL) != GX_OK)
-        return NULL;
-    return theSurface;
-}
-
-// Whether the data root holds the game (its Data folder with the db tables) -> nonzero; the root into outRoot
-static int EEDataPresent(char* outRoot, uint32_t inSize)
-{
-    if (!PlatPathGetDataRoot(outRoot, inSize))
-        return 0;
-    std::string theDb = std::string(outRoot) + "Data\\Db";
-    uint32_t theAttributes = PlatPathGetAttributes(theDb.c_str());
-    return theAttributes != PLAT_ATTR_INVALID && (theAttributes & PLAT_ATTR_DIRECTORY) != 0;
-}
-
-static void EEReportMissingData(const char* inRoot)
-{
-    char theText[1024];
-    snprintf(theText, sizeof(theText),
-             "Empire Earth: The Art of Conquest: game data not found in %s (no Data\\Db folder there).\n"
-             "Copy the installed game (its Data and Users folders) there, or point EE_DATA_ROOT at a copy of it: "
-             "see README.md, 'Linux and macOS'.", inRoot && *inRoot ? inRoot : "the data root");
-    PlatMessageShow("Empire Earth", theText, PLAT_MESSAGE_ERROR);
-}
-
-// -> 0: the window, the wgpu device and 30 presented frames worked (the data root is reported); 2: no display or no
-// GPU adapter; 1: a check failed
-static int EESmokeTest()
-{
-    char theRoot[PLAT_MAX_PATH] = "";
-    int theData = EEDataPresent(theRoot, sizeof(theRoot));
-    PlatWindowSetAppName("Empire Earth Expansion", 0);
-    if (!PlatWindowSystemStart()) {
-        fprintf(stderr, "smoke test: no window system: %s\n", PlatWindowLastError());
-        return 2;
-    }
-    PlatWindow* theWindow = PlatWindowCreate("Empire Earth: The Art of Conquest (smoke test)", 640, 480, 0);
-    if (theWindow == NULL) {
-        fprintf(stderr, "smoke test: no window: %s\n", PlatWindowLastError());
-        return 2;
-    }
-    GXDirectDraw* theDirectDraw = NULL;
-    if (GXDirectDrawCreate(NULL, &theDirectDraw) != GX_OK) {
-        fprintf(stderr, "smoke test: no wgpu device (no GPU adapter)\n");
-        return 2;
-    }
-    theDirectDraw->SetCooperativeLevel(theWindow, GXSCL_NORMAL);
-    GXSurface* thePrimary = EESmokeSurface(theDirectDraw, GXSCAPS_PRIMARYSURFACE, 0, 0);
-    GXSurface* theBack = EESmokeSurface(theDirectDraw, GXSCAPS_OFFSCREENPLAIN | GXSCAPS_3DDEVICE, 640, 480);
-    if (thePrimary == NULL || theBack == NULL) {
-        fprintf(stderr, "smoke test: FAIL surfaces\n");
-        return 1;
-    }
-    int theFailed = 0;
-    for (int theFrame = 0; theFrame < 30; theFrame++) {
-        GXBLTFX theFill = {sizeof(GXBLTFX), (unsigned long)(0x00102030 * (theFrame % 8))};
-        theBack->Blt(NULL, NULL, NULL, GXBLT_COLORFILL, &theFill);
-        GXSURFACEDESC theLocked = {};
-        theLocked.dwSize = sizeof(theLocked);
-        RECT theAll = {0, 0, 640, 480};
-        if (theBack->Lock(NULL, &theLocked, 0, NULL) == GX_OK) {
-            uint32_t thePixel = *(const uint32_t*)((const unsigned char*)theLocked.lpSurface + 10 * theLocked.lPitch + 40);
-            theBack->Unlock(NULL);
-            if ((thePixel & 0xffffff) != (theFill.dwFillColor & 0xffffff))
-                theFailed = 1;
-        } else
-            theFailed = 1;
-        thePrimary->Blt(&theAll, theBack, NULL, 0, NULL);   // presents into the window
-        PlatInputEvent theEvent;
-        while (PlatWindowPollEvent(&theEvent))
-            ;
-        PlatSleep(16);
-    }
-    theBack->Release();
-    thePrimary->Release();
-    theDirectDraw->Release();
-    PlatWindowDestroy(theWindow);
-    printf("smoke test: window, wgpu device, 30 frames presented and read back%s\n", theFailed ? ": FAIL" : "");
-    if (theData)
-        printf("smoke test: the game's data is in %s\n", theRoot);
-    else
-        printf("smoke test: game data not found in %s (EE_DATA_ROOT; README.md 'Linux and macOS')\n",
-               *theRoot ? theRoot : "the data root");
-    PlatWindowSystemStop();
-    return theFailed ? 1 : 0;
-}
-
+// The POSIX entry point: EE-SIM's run (ee-aoc --sim ..., or an ee-sim executable), else the game. The arguments'
+// test, the command line, the data root's check and entry and --smoke-test are ee_game gamecpp posix_main.rs's.
 int EESimMain(int argc, char** argv);   // EESim.cpp (TEST ONLY): the headless simulation, "ee-aoc --sim ..."
 void EESimGameEnded(int inResult);
 
 int main(int argc, char** argv)
 {
-    std::string theCommandLine;
-    // the simulation: "ee-aoc --sim ...", or the exe started as ee-sim (the link tools/xbuild.py game makes beside it)
-    const char* theName = argc > 0 && argv[0] ? argv[0] : "";
-    theName = strrchr(theName, '/') ? strrchr(theName, '/') + 1 : theName;
-    bool theSimFlag = argc > 1 && !strcmp(argv[1], "--sim");
-    if (theSimFlag || !strncmp(theName, "ee-sim", 6)) {
-        int theSkip = theSimFlag ? 1 : 0;
+    int theSkip = ee_gamecpp_posix_sim_skip(argc, argv);
+    if (theSkip >= 0) {
         int theResult = EESimMain(argc - theSkip, argv + theSkip);
         if (theResult != -1)
             return theResult;
         argc = 1;   // the simulation's own options are not the game's command line
     }
-    for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "--smoke-test"))
-            return EESmokeTest();
-        if (i > 1)
-            theCommandLine += ' ';
-        theCommandLine += argv[i];
-    }
-    char theRoot[PLAT_MAX_PATH] = "";
-    if (!EEDataPresent(theRoot, sizeof(theRoot))) {
-        EEReportMissingData(theRoot);
-        return 3;
-    }
-    if (!PlatPathEnterDataRoot()) {
-        PlatMessageShow("Empire Earth", "The game's data directory could not be entered (EE_DATA_ROOT).",
-                        PLAT_MESSAGE_ERROR);
-        return 1;
-    }
-    std::vector<char> theBuffer(theCommandLine.begin(), theCommandLine.end());
-    theBuffer.push_back(0);
-    int theResult = EERun(NULL, &theBuffer[0]);
+    char* theCommandLine = NULL;
+    int theCode = ee_gamecpp_posix_start(argc, argv, &theCommandLine);
+    if (theCode >= 0)
+        return theCode;
+    int theResult = EERun(NULL, theCommandLine);
     if (gPlatSimMode)
         EESimGameEnded(theResult);   // (does not return)
     return theResult;
@@ -1669,12 +1469,15 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RunFixtureConfigure: gEETestFixtureConfigure != NULL ? gEETestFixtureConfigure() : (void)0;
         break;
     case O::RunInstanceMutex: return EECreateInstanceMutex();
-    case O::RunSetEventPump: TSThread::SetEventPump(EEPumpWindowEvent, PlatCurrentThreadId());
+    case O::RunSetEventPump: TSThread::SetEventPump((bool (*)())a[0], PlatCurrentThreadId());   // gamecpp window_pump.rs
         break;
-    case O::RunNativeHook:
-#ifdef _WIN32
-        PlatWindowSetNativeMessageHook(EENativeMessageHook);
-#endif
+    // round 12, fork D (gamecpp window_pump.rs)
+    case O::C12GameWindowSize: return gGameWindow == NULL ? 0 : a[0] == 0 ? gGameWindow->GetWidth() : gGameWindow->GetHeight();
+    case O::C12DebugText: ESDebugOut("%s", (const char*)a[0]);
+        break;
+    case O::C12WonNetCffdd: ((EEWonNet*)p)->FnCFFDD(0);
+        break;
+    case O::C12WonNetCfff2: ((EEWonNet*)p)->FnCFFF2();
         break;
     case O::RunComInit:
 #ifdef _WIN32
@@ -1700,8 +1503,6 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RunDefaultSettings: EEInitializeDefaultSettings();
         break;
     case O::RunPreferencesLoad: return gGamePreferences.Load();
-    case O::RunSimPreferences: EESimPreferences();
-        break;
     case O::RunUserInterface: return gUserInterface->Run((void*)&(const UString&)UString((const char*)a[0]));
     case O::RunUShutdown: UShutdown(a[0] != 0, false);
         break;
