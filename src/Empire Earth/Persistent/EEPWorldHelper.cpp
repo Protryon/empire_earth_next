@@ -665,8 +665,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSetMusicVolume: gConductor->GetConductor().SetVolume(f[0]);
         break;
-    case O::PsSleep: PlatSleep((unsigned long)a[0]);
-        break;
     case O::PsCommPresent: return gCommunications != NULL;
     case O::PsShowSplash: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
         break;

@@ -246,13 +246,13 @@ fn load_main_screen(m: P) {
             if h(O::GfxIsPaused, 0, &[]) == 0 {
                 break;
             }
-            h(O::Sleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
         }
     } else {
         h(O::GfxPostPause, 0, &[]);
         let mut started = h(O::GfxIsPaused, 0, &[]) != 0;
         while !started {
-            h(O::Sleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
             started = h(O::GfxIsPaused, 0, &[]) != 0;
         }
         if *wm::<bool>(O::WGameScreenActive) {

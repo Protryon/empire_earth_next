@@ -607,7 +607,7 @@ fn comms(f: P, v: &[i64; 8]) {
         EE_NETMSG_SESS_COMMS_LOWEST_CTS => O::SsLowestCts,
         EE_NETMSG_SESS_COMMS_DISCONNECT => O::SsDisconnect,
         EE_NETMSG_SESS_COMMS_LOCAL_OUT => O::SsLocalOut,
-        EE_NETMSG_SESS_COMMS_SLEEP => O::SsSleep,
+        EE_NETMSG_SESS_COMMS_SLEEP => return ee_base::plat_core::time::PlatSleep(v[1] as u32),
         _ => O::SsFrameProtocol,
     };
     h(op, f, &[v[1], v[2], v[3]]);
@@ -625,12 +625,12 @@ fn start(f: P, v: &[i64; 8]) {
     } else if v[0] == EE_NETMSG_SESS_START_RESUME {
         h(O::SsPostResume, f, &[]);
         while h(O::SsGfxPaused, f, &[]) != 0 {
-            h(O::SsSleep, f, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
         }
     } else {
         h(O::SsPhysicsPostStart, f, &[]);
         while h(O::SsTimerRunning, f, &[]) == 0 {
-            h(O::SsSleep, f, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
         }
         h(O::SsMainGameUiState0, f, &[]);
     }

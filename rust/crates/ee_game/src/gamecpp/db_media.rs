@@ -84,7 +84,7 @@ extern "C" fn lock_leave(lock: *mut c_void) {
 }
 
 extern "C" fn lock_sleep() {
-    h(O::SsSleep, 0, &[1]);
+    ee_base::plat_core::time::PlatSleep(1);
 }
 
 /// A unit's `sDatabaseLock` (its `TSCriticalSection*`) as the use count's lock.

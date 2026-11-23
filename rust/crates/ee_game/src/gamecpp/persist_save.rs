@@ -335,7 +335,7 @@ fn mute(loading: bool, quiet: bool) -> i64 {
     MUSIC_VOLUME.store(hd(O::PsMusicVolume, 0, &[], &[]).to_bits(), Ordering::Relaxed);
     hf(O::PsSetMasterVolume, 0, &[], &[0.0]);
     hf(O::PsSetMusicVolume, 0, &[], &[0.0]);
-    h(O::PsSleep, 0, &[0x282]);
+    ee_base::plat_core::time::PlatSleep(0x282);
     if quiet || h(O::PsCommPresent, 0, &[]) == 0 || h(O::CommIsServer, 0, &[]) == 0 || loading != true {
         return 0;
     }

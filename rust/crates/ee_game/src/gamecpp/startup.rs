@@ -133,7 +133,7 @@ fn pause_graphics() {
     h(O::GfxPostPause, 0, &[]);
     let mut started = h(O::GfxIsPaused, 0, &[]) != 0;
     while !started {
-        h(O::Sleep, 0, &[1]);
+        ee_base::plat_core::time::PlatSleep(1);
         started = h(O::GfxIsPaused, 0, &[]) != 0;
     }
 }
@@ -142,7 +142,7 @@ fn pause_graphics() {
 fn stop_physics_timer() {
     h(O::PhysPost, 0, &[0x402]);
     while h(O::PhysTimerRunning, 0, &[]) != 0 {
-        h(O::Sleep, 0, &[1]);
+        ee_base::plat_core::time::PlatSleep(1);
     }
 }
 
@@ -582,7 +582,7 @@ pub extern "C" fn ee_gamecpp_startup_shutdown_threads() {
     h(O::WonNetDeleteDetached, 0, &[]);
     h(O::MousePointerPost, 0, &[0x402]);
     while h(O::MousePointerShown, 0, &[]) != 0 {
-        h(O::Sleep, 0, &[1]);
+        ee_base::plat_core::time::PlatSleep(1);
     }
     pause_graphics();
     for (shutdown, delete) in [

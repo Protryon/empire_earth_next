@@ -510,8 +510,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GfxIsPaused: return gGraphics->mIsPaused;
     case O::GfxPostSetFlag5B: gGraphics->PostSetFlag5B(a[0] != 0);
         break;
-    case O::Sleep: PlatSleep((unsigned long)a[0]);
-        break;
     case O::TimeNow: return TMGetTime();
     case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
         break;

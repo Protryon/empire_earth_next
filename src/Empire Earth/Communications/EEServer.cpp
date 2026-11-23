@@ -674,8 +674,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsLocalOut: gLocalPlayerOut = a[0] != 0;
         break;
-    case O::SsSleep: PlatSleep((unsigned long)a[0]);
-        break;
     case O::SsFrameProtocol: NEProtocol::GetProtocol(0, SF->mProtocol);
         break;
     // the game start

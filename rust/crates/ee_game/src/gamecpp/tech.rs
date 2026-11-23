@@ -102,7 +102,7 @@ fn media(player: P, what: i32, id: i32, load: bool) {
             }
         }
         EE_TECH_MEDIA_SLEEP => {
-            h(O::SsSleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
             return;
         }
         _ => return,
