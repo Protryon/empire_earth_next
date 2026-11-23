@@ -8,8 +8,10 @@
 // - context: a server list's addresses and the answer after AddAddressesFromDir / AtomicClear.. with every filter;
 // - ping: the multi-ping op's servers after AddServers;
 // - model: the trace of the model's calls the update makes (servers made, the connected left, names, addresses,
-//   populations, address names).
-// EE_W34_MUTATE=n changes the original side in one way (1..8): the run must then report mismatches.
+//   populations, address names);
+// - request: RoutingRequestValues (whole in Rust: routereq.rs) against the class as it was, over random chains of
+//   numbers, texts, data types, buffers and recipient lists (the values a request is made of).
+// EE_W34_MUTATE=n changes the original side in one way (1..10): the run must then report mismatches.
 // The exit code is the number of mismatching cases.
 #include <windows.h>
 #include <stdio.h>
@@ -32,6 +34,8 @@
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/multiping.h"
 #include "rust/won_net/servctx.h"
+#include "rust/won_net/routereq.h"
+#include "rust/won_net/admin.h"
 #include "rust/won_lobby/dirread.h"
 #include "rust/won_lobby/model.h"
 #include "rust/won_lobby/modelobj.h"
@@ -412,6 +416,76 @@ static void ModelPhase(int inRuns)
     }
 }
 
+// ---- RoutingRequestValues (WONRouting.h at ab1b33bcb, Run recording the values instead of requesting)
+class OrigRequestValues {
+public:
+    OrigRequestValues& N(long long inNum) { return this->Add(inNum, std::string()); }
+    OrigRequestValues& W(const std::wstring& inText) { std::string b; WideAppendUtf16LE(b, inText); return this->Add(0, b); }
+    OrigRequestValues& S(const std::string& inBytes) { return this->Add(0, inBytes); }
+    OrigRequestValues& D(const ByteBuffer* inData)
+    { return inData == NULL ? this->Add(Mutate(9) ? 1 : 0, std::string()) : this->Add(1, std::string(inData->data(), inData->length())); }
+    OrigRequestValues& L(const std::list<unsigned short>& inIds)
+    {
+        std::string b;
+        for (std::list<unsigned short>::const_iterator i = inIds.begin(); i != inIds.end(); ++i)
+            b.append(1, (char)(*i & 0xff)).append(1, (char)(Mutate(10) ? 0 : *i >> 8));
+        return this->Add(0, b);
+    }
+    std::string Run()
+    {
+        std::vector<EeWonAdminValue> v;
+        for (std::list<std::pair<long long, std::string> >::iterator i = mValues.begin(); i != mValues.end(); ++i) {
+            EeWonAdminValue x = {i->first, reinterpret_cast<const uint8_t*>(i->second.data()), i->second.size()};
+            v.push_back(x);
+        }
+        std::string s;
+        for (const EeWonAdminValue& x : v) ValueOut(&s, x.num, x.data, x.len);
+        return s;
+    }
+    static void ValueOut(void* inOut, int64_t inNum, const uint8_t* inData, size_t inLength)
+    {
+        std::string& s = *static_cast<std::string*>(inOut);
+        s += " " + ::N(inNum) + ":";
+        for (size_t i = 0; i < inLength; i++) s += ::N(inData[i]) + ".";
+    }
+private:
+    OrigRequestValues& Add(long long inNum, const std::string& inBytes)
+    { this->mValues.push_back(std::make_pair(inNum, inBytes)); return *this; }
+    std::list<std::pair<long long, std::string> > mValues;
+};
+static void RequestPhase(int inRuns)
+{
+    static const wchar_t* const kTexts[] = {L"", L"Room", L"\x00e9t\x00e9", L"a\xd800" L"b", L"\xd83d\xde00"};
+    static const char* const kTypes[] = {"", "G", "_C", "\xff\x00x"};
+    for (int q = 0; q < inRuns; q++) {
+        OrigRequestValues o;
+        RoutingRequestValues n;
+        for (unsigned k = 0, m = R(9); k < m; k++) {
+            switch (R(5)) {
+            case 0: { long long v = (long long)R(0x20000) - 0x10000; if (R(4) == 0) v *= 0x100000; o.N(v); n.N(v); break; }
+            case 1: { std::wstring t = kTexts[R(5)]; o.W(t); n.W(t); break; }
+            case 2: { std::string t = kTypes[R(4)]; o.S(t); n.S(t); break; }
+            case 3: {
+                if (R(3) == 0) { o.D(NULL); n.D(NULL); break; }
+                std::string b;
+                for (unsigned i = 0, c = R(6); i < c; i++) b += (char)R(256);
+                ByteBufferPtr p = new ByteBuffer(b.data(), (unsigned long)b.size(), false);
+                o.D(p.get()); n.D(p.get());
+                break;
+            }
+            default: {
+                std::list<unsigned short> ids;
+                for (unsigned i = 0, c = R(4); i < c; i++) ids.push_back((unsigned short)(R(2) ? R(0x10000) : R(8)));
+                o.L(ids); n.L(ids);
+            }
+            }
+        }
+        std::string sn;
+        ee_won_routereq_each(n.GetReq(), OrigRequestValues::ValueOut, &sn);
+        Compare("request", o.Run(), sn, "run " + N(q));
+    }
+}
+
 int main(int argc, char** argv)
 {
     const char* m = getenv("EE_W34_MUTATE");
@@ -425,7 +499,9 @@ int main(int argc, char** argv)
     PingPhase(3000 * scale);
     printf("ping: %d cases\n", sCases - c); c = sCases;
     ModelPhase(4000 * scale);
-    printf("model: %d cases\n", sCases - c);
+    printf("model: %d cases\n", sCases - c); c = sCases;
+    RequestPhase(4000 * scale);
+    printf("request: %d cases\n", sCases - c);
     for (auto& f : sFailedPhases) printf("  %s: %d mismatches\n", f.first.c_str(), f.second);
     printf("won_dir34_test%s: %d cases, %d mismatches\n", sMutate ? (" (mutation " + N(sMutate) + ")").c_str() : "", sCases, sFailures);
     return sFailures;

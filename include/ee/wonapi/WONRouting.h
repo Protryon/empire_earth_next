@@ -39,6 +39,7 @@
 #include "rust/won_net/routeconn.h"
 #include "rust/won_net/routecpp.h"
 #include "rust/won_net/routeop.h"
+#include "rust/won_net/routereq.h"
 #include "rust/won_net/servconn.h"
 #include "rust/won_net/smartroute.h"
 #include "rust/won_net/sockobj.h"
@@ -1233,31 +1234,26 @@ public:
 // A request helper's values in parameter order: numbers, texts (UTF-16), data types, a buffer (or none), recipients
 class RoutingRequestValues {
 public:
-    RoutingRequestValues& N(long long inNum) { return this->Add(inNum, std::string()); }
-    RoutingRequestValues& W(const std::wstring& inText) { std::string b; WideAppendUtf16LE(b, inText); return this->Add(0, b); }
-    RoutingRequestValues& S(const std::string& inBytes) { return this->Add(0, inBytes); }
+    // the values are a Rust builder's (rust/crates/ee_won_net/src/routereq.rs, R6 WON round 34)
+    RoutingRequestValues() : mReq(ee_won_routereq_new()) {}
+    ~RoutingRequestValues() { ee_won_routereq_free(this->mReq); }
+    RoutingRequestValues& N(long long inNum) { return this->Add(inNum, NULL, 0); }
+    RoutingRequestValues& W(const std::wstring& inText)
+    { ee_won_routereq_wide(this->mReq, inText.data(), sizeof(wchar_t), inText.length()); return *this; }
+    RoutingRequestValues& S(const std::string& inBytes) { return this->Add(0, inBytes.data(), inBytes.size()); }
     RoutingRequestValues& D(const ByteBuffer* inData)
-    { return inData == NULL ? this->Add(0, std::string()) : this->Add(1, std::string(inData->data(), inData->length())); }
+    { return inData == NULL ? this->Add(0, NULL, 0) : this->Add(1, inData->data(), inData->length()); }
     RoutingRequestValues& L(const std::list<unsigned short>& inIds)
-    {
-        std::string b;
-        for (std::list<unsigned short>::const_iterator i = inIds.begin(); i != inIds.end(); ++i)
-            b.append(1, (char)(*i & 0xff)).append(1, (char)(*i >> 8));
-        return this->Add(0, b);
-    }
+    { ee_won_routereq_ids(this->mReq, std::vector<uint16_t>(inIds.begin(), inIds.end()).data(), inIds.size()); return *this; }
     void Run(RefCount* inConn, int inKind, CompletionBase<AsyncOpPtr>* inCompletion)
-    {
-        std::vector<EeWonAdminValue> v;
-        for (std::list<std::pair<long long, std::string> >::iterator i = mValues.begin(); i != mValues.end(); ++i) {
-            EeWonAdminValue x = {i->first, reinterpret_cast<const uint8_t*>(i->second.data()), i->second.size()};
-            v.push_back(x);
-        }
-        ee_won_routeconn_request(inConn, inKind, v.empty() ? NULL : &v[0], v.size(), static_cast<RefCount*>(inCompletion));
-    }
+    { ee_won_routereq_run(this->mReq, inConn, inKind, static_cast<RefCount*>(inCompletion)); }
+    const EeWonRouteReq* GetReq() const { return this->mReq; }
 private:
-    RoutingRequestValues& Add(long long inNum, const std::string& inBytes)
-    { this->mValues.push_back(std::make_pair(inNum, inBytes)); return *this; }
-    std::list<std::pair<long long, std::string> > mValues;
+    RoutingRequestValues(const RoutingRequestValues&);
+    RoutingRequestValues& operator=(const RoutingRequestValues&);
+    RoutingRequestValues& Add(long long inNum, const void* inBytes, size_t inLength)
+    { ee_won_routereq_add(this->mReq, inNum, static_cast<const uint8_t*>(inBytes), inLength); return *this; }
+    EeWonRouteReq* mReq; // owned
 };
 typedef CompletionBase<AsyncOpPtr> RouteCompletion;
 class RoutingConnection : public ServerConnection {
