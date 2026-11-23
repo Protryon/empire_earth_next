@@ -21,34 +21,18 @@
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType);  // 0x21176e: restores the colour of inPlayer's walls
 void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType);  // 0x211957: highlights them
 
-// Restores the player's wall colours and removes the gate ghost
-void EEUIBuildGate::ClearGhostUnits()
-{
-    EEClearGateHighlights(gWorld.GetPlayer(this->mPlayer), this->mWallType);
-    gWorld.mGhostUnitsLock->Enter();
-    gWorld.ClearGhostUnits();
-    gWorld.mGhostUnitsLock->Leave();
-}
-
-// Starts gate placement for a player: highlights the walls a gate can go on and loads the gate's media
-void EEUIBuildGate::Initialize(long inPlayer)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayer(inPlayer);
-    EEHighlightGateWalls(thePlayer, this->mWallType);
-    this->mTileY = this->mTileX = -99;
-    this->mDirection = 2;
-    this->mPlayer = inPlayer;
-    thePlayer->SetUnitClassMedia(this->mUnitClass->mUnitType, 0x7f);
-}
-
-// Ends gate placement: removes highlights and ghosts, unlocks the cursor and unloads the gate's media
-void EEUIBuildGate::Terminate()
-{
-    EEPlayer* thePlayer = gWorld.GetPlayer(this->mPlayer);
-    this->ClearGhostUnits();
-    gUIManager->GetMainGameForm()->mIsCursorLocked = false;
-    thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
-}
+// the gate placement's world calls (placement_ffi.rs: Initialize, Terminate, ClearGhostUnits)
+extern "C" void ee_screenscpp_pl_gate_highlight(int32_t inPlayer, int32_t inWallType)
+{ EEHighlightGateWalls(gWorld.GetPlayer(inPlayer), inWallType); }
+extern "C" void ee_screenscpp_pl_gate_unhighlight(int32_t inPlayer, int32_t inWallType)
+{ EEClearGateHighlights(gWorld.GetPlayer(inPlayer), inWallType); }
+extern "C" void ee_screenscpp_pl_ghosts_enter() { gWorld.mGhostUnitsLock->Enter(); }
+extern "C" void ee_screenscpp_pl_ghosts_leave() { gWorld.mGhostUnitsLock->Leave(); }
+extern "C" void ee_screenscpp_pl_ghosts_clear() { gWorld.ClearGhostUnits(); }
+extern "C" void ee_screenscpp_pl_gate_load_media(int32_t inPlayer, EEUnitClass* inClass)
+{ gWorld.GetPlayer(inPlayer)->SetUnitClassMedia(inClass->mUnitType, 0x7f); }
+extern "C" void ee_screenscpp_pl_gate_unload_media(int32_t inPlayer, EEUnitClass* inClass)
+{ gWorld.GetPlayer(inPlayer)->UnloadUnitClassMedia(inClass->mUnitType); }
 
 void EEUIBuildGate::Cancel()
 {
