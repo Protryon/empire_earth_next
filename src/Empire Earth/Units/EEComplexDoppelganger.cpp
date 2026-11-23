@@ -209,23 +209,6 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, this, this, &theIn);
 }
 
-// Load stores the saved fractions as floats in the longs.
-// Turns the saved hit point, flight, garrison and power fractions back into amounts (at least 1 if nonzero; port,
-// R5b.4 round 27: ee_units unit_load.rs finish_fractions over the record); marks an old save's (<= 200) unbuilt land
-// building at 1 hit point as a foundation, reloading its media
-long EEComplexUnit::FinishLoad(long inMajorVersion, long inMinorVersion)
-{
-    return (long)ee_units_dop_more(EE_UNITS_DOPX_DO_FINISH_LOAD, this, inMajorVersion, inMinorVersion);   // dop_more.rs
-}
-
-/// Turns the loaded ids back into units, groups, research and behaviour, dropping the missing ones; strands a unit whose
-// transport or owner vanished and clears goal queues that fail to repair; returns the last status. port (the units'
-// lane, round 7): the body is Rust (ee_units dop_repair.rs) over ee_units_dop_host's statements
-long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return (long)ee_units_dop_repair_pointers(this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-}
-
 // RepairPointers's locals (the cargo and research kept, the new turret angles)
 static std::vector<EEComplexUnit*> sRepairCargo;
 static std::vector<EEProductionEntry> sRepairResearch;
@@ -568,13 +551,6 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOPX_BASE_FINISH_LOAD: return theUnit->EEUnit::FinishLoad((long)inB, (long)inC);
     default: return 0;
     }
-}
-
-// RepairPointers's helper, out of line in this unit.
-// Shows the model of the unit's current animation state at the given frame
-void EEComplexUnit::SetAnimationFrame(unsigned long inFrame)
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, this, NULL, (int64_t)inFrame);   // cu_small.rs
 }
 
 // Writes the complex unit's state to the saved game, units and groups as ids and hit points, flight time, garrison
