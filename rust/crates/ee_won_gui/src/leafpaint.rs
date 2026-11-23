@@ -3,7 +3,7 @@
 //! when it stretches), TextListItem (CalcDimensions: the list's font and text colour taken when unset, the size from
 //! the text and the image; Paint: guidraw.rs's text row over the item's and the list's members) and MenuItem
 //! (CalcDimensions: the text item's plus room for the icon and the submenu arrow; Paint: guidraw.rs's menu item);
-//! and Background::Paint (guidraw.rs's background over the background's members, its component's call made here).
+//! ComponentListItem (its size, viewport and place: its component's); and Background::Paint (guidraw.rs's background over the background's members, its component's call made here).
 //!
 //! The C++ classes keep their members (the images, the text, the font, the colour, the sizes); the methods are one
 //! call here each, and each host op (`EeWonLeafOp`; WONGUI/ImageButton.cpp, TextListItem.cpp, MenuBehavior.cpp) is
@@ -41,6 +41,12 @@ pub enum EeWonLeafCall {
     MenuItemMeasure,
     /// `MenuItem::Paint(*(Graphics*)a, (ListArea*)b)`.
     MenuItemPaint,
+    /// `ComponentListItem::CalcDimensions(list)`.
+    ComponentItemMeasure,
+    /// `ComponentListItem::SetViewport(list, (Container*)b)`.
+    ComponentItemViewport,
+    /// `ComponentListItem::SetPos(a, b)`.
+    ComponentItemSetPos,
 }
 
 /// The host's calls (`t` the C++ object: an ImageButton for the `Btn` ops, a TextListItem for the `Item` ops, a
@@ -138,6 +144,21 @@ pub enum EeWonLeafOp {
     BgCompInvalidate,
     /// `t->mComponent->Paint(g)`.
     BgCompPaint,
+    /// `t->mComponent.get() != NULL` (0 or 1; `t` a ComponentListItem, whose `ItemWidthAt` and `ItemHeightAt` the
+    /// host answers too).
+    CompItemHasComponent,
+    /// `t->mComponent->Width()`.
+    CompItemWidth,
+    /// `t->mComponent->Height()`.
+    CompItemHeight,
+    /// `t->mComponent->mParent = (Container*)a`.
+    CompItemSetParent,
+    /// `t->mComponent->AddedToParent()`.
+    CompItemAdded,
+    /// `t->ListItem::SetPos(a, b)`.
+    CompItemBaseSetPos,
+    /// `t->mComponent->SetPos(a, b)`.
+    CompItemSetPos,
 }
 
 /// The host: `me` the C++ object, `op`, two arguments.
@@ -337,6 +358,28 @@ impl EeWonLeaf {
         }
     }
 
+    /// `ComponentListItem::CalcDimensions`: the item's size its component's, when it has one.
+    pub fn component_item_measure(&self) {
+        use EeWonLeafOp::*;
+        if self.yes(CompItemHasComponent, 0) {
+            self.set_size(self.get(CompItemWidth, 0), self.get(CompItemHeight, 0));
+        }
+    }
+
+    /// `ComponentListItem::SetViewport`: the component parented to the list's viewport, told when it has one.
+    pub fn component_item_viewport(&self, viewport: isize) {
+        self.op(EeWonLeafOp::CompItemSetParent, viewport, 0);
+        if viewport != 0 {
+            self.op(EeWonLeafOp::CompItemAdded, 0, 0);
+        }
+    }
+
+    /// `ComponentListItem::SetPos`: the item and its component moved.
+    pub fn component_item_set_pos(&self, x: isize, y: isize) {
+        self.op(EeWonLeafOp::CompItemBaseSetPos, x, y);
+        self.op(EeWonLeafOp::CompItemSetPos, x, y);
+    }
+
     fn call(&self, c: EeWonLeafCall, a: isize, b: isize) {
         match c {
             EeWonLeafCall::ImageButtonSize => {
@@ -352,6 +395,9 @@ impl EeWonLeaf {
             EeWonLeafCall::TextItemPaint => self.text_item_paint(a, b),
             EeWonLeafCall::MenuItemMeasure => self.menu_item_measure(a),
             EeWonLeafCall::MenuItemPaint => self.menu_item_paint(a, b),
+            EeWonLeafCall::ComponentItemMeasure => self.component_item_measure(),
+            EeWonLeafCall::ComponentItemViewport => self.component_item_viewport(b),
+            EeWonLeafCall::ComponentItemSetPos => self.component_item_set_pos(a, b),
         }
     }
 }

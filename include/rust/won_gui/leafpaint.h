@@ -111,6 +111,21 @@ enum class EeWonLeafOp : uint32_t {
   BgCompInvalidate,
   /// `t->mComponent->Paint(g)`.
   BgCompPaint,
+  /// `t->mComponent.get() != NULL` (0 or 1; `t` a ComponentListItem, whose `ItemWidthAt` and `ItemHeightAt` the
+  /// host answers too).
+  CompItemHasComponent,
+  /// `t->mComponent->Width()`.
+  CompItemWidth,
+  /// `t->mComponent->Height()`.
+  CompItemHeight,
+  /// `t->mComponent->mParent = (Container*)a`.
+  CompItemSetParent,
+  /// `t->mComponent->AddedToParent()`.
+  CompItemAdded,
+  /// `t->ListItem::SetPos(a, b)`.
+  CompItemBaseSetPos,
+  /// `t->mComponent->SetPos(a, b)`.
+  CompItemSetPos,
 };
 
 /// The inward calls.
@@ -127,6 +142,12 @@ enum class EeWonLeafCall : uint32_t {
   MenuItemMeasure,
   /// `MenuItem::Paint(*(Graphics*)a, (ListArea*)b)`.
   MenuItemPaint,
+  /// `ComponentListItem::CalcDimensions(list)`.
+  ComponentItemMeasure,
+  /// `ComponentListItem::SetViewport(list, (Container*)b)`.
+  ComponentItemViewport,
+  /// `ComponentListItem::SetPos(a, b)`.
+  ComponentItemSetPos,
 };
 
 /// The host: `me` the C++ object, `op`, two arguments.
