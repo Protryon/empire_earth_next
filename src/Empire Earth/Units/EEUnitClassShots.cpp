@@ -46,6 +46,8 @@
 // 0x241a6a (cdecl): the launch angle from inOwner at inLocation for the ammunition (provisional name)
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);
 
+static void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit);
+
 // Returns whether a projectile hit the ground (bombs, low launches, after 1 s of flight): attacks the ground there
 // unless it came down on its target building or wall, and leaves a shell hole on land
 // Returns whether a bomb, or a projectile after 1 s of flight, hit water it cannot cross; if so, it attacks the ground
@@ -53,12 +55,7 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
 // set a target on fire (flaming arrows), dies and leaves remains; retargets a dead target's tile or its container
 void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope(1);
-    uint32_t theBefore = EECombatCommandOf(inUnit);
-    // ee_combat shots.rs action_changed: the plan's operations on this host (EECombatShotAction); CBSO records the outcome
-    EECombatShotAction(EE_COMBAT_SHOT_PROJECTILE, this, inUnit);
-    if (theScope.mOuter)
-        EECombatCaptureShot(EE_COMBAT_SO_PROJECTILE_ACTION, inUnit, theBefore);
+    EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, false, EE_COMBAT_SO_PROJECTILE_ACTION, this, inUnit);   // ee_combat shots.rs (CBSO)
 }
 
 // Sets up a new projectile: records its start point, sets it to full speed and starts it advancing
@@ -67,12 +64,7 @@ void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
 // Steps the projectile's physics, effects and sound, counts down rotting, fades it below z 0 in space, adds flight time
 void EEUnitClass::ProjectileUpdate(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope(2);
-    uint32_t theBefore = EECombatCommandOf(inUnit);
-    // ee_combat shots.rs update: the plan's operations on this host; CBSO records the outcome
-    EECombatShotUpdate(EE_COMBAT_SHOT_PROJECTILE, this, inUnit);
-    if (theScope.mOuter)
-        EECombatCaptureShot(EE_COMBAT_SO_PROJECTILE_UPDATE, inUnit, theBefore);
+    EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, true, EE_COMBAT_SO_PROJECTILE_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
 }
 
 // New (port): the host of ee_combat shots.rs's plans (EEUCProjectile/EEUCMissile::ActionChanged and Update,
@@ -280,18 +272,13 @@ int64_t EEShotOp64(void* inContext, int32_t inOp, uint64_t inA, int64_t inB, flo
 
 }   // namespace
 
-void EECombatShotAction(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
+// A shot's ActionChanged or Update (inUpdate) within its host-read scope and its CBSO record (inFunc): ee_combat
+// shots.rs over this file's host
+static void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
     EEShotContext theContext = {inUnit, inClass, inKind};
     EeCombatShotHost theHost = {&theContext, EEShotOp, EEShotOp64};
-    ee_combat_shot_action_changed(inKind, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), &theHost);
-}
-
-void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    EEShotContext theContext = {inUnit, inClass, inKind};
-    EeCombatShotHost theHost = {&theContext, EEShotOp, EEShotOp64};
-    ee_combat_shot_update(inKind, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), &theHost);
+    ee_combat_shot_step(inKind, inUpdate, inFunc, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), &theHost);
 }
 
 // ---- EEUCBomb.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The bomb's unit class:
@@ -329,12 +316,7 @@ bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget)
 // (attack-unit goals, ICBM ground strikes); switches to attack ground; on retarget follows the target's container
 void EEUnitClass::MissileActionChanged(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope(1);
-    uint32_t theBefore = EECombatCommandOf(inUnit);
-    // ee_combat shots.rs action_changed over EEUnitClass.cpp's host; CBSO records the outcome
-    EECombatShotAction(EE_COMBAT_SHOT_MISSILE, this, inUnit);
-    if (theScope.mOuter)
-        EECombatCaptureShot(EE_COMBAT_SO_MISSILE_ACTION, inUnit, theBefore);
+    EECombatShotStep(EE_COMBAT_SHOT_MISSILE, false, EE_COMBAT_SO_MISSILE_ACTION, this, inUnit);   // ee_combat shots.rs (CBSO)
 }
 
 // Sets up a new missile: records its start point and stops it; all but the ICBM start the flight animation and advance
@@ -350,12 +332,7 @@ long EEUnitClass::MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long 
 // Steps the missile's physics, effects and sound, and counts down its rotting time, launch delay and lifetime
 void EEUnitClass::MissileUpdate(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope(2);
-    uint32_t theBefore = EECombatCommandOf(inUnit);
-    // ee_combat shots.rs update over EEUnitClass.cpp's host; CBSO records the outcome
-    EECombatShotUpdate(EE_COMBAT_SHOT_MISSILE, this, inUnit);
-    if (theScope.mOuter)
-        EECombatCaptureShot(EE_COMBAT_SO_MISSILE_UPDATE, inUnit, theBefore);
+    EECombatShotStep(EE_COMBAT_SHOT_MISSILE, true, EE_COMBAT_SO_MISSILE_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
 }
 
 // ---- EEUCTorpedo.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The torpedo's unit class:
@@ -367,12 +344,7 @@ void EEUnitClass::MissileUpdate(EEComplexUnit* inUnit)
 // Flies the torpedo as a missile and keeps it from rising above the water plane (height 0)
 void EEUnitClass::TorpedoUpdate(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope(2);
-    uint32_t theBefore = EECombatCommandOf(inUnit);
-    // ee_combat shots.rs update (the missile's, then the water plane) over EEUnitClass.cpp's host; CBSO records the outcome
-    EECombatShotUpdate(EE_COMBAT_SHOT_TORPEDO, this, inUnit);
-    if (theScope.mOuter)
-        EECombatCaptureShot(EE_COMBAT_SO_TORPEDO_UPDATE, inUnit, theBefore);
+    EECombatShotStep(EE_COMBAT_SHOT_TORPEDO, true, EE_COMBAT_SO_TORPEDO_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
 }
 
 // BombUpdate's blink colour (its function static until round 7)
