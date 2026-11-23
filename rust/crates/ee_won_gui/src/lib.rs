@@ -77,6 +77,7 @@ pub mod stretchobj;
 pub mod surface;
 pub mod tabobj;
 pub mod textobj;
+pub mod tipobj;
 pub mod treeobj;
 pub mod winobj;
 pub mod wmcache;

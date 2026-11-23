@@ -20,6 +20,7 @@
 #include "platform/PlatTime.h" // PlatSleep (WindowManager::GetNextEvent)
 #include "rust/won_gui/barobj.h"
 #include "rust/won_gui/browserobj.h" // BrowserComponent
+#include "rust/won_gui/tipobj.h" // ListAreaToolTip
 #include "rust/won_gui/btnobj.h"
 #include "rust/won_gui/comboobj.h"
 #include "rust/won_gui/cfgkind.h"
@@ -2015,14 +2016,19 @@ private:
 enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortType_None };
 // ListAreaToolTip (0x38 bytes): allocated at 0x2fbbb6, constructor 0x2fb7b0,
 // Component (0x30) plus the ListArea pointer at +0x30 and the owned item at +0x34; 43 vtable slots.
+// R6 WON round 34: the methods are the Rust tip's (rust/crates/ee_won_gui/src/tipobj.rs) over the host's
+// one-statement ops (WONGUI/ListAreaToolTip.cpp)
+extern "C" intptr_t ee_won_guicpp_tip_call(void*,EeWonTipOp,intptr_t,intptr_t);
 class ListAreaToolTip : public Component {
 public:
-    ListAreaToolTip(ListArea*);
-    virtual void Paint(Graphics&); // 0x2fb8d0, vtable +0x18
-    void DoTip(ListItem*); //2fb9b0
-    void EndTip(); //2fbab0
+    ListAreaToolTip(ListArea* area) : mListArea(area) {} // no item
+    virtual void Paint(Graphics& g) { this->TCall(EeWonTipCall::Paint,(intptr_t)&g); } // 0x2fb8d0, vtable +0x18
+    void DoTip(ListItem* i) { this->TCall(EeWonTipCall::DoTip,(intptr_t)i); } //2fb9b0
+    void EndTip() { this->TCall(EeWonTipCall::EndTip); } //2fbab0
     ListArea* mListArea; //30 borrowed
     SmartPtr<ListItem> mItem; // at +0x34
+private:
+    void TCall(EeWonTipCall c,intptr_t a=0) { ee_won_tip_call(this,ee_won_guicpp_tip_call,c,a); }
 };
 // ListArea (0x164 bytes): ScrollArea (0x110) base plus vectors and SmartPtr members.
 // ListArea (R6 WON round 23): its items, top line, flags, batch, paint width, sort type, selection, keyboard and mouse

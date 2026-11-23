@@ -178,6 +178,7 @@
 #include "rust/won_gui/surface.h"
 #include "rust/won_gui/tabobj.h"
 #include "rust/won_gui/textobj.h"
+#include "rust/won_gui/tipobj.h"
 #include "rust/won_gui/treeobj.h"
 #include "rust/won_gui/winobj.h"
 #include "rust/won_gui/wmcache.h"
