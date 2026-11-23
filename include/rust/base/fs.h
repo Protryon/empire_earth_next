@@ -92,6 +92,22 @@ struct EeFsFileCalls {
   bool (*is_open)(void *file);
 };
 
+/// The C++ calls (File System.cpp): each the one call it names. `p` is an `FSPersistent*`.
+struct EeFsCppCalls {
+  /// `new FSMemoryFile(state, true)` (the memory file owns the state).
+  void *(*new_mem_file)(EeFsMemFile *state);
+  /// `p->CreateDefault()`.
+  void *(*create_default)(void *p);
+  /// `p->Load(major, minor, file)` on an `FSMemoryFile` over `data` (not owned).
+  long (*load)(void *p, unsigned long major, unsigned long minor, EeFsMemFile *data);
+  /// `p->Save(major, minor, file)` on an `FSMemoryFile` over `data` (not owned).
+  long (*save)(void *p, unsigned long major, unsigned long minor, EeFsMemFile *data);
+  /// `p->GetTagID()`.
+  long (*tag)(void *p);
+  /// `delete p`.
+  void (*delete_)(void *p);
+};
+
 /// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
 /// `data` is the payload; the C++ destructor frees it through `ee_fs_chunk_free`.
 struct EeFsChunk {
@@ -274,6 +290,49 @@ long ee_fs_read_long(void *file,
 /// As [`ee_fs_read_long`].
 long ee_fs_read_ulong(void *file, unsigned long *value);
 
+/// Registers the C++ calls (File System.cpp's static initializer); returns true.
+///
+/// # Safety
+/// `calls` lives for the rest of the process.
+bool ee_fs_cpp_register(const EeFsCppCalls *calls);
+
+/// `FSPersistentList::CreateDefaultPersistent`: a new default object of the type registered under the tag, or NULL.
+void *ee_fs_persistent_create_default(long tag);
+
+/// `FSPersistentList::RegisterPersistent`: the prototype registered under its tag (kErrorOK); for a tag already
+/// taken the prototype is deleted (kErrorAlreadyExists).
+///
+/// # Safety
+/// `p` is a live C++ `FSPersistent` the registry takes over.
+long ee_fs_persistent_register_object(void *p);
+
+/// `FSChunk::LoadPersistentFromChunk`: the object registered for the chunk's tag, created and loaded from the chunk
+/// data; kErrorNotSuspended without data, kErrorNotFound for an unregistered tag (`*out` NULL then).
+///
+/// # Safety
+/// `chunk` is a live record; `out` is writable.
+long ee_fs_chunk_load_persistent(const EeFsChunk *chunk,
+                                 void **out);
+
+/// `FSChunk::SavePersistentToChunk`: the object saved into new chunk data (kErrorOK without a save when the chunk
+/// has data already); the save's error when it fails (fixed: it used to be reported as success).
+///
+/// # Safety
+/// `chunk` is a live record; `p` a live C++ `FSPersistent`.
+long ee_fs_chunk_save_persistent(EeFsChunk *chunk,
+                                 unsigned long major,
+                                 unsigned long minor,
+                                 void *p);
+
+/// `FSArchive::FindFile`: the member of the lower-cased name, decompressed into a new C++ `FSMemoryFile` named after
+/// the archive (always made on a hit, even when the decompression failed); a miss returns kErrorNotFound.
+///
+/// # Safety
+/// `a` is a live record, `name` a live `UString`, `out` writable.
+long ee_fs_arch_find_file(const EeFsArchiveObj *a,
+                          const EeFsString *name,
+                          void **out);
+
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);
 
@@ -371,7 +430,7 @@ const uint8_t *ee_fs_mem_data(const EeFsMemFile *file);
 /// `Read`: `*out_read` is written unless the file has no buffer (`kErrorNotOpen`, the C++ left it untouched).
 ///
 /// # Safety
-/// `file` is live, `out` valid for `length` bytes, `out_read` for a write.
+/// `file` is live, `out` valid for `length` bytes, `out_read` null (the scalar reads) or valid for a write.
 int32_t ee_fs_mem_read(EeFsMemFile *file,
                        uint8_t *out,
                        size_t length,
@@ -380,7 +439,7 @@ int32_t ee_fs_mem_read(EeFsMemFile *file,
 /// `Write`.
 ///
 /// # Safety
-/// `file` is live, `data` valid for `length` bytes, `out_written` for a write.
+/// `file` is live, `data` valid for `length` bytes, `out_written` null (the scalar writes) or valid for a write.
 int32_t ee_fs_mem_write(EeFsMemFile *file,
                         const uint8_t *data,
                         size_t length,
@@ -639,6 +698,15 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
 int32_t ee_fs_mem_close_disk(EeFsMemFile *file,
                              void **stream,
                              const EeFsString *temporary);
+
+/// `~FSMemoryFile`: an owned state closed as `Close` closes it and freed; a borrowed one (a chunk's payload) left.
+///
+/// # Safety
+/// As [`ee_fs_mem_close_disk`]; an owned `file` is not used again.
+void ee_fs_mem_finish(EeFsMemFile *file,
+                      bool owns,
+                      void **stream,
+                      const EeFsString *temporary);
 
 /// `FSMemoryFile::Copy(inDestination, inFailIfExists, ...)`: the contents written to a disk file; kErrorAlreadyExists
 /// when asked to fail on an existing file, kErrorNativeError when it cannot be created. The position is reset.

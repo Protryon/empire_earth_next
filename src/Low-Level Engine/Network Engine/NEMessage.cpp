@@ -19,20 +19,9 @@
 
 static_assert(sizeof(NEMRecordValue) == sizeof(int64_t), "a sender's value is one long long");
 
-template <class T> static inline EeNetMsgSlot NetMsgField(T& inMember)
-{
-    EeNetMsgSlot theSlot = {(uint8_t*)&inMember, (uint32_t)sizeof(T), 0, 0};
-    return theSlot;
-}
-
 // New (port): the header's members (reserved, type, target slot, originating slot) as the codec's first four slots
-void NEMessage::GetHeaderSlots(EeNetMsgSlot* outSlots)
-{
-    outSlots[0] = NetMsgField(this->mReserved);
-    outSlots[1] = NetMsgField(this->mType);
-    outSlots[2] = NetMsgField(this->mForSpecificSlot);
-    outSlots[3] = NetMsgField(this->mOriginatingSlot);
-}
+// (from mType: the four bytes are consecutive, NEMessage.h)
+void NEMessage::GetHeaderSlots(EeNetMsgSlot* outSlots) { ee_netmsg_header_slots(&this->mType, outSlots); }
 
 // Builds a message from received bytes with the builder registered for its type; NULL for a type with none
 NEMessage* NEMessage::ConvertMemoryToMessage(unsigned char* inMemory)

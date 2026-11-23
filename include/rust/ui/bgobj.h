@@ -119,7 +119,8 @@ struct EeUiBackgroundFields {
 
 extern "C" {
 
-/// `UIBackground`'s constructor over its record (`layout` an `EeUiLayout`).
+/// `UIBackground`'s constructor over its record (`layout` an `EeUiLayout`), registered for the direct path as the
+/// C++ `background` (NULL: not registered).
 ///
 /// # Safety
 /// `rec` is the C++ background's base, `layout` a live layout.
@@ -130,7 +131,8 @@ void ee_ui_bg_init(EeUiBackgroundFields *rec,
                    const EeUiLayout *layout,
                    void *form,
                    unsigned long priority,
-                   bool visible);
+                   bool visible,
+                   void *background);
 
 /// `UITextureBackground`'s constructor: the texture's rectangle (four floats), description and NUL-terminated name.
 ///

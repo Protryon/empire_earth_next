@@ -11,10 +11,7 @@ class LLE_API FSPersistentList {
 public:
     // a new default object of the type registered under the tag, or NULL
     static FSPersistent* CreateDefaultPersistent(long inTagID)
-    {
-        FSPersistent* thePrototype = static_cast<FSPersistent*>(ee_fs_persistent_find((int32_t)inTagID));
-        return thePrototype != NULL ? thePrototype->CreateDefault() : NULL;
-    }
+        { return static_cast<FSPersistent*>(ee_fs_persistent_create_default(inTagID)); }
     // URegisterShutdown hook: deletes every registered prototype, the lowest tag first (inForced is not used)
     static void Shutdown(bool inForced)
     {
@@ -22,13 +19,7 @@ public:
             delete thePrototype;
     }
     // registers a prototype under its tag; for a tag already taken deletes it and returns kErrorAlreadyExists
-    static long RegisterPersistent(FSPersistent* inPersistent)
-    {
-        if (ee_fs_persistent_register((int32_t)inPersistent->GetTagID(), inPersistent))
-            return kErrorOK;
-        delete inPersistent;
-        return kErrorAlreadyExists;
-    }
+    static long RegisterPersistent(FSPersistent* inPersistent) { return ee_fs_persistent_register_object(inPersistent); }
 
 private:
     FSPersistentList() = delete;

@@ -129,14 +129,22 @@ public:
     void AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
                    unsigned long inModifier3, UIEvent* inJustPressedEvent, UIEvent* inPressedEvent,
                    UIEvent* inJustUnpressedEvent, UIEvent* inDoublePressedEvent, unsigned long inGroup,
-                   bool inAlwaysFire);
+                   bool inAlwaysFire)
+    {
+        ee_ui_form_add_hot_key(this->mRust, inKey, inModifier1, inModifier2, inModifier3, inJustPressedEvent,
+                               inPressedEvent, inJustUnpressedEvent, inDoublePressedEvent, inGroup, inAlwaysFire);
+    }
     void ClearAllClipRectangles() { this->Call(EeUiFormCall::ClearAllClipRectangles); }
     // Reads every form record from the UI database file and creates, registers and enables each form with an ID above 0
     static long Create(FSFileSpec& inFile, UIManager* inManager) { return ee_ui_form_create(&inFile, inManager); }
     // Draws the part of a bitmap's texture under a rectangle at a screen location
     long DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GE2DPoint& inTextureSize) { return (long)this->CallRect(EeUiFormCall::DrawBitmap, (intptr_t)inBitmap, ee_ui_float_pair_bits(inTextureSize.GetX(), inTextureSize.GetY()), inRectangle); }
+    // Draws a bitmap tiled over a tile area, clipped to the rectangle, one piece per tile
     long DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
-                        const GERectangle& inTileRectangle);
+                        const GERectangle& inTileRectangle)
+    {
+        return ee_ui_form_draw_tiles(this->mRust, inBitmap, UIRect(inRectangle), UIRect(inDrawRectangle), UIRect(inTileRectangle));
+    }
     // Draws text clipped around the form's clip rectangles, the copied popup or the IME candidate window
     long DrawClippedText(const GERectangle& inRectangle, GEText* inText, UIControl* inControl) { return (long)this->CallRect(EeUiFormCall::DrawClippedText, (intptr_t)inText, (intptr_t)inControl, inRectangle); }
     // Returns the background with the given ID, or NULL

@@ -131,6 +131,12 @@ ptrdiff_t ee_ui_label_call(const EeUiLabel *label,
                            ptrdiff_t b,
                            float *f);
 
+/// `SetText(value)`: `_itoa(value, 10)`'s decimal (of the value as an `int`), replacing the text.
+///
+/// # Safety
+/// `label` is live.
+void ee_ui_label_set_number(const EeUiLabel *label, long value);
+
 }  // extern "C"
 
 #endif  // EE_RUST_UI_LABELOBJ_H

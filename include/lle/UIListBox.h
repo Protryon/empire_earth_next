@@ -5,12 +5,12 @@
 // vector COMDATs (0x1006452c). Vtable 0x1009920c (UIControl's 34 slots, then AppendLine 0x88 .. ProcessUp 0xb8).
 // The original's sizeof was 0x134 (UILBString's members started at +0x134).
 //
-// The template is whole in Rust but for what depends on T (rust/crates/ee_ui/src/listobj.rs, R6 ui round 15): the
-// text rectangles, colours, selection record, scroll bar, key-repeat polls and selection rhombi, and every method
-// that does not touch the lines, are the Rust object mRust; the lines (mData), their drawn copy (mCopyLineArray) and
-// the data methods stay here. UIListBoxRust<T>::Op answers the ops that need the instantiation (the virtuals, the
-// copy of the lines); the rest go to UIListBoxHostOp (UILBString.cpp).
-// Requires lle/UIControl.h, lle/UIScrollBar.h, lle/GERhombus.h, <vector>, <algorithm>.
+// The template is whole in Rust (rust/crates/ee_ui/src/listobj.rs, R6 ui round 15): the text rectangles, colours,
+// selection record, scroll bar, key-repeat polls and selection rhombi, every method, and (UI round 15) the lines
+// themselves: mData and its drawn copy mCopyLineArray are Rust-owned boxed Ts, made, copied and freed through
+// UILineOps<T>; here the members are one call each and mData/mCopyLineArray are views (UILines<T>: size() and [i]).
+// UIListBoxRust<T>::Op answers the virtuals (a subclass's override runs); the rest go to ee_ui_list_host.
+// Requires lle/UIControl.h, lle/UIScrollBar.h, lle/GERhombus.h, <vector>.
 #ifndef LLE_UILISTBOX_H
 #define LLE_UILISTBOX_H
 #include "platform/PlatString.h"
@@ -20,9 +20,6 @@
 #include <stddef.h>
 
 #include <vector>
-#include <algorithm>
-#include <type_traits>
-#include <string.h>
 #include "lle/UIControl.h"
 
 // The default InsertLine predicate: never "less", so lower_bound keeps the insertion index.
@@ -31,7 +28,7 @@ public:
     bool operator()(const T& inLeft, const T& inRight) const { return false; }
 };
 
-// Case-insensitive alphabetical order (UIListBox<UWideString>::Sort, UIFileComboBox's InsertLine).
+// Case-insensitive alphabetical order (UIFileComboBox's InsertLine).
 class LLE_API UWSNoCaseAlphaSort {
 public:
     UWSNoCaseAlphaSort() {}                 // user-declared: exported ??0UWSNoCaseAlphaSort@@QAE@XZ (ICF-folded, 0x1093c)
@@ -41,22 +38,40 @@ public:
     }
 };
 
-#ifdef __clang__
-// clang applies an exported/imported class template's attribute to every instantiation (the modern MSVC rule), so
-// the exe would import members of UIListBox<EESEUITTData> etc. that the engine never exports. VC6 instantiated those
-// where they were used; only UIListBox<UWideString> crosses the DLL boundary (lle/UILBString.h's explicit
-// instantiation carries LLE_API).
-#define UILISTBOX_API
-#else
-#define UILISTBOX_API LLE_API
-#endif
+// A line type's members for the Rust list (EeUiLineOps): a UWideString line's text both ways, nothing for another type
+inline const char* UILineText(const UWideString* inLine) { return *inLine; }
+inline const char* UILineText(const void* inLine) { return NULL; }
+inline void* UILineFromText(const UWideString*, const char* inText) { return new UWideString(inText); }
+inline void* UILineFromText(const void*, const char* inText) { return NULL; }
+template <class T> struct UILineOps {
+    static void* Make() { return new T; }
+    static void* Clone(const void* inLine) { return new T(*static_cast<const T*>(inLine)); }
+    static void Free(void* inLine) { delete static_cast<T*>(inLine); }
+    static void Assign(void* inTo, const void* inFrom) { *static_cast<T*>(inTo) = *static_cast<const T*>(inFrom); }
+    static const char* Text(const void* inLine) { return UILineText(static_cast<const T*>(inLine)); }
+    static void* FromText(const char* inText) { return UILineFromText(static_cast<const T*>(NULL), inText); }
+    static bool Equal(const void* a, const void* b) { return *static_cast<const T*>(a) == *static_cast<const T*>(b); }
+    template <class P> static bool Less(void* inSort, const void* a, const void* b)
+    {
+        return (*static_cast<P*>(inSort))(*static_cast<const T*>(a), *static_cast<const T*>(b));
+    }
+    static constexpr EeUiLineOps kOps = {Make, Clone, Free, Assign, Text, FromText};
+};
+
+// mData / mCopyLineArray: a view of the Rust list's lines (inWhich 0, 1)
+template <class T> class UILines {
+public:
+    UILines(EeUiList* inList, uint32_t inWhich) : mList(inList), mWhich(inWhich) {}
+    size_t size() const { return ee_ui_list_lines(this->mList, this->mWhich); }
+    T& operator[](size_t inIndex) const { return *static_cast<T*>(ee_ui_list_line(this->mList, this->mWhich, inIndex)); }
+    EeUiList* mList;
+    uint32_t mWhich;
+};
+
 class GERhombus;
 class UIScrollBar;
-// The Rust list box's ops that do not depend on T (UILBString.cpp: UIControl's, the scroll bar's, polls', rhombi's,
-// the focus line's, the keys')
-
 template <class T> struct UIListBoxRust;
-template <class T> class UILISTBOX_API UIListBox : public UIControl {
+template <class T> class UIListBox : public UIControl {
 public:
     typedef EeUiListCall UIListBoxCall;
     intptr_t Call(UIListBoxCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const
@@ -65,38 +80,18 @@ public:
     }
     intptr_t CallF(UIListBoxCall inCall, float f0, float f1 = 0.0f, float f2 = 0.0f) const { return ee_ui_list_call(this->mRust, inCall, 0, 0, UIF4(f0, f1, f2)); }
     GEColor Color(UIListBoxCall inCall) const { return UIOut(ee_ui_list_call, this->mRust, inCall, (intptr_t)0, (intptr_t)0).Color(); }
-    UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
+    UIListBox(unsigned long inId, const std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
               const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
         : UIControl(kControlTypeListBox, inId, inRectangle, inForm, inIndex, inBorderThickness),
-          mRust(ee_ui_list_new(this, UIListBoxRust<T>::Op, inLineHeight, inAutoSelect, inBorderThickness)), mData(inData),
-          mCopyLineArray(this->GetNumberLinesDisplayed())
+          mRust(ee_ui_list_new(this, UIListBoxRust<T>::Op, &UILineOps<T>::kOps, inData.data(), inData.size(), sizeof(T),
+                               inLineHeight, inAutoSelect, inBorderThickness)),
+          mData(mRust, 0), mCopyLineArray(mRust, 1)
     {
         this->CheckScrollBar();
     }
     virtual ~UIListBox() { ee_ui_list_free(this->mRust); }
-#ifdef __clang__
-    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
-    // forward to them (clang build only; remove once the parameters themselves are const).
-    UIListBox(unsigned long inId, const std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
-              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
-        : UIListBox(inId, const_cast<std::vector<T>&>(inData), inLineHeight, inAutoSelect, inRectangle, inForm,
-                    inIndex, inBorderThickness) {}
-    template <class P> void InsertLine(const T& inLine, unsigned long inIndex, const P& inSort)
-        { this->InsertLine(inLine, inIndex, const_cast<P&>(inSort)); }
-#endif
-    virtual void AppendLine(const T& inLine)
-    {
-        this->mData.push_back(inLine);
-        this->SetDirty(true);
-        this->CheckScrollBar();
-    }
-    virtual void AppendStringArray(std::vector<T>& inLines)
-    {
-        for (unsigned long i = 0; i < inLines.size(); i++)
-            this->mData.push_back(inLines[i]);
-        this->CheckScrollBar();
-        this->SetDirty(true);
-    }
+    virtual void AppendLine(const T& inLine) { ee_ui_list_append(this->mRust, &inLine); }
+    virtual void AppendStringArray(std::vector<T>& inLines) { ee_ui_list_append_n(this->mRust, inLines.data(), inLines.size(), sizeof(T)); }
     virtual void ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
     {
         this->Call(UIListBoxCall::ChangeSelectionIndex, inIndex, (inFireEvent ? 1 : 0) | (inScrollTo ? 2 : 0));
@@ -104,25 +99,11 @@ public:
     void ChangeWidth(unsigned long inWidth) { this->Call(UIListBoxCall::ChangeWidth, inWidth); }
     virtual void ClearSelection() { this->Call(UIListBoxCall::ClearSelection); }
     virtual long CopyData() { return (long)this->Call(UIListBoxCall::CopyData); }
-    virtual void DeleteAllEntries()
-    {
-        this->mData.clear();
-        this->Call(UIListBoxCall::Cleared);
-    }
-    virtual void DeleteLine(unsigned long inLine)
-    {
-        this->mData.erase(this->mData.begin() + inLine);
-        this->Call(UIListBoxCall::DeletedLine, inLine);
-    }
+    virtual void DeleteAllEntries() { ee_ui_list_delete_all(this->mRust); }
+    virtual void DeleteLine(unsigned long inLine) { ee_ui_list_delete_line(this->mRust, inLine); }
     virtual long DrawPolygons() { return (long)this->Call(UIListBoxCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(UIListBoxCall::DrawText); }
-    long GetCurrentSelection(unsigned long& outSelection) const
-    {
-        outSelection = this->GetSelectionIndex();
-        if (this->mData.size() > 0 && this->GetHasSelection())
-            return kErrorOK;
-        return 0xd;
-    }
+    long GetCurrentSelection(unsigned long& outSelection) const { return ee_ui_list_current_selection(this->mRust, &outSelection); }
     unsigned long GetDisplayLine() const { return (unsigned long)this->Call(UIListBoxCall::DisplayLine); }
     GERhombus* GetSelectedBackground() const { return reinterpret_cast<GERhombus*>(this->Call(UIListBoxCall::SelectedBackground)); }
     unsigned long GetLineCount() const { return this->mData.size(); }
@@ -130,38 +111,13 @@ public:
     const UIScrollBar* GetScrollBar() const { return reinterpret_cast<const UIScrollBar*>(this->Call(UIListBoxCall::ScrollBar)); }
     bool GetScrollBarCaptured() const { return this->Call(UIListBoxCall::ScrollBarCaptured) != 0; }
     const T& GetData(unsigned long inIndex) const { return this->mData[inIndex]; }
-    const std::vector<T>& GetDataArray() const { return this->mData; }
     bool GetHasSelection() const { return this->Call(UIListBoxCall::HasSelection) != 0; }
-    bool FindString(const T& inString, unsigned long& outIndex) const
+    bool FindString(const T& inString, unsigned long& outIndex) const { return ee_ui_list_find(this->mRust, &inString, UILineOps<T>::Equal, &outIndex); }
+    void InsertLine(const T& inLine, unsigned long inIndex) { ee_ui_list_insert(this->mRust, &inLine, inIndex, NULL, NULL); }
+    template <class P> void InsertLine(const T& inLine, unsigned long inIndex, const P& inSort)
     {
-        for (unsigned long i = 0; i < this->GetNumLines(); i++)
-            if (this->mData[i] == inString) {
-                outIndex = i;
-                return true;
-            }
-        return false;
+        ee_ui_list_insert(this->mRust, &inLine, inIndex, const_cast<P*>(&inSort), UILineOps<T>::template Less<P>);
     }
-    void InsertLine(const T& inLine, unsigned long inIndex)
-    {
-        UILBNoSort<T> theSort;
-        this->InsertLine(inLine, inIndex, theSort);
-    }
-    template <class P> void InsertLine(const T& inLine, unsigned long inIndex, P& inSort)
-    {
-        typename std::vector<T>::iterator theWhere = this->mData.begin() + inIndex;
-        theWhere = std::lower_bound(theWhere, this->mData.end(), inLine, inSort);
-        // Fixed: the index was taken after the insert, from an iterator a reallocation had invalidated
-        unsigned long theIndex = theWhere - this->mData.begin();
-        if (theWhere != this->mData.end())
-            this->mData.insert(theWhere, inLine);
-        else
-            this->mData.push_back(inLine);
-        this->Call(UIListBoxCall::Inserted, theIndex);
-    }
-    typename std::vector<T>::const_iterator Begin() const { return this->mData.begin(); }
-    typename std::vector<T>::iterator Begin() { return this->mData.begin(); }
-    typename std::vector<T>::const_iterator End() const { return this->mData.end(); }
-    typename std::vector<T>::iterator End() { return this->mData.end(); }
     virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(UIListBoxCall::MouseWheelTurned, inDelta); }
     bool ScrollBarExists() { return this->Call(UIListBoxCall::ScrollBar) != 0; }
     void SetAutoSelect(bool inAutoSelect) { this->Call(UIListBoxCall::SetAutoSelect, inAutoSelect); }
@@ -177,7 +133,6 @@ public:
     }
     void SetScrollBarCurrentRange(unsigned long inValue) { this->Call(UIListBoxCall::SetScrollValue, inValue); }
     void SetStartingDisplayLine(unsigned long inLine) { this->Call(UIListBoxCall::SetScrollValue, inLine); }
-    void Sort() { std::sort(this->mData.begin(), this->mData.end(), UWSNoCaseAlphaSort()); }
     virtual long UpdateKeyboard() { return (long)this->Call(UIListBoxCall::UpdateKeyboard); }
     virtual void ButtonDown() { this->Call(UIListBoxCall::ButtonDown); }   // slot 0xa0
     virtual void ButtonUp() { this->FireTriggerEvent(kControlTriggerButtonUp); }
@@ -219,13 +174,13 @@ public:
     virtual void TabbedTo() { this->SetDirty(true); }
     void CheckScrollBar() { this->Call(UIListBoxCall::CheckScrollBar); }
 
-    EeUiList* mRust;                        // the state (listobj.rs; first: the lines' copy is sized from it)
-    std::vector<T> mData;                   // the lines
-    std::vector<T> mCopyLineArray;          // the visible lines as of the last CopyData
+    EeUiList* mRust;                        // the state and the lines (listobj.rs; first: the views are made from it)
+    UILines<T> mData;                       // the lines
+    UILines<T> mCopyLineArray;              // the visible lines as of the last CopyData
 };
 
-// The Rust list box's ops that need the instantiation: the virtuals (a subclass's override runs) and the copy of the
-// visible lines; the rest go to UIListBoxHostOp
+// The Rust list box's ops that need the instantiation: the virtuals (a subclass's override runs); the rest go to
+// ee_ui_list_host (lle_hosts.rs)
 template <class T> struct UIListBoxRust {
     static intptr_t Op(void* inList, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
     {
@@ -234,41 +189,14 @@ template <class T> struct UIListBoxRust {
         case EeUiOp::ListNumLines: return l->GetNumLines();
         case EeUiOp::ListChangeSelection: l->ChangeSelectionIndex((unsigned long)a, b != 0, c != 0); break;
         case EeUiOp::ListClearSelection: l->ClearSelection(); break;
-        case EeUiOp::ListCopyLines:
-            if ((unsigned long)a > l->mCopyLineArray.size())
-                l->mCopyLineArray.resize((unsigned long)a);
-            for (unsigned long i = (unsigned long)b, j = 0; i < (unsigned long)c; i++, j++)
-                l->mCopyLineArray[j] = l->mData[i];
-            break;
-        case EeUiOp::ListProcess:
-            if (a == 0)
-                l->ProcessDown();
-            else if (a == 1)
-                l->ProcessUp();
-            else if (a == 2)
-                l->ProcessHome();
-            else
-                l->ProcessEnd();
-            break;
+        case EeUiOp::ListProcessDown: l->ProcessDown(); break;
+        case EeUiOp::ListProcessUp: l->ProcessUp(); break;
+        case EeUiOp::ListProcessHome: l->ProcessHome(); break;
+        case EeUiOp::ListProcessEnd: l->ProcessEnd(); break;
         case EeUiOp::ButtonDown: l->ButtonDown(); break;
         case EeUiOp::ButtonUp: l->ButtonUp(); break;
-        // the lines, for the screens' direct path (ee_ui direct.rs)
-        case EeUiOp::ListLineCount: return l->GetLineCount();
-        case EeUiOp::ListLineText:
-            if constexpr (std::is_same<T, UWideString>::value)
-                return (unsigned long)a < l->GetLineCount() ? (intptr_t)(const char*)l->GetData((unsigned long)a) : 0;
-            return 0;
-        case EeUiOp::ListAppendText:
-            if constexpr (std::is_same<T, UWideString>::value)
-                l->AppendLine(UWideString(reinterpret_cast<const char*>(a)));
-            break;
+        case EeUiOp::ListAppendLine: l->AppendLine(*reinterpret_cast<const T*>(a)); break;
         case EeUiOp::ListDeleteAll: l->DeleteAllEntries(); break;
-        case EeUiOp::ListSelection: {
-            unsigned long theSelection = 0;
-            long theResult = l->GetCurrentSelection(theSelection);
-            memcpy(&f[0], &theSelection, 4);
-            return theResult;
-        }
         default: return ee_ui_list_host(l, inOp, a, b, c, d, f);
         }
         return 0;

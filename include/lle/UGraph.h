@@ -4,7 +4,8 @@
 // Whole in Rust (rust/crates/ee_base/src/util graph.rs, LLE lane round 7): a series is an EeUtilSeries and a graph's series and
 // range an EeUtilGraph; these classes hold the pointer and forward. GetSeries hands out the graph's slot for a series
 // (a UGraphSeries is that one pointer), GetDataPoint and GetColor the Rust values' addresses (laid out as U2DPoint<long>
-// and GEColor): each lasts until its container changes, as the C++ vectors' did. The title and labels stay here.
+// and GEColor): each lasts until its container changes, as the C++ vectors' did. The title and axis labels, which
+// nothing read (UIGraph has its own), are gone (LLE round 13).
 #ifndef LLE_UGRAPH_H
 #define LLE_UGRAPH_H
 
@@ -39,28 +40,13 @@ private:
     EeUtilSeries* mSeries;
 };
 
-class LLE_API UGraph {                      // a pointer and the three strings (was sizeof 0x5c)
+class LLE_API UGraph {                      // a pointer (was sizeof 0x5c)
 public:
-    UGraph() : mGraph(ee_util_graph_new())
-    {
-        this->mXLabel = "";
-        this->mYLabel = "";
-        this->mTitle = "";
-    }
-    UGraph(const UGraph& inGraph)
-        : mGraph(ee_util_graph_clone(inGraph.mGraph)), mTitle(inGraph.mTitle), mXLabel(inGraph.mXLabel),
-          mYLabel(inGraph.mYLabel) {}
+    UGraph() : mGraph(ee_util_graph_new()) {}
+    UGraph(const UGraph& inGraph) : mGraph(ee_util_graph_clone(inGraph.mGraph)) {}
     ~UGraph() { ee_util_graph_free(this->mGraph); }
     UGraph& operator=(const UGraph& inGraph)
-    {
-        if (&inGraph != this) {
-            ee_util_graph_assign(this->mGraph, inGraph.mGraph);
-            this->mTitle = inGraph.mTitle;
-            this->mXLabel = inGraph.mXLabel;
-            this->mYLabel = inGraph.mYLabel;
-        }
-        return *this;
-    }
+        { ee_util_graph_assign(this->mGraph, inGraph.mGraph); return *this; }
 
     // adds a copy of the series and widens min/max to include it
     void AddSeries(const UGraphSeries& inSeries) { ee_util_graph_add_series(this->mGraph, inSeries.mSeries); }
@@ -75,22 +61,13 @@ public:
     const UGraphSeries& GetSeries(unsigned long inIndex) const
         { return *reinterpret_cast<const UGraphSeries*>(ee_util_graph_series(this->mGraph, inIndex)); }
     const unsigned long GetSeriesCount() const { return ee_util_graph_count(this->mGraph); }
-    const UWideString& GetTitle() const { return this->mTitle; }
-    const UWideString& GetXLabel() const { return this->mXLabel; }
-    const UWideString& GetYLabel() const { return this->mYLabel; }
     // reduces every series to one point per x, keeping the highest y
     void PruneGraph() { ee_util_graph_prune(this->mGraph); }
     void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled)
         { ee_util_graph_set_enabled(this->mGraph, inIndex, inIsEnabled); }
-    void SetTitle(const UWideString& inTitle) { this->mTitle = inTitle; }
-    void SetXLabel(const UWideString& inLabel) { this->mXLabel = inLabel; }
-    void SetYLabel(const UWideString& inLabel) { this->mYLabel = inLabel; }
 
 private:
     EeUtilGraph* mGraph;                    // the series and min/max
-    UWideString mTitle;
-    UWideString mXLabel;
-    UWideString mYLabel;
 };
 
 #endif

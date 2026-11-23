@@ -10,7 +10,7 @@
 /// A `U2DFractal`: `dimension` x `dimension` values, column `x` first as the C++'s `mValues[x][y]`.
 struct EeUtilFractal;
 
-/// A `UGraph`'s series and range (its strings stay in the C++ object). The series are boxed: the C++ views hold
+/// A `UGraph`'s series and range. The series are boxed: the C++ views hold
 /// their addresses.
 struct EeUtilGraph;
 
@@ -214,7 +214,7 @@ void ee_util_series_set_enabled(EeUtilSeries *series, bool enabled);
 /// `series` is a live series.
 const EeUtilRange *ee_util_series_range(const EeUtilSeries *series);
 
-/// `UGraph()` (the strings are the C++'s).
+/// `UGraph()`.
 EeUtilGraph *ee_util_graph_new();
 
 /// The implicit copy constructor.

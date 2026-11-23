@@ -38,7 +38,6 @@
 #include "rust/sim/tech.h"
 #include "rust/game/screens.h"   // the host (civ_file_calls.rs)
 #include "ee/EEScreensShims.h"
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67fe94 (wrapper)
 //   object 0x965518  ctor __imp_??0FSFileSpec@@QAE@XZ  dtor __imp_??1FSFileSpec@@UAE@XZ
@@ -100,9 +99,6 @@ static void EECivFileCall(void* inCtx, const EeTechCivFileCall* c, EeTechCivFile
 }
 
 #define CF(x) static_cast<EECivFileContext*>((void*)(x))
-static unsigned long sCFCost = 0;       // an upgrade's cost (CanAfford's)
-static UWideString sCFFormat;           // the refusal's format and line
-static UWideString sCFText;
 extern "C" int64_t ee_screenscpp_civf_load(uintptr_t inCtx, bool inUser)
 { return EELoadCivilization(*CF(inCtx)->mFile, EEGetCivilizationDirectory(inUser), CF(inCtx)->mName, CF(inCtx)->mUpgrades); }
 extern "C" uintptr_t ee_screenscpp_civf_name(uintptr_t inCtx) { return (uintptr_t)(const char*)CF(inCtx)->mName; }
@@ -121,8 +117,8 @@ extern "C" void ee_screenscpp_civf_civ_set_points_and_max(uintptr_t inCtx, uint6
 extern "C" void ee_screenscpp_civf_civ_set_name(uintptr_t inCtx)
 { CF(inCtx)->mPlayer->mCivilization.SetName(CF(inCtx)->mName); }
 extern "C" void ee_screenscpp_civf_civ_can_afford(uintptr_t inCtx, uint32_t inUpgrade)
-{ CF(inCtx)->mPlayer->mCivilization.CanAfford((EECivUpgrade)inUpgrade, &sCFCost, NULL); }
-extern "C" uint64_t ee_screenscpp_civf_cost() { return (uint64_t)sCFCost; }
+{ CF(inCtx)->mPlayer->mCivilization.CanAfford((EECivUpgrade)inUpgrade, &EEScratch<unsigned long>(kScratchCFCost), NULL); }
+extern "C" uint64_t ee_screenscpp_civf_cost() { return (uint64_t)EEScratch<unsigned long>(kScratchCFCost); }
 extern "C" uint64_t ee_screenscpp_civf_civ_max_points(uintptr_t inCtx)
 { return (uint64_t)CF(inCtx)->mPlayer->mCivilization.GetMaxPoints(); }
 extern "C" void ee_screenscpp_civf_civ_buy(uintptr_t inCtx, uint32_t inUpgrade)
@@ -143,16 +139,16 @@ extern "C" void ee_screenscpp_civf_send(uintptr_t inMessage)
 extern "C" void ee_screenscpp_civf_execute(uintptr_t inMessage) { ((NEMessage*)inMessage)->Execute(); }
 extern "C" void ee_screenscpp_civf_release(uintptr_t inMessage) { ((NEMessage*)inMessage)->Dereference(); }
 extern "C" void ee_screenscpp_civf_refuse_format()
-{ gResource->GetString(IDS_PLAYER_HAS_CIVILIZATION_NAMED_WHICH, sCFFormat); }
+{ gResource->GetString(IDS_PLAYER_HAS_CIVILIZATION_NAMED_WHICH, EEScratch<UWideString>(kScratchCFFormat)); }
 extern "C" void ee_screenscpp_civf_refuse_print(uintptr_t inCtx)
-{ sprintf(sCFText, sCFFormat, (const char*)CF(inCtx)->mPlayer->mName, (const char*)CF(inCtx)->mName, (const char*)::gWorld.GetCurrentPlayer()->mName); }
+{ sprintf(EEScratch<UWideString>(kScratchCFText), EEScratch<UWideString>(kScratchCFFormat), (const char*)CF(inCtx)->mPlayer->mName, (const char*)CF(inCtx)->mName, (const char*)::gWorld.GetCurrentPlayer()->mName); }
 extern "C" void ee_screenscpp_civf_chat_type()
 { gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectPlayerChatType, {0L}), kSlotNone); }
 extern "C" void ee_screenscpp_civf_chat()
-{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageInGameChat, {sCFText}), kSlotNone); }
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageInGameChat, {EEScratch<UWideString>(kScratchCFText)}), kSlotNone); }
 extern "C" void ee_screenscpp_civf_random() { gPhysics->GetRandom(0L, 1L); }
-extern "C" void ee_screenscpp_civf_strings_clear() { sCFFormat = UWideString(); }
-extern "C" void ee_screenscpp_civf_text_clear() { sCFText = UWideString(); }
+extern "C" void ee_screenscpp_civf_strings_clear() { EEScratch<UWideString>(kScratchCFFormat) = UWideString(); }
+extern "C" void ee_screenscpp_civf_text_clear() { EEScratch<UWideString>(kScratchCFText) = UWideString(); }
 
 // Gives a player the civilization from a file (the game's, else the user's), buying its upgrades at no cost;
 // a game file's premade civilization keeps its localized name (ee_tech civ_file.rs apply_file)
@@ -176,8 +172,6 @@ void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vecto
 }
 
 // EELoadCivilization's file, read and results (civ_load.rs, UI lane round 12)
-static std::vector<unsigned char> sCivlBytes;   // the file's bytes (the original's local)
-static unsigned long sCivlGot = 0;
 extern "C" void ee_screenscpp_civl_string(uintptr_t inString, void* inOut)
 { EEShimOut(inOut, *(const UString*)inString); }
 extern "C" void ee_screenscpp_civl_global_close() { gU565518.Close(); }
@@ -192,11 +186,11 @@ extern "C" void ee_screenscpp_civl_spec_assign_global(uintptr_t inSpec) { *(FSFi
 extern "C" int32_t ee_screenscpp_civl_open(uintptr_t inSpec) { return ((FSFileSpec*)inSpec)->Open(kFileAccessRead); }
 extern "C" int32_t ee_screenscpp_civl_length(uintptr_t inSpec, unsigned long* inOut)
 { return ((FSFileSpec*)inSpec)->GetLength(*inOut); }
-extern "C" void ee_screenscpp_civl_buffer_resize(uint64_t inSize) { sCivlBytes.resize((size_t)inSize); }
+extern "C" void ee_screenscpp_civl_buffer_resize(uint64_t inSize) { EEScratch<std::vector<unsigned char>>(kScratchCivlBytes).resize((size_t)inSize); }
 extern "C" int32_t ee_screenscpp_civl_read(uintptr_t inSpec, uint64_t inSize)
-{ return ((FSFileSpec*)inSpec)->Read(sCivlBytes.data(), (unsigned long)inSize, sCivlGot); }
+{ return ((FSFileSpec*)inSpec)->Read(EEScratch<std::vector<unsigned char>>(kScratchCivlBytes).data(), (unsigned long)inSize, EEScratch<unsigned long>(kScratchCivlGot)); }
 extern "C" void ee_screenscpp_civl_buffer(void* inOut)
-{ ee_screens_shim_out(inOut, sCivlBytes.data(), sCivlBytes.size()); }
+{ ee_screens_shim_out(inOut, EEScratch<std::vector<unsigned char>>(kScratchCivlBytes).data(), EEScratch<std::vector<unsigned char>>(kScratchCivlBytes).size()); }
 extern "C" void ee_screenscpp_civl_set_name(uintptr_t inName, EeScreensShimText inText)
 { *(UWideString*)inName = EEShimText(inText); }
 extern "C" void ee_screenscpp_civl_upgrade_push(uintptr_t inList, uint32_t inUpgrade)

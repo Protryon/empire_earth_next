@@ -19,13 +19,9 @@ public:
     // exe: the rectangle of one point (EEAIAStarPathfindingGoalBase::SetStart 0x19c77 / SetGoal 0x19ca1 store in the
     // ctor's order) provisional name (was EEAIAStarBounds)
     void Set(const U2DPoint<T>& inPoint) { *this = U2DRectangle(inPoint.mX, inPoint.mY, inPoint.mX, inPoint.mY); }
-    // exe: the edges move out by inMargin, clamped at 0 (out of line 0x19f9d; defined below the class) (provisional
-    // name)
-    // name (was EEAIAStarBounds)
-    void Grow(T inMargin, bool inClamp);
-    // exe: the middle of the rectangle (0x61340, ret 4, hidden result; out of line, defined below the class)
-    // (provisional name; was EEAIAStarBounds)
-    void GetCenter(U2DPoint<T>& outCenter) const;
+    // exe: the middle of the rectangle (EEARust, the command units' bounds)
+    void GetCenter(U2DPoint<T>& outCenter) const
+        { outCenter = U2DPoint<T>((this->mRight - this->mLeft) / 2 + this->mLeft, (this->mBottom - this->mTop) / 2 + this->mTop); }
     // exe: an inline COMDAT first expanded out of line by the AI (0xd190, U2DPolygon<long>::Contains 0xd16e calls it
     // on its bounds; RTSMap 0x1238bd): inside, edges included (bool: push 1; pop eax) provisional name. Exe view only
     // so the engine's token stream stays unchanged
@@ -72,26 +68,5 @@ public:
     T mTop;                                 // +0x0c
 };
 
-#ifdef LLE_EXE_HEADERS
-// exe view only: out of line (never expanded; 0x19f9d, EEAIAStarPathfindingGoalBase's range)
-template <class T>
-void U2DRectangle<T>::Grow(T inMargin, bool inClamp)
-{
-    this->mLeft -= inMargin;
-    this->mTop -= inMargin;
-    this->mRight += inMargin;
-    this->mBottom += inMargin;
-    if (inClamp) {
-        this->mLeft = max(this->mLeft, 0);
-        this->mTop = max(this->mTop, 0);
-    }
-}
-// exe view only: out of line (never expanded; 0x61340, EECPAttackSubGroup's range)
-template <class T>
-void U2DRectangle<T>::GetCenter(U2DPoint<T>& outCenter) const
-{
-    outCenter = U2DPoint<T>((this->mRight - this->mLeft) / 2 + this->mLeft, (this->mBottom - this->mTop) / 2 + this->mTop);
-}
-#endif
 
 #endif

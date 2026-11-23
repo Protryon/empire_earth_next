@@ -1049,6 +1049,24 @@ pub unsafe extern "C" fn ee_ui_edit_call(
     unsafe { (*edit).call(call, a, b, c, d, f) }
 }
 
+/// The constructor's flags: numbers only (1), multi-line (2), password box (4).
+#[no_mangle]
+pub extern "C" fn ee_ui_edit_flags(numbers_only: bool, multi_line: bool, password: bool) -> u32 {
+    numbers_only as u32 | (multi_line as u32) << 1 | (password as u32) << 2
+}
+
+/// `SetText(value)`: `_itoa(value, 10)`'s decimal (of the value as an `int`).
+///
+/// # Safety
+/// `edit` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_edit_set_number(edit: *const EeUiEdit, value: core::ffi::c_ulong) {
+    let mut t = format!("{}", value as i32).into_bytes();
+    t.push(0);
+    // SAFETY: live (the contract); NUL-terminated bytes
+    unsafe { (*edit).call(EeUiEditCall::SetText, t.as_ptr() as isize, 0, 0, 0, core::ptr::null_mut()) };
+}
+
 #[cfg(test)]
 #[path = "editobj_tests.rs"]
 mod tests;

@@ -110,18 +110,116 @@ enum class EeUiListCall : uint32_t {
 /// The Rust UIListBox.
 struct EeUiList;
 
+/// A line type's C++ members (`UILineOps<T>::kOps`, lle/UIListBox.h): the list's lines are `new`ed `T`s.
+struct EeUiLineOps {
+  /// `new T` (a slot of the drawn copy).
+  void *(*make)();
+  /// `new T(*line)`.
+  void *(*clone)(const void*);
+  /// `delete line`.
+  void (*free)(void*);
+  /// `*to = *from`.
+  void (*assign)(void*, const void*);
+  /// A `UWideString` line's NUL-terminated bytes (NULL for another line type).
+  const char *(*text)(const void*);
+  /// `new UWideString(bytes)` (NULL for another line type).
+  void *(*from_text)(const char*);
+};
+
+/// An `InsertLine` predicate: `(*sort)(*a, *b)`.
+using EeUiLineLess = bool(*)(void*, const void*, const void*);
+
+/// `FindString`'s comparison: `*a == *b`.
+using EeUiLineEq = bool(*)(const void*, const void*);
+
 extern "C" {
 
-/// A new Rust list box for the C++ `list` (its `UIControl` part constructed); the C++ then sizes the copy, assigns
-/// the lines and calls `CheckScrollBar`.
+/// A new Rust list box for the C++ `list` (its `UIControl` part constructed) with a copy of the `count` lines at
+/// `data` (`stride` bytes apart, of the type `ops` makes); the C++ then calls `CheckScrollBar`.
 ///
 /// # Safety
-/// `host` answers the ops for `list`.
+/// `host` answers the ops for `list`; `ops` is live; `data` holds `count` live lines.
 EeUiList *ee_ui_list_new(void *list,
                          EeUiHostFn host,
+                         const EeUiLineOps *ops,
+                         const void *data,
+                         size_t count,
+                         size_t stride,
                          unsigned long line_height,
                          bool auto_select,
                          unsigned long border);
+
+/// The lines of `mData` (`which` 0) or `mCopyLineArray` (1).
+///
+/// # Safety
+/// `list` is live.
+size_t ee_ui_list_lines(const EeUiList *list, uint32_t which);
+
+/// Line `i` of `mData` (`which` 0) or `mCopyLineArray` (1): the `T` (NULL past the end).
+///
+/// # Safety
+/// `list` is live.
+void *ee_ui_list_line(const EeUiList *list, uint32_t which, size_t i);
+
+/// `AppendLine(*line)` (the base class's).
+///
+/// # Safety
+/// `list` is live; `line` is a live line.
+void ee_ui_list_append(const EeUiList *list, const void *line);
+
+/// `AppendStringArray`: the `count` lines at `data`, `stride` bytes apart.
+///
+/// # Safety
+/// `list` is live; `data` holds `count` live lines.
+void ee_ui_list_append_n(const EeUiList *list, const void *data, size_t count, size_t stride);
+
+/// `InsertLine(*line, index, sort)`: `less(sort, a, b)` the predicate (NULL: the line goes in at `index`).
+///
+/// # Safety
+/// `list` is live; `line` is a live line; `less` is NULL or takes `sort` and two live lines.
+void ee_ui_list_insert(const EeUiList *list,
+                       const void *line,
+                       unsigned long index,
+                       void *sort,
+                       EeUiLineLess less);
+
+/// `DeleteLine(i)` (the base class's).
+///
+/// # Safety
+/// `list` is live.
+void ee_ui_list_delete_line(const EeUiList *list, unsigned long i);
+
+/// `DeleteAllEntries()` (the base class's).
+///
+/// # Safety
+/// `list` is live.
+void ee_ui_list_delete_all(const EeUiList *list);
+
+/// `FindString(*line, *out)`: true with the index in `out` when a line equals `line` (`eq`).
+///
+/// # Safety
+/// `list` is live; `line` is a live line; `eq` takes two live lines; `out` is writable.
+bool ee_ui_list_find(const EeUiList *list, const void *line, EeUiLineEq eq, unsigned long *out);
+
+/// `GetCurrentSelection(*out)`: the selection in `out`; OK when there are lines and a selection, else 0xd.
+///
+/// # Safety
+/// `list` is live; `out` is writable.
+long ee_ui_list_current_selection(const EeUiList *list,
+                                  unsigned long *out);
+
+/// `UILBString::DrawTextA`.
+///
+/// # Safety
+/// `list` is a live string list's.
+long ee_ui_string_list_draw(const EeUiList *list);
+
+/// `UILBString::UpdateTranslatedKey(key)`: OK, or kErrorNotFound when no line starts with the key's letter.
+///
+/// # Safety
+/// `list` is a live string list's; `key` is NULL or NUL-terminated.
+long ee_ui_string_list_key(const EeUiList *list,
+                           const char *key);
 
 /// The destructor (after `mData.clear()`): the rest of `DeleteAllEntries`, then the parts deleted; frees the object.
 ///

@@ -26,14 +26,10 @@
 #define CP(p) ((EEPlayer*)(p))
 #define CN(n) ((EETechTreeNode*)(n))
 #define CV(c) ((EECivilization*)(c))
-static std::vector<long> sCivcTypes;            // a unit set's types (the original's collector's)
-static std::vector<long> sCivcIDs;              // a tech tree's node ids
-static UWideString sCivcName;                   // a premade file's name and upgrades as loaded
-static std::vector<EECivUpgrade> sCivcLoaded;
 // the unit types of a set, in its order
 class EECivcCollect : public EEUnitSetFunctor {
 public:
-    virtual bool Execute(long inUnitType) { return sCivcTypes.push_back(inUnitType), true; }
+    virtual bool Execute(long inUnitType) { return EEScratch<std::vector<long>>(kScratchCivcTypes).push_back(inUnitType), true; }
 };
 // a temporary's address for the full expression (the set walker's functor argument)
 template <class T> static T* EECivcTemp(T&& inValue) { return &inValue; }
@@ -53,11 +49,11 @@ extern "C" float ee_screenscpp_civc_high_ground(uintptr_t inPlayer) { return CP(
 extern "C" int64_t ee_screenscpp_civc_share(uintptr_t inPlayer) { return (int64_t)CP(inPlayer)->mShareBonus; }
 extern "C" int64_t ee_screenscpp_civc_mining(uintptr_t inPlayer) { return (int64_t)CP(inPlayer)->mMiningLimit; }
 extern "C" bool ee_screenscpp_civc_set_exists(int64_t inSet) { return gUnitSetManager.GetSet((long)inSet) != NULL; }
-extern "C" void ee_screenscpp_civc_types_clear() { sCivcTypes.clear(); }
+extern "C" void ee_screenscpp_civc_types_clear() { EEScratch<std::vector<long>>(kScratchCivcTypes).clear(); }
 extern "C" void ee_screenscpp_civc_collect(int64_t inSet)
 { gUnitSetManager.ForEach((long)inSet, EECivcTemp(EECivcCollect())); }
-extern "C" uintptr_t ee_screenscpp_civc_types_count() { return sCivcTypes.size(); }
-extern "C" int64_t ee_screenscpp_civc_type_at(uintptr_t inIndex) { return (int64_t)sCivcTypes[inIndex]; }
+extern "C" uintptr_t ee_screenscpp_civc_types_count() { return EEScratch<std::vector<long>>(kScratchCivcTypes).size(); }
+extern "C" int64_t ee_screenscpp_civc_type_at(uintptr_t inIndex) { return (int64_t)EEScratch<std::vector<long>>(kScratchCivcTypes)[inIndex]; }
 extern "C" bool ee_screenscpp_civc_class_exists(int64_t inKind) { return gUnitClassTable[(long)inKind] != NULL; }
 extern "C" uintptr_t ee_screenscpp_civc_class_upgrade(uintptr_t inPlayer, int64_t inKind)
 { return (uintptr_t)CP(inPlayer)->mUnitClassUpgrades[(long)inKind]; }
@@ -68,10 +64,10 @@ extern "C" uintptr_t ee_screenscpp_civc_purchased_count(uintptr_t inPlayer)
 extern "C" uintptr_t ee_screenscpp_civc_purchased_data(uintptr_t inPlayer)
 { return (uintptr_t)CP(inPlayer)->mCivilization.GetPurchasedUpgrades().data(); }
 extern "C" uintptr_t ee_screenscpp_civc_tree(uintptr_t inPlayer) { return (uintptr_t)CP(inPlayer)->GetTechTree(); }
-extern "C" void ee_screenscpp_civc_ids_clear() { sCivcIDs.clear(); }
-extern "C" void ee_screenscpp_civc_ids_fill(uintptr_t inTree) { ((EETechTree*)inTree)->GetNodeIDs(sCivcIDs); }
-extern "C" uintptr_t ee_screenscpp_civc_ids_count() { return sCivcIDs.size(); }
-extern "C" int64_t ee_screenscpp_civc_id_at(uintptr_t inIndex) { return (int64_t)sCivcIDs[inIndex]; }
+extern "C" void ee_screenscpp_civc_ids_clear() { EEScratch<std::vector<long>>(kScratchCivcIDs).clear(); }
+extern "C" void ee_screenscpp_civc_ids_fill(uintptr_t inTree) { ((EETechTree*)inTree)->GetNodeIDs(EEScratch<std::vector<long>>(kScratchCivcIDs)); }
+extern "C" uintptr_t ee_screenscpp_civc_ids_count() { return EEScratch<std::vector<long>>(kScratchCivcIDs).size(); }
+extern "C" int64_t ee_screenscpp_civc_id_at(uintptr_t inIndex) { return (int64_t)EEScratch<std::vector<long>>(kScratchCivcIDs)[inIndex]; }
 extern "C" uintptr_t ee_screenscpp_civc_node(uintptr_t inTree, int64_t inId)
 { return (uintptr_t)((EETechTree*)inTree)->Get((long)inId); }
 extern "C" bool ee_screenscpp_civc_node_researched(uintptr_t inNode) { return CN(inNode)->mIsResearched; }
@@ -79,13 +75,13 @@ extern "C" bool ee_screenscpp_civc_node_obsolete(uintptr_t inNode) { return CN(i
 extern "C" bool ee_screenscpp_civc_node_available(uintptr_t inNode) { return CN(inNode)->mIsAvailable; }
 extern "C" bool ee_screenscpp_civc_node_allowed(uintptr_t inNode) { return CN(inNode)->mIsAllowed; }
 extern "C" int64_t ee_screenscpp_civc_civ_load(EeScreensShimText inFile)
-{ return EELoadCivilization(EEShimString(inFile), EEGetCivilizationDirectory(false), sCivcName, sCivcLoaded); }
-extern "C" void ee_screenscpp_civc_loaded_clear() { sCivcLoaded.clear(); }
-extern "C" void ee_screenscpp_civc_name_clear() { sCivcName = UWideString(); }
-extern "C" void ee_screenscpp_civc_name(void* inOut) { EEShimOut(inOut, sCivcName); }
-extern "C" uint32_t ee_screenscpp_civc_name_length() { return (uint32_t)sCivcName.GetLength(); }
-extern "C" uintptr_t ee_screenscpp_civc_loaded_count() { return sCivcLoaded.size(); }
-extern "C" uint32_t ee_screenscpp_civc_loaded_at(uintptr_t inIndex) { return sCivcLoaded[inIndex]; }
+{ return EELoadCivilization(EEShimString(inFile), EEGetCivilizationDirectory(false), EEScratch<UWideString>(kScratchCivcName), EEScratch<std::vector<EECivUpgrade>>(kScratchCivcLoaded)); }
+extern "C" void ee_screenscpp_civc_loaded_clear() { EEScratch<std::vector<EECivUpgrade>>(kScratchCivcLoaded).clear(); }
+extern "C" void ee_screenscpp_civc_name_clear() { EEScratch<UWideString>(kScratchCivcName) = UWideString(); }
+extern "C" void ee_screenscpp_civc_name(void* inOut) { EEShimOut(inOut, EEScratch<UWideString>(kScratchCivcName)); }
+extern "C" uint32_t ee_screenscpp_civc_name_length() { return (uint32_t)EEScratch<UWideString>(kScratchCivcName).GetLength(); }
+extern "C" uintptr_t ee_screenscpp_civc_loaded_count() { return EEScratch<std::vector<EECivUpgrade>>(kScratchCivcLoaded).size(); }
+extern "C" uint32_t ee_screenscpp_civc_loaded_at(uintptr_t inIndex) { return EEScratch<std::vector<EECivUpgrade>>(kScratchCivcLoaded)[inIndex]; }
 extern "C" bool ee_screenscpp_civc_is_user_directory(EeScreensShimText inDirectory)
 { return EEShimString(inDirectory).Equals(EEGetCivilizationDirectory(true)); }
 extern "C" uintptr_t ee_screenscpp_civc_civ(uintptr_t inPlayer) { return (uintptr_t)&CP(inPlayer)->mCivilization; }

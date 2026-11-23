@@ -10,7 +10,7 @@
 
 class FSFileSpec;
 
-class EEUISCIFormManager : public UIFormManager {
+class EEUISCIFormManager : public UIFormManager, public EeScreensSciFormFields {
 public:
     EEUISCIFormManager() { this->Clear(); }  // inline (Get: UIFormManager's vptr, the media strings, then Clear)
     virtual ~EEUISCIFormManager() { this->DeleteObjects(); }  // inline (the ??_G 0x1e83cb expands it)
@@ -60,11 +60,6 @@ public:
     // (+0x94: the original's movie file, OpenMovie's)
     FSFileSpec* mFile;                      // +0x98 (SetFile; OpenScenario)
     FSFileSpec* mSound;                     // +0x9c (OpenSound)
-    bool mBA0;                              // +0xa0 (Clear)
-    bool mIsInGame;                         // +0xa1 (the in-game LoadScenario clears it; SIE Back closes the form)
-    bool mIsLoadingFromGame;                // +0xa2 (and sets this one; SIE Start posts the saved game)
-    bool mIsCampaign;                       // +0xa3 (the CSSE StartScenario sets it: a campaign scenario)
-    bool mScrollBriefingToEnd;              // +0xa4 (SIE Open sets it, Briefing scrolls to the end and clears it)
 };
 
 #endif

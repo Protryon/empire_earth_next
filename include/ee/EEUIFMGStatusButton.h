@@ -8,12 +8,10 @@
 
 #include "rust/game/screens.h"   // EeScreensStatusButtonFields
 
-class EEButtonObject;
-class GEText;
 class UIControlsTable;
 class UIManager;
 
-class EEUIFMGStatusButton : public UIButton, public EeScreensStatusButtonFields {
+class EEUIFMGStatusButton : public UIButton, public EeScreensStatusButtonFields, public EeScreensStatusButtonObjects {
 public:
     // 0x26de97 (ret 0xc; the user-defined control factory)
     EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable);
@@ -67,10 +65,6 @@ public:
 
     // the plain members (+0x118 mLastErrorTime, +0x12c mTechnology .. +0x14b mDrawIcon) are the Rust record
     // EeScreensStatusButtonFields' (ee_screens main_form_fields.rs), under their names
-    EEButtonObject* mButtonObject;          // +0x11c
-    GEBitmap* mDither;                      // +0x120 textures\Dither over a disabled button
-    GEBitmap* mIcon;                        // +0x124
-    GEText* mBuildQueue;                    // +0x128 the queue count (ESVERIFY(this->mBuildQueue), line 195)
 };
 
 // RTTI EEUIEndCinematicModeEvent (vtable 0x44ae68; ??_G 0x271265 after its first user EEModeKeyboardCinematic; ProcessEvent

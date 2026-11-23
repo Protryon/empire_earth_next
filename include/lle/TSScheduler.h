@@ -49,11 +49,7 @@ public:
     // the calling thread's registered object, or NULL
     static TSThread* GetCurrentThread() { return reinterpret_cast<TSThread*>(ee_ts_thread_current()); }
     // the calling thread's registry index, or -1 if it is not registered
-    static unsigned long GetCurrentThreadIndex()
-    {
-        uint32_t theIndex = ee_ts_thread_current_index();
-        return theIndex == 0xFFFFFFFFu ? (unsigned long)-1 : theIndex;
-    }
+    static unsigned long GetCurrentThreadIndex() { return ee_ts_thread_current_index(); }
 };
 
 #endif

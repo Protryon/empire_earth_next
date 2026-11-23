@@ -202,20 +202,17 @@ EECivPowersManager::EECivPowersManager()
 
 // the db files' reads, the premade copies, ApplyUpgrade's capture halves and the powers' test: civ_manager_obj.rs over
 // these (UI lane round 12)
-static unsigned char sCivmChunk[0x1000];   // a chunk read (the original's local)
-static unsigned long sCivmRead = 0;
-static unsigned char sCivmByte = 0;
 extern "C" uintptr_t ee_screenscpp_civm_capture_begin(uint32_t inUpgrade, int64_t inPlayer)
 { return (uintptr_t)EECivCaptureApplyBegin(inUpgrade, (long)inPlayer); }
 extern "C" void ee_screenscpp_civm_capture_end(uintptr_t inState, bool inResult)
 { EECivCaptureApplyEnd((EECivCaptureApply*)inState, inResult); }
 extern "C" int32_t ee_screenscpp_civm_file_open(uintptr_t inFile) { return ((FSFile*)inFile)->Open(kFileAccessRead); }
 extern "C" int32_t ee_screenscpp_civm_read_chunk(uintptr_t inFile)
-{ return ((FSFile*)inFile)->Read(sCivmChunk, sizeof(sCivmChunk), sCivmRead); }
+{ return ((FSFile*)inFile)->Read(EEScratch<unsigned char[0x1000]>(kScratchCivmChunk), sizeof(EEScratch<unsigned char[0x1000]>(kScratchCivmChunk)), EEScratch<unsigned long>(kScratchCivmRead)); }
 extern "C" void ee_screenscpp_civm_chunk_bytes(void* inOut)
-{ ee_screens_shim_out(inOut, sCivmChunk, sizeof(sCivmChunk)); }
-extern "C" int32_t ee_screenscpp_civm_read_byte(uintptr_t inFile) { return ((FSFile*)inFile)->Read(sCivmByte); }
-extern "C" uint8_t ee_screenscpp_civm_byte() { return sCivmByte; }
+{ ee_screens_shim_out(inOut, EEScratch<unsigned char[0x1000]>(kScratchCivmChunk), sizeof(EEScratch<unsigned char[0x1000]>(kScratchCivmChunk))); }
+extern "C" int32_t ee_screenscpp_civm_read_byte(uintptr_t inFile) { return ((FSFile*)inFile)->Read(EEScratch<unsigned char>(kScratchCivmByte)); }
+extern "C" uint8_t ee_screenscpp_civm_byte() { return EEScratch<unsigned char>(kScratchCivmByte); }
 extern "C" void ee_screenscpp_civm_file_close(uintptr_t inFile) { ((FSFile*)inFile)->Close(); }
 extern "C" int64_t ee_screenscpp_civm_powers_cost()
 { return (int64_t)EERuleLong(EEGetRules().mCivBuilder.mPowersCost); }
