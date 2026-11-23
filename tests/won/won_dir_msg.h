@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
 #include "rust/won_net/dirops.h"
+#include "won_direntity_orig.h" // DirEntity and its records as they were (R6 WON round 34 made them Rust's)
 
 namespace WONAPI {
 

@@ -19,6 +19,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "rust/won_net/dirops.h"
+#include "won_direntity_orig.h" // DirEntity and its records as they were (R6 WON round 34 made them Rust's)
 #include "won_dir_msg.h" // DirDataTypeSet
 
 using namespace WONAPI;

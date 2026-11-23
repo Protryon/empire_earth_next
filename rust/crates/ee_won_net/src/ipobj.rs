@@ -72,6 +72,14 @@ impl EeWonIpAddr {
         }
     }
 
+    /// `GetSixByte`: the port and address as they sit in the sockaddr (network order).
+    pub fn six(&self) -> [u8; 6] {
+        let mut b = [0u8; 6];
+        b[0..2].copy_from_slice(&self.sa.mPort.to_ne_bytes());
+        b[2..6].copy_from_slice(&self.sa.mAddress.to_ne_bytes());
+        b
+    }
+
     /// `SetSixByte`: the 6-byte wire form (port, then address); the host forgotten.
     pub fn set_six(&mut self, six: &[u8; 6]) {
         self.sa = sockaddr(Addr::from_six_bytes(six));

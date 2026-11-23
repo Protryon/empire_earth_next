@@ -29,6 +29,38 @@ pub extern "C" fn ee_util_resource_string(id: u16) -> *const u8 {
     }
 }
 
+/// `UResourceFile::GetString`'s text of string `id`: at most 4,499 bytes (its 4,500-byte buffer), `None` when missing.
+pub fn resource_string_for_get(id: u16) -> Option<Vec<u8>> {
+    let text = resource_string(id)?.as_bytes();
+    let mut out = text[..text.len().min(4499)].to_vec();
+    out.push(0);
+    Some(out)
+}
+
+/// `UResourceFile::GetString`: string `id` handed to `assign` (the C++ `UWideString` assignment) and kErrorOK, or
+/// kErrorNativeError with native error 1814 (ERROR_RESOURCE_NAME_NOT_FOUND, as LoadStringA left) when it is missing.
+///
+/// # Safety
+/// `assign` takes `target` and a NUL-terminated text.
+#[no_mangle]
+pub unsafe extern "C" fn ee_util_resource_string_get(
+    id: u16,
+    assign: unsafe extern "C" fn(*mut core::ffi::c_void, *const core::ffi::c_char),
+    target: *mut core::ffi::c_void,
+) -> core::ffi::c_long {
+    match resource_string_for_get(id) {
+        Some(text) => {
+            // SAFETY: the function's contract
+            unsafe { assign(target, text.as_ptr().cast()) };
+            crate::lle_enums::ESError::kErrorOK as core::ffi::c_long
+        }
+        None => {
+            crate::error::ee_error_record_native(1814);
+            crate::lle_enums::ESError::kErrorNativeError as core::ffi::c_long
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -45,6 +77,17 @@ mod tests {
         }
         assert_eq!(STRINGS.len(), 3773);
         assert_eq!(h, 0x69d3_7468_17dd_a2ff);
+    }
+
+    #[test]
+    fn get_string_text_is_cut_at_4499_bytes() {
+        let &(id, text) = STRINGS.iter().max_by_key(|(_, text)| text.len()).unwrap();
+        let got = resource_string_for_get(id).unwrap();
+        assert_eq!(got.len(), (text.len() - 1).min(4499) + 1);
+        assert_eq!(got.last(), Some(&0));
+        assert_eq!(&got[..got.len() - 1], &text.as_bytes()[..got.len() - 1]);
+        let missing = (0..=u16::MAX).find(|&i| resource_string(i).is_none()).unwrap();
+        assert!(resource_string_for_get(missing).is_none());
     }
 
     #[test]

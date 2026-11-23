@@ -1,5 +1,6 @@
 // The directory server's entity replies: the reading is ee_won's (rust/crates/ee_won_net/src/dir.rs), the ops that read
-// them Rust's (reqdir.rs); this makes the DirEntity objects of what they read (RustServerOp::GetEntities). The
+// them Rust's (reqdir.rs), and since R6 WON round 34 the entities and their lists too (dirlist.rs: DirEntity.cpp and
+// DirMakeEntity as they were are tests/won/won_direntity_orig.h); this is DirList's forwards (ee/EEWonNet.h). The
 // parsers' statements (ParseMultiEntityReply 2f0510, ParseSingleEntityReply, OnlyDirs 2f04f0, OnlyServices 2f0500)
 // are tests/won/won_dir_test.cpp's original half.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
@@ -14,58 +15,25 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/won_net/dir.h"
+#include "rust/won_net/dirlist.h"
 namespace WONAPI {
 
-// DirMakeEntity's members (its decisions are ee_won dir.rs's ee_won_dir_entity_fill, R6 WON round 33)
-static void DirSet(void* inEntity, EeWonDirSet inMember, int64_t inNum, const void* p, size_t n)
+DirList::DirList(EeWonDirList* inList) : mList(inList != NULL ? inList : ee_won_dirlist_new()) {}
+DirList::~DirList() { ee_won_dirlist_free(this->mList); }
+size_t DirList::size() const { return ee_won_dirlist_len(this->mList); }
+void DirList::clear() { ee_won_dirlist_clear(this->mList); }
+void DirList::Keep(const DirList& inFrom, size_t inIndex) { ee_won_dirlist_keep(this->mList, inFrom.mList, inIndex); }
+std::wstring DirList::Name(size_t inIndex) const
 {
-    DirEntity* e = static_cast<DirEntity*>(inEntity);
-    const uint8_t* b = static_cast<const uint8_t*>(p);
-    const EeWonDirAcl* r = static_cast<const EeWonDirAcl*>(p);
-    switch (inMember) {
-    case EeWonDirSet::Kind: e->mType = (char)inNum; return;
-    case EeWonDirSet::Path: WonWideSink(&e->mPath, static_cast<const uint16_t*>(p), n); return;
-    case EeWonDirSet::Name: WonWideSink(&e->mName, static_cast<const uint16_t*>(p), n); return;
-    case EeWonDirSet::NetAddr: e->mNetAddr = new ByteBuffer(b, (unsigned long)n, false); return;
-    case EeWonDirSet::ReqUnique: e->mReqUnique = inNum != 0; return;
-    case EeWonDirSet::DisplayName: WonWideSink(&e->mDisplayName, static_cast<const uint16_t*>(p), n); return;
-    case EeWonDirSet::Lifespan: e->mLifespan = (long)inNum; return;
-    case EeWonDirSet::Created: e->mCreated = (long)inNum; return;
-    case EeWonDirSet::Touched: e->mTouched = (long)inNum; return;
-    case EeWonDirSet::Crc: e->mCRC = (unsigned long)(int32_t)inNum; return;
-    case EeWonDirSet::CreateIp: e->mCreateIP = (unsigned long)(int32_t)inNum; return;
-    case EeWonDirSet::TouchIp: e->mTouchIP = (unsigned long)(int32_t)inNum; return;
-    case EeWonDirSet::CreateId: e->mCreateId = (unsigned long)(int32_t)inNum; return;
-    case EeWonDirSet::TouchId: e->mTouchId = (unsigned long)(int32_t)inNum; return;
-    case EeWonDirSet::ObjectAdd: e->mDataObjects.push_back(DirDataObject{std::string(reinterpret_cast<const char*>(b), n)}); return;
-    case EeWonDirSet::ObjectData: e->mDataObjects.back().mData = new ByteBuffer(b, (unsigned long)n, false); return;
-    // the original's long user, long community and short trust locals, then the unsigned members
-    case EeWonDirSet::Acl: e->mACLs.push_back(DirACL{(char)r->kind, (unsigned long)(long)r->user, (unsigned long)(long)r->community, (unsigned short)(short)r->trust}); return;
-    }
+    std::wstring aText;
+    ee_won_dirlist_text(this->mList, inIndex, EeWonDirText::Name, WonWideSink, &aText);
+    return aText;
 }
-
-// an empty entity: no type, times, CRC or addresses (DirEntity.cpp is merged here: net round 29)
-DirEntity::DirEntity()
-    : mType(0), mLifespan(0), mCRC(0), mCreated(0), mCreateIP(0), mCreateId(0), mTouched(0), mTouchIP(0), mTouchId(0),
-      mReqUnique(false)
+std::wstring DirList::DisplayName(size_t inIndex) const
 {
+    std::wstring aText;
+    ee_won_dirlist_text(this->mList, inIndex, EeWonDirText::DisplayName, WonWideSink, &aText);
+    return aText;
 }
-DirEntity::~DirEntity() {}
-DirEntity::DirEntity(const EeWonDirEntity* inEntity) : DirEntity() { ee_won_dir_entity_fill(inEntity, DirSet, this); }
-// Returns the service's network address as an IP address and port (empty when shorter than 6 bytes; 2f0400)
-IPAddr DirEntity::GetNetAddrAsIP() const
-{
-    IPAddr result;
-    if (this->mNetAddr.get() != NULL && this->mNetAddr->length() >= 6)
-        result.SetSixByte(this->mNetAddr->data());
-    return result;
-}
-
-// No original address identified: the parsers' entity sink, for the Rust ops' results
-// Appends a DirEntity made of what ee_won read to a DirEntityList
-void DirEntityReplyParser::TakeEntity(void* inList, const EeWonDirEntity* inEntity)
-{
-    static_cast<DirEntityList*>(inList)->push_back(new DirEntity(inEntity));
-}
+IPAddr DirList::Addr(size_t inIndex) const { return IPAddr::FromValue(ee_won_dirlist_addr(this->mList, inIndex)); }
 }

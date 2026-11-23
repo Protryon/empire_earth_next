@@ -135,6 +135,7 @@ struct DirEntityList {
     bool empty() const { Log("DirEntityList empty"); return this->mOp % 2 == 0; }
     ~DirEntityList() { Log("delete DirEntityList #" + N(this->mOp)); }
 };
+typedef DirEntityList DirList; // the hosts' name since R6 WON round 34
 struct ServerContext : RefCount {
     void Clear() { Log(Id(this) + " Clear"); }
     void RemoveAllAddresses() { Log(Id(this) + " RemoveAllAddresses"); }

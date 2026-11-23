@@ -11,6 +11,7 @@ pub mod chatctl;
 pub mod chatlink;
 pub mod chatobj;
 pub mod dialogs;
+pub mod dirread;
 pub mod dlglogic;
 pub mod eecolor;
 pub mod eegame;

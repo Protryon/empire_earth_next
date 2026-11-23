@@ -10,25 +10,14 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/game/screens.h"
 
-UIEvent* EECreateScreenEvent(unsigned long inEvent)
-{
-    if (inEvent == 0)
-        return NULL;
-    return new EEScreenEvent(inEvent);
-}
+// a new screen event of the code, NULL for code 0
+UIEvent* EECreateScreenEvent(unsigned long inEvent) { return inEvent == 0 ? NULL : new EEScreenEvent(inEvent); }
 
-// The screens' events for ee_screens toolkit.rs (its event group): 0 a new event of the code, 1 the event's
-// Reference, 2 its Dereference
-extern "C" void* ee_screenscpp_event(uint32_t inOp, void* inEvent, uint32_t inCode)
-{
-    if (inOp == 0)
-        return EECreateScreenEvent(inCode);
-    if (inOp == 1)
-        static_cast<UIEvent*>(inEvent)->Reference();
-    else
-        static_cast<UIEvent*>(inEvent)->Dereference();
-    return NULL;
-}
+// The screens' events for ee_screens toolkit.rs (its event group): a new event of the code, an event's Reference,
+// its Dereference
+extern "C" void* ee_screenscpp_event_new(uint32_t inCode) { return EECreateScreenEvent(inCode); }
+extern "C" void ee_screenscpp_event_ref(void* inEvent) { static_cast<UIEvent*>(inEvent)->Reference(); }
+extern "C" void ee_screenscpp_event_unref(void* inEvent) { static_cast<UIEvent*>(inEvent)->Dereference(); }
 
 // A form's grab scroll event (0 the main game form's, 1 the scenario editor's), its record fresh
 UIEvent* EECreateGrabScroll(unsigned long inForm)

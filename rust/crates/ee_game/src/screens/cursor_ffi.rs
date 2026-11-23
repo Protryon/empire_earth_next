@@ -11,6 +11,10 @@ mod sys {
 
     extern "C" {
         pub fn ee_screenscpp_cursor(ctx: *mut c_void, op: u32, a: u32, b: u32, f: *mut f32) -> i32;
+        pub fn ee_screenscpp_cur_local_player() -> *mut c_void;
+        pub fn ee_screenscpp_cur_selected_group(player: *mut c_void) -> *mut c_void;
+        pub fn ee_screenscpp_cur_group_first(group: *mut c_void) -> *mut c_void;
+        pub fn ee_screenscpp_cur_set_pointer(kind: i32);
     }
 }
 
@@ -35,4 +39,23 @@ impl CursorHost for Host {
 #[no_mangle]
 pub extern "C" fn ee_screens_cursor_kind(ctx: *mut c_void) -> i32 {
     cursor_kind(&mut Host(ctx))
+}
+
+/// `EEUIFMainGame::UpdateCursorKind` (0x266f8b): picks the mouse cursor for the unit under it from what the local
+/// player's selection can do to it (`cursor_kind` over one read state of `form`).
+///
+/// # Safety
+/// `form` is the live main game form; the world has its local player.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_update_cursor_kind(form: *mut c_void) {
+    // SAFETY: the contract
+    unsafe {
+        let player = sys::ee_screenscpp_cur_local_player();
+        let group = sys::ee_screenscpp_cur_selected_group(player);
+        let mut read =
+            crate::screens::hud_direct::CursorRead::new(form, player, group, sys::ee_screenscpp_cur_group_first(group));
+        sys::ee_screenscpp_cur_set_pointer(ee_screens_cursor_kind(
+            (&mut read as *mut crate::screens::hud_direct::CursorRead).cast(),
+        ));
+    }
 }

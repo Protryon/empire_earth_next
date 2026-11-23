@@ -10,8 +10,10 @@
 #define LLE_UIHOTKEY_H
 
 #include "rust/ui/hotkeyobj.h"
+#include "rust/ui/hotkey_ffi.h"
 #include "lle/UIEntity.h"
 #include "lle/TMPoll.h"
+#include "rust/ui/lle_hosts.h"
 
 class FSFileSpec;
 class ISEntity;
@@ -23,20 +25,19 @@ class UIForm;
 #undef SetForm
 #endif
 
-class LLE_API UIHotKey : public UIEntity, private EeUiHotKeyFields {
-    friend class UIForm;                    // UIForm.cpp reads and writes the fields directly
-    friend struct UIHotKeyHost;             // UIHotKey.cpp: the Rust object's calls out
+class LLE_API UIHotKey : public UIEntity, public EeUiHotKeyFields {
 public:
-    UIHotKey();
-    UIHotKey(UIForm* inForm, const UIHotKey& inHotKey);
+    // a hot key with no keys or events, enabled; a copy onto a form, referencing its events
+    UIHotKey() : UIEntity(0) { ee_ui_hotkey_init(this, ee_ui_hotkey_host); }
+    UIHotKey(UIForm* inForm, const UIHotKey& inHotKey) : UIEntity(0) { ee_ui_hotkey_copy(this, ee_ui_hotkey_host, const_cast<UIHotKey*>(&inHotKey), inForm); }
     virtual ~UIHotKey();
-    static long CreateHotKeys(FSFileSpec& inFile);
-    static void DeleteHotKeys();
+    static long CreateHotKeys(FSFileSpec& inFile) { return ee_ui_hotkey_create_all(&inFile, ee_ui_hotkey_host); }
+    static void DeleteHotKeys() { ee_ui_hotkey_delete_all(ee_ui_hotkey_host); }
     virtual bool FireEvents() { return this->Call(EeUiHotKeyCall::FireEvents) != 0; }              // slot 0x04
     bool GetAlwaysFire() const { return this->mAlwaysFire; }
     static UIHotKey* GetHotKey(unsigned long inIndex) { return static_cast<UIHotKey*>(ee_ui_hotkey_at(inIndex)); }
     static unsigned long GetHotKeyCount() { return ee_ui_hotkey_count(); }
-    void GetHotKeyName(UWideString& outName);
+    void GetHotKeyName(UWideString& outName) { outName = ee_ui_hotkey_display_name(this); }
     unsigned long GetKeyCount() const { return this->mKeyCount; }
     void SetAlwaysFire(bool inAlwaysFire) { this->mAlwaysFire = inAlwaysFire; }
     void SetDoublePressedEvent(UIEvent* inEvent) { this->Call(EeUiHotKeyCall::SetEvent, 0, (intptr_t)inEvent); }
@@ -49,7 +50,6 @@ public:
 #ifdef LOWLEVELENGINE_EXPORTS
     static void UpdatePressedPollAmount() { UIHotKey::sPressedPollAmount = UIHotKey::sPressedPoll.Poll(); }
 #endif
-private:
     intptr_t Call(EeUiHotKeyCall inCall, intptr_t a = 0, intptr_t b = 0) { return ee_ui_hotkey_call(this, inCall, a, b); }
 
 #ifdef LOWLEVELENGINE_EXPORTS

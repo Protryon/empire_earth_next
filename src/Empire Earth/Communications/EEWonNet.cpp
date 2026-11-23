@@ -159,8 +159,8 @@ static void CancelOpCallback(UIForm* inForm) { reinterpret_cast<AsyncOp*>(inForm
 static void HostGameCallback(UIForm* inForm) { ee_won_wonnet_call(reinterpret_cast<EEWonNet*>(inForm)->mRust, Call::CreateGame, 0, 0, 0); }
 
 // the host's statics (the original's locals that are C++ objects) and sinks
-static DirEntityList sEntities;
-static DirEntityList::const_iterator sEntity;
+static DirList sEntities;
+static size_t sEntity; // the entity at
 static FSFileSpec sFile;
 static NEProtocol* sProtocol;
 static EEUICWNRBLine sRoomLine;

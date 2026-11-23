@@ -35,6 +35,11 @@ pub(crate) fn cat(parts: &[&[u8]]) -> Vec<u8> {
     parts.concat()
 }
 
+/// The seven numbers of a replayed `create` / `create_sub` as the forwarders' record.
+fn create_args(n: &[c_ulong]) -> EeGeModelCreate {
+    EeGeModelCreate { counts: [n[0], n[1], n[2], n[3], n[4], n[5]], flags: n[6] }
+}
+
 pub(crate) fn cstr(p: isize) -> Vec<u8> {
     // SAFETY: the Rust object passes NUL-terminated names
     unsafe { c_bytes(p as *const c_char) }.to_vec()
@@ -164,7 +169,11 @@ impl Replay {
         use EeGeManOp as O;
         let o = tok(obj);
         match op {
-            O::LockCreate => id(&self.expect_answer(b"LockCreate")[0]) as isize,
+            O::LockCreate => {
+                // SAFETY: the object's out pointer
+                unsafe { *(a as *mut usize) = id(&self.expect_answer(b"LockCreate")[0]) };
+                0
+            }
             O::LockDestroy => {
                 let d = self.world.depth.get(&obj).copied().unwrap_or(0).to_string();
                 self.expect(&cat(&[b"LockDestroy ", &o, b" depth ", d.as_bytes()]));
@@ -191,27 +200,15 @@ impl Replay {
                 self.expect(&cat(&[b"BaseDereference ", &o]));
                 0
             }
-            O::DumpHeader => {
-                let d = self.world.dumps.entry(obj).or_default();
-                d.extend_from_slice(b"\n\n*********Model Manager - Current Loaded Files In Memory*********\n\n");
+            O::DumpText => {
+                self.world.dumps.entry(obj).or_default().extend_from_slice(&cstr(a));
                 0
             }
-            O::DumpLine => {
-                let count = self.world.refs[&obj].to_string();
-                let line = cat(&[
-                    b"The ",
-                    &cstr(a),
-                    b" model file is loaded in memory with a reference count of ",
-                    count.as_bytes(),
-                    b".\n",
-                ]);
-                self.world.dumps.entry(b as usize).or_default().extend_from_slice(&line);
-                0
-            }
+            O::LockVerify => 0,
             O::ModelNew | O::ModelNewSub => {
                 // SAFETY: the replay's calls pass seven counts
                 let n = unsafe { std::slice::from_raw_parts(a as *const c_ulong, 7) };
-                let name = if op == O::ModelNew { cstr(b) } else { self.world.names[&obj].clone() };
+                let name = if op == O::ModelNew { cstr(b) } else { self.world.names[&(b as usize)].clone() };
                 let line = self.peek().to_vec();
                 let (before, got_name, after) = split_named(&line);
                 let mut want = vec![b"ModelNew".to_vec(), before.get(1).map_or(b"?".to_vec(), |t| t.to_vec())];
@@ -224,12 +221,14 @@ impl Replay {
                     self.fail("a different ModelNew");
                 }
                 self.take();
-                if op == O::ModelNewSub {
-                    let index = (b as c_ulong).to_string();
-                    self.expect(&cat(&[b"SetSubModel ", &o, b" ", &tok(model), b" ", index.as_bytes()]));
-                    self.expect(&cat(&[b"BaseDereference ", &tok(model)]));
-                }
                 model as isize
+            }
+            // the parent's name: the fake's own token, which ModelNewSub looks up
+            O::ModelName => obj as isize,
+            O::ModelSetSub => {
+                let index = (b as c_ulong).to_string();
+                self.expect(&cat(&[b"SetSubModel ", &o, b" ", &tok(a as usize), b" ", index.as_bytes()]));
+                0
             }
             O::ModelFindFile => {
                 let want = cat(&[b"ModelFindFile ", &o, b" [", &cstr(a), b"] ", &tok(b as usize)]);
@@ -296,12 +295,12 @@ impl Replay {
                     let (before, name, _) = split_named(&line);
                     let n: Vec<c_ulong> = before[2..].iter().map(|v| num(v) as c_ulong).collect();
                     let cname = c_string(&name);
-                    tok(EeGeModelManager::create_model(p, n.as_ptr().cast(), cname.as_ptr().cast()))
+                    tok(EeGeModelManager::create_model(p, &create_args(&n), cname.as_ptr().cast()))
                 }
                 b"create_sub" => {
                     let n: Vec<c_ulong> = t[2..9].iter().map(|v| num(v) as c_ulong).collect();
                     let index = num(t[9]) as c_ulong;
-                    tok(EeGeModelManager::create_sub_model(p, n.as_ptr().cast(), index, id(t[10])))
+                    tok(EeGeModelManager::create_sub_model(p, &create_args(&n), index, id(t[10])))
                 }
                 b"load" => {
                     let (_, name, after) = split_named(&line);

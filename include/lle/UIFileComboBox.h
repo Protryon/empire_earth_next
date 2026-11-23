@@ -15,20 +15,16 @@
 class FSPath;
 
 class LLE_API UIFileComboBox : public UIComboBox {
-    friend struct UIFileListHost;           // UIFileListBox.cpp: the Rust object's calls out
 public:
     UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont,
                    const GE2DPoint& inLocation, float inWidth, unsigned long inMaxListBoxHeight, UIForm* inForm,
                    unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness);
-    UIFileComboBox(const UIFileComboBox&) = delete;
-    UIFileComboBox& operator=(const UIFileComboBox&) = delete;
     virtual ~UIFileComboBox();
     void AddValidExtension(const UString& inExtension) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::AddExtension, (intptr_t)(const char*)inExtension); }
     void CreateEntries(unsigned long inSortType) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType); }
     long DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }
     FSPath* GetFilePath() const { return (FSPath*)ee_ui_file_list_call(this->mRust, EeUiFileListCall::FilePath, 0); }
     void SetSearchPaths(FSPath* inPath) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath); }
-private:
     EeUiFileList* mRust;                    // the valid extensions (".xxx") and the path (referenced)
 };
 

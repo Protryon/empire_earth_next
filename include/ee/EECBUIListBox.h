@@ -53,17 +53,7 @@ public:
 
     void SetSortLines(bool inSortLines) { this->mSortLines = inSortLines; }
 
-    // the base's members the builder host's shims call (EECivilizationBuilder.cpp)
-    using UIListBox<UWideString>::GetCopyTextRectangle;
-    using UIListBox<UWideString>::GetLineHeight;
-    using UIListBox<UWideString>::DrawScrollBarText;
-    using UIListBox<UWideString>::GetSelectionIndex;
-    using UIListBox<UWideString>::GetAutoSelect;
-    using UIListBox<UWideString>::GetDrawCount;
-    using UIListBox<UWideString>::GetNumLines;
-    using UIListBox<UWideString>::mData;
-    using UIListBox<UWideString>::mCopyLineArray;
-    using UIListBox<UWideString>::SetCopiedHasSelection;
+    // (the base's members the builder host's shims call are public: UIListBox.h)
 
     GEColor mC13C;                          // the header colour (kBlack; the choice form's: (0, 0, 0.39), (0.18, 0.18, 0.28))
     GEColor mC148;                          // the header colour as of the last CopyData

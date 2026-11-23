@@ -79,7 +79,7 @@ public:
         this->AddCommunity(inCommunity);
     }
     bool AddAddress(const IPAddr& inAddr) { return this->GetServerContext()->AddAddress(inAddr); }
-    bool AddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter = NULL)
+    bool AddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter = NULL)
     { return this->GetServerContext()->AddAddressesFromDir(inDir, inNameFilter); }
     void RemoveAllCommunity() { this->LoginSet(EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY, std::wstring()); }
     void AddCDKeyCommunityJoin(const std::wstring& inCommunity, const CDKey& inKey)
@@ -95,9 +95,6 @@ public:
     void ClearNicknames() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES, std::wstring()); }
     bool RemoveAddress(const IPAddr& inAddr) { return this->GetServerContext()->RemoveAddress(inAddr); }
     void RemoveAllAddresses() { this->GetServerContext()->RemoveAllAddresses(); }
-    bool AddAddressesFromDir(const std::map<std::wstring,DirEntityList>& inMap, const std::wstring& inPath,
-                             const wchar_t* inNameFilter = NULL)
-    { return this->GetServerContext()->AddAddressesFromDir(inMap, inPath, inNameFilter); }
     static bool LoadVerifierKey(const std::string& inFile) //2df440
     { return ee_won_auth_verifier_load(WonBytes(inFile), inFile.size()); }
     void SetServerContext(ServerContext* inContext) //2df330

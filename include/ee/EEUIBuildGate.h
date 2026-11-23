@@ -6,6 +6,7 @@
 #ifndef EE_EEUIBUILDGATE_H
 #define EE_EEUIBUILDGATE_H
 #include "ee/EETechTreeTechID.h"
+#include "rust/game/screens.h"   // ee_screens_gate_* (placement_ffi.rs)
 
 class EEUnitClass;
 
@@ -16,12 +17,16 @@ public:
     virtual ~EEUIBuildGate() {}             // +0x00 (??_G 0x19cc1c in the scenario editor form's unit: the vptr store)
     // Leaves the placement mode (back to the normal interface state)
     virtual void Cancel();                  // +0x04 0x2561b6 (ICF: EEUIBuildWall's too) the main form leaves the mode
-    virtual void Initialize(long inPlayer); // +0x08 0x2561ff
-    virtual void Terminate();               // +0x0c 0x256245
+    // +0x08 0x2561ff: starts gate placement for a player: highlights the walls a gate can go on and loads its media
+    virtual void Initialize(long inPlayer) { ee_screens_gate_initialize(this->Fields(), (int32_t)inPlayer); }
+    // +0x0c 0x256245: ends gate placement: removes highlights and ghosts, unlocks the cursor and unloads the media
+    virtual void Terminate() { ee_screens_gate_terminate(this->Fields()); }
     virtual void Update(const GE2DPoint& inLocation);   // +0x10 0x25627d (the mouse location)
     // Asks the main game form's build action to build a gate at a location facing a direction
     virtual void Build(const GE2DPoint& inLocation, long inDirection);   // +0x14 0x25619b
-    void ClearGhostUnits();                 // 0x2561c9 (un-highlights the walls, clears the ghosts)
+    void ClearGhostUnits() { ee_screens_gate_clear_ghosts(this->Fields()); }   // 0x2561c9 (the walls, the ghosts)
+    // the members from mUnitClass on as placement_ffi.rs' and mouse_modes.rs' record (EEUIFMainGame.cpp asserts it)
+    EeScreensBuildGateFields* Fields() { return reinterpret_cast<EeScreensBuildGateFields*>(&this->mUnitClass); }
 
     void SetUnitClass(EEUnitClass* inClass) { this->mUnitClass = inClass; }
     EEUnitClass* mUnitClass;                // +0x04 the gate's class (its +0x1bc type: the media)

@@ -177,6 +177,8 @@ CHECKS = [
     dict(enum="EeWonLobbyCfgRdOp", header="won_lobby/lobbycfgrd.h",
          hosts=[LOBBY / f for f in ("LobbyNetCtrlHost.cpp", "LobbyCtrlHost.cpp", "CrossPromotionButton.cpp", "CreditsDialog.cpp")],
          rust=[], allowed={}),
+    # R6 WON round 34 (net): the model's directory reads (dirread.rs)
+    dict(enum="EeWonDirReadOp", header="won_lobby/dirread.h", hosts=[LOBBY / "LobbyModelHost.cpp"], rust=[], allowed={}),
 ]
 
 

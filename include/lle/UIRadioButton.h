@@ -16,7 +16,6 @@
 #include "lle/UITextLabel.h"   // the inline dtor deletes the label
 
 class LLE_API UIRadioButton : public UIButton {
-    friend struct UIButtonHost;             // UIButton.cpp: the Rust button's calls of Check and UnCheck
 public:
     UIRadioButton(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inIsPushButton,
@@ -46,7 +45,6 @@ public:
     void SetUpCheckedBitmap(GEBitmap* inBitmap) { this->SubCall(EeUiButtonCall::RadioSetUpChecked, (intptr_t)inBitmap); }
     // Sets the normal bitmap shown while unchecked
     void SetUpUncheckedBitmap(GEBitmap* inBitmap) { this->SubCall(EeUiButtonCall::RadioSetUpUnchecked, (intptr_t)inBitmap); }
-protected:
     // Checks the button (the virtual Check), then releases it
     virtual void ButtonUp() { this->SubCall(EeUiButtonCall::RadioButtonUp); } // 0x1005fc98: the virtual Check, then UIButton's
     // Presses the button, except a checked push button

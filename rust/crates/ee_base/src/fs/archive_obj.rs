@@ -584,12 +584,13 @@ pub unsafe extern "C" fn ee_fs_arch_create_walk(
 /// `Create(root, files, level)`: the archive built from the listed files under the root.
 ///
 /// # Safety
-/// `a` is a live record, `root` a live spec, `files` `count` live `UString` records.
+/// `a` is a live record, `root` a live spec, `files` an array of `count` live `UString`s (a `std::vector<UString>`'s
+/// data: a `UString` is an [`EeFsString`]).
 #[no_mangle]
 pub unsafe extern "C" fn ee_fs_arch_create_list(
     a: *mut EeFsArchiveObj,
     root: *const EeFsSpec,
-    files: *const *const EeFsString,
+    files: *const EeFsString,
     count: usize,
     level: c_ulong,
 ) -> c_long {
@@ -597,7 +598,7 @@ pub unsafe extern "C" fn ee_fs_arch_create_list(
     let mut name = Local::capacity(260);
     let mut file = TempSpec::copy_of(root);
     for i in 0..count {
-        ee_ustring_assign(file.0.file.us(), (**files.add(i)).usc());
+        ee_ustring_assign(file.0.file.us(), (*files.add(i)).usc());
         add_to_fat(a, root, &file.0, level, &mut name, 213);
     }
     finish_create(a, root, level) as c_long

@@ -23,12 +23,7 @@ public:
     virtual void CopyFrom(const GEVertexArray& inArray) { ee_ge_va_copy_from(this->mRust, inArray.mRust); }
     virtual void GetColor(GEColor& outColor, unsigned long inIndex) const { this->Get(EeGeVaField::Color, inIndex, &outColor); }
     virtual void GetNormal(GEVector& outNormal, unsigned long inIndex) const { this->Get(EeGeVaField::Normal, inIndex, &outNormal); }
-    virtual float GetOpacity(unsigned long inIndex) const
-    {
-        float theOpacity;
-        this->Get(EeGeVaField::Opacity, inIndex, &theOpacity);
-        return theOpacity;
-    }
+    virtual float GetOpacity(unsigned long inIndex) const { return ee_ge_va_opacity(this->mRust, inIndex); }
     virtual void GetPoint(GE3DPoint& outPoint, unsigned long inIndex) const   // slot 0x14
         { this->Get(EeGeVaField::Point, inIndex, &outPoint); }
     virtual unsigned long GetSize() const { return ee_ge_va_size(this->mRust, false); }

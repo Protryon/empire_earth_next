@@ -11,6 +11,7 @@
 
 #include "rust/ui/bgobj.h"
 #include "lle/UILayoutUtility.h"
+#include "lle/UIObjHost.h"
 
 class UIForm;
 
@@ -19,8 +20,7 @@ class UIForm;
 #undef GetForm
 #endif
 
-class LLE_API UIBackground : protected EeUiBackgroundFields {
-    friend struct UIBackgroundHost;         // UIBackground.cpp: the Rust object's calls out
+class LLE_API UIBackground : public EeUiBackgroundFields {
 public:
     UIBackground(unsigned long inBackgroundID, const UILayoutUtility& inLayout, UIForm* inForm,
                  unsigned long inDrawPriority, bool inVisible);
@@ -40,10 +40,9 @@ public:
     const GERectangle& GetRectangle() const { return *reinterpret_cast<const GERectangle*>(&this->mRectangle); }
     void SetRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiBgCall::SetRectangle, inRectangle); }
     void SetVisibility(bool inVisible) { this->Call(EeUiBgCall::SetVisibility, inVisible); }
-protected:
     intptr_t Call(EeUiBgCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
         { return ee_ui_bg_call(this, inCall, a, b, f); }
-    intptr_t CallRect(EeUiBgCall inCall, const GERectangle& inRectangle);
+    intptr_t CallRect(EeUiBgCall inCall, const GERectangle& inRectangle) { return ee_ui_bg_call(this, inCall, 0, 0, UIF4(inRectangle)); }
 };
 
 #endif

@@ -2,6 +2,7 @@
 //! order: what is looked up, opened, read, closed and deleted, and what stops the game.
 
 use super::*;
+use crate::ge::model_ffi::EeGeSharedFrame;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
@@ -35,9 +36,10 @@ unsafe extern "C" fn host(op: EeOfFileOp, obj: *mut c_void, a: isize, b: isize) 
                 let found = with(|w| w.files.contains_key(&wanted));
                 with(|w| w.log.push(format!("find {wanted} {found}")));
                 if found {
-                    Box::into_raw(Box::new(wanted)) as isize
-                } else {
+                    *(b as *mut *mut String) = Box::into_raw(Box::new(wanted));
                     0
+                } else {
+                    3
                 }
             }
             EeOfFileOp::FileOpen => {
@@ -111,7 +113,15 @@ fn model(name: &str, shared: &[EeGeSharedFrame]) -> (c_long, *mut CemModel) {
     let mut out = std::ptr::null_mut();
     let c = std::ffi::CString::new(name).unwrap();
     // SAFETY: as above
-    let r = unsafe { ee_of_find_model(host, PATH as *mut c_void, c.as_ptr(), shared.as_ptr(), shared.len(), &mut out) };
+    let r = unsafe {
+        ee_of_find_model(
+            host,
+            PATH as *mut c_void,
+            c.as_ptr(),
+            &EeGeSharedFrames { frames: shared.as_ptr(), count: shared.len() },
+            &mut out,
+        )
+    };
     (r, out)
 }
 

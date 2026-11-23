@@ -606,6 +606,39 @@ pub unsafe extern "C" fn ee_ge_pa_index(p: *const EeGePolygonArray, polygon: u32
     unsafe { (*p).0.vertex_index(polygon, corner) as c_ulong }
 }
 
+/// `GEVertexArray::GetOpacity(index)`: the vertex's opacity (`ee_ge_va_get`'s).
+///
+/// # Safety
+/// As `ee_ge_va_get`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_va_opacity(a: *const EeGeVertexArray, index: u32) -> f32 {
+    let mut opacity = 0.0f32;
+    // SAFETY: the caller's contract; the field is one float
+    unsafe { ee_ge_va_get(a, EeGeVaField::Opacity, index, &mut opacity) };
+    opacity
+}
+
+/// `GEPolygonArray::SetVertexIndices(polygon, first, second, third)`: the three corners in turn
+/// (`ee_ge_pa_set_index`'s).
+///
+/// # Safety
+/// As `ee_ge_pa_set_index`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_pa_set_indices(
+    p: *mut EeGePolygonArray,
+    polygon: u32,
+    first: c_ulong,
+    second: c_ulong,
+    third: c_ulong,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_ge_pa_set_index(p, polygon, 0, first);
+        ee_ge_pa_set_index(p, polygon, 1, second);
+        ee_ge_pa_set_index(p, polygon, 2, third);
+    }
+}
+
 /// `SetVertexIndex{corner + 1}(polygon, index)` (16 bits kept).
 ///
 /// # Safety
