@@ -155,6 +155,12 @@ mod cpp_consts_tests;
 
 // ---- round 12, fork D: the Empire Earth directory (EECore11OpB)
 //
+/// cbindgen:ignore
+pub mod globals;
+pub mod posix_main;
+pub mod teams;
+/// cbindgen:ignore
+pub mod window_pump;
 //
 
 use ee_base::math::types::{Ge3DPoint, GeTransformation};
@@ -632,7 +638,6 @@ pub enum EeGameCpp {
     WMap,
     WMaxPlayers,
     WMediaLoaded,
-    WMirrorTeams,
     WMoonDirection,
     WNumPlayers,
     WOptions,
@@ -2795,7 +2800,6 @@ pub enum EeGameCpp {
     RunFixtureConfigure,
     RunInstanceMutex,
     RunSetEventPump,
-    RunNativeHook,
     RunComInit,
     RunComUninit,
     RunFloatingPoint,
@@ -2806,7 +2810,6 @@ pub enum EeGameCpp {
     RunNewResource,
     RunDefaultSettings,
     RunPreferencesLoad,
-    RunSimPreferences,
     RunUserInterface,
     RunUShutdown,
     RunReleaseDataPath,
@@ -4017,6 +4020,14 @@ pub enum EeGameCpp {
     //
     // ---- round 12, fork D (EECore11OpB's cases)
     //
+    C12GameWindowSize,
+    C12DebugText,
+    C12WonNetCffdd,
+    C12WonNetCfff2,
+    C12TeamsResize,
+    C12TeamSetPlayers,
+    C12PlayerObserver,
+    C12PlayerEnemy,
 }
 
 pub use EeGameCpp as O;

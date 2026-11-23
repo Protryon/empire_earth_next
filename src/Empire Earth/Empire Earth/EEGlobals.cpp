@@ -1,8 +1,8 @@
 // The game's global data, out of the game's main unit (Empire Earth.cpp): the storage of its 48 global objects
 // (gWorld, gContinentManager, the tables, the managers, the strings; ee/EEGlobalStorage.h: Empire Earth.cpp
 // constructs them in place, in their original order), the references the original's code made to members of them
-// (gNumPlayers is gWorld.mNumPlayers, ...), the subsystem and font pointers, the network checksums and the save
-// version. No function and no constructor is named here, so the unit depends on no other: 197 units named
+// (gNumPlayers is gWorld.mNumPlayers, ...) and the save version; the plain pointers and scalars (the subsystems,
+// the fonts, the render objects, the hooks, the checksums) are Rust's storage (ee_game gamecpp globals.rs). No function and no constructor is named here, so the unit depends on no other: 197 units named
 // Empire Earth.cpp only for these globals, and that put them all in one dependency cycle (tools/cpp_deps.py).
 #include <windows.h>
 #include <stdint.h>
@@ -34,21 +34,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEGlobalStorage.h"
-
-class GETextureManager;
-class GEModelManager;
-class RTSRenderObject;
-class GEFont;
-class EEUserInterface;
-class EEMusicManager;
-class RTSMousePointer;
-class EEGraphics;
-class EEDataPreLoading;
-class EEPhysics;
-class FSPath;
-class GERasterizer;
-class GEWindow;
-class UResourceFile;
 
 EE_GLOBAL_STORAGE(UString, gU530BE0, "?gU530BE0@@3VUString@@A");
 EE_GLOBAL_STORAGE(UWideString, gU530BC8, "?gU530BC8@@3VUWideString@@A");
@@ -173,84 +158,6 @@ EE_GLOBAL_STORAGE(UString, gCommRecPlayThreadName, "?gCommRecPlayThreadName@@3VU
 EE_GLOBAL_STORAGE(UString, gSoundScavengerThreadName, "?gSoundScavengerThreadName@@3VUString@@A");
 EE_GLOBAL_STORAGE(UString, gCDAudioThreadName, "?gCDAudioThreadName@@3VUString@@A");
 
-// the network settings EELoadNetworkSettings reads from the string resources (0x4c05d4.., .data, all 1)
-long gAOCRomanChecksum = 1;
-long gAOCPacificChecksum = 1;
-long gAOCAsianChecksum = 1;
-long gEEDemoChecksum = 1;
-long gEELearningChecksum = 1;
-
-uint32_t gBinaryChecksum; // 0x5319e4: the install checksum EEInitializeNetwork computes (sent to clients; 32-bit on the wire)
-
-GETextureManager* gTextureManager;
-GEModelManager* gModelManager;
-RTSRenderObject* gU56535C;
-RTSRenderObject* gU565358;
-RTSRenderObject* gU565354;
-RTSRenderObject* gU565350;
-RTSRenderObject* gU565360;
-GEFont* gFontArial8; // 0x531928 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial9; // 0x53192c (UIFontTable::FindOrCreateFont)
-GEFont* gU531930; // 0x531930 (UIFontTable::FindOrCreateFont)
-GEFont* gU531934; // 0x531934 (UIFontTable::FindOrCreateFont)
-GEFont* gU531938; // 0x531938 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial16; // 0x53193c (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial18; // 0x531940 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial20; // 0x531944 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial24; // 0x531948 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial36; // 0x53194c (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial48; // 0x531950 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArial72; // 0x531954 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold8; // 0x531958 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold9; // 0x53195c (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold10; // 0x531960 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold12; // 0x531964 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold14; // 0x531968 (UIFontTable::FindOrCreateFont)
-GEFont* gFontArialBold16; // 0x53196c (UIFontTable::FindOrCreateFont)
-GEFont* gFontTimesNewRoman9; // 0x531970 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTimesNewRoman10; // 0x531974 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTimesNewRoman12; // 0x531978 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTimesNewRoman14; // 0x53197c (UIFontTable::FindOrCreateFont)
-GEFont* gFontCourier8; // 0x531980 (UIFontTable::FindOrCreateFont)
-GEFont* gFontCourier10; // 0x531984 (UIFontTable::FindOrCreateFont)
-GEFont* gFontCourier12; // 0x531988 (UIFontTable::FindOrCreateFont)
-GEFont* gFontCourier14; // 0x53198c (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma8; // 0x531990 (UIFontTable::FindOrCreateFont)
-GEFont* gU531994; // 0x531994 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma10; // 0x531998 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma12; // 0x53199c (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma14; // 0x5319a0 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma16; // 0x5319a4 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma18; // 0x5319a8 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma20; // 0x5319ac (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma24; // 0x5319b0 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma36; // 0x5319b4 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma48; // 0x5319b8 (UIFontTable::FindOrCreateFont)
-GEFont* gFontTahoma72; // 0x5319bc (UIFontTable::FindOrCreateFont)
-// The subsystem pointers after the font table (.bss 0x5319c0..0x5319d4; their headers declare them)
-class SEMixer;
-class SESoundManager;
-class NESynchronousCommunications;
-class EEWonNet;
-class EEArtificialIntelligence;
-class EECheatCodes;
-class EEUIManager;
-class EEMouse;
-SEMixer* gConductor;
-SESoundManager* gSoundManager;
-NESynchronousCommunications* gCommunications;
-EEWonNet* gWonNet;
-EEArtificialIntelligence* gArtificialIntelligence;
-EECheatCodes* gCheatCodes;
-EEUIManager* gUIManager;
-EEMouse* gMouse;
-bool gFreeCamera;                           // 0x5319e8 (EmpireEarth.h)
-// The UI's globals the rest of the game names (their units' storage before: 16 units named EEUIFMainGame.cpp only
-// for gMiniMap, which put the main game form in the game's dependency cycle; tools/cpp_deps.py)
-class EEMiniMap;
-EEMiniMap* gMiniMap;                        // 0x564888 (ee/EEMiniMap.h; EEUIFMainGame.cpp's .bss)
-RTSRenderObject* gU56534C;                  // 0x56534c (the UI's render object; EEUserInterface.cpp's .bss)
-bool sIconsLoaded;                          // 0x5652ec (the status box's icons are loaded; EEUIFMGStatusBox.cpp's)
 // 0x562fd8 the WON password the UI thread keeps (ee/EmpireEarth.h; constructed in UI Events/EEScreens.cpp, which
 // defined it: the UI thread's unit named the screens' host only for it)
 EE_GLOBAL_STORAGE(UString, gMultiplayerString, "?gMultiplayerString@@3VUString@@A");
@@ -295,52 +202,13 @@ EE_GLOBAL_STORAGE(UString, gMultiplayerString, "?gMultiplayerString@@3VUString@@
 const unsigned long kSaveGameMajorVersion = 0;
 const unsigned long kSaveGameMinorVersion = 283;
 
-EEUserInterface* gUserInterface; // 0x5318f8, created by EEInitializePart1
-
-EEMusicManager* gMusicManager;
-RTSMousePointer* gMousePointer;
-EEGraphics* gGraphics;
-EEDataPreLoading* gDataPreLoading;
-EEPhysics* gPhysics;
-
-// The two original zero-initialized search-path pointers (EESetDataPaths writes them, Empire Earth.cpp).
-FSPath* gDataPath;
-FSPath* gCivilizationDataPath;
-
-GERasterizer* gRasterizer;
-GEWindow* gGameWindow;
-
-UResourceFile* gResource;
-
-// TEST ONLY: the UI fixture's configure step (EETestFixture.cpp sets it at static initialization; EERun calls it first)
-void (*gEETestFixtureConfigure)();
-// TEST ONLY: the physics' hooks (were EEPhysics.cpp's; ee/EEPhysics.h): the unit being stepped (EE-SIM's random-draw
-// trace), after each tick of RTSPhysics::Main's simulation loop, each executed input's view (the UI fixture's orders)
-class EEComplexUnit;
-class NEMessage;
-EEComplexUnit* gPhysicsSteppingUnit = NULL;
-void (*gPhysicsAfterTickHook)(void) = NULL;
-void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase) = NULL;
-// TEST ONLY: the render fill's capture (ee/EERenderCapture.h; EERenderCapture.cpp sets it)
-struct EERenderFrameInfo;
-void (*gEERenderCaptureFill)(const EERenderFrameInfo& inInfo, uint32_t inSwayClock, float inUnitCount) = NULL;
-
 // The unit classes by type and the registered unit types (EEUnitClass.cpp constructs them where they were defined;
-// ee/EEUnit.h), and the space units' heights (.data 0x4cc9fc/0x4cca00; ee/EERenderLists.h): were EEUnitClass.cpp's
+// ee/EEUnit.h): were EEUnitClass.cpp's
 EE_GLOBAL_STORAGE_AS(std::vector<EEUnitClass*>, gUnitClassTable,
                      "?gUnitClassTable@@3V?$vector@PEAVEEUnitClass@@V?$allocator@PEAVEEUnitClass@@@std@@@std@@A",
                      "gUnitClassTable");
 EE_GLOBAL_STORAGE_AS(std::vector<unsigned long>, EEUnitClassUnitTypes,
                      "?sUnitTypes@EEUnitClass@@2V?$vector@KV?$allocator@K@std@@@std@@A", "_ZN11EEUnitClass10sUnitTypesE");
-float gSpaceTurretHeight = 0.7f;
-float gSpaceStationHeight = 1.5f;
-// the scenario editor's screen font while a tab makes its controls (was EESERBUnitTypes.cpp's)
-class GEFont;
-GEFont* gSeplScreenFont;
-// 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.
-// Size: one dword (the next named datum is 8 bytes on, 0x4e5ba0; the dword between is unreferenced). Was
-// EEROUnits.cpp's: 21 units named the renderer's unit for it
-char gEmptyString[4] = "";
 // the game's UI as the WON network code uses it (ee/EEWonNetUI.h; EEUIEWonNetArenaRoomEvents.cpp fills it)
 #include "ee/EEWonNetUI.h"
 EEWonNetUI gEEWonNetUI;

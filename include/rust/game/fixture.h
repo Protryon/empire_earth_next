@@ -163,10 +163,10 @@ enum class EeFixtureOp : uint32_t {
   LobbySnapshot,
   /// control i0 of form h: an edit box's text set to the number i1 (`SetText(unsigned long)`) -> 1, 0 not an edit box
   EditNumber,
-  FxInstallDebug,
   FxInstallFault,
   FxInstallLasso,
-  FxInstallMessageHook,
+  FxMessageType,
+  FxMessageLocal,
   FxUiLockOn,
   FxUiLockOff,
   FxCurrentForm,

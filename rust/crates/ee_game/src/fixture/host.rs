@@ -138,10 +138,10 @@ pub enum EeFixtureOp {
     EditNumber,
     // ---- the compound operations' finer ones (compound.rs; one C++ statement each: EETestFixture.cpp names each
     // one's call)
-    FxInstallDebug,
     FxInstallFault,
     FxInstallLasso,
-    FxInstallMessageHook,
+    FxMessageType,
+    FxMessageLocal,
     FxUiLockOn,
     FxUiLockOff,
     FxCurrentForm,

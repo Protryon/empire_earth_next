@@ -78,7 +78,6 @@
 
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open
 extern void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs);   // EEMessage.cpp: each box selection's ids
-extern void (*gEEMessageExecutedTestHook)(NEMessage* inMessage, int inPhase);   // EEPhysics.cpp (DrainInput)
 
 // ---- the WON lobby (TEST ONLY): its walk, commands and snapshot are the Rust fixture's (lobby.rs), run on the
 // lobby's own message loop by a UserEvent (this trampoline)
@@ -126,21 +125,7 @@ void LassoHook(const std::vector<long>& inUnitIDs)
     ee_fixture_lasso(theIDs.data(), theIDs.size());
 }
 
-void MessageHook(NEMessage* inMessage, int inPhase)
-{
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    bool theLocal = thePlayer != NULL && gWorld.GetPlayerBySlot(inMessage->GetOriginatingSlot()) == thePlayer;
-    ee_fixture_message((uint64_t)(uintptr_t)inMessage, inMessage->GetType(), theLocal, inPhase);
-}
-
-// The game's debug output (PlatDebugOutput: GX's log, EE-AI lines, ...) goes to stderr as "debugstring <text>", the
-// lines the debugger harness read (no debugger runs under the fixture driver)
-void DebugToStderr(const char* inText)
-{
-    size_t theLength = inText ? strlen(inText) : 0;
-    fprintf(stderr, "debugstring %s%s", inText ? inText : "", theLength && inText[theLength - 1] == '\n' ? "" : "\n");
-    fflush(stderr);
-}
+// (the executed messages' hook and the debug output to stderr: ee_game fixture compound.rs)
 
 // (TEST ONLY: a fault under the fixture prints its code, place and return addresses on stderr, which the harness
 // keeps as game.log: sim_driver fault.rs, EE-SIM's own report)
@@ -230,14 +215,12 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::CalamityCount: return CALAMITIES != NULL ? (int64_t)CALAMITIES->GetCalamityClassCount() : 0;
     // ---- the compound operations' finer ones (compound.rs)
-    case EeFixtureOp::FxInstallDebug: PlatDebugSetHandler(DebugToStderr);
-        return 0;
     case EeFixtureOp::FxInstallFault: ee_sim_driver_fault_install("EE-AOC");
         return 0;
     case EeFixtureOp::FxInstallLasso: gEESelectUnitsTestHook = LassoHook;   // each box selection's ids (the boxselect command)
         return 0;
-    case EeFixtureOp::FxInstallMessageHook: gEEMessageExecutedTestHook = MessageHook;   // each executed input's view
-        return 0;
+    case EeFixtureOp::FxMessageType: return As<NEMessage>(c->h)->GetType();
+    case EeFixtureOp::FxMessageLocal: return gWorld.GetCurrentPlayer() != NULL && gWorld.GetPlayerBySlot(As<NEMessage>(c->h)->GetOriginatingSlot()) == gWorld.GetCurrentPlayer();
     case EeFixtureOp::FxUiLockOn: gUIManager->LockUIForCopyData();
         return 0;
     case EeFixtureOp::FxUiLockOff: gUIManager->UnlockUIForCopyData();

@@ -593,7 +593,7 @@ fn start_teams(w: P, st: P) {
         for i in 0..teams {
             h(O::StTeamToRust, st, &[i]);
         }
-        h(O::WMirrorTeams, w, &[]);
+        super::teams::mirror(w);
         let mut i = num_players(w);
         while i <= 16 {
             if player(w, i) == 0 {

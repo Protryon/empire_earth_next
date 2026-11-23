@@ -141,6 +141,8 @@ pub enum EeSimDriverSim {
     TorpedoCategory,
     // the capture and its sweeps
     CaptureActive,
+    CaptureFlush,
+    PhysicsRandom,
     CaptureOnly,
     CaptureOnlyList,
     CaptureExclusive,
