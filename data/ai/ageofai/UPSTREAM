@@ -3,12 +3,29 @@ GPL-3.0, Copyright (C) 2025-2026 Grille and the Age of AI contributors. Ported w
 port is GPL-3.0 as well (see LICENSE in this folder).
 
 Upstream commit the port matches:
-  0ac649541fca5b7a80bb724a308229fa4cfb2574   2026-11-09T22:18:40+01:00
+  7a17182bbb21e3e0aeb0c4f777794afc754bde69   2026-11-23T21:21:35+01:00
+
+The port's first commit matched 0ac6495 (2026-11-09). The port forward to 7a17182 (2026-11-23) is a work in
+progress: the per-file lines below say, file by file, what of the newer upstream is in the port, what is still NOT
+STARTED, and what of it this engine cannot take (ENGINE). A line that says nothing of the newer upstream describes
+the port at 0ac6495 (the newer changes are not ported yet); a line naming a newer feature says it is ported.
+The port forward is measured in stages (see the paragraph after the map).
 
 How to port forward: diff the upstream files below against that commit (git diff 0ac6495..HEAD -- dll/ai/<file>)
 and carry the changed decisions into the Lua module named. The port keeps the decisions (budgets, targets, timings,
 the force's rules), not the engine patches: what upstream patches into the original exe (danger routes, honest
 vision, the group move, the unload retries) is a C++ helper of this engine (docs/AI_LUA_UNITS.md §4, §11).
+
+From 0ac6495 to 7a17182 upstream added ~20k lines and 24 files. Most of the newer AI plays only with the game's own
+computer player off ([ai_base] game_ai = 0, upstream's default since 2026-11-14): its own economy (work.c, build.c,
+research.c, savings.c, claims.c), the force by territory (territories.c, stations.c, produce.c, army_view.c,
+claims.c), the ferry service and crossings (ferry.c, crossing.c, convoy.c, explore.c), the air guard (airguard.c,
+storms.c), the squadrons (squadrons.c), the holy units (holy.c), the strategy plans (plans.c, returns.c), and the
+pieces the territories carry (watch.c, creep.c, news.c, scen_targets.c). The probe before porting one of those is
+the engine: this engine exposes no territory split (game/territory.c is retail), no stance-claimed unit ownership
+(claims.c), no unit improvements through a Lua call to the game's improve verb where the data lacks it, no
+territory graph for the ferry, and no personality leanings. Where a decision needs one of those, the port either
+stands in with its own cheap model (a cell grid built from ai.tile, as fronts.lua does) or says ENGINE.
 
 Per-file map (upstream dll/ai/<file> -> this folder). Each line says PORTED, PARTLY (what is missing), ENGINE (a
 C++ helper of this engine stands in, nothing to port) or NOT STARTED.
@@ -35,6 +52,21 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 citizens on safe sites).
                 citizens_home part 2 ported (econ.lua: the idle citizens away from the towns walk home, every 3 s);
                 its parts 1 and 3 (the base point moved, stacked foundations) are the original's bugs: ENGINE.
+  work.c        NOT STARTED -> work.lua (port forward 7a17182). The citizens' work while the game's own computer
+                player is off: the worker targets by need and by the mine slots, the mine crowds (the walkers count
+                against a mine's places), the local mines and the town work, the herds kept, the forest settlement,
+                the food plan's parts, the work a claim leaves.
+  build.c       NOT STARTED -> build.lua (port forward 7a17182). The buildings by territory: which building in
+                which territory (production at the front, farming and wood in the backland), the claims of empty
+                territories, a building it cannot place dropped, the repairs.
+  produce.c     NOT STARTED -> produce.lua (port forward 7a17182). The production by territory and the force shares
+                (the pools: main force, siege, anti-air, explorers; train_by_need, fleet_by_need, train_room).
+  research.c    NOT STARTED -> research.lua (port forward 7a17182). The research by rank (the epoch's buildings'
+                techs, the unit upgrades of the units it has, the unit improvements a player buys with the "+").
+  savings.c     NOT STARTED -> savings.lua (port forward 7a17182). The savings for an expensive want: a spender
+                asks whether a bigger want holds the stock before it spends.
+  claims.c      NOT STARTED -> claims.lua (port forward 7a17182). Orders by priority: who may order a claimed unit,
+                its stance while claimed, the priorities and their life.
   early.c       PARTLY -> econ.lua (towers), tactics.lua (bait). Ported: early_towers (two towers by the town
                 The fidelity pass: tower_bait as upstream's rule (every 2 s to the Bronze Age, a citizen with an enemy
                 soldier within 5 tiles or attacking it, outside its own towers' reach, to the spot 1.5 tiles behind
@@ -119,9 +151,26 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 is visible now, the base threatened is view.threat_strength > 0, the target's life from the memory.
                 Missing: the force's own breach (AR_BREACH, off upstream: the stand-off before a defended position;
                 attack.lua's breach through a wall is attack.c's).
+  territories.c NOT STARTED -> territories.lua (port forward 7a17182). The territories as an AI sees them: the land
+                and the seas, held, a front or the backland, the foes and the guard, unsafe with its refuge, the seas
+                claimed by the shore, the border towers and walls, the harbours. The retail game splits the map into
+                40 regions in game/territory.c and this engine has no such split: the port grows its own region grid
+                from ai.tile (the deviation), fog-honest and chunked over steps as fronts.lua does the fronts.
+  stations.c    NOT STARTED -> stations.lua (port forward 7a17182). The force by territory: a station for every land
+                soldier, the shares, giving and marching, the pushes without an attack time, the scouts and the
+                patrols, the demolition, the bridgehead, the coast batteries.
+  army_view.c   NOT STARTED -> nothing to port yet (port forward 7a17182): a summary of the force for the deciding
+                parts to read as one army; the port's lib.groups sums the members on demand.
+  crossing.c    NOT STARTED -> crossing.lua (port forward 7a17182). What a crossing risks and the way it takes (the
+                safety by the enemy's density and by what the delivery is worth, the meeting point).
+  convoy.c      NOT STARTED -> convoy.lua (port forward 7a17182). The convoys: the lifeboat unload at the nearest
+                beach, the escort ahead of the transport.
   stage.c       PORTED -> army.lua: the staging point (the last point of the way out of the enemy's reach).
   intel.c       ENGINE -> C++ (ai.memory, ai.seen): honest vision's memory (buildings until seen gone, soldiers
                 remembered 3 minutes).
+  explore.c     NOT STARTED -> explore.lua (port forward 7a17182). Exploring: the citizens round their town for
+                food, the Canine Scout's rings, the territory scouts walking the unexplored ground and the parts
+                looked at longest ago.
   danger.c      ENGINE -> C++ ai.danger "threat": the threat map (defences at range, soldiers, hurt citizens).
   cover.c       ENGINE -> C++ ai.danger "lost": DANGER_LOST (where own units traded badly, 20 minutes).
   shiproute.c   ENGINE -> C++ ai.route (cells): danger-aware routes.
@@ -144,7 +193,11 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 sight), hurt_danger (one spot for food and wood, three for the minerals), raid_held, the send-back
                 to the nearest drop site with the claim released, flee_point while a muster is on; the engine's
                 30-second danger zones stay on underneath. Not ported: the stray's order, the danger map (ai.danger
-                stands in), the per-list logs.
+                stands in), the per-list logs. From the port forward (7a17182): GOLD AND IRON STAY (safety.lua: a
+                gold or iron mine is left only when its citizens are being hit there, not for soldiers seen near
+                it, the way's danger or a territory being lost); the rest of the newer attack.c decisions wait for
+                the buildings, the stations and the claims they read (build.c HOLDING THE GROUND, defence.c
+                BUILDERS UNDER COVER, claims.c, the animal hunts' hurt notes).
   garrison.c    PORTED -> tactics.lua (garrison): the settlement upgrades (spare citizens into the drop site with
                 the most metal mines near).
   counterfire.c PORTED -> tactics.lua (counterfire): the shooters out of reach answered by the soldiers near when
@@ -171,6 +224,8 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 view's population (which counts the units in production; upstream's bk_room left them out); a
                 fortress that lets nobody out is tried again on the next side until empty (upstream cleared the
                 shelter flag after the first order).
+  holy.c        NOT STARTED -> holy.lua (port forward 7a17182). The holy: the priest's conversions, the prophet's
+                calamities as its own strike category, the hit and run.
   navy.c        PARTLY -> navy.lua, fleet.lua (the roles). Ported: navy_detect (the water map: enemies with
                 buildings known across the water, the strength; fog-honest, so looked at again every minute),
                 the navy account (navy_share x the strength of the wood, gold and iron income, 600 of each at
@@ -197,6 +252,11 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 minute), fl_move round a zone, fl_flee, fl_rally_tower (in navy.lua: the newest tower on the coast by
                 the dock farthest from the enemy, every 2 minutes, 3 a game). Missing: the kill / loss counters
                 and the losing-at-sea shelter (no kill events by target).
+  squadrons.c   NOT STARTED -> squadrons.lua (port forward 7a17182). The squadrons: a main squadron per stretch of
+                valuable water that holds it and calls the others for help, scout and raid groups, hunter groups,
+                the missile submarines and the shore fire.
+  storms.c      NOT STARTED -> storms.lua (port forward 7a17182). The storms: the ships within reach of the enemy
+                prophet's hurricane sail straight out of it, and nobody is sent in.
   transports.c  ENGINE -> C++ (the unload retries at the next shore tile; the stalled transport watchdog is the
                 engine's own transport goal; the player's load split and unload spread are UI). Nothing to port.
   landing.c     PORTED -> navy.lua (landing), lib/navy.lua (N.beach, N.plan, N.landing_step). Ported: ld_phase_plan
@@ -219,6 +279,9 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 landing_waves; the sea held: no more waves). Missing: the switch to another beach at the sail
                 check, the staging at sea for 3+ transports (the lib sails in formation), landing_bombard (off
                 upstream), the raid targets ashore by kind (lib.groups' attack priorities stand in).
+  ferry.c       NOT STARTED -> ferry.lua (port forward 7a17182). The ferry service: the citizens and soldiers across
+                the water, the lands' free places, the pick-up and the meeting point, the trips and their time limits
+                by the way, the transports gathered and held, the scouts across.
   expand.c      PARTLY -> towns.lua (the outpost). Ported: ex_plan (from the Copper Age and expand_minute, the home
                 mines half worked or minute 15, 25 workers, the army not outmatched, the dock's sea), ex_pick (the
                 island with the most explored mines: 10 a mine, a quarter a tile, 15 an enemy building known; no
@@ -289,6 +352,9 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 gone (fog-honest); a bomber landed in its airport is inside a container and ai.attack refuses it
                 (cannot_do) where upstream's game air order launched it - an interface gap (counted:
                 memory.air.refused).
+  airguard.c    NOT STARTED -> airguard.lua (port forward 7a17182). The air guard: the anti-air before any aircraft
+                is seen, the fighters by role (air fighters, fighter/bombers, anti-tank planes), the sweeps, the air
+                bases moving forward, the aircraft parked in an Airport.
   diplo.c       PARTLY -> diplo.lua. Ported: diplo_tick (the first look takes the stances as they are; a player
                 turned hostile: opinion -40, a betrayal after 2 minutes of alliance -60, x (0.5 + pride/100);
                 ANSWER WAR 3-6 s later through ai.diplomacy; a player turned allied while at war: the peace offer
@@ -321,6 +387,15 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 AIs upstream answered an offer at once (one process) - here it stands 2 minutes (OFFER_AI_MS) like
                 one to a human. DEVIATION: a vassal's tribute every 3 minutes of a quarter of each resource (the
                 language model's bounds made a rule).
+  plans.c       NOT STARTED -> plans.lua (port forward 7a17182). The strategy plans: a plan picked by the
+                personality's leanings and changed on what the fighting shows; without personas, the port's default
+                leanings (50 each) apply.
+  returns.c     NOT STARTED -> returns.lua (port forward 7a17182). The returns: what each kind of force kills and
+                loses for what it fields, the recent fighting weighed most.
+  news.c        NOT STARTED -> news.lua (port forward 7a17182). The lines the pushes and the territories give an AI
+                to say (the port's tests have no personalities, so the trace's lines stand in).
+  scen_targets.c NOT STARTED -> scen_targets.lua (port forward 7a17182). A scenario's military targets: the trigger's
+                two lists read as they stand, the attack targets the pushes' goal.
   spoils.c      ENGINE -> nothing to port. Every part is the game's handling of a player out of the game, not a
                 decision of a living AI: sp_resigned (the out player at war with everyone, its fortresses and
                 airports let out), the roaming bands (the out player's own land fighters, an attack-move to the
@@ -393,6 +468,10 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 regions are the land masses (ai.tile's continent); a cell's land from 16 of its 64 tiles, explored
                 ones only (fog), 96 cells a look; front_army's second station fights lib.groups' one force (the
                 defend task walks them back) - off as upstream. Not ported: the overlay, the autotest log counts.
+  watch.c       NOT STARTED -> watch.lua (port forward 7a17182). Watching its own ground: the 4 x 4 cells' patches
+                out of sight, the patrols that look at them, the watch towers for the patches it sees least.
+  creep.c       NOT STARTED -> creep.lua (port forward 7a17182). Tower creep: 12 citizens walk up to an unguarded
+                enemy building and build a tower in range of it, then the next building from the new towers.
   sites.c       ENGINE -> C++: the next engine's finders take the mine nearest a drop site, the bush nearest a drop
                 site, refuse a site behind known towers (the site's blocked == "tower"). Nothing to port.
   packing.c     PORTED -> packing.lua (tb_spot: the arc rule round the footprint, the lane a tile wide, s + 2 walkable
@@ -444,7 +523,27 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 stands in - anti-air hits aircraft only, only anti-air or aircraft hit aircraft), the armour per
                 class, the minimum range (stg_inside_min), the area effect (st_neighbours), the enemy's own stats
                 (ai.class reads the reader's upgrades), the test commands (cmd_stats).
-  settings.c    PORTED -> settings.lua: the [ai_base] defaults of config/ageofai.ini at that commit.
+  ai_overlay.c  ENGINE -> nothing to port: the debug overlay draws each AI's plan on the player's map; the port's
+                trace lines carry the same numbers.
+  settings.c    PORTED -> settings.lua: the [ai_base] defaults of config/ageofai.ini at 7a17182, with the keys of
+                the port forward added (each marked: read by a module, or "not read yet" / ENGINE) and the
+                deviations noted there (each marked why: an engine difference, or a measured call of the owner's).
+                The personality style keys (settings.c's k_style_keys) have no port: the port has no personas, and
+                upstream cut them to the army's share and the epochs' times.
 
-Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at that commit, with the deviations
-noted there (each marked why: an engine difference, or a measured call of the owner's).
+PORT FORWARD STAGES. The forward is carried in stages, each a commit that changes the modules it names and their
+lines here:
+  stage 1 (2026-11-23): the map above, settings.lua's new keys, and GOLD AND IRON STAY (safety.lua, attack.c). The
+            mod's own economy and its pieces (work.lua, build.lua, produce.lua, research.lua, savings.lua,
+            claims.lua), the territories and the watch (territories.lua, watch.lua), the exploring and the air
+            guard (explore.lua, airguard.lua, storms.lua) are the first modules of the forward.
+  stage 2: the consumers of the territories and the force by territory (stations.c, defence.c's shelter, expand.c's
+            front guards, navy.c's fleet station and harbours), the ferry and the crossings (ferry.c, crossing.c,
+            convoy.c), the squadrons (squadrons.c), the holy (holy.c), the plans and the returns (plans.c,
+            returns.c), news.c, scen_targets.c, and the modified files' lines brought up to 7a17182.
+A decision this engine cannot express (no territory split of the retail game, no stance-claimed orders, no
+personality leanings, no unit-improvement data) is a gap named in the file's line, not a silent omission.
+
+Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at the commit in UPSTREAM, with the
+deviations noted there (each marked why: an engine difference, or a measured call of the owner's). The keys of the
+port forward are there too, each marked with the module that reads it or "not read yet".

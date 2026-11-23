@@ -3,7 +3,9 @@
 -- soldier was in sight within 6 tiles (hurt_seen_short) - and a site within 6 tiles of such spots is dangerous:
 -- food and wood from one spot, stone, gold and iron from three. A citizen gathering at a raided site (enemy
 -- soldiers seen within 6) or a hurt one is sent back to the nearest drop site unless the town holds there
--- (raid_held: its soldiers and towers within 8 beat the raiders by raid_held 150%); the claimed site is released
+-- (raid_held: its soldiers and towers within 8 beat the raiders by raid_held 150%); a gold or iron mine only when
+-- its citizens are being hit there (GOLD AND IRON STAY, the port forward's attack.c: not for soldiers seen near
+-- it, not for the way's danger). The claimed site is released
 -- while the danger lasts, so the engine's finders send nobody there (upstream's searches refuse such sites). While
 -- the base is overrun (a muster on, army.lua): every citizen with raiders within 8 of it flees to the rally point,
 -- or 12 tiles in the clear direction nearest it when the way is raided (flee_point).
@@ -218,13 +220,20 @@ function M.step(mem, memory, now)
                         nh = nh + 1
                     end
                 end
-                local mineral = false
-                if not raided and nh >= 1 then
-                    -- the site's resource only when a hurt spot is near (the budget): minerals take three spots
+                local kind = nil
+                if raided or nh >= 1 then
+                    -- the site's resource (the budget): one look, only when the site is in question
                     local site = ai.unit(ai.units{category = "resource", near = {sx, sy, 2}, limit = 1}[1] or -1)
-                    if site ~= nil and site.kind ~= nil then
-                        mineral = site.kind == "stone" or site.kind == "gold" or site.kind == "iron"
-                    end
+                    kind = site ~= nil and site.kind or nil
+                end
+                local mineral = kind == "stone" or kind == "gold" or kind == "iron"
+                -- GOLD AND IRON STAY (attack.c, 7a17182: "it scares citizens away from work way too aggressively, for
+                -- farms and wood that's fine ... but gold and iron are abandoned way too quickly"): a gold or iron
+                -- mine is left only when its citizens are being hit there (three hurt spots within 6), not for
+                -- enemy soldiers seen near it, not for the danger on the way or a territory being lost - and not
+                -- while the town holds it. Food, wood and stone keep the wider rule below.
+                if kind == "gold" or kind == "iron" then
+                    raided = false
                 end
                 local hurt = not raided and nh >= (mineral and 3 or 1)
                 if (raided or hurt) then

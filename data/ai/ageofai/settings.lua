@@ -272,4 +272,89 @@ return {
     citizens_home = true,           -- econ.c citizens_home part 2: an idle citizen 15+ tiles from its nearest
                                     -- finished town, idle twice running, walks to the nearest safe town (parts 1 and
                                     -- 3, the base point and the stacked foundations, are the original game's bugs)
+
+    -- ============================================================================================================
+    -- THE PORT FORWARD (upstream 7a17182, 2026-11-23): the [ai_base] keys of the newer upstream that this port
+    -- knows about. A key whose comment names a module is read by it; "(not read yet)" marks a decision this port
+    -- forward has not reached yet, kept here so the file stays the map of upstream's settings.
+    -- ============================================================================================================
+    -- work.c: the citizens' work (work.lua)
+    mine_crowds = true,             -- the walkers and waiters count against a mine's places; the rest go to the
+                                    -- nearest free mine (work.c; 6 gatherers a mine)
+    mine_choice = true,             -- the free mine nearest a drop site
+    rebalance_workers = true,       -- citizens move from an oversupplied resource to a short one
+    local_mines = false,            -- a citizen works a mine near its own town (a drop site within 40) first
+    town_work = false,              -- the mod decides the citizens' work, a site 60+ tiles from the citizen swapped
+                                    -- for work in its own town
+    herd_keep = true,               -- the hunters take grown animals only and leave a herd's minimum living
+    wood_drop = true,               -- a Settlement by the forest when 8+ woodcutters cut 15+ tiles from a drop site
+    citizen_mine_cap = true,        -- the citizens wanted at most half the cap and at most the known mines x places
+    claim_from_towers = false,      -- [ai_base] claim_from_towers, off (no gain measured)
+    mine_fill = false,              -- mine_fill (empty upstream = off): the game's AI's mine help; mine_places_first
+    mine_places_first = true,       -- ... the mines' free places before more food and wood (mines_first, on)
+    food_plan = "count_trained,back_to_food",   -- the food plan's parts (food.c; upstream 3 + its newer parts)
+    food_hunt_range = 15,           -- tiles from a drop site the hunters go
+    citizen_plan = "mine_slots,food_pays",      -- citizen_plan's parts (citizens.c)
+    workforce_plan = "",            -- workforce_plan's parts, empty = off (upstream's default)
+    workforce_army_cap = 250,       -- ... its army_room from this population cap
+    -- research.c, savings.c, produce.c, claims.c
+    paid_upgrades = true,           -- the epoch's upgrades researched and paid, not granted (research.lua)
+    unit_improvements = true,       -- the "+" improvements a player buys (research.lua)
+    savings = true,                 -- a bigger want holds the stock before a small spender takes it (savings.lua)
+    train_by_need = true,           -- the producers train what the need asks (produce.lua)
+    fleet_by_need = false,          -- ... the fleet likewise (off upstream)
+    train_room = 65535,             -- a mask of players whose producers count the room (all)
+    -- explore.c
+    explore = true,                 -- the citizens round their town for food, the dog's rings, the scouts (explore.lua)
+    -- airguard.c, airstrike.c, storms.c
+    air_force_share = 25,           -- percent of the force into the AI's own air force (0 = air.lua's wing only)
+    fighter_sweeps = true,          -- the fighters sweep the enemy's ground
+    air_by_worth = true,            -- the air force's parts scaled by what they bring back
+    bomber_harass = false,          -- lone bomber runs while the wing gathers (off: measured no gain)
+    bomber_doctrine = true,         -- the bombers' survival estimate, the way home, a wing by worth, no theft
+    bomber_survive = true, bomber_come_home = true, bomber_value_wing = true, bomber_claim = true,
+    storm_dodge = true,             -- the ships sail out of an enemy prophet's hurricane (storms.lua)
+    -- territories.c, watch.c
+    territory_shelter = true,       -- the citizens of a territory being lost into a Fortress or a safe refuge
+    front_guards = true,            -- a front island gets a boat of soldiers when short of its guard
+    border_towers = true,           -- a tower every 20 s on the outside border of a held territory (1500 stone, wood)
+    border_walls = true,            -- a wall along the shortest border to land nobody of its side holds
+    stone_sink = true,              -- with 5000 stone the border towers denser and faster, the wood sink past its wood
+    watch_towers = true,            -- a tower on the ground the AI has had in sight least
+    fog_patrols = true,             -- a soldier to the patches out of sight for 4 minutes
+    tower_creep = false,            -- 12 citizens creep a tower to an unguarded enemy building (off upstream)
+    sea_fishing = true,             -- a fishing boat on the sea territories along the AI's land
+    sea_fleet = 300,                -- the fleet's size from a warship per this many tiles of its sea territories (0 off)
+    harbours = true,                -- a dock and a tower on every sea territory along the AI's land
+    fleet_station = true,           -- the fleet's guard point on the sea with the longest shore along its land
+    sea_squadrons = true,           -- the warships as squadrons instead of one fleet (squadrons.c: not ported yet)
+    stash_by_territory = true,      -- the fortress reserve by territory (bunker.c)
+    stash_let_out_few = true,       -- a fortress lets out as many as are wanted, one at a time
+    -- the newer engines' switches, as upstream ships them
+    behind_walls = false,           -- an enemy behind the walls no longer keeps the citizens from work
+    ship_reach_exact = false,       -- an enemy ship keeps citizens off only within its range and a tile
+    danger_routes = true,           -- ENGINE: this engine's ai.route (attack.lua, citizens by the danger layer)
+    avoid_lost_fights = true,       -- ENGINE: this engine's threat/lost layers (docs/AI_LUA_UNITS.md §4.4)
+    threat_memory = true,           -- ENGINE: the seen-and-remembered soldiers in the safety checks
+    shelter_first = true,           -- the fortress ahead of everything it saves for
+    counter_siege = true,           -- the soldiers near the base answer enemy siege (tactics.lua)
+    more_granaries = true,          -- a granary while it wants more food workers than its fields hold
+    build_fields = true,            -- the fields around every granary (econ.lua's farms)
+    farm_builders_paid = true,      -- a field's builder only with its wood, one field a builder
+    rest_open_ground = true,        -- a soldier at rest on open ground (stations.c: not ported yet)
+    fight_production = true,        -- production where the fight is (stations.c: not ported yet)
+    hold_ground = true,             -- stations.c HELD GROUND: not ported yet
+    attention_activities = 0,       -- ENGINE: the game takes +1 of its attention flags (0 = leave)
+    last_stand_buildings = 0,       -- ENGINE: the game's last-stand level (0 = never)
+    sea_first = true,               -- a crossing held for the risk has the squadrons win its way (squadrons: not ported)
+    ferry_service = true,           -- the ferry service for citizens and soldiers (ferry.c: not ported yet)
+    ferry_safety = true,            -- the crossing's safety check (crossing.c: not ported yet)
+    ferry_reach = true,             -- a pick-up both the passengers and the transport reach (ferry.c)
+    ferry_time_by_way = true,       -- the ferry's time limits by the way (ferry.c)
+    expand_across = true,           -- the pushes across the water (stations.c: not ported yet)
+    push_across = true,             -- ... and their waves
+    transport_lifeboat = true,      -- a sinking transport runs for the nearest beach (convoy.c: not ported yet)
+    transport_escort = true,        -- the ferry's escort ahead (convoy.c)
+    transport_park = true,          -- transports held at a park
+    strategy_plans = true,          -- the strategy plans (plans.c: not ported yet; the port's play is its default)
 }
