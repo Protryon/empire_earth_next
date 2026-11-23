@@ -94,8 +94,8 @@ mod tests {
         // SAFETY: the fake units live for the test
         unsafe {
             assert_eq!(outermost_carrier(pa, at), pa);
-            a.cx.mPreviousPart = pb;
-            b.cx.mPreviousPart = pc;
+            (*pa.cast::<FakeUnit>()).cx.mPreviousPart = pb;
+            (*pb.cast::<FakeUnit>()).cx.mPreviousPart = pc;
             assert_eq!(outermost_carrier(pa, at), pc);
             assert_eq!(outermost_carrier(pb, at), pc);
         }
