@@ -176,8 +176,8 @@ public:
     void HideAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS); }
 
     UWideString mStrings[0x24];             // +0x1a0 (CopyData copies them into control 0x1b's list while mStringsChanged)
-    EEUIBuildWall mBuildWall;               // +0x494
-    EEUIBuildGate mBuildGate;               // +0x4b4
+    EEUIBuildWall mBuildWall = ee_screens_wall_new(false);   // +0x494
+    EEUIBuildGate mBuildGate = ee_screens_gate_new(false);   // +0x4b4
     // (+0x4d4 mUnitInfoBackground .. +0x518 mCalamity but the panel groups: the Rust record
     // EeScreensMainFormObjects, untyped)
     // +0x4ec the panel groups (0: the main group, 1: statistics, 2: chat, 3: diplomacy, 4: options, 5: civilization

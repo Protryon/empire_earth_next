@@ -67,12 +67,7 @@ public:
     // EeScreensStatusButtonFields' (ee_screens main_form_fields.rs), under their names
 };
 
-// RTTI EEUIEndCinematicModeEvent (vtable 0x44ae68; ??_G 0x271265 after its first user EEModeKeyboardCinematic; ProcessEvent
-// 0x26fb93 is defined in EEUIFMGStatusButton.cpp after TabbedTo). sizeof 0xc.
-class EEUIEndCinematicModeEvent : public UIEvent {
-public:
-    virtual ~EEUIEndCinematicModeEvent() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
+// (RTTI EEUIEndCinematicModeEvent, vtable 0x44ae68, ProcessEvent 0x26fb93: the screen event EE_SCREENS_EV_END_CINEMATIC,
+// ee/EEScreenEvent.h)
 
 #endif

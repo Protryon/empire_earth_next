@@ -155,16 +155,16 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
         EEUIShell::Op(static_cast<UIControl*>(p[0]), EE_SCREENS_SKOP_CARGO_ADD, (int64_t)SeunEditor(p[1])->GetSelectedUnit((unsigned long)i[0])->mComplexUnit->mCargo[(unsigned long)i[1]]);
         return 0;
     case EE_SCREENS_SEUN_OP_GATE_PLAYER:   // (the build tools' Cancel: editor_unit.rs cancel_gate, cancel_wall)
-        EESEOutSlot(p) = gWorld.mPlayers[static_cast<EESEUIBuildGate*>(p[1])->mPlayer];
+        EESEOutSlot(p) = gWorld.mPlayers[static_cast<EEUIBuildGate*>(p[1])->mPlayer];
         return 0;
     case EE_SCREENS_SEUN_OP_WALL_PLAYER:
-        EESEOutSlot(p) = gWorld.mPlayers[static_cast<EESEUIBuildWall*>(p[1])->mPlayer];
+        EESEOutSlot(p) = gWorld.mPlayers[static_cast<EEUIBuildWall*>(p[1])->mPlayer];
         return 0;
     case EE_SCREENS_SEUN_OP_UNLOAD_GATE:
-        static_cast<EEPlayer*>(p[1])->UnloadUnitClassMedia(static_cast<EESEUIBuildGate*>(p[2])->mUnitClass->mUnitType);
+        static_cast<EEPlayer*>(p[1])->UnloadUnitClassMedia(static_cast<EEUnitClass*>(static_cast<EEUIBuildGate*>(p[2])->mUnitClass)->mUnitType);
         return 0;
     case EE_SCREENS_SEUN_OP_UNLOAD_WALL:
-        static_cast<EEPlayer*>(p[1])->UnloadUnitClassMedia(static_cast<EEPlayer*>(p[1])->mTechnologies->GetData(static_cast<EESEUIBuildWall*>(p[2])->mTechnology)->mUnitClass);
+        static_cast<EEPlayer*>(p[1])->UnloadUnitClassMedia(static_cast<EEPlayer*>(p[1])->mTechnologies->GetData(static_cast<EEUIBuildWall*>(p[2])->mTechnology)->mUnitClass);
         return 0;
     case EE_SCREENS_SEUN_OP_LIST_SORT: EEUIShell::Op(static_cast<UIControl*>(p[0]), EE_SCREENS_SKOP_UL_SORT, i[0]); return 0;
     case EE_SCREENS_SEUN_OP_LIST_EMPTY: EEUIShell::Op(static_cast<UIControl*>(p[0]), EE_SCREENS_SKOP_UL_CLEAR); return 0;
@@ -368,7 +368,7 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEUNX_FIND_GATE_WALL:
         return EEFindGateWall(EETileCoordinate((long)i[0], (long)i[1]), *static_cast<long*>(p[2]));
     case EE_SCREENS_SEUNX_CREATE_GATE:
-        EEGhostUnit::CreateGate(0.0f, SeunTab(p[1])->mBuildGate.mUnitClass, gWorld.GetPlayer(SeunTab(p[1])->mBuildGate.mPlayer));
+        EEGhostUnit::CreateGate(0.0f, static_cast<EEUnitClass*>(SeunTab(p[1])->mBuildGate.mUnitClass), gWorld.GetPlayer(SeunTab(p[1])->mBuildGate.mPlayer));
         return 0;
     case EE_SCREENS_SEUNX_PREVIEW_GATE:
         EEGhostUnit::PreviewGate(gMouse->mPosition, *static_cast<long*>(p[2]));
@@ -423,10 +423,10 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
                                                                                  static_cast<UIControl*>(p[2])->GetForm());
         return 0;
     case EE_SCREENS_SEUNX_GATE_CANCEL:
-        SeunTab(p[1])->mBuildGate.Cancel();
+        ee_screens_gate_cancel(&SeunTab(p[1])->mBuildGate);
         return 0;
     case EE_SCREENS_SEUNX_WALL_CANCEL:
-        SeunTab(p[1])->mBuildWall.Cancel();
+        ee_screens_wall_cancel(&SeunTab(p[1])->mBuildWall);
         return 0;
     case EE_SCREENS_SEUNX_PLAYER:
         EESEOutSlot(p) = gWorld.GetPlayer(i[0]);
@@ -452,7 +452,7 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
         SeunTab(p[1])->mBuildWall.mTechnology = i[0];
         return 0;
     case EE_SCREENS_SEUNX_WALL_INITIALIZE:
-        SeunTab(p[1])->mBuildWall.Initialize(i[0]);
+        ee_screens_wall_initialize(&SeunTab(p[1])->mBuildWall, (int32_t)i[0]);
         return 0;
     case EE_SCREENS_SEUNX_GATE_SET_TECH:
         SeunTab(p[1])->mBuildGate.mTechnology = i[0];
@@ -464,7 +464,7 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
         SeunTab(p[1])->mBuildGate.mUnitClass = static_cast<EEUnitClass*>(p[2]);
         return 0;
     case EE_SCREENS_SEUNX_GATE_INITIALIZE:
-        SeunTab(p[1])->mBuildGate.Initialize(i[0]);
+        ee_screens_gate_initialize(&SeunTab(p[1])->mBuildGate, (int32_t)i[0]);
         return 0;
     case EE_SCREENS_SEUNX_POST_402:
         SeunEditor(p[1])->GetLoadThread()->Post402(reinterpret_cast<void*>((long)i[0]), reinterpret_cast<void*>((long)i[1]));
@@ -503,13 +503,13 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
         static_cast<EEUnit*>(p[1])->Kill(0, 0, 0);
         return 0;
     case EE_SCREENS_SEUNX_GATE_INITIALIZE_OF_UNIT:
-        SeunTab(p[1])->mBuildGate.Initialize(static_cast<EEUnit*>(p[2])->mPlayer->mPlayerID);
+        ee_screens_gate_initialize(&SeunTab(p[1])->mBuildGate, (int32_t)static_cast<EEUnit*>(p[2])->mPlayer->mPlayerID);
         return 0;
     case EE_SCREENS_SEUNX_GATE_UPDATE:
-        SeunTab(p[1])->mBuildGate.Update(GE2DPoint(f[0], f[1]));
+        EEUIBuildGateUpdate(&SeunTab(p[1])->mBuildGate, GE2DPoint(f[0], f[1]));
         return 0;
     case EE_SCREENS_SEUNX_WALL_UPDATE:
-        SeunTab(p[1])->mBuildWall.Update(GE2DPoint(f[0], f[1]));
+        EEUIBuildWallUpdate(&SeunTab(p[1])->mBuildWall, GE2DPoint(f[0], f[1]));
         return 0;
     case EE_SCREENS_SEUNX_KEY_DELETE:
         gISKeyboard->GetEntity(kKeyDelete, *static_cast<ISEntity**>(p[0]));
@@ -528,22 +528,10 @@ extern "C" int32_t ee_screenscpp_seunx(uint32_t inOp, void* const* p, int32_t* i
 }
 
 // the editor's gate and wall placement modes (once EESETSUICBPlayer.cpp): the unit tab places or ends them
-void EESEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
-{
-    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_PLACE_GATE);
-}
-
-void EESEUIBuildGate::Cancel()
-{
-    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_CANCEL_GATE, 0, this);   // (editor_unit.rs cancel_gate)
-}
-
-void EESEUIBuildWall::Build()
-{
-    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_PLACE_WALL);
-}
-
-void EESEUIBuildWall::Cancel()
-{
-    gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_CANCEL_WALL, 0, this);   // (editor_unit.rs cancel_wall)
-}
+// (their Cancel and Build: the placements' records' own, mEditor; placement_ffi.rs calls these)
+extern "C" void ee_screenscpp_se_gate_build() { gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_PLACE_GATE); }
+extern "C" void ee_screenscpp_se_gate_cancel(void* inGate)
+{ gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_CANCEL_GATE, 0, inGate); }   // (editor_unit.rs cancel_gate)
+extern "C" void ee_screenscpp_se_wall_build() { gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_PLACE_WALL); }
+extern "C" void ee_screenscpp_se_wall_cancel(void* inWall)
+{ gUIManager->GetScenarioEditorForm()->UnitCall(EE_SCREENS_SEUN_CANCEL_WALL, 0, inWall); }   // (editor_unit.rs cancel_wall)

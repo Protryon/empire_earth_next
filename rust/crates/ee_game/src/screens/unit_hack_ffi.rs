@@ -1,5 +1,5 @@
-//! `extern "C"` for the main game form's unit hack (`unit_hack.rs`). The host is `ee_screenscpp_unit_hack`
-//! (`User Interface Thread/EEUIFMainGame.cpp`): `form` is the `EEUIFMainGame`.
+//! `extern "C"` for the main game form's unit hack (`unit_hack.rs`). The host is Rust's (`unit_hack_calls.rs`, over
+//! `User Interface Thread/EEUIFMainGame.cpp`'s shims): `form` is the `EEUIFMainGame`.
 
 use core::ffi::c_void;
 
@@ -8,41 +8,12 @@ use crate::screens::unit_hack::{
     EE_SCREENS_UH_UPDATE,
 };
 
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_unit_hack(
-            form: *mut c_void,
-            op: u32,
-            a: i32,
-            b: i32,
-            f: *mut f32,
-            selection: *mut u32,
-            text: *mut u8,
-            length: usize,
-        ) -> i32;
-    }
-}
-
 struct Host(*mut c_void);
 
 impl UnitHackHost for Host {
     fn op(&mut self, op: u32, a: i32, b: i32, f: &mut [f32; 2], out: &mut u32, text: &mut [u8]) -> i32 {
-        if let Some(r) = crate::screens::unit_hack_calls::call(
-            &mut crate::screens::game_cpp::Ffi,
-            self.0 as usize,
-            op,
-            a,
-            b,
-            f,
-            out,
-            text,
-        ) {
-            return r;
-        }
-        unsafe { sys::ee_screenscpp_unit_hack(self.0, op, a, b, f.as_mut_ptr(), out, text.as_mut_ptr(), text.len()) }
+        crate::screens::unit_hack_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, f, out, text)
+            .unwrap_or(0)
     }
 }
 

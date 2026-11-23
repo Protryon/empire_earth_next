@@ -51,7 +51,6 @@
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIBGenericBackground.h"
-#include "ee/EEUIManagerEvents.h"
 #include "ee/EEControlEventID.h"
 
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
@@ -243,8 +242,12 @@ extern "C" uintptr_t ee_screenscpp_um_editor_form(uintptr_t inManager)
 extern "C" uintptr_t ee_screenscpp_um_main_game_form(uintptr_t inManager)
 { return (uintptr_t)static_cast<UIForm*>(UMG(inManager)->GetMainGameForm()); }
 extern "C" uintptr_t ee_screenscpp_um_new_cancel(uintptr_t inForm)
-{ return (uintptr_t)static_cast<UIEvent*>(new EEUIECancel(reinterpret_cast<UIForm*>(inForm))); }
-extern "C" uintptr_t ee_screenscpp_um_new_load_unit() { return (uintptr_t)static_cast<UIEvent*>(new EEUIELoadUnit); }
+{ return (uintptr_t)static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_CANCEL, inForm)); }
+extern "C" uintptr_t ee_screenscpp_um_new_load_unit() { return (uintptr_t)static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_LOAD_UNIT)); }
+// the events' bodies (cpp_events.rs)
+extern "C" long ee_screenscpp_ev_open_form(uintptr_t inForm) { return gUserInterface->OpenForm(reinterpret_cast<UIForm*>(inForm)); }
+extern "C" void ee_screenscpp_ev_load_unit(uintptr_t inForm)
+{ static_cast<EEUIFMGUnitHack*>(reinterpret_cast<EEUIFMainGame*>(inForm)->mUnitHack)->LoadUnitData(); }
 extern "C" uintptr_t ee_screenscpp_um_new_wns_open() { return (uintptr_t)static_cast<UIEvent*>(new EEUIEWNSOpen); }
 extern "C" uintptr_t ee_screenscpp_um_new_wns_cancel() { return (uintptr_t)static_cast<UIEvent*>(new EEUIEWNSCancel); }
 extern "C" void ee_screenscpp_um_new_editor(uintptr_t inManager)

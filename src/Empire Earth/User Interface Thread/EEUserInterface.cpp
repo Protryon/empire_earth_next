@@ -208,7 +208,15 @@ extern "C" void ee_screenscpp_uim_delete_error_data(uintptr_t inData)
 extern "C" void ee_screenscpp_uim_chat_show(uintptr_t inMain, uintptr_t inEntry)
 { ((EEUIFMainGame*)inMain)->DisplayChat(UIM_CHAT(inEntry)->mColor, UIM_CHAT(inEntry)->mName, UIM_CHAT(inEntry)->mText, UIM_CHAT(inEntry)->mTime, UIM_CHAT(inEntry)->mType); }
 extern "C" int64_t ee_screenscpp_uim_chat_type(uintptr_t inEntry) { return (int64_t)UIM_CHAT(inEntry)->mType; }
-extern "C" void ee_screenscpp_uim_chat_log(uintptr_t inEntry) { EEUIECLEFormManager::AddEntry(*UIM_CHAT(inEntry)); }
+// a chat line into the Rust log (the original's EEUIECLEFormManager::AddEntry 0x1d32bf)
+static void EEChatLogAdd(const EEChatLogEntry& inEntry)
+{
+    EeScreensChatLogHead theHead = {{inEntry.mColor.mRed, inEntry.mColor.mGreen, inEntry.mColor.mBlue},
+                                    (uint32_t)inEntry.mType, (uint32_t)inEntry.mTime};
+    ee_screens_chat_log_add(&theHead, (const uint8_t*)(const char*)inEntry.mName, inEntry.mName.GetTCHARLength(),
+                            (const uint8_t*)(const char*)inEntry.mText, inEntry.mText.GetTCHARLength());
+}
+extern "C" void ee_screenscpp_uim_chat_log(uintptr_t inEntry) { EEChatLogAdd(*UIM_CHAT(inEntry)); }
 extern "C" void ee_screenscpp_uim_delete_chat(uintptr_t inEntry) { delete UIM_CHAT(inEntry); }
 extern "C" void ee_screenscpp_uim_show_information(uintptr_t inMain, uintptr_t inInfo)
 { ((EEUIFMainGame*)inMain)->ShowInformation(reinterpret_cast<EEUIFMGInformation*>(inInfo)); }
@@ -391,7 +399,7 @@ extern "C" uintptr_t ee_screenscpp_boot_client_new(int32_t inId)
 extern "C" void ee_screenscpp_music_pause() { gMusicManager->Pause(); }
 extern "C" void ee_screenscpp_ambient_stop_sounds() { gAmbientSoundManager.StopSounds(); }
 extern "C" void ee_screenscpp_ambient_pause() { gAmbientSoundManager.Pause(); }
-extern "C" void ee_screenscpp_chat_log_clear() { EEUIECLEFormManager::Clear(); }
+extern "C" void ee_screenscpp_chat_log_clear() { ee_screens_chat_log_clear(); }
 extern "C" void ee_screenscpp_civ_builder_button_blinking(bool inBlinking)
 { EESetCivBuilderButtonBlinking(inBlinking); }
 extern "C" void ee_screenscpp_player_civilization_chosen()
@@ -408,7 +416,7 @@ extern "C" void ee_screenscpp_chat_entry_text_from_dialog(uintptr_t inEntry, uin
 extern "C" void ee_screenscpp_chat_entry_set_type(uintptr_t inEntry, uint32_t inKind)
 { reinterpret_cast<EEChatLogEntry*>(inEntry)->mType = inKind; }
 extern "C" void ee_screenscpp_chat_log_add(uintptr_t inEntry)
-{ EEUIECLEFormManager::AddEntry(*reinterpret_cast<EEChatLogEntry*>(inEntry)); }
+{ EEChatLogAdd(*reinterpret_cast<EEChatLogEntry*>(inEntry)); }
 extern "C" void ee_screenscpp_chat_entry_delete(uintptr_t inEntry)
 { delete reinterpret_cast<EEChatLogEntry*>(inEntry); }
 extern "C" void ee_screenscpp_set_quit_flag() { EESetQuitFlag(); }

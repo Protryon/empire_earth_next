@@ -36,6 +36,7 @@ fn wall_of(t: &[&str]) -> EeScreensBuildWallFields {
         end: EeScreensPoint { x: hex(t[3]), y: hex(t[4]) },
         technology: t[5].parse().unwrap(),
         player: t[6].parse().unwrap(),
+        editor: false,
     }
 }
 
@@ -56,7 +57,16 @@ fn gate_of(g: [i32; 6]) -> EeScreensBuildGateFields {
         wall_type: g[3],
         direction: g[4],
         player: g[5],
+        editor: false,
     }
+}
+
+#[test]
+fn the_placements_made() {
+    let w = EeScreensBuildWallFields::new(true);
+    assert_eq!((w.state, w.start.x, w.end.y, w.technology, w.editor), (0, -99.0, -99.0, 100_000, true));
+    let g = EeScreensBuildGateFields::new(false);
+    assert_eq!((g.tile_x, g.tile_y, g.direction, g.technology, g.editor), (-99, -99, 2, 100_000, false));
 }
 
 /// The host replaying a call's logged ops in order.

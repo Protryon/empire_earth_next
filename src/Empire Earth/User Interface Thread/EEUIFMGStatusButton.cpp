@@ -93,13 +93,10 @@ extern "C" uint32_t ee_screenscpp_sbm_state(uintptr_t inButton) { return (uint32
 extern "C" void ee_screenscpp_sbm_hot_key_up(uintptr_t inButton) { SBM(inButton)->HotKeyUp(); }
 extern "C" void ee_screenscpp_sbm_base_tabbed_from(uintptr_t inButton) { SBM(inButton)->BaseTabbedFrom(); }
 
-// Ends the cinematic at its saved end time (sends the end-cinematic message)
-// (EEMEndCinematic takes the end time as a float)
-long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone);
-    return kErrorOK;
-}
+// EEUIEndCinematicModeEvent's body (cpp_events.rs): ends the cinematic at its saved end time (EEMEndCinematic takes the
+// end time as a float)
+extern "C" void ee_screenscpp_ev_end_cinematic()
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone); }
 
 // ---- the one-statement shims of ee_screens status_button_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"

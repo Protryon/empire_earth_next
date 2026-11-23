@@ -1227,7 +1227,7 @@ extern "C" void ee_screenscpp_sc_hk_group_button(uintptr_t inForm, uint32_t inCo
 extern "C" bool ee_screenscpp_sc_ch_mouse_inside(uintptr_t inForm)
 { return F(inForm)->GetRectangle().Contains(F(inForm)->GetMouseLocation()); }
 extern "C" void ee_screenscpp_sc_cl_unpause() { gWorld.UnpauseGame(); }
-extern "C" void ee_screenscpp_sc_mg_clear_gate_ghosts(uintptr_t inForm) { MGF(inForm)->mBuildGate.ClearGhostUnits(); }
+extern "C" void ee_screenscpp_sc_mg_clear_gate_ghosts(uintptr_t inForm) { ee_screens_gate_clear_ghosts(&MGF(inForm)->mBuildGate); }
 extern "C" void ee_screenscpp_sc_mg_set_ui_state(uintptr_t inForm, int32_t inState)
 { MGF(inForm)->SetUIState((long)inState); }
 extern "C" void ee_screenscpp_sc_mg_pointer(int32_t inPointer) { gMouse->mPointer = (long)inPointer; }

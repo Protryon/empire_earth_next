@@ -10,7 +10,6 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
-        pub fn ee_screenscpp_cursor(ctx: *mut c_void, op: u32, a: u32, b: u32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_cur_local_player() -> *mut c_void;
         pub fn ee_screenscpp_cur_selected_group(player: *mut c_void) -> *mut c_void;
         pub fn ee_screenscpp_cur_group_first(group: *mut c_void) -> *mut c_void;
@@ -26,12 +25,7 @@ impl CursorHost for Host {
         if let Some(r) = unsafe { crate::screens::hud_direct::cursor(self.0.cast(), op, a, b, f) } {
             return r;
         }
-        if let Some(r) =
-            crate::screens::cursor_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, f)
-        {
-            return r;
-        }
-        unsafe { sys::ee_screenscpp_cursor(self.0, op, a, b, f.as_mut_ptr()) }
+        crate::screens::cursor_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, f).unwrap_or(0)
     }
 }
 

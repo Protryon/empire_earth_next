@@ -1158,8 +1158,11 @@ shims! {
     fn mg_hot_key_event_new(button: usize, pressed: bool) -> usize = ee_screenscpp_mg_hot_key_event_new;
     fn mg_hot_key_pressed_event(key: usize, event: usize) = ee_screenscpp_mg_hot_key_pressed_event;
     fn mg_hot_key_unpressed_event(key: usize, event: usize) = ee_screenscpp_mg_hot_key_unpressed_event;
-    fn mg_event_button(event: usize) -> usize = ee_screenscpp_mg_event_button;
-    fn mg_event_pressed(event: usize) -> bool = ee_screenscpp_mg_event_pressed;
+    // the screen events with arguments (cpp_events.rs)
+    fn ev_open_form(form: usize) -> core::ffi::c_long = ee_screenscpp_ev_open_form;
+    fn ev_load_unit(form: usize) = ee_screenscpp_ev_load_unit;
+    fn ev_timer_expired() -> core::ffi::c_long = ee_screens_cb_timer_expired;
+    fn ev_end_cinematic() = ee_screenscpp_ev_end_cinematic;
     fn mg_button_hot_key_down(button: usize) = ee_screenscpp_mg_button_hot_key_down;
     fn mg_saved_groups_reset() = ee_screenscpp_mg_saved_groups_reset;
     fn mg_remove_cloak(unit: usize) = ee_screenscpp_mg_remove_cloak;
@@ -2155,6 +2158,15 @@ shims! {
     fn uh_point_x() -> f32 = ee_screenscpp_uh_point_x;
     fn uh_point_y() -> f32 = ee_screenscpp_uh_point_y;
     fn uh_point_reset() = ee_screenscpp_uh_point_reset;
+    fn uh_class_count() -> i32 = ee_screenscpp_uh_class_count;
+    fn uh_class_category(index: i32) -> i32 = ee_screenscpp_uh_class_category;
+    fn uh_class_type(index: i32) -> i32 = ee_screenscpp_uh_class_type;
+    fn uh_combo_clear(form: usize) = ee_screenscpp_uh_combo_clear;
+    fn uh_tile(x: f32, y: f32) -> bool = ee_screenscpp_uh_tile;
+    fn uh_player_skipped(player: i32) -> bool = ee_screenscpp_uh_player_skipped;
+    fn uh_local_player() -> i32 = ee_screenscpp_uh_local_player;
+    fn uh_send_load(unit_type: i32) = ee_screenscpp_uh_send_load;
+    fn uh_in_view(x: f32, y: f32) -> bool = ee_screenscpp_uh_in_view;
     // EEUIFMainGame.cpp's cursor (cursor_calls.rs)
     fn cur_mouse_over(ctx: usize) -> usize = ee_screenscpp_cur_mouse_over;
     fn cur_command_units(ctx: usize) -> usize = ee_screenscpp_cur_command_units;
@@ -2175,6 +2187,17 @@ shims! {
     fn cur_set_shielded(shielded: bool) = ee_screenscpp_cur_set_shielded;
     fn cur_convert(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_convert;
     fn cur_shielded() -> bool = ee_screenscpp_cur_shielded;
+    fn cur_flags(ctx: usize) -> i32 = ee_screenscpp_cur_flags;
+    fn cur_in_view() -> bool = ee_screenscpp_cur_in_view;
+    fn cur_release(ctx: usize) = ee_screenscpp_cur_release;
+    fn cur_seen(ctx: usize) -> bool = ee_screenscpp_cur_seen;
+    fn cur_t_targetable(ctx: usize) -> bool = ee_screenscpp_cur_t_targetable;
+    fn cur_can_heal(ctx: usize) -> bool = ee_screenscpp_cur_can_heal;
+    fn cur_sel_air_base(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_sel_air_base;
+    fn cur_sel_crusader(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_sel_crusader;
+    fn cur_sel_priest(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_sel_priest;
+    fn cur_sel_can_attack(ctx: usize, index: u32) -> bool = ee_screenscpp_cur_sel_can_attack;
+    fn cur_cargo_can_attack(ctx: usize, index: u32, cargo: u32) -> bool = ee_screenscpp_cur_cargo_can_attack;
     // EEUIFError.cpp's (dialog_calls.rs)
     fn dlg_text_load(ids: u32) = ee_screenscpp_dlg_text_load;
     fn dlg_button_set_text(button: usize) = ee_screenscpp_dlg_button_set_text;

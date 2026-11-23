@@ -37,7 +37,7 @@
 #include "ee/EEUIShell.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
-#include "ee/EEUIEMGHotKeyStatusButton.h"
+#include "ee/EEScreenEvent.h"
 
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
@@ -149,15 +149,11 @@ extern "C" uintptr_t ee_screenscpp_mg_hot_key_copy(uintptr_t inGroup, uintptr_t 
 extern "C" void ee_screenscpp_mg_hot_key_shift(uintptr_t inKey) { MGK(inKey)->SetModifier(kKeyShift, 0); }
 extern "C" void ee_screenscpp_mg_hot_key_delete(uintptr_t inKey) { delete MGK(inKey); }
 extern "C" uintptr_t ee_screenscpp_mg_hot_key_event_new(uintptr_t inButton, bool inPressed)
-{ return (uintptr_t)static_cast<UIEvent*>(new EEUIEMGHotKeyStatusButton(SBB(inButton), inPressed)); }
+{ return (uintptr_t)static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_HOT_KEY, inButton, inPressed)); }
 extern "C" void ee_screenscpp_mg_hot_key_pressed_event(uintptr_t inKey, uintptr_t inEvent)
 { MGK(inKey)->SetJustPressedEvent(reinterpret_cast<UIEvent*>(inEvent)); }
 extern "C" void ee_screenscpp_mg_hot_key_unpressed_event(uintptr_t inKey, uintptr_t inEvent)
 { MGK(inKey)->SetJustUnpressedEvent(reinterpret_cast<UIEvent*>(inEvent)); }
-extern "C" uintptr_t ee_screenscpp_mg_event_button(uintptr_t inEvent)
-{ return (uintptr_t)reinterpret_cast<EEUIEMGHotKeyStatusButton*>(inEvent)->mButton; }
-extern "C" bool ee_screenscpp_mg_event_pressed(uintptr_t inEvent)
-{ return reinterpret_cast<EEUIEMGHotKeyStatusButton*>(inEvent)->mPressed; }
 extern "C" void ee_screenscpp_mg_button_hot_key_down(uintptr_t inButton) { SBB(inButton)->HotKeyDown(); }
 extern "C" void ee_screenscpp_mg_saved_groups_reset() { gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x14, 1); }
 extern "C" void ee_screenscpp_mg_remove_cloak(uintptr_t inUnit)

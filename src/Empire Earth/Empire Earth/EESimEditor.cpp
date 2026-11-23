@@ -376,13 +376,13 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::LoadThreadClearDone: ((EESELoadThread*)p)->mMessageQueueDone->Clear();
         break;
-    case O::UnitWallStart: SU->mBuildWall.mStart.SetXY(f[0], f[1]);
+    case O::UnitWallStart: SU->mBuildWall.mStart = {f[0], f[1]};
         break;
-    case O::UnitWallEnd: SU->mBuildWall.mEnd.SetXY(f[0], f[1]);
+    case O::UnitWallEnd: SU->mBuildWall.mEnd = {f[0], f[1]};
         break;
-    case O::UnitWallBuild: SU->mBuildWall.Build();
+    case O::UnitWallBuild: ee_screens_wall_build(&SU->mBuildWall);
         break;
-    case O::UnitWallCancel: SU->mBuildWall.Cancel();
+    case O::UnitWallCancel: ee_screens_wall_cancel(&SU->mBuildWall);
         break;
     case O::UnitGateTileX: SU->mBuildGate.mTileX = (long)a[0];
         break;
@@ -390,9 +390,9 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::UnitGateDirection: SU->mBuildGate.mDirection = (long)a[0];
         break;
-    case O::UnitGateBuild: SU->mBuildGate.Build(GE2DPoint(f[0], f[1]), (long)a[0]);
+    case O::UnitGateBuild: ee_screens_gate_build(&SU->mBuildGate, f[0], f[1], (int32_t)a[0]);
         break;
-    case O::UnitGateCancel: SU->mBuildGate.Cancel();
+    case O::UnitGateCancel: ee_screens_gate_cancel(&SU->mBuildGate);
         break;
     // the actions and messages
     case O::SeaNew:

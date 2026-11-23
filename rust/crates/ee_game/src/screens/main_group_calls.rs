@@ -126,13 +126,13 @@ fn hot_key_events(c: &mut impl Cpp, key: usize, button: usize) {
     c.event_dereference(event);
 }
 
-/// `EEUIEMGHotKeyStatusButton::ProcessEvent`: the button pressed (the saved groups' state reset) or released.
-pub(crate) fn hot_key_event(c: &mut impl Cpp, event: usize) {
-    let button = c.mg_event_button(event);
+/// `EEUIEMGHotKeyStatusButton::ProcessEvent` (now the screen event `EE_SCREENS_EV_HOT_KEY`, cpp_events.rs): the
+/// button pressed (the saved groups' state reset) or released.
+pub(crate) fn hot_key_event(c: &mut impl Cpp, button: usize, pressed: bool) {
     if button == 0 {
         return;
     }
-    if c.mg_event_pressed(event) {
+    if pressed {
         c.mg_button_hot_key_down(button);
         c.mg_saved_groups_reset();
     } else {
@@ -261,12 +261,6 @@ mod ffi {
     #[no_mangle]
     pub extern "C" fn ee_screens_mg_show_commands(group: usize, unit: usize) {
         super::show_commands(&mut Ffi, group, unit, |which, unit, b| super::member(group, which, unit, b))
-    }
-    /// `EEUIEMGHotKeyStatusButton::ProcessEvent`.
-    #[no_mangle]
-    pub extern "C" fn ee_screens_mg_hot_key_event(event: usize) -> i64 {
-        super::hot_key_event(&mut Ffi, event);
-        0
     }
 }
 

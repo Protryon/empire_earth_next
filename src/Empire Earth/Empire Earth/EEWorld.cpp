@@ -1241,7 +1241,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::CampaignRestoreCivilization: ((EECampaignProgress*)p)->RestoreCivilization(UWideString(gDefaultCampaignUser), ((EEGameState*)a[0])->mGameOptions.mCampaignName, ((EEGameState*)a[0])->mGameOptions.mScenarioName, ((EEGameState*)a[0])->mGameOptions.mCampaignChecksum);
         break;
-    case O::ClearFormManager: EEUIECLEFormManager::Clear();
+    case O::ClearFormManager: ee_screens_chat_log_clear();
         break;
     case O::StrNew: return P64(new UWideString);
     case O::StrFree: delete (UWideString*)p;
