@@ -29,6 +29,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEARust.h"
 #include "ee/EEUICCommandUnits.h"
+#include "ee/EEScreensShims.h"
 
 extern unsigned long& gTexturePixelDepth;
 extern GEViewport gU4E8F08;                 // 0x4e8f08 the game view viewport (provisional name)
@@ -49,23 +50,10 @@ EEUICCommandUnits::EEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigne
 // The class's own ops (the arrow's draw, the ground point, the pick, the group's centre, the click: the old RustOp)
 // are command_units_ops.rs' over the one-statement shims below (UI lane round 11)
 #define CU(c) static_cast<EEUICCommandUnits*>((EEUIRustControl*)(c))
-static GEColor sCUAmbientColor;         // the arrow's draw: the rasterizer's state put back after it
-static GEViewport sCUViewport;
-static GETransformation sCUTransformation;
-static GE3DPoint sCUNear;               // the ground point: the mouse's line
-static GE3DPoint sCUFar;
-static GE3DPoint sCUNearWorld;
-static GE3DPoint sCUFarWorld;
-static GE3DLine sCULine;
-static float sCUT;
-static GE3DPoint sCUTarget;             // the ground point, the point at the mouse
-static EETile* sCUTile;
-static GERectangle sCUBounds;           // the selected group's bounds and centre
-static GE2DPoint sCUCenter;
 
 extern "C" uint32_t ee_screenscpp_cu_screen() { return (uint32_t)gScreenIndex; }
-extern "C" void ee_screenscpp_cu_save_ambient_color() { sCUAmbientColor = gRasterizer->GetAmbientColor(); }
-extern "C" void ee_screenscpp_cu_save_viewport() { sCUViewport = gRasterizer->GetViewport(gScreenIndex); }
+extern "C" void ee_screenscpp_cu_save_ambient_color() { EEScratch<GEColor>(kScratchCUAmbientColor) = gRasterizer->GetAmbientColor(); }
+extern "C" void ee_screenscpp_cu_save_viewport() { EEScratch<GEViewport>(kScratchCUViewport) = gRasterizer->GetViewport(gScreenIndex); }
 extern "C" float ee_screenscpp_cu_ambient_intensity() { return gRasterizer->GetAmbientIntensity(); }
 extern "C" uint64_t ee_screenscpp_cu_lighting(uint32_t inScreen)
 { return (uint64_t)gRasterizer->GetLighting(inScreen); }
@@ -89,18 +77,18 @@ extern "C" void ee_screenscpp_cu_set_zbuffer(uint64_t inV, uint32_t inScreen)
 extern "C" void ee_screenscpp_cu_set_zcompare(uint64_t inV, uint32_t inScreen)
 { gRasterizer->SetZCompare((unsigned long)inV, inScreen); }
 extern "C" void ee_screenscpp_cu_restore_viewport(uint32_t inScreen)
-{ gRasterizer->SetViewport(sCUViewport, inScreen); }
+{ gRasterizer->SetViewport(EEScratch<GEViewport>(kScratchCUViewport), inScreen); }
 extern "C" void ee_screenscpp_cu_restore_ambient_color(uint32_t inScreen)
-{ gRasterizer->SetAmbientColor(sCUAmbientColor, inScreen); }
-extern "C" void ee_screenscpp_cu_transform_reset() { sCUTransformation = GETransformation(); }
-extern "C" void ee_screenscpp_cu_transform_yaw(float inYaw) { sCUTransformation.SetOrientationYPR(inYaw, 0.0f, 0.0f); }
+{ gRasterizer->SetAmbientColor(EEScratch<GEColor>(kScratchCUAmbientColor), inScreen); }
+extern "C" void ee_screenscpp_cu_transform_reset() { EEScratch<GETransformation>(kScratchCUTransformation) = GETransformation(); }
+extern "C" void ee_screenscpp_cu_transform_yaw(float inYaw) { EEScratch<GETransformation>(kScratchCUTransformation).SetOrientationYPR(inYaw, 0.0f, 0.0f); }
 extern "C" void ee_screenscpp_cu_transform_position(float inX, float inY, float inZ)
-{ sCUTransformation.SetPosition(inX, inY, inZ); }
+{ EEScratch<GETransformation>(kScratchCUTransformation).SetPosition(inX, inY, inZ); }
 extern "C" void ee_screenscpp_cu_model_frame(uintptr_t inCtl) { CU(inCtl)->mModel->SetGraphicsCurrentFrame(0); }
 extern "C" float ee_screenscpp_cu_camera_zoom() { return gCameraZoom; }
 extern "C" void ee_screenscpp_cu_model_scale(uintptr_t inCtl, float inV) { CU(inCtl)->mModel->SetGraphicsScale(inV); }
 extern "C" void ee_screenscpp_cu_model_transform(uintptr_t inCtl)
-{ CU(inCtl)->mModel->SetGraphicsPostModelTransform(sCUTransformation); }
+{ CU(inCtl)->mModel->SetGraphicsPostModelTransform(EEScratch<GETransformation>(kScratchCUTransformation)); }
 extern "C" void ee_screenscpp_cu_model_prepare(uintptr_t inCtl) { CU(inCtl)->mModel->PrepareTransforms(); }
 extern "C" void ee_screenscpp_cu_model_draw(uintptr_t inCtl, uint32_t inScreen)
 { gRasterizer->Draw(CU(inCtl)->mModel, inScreen, 1.0f, gOrthographicView); }
@@ -108,35 +96,33 @@ extern "C" float ee_screenscpp_cu_half_width() { return gU4E8F08.GetHalfWidth();
 extern "C" float ee_screenscpp_cu_x_center() { return gU4E8F08.GetXCenter(); }
 extern "C" float ee_screenscpp_cu_y_center() { return gU4E8F08.GetYCenter(); }
 extern "C" bool ee_screenscpp_cu_ortho() { return gOrthographicView; }
-extern "C" void ee_screenscpp_cu_near(float inX, float inY, float inZ) { sCUNear = GE3DPoint(inX, inY, inZ); }
-extern "C" void ee_screenscpp_cu_far(float inX, float inY, float inZ) { sCUFar = GE3DPoint(inX, inY, inZ); }
+extern "C" void ee_screenscpp_cu_near(float inX, float inY, float inZ) { EEScratch<GE3DPoint>(kScratchCUNear) = GE3DPoint(inX, inY, inZ); }
+extern "C" void ee_screenscpp_cu_far(float inX, float inY, float inZ) { EEScratch<GE3DPoint>(kScratchCUFar) = GE3DPoint(inX, inY, inZ); }
 extern "C" void ee_screenscpp_cu_denorm_persp_near()
-{ gU4E8F08.DenormalizePerspectivePoint(sCUNear, gU4E8F08.GetFrontClippingDistance(), sCUNearWorld); }
+{ gU4E8F08.DenormalizePerspectivePoint(EEScratch<GE3DPoint>(kScratchCUNear), gU4E8F08.GetFrontClippingDistance(), EEScratch<GE3DPoint>(kScratchCUNearWorld)); }
 extern "C" void ee_screenscpp_cu_denorm_persp_far()
-{ gU4E8F08.DenormalizePerspectivePoint(sCUFar, gU4E8F08.GetRearClippingDistance(), sCUFarWorld); }
-extern "C" void ee_screenscpp_cu_denorm_ortho_near() { gU4E8F08.DenormalizeOrthographicPoint(sCUNear, sCUNearWorld); }
-extern "C" void ee_screenscpp_cu_denorm_ortho_far() { gU4E8F08.DenormalizeOrthographicPoint(sCUFar, sCUFarWorld); }
-extern "C" void ee_screenscpp_cu_line_define() { sCULine.Define(sCUNearWorld, sCUFarWorld); }
-extern "C" void ee_screenscpp_cu_line_solve(float inZ) { sCULine.SolveForZ(inZ, sCUT, sCUTarget); }
-extern "C" float ee_screenscpp_cu_target_x() { return sCUTarget.GetX(); }
-extern "C" float ee_screenscpp_cu_target_y() { return sCUTarget.GetY(); }
-extern "C" float ee_screenscpp_cu_target_z() { return sCUTarget.GetZ(); }
-extern "C" void ee_screenscpp_cu_point_set(float inX, float inY, float inZ) { sCUTarget = GE3DPoint(inX, inY, inZ); }
+{ gU4E8F08.DenormalizePerspectivePoint(EEScratch<GE3DPoint>(kScratchCUFar), gU4E8F08.GetRearClippingDistance(), EEScratch<GE3DPoint>(kScratchCUFarWorld)); }
+extern "C" void ee_screenscpp_cu_denorm_ortho_near() { gU4E8F08.DenormalizeOrthographicPoint(EEScratch<GE3DPoint>(kScratchCUNear), EEScratch<GE3DPoint>(kScratchCUNearWorld)); }
+extern "C" void ee_screenscpp_cu_denorm_ortho_far() { gU4E8F08.DenormalizeOrthographicPoint(EEScratch<GE3DPoint>(kScratchCUFar), EEScratch<GE3DPoint>(kScratchCUFarWorld)); }
+extern "C" void ee_screenscpp_cu_line_define() { EEScratch<GE3DLine>(kScratchCULine).Define(EEScratch<GE3DPoint>(kScratchCUNearWorld), EEScratch<GE3DPoint>(kScratchCUFarWorld)); }
+extern "C" void ee_screenscpp_cu_line_solve(float inZ) { EEScratch<GE3DLine>(kScratchCULine).SolveForZ(inZ, EEScratch<float>(kScratchCUT), EEScratch<GE3DPoint>(kScratchCUTarget)); }
+extern "C" float ee_screenscpp_cu_target_x() { return EEScratch<GE3DPoint>(kScratchCUTarget).GetX(); }
+extern "C" float ee_screenscpp_cu_target_y() { return EEScratch<GE3DPoint>(kScratchCUTarget).GetY(); }
+extern "C" float ee_screenscpp_cu_target_z() { return EEScratch<GE3DPoint>(kScratchCUTarget).GetZ(); }
+extern "C" void ee_screenscpp_cu_point_set(float inX, float inY, float inZ) { EEScratch<GE3DPoint>(kScratchCUTarget) = GE3DPoint(inX, inY, inZ); }
 extern "C" bool ee_screenscpp_cu_point_at(float inX, float inY)
-{ return EEPointUnitOrTile(GE2DPoint(inX, inY), sCUTile, sCUTarget, true); }
-extern "C" void ee_screenscpp_cu_bounds_reset() { sCUBounds = GERectangle(); }
-extern "C" void ee_screenscpp_cu_group_bounds() { gWorld.GetCurrentPlayer()->mSelectedGroup->GetBounds(sCUBounds); }
-extern "C" void ee_screenscpp_cu_bounds_center() { sCUBounds.GetCenter(sCUCenter); }
-extern "C" float ee_screenscpp_cu_center_x() { return sCUCenter.GetX(); }
-extern "C" float ee_screenscpp_cu_center_y() { return sCUCenter.GetY(); }
+{ return EEPointUnitOrTile(GE2DPoint(inX, inY), EEScratch<EETile*>(kScratchCUTile), EEScratch<GE3DPoint>(kScratchCUTarget), true); }
+extern "C" void ee_screenscpp_cu_bounds_reset() { EEScratch<GERectangle>(kScratchCUBounds) = GERectangle(); }
+extern "C" void ee_screenscpp_cu_group_bounds() { gWorld.GetCurrentPlayer()->mSelectedGroup->GetBounds(EEScratch<GERectangle>(kScratchCUBounds)); }
+extern "C" void ee_screenscpp_cu_bounds_center() { EEScratch<GERectangle>(kScratchCUBounds).GetCenter(EEScratch<GE2DPoint>(kScratchCUCenter)); }
+extern "C" float ee_screenscpp_cu_center_x() { return EEScratch<GE2DPoint>(kScratchCUCenter).GetX(); }
+extern "C" float ee_screenscpp_cu_center_y() { return EEScratch<GE2DPoint>(kScratchCUCenter).GetY(); }
 extern "C" void ee_screenscpp_cu_execute(uintptr_t inCtl, float inX, float inY, bool inHit, uint64_t inModifiers, bool inFacing, float inAngle, bool inDragged)
 { CU(inCtl)->mListener->Execute(inX, inY, inHit, (unsigned long)inModifiers, inFacing, inAngle, inDragged); }
 
 // ---- the one-statement shims of ee_screens command_units_calls.rs (UI lane round 8: the constructor's arrow, the
 // destructor): each one call, no logic
-#include "ee/EEScreensShims.h"
 #define CU(x) reinterpret_cast<EEUICCommandUnits*>(x)
-static GETextureDescription sCUDescription;   // the arrow texture's description
 extern "C" void ee_screenscpp_cu_set_listener(uintptr_t inCu, uintptr_t inListener)
 { CU(inCu)->mListener = reinterpret_cast<EEAMouseClick*>(inListener); }
 extern "C" void ee_screenscpp_cu_listener_reference(uintptr_t inCu) { CU(inCu)->mListener->Reference(); }
@@ -166,8 +152,8 @@ extern "C" void ee_screenscpp_cu_vertex_length(uintptr_t inCu)
 { CU(inCu)->mModel->GetMaterial(0)->SetVertexRangeLength(4); }
 extern "C" void ee_screenscpp_cu_bounds(uintptr_t inCu) { CU(inCu)->mModel->ComputeBoundingVolumes(); }
 extern "C" void ee_screenscpp_cu_set_description()
-{ sCUDescription = GETextureDescription{1, 0, gTexturePixelDepth, 0, false, false, true, true}; }
-extern "C" uintptr_t ee_screenscpp_cu_description() { return (uintptr_t)&sCUDescription; }
+{ EEScratch<GETextureDescription>(kScratchCUDescription) = GETextureDescription{1, 0, gTexturePixelDepth, 0, false, false, true, true}; }
+extern "C" uintptr_t ee_screenscpp_cu_description() { return (uintptr_t)&EEScratch<GETextureDescription>(kScratchCUDescription); }
 extern "C" void ee_screenscpp_cu_set_texture(uintptr_t inCu, uintptr_t inTexture)
 { CU(inCu)->mTexture = reinterpret_cast<GETexture*>(inTexture); }
 extern "C" void ee_screenscpp_texture_alpha_texture(uintptr_t inTexture)

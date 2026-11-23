@@ -42,10 +42,9 @@ EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, uns
 }
 
 // the tooltip being built (the UI thread's)
-static UWideString* sPortraitHelp;
 
-extern "C" void ee_screenscpp_pt_help_target(UWideString* inOut) { sPortraitHelp = inOut; }
-extern "C" void ee_screenscpp_pt_help_clear() { *sPortraitHelp = UWideString(); }
+extern "C" void ee_screenscpp_pt_help_target(UWideString* inOut) { EEScratch<UWideString*>(kScratchPortraitHelp) = inOut; }
+extern "C" void ee_screenscpp_pt_help_clear() { *EEScratch<UWideString*>(kScratchPortraitHelp) = UWideString(); }
 
 // The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*: units and nodes as handles), its constructor's,
 // destructor's, DrawTextA's and MouseMove's bodies: portrait_calls.rs over the one-statement shims below (UI lane
@@ -53,8 +52,6 @@ extern "C" void ee_screenscpp_pt_help_clear() { *sPortraitHelp = UWideString(); 
 #define PT(p) ((EEUICPortrait*)(p))
 #define PT_CU(u) ((EEComplexUnit*)(u))
 #define PT_N(n) ((EETechTreeNode*)(n))
-static UWideString sPTFormat;           // the tooltip's format
-static UWideString sPTName;             // the tooltip's name
 
 extern "C" bool ee_screenscpp_pt_has_unit(uintptr_t inP) { return PT(inP)->mUnit != NULL; }
 extern "C" void ee_screenscpp_pt_button_release(uintptr_t inP) { PT(inP)->mButton->Release(); }
@@ -104,19 +101,19 @@ extern "C" void ee_screenscpp_pt_update_help(uintptr_t inP) { PT(inP)->GetForm()
 extern "C" bool ee_screenscpp_pt_contains(uintptr_t inP, float inLeft, float inTop, float inRight, float inBottom)
 { return GERectangle(inLeft, inTop, inRight, inBottom).Contains(PT(inP)->GetMouseLocation()); }
 extern "C" bool ee_screenscpp_pt_unit_building(uintptr_t inP) { return PT(inP)->mUnit->GetUnitClass()->IsBuilding(); }
-extern "C" void ee_screenscpp_pt_strings_clear() { sPTFormat = UWideString(); }
-extern "C" void ee_screenscpp_pt_name_clear() { sPTName = UWideString(); }
+extern "C" void ee_screenscpp_pt_strings_clear() { EEScratch<UWideString>(kScratchPTFormat) = UWideString(); }
+extern "C" void ee_screenscpp_pt_name_clear() { EEScratch<UWideString>(kScratchPTName) = UWideString(); }
 extern "C" void ee_screenscpp_pt_format_research()
-{ gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_RESEARCH, sPTFormat); }
+{ gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_RESEARCH, EEScratch<UWideString>(kScratchPTFormat)); }
 extern "C" void ee_screenscpp_pt_format_improvement()
-{ gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_IMPROVEMENT, sPTFormat); }
+{ gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_IMPROVEMENT, EEScratch<UWideString>(kScratchPTFormat)); }
 extern "C" void ee_screenscpp_pt_name_unit_class(uintptr_t inNode)
-{ gResource->GetString(gUnitClassTable[PT_N(inNode)->mData->mUnitClass]->mNameStringID, sPTName); }
+{ gResource->GetString(gUnitClassTable[PT_N(inNode)->mData->mUnitClass]->mNameStringID, EEScratch<UWideString>(kScratchPTName)); }
 extern "C" void ee_screenscpp_pt_name_node(uintptr_t inNode)
-{ gResource->GetString(PT_N(inNode)->mData->mNameID, sPTName); }
+{ gResource->GetString(PT_N(inNode)->mData->mNameID, EEScratch<UWideString>(kScratchPTName)); }
 extern "C" void ee_screenscpp_pt_name_improvement(uintptr_t inP)
-{ PT(inP)->mUnit->mStats->GetImprovementName(sPTName, PT(inP)->mUnit->GetPlayer()->GetResearchedImprovement(PT(inP)->mUnit->GetUnitClass()->GetUnitType())); }
-extern "C" void ee_screenscpp_pt_help_print() { sprintf(*sPortraitHelp, sPTFormat, (const char*)sPTName); }
+{ PT(inP)->mUnit->mStats->GetImprovementName(EEScratch<UWideString>(kScratchPTName), PT(inP)->mUnit->GetPlayer()->GetResearchedImprovement(PT(inP)->mUnit->GetUnitClass()->GetUnitType())); }
+extern "C" void ee_screenscpp_pt_help_print() { sprintf(*EEScratch<UWideString*>(kScratchPortraitHelp), EEScratch<UWideString>(kScratchPTFormat), (const char*)EEScratch<UWideString>(kScratchPTName)); }
 extern "C" bool ee_screenscpp_pt_unit_hp_positive(uintptr_t inP) { return PT(inP)->mUnit->mHitPoints > 0; }
 extern "C" bool ee_screenscpp_pt_unit_on_tile(uintptr_t inP) { return PT(inP)->mUnit->mTileNode != NULL; }
 extern "C" uintptr_t ee_screenscpp_pt_unit_complex_field(uintptr_t inP)

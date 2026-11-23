@@ -112,7 +112,6 @@ long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 #define SBK(x) reinterpret_cast<EEUnitClass*>(x)
 #define SBM(x) reinterpret_cast<UIManager*>(x)
 #define SBT(x) (*reinterpret_cast<UIControlsTable*>(x))
-static UWideString sSBTString;   // the chat line's string (the original's local)
 extern "C" uintptr_t ee_screenscpp_sbt_unit(int64_t inIndex)
 { return (uintptr_t)gWorld.GetCurrentPlayer()->mSelectedGroup->GetUnit(inIndex); }
 extern "C" int64_t ee_screenscpp_sbt_unit_get_power(uintptr_t inUnit) { return SBU(inUnit)->GetPower(); }
@@ -144,9 +143,9 @@ extern "C" int64_t ee_screenscpp_sbt_game_resources() { return gGameResources; }
 extern "C" float ee_screenscpp_sbt_game_clock() { return gPhysics->GetGameClock(); }
 extern "C" int64_t ee_screenscpp_sbt_world_long(int64_t inConstant)
 { return gWorldTable.GetLongValue((EEWorldConstant)inConstant); }
-extern "C" void ee_screenscpp_sbt_string_clear() { sSBTString = UWideString(); }
-extern "C" void ee_screenscpp_sbt_string_load(int64_t inId) { gResource->GetString(inId, sSBTString); }
-extern "C" void ee_screenscpp_sbt_chat_add_string() { gUserInterface->AddChatLogEntry(sSBTString, 0); }
+extern "C" void ee_screenscpp_sbt_string_clear() { EEScratch<UWideString>(kScratchSBTString) = UWideString(); }
+extern "C" void ee_screenscpp_sbt_string_load(int64_t inId) { gResource->GetString(inId, EEScratch<UWideString>(kScratchSBTString)); }
+extern "C" void ee_screenscpp_sbt_chat_add_string() { gUserInterface->AddChatLogEntry(EEScratch<UWideString>(kScratchSBTString), 0); }
 extern "C" bool ee_screenscpp_sbt_shift() { return UIControl::ShiftKeyPressed(); }
 extern "C" bool ee_screenscpp_sbt_is_command(uintptr_t inRec) { return SBRB(inRec)->mIsCommand; }
 extern "C" uintptr_t ee_screenscpp_sbt_node(uintptr_t inRec)

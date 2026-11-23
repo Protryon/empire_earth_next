@@ -11,6 +11,9 @@
 #include <string>
 #include "lle/UString.h"
 #include "lle/UWideString.h"
+#include "rust/game/screens.h"   // ee_screens_scratch, EeScreensScratch
+#include <new>
+#include <type_traits>
 
 struct EeScreensShimText {
     const uint8_t* ptr;
@@ -33,6 +36,15 @@ inline float EEShimBitsFloat(int64_t inBits)
     float theFloat;
     memcpy(&theFloat, &theBits, 4);
     return theFloat;
+}
+
+// The C++ object a shim keeps between calls (a former file static): slot inSlot of the Rust-owned table (ee_game
+// screens scratch.rs), made by T's default constructor at its first use (a plain type is its zeros, as a static's)
+template <class T> void EEScratchMake(void* inAt) { ::new (inAt) T(); }
+template <class T> T& EEScratch(EeScreensScratch inSlot)
+{
+    return *static_cast<T*>(ee_screens_scratch(inSlot, sizeof(T), alignof(T),
+                                               std::is_trivially_default_constructible<T>::value ? nullptr : EEScratchMake<T>));
 }
 
 #endif

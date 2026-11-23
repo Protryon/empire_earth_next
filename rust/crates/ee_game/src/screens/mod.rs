@@ -355,6 +355,8 @@ mod scenario_editor_ffi;
 pub mod scenario_screens;
 #[cfg(not(test))]
 mod scenario_screens_ffi;
+// the C++ objects the shims keep between calls (the files' scratch statics), Rust-owned slots
+pub mod scratch;
 pub mod select_units;
 pub mod settings;
 pub mod settings_form;

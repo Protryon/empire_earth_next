@@ -35,6 +35,7 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreensShims.h"
 extern unsigned long& gTexturePixelDepth;
 
 // one loaded icon (0x14 bytes) (provisional name)
@@ -88,8 +89,6 @@ extern "C" bool ee_screenscpp_status_box_bar4(void* inCall) { return static_cast
 static const GEColor* const kSBBarColors[3] = {&kStatusColor3, &kStatusColor1, &kStatusColor2};
 static const char* const kSBTextureNames[4] = {"", "textures\\unit improvements_01", "textures\\unit improvements_02",
                                                "textures\\unit upgrades_03"};
-static UWideString sSBSuffix;                 // the gate's lock state (the original's local)
-static GETextureDescription sSBReload;        // ReloadIcons' description
 extern "C" int64_t ee_screenscpp_sb_upgrade_queued(uintptr_t inCall, int64_t inCtl)
 { return static_cast<EEUIBUpgrade*>(SBX(inCall, inCtl))->mNumQueued; }
 extern "C" void ee_screenscpp_sb_control_set_dirty(uintptr_t inCall, int64_t inCtl)
@@ -118,10 +117,10 @@ extern "C" bool ee_screenscpp_sb_is_gate_fill(uintptr_t inCall)
 extern "C" bool ee_screenscpp_sb_is_gate(uintptr_t inCall)
 { return SBC(inCall).mUnit->GetUnitClass()->mCategory == kUnitCategoryGate; }
 extern "C" bool ee_screenscpp_sb_gate_locked(uintptr_t inCall) { return SBC(inCall).mUnit->mComplexUnit->mIsLocked; }
-extern "C" void ee_screenscpp_sb_suffix_clear() { sSBSuffix = UWideString(); }
-extern "C" void ee_screenscpp_sb_suffix_locked() { gResource->GetString(IDS_MSG_LOCKED, sSBSuffix); }
-extern "C" void ee_screenscpp_sb_suffix_unlocked() { gResource->GetString(IDS_MSG_UNLOCKED, sSBSuffix); }
-extern "C" void ee_screenscpp_sb_text_append_suffix(uintptr_t inCall) { SBC(inCall).mText += sSBSuffix; }
+extern "C" void ee_screenscpp_sb_suffix_clear() { EEScratch<UWideString>(kScratchSBSuffix) = UWideString(); }
+extern "C" void ee_screenscpp_sb_suffix_locked() { gResource->GetString(IDS_MSG_LOCKED, EEScratch<UWideString>(kScratchSBSuffix)); }
+extern "C" void ee_screenscpp_sb_suffix_unlocked() { gResource->GetString(IDS_MSG_UNLOCKED, EEScratch<UWideString>(kScratchSBSuffix)); }
+extern "C" void ee_screenscpp_sb_text_append_suffix(uintptr_t inCall) { SBC(inCall).mText += EEScratch<UWideString>(kScratchSBSuffix); }
 extern "C" void ee_screenscpp_sb_text_civ(uintptr_t inCall)
 { SBC(inCall).mText = SBC(inCall).mUnit->GetPlayer()->mCivilization.mName; }
 extern "C" uintptr_t ee_screenscpp_sb_bar_control(uintptr_t inCall, int64_t inCtl)
@@ -206,9 +205,9 @@ extern "C" void ee_screenscpp_sb_bitmap_dereference(int64_t inIcon)
 { EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap->Dereference(); }
 extern "C" void ee_screenscpp_sb_bitmap_clear(int64_t inIcon) { EEUIFMGStatusBox::sIconBitmaps[inIcon].mBitmap = NULL; }
 extern "C" void ee_screenscpp_sb_set_reload_description(int32_t inDrop)
-{ sSBReload = GETextureDescription{1, 0, gTexturePixelDepth, inDrop, false, false, true, false}; }
+{ EEScratch<GETextureDescription>(kScratchSBReload) = GETextureDescription{1, 0, gTexturePixelDepth, inDrop, false, false, true, false}; }
 extern "C" int64_t ee_screenscpp_sb_reload(int64_t inIndex)
-{ return gTextureManager->ReloadTexture(UString(kSBTextureNames[inIndex]), sSBReload); }
+{ return gTextureManager->ReloadTexture(UString(kSBTextureNames[inIndex]), EEScratch<GETextureDescription>(kScratchSBReload)); }
 extern "C" void ee_screenscpp_sb_bar_bitmap(uintptr_t inBar, uintptr_t inBitmap)
 { reinterpret_cast<EEUIFMGStatusBar*>(inBar)->mIcon->SetBitmap(reinterpret_cast<GEBitmap*>(inBitmap)); }
 extern "C" void ee_screenscpp_sb_bar_stretch(uintptr_t inBar, uintptr_t inBitmap, uintptr_t inRectangle)
