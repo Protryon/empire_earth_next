@@ -113,6 +113,8 @@ struct Component : RefCount {
     void Invalidate() { Log(Id(this) + " Invalidate"); }
     void SetComponentFlags(int f, bool on) { Log(Id(this) + " SetComponentFlags " + N(f) + " " + N(on)); }
     void SetBackground(const Background& b) { Log(Id(this) + " SetBackground " + N(b.mColor) + " " + N(b.mBorderColor)); }
+    void SetPos(int x, int y) { Log(Id(this) + " SetPos " + N(x) + " " + N(y)); }
+    virtual void AddedToParent() { Log(Id(this) + " Component::AddedToParent"); }
 };
 struct Container : Component {
     std::vector<SmartPtr<Component>> mChildren;
@@ -312,6 +314,11 @@ struct PaintList : ListArea {
 // the list item base the text items derive from (ListItem's members and mSelected)
 struct PaintItem : ListItem {
     bool mSelected = false;
+    virtual void SetPos(int, int inTop)
+    {
+        Log(Id(this) + " ListItem::SetPos " + N(inTop));
+        this->mTop = inTop;
+    }
 };
 // ImageButton's base: the button states the paint reads
 struct ImageButtonBase : Component {

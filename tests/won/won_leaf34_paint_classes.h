@@ -35,3 +35,12 @@ public:
     SmartPtr<Component> mComponent;
     void Paint(PaintGraphics&, int, int, int, int, int = 0, int = 0);
 };
+// ComponentListItem (WONLobbyComponentListItem.h's members; its mouse forwards are one statement each)
+class ComponentListItem : public PaintItem {
+public:
+    void CalcDimensions(PaintList*);
+    void SetViewport(PaintList*, Container*);
+    void SetPos(int, int);
+    SmartPtr<Component> mComponent;
+    bool mIsSizable = false;
+};

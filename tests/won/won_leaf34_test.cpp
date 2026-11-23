@@ -89,14 +89,14 @@ static bool IsLeafBool(EeWonLeafOp o)
 {
     return o == Lo::BtnHasImage || (o >= Lo::BtnDisabled && o <= Lo::BtnStretch) || o == Lo::ItemHasFont ||
            o == Lo::ItemHasImage || o == Lo::ItemSelected || o == Lo::ItemListFlag || o == Lo::MenuDisabled ||
-           o == Lo::MenuHasSubMenu || (o >= Lo::BgHasImage && o <= Lo::BgHasComponent);
+           o == Lo::MenuHasSubMenu || (o >= Lo::BgHasImage && o <= Lo::BgHasComponent) || o == Lo::CompItemHasComponent;
 }
 static bool IsLeafNumber(EeWonLeafOp o)
 {
     return o == Lo::BtnImageWidth || o == Lo::BtnImageHeight || o == Lo::BtnWidth || o == Lo::BtnHeight ||
            o == Lo::ItemColor || o == Lo::ItemImageWidth || o == Lo::ItemImageHeight || o == Lo::ItemTextWidth ||
            o == Lo::ItemFontHeight || o == Lo::ItemListPaintWidth || o == Lo::MenuListViewWidth ||
-           (o >= Lo::BgImageWidth && o <= Lo::BgBorderColor);
+           (o >= Lo::BgImageWidth && o <= Lo::BgBorderColor) || o == Lo::CompItemWidth || o == Lo::CompItemHeight;
 }
 static intptr_t MutLeaf(intptr_t (*inHost)(void*, EeWonLeafOp, intptr_t, intptr_t), void* me, EeWonLeafOp op, intptr_t a, intptr_t b)
 {
@@ -114,6 +114,7 @@ static intptr_t MutImgBtn(void* me, EeWonLeafOp op, intptr_t a, intptr_t b) { re
 static intptr_t MutTextItem(void* me, EeWonLeafOp op, intptr_t a, intptr_t b) { return MutLeaf(HostTextItem, me, op, a, b); }
 static intptr_t MutMenu(void* me, EeWonLeafOp op, intptr_t a, intptr_t b) { return MutLeaf(HostMenu, me, op, a, b); }
 static intptr_t MutBg(void* me, EeWonLeafOp op, intptr_t a, intptr_t b) { return MutLeaf(HostBg, me, op, a, b); }
+static intptr_t MutCompItem(void* me, EeWonLeafOp op, intptr_t a, intptr_t b) { return MutLeaf(HostCompItem, me, op, a, b); }
 } // namespace LfNew
 
 // ---- random numbers (one generator, reseeded per sequence so the two sides draw alike)
@@ -327,7 +328,7 @@ template <class I> static void DumpItem(const char* inName, I& it)
     Log(std::string("state ") + inName + " size " + N(it.mWidth) + " " + N(it.mHeight) + " color " + N(it.mColor) + " font " +
         Id(it.mFont.get()) + " image " + Id(it.mImage.get()));
 }
-template <class B, class T, class M, class G> static std::vector<std::string> PaintRun(uint32_t inSeed, int inCalls)
+template <class B, class T, class M, class G, class C> static std::vector<std::string> PaintRun(uint32_t inSeed, int inCalls)
 {
     sTrace.clear();
     sObjects.clear();
@@ -348,10 +349,13 @@ template <class B, class T, class M, class G> static std::vector<std::string> Pa
         SmartPtr<M> menu = new M;
         G back;
         SmartPtr<Component> comp = new Component;
+        SmartPtr<C> citem = new C;
+        Container viewport;
+        viewport.AddRef(); // held by the world
         item->mText = GUIString(Pick(2) ? L"Some item" : L"x");
         menu->mText = GUIString(L"Menu &entry");
         for (int i = 0; i < inCalls; i++) {
-            const int k = Pick(15);
+            const int k = Pick(18);
             switch (k) {
             case 0: { int w = -1, h = -1; b->GetDesiredSize(w, h); Log("size " + N(w) + " " + N(h)); break; }
             case 1: case 2: Log("call button Paint"); b->Paint(g); break;
@@ -389,6 +393,28 @@ template <class B, class T, class M, class G> static std::vector<std::string> Pa
                 Log("background world");
                 break;
             }
+            case 15: {
+                citem->mComponent = Pick(4) ? comp.get() : NULL;
+                comp->mWidth = Pick(60);
+                comp->mHeight = Pick(30);
+                Log("call component item CalcDimensions");
+                citem->CalcDimensions(list.get());
+                break;
+            }
+            case 16: {
+                citem->mComponent = comp.get();
+                Container* v = Pick(2) ? &viewport : NULL;
+                Log("call component item SetViewport " + Id(v));
+                citem->SetViewport(list.get(), v);
+                break;
+            }
+            case 17: {
+                citem->mComponent = comp.get();
+                const int x = Pick(100) - 20, y = Pick(100) - 20;
+                Log("call component item SetPos " + N(x) + " " + N(y));
+                citem->SetPos(x, y);
+                break;
+            }
             case 7:
                 if (menu->mFont.get() == NULL) menu->CalcDimensions(list.get());
                 Log("call menu Paint");
@@ -420,6 +446,8 @@ template <class B, class T, class M, class G> static std::vector<std::string> Pa
             DumpButton(*b.get());
             DumpItem("item", *item.get());
             DumpItem("menu", *menu.get());
+            Log("state component item " + N(citem->mWidth) + " " + N(citem->mHeight) + " top " + N(citem->mTop) +
+                " parent " + Id(comp->mParent));
             Log("state component " + N(comp->mWidth) + " " + N(comp->mHeight) + " refs " + N(comp->mRefCount));
         }
     }
@@ -487,8 +515,8 @@ static int RunAll(bool inShow, long long* outSteps)
     for (int i = 0; i < kPaintRuns; i += step) {
         const uint32_t seed = 500000u + (uint32_t)i;
         const int calls = 6 + i % 14;
-        report("paint", seed, PaintRun<LfOrig::ImageButton, LfOrig::TextListItem, LfOrig::MenuItem, LfOrig::Background>(seed, calls),
-               PaintRun<LfNew::ImageButton, LfNew::TextListItem, LfNew::MenuItem, LfNew::Background>(seed, calls));
+        report("paint", seed, PaintRun<LfOrig::ImageButton, LfOrig::TextListItem, LfOrig::MenuItem, LfOrig::Background, LfOrig::ComponentListItem>(seed, calls),
+               PaintRun<LfNew::ImageButton, LfNew::TextListItem, LfNew::MenuItem, LfNew::Background, LfNew::ComponentListItem>(seed, calls));
         steps += calls;
     }
     for (int i = 0; i < kFormatRuns; i += step) {
@@ -514,7 +542,7 @@ int main()
     std::vector<int> ops;
     for (int o = (int)EeWonBrowserOp::NewView; o <= (int)EeWonBrowserOp::Invalidate; o++) ops.push_back(o);
     for (int o = (int)EeWonTipOp::BasePaint; o <= (int)EeWonTipOp::ClosePopup; o++) ops.push_back(o + 100);
-    for (int o = (int)EeWonLeafOp::BtnHasImage; o <= (int)EeWonLeafOp::BgCompPaint; o++) ops.push_back(o + 300);
+    for (int o = (int)EeWonLeafOp::BtnHasImage; o <= (int)EeWonLeafOp::CompItemSetPos; o++) ops.push_back(o + 300);
     ops.push_back(200);
     ops.push_back(201);
     int missed = 0, caught = 0;

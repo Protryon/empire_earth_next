@@ -357,4 +357,24 @@ void Background::Paint(PaintGraphics &g, int xpos, int ypos, int width, int heig
 		this->mComponent->Paint(g);
 	});
 }
+// ComponentListItem's size, viewport and place as they were (ComponentListItemAdapters.cpp at ab1b33bcb)
+void ComponentListItem::CalcDimensions(PaintList*)
+{
+    if(this->mComponent.get()!=NULL) {
+        this->mWidth=this->mComponent->Width();
+        this->mHeight=this->mComponent->Height();
+    }
+}
+// Parents the component to the list viewport and notifies it when attached
+void ComponentListItem::SetViewport(PaintList*,Container* viewport)
+{
+    this->mComponent->mParent=viewport;
+    if(viewport!=NULL) this->mComponent->AddedToParent();
+}
+// Moves the item and its component
+void ComponentListItem::SetPos(int x,int y)
+{
+    PaintItem::SetPos(x,y);
+    this->mComponent->SetPos(x,y);
+}
 } // namespace LfOrig
