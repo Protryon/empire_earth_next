@@ -409,9 +409,9 @@ shims! {
     fn db_remove_fonts() = ee_uicpp_db_remove_fonts;
     fn mouse_buttons_ready() -> bool = ee_uicpp_mouse_buttons_ready;
     fn mouse_button_fetch(which: u32) = ee_uicpp_mouse_button_fetch;
-    fn mouse_left_handed() -> bool = ee_uicpp_mouse_left_handed;
+    fn mouse_left_handed() -> bool = ee_ui_mouse_left_handed;
     fn mouse_swap_buttons() = ee_uicpp_mouse_swap_buttons;
-    fn mouse_set_left_handed(left: bool) = ee_uicpp_mouse_set_left_handed;
+    fn mouse_set_left_handed(left: bool) = ee_ui_mouse_set_left_handed;
     // UIForm.cpp's (lle_form.rs); the file's open, read and close are UIHotKey.cpp's
     fn file_open(file: usize) = ee_uicpp_file_open;
     fn file_read(file: usize, data: EeUiShimU8Out, length: c_ulong) -> c_long = ee_uicpp_file_read;

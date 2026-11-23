@@ -104,6 +104,114 @@ unsafe fn base_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _
     (if a < 2 { cpp.entity_just_pressed(k) } else { cpp.entity_just_unpressed(k) }) as isize
 }
 
+/// The manager's form calls (`b`: managerobj.rs F_OPEN .. F_DELETE) -> the call's result (0 for the void ones).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn mgr_form_call(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    let r: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize = match b {
+        6 => ee_uicpp_mgr_form_copy,
+        7 => ee_uicpp_mgr_form_draw_polygons,
+        8 => ee_uicpp_mgr_form_draw_text,
+        9 => ee_uicpp_mgr_form_update_keyboard,
+        10 => ee_uicpp_mgr_form_update_mouse,
+        _ => {
+            let v: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) = match b {
+                0 => ee_uicpp_mgr_form_open,
+                1 => ee_uicpp_mgr_form_close,
+                2 => ee_uicpp_mgr_form_activate,
+                3 => ee_uicpp_mgr_form_deactivate,
+                4 => ee_uicpp_mgr_form_clear_clips,
+                5 => ee_uicpp_mgr_form_all_dirty,
+                _ => ee_uicpp_mgr_form_delete,
+            };
+            // SAFETY: the contract
+            unsafe { v(o, a, b, c, d, f) };
+            return 0;
+        }
+    };
+    // SAFETY: the contract
+    unsafe { r(o, a, b, c, d, f) }
+}
+
+/// The manager's form calls with a rectangle or a point in `f` (`b`: managerobj.rs R_ADD_DIRTY .. R_MOUSE_LOCATION).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn mgr_form_rect_call(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    let v: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) = match b {
+        0 => ee_uicpp_mgr_form_add_dirty,
+        1 => ee_uicpp_mgr_form_redraw,
+        2 => ee_uicpp_mgr_form_add_clip,
+        3 => ee_uicpp_mgr_form_relayout,
+        _ => ee_uicpp_mgr_form_mouse_location,
+    };
+    // SAFETY: the contract
+    unsafe { v(o, a, b, c, d, f) };
+    0
+}
+
+/// The manager's IME calls on form `a` (`b` a manager_media.rs `ImeCall`, `c` its argument) -> the form's result.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn mgr_form_ime(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    unsafe {
+        match b {
+            0 => {
+                ee_uicpp_mgr_form_ime_result(o, a, b, c, d, f);
+                0
+            }
+            1 => ee_uicpp_mgr_form_ime_change(o, a, b, c, d, f),
+            2 => ee_uicpp_mgr_form_ime_close(o, a, b, c, d, f),
+            _ => ee_uicpp_mgr_form_ime_open(o, a, b, c, d, f),
+        }
+    }
+}
+
+/// The form's temporary hot key (AddHotKey's): made, on the form, its key `a` -> the hot key.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn form_hot_key_temp(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    unsafe {
+        let k = ee_uicpp_form_hot_key_new(o, 0, 0, 0, 0, f);
+        ee_uicpp_form_hot_key_set_form(o, k, 0, 0, 0, f);
+        ee_uicpp_form_hot_key_set_key(o, k, a, 0, 0, f);
+        k
+    }
+}
+
+/// The keyboard's input entity for key `a` (NULL when it has none).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn form_key_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+    let mut e: *mut c_void = core::ptr::null_mut();
+    // SAFETY: the contract; the slot is live for the call
+    unsafe { ee_uicpp_form_key_entity_get(o, a, &mut e as *mut *mut c_void as isize, 0, 0, f) };
+    e as isize
+}
+
+/// The mouse's input entity for button `a` (NULL when it has none).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn form_mouse_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+    let mut e: *mut c_void = core::ptr::null_mut();
+    // SAFETY: the contract; the slot is live for the call
+    unsafe { ee_uicpp_form_mouse_entity_get(o, a, &mut e as *mut *mut c_void as isize, 0, 0, f) };
+    e as isize
+}
+
 /// The list boxes' key questions (edit_keys' numbering): 6 Home, 7 End, 8 Up, 9 Down, else Enter.
 ///
 /// # Safety

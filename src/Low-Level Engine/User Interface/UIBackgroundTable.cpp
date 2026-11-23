@@ -39,12 +39,6 @@
 
 static_assert(sizeof(EeUiLayout) == sizeof(UILayoutUtility) && sizeof(EeUiColor) == sizeof(GEColor), "bgtableobj.rs");
 
-// the database file's calls (UIEvent.cpp)
-extern "C" void ee_uicpp_file_open(void* inFile);
-extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount);
-extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength);
-extern "C" void ee_uicpp_file_close(void* inFile);
-
 // The Rust table's calls out (EeUiOp 590..600): the object is the file (Create) or the manager (CreateBackgrounds)
 struct UIBackgroundTableHost {
     // A background of the entry's type on the form (others the manager's user-defined backgrounds)
