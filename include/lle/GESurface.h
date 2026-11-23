@@ -1,14 +1,16 @@
-// C:\EEX\Low-Level Engine\Graphics Engine\GESurface.h (RECONSTRUCTION). Abstract: the renderer plug-ins implement it
-// (DX7HRDisplay DX7Surface); slot order and signatures from DX7Surface's vtable (0x104c4) and exports.
+// C:\EEX\Low-Level Engine\Graphics Engine\GESurface.h (RECONSTRUCTION). Abstract in the original (the renderer plug-ins
+// implemented it: DX7HRDisplay DX7Surface, vtable 0x104c4); the game links one renderer, so it is DX7Surface itself.
 #ifndef LLE_GESURFACE_H
 #define LLE_GESURFACE_H
 #include "rust/render/gestate.h"
 #include "rust/render/ge.h"
+#include "rust/render/dx7.h"
 
 class FSFileSpec;
 class GEColor;
 class GERectangle;
 class GEScreen;
+class GXSurface;
 struct HDC__;
 
 // How a surface is created (GEScreen::CreateSurface). Fields from GETextureManager::LoadTexture/RefreshAllTextures
@@ -18,45 +20,54 @@ struct GESurfaceDescription : EeGeSurfaceDescription {   // the record is Rust's
     GESurfaceDescription() { this->mNoAlpha = false; }  // the only store before the fields are filled in
 };
 
+// The game's one surface (LLE round 13: DX7Surface folded in, its virtuals gone): every member is one call of the Rust
+// object (rust/crates/ee_render/src/dx7/surfobj.rs: the description, the attached surfaces, the transparency colour,
+// the GX surface, the lock state); the class keeps the reference count and the logical-size members. The model store
+// gate (tools/eemodel/storegate) links its own memory surfaces as the ee_dx7sf_* functions.
 class LLE_API GESurface : public UReferenceCounter {   // sizeof 8 (vector deleting dtor 0xdf58)
-protected:
-    GESurface() {}
-    virtual ~GESurface() {}                 // slot 0 (exported protected: ??1GESurface@@MAE@XZ)
 public:
-    virtual long AttachSurface(GESurface* inSurface) = 0;
-    // overloaded virtuals take vtable slots in reverse declaration order (0x08 rectangle form, 0x0c whole surface)
-    virtual long Clear(GEColor& inColor, float inZ) = 0;
-    virtual long Clear(GERectangle& inRectangle, GEColor& inColor, float inZ) = 0;
-    virtual long CopyTo(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination, bool inTransparent) = 0;
-    virtual long CopyWithFilter(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination) = 0;
-    virtual long DetachSurface(unsigned long inIndex) = 0;
-    virtual long Flip(bool inWait) = 0;
-    virtual unsigned long GetAllocatedSize() = 0;
-    virtual GESurface* GetAttachedSurface(unsigned long inIndex) = 0;
-    virtual unsigned long GetAttachedSurfaceCount() = 0;
-    virtual unsigned long GetBytesPerRow() const = 0;
-    virtual unsigned long GetHeight() const = 0;           // slot 0x30
-    virtual bool GetIs3DRenderable() const = 0;
-    virtual bool GetIsTextLocked() const = 0;
-    virtual bool GetIsTransparencyEnabled() const = 0;
-    virtual unsigned char* GetMemoryAddress() const = 0;
-    virtual GEScreen* GetParentScreen() const = 0;
-    virtual unsigned long GetPixelFormat() const = 0;      // slot 0x48
-    virtual unsigned long GetPixelDepth() const = 0;
-    virtual unsigned long GetSurfaceVolatility() const = 0;
-    virtual const GESurfaceDescription& GetSurfaceDescription() const = 0;
-    virtual const GEColor& GetTransparencyColor() const = 0;
-    virtual unsigned long GetType() const = 0;
-    virtual unsigned long GetWidth() const = 0;            // slot 0x64
-    virtual long Lock() = 0;
-    virtual long RestoreSurface() = 0;
-    virtual void SetTransparencyColor(GEColor& inColor) = 0;
-    virtual long TextLock() = 0;
-    virtual long TextUnlock() = 0;
-    virtual long Unlock() = 0;
+    // Wraps a GX surface with its description and parent screen, unlocked and with no attachments (DX7Surface's ctor
+    // 0x1000eced; DX7Rasterizer.cpp: the host is there)
+    GESurface(GXSurface* inSurface, const GESurfaceDescription& inDescription, GEScreen* inParentScreen);
+    operator GXSurface*() { return static_cast<GXSurface*>(ee_dx7sf_gx(this->mDX7)); }
+
+    long AttachSurface(GESurface* inSurface) { return ee_dx7sf_attach(this->mDX7, inSurface); }
+    long Clear(GEColor& inColor, float inAlpha) { return ee_dx7sf_clear(this->mDX7, NULL, reinterpret_cast<const float*>(&inColor), inAlpha); }
+    long Clear(GERectangle& inRectangle, GEColor& inColor, float inAlpha)
+        { return ee_dx7sf_clear(this->mDX7, reinterpret_cast<const float*>(&inRectangle), reinterpret_cast<const float*>(&inColor), inAlpha); }
+    long CopyTo(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination, bool inTransparent)
+        { return ee_dx7sf_copy_to(this->mDX7, inTarget, reinterpret_cast<const float*>(&inSource), reinterpret_cast<const float*>(&inDestination), inTransparent); }
+    long CopyWithFilter(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination)
+        { return ee_dx7sf_copy_with_filter(this->mDX7, inTarget, reinterpret_cast<const float*>(&inSource), reinterpret_cast<const float*>(&inDestination)); }
+    long DetachSurface(unsigned long inIndex) { return ee_dx7sf_detach(this->mDX7, inIndex); }
+    long Flip(bool inWait) { return ee_dx7sf_flip(this->mDX7, inWait); }
+    unsigned long GetAllocatedSize() { return ee_dx7sf_allocated_size(this->mDX7); }
+    GESurface* GetAttachedSurface(unsigned long inIndex) { return static_cast<GESurface*>(ee_dx7sf_attached(this->mDX7, inIndex)); }
+    unsigned long GetAttachedSurfaceCount() { return ee_dx7sf_attached_count(this->mDX7); }
+    unsigned long GetBytesPerRow() const { return ee_dx7sf_bytes_per_row(this->mDX7); }
+    unsigned long GetHeight() const { return ee_dx7sf_logical_size(this->mDX7, this->mLogicalHeight, this->mLogicalShift, true); }
+    bool GetIs3DRenderable() const { return this->GetSurfaceDescription().mIs3DRenderable; }
+    bool GetIsTextLocked() const { return ee_dx7sf_text_locked(this->mDX7); }
+    bool GetIsTransparencyEnabled() const { return this->GetSurfaceDescription().mIsTransparencyEnabled; }
+    unsigned char* GetMemoryAddress() const { return ee_dx7sf_memory(this->mDX7); }
+    GEScreen* GetParentScreen() const { return static_cast<GEScreen*>(ee_dx7sf_parent(this->mDX7)); }
+    unsigned long GetPixelFormat() const { return this->GetSurfaceDescription().mPixelFormat; }
+    unsigned long GetPixelDepth() const { return this->GetSurfaceDescription().mPixelDepth; }
+    unsigned long GetSurfaceVolatility() const { return this->GetSurfaceDescription().mSurfaceVolatility; }
+    const GESurfaceDescription& GetSurfaceDescription() const
+        { return *reinterpret_cast<const GESurfaceDescription*>(ee_dx7sf_description(this->mDX7)); }
+    const GEColor& GetTransparencyColor() const { return *reinterpret_cast<const GEColor*>(ee_dx7sf_transparency(this->mDX7)); }
+    unsigned long GetType() const { return this->GetSurfaceDescription().mType; }
+    unsigned long GetWidth() const { return ee_dx7sf_logical_size(this->mDX7, this->mLogicalWidth, this->mLogicalShift, false); }
+    long Lock() { return ee_dx7sf_lock(this->mDX7); }
+    long RestoreSurface() { return ee_dx7sf_restore(this->mDX7); }
+    void SetTransparencyColor(GEColor& inColor) { ee_dx7sf_set_transparency_color(this->mDX7, reinterpret_cast<const float*>(&inColor)); }
+    long TextLock() { return ee_dx7sf_text_lock(this->mDX7, true); }
+    long TextUnlock() { return ee_dx7sf_text_lock(this->mDX7, false); }
+    long Unlock() { return ee_dx7sf_unlock(this->mDX7); }
     // port: the pixels the GPU copy of a scaled back buffer holds per logical pixel (the render scale: the GX
     // renderer draws the game's logical pixels into a larger texture); 1 for every other surface
-    virtual float GetRenderScale() const { return 1.0f; }
+    float GetRenderScale() const { return ee_dx7sf_render_scale(this->mDX7); }
 
     // Image files (inType: GEImageFileType): Rust (ee_openformats surface_file.rs), GETexture.cpp forwards
     long Load(FSFileSpec& inFile, unsigned char inType);
@@ -80,7 +91,10 @@ public:
     unsigned long GetPixelWidth() const { return this->GetSurfaceDescription().mWidth; }
     unsigned long GetPixelHeight() const { return this->GetSurfaceDescription().mHeight; }
 
+    EeDx7Surface* mDX7;                     // the surface (ee_render dx7 surfobj.rs)
+
 protected:
+    virtual ~GESurface() { ee_dx7sf_destroy(this->mDX7); }   // (exported protected: ??1GESurface@@MAE@XZ)
     unsigned long mLogicalShift = 0;        // port: see GetLogicalShift
     unsigned long mLogicalWidth = 0;        // port: see SetLogicalSize (0: none)
     unsigned long mLogicalHeight = 0;
