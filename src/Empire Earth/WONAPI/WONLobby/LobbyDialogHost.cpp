@@ -32,19 +32,8 @@
 using namespace WONAPI;
 
 
-namespace {
-// One player's line of the EE connect dialog (EELobbyConnectDialog.cpp's anonymous namespace; 0x2c bytes; vtable
-// 0x84c2c0: TextListItem's slots)
-class ConnectListItem : public TextListItem {
-public:
-    ConnectListItem(const GUIString& inName, Image* inImage, unsigned char inSlot) : TextListItem(inName, inImage)
-    {
-        this->mSlot = inSlot;
-    }
-
-    unsigned char mSlot;                    // +0x28
-};
-}
+// One player's line of the EE connect dialog (EELobbyConnectDialog.cpp's ConnectListItem): a Rust text row since
+// R6 WON round 34 (ee_won_lobby rows.rs Connect, made by dlgsplit.rs)
 
 // ---- the list rows (R6 WONLobby round 3: moved here from BadUserDialog.cpp and ChooseNetworkAdapterDialog.cpp, whose
 // dialogs are lobby dialog kinds now; the rows stay C++ widgets)
@@ -253,17 +242,10 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     // EELobbyConnectDialog
     case Op::GameIsHost: return reinterpret_cast<EELobbyGame*>(a)->GetIsHost() ? 1 : 0;
     case Op::GameRust: return (intptr_t) reinterpret_cast<EELobbyGame*>(a)->mRust;
-    case Op::ConnectInsert: {
-        Image* theImage = ((c >> 8) == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(LobbyGlobal_Searching_Image)).mPtr;
-        reinterpret_cast<ListArea*>(a)->InsertItem(
-            new ConnectListItem(EELobbyStr(b), theImage, (unsigned char)c), -1);
-        return theImage != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
-    }
     case Op::DoDialog: return LobbyDoDialog(aDialog);
     case Op::EndDialog: reinterpret_cast<Window*>(a)->EndDialog((int)b, aDialog); return 0;
-    case Op::ConnectItemSlot: return reinterpret_cast<ConnectListItem*>(a)->mSlot;
-    case Op::ConnectItemSetImage: reinterpret_cast<ConnectListItem*>(a)->mImage = (b == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(ServerListCtrl_PingFailed_Image)).mPtr; return 0;
-    case Op::ConnectItemNotReady: return reinterpret_cast<ConnectListItem*>(a)->mImage.mPtr != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
+    case Op::ConnectItemSetImage: static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mImage = (b == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(ServerListCtrl_PingFailed_Image)).mPtr; return 0;
+    case Op::ConnectItemNotReady: return static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mImage.mPtr != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
     // EELobbyFileDialog
     case Op::ItemText: return (intptr_t)(sDlgItemText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mText.mData->GetString()).c_str();
     case Op::LoadSavedGame: return EELobbyLoadSavedGame(reinterpret_cast<const char*>(a)) ? 1 : 0;

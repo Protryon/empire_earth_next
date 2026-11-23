@@ -769,6 +769,41 @@ fn bad_user_call(s: &BadUser, c: EeWonRowCall, item: isize, list: isize, a: isiz
     }
 }
 
+// ---- ConnectListItem (R6 WON round 34: the EE connect dialog's player lines, LobbyDialogHost.cpp's C++ class as
+// it was: a TextListItem with the slot's number)
+
+/// ConnectListItem's own member (the text and the picture are its `TextListItem` base's).
+struct Connect {
+    slot: u8,
+}
+
+impl Connect {
+    fn end(&self) {}
+}
+
+table!(CONNECT, Connect, connect_call);
+
+/// `new ConnectListItem(name, image, slot)`'s row: its text and picture set after by the caller (dlgsplit.rs), as
+/// the base's constructor set them.
+pub(crate) fn connect_new(slot: u8) -> isize {
+    make(&CONNECT, Connect { slot }, true).0
+}
+
+/// A connect line's slot number (`None` for another row).
+pub(crate) fn connect_slot(item: isize) -> Option<u8> {
+    state_of::<Connect>(item, &CONNECT).map(|s| s.slot)
+}
+
+/// TextListItem's own virtuals (ConnectListItem had none of its own).
+fn connect_call(_: &Connect, c: EeWonRowCall, item: isize, list: isize, a: isize, b: isize, _: isize) -> isize {
+    match c {
+        EeWonRowCall::Paint => h(Op::RowTextPaint, item, a, list),
+        EeWonRowCall::CalcDimensions => h(Op::RowTextCalc, item, list, 0),
+        EeWonRowCall::Compare => h(Op::RowTextCompare, item, b, list) as i32 as isize,
+        EeWonRowCall::CanSelect | EeWonRowCall::MouseDown => 0,
+    }
+}
+
 // ---- the controls' row ops
 
 /// The controls' row ops answered here in the game (lobbyctl.rs, after the model's answers); `None` for the rest.

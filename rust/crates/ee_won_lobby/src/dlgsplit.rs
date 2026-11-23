@@ -9,6 +9,7 @@
 //!   name, moderator and comment, the ids as `%d`, the expiry in days, hours, minutes or seconds) are made here.
 //! - AdminTitleRes: the title text built over the host's `GUIString` local.
 //! - AdapterAddDefault: the default row and its name.
+//! - ConnectInsert / ConnectItemSlot: ConnectListItem is a Rust text row (rows.rs `Connect`).
 //! - The file dialog's search (FindFirst .. FindClose): the platform search is Rust's (ee_base's PlatFind); the
 //!   names' lengths and the rows are the host's.
 
@@ -100,6 +101,19 @@ pub(crate) fn game_op(op: Op, a: isize, b: isize, c: isize, out: Out, host: EeWo
             out(Op::AdapterSetDefaultName, a, 0, 0);
             Some(0)
         }
+        // `new ConnectListItem(name, image, slot)` (a Rust text row) into the list; whether its image is not the
+        // ready one
+        Op::ConnectInsert => {
+            let res = if (c >> 8) == 0 { R::GameUserListCtrl_Ready_Image } else { R::LobbyGlobal_Searching_Image };
+            let item = crate::rows::connect_new(c as u8);
+            crate::rows::ctl(COp::ItemSetText, item, b, 0);
+            crate::rows::ctl(COp::ItemSetImageRes, item, res as isize, 0);
+            crate::rows::ctl(COp::ListInsert, a, item, 0);
+            let image = crate::rows::ctl(COp::ResImage, res as isize, 0, 0);
+            let ready = crate::rows::ctl(COp::ResImage, R::GameUserListCtrl_Ready_Image as isize, 0, 0);
+            Some((image != ready) as isize)
+        }
+        Op::ConnectItemSlot => Some(crate::rows::connect_slot(a).map_or(0, isize::from)),
         Op::FindFirst => {
             // SAFETY: a plain record of bytes and a number
             let mut f = Box::new(Find { find: std::ptr::null_mut(), data: unsafe { std::mem::zeroed() } });
