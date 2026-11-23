@@ -207,8 +207,10 @@ public:
     unsigned long GetZCompare(unsigned long inScreen) const { return this->GetScreenState(inScreen)->z_compare; }
     void SetScreenID(unsigned long inID) { ee_ge_rast_set(this->mRust, EeGeRastVal::ScreenId, (intptr_t)inID); }
     void SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2);
-    // the DX7 rasterizer of the given name (inTnL: its T&L flavour); the game has one (DX7TnLRasterizer)
+    // the DX7 rasterizer of the given name (inTnL: its T&L flavour); the game has one (DX7TnLRasterizer). Without inTnL,
+    // a rasterizer with no device (tools/eemodel/storegate: model and texture loads, no draws)
     GERasterizer(const UString& inName, bool inTnL);
+    explicit GERasterizer(const UString& inName);
     ~GERasterizer();                        // slot 0x114
 protected:
     // The plug-in's access to the base's state (the census of R4.3's twelfth part: no member is read directly)
@@ -217,7 +219,7 @@ protected:
     // ?ActivateRasterizer@DX7Rasterizer@@MAEJXZ, ...). Activate calls ActivateRasterizer and keys mIsActivated on its
     // keseOK result: it enumerates the DirectDraw devices into screens and makes this the active rasterizer. Textures
     // need no handle here (CreateTextureHandle, DestroyTextureHandle and PromoteTexture do nothing).
-    long ActivateRasterizer() { return ee_dx7r_activate_rasterizer(this->mDX7); }   // slot 0x118
+    long ActivateRasterizer() { return this->mDX7 != NULL ? ee_dx7r_activate_rasterizer(this->mDX7) : kErrorOK; }   // slot 0x118
     long CreateTextureHandle(GETexture* inTexture) { return kErrorOK; }             // slot 0x120: GETexture gains a surface
     void DestroyTextureHandle(GETexture* inTexture) {}                              // slot 0x128: GETexture loses its surface
     long PromoteTexture(GETexture* inTexture) { return kErrorOK; }                  // slot 0x130
@@ -228,7 +230,7 @@ protected:
     // the drawing lock, the ripple, the culling, the flags, the name, the screen id, and the statics sRasterizers and
     // sActiveRasterizer); every call it makes on another object goes through GERasterizerHost (GERasterizer.cpp).
     EeGeRasterizer* mRust;
-    EeDx7Rasterizer* mDX7;                  // the DX7 rasterizer (ee_dx7 rastobj.rs)
+    EeDx7Rasterizer* mDX7 = NULL;           // the DX7 rasterizer (ee_dx7 rastobj.rs; none in the store gate)
 
     friend class GETexture;                 // calls CreateTextureHandle/DestroyTextureHandle (GETexture.cpp)
     friend struct GERasterizerHost;

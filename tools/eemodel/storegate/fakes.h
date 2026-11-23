@@ -94,19 +94,6 @@ public:
 #include "fakes_generated_screen.h"
 };
 
-class StoreRasterizer : public GERasterizer {
-public:
-    StoreRasterizer() : GERasterizer(UString("storegate")) {}
-    // the game's own arrays: what is set on them is the capture's (ee_ge_store_capture, digest.cpp)
-    GEPolygonArray* CreatePolygonArray(unsigned long inCount) override { return new GEPolygonArray(inCount); }
-    GEVertexArray* CreateVertexArray(unsigned long inType, unsigned long inCount) override
-        { return new GEVertexArray(inType, inCount); }
-    long ActivateRasterizer() override { return kErrorOK; }
-    long CreateTextureHandle(GETexture* inTexture) override { return kErrorOK; }
-    void DestroyTextureHandle(GETexture* inTexture) override {}
-#include "fakes_generated_rasterizer.h"
-};
-
 // digest.cpp: the stored state, read through the classes' members
 unsigned long long StoreDigestModel(GEModel* inModel);
 unsigned long long StoreDigestTexture(GETexture* inTexture);
