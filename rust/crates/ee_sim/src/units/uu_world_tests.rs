@@ -690,3 +690,50 @@ fn the_heading_between_two_points_is_the_arctangent_of_the_ground_step() {
     assert!((west - std::f32::consts::FRAC_PI_2).abs() < 1e-4, "{west}");
     assert_eq!(heading_between([0.0, 0.0, 0.0], [3.0, -1.0, 0.0]), ee_base::math::um::um_arctan2(-3.0, -1.0));
 }
+
+#[test]
+fn the_sound_view_reads_the_tile_first_and_the_camera_only_when_seen() {
+    let mut calls = Vec::new();
+    let v = sound_view(
+        |w, l, _| {
+            calls.push((w, *l));
+            0.0
+        },
+        [3.0, 4.0, 5.0],
+    );
+    assert_eq!(calls, vec![(EE_UNITS_UU_SOUND_SEEN, [3.0, 4.0, 5.0])]);
+    assert_eq!(v, EeUnitsUuSoundView::default());
+
+    let mut calls = Vec::new();
+    let v = sound_view(
+        |w, _, o| {
+            calls.push(w);
+            match w {
+                EE_UNITS_UU_SOUND_CAMERA_POINT => *o = [1.0, 2.0, 3.0, 9.0],
+                EE_UNITS_UU_SOUND_CAMERA => *o = [4.0, 5.0, 6.0, 0.0],
+                _ => {}
+            }
+            match w {
+                EE_UNITS_UU_SOUND_SEEN => 1.0,
+                EE_UNITS_UU_SOUND_Y_CLIP => 70.0,
+                EE_UNITS_UU_SOUND_ZOOM => 1.5,
+                _ => 0.0,
+            }
+        },
+        [0.0; 3],
+    );
+    assert_eq!(
+        calls,
+        vec![
+            EE_UNITS_UU_SOUND_SEEN,
+            EE_UNITS_UU_SOUND_CAMERA_POINT,
+            EE_UNITS_UU_SOUND_CAMERA,
+            EE_UNITS_UU_SOUND_Y_CLIP,
+            EE_UNITS_UU_SOUND_ZOOM
+        ]
+    );
+    assert_eq!(
+        v,
+        EeUnitsUuSoundView { seen: 1, screen: [1.0, 2.0, 3.0], depth: 9.0, camera: [4.0, 5.0, 6.0], y_clip: 70.0, zoom: 1.5 }
+    );
+}

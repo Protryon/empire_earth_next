@@ -24,6 +24,10 @@
 #include <vector>
 
 #include "lle/U2DPoint.h"
+#include "lle/GE2DPoint.h"
+#include "lle/GE3DPoint.h"
+#include "lle/LowLevelEngineCore.h"     // UFloatBits
+#include "rust/sim/unit_ids.h"        // kGoalAttackGround
 #include "rust/sim/units.h"
 #include "rust/sim/combat.h"
 
@@ -57,7 +61,8 @@ public:
 
     // the original's virtuals (vtable 0x43cc64, by slot), each one call of the kind's body
     void AddCreatedUnit(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_ADD_CREATED_UNIT, H(inUnit)); }   // +0x04
-    void GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation);   // +0x08 (the base: told to the group)
+    void GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)   // +0x08 (the base: told to the group)
+        { ee_units_goal_point(EE_UNITS_GOAL_DESTINATION, this->Base(), H(inUnit), (float(*)[3])&outLocation.mX, true); }
     // +0x0c (the gather goal reports 5000 while not active)
     bool IsActive(unsigned long* outValue)
     {
@@ -74,7 +79,8 @@ public:
     void GetDebugLine(UWideString& ioText);                    // +0x1c
     // +0x24 (kGoalLoadTransport, kGoalLoadGarrison)
     bool IsLoadGoal() { return this->mKind == 7 || this->mKind == 12; }
-    void GetGoalLocation(GE3DPoint& outLocation);              // +0x28
+    void GetGoalLocation(GE3DPoint& outLocation)               // +0x28
+        { ee_units_goal_point(EE_UNITS_GOAL_LOCATION, this->Base(), 0, (float(*)[3])&outLocation.mX, true); }
     long GetMaxPathAttempts() { return (long)this->Call(EE_UNITS_GOAL_MAX_PATH_ATTEMPTS); }   // +0x2c (the base: 3)
     long GetStartAction() { return (long)this->Call(EE_UNITS_GOAL_START_ACTION); }            // +0x30
     long GetStartTime() { return this->mStartTime; }           // +0x34
@@ -120,6 +126,8 @@ public:
     }
     const EeUnitsGoalBase* Base() const { return reinterpret_cast<const EeUnitsGoalBase*>(this); }
     static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
+    // a Rust point (ee_base math types.rs Ge3DPoint) as a GE3DPoint
+    static GE3DPoint PointOf(const EeGe3DPoint& inPoint) { return GE3DPoint(inPoint.mX, inPoint.mY, inPoint.mZ); }
     // the object of a handle a body answers
     template <class T> static T* Of(int64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
     // a new goal of a kind made by its body's operation (the New functions)
@@ -151,17 +159,32 @@ public:
     // a map position at height 0; a 3D point) with the forced-move, facing (its yaw), auto-waypoint flags and the
     // group path state; or the load's empty goal (at 0, 0, 0, yaw 0, no facing). None uses group movement.
     static EEUnitGoal* NewLocation(float inX, float inY, float inZ, bool inArg, bool inIsForcedMove, bool inShouldFace,
-                                   float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState);
+                                   float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState)
+    {
+        return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new_location(inArg, inX, inY, inZ, inIsForcedMove, inShouldFace, inYaw,
+                                                                        inIsAutoWaypoint, inGroupPathState));
+    }
     static EEUnitGoal* NewLocation(const GE2DPoint& inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace,
-                                   float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState);
+                                   float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState)
+    {
+        return NewLocation(inLocation.GetX(), inLocation.GetY(), 0.0f, inArg, inIsForcedMove, inShouldFace, inYaw,
+                           inIsAutoWaypoint, inGroupPathState);
+    }
     static EEUnitGoal* NewLocation(const GE3DPoint* inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace,
-                                   float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState);
-    static EEUnitGoal* NewLocation(bool inArg, bool inIsForcedMove, bool inIsAutoWaypoint,
-                                   unsigned char inGroupPathState);
+                                   float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState)
+    {
+        return NewLocation(inLocation->GetX(), inLocation->GetY(), inLocation->GetZ(), inArg, inIsForcedMove, inShouldFace,
+                           inYaw, inIsAutoWaypoint, inGroupPathState);
+    }
+    static EEUnitGoal* NewLocation(bool inArg, bool inIsForcedMove, bool inIsAutoWaypoint, unsigned char inGroupPathState)
+    {
+        return NewLocation(0.0f, 0.0f, 0.0f, inArg, inIsForcedMove, false, 0.0f, inIsAutoWaypoint, inGroupPathState);
+    }
     // the location goal's members (EEUGLocation's accessors; the record's fields, no host call): its point, the yaw
     // to face, the flags and the group path state
-    GE3DPoint GetLocation() const;
-    void SetLocation(const GE3DPoint& inLocation);
+    GE3DPoint GetLocation() const { return PointOf(ee_units_location_goal_point(H(this))); }
+    void SetLocation(const GE3DPoint& inLocation)
+        { ee_units_location_goal_set_point(H(this), inLocation.GetX(), inLocation.GetY(), inLocation.GetZ()); }
     float GetYaw() const { return this->Location().yaw; }
     bool GetIsForcedMove() const { return this->Location().forced_move; }
     bool GetShouldFace() const { return this->Location().should_face; }
@@ -200,12 +223,14 @@ public:
         return ee_units_goal_calamity_type(EE_UNITS_GOAL_CALAMITY_FIELDS, this->Base(), outTileX, outTileY,
                                            reinterpret_cast<uint64_t*>(outTarget));
     }
-    void GetCalamityTargetLocation(GE3DPoint& outLocation);
+    void GetCalamityTargetLocation(GE3DPoint& outLocation)
+        { ee_units_goal_point(EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION, this->Base(), 0, (float(*)[3])&outLocation.mX, false); }
 
     // an explore goal (kGoalExplore): no tile searched yet (EEUGExplore(inArg)); the tile being explored's centre
     // (x and y only: EEUGExplore's GetTileCenter), the tile set
     static EEUnitGoal* NewExplore(bool inArg) { return New(10, inArg, EE_UNITS_GOAL_NEW_EXPLORE); }
-    void GetExploreTileCenter(GE3DPoint& outLocation);
+    void GetExploreTileCenter(GE3DPoint& outLocation)
+        { ee_units_goal_explore_center(EE_UNITS_GOAL_EXPLORE_TILE, this->Base(), (float(*)[3])&outLocation.mX); }
     void SetExploreTile(long inX, long inY) { this->Call3(EE_UNITS_GOAL_EXPLORE_SET_TILE, 0, 0, inX, inY); }
 
     // an unload (kGoalUnloadTransport): the transport (referenced) unloads at the tile, its unload tiles found when
@@ -226,8 +251,12 @@ public:
 
     // the combat lane's goals (ee_combat goal_objects.rs, goal_attack.rs; EEUGRustCombat.cpp): an attack on the
     // ground at inTarget (kGoalAttackGround; EEUGAttackGround(inTarget, inArg), the load's at 0, 0, 0) and its point
-    static EEUnitGoal* NewAttackGround(const GE3DPoint& inTarget, bool inArg);
-    GE3DPoint GetGroundTarget();
+    static EEUnitGoal* NewAttackGround(const GE3DPoint& inTarget, bool inArg)
+    {
+        return reinterpret_cast<EEUnitGoal*>(ee_units_goal_new_point(kGoalAttackGround, inArg, EE_COMBAT_GOAL_NEW_GROUND,
+                                                                     inTarget.GetX(), inTarget.GetY(), inTarget.GetZ()));
+    }
+    GE3DPoint GetGroundTarget() { return PointOf(ee_combat_ground_target_point(H(this))); }
     // an attack on a unit (kGoalAttackUnit; EEUGAttackUnit(inAttacker, inTarget, inArg3, inIsConvert): a multi-part
     // target's attack part, the target referenced, the attack counts; the load's EEUGAttackUnit(inArg) empty), its
     // target, attacker, last known target tile, convert flag, destination and sidestep count
@@ -254,8 +283,12 @@ public:
     static EEUnitGoal* NewHealUnit(EEComplexUnit* inTarget, bool inArg) { return New(15, inArg, EE_COMBAT_GOAL_NEW_HEAL, H(inTarget)); }
     static EEUnitGoal* NewHealUnit(bool inArg) { return NewCall(15, inArg, EE_COMBAT_GOAL_NEW_HEAL, 0, 0, 2); }
     EEComplexUnit* GetHealTarget() const { return Of<EEComplexUnit>(ee_combat_heal_target(H(this))); }
-    GE3DPoint GetHealLocation() const;
-    void SetHealLocation(const GE3DPoint& inLocation);
+    GE3DPoint GetHealLocation() const { return PointOf(ee_combat_heal_location(H(this))); }
+    void SetHealLocation(const GE3DPoint& inLocation)
+    {
+        ee_combat_heal_set_location(H(this), UFloatBits(inLocation.GetX()), UFloatBits(inLocation.GetY()),
+                                    UFloatBits(inLocation.GetZ()));
+    }
     // a load goal (kGoalLoadTransport, kGoalLoadGarrison): the container and the units, all referenced; inUnits is
     // sorted by id and loses its duplicates, as the original constructors did to the caller's list
     // (EEUGLoadTransport/EEUGLoadGarrison(inContainer, inUnits, inArg)); or the load's empty goal

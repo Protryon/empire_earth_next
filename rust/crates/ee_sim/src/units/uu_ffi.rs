@@ -1410,6 +1410,38 @@ pub unsafe extern "C" fn ee_units_uu_sound_parameters(
     unsafe { *out = uu_world::sound_parameters(&*view, volume, *location) }
 }
 
+extern "C" {
+    fn ee_units_uu_host_sound_view(which: i32, location: *const [f32; 3], out: *mut [f32; 4]) -> f32;
+}
+
+/// `EEComputeSoundParameters` whole: the camera's view of `location` (the C++ reads, before the note), then the
+/// note (82) and the arithmetic; `volume`, `pan`, `pitch` written in that order after `location` is read.
+///
+/// # Safety
+/// `location` holds three floats; `volume_out`, `pan`, `pitch` are writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_compute_sound(
+    volume: f32,
+    location: *const [f32; 3],
+    volume_out: *mut f32,
+    pan: *mut f32,
+    pitch: *mut f32,
+) {
+    // SAFETY: the caller's contract
+    let at = unsafe { *location };
+    // SAFETY: the C++ host reads the world (the caller's thread holds it)
+    let view = uu_world::sound_view(|w, l, o| unsafe { ee_units_uu_host_sound_view(w, l, o) }, at);
+    let mut out = [0.0f32; 3];
+    // SAFETY: the view and the buffers are this frame's
+    unsafe { ee_units_uu_sound_parameters(&view, volume, &at, &mut out) };
+    // SAFETY: the caller's contract
+    unsafe {
+        *volume_out = out[0];
+        *pan = out[1];
+        *pitch = out[2];
+    }
+}
+
 /// `EEGetDopplerPitch` (83)'s factor (`pitch` written unless silent or still).
 ///
 /// # Safety
