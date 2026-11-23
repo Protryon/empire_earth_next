@@ -24,7 +24,7 @@
 //! entry returns 2, the C++ rethrowing it. No Rust reference to an object lives across a host op (they re-enter).
 
 use std::cell::{Cell, RefCell};
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 use std::sync::Mutex;
 
 use ee_won_net::cfgobject::EeWonCfgStringParser;
@@ -180,8 +180,20 @@ pub enum EeWonCcOp {
     SoundDecode,
     /// `SoundDescriptor` `c` deleted.
     SoundDescFree,
-    /// `*(Background*)c` = the background of the `EeWonCcBackground` at `a`.
-    BgMake,
+    /// `*(Background*)c` = `Background()`.
+    BgReset,
+    /// `((Background*)c)->mImage = (Image*)a`.
+    BgImage,
+    /// `((Background*)c)->mColor = a`.
+    BgColor,
+    /// `((Background*)c)->mBorderColor = a`.
+    BgBorder,
+    /// `((Background*)c)->mUseOffsets = a != 0`.
+    BgOffsets,
+    /// `((Background*)c)->mStretchImage = a != 0`.
+    BgStretch,
+    /// `((Background*)c)->mWantGrabBG = a != 0`.
+    BgGrab,
     /// The config factory `a` called: its config with a reference (`ConfigObject*`, NULL for none).
     AllocConfig,
     /// The component factory `a` called: its component with a reference (NULL for none).
@@ -192,6 +204,12 @@ pub enum EeWonCcOp {
     NewRes,
     /// `*(GUIString*)c` = the `a` `wchar_t` units, `b` long.
     SetText,
+    /// `*(SelectionColor*)c` = `SelectionColor(a, b)` (a foreground colour).
+    SelFore,
+    /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_InvertOriginalColor)`.
+    SelInvert,
+    /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_UseOriginalColor)`.
+    SelOriginal,
 }
 
 /// What a `Ref` op counts.
@@ -1932,7 +1950,7 @@ pub enum EeWonCcCall {
     ReadStandardCursor = 17,
     /// config: `*(int*)a` = `ReadCursor()`'s standard cursor
     ReadCursor = 18,
-    /// config: `*(EeWonCcSelColor*)a` = `ReadSelectionColor()`
+    /// config: `*(SelectionColor*)a` = `ReadSelectionColor()` (made by the host's `Sel*` ops)
     ReadSelectionColor = 19,
     /// config: `*(bool*)a` = `EndOfString()`
     EndOfString = 20,
@@ -2053,6 +2071,9 @@ pub enum EeWonCcCall {
     /// config: `*(bool*)a` = `GetPredefinedComponent(the name of the EeWonCcKey b, *(ComponentConfig**)c,
     /// *(Component**)d)` (the base's: the kind's predefined children, cfgkind.rs)
     Predefined = 78,
+    /// `ComponentConfigMissing(b, c bytes, the file a, the line d)`: the message "InitComponent error: name
+    /// (file:line)" (the original's 512-byte snprintf) thrown as the original's ConfigObjectException
+    Missing = 79,
 }
 
 /// A key and the value parser of an instruction.
@@ -2214,6 +2235,22 @@ pub unsafe extern "C" fn ee_won_cc_call(
     }
 }
 
+/// `ComponentConfigMissing`'s message: `snprintf(512, "InitComponent error: %s (%s:%d)", name, file, line)`.
+unsafe fn missing_text(name: &[u8], file: *const c_char, line: i32) -> Vec<u8> {
+    let upto_nul = |b: &[u8]| b[..b.iter().position(|&c| c == 0).unwrap_or(b.len())].to_vec();
+    let file: Vec<u8> = if file.is_null() {
+        b"(null)".to_vec()
+    } else {
+        // SAFETY: the caller's NUL-terminated text
+        unsafe { std::ffi::CStr::from_ptr(file) }.to_bytes().to_vec()
+    };
+    let mut m =
+        [b"InitComponent error: ".as_slice(), &upto_nul(name), b" (", &file, b":", line.to_string().as_bytes(), b")"]
+            .concat();
+    m.truncate(511);
+    m
+}
+
 /// The bytes of the `EeWonCcKey` at `p`.
 unsafe fn key_at<'a>(p: isize) -> &'a [u8] {
     // SAFETY: the caller's EeWonCcKey
@@ -2255,8 +2292,16 @@ unsafe fn text_units(p: isize) -> Vec<u32> {
     unsafe { std::slice::from_raw_parts(t.units as *const WChar, t.len) }.iter().map(|&u| u as u32).collect()
 }
 
+/// `*out` = the background: the original's fresh `Background` with the record's members, assigned.
 fn bg_out(cx: &Cx, out: isize, bg: &EeWonCcBackground) {
-    cx.call(EeWonCcOp::BgMake, out as *mut c_void, bg as *const EeWonCcBackground as isize, 0, 0, 0);
+    let o = out as *mut c_void;
+    cx.call(EeWonCcOp::BgReset, o, 0, 0, 0, 0);
+    cx.call(EeWonCcOp::BgImage, o, bg.image as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgColor, o, bg.color as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgBorder, o, bg.border_color as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgOffsets, o, bg.use_offsets as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgStretch, o, bg.stretch_image as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgGrab, o, bg.want_grab_bg as isize, 0, 0, 0);
 }
 
 unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isize, c: isize, d: isize) -> R<()> {
@@ -2312,7 +2357,16 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
             C::ReadImage => put(a, cfg().read_image(cx, b != 0)?),
             C::ReadStandardCursor => put(a, cfg().read_standard_cursor(cx)?),
             C::ReadCursor => put(a, cfg().read_cursor(cx)?),
-            C::ReadSelectionColor => put(a, cfg().read_selection_color(cx)?),
+            C::ReadSelectionColor => {
+                let x = cfg().read_selection_color(cx)?;
+                let (op, fore) = match x.mode {
+                    0 => (EeWonCcOp::SelFore, x.foreground as isize),
+                    1 => (EeWonCcOp::SelInvert, 0),
+                    _ => (EeWonCcOp::SelOriginal, 0),
+                };
+                cx.call(op, a as *mut c_void, x.background as isize, fore, 0, 0);
+            }
+            C::Missing => return Err(CcErr::Msg(missing_text(txt(), a as *const c_char, d as i32))),
             C::EndOfString => put(a, cfg().end_of_string()),
             C::SkipComma => cfg().skip_comma(),
             C::EnsureComma => cfg().ensure_comma()?,

@@ -150,8 +150,20 @@ enum class EeWonCcOp : int32_t {
   SoundDecode,
   /// `SoundDescriptor` `c` deleted.
   SoundDescFree,
-  /// `*(Background*)c` = the background of the `EeWonCcBackground` at `a`.
-  BgMake,
+  /// `*(Background*)c` = `Background()`.
+  BgReset,
+  /// `((Background*)c)->mImage = (Image*)a`.
+  BgImage,
+  /// `((Background*)c)->mColor = a`.
+  BgColor,
+  /// `((Background*)c)->mBorderColor = a`.
+  BgBorder,
+  /// `((Background*)c)->mUseOffsets = a != 0`.
+  BgOffsets,
+  /// `((Background*)c)->mStretchImage = a != 0`.
+  BgStretch,
+  /// `((Background*)c)->mWantGrabBG = a != 0`.
+  BgGrab,
   /// The config factory `a` called: its config with a reference (`ConfigObject*`, NULL for none).
   AllocConfig,
   /// The component factory `a` called: its component with a reference (NULL for none).
@@ -162,6 +174,12 @@ enum class EeWonCcOp : int32_t {
   NewRes,
   /// `*(GUIString*)c` = the `a` `wchar_t` units, `b` long.
   SetText,
+  /// `*(SelectionColor*)c` = `SelectionColor(a, b)` (a foreground colour).
+  SelFore,
+  /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_InvertOriginalColor)`.
+  SelInvert,
+  /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_UseOriginalColor)`.
+  SelOriginal,
 };
 
 /// What `ee_won_cc_call` answers; `o` is the Rust object named, the arguments `a`..`d` as each says.
@@ -204,7 +222,7 @@ enum class EeWonCcCall : int32_t {
   ReadStandardCursor = 17,
   /// config: `*(int*)a` = `ReadCursor()`'s standard cursor
   ReadCursor = 18,
-  /// config: `*(EeWonCcSelColor*)a` = `ReadSelectionColor()`
+  /// config: `*(SelectionColor*)a` = `ReadSelectionColor()` (made by the host's `Sel*` ops)
   ReadSelectionColor = 19,
   /// config: `*(bool*)a` = `EndOfString()`
   EndOfString = 20,
@@ -325,6 +343,9 @@ enum class EeWonCcCall : int32_t {
   /// config: `*(bool*)a` = `GetPredefinedComponent(the name of the EeWonCcKey b, *(ComponentConfig**)c,
   /// *(Component**)d)` (the base's: the kind's predefined children, cfgkind.rs)
   Predefined = 78,
+  /// `ComponentConfigMissing(b, c bytes, the file a, the line d)`: the message "InitComponent error: name
+  /// (file:line)" (the original's 512-byte snprintf) thrown as the original's ConfigObjectException
+  Missing = 79,
 };
 
 /// A config's members (`mConfigMap`, `mCurResourceConfig`, `mConfigParser`, `mStringParser`).

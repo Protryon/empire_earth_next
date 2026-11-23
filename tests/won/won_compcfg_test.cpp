@@ -166,6 +166,14 @@ static std::string ClassTag(ComponentConfig* k)
 }
 #include "won_compcfg_run.h"
 #include "won_compcfg_orig.h"
+// ComponentConfigMissing as it was at ab1b33bcb (ComponentConfigHost.cpp; R6 WON round 34 moved its message to
+// compcfg.rs, the Missing call)
+void ComponentConfigMissing(const std::string& name,const char* file,int line)
+{
+    char message[512];
+    snprintf(message,sizeof message,"InitComponent error: %s (%s:%d)",name.c_str(),file,line);
+    throw ConfigObjectException(message);
+}
 // world: ComponentConfigLoad.cpp's InitComponents
 void ComponentConfig::InitComponents()
 {
@@ -430,5 +438,20 @@ int main(int argc, char** argv)
         }
     }
     printf("won_compcfg_test: %d runs, %u trace bytes each side, %d mismatching\n", runs, (unsigned)chars, bad);
+    // ComponentConfigMissing's message (R6 WON round 34): names and files of every length up to past the 511 bytes
+    // kept, with a NUL inside, and lines of every sign, against the original's snprintf
+    int missBad = 0;
+    for (int i = 0; i < 4000; i++) {
+        std::string name(Rnd(4) == 0 ? 400 + Rnd(300) : Rnd(40), 'a' + (char)Rnd(26));
+        if (Rnd(8) == 0 && !name.empty()) name[Rnd((unsigned)name.size())] = 0;
+        std::string file(Rnd(4) == 0 ? 300 + Rnd(300) : Rnd(30), 'A' + (char)Rnd(26));
+        int line = (int)(Rnd(5) == 0 ? sSeed : Rnd(3000)) - 5;
+        std::string a, b;
+        try { Orig::ComponentConfigMissing(name, file.c_str(), line); } catch (Orig::ConfigObjectException& e) { a = e.mText + "|" + (char)('0' + e.mFlag); }
+        try { Port::ComponentConfigMissing(name, file.c_str(), line); } catch (Port::ConfigObjectException& e) { b = e.mText + "|" + (char)('0' + e.mFlag); }
+        if (a != b || a.empty()) { if (missBad++ < 3) printf("missing %d differs:\n%s\n%s\n", i, a.c_str(), b.c_str()); }
+    }
+    printf("won_compcfg_test: ComponentConfigMissing 4000 cases, %d mismatching\n", missBad);
+    bad += missBad;
     return bad;
 }

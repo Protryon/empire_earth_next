@@ -110,19 +110,21 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
     case O::SoundDescPath: ((SoundDescriptor*)c)->mPath = CcStr(a, b); return 0;
     case O::SoundDecode: return CC_G(CcGive(WindowManager::GetDefaultWindowManager()->DecodeSound(*(SoundDescriptor*)c)));
     case O::SoundDescFree: delete (SoundDescriptor*)c; return 0;
-    case O::BgMake: {
-        const EeWonCcBackground* x = (const EeWonCcBackground*)a;
-        Background aBg;
-        aBg.mImage = (Image*)x->image; aBg.mColor = x->color; aBg.mBorderColor = x->border_color;
-        aBg.mUseOffsets = x->use_offsets; aBg.mStretchImage = x->stretch_image; aBg.mWantGrabBG = x->want_grab_bg;
-        *(Background*)c = aBg;
-        return 0;
-    }
+    case O::BgReset: *(Background*)c = Background(); return 0;
+    case O::BgImage: ((Background*)c)->mImage = (Image*)a; return 0;
+    case O::BgColor: ((Background*)c)->mColor = (int)a; return 0;
+    case O::BgBorder: ((Background*)c)->mBorderColor = (int)a; return 0;
+    case O::BgOffsets: ((Background*)c)->mUseOffsets = a != 0; return 0;
+    case O::BgStretch: ((Background*)c)->mStretchImage = a != 0; return 0;
+    case O::BgGrab: ((Background*)c)->mWantGrabBG = a != 0; return 0;
     case O::AllocConfig: return CC_G(CcGive(SmartPtr<ConfigObject>(((ResourceConfigTable::ComponentConfigFactory)a)())));
     case O::AllocComp: return CC_G(CcGive(SmartPtr<Component>(((ResourceConfigTable::ComponentFactory)a)())));
     case O::Glue: return CC_GV(((ResourceConfigTable::GlueResourceFunc)a)((ResourceConfigTable*)c));
     case O::NewRes: return CcGive(SmartPtr<ConfigObject>(new ResourceConfig));
     case O::SetText: *(GUIString*)c = GUIString(std::wstring((const wchar_t*)a, (size_t)b)); return 0;
+    case O::SelFore: *(SelectionColor*)c = SelectionColor((DWORD)a, (DWORD)b); return 0;
+    case O::SelInvert: *(SelectionColor*)c = SelectionColor((DWORD)a, ForegroundSelectionMode_InvertOriginalColor); return 0;
+    case O::SelOriginal: *(SelectionColor*)c = SelectionColor((DWORD)a, ForegroundSelectionMode_UseOriginalColor); return 0;
     default: return 0;
     }
 }
@@ -171,12 +173,7 @@ SmartPtr<RawImage> ComponentConfig::GetRawImageFromStr(const std::string& s) { r
 SmartPtr<RawImage> ComponentConfig::ReadRawImage() { return (RawImage*)this->ReadImage(true).get(); }
 StandardCursor ComponentConfig::ReadStandardCursor() { return (StandardCursor)CC_GET(int32_t, CcK::ReadStandardCursor); }
 SmartPtr<Cursor> ComponentConfig::ReadCursor() { return Cursor::GetStandardCursor((StandardCursor)CC_GET(int32_t, CcK::ReadCursor)); }
-SelectionColor ComponentConfig::ReadSelectionColor()
-{
-    EeWonCcSelColor x = CC_GET(EeWonCcSelColor, CcK::ReadSelectionColor);
-    if (x.mode == 0) return SelectionColor(x.background, (DWORD)x.foreground);
-    return SelectionColor(x.background, x.mode == 1 ? ForegroundSelectionMode_InvertOriginalColor : ForegroundSelectionMode_UseOriginalColor);
-}
+SelectionColor ComponentConfig::ReadSelectionColor() { return CC_GET(SelectionColor, CcK::ReadSelectionColor); }
 // the kind's own named values (the WON frame's paddings: cfgkind.rs), else the component's edges (compcfg.rs)
 bool ComponentConfig::GetNamedValue(const std::string& k, int& v) { return CC_GET(bool, CcK::GetNamedValue, CC_P(k), (intptr_t)&v); }
 // the kind's predefined children (cfgkind.rs): a new config of the child's kind and the part
@@ -207,6 +204,8 @@ void ComponentConfig::InitComponents() { CC(InitComponents, 0); }
 static void CcStringSink(void* c, const uint8_t* b, uintptr_t n) { static_cast<std::string*>(c)->assign((const char*)b, n); }
 void ComponentConfig::SetResourceFolder(const std::string& f) { CcRun(NULL, CcK::SetResourceFolder, 0, CC_P(f)); }
 std::string ComponentConfig::GetResourceFile(const std::string& f) { return CcGet<std::string>(NULL, CcK::GetResourceFile, CC_P(f), (intptr_t)&CcStringSink); }
+// Throws a configuration error naming the missing component and the source file and line that wanted it
+void ComponentConfigMissing(const std::string& n, const char* f, int l) { CcRun(NULL, CcK::Missing, (intptr_t)f, CC_P(n), l); }
 #undef CC
 #undef CC_GET
 

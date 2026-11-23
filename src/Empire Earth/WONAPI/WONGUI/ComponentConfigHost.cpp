@@ -57,14 +57,6 @@ void ComponentConfig::SetComponent(Component* component)
     this->mComponent=component;
 }
 
-// Throws a configuration error naming the missing component and the source file and line that wanted it
-void ComponentConfigMissing(const std::string& name,const char* file,int line)
-{
-    char message[512];
-    snprintf(message,sizeof message,"InitComponent error: %s (%s:%d)",name.c_str(),file,line);
-    throw ConfigObjectException(message);
-}
-
 // The component configured under the name, or NULL when there is none
 Component* ComponentConfigGet(ComponentConfig* config,const char* name)
 {
