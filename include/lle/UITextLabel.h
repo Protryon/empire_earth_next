@@ -18,12 +18,11 @@
 #include "rust/ui/labelobj.h"
 #include "rust/ui/lle_hosts.h"
 
-class GEText;
 
 class LLE_API UITextLabel : public UIControl {
 public:
     UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inLabelType, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness), mRust(ee_ui_label_new(this, ee_ui_label_host, UIF4(inRectangle), inFont, inLabelType, inBorderThickness)) { this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText); }
-    virtual ~UITextLabel();
+    virtual ~UITextLabel() { ee_ui_label_free(this->mRust); }
     virtual void AppendText(const UWideString& inText) { this->SetText(inText, false); }   // slot 0x88
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiLabelCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiLabelCall::CopyData); }

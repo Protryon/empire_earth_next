@@ -80,14 +80,16 @@ extern "C" void ee_uicpp_fl_file_free(FSFileSpec* inFile) { delete inFile; }
 static UWideString sFileLine;   // the combo box's appended line (its AppendLine takes a reference)
 EE_UI_VOID(fl_list_delete_all) { FILE_LIST->DeleteAllEntries(); }
 EE_UI_VOID(fl_list_append) { FILE_LIST->AppendLine(UWideString(reinterpret_cast<const char*>(a))); }
-EE_UI_VOID(fl_list_insert_sorted) { FILE_LIST->InsertLine(UWideString(reinterpret_cast<const char*>(a)), 0, UWSNoCaseAlphaSort()); }
+// the file lists' case-insensitive alphabetical order (the original's UWSNoCaseAlphaSort)
+static bool UINoCaseLess(const UWideString& inLeft, const UWideString& inRight) { return ee_ui_text_less_no_case(inLeft, inRight); }
+EE_UI_VOID(fl_list_insert_sorted) { FILE_LIST->InsertLine(UWideString(reinterpret_cast<const char*>(a)), 0, &UINoCaseLess); }
 EE_UI_CASE(fl_list_selection) { return FILE_LIST->GetCurrentSelection(*reinterpret_cast<unsigned long*>(f)); }
 EE_UI_CASE(fl_list_line_length) { return strlen(FILE_LIST->GetData((unsigned long)a)); }
 EE_UI_VOID(fl_list_line_copy) { snprintf(reinterpret_cast<char*>(b), (size_t)c, "%s", (const char*)FILE_LIST->GetData((unsigned long)a)); }
 EE_UI_VOID(fl_list_delete_line) { FILE_LIST->DeleteLine((unsigned long)a); }
 EE_UI_VOID(fl_combo_delete_all) { FILE_COMBO->DeleteAllEntries(); }
 EE_UI_VOID(fl_combo_append) { FILE_COMBO->AppendLine(sFileLine = reinterpret_cast<const char*>(a)); }
-EE_UI_VOID(fl_combo_insert_sorted) { FILE_COMBO->GetList()->InsertLine(UWideString(reinterpret_cast<const char*>(a)), 0, UWSNoCaseAlphaSort()); }
+EE_UI_VOID(fl_combo_insert_sorted) { FILE_COMBO->GetList()->InsertLine(UWideString(reinterpret_cast<const char*>(a)), 0, &UINoCaseLess); }
 EE_UI_CASE(fl_combo_selection) { return FILE_COMBO->GetCurrentSelection(*reinterpret_cast<unsigned long*>(f)); }
 EE_UI_CASE(fl_combo_line_length) { return strlen(FILE_COMBO->GetList()->GetData((unsigned long)a)); }
 EE_UI_VOID(fl_combo_line_copy) { snprintf(reinterpret_cast<char*>(b), (size_t)c, "%s", (const char*)FILE_COMBO->GetList()->GetData((unsigned long)a)); }
@@ -95,27 +97,6 @@ EE_UI_VOID(fl_combo_delete_line) { FILE_COMBO->DeleteLine((unsigned long)a); }
 #undef FILE_COMBO
 #undef FILE_LIST
 
-// Creates an empty file list box with no search path
-UIFileListBox::UIFileListBox(unsigned long inId, GEFont* inFont, bool inAutoSelect, const GERectangle& inRectangle,
-                             UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
-    : UILBString(inId, std::vector<UWideString>(), inFont, inAutoSelect, inRectangle, inForm, inIndex,
-                 inBorderThickness)
-{
-    this->mRust = ee_ui_file_list_new(this, ee_ui_file_list_host, false);
-}
 
-UIFileListBox::~UIFileListBox() { ee_ui_file_list_free(this->mRust); }
 
-// Creates an empty file combo box (the given entries are ignored) with no search path
-UIFileComboBox::UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData,
-                               GEFont* inFont, const GE2DPoint& inLocation, float inWidth,
-                               unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex,
-                               unsigned long inMaxChars, unsigned long inBorderThickness)
-    : UIComboBox(inId, inTextBoxType, std::vector<UWideString>(), inFont,
-                 GERectangle(inLocation, GE2DPoint(inLocation.GetX() + inWidth, inLocation.GetY() + kScrollBarWidth)),
-                 inMaxListBoxHeight, inForm, inIndex, inMaxChars, inBorderThickness)
-{
-    this->mRust = ee_ui_file_list_new(this, ee_ui_file_combo_host, true);
-}
 
-UIFileComboBox::~UIFileComboBox() { ee_ui_file_list_free(this->mRust); }

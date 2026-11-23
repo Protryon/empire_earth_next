@@ -51,5 +51,3 @@ EE_UI_VOID(graph_line_delete) { delete theLine; }
 #undef theText
 #undef g
 
-// Creates a graph control with a 15 x 10 grid, every label on, zoom 1 and no fonts yet
-UIGraph::~UIGraph() { ee_ui_graph_free(this->mRust); }

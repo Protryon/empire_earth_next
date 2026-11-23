@@ -60,7 +60,6 @@ extern "C" intptr_t ee_uicpp_hk_get_entity(intptr_t inKey, ISEntity** ioEntity) 
 #undef r
 
 
-UIHotKey::~UIHotKey() { this->Call(EeUiHotKeyCall::Release); }
 
 // the entities' names (ee_ui hotkey_ffi.rs: the hot key's display name)
 extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast<ISEntity*>(inEntity)->GetName(); }

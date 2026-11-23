@@ -13,13 +13,22 @@
 #define LLE_UIRADIOBUTTON_H
 
 #include "lle/UIButton.h"
+#include "lle/UIButtonRust.h"
+#include "rust/ui/checkobj.h"
 #include "lle/UITextLabel.h"   // the inline dtor deletes the label
 
 class LLE_API UIRadioButton : public UIButton {
 public:
     UIRadioButton(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inIsPushButton,
-                  bool inIsChecked, bool inScaleBitmap);
+                  bool inIsChecked, bool inScaleBitmap)
+        : UIButton(inId, inForm->GetManager()->GetRadioOff(), NULL, inForm->GetManager()->GetRadioDownOff(),
+               UIButtonRust::Rect(ee_ui_button_box_rect(UIButtonRust::Rect(inRectangle), inScaleBitmap)),
+               inForm, inIndex, inBorderThickness)
+{
+    this->SubCall(EeUiButtonCall::RadioInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inIsPushButton ? 1.0f : 0.0f,
+                inIsChecked ? 1.0f : 0.0f, inScaleBitmap ? 1.0f : 0.0f);
+}
     // the dtor (0x1005fc41) deleted the label and released the other state's bitmaps: the Rust button's release does
     // Checks the button: unchecks its checked neighbour, swaps to the checked bitmaps and fires the checked trigger
     virtual void Check() { this->SubCall(EeUiButtonCall::RadioCheck); } // slot 0x94

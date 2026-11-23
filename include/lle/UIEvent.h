@@ -11,11 +11,8 @@
 #include "rust/ui/eventobj.h"
 #include "lle/UIShims.h"
 #include "rust/ui/obj.h"
+#include "lle/UIObjHost.h"
 
-class FSFileSpec;
-class UIEntity;
-class UIForm;
-class UIManager;
 
 class LLE_API UIEvent : public UReferenceCounter, public EeUiEventFields {
 public:
