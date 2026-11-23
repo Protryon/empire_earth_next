@@ -43,10 +43,7 @@ EESoundObject::EESoundObject() : EeDataSoundFields(), EeDataMediaUse()
 // Destroys the sound, unloading its sample if it is loaded
 EESoundObject::~EESoundObject()
 {
-    if (this->mMediaCount > 0) {
-        this->mMediaCount = 1;
-        this->UnloadMedia();
-    }
+    ee_preload_sound_free(this);   // (preload_media.rs)
 }
 
 // Reads the sound table (each record after its sample's name; the record and its copy are ee_data tables.rs':
@@ -231,6 +228,14 @@ extern "C" int64_t ee_preload_mediacpp(EePreloadMediaCpp inOp, uintptr_t p, cons
     case O::MusicSetScore: MO(p)->mScoreID = (long)a[0];
         break;
     case O::MusicUnloadScore: return gConductor->GetConductor().UnloadScore(MO(p)->mScoreID);
+    case O::GraphicNameDelete: delete *EEGraphicObjectName(GO(p), a[0]);
+        break;
+    case O::MediaForceUnload: return a[0] ? (SO(p)->mMediaCount = 1, SO(p)->UnloadMedia()) : (GO(p)->mMediaCount = 1, GO(p)->UnloadMedia());
+    case O::PartsCount: return a[0] == 0 ? GO(p)->mOrbitals.size() : a[0] == 1 ? GO(p)->mTurretParts.size() : GO(p)->mWheels.size();
+    case O::PartDelete: a[0] == 0 ? delete GO(p)->mOrbitals[a[1]] : a[0] == 1 ? delete GO(p)->mTurretParts[a[1]] : delete GO(p)->mWheels[a[1]];
+        break;
+    case O::PartsClear: a[0] == 0 ? GO(p)->mOrbitals.clear() : a[0] == 1 ? GO(p)->mTurretParts.clear() : GO(p)->mWheels.clear();
+        break;
     }
     return 0;
 }

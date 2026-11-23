@@ -154,6 +154,14 @@ pub enum EePreloadMediaCpp {
     MusicSetScore,
     /// `gConductor->GetConductor().UnloadScore(mScoreID)`
     MusicUnloadScore,
+    /// `delete *<the name slot a0>` (as GraphicName)
+    GraphicNameDelete,
+    /// `mMediaCount = 1`, then the `UnloadMedia` virtual (a graphic object, a0 0, or a sound, 1)
+    MediaForceUnload,
+    /// the graphic's part lists (a0: 0 mOrbitals, 1 mTurretParts, 2 mWheels): `size()`, `delete [a1]`, `clear()`
+    PartsCount,
+    PartDelete,
+    PartsClear,
 }
 
 use EePreloadMediaCpp as O;
@@ -610,6 +618,57 @@ pub fn load_music(file: P) -> c_long {
         add_song_to_every_epoch(h(O::MusicNew, 0, &[record.as_ptr() as usize as i64]) as P);
     }
     result
+}
+
+// ---- the graphic object's and the sound's destructors, the graphic's part lists
+
+/// `~EEGraphicObject`: its media unloaded if loaded, its names freed.
+pub fn graphic_free(object: P) {
+    if h(O::GraphicMediaCount, object, &[]) as c_ulong != 0 {
+        h(O::MediaForceUnload, object, &[0]);
+    }
+    for slot in 0..GRAPHIC_NAMES {
+        h(O::GraphicNameDelete, object, &[slot]);
+    }
+}
+
+/// `~EESoundObject`: its sample unloaded if loaded.
+pub fn sound_free(sound: P) {
+    if h(O::SoundMediaCount, sound, &[]) as c_ulong != 0 {
+        h(O::MediaForceUnload, sound, &[1]);
+    }
+}
+
+/// The graphic's orbitals, turret parts and wheels deleted and their lists emptied (ee_gfx gobj_media.rs'
+/// `clear_parts`).
+pub extern "C" fn clear_parts(object: *mut c_void) {
+    let object = object as P;
+    for list in 0..3 {
+        for i in 0..h(O::PartsCount, object, &[list]) {
+            h(O::PartDelete, object, &[list, i]);
+        }
+        h(O::PartsClear, object, &[list]);
+    }
+}
+
+/// [`clear_parts`] for the C++ host table.
+#[no_mangle]
+pub extern "C" fn ee_preload_graphic_clear_parts(object: *mut c_void) {
+    clear_parts(object)
+}
+
+/// # Safety
+/// `object` is a live `EEGraphicObject` (its `EEMedia` address).
+#[no_mangle]
+pub unsafe extern "C" fn ee_preload_graphic_free(object: *mut c_void) {
+    graphic_free(object as P)
+}
+
+/// # Safety
+/// `sound` is a live `EESoundObject`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_preload_sound_free(sound: *mut c_void) {
+    sound_free(sound as P)
 }
 
 // ---- the media uses (ee/EEMediaUse.h's acquire and release over the unit's lock)

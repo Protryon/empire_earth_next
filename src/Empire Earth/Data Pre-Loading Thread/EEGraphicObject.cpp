@@ -86,18 +86,7 @@ EEGraphicObject::EEGraphicObject() : EeDataMediaUse()
 // Destroys the graphic object: unloads its media if loaded, frees its file names
 EEGraphicObject::~EEGraphicObject()
 {
-    if (this->mMediaCount > 0) {
-        this->mMediaCount = 1;
-        this->UnloadMedia();
-    }
-    delete this->mFileName;
-    delete this->mTextureName;
-    delete this->mShadowModelName;
-    delete this->mShadowTextureName;
-    for (unsigned long i = 0; i < 14; i++) {
-        delete this->mModelNames[i];
-        delete this->mTextureNames[i];
-    }
+    ee_preload_graphic_free(static_cast<EEMedia*>(this));   // (preload_media.rs)
 }
 
 // Reads the graphics table into the media table (each record after its 32 names; the record and its copy are ee_data
@@ -151,18 +140,7 @@ static const EeGfxGobjHost kGobjHost = {
         static_cast<EEGraphicObject*>(inObject)->mWheels.push_back(new EEWheel(static_cast<GEModel*>(inModel)));
         return true;
     },
-    [](void* inObject) {
-        EEGraphicObject* theObject = static_cast<EEGraphicObject*>(inObject);
-        for (unsigned long i = 0; i < theObject->mOrbitals.size(); i++)
-            delete theObject->mOrbitals[i];
-        theObject->mOrbitals.clear();
-        for (unsigned long i = 0; i < theObject->mTurretParts.size(); i++)
-            delete theObject->mTurretParts[i];
-        theObject->mTurretParts.clear();
-        for (unsigned long i = 0; i < theObject->mWheels.size(); i++)
-            delete theObject->mWheels[i];
-        theObject->mWheels.clear();
-    },
+    ee_preload_graphic_clear_parts,   // (preload_media.rs)
 };
 static_assert(sizeof(GEModelManager) == sizeof(void*) && sizeof(GETextureManager) == sizeof(void*),
               "the managers are their Rust objects (gobj_media.rs reads them in place)");

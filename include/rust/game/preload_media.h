@@ -144,6 +144,14 @@ enum class EePreloadMediaCpp : uint32_t {
   MusicSetScore,
   /// `gConductor->GetConductor().UnloadScore(mScoreID)`
   MusicUnloadScore,
+  /// `delete *<the name slot a0>` (as GraphicName)
+  GraphicNameDelete,
+  /// `mMediaCount = 1`, then the `UnloadMedia` virtual (a graphic object, a0 0, or a sound, 1)
+  MediaForceUnload,
+  /// the graphic's part lists (a0: 0 mOrbitals, 1 mTurretParts, 2 mWheels): `size()`, `delete [a1]`, `clear()`
+  PartsCount,
+  PartDelete,
+  PartsClear,
 };
 
 /// The text sink the C++ fills (`ee_preload_media_text_push`).
@@ -156,6 +164,17 @@ extern "C" {
 /// # Safety
 /// `sink` is a sink the caller handed out; `bytes` holds `length` bytes.
 void ee_preload_media_text_push(EePreloadMediaText *sink, const uint8_t *bytes, size_t length);
+
+/// [`clear_parts`] for the C++ host table.
+void ee_preload_graphic_clear_parts(void *object);
+
+/// # Safety
+/// `object` is a live `EEGraphicObject` (its `EEMedia` address).
+void ee_preload_graphic_free(void *object);
+
+/// # Safety
+/// `sound` is a live `EESoundObject`.
+void ee_preload_sound_free(void *sound);
 
 /// # Safety
 /// `file` is a live `FSFileSpec`.
