@@ -38739,3 +38739,46 @@ PT 2967/2968).
 - `tools/gates.sh`: GATES PASS (tour PASS; ai-game time-cap, PT 12722, game_s 795, units [4, 39, 40],
   alive_computers [2, 3], engines classic_lua x 2; lan-game PASS, PT host 2871, joiner 2877).
 - Not run: the POSIX builds, `gates.sh --legacy`.
+
+## The units' lane, round 9: the unit constants' enums Rust's; the EEUnitClass family's, the unit objects' and the unit utilities' remaining bodies, the combat queries' entry points and the goal accessors in Rust over one-statement hosts (ee_sim unit_ids.rs; units ucg_sea.rs, uc_rest.rs, cls_host.rs, uck_dispatch.rs, ucbd_note.rs, dm_dop.rs, ghost_more.rs, cu_wheel.rs, eu_describe.rs, cu_small.rs, us_fill.rs, goal_calls.rs, upd_entry.rs, uu_adapt.rs; combat cg_query.rs; branch rust-units9, 2026-11-22)
+
+Numbers: docs/progress/units.md ("Round 9"). C++ logic lines (logic_lines.py, the units' commits alone) -2,445
+(enums -740, the forks and follow-ups -1,705); the target was -3,000.
+
+- **A constant enum moves to Rust whole, by LLE round 10's method.** EEUnitClassIDs.h, EEUnitAction.h's ids and
+  EEUnitGoal.h's goal kinds became `#[repr(C)]` enums of ee_sim::unit_ids. cbindgen (`enum-class=false`, the names
+  in cbindgen.toml's include list) emits them back as the same unscoped C++ enums. This one change was -752 logic
+  lines, a third of the round. Three things to handle:
+  - A Rust enum cannot hold two names for one value: trigger 12007's second name (no reader) went into the first
+    name's comment.
+  - A composed value (`kMovementAir | kMovementSea`) becomes its number, with its parts in the comment.
+  - Every reader of the old header has to move with it. Here that was eedata's rules.py and rulesgen.py, four Rust
+    tests that parse `NAME = value` lines (two of them came with batch 18, after the move) and header_consts.rs.
+    grep rust/ and tools/ for the header's file name after every origin merge.
+- **A record header that a data tool parses stays C++.** EEUnitClassRecord.h (247 logic) moved cleanly to a Rust
+  struct with asserted offsets. But tools/eedata/overlay.py reads the C++ header as the record's layout source, and
+  `eedata check` failed ("struct EEUnitClassRecord not found"), so the move was reverted.
+- **Three forks, one heavy lock, the turn limit.** All three forks stopped once at their turn limit with a heavy job
+  still queued on the shared lock; resumed, they finished. A job a stopped fork left running keeps the lock: check its
+  pid before removing anything.
+  - On a loaded machine a saveload can fail with 0xC0000142 (STATUS_DLL_INIT_FAILED) at process start; rerun it alone
+    before suspecting the game (fork B).
+- **Merging the batches.** Batch 18 renamed `EeGe3DPoint`'s fields to `mX`/`mY`/`mZ`, and fork C's new
+  `EEGoalPointOf` template only broke on the merged tree. cbindgen.toml's include list conflicts on every batch that
+  adds names: take one side's list, append the other side's new names, then check the file with `tomllib`.
+  PORT_LEARNINGS.md merges best as origin's file with this side's missing sections appended.
+- **Windows text mode.** Python's text-mode write turns LF into CRLF (open with `newline=""`). A bash heredoc
+  feeding Python turns `"\n"` inside C++ literals into real newlines: write such scripts with the Write tool.
+- **Two modules declaring one `extern "C"` host** make cbindgen report it twice; share the first module's
+  `pub(crate)` host instead (fork B: dm_body, eu_more, ghost_body, us_check).
+- **Call-site edits outside the lane**: the header readers above (tools/eedata rules.py and rulesgen.py; ee_game
+  editor_cpp_consts_tests.rs, editor_seax_tests.rs; ee_sim scenario cpp_consts_tests.rs), rust/cbindgen.toml.
+- **Behaviour changes**: EEReportLeakingUnits no longer builds its discarded report text or walks the reference
+  buckets. It only clears the reference counts, its one effect. No other change was observed: the oracle, captures,
+  saveloads and scenarios are identical. waiting_gatherer now reads the unit list once and permutes it in Rust:
+  same units, same order.
+  - Only a drawn game or a debug path reaches some moved code: Describe/DescribeLong, the leak and out-of-sync dumps,
+    the ghosts' media, Load, Save and AddChecksum, the insurance chat, the class media.
+- **Gates** on 22f9ff8b8 (batch 18 merged): builds and the test profile 0/0; Rust gate PASS; oracle seeds 2-7
+  identical; the twelve capture profiles PASS; saveloads plain and matrix PASS; scenario_check 27/27; sim_editor and
+  `--civbuilder` PASS; eedata check and cppgate PASS; the tour PASS; gates.sh GATES PASS.
