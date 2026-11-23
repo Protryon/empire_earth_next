@@ -584,6 +584,11 @@ pub enum EeWonEeGlueOp {
     UiLockCopy,
     /// `gWorld.mLock->WriteLock()`.
     WorldWriteLock,
+    // ---- R6 WON round 33
+    /// `((GUIStringData*)a)->mLength`.
+    StringLength = 600,
+    /// `(uint32_t)((GUIStringData*)a)->mText[b]`.
+    StringUnitAt,
 }
 
 /// The inward calls (`a`.. as documented).

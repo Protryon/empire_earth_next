@@ -509,6 +509,10 @@ enum class EeWonEeGlueOp : uint32_t {
   UiLockCopy,
   /// `gWorld.mLock->WriteLock()`.
   WorldWriteLock,
+  /// `((GUIStringData*)a)->mLength`.
+  StringLength = 600,
+  /// `(uint32_t)((GUIStringData*)a)->mText[b]`.
+  StringUnitAt,
 };
 
 /// The inward calls (`a`.. as documented).
