@@ -13,6 +13,8 @@
 // - EELobbyGlueHost.cpp's options and players fields (OptionsField, OptionsPlayer, OptionSet, PlayerSet: every field,
 //   values past 32 bits; the LAN game never reads a player of the options);
 // - EELobbyGlueHost.cpp's colour chooser: ChooserNew and OpenPopup (eecolor.rs; the LAN game opens no chooser).
+// - the game list's EE columns (EeColumn, added in round 35 of the lobby and network lane): every column call, the keeps over filter texts (the text the glue
+//   is handed and its references), over eeglue.rs's calls on a stand-in glue host.
 //
 // The new side is the Rust over the host's one-statement cases, copied as they are (World below). Each case runs on
 // both sides over worlds made alike; the traces (calls, results, the objects' state after) must be equal. Then every
@@ -278,6 +280,12 @@ static intptr_t Host(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intptr_
         memcpy(reinterpret_cast<char*>(b), aBytes.data(), aBytes.length() < (size_t)c ? aBytes.length() : (size_t)c);
         return (intptr_t)aBytes.length();
     }
+    case Op::EeColumn:
+        if ((EeWonEeGlueCall)a == EeWonEeGlueCall::EpochKeep || (EeWonEeGlueCall)a == EeWonEeGlueCall::MapTypeKeep) {
+            GUIString aText = Txt(c);
+            return ee_won_eeglue_call((EeWonEeGlueCall)a, b, (intptr_t)&aText, 0);
+        }
+        return ee_won_eeglue_call((EeWonEeGlueCall)a, b, c, 0);
     case Op::ItemGet: return ItemField(reinterpret_cast<ListItem*>(a), b, false, 0);
     case Op::ItemSet: ItemField(reinterpret_cast<ListItem*>(a), b, true, c); return 0;
     default: return 0;
@@ -312,6 +320,7 @@ static const GUIString* const sEELobbyFmtText[2] = {&sEELobbyFmtStrings[0], &sEE
 static TextSegmentBase* sEELobbyFmtLinks[3];
 static Font* sEELobbyFmtFonts[3];
 static SmartPtr<LobbyEvent> sEELobbyEvent;
+static GUIString sEELobbyColumnText;
 static const EeWonLobbyCtlFormat* Fmt(intptr_t inFormat) { return reinterpret_cast<const EeWonLobbyCtlFormat*>(inFormat); }
 
 static intptr_t World(void* inCtlArg, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t b, intptr_t c)
@@ -383,6 +392,8 @@ static intptr_t World(void* inCtlArg, EeWonLobbyCtlOp inOp, intptr_t a, intptr_t
     case Op::EvSetNum: LobbyEvtSet(sEELobbyEvent.get(), (LobbyEvtField)a, b); return 0;
     case Op::EvDeliverHeld: inCtl->DeliverEvent(sEELobbyEvent.get(), false); return 0;
     case Op::EvDrop: sEELobbyEvent = NULL; return 0;
+    case Op::ColumnTextSet: sEELobbyColumnText = Txt(a); return 0;
+    case Op::ColumnText: return (intptr_t)&sEELobbyColumnText;
     default: Log("unexpected op " + N((int)inOp)); return 0;
     }
 }
@@ -437,7 +448,7 @@ struct Objects {
     char mBuffer[1100];
     Objects()
     {
-        for (int i = 0; i < 4; i++) { this->mLinks[i].mId = 100 + i; this->mLinks[i].mKind = i; }
+        for (int i = 0; i < 4; i++) { this->mLinks[i].mId = 100 + i; this->mLinks[i].mKind = i + 1; }
         this->mArea.mId = 7;
         memset(this->mBuffer, '.', sizeof(this->mBuffer));
     }
@@ -976,19 +987,60 @@ static void RunGlue()
                     }
 }
 
+// ---- the game list's EE columns (EeColumn: the glue's column call on a row; the keeps hold the filter text in a
+// local, now the host's static sEELobbyColumnText through ColumnTextSet / ColumnText). The glue's calls run in
+// eeglue.rs over a stand-in glue host that logs its ops and the filter text it is handed (with its references).
+static intptr_t ColumnGlue(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f)
+{
+    Log("glue " + N((int)inOp) + " " + N(a) + " " + N(b) + " " + N(c) + " " + (inOp == EeWonEeGlueOp::TextFind ? "" : N(d)) + " " + N(e) + " " + N(f));
+    switch (inOp) {
+    case EeWonEeGlueOp::ItemGame: return a;
+    case EeWonEeGlueOp::NumMapTypes: return 3;
+    case EeWonEeGlueOp::TextFind: {
+        if (d == 0) { Log("filter null"); return -1; }
+        const GUIString* aText = reinterpret_cast<const GUIString*>(d);
+        Log("filter '" + aText->mData->mText + "'/" + N(aText->mData->mRefs));
+        return aText->mData->mText.find('e') != std::string::npos ? 0 : -1;
+    }
+    default: return 0;
+    }
+}
+static void RunColumn()
+{
+    typedef EeWonEeGlueCall GC;
+    ee_won_eeglue_set_host(ColumnGlue);
+    const char* kFilters[] = {"", "e", "epoch", "xyz"};
+    for (GC call : {GC::EpochCompare, GC::MapTypeCompare, GC::EpochKeep, GC::MapTypeKeep, GC::EpochPaint, GC::MapTypePaint})
+        for (const char* t : kFilters)
+            for (intptr_t row : {(intptr_t)1, (intptr_t)2})
+                Case("EeColumn " + N((int)call) + " " + t + " " + N(row), [](Objects&) {},
+                     [&](Objects& o, bool n) {
+                         bool aKeep = call == GC::EpochKeep || call == GC::MapTypeKeep;
+                         // a keep's filter text (the caller's GUIStringData, held once); the others' third argument
+                         GUIStringData* aData = NewData(t);
+                         aData->AddRef();
+                         intptr_t c = aKeep ? (intptr_t)aData : row + 1;
+                         intptr_t r = Call(o, n, Op::EeColumn, (intptr_t)call, row, c);
+                         Log("column text '" + (std::string)sEELobbyColumnText + "'/" + N(sEELobbyColumnText.mData->mRefs));
+                         return r;
+                     });
+    ee_won_eeglue_set_host(NULL);
+}
+
 int main()
 {
     Run();
     RunColor();
     RunGlue();
+    RunColumn();
     int aReal = sFailures;
     printf("won_ctl35_test: %d checks, %d mismatches\n", sChecks, aReal);
     // the skips: every new op of the control host, then of the config host
     std::vector<int> aSkips;
     for (int op = (int)Op::ItemGetHeight; op <= (int)Op::LinkSetPrevious; op++)
-        // (EeColumn's text is not run here; TextStartEmpty's empty text is the one TextDrop left: in this world, as
-        // in the game, GetEmptyGUIStringData() is the empty text, so skipping it reads the same)
-        if (op != (int)Op::ColumnTextSet && op != (int)Op::ColumnText && op != (int)Op::TextStartEmpty) aSkips.push_back(op);
+        // (TextStartEmpty's empty text is the one TextDrop left: in this world, as in the game,
+        // GetEmptyGUIStringData() is the empty text, so skipping it reads the same)
+        if (op != (int)Op::TextStartEmpty) aSkips.push_back(op);
     for (EeWonLobbyCfgRdOp op : {EeWonLobbyCfgRdOp::BaseSetComponent, EeWonLobbyCfgRdOp::RoomSetLabel, EeWonLobbyCfgRdOp::ChatSetCtrl,
                                  EeWonLobbyCfgRdOp::ServerSetList})
         aSkips.push_back((int)op + 100000);
@@ -1000,9 +1052,16 @@ int main()
     for (int s : aSkips) {
         sSkip = s;
         sFailures = 0;
+        // the host statics a skip may leave set (a skipped EvDrop keeps the event) start each run empty: a leak would
+        // make the next run's cases differ and pass its skip off as caught
+        sEELobbyEvent = NULL;
+        sEELobbyText = GUIString();
+        std::string().swap(sEELobbyBytes);
+        sEELobbyColumnText = GUIString();
         Run();
         RunColor();
         RunGlue();
+        RunColumn();
         if (sFailures > 0) aCaught++;
         else printf("skip of op %d not caught\n", s);
     }
