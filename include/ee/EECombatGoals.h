@@ -90,8 +90,6 @@ inline void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, ui
 
 // The shots' ActionChanged and Update through ee_combat shots.rs over the host in EEUCProjectile.cpp (inKind
 // EE_COMBAT_SHOT_*, inClass the original's `this`)
-void EECombatShotAction(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
-void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
 
 // CBXR (TEST ONLY): one call of the eighth round's reads (R5b.2), its outcome: the function, the unit's and target's
 // ids (0 without one), the result and what the call left behind (per function below); folded like CBQR
