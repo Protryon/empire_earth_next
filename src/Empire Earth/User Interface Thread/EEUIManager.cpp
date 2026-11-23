@@ -55,10 +55,6 @@
 #include "ee/EEControlEventID.h"
 
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
-extern bool& gLoadingSavedGame;
-extern unsigned long& gTexturePixelDepth;
-extern FSPath* gDataPath;
-void EEPostF9Key();
 
 // the event factories (UIManager's control-event callbacks, then its form-event callback)
 UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID);

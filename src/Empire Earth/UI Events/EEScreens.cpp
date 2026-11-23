@@ -125,9 +125,7 @@
 #include "lle/UITextureBackground.h"
 
 extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
-extern GEViewport gU4E8F08;   // 0x4e8f08 (EERenderObject.cpp; the render viewport: the aircraft hot keys' point)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
-extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);   // lle/SEMixer.h
 unsigned long EEMenuWidth();   // Empire Earth.cpp
 unsigned long EEMenuHeight();
 
