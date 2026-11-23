@@ -19,30 +19,15 @@ public:
     // an open, empty memory file with room for inBlockCount blocks, growing by blocks or by doubling (defaults proven
     // by the default-constructor closure ??_F 0x4715: push 1; push 1; push 1000)
     FSMemoryFile(unsigned long inBlockSize = 1000, bool inGrowByDoubling = true, unsigned long inBlockCount = 1)
-        : mState(ee_fs_mem_new(inBlockSize, inGrowByDoubling, inBlockCount)), mOwnsState(true)
-    {
-        this->mTemporaryFileName = "";
-    }
+        : mState(ee_fs_mem_new(inBlockSize, inGrowByDoubling, inBlockCount)), mOwnsState(true) {}
     // an open memory file holding the caller's buffer, which is copied and freed (the caller gave it up)
     FSMemoryFile(unsigned char* inData, unsigned long inLength, unsigned long inBlockSize, bool inGrowByDoubling)
-        : mState(ee_fs_mem_new_over(inData, inLength, inBlockSize, inGrowByDoubling)), mOwnsState(true)
-    {
-        this->mTemporaryFileName = "";
-        delete[] inData;
-    }
+        : mState(ee_fs_mem_new_over(inData, inLength, inBlockSize, inGrowByDoubling)), mOwnsState(true) { delete[] inData; }
     // over a state made by Rust (an archive member, a chunk's payload); inOwns: the destructor frees it
-    FSMemoryFile(EeFsMemFile* inState, bool inOwns) : mState(inState), mOwnsState(inOwns)
-    {
-        this->mTemporaryFileName = "";
-    }
+    FSMemoryFile(EeFsMemFile* inState, bool inOwns) : mState(inState), mOwnsState(inOwns) {}
+    // an owned state closed (as Close) and freed
     virtual ~FSMemoryFile()
-    {
-        if (this->mOwnsState) {
-            this->Close();
-            ee_fs_mem_free(this->mState);
-        }
-        this->mState = NULL;
-    }
+        { ee_fs_mem_finish(this->mState, this->mOwnsState, reinterpret_cast<void**>(&this->mStream), reinterpret_cast<const EeFsString*>(&this->mTemporaryFileName)); }
     // implicit copy ctor (0x466d) and operator= (0x46c4) dropped: they copied the raw buffer pointer (double delete)
     FSMemoryFile(const FSMemoryFile&) = delete;
     FSMemoryFile& operator=(const FSMemoryFile&) = delete;
@@ -131,16 +116,11 @@ public:
     long Save(FSFile& outFile) { return ee_fs_mem_save_prefixed(this->mState, &outFile); }
 
 protected:
+    // the scalars' bytes (no count out)
     template <typename T> long MemRead(T& outValue)
-    {
-        unsigned long theRead;
-        return this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
-    }
+        { return ee_fs_mem_read(this->mState, reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), NULL); }
     template <typename T> long MemWrite(const T& inValue)
-    {
-        unsigned long theWritten;
-        return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
-    }
+        { return ee_fs_mem_write(this->mState, reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), NULL); }
 
     UString mTemporaryFileName;                       // +0x48
     EeFsMemFile* mState;                              // the contents (rust/crates/ee_base/src/fs/memfile.rs)

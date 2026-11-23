@@ -430,7 +430,7 @@ const uint8_t *ee_fs_mem_data(const EeFsMemFile *file);
 /// `Read`: `*out_read` is written unless the file has no buffer (`kErrorNotOpen`, the C++ left it untouched).
 ///
 /// # Safety
-/// `file` is live, `out` valid for `length` bytes, `out_read` for a write.
+/// `file` is live, `out` valid for `length` bytes, `out_read` null (the scalar reads) or valid for a write.
 int32_t ee_fs_mem_read(EeFsMemFile *file,
                        uint8_t *out,
                        size_t length,
@@ -439,7 +439,7 @@ int32_t ee_fs_mem_read(EeFsMemFile *file,
 /// `Write`.
 ///
 /// # Safety
-/// `file` is live, `data` valid for `length` bytes, `out_written` for a write.
+/// `file` is live, `data` valid for `length` bytes, `out_written` null (the scalar writes) or valid for a write.
 int32_t ee_fs_mem_write(EeFsMemFile *file,
                         const uint8_t *data,
                         size_t length,
@@ -698,6 +698,15 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
 int32_t ee_fs_mem_close_disk(EeFsMemFile *file,
                              void **stream,
                              const EeFsString *temporary);
+
+/// `~FSMemoryFile`: an owned state closed as `Close` closes it and freed; a borrowed one (a chunk's payload) left.
+///
+/// # Safety
+/// As [`ee_fs_mem_close_disk`]; an owned `file` is not used again.
+void ee_fs_mem_finish(EeFsMemFile *file,
+                      bool owns,
+                      void **stream,
+                      const EeFsString *temporary);
 
 /// `FSMemoryFile::Copy(inDestination, inFailIfExists, ...)`: the contents written to a disk file; kErrorAlreadyExists
 /// when asked to fail on an existing file, kErrorNativeError when it cannot be created. The position is reset.
