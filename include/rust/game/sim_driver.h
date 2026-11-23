@@ -936,6 +936,14 @@ void ee_sim_driver_combat_sweep(const EeSimDriverCombatSweep *input);
 /// `path` is a NUL-ended text.
 void ee_sim_driver_dump_state(const char *path);
 
+/// Installs the fault report (first in the handler chain) with the exe's name as its prefix (`EE-SIM`, `EE-AOC`).
+///
+/// # Safety
+/// `prefix` is a NUL-ended text.
+void ee_sim_driver_fault_install(const char *prefix);
+
+extern int32_t _write(int32_t fd, const void *buffer, uint32_t count);
+
 /// EE-SIM's entry: the command line parsed, the driver made over the host, the output files opened, the switches
 /// and the environment set -> [`EE_SIM_DRIVER_CONTINUE`], or the exit code (0 after --help, 64 a bad command
 /// line, 66 a file that cannot be opened).

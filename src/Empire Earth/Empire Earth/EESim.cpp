@@ -319,28 +319,8 @@ void DebugTrampoline(const char* inText)
 // (EESimPreferences is Empire Earth.cpp's, and EERun starts the driver's thread itself, ee_sim_driver_start: so the
 // game's start-up names no symbol of this driver)
 
-#ifdef _WIN32
-// a fault in the simulation: the code, the place and the return addresses (exe addresses: EE-SIM.map) on stderr
-static LONG CALLBACK EESimFault(EXCEPTION_POINTERS* inInfo)
-{
-    DWORD theCode = inInfo->ExceptionRecord->ExceptionCode;
-    if (theCode < 0xC0000000UL || theCode == 0xE06D7363UL)   // not a fault (thread names, debug strings, C++)
-        return EXCEPTION_CONTINUE_SEARCH;
-    static volatile LONG sOnce = 0;
-    if (InterlockedExchange(&sOnce, 1))
-        return EXCEPTION_CONTINUE_SEARCH;
-    void* theFrames[48];
-    USHORT theCount = RtlCaptureStackBackTrace(0, 48, theFrames, NULL);
-    char theText[2048];
-    int n = snprintf(theText, sizeof(theText), "EE-SIM FAULT %08lx at %p thread %lu; frames:", (unsigned long)theCode,
-                     inInfo->ExceptionRecord->ExceptionAddress, (unsigned long)GetCurrentThreadId());
-    for (USHORT k = 0; k < theCount && n < (int)sizeof(theText) - 24; k++)
-        n += snprintf(theText + n, sizeof(theText) - n, " %p", theFrames[k]);
-    fprintf(stderr, "%s\n", theText);
-    fflush(stderr);
-    return EXCEPTION_CONTINUE_SEARCH;
-}
-#else
+#ifndef _WIN32
+// (Windows: the fault report is sim_driver fault.rs's)
 // a fault in the simulation (POSIX): the signal, the address and the return addresses on stderr, then the signal's
 // default action (the handler is reset). Linux prints the frames as ee-sim(+0xOFFSET): addr2line -f -C -e ee-sim
 // 0xOFFSET names them.
@@ -405,7 +385,7 @@ int EESimMain(int argc, char** argv)
         return theCode;
     PlatDebugSetHandler(DebugTrampoline);
 #ifdef _WIN32
-    AddVectoredExceptionHandler(1, EESimFault);
+    ee_sim_driver_fault_install("EE-SIM");
 #else
     EESimInstallFaultHandler();
 #if !defined(__APPLE__)
