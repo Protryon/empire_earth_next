@@ -186,7 +186,6 @@ EETechTreeEpoch& EETechTreeEpoch::operator=(const EETechTreeEpoch& inOther)
 
 // ------------------------------------------------------------------------- round 10, lane B: the tech tree's C++
 
-int64_t EECore10OpB8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEPCalamityHelper.cpp
 
 static_assert(kTechEpochPrehistoric == 0 && kTechNone == 100000 && kTechFirstNodeID == 1000 &&
               IDS_PREHISTORIC_AGE == 30145, "gamecpp tech_load.rs");
@@ -195,59 +194,4 @@ static_assert(kTechEpochPrehistoric == 0 && kTechNone == 100000 && kTechFirstNod
 #define BNODE ((EETechTreeNode*)p)
 #define BEPOCH ((EETechTreeEpoch*)p)
 #define BTREE ((EETechTree*)p)
-
-// the tech tree's loads, copies, costs and sweep (gamecpp tech_load.rs, tech_capture.rs; p the node, the epoch, the
-// tree or the player): one statement each
-int64_t EECore10OpB7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::TbNewData: return P64(BNODE->mData = new RTSTechTreeNodeData);
-    case O::TbDeleteData: delete std::exchange(BNODE->mData, nullptr);
-        break;
-    case O::TbShareData: BNODE->mData = ((const EETechTreeNode*)a[0])->mData;
-        break;
-    case O::TbSetTree: BNODE->mTree = (EETechTree*)a[0];
-        break;
-    case O::TbNewNode: return P64(new EETechTreeNode);
-    case O::TbClassesResize: BNODE->mData->mUnitClasses.resize((unsigned long)a[0], 0);
-        break;
-    case O::TbClassRead: return ((FSFile*)a[0])->Read(BNODE->mData->mUnitClasses[a[1]]);
-    case O::TbClassCount: return (int64_t)BNODE->mData->mUnitClasses.size();
-    case O::TbClassAt: return (int64_t)BNODE->mData->mUnitClasses[a[0]];
-    case O::TbCostsInsert: BNODE->mData->mClassCosts.insert(std::map<long, long*>::value_type((long)BNODE->mData->mUnitClasses[a[0]], new long[7]{(long)a[1], (long)a[2], (long)a[3], (long)a[4], (long)a[5], (long)a[6], (long)a[7]}));
-        break;
-    case O::TbCostsCount: return (int64_t)BNODE->mData->mClassCosts.size();
-    case O::TbCostsDelete: delete[] std::next(BNODE->mData->mClassCosts.begin(), a[0])->second;
-        break;
-    case O::TbCostsClear: BNODE->mData->mClassCosts.clear();
-        break;
-    case O::TbButton: return P64(BNODE->mButton);
-    case O::TbCopyButton: BNODE->mButton = ((const EETechTreeNode*)a[0])->mButton;
-        break;
-    case O::TbSetButton: BNODE->mButton = EEButtonObject::Get((unsigned long)a[0]);
-        break;
-    case O::TbButtonGet: return P64(EEButtonObject::Get((unsigned long)a[0]));
-    case O::TbSwapButton: ((EEPlayer*)p)->SwapClassButtonMedia((long)a[0], (EEButtonObject*)a[1], (EEButtonObject*)a[2]);
-        break;
-    case O::TbGlobalTree: return P64(&gTechTree);
-    case O::TbEpochInsert: BEPOCH->mNodes.insert(std::map<long, EETechTreeNode*>::value_type(((EETechTreeNode*)a[0])->mData->mID, (EETechTreeNode*)a[0]));
-        break;
-    case O::TbSetPlayerIndex: BTREE->mPlayerIndex = (long)a[0];
-        break;
-    case O::TbCopyPlayer: BTREE->mPlayer = ((const EETechTree*)a[0])->mPlayer;
-        break;
-    case O::TbIsHuman: return ((EEPlayer*)p)->IsHuman();
-    case O::TbClassFamily: return ((EEUnitClass*)p)->mFamily;
-    case O::TbNodeIsObsolete: return BNODE->GetIsObsolete();
-    case O::TbNodeDependsOn: return BNODE->DependsOn((long)a[0]);
-    case O::TbNodeGetCost: return BNODE->GetCost((long)a[0], (long)a[1], f[0]);
-    case O::TbTreeChecksum: return (int64_t)(uint32_t)EETechTreeWalk(BTREE, EeTechTreeOp::Checksum);
-    case O::TbWorldPlayers: return (int64_t)gWorld.GetNumPlayers();
-    case O::TbWorldPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
-    case O::TbPlayerTree: return P64(((EEPlayer*)p)->GetTechTree());
-    default: return EECore10OpB8(inOp, p, a, f);
-    }
-    return 0;
-}
 

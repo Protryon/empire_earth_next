@@ -136,11 +136,16 @@ void ee_data_rules_free(EeDataRules *rules);
 /// `rules` and `content` live, `err` writable or null.
 bool ee_data_rules_load(EeDataRules *rules, EeDataContent *content, EeDataBytes *err);
 
-/// The snapshot the C++ `EERules` decodes (EERulesGenDecode.inl).
+/// Writes the C++ `EERulesData` (ee/EERulesGen.h) of the rules in place: its lists and texts point into storage the
+/// rules own until the next call. `sizes` are the C++ structs' sizes (`kEERulesMirrorSizes`); a layout that differs
+/// from the Rust mirror's stops the game.
 ///
 /// # Safety
-/// `rules` live, `out` writable.
-void ee_data_rules_encode(const EeDataRules *rules, EeDataBytes *out);
+/// `rules` live, `out` an `EERulesData` (no list or text of it read across the call), `sizes` readable for `count`.
+void ee_data_rules_mirror(EeDataRules *rules,
+                          void *out,
+                          const size_t *sizes,
+                          size_t count);
 
 /// The content dump of the rules (`"rules.<doc>":{...}` lines).
 ///

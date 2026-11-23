@@ -53,28 +53,7 @@ void EEPSaveGameHeader::GetChecksum(ESChecksum& ioChecksum) const
 
 // ------------------------------------------------------------------------- the header's C++ (gamecpp persist_parts.rs)
 
-int64_t EEPMultiplayerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define HDR ((EEPSaveGameHeader*)p)
 #define AFILE (*(FSFile*)a[0])
 
-// The header's C++ calls and members (EEPPlayerHelper.cpp's EEPHelpersOp default): one statement each
-int64_t EEPHeaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::HdrNameLoad: return HDR->mName.Load(AFILE);
-    case O::HdrNameSave: return HDR->mName.Save(AFILE);
-    case O::HdrDescriptionLoad: return HDR->mDescription.Load(AFILE);
-    case O::HdrDescriptionSave: return HDR->mDescription.Save(AFILE);
-    case O::HdrPlayerNamesLoad: return HDR->mPlayerNames.Load(AFILE);
-    case O::HdrPlayerNamesSave: return HDR->mPlayerNames.Save(AFILE);
-    case O::HdrDateLoad: return HDR->mDate.Load(AFILE);
-    case O::HdrDateSave: return HDR->mDate.Save(AFILE);
-    case O::HdrOptionsLoad: return HDR->mGameOptions.Load(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
-    case O::HdrOptionsSave: return HDR->mGameOptions.Save(AFILE);
-    case O::HdrMediaLoad: return HDR->mMediaStrings.Load(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
-    case O::HdrMediaSave: return HDR->mMediaStrings.Save(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
-    default: return EEPMultiplayerOp(inOp, p, a, f);
-    }
-}
