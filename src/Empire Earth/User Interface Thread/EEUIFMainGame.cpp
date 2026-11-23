@@ -180,73 +180,65 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == 2 * sizeof(void*) &&
 // unit and the pointed tile held in the call; io.f[0..2] the mouse location where an op takes one
 // ---- (the mouse modes' ops end)
 
-// The cursor's reads for one UpdateCursorKind (ee_screens cursor.rs asks them through ee_screenscpp_cursor)
-struct EEUIFMGCursorRead {
-    EEUIFMainGame* mForm;
-    EEPlayer* mPlayer;
-    EESelectedGroup* mGroup;
-    EEComplexUnit* mFirst;
-    EEUnit* mTarget;
-};
-static_assert(sizeof(EEUIFMGCursorRead) == 5 * sizeof(void*), "hud_direct.rs CursorRead");
+// (the cursor's reads for one UpdateCursorKind: the Rust record EeScreensCursorRead, hud_direct.rs, untyped)
 
 // The world's answers to the cursor's ops (EE_SCREENS_CURSOR_OP_*): the target, the selection by index, an air
 // base's cargo by index; the positions' floats into outF
-#define CR(x) static_cast<EEUIFMGCursorRead*>(reinterpret_cast<void*>(x))
+#define CR(x) static_cast<EeScreensCursorRead*>(reinterpret_cast<void*>(x))
 extern "C" uintptr_t ee_screenscpp_cur_mouse_over(uintptr_t inCtx)
-{ return (uintptr_t)CR(inCtx)->mForm->GetMouseOverControl(); }
+{ return (uintptr_t)static_cast<EEUIFMainGame*>(CR(inCtx)->mForm)->GetMouseOverControl(); }
 extern "C" uintptr_t ee_screenscpp_cur_command_units(uintptr_t inCtx)
-{ return (uintptr_t)CR(inCtx)->mForm->GetControl(kMainGameCommandUnits); }
+{ return (uintptr_t)static_cast<EEUIFMainGame*>(CR(inCtx)->mForm)->GetControl(kMainGameCommandUnits); }
 extern "C" void ee_screenscpp_cur_pick(uintptr_t inCtx, uint32_t inFlags)
 { CR(inCtx)->mTarget = gUnitPicker.PickUnit(gMouse->mPosition, inFlags); }
-extern "C" bool ee_screenscpp_cur_has_target(uintptr_t inCtx) { return CR(inCtx)->mTarget != NULL; }
-extern "C" bool ee_screenscpp_cur_t_on_tile(uintptr_t inCtx) { return CR(inCtx)->mTarget->mTileNode != NULL; }
-extern "C" bool ee_screenscpp_cur_t_disabled(uintptr_t inCtx) { return CR(inCtx)->mTarget->mComplexUnit->mIsDisabled; }
+extern "C" bool ee_screenscpp_cur_has_target(uintptr_t inCtx) { return static_cast<EEUnit*>(CR(inCtx)->mTarget) != NULL; }
+extern "C" bool ee_screenscpp_cur_t_on_tile(uintptr_t inCtx) { return static_cast<EEUnit*>(CR(inCtx)->mTarget)->mTileNode != NULL; }
+extern "C" bool ee_screenscpp_cur_t_disabled(uintptr_t inCtx) { return static_cast<EEUnit*>(CR(inCtx)->mTarget)->mComplexUnit->mIsDisabled; }
 extern "C" bool ee_screenscpp_cur_t_protected(uintptr_t inCtx)
-{ return CR(inCtx)->mTarget->mComplexUnit->IsProtected(); }
+{ return static_cast<EEUnit*>(CR(inCtx)->mTarget)->mComplexUnit->IsProtected(); }
 extern "C" bool ee_screenscpp_cur_t_has_complex(uintptr_t inCtx)
-{ return CR(inCtx)->mTarget->GetComplexUnit() != NULL; }
+{ return static_cast<EEUnit*>(CR(inCtx)->mTarget)->GetComplexUnit() != NULL; }
 extern "C" bool ee_screenscpp_cur_t_has_model(uintptr_t inCtx)
-{ return CR(inCtx)->mTarget->GetModel()->mModel != NULL; }
-extern "C" float ee_screenscpp_cur_t_scale(uintptr_t inCtx) { return CR(inCtx)->mTarget->mStats->GetScale(); }
+{ return static_cast<EEUnit*>(CR(inCtx)->mTarget)->GetModel()->mModel != NULL; }
+extern "C" float ee_screenscpp_cur_t_scale(uintptr_t inCtx) { return static_cast<EEUnit*>(CR(inCtx)->mTarget)->mStats->GetScale(); }
 extern "C" void ee_screenscpp_cur_t_default_point(uintptr_t inCtx, float* inPoint)
-{ *reinterpret_cast<GE3DPoint*>(inPoint) = CR(inCtx)->mTarget->GetModel()->mDefaultPoint; }
+{ *reinterpret_cast<GE3DPoint*>(inPoint) = static_cast<EEUnit*>(CR(inCtx)->mTarget)->GetModel()->mDefaultPoint; }
 extern "C" void ee_screenscpp_cur_t_place(uintptr_t inCtx, float inX, float inY, float inZ, float* inAim)
-{ CR(inCtx)->mTarget->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(GE3DPoint(inX, inY, inZ), *reinterpret_cast<GE3DPoint*>(inAim)); }
-extern "C" int32_t ee_screenscpp_cur_t_tile_x(uintptr_t inCtx) { return (int32_t)CR(inCtx)->mTarget->GetTileX(); }
-extern "C" int32_t ee_screenscpp_cur_t_tile_y(uintptr_t inCtx) { return (int32_t)CR(inCtx)->mTarget->GetTileY(); }
-extern "C" float ee_screenscpp_cur_t_tile_height(uintptr_t inCtx) { return CR(inCtx)->mTarget->mTile->GetHeight(); }
+{ static_cast<EEUnit*>(CR(inCtx)->mTarget)->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(GE3DPoint(inX, inY, inZ), *reinterpret_cast<GE3DPoint*>(inAim)); }
+extern "C" int32_t ee_screenscpp_cur_t_tile_x(uintptr_t inCtx) { return (int32_t)static_cast<EEUnit*>(CR(inCtx)->mTarget)->GetTileX(); }
+extern "C" int32_t ee_screenscpp_cur_t_tile_y(uintptr_t inCtx) { return (int32_t)static_cast<EEUnit*>(CR(inCtx)->mTarget)->GetTileY(); }
+extern "C" float ee_screenscpp_cur_t_tile_height(uintptr_t inCtx) { return static_cast<EEUnit*>(CR(inCtx)->mTarget)->mTile->GetHeight(); }
 extern "C" bool ee_screenscpp_cur_can_gather(uintptr_t inCtx, uint32_t inFlags)
-{ return CR(inCtx)->mGroup->FindUnitWithFlags(inFlags)->CanGather(CR(inCtx)->mTarget, CR(inCtx)->mTarget->GetTileX(), CR(inCtx)->mTarget->GetTileY(), false, false); }
+{ return static_cast<EESelectedGroup*>(CR(inCtx)->mGroup)->FindUnitWithFlags(inFlags)->CanGather(static_cast<EEUnit*>(CR(inCtx)->mTarget), static_cast<EEUnit*>(CR(inCtx)->mTarget)->GetTileX(), static_cast<EEUnit*>(CR(inCtx)->mTarget)->GetTileY(), false, false); }
 extern "C" void ee_screenscpp_cur_set_shielded(bool inShielded) { EEScratch<bool>(kScratchCurShielded) = inShielded; }
 extern "C" bool ee_screenscpp_cur_convert(uintptr_t inCtx, uint32_t inIndex)
-{ return EECanConvert(CR(inCtx)->mGroup->GetUnit(inIndex), CR(inCtx)->mTarget->mComplexUnit, EEScratch<bool>(kScratchCurShielded)); }
+{ return EECanConvert(static_cast<EESelectedGroup*>(CR(inCtx)->mGroup)->GetUnit(inIndex), static_cast<EEUnit*>(CR(inCtx)->mTarget)->mComplexUnit, EEScratch<bool>(kScratchCurShielded)); }
 extern "C" bool ee_screenscpp_cur_shielded() { return EEScratch<bool>(kScratchCurShielded); }
 // UpdateCursorKind's reads (cursor_ffi.rs ee_screens_update_cursor_kind) and its result
 extern "C" EEPlayer* ee_screenscpp_cur_local_player() { return gWorld.GetCurrentPlayer(); }
 extern "C" EESelectedGroup* ee_screenscpp_cur_selected_group(EEPlayer* inPlayer) { return inPlayer->mSelectedGroup; }
 extern "C" EEComplexUnit* ee_screenscpp_cur_group_first(EESelectedGroup* inGroup) { return inGroup->GetFirstUnit(); }
 extern "C" void ee_screenscpp_cur_set_pointer(int32_t inKind) { gMouse->mPointer = inKind; }
-#define theRead (*static_cast<EEUIFMGCursorRead*>(inContext))
-#define theTarget theRead.mTarget
-#define theUnit theRead.mGroup->GetUnit(inA)
-#define theCargo theRead.mGroup->GetUnit(inA)->GetComplexUnit()->mCargo[inB]
+#define theRead (*static_cast<EeScreensCursorRead*>(inContext))
+#define theTarget static_cast<EEUnit*>(theRead.mTarget)
+#define theUnit static_cast<EESelectedGroup*>(theRead.mGroup)->GetUnit(inA)
+#define theCargo static_cast<EESelectedGroup*>(theRead.mGroup)->GetUnit(inA)->GetComplexUnit()->mCargo[inB]
 extern "C" int32_t ee_screenscpp_cursor(void* inContext, uint32_t inOp, uint32_t inA, uint32_t inB, float* outF)
 {
     switch (inOp) {
     case EE_SCREENS_CURSOR_OP_FLAGS:
-        return (int32_t)theRead.mGroup->mKindFlags;
+        return (int32_t)static_cast<EESelectedGroup*>(theRead.mGroup)->mKindFlags;
     case EE_SCREENS_CURSOR_OP_IN_VIEW:
         return gRasterizer->GetViewport(gScreenIndex).GetViewRectangle().Contains(gMouse->mPosition);
     case EE_SCREENS_CURSOR_OP_RELEASE:
         theTarget->Dereference();
         return 0;
     case EE_SCREENS_CURSOR_OP_SEEN:
-        return EECombatIsSeenBy(theTarget, theRead.mPlayer, true);
+        return EECombatIsSeenBy(theTarget, static_cast<EEPlayer*>(theRead.mPlayer), true);
     case EE_SCREENS_CURSOR_OP_T_TARGETABLE:
         return ee_units_uu_targetable(0, (uint64_t)(uintptr_t)theTarget->mUnitClass, 0);
     case EE_SCREENS_CURSOR_OP_CAN_HEAL:
-        return EECanHeal(theRead.mFirst, theTarget->mComplexUnit);
+        return EECanHeal(static_cast<EEComplexUnit*>(theRead.mFirst), theTarget->mComplexUnit);
     case EE_SCREENS_CURSOR_OP_SEL_AIR_BASE:
         return theUnit->GetUnitClass()->IsAirBase();
     case EE_SCREENS_CURSOR_OP_SEL_CRUSADER:

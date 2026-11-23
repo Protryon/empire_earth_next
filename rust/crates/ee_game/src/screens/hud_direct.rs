@@ -702,18 +702,20 @@ pub(crate) fn control(ctl: Cpp, op: u32, a: i64, f: &mut [f32]) -> Option<i64> {
 
 // ------------------------------------------------------------------------------------------------ the cursor
 
-/// `EEUIFMGCursorRead` (EEUIFMainGame.cpp, which asserts its size): the form, the local player, its selected
-/// group, the group's first unit and the picked target, for one `UpdateCursorKind`.
+/// The cursor's reads for one `UpdateCursorKind` (the C++'s `EeScreensCursorRead`, EEUIFMainGame.cpp's shims read
+/// it): the form, the local player, its selected group, the group's first unit and the picked target.
+///
+/// cbindgen:field-names=[mForm, mPlayer, mGroup, mFirst, mTarget]
 #[repr(C)]
-pub(crate) struct CursorRead {
-    form: Cpp,
+pub struct EeScreensCursorRead {
+    form: *mut c_void,
     player: *mut c_void,
     group: *mut c_void,
     first: *mut c_void,
     target: *mut c_void,
 }
 
-impl CursorRead {
+impl EeScreensCursorRead {
     /// The reads of one `UpdateCursorKind`: the form, the local player, its selected group and the group's first
     /// unit (no target yet).
     pub(crate) fn new(form: Cpp, player: *mut c_void, group: *mut c_void, first: *mut c_void) -> Self {
@@ -728,7 +730,7 @@ impl CursorRead {
 ///
 /// # Safety
 /// `read` is the host's live read state; its units are live (the UI thread holds the world).
-pub(crate) unsafe fn cursor(read: *const CursorRead, op: u32, a: u32, b: u32, f: &mut [f32; 3]) -> Option<i32> {
+pub(crate) unsafe fn cursor(read: *const EeScreensCursorRead, op: u32, a: u32, b: u32, f: &mut [f32; 3]) -> Option<i32> {
     use crate::screens::cursor::*;
     use ee_sim::world::{GroupView, PlayerView, UnitView, WorldRead};
     use ee_sim::world_field;

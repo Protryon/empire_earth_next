@@ -15770,6 +15770,17 @@ struct EeScreensMainFormObjects {
   void *mCalamity;
 };
 
+/// The cursor's reads for one `UpdateCursorKind` (the C++'s `EeScreensCursorRead`, EEUIFMainGame.cpp's shims read
+/// it): the form, the local player, its selected group, the group's first unit and the picked target.
+///
+struct EeScreensCursorRead {
+  void *mForm;
+  void *mPlayer;
+  void *mGroup;
+  void *mFirst;
+  void *mTarget;
+};
+
 /// `EEUIBUpgrade`'s members (ee/EEUIBUpgrade.h).
 struct EeScreensUpgradeFields {
   /// the improvement (0x10: help string only, 0xc: no cost)

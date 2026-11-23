@@ -166,7 +166,7 @@ fn the_controls_base_ops_answer_without_a_control() {
 #[test]
 fn the_cursor_reads_answer_zero_without_units() {
     use crate::screens::cursor::*;
-    let read = CursorRead {
+    let read = EeScreensCursorRead {
         form: core::ptr::null_mut(),
         player: core::ptr::null_mut(),
         group: core::ptr::null_mut(),
