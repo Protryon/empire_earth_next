@@ -1007,6 +1007,9 @@ WON_TESTS["won_routemodel_test"] = WON_TESTS["won_servconn_test"]
 WON_TESTS["won_apicore_test"] = WON_TESTS["won_ops_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp"))]
+# the lobby dialog host's and the EE game host's compound cases R6 WON round 34 composed in Rust (dlgsplit.rs, the
+# bad user row rows.rs BadUser) against the deleted code over a stand-in world, with mutations
+WON_TESTS["won_dlg34_test"] = []
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes
