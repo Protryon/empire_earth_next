@@ -53,8 +53,8 @@ public:
         { ee_uwstring_insert(&this->mState, inString, inPosition, inReplace); }
     // the byte size and the bytes, both counting the terminator (lle/FSFile.h: on a failed read the string is left
     // empty and the error returned; an old Windows-1252 string is converted, D6)
-    long Load(FSFile& inFile);
-    long Save(FSFile& inFile) const;
+    long Load(FSFile& inFile) { return ee_uwstring_load_file(&this->mState, &inFile); }
+    long Save(FSFile& inFile) const { return ee_uwstring_save_file(&this->mState, &inFile); }
     // splits at any of the separator characters, skipping empty tokens (ee_uwstring_tokens: the tokens' first and
     // last characters); always true
     bool Tokenize(const UWideString& inSeparators, std::vector<UWideString>& outTokens) const
@@ -85,7 +85,7 @@ public:
 private:
     friend UWideString operator+(const UWideString& inLeft, const UWideString& inRight);
     friend UWideString operator+(const UWideString& inLeft, const char* inRight);
-    friend long sprintf(UWideString& outString, const char* inFormat, ...);   // sets the lengths
+    template <class... A> friend long sprintf(UWideString& outString, const char* inFormat, A... inArguments);   // sets the lengths
 
     enum Unset { kUnset };                  // a result the Rust side initialises
     explicit UWideString(Unset) {}
@@ -136,15 +136,11 @@ inline bool operator>(const UWideString& inLeft, const UWideString& inRight) { r
 inline bool operator>(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) > 0; }
 inline bool operator>=(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) >= 0; }
 inline bool operator>=(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) >= 0; }
-// formats into the string's buffer (grown when the text does not fit: the original wrote past it), then measures it
-inline long sprintf(UWideString& outString, const char* inFormat, ...) PLAT_PRINTF_FORMAT(2, 3);
-inline long sprintf(UWideString& outString, const char* inFormat, ...)
-{
-    va_list theArguments;
-    va_start(theArguments, inFormat);
-    long theResult = UFormat(&outString.mState, ee_uwstring_format_buffer, ee_uwstring_format_end, inFormat, theArguments);
-    va_end(theArguments);
-    return theResult;
-}
+// formats into the string's buffer, then measures it (lle/LowLevelEngineCore.h UFormat)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgcc-compat"
+template <class... A> LLE_PRINTF_TEMPLATE(2, 3) inline long sprintf(UWideString& outString, const char* inFormat, A... inArguments)
+    { return UFormat(&outString.mState, ee_uwstring_format_buffer, ee_uwstring_format_end, inFormat, inArguments...); }
+#pragma clang diagnostic pop
 
 #endif

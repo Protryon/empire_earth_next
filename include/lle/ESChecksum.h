@@ -30,14 +30,8 @@ public:
     }
     // whether inOther matches entry by entry; one error text per mismatch into outErrors
     bool Compare(const ESChecksum& inOther, std::vector<UString>& outErrors) const
-    {
-        EeErrorTexts* theTexts;
-        bool theResult = ee_error_checksum_compare(this->mRust, inOther.mRust, &theTexts);
-        for (size_t i = 0; i < ee_error_texts_count(theTexts); i++)
-            outErrors.push_back(UString(ee_error_texts_get(theTexts, i)));
-        ee_error_texts_free(theTexts);
-        return theResult;
-    }
+        { return ee_error_checksum_compare(this->mRust, inOther.mRust, PushText, &outErrors); }
+    EeErrorChecksum* GetRust() const { return this->mRust; }
     bool GetIsVerboseMode() const { return ee_error_checksum_verbose(this->mRust); }
     unsigned long GetTotalChecksum() const   // the entries' 32-bit sum
     {
@@ -50,14 +44,12 @@ protected:
         ee_error_checksum_add_value(this->mRust, inChecksum);
     }
 
+    static void PushText(void* inErrors, const char* inText) { static_cast<std::vector<UString>*>(inErrors)->push_back(UString(inText)); }
+
     EeErrorChecksum* mRust;                 // owned
 };
 
-inline void UWideString::GetChecksum(ESChecksum& ioChecksum)
-{
-    UString theName;
-    sprintf(theName, "UWideString (%s)", (const char*)*this);
-    ioChecksum.AddChecksum(theName, ee_uwstring_checksum(&this->mState));
-}
+// "UWideString (<the text>)" and the string's checksum (ee_base error checksum.rs)
+inline void UWideString::GetChecksum(ESChecksum& ioChecksum) { ee_error_checksum_add_wide(ioChecksum.GetRust(), &this->mState); }
 
 #endif

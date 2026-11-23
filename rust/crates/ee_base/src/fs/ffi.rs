@@ -206,7 +206,7 @@ pub unsafe extern "C" fn ee_fs_mem_data(file: *const EeFsMemFile) -> *const u8 {
 /// `Read`: `*out_read` is written unless the file has no buffer (`kErrorNotOpen`, the C++ left it untouched).
 ///
 /// # Safety
-/// `file` is live, `out` valid for `length` bytes, `out_read` for a write.
+/// `file` is live, `out` valid for `length` bytes, `out_read` null (the scalar reads) or valid for a write.
 #[no_mangle]
 pub unsafe extern "C" fn ee_fs_mem_read(
     file: *mut EeFsMemFile,
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn ee_fs_mem_read(
     };
     // SAFETY: the function's contract
     let (result, read) = unsafe { (*file).read(slice) };
-    if let Some(read) = read {
+    if let (Some(read), false) = (read, out_read.is_null()) {
         // SAFETY: the function's contract
         unsafe { *out_read = read as c_ulong };
     }
@@ -233,7 +233,7 @@ pub unsafe extern "C" fn ee_fs_mem_read(
 /// `Write`.
 ///
 /// # Safety
-/// `file` is live, `data` valid for `length` bytes, `out_written` for a write.
+/// `file` is live, `data` valid for `length` bytes, `out_written` null (the scalar writes) or valid for a write.
 #[no_mangle]
 pub unsafe extern "C" fn ee_fs_mem_write(
     file: *mut EeFsMemFile,
@@ -243,8 +243,10 @@ pub unsafe extern "C" fn ee_fs_mem_write(
 ) -> i32 {
     // SAFETY: the function's contract
     let (result, written) = unsafe { (*file).write(bytes(data, length)) };
-    // SAFETY: the function's contract
-    unsafe { *out_written = written as c_ulong };
+    if !out_written.is_null() {
+        // SAFETY: the function's contract
+        unsafe { *out_written = written as c_ulong };
+    }
     result
 }
 
@@ -854,6 +856,26 @@ pub unsafe extern "C" fn ee_fs_mem_close_disk(
             disk::PlatDeleteFile((*temporary).string);
         }
         result
+    }
+}
+
+/// `~FSMemoryFile`: an owned state closed as `Close` closes it and freed; a borrowed one (a chunk's payload) left.
+///
+/// # Safety
+/// As [`ee_fs_mem_close_disk`]; an owned `file` is not used again.
+#[no_mangle]
+pub unsafe extern "C" fn ee_fs_mem_finish(
+    file: *mut EeFsMemFile,
+    owns: bool,
+    stream: *mut *mut c_void,
+    temporary: *const EeFsString,
+) {
+    if owns {
+        // SAFETY: the caller's contract
+        unsafe {
+            ee_fs_mem_close_disk(file, stream, temporary);
+            ee_fs_mem_free(file);
+        }
     }
 }
 

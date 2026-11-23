@@ -31,15 +31,7 @@ public:
     long Stop() { return ee_time_timer_stop(this->mTimer); }
     EeTimeTimer* Rust() const { return this->mTimer; }   // the Rust timer (ee_game rts physics.rs)
     long Stop(unsigned long& outElapsed, unsigned long& outRemaining)
-    {
-        uint32_t theElapsed, theRemaining;
-        long theResult = ee_time_timer_stop_elapsed(this->mTimer, &theElapsed, &theRemaining);
-        if (theResult == kErrorOK) {
-            outElapsed = theElapsed;
-            outRemaining = theRemaining;
-        }
-        return theResult;
-    }
+        { return ee_time_timer_stop_elapsed(this->mTimer, &outElapsed, &outRemaining); }
 private:
     TMTimer(const TMTimer&);
     TMTimer& operator=(const TMTimer&);

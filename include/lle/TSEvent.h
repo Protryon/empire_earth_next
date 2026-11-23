@@ -25,12 +25,7 @@ public:
     // Waits until one of the events is set (at most PLAT_WAIT_MAX) -> its index (the lowest when several are),
     // kTSWaitTimeout or kTSWaitFailed (PlatGetLastError); the threads' message loops wait on several at once.
     static long WaitAny(TSEvent* const* inEvents, unsigned long inCount, unsigned long inTimeout)
-    {
-        if (inCount > PLAT_WAIT_MAX)
-            return kTSWaitFailed;
-        return ee_ts_event_wait_any(reinterpret_cast<const EeTsEvent* const*>(inEvents), (uint32_t)inCount,
-                                    (uint32_t)inTimeout);
-    }
+        { return ee_ts_event_wait_any(reinterpret_cast<const EeTsEvent* const*>(inEvents), (uint32_t)inCount, (uint32_t)inTimeout); }
     bool GetIsManuallyReset() { return ee_ts_event_is_manual(this->Rust()); }
     operator void*() const { return ee_ts_event_handle(this->Rust()); }
     // the platform event (TMTimer's event timers set it)

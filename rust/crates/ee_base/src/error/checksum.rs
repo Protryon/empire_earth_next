@@ -7,7 +7,9 @@
 //! a pointer to this object; copies clone it. `golden_checksum.txt` is the original classes' trace
 //! (`tests/error/es_checksum_golden.cpp`), replayed by `golden_checksum.rs`.
 
-use std::ffi::{c_char, c_ulong, CStr};
+use std::ffi::{c_char, c_ulong, c_void, CStr};
+
+use crate::ustring::{ee_uwstring_checksum, EeUWideString};
 
 /// One entry: its description (the original's `UString`, bytes up to a NUL) and its checksum.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -92,11 +94,6 @@ impl EeErrorChecksum {
         }
         (errors.is_empty(), errors)
     }
-}
-
-/// Error texts from `ee_error_checksum_compare`, read with `ee_error_texts_count` / `_get`, freed with `_free`.
-pub struct EeErrorTexts {
-    texts: Vec<std::ffi::CString>,
 }
 
 unsafe fn set<'a>(c: *const EeErrorChecksum) -> &'a EeErrorChecksum {
@@ -243,55 +240,39 @@ pub unsafe extern "C" fn ee_error_checksum_push(c: *mut EeErrorChecksum, descrip
     (*c).entries.push(Entry { description: CStr::from_ptr(description).to_bytes().to_vec(), checksum: value });
 }
 
-/// `Compare(other)`: whether they match; the error texts into `*out_texts` (free with `ee_error_texts_free`).
+/// `Compare(other, errors)`: whether they match; each error text (its NULs dropped) handed to `sink` with `target`
+/// in order (`ESChecksum::Compare`'s vector push).
 ///
 /// # Safety
-/// Both are live sets; `out_texts` is valid.
+/// Both are live sets; `sink` takes `target` and a NUL-terminated text valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn ee_error_checksum_compare(
     c: *const EeErrorChecksum,
     other: *const EeErrorChecksum,
-    out_texts: *mut *mut EeErrorTexts,
+    sink: unsafe extern "C" fn(target: *mut c_void, text: *const c_char),
+    target: *mut c_void,
 ) -> bool {
     let (same, errors) = set(c).compare(set(other));
-    let texts = errors
-        .into_iter()
-        .map(|mut t| {
-            t.retain(|&b| b != 0);
-            std::ffi::CString::new(t).unwrap_or_default()
-        })
-        .collect();
-    *out_texts = Box::into_raw(Box::new(EeErrorTexts { texts }));
+    for mut text in errors {
+        text.retain(|&b| b != 0);
+        let text = std::ffi::CString::new(text).unwrap_or_default();
+        sink(target, text.as_ptr());
+    }
     same
 }
 
-/// The number of texts.
+/// `UWideString::GetChecksum`: the string's checksum added to the set as "UWideString (<text>)".
 ///
 /// # Safety
-/// `t` is from `ee_error_checksum_compare`.
+/// `c` is a live set, `s` a live string.
 #[no_mangle]
-pub unsafe extern "C" fn ee_error_texts_count(t: *const EeErrorTexts) -> usize {
-    (*t).texts.len()
-}
-
-/// Text `i` (valid until `ee_error_texts_free`).
-///
-/// # Safety
-/// `t` is from `ee_error_checksum_compare`; `i` is below the count.
-#[no_mangle]
-pub unsafe extern "C" fn ee_error_texts_get(t: *const EeErrorTexts, i: usize) -> *const c_char {
-    (&(*t).texts)[i].as_ptr()
-}
-
-/// Frees the texts.
-///
-/// # Safety
-/// `t` is from `ee_error_checksum_compare` or NULL, not used afterwards.
-#[no_mangle]
-pub unsafe extern "C" fn ee_error_texts_free(t: *mut EeErrorTexts) {
-    if !t.is_null() {
-        drop(Box::from_raw(t));
-    }
+pub unsafe extern "C" fn ee_error_checksum_add_wide(c: *mut EeErrorChecksum, s: *const EeUWideString) {
+    let text: &[u8] = if (*s).string.is_null() { b"(null)" } else { CStr::from_ptr((*s).string.cast()).to_bytes() };
+    let mut description = b"UWideString (".to_vec();
+    description.extend_from_slice(text);
+    description.push(b')');
+    #[allow(clippy::unnecessary_cast)] // `unsigned long` is 64-bit on LP64 systems: the entry keeps 32 bits
+    (*c).add(&description, ee_uwstring_checksum(s) as u32);
 }
 
 #[cfg(test)]
@@ -332,10 +313,22 @@ mod tests {
             assert_eq!(ee_error_checksum_entry(d, 0, buf.as_mut_ptr(), 4, &mut value), 5);
             assert_eq!(CStr::from_ptr(buf.as_ptr()).to_bytes(), b"EEM");
             assert_eq!(value, 4);
-            let mut texts = std::ptr::null_mut();
-            assert!(!ee_error_checksum_compare(c, d, &mut texts));
-            assert_eq!(ee_error_texts_count(texts), 1);
-            ee_error_texts_free(texts);
+            unsafe extern "C" fn push(target: *mut c_void, text: *const c_char) {
+                (*(target as *mut Vec<Vec<u8>>)).push(CStr::from_ptr(text).to_bytes().to_vec());
+            }
+            let mut texts: Vec<Vec<u8>> = Vec::new();
+            assert!(!ee_error_checksum_compare(c, d, push, &mut texts as *mut Vec<Vec<u8>> as *mut c_void));
+            assert_eq!(texts.len(), 1);
+            assert!(ee_error_checksum_compare(c, c, push, &mut texts as *mut Vec<Vec<u8>> as *mut c_void));
+            assert_eq!(texts.len(), 1);
+            let mut w = EeUWideString { string: std::ptr::null_mut(), byte_length: 0, length: 0, capacity: 0 };
+            crate::ustring::ee_uwstring_init_text(&mut w, c"ab".as_ptr());
+            ee_error_checksum_add_wide(c, &w);
+            let mut buf = [0 as c_char; 32];
+            ee_error_checksum_entry(c, 1, buf.as_mut_ptr(), 32, &mut value);
+            assert_eq!(CStr::from_ptr(buf.as_ptr()).to_bytes(), b"UWideString (ab)");
+            assert_eq!(value, ee_uwstring_checksum(&w) as u32);
+            crate::ustring::ee_uwstring_free(&mut w);
             ee_error_checksum_assign(c, d);
             assert_eq!(ee_error_checksum_total(c), 4);
             ee_error_checksum_free(c);
