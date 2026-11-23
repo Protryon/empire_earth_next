@@ -1,8 +1,9 @@
 // The lobby logics' host cases R6 WON lobby and network round 35 composed in Rust (ee_won_lobby logicsplit.rs)
-// against the deleted cases as they were at 207fb805f (WONLobby/DialogLogic.cpp's WmPopups, Bounds, NewWindow,
-// SetUpPopup, StatusSetStatus and OkCancelSetText), over one stand-in world that logs every call ("WON goldens by
-// reach": the popup windows and the Yes/No boxes no LAN game opens, and the status and bounds cases the LAN game
-// reaches only in part).
+// and LobbyLogicMgr, whole in Rust (logicmgr.rs; RunMgr below), against the deleted code as it was at 207fb805f
+// (DialogLogic.cpp's WmPopups, Bounds, NewWindow, SetUpPopup, StatusSetStatus and OkCancelSetText; LobbyLogicMgr.cpp),
+// over one stand-in world that logs every call ("WON goldens by reach": the popup windows and the Yes/No boxes no
+// LAN game opens, the status and bounds cases the LAN game reaches only in part, the manager's Kill and its menu
+// clicks, which the LAN game never makes).
 //
 // Each case runs on both sides over worlds made alike: the original's statements (Orig::Host), then the Rust over
 // the host's new one-statement cases, copied as they are (World). The traces (calls, results, the objects' state and
@@ -14,10 +15,14 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
+#include <list>
+#include <stdexcept>
 #include "rust/won_lobby/dlglogic.h"
 #include "rust/won_lobby/lobbydlg.h"
 #include "rust/won_lobby/logicsplit.h"
 #include "rust/won_lobby/resource.h"
+#include "rust/won_lobby/logicmgr.h"
+#include "ee/wonapi/WONLobbyGuard.h"
 
 typedef EeWonDlgLogicOp Op;
 
@@ -304,6 +309,228 @@ static void Run()
              [&](Objects& o, bool n) { return Call(o, n, Op::OkCancelSetText, (intptr_t)(Component*)&o.mDialog, 11, 12, yes); });
 }
 
+// ---- LobbyLogicMgr (logicmgr.rs, whole in Rust this round) against LobbyLogicMgr.cpp as it was at 207fb805f, over
+// stand-in logics and events (the LAN game never kills the logics nor clicks a menu item: those branches are here)
+namespace Mgr {
+using namespace WONAPI;
+enum { ComponentEvent_ButtonPressed = 15, ComponentEvent_ListItemUpClicked = 24 };
+struct ComponentConfig { int mId; };
+struct ComponentEvent {
+    int mType = 0;
+    int mControlId = 0;
+    virtual ~ComponentEvent() {}
+    int GetControlId() { Log("GetControlId " + N(this->mControlId)); return this->mControlId; }
+};
+struct ListItem : RefCount {};
+struct MenuItem : ListItem { int mMenuId = 0; };
+struct ListItemClickedEvent : ComponentEvent { SmartPtr<ListItem> mItem; int mButton = 0; };
+struct LobbyLogic;
+static void (*sOnControl)(LobbyLogic*, int);
+struct LobbyLogic : RefCount {
+    bool mThrowInit = false;
+    virtual ~LobbyLogic() {}
+    virtual void InitComponent(ComponentConfig* c)
+    {
+        Log("InitComponent " + Id(this) + " " + N(c->mId));
+        if (this->mThrowInit) throw std::runtime_error("config");
+    }
+    virtual void Reset() { Log("Reset " + Id(this)); }
+    virtual void HandleControlEvent(int i) { Log("HandleControlEvent " + Id(this) + " " + N(i)); if (sOnControl) sOnControl(this, i); }
+    virtual void HandleComponentEvent(ComponentEvent* e) { Log("HandleComponentEvent " + Id(this) + " " + N(e->mType)); }
+    void Kill() { Log("Kill " + Id(this)); }
+};
+
+// the original (LobbyLogicMgr.cpp at 207fb805f)
+class LobbyLogicMgr {
+public:
+    void AddLogic(LobbyLogic* logic);
+    void Init(ComponentConfig* config);
+    void Kill();
+    void DispatchControlEvent(int control);
+    void DispatchComponentEvent(ComponentEvent* event);
+    void DispatchTimerEvent();
+    void HandleComponentEvent(ComponentEvent* event);
+    typedef std::list<SmartPtr<LobbyLogic> > LogicList;
+    LogicList mLogicList;
+};
+void LobbyLogicMgr::AddLogic(LobbyLogic* logic)
+{
+    this->mLogicList.push_back(logic);
+}
+void LobbyLogicMgr::Init(ComponentConfig* config)
+{
+    LogicList::iterator itr=this->mLogicList.begin();
+    while(itr!=this->mLogicList.end()) {
+        (*itr)->InitComponent(config);
+        ++itr;
+    }
+}
+void LobbyLogicMgr::Kill()
+{
+    LogicList::iterator itr=this->mLogicList.begin();
+    while(itr!=this->mLogicList.end()) {
+        (*itr)->Kill();
+        ++itr;
+    }
+}
+void LobbyLogicMgr::DispatchControlEvent(int control)
+{
+    LogicList::iterator itr=this->mLogicList.begin();
+    while(itr!=this->mLogicList.end()) {
+        (*itr)->HandleControlEvent(control);
+        ++itr;
+    }
+}
+void LobbyLogicMgr::DispatchComponentEvent(ComponentEvent* event)
+{
+    LogicList::iterator itr=this->mLogicList.begin();
+    while(itr!=this->mLogicList.end()) {
+        (*itr)->HandleComponentEvent(event);
+        ++itr;
+    }
+}
+void LobbyLogicMgr::DispatchTimerEvent()
+{
+    LogicList::iterator itr=this->mLogicList.begin();
+    while(itr!=this->mLogicList.end()) {
+        (*itr)->Reset();
+        ++itr;
+    }
+}
+void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* event)
+{
+    switch(event->mType) {
+    default:
+        this->DispatchComponentEvent(event);
+        break;
+    case ComponentEvent_ListItemUpClicked: {
+        ListItemClickedEvent* click=static_cast<ListItemClickedEvent*>(event);
+        if(click->mItem.get()==NULL || click->mButton!=0) return;
+        MenuItem* menu=dynamic_cast<MenuItem*>(click->mItem.get());
+        if(menu!=NULL) this->DispatchControlEvent(menu->mMenuId);
+        break;
+    }
+    case ComponentEvent_ButtonPressed:
+        this->DispatchControlEvent(event->GetControlId());
+        break;
+    }
+}
+
+// the new host (LobbyLogicMgr.cpp's, as it is)
+static intptr_t LogicMgrHost(EeWonLogicMgrOp inOp, intptr_t a, intptr_t b)
+{
+    typedef EeWonLogicMgrOp Op;
+    if ((int)inOp + 100000 == sSkip) return 0;
+    LobbyLogic* aLogic = reinterpret_cast<LobbyLogic*>(a);
+    ListItemClickedEvent* aClick = static_cast<ListItemClickedEvent*>(reinterpret_cast<ComponentEvent*>(a));
+    switch (inOp) {
+    case Op::AddRef: aLogic->AddRef(); return 0;
+    case Op::Release: aLogic->Release(); return 0;
+    case Op::InitComponent: return WON_GUARDED_V(aLogic->InitComponent(reinterpret_cast<ComponentConfig*>(b)));
+    case Op::Kill: return WON_GUARDED_V(aLogic->Kill());
+    case Op::HandleControlEvent: return WON_GUARDED_V(aLogic->HandleControlEvent((int)b));
+    case Op::HandleComponentEvent: return WON_GUARDED_V(aLogic->HandleComponentEvent(reinterpret_cast<ComponentEvent*>(b)));
+    case Op::Reset: return WON_GUARDED_V(aLogic->Reset());
+    case Op::ClickItem: return (intptr_t)aClick->mItem.get();
+    case Op::ClickButton: return aClick->mButton;
+    case Op::IsMenuItem: return dynamic_cast<MenuItem*>(reinterpret_cast<ListItem*>(a)) != NULL ? 1 : 0;
+    case Op::MenuId: return dynamic_cast<MenuItem*>(reinterpret_cast<ListItem*>(a))->mMenuId;
+    case Op::ControlId: return reinterpret_cast<ComponentEvent*>(a)->GetControlId();
+    }
+    return 0;
+}
+// the new class's forwards (WONLobbyLogic.h's, as they are)
+struct NewMgr {
+    EeWonLogicMgr* mRust = ee_won_logicmgr_new(LogicMgrHost);
+    ~NewMgr() { ee_won_logicmgr_free(this->mRust); }
+    intptr_t Call(EeWonLogicMgrCall c, intptr_t a = 0, intptr_t b = 0) { return WonRethrow(ee_won_logicmgr_call(this->mRust, c, a, b)); }
+    void AddLogic(LobbyLogic* l) { this->Call(EeWonLogicMgrCall::AddLogic, (intptr_t)l); }
+    void Init(ComponentConfig* c) { this->Call(EeWonLogicMgrCall::Init, (intptr_t)c); }
+    void Kill() { this->Call(EeWonLogicMgrCall::Kill); }
+    void DispatchControlEvent(int i) { this->Call(EeWonLogicMgrCall::DispatchControlEvent, i); }
+    void DispatchComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::DispatchComponentEvent, (intptr_t)e); }
+    void DispatchTimerEvent() { this->Call(EeWonLogicMgrCall::DispatchTimerEvent); }
+    void HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::HandleComponentEvent, (intptr_t)e, e->mType); }
+};
+
+// one script over either manager: k picks the logics' count, the thrower and the late addition
+static LobbyLogic sLogics[5];
+static void* sMgr;
+static bool sMgrNew;
+static void AddLate(LobbyLogic* l, int i)
+{
+    if (i != 99 || l != &sLogics[0]) return;
+    if (sMgrNew) static_cast<NewMgr*>(sMgr)->AddLogic(&sLogics[4]);
+    else static_cast<LobbyLogicMgr*>(sMgr)->AddLogic(&sLogics[4]);
+}
+template <class M> static void Script(M& m, int k)
+{
+    int aCount = 1 + k % 4;
+    for (int i = 0; i < aCount; i++) m.AddLogic(&sLogics[i]);
+    ComponentConfig aConfig = {7};
+    try {
+        m.Init(&aConfig);
+        Log("init done");
+    } catch (std::exception& e) {
+        Log(std::string("init threw ") + e.what());
+    }
+    m.DispatchTimerEvent();
+    m.DispatchControlEvent(99); // logic 0 adds logic 4 here
+    ComponentEvent aPlain;
+    aPlain.mType = 3;
+    m.HandleComponentEvent(&aPlain);
+    ComponentEvent aButton;
+    aButton.mType = ComponentEvent_ButtonPressed;
+    aButton.mControlId = 200011;
+    m.HandleComponentEvent(&aButton);
+    // clicks: a menu item with the left button, the right button, no item, a list item that is no menu
+    MenuItem aMenu;
+    aMenu.mMenuId = 4321;
+    ListItem aRow;
+    for (int c = 0; c < 4; c++) {
+        ListItemClickedEvent aClick;
+        aClick.mType = ComponentEvent_ListItemUpClicked;
+        aClick.mItem = c == 2 ? NULL : c == 3 ? &aRow : static_cast<ListItem*>(&aMenu);
+        aClick.mButton = c == 1 ? 1 : 0;
+        m.HandleComponentEvent(&aClick);
+        aClick.mItem = NULL;
+    }
+    m.DispatchComponentEvent(&aPlain);
+    m.Kill();
+}
+static void RunMgr()
+{
+    for (int k = 0; k < 8; k++) {
+        std::vector<std::string> t[2];
+        for (int side = 0; side < 2; side++) {
+            for (int i = 0; i < 5; i++) {
+                sLogics[i].mId = 10 + i;
+                sLogics[i].mRefs = 0;
+                sLogics[i].mThrowInit = k >= 4 && i == 1;
+            }
+            sOnControl = AddLate;
+            sTrace.clear();
+            sMgrNew = side == 1;
+            if (side == 0) {
+                LobbyLogicMgr* m = new LobbyLogicMgr;
+                sMgr = m;
+                Script(*m, k);
+                delete m;
+            } else {
+                NewMgr* m = new NewMgr;
+                sMgr = m;
+                Script(*m, k);
+                delete m;
+            }
+            for (int i = 0; i < 5; i++) Log("after " + Id(&sLogics[i]));
+            t[side] = sTrace;
+        }
+        Compare("LobbyLogicMgr " + N(k), t[0], t[1]);
+    }
+    sOnControl = NULL;
+}
+}
+
 int main()
 {
     for (int i = 0; i < 700; i++) {
@@ -313,16 +540,19 @@ int main()
         gLobbyResources[i].mString = GUIString(d);
     }
     Run();
+    Mgr::RunMgr();
     int aReal = sFailures;
     printf("won_logic35_test: %d checks, %d mismatches\n", sChecks, aReal);
     std::vector<int> aSkips;
     for (int op = (int)Op::WmDefault; op <= (int)Op::OkCancelSetHeldText; op++) aSkips.push_back(op);
     aSkips.push_back((int)Op::AddRefWindow);
+    for (int op = (int)EeWonLogicMgrOp::AddRef; op <= (int)EeWonLogicMgrOp::ControlId; op++) aSkips.push_back(op + 100000);
     int aCaught = 0;
     for (int s : aSkips) {
         sSkip = s;
         sFailures = 0;
         Run();
+        Mgr::RunMgr();
         if (sFailures > 0) aCaught++;
         else printf("skip of op %d not caught\n", s);
     }

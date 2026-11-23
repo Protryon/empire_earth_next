@@ -15,7 +15,6 @@
 //! Reach: every LAN game (the logics' init, the button and menu events, the timer, the kill at the lobby's end).
 
 use std::cell::RefCell;
-use std::ffi::c_void;
 
 use crate::lobbyprv::EE_WON_LOBBY_THROWN;
 

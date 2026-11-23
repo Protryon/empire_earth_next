@@ -383,11 +383,11 @@ impl EeWonCfgVal {
             Kind::U16(p, _) => format_i64(unsafe { *p } as i64, out),
             Kind::Int(p, _) => format_i64(unsafe { *p } as i64, out),
             Kind::Str(t, _) => {
-                h(O::StrOut, t, sink_vec as EeWonByteSink as isize, ctx(out), 0);
+                h(O::StrOut, t, sink_vec as EeWonByteSink as usize as isize, ctx(out), 0);
             }
             Kind::WStr(t, _) => {
                 let mut w: Vec<WChar> = Vec::new();
-                h(O::WStrOut, t, sink_units as EeWonCfgValUnits as isize, ctx(&mut w), 0);
+                h(O::WStrOut, t, sink_units as EeWonCfgValUnits as usize as isize, ctx(&mut w), 0);
                 // `s += WStringToString(v)`
                 out.extend_from_slice(&ee_won_net::titleobj::narrow(&w));
             }
@@ -395,7 +395,7 @@ impl EeWonCfgVal {
             Kind::StrList(t, ..) => {
                 let n = h(O::ListCount, t, 0, 0, 0);
                 for i in 0..n {
-                    h(O::ListOut, t, i, sink_vec as EeWonByteSink as isize, ctx(out));
+                    h(O::ListOut, t, i, sink_vec as EeWonByteSink as usize as isize, ctx(out));
                     if i + 1 < n {
                         out.extend_from_slice(b", ");
                     }

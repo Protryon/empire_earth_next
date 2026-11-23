@@ -115,8 +115,10 @@ mod tests {
     use super::*;
     use std::cell::RefCell;
 
+    type Entry = (Op, isize, isize, isize);
+
     thread_local! {
-        static LOG: RefCell<Vec<(Op, isize, isize, isize)>> = const { RefCell::new(Vec::new()) };
+        static LOG: RefCell<Vec<Entry>> = const { RefCell::new(Vec::new()) };
     }
 
     fn world(op: Op, a: isize, b: isize, c: isize, _d: isize) -> isize {
@@ -133,7 +135,7 @@ mod tests {
         }
     }
 
-    fn run(op: Op, a: isize, b: isize, c: isize, d: isize) -> (Option<isize>, Vec<(Op, isize, isize, isize)>) {
+    fn run(op: Op, a: isize, b: isize, c: isize, d: isize) -> (Option<isize>, Vec<Entry>) {
         LOG.with(|l| l.borrow_mut().clear());
         let r = dlg_op(op, a, b, c, d, &world);
         (r, LOG.with(|l| l.borrow().clone()))

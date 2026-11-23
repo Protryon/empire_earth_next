@@ -87,7 +87,9 @@ fn read(v: *mut EeWonCfgVal, text: &[u8]) -> (bool, i32) {
 
 fn write(v: *mut EeWonCfgVal) -> String {
     let mut out: Vec<u8> = Vec::new();
-    unsafe { ee_won_cfgval_call(v, EeWonCfgValCall::Write, sink_vec as EeWonByteSink as isize, ctx(&mut out)) };
+    unsafe {
+        ee_won_cfgval_call(v, EeWonCfgValCall::Write, sink_vec as EeWonByteSink as usize as isize, ctx(&mut out))
+    };
     String::from_utf8(out).unwrap()
 }
 
