@@ -263,10 +263,13 @@ pub mod frame;
 #[cfg(not(test))]
 mod frame_ffi;
 pub mod game_actions;
+#[cfg(test)]
+mod game_actions_cpp_consts_tests;
 #[cfg(not(test))]
 mod game_actions_ffi;
 #[cfg(test)]
 mod game_actions_golden;
+pub mod game_actions_host;
 #[cfg(test)]
 mod game_actions_tests;
 // the moved C++ host cases (UI lane round 7) and their one-statement C++ shims

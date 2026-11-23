@@ -140,6 +140,8 @@ pub mod tech_hooks;
 //
 
 // ---- round 12, fork A: the Graphics Thread and the Map (EECore11OpA)
+#[cfg(test)]
+mod cpp_consts_tests;
 //
 //
 

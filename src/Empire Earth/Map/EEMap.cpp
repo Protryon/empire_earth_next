@@ -279,7 +279,7 @@ bool EEPlayer::IsAlliedWith(EEPlayer* inPlayer)
 // ------------------------------------------------------------------------- round 9, lane B: the map's bodies' C++
 
 
-static_assert(kUnitTypeCameraObject == 0x167, "gamecpp map.rs");
+// (its constants are checked against the headers by gamecpp cpp_consts_tests.rs)
 static_assert(sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GE2DPoint) == sizeof(EeGe2DPoint), "gamecpp map.rs: the values by address");
 
 #define P64(x) ((int64_t)(intptr_t)(x))

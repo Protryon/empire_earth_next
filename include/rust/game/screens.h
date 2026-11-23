@@ -8903,6 +8903,320 @@ constexpr static const int64_t EE_SCREENS_GA_IDS_GAME_NAME_IS_INVALID = 10005;
 
 constexpr static const int64_t EE_SCREENS_GA_IDS_GAME_NAME_EXISTS = 10010;
 
+constexpr static const uint32_t EE_SCREENS_GAH_U_LOC_X = ((EE_SCREENS_GA_OP_UNIT << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_U_LOC_Y = ((EE_SCREENS_GA_OP_UNIT << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_G_BOUNDS = ((EE_SCREENS_GA_OP_GROUP << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_P_EVENT = ((EE_SCREENS_GA_OP_PLAYER << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_P_EVENT_X = ((EE_SCREENS_GA_OP_PLAYER << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_P_EVENT_Y = ((EE_SCREENS_GA_OP_PLAYER << 8) | 102);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FS_SET = ((EE_SCREENS_GA_OP_FIRST_SELECTED << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FS_CALL = ((EE_SCREENS_GA_OP_FIRST_SELECTED << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FS_GET = ((EE_SCREENS_GA_OP_FIRST_SELECTED << 8) | 102);
+
+constexpr static const uint32_t EE_SCREENS_GAH_PT_SET_TILE = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_PT_SET_X = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_PT_SET_Y = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 102);
+
+constexpr static const uint32_t EE_SCREENS_GAH_PT_CALL = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 103);
+
+constexpr static const uint32_t EE_SCREENS_GAH_PT_TILE = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 104);
+
+constexpr static const uint32_t EE_SCREENS_GAH_PT_X = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 105);
+
+constexpr static const uint32_t EE_SCREENS_GAH_PT_Y = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 106);
+
+constexpr static const uint32_t EE_SCREENS_GAH_T_FIRST = ((EE_SCREENS_GA_OP_TILE << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_T_NEXT = ((EE_SCREENS_GA_OP_TILE << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_T_NODE_UNIT = ((EE_SCREENS_GA_OP_TILE << 8) | 102);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FD_CLEAR = ((EE_SCREENS_GA_OP_FARM_DROP_SITES << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FD_FILL = ((EE_SCREENS_GA_OP_FARM_DROP_SITES << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FD_SIZE = ((EE_SCREENS_GA_OP_FARM_DROP_SITES << 8) | 102);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FD_FIRST_ID = ((EE_SCREENS_GA_OP_FARM_DROP_SITES << 8) | 103);
+
+constexpr static const uint32_t EE_SCREENS_GAH_M_TILE_PTR = ((EE_SCREENS_GA_OP_MAP << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_M_TILE_HEIGHT = ((EE_SCREENS_GA_OP_MAP << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_M_CLOSEST = ((EE_SCREENS_GA_OP_MAP << 8) | 102);
+
+constexpr static const uint32_t EE_SCREENS_GAH_M_PLANE = ((EE_SCREENS_GA_OP_MAP << 8) | 103);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FX_CREATE = ((EE_SCREENS_GA_OP_EFFECT << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_FX_LOCAL = ((EE_SCREENS_GA_OP_EFFECT << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_K_CLASS = ((EE_SCREENS_GA_OP_TECH << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_K_CLASS_TILE_SIZE = ((EE_SCREENS_GA_OP_TECH << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_A_SCREEN_TO_WORLD = ((EE_SCREENS_GA_OP_CALAMITY << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_A_TRANSFORM = ((EE_SCREENS_GA_OP_CALAMITY << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_CAM_SET_ZOOM = ((EE_SCREENS_GA_OP_CAMERA << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_CAM_SET_MODE = ((EE_SCREENS_GA_OP_CAMERA << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_CAM_MOVE_TO = ((EE_SCREENS_GA_OP_CAMERA << 8) | 102);
+
+constexpr static const uint32_t EE_SCREENS_GAH_CAM_UPDATE = ((EE_SCREENS_GA_OP_CAMERA << 8) | 103);
+
+/// The lobby's chat box (a `UITextLabel*`); `p` a chat box: `mText` appended, its scroll bar, its slider's maximum
+/// and current value, its starting display line set to i1.
+constexpr static const uint32_t EE_SCREENS_GAH_N_CHAT = ((EE_SCREENS_GA_OP_NET << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CHAT_APPEND = ((EE_SCREENS_GA_OP_NET << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CHAT_BAR = ((EE_SCREENS_GA_OP_NET << 8) | 102);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CHAT_MAX = ((EE_SCREENS_GA_OP_NET << 8) | 103);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CHAT_CURRENT = ((EE_SCREENS_GA_OP_NET << 8) | 104);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CHAT_START_LINE = ((EE_SCREENS_GA_OP_NET << 8) | 105);
+
+/// `gWonNet` set; its game list cleared; its room rejoined.
+constexpr static const uint32_t EE_SCREENS_GAH_N_WON = ((EE_SCREENS_GA_OP_NET << 8) | 106);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_WON_CLEAR = ((EE_SCREENS_GA_OP_NET << 8) | 107);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_WON_REJOIN = ((EE_SCREENS_GA_OP_NET << 8) | 108);
+
+/// The string i1 into the kept message; the kept message shown (i2 set: closing it restarts the client).
+constexpr static const uint32_t EE_SCREENS_GAH_N_STRING = ((EE_SCREENS_GA_OP_NET << 8) | 109);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SHOW = ((EE_SCREENS_GA_OP_NET << 8) | 110);
+
+/// The `EEServer` paused, unpaused; the UI told the pause (i1); `mUserPaused` = i1.
+constexpr static const uint32_t EE_SCREENS_GAH_N_PAUSE = ((EE_SCREENS_GA_OP_NET << 8) | 111);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_UNPAUSE = ((EE_SCREENS_GA_OP_NET << 8) | 112);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_POST_PAUSE = ((EE_SCREENS_GA_OP_NET << 8) | 113);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SET_USER_PAUSED = ((EE_SCREENS_GA_OP_NET << 8) | 114);
+
+/// `gCommunications` deleted; cleared.
+constexpr static const uint32_t EE_SCREENS_GAH_N_DELETE = ((EE_SCREENS_GA_OP_NET << 8) | 115);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CLEAR = ((EE_SCREENS_GA_OP_NET << 8) | 116);
+
+/// A new client; its threads started; a new server for `mGameName` (i1: published to WON); its threads started.
+constexpr static const uint32_t EE_SCREENS_GAH_N_NEW_CLIENT = ((EE_SCREENS_GA_OP_NET << 8) | 117);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CLIENT_START = ((EE_SCREENS_GA_OP_NET << 8) | 118);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_NEW_SERVER = ((EE_SCREENS_GA_OP_NET << 8) | 119);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SERVER_START = ((EE_SCREENS_GA_OP_NET << 8) | 120);
+
+/// `gPlayerName` = `mPlayerName`; the host game name setting = `mGameName`.
+constexpr static const uint32_t EE_SCREENS_GAH_N_PLAYER_NAME = ((EE_SCREENS_GA_OP_NET << 8) | 121);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_HOST_NAME = ((EE_SCREENS_GA_OP_NET << 8) | 122);
+
+/// The game options' write lock; the last game options copied; multiplayer; no cheats; the unlock.
+constexpr static const uint32_t EE_SCREENS_GAH_N_OPT_LOCK = ((EE_SCREENS_GA_OP_NET << 8) | 123);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_OPT_COPY = ((EE_SCREENS_GA_OP_NET << 8) | 124);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_OPT_MULTI = ((EE_SCREENS_GA_OP_NET << 8) | 125);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_OPT_NO_CHEATS = ((EE_SCREENS_GA_OP_NET << 8) | 126);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_OPT_UNLOCK = ((EE_SCREENS_GA_OP_NET << 8) | 127);
+
+/// `PlatSleep(i1)`; the string i1 into the kept format; the kept message printed from it with `mText`, with
+/// `mGameName`; the kept message as a chat log line.
+constexpr static const uint32_t EE_SCREENS_GAH_N_SLEEP = ((EE_SCREENS_GA_OP_NET << 8) | 128);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_FORMAT = ((EE_SCREENS_GA_OP_NET << 8) | 129);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_PRINT_TEXT = ((EE_SCREENS_GA_OP_NET << 8) | 130);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_PRINT_GAME = ((EE_SCREENS_GA_OP_NET << 8) | 131);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CHAT_LOG = ((EE_SCREENS_GA_OP_NET << 8) | 132);
+
+/// The kept address = `mGameName`, = `mName`; `SearchForGame(false)`; `Connect(address, "EEService", "")`.
+constexpr static const uint32_t EE_SCREENS_GAH_N_ADDRESS_GAME = ((EE_SCREENS_GA_OP_NET << 8) | 133);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_ADDRESS_NAME = ((EE_SCREENS_GA_OP_NET << 8) | 134);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SEARCH_OFF = ((EE_SCREENS_GA_OP_NET << 8) | 135);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CONNECT = ((EE_SCREENS_GA_OP_NET << 8) | 136);
+
+/// The connection request (i1 the firewall flag); `p` (a message) sent as the start-connect message; `p` given as
+/// local user input.
+constexpr static const uint32_t EE_SCREENS_GAH_N_NEW_REQUEST = ((EE_SCREENS_GA_OP_NET << 8) | 137);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SEND_START = ((EE_SCREENS_GA_OP_NET << 8) | 138);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_INPUT = ((EE_SCREENS_GA_OP_NET << 8) | 139);
+
+/// The screen event i1; the lobby's open event `p`; `p` dereferenced.
+constexpr static const uint32_t EE_SCREENS_GAH_N_EVENT = ((EE_SCREENS_GA_OP_NET << 8) | 140);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_OPEN_EVENT = ((EE_SCREENS_GA_OP_NET << 8) | 141);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_EVENT_RELEASE = ((EE_SCREENS_GA_OP_NET << 8) | 142);
+
+/// The Sierra user id setting = `mPlayerName`.
+constexpr static const uint32_t EE_SCREENS_GAH_N_SIERRA_ID = ((EE_SCREENS_GA_OP_NET << 8) | 143);
+
+/// The migration's begin: `mText`, `mGameName`, `mName` emptied; the owed ticks run; the client migrating.
+constexpr static const uint32_t EE_SCREENS_GAH_N_CLEAR_TEXT = ((EE_SCREENS_GA_OP_NET << 8) | 144);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CLEAR_GAME_NAME = ((EE_SCREENS_GA_OP_NET << 8) | 145);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CLEAR_NAME = ((EE_SCREENS_GA_OP_NET << 8) | 146);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_RUN_OWED = ((EE_SCREENS_GA_OP_NET << 8) | 147);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CLIENT_MIGRATING = ((EE_SCREENS_GA_OP_NET << 8) | 148);
+
+/// Player i1's slot, firewall flag, human flag, is the current player.
+constexpr static const uint32_t EE_SCREENS_GAH_N_PLAYER_SLOT = ((EE_SCREENS_GA_OP_NET << 8) | 149);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_PLAYER_FIREWALL = ((EE_SCREENS_GA_OP_NET << 8) | 150);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_PLAYER_HUMAN = ((EE_SCREENS_GA_OP_NET << 8) | 151);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_PLAYER_CURRENT = ((EE_SCREENS_GA_OP_NET << 8) | 152);
+
+/// Player i1's active group cleared; the current player's selection copied into its active group; the client's fast
+/// selection reset.
+constexpr static const uint32_t EE_SCREENS_GAH_N_ACTIVE_CLEAR = ((EE_SCREENS_GA_OP_NET << 8) | 153);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_COPY_SELECTION = ((EE_SCREENS_GA_OP_NET << 8) | 154);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_RESET_FAST = ((EE_SCREENS_GA_OP_NET << 8) | 155);
+
+/// `mText` = player i1's name; `mName` = its human name; `mGameName` = its name.
+constexpr static const uint32_t EE_SCREENS_GAH_N_KEEP_TEXT = ((EE_SCREENS_GA_OP_NET << 8) | 156);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_KEEP_HUMAN = ((EE_SCREENS_GA_OP_NET << 8) | 157);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_KEEP_GAME_NAME = ((EE_SCREENS_GA_OP_NET << 8) | 158);
+
+/// The CTs processed in the physics; the physics' current tick; the client's fast selection id.
+constexpr static const uint32_t EE_SCREENS_GAH_N_CTS = ((EE_SCREENS_GA_OP_NET << 8) | 159);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CURRENT_TICK = ((EE_SCREENS_GA_OP_NET << 8) | 160);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_FAST_ID = ((EE_SCREENS_GA_OP_NET << 8) | 161);
+
+/// The promoted host: the "Migrated Server" (ticks i1, i2); the server messages cleared; a multiplayer session; the
+/// current player sent to the server's slot; its slot 0xfe; the fast selection id i1; migrating.
+constexpr static const uint32_t EE_SCREENS_GAH_N_NEW_MIGRATED = ((EE_SCREENS_GA_OP_NET << 8) | 162);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_CLEAR_SERVER_MESSAGES = ((EE_SCREENS_GA_OP_NET << 8) | 163);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_MULTI_SESSION = ((EE_SCREENS_GA_OP_NET << 8) | 164);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SEND_TO_SERVER = ((EE_SCREENS_GA_OP_NET << 8) | 165);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SLOT_FE = ((EE_SCREENS_GA_OP_NET << 8) | 166);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SERVER_FAST_ID = ((EE_SCREENS_GA_OP_NET << 8) | 167);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_SERVER_MIGRATING = ((EE_SCREENS_GA_OP_NET << 8) | 168);
+
+/// The server's reconnect wait timed out; its wait for i1 players started.
+constexpr static const uint32_t EE_SCREENS_GAH_N_WAIT_TIMED_OUT = ((EE_SCREENS_GA_OP_NET << 8) | 169);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_WAIT_START = ((EE_SCREENS_GA_OP_NET << 8) | 170);
+
+/// The last tick received -2; my send-to slot none; the reconnection request (the tick, the player).
+constexpr static const uint32_t EE_SCREENS_GAH_N_LAST_TICK = ((EE_SCREENS_GA_OP_NET << 8) | 171);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_MY_SLOT_NONE = ((EE_SCREENS_GA_OP_NET << 8) | 172);
+
+constexpr static const uint32_t EE_SCREENS_GAH_N_NEW_RECONNECT = ((EE_SCREENS_GA_OP_NET << 8) | 173);
+
+/// The improvement applied to the unit `p` (i1: lowered); its unit tab shown; the help string updated.
+constexpr static const uint32_t EE_SCREENS_GAH_E_APPLY_IMPROVEMENT = ((EE_SCREENS_GA_OP_EDITOR << 8) | 100);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_SHOW_UNIT = ((EE_SCREENS_GA_OP_EDITOR << 8) | 101);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_HELP = ((EE_SCREENS_GA_OP_EDITOR << 8) | 102);
+
+/// Player list entry i1's civilization file applied; its start epoch posted (406).
+constexpr static const uint32_t EE_SCREENS_GAH_E_APPLY_CIV = ((EE_SCREENS_GA_OP_EDITOR << 8) | 103);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_POST406 = ((EE_SCREENS_GA_OP_EDITOR << 8) | 104);
+
+/// The master volume, the music volume into f0; each set to f0; the physics' owed ticks cleared.
+constexpr static const uint32_t EE_SCREENS_GAH_E_MASTER = ((EE_SCREENS_GA_OP_EDITOR << 8) | 105);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_MUSIC = ((EE_SCREENS_GA_OP_EDITOR << 8) | 106);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_SET_MASTER = ((EE_SCREENS_GA_OP_EDITOR << 8) | 107);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_SET_MUSIC = ((EE_SCREENS_GA_OP_EDITOR << 8) | 108);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_NO_OWED = ((EE_SCREENS_GA_OP_EDITOR << 8) | 109);
+
+/// The synchronous server paused, unpaused.
+constexpr static const uint32_t EE_SCREENS_GAH_E_PAUSE = ((EE_SCREENS_GA_OP_EDITOR << 8) | 110);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_UNPAUSE = ((EE_SCREENS_GA_OP_EDITOR << 8) | 111);
+
+/// A new file spec; `p`'s volume the start-up volume; its directory data\Scenarios; its file `EEQuickSave<mName>`,
+/// `mFileName`; the saved game loaded from it (non-zero: failed); deleted.
+constexpr static const uint32_t EE_SCREENS_GAH_E_NEW_SPEC = ((EE_SCREENS_GA_OP_EDITOR << 8) | 112);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_SPEC_VOLUME = ((EE_SCREENS_GA_OP_EDITOR << 8) | 113);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_SPEC_DIRECTORY = ((EE_SCREENS_GA_OP_EDITOR << 8) | 114);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_SPEC_QUICK = ((EE_SCREENS_GA_OP_EDITOR << 8) | 115);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_SPEC_FILE_NAME = ((EE_SCREENS_GA_OP_EDITOR << 8) | 116);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_LOAD = ((EE_SCREENS_GA_OP_EDITOR << 8) | 117);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_DELETE_SPEC = ((EE_SCREENS_GA_OP_EDITOR << 8) | 118);
+
+/// A new memory file; `mFileName` the quick save's text name; the save written into `p`.
+constexpr static const uint32_t EE_SCREENS_GAH_E_NEW_MEMORY = ((EE_SCREENS_GA_OP_EDITOR << 8) | 119);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_TEXT_NAME = ((EE_SCREENS_GA_OP_EDITOR << 8) | 120);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_WRITE = ((EE_SCREENS_GA_OP_EDITOR << 8) | 121);
+
+/// The spec `p` created; opened for writing (1: opened); the memory file `p` saved into the spec i1; `p` closed.
+constexpr static const uint32_t EE_SCREENS_GAH_E_CREATE = ((EE_SCREENS_GA_OP_EDITOR << 8) | 122);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_OPEN = ((EE_SCREENS_GA_OP_EDITOR << 8) | 123);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_SAVE_INTO = ((EE_SCREENS_GA_OP_EDITOR << 8) | 124);
+
+constexpr static const uint32_t EE_SCREENS_GAH_E_CLOSE = ((EE_SCREENS_GA_OP_EDITOR << 8) | 125);
+
+constexpr static const int64_t EE_SCREENS_GA_IDS_HOST_IS_GONE = 30608;
+
+constexpr static const int64_t EE_SCREENS_GA_IDS_YOU_ARE_BEING_PROMOTED_TO_HOST = 30610;
+
+constexpr static const int64_t EE_SCREENS_GA_IDS_ATTEMPTING_TO_CONNECT_TO_NEW_HOST = 30611;
+
 /// The sound manager and the mixer's conductor (`gSoundManager`, `&gConductor->GetConductor()`).
 constexpr static const uint32_t EE_SCREENS_VIEW_SOUND = 0;
 

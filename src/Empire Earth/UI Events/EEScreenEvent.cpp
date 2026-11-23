@@ -12,22 +12,18 @@
 
 UIEvent* EECreateScreenEvent(unsigned long inEvent)
 {
-    if (inEvent == 0)
-        return NULL;
-    return new EEScreenEvent(inEvent);
+    return inEvent == 0 ? NULL : static_cast<UIEvent*>(new EEScreenEvent(inEvent));
 }
 
 // The screens' events for ee_screens toolkit.rs (its event group): 0 a new event of the code, 1 the event's
 // Reference, 2 its Dereference
 extern "C" void* ee_screenscpp_event(uint32_t inOp, void* inEvent, uint32_t inCode)
 {
-    if (inOp == 0)
-        return EECreateScreenEvent(inCode);
-    if (inOp == 1)
-        static_cast<UIEvent*>(inEvent)->Reference();
-    else
-        static_cast<UIEvent*>(inEvent)->Dereference();
-    return NULL;
+    switch (inOp) {
+    case 0: return EECreateScreenEvent(inCode);
+    case 1: static_cast<UIEvent*>(inEvent)->Reference(); return NULL;
+    default: static_cast<UIEvent*>(inEvent)->Dereference(); return NULL;
+    }
 }
 
 // A form's grab scroll event (0 the main game form's, 1 the scenario editor's), its record fresh
