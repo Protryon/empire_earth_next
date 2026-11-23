@@ -143,7 +143,8 @@ pub enum EeWonEeGameOp {
     NumMapTypes,
     /// `EELobbySetDefaultGameOptions(this)`.
     SetDefaultOptions,
-    /// `EELobbyGetVersion(version, *(uint32_t*)a)`: the version as a new `GUIStringData` with one reference.
+    /// `EELobbyGetVersion(version, *(uint32_t*)a)`: the version as a new `GUIStringData` with one reference (in the
+    /// game eesplit.rs's VersionTextNew, AddRef and VersionChecksum).
     Version,
     /// `GUIString(a) == GUIString(b)` (0: the empty string).
     StringsEqual,
@@ -186,6 +187,11 @@ pub enum EeWonEeGameOp {
     TransferHostFromGame,
     /// `a->mHost.SetPort(b)`.
     TransferHostSetPort,
+    // R6 WON round 35: EELobbyGetVersion's statements (eesplit.rs composes Version)
+    /// `new GUIStringData(StringToWString(std::string(gGameVersion), -1))` (EELobbyToGUIString's text; no reference).
+    VersionTextNew,
+    /// `gBinaryChecksum`.
+    VersionChecksum,
 }
 
 /// The host: `(game, op, a, b, c, d) -> result`.

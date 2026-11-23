@@ -16,6 +16,7 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
+#include "ee/EmpireEarth.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
@@ -73,13 +74,7 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
     AsyncOp* anOp = reinterpret_cast<AsyncOp*>(a);
     QueueSocket* aSocket = static_cast<QueueSocket*>(reinterpret_cast<AsyncSocket*>(a));
     switch (inOp) {
-    case Op::SavedGameInfo: {
-        unsigned long aSize = *reinterpret_cast<uint32_t*>(b), aChecksum = *reinterpret_cast<uint32_t*>(c);
-        EELobbyGetSavedGameInfo(reinterpret_cast<const char*>(a), aSize, aChecksum);
-        *reinterpret_cast<uint32_t*>(b) = (uint32_t)aSize;
-        *reinterpret_cast<uint32_t*>(c) = (uint32_t)aChecksum;
-        return 0;
-    }
+    case Op::SavedGameInfo: EELobbyGetSavedGameInfo(reinterpret_cast<const char*>(a), *reinterpret_cast<uint32_t*>(b), *reinterpret_cast<uint32_t*>(c)); return 0;
     case Op::Time: return (intptr_t)(uint32_t)(unsigned long)PlatTimeMilliseconds64();
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
     case Op::GameProgress:
@@ -274,15 +269,9 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::FileTransferPort: return EELobbyGetFileTransferPort();
     case Op::NumMapTypes: return (intptr_t)EELobbyGetNumMapTypes();
     case Op::SetDefaultOptions: EELobbySetDefaultGameOptions(aGame); return 0;
-    case Op::Version: {
-        GUIString aVersion(GetEmptyGUIStringData());
-        unsigned long aChecksum;
-        EELobbyGetVersion(aVersion, aChecksum);
-        *reinterpret_cast<uint32_t*>(a) = (uint32_t)aChecksum;
-        GUIStringData* aData = aVersion.mData.get();
-        aData->AddRef();
-        return (intptr_t)aData;
-    }
+    // EELobbyGetVersion's statements (eesplit.rs composes Version, R6 WON round 35): the text EELobbyToGUIString makes
+    case Op::VersionTextNew: return (intptr_t) new GUIStringData(StringToWString(std::string(gGameVersion), -1));
+    case Op::VersionChecksum: return (intptr_t)gBinaryChecksum;
     case Op::StringsEqual: return EELobbyStr(a) == EELobbyStr(b) ? 1 : 0;
     case Op::TransferNew: return (intptr_t) new EELobbyFileTransfer;
     case Op::TransferSetSavesPath: {

@@ -95,18 +95,6 @@ using namespace WONAPI;
 
 extern EEGameOptions& gLobbyGameOptions;    // 0x93030c (the lobby defaults; as EEGameOptions.cpp declares it)
 extern char gEmptyString[];                 // 0x8e5b98 (pooled ""; as EEWonNet.cpp declares it)
-void EELobbyShow(bool inFlag);
-void EELobbyHide();
-void EELobbyJoinGame();
-void EELobbyStartHostedGame();
-void EELobbyShowGameScreen();
-void EELobbyRunSierraUpdate();
-void EELobbyPostAction(void (*inFunc)());
-void EELobbyOpen();
-void EELobbyPostReturnFromGame();
-bool EEIsLobbyOpen();
-bool EELobbyIsShown();
-UWideString EELobbyToWideString(const GUIString& inText);
 
 typedef EeWonEeGlueCall GL;
 static intptr_t Glue(GL inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0) { return ee_won_eeglue_call(inCall, a, b, c); }
@@ -160,25 +148,12 @@ static intptr_t ColorHost(void*, EeWonEeColorOp inOp, intptr_t a, intptr_t b, in
     case Op::DrawRect: g->DrawRect((int)b, (int)c, (int)d, (int)e); return 0;
     case Op::Draw3DFrame: LobbyDraw3DFrame(*g, (int)b, (int)c, (int)d, (int)e, f != 0); return 0;
     case Op::DrawFrame: LobbyDrawFrame(*g, (int)b, (int)c, (int)d, (int)e, f != 0); return 0;
-    case Op::ChooserNew: {
-        EELobbyColorChooser* aNew = new EELobbyColorChooser;
-        aNew->AddRef();
-        return (intptr_t)aNew;
-    }
     case Op::ChooserRust: return (intptr_t)reinterpret_cast<EELobbyColorChooser*>(a)->mRust;
     case Op::SetDesiredSize: aComp->SetDesiredSize((int)b, (int)c); return 0;
     case Op::AddListener: aComp->AddListener(new ComponentListenerComp(reinterpret_cast<Component*>(b))); return 0;
     case Op::Parent: return (intptr_t)aComp->mParent;
     case Op::ClosePopup: aComp->GetRoot()->ClosePopup(reinterpret_cast<Component*>(b)); return 0;
     case Op::LocalToRoot: aComp->LocalToRoot(*reinterpret_cast<int*>(b), *reinterpret_cast<int*>(c)); return 0;
-    case Op::OpenPopup: {
-        PopupParams theParams(reinterpret_cast<Component*>(b), 0x23e7, aComp, (int)c, (int)d);
-        theParams.mAvoidRect.height = aComp->Height();
-        theParams.mAvoidRect.y = (int)d - aComp->Height();
-        theParams.mInputComponent = aComp;
-        aComp->GetRoot()->OpenPopup(theParams);
-        return 0;
-    }
     case Op::FireColorChanged: aComp->Fn2F5380(100064, 0); return 0;
     case Op::BaseEvent: reinterpret_cast<Button*>(a)->Button::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(b)); return 0;
     case Op::BaseAddedToParent: aComp->Component::AddedToParent(); return 0;
@@ -186,6 +161,15 @@ static intptr_t ColorHost(void*, EeWonEeColorOp inOp, intptr_t a, intptr_t b, in
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
     case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->mRust;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
+    // the statements of ChooserNew and OpenPopup (eecolor.rs composes them, R6 WON round 35)
+    case Op::ChooserAlloc: return (intptr_t) new EELobbyColorChooser;
+    case Op::ChooserAddRef: reinterpret_cast<EELobbyColorChooser*>(a)->AddRef(); return 0;
+    case Op::PopupNew: return (intptr_t) new PopupParams(reinterpret_cast<Component*>(b), 0x23e7, aComp, (int)c, (int)d);
+    case Op::PopupAvoidHeight: reinterpret_cast<PopupParams*>(b)->mAvoidRect.height = (int)c; return 0;
+    case Op::PopupAvoidY: reinterpret_cast<PopupParams*>(b)->mAvoidRect.y = (int)c; return 0;
+    case Op::PopupInput: reinterpret_cast<PopupParams*>(b)->mInputComponent = aComp; return 0;
+    case Op::PopupOpen: aComp->GetRoot()->OpenPopup(*reinterpret_cast<PopupParams*>(b)); return 0;
+    case Op::PopupFree: delete reinterpret_cast<PopupParams*>(b); return 0;
     }
     return 0;
 }
@@ -292,73 +276,8 @@ struct EELobbySavedGame {
     FSFileSpec mSpec;
 };
 
-static long OptionsField(const EEGameOptions& o, EeWonEeGlueField inField)
-{
-    typedef EeWonEeGlueField F;
-    unsigned long aIndex = 0;
-    switch (inField) {
-    case F::MapTypeIndex: EERMFindGenerator(o.mMapType, aIndex); return (long)aIndex;
-    case F::MapSize: return o.mMapSize;
-    case F::Resources: return o.mResources;
-    case F::EpochStart: return o.mEpochStart;
-    case F::EpochEnd: return o.mEpochEnd;
-    case F::Variant: return o.mVariant;
-    case F::Difficulty: return o.mDifficulty;
-    case F::GameSpeed: return o.mGameSpeed;
-    case F::UnitLimit: return o.mUnitLimit;
-    case F::WondersForVictory: return o.mWondersForVictory;
-    case F::RevealMap: return o.mRevealMap;
-    case F::AllowCustomCivs: return o.mAllowCustomCivs;
-    case F::LockTeams: return o.mLockTeams;
-    case F::LockSpeed: return o.mLockSpeed;
-    case F::Victory: return o.mVictory;
-    default: return 0;
-    }
-}
-
-static void OptionSet(EeWonEeGlueField inField, long v)
-{
-    typedef EeWonEeGlueField F;
-    EEGameOptions& o = gGameOptions;
-    switch (inField) {
-    case F::LoadType: o.mLoadType = v; return;
-    case F::MapSize: o.mMapSize = v; return;
-    case F::Resources: o.mResources = v; return;
-    case F::EpochStart: o.mEpochStart = v; return;
-    case F::EpochEnd: o.mEpochEnd = v; return;
-    case F::Variant: o.mVariant = v; return;
-    case F::Difficulty: o.mDifficulty = v; return;
-    case F::GameSpeed: o.mGameSpeed = v; return;
-    case F::UnitLimit: o.mUnitLimit = v; return;
-    case F::WondersForVictory: o.mWondersForVictory = v; return;
-    case F::RevealMap: o.mRevealMap = v != 0; return;
-    case F::AllowCustomCivs: o.mAllowCustomCivs = v != 0; return;
-    case F::LockTeams: o.mLockTeams = v != 0; return;
-    case F::LockSpeed: o.mLockSpeed = v != 0; return;
-    case F::Victory: o.mVictory = v != 0; return;
-    default: return;
-    }
-}
-
-static long PlayerField(EEGameOptionsPlayer& p, EeWonEeGlueField inField, bool inSet, long v)
-{
-    typedef EeWonEeGlueField F;
-    switch (inField) {
-    case F::Type: if (inSet) p.mType = v; return (long)p.mType;
-    case F::LoadedType: if (inSet) p.mLoadedType = v; return p.mLoadedType;
-    case F::Slot: if (inSet) p.mSlot = v; return (long)p.mSlot;
-    case F::Color: if (inSet) p.mColor = v; return (long)p.mColor;
-    case F::Team: if (inSet) p.mTeam = v; return (long)p.mTeam;
-    case F::StartingCitizens: if (inSet) p.mStartingCitizens = v; return (long)p.mStartingCitizens;
-    case F::IsLocal: if (inSet) p.mIsLocal = v != 0; return p.mIsLocal;
-    case F::IsReady: if (inSet) p.mIsReady = v != 0; return p.mIsReady;
-    case F::B36: if (inSet) p.mB36 = v != 0; return p.mB36;
-    case F::NameEmpty: return p.mName == "" ? 1 : 0;
-    default: return 0;
-    }
-}
-
 static EEGameOptionsPlayer sEELobbyPlayer;
+static unsigned long sEELobbyMapIndex; // OptGetMapTypeIndex's (EERMFindGenerator's index)
 // the locals of the cases gluesplit.rs composes (R6 WON round 32)
 static ResourceConfigTablePtr sEELobbyResources;
 static GEColor sEELobbyColor;
@@ -399,10 +318,127 @@ static UWideString sEELobbyJoinName;
 static NEMessage* sEELobbyJoinRequest;
 static EEGameOptionsPlayer sEELobbyStartPlayer;
 static UWideString sEELocalAddress;
-static void EELobbyForwardEvent(const PlatInputEvent& inEvent);
-void EELobbyLock();
-void EELobbyUnlock();
 void EELobbyInit();
+
+// ---- what the game owns (EELobbyMisc.cpp's and EELobbyInterface.cpp's)
+
+static CriticalSection gEELobbyCriticalSection;
+
+// Enters the lobby's critical section (shared with the renderer)
+void EELobbyLock() { gEELobbyCriticalSection.Enter(); }
+// Leaves the lobby's critical section
+void EELobbyUnlock() { gEELobbyCriticalSection.Leave(); }
+
+// Converts a game wide string (player or map name) to a lobby GUI string
+GUIString EELobbyToGUIString(const UWideString& inText) { return GUIString(StringToWString(std::string(inText), -1)); }
+// Converts a lobby GUI string to a game wide string
+UWideString EELobbyToWideString(const GUIString& inText) { return UWideString(WStringToString(inText, -1).c_str()); }
+
+// Returns the saved games directory (data\Saved Games)
+// port: one text made once (the original's function-local static was emptied and appended to on every call)
+static const GUIString sEELobbySavedGames("data\\Saved Games\\");
+const GUIString& EELobbyFn2988E9() { return sEELobbySavedGames; }
+
+// Returns whether the game is multiplayer when the flag is set, true otherwise
+bool EEIsMultiplayerGame(bool inFlag) { return inFlag ? gGameOptions.mIsMultiplayer : true; }
+
+// (EELobbyGetVersion's two statements are EELobbyGameHost.cpp's VersionTextNew and VersionChecksum: eesplit.rs,
+// R6 WON round 35)
+
+// Returns the lobby game's host address in a multiplayer lobby game, else the protocol's local address
+UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
+{
+    return *reinterpret_cast<UWideString*>(Glue(GL::LocalAddress, (intptr_t)inProtocol, (intptr_t)inAdapter));
+}
+
+// Hosts the lobby game: replaces the connection with a new game server and, once the game is published, sends the
+// host's own connection request; returns whether it was published
+bool EELobbyHostGame() { return Glue(GL::HostGame) != 0; }
+
+// Posts a function for the user interface thread to call
+// (its statements are GlueHost's ActionNew, UiPostAction and ActionDereference: eeglue.rs, R6 WON round 35)
+void EELobbyPostAction(void (*inFunc)()) { Glue(GL::PostAction, (intptr_t)inFunc); }
+
+// port: the game window's events the lobby passes on while it owns the event loop (close, quit, size, focus,
+// exposure, the keys of its main window): handled as the game window's own (EEUserInterface::HandleEvent)
+static void EELobbyForwardEvent(const PlatInputEvent& inEvent) { EEUserInterface::HandleEvent(inEvent); }
+
+// Opens the external lobby: WONAPI core, window manager, the lobby window and the lobby screen in it; then shows it
+// and runs it until it is left
+// port: the window manager and window are the platform backend's (WONLobbyPlatform.h): the lobby window fills the
+// lobby surface (the back buffer's size), so the original's title, icon and owner window are gone
+void EELobbyOpen() { Glue(GL::Open); }
+
+// port: the lobby's frame for RTSGraphics::RenderLobby (RTSGraphics.h). The caller holds EELobbyLock, under which
+// EELobbyShow and EELobbyHide change gEELobbyShown (and EELobbyClose hides before it lets the manager go), so the
+// manager outlives every locked frame.
+bool EELobbyLockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
+                      int& outLogicalHeight, uint32_t& outSerial)
+{
+    if (!gEELobbyShown || gEELobbyRootWindow.get() == NULL)
+        return false;
+    return gEELobbyRootWindow->LockFrame(outPixels, outWidth, outHeight, outPitch, outLogicalWidth, outLogicalHeight,
+                                         outSerial);
+}
+
+// port: RenderLobby's pixel scale (the lobby at the window's pixels; the caller holds EELobbyLock)
+void EELobbySetPresentation(float inScale, float inLeft, float inTop, float inWidth, float inHeight)
+{
+    if (gEELobbyShown && gEELobbyRootWindow.get() != NULL) {
+        gEELobbyRootWindow->SetPresentRect(inLeft, inTop, inWidth, inHeight);
+        gEELobbyRootWindow->SetPixelScale(inScale);
+    }
+}
+
+void EELobbyGetSurfaceSize(int& outWidth, int& outHeight)
+{
+    outWidth = kEELobbySurfaceWidth;
+    outHeight = kEELobbySurfaceHeight;
+}
+
+void EELobbyUnlockFrame()
+{
+    if (gEELobbyRootWindow.get() != NULL)
+        gEELobbyRootWindow->UnlockFrame();
+}
+
+// Shows the lobby in the game's place, keeping the cursor where it was, and suspends the game's input
+// port: the lobby is drawn into the game's window (RTSGraphics::RenderLobby), so the game window stays; its input is
+// suspended in both modes (the mouse leaves relative mode), the system pointer shows and the lobby gets typed text.
+// inFlag asked the original to flip to the GDI surface (full screen), which has no meaning here.
+void EELobbyShow(bool inFlag) { Glue(GL::Show, inFlag); }
+
+// Starts loading the hosted game: closes it to new players, counts the humans, sends the start message with a random
+// seed and saves the options as the last game's
+void EELobbyStartHostedGame() { Glue(GL::StartHostedGame); }
+
+// Joins the lobby game: makes this a client, resets the game options and connects to the host's address
+void EELobbyJoinGame() { Glue(GL::JoinGame); }
+
+// Hides the lobby and gives the game back its window, resuming input and the game's cursor
+// port: the reverse of EELobbyShow: the game's pointer goes where the system pointer is, the system pointer hides
+// again (the game draws its own) with its default shape; typed text stays on (the game window always takes it)
+void EELobbyHide() { Glue(GL::Hide); }
+
+// Runs Sierra Update and quits the game, or tells the player it is missing
+void EELobbyRunSierraUpdate() { Glue(GL::RunSierraUpdate); }
+
+// Pushes the game form (form 30), hooking it to return to the lobby once the game is done
+void EELobbyShowGameScreen() { Glue(GL::ShowGameScreen); }
+
+void EELobbyReturnFromGame() { Glue(GL::ReturnFromGame); }
+// Asks the user interface thread to return to the lobby
+void EELobbyPostReturnFromGame() { EELobbyPostAction(EELobbyReturnFromGame); }
+
+// Closes the external lobby, its windows and its WONAPI core, and restores the game's music volume
+void EELobbyClose() { Glue(GL::Close); }
+
+bool EEIsLobbyOpen() { return gEELobbyOpen; }
+bool EELobbyIsShown() { return gEELobbyShown; }
+void EESetQuitFlag() { Glue(GL::SetQuitFlag); }
+
+// Asks the user interface thread to open the external lobby
+void EEStartExternalLobby() { EELobbyPostAction(EELobbyOpen); }
 
 static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t)
 {
@@ -411,6 +447,8 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     Graphics* g = reinterpret_cast<Graphics*>(a);
     std::vector<LobbyNetAddress>* anAddresses = reinterpret_cast<std::vector<LobbyNetAddress>*>(a);
     FSFileSpec* aFile = reinterpret_cast<FSFileSpec*>(a);
+    EEGameOptions* anOptions = reinterpret_cast<EEGameOptions*>(a);
+    EEGameOptionsPlayer* aPlayer = reinterpret_cast<EEGameOptionsPlayer*>(a);
     switch (inOp) {
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
     case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->mRust;
@@ -453,19 +491,15 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
         return 0;
     case Op::BoxNotInGame: LobbyMessageBox(EE_LOBBY_STRING(gEELobbyInterface_LoadGameError), LobbyFormatString(EE_LOBBY_STRING(gEELobbyInterface_PlayerNotInGame), EELobbyStr(a)));
         return 0;
-    case Op::OptionsField: return OptionsField(*reinterpret_cast<const EEGameOptions*>(a), (EeWonEeGlueField)b);
-    case Op::OptionsPlayer: return PlayerField(reinterpret_cast<EEGameOptions*>(a)->mPlayers[b], (EeWonEeGlueField)c, false, 0);
     case Op::OptionsPlayerName: return HeldData(EELobbyToGUIString(reinterpret_cast<const EEGameOptions*>(a)->mPlayers[b].mName));
     case Op::FileName: return HeldData(GUIString(WONFile(reinterpret_cast<const char*>(a)).GetFileName()));
     case Op::FileSize: return (intptr_t)WONFile(reinterpret_cast<const char*>(a)).GetSize();
     case Op::ClientPlayer: return (intptr_t)(EELobbyPlayer*)reinterpret_cast<LobbyClient*>(a)->GetPlayer().mPtr;
     case Op::DefaultOptions: return (intptr_t)&gGamePreferences.GetSettings().mGameOptions;
-    case Op::OptionSet: OptionSet((EeWonEeGlueField)a, (long)b); return 0;
     case Op::OptionMapTypeName: gGameOptions.mMapType = EELobbyToWideString(EELobbyStr(a)); return 0;
     case Op::OptionMapTypeGenerator: gGameOptions.mMapType = EERMGetGeneratorName((unsigned long)a); return 0;
     case Op::OptionsEnd: gGameOptions.mLock->WriteUnlock(); return 0;
     case Op::PlayerNew: sEELobbyPlayer = EEGameOptionsPlayer(); return 0;
-    case Op::PlayerSet: PlayerField(sEELobbyPlayer, (EeWonEeGlueField)a, true, (long)b); return 0;
     case Op::PlayerType: return (intptr_t)sEELobbyPlayer.mType;
     case Op::PlayerSetName: sEELobbyPlayer.mName = EELobbyToWideString(EELobbyStr(a)); return 0;
     case Op::PlayerCommit: gGameOptions.mPlayers[a] = sEELobbyPlayer; return 0;
@@ -750,7 +784,62 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     // StringUnits' (gluesplit.rs composes it, R6 WON round 33)
     case Op::StringLength: return (intptr_t)reinterpret_cast<GUIStringData*>(a)->mLength;
     case Op::StringUnitAt: return (intptr_t)(uint32_t)reinterpret_cast<GUIStringData*>(a)->mText[b];
+    case Op::ActionNew: return (intptr_t) new EEALobbyAction(reinterpret_cast<void (*)()>(a));
+    case Op::UiPostAction: gUserInterface->PostAction(reinterpret_cast<EEALobbyAction*>(a)); return 0;
+    case Op::ActionDereference: reinterpret_cast<EEALobbyAction*>(a)->Dereference(); return 0;
     case Op::BoxDissolved: LobbyMessageBox(LOBBY_STRING(RoutingLogic_GameDissolvedTitle_String), LOBBY_STRING(RoutingLogic_GameDissolvedDetails_String)); return 0;
+    // the fields of the options and players (gluesplit.rs maps the field to its op, R6 WON round 35)
+    case Op::OptGetMapSize: return (long)anOptions->mMapSize;
+    case Op::OptGetResources: return (long)anOptions->mResources;
+    case Op::OptGetEpochStart: return (long)anOptions->mEpochStart;
+    case Op::OptGetEpochEnd: return (long)anOptions->mEpochEnd;
+    case Op::OptGetVariant: return (long)anOptions->mVariant;
+    case Op::OptGetDifficulty: return (long)anOptions->mDifficulty;
+    case Op::OptGetGameSpeed: return (long)anOptions->mGameSpeed;
+    case Op::OptGetUnitLimit: return (long)anOptions->mUnitLimit;
+    case Op::OptGetWondersForVictory: return (long)anOptions->mWondersForVictory;
+    case Op::OptGetRevealMap: return (long)anOptions->mRevealMap;
+    case Op::OptGetAllowCustomCivs: return (long)anOptions->mAllowCustomCivs;
+    case Op::OptGetLockTeams: return (long)anOptions->mLockTeams;
+    case Op::OptGetLockSpeed: return (long)anOptions->mLockSpeed;
+    case Op::OptGetVictory: return (long)anOptions->mVictory;
+    case Op::MapIndexClear: sEELobbyMapIndex = 0; return 0;
+    case Op::OptGetMapTypeIndex: EERMFindGenerator(anOptions->mMapType, sEELobbyMapIndex); return (long)sEELobbyMapIndex;
+    case Op::OptSetLoadType: gGameOptions.mLoadType = (long)a; return 0;
+    case Op::OptSetMapSize: gGameOptions.mMapSize = (long)a; return 0;
+    case Op::OptSetResources: gGameOptions.mResources = (long)a; return 0;
+    case Op::OptSetEpochStart: gGameOptions.mEpochStart = (long)a; return 0;
+    case Op::OptSetEpochEnd: gGameOptions.mEpochEnd = (long)a; return 0;
+    case Op::OptSetVariant: gGameOptions.mVariant = (long)a; return 0;
+    case Op::OptSetDifficulty: gGameOptions.mDifficulty = (long)a; return 0;
+    case Op::OptSetGameSpeed: gGameOptions.mGameSpeed = (long)a; return 0;
+    case Op::OptSetUnitLimit: gGameOptions.mUnitLimit = (long)a; return 0;
+    case Op::OptSetWondersForVictory: gGameOptions.mWondersForVictory = (long)a; return 0;
+    case Op::OptSetRevealMap: gGameOptions.mRevealMap = a != 0; return 0;
+    case Op::OptSetAllowCustomCivs: gGameOptions.mAllowCustomCivs = a != 0; return 0;
+    case Op::OptSetLockTeams: gGameOptions.mLockTeams = a != 0; return 0;
+    case Op::OptSetLockSpeed: gGameOptions.mLockSpeed = a != 0; return 0;
+    case Op::OptSetVictory: gGameOptions.mVictory = a != 0; return 0;
+    case Op::OptionsPlayerAt: return (intptr_t)&anOptions->mPlayers[b];
+    case Op::PlayerGetType: return (long)aPlayer->mType;
+    case Op::PlayerGetLoadedType: return (long)aPlayer->mLoadedType;
+    case Op::PlayerGetSlot: return (long)aPlayer->mSlot;
+    case Op::PlayerGetColor: return (long)aPlayer->mColor;
+    case Op::PlayerGetTeam: return (long)aPlayer->mTeam;
+    case Op::PlayerGetStartingCitizens: return (long)aPlayer->mStartingCitizens;
+    case Op::PlayerGetIsLocal: return (long)aPlayer->mIsLocal;
+    case Op::PlayerGetIsReady: return (long)aPlayer->mIsReady;
+    case Op::PlayerGetB36: return (long)aPlayer->mB36;
+    case Op::PlayerGetNameEmpty: return aPlayer->mName == "" ? 1 : 0;
+    case Op::PlayerSetType: sEELobbyPlayer.mType = (long)a; return 0;
+    case Op::PlayerSetLoadedType: sEELobbyPlayer.mLoadedType = (long)a; return 0;
+    case Op::PlayerSetSlot: sEELobbyPlayer.mSlot = (long)a; return 0;
+    case Op::PlayerSetColor: sEELobbyPlayer.mColor = (long)a; return 0;
+    case Op::PlayerSetTeam: sEELobbyPlayer.mTeam = (long)a; return 0;
+    case Op::PlayerSetStartingCitizens: sEELobbyPlayer.mStartingCitizens = (long)a; return 0;
+    case Op::PlayerSetIsLocal: sEELobbyPlayer.mIsLocal = a != 0; return 0;
+    case Op::PlayerSetIsReady: sEELobbyPlayer.mIsReady = a != 0; return 0;
+    case Op::PlayerSetB36: sEELobbyPlayer.mB36 = a != 0; return 0;
     }
     return 0;
 }
@@ -775,149 +864,11 @@ void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected) { Glue(GL::
 void EELobbyCancelConnectDialog() { Glue(GL::CancelConnectDialog); }
 void EELobbyPostConnectStatus(bool inConnected) { Glue(GL::PostConnectStatus, inConnected); }
 bool EELobbyIsConnectDialogRunning() { return Glue(GL::IsConnectDialogRunning) != 0; }
-bool EELobbyGetSavedGameInfo(const char* inFile, unsigned long& outLength, unsigned long& outChecksum)
+bool EELobbyGetSavedGameInfo(const char* inFile, uint32_t& outLength, uint32_t& outChecksum)
 {
-    uint32_t aLength = (uint32_t)outLength, aChecksum = (uint32_t)outChecksum;
-    bool aResult = Glue(GL::SavedGameInfo, (intptr_t)inFile, (intptr_t)&aLength, (intptr_t)&aChecksum) != 0;
-    outLength = aLength;
-    outChecksum = aChecksum;
-    return aResult;
+    return Glue(GL::SavedGameInfo, (intptr_t)inFile, (intptr_t)&outLength, (intptr_t)&outChecksum) != 0;
 }
 bool EELobbyLoadSavedGame(const char* inFile) { return Glue(GL::LoadSavedGame, (intptr_t)inFile) != 0; }
 void EELobbyFillMapTypeCombo(ComboBox* inCombo) { Glue(GL::FillMapTypeCombo, (intptr_t)inCombo); }
 void EELobbySetDefaultGameOptions(EELobbyGame* inGame) { Glue(GL::SetDefaultGameOptions, (intptr_t)inGame); }
 unsigned long EELobbyGetNumMapTypes() { return EERMGetNumberOfGenerators(); }
-
-// ---- what the game owns (EELobbyMisc.cpp's and EELobbyInterface.cpp's)
-
-static CriticalSection gEELobbyCriticalSection;
-
-// Enters the lobby's critical section (shared with the renderer)
-void EELobbyLock() { gEELobbyCriticalSection.Enter(); }
-// Leaves the lobby's critical section
-void EELobbyUnlock() { gEELobbyCriticalSection.Leave(); }
-
-// Converts a game wide string (player or map name) to a lobby GUI string
-GUIString EELobbyToGUIString(const UWideString& inText) { return GUIString(StringToWString(std::string(inText), -1)); }
-// Converts a lobby GUI string to a game wide string
-UWideString EELobbyToWideString(const GUIString& inText) { return UWideString(WStringToString(inText, -1).c_str()); }
-
-// Returns the saved games directory (data\Saved Games)
-const GUIString& EELobbyFn2988E9()
-{
-    static GUIString theDirectory;
-    theDirectory = GetEmptyGUIStringData();
-    theDirectory.append("data\\");
-    theDirectory.append("Saved Games\\");
-    return theDirectory;
-}
-
-// Returns whether the game is multiplayer when the flag is set, true otherwise
-bool EEIsMultiplayerGame(bool inFlag) { return inFlag ? gGameOptions.mIsMultiplayer : true; }
-
-// Returns the game's version string and binary checksum
-void EELobbyGetVersion(GUIString& outVersion, unsigned long& outChecksum)
-{
-    outVersion = EELobbyToGUIString(gGameVersion);
-    outChecksum = gBinaryChecksum;
-}
-
-
-// Returns the lobby game's host address in a multiplayer lobby game, else the protocol's local address
-UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
-{
-    return *reinterpret_cast<UWideString*>(Glue(GL::LocalAddress, (intptr_t)inProtocol, (intptr_t)inAdapter));
-}
-
-// Hosts the lobby game: replaces the connection with a new game server and, once the game is published, sends the
-// host's own connection request; returns whether it was published
-bool EELobbyHostGame() { return Glue(GL::HostGame) != 0; }
-
-// Asks the user interface thread to open the external lobby
-void EEStartExternalLobby() { EELobbyPostAction(EELobbyOpen); }
-
-// Posts a function for the user interface thread to call
-void EELobbyPostAction(void (*inFunc)())
-{
-    EEALobbyAction* theAction = new EEALobbyAction(inFunc);
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-}
-
-// port: the game window's events the lobby passes on while it owns the event loop (close, quit, size, focus,
-// exposure, the keys of its main window): handled as the game window's own (EEUserInterface::HandleEvent)
-static void EELobbyForwardEvent(const PlatInputEvent& inEvent) { EEUserInterface::HandleEvent(inEvent); }
-
-// Opens the external lobby: WONAPI core, window manager, the lobby window and the lobby screen in it; then shows it
-// and runs it until it is left
-// port: the window manager and window are the platform backend's (WONLobbyPlatform.h): the lobby window fills the
-// lobby surface (the back buffer's size), so the original's title, icon and owner window are gone
-void EELobbyOpen() { Glue(GL::Open); }
-
-// port: the lobby's frame for RTSGraphics::RenderLobby (RTSGraphics.h). The caller holds EELobbyLock, under which
-// EELobbyShow and EELobbyHide change gEELobbyShown (and EELobbyClose hides before it lets the manager go), so the
-// manager outlives every locked frame.
-bool EELobbyLockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
-                      int& outLogicalHeight, uint32_t& outSerial)
-{
-    if (!gEELobbyShown || gEELobbyRootWindow.get() == NULL)
-        return false;
-    return gEELobbyRootWindow->LockFrame(outPixels, outWidth, outHeight, outPitch, outLogicalWidth, outLogicalHeight,
-                                         outSerial);
-}
-
-// port: RenderLobby's pixel scale (the lobby at the window's pixels; the caller holds EELobbyLock)
-void EELobbySetPresentation(float inScale, float inLeft, float inTop, float inWidth, float inHeight)
-{
-    if (gEELobbyShown && gEELobbyRootWindow.get() != NULL) {
-        gEELobbyRootWindow->SetPresentRect(inLeft, inTop, inWidth, inHeight);
-        gEELobbyRootWindow->SetPixelScale(inScale);
-    }
-}
-
-void EELobbyGetSurfaceSize(int& outWidth, int& outHeight)
-{
-    outWidth = kEELobbySurfaceWidth;
-    outHeight = kEELobbySurfaceHeight;
-}
-
-void EELobbyUnlockFrame()
-{
-    if (gEELobbyRootWindow.get() != NULL)
-        gEELobbyRootWindow->UnlockFrame();
-}
-
-// Shows the lobby in the game's place, keeping the cursor where it was, and suspends the game's input
-// port: the lobby is drawn into the game's window (RTSGraphics::RenderLobby), so the game window stays; its input is
-// suspended in both modes (the mouse leaves relative mode), the system pointer shows and the lobby gets typed text.
-// inFlag asked the original to flip to the GDI surface (full screen), which has no meaning here.
-void EELobbyShow(bool inFlag) { Glue(GL::Show, inFlag); }
-
-// Starts loading the hosted game: closes it to new players, counts the humans, sends the start message with a random
-// seed and saves the options as the last game's
-void EELobbyStartHostedGame() { Glue(GL::StartHostedGame); }
-
-// Joins the lobby game: makes this a client, resets the game options and connects to the host's address
-void EELobbyJoinGame() { Glue(GL::JoinGame); }
-
-// Hides the lobby and gives the game back its window, resuming input and the game's cursor
-// port: the reverse of EELobbyShow: the game's pointer goes where the system pointer is, the system pointer hides
-// again (the game draws its own) with its default shape; typed text stays on (the game window always takes it)
-void EELobbyHide() { Glue(GL::Hide); }
-
-// Runs Sierra Update and quits the game, or tells the player it is missing
-void EELobbyRunSierraUpdate() { Glue(GL::RunSierraUpdate); }
-
-// Pushes the game form (form 30), hooking it to return to the lobby once the game is done
-void EELobbyShowGameScreen() { Glue(GL::ShowGameScreen); }
-
-void EELobbyReturnFromGame() { Glue(GL::ReturnFromGame); }
-// Asks the user interface thread to return to the lobby
-void EELobbyPostReturnFromGame() { EELobbyPostAction(EELobbyReturnFromGame); }
-
-// Closes the external lobby, its windows and its WONAPI core, and restores the game's music volume
-void EELobbyClose() { Glue(GL::Close); }
-
-bool EEIsLobbyOpen() { return gEELobbyOpen; }
-bool EELobbyIsShown() { return gEELobbyShown; }
-void EESetQuitFlag() { Glue(GL::SetQuitFlag); }
