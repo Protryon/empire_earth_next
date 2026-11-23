@@ -1218,7 +1218,7 @@ impl EeUiForm {
                 let c = self.with(|s| s.mouse_over);
                 if c != 0 {
                     let amount = self.op(Op::FormWheelAmount, 0, 0);
-                    self.op(Op::FormCtlWheelTurned, c as isize, amount);
+                    self.op(Op::FormCtlWheelTurned, c, amount);
                 }
             }
             C::SetRectangle => self.with(|s| s.rect = rect),

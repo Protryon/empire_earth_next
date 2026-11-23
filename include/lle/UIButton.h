@@ -25,8 +25,8 @@ public:
           mRust(ee_ui_button_new(this, ee_ui_button_host, inNormalBitmap, inFocusedBitmap, inPressedBitmap)) {}
     virtual ~UIButton() { ee_ui_button_free(this->mRust); }
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiButtonCall::ChangeFont, (intptr_t)inFont); }
-    virtual long CopyData() { return (long)this->Call(EeUiButtonCall::CopyData); }
-    virtual long DrawPolygons() { return (long)this->Call(EeUiButtonCall::DrawPolygons); }
+    virtual long CopyData() { return (long)this->Call(EeUiButtonCall::VirtCopyData); }
+    virtual long DrawPolygons() { return (long)this->Call(EeUiButtonCall::VirtDrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiButtonCall::DrawText); }
     GE2DPoint GetBitmapLocation() const { return UIOut(ee_ui_button_call, this->mRust, EeUiButtonCall::BitmapLocation, (intptr_t)0, (intptr_t)0).Point(); }
     unsigned long GetState() const { return (unsigned long)this->Call(EeUiButtonCall::State); } // UIButtonState
@@ -47,9 +47,9 @@ public:
         this->CallF(EeUiButtonCall::SetTextRectangle, inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight,
                             inRectangle.mTop);
     }
-    virtual long UpdateKeyboard() { return (long)this->Call(EeUiButtonCall::UpdateKeyboard); }   // Fixed (kept): a key press on it
-    virtual void ButtonDown() { this->Call(EeUiButtonCall::ButtonDown); } // slot 0x88
-    virtual void ButtonUp() { this->Call(EeUiButtonCall::ButtonUp); }   // Fixed (kept): plays the button-up sound                // slot 0x8c
+    virtual long UpdateKeyboard() { return (long)this->Call(EeUiButtonCall::VirtUpdateKeyboard); }   // Fixed (kept): a key press on it
+    virtual void ButtonDown() { this->Call(EeUiButtonCall::VirtButtonDown); } // slot 0x88
+    virtual void ButtonUp() { this->Call(EeUiButtonCall::VirtButtonUp); }   // Fixed (kept): plays the button-up sound                // slot 0x8c
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiButtonCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(EeUiButtonCall::MouseLButtonUp); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->CallF(EeUiButtonCall::MouseMove, inLocation.GetX(), inLocation.GetY()); }
