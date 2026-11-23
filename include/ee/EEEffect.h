@@ -39,8 +39,6 @@ EeGfxEffectFile EEEffectFile(FSFile& inFile);
 // takes a reference to inSound, returns a referenced node (provisional name)
 SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
                            SESMInstanceNode* inSound, unsigned long inFrame, bool inStart);
-// the rasterizer as the Rust draws call it (EERenderObject.cpp)
-extern const EeGfxRaster gEERustRaster;
 
 class EEEffect {
 public:
@@ -52,13 +50,8 @@ public:
     void Release() { ee_gfx_effect_release(this->Head()); }   // the last reference destroys it
     long GetKind() const { return this->mRecord->kind; }
     EEEffectHandle GetHandle() const { return EEEffectHandle{this->mRecord->handle}; }
-    // shown only to inPlayer, not saved (a player's confirmations, flares and goal markers)
-    void SetLocalTo(long inPlayer)
-    {
-        this->mRecord->saved = false;
-        this->mRecord->local_only = true;
-        this->mRecord->player = (int32_t)inPlayer;
-    }
+    // shown only to inPlayer, not saved (a player's confirmations, flares and goal markers; gamecpp fx_world.rs)
+    void SetLocalTo(long inPlayer);
     EEUnit* GetUnit() const { return this->mUnit; }
     EEGraphicEffect* GetGraphicEffect() const { return this->mGraphicEffect; }
     // 0x102f96: the graphic effect's object (a random one of its kind without one; 0 without a graphic effect)

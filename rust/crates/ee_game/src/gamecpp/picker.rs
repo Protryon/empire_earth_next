@@ -5,12 +5,17 @@
 
 use std::ffi::{c_long, c_ulong, c_void};
 
-use ee_base::math::types::{Ge3DPoint, GeTransformation};
+use ee_base::math::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeTransformation};
+use ee_render::ge::physical_walk::EeGePhysicalModels;
 use ee_render::ge::rastobj::{EeGeRastColor, EeGeRastFog};
+use ee_render::ge::viewport::GeViewport;
 use ee_render::gfx::pick::{admits, EeGfxPickAdd, EeGfxPickUnit};
-use ee_render::gfx::pick_walk::{EeGfxPickBoxUnit, EeGfxPickFindUnit, EeGfxPickHost};
+use ee_render::gfx::pick_walk::{
+    ee_gfx_pick_box, ee_gfx_pick_find_unit, EeGfxPickBoxUnit, EeGfxPickEntry, EeGfxPickFindUnit, EeGfxPickHost,
+    EeGfxPickView,
+};
 
-use super::{h, hd, hf, hp, pa, ptr, O, P};
+use super::{h, hd, hf, hp, pa, ptr, Owned, O, P};
 
 /// The picker's entry count (`mCount`).
 fn count(picker: P) -> *mut c_ulong {
@@ -48,7 +53,7 @@ pub unsafe extern "C" fn ee_gamecpp_picker_pick(
 ) -> *mut c_void {
     let picker = picker as P;
     h(O::PkLock, picker, &[]);
-    let unit = hp(O::PkFindUnit, picker, &[point as usize as i64, prefer_resources as i64]);
+    let unit = find_unit(picker, point as *const Ge2DPoint, prefer_resources);
     if reference && unit != 0 {
         h(O::PkUnitReference, unit, &[]);
     }
@@ -227,14 +232,10 @@ extern "C" fn pick_push(_: *mut c_void, out: *mut c_void, id: u32) {
     h(O::PkPushId, out as P, &[id as i64]);
 }
 
-/// The walks' host for a picker (EEUnitPicker.cpp's FindUnit and PickBox pass it to ee_gfx pick_walk.rs).
-///
-/// # Safety
-/// `out` is a writable `EeGfxPickHost`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gamecpp_picker_host(picker: *mut c_void, out: *mut c_void) {
-    let host = EeGfxPickHost {
-        context: picker,
+/// The walks' host for a picker.
+fn host(picker: P) -> EeGfxPickHost {
+    EeGfxPickHost {
+        context: picker as *mut c_void,
         unit: pick_unit,
         find_unit: pick_find_unit,
         ask: pick_ask,
@@ -243,9 +244,85 @@ pub unsafe extern "C" fn ee_gamecpp_picker_host(picker: *mut c_void, out: *mut c
         carrier: pick_carrier,
         box_unit: pick_box_unit,
         push: pick_push,
+    }
+}
+
+/// The picker's entries in place (as ee_gfx's records) and their count.
+fn entries(picker: P) -> (*mut EeGfxPickEntry, u32) {
+    // SAFETY: the picker's count
+    (hp(O::PzEntries, picker, &[]) as *mut EeGfxPickEntry, unsafe { *count(picker) } as u32)
+}
+
+/// EEUnitPicker::FindUnit: PickUnit's search (the picker's lock held), over the frame's view (ee_gfx pick_walk.rs).
+fn find_unit(picker: P, point: *const Ge2DPoint, prefer_resources: c_long) -> P {
+    let host = host(picker);
+    let view = EeGfxPickView {
+        // SAFETY: the picker's viewport (a copy)
+        viewport: unsafe { *(hp(O::PzViewport, picker, &[]) as *const GeViewport) },
+        orthographic: h(O::PzOrthographic, picker, &[]) != 0,
+        show_hidden: h(O::PzShowHidden, picker, &[]) != 0,
+        free_camera: h(O::FxFreeCamera, 0, &[]) != 0,
+        window_width: h(O::PzWindowWidth, 0, &[]) as u32,
     };
-    // SAFETY: the function's contract
-    unsafe { *(out as *mut EeGfxPickHost) = host };
+    let (e, n) = entries(picker);
+    let models = hp(O::PzModelTable, 0, &[]) as *const EeGePhysicalModels;
+    // SAFETY: the picker's entries under its lock, the model table, the caller's point
+    unsafe { ee_gfx_pick_find_unit(&host, models, e, n, &view, point, prefer_resources != 0) as P }
+}
+
+/// EEUnitPicker::PickBox (PickUnits and PickUnitsInRectangle): under the lock, the ids of the units inside a screen
+/// rectangle's frustum (`all`: every pickable unit, else `player`'s of a type) into `out` (a
+/// `std::vector<unsigned long>`).
+///
+/// # Safety
+/// `rectangle` is a readable `GERectangle`, `player` a live player or null, `out` a live vector.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gamecpp_pz_box(
+    picker: *mut c_void,
+    rectangle: *const c_void,
+    all: bool,
+    player: *mut c_void,
+    kind: c_long,
+    out: *mut c_void,
+) {
+    let picker = picker as P;
+    let planes = Owned::new(O::PzPlanesNew, O::PzPlanesDelete);
+    let host = host(picker);
+    h(O::PkLock, picker, &[]);
+    h(O::PzIdsClear, out as P, &[]);
+    let (e, n) = entries(picker);
+    if n > 0 {
+        h(O::PzFrustumPlanes, picker, &[rectangle as usize as i64, pa(planes.0)]);
+    }
+    let p = if n > 0 { hp(O::PzPlanesData, planes.0, &[]) as *const Ge3DPlane } else { std::ptr::null() };
+    let models = hp(O::PzModelTable, 0, &[]) as *const EeGePhysicalModels;
+    // SAFETY: the picker's entries under its lock, the planes, the caller's vector
+    unsafe { ee_gfx_pick_box(&host, models, e, n, p, all, player, kind as u32, out) };
+    h(O::PkUnlock, picker, &[]);
+}
+
+/// EEUnitPicker's constructor: its lock, room for `capacity` entries, none yet, the perspective view.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_pz_construct(picker: *mut c_void, capacity: c_ulong) {
+    let picker = picker as P;
+    h(O::PzCreateLock, picker, &[]);
+    h(O::PzSetCapacity, picker, &[capacity as i64]);
+    h(O::PzNewEntries, picker, &[capacity as i64]);
+    // SAFETY: the picker's count
+    unsafe { *count(picker) = 0 };
+    h(O::PzSetOrthographic, picker, &[0]);
+    h(O::PzSetShowHidden, picker, &[0]);
+}
+
+/// EEUnitPicker's destructor: its units and entries released, its lock destroyed.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_pz_destroy(picker: *mut c_void) {
+    ee_gamecpp_picker_clear(picker);
+    let picker = picker as P;
+    if hp(O::PzEntries, picker, &[]) != 0 {
+        h(O::PzDeleteEntries, picker, &[]);
+    }
+    h(O::PzDestroyLock, picker, &[]);
 }
 
 #[cfg(test)]

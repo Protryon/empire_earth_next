@@ -15,6 +15,10 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/GETextureSet.h"
 #include "lle/GEViewport.h"
+#include "lle/GESurface.h"
+#include "lle/GETexture.h"
+#include "lle/Graphics Engine.h"
+#include "lle/GERenderState.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -22,6 +26,10 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEMiniMap.h"
+#include "ee/EEDoppelganger.h"
+#include "ee/EEDoppelgangerManager.h"
+#include "ee/EEColorTable.h"
+#include "ee/EEGameUI.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EETerrainColorTable.h"
@@ -38,24 +46,19 @@ extern bool gSightUpdatesEnabled;           // 0x4c76ec (EEUserInterface.cpp; pr
 
 // unit-local constants (.rdata next to EEMap's vtables)
 const float kMapTileSize = 0.40824828f;     // 0x441ce8 (RTSMap's ctor argument; provisional name)
-const float kSlopeScale = -0.76923078f;     // 0x441cf8 (GetTerrainPitch / GetTerrainRoll)
 
 // Creates an empty map on the default terrain
 EEMap::EEMap()
     : RTSMap(kMapTileSize), FSPersistent(kPersistentMap), mRandom(1)
 {
-    this->mU195650 = gDefaultTerrain;
-    this->Initialize();
+    ee_gamecpp_mx_construct_empty(this);
 }
 
 // Creates a map of the given size and player count, filled with the given terrain
 EEMap::EEMap(long inWidth, long inHeight, unsigned long inPlayerCount, long inTerrain)
     : RTSMap(kMapTileSize), FSPersistent(kPersistentMap), mRandom(1)
 {
-    this->Initialize();
-    this->mU195650 = inTerrain;
-    this->CreateMap(inWidth, inHeight, inPlayerCount);
-    this->mU19565C = gFirstCliffTerrain;
+    ee_gamecpp_mx_construct(this, inWidth, inHeight, inPlayerCount, inTerrain);
 }
 
 // Destroys the map: frees its region tables, tiles and visibility words and unloads its terrain textures
@@ -92,16 +95,14 @@ void EEMap::PlaceUnitOnGround(EEUnit* inUnit)
 // when below sea level, else its terrain's colour set (ee_app map.rs)
 void EEMap::UpdateWater(long inX, long inY)
 {
-    EEAppMapScope theScope(this, kAppMapUpdateWater, inX, inY, 0, 0, 0, 0, inX - 1, inX, inY - 1, inY);   // MAPC (TEST ONLY)
-    ee_gamecpp_map_edit(this, 0, inX, inY, 0, 0, 0, 0);
+    ee_gamecpp_mx_update_water(this, inX, inY);   // (with MAPC, TEST ONLY)
 }
 
 // Builds a new map of the given size: fresh unit and effect region tables, every tile on the base terrain (the fill:
 // ee_app map.rs). The original assigned the terrain mesh to itself here, a no-op; the mesh is a Rust object now.
 void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
 {
-    EEAppMapScope theScope(this, kAppMapCreateMap, inWidth, inHeight, (long)inPlayerCount, 0, 0, 0, 1, 0, 0, 0);   // MAPC (TEST ONLY)
-    ee_gamecpp_map_create_map(this, inWidth, inHeight, inPlayerCount);
+    ee_gamecpp_mx_create_map(this, inWidth, inHeight, inPlayerCount);   // (with MAPC, TEST ONLY)
 }
 
 // Creates an empty map for loading
@@ -114,9 +115,7 @@ FSPersistent* EEMap::CreateDefault() const
 // through it, updates the mini map and terrain visibility counts too (ee_app map.rs)
 void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
 {
-    EESightScope theCapture(kSightMapRemove, inPlayer, inX, inY, 0.0f, 0.0f, inRadius, inShared);   // TSGT (TEST ONLY)
-    ee_gamecpp_map_sight(this, inPlayer, inX, inY, inRadius, inShared, false);
-    EEAppCaptureSight(1, inPlayer, inX, inY, inRadius, inShared);   // MAPS (TEST ONLY)
+    ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, false);   // (with TSGT and MAPS, TEST ONLY)
 }
 
 // Sums the tile and corner-height checksums of the next 64 x 64 window and advances the window; past the right
@@ -165,17 +164,13 @@ float EEMap::GetTerrainRoll(const GETransformation& inLocation)
 // Returns the tile hit by the ray through a screen point, optionally stopping at the water surface
 EETile* EEMap::PickScreenTile(const GE2DPoint& inPoint, long& outX, long& outY, bool inHitWaterSurface)
 {
-    GE3DLine theLine;
-    this->GetScreenLine(inPoint, theLine);
-    return this->GetTileOnLine(theLine, outX, outY, inHitWaterSurface);
+    return (EETile*)ee_gamecpp_mx_pick_tile(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &outX, &outY, inHitWaterSurface);
 }
 
 // Returns the tile and the 3D point hit by the ray through a screen point, optionally at the water surface
 EETile* EEMap::GetLocationAt(const GE2DPoint& inPoint, GE3DPoint& outLocation, bool inHitWaterSurface)
 {
-    GE3DLine theLine;
-    this->GetScreenLine(inPoint, theLine);
-    return this->GetLocationOnLine(theLine, outLocation, inHitWaterSurface);
+    return (EETile*)ee_gamecpp_mx_location_at(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), reinterpret_cast<EeGe3DPoint*>(&outLocation), inHitWaterSurface);
 }
 
 // Resets the map to empty: no tiles or region tables, seeds its random generator, registers terrain sets
@@ -188,57 +183,14 @@ void EEMap::Initialize()
 // tile (cliffs and unknown terrain become the base terrain; saves up to 0.203 have no space tiles)
 long EEMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    // port (R5b.4, round 28): the original's two era bodies are one Rust sequence (ee_units map_save.rs) over the records
-    // the classes derive from and EEMapSaveOperation's parts
-    EEMapSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL, NULL};
-    return ee_units_map_load(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this),
-                             static_cast<EeUnitsMapFields*>(this), (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+    return ee_gamecpp_mx_load(this, &inFile, inMajorVersion, inMinorVersion);   // port: ee_units map_save.rs
 }
 
-// New (R5b.4, round 28): the C++ parts of the maps' Load and Save (ee/EEMap.h): the file's primitives (EESavePrimitive),
-// the tiles, the mesh and the terrain tables; a tile's y in inIndex, its x in io->i's low 32 bits
+// The C++ parts of the maps' Load and Save (ee/EEMap.h; RTSMap.cpp's too): gamecpp map_more.rs over EECore9OpB2's round 11
+// cases
 int32_t EEMapSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
 {
-    EEMapSaveContext& theContext = *static_cast<EEMapSaveContext*>(inContext);
-    RTSMap* theMap = theContext.mMap;
-    EEMap* theEEMap = static_cast<EEMap*>(theMap);   // (EEMap's operations only)
-    FSFile& theFile = *theContext.mFile;
-    long theX = (long)(uint32_t)io->i;
-    long theY = (long)inIndex;
-    switch (inOp) {
-    case EE_UNITS_MAP_SAVE_CREATE:
-        theMap->Create(theMap->mL195614, theMap->mL195610, theMap->mU19561C, false);
-        return kErrorOK;
-    case EE_UNITS_MAP_SAVE_LOAD_TILE:
-        theMap->mTiles[theMap->mSize * theY + theX] =
-            io->b != 0 ? theMap->LoadTile(theContext.mMajorVersion, theContext.mMinorVersion, theFile, theX, theY) : NULL;
-        return kErrorOK;
-    case EE_UNITS_MAP_SAVE_MESH_LOAD:
-        return theMap->mTerrainMesh.Load(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
-    case EE_UNITS_MAP_SAVE_MESH_SAVE:
-        return theMap->mTerrainMesh.Save(theFile);
-    case EE_UNITS_MAP_SAVE_TILE_SAVE: return ee_gamecpp_map_save_tile(theEEMap, &theFile, theX, theY);
-    case EE_UNITS_MAP_SAVE_PICK_DEFAULT: return ee_gamecpp_map_pick_default(theEEMap, (uintptr_t*)&theContext.mDefault, io->b);
-    case EE_UNITS_MAP_SAVE_VALID:
-        io->i = theEEMap->mTerrainMesh.GetIsValidTile(theX, theY) ? 1 : 0;
-        return kErrorOK;
-    case EE_UNITS_MAP_SAVE_TERRAIN_TYPE: return ee_gamecpp_map_save_terrain_type(theEEMap, (uintptr_t*)&theContext.mTerrain, theX, theY, io);
-    case EE_UNITS_MAP_SAVE_SPACE:
-        io->i = theEEMap->mTerrainMesh.GetIsSpaceTile(theX, theY) ? 1 : 0;
-        return kErrorOK;
-    case EE_UNITS_MAP_SAVE_SET_TYPE: return ee_gamecpp_map_set_terrain_type(theEEMap, theX, theY, (long)(io->i >> 32));
-    case EE_UNITS_MAP_SAVE_TERRAIN_LOAD:
-        theContext.mTerrain->Load(theEEMap->mTerrainMesh);
-        return kErrorOK;
-    case EE_UNITS_MAP_SAVE_SET_DEFAULT: return ee_gamecpp_map_save_set_default(theEEMap, (uintptr_t)theContext.mDefault, theX, theY);
-    case EE_UNITS_MAP_SAVE_CLIFF_VALID: io->b = (unsigned long)io->i >= EETerrainTable::GetNumCliffTerrains() || EETerrainTable::sCliffTable[(unsigned long)io->i] == NULL ? 0 : 1;
-        return kErrorOK;
-    case EE_UNITS_MAP_SAVE_FIRST_CLIFF:
-        io->i = gFirstCliffTerrain;
-        return kErrorOK;
-    case EE_UNITS_MAP_SAVE_FINISH: return ee_gamecpp_map_save_finish(theEEMap);
-    }
-    return EESavePrimitive(theFile, inOp, io);
+    return ee_gamecpp_mx_save_op(inContext, inOp, inIndex, io);
 }
 
 // Reads the next tile from the saved game (saves up to 0.46 also carry its terrain); returns the tile
@@ -258,41 +210,32 @@ void EEMap::DumpOutOfSynch(FILE* inFile)
 // it, updates the mini map and terrain visibility counts too (ee_app map.rs)
 void EEMap::AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
 {
-    EESightScope theCapture(kSightMapAdd, inPlayer, inX, inY, 0.0f, 0.0f, inRadius, inShared);   // TSGT (TEST ONLY)
-    ee_gamecpp_map_sight(this, inPlayer, inX, inY, inRadius, inShared, true);
-    EEAppCaptureSight(0, inPlayer, inX, inY, inRadius, inShared);   // MAPS (TEST ONLY)
+    ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, true);   // (with TSGT and MAPS, TEST ONLY)
 }
 
 // Paints a rectangle of tiles with a terrain, then recolours its vertices with the given colour type (ee_app map.rs)
 void EEMap::PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff)
 {
-    EEAppMapScope theScope(this, kAppMapPaintTerrainRect, inLeft, inRight, inTop, inBottom, inTerrain, inCliff, inLeft,
-                           inRight, inBottom, inTop);   // MAPC (TEST ONLY)
-    ee_gamecpp_map_edit(this, 5, inLeft, inRight, inTop, inBottom, inTerrain, inCliff);
+    ee_gamecpp_mx_paint_rect(this, inLeft, inRight, inTop, inBottom, inTerrain, inCliff);   // (with MAPC, TEST ONLY)
 }
 
 // Sets a tile's terrain type and paints it and its lower-left neighbours' textures with the terrain (ee_app map.rs)
 void EEMap::PaintTerrain(long inX, long inY, long inTerrain)
 {
-    EEAppMapScope theScope(this, kAppMapPaintTerrain, inX, inY, inTerrain, 0, 0, 0, inX - 1, inX, inY - 1, inY);   // MAPC (TEST ONLY)
-    ee_gamecpp_map_edit(this, 4, inX, inY, inTerrain, 0, 0, 0);
+    ee_gamecpp_mx_paint(this, inX, inY, inTerrain);   // (with MAPC, TEST ONLY)
 }
 
 // Marks steep tiles in a rectangle as cliffs, texturing them from the cliff terrain by slope direction, then makes
 // tiles with three or more cliff neighbours cliffs too (ee_app map.rs)
 void EEMap::UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop)
 {
-    EEAppMapScope theScope(this, kAppMapUpdateCliffs, inLeft, inRight, inBottom, inTop, 0, 0, inLeft - 1, inRight,
-                           inBottom - 1, inTop);   // MAPC (TEST ONLY)
-    ee_gamecpp_map_edit(this, 2, inLeft, inRight, inBottom, inTop, 0, 0);
+    ee_gamecpp_mx_update_cliffs(this, inLeft, inRight, inBottom, inTop);   // (with MAPC, TEST ONLY)
 }
 
 // Turns cliff tiles in a rectangle that are no longer steep back into the map's base terrain (ee_app map.rs)
 void EEMap::RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop)
 {
-    EEAppMapScope theScope(this, kAppMapRemoveFlatCliffs, (long)inLeft, (long)inRight, (long)inBottom, (long)inTop, 0, 0,
-                           (long)inLeft - 1, (long)inRight, (long)inBottom - 1, (long)inTop);   // MAPC (TEST ONLY)
-    ee_gamecpp_map_edit(this, 3, (long)inLeft, (long)inRight, (long)inBottom, (long)inTop, 0, 0);
+    ee_gamecpp_mx_remove_flat_cliffs(this, inLeft, inRight, inBottom, inTop);   // (with MAPC, TEST ONLY)
 }
 
 // Registers every terrain's texture set and every terrain type's colour set with the terrain mesh, then
@@ -305,23 +248,13 @@ void EEMap::RegisterTerrainSets()
 // Writes the map, its base terrain, characteristics and cliff terrain to the saved game; returns the first error
 long EEMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    EEMapSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL, NULL};   // port: ee_units map_save.rs
-    return ee_units_map_save(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this),
-                             static_cast<EeUnitsMapFields*>(this));
+    return ee_gamecpp_mx_save(this, &outFile, inMajorVersion, inMinorVersion);   // port: ee_units map_save.rs
 }
 
 // Switches the map to another cliff terrain and re-runs cliff detection over the whole map
 void EEMap::SetCliffTexture(long inCliffTexture)
 {
-    // Fixed: a random map script without CliffTexture (Continental and most others) passes -1, which indexed the cliff
-    // table at [-1] (the 32-bit original read the heap word before it as a table pointer). As Load does with a bad
-    // saved index, it takes the first cliff terrain.
-    if (inCliffTexture < 0 || (unsigned long)inCliffTexture >= EETerrainTable::GetNumCliffTerrains() ||
-        EETerrainTable::sCliffTable[inCliffTexture] == NULL)
-        inCliffTexture = gFirstCliffTerrain;
-    EEAppMapScope theScope(this, kAppMapSetCliffTexture, inCliffTexture, 0, 0, 0, 0, 0, 1, 0, 0, 0);   // MAPC (TEST ONLY)
-    this->mU19565C = inCliffTexture;
-    this->UpdateCliffs(0, this->mSize, 0, this->mSize);
+    ee_gamecpp_mx_set_cliff_texture(this, inCliffTexture);   // (with MAPC, TEST ONLY; a bad index: the first cliff terrain)
 }
 
 // Sets a tile's texture set, loading the new terrain's textures and optionally unloading the old one's
@@ -343,19 +276,8 @@ bool EEPlayer::IsAlliedWith(EEPlayer* inPlayer)
     return inPlayer == this || this->mEnemies[inPlayer->mPlayerID] == 0 && inPlayer->mEnemies[this->mPlayerID] == 0;
 }
 
-// TSGT (TEST ONLY): the record of the outermost sight scope (ee/EESightCapture.h) for the world's map, with the tile's
-// index in the map's tile array (-1: not one of them)
-void EESightRecord(unsigned int inShape, unsigned int inKind, EEPlayer* inPlayer, const RTSTile* inTile, long inTileX,
-                   long inTileY, unsigned long inValue, const float* inArgs)
-{
-    ee_gamecpp_map_sight_record(inShape, inKind, (uint64_t)(uintptr_t)inPlayer, (uint64_t)(uintptr_t)inTile, inTileX, inTileY, inValue, inArgs);
-}
-
 // ------------------------------------------------------------------------- round 9, lane B: the map's bodies' C++
 
-// the mini map's cases (EEMiniMap.cpp), then lane C's
-int64_t EECore9OpB3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore9OpB3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 static_assert(kUnitTypeCameraObject == 0x167, "gamecpp map.rs");
 static_assert(sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GE2DPoint) == sizeof(EeGe2DPoint), "gamecpp map.rs: the values by address");
@@ -363,9 +285,20 @@ static_assert(sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GE2DPoint) == siz
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define MPPT(i) (*(GE3DPoint*)a[i])
 #define M ((EEMap*)p)
+#define MM ((EEMiniMap*)p)
+extern GEVector gMiniMapLight;              // EEMiniMap.cpp (the terrain light)
+
+// round 11, lane A: gamecpp map_more.rs' constants and the save's context
+
+static_assert(kAppMapUpdateCliffs == 1 && kAppMapRemoveFlatCliffs == 2 && kAppMapPaintTerrain == 3 && kAppMapPaintTerrainRect == 4 &&
+                  kAppMapUpdateWater == 6 && kAppMapCreateMap == 7 && kAppMapSetCliffTexture == 8 && kSightMapAdd == 8 && kSightMapRemove == 9,
+              "gamecpp map_more.rs");
+static_assert(offsetof(EEMapSaveContext, mDefault) == 2 * sizeof(void*) + 2 * sizeof(unsigned long) && sizeof(EEMapSaveContext) == 4 * sizeof(void*) + 2 * sizeof(unsigned long),
+              "gamecpp map_more.rs EeGamecppMxSaveContext");
 
 // The C++ calls and members of the map's bodies in Rust (gamecpp map.rs; EeGameCpp's lane B section, after
 // EEEffectHost.cpp's EECore9OpB): one statement each
+int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -517,22 +450,111 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MpLineDefine: ((GE3DLine*)a[0])->Define(MPPT(1), MPPT(2));
         break;
     case O::MpLineSolveForZ: return ((GE3DLine*)a[0])->SolveForZ(f[0], *(float*)a[1], MPPT(2));
-    default: return EECore9OpB3(inOp, p, a, f);
+    // round 11, lane A (gamecpp map_more.rs)
+    case O::MxScopeEnter: return EEAppMapScopeEnter();
+    case O::MxScopeLeave: EEAppMapScopeLeave(M, a[0] != 0, (unsigned int)a[1], (const long*)a[2], (const long*)a[3]);
+        break;
+    case O::MxCliffCount: return EETerrainTable::GetNumCliffTerrains();
+    case O::MxCliffExists: return EETerrainTable::sCliffTable[(unsigned long)a[0]] != NULL;
+    case O::MxFirstCliff: return gFirstCliffTerrain;
+    case O::MxCaptureSight: EEAppCaptureSight((unsigned int)a[0], (EEPlayer*)p, f[0], f[1], f[2], a[1] != 0);
+        break;
+    case O::MxTileOnLine: return P64(M->GetTileOnLine(*(const GE3DLine*)a[0], *(long*)a[1], *(long*)a[2], a[3] != 0));
+    case O::MxLocationOnLine: return P64(M->GetLocationOnLine(*(const GE3DLine*)a[0], *(GE3DPoint*)a[1], a[2] != 0));
+    case O::MxRtsOf: return P64(static_cast<RTSMap*>(M));
+    case O::MxEEMapOf: return P64(static_cast<EEMap*>((RTSMap*)p));
+    case O::MxCreate: ((RTSMap*)p)->Create((long)a[0], (long)a[1], (unsigned long)a[2], false);
+        break;
+    case O::MxLoadTile: return P64(((RTSMap*)p)->LoadTile((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2], (long)a[3], (long)a[4]));
+    case O::MxSetRtsTile: ((RTSMap*)p)->mTiles[a[0]] = (EEMapTile*)a[1];
+        break;
+    case O::MxMeshLoad: return ((RTSMap*)p)->mTerrainMesh.Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
+    case O::MxMeshSave: return ((RTSMap*)p)->mTerrainMesh.Save(*(FSFile*)a[0]);
+    case O::MxSpaceTile: return M->mTerrainMesh.GetIsSpaceTile((long)a[0], (long)a[1]);
+    case O::MxTerrainLoadInto: ((EETerrainTable*)p)->Load(((EEMap*)a[0])->mTerrainMesh);
+        break;
+    case O::MxPrimitive: return EESavePrimitive(*(FSFile*)p, (int32_t)a[0], (EeUnitsPlayerSaveIo*)a[1]);
+    case O::MmTail: return P64(&MM->mL12174);
+    case O::MmRust: return P64(MM->mRust);
+    case O::MmSetRust: MM->mRust = (EeAppMiniMap*)a[0];
+        break;
+    case O::MmTransforms: return P64(&MM->mMapToPixel);
+    case O::MmCorners: return P64(&MM->mCorner0);
+    case O::MmSetPixels: MM->mPixels = (unsigned short*)a[0];
+        break;
+    case O::MmSetPixelsPerRow: MM->mPixelsPerRow = (long)a[0];
+        break;
+    case O::MmUnitLock: MM->mUnitSurface->Lock();
+        break;
+    case O::MmUnitUnlock: MM->mUnitSurface->Unlock();
+        break;
+    case O::MmUnitMemory: return P64(MM->mUnitSurface->GetMemoryAddress());
+    case O::MmUnitBytesPerRow: return MM->mUnitSurface->GetBytesPerRow();
+    case O::MmUnitCopyToWorld: MM->mUnitSurface->CopyTo(MM->mWorldTexture->GetSurface(), *(GERectangle*)a[0], *(GERectangle*)a[0], false);
+        break;
+    case O::MmUnitClear: MM->mUnitSurface->Clear(*(GEColor*)a[0], 1.0f);
+        break;
+    case O::MmTerrainEnter: MM->mTerrainCriticalSection->Enter();
+        break;
+    case O::MmTerrainLeave: MM->mTerrainCriticalSection->Leave();
+        break;
+    case O::MmTerrainLock: MM->mTerrainTexture->GetSurface()->Lock();
+        break;
+    case O::MmTerrainUnlock: MM->mTerrainTexture->GetSurface()->Unlock();
+        break;
+    case O::MmTerrainMemory: return P64(MM->mTerrainTexture->GetSurface()->GetMemoryAddress());
+    case O::MmTerrainBytesPerRow: return MM->mTerrainTexture->GetSurface()->GetBytesPerRow();
+    case O::MmUiUpdate: gEEGameUI.mMiniMapUpdate(MM);   // EEUIMiniMap::Update (ee/EEGameUI.h)
+        break;
+    case O::MmLight: *(GEVector*)a[0] = gMiniMapLight;
+        break;
+    case O::MmLightSet: gMiniMapLight = GEVector(0.0f, 1.5f, 1.0f);
+        break;
+    case O::MmLightNormalize: gMiniMapLight.Normalize();
+        break;
+    case O::MmViewport: return P64(&gViewport);
+    case O::MmNumPlayers: return gWorld.mNumPlayers;
+    case O::MmDoppUnit: return P64(((EEDoppelganger*)p)->mUnit);
+    case O::MmDoppPlayer: return P64(((EEDoppelganger*)p)->GetPlayer());
+    case O::MmDoppPlayerField: return P64(((EEDoppelganger*)p)->mPlayer);
+    case O::MmDoppIsComplex: return ((EEDoppelganger*)p)->IsComplex();
+    case O::MmDoppOnTile: return ((EEDoppelganger*)p)->GetTile() == (EETile*)a[0];
+    case O::MmPackDark: return GEPackColor(kPixelFormatA4R4G4B4, EEColorTable::GetDarkColor((unsigned long)a[0]), 1.0f);
+    case O::MmPackColor2: return GEPackColor(kPixelFormatA4R4G4B4, EEColorTable::GetColor2((unsigned long)a[0]), 1.0f);
+    case O::MmPackShade: return GEPackColor(kPixelFormatA4R4G4B4, ((EEPlayer*)p)->mShadeColor, 1.0f);
+    case O::MmPackPlayerColor: return GEPackColor(kPixelFormatA4R4G4B4, ((EEPlayer*)p)->mColor, 1.0f);
+    case O::MmTileVisibility: return ((EETile*)p)->GetVisibility((unsigned long)a[0]);
+    case O::MmTileDoppCount: return ((EETile*)p)->GetNumDoppelgangers();
+    case O::MmTileDopp: return P64(((EETile*)p)->mDoppelgangers[a[0]]);
+    case O::MmNodeUnit: return P64(((RTSTileUnitNode*)p)->mUnit);
+    case O::MmNodeNext: return P64(((RTSTileUnitNode*)p)->mNext);
+    case O::MmTerrainColor: *(GEColor*)a[1] = EETerrainTable::Get((long)a[0])->mColor;
+        break;
+    case O::TlRtsChecksum: return ((const EETile*)p)->RTSTile::GetChecksum((unsigned long)a[0]);
+    case O::TlRtsLoad: ((EETile*)p)->RTSTile::Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2], (unsigned long)a[3]);
+        break;
+    case O::TlRtsSave: return ((EETile*)p)->RTSTile::Save(*(FSFile*)a[0], (unsigned long)a[1]);
+    case O::TlRtsDump: ((const EETile*)p)->RTSTile::Dump((FILE*)a[0], (unsigned long)a[1]);
+        break;
+    case O::TlLoadImage: return P64(gDoppelgangerManager.Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]));
+    case O::TlImageSetTile: ((EEDoppelganger*)p)->mTile = (EETile*)a[0];
+        break;
+    case O::TlImageValid: return ((EEDoppelganger*)p)->GetIsValid();
+    case O::TlImageTileNull: return ((EEDoppelganger*)p)->GetTile() == NULL;
+    case O::TlImageSave: return ((EEDoppelganger*)p)->Save(0, 0, *(FSFile*)a[0]);
+    case O::TlEraseImage: ((EETile*)p)->mDoppelgangers.erase(((EETile*)p)->mDoppelgangers.begin() + a[0]);
+        break;
+    case O::TlDumpImage: fprintf((FILE*)p, "Doppelganger %ld has unit id of %ld\n", (unsigned long)a[0], (unsigned long)a[1]);
+        break;
+    case O::TlWriteUlong: return ((FSFile*)p)->Write((unsigned long)a[0]);
+    case O::TlDynMap: return P64(dynamic_cast<EEMap*>((RTSMap*)p));
+    case O::TlSetIsSpace: ((EEMap*)p)->mTerrainMesh.SetIsSpace((unsigned long)a[0], (unsigned long)a[1], a[2] != 0);
+        break;
+    case O::TlValidPoint: return ((EEMap*)p)->mTerrainMesh.GetIsValidPoint((unsigned long)a[0], (unsigned long)a[1]);
+    case O::TlSetTerrainTypeField: ((EETile*)p)->mTerrainType = (long)a[0];
+        break;
+    default: return EECore9OpB5(inOp, p, a, f);
     }
     return 0;
 }
 
-double EECore9OpB2F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::MpMeshZ: return M->mTerrainMesh.GetMeshZ(f[0], f[1]);
-    case O::MpTerrainWaterDepth: return ((EETerrainTable*)p)->mWaterDepth;
-    case O::MpViewHalfWidth: return gViewport.GetHalfWidth();
-    case O::MpViewXCenter: return gViewport.GetXCenter();
-    case O::MpViewYCenter: return gViewport.GetYCenter();
-    case O::MpViewFrontClip: return gViewport.GetFrontClippingDistance();
-    case O::MpViewRearClip: return gViewport.GetRearClippingDistance();
-    default: return EECore9OpB3F(inOp, p, a, f);
-    }
-}
