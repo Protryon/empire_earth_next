@@ -905,7 +905,6 @@ enum class EeGameCpp : uint32_t {
   ServerFastLast,
   ServerFastLockEnter,
   ServerFastLockLeave,
-  ServerGetSendToSlot,
   ServerLogResponse,
   ServerSendPlayerSlotInfo,
   ServerSetGameState,
@@ -2315,7 +2314,6 @@ enum class EeGameCpp : uint32_t {
   SsFormById,
   SsCurrentForm,
   SsFormVisible,
-  SsSendToSlot,
   SsPlayerSendToSlot,
   SsSHasLeft,
   SsCHasLeft,
@@ -2443,9 +2441,6 @@ enum class EeGameCpp : uint32_t {
   SsSetPt,
   SsRegisterSlot,
   SsUnregisterSlot,
-  SsSendToClear,
-  SsSendToInsert,
-  SsSendToErase,
   SsAbortXfer,
   SsRemoveInProgress,
   SsOpenSaveGame,
@@ -3744,9 +3739,6 @@ enum class EeGameCpp : uint32_t {
   C11SvDestroyFastLock,
   C11SvDestroyAttemptLock,
   C11SvMaxPlayers,
-  C11SvSendToSlot,
-  C11SvLobbySlot,
-  C11SvSendToErase,
   C11SvUnregister,
   C11SvNewResponse,
   C11SvSendTo,
@@ -6378,6 +6370,9 @@ const char *ee_gamecpp_date_text();
 /// # Safety
 /// `file` is a C string.
 bool ee_gamecpp_is_scenario_file(const char *file);
+
+/// EEServer::GetSendToSlot: a lobby slot's network slot, 0xff when none.
+uint8_t ee_gamecpp_server_send_to_slot(uint8_t lobby);
 
 /// EEServer's constructor body: the members, the fast selection, the three locks (search, fast selection, attempt).
 void ee_gamecpp_server_init(void *server);

@@ -556,7 +556,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ServerSetLoadResponses: SERVER->mNumLoadResponses = (unsigned char)a[0];
         break;
-    case O::ServerGetSendToSlot: return SERVER->GetSendToSlot((unsigned char)a[0]);
     case O::ServerSetSendToSlotForPlayer: SERVER->SetSendToSlotForPlayer((unsigned char)a[0], (unsigned char)a[1]);
         break;
     case O::ServerSendPlayerSlotInfo: SERVER->SendPlayerSlotInfo();

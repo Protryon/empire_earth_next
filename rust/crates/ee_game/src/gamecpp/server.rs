@@ -11,6 +11,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 use ee_sim::netmsg::session::*;
 
 use super::{h, hp, ptr, session_objs, Owned, O, P};
+use super::session_objs::{ee_gamecpp_server_send_to_slot, send_to_clear, send_to_erase, send_to_insert};
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
 /// `kSlotServer`, `kSlotNone` (NEMessageID.h).
@@ -259,7 +260,7 @@ fn fact(f: P, v: &[i64; 8]) -> i64 {
             };
         }
         EE_NETMSG_SESS_FACT_FORM_VISIBLE => O::SsFormVisible,
-        EE_NETMSG_SESS_FACT_SEND_TO_SLOT => O::SsSendToSlot,
+        EE_NETMSG_SESS_FACT_SEND_TO_SLOT => return ee_gamecpp_server_send_to_slot(v[1] as u8) as i64,
         _ => O::SsPlayerSendToSlot,
     };
     h(op, f, &[v[1]])
@@ -562,7 +563,8 @@ fn xfer_game_file(f: P, load_type: i64, slot: i64) {
         h(O::SsHeaderSetVersions, f, &[header.0 as i64]);
         if h(O::SsHeaderLoad, f, &[header.0 as i64, file as i64]) != 0 && h(O::SsMultiplayerGame, f, &[]) == 0 {
             let mut xfer_id: c_ulong = 0;
-            h(O::SsXferToClient, f, &[file as i64, header.0 as i64, slot, ptr(&mut xfer_id)]);
+            let send_to = ee_gamecpp_server_send_to_slot(slot as u8) as i64;
+            h(O::SsXferToClient, f, &[file as i64, header.0 as i64, send_to, ptr(&mut xfer_id)]);
         }
     }
 }
@@ -581,9 +583,9 @@ fn comms(f: P, v: &[i64; 8]) {
         }
         EE_NETMSG_SESS_COMMS_REGISTER => O::SsRegisterSlot,
         EE_NETMSG_SESS_COMMS_UNREGISTER => O::SsUnregisterSlot,
-        EE_NETMSG_SESS_COMMS_SEND_TO_CLEAR => O::SsSendToClear,
-        EE_NETMSG_SESS_COMMS_SEND_TO_INSERT => O::SsSendToInsert,
-        EE_NETMSG_SESS_COMMS_SEND_TO_ERASE => O::SsSendToErase,
+        EE_NETMSG_SESS_COMMS_SEND_TO_CLEAR => return send_to_clear(),
+        EE_NETMSG_SESS_COMMS_SEND_TO_INSERT => return send_to_insert(v[1] as u8, v[2] as u8),
+        EE_NETMSG_SESS_COMMS_SEND_TO_ERASE => return send_to_erase(v[1] as u8),
         EE_NETMSG_SESS_COMMS_ABORT_XFER => O::SsAbortXfer,
         EE_NETMSG_SESS_COMMS_REMOVE_IN_PROGRESS => O::SsRemoveInProgress,
         EE_NETMSG_SESS_COMMS_XFER_GAME_FILE => return xfer_game_file(f, v[1], v[2]),

@@ -640,7 +640,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             h(O::ServerSetLoadResponses, 0, &[i[1] as u8 as i64]);
         }
         EE_NETMSG_WACT_SEND_TO_SLOT => {
-            let to = h(O::ServerGetSendToSlot, 0, &[i[2] as u8 as i64]);
+            let to = super::session_objs::ee_gamecpp_server_send_to_slot(i[2] as u8) as i64;
             h(O::ServerSetSendToSlotForPlayer, 0, &[i[1] as u8 as i64, to]);
         }
         EE_NETMSG_WACT_ALL_LOADED => {
