@@ -74,10 +74,7 @@ void StagingLogic::CallMessage(EeWonStagingCall inCall, const ByteBuffer* inMess
 // The room message from the buffer's position (ee_won reads its type and fixed fields)
 void StagingLogic::HandleMessage(ReadBuffer& inBuffer, LobbyClient* inClient)
 {
-    long aStart = inBuffer.pos();
-    ee_won_staging_call(this->mRust, EeWonStagingCall::HandleMessage, &inBuffer, inClient,
-                        (intptr_t)(reinterpret_cast<const uint8_t*>(inBuffer.data()) + aStart),
-                        (intptr_t)(inBuffer.length() - aStart));
+    ee_won_staging_call(this->mRust, EeWonStagingCall::HandleMessage, &inBuffer, inClient, (intptr_t)(reinterpret_cast<const uint8_t*>(inBuffer.data()) + inBuffer.pos()), (intptr_t)(inBuffer.length() - inBuffer.pos()));
 }
 
 void StagingLogic::HandleMessageBuffer(const ByteBuffer* inMessage, LobbyClient* inClient)
@@ -131,35 +128,21 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::StSetMyClientFromNet: st->mMyClient = LobbyGetNetMyClient(); return (intptr_t)st->mMyClient.get();
     case EeWonLobbyOp::StSetGame: st->mGame = g; return 0;
     case EeWonLobbyOp::StJoinOpNew: st->mJoinOp = new AsyncOp; return 0;
-    case EeWonLobbyOp::StSendJoinRequest: {
-        ConstSmartPtr<ByteBuffer> aMessage = st->mGame->GetJoinRequest();
-        st->SendToCaptain(aMessage.get());
-        return 0;
-    }
-    case EeWonLobbyOp::StCreateDialogRun:
-        st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::SetGameType, (int)inC);
-        st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::Reset, false);
-        return LobbyDoDialog(st->mCreateGameDialog.get());
-    case EeWonLobbyOp::StTakeDialogGame: {
-        SmartPtr<LobbyGame> aGame = st->mCreateGameDialog->GetGame();
-        aGame->SetAddress(LobbyGetMyAddress((int)inC));
-        st->mGame = aGame;
-        return Held(aGame.get());
-    }
-    case EeWonLobbyOp::StClientModerated:
-        LobbyBroadcastEvent(ClientModeratedEvent(cl, (int)inC, st->mGame->GetName(), (int)(inD >> 1), 0,
-                                                     (inD & 1) != 0, gEmptyGUIString), true);
-        return 0;
+    case EeWonLobbyOp::StSendJoinRequest: st->SendToCaptain(st->mGame->GetJoinRequest().get()); return 0;
+    // StCreateDialogRun, StTakeDialogGame and GameNewCopy are lobbyops.rs's over these (R6 WON round 32)
+    case EeWonLobbyOp::StCreateSetType: st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::SetGameType, (int)inC); return 0;
+    case EeWonLobbyOp::StCreateReset: st->mCreateGameDialog->LCall(EeWonLobbyDlgCall::Reset, false); return 0;
+    case EeWonLobbyOp::StCreateDo: return LobbyDoDialog(st->mCreateGameDialog.get());
+    case EeWonLobbyOp::StDialogGameHeld: return Held(st->mCreateGameDialog->GetGame().get());
+    case EeWonLobbyOp::GameSetMyAddress: g->SetAddress(LobbyGetMyAddress((int)inC)); return 0;
+    case EeWonLobbyOp::GameCreateHeld: return Held(LobbyGame::CreateGame(static_cast<LobbyGameType>(g->GetGameType())));
+    case EeWonLobbyOp::GameCopyFrom: g->CopyFrom(static_cast<LobbyGame*>(inB)); return 0;
+    case EeWonLobbyOp::StClientModerated: LobbyBroadcastEvent(ClientModeratedEvent(cl, (int)inC, st->mGame->GetName(), (int)(inD >> 1), 0, (inD & 1) != 0, gEmptyGUIString), true); return 0;
     // a game
     case EeWonLobbyOp::GameHold: return Held(g);
     case EeWonLobbyOp::GameRelease: g->Release(); return 0;
     case EeWonLobbyOp::GameCanReady: return g->CanReady();
     case EeWonLobbyOp::GameCanStartAndTry: return g->CanStartGame() && g->TryStartGame();
-    case EeWonLobbyOp::GameNewCopy: {
-        SmartPtr<LobbyGame> aGame = LobbyGame::CreateGame(static_cast<LobbyGameType>(g->GetGameType()));
-        aGame->CopyFrom(g);
-        return Held(aGame.get());
-    }
     case EeWonLobbyOp::GamePreNetCreate: return g->PreNetCreateGame();
     case EeWonLobbyOp::GamePostNetCreate: return g->PostNetCreateGame();
     case EeWonLobbyOp::GamePreNetJoin: return g->PreNetJoinGame();

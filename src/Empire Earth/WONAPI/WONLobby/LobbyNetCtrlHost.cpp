@@ -109,6 +109,13 @@ static intptr_t Held(const GUIString& inText)
     return (intptr_t)aData;
 }
 
+// an object with one reference the Rust gives back
+static intptr_t HeldRef(RefCount* inObject)
+{
+    inObject->AddRef();
+    return (intptr_t)inObject;
+}
+
 // the lobby events' members are read in Rust (lobbyevt.rs ctl_op); the chat link of a WONGUI event stays here
 static intptr_t EvField(ComponentEvent* e, EeWonLobbyCtlEvField f)
 {
@@ -129,11 +136,7 @@ static intptr_t ChatOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intpt
     ChatCommandParser* aParser = reinterpret_cast<ChatCommandParser*>(a);
     switch (inOp) {
     case Op::EvGet: return EvField(reinterpret_cast<ComponentEvent*>(a), (EeWonLobbyCtlEvField)b);
-    case Op::ChatLinkNew: {
-        ChatLink* aNew = new ChatLink(*reinterpret_cast<const EeWonLobbyCtlLink*>(a));
-        aNew->AddRef();
-        return (intptr_t)aNew;
-    }
+    case Op::ChatLinkNew: return HeldRef(new ChatLink(*reinterpret_cast<const EeWonLobbyCtlLink*>(a)));
     case Op::LinkGet:
         switch ((L)b) {
         case L::Kind: return aLink->mKind;
@@ -237,10 +240,7 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
     case Op::UserPassword: return Held(LobbyGetUserPassword(Txt(a)));
     case Op::AddUser: LobbyAddUser(Txt(a), Txt(b), true); return 0;
     case Op::ComboSetTextFlag: aCombo->SetText(Txt(b), c != 0); return 0;
-    case Op::DeliverLogin:
-        inCtl->DeliverEvent(LoginEvent(anInput->GetText(), reinterpret_cast<Button*>(b)->IsChecked(),
-                                           reinterpret_cast<ComboBox*>(c)->mEdit.mPtr->GetText()), false);
-        return 0;
+    case Op::DeliverLogin: inCtl->DeliverEvent(LoginEvent(anInput->GetText(), reinterpret_cast<Button*>(b)->IsChecked(), reinterpret_cast<ComboBox*>(c)->mEdit.mPtr->GetText()), false); return 0;
     case Op::TextToInt: return Txt(a).mData->ToInt(0);
     case Op::DeliverCreateAccount: {
         const intptr_t* f = reinterpret_cast<const intptr_t*>(a);
@@ -261,10 +261,7 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
         anInput->SetText(GUIString(new GUIStringData(reinterpret_cast<AuthContext*>(b)->GetName())), true);
         return 0;
     case Op::AuthPassword: return Held(GUIString(new GUIStringData(reinterpret_cast<AuthContext*>(a)->GetPassword())));
-    case Op::DeliverUpdateAccount:
-        inCtl->DeliverEvent(UpdateAccountEvent(anInput->GetText(), reinterpret_cast<InputBox*>(b)->GetText(),
-                                                   reinterpret_cast<Button*>(c)->IsChecked()), false);
-        return 0;
+    case Op::DeliverUpdateAccount: inCtl->DeliverEvent(UpdateAccountEvent(anInput->GetText(), reinterpret_cast<InputBox*>(b)->GetText(), reinterpret_cast<Button*>(c)->IsChecked()), false); return 0;
     case Op::DeliverLostPassword: inCtl->DeliverEvent(GetLostPasswordEvent(aCombo->mEdit->GetText()), false); return 0;
     case Op::DeliverLostUserName: inCtl->DeliverEvent(GetLostUserNameEvent(anInput->GetText()), false); return 0;
     case Op::BrowserGoLoginHelp:
@@ -279,20 +276,11 @@ static intptr_t SmallOp(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, intp
         memcpy(reinterpret_cast<char*>(c), aPath.data(), aPath.length() < 1024 ? aPath.length() : 1024);
         return (intptr_t)aPath.length();
     }
-    case Op::BrowserShowFiles: {
-        const EeWonLobbyCtlFiles* f = reinterpret_cast<const EeWonLobbyCtlFiles*>(b);
-        reinterpret_cast<BrowserComponent*>(a)->ShowFiles(std::string((const char*)f->sys, f->sys_len),
-                                                         std::string((const char*)f->game, f->game_len), true);
-        return 0;
-    }
+    case Op::BrowserShowFiles: reinterpret_cast<BrowserComponent*>(a)->ShowFiles(std::string((const char*)reinterpret_cast<const EeWonLobbyCtlFiles*>(b)->sys, reinterpret_cast<const EeWonLobbyCtlFiles*>(b)->sys_len), std::string((const char*)reinterpret_cast<const EeWonLobbyCtlFiles*>(b)->game, reinterpret_cast<const EeWonLobbyCtlFiles*>(b)->game_len), true); return 0;
     case Op::ScreenShow: reinterpret_cast<ScreenContainer*>(a)->ShowScreen(reinterpret_cast<Component*>(b), c != 0); return 0;
     case Op::ListSelGame: return (intptr_t)reinterpret_cast<ServerListCtrl*>(a)->GetSelGame();
     case Op::DeliverDirectConnect: inCtl->DeliverEvent(ChangeDirectConnectEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;
-    case Op::LabelSetFormat3: {
-        const intptr_t* t = reinterpret_cast<const intptr_t*>(c);
-        aLabel->SetText(LobbyFormatString3(Txt(b), Txt(t[0]), Txt(t[1]), Txt(t[2])), true);
-        return 0;
-    }
+    case Op::LabelSetFormat3: aLabel->SetText(LobbyFormatString3(Txt(b), Txt(reinterpret_cast<const intptr_t*>(c)[0]), Txt(reinterpret_cast<const intptr_t*>(c)[1]), Txt(reinterpret_cast<const intptr_t*>(c)[2])), true); return 0;
     default: break;
     }
     return 0;
@@ -392,9 +380,7 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::ListOwnerCtl: return (intptr_t) static_cast<LobbyRustCtrl*>(static_cast<ServerListCtrl*>(aList->mParent->mParent))->mLobbyCtl;
     case Op::GameAddrText: return Held(reinterpret_cast<LobbyGame*>(a)->GetAddress().GetHostAndPortString(true));
     // round 16: the lobby's rows (rows.rs; RustRow and RustTextRow over their Rust states)
-    case Op::RowShellNew:
-        if (b != 0) return (intptr_t) static_cast<ListItem*>(new RustTextRow(reinterpret_cast<EeWonRow*>(a)));
-        return (intptr_t) static_cast<ListItem*>(new RustRow(reinterpret_cast<EeWonRow*>(a)));
+    case Op::RowShellNew: return b != 0 ? (intptr_t) static_cast<ListItem*>(new RustTextRow(reinterpret_cast<EeWonRow*>(a))) : (intptr_t) static_cast<ListItem*>(new RustRow(reinterpret_cast<EeWonRow*>(a)));
     case Op::RowTextPaint: aText->TextListItem::Paint(*reinterpret_cast<Graphics*>(b), reinterpret_cast<ListArea*>(c)); return 0;
     case Op::RowTextCalc: aText->TextListItem::CalcDimensions(reinterpret_cast<ListArea*>(b)); return 0;
     case Op::RowTextCompare: return aText->TextListItem::Compare(reinterpret_cast<ListItem*>(b), reinterpret_cast<ListArea*>(c));

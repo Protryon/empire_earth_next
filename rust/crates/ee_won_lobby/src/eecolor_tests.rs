@@ -208,6 +208,8 @@ fn the_swatches_and_their_gaps() {
 
 #[test]
 fn the_palette_is_the_originals_until_the_game_sets_it() {
+    // the glue's replays set the game's colours and put the original's back, under this lock
+    let _l = crate::eegame::testgame::lock();
     assert_eq!(palette(0), 0x0000ff);
     assert_eq!(palette(15), 0xff8888);
 }

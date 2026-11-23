@@ -431,6 +431,84 @@ enum class EeWonEeGlueOp : uint32_t {
   GameAddressSet,
   /// `&sEELocalAddress`.
   GameAddressRef,
+  /// `GlueText(a, b)` held (one reference given back with `Release`).
+  TextHeld = 500,
+  /// `((Graphics*)a)->mFont->GetStringWidth(text, 0, length)` of the held text `b`.
+  GfxTextWidthHeld,
+  /// `LobbyGame::SetGameFactory(EELobbyNewGame)`.
+  FactoryGame,
+  /// `LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer)`.
+  FactoryPlayer,
+  /// `LobbyConfig::SetAllocator(EELobbyNewConfig)`.
+  FactoryConfig,
+  /// `sEELobbyResources = EELobbyResource_Init(NULL)`.
+  ResInit,
+  /// `sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl)`.
+  ResAllocGameOptions,
+  /// `.. ("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl)`.
+  ResAllocPlayerOptions,
+  /// `.. ("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton)`.
+  ResAllocColorButton,
+  /// `.. ("EELobbyFileDialog", EELobbyNewDialogConfig, EELobbyNewFileDialog)`.
+  ResAllocFileDialog,
+  /// `.. ("EELobbyConnectDialog", EELobbyNewDialogConfig, EELobbyNewConnectDialog)`.
+  ResAllocConnectDialog,
+  /// `sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(..))`.
+  ResAddMusic,
+  /// `LobbyAddComponentLoader(sEELobbyResources.mPtr, EELobbyGetComponents)`.
+  ResAddLoader,
+  /// `sEELobbyResources = NULL` (the original's local going out of scope).
+  ResDone,
+  /// `sEELobbyColor = EEGetPlayerColor(a)`.
+  PlayerColorGet,
+  /// `*(float*)a = sEELobbyColor.GetRed()`.
+  PlayerColorRed,
+  /// `*(float*)a = sEELobbyColor.GetGreen()`.
+  PlayerColorGreen,
+  /// `*(float*)a = sEELobbyColor.GetBlue()`.
+  PlayerColorBlue,
+  /// `SafeGetComponent(a, ptr, "EELobbyConnectDialog", "EELobbyInit.cpp", 329)`: held.
+  FindConnectDialog,
+  /// `SafeGetComponent(a, ptr, "EELobbyFileDialog", "EELobbyInit.cpp", 328)`: held.
+  FindFileDialog,
+  /// `new EELobbySavedGame`.
+  SaveAlloc,
+  /// `((EELobbySavedGame*)a)->mSpec.SetFile((const char*)b)`.
+  SaveSetFile,
+  /// `sEELobbySaveLength = 0`.
+  SaveLengthClear,
+  /// `a->mSpec.GetLength(sEELobbySaveLength)`.
+  SaveGetLength,
+  /// `sEELobbySaveLength`.
+  SaveLengthValue,
+  /// `a->mHeader.SetMajorVersion(kSaveGameMajorVersion)`.
+  SaveSetMajor,
+  /// `a->mHeader.SetMinorVersion(kSaveGameMinorVersion)`.
+  SaveSetMinor,
+  /// `a->mHeader.LoadFromFile(a->mSpec) == keseOK`.
+  SaveLoadFile,
+  /// `gGameOptions.mLock->WriteLock()`.
+  OptionsWriteLock,
+  /// `gGameOptions = gLobbyGameOptions`.
+  OptionsCopyLobby,
+  /// `gGameOptions.mIsMultiplayer = true`.
+  OptionsSetMultiplayer,
+  /// `gGameOptions.mCheatCodes = false`.
+  OptionsClearCheats,
+  /// `LobbyGetNetAddresses(sEELobbyAddressList, false)`.
+  AddressListFill,
+  /// `new std::vector<LobbyNetAddress>(sEELobbyAddressList.begin(), sEELobbyAddressList.end())`.
+  AddressVectorNew,
+  /// `sEELobbyAddressList.clear()` (the original's local going out of scope).
+  AddressListClear,
+  /// `gWorld.mLock->WriteUnlock()`.
+  WorldWriteUnlock,
+  /// `gUIManager->UnlockUIForCopyData()`.
+  UiUnlockCopy,
+  /// `gUIManager->LockUIForCopyData()`.
+  UiLockCopy,
+  /// `gWorld.mLock->WriteLock()`.
+  WorldWriteLock,
 };
 
 /// The inward calls (`a`.. as documented).
@@ -577,6 +655,10 @@ extern "C" {
 
 /// Sets the glue's host (the C++ calls it once, before any other call).
 void ee_won_eeglue_set_host(EeWonEeGlueHostFn host);
+
+/// Sets the game's host (EELobbyGlueHost.cpp): as `ee_won_eeglue_set_host`, and its multi-statement ops are
+/// answered by gluesplit.rs over the host's one-statement ops (the drivers' scripted hosts see the ops whole).
+void ee_won_eeglue_set_game_host(EeWonEeGlueHostFn host);
 
 /// One inward call (`EeWonEeGlueCall`).
 ///

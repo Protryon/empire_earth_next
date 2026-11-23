@@ -99,10 +99,7 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::OpKill: anOp->Kill(true); return 0;
     case Op::OpForceFinishKilled: anOp->ForceFinish(WS_Killed); return 0;
     case Op::OpGetStatus: return (intptr_t)anOp->GetStatus();
-    case Op::RunOp:
-        aLogic->RunOp(anOp, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, aLogic),
-                      (unsigned long)b);
-        return 0;
+    case Op::RunOp: aLogic->RunOp(anOp, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, aLogic), (unsigned long)b); return 0;
     case Op::EndDialog: GetLobbyWindow()->EndDialog(-1, NULL, aComp); return 0;
     case Op::LobbyRoot: return (intptr_t)static_cast<Component*>(GetLobbyRoot());
     case Op::RootWindow: return (intptr_t)LobbyGetRootWindow();
