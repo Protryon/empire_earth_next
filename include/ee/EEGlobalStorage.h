@@ -1,17 +1,13 @@
-// The storage of a global object apart from its construction (EEGlobals.cpp, Empire Earth.cpp).
+// The construction of a global object whose storage is Rust's (ee_game gamecpp global_objects.rs: zeroed bytes,
+// aligned to 16, under the object's own symbol: MSVC's mangled name on Windows, the plain name elsewhere).
 //
-// EE_GLOBAL_STORAGE(Type, name, "msvc symbol") defines zeroed, aligned bytes under the object's own symbol: what
-// `Type name;` would define, without the reference to Type's constructor and destructor. The headers keep declaring
-// `extern Type name;`, so every user reads the object as before. EE_CONSTRUCT_GLOBAL(Type, name, (args)) is the
-// dynamic initializer `Type name(args);` would have had: it constructs the object in place and registers its
-// destructor with atexit (not for a trivially destructible type), so the objects are made and destroyed in the order
-// of the EE_CONSTRUCT_GLOBAL lines. Why: the unit that defines a global must name its constructor, so a data unit
-// holding gWorld depended on EEWorld.cpp, and every unit that reads gWorld sat in one dependency cycle with it
-// (tools/cpp_deps.py; PORT_LEARNINGS "Cycle cuts"). The symbol is the platform's: MSVC's mangled name on Windows, the
-// plain name (with Mach-O's underscore on macOS) elsewhere (EE_GLOBAL_STORAGE_AS below for other symbols).
-// The storage is aligned to 16 at least: a compiler gives a global object of 16 bytes or more that alignment and
-// assumes it where the object is named (clang's movaps on gWorld's members in EERenderObject::Fn10C036 faulted on
-// storage aligned only to alignof(EEWorld), 8).
+// The headers keep declaring `extern Type name;`, so every user reads the object as before. EE_CONSTRUCT_GLOBAL(Type,
+// name, (args)) is the dynamic initializer `Type name(args);` would have had: it constructs the object in place and
+// registers its destructor with atexit (not for a trivially destructible type), so the objects are made and destroyed
+// in the order of the EE_CONSTRUCT_GLOBAL lines. It also checks that the type fits the Rust storage
+// (EE_GAME_SIZE_<name> x EE_GAME_STORAGE_FACTOR bytes, alignment 16 at most). Why the storage is apart: the unit
+// that defines a global must name its constructor, so a data unit holding gWorld depended on EEWorld.cpp, and every
+// unit that reads gWorld sat in one dependency cycle with it (tools/cpp_deps.py; PORT_LEARNINGS "Cycle cuts").
 #ifndef EE_EEGLOBALSTORAGE_H
 #define EE_EEGLOBALSTORAGE_H
 
@@ -19,28 +15,21 @@
 #include <stdlib.h>
 #include <type_traits>
 
-#if defined(_WIN32)
-#define EE_GLOBAL_SYMBOL(msvc, plain) __asm__(msvc)
-#elif defined(__APPLE__)
-#define EE_GLOBAL_SYMBOL(msvc, plain) __asm__("_" plain)
-#else
-#define EE_GLOBAL_SYMBOL(msvc, plain) __asm__(plain)
-#endif
+#include "rust/game/gamecpp.h"   // EE_GAME_SIZE_*, EE_GAME_STORAGE_FACTOR
 
-#define EE_GLOBAL_STORAGE(Type, name, msvc) \
-    alignas(Type) alignas(16) unsigned char name##Storage[sizeof(Type)] EE_GLOBAL_SYMBOL(msvc, #name)
+#define EE_GLOBAL_FITS(Type, tag) \
+    static_assert(sizeof(Type) <= EE_GAME_SIZE_##tag * EE_GAME_STORAGE_FACTOR && alignof(Type) <= 16, \
+                  #tag ": the Rust storage is too small (ee_game gamecpp global_objects.rs EE_GAME_SIZE_" #tag ")")
 
 #define EE_CONSTRUCT_GLOBAL(Type, name, args) \
+    EE_GLOBAL_FITS(Type, name); \
     static const bool name##Constructed = (::new (static_cast<void*>(&name)) Type args, \
         std::is_trivially_destructible<Type>::value ? 0 : atexit([] { name.Type::~Type(); }), true)
 
-// The same for an object whose symbol is not its plain name (a class's static member) or whose type is a
-// template-id: tag names the storage and the constructed flag, itanium is the POSIX symbol (e.g.
-// "_ZN11EEUnitClass10sUnitTypesE"; a global's plain name); the destructor is called through a local alias.
-#define EE_GLOBAL_STORAGE_AS(Type, tag, msvc, itanium) \
-    alignas(Type) alignas(16) unsigned char tag##Storage[sizeof(Type)] EE_GLOBAL_SYMBOL(msvc, itanium)
-
+// The same for an object whose name is not a plain identifier (a class's static member) or whose type is a
+// template-id: tag names the storage's size and the constructed flag; the destructor is called through a local alias.
 #define EE_CONSTRUCT_GLOBAL_AS(Type, tag, object, args) \
+    EE_GLOBAL_FITS(Type, tag); \
     static const bool tag##Constructed = (::new (static_cast<void*>(&(object))) Type args, \
         std::is_trivially_destructible<Type>::value ? 0 : atexit([] { using T = Type; (object).~T(); }), true)
 

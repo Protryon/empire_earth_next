@@ -105,8 +105,8 @@ extern EETerrainColorTable gTerrainColorTable;
 extern EETerrainTypeTable gTerrainTypeTable;
 extern EEComputerPlayerBehaviorTable gComputerPlayerBehaviorTable;
 
-// The game's globals (gWorld, gPhysics, gUIManager, the subsystem pointers, the save version, ...) are
-// EEGlobals.cpp's, a data-only unit: there the 48 global objects are only storage (ee/EEGlobalStorage.h). They are
+// The game's globals (gWorld, gPhysics, gUIManager, the subsystem pointers, the save version, ...) are Rust's
+// storage (ee_game gamecpp global_objects.rs and globals.rs; ee/EEGlobalStorage.h). The 48 global objects are
 // constructed here, where their definitions were, in the order of the original's init chains (0x53e967..0x53f27c),
 // each registering its destructor with atexit as its definition did.
 // chain at 0x53e967 (wrapper)

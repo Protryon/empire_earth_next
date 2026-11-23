@@ -165,6 +165,7 @@ pub mod window_pump;
 
 // ---- round 13, fork A: the Empire Earth directory's start-up, globals and managers (EEStartupOp)
 //
+pub mod global_objects;
 //
 
 // ---- round 13, fork B: the world, the game state, Physics Thread, Player, Random Map, Campaign, Data Pre-Loading (EECore11OpE)

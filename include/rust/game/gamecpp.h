@@ -19,6 +19,113 @@ constexpr static const int64_t SS_SLOT_SERVER = 254;
 
 constexpr static const int64_t SS_SLOT_NONE = 255;
 
+/// A storage holds this many times its `EE_GAME_SIZE_*` bytes (ee/EEGlobalStorage.h's static_assert reads it).
+constexpr static const size_t EE_GAME_STORAGE_FACTOR = 2;
+
+constexpr static const size_t EE_GAME_SIZE_gU530BE0 = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gU530BC8 = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gExecutableName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gSavedGameExtension = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gScenarioExtension = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gU530B88 = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignExtension = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gViewport = 648;
+
+constexpr static const size_t EE_GAME_SIZE_gGamePreferences = 2096;
+
+constexpr static const size_t EE_GAME_SIZE_gWorld = 3712;
+
+constexpr static const size_t EE_GAME_SIZE_gEvent = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gDatabaseObjects = 16;
+
+constexpr static const size_t EE_GAME_SIZE_gTechTree = 88;
+
+constexpr static const size_t EE_GAME_SIZE_gToHitTable = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gAIUnitTargetingTable = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gPathManager = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gContinentManager = 144;
+
+constexpr static const size_t EE_GAME_SIZE_gWorldTable = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gTerrainTable = 184;
+
+constexpr static const size_t EE_GAME_SIZE_gTerrainColorTable = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gTerrainTypeTable = 28;
+
+constexpr static const size_t EE_GAME_SIZE_gGameState = 1688;
+
+constexpr static const size_t EE_GAME_SIZE_gComputerPlayerBehaviorTable = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gUnitSetManager = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gAEManager = 64;
+
+constexpr static const size_t EE_GAME_SIZE_gAmbientSoundManager = 128;
+
+constexpr static const size_t EE_GAME_SIZE_gCivilizationManager = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gDoppelgangerManager = 168;
+
+constexpr static const size_t EE_GAME_SIZE_gCivPowersManager = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignAOCRoman = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignAOCPacific = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignAOCAsian = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignEEDemo = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignEELearning = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gU52A280 = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gPhysicsThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gGraphicsThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gDataPreLoadingThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gMousePointerThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gScenarioEditorThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gUserInterfaceThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommSendThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommRecvThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommMainThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommLagLossThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommRecPlayThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gSoundScavengerThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCDAudioThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gMultiplayerString = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gUnitClassTable = 24;
+
+constexpr static const size_t EE_GAME_SIZE_EEUnitClassUnitTypes = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gGameVariants = 1;
+
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
 enum class EeGameCpp : uint32_t {
   UnRts = 1,
