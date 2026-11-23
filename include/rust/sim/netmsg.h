@@ -2004,6 +2004,15 @@ void ee_netmsg_register_builder(uint8_t first,
                                 uint8_t last,
                                 void *(*builder)(uint8_t *data));
 
+/// `NEMessage::GetHeaderSlots`: the header's four one-byte members as the codec's first four slots, from the first of
+/// them (`mType` at +0x08; then `mForSpecificSlot`, `mOriginatingSlot`, `mReserved`): the wire order is reserved,
+/// type, target slot, originating slot.
+///
+/// # Safety
+/// `ty` points at the four consecutive header bytes; `out` has room for four slots.
+void ee_netmsg_header_slots(uint8_t *ty,
+                            EeNetMsgSlot *out);
+
 /// `NEMessage::ConvertMemoryToMessage`: the message the builder registered for the type at `data[1]` makes, or NULL
 /// when no builder is registered for it.
 ///

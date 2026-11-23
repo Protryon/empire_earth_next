@@ -105,6 +105,25 @@ static FILTERS: Mutex<Filters> =
     Mutex::new(Filters { loaded: false, suppress: true, output_to_debugger: false, filters: Vec::new() });
 static NATIVE_ERROR: AtomicU64 = AtomicU64::new(0);
 static IN_VERIFY: AtomicBool = AtomicBool::new(false);
+/// A driver's verify handler (tests/net's ne_message_test traces the failures): when set, [`ee_error_verify`] calls
+/// it and returns instead of reporting and aborting.
+static VERIFY_HOOK: Mutex<Option<EeErrorVerifyHook>> = Mutex::new(None);
+
+/// A verify handler: the file, line and expression of [`ee_error_verify`].
+/// cbindgen:ignore
+pub type EeErrorVerifyHook = unsafe extern "C" fn(file: *const c_char, line: c_ulong, expression: *const c_char);
+
+/// Sets (or with `None` clears) the verify handler of [`VERIFY_HOOK`] (test drivers only).
+#[no_mangle]
+pub extern "C" fn ee_error_set_verify_hook(
+    hook: Option<unsafe extern "C" fn(file: *const c_char, line: c_ulong, expression: *const c_char)>,
+) {
+    *VERIFY_HOOK.lock().unwrap_or_else(|e| e.into_inner()) = hook;
+}
+
+fn verify_hook() -> Option<EeErrorVerifyHook> {
+    *VERIFY_HOOK.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 fn filters() -> std::sync::MutexGuard<'static, Filters> {
     FILTERS.lock().unwrap_or_else(|e| e.into_inner())
@@ -196,6 +215,11 @@ pub fn verify_report(file: &[u8], line: c_ulong, expression: &[u8]) -> Option<Ve
 /// `file` and `expression` are NULL or NUL-terminated strings.
 #[no_mangle]
 pub unsafe extern "C" fn ee_error_verify(file: *const c_char, line: c_ulong, expression: *const c_char) {
+    if let Some(hook) = verify_hook() {
+        // SAFETY: the handler takes the caller's strings as they are
+        unsafe { hook(file, line, expression) };
+        return;
+    }
     let text = |p: *const c_char| if p.is_null() { &b""[..] } else { CStr::from_ptr(p).to_bytes() };
     let Some(report) = verify_report(text(file), line, text(expression)) else { return };
     use std::io::Write;
@@ -267,6 +291,20 @@ mod tests {
         assert_eq!(ee_error_record_native(5), 5);
         assert_eq!(ee_error_record_native(0), 0);
         assert_eq!(ee_error_native(), 5);
+    }
+
+    #[test]
+    fn verify_calls_the_hook_and_returns() {
+        static SEEN: AtomicU64 = AtomicU64::new(0);
+        unsafe extern "C" fn hook(_file: *const c_char, line: c_ulong, _expression: *const c_char) {
+            SEEN.store(u64::from(line), Ordering::Relaxed);
+        }
+        ee_error_set_verify_hook(Some(hook));
+        // SAFETY: C strings
+        unsafe { ee_error_verify(c"f.cpp".as_ptr(), 227, c"x".as_ptr()) };
+        ee_error_set_verify_hook(None);
+        assert_eq!(SEEN.load(Ordering::Relaxed), 227);
+        assert!(verify_hook().is_none());
     }
 
     #[test]

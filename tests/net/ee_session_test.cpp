@@ -21,6 +21,7 @@
 #include "ee/EEServer.h"
 #include "ee/EEClient.h"
 #include "rust/sim/netmsg.h"
+#include "rust/game/gamecpp.h"
 
 // ---- the trace ----
 static std::string sTrace;
@@ -80,27 +81,30 @@ std::string TPlayer(const EEGameOptionsPlayer& p)
     return theText;
 }
 
-// ---- the engine functions the units call ----
-void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression)
+// ---- the engine functions the units call (inline over Rust: ee_stand/lle/LowLevelEngineCore.h renames the calls
+// the golden traces to these; ESVerify's through the verify handler) ----
+static void TraceVerify(const char* inFile, unsigned long inLine, const char* inExpression)
 {
     T("ESVERIFY %lu %s", inLine, inExpression);
 }
-unsigned long ESRecordNativeError(unsigned long inError)
-{
-    return inError;
-}
-void ESChecksum::AddChecksum(const UString&, unsigned long)
-{
-}
-float URandom::Generate()
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    return (float)((double)this->mSeed / (double)this->mModulus);
-}
-unsigned long TMGetTime()
+extern "C" uint32_t ee_stand_time_get()
 {
     T("time");
     return gFake.mTime;
+}
+
+// the game's operation host (EEGameOps.cpp's ee_gamecpp, not linked): the session's bodies are Rust (ee_game gamecpp
+// server.rs) over the session cases of EEServer.cpp and EEClient.cpp (EECore9OpD, D2, D3); the chain's next link
+// (EETechTree.cpp) is not linked either, and any operation reaching it is a trace line
+int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpD(inOp, p, a, f);
+}
+int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t, const int64_t*, const float*)
+{
+    T("gamecpp op %u", (unsigned)inOp);
+    return 0;
 }
 
 // ---- the stand-in world's objects and answers ----
@@ -183,8 +187,9 @@ std::string EEABootClientFromCanceledGame::Describe()
 }
 static long sResourceStorage[8];
 UResourceFile* gResource = reinterpret_cast<UResourceFile*>(sResourceStorage);
-long UResourceFile::GetString(long inID, UWideString& outString)
+extern "C" long ee_stand_resource_string_get(uint16_t inID16, void (*inAssign)(void*, const char*), void* inTarget)
 {
+    long inID = inID16;
     char theText[64];
     switch (inID) {
     case IDS_PLAYER_IS_OUT_OF_SYNCH:
@@ -201,7 +206,7 @@ long UResourceFile::GetString(long inID, UWideString& outString)
         break;
     }
     T("resource %ld", inID);
-    outString = theText;
+    inAssign(inTarget, theText);
     return 0;
 }
 static SESoundManager sSoundManager;
@@ -268,6 +273,7 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
                                          unsigned long inStepUp, unsigned long inStepDown, unsigned long inCT, unsigned long inPT,
                                          UWideString& inName, bool inAllowNew, bool inAnnounce, unsigned long inAdapter)
 {
+    this->mIsServer = true;
     T("server base ctor %u %lu %u %lu %lu %g %lu %lu %lu %lu %lu %s %d %d %lu", inMaxPlayers, inDefaultSendInterval,
       inPTsPerCT, inMaxPTs, inMinPTs, inTuning, inMaxCTSend, inStepUp, inStepDown, inCT, inPT, TName(inName).c_str(),
       inAllowNew, inAnnounce, inAdapter);
@@ -286,7 +292,7 @@ UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
     T("local address %lu", inAdapter);
     return sAddress;
 }
-unsigned long EECPEngineChoiceCount()
+extern "C" uint64_t ee_stand_engine_choice_count()
 {
     return gFake.mEngineChoices;
 }
@@ -937,6 +943,7 @@ static void ClientCall(unsigned long inStep)
 
 int main(int argc, char** argv)
 {
+    ee_error_set_verify_hook(TraceVerify);
     const char* thePrint = NULL;
     unsigned long theSteps = 6000;
     for (int i = 1; i < argc; i++) {

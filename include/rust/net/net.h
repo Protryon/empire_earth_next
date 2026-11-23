@@ -1145,7 +1145,7 @@ void ee_net_sv_log_checksum_response(const EeNetServer *s,
                                      uint32_t checksum,
                                      uint8_t slot);
 
-void ee_net_sv_log_response(const EeNetServer *s, void *msg);
+int32_t ee_net_sv_log_response(const EeNetServer *s, void *msg);
 
 /// PauseGame (`pause`) and UnpauseGame
 void ee_net_sv_pause_game(const EeNetServer *s, bool pause);
