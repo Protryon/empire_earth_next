@@ -11974,6 +11974,9 @@ constexpr static const int32_t EE_UNITS_UCB_DO_SPACE_CREATE_UNIT = 12;
 
 constexpr static const int32_t EE_UNITS_UCB_DO_SURROUNDING_TILES = 13;
 
+/// "UCBD"
+constexpr static const uint32_t UCBD = 1145193301;
+
 /// unit `a`'s `mTileX`
 constexpr static const int32_t EE_UNITS_UCG_TILE_X_OF = 1600;
 
@@ -12116,9 +12119,6 @@ constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT = 3030;
 constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT = 3031;
 
 constexpr static const int32_t EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION = 3032;
-
-/// "UCBD"
-constexpr static const uint32_t UCBD = 1145193301;
 
 /// `class->BaseAddToRegion(unit a)`
 constexpr static const int32_t EE_UNITS_UCK_D_BASE_ADD_TO_REGION = 3500;
@@ -19759,6 +19759,15 @@ int64_t ee_units_ucb_call(int32_t what,
 /// `flag` is a live bool.
 int32_t ee_units_ucb_wall_piece_part(int32_t index, bool *flag);
 
+/// `EEUCNote`'s constructor: whether the note records.
+uint8_t ee_units_ucbd_begin();
+
+/// `EEUCNote`'s destructor: its words folded (`on` its constructor's answer).
+///
+/// # Safety
+/// `words` holds `count` words (or is NULL with 0).
+void ee_units_ucbd_end(uint8_t on, const uint32_t *words, size_t count);
+
 extern int64_t ee_units_ucg_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -19791,15 +19800,6 @@ int64_t ee_units_ucg_sea(int32_t what,
                          int64_t b,
                          int64_t c,
                          float *f);
-
-/// `EEUCNote`'s constructor: whether the note records.
-uint8_t ee_units_ucbd_begin();
-
-/// `EEUCNote`'s destructor: its words folded (`on` its constructor's answer).
-///
-/// # Safety
-/// `words` holds `count` words (or is NULL with 0).
-void ee_units_ucbd_end(uint8_t on, const uint32_t *words, size_t count);
 
 /// The kind dispatcher `row` (`EE_UNITS_BODY_*`) of `class` on `unit` (see [`dispatch`]).
 ///
