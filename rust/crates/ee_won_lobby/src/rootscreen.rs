@@ -155,16 +155,18 @@ pub enum EeWonRootScreenOp {
     BroadcastRoomSpec,
     /// `this->SubscribeToBroadcast(1)`.
     Subscribe,
-    /// `GetRoot()->GetRect(sRootWindowRect, false)`.
+    /// `sRootWindow->GetRect(sRootWindowRect, false)`.
     WindowRectGet,
-    /// `GetRoot()->GetRect(sRootClientRect, true)`.
+    /// `sRootWindow->GetRect(sRootClientRect, true)`.
     ClientRectGet,
     /// `sRootWindowRect.height`.
     WindowHeight,
     /// `sRootClientRect.height`.
     ClientHeight,
-    /// `GetRoot()->SetPosSize(sRootWindowRect.x, sRootWindowRect.y, sRootWindowRect.width, a)`.
+    /// `sRootWindow->SetPosSize(sRootWindowRect.x, sRootWindowRect.y, sRootWindowRect.width, a)`.
     WindowSetHeight,
+    /// `sRootWindow = GetRoot()` (the SWAT resize's `aWindow`, read once: R6 WON round 33's golden).
+    WindowGet,
 }
 
 /// The calls in (`ee_won_rootscreen_call`).
@@ -393,6 +395,7 @@ impl Screen<'_> {
             return;
         }
         if self.get(F::IsSwat) != 0 {
+            self.on(Op::WindowGet);
             self.on(Op::WindowRectGet);
             self.on(Op::ClientRectGet);
             let window = self.on(Op::WindowHeight) as i32;
@@ -602,16 +605,16 @@ mod tests {
         w.fields.borrow_mut().insert(F::IsSwat as u32, 1);
         *w.cur.borrow_mut() = 2;
         w.call(EeWonRootScreenCall::TabSelected, 8, 0);
-        assert_eq!(w.take()[2], "WindowSetHeight 180 0 0");
+        assert_eq!(w.take()[3], "WindowSetHeight 180 0 0");
         assert_eq!(w.field(F::HideLowerControls), 1);
         *w.cur.borrow_mut() = 1;
         w.call(EeWonRootScreenCall::TabSelected, 8, 0);
-        assert_eq!(w.take()[2], "WindowSetHeight 600 0 0");
+        assert_eq!(w.take()[3], "WindowSetHeight 600 0 0");
         assert_eq!(w.field(F::HideLowerControls), 0);
         w.call(EeWonRootScreenCall::TabSelected, 8, 0);
         assert_eq!(
             w.take(),
-            vec!["WindowRectGet 0 0 0", "ClientRectGet 0 0 0", "Relayout 0 0 0", "SaveUserPrefs 0 0 0"]
+            vec!["WindowGet 0 0 0", "WindowRectGet 0 0 0", "ClientRectGet 0 0 0", "Relayout 0 0 0", "SaveUserPrefs 0 0 0"]
         );
     }
 }
