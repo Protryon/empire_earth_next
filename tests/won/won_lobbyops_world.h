@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <list>
 #include "rust/won_lobby/lanobj.h"
 #include "rust/won_lobby/lobbydlg.h"
 #include "rust/won_lobby/resource.h"
@@ -51,10 +52,20 @@ public:
     T* mPtr;
 };
 
+struct GUIStringData;
+static std::string Narrow(const std::wstring& w)
+{
+    std::string s;
+    for (wchar_t c : w) s.push_back((char)c);
+    return s;
+}
 struct GUIString {
     std::string s;
     GUIString() {}
     GUIString(const char* t) : s(t) {}
+    GUIString(const std::wstring& w) : s(Narrow(w)) {}
+    GUIString(GUIStringData* d); // (won_netlogic_world.h: a text member's data)
+    operator std::wstring() const { return std::wstring(this->s.begin(), this->s.end()); }
     int length() const { return (int)this->s.size(); }
 };
 typedef long WONStatus;
@@ -63,6 +74,7 @@ static wchar_t gEmptyWideString[1];
 
 struct IPAddr {
     intptr_t mValue = 0;
+    void SetRememberHostString(bool b) { Log("ipaddr SetRememberHostString " + N(b)); }
     intptr_t GetValue() const { return this->mValue; }
     static IPAddr GetBroadcastAddr(int inPort) { Log("GetBroadcastAddr " + N(inPort)); IPAddr a; a.mValue = 0xb000 + inPort; return a; }
 };
@@ -109,8 +121,10 @@ struct AuthContext : RefCount {
     AuthPeerData mPeer;
     void SetDoAutoRefresh(bool b) { Log("SetDoAutoRefresh " + N(b)); }
     bool IsExpired(time_t t) { Log("IsExpired " + N((long long)t)); return this->mExpired; }
-    void SetUserName(const std::wstring& w) { Log("SetUserName " + N((long long)w.size())); }
-    void SetPassword(const std::wstring& w) { Log("SetPassword " + N((long long)w.size())); }
+    void SetUserName(const std::wstring& w) { Log("SetUserName " + N((long long)w.size()) + " " + Narrow(w)); }
+    void SetPassword(const std::wstring& w) { Log("SetPassword " + N((long long)w.size()) + " " + Narrow(w)); }
+    void AddCommunity(const std::wstring& w) { Log("AddCommunity " + Narrow(w)); }
+    void RemoveCommunity(const std::wstring& w) { Log("RemoveCommunity " + Narrow(w)); }
     AuthPeerData* GetPeerData() { return &this->mPeer; }
 };
 struct GetCertOp : AsyncOp {
@@ -142,6 +156,7 @@ struct AsyncSocket : RefCount {
     void SetCloseCompletion(Completion* c) { Log(Id(this) + " SetCloseCompletion " + c->mName); delete c; }
     void SetRepeatOp(SocketOp* o) { Log(Id(this) + " SetRepeatOp " + Id(o)); }
     void QueueClose(long t) { Log(Id(this) + " QueueClose " + N(t)); }
+    void Close() { Log(Id(this) + " Close"); }
 };
 struct LobbyLanSocket : AsyncSocket {};
 struct QueueSocket : AsyncSocket {
@@ -157,6 +172,7 @@ struct LobbyGame : RefCount {
     void SetShowDetails(bool b) { Log(Id(this) + " SetShowDetails " + N(b)); }
     IPAddr GetAddress() const { Log(Id(this) + " GetAddress"); IPAddr a; a.mValue = 0xa000 + this->mId; return a; }
     void SetName(const GUIString& n) { Log(Id(this) + " SetName " + n.s); }
+    template <class B> void WriteSummary(B& b) { Log(Id(this) + " WriteSummary"); b.mData += "summary" + N(this->mId); }
 };
 struct LobbyClient : RefCount {
     GUIString GetName() { return GUIString(("client" + N(this->mId)).c_str()); }
@@ -179,6 +195,8 @@ struct Dialog : RefCount {
 struct Sound : RefCount {
     std::string mName;
     void Stop() { Log("sound Stop " + mName); }
+    void Play() { Log("sound Play " + mName); }
+    void SetLooping(bool b) { Log("sound SetLooping " + mName + " " + N(b)); }
 };
 struct LobbyResource {
     GUIString mString;
@@ -189,6 +207,10 @@ static LobbyResource gLobbyResources[1024];
 #define LOBBY_SOUND(theName) (gLobbyResources[(int)EeWonLobbyRes::theName].mSound)
 struct LobbyConfig {
     int mAllowJoinGameWithoutPing = 0;
+    // the Internet logics' (won_netlogic_world.h)
+    std::list<std::string> mDirServers, mRoomDirServers, mAuthServers;
+    std::string mProductName, mLanguage, mVersion;
+    std::wstring mProductDirectory;
 };
 
 struct StagingLogic {

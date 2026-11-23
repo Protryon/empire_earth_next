@@ -51,20 +51,8 @@
 #include "ee/EEUICWonNetStatBox.h"
 #include "ee/EEUIEWonNetStatsEvents.h"
 #include "ee/EEUIManager.h"
+#include "rust/won_lobby/wonfront.h"
 
-// Refreshes the WON statistics box and the player's own stats line
-long EEUIEWNSOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (gWonNet) {
-        static_cast<EEUICWonNetStatBox*>(inForm->GetControl(kWonStatsStatBox))->Refresh();
-        static_cast<EEUICWonNetStatBox*>(inForm->GetControl(kWonStatsMyStatsLine))->Refresh();
-    }
-    return kErrorOK;
-}
-
-// Closes the debug sound panel by popping the top form
-long EEUIEWNSCancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    gUIManager->Pop();
-    return kErrorOK;
-}
+// R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs)
+long EEUIEWNSOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::StatsOpen, inForm, (intptr_t)inEntity); }
+long EEUIEWNSCancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::StatsCancel, inForm, (intptr_t)inEntity); }

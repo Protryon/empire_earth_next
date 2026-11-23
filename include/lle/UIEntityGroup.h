@@ -7,14 +7,14 @@
 #define LLE_UIENTITYGROUP_H
 
 #include "rust/ui/groupobj.h"
+#include "rust/ui/lle_hosts.h"
 #include "rust/ui/obj.h"
 
 class UIEntity;
 
 class LLE_API UIEntityGroup {
-    friend class UIForm;                    // AddControl/RemoveControl call AddEntity/RemoveEntity (private)
 public:
-    UIEntityGroup() : mRust(ee_ui_entity_group_new(this, UIEntityGroup::HostOp)) {}
+    UIEntityGroup() : mRust(ee_ui_entity_group_new(this, ee_ui_group_host)) {}
     UIEntityGroup(const UIEntityGroup&) = delete;
     UIEntityGroup& operator=(const UIEntityGroup&) = delete;
     ~UIEntityGroup() { ee_ui_entity_group_free(this->mRust); }
@@ -23,11 +23,9 @@ public:
     UIEntity* GetEntity(unsigned long inIndex) { return (UIEntity*)this->Call(EeUiEntityGroupCall::Entity, inIndex); }
     unsigned long GetEntityCount() { return (unsigned long)this->Call(EeUiEntityGroupCall::Count); }
     bool GetIsEnabled() { return this->Call(EeUiEntityGroupCall::IsEnabled) != 0; }
-private:
     long AddEntity(UIEntity* inEntity) { return (long)this->Call(EeUiEntityGroupCall::Add, (intptr_t)inEntity); }
     long RemoveEntity(UIEntity* inEntity) { return (long)this->Call(EeUiEntityGroupCall::Remove, (intptr_t)inEntity); }
     intptr_t Call(EeUiEntityGroupCall inCall, intptr_t a = 0) { return ee_ui_entity_group_call(this->mRust, inCall, a); }
-    static intptr_t HostOp(void* inGroup, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 
     EeUiEntityGroup* mRust;                 // the entities and the disable count (groupobj.rs)
 };

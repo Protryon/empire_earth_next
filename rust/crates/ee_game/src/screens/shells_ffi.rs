@@ -14,6 +14,9 @@ mod sys {
 
     extern "C" {
         pub fn ee_screenscpp_shell(ctl: *mut c_void, op: u32, a: i64, b: i64, f: *mut f32) -> i64;
+        pub fn ee_screenscpp_shell_base(ctl: *mut c_void, v: u32, a: i64, b: i64, f: *mut f32) -> i64;
+        pub fn ee_screenscpp_shell_form_base(form: *mut c_void, v: u32, a: i64, b: i64, f: *mut f32) -> i64;
+        pub fn ee_screenscpp_shell_form_self(form: *mut c_void, v: u32) -> i64;
     }
 }
 
@@ -44,7 +47,28 @@ impl ShellHost for CppHost {
             // SAFETY: the shell's live control; the host's float buffer is four floats
             // the cases that are Rust's over the C++ shims (shell_calls.rs), else the C++ host
             _ => crate::screens::shell_calls::call(&mut crate::screens::game_cpp::Ffi, ctl as usize, op, a, b, f)
-                .unwrap_or_else(|| unsafe { sys::ee_screenscpp_shell(ctl, op, a, b, f.as_mut_ptr()) }),
+                .unwrap_or_else(|| unsafe { cpp_shell(ctl, op, a, b, f) }),
+        }
+    }
+}
+
+/// The C++ host: a base class's virtual (`EE_SCREENS_SH_BASE + v`, a form's `EE_SCREENS_SH_FORM_BASE + v`), a form's
+/// own virtual (`EE_SCREENS_SH_FORM_SELF`), else `ee_screenscpp_shell`'s cases.
+///
+/// # Safety
+/// `ctl` is the shell's live control (a form shell's `UIForm*`).
+unsafe fn cpp_shell(ctl: Cpp, op: u32, a: i64, b: i64, f: &mut [f32; 4]) -> i64 {
+    use crate::screens::shells::{EE_SCREENS_SH_BASE, EE_SCREENS_SH_FORM_BASE, EE_SCREENS_SH_FORM_SELF};
+    // SAFETY: the contract
+    unsafe {
+        if op >= EE_SCREENS_SH_FORM_BASE {
+            sys::ee_screenscpp_shell_form_base(ctl, op - EE_SCREENS_SH_FORM_BASE, a, b, f.as_mut_ptr())
+        } else if op == EE_SCREENS_SH_FORM_SELF {
+            sys::ee_screenscpp_shell_form_self(ctl, a as u32)
+        } else if op >= EE_SCREENS_SH_BASE {
+            sys::ee_screenscpp_shell_base(ctl, op - EE_SCREENS_SH_BASE, a, b, f.as_mut_ptr())
+        } else {
+            sys::ee_screenscpp_shell(ctl, op, a, b, f.as_mut_ptr())
         }
     }
 }
@@ -89,6 +113,44 @@ pub unsafe extern "C" fn ee_screens_shell_new(
     let s = Box::into_raw(Box::new(EeScreensShell { ctl, kind: k }));
     shells().insert(ctl as usize, s as usize);
     s
+}
+
+/// A shell's `Make`: the kind made (`ee_screens_shell_new`), stored at `*state` with its override mask at `*over`,
+/// then its constructor body run (`ee_screens_shell_init`: the body may reach the shell through its control, so the
+/// stores come first).
+///
+/// # Safety
+/// `state` and `over` are the shell's members; `args` holds `n` words (or is NULL with `n` 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_shell_make(
+    state: *mut *mut EeScreensShell,
+    over: *mut u64,
+    kind: u32,
+    ctl: *mut c_void,
+    args: *const i64,
+    n: u32,
+) {
+    // SAFETY: the contract
+    unsafe {
+        let s = ee_screens_shell_new(kind, ctl, args, n);
+        *state = s;
+        *over = ee_screens_shell_overrides(s);
+        ee_screens_shell_init(s);
+    }
+}
+
+/// `EEUIShell::Op`: the kind's op on the shell whose control (a form shell's `UIForm*`) is at `ctl`, 0 when none is.
+/// `f` is NULL or four floats.
+///
+/// # Safety
+/// `f` is NULL or four floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_shell_op_at(ctl: *const c_void, op: u32, a: i64, b: i64, f: *mut f32) -> i64 {
+    let Some(s) = shells().get(&(ctl as usize)).copied() else {
+        return 0;
+    };
+    // SAFETY: a registered shell lives until its free; the contract
+    unsafe { ee_screens_shell_op(s as *const EeScreensShell, op, a, b, f) }
 }
 
 /// The kind's override mask (`EE_SCREENS_SV_*` bits).

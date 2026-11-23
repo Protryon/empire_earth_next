@@ -454,10 +454,10 @@ unsafe fn serve(owner: usize, op: EeGeFbOp, obj: usize, a: isize, b: isize) -> i
                 emit(format!("unlock {} {h:016x}", name(obj)));
                 0
             }
-            EeGeFbOp::SurfPixels => surface_mut(obj, |s| {
-                *(a as *mut [c_ulong; 3]) = [s.width, s.height, s.bytes_per_row];
-                s.memory.as_mut_ptr() as isize
-            }),
+            EeGeFbOp::SurfWidth => surface_mut(obj, |s| s.width as isize),
+            EeGeFbOp::SurfHeight => surface_mut(obj, |s| s.height as isize),
+            EeGeFbOp::SurfBytesPerRow => surface_mut(obj, |s| s.bytes_per_row as isize),
+            EeGeFbOp::SurfMemory => surface_mut(obj, |s| s.memory.as_mut_ptr() as isize),
             EeGeFbOp::SurfClear => {
                 emit(format!("clear {} 00000000 00000000 00000000 3f800000", name(obj)));
                 surface_mut(obj, |s| {
@@ -501,8 +501,8 @@ unsafe fn serve(owner: usize, op: EeGeFbOp, obj: usize, a: isize, b: isize) -> i
                 emit(format!("maketexture {} {}", name(t), name(a as usize)));
                 t as isize
             }
-            EeGeFbOp::Verify => {
-                emit(format!("verify {}", if a == 0 { 228 } else { 235 }));
+            EeGeFbOp::VerifySurface | EeGeFbOp::VerifyTexture => {
+                emit(format!("verify {}", if op == EeGeFbOp::VerifySurface { 228 } else { 235 }));
                 0
             }
         }

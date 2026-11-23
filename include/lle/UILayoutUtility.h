@@ -19,8 +19,8 @@ static_assert(offsetof(GERectangle, mLeft) == offsetof(EeUiRect, left), "ee_ui/s
 static_assert(offsetof(GERectangle, mRight) == offsetof(EeUiRect, right), "ee_ui/src/rect.rs");
 static_assert(offsetof(GERectangle, mTop) == offsetof(EeUiRect, top), "ee_ui/src/rect.rs");
 
-class LLE_API UILayoutUtility : public EeUiLayout {   // the record is Rust's (layout.rs; UI round 13)
-public:
+class LLE_API UILayoutUtility : public EeUiLayout {
+public:   // the record is Rust's (layout.rs; UI round 13)
     UILayoutUtility() { ee_ui_layout_init(this); }
     ~UILayoutUtility() {}                   // exported, ICF-folded `ret` (0x1000c16a)
     void CalculateRectangle(const GERectangle& inParent, GERectangle& outRectangle, bool inExclusive) const

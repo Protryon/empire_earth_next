@@ -73,17 +73,8 @@ public:
     // too: GetRandomPoint draws a column), as numbers: the offset, the count, the column count, then per column 0 (none)
     // or 1, its size, its run count and its runs' ends (ee_sparse_raw); SetRaw makes the set from them (false, the set
     // cleared, when they are not such a list)
-    void GetRaw(std::vector<long>& outRaw) const
-    {
-        size_t theCount = 0;
-        const int32_t* theRaw = ee_sparse_raw(this->mPoints, &theCount);
-        outRaw.assign(theRaw, theRaw + theCount);
-    }
-    bool SetRaw(const std::vector<long>& inRaw)
-    {
-        std::vector<int32_t> theRaw(inRaw.begin(), inRaw.end());
-        return ee_sparse_set_raw(this->mPoints, theRaw.empty() ? NULL : &theRaw[0], theRaw.size());
-    }
+    void GetRaw(std::vector<long>& outRaw) const { ee_sparse_raw_into(this->mPoints, &outRaw, Resize<long>); }
+    bool SetRaw(const std::vector<long>& inRaw) { return ee_sparse_set_raw_longs(this->mPoints, inRaw.data(), inRaw.size()); }
     EeSparseArray* GetHandle() const { return this->mPoints; }   // New (port): for the AI area's record (ee_astar area.rs)
     // New (port): where the handle is (ee_sim::astar cm_io.rs reads an area's tiles from its object)
     EeSparseArray* const* GetHandleSlot() const { return &this->mPoints; }
@@ -93,27 +84,15 @@ private:
     static float Generate(void* inRandom) { return static_cast<URandom*>(inRandom)->Generate(); }
     // The handle's point list (BuildPointList / GetOnlyExtremeEdgePoints) into outList, cleared first
     void List(bool inExtremes, long inStep, std::vector<U2DPoint<long> >& outList)
-    {
-        size_t theCount = 0;
-        const EePoint* thePoints = ee_sparse_points(this->mPoints, inExtremes, (int32_t)inStep, &theCount);
-        outList.clear();
-        outList.reserve(theCount);
-        for (size_t i = 0; i < theCount; i++)
-            outList.push_back(Point(thePoints[i]));
-    }
-    // Copies a point list into the handle's (int32) points: Create (inCreate) or Insert
+        { ee_sparse_points_into(this->mPoints, inExtremes, (int32_t)inStep, &outList, Resize<U2DPoint<long> >); }
     void InsertList(const std::vector<U2DPoint<long> >& inPoints, bool inCreate)
-    {
-        std::vector<EePoint> thePoints(inPoints.size());
-        for (size_t i = 0; i < inPoints.size(); i++) {
-            thePoints[i].x = (int32_t)inPoints[i].mX;
-            thePoints[i].y = (int32_t)inPoints[i].mY;
-        }
-        ee_sparse_insert_list(this->mPoints, thePoints.empty() ? NULL : &thePoints[0], thePoints.size(), inCreate);
-    }
-
+        { ee_sparse_insert_longs(this->mPoints, reinterpret_cast<const long*>(inPoints.data()), inPoints.size(), inCreate); }
+    // a vector Rust fills (ee_sparse_points_into, ee_sparse_raw_into): resized, its data as longs
+    template <class T> static long* Resize(void* inVector, size_t inCount)
+        { return reinterpret_cast<long*>((static_cast<std::vector<T>*>(inVector)->resize(inCount), static_cast<std::vector<T>*>(inVector)->data())); }
     EeSparseArray* mPoints;                 // the points (ee_sparse_new)
 };
 static_assert(sizeof(EePoint) == 8, "EePoint");
+static_assert(sizeof(U2DPoint<long>) == 2 * sizeof(long), "a U2DPoint<long> is two longs (ee_sparse_points_into)");
 
 #endif

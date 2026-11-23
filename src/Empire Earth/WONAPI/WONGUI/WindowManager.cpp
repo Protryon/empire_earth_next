@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guihost.h"
+#include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/wmcache.h"
 #include "rust/won_gui/wmobj.h"
 using namespace WONAPI;
@@ -30,6 +31,11 @@ static EeWonRect4 WinRect4(const WONRectangle& inRect)
 // R6 WON rounds 33-34: the Rust manager's calls out (EeWonGuiOp's Wm* ops; rust/crates/ee_won_gui/src/wmobj.rs,
 // wmloop.rs)
 typedef EeWonGuiOp Op;
+
+// the pictures and attributes a run of ops shares (guisplit.rs wm_op: the original's locals)
+static SmartPtr<NativeImage> sHostImage;
+static SmartPtr<RawImage> sHostRaw;
+static ImageAttributes sHostAttr;
 
 static intptr_t WmCompCall(Component* t, intptr_t call, intptr_t c, intptr_t d)
 {
@@ -112,18 +118,6 @@ static intptr_t WmEventCall(WindowEventBase* t, intptr_t call, intptr_t c)
     case EeWonWmEvent::Type: return (intptr_t)t->mEventType;
     case EeWonWmEvent::Window: return (intptr_t)t->mWindow;
     case EeWonWmEvent::SetWindow: t->mWindow = (Window*)c; return 0;
-    case EeWonWmEvent::Mouse: {
-        MouseEvent* m = static_cast<MouseEvent*>(t);
-        EeWonWmMouse* o = (EeWonWmMouse*)c;
-        o->window = (intptr_t)m->mWindow; o->x = m->mx; o->y = m->my; o->button = m->mButtonOrAmount;
-        return 0;
-    }
-    case EeWonWmEvent::SetMouse: {
-        MouseEvent* m = static_cast<MouseEvent*>(t);
-        const EeWonWmMouse* o = (const EeWonWmMouse*)c;
-        m->mWindow = (Window*)o->window; m->mx = o->x; m->my = o->y;
-        return 0;
-    }
     case EeWonWmEvent::Button: return static_cast<MouseEvent*>(t)->mButtonOrAmount;
     case EeWonWmEvent::Key: return static_cast<KeyEvent*>(t)->mKey;
     case EeWonWmEvent::Size: {
@@ -166,34 +160,28 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     }
     case Op::WmRef:
         switch ((EeWonWmRefKind)a) {
-        case EeWonWmRefKind::Font: if (c) ((Font*)b)->AddRef(); else ((Font*)b)->Release(); return 0;
         case EeWonWmRefKind::NativeImage: if (c) ((NativeImage*)b)->AddRef(); else ((NativeImage*)b)->Release(); return 0;
-        case EeWonWmRefKind::RawImage: if (c) ((RawImage*)b)->AddRef(); else ((RawImage*)b)->Release(); return 0;
-        case EeWonWmRefKind::Image: if (c) ((Image*)b)->AddRef(); else ((Image*)b)->Release(); return 0;
         }
         return 0;
-    case Op::WmDecode: {
-        // the decoder's SmartPtr: its object answered with one reference
-        std::string aPath((const char*)b, (size_t)c);
-        SmartPtr<NativeImage> anImage = t->mImageDecoder.Decode((DisplayContext*)a, aPath.c_str());
-        if (anImage.get() != NULL) anImage->AddRef();
-        return (intptr_t)anImage.get();
-    }
-    case Op::WmDecodeRaw: {
-        std::string aPath((const char*)a, (size_t)b);
-        SmartPtr<RawImage> anImage = t->mImageDecoder.DecodeRaw(aPath.c_str());
-        if (anImage.get() != NULL) anImage->AddRef();
-        return (intptr_t)anImage.get();
-    }
-    case Op::WmDelayImage: {
-        std::string aPath((const char*)a, (size_t)b);
-        ImageAttributes anAttr;
-        if (!t->mImageDecoder.GetImageAttributes(aPath.c_str(), anAttr))
-            return 0;
-        Image* anImage = new Image(ee_won_image_new_delay(WONImageHost, (const uint8_t*)aPath.data(), aPath.size(), anAttr.mWidth, anAttr.mHeight));
-        anImage->AddRef();
-        return (intptr_t)anImage;
-    }
+    case Op::WmMouseEvX: return static_cast<MouseEvent*>((WindowEventBase*)a)->mx;
+    case Op::WmMouseEvY: return static_cast<MouseEvent*>((WindowEventBase*)a)->my;
+    case Op::WmMouseEvSetX: static_cast<MouseEvent*>((WindowEventBase*)a)->mx = (int)b; return 0;
+    case Op::WmMouseEvSetY: static_cast<MouseEvent*>((WindowEventBase*)a)->my = (int)b; return 0;
+    case Op::WmFontHold: ((Font*)a)->AddRef(); return 0;
+    case Op::WmFontRelease: ((Font*)a)->Release(); return 0;
+    case Op::WmRawHold: ((RawImage*)a)->AddRef(); return 0;
+    case Op::WmRawRelease: ((RawImage*)a)->Release(); return 0;
+    case Op::WmImageHold: ((Image*)a)->AddRef(); return 0;
+    case Op::WmImageRelease: ((Image*)a)->Release(); return 0;
+    case Op::WmDecodeKeep: sHostImage = t->mImageDecoder.Decode((DisplayContext*)a, std::string((const char*)b, (size_t)c).c_str()); return 0;
+    case Op::WmHostImage: return (intptr_t)sHostImage.get();
+    case Op::WmHostImageClear: sHostImage = SmartPtr<NativeImage>(); return 0;
+    case Op::WmDecodeRawKeep: sHostRaw = t->mImageDecoder.DecodeRaw(std::string((const char*)a, (size_t)b).c_str()); return 0;
+    case Op::WmHostRaw: return (intptr_t)sHostRaw.get();
+    case Op::WmHostRawClear: sHostRaw = SmartPtr<RawImage>(); return 0;
+    case Op::WmImageAttributes: return t->mImageDecoder.GetImageAttributes(std::string((const char*)a, (size_t)b).c_str(), sHostAttr) ? 1 : 0;
+    case Op::WmNewDelayImage: return (intptr_t)new Image(ee_won_image_new_delay(WONImageHost, (const uint8_t*)a, (size_t)b, sHostAttr.mWidth, sHostAttr.mHeight));
+    case Op::WmSetStandardColor: t->mColorScheme->SetStandardColor((int)a, (DWORD)(uint32_t)b); return 0;
     case Op::WmDefaultWindowFont: {
         SmartPtr<Font> aFont = t->GetDefaultWindow()->GetFont(FontDescriptor("Tahoma", 0, 8));
         if (aFont.get() != NULL) aFont->AddRef();
@@ -215,7 +203,7 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
 // WIM decoders here; the port reads PNG and JPEG pictures only (D9; the lobby's game code registers both), so they
 // went (round 18)
 WindowManager::WindowManager() {
-    this->mWmObj.p = ee_won_wm_new(this, ee_won_guicpp_wm_call);
+    this->mWmObj.p = ee_won_wm_new(this, ee_won_gui_wm_game);
     WindowManager::mThreadId=PlatCurrentThreadId();
     WindowManager::mDefaultWindowManager=this;
     this->WmSet(EeWonWmField::LastTimerTick, (intptr_t)(uint32_t)WONTickCount());
@@ -231,10 +219,7 @@ WindowManager::~WindowManager() { this->CloseAllWindows(); }
 // Fills the colour scheme with the 17 standard Windows-style colours (wmobj.rs's table)
 void WindowManager::InitColorScheme()
 {
-    uint32_t aColors[StandardColor_Max];
-    ee_won_wm_standard_colors(aColors);
-    for (int i = 0; i < StandardColor_Max; i++)
-        this->mColorScheme->SetStandardColor(i, aColors[i]);
+    ee_won_gui_wm_init_colors(ee_won_guicpp_wm_call, this);
 }
 
 // A font with another style and, when the size is positive, another size, from the default window (GetDefaultFontMod,
@@ -287,3 +272,6 @@ SmartPtr<Font> WindowManager::GetDefaultFont(const FontDescriptor& theDescriptor
 // Class statics: the default window manager and the GUI thread id (constant-initialised)
 WindowManager* WindowManager::mDefaultWindowManager = NULL;
 DWORD WindowManager::mThreadId = 0;
+
+// the host behind the game's (guisplit.rs ee_won_gui_wm_game)
+[[maybe_unused]] static const bool sSplitWmHost = (ee_won_gui_split_register(EeWonGuiSplitHost::Wm, ee_won_guicpp_wm_call), true);

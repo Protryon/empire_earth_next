@@ -12,6 +12,31 @@ use crate::screens::menus_ffi::{sys, Form};
 use crate::screens::settings::EeScreensVideoMode;
 use crate::screens::settings_form::*;
 
+/// The settings members the form reads and writes (`EEGameSettings`' base `EeAppSettingsFields`): (record field,
+/// member) pairs handed to `$m`.
+macro_rules! settings_fields {
+    ($m:ident) => {
+        $m! {
+            mouse_sensitivity mMouseSensitivity side_scroll_speed mSideScrollSpeed grab_scroll_speed mGrabScrollSpeed
+            sound_volume mSoundVolume music_volume mMusicVolume max_number_of_sounds mMaxNumberOfSounds
+            game_bit_depth mGameBitDepth game_window_height mGameWindowHeight game_window_width mGameWindowWidth
+            mip_levels_to_drop mMIPLevelsToDrop model_detail mModelDetail effect_detail mEffectDetail
+            network_adapter mNetworkAdapter screen_id mScreenID terrain_mip_levels_to_drop mTerrainMIPLevelsToDrop
+            texture_bit_depth mTextureBitDepth number_of_auto_saves mNumberOfAutoSaves
+            auto_save_in_milliseconds mAutoSaveInMilliseconds texture_resolution mTextureResolution ui_scale mUIScale
+            render_resolution mRenderResolution window_mode mWindowMode frame_rate_limit mFrameRateLimit
+            texture_filtering mTextureFiltering brightness mBrightness master_volume mMasterVolume
+            maximum_zoom_out mMaximumZoomOut zoom_enabled mZoomEnabled display_clouds mDisplayClouds
+            display_shadows mDisplayShadows display_battlefield_ambients mDisplayBattlefieldAmbients
+            trilinear_filter mTrilinearFilter full_screen mFullScreen reverb_enabled mReverbEnabled
+            wait_for_vsync mWaitForVSync ambient_sounds mAmbientSounds show_blood mShowBlood
+            music_enabled mMusicEnabled right_hand_mouse_orientation mRightHandMouseOrientation
+            unit_lighting mUnitLighting display_weather_effects mDisplayWeatherEffects anti_aliasing mAntiAliasing
+            mute_in_background mMuteInBackground
+        }
+    };
+}
+
 /// The form's state (the UI thread's; locked only around its own reads and writes).
 static SETTINGS: Mutex<SettingsForm> = Mutex::new(SettingsForm::new());
 
@@ -143,11 +168,21 @@ impl SettingsHost for Form {
     }
     fn settings(&mut self, defaults: bool) -> EeScreensSettingsRecord {
         let mut out = EeScreensSettingsRecord::default();
-        unsafe { sys::ee_screenscpp_settings(defaults, &mut out) };
+        // SAFETY: the game's live settings (read here)
+        let s = unsafe { &*sys::ee_screenscpp_settings_fields(defaults) };
+        macro_rules! get {
+            ($($field:ident $member:ident)*) => { $(out.$field = s.$member;)* };
+        }
+        settings_fields!(get);
         out
     }
     fn put_settings(&mut self, settings: &EeScreensSettingsRecord) {
-        unsafe { sys::ee_screenscpp_put_settings(settings) }
+        // SAFETY: the game's live settings (the UI thread's)
+        let s = unsafe { &mut *sys::ee_screenscpp_settings_fields(false) };
+        macro_rules! put {
+            ($($field:ident $member:ident)*) => { $(s.$member = settings.$field;)* };
+        }
+        settings_fields!(put);
     }
     fn text(&mut self, which: u32, arg: u32) -> Vec<u8> {
         self.get(which, arg)

@@ -22,11 +22,7 @@ public:
     virtual void SetVertexIndex3(unsigned long inPolygon, unsigned long inIndex) { ee_ge_pa_set_index(this->mRust, inPolygon, 2, inIndex); }
     virtual void SetVertexIndices(unsigned long inPolygon, unsigned long inIndex1, unsigned long inIndex2,
                                   unsigned long inIndex3)   // (inPolygon first: DX7PolygonArray.cpp)
-    {
-        ee_ge_pa_set_index(this->mRust, inPolygon, 0, inIndex1);
-        ee_ge_pa_set_index(this->mRust, inPolygon, 1, inIndex2);
-        ee_ge_pa_set_index(this->mRust, inPolygon, 2, inIndex3);
-    }
+        { ee_ge_pa_set_indices(this->mRust, inPolygon, inIndex1, inIndex2, inIndex3); }
     virtual unsigned long SizeOf() const { return ee_ge_pa_size(this->mRust, true); }
     const unsigned short* GetIndices() const { return this->mIndices; }   // three per triangle
 

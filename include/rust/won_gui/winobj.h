@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/guihost.h"
 
 /// `Window::WindowState`.
@@ -64,6 +65,16 @@ enum class EeWonWinCall : uint32_t {
   GetField,
   /// the field `a` set to `b`.
   SetField,
+};
+
+/// The C++ event class a handler's record is read from (`ee_won_win_event`).
+enum class EeWonWinEventShape : uint32_t {
+  /// a `KeyEvent` (the type, the key modifiers, the key).
+  Key = 0,
+  /// a `MouseEvent` (the type, the point, the key modifiers, the button or wheel amount).
+  Mouse,
+  /// an `InputEvent` (the type; a `SizeEvent`'s size for `InputEvent_SizeChange`).
+  Input,
 };
 
 /// The root container's methods the window calls (`WinRoot`'s `a`; `b`, `c`, `d` its arguments).
@@ -197,6 +208,34 @@ void ee_won_win_free(EeWonWindow *win);
 /// # Safety
 /// `win` is live; the call's arguments as documented.
 ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A key, mouse or input handler (`call`) over the record read from the C++ event `event` (a `KeyEvent*`,
+/// `MouseEvent*` or `InputEvent*` as an `InputEvent*`).
+///
+/// # Safety
+/// `win` is live; `event` is a live event of the shape.
+ptrdiff_t ee_won_win_event(const EeWonWindow *win,
+                           EeWonWinCall call,
+                           EeWonWinEventShape shape,
+                           ptrdiff_t event);
+
+/// `Window::GetFont`'s font (unheld: the C++ wraps it in its SmartPtr).
+///
+/// # Safety
+/// `win` is live; `map` is the window's font map; `desc` the `FontDescriptor*`; `face` its face's `n` bytes.
+ptrdiff_t ee_won_win_get_font(const EeWonWindow *win,
+                              EeWonFontMap *map,
+                              ptrdiff_t desc,
+                              const uint8_t *face,
+                              size_t n,
+                              int32_t style,
+                              int32_t size);
+
+/// `Window::Create`: the manager's default icon when the window has none, then the create.
+///
+/// # Safety
+/// `win` is live.
+void ee_won_win_create(const EeWonWindow *win, int32_t width, int32_t height);
 
 }  // extern "C"
 

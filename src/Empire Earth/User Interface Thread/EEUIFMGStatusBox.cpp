@@ -68,23 +68,17 @@ struct EEUIFMGStatusBoxCall {
     UWideString mText;
     GETextureDescription mDescription;
     GETexture* mTextures[4];
+    // the record of a call (a temporary's, for the full expression)
+    EEUIFMGStatusBoxCall* Ptr() { return this; }
 };
 static_assert(offsetof(EEUIFMGStatusBoxCall, mText) == 3 * sizeof(void*), "hud_direct.rs BoxCallHead");
-static_assert(EE_SCREENS_BOX_IMPROVEMENT_FLIGHT_OR_POWER == kImprovementFlightTimeOrPower &&
-                  EE_SCREENS_BOX_IMPROVEMENT_HIT_POINTS == kImprovementHitPoints &&
-                  EE_SCREENS_BOX_IMPROVEMENT_TRANSPORT == kImprovementTransport &&
-                  EE_SCREENS_BOX_IDS_GARRISON == IDS_IMPROVEMENT_GARRISON && kDisplayModeHidden == 0 &&
-                  kDisplayModeShown == 1,
-              "status_box.rs's constants");
+// (status_box.rs' constants equal the headers': hud_cpp_consts_tests.rs)
 
 // The call's unit (an EEUnit*) for the status box's view of it (hud_views.rs status_box_view, the original's
 // EEStatusBoxView), and whether the box has its third and fourth bars
-extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall, bool* outTwoBars)
-{
-    EEUIFMGStatusBoxCall& theCall = *static_cast<EEUIFMGStatusBoxCall*>(inCall);
-    *outTwoBars = theCall.mBox->mCA8 != NULL && theCall.mBox->mCAC != NULL;
-    return (int64_t)theCall.mUnit;
-}
+extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall) { return (int64_t)static_cast<EEUIFMGStatusBoxCall*>(inCall)->mUnit; }
+extern "C" bool ee_screenscpp_status_box_bar3(void* inCall) { return static_cast<EEUIFMGStatusBoxCall*>(inCall)->mBox->mCA8 != NULL; }
+extern "C" bool ee_screenscpp_status_box_bar4(void* inCall) { return static_cast<EEUIFMGStatusBoxCall*>(inCall)->mBox->mCAC != NULL; }
 
 // ---- the one-statement shims of ee_screens status_box_calls.rs (UI lane round 8; once HostOp's cases and
 // EEUIFMGStatusBar::SetIconBitmap): each one call, no logic
@@ -229,37 +223,32 @@ extern "C" void ee_screenscpp_sb_bar_dirty(uintptr_t inBar)
 // bars, the improvable attribute buttons and the background panels; clears it without a unit
 void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
 {
-    EEUIFMGStatusBoxCall theCall = {this, inUnit, NULL};
-    ee_screens_status_box_fill(&theCall, inUnit != NULL);   // ee_screens status_box.rs fill
+    ee_screens_status_box_fill(EEUIFMGStatusBoxCall{this, inUnit, NULL}.Ptr(), inUnit != NULL);
 }
 
 // Hides the status box's background panels (all but panel 0x7c)
 void EEUIFMGStatusBox::HideBackgrounds()
 {
-    EEUIFMGStatusBoxCall theCall = {this, NULL, NULL};
-    ee_screens_status_box_hide_backgrounds(&theCall);   // ee_screens status_box.rs hide_backgrounds
+    ee_screens_status_box_hide_backgrounds(EEUIFMGStatusBoxCall{this, NULL, NULL}.Ptr());
 }
 
 // Loads the three unit improvement textures and points the 50 attribute icons at their cells
 void EEUIFMGStatusBox::LoadIcons()
 {
-    EEUIFMGStatusBoxCall theCall = {NULL, NULL, NULL};
-    ee_screens_status_box_load_icons(&theCall);   // ee_screens status_box.rs load_icons (the cells, the texture choice)
+    ee_screens_status_box_load_icons(EEUIFMGStatusBoxCall{NULL, NULL, NULL}.Ptr());
 }
 
 // Refreshes the status box texts for the unit: name, civilization, hit points, attributes, cargo, flight time
 // or power, garrison, and the resource it carries
 void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
 {
-    EEUIFMGStatusBoxCall theCall = {this, inUnit, NULL};
-    ee_screens_status_box_refresh(&theCall);   // ee_screens status_box.rs refresh
+    ee_screens_status_box_refresh(EEUIFMGStatusBoxCall{this, inUnit, NULL}.Ptr());
 }
 
 // Shows on each visible improvement button how many of its improvements the player has queued
 void EEUIFMGStatusBox::UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement)
 {
-    EEUIFMGStatusBoxCall theCall = {this, NULL, inUnit};
-    ee_screens_status_box_update_queued(&theCall);   // ee_screens status_box.rs update_queued_counts
+    ee_screens_status_box_update_queued(EEUIFMGStatusBoxCall{this, NULL, inUnit}.Ptr());
 }
 
 // the icons' load, unload and reload as the game's media calls them (Empire Earth.cpp: ee/EEGameUI.h)

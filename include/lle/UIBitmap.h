@@ -8,10 +8,10 @@
 #define LLE_UIBITMAP_H
 
 #include "lle/UIControl.h"
-#include "lle/UIObjHost.h"
+#include "rust/ui/lle_hosts.h"
 #include "rust/ui/mediaobj.h"
 
-class LLE_API UIBitmap : public UIControl, private EeUiBitmapFields {
+class LLE_API UIBitmap : public UIControl, public EeUiBitmapFields {
 public:
     UIBitmap(unsigned long inId, GEBitmap* inBitmap, const GERectangle& inRectangle, UIForm* inForm,
              unsigned long inIndex)
@@ -19,8 +19,6 @@ public:
     {
         this->Call(EeUiBitmapCall::Init, (intptr_t)inBitmap);
     }
-    UIBitmap(const UIBitmap&) = delete;
-    UIBitmap& operator=(const UIBitmap&) = delete;
     virtual ~UIBitmap() { this->Call(EeUiBitmapCall::Release); }
     virtual long CopyData() { return (long)this->Call(EeUiBitmapCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiBitmapCall::DrawPolygons); }
@@ -28,7 +26,6 @@ public:
     GEBitmap* GetBitmap() const { return static_cast<GEBitmap*>(this->mBitmap); }
     void SetBitmap(GEBitmap* inBitmap) { this->Call(EeUiBitmapCall::SetBitmap, (intptr_t)inBitmap); }
     virtual long UpdateKeyboard() { return kErrorOK; }
-protected:
     virtual long MouseLButtonDown() { return kErrorOK; }
     virtual long MouseLButtonUp() { return kErrorOK; }
     virtual long MouseMove(const GE2DPoint& inLocation) { return kErrorOK; }
@@ -36,16 +33,9 @@ protected:
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void TabbedTo() {}
     virtual void TabbedFrom() {}
-private:
-    // the Rust record's calls out: UIControl's and the media's ops on this control
-    static intptr_t Op(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
-    {
-        UIBitmap* c = static_cast<UIBitmap*>(static_cast<EeUiBitmapFields*>(inObj));
-        intptr_t r = 0;
-        if (!UIObjHost::Base(c, inOp, a, f, &r))
-            UIObjHost::Media(c, inOp, a, b, f, &r);
-        return r;
-    }
+    // the Rust record's calls out: UIControl's and the media's ops on this control (ee_ui lle_hosts.rs)
+    static intptr_t Op(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+    { return ee_ui_bitmap_host(static_cast<UIControl*>(static_cast<UIBitmap*>(static_cast<EeUiBitmapFields*>(inObj))), inOp, a, b, c, d, f); }
     intptr_t Call(EeUiBitmapCall inCall, intptr_t a = 0) { return ee_ui_bitmap_call(this, UIBitmap::Op, inCall, a); }
 };
 

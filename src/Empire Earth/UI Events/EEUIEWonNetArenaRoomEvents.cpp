@@ -64,122 +64,20 @@
 #include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEWonNetUI.h"
+#include "rust/won_lobby/wonfront.h"
 
-static unsigned long sLastUpdateTime;
-
-static long JoinSelectedRoom(UIForm* inForm);
-
-// Refreshes the WON room list, its server name and game count every 10 seconds or when the list changed
-long EEUIEWNARUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (gWonNet) {
-        if (TMGetTime() - sLastUpdateTime > 10000 || gWonNet->GetRoomListChanged() == true) {
-            sLastUpdateTime = TMGetTime();
-            UITextLabel* theLabel14 = dynamic_cast<UITextLabel*>(inForm->GetControl(kAvailableRoomsTotalGamesNumber));
-            UITextLabel* theLabel16 = dynamic_cast<UITextLabel*>(inForm->GetControl(kAvailableRoomsServersNameLabel));
-            EEUICWonNetRoomsBox* theRooms = dynamic_cast<EEUICWonNetRoomsBox*>(inForm->GetControl(kAvailableRoomsAvailRoomsListBox));
-            gWonNet->UpdateRoomList(theRooms, theLabel16, theLabel14);
-        }
-    }
-    return kErrorOK;
-}
-
-// Installs the room list's update event the first time and refreshes the room list, server name and game count
-long EEUIEWNARActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (inForm->GetFormUpdateEvent() == NULL) {
-        UIEvent* theEvent = new EEUIEWNARUpdateForm;
-        inForm->SetFormUpdateEvent(theEvent);
-        theEvent->Dereference();
-    }
-    if (gWonNet) {
-        UITextLabel* theLabel14 = dynamic_cast<UITextLabel*>(inForm->GetControl(kAvailableRoomsTotalGamesNumber));
-        UITextLabel* theLabel16 = dynamic_cast<UITextLabel*>(inForm->GetControl(kAvailableRoomsServersNameLabel));
-        EEUICWonNetRoomsBox* theRooms = dynamic_cast<EEUICWonNetRoomsBox*>(inForm->GetControl(kAvailableRoomsAvailRoomsListBox));
-        gWonNet->UpdateRoomList(theRooms, theLabel16, theLabel14);
-    }
-    return kErrorOK;
-}
+// R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs; the host is EEUIEWonNetArenaGameEvents.cpp's)
+long EEUIEWNARUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArUpdateForm, inForm, (intptr_t)inEntity); }
+long EEUIEWNARActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArActivateForm, inForm, (intptr_t)inEntity); }
+long EEUIEWNARDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArDeactivateForm, inForm, (intptr_t)inEntity); }
+long EEUIEWNARDoubleClickRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArDoubleClickRoom, inForm, (intptr_t)inEntity); }
+long EEUIEWNARClickUpdateAccount::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArClickUpdateAccount, inForm, (intptr_t)inEntity); }
+long EEUIEWNARJoinRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArJoinRoom, inForm, (intptr_t)inEntity); }
+long EEUIEWNAROpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArOpenScreen, inForm, (intptr_t)inEntity); }
 
 long EEUIEWNARBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     return inForm->GetManager()->Pop();
-}
-
-// Removes the current form's update event when the room list is deactivated
-long EEUIEWNARDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    gUIManager->GetCurrentForm()->SetFormUpdateEvent(NULL);
-    return kErrorOK;
-}
-
-// Joins the double-clicked WON room
-long EEUIEWNARDoubleClickRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    return JoinSelectedRoom(inForm);
-}
-
-// Joins the WON room selected in the room list; always returns 0
-static long JoinSelectedRoom(UIForm* inForm)
-{
-    UWideString theRoom;
-    unsigned long theSelection;
-    if (static_cast<EEUICWonNetRoomsBox*>(inForm->GetControl(kAvailableRoomsAvailRoomsListBox))->GetCurrentSelection(theSelection) == kErrorOK) {
-        theRoom = static_cast<EEUICWonNetRoomsBox*>(inForm->GetControl(kAvailableRoomsAvailRoomsListBox))->GetData(theSelection).mName;
-        if (gWonNet)
-            gWonNet->JoinRoom(theRoom, NULL);
-    }
-    return 0;
-}
-
-// Opens the update-account screen and asks WON for the account details
-long EEUIEWNARClickUpdateAccount::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UString theUnused;
-    UIEvent* theEvent = new EEUIEWNMUAOpenScreen;
-    gUIManager->GetFormByID(kFormUpdateSierraAccount)->SetFormOpenEvent(theEvent);
-    theEvent->Dereference();
-    gUIManager->LockUIForCopyData();
-    gUIManager->Push(gUIManager->GetFormByID(kFormUpdateSierraAccount));
-    gUIManager->UnlockUIForCopyData();
-    gWonNet->OpenUpdateAccount();
-    return kErrorOK;
-}
-
-// Joins the selected WON room, at most once every 5 seconds
-long EEUIEWNARJoinRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static unsigned long sLastTime = 0;
-    unsigned long theTime = TMGetTime();
-    if (theTime - sLastTime > 5000) {
-        sLastTime = theTime;
-        JoinSelectedRoom(inForm);
-    }
-    return kErrorOK;
-}
-
-// Sets up the WON room list: hooks its buttons and list to their events, shows the user name and connects to the lobby
-long EEUIEWNAROpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theText;
-    EEUIEWNSetTriggerEvent(new EEUIEWNARBack, inForm->GetControl(kAvailableRoomsBackButton), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNARJoinRoom, inForm->GetControl(kAvailableRoomsJoinRoomButton), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNARDoubleClickRoom, inForm->GetControl(kAvailableRoomsAvailRoomsListBox), kControlTriggerDoubleClicked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNARDoubleClickRoom, inForm->GetControl(kAvailableRoomsAvailRoomsListBox), kControlTriggerEnterPressed);
-    UIEvent* theEvent = new EEUIEWNARActivateForm;
-    inForm->SetFormActivateEvent(theEvent);
-    theEvent->Dereference();
-    theEvent = new EEUIEWNARDeactivateForm;
-    inForm->SetFormDeactivateEvent(theEvent);
-    theEvent->Dereference();
-    EEUIEWNSetTriggerEvent(new EEUIEWNARClickUpdateAccount, inForm->GetControl(kAvailableRoomsUpdateMyAccount), kControlTriggerButtonUp);
-    UITextLabel* theUserLabel = static_cast<UITextLabel*>(inForm->GetControl(kAvailableRoomsPlayersNameLabel));
-    std::string theUser = WONAPI::WStringToString(gWonNet->mUser->GetName());
-    theUserLabel->SetText(UWideString(theUser.c_str()));
-    if (gWonNet)
-        gWonNet->ConnectToLobby();
-    sLastUpdateTime = TMGetTime();
-    return kErrorOK;
 }
 
 // The UI that the WON network code (EEWonNet.cpp) calls, set before main (ee/EEWonNetUI.h)

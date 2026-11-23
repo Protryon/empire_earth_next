@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "rust/won_lobby/lobbycfg.h"
 using namespace WONAPI;
 
 // The class-static allocator at 0x8d954c holds DefaultAllocator (0x757f30), the SDK's default factory
@@ -91,33 +92,32 @@ bool LobbyConfig::HandleValueInstruction(ConfigParser* parser, const std::string
 
 // Checks that the config names directory servers, product, version and language (setting a parser error
 // otherwise) and fills in the LAN version, resource and product directories and the Product define
-bool LobbyConfig::PostParse(ConfigParser* parser)
+// PostParse's statements (lobbycfg.rs composes them, R6 WON round 32)
+static intptr_t CfgHost(void* inConfig, void* inParser, EeWonLobbyCfgOp inOp)
 {
-    if (this->mDirServers.empty()) {
-        parser->SetError("No Directory Servers specified.", false);
-        return false;
+    typedef EeWonLobbyCfgOp Op;
+    LobbyConfig* c = static_cast<LobbyConfig*>(inConfig);
+    ConfigParser* parser = static_cast<ConfigParser*>(inParser);
+    switch (inOp) {
+    case Op::DirServersEmpty: return c->mDirServers.empty();
+    case Op::ProductNameEmpty: return c->mProductName.empty();
+    case Op::VersionEmpty: return c->mVersion.empty();
+    case Op::LanguageEmpty: return c->mLanguage.empty();
+    case Op::ErrorNoDirServers: parser->SetError("No Directory Servers specified.", false); return 0;
+    case Op::ErrorNoProductName: parser->SetError("No product name specified.", false); return 0;
+    case Op::ErrorNoVersion: parser->SetError("No version specified.", false); return 0;
+    case Op::ErrorNoLanguage: parser->SetError("No language specified.", false); return 0;
+    case Op::LanVersionEmpty: return c->mLanVersion.empty();
+    case Op::LanVersionFromVersion: c->mLanVersion = c->mVersion; return 0;
+    case Op::ResourceDirEmpty: return c->mResourceDirectory.empty();
+    case Op::ResourceDirDefault: c->mResourceDirectory = ".\\" + c->mProductName; return 0;
+    case Op::ProductDirEmpty: return c->mProductDirectory.empty();
+    case Op::ProductDirDefault: c->mProductDirectory = std::wstring(L"/") + StringToWString(c->mProductName); return 0;
+    case Op::DefineProduct: c->mDefines["Product"] = c->GetProductName(); return 0;
     }
-    if (this->mProductName.empty()) {
-        parser->SetError("No product name specified.", false);
-        return false;
-    }
-    if (this->mVersion.empty()) {
-        parser->SetError("No version specified.", false);
-        return false;
-    }
-    if (this->mLanguage.empty()) {
-        parser->SetError("No language specified.", false);
-        return false;
-    }
-    if (this->mLanVersion.empty())
-        this->mLanVersion = this->mVersion;
-    if (this->mResourceDirectory.empty())
-        this->mResourceDirectory = ".\\" + this->mProductName;
-    if (this->mProductDirectory.empty())
-        this->mProductDirectory = std::wstring(L"/") + StringToWString(this->mProductName);
-    this->mDefines["Product"] = this->GetProductName();
-    return true;
+    return 0;
 }
+bool LobbyConfig::PostParse(ConfigParser* parser) { return ee_won_lobbycfg_post_parse(this, parser, CfgHost); }
 
 // Returns the lobby's configuration, or NULL while the lobby is not running
 LobbyConfig* WONAPI::GetLobbyConfig()

@@ -93,10 +93,7 @@ void LobbyLanSocket::SetClient(LobbyLanClient* inClient) { ee_won_lansocket_set_
 // Creates the LAN logic with an empty client list and empty LAN and direct-connect game lists (the Rust object's)
 LanLogic::LanLogic() : mRust(NULL)
 {
-    LobbyClientList* aClients = new LobbyClientList;
-    LobbyGameList* aLanGames = new LobbyGameList(1);
-    LobbyGameList* aDirectGames = new LobbyGameList(3);
-    this->mRust = ee_won_lan_new_model(this, ee_won_lobbycpp_call, aClients, aLanGames, aDirectGames);
+    this->mRust = ee_won_lan_new_model(this, ee_won_lobbycpp_call, new LobbyClientList, new LobbyGameList(1), new LobbyGameList(3));
 }
 
 LanLogic::~LanLogic() { ee_won_lan_free(this->mRust); }
@@ -176,11 +173,15 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
                           (uint32_t)(unsigned char)aLocalBytes[2] << 16 | (uint32_t)(unsigned char)aLocalBytes[3] << 24);
     }
     case EeWonLobbyOp::LanGamePasswordIs: return LanWide(inC, inD) == std::wstring(g->GetPassword());
-    case EeWonLobbyOp::LanNewClient: {
-        LobbyLanClient* aClient = new LobbyLanClient;
-        aClient->SetName(GUIString(new GUIStringData(LanWide(inC, inD))));
-        return Held(aClient);
-    }
+    // LanNewClient, LanPortDialogRun and LanNewTimer are lobbyops.rs's over these (R6 WON round 32)
+    case EeWonLobbyOp::LanClientAlloc: return Held(new LobbyLanClient);
+    case EeWonLobbyOp::LanClientSetName: lc->SetName(GUIString(new GUIStringData(LanWide(inC, inD)))); return 0;
+    case EeWonLobbyOp::LanPortSetGamePort: l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetGamePort, (unsigned short)LobbyGetLobbyPort()); return 0;
+    case EeWonLobbyOp::LanPortSetPort: l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetPort, (unsigned short)(int)inC); return 0;
+    case EeWonLobbyOp::LanPortReset: l->mLanPortDialog->LCall(EeWonLobbyDlgCall::Reset); return 0;
+    case EeWonLobbyOp::LanPortDo: return LobbyDoDialog(l->mLanPortDialog.get());
+    case EeWonLobbyOp::LanTimerAlloc: return Held(new AsyncOp);
+    case EeWonLobbyOp::LanTimerSetCompletion: op->SetCompletion(new LogicCompletion<LanLogic>(inC == 0 ? &LanLogic::HandleNetworkTimer : &LanLogic::HandleDiscoveryTimer, l)); return 0;
     case EeWonLobbyOp::ClientNameTake: Take(inB, LanUtf16(cl->GetName())); return 0;
     case EeWonLobbyOp::LanClientChanged:
         LobbyBroadcastEvent(ClientChangedEvent(cl, l->GetRoomSpec(), (int)inC), true);
@@ -188,14 +189,8 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::ClientLeftGame: LobbyClientLeftGame(cl); return 0;
     case EeWonLobbyOp::LanSocketStamp: sock->SetLastMessageTime(time(NULL)); return 0;
     case EeWonLobbyOp::LanClientSocket: return (intptr_t)lc->mSocket;
-    case EeWonLobbyOp::LanClientSocketSend:
-        static_cast<LobbyLanClient*>(static_cast<LobbyClient*>(inB))->mSocket->QueueOp(
-            new SocketOp(EeWonCoreSocketOp::SendMsg, NULL, LanMessageOf(inA, inC, inD, aHold)), -1);
-        return 0;
-    case EeWonLobbyOp::LanRecvChat:
-        LobbyBroadcastEvent(RecvChatEvent(8, (unsigned long)(inD >> 32), cl, LanWide(inC, inD & 0xffffffff),
-                                              static_cast<LobbyClient*>(inB)), true);
-        return 0;
+    case EeWonLobbyOp::LanClientSocketSend: static_cast<LobbyLanClient*>(static_cast<LobbyClient*>(inB))->mSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::SendMsg, NULL, LanMessageOf(inA, inC, inD, aHold)), -1); return 0;
+    case EeWonLobbyOp::LanRecvChat: LobbyBroadcastEvent(RecvChatEvent(8, (unsigned long)(inD >> 32), cl, LanWide(inC, inD & 0xffffffff), static_cast<LobbyClient*>(inB)), true); return 0;
     case EeWonLobbyOp::LanStagingRead: {
         ReadBuffer aBuffer(reinterpret_cast<const void*>(inC), (unsigned long)inD);
         try {
@@ -208,11 +203,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::LanNameDialogRun: l->mLanNameDialog->LCall(EeWonLobbyDlgCall::Reset); return LobbyDoDialog(l->mLanNameDialog.get());
     case EeWonLobbyOp::LanNameDialogLength: return (intptr_t)l->mLanNameDialog->InputText(0).length();
     case EeWonLobbyOp::LanBroadcastPort: return LobbyGetLanBroadcastPort();
-    case EeWonLobbyOp::LanPortDialogRun:
-        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetGamePort, (unsigned short)LobbyGetLobbyPort());
-        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::SetPort, (unsigned short)(int)inC);
-        l->mLanPortDialog->LCall(EeWonLobbyDlgCall::Reset);
-        return LobbyDoDialog(l->mLanPortDialog.get());
     case EeWonLobbyOp::LanPortDialogPort: return (unsigned short)l->mLanPortDialog->LCall(EeWonLobbyDlgCall::GetPort);
     case EeWonLobbyOp::EventComponent: return (intptr_t)static_cast<ComponentEvent*>(inA)->mComponent;
     case EeWonLobbyOp::SetClientIgnored: LobbySetClientIgnored(cl, inC != 0, (int)inD); return 0;
@@ -233,11 +223,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::KillFirewallTest: LobbyKillFirewallTest(); return 0;
     case EeWonLobbyOp::LanNameTake: Take(inB, LanUtf16(LobbyGetLanName())); return 0;
     // the C++ calls of the cases over the members (lanown.rs)
-    case EeWonLobbyOp::LanNewTimer: {
-        AsyncOp* aTimer = new AsyncOp;
-        aTimer->SetCompletion(new LogicCompletion<LanLogic>(inC == 0 ? &LanLogic::HandleNetworkTimer : &LanLogic::HandleDiscoveryTimer, l));
-        return Held(aTimer);
-    }
     case EeWonLobbyOp::LanGameDisconnected: LobbyGameDisconnected(true); return 0;
     case EeWonLobbyOp::LanSyncGameList: LobbyBroadcastEvent(SyncGameListEvent(static_cast<LobbyGameList*>(inA)), true); return 0;
     case EeWonLobbyOp::LanGameChanged: LobbyBroadcastEvent(GameChangedEvent(g, (int)inC), true); return 0;

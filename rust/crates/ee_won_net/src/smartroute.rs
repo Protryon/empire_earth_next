@@ -1988,6 +1988,130 @@ pub unsafe extern "C" fn ee_won_smart_dump(
     unsafe { sink(context, text.as_ptr(), text.len()) };
 }
 
+/// The smart connection's calls made under its socket's lock (R6 WON round 32: SmartRoutingConnection's inline
+/// bodies, each `AutoCrit aCrit(GetDataLock()); ee_won_smart_...;`, are one call here).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonSmartLocked {
+    /// `ee_won_smart_start(r, a, b)`.
+    Start = 1,
+    /// `ee_won_smart_ignore(r, a, b != 0)`.
+    Ignore,
+    /// `ee_won_smart_add_command(r, a, b, c)`.
+    AddCommand,
+    /// `ee_won_smart_clear_commands(r)`.
+    ClearCommands,
+    /// `ee_won_smart_handle_input(r, a, b, c, d)`.
+    HandleInput,
+    /// `ee_won_smart_set_path(r, a, b)`.
+    SetPath,
+    /// `ee_won_smart_number(r, ClientId)` as an `unsigned short`.
+    ClientId,
+    /// `ee_won_smart_set(r, a, b)`.
+    Set,
+}
+
+/// One of the smart connection's calls (`call`, its arguments `a`..`d`) with the connection's lock `lock` held
+/// around it, as the C++ bodies held it (`AutoCrit`).
+///
+/// # Safety
+/// `lock` is the connection's live mutex, `r` its model; the arguments are each call's.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_smart_locked(
+    lock: *mut c_void,
+    r: *mut EeWonSmartRoute,
+    call: EeWonSmartLocked,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> i64 {
+    let _held = SmartLock::new(lock as *mut ee_base::plat_sys::thread::imp::PlatMutex);
+    // SAFETY: the contract, per call (the lock is given back after the call's value is made)
+    unsafe {
+        match call {
+            EeWonSmartLocked::Start => i64::from(ee_won_smart_start(r, a as i32, b as u16)),
+            EeWonSmartLocked::Ignore => {
+                ee_won_smart_ignore(r, a as u16, b != 0);
+                0
+            }
+            EeWonSmartLocked::AddCommand => {
+                ee_won_smart_add_command(r, a as *const c_void, b as usize, c as i32);
+                0
+            }
+            EeWonSmartLocked::ClearCommands => {
+                ee_won_smart_clear_commands(r);
+                0
+            }
+            EeWonSmartLocked::HandleInput => i64::from(crate::routecpp::ee_won_smart_handle_input(
+                r,
+                a as *mut c_void,
+                b as *const c_void,
+                c as usize,
+                d as i32,
+            )),
+            EeWonSmartLocked::SetPath => {
+                ee_won_smart_set_path(r, a as *const u8, b as usize);
+                0
+            }
+            EeWonSmartLocked::ClientId => i64::from(ee_won_smart_number(r, EeWonSmartNumber::ClientId) as u16),
+            EeWonSmartLocked::Set => {
+                let which = match a {
+                    1 => EeWonSmartNumber::PartialNames,
+                    2 => EeWonSmartNumber::ServerWide,
+                    3 => EeWonSmartNumber::ColonEmote,
+                    _ => EeWonSmartNumber::ClientId,
+                };
+                ee_won_smart_set(r, which, b as i64);
+                0
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod locked_tests {
+    use super::*;
+
+    #[test]
+    fn the_locked_calls_reach_the_model() {
+        // SAFETY: a model of our own, no lock (the call takes none for NULL)
+        unsafe {
+            let r = ee_won_smart_new(4, std::ptr::null(), 0);
+            let lock = std::ptr::null_mut();
+            ee_won_smart_locked(lock, r, EeWonSmartLocked::Set, 1, 1, 0, 0);
+            assert_eq!(ee_won_smart_number(r, EeWonSmartNumber::PartialNames), 1);
+            ee_won_smart_locked(lock, r, EeWonSmartLocked::Set, 3, 1, 0, 0);
+            assert_eq!(ee_won_smart_number(r, EeWonSmartNumber::ColonEmote), 1);
+            assert_eq!(ee_won_smart_locked(lock, r, EeWonSmartLocked::ClientId, 0, 0, 0, 0), 0);
+            assert_eq!(ee_won_smart_locked(lock, r, EeWonSmartLocked::Start, 0, 0, 0, 0), 1);
+            ee_won_smart_free(r);
+        }
+    }
+}
+
+/// The connection's lock held for a scope (AutoCrit; the mutex is recursive: a request made inside takes it again).
+struct SmartLock(*mut ee_base::plat_sys::thread::imp::PlatMutex);
+
+impl SmartLock {
+    fn new(m: *mut ee_base::plat_sys::thread::imp::PlatMutex) -> SmartLock {
+        if !m.is_null() {
+            // SAFETY: the connection's live mutex
+            unsafe { ee_base::plat_sys::thread::imp::PlatMutexLock(m) };
+        }
+        SmartLock(m)
+    }
+}
+
+impl Drop for SmartLock {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            // SAFETY: locked in `new`
+            unsafe { ee_base::plat_sys::thread::imp::PlatMutexUnlock(self.0) };
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

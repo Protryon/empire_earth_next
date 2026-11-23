@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/ui/controlobj.h"
+#include "rust/ui/rect.h"
 
 /// The shared UI keys and mouse buttons (UI lane round 13: once `UIControl`'s 24 key statics, `UIForm`'s Tab and
 /// Shift and `UIManager`'s mouse buttons and wheel): the slot of each `ISEntity*` in [`ee_ui_key_slot`]'s record. The
@@ -73,6 +75,44 @@ uint32_t ee_ui_obj_manager_bitmap(ptrdiff_t a);
 
 /// The constructor's key lookup.
 void ee_ui_control_fetch_keys();
+
+/// `UIControl::SetBorderColors(dark, light)`.
+///
+/// # Safety
+/// `dark` and `light` three live floats each.
+void ee_ui_set_border_colors(const float *dark, const float *light);
+
+/// `UIControl::DrawBorder`: [`crate::draw2d::ee_ui_draw_border`] in the border colours.
+///
+/// # Safety
+/// As `ee_ui_draw_border`.
+long ee_ui_control_draw_border(void *rasterizer,
+                               unsigned long screen,
+                               EeUiRect rect,
+                               unsigned long thickness,
+                               float opacity,
+                               unsigned long border_type);
+
+/// UIControl's constructor: its two background rhombi made (UIControl.cpp's shims), the record's state
+/// ([`crate::controlobj::ee_ui_control_init`] over [`ee_ui_control_host`]) with the border type, the shared keys looked up.
+///
+/// # Safety
+/// `rec` is the live base of the C++ control `cpp`; `rect` four live floats.
+void ee_ui_control_construct(EeUiControlFields *rec,
+                             void *cpp,
+                             unsigned long control_type,
+                             unsigned long id,
+                             const float *rect,
+                             void *form,
+                             unsigned long index,
+                             unsigned long border_thickness,
+                             unsigned long border_type);
+
+/// UIControl's destructor: every trigger event released, then the two rhombi deleted.
+///
+/// # Safety
+/// `rec` a live record [`ee_ui_control_construct`] set up.
+void ee_ui_control_destruct(EeUiControlFields *rec);
 
 }  // extern "C"
 

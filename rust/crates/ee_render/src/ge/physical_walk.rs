@@ -692,6 +692,58 @@ pub unsafe extern "C" fn ee_ge_physical_models(
     unsafe { out.write(table) };
 }
 
+/// The scaled walk's exact retry as the C++ made it: a placed model of its own (`GEPhysicalModel(model, location,
+/// scale)`, the model referenced) at `frame`, its `Intersects(line, lod, distance, true)` (the line walk over the
+/// game's table), then its destructor's release.
+///
+/// # Safety
+/// `model` is a live C++ `GEModel`; the pointers are valid.
+unsafe extern "C" fn pm_retry_line(
+    model: *const c_void,
+    location: *const GeTransformation,
+    frame: c_ulong,
+    scale: f32,
+    line: *const Ge3DLine,
+    lod: c_ulong,
+) -> bool {
+    use crate::ge::modobj::ee_ge_pm_set_model;
+    let mut placed: *mut c_void = std::ptr::null_mut();
+    // the walk writes the distance before it reads it
+    let mut distance = 0.0f32;
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_ge_pm_set_model(&mut placed, model as *mut c_void);
+        let hit = ee_ge_physical_line_walk(&GAME_TABLE, scale, location, placed, frame, line, lod, &mut distance, true);
+        ee_ge_pm_set_model(&mut placed, std::ptr::null_mut());
+        hit
+    }
+}
+
+/// The game's table: the models' reads in place (their Rust objects), the triangle read of `modobj.rs` and the exact
+/// retry above.
+static GAME_TABLE: EeGePhysicalModels = EeGePhysicalModels {
+    has_parent: pm_has_parent,
+    internal_transform: pm_internal_transform,
+    center: pm_center,
+    radius: pm_radius,
+    bbox: pm_box,
+    material_count: pm_material_count,
+    material: pm_material,
+    triangle: crate::ge::modobj::ee_ge_mod_triangle,
+    sub_model_count: pm_sub_model_count,
+    sub_model: pm_sub_model,
+    lod_count: pm_lod_count,
+    polygon_count: pm_polygon_count,
+    retry_line: pm_retry_line,
+};
+
+/// The game's table of the walks over C++ models (`GEPhysicalModel`'s walks, the unit picker's: ee_gfx
+/// pick_walk.rs).
+#[no_mangle]
+pub extern "C" fn ee_ge_physical_table() -> *const EeGePhysicalModels {
+    &GAME_TABLE
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
