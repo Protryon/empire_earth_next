@@ -6,6 +6,7 @@
 use core::ffi::c_void;
 
 use crate::screens::game_actions::{EeScreensGaFields, EeScreensGaValue, Ga, GaEditorCall, GaHost};
+use crate::screens::game_actions_host::{ee_screens_gah_run, GaCpp};
 
 /// cbindgen:ignore
 // (the record's editor parts are pointers to Rust boxes C++ never looks into)
@@ -23,9 +24,18 @@ mod sys {
 
 struct Host;
 
+/// The C++ cases (`ee_screenscpp_ga`: one statement each).
+struct Cpp;
+
+impl GaCpp for Cpp {
+    fn cpp(&mut self, key: u32, r: *mut EeScreensGaFields, p: usize, i: &mut [i64; 8], f: &mut [f32; 8]) -> i64 {
+        unsafe { sys::ee_screenscpp_ga(key, r, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
+    }
+}
+
 impl GaHost for Host {
     fn op(&mut self, op: u32, r: *mut EeScreensGaFields, p: usize, i: &mut [i64; 8], f: &mut [f32; 8]) -> i64 {
-        unsafe { sys::ee_screenscpp_ga(op, r, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
+        ee_screens_gah_run(&mut Cpp, op, r, p, i, f)
     }
     fn record(&mut self, kind: u32, values: &[EeScreensGaValue]) -> usize {
         unsafe { sys::ee_screenscpp_ga_record(kind, values.as_ptr(), values.len() as u32) as usize }

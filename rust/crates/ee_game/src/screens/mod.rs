@@ -263,8 +263,11 @@ pub mod frame;
 #[cfg(not(test))]
 mod frame_ffi;
 pub mod game_actions;
+pub mod game_actions_host;
 #[cfg(not(test))]
 mod game_actions_ffi;
+#[cfg(test)]
+mod game_actions_cpp_consts_tests;
 #[cfg(test)]
 mod game_actions_golden;
 #[cfg(test)]
