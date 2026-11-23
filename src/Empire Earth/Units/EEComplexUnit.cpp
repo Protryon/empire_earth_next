@@ -98,36 +98,6 @@ const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 
 // 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
 
-// chain at 0x5f5805 (wrapper)
-//   object 0x963218  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 1): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sData@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sData("EEComplexUnit-Data");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f5848 (wrapper)
-//   object 0x963200  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 2): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sCloakableOpacity@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sCloakableOpacity("EEComplexUnit-CloakableOpacity");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f588b (wrapper)
-//   object 0x9631f0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 4): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sIsCloaked@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sIsCloaked("EEComplexUnit-IsCloaked");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f58ce (wrapper)
-//   object 0x9631e0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 8): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sDrawAreaEffects@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sDrawAreaEffects("EEComplexUnit-DrawAreaEffects");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f5911 (wrapper)
-//   object 0x9631d0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 0x10): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sAreaEffectsTick@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sAreaEffectsTick("EEComplexUnit-AreaEffectsTick");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
 // Creates a complex unit with every unit, mobile-unit and reference state reset to defaults (out of line: the members'
 // destructors need the complete EEUnitVectorItem)
 EEComplexUnit::EEComplexUnit()
@@ -164,14 +134,6 @@ void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, f
 bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before this unit's 0x4c76f0 table; EEUserInterface/EEWorld/EEMap read it; provisional name)
 
 extern char gEmptyString[];
-
-static float EECuFloat(int64_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, sizeof(theValue));
-    return theValue;
-}
 
 // FindAreaTile's tile from cu_world.rs's answer (x in the low 32 bits, y in the high)
 static EETileCoordinate EECuTile(int64_t inPacked)
@@ -640,7 +602,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
         return gUnitSetManager.Contains(theUnit->GetUnitClass()->GetUnitType(), sInsurancePower.mUnitSet);
     case EE_UNITS_CU_INSURANCE_AMOUNT: return UFloatBits(sInsurancePower.mAmount);
     case EE_UNITS_CU_IS_BUILT: return theUnit->mIsBuilt;
-    case EE_UNITS_CU_PAY_INSURANCE: theUnit->PayInsurance(EECuFloat(inB)); return 0;
+    case EE_UNITS_CU_PAY_INSURANCE: theUnit->PayInsurance(UBitsFloat(inB)); return 0;
     case EE_UNITS_CU_LAST_ATTACKER: return (uint64_t)(uintptr_t)theUnit->mLastAttacker;
     case EE_UNITS_CU_DEREFERENCE: EECuObject<RTSUnit>(inA)->Dereference(); return 0;
     case EE_UNITS_CU_CLEAR_LAST_ATTACKER: theUnit->mLastAttacker = NULL; return 0;
@@ -738,7 +700,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UI_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
     case EE_UNITS_CU_QUEUE_POP_FRONT: theUnit->mBuildQueue.erase(theUnit->mBuildQueue.begin()); return 0;
     case EE_UNITS_CU_REFUND_TECHNOLOGY:
-        theUnit->GetPlayer()->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), EECuFloat(inB));
+        theUnit->GetPlayer()->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), UBitsFloat(inB));
         return 0;
     case EE_UNITS_CU_QUEUE_EMPTY: return theUnit->mBuildQueue.empty();
     // SetBuilt's (inA the part)
@@ -794,7 +756,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_REFUND_TOTAL: return thePlayer->mInsuranceRefunds[inB];
     case EE_UNITS_CU_RESOURCE: return thePlayer->mResourceCaps[inB];
     case EE_UNITS_CU_PLAYER_REFUND_TECHNOLOGY:
-        theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), EECuFloat(inB));
+        theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), UBitsFloat(inB));
         return 0;
     case EE_UNITS_CU_SET_REFUND_TOTAL: thePlayer->mInsuranceRefunds[inB] = (long)inC; return 0;
     case EE_UNITS_CU_CURRENT_PLAYER: return (uint64_t)(uintptr_t)::gWorld.GetCurrentPlayer();
@@ -891,7 +853,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNIT_SET_PLANET: theOther->mPlanetID = EEGetLandContinentOf(theOther); return 0;
     case EE_UNITS_CU_UNIT_CRUISE_ALTITUDE: return UFloatBits(theOther->mUnitClass->GetCruiseAltitude());
     case EE_UNITS_CU_UNIT_SET_TRANSFORMATION_AT_Z:
-        EECuSetTransformationAtZ(theOther, *EECuObject<GETransformation>((uint64_t)inB), EECuFloat(inC));
+        EECuSetTransformationAtZ(theOther, *EECuObject<GETransformation>((uint64_t)inB), UBitsFloat(inC));
         return 0;
     case EE_UNITS_CU_UNIT_TILE_X: return theOther->GetTileX();
     case EE_UNITS_CU_ACTIVATE_UNIT: ::gWorld.ActivateUnit(theOther); return 0;
@@ -1177,10 +1139,10 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_IS_SWIMMING: return theUnit->IsSwimming();
     case EE_UNITS_CU_SET_ANIMATION_STATE: theUnit->SetAnimation((long)inB, -1, 0); return 0;
     case EE_UNITS_CU_GROWTH: return UFloatBits(theUnit->mGrowth);
-    case EE_UNITS_CU_SET_GROWTH: theUnit->mGrowth = EECuFloat(inB); return 0;
+    case EE_UNITS_CU_SET_GROWTH: theUnit->mGrowth = UBitsFloat(inB); return 0;
     case EE_UNITS_CU_STATS_SCALE: return UFloatBits(theUnit->GetStats()->GetScale());
     case EE_UNITS_CU_COLLISION_RADIUS: return UFloatBits(theUnit->mCollisionRadius);
-    case EE_UNITS_CU_SET_COLLISION_RADIUS: theUnit->mCollisionRadius = EECuFloat(inB); return 0;
+    case EE_UNITS_CU_SET_COLLISION_RADIUS: theUnit->mCollisionRadius = UBitsFloat(inB); return 0;
     case EE_UNITS_CU_ZERO_NUM_AREA_EFFECTS: theUnit->mNumAreaEffects = 0; return 0;
     case EE_UNITS_CU_STATS_AREA_TEMPLATE: return theUnit->GetStats()->mAreaEffectTemplates[inB];
     case EE_UNITS_CU_COUNT_AREA_EFFECT: theUnit->mNumAreaEffects++; return 0;
@@ -1189,7 +1151,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_QUEUE_GOAL: theUnit->QueueGoal(EECuObject<EEUnitGoal>(inA), (unsigned long)inB); return 0;
     case EE_UNITS_CU_AREA_EFFECTS_SIZE: return (int64_t)theUnit->mAreaEffects.GetSize();
     case EE_UNITS_CU_AREA_EFFECT_RADIUS: return UFloatBits(theUnit->mAreaEffects.mItems[(size_t)inB]->GetRadius());
-    case EE_UNITS_CU_COLLECT_EFFECTS: ::gAEManager.CollectEffects(EECuFloat(inB), sCuLocation = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()), (unsigned long)inC, &theUnit->mAreaEffects, theUnit); return 0;
+    case EE_UNITS_CU_COLLECT_EFFECTS: ::gAEManager.CollectEffects(UBitsFloat(inB), sCuLocation = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()), (unsigned long)inC, &theUnit->mAreaEffects, theUnit); return 0;
     case EE_UNITS_CU_PLAYER_ID: return theUnit->mPlayer->mPlayerID;
     case EE_UNITS_CU_AFFECTING_KIND: return theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->mTemplate->mKind;
     case EE_UNITS_CU_SET_OUT_EFFECT:
@@ -1238,7 +1200,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
         return (uint64_t)(uintptr_t)theUnit->UnloadCargoAt((unsigned long)inB, *EECuObject<const GETransformation>(inA));
     case EE_UNITS_CU_RELOAD_RANGE:
         return UFloatBits(inB == 0 ? gWorldTable.GetFloatValue(kWorldReloadTimeRandomRange) : gWorldTable.GetFloatValue2(kWorldReloadTimeRandomRange));
-    case EE_UNITS_CU_RANDOM_BETWEEN: return UFloatBits(gPhysics->GetRandom(EECuFloat(inB), EECuFloat(inC)));
+    case EE_UNITS_CU_RANDOM_BETWEEN: return UFloatBits(gPhysics->GetRandom(UBitsFloat(inB), UBitsFloat(inC)));
     case EE_UNITS_CU_SET_RELOAD_TIMER: theUnit->SetReloadTimer((long)inB); return 0;
     // cu_life.rs: CopyFrom's
     case EE_UNITS_CU_COPY_PROJECTILE_START: theUnit->mProjectileStart = theOther->mProjectileStart; return 0;
@@ -1331,7 +1293,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_RESET_CONVERSION_EFFECT: theUnit->mConversionEffect.mValue = -1; return 0;
     case EE_UNITS_CU_RESET_HEAL_EFFECT: theUnit->mHealEffect.mValue = -1; return 0;
     case EE_UNITS_CU_PM_CLEAR_MODEL: theUnit->mPhysicalModel.SetModel(NULL); return 0;
-    case EE_UNITS_CU_PM_SET_SCALE: theUnit->mPhysicalModel.SetScale(EECuFloat(inB)); return 0;
+    case EE_UNITS_CU_PM_SET_SCALE: theUnit->mPhysicalModel.SetScale(UBitsFloat(inB)); return 0;
     case EE_UNITS_CU_PM_RESET_LOCATION: theUnit->mPhysicalModel.SetLocation(GETransformation()); return 0;
     case EE_UNITS_CU_PM_RESET_FRAME: theUnit->mPhysicalModel.SetFrame(0); return 0;
     case EE_UNITS_CU_RESET_PITCH: theUnit->mAngularVelocity.SetPitch(0.0f); return 0;
@@ -1364,7 +1326,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_GRAPHIC_START_FRAME: return (int64_t)EECuObject<EEGraphicObject>(inA)->mStartFrames[inB];
     case EE_UNITS_CU_GRAPHIC_FRAME_COUNT: return (int64_t)EECuObject<EEGraphicObject>(inA)->mFrameCounts[inB];
     case EE_UNITS_CU_GRAPHIC_LAST_FRAME: return (int64_t)EECuObject<EEGraphicObject>(inA)->mLastFrames[inB];
-    case EE_UNITS_CU_FLOAT_TO_LONG: return UMFloatToLong(EECuFloat(inB));
+    case EE_UNITS_CU_FLOAT_TO_LONG: return UMFloatToLong(UBitsFloat(inB));
     case EE_UNITS_CU_SET_ANIMATION_FRAME: theUnit->SetAnimationFrame((unsigned long)inB); return 0;
     case EE_UNITS_CU_GRAPHIC_NUM_PARTS: return (int64_t)EECuObject<EEGraphicObject>(inA)->GetNumParts();
     case EE_UNITS_CU_SCRATCH_ANGLES_NEW: sCuAngles = new float[(size_t)inB]; return 0;
@@ -1439,14 +1401,14 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNIT_INIT: theUnit->EEUnit::Init(theClass, EECuObject<EEPlayer>((uint64_t)inB)); return 0;
     case EE_UNITS_CU_INIT_COLLIDABLE: theUnit->mIsCollidable = theClass->mIsCollidable && (!(theClass->mDomains & kMovementAir) || theClass->FliesOver()) && !theClass->mIsProjectile && theClass->mUnitType != kUnitTypeWaypoint; return 0;
     case EE_UNITS_CU_INIT_CAN_BE_HIDDEN: theUnit->mCanBeHidden = (!(theClass->mDomains & kMovementAir) && !theClass->mIsObstacle && !theClass->mIsProjectile && theClass->mMaxVelocity > 0.0f) || theClass->mFamily == kUnitFamilyAABuilding; return 0;
-    case EE_UNITS_CU_UM_FLOOR: return UMFloor(EECuFloat(inB));
+    case EE_UNITS_CU_UM_FLOOR: return UMFloor(UBitsFloat(inB));
     case EE_UNITS_CU_MOVE_TO: theUnit->MoveTo((long)inB, (long)inC, false); return 0;
     case EE_UNITS_CU_UPDATE_WATER_STATE_OFF: theUnit->UpdateWaterState(false); return 0;
     case EE_UNITS_CU_PLACEMENT_COPY: sCuPlacement = *EECuObject<const GETransformation>(inA); return 0;
     case EE_UNITS_CU_PLACEMENT_X: return UFloatBits(sCuPlacement.GetX());
     case EE_UNITS_CU_PLACEMENT_Y: return UFloatBits(sCuPlacement.GetY());
-    case EE_UNITS_CU_PLACEMENT_SET_X: sCuPlacement.SetX(EECuFloat(inB)); return 0;
-    case EE_UNITS_CU_PLACEMENT_SET_Y: sCuPlacement.SetY(EECuFloat(inB)); return 0;
+    case EE_UNITS_CU_PLACEMENT_SET_X: sCuPlacement.SetX(UBitsFloat(inB)); return 0;
+    case EE_UNITS_CU_PLACEMENT_SET_Y: sCuPlacement.SetY(UBitsFloat(inB)); return 0;
     case EE_UNITS_CU_PM_SET_PLACEMENT: theUnit->mPhysicalModel.SetLocation(sCuPlacement); return 0;
     case EE_UNITS_CU_CLASS_SCALE: return UFloatBits(theClass->mScale);
     case EE_UNITS_CU_INIT_CARGO_ROOM: theUnit->mCargoRoom = theClass->mTransportCapacity; return 0;

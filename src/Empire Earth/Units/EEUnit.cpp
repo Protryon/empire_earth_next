@@ -68,10 +68,6 @@ void EEUnitHandleResolve(uint32_t inUnitID, EEComplexUnit*& outUnit)
     outUnit = static_cast<EEComplexUnit*>(static_cast<EEUnit*>(RTSResolveUnitID(inUnitID)));
 }
 
-const UString EEUnit::sHitPoints("EEUnit-HitPoints");
-
-const UString EEUnit::sData("EEUnit-Data");
-
 // FindAreaTile's tile from eu_body.rs's answer (x in the low 32 bits, y in the high)
 static EETileCoordinate EEEuTile(int64_t inPacked)
 {

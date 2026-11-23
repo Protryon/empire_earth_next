@@ -152,9 +152,6 @@ typedef EEUnitClassUpgrade EEUnitStats;
 // offset 0). The unit store reads the record directly.
 class EEUnit : public RTSUnit, public EeUnitsUnitFields {
 public:
-    // the save keys (EEUnit.cpp's `$E` chains 0x228c4c/0x228c8f, one guard byte 0x963630 bits 1/2)
-    static const UString sData;             // "EEUnit-Data" (0x963620) (provisional name)
-    static const UString sHitPoints;        // "EEUnit-HitPoints" (0x963638) (provisional name)
     unsigned long GetUnitID() const { return this->mUnitID; }
     // inline: the cloaking calamity loads both into registers before it pushes them (0xafd92)
     long GetTileX() const { return this->mTileX; }
@@ -326,22 +323,22 @@ public:
     void SetLocation(const GETransformation& inLocation)
     {
         GEPhysicalModel::SetLocation(inLocation);
-        EEUnitStoreWrote(kUnitFieldLocation, this);
+        EEUnitStoreMoved(this);
     }
     void SetLocationAndScale(const GETransformation& inLocation, float inScale)
     {
         GEPhysicalModel::SetLocationAndScale(inLocation, inScale);
-        EEUnitStoreWrote(kUnitFieldLocation, this);
+        EEUnitStoreMoved(this);
     }
     void SetLocationXY(float inX, float inY)
     {
         GEPhysicalModel::SetLocationXY(inX, inY);
-        EEUnitStoreWrote(kUnitFieldLocation, this);
+        EEUnitStoreMoved(this);
     }
     void SetLocationXYZ(const GE3DPoint& inPoint)
     {
         GEPhysicalModel::SetLocationXYZ(inPoint);
-        EEUnitStoreWrote(kUnitFieldLocation, this);
+        EEUnitStoreMoved(this);
     }
 };
 
@@ -353,11 +350,6 @@ class EEComplexUnit : public EEUnit, public EeUnitsComplexUnitFields {
 public:
     // the save keys and the pool (EEComplexUnit.cpp's `$E` chains 0x1f5805..0x1f5954, one guard byte 0x963210;
     // definition order as listed). Provisional names (from the keys)
-    static const UString sData;             // "EEComplexUnit-Data" (0x963218, guard bit 1)
-    static const UString sCloakableOpacity; // "EEComplexUnit-CloakableOpacity" (0x963200, bit 2)
-    static const UString sIsCloaked;        // "EEComplexUnit-IsCloaked" (0x9631f0, bit 4)
-    static const UString sDrawAreaEffects;  // "EEComplexUnit-DrawAreaEffects" (0x9631e0, bit 8)
-    static const UString sAreaEffectsTick;  // "EEComplexUnit-AreaEffectsTick" (0x9631d0, bit 0x10)
     // 0x963198, bit 0x20 (ctor 0x1ffe45 stores UMemoryPool<EEComplexUnit>'s vtable; dtor 0x121790)
     static UMemoryPool<EEComplexUnit> sMemoryPool;
     // inline: the calamities load it into a register before their GetCost() call (EECalamityClass 0xadf12, cloaking
