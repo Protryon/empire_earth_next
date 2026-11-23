@@ -427,7 +427,9 @@ mod tests {
 
     #[test]
     fn create_goal_makes_each_kind_s_empty_goal_by_its_new_function() {
-        use crate::combat::goal_dispatch::{EE_COMBAT_GOAL_NEW_ATTACK, EE_COMBAT_GOAL_NEW_GROUND, EE_COMBAT_GOAL_NEW_HEAL};
+        use crate::combat::goal_dispatch::{
+            EE_COMBAT_GOAL_NEW_ATTACK, EE_COMBAT_GOAL_NEW_GROUND, EE_COMBAT_GOAL_NEW_HEAL,
+        };
         use crate::units::rust_goal::{EE_UNITS_GOAL_LOAD_NEW_EMPTY, EE_UNITS_GOAL_NEW_EXPLORE};
         assert_eq!(empty_goal(3), Some(EmptyGoal::Point(EE_COMBAT_GOAL_NEW_GROUND)));
         assert_eq!(empty_goal(2), Some(EmptyGoal::Call(EE_COMBAT_GOAL_NEW_ATTACK, 2)));

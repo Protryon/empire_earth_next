@@ -998,7 +998,10 @@ pub const EE_UNITS_UU_SOUND_ZOOM: i32 = 4;
 
 /// `EEComputeSoundParameters`' view of `location`, read in the C++ forwarder's order over `host(which, location,
 /// out)` (its answer, `out` four floats it may write): the tile first, the camera's reads only when it is seen.
-pub fn sound_view(mut host: impl FnMut(i32, &[f32; 3], &mut [f32; 4]) -> f32, location: [f32; 3]) -> EeUnitsUuSoundView {
+pub fn sound_view(
+    mut host: impl FnMut(i32, &[f32; 3], &mut [f32; 4]) -> f32,
+    location: [f32; 3],
+) -> EeUnitsUuSoundView {
     let mut v = EeUnitsUuSoundView::default();
     let mut out = [0.0f32; 4];
     v.seen = u8::from(host(EE_UNITS_UU_SOUND_SEEN, &location, &mut out) != 0.0);

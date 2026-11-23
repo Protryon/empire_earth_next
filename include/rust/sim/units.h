@@ -19322,6 +19322,10 @@ void ee_units_goal_set_location_point_any(const EeUnitsGoalBase *goal,
 /// `goal` a live goal or null.
 float ee_units_goal_location_yaw_any(const EeUnitsGoalBase *goal);
 
+/// `EEUnitGoal::CreateGoal(kind)` (0x23c3e6): the load's empty goal of `kind` given the id it drew back (the loaded
+/// record sets its own), or null for an unknown kind.
+EeUnitsGoalBase *ee_units_goal_create(uint8_t kind);
+
 /// `new EEUnitGoal(inKind, inArg)` (`EEUnitGoal::Make`): see [`goal_new`].
 EeUnitsGoalBase *ee_units_goal_new(uint8_t kind, bool arg);
 
@@ -22469,13 +22473,8 @@ void ee_units_lf_tile_line(int32_t x1,
                            uint8_t thin,
                            void *out);
 
-/// `EESimCaptureRecord::Active()` (0), the physics' ticks done (1), the UUTL record of (a tick, b calls, c and d
-/// the digest's halves) written (2).
-extern uint32_t ee_units_uu_host_note(int32_t which,
-                                      uint32_t a,
-                                      uint32_t b,
-                                      uint32_t c,
-                                      uint32_t d);
+/// `gPhysics != NULL ? gPhysics->mNumTicksDone : 0`
+extern uint32_t ee_units_uu_host_ticks();
 
 /// Opens a note of `kind`; whether it records (its words are worth sending).
 uint8_t ee_units_uu_note_begin(uint32_t kind);

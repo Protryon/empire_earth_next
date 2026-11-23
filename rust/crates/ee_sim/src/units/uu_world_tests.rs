@@ -734,6 +734,13 @@ fn the_sound_view_reads_the_tile_first_and_the_camera_only_when_seen() {
     );
     assert_eq!(
         v,
-        EeUnitsUuSoundView { seen: 1, screen: [1.0, 2.0, 3.0], depth: 9.0, camera: [4.0, 5.0, 6.0], y_clip: 70.0, zoom: 1.5 }
+        EeUnitsUuSoundView {
+            seen: 1,
+            screen: [1.0, 2.0, 3.0],
+            depth: 9.0,
+            camera: [4.0, 5.0, 6.0],
+            y_clip: 70.0,
+            zoom: 1.5
+        }
     );
 }

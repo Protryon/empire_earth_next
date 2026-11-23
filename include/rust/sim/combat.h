@@ -3325,6 +3325,19 @@ size_t ee_combat_regions_collect(const EeCombatUnitRegions *table,
                                  uint64_t *out,
                                  size_t cap);
 
+/// [`EeCombatUnitRegions::walk`] of the tiles (left, top) to (right, bottom) into `out` (up to `cap`); answers the
+/// units' number.
+///
+/// # Safety
+/// `table` is a live table; `out` is null or holds `cap` values.
+size_t ee_combat_regions_walk(const EeCombatUnitRegions *table,
+                              int32_t left,
+                              int32_t top,
+                              int32_t right,
+                              int32_t bottom,
+                              uint64_t *out,
+                              size_t cap);
+
 /// The saved order (see [`EeCombatUnitRegions::order`]; a null table: no region) into `out` (up to `cap`); answers
 /// its length.
 ///
