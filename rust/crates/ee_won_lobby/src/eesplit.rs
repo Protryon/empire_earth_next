@@ -83,6 +83,7 @@ pub(crate) fn game_op(op: G, a: isize, b: isize, c: isize, d: isize, out: GameOu
 /// `xfer_op` for the drivers (won_dlg34_test) over the host `host` with its object `obj`; `INTPTR_MIN` when the op
 /// is not one of these.
 #[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the object passes through to the driver's host
 pub extern "C" fn ee_won_eexfer_split_op(
     obj: *mut std::ffi::c_void,
     op: crate::eexfer::EeWonEeXferOp,
@@ -101,6 +102,7 @@ pub extern "C" fn ee_won_eexfer_split_op(
 
 /// `game_op` for the drivers over the host `host` with its game `game`; `INTPTR_MIN` when the op is not one of these.
 #[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the object passes through to the driver's host
 pub extern "C" fn ee_won_eegame_split_op(
     game: *mut std::ffi::c_void,
     op: crate::eegame::EeWonEeGameOp,
