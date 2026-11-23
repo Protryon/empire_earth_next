@@ -1,10 +1,9 @@
-// storegate: the engine's abstract classes the model and texture loaders call (GERasterizer, GEScreen, GESurface)
-// as plain memory objects, so the game's own GEModelManager, GEModel, GETextureManager and GETexture code runs
+// storegate: the engine's renderer objects the model and texture loaders call (GEScreen, GESurface: their Rust
+// objects' C functions, defined by storegate.cpp) as plain memory objects, so the game's own GEModelManager, GEModel, GETextureManager and GETexture code runs
 // without a renderer. The vertex and polygon arrays are the game's own (GEVertexArray, GEPolygonArray, Rust arrays):
 // with the capture on (ee_ge_store_capture; ee_render geval vertarr_capture.rs) each keeps a shadow of what was set,
 // as the gate's own memory arrays kept it before (every field as floats, 32-bit indices, the sets past the end
-// counted), and the digests read the shadows. tools/eemodel/storegate.py generates the members not written here
-// (fakes_generated.h: every other pure virtual, returning a zero value).
+// counted), and the digests read the shadows.
 #ifndef STOREGATE_FAKES_H
 #define STOREGATE_FAKES_H
 
@@ -41,57 +40,30 @@
 #include "lle/GERenderState.h"
 #include "lle/GERasterizer.h"
 
-// A surface in memory: pixel rows of GetBytesPerRow() bytes (a few bytes past the pixels, so that a loader's row skip
-// shows), a MIP chain as attached surfaces (each level half the last, at least 1), zero-filled when created.
-class StoreSurface : public GESurface {
-public:
-    StoreSurface(GEScreen* inScreen, const GESurfaceDescription& inDescription, long inLevel);
-    ~StoreSurface() override;
-    long AttachSurface(GESurface* inSurface) override { return kErrorFailed; }
-    long CopyTo(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination, bool inTransparent) override;
-    long CopyWithFilter(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination) override;
-    long DetachSurface(unsigned long inIndex) override { return kErrorFailed; }
-    unsigned long GetAllocatedSize() override;
-    GESurface* GetAttachedSurface(unsigned long inIndex) override { return inIndex == 0 ? mNext : NULL; }
-    unsigned long GetAttachedSurfaceCount() override { return mNext ? 1 : 0; }
-    unsigned long GetBytesPerRow() const override { return mBytesPerRow; }
-    unsigned long GetHeight() const override { return mDescription.mHeight >> mLogicalShift; }
-    bool GetIs3DRenderable() const override { return mDescription.mIs3DRenderable; }
-    bool GetIsTextLocked() const override { return false; }
-    bool GetIsTransparencyEnabled() const override { return mDescription.mIsTransparencyEnabled; }
-    unsigned char* GetMemoryAddress() const override { return mLocked ? const_cast<unsigned char*>(&mPixels[0]) : NULL; }
-    GEScreen* GetParentScreen() const override { return mScreen; }
-    unsigned long GetPixelFormat() const override { return mDescription.mPixelFormat; }
-    unsigned long GetPixelDepth() const override { return mDescription.mPixelDepth; }
-    unsigned long GetSurfaceVolatility() const override { return mDescription.mSurfaceVolatility; }
-    const GESurfaceDescription& GetSurfaceDescription() const override { return mDescription; }
-    const GEColor& GetTransparencyColor() const override { return mTransparency; }
-    unsigned long GetType() const override { return mDescription.mType; }
-    unsigned long GetWidth() const override { return mDescription.mWidth >> mLogicalShift; }
-    long Lock() override { mLocked = true; mLockCount++; return kErrorOK; }
-    long RestoreSurface() override { return kErrorOK; }
-    void SetTransparencyColor(GEColor& inColor) override { mTransparency = inColor; }
-    long TextLock() override { return kErrorOK; }
-    long TextUnlock() override { return kErrorOK; }
-    long Unlock() override { mLocked = false; return kErrorOK; }
-#include "fakes_generated_surface.h"
+// A surface in memory, the state behind a GESurface (its mDX7: storegate.cpp defines the ee_dx7sf_* functions the
+// surface's members call, which the link takes before the Rust library's, /FORCE:MULTIPLE): pixel rows of
+// mBytesPerRow bytes (a few bytes past the pixels, so that a loader's row skip shows), a MIP chain as attached
+// surfaces (each level half the last, at least 1), zero-filled when created.
+struct StoreSurface {
+    StoreSurface(GESurface* inOwner, GEScreen* inScreen, const GESurfaceDescription& inDescription, long inLevel);
+    ~StoreSurface();
+    static StoreSurface* Of(GESurface* inSurface) { return reinterpret_cast<StoreSurface*>(inSurface->mDX7); }
 
+    GESurface* mOwner;
     GEScreen* mScreen;
     GESurfaceDescription mDescription;
     unsigned long mBytesPerRow;
     std::vector<unsigned char> mPixels;
-    StoreSurface* mNext;
+    GESurface* mNext;
     GEColor mTransparency;
     bool mLocked;
     unsigned long mLockCount;
     long mLevel;
 };
 
-class StoreScreen : public GEScreen {
-public:
-    StoreScreen() { this->mTextureManager = NULL; this->mRasterizerIndex = 0; }
-    long CreateSurface(GESurfaceDescription& inDescription, GESurface** outSurface) override;
-#include "fakes_generated_screen.h"
+// The screen behind a GEScreen (the ee_dx7sc_* functions): it creates the memory surfaces
+struct StoreScreen {
+    GEScreen* mOwner;
 };
 
 // digest.cpp: the stored state, read through the classes' members

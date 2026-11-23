@@ -9,7 +9,7 @@
 //! a member found for a caller is handed back as one for the C++ to wrap in an `FSMemoryFile`.
 //!
 //! What stays C++: `GetTag`, `SetTag` and `ListFiles` (they fill a `UWideString` and a `std::set`) and `FindFile`'s
-//! `new FSMemoryFile` (the names it gives the member are set here, `ee_fs_arch_name_member`).
+//! `new FSMemoryFile` (a call of File System.cpp's table: cppobj.rs `ee_fs_arch_find_file`).
 
 #![allow(clippy::unnecessary_cast)]
 
@@ -616,6 +616,10 @@ pub unsafe extern "C" fn ee_fs_arch_extract_all(
     startup_volume: *const EeFsString,
     startup_directory: *const EeFsString,
 ) -> c_long {
+    extern "C" {
+        fn fflush(stream: *mut c_void) -> std::ffi::c_int;
+    }
+    fflush(ptr::null_mut()); // the C runtime's lines first (the C++ facade's `fflush(stdout)` before)
     let mut out = TextMode(std::io::stdout().lock());
     let result = extract_all_to(a, destination, startup_volume, startup_directory, &mut out);
     let _ = out.flush();

@@ -39500,3 +39500,103 @@ UIControlsTable's three host switches, UIControl's out-of-line lookups; EEUIFMai
 unit-hack and cursor op switches; EEUIBuildWall's and EEUIBuildGate's members (the scenario editor and sim_editor use
 them by name); EECBCivilizationFiles' context and directory code; EEUserInterface's and EEUIManager's prototypes and
 the ui-event switch (docs/progress/ui-cluster.md).
+
+## LLE round 13: GESurface and GEScreen concrete (DX7Surface and DX7Screen folded in), the NE classes without the game's virtuals, the File System's object bodies and the formatters in Rust, nettest whole again (ee_render dx7 surfobj.rs scrobj.rs; ee_net; ee_sim netmsg ne_records.rs; ee_base fs cppobj.rs, error; branch rust-lle13, 2026-11-22)
+
+The brief: about -600 logic lines in the LLE's scope (src/Low-Level Engine but User Interface, include/lle but UI*,
+include/gx, include/dx7, the RTS Engine) by whole-class moves against what round 12 called the structural floor, and
+plain `xbuild.py nettest` running every program. **In scope -301** (`logic_lines.py`'s count per file: 1,818 ->
+1,517); net C++ -421 (src and include but include/rust). Two forks in their own worktrees: a (the NE, tests/net) -77,
+b (the File System, the U* utilities, LowLevelEngineCore.h, the TM/TS headers) -173; the main branch took GESurface,
+GEScreen and the store gate, -51. docs/progress/lle-shims.md has the commits and what is left. Short of the target:
+the floor mostly held (below).
+
+### What moved
+
+- **GESurface and GEScreen are concrete.** Each had one implementation in the game (DX7Surface, DX7Screen) and a
+  second in the model store gate (StoreSurface, StoreScreen). The members are now one call of the Rust object each
+  (`mDX7` in the base; DX7Rasterizer.cpp keeps the constructors, CreateAWindow and the hosts); include/dx7's two
+  headers are gone. The store gate keeps its memory surfaces by defining the C functions those members call
+  (`ee_dx7sf_*`, `ee_dx7sc_*`) in storegate.cpp: its objects come before the Rust library on the link line, which
+  takes them with `/FORCE:MULTIPLE`, and storegate.py fails if the link reports any other duplicate. The digests did
+  not change (25,140 lines).
+- **The NE without the game's virtuals** (fork a): NESynchronousServer's 17 and NESynchronousClient's 12 pure
+  virtuals duplicated the game class's own declarations. The game class now passes `GameHost<Game>` (and the
+  server `GameMessageManagerHost<Game>`) to the engine's constructor: header templates that call the game class's
+  members by name and hand every other op to the engine's `Host`. NESynchronousCommunications keeps one virtual
+  (ExecuteRemovePlayer, called through gCommunications); its slots 2..8 are one-statement members over whichever
+  Rust object is set.
+- **nettest whole** (fork a): four drivers did not build (ne_protocol_test, ne_message_test, ee_session_test,
+  ee_session_orig): they defined engine functions that are inlines over Rust since 456ed11cb. Their definitions are
+  kept only under `NE_PROTOCOL_ORIG`; ESVerify's abort is traced through a driver hook (`ee_error_set_verify_hook`);
+  the session pair's fake world goes in through a stand-in LowLevelEngineCore.h that renames the Rust calls it
+  traces. Batch 18 had fixed ee_session_test another way (the driver defining the Rust functions, `/FORCE:MULTIPLE`);
+  the merge keeps fork a's version, which also covers the other three.
+- **The File System's object bodies** (fork b): FSChunk's persistent loads and saves, FSPersistentList's creation
+  and registration, FSArchive::FindFile and ExtractAll's flush in Rust (ee_base fs cppobj.rs) over a table of six
+  one-statement C++ calls File System.cpp registers: ee_base imports no C++ symbol at link time. sprintf(UString&),
+  sprintf(UWideString&) and ESDebugOut are one-statement variadic templates over one C-variadic `UFormat`.
+
+### Lessons
+
+- A test fake of a concrete class can live at the C boundary: when the members are one call each of `extern "C"`
+  functions, a tool links its own definitions of those functions before the Rust library (`/FORCE:MULTIPLE`) and
+  keeps its behaviour, with no subclass and no virtual. Check the link's duplicate list against exactly the names
+  you meant, or the flag hides a real duplicate.
+- clang accepts `__attribute__((format(printf, f, a)))` on a C++ variadic template and checks the arguments:
+  varargs formatters can be one-statement templates over one C-variadic function without losing -Wformat.
+- A driver that links is not one that runs: ee_session_test linked with `/FORCE:UNRESOLVED` and crashed (0xC0000005,
+  no output) at its call of the unlinked `ee_gamecpp`. `lldb --batch -o run -k "bt 15"` gave the backtrace in one call.
+- Once a driver's engine functions are inlines over Rust, the fake world can go in only at the Rust call: a stand-in
+  header that renames the Rust symbol before including the real one, or a hook in Rust.
+- NEMRecord's AddPlayerInput/GetPlayerInput had answered kErrorNotReadable/kErrorBusy since LLE round 8 instead of
+  the original's kErrorBadPath/kErrorBeyondEnd; the Rust callers test only for nonzero, so the game did not notice.
+  The message driver's golden found it once it ran again.
+- After the merge with batch 18 the session pair broke again, twice: the stand-in world's `kFormMainGame`/`kFormLobby`/
+  `kFormAvailableGames` constants collided with rust/game/screens.h's new enum (the stand-in now includes it), and
+  EEMRecord's bodies had become Rust (gamecpp mrecord.rs) asking `ee_gamecpp` for the records' reads, which the
+  driver answered with nothing (an access violation in `ee_gamecpp_mrecord_init`). The driver now links
+  EEMessageCapture.cpp (the reads' chain link) and gives the original units' missing `EECore9OpD` a fallback with
+  `#pragma comment(linker, "/alternatename:...")`: one driver source, two link sets, no #ifdef. Rerun nettest after
+  every merge of origin/rust, not only after an ee_net change.
+- Merging two lanes' fixes of the same driver: keep one whole (here fork a's, which covers four programs), not a
+  hunk-by-hunk mix: each fix's stand-ins rename different symbols.
+
+### Behaviour changes
+
+None intended. Small differences: NEMRecord's two input calls answer the original's error codes again; the
+rasterizer host's SurfaceGxChecked op is a static cast (every surface is the DX7 one); GEScreen has no vtable and
+its texture manager and rasterizer index start at NULL and 0; GEScreen::CreateAWindow takes const strings;
+ExtractAll flushes every C stream (`fflush(NULL)`); the memory file's temporary name starts default-constructed;
+WaitAny's count above 64 fails in Rust; UGraph has no title or axis labels (tests/util/util_golden.cpp, in no gate,
+no longer compiles against it).
+
+### Gates
+
+On 7cf0a9c9c (the round merged with origin/rust 4a255ad0d, batch 19), and before that on 0b3af7637 and 4d49a0d44
+(merged with d968d89bd, batch 18), both full runs:
+
+- both builds 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0 (412); the headers current (320); the
+  Rust gate PASS (6,409 tests, 0 failed; test, clippy, rustfmt, header). The first run at 0b3af7637 failed once on
+  ee_base `codec::golden::implode_output_is_byte_identical_to_the_c_encoder` (a different output hash, with the
+  machine loaded); the test passed alone, six whole ee_base runs passed, and both later gate runs passed;
+- plain `xbuild.py nettest`, exit 0: ne_msgmgr_test 20000 sequences, ne_queues_test 1500, ne_client_test 1500,
+  ne_tune_test 20000, ne_server_test 1500, each 0 differing; ne_protocol_test, ne_message_test (711 checks),
+  ee_session_test and ee_session_orig (44,289 lines) equal to their goldens. Once, in the first run, ne_client_test
+  differed in 1 of 1500 sequences (1330: the last character of a random, unterminated transfer file name, which the
+  original and Rust sides read past); four later runs had 0;
+- the store gate PASS: 25,140 lines equal (2,583 model loads, 17,535 texture loads);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (digests equal: oracle 598, late 598, space 590, calamity 623, units
+  510, effects 18, missile 66, app 38, scenario 113, groups 6, placement 4, transport 185). In the batch 19 run the
+  calamity profile ran out of disk (the shared C: reached 0 bytes) and was rerun alone: PASS, 623 digests equal;
+- the plain saveload PASS (seeds 2-7 at 600, 1350, 2100 s: 18 identical); the matrix `--settings all --seeds 2-3 --at
+  1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS
+  (14,448 lines), `--civbuilder` PASS (4,062); eedata check PASS, cppgate PASS;
+- through slot.py, the test profile, `--data` the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` (F3 ok, VIEW CHECK PASS, RENDER CHECK ok: view 88.5% lit, 4,070 colours; RESULT PASS);
+  `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair, repair-queued, move;
+  RESULT PASS); `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 11309, units [4, 32, 36], alive [2, 3],
+  classic_lua x 2; lan-game PT 3396/3339). The batch 18 run before it passed the same (ai-game PT 11802, units
+  [4, 36, 36]; lan-game 2994/2994).
+- Not run: the POSIX builds, `gates.sh --legacy`.

@@ -11,15 +11,15 @@
 #include "lle/NESynchronousClient.h"
 #include "rust/net/net.h"
 
-NESynchronousClient::NESynchronousClient()
+NESynchronousClient::NESynchronousClient(EeNetClHostFn inHost)
 {
     // the client calls the protocol itself (ee_net ffi_protocol.rs)
-    this->mRust = ee_net_cl_new(this, NESynchronousClient::Host, NESynchronousClient::QueueHost, this->mComms, true);
+    this->mClient = ee_net_cl_new(this, inHost, NESynchronousClient::QueueHost, this->mComms, true);
 }
 
 NESynchronousClient::~NESynchronousClient()
 {
-    ee_net_cl_free(this->mRust);
+    ee_net_cl_free(this->mClient);
 }
 
 
@@ -71,37 +71,7 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
     case EeNetClOp::FsFree:
         delete reinterpret_cast<FSFile*>(a);
         return 0;
-    case EeNetClOp::CreateXferFile:
-        return (ptrdiff_t)static_cast<NESynchronousClient*>(inClient)->CreateXferFile(UWideString(reinterpret_cast<char*>(a)), (unsigned long)b);
-    case EeNetClOp::IsPlaybackRecordingSession:
-        return static_cast<NESynchronousClient*>(inClient)->IsPlaybackRecordingSession();
-    case EeNetClOp::ConnectTimeout:
-        return (ptrdiff_t)static_cast<NESynchronousClient*>(inClient)->GetConnectTimeout();
-    case EeNetClOp::ClientSlot:
-        return static_cast<NESynchronousClient*>(inClient)->GetClientSlot();
-    case EeNetClOp::IgnoreConnectionTimeout:
-        return static_cast<NESynchronousClient*>(inClient)->IgnoreConnectionTimeout();
-    case EeNetClOp::SetConnectionState:
-        static_cast<NESynchronousClient*>(inClient)->SetConnectionState((long)(int32_t)a);
-        return 0;
-    case EeNetClOp::HandleMessage:
-        static_cast<NESynchronousClient*>(inClient)->HandleMessage(reinterpret_cast<NEMessage*>(a));
-        return 0;
-    case EeNetClOp::HandleUserInput:
-        static_cast<NESynchronousClient*>(inClient)->HandleUserInput(reinterpret_cast<NEMessage*>(a));
-        return 0;
-    case EeNetClOp::HandleConnectionLost:
-        static_cast<NESynchronousClient*>(inClient)->HandleConnectionLost();
-        return 0;
-    case EeNetClOp::HandleStartGame:
-        return (ptrdiff_t)(uint32_t)static_cast<NESynchronousClient*>(inClient)->HandleStartGame((unsigned long)a);
-    case EeNetClOp::HandleStopGame:
-        static_cast<NESynchronousClient*>(inClient)->HandleStopGame();
-        return 0;
-    case EeNetClOp::HandleConnectionTimeoutWarning:
-        static_cast<NESynchronousClient*>(inClient)->HandleConnectionTimeoutWarning((unsigned long)a);
-        return 0;
-    case EeNetClOp::ProcessLocalUserInput:
+    case EeNetClOp::ProcessLocalUserInput:   // (the game's calls: GameHost)
         return static_cast<NESynchronousClient*>(inClient)->ProcessLocalUserInput(reinterpret_cast<NEMessage*>(a), (unsigned char)b);
     }
     return 0;

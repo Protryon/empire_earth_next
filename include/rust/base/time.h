@@ -165,7 +165,9 @@ int ee_time_timer_stop(const EeTimeTimer *timer);
 ///
 /// # Safety
 /// `timer` is a live timer; the outputs are writable.
-int ee_time_timer_stop_elapsed(const EeTimeTimer *timer, uint32_t *elapsed, uint32_t *remaining);
+int ee_time_timer_stop_elapsed(const EeTimeTimer *timer,
+                               unsigned long *elapsed,
+                               unsigned long *remaining);
 
 }  // extern "C"
 

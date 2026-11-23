@@ -97,6 +97,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "lle/NESynchronousClient.h"
+#include "ee/EEClient.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEUnitGoal.h"
@@ -1093,9 +1094,9 @@ extern "C" bool ee_screenscpp_gv_multiplayer_session() { return gCommunications-
 extern "C" uint32_t ee_screenscpp_gv_cts_processed()
 { return (uint32_t)gCommunications->GetNumberOfCTsProcessedInPhysics(); }
 extern "C" bool ee_screenscpp_gv_server_migrating()
-{ return static_cast<NESynchronousServer*>(gCommunications)->IsMigrating(); }
+{ return static_cast<EEServer*>(gCommunications)->IsMigrating(); }
 extern "C" bool ee_screenscpp_gv_client_playback()
-{ return static_cast<NESynchronousClient*>(gCommunications)->IsPlaybackRecordingSession(); }
+{ return static_cast<EEClient*>(gCommunications)->IsPlaybackRecordingSession(); }
 extern "C" uint32_t ee_screenscpp_gv_humans() { return (uint32_t)gCommunications->GetNumHumanPlayers(); }
 extern "C" int32_t ee_screenscpp_gv_camera_mode() { return (int32_t)gWorld.mCameraControl.mMode; }
 extern "C" bool ee_screenscpp_gv_lock_speed() { return gWorld.mGameOptions.GetLockSpeed() != false; }

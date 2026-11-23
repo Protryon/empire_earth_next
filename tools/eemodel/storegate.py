@@ -38,71 +38,9 @@ from ee import CLANG, LLD_LINK, LLVM_LIB, LLVM_NM, MODULE_FLAGS, RUNTIME_LIBS, l
 SRC = HERE / "storegate"
 DIGESTS = SRC / "digests.json"
 DEFAULT_TREE = pathlib.Path("C:/Users/max/Desktop/empire_earth_next/build/open_data/tree")
-# the classes whose pure virtuals fakes.h leaves to the generated headers: (header, class, generated file, written by hand)
-FAKES = [
-    ("GESurface.h", "GESurface", "fakes_generated_surface.h",
-     {"AttachSurface", "CopyTo", "CopyWithFilter", "DetachSurface", "GetAllocatedSize", "GetAttachedSurface",
-      "GetAttachedSurfaceCount", "GetBytesPerRow", "GetHeight", "GetIs3DRenderable", "GetIsTextLocked",
-      "GetIsTransparencyEnabled", "GetMemoryAddress", "GetParentScreen", "GetPixelFormat", "GetPixelDepth",
-      "GetSurfaceVolatility", "GetSurfaceDescription", "GetTransparencyColor", "GetType", "GetWidth", "Lock",
-      "RestoreSurface", "SetTransparencyColor", "TextLock", "TextUnlock", "Unlock"}),
-    ("GEScreen.h", "GEScreen", "fakes_generated_screen.h", {"CreateSurface"}),
-]
-
-
-def class_body(text, name):
-    m = re.search(r"class\s+LLE_API\s+" + name + r"\b[^{;]*\{", text)
-    if not m:
-        sys.exit(f"no class {name}")
-    depth, i = 1, m.end()
-    while depth:
-        depth += {"{": 1, "}": -1}.get(text[i], 0)
-        i += 1
-    return text[m.end():i - 1]
-
-
-def preprocess(text, defined=("__clang__",)):
-    """The header's #ifdef/#ifndef/#else/#endif branches as the engine's units see them (LLE_EXE_HEADERS unset)."""
-    out, stack = [], []
-    for line in text.splitlines():
-        m = re.match(r"\s*#\s*(ifdef|ifndef|if|else|elif|endif)\b\s*(\w*)", line)
-        if m:
-            kind, name = m.groups()
-            if kind in ("ifdef", "ifndef", "if"):
-                on = (name in defined) if kind == "ifdef" else (name not in defined) if kind == "ifndef" else True
-                stack.append(on)
-            elif kind in ("else", "elif") and stack:
-                stack[-1] = not stack[-1]
-            elif kind == "endif" and stack:
-                stack.pop()
-            continue
-        if all(stack):
-            out.append(line)
-    return "\n".join(out)
-
-
-def generate_fakes(out):
-    """The overrides fakes.h does not write: every other pure virtual of the class, returning a zero value."""
-    for header, cls, target, done in FAKES:
-        text = re.sub(r"//[^\n]*", "", preprocess((ROOT / "include" / "lle" / header).read_text(errors="replace")))
-        body = class_body(text, cls)
-        lines = []
-        for decl in re.findall(r"virtual\s+([^;{}]*?)=\s*0\s*;", body, re.S):
-            decl = " ".join(decl.split())
-            m = re.match(r"(.*?)\b(\w+)\s*\((.*)\)\s*(const)?\s*$", decl)
-            if not m:
-                sys.exit(f"{cls}: cannot read {decl!r}")
-            ret, fname, params, const = m.group(1).strip(), m.group(2), m.group(3), m.group(4) or ""
-            if fname in done:
-                continue
-            if ret == "void":
-                impl = "{}"
-            elif ret.endswith("&"):
-                impl = f"{{ static std::remove_const_t<std::remove_reference_t<{ret}>> s; return s; }}"
-            else:
-                impl = "{ return {}; }"
-            lines.append(f"    {ret} {fname}({params}) {const} override {impl}")
-        (out / target).write_text("\n".join(lines) + "\n")
+# the Rust functions storegate.cpp defines as its memory surfaces and screen (GESurface's and GEScreen's members call
+# them): the link takes the driver's first (/FORCE:MULTIPLE), and these are the only duplicates it may report
+STORE_DUPLICATES = re.compile(r"ee_dx7s[fc]_\w+")
 
 
 def run(cmd, cwd=None):
@@ -114,7 +52,6 @@ def build(game_out, out):
     """The driver over a game build's objects -> its path."""
     game_out, out = game_out.resolve(), out.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    generate_fakes(out)
     import rust_build
     mods = ["lle", "default", "tcp", "mixer", "dx7hrtnl"]
     objs = [units.obj_path(game_out, j) for m in mods for j in units.jobs_for(m)]
@@ -143,10 +80,14 @@ def build(game_out, out):
     # symbol may stay unresolved only when the game's own objects (the exe and WON modules, their library members)
     # define it, so an engine or driver symbol that went missing still fails the link.
     code, log = run([str(LLD_LINK), "/nologo", "/INCREMENTAL:NO", "/MACHINE:X64", "/SUBSYSTEM:CONSOLE",
-                     "/NODEFAULTLIB", "/DEBUG", "/FORCE:UNRESOLVED", "/DEMANGLE:NO", f"/OUT:{exe}", *lib_paths(),
+                     "/NODEFAULTLIB", "/DEBUG", "/FORCE:UNRESOLVED", "/FORCE:MULTIPLE", "/DEMANGLE:NO", f"/OUT:{exe}", *lib_paths(),
                      "@link.rsp"], out)
     log = "\n".join(l for l in log.splitlines() if "ignoring section .debug$S" not in l)
     (out / "link.log").write_text(log)
+    duplicates = set(re.findall(r"duplicate symbol: (\S+)", log))
+    stray = sorted(d for d in duplicates if not STORE_DUPLICATES.fullmatch(d))
+    if stray:
+        sys.exit(f"link failed ({out / 'link.log'}): duplicate symbols other than the memory surfaces' {stray}")
     unresolved = set(re.findall(r"undefined symbol: (\S+)", log))
     unexpected = sorted(unresolved - game_symbols(game_out)) if unresolved else []
     if code or unexpected:

@@ -4,6 +4,7 @@
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
 #include <stddef.h>
+#include <memory>
 
 // Not the umbrella: the inline block holds FSArchive, FSChunk, UReferenceCounter,
 // FSPersistent, TSLockable, FSPersistentList and FSMemoryFile, in that order. FSMemoryFile, FSChunk and FSArchive are
@@ -51,6 +52,17 @@ static const EeFsFileCalls kFSFileCalls = {
     [](void* f) { return static_cast<FSFile*>(f)->GetIsOpen(); },
 };
 static const bool sFSFileCallsRegistered = ee_fs_file_register(&kFSFileCalls);
+
+// The C++ objects' calls of the moved FSChunk, FSPersistentList and FSArchive bodies (ee_base fs cppobj.rs)
+static const EeFsCppCalls kFSCppCalls = {
+    [](EeFsMemFile* s) { return static_cast<void*>(static_cast<FSFileSpec*>(new FSMemoryFile(s, true))); },
+    [](void* p) { return static_cast<void*>(static_cast<FSPersistent*>(p)->CreateDefault()); },
+    [](void* p, unsigned long ma, unsigned long mi, EeFsMemFile* d) { return static_cast<FSPersistent*>(p)->Load(ma, mi, *std::make_unique<FSMemoryFile>(d, false)); },
+    [](void* p, unsigned long ma, unsigned long mi, EeFsMemFile* d) { return static_cast<FSPersistent*>(p)->Save(ma, mi, *std::make_unique<FSMemoryFile>(d, false)); },
+    [](void* p) { return static_cast<FSPersistent*>(p)->GetTagID(); },
+    [](void* p) { delete static_cast<FSPersistent*>(p); },
+};
+static const bool sFSCppCallsRegistered = ee_fs_cpp_register(&kFSCppCalls);
 
 // FSBasicFile and FSFileSpec are their Rust records from the vtable pointer on (lle/FSFileSpec.h; fs spec.rs)
 static_assert(sizeof(UString) == sizeof(EeFsString), "a UString member is an EeFsString");

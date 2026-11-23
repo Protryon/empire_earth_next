@@ -105,6 +105,25 @@ static FILTERS: Mutex<Filters> =
     Mutex::new(Filters { loaded: false, suppress: true, output_to_debugger: false, filters: Vec::new() });
 static NATIVE_ERROR: AtomicU64 = AtomicU64::new(0);
 static IN_VERIFY: AtomicBool = AtomicBool::new(false);
+/// A driver's verify handler (tests/net's ne_message_test traces the failures): when set, [`ee_error_verify`] calls
+/// it and returns instead of reporting and aborting.
+static VERIFY_HOOK: Mutex<Option<EeErrorVerifyHook>> = Mutex::new(None);
+
+/// A verify handler: the file, line and expression of [`ee_error_verify`].
+/// cbindgen:ignore
+pub type EeErrorVerifyHook = unsafe extern "C" fn(file: *const c_char, line: c_ulong, expression: *const c_char);
+
+/// Sets (or with `None` clears) the verify handler of [`VERIFY_HOOK`] (test drivers only).
+#[no_mangle]
+pub extern "C" fn ee_error_set_verify_hook(
+    hook: Option<unsafe extern "C" fn(file: *const c_char, line: c_ulong, expression: *const c_char)>,
+) {
+    *VERIFY_HOOK.lock().unwrap_or_else(|e| e.into_inner()) = hook;
+}
+
+fn verify_hook() -> Option<EeErrorVerifyHook> {
+    *VERIFY_HOOK.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 fn filters() -> std::sync::MutexGuard<'static, Filters> {
     FILTERS.lock().unwrap_or_else(|e| e.into_inner())
@@ -139,6 +158,39 @@ pub unsafe extern "C" fn ee_error_debug_out(
     if filters().passes(message) {
         crate::plat_core::message::PlatDebugOutput(if message.first() == Some(&b'!') { text.add(1) } else { text });
     }
+}
+
+/// `ESDebugOut`'s buffer for its formatted text (`UFormat`, lle/LowLevelEngineCore.h): `size` bytes (at least 1),
+/// freed by [`ee_error_debug_end`].
+#[no_mangle]
+pub extern "C" fn ee_error_debug_buffer(_state: *mut std::ffi::c_void, size: c_ulong) -> *mut c_char {
+    Box::into_raw(vec![0u8; (size as usize).max(1)].into_boxed_slice()).cast()
+}
+
+/// `ESDebugOut`'s end: the formatted text cut at 1023 bytes (the original's 1024-byte `vsnprintf`) through
+/// [`ee_error_debug_out`], then the buffer freed.
+///
+/// # Safety
+/// `text` and `size` are from [`ee_error_debug_buffer`], the text NUL-terminated inside it; as
+/// [`ee_error_debug_out`] for `volume` and `directory`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_error_debug_end(
+    text: *mut c_char,
+    size: c_ulong,
+    volume: *const std::ffi::c_void,
+    directory: *const std::ffi::c_void,
+) {
+    let buffer = Box::from_raw(std::ptr::slice_from_raw_parts_mut(text.cast::<u8>(), (size as usize).max(1)));
+    let mut buffer = cut_debug_text(&buffer);
+    ee_error_debug_out(buffer.as_mut_ptr().cast(), volume, directory);
+}
+
+/// The text up to its NUL, at most 1023 bytes, NUL-terminated.
+fn cut_debug_text(buffer: &[u8]) -> Vec<u8> {
+    let length = buffer.iter().position(|&b| b == 0).unwrap_or(buffer.len()).min(1023);
+    let mut text = buffer[..length].to_vec();
+    text.push(0);
+    text
 }
 
 /// `ESInitialize`: [`ee_error_shutdown_hook`] registered with the engine's shutdown list (ee_util).
@@ -196,6 +248,11 @@ pub fn verify_report(file: &[u8], line: c_ulong, expression: &[u8]) -> Option<Ve
 /// `file` and `expression` are NULL or NUL-terminated strings.
 #[no_mangle]
 pub unsafe extern "C" fn ee_error_verify(file: *const c_char, line: c_ulong, expression: *const c_char) {
+    if let Some(hook) = verify_hook() {
+        // SAFETY: the handler takes the caller's strings as they are
+        unsafe { hook(file, line, expression) };
+        return;
+    }
     let text = |p: *const c_char| if p.is_null() { &b""[..] } else { CStr::from_ptr(p).to_bytes() };
     let Some(report) = verify_report(text(file), line, text(expression)) else { return };
     use std::io::Write;
@@ -223,6 +280,21 @@ fn breakpoint() {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn a_debug_text_is_cut_at_1023_bytes() {
+        let mut long = vec![b'x'; 2000];
+        long.push(0);
+        let cut = super::cut_debug_text(&long);
+        assert_eq!(cut.len(), 1024);
+        assert_eq!(cut[1023], 0);
+        let short = super::cut_debug_text(b"ab zz");
+        assert_eq!(short, b"ab ");
+        let buffer = super::ee_error_debug_buffer(std::ptr::null_mut(), 0);
+        // SAFETY: a one-byte buffer of ee_error_debug_buffer
+        unsafe { drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(buffer.cast::<u8>(), 1))) };
+    }
+
     use super::*;
 
     fn loaded(text: &str) -> Filters {
@@ -267,6 +339,20 @@ mod tests {
         assert_eq!(ee_error_record_native(5), 5);
         assert_eq!(ee_error_record_native(0), 0);
         assert_eq!(ee_error_native(), 5);
+    }
+
+    #[test]
+    fn verify_calls_the_hook_and_returns() {
+        static SEEN: AtomicU64 = AtomicU64::new(0);
+        unsafe extern "C" fn hook(_file: *const c_char, line: c_ulong, _expression: *const c_char) {
+            SEEN.store(u64::from(line), Ordering::Relaxed);
+        }
+        ee_error_set_verify_hook(Some(hook));
+        // SAFETY: C strings
+        unsafe { ee_error_verify(c"f.cpp".as_ptr(), 227, c"x".as_ptr()) };
+        ee_error_set_verify_hook(None);
+        assert_eq!(SEEN.load(Ordering::Relaxed), 227);
+        assert!(verify_hook().is_none());
     }
 
     #[test]
