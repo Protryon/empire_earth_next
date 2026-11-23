@@ -110,9 +110,7 @@ extern unsigned long gCollisionPeriod;      // 0x4c237c (.data = 1 after gCollis
 EEPhysics::EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer)
     : RTSPhysics(inGraphics, inTimer, 1, 0xf), mInputMessagesProcessed(0), mLastOutOfSynchChecksum(0)
 {
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mSaveGameLock) == keseOK, 281);
-    this->Init();
-    this->mStartThreadMainLoop->Set();
+    ee_physics_construct(this);   // (physics.rs)
 }
 
 // Destroys the physics simulation, releasing its save-game lock
@@ -187,45 +185,20 @@ void EEAfterLoadLast(std::function<void()> inFixup)
     ee_physics_after_load(true, new std::function<void()>(inFixup));
 }
 
-// New (R5b.4, round 28): the C++ parts of EEPhysics::Load and Save (ee_units physics_save.rs): the file's primitives
-// (EESavePrimitive) and RTSPhysics' part
-struct EEPhysicsSaveContext {
-    EEPhysics* mPhysics;
-    FSFile* mFile;
-    unsigned long mMajorVersion;
-    unsigned long mMinorVersion;
-};
-
-static int32_t EEPhysicsSaveOperation(void* inContext, int32_t inOp, uint32_t, EeUnitsPlayerSaveIo* io)
-{
-    EEPhysicsSaveContext& theContext = *static_cast<EEPhysicsSaveContext*>(inContext);
-    if (inOp == EE_UNITS_PHYSICS_SAVE_RTS_LOAD)
-        return theContext.mPhysics->RTSPhysics::Load(theContext.mMajorVersion, theContext.mMinorVersion, *theContext.mFile);
-    if (inOp == EE_UNITS_PHYSICS_SAVE_RTS_SAVE)
-        return theContext.mPhysics->RTSPhysics::Save(theContext.mMajorVersion, theContext.mMinorVersion, *theContext.mFile);
-    return EESavePrimitive(*theContext.mFile, inOp, io);
-}
-
 // Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
-// flag after version 0.0xce, the resource timer from 0xfa); returns the first read error
+// flag after version 0.0xce, the resource timer from 0xfa); returns the first read error. The original's two era
+// bodies are Rust (ee_units physics_save.rs, over the record this class derives from; physics.rs: the base's part,
+// the file's primitives, the loaded seed back at the first tick)
 long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    // port (R5b.4, round 28): the original's two era bodies are Rust (ee_units physics_save.rs) over the record this
-    // class derives from (EeUnitsPhysicsSaved) and EEPhysicsSaveOperation's parts
-    EEPhysicsSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion};
-    long theResult = ee_units_physics_load(&theContext, &EEPhysicsSaveOperation, static_cast<EeUnitsPhysicsSaved*>(this),
-                                           (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-    if (theResult == kErrorOK)   // port: the loaded seed comes back at the first tick (ee_game physics.rs)
-        ee_physics_loaded_seed(this->mRandom.GetSeed());
-    return theResult;
+    return ee_physics_load(this, &inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // Writes the physics clocks, tick counters, timing averages, civ timer state, game-over flag and resource timer
 // to the saved game; returns the first write error
 long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    EEPhysicsSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};   // port: ee_units physics_save.rs
-    return ee_units_physics_save(&theContext, &EEPhysicsSaveOperation, static_cast<EeUnitsPhysicsSaved*>(this));
+    return ee_physics_save(this, &outFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // TEST ONLY: the UI fixture's view of each executed input (EETestFixtureOrders.cpp: the orders' verdicts), called
@@ -272,6 +245,11 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::TicksPerSecond: return PH->mTicksPerSecond;
     case O::TimerRunning: return PH->mTimerRunning;
     case O::RandomSeed: return PH->mRandom.GetSeed();
+    case O::CreateSaveLock: return TSScheduler::CreateCriticalSection(PH->mSaveGameLock) == keseOK;
+    case O::StartMainLoop: PH->mStartThreadMainLoop->Set();
+        break;
+    case O::RtsLoad: return PH->RTSPhysics::Load((unsigned long)a[1], (unsigned long)a[2], *(FSFile*)a[0]);
+    case O::RtsSave: return PH->RTSPhysics::Save((unsigned long)a[1], (unsigned long)a[2], *(FSFile*)a[0]);
     case O::SetRandomSeed: PH->mRandom.SetSeed((unsigned long)a[0]);
         break;
     case O::InputMessages: return PH->mInputMessagesProcessed;

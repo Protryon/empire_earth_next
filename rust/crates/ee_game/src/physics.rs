@@ -34,6 +34,13 @@ pub enum EePhysCpp {
     // ---- the physics (p: the EEPhysics)
     /// `static_cast<EeUnitsPhysicsSaved*>(this)`
     Rec = 1,
+    /// `RTSPhysics::Load(a1, a2, *(FSFile*)a0)`, `RTSPhysics::Save(a1, a2, *(FSFile*)a0)` (the base's part of a save)
+    RtsLoad,
+    RtsSave,
+    /// `TSScheduler::CreateCriticalSection(mSaveGameLock) == keseOK`
+    CreateSaveLock,
+    /// `mStartThreadMainLoop->Set()`
+    StartMainLoop,
     /// `mSpeed` (float)
     Speed,
     SetSpeed,
@@ -451,6 +458,80 @@ fn campaign_win() {
     if progress.load(&user, &campaign, checksum, true) == 0 {
         progress.save_completed_scenario(&user, &campaign, &scenario, checksum);
     }
+}
+
+/// The constructor's body: the save-game lock, the clocks and queues reset (`Init`), the thread's main loop started.
+#[no_mangle]
+pub extern "C" fn ee_physics_construct(p: *mut c_void) {
+    h(O::Verify, 0, &[h(O::CreateSaveLock, this(p), &[]), 281]);
+    ee_physics_init(p);
+    h(O::StartMainLoop, this(p), &[]);
+}
+
+/// A save's or load's file and version for [`save_operation`].
+struct SaveFile {
+    physics: P,
+    file: *mut c_void,
+    major: u32,
+    minor: u32,
+}
+
+/// ee_units physics_save.rs' calls: the base's part (RTSPhysics' Load or Save), else the file's primitives.
+unsafe extern "C" fn save_operation(
+    context: *mut c_void,
+    op: i32,
+    _: u32,
+    io: *mut ee_sim::units::player_save::EeUnitsPlayerSaveIo,
+) -> i32 {
+    // SAFETY: `load`'s or `save`'s local
+    let c = unsafe { &*(context as *const SaveFile) };
+    let a = [c.file as usize as i64, i64::from(c.major), i64::from(c.minor)];
+    match op {
+        ee_sim::units::physics_save::EE_UNITS_PHYSICS_SAVE_RTS_LOAD => h(O::RtsLoad, c.physics, &a) as i32,
+        ee_sim::units::physics_save::EE_UNITS_PHYSICS_SAVE_RTS_SAVE => h(O::RtsSave, c.physics, &a) as i32,
+        // SAFETY: the live file; io lives for the call
+        _ => unsafe { ee_sim::units::save_prim::game::ee_units_save_primitive(c.file, op, io) },
+    }
+}
+
+/// `EEPhysics::Load`: the record's two era bodies (ee_units physics_save.rs); the loaded seed comes back at the first
+/// tick.
+///
+/// # Safety
+/// `p` is the live physics; `file` a live `FSFile`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_physics_load(p: *mut c_void, file: *mut c_void, major: u32, minor: u32) -> c_long {
+    let p = this(p);
+    let c = SaveFile { physics: p, file, major, minor };
+    // SAFETY: the record is the physics'; `c` outlives the call
+    let result = unsafe {
+        ee_sim::units::physics_save::ee_units_physics_load(
+            &c as *const SaveFile as *mut c_void,
+            save_operation,
+            rec(p),
+            major,
+            minor,
+        )
+    };
+    if result == 0 {
+        ee_physics_loaded_seed(h(O::RandomSeed, p, &[]) as u32);
+    }
+    result as c_long
+}
+
+/// `EEPhysics::Save`: as [`ee_physics_load`].
+///
+/// # Safety
+/// As [`ee_physics_load`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_physics_save(p: *mut c_void, file: *mut c_void, major: u32, minor: u32) -> c_long {
+    let p = this(p);
+    let c = SaveFile { physics: p, file, major, minor };
+    // SAFETY: as `ee_physics_load`
+    let result = unsafe {
+        ee_sim::units::physics_save::ee_units_physics_save(&c as *const SaveFile as *mut c_void, save_operation, rec(p))
+    };
+    result as c_long
 }
 
 static LOADED_SEED: AtomicU32 = AtomicU32::new(0);

@@ -11,6 +11,13 @@
 enum class EePhysCpp : uint32_t {
   /// `static_cast<EeUnitsPhysicsSaved*>(this)`
   Rec = 1,
+  /// `RTSPhysics::Load(a1, a2, *(FSFile*)a0)`, `RTSPhysics::Save(a1, a2, *(FSFile*)a0)` (the base's part of a save)
+  RtsLoad,
+  RtsSave,
+  /// `TSScheduler::CreateCriticalSection(mSaveGameLock) == keseOK`
+  CreateSaveLock,
+  /// `mStartThreadMainLoop->Set()`
+  StartMainLoop,
   /// `mSpeed` (float)
   Speed,
   SetSpeed,
@@ -236,6 +243,25 @@ extern "C" {
 
 /// Queues a fixup (`last`: after every EEAfterLoad fixup of that tick).
 void ee_physics_after_load(bool last, void *fixup);
+
+/// The constructor's body: the save-game lock, the clocks and queues reset (`Init`), the thread's main loop started.
+void ee_physics_construct(void *p);
+
+/// `EEPhysics::Load`: the record's two era bodies (ee_units physics_save.rs); the loaded seed comes back at the first
+/// tick.
+///
+/// # Safety
+/// `p` is the live physics; `file` a live `FSFile`.
+long ee_physics_load(void *p,
+                     void *file,
+                     uint32_t major,
+                     uint32_t minor);
+
+/// `EEPhysics::Save`: as [`ee_physics_load`].
+///
+/// # Safety
+/// As [`ee_physics_load`].
+long ee_physics_save(void *p, void *file, uint32_t major, uint32_t minor);
 
 /// A loaded game's seed, put back at its first tick.
 void ee_physics_loaded_seed(uint32_t seed);
