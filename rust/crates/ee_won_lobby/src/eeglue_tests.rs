@@ -199,8 +199,18 @@ fn options_of(line: &str) -> Options {
     Options { fields: v[..16].to_vec(), players }
 }
 
+/// The palette back to the original's when a replay ends, failed or not (the replays set the game's colours; the
+/// eecolor tests read the palette under the same lock).
+struct RestorePalette;
+impl Drop for RestorePalette {
+    fn drop(&mut self) {
+        crate::eecolor::set_palette(&ORIGINAL_PALETTE);
+    }
+}
+
 fn replay(golden: &'static str) -> Result<usize, String> {
     let _l = testgame::lock();
+    let _palette = RestorePalette;
     let lines: Vec<&str> = golden.lines().filter(|l| !l.is_empty()).collect();
     let mut starts: Vec<usize> =
         lines.iter().enumerate().filter(|(_, l)| l.starts_with("seq ")).map(|(i, _)| i).collect();
@@ -302,8 +312,6 @@ fn replay(golden: &'static str) -> Result<usize, String> {
         }
     }
     ee_won_eeglue_set_host(None);
-    // the palette back to the original's (the replays set the game's colours)
-    crate::eecolor::set_palette(&ORIGINAL_PALETTE);
     Ok(starts.len() - 1)
 }
 

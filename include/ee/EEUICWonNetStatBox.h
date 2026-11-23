@@ -30,6 +30,14 @@ public:
     virtual long DrawTextA();               // +0x1c 0x25e413 (twelve columns per copied line)
     virtual void Refresh();                 // +0xbc 0x25eca2 (the stats form's open event; provisional name)
 
+    // the screens' host's reads of the protected base (R6 WON round 32: ee/EEWonFrontHost.inl)
+    long FrontScrollBarText() { return this->DrawScrollBarText(); }
+    const GERectangle& FrontCopyRect() const { return this->GetCopyTextRectangle(); }
+    unsigned long FrontDrawCount() const { return this->GetDrawCount(); }
+    unsigned long FrontLineHeight() const { return this->GetLineHeight(); }
+    unsigned long FrontCopyCount() const { return (unsigned long)this->mCopyLineArray.size(); }
+    const EEUICWNSBStat& FrontCopyLine(unsigned long inIndex) const { return this->mCopyLineArray[inIndex]; }
+    void FrontClearCopiedSelection() { this->SetCopiedHasSelection(false); }
     GEText* mText;                          // +0x134 (ctor: new GEText(argument 2, the font); dtor ??_G)
     std::vector<EEUICWNSBStat> mStats;      // +0x138 (dtor 0x25f7de, the list box's own vector type)
     unsigned long mRowHeight;               // +0x148 (ctor: argument 2's +0x2c)

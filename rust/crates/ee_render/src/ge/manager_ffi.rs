@@ -1,7 +1,7 @@
 //! The C ABI of the managers' logic (`managers.rs`), called by `GETextureManager.cpp` and `GEModelManager.cpp`. Names
 //! go in as NUL-terminated C strings and come back into a caller's buffer (NUL-terminated, cut to the capacity).
 
-use std::ffi::{c_char, c_long, c_ulong, CStr};
+use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 
 use crate::ge::managers::{self, with_pack};
 
@@ -56,30 +56,29 @@ pub unsafe extern "C" fn ee_ge_texpack_set(directory: *const c_char, scale_shift
     with_pack(|p| p.set(directory, scale_shift, mip_levels_to_drop));
 }
 
-/// The pack's name of a texture (`GETexturePackName`; with `require_enabled`, `GetTexturePackName`): false and nothing
-/// written when there is none.
+/// `GETextureManager::GetTexturePackName(name, out)`: the pack's name of a texture while the pack is on, into the
+/// `UString` `out` through the original's 1,024-byte buffer (cut to 1,023 bytes); false and `out` unchanged when
+/// there is none.
 ///
 /// # Safety
-/// `name` is NUL-terminated; `out` holds `capacity` bytes.
+/// `name` is NUL-terminated; `out` is a C++ `UString`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_ge_texpack_name(
-    name: *const c_char,
-    require_enabled: bool,
-    out: *mut c_char,
-    capacity: usize,
-) -> bool {
+pub unsafe extern "C" fn ee_ge_texpack_name(name: *const c_char, out: *mut c_void) -> bool {
     // SAFETY: the caller's contract
     let name = unsafe { c_bytes(name) };
-    let packed = with_pack(|p| if require_enabled { p.enabled_pack_name(name) } else { p.pack_name(name) });
-    match packed {
-        Some(bytes) => {
+    match with_pack(|p| p.enabled_pack_name(name)) {
+        Some(mut bytes) => {
+            bytes.truncate(PACK_NAME_BUFFER - 1);
             // SAFETY: the caller's contract
-            unsafe { put_c_string(&bytes, out, capacity) };
+            unsafe { crate::ge::cppobj::str_set_bytes(out as usize, &bytes) };
             true
         }
         None => false,
     }
 }
+
+/// `GetTexturePackName`'s buffer (`char theBuffer[1024]`).
+const PACK_NAME_BUFFER: usize = 1024;
 
 /// Whether the pack is on (`sTexturePackEnabled`).
 #[no_mangle]

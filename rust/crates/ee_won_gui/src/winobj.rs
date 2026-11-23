@@ -856,6 +856,127 @@ pub unsafe extern "C" fn ee_won_win_call(win: *const EeWonWindow, call: EeWonWin
     unsafe { (*win).call(call, a, b) }
 }
 
+/// The C++ event class a handler's record is read from (`ee_won_win_event`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonWinEventShape {
+    /// a `KeyEvent` (the type, the key modifiers, the key).
+    Key = 0,
+    /// a `MouseEvent` (the type, the point, the key modifiers, the button or wheel amount).
+    Mouse,
+    /// an `InputEvent` (the type; a `SizeEvent`'s size for `InputEvent_SizeChange`).
+    Input,
+}
+
+impl EeWonWindow {
+    /// The handlers' record read from the C++ event through the window's host (R6 WON round 32: the original
+    /// forwarders' statements, Window::HandleKeyEvent .. HandleInputEvent).
+    fn event_of(&self, shape: EeWonWinEventShape, e: isize) -> EeWonWinEvent {
+        let get = |op: Op| self.op(op, e, 0, 0, 0) as i32;
+        let mut r = EeWonWinEvent { kind: get(Op::WinEvType), ..EeWonWinEvent::default() };
+        match shape {
+            EeWonWinEventShape::Key => {
+                r.key_mod = get(Op::WinKeyEvKeyMod);
+                r.key = get(Op::WinKeyEvKey);
+            }
+            EeWonWinEventShape::Mouse => {
+                r.x = get(Op::WinMouseEvX);
+                r.y = get(Op::WinMouseEvY);
+                r.key_mod = get(Op::WinMouseEvKeyMod);
+                r.button = get(Op::WinMouseEvButton);
+            }
+            EeWonWinEventShape::Input => {
+                if r.kind == EV_SIZE_CHANGE {
+                    r.width = get(Op::WinSizeEvWidth);
+                    r.height = get(Op::WinSizeEvHeight);
+                }
+            }
+        }
+        r
+    }
+
+    /// `Window::GetFont`: the map's font, else the platform's (held by the map; a NULL one is asked again next
+    /// time).
+    ///
+    /// # Safety
+    /// `map` is the window's live font map; `desc` its `FontDescriptor*`, `face` its face's `n` bytes.
+    unsafe fn get_font(
+        &self,
+        map: *mut crate::fontmap::EeWonFontMap,
+        desc: isize,
+        face: *const u8,
+        n: usize,
+        style: i32,
+        size: i32,
+    ) -> isize {
+        use crate::fontmap::{ee_won_fontmap_lookup, ee_won_fontmap_store};
+        // SAFETY: the caller's map and face
+        let found = unsafe { ee_won_fontmap_lookup(map, face, n, style, size) } as isize;
+        if found != 0 {
+            return found;
+        }
+        self.op(Op::WinPlatformFont, desc, 0, 0, 0);
+        let font = self.op(Op::WinHostFont, 0, 0, 0, 0);
+        if font != 0 {
+            self.op(Op::WinFontHold, font, 0, 0, 0);
+        }
+        // SAFETY: as above
+        unsafe { ee_won_fontmap_store(map, face, n, style, size, font as usize) };
+        self.op(Op::WinHostFontClear, 0, 0, 0, 0);
+        font
+    }
+}
+
+/// A key, mouse or input handler (`call`) over the record read from the C++ event `event` (a `KeyEvent*`,
+/// `MouseEvent*` or `InputEvent*` as an `InputEvent*`).
+///
+/// # Safety
+/// `win` is live; `event` is a live event of the shape.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_win_event(
+    win: *const EeWonWindow,
+    call: EeWonWinCall,
+    shape: EeWonWinEventShape,
+    event: isize,
+) -> isize {
+    // SAFETY: live (the contract)
+    let w = unsafe { &*win };
+    let r = w.event_of(shape, event);
+    w.call(call, &r as *const EeWonWinEvent as isize, 0)
+}
+
+/// `Window::GetFont`'s font (unheld: the C++ wraps it in its SmartPtr).
+///
+/// # Safety
+/// `win` is live; `map` is the window's font map; `desc` the `FontDescriptor*`; `face` its face's `n` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_win_get_font(
+    win: *const EeWonWindow,
+    map: *mut crate::fontmap::EeWonFontMap,
+    desc: isize,
+    face: *const u8,
+    n: usize,
+    style: i32,
+    size: i32,
+) -> isize {
+    // SAFETY: the contract
+    unsafe { (*win).get_font(map, desc, face, n, style, size) }
+}
+
+/// `Window::Create`: the manager's default icon when the window has none, then the create.
+///
+/// # Safety
+/// `win` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_win_create(win: *const EeWonWindow, width: i32, height: i32) {
+    // SAFETY: live (the contract)
+    let w = unsafe { &*win };
+    if w.op(Op::WinHasIcon, 0, 0, 0, 0) == 0 {
+        w.op(Op::WinIconDefault, 0, 0, 0, 0);
+    }
+    w.create(width, height);
+}
+
 #[cfg(test)]
 #[path = "winobj_tests.rs"]
 mod tests;

@@ -505,6 +505,85 @@ pub enum EeWonEeGlueOp {
     GameAddressSet,
     /// `&sEELocalAddress`.
     GameAddressRef,
+    // ---- the statements of the multi-statement cases gluesplit.rs answers in the game (R6 WON round 32)
+    /// `GlueText(a, b)` held (one reference given back with `Release`).
+    TextHeld = 500,
+    /// `((Graphics*)a)->mFont->GetStringWidth(text, 0, length)` of the held text `b`.
+    GfxTextWidthHeld,
+    /// `LobbyGame::SetGameFactory(EELobbyNewGame)`.
+    FactoryGame,
+    /// `LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer)`.
+    FactoryPlayer,
+    /// `LobbyConfig::SetAllocator(EELobbyNewConfig)`.
+    FactoryConfig,
+    /// `sEELobbyResources = EELobbyResource_Init(NULL)`.
+    ResInit,
+    /// `sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl)`.
+    ResAllocGameOptions,
+    /// `.. ("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl)`.
+    ResAllocPlayerOptions,
+    /// `.. ("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton)`.
+    ResAllocColorButton,
+    /// `.. ("EELobbyFileDialog", EELobbyNewDialogConfig, EELobbyNewFileDialog)`.
+    ResAllocFileDialog,
+    /// `.. ("EELobbyConnectDialog", EELobbyNewDialogConfig, EELobbyNewConnectDialog)`.
+    ResAllocConnectDialog,
+    /// `sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(..))`.
+    ResAddMusic,
+    /// `LobbyAddComponentLoader(sEELobbyResources.mPtr, EELobbyGetComponents)`.
+    ResAddLoader,
+    /// `sEELobbyResources = NULL` (the original's local going out of scope).
+    ResDone,
+    /// `sEELobbyColor = EEGetPlayerColor(a)`.
+    PlayerColorGet,
+    /// `*(float*)a = sEELobbyColor.GetRed()`.
+    PlayerColorRed,
+    /// `*(float*)a = sEELobbyColor.GetGreen()`.
+    PlayerColorGreen,
+    /// `*(float*)a = sEELobbyColor.GetBlue()`.
+    PlayerColorBlue,
+    /// `SafeGetComponent(a, ptr, "EELobbyConnectDialog", "EELobbyInit.cpp", 329)`: held.
+    FindConnectDialog,
+    /// `SafeGetComponent(a, ptr, "EELobbyFileDialog", "EELobbyInit.cpp", 328)`: held.
+    FindFileDialog,
+    /// `new EELobbySavedGame`.
+    SaveAlloc,
+    /// `((EELobbySavedGame*)a)->mSpec.SetFile((const char*)b)`.
+    SaveSetFile,
+    /// `sEELobbySaveLength = 0`.
+    SaveLengthClear,
+    /// `a->mSpec.GetLength(sEELobbySaveLength)`.
+    SaveGetLength,
+    /// `sEELobbySaveLength`.
+    SaveLengthValue,
+    /// `a->mHeader.SetMajorVersion(kSaveGameMajorVersion)`.
+    SaveSetMajor,
+    /// `a->mHeader.SetMinorVersion(kSaveGameMinorVersion)`.
+    SaveSetMinor,
+    /// `a->mHeader.LoadFromFile(a->mSpec) == keseOK`.
+    SaveLoadFile,
+    /// `gGameOptions.mLock->WriteLock()`.
+    OptionsWriteLock,
+    /// `gGameOptions = gLobbyGameOptions`.
+    OptionsCopyLobby,
+    /// `gGameOptions.mIsMultiplayer = true`.
+    OptionsSetMultiplayer,
+    /// `gGameOptions.mCheatCodes = false`.
+    OptionsClearCheats,
+    /// `LobbyGetNetAddresses(sEELobbyAddressList, false)`.
+    AddressListFill,
+    /// `new std::vector<LobbyNetAddress>(sEELobbyAddressList.begin(), sEELobbyAddressList.end())`.
+    AddressVectorNew,
+    /// `sEELobbyAddressList.clear()` (the original's local going out of scope).
+    AddressListClear,
+    /// `gWorld.mLock->WriteUnlock()`.
+    WorldWriteUnlock,
+    /// `gUIManager->UnlockUIForCopyData()`.
+    UiUnlockCopy,
+    /// `gUIManager->LockUIForCopyData()`.
+    UiLockCopy,
+    /// `gWorld.mLock->WriteLock()`.
+    WorldWriteLock,
 }
 
 /// The inward calls (`a`.. as documented).
@@ -602,6 +681,8 @@ pub type EeWonEeGlueHostFn = Option<
 /// The glue's state (the original's globals; the lobby runs on one thread, re-entered by its calls out).
 pub struct EeWonEeGlue {
     host: AtomicUsize,
+    /// The host is the game's (`ee_won_eeglue_set_game_host`): gluesplit.rs answers the multi-statement ops.
+    game: AtomicBool,
     /// `gEELobbyFileDialog`, `gEELobbyConnectDialog` (held `SmartPtr`s)
     file_dialog: AtomicIsize,
     connect_dialog: AtomicIsize,
@@ -614,6 +695,7 @@ impl EeWonEeGlue {
     pub const fn new() -> Self {
         Self {
             host: AtomicUsize::new(0),
+            game: AtomicBool::new(false),
             file_dialog: AtomicIsize::new(0),
             connect_dialog: AtomicIsize::new(0),
             closing: AtomicBool::new(false),
@@ -672,7 +754,14 @@ impl EeWonEeGlue {
         let h: unsafe extern "C" fn(Op, isize, isize, isize, isize, isize, isize) -> isize =
             unsafe { std::mem::transmute(h) };
         // SAFETY: the C++ host's ops
-        unsafe { h(op, a, b, c, d, e, f) }
+        let out =
+            |op: Op, a: isize, b: isize, c: isize, d: isize, e: isize, f: isize| unsafe { h(op, a, b, c, d, e, f) };
+        if self.game.load(Ordering::Relaxed) {
+            if let Some(r) = crate::gluesplit::game_op(op, [a, b, c, d, e, f], &out) {
+                return r;
+            }
+        }
+        out(op, a, b, c, d, e, f)
     }
 
     fn op1(&self, op: Op, a: isize) -> isize {
@@ -1503,6 +1592,15 @@ pub(crate) const TIMEOUTS: EeLobbyTimeouts =
 #[no_mangle]
 pub extern "C" fn ee_won_eeglue_set_host(host: EeWonEeGlueHostFn) {
     GLUE.host.store(host.map_or(0, |f| f as usize), Ordering::Relaxed);
+    GLUE.game.store(false, Ordering::Relaxed);
+}
+
+/// Sets the game's host (EELobbyGlueHost.cpp): as `ee_won_eeglue_set_host`, and its multi-statement ops are
+/// answered by gluesplit.rs over the host's one-statement ops (the drivers' scripted hosts see the ops whole).
+#[no_mangle]
+pub extern "C" fn ee_won_eeglue_set_game_host(host: EeWonEeGlueHostFn) {
+    GLUE.host.store(host.map_or(0, |f| f as usize), Ordering::Relaxed);
+    GLUE.game.store(true, Ordering::Relaxed);
 }
 
 /// One inward call (`EeWonEeGlueCall`).

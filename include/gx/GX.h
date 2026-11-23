@@ -20,8 +20,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef long GXRESULT;
-struct PlatWindow;   // platform/PlatWindow.h: the window the primary surface presents in
+struct PlatWindow;       // platform/PlatWindow.h: the window the primary surface presents in
+struct PlatFontTarget;   // platform/PlatFont.h: a text callback's target
+
+// the Rust implementation (rust/crates/ee_render/src/gx: abi.rs's structures and ffi.rs's functions, under their
+// DirectX 7 names): the classes below are handles to its objects and every method an inline forwarder
+#include "rust/render/gx.h"
 
 // ---- results
 #define GX_OK 0
@@ -164,195 +168,16 @@ enum GXIID { GXIID_Direct3D7 = 1, GXIID_HALDevice, GXIID_TnLHalDevice, GXIID_RGB
 #define GXMAKEFOURCC(a, b, c, d) ((unsigned long)(unsigned char)(a) | ((unsigned long)(unsigned char)(b) << 8) | \
                                   ((unsigned long)(unsigned char)(c) << 16) | ((unsigned long)(unsigned char)(d) << 24))
 
-// ---- structures (the DirectX 7 fields the renderer reads or writes)
-struct GXPIXELFORMAT {
-    unsigned long dwSize;
-    unsigned long dwFlags;
-    unsigned long dwFourCC;
-    unsigned long dwRGBBitCount;
-    unsigned long dwRBitMask;
-    unsigned long dwGBitMask;
-    unsigned long dwBBitMask;
-    unsigned long dwRGBAlphaBitMask;
-};
-struct GXSCAPS {
-    unsigned long dwCaps;
-    unsigned long dwCaps2;
-};
-struct GXCOLORKEY {
-    unsigned long dwColorSpaceLowValue;
-    unsigned long dwColorSpaceHighValue;
-};
-struct GXSURFACEDESC {
-    unsigned long dwSize;
-    unsigned long dwFlags;
-    unsigned long dwHeight;
-    unsigned long dwWidth;
-    long lPitch;
-    unsigned long dwBackBufferCount;
-    unsigned long dwMipMapCount;
-    unsigned long dwRefreshRate;
-    void* lpSurface;
-    GXCOLORKEY ddckCKSrcBlt;
-    GXPIXELFORMAT ddpfPixelFormat;
-    GXSCAPS ddsCaps;
-};
-struct GXCAPS {
-    unsigned long dwSize;
-    unsigned long dwCaps;
-    unsigned long dwFXCaps;
-};
-struct GXBLTFX {
-    unsigned long dwSize;
-    unsigned long dwFillColor;
-};
-struct GXDEVICEIDENTIFIER {
-    char szDescription[512];
-    unsigned long dwVendorId;
-    unsigned long dwDeviceId;
-};
-struct GXDEVICEDESC {
-    unsigned long dwDevCaps;
-    unsigned long dwDeviceRenderBitDepth;
-};
-struct GXVERTEXBUFFERDESC {
-    unsigned long dwSize;
-    unsigned long dwCaps;
-    unsigned long dwFVF;
-    unsigned long dwNumVertices;
-};
-struct GXVIEWPORT {
-    unsigned long dwX;
-    unsigned long dwY;
-    unsigned long dwWidth;
-    unsigned long dwHeight;
-    float dvMinZ;
-    float dvMaxZ;
-};
-struct GXRECT {
-    long x1, y1, x2, y2;
-};
-struct GXMATRIX {
-    float _11, _12, _13, _14;
-    float _21, _22, _23, _24;
-    float _31, _32, _33, _34;
-    float _41, _42, _43, _44;
-};
-struct GXCOLORVALUE {
-    float r, g, b, a;
-};
-struct GXVECTOR {
-    float x, y, z;
-};
-struct GXMATERIAL {   // the D3DMATERIAL7 unions: both spellings name the same member
-    union { GXCOLORVALUE dcvDiffuse; GXCOLORVALUE diffuse; };
-    union { GXCOLORVALUE dcvAmbient; GXCOLORVALUE ambient; };
-    union { GXCOLORVALUE dcvSpecular; GXCOLORVALUE specular; };
-    union { GXCOLORVALUE dcvEmissive; GXCOLORVALUE emissive; };
-    union { float dvPower; float power; };
-};
-struct GXLIGHT {
-    unsigned long dltType;
-    GXCOLORVALUE dcvDiffuse;
-    GXCOLORVALUE dcvSpecular;
-    GXCOLORVALUE dcvAmbient;
-    GXVECTOR dvPosition;
-    GXVECTOR dvDirection;
-    float dvRange;
-    float dvFalloff;
-    float dvAttenuation0;
-    float dvAttenuation1;
-    float dvAttenuation2;
-    float dvTheta;
-    float dvPhi;
-};
-// the untransformed, unlit vertex (D3DVERTEX: position, normal, one texture coordinate)
-struct GXVERTEX {
-    float x, y, z;
-    float nx, ny, nz;
-    float tu, tv;
-};
-
 class GXSurface;
 class GXDirectDraw;
 class GXDevice;
 class GXVertexBuffer;
-typedef GXDirectDraw GXDirect3D;   // IDirect3D7 was a QueryInterface of the DirectDraw object; here it is the same
-
-typedef GXRESULT (CALLBACK* GXENUMMODESCALLBACK)(GXSURFACEDESC* inMode, void* inContext);
-typedef GXRESULT (CALLBACK* GXENUMDEVICESCALLBACK)(char* inDescription, char* inName, GXDEVICEDESC* inCaps,
-                                                   void* inContext);
-typedef GXRESULT (CALLBACK* GXENUMPIXELFORMATSCALLBACK)(GXPIXELFORMAT* inFormat, void* inContext);
-// inMonitor: an opaque token of the display (non-NULL: the primary display; DirectDraw's HMONITOR)
-typedef BOOL (WINAPI* GXDDENUMCALLBACKEX)(GUID* inGUID, char* inDescription, char* inName, void* inContext,
-                                          void* inMonitor);
-
-// the Rust implementation (rust/crates/ee_render/src/gx/ffi.rs): the classes below are handles to its objects and
-// every method an inline forwarder (GX.cpp is gone)
-extern "C" {
-GXRESULT gx_direct_draw_create(void** outDirectDraw);
-unsigned long gx_direct_draw_add_ref(void* inDirectDraw);
-unsigned long gx_direct_draw_release(void* inDirectDraw);
-GXRESULT gx_direct_draw_get_caps(GXCAPS* outCaps, GXCAPS* outHELCaps);
-GXRESULT gx_direct_draw_set_display_mode(void* inDirectDraw, unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount);
-GXRESULT gx_direct_draw_set_cooperative_level(void* inDirectDraw, void* inWindow, unsigned long inFlags);
-GXRESULT gx_direct_draw_create_surface(void* inDirectDraw, GXSURFACEDESC* inDescription, void** outSurface);
-GXRESULT gx_direct_draw_get_device_identifier(GXDEVICEIDENTIFIER* outIdentifier);
-GXRESULT gx_direct_draw_create_vertex_buffer(unsigned long inFVF, unsigned long inCount, void** outBuffer);
-GXRESULT gx_direct_draw_create_device(void* inTarget, void** outDevice);
-
-unsigned long gx_surface_add_ref(void* inSurface);
-unsigned long gx_surface_release(void* inSurface);
-GXRESULT gx_surface_add_attached(void* inSurface, void* inOther);
-GXRESULT gx_surface_get_attached(void* inSurface, GXSCAPS* inCaps, void** outSurface);
-GXRESULT gx_surface_blt(void* inSurface, RECT* inDestination, void* inSource, RECT* inSourceRect, unsigned long inFlags, GXBLTFX* inFX);
-GXRESULT gx_surface_flip(void* inSurface, unsigned long inFlags);
-GXRESULT gx_surface_lock(void* inSurface, RECT* inRect, GXSURFACEDESC* outDescription, unsigned long inFlags);
-GXRESULT gx_surface_unlock(void* inSurface);
-GXRESULT gx_surface_set_color_key(void* inSurface, GXCOLORKEY* inKey);
-float gx_surface_render_scale(void* inSurface);
-GXRESULT gx_surface_draw_text(void* inSurface, const RECT* inBounds, bool (*inDraw)(const struct PlatFontTarget&, long, long, void*), void* inContext);
-
-unsigned long gx_vertex_buffer_add_ref(void* inBuffer);
-unsigned long gx_vertex_buffer_release(void* inBuffer);
-GXRESULT gx_vertex_buffer_lock(void* inBuffer, void** outData, unsigned long* outSize);
-
-unsigned long gx_device_add_ref(void* inDevice);
-unsigned long gx_device_release(void* inDevice);
-GXRESULT gx_device_get_caps(GXDEVICEDESC* outCaps);
-GXRESULT gx_device_begin_scene();
-GXRESULT gx_device_set_render_target(void* inDevice, void* inTarget);
-GXRESULT gx_device_set_viewport(void* inDevice, GXVIEWPORT* inViewport);
-GXRESULT gx_device_get_viewport(void* inDevice, GXVIEWPORT* outViewport);
-GXRESULT gx_device_clear(void* inDevice, unsigned long inCount, GXRECT* inRects, unsigned long inFlags, unsigned long inColor, float inZ);
-GXRESULT gx_device_set_transform(void* inDevice, uint32_t inState, GXMATRIX* inMatrix);
-GXRESULT gx_device_set_render_state(void* inDevice, uint32_t inState, unsigned long inValue);
-GXRESULT gx_device_set_stage_state(void* inDevice, unsigned long inStage, uint32_t inState, unsigned long inValue);
-GXRESULT gx_device_set_texture(void* inDevice, unsigned long inStage, void* inTexture);
-GXRESULT gx_device_set_material(void* inDevice, GXMATERIAL* inMaterial);
-GXRESULT gx_device_set_light(void* inDevice, unsigned long inIndex, GXLIGHT* inLight);
-GXRESULT gx_device_get_light(void* inDevice, unsigned long inIndex, GXLIGHT* outLight);
-GXRESULT gx_device_light_enable(void* inDevice, unsigned long inIndex, int inEnable);
-GXRESULT gx_device_draw_indexed_primitive_vb(void* inDevice, uint32_t inType, void* inBuffer, unsigned long inStart, unsigned long inCount,
-                                             unsigned short* inIndices, unsigned long inIndexCount);
-
-void gx_set_render_percent(unsigned long inPercent);
-void gx_set_frame_limit(long inFramesPerSecond);
-void gx_set_texture_filtering(unsigned long inMode);
-void gx_set_brightness(float inGamma);
-void gx_game_size(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);
-}
 
 // the tools/harness/presentation_bridge.c hooks, found by map address: keep them in the image (lld-link on Windows; the
 // POSIX builds have no harness and link what the shim references)
 #if defined(_MSC_VER)
 #pragma comment(linker, "/include:GXTestSetPresentHook")
 #pragma comment(linker, "/include:GXTestReadFrame")
-static_assert(sizeof(GXPIXELFORMAT) == 8 * sizeof(unsigned long), "ee_gx/src/abi.rs");
-static_assert(sizeof(RECT) == 16, "ee_gx/src/abi.rs");
-static_assert(sizeof(GXMATRIX) == 64, "ee_gx/src/abi.rs");
-static_assert(sizeof(GXMATERIAL) == 68, "ee_gx/src/abi.rs");
-
 #endif
 
 // The display device of one monitor (IDirectDraw7 + IDirect3D7)
@@ -401,7 +226,7 @@ public:
     // read-back; otherwise it holds the CPU copy's pixels and the changed ones are written back (DirectDraw's GetDC
     // and GDI text before). Not on the primary or a Z buffer.
     typedef bool (*TextCallback)(const struct PlatFontTarget& inTarget, long inOriginX, long inOriginY, void* inContext);
-    GXRESULT DrawText(const RECT& inBounds, TextCallback inDraw, void* inContext) { return gx_surface_draw_text(this, &inBounds, inDraw, inContext); }
+    GXRESULT DrawText(const RECT& inBounds, TextCallback inDraw, void* inContext) { return gx_surface_draw_text(this, &inBounds, reinterpret_cast<GXTextCallback>(inDraw), inContext); }
 
 private:   // a handle: Rust owns the object
     GXSurface() = delete;
@@ -466,10 +291,5 @@ private:   // a handle: Rust owns the object
     GXDevice() = delete;
     ~GXDevice() = delete;
 };
-
-static_assert(sizeof(GXPIXELFORMAT) == 8 * sizeof(unsigned long), "ee_gx/src/abi.rs");
-static_assert(sizeof(RECT) == 16, "ee_gx/src/abi.rs");
-static_assert(sizeof(GXMATRIX) == 64, "ee_gx/src/abi.rs");
-static_assert(sizeof(GXMATERIAL) == 68, "ee_gx/src/abi.rs");
 
 #endif

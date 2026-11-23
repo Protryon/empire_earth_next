@@ -182,10 +182,6 @@ pub struct PresentRequest {
     pub wait: bool,
 }
 
-pub type PresentHook = extern "C" fn(*mut c_void, *mut c_void);
-/// A `GXSurface::TextCallback`.
-pub type TextCallback = extern "C" fn(*const PlatFontTarget, std::ffi::c_long, std::ffi::c_long, *mut c_void) -> bool;
-
 /// A `Blt` or `Flip` result: what to tell the caller, and a present left for the caller to run.
 pub struct Outcome {
     pub result: GxResult,

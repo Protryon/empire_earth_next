@@ -45,6 +45,7 @@ fn digest(data: &[u8]) -> u32 {
     data.iter().fold(2_166_136_261u32, |h, &b| (h ^ b as u32).wrapping_mul(16_777_619))
 }
 
+#[repr(transparent)]
 struct Str(EeFsString);
 impl Str {
     fn new(text: &[u8]) -> Str {
@@ -306,8 +307,7 @@ unsafe fn line_of(r: &mut Replay, w: &[&str]) -> String {
             let root = r.dir(DIRS[n(2) as usize]);
             let count = n(3) as usize;
             let names: Vec<Str> = (0..count).map(|j| Str::new(&unhex(w[4 + j]))).collect();
-            let pointers: Vec<*const EeFsString> = names.iter().map(|s| &s.0 as *const EeFsString).collect();
-            let result = ee_fs_arch_create_list(a, &root.0, pointers.as_ptr(), count, 0x1000);
+            let result = ee_fs_arch_create_list(a, &root.0, names.as_ptr().cast(), count, 0x1000);
             format!("{} = {result}", w[..4 + count].join(" "))
         }
         "open" => format!("open {k} = {}", ee_fs_arch_open(a)),

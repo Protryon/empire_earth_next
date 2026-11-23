@@ -415,6 +415,65 @@ pub enum EeWonRouteLogicOp {
     DirNotifyFailed,
     /// `L->mServerList->UpdateFromDirectory(list a)`.
     DirUpdate,
+
+    // ---- the host's one-statement cases the moved cases' statements became (R6 WON round 32: netlogicops.rs
+    // composes them in the model mode)
+    /// `RC(a)->SetAuth((AuthContext*)b, AUTH_TYPE_PERSISTENT)`.
+    ConnSetAuth = 300,
+    /// `RC(a)->SetOpCompletion(b, new RoutingOpCompletion(c, L))`.
+    ConnSetNotice,
+    /// `RC(a)->SetCloseCompletion(new LogicCompletion<RoutingLogic>(&RoutingLogic::ConnectionClosed, L))`.
+    ConnSetClose,
+    /// `SubscribeDataObject(0xffff, L->mGameDataType, false, new RoutingOpCompletion(21, L))` on connection `a`.
+    ConnSubscribeGames,
+    /// `RC(a)->IsConnected()`.
+    ConnIsConnected,
+    /// `RustServerOp::NewRequest(ee_won_reqop_user_id(a, b), (ServerContext*)c)`, held.
+    UserIdOpNew,
+    /// the user id op `a`'s id (`ee_won_hostop_num(.., EE_WON_REQOP_USER_ID, 0)` as an `unsigned long`).
+    OpUserId,
+    /// `RustServerOp::NewGetDir(context a, config's mProductDirectory, 0x04000622, {"_C", "_L"}, 2)`, held.
+    DirOpNew,
+    /// `new WriteBuffer(0, true)`.
+    BufNew,
+    /// `GM(a)->WriteSummary(*(WriteBuffer*)b)`.
+    GameWriteSummary,
+    /// `CreateDataObject(true, c, L->mGameDataType, gEmptyWideString, buffer b's bytes, NULL)` on connection `a`.
+    ConnCreateGameObject,
+    /// `delete (WriteBuffer*)a`.
+    BufFree,
+    /// `((ComponentEvent*)a)->mType`.
+    EventType,
+    /// `L->mServerList->FindServer(event a's Address)`.
+    EventFindServer,
+    /// the user status op `a`'s Rust object (`EeWonUserStatus*`).
+    StatusOpRust,
+    /// `ClientModeratedEvent(C(a), b, G(c)->GetName(), d, op e's time, true, op e's comment)` broadcast.
+    EvModeratedGroup,
+    /// `ClientModeratedEvent(C(a), b, S(c)->GetName(), d, op e's time, true, op e's comment)` broadcast.
+    EvModeratedServer,
+    /// `delete (DirEntityList*)a`.
+    DirListFree,
+    /// `delete (LobbyClientIterator*)a`.
+    IterFree,
+    /// `AlertEvent(4, a, op b's time, op b's text)` broadcast.
+    EvAlertTimed,
+    /// `AlertEvent(4, a, 0, op b's text)` broadcast.
+    EvAlertPlain,
+    /// `new DirEntityList(op a's GetEntities(EE_WON_REQOP_DIR_LIST))`.
+    DirEntitiesNew,
+    /// `((DirEntityList*)a)->empty()`.
+    DirListEmpty,
+    /// `RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29)`, held.
+    GroupQueryNew,
+    /// `L->RunTrackedOp(a, QueryServerGroupsDone, 0)`.
+    RunTrackedGroups,
+    /// `((ComponentEvent*)a)->mComponent`.
+    EventComponent,
+    /// `LobbyOnInternetScreen()`.
+    OnInternetScreen,
+    /// `LobbyUserCanceledLastStatusOp()`.
+    UserCanceledLast,
 }
 use EeWonRouteLogicOp as Op;
 
@@ -472,6 +531,8 @@ pub enum EeWonRouteLogicCall {
     /// a member: 0 the current server, 1 the chat room, 2 the pending server, 3 the game room, 4 the wait op, 5
     /// suppress idle, 6 idle, 7 have the game list, 8 want to be moderator, 9 the last server refresh.
     Field,
+    /// `HandleControlEvent(a)` (R6 WON round 32): the control's number mapped here, then `Control`.
+    ControlId = 40,
 }
 use EeWonRouteLogicCall as Call;
 
@@ -691,6 +752,10 @@ impl EeWonRouteLogic {
             if let Some((kind, values)) = conn_request(op, [g(0), g(1), g(2), g(3), g(4)], &|p| self.text_utf16(p)) {
                 ee_won_net::routecpp::request(g(0) as *mut c_void, kind, &values, std::ptr::null_mut());
                 return 0;
+            }
+            // the host's cases whose statements are Rust (R6 WON round 32), each statement an op through this dispatch
+            if let Some(r) = crate::netlogicops::route_op(op, [g(0), g(1), g(2), g(3), g(4)], &|o, v| self.h(o, v)) {
+                return r;
             }
         }
         // SAFETY: the host is the C++ (or a test's) function given at creation, called with its own object.
@@ -2990,6 +3055,13 @@ impl EeWonRouteLogic {
                 self.control(a);
                 0
             }
+            Call::ControlId => {
+                let which = crate::netlogicops::route_control_of(a);
+                if which != 0 {
+                    self.control(which);
+                }
+                0
+            }
             Call::Event => {
                 self.event(a, b);
                 0
@@ -3090,7 +3162,7 @@ pub(crate) fn conn_request(op: Op, g: [isize; 5], text: &dyn Fn(isize) -> Vec<u8
 
 /// A `wchar_t` text's units (16-bit units on Windows, code points elsewhere) as UTF-16 little-endian bytes, as
 /// `WideAppendUtf16LE` makes them.
-fn utf16le(units: &[u32]) -> Vec<u8> {
+pub(crate) fn utf16le(units: &[u32]) -> Vec<u8> {
     let v: Vec<u16> = if cfg!(windows) {
         units.iter().map(|&u| u as u16).collect()
     } else {

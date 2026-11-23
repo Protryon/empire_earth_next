@@ -74,6 +74,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEWonNetAvailableGameFormManager.h"
 #include "lle/ISModifierState.h"
+#include "rust/won_lobby/wonfront.h"
 
 // 0x27a896 (defined below, after its user)
 bool EEGetLanguageStringReference(const UWideString& inText, unsigned long& outID);
@@ -90,19 +91,8 @@ EEWonNetAvailableGameFormManager::~EEWonNetAvailableGameFormManager()
     delete this->mPoll;
 }
 
-// Returns the available-games form's manager, creating and attaching it on first use
-EEWonNetAvailableGameFormManager* EEWonNetAvailableGameFormManager::Get()
-{
-    UIForm* theForm = gUIManager->GetFormByID(kFormAvailableGames);
-    EEWonNetAvailableGameFormManager* theManager;
-    if (theForm->GetFormManager() != NULL)
-        theManager = static_cast<EEWonNetAvailableGameFormManager*>(theForm->GetFormManager());
-    else {
-        theManager = new EEWonNetAvailableGameFormManager;
-        theForm->SetFormManager(theManager);
-    }
-    return theManager;
-}
+// Returns the available-games form's manager, creating and attaching it on first use (Rust: wonfront.rs)
+EEWonNetAvailableGameFormManager* EEWonNetAvailableGameFormManager::Get() { return (EEWonNetAvailableGameFormManager*)ee_won_front_call(EeWonFrontCall::FormManagerGet, NULL, 0); }
 
 // Translates a "<string id>::text" reference into the language string; other text is copied unchanged
 void EETranslateString(const UWideString& inText, UWideString& outText)

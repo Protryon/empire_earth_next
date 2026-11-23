@@ -83,11 +83,4 @@ void FSInitialize(const UString& inPath)
 
 static_assert(sizeof(FSArchive) == sizeof(EeFsArchiveObj), "FSArchive is an EeFsArchiveObj");
 
-// The memory file's disk copies (rust/crates/ee_base/src/fs ffi.rs): Close closes and deletes FOpen's temporary file,
-// Copy writes the contents to a file, FOpen to a temporary file reopened as a stdio stream
-long FSMemoryFile::Close()
-{
-    return ee_fs_mem_close_disk(this->mState, reinterpret_cast<void**>(&this->mStream), reinterpret_cast<const EeFsString*>(&this->mTemporaryFileName));
-}
-
 

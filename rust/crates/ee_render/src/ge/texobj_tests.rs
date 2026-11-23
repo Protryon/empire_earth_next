@@ -221,7 +221,11 @@ impl Replay {
         use EeGeTexField as F;
         let o = tok(obj);
         match op {
-            O::LockCreate => id(&self.expect_answer(b"LockCreate")[0]) as isize,
+            O::LockCreate => {
+                // SAFETY: the object's out pointer
+                unsafe { *(a as *mut usize) = id(&self.expect_answer(b"LockCreate")[0]) };
+                0
+            }
             O::LockDestroy => {
                 let d = self.world.depth.get(&obj).copied().unwrap_or(0).to_string();
                 self.expect(&cat(&[b"LockDestroy ", &o, b" depth ", d.as_bytes()]));
@@ -248,23 +252,11 @@ impl Replay {
                 self.expect(&cat(&[b"BaseDereference ", &o]));
                 0
             }
-            O::DumpHeader => {
-                let d = self.world.dumps.entry(obj).or_default();
-                d.extend_from_slice(b"\n\n*********Texture Manager - Current Loaded Files In Memory*********\n\n");
+            O::DumpText => {
+                self.world.dumps.entry(obj).or_default().extend_from_slice(&cstr(a));
                 0
             }
-            O::DumpLine => {
-                let count = self.t(obj).refs.to_string();
-                let line = cat(&[
-                    b"The ",
-                    &cstr(a),
-                    b" texture file is loaded in memory with a reference count of ",
-                    count.as_bytes(),
-                    b".\n",
-                ]);
-                self.world.dumps.entry(b as usize).or_default().extend_from_slice(&line);
-                0
-            }
+            O::LockVerify => 0,
             O::TexFindFile => {
                 let r = self.expect_answer(&cat(&[b"TexFindFile ", &o, b" [", &cstr(a), b"]"]));
                 let result = num(&r[0]);
@@ -662,10 +654,12 @@ fn a_cpp_managers_texture_operations_are_the_forwarders_calls() {
         assert_eq!((*tex::ee_ge_tex_stage(t)).mip_map_bias, 1.5);
         assert_eq!(d(EeGeManOp::TexStage, EeGeTexStage::MipMapBias as isize, 0), Some(1.5f32.to_bits() as isize));
         assert_eq!(d(EeGeManOp::TexFrame, 0, 0), Some(tex::ee_ge_tex_frame_texture(t, 0) as isize), "GetFrameTexture");
+        // the surface description from the texture's surface, through the texture's own host (here 0s)
+        let mut desc = EeGeSurfaceDescription { pixel_format: 7, kind: 5, ..Default::default() };
+        assert_eq!(d(EeGeManOp::TexSurfaceDescription, &mut desc as *mut EeGeSurfaceDescription as isize, 0), Some(0));
+        assert_eq!((desc.pixel_format, desc.kind), (0, 5), "the surface's five values, the rest kept");
         // what stays the C++'s
-        for op in
-            [EeGeManOp::TexNew, EeGeManOp::BaseDereference, EeGeManOp::TexSurfaceDescription, EeGeManOp::LockEnter]
-        {
+        for op in [EeGeManOp::TexNew, EeGeManOp::BaseDereference, EeGeManOp::LockEnter] {
             assert_eq!(d(op, 0, 0), None, "{op:?}");
         }
         assert_eq!(d(EeGeManOp::TexGet, 99, 0), None, "an unknown field");

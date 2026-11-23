@@ -729,7 +729,7 @@ typedef SmartPtr<RoutingOp> RoutingOpPtr;
 #define EE_WON_ROUTE_OPS_RUST 1 // the ops are Rust objects (won_routeops_test reads them so)
 
 // The friend status map (the original's +0x88), the request datagram and the reply's read are a Rust object since
-// net round 19 (rust/crates/ee_won_net/src/userstatus.rs EeWonUserStatus); the map is read and set through copies
+// net round 19 (rust/crates/ee_won_net/src/userstatus.rs EeWonUserStatus); the map is read and set in Rust
 class RoutingGetUserStatusOp : public UDPManagerSendRecvOp {
 public:
     typedef std::map<unsigned long,unsigned char> FriendStatusMap;
@@ -761,21 +761,10 @@ public:
         return aStatus;
     }
     void AddWONUserId(unsigned long inId) { ee_won_userstatus_add(this->mStatus, inId); } //2c68c0, status 0 until the reply
-    FriendStatusMap GetFriendStatusMap() const // a copy
-    {
-        FriendStatusMap aMap;
-        ee_won_userstatus_each(this->mStatus, StatusSink, &aMap);
-        return aMap;
-    }
-    void SetFriendStatusMap(const FriendStatusMap& inMap)
-    {
-        ee_won_userstatus_clear(this->mStatus);
-        for (FriendStatusMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i)
-            ee_won_userstatus_put(this->mStatus, i->first, i->second);
-    }
+    // the friend status map, read and set by the routing logic in Rust (R6 WON round 32: netlogicops.rs; the
+    // original's GetFriendStatusMap / SetFriendStatusMap copies)
+    EeWonUserStatus* GetRust() const { return this->mStatus; }
 private:
-    static void StatusSink(void* inContext, uint64_t inId, uint8_t inStatus)
-    { (*static_cast<FriendStatusMap*>(inContext))[(unsigned long)inId] = inStatus; }
     EeWonUserStatus* mStatus; // owned
 };
 #define EE_WON_USER_STATUS_RUST 1 // the map is a Rust object (won_userstatus_test sets it so)
@@ -1403,44 +1392,31 @@ public:
         AutoCrit aCrit(this->GetDataLock());
         if (ee_won_smart_routeop(this->mModel, inOp->mRust, inOp->GetStatus())) inOp->SetCompletion(NULL);
     }
-    void StartClientItr() { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_start(this->mModel, 0, 0); }
-    void StartGroupItr() { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_start(this->mModel, 1, 0); }
-    bool StartMemberItr(unsigned short inId)
-    { AutoCrit aCrit(this->GetDataLock()); return ee_won_smart_start(this->mModel, 2, inId); }
+    // (each call below holds the socket's lock around the model's call, as the original's AutoCrit: ee_won_smart_locked)
+    void StartClientItr() { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Start, 0, 0, 0, 0); }
+    void StartGroupItr() { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Start, 1, 0, 0, 0); }
+    bool StartMemberItr(unsigned short inId) { return ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Start, 2, inId, 0, 0) != 0; }
     // 2c37d0: the client GetClient(id) finds ignored or not, the ignore list saved
-    void IgnoreClient(unsigned short inClientId, bool inOn)
-    { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_ignore(this->mModel, inClientId, inOn); }
+    void IgnoreClient(unsigned short inClientId, bool inOn) { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Ignore, inClientId, inOn, 0, 0); }
     // 2c3970: a chat command word (case-insensitive)
     void AddCommandString(const std::wstring& inText, InputCommand inCommand)
-    {
-        AutoCrit aCrit(this->GetDataLock());
-        ee_won_smart_add_command(this->mModel, inText.data(), inText.length(), inCommand);
-    }
-    void ClearCommandStrings() { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_clear_commands(this->mModel); }
+    { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::AddCommand, (intptr_t)inText.data(), (intptr_t)inText.length(), inCommand, 0); }
+    void ClearCommandStrings() { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::ClearCommands, 0, 0, 0, 0); }
     void SetAllowPartialNameMatch(bool inAllow) { this->SetSmart(EeWonSmartNumber::PartialNames, inAllow); } //2c40a0
     void SetServerWideCommands(bool inOn) { this->SetSmart(EeWonSmartNumber::ServerWide, inOn); } //2c40f0
     void SetDoColonEmote(bool inOn) { this->SetSmart(EeWonSmartNumber::ColonEmote, inOn); }
     // a line of chat input: a command, a colon emote or a broadcast; its request sent (ee_won routecpp.rs)
     bool HandleInput(const std::wstring& inInput, int inGroupIdContext = -1)
-    {
-        AutoCrit aCrit(this->GetDataLock());
-        return ee_won_smart_handle_input(this->mModel, static_cast<RefCount*>(this), inInput.data(), inInput.length(),
-                                         inGroupIdContext);
-    }
+    { return ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::HandleInput, (intptr_t) static_cast<RefCount*>(this), (intptr_t)inInput.data(), (intptr_t)inInput.length(), inGroupIdContext) != 0; }
     // 2c2fc0, the ignore file's path (provisional name)
-    void SetProductName(const std::string& inPath)
-    {
-        AutoCrit aCrit(this->GetDataLock());
-        ee_won_smart_set_path(this->mModel, reinterpret_cast<const uint8_t*>(inPath.data()), inPath.length());
-    }
+    void SetProductName(const std::string& inPath) { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::SetPath, (intptr_t)inPath.data(), (intptr_t)inPath.length(), 0, 0); }
     void ClearProductName() { this->SetProductName(""); }
-    unsigned short GetMyClientId() // OnChat 0x4d040c
-    { AutoCrit aCrit(this->GetDataLock()); return (unsigned short)ee_won_smart_number(this->mModel, EeWonSmartNumber::ClientId); }
+    unsigned short GetMyClientId() { return (unsigned short)ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::ClientId, 0, 0, 0, 0); } // OnChat 0x4d040c
     EeWonSmartRoute* mModel; // owned
 protected:
     virtual ~SmartRoutingConnection() { ee_won_smart_free(this->mModel); }
 private:
-    void SetSmart(EeWonSmartNumber inWhich, bool inOn) { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_set(this->mModel, inWhich, inOn); }
+    void SetSmart(EeWonSmartNumber inWhich, bool inOn) { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Set, (intptr_t)inWhich, inOn, 0, 0); }
     SmartRoutingConnection(const SmartRoutingConnection&);
     SmartRoutingConnection& operator=(const SmartRoutingConnection&);
 };

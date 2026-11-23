@@ -37,18 +37,6 @@ NESynchronousServer::~NESynchronousServer()
     ee_net_sv_free(this->mRust);
 }
 
-// ---- the members (ee_net server.rs)
-
-long NESynchronousServer::XferFileToClient(FSFileSpec& inFile, unsigned long inUserData, unsigned char inSlot,
-                                           unsigned long& outXferID, bool inP5)
-{
-    uint32_t theXferID = 0;
-    if (!ee_net_sv_xfer_file_to_client(this->mRust, &inFile, (uint32_t)inUserData, inSlot, &theXferID))
-        return kErrorNotFound;
-    outXferID = theXferID;
-    return kErrorOK;
-}
-
 // ---- the calls out
 
 // The message manager's calls out that reach the C++ (ee_net msgmgr.rs; the server's own fields, the forced tick and

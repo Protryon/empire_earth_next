@@ -32,11 +32,6 @@ using namespace WONAPI;
 // Timeout for the firewall detect and accept operations, in milliseconds.
 unsigned long WONAPI::gLobbyAcceptTimeout = 20000;
 
-// The three controls the login screen disables while it initialises.
-struct LoginControlIds : public ControlIdSet {
-    void Add(value_type inA,value_type inB,value_type inC) { insert(inA); insert(inB); insert(inC); }
-};
-
 namespace WONAPI {
 static void InitAddAll(ServerContext* inList, const std::list<std::string>& inNames)
 {
@@ -74,90 +69,81 @@ static ServerContext* InitList(intptr_t inWhich)
     return NULL;
 }
 
+// the directory query's paths: the auth, database proxy and firewall services, then the product's patch servers
+// when there is a config
+static const std::wstring* InitDirPaths(LobbyConfig* inConfig)
+{
+    static std::wstring sPaths[4] = { L"/TitanServers/Auth", L"/TitanServers/DBProxy", L"/TitanServers/Firewall" };
+    sPaths[3] = inConfig != NULL ? inConfig->mProductDirectory + L"/Patch" : std::wstring();
+    return sPaths;
+}
+
 static RustServerOp* R(intptr_t a) { return static_cast<RustServerOp*>(reinterpret_cast<AsyncOp*>(a)); }
 static GUIString* T(intptr_t a) { return reinterpret_cast<GUIString*>(a); }
+static ServerContext* SC(intptr_t a) { return reinterpret_cast<ServerContext*>(a); }
+static DetectFirewallOp* FW(intptr_t a) { return static_cast<DetectFirewallOp*>(reinterpret_cast<AsyncOp*>(a)); }
+// a new object with one reference the Rust gives back (the original's SmartPtr local)
+static intptr_t Held(AsyncOp* inOp)
+{
+    inOp->AddRef();
+    return (intptr_t)inOp;
+}
+template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
+{
+    if (inPtr.get() != NULL) inPtr->AddRef();
+    return (intptr_t)inPtr.get();
+}
+static const uint8_t* B(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
 
+// The host: each case one statement; the decisions and the order are the Rust's (logics.rs, and netlogicops.rs
+// for the cases R6 WON round 32 split).
 static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonLogicOp O;
     InitLogic* aLogic = static_cast<InitLogic*>(inObj);
     LobbyConfig* config = GetLobbyConfig();
     switch (inOp) {
+    case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case O::OpStatus: return (int)reinterpret_cast<AsyncOp*>(a)->GetStatus();
     case O::BroadcastLobby: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case O::Exit: LobbyExit((int)a); return 0;
     case O::Root: return (intptr_t)GetLobbyRoot();
-    case O::InitStatus: {
-        const GUIString& aDescription = b != 0 ? *T(b) : c >= 0 ? gLobbyResources[c].mString : gEmptyGUIString;
-        LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, aDescription, (d & 1) != 0, (int)(d >> 8)), true);
-        return 0;
-    }
+    case O::InitStatusText: LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, *T(b), (d & 1) != 0, (int)(d >> 8)), true); return 0;
+    case O::InitStatusRes: LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, gLobbyResources[c].mString, (d & 1) != 0, (int)(d >> 8)), true); return 0;
+    case O::InitStatusEmpty: LobbyBroadcastEvent(LoginInitStatusEvent(gLobbyResources[a].mString, gEmptyGUIString, (d & 1) != 0, (int)(d >> 8)), true); return 0;
     case O::SetVersionStatus: LobbySetVersionStatus((WONStatus)a); return 0;
     case O::CheckForInternet: return config != NULL && config->mCheckForInternet;
     case O::HasInternet: return AsyncSocket::HasInternetConnection();
-    case O::ClearServerLists: {
-        ServerContext* account = LobbyGetAccountServers();
-        ServerContext* auth = LobbyGetAuthServers();
-        ServerContext* firewall = LobbyGetFirewallDetectServers();
-        ServerContext* routing = LobbyGetPatchServers();
-        if (account != NULL) account->Clear();
-        if (auth != NULL) auth->Clear();
-        if (firewall != NULL) firewall->Clear();
-        if (routing != NULL) routing->Clear();
-        return 0;
-    }
+    case O::HasConfig: return config != NULL;
+    case O::InitListGet: return (intptr_t)InitList(a);
+    case O::ServerClear: SC(a)->Clear(); return 0;
     case O::LoadPrefs: LobbyLoadGlobalPrefs(); IPAddr::SetLocalHost(LobbyGetNetworkAdapter(), true); return 0;
-    case O::LoadTOUTimes: {
-        WONFile file(LobbyGetSysTOUPath());
-        long systemTime = file.GetModifyTime();
-        file.SetFilePath(LobbyGetGameTOUPath());
-        long gameTime = file.GetModifyTime();
-        LobbySetTOUTimes(systemTime, gameTime);
-        return 0;
-    }
+    case O::SysTouModifyTime: return (intptr_t)WONFile(LobbyGetSysTOUPath()).GetModifyTime();
+    case O::GameTouModifyTime: return (intptr_t)WONFile(LobbyGetGameTOUPath()).GetModifyTime();
+    case O::SetTOUTimes: LobbySetTOUTimes((long)a, (long)b); return 0;
     case O::BindUdp: LobbyBindUDPPort(); return 0;
-    case O::EnableLogin: {
-        LoginControlIds ids;
-        ids.Add(200001, 200002, 200003);
-        reinterpret_cast<Container*>(a)->EnableControlsById(ids, b != 0);
-        return 0;
-    }
+    // the three controls the login screen disables while it initialises
+    case O::EnableLogin: reinterpret_cast<Container*>(a)->EnableControlsById(ControlIdSet{200001, 200002, 200003}, b != 0); return 0;
     case O::LobbyMusic: return LobbyGetLobbyMusic();
-    case O::Music:
-        if (a == 0) LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->SetLooping(true);
-        else if (a == 1) LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Play();
-        else LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop();
-        return 0;
-    case O::DnsReady:
-        return config != NULL && LobbyGetDirServers() != NULL && LobbyGetRoomDirServers() != NULL && LobbyGetAuthServers() != NULL;
-    case O::FillDnsServers: {
-        // the original's address with mRememberHostString set (separate from the loops' addresses)
-        IPAddr address;
-        address.SetRememberHostString(true);
-        LobbyGetDirServers()->RemoveAllAddresses();
-        InitAddAll(LobbyGetDirServers(), config->mDirServers);
-        InitAddAll(LobbyGetRoomDirServers(), config->mRoomDirServers);
-        InitAddAll(LobbyGetAuthServers(), config->mAuthServers);
-        return 0;
-    }
+    case O::MusicSetLooping: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->SetLooping(true); return 0;
+    case O::MusicPlay: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Play(); return 0;
+    case O::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
+    case O::RoomDirServersGet: return (intptr_t)LobbyGetRoomDirServers();
+    case O::RememberHostAddress: IPAddr().SetRememberHostString(true); return 0;
+    case O::DirServersRemoveAll: LobbyGetDirServers()->RemoveAllAddresses(); return 0;
+    case O::AddAllDir: InitAddAll(LobbyGetDirServers(), config->mDirServers); return 0;
+    case O::AddAllRoomDir: InitAddAll(LobbyGetRoomDirServers(), config->mRoomDirServers); return 0;
+    case O::AddAllAuth: InitAddAll(LobbyGetAuthServers(), config->mAuthServers); return 0;
     case O::RoomDirEmpty: return LobbyGetRoomDirServers()->GetNumAddresses() < 1;
     case O::ResetRoomDir: LobbyResetRoomDirServers(); return 0;
-    case O::PromotionImage: {
-        SmartPtr<NativeImage> image = Window::GetDefaultWindow()->DecodeImage(R(a)->GetBytes(EE_WON_HTTPGET_LOCAL_PATH).c_str());
-        LobbyBroadcastEvent(SetCrossPromotionEvent(image.get(), aLogic->mCrossPromotion), true);
-        return 0;
-    }
+    case O::PromotionDecode: return Held(Window::GetDefaultWindow()->DecodeImage(R(a)->GetBytes(EE_WON_HTTPGET_LOCAL_PATH).c_str()));
+    case O::PromotionBroadcast: LobbyBroadcastEvent(SetCrossPromotionEvent(reinterpret_cast<NativeImage*>(a), aLogic->mCrossPromotion), true); return 0;
     case O::SetPromotionLink: aLogic->mCrossPromotion.assign(reinterpret_cast<const char*>(a), (size_t)b); return 0;
-    case O::FetchPromotionImage: {
-        SmartPtr<RustServerOp> op = RustServerOp::NewHttpGet(std::string(reinterpret_cast<const char*>(a), (size_t)b));
-        // HTTPCache::GetGlobalCache(): the Rust cache in the WON directory (ee_won httpcache.rs), the op's reference
-        const std::string& aDir = WONAPICore::GetDefaultFileDirectory();
-        ee_won_hostop_set(op->GetRustOp(), EE_WON_HTTPGET_CACHE, 0, NULL, 0, NULL,
-                          ee_won_http_cache_global(reinterpret_cast<const uint8_t*>(aDir.data()), aDir.size()));
-        op->SetCompletion(new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion, aLogic));
-        aLogic->mHTTPSession->AddOp(op.get());
-        return 0;
-    }
+    case O::HttpGetNew: return Held(RustServerOp::NewHttpGet(std::string(reinterpret_cast<const char*>(a), (size_t)b)));
+    // HTTPCache::GetGlobalCache(): the Rust cache in the WON directory (ee_won httpcache.rs), the op's reference
+    case O::HttpGetSetCache: ee_won_hostop_set(R(a)->GetRustOp(), EE_WON_HTTPGET_CACHE, 0, NULL, 0, NULL, ee_won_http_cache_global(B(WONAPICore::GetDefaultFileDirectory()), WONAPICore::GetDefaultFileDirectory().size())); return 0;
+    case O::HttpGetSetPromotionCompletion: R(a)->SetCompletion(new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion, aLogic)); return 0;
+    case O::SessionAddOp: aLogic->mHTTPSession->AddOp(R(a)); return 0;
     case O::TOUTimes: {
         long systemTime, gameTime;
         LobbyGetTOUTimes(systemTime, gameTime);
@@ -174,18 +160,11 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
         return (intptr_t)(document.get() != NULL ? document->data() : NULL); // the op keeps the document
     }
     case O::BroadcastNoPromotion: LobbyBroadcastEvent(SetCrossPromotionEvent(NULL, std::string("")), true); return 0;
-    case O::DirReady:
-        return config != NULL && LobbyGetAccountServers() != NULL && LobbyGetAuthServers() != NULL &&
-               LobbyGetFirewallDetectServers() != NULL && LobbyGetDirServers() != NULL;
     case O::HasAuthConfig: return !config->mAuthServers.empty();
-    case O::AddDirAddresses: {
-        ServerContext* aList = InitList(a);
-        if (aList != NULL)
-            aList->AddAddressesFromDir(R(b)->GetEntities(EE_WON_REQOP_DIR_LIST, c), NULL);
-        return 0;
-    }
+    case O::ServerAddFromDir: SC(a)->AddAddressesFromDir(R(b)->GetEntities(EE_WON_REQOP_DIR_LIST, c), NULL); return 0;
     case O::ServerCount: return InitList(a)->GetNumAddresses();
     case O::DirNotifyFailed: LobbyGetDirServers()->NotifyFailed(R(a)->GetCurAddr()); return 0;
+    case O::ServerNotifyFailed: SC(a)->NotifyFailed(R(b)->GetCurAddr()); return 0;
     case O::TextNew: return (intptr_t)(a >= 0 ? new GUIString(gLobbyResources[a].mString) : new GUIString);
     case O::TextAppendRes: T(a)->append(gLobbyResources[b].mString); return 0;
     case O::TextAppendComma: T(a)->append(GUIString(", ")); return 0;
@@ -193,101 +172,51 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::TextAppendText: T(a)->append(*T(b)); return 0;
     case O::TextFree: delete T(a); return 0;
     case O::TextStatus: return (intptr_t)new GUIString(LobbyFormatString(gLobbyResources[a].mString, GetWONStatusString((WONStatus)b)));
-    case O::VersionNotifyFailed: {
-        ServerContext* versions = LobbyGetPatchServers();
-        if (versions != NULL)
-            versions->NotifyFailed(R(a)->GetCurAddr());
-        return 0;
-    }
     case O::IsAcceptOp: return reinterpret_cast<AsyncOp*>(a) == aLogic->mAcceptOp.get();
     case O::ClearAcceptOp: aLogic->mAcceptOp = NULL; return 0;
     case O::AcceptedFromFirewall:
         return static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(a))->GetAcceptedSocket()->GetDestAddr().GetHost() ==
                aLogic->mFirewallAddress.GetHost();
     case O::SetBehindFirewall: LobbySetBehindFirewall(a != 0); return 0;
-    case O::RestartAccept:
-        aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(a))->GetSocket());
-        aLogic->RunOp(aLogic->mAcceptOp.get(), new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion, aLogic),
-                      gLobbyAcceptTimeout);
-        return 0;
-    case O::SetPublicAddress:
-        LobbySetPublicAddress(static_cast<DetectFirewallOp*>(reinterpret_cast<AsyncOp*>(a))->GetPublicAddr());
-        return 0;
+    case O::AcceptOpNewFrom: aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(a))->GetSocket()); return 0;
+    case O::AcceptOpNewFirewall: aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, aLogic->mFirewallSocket.get()); return 0;
+    case O::AcceptOpRun: aLogic->RunOp(aLogic->mAcceptOp.get(), new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion, aLogic), gLobbyAcceptTimeout); return 0;
+    case O::SetFirewallAddress: aLogic->mFirewallAddress = FW(a)->GetCurAddr(); return 0;
+    case O::SetPublicAddress: LobbySetPublicAddress(FW(a)->GetPublicAddr()); return 0;
     case O::HasFirewallSocket: return aLogic->mFirewallSocket.get() != NULL;
-    case O::StartAccept:
-        aLogic->mFirewallAddress = static_cast<DetectFirewallOp*>(reinterpret_cast<AsyncOp*>(a))->GetCurAddr();
-        aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, aLogic->mFirewallSocket.get());
-        aLogic->RunOp(aLogic->mAcceptOp.get(), new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion, aLogic),
-                      gLobbyAcceptTimeout);
-        aLogic->mFirewallSocket = NULL;
-        return 0;
     case O::DnsTestReady: return config != NULL && !config->mDirServers.empty();
-    case O::RunDnsTest: {
-        SmartPtr<DNSTestOp> op = new DNSTestOp(config->mDirServers.front());
-        aLogic->RunTrackedOp(op.get(), new LogicCompletion<InitLogic>(&InitLogic::DNSCompletion, aLogic), 0);
-        return 0;
-    }
-    case O::StartDocuments:
-        if (config != NULL) {
-            static const int kTypes[3] = {HTTPDocType_MOTD, HTTPDocType_TOU, HTTPDocType_ADV};
-            SmartPtr<RustServerOp> ops[3];
-            for (int i = 0; i < 3; i++) {
-                ops[i] = RustServerOp::NewHttpDocument(config->mProductName, kTypes[i]);
-                ops[i]->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage);
-                ops[i]->Set(EE_WON_HTTPDOC_SESSION, aLogic->mHTTPSession.get());
-                aLogic->RunTrackedOp(ops[i].get(), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, aLogic), 0);
-            }
-        }
-        return 0;
+    case O::DnsOpNew: return Held(new DNSTestOp(config->mDirServers.front()));
+    case O::RunTrackedDns: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DNSCompletion, aLogic), 0); return 0;
+    case O::RunTrackedDocument: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, aLogic), 0); return 0;
+    case O::RunTrackedDirectory: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DirectoryCompletion, aLogic), 0); return 0;
+    case O::RunTrackedVersion: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::VersionCompletion, aLogic), 0); return 0;
+    case O::RunTrackedFirewall: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::FirewallCompletion, aLogic), 0); return 0;
+    case O::HttpDocNew: return Held(RustServerOp::NewHttpDocument(config->mProductName, (int)a));
+    case O::HttpDocSetConfig: R(a)->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage); return 0;
+    case O::HttpDocSetSession: R(a)->Set(EE_WON_HTTPDOC_SESSION, aLogic->mHTTPSession.get()); return 0;
     case O::DirServers: return (intptr_t)LobbyGetDirServers();
-    case O::RunDirQuery: {
-        std::wstring paths[4] = { L"/TitanServers/Auth", L"/TitanServers/DBProxy", L"/TitanServers/Firewall" };
-        if (config != NULL)
-            paths[3] = config->mProductDirectory + L"/Patch";
-        SmartPtr<RustServerOp> op = RustServerOp::NewGetMultiDir(reinterpret_cast<ServerContext*>(a), 0x04000002, paths,
-                                                                 config != NULL ? 4 : 3);
-        aLogic->RunTrackedOp(op.get(), new LogicCompletion<InitLogic>(&InitLogic::DirectoryCompletion, aLogic), 0);
-        return 0;
-    }
+    case O::DirQueryNew: return Held(RustServerOp::NewGetMultiDir(SC(a), 0x04000002, InitDirPaths(config), (int)b));
     case O::VersionReady: return LobbyGetPatchServers() != NULL && config != NULL;
-    case O::RunVersionCheck: {
-        // CheckValidVersionOp: a Rust op (ee_won reqops.rs) with the product, config and version
-        const std::string& aProduct = config->mProductName;
-        const std::string& aConfig = config->mLanguage;
-        const std::string& aVersion = config->mVersion;
-        SmartPtr<RustServerOp> op = RustServerOp::NewRequest(ee_won_reqop_version_check(
-            reinterpret_cast<const uint8_t*>(aProduct.data()), aProduct.size(), reinterpret_cast<const uint8_t*>(aConfig.data()),
-            aConfig.size(), reinterpret_cast<const uint8_t*>(aVersion.data()), aVersion.size()), LobbyGetPatchServers());
-        aLogic->RunTrackedOp(op.get(), new LogicCompletion<InitLogic>(&InitLogic::VersionCompletion, aLogic), 0);
-        return 0;
-    }
+    // CheckValidVersionOp: a Rust op (ee_won reqops.rs) with the product, config and version
+    case O::VersionCheckNew: return Held(RustServerOp::NewRequest(ee_won_reqop_version_check(B(config->mProductName), config->mProductName.size(), B(config->mLanguage), config->mLanguage.size(), B(config->mVersion), config->mVersion.size()), LobbyGetPatchServers()));
     case O::FirewallServers: return (intptr_t)LobbyGetFirewallDetectServers();
     case O::ResetFirewallTest: LobbyResetFirewallTest(); return 0;
-    case O::RunFirewallDetect: {
-        SmartPtr<DetectFirewallOp> op = new DetectFirewallOp(reinterpret_cast<ServerContext*>(a));
-        op->SetListenPort(LobbyGetLobbyPort());
-        op->SetDoListen(false);
-        op->SetWaitForConnect(false);
-        aLogic->RunTrackedOp(op.get(), new LogicCompletion<InitLogic>(&InitLogic::FirewallCompletion, aLogic), 0);
-        return 0;
-    }
+    case O::FirewallOpNew: return Held(new DetectFirewallOp(SC(a)));
+    case O::FirewallSetListenPort: FW(a)->SetListenPort(LobbyGetLobbyPort()); return 0;
+    case O::FirewallSetDoListen: FW(a)->SetDoListen(b != 0); return 0;
+    case O::FirewallSetWaitForConnect: FW(a)->SetWaitForConnect(b != 0); return 0;
     case O::FirewallSocketNew: aLogic->mFirewallSocket = new AsyncSocket(0); return 0;
     case O::FirewallBind: return (int)aLogic->mFirewallSocket->Fn2B0D90(LobbyGetLobbyPort(), 0);
     case O::FirewallListen: return (int)aLogic->mFirewallSocket->Listen(1000);
     case O::FirewallSocketDrop: aLogic->mFirewallSocket = NULL; return 0;
-    case O::KillAcceptOp:
-        if (aLogic->mAcceptOp.get() != NULL) {
-            aLogic->mAcceptOp->Kill(true);
-            if (aLogic->mAcceptOp->GetSocket() != NULL)
-                aLogic->mAcceptOp->GetSocket()->Close();
-            aLogic->mAcceptOp = NULL;
-        }
-        return 0;
+    case O::HasAcceptOp: return aLogic->mAcceptOp.get() != NULL;
+    case O::AcceptOpKill: aLogic->mAcceptOp->Kill(true); return 0;
+    case O::AcceptOpHasSocket: return aLogic->mAcceptOp->GetSocket() != NULL;
+    case O::AcceptOpCloseSocket: aLogic->mAcceptOp->GetSocket()->Close(); return 0;
     case O::KillHttp: aLogic->mHTTPSession->KillAll(); return 0;
     case O::ShowInternet: LobbyShowInternetScreen(); return 0;
-    case O::AdapterDialog:
-        aLogic->mNetworkAdapterDialog->LCall(EeWonLobbyDlgCall::Reset);
-        return LobbyDoDialog(aLogic->mNetworkAdapterDialog.get());
+    case O::AdapterReset: aLogic->mNetworkAdapterDialog->LCall(EeWonLobbyDlgCall::Reset); return 0;
+    case O::AdapterDo: return LobbyDoDialog(aLogic->mNetworkAdapterDialog.get());
     case O::SetAdapter: LobbySetNetworkAdapter((unsigned long)(uint32_t)aLogic->mNetworkAdapterDialog->LCall(EeWonLobbyDlgCall::SelectedAddress)); return 0;
     default: return 0;
     }
@@ -308,10 +237,5 @@ void InitLogic::InitComponent(ComponentConfig* inConfig)
 }
 
 // Handles the login screen's Back, Internet and choose-network-adapter buttons
-void InitLogic::HandleControlEvent(int inControlId)
-{
-    int aWhich = inControlId == ID_LoginScreenBack ? 1 : inControlId == ID_ShowInternetScreen ? 2
-               : inControlId == ID_ChooseNetworkAdapter ? 3 : 0;
-    if (aWhich != 0) this->Call(EeWonLogicCall::InitControl, aWhich);
-}
+void InitLogic::HandleControlEvent(int inControlId) { this->Call(EeWonLogicCall::InitControlId, inControlId); }
 }

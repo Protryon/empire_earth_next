@@ -163,10 +163,10 @@ int main(int argc, char** argv)
     theDD->CreateDevice(GXIID_HALDevice, theBack, &theDevice);
     GXMATRIX theIdentity = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     GXMATRIX theProjection = theIdentity;
-    theProjection._11 = 2.0f / 64;
-    theProjection._41 = -1.0f;
-    theProjection._22 = -2.0f / 64;
-    theProjection._42 = 1.0f;
+    theProjection.m[0] = 2.0f / 64;
+    theProjection.m[12] = -1.0f;
+    theProjection.m[5] = -2.0f / 64;
+    theProjection.m[13] = 1.0f;
     theDevice->SetTransform(GXTS_WORLD, &theIdentity);
     theDevice->SetTransform(GXTS_VIEW, &theIdentity);
     theDevice->SetTransform(GXTS_PROJECTION, &theProjection);
@@ -204,9 +204,9 @@ int main(int argc, char** argv)
     theDevice->SetTexture(0, NULL);
     theDevice->SetTextureStageState(0, GXTSS_COLOROP, GXTOP_DISABLE);
     GXMATERIAL theMaterial = {};
-    theMaterial.dcvDiffuse.r = 1.0f;
-    theMaterial.dcvDiffuse.g = 0.5f;
-    theMaterial.dcvDiffuse.a = 1.0f;
+    theMaterial.diffuse.r = 1.0f;
+    theMaterial.diffuse.g = 0.5f;
+    theMaterial.diffuse.a = 1.0f;
     theDevice->SetMaterial(&theMaterial);
     GXLIGHT theLight = {};
     theLight.dltType = GXLIGHT_DIRECTIONAL;

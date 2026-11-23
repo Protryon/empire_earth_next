@@ -9,6 +9,7 @@
 // `c_long`/`c_ulong` are the build's `long`: 32 bits on Windows, 64 on LP64, so their casts are needed on one of them
 #![allow(clippy::unnecessary_cast)]
 
+pub mod config;
 pub mod fp;
 pub mod fractal;
 #[cfg(test)]

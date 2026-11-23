@@ -56,57 +56,13 @@
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "ee/EEUIManager.h"
+#include "rust/won_lobby/wonfront.h"
 
 long EEUIEWNSSCancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     return inForm->GetManager()->Pop();
 }
 
-// Connects to the WON server selected in the server list (nothing when none or out of range)
-long EEUIEWNSSOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    WONAPI::DirEntityList theServers(gWonNet->mServers);
-    WONAPI::DirEntityList::iterator theIterator;
-    unsigned long theSelection;
-    UIListBox<UWideString>* theList = (UIListBox<UWideString>*)inForm->GetControl(kSelectServerListBox);
-    if (!theList->GetHasSelection())
-        return kErrorOK;
-    theList->GetCurrentSelection(theSelection);
-    if (theSelection >= theServers.size())
-        return kErrorOK;
-    unsigned long i = 0;
-    for (theIterator = theServers.begin(); theIterator != theServers.end() && i < theSelection; i++)
-        ++theIterator;
-    gWonNet->SelectServer((*theIterator)->mDisplayName, (*theIterator)->GetNetAddrAsIP());
-    return kErrorOK;
-}
-
-// Sets up the WON server list: hooks OK and Cancel, lists each server's display name (or name), selects a lone one
-long EEUIEWNSSOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    WONAPI::DirEntityList theServers;
-    std::wstring theName;
-    UIListBox<UWideString>* theList = (UIListBox<UWideString>*)inForm->GetControl(kSelectServerListBox);
-    UWideString theText;
-    unsigned long theCount = 0;
-    char theBuffer[1024];
-    EEUIEWNSetTriggerEvent(new EEUIEWNSSCancel, inForm->GetControl(kSelectServerCancelButton), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNSSOk, inForm->GetControl(kSelectServerOKButton), kControlTriggerButtonUp);
-    EEUIEWNSetTriggerEvent(new EEUIEWNSSOk, inForm->GetControl(kSelectServerListBox), kControlTriggerDoubleClicked);
-    EEUIEWNSetTriggerEvent(new EEUIEWNSSOk, inForm->GetControl(kSelectServerListBox), kControlTriggerEnterPressed);
-    theList->DeleteAllEntries();
-    theServers = gWonNet->mServers;
-    for (WONAPI::DirEntityList::iterator theIterator = theServers.begin(); theIterator != theServers.end(); ++theIterator) {
-        if ((*theIterator)->mDisplayName.size() > 0)
-            theName = (*theIterator)->mDisplayName;
-        else
-            theName = (*theIterator)->mName;
-        wcstombs(theBuffer, theName.c_str(), sizeof(theBuffer));
-        theText = UWideString(theBuffer);
-        theList->AppendLine(theText);
-        theCount++;
-    }
-    if (theCount != 0 && theCount == 1)
-        theList->ChangeSelectionIndex(0, true, false);
-    return kErrorOK;
-}
+// R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs)
+long EEUIEWNSSOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::SsOk, inForm, (intptr_t)inEntity); }
+long EEUIEWNSSOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::SsOpenScreen, inForm, (intptr_t)inEntity); }
