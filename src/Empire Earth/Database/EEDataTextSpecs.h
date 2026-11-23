@@ -3,48 +3,12 @@
 #ifndef EE_DATATEXTSPECS_H
 #define EE_DATATEXTSPECS_H
 
-#define EEDT_FORMAT_VERSION 3
-
 // record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)
 enum EEDTRecordSize {
-    kEEDTSize_EEAIUnitTargetingRecord = 160,
-    kEEDTSize_EEAmbientSoundRecord = 152,
-    kEEDTSize_EEAnimalRecord = 272,
-    kEEDTSize_EEAreaEffectData = 188,
-    kEEDTSize_EEButtonRecord = 224,
-    kEEDTSize_EECalamityData = 236,
-    kEEDTSize_EECivilizationCategoryEntry = 600,
-    kEEDTSize_EECivPower = 152,
-    kEEDTSize_EECliffTerrainRecord = 124,
-    kEEDTSize_EEColorTableRecord = 168,
-    kEEDTSize_EECPBehavior = 56,
-    kEEDTSize_EEEventEffect = 88,
-    kEEDTSize_EEEventRow = 104,
-    kEEDTSize_EEDamageTableRecord = 380,
-    kEEDTSize_EEGameVariantData = 276,
-    kEEDTSize_EEGraphicEffectRecord = 232,
-    kEEDTSize_EEGraphicObjectRecord = 716,
-    kEEDTSize_EEMusicRecord = 196,
-    kEEDTSize_EEUnitClassRecord = 1960,
-    kEEDTSize_EECivilizationEntry = 120,
-    kEEDTSize_EESoundRecord = 132,
-    kEEDTSize_EEStartingResourcesRecord = 132,
-    kEEDTSize_EETechTreeRecord = 268,
-    kEEDTSize_EETerrainRecord = 204,
-    kEEDTSize_EETerrainTypeRecord = 128,
-    kEEDTSize_UIDbDataBackgrounds = 308,
-    kEEDTSize_UIDbDataEvents = 116,
-    kEEDTSize_UIDbControl = 860,
-    kEEDTSize_UIDbDataFonts = 128,
-    kEEDTSize_UIDbDataForms = 268,
-    kEEDTSize_UIDbDataHotKeys = 124,
-    kEEDTSize_EEUnitBehaviorRecord = 124,
-    kEEDTSize_EEUnitSetRecord = 184,
-    kEEDTSize_EEUCUpgradeRecord = 240,
-    kEEDTSize_EEToHitRecord = 132,
     kEEDTSize_EEWorldTableEntry = 28,
-    kEEDTSize_EERandomMapRecord = 132,
-    kEEDTSize_EETerrainGrayTextureRecord = 120,
+    kEEDTSize_EECPBehavior = 56,
+    kEEDTSize_EETechTreeRecord = 268,
+    kEEDTSize_EEUnitClassRecord = 1960,
 };
 
 #endif

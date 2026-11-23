@@ -10,6 +10,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 OUT = ROOT / 'src' / 'Empire Earth' / 'Database' / 'EEDataTextSpecs.h'
 WORLD_OUT = ROOT / 'include' / 'ee' / 'EEWorldConstants.h'
+# the records whose C++ structs EEDataTextFile.cpp pins (the others are Rust records or read through ee_data)
+PINS = ('EEWorldTableEntry', 'EECPBehavior', 'EETechTreeRecord', 'EEUnitClassRecord')
 
 
 def generate(spec):
@@ -20,12 +22,10 @@ def generate(spec):
          '#ifndef EE_DATATEXTSPECS_H',
          '#define EE_DATATEXTSPECS_H',
          '',
-         f'#define EEDT_FORMAT_VERSION {spec["format"]}',
-         '',
          '// record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)',
          'enum EEDTRecordSize {']
-    for sname, s in spec['structs'].items():
-        o.append(f'    kEEDTSize_{sname} = {s["size"]},')
+    for sname in PINS:
+        o.append(f'    kEEDTSize_{sname} = {spec["structs"][sname]["size"]},')
     o += ['};', '', '#endif']
     return ('\n'.join(o) + '\n').encode('ascii')
 
