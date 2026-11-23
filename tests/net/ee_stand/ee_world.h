@@ -16,6 +16,7 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
+#include "rust/game/app.h"
 #include "lle/GEColor.h"
 #include "lle/UResourceFile.h"
 #include "ee/EEWorldConstants.h"
@@ -70,24 +71,10 @@ public:
 };
 
 // ---- the lobby's options ----
-class EEGameOptionsPlayer {
+class EEGameOptionsPlayer : public EeAppOptionsPlayerFields {   // the game's: its plain members are the Rust record
 public:
-    EEGameOptionsPlayer()
-        : mType(0), mLoadedType(0), mPing(0.0f), mSlot(0), mColor(0), mTeam(0), mStartingCitizens(0), mTransferID(0),
-          mIsLocal(false), mIsReady(false), mB36(true), mEngine(0) {}
-    unsigned long mType;
-    long mLoadedType;
+    EEGameOptionsPlayer() : EeAppOptionsPlayerFields{0, 0, 0.0f, 0, 0, 0, 0, 0, false, false, true, 0} {}
     UWideString mName;
-    float mPing;
-    unsigned long mSlot;
-    unsigned long mColor;
-    unsigned long mTeam;
-    unsigned long mStartingCitizens;
-    unsigned long mTransferID;
-    bool mIsLocal;
-    bool mIsReady;
-    bool mB36;
-    unsigned long mEngine;
 };
 std::string TPlayer(const EEGameOptionsPlayer& inPlayer);
 
@@ -227,6 +214,7 @@ public:
 class EEUserInterface {
 public:
     EEUserInterface() : mThread(new EEThreadFake("ui")) {}
+    EEThreadFake* GetThread() { return this->mThread; }
     void PostLobbyUpdatePlayer(unsigned long inSlot, unsigned long inFlags) { T("ui lobby update player %lu %lu", inSlot, inFlags); }
     void PostAction(EEAction* inAction) { T("ui action %s", inAction->Describe().c_str()); }
     void AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText, long inTime, long inKind)
@@ -252,6 +240,7 @@ public:
     UIForm* GetFormByID(unsigned long inID);
     UIForm* GetCurrentForm();
     bool IsFormVisible(UIForm* inForm);
+    EEUIFMainGame* GetMainGameForm() { return this->mMainGameForm; }
     EEUIFMainGame* mMainGameForm;
 };
 extern EEUIManager* gUIManager;
@@ -356,8 +345,6 @@ public:
     void SetNumberOfCTsProcessedInPhysics(unsigned long inCount) { T("comms set cts in physics %lu", inCount); gFake.mCTsInPhysics = inCount; }
 };
 extern NESynchronousCommunications* gCommunications;
-
-enum { kServerStateOpen = 0, kServerStateClosed = 1, kServerStateRunning = 3, kServerStatePaused = 4 };
 
 class NESynchronousServer : public NESynchronousCommunications {
 public:

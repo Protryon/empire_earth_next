@@ -15,6 +15,11 @@ struct EeErrorTexts;
 
 extern "C" {
 
+/// Sets (or with `None` clears) the verify handler of [`VERIFY_HOOK`] (test drivers only).
+void ee_error_set_verify_hook(void (*hook)(const char *file,
+                                           unsigned long line,
+                                           const char *expression));
+
 /// Whether `Filter.txt` was read (C++ reads it on the first debug message that has a startup path).
 bool ee_error_filters_loaded();
 
