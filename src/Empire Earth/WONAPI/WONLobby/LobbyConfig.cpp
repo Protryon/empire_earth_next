@@ -15,6 +15,8 @@
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "rust/won_lobby/lobbycfg.h"
+#include "rust/won_lobby/lobbyconf.h"
+#include "ee/wonapi/WONLobbyGuard.h"
 using namespace WONAPI;
 
 // The class-static allocator at 0x8d954c holds DefaultAllocator (0x757f30), the SDK's default factory
@@ -32,63 +34,64 @@ LobbyConfig* LobbyConfig::DefaultAllocator()
     return new LobbyConfig;
 }
 
-// Creates the lobby configuration and registers every WONLobby.cfg key with its default; UseLocalIP comes
-// from the HKLM\SOFTWARE\Sierra\WONLobby registry value
-LobbyConfig::LobbyConfig()
+// the constructor's and HandleValueInstruction's statements (lobbyconf.rs composes them, R6 WON round 33); their
+// locals are these statics
+static RegKey* sConfRegistry;
+static DWORD sConfRegistryValue;
+static std::string sConfName, sConfValue;
+static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intptr_t b, intptr_t cc)
 {
-    this->KeyAdd("DirServer", this->mDirServers, NULL, true);
-    this->KeyAdd("RoomDirServer", this->mRoomDirServers, NULL, true);
-    this->KeyAdd("AuthServers", this->mAuthServers, NULL, true);
-    this->KeyAdd("ProductName", this->mProductName, NULL);
-    this->KeyAdd("ProductDirectory", this->mProductDirectory, NULL);
-    this->KeyAdd("ResourceDirectory", this->mResourceDirectory, NULL);
-    this->KeyAdd("Version", this->mVersion, NULL);
-    this->KeyAdd("LanVersion", this->mLanVersion, NULL);
-    this->KeyAdd("Language", this->mLanguage, "");
-    this->KeyAdd("CRCCheck", this->mCRCCheck, true);
-    this->KeyAdd("CDKeyCheck", this->mCDKeyCheck, true);
-    this->KeyAdd("Public", this->mPublic, false);
-    this->KeyAdd("LanBroadcastPort", this->mLanBroadcastPort, 8585);
-    this->KeyAdd("NoPingInProgress", this->mNoPingInProgress, true);
-    this->KeyAdd("LobbyPort", this->mLobbyPort, 8888);
-    this->KeyAdd("CheckForInternet", this->mCheckForInternet, true);
-    this->KeyAdd("PingCeiling", this->mPingCeiling, 1000);
-    this->KeyAdd("AllowDuplicateNames", this->mAllowDuplicateNames, true);
-    this->KeyAdd("AppendNumberToDefaultLanName", this->mAppendNumberToDefaultLanName, true);
-    this->KeyAdd("AllowJoinGameWithoutPing", this->mAllowJoinGameWithoutPing, true);
-
-    bool useLocalIP = false;
-    const char* regKey = "SOFTWARE\\Sierra\\WONLobby";
-    const char* valueName = "UseLocalIP";
-    int hive = 2;
-    RegKey registry(hive, regKey, false, true);
-    DWORD value = 0;
-    if (registry.QueryDWORD(valueName, value) == 0)
-        useLocalIP = value != 0;
-    this->mUseLocalIP = useLocalIP;
-    // The config key writes the global gLobbyUseLocalIP (0x96634d), which nothing reads, not mUseLocalIP:
-    // a UseLocalIP line in WONLobby.cfg has no effect, only the registry value counts
-    this->KeyAdd(valueName, gLobbyUseLocalIP, useLocalIP);
+    typedef EeWonLobbyConfOp Op;
+    LobbyConfig* c = static_cast<LobbyConfig*>(inConfig);
+    switch (inOp) {
+    case Op::KeyDirServer: c->KeyAdd("DirServer", c->mDirServers, NULL, true); return 0;
+    case Op::KeyRoomDirServer: c->KeyAdd("RoomDirServer", c->mRoomDirServers, NULL, true); return 0;
+    case Op::KeyAuthServers: c->KeyAdd("AuthServers", c->mAuthServers, NULL, true); return 0;
+    case Op::KeyProductName: c->KeyAdd("ProductName", c->mProductName, NULL); return 0;
+    case Op::KeyProductDirectory: c->KeyAdd("ProductDirectory", c->mProductDirectory, NULL); return 0;
+    case Op::KeyResourceDirectory: c->KeyAdd("ResourceDirectory", c->mResourceDirectory, NULL); return 0;
+    case Op::KeyVersion: c->KeyAdd("Version", c->mVersion, NULL); return 0;
+    case Op::KeyLanVersion: c->KeyAdd("LanVersion", c->mLanVersion, NULL); return 0;
+    case Op::KeyLanguage: c->KeyAdd("Language", c->mLanguage, ""); return 0;
+    case Op::KeyCrcCheck: c->KeyAdd("CRCCheck", c->mCRCCheck, true); return 0;
+    case Op::KeyCdKeyCheck: c->KeyAdd("CDKeyCheck", c->mCDKeyCheck, true); return 0;
+    case Op::KeyPublic: c->KeyAdd("Public", c->mPublic, false); return 0;
+    case Op::KeyLanBroadcastPort: c->KeyAdd("LanBroadcastPort", c->mLanBroadcastPort, 8585); return 0;
+    case Op::KeyNoPingInProgress: c->KeyAdd("NoPingInProgress", c->mNoPingInProgress, true); return 0;
+    case Op::KeyLobbyPort: c->KeyAdd("LobbyPort", c->mLobbyPort, 8888); return 0;
+    case Op::KeyCheckForInternet: c->KeyAdd("CheckForInternet", c->mCheckForInternet, true); return 0;
+    case Op::KeyPingCeiling: c->KeyAdd("PingCeiling", c->mPingCeiling, 1000); return 0;
+    case Op::KeyAllowDuplicateNames: c->KeyAdd("AllowDuplicateNames", c->mAllowDuplicateNames, true); return 0;
+    case Op::KeyAppendNumberToDefaultLanName: c->KeyAdd("AppendNumberToDefaultLanName", c->mAppendNumberToDefaultLanName, true); return 0;
+    case Op::KeyAllowJoinGameWithoutPing: c->KeyAdd("AllowJoinGameWithoutPing", c->mAllowJoinGameWithoutPing, true); return 0;
+    case Op::RegistryOpen: sConfRegistry = new RegKey(2, "SOFTWARE\\Sierra\\WONLobby", false, true); return 0;
+    case Op::RegistryValueClear: sConfRegistryValue = 0; return 0;
+    case Op::RegistryQuery: return (intptr_t)(sConfRegistry->QueryDWORD("UseLocalIP", sConfRegistryValue));
+    case Op::RegistryValue: return (intptr_t)(sConfRegistryValue);
+    case Op::SetUseLocalIp: c->mUseLocalIP = a != 0; return 0;
+    case Op::KeyUseLocalIp: c->KeyAdd("UseLocalIP", gLobbyUseLocalIP, a != 0); return 0;
+    case Op::RegistryClose: delete sConfRegistry; return 0;
+    case Op::KeyIsLobbyDefine: return (*(const std::string*)a == "LOBBYDEFINE") ? 1 : 0;
+    case Op::DefineLocalsClear: sConfName = sConfValue = std::string(); return 0;
+    case Op::DefineReadName: ((StringParser*)a)->ReadString(sConfName, true); return 0;
+    case Op::DefineReadValue: ((StringParser*)a)->ReadString(sConfValue, false); return 0;
+    case Op::DefineNameEmpty: return (sConfName.empty()) ? 1 : 0;
+    case Op::DefineStore: c->mDefines[sConfName] = sConfValue; return 0;
+    case Op::BaseHandleValue: return WonGuard([&] { return c->ConfigObject::HandleValueInstruction((ConfigParser*)a, *(const std::string*)b, *(StringParser*)cc); });
+    }
+    return 0;
 }
+
+// Creates the lobby configuration and registers every WONLobby.cfg key with its default; UseLocalIP comes
+// from the HKLM\SOFTWARE\Sierra\WONLobby registry value (the config key writes the global gLobbyUseLocalIP,
+// 0x96634d, which nothing reads, not mUseLocalIP: a UseLocalIP line in WONLobby.cfg has no effect)
+LobbyConfig::LobbyConfig() { ee_won_lobbyconf_call(this, ConfHost, EeWonLobbyConfCall::Construct, 0, 0, 0); }
 
 // The destructor is implicit (the shared one at 0x694e04); the scalar deleting destructor 0x758570 and the
 // map destructors 0x758590/0x758650 are compiler-generated
 
 // Handles a LOBBYDEFINE name value line by storing the define; passes every other key to the base class
-bool LobbyConfig::HandleValueInstruction(ConfigParser* parser, const std::string& key,
-                           StringParser& values)
-{
-    if (key == "LOBBYDEFINE") {
-        std::string name;
-        std::string value;
-        values.ReadString(name, true);
-        values.ReadString(value, false);
-        if (!name.empty())
-            this->mDefines[name] = value;
-        return true;
-    }
-    return ConfigObject::HandleValueInstruction(parser, key, values);
-}
+bool LobbyConfig::HandleValueInstruction(ConfigParser* parser, const std::string& key, StringParser& values) { return WonRethrow(ee_won_lobbyconf_call(this, ConfHost, EeWonLobbyConfCall::HandleValue, (intptr_t)parser, (intptr_t)&key, (intptr_t)&values)) != 0; }
 
 // Checks that the config names directory servers, product, version and language (setting a parser error
 // otherwise) and fills in the LAN version, resource and product directories and the Product define
