@@ -69,3 +69,4 @@ pub mod cfgval;
 pub mod dlgsplit;
 pub mod eesplit;
 pub mod lobbyids;
+pub mod logicsplit;

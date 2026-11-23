@@ -145,7 +145,8 @@ CHECKS = [
          # the multi-statement cases composed in Rust over one-statement cases (R6 WON round 32)
          rust=[(RS / "ee_won_lobby" / "src" / "gluesplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
-         hosts=[LOBBY / "DialogLogic.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "DialogLogic.cpp"],
+         rust=[(RS / "ee_won_lobby" / "src" / "logicsplit.rs", "dlg_op")], allowed={}),
     # LobbyConfig::PostParse (R6 WON round 32: lobbycfg.rs; LobbyConfig.cpp's host)
     dict(enum="EeWonLobbyCfgOp", header="won_lobby/lobbycfg.h",
          hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),

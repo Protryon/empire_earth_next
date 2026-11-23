@@ -1019,6 +1019,9 @@ WON_TESTS["won_dlg34_test"] = []
 # the control host's compound cases R6 WON round 35 composed in Rust (hostops.rs split_op, lobbycfgrd.rs's
 # SetComponent calls) against the deleted LobbyNetCtrlHost.cpp code over a stand-in world, every new op skipped in turn
 WON_TESTS["won_ctl35_test"] = []
+# the lobby logics' host cases R6 WON lobby and network round 35 composed in Rust (logicsplit.rs) against the deleted
+# cases over a stand-in world, every new op skipped in turn
+WON_TESTS["won_logic35_test"] = []
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes

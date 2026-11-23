@@ -113,6 +113,47 @@ pub enum EeWonDlgLogicOp {
     RootWindowOf,
     /// `((Container*)a)->InvalidateRect(WONRectangle(*(int(*)[4])b))`.
     InvalidateRect,
+    // R6 WON lobby and network round 35: the statements of the cases logicsplit.rs composes in the game
+    /// `WindowManager::GetDefaultWindowManager()` (not held).
+    WmDefault,
+    /// `((WindowManager*)a)->GetPopupsInOwnWindow()` (0 or 1).
+    WmPopupsOf,
+    /// `a->GetBounds().x` (a component).
+    BoundsX,
+    /// `a->GetBounds().y`.
+    BoundsY,
+    /// `a->GetBounds().width`.
+    BoundsWidth,
+    /// `a->GetBounds().height`.
+    BoundsHeight,
+    /// `sDlgNewWindow = CreateNativeWindow()` (NewWindow's local).
+    NewWindowMake,
+    /// `sDlgNewWindow->SetOneComponentWindow(true)`.
+    NewWindowOneComponent,
+    /// `sDlgNewWindow.get()`.
+    NewWindowGet,
+    /// `sDlgNewWindow = NULL`.
+    NewWindowDrop,
+    /// `((Window*)a)->SetParent((Window*)b)`.
+    WindowSetParent,
+    /// `((Window*)a)->SetStyle(0x22)`.
+    WindowSetPopupStyle,
+    /// `((Window*)a)->Create(WONRectangle(0, 0, 100, 100))`.
+    WindowCreatePopup,
+    /// `LobbyAddLogicListener(((Window*)a)->mRoot.get())`.
+    WindowListenRoot,
+    /// `((Window*)a)->mRoot->SetColorScheme(LobbyGetColorScheme())`.
+    WindowRootSetScheme,
+    /// `sDlgStatusText = GetWONStatusString(a)` (StatusSetStatus's local).
+    StatusTextOf,
+    /// `((StatusDialog*)a)->SetStatus(sDlgStatusText, false)`.
+    StatusSetHeldText,
+    /// `sDlgStatusText = GUIString()`.
+    StatusTextDrop,
+    /// `sDlgButtons[a] = &gLobbyResources[b].mString` (OkCancelSetText's local).
+    ButtonTextSet,
+    /// `((OkCancelDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, sDlgButtons)`.
+    OkCancelSetHeldText,
 }
 
 /// The inward calls (the C++ class's methods).
@@ -200,6 +241,15 @@ impl EeWonDlgLogic {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        // the game's compound cases (logicsplit.rs) over the host's one-statement ones
+        if let Some(r) = crate::logicsplit::game_dlg_op(op, a, b, c, d, &|op, a, b, c, d| self.host_op(op, a, b, c, d))
+        {
+            return r;
+        }
+        self.host_op(op, a, b, c, d)
+    }
+
+    fn host_op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
         match self.host {
             // SAFETY: the host is the C++ logic's (or a test's), called with the logic it was given for
             Some(f) => unsafe { f(self.logic, op, a, b, c, d) },
