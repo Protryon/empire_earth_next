@@ -7,6 +7,9 @@
 //! the host-read captures (CBQR) of IsStillReachable and IsGateClosed are here. The host-read scope's depth (the
 //! C++ `EECombatHostReadScope`, a thread's nesting of the captured host reads) is Rust's too.
 
+// `c_long` and `c_ulong` are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use crate::combat::damage::EeCombatDamageCall;
 use core::ffi::c_long;
 use std::cell::Cell;
@@ -99,6 +102,24 @@ pub const EE_COMBAT_XA_AREA_DAMAGE: u32 = 4;
 pub const EE_COMBAT_GO_DESTINATION: u32 = 1;
 pub const EE_COMBAT_GO_SUITS: u32 = 2;
 
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod capture_ffi {
+    extern "C" {
+        /// ee_sim combat capture_units.rs (the CBQR and CBXR folds)
+        pub fn ee_combat_capture_read(
+            which: u32,
+            func: u32,
+            unit: u64,
+            target: u64,
+            result: i32,
+            extra: *const [u32; 3],
+        );
+    }
+}
+#[cfg(not(test))]
+use capture_ffi::ee_combat_capture_read;
+
 /// `EECombatCaptureHostRead` (`which` 0, three extras) and `EECombatCaptureXRead` (1, two) with the extras as
 /// arguments.
 #[no_mangle]
@@ -114,7 +135,10 @@ pub extern "C" fn ee_combat_capture_read_of(
     e2: u32,
 ) {
     #[cfg(not(test))]
-    crate::combat::capture_units::ee_combat_capture_read(which, func, unit, target, result, &[e0, e1, e2]);
+    // SAFETY: a local array of three extras
+    unsafe {
+        ee_combat_capture_read(which, func, unit, target, result, &[e0, e1, e2]);
+    }
     #[cfg(test)]
     let _ = (which, func, unit, target, result, e0, e1, e2);
 }
@@ -666,7 +690,8 @@ mod game {
         }
         fn capture_read(&mut self, which: u32, func: u32, unit: u64, target: u64, result: bool, extra: [u32; 2]) {
             let e = [extra[0], extra[1], 0];
-            crate::combat::capture_units::ee_combat_capture_read(which, func, unit, target, i32::from(result), &e);
+            // SAFETY: a local array of three extras
+            unsafe { ee_combat_capture_read(which, func, unit, target, i32::from(result), &e) };
         }
     }
 }

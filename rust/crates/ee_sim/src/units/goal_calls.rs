@@ -401,10 +401,10 @@ mod tests {
             assert_eq!(ee_units_goal_location_point_any(core::ptr::null()), Ge3DPoint::default());
             assert_eq!(ee_units_goal_location_yaw_any(core::ptr::null()), 0.0);
         }
-        let mut other = EeUnitsGoalBase { kind: 9, ..Default::default() };
+        let other = EeUnitsGoalBase { kind: 9, ..Default::default() };
         // SAFETY: as above
         unsafe {
-            ee_units_goal_set_location_point_any(&mut other, 7.0, 7.0, 7.0);
+            ee_units_goal_set_location_point_any(&other, 7.0, 7.0, 7.0);
             assert_eq!(ee_units_goal_location_point_any(&other), Ge3DPoint::default());
         }
     }
