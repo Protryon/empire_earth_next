@@ -189,6 +189,7 @@
 #include "rust/won_lobby/chatobj.h"
 #include "rust/won_lobby/dialogs.h"
 #include "rust/won_lobby/dlglogic.h"
+#include "rust/won_lobby/dlgsplit.h"
 #include "rust/won_lobby/eecolor.h"
 #include "rust/won_lobby/eegame.h"
 #include "rust/won_lobby/eeglue.h"

@@ -32,12 +32,6 @@
 using namespace WONAPI;
 
 
-// the EE file dialog's search (EELobbyFileDialog::ListFiles' locals)
-struct EELobbyFind {
-    PlatFind* mFind;
-    PlatFindData mData;
-};
-
 namespace {
 // One player's line of the EE connect dialog (EELobbyConnectDialog.cpp's anonymous namespace; 0x2c bytes; vtable
 // 0x84c2c0: TextListItem's slots)
@@ -55,104 +49,15 @@ public:
 // ---- the list rows (R6 WONLobby round 3: moved here from BadUserDialog.cpp and ChooseNetworkAdapterDialog.cpp, whose
 // dialogs are lobby dialog kinds now; the rows stay C++ widgets)
 
-// One row of the bad user list (global namespace, 0x50 bytes)
-class BadUserItem : public ListItem {
-public:
-    BadUserItem(const EeWonRouteRecord& inUser,bool inSimple);
-    virtual void Paint(Graphics& inGraphics,ListArea* inList);
-    virtual void CalcDimensions(ListArea* inList);
-    virtual int Compare(const ListItem* inOther,ListArea* inList) const;
-    SmartPtr<Font> mFont; // 0x18
-    GUIString mStrings[6]; // 0x1c..0x30: name, WON id, expiry, moderator, moderator's WON id, comment
-    unsigned long mValues[6]; // 0x34..0x48: sort keys; only the WON id (1), expiry (2) and moderator id (4) are set
-    bool mIsSimple; // 0x4c (padded to 0x50)
-};
+// One row of the bad user list: a Rust row since R6 WON round 34 (ee_won_lobby rows.rs BadUser; its texts made
+// by dlgsplit.rs over TextRecord, TextFormatRes and the rows' TextNew)
+
+// a bad user record's text (TextRecord)
 static std::wstring RecordText(const uint16_t* inUnits, size_t inCount)
 {
     std::wstring aText;
     WonWideSink(&aText, inUnits, inCount);
     return aText;
-}
-// Creates a row from a bad user record (the routing op's: ee_won routeop.rs), writing the expiry as days, hours,
-// minutes, seconds or infinite
-BadUserItem::BadUserItem(const EeWonRouteRecord& inUser, bool inSimple)
-{
-    this->mIsSimple = inSimple;
-    this->mStrings[0] = GUIString(new GUIStringData(RecordText(inUser.name, inUser.name_len)));
-    char aBuffer[100];
-    sprintf(aBuffer, "%d", inUser.user_id);
-    this->mStrings[1] = aBuffer;
-    this->mValues[1] = inUser.user_id;
-
-    unsigned long aDuration = inUser.expiration;
-    GUIString aText;
-    GUIString aUnit;
-    if (aDuration > 86400) {
-        aDuration /= 86400;
-        aUnit = aDuration > 1 ? LOBBY_STRING(BadUserDialog_XDays_String) : LOBBY_STRING(BadUserDialog_OneDay_String);
-    } else if (aDuration > 3600) {
-        aDuration /= 3600;
-        aUnit = aDuration > 1 ? LOBBY_STRING(BadUserDialog_XHours_String) : LOBBY_STRING(BadUserDialog_OneHour_String);
-    } else if (aDuration > 60) {
-        aDuration /= 60;
-        aUnit = aDuration > 1 ? LOBBY_STRING(BadUserDialog_XMinutes_String) : LOBBY_STRING(BadUserDialog_OneMinute_String);
-    } else if (aDuration > 0) {
-        aUnit = aDuration > 1 ? LOBBY_STRING(BadUserDialog_XSeconds_String) : LOBBY_STRING(BadUserDialog_OneSecond_String);
-    } else {
-        aUnit = LOBBY_STRING(BadUserDialog_Infinite_String);
-    }
-    sprintf(aBuffer, "%d", aDuration);
-    this->mValues[2] = inUser.expiration;
-    this->mStrings[2] = LobbyFormatString(aUnit, GUIString(aBuffer));
-    this->mStrings[3] = GUIString(RecordText(inUser.moderator_name, inUser.moderator_name_len));
-    sprintf(aBuffer, "%d", inUser.moderator_id);
-    this->mStrings[4] = GUIString(aBuffer);
-    this->mValues[4] = inUser.moderator_id;
-    this->mStrings[5] = GUIString(RecordText(inUser.comment, inUser.comment_len));
-}
-
-// Takes the list's font and makes the row one text line high
-void BadUserItem::CalcDimensions(ListArea* inList)
-{
-    this->mFont=inList->mFont;
-    this->mHeight=this->mFont->GetHeight();
-}
-// Draws the selection background and the text of the column being painted (the name in the simple list)
-void BadUserItem::Paint(Graphics& inGraphics,ListArea* inList)
-{
-    DWORD aColor=inList->GetTextColor();
-    if(this->mSelected) aColor=inList->GetSelColor().GetForegroundColor(inGraphics,aColor);
-    int aColumn=0;
-    bool aSelected=this->mSelected;
-    bool aSimple=this->mIsSimple;
-    if(!aSimple) aColumn=static_cast<MultiListArea*>(inList)->GetColumnPaintContext();
-    if((aSimple || aColumn==-1) && aSelected) {
-        inGraphics.SetColor(inList->GetSelColor().GetBackgroundColor(inGraphics));
-        int aWidth=inList->GetPaintWidth();
-        int aHeight=this->mFont->GetHeight();
-        inGraphics.FillRect(0,0,aWidth,aHeight);
-        if(!this->mIsSimple) return;
-    }
-    if(aColumn<0 || aColumn>5)
-        return;
-    inGraphics.SetColor(aColor);
-    inGraphics.SetFont(this->mFont.get());
-    inGraphics.DrawString(this->mStrings[aColumn],0,0);
-}
-// Orders two rows by the sort column: numerically for the ids and expiry, else by text
-int BadUserItem::Compare(const ListItem* inOther,ListArea* inList) const
-{
-    int aColumn=static_cast<MultiListArea*>(inList)->GetSortColumn();
-    if(aColumn<0 || aColumn>5) return this<inOther;
-    const BadUserItem* anOther=static_cast<const BadUserItem*>(inOther);
-    switch(aColumn) {
-    case 1:
-    case 2:
-    case 4:
-        return this->mValues[aColumn]-anOther->mValues[aColumn];
-    default:
-        return this->mStrings[aColumn].mData->Compare(anOther->mStrings[aColumn].mData.get());
-    }
 }
 
 // Adapter list row holding the adapter's host address (RTTI in the global namespace, not WONAPI)
@@ -177,9 +82,7 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
 LobbyRustDialog::LobbyRustDialog(EeWonLobbyDlgKind inKind)
     : mLobbyDlg(ee_won_lobbydlg_new_model(this, inKind, LobbyDialogHost)), mKind(inKind)
 {
-    // the subclasses' constructors: the status dialog's start tick, the credits' scrolling text
-    if (inKind == EeWonLobbyDlgKind::Status) this->LCall(EeWonLobbyDlgCall::SetStartTick, (intptr_t)WONTickCount());
-    if (inKind == EeWonLobbyDlgKind::Credits) this->LCall(EeWonLobbyDlgCall::HoldScrollText, (intptr_t) new ScrollingTextComponent);
+    // the subclasses' constructors (the status dialog's start tick, the credits' scrolling text) are the Rust's
 }
 
 
@@ -239,12 +142,6 @@ static const GUIString& EeString(intptr_t inString)
     return gEmptyGUIString;
 }
 
-// a bad user record into the list (BadUsersInsert)
-static void InsertBadUser(void* inTarget, const EeWonRouteRecord* inRecord)
-{
-    std::pair<ListArea*, bool>& aTarget = *static_cast<std::pair<ListArea*, bool>*>(inTarget);
-    aTarget.first->InsertItem(new BadUserItem(*inRecord, aTarget.second), -1);
-}
 // an object with one reference the Rust gives back (NULL stays NULL)
 static intptr_t Held(RefCount* inObject)
 {
@@ -299,13 +196,6 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     // the lobby's strings come as resource rows (lobbydlg.rs string_row), the EE game's two as strings
     case Op::LabelSetRes: aLabel->SetText(gLobbyResources[b].mString, true); return 0;
     case Op::ButtonSetRes: aButton->SetText(gLobbyResources[b].mString, true); return 0;
-    case Op::AdminTitleRes: {
-        GUIString aTitle = gLobbyResources[b].mString;
-        aTitle.append(GUIString(new GUIStringData(" ")));
-        aTitle.append(reinterpret_cast<LobbyClient*>(c)->GetName());
-        aLabel->SetText(aTitle, true);
-        return 0;
-    }
     case Op::LabelSetString: aLabel->SetText(EeString(b), true); return 0;
     case Op::ButtonSetString: aButton->SetText(EeString(b), true); return 0;
     case Op::GameCreate: return Held(LobbyGame::CreateGame(static_cast<LobbyGameType>(b)));
@@ -335,19 +225,8 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::BrowserShowTou: reinterpret_cast<BrowserComponent*>(a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false); return 0;
     case Op::BrowserTop: reinterpret_cast<BrowserComponent*>(a)->GetHTMLView()->SetOffsets(0, 0); return 0;
     case Op::HttpDocType: return ((RustServerOp*)LobbyEvtGet(reinterpret_cast<ComponentEvent*>(a), LobbyEvtField::Op))->GetNum(EE_WON_HTTPDOC_TYPE);
-    case Op::BadUsersInsert: {
-        std::pair<ListArea*, bool> aTarget(aList, c != 0);
-        ee_won_routeop_records(reinterpret_cast<const EeWonRouteOp*>(b), EE_WON_RTR_BAD_USER, InsertBadUser, &aTarget);
-        return 0;
-    }
     case Op::IdsClear: reinterpret_cast<std::list<unsigned long>*>(a)->clear(); return 0;
-    // the original read the id (0x7f5ca5) before allocating the list node
-    case Op::BadUserId: return (intptr_t)reinterpret_cast<BadUserItem*>(a)->mValues[1];
     case Op::IdsPush: reinterpret_cast<std::list<unsigned long>*>(a)->push_back((unsigned long)b); return 0;
-    case Op::AdapterAddDefault:
-        aMulti->InsertItem(new NetworkAdapterListItem(0), -1);
-        aMulti->SetString(0, 0, LOBBY_STRING(ChooseNetworkAdapterDialog_Default_String), NULL);
-        return 0;
     case Op::LocalHost: return (intptr_t)WONAPI::IPAddr::GetLocalHost();
     case Op::AdaptersGet: {
         std::list<LobbyNetAddress> anAddresses;
@@ -386,32 +265,25 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::ConnectItemSetImage: reinterpret_cast<ConnectListItem*>(a)->mImage = (b == 0 ? LOBBY_IMAGE(GameUserListCtrl_Ready_Image) : LOBBY_IMAGE(ServerListCtrl_PingFailed_Image)).mPtr; return 0;
     case Op::ConnectItemNotReady: return reinterpret_cast<ConnectListItem*>(a)->mImage.mPtr != LOBBY_IMAGE(GameUserListCtrl_Ready_Image).mPtr ? 1 : 0;
     // EELobbyFileDialog
-    case Op::FindFirst: {
-        EELobbyFind* aFind = new EELobbyFind;
-        aFind->mFind = PlatFindFirst(reinterpret_cast<const char*>(a), &aFind->mData);
-        if (aFind->mFind != NULL)
-            return (intptr_t)aFind;
-        delete aFind;
-        return 0;
-    }
-    case Op::FindNameLength: return (intptr_t)GUIString(reinterpret_cast<EELobbyFind*>(a)->mData.mName).length();
-    case Op::FileListInsert: {
-        GUIString theName(reinterpret_cast<EELobbyFind*>(b)->mData.mName);
-        theName.resize((int)c);
-        aList->InsertString(theName, -1);
-        return 0;
-    }
-    case Op::FindNext: return PlatFindNext(reinterpret_cast<EELobbyFind*>(a)->mFind, &reinterpret_cast<EELobbyFind*>(a)->mData) == PLAT_FILE_OK;
-    case Op::FindClose:
-        PlatFindClose(reinterpret_cast<EELobbyFind*>(a)->mFind);
-        delete reinterpret_cast<EELobbyFind*>(a);
-        return 0;
     case Op::ItemText: return (intptr_t)(sDlgItemText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mText.mData->GetString()).c_str();
     case Op::LoadSavedGame: return EELobbyLoadSavedGame(reinterpret_cast<const char*>(a)) ? 1 : 0;
     case Op::FileAskDelete: return LobbyMessageBoxYesNo(EE_LOBBY_STRING(gEELobbyFileDialog_DeleteTitle), EE_LOBBY_STRING(gEELobbyFileDialog_DeleteDetails), true);
     case Op::FileDelete: WONFile(reinterpret_cast<const char*>(a)).Delete(true); return 0;
     case Op::EventDoubleClick: return reinterpret_cast<ListItemClickedEvent*>(a)->mDoubleClick ? 1 : 0;
     case Op::EventButton: return reinterpret_cast<ListItemClickedEvent*>(a)->mButton;
+    // R6 WON round 34: the statements of the compound cases dlgsplit.rs composes (the bad user rows, the admin title,
+    // the default adapter row, the file search) and of the constructors
+    case Op::TextCompare: return reinterpret_cast<GUIStringData*>(a)->Compare(reinterpret_cast<GUIStringData*>(b));
+    case Op::TextRecord: return Held(new GUIStringData(RecordText(reinterpret_cast<const uint16_t*>(a), (size_t)b)));
+    case Op::TextFormatRes: return Held(LobbyFormatString(gLobbyResources[a].mString, GUIString(reinterpret_cast<GUIStringData*>(b))).mData.get());
+    case Op::TitleNew: return (intptr_t) new GUIString(gLobbyResources[a].mString);
+    case Op::TitleAppendSpace: reinterpret_cast<GUIString*>(a)->append(GUIString(new GUIStringData(" "))); return 0;
+    case Op::TitleAppendName: reinterpret_cast<GUIString*>(a)->append(reinterpret_cast<LobbyClient*>(b)->GetName()); return 0;
+    case Op::TitleFree: delete reinterpret_cast<GUIString*>(a); return 0;
+    case Op::AdapterSetDefaultName: aMulti->SetString(0, 0, LOBBY_STRING(ChooseNetworkAdapterDialog_Default_String), NULL); return 0;
+    case Op::NameLength: return (intptr_t)GUIString(reinterpret_cast<const char*>(a)).length();
+    case Op::FileListInsertName: aList->InsertString(GUIString(new GUIStringData(GUIString(reinterpret_cast<const char*>(b)).mData.get(), 0, (unsigned short)c)), -1); return 0;
+    case Op::NewScrollText: return (intptr_t) new ScrollingTextComponent;
     }
     return 0;
 }

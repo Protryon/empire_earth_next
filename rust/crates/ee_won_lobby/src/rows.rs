@@ -53,6 +53,11 @@ fn world() -> bool {
     WORLD_HOST.with(|h| h.get()).is_some()
 }
 
+/// A row op (the rows' host: the game's controls' host, or a driver's world).
+pub(crate) fn ctl(op: Op, a: isize, b: isize, c: isize) -> isize {
+    h(op, a, b, c)
+}
+
 fn h(op: Op, a: isize, b: isize, c: isize) -> isize {
     let f = match WORLD_HOST.with(|h| h.get()) {
         Some(f) => f,
@@ -656,6 +661,111 @@ fn server_call(_: &Server, c: EeWonRowCall, item: isize, list: isize, a: isize, 
         EeWonRowCall::Compare => r as i32 as isize,
         EeWonRowCall::CanSelect => (r != 0) as isize,
         _ => 0,
+    }
+}
+
+// ---- BadUserItem (R6 WON round 34: BadUserDialog's rows, LobbyDialogHost.cpp's C++ class as it was; Internet only)
+
+/// BadUserItem's members: the six column texts (held `GUIStringData*`: name, WON id, expiry, moderator, moderator's
+/// WON id, comment), the sort keys (only the WON id 1, expiry 2 and moderator id 4 are set; the original left the
+/// others uninitialised and never read them), whether the row is the simple list's, the list's font (`mFont`), and
+/// the dialog host that compares two texts (`GUIStringData::Compare`).
+pub(crate) struct BadUser {
+    pub(crate) strings: [Cell<isize>; 6],
+    pub(crate) values: [Cell<u32>; 6],
+    pub(crate) simple: bool,
+    font: Cell<isize>,
+    host: crate::lobbydlg::EeWonLobbyDlgHostFn,
+}
+
+impl BadUser {
+    fn end(&self) {
+        // the members in reverse order: the texts from the last, the font
+        for s in self.strings.iter().rev() {
+            drop_ref(s);
+        }
+        drop_ref(&self.font);
+    }
+
+    fn compare_texts(&self, a: isize, b: isize) -> i32 {
+        match self.host {
+            // SAFETY: the dialog host answers TextCompare with no dialog
+            Some(f) => unsafe {
+                f(std::ptr::null_mut(), crate::lobbydlg::EeWonLobbyDlgOp::TextCompare, a, b, 0) as i32
+            },
+            None => 0,
+        }
+    }
+}
+
+table!(BAD_USER, BadUser, bad_user_call);
+
+/// `new BadUserItem(record, simple)`'s row: its texts (held `GUIStringData*`) and keys set after by the caller
+/// (dlgsplit.rs), as the constructor's body did.
+pub(crate) fn bad_user_new(simple: bool, host: crate::lobbydlg::EeWonLobbyDlgHostFn) -> isize {
+    let s = BadUser { strings: Default::default(), values: Default::default(), simple, font: Cell::new(0), host };
+    make(&BAD_USER, s, false).0
+}
+
+/// A bad user row's state (`None` for another row).
+pub(crate) fn bad_user_of(item: isize) -> Option<&'static BadUser> {
+    state_of::<BadUser>(item, &BAD_USER)
+}
+
+fn bad_user_call(s: &BadUser, c: EeWonRowCall, item: isize, list: isize, a: isize, b: isize, _: isize) -> isize {
+    match c {
+        // Takes the list's font and makes the row one text line high
+        EeWonRowCall::CalcDimensions => {
+            assign(&s.font, h(Op::ListFont, list, 0, 0));
+            set(item, F::Height, h(Op::FontHeight, s.font.get(), 0, 0) as i32 as isize);
+            0
+        }
+        // Draws the selection background and the text of the column being painted (the name in the simple list)
+        EeWonRowCall::Paint => {
+            let g = a;
+            let mut color = h(Op::ListTextColor, list, 0, 0) as u32;
+            let selected = get(item, F::Selected) != 0;
+            if selected {
+                color = h(Op::GfxSelFore, g, list, color as isize) as u32;
+            }
+            let mut column = 0;
+            if !s.simple {
+                column = h(Op::ListPaintColumn, list, 0, 0) as i32;
+            }
+            if (s.simple || column == -1) && selected {
+                h(Op::GfxSetColor, g, h(Op::GfxSelBack, g, list, 0) as u32 as isize, 0);
+                let width = h(Op::ListPaintWidth, list, 0, 0) as i32;
+                let height = h(Op::FontHeight, s.font.get(), 0, 0) as i32;
+                h(Op::GfxFillRect, g, pt(0, 0), pt(width, height));
+                if !s.simple {
+                    return 0;
+                }
+            }
+            if !(0..=5).contains(&column) {
+                return 0;
+            }
+            h(Op::GfxSetColor, g, color as isize, 0);
+            h(Op::GfxSetFont, g, s.font.get(), 0);
+            h(Op::GfxDrawText, g, s.strings[column as usize].get(), pt(0, 0));
+            0
+        }
+        // Orders two rows by the sort column: numerically for the ids and expiry, else by text
+        EeWonRowCall::Compare => {
+            let column = h(Op::ListSortColumn, list, 0, 0) as i32;
+            if !(0..=5).contains(&column) {
+                return (item < b) as isize;
+            }
+            let Some(o) = other_of::<BadUser>(a, &BAD_USER) else {
+                return 0;
+            };
+            let i = column as usize;
+            match column {
+                1 | 2 | 4 => s.values[i].get().wrapping_sub(o.values[i].get()) as i32 as isize,
+                _ => s.compare_texts(s.strings[i].get(), o.strings[i].get()) as isize,
+            }
+        }
+        EeWonRowCall::CanSelect => (get(item, F::Selectable) != 0) as isize,
+        EeWonRowCall::MouseDown => 0,
     }
 }
 

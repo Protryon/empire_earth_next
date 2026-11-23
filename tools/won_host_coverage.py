@@ -102,7 +102,9 @@ CHECKS = [
          rust=[(RS / "ee_won_lobby" / "src" / "lobbydlg.rs", "game_op"),
                (RS / "ee_won_lobby" / "src" / "lobbydlg.rs", "comp_op"),
                # the widget ops through the widget registry (R6 WONLobby round 19)
-               (RS / "ee_won_lobby" / "src" / "widgets.rs", "dlg_op")], allowed={}),
+               (RS / "ee_won_lobby" / "src" / "widgets.rs", "dlg_op"),
+               # the compound cases composed in Rust over one-statement cases (R6 WON round 34)
+               (RS / "ee_won_lobby" / "src" / "dlgsplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonLobbyPopupOp", header="won_lobby/lobbypopup.h",
          hosts=[LOBBY / "LobbyDialogHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
          rust=[(RS / "ee_won_lobby" / "src" / "modelobj.rs", "popup_op"),

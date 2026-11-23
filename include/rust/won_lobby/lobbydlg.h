@@ -311,6 +311,28 @@ enum class EeWonLobbyDlgOp : uint32_t {
   /// `aTitle = gLobbyResources[b].mString; aTitle.append(" "); aTitle.append(((LobbyClient*)c)->GetName());
   /// ((Label*)a)->SetText(aTitle, true)`.
   AdminTitleRes,
+  /// `((GUIStringData*)a)->Compare((GUIStringData*)b)`.
+  TextCompare,
+  /// `new GUIStringData(RecordText((const uint16_t*)a, b))` with a reference (a bad user record's text).
+  TextRecord,
+  /// `LobbyFormatString(gLobbyResources[a].mString, GUIString((GUIStringData*)b))`'s text with a reference.
+  TextFormatRes,
+  /// `new GUIString(gLobbyResources[a].mString)` (AdminTitleRes's local, freed by `TitleFree`).
+  TitleNew,
+  /// `((GUIString*)a)->append(GUIString(new GUIStringData(" ")))`.
+  TitleAppendSpace,
+  /// `((GUIString*)a)->append(((LobbyClient*)b)->GetName())`.
+  TitleAppendName,
+  /// `delete (GUIString*)a`.
+  TitleFree,
+  /// `((MultiListArea*)a)->SetString(0, 0, ChooseNetworkAdapterDialog_Default_String, NULL)`.
+  AdapterSetDefaultName,
+  /// `GUIString((const char*)a).length()` (a found file's name).
+  NameLength,
+  /// `((ListArea*)a)->InsertString(GUIString((const char*)b)` cut to `c` characters`, -1)`.
+  FileListInsertName,
+  /// `new ScrollingTextComponent` (the credits dialog's, which the object holds).
+  NewScrollText,
 };
 
 /// The inward calls (the shells' methods).
