@@ -38206,3 +38206,104 @@ eedata's area-effect record fixed after it):
   --seed 7` RESULT PASS; `random-game --box-select --orders --seed 7` RESULT PASS (BOX SELECT PASS; ORDERS PASS:
   gather, repair, repair-queued, move); `gates.sh` GATES PASS (ai-game time-cap PT 13194, units [4, 41, 40], alive
   [2, 3], classic_lua x 2; lan-game PT 2869/2858).
+
+## The UI lane, round 14: the toolkit's host switches as Rust tables, the shells one template, the game UI's call records made at the call, the settings copy, the question answers, the message box's inputs and the placements in Rust (ee_ui lle_hosts.rs, lle_hosts_tables.rs, lle_hosts_shims.rs; ee_game screens settings_form_ffi.rs, question_answers_ffi.rs, dialog_inputs_ffi.rs, placement_ffi.rs, mini_map_calls.rs, hud_cpp_consts_tests.rs; branches rust-ui14a, rust-ui14b, merged on rust-ui14, 2026-11-22)
+
+The brief: about -1,500 logic lines in the lane's files (round 13 left 2,718), real moves over declaration inlining.
+Two forks in own worktrees: ui14a the LLE toolkit, ui14b the game UI; one heavy job at a time (build/ui14/heavy.sh).
+**Lane logic 2,718 -> 1,553 (-1,165)**: toolkit 1,327 -> 673 (-654), game 1,391 -> 880 (-511); headers 1,274 -> 865.
+Whole tree (logic_lines.py, 4a437a0f6 -> da68603e0, the forks merged before origin/rust): 46,955 -> 45,780 (-1,175).
+Net C++ lines -1,130 (+1,507 -2,637) in src, include/ee and include/lle; Rust +2,617 -62. The target was not reached.
+
+### What moved
+
+- **The toolkit's hosts as Rust tables** (ui14a): UIControl's, UIObjHost's, UIForm's, the backgrounds', the list
+  boxes', the file lists', the hot keys', the font and background tables' `HostOp` switches are Rust tables (ee_ui
+  lle_hosts.rs, lle_hosts_tables.rs) whose entries call one-statement shims (`EE_UI_CASE`/`EE_UI_VOID`, lle/UIShims.h;
+  lle_hosts_shims.rs); the switch frames are gone. The toolkit classes' members are public, so a shim needs no friend.
+- **Toolkit records** (ui14a): the packed float buffers are one `UIF4`; UIControl's construction and its border
+  colours (`sDarkBorder`, `sLightBorder`) are Rust's; the UI database's file names (`DB_NAMES`) Rust's; UIListBox's
+  constructor and destructor inline.
+- **The shells one template** (ui14b): the seven `EEUIShell*` classes are `EEUIShellOf<B, D>` over the toolkit base:
+  every override one statement, BaseCall's common cases written once, a kind's extras `D::Extra`; `Make`, `Op` and the
+  base-call routing are Rust (`ee_screens_shell_make`, `ee_screens_shell_op_at`, shells_ffi.rs `cpp_shell`), `Op`
+  finding the shell by the control's address instead of a dynamic_cast; `EEShellText` is a shell virtual.
+  EEUIShell.h/.cpp 217 -> 68.
+- **Call records made at the call** (ui14b): the main form's `EEUIFMGFormCall`, the status box's, the improvement
+  button's and the UI manager's records are built as a temporary (one constructor per call kind, `Ptr()`), so each
+  member is one forward to its Rust; the UI manager's `HostOp` and the action queues' host are one-statement shims.
+- **Bodies in Rust** (ui14b): the settings form's record copy (settings_form_ffi.rs over `EeAppSettingsFields`; the
+  X-macro gone), the screens' question answers and their callback tables (question_answers_ffi.rs), the message box's
+  Display inputs (dialog_inputs_ffi.rs), the lobby's option setter, `UpdateCursorKind`, the placements' Initialize,
+  Terminate and ClearGhostUnits (placement_ffi.rs), the main form's constructor, the mini map's RustOp
+  (mini_map_calls.rs), the selection box's constructor and destructor.
+- **Asserts as tests** (ui14b): the game UI's constant static_asserts are Rust tests reading the headers
+  (hud_cpp_consts_tests.rs, the editor lane's pattern); the layout asserts stay in C++.
+- `EECBUIListBox`'s ten `using` lines are gone (round 13 made the accessors public).
+- Behaviour: none intended. The shells' `Make` runs in the most derived class (the same address as the key);
+  `EEUIShellControl::mKind` (unread) is gone; the improvement button's discarded ButtonUp reason lives in its record.
+
+### Lessons
+
+- **cbindgen copies a module-level `extern "C"` block into the header**, and **does not see `#[no_mangle]` functions
+  a macro makes**: the shim tables' C declarations are written by hand in lle/UIShims.h, and the Rust side keeps its
+  `extern "C"` declarations out of the exported module's top level.
+- **Shim parameter-name macros clash with the hosts' `#define`s** (a parameter named like a Windows or toolkit macro
+  expands); name the macro parameters distinctly.
+- **Don't edit files while waiting on the heavy lock**: build.py stages the tree when it starts, so a build queued
+  behind the lock compiles a half-edited tree.
+- Python text-mode writes on Windows turn an LF file into CRLF (one commit had to put the shells' files back): open
+  with `newline=""`. The other way, Git Bash `sed -i` writes this CRLF file back as LF: resolve its merge conflicts
+  with a byte-exact tool.
+- A call record built as a temporary (a constructor and `Ptr()`) turns a member that filled the record field by field
+  into one forward.
+
+### The thread start race, a third sighting
+
+The saveload matrix's full run had one failure: plains-medium-3ai seed 3's game loaded at 1,000 s faulted at start
+(c0000005 in `ee_ts_thread_receive` under the mouse pointer's thread, `ee_rts_mouse_pointer_main`, before any tick:
+"the loaded game wrote no tick"). The same race as the two earlier sightings (under RTSGraphics::Main and
+EEDataPreLoading::Main); the case alone was identical to the end and `saveload expect: PASS`. Not this round's: a
+thread receiving at its start, before the load.
+
+### What only the tours (or a person) exercise
+
+Cumulative with rounds 7-13: the toolkit's host tables (every form's paint, input and layout: every menu, the
+settings tabs, the lobby), the shells' template (every shelled control: the menus, the HUD, the editor), the
+settings copy (the settings tabs), the question answers (the save, resign, restart, exit and campaign editor
+questions; the editor tour's campaign editor step reaches the last), the placements (the walls and gates: only a
+person places a wall).
+
+### Gates
+
+On the final tree (the forks merged at da68603e0, then origin/rust a85f71862 at 60f7b2c0b: one conflict,
+PORT_LEARNINGS.md's end, both kept; strip_markers --check 0 files; batch 18 had not landed):
+- both builds 0/0 (EE-AOC 412 inputs, EE-SIM 413) and the test profile 0/0 (412); the Rust gate PASS (header
+  included);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (oracle 212, late 214, space 210, calamity 222, units 175, effects
+  6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests);
+- the plain saveload exit 0; the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt` `saveload expect: FAIL (1)` (the start race above), the case alone PASS;
+- scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062 lines); `eedata.py check` and
+  `cppgate` PASS;
+- through slot.py, the test profile and the main checkout's tree: the tour `--input-check --view-check
+  --play-seconds 120 --seed 7` RESULT PASS (F3 ok, VIEW CHECK PASS); `--exercise editor` (CAMPAIGN EDITOR PASS, RESULT
+  PASS); `random-game --box-select --orders --seed 7` (BOX SELECT PASS; ORDERS PASS: gather, repair, repair-queued,
+  move). The tour's captures against round 13's exe (the same tour): the settings tabs, single player and random map
+  set-up equal pixel for pixel, the main menu and the closed settings differ only in the build label (216 pixels);
+  the game frames differ as two live games do;
+- the lobby captures (lan_game.py, then lan_capture_compare.py against round 13's exe): every lobby capture identical
+  but the two blinking carets (the create-game dialog's name box, 15 pixels at x 575; the staging screen, 15 pixels at
+  x 121); `RESULT PASS lan-game PT host=2824 joiner=2817`;
+- round 13's open check, the lobby captures of round 13's exe against b6f7d06bd's (the enums and the key access ui13a
+  moved): the same, carets only;
+- `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 11714, units [4, 34, 36], alive [2, 3], classic_lua x
+  2; lan-game PT 2972/2966).
+- Not run: the POSIX builds.
+
+### What is left
+
+UIListBox.h (99), UIForm's and UIManager's declarations, UILBString, the combo box's and controls table's C++ hosts;
+EEScreens.cpp's about 45 scratch statics holding C++ objects, EEUIFMainGame's form-call record fields and own members,
+the main group's print host, the status box's icon struct (docs/progress/ui-cluster.md).
