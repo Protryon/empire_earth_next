@@ -58,7 +58,6 @@ public:
     LobbyServer() : LobbyModelObject(EeWonModelKind::Server) {}
     void Disconnect() { this->M(LobbyMC::ServerDisconnect, (intptr_t)time(NULL)); }
     bool HasAddress(const std::string& inName) { return this->M(LobbyMC::ServerHasAddress, (intptr_t)inName.data(), (intptr_t)inName.length()) != 0; }
-    void ReadDirEntity(DirEntity* inEntity);
     void UpdateFriends() { this->M(LobbyMC::ServerUpdateFriends); }
     void ClearFriendLocations() { this->M(LobbyMC::ServerClearFriendLocations, (intptr_t)time(NULL)); }
     void AddClientToGroup(LobbyClient* inClient, unsigned char inFlags, LobbyGroup* inGroup)
@@ -89,7 +88,7 @@ public:
 class LobbyServerList : public LobbyModelObject {
 public:
     LobbyServerList() : LobbyModelObject(EeWonModelKind::ServerList) {}
-    void UpdateFromDirectory(const DirEntityList& inEntities);
+    void UpdateFromDirectory(const DirList& inEntities); // dirread.rs (ReadDirEntity among it)
     LobbyServer* FindServer(const IPAddr& inAddress) { return (LobbyServer*)this->M(LobbyMC::ServerListFind, (intptr_t)inAddress.GetValue()); }
     size_t GetCount() const { return (size_t)this->M(LobbyMC::ServerListCount); }
     bool IsEmpty() const { return this->GetCount() == 0; }

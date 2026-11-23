@@ -207,12 +207,12 @@ static intptr_t Route(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, intptr_t 
     case O::StatusOpRust: return (intptr_t)US(a)->GetRust();
     case O::EvModeratedGroup: Broadcast(ClientModeratedEvent(C(a), (int)b, G(c)->GetName(), (int)d, (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true, GUIString(RO(e)->Text(EE_WON_RTT_COMMENT)))); return 0;
     case O::EvModeratedServer: Broadcast(ClientModeratedEvent(C(a), (int)b, S(c)->GetName(), (int)d, (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true, GUIString(RO(e)->Text(EE_WON_RTT_COMMENT)))); return 0;
-    case O::DirListFree: delete reinterpret_cast<DirEntityList*>(a); return 0;
+    case O::DirListFree: delete reinterpret_cast<DirList*>(a); return 0;
     case O::IterFree: delete reinterpret_cast<LobbyClientIterator*>(a); return 0;
     case O::EvAlertTimed: Broadcast(AlertEvent(4, (int)a, (unsigned long)RO(b)->Num(EE_WON_RTF_TIME), GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT))))); return 0;
     case O::EvAlertPlain: Broadcast(AlertEvent(4, (int)a, 0, GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT))))); return 0;
-    case O::DirEntitiesNew: return (intptr_t) new DirEntityList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));
-    case O::DirListEmpty: return reinterpret_cast<DirEntityList*>(a)->empty();
+    case O::DirEntitiesNew: return (intptr_t) new DirList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));
+    case O::DirListEmpty: return reinterpret_cast<DirList*>(a)->empty();
     case O::GroupQueryNew: return HeldOp(RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29));
     case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone, L), 0); return 0;
     case O::EventComponent: return (intptr_t)E(a)->mComponent;

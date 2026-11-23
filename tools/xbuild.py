@@ -998,6 +998,9 @@ WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
 # R6 WON round 33's network moves (CDKey whole, DirMakeEntity, RustServerOp's settings and requests, RoutingOp's
 # members, the user status op's settings, ThreadBase::Stop) against the original statements copied into the driver
 WON_TESTS["won_net33_test"] = WON_TESTS["won_serverop_test"]
+# R6 WON round 34: the directory's entities whole in Rust (dirlist.rs, dirread.rs, the C++ DirList) against
+# DirEntity and its readers as they were (won_direntity_orig.h and the driver's copies)
+WON_TESTS["won_dir34_test"] = [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"]
 # the lobby model reading the routing server's records in Rust (modelobj.rs route_record_op) against RoutingOp.cpp's
 # copies, RoutingLogic.cpp's cases and LobbyModelHost.cpp's reads as they were, on real routing ops (golden:
 # rust/crates/ee_won_lobby/src/golden_routerec.txt); won_servconn_test's units (a connection binds the core)

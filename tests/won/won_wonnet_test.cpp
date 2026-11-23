@@ -77,7 +77,7 @@ static void CloseMessageCallback(UIForm* inForm) { gUserInterface->CloseForm(gUI
 static void CancelOpCallback(UIForm* inForm) { reinterpret_cast<AsyncOp*>(inForm)->Kill(true); }
 static void HostGameCallback(UIForm* inForm) { ee_won_wonnet_call(reinterpret_cast<EEWonNet*>(inForm)->mRust, Call::CreateGame, 0, 0, 0); }
 static DirEntityList sEntities;
-static DirEntityList::const_iterator sEntity;
+static size_t sEntity; // the entity at (R6 WON round 34: the host reads the list by index)
 static FSFileSpec sFile;
 static NEProtocol* sProtocol;
 static EEUICWNRBLine sRoomLine;
