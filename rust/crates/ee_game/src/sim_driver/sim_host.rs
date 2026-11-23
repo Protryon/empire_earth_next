@@ -6,6 +6,7 @@
 //! formulas', the unit-list target search's, the missiles', EEMap's sight).
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
+use crate::gamecpp as gc;
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::GeTransformation;
@@ -73,11 +74,11 @@ fn lines(list: usize) -> Vec<String> {
 
 /// The form on top's id (0: none).
 pub fn top_form() -> u32 {
-    if h(O::UiPresent, 0, &[]) == 0 {
+    if gc::h(gc::O::DuHaveUi, 0, &[]) == 0 {
         return 0;
     }
     let _lock = UiLock::hold();
-    let form = h(O::CurrentForm, 0, &[]) as usize;
+    let form = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
     if form != 0 {
         form_id(form) as u32
     } else {
@@ -88,9 +89,9 @@ pub fn top_form() -> u32 {
 /// The form on top's class name (a form shell: the class its kind replaces; a message box is EEUIFError).
 pub fn top_form_class() -> String {
     let mut class = "none".to_string();
-    if h(O::UiPresent, 0, &[]) != 0 {
+    if gc::h(gc::O::DuHaveUi, 0, &[]) != 0 {
         let _lock = UiLock::hold();
-        let form = h(O::CurrentForm, 0, &[]) as usize;
+        let form = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
         let shell = if form != 0 { h(O::FormShellOf, form, &[]) as usize } else { 0 };
         if shell != 0 {
             class = ht(O::ShellKindName, shell, 0);
@@ -104,7 +105,7 @@ pub fn top_form_class() -> String {
 /// The control's trigger fired: 0, 1 the form is not on top or has no such control, 2 the control has no trigger.
 pub fn click(form: u32, index: u32) -> i32 {
     let _lock = UiLock::hold();
-    let top = h(O::CurrentForm, 0, &[]) as usize;
+    let top = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
     if top == 0 || form_id(top) != form as c_ulong || index as c_ulong >= control_count(top) {
         return 1;
     }
@@ -126,7 +127,7 @@ fn combo(form: usize, index: c_long) -> usize {
 /// The lobby combo's lines and selection; None when the control is not a combo on the lobby.
 pub fn combo_lines(index: c_long) -> Option<(Vec<String>, c_long)> {
     let _lock = UiLock::hold();
-    let form = h(O::CurrentForm, 0, &[]) as usize;
+    let form = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
     if form == 0 || form_id(form) != FORM_LOBBY {
         return None;
     }
@@ -144,7 +145,7 @@ pub fn combo_lines(index: c_long) -> Option<(Vec<String>, c_long)> {
 /// The lobby combo's selection set; false when the lobby went away.
 pub fn combo_select(index: c_long, line: c_ulong) -> bool {
     let _lock = UiLock::hold();
-    let c = combo(h(O::CurrentForm, 0, &[]) as usize, index);
+    let c = combo(gc::h(gc::O::SsCurrentForm, 0, &[]) as usize, index);
     if c == 0 {
         return false;
     }
@@ -154,7 +155,7 @@ pub fn combo_select(index: c_long, line: c_ulong) -> bool {
 
 /// The load screen's, the play scenario screen's or the campaign scenario select form's file list (0: not on top).
 fn screen_list(which: i32) -> usize {
-    let form = h(O::CurrentForm, 0, &[]) as usize;
+    let form = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
     let forms = [FORM_LOAD, FORM_LOAD_SCENARIO, FORM_CAMPAIGN_SELECT];
     let controls = [
         h(O::SpLoadGameFileList, 0, &[]) as c_ulong,
@@ -199,7 +200,7 @@ pub fn list_select(which: i32, line: c_ulong) -> bool {
 /// The control of the form on top whose trigger is the screen event `code` (-1: none, or another form).
 pub fn control_with_event(form: u32, code: u32) -> c_long {
     let _lock = UiLock::hold();
-    let top = h(O::CurrentForm, 0, &[]) as usize;
+    let top = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
     if top == 0 || form_id(top) != form as c_ulong {
         return -1;
     }
@@ -219,13 +220,13 @@ pub fn control_with_event(form: u32, code: u32) -> c_long {
 
 /// The physics' clock and state.
 pub fn physics() -> EeSimDriverPhysics {
-    let mut p = EeSimDriverPhysics { present: h(O::PhysicsPresent, 0, &[]) != 0, ..Default::default() };
+    let mut p = EeSimDriverPhysics { present: gc::h(gc::O::RcPhysicsPresent, 0, &[]) != 0, ..Default::default() };
     if !p.present {
         return p;
     }
-    p.timer_running = h(O::PhysicsTimerRunning, 0, &[]) != 0;
-    p.game_over = h(O::PhysicsGameOver, 0, &[]) != 0;
-    p.game_ms = h(O::PhysicsGameTime, 0, &[]) as c_long;
+    p.timer_running = gc::h(gc::O::SsTimerRunning, 0, &[]) != 0;
+    p.game_over = gc::h(gc::O::FwGameOver, 0, &[]) != 0;
+    p.game_ms = gc::h(gc::O::DwGameTime, 0, &[]) as c_long;
     p.pt = h(O::PhysicsTicksDone, 0, &[]) as c_ulong;
     p
 }
@@ -234,7 +235,7 @@ pub fn physics() -> EeSimDriverPhysics {
 pub fn editor_up() -> bool {
     let _lock = UiLock::hold();
     let editor = h(O::EditorForm, 0, &[]);
-    editor != 0 && h(O::CurrentForm, 0, &[]) == editor && h(O::MapPresent, 0, &[]) != 0
+    editor != 0 && gc::h(gc::O::SsCurrentForm, 0, &[]) == editor && h(O::MapPresent, 0, &[]) != 0
 }
 
 /// The idle human as the harness's civilization pre-empt leaves it (ai_game.py: the civilization builder opened and
@@ -244,14 +245,14 @@ pub fn editor_up() -> bool {
 /// computers stay at war with each other; an observer seat, or its units removed, ends the single-player game at
 /// once).
 pub fn prepare_human(human_out: bool) {
-    let human = h(O::CurrentPlayer, 0, &[]) as usize;
+    let human = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
     h(O::PlayerSetCivilizationChosen, human, &[1]);
     h(O::PlayerSetCivilizationLocked, human, &[1]);
     if !human_out {
         return;
     }
     for i in 1..h(O::NumPlayers, 0, &[]) {
-        let other = h(O::GetPlayer, 0, &[i]) as usize;
+        let other = gc::h(gc::O::TbWorldPlayer, 0, &[i]) as usize;
         if other == 0 || other == human {
             continue;
         }
@@ -293,16 +294,16 @@ pub fn no_human_defeat_hits(op: c_long) -> c_long {
 
 /// The player's first living building (0: none).
 fn first_building(player: c_ulong) -> usize {
-    let p = h(O::GetPlayer, 0, &[player as i64]) as usize;
-    let mut u = if p != 0 { h(O::PlayerFirstUnit, p, &[]) as usize } else { 0 };
+    let p = gc::h(gc::O::TbWorldPlayer, 0, &[player as i64]) as usize;
+    let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
     while u != 0 {
-        if h(O::UnitComplex, u, &[]) != 0
+        if gc::h(gc::O::UnComplex, u, &[]) != 0
             && h(O::UnitHitPoints, u, &[]) as c_long > 0
             && h(O::UnitIsBuilding, u, &[]) != 0
         {
             return u;
         }
-        u = h(O::UnitNext, u, &[]) as usize;
+        u = gc::h(gc::O::UnNext, u, &[]) as usize;
     }
     0
 }
@@ -310,16 +311,16 @@ fn first_building(player: c_ulong) -> usize {
 /// --flare: the idle human's flare at the building, told to the human's allies as EEMSendFlare::Execute tells them
 /// (EEPlayer::FlareReceived): the AIs' answer to an ally's flare, which no computer sends.
 pub fn flare(player: c_ulong) -> EeSimDriverSpot {
-    let human = h(O::CurrentPlayer, 0, &[]) as usize;
+    let human = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
     let spot = first_building(player);
     if human == 0 || spot == 0 {
         return EeSimDriverSpot::default();
     }
     let (x, y) = (h(O::UnitTileX, spot, &[]) as c_long, h(O::UnitTileY, spot, &[]) as c_long);
     let allies: Vec<usize> =
-        (0..h(O::PlayerAllyCount, human, &[])).map(|k| h(O::PlayerAllyAt, human, &[k]) as usize).collect();
+        (0..h(O::PlayerAllyCount, human, &[])).map(|k| gc::h(gc::O::PlAllyAt, human, &[k]) as usize).collect();
     for &a in &allies {
-        h(O::PlayerFlareReceived, a, &[human as i64, x as i64, y as i64]);
+        gc::h(gc::O::PlFlareReceived, a, &[human as i64, x as i64, y as i64]);
     }
     EeSimDriverSpot { found: true, x, y, count: allies.len() as c_ulong }
 }
@@ -341,13 +342,13 @@ pub fn volcano_boulders() -> Vec<c_ulong> {
     let boulder = h(O::VolcanoProjectileType, 0, &[]);
     let mut out = Vec::new();
     for i in 0..h(O::NumPlayers, 0, &[]) {
-        let p = h(O::GetPlayer, 0, &[i]) as usize;
-        let mut u = if p != 0 { h(O::PlayerFirstUnit, p, &[]) as usize } else { 0 };
+        let p = gc::h(gc::O::TbWorldPlayer, 0, &[i]) as usize;
+        let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
         while u != 0 {
             if h(O::UnitType, u, &[]) == boulder {
                 out.push(h(O::UnitId, u, &[]) as c_ulong);
             }
-            u = h(O::UnitNext, u, &[]) as usize;
+            u = gc::h(gc::O::UnNext, u, &[]) as usize;
         }
     }
     out
@@ -381,8 +382,8 @@ pub fn engine_ids() -> Vec<String> {
 
 /// A unit class's value in a sample: the cost of the player's tech node of the class's technology, every resource.
 pub fn unit_value(player: u64, technology: c_long, unit_type: c_ulong) -> c_long {
-    let tree = h(O::PlayerTechnologies, player as usize, &[]) as usize;
-    let node = if tree != 0 { h(O::TreeGet, tree, &[technology as i64]) as usize } else { 0 };
+    let tree = gc::h(gc::O::PlTechnologies, player as usize, &[]) as usize;
+    let node = if tree != 0 { gc::h(gc::O::PwTreeGet, tree, &[technology as i64]) as usize } else { 0 };
     let mut value: c_long = 0;
     if node != 0 && h(O::NodeData, node, &[]) != 0 {
         for r in 2..=6 {
@@ -449,9 +450,9 @@ fn combat_capture_sweep() {
 fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
     let (missile, torpedo) = (h(O::MissileCategory, 0, &[]), h(O::TorpedoCategory, 0, &[]));
     let mut all = Vec::new();
-    let mut u = if player != 0 { h(O::PlayerFirstUnit, player, &[]) as usize } else { 0 };
+    let mut u = if player != 0 { gc::h(gc::O::PlFirstUnit, player, &[]) as usize } else { 0 };
     while u != 0 {
-        let c = h(O::ComplexOf, u, &[]) as usize;
+        let c = gc::h(gc::O::UnComplex, u, &[]) as usize;
         if c != 0
             && h(O::UnitHitPoints, u, &[]) as c_long > 0
             && h(O::UnitHasStats, u, &[]) != 0
@@ -463,7 +464,7 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
         {
             all.push(c);
         }
-        u = h(O::UnitNext, u, &[]) as usize;
+        u = gc::h(gc::O::UnNext, u, &[]) as usize;
     }
     all
 }
@@ -478,7 +479,7 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
 fn list_search_sweep() {
     capture_only(tag(b"CBSL"));
     for p in 1..h(O::NumPlayers, 0, &[]) {
-        let player = h(O::GetPlayer, 0, &[p]) as usize;
+        let player = gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize;
         if player == 0 {
             continue;
         }
@@ -514,7 +515,7 @@ fn missile_sweep() {
     capture_only_list(&[tag(b"CBMA"), tag(b"CBMH"), tag(b"CBGI"), tag(b"CBWI")]);
     cap::ee_app_capture_exclusive(true);
     let (missile, torpedo) = (h(O::MissileCategory, 0, &[]), h(O::TorpedoCategory, 0, &[]));
-    let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| h(O::ClassAt, 0, &[k]) as usize).collect();
+    let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| gc::h(gc::O::UcAt, 0, &[k]) as usize).collect();
     let mut classes = Vec::new();
     let mut launchers = Vec::new();
     for &class in &table {
@@ -532,7 +533,7 @@ fn missile_sweep() {
     }
     let mut armed: Vec<Vec<usize>> = Vec::new();
     for p in 1..h(O::NumPlayers, 0, &[]) {
-        let all = armed_units(h(O::GetPlayer, 0, &[p]) as usize, true, false);
+        let all = armed_units(gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize, true, false);
         if !all.is_empty() {
             armed.push(all);
         }
@@ -555,7 +556,7 @@ fn missile_sweep() {
                     class,
                     &[h(O::ComplexTileX, a, &[]), h(O::ComplexTileY, a, &[]), h(O::PlayerId, owner, &[]), a as i64],
                 ) as usize;
-                let m = if created != 0 { h(O::UnitGetComplex, created, &[]) as usize } else { 0 };
+                let m = if created != 0 { gc::h(gc::O::UnGetComplex, created, &[]) as usize } else { 0 };
                 if m == 0 {
                     continue;
                 }
@@ -563,12 +564,12 @@ fn missile_sweep() {
                 let mut start = unsafe { *(h(O::ComplexLocation, a, &[]) as *const GeTransformation) };
                 start.m[2][3] += 1.5;
                 h(O::ComplexSetLocation, m, &[&start as *const GeTransformation as i64]);
-                h(
-                    O::ComplexSetLauncherClass,
+                gc::h(
+                    gc::O::CxSetLauncherClass,
                     m,
                     &[if launchers[k] != 0 { launchers[k] } else { h(O::ComplexClass, a, &[]) as usize } as i64],
                 );
-                h(O::ComplexSetOwner, m, &[a as i64]);
+                gc::h(gc::O::CxSetOwner, m, &[a as i64]);
                 let mut at = [0f32; 3];
                 h(O::ComplexPosition, target, &[at.as_mut_ptr() as i64]);
                 let goal = if ((i + k) & 1) == 0 {
@@ -577,10 +578,10 @@ fn missile_sweep() {
                     hf(O::NewAttackGround, 0, &[], &at)
                 };
                 h(O::ComplexSetGoal, m, &[goal]);
-                hf(O::ComplexSetVelocity, m, &[], &[hd(O::ComplexVelocity, a, &[], &[])]);
+                gc::hf(gc::O::CxSetVelocity, m, &[], &[hd(O::ComplexVelocity, a, &[], &[])]);
                 hf(O::ClassLaunchProjectile, class, &[m as i64], &at);
                 if h(O::ComplexFlightTime, m, &[]) as c_long == 0 {
-                    h(O::ComplexSetFlightTime, m, &[300]);
+                    gc::h(gc::O::CxSetFlightTime, m, &[300]);
                 }
                 // onto the map, as the next tick's EEPhysics::FlushWorld puts a launched shot
                 h(O::PhysicsFlushPlacements, 0, &[]);
@@ -595,7 +596,7 @@ fn missile_sweep() {
                     let elapsed = if tick != 0 { tick } else { 1 };
                     let flight = h(O::ComplexFlightTime, m, &[]) as c_long;
                     if flight != 0 {
-                        h(O::ComplexSetFlightTime, m, &[if flight > elapsed { flight - elapsed } else { 0 } as i64]);
+                        gc::h(gc::O::CxSetFlightTime, m, &[if flight > elapsed { flight - elapsed } else { 0 } as i64]);
                     }
                     if h(O::ClassWaterImpact, class, &[m as i64]) != 0
                         || h(O::ClassGroundImpact, class, &[m as i64]) != 0
@@ -618,12 +619,12 @@ pub fn sight_capture_sweep() {
         return;
     }
     let radius = hd(O::WonderSightRadius, 0, &[], &[]);
-    let map_size = h(O::MapSize, 0, &[]) as c_long;
+    let map_size = gc::h(gc::O::TeMapSize, 0, &[]) as c_long;
     let size = map_size as f32;
     let points = [[size * 0.5, size * 0.5], [5.5, 7.5], [size - 3.25, size * 0.3]];
-    let n = h(O::WorldNumPlayers, 0, &[]) as c_ulong;
+    let n = gc::h(gc::O::MmNumPlayers, 0, &[]) as c_ulong;
     for p in 1..n {
-        let player = h(O::WorldPlayersAt, 0, &[p as i64]) as usize;
+        let player = gc::h(gc::O::SsWorldPlayer, 0, &[p as i64]) as usize;
         if player == 0 {
             continue;
         }
@@ -635,7 +636,7 @@ pub fn sight_capture_sweep() {
         hf(O::MapRemoveSight, player, &[1], &[points[0][0] + 2.0, points[0][1] - 1.0, radius * 0.5]);
     }
     if n > 1 {
-        let last = h(O::WorldPlayersAt, 0, &[(n - 1) as i64]) as usize;
+        let last = gc::h(gc::O::SsWorldPlayer, 0, &[(n - 1) as i64]) as usize;
         h(O::MapExploreUnseen, last, &[]);
         h(O::MapFogSeen, last, &[]);
     }
@@ -684,7 +685,7 @@ pub fn sweep(kind: i32, arg: c_long) {
         EE_SIM_DRIVER_SWEEP_UNITS => unsafe { sys::ee_units_unit_sweep(arg as i64) }, // --unit-sweep
         EE_SIM_DRIVER_SWEEP_MINUTE => {
             // every game minute: the mini map's cells (MMSN; ee_game app world_capture.rs), the tile sight (TSGT)
-            if h(O::MiniMapPresent, 0, &[]) != 0 {
+            if gc::h(gc::O::DkHaveMiniMap, 0, &[]) != 0 {
                 h(O::MiniMapSnapshot, 0, &[]);
             }
             crate::sight_capture::ee_app_sight_open_whole(SIGHT_SNAPSHOT, std::ptr::null());

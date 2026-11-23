@@ -342,26 +342,15 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::MouseSetPosition: gMouse->mPosition = GE2DPoint(f[0], f[1]);
         break;
     // the world
-    case O::PhysicsFlush: gPhysics->FlushWorld();
-        break;
-    case O::MapPresent: return gWorld.mMap != NULL;
     case O::MapMesh: return P64(gWorld.mMap != NULL ? gWorld.mMap->mTerrainMesh.GetRust() : NULL);
     case O::MapTile: return P64(gWorld.mMap->RTSMap::GetTile((long)a[0], (long)a[1]));
     case O::MapGetTile: return P64(gWorld.GetMap()->GetTile((long)a[0], (long)a[1]));
-    case O::TileFirstNode: return P64(((EEMapTile*)p)->mUnits);
-    case O::NodeNext: return P64(((RTSTileUnitNode*)p)->mNext);
-    case O::NodeUnit: return P64(((RTSTileUnitNode*)p)->mUnit);
     case O::NodeUnitPlayer: return P64(UN->GetPlayer());
     case O::NodeUnitId: return UN->GetUnitID();
     case O::PlayerId: return PL->mPlayerID;
     case O::TerrainColorType: return EETerrainTable::Get((long)a[0])->mColorType;
     case O::ViewportRect: return P64(&gViewport.GetViewRectangle());
-    case O::RandomSeed: return gUserInterface->mRandomSeed;
-    case O::ResolveUnit: return P64(static_cast<EEUnit*>(RTSResolveUnitID((uint32_t)a[0])));
-    case O::WorldNumPlayers: return gWorld.mNumPlayers;
-    case O::WorldPlayersAt: return P64(gWorld.mPlayers[a[0]]);
     case O::WorldGetNumPlayers: return gWorld.GetNumPlayers();
-    case O::WorldGetPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
     case O::WorldMaxPlayers: return gMaxPlayers;
     case O::WorldPopulationLimit: return gWorld.mPopulationLimit;
     case O::WorldWondersToWin: return gWorld.mNumberOfWondersToWin;
@@ -377,14 +366,11 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::OptionsCheatCodes: return gWorld.mGameOptions.mCheatCodes;
     case O::OptionsPlayerColor: return gWorld.mGameOptions.mPlayers[a[0]].mColor;
     case O::OptionsPlayerB36: return gWorld.mGameOptions.mPlayers[a[0]].mB36;
-    case O::PlayerFirstUnit: return P64(PL->mFirstUnit);
     case O::PlayerColor: return P64(&PL->mColor);
-    case O::PlayerTechTree: return P64(PL->GetTechTree());
     case O::PlayerResourceCap: return PL->mResourceCaps[a[0]];
     case O::PlayerEnemy: return (long)PL->mEnemies[a[0]];
     case O::PlayerSharedLos: return PL->mSharedLOS;
     case O::PlayerPurchasedUpgrades: return PL->mCivilization.mPurchasedUpgrades.size();
-    case O::PlayerComputer: return P64(PL->mComputerPlayer);
     case O::TreeCurrentEpoch: return (long)((EETechTree*)p)->mCurrentEpoch;
     case O::TreeStartEpoch: return (long)((EETechTree*)p)->mStartEpoch;
     case O::TreeEndEpoch: return (long)((EETechTree*)p)->mEndEpoch;
@@ -397,16 +383,11 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::ComputerIgnoreOthers: return CP->mIgnoreOthers;
     case O::ComputerCanGather: return CP->mCanGather;
     case O::UnitId: return UN->GetUnitID();
-    case O::UnitNext: return P64(static_cast<EEUnit*>(UN->mNext));
     case O::UnitType: return (long)UN->mUnitClass->mUnitType;
     case O::UnitTileX: return (long)UN->mTileX;
     case O::UnitTileY: return (long)UN->mTileY;
     case O::UnitIsEditorSelected: return UN->mIsEditorSelected;
     // the ghosts
-    case O::GhostsLock: gWorld.mGhostUnitsLock->Enter();
-        break;
-    case O::GhostsUnlock: gWorld.mGhostUnitsLock->Leave();
-        break;
     case O::GhostsChanged: gGhostUnitsChanged = true;
         break;
     case O::GhostsClear: gWorld.ClearGhostUnits();
@@ -437,7 +418,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::GhostSetCanPlace: GH->mCanPlace = a[0] != 0;
         break;
     // the scenario manager
-    case O::Sm: return P64(gWorld.mScenarioManager);
     case O::SmTriggerCount: return SM->mTriggers.size();
     case O::SmTriggerAt: return P64(SM->mTriggers[a[0]]);
     case O::SmConditionCount: return SM->mConditions.size();
@@ -587,8 +567,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::MemPosition: return MF->GetPosition(*(long*)a[0]);
     case O::MemData: return P64(MF->GetData());
     case O::HeaderNew: return P64(new EEPSaveGameHeader());
-    case O::HeaderFree: delete (EEPSaveGameHeader*)p;
-        break;
     case O::HeaderLoad: return ((EEPSaveGameHeader*)p)->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, *(FSMemoryFile*)a[0]);
     case O::ChunksNew: return P64(new std::vector<FSPersistent*>());
     case O::ChunksBuild: BuildSaveGameChunks(*CH);
@@ -614,7 +592,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::UiFormControl: return P64(UF->GetControl((unsigned long)a[0]));
     case O::UiFormId: return UF->GetFormID();
     case O::UiFormShellOf: return P64(EEUIShell::Of(UF));
-    case O::UiFormCurrent: return P64(gUIManager->GetCurrentForm());
     case O::UiFormCount: return gUIManager->GetFormCount();
     case O::UiFormStacked: return P64(gUIManager->GetStackedForm((unsigned long)a[0]));
     case O::UiPop: gUIManager->Pop();
@@ -651,7 +628,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::CivDeferredCount: return CV->mDeferredUpgrades.size();
     case O::CivDeferredAt: return (unsigned long)CV->mDeferredUpgrades[a[0]];
     case O::EditorCivilization: return P64(&ED->mC1A0);
-    case O::WorldCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
     case O::PlayerCivilization: return P64(&PL->mCivilization);
     case O::PlayerCivilizationChosen: return PL->mCivilizationChosen;
     case O::PlayerCivilizationLocked: return PL->mCivilizationLocked;
@@ -665,16 +641,12 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
                                   *(std::vector<EECivUpgrade>*)a[1]);
     case O::CivApply: return EEApplyCivilizationFile(*(UString*)a[0], PL);
     case O::WideNew: return P64(new UWideString());
-    case O::WideFree: delete (UWideString*)p;
-        break;
     case O::UpgradesNew: return P64(new std::vector<EECivUpgrade>());
     case O::UpgradesCount: return UPG->size();
     case O::UpgradesAt: return (unsigned long)(*UPG)[a[0]];
     case O::UpgradesFree: delete UPG;
         break;
     case O::NarrowNew: return P64(new UString(s));
-    case O::NarrowFree: delete (UString*)p;
-        break;
     case O::SetFreeCamera: gFreeCamera = a[0] != 0;
         break;
     case O::SetAllowCustomCivs: gAllowCustomCivs = a[0] != 0;

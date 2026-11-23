@@ -5,6 +5,7 @@
 //! their formats are the C++'s.
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
+use crate::gamecpp as gc;
 use std::ffi::{c_long, c_ulong};
 
 use ee_render::gx::cformat::format_g;
@@ -100,7 +101,7 @@ pub fn file_digest(name: &str, out: &mut Vec<String>) {
     h(O::SpecClose, spec, &[]);
     let done = |out: &mut Vec<String>, line: &str| {
         out.push(line.into());
-        h(O::HeaderFree, header, &[]);
+        gc::h(gc::O::SsDeleteHeader, header, &[]);
         h(O::MemFree, memory, &[]);
         h(O::SpecFree, spec, &[]);
     };
@@ -321,8 +322,8 @@ pub fn text_elements(out: &mut Vec<String>) {
         ));
     }
     let mut s = "  players".to_string();
-    for p in 0..h(O::WorldNumPlayers, 0, &[]) {
-        let player = h(O::WorldGetPlayer, 0, &[p]) as usize;
+    for p in 0..gc::h(gc::O::MmNumPlayers, 0, &[]) {
+        let player = gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize;
         s += &format!(" |{}", if player != 0 { ht(O::PlayerName, player, 0) } else { "-".into() });
     }
     out.push(s);
@@ -807,12 +808,12 @@ pub fn form_digest(first: c_ulong, last: c_ulong, group: c_long, out: &mut Vec<S
 pub fn players_digest(out: &mut Vec<String>) {
     let n = h(O::WorldGetNumPlayers, 0, &[]) as c_ulong;
     for p in 0..n {
-        let q = h(O::WorldGetPlayer, 0, &[p as i64]) as usize;
+        let q = gc::h(gc::O::TbWorldPlayer, 0, &[p as i64]) as usize;
         if q == 0 {
             out.push(format!("  player {p} none"));
             continue;
         }
-        let t = h(O::PlayerTechTree, q, &[]) as usize;
+        let t = gc::h(gc::O::PlTechTree, q, &[]) as usize;
         let caps: Vec<String> = (2..7).map(|i| (h(O::PlayerResourceCap, q, &[i]) as c_long).to_string()).collect();
         let enemies: String = (0..n).map(|j| (h(O::PlayerEnemy, q, &[j as i64]) as c_long).to_string()).collect();
         let mut line = format!(
@@ -835,7 +836,7 @@ pub fn players_digest(out: &mut Vec<String>) {
                 h(O::OptionsPlayerB36, 0, &[p as i64 - 1])
             );
         }
-        let c = h(O::PlayerComputer, q, &[]) as usize;
+        let c = gc::h(gc::O::PlComputerPlayer, q, &[]) as usize;
         if c != 0 {
             const FLAGS: [O; 8] = [
                 O::ComputerActive,

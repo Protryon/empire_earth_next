@@ -2,6 +2,7 @@
 //! host operation per C++ call or member (EESim.cpp `ee_simcpp_sim`, `ee_simcpp_sim_text`, `ee_simcpp_sim_float`: a
 //! one-statement case each). The pattern of [`super::sed_host`].
 
+use crate::gamecpp as gc;
 use std::ffi::{c_char, CStr, CString};
 
 /// The host operations (`p` the object, `a` and `f` the integer and float arguments, `s` a text). A pointer is
@@ -10,11 +11,7 @@ use std::ffi::{c_char, CStr, CString};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeSimDriverSim {
     // the user interface
-    UiPresent = 1,
-    UiLock,
-    UiUnlock,
-    CurrentForm,
-    EditorForm,
+    EditorForm = 1,
     FormId,
     FormShellOf,
     ShellKindName,
@@ -37,29 +34,18 @@ pub enum EeSimDriverSim {
     SpLoadGameFileList,
     LoadScenarioFileList,
     // the physics and the world
-    PhysicsPresent,
-    PhysicsTimerRunning,
-    PhysicsGameOver,
-    PhysicsGameTime,
     PhysicsTicksDone,
     PhysicsTickMs,
     PhysicsTickSeconds,
     PhysicsFlushPlacements,
     MapPresent,
-    CurrentPlayer,
     NumPlayers,
-    GetPlayer,
     PlayerSetCivilizationChosen,
     PlayerSetCivilizationLocked,
     PlayerSetStance,
-    PlayerFirstUnit,
     PlayerAllyCount,
-    PlayerAllyAt,
-    PlayerFlareReceived,
-    PlayerTechnologies,
     PlayerId,
     PlayerAddPendingUnits,
-    TreeGet,
     NodeData,
     NodeCost,
     CastLocationCalamity,
@@ -84,8 +70,6 @@ pub enum EeSimDriverSim {
     RulesProblemCount,
     RulesProblem,
     // the units
-    UnitNext,
-    UnitComplex,
     UnitHitPoints,
     UnitHasStats,
     UnitIsBuilding,
@@ -94,7 +78,6 @@ pub enum EeSimDriverSim {
     UnitTileX,
     UnitTileY,
     UnitPlayer,
-    ComplexOf,
     ComplexOnMap,
     ComplexTileX,
     ComplexTileY,
@@ -105,17 +88,13 @@ pub enum EeSimDriverSim {
     ComplexLocation,
     ComplexSetLocation,
     ComplexSetLauncherClass,
-    ComplexSetOwner,
     ComplexPosition,
     ComplexSetGoal,
     ComplexVelocity,
-    ComplexSetVelocity,
     ComplexFlightTime,
-    ComplexSetFlightTime,
     ComplexHasGoalState,
     ComplexPlayer,
     ComplexHitPoints,
-    UnitGetComplex,
     UnitTileXRaw,
     IgnoredSave,
     IgnoredRestore,
@@ -127,7 +106,6 @@ pub enum EeSimDriverSim {
     UpgradeProjectile,
     // the unit classes
     ClassCount,
-    ClassAt,
     ClassCategory,
     ClassProjectile,
     ClassAcceleration,
@@ -142,7 +120,6 @@ pub enum EeSimDriverSim {
     PhysicsRandom,
     FormationSweep,
     GroupCommandSweep,
-    MiniMapPresent,
     MiniMapSnapshot,
     TradeFoodWood,
     TradeFoodWood2,
@@ -153,14 +130,11 @@ pub enum EeSimDriverSim {
     DialogShowing,
     ShowDialogMessage,
     // the map's sight (the app sweep)
-    MapSize,
     WonderSightRadius,
     MapAddSight,
     MapRemoveSight,
     MapExploreUnseen,
     MapFogSeen,
-    WorldNumPlayers,
-    WorldPlayersAt,
     // the state dump (dump.rs)
     DmPhysLastOos,
     DmPhysSetLastOos,
@@ -172,7 +146,6 @@ pub enum EeSimDriverSim {
     DmPhysTickRandom,
     DmPhysTicksToProcess,
     DmWorldFirstUnit,
-    DmWorldNextUnit,
     DmUnitChecksum,
     DmComplexChecksum,
     DmActiveUnitId,
@@ -229,7 +202,6 @@ pub enum EeSimDriverSim {
     DmCxAffectingUnitId,
     DmCxSize,
     DmUnitSize,
-    DmCalManager,
     DmCalCount,
     DmCalAt,
     DmCalClass,
@@ -358,13 +330,13 @@ pub struct UiLock;
 
 impl UiLock {
     pub fn hold() -> UiLock {
-        h(O::UiLock, 0, &[]);
+        gc::h(gc::O::UiLockForCopy, 0, &[]);
         UiLock
     }
 }
 
 impl Drop for UiLock {
     fn drop(&mut self) {
-        h(O::UiUnlock, 0, &[]);
+        gc::h(gc::O::UiUnlockForCopy, 0, &[]);
     }
 }

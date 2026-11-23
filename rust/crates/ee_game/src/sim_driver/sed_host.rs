@@ -3,6 +3,7 @@
 //! `ee_simcpp_sed_float`: a one-statement case each), the step's run on the UI thread ([`super::sed_run`]), and
 //! the editor's Rust objects (ee_screens) called directly.
 
+use crate::gamecpp as gc;
 use std::ffi::{c_long, c_ulong, c_void, CStr, CString};
 
 /// The host operations (`p` the object, `a` and `f` the integer and float arguments, `s` a text). A pointer is
@@ -11,8 +12,7 @@ use std::ffi::{c_long, c_ulong, c_void, CStr, CString};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeSimDriverSed {
     // the editor form
-    Editor = 1,
-    FormSlot,
+    FormSlot = 1,
     ControlById,
     FormControl,
     FormControlCount,
@@ -151,24 +151,14 @@ pub enum EeSimDriverSed {
     MRecord1,
     MouseSetPosition,
     // the world
-    PhysicsFlush,
-    MapPresent,
     MapMesh,
     MapTile,
     MapGetTile,
     MeshZ,
     TileHeight,
-    TileFirstNode,
-    NodeNext,
-    NodeUnit,
     TerrainColorType,
     ViewportRect,
-    RandomSeed,
-    ResolveUnit,
-    WorldNumPlayers,
-    WorldPlayersAt,
     WorldGetNumPlayers,
-    WorldGetPlayer,
     WorldMaxPlayers,
     WorldPopulationLimit,
     WorldWondersToWin,
@@ -186,16 +176,13 @@ pub enum EeSimDriverSed {
     OptionsPlayerB36,
     PlayerName,
     PlayerId,
-    PlayerFirstUnit,
     PlayerColor,
     PlayerCivilizationFile,
-    PlayerTechTree,
     PlayerResourceCap,
     PlayerEnemy,
     PlayerSharedLos,
     PlayerPurchasedUpgrades,
     PlayerAvailablePoints,
-    PlayerComputer,
     TreeCurrentEpoch,
     TreeStartEpoch,
     TreeEndEpoch,
@@ -209,7 +196,6 @@ pub enum EeSimDriverSed {
     ComputerCanGather,
     ComputerCitizens,
     UnitId,
-    UnitNext,
     UnitType,
     UnitTileX,
     UnitTileY,
@@ -217,8 +203,6 @@ pub enum EeSimDriverSed {
     NodeUnitId,
     UnitIsEditorSelected,
     // the ghosts
-    GhostsLock,
-    GhostsUnlock,
     GhostsChanged,
     GhostsClear,
     GhostCount,
@@ -238,7 +222,6 @@ pub enum EeSimDriverSed {
     GhostCanPlace,
     GhostSetCanPlace,
     // the scenario manager
-    Sm,
     SmTriggerCount,
     SmTriggerAt,
     SmConditionCount,
@@ -373,7 +356,6 @@ pub enum EeSimDriverSed {
     MemPosition,
     MemData,
     HeaderNew,
-    HeaderFree,
     HeaderLoad,
     ChunksNew,
     ChunksBuild,
@@ -395,7 +377,6 @@ pub enum EeSimDriverSed {
     UiFormId,
     UiFormShellOf,
     UiFormTypeName,
-    UiFormCurrent,
     UiFormCount,
     UiFormStacked,
     UiPop,
@@ -430,7 +411,6 @@ pub enum EeSimDriverSed {
     CivDeferredCount,
     CivDeferredAt,
     EditorCivilization,
-    WorldCurrentPlayer,
     PlayerCivilization,
     PlayerCivilizationChosen,
     PlayerCivilizationLocked,
@@ -442,13 +422,11 @@ pub enum EeSimDriverSed {
     CivApply,
     WideNew,
     WideText,
-    WideFree,
     UpgradesNew,
     UpgradesCount,
     UpgradesAt,
     UpgradesFree,
     NarrowNew,
-    NarrowFree,
     SetFreeCamera,
     SetAllowCustomCivs,
     SetScenarioGame,
@@ -633,7 +611,7 @@ pub fn color(addr: usize) -> [f32; 3] {
 
 /// The editor form (`gUIManager->GetScenarioEditorForm()`).
 pub fn editor() -> usize {
-    h(O::Editor, 0, &[]) as usize
+    gc::h(gc::O::UiEditorForm, 0, &[]) as usize
 }
 
 /// One of the form's slots (`GetSlot`; editor_form.rs EE_SCREENS_SEFM_*).
@@ -819,7 +797,7 @@ pub fn record(kind: i64, id: Option<c_ulong>) -> usize {
 
 /// The scenario manager.
 pub fn sm() -> usize {
-    h(O::Sm, 0, &[]) as usize
+    gc::h(gc::O::PsWorldScenario, 0, &[]) as usize
 }
 
 /// The scenario manager's name list `which` (GetNames).
