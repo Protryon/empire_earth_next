@@ -104,6 +104,23 @@ unsafe fn base_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _
     (if a < 2 { cpp.entity_just_pressed(k) } else { cpp.entity_just_unpressed(k) }) as isize
 }
 
+/// The list boxes' key questions (edit_keys' numbering): 6 Home, 7 End, 8 Up, 9 Down, else Enter.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn list_edit_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    use crate::lle_control::{ee_ui_key_pressed, EeUiKeyPress as P};
+    let which = match a {
+        6 => P::Home,
+        7 => P::End,
+        8 => P::Up,
+        9 => P::Down,
+        _ => P::Enter,
+    };
+    ee_ui_key_pressed(which) as isize
+}
+
 /// `UIObjHost::Media`'s text extent: the text's width and height in `f[0]`, `f[1]`.
 ///
 /// # Safety

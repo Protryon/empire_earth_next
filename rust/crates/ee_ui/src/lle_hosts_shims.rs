@@ -309,6 +309,9 @@ shims! {
     v ee_uicpp_label_virt_recompute;
     v ee_uicpp_label_virt_set_location;
     v ee_uicpp_label_virt_set_rectangle;
+    r ee_uicpp_lbs_draw_clipped;
+    v ee_uicpp_lbs_text_at;
+    v ee_uicpp_lbs_text_line;
     v ee_uicpp_list_bar_increment_by;
     r ee_uicpp_list_bar_max;
     v ee_uicpp_list_bar_set_page_size;
@@ -318,7 +321,6 @@ shims! {
     r ee_uicpp_list_base_mouse_double_pressed;
     r ee_uicpp_list_create_scroll_bar;
     v ee_uicpp_list_draw_count_decrement;
-    r ee_uicpp_list_edit_key;
     r ee_uicpp_list_line_create;
     v ee_uicpp_list_line_delete;
     r ee_uicpp_list_poll_create;

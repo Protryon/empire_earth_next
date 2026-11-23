@@ -324,7 +324,10 @@ tables! {
     }
     /// the list boxes' ops that do not depend on T (the polls, the rhombi, the line, the scroll bar, the keys)
     list {
-        EditKey => r ee_uicpp_list_edit_key,
+        EditKey => x list_edit_key,
+        StringListTextAt => v ee_uicpp_lbs_text_at,
+        StringListTextLine => v ee_uicpp_lbs_text_line,
+        StringListDrawClipped => r ee_uicpp_lbs_draw_clipped,
         PollCreate => r ee_uicpp_list_poll_create,
         PollDelete => v ee_uicpp_list_poll_delete,
         PollRunning => r ee_uicpp_list_poll_running,

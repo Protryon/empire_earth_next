@@ -86,9 +86,6 @@ mod layout_ffi;
 // imports the C++ controls' and form's mouse calls (UIControl.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(any(test, feature = "no_cpp")))]
 mod mouse_ffi;
-// imports the C++ string list's lines (UILBString.cpp), absent from a test binary
-#[cfg(not(any(test, feature = "no_cpp")))]
-mod string_list_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
 // imports the C++ text measuring (UITextLabel.cpp)
 

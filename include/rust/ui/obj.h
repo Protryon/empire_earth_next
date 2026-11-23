@@ -312,11 +312,6 @@ enum class EeUiOp : uint32_t {
   ListChangeSelection = 192,
   /// The virtual `ClearSelection()`.
   ListClearSelection = 193,
-  /// The visible lines copied: `mCopyLineArray` grown to `a` lines if shorter, then lines `b .. c` of `mData` copied
-  /// to its start.
-  ListCopyLines = 194,
-  /// The virtual `ProcessDown()` (`a` 0), `ProcessUp()` (1), `ProcessHome()` (2), `ProcessEnd()` (3).
-  ListProcess = 195,
   /// `*rhombus a = *rhombus b`.
   RhombusAssign = 196,
   /// *Pure*: the combo box's question `a >> 24` (`comboobj::EeUiComboQuery`) with its argument `a & 0xffffff`.
@@ -898,6 +893,22 @@ enum class EeUiOp : uint32_t {
   ListDeleteAll = 673,
   /// `GetCurrentSelection(out)` -> its result, `out`'s bits in `f[0]`.
   ListSelection = 674,
+  /// The virtual `ProcessDown()`.
+  ListProcessDown = 900,
+  /// The virtual `ProcessUp()`.
+  ListProcessUp = 901,
+  /// The virtual `ProcessHome()`.
+  ListProcessHome = 902,
+  /// The virtual `ProcessEnd()`.
+  ListProcessEnd = 903,
+  /// The virtual `AppendLine(*line a)` (a line the Rust made from text: the direct path's `ListAppendText`).
+  ListAppendLine = 904,
+  /// The string list's drawn text at `(f[0], f[1])` (`mCopiedText->SetLocation`).
+  StringListTextAt = 905,
+  /// The string list's drawn text set to the drawn copy's line `a`.
+  StringListTextLine = 906,
+  /// `GetForm()->DrawClippedText(rect f, mCopiedText, this)` -> its result.
+  StringListDrawClipped = 907,
 };
 
 /// A whole object's host: `(the C++ object, op, a, b, c, d, f)` -> the op's result.
