@@ -15478,13 +15478,6 @@ struct EeScreensGaFields {
   bool mWriteToFile;
 };
 
-/// One loaded icon of the status box (the original's `EEUIFMGStatusBox::sIconBitmaps[50]`, 0x14 bytes each): its
-/// cell in the icon textures and its `GEBitmap*`.
-struct EeScreensIconBitmap {
-  EeGeRectangle mRectangle;
-  void *mBitmap;
-};
-
 /// `EEUICPing`'s members (its protected base) but the bars.
 struct EeScreensPingFields {
   /// The lit bars less one (`SetPing`'s quality times 5).
@@ -15547,6 +15540,13 @@ struct EeScreensCommandUnitsFields {
   bool mDrawnHasFacing;
   /// The scenario editor's control (`EESEUICCommandUnits`; port addition: the subclass's overrides are this).
   bool mEditor;
+};
+
+/// One loaded icon of the status box (the original's `EEUIFMGStatusBox::sIconBitmaps[50]`, 0x14 bytes each): its
+/// cell in the icon textures and its `GEBitmap*`.
+struct EeScreensIconBitmap {
+  EeGeRectangle mRectangle;
+  void *mBitmap;
 };
 
 /// `EEUIFMainGame`'s plain members (ee/EEUIFMainGame.h), in the class's order.
@@ -17730,9 +17730,6 @@ uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
                                            bool idle_military,
                                            bool select_all);
 
-/// The status box's icon `icon` (0..50).
-EeScreensIconBitmap *ee_screens_icon_bitmap(int64_t icon);
-
 extern int64_t ee_screenscpp_hud_ctl(void *ctl, uint32_t op, int64_t a, int64_t b, float *f);
 
 /// `EEUICPing`'s constructor part: the bars placed from the location (x, y).
@@ -17781,6 +17778,9 @@ void ee_screens_hud_draw_free(void *control);
 void ee_screens_portrait_draw_init(void *portrait,
                                    void *bitmap,
                                    const float *rect);
+
+/// The status box's icon `icon` (0..50).
+EeScreensIconBitmap *ee_screens_icon_bitmap(int64_t icon);
 
 /// The state of a bar `width` x `height`; `icon` (four floats: left, top, right, bottom) gets one icon's rectangle.
 void *ee_screens_icon_bar_new(float width,
