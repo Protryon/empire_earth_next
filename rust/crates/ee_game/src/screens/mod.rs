@@ -164,9 +164,9 @@ pub mod civ_whole;
 #[cfg(not(test))]
 mod civ_whole_ffi;
 pub mod command_panel;
-pub mod cpp_events;
 mod command_panel_ffi;
 pub mod command_units;
+pub mod cpp_events;
 pub mod cursor;
 #[cfg(not(test))]
 mod cursor_ffi;

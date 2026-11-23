@@ -25,7 +25,8 @@ impl CursorHost for Host {
         if let Some(r) = unsafe { crate::screens::hud_direct::cursor(self.0.cast(), op, a, b, f) } {
             return r;
         }
-        crate::screens::cursor_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, f).unwrap_or(0)
+        crate::screens::cursor_calls::call(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b, f)
+            .unwrap_or(0)
     }
 }
 

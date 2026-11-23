@@ -10,10 +10,9 @@ use crate::screens::game_cpp::{Cpp, EeScreensShimOut, EeScreensShimPtrOut};
 
 /// `EEUIFMainGame::CreateGroup(index)`: the main panel group (0) or one of the five Rust groups.
 pub(crate) fn main_create_group<C: Cpp + ?Sized>(c: &mut C, form: usize, index: u32) {
-    match index {
-        0 => c.mfb_group_main(form),
-        // the five others are Rust kinds (panel_groups.rs), no object
-        _ => {}
+    // the five others are Rust kinds (panel_groups.rs), no object
+    if index == 0 {
+        c.mfb_group_main(form);
     }
 }
 
