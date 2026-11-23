@@ -176,7 +176,7 @@ fn mouse_buttons_are_fetched_once_and_swapped_on_a_change() {
     fetch_mouse_buttons(&mut fake);
     assert_eq!(
         fake.calls(),
-        "mouse_buttons_ready()\nmouse_button_fetch(0)\nmouse_button_fetch(1)\nmouse_button_fetch(2)"
+        "mouse_buttons_ready()\nmouse_button_fetch(0, 3)\nmouse_button_fetch(1, 4)\nmouse_button_fetch(2, 2)"
     );
     let mut fake = Fake::default();
     fake.answer("mouse_buttons_ready", &[1]);

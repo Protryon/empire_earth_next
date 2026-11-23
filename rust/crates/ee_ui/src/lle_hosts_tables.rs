@@ -32,7 +32,7 @@ tables! {
         BgtTextureDepth => r ee_uicpp_bgt_texture_depth,
         BgtEntryAlpha => r ee_uicpp_bgt_entry_alpha,
         BgtEntryFormId => r ee_uicpp_bgt_entry_form_id,
-        BgtMake => r ee_uicpp_bgt_make,
+        BgtMake => x bgt_make,
     }
     /// the button's own ops (its virtuals, the sounds, the label, the radio group, the polls, the stretch)
     button {
@@ -78,10 +78,10 @@ tables! {
         BarSetValue => v ee_uicpp_edit_bar_set_value,
         BarMax => r ee_uicpp_edit_bar_max,
         VirtSetRectangle => v ee_uicpp_edit_virt_set_rectangle,
-        EditKey => r ee_uicpp_edit_key,
+        EditKey => x ui_key,
         VirtProcessEnterKey => v ee_uicpp_edit_virt_process_enter_key,
         ClipboardSet => v ee_uicpp_edit_clipboard_set,
-        ClipboardGet => r ee_uicpp_edit_clipboard_get,
+        ClipboardGet => x clipboard_get,
         TranslatedKey => v ee_uicpp_edit_translated_key,
         TextInputCancel => v ee_uicpp_edit_text_input_cancel,
         BaseReleaseKeyboard => v ee_uicpp_edit_base_release_keyboard,
@@ -324,7 +324,7 @@ tables! {
     }
     /// the list boxes' ops that do not depend on T (the polls, the rhombi, the line, the scroll bar, the keys)
     list {
-        EditKey => x list_edit_key,
+        EditKey => x ui_key,
         StringListTextAt => v ee_uicpp_lbs_text_at,
         StringListTextLine => v ee_uicpp_lbs_text_line,
         StringListDrawClipped => r ee_uicpp_lbs_draw_clipped,

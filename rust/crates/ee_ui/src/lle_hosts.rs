@@ -104,6 +104,40 @@ unsafe fn base_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _
     (if a < 2 { cpp.entity_just_pressed(k) } else { cpp.entity_just_unpressed(k) }) as isize
 }
 
+/// `CreateBackgrounds`' background for the entry `a` on the form `b` (texture description `c`): the entry's type's
+/// class (`UIBackgroundType`), a tiled one with its tiling and, stretched, its across and down percents; another
+/// type the manager's user-defined background.
+///
+/// # Safety
+/// The host contract: `a` a live `EeUiBgTableFields` (the `UIBackgroundTable`'s base).
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn bgt_make(o: *mut c_void, a: isize, b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+    use crate::ids::UITiling as T;
+    // SAFETY: the contract
+    let e = unsafe { *(a as *const crate::bgtableobj::EeUiBgTableFields) };
+    let mut f = [0.0f32; 4];
+    let tiled = |tiling: T, f: &mut [f32; 4]| {
+        // SAFETY: the contract
+        unsafe { ee_uicpp_bgt_make_tiled(o, a, b, c, tiling as isize, f.as_mut_ptr()) }
+    };
+    // SAFETY: the contract
+    unsafe {
+        match e.mBackgroundType {
+            0 => ee_uicpp_bgt_make_bitmap(o, a, b, c, 0, f.as_mut_ptr()),
+            1 => tiled(T::kTilingBoth, &mut f),
+            2 => ee_uicpp_bgt_make_full(o, a, b, c, 0, f.as_mut_ptr()),
+            3 => tiled(T::kTilingLeftRight, &mut f),
+            4 => tiled(T::kTilingTopBottom, &mut f),
+            5 => {
+                f[0] = e.mTileWidthPercent;
+                f[1] = e.mTileHeightPercent;
+                tiled(T::kTilingStretched, &mut f)
+            }
+            _ => ee_uicpp_bgt_make_user(o, a, b, c, 0, f.as_mut_ptr()),
+        }
+    }
+}
+
 /// The manager's form calls (`b`: managerobj.rs F_OPEN .. F_DELETE) -> the call's result (0 for the void ones).
 ///
 /// # Safety
@@ -212,21 +246,59 @@ unsafe fn form_mouse_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: 
     e as isize
 }
 
-/// The list boxes' key questions (edit_keys' numbering): 6 Home, 7 End, 8 Up, 9 Down, else Enter.
+/// The edit and list boxes' key questions (`EditKey`, edit_keys.rs' numbering): UIControl's key predicates, Control's
+/// and Backspace's values, Enter's and the keypad Enter's presses; false for another number.
 ///
 /// # Safety
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
-unsafe fn list_edit_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
-    use crate::lle_control::{ee_ui_key_pressed, EeUiKeyPress as P};
-    let which = match a {
-        6 => P::Home,
-        7 => P::End,
-        8 => P::Up,
-        9 => P::Down,
-        _ => P::Enter,
-    };
-    ee_ui_key_pressed(which) as isize
+unsafe fn ui_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    use crate::lle_control::{ee_ui_key_pressed, key, EeUiKey as K, EeUiKeyPress as P};
+    use crate::lle_cpp::Cpp;
+    let mut c = crate::lle_cpp::Ffi;
+    let p = |w: P| ee_ui_key_pressed(w);
+    (match a {
+        0 => p(P::Shift),
+        1 => c.entity_value(key(K::Control)) != 0,
+        2 => c.entity_value(key(K::BackSpace)) != 0,
+        3 => p(P::Delete),
+        4 => p(P::Right),
+        5 => p(P::Left),
+        6 => p(P::Home),
+        7 => p(P::End),
+        8 => p(P::Up),
+        9 => p(P::Down),
+        10 => p(P::Enter),
+        11 => p(P::Cut),
+        12 => p(P::Copy),
+        13 => p(P::Paste),
+        17 => c.entity_just_pressed(key(K::Enter)),
+        18 => c.entity_just_pressed(key(K::NumEnter)),
+        _ => false,
+    }) as isize
+}
+
+/// The edit box's paste text (`PlatClipboardGetText`'s copy, kept until the next ask, which frees it).
+#[cfg(not(any(test, feature = "no_cpp")))]
+static CLIPBOARD: core::sync::atomic::AtomicPtr<core::ffi::c_char> =
+    core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
+
+/// The clipboard's text (NULL without one), the previous ask's freed.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn clipboard_get(_o: *mut c_void, _a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    extern "C" {
+        fn PlatClipboardGetText() -> *mut core::ffi::c_char;
+        fn free(p: *mut c_void);
+    }
+    // SAFETY: the platform's malloc'ed copy; the previous one is not used again
+    unsafe {
+        let text = PlatClipboardGetText();
+        free(CLIPBOARD.swap(text, core::sync::atomic::Ordering::Relaxed) as *mut c_void);
+        text as isize
+    }
 }
 
 /// `UIObjHost::Media`'s text extent: the text's width and height in `f[0]`, `f[1]`.

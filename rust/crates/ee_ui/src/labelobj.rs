@@ -985,6 +985,18 @@ pub unsafe extern "C" fn ee_ui_label_call(
     unsafe { (*label).call(call, a, b, f) }
 }
 
+/// `SetText(value)`: `_itoa(value, 10)`'s decimal (of the value as an `int`), replacing the text.
+///
+/// # Safety
+/// `label` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_label_set_number(label: *const EeUiLabel, value: c_long) {
+    let mut t = format!("{}", value as i32).into_bytes();
+    t.push(0);
+    // SAFETY: live (the contract); NUL-terminated bytes
+    unsafe { (*label).call(EeUiLabelCall::SetText, t.as_ptr() as isize, 1, core::ptr::null_mut()) };
+}
+
 #[cfg(test)]
 #[path = "labelobj_tests.rs"]
 mod tests;

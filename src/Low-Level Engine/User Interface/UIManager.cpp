@@ -70,8 +70,6 @@ static GERectangle UIManagerRect(const float* inF) { return GERectangle(inF[1], 
 #define UVS(x) reinterpret_cast<GETextureCoordinate*>(x)
 #define FILE_SPEC(x) reinterpret_cast<FSFileSpec*>(x)
 static UWideString sUIManagerKey;   // UpdateTranslatedKey's character (the UI thread's)
-// the database's table files in load order, the shared mouse buttons (lle_manager.rs)
-static const unsigned long kUIManagerMouseKeys[] = {kMouseLeftButton, kMouseRightButton, kMouseZAxis};
 extern "C" uint32_t ee_uicpp_mgr_screen(uintptr_t inM) { return MGR(inM)->GetScreen(); }
 extern "C" void ee_uicpp_mgr_rasterizer_screen(uintptr_t inM)
 { MGR(inM)->GetRasterizer()->GetScreen(MGR(inM)->GetScreen()); }
@@ -163,8 +161,9 @@ extern "C" void ee_uicpp_db_remove_controls() { UIControlsTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_backgrounds() { UIBackgroundTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_fonts() { UIFontTable::DeleteAll(); }
 extern "C" bool ee_uicpp_mouse_buttons_ready() { return UIControl::Key(EeUiKey::LeftMouse) != NULL; }
-extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich)
-{ gISMouse->GetEntity(kUIManagerMouseKeys[inWhich], UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
+// the shared mouse button inButton into the key slot inWhich after the left button's (lle_manager.rs)
+extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich, uint32_t inButton)
+{ gISMouse->GetEntity(inButton, UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
 extern "C" void ee_uicpp_mouse_swap_buttons() { std::swap(UIControl::Key(EeUiKey::LeftMouse), UIControl::Key(EeUiKey::RightMouse)); }
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats

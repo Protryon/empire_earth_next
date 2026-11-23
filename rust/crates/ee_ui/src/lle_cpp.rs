@@ -408,7 +408,7 @@ shims! {
     fn db_remove_backgrounds() = ee_uicpp_db_remove_backgrounds;
     fn db_remove_fonts() = ee_uicpp_db_remove_fonts;
     fn mouse_buttons_ready() -> bool = ee_uicpp_mouse_buttons_ready;
-    fn mouse_button_fetch(which: u32) = ee_uicpp_mouse_button_fetch;
+    fn mouse_button_fetch(which: u32, button: u32) = ee_uicpp_mouse_button_fetch;
     fn mouse_left_handed() -> bool = ee_ui_mouse_left_handed;
     fn mouse_swap_buttons() = ee_uicpp_mouse_swap_buttons;
     fn mouse_set_left_handed(left: bool) = ee_ui_mouse_set_left_handed;
@@ -522,7 +522,7 @@ shims! {
     fn combo_base_set_rect(combo: usize, text_box: usize, drop: usize) = ee_uicpp_combo_base_set_rect;
     // UI lane round 12: the backgrounds' and edit boxes' moved host cases (lle_bg_edit.rs)
     fn bg_texture_load(record: usize, name: EeUiShimText, description: usize) -> usize = ee_uicpp_bg_texture_load;
-    fn edit_key_fetch(which: u32, out: EeUiShimPtrOut) = ee_uicpp_edit_key_fetch;
+    fn keyboard_entity(key: u32, out: EeUiShimPtrOut) = ee_uicpp_keyboard_entity;
     fn edit_scroll_bar_new(edit: usize, x: f32, y: f32, length: f32) -> usize = ee_uicpp_edit_scroll_bar_new;
     fn edit_form_mouse_x(edit: usize) -> f32 = ee_uicpp_edit_form_mouse_x;
     fn edit_form_mouse_y(edit: usize) -> f32 = ee_uicpp_edit_form_mouse_y;

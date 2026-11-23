@@ -260,8 +260,9 @@ pub(crate) fn fetch_mouse_buttons<C: Cpp + ?Sized>(c: &mut C) {
     if c.mouse_buttons_ready() {
         return;
     }
-    for which in 0..3 {
-        c.mouse_button_fetch(which);
+    use ee_base::lle_enums::ISMouseEntity as M;
+    for (which, button) in [M::kMouseLeftButton, M::kMouseRightButton, M::kMouseZAxis].into_iter().enumerate() {
+        c.mouse_button_fetch(which as u32, button as u32);
     }
 }
 

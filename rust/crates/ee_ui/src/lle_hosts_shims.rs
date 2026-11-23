@@ -34,7 +34,10 @@ shims! {
     v ee_uicpp_bgt_file_open;
     r ee_uicpp_bgt_file_read;
     r ee_uicpp_bgt_form;
-    r ee_uicpp_bgt_make;
+    r ee_uicpp_bgt_make_bitmap;
+    r ee_uicpp_bgt_make_full;
+    r ee_uicpp_bgt_make_tiled;
+    r ee_uicpp_bgt_make_user;
     r ee_uicpp_bgt_new;
     r ee_uicpp_bgt_texture_depth;
     v ee_uicpp_button_down;
@@ -93,10 +96,8 @@ shims! {
     r ee_uicpp_edit_base_mouse_double_pressed;
     v ee_uicpp_edit_base_release_keyboard;
     v ee_uicpp_edit_button_down;
-    r ee_uicpp_edit_clipboard_get;
     v ee_uicpp_edit_clipboard_set;
     v ee_uicpp_edit_draw_count_decrement;
-    r ee_uicpp_edit_key;
     v ee_uicpp_edit_line_delete;
     r ee_uicpp_edit_poll_create;
     v ee_uicpp_edit_poll_delete;
