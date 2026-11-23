@@ -23,6 +23,7 @@
 #include "ee/wonapi/WONLobbyStretchImage.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "ee/wonapi/WONLayoutConfigs.h"
+#include "ee/wonapi/WONPercentLayout.h" // the percent layouts WONCfgBody.inl makes
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyWONSkinConfig.h"
 #include "ee/wonapi/WONPerfTimer.h"
@@ -34,6 +35,7 @@ extern int gLinesParsed;
 namespace WONAPI {
 void CfgSkinClickSound(ComponentConfig*); // below
 #include "ee/wonapi/WONCfgTable.inl"
+#include "ee/wonapi/WONCfgBody.inl" // the config subclasses' bodies (R6 WON round 34: cfgbody.rs)
 }
 
 // What the handlers' units kept besides their instructions (ButtonConfig.cpp's FITTEXT, WONSkinConfig's click sound);
@@ -46,27 +48,8 @@ ComponentConfig* CfgNewOfKind(EeWonCfgKind inKind)
     if(ee_won_cfg_kind_is(inKind,EeWonCfgKind::Container)) return new ContainerConfig(inKind);
     return new ComponentConfig(inKind);
 }
-// Grows the button to fit the largest of a comma-separated list of texts, keeping its current text
-void ComponentConfig::HandleFitText()
-{
-    Button* aButton=static_cast<Button*>(this->mComponent.get());
-    int width=aButton->Width();
-    int height=aButton->Height();
-    GUIString oldText=aButton->GetText();
-    for(;;)
-    {
-        GUIString text=this->ReadString(false);
-        aButton->SetText(text,true);
-        int desiredWidth=0,desiredHeight=0;
-        aButton->GetDesiredSize(desiredWidth,desiredHeight);
-        if(desiredWidth>width) width=desiredWidth;
-        if(desiredHeight>height) height=desiredHeight;
-        if(this->EndOfString()) break;
-        this->EnsureComma();
-    }
-    aButton->SetText(oldText,true);
-    aButton->SetSize(width,height);
-}
+// Grows the button to fit the largest of a comma-separated list of texts, keeping its current text (cfgbody.rs)
+void ComponentConfig::HandleFitText() { CfgBodyCall(this, EeWonCfgBody::FitText); }
 // WONSkinConfig's BUTTONCLICKSOUND: a sound read, then the click sound of the skin's template buttons and every named
 // button type
 void CfgSkinClickSound(ComponentConfig* inConfig)
