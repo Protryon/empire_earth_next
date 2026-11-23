@@ -30,11 +30,6 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "rust/game/screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
 
-// The status bar's mouse handler `inWhich` (EE_SCREENS_UP_BAR_*) at the location (MouseMove's)
-long EEUIFMGStatusBar::BarMouse(uint32_t inWhich, const GE2DPoint* inLocation)
-{
-    return (long)ee_screens_upgrade_bar_mouse(EEUIBUpgradeCall(this, NULL, inLocation).Ptr(), inWhich);
-}
 
 // The button's host (upgrade.rs EE_SCREENS_UP_OP_*): units (as EEUnit*) and nodes as handles (the selection's reads
 // are hud_views.rs')

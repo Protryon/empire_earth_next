@@ -30,9 +30,8 @@ public:
                  UIForm* inForm, unsigned long inIndex, bool inScenarioEditor, unsigned long inBorderThickness)
         : UIButton(inId, NULL, NULL, NULL, GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex,
                    inBorderThickness),
-          EeScreensUpgradeFields()
+          EeScreensUpgradeFields{0, NULL, 0, 0, 0, inScenarioEditor, false}
     {
-        this->mScenarioEditor = inScenarioEditor;
         ee_screens_upb_construct((uintptr_t)this);
     }
     // Snapshots the button and its cost label for drawing
@@ -51,7 +50,6 @@ public:
     {
         ee_screens_upgrade_update_cost(EEUIBUpgradeCall(this, const_cast<UWideString*>(&inText)).Ptr());
     }
-protected:
     // Presses the button unless the improvement is unavailable, and updates the help text
     virtual void ButtonDown() { ee_screens_upb_button_down((uintptr_t)this); }
     virtual void ButtonUp() { ee_screens_upgrade_button_up(EEUIBUpgradeCall(this, true).Ptr()); }
@@ -67,7 +65,6 @@ protected:
     // Presses the button on a right press, capturing the mouse
     virtual long MouseRButtonDown() { return (long)ee_screens_upb_right_down((uintptr_t)this); }
     virtual long MouseRButtonUp() { return (long)ee_screens_upgrade_mouse_r_up(EEUIBUpgradeCall(this).Ptr()); }
-public:
     virtual ~EEUIBUpgrade() {}
     // +0x94: the unit the improvement applies to (the selected group's first unit, or the scenario editor's first
     // selected unit) and whether it can be raised; outReason gets the player's reason why not

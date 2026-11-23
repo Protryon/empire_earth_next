@@ -14,7 +14,13 @@ public:
     EEUIBGenericBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
                            const GETextureDescription& inDescription, const UILayoutUtility& inLayout,
                            UIForm* inForm, unsigned long inDrawPriority, const GEColor& inColor, bool inVisible,
-                           float inOpacity, float inScaleX, float inScaleY, unsigned long inFlags);
+                           float inOpacity, float inScaleX, float inScaleY, unsigned long inFlags)
+        : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, GERectangle(), inLayout, inForm,
+                             inDrawPriority, inVisible),
+          EeScreensBackgroundFields()
+    {
+        ee_screens_gb_construct((uintptr_t)this, inOpacity, (uint32_t)inFlags, (uintptr_t)&inColor, inScaleX, inScaleY);
+    }
     // Destroys the form background
     virtual ~EEUIBGenericBackground() {}
     // +0x14 0x255131: the tinted rhombus, then the frame pieces mFrameFlags asks for (1 edges + small corners, 2 large
