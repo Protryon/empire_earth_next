@@ -308,12 +308,7 @@ pub extern "C" fn ee_gamecpp_ro_release_scene() {
 
 /// The six texture maps and the two selected lists emptied (FillRenderLists' and EEReleaseScene's order).
 fn clear_lists() {
-    for k in 0..3 {
-        h(O::RoObjectsClear, 0, &[k]);
-        h(O::RoUnitsClear, 0, &[k]);
-    }
-    h(O::RoSelectedObjectsClear, 0, &[]);
-    h(O::RoSelectedUnitsClear, 0, &[]);
+    super::ro_lists::clear();
 }
 
 /// UnloadRenderShadows: every pooled map object's media unloaded, the pool emptied.
@@ -347,7 +342,7 @@ fn unload_render_units() {
         }
         h(O::RoUnitPartsClear, ru, &[]);
     }
-    h(O::RoSelectedClear, 0, &[]);
+    super::ro_lists::clear_selected();
     // SAFETY: as above
     unsafe { *count = 0 };
 }
@@ -840,10 +835,10 @@ impl FillHost for GameFill {
         h(O::RoUnitNameFromStats, out as P, &[unit as i64]);
     }
     fn select(&mut self, out: *mut EeGfxFillUnit) {
-        h(O::RoSelectedUnitsPush, out as P, &[]);
+        super::ro_lists::select_unit(out as usize);
     }
     fn point_at(&mut self, out: *mut EeGfxFillUnit) {
-        h(O::RoSetSelectedUnit, out as P, &[]);
+        super::ro_lists::set_selected_unit(out as usize);
     }
     fn label(&mut self, out: *mut EeGfxFillUnit, player: u64) {
         let player = player as P;
@@ -921,12 +916,12 @@ fn fill_frame(info: &FrameInfo) -> EeGfxFillFrame {
 fn unit_opacity(unit: P, opacity: *mut f32) -> bool {
     // SAFETY: gRenderEnvironment
     let show_hidden = unsafe { (*env()).show_hidden_units };
-    h(O::RoUnitOpacity, unit, &[opacity as usize as i64, show_hidden as i64]) != 0
+    super::ro_raster::unit_opacity(unit, show_hidden as c_long, opacity)
 }
 
 /// A render map's insert: the units' (`objects` false) or the map objects' map `k` (0..2) by texture.
 fn insert(objects: bool, k: i64, texture: P, item: P) {
-    h(if objects { O::RoObjectsInsert } else { O::RoUnitsInsert }, item, &[k, pa(texture)]);
+    super::ro_lists::insert(objects, k, texture, item);
 }
 
 /// EERenderObject::FillUnit: a render unit for a unit, filed in the picker and the texture maps (the ambient
@@ -992,7 +987,7 @@ fn fill_object(unit: P, out: P, map: i64, info: &mut FrameInfo) {
         fill_object_fields(&t, view, &mut *head, &frame, &mut transformation, &mut GameFill)
     };
     if selected {
-        h(O::RoSelectedObjectsPush, out, &[]);
+        super::ro_lists::select_object(out);
     }
     // SAFETY: the render object (filled)
     let (index, opacity) = unsafe { ((*head).model_index, (*head).opacity) };

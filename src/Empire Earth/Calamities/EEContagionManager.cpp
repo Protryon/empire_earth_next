@@ -16,6 +16,7 @@
 
 #include "ee/EEEffectManager.h"
 #include "ee/EECalamity.h"
+#include "ee/EEVectorIO.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionFunctor.h"
@@ -100,12 +101,11 @@ long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMino
                                      EESaveHasContagionCounter(inMajorVersion, inMinorVersion));
 }
 
+// (the calamities' addresses as the Rust's 64-bit handles: every target is 64-bit)
+static_assert(sizeof(EECalamity*) == sizeof(uint64_t), "the calamities' handles");
 long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
 {
-    std::vector<uint64_t> theCalamities;
-    for (EECalamity* theCalamity : inCalamities)
-        theCalamities.push_back((uint64_t)(uintptr_t)theCalamity);
-    return ee_contagion_manager_restore(this->mRust, theCalamities.data(), theCalamities.size());
+    return ee_contagion_manager_restore(this->mRust, reinterpret_cast<const uint64_t*>(inCalamities.data()), inCalamities.size());
 }
 
 bool EEContagionHelperAddUnit(EEContagionHelper* inHelper, EEUnit* inUnit, bool inNotify)
@@ -117,67 +117,6 @@ void EEContagionHelperUpdate(EEContagionHelper* inHelper, float inElapsedTime)
 {
     EECalamity* theCalamity = reinterpret_cast<EECalamity*>((uintptr_t)ee_contagion_helper_calamity(inHelper));
     ee_contagion_helper_update(inHelper, theCalamity->mClass->mIsBlockedByImmunity, inElapsedTime);
-}
-
-namespace {
-
-template<class T> T* Object(uint64_t inHandle) { return reinterpret_cast<T*>((uintptr_t)inHandle); }
-
-uint32_t FloatBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
-}   // namespace
-
-// New (port): the world under the Rust contagion manager and helpers (contagion_store.rs EE_CONTAGION_WORLD_*): each
-// case the original helper's or manager's statement on the units, functors and calamities by address
-extern "C" int64_t ee_contagion_world(uint32_t inOp, uint64_t inA, uint64_t inB, uint64_t inC, float inX, void* ioValue)
-{
-    switch (inOp) {
-    case EE_CONTAGION_WORLD_REFERENCE: return ee_gamecpp_contagion_reference(inA, inB);
-    case EE_CONTAGION_WORLD_MARK: return ee_gamecpp_contagion_mark(inA, inB, inC);
-    case EE_CONTAGION_WORLD_INFECT: Object<EEContagionFunctor>(inA)->Infect(Object<EEUnit>(inB), Object<EECalamity>(inC)); return 0;
-    case EE_CONTAGION_WORLD_CURE: Object<EEContagionFunctor>(inA)->Cure(Object<EEUnit>(inB), Object<EECalamity>(inC)); return 0;
-    case EE_CONTAGION_WORLD_APPLY:
-        Object<EEContagionFunctor>(inA)->Apply(Object<EEUnit>(inB), inX, Object<EECalamity>(inC));
-        return 0;
-    case EE_CONTAGION_WORLD_FUNCTOR_UPDATE: Object<EEContagionFunctor>(inA)->Update(inX, Object<EECalamity>(inC)); return 0;
-    case EE_CONTAGION_WORLD_NEAR: return ee_gamecpp_contagion_near(inA, inX, ioValue);   // GetUnitsInArea
-    case EE_CONTAGION_WORLD_CAN_INFECT:
-        return Object<EEContagionFunctor>(inA)->CanInfectType(Object<EEUnit>(inB)->mUnitClass->GetCategory(), Object<EEUnit>(inB)->mUnitClass->GetUnitType());
-    case EE_CONTAGION_WORLD_IMMUNE: return ee_gamecpp_contagion_immune(inA);
-    case EE_CONTAGION_WORLD_RANDOM: return FloatBits(gPhysics->mRandom.Generate());
-    case EE_CONTAGION_WORLD_DISTANCE:
-        return FloatBits(Object<EEComplexUnit>(inA)->mPhysicalModel.GetLocation().DistanceSquaredTo(
-            Object<EEComplexUnit>(inB)->mPhysicalModel.GetLocation()));
-    case EE_CONTAGION_WORLD_UNIT: return (int64_t)(uintptr_t)gWorld.GetUnit((unsigned long)inA);
-    case EE_CONTAGION_WORLD_CALAMITY_CHECKSUM: return Object<EECalamity>(inA)->GetOutOfSynchChecksum();
-    case EE_CONTAGION_WORLD_CALAMITY_INDEX: return ee_gamecpp_contagion_calamity_index(inA);
-    case EE_CONTAGION_WORLD_CALAMITY_FUNCTOR:
-        return (int64_t)(uintptr_t)Object<EECalamity>(inA)->mClass->GetContagionFunctor();
-    case EE_CONTAGION_WORLD_CALAMITY_DUMP: Object<EECalamity>(inA)->DumpOutOfSynch(Object<FILE>(inB)); return 0;
-    case EE_CONTAGION_WORLD_TEXT: fputs(static_cast<const char*>(ioValue), Object<FILE>(inB)); return 0;
-    case EE_CONTAGION_WORLD_FILE: {
-        FSFile& theFile = *Object<FSFile>(inB);
-        switch (inA) {
-        case EE_CONTAGION_IO_READ_ULONG: return theFile.Read(*static_cast<unsigned long*>(ioValue));
-        case EE_CONTAGION_IO_READ_LONG: return theFile.Read(*static_cast<long*>(ioValue));
-        case EE_CONTAGION_IO_READ_FLOAT: return theFile.Read(*static_cast<float*>(ioValue));
-        case EE_CONTAGION_IO_WRITE_ULONG: return theFile.Write(*static_cast<const unsigned long*>(ioValue));
-        case EE_CONTAGION_IO_WRITE_LONG: return theFile.Write(*static_cast<const long*>(ioValue));
-        case EE_CONTAGION_IO_WRITE_FLOAT: return theFile.Write(*static_cast<const float*>(ioValue));
-        }
-        return kErrorFailed;
-    }
-    case EE_CONTAGION_WORLD_CAPTURE:   // CONT (TEST ONLY)
-        EECalamityCaptureContagionEvent((int32_t)inA, (int32_t)inB, (int32_t)inC, inX, *static_cast<float*>(ioValue));
-        return 0;
-    }
-    ESVERIFY_AT(false, 1);
-    return 0;
 }
 
 // ------------------------------------------------------------------------- round 9, lane B: the hosts' compound cases' C++
@@ -225,4 +164,69 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     return EECore9OpCF(inOp, p, a, f);
+}
+
+// ------------------------------------------------------------------------- round 11, lane C: the calamities' C++
+
+int64_t EECore11OpC6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECalamityUpdate.cpp
+double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define CAL ((EECalamity*)p)
+#define FNC ((EEContagionFunctor*)p)
+#define FSF (*(FSFile*)a[0])
+
+// the C++ calls and members of the calamity record's I/O and of the contagion world (gamecpp calamity_io.rs; p the
+// calamity or the functor; EEMessage.cpp's EECore11OpC4 default): one statement each
+int64_t EECore11OpC5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // the calamity record's parts (a0 the file)
+    case O::C11CalRectLoad: return CAL->mRectangle.Load(FSF);
+    case O::C11CalRectSave: return CAL->mRectangle.Save(FSF);
+    case O::C11CalTargetLoad: return CAL->mTargetLocation.Load(FSF);
+    case O::C11CalTargetSave: return CAL->mTargetLocation.Save(FSF);
+    case O::C11CalShakeLoad: return CAL->mShakeLocation.Load(FSF);
+    case O::C11CalShakeSave: return CAL->mShakeLocation.Save(FSF);
+    case O::C11CalGenerationLoad: return FSLoadVector(FSF, CAL->mEffectGeneration, EECalamity::mEffectGenerationStringID);
+    case O::C11CalGenerationSave: return FSSaveVector(FSF, CAL->mEffectGeneration, EECalamity::mEffectGenerationStringID);
+    case O::C11CalTargetId: return CAL->mTargetUnit != NULL ? CAL->mTargetUnit->GetUnitID() : -1;
+    case O::C11CalCasterId: return CAL->mCasterUnit != NULL ? CAL->mCasterUnit->GetUnitID() : -1;
+    case O::C11CalHandleRead: return FSF.Read(CAL->mEffectHandle.mValue);
+    case O::C11CalHandleWrite: return FSF.Write(CAL->mEffectHandle.mValue);
+    // the contagion world (a0, a1 the unit and the calamity unless noted)
+    case O::C11CgInfect: FNC->Infect((EEUnit*)a[0], (EECalamity*)a[1]);
+        break;
+    case O::C11CgCure: FNC->Cure((EEUnit*)a[0], (EECalamity*)a[1]);
+        break;
+    case O::C11CgApply: FNC->Apply((EEUnit*)a[0], f[0], (EECalamity*)a[1]);
+        break;
+    case O::C11CgFunctorUpdate: FNC->Update(f[0], (EECalamity*)a[0]);
+        break;
+    case O::C11CgCanInfect: return FNC->CanInfectType(((EEUnit*)a[0])->mUnitClass->GetCategory(), ((EEUnit*)a[0])->mUnitClass->GetUnitType());
+    case O::C11CgUnit: return P64(gWorld.GetUnit((unsigned long)a[0]));
+    case O::C11CgChecksum: return CAL->GetOutOfSynchChecksum();
+    case O::C11CgFunctor: return P64(CAL->mClass->GetContagionFunctor());
+    case O::C11CgDump: CAL->DumpOutOfSynch((FILE*)a[0]);
+        break;
+    case O::C11CgText: fputs((const char*)a[0], (FILE*)p);
+        break;
+    case O::C11CgCapture: EECalamityCaptureContagionEvent((long)a[0], (long)a[1], (long)a[2], f[0], f[1]);   // CONT (TEST ONLY)
+        break;
+    case O::C11CgUnknown: ESVERIFY_AT(false, 1);
+        break;
+    default: return EECore11OpC6(inOp, p, a, f);
+    }
+    return 0;
+}
+
+// the float answers: a random draw, two complex units' squared distance (p, a0)
+double EECore11OpC5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::C11CgRandom: return gPhysics->mRandom.Generate();
+    case O::C11CgDistance: return ((EEComplexUnit*)p)->mPhysicalModel.GetLocation().DistanceSquaredTo(((EEComplexUnit*)a[0])->mPhysicalModel.GetLocation());
+    default: return EECore11OpEF(inOp, p, a, f);
+    }
 }

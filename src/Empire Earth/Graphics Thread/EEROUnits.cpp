@@ -46,8 +46,6 @@ extern bool& gShowCollisionSpheres;          // 0x5318dc (the units' collision s
 extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpolated; provisional name)
 extern long& gModelDetail;                   // 0x530898 (0: full opacity, 1: half, else opaque; provisional name)
 extern GEFont* gU531994;                    // 0x531994 (the labels' default font; before gFontTahoma10; provisional name)
-// the rasterizer as the Rust draws call it (EERenderObject.cpp)
-extern const EeGfxRaster gEERustRaster;
 
 // the bars' rhombi (0x529508 the fill, 0x52950c its back) and the line batch (0x529478, new[]) (provisional names)
 static GERhombus* sBars[2];
@@ -76,85 +74,9 @@ void EEROUnits::FrameStarting()
     this->FillRenderLists();
 }
 
-// the raster table's bar draw (EERenderObject.cpp's table; the bars' set, the screen lines and the labels are gamecpp
-// ro_units.rs')
-int32_t EEROUnitsBarDraw(uint32_t inWhich)
-{
-    return gRasterizer->Draw(sBars[inWhich], gScreenIndex);
-}
 extern std::vector<unsigned long> gU4E9230;   // EERenderObject.cpp: the rectangle's picked unit ids
 extern EERenderUnit* gU529044;               // the picked enemy's render unit
 extern UWideString gU529030;                 // its owner's name
-
-namespace {
-
-// a texture map in its order, as rfil.rs reads it
-template <class Map> EeGfxRfilPairs Flatten(const Map& inMap, std::vector<EeGfxRfilPair>& outPairs)
-{
-    outPairs.clear();   // (the pairs' storage is reused from view to view: sDrawPairs)
-    for (typename Map::const_iterator it = inMap.begin(); it != inMap.end(); ++it)
-        outPairs.push_back({it->first, it->second});
-    return {outPairs.data(), outPairs.size()};
-}
-
-template <class T> EeGfxRfilSpan Span(const std::vector<T>& inValues) { return {inValues.data(), inValues.size()}; }
-
-EeGfxRfilLayout MakeLayout()
-{
-    static_assert(offsetof(EERenderUnitRecord, mUnit) == 0, "rfil.rs reads a record's unit first");
-    EeGfxRfilLayout l = {};
-    l.size = sizeof(EeGfxRfilLayout);
-    l.unit_stride = sizeof(EERenderUnit);
-    l.unit_health_bars = offsetof(EERenderUnit, mHealthBars);
-    l.unit_turret_angles = offsetof(EERenderUnit, mTurretAngles);
-    l.unit_turret_models = offsetof(EERenderUnit, mTurretModels);
-    l.unit_orbital_angles = offsetof(EERenderUnit, mOrbitalAngles);
-    l.unit_orbital_models = offsetof(EERenderUnit, mOrbitalModels);
-    l.unit_wheel_angles = offsetof(EERenderUnit, mWheelAngles);
-    l.unit_wheel_models = offsetof(EERenderUnit, mWheelModels);
-    l.unit_name = offsetof(EERenderUnit, mName);
-    l.record_stride = sizeof(EERenderUnitRecord);
-    l.record_heights = offsetof(EERenderUnitRecord, mHeights);
-    l.record_cells = offsetof(EERenderUnitRecord, mCells);
-    l.record_tile_x = offsetof(EERenderUnitRecord, mTileX);
-    l.record_tile_y = offsetof(EERenderUnitRecord, mTileY);
-    l.line_stride = sizeof(EERenderLine);
-    l.line_points = offsetof(EERenderLine, mPoints);
-    l.line_texture = offsetof(EERenderLine, mTexture);
-    l.line_width = offsetof(EERenderLine, mWidth);
-    return l;
-}
-
-}   // namespace
-
-// The render lists as ee_gfx reads them in place (rfil.rs, units_lists.rs): the pools and vectors, the multimaps
-// flattened into ioPairs (which must outlive the frame's use)
-void EERenderListsView(EeGfxRfilFrame& outFrame, std::vector<EeGfxRfilPair> (&ioPairs)[6])
-{
-    static const EeGfxRfilLayout kLayout = MakeLayout();
-    const EERenderLists& l = EERenderLists::sInstance;
-    EeGfxRfilFrame& f = outFrame;
-    f.layout = &kLayout;
-    f.units = l.mRenderUnits;
-    f.units_used = l.mRenderUnitCount;
-    f.shadows = reinterpret_cast<const EeGfxFillObject*>(l.mRenderShadows);
-    f.shadows_used = l.mRenderShadowCount;
-    f.maps[0] = Flatten(l.mUnits0, ioPairs[0]);
-    f.maps[1] = Flatten(l.mUnits1, ioPairs[1]);
-    f.maps[2] = Flatten(l.mUnits2, ioPairs[2]);
-    f.maps[3] = Flatten(l.mShadows0, ioPairs[3]);
-    f.maps[4] = Flatten(l.mShadows1, ioPairs[4]);
-    f.maps[5] = Flatten(l.mShadows2, ioPairs[5]);
-    f.selected_units = Span(l.mSelectedUnits);
-    f.selected_objects = Span(l.mSelectedObjects);
-    f.selected_unit = l.mSelectedUnit;
-    f.selected_object = l.mSelectedObject;
-    f.label_unit = gU529044;
-    f.label_name = (const char*)gU529030;
-    f.picked_ids = Span(gU4E9230);
-    f.ghosts = Span(l.mGhostRecords);
-    f.lines = Span(gU529050);
-}
 
 // the media, the frame's draws and the labels: gamecpp ro_units.rs
 void EEROUnits::LoadMedia()
@@ -191,23 +113,19 @@ void EEROUnits::SceneStarting()
 // ------------------------------------------------------------------------- round 10, lane A: this file's C++ (gamecpp ro_units.rs)
 
 int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
-// the render lists' pairs of the units' draws (valid until the next view)
-static std::vector<EeGfxRfilPair> sDrawPairs[6];
 
 #define RU_P64(x) ((int64_t)(intptr_t)(x))
 #define RU_TEXT ((GEText*)p)
 #define RU_COLOR(k) (*reinterpret_cast<const GEColor*>(&((const EeGfxColor*)a[1])[k]))
 
-// the C++ calls and members of gamecpp ro_units.rs (EECore10OpA's default): one statement each
+static_assert(offsetof(EERenderUnitRecord, mUnit) == 0, "rfil.rs reads a record's unit first");
+
+// the C++ calls and members of gamecpp ro_units.rs and ro_lists.rs (EECore10OpA's default): one statement each
 int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::RuRaster: return RU_P64(&gEERustRaster);
-    case O::RuListsView: EERenderListsView(*(EeGfxRfilFrame*)a[0], sDrawPairs);
-        break;
+    case O::RrBarDraw: return gRasterizer->Draw(sBars[a[0]], gScreenIndex);
     case O::RuMainViewport: return RU_P64(&gU4E8F08);
     case O::RuCinematic: return gRenderSnapshot.mInCinematic;
     case O::RuCollisionSpheres: return gShowCollisionSpheres;
@@ -248,16 +166,36 @@ int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::RuTextFont12: RU_TEXT->SetFont(gFontTahoma12);
         break;
+    // round 11, lane A: the render lists' view (gamecpp ro_lists.rs)
+    case O::RlLayUnitStride: return sizeof(EERenderUnit);
+    case O::RlLayUnitHealthBars: return offsetof(EERenderUnit, mHealthBars);
+    case O::RlLayUnitTurretAngles: return offsetof(EERenderUnit, mTurretAngles);
+    case O::RlLayUnitTurretModels: return offsetof(EERenderUnit, mTurretModels);
+    case O::RlLayUnitOrbitalAngles: return offsetof(EERenderUnit, mOrbitalAngles);
+    case O::RlLayUnitOrbitalModels: return offsetof(EERenderUnit, mOrbitalModels);
+    case O::RlLayUnitWheelAngles: return offsetof(EERenderUnit, mWheelAngles);
+    case O::RlLayUnitWheelModels: return offsetof(EERenderUnit, mWheelModels);
+    case O::RlLayUnitName: return offsetof(EERenderUnit, mName);
+    case O::RlLayRecordStride: return sizeof(EERenderUnitRecord);
+    case O::RlLayRecordHeights: return offsetof(EERenderUnitRecord, mHeights);
+    case O::RlLayRecordCells: return offsetof(EERenderUnitRecord, mCells);
+    case O::RlLayRecordTileX: return offsetof(EERenderUnitRecord, mTileX);
+    case O::RlLayRecordTileY: return offsetof(EERenderUnitRecord, mTileY);
+    case O::RlLayLineStride: return sizeof(EERenderLine);
+    case O::RlLayLinePoints: return offsetof(EERenderLine, mPoints);
+    case O::RlLayLineTexture: return offsetof(EERenderLine, mTexture);
+    case O::RlLayLineWidth: return offsetof(EERenderLine, mWidth);
+    case O::RlUnits: return RU_P64(EERenderLists::sInstance.mRenderUnits);
+    case O::RlShadows: return RU_P64(EERenderLists::sInstance.mRenderShadows);
+    case O::RlLabelUnit: return RU_P64(gU529044);
+    case O::RlLabelName: return RU_P64((const char*)gU529030);
+    case O::RlPickedIds: return RU_P64(gU4E9230.data());
+    case O::RlPickedCount: return (int64_t)gU4E9230.size();
+    case O::RlGhosts: return RU_P64(EERenderLists::sInstance.mGhostRecords.data());
+    case O::RlLines: return RU_P64(gU529050.data());
+    case O::RlLinesCount: return (int64_t)gU529050.size();
     default: return EERoViewsOp(inOp, p, a, f);
     }
     return 0;
 }
 
-double EERoUnitsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::RuTextHeight: return RU_TEXT->GetTextExtent().GetHeight();
-    default: return EERoViewsOpF(inOp, p, a, f);
-    }
-}

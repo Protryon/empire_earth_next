@@ -109,55 +109,5 @@ void EETile::SetUnitListPoolSize(unsigned long inChunkSize, unsigned long inMaxC
 
 // ------------------------------------------------------------------------- round 9, lane B: the tile's bodies' C++
 
-// the calamity hosts' cases (EEContagionManager.cpp), then lane C's
-int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
+// (their cases: EEMap.cpp's EECore9OpB2)
 static_assert(kTerrainDeepWater == 1 && kTerrainShallowWater == 10 && kTerrainSpace == 12, "gamecpp tile.rs");
-
-#define P64(x) ((int64_t)(intptr_t)(x))
-
-// The C++ calls and members of the tile's bodies in Rust (gamecpp tile.rs; EeGameCpp's lane B section, after
-// EEMiniMap.cpp's EECore9OpB3): one statement each
-int64_t EECore9OpB4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::TlRtsChecksum: return ((const EETile*)p)->RTSTile::GetChecksum((unsigned long)a[0]);
-    case O::TlRtsLoad: ((EETile*)p)->RTSTile::Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2], (unsigned long)a[3]);
-        break;
-    case O::TlRtsSave: return ((EETile*)p)->RTSTile::Save(*(FSFile*)a[0], (unsigned long)a[1]);
-    case O::TlRtsDump: ((const EETile*)p)->RTSTile::Dump((FILE*)a[0], (unsigned long)a[1]);
-        break;
-    case O::TlLoadImage: return P64(gDoppelgangerManager.Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]));
-    case O::TlImageSetTile: ((EEDoppelganger*)p)->mTile = (EETile*)a[0];
-        break;
-    case O::TlImageValid: return ((EEDoppelganger*)p)->GetIsValid();
-    case O::TlImageTileNull: return ((EEDoppelganger*)p)->GetTile() == NULL;
-    case O::TlImageSave: return ((EEDoppelganger*)p)->Save(0, 0, *(FSFile*)a[0]);
-    case O::TlEraseImage: ((EETile*)p)->mDoppelgangers.erase(((EETile*)p)->mDoppelgangers.begin() + a[0]);
-        break;
-    case O::TlDumpImage: fprintf((FILE*)p, "Doppelganger %ld has unit id of %ld\n", (unsigned long)a[0], (unsigned long)a[1]);
-        break;
-    case O::TlWriteUlong: return ((FSFile*)p)->Write((unsigned long)a[0]);
-    case O::TlDynMap: return P64(dynamic_cast<EEMap*>((RTSMap*)p));
-    case O::TlSetIsSpace: ((EEMap*)p)->mTerrainMesh.SetIsSpace((unsigned long)a[0], (unsigned long)a[1], a[2] != 0);
-        break;
-    case O::TlValidPoint: return ((EEMap*)p)->mTerrainMesh.GetIsValidPoint((unsigned long)a[0], (unsigned long)a[1]);
-    case O::TlSetTerrainTypeField: ((EETile*)p)->mTerrainType = (long)a[0];
-        break;
-    default: return EECore9OpB5(inOp, p, a, f);
-    }
-    return 0;
-}
-
-double EECore9OpB4F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::TlHeight: return ((EETile*)p)->GetHeight();
-    case O::TlMapTileSize: return gMapTileSize;
-    case O::TlMeshZ: return ((EEMap*)p)->mTerrainMesh.GetZ((long)a[0], (long)a[1]);
-    default: return EECore9OpB5F(inOp, p, a, f);
-    }
-}

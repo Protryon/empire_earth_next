@@ -8,7 +8,8 @@
 //! record nothing.
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
+use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
 use ee_render::ge::tmobj::{ee_ge_tm_is_valid, ee_ge_tm_tile, EeGeTerrainMesh};
@@ -183,9 +184,120 @@ pub unsafe extern "C" fn ee_app_sight_record(
     capture::commit(tag(b"TSGT"), &r.0);
 }
 
+// ---- the scope (ee/EESightCapture.h's EESightScope: each constructor opens one, the destructor closes the last)
+
+/// An open scope: whether it is the outermost, and what its record holds.
+struct Scope {
+    outer: bool,
+    shape: u32,
+    kind: u32,
+    player: u64,
+    tile: u64,
+    tile_x: c_long,
+    tile_y: c_long,
+    value: c_ulong,
+    args: [f32; 5],
+}
+
+thread_local! {
+    static SCOPES: RefCell<Vec<Scope>> = const { RefCell::new(Vec::new()) };
+}
+
+fn open(
+    shape: u32,
+    kind: u32,
+    player: *const c_void,
+    tile: *const c_void,
+    at: (c_long, c_long),
+    value: c_ulong,
+    args: [f32; 5],
+) {
+    let outer = ee_app_sight_enter();
+    let (tile_x, tile_y) = at;
+    let scope = Scope { outer, shape, kind, player: player as u64, tile: tile as u64, tile_x, tile_y, value, args };
+    SCOPES.with(|s| s.borrow_mut().push(scope));
+}
+
+/// `EESightScope`'s tile constructor: a tile's call (`x`, `y` the coordinates it takes, -1 when none; `value`
+/// SetVisibility's).
+#[no_mangle]
+pub extern "C" fn ee_app_sight_open_tile(
+    kind: u32,
+    player: *const c_void,
+    tile: *const c_void,
+    x: c_long,
+    y: c_long,
+    value: c_ulong,
+) {
+    open(EE_APP_SIGHT_TILE, kind, player, tile, (x, y), value, [0.0; 5]);
+}
+
+/// `EESightScope`'s circle constructor: a circle around (`x0`, `y0`), or a step from it to (`x1`, `y1`); `value` the
+/// map sight's shared flag.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn ee_app_sight_open_circle(
+    kind: u32,
+    player: *const c_void,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    radius: f32,
+    value: c_ulong,
+) {
+    open(EE_APP_SIGHT_CIRCLE, kind, player, std::ptr::null(), (-1, -1), value, [x0, y0, x1, y1, radius]);
+}
+
+/// `EESightScope`'s whole-map constructor.
+#[no_mangle]
+pub extern "C" fn ee_app_sight_open_whole(kind: u32, player: *const c_void) {
+    open(EE_APP_SIGHT_WHOLE, kind, player, std::ptr::null(), (-1, -1), 0, [0.0; 5]);
+}
+
+/// `EESightScope`'s destructor: the last scope closed; the outermost one's TSGT record when the capture runs.
+#[no_mangle]
+pub extern "C" fn ee_app_sight_close() {
+    let Some(s) = SCOPES.with(|v| v.borrow_mut().pop()) else { return };
+    if ee_app_sight_leave(s.outer) {
+        crate::gamecpp::map::ee_gamecpp_map_sight_record(
+            s.shape,
+            s.kind,
+            s.player,
+            s.tile,
+            s.tile_x,
+            s.tile_y,
+            s.value,
+            s.args.as_ptr(),
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_scopes_nest_and_only_the_outermost_is_outer() {
+        ee_app_sight_open_whole(15, std::ptr::null());
+        ee_app_sight_open_tile(1, std::ptr::null(), std::ptr::null(), 2, 3, 0);
+        SCOPES.with(|s| {
+            let s = s.borrow();
+            assert_eq!(s.len(), 2);
+            assert!(s[0].outer && !s[1].outer);
+            assert_eq!((s[1].shape, s[1].tile_x, s[1].tile_y), (EE_APP_SIGHT_TILE, 2, 3));
+        });
+        ee_app_sight_close();
+        ee_app_sight_close();
+        ee_app_sight_open_circle(8, std::ptr::null(), 1.0, 2.0, 0.0, 0.0, 3.0, 1);
+        SCOPES.with(|s| {
+            let s = s.borrow();
+            assert!(s[0].outer);
+            assert_eq!(s[0].args, [1.0, 2.0, 0.0, 0.0, 3.0]);
+        });
+        ee_app_sight_close();
+        SCOPES.with(|s| assert!(s.borrow().is_empty()));
+    }
 
     #[test]
     fn rects_as_the_scope_made_them() {

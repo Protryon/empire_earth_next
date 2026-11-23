@@ -5,9 +5,9 @@
 // 0x1273d7 unit ends at 0x127584, EECheatCodes.cpp starts at 0x12a54a. Names are provisional.
 //
 // The camera is whole in Rust (rust/crates/ee_game/src/app camera.rs, app and world lane round 1): its plain members are the
-// record EeAppCameraFields the class derives from, every body is Rust over the host below (the followed units' handles,
-// the key list, the units, the terrain mesh, the viewport and the world's switches). This unit keeps the host, the
-// forwarders, Update's tail (the view to the world and the viewport, the mini map) and EEIsSeen.
+// record EeAppCameraFields the class derives from, every body is Rust over the host (the followed units' handles,
+// the key list, the units, the terrain mesh, the viewport and the world's switches: ee_game gamecpp camera_io.rs,
+// camera_host.rs). This unit keeps the forwarders, EEIsSeen and the host's one-statement cases.
 #include <windows.h>
 #include <vector>
 #include "lle/LowLevelEngine.h"
@@ -55,94 +55,13 @@ float gCameraMaxZoom = 2.0f;
 // Initialises the camera's field of view (30 degrees)
 static float sCameraFieldOfView = 0.017453292f * 30.0f;
 
-// the unit of an id (NULL for none or a unit that no longer resolves)
-static EEUnit* EECameraUnit(uint32_t inID)
-{
-    EEUnit* theUnit;
-    EEUnitHandleResolve(inID, theUnit);
-    return theUnit;
-}
-
-// The camera's host (ee_app camera_ffi.rs): the context is the camera
-static int32_t EECameraHost(void* inContext, int32_t inOp, EeAppCameraIo* io)
-{
-    EECameraControl* theCamera = static_cast<EECameraControl*>(inContext);
-    EEUnitHandle<EEUnit>& theSlot = io->slot == EE_APP_CAMERA_UNIT_A ? theCamera->mUnitA : theCamera->mUnitB;
-    EEUnit* theUnit = inOp >= EE_APP_CAMERA_OP_REFERENCE && inOp <= EE_APP_CAMERA_OP_HIDDEN ? EECameraUnit(io->id) : NULL;
-    EEComplexUnit* theComplex = theUnit != NULL ? theUnit->mComplexUnit : NULL;
-    GETerrainMesh* theMesh = gWorld.GetMap() != NULL ? &gWorld.GetMap()->mTerrainMesh : NULL;
-    switch (inOp) {
-    case EE_APP_CAMERA_OP_UNIT: io->id = theSlot.Get() != NULL ? theSlot.GetSavedID() : (uint32_t)EE_APP_CAMERA_NO_UNIT; break;
-    case EE_APP_CAMERA_OP_SET_UNIT: theSlot = EEUnitHandle<EEUnit>::FromSavedID(io->id); break;
-    case EE_APP_CAMERA_OP_REFERENCE: theUnit->Reference(); break;
-    case EE_APP_CAMERA_OP_DEREFERENCE: theUnit->Dereference(); break;
-    case EE_APP_CAMERA_OP_UNIT_STATE:
-        io->id = theUnit == NULL ? 0
-                                 : EE_APP_CAMERA_EXISTS | (theUnit->mHitPoints > 0 ? EE_APP_CAMERA_ALIVE : 0) |
-                                       (theUnit->mTileX != -10000 && theUnit->GetTileY() != -10000 ? EE_APP_CAMERA_ON_MAP : 0);
-        break;
-    case EE_APP_CAMERA_OP_CONTAINER:
-        if (theComplex != NULL && theComplex->mContainer != NULL)
-            io->id = EEUnitHandleID(theComplex->mContainer);
-        break;
-    case EE_APP_CAMERA_OP_UNIT_POINT: theCamera->GetUnitPoint(theUnit, *EECameraRust<GE3DPoint>(io->point)); break;
-    case EE_APP_CAMERA_OP_UNIT_LOCATION:
-        io->flag = theComplex != NULL && !theUnit->mUnitClass->mFacesCamera;
-        if (io->flag)
-            *EECameraRust<GETransformation>(io->t) = theComplex->mPhysicalModel.GetLocation();
-        break;
-    case EE_APP_CAMERA_OP_FOLLOW_RATE:
-        io->flag = theComplex != NULL && !gInCinematic;
-        if (io->flag)
-            io->x = theComplex->GetVelocity() * gWorld.GetGameSpeed();
-        break;
-    case EE_APP_CAMERA_OP_HIDDEN: io->flag = theUnit != NULL && theUnit->mPlayer != gWorld.GetCurrentPlayer() && !EEIsSeen(theUnit); break;
-    case EE_APP_CAMERA_OP_KEY_COUNT: io->id = (uint32_t)theCamera->mKeys.size(); break;
-    case EE_APP_CAMERA_OP_KEY: *EECameraRust<EECameraKey>(io->key) = theCamera->mKeys[io->id]; break;
-    case EE_APP_CAMERA_OP_CLEAR_KEYS: theCamera->mKeys.clear(); break;
-    case EE_APP_CAMERA_OP_FLAGS:
-        io->id = (gFreeCamera ? EE_APP_CAMERA_FREE : 0) | (gFarRearClipping ? EE_APP_CAMERA_FAR_REAR : 0) |
-                 (gInCinematic ? EE_APP_CAMERA_CINEMATIC : 0) | (gOrthographicView ? EE_APP_CAMERA_ORTHOGRAPHIC : 0) |
-                 (gWorld.mMap != NULL ? EE_APP_CAMERA_HAS_MAP : 0);
-        break;
-    case EE_APP_CAMERA_OP_WORLD_TRANSFORMATION: *EECameraRust<GETransformation>(io->t) = gWorld.mTransformation; break;
-    case EE_APP_CAMERA_OP_WORLD_CAMERA_YAW: io->x = gWorld.mCameraYaw; break;
-    case EE_APP_CAMERA_OP_VALID_TILE: io->flag = theMesh->GetIsValidTile(UMFloorUnsigned(io->x), UMFloorUnsigned(io->y)); break;
-    case EE_APP_CAMERA_OP_VALID_POINT: io->flag = theMesh->GetIsValidPoint(UMFloorUnsigned(io->x), UMFloorUnsigned(io->y)); break;
-    case EE_APP_CAMERA_OP_MESH_Z: io->z = theMesh->GetMeshZ(io->x, io->y); break;
-    case EE_APP_CAMERA_OP_EDGE_PLANES:
-        io->planes.front = *EECameraRust<EeGe3DPlane>(theMesh->GetFrontPlane());
-        io->planes.back = *EECameraRust<EeGe3DPlane>(theMesh->GetBackPlane());
-        io->planes.left = *EECameraRust<EeGe3DPlane>(theMesh->GetLeftPlane());
-        io->planes.right = *EECameraRust<EeGe3DPlane>(theMesh->GetRightPlane());
-        break;
-    case EE_APP_CAMERA_OP_SCREEN_LINE: gWorld.GetMap()->GetScreenLine(GE2DPoint(io->x, io->y), *EECameraRust<GE3DLine>(io->line)); break;
-    case EE_APP_CAMERA_OP_LOCATION_ON_LINE:
-        io->flag = gWorld.mMap->GetLocationOnLine(*EECameraRust<GE3DLine>(io->line), *EECameraRust<GE3DPoint>(io->point), true) != NULL;
-        break;
-    case EE_APP_CAMERA_OP_VIEWPORT:
-        io->x = gViewport.GetXCenter();
-        io->y = gViewport.GetYCenter();
-        io->z = gViewport.GetHalfHeight();
-        break;
-    case EE_APP_CAMERA_OP_VIEWPORT_CAMERA:
-        io->point.mX = gViewport.GetCamera().GetX();
-        io->point.mY = gViewport.GetCamera().GetY();
-        io->point.mZ = gViewport.GetCamera().GetZ();
-        break;
-    case EE_APP_CAMERA_OP_FRONT_CLIPPING: io->x = gViewport.GetFrontClippingDistance(); break;
-    case EE_APP_CAMERA_OP_SET_CLIPPING:
-        gViewport.SetFrontClippingDistance(io->x);
-        gViewport.SetRearClippingDistance(io->y);
-        break;
-    }
-    return 0;
-}
+// The camera's host (ee_app camera_ffi.rs): ee_game gamecpp camera_io.rs (its cases: EECore10OpD7 below); the
+// context is the camera
 static uint32_t EECameraID(EEUnit* inUnit)
 {
     return inUnit != NULL ? EEUnitHandleID(inUnit) : (uint32_t)EE_APP_CAMERA_NO_UNIT;
 }
-#define EE_CAMERA_HOST this, this, EECameraHost
+#define EE_CAMERA_HOST this, this, ee_gamecpp_camera_host
 
 // Creates the camera controller with no followed unit or target point, mode 0, zoom 0.5 and no path
 EECameraControl::EECameraControl()
@@ -158,13 +77,7 @@ EECameraControl::~EECameraControl()
 void EECameraControl::ResetPath() { ee_app_camera_reset_path(EE_CAMERA_HOST); }
 
 // Appends a key to the camera path; returns 0, or 5 while a path plays (camera locked)
-long EECameraControl::AddKey(const EECameraKey& inKey)
-{
-    if (this->mLocked)
-        return 5;
-    this->mKeys.push_back(inKey);
-    return 0;
-}
+long EECameraControl::AddKey(const EECameraKey& inKey) { return ee_gamecpp_camera_add_key(this, &inKey); }
 
 // (the original's EECameraRayDistance 0x527c09 built each ray twice; the Rust builds it once and measures it twice)
 void EECameraControl::SetClippingDistances() { ee_app_camera_set_clipping_distances(EE_CAMERA_HOST); }
@@ -266,7 +179,7 @@ void EECameraControl::ClearUnitB() { ee_app_camera_clear_unit_b(EE_CAMERA_HOST);
 // end (TEST ONLY) (ee_game gamecpp camera_host.rs)
 void EECameraControl::Update(float inElapsedTime)
 {
-    ee_gamecpp_camera_update(this, EECameraHost, inElapsedTime);
+    ee_gamecpp_camera_update(this, inElapsedTime);
 }
 
 void EECameraControl::Follow(EEUnit* inUnit, bool inFlag, float inDuration, float inTurnYaw, float inTurnPitch)
@@ -324,6 +237,55 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DkKeyCount: return (int64_t)CAM->mKeys.size();
     case O::DkKeyAt: *(EECameraKey*)a[1] = CAM->mKeys[a[0]];
         break;
+    // round 11, lane B: the camera's host (gamecpp camera_io.rs)
+    case O::EcUnitAGet: return P64(CAM->mUnitA.Get());
+    case O::EcUnitBGet: return P64(CAM->mUnitB.Get());
+    case O::EcSetUnitA: CAM->mUnitA = EEUnitHandle<EEUnit>::FromSavedID((uint32_t)a[0]);
+        break;
+    case O::EcSetUnitB: CAM->mUnitB = EEUnitHandle<EEUnit>::FromSavedID((uint32_t)a[0]);
+        break;
+    case O::EcResolve: return P64(static_cast<EEUnit*>(RTSResolveUnitID((uint32_t)a[0])));
+    case O::EcReference: ((EEUnit*)p)->Reference();
+        break;
+    case O::EcDereference: ((EEUnit*)p)->Dereference();
+        break;
+    case O::EcHitPoints: return ((EEUnit*)p)->mHitPoints;
+    case O::EcTileXRaw: return ((EEUnit*)p)->mTileX;
+    case O::EcContainer: return P64(CX->mContainer);
+    case O::EcContainerId: return EEUnitHandleID(CX->mContainer);
+    case O::EcFacesCamera: return ((EEUnit*)p)->mUnitClass->mFacesCamera;
+    case O::EcLocation: *(GETransformation*)a[0] = CX->mPhysicalModel.GetLocation();
+        break;
+    case O::EcInCinematic: return gInCinematic;
+    case O::EcCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
+    case O::EcIsSeen: return EEIsSeen((EEUnit*)p);
+    case O::EcClearKeys: CAM->mKeys.clear();
+        break;
+    case O::EcPushKey: CAM->mKeys.push_back(*(const EECameraKey*)a[0]);
+        break;
+    case O::EcFreeCamera: return gFreeCamera;
+    case O::EcFarRearClipping: return gFarRearClipping;
+    case O::EcOrthographic: return gOrthographicView;
+    case O::EcHasMap: return gWorld.mMap != NULL;
+    case O::EcWorldTransformation: *(GETransformation*)a[0] = gWorld.mTransformation;
+        break;
+    case O::EcValidTile: return gWorld.GetMap()->mTerrainMesh.GetIsValidTile(UMFloorUnsigned(f[0]), UMFloorUnsigned(f[1]));
+    case O::EcValidPoint: return gWorld.GetMap()->mTerrainMesh.GetIsValidPoint(UMFloorUnsigned(f[0]), UMFloorUnsigned(f[1]));
+    case O::EcFrontPlane: *(EeGe3DPlane*)a[0] = *EECameraRust<EeGe3DPlane>(gWorld.GetMap()->mTerrainMesh.GetFrontPlane());
+        break;
+    case O::EcBackPlane: *(EeGe3DPlane*)a[0] = *EECameraRust<EeGe3DPlane>(gWorld.GetMap()->mTerrainMesh.GetBackPlane());
+        break;
+    case O::EcLeftPlane: *(EeGe3DPlane*)a[0] = *EECameraRust<EeGe3DPlane>(gWorld.GetMap()->mTerrainMesh.GetLeftPlane());
+        break;
+    case O::EcRightPlane: *(EeGe3DPlane*)a[0] = *EECameraRust<EeGe3DPlane>(gWorld.GetMap()->mTerrainMesh.GetRightPlane());
+        break;
+    case O::EcScreenLine: gWorld.GetMap()->GetScreenLine(GE2DPoint(f[0], f[1]), *(GE3DLine*)a[0]);
+        break;
+    case O::EcLocationOnLine: return gWorld.mMap->GetLocationOnLine(*(GE3DLine*)a[0], *(GE3DPoint*)a[1], true) != NULL;
+    case O::EcSetFrontClipping: gViewport.SetFrontClippingDistance(f[0]);
+        break;
+    case O::EcSetRearClipping: gViewport.SetRearClippingDistance(f[0]);
+        break;
     default: return EECore10OpE(inOp, p, a, f);
     }
     return 0;
@@ -338,6 +300,15 @@ double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DkCameraFocus: return CX->mStats->GetCameraFocus();
     case O::DkFrontClipping: return gViewport.GetFrontClippingDistance();
     case O::DkRearClipping: return gViewport.GetRearClippingDistance();
+    case O::EcVelocity: return CX->GetVelocity();
+    case O::EcGameSpeed: return gWorld.GetGameSpeed();
+    case O::EcWorldCameraYaw: return gWorld.mCameraYaw;
+    case O::EcViewportXCenter: return gViewport.GetXCenter();
+    case O::EcViewportYCenter: return gViewport.GetYCenter();
+    case O::EcViewportHalfHeight: return gViewport.GetHalfHeight();
+    case O::EcViewportCameraX: return gViewport.GetCamera().GetX();
+    case O::EcViewportCameraY: return gViewport.GetCamera().GetY();
+    case O::EcViewportCameraZ: return gViewport.GetCamera().GetZ();
     default: return EECore10OpEF(inOp, p, a, f);
     }
 }

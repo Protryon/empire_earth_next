@@ -57,9 +57,6 @@ struct EERenderUnitRecord {
 // fraction, model index, frames, fogged)
 typedef EeGfxFillObject EERenderShadow;
 
-typedef std::multimap<GETexture*, EERenderUnit*> EERenderUnitMap;
-typedef std::multimap<GETexture*, EERenderShadow*> EERenderShadowMap;
-
 struct EERenderLists {
     // inline: its COMDAT 0x1117da closes EERenderObject.cpp with the template COMDATs (first user: the init chain)
     EERenderLists()
@@ -69,19 +66,11 @@ struct EERenderLists {
     }
     static EERenderLists sInstance;         // 0x4e9458 (guard 0x4e9454 bit 1: a class static) (provisional name)
 
-    EERenderUnitMap mUnits0;                // +0x00
-    EERenderUnitMap mUnits1;                // +0x0c
-    EERenderUnitMap mUnits2;                // +0x18 (EEROGroundShadows draws their shadows)
-    EERenderShadowMap mShadows0;            // +0x24
-    EERenderShadowMap mShadows1;            // +0x30
-    EERenderShadowMap mShadows2;            // +0x3c (EEROGroundShadows draws them)
+    // the six texture maps (+0x00..+0x48: the units' mUnits0..2, the objects' mShadows0..2) and the selections
+    // (mSelectedUnits +0x58, mSelectedObjects +0x68, mSelectedUnit 0x528cd0, mSelectedObject 0x528cd4): gamecpp ro_lists.rs
     std::vector<EERenderUnitRecord> mGhostRecords;  // +0x48
-    std::vector<EERenderUnit*> mSelectedUnits;  // +0x58 (the units with a selection ring/bar)
-    std::vector<EERenderShadow*> mSelectedObjects;  // +0x68
     EERenderUnit mRenderUnits[0x200];       // +0x78
     EERenderShadow mRenderShadows[0x600];   // +0x29078
-    EERenderUnit* mSelectedUnit;            // +0x3f878 (0x528cd0: its bars are drawn outside mU58) (provisional name)
-    EERenderShadow* mSelectedObject;        // +0x3f87c (0x528cd4) (provisional name)
     unsigned long mRenderUnitCount;         // +0x3f880
     unsigned long mRenderShadowCount;       // +0x3f884
 };

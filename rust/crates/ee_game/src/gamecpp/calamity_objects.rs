@@ -947,12 +947,7 @@ pub extern "C" fn ee_gamecpp_calamity_class_run(kl: *mut c_void, c: *mut c_void,
     }
     let sound = if run.sounds & cc::EE_CALAMITY_RUN_SOUND != 0 { hp(O::KlSound, kl, &[]) } else { 0 };
     let secondary = if run.sounds & cc::EE_CALAMITY_RUN_SECONDARY_SOUND != 0 { hp(O::KlSecondary, kl, &[]) } else { 0 };
-    let op = match which {
-        cc::EE_CALAMITY_RUN_START => O::CalRunStart,
-        cc::EE_CALAMITY_RUN_STOP => O::CalRunStop,
-        _ => O::CalRunUpdate,
-    };
-    hf(op, kl, &[pa(c), cptr(&run.params), pa(sound), pa(secondary)], &[elapsed]) as c_long
+    super::calamity_io::class_run(which, kl, c, &run.params, [sound, secondary], elapsed)
 }
 
 /// The world's game variant (`mGameOptions.mVariant`).
