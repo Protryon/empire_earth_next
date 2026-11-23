@@ -3,8 +3,8 @@
 
 /// `kMinimumWheelDistance`: the least share of the top speed or turn rate that rolls a wheel
 const MINIMUM_WHEEL_DISTANCE: f32 = 0.1;
-/// the original's pi (`3.1415927f`)
-const PI: f32 = 3.141_592_7;
+/// the original's pi (`3.1415927f`, the same float)
+const PI: f32 = std::f32::consts::PI;
 
 /// The unit's travel this tick that rolls the wheel.
 #[repr(C)]
@@ -30,7 +30,9 @@ pub struct EeUnitsWheelIn {
 
 /// `EEWheel::Update(unit)`: the wheel's new angle, rolled back by the unit's travel this tick (speed or turn rate,
 /// whichever is the larger share of its top) over its scaled radius, in physics actions 0, 4 and 5 above a tenth of
-/// the top; wrapped by a full turn. The angle unchanged otherwise.
+/// the top; wrapped by a full turn. The angle unchanged otherwise. (The negated comparisons are the original's: a NaN
+/// passes them.)
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn wheel_angle(w: &EeUnitsWheelIn) -> f32 {
     let circumference = w.scale * w.radius;
     if !(circumference < -0.0001) && !(circumference > 0.0001) {
@@ -111,7 +113,7 @@ mod tests {
     fn the_angle_wraps_by_a_full_turn() {
         let w = EeUnitsWheelIn { angle: -3.0, tick_seconds: 1.0, ..moving() };
         let a = wheel_angle(&w);
-        assert!(a >= -PI && a < PI, "{a}");
+        assert!((-PI..PI).contains(&a), "{a}");
         assert_eq!(a, -3.0f32 - 1.0 * 4.0 * 0.75 / 0.5 + 2.0 * PI);
     }
 
