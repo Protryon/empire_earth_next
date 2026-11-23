@@ -431,6 +431,7 @@ pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
 pub(crate) mod screens_calls;
 pub(crate) mod screens_more_calls;
+pub(crate) mod select_units_ops;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
@@ -465,3 +466,4 @@ pub mod upgrade;
 pub(crate) mod upgrade_calls;
 #[cfg(not(test))]
 mod upgrade_ffi;
+pub(crate) mod upgrade_ops;

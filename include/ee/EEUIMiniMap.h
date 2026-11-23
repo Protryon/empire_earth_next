@@ -16,10 +16,14 @@ class EEMiniMap;
 class EEUIMiniMap : public EEUIRustControl, public EeScreensMiniMapFields {
 public:
     EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
-                unsigned long inBorderThickness);
+                unsigned long inBorderThickness)
+        : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness), EeScreensMiniMapFields()
+    {
+        ee_screens_mm_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uint32_t)inBorderThickness);   // (mini_map_calls.rs)
+    }
     // Destroys the mini map control and its click action
     virtual ~EEUIMiniMap() { ee_screens_mm_destroy((uintptr_t)this); }
-    virtual long CopyData();                // +0x14 0x275585
+    virtual long CopyData() { return (long)ee_screens_mm_copy_data((uintptr_t)this); }   // +0x14 0x275585
     // Draws the terrain, the units, the flare and the camera outline clipped to the map: ee_screens mini_map.rs' plan,
     // executed in its order (the result is the last bitmap's or line's draw)
     // (mini_map_calls.rs)
@@ -42,13 +46,9 @@ public:
     // (mini_map_calls.rs)
     static void Update(EEMiniMap* inMiniMap) { ee_screens_mm_update((uintptr_t)inMiniMap); }
     static GERectangle sBounds;
-    // (public for the shims of ee_screens mini_map_calls.rs: the members, CenterCamera and the base's mouse)
-    using UIControl::CaptureMouse;
-    using UIControl::GetMouseLocation;
     // 0x2760ec: centres the camera on the mini-map point under the mouse (EEAMiniMap mode 0) (provisional name)
     // Centres the camera on the map point under the mouse, clamped to the map
     void CenterCamera() { ee_screens_mm_center_camera((uintptr_t)this); }
-protected:
     // the ee_screens mini_map.rs host of the left release and drag (EE_SCREENS_MM_OP_*, EEUIRustControl's the
     // toolkit's)
     virtual long MouseLButtonDown() { return ee_screens_mini_map_left_down(this); }   // +0x34 (CaptureMouse, 0)
@@ -61,7 +61,6 @@ protected:
     // On a right press, posts a mini map action (mode 1) at the clicked map point, clamped to the map
     virtual long MouseRButtonDown() { return (long)ee_screens_mm_mouse_r_down((uintptr_t)this); }        // +0x44 0x275e45
     virtual long MouseRButtonUp() { return ee_screens_mini_map_right_up(this); }      // +0x48 0x275523
-public:
     GE2DPoint mOrigin;                      // +0x0a0 the map's top-left (the location plus the border)
     GELine mLines[4];                       // +0x0a8 the camera view's edges
 };

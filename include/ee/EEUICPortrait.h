@@ -16,7 +16,12 @@ class EEUICPortrait : public EEUIRustControl, public EeScreensPortraitFields {
 public:
     // 0x25861c (the user-defined control factory 0x274965; the scenario editor 0x1a4f39)
     EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, unsigned long inId, unsigned long inIndex,
-                  bool inShowLevel);
+                  bool inShowLevel)
+        : EEUIRustControl(inId, inRectangle, inForm, inIndex, 0), EeScreensPortraitFields()
+    {
+        ee_screens_portrait_init(this, inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(),
+                                 inRectangle.GetBottom(), inShowLevel);
+    }
     // Destroys the portrait, releasing its unit and button
     virtual ~EEUICPortrait() { ee_screens_portrait_free(this); }
     // The bars' rectangles, the drawing, the tooltip, the click and the update from the unit (the original's

@@ -33,13 +33,6 @@
 #include "ee/EEStringIDs.h"
 // Creates the selected-unit portrait with its research (green) and improvement (yellow) progress bars over a
 // red background, and a level text
-EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, unsigned long inId,
-                             unsigned long inIndex, bool inShowLevel)
-    : EEUIRustControl(inId, inRectangle, inForm, inIndex, 0), EeScreensPortraitFields()
-{
-    ee_screens_portrait_init(this, inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(),
-                             inRectangle.GetBottom(), inShowLevel);
-}
 
 // the tooltip being built (the UI thread's)
 

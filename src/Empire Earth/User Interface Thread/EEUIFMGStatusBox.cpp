@@ -45,10 +45,6 @@ static GEColor kStatusColor3(0.0f, 1.0f, 0.5f);
 extern bool sIconsLoaded;                           // 0x5652ec; cross-TU flag (stored in EEGlobals.cpp)
 
 // Creates the main panel's status box with no controls bound and no attributes shown
-EEUIFMGStatusBox::EEUIFMGStatusBox(UIForm* inForm)
-{
-    ee_screens_status_box_init(this, inForm);   // (main_form_fields.rs)
-}
 
 // Existing pooled empty byte string, original reference26b6d9; no equal-content alias.
 extern char gEmptyString[];

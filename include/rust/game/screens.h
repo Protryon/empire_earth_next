@@ -17971,6 +17971,15 @@ void ee_screens_gate_update(void *call,
 /// `record` is the new box's record.
 void ee_screens_status_box_init(EeScreensStatusBoxFields *record, void *form);
 
+/// `EEUIFMGStatusBox::SetControls(index, icon, label)`: the attribute row's icon and label controls.
+///
+/// # Safety
+/// `record` is a live box's record; `index` is below 9.
+void ee_screens_status_box_set_controls(EeScreensStatusBoxFields *record,
+                                        int64_t index,
+                                        void *icon,
+                                        void *label);
+
 /// `EEUIFMGStatusBox::GetBoxControl(id)`: the control an `EE_SCREENS_BOX_CTL_*` names.
 ///
 /// # Safety
