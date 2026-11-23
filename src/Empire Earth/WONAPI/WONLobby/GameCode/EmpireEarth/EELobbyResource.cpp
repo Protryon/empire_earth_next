@@ -18,6 +18,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "rust/won_lobby/eeresource.h"
+#include "ee/wonapi/WONLobbyGuard.h"
 
 using namespace WONAPI;
 
@@ -46,49 +47,34 @@ GUIString& EELobbyResource_GetString(int inID)
     return sEELobbyStrings[inID];
 }
 
-// the string of a global's name (its row in ee_won's table); the program stops for a name the table lacks
+// the string of a global's name (its row in ee_won's table); the program stops for a name the table lacks (the
+// look-up is ee_won's)
 GUIString& EELobbyResource_Named(const char* inName)
 {
-    intptr_t anIndex = ee_won_eeresource_find(inName);
-    if (anIndex < 0 || (size_t)anIndex >= kEELobbyStringCount) {
-        fprintf(stderr, "EELobbyResource: no string %s\n", inName);
-        abort();
-    }
-    return sEELobbyStrings[anIndex];
+    return sEELobbyStrings[ee_won_eeresource_index(inName, kEELobbyStringCount)];
 }
 
-// the string of row `inIndex` of ee_won's table (the same order); the program stops when the two lists disagree
-static GUIString* EELobbyResourceSlotFor(size_t inIndex)
+// the loader's and the reset's statements (R6 WON round 34: their loops are ee_won's eeresource.rs; a read that
+// throws is kept and the loader rethrows it, never through a Rust frame)
+static intptr_t EELobbyResourceHost(EeWonEeResOp inOp, void* inTable, intptr_t a, intptr_t b, intptr_t c)
 {
-    if (ee_won_eeresource_count() != kEELobbyStringCount) {
-        fprintf(stderr, "EELobbyResource: %u rows for %u strings\n", (unsigned)ee_won_eeresource_count(),
-                (unsigned)kEELobbyStringCount);
-        abort();
+    switch (inOp) {
+    case EeWonEeResOp::Config: return WON_GUARDED(static_cast<ResourceConfigTable*>(inTable)->SafeGetConfig(reinterpret_cast<const char*>(a)));
+    case EeWonEeResOp::Read: return WON_GUARDED_V(sEELobbyStrings[a] = reinterpret_cast<ResourceConfig*>(b)->SafeGetString(reinterpret_cast<const char*>(c)));
+    case EeWonEeResOp::Erase: sEELobbyStrings[a] = GetEmptyGUIStringData(); return 0;
     }
-    return &sEELobbyStrings[inIndex];
+    return 0;
 }
 
 // Loads the game options, player options, connect, file dialog, game status and lobby texts from resources (ee_won's
 // rows in order: a section is looked up where it changes, as the original's statements did)
 static void EELobbyResource_Load(ResourceConfigTable* inTable)
 {
-    ResourceConfig* aTable = NULL;
-    size_t aCount = ee_won_eeresource_count();
-    for (size_t i = 0; i < aCount; i++) {
-        EeWonEeResource aRow;
-        if (!ee_won_eeresource_row(i, &aRow))
-            break;
-        GUIString* aGlobal = EELobbyResourceSlotFor(i);
-        if (aRow.new_section)
-            aTable = inTable->SafeGetConfig(aRow.section);
-        *aGlobal = aTable->SafeGetString(aRow.key);
-    }
+    WonRethrow(ee_won_eeresource_load(inTable, kEELobbyStringCount, EELobbyResourceHost));
 }
 
 // Resets every game lobby string to the empty string (ee_won's rows in order)
 void EELobbyResource_Destroy()
 {
-    size_t aCount = ee_won_eeresource_count();
-    for (size_t i = 0; i < aCount; i++)
-        *EELobbyResourceSlotFor(i) = GetEmptyGUIStringData();
+    ee_won_eeresource_destroy(kEELobbyStringCount, EELobbyResourceHost);
 }

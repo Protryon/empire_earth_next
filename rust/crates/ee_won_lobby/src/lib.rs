@@ -64,3 +64,6 @@ pub mod statusstr;
 pub mod widgets;
 pub mod wonfront;
 pub mod wonnet;
+// R6 WON round 34 (the dialog lane)
+pub mod dlgsplit;
+pub mod eesplit;
