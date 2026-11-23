@@ -941,6 +941,9 @@ WON_TESTS = {
     # ConfigObject whole in Rust (WON round 21): the original statements (tests/won/won_cfgobject_orig.h) against the
     # game's class over ee_won_net cfgobject.rs, random config files through one subclass on each
     "won_cfgobject_test": [WON_SRC / "WONConfig" / "ConfigObject.cpp"],
+    # R6 WON round 34's leaf classes (browserobj.rs, tipobj.rs, localize.rs: BrowserComponent, ListAreaToolTip,
+    # StringLocalize::GetStr) against the deleted C++ over a stand-in world, real GUIStrings and real page files
+    "won_leaf34_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
