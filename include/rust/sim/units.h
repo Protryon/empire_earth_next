@@ -21365,6 +21365,84 @@ uint8_t ee_units_ucbd_begin();
 /// `words` holds `count` words (or is NULL with 0).
 void ee_units_ucbd_end(uint8_t on, const uint32_t *words, size_t count);
 
+extern int64_t ee_units_ucg_host(int32_t op,
+                                 void *class_,
+                                 void *unit,
+                                 uint64_t a,
+                                 int64_t b,
+                                 int64_t c,
+                                 float (*f)[4]);
+
+/// The ground classes' body `what` (`EE_UNITS_UCG_DO_*`) of `class` on `unit`: `a` a simple unit, `f` a value;
+/// the choice, or 0.
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a` a live `EEUnit` (or 0), on the
+/// simulation thread.
+int64_t ee_units_ucg_call(int32_t what,
+                          void *class_,
+                          void *unit,
+                          uint64_t a,
+                          float f);
+
+/// The sea classes' body `what` (`EE_UNITS_UCG_DO_*` from 3020) of `class` on `unit` (see [`run`]).
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a` a live `EEUnit` (or 0) or the
+/// body's out tile, `f` the body's point or transformation, on the simulation thread.
+int64_t ee_units_ucg_sea(int32_t what,
+                         void *class_,
+                         void *unit,
+                         uint64_t a,
+                         int64_t b,
+                         int64_t c,
+                         float *f);
+
+/// The kind dispatcher `row` (`EE_UNITS_BODY_*`) of `class` on `unit` (see [`dispatch`]).
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a`, `b`, `c` the dispatcher's
+/// objects and values, `f` its point (or NULL), on the simulation thread.
+int64_t ee_units_uck_dispatch(size_t row,
+                              void *class_,
+                              void *unit,
+                              uint64_t a,
+                              int64_t b,
+                              int64_t c,
+                              float *f);
+
+/// `GetSoundParameters(unit, sound, outs)` of `class`.
+///
+/// # Safety
+/// `class`, `unit` live; `sound` a live `EESoundObject` or NULL; the outs live floats.
+void ee_units_uck_sound(void *class_,
+                        void *unit,
+                        void *sound,
+                        float *volume,
+                        float *pan,
+                        float *pitch);
+
+extern int64_t ee_units_uck_host(int32_t op,
+                                 void *class_,
+                                 void *unit,
+                                 uint64_t a,
+                                 int64_t b,
+                                 int64_t c,
+                                 float (*f)[4]);
+
+/// The kind dispatcher `what` (`EE_UNITS_UCK_DO_*`) of `class` on `unit`: `a` an object (a cargo, a transport,
+/// a tile vector), `b`, `c` values or the caller's points, `f` a value; the answer, or 0.
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), on the simulation thread.
+int64_t ee_units_uck_call(int32_t what,
+                          void *class_,
+                          void *unit,
+                          uint64_t a,
+                          int64_t b,
+                          int64_t c,
+                          float f);
+
 /// `CanUnloadAt` (note 2).
 bool ee_units_ucn_can_unload_at(uint64_t class_, uint64_t transport, int32_t x, int32_t y);
 
@@ -21514,84 +21592,6 @@ bool ee_units_ucn_faces_target(uint64_t class_,
                                uint64_t unit,
                                uint64_t target,
                                bool tolerance);
-
-extern int64_t ee_units_ucg_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
-
-/// The ground classes' body `what` (`EE_UNITS_UCG_DO_*`) of `class` on `unit`: `a` a simple unit, `f` a value;
-/// the choice, or 0.
-///
-/// # Safety
-/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a` a live `EEUnit` (or 0), on the
-/// simulation thread.
-int64_t ee_units_ucg_call(int32_t what,
-                          void *class_,
-                          void *unit,
-                          uint64_t a,
-                          float f);
-
-/// The sea classes' body `what` (`EE_UNITS_UCG_DO_*` from 3020) of `class` on `unit` (see [`run`]).
-///
-/// # Safety
-/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a` a live `EEUnit` (or 0) or the
-/// body's out tile, `f` the body's point or transformation, on the simulation thread.
-int64_t ee_units_ucg_sea(int32_t what,
-                         void *class_,
-                         void *unit,
-                         uint64_t a,
-                         int64_t b,
-                         int64_t c,
-                         float *f);
-
-/// The kind dispatcher `row` (`EE_UNITS_BODY_*`) of `class` on `unit` (see [`dispatch`]).
-///
-/// # Safety
-/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a`, `b`, `c` the dispatcher's
-/// objects and values, `f` its point (or NULL), on the simulation thread.
-int64_t ee_units_uck_dispatch(size_t row,
-                              void *class_,
-                              void *unit,
-                              uint64_t a,
-                              int64_t b,
-                              int64_t c,
-                              float *f);
-
-/// `GetSoundParameters(unit, sound, outs)` of `class`.
-///
-/// # Safety
-/// `class`, `unit` live; `sound` a live `EESoundObject` or NULL; the outs live floats.
-void ee_units_uck_sound(void *class_,
-                        void *unit,
-                        void *sound,
-                        float *volume,
-                        float *pan,
-                        float *pitch);
-
-extern int64_t ee_units_uck_host(int32_t op,
-                                 void *class_,
-                                 void *unit,
-                                 uint64_t a,
-                                 int64_t b,
-                                 int64_t c,
-                                 float (*f)[4]);
-
-/// The kind dispatcher `what` (`EE_UNITS_UCK_DO_*`) of `class` on `unit`: `a` an object (a cargo, a transport,
-/// a tile vector), `b`, `c` values or the caller's points, `f` a value; the answer, or 0.
-///
-/// # Safety
-/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), on the simulation thread.
-int64_t ee_units_uck_call(int32_t what,
-                          void *class_,
-                          void *unit,
-                          uint64_t a,
-                          int64_t b,
-                          int64_t c,
-                          float f);
 
 extern int64_t ee_units_ucp_host(int32_t op,
                                  void *class_,
