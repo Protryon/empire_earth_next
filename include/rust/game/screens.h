@@ -17069,6 +17069,18 @@ int64_t ee_screens_command_units(EeScreensCommandUnitsFields *rec,
                                  float x,
                                  float y);
 
+/// `EEUICSelectUnits`' constructor body (0x25958f): hidden, its click and lasso handlers referenced, always dirty.
+///
+/// # Safety
+/// `box_` is the box being constructed (its handlers set).
+void ee_screens_su_construct(void *box_);
+
+/// `EEUICSelectUnits`' destructor body: its click and lasso handlers released.
+///
+/// # Safety
+/// `box_` is the box being destroyed.
+void ee_screens_su_destroy(void *box_);
+
 /// `EEUIRustControl`'s destructor: the control's draw objects freed (nothing for a control with none).
 void ee_screens_hud_draw_free(void *control);
 
@@ -17295,6 +17307,18 @@ int64_t ee_screens_mini_map_mouse_l_up(void *map);
 
 /// `EEUIMiniMap::MouseMove` on the control `map`: its result.
 int64_t ee_screens_mini_map_mouse_move(void *map);
+
+/// `EEUIMiniMap::MouseLButtonDown` (ICF-folded 0x25ae3b): captures the mouse; 0.
+///
+/// # Safety
+/// `map` is the live mini map.
+long ee_screens_mini_map_left_down(void *map);
+
+/// `EEUIMiniMap::MouseRButtonUp` (0x275523): releases the captured mouse; 0.
+///
+/// # Safety
+/// `map` is the live mini map.
+long ee_screens_mini_map_right_up(void *map);
 
 /// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
 void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);

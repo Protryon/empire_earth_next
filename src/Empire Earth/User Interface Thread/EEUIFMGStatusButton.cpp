@@ -74,16 +74,14 @@ EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle
 // hot key, or a tech's name, cost and description (ee_screens status_button.rs help_string)
 bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
 {
-    EEUIFMGStatusButton* theButton = const_cast<EEUIFMGStatusButton*>(this);
-    return static_cast<EEUIFMainGame*>(theButton->GetForm())->ButtonCall(theButton, EE_SCREENS_SB_DO_HELP, &outString) != 0;
+    return static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(const_cast<EEUIFMGStatusButton*>(this), EE_SCREENS_SB_DO_HELP, &outString) != 0;
 }
 
 // Runs a command button on a right release, or cancels one queued tech (Shift: five, for units only)
 // (ee_screens status_button.rs)
 long EEUIFMGStatusButton::MouseRButtonUp()
 {
-    static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_RIGHT_UP);
-    return 0;
+    return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_RIGHT_UP);   // (0)
 }
 
 // the right press's and tab's shims (ee_screens hud_more.rs)

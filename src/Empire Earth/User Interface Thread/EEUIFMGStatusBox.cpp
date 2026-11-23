@@ -76,12 +76,9 @@ static_assert(offsetof(EEUIFMGStatusBoxCall, mText) == 3 * sizeof(void*), "hud_d
 
 // The call's unit (an EEUnit*) for the status box's view of it (hud_views.rs status_box_view, the original's
 // EEStatusBoxView), and whether the box has its third and fourth bars
-extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall, bool* outTwoBars)
-{
-    EEUIFMGStatusBoxCall& theCall = *static_cast<EEUIFMGStatusBoxCall*>(inCall);
-    *outTwoBars = theCall.mBox->mCA8 != NULL && theCall.mBox->mCAC != NULL;
-    return (int64_t)theCall.mUnit;
-}
+extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall) { return (int64_t)static_cast<EEUIFMGStatusBoxCall*>(inCall)->mUnit; }
+extern "C" bool ee_screenscpp_status_box_bar3(void* inCall) { return static_cast<EEUIFMGStatusBoxCall*>(inCall)->mBox->mCA8 != NULL; }
+extern "C" bool ee_screenscpp_status_box_bar4(void* inCall) { return static_cast<EEUIFMGStatusBoxCall*>(inCall)->mBox->mCAC != NULL; }
 
 // ---- the one-statement shims of ee_screens status_box_calls.rs (UI lane round 8; once HostOp's cases and
 // EEUIFMGStatusBar::SetIconBitmap): each one call, no logic
