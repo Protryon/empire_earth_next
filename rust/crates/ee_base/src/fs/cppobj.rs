@@ -3,6 +3,8 @@
 //! `FSMemoryFile`) make on C++ objects, as a table of one-statement C++ calls that File System.cpp registers once
 //! (`ee_fs_cpp_register`), as [`crate::fs::cppfile`]'s file calls are.
 
+#![allow(clippy::unnecessary_cast)] // (c_long/c_ulong: 32 bits on Windows, 64 on LP64)
+
 use std::ffi::{c_long, c_ulong, c_void};
 use std::ptr;
 use std::sync::atomic::{AtomicPtr, Ordering};
@@ -221,9 +223,9 @@ mod tests {
     fn a_chunk_loads_and_saves_its_persistent() {
         let calls = run(|| unsafe {
             let mut chunk = EeFsChunk::new();
-            let mut out = 1usize as *mut c_void;
+            let mut out = std::ptr::dangling_mut::<c_void>();
             assert_eq!(ee_fs_chunk_load_persistent(&chunk, &mut out), 2);
-            assert_eq!(out as usize, 1);
+            assert_eq!(out, std::ptr::dangling_mut::<c_void>());
             // a failed save leaves the chunk without a finished payload
             assert_eq!(ee_fs_chunk_save_persistent(&mut chunk, 3, 4, 99usize as *mut c_void), 5);
             let mut chunk = EeFsChunk::new();
@@ -242,13 +244,7 @@ mod tests {
         });
         assert_eq!(
             calls,
-            [
-                "save 99 3 4 true",
-                "save 88800 3 4 true",
-                "tag 88800",
-                "create_default 55",
-                "load 56 3 4 true"
-            ]
+            ["save 99 3 4 true", "save 88800 3 4 true", "tag 88800", "create_default 55", "load 56 3 4 true"]
         );
     }
 }

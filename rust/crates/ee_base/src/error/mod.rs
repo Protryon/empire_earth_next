@@ -162,12 +162,12 @@ pub unsafe extern "C" fn ee_error_debug_end(
     directory: *const std::ffi::c_void,
 ) {
     let buffer = Box::from_raw(std::ptr::slice_from_raw_parts_mut(text.cast::<u8>(), (size as usize).max(1)));
-    let mut buffer = cut_debug_text(buffer);
+    let mut buffer = cut_debug_text(&buffer);
     ee_error_debug_out(buffer.as_mut_ptr().cast(), volume, directory);
 }
 
 /// The text up to its NUL, at most 1023 bytes, NUL-terminated.
-fn cut_debug_text(buffer: Box<[u8]>) -> Vec<u8> {
+fn cut_debug_text(buffer: &[u8]) -> Vec<u8> {
     let length = buffer.iter().position(|&b| b == 0).unwrap_or(buffer.len()).min(1023);
     let mut text = buffer[..length].to_vec();
     text.push(0);
@@ -261,10 +261,10 @@ mod tests {
     fn a_debug_text_is_cut_at_1023_bytes() {
         let mut long = vec![b'x'; 2000];
         long.push(0);
-        let cut = super::cut_debug_text(long.into_boxed_slice());
+        let cut = super::cut_debug_text(&long);
         assert_eq!(cut.len(), 1024);
         assert_eq!(cut[1023], 0);
-        let short = super::cut_debug_text(b"ab zz".to_vec().into_boxed_slice());
+        let short = super::cut_debug_text(b"ab zz");
         assert_eq!(short, b"ab ");
         let buffer = super::ee_error_debug_buffer(std::ptr::null_mut(), 0);
         // SAFETY: a one-byte buffer of ee_error_debug_buffer
