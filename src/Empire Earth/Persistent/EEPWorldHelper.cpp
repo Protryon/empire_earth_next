@@ -46,6 +46,23 @@
 
 
 #include "rust/game/gamecpp.h"
+#include "lle/NEMessage.h"
+#include "lle/NESynchronousServer.h"
+#include "lle/NESynchronousClient.h"
+#include "ee/EECommunications.h"
+#include "ee/EEPhysics.h"
+#include "ee/EEPMultiplayerHelper.h"
+#include "ee/EEHumanPlayer.h"
+#include "ee/EEComputerPlayer.h"
+#include "ee/EEPPlayerHelper.h"
+#include "ee/EECPEngine.h"
+#include "ee/EECPNext.h"
+#include "ee/EECPNextUnits.h"
+#include "ee/EEGameOptions.h"
+#include "ee/EESMMediaStrings.h"
+#include "ee/EEPSaveGameHeader.h"
+#include "ee/EEPChecksum.h"
+#include "rust/base/error.h"
 
 // The saved world's bodies are ee_game gamecpp persist_world.rs (game core lane, round 9): the constructors, Load,
 // Save, Restore, the teams' load and save, the host of ee_sim's world_save.rs (the running state from save 0.254 on),
@@ -115,7 +132,7 @@ void EEPWorldHelper::GetChecksum(ESChecksum& ioChecksum) const
 
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
 
-int64_t EEPLoaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
@@ -129,6 +146,15 @@ double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 #define FOREST ((EEAIForest*)p)
 #define POINTS (*(std::vector<U2DPoint<long> >*)p)
 
+#define SERVER dynamic_cast<NESynchronousServer*>(gCommunications)
+#define CLIENT dynamic_cast<NESynchronousClient*>(gCommunications)
+#define COMMS dynamic_cast<NESynchronousCommunications*>(gCommunications)
+#define PPH ((EEPPlayerHelper*)p)
+#define CP ((EEComputerPlayer*)p)
+#define STR (*(std::string*)p)
+#define BYTES std::string((const char*)a[0], (size_t)a[1])
+#define HDR ((EEPSaveGameHeader*)p)
+#define AFILE (*(FSFile*)a[0])
 // The saved world's C++ calls and members (EESaveLoad.cpp's EECore9OpC default): one statement each
 int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
@@ -286,7 +312,89 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwNodeAllowed: return ((EETechTreeNode*)p)->mIsAllowed;
     case O::PwNodeSetAllowed: ((EETechTreeNode*)p)->mIsAllowed = a[0] != 0;
         break;
-    default: return EEPLoaderOp(inOp, p, a, f);
+    // (EEPMultiplayerOp) The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
+    case O::PmPhysicsLoad: return gPhysics->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
+    case O::PmPhysicsSave: return gPhysics->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
+    case O::PmServerSetPhysicsTick: SERVER->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
+        break;
+    case O::PmClientSetPhysicsTick: CLIENT->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
+        break;
+    case O::PmCommCtsProcessed: return COMMS->GetNumberOfCTsProcessedInPhysics();
+    case O::PmCommLastTick: return COMMS->GetLastTickReceived();
+    case O::PmServerLastCt: return SERVER->GetLastCTMessageID();
+    case O::PmServerCt: return SERVER->GetCurrentCommunicationsTick();
+    case O::PmServerPt: return SERVER->GetCurrentPhysicsTick();
+    case O::PmServerMessageNumber: return SERVER->GetMessageManagerCurrentMessageNumber();
+    case O::PmClientCt: return CLIENT->GetCurrentCommunicationsTick();
+    case O::PmClientPt: return CLIENT->GetCurrentPhysicsTick();
+    // (EEPHelpersOp) The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
+    case O::PphFields: return P64(&PPH->mLocalPlayerIndex);
+    case O::PphPush: PPH->mPlayers.push_back((EEPlayer*)a[0]);
+        break;
+    case O::PphCopyPlayers: *(std::vector<EEPlayer*>*)a[0] = PPH->mPlayers;
+        break;
+    case O::PphPlayerChecksum: PL->GetChecksum(*(ESChecksum*)a[0]);
+        break;
+    case O::PphChecksumLocal: ((ESChecksum*)p)->AddChecksum("EEPPlayerHelper::mLocalPlayerIndex", (unsigned long)a[0]);
+        break;
+    case O::PphNewHuman: return P64(static_cast<EEPlayer*>(new EEHumanPlayer));
+    case O::PphNewComputer: return P64(static_cast<EEPlayer*>(new EEComputerPlayer));
+    case O::PphVerifyType3: ESVERIFY_AT(false, 251);
+        break;
+    case O::PphPlayerLoad: return PL->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
+    case O::PphPlayerSave: return PL->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
+    case O::PphComputerOf: return P64(PL->mComputerPlayer);
+    case O::PphHasHuman: return PL->mHumanPlayer != NULL;
+    case O::PphVerifyPlayerType: ESVERIFY_AT(a[0] != 0, 274);
+        break;
+    case O::PphCpSetEngineNext: CP->mEngine = kEECPEngineNext;
+        break;
+    case O::PphCpEngine: return CP->mEngine;
+    case O::PphAiKnown: return EECPAIByID(BYTES) != NULL;
+    case O::PphLogUnknownAi: EECPEngineLog("the saved game's player %lu plays the AI '%s', which Data/ai/ais.json does not list: the game cannot be loaded", PL->mPlayerID, BYTES.c_str());
+        break;
+    case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
+        break;
+    case O::PphCpLoadState: return EECPNextLoadState(CP, BYTES);
+    case O::PphCpUnitsLoad: return EECPUnitsLoad(CP, BYTES);
+    case O::PphHasUnitsLuaState: return EESaveHasUnitsLuaState((unsigned long)a[0], (unsigned long)a[1]);
+    case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
+    case O::PphAddAlly: PL->mAllies.push_back((EEPlayer*)a[0]);
+        break;
+    case O::PphStrNew: return P64(new std::string);
+    case O::PphStrDelete: delete &STR;
+        break;
+    case O::PphStrSize: return (int64_t)STR.size();
+    case O::PphStrData: return P64(STR.data());
+    case O::PphCpEngineAi: *(std::string*)a[0] = EECPEngineAI(CP);
+        break;
+    case O::PphClassicAiPresent: return EECPClassicAI() != NULL;
+    case O::PphClassicAiId: *(std::string*)a[0] = EECPAIID(EECPClassicAI());
+        break;
+    case O::PphCpSaveState: EECPNextSaveState(CP, *(std::string*)a[0]);
+        break;
+    case O::PphCpUnitsSave: EECPUnitsSave(CP, *(std::string*)a[0]);
+        break;
+    // (EEPHeaderOp) The header's C++ calls and members (EEPPlayerHelper.cpp's EEPHelpersOp default): one statement each
+    case O::HdrNameLoad: return HDR->mName.Load(AFILE);
+    case O::HdrNameSave: return HDR->mName.Save(AFILE);
+    case O::HdrDescriptionLoad: return HDR->mDescription.Load(AFILE);
+    case O::HdrDescriptionSave: return HDR->mDescription.Save(AFILE);
+    case O::HdrPlayerNamesLoad: return HDR->mPlayerNames.Load(AFILE);
+    case O::HdrPlayerNamesSave: return HDR->mPlayerNames.Save(AFILE);
+    case O::HdrDateLoad: return HDR->mDate.Load(AFILE);
+    case O::HdrDateSave: return HDR->mDate.Save(AFILE);
+    case O::HdrOptionsLoad: return HDR->mGameOptions.Load(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
+    case O::HdrOptionsSave: return HDR->mGameOptions.Save(AFILE);
+    case O::HdrMediaLoad: return HDR->mMediaStrings.Load(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
+    case O::HdrMediaSave: return HDR->mMediaStrings.Save(HDR->mMajorVersion, HDR->mMinorVersion, AFILE);
+    // (EEPChecksumOp) The checksum's C++ calls and members (EEPCalamityHelper.cpp's EEPCalamityOp default; the end of lane C): one
+    // statement each
+    case O::PcRust: return P64(static_cast<EEPChecksum*>((FSPersistent*)p)->GetRust());
+    case O::PcUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
+    case O::PcUStrText: return P64((const char*)*(UString*)p);
+    case O::PcSaveText: return UString((const char*)a[0]).Save(*(FSFile*)p);
+    default: return EECore9OpD6(inOp, p, a, f);
     }
     return 0;
 }

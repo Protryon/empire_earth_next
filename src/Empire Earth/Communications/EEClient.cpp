@@ -160,18 +160,39 @@ bool EEClient::IsServer()
 
 // ------------------------------------------------------------------------- round 9, lane D: the client's bodies' C++
 
-int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTree.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define FILESPEC ((FSFileSpec*)a[0])
 #define WSTR(k) (*(UWideString*)a[k])
 
-// the C++ calls of the client's bodies in Rust (gamecpp server.rs; EEServer.cpp's EECore9OpD2 default): one statement
-// each
-int64_t EECore9OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+// ------------------------------------------------------------------------- round 11, lane C: the client's bodies' C++
+
+int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the client's plain tail (gamecpp session_objs.rs EeGamecppClientTail): mHasLeftGame .. mWasBooted
+static_assert(offsetof(EEClient, mUISlotNumber) - offsetof(EEClient, mHasLeftGame) == 1
+                  && offsetof(EEClient, mUF2) - offsetof(EEClient, mHasLeftGame) == 18
+                  && offsetof(EEClient, mIsExecutingSelection) - offsetof(EEClient, mHasLeftGame) == 20
+                  && offsetof(EEClient, mWasBooted) - offsetof(EEClient, mHasLeftGame) == 27,
+              "gamecpp session_objs.rs EeGamecppClientTail");
+
+#define CL ((EEClient*)p)
+
+// the C++ calls and members of the client's bodies in Rust (gamecpp session_objs.rs; EEServer.cpp's EECore11OpC2
+// default): p the client, one statement each
+int64_t EECore11OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
+    case O::C11ClTail: return P64(&CL->mHasLeftGame);
+    case O::C11ClCreateLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(CL->mFastSelectionLock) == keseOK, 67);
+        break;
+    case O::C11ClStopThreads: CL->StopThreads();
+        break;
+    case O::C11ClDestroyLock: TSScheduler::DestroyCriticalSection(CL->mFastSelectionLock);
+        break;
+    // (EECore9OpD3) the C++ calls of the client's bodies in Rust (gamecpp server.rs; EEServer.cpp's EECore9OpD2 default): one statement
+    // each
     case O::ClNewBootDefault: return P64(static_cast<EEAction*>(new EEABootClientFromCanceledGame));
     case O::ClNameLength: return WSTR(0).GetLength();
     case O::ClExtension: WSTR(1) = WSTR(0).GetIndexedSubstring(WSTR(0).GetLength() - 4, WSTR(0).GetLength());
@@ -203,38 +224,7 @@ int64_t EECore9OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ClSprintfSeconds: sprintf(WSTR(0), WSTR(1), (unsigned long)a[2]);
         break;
-    default: return EECore9OpD6(inOp, p, a, f);
-    }
-    return 0;
-}
-
-// ------------------------------------------------------------------------- round 11, lane C: the client's bodies' C++
-
-int64_t EECore11OpC4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEMessage.cpp
-
-// the client's plain tail (gamecpp session_objs.rs EeGamecppClientTail): mHasLeftGame .. mWasBooted
-static_assert(offsetof(EEClient, mUISlotNumber) - offsetof(EEClient, mHasLeftGame) == 1
-                  && offsetof(EEClient, mUF2) - offsetof(EEClient, mHasLeftGame) == 18
-                  && offsetof(EEClient, mIsExecutingSelection) - offsetof(EEClient, mHasLeftGame) == 20
-                  && offsetof(EEClient, mWasBooted) - offsetof(EEClient, mHasLeftGame) == 27,
-              "gamecpp session_objs.rs EeGamecppClientTail");
-
-#define CL ((EEClient*)p)
-
-// the C++ calls and members of the client's bodies in Rust (gamecpp session_objs.rs; EEServer.cpp's EECore11OpC2
-// default): p the client, one statement each
-int64_t EECore11OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::C11ClTail: return P64(&CL->mHasLeftGame);
-    case O::C11ClCreateLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(CL->mFastSelectionLock) == keseOK, 67);
-        break;
-    case O::C11ClStopThreads: CL->StopThreads();
-        break;
-    case O::C11ClDestroyLock: TSScheduler::DestroyCriticalSection(CL->mFastSelectionLock);
-        break;
-    default: return EECore11OpC4(inOp, p, a, f);
+    default: return EECore11OpC7(inOp, p, a, f);
     }
     return 0;
 }

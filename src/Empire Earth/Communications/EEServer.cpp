@@ -288,10 +288,6 @@ long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_
 
 // ------------------------------------------------------------------------- round 9, lane D: this file's bodies' C++
 
-int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EECore9OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EECore9OpD3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEClient.cpp
 
 static_assert(kSlotServer == 0xfe && kSlotNone == 0xff, "gamecpp server.rs SLOT_SERVER, SLOT_NONE");
 
@@ -303,12 +299,102 @@ static_assert(kSlotServer == 0xfe && kSlotNone == 0xff, "gamecpp server.rs SLOT_
 #define MSG ((NEMessage*)a[0])
 #define WSTR(k) (*(UWideString*)a[k])
 
-// the C++ calls and members of the session host's body in Rust (gamecpp server.rs; EeGameCpp's lane D section):
-// p the session's frame (EESessionFrame) unless noted, one statement each
-int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
+double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpD7F(inOp, p, a, f);
+}
+
+// ------------------------------------------------------------------------- round 11, lane C: the server's bodies' C++
+
+int64_t EECore11OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEClient.cpp
+
+static_assert(kConnectionRemovedByHost == 5 && kMessageUpdatePingStat == 0x7a, "gamecpp session_objs.rs");
+// the server's plain tail (gamecpp session_objs.rs EeGamecppServerTail): mVoted .. mHasLeftGame
+static_assert(offsetof(EEServer, mVoteEdict) - offsetof(EEServer, mVoted) == 256
+                  && offsetof(EEServer, mLagMask) - offsetof(EEServer, mVoted) == 262
+                  && offsetof(EEServer, mNumVotes) - offsetof(EEServer, mVoted) == 264
+                  && offsetof(EEServer, mNumDroppedLoaders) - offsetof(EEServer, mVoted) == 267
+                  && offsetof(EEServer, mFastSelection) - offsetof(EEServer, mVoted) == 268
+                  && offsetof(EEServer, mU348) - offsetof(EEServer, mVoted) == 284
+                  && offsetof(EEServer, mHasLeftGame) - offsetof(EEServer, mVoted) == 288,
+              "gamecpp session_objs.rs EeGamecppServerTail");
+
+#define SV ((EEServer*)p)
+#define GOP ((EEGameOptionsPlayer*)p)
+#define REQ ((NEMRecord*)a[0])
+
+// the C++ calls and members of the server's bodies in Rust (gamecpp session_objs.rs): p the server unless noted, one
+// statement each
+int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
+    // the session's frame (a0 the communications, a1 the server flag, a2 a join request's player, a3 its version)
+    case O::C11FrameNew: return P64((new EESessionFrame{(NESynchronousCommunications*)a[0], a[1] != 0, {}, (const EEGameOptionsPlayer*)a[2], (const UWideString*)a[3], NULL}));
+    case O::C11FrameDelete: delete SF;
+        break;
+    case O::C11FrameComms: return P64(SF->mComms);
+    // the server's members and locks
+    case O::C11SvTail: return P64(&SV->mVoted[0]);
+    case O::C11SvCreateSearchLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(SV->mSearchForSlotLock) == keseOK, 103);
+        break;
+    case O::C11SvCreateFastLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(SV->mFastSelectionLock) == keseOK, 106);
+        break;
+    case O::C11SvCreateAttemptLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(SV->mAttemptToRemovePlayerLock) == keseOK, 109);
+        break;
+    case O::C11SvStopThreads: SV->StopThreads();
+        break;
+    case O::C11SvDestroySearchLock: TSScheduler::DestroyCriticalSection(SV->mSearchForSlotLock);
+        break;
+    case O::C11SvDestroyFastLock: TSScheduler::DestroyCriticalSection(SV->mFastSelectionLock);
+        break;
+    case O::C11SvDestroyAttemptLock: TSScheduler::DestroyCriticalSection(SV->mAttemptToRemovePlayerLock);
+        break;
+    case O::C11SvMaxPlayers: return SV->GetMaxPlayers();
+    case O::C11SvSendToSlot: return SV->GetSendToSlot((unsigned char)a[0]);
+    case O::C11SvLobbySlot: return SV->GetLobbySlot((unsigned char)a[0]);
+    case O::C11SvSendToErase: SV->mSendToSlots.erase((unsigned char)a[0]);
+        break;
+    case O::C11SvUnregister: EESessionAccess::Unregister(SV, (unsigned char)a[0]);
+        break;
+    // the sends
+    case O::C11SvNewResponse: return P64(SV->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]));
+    case O::C11SvSendTo: EESessionAccess::SendTo(SV, (unsigned char)a[0], (NEMessage*)a[1]);
+        break;
+    case O::C11SvSendPlayerInfo: SV->ProcessLocalUserInput(EENewFullPlayerInformation(*(EEGameOptionsPlayer*)a[0]), kSlotNone);
+        break;
+    case O::C11SvPingStat: SV->ProcessLocalUserInput(new EEMRecord(kMessageUpdatePingStat, {(unsigned char)a[0], f[0]}), kSlotNone);
+        break;
+    case O::C11SvXferStatus: SV->ProcessLocalUserInput(new NEMRecord(kNetMessageXferStatus, {(unsigned char)a[0], (unsigned char)a[1], (uint32_t)a[2], (unsigned char)a[3]}), kSlotNone);
+        break;
+    // a connection request (a0)
+    case O::C11RequestFirewall: SV->mBehindFirewall.insert(std::map<unsigned char, bool>::value_type(REQ->GetOriginatingSlot(), REQ->Get<bool>(0)));
+        break;
+    case O::C11RequestString: *(UWideString*)p = REQ->GetString((uint32_t)a[1]);
+        break;
+    case O::C11RequestChecksum: return (long long)REQ->Get<uint32_t>(3);
+    // a lobby slot's player (p)
+    case O::C11PlayerNew: return P64(new EEGameOptionsPlayer);
+    case O::C11PlayerDelete: delete GOP;
+        break;
+    case O::C11PlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(GOP));
+    case O::C11PlayerNameCopy: GOP->mName = ((EEGameOptionsPlayer*)a[0])->mName;
+        break;
+    case O::C11PlayerNameFromRequest: GOP->mName = REQ->GetString((uint32_t)a[1]);
+        break;
+    case O::C11OptionsReadLock: gGameOptions.mLock->ReadLock();
+        break;
+    case O::C11OptionsReadUnlock: gGameOptions.mLock->ReadUnlock();
+        break;
+    case O::C11OptionsPlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(&gGameOptions.mPlayers[a[0]]));
+    // the sounds and the UI
+    case O::C11WarningSound: EELoadSound(UString(a[0] == 1 ? "sounds\\OutOfSynch.wav" : "sounds\\Resending.wav"), 0x31, *(unsigned long*)a[1], *(unsigned long*)a[2], 1);
+        break;
+    case O::C11UiPost12: gUserInterface->GetThread()->Post(0x12, (void*)a[0], (void*)a[1], true);
+        break;
+    // (EECore9OpD) the C++ calls and members of the session host's body in Rust (gamecpp server.rs; EeGameCpp's lane D section):
+    // p the session's frame (EESessionFrame) unless noted, one statement each
     // the locks
     case O::SsLockCt: SS->LockSendCommunicationsTick();
         break;
@@ -514,16 +600,7 @@ int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::SsSprintfVersions: sprintf(WSTR(0), WSTR(1), (const char*)((NEMRecord*)a[2])->GetString(4), (const char*)gGameVersion);
         break;
-    default: return EECore9OpD2(inOp, p, a, f);
-    }
-    return 0;
-}
-
-// the session host's second half (the lobby service, the sounds, the world, the communications, the game start)
-int64_t EECore9OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
+    // (EECore9OpD2) the session host's second half (the lobby service, the sounds, the world, the communications, the game start)
     // the lobby service
     case O::SsNewWonInfo: return P64(new EEWonNetGameInfo);
     case O::SsDeleteWonInfo: delete (EEWonNetGameInfo*)p;
@@ -644,105 +721,6 @@ int64_t EECore9OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::SsTimerRunning: return gPhysics->mTimerRunning;
     case O::SsMainGameUiState0: gUIManager->GetMainGameForm()->SetUIState(0);
-        break;
-    default: return EECore9OpD3(inOp, p, a, f);
-    }
-    return 0;
-}
-
-double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
-double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpD7F(inOp, p, a, f);
-}
-
-// ------------------------------------------------------------------------- round 11, lane C: the server's bodies' C++
-
-int64_t EECore11OpC3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEClient.cpp
-
-static_assert(kConnectionRemovedByHost == 5 && kMessageUpdatePingStat == 0x7a, "gamecpp session_objs.rs");
-// the server's plain tail (gamecpp session_objs.rs EeGamecppServerTail): mVoted .. mHasLeftGame
-static_assert(offsetof(EEServer, mVoteEdict) - offsetof(EEServer, mVoted) == 256
-                  && offsetof(EEServer, mLagMask) - offsetof(EEServer, mVoted) == 262
-                  && offsetof(EEServer, mNumVotes) - offsetof(EEServer, mVoted) == 264
-                  && offsetof(EEServer, mNumDroppedLoaders) - offsetof(EEServer, mVoted) == 267
-                  && offsetof(EEServer, mFastSelection) - offsetof(EEServer, mVoted) == 268
-                  && offsetof(EEServer, mU348) - offsetof(EEServer, mVoted) == 284
-                  && offsetof(EEServer, mHasLeftGame) - offsetof(EEServer, mVoted) == 288,
-              "gamecpp session_objs.rs EeGamecppServerTail");
-
-#define SV ((EEServer*)p)
-#define GOP ((EEGameOptionsPlayer*)p)
-#define REQ ((NEMRecord*)a[0])
-
-// the C++ calls and members of the server's bodies in Rust (gamecpp session_objs.rs): p the server unless noted, one
-// statement each
-int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    // the session's frame (a0 the communications, a1 the server flag, a2 a join request's player, a3 its version)
-    case O::C11FrameNew: return P64((new EESessionFrame{(NESynchronousCommunications*)a[0], a[1] != 0, {}, (const EEGameOptionsPlayer*)a[2], (const UWideString*)a[3], NULL}));
-    case O::C11FrameDelete: delete SF;
-        break;
-    case O::C11FrameComms: return P64(SF->mComms);
-    // the server's members and locks
-    case O::C11SvTail: return P64(&SV->mVoted[0]);
-    case O::C11SvCreateSearchLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(SV->mSearchForSlotLock) == keseOK, 103);
-        break;
-    case O::C11SvCreateFastLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(SV->mFastSelectionLock) == keseOK, 106);
-        break;
-    case O::C11SvCreateAttemptLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(SV->mAttemptToRemovePlayerLock) == keseOK, 109);
-        break;
-    case O::C11SvStopThreads: SV->StopThreads();
-        break;
-    case O::C11SvDestroySearchLock: TSScheduler::DestroyCriticalSection(SV->mSearchForSlotLock);
-        break;
-    case O::C11SvDestroyFastLock: TSScheduler::DestroyCriticalSection(SV->mFastSelectionLock);
-        break;
-    case O::C11SvDestroyAttemptLock: TSScheduler::DestroyCriticalSection(SV->mAttemptToRemovePlayerLock);
-        break;
-    case O::C11SvMaxPlayers: return SV->GetMaxPlayers();
-    case O::C11SvSendToSlot: return SV->GetSendToSlot((unsigned char)a[0]);
-    case O::C11SvLobbySlot: return SV->GetLobbySlot((unsigned char)a[0]);
-    case O::C11SvSendToErase: SV->mSendToSlots.erase((unsigned char)a[0]);
-        break;
-    case O::C11SvUnregister: EESessionAccess::Unregister(SV, (unsigned char)a[0]);
-        break;
-    // the sends
-    case O::C11SvNewResponse: return P64(SV->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]));
-    case O::C11SvSendTo: EESessionAccess::SendTo(SV, (unsigned char)a[0], (NEMessage*)a[1]);
-        break;
-    case O::C11SvSendPlayerInfo: SV->ProcessLocalUserInput(EENewFullPlayerInformation(*(EEGameOptionsPlayer*)a[0]), kSlotNone);
-        break;
-    case O::C11SvPingStat: SV->ProcessLocalUserInput(new EEMRecord(kMessageUpdatePingStat, {(unsigned char)a[0], f[0]}), kSlotNone);
-        break;
-    case O::C11SvXferStatus: SV->ProcessLocalUserInput(new NEMRecord(kNetMessageXferStatus, {(unsigned char)a[0], (unsigned char)a[1], (uint32_t)a[2], (unsigned char)a[3]}), kSlotNone);
-        break;
-    // a connection request (a0)
-    case O::C11RequestFirewall: SV->mBehindFirewall.insert(std::map<unsigned char, bool>::value_type(REQ->GetOriginatingSlot(), REQ->Get<bool>(0)));
-        break;
-    case O::C11RequestString: *(UWideString*)p = REQ->GetString((uint32_t)a[1]);
-        break;
-    case O::C11RequestChecksum: return (long long)REQ->Get<uint32_t>(3);
-    // a lobby slot's player (p)
-    case O::C11PlayerNew: return P64(new EEGameOptionsPlayer);
-    case O::C11PlayerDelete: delete GOP;
-        break;
-    case O::C11PlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(GOP));
-    case O::C11PlayerNameCopy: GOP->mName = ((EEGameOptionsPlayer*)a[0])->mName;
-        break;
-    case O::C11PlayerNameFromRequest: GOP->mName = REQ->GetString((uint32_t)a[1]);
-        break;
-    case O::C11OptionsReadLock: gGameOptions.mLock->ReadLock();
-        break;
-    case O::C11OptionsReadUnlock: gGameOptions.mLock->ReadUnlock();
-        break;
-    case O::C11OptionsPlayerFields: return P64(static_cast<EeAppOptionsPlayerFields*>(&gGameOptions.mPlayers[a[0]]));
-    // the sounds and the UI
-    case O::C11WarningSound: EELoadSound(UString(a[0] == 1 ? "sounds\\OutOfSynch.wav" : "sounds\\Resending.wav"), 0x31, *(unsigned long*)a[1], *(unsigned long*)a[2], 1);
-        break;
-    case O::C11UiPost12: gUserInterface->GetThread()->Post(0x12, (void*)a[0], (void*)a[1], true);
         break;
     default: return EECore11OpC3(inOp, p, a, f);
     }

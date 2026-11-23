@@ -214,7 +214,7 @@ EETechTree& EETechTree::operator=(const EETechTree& inOther)
 
 // ------------------------------------------------------------------------- round 9, lane D: the tech tree's host
 
-int64_t EECore9OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
+int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // an epoch's nodes into the walk's buffer (at most its count); the epoch's node count
 static int32_t EETechEpochNodes(EETechTreeEpoch* inEpoch, EeTechHostIo* io)
@@ -332,7 +332,7 @@ int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::TkNodeUnitClass0: return TNODE->GetUnitClass(0);
     case O::TkNodeIsAvailable: return TNODE->GetIsAvailable();
     case O::TkNodeGetCost: return TNODE->GetCost((long)a[0], (long)a[1], 1.0f);
-    default: return EECore9OpD7(inOp, p, a, f);
+    default: return EECore9OpE(inOp, p, a, f);
     }
     return 0;
 }

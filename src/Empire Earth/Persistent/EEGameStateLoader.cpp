@@ -115,22 +115,7 @@ void EEGameState::SetScenarioManager(EEScenarioManager* inManager)
 
 // ------------------------------------------------------------------------- the loader's C++ (gamecpp persist_save.rs)
 
-int64_t EEPHelpersOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EEPHelpersOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
-// The loader's C++ (EEPWorldHelper.cpp's EEPWorldOp default): one statement each
-int64_t EEPLoaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::PsSetLoadingScenario: sLoadingScenario = EEIsScenarioFile(((FSFile*)p)->GetFile());
-        break;
-    case O::PsClearLoadingScenario: sLoadingScenario = false;
-        break;
-    default: return EEPHelpersOp(inOp, p, a, f);
-    }
-    return 0;
-}
 
 double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
@@ -147,6 +132,11 @@ int64_t EECore11OpC8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     typedef EeGameCpp O;
     switch (inOp) {
     case O::C11ScenarioExtension: return (int64_t)(intptr_t)(const char*)gScenarioExtension;
+    // (EEPLoaderOp) The loader's C++ (EEPWorldHelper.cpp's EEPWorldOp default): one statement each
+    case O::PsSetLoadingScenario: sLoadingScenario = EEIsScenarioFile(((FSFile*)p)->GetFile());
+        break;
+    case O::PsClearLoadingScenario: sLoadingScenario = false;
+        break;
     default: return EECore11OpE(inOp, p, a, f);
     }
     return 0;

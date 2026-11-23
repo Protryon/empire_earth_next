@@ -129,6 +129,20 @@ static_assert(sizeof(EETileArea) == 4 * sizeof(long), "gamecpp calamity_hosts.rs
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 
+
+double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpCF(inOp, p, a, f);
+}
+
+// ------------------------------------------------------------------------- round 11, lane C: the calamities' C++
+
+double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define CAL ((EECalamity*)p)
+#define FNC ((EEContagionFunctor*)p)
+#define FSF (*(FSFile*)a[0])
+
 // The C++ calls and members of the contagion world's and the calamity record's compound cases in Rust (gamecpp
 // calamity_hosts.rs; EeGameCpp's lane B section, after EETile.cpp's EECore9OpB4): one statement each
 int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
@@ -156,31 +170,8 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::CgSetClass: ((EECalamity*)p)->mClass = EECalamityManager::GetInstance()->GetCalamityClass((long)a[0]);
         break;
     case O::CgTileAddr: return P64(a[0] != 0 ? &((EECalamity*)p)->mTilePlaceHolder1.mY : &((EECalamity*)p)->mTilePlaceHolder1.mX);
-    default: return EECore9OpC(inOp, p, a, f);
-    }
-    return 0;
-}
-
-double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpCF(inOp, p, a, f);
-}
-
-// ------------------------------------------------------------------------- round 11, lane C: the calamities' C++
-
-int64_t EECore11OpC6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECalamityUpdate.cpp
-double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
-#define CAL ((EECalamity*)p)
-#define FNC ((EEContagionFunctor*)p)
-#define FSF (*(FSFile*)a[0])
-
-// the C++ calls and members of the calamity record's I/O and of the contagion world (gamecpp calamity_io.rs; p the
-// calamity or the functor; EEMessage.cpp's EECore11OpC4 default): one statement each
-int64_t EECore11OpC5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
+    // (EECore11OpC5) the C++ calls and members of the calamity record's I/O and of the contagion world (gamecpp calamity_io.rs; p the
+    // calamity or the functor; EEMessage.cpp's EECore11OpC4 default): one statement each
     // the calamity record's parts (a0 the file)
     case O::C11CalRectLoad: return CAL->mRectangle.Load(FSF);
     case O::C11CalRectSave: return CAL->mRectangle.Save(FSF);
@@ -215,7 +206,7 @@ int64_t EECore11OpC5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::C11CgUnknown: ESVERIFY_AT(false, 1);
         break;
-    default: return EECore11OpC6(inOp, p, a, f);
+    default: return EECore9OpC(inOp, p, a, f);
     }
     return 0;
 }

@@ -97,7 +97,6 @@ void EEPCalamityHelper::Virtual1C(long)
 
 // ------------------------------------------------------------------------- the calamities' C++ (gamecpp persist_parts.rs)
 
-int64_t EEPChecksumOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the calamity manager's active calamities (GetCalamities' out value)
 static std::vector<EECalamity*>* EEActiveCalamities()
@@ -113,11 +112,26 @@ static std::vector<EECalamity*>* EEActiveCalamities()
 #define CALAMITIES (*(std::vector<EECalamity*>*)p)
 #define AFILE (*(FSFile*)a[2])
 
-// The calamities' C++ calls and members (EEPMultiplayerHelper.cpp's EEPMultiplayerOp default): one statement each
-int64_t EEPCalamityOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+// ------------------------------------------------------------------------- round 10, lane B: the chunk's own C++
+
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+// the chunk's constructor's, destructor's, Reset's and copy's C++ (gamecpp persist_more.rs; p the chunk): one
+// statement each
+int64_t EECore10OpB8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
+    case O::PchClearContagion: PCH->ClearContagionManager();
+        break;
+    case O::PchNewContagion: PCH->mContagionManager = new EEContagionManager;
+        break;
+    case O::PchContagion: return P64(PCH->mContagionManager);
+    case O::PchCopyCalamities: *PCH->mCalamities = *((const EEPCalamityHelper*)a[0])->mCalamities;
+        break;
+    case O::PchCopyContagion: *PCH->mContagionManager = *((const EEPCalamityHelper*)a[0])->mContagionManager;
+        break;
+    // (EEPCalamityOp) The calamities' C++ calls and members (EEPMultiplayerHelper.cpp's EEPMultiplayerOp default): one statement each
     case O::PchClearCalamities: PCH->ClearCalamities();
         break;
     case O::PchCalamities: return P64(PCH->mCalamities);
@@ -148,31 +162,7 @@ int64_t EEPCalamityOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::PchGetTarget: return CL->GetTargetUnit(*(EEUnit**)a[0]);
     case O::PchContagionSave: return gWorld.GetContagionManager()->Save((unsigned long)a[0], (unsigned long)a[1], AFILE);
-    default: return EEPChecksumOp(inOp, p, a, f);
-    }
-    return 0;
-}
-
-// ------------------------------------------------------------------------- round 10, lane B: the chunk's own C++
-
-int64_t EECore10OpB9(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETerrainColorTable.cpp
-
-// the chunk's constructor's, destructor's, Reset's and copy's C++ (gamecpp persist_more.rs; p the chunk): one
-// statement each
-int64_t EECore10OpB8(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::PchClearContagion: PCH->ClearContagionManager();
-        break;
-    case O::PchNewContagion: PCH->mContagionManager = new EEContagionManager;
-        break;
-    case O::PchContagion: return P64(PCH->mContagionManager);
-    case O::PchCopyCalamities: *PCH->mCalamities = *((const EEPCalamityHelper*)a[0])->mCalamities;
-        break;
-    case O::PchCopyContagion: *PCH->mContagionManager = *((const EEPCalamityHelper*)a[0])->mContagionManager;
-        break;
-    default: return EECore10OpB9(inOp, p, a, f);
+    default: return EECore10OpD(inOp, p, a, f);
     }
     return 0;
 }

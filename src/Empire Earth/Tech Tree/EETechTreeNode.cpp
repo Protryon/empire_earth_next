@@ -194,55 +194,12 @@ UIHotKey* EETechTreeNode::GetHotKey()
 
 // ------------------------------------------------------------------------- round 9, lane D: the nodes' and epochs' C++
 
-int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define TNODE ((EETechTreeNode*)p)
 #define TEPOCH ((EETechTreeEpoch*)p)
 #define TVARIANT EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)
-
-// the C++ calls and members of the nodes' and epochs' bodies in Rust (gamecpp tech.rs; p the node or the epoch, the
-// player for the Pl ops): one statement each
-int64_t EECore9OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::TkNodeFields: return P64(static_cast<EeTechNodeFields*>(TNODE));
-    case O::TkNodeData: return P64(static_cast<EeTechNodeDataFields*>(TNODE->mData));
-    case O::TkNodeTree: return P64(TNODE->mTree);
-    case O::TkClassCosts: return P64(TNODE->mData->mClassCosts.count((long)a[0]) != 0 ? TNODE->mData->mClassCosts[(long)a[0]] : NULL);
-    case O::TkUpgrade: return P64(static_cast<EEUnitStats*>(((EEPlayer*)p)->mUnitClassUpgrades[a[0]]));
-    case O::TkInCostSet: return gUnitSetManager.GetSet(TVARIANT->mCostSet) != NULL && gUnitSetManager.GetSet(TVARIANT->mCostSet)->Contains((long)a[0]);
-    case O::TkPlayerJit: return ((EEPlayer*)p)->mJITManufacturing;
-    case O::TkClassHasRallyPoint: return gUnitClassTable[a[0]] != NULL && gUnitClassTable[a[0]]->HasRallyPoint();
-    case O::TkNodeCount: return (int64_t)TEPOCH->mNodes.size();
-    case O::TkNodeAt: return P64(std::next(TEPOCH->mNodes.begin(), a[0])->second);
-    case O::TkNodeKeyAt: return std::next(TEPOCH->mNodes.begin(), a[0])->first;
-    case O::TkNodeUnload: TNODE->Unload();
-        break;
-    case O::TkNodeDelete: delete TNODE;
-        break;
-    case O::TkNodesClear: TEPOCH->mNodes.clear();
-        break;
-    case O::TkEpochDeleteData: delete std::exchange(TEPOCH->mData, nullptr);
-        break;
-    case O::TkPushId: ((std::vector<long>*)a[0])->push_back((long)a[1]);
-        break;
-    case O::TkLoadedClassesPush: TEPOCH->mLoadedUnitClasses.push_back((long)a[0]);
-        break;
-    case O::TkLoadedClassesCount: return (int64_t)TEPOCH->mLoadedUnitClasses.size();
-    case O::TkLoadedClassAt: return TEPOCH->mLoadedUnitClasses[a[0]];
-    case O::TkLoadedClassesClear: TEPOCH->mLoadedUnitClasses.clear();
-        break;
-    case O::TkNodeLoadMedia: TEPOCH->EETechTreeNode::LoadMedia((EEPlayer*)a[0]);
-        break;
-    case O::TkNodeUnloadMedia: TEPOCH->EETechTreeNode::UnloadMedia((EEPlayer*)a[0]);
-        break;
-    default: return EECore9OpE(inOp, p, a, f);
-    }
-    return 0;
-}
 
 double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
