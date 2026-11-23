@@ -31,37 +31,22 @@ void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
 
 void EEUnitClass::AddToRegion(EEUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_ADD_TO_REGION)) {
-    case 1: ee_units_uu_footprint(2, (uint64_t)(uintptr_t)inUnit); return;   // uu_world.rs building_region
-    case 2: return;
-    }
-    this->BaseAddToRegion(inUnit);
+    ee_units_uck_dispatch(EE_UNITS_BODY_ADD_TO_REGION, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::AddToTile(EEUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_ADD_TO_TILE)) {
-    case 1: ee_units_uu_footprint(0, (uint64_t)(uintptr_t)inUnit); return;   // uu_world.rs footprint_link
-    case 2: this->SpaceTransportAddToTile(inUnit); return;
-    case 3: this->AmbientAddToTile(inUnit); return;
-    case 4: this->ResourceAddToTile(inUnit); return;
-    case 5: this->SubmergedNavalAddToTile(inUnit); return;
-    }
-    this->BaseAddToTile(inUnit);
+    ee_units_uck_dispatch(EE_UNITS_BODY_ADD_TO_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::BadlyHurt(EEUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_BADLY_HURT)) {
-    case 1: this->LandTransportBadlyHurt(inUnit); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_BADLY_HURT, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::CallParatroopPlane(EEComplexUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_CALL_PARATROOP_PLANE)) {
-    case 1: this->LandCallParatroopPlane(inUnit); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_CALL_PARATROOP_PLANE, this, inUnit, 0, 0, 0, NULL);   // uck_dispatch.rs
 }
 
 bool EEUnitClass::CanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
@@ -72,67 +57,37 @@ bool EEUnitClass::CanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 
 void EEUnitClass::CargoAdded(EEComplexUnit* inUnit, EEComplexUnit* inCargo, bool inArg)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_CARGO_ADDED)) {
-    case 1: if (!inArg) inUnit->mPlayer->mPopulationCount -= inCargo->mUnitClass->GetPopulationCost(); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_CARGO_ADDED, this, inUnit, EEObj(inCargo), inArg, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::CargoRemoved(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_CARGO_REMOVED)) {
-    case 1: inUnit->mPlayer->mPopulationCount += inCargo->mUnitClass->GetPopulationCost(); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_CARGO_REMOVED, this, inUnit, EEObj(inCargo), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::CargoUnloaded(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_CARGO_UNLOADED)) {
-    case 1: inUnit->mPlayer->mPopulationCount += inCargo->mUnitClass->GetPopulationCost(); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_CARGO_UNLOADED, this, inUnit, EEObj(inCargo), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 bool EEUnitClass::CheckGroundImpact(EEComplexUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_CHECK_GROUND_IMPACT)) {
-    case 1: return this->TorpedoCheckGroundImpact(inUnit);
-    case 2: return this->MissileCheckGroundImpact(inUnit);
-    case 3: return this->ProjectileCheckGroundImpact(inUnit);
-    }
-    return false;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_CHECK_GROUND_IMPACT, this, inUnit, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 bool EEUnitClass::CheckWaterImpact(EEComplexUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_CHECK_WATER_IMPACT)) {
-    case 1: return false;
-    case 2: return this->MissileCheckWaterImpact(inUnit);
-    case 3: return this->ProjectileCheckWaterImpact(inUnit);
-    }
-    return false;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_CHECK_WATER_IMPACT, this, inUnit, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 EEUnit* EEUnitClass::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_CREATE_UNIT)) {
-    case 1: return this->MiningBuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    case 2: return this->NavalCitizenCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    case 3: return this->SpaceBuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    case 4: return this->BuildingCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    case 5: return this->SubmergedNavalCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
-    }
-    return this->BaseCreateUnit(inX, inY, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_uck_dispatch(EE_UNITS_BODY_CREATE_UNIT, this, NULL, EEObj(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // uck_dispatch.rs
 }
 
 EEUnit* EEUnitClass::CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_CREATE_UNIT_AT)) {
-    case 1: return this->MiningBuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    case 2: return this->NavalPriestCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    case 3: return this->SpaceBuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    case 4: return this->BuildingCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    case 5: return this->SubmergedNavalCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
-    }
-    return this->BaseCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
+    return (EEUnit*)(uintptr_t)ee_units_uck_dispatch(EE_UNITS_BODY_CREATE_UNIT_AT, this, NULL, EEObj(inCreator), (int64_t)EEObj(&inTransformation), (int64_t)inPlayer * 2 + inIsFoundation, NULL);   // uck_dispatch.rs
 }
 
 // the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
@@ -173,18 +128,12 @@ void EEUnitClass::FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* in
 
 bool EEUnitClass::FliesOver()
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_FLIES_OVER)) {
-    case 1: return true;
-    case 2: return this->mDomains & kMovementAir;
-    }
-    return false;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_FLIES_OVER, this, NULL, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 void EEUnitClass::GateReplaced(EEUnit* inGate, EEUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_GATE_REPLACED)) {
-    case 1: this->GateGateReplaced(inGate, inUnit); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_GATE_REPLACED, this, NULL, EEObj(inGate), (int64_t)EEObj(inUnit), 0, NULL);   // uck_dispatch.rs
 }
 
 float EEUnitClass::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
@@ -201,15 +150,7 @@ long EEUnitClass::GetPopulationCost()
 
 void EEUnitClass::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_GET_SOUND_PARAMETERS)) {
-    case 1: this->AirGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;   // the air animal's: the same Doppler pitch, unnoted
-    case 2: this->HelicopterPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
-    case 3: this->SpaceshipGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
-    case 4: this->LandPriestGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;
-    case 5: this->SpaceshipVirtual2C(inUnit, inSound, outVolume, outPan, outPitch); return;
-    case 6: this->AirGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch); return;   // the landable's: likewise
-    }
-    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    ee_units_uck_sound(this, inUnit, inSound, outVolume, outPan, outPitch);   // uck_dispatch.rs
 }
 
 void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
@@ -221,23 +162,12 @@ void EEUnitClass::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileC
 
 long EEUnitClass::GetUnloadFailedTextID()
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_GET_UNLOAD_FAILED_TEXT_ID)) {
-    case 1: return 0x7c39;
-    case 2: return 0x7c38;
-    }
-    return 0;
+    return (long)ee_units_uck_dispatch(EE_UNITS_BODY_GET_UNLOAD_FAILED_TEXT_ID, this, NULL, 0, 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::GroundLocation(GE3DPoint& ioLocation)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_GROUND_LOCATION)) {
-    case 1: ioLocation.SetZ(0.0f); return;
-    case 2: if (ioLocation.GetZ() < 0.0f) ioLocation.SetZ(0.0f); return;
-    case 3: ioLocation.SetZ(this->mCruiseAltitude); return;
-    case 4: if (this->mUnitType == kUnitTypeAmbCattails1) ioLocation.SetZ(0.0f); return;
-    case 5: this->BuildingGroundLocation(ioLocation); return;
-    case 6: this->SubmergedNavalGroundLocation(ioLocation); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX);   // uck_dispatch.rs
 }
 
 bool EEUnitClass::HasArrived(EEComplexUnit* inUnit, float inValue)
@@ -254,11 +184,7 @@ bool EEUnitClass::HasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 
 bool EEUnitClass::HasSunk(EEComplexUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_HAS_SUNK)) {
-    case 1: return this->NavalBuildingHasSunk(inUnit);
-    case 2: return true;
-    }
-    return false;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_HAS_SUNK, this, inUnit, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 bool EEUnitClass::IsBuilding()
@@ -268,82 +194,47 @@ bool EEUnitClass::IsBuilding()
 
 bool EEUnitClass::IsLandBuilding()
 {
-    unsigned theBody = EEClassBody(this, EE_UNITS_BODY_IS_LAND_BUILDING);
-    return theBody == 1 || theBody == 3;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_IS_LAND_BUILDING, this, NULL, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 bool EEUnitClass::IsPartLeftOut(EEComplexUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_IS_PART_LEFT_OUT)) {
-    case 1: return !this->IsSidePart(inUnit) && EEGetFirstPart(inUnit)->GetCommandType() != kActionClosed;
-    }
-    return false;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_IS_PART_LEFT_OUT, this, inUnit, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 bool EEUnitClass::IsPickable()
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_IS_PICKABLE)) {
-    case 1: return false;
-    case 2: return !this->mIsFlare && this->mUnitType != kUnitTypeVolcano;
-    }
-    return true;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_IS_PICKABLE, this, NULL, 0, 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 bool EEUnitClass::IsSelectable(EEUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_IS_SELECTABLE)) {
-    case 1: return inUnit->mUnitClass->mUnitType == kUnitTypePathPoint;
-    case 2: return !this->mIsFlare && this->mUnitType != kUnitTypeVolcano;
-    }
-    return true;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_IS_SELECTABLE, this, NULL, EEObj(inUnit), 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 bool EEUnitClass::LaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_LAUNCH_PROJECTILE)) {
-    case 1: return this->BombLaunchProjectile(inUnit, inLocation);
-    case 2: return this->MissileLaunchProjectile(inUnit, inLocation);
-    case 3: return this->ProjectileLaunchProjectile(inUnit, inLocation);
-    }
-    return false;
+    return ee_units_uck_dispatch(EE_UNITS_BODY_LAUNCH_PROJECTILE, this, inUnit, EEObj(&inLocation), 0, 0, NULL) != 0;   // uck_dispatch.rs
 }
 
 void EEUnitClass::LoadMedia(EEPlayer* inPlayer)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_LOAD_MEDIA)) {
-    case 1: this->BasicPriestLoadMedia(inPlayer); return;
-    case 2: this->BasicPriestLoadMedia(inPlayer); return;
-    }
-    this->BaseLoadMedia(inPlayer);
+    ee_units_uck_dispatch(EE_UNITS_BODY_LOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_LOCATION_TO_TILE)) {
-    case 1: this->NavalCitizenLocationToTile(inLocation, outX, outY); return;
-    case 2: this->SpaceBuildingLocationToTile(inLocation, outX, outY); return;
-    case 3: this->AmbientLocationToTile(inLocation, outX, outY); return;
-    case 4: this->SubmergedNavalLocationToTile(inLocation, outX, outY); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_LOCATION_TO_TILE, this, NULL, EEObj(&inLocation), (int64_t)EEObj(&outX), (int64_t)EEObj(&outY), NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::RemoveFromRegion(EEUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_REMOVE_FROM_REGION)) {
-    case 1: ee_units_uu_footprint(3, (uint64_t)(uintptr_t)inUnit); return;
-    case 2: return;
-    }
-    this->BaseRemoveFromRegion(inUnit);
+    ee_units_uck_dispatch(EE_UNITS_BODY_REMOVE_FROM_REGION, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::RemoveFromTile(EEUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_REMOVE_FROM_TILE)) {
-    case 1: ee_units_uu_footprint(1, (uint64_t)(uintptr_t)inUnit); return;
-    case 2: this->SpaceTransportRemoveFromTile(inUnit); return;
-    case 3: this->AmbientRemoveFromTile(inUnit); return;
-    }
-    this->BaseRemoveFromTile(inUnit);
+    ee_units_uck_dispatch(EE_UNITS_BODY_REMOVE_FROM_TILE, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 bool EEUnitClass::SelectUnitToRelease(EEComplexUnit* inUnit)
@@ -354,48 +245,22 @@ bool EEUnitClass::SelectUnitToRelease(EEComplexUnit* inUnit)
 
 void EEUnitClass::SimpleUnitCreated(EEUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_SIMPLE_UNIT_CREATED)) {
-    case 1: this->ResourceSimpleUnitCreated(inUnit); return;
-    }
-    this->BaseSimpleUnitCreated(inUnit);
+    ee_units_uck_dispatch(EE_UNITS_BODY_SIMPLE_UNIT_CREATED, this, NULL, EEObj(inUnit), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::UnitCreated(EEComplexUnit* inUnit)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_UNIT_CREATED)) {
-    case 1: this->AirAnimalUnitCreated(inUnit); return;
-    case 2: this->FortressUnitCreated(inUnit); return;
-    case 3: this->GateUnitCreated(inUnit); return;
-    case 4: this->HelicopterPriestUnitCreated(inUnit); return;
-    case 5: this->HelicopterTransportUnitCreated(inUnit); return;
-    case 6: this->SpaceBuildingUnitCreated(inUnit); return;
-    case 7: this->SpaceTransportUnitCreated(inUnit); return;
-    case 8: this->BuildingUnitCreated(inUnit); return;
-    case 9: this->LandUnitCreated(inUnit); return;
-    case 10: this->LandableUnitCreated(inUnit); return;
-    case 11: this->MissileUnitCreated(inUnit); return;
-    case 12: this->NavalUnitCreated(inUnit); return;
-    case 13: this->ProjectileUnitCreated(inUnit); return;
-    case 14: this->TransportUnitCreated(inUnit); return;
-    }
-    this->BaseUnitCreated(inUnit);
+    ee_units_uck_dispatch(EE_UNITS_BODY_UNIT_CREATED, this, inUnit, 0, 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::UnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_UNLOAD_AT)) {
-    case 1: this->FortressUnloadAt(inTransport, inX, inY); return;
-    case 2: this->TransportUnloadAt(inTransport, inX, inY); return;
-    }
+    ee_units_uck_dispatch(EE_UNITS_BODY_UNLOAD_AT, this, inTransport, 0, inX, inY, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::UnloadMedia(EEPlayer* inPlayer)
 {
-    switch (EEClassBody(this, EE_UNITS_BODY_UNLOAD_MEDIA)) {
-    case 1: this->BasicPriestUnloadMedia(inPlayer); return;
-    case 2: this->BasicPriestUnloadMedia(inPlayer); return;
-    }
-    this->BaseUnloadMedia(inPlayer);
+    ee_units_uck_dispatch(EE_UNITS_BODY_UNLOAD_MEDIA, this, NULL, EEObj(inPlayer), 0, 0, NULL);   // uck_dispatch.rs
 }
 
 void EEUnitClass::Update(EEComplexUnit* inUnit)
@@ -471,19 +336,76 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCK_GATE_SURROUNDING: theClass->GateGetSurroundingTiles(theUnit, *EEUckObject<std::vector<EETileCoordinate> >(inA), (long)inB, inC != 0); return 0;
     case EE_UNITS_UCK_BUILDING_SURROUNDING: theClass->BuildingGetSurroundingTiles(theUnit, *EEUckObject<std::vector<EETileCoordinate> >(inA), (long)inB, inC != 0); return 0;
     case EE_UNITS_UCK_BASE_SURROUNDING: theClass->BaseGetSurroundingTiles(theUnit, *EEUckObject<std::vector<EETileCoordinate> >(inA), (long)inB, inC != 0); return 0;
+    // round 9's dispatcher bodies (uck_dispatch.rs: EE_UNITS_UCK_D_*)
+    case EE_UNITS_UCK_D_BASE_ADD_TO_REGION: theClass->BaseAddToRegion(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_SPACE_TRANSPORT_ADD_TO_TILE: theClass->SpaceTransportAddToTile(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_AMBIENT_ADD_TO_TILE: theClass->AmbientAddToTile(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_RESOURCE_ADD_TO_TILE: theClass->ResourceAddToTile(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_SUBMERGED_ADD_TO_TILE: theClass->SubmergedNavalAddToTile(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_LAND_TRANSPORT_BADLY_HURT: theClass->LandTransportBadlyHurt(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_LAND_CALL_PARATROOP_PLANE: theClass->LandCallParatroopPlane(theUnit); return 0;
+    case EE_UNITS_UCK_D_POPULATION_SUB: theUnit->mPlayer->mPopulationCount -= EEUckObject<EEComplexUnit>(inA)->mUnitClass->GetPopulationCost(); return 0;
+    case EE_UNITS_UCK_D_POPULATION_ADD: theUnit->mPlayer->mPopulationCount += EEUckObject<EEComplexUnit>(inA)->mUnitClass->GetPopulationCost(); return 0;
+    case EE_UNITS_UCK_D_TORPEDO_GROUND_IMPACT: return theClass->TorpedoCheckGroundImpact(theUnit);
+    case EE_UNITS_UCK_D_MISSILE_GROUND_IMPACT: return theClass->MissileCheckGroundImpact(theUnit);
+    case EE_UNITS_UCK_D_PROJECTILE_GROUND_IMPACT: return theClass->ProjectileCheckGroundImpact(theUnit);
+    case EE_UNITS_UCK_D_MISSILE_WATER_IMPACT: return theClass->MissileCheckWaterImpact(theUnit);
+    case EE_UNITS_UCK_D_PROJECTILE_WATER_IMPACT: return theClass->ProjectileCheckWaterImpact(theUnit);
+    case EE_UNITS_UCK_D_MINING_CREATE_UNIT: return EEObj(theClass->MiningBuildingCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_NAVAL_CITIZEN_CREATE_UNIT: return EEObj(theClass->NavalCitizenCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT: return EEObj(theClass->SpaceBuildingCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_BUILDING_CREATE_UNIT: return EEObj(theClass->BuildingCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT: return EEObj(theClass->SubmergedNavalCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_BASE_CREATE_UNIT: return EEObj(theClass->BaseCreateUnit((long)(int32_t)inB, (long)(int32_t)(inB >> 32), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_MINING_CREATE_UNIT_AT: return EEObj(theClass->MiningBuildingCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_NAVAL_PRIEST_CREATE_UNIT_AT: return EEObj(theClass->NavalPriestCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT_AT: return EEObj(theClass->SpaceBuildingCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_BUILDING_CREATE_UNIT_AT: return EEObj(theClass->BuildingCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT_AT: return EEObj(theClass->SubmergedNavalCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_BASE_CREATE_UNIT_AT: return EEObj(theClass->BaseCreateUnitAt(*EEUckObject<GETransformation>((uint64_t)inB), (long)(inC >> 1), (inC & 1) != 0, EEUckObject<EEUnit>(inA)));
+    case EE_UNITS_UCK_D_DOMAINS: return theClass->mDomains;
+    case EE_UNITS_UCK_D_GATE_GATE_REPLACED: theClass->GateGateReplaced(EEUckObject<EEUnit>(inA), EEUckObject<EEUnit>((uint64_t)inB)); return 0;
+    case EE_UNITS_UCK_D_AIR_SOUND: theClass->AirGetSoundParameters(EEUckObject<EEUnit>(inA), EEUckObject<EESoundObject>((uint64_t)inB), EEUckObject<float*>((uint64_t)inC)[0], EEUckObject<float*>((uint64_t)inC)[1], EEUckObject<float*>((uint64_t)inC)[2]); return 0;
+    case EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION: theClass->BuildingGroundLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION: theClass->SubmergedNavalGroundLocation(*reinterpret_cast<GE3DPoint*>(f)); return 0;
+    case EE_UNITS_UCK_D_NAVAL_BUILDING_SUNK: return theClass->NavalBuildingHasSunk(theUnit);
+    case EE_UNITS_UCK_D_IS_SIDE_PART: return theClass->IsSidePart(theUnit);
+    case EE_UNITS_UCK_D_FIRST_PART_COMMAND: return EEGetFirstPart(theUnit)->GetCommandType();
+    case EE_UNITS_UCK_D_IS_FLARE: return theClass->mIsFlare;
+    case EE_UNITS_UCK_D_UNIT_TYPE_OF: return EEUckObject<EEUnit>(inA)->mUnitClass->mUnitType;
+    case EE_UNITS_UCK_D_BOMB_LAUNCH: return theClass->BombLaunchProjectile(theUnit, *EEUckObject<GE3DPoint>(inA));
+    case EE_UNITS_UCK_D_MISSILE_LAUNCH: return theClass->MissileLaunchProjectile(theUnit, *EEUckObject<GE3DPoint>(inA));
+    case EE_UNITS_UCK_D_PROJECTILE_LAUNCH: return theClass->ProjectileLaunchProjectile(theUnit, *EEUckObject<GE3DPoint>(inA));
+    case EE_UNITS_UCK_D_NAVAL_CITIZEN_TO_TILE: theClass->NavalCitizenLocationToTile(*EEUckObject<GE3DPoint>(inA), *EEUckObject<long>((uint64_t)inB), *EEUckObject<long>((uint64_t)inC)); return 0;
+    case EE_UNITS_UCK_D_SPACE_BUILDING_TO_TILE: theClass->SpaceBuildingLocationToTile(*EEUckObject<GE3DPoint>(inA), *EEUckObject<long>((uint64_t)inB), *EEUckObject<long>((uint64_t)inC)); return 0;
+    case EE_UNITS_UCK_D_AMBIENT_TO_TILE: theClass->AmbientLocationToTile(*EEUckObject<GE3DPoint>(inA), *EEUckObject<long>((uint64_t)inB), *EEUckObject<long>((uint64_t)inC)); return 0;
+    case EE_UNITS_UCK_D_SUBMERGED_TO_TILE: theClass->SubmergedNavalLocationToTile(*EEUckObject<GE3DPoint>(inA), *EEUckObject<long>((uint64_t)inB), *EEUckObject<long>((uint64_t)inC)); return 0;
+    case EE_UNITS_UCK_D_BASE_REMOVE_FROM_REGION: theClass->BaseRemoveFromRegion(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_SPACE_TRANSPORT_REMOVE: theClass->SpaceTransportRemoveFromTile(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_AMBIENT_REMOVE: theClass->AmbientRemoveFromTile(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_RESOURCE_SIMPLE_CREATED: theClass->ResourceSimpleUnitCreated(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_BASE_SIMPLE_CREATED: theClass->BaseSimpleUnitCreated(EEUckObject<EEUnit>(inA)); return 0;
+    case EE_UNITS_UCK_D_AIR_ANIMAL_CREATED: theClass->AirAnimalUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_FORTRESS_CREATED: theClass->FortressUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_GATE_CREATED: theClass->GateUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_HELICOPTER_TRANSPORT_CREATED: theClass->HelicopterTransportUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_SPACE_BUILDING_CREATED: theClass->SpaceBuildingUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_SPACE_TRANSPORT_CREATED: theClass->SpaceTransportUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_BUILDING_CREATED: theClass->BuildingUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_LAND_CREATED: theClass->LandUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_LANDABLE_CREATED: theClass->LandableUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_MISSILE_CREATED: theClass->MissileUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_NAVAL_CREATED: theClass->NavalUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_PROJECTILE_CREATED: theClass->ProjectileUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_TRANSPORT_CREATED: theClass->TransportUnitCreated(theUnit); return 0;
+    case EE_UNITS_UCK_D_FORTRESS_UNLOAD_AT: theClass->FortressUnloadAt(theUnit, (long)inB, (long)inC); return 0;
+    case EE_UNITS_UCK_D_TRANSPORT_UNLOAD_AT: theClass->TransportUnloadAt(theUnit, (long)inB, (long)inC); return 0;
     default: return ee_units_uc_host(inOp, inClass, inUnit, inA, inB, inC, ioF);
     }
 }
 
 // TEST ONLY: the UCBD record (ee/EEUnitClassKinds.h EEUCNote; the unit utilities' UUTL record's pattern)
-static thread_local int sUCDepth = 0;
-static std::mutex sUCMutex;
-static uint64_t sUCDigest = 0xcbf29ce484222325ull;
-static uint32_t sUCCalls = 0;
-static unsigned long sUCTick = 0;
-static uint32_t sUCKinds[64];
-
-EEUCNote::EEUCNote(unsigned int inKind) : mOn(++sUCDepth == 1 && EESimCaptureRecord::Active())
+EEUCNote::EEUCNote(unsigned int inKind) : mOn(ee_units_ucbd_begin() != 0)   // ucbd_note.rs (the depth, the record)
 {
     this->I((long)inKind);
 }
@@ -547,35 +469,5 @@ EEUCNote& EEUCNote::S(EEComplexUnit* inUnit)
 
 EEUCNote::~EEUCNote()
 {
-    sUCDepth--;
-    if (!this->mOn)
-        return;
-    std::lock_guard<std::mutex> theLock(sUCMutex);
-    unsigned long theTick = gPhysics != NULL ? gPhysics->mNumTicksDone : 0;
-    if (theTick != sUCTick) {
-        if (sUCCalls != 0) {
-            EESimCaptureRecord theRecord(0x44424355u);   // "UCBD"
-            theRecord.U32((unsigned int)sUCTick);
-            theRecord.U32(sUCCalls);
-            theRecord.U32((unsigned int)(sUCDigest & 0xffffffffu));
-            theRecord.U32((unsigned int)(sUCDigest >> 32));
-            theRecord.Commit();
-        }
-        if (theTick / 20000 != sUCTick / 20000) {
-            fprintf(stderr, "EE-UCBD-COUNT %lu", theTick);
-            for (int i = 1; i < 50; i++)
-                fprintf(stderr, " %d:%u", i, sUCKinds[i]);
-            fprintf(stderr, "\n");
-        }
-        sUCDigest = 0xcbf29ce484222325ull;
-        sUCCalls = 0;
-        sUCTick = theTick;
-    }
-    sUCKinds[this->mWords[0] & 63]++;
-    for (size_t i = 0; i < this->mWords.size(); i++)
-        for (int b = 0; b < 4; b++) {
-            sUCDigest ^= (this->mWords[i] >> (8 * b)) & 0xff;
-            sUCDigest *= 0x100000001b3ull;
-        }
-    sUCCalls++;
+    ee_units_ucbd_end(this->mOn, this->mWords.empty() ? NULL : this->mWords.data(), this->mWords.size());   // ucbd_note.rs
 }

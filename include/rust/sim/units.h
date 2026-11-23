@@ -1113,6 +1113,51 @@ constexpr static const int32_t EE_UNITS_CLS_GOAL_HAS_LOCATION = 37;
 /// unit `a`'s air traffic control has it queued (`GetQueuePosition(a, 1)` or `(a, 0)` at least 0)
 constexpr static const int32_t EE_UNITS_CLS_REQUEST_QUEUED = 38;
 
+/// `p = gWorld.mMap->GetTileLocation(c, d)` (untouched when there is no tile)
+constexpr static const int32_t EE_UNITS_CLS_R_TILE_LOCATION = 3400;
+
+/// `EELoadTransportGoalCast(unit->GetGoal())`
+constexpr static const int32_t EE_UNITS_CLS_R_LOAD_GOAL = 3401;
+
+/// goal `b`'s `GetLoadUnitTile()` (x, y << 32)
+constexpr static const int32_t EE_UNITS_CLS_R_LOAD_GOAL_TILE = 3402;
+
+/// `EEAttackUnitCast(unit->GetGoal())`
+constexpr static const int32_t EE_UNITS_CLS_R_ATTACK_GOAL = 3403;
+
+/// goal `b`'s `GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_CLS_R_ATTACK_TARGET_OF = 3404;
+
+/// unit `b`'s `mHitPoints`
+constexpr static const int32_t EE_UNITS_CLS_R_HIT_POINTS_OF = 3405;
+
+/// `unit->mPlayer->mAirTraffic[unit->GetUnitClass()->mAirTrafficType - 1]`
+constexpr static const int32_t EE_UNITS_CLS_R_ATC = 3406;
+
+/// continent `b`'s `GetHullCenter()` (x, y << 32)
+constexpr static const int32_t EE_UNITS_CLS_R_HULL_CENTER = 3407;
+
+/// `p = ` goal `b`'s `GetGroundTarget()`
+constexpr static const int32_t EE_UNITS_CLS_R_GROUND_TARGET = 3408;
+
+/// unit `b`'s `mComplexUnit`
+constexpr static const int32_t EE_UNITS_CLS_R_COMPLEX_OF = 3409;
+
+/// `p = ` complex unit `b`'s location
+constexpr static const int32_t EE_UNITS_CLS_R_LOCATION_OF = 3410;
+
+/// `p = ` unit `b`'s tile centre and its tile's height
+constexpr static const int32_t EE_UNITS_CLS_R_TILE_CENTER_OF = 3411;
+
+/// goal `b`'s `GetPatrolTarget()`
+constexpr static const int32_t EE_UNITS_CLS_R_PATROL_TARGET = 3412;
+
+/// goal `b`'s `GetExploreTileCenter(p)`
+constexpr static const int32_t EE_UNITS_CLS_R_EXPLORE_CENTER = 3413;
+
+/// `unit->SetGoal(goal b, c, 0)`
+constexpr static const int32_t EE_UNITS_CLS_R_SET_GOAL_KEEP = 3414;
+
 /// the mesh `a`'s `GetZ(c, d)` into `io.f`
 constexpr static const int32_t EE_UNITS_CLS_LV_MESH_Z = 85;
 
@@ -10745,6 +10790,314 @@ constexpr static const int32_t EE_UNITS_UC_PRODUCER_TILE_X = 167;
 
 constexpr static const int32_t EE_UNITS_UC_PRODUCER_TILE_Y = 168;
 
+/// `unit->GetLineOfSight()` in `f[0]`
+constexpr static const int32_t EE_UNITS_UC_R_LINE_OF_SIGHT = 3100;
+
+/// `static_cast<EEUGRust*>(goal a)->GetGatherResource()`
+constexpr static const int32_t EE_UNITS_UC_R_GATHER_RESOURCE = 3101;
+
+/// `gContinentManager.CanGetToUnit(unit a, unit)`
+constexpr static const int32_t EE_UNITS_UC_R_CAN_GET_TO_UNIT = 3102;
+
+/// `class->FindResourceOfKind(unit, unit a, unit b, the bits of f[0], the bits of f[1], the vector c, true)`
+constexpr static const int32_t EE_UNITS_UC_R_FIND_RESOURCE_OF_KIND = 3103;
+
+/// `EECombatFindDropLocation(unit, NULL, f[0..3])`
+constexpr static const int32_t EE_UNITS_UC_R_FIND_DROP_LOCATION = 3104;
+
+/// goal `a`'s `GetDestination(unit, f[0..3])`
+constexpr static const int32_t EE_UNITS_UC_R_GOAL_DESTINATION = 3105;
+
+/// `EEGetHelicopterPriestDestination(unit, f[0..3])`
+constexpr static const int32_t EE_UNITS_UC_R_PRIEST_DESTINATION = 3106;
+
+/// `f[0] = class->mCruiseAltitude`
+constexpr static const int32_t EE_UNITS_UC_R_CRUISE_ALTITUDE = 3107;
+
+/// `EEFindLandingPoint(unit, f[0..3])`
+constexpr static const int32_t EE_UNITS_UC_R_LANDING_POINT = 3108;
+
+/// `f[0] = class->GetHeightAt(unit, f[0..3])`
+constexpr static const int32_t EE_UNITS_UC_R_HEIGHT_AT = 3109;
+
+/// `unit->SetTransformation(the transformation at a, true)`
+constexpr static const int32_t EE_UNITS_UC_R_SET_TRANSFORMATION = 3110;
+
+/// `unit->SetHeight(f[0])`
+constexpr static const int32_t EE_UNITS_UC_R_SET_HEIGHT = 3111;
+
+/// `class->mCategory`
+constexpr static const int32_t EE_UNITS_UC_R_CATEGORY = 3112;
+
+/// unit `a`'s `mUnitClass->mCategory`
+constexpr static const int32_t EE_UNITS_UC_R_CATEGORY_OF = 3113;
+
+/// `EEGetRules().mCombat.IsElevationLauncher(b)`
+constexpr static const int32_t EE_UNITS_UC_R_ELEVATION_LAUNCHER = 3114;
+
+/// `unit->mLauncherClass->mCategory`
+constexpr static const int32_t EE_UNITS_UC_R_LAUNCHER_CATEGORY = 3115;
+
+/// `EEGetRules().mCombat.IsElevationAttacker(b)`
+constexpr static const int32_t EE_UNITS_UC_R_ELEVATION_ATTACKER = 3116;
+
+/// `EEGetRules().mCombat.IsElevationTarget(b)`
+constexpr static const int32_t EE_UNITS_UC_R_ELEVATION_TARGET = 3117;
+
+/// `f[0] = unit->mHeight`
+constexpr static const int32_t EE_UNITS_UC_R_HEIGHT = 3118;
+
+/// `f[0] = gWorldTable.GetFloatValue(b)`
+constexpr static const int32_t EE_UNITS_UC_R_WORLD_FLOAT = 3119;
+
+/// `f[0] = unit->mPlayer->mHighGroundBonus`
+constexpr static const int32_t EE_UNITS_UC_R_HIGH_GROUND_BONUS = 3120;
+
+/// `f[0] = EECombatElevation(the record at a)` (its CBEL record)
+constexpr static const int32_t EE_UNITS_UC_R_ELEVATION = 3121;
+
+/// unit `a`'s `mTileX`
+constexpr static const int32_t EE_UNITS_UC_R_TILE_X_OF = 3122;
+
+/// unit `a`'s `mTileY`
+constexpr static const int32_t EE_UNITS_UC_R_TILE_Y_OF = 3123;
+
+/// `f[0] = ` unit `a`'s `mTile->mHeight`
+constexpr static const int32_t EE_UNITS_UC_R_TILE_HEIGHT_OF = 3124;
+
+/// `f[0] = ` sound `a`'s `mVolume`
+constexpr static const int32_t EE_UNITS_UC_R_SOUND_VOLUME = 3125;
+
+/// `EEComputeSoundParameters(f[3], f[0..3], f[0], f[1], f[2], 4.0f)`
+constexpr static const int32_t EE_UNITS_UC_R_COMPUTE_SOUND = 3126;
+
+/// `EEIsSeen(unit a)`
+constexpr static const int32_t EE_UNITS_UC_R_IS_SEEN = 3127;
+
+/// `EEGetDopplerPitch(unit a, sound b, &f[0], &f[1], &f[2])`
+constexpr static const int32_t EE_UNITS_UC_R_DOPPLER_PITCH = 3128;
+
+/// unit `a`'s `mTileNode != NULL`
+constexpr static const int32_t EE_UNITS_UC_R_HAS_TILE_NODE = 3129;
+
+/// `EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Load(false)`
+constexpr static const int32_t EE_UNITS_UC_R_LOAD_INDICATOR = 3130;
+
+/// `EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Unload()`
+constexpr static const int32_t EE_UNITS_UC_R_UNLOAD_INDICATOR = 3131;
+
+/// `class->BaseLoadMedia(player a)`
+constexpr static const int32_t EE_UNITS_UC_R_BASE_LOAD_MEDIA = 3132;
+
+/// `class->BaseUnloadMedia(player a)`
+constexpr static const int32_t EE_UNITS_UC_R_BASE_UNLOAD_MEDIA = 3133;
+
+/// `unit->mNumOrbitals`
+constexpr static const int32_t EE_UNITS_UC_R_ORBITAL_COUNT = 3134;
+
+/// `unit->mOrbitals[b]->Update()`
+constexpr static const int32_t EE_UNITS_UC_R_ORBITAL_UPDATE = 3135;
+
+/// unit `a`'s `mTile`
+constexpr static const int32_t EE_UNITS_UC_R_RTS_TILE_OF = 3136;
+
+/// RTS tile `a`'s `mUnits = AddUnit(unit b, mUnits)`
+constexpr static const int32_t EE_UNITS_UC_R_RTS_TILE_ADD = 3137;
+
+/// RTS tile `a`'s `RemoveUnit(unit b)`
+constexpr static const int32_t EE_UNITS_UC_R_RTS_TILE_REMOVE = 3138;
+
+/// class `a`'s `Reference()`
+constexpr static const int32_t EE_UNITS_UC_R_CLASS_REFERENCE = 3139;
+
+/// class `a`'s `Dereference()`
+constexpr static const int32_t EE_UNITS_UC_R_CLASS_DEREFERENCE = 3140;
+
+/// `gUnitClassTable[b]`
+constexpr static const int32_t EE_UNITS_UC_R_TABLE_GET = 3141;
+
+/// `gUnitClassTable[b] = class a`
+constexpr static const int32_t EE_UNITS_UC_R_TABLE_SET = 3142;
+
+/// `EEUnitClass::sUnitTypes.push_back(b)`
+constexpr static const int32_t EE_UNITS_UC_R_TYPES_PUSH = 3143;
+
+/// `EEUnitClassCount()`
+constexpr static const int32_t EE_UNITS_UC_R_CLASS_COUNT = 3144;
+
+/// `--class->mNumUnits` (its new value)
+constexpr static const int32_t EE_UNITS_UC_R_UNIT_REMOVED = 3145;
+
+/// `class->mLastUnitGoneTime = TMGetTime()`
+constexpr static const int32_t EE_UNITS_UC_R_SET_GONE_TIME = 3146;
+
+/// `unit->mActiveGroup`
+constexpr static const int32_t EE_UNITS_UC_R_ACTIVE_GROUP = 3147;
+
+/// `f[0] = ` group `a`'s `GetInverseMaxVelocity(unit)`
+constexpr static const int32_t EE_UNITS_UC_R_GROUP_INVERSE_VELOCITY = 3148;
+
+/// `f[0] = unit->mStats->mInverseMaxVelocity`
+constexpr static const int32_t EE_UNITS_UC_R_STATS_INVERSE_VELOCITY = 3149;
+
+/// `unit->mCamouflageTimer`
+constexpr static const int32_t EE_UNITS_UC_R_CAMOUFLAGE_TIMER = 3150;
+
+/// `unit->mCamouflageTimer = b`
+constexpr static const int32_t EE_UNITS_UC_R_SET_CAMOUFLAGE_TIMER = 3151;
+
+/// unit `a`'s `mNextPart`
+constexpr static const int32_t EE_UNITS_UC_R_NEXT_PART = 3152;
+
+/// unit `a`'s `mPreviousPart`
+constexpr static const int32_t EE_UNITS_UC_R_PREVIOUS_PART = 3153;
+
+/// `EECanHeal(unit, complex unit a)`
+constexpr static const int32_t EE_UNITS_UC_R_CAN_HEAL = 3154;
+
+/// `unit->CanReachUnit(unit a)`
+constexpr static const int32_t EE_UNITS_UC_R_CAN_REACH = 3155;
+
+/// `gContinentManager.GetContinentAt(unit a)`
+constexpr static const int32_t EE_UNITS_UC_R_CONTINENT_OF = 3156;
+
+/// `sUcTiles9.clear()` (the surrounding tiles' list, a local of the original)
+constexpr static const int32_t EE_UNITS_UC_R_TILES_CLEAR = 3157;
+
+/// `class->GetSurroundingTiles(unit, sUcTiles9, 1, false)`
+constexpr static const int32_t EE_UNITS_UC_R_SURROUNDING_TILES = 3158;
+
+/// `sUcTiles9.size()`
+constexpr static const int32_t EE_UNITS_UC_R_TILES_SIZE = 3159;
+
+/// `gContinentManager.GetContinentAt(sUcTiles9[b].GetX(), sUcTiles9[b].GetY())`
+constexpr static const int32_t EE_UNITS_UC_R_CONTINENT_AT_TILE = 3160;
+
+/// `gWorld.mMap->GetTileAtLocation(sUcTiles9[b])`
+constexpr static const int32_t EE_UNITS_UC_R_MAP_TILE_AT_TILE = 3161;
+
+/// continent `a`'s `GetCategory() == kContinentCategoryLand`
+constexpr static const int32_t EE_UNITS_UC_R_CONTINENT_IS_LAND = 3162;
+
+/// tile `a`'s `mTerrainType`
+constexpr static const int32_t EE_UNITS_UC_R_TERRAIN_OF = 3163;
+
+/// `::gWorld.mMap->IsEdgeTile(b, c)`
+constexpr static const int32_t EE_UNITS_UC_R_EDGE_TILE = 3164;
+
+/// `class->FacesPoint(unit, f[0..3], b)` (its own CBQR record)
+constexpr static const int32_t EE_UNITS_UC_R_FACES_POINT = 3165;
+
+/// tile vector `a`'s `size()`
+constexpr static const int32_t EE_UNITS_UC_R_VEC_TILES_SIZE = 3166;
+
+/// tile vector `a`'s `clear()`
+constexpr static const int32_t EE_UNITS_UC_R_VEC_TILES_CLEAR = 3167;
+
+/// upgrade `a`'s `mButton = mUnitClass->mButton`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_BUTTON = 3168;
+
+/// upgrade `a`'s `SetModel(mUnitClass->mModel)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_MODEL = 3169;
+
+/// upgrade `a`'s `SetAcknowledgeSound(mUnitClass->mAcknowledgeSounds[b], b)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_ACKNOWLEDGE = 3170;
+
+/// upgrade `a`'s `SetCreationSound(mUnitClass->mCreationSound)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_CREATION = 3171;
+
+/// upgrade `a`'s `SetDeathSound(mUnitClass->mDeathSound)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_DEATH = 3172;
+
+/// upgrade `a`'s `SetSelectionSound(mUnitClass->mSelectionSounds[b], b)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_SELECTION = 3173;
+
+/// upgrade `a`'s `SetRange(mUnitClass->mRange)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_RANGE = 3174;
+
+/// `ee_units_upgrade_init(upgrade a, its mUnitClass)` (the copies from the class's record)
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_INIT = 3175;
+
+/// upgrade `a`'s `mImprovement.Reapply(mUnitClass, upgrade)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_REAPPLY = 3176;
+
+/// `ee_units_upgrade_init_finish(upgrade a, its mUnitClass)`
+constexpr static const int32_t EE_UNITS_UC_R_UPGRADE_INIT_FINISH = 3177;
+
+/// `USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(9, the class pointer at a)`
+constexpr static const int32_t EE_UNITS_UCB_R_VOLCANO_CLASS = 3180;
+
+/// the original's `ESVerify` of the volcano class
+constexpr static const int32_t EE_UNITS_UCB_R_VOLCANO_VERIFY = 3181;
+
+/// calamity class `a`'s `GetRandomLocation(f[0..3], f[0..3])`
+constexpr static const int32_t EE_UNITS_UCB_R_RANDOM_LOCATION = 3182;
+
+/// `unit->SetGoal(EEUGRust::NewAttackGround(f[0..3], false), 0, 0)`
+constexpr static const int32_t EE_UNITS_UCB_R_ATTACK_GROUND = 3183;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_HELICOPTER_PRIEST_PATH = 3200;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_HELICOPTER_PRIEST_CREATED = 3201;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_FIND_NEXT_RESOURCE = 3202;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_ELEVATION_FACTOR = 3203;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_UPDATE_ORBITALS = 3204;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_PRIEST_LOAD_MEDIA = 3205;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_PRIEST_UNLOAD_MEDIA = 3206;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_BASE_ADD_TO_TILE = 3207;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_BASE_REMOVE_FROM_TILE = 3208;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_REGISTER_CLASS = 3209;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_RELEASE_CLASS = 3210;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_RELEASE_CLASSES = 3211;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_UNIT_REMOVED = 3212;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_INVERSE_MAX_VELOCITY = 3213;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_SET_CAMOUFLAGED = 3214;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_ERUPT_VOLCANO = 3215;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_LAST_LINKED = 3216;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_FOURTH_PART = 3217;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_SECOND_PART = 3218;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_FIRST_PART = 3219;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_FIND_TARGET_NEAR = 3220;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_CONTAINER_CONTINENT = 3221;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_DISTANCE_3D = 3222;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_TILE_FREE = 3223;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_FACES_TARGET = 3224;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_BASE_SURROUNDING = 3225;
+
+constexpr static const int32_t EE_UNITS_UC_DO_R_UPGRADE_INIT = 3226;
+
+constexpr static const int32_t EE_UNITS_UC_SOUND_BASE = 3240;
+
+constexpr static const int32_t EE_UNITS_UC_SOUND_LAND_PRIEST = 3241;
+
+constexpr static const int32_t EE_UNITS_UC_SOUND_HELICOPTER_PRIEST = 3242;
+
+constexpr static const int32_t EE_UNITS_UC_SOUND_SPACESHIP = 3243;
+
 /// `f[0..3]` = the unit's location's X, Y, Z
 constexpr static const int32_t EE_UNITS_UCA_LOCATION = 2000;
 
@@ -11621,6 +11974,9 @@ constexpr static const int32_t EE_UNITS_UCB_DO_SPACE_CREATE_UNIT = 12;
 
 constexpr static const int32_t EE_UNITS_UCB_DO_SURROUNDING_TILES = 13;
 
+/// "UCBD"
+constexpr static const uint32_t UCBD = 1145193301;
+
 /// unit `a`'s `mTileX`
 constexpr static const int32_t EE_UNITS_UCG_TILE_X_OF = 1600;
 
@@ -11707,6 +12063,227 @@ constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_CREATED = 7;
 constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_ARRIVED = 8;
 
 constexpr static const int32_t EE_UNITS_UCG_DO_UPDATE_RESOURCE_UNIT = 9;
+
+/// `memcpy(a, &::gWorld.mLine, sizeof(GE3DLine))` (its start, then its direction)
+constexpr static const int32_t EE_UNITS_UCG_WORLD_LINE = 3000;
+
+/// `f[0] = ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1])`
+constexpr static const int32_t EE_UNITS_UCG_MESH_Z = 3001;
+
+/// `::gWorld.mMap->GetGroundPoint(f[0..3], f[0..3])`
+constexpr static const int32_t EE_UNITS_UCG_GROUND_POINT = 3002;
+
+/// `f[0] = ::gWorld.mMap->mTerrainMesh.GetZ(b, c)`
+constexpr static const int32_t EE_UNITS_UCG_TERRAIN_Z = 3003;
+
+/// `class->BaseCreateUnitAt(the transformation at a, b >> 1, b & 1, unit c)`
+constexpr static const int32_t EE_UNITS_UCG_BASE_CREATE_AT = 3004;
+
+/// complex unit `a`'s `SetLocation(f[0..3], true)`
+constexpr static const int32_t EE_UNITS_UCG_SET_LOCATION_OF = 3005;
+
+/// `f[0] = gPhysics->mRandom.Generate()`
+constexpr static const int32_t EE_UNITS_UCG_RANDOM_GENERATE = 3006;
+
+/// `f[0] = gPhysics->GetRandom(f[0], f[1])`
+constexpr static const int32_t EE_UNITS_UCG_RANDOM_RANGE = 3007;
+
+/// `unit->mNumWheels`
+constexpr static const int32_t EE_UNITS_UCG_WHEEL_COUNT = 3008;
+
+/// `unit->mWheels[b]->Update(unit)`
+constexpr static const int32_t EE_UNITS_UCG_WHEEL_UPDATE = 3009;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_AMBIENT_LOCATION_TO_TILE = 3020;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_GROUND_LOCATION = 3021;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_LOCATION_TO_TILE = 3022;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT_AT = 3023;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT = 3024;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE = 3025;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED = 3026;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_UPDATE_WHEELS = 3027;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE = 3028;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_SPACE_BUILDING_LOCATION_TO_TILE = 3029;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT = 3030;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT = 3031;
+
+constexpr static const int32_t EE_UNITS_UCG_DO_BUILDING_GROUND_LOCATION = 3032;
+
+/// `class->BaseAddToRegion(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_ADD_TO_REGION = 3500;
+
+/// `class->SpaceTransportAddToTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_TRANSPORT_ADD_TO_TILE = 3501;
+
+/// `class->AmbientAddToTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_AMBIENT_ADD_TO_TILE = 3502;
+
+/// `class->ResourceAddToTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_RESOURCE_ADD_TO_TILE = 3503;
+
+/// `class->SubmergedNavalAddToTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_ADD_TO_TILE = 3504;
+
+/// `class->LandTransportBadlyHurt(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_LAND_TRANSPORT_BADLY_HURT = 3505;
+
+/// `class->LandCallParatroopPlane(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_LAND_CALL_PARATROOP_PLANE = 3506;
+
+/// `unit->mPlayer->mPopulationCount -= ` cargo `a`'s `mUnitClass->GetPopulationCost()`
+constexpr static const int32_t EE_UNITS_UCK_D_POPULATION_SUB = 3507;
+
+/// `unit->mPlayer->mPopulationCount += ` cargo `a`'s `mUnitClass->GetPopulationCost()`
+constexpr static const int32_t EE_UNITS_UCK_D_POPULATION_ADD = 3508;
+
+/// `class->TorpedoCheckGroundImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_TORPEDO_GROUND_IMPACT = 3509;
+
+/// `class->MissileCheckGroundImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_MISSILE_GROUND_IMPACT = 3510;
+
+/// `class->ProjectileCheckGroundImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_PROJECTILE_GROUND_IMPACT = 3511;
+
+/// `class->MissileCheckWaterImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_MISSILE_WATER_IMPACT = 3512;
+
+/// `class->ProjectileCheckWaterImpact(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_PROJECTILE_WATER_IMPACT = 3513;
+
+/// `class->MiningBuildingCreateUnit(b's x, b's y, c >> 1, c & 1, creator a)` (the next four likewise)
+constexpr static const int32_t EE_UNITS_UCK_D_MINING_CREATE_UNIT = 3514;
+
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_CITIZEN_CREATE_UNIT = 3515;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT = 3516;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_CREATE_UNIT = 3517;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT = 3518;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_CREATE_UNIT = 3519;
+
+/// `class->MiningBuildingCreateUnitAt(the transformation at b, c >> 1, c & 1, creator a)` (the next five likewise)
+constexpr static const int32_t EE_UNITS_UCK_D_MINING_CREATE_UNIT_AT = 3520;
+
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_PRIEST_CREATE_UNIT_AT = 3521;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_BUILDING_CREATE_UNIT_AT = 3522;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_CREATE_UNIT_AT = 3523;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_CREATE_UNIT_AT = 3524;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_CREATE_UNIT_AT = 3525;
+
+/// `class->mDomains`
+constexpr static const int32_t EE_UNITS_UCK_D_DOMAINS = 3526;
+
+/// `class->GateGateReplaced(gate a, unit b)`
+constexpr static const int32_t EE_UNITS_UCK_D_GATE_GATE_REPLACED = 3527;
+
+/// `class->AirGetSoundParameters(unit a, sound b, the three out pointers at c)`
+constexpr static const int32_t EE_UNITS_UCK_D_AIR_SOUND = 3528;
+
+/// `class->BuildingGroundLocation(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION = 3530;
+
+/// `class->SubmergedNavalGroundLocation(f[0..3])`
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION = 3531;
+
+/// `class->NavalBuildingHasSunk(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_BUILDING_SUNK = 3532;
+
+/// `class->IsSidePart(unit)`
+constexpr static const int32_t EE_UNITS_UCK_D_IS_SIDE_PART = 3533;
+
+/// `EEGetFirstPart(unit)->GetCommandType()`
+constexpr static const int32_t EE_UNITS_UCK_D_FIRST_PART_COMMAND = 3534;
+
+/// `class->mIsFlare`
+constexpr static const int32_t EE_UNITS_UCK_D_IS_FLARE = 3535;
+
+/// unit `a`'s `mUnitClass->mUnitType`
+constexpr static const int32_t EE_UNITS_UCK_D_UNIT_TYPE_OF = 3536;
+
+/// `class->BombLaunchProjectile(unit, the point at a)` (the next two likewise)
+constexpr static const int32_t EE_UNITS_UCK_D_BOMB_LAUNCH = 3537;
+
+constexpr static const int32_t EE_UNITS_UCK_D_MISSILE_LAUNCH = 3538;
+
+constexpr static const int32_t EE_UNITS_UCK_D_PROJECTILE_LAUNCH = 3539;
+
+/// `class->NavalCitizenLocationToTile(the point at a, the long at b, the long at c)` (the next three likewise)
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_CITIZEN_TO_TILE = 3540;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_BUILDING_TO_TILE = 3541;
+
+constexpr static const int32_t EE_UNITS_UCK_D_AMBIENT_TO_TILE = 3542;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_TO_TILE = 3543;
+
+/// `class->BaseRemoveFromRegion(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_REMOVE_FROM_REGION = 3544;
+
+/// `class->SpaceTransportRemoveFromTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_TRANSPORT_REMOVE = 3545;
+
+/// `class->AmbientRemoveFromTile(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_AMBIENT_REMOVE = 3546;
+
+/// `class->ResourceSimpleUnitCreated(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_RESOURCE_SIMPLE_CREATED = 3547;
+
+/// `class->BaseSimpleUnitCreated(unit a)`
+constexpr static const int32_t EE_UNITS_UCK_D_BASE_SIMPLE_CREATED = 3548;
+
+/// `UnitCreated`'s bodies 1..14 (`3548 + body`): `class->AirAnimalUnitCreated(unit)`, `FortressUnitCreated`,
+/// `GateUnitCreated`, (4: Rust's), `HelicopterTransportUnitCreated`, `SpaceBuildingUnitCreated`,
+/// `SpaceTransportUnitCreated`, `BuildingUnitCreated`, `LandUnitCreated`, `LandableUnitCreated`,
+/// `MissileUnitCreated`, `NavalUnitCreated`, `ProjectileUnitCreated`, `TransportUnitCreated`
+constexpr static const int32_t EE_UNITS_UCK_D_AIR_ANIMAL_CREATED = 3549;
+
+constexpr static const int32_t EE_UNITS_UCK_D_FORTRESS_CREATED = 3550;
+
+constexpr static const int32_t EE_UNITS_UCK_D_GATE_CREATED = 3551;
+
+constexpr static const int32_t EE_UNITS_UCK_D_HELICOPTER_TRANSPORT_CREATED = 3553;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_BUILDING_CREATED = 3554;
+
+constexpr static const int32_t EE_UNITS_UCK_D_SPACE_TRANSPORT_CREATED = 3555;
+
+constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_CREATED = 3556;
+
+constexpr static const int32_t EE_UNITS_UCK_D_LAND_CREATED = 3557;
+
+constexpr static const int32_t EE_UNITS_UCK_D_LANDABLE_CREATED = 3558;
+
+constexpr static const int32_t EE_UNITS_UCK_D_MISSILE_CREATED = 3559;
+
+constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_CREATED = 3560;
+
+constexpr static const int32_t EE_UNITS_UCK_D_PROJECTILE_CREATED = 3561;
+
+constexpr static const int32_t EE_UNITS_UCK_D_TRANSPORT_CREATED = 3562;
+
+/// `class->FortressUnloadAt(unit, b, c)`
+constexpr static const int32_t EE_UNITS_UCK_D_FORTRESS_UNLOAD_AT = 3563;
+
+/// `class->TransportUnloadAt(unit, b, c)`
+constexpr static const int32_t EE_UNITS_UCK_D_TRANSPORT_UNLOAD_AT = 3564;
 
 /// `EEUnitClassKinds(class)`
 constexpr static const int32_t EE_UNITS_UCK_KINDS = 2200;
@@ -16240,6 +16817,10 @@ struct EeUnitsPlayerUnit {
   long build_queue;
 };
 
+/// `kWorldHighGroundHeight`, `kWorldLowGroundHeight`, `kWorldHighGroundAttackFactor`, `kWorldLowGroundAttackFactor`
+/// (the world table's rows, ee/EEWorldConstants.h)
+constexpr static const int64_t WORLD_ELEVATION_ROWS[4] = { 53, 54, 55, 56, };
+
 extern "C" {
 
 /// A class's `ActionChanged` of the unit `id` (`object`: its address, the record's check) over the store and `host`.
@@ -19073,6 +19654,44 @@ bool ee_units_uc_produce(void *class_,
                          void *made,
                          bool arg);
 
+/// The class body `what` (`EE_UNITS_UC_DO_R_*`) of `class` on `unit` (see [`run`]).
+///
+/// # Safety
+/// `class` a live `EEUnitClass` (or NULL for the table's bodies), `unit` a live `EEComplexUnit` (or NULL), `a`
+/// a live object of the body's, `f` four writable floats, on the simulation thread.
+int64_t ee_units_uc_rest(int32_t what,
+                         void *class_,
+                         void *unit,
+                         uint64_t a,
+                         int64_t b,
+                         int64_t c,
+                         float (*f)[4]);
+
+/// The class body `what` (`EE_UNITS_UC_DO_R_*`) of `class` on `unit` that answers a float (`a` its object,
+/// (`x`, `y`, `z`) its point).
+///
+/// # Safety
+/// As [`ee_units_uc_rest`].
+float ee_units_uc_rest_f(int32_t what,
+                         void *class_,
+                         void *unit,
+                         uint64_t a,
+                         float x,
+                         float y,
+                         float z);
+
+/// The sound body `what` (`EE_UNITS_UC_SOUND_*`) of `class` for `unit` (an `EEUnit`) and `sound`.
+///
+/// # Safety
+/// `class`, `unit` live; `sound` a live `EESoundObject` or NULL; the outs live floats.
+void ee_units_uc_rest_sound(int32_t what,
+                            void *class_,
+                            void *unit,
+                            void *sound,
+                            float *volume,
+                            float *pan,
+                            float *pitch);
+
 extern int64_t ee_units_uca_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -19140,6 +19759,15 @@ int64_t ee_units_ucb_call(int32_t what,
 /// `flag` is a live bool.
 int32_t ee_units_ucb_wall_piece_part(int32_t index, bool *flag);
 
+/// `EEUCNote`'s constructor: whether the note records.
+uint8_t ee_units_ucbd_begin();
+
+/// `EEUCNote`'s destructor: its words folded (`on` its constructor's answer).
+///
+/// # Safety
+/// `words` holds `count` words (or is NULL with 0).
+void ee_units_ucbd_end(uint8_t on, const uint32_t *words, size_t count);
+
 extern int64_t ee_units_ucg_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -19159,6 +19787,43 @@ int64_t ee_units_ucg_call(int32_t what,
                           void *unit,
                           uint64_t a,
                           float f);
+
+/// The sea classes' body `what` (`EE_UNITS_UCG_DO_*` from 3020) of `class` on `unit` (see [`run`]).
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a` a live `EEUnit` (or 0) or the
+/// body's out tile, `f` the body's point or transformation, on the simulation thread.
+int64_t ee_units_ucg_sea(int32_t what,
+                         void *class_,
+                         void *unit,
+                         uint64_t a,
+                         int64_t b,
+                         int64_t c,
+                         float *f);
+
+/// The kind dispatcher `row` (`EE_UNITS_BODY_*`) of `class` on `unit` (see [`dispatch`]).
+///
+/// # Safety
+/// `class` is a live `EEUnitClass`, `unit` a live `EEComplexUnit` (or NULL), `a`, `b`, `c` the dispatcher's
+/// objects and values, `f` its point (or NULL), on the simulation thread.
+int64_t ee_units_uck_dispatch(size_t row,
+                              void *class_,
+                              void *unit,
+                              uint64_t a,
+                              int64_t b,
+                              int64_t c,
+                              float *f);
+
+/// `GetSoundParameters(unit, sound, outs)` of `class`.
+///
+/// # Safety
+/// `class`, `unit` live; `sound` a live `EESoundObject` or NULL; the outs live floats.
+void ee_units_uck_sound(void *class_,
+                        void *unit,
+                        void *sound,
+                        float *volume,
+                        float *pan,
+                        float *pitch);
 
 extern int64_t ee_units_uck_host(int32_t op,
                                  void *class_,
@@ -20307,12 +20972,6 @@ void ee_units_waypoints_group_path_goals(uint64_t unit, const float *points, siz
 /// # Safety
 /// `unit` is a live complex unit; `index` writable.
 bool ee_units_waypoints_at_tile(uint64_t unit, long x, long y, size_t *index);
-
-/// `SeaAnimalAdjustPath(unit, path)`: the points' depths (EEUnitClassGround.cpp: the physics' random stream)
-extern void ee_units_wp_host_sea_animal_path(uint64_t class_,
-                                             uint64_t unit,
-                                             float (*points)[3],
-                                             uint32_t count);
 
 /// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
 extern int64_t ee_units_wp_host(int32_t op, uint64_t unit, uint64_t arg, float *point);

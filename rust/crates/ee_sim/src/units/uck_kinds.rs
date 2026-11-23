@@ -367,7 +367,7 @@ mod game {
         ) -> i64;
     }
 
-    struct GameK;
+    pub(crate) struct GameK;
 
     impl UcHost for GameK {
         #[allow(clippy::too_many_arguments)]
@@ -395,6 +395,9 @@ mod game {
         run(&mut GameK, what, class as usize as u64, unit as usize as u64, a, b, c, f)
     }
 }
+
+#[cfg(not(test))]
+pub(crate) use game::GameK;
 
 #[cfg(test)]
 #[path = "uck_kinds_tests.rs"]

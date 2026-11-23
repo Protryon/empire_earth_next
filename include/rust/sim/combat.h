@@ -1359,6 +1359,96 @@ constexpr static const int32_t EE_COMBAT_SHOT_SET_CLOAKED = 72;
 /// the torpedo held at the water plane: the location with z 0 (`SetTransformation(t, true)`).
 constexpr static const int32_t EE_COMBAT_SHOT_WATER_PLANE = 73;
 
+/// `GetCalamityClass(0x17, the class pointer at a)` (the flaming arrows)
+constexpr static const int32_t EE_COMBAT_SHOT_X_FLAMING_CLASS = 3600;
+
+/// `gUnitSetManager.GetSet(calamity class a->GetUnitSet())`
+constexpr static const int32_t EE_COMBAT_SHOT_X_UNIT_SET = 3601;
+
+/// `static_cast<EEUGRust*>(unit->mComplexUnit->mGoalState)->GetAttackTarget()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_COMPLEX_GOAL_TARGET = 3602;
+
+/// unit `a`'s `mUnitClass->mUnitType`
+constexpr static const int32_t EE_COMBAT_SHOT_X_UNIT_TYPE_OF = 3603;
+
+/// unit set `a`'s `Contains(b)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SET_CONTAINS = 3604;
+
+/// `unit->GetPosition(f[0..3])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_POSITION = 3605;
+
+/// `f[0..3] = EEShotLocation(unit)` (the location's point)
+constexpr static const int32_t EE_COMBAT_SHOT_X_LOCATION = 3606;
+
+/// `gEffectManager->CreatePlacedEffect(f[0..3], class->mSplashEffect, NULL)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SPLASH_AT = 3607;
+
+/// `::gWorld.mMap->GetGroundPoint(f[0..3], f[0..3])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_GROUND_POINT = 3608;
+
+/// `unit->mPhysicalModel.SetLocationXYZ(f[0..3])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SET_LOCATION_XYZ = 3609;
+
+/// `unit->mStats->mDeathSound`
+constexpr static const int32_t EE_COMBAT_SHOT_X_DEATH_SOUND = 3610;
+
+/// `class->GetSoundParameters(unit, sound a, &f[0], &f[1], &f[2])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SOUND_PARAMETERS = 3611;
+
+/// `gSoundManager->Play(sound a's mSampleID, f[0], f[1], f[2], its mLooping, NULL)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_PLAY = 3612;
+
+/// `EEShotAttack(unit)` (the attack goal)
+constexpr static const int32_t EE_COMBAT_SHOT_X_ATTACK_GOAL = 3613;
+
+/// attack goal `a`'s `GetAttackTarget()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_ATTACK_TARGET = 3614;
+
+/// `EEUnitCast<EEComplexUnit>(unit a)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_COMPLEX_CAST = 3615;
+
+/// complex unit `a`'s `SetIsTinted(false)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_UNTINT = 3616;
+
+/// unit `a`'s `mTileX`
+constexpr static const int32_t EE_COMBAT_SHOT_X_TILE_X_OF = 3617;
+
+/// unit `a`'s `mTileY`
+constexpr static const int32_t EE_COMBAT_SHOT_X_TILE_Y_OF = 3618;
+
+/// `::gWorld.mMap->GetTile(a, b)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_MAP_TILE = 3619;
+
+/// `f[0] = ` tile `a`'s `GetHeight()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_TILE_HEIGHT = 3620;
+
+/// `unit->SetGoal(EEUGRust::NewAttackGround(f[0..3], b), 0, 0)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_ATTACK_GROUND = 3621;
+
+/// unit `a`'s `mComplexUnit`
+constexpr static const int32_t EE_COMBAT_SHOT_X_COMPLEX_OF = 3622;
+
+/// complex unit `a`'s `mContainer`
+constexpr static const int32_t EE_COMBAT_SHOT_X_CONTAINER_OF = 3623;
+
+/// attack goal `a`'s `SetAttackTarget(unit b)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SET_ATTACK_TARGET = 3624;
+
+/// `unit->mGoalState`
+constexpr static const int32_t EE_COMBAT_SHOT_X_GOAL_STATE = 3625;
+
+/// goal `a`'s `GetGoalLocation(f[0..3])`
+constexpr static const int32_t EE_COMBAT_SHOT_X_GOAL_LOCATION = 3626;
+
+/// goal `a`'s `GetB1C()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_GOAL_B1C = 3627;
+
+/// `*(GETransformation*)a = unit->mPhysicalModel.GetLocation()`
+constexpr static const int32_t EE_COMBAT_SHOT_X_LOCATION_MATRIX = 3628;
+
+/// `unit->SetTransformation(the transformation at a, true)`
+constexpr static const int32_t EE_COMBAT_SHOT_X_SET_TRANSFORMATION = 3629;
+
 /// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
 constexpr static const uint8_t EE_COMBAT_STORED_COMPLEX_UNIT = 2;
 
@@ -2341,10 +2431,12 @@ struct EeCombatScreenIn {
 /// The host's distance of a screen's candidate (asked only for a living one).
 using EeCombatScreenDistance = float(*)(void *context);
 
-/// The C++ host of a shot's plan: `op` reads or acts on the unit and its class over `ctx`.
+/// The C++ host of a shot's plan: `op` reads or acts on the unit and its class over `ctx`; `op64` is one statement
+/// of the operations composed here ([`compose`]: `EE_COMBAT_SHOT_X_*`, an object `a`, a value `b`, floats `f`).
 struct EeCombatShotHost {
   void *ctx;
   int32_t (*op)(void *ctx, int32_t op, int32_t arg, int32_t arg1);
+  int64_t (*op64)(void *ctx, int32_t op, uint64_t a, int64_t b, float *f);
 };
 
 /// What the work does: the goal's new elapsed time (`work`), and the target's new hit points (`heal`).
