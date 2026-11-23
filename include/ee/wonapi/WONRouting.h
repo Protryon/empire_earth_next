@@ -40,6 +40,8 @@
 #include "rust/won_net/routecpp.h"
 #include "rust/won_net/routeop.h"
 #include "rust/won_net/routereq.h"
+#include "rust/won_net/rustref.h"
+#include "rust/won_net/dnstest.h"
 #include "rust/won_net/servconn.h"
 #include "rust/won_net/smartroute.h"
 #include "rust/won_net/sockobj.h"
@@ -579,53 +581,29 @@ public:
     SmartPtr<T> mObject;                    // +0x10; original allocation0x14
 };
 
-// HTTPConnection (partial), RTTI 44d3a4 > RefCount
-// Held only through SmartPtr (maps); never constructed, sized or copied here.
 class RustServerOp; // an HTTPGetOp (httpget.rs)
-class HTTPSession;
-// HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
-// ee_won's (rust/crates/ee_won_net/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold.
-// Its calls back are Rust's since net round 26 (httpcpp.rs, over the core table; HTTPEngine.cpp is deleted); the
-// forwarders that take an op are below RustServerOp.
-class HTTPConnection : public RefCount {
+// A Rust object a C++ reference holds (R6 WON round 34): HTTPConnection (RTTI 44d3a4 > RefCount; ctor 2d2c80, dtor
+// 2d2d50: a host's keep-alive connection, its socket, queues, running ops, pipelining and retry) and HTTPSession (0x2c
+// bytes; ctor 2d27b0, dtor 2d2870: the connections by host) are wholly ee_won's (httpengine.rs EeWonHttpConn and
+// EeWonHttpSession, their calls httpcpp.rs, made and freed by rustref.rs). This is the RefCount the ops' completions
+// and the session hold, of one kind (EeWonCoreObject::HttpConn or HttpSession), with the lock the Rust takes; the
+// library's core table finds both (AsyncOp.cpp CoreObjectOf).
+class WonRustRef : public RefCount {
 public:
-    // 2d2c80 (new 64 at 2d2a97): idle, pipelining on
-    HTTPConnection(HTTPSession* inSession = NULL) : mSession(inSession)
-    { this->mImpl = ee_won_http_conn_new_core(static_cast<RefCount*>(this), WonCore()); }
-    virtual ~HTTPConnection() { ee_won_http_conn_free(this->mImpl); } //2d2d50: the socket, queues and completions
-    void Kill() { ee_won_http_conn_kill(this->mImpl); } //2d3600: the running and queued requests killed (finished)
-    void QueueOp(RustServerOp* inOp); //2d33a0: send-only on the pipeline queue, a full request without pipelining
-    void QueueOp(RustServerOp* inOp, int inId); //2d3290: on the send (0) or receive (1) queue, started when it was empty
-    void RunOp(int inId) { ee_won_http_conn_run_op(this->mImpl, inId); } //2d3430: a queue's next request on the socket
-    int GetNumOps() { return ee_won_http_conn_num_ops(this->mImpl); }
-    PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
-    EeWonHttpConn* GetConnObject() const { return this->mImpl; }
-protected:
-    // 2d2e80: a sent request queued for its reply, or completed; all requeued when the pipeline drops
-    void OpCallback(AsyncOp* inOp) { ee_won_http_conn_op_callback(this->mImpl, static_cast<RefCount*>(inOp)); }
+    explicit WonRustRef(EeWonCoreObject inKind)
+        : mKind(inKind), mImpl(ee_won_rustref_new(inKind, static_cast<RefCount*>(this), WonCore())) {}
+    virtual ~WonRustRef() { ee_won_rustref_free(this->mKind, this->mImpl); }
+    // the kind's Rust object, or the lock (NULL for another kind)
+    void* Get(EeWonCoreObject inKind) const
+    { return inKind == this->mKind ? this->mImpl : inKind == EeWonCoreObject::Lock ? static_cast<void*>(this->mDataCrit.mCrit) : NULL; }
 private:
-    CriticalSection mDataCrit; //08..20
-    HTTPSession* mSession; //20 NONOWNING, ctor raw assignment
-    EeWonHttpConn* mImpl;   // owned: 0x24..0x64 (socket, counts, flag, last use, queues, retry, running ops)
+    WonRustRef(const WonRustRef&);
+    WonRustRef& operator=(const WonRustRef&);
+    CriticalSection mDataCrit; // before the Rust object, which may lock it
+    EeWonCoreObject mKind;
+    void* mImpl; // owned
 };
-typedef SmartPtr<HTTPConnection> HTTPConnectionPtr;
-
-// 0x2c bytes: constructor 2d27b0, map destruction 2d2870. The connections by host (StringLessNoCase) are ee_won's
-// (httpengine.rs EeWonHttpSession).
-class HTTPSession : public RefCount {
-public:
-    HTTPSession() { this->mImpl = ee_won_http_session_new_core(static_cast<RefCount*>(this), WonCore()); } //2d27b0
-    virtual ~HTTPSession() { ee_won_http_session_free(this->mImpl); } //2d2870, the map
-    void AddOp(RustServerOp*); //2d28f0: on its host's connection, made at the first use
-    void KillAll() { ee_won_http_session_kill_all(this->mImpl); } //2d2bc0: every connection's requests killed
-    int GetNumOps() { return ee_won_http_session_num_ops(this->mImpl); }
-    PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
-    EeWonHttpSession* GetSessionObject() const { return this->mImpl; }
-private:
-    CriticalSection mDataCrit;              //08..20
-    EeWonHttpSession* mImpl;                //20..2c, owned
-};
-typedef SmartPtr<HTTPSession> HTTPSessionPtr;
+typedef WonRustRef HTTPSession; // of the kind EeWonCoreObject::HttpSession (HttpSessionNew)
 
 
 class RoutingConnection;
@@ -847,6 +825,7 @@ public:
     static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
     IPAddr GetCurAddr() const; // a request's current server (EE_WON_REQHOST_CUR_ADDR)
     IPAddr GetAddr() const; // a request's first server (an invalid address: none)
+    IPAddr AddrOf(int inWhich) const; // an address's six bytes by number (an invalid address: none)
     void Set(int inWhich, RefCount* inObj); // an object setter (the op takes its own reference)
     void SetNum(int inWhich, long long inNum); // a number setter
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
@@ -899,17 +878,18 @@ protected:
     virtual ~RustServerOp();
 private:
     static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
-    IPAddr AddrOf(int inWhich) const;
     EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
-// the HTTP engine's forwarders that take an HTTP get op (HTTPEngine.cpp's, 2d33a0, 2d3290, 2d28f0)
-inline void HTTPConnection::QueueOp(RustServerOp* inOp)
-{ ee_won_http_conn_queue_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
-inline void HTTPConnection::QueueOp(RustServerOp* inOp, int inId)
-{ ee_won_http_conn_queue_op_id(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp)), inId); }
-inline void HTTPSession::AddOp(RustServerOp* inOp)
-{ ee_won_http_session_add_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
+// HTTPSession's calls (2d27b0, 2d28f0: an HTTP get op on its host's connection, made at the first use; 2d2bc0: every
+// connection's requests killed); a connection's are the Rust's own (httpcpp.rs)
+inline HTTPSession* HttpSessionNew() { return new WonRustRef(EeWonCoreObject::HttpSession); }
+inline EeWonHttpSession* HttpSessionOf(HTTPSession* inSession)
+{ return static_cast<EeWonHttpSession*>(inSession->Get(EeWonCoreObject::HttpSession)); }
+inline void HttpSessionAddOp(HTTPSession* inSession, RustServerOp* inOp)
+{ ee_won_http_session_add_op(HttpSessionOf(inSession), static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
+inline void HttpSessionKillAll(HTTPSession* inSession) { ee_won_http_session_kill_all(HttpSessionOf(inSession)); }
+inline int HttpSessionNumOps(HTTPSession* inSession) { return ee_won_http_session_num_ops(HttpSessionOf(inSession)); }
 
 // AuthSession (0x10cc bytes in the original) is an ee_won handle (hostauth.rs over peerauth.rs's session, round 22):
 // the peer auth op that makes it, the auth context's session cache and the sockets' transforms hold it.
@@ -985,37 +965,10 @@ class Thread : public ThreadBase {
 public:
     void SetAutoDelete(bool inAutoDelete) { ee_won_thread_set_auto_delete(this->mThread,inAutoDelete); }
 };
-class DNSTestOp : public AsyncOp {
-    friend class DNSTestThread;
-public:
-    DNSTestOp(const std::string& inHost) { this->mHostString = inHost; } //2d95a0 (header-only since net round 27)
-    // Accessor as in the SDK's DNSTestOp.h; the LAN family 3e28d0 reads
-    // receiver+54 directly (no out-of-line helper).
-    const IPAddr& GetHostAddr() { return this->mHostAddr; }
-protected:
-    virtual ~DNSTestOp() {}                 //2d9740
-    virtual void RunHook();                 //2d97f0: a self-deleting thread resolves the host
-    std::string mHostString;                //44..54
-    IPAddr mHostAddr;                       //54..7c
-};
-typedef SmartPtr<DNSTestOp> DNSTestOpPtr;
-class DNSTestThread : public Thread {
-public:
-    DNSTestThread(DNSTestOp* inOp) : mOp(inOp) {} //inline constructor 2d9826..985d
-    // the op finished with success or the host-lookup failure status
-    virtual void ThreadFunc() //slot10 2d9920
-    {
-        this->mOp->mHostAddr.SetWithDefaultPort(this->mOp->mHostString, 0);
-        this->mOp->Finish(this->mOp->mHostAddr.IsValid() ? WS_Success : WS_InvalidAddress);
-    }
-    DNSTestOpPtr mOp; //1c,owned; full20. Implicit dtor2d98b0 no ownvptr store.
-};
-inline void DNSTestOp::RunHook()
-{
-    DNSTestThread* aThread = new DNSTestThread(this);
-    aThread->SetAutoDelete(true);
-    aThread->Start();
-}
+// DNSTestOp (0x7c bytes; ctor 2d95a0, dtor 2d9740, RunHook 2d97f0) and DNSTestThread (ThreadFunc 2d9920) are a Rust op
+// (rust/crates/ee_won_net/src/dnstest.rs, R6 WON round 34): its run starts a thread holding the op, which resolves
+// the host (SetWithDefaultPort, port 0) and finishes the op; GetHostAddr is AddrOf(EE_WON_DNSTEST_ADDR)
+inline RustServerOp* NewDnsTestOp(const std::string& inHost) { return new RustServerOp(ee_won_dnstest_new(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size())); }
 
 
 // WONAPI's HTTP document request (sizeof 0xdc; implicit dtor 0x4cff46; ctor out of line in the base game,

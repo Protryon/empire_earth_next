@@ -1001,6 +1001,9 @@ WON_TESTS["won_net33_test"] = WON_TESTS["won_serverop_test"]
 # R6 WON round 34: the directory's entities whole in Rust (dirlist.rs, dirread.rs, the C++ DirList) against
 # DirEntity and its readers as they were (won_direntity_orig.h and the driver's copies)
 WON_TESTS["won_dir34_test"] = [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"]
+# R6 WON round 34 (net, second batch): DNSTestOp whole in Rust (dnstest.rs) against the classes as they were; the
+# op machinery and the core: won_serverop_test's units
+WON_TESTS["won_net34_test"] = WON_TESTS["won_serverop_test"]
 # the lobby model reading the routing server's records in Rust (modelobj.rs route_record_op) against RoutingOp.cpp's
 # copies, RoutingLogic.cpp's cases and LobbyModelHost.cpp's reads as they were, on real routing ops (golden:
 # rust/crates/ee_won_lobby/src/golden_routerec.txt); won_servconn_test's units (a connection binds the core)
