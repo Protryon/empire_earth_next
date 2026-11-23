@@ -317,11 +317,7 @@ fn dump_unit(o: &mut Out, u: usize) {
     for q in 0..i64::from(queues) {
         for g in 0..h(O::DmCxQueueSize, x, &[q]) {
             let goal = h(O::DmCxGoal, x, &[q, g]) as usize;
-            s.push_str(&format!(
-                " g{q}:k{}:{}",
-                h(O::DmGoalKind, goal, &[]) as u32,
-                x8(h(O::DmGoalOos, goal, &[]))
-            ));
+            s.push_str(&format!(" g{q}:k{}:{}", h(O::DmGoalKind, goal, &[]) as u32, x8(h(O::DmGoalOos, goal, &[]))));
         }
     }
     // what the raw bytes hold only as pointers: the contacts, the last attacker, the area effects
