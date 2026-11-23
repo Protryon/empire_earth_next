@@ -93,7 +93,9 @@ mod game {
         let r = unsafe { &mut *record };
         let [rts, u, c] = fill(&mut Game, r, unit, owner, player);
         // SAFETY: the unit's live base subobjects (or null)
-        unsafe { crate::units::ffi::ee_units_store_set_fields(record, rts as usize as _, u as usize as _, c as usize as _) };
+        unsafe {
+            crate::units::ffi::ee_units_store_set_fields(record, rts as usize as _, u as usize as _, c as usize as _)
+        };
     }
 
     /// `EEUnitOrderReset()`: the update order from the world's list.

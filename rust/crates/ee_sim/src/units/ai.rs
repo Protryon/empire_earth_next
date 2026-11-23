@@ -606,21 +606,38 @@ mod ops_tests {
 
     #[test]
     fn the_members_are_read_when_the_store_has_no_record() {
-        let mut r = Rec { answers: vec![(EE_UNITS_AI_H_COMMAND_TYPE, 5000), (EE_UNITS_AI_H_NEXT_TRIGGER_TIME, 7), (EE_UNITS_AI_H_GOAL_KIND, -1)], ..Default::default() };
+        let mut r = Rec {
+            answers: vec![
+                (EE_UNITS_AI_H_COMMAND_TYPE, 5000),
+                (EE_UNITS_AI_H_NEXT_TRIGGER_TIME, 7),
+                (EE_UNITS_AI_H_GOAL_KIND, -1),
+            ],
+            ..Default::default()
+        };
         let s = host(&mut r).state();
         assert_eq!(s, EeUnitsAIState { command: 5000, next_trigger_time: 7, goal_kind: -1 });
     }
 
     #[test]
     fn the_gather_test_resets_its_action_and_asks_activity_only_with_a_goal() {
-        let mut r = Rec { answers: vec![(EE_UNITS_AI_H_HAS_GOAL, 1), (EE_UNITS_AI_H_GOAL_ACTION, 42)], ..Default::default() };
+        let mut r =
+            Rec { answers: vec![(EE_UNITS_AI_H_HAS_GOAL, 1), (EE_UNITS_AI_H_GOAL_ACTION, 42)], ..Default::default() };
         assert_eq!(host(&mut r).gather_inactive(), Some(42));
         let ops: Vec<i32> = r.log.iter().map(|e| e.0).collect();
-        assert_eq!(ops, [EE_UNITS_AI_H_GOAL_ACTION_RESET, EE_UNITS_AI_H_HAS_GOAL, EE_UNITS_AI_H_GOAL_ACTIVE, EE_UNITS_AI_H_GOAL_ACTION]);
+        assert_eq!(
+            ops,
+            [
+                EE_UNITS_AI_H_GOAL_ACTION_RESET,
+                EE_UNITS_AI_H_HAS_GOAL,
+                EE_UNITS_AI_H_GOAL_ACTIVE,
+                EE_UNITS_AI_H_GOAL_ACTION
+            ]
+        );
         let mut r = Rec::default();
         assert_eq!(host(&mut r).gather_inactive(), None);
         assert_eq!(r.log.len(), 2);
-        let mut r = Rec { answers: vec![(EE_UNITS_AI_H_HAS_GOAL, 1), (EE_UNITS_AI_H_GOAL_ACTIVE, 1)], ..Default::default() };
+        let mut r =
+            Rec { answers: vec![(EE_UNITS_AI_H_HAS_GOAL, 1), (EE_UNITS_AI_H_GOAL_ACTIVE, 1)], ..Default::default() };
         assert_eq!(host(&mut r).gather_inactive(), None);
     }
 
@@ -628,7 +645,14 @@ mod ops_tests {
     fn a_command_is_set_after_the_camouflage_and_announced() {
         let mut r = Rec::default();
         host(&mut r).set_command(0x77, 2001);
-        assert_eq!(r.log, [(EE_UNITS_AI_H_UPDATE_CAMOUFLAGE, 0, 2001), (EE_UNITS_AI_H_SET_COMMAND, 0x77, 0), (EE_UNITS_AI_H_ACTION_CHANGED, 0, 0)]);
+        assert_eq!(
+            r.log,
+            [
+                (EE_UNITS_AI_H_UPDATE_CAMOUFLAGE, 0, 2001),
+                (EE_UNITS_AI_H_SET_COMMAND, 0x77, 0),
+                (EE_UNITS_AI_H_ACTION_CHANGED, 0, 0)
+            ]
+        );
         let mut r = Rec::default();
         host(&mut r).start_action(5000);
         assert_eq!(r.log, [(EE_UNITS_AI_H_START_ACTION, 0, 5000), (EE_UNITS_AI_H_ACTION_CHANGED, 0, 0)]);
@@ -643,10 +667,21 @@ mod ops_tests {
 
     #[test]
     fn a_step_without_a_command_reads_its_words_and_stops() {
-        let mut r = Rec { answers: vec![(EE_UNITS_AI_H_GAME_TIME, 900), (EE_UNITS_AI_H_GOAL_KIND, -1)], ..Default::default() };
+        let mut r =
+            Rec { answers: vec![(EE_UNITS_AI_H_GAME_TIME, 900), (EE_UNITS_AI_H_GOAL_KIND, -1)], ..Default::default() };
         let out = ai_step_noted(&mut r, 0x5555);
         assert_eq!(out.path, 2);
         let ops: Vec<i32> = r.log.iter().map(|e| e.0).collect();
-        assert_eq!(&ops[..6], [EE_UNITS_AI_H_COMMAND_TYPE, EE_UNITS_AI_H_NEXT_TRIGGER_TIME, EE_UNITS_AI_H_GAME_TIME, EE_UNITS_AI_H_UNIT_ID, EE_UNITS_AI_H_IS_CITIZEN, EE_UNITS_AI_H_GAME_TIME]);
+        assert_eq!(
+            &ops[..6],
+            [
+                EE_UNITS_AI_H_COMMAND_TYPE,
+                EE_UNITS_AI_H_NEXT_TRIGGER_TIME,
+                EE_UNITS_AI_H_GAME_TIME,
+                EE_UNITS_AI_H_UNIT_ID,
+                EE_UNITS_AI_H_IS_CITIZEN,
+                EE_UNITS_AI_H_GAME_TIME
+            ]
+        );
     }
 }

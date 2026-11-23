@@ -176,7 +176,12 @@ pub fn save<H: DmHost + ?Sized>(h: &mut H, d: u64, file: u64) -> i64 {
 
 /// `EEDoppelgangerManager::Release()`: both pools' statistics dumped and the pools released.
 pub fn release<H: DmHost + ?Sized>(h: &mut H) {
-    for op in [EE_UNITS_DM_DG_POOL_DUMP, EE_UNITS_DM_DG_POOL_RELEASE, EE_UNITS_DM_DG_COMPLEX_POOL_DUMP, EE_UNITS_DM_DG_COMPLEX_POOL_RELEASE] {
+    for op in [
+        EE_UNITS_DM_DG_POOL_DUMP,
+        EE_UNITS_DM_DG_POOL_RELEASE,
+        EE_UNITS_DM_DG_COMPLEX_POOL_DUMP,
+        EE_UNITS_DM_DG_COMPLEX_POOL_RELEASE,
+    ] {
         q(h, op, 0);
     }
 }
@@ -218,7 +223,13 @@ mod game {
     /// # Safety
     /// The objects named are live, on the simulation thread.
     #[no_mangle]
-    pub unsafe extern "C" fn ee_units_dm_dop(what: i32, d: *mut c_void, a: *mut c_void, b: *mut c_void, c: *mut c_void) -> i64 {
+    pub unsafe extern "C" fn ee_units_dm_dop(
+        what: i32,
+        d: *mut c_void,
+        a: *mut c_void,
+        b: *mut c_void,
+        c: *mut c_void,
+    ) -> i64 {
         run(&mut Game, what, d as usize as u64, a as usize as u64, b as usize as u64, c as usize as u64)
     }
 }

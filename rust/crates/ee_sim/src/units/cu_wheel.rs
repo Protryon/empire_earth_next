@@ -79,7 +79,12 @@ pub extern "C" fn ee_units_cu_wheel_angle(input: EeUnitsWheelIn) -> f32 {
 
 /// `EEGetAttackFrameSet`'s choice (see [`attack_frame_set`]).
 #[no_mangle]
-pub extern "C" fn ee_units_cu_attack_frame_set(special_attack: bool, unit_type: u32, fires_over_walls: bool, firing_high: bool) -> i32 {
+pub extern "C" fn ee_units_cu_attack_frame_set(
+    special_attack: bool,
+    unit_type: u32,
+    fires_over_walls: bool,
+    firing_high: bool,
+) -> i32 {
     attack_frame_set(special_attack, unit_type, fires_over_walls, firing_high)
 }
 

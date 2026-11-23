@@ -70,7 +70,11 @@ fn initialize_sets_player_unit_media_reference_tile_in_order() {
 
 #[test]
 fn initialize_copy_takes_the_other_ones_unit_and_tile() {
-    let mut r = rec(&[(EE_UNITS_DM_DOPPELGANGER_UNIT, 0x200), (EE_UNITS_DM_DOPPELGANGER_TILE, 0x400), (EE_UNITS_DM_IS_COMPLEX, 1)]);
+    let mut r = rec(&[
+        (EE_UNITS_DM_DOPPELGANGER_UNIT, 0x200),
+        (EE_UNITS_DM_DOPPELGANGER_TILE, 0x400),
+        (EE_UNITS_DM_IS_COMPLEX, 1),
+    ]);
     initialize_copy(&mut r, D, 0x500, 0x300);
     assert_eq!(
         r.log,
@@ -89,7 +93,12 @@ fn initialize_copy_takes_the_other_ones_unit_and_tile() {
 
 #[test]
 fn load_keeps_the_ids_and_returns_the_second_read() {
-    let mut r = rec(&[(EE_UNITS_DM_DG_VALUE, 17), (EE_UNITS_DM_DG_COORDINATE, 3), (EE_UNITS_DM_READ_LONG, 5), (EE_UNITS_DM_READ_ULONG, 6)]);
+    let mut r = rec(&[
+        (EE_UNITS_DM_DG_VALUE, 17),
+        (EE_UNITS_DM_DG_COORDINATE, 3),
+        (EE_UNITS_DM_READ_LONG, 5),
+        (EE_UNITS_DM_READ_ULONG, 6),
+    ]);
     assert_eq!(load(&mut r, D, 0x900), 5);
     assert_eq!(r.log[0], (EE_UNITS_DM_SET_FILE, 0x900, 0));
     assert_eq!(r.log[3], (EE_UNITS_DM_DG_SET_UNIT, D, 17));
@@ -98,10 +107,17 @@ fn load_keeps_the_ids_and_returns_the_second_read() {
 
 #[test]
 fn repair_pointers_puts_a_found_simple_doppelganger_back_on_its_tile() {
-    let mut r = rec(&[(EE_UNITS_DM_DG_SAVED_UNIT, 0x200), (EE_UNITS_DM_PLAYER_AT, 0x300), (EE_UNITS_DM_DOPPELGANGER_TILE, 0x400)]);
+    let mut r = rec(&[
+        (EE_UNITS_DM_DG_SAVED_UNIT, 0x200),
+        (EE_UNITS_DM_PLAYER_AT, 0x300),
+        (EE_UNITS_DM_DOPPELGANGER_TILE, 0x400),
+    ]);
     assert_eq!(repair_pointers(&mut r, D), 0);
     let o = ops(&r);
-    assert_eq!(&o[o.len() - 4..], [EE_UNITS_DM_IS_COMPLEX, EE_UNITS_DM_DOPPELGANGER_TILE, EE_UNITS_DM_TILE_ADD, EE_UNITS_DM_DG_LOAD_MEDIA]);
+    assert_eq!(
+        &o[o.len() - 4..],
+        [EE_UNITS_DM_IS_COMPLEX, EE_UNITS_DM_DOPPELGANGER_TILE, EE_UNITS_DM_TILE_ADD, EE_UNITS_DM_DG_LOAD_MEDIA]
+    );
     assert!(r.log.contains(&(EE_UNITS_DM_TILE_ADD, 0x400, D as i64)));
 }
 
@@ -119,9 +135,19 @@ fn repair_pointers_frees_a_simple_one_whose_unit_is_gone_and_fails_a_complex_one
 
 #[test]
 fn save_writes_flag_unit_and_player_while_each_succeeds() {
-    let mut r = rec(&[(EE_UNITS_DM_DG_IS_VALID, 1), (EE_UNITS_DM_IS_COMPLEX, 1), (EE_UNITS_DM_DG_UNIT_ID, 42), (EE_UNITS_DM_PLAYER_ID, 2)]);
+    let mut r = rec(&[
+        (EE_UNITS_DM_DG_IS_VALID, 1),
+        (EE_UNITS_DM_IS_COMPLEX, 1),
+        (EE_UNITS_DM_DG_UNIT_ID, 42),
+        (EE_UNITS_DM_PLAYER_ID, 2),
+    ]);
     assert_eq!(save(&mut r, D, 0x900), 0);
-    let writes: Vec<_> = r.log.iter().filter(|e| e.0 == EE_UNITS_DM_DG_WRITE_BOOL || e.0 == EE_UNITS_DM_DG_WRITE_ULONG).map(|e| e.2).collect();
+    let writes: Vec<_> = r
+        .log
+        .iter()
+        .filter(|e| e.0 == EE_UNITS_DM_DG_WRITE_BOOL || e.0 == EE_UNITS_DM_DG_WRITE_ULONG)
+        .map(|e| e.2)
+        .collect();
     assert_eq!(writes, [1, 42, 2]);
     let mut r = rec(&[(EE_UNITS_DM_DG_IS_VALID, 1), (EE_UNITS_DM_DG_WRITE_BOOL, 3)]);
     assert_eq!(save(&mut r, D, 0x900), 3);
@@ -137,6 +163,11 @@ fn the_manager_releases_both_pools_after_their_statistics() {
     release(&mut r);
     assert_eq!(
         ops(&r),
-        [EE_UNITS_DM_DG_POOL_DUMP, EE_UNITS_DM_DG_POOL_RELEASE, EE_UNITS_DM_DG_COMPLEX_POOL_DUMP, EE_UNITS_DM_DG_COMPLEX_POOL_RELEASE]
+        [
+            EE_UNITS_DM_DG_POOL_DUMP,
+            EE_UNITS_DM_DG_POOL_RELEASE,
+            EE_UNITS_DM_DG_COMPLEX_POOL_DUMP,
+            EE_UNITS_DM_DG_COMPLEX_POOL_RELEASE
+        ]
     );
 }

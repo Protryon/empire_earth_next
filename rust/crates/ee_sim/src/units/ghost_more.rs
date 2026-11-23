@@ -7,7 +7,9 @@ use crate::units::ghost_body::{
     GhostHost, EE_UNITS_GHOST_SET_CAN_PLACE, EE_UNITS_GHOST_SET_TILE_X, EE_UNITS_GHOST_SET_TILE_Y,
     EE_UNITS_GHOST_TILE_X, EE_UNITS_GHOST_TILE_Y, EE_UNITS_GHOST_UNIT_TYPE,
 };
-use crate::units::ghost_make::{EE_UNITS_GHOST_CLASS_AT, EE_UNITS_GHOST_SET_X, EE_UNITS_GHOST_SET_Y, EE_UNITS_GHOST_SET_Z};
+use crate::units::ghost_make::{
+    EE_UNITS_GHOST_CLASS_AT, EE_UNITS_GHOST_SET_X, EE_UNITS_GHOST_SET_Y, EE_UNITS_GHOST_SET_Z,
+};
 
 // ---- the statements (`op`; the answer)
 /// the ghost's `mPlayer = (EEPlayer*)b`

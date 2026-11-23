@@ -327,7 +327,10 @@ mod tests {
     fn clear_and_last_dereference_in_order() {
         let mut r = Rec::default();
         clear(&mut r, 1);
-        assert_eq!(ops(&r), [EE_UNITS_CU_S_RESET_COMPLEX, EE_UNITS_CU_S_RESET_UNIT, EE_UNITS_CU_S_RESET, EE_UNITS_CU_S_SET_INVALID]);
+        assert_eq!(
+            ops(&r),
+            [EE_UNITS_CU_S_RESET_COMPLEX, EE_UNITS_CU_S_RESET_UNIT, EE_UNITS_CU_S_RESET, EE_UNITS_CU_S_SET_INVALID]
+        );
         let mut r = Rec::default();
         last_dereference(&mut r, 1);
         assert_eq!(ops(&r), [EE_UNITS_CU_S_FREE_NODE, EE_UNITS_CU_S_ZERO_REFERENCES, EE_UNITS_CU_S_POOL_DELETE]);
@@ -356,7 +359,10 @@ mod tests {
     fn the_heal_effect_is_destroyed_only_when_there_is_one() {
         let mut r = Rec::default();
         release_heal_effect(&mut r, 1);
-        assert_eq!(ops(&r), [EE_UNITS_CU_S_HEAL_EFFECT_NONE, EE_UNITS_CU_S_DESTROY_HEAL_EFFECT, EE_UNITS_CU_S_CLEAR_HEAL_EFFECT]);
+        assert_eq!(
+            ops(&r),
+            [EE_UNITS_CU_S_HEAL_EFFECT_NONE, EE_UNITS_CU_S_DESTROY_HEAL_EFFECT, EE_UNITS_CU_S_CLEAR_HEAL_EFFECT]
+        );
         let mut r = Rec { answers: vec![(EE_UNITS_CU_S_HEAL_EFFECT_NONE, 1)], ..Default::default() };
         release_heal_effect(&mut r, 1);
         assert_eq!(ops(&r), [EE_UNITS_CU_S_HEAL_EFFECT_NONE]);
@@ -366,7 +372,15 @@ mod tests {
     fn holding_queues_and_parts() {
         let mut r = Rec::default();
         hold_unit(&mut r, 1, 7);
-        assert_eq!(ops(&r), [EE_UNITS_CU_S_REFERENCE_OTHER, EE_UNITS_CU_S_SET_HOLDER_OF, EE_UNITS_CU_S_HELD_PUSH, EE_UNITS_CU_S_HELD_SORT]);
+        assert_eq!(
+            ops(&r),
+            [
+                EE_UNITS_CU_S_REFERENCE_OTHER,
+                EE_UNITS_CU_S_SET_HOLDER_OF,
+                EE_UNITS_CU_S_HELD_PUSH,
+                EE_UNITS_CU_S_HELD_SORT
+            ]
+        );
         assert!(r.log[..3].iter().all(|e| e.1 == 7));
         let mut r = Rec { queues: 2, ..Default::default() };
         clear_all_goal_queues(&mut r, 1);
@@ -374,7 +388,10 @@ mod tests {
         assert_eq!(cleared, [0, 1]);
         let mut r = Rec { answers: vec![(EE_UNITS_CU_S_NOT_CURRENT_PLAYER, 1)], ..Default::default() };
         part_finished(&mut r, 1);
-        assert_eq!(ops(&r), [EE_UNITS_CU_S_SIGHT_ON_HERE, EE_UNITS_CU_S_NOT_CURRENT_PLAYER, EE_UNITS_CU_S_MINIMAP_SHOW]);
+        assert_eq!(
+            ops(&r),
+            [EE_UNITS_CU_S_SIGHT_ON_HERE, EE_UNITS_CU_S_NOT_CURRENT_PLAYER, EE_UNITS_CU_S_MINIMAP_SHOW]
+        );
     }
 
     #[test]

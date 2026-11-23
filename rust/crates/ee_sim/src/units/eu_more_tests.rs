@@ -169,7 +169,12 @@ fn the_constructors_and_the_destructor_in_the_originals_order() {
     construct(&mut r, 1);
     assert_eq!(
         r.0,
-        [(EE_UNITS_EUM_SET_OBJECT_KIND, 1), (EE_UNITS_EUM_RTS_RESET, 0), (EE_UNITS_EUM_RESET_EE_UNIT, 0), (EE_UNITS_EUM_ZERO_REFERENCES, 0)]
+        [
+            (EE_UNITS_EUM_SET_OBJECT_KIND, 1),
+            (EE_UNITS_EUM_RTS_RESET, 0),
+            (EE_UNITS_EUM_RESET_EE_UNIT, 0),
+            (EE_UNITS_EUM_ZERO_REFERENCES, 0)
+        ]
     );
     let mut r = R(vec![]);
     construct_complex(&mut r, 1);

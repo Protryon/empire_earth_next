@@ -83,7 +83,15 @@ fn construct_loads_media_in_free_camera_queues_it_otherwise() {
 fn destroy_queues_the_unload_or_unloads_in_free_camera_or_at_shutdown() {
     let mut r = rec(&[]);
     destroy(&mut r, G);
-    assert_eq!(ops(&r), [EE_UNITS_GHOST_M_NO_MEDIA, EE_UNITS_GHOST_M_FREE_CAMERA, EE_UNITS_GHOST_M_SHUTTING_DOWN, EE_UNITS_GHOST_M_POST_UNLOAD]);
+    assert_eq!(
+        ops(&r),
+        [
+            EE_UNITS_GHOST_M_NO_MEDIA,
+            EE_UNITS_GHOST_M_FREE_CAMERA,
+            EE_UNITS_GHOST_M_SHUTTING_DOWN,
+            EE_UNITS_GHOST_M_POST_UNLOAD
+        ]
+    );
     let mut r = rec(&[(EE_UNITS_GHOST_M_FREE_CAMERA, 1)]);
     destroy(&mut r, G);
     assert_eq!(ops(&r), [EE_UNITS_GHOST_M_NO_MEDIA, EE_UNITS_GHOST_M_FREE_CAMERA, EE_UNITS_GHOST_M_UNLOAD_CLASS_MEDIA]);
@@ -107,7 +115,15 @@ fn load_reads_the_player_only_after_a_good_first_read() {
 fn save_writes_the_type_then_the_player() {
     let mut r = rec(&[(EE_UNITS_GHOST_UNIT_TYPE, 12)]);
     assert_eq!(save(&mut r, G, 0x900), 0);
-    assert_eq!(ops(&r), [EE_UNITS_GHOST_M_SET_FILE, EE_UNITS_GHOST_UNIT_TYPE, EE_UNITS_GHOST_M_WRITE_ULONG, EE_UNITS_GHOST_M_WRITE_PLAYER_ID]);
+    assert_eq!(
+        ops(&r),
+        [
+            EE_UNITS_GHOST_M_SET_FILE,
+            EE_UNITS_GHOST_UNIT_TYPE,
+            EE_UNITS_GHOST_M_WRITE_ULONG,
+            EE_UNITS_GHOST_M_WRITE_PLAYER_ID
+        ]
+    );
     assert_eq!(r.log[2].3, 12);
     let mut r = rec(&[(EE_UNITS_GHOST_M_WRITE_ULONG, 2)]);
     assert_eq!(save(&mut r, G, 0x900), 2);
@@ -123,7 +139,14 @@ fn farm_slot_and_animation() {
     assert_eq!(r.log[3], (EE_UNITS_GHOST_SET_TILE_Y, G, 0, i64::from(t[1])));
     let mut r = rec(&[(EE_UNITS_GHOST_M_START_FRAME, 40)]);
     set_animation(&mut r, G, 3);
-    assert_eq!(r.log, [(EE_UNITS_GHOST_M_START_FRAME, G, 0, 3), (EE_UNITS_GHOST_M_SET_FRAME, G, 0, 40), (EE_UNITS_GHOST_M_SET_ANIMATION_INDEX, G, 0, 3)]);
+    assert_eq!(
+        r.log,
+        [
+            (EE_UNITS_GHOST_M_START_FRAME, G, 0, 3),
+            (EE_UNITS_GHOST_M_SET_FRAME, G, 0, 40),
+            (EE_UNITS_GHOST_M_SET_ANIMATION_INDEX, G, 0, 3)
+        ]
+    );
 }
 
 #[test]
