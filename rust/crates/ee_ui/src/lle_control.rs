@@ -247,7 +247,16 @@ pub unsafe extern "C" fn ee_ui_control_draw_border(
     let [dark, light] = *BORDER_COLORS.lock().unwrap_or_else(|e| e.into_inner());
     // SAFETY: the contract; the colours are three floats each
     unsafe {
-        crate::draw2d::ee_ui_draw_border(rasterizer, screen, rect, thickness, opacity, border_type, light.as_ptr(), dark.as_ptr())
+        crate::draw2d::ee_ui_draw_border(
+            rasterizer,
+            screen,
+            rect,
+            thickness,
+            opacity,
+            border_type,
+            light.as_ptr(),
+            dark.as_ptr(),
+        )
     }
 }
 
@@ -277,7 +286,17 @@ pub unsafe extern "C" fn ee_ui_control_construct(
     unsafe {
         (*rec).mBgRhombus = ee_uicpp_rhombus_new();
         (*rec).mCopiedBgRhombus = ee_uicpp_rhombus_new();
-        crate::controlobj::ee_ui_control_init(rec, cpp, Some(ee_ui_control_host), control_type, id, rect, form, index, border_thickness);
+        crate::controlobj::ee_ui_control_init(
+            rec,
+            cpp,
+            Some(ee_ui_control_host),
+            control_type,
+            id,
+            rect,
+            form,
+            index,
+            border_thickness,
+        );
         (*rec).mBorderType = border_type;
     }
     ee_ui_control_fetch_keys();

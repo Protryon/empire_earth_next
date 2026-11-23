@@ -97,8 +97,8 @@ include!("lle_hosts_tables.rs");
 /// The host contract.
 #[cfg(not(any(test, feature = "no_cpp")))]
 unsafe fn base_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
-    use crate::lle_cpp::Cpp;
     use crate::lle_control::{key, EeUiKey};
+    use crate::lle_cpp::Cpp;
     let k = key(if a & 1 != 0 { EeUiKey::Enter } else { EeUiKey::Space });
     let mut cpp = crate::lle_cpp::Ffi;
     (if a < 2 { cpp.entity_just_pressed(k) } else { cpp.entity_just_unpressed(k) }) as isize
@@ -519,7 +519,6 @@ pub unsafe extern "C" fn ee_ui_hotkey_host(
     // SAFETY: the contract
     unsafe { chain(&[hotkey], o, op, a, b, c, d, f) }
 }
-
 
 /// The font table's `TblFileReadCount`: the file `a`'s next count, packed with the read's result (count << 32).
 ///

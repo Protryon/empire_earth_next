@@ -513,14 +513,18 @@ impl Ctl {
                 let bg = self.get(|r| r.mBgRhombus) as isize;
                 let h = self.host();
                 let rgb = [buf[0], buf[1], buf[2]];
-                crate::draw2d::rhombus_set_color(bg, rgb, || h.op_f(Op::RhombusSetColor, BG, 0, 0, 0, &mut [buf[0], buf[1], buf[2], 0.0]));
+                crate::draw2d::rhombus_set_color(bg, rgb, || {
+                    h.op_f(Op::RhombusSetColor, BG, 0, 0, 0, &mut [buf[0], buf[1], buf[2], 0.0])
+                });
                 self.op(Op::SetDirty, 1, 0);
             }
             C::SetBgOpacity => {
                 self.set(|r| r.mHasBgOpacity = buf[0] != 0.0);
                 let bg = self.get(|r| r.mBgRhombus) as isize;
                 let h = self.host();
-                crate::draw2d::rhombus_set_opacity(bg, buf[0], || h.op_f(Op::RhombusSetOpacity, BG, 0, 0, 0, &mut [buf[0], 0.0, 0.0, 0.0]));
+                crate::draw2d::rhombus_set_opacity(bg, buf[0], || {
+                    h.op_f(Op::RhombusSetOpacity, BG, 0, 0, 0, &mut [buf[0], 0.0, 0.0, 0.0])
+                });
             }
             C::SetBorderThickness => {
                 self.set(|r| r.mBorderThickness = a as c_ulong);
