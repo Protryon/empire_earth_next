@@ -498,7 +498,9 @@ impl EeUiList {
             Op::ListLineText => 0,
             Op::ListSelection => {
                 let (r, s) = self.current_selection();
-                f[0] = f32::from_bits(s as u32);
+                #[allow(clippy::unnecessary_cast)] // c_ulong is 64 bits off Windows
+                let bits = s as u32;
+                f[0] = f32::from_bits(bits);
                 r
             }
             Op::ListAppendText => {

@@ -991,6 +991,7 @@ pub unsafe extern "C" fn ee_ui_label_call(
 /// `label` is live.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_label_set_number(label: *const EeUiLabel, value: c_long) {
+    #[allow(clippy::unnecessary_cast)] // c_long is 64 bits off Windows
     let mut t = format!("{}", value as i32).into_bytes();
     t.push(0);
     // SAFETY: live (the contract); NUL-terminated bytes
