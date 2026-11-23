@@ -78,8 +78,8 @@ public:
         { return UString(kUnset, ee_ustring_indexed_substring, &this->mState, inFirst, inLast); }
     // the length and the characters, both counting the terminator (lle/FSFile.h: on a failed read the string is
     // left empty and the error returned)
-    long Load(FSFile& inFile);
-    long Save(FSFile& inFile) const;
+    long Load(FSFile& inFile) { return ee_ustring_load_file(&this->mState, &inFile); }
+    long Save(FSFile& inFile) const { return ee_ustring_save_file(&this->mState, &inFile); }
     bool Tokenize(const UString& inSeparators, std::vector<UString>& outTokens) const
         { return ee_ustring_tokens(&this->mState, &inSeparators.mState, NULL, &outTokens, PushToken); }
     bool NestedTokenize(const UString& inSeparators, const UString& inBrackets,

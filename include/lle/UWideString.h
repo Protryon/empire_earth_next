@@ -53,8 +53,8 @@ public:
         { ee_uwstring_insert(&this->mState, inString, inPosition, inReplace); }
     // the byte size and the bytes, both counting the terminator (lle/FSFile.h: on a failed read the string is left
     // empty and the error returned; an old Windows-1252 string is converted, D6)
-    long Load(FSFile& inFile);
-    long Save(FSFile& inFile) const;
+    long Load(FSFile& inFile) { return ee_uwstring_load_file(&this->mState, &inFile); }
+    long Save(FSFile& inFile) const { return ee_uwstring_save_file(&this->mState, &inFile); }
     // splits at any of the separator characters, skipping empty tokens (ee_uwstring_tokens: the tokens' first and
     // last characters); always true
     bool Tokenize(const UWideString& inSeparators, std::vector<UWideString>& outTokens) const

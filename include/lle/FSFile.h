@@ -66,11 +66,7 @@ public:
     virtual long DeleteDirectory() { return ee_fs_spec_delete_directory(Rec()); }   // +0xa4
     virtual long FOpen(char* inMode) { return ee_fs_spec_fopen(Rec(), inMode); }   // +0xa8
     void* GetFileHandle() const { return this->mHandle; }  // inline (folded 0x11cc9)
-    virtual long GetFirstFile(FSFileSpec& outFile)                              // +0xb0 0x13e8 (inline)
-    {
-        UString thePattern("*.*");
-        return this->GetFirstFile(thePattern, outFile);
-    }
+    virtual long GetFirstFile(FSFileSpec& outFile) { return this->GetFirstFile(UString("*.*"), outFile); }   // +0xb0 0x13e8 (inline)
     virtual long GetFirstFile(const UString& inPattern, FSFileSpec& outFile)   // +0xac
     {
         return ee_fs_spec_first_file(Rec(), inPattern, Spec(&outFile), Startup(&gStartupVolume),
@@ -146,10 +142,5 @@ protected:
     FILE* mStream;                                    // +0x44: FOpen's fopen stream (Close: fclose)
 };
 
-// UString's and UWideString's file forms (lle/UString.h, lle/UWideString.h)
-inline long UString::Load(FSFile& inFile) { return ee_ustring_load_file(&this->mState, &inFile); }
-inline long UString::Save(FSFile& inFile) const { return ee_ustring_save_file(&this->mState, &inFile); }
-inline long UWideString::Load(FSFile& inFile) { return ee_uwstring_load_file(&this->mState, &inFile); }
-inline long UWideString::Save(FSFile& inFile) const { return ee_uwstring_save_file(&this->mState, &inFile); }
 
 #endif

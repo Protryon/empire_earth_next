@@ -12,16 +12,8 @@
 #include "lle/FSMemoryFile.h"                // FindFile's new memory file
 #include "rust/base/fs.h"                    // the members' Rust (rust/crates/ee_base/src/fs/archive_obj.rs)
 
-typedef long int32;                         // Inferred home: the assert text "(int32)theCompressedSize" (0x100d8f64)
-
 class LLE_API FSArchive {                   // sizeof 0x6c (FSPath's vector<FSArchive> stride)
 public:
-    struct ArchivedFile {                   // 0xc bytes; field names from the assert texts (0x100d8c4c..)
-        int32 mStart;                       // +0x00 offset of the data in the archive
-        int32 mEnd;                         // +0x04 last byte (mStart when empty)
-        int32 mLength;                      // +0x08 compressed length
-    };
-
     FSArchive() { ee_fs_arch_init(Rec(this)); }                                // no file set, nothing mapped
     FSArchive(const FSFileSpec& inFile) { ee_fs_arch_init_file(Rec(this), Spec(&inFile)); }   // not yet opened
     virtual ~FSArchive() { ee_fs_arch_finish(Rec(this)); }                     // unmaps and closes
