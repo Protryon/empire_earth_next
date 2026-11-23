@@ -33,7 +33,12 @@ protected:
     virtual long MouseLButtonDoublePressed() { return this->Rust(EE_SCREENS_SU_DO_DOUBLE_CLICK); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return this->Rust(EE_SCREENS_SU_DO_MOUSE_MOVE, &inLocation); }
     virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
-    long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL);
+    // CopyData, DrawPolygons, the double click, the release, the drag and StartSelection: ee_screens select_units.rs
+    // (EE_SCREENS_SU_DO_*) over the picker's and actions' ops below (the lines and the unit's reads: hud_ctl_ffi.rs)
+    long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL)
+    {
+        return (long)ee_screens_select_units(this, this->Host(), inWhich, inLocation ? inLocation->GetX() : 0.0f, inLocation ? inLocation->GetY() : 0.0f);
+    }
 
     EEAMouseClick* mClick;                  // referenced; the mouse click action
     EEALasso* mLasso;                       // referenced

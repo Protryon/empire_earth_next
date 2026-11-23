@@ -61,9 +61,8 @@
 std::vector<EERenderLine> gU529050;
 UWideString gU529030;
 
-// the unit picker and the environment: one guard byte (0x528d70)
+// the unit picker and the environment (gamecpp render_object.rs' RENDER_ENV): one guard byte (0x528d70)
 EEUnitPicker gUnitPicker(0x600);
-EERenderEnvironment gRenderEnvironment;
 
 EERenderLists EERenderLists::sInstance;
 
@@ -146,60 +145,7 @@ float EEGhostUnit::GetScale()
     return this->mPlayer->mUnitClassUpgrades[this->mUnitClass->GetUnitType()]->GetScale();
 }
 
-// EERenderShadow is ee_gfx fill.rs's EeGfxFillObject, field for field
-static_assert(sizeof(EERenderShadow) == sizeof(EeGfxFillObject), "the render shadow's mirror");
-static_assert(offsetof(EERenderShadow, mLocation) == offsetof(EeGfxFillObject, location)
-              && offsetof(EERenderShadow, mObject) == offsetof(EeGfxFillObject, object)
-              && offsetof(EERenderShadow, mModelScale) == offsetof(EeGfxFillObject, model_scale)
-              && offsetof(EERenderShadow, mSelectionSize) == offsetof(EeGfxFillObject, selection_size)
-              && offsetof(EERenderShadow, mScale) == offsetof(EeGfxFillObject, scale)
-              && offsetof(EERenderShadow, mF1C) == offsetof(EeGfxFillObject, f1c)
-              && offsetof(EERenderShadow, mHealth) == offsetof(EeGfxFillObject, health)
-              && offsetof(EERenderShadow, mOpacity) == offsetof(EeGfxFillObject, opacity)
-              && offsetof(EERenderShadow, mFraction) == offsetof(EeGfxFillObject, fraction)
-              && offsetof(EERenderShadow, mModelIndex) == offsetof(EeGfxFillObject, model_index)
-              && offsetof(EERenderShadow, mCurrentFrame) == offsetof(EeGfxFillObject, current_frame)
-              && offsetof(EERenderShadow, mNextFrame) == offsetof(EeGfxFillObject, next_frame)
-              && offsetof(EERenderShadow, mIsFogged) == offsetof(EeGfxFillObject, is_fogged),
-              "the render shadow's mirror");
-static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation), "a transformation is 16 floats");
-// EERenderUnit's head is ee_gfx fill.rs's EeGfxFillUnit, member for member
-static_assert(offsetof(EERenderUnit, mHealthBars) >= sizeof(EeGfxFillUnit), "the render unit's head");
-static_assert(offsetof(EERenderUnit, mTransformation) == offsetof(EeGfxFillUnit, transformation)
-              && offsetof(EERenderUnit, mPlayerColor) == offsetof(EeGfxFillUnit, player_color)
-              && offsetof(EERenderUnit, mTintColor) == offsetof(EeGfxFillUnit, tint_color)
-              && offsetof(EERenderUnit, mInfo) == offsetof(EeGfxFillUnit, info)
-              && offsetof(EERenderUnit, mSource) == offsetof(EeGfxFillUnit, source)
-              && offsetof(EERenderUnit, mSource2) == offsetof(EeGfxFillUnit, source2)
-              && offsetof(EERenderUnit, mScale) == offsetof(EeGfxFillUnit, scale)
-              && offsetof(EERenderUnit, mSelectionSize) == offsetof(EeGfxFillUnit, selection_size)
-              && offsetof(EERenderUnit, mShadowScale) == offsetof(EeGfxFillUnit, shadow_scale)
-              && offsetof(EERenderUnit, mFF4) == offsetof(EeGfxFillUnit, ff4)
-              && offsetof(EERenderUnit, mGroundZ) == offsetof(EeGfxFillUnit, ground_z)
-              && offsetof(EERenderUnit, mOpacity) == offsetof(EeGfxFillUnit, opacity)
-              && offsetof(EERenderUnit, mHealth) == offsetof(EeGfxFillUnit, health)
-              && offsetof(EERenderUnit, mFraction) == offsetof(EeGfxFillUnit, fraction)
-              && offsetof(EERenderUnit, mSubModelOffsetScale) == offsetof(EeGfxFillUnit, sub_model_offset_scale)
-              && offsetof(EERenderUnit, mFogScale) == offsetof(EeGfxFillUnit, fog_scale)
-              && offsetof(EERenderUnit, mCategory) == offsetof(EeGfxFillUnit, category)
-              && offsetof(EERenderUnit, mUnitClassIndex) == offsetof(EeGfxFillUnit, unit_class_index)
-              && offsetof(EERenderUnit, mL118) == offsetof(EeGfxFillUnit, l118)
-              && offsetof(EERenderUnit, mCommandType) == offsetof(EeGfxFillUnit, command_type)
-              && offsetof(EERenderUnit, mCurrentResearch) == offsetof(EeGfxFillUnit, current_research)
-              && offsetof(EERenderUnit, mAnimation) == offsetof(EeGfxFillUnit, animation)
-              && offsetof(EERenderUnit, mGridSize) == offsetof(EeGfxFillUnit, grid_size)
-              && offsetof(EERenderUnit, mCurrentFrame) == offsetof(EeGfxFillUnit, current_frame)
-              && offsetof(EERenderUnit, mNextFrame) == offsetof(EeGfxFillUnit, next_frame)
-              && offsetof(EERenderUnit, mL134) == offsetof(EeGfxFillUnit, l134)
-              && offsetof(EERenderUnit, mUnitId) == offsetof(EeGfxFillUnit, unit_id)
-              && offsetof(EERenderUnit, mPlayerID) == offsetof(EeGfxFillUnit, player_id)
-              && offsetof(EERenderUnit, mAreaEffectStrength) == offsetof(EeGfxFillUnit, area_effect_strength)
-              && offsetof(EERenderUnit, mCanPlace) == offsetof(EeGfxFillUnit, can_place)
-              && offsetof(EERenderUnit, mIsFogged) == offsetof(EeGfxFillUnit, is_fogged)
-              && offsetof(EERenderUnit, mIsTinted) == offsetof(EeGfxFillUnit, is_tinted)
-              && offsetof(EERenderUnit, mHasSubModelOffset) == offsetof(EeGfxFillUnit, has_sub_model_offset)
-              && offsetof(EERenderUnit, mSecondFullOpacity) == offsetof(EeGfxFillUnit, second_full_opacity),
-              "the render unit's head");
+// EERenderShadow is ee_gfx fill.rs's EeGfxFillObject and EERenderUnit's head its EeGfxFillUnit (ee/EERenderLists.h)
 
 // GetUnitOpacity's calls (ee_gfx fill.rs EeGfxOpacityHost)
 static EEUnit* EEOpacityUnit(uint64_t inUnit)
@@ -267,30 +213,26 @@ static void EERasterStoreMesh(void* inModel, const EeGfxMeshVertex* inVertices, 
 // EEEffect.cpp's quad batches' quad and draw
 void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex);
 int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture);
-// EEROUnits.cpp's bars, placement lines and labels
-void EEROUnitsBarSet(uint32_t inWhich, const EeGeRectangle* inRect, const EeGfxColor* inColors);
+// EEROUnits.cpp's bars (their set, the placement lines and the labels: gamecpp ro_units.rs)
 int32_t EEROUnitsBarDraw(uint32_t inWhich);
-int32_t EEROUnitsScreenLines(const EeGfxScreenLine* inLines, uint32_t inCount, float inStartU, float inEndU);
-void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inColor, uint32_t inFont,
-                    const EeGeRectangle* inView, const EeGeRectangle* inStrip, float inBottom);
 
 // Computes a unit's opacity this frame (see-through modes, its own fade, and buildings fading in front of the near
 // clipping plane); returns whether it is drawn translucent (ee_gfx fill.rs over the world views; the calls here)
-static bool EEGetUnitOpacity(EEUnit* inUnit, float& outOpacity)
+static bool EEGetUnitOpacity(EEUnit* inUnit, long inShowHiddenUnits, float& outOpacity)
 {
-    return ee_gfx_fill_unit_opacity((uint64_t)(uintptr_t)inUnit, gRenderEnvironment.mShowHiddenUnits, gWorld.mInCinematic,
+    return ee_gfx_fill_unit_opacity((uint64_t)(uintptr_t)inUnit, inShowHiddenUnits, gWorld.mInCinematic,
                                     gOrthographicView, reinterpret_cast<const EeGeViewport*>(&gViewport), EEOpacityHost(),
                                     &outOpacity);
 }
 
 const EeGfxRaster gEERustRaster = {
     [](EeGfxLighting inKind) { ee_gamecpp_ro_lighting((uint32_t)inKind); },
-    [](const EeGe3DPoint* inLocation, uint32_t inFog) { return ee_gamecpp_ro_fog_factor(&inLocation->x, inFog); },
+    [](const EeGe3DPoint* inLocation, uint32_t inFog) { return ee_gamecpp_ro_fog_factor(&inLocation->mX, inFog); },
     [](void* inModel, float inOpacity) { return (int32_t)gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, gOrthographicView); },
     []() { return *reinterpret_cast<const EeGeTransformation*>(&gRenderSnapshot.mCamera); },
     ee_gamecpp_ro_depth_range,
     []() { return gRenderSnapshot.mCameraYaw; },
-    [](const EeGe3DPoint* inPoint, float* outX, float* outY) { ee_gamecpp_ro_screen_point(&inPoint->x, outX, outY); },
+    [](const EeGe3DPoint* inPoint, float* outX, float* outY) { ee_gamecpp_ro_screen_point(&inPoint->mX, outX, outY); },
     // EEE3DGoal::DrawPass3's text (0xf13db)
     [](float inX, float inY, const uint8_t* inText, EeGfxColor inColor) { ee_gamecpp_ro_draw_text(inX, inY, inText, inColor.red, inColor.green, inColor.blue); },
     EERasterCreateModel,
@@ -302,10 +244,10 @@ const EeGfxRaster gEERustRaster = {
     ee_gamecpp_ro_rear_clipping,
     [](void* inModel, bool inSorted) { return (int32_t)gRasterizer->DrawSky(static_cast<GEModel*>(inModel), gScreenIndex, 1.0f, inSorted); },
     []() { return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport(); },
-    EEROUnitsBarSet,
+    ee_gamecpp_ru_bar_set,
     EEROUnitsBarDraw,
-    EEROUnitsScreenLines,
-    EEROUnitsLabel,
+    ee_gamecpp_ru_screen_lines,
+    ee_gamecpp_ru_label,
     // the effects' quad batches (ee_gfx effect_batch.rs; EEEffect.cpp's arrays)
     []() { return *reinterpret_cast<const EeGeTransformation*>(&gU4E8F08.GetCameraInverse()); },
     []() { return gRenderSnapshot.mCameraPitch; },
@@ -324,8 +266,6 @@ int64_t EEPickerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
 double EEPickerOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the mirrors and constants of gamecpp render_object.rs
-static_assert(offsetof(EERenderEnvironment, mCameraYaw) == 0x84 && offsetof(EERenderEnvironment, mColor54) == 0x54
-              && offsetof(EERenderEnvironment, mTimeOfDayChanged) == 0x89 + sizeof(long), "render_object.rs RenderEnv");
 static_assert(offsetof(EERenderFrameInfo, mYaw) == sizeof(void*) && offsetof(EERenderFrameInfo, mFrame) == sizeof(void*) + 8
               && offsetof(EERenderFrameInfo, mAmbient) == sizeof(void*) + 8 + sizeof(long), "render_object.rs FrameInfo");
 static_assert(offsetof(GETextureDescription, mIs3DRenderable) == 4 * sizeof(long)
@@ -357,7 +297,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     typedef EeGameCpp O;
     switch (inOp) {
     // the render globals
-    case O::RoEnvironment: return RO_P64(&gRenderEnvironment);
     case O::RoSceneFade: return RO_P64(&sSceneFade);
     case O::RoGridPhase: return RO_P64(&gU4E9330);
     case O::RoLetterboxZoom: return RO_P64(&gF4BE374);
@@ -408,7 +347,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoUnitWheelsResize: RU->mWheelAngles.resize((size_t)a[0], 0.0f), RU->mWheelModels.resize((size_t)a[0], 0);
         break;
-    case O::RoUnitTurretSet: RU->mTurretAngles[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mTurretAngles[a[1]], RU->mTurretModels[a[1]] = RU->mSource->mTurretParts[a[1]]->mModel;
+    case O::RoUnitTurretSet: RU->mTurretAngles[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mTurretAngles[a[1]], RU->mTurretModels[a[1]] = ((EEGraphicObject*)RU->source)->mTurretParts[a[1]]->mModel;
         break;
     case O::RoUnitOrbitalSet: RU->mOrbitalAngles[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mOrbitals[a[1]]->mAngle, RU->mOrbitalModels[a[1]] = ((EEUnit*)a[0])->GetComplexUnit()->mOrbitals[a[1]]->mModel;
         break;
@@ -440,10 +379,10 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoSetLabelUnit: gU529044 = RU;
         break;
-    case O::RoObjectUnloadMedia: ((EERenderShadow*)p)->mObject->UnloadMedia();
+    case O::RoObjectUnloadMedia: ((EEGraphicObject*)((EERenderShadow*)p)->object)->UnloadMedia();
         break;
     case O::RoGhostRecordsCount: return (int64_t)RS.mGhostRecords.size();
-    case O::RoGhostRecordsBackSource: return RO_P64(RS.mGhostRecords.back().mUnit.mSource);
+    case O::RoGhostRecordsBackSource: return RO_P64(RS.mGhostRecords.back().mUnit.source);
     case O::RoGhostRecordsPop: RS.mGhostRecords.pop_back();
         break;
     case O::RoGhostRecordsPush: RS.mGhostRecords.push_back(*(EERenderUnitRecord*)p);
@@ -455,9 +394,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoPickedIds: return (*(const unsigned long**)a[0] = gU4E9230.empty() ? NULL : &gU4E9230[0], (int64_t)gU4E9230.size());
     case O::RoPickedClear: gU4E9230.clear();
-        break;
-    case O::RoCaptureFillPresent: return gEERenderCaptureFill != NULL;
-    case O::RoCaptureFill: gEERenderCaptureFill(*(const EERenderFrameInfo*)a[0], (uint32_t)a[1], f[0]);
         break;
     // the 3D lines
     case O::RoLinesCount: return (int64_t)gU529050.size();
@@ -564,7 +500,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoGobjShadowTexture: return RO_P64(RO_GOBJ->mShadowTexture);
     case O::RoMeshWaterTile: return gWorld.mMap->mTerrainMesh.GetIsWaterTile((long)a[0], (long)a[1]);
     case O::RoModelInView: return GEPhysicalModel((GEModel*)p, *(const GETransformation*)a[0], f[0]).Intersects(gViewport, gOrthographicView);
-    case O::RoUnitOpacity: return EEGetUnitOpacity(RO_UN, *(float*)a[0]);
+    case O::RoUnitOpacity: return EEGetUnitOpacity(RO_UN, (long)a[1], *(float*)a[0]);
     // the picker, the selection, the ambient sounds
     case O::RoPickerAdd: gUnitPicker.AddUnit(RO_UN, *(const GETransformation*)a[0], f[0]);
         break;

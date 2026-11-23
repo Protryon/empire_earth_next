@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/render/ge.h"
 
 /// The host's ops (`ee_screenscpp_action`): an action's reference taken, released, run (`Virtual4`), undone
 /// (`Virtual8`), asked whether it is undoable; the UI copy lock and the world's write lock taken and released.
@@ -1389,9 +1390,6 @@ constexpr static const uint32_t EE_SCREENS_SEA_STORE_MOUSE_TILE = 15;
 /// `gEffectManager->ElevationChanged(left i0, top i1, right i2, bottom i3)`.
 constexpr static const uint32_t EE_SCREENS_SEA_ELEVATION_CHANGED = 16;
 
-/// -> the height of one elevation level (`kSEPELevelHeight`) in f0.
-constexpr static const uint32_t EE_SCREENS_SEA_LEVEL_HEIGHT = 17;
-
 /// The paint kinds of `ee_screens_sea_paint_new` (`kSEAPaint*` in `ee/EESEAPaint.h`).
 constexpr static const uint32_t EE_SCREENS_SEA_PAINT_TERRAIN = 0;
 
@@ -2093,6 +2091,12 @@ constexpr static const uint32_t EE_SCREENS_SEE_START_EPOCH = 15;
 /// `EESEEGameUnitLimit` (its label, modifier and offset: `ee_screens_see_slider` with the format "%g").
 constexpr static const uint32_t EE_SCREENS_SEE_UNIT_LIMIT = 16;
 
+/// `EEUIETerrainTypeChange` (object: the terrain tab's group, `EeScreensSeGroup`): the tab's type change.
+constexpr static const uint32_t EE_SCREENS_SEE_TERRAIN_TYPE = 4000;
+
+/// `EEUIETerrainColorChange` (object: the terrain tab's group): the tab's colour change.
+constexpr static const uint32_t EE_SCREENS_SEE_TERRAIN_COLOR = 4001;
+
 /// The game page's per-player count label (`kSERBUnitTypesPerPlayerCountLabel`).
 constexpr static const int32_t EE_SCREENS_SEE_PER_PLAYER_LABEL_ID = 354;
 
@@ -2188,6 +2192,16 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
 
 /// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
+
+/// `ee_screenscpp_seex`'s statements for the host's last ops (round 6): whether the editor's form exists,
+/// `gWorld.mMaxPlayers` (with `EE_SCREENS_SEEX_EPOCH_COUNT`, editor_tabsx.rs).
+constexpr static const uint32_t EE_SCREENS_SEEX_HAS_EDITOR = 4000;
+
+constexpr static const uint32_t EE_SCREENS_SEEX_MAX_PLAYERS = 4001;
+
+/// The terrain tab of the group p told of its list q's change i0 (`EE_SCREENS_SETN_TYPE_CHANGE` or
+/// `EE_SCREENS_SETN_COLOR_CHANGE`; `ee_screens_setn_call`, Rust).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_TERRAIN_CHANGE = 4000;
 
 constexpr static const uint32_t EE_SCREENS_SEFM_BUTTON_TEXTURE = 0;
 
@@ -4464,6 +4478,14 @@ constexpr static const int32_t EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED = 698;
 
 constexpr static const int32_t EE_SCREENS_SEAX_TYPE_CAMERA_OBJECT = 359;
 
+constexpr static const uint32_t EE_SCREENS_SEAX_SEA = 4200;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SEW = 4400;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SEP = 4600;
+
+constexpr static const uint32_t EE_SCREENS_SEAX_SEU = 4800;
+
 /// `gRasterizer->GetTextureManager(form->GetManager()->GetScreen())->LoadTexture("textures\\SE Buttons", the
 /// screen's description)` -> the texture; p0's `Reference()`.
 constexpr static const uint32_t EE_SCREENS_SEFMX_BUTTON_TEXTURE = 0;
@@ -4720,8 +4742,7 @@ constexpr static const uint32_t EE_SCREENS_SEFMX_UNIT_CARGO_COUNT = 109;
 /// `EESetGameViewRectangle(GERectangle(f0, f1, f2, f3))`.
 constexpr static const uint32_t EE_SCREENS_SEFMX_GAME_VIEW = 110;
 
-/// `new EESELoadThread(p2, 0)`; the load thread p0's `Post401()`, `Post404()`, `Post405()`, `Post40B(p2)`,
-/// `Post40C(p2)`.
+/// `new EESELoadThread(p2, 0)`; the load thread p0's `Post401()`, `Post404()`, `Post405()`.
 constexpr static const uint32_t EE_SCREENS_SEFMX_NEW_LOAD_THREAD = 111;
 
 constexpr static const uint32_t EE_SCREENS_SEFMX_POST_401 = 112;
@@ -4730,9 +4751,11 @@ constexpr static const uint32_t EE_SCREENS_SEFMX_POST_404 = 113;
 
 constexpr static const uint32_t EE_SCREENS_SEFMX_POST_405 = 114;
 
-constexpr static const uint32_t EE_SCREENS_SEFMX_POST_40B = 115;
+/// The load thread's `Post40B(p2)` and `Post40C(p2)` (once two-statement inline members): p2's `Reference()`, then
+/// the thread p0's `mThread->Post(i0, p2, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_SEFMX_REFERENCE = 5000;
 
-constexpr static const uint32_t EE_SCREENS_SEFMX_POST_40C = 116;
+constexpr static const uint32_t EE_SCREENS_SEFMX_THREAD_POST = 5001;
 
 /// `gWorld.RebuildActiveUnits()`; `gUIManager->mInScenarioEditor == true`.
 constexpr static const uint32_t EE_SCREENS_SEFMX_REBUILD_ACTIVE_UNITS = 117;
@@ -5076,10 +5099,11 @@ constexpr static const uint32_t EE_SCREENS_SELTX_REMOVE_KILLED = 63;
 
 constexpr static const uint32_t EE_SCREENS_SELTX_RELEASE_PENDING = 64;
 
-/// The text actions' (p1 a file spec `FSFileSpec*`): the export action p0's `&mFile`, the import action p0's `&mFile`
-/// and `mValidate`; p1's `FOpen("w")` / `FOpen("r")`, `Close()`, `feof`, `fgets` into the buffer (0x200 bytes; the
-/// answer: not NULL); `gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup()` / `ResumeCurrentGroup()`; the
-/// `"{Version_%ld}\n\n"` header's `fprintf` (as an `unsigned long`); `gSETextVersion`.
+/// The text actions' (p1 a file spec `FSFileSpec*`): the action p0's file and its validate flag (answered in Rust by
+/// the adapter from the action's [`EeScreensSeltInfo`]); p1's `FOpen("w")` / `FOpen("r")`, `Close()`, `feof`, `fgets`
+/// into the buffer (0x200 bytes; the answer: not NULL); `gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup()`
+/// / `ResumeCurrentGroup()`; the `"{Version_%ld}\n\n"` header's `fprintf` (as an `unsigned long`) of a0 (the adapter
+/// passes [`EE_SCREENS_SELT_TEXT_VERSION`]); the version (answered by the adapter).
 constexpr static const uint32_t EE_SCREENS_SELTX_EXPORT_FILE = 70;
 
 constexpr static const uint32_t EE_SCREENS_SELTX_IMPORT_FILE = 71;
@@ -5130,9 +5154,10 @@ constexpr static const uint32_t EE_SCREENS_SELTX_QUESTION = 92;
 constexpr static const uint32_t EE_SCREENS_SELTX_FORM_QUESTION = 93;
 
 /// The specs and answers: `new FSFileSpec`, `new FSFileSpec(*p1)`, `delete p1`, p1's `SetVolume(gStartupVolume)`,
-/// `SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\")`, `SetFile(the text)`; `new EESEImportInfo{*p1, a0 !=
-/// 0}`, `delete` it; `gUserInterface->PostAction(new EESEIAExport(*p1))`, `PostAction(new EESEIAImport(p1->mFile,
-/// p1->mValidate))`.
+/// `SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\")`, `SetFile(the text)`; the import info (once `new
+/// EESEImportInfo{*p1, a0 != 0}`) and its `delete`, the posts of the export action (p1 a spec, copied) and of the
+/// import action (p1 an info, copied): answered by the adapter over `SPEC_COPY`, `SPEC_DELETE` and
+/// [`EE_SCREENS_SELTX_POST_TEXT_ACTION`].
 constexpr static const uint32_t EE_SCREENS_SELTX_SPEC_NEW = 100;
 
 constexpr static const uint32_t EE_SCREENS_SELTX_SPEC_COPY = 101;
@@ -5152,6 +5177,24 @@ constexpr static const uint32_t EE_SCREENS_SELTX_INFO_DELETE = 107;
 constexpr static const uint32_t EE_SCREENS_SELTX_POST_EXPORT = 108;
 
 constexpr static const uint32_t EE_SCREENS_SELTX_POST_IMPORT = 109;
+
+/// `gUserInterface->PostAction(new EESEARust(a0, p1))`: a text action (`EE_SCREENS_SEW_TEXT_*`) on its info.
+constexpr static const uint32_t EE_SCREENS_SELTX_POST_TEXT_ACTION = 5000;
+
+/// The trigger text files' version (`{Version_1}`; the original's `gSETextVersion` 0x4c2cb8, .data = 1).
+constexpr static const int64_t EE_SCREENS_SELT_TEXT_VERSION = 1;
+
+/// The instructions screen's export and import buttons' events (`EESEERust` kinds; once `EESEIEExport` and
+/// `EESEIEImport`, vtables 0x442bd4 and 0x442be8): their `ProcessEvent` is `export_event` / `import_event`.
+constexpr static const uint32_t EE_SCREENS_SEE_TEXT_EXPORT = 5000;
+
+constexpr static const uint32_t EE_SCREENS_SEE_TEXT_IMPORT = 5001;
+
+/// The text actions (`EESEARust` kinds over an [`EeScreensSeltInfo`]; once `EESEIAExport`, vtable 0x442bb0, and
+/// `EESEIAImport`, vtable 0x442bc0): their `Virtual4` is `export` / `import`.
+constexpr static const uint32_t EE_SCREENS_SEW_TEXT_EXPORT = 5000;
+
+constexpr static const uint32_t EE_SCREENS_SEW_TEXT_IMPORT = 5001;
 
 /// The statements answered in Rust by the adapter: `UMGetFloatingPointPrecision() == kFPPrecision53`,
 /// `UMSetFloatingPointPrecision(kFPPrecision53)`, `UMGetFloatingPointRoundingMode()`,
@@ -5605,11 +5648,9 @@ constexpr static const uint32_t EE_SCREENS_SETNX_T_PREVIEW = 14;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_T_CLASS = 15;
 
-/// String i0 into the host's text; the paint type radio (id i0, the text, index i2, checked i3, at f0, f1, on form
-/// p1); radio p1's label's background 0.4, its text transparent, yellow; radio p1 as a control.
+/// String i0 into the host's text; radio p1's label's background 0.4, its text transparent, coloured f0, f1, f2
+/// (`SetnYellow`); radio p1 as a control.
 constexpr static const uint32_t EE_SCREENS_SETNX_STRING = 16;
-
-constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_RADIO = 17;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_LABEL_BG = 18;
 
@@ -5715,18 +5756,12 @@ constexpr static const uint32_t EE_SCREENS_SETNX_CLASS_EXISTS = 61;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_CLASS_BUTTON_TEXTURE = 62;
 
-/// The preview p1's bitmap's `SetTexture(p2, list p0's screen)`; texture p1's width, height; the preview p1's
-/// `ComputeStretchedCoordsAndScale(its rectangle, its rectangle, f, list p0's screen)`.
+/// The preview p1's bitmap's `SetTexture(p2, list p0's screen)`; texture p1's width, height.
 constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_TEXTURE = 63;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_TEXTURE_WIDTH = 64;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_TEXTURE_HEIGHT = 65;
-
-constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_STRETCH = 66;
-
-/// The preview p2's bitmap's `SetColorPerVertex` of the colour list p1's line i0's colours 0, i1, i2, i3.
-constexpr static const uint32_t EE_SCREENS_SETNX_TINT = 67;
 
 /// Form p1's load thread's `Post408(i0)`, `Post409(i0)`.
 constexpr static const uint32_t EE_SCREENS_SETNX_POST_408 = 68;
@@ -5741,8 +5776,43 @@ constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_TERRAIN = 71;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_PAINT_BULLDOZER = 72;
 
-/// A brush radio (group p2's brush i0, id i1, the text, index i3, at f0, f1, form p1; checked for brush 0).
-constexpr static const uint32_t EE_SCREENS_SETNX_BRUSH_RADIO = 73;
+/// The screen font's height; the form p1's radio-on bitmap's height into f0; `new EEUIShellRadio(kind i0, the
+/// arguments at p2 (`[count, ...]`), id i1, the host's text, the screen font, the rectangle f (left, top, right,
+/// bottom), form p1, index i2, border 0, checked i3)`.
+constexpr static const uint32_t EE_SCREENS_SETNX_FONT_HEIGHT = 4000;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_RADIO_ON_HEIGHT = 4001;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_NEW_RADIO = 4002;
+
+/// The preview p1's bitmap's Rust object (`EeGeBitmap`); its rectangle into *p2; control p1's screen; the colour
+/// list p1's line i0's colours (a `GEColor` array); the type list p1's bitmap's Rust object.
+constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_BITMAP = 4003;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_PREVIEW_RECT = 4004;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_SCREEN = 4005;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_LINE_COLORS = 4006;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_BITMAP = 4007;
+
+/// The host's text's bytes (NUL-terminated) into the out slot (after `EE_SCREENS_SETNX_STRING`).
+constexpr static const uint32_t EE_SCREENS_SETNX_TEXT = 4008;
+
+/// Rust's own statements (`ge_op`, never the C++): the bitmap p0's `ComputeStretchedCoordsAndScale` of the three
+/// rectangles at p1 (texture, source, destination) on screen i0; the bitmap p0's `SetColorPerVertex` of the
+/// colours i0..i3 of the `GEColor` array p1.
+constexpr static const uint32_t EE_SCREENS_SETNX_GE_STRETCH = 4010;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_GE_COLORS = 4011;
+
+/// The type list p1's destructor's parts: its bitmap released, its text deleted, its copy text deleted.
+constexpr static const uint32_t EE_SCREENS_SETNX_T_BITMAP_RELEASE = 4012;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_TEXT_DELETE = 4013;
+
+constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_TEXT_DELETE = 4014;
 
 /// The colour list p1 (from 100): its base `CopyData()`, `SetCopiedHasFocus(true)`, its copied lines' count, line
 /// i0's colour count, its copy text rectangle into *p2 (a `GERectangle`), its line height; `new GERhombus`, rhombus
@@ -5817,8 +5887,6 @@ constexpr static const uint32_t EE_SCREENS_SETNX_T_COPY_RECT = 137;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_T_LINE_HEIGHT = 138;
 
-constexpr static const uint32_t EE_SCREENS_SETNX_T_STRETCH = 139;
-
 constexpr static const uint32_t EE_SCREENS_SETNX_T_BITMAP_AT = 140;
 
 constexpr static const uint32_t EE_SCREENS_SETNX_T_DRAW_BITMAP = 141;
@@ -5865,6 +5933,9 @@ constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_DRAW = 4;
 
 constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_TEXT = 5;
 
+/// The type list's destructor (`~EESEUITerrainTypeLB`, 0x1ac40d).
+constexpr static const uint32_t EE_SCREENS_SETLB_TYPE_FREE = 4000;
+
 /// `new GEBitmap`; the form p1's `GetButtonTexture()`; texture p1's `GetWidth()`; bitmap p0's `SetTexture(texture
 /// p1, form p2's screen)`; bitmap p1's `SetTextureCoordinates` of the corners (f0, f1)-(f2, f3), `SetXYScale(f0,
 /// f1)`.
@@ -5876,11 +5947,9 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_TEXTURE_WIDTH = 2;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_TEXTURE_FORM = 3;
 
-constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_COORDS = 4;
-
 constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_SCALE = 5;
 
-/// A unit type button (`EEUIShellRadio`, id i1 + 0x406, at x i3, index i0, checked when i1 is 0) on form p1; its
+/// A unit type button (`EEUIShellRadio`, index i0, id i1, checked i2, the rectangle f) on form p1; its
 /// up checked, down checked, down unchecked, up unchecked bitmaps (p2), no focused bitmap, the draw offset 0, the
 /// button-up event p2, the string id i0; added to form p1 (p2 the radio, layer i0).
 constexpr static const uint32_t EE_SCREENS_SEUNX_TYPE_RADIO = 6;
@@ -5903,12 +5972,9 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_RADIO_STRING_ID = 14;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_ADD_RADIO = 15;
 
-/// `IDS_SE_REMOVE` into the host's text; the Remove Cargo button (form p1, x f0, index i0); button p1's `SetText(the
-/// text, the screen font)`, `SetBgOpacity(1)`, its text white and transparent; added to form p1 (p2, layer i0); the
-/// Rotation button (form p1, index i0), its `SetStringTableID(IDS_ROTATE)`.
+/// `IDS_SE_REMOVE` into the host's text; button p1's `SetText(the text, the screen font)`, `SetBgOpacity(1)`, its
+/// text white and transparent; added to form p1 (p2, layer i0); button p1's `SetStringTableID(IDS_ROTATE)`.
 constexpr static const uint32_t EE_SCREENS_SEUNX_STRING_REMOVE = 16;
-
-constexpr static const uint32_t EE_SCREENS_SEUNX_REMOVE_CARGO_BUTTON = 17;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_SET_TEXT = 18;
 
@@ -5919,8 +5985,6 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_TEXT_WHITE = 20;
 constexpr static const uint32_t EE_SCREENS_SEUNX_BUTTON_TEXT_TRANSPARENT = 21;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_ADD_BUTTON = 22;
-
-constexpr static const uint32_t EE_SCREENS_SEUNX_ROTATION_BUTTON = 23;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_ROTATION_STRING = 24;
 
@@ -6052,8 +6116,8 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_REDRAW_ALL = 78;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_ALL_DIRTY = 79;
 
-/// The tab p1's panel rectangle `And` the rectangle p2 into the host's rectangle; the form's `DrawBackground(bitmap
-/// p2, that rectangle, (0, 0, 255, 255), the panel)`; the rotation control p1's angle (bits); the panel's left,
+/// The tab p1's panel rectangle `And` the rectangle p2 into the rectangle *p0; the form's `DrawBackground(bitmap
+/// p2, the rectangle *p0, (0, 0, 255, 255), the panel)`; the rotation control p1's angle (bits); the panel's left,
 /// top, right, bottom set to f0; the panel added dirty to control p2's form.
 constexpr static const uint32_t EE_SCREENS_SEUNX_PANEL_AND = 80;
 
@@ -6179,8 +6243,20 @@ constexpr static const uint32_t EE_SCREENS_SEUNX_KEY_PRESSED = 132;
 
 constexpr static const uint32_t EE_SCREENS_SEUNX_KEY_DOWN = 133;
 
-/// `new EESEARust(kSEADeleteUnit, NULL, -1, the current player's id, i0 != 0)`.
+/// `new EESEARust(kSEADeleteUnit, NULL, -1, player i1, i0 != 0)`.
 constexpr static const uint32_t EE_SCREENS_SEUNX_DELETE_ACTION = 134;
+
+/// Bitmap p1's Rust object (`EeGeBitmap`); Rust's own statement (`ge_op`): the bitmap p0's
+/// `SetTextureCoordinates((f0, f1), (f2, f1), (f0, f3), (f2, f3))` (the original's corner order).
+constexpr static const uint32_t EE_SCREENS_SEUNX_BITMAP_RUST = 4000;
+
+constexpr static const uint32_t EE_SCREENS_SEUNX_GE_UVS = 4001;
+
+/// `new EEUIShellButton(kind i1, id i2, no bitmaps, the rectangle f, form p1, index i0, border i3)`.
+constexpr static const uint32_t EE_SCREENS_SEUNX_NEW_BUTTON = 4002;
+
+/// The current player's id.
+constexpr static const uint32_t EE_SCREENS_SEUNX_CURRENT_PLAYER = 4003;
 
 constexpr static const uint32_t EE_SCREENS_SESC_SORT = 1;
 
@@ -6345,8 +6421,8 @@ constexpr static const uint32_t EE_SCREENS_SEELX_TILE_Y = 20;
 /// The screen font's height.
 constexpr static const uint32_t EE_SCREENS_SEELX_FONT_HEIGHT = 21;
 
-/// `mStatusBox = new EEUIFMGStatusBox(form)`; `mPortrait = new EEUICPortrait(form, GERectangle(f0, f1, f2, f3), i0,
-/// i1, false)` (a handle); the portrait's right and top into f0.
+/// `new EEUIFMGStatusBox(form)`; `new EEUICPortrait(form, GERectangle(f0, f1, f2, f3), i0, i1, false)`; the
+/// portrait p0's right and top into f0.
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_BOX = 0;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_PORTRAIT = 1;
@@ -6355,8 +6431,8 @@ constexpr static const uint32_t EE_SCREENS_SEUPX_PORTRAIT_RIGHT = 2;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_PORTRAIT_TOP = 3;
 
-/// `mUnitNameLabel = new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1,
-/// 0)`; `new UILayoutUtility`, p2's `SetLeft(0, f0)`, `SetRight(0, f0)`, `SetTop(3, f0)`, `SetBottom(3, f0)`, its
+/// `new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1, 0)`; `new
+/// UILayoutUtility`, p2's `SetLeft(0, f0)`, `SetRight(0, f0)`, `SetTop(3, f0)`, `SetBottom(3, f0)`, its
 /// `CalculateRectangle(the form's rectangle, f as a `GERectangle`, false)`, `delete`.
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_NAME_LABEL = 4;
 
@@ -6374,27 +6450,24 @@ constexpr static const uint32_t EE_SCREENS_SEUPX_LAYOUT_CALCULATE = 10;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_LAYOUT_DELETE = 11;
 
-/// `mLeftStatusBar`, `mMiddleStatusBar = new EEUIFMGStatusBar(i0, i1, p2, 0x400, 0x300, GERectangle(f0, f1, f2, f3),
-/// form, true, true, false)`.
-constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_LEFT_BAR = 12;
+/// A status bar (the left and the middle one): `new EEUIFMGStatusBar(i0, i1, p2, 0x400, 0x300, GERectangle(f0, f1,
+/// f2, f3), form, true, true, false)`.
+constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_BAR = 12;
 
-constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_MIDDLE_BAR = 13;
-
-/// `mAttributes[i2] = new EEUIFMGAttribute(gFontTahoma10, form, GERectangle(f0, f1, f2, f3), i1, i0, black, true,
-/// 0)`; `mLabels[i2] = new UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1,
-/// 0)`; `mStatusBox->SetControls(i2, mAttributes[i2], mLabels[i2])`.
+/// `new EEUIFMGAttribute(gFontTahoma10, form, GERectangle(f0, f1, f2, f3), i1, i0, black, true, 0)`; `new
+/// UITextLabel("", gFontTahoma12, i0, GERectangle(GE2DPoint(f0, f1), f2, f3), form, 0, i1, 0)`; the box p0's
+/// `SetControls(i2, p1, p2)`.
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_ATTRIBUTE = 14;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_ROW_LABEL = 15;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_ROW = 16;
 
-/// `mArmorTitleLabel = new UITextLabel(gSefxText, gFontTahoma12, i0, GERectangle(156, 634, 240, 650), form, 0, i1,
-/// 0)`.
+/// `new UITextLabel(gSefxText, gFontTahoma12, i0, GERectangle(156, 634, 240, 650), form, 0, i1, 0)`.
 constexpr static const uint32_t EE_SCREENS_SEUPX_NEW_ARMOR_LABEL = 17;
 
-/// The status box's portrait (`mC8C`), name label (`mC90`), left bar (`mC84`), middle bar (`mC88`), armor title
-/// (`mC98`) set from the panel's.
+/// The box p0's portrait (`mC8C`), name label (`mC90`), left bar (`mC84`), middle bar (`mC88`), armor title (`mC98`)
+/// set to p1.
 constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_PORTRAIT = 18;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_NAME = 19;
@@ -6405,23 +6478,19 @@ constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_MIDDLE_BAR = 21;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_BOX_ARMOR = 22;
 
-/// The destructor's `delete`s: the status box, the portrait, the armor title, the left and middle bars, the name
-/// label, attribute i2, label i2.
+/// `delete` p0: the status box, the portrait, a text label, a status bar, an attribute icon.
 constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_BOX = 23;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_PORTRAIT = 24;
 
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_ARMOR = 25;
+constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_LABEL = 25;
 
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_LEFT_BAR = 26;
-
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_MIDDLE_BAR = 27;
-
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_NAME = 28;
+constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_BAR = 26;
 
 constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_ATTRIBUTE = 29;
 
-constexpr static const uint32_t EE_SCREENS_SEUPX_DELETE_LABEL = 30;
+/// The box p0's `Fill(p1)` (`EEUIFSEUpgradePanel::ShowUnit`: the status box shows the unit).
+constexpr static const uint32_t EE_SCREENS_SEUPX_FILL = 5000;
 
 /// `gWorld.mScenarioManager->mShowDebugIDs`, set to i0 != 0.
 constexpr static const uint32_t EE_SCREENS_SEX_DEBUG_IDS = 0;
@@ -7132,6 +7201,10 @@ constexpr static const uint32_t EE_SCREENS_SETSX_GAME_VIEW_RECT = 430;
 
 constexpr static const uint32_t EE_SCREENS_SETSX_HIDE_UI_VIEWS = 431;
 
+/// The hide-UI box p0's checked event's Rust event (`EESEERust::mEvent`; found): `HIDE_UI_VIEWS` (answered by the
+/// adapter since round 6) sets its views through it.
+constexpr static const uint32_t EE_SCREENS_SETSX_CHECKED_EVENT = 480;
+
 constexpr static const uint32_t EE_SCREENS_SETSX_SET_CHECKED = 432;
 
 constexpr static const uint32_t EE_SCREENS_SETSX_GROUP_ENABLE = 433;
@@ -7230,15 +7303,28 @@ constexpr static const uint32_t EE_SCREENS_SEARX_NEW_PAINT = 523;
 
 constexpr static const uint32_t EE_SCREENS_SEARX_BOUNDS_VIEW = 524;
 
-constexpr static const uint32_t EE_SCREENS_SEARX_EDGES_VIEW = 525;
-
 constexpr static const uint32_t EE_SCREENS_SEARX_BOUNDS_WINDOW = 526;
-
-constexpr static const uint32_t EE_SCREENS_SEARX_EDGES_WINDOW = 527;
 
 constexpr static const uint32_t EE_SCREENS_SEARX_PAINT_AREA = 528;
 
 constexpr static const uint32_t EE_SCREENS_SEARX_PAINT_RELEASE = 529;
+
+/// The view rectangle's sides (`gViewport.GetViewRectangle()`'s left, top, right, bottom) and the game window's
+/// width and height (as floats) into f0; the edge scroll's edges `= GERectangle(f0, f1, f2, f3)` (round 6: the
+/// edges' arithmetic, the view or the window less one, is Rust's).
+constexpr static const uint32_t EE_SCREENS_SEARX_VIEW_LEFT = 580;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_VIEW_TOP = 581;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_VIEW_RIGHT = 582;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_VIEW_BOTTOM = 583;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_WINDOW_WIDTH = 584;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_WINDOW_HEIGHT = 585;
+
+constexpr static const uint32_t EE_SCREENS_SEARX_SET_EDGES = 586;
 
 /// Directory k (i0: 0 scenarios, 1 sounds, 2 movies; kept): `SetVolume(gStartupVolume)`, `SetDirectory(
 /// gStartupDirectory + "data\\" + its name)`; `new FSPath` (made); a path p0's `AddDirectory(directory i0, true)`;
@@ -7942,6 +8028,9 @@ constexpr static const uint32_t EE_SCREENS_SEW_MOVE_UNIT = 13;
 /// (the one unit only when it exists).
 constexpr static const uint32_t EE_SCREENS_SEW_DELETE_UNIT = 14;
 
+/// `EESEAChangeWorldPlayerCount` (a: the count): `gMaxPlayers` set when it runs (round 6: the player tab's count).
+constexpr static const uint32_t EE_SCREENS_SEW_PLAYER_COUNT = 4000;
+
 /// `gUserInterface->PostAction(p)` (p: the action's `EESEARust`).
 constexpr static const uint32_t EE_SCREENS_SEW_OP_POST = 1;
 
@@ -8094,6 +8183,15 @@ constexpr static const uint32_t EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE = 50;
 
 /// -> whether the unit i0 exists (`gWorld.GetUnit`); its player's id -> i1.
 constexpr static const uint32_t EE_SCREENS_SEW_OP_UNIT_PLAYER = 51;
+
+/// `gMaxPlayers = i0` (`EESEAChangeWorldPlayerCount::Virtual4`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_SET_MAX_PLAYERS = 4000;
+
+/// A text action's run (p its info, i0 1 for the import) and its info freed (`editor_selt.rs`; the adapter answers
+/// them).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_TEXT_RUN = 5000;
+
+constexpr static const uint32_t EE_SCREENS_SEW_OP_TEXT_FREE = 5001;
 
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
@@ -9861,31 +9959,11 @@ constexpr static const int64_t EE_SCREENS_MF_GROUP_WANTS_REFRESH = 2;
 /// The first resource label (`GetControl(i + 6)`).
 constexpr static const int64_t EE_SCREENS_MF_CTL_RESOURCE = 6;
 
-constexpr static const int64_t EE_SCREENS_MF_CTL_WIN_LOSE = 13;
-
 /// The first wonder countdown label (to 0x12).
 constexpr static const int64_t EE_SCREENS_MF_CTL_WONDER = 14;
 
-constexpr static const int64_t EE_SCREENS_MF_CTL_POPULATION = 24;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_MINI_MAP = 26;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_CHAT_LINE1 = 101;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_CHAT_LINE7 = 107;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_GAME_CLOCK = 108;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_BRIEFING = 109;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_DIALOG_PORTRAIT = 223;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_BRIEFING_ALERT = 235;
-
 /// The last lag icon (player 8); player 1's is 0xfc.
 constexpr static const int64_t EE_SCREENS_MF_CTL_LAG_LAST = 245;
-
-constexpr static const int64_t EE_SCREENS_MF_CTL_PREVIOUS_MESSAGES = 253;
 
 /// The error log's lines (`mStrings`).
 constexpr static const int64_t EE_SCREENS_MF_ERROR_LINES = 36;
@@ -9933,9 +10011,6 @@ constexpr static const int64_t EE_SCREENS_MF_GROUP_SELECT = 3;
 
 /// No event in a hot key's slot (EE_SCREENS_MF_OP_ADD_HOT_KEY).
 constexpr static const uint32_t EE_SCREENS_MF_NO_EVENT = 4294967295;
-
-/// The cancel-mode button (`kMainGameCancelUIMode`).
-constexpr static const int64_t EE_SCREENS_MF_CTL_CANCEL_UI_MODE = 244;
 
 /// `kSoundButton1`, `kSoundButton2`.
 constexpr static const int64_t EE_SCREENS_MF_SOUND_BUTTON1 = 519;
@@ -10592,12 +10667,6 @@ constexpr static const uint32_t EE_SCREENS_MGR_DO_COMMAND_BUTTON = 6;
 constexpr static const uint32_t EE_SCREENS_MGR_DO_SPECIAL_BUTTONS = 7;
 
 constexpr static const uint32_t EE_SCREENS_MGR_DO_UPDATE = 8;
-
-/// `kMainGameActionButton1`: the stop button's control.
-constexpr static const uint32_t EE_SCREENS_MGC_ACTION_BUTTON1 = 78;
-
-/// `kMainGameUnitIconBar`.
-constexpr static const uint32_t EE_SCREENS_MGC_UNIT_ICON_BAR = 222;
 
 /// The main menu's open event (form event 1).
 constexpr static const uint32_t EE_SCREENS_MAIN_OPEN = 3073;
@@ -13935,9 +14004,6 @@ constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER_STRING = 33173;
 
 constexpr static const int32_t EE_SCREENS_UM_ENGINE_HELP = 33175;
 
-/// `kFormMainGame` (the form `CreateForm` makes as the game's class).
-constexpr static const uint32_t EE_SCREENS_UMC_FORM_MAIN_GAME = 11;
-
 /// `kControlEventWNSCancel` (WON's server select form's cancel).
 constexpr static const uint32_t EE_SCREENS_UMC_WNS_CANCEL = 106;
 
@@ -14544,6 +14610,321 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_LEVEL = 2;
 constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
 
 constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 32 'Available
+/// Games (Sierra) Form'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEAvailableGamesControl : uint32_t {
+  /// dbuicontrols form 32 index 2 id 3080 'AG Player's Name Label' (type 15); site form via UITextLabel* theUserLabel = (UITextLabel
+  kAvailableGamesPlayersNameLabel = 2,
+  /// dbuicontrols form 32 index 4 id 3082 'AG Room's Name Label' (type 15); site form via UITextLabel* theRoomLabel = (UITextLabel
+  kAvailableGamesRoomsNameLabel = 4,
+  /// dbuicontrols form 32 index 5 id 3083 'AG Join Game Tab' (type 12); site form via TriggerEvent(new EEUIEWNAGToggleJoinScre
+  kAvailableGamesJoinGameTab = 5,
+  /// dbuicontrols form 32 index 6 id 3084 'AG Host Game Tab' (type 12); site form via TriggerEvent(new EEUIEWNAGToggleHostScre
+  kAvailableGamesHostGameTab = 6,
+  /// dbuicontrols form 32 index 8 id 3086 'AG Players in Room List box' (type 9); site form via gWonNet->RefreshGameList(inForm
+  kAvailableGamesPlayersInRoomListBox = 8,
+  /// dbuicontrols form 32 index 13 id 3091 'AG Aval. Games List Box' (type 1019); site form via EUICWonNetGamesBox*>(gUIManager->GetForm
+  kAvailableGamesAvalGamesListBox = 13,
+  /// dbuicontrols form 32 index 16 id 3094 'AG Chat Edit Box' (type 8); site form via UIEditBox* theChat = (UIEditBox*)inForm
+  kAvailableGamesChatEditBox = 16,
+  /// dbuicontrols form 32 index 17 id 3095 'AG Join/Host Game Button' (type 28); site form via etTriggerEvent(new EEUIEWNAGHostOrJoinGa
+  kAvailableGamesJoinHostGameButton = 17,
+  /// dbuicontrols form 32 index 18 id 3096 'AG Back Button' (type 28); site form via EEUIEWNSetTriggerEvent(new EEUIEWNAGBack
+  kAvailableGamesBackButton = 18,
+  /// dbuicontrols form 32 index 24 id 3102 'AG Host Game Name Edit Box' (type 8); site form via UIEditBox* theName = (UIEditBox*)inForm
+  kAvailableGamesHostGameNameEditBox = 24,
+  /// dbuicontrols form 32 index 27 id 3129 'AG PW for Hosted Game Edit Box' (type 8); site form via UIEditBox* thePassword = (UIEditBox*)inF
+  kAvailableGamesPWForHostedGameEditBox = 27,
+  /// dbuicontrols form 32 index 28 id 3130 'AG PW for Hosted Game Checkbox' (type 2); site form via UICheckBox* theCheckBox = (UICheckBox*)i
+  kAvailableGamesPWForHostedGameCheckbox = 28,
+  /// dbuicontrols form 32 index 29 id 3133 'AG PW Retype for Hosted Game Edit Box' (type 8); site form via UIEditBox* theConfirmation = (UIEditBox*
+  kAvailableGamesPWRetypeForHostedGameEditBox = 29,
+  /// dbuicontrols form 32 index 30 id 3131 'AG PW  for Hosted Game Label' (type 15); site form via UIControl* thePasswordLabel = inForm
+  kAvailableGamesPWForHostedGameLabel = 30,
+  /// dbuicontrols form 32 index 31 id 3132 'AG PW Retype for Hosted Game Label' (type 15); site form via UIControl* theConfirmationLabel = inForm
+  kAvailableGamesPWRetypeForHostedGameLabel = 31,
+  /// dbuicontrols form 32 index 32 id 3350 'AG In Progress Toggle' (type 2); site form via tTriggerEvent(new EEUIEWNAGClickGameFilt
+  kAvailableGamesInProgressToggle = 32,
+  /// dbuicontrols form 32 index 33 id 3351 'AG Password Toggle' (type 2); site form via tTriggerEvent(new EEUIEWNAGClickGameFilt
+  kAvailableGamesPasswordToggle = 33,
+  /// dbuicontrols form 32 index 34 id 3352 'AG Private Toggle' (type 2); site form via tTriggerEvent(new EEUIEWNAGClickGameFilt
+  kAvailableGamesPrivateToggle = 34,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 31 'Available
+/// Rooms (Sierra) Form'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEAvailableRoomsControl : uint32_t {
+  /// dbuicontrols form 31 index 2 id 2963 'AR Player 's Name Label' (type 15); site form via UITextLabel* theUserLabel = (UITextLabel
+  kAvailableRoomsPlayersNameLabel = 2,
+  /// dbuicontrols form 31 index 6 id 2967 'AR Avail. Rooms List Box' (type 1018); site form via EUICWonNetRoomsBox*>(gUIManager->GetForm
+  kAvailableRoomsAvailRoomsListBox = 6,
+  /// dbuicontrols form 31 index 7 id 2968 'AR Join Room Button' (type 28); site form via UIEWNSetTriggerEvent(new EEUIEWNARJoinRo
+  kAvailableRoomsJoinRoomButton = 7,
+  /// dbuicontrols form 31 index 8 id 2969 'AR Back Button' (type 28); site form via EEUIEWNSetTriggerEvent(new EEUIEWNARBack
+  kAvailableRoomsBackButton = 8,
+  /// dbuicontrols form 31 index 9 id 3269 'AR Update My Account' (type 1); site form via iggerEvent(new EEUIEWNARClickUpdateAccou
+  kAvailableRoomsUpdateMyAccount = 9,
+  /// dbuicontrols form 31 index 14 id 3293 'AR Total Games Number' (type 20); site form via ((UITextLabel*)gUIManager->GetFormByID(0
+  kAvailableRoomsTotalGamesNumber = 14,
+  /// dbuicontrols form 31 index 16 id 3295 'AR Server's Name Label' (type 15); site form via ((UITextLabel*)gUIManager->GetFormByID(0
+  kAvailableRoomsServersNameLabel = 16,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 24 'Campaign
+/// Editor Form'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EECampaignEditorControl : uint32_t {
+  /// dbuicontrols form 24 index 44 id 3106 'CE Background Image Combo Box' (type 32); site form via UIFileComboBox* theList = (UIFileComboBo
+  kCampaignEditorBackgroundImageComboBox = 44,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 18 'Chat In Game
+/// pop-up dialog'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEChatControl : uint32_t {
+  /// dbuicontrols form 18 index 1 id 414 'Chat Text Edit Box' (type 8); site form via inForm
+  kChatTextEditBox = 1,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 29 'Chat Log
+/// Form'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEChatLogControl : uint32_t {
+  /// dbuicontrols form 29 index 1 id 3069 'Chat Log Text Box' (type 16); site form via UITextLabel* theLabel = (UITextLabel*)th
+  kChatLogChatLogTextBox = 1,
+};
+
+/// UI database form ids (dbuiforms form id field +0xcc: UIManager::GetFormByID, the controls' form field); names from
+/// the form names.
+///
+enum EEFormID : uint32_t {
+  /// dbuiforms form id 3 'In Game Scenario & Save Game Screen'
+  kFormSaveGame = 3,
+  /// dbuiforms form id 11 'Scott Main Game Form'
+  kFormMainGame = 11,
+  /// dbuiforms form id 12 'Main Menu Screen'
+  kFormMainMenu = 12,
+  /// dbuiforms form id 19 'Scenario Intro Screen(Briefing Screen)'
+  kFormScenarioIntro = 19,
+  /// dbuiforms form id 20 'Scenario Load Screen'
+  kFormScenarioLoad = 20,
+  /// dbuiforms form id 22 'DS Debug Sound Screen'
+  kFormDebugSound = 22,
+  /// dbuiforms form id 23 'Splash Screen'
+  kFormSplash = 23,
+  /// dbuiforms form id 25 'Post Game Summary Screen'
+  kFormPostGameSummary = 25,
+  /// dbuiforms form id 26 'Multi/Single Setup Screen(Lobby)'
+  kFormLobby = 26,
+  /// dbuiforms form id 28 'In-game Options form'
+  kFormGameOptions = 28,
+  /// dbuiforms form id 29 'Chat Log Form'
+  kFormChatLog = 29,
+  /// dbuiforms form id 30 'Multiplayer Menu Form'
+  kFormMultiplayer = 30,
+  /// dbuiforms form id 31 'Available Rooms (Sierra) Form'
+  kFormAvailableRooms = 31,
+  /// dbuiforms form id 32 'Available Games (Sierra) Form'
+  kFormAvailableGames = 32,
+  /// dbuiforms form id 33 'Campaign Scenario Select Form'
+  kFormCampaignScenarioSelect = 33,
+  /// dbuiforms form id 35 'Predefined Civ Form'
+  kFormPredefinedCiv = 35,
+  /// dbuiforms form id 37 'Update Sierra Account Form'
+  kFormUpdateSierraAccount = 37,
+  /// dbuiforms form id 38 'Select Server Form'
+  kFormSelectServer = 38,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 5 'Game Settings
+/// Screen'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEGameSettingsControl : uint32_t {
+  /// port: not in the database (EEUIManager's ctor adds it: UIControlsTable::AddControlLike, a copy of the video
+  /// card combo box; strings kTextureResolutionOriginalString..)
+  kGameSettingsTextureResolutionComboBox = 111,
+  /// port: the modern display and audio settings (EEUIManager.cpp AddControlLike; ee_screens settings_form.rs)
+  /// port: the graphics quality preset (replaces the 5 radio buttons)
+  kGameSettingsQualityComboBox = 123,
+};
+
+/// port: the texture resolution combo box (kGameSettingsTextureResolutionComboBox): its control id (past the
+/// database's) and its strings (Language.rc)
+///
+enum EETextureResolutionControl : uint32_t {
+  kTextureResolutionControlID = 90001,
+  /// "Textures: Original", then 2x (33101) and 4x (33102)
+  kTextureResolutionOriginalString = 33100,
+  kTextureResolutionHelpString = 33103,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 4 'In Game
+/// Scenario & Load Game Screen'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EELoadGameControl : uint32_t {
+  /// dbuicontrols form 4 index 1 id 143 'Load Button' (type 1); site form via inForm
+  kLoadGameLoadButton = 1,
+  /// dbuicontrols form 4 index 4 id 141 'Load File List Box' (type 22); site form via UIFileListBox* theList = (UIFileListBox*
+  kLoadGameLoadFileListBox = 4,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 26 'Multi/Single
+/// Setup Screen(Lobby)'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EELobbyControl : uint32_t {
+  /// dbuicontrols form 26 index 8 id 2509 'M-SS Chat Previous Messages' (type 16); site form via Chat = (UITextLabel*)gUIManager->GetForm
+  kLobbyChatPreviousMessages = 8,
+  /// port: not in the database (EEUIManager's ctor adds them: UIControlsTable::AddControlLike). The computer slots'
+  /// engine (ee/EECPEngine.h; docs/AI_LUA_PLAN.md S0) in the ping column, which a computer row leaves empty: its
+  /// header (a copy of the ping label, shown in place of it), per slot a combo box (a copy of the citizens combo,
+  /// the host's before ready) and a label (a copy of the citizens label, everyone else)
+  kLobbyEngineHeader = 274,
+  /// + slot (16)
+  kLobbyEngineCombo = 275,
+  /// + slot (16)
+  kLobbyEngineLabel = 291,
+};
+
+/// port: the lobby's engine controls' ids (past the database's and the settings' 90001..) and strings (Language.rc)
+///
+enum EELobbyEngineControl : uint32_t {
+  /// the header; + 1 + slot the combo boxes, + 17 + slot the labels
+  kLobbyEngineControlID = 90100,
+  /// "Classic", then "Random": the combo's first lines (ee/EECPEngine.h
+  kLobbyEngineClassicString = 33170,
+  /// EECPEngineChoice); the AI manifest's names follow
+  kLobbyEngineRandomString = 33171,
+  /// "AI" (single player)
+  kLobbyEngineHeaderString = 33173,
+  kLobbyEngineHelpString = 33175,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 11 'Scott Main
+/// Game Form'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEMainGameControl : uint32_t {
+  /// dbuicontrols form 11 index 3 id 250 'SRMIngame Options*' (type 27); site form via ((UIBlinkingButton*)gUIManager->mMainGam
+  kMainGameIngameOptions = 3,
+  /// dbuicontrols form 11 index 5 id 252 'SRMCiv Selector/Builder*' (type 27); site form via UIControl* theControl = theForm
+  kMainGameCivSelectorBuilder = 5,
+  /// dbuicontrols form 11 index 13 id 246 'SRMWin/Lose*' (type 15); site form via this
+  kMainGameWinLose = 13,
+  /// dbuicontrols form 11 index 24 id 263 'SRMPopulation*' (type 20); site form via this
+  kMainGamePopulation = 24,
+  /// dbuicontrols form 11 index 25 id 264 'SRMTitle*' (type 15); site form via this
+  kMainGameTitle = 25,
+  /// dbuicontrols form 11 index 26 id 265 'SRMMiniMap*' (type 1001); site form via this
+  kMainGameMiniMap = 26,
+  /// dbuicontrols form 11 index 27 id 266 'SRMError Log*' (type 1003); site form via this
+  kMainGameErrorLog = 27,
+  /// dbuicontrols form 11 index 28 id 267 'SRMSelect Units*' (type 1007); site form via ((EEUICSelectUnits*)theForm
+  kMainGameSelectUnits = 28,
+  /// dbuicontrols form 11 index 29 id 268 'SRMCommand Units*' (type 1008); site form via ((EEUICCommandUnits*)theForm
+  kMainGameCommandUnits = 29,
+  /// dbuicontrols form 11 index 78 id 321 'SRMAction Button 1*' (type 1000); site form via ((EEUIFMGStatusButton*)mOwner
+  kMainGameActionButton1 = 78,
+  /// dbuicontrols form 11 index 98 id 300 'SRMTemp Object List*' (type 4); site form via ((UIComboBox*)mForm
+  kMainGameTempObjectList = 98,
+  /// dbuicontrols form 11 index 99 id 301 'SRMTemp Player List*' (type 4); site form via ((UIComboBox*)mForm
+  kMainGameTempPlayerList = 99,
+  /// dbuicontrols form 11 index 101 id 429 'SRMChat Line 1*' (type 1010); site form via this
+  kMainGameChatLine1 = 101,
+  /// dbuicontrols form 11 index 107 id 435 'SRMChat Line 7*' (type 1010); site form via this
+  kMainGameChatLine7 = 107,
+  /// dbuicontrols form 11 index 108 id 797 'SRM Game Clock' (type 20); site form via this
+  kMainGameGameClock = 108,
+  /// dbuicontrols form 11 index 109 id 578 'SRMGame Info* (Briefing)' (type 27); site form via this
+  kMainGameGameInfoBriefing = 109,
+  /// dbuicontrols form 11 index 208 id 829 'SRMTimedFighterRally' (type 1); site form via mOwner
+  kMainGameTimedFighterRally = 208,
+  /// dbuicontrols form 11 index 209 id 830 'SRMTimedBomberRally' (type 1); site form via mOwner
+  kMainGameTimedBomberRally = 209,
+  /// dbuicontrols form 11 index 210 id 831 'SRMTimedAtomicBomberRally' (type 1); site form via mOwner
+  kMainGameTimedAtomicBomberRally = 210,
+  /// dbuicontrols form 11 index 211 id 832 'SRMDialogMessage' (type 26); site form via this
+  kMainGameDialogMessage = 211,
+  /// dbuicontrols form 11 index 222 id 891 'SRMUnit Icon Bar' (type 1014); site form via UIControl* theIconBar = mOwner
+  kMainGameUnitIconBar = 222,
+  /// dbuicontrols form 11 index 223 id 892 'SRMDialog Portrait' (type 0); site form via this
+  kMainGameDialogPortrait = 223,
+  /// dbuicontrols form 11 index 234 id 3066 'SRM Large Civ Builder Alert*' (type 27); site form via _cast<UIBlinkingButton*>(gUIManager->mMa
+  kMainGameLargeCivBuilderAlert = 234,
+  /// dbuicontrols form 11 index 235 id 3067 'SRM Large Scen Briefing Alert*' (type 27); site form via this
+  kMainGameLargeScenBriefingAlert = 235,
+  /// dbuicontrols form 11 index 244 id 3226 'SRM Cancel UI Mode' (type 31); site form via theForm
+  kMainGameCancelUIMode = 244,
+  /// dbuicontrols form 11 index 253 id 3270 'SRMPrevious Messages*' (type 1); site form via this
+  kMainGamePreviousMessages = 253,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 25 'Post Game
+/// Summary Screen'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEPostGameSummaryControl : uint32_t {
+  /// dbuicontrols form 25 index 0 id 916 'PGS Line Graph' (type 1016); site form via ineGraph* theLineGraph = (EEUIPGSLineGra
+  kPostGameLineGraph = 0,
+  /// dbuicontrols form 25 index 790 id 1691 'PGS Gold Star' (type 0); site form via tmap* theTemplate = dynamic_cast<UIBitma
+  kPostGameGoldStar = 790,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 38 'Select Server
+/// Form'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EESelectServerControl : uint32_t {
+  /// dbuicontrols form 38 index 1 id 3266 'Serv  List Box' (type 9); site form via String>* theList = (UIListBox<UWideStrin
+  kSelectServerListBox = 1,
+  /// dbuicontrols form 38 index 2 id 3267 'Serv OK Button' (type 1); site form via EEUIEWNSetTriggerEvent(new EEUIEWNSSOk,
+  kSelectServerOKButton = 2,
+  /// dbuicontrols form 38 index 3 id 3268 'Serv Cancel Button' (type 1); site form via EEUIEWNSetTriggerEvent(new EEUIEWNSSCanc
+  kSelectServerCancelButton = 3,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 13 'Single Player
+/// Load Game Screen'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EESinglePlayerLoadGameControl : uint32_t {
+  /// dbuicontrols form 13 index 4 id 394 'SP_Load File List Box' (type 22); site form via nt = new EEUIESLEDeleteFile((UIFileListB
+  kSPLoadGameFileListBox = 4,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 23 'Splash
+/// Screen'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EESplashControl : uint32_t {
+  /// dbuicontrols form 23 index 3 id 803 'SS Load Label' (type 15); site form via ((UITextLabel*)gUIManager->GetFormByID(0
+  kSplashLoadLabel = 3,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 37 'Update Sierra
+/// Account Form'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEUpdateSierraAccountControl : uint32_t {
+  /// dbuicontrols form 37 index 2 id 3256 'USA New Password Edit Box' (type 8); site form via thePassword = ((UIEditBox*)inForm
+  kUpdateAccountNewPasswordEditBox = 2,
+  /// dbuicontrols form 37 index 4 id 3258 'USA Confirm Password Edit Box' (type 8); site form via theConfirmation = ((UIEditBox*)inForm
+  kUpdateAccountConfirmPasswordEditBox = 4,
+  /// dbuicontrols form 37 index 6 id 3260 'USA Enter Email Edit Box' (type 8); site form via theNewPassword = ((UIEditBox*)inForm
+  kUpdateAccountEnterEmailEditBox = 6,
+  /// dbuicontrols form 37 index 7 id 3261 'USA Send Me Email Checkbox' (type 2); site form via bool theFlag = ((UICheckBox*)inForm
+  kUpdateAccountSendMeEmailCheckbox = 7,
+  /// dbuicontrols form 37 index 8 id 3262 'USA Update Button' (type 1); site form via EUIEWNSetTriggerEvent(new EEUIEWNMUASubm
+  kUpdateAccountUpdateButton = 8,
+  /// dbuicontrols form 37 index 9 id 3263 'USA Don't Update Button' (type 1); site form via EUIEWNSetTriggerEvent(new EEUIEWNMUACanc
+  kUpdateAccountDontUpdateButton = 9,
+};
+
+/// Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 21 'WON.net Stat
+/// Screen'; names from the dbuicontrols control names (form prefix dropped).
+///
+enum EEWonNetStatsControl : uint32_t {
+  /// dbuicontrols form 21 index 2 id 607 'WNS Stat Box' (type 1013); site form via ((EEUICWonNetStatBox*)inForm
+  kWonStatsStatBox = 2,
+  /// dbuicontrols form 21 index 22 id 824 'WNS My Stats Line' (type 1013); site form via ((EEUICWonNetStatBox*)inForm
+  kWonStatsMyStatsLine = 22,
+};
 
 /// One editor tab (0x4c46d0): its group, its order along the bottom, its help string, the normal and pressed corners
 /// in the button texture, its control group, whether it is a full view and whether it paints with the brush.
@@ -15410,10 +15791,6 @@ constexpr static const int32_t EE_SCREENS_SETS_GROUPS[5] = { 9, 12, 13, 10, 11, 
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
 
-/// The timed rally buttons (`kMainGameTimedFighterRally`, `kMainGameTimedBomberRally`,
-/// `kMainGameTimedAtomicBomberRally`).
-constexpr static const uint32_t EE_SCREENS_MGC_TIMED_RALLIES[3] = { 208, 209, 210, };
-
 extern "C" {
 
 /// `EEUserInterface::PostAction`: queues the action (`EEAction*`) with a reference of its own.
@@ -16020,14 +16397,16 @@ unsigned long ee_screens_selt_main(void *thread);
 /// `EESELoadThread::HandleMessage(message, p1, p2)`.
 void ee_screens_selt_message(void *thread, unsigned long message, void *p1, void *p2);
 
-/// The text actions: `EESEIAExport::Virtual4` (`import` false) or `EESEIAImport::Virtual4`.
-void ee_screens_seia_run(void *action, bool import_text);
+/// The text actions' `Virtual4` (`action` its [`EeScreensSeltInfo`]): the export (`import` false) or the import.
+void ee_screens_seia_run(void *action,
+                         bool import_text);
 
 /// The questions' answers: `EESEExportTextAnswer(spec)` (`import` false) or `EESEImportTextAnswer(info)`.
 void ee_screens_seia_answer(void *p,
                             bool import_text);
 
-/// The buttons' events: `EESEIEExport::ProcessEvent(form)` (`import` false) or `EESEIEImport::ProcessEvent`.
+/// The buttons' events' `ProcessEvent(form)` (the `EESEERust` kinds `EE_SCREENS_SEE_TEXT_*`): the export (`import`
+/// false) or the import.
 long ee_screens_seia_event(void *form,
                            bool import_text);
 
@@ -16059,6 +16438,24 @@ void ee_screens_sebr_group_new(EeScreensSeBrushGroup *group,
 /// # Safety
 /// `group` is a live C++ group.
 void ee_screens_sebr_group_highlight(EeScreensSeBrushGroup *group, float x, float y, bool centered);
+
+/// The bitmap `bitmap`'s texture coordinates over a cell: `(u0, v0), (u1, v0), (u0, v1), (u1, v1)` (the original's
+/// corner order; the diplomacy buttons' cells).
+///
+/// # Safety
+/// `bitmap` is a live bitmap.
+void ee_screens_bitmap_uvs(EeGeBitmap *bitmap,
+                           float u0,
+                           float v0,
+                           float u1,
+                           float v1);
+
+/// `SeplColor(text, flags)`: the text coloured by the flags and made transparent (nothing without a colour).
+///
+/// # Safety
+/// `text` is a live text.
+void ee_screens_sepl_color(EeGeText *text,
+                           uint32_t flags);
 
 /// `EESETSCondition`'s constructor on the form: its controls from the control index `*index` (advanced; the screen
 /// font is `gSeplScreenFont`). Freed by `ee_screens_secd_free`.
@@ -16126,19 +16523,25 @@ void ee_screens_sefx_names(const EeScreensSeEffectScreen *screen, void *names);
 /// `screen` comes from `ee_screens_sefx_new` (or is NULL).
 void *ee_screens_sefx_handle(const EeScreensSeEffectScreen *screen, uint32_t which);
 
-/// `EEUIFSEUpgradePanel::EEUIFSEUpgradePanel` (the C++ constructor forwards here).
+/// The unit tab's upgrade panel made (once `new EEUIFSEUpgradePanel(id, index, form)`): its handle, freed by
+/// `ee_screens_seup_free`.
 ///
 /// # Safety
-/// `panel` is the panel being made, `id` and `index` the caller's counters, `form` the live editor form.
-void ee_screens_seup_new(void *panel,
-                         unsigned long *id,
-                         unsigned long *index,
-                         void *form);
+/// `id` and `index` are the caller's counters, `form` the live editor form.
+void *ee_screens_seup_new(unsigned long *id,
+                          unsigned long *index,
+                          void *form);
 
-/// `EEUIFSEUpgradePanel::~EEUIFSEUpgradePanel`.
+/// The panel's `ShowUnit(unit)`.
 ///
 /// # Safety
-/// `panel` is the panel being destroyed.
+/// `panel` comes from `ee_screens_seup_new`.
+void ee_screens_seup_show(void *panel, void *unit);
+
+/// The panel destroyed (once `delete` of the `EEUIFSEUpgradePanel`): its box and controls deleted.
+///
+/// # Safety
+/// `panel` comes from `ee_screens_seup_new` and is not used after.
 void ee_screens_seup_free(void *panel);
 
 /// The terrain list boxes' members (`EE_SCREENS_SETLB_*`: the colour list's `CopyData`, `DrawPolygons`; the type
@@ -16148,6 +16551,10 @@ void ee_screens_seup_free(void *panel);
 /// `list` is the live list box of the member's class (its `this`).
 int32_t ee_screens_setlb_call(uint32_t which,
                               void *list);
+
+/// `EESETerrainNameLess` (std::sort's order of the editor's terrains): string `first` before string `second`.
+bool ee_screens_setnx_terrain_less(int32_t first,
+                                   int32_t second);
 
 /// `EEUIFSETerrain`'s constructor: every control made on `form` from the control index `*index` (advanced), the
 /// lists' events over the C++ `tab`, the paint area over the form's edge `scroll` and `brushes`. Freed by
@@ -16569,6 +16976,25 @@ void ee_screens_see_objects(EeScreensSeeEvent *event,
                             void *a,
                             void *b,
                             void *c);
+
+/// A slider event of `kind` (`EE_SCREENS_SEE_SLIDER_CHANGE` or `EE_SCREENS_SEE_UNIT_LIMIT`) made with its label,
+/// format, scale and offset (`EESEENewSliderChange`, `EESEENewUnitLimit`).
+///
+/// # Safety
+/// `format` is NUL-terminated (or NULL).
+EeScreensSeeEvent *ee_screens_see_new_slider(uint32_t kind,
+                                             void *label,
+                                             const char *format,
+                                             float scale,
+                                             float offset);
+
+/// An `EESEEUseObjectArea` made with its label, combo box and area control (`EESEENewUseObjectArea`).
+EeScreensSeeEvent *ee_screens_see_new_object_area(void *label,
+                                                  void *combo,
+                                                  void *area);
+
+/// An effect editor's event of `kind` made with its objects (`EESEENewObjects`).
+EeScreensSeeEvent *ee_screens_see_new_objects(uint32_t kind, void *a, void *b, void *c);
 
 /// The `EESEERust`'s destructor.
 ///
@@ -17074,6 +17500,26 @@ void ee_screens_cbb_append(size_t list, size_t lines);
 
 int64_t ee_screens_cbb_copy_data(size_t list);
 
+void ee_screens_att_construct(size_t attr, size_t font, size_t color);
+
+int64_t ee_screens_att_copy_data(size_t attr);
+
+int64_t ee_screens_att_draw_text(size_t attr);
+
+int64_t ee_screens_sbm_right_down(size_t button);
+
+void ee_screens_sbm_tabbed_from(size_t button);
+
+int64_t ee_screens_mff_load(size_t info,
+                            size_t button,
+                            uint32_t major,
+                            uint32_t minor,
+                            size_t file);
+
+int64_t ee_screens_mff_save(bool info, bool button, size_t file);
+
+void ee_screens_mff_set_error(size_t form, uint32_t index, size_t text);
+
 /// A shell's constructor: the kind `kind` of the control `ctl`, made from `args[0..n]`; NULL for an unknown kind.
 ///
 /// # Safety
@@ -17499,6 +17945,18 @@ void ee_screens_ui_construct(EeScreensUserInterfaceFields *rec);
 /// `EEUserInterface::~EEUserInterface` (0x276740): every queued, undoable and redoable action released, the event
 /// destroyed.
 void ee_screens_ui_destroy(EeScreensUserInterfaceFields *rec);
+
+/// `EEUserInterface::PostEvent(event, form)` (0x40e): the event referenced, then posted with its form.
+long ee_screens_ui_post_event(const EeScreensUserInterfaceFields *rec,
+                              void *event,
+                              void *form);
+
+/// `EEUserInterface::ShowLoadedObject(object)` (0x40c): the object referenced, then posted.
+void ee_screens_ui_show_loaded(const EeScreensUserInterfaceFields *rec, void *object);
+
+/// `EEUserInterface::ResumeGraphics`: the graphics thread told to resume, then waited for (1 ms sleeps) until it
+/// is not paused.
+void ee_screens_ui_resume_graphics();
 
 /// One of `EEUserInterface`'s posts: `mThread->Post(message, p1, p2, true)` -> Post's result.
 long ee_screens_ui_post(const EeScreensUserInterfaceFields *rec,

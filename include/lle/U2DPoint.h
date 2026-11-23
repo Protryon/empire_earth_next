@@ -5,7 +5,8 @@
 
 // LLE exports use U2DPoint<long> (?$U2DPoint@J@@) and U2DPoint<float>; no member is exported (all inline).
 // Default.dll EEClumps keeps a vector<U2DPoint<long> > (8-byte elements, x then y, trivial dtor: 0x8e6d).
-#include "rust/base/math.h"   // GetLineTiles
+#include "rust/base/math.h"   // GetLineTiles, the file forms
+#include <type_traits>
 
 template <class T> class U2DPoint {
 public:
@@ -34,8 +35,6 @@ public:
     // The exe calls an out-of-line copy ctor 0x4d28b (479 callers); with the pair in the exe view allscores gained
     // 3 exact, 0 lost (EEAIArea 0xda77, EEUGLoadGarrison 0x226ba4, EEUGUnloadTransport 0x228883).
     // (The engine's empty dtor is in the exe view too: EEAIArea 0xe98e is one of its known regressions.)
-    U2DPoint(const U2DPoint& inPoint) : mX(inPoint.mX), mY(inPoint.mY) {}
-    U2DPoint& operator=(const U2DPoint& inPoint) { this->mX = inPoint.mX; this->mY = inPoint.mY; return *this; }
 #endif
     // Engine template members (instantiated by GETerrainMesh.cpp's U2DPolygon<float> code). (provisional names)
     bool operator<(const U2DPoint& inPoint) const   // 0x10031459: lower y first, then larger x (through the accessors:
@@ -47,7 +46,7 @@ public:
     T GetY() const { return this->mY; }
     void SetX(T inX) { this->mX = inX; }
     void SetY(T inY) { this->mY = inY; }
-    void SetXY(T inX, T inY) { this->mX = inX; this->mY = inY; }  // exe: EEUGUnloadTransport's (bool) ctor 0x23c685 (as GE2DPoint's)
+    void SetXY(T inX, T inY) { *this = U2DPoint(inX, inY); }  // exe: EEUGUnloadTransport's (bool) ctor 0x23c685 (as GE2DPoint's)
     // exe (out-of-line COMDAT 0xe964, an AI unit's): the squared distance as a float (EEUGUnloadTransport 0x228683)
     // (provisional name)
     // Inline with the doubled differences: 0xe964 exact, and the float copy is ICF-identical to
@@ -103,28 +102,11 @@ public:
     // (U2DSparseArray.cpp 0x10055899: x and y kept in eax/edx, inPoint in esi)
     T DistanceToSquared(const U2DPoint& inPoint) const
         { return (this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX()) + (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY()); }
-    long Load(FSFile& inFile)
-    {
-        long theResult;
-        if (inFile.GetIsOpen()) {
-            theResult = inFile.Read(this->mX);
-            if (theResult == 0)
-                theResult = inFile.Read(this->mY);
-        } else
-            theResult = 4;
-        return theResult;
-    }
+    // x and y from (to) an open file, each through its typed call; kErrorNotOpen when it is not open, else the first
+    // error (ee_base math u2d.rs; T is long or float)
+    long Load(FSFile& inFile) { return ee_u2d_point_io(&inFile, &this->mX, std::is_floating_point<T>::value, false); }
     long Save(FSFile& inFile) const
-    {
-        long theResult;
-        if (inFile.GetIsOpen()) {
-            theResult = inFile.Write(this->mX);
-            if (theResult == 0)
-                theResult = inFile.Write(this->mY);
-        } else
-            theResult = 4;
-        return theResult;
-    }
+        { return ee_u2d_point_io(&inFile, const_cast<T*>(&this->mX), std::is_floating_point<T>::value, true); }
 
     T mX;                                   // +0x00
     T mY;                                   // +0x04

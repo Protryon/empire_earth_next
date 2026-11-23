@@ -582,7 +582,9 @@ pub unsafe extern "C" fn ee_units_unit_save(
     complex: *const EeUnitsComplexUnitFields,
     inp: *const EeUnitsUnitSaveIn,
 ) -> i32 {
-    let mut callback = CallbackHost { ctx, f };
+    let mut c_host = CallbackHost { ctx, f };
+    // the C++ loops' parts in Rust over the callback's statements (dop_save.rs)
+    let mut callback = crate::units::dop_save::DopSaveHost { inner: &mut c_host };
     // the views answer the plain reads once the layout is registered (unit_save_views.rs); the unit's handle is its
     // RTSUnit*, the record's address less the record's base
     let unit_handle = match crate::world::layout::get() {

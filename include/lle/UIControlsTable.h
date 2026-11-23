@@ -11,6 +11,9 @@
 #include <vector>
 
 #include "rust/ui/controls_table.h"
+#include "rust/ui/lle_table.h"
+#include "lle/UIShims.h"
+#include "rust/ui/ids.h"
 #include "rust/ui/tableobj.h"
 
 class FSFileSpec;
@@ -30,33 +33,47 @@ class LLE_API UIControlsTable {
 public:
     UIControlsTable();
     virtual ~UIControlsTable();
-    void AddEvent(const UIEventData& inEvent);
-    static long Create(FSFileSpec& inFile, UIManager* inManager);
+    void AddEvent(const UIEventData& inEvent) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::AddEvent, inEvent.mEventID, inEvent.mEventType, NULL); }
+    // Loads every control record from the file and registers each valid one with its form; returns the last read result
+    static long Create(FSFileSpec& inFile, UIManager* inManager)
+    {
+        return (long)ee_ui_controls_tables(EeUiTablesCall::Create, (intptr_t)&inFile, (intptr_t)inManager,
+                                           ee_ui_table_host, NULL);
+    }
     // port: adds a control the database does not have (after Create), described as a copy of the database control
     // inTemplateID (its type, font, colours, sounds and offset types; not its events) with its own id, form index,
     // group, rectangle (fractions of the window: offset type 4), string range and help string; registered with the
     // template's form as Create registers a record. -> kErrorOK; kErrorNotFound without the template or when the
     // id or the form index is taken
+    // port: see the header
     static long AddControlLike(UIManager* inManager, long inTemplateID, long inID, long inFormIndex,
                                unsigned long inGroup, float inLeft, float inRight, float inTop, float inBottom,
-                               long inStringTableBegin, long inStringTableEnd, unsigned long inHelpStringID);
+                               long inStringTableBegin, long inStringTableEnd, unsigned long inHelpStringID) { return (long)ee_ui_controls_tables(EeUiTablesCall::AddControlLike, (intptr_t)inManager, (intptr_t)&(const EeUiTableLike&)EeUiTableLike{inTemplateID, inID, inFormIndex, inGroup, inLeft, inRight, inTop, inBottom, inStringTableBegin, inStringTableEnd, inHelpStringID}, NULL, NULL); }
     // port: moves the form inFormID's controls with form index inFirstIndex .. inLastIndex horizontally (after
     // Create, before the form makes its controls): inLeftDelta and inRightDelta are added to their left and right
     // offsets, which must be fractions of the window (offset type 4; others are left alone). -> the number moved
     static long MoveControlsHorizontally(long inFormID, long inFirstIndex, long inLastIndex, float inLeftDelta,
                                          float inRightDelta);
+    // Loads a UI texture (clamped, point mip, given alpha) and returns a bitmap stretched over the rectangle, or NULL
     GEBitmap* CreateBitmap(UIManager* inManager, const GERectangle& inRectangle, const UString& inFileName,
-                           bool inHasAlpha, const GERectangle& inTextureRectangle) const;
-    UIControl* CreateControl(UIManager* inManager);
-    void CreateControlEvent(UIForm* inForm);
+                           bool inHasAlpha, const GERectangle& inTextureRectangle) const { return (GEBitmap*)ee_ui_table_create_bitmap(inManager, &inRectangle, &inFileName, inHasAlpha, &inTextureRectangle); }
+    // Lays out the control on the window and creates it by type (user types via the manager), then sets its background
+    UIControl* CreateControl(UIManager* inManager)
+    {
+        return reinterpret_cast<UIControl*>(
+            ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControl, (intptr_t)inManager, 0, NULL));
+    }
+    // Attaches the description's trigger events to the form's control, creating each event through the manager
+    void CreateControlEvent(UIForm* inForm) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControlEvent, (intptr_t)inForm, 0, NULL); }
     GEBitmap* CreateFocusedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetFocusedFileName(), this->GetFocusedHasAlpha(), this->GetFocusedTextureRect()); }
     GEBitmap* CreateNormalBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetNormalFileName(), this->GetNormalHasAlpha(), this->GetNormalTextureRect()); }
     GEBitmap* CreatePressedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
         { return this->CreateBitmap(inManager, inRectangle, this->GetPressedFileName(), this->GetPressedHasAlpha(), this->GetPressedTextureRect()); }
-    static void DeleteAll();
-    static UIControlsTable* GetUIControlsTable(unsigned long inIndex);
+    // Deletes every control description and empties the table
+    static void DeleteAll() { ee_ui_controls_tables(EeUiTablesCall::DeleteAll, 0, 0, NULL, NULL); }
+    static UIControlsTable* GetUIControlsTable(unsigned long inIndex) { return reinterpret_cast<UIControlsTable*>(ee_ui_controls_tables(EeUiTablesCall::At, inIndex, 0, NULL, NULL)); }
     GEColor GetBackground() const { return reinterpret_cast<const GEColor&>(this->D().background); }
     GEColor GetTextForeground() const { return reinterpret_cast<const GEColor&>(this->D().text_foreground); }
     UString GetNormalFileName() const { return UString(this->D().names[0]); }
@@ -85,10 +102,17 @@ public:
     bool GetNormalHasAlpha() const { return this->F().normal_has_alpha; }
     bool GetAlwaysDirty() const { return this->F().always_dirty; }
     bool GetLoopMovie() const { return this->F().loop_movie; }
-    void RelayoutControl(UIControl* inControl, UIManager* inManager);
-    void SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow);
+    // Recomputes a created control's rectangle and font for the current window size
+    void RelayoutControl(UIControl* inControl, UIManager* inManager)
+    {
+        ee_ui_controls_table_call(this->mRust, EeUiTableCall::RelayoutControl, (intptr_t)inControl, (intptr_t)inManager,
+                                  NULL);
+    }
+    // Picks the description's font: scaled to the control or window height when the record asks, else the table font
+    void SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::SetupFont, (intptr_t)inManager, inScaleToWindow, const_cast<float*>(&inRectangle.mBottom)); }
     void SetupGEText(GEText* inText) const;
-    void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const;
+    // Fills a list with the description's string-table range (empty when the range is unset)
+    void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const { ee_ui_table_setup_strings(this, inManager, &outStrings); }
 private:
     friend struct UIControlsTableHost;      // UIControlsTable.cpp: the Rust table's calls out
     UIControlsTable(EeUiControlsTable* inRust) : mRust(inRust) {}
@@ -100,57 +124,5 @@ private:
     EeUiControlsTable* mRust;
 };
 
-// UI database control type (UIControlsTable::CreateControl; >= 1000: EEUIManager::CreateUserDefinedControl)
-enum UIDbControlType {
-    kDbControlBitmap = 0,                     // CreateBitmap (provisional name)
-    kDbControlButton = 1,                     // CreateButton: new UIButton (provisional name)
-    kDbControlCheckBox = 2,                   // CreateCheckBox (provisional name)
-    kDbControlEditableComboBox = 3,           // CreateComboBox: UIComboBox text box type 0 (an edit box) (provisional name)
-    kDbControlComboBox = 4,                   // CreateComboBox: UIComboBox text box type 1 (a text label; db GS Video Card Combo Box) (provisional name)
-    kDbControlNumberMultiLineEditBox = 5,     // CreateEditBox: UIEditBox numbers only + multi-line; text set from the number (provisional name)
-    kDbControlNumberEditBox = 6,              // CreateEditBox: UIEditBox numbers only, single line (provisional name)
-    kDbControlMultiLineEditBox = 7,           // CreateEditBox: UIEditBox multi-line (db CE Campaign Descrip. Edit Box) (provisional name)
-    kDbControlEditBox = 8,                    // CreateEditBox: UIEditBox single line (db Chat Text Edit Box) (provisional name)
-    kDbControlListBox = 9,                    // CreateListBox: UILBString (provisional name)
-    kDbControlAutoSelectListBox = 10,         // CreateListBox: UILBString with inAutoSelect (select on mouse over) (provisional name)
-    kDbControlRadioButton = 11,               // CreateRadioButton (provisional name)
-    kDbControlRadioTab = 12,                  // CreateRadioButton with inIsPushButton (db: GS Video Tab, MPS Join By IP Tab) (provisional name)
-    kDbControlStatusBar = 13,                 // CreateStatusBar (provisional name)
-    kDbControlHorizontalScrollBar = 14,       // CreateScrollBar style 0 (provisional name)
-    kDbControlTextLabel = 15,                 // CreateTextLabel: label type 0 (single line) (provisional name)
-    kDbControlMultiLineTextLabel = 16,        // CreateTextLabel: label type 1 (multi-line with scroll bar) (provisional name)
-    kDbControlHorizontalSlider = 0x11,        // CreateSlider style 0 (provisional name)
-    kDbControlVerticalSlider = 0x12,          // CreateSlider style 1 (provisional name)
-    kDbControlVerticalScrollBar = 0x13,       // CreateScrollBar style 1 (provisional name)
-    kDbControlNumberTextLabel = 0x14,         // CreateTextLabel single line, text = the number in the string-table field (db CB Civ Pts Left (#)) (provisional name)
-    kDbControlNumberMultiLineTextLabel = 0x15,  // CreateTextLabel multi-line, number text (provisional name)
-    kDbControlFileListBox = 0x16,             // CreateFileListBox (provisional name)
-    kDbControlHelpTextLabel = 0x18,           // UIForm::Open takes it as mHelpTextLabel; single line (db Main Screen Tool Tips) (provisional name)
-    kDbControlMultiLineHelpTextLabel = 0x19,  // UIForm::Open help text label, multi-line (db GS Help Roll Over Text Display) (provisional name)
-    kDbControlScrollingTextLabel = 0x1a,      // CreateScrollingTextLabel: UITLScrolling (provisional name)
-    kDbControlBlinkingButton = 0x1b,          // CreateButton: new UIBlinkingButton (provisional name)
-    kDbControlScalableButton = 0x1c,          // CreateButton: new UIScalableButton (provisional name)
-    kDbControlMovie = 0x1d,                   // no control (the original's CreateMovie: UIMovie; movies left the game) (provisional name)
-    kDbControlLineGraph = 0x1e,               // CreateGraph: new UILineGraph (provisional name)
-    kDbControlDualButton = 0x1f,              // CreateButton: new UIDualButton (provisional name)
-    kDbControlFileComboBox = 0x20,            // CreateFileComboBox: UIFileComboBox (provisional name)
-    kDbControlStatusButton = 0x3e8,           // CreateUserDefinedControl: new EEUIFMGStatusButton (RTTI)
-    kDbControlMiniMap = 0x3e9,                // CreateUserDefinedControl: new EEUIMiniMap (RTTI)
-    kDbControlErrorLog = 0x3eb,               // CreateUserDefinedControl: new EEUIFMGErrorLog (RTTI)
-    kDbControlAttribute = 0x3ed,              // CreateUserDefinedControl: new EEUIFMGAttribute (RTTI)
-    kDbControlMainGameStatusBar = 0x3ee,      // CreateUserDefinedControl: new EEUIFMGStatusBar (RTTI)
-    kDbControlSelectUnits = 0x3ef,            // CreateUserDefinedControl: new EEUICSelectUnits (RTTI)
-    kDbControlCommandUnits = 0x3f0,           // CreateUserDefinedControl: new EEUICCommandUnits (RTTI)
-    kDbControlPortrait = 0x3f1,               // CreateUserDefinedControl: new EEUICPortrait (RTTI)
-    kDbControlChatLine = 0x3f2,               // CreateUserDefinedControl: new EEUICChatLine (RTTI)
-    kDbControlCBListBox = 0x3f3,              // CreateUserDefinedControl: new EECBUIListBox (RTTI)
-    kDbControlWonNetStatBox = 0x3f5,          // CreateUserDefinedControl: new EEUICWonNetStatBox (RTTI)
-    kDbControlUnitIconBar = 0x3f6,            // CreateUserDefinedControl: new EEUICUnitIconBar (RTTI)
-    kDbControlSavedGroup = 0x3f7,             // CreateUserDefinedControl: new EEUIBSavedGroup (RTTI)
-    kDbControlPGSLineGraph = 0x3f8,           // CreateUserDefinedControl: new EEUIPGSLineGraph (RTTI)
-    kDbControlPing = 0x3f9,                   // CreateUserDefinedControl: new EEUICPing (RTTI)
-    kDbControlWonNetRoomsBox = 0x3fa,         // CreateUserDefinedControl: new EEUICWonNetRoomsBox (RTTI)
-    kDbControlWonNetGamesBox = 0x3fb,         // CreateUserDefinedControl: new EEUICWonNetGamesBox (RTTI)
-};
-
+// the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)
 #endif

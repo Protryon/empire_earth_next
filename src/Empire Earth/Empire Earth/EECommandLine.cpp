@@ -44,107 +44,7 @@ extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local s
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 void CreatePlaneModels();                   // 0x1030ab (EEEffect.cpp)
 
-// Loads one saved game or scenario from a directory and saves it again under a new name; returns the first error
-long EEConvertGameFile(const UString& inDirectory, const UString& inFile, const UString& inNewFile)
-{
-    long theResult = EELoadSavedGameFile(inFile, true, false, inDirectory, 0);
-    if (theResult != 0)
-        return theResult;
-    gWorld.mCameraControl.SetChanged();
-    gWorld.mCameraControl.Update(1.0f);
-    theResult = SaveGame(inNewFile, TMGetTime(), false, inDirectory);
-    return theResult;
-}
-
-// "update_saved_games": converts every saved game and scenario to "UPDATED <name>", logging to "saved game
-// conversion.log", and deletes each original once its conversion succeeded
-void EEUpdateSavedGames()
-{
-    FSFileSpec theLog;
-    FSFileSpec theSearch;
-    FSFileSpec theFile;
-    std::vector<UString> theNames;
-    gWorld.mLock->WriteLock();
-    CreatePlaneModels();
-    if (gCommunications != NULL)
-        delete gCommunications;
-    gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
-    static_cast<EEServer*>(gCommunications)->StartThreads();
-    TMTime theTime;
-    TMGetTimeOfDay(theTime);
-    theLog.SetVolume(gStartupVolume);
-    theLog.SetDirectory(gStartupDirectory);
-    theLog.SetFile("saved game conversion.log");
-    theLog.Delete();
-    theLog.Create();
-    if (theLog.FOpen("w") == 0) {
-        FILE* theStream = theLog;
-        fprintf(theStream, "Saved game conversion started on %02ld/%02ld/%02ld, %02ld:%02ld.%02ld\n", theTime.mMonth + 1,
-                theTime.mDay, theTime.mYear, theTime.mHour, theTime.mMinute, theTime.mSecond);
-        fflush(theStream);
-
-        theNames.clear();
-        theSearch.SetVolume(gStartupVolume);
-        theSearch.SetDirectory(gStartupDirectory + "Data\\Saved Games\\");
-        long theStatus = theSearch.GetFirstFile("*.ees", theFile);
-        if (theStatus == 0) {
-            do {
-                if (theFile.GetFile().Find("UPDATED ", 0) != 0)
-                    theNames.push_back(theFile.GetFile());
-            } while (theSearch.GetNextFile(theFile) == 0);
-        }
-        for (unsigned long i = 0; i < theNames.size(); i++) {
-            fprintf(theStream, "Beginning conversion of file %s... ", (const char*)theNames[i]);
-            fflush(theStream);
-            {
-                UString thePrefix("UPDATED ");
-                UString theDirectory("Data\\Saved Games\\");
-                theStatus = EEConvertGameFile(theDirectory, theNames[i], thePrefix + theNames[i]);
-            }
-            if (theStatus == 0) fprintf(theStream, "success!\n"); else fprintf(theStream, "failed!\n");
-            fflush(theStream);
-            if (theStatus != 0)
-                continue;   // keep the original when its conversion failed (it was deleted either way)
-            theFile.SetVolume(gStartupVolume);
-            theFile.SetDirectory(gStartupDirectory + "Data\\Saved Games\\");
-            theFile.SetFile(theNames[i]);
-            theFile.Delete();
-        }
-
-        theNames.clear();
-        theSearch.SetVolume(gStartupVolume);
-        theSearch.SetDirectory(gStartupDirectory + "Data\\Scenarios\\");
-        theStatus = theSearch.GetFirstFile("*.scn", theFile);
-        if (theStatus == 0) {
-            do {
-                if (theFile.GetFile().Find("UPDATED ", 0) != 0)
-                    theNames.push_back(theFile.GetFile());
-            } while (theSearch.GetNextFile(theFile) == 0);
-        }
-        for (unsigned long j = 0; j < theNames.size(); j++) {
-            fprintf(theStream, "Beginning conversion of file %s... ", (const char*)theNames[j]);
-            fflush(theStream);
-            {
-                UString thePrefix("UPDATED ");
-                UString theDirectory("Data\\Scenarios\\");
-                theStatus = EEConvertGameFile(theDirectory, theNames[j], thePrefix + theNames[j]);
-            }
-            if (theStatus == 0) fprintf(theStream, "success!\n"); else fprintf(theStream, "failed!\n");
-            fflush(theStream);
-            if (theStatus != 0)
-                continue;   // keep the original when its conversion failed (it was deleted either way)
-            theFile.SetVolume(gStartupVolume);
-            theFile.SetDirectory(gStartupDirectory + "Data\\Scenarios\\");
-            theFile.SetFile(theNames[j]);
-            theFile.Delete();
-        }
-
-        fprintf(theStream, "Conversion completed!\n");
-        fflush(theStream);
-        theLog.Close();
-    }
-    gWorld.mLock->WriteUnlock();
-}
+// (EEConvertGameFile and EEUpdateSavedGames, "update_saved_games": ee_game gamecpp saved_games.rs over EECore10OpE2)
 
 // Runs the command-line commands after startup; without one, starts a client and opens the main menu. Returns
 // false when the game should quit (update_saved_games) (ee_game gamecpp entry.rs; the original's four file statics
@@ -162,6 +62,8 @@ bool EEParseCommandLine(const char* inCommandLine)
 
 // The command line's C++ calls and members (EeGameCpp's lane E section; Empire Earth.cpp's EECore9OpE default): one
 // statement each; the end of the chain
+int64_t EECore10OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // round 10 (EEGraphics.cpp)
+
 int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -219,10 +121,50 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
         break;
     case O::EntryStartLoadingInput: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
         break;
-    case O::EntryUpdateSavedGames: EEUpdateSavedGames();
+    default: return EECore10OpA(inOp, p, a, f);
+    }
+    return 0;
+}
+
+// ------------------------------------------------------------------------- round 10, lane E: saved_games.rs's C++
+
+#define USTRA(k) (*(UString*)a[k])
+
+int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
+
+// the C++ calls and members of "update_saved_games" (gamecpp saved_games.rs): one statement each
+int64_t EECore10OpE2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::UsgWorldWriteLock: gWorld.mLock->WriteLock();
         break;
-    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+    case O::UsgWorldWriteUnlock: gWorld.mLock->WriteUnlock();
         break;
+    case O::UsgSetDirectory: SPEC->SetDirectory(gStartupDirectory + (const char*)a[0]);
+        break;
+    case O::UsgSetFile: SPEC->SetFile((const char*)a[0]);
+        break;
+    case O::UsgDelete: SPEC->Delete();
+        break;
+    case O::UsgCreate: SPEC->Create();
+        break;
+    case O::UsgFOpenWrite: return SPEC->FOpen("w");
+    case O::UsgPuts: fputs((const char*)a[0], (FILE*)*SPEC);
+        break;
+    case O::UsgFlush: fflush((FILE*)*SPEC);
+        break;
+    case O::UsgClose: SPEC->Close();
+        break;
+    case O::UsgFirstFile: return SPEC->GetFirstFile((const char*)a[0], *(FSFileSpec*)a[1]);
+    case O::UsgFileName: return P64((const char*)SPEC->GetFile());
+    case O::UsgLoad: return EELoadSavedGameFile((const char*)a[0], true, false, (const char*)a[1], 0);
+    case O::UsgCameraChanged: gWorld.mCameraControl.SetChanged();
+        break;
+    case O::UsgCameraUpdate: gWorld.mCameraControl.Update(f[0]);
+        break;
+    case O::UsgSave: return SaveGame((const char*)a[0], (unsigned long)a[1], false, (const char*)a[2]);
+    default: return EECore10OpE3(inOp, p, a, f);
     }
     return 0;
 }

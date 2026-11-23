@@ -57,8 +57,8 @@ pub const EE_SCREENS_SEA_REMOVE_FLAT_CLIFFS: u32 = 14;
 pub const EE_SCREENS_SEA_STORE_MOUSE_TILE: u32 = 15;
 /// `gEffectManager->ElevationChanged(left i0, top i1, right i2, bottom i3)`.
 pub const EE_SCREENS_SEA_ELEVATION_CHANGED: u32 = 16;
-/// -> the height of one elevation level (`kSEPELevelHeight`) in f0.
-pub const EE_SCREENS_SEA_LEVEL_HEIGHT: u32 = 17;
+/// The height of one elevation level (0x445618, once EEUIFSEPaintElevation.cpp's `kSEPELevelHeight`).
+const EE_SCREENS_SEA_LEVEL_HEIGHT: f32 = 0.204_124_14;
 
 /// The hills' height per level and the height from which they are less rough (0x44598c, 0x445988).
 const SEA_HILL_HEIGHT: f32 = 0.816_496_55;
@@ -270,10 +270,8 @@ pub fn remove_in_order<H: SeaHost + ?Sized>(h: &mut H, mut units: Vec<(usize, bo
     }
 }
 
-fn level_height<H: SeaHost + ?Sized>(h: &mut H) -> f32 {
-    let mut f = [0.0; 5];
-    h.op(EE_SCREENS_SEA_LEVEL_HEIGHT, &mut [0; 6], &mut f);
-    f[0]
+fn level_height<H: SeaHost + ?Sized>(_: &mut H) -> f32 {
+    EE_SCREENS_SEA_LEVEL_HEIGHT
 }
 
 /// The height an elevation paint of `level` gives in the tab's mode (`SetArea`'s test).
@@ -678,10 +676,6 @@ mod tests {
                 EE_SCREENS_SEA_TERRAIN_CLASS => 100 + i[1],
                 EE_SCREENS_SEA_TIME => self.time,
                 EE_SCREENS_SEA_ELEVATION_MODE => self.mode,
-                EE_SCREENS_SEA_LEVEL_HEIGHT => {
-                    f[0] = 0.204_124_14;
-                    0
-                }
                 EE_SCREENS_SEA_RAISE => {
                     self.log.push(format!("raise {:?} {:?}", &i[..5], &f[..4]));
                     i[0] -= 1; // Raise may widen the area

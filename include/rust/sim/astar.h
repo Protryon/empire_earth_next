@@ -109,6 +109,9 @@ constexpr static const int32_t EE_ASTAR_CM_REGROW_UNIT = 47;
 
 constexpr static const int32_t EE_ASTAR_CM_SET_REGROWING = 48;
 
+/// `&gPhysics->mRandom` (the physics' `URandom`, an `EeURandom`)
+constexpr static const int32_t EE_ASTAR_CM_PHYSICS_RANDOM = 49;
+
 /// The id lists, by `EeAStarContinentList`'s numbers.
 constexpr static const size_t EE_ASTAR_CONTINENT_LISTS = 7;
 
@@ -359,18 +362,6 @@ constexpr static const int32_t EE_PATH_GM_FOUND = 66;
 
 /// a loaded request from the request record `h0` (a `RequestRecord`) -> it (one reference, the caller's)
 constexpr static const int32_t EE_PATH_REQUEST_LOAD = 67;
-
-constexpr static const uint32_t EE_PATH_FILE_U32 = 1;
-
-constexpr static const uint32_t EE_PATH_FILE_I32 = 2;
-
-constexpr static const uint32_t EE_PATH_FILE_U16 = 3;
-
-constexpr static const uint32_t EE_PATH_FILE_BOOL = 4;
-
-constexpr static const uint32_t EE_PATH_FILE_F32 = 5;
-
-constexpr static const uint32_t EE_PATH_FILE_BYTES = 6;
 
 /// `kErrorBeyondEnd`, `LoadRunningState`'s answer for a short record.
 constexpr static const int32_t EE_PATH_ERROR_BEYOND_END = 10;
@@ -1278,23 +1269,6 @@ struct EePathQueued {
   uint64_t request;
 };
 
-/// The save file through the C++ `FSFile`'s typed calls: `kind` 1 `uint32_t`, 2 `int32_t`, 3 `unsigned short`,
-/// 4 `bool`, 5 `float` (the value's bits), 6 the bytes `data[..len]`. A read returns 0 and the value (or fills the
-/// bytes), else the file's error.
-using EePathFileFn = int32_t(*)(void *ctx,
-                                uint32_t kind,
-                                uint32_t *value,
-                                uint8_t *data,
-                                uint32_t len);
-
-/// A bounded tile search's window (`EEAIAStarBounds`: top, left, bottom, right).
-struct EePathWindow {
-  int32_t top;
-  int32_t left;
-  int32_t bottom;
-  int32_t right;
-};
-
 /// `EEAIPathSector`'s members.
 struct EeAStarSectorRecord {
   /// the lists (`ee_astar_sector_*`)
@@ -1959,6 +1933,12 @@ int32_t ee_astar_cm_load_regions(void *file);
 /// `EEContinentRegionsPending`: a loaded block waits.
 bool ee_astar_cm_regions_pending();
 
+/// `EEAIArea::AreaCreate(tiles)` for the C++ (`EEAIArea::Create` of every kind but a herd).
+///
+/// # Safety
+/// `h` a live area (an `EEAIArea*`); `points` holds `n` points.
+void ee_astar_area_create_of(uint64_t h, const EeHullPoint *points, size_t n);
+
 /// `EEAIArea::UpdateHull()` for the C++.
 ///
 /// # Safety
@@ -1970,6 +1950,151 @@ void ee_astar_area_update_hull_of(uint64_t h);
 /// # Safety
 /// `h` a live area.
 bool ee_astar_area_remove_tile_of(uint64_t h, long x, long y);
+
+/// `GetContinentID(x, y)`: the grid's id, `FindContinentID` without the grid, 0 off the map.
+///
+/// # Safety
+/// `r` a live record.
+uint16_t ee_astar_cm_continent_id_at(const EeAStarCmRecord *r, long x, long y);
+
+/// `GetContinentID(unit)`: the id at the unit's tile (0 off the grid).
+///
+/// # Safety
+/// `r` a live record; `unit` 0 or a live unit.
+uint16_t ee_astar_cm_unit_continent_id(const EeAStarCmRecord *r, uint64_t unit);
+
+/// `GetContinentAt(x, y)`: the continent at the tile (0 if none).
+///
+/// # Safety
+/// `r` a live record.
+uint64_t ee_astar_cm_continent_at(const EeAStarCmRecord *r, long x, long y);
+
+/// `GetContinentAt(unit)`: the continent at the unit's tile (0 off the grid or none).
+///
+/// # Safety
+/// `r` a live record; `unit` 0 or a live unit.
+uint64_t ee_astar_cm_unit_continent_at(const EeAStarCmRecord *r, uint64_t unit);
+
+/// `GetContinent(unit, kind)`: the region id of kind `kind` at the unit's tile (with its CNTQ record).
+///
+/// # Safety
+/// `r` a live record; `unit` 0 or a live unit.
+uint16_t ee_astar_cmq_unit_region_id(const EeAStarCmRecord *r,
+                                     uint64_t unit,
+                                     long kind);
+
+/// The area lookups by a unit (`GetChokePointAt`, `GetForestAt`, `GetPathAreaAt` of a unit: kinds 0, 1, 3 of
+/// `ee_astar_cmq_area_at`) at its tile.
+///
+/// # Safety
+/// `r` a live record; `unit` 0 or a live unit.
+uint64_t ee_astar_cmq_unit_area_at(const EeAStarCmRecord *r,
+                                   int32_t kind,
+                                   uint64_t unit);
+
+/// `GetPathSector(tile)`: 0 off the map.
+///
+/// # Safety
+/// `r` a live record.
+uint64_t ee_astar_cm_sector_at(const EeAStarCmRecord *r, long x, long y);
+
+/// `GetPathSector(unit)`: the sector at the unit's tile.
+///
+/// # Safety
+/// `r` a live record; `unit` 0 or a live unit.
+uint64_t ee_astar_cm_unit_sector_at(const EeAStarCmRecord *r, uint64_t unit);
+
+/// `GetPathSubSectorID(x, y)`: the grid's id, `FindPathSubSectorID` without it, 0 off the map.
+///
+/// # Safety
+/// `r` a live record.
+uint16_t ee_astar_cm_sub_sector_id_at(const EeAStarCmRecord *r, long x, long y);
+
+/// `GetPathSubSectorID(unit)`: the id at the unit's tile (0 off the grid).
+///
+/// # Safety
+/// `r` a live record; `unit` 0 or a live unit.
+uint16_t ee_astar_cm_unit_sub_sector_id(const EeAStarCmRecord *r, uint64_t unit);
+
+/// `GetPathSubSectorAt(x, y)`: the sub sector at the tile (0 if none).
+///
+/// # Safety
+/// `r` a live record.
+uint64_t ee_astar_cm_sub_sector_at(const EeAStarCmRecord *r, long x, long y);
+
+/// `CanGetToUnit(unit, target)`: `CanGetTo(unit, the target's tile)`.
+///
+/// # Safety
+/// `unit`, `target` live units.
+bool ee_astar_cm_can_get_to_unit(uint64_t unit, uint64_t target);
+
+/// `AdjacentIDs(out, id, with_self)`: `out` resized to the matrix's side (`resize(list, n)`, `data(list)` its
+/// ids), filled, then cut to the ids found.
+///
+/// # Safety
+/// `r` a live record; `resize` resizes the C++ list `list`, `data` answers its ids.
+void ee_astar_cmq_adjacent_ids_into(const EeAStarCmRecord *r,
+                                    uint16_t id,
+                                    bool with_self,
+                                    void *list,
+                                    void (*resize)(void*, size_t),
+                                    uint16_t *(*data)(void*));
+
+/// `GetChokePoints(out, id, clear)`: `clear(list)` first when `clear`, then the continent's choke points appended
+/// (`ee_astar_cmq_choke_points` over the list as it is then).
+///
+/// # Safety
+/// `r` a live record; `before`, `count_before` the list's entries after the clear; the callbacks the C++ list's.
+void ee_astar_cmq_choke_points_into(const EeAStarCmRecord *r,
+                                    uint16_t id,
+                                    bool clear,
+                                    const uint64_t *before,
+                                    size_t count_before,
+                                    void *list,
+                                    void (*clear_list)(void*),
+                                    void (*push)(void*, uint64_t));
+
+/// `GetTilesNextTo(x, y, out, id)`: the answer, `out` cleared and given the tiles (at most eight).
+///
+/// # Safety
+/// `r` a live record; the callbacks the C++ list's.
+bool ee_astar_cmq_tiles_next_to_into(const EeAStarCmRecord *r,
+                                     long x,
+                                     long y,
+                                     uint16_t id,
+                                     void *list,
+                                     void (*clear_list)(void*),
+                                     void (*push)(void*, long, long));
+
+/// `EEAIContinent::GetShoreInRegions(ids, out, kind)`: `clear(list)`, then the tiles found pushed.
+///
+/// # Safety
+/// `h` a live continent; `ids` holds `n` ids; the callbacks the C++ list's.
+void ee_astar_continent_shore_in_regions_into(uint64_t h,
+                                              const uint16_t *ids,
+                                              size_t n,
+                                              long kind,
+                                              void *list,
+                                              void (*clear_list)(void*),
+                                              void (*push)(void*, long, long));
+
+/// `EEWriteAreaBytes(area, out)`: the area's save bytes handed to `assign(list, data, len)`.
+///
+/// # Safety
+/// `h` a live area; `assign` replaces the C++ list's contents.
+void ee_astar_cm_area_bytes_into(uint64_t h, void *list, void (*assign)(void*,
+                                                                        const uint8_t*,
+                                                                        size_t));
+
+/// `BuildRegions(map)` with the scenario manager's areas (`scenario::entry::region_inputs`, read first as the
+/// C++ read them) and the region size and the continent grid's keeping the C++ computed.
+///
+/// # Safety
+/// As `ee_astar_cm_build_regions`.
+void ee_astar_cm_build_regions_scenario(EeAStarCmRecord *r,
+                                        uint64_t map,
+                                        long region,
+                                        bool keep_continent_ids);
 
 /// The host the state's readers and writers call.
 void ee_astar_cm_set_host(EeAStarCmHostFn f, void *ctx);
@@ -2079,6 +2204,13 @@ void ee_astar_cm_reset_all(EeAStarCmRecord *r);
 /// # Safety
 /// As `ee_astar_cm_reset_all`.
 void ee_astar_cm_shutdown(EeAStarCmRecord *r);
+
+/// `~EEAIContinentManager`: `Shutdown` of the game's manager `global`, then this one's tables freed.
+///
+/// # Safety
+/// `global` the game's live record; `r` this manager's record, not used after.
+void ee_astar_cm_destroy(EeAStarCmRecord *global,
+                         EeAStarCmRecord *r);
 
 /// `Clear(map)`: clearing, reset, the grids freed, the continents and hills of the map made.
 ///
@@ -2439,6 +2571,20 @@ bool ee_astar_forest_regrow(uint64_t forest,
                             long y,
                             long radius,
                             long count);
+
+/// `EEAIArea::AreaRandomPoint`: a random tile of the area from the physics' stream (`URandom::Generate` draws, as
+/// the tile set's `GetRandomPoint(gPhysics->mRandom)`), (0, 0) when it is empty.
+///
+/// # Safety
+/// `area` a live area.
+EeHullPoint ee_astar_area_random_point(uint64_t area);
+
+/// `EEAIRectangleArea::GetRandomPoint`: the area's random tile; when the map has no tile there, a random on-map tile
+/// of the area instead (`cm_inline::rect_on_map_point`; unchanged when there is none).
+///
+/// # Safety
+/// `area` a live rectangle area.
+EeHullPoint ee_astar_rect_random_point(uint64_t area);
 
 /// The adjacent continents and their count; valid until they next change.
 ///
@@ -3131,8 +3277,10 @@ bool ee_path_manager_pending(EePathManager *p, uint32_t k, int32_t *out);
 int32_t ee_path_manager_file(EePathManager *p,
                              int32_t what,
                              bool load,
-                             EePathFileFn f,
-                             void *ctx);
+                             void *file);
+
+/// `EEAfterLoad(fixup)` (EEPathManager.cpp).
+extern void ee_path_after_load(void (*f)());
 
 /// A saved search's tile list (`which` 0 the blocked tiles, 1 the unit tiles): `k`'s tile into `out`, false past
 /// the end; `push` appends (x, y).
@@ -3165,19 +3313,6 @@ const uint8_t *ee_path_saved_bytes(void *bytes,
 /// `lists` a live `EePathSavedLists`.
 void *ee_path_saved_storage(EePathSavedLists *lists);
 
-/// A tile list (`EEPathManager::FindPath`'s): new, its tiles, freed.
-void *ee_path_tiles_new();
-
-/// Tile `k` of the list into `out`; false past the end.
-///
-/// # Safety
-/// `list` from `ee_path_tiles_new`, `out` writable for two values.
-bool ee_path_tiles_get(void *list, uint32_t k, int32_t *out);
-
-/// # Safety
-/// `list` from `ee_path_tiles_new`, not used after.
-void ee_path_tiles_free(void *list);
-
 /// A dump's text into `out` (up to `cap` bytes, no terminator); its length. `what` 0: `DumpSim`'s (TEST ONLY, EE-SIM's
 /// state dumps: the searches in progress, the pending requests, the timers, then the bounded machine's storage as
 /// a digest of its bytes); 1: `DumpOutOfSynch`'s (the sub sectors and the queued searches).
@@ -3188,6 +3323,37 @@ uint32_t ee_path_manager_dump(EePathManager *p,
                               int32_t what,
                               uint8_t *out,
                               uint32_t cap);
+
+/// `DumpSim` (`what` 0) / `DumpOutOfSynch` (1): the dump's text written to the C++ stream `file`.
+///
+/// # Safety
+/// `p` a live manager, `file` an open `FILE*`.
+void ee_path_manager_dump_file(EePathManager *p, int32_t what, void *file);
+
+/// `EEPathManager::Call(what, h0, h1, values, out)`: the call's io from the handles and the `n` values, then
+/// [`ee_path_manager_call`]; `out` (when not null) gets the io's first two values after it.
+///
+/// # Safety
+/// `p` a live manager; `values` holds `n` (at most 12) values; `out` null or writable for two.
+int64_t ee_path_manager_call_values(EePathManager *p,
+                                    int32_t what,
+                                    uint64_t h0,
+                                    uint64_t h1,
+                                    const int64_t *values,
+                                    size_t n,
+                                    int64_t *out);
+
+/// `GetPathGoal(unit, out)` (call 13): the answer, the goal tile into `out` (two `long`s).
+///
+/// # Safety
+/// `p` a live manager; `unit` a live unit; `out` writable for two `long`s.
+bool ee_path_manager_path_goal(EePathManager *p, uint64_t unit, long *out);
+
+/// The destructor: `Clear` (call 3), then the manager freed; null (the handle's new value).
+///
+/// # Safety
+/// `p` from `ee_path_manager_new`, not used after.
+EePathManager *ee_path_manager_destroy(EePathManager *p);
 
 /// Appends `count` points to a Rust point list (a host operation's list in `h1`).
 ///
@@ -3211,21 +3377,26 @@ void ee_path_capture_word(uint32_t bits);
 /// `p` a live manager.
 void ee_path_capture_close(EePathManager *p);
 
-/// `EEPathManager::FindPath` for the C++ callers: the path's tiles into the tile list `path` and, when `visited`
-/// is not null, the visited tiles into it (`ee_path_tiles_new` lists).
+/// `EEPathManager::FindPath` for the C++ callers: `from`, `to` the ends, `bounds` the window (a
+/// `U2DRectangle<long>`); `clear(path)` then the path's tiles pushed into `path`, and when `visited` is not null the
+/// visited tiles appended to it.
 ///
 /// # Safety
-/// `p` the live manager; the handles as [`find_path_on`]'s; the lists live.
-void ee_path_find_path(EePathManager *p,
-                       uint64_t unit,
-                       uint64_t map,
-                       const int32_t *ends,
-                       EePathWindow window,
-                       int32_t kind,
-                       int32_t revs,
-                       uint64_t modifier,
-                       void *path,
-                       void *visited);
+/// `p` the live manager; the handles as [`find_path_on`]'s; the points and the rectangle readable; the lists the
+/// callbacks' own.
+void ee_path_find_path_into(EePathManager *p,
+                            uint64_t unit,
+                            uint64_t map,
+                            const EeHullPoint *from,
+                            const EeHullPoint *to,
+                            const EeHullRect *bounds,
+                            long kind,
+                            long revs,
+                            uint64_t modifier,
+                            void *path,
+                            void *visited,
+                            void (*push)(void*, int32_t, int32_t),
+                            void (*clear)(void*));
 
 /// The resolve at the loaded game's first tick (`EEAfterLoadLast`'s fix-up): the game's manager's call 19.
 void ee_path_resolve_graph_searches();

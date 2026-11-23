@@ -672,7 +672,9 @@ pub unsafe extern "C" fn ee_units_unit_load(
     complex: *mut EeUnitsComplexUnitFields,
     inp: *const EeUnitsUnitSaveIn,
 ) -> i32 {
-    let mut callback = crate::units::unit_save::CallbackHost { ctx, f };
+    let mut c_host = crate::units::unit_save::CallbackHost { ctx, f };
+    // the C++ loops' parts in Rust over the callback's statements (dop_save.rs)
+    let mut callback = crate::units::dop_save::DopSaveHost { inner: &mut c_host };
     // the plain stores in place once the layout is registered (unit_save_views.rs); the unit's handle is its
     // RTSUnit*, the record's address less the record's base
     let unit_handle = match crate::world::layout::get() {

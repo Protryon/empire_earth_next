@@ -23,10 +23,10 @@ public:
     UIGraph(const UIGraph&) = delete;
     UIGraph& operator=(const UIGraph&) = delete;
     virtual ~UIGraph();
-    virtual long CopyData();
-    virtual long DrawPolygons();
-    virtual long DrawTextA();
-    void SetFont(GEFont* inFont);
+    virtual long CopyData() { return (long)this->Call(EeUiGraphCall::CopyData); }
+    virtual long DrawPolygons() { return (long)this->Call(EeUiGraphCall::DrawPolygons); }
+    virtual long DrawTextA() { return (long)this->Call(EeUiGraphCall::DrawText); }
+    void SetFont(GEFont* inFont) { this->Call(EeUiGraphCall::SetFont, (intptr_t)inFont); }
     void SetFontColor(const GEColor& inColor);
     // the summary's: a series of the inCount (time, value) pairs in a colour, added to stored graph inGraph
     void AddGraphSeries(const long* inPoints, unsigned long inCount, unsigned long inGraph, const GEColor& inColor);
@@ -38,9 +38,12 @@ protected:
     virtual long MouseMove(const GE2DPoint& inLocation) { return kErrorOK; }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
-    virtual void TabbedTo();
-    virtual void TabbedFrom();
+    virtual void TabbedTo() { this->Call(EeUiGraphCall::TabbedTo); }
+    virtual void TabbedFrom() { this->Call(EeUiGraphCall::TabbedFrom); }
 
+private:
+    intptr_t Call(EeUiGraphCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, float* f = NULL) const { return ee_ui_graph_call(this->mRust, c, a, b, cc, f); }
+protected:
     EeUiGraph* mRust;                       // the state (graphobj.rs)
 };
 

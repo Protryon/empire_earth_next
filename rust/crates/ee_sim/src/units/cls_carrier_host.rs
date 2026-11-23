@@ -13,11 +13,11 @@ use crate::units::uu_host::Game;
 use crate::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use crate::world::{UnitView, WorldRead};
 
-/// the carrier `a`'s tag point `c` at plane `b`'s frame in its scaled location into `io.p` (0: no tag points)
+/// tag list `d`'s point `c` at plane `b`'s frame in the scratch transformation into `io.p`
 pub const EE_UNITS_CLS_CR_TAG: i32 = 73;
 /// unit `a`'s `mOrientation = (io.p[0], io.p[1], io.p[2])`
 pub const EE_UNITS_CLS_CR_SET_ORIENTATION: i32 = 74;
-/// unit `a`'s `SetTransformation(its location at io.p, true)`
+/// the scratch transformation's `SetPosition(io.p)`
 pub const EE_UNITS_CLS_CR_SET_POSITION: i32 = 75;
 /// unit `a`'s `mPhysicalModel.SetScale(io.f)`
 pub const EE_UNITS_CLS_CR_SET_SCALE: i32 = 76;
@@ -25,16 +25,40 @@ pub const EE_UNITS_CLS_CR_SET_SCALE: i32 = 76;
 pub const EE_UNITS_CLS_CR_ROUTE_DOCK: i32 = 77;
 /// unit `a`'s player's air traffic control of its class is not NULL
 pub const EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC: i32 = 78;
-/// unit `a`'s approach goal at `io.p` (the location goal's point, else a new location goal)
+/// `EEUGRust::NewLocation(&io.p, false, true, false, 0.0f, false, false)`
 pub const EE_UNITS_CLS_CR_DECK_GOAL: i32 = 79;
 /// `EELocationGoalPoint(unit a's goal)` into `io.p`
 pub const EE_UNITS_CLS_CR_LOCATION_GOAL_POINT: i32 = 80;
-/// unit `a` without a home base: the first slot's airport, else killed; the home base after
+/// unit `a`'s `SetHomeBase(` its air traffic control's first slot's airport `)`
 pub const EE_UNITS_CLS_CR_HOME_FIRST_SLOT: i32 = 81;
 /// `gPhysics->mRandom.Generate()` into `io.f`
 pub const EE_UNITS_CLS_CR_RANDOM: i32 = 82;
 /// class `b`'s `GetHeightAt(unit a, io.p)` into `io.f`
 pub const EE_UNITS_CLS_CR_HEIGHT_AT: i32 = 83;
+/// carrier `a`'s `GetModel()->mTagPoints[mAnimation]`
+pub const EE_UNITS_CLS_CR_TAG_LIST: i32 = 215;
+/// tag list `b`'s `mPoints.size()`
+pub const EE_UNITS_CLS_CR_TAG_COUNT: i32 = 216;
+/// the scratch transformation = unit `a`'s location
+pub const EE_UNITS_CLS_CR_SCRATCH_LOCATION: i32 = 217;
+/// `EETagPointList::Scale(the scratch, a->GetStats()->GetScale())`
+pub const EE_UNITS_CLS_CR_SCRATCH_SCALE: i32 = 218;
+/// unit `a`'s `SetTransformation(the scratch, true)`
+pub const EE_UNITS_CLS_CR_SET_SCRATCH_TRANSFORMATION: i32 = 219;
+/// unit `a`'s `GetGoal()`
+pub const EE_UNITS_CLS_CR_GOAL: i32 = 220;
+/// `EEGoalHasLocation(goal b)`
+pub const EE_UNITS_CLS_CR_HAS_LOCATION: i32 = 221;
+/// unit `a`'s `ClearGoalQueue(0)`
+pub const EE_UNITS_CLS_CR_CLEAR_GOAL_QUEUE: i32 = 222;
+/// unit `a`'s `SetGoal(goal b, 0, 0)`
+pub const EE_UNITS_CLS_CR_SET_GOAL: i32 = 223;
+/// `EESetLocationGoalPoint(goal b, io.p)`
+pub const EE_UNITS_CLS_CR_SET_LOCATION_POINT: i32 = 224;
+/// `ee_units_atc_slot_count(a's air traffic control)`
+pub const EE_UNITS_CLS_CR_ATC_SLOTS: i32 = 225;
+/// unit `a`'s `Kill(true, false, false)`
+pub const EE_UNITS_CLS_CR_KILL: i32 = 226;
 
 impl ClsGame {
     #[allow(clippy::too_many_arguments)] // the switch's operands
@@ -63,8 +87,16 @@ impl CarrierHost for ClsGame {
         self.cr0(EE_UNITS_CLS_HOME_BASE, unit, 0).0 as u64
     }
     fn tag(&mut self, carrier: u64, plane: u64, index: i32) -> Option<Ge3DPoint> {
-        let (r, io) = self.cr(EE_UNITS_CLS_CR_TAG, carrier, plane, i64::from(index), 0, Ge3DPoint::default(), 0.0);
-        (r != 0).then_some(point(io.p))
+        // the carrier's tags at the plane's frame, the location scaled by the carrier's stats
+        let tags = self.cr0(EE_UNITS_CLS_CR_TAG_LIST, carrier, 0).0 as u64;
+        if tags == 0 || self.cr0(EE_UNITS_CLS_CR_TAG_COUNT, 0, tags).0 == 0 {
+            return None;
+        }
+        self.cr0(EE_UNITS_CLS_CR_SCRATCH_LOCATION, carrier, 0);
+        self.cr0(EE_UNITS_CLS_CR_SCRATCH_SCALE, carrier, 0);
+        let io =
+            self.cr(EE_UNITS_CLS_CR_TAG, carrier, plane, i64::from(index), tags as i64, Ge3DPoint::default(), 0.0).1;
+        Some(point(io.p))
     }
     fn set_orientation(&mut self, unit: u64, o: GeOrientation) {
         self.cr(EE_UNITS_CLS_CR_SET_ORIENTATION, unit, 0, 0, 0, Ge3DPoint { x: o.yaw, y: o.pitch, z: o.roll }, 0.0);
@@ -73,7 +105,9 @@ impl CarrierHost for ClsGame {
         self.cr0(EE_UNITS_CLS_COMMAND_TYPE, unit, 0).0 as i32
     }
     fn set_position(&mut self, unit: u64, p: Ge3DPoint) {
+        self.cr0(EE_UNITS_CLS_CR_SCRATCH_LOCATION, unit, 0);
         self.cr(EE_UNITS_CLS_CR_SET_POSITION, unit, 0, 0, 0, p, 0.0);
+        self.cr0(EE_UNITS_CLS_CR_SET_SCRATCH_TRANSFORMATION, unit, 0);
     }
     fn set_scale(&mut self, unit: u64, s: f32) {
         self.cr(EE_UNITS_CLS_CR_SET_SCALE, unit, 0, 0, 0, Ge3DPoint::default(), s);
@@ -88,13 +122,32 @@ impl CarrierHost for ClsGame {
         self.cr0(EE_UNITS_CLS_CR_HAS_AIR_TRAFFIC, unit, 0).0 != 0
     }
     fn deck_goal(&mut self, unit: u64, deck: Ge3DPoint) {
-        self.cr(EE_UNITS_CLS_CR_DECK_GOAL, unit, 0, 0, 0, deck, 0.0);
+        // the location goal (or heal goal) moved to the deck, else a new move goal there
+        let mut location = 0;
+        if self.cr0(crate::units::cls_move_host::EE_UNITS_CLS_MV_GOAL, unit, 0).0 != 0 {
+            let goal = self.cr0(EE_UNITS_CLS_CR_GOAL, unit, 0).0 as u64;
+            if self.cr0(EE_UNITS_CLS_CR_HAS_LOCATION, unit, goal).0 != 0 {
+                location = self.cr0(EE_UNITS_CLS_CR_GOAL, unit, 0).0 as u64;
+            }
+        }
+        if location == 0 {
+            let goal = self.cr(EE_UNITS_CLS_CR_DECK_GOAL, unit, 0, 0, 0, deck, 0.0).0 as u64;
+            self.cr0(EE_UNITS_CLS_CR_CLEAR_GOAL_QUEUE, unit, 0);
+            self.cr0(EE_UNITS_CLS_CR_SET_GOAL, unit, goal);
+        } else {
+            self.cr(EE_UNITS_CLS_CR_SET_LOCATION_POINT, unit, location, 0, 0, deck, 0.0);
+        }
     }
     fn location_goal_point(&mut self, unit: u64) -> Ge3DPoint {
         point(self.cr0(EE_UNITS_CLS_CR_LOCATION_GOAL_POINT, unit, 0).1.p)
     }
     fn home_first_slot(&mut self, unit: u64) -> u64 {
-        self.cr0(EE_UNITS_CLS_CR_HOME_FIRST_SLOT, unit, 0).0 as u64
+        if self.cr0(EE_UNITS_CLS_CR_ATC_SLOTS, unit, 0).0 as u32 > 0 {
+            self.cr0(EE_UNITS_CLS_CR_HOME_FIRST_SLOT, unit, 0);
+        } else {
+            self.cr0(EE_UNITS_CLS_CR_KILL, unit, 0);
+        }
+        self.home_base(unit)
     }
     fn next_waypoint_at(&mut self, unit: u64) -> Option<Ge3DPoint> {
         let (r, io) = self.cr0(EE_UNITS_CLS_NEXT_WAYPOINT, unit, 0);

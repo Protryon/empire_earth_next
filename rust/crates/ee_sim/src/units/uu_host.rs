@@ -4,6 +4,7 @@
 
 #![cfg(not(test))]
 
+use crate::units::uu_world_ops;
 use std::ffi::{c_long, c_void};
 
 use ee_base::math::types::GeTransformation;
@@ -59,25 +60,17 @@ extern "C" {
 }
 
 /// `ee_units_uu_host_world`'s questions and writes (one C++ switch).
-const WORLD_ADD_BUILD_TARGET: i32 = 2;
-const WORLD_RESTART_IDLE: i32 = 3;
 const WORLD_CAN_PRODUCE: i32 = 4;
-const WORLD_MAKE_WALL_PIECE: i32 = 5;
-const WORLD_TILE_UNIT: i32 = 6;
-const WORLD_CLEAR_AMBIENT: i32 = 7;
 const WORLD_REGIONS_FOOTPRINT: i32 = 8;
 const WORLD_LOADING: i32 = 9;
-const WORLD_STEP_ASIDE: i32 = 10;
 const WORLD_CAN_TAKE: i32 = 11;
 const WORLD_LAST_RESOURCE: i32 = 12;
 const WORLD_DEPOSIT_EFFECT: i32 = 13;
 const WORLD_ADD_RESOURCE: i32 = 14;
 const WORLD_STATISTIC: i32 = 15;
-const WORLD_EDITOR_TRANSPORT: i32 = 17;
 const WORLD_HAS_GATHER_POINT: i32 = 18;
 /// `ee_units_uu_host_world_f`'s.
 const WORLD_F_GATHER_REACH: i32 = 1;
-const WORLD_F_WALL_RISE: i32 = 2;
 const WORLD_F_DEPOSIT_FACTOR: i32 = 4;
 
 /// `ee_units_uu_host_player`'s questions.
@@ -469,24 +462,17 @@ impl UuHost for Game {
         unsafe { ee_units_uu_host_tiles_test(1, tiles.as_ptr(), tiles.len() as u32, 0) != 0 }
     }
     fn drop_point(&mut self, target: u64) -> [f32; 3] {
-        let mut out = [0.0; 3];
-        // SAFETY: a live unit; three floats
-        unsafe { ee_units_uu_host_spot(0, target, 0, 0, out.as_mut_ptr()) };
-        out
+        uu_world_ops::drop_point(&mut Ops, target)
     }
     fn part_left_out(&mut self, piece: u64) -> bool {
         // SAFETY: a live complex unit
         unsafe { ee_units_uu_host_spot(1, piece, 0, 0, std::ptr::null_mut()) != 0 }
     }
     fn path_area_id(&mut self, x: i32, y: i32) -> u16 {
-        // SAFETY: a C++ read of the continent manager
-        unsafe { ee_units_uu_host_spot(2, 0, x, y, std::ptr::null_mut()) as u16 }
+        uu_world_ops::path_area_id(&mut Ops, x, y)
     }
     fn gate_ends(&mut self, gate: u64) -> [[f32; 3]; 2] {
-        let mut out = [[0.0; 3]; 2];
-        // SAFETY: a live gate piece; six floats
-        unsafe { ee_units_uu_host_spot(3, gate, 0, 0, out.as_mut_ptr().cast()) };
-        out
+        uu_world_ops::gate_ends(&mut Ops, gate)
     }
 }
 
@@ -525,6 +511,28 @@ pub(crate) fn has_gather_point(unit: u64, resource: u64) -> bool {
     world(WORLD_HAS_GATHER_POINT, unit, resource, 0, 0, 0, 0.0) != 0
 }
 
+/// The world host's statements as they are (uu_world_ops.rs's compound questions over them).
+struct Ops;
+
+impl uu_world_ops::UuOps for Ops {
+    fn world(&mut self, which: i32, a: u64, b: u64, c: u64, x: i32, y: i32, f: f32) -> u64 {
+        world(which, a, b, c, x, y, f)
+    }
+    fn world_f(&mut self, which: i32, a: u64, b: u64, f: f32) -> f32 {
+        world_f(which, a, b, f)
+    }
+    fn spot(&mut self, which: i32, unit: u64, x: i32, y: i32, out: &mut [f32; 6]) -> i32 {
+        // SAFETY: the objects are live ones the C++ gave; six floats
+        unsafe { ee_units_uu_host_spot(which, unit, x, y, out.as_mut_ptr()) }
+    }
+    fn note_event(&mut self, a: i32, b: i32, c: i32) {
+        crate::units::uu_note::ee_units_uu_note_event(a, b, c);
+    }
+    fn shape_wall(&mut self, complex: u64, corner: i32, raised: i32) {
+        crate::units::uu_ffi::ee_units_uu_shape_wall(complex, corner, raised);
+    }
+}
+
 fn world(which: i32, a: u64, b: u64, c: u64, x: i32, y: i32, f: f32) -> u64 {
     // SAFETY: the objects are live ones the C++ gave (each question's own contract in the C++ switch)
     unsafe { ee_units_uu_host_world(which, a, b, c, x, y, f) }
@@ -552,10 +560,10 @@ impl UuWorld for Game {
         world_f(WORLD_F_GATHER_REACH, unit, target, distance) != 0.0
     }
     fn tile_unit(&mut self, tile: u64, unit: u64, add: bool) {
-        world(WORLD_TILE_UNIT, tile, unit, 0, i32::from(add), 0, 0.0);
+        uu_world_ops::tile_unit(&mut Ops, tile, unit, add);
     }
     fn clear_ambient(&mut self, unit: u64) {
-        world(WORLD_CLEAR_AMBIENT, unit, 0, 0, 0, 0, 0.0);
+        uu_world_ops::clear_ambient(&mut Ops, unit);
     }
     fn regions_footprint(&mut self, x: i32, y: i32, size: i32, complex: u64, add: bool) {
         world(WORLD_REGIONS_FOOTPRINT, complex, u64::from(add), size as u32 as u64, x, y, 0.0);
@@ -564,7 +572,7 @@ impl UuWorld for Game {
         world(WORLD_LOADING, 0, 0, 0, 0, 0, 0.0) != 0
     }
     fn step_aside(&mut self, complex: u64, player: u64, class: u64, x: i32, y: i32, force: bool) {
-        world(WORLD_STEP_ASIDE, complex, player, class, x, y, if force { 1.0 } else { 0.0 });
+        uu_world_ops::step_aside(&mut Ops, complex, player, class, x, y, force);
     }
     fn group_len(&mut self, group: u64) -> i32 {
         // SAFETY: a live active group (an EEGroup)
@@ -575,19 +583,19 @@ impl UuWorld for Game {
         read(|t| unsafe { GroupView::of(t, group) }.map_or(0, |g| g.unit_handle(i as usize)))
     }
     fn add_build_target(&mut self, unit: u64, piece: u64) {
-        world(WORLD_ADD_BUILD_TARGET, unit, piece, 0, 0, 0, 0.0);
+        uu_world_ops::add_build_target(&mut Ops, unit, piece);
     }
     fn restart_idle(&mut self, unit: u64) {
-        world(WORLD_RESTART_IDLE, unit, 0, 0, 0, 0, 0.0);
+        uu_world_ops::restart_idle(&mut Ops, unit);
     }
     fn can_produce(&mut self, player: u64, class: u64) -> bool {
         world(WORLD_CAN_PRODUCE, player, class, 0, 0, 0, 0.0) != 0
     }
     fn make_wall_piece(&mut self, class: u64, player: u64, x: i32, y: i32, corner: i32, foundation: bool) -> u64 {
-        world(WORLD_MAKE_WALL_PIECE, class, player, corner as u32 as u64, x, y, if foundation { 1.0 } else { 0.0 })
+        uu_world_ops::make_wall_piece(&mut Ops, class, player, x, y, corner, foundation)
     }
     fn wall_rise(&mut self, wall: u64) -> f32 {
-        world_f(WORLD_F_WALL_RISE, wall, 0, 0.0)
+        uu_world_ops::wall_rise(&mut Ops, wall)
     }
     fn map_size(&mut self) -> i32 {
         read(|t| WorldView::global(t).and_then(|w| w.map()).map_or(0, |m| m.size() as i32))
@@ -650,7 +658,7 @@ impl UuWorld for Game {
         world(WORLD_STATISTIC, container, 0, 0, series, amount, 0.0);
     }
     fn editor_transport_takes(&mut self, player: u64, unit_type: i32) -> bool {
-        world(WORLD_EDITOR_TRANSPORT, player, 0, 0, unit_type, 0, 0.0) != 0
+        uu_world_ops::editor_transport_takes(&mut Ops, player, unit_type)
     }
     fn region_units(&mut self, x: i32, y: i32) -> Vec<u64> {
         with_regions(|r| r.region(x as u32, y as u32).cloned().unwrap_or_default()).unwrap_or_default()

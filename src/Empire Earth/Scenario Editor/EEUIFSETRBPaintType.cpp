@@ -58,20 +58,8 @@ void FillScenarioComboBox(UIComboBox* inComboBox, UITextLabel* inLabel, bool inA
 void FillAreaObjectComboBox(UITextLabel* inLabel, UIComboBox* inComboBox, bool inAreas);   // EESETSEffect.cpp
 
 
-// p: three pointers, i: four integers, f: four floats (EE_SCREENS_SEE_OP_*): the ops left of the host (the toolkit's
-// in editor_direct.rs, the sequences and the Rust objects' calls in editor_tabsx.rs, over ee_screenscpp_seex)
-extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int32_t* i, float* f)
-{
-    switch (inOp) {
-    case EE_SCREENS_SEE_OP_HAS_EDITOR:
-        return gUIManager->GetScenarioEditorForm() != NULL;
-    case EE_SCREENS_SEE_OP_EPOCH_COUNT:
-        return (int32_t)EEEpochCount();
-    case EE_SCREENS_SEE_OP_MAX_PLAYERS:
-        return (int32_t)gWorld.mMaxPlayers;
-    }
-    return 0;
-}
+// (the host's ops, EE_SCREENS_SEE_OP_*, are Rust's: the toolkit's in editor_direct.rs, the sequences and the Rust
+// objects' calls in editor_tabsx.rs, the rest over ee_screenscpp_seex below: editor_whole_ffi.rs)
 
 
 namespace {
@@ -109,6 +97,8 @@ extern "C" int32_t ee_screenscpp_seex(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEEX_COMBO_APPEND: static_cast<UIComboBox*>(p[0])->AppendStringArray(sSeexNames);
         return 0;
     case EE_SCREENS_SEEX_EPOCH_COUNT: return (int32_t)EEEpochCount();
+    case EE_SCREENS_SEEX_HAS_EDITOR: return gUIManager->GetScenarioEditorForm() != NULL;
+    case EE_SCREENS_SEEX_MAX_PLAYERS: return (int32_t)gWorld.mMaxPlayers;
     }
     return 0;
 }

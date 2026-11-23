@@ -60,112 +60,6 @@ EECivilizationManager::EECivilizationManager()
     ee_tech_civ_bind_rules(EEGetRules().RustRules());
 }
 
-EECivilizationManager::~EECivilizationManager()
-{
-}
-
-// Reads the categories, then appends the civ powers' category (civbuilder.yaml's powers_category)
-long EECivilizationManager::Load(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 0); }
-
-// Reads the premade civilizations, sorted by index, and their eras
-long EECivilizationManager::LoadPremadeCivilizations(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 1); }
-
-long EECivilizationManager::GetExtraCost(EECivUpgrade inUpgrade) { return ee_tech_civ_extra_cost(inUpgrade); }
-
-long EECivilizationManager::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
-{
-    return ee_tech_civ_count_in_category(inUpgrade, inList->data(), inList->size());
-}
-
-unsigned long EECivilizationManager::GetNumCivilizations() { return ee_tech_civ_civilization_count(); }
-
-const EECivilizationEntry& EECivilizationManager::GetCivilization(unsigned long inIndex)
-{
-    return *reinterpret_cast<const EECivilizationEntry*>(ee_tech_civ_civilization((uint32_t)inIndex));
-}
-
-unsigned long EECivilizationManager::GetEraCount() { return ee_tech_civ_era_count(); }
-long EECivilizationManager::GetEra(unsigned long inIndex) { return ee_tech_civ_era((uint32_t)inIndex); }
-
-void EECivilizationManager::GetCivilizations(std::vector<EECivilizationEntry>& outCivs)
-{
-    ee_screens_civm_civilizations((uintptr_t)&outCivs, 0, true);
-}
-
-void EECivilizationManager::GetCivilizationsOfType(std::vector<EECivilizationEntry>& outCivs, long inType)
-{
-    ee_screens_civm_civilizations((uintptr_t)&outCivs, (int32_t)inType, false);
-}
-
-// Fills a list box with one header per era and a line per premade civilization of that era (civ_manager_calls.rs)
-void EECivilizationManager::FillCivilizationList(EECBUIListBox* inList)
-{
-    ee_screens_civ_fill_list(inList);
-}
-
-bool EECivilizationManager::MatchesPremadeCivilization(const UWideString& inFile, const UWideString& inName,
-                                                       std::vector<EECivUpgrade>& inUpgrades, long* outNameID)
-{
-    return ee_screens_civm_matches((const char*)inFile, (const char*)inName, (uint32_t)inName.GetLength(), inUpgrades.data(),
-                                   inUpgrades.size(), outNameID);
-}
-
-bool EECivilizationManager::GetCategoryNameID(unsigned long inCategory, long* outNameID)
-{
-    return ee_screens_civm_category_name_id((uint32_t)inCategory, outNameID);
-}
-
-bool EECivilizationManager::LookupLevel(EECivUpgrade inUpgrade, float* outValue, float* outBonus)
-{
-    return this->GetCategoryLevel(inUpgrade >> kCivUpgradeLevelBits, inUpgrade & kCivUpgradeLevelMask, outValue, outBonus);
-}
-
-bool EECivilizationManager::GetCategoryLevel(unsigned long inCategory, unsigned long inIndex, float* outValue,
-                                             float* outBonus)
-{
-    return ee_tech_civ_category_level((uint32_t)inCategory, (uint32_t)inIndex, outValue, outBonus);
-}
-
-bool EECivilizationManager::GetCategory(unsigned long inCategory, EECivilizationCategoryEntry** outEntry)
-{
-    return ee_screens_civm_category((uint32_t)inCategory, (void**)outEntry);
-}
-
-unsigned long EECivilizationManager::GetCategoryCount() { return ee_tech_civ_category_count(); }
-
-std::string EECivilizationManager::GetCategoryID(unsigned long inCategory)
-{
-    struct Sink {
-        static void Put(void* inCtx, const uint8_t* inBytes, size_t inLength)
-        {
-            static_cast<std::string*>(inCtx)->assign(reinterpret_cast<const char*>(inBytes), inLength);
-        }
-    };
-    std::string theID;
-    ee_tech_civ_category_id((uint32_t)inCategory, &theID, &Sink::Put);
-    return theID;
-}
-
-unsigned long EECivilizationManager::MakeUpgrade(unsigned long inCategory, unsigned long inIndex)
-{
-    return (inCategory << kCivUpgradeLevelBits) + (inIndex & kCivUpgradeLevelMask);
-}
-
-unsigned long EECivilizationManager::GetLevelCount(unsigned long inCategory) const
-{
-    return ee_tech_civ_level_count((uint32_t)inCategory);
-}
-
-long EECivilizationManager::LevelNameID(unsigned long inLevel) { return ee_tech_civ_level_name_id((uint32_t)inLevel); }
-bool EECivilizationManager::IsPowerLevel(unsigned long inLevel) { return ee_tech_civ_is_power_level((uint32_t)inLevel); }
-unsigned long EECivilizationManager::PowerLevel(unsigned long inPowerID) { return ee_tech_civ_power_level((uint32_t)inPowerID); }
-EECivUpgrade EECivilizationManager::FromLegacy(unsigned long inLegacy) { return ee_tech_civ_from_legacy((uint32_t)inLegacy); }
-
-bool EECivilizationManager::ToLegacy(EECivUpgrade inUpgrade, unsigned long& outLegacy)
-{
-    return ee_screens_civm_to_legacy(inUpgrade, &outLegacy);
-}
-
 bool EECivilizationManager::UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const
 {
     struct Sink {
@@ -175,18 +69,6 @@ bool EECivilizationManager::UpgradeKey(EECivUpgrade inUpgrade, std::string& outK
         }
     };
     return ee_tech_civ_upgrade_key(inUpgrade, &outKey, &Sink::Put);
-}
-
-bool EECivilizationManager::FindUpgradeKey(const std::string& inKey, EECivUpgrade& outUpgrade) const
-{
-    return ee_tech_civ_find_upgrade_key(reinterpret_cast<const uint8_t*>(inKey.data()), inKey.size(), &outUpgrade);
-}
-
-unsigned long EECivilizationManager::MakePowerUpgrade(unsigned long inIndex) { return ee_tech_civ_power_upgrade((uint32_t)inIndex); }
-
-void EECivilizationManager::SplitAttribute(EECivUpgrade inUpgrade, unsigned long* outCategory, unsigned long* outIndex)
-{
-    ee_screens_civm_split(inUpgrade, outCategory, outIndex);
 }
 
 std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
@@ -312,45 +194,11 @@ extern "C" void ee_screenscpp_civh_mining_limit(int32_t inPlayer, int64_t inKind
 extern "C" void ee_screenscpp_civh_camouflage(int32_t inPlayer) { CIVH_P(inPlayer)->EnableCamouflagePower(); }
 extern "C" bool ee_screenscpp_cbl_tabable(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetTabable(); }
 
-// Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
-bool EECivilizationManager::ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
-{
-    return ee_screens_civm_apply_upgrade(inUpgrade, inPlayer);
-}
-
 // ------------------------------------------------------------------------------------------------ the powers
 
 EECivPowersManager::EECivPowersManager()
 {
 }
-
-EECivPowersManager::~EECivPowersManager()
-{
-}
-
-// Reads the civilization power records (appended)
-long EECivPowersManager::Load(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 2); }
-
-// Reads a civilization power's name from the string table
-long EECivPowersManager::GetName(long inID, UWideString& outName)
-{
-    return gResource->GetString(inID + IDS_CIV_POWER_BASE, outName);
-}
-
-bool EECivPowersManager::GetPower(long inID, EECivPower& outPower)
-{
-    return ee_tech_civ_power((int32_t)inID, reinterpret_cast<EeTechCivPower*>(&outPower));
-}
-
-EECivPower* EECivPowersManager::GetPowerRecord(long inID)
-{
-    return reinterpret_cast<EECivPower*>(ee_tech_civ_power_record((int32_t)inID));
-}
-
-unsigned long EECivPowersManager::GetNumPowers() { return ee_tech_civ_power_count(); }
-
-// (an upgrade whose attribute applies the power: civbuilder.yaml; the original compared the level with the id)
-bool EECivPowersManager::HasPower(EEPlayer* inPlayer, long inID) { return ee_screens_civm_has_power((uintptr_t)inPlayer, inID); }
 
 // the db files' reads, the premade copies, ApplyUpgrade's capture halves and the powers' test: civ_manager_obj.rs over
 // these (UI lane round 12)
@@ -379,3 +227,8 @@ extern "C" uintptr_t ee_screenscpp_civm_purchased_count(uintptr_t inPlayer)
 { return ((EEPlayer*)inPlayer)->mCivilization.GetPurchasedUpgrades().size(); }
 extern "C" uintptr_t ee_screenscpp_civm_purchased_data(uintptr_t inPlayer)
 { return (uintptr_t)((EEPlayer*)inPlayer)->mCivilization.GetPurchasedUpgrades().data(); }
+
+long EECivPowersManager::GetName(long inID, UWideString& outName)
+{
+    return gResource->GetString(inID + IDS_CIV_POWER_BASE, outName);
+}

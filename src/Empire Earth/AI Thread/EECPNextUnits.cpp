@@ -66,15 +66,6 @@
 #include "rust/sim/units.h"
 #include "ee/EEUnitRegions.h"
 
-// ---------------------------------------------------------------------------------------------------------------
-// The state
-
-namespace {
-
-const unsigned char kBorrowedSlot = 0xfd;   // the slot id a computer player answers to while its order runs
-
-}  // namespace
-
 // The state is Rust's (ee_ai units_state.rs: the held set, the events, the forwarding, the enemy memory, the reflexes,
 // the limits, the danger layers, the bindings' scratch, ai.wall_route's path requests; units_bind.rs, units_more.rs,
 // units_world.rs: its hooks and the bindings): EEComputerPlayer::mUnitsState, made at the bindings' first call
@@ -103,28 +94,6 @@ void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool i
 
 bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType, std::vector<EEUnit*>& outUnits);   // EECPWallManager.cpp
 
-// the next level's cost of a class's improvement, as the improve verb pays it (ai.improve_cost): false for no node
-// now or no such improvement
-static bool EECPUnitsImproveCost(EEComputerPlayer* inPlayer, long inType, long inImprovement, EeAiUnitsImproveCost& outCost)
-{
-    if (inType < 0 || (unsigned long)inType >= EEUnitClassCount() || gUnitClassTable[inType] == NULL
-        || inPlayer->mTechnologies == NULL)
-        return false;
-    EETechTreeNode* theNode = inPlayer->mTechnologies->Get(gUnitClassTable[inType]->mTechnology);
-    if (theNode == NULL || theNode->mData == NULL || !theNode->GetIsAvailable() || theNode->GetIsObsolete())
-        return false;
-    EEUnitClass* theClass = gUnitClassTable[inType];
-    if (inImprovement < 0 || inImprovement >= 16 || theClass->mImprovements == NULL)
-        return false;
-    EEUnitClassUpgrade* theUpgrade = inPlayer->mUnitClassUpgrades[inType];
-    outCost.level = inPlayer->GetImprovementLevel(inType, inImprovement);
-    outCost.max = theClass->mImprovements->GetMaxLevel();
-    float theFactor = theClass->mImprovements->mEntries[inImprovement].mCostFactor * (float)outCost.level;
-    for (long i = 0; i < 5; i++)
-        outCost.cost[i] = inPlayer->ScaleCost(UMFloatToLong((float)theNode->mData->mCosts[kResourceFood + i] * theUpgrade->mCostScale * theFactor));
-    return true;
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The registration and the micro step are Rust (ee_ai units_bind.rs ee_ai_units_open, next_game.rs
 // ee_ai_next_micro_tick)
@@ -132,11 +101,6 @@ static bool EECPUnitsImproveCost(EEComputerPlayer* inPlayer, long inType, long i
 void* EECPUnitsRust(const EEComputerPlayer* inPlayer)
 {
     return inPlayer != NULL ? inPlayer->mUnitsState : NULL;
-}
-
-void EECPUnitsMicroTick(unsigned long inTime)
-{
-    ee_ai_next_micro_tick(inTime);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -158,16 +122,8 @@ bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
 // ---------------------------------------------------------------------------------------------------------------
 // The host of the Rust bindings (ee_ai units_bind.rs EE_AI_UNITS_HOST_*): what the world views do not hold
 
-// a command's message (ee_ai units_bind.rs EE_AI_UNITS_MSG_*), as the human's: on the selection under the borrowed
-// slot (mode 0, EECPUnitsRun's), or run as it is (mode 1)
-static const unsigned char kUnitsMessages[] = {0, kMessagePathTo, kMessageAttackUnit, kMessageAttackGround,
-    kMessageGatherResource, kMessageBuildUnit, kMessageRepairUnit, kMessageLoadGarrison, kMessageLoadTransport,
-    kMessageUnloadTransport, kMessageResearchTechnology, kMessageSetUnitBehavior, kMessageStopActiveGroup, kMessageExplore,
-    kMessageKillUnit, kMessageHealUnit, kMessageSetRallyGoal, kMessageRemoveTechnology, kMessageChangeFormation,
-    kMessagePackUnpack, kMessageDropoffResource, kMessageReplantFarms, kMessageSmartFarmers, kMessageCastCalamity,
-    kMessageAddPatrolPoint, kMessageLockUnlock, kMessageBuildWall, kMessageImproveUnit, kMessageHackANewUnit, kMessageBuildGate,
-    kMessageExchangeResources};
-
+// a command's message, as the human's: run as it is, or from the borrowed slot inSlot (0: none) (ee_ai units_cases.rs:
+// its type, the borrowed slot's sequence)
 static EEMRecordValue EECPUnitsValue(const EeAiUnitsMsgValue& inValue)
 {
     if (inValue.kind == 2)
@@ -177,69 +133,30 @@ static EEMRecordValue EECPUnitsValue(const EeAiUnitsMsgValue& inValue)
     return EEMRecordValue((long long)inValue.i);
 }
 
-static void EECPUnitsExecute(EEComputerPlayer* me, EEMessage& inMessage, long inMode)
+static void EECPUnitsRun(EEMessage&& inMessage, unsigned char inSlot)
 {
-    if (inMode == 1) {
-        inMessage.Execute();
-        return;
-    }
-    unsigned char theSlot = me->mSlot;
-    me->mSlot = kBorrowedSlot;
-    if (inMode == 2 || gWorld.GetPlayerBySlot(kBorrowedSlot) == me) {   // 2: the borrowed slot, unchecked
-        inMessage.SetOriginatingSlot(kBorrowedSlot);
-        inMessage.Execute();
-    }
-    me->mSlot = theSlot;
-    if (inMode == 0)   // 2, 3: the selection is not the order's
-        me->mActiveGroup->Clear();
+    if (inSlot != 0)
+        inMessage.SetOriginatingSlot(inSlot);
+    inMessage.Execute();
 }
 
-static void EECPUnitsExec(EEComputerPlayer* me, const EeAiUnitsMessage& m)
+static void EECPUnitsExec(unsigned char inType, const EeAiUnitsMessage& m, unsigned char inSlot)
 {
-    static_assert(sizeof(kUnitsMessages) == EE_AI_UNITS_MSG_EXCHANGE + 1, "ee_ai units_bind.rs EE_AI_UNITS_MSG_*");
-    unsigned char theType = kUnitsMessages[m.message];
     const EeAiUnitsMsgValue* v = m.values;
     switch (m.count) {
-    case 0: { EEMRecord theMessage(theType); EECPUnitsExecute(me, theMessage, m.mode); break; }
-    case 1: { EEMRecord theMessage(theType, {EECPUnitsValue(v[0])}); EECPUnitsExecute(me, theMessage, m.mode); break; }
-    case 2: { EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1])}); EECPUnitsExecute(me, theMessage, m.mode); break; }
-    case 3: {
-        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2])});
-        EECPUnitsExecute(me, theMessage, m.mode);
-        break;
-    }
-    case 4: {
-        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3])});
-        EECPUnitsExecute(me, theMessage, m.mode);
-        break;
-    }
-    case 5: {
-        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3]),
-            EECPUnitsValue(v[4])});
-        EECPUnitsExecute(me, theMessage, m.mode);
-        break;
-    }
-    case 7: {
-        EEMRecord theMessage(theType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3]),
-            EECPUnitsValue(v[4]), EECPUnitsValue(v[5]), EECPUnitsValue(v[6])});
-        EECPUnitsExecute(me, theMessage, m.mode);
-        break;
-    }
-    default:
-        break;
+    case 0: EECPUnitsRun(EEMRecord(inType), inSlot); break;
+    case 1: EECPUnitsRun(EEMRecord(inType, {EECPUnitsValue(v[0])}), inSlot); break;
+    case 2: EECPUnitsRun(EEMRecord(inType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1])}), inSlot); break;
+    case 3: EECPUnitsRun(EEMRecord(inType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2])}), inSlot); break;
+    case 4: EECPUnitsRun(EEMRecord(inType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3])}), inSlot); break;
+    case 5: EECPUnitsRun(EEMRecord(inType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3]), EECPUnitsValue(v[4])}), inSlot); break;
+    case 7: EECPUnitsRun(EEMRecord(inType, {EECPUnitsValue(v[0]), EECPUnitsValue(v[1]), EECPUnitsValue(v[2]), EECPUnitsValue(v[3]), EECPUnitsValue(v[4]), EECPUnitsValue(v[5]), EECPUnitsValue(v[6])}), inSlot); break;
     }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // The continent manager and the walls for the Rust bindings (ee_ai units_more.rs): the only reads of the
 // continent manager's objects the bindings make (lane C re-points these when the continents move)
-
-static void EECPUnitsTilesIn(const EeAiUnitsTiles& inTiles, std::vector<U2DPoint<long> >& outTiles)
-{
-    outTiles.clear();
-    for (size_t k = 0; k < inTiles.len; k++)
-        outTiles.push_back(U2DPoint<long>(inTiles.xy[2 * k], inTiles.xy[2 * k + 1]));
-}
 
 // the classic wall manager's area utilities (EECPWallManager.cpp declares them the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
@@ -250,8 +167,9 @@ static int64_t EECPUnitsEffectBits(const EEEventEffect* inEffect)
     return inEffect == NULL ? -1 : (int64_t)(((uint64_t)(inEffect->mKind & 0xffff) << 48) | ((uint64_t)(uint32_t)inEffect->mUnitClass << 16) | (uint64_t)(inEffect->mAttribute & 0xffff));
 }
 
-// the units a gate's fit asks about (EE_AI_UNITS_HOST_GATE_FITS: emptied for each side)
+// the units a gate's fit asks about (EE_AI_UNITS_HOST_GATE_FITS: emptied for each side), the tiles of a level test
 static std::vector<EEUnit*> sGateUnits;
+static std::vector<U2DPoint<long> > sLevelTiles;
 
 // (the world's and the continent manager's reads are Rust's: units_bind.rs world_op)
 extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
@@ -262,41 +180,15 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return (int64_t)(uintptr_t)(me->mUnitsState != NULL ? me->mUnitsState : (me->mUnitsState = ee_ai_units_state_new()));
     case EE_AI_UNITS_HOST_UNIT:
         return a > 0 ? (int64_t)(uintptr_t)static_cast<RTSUnit*>(gWorld.GetUnit((unsigned long)a)) : 0;
-    case EE_AI_UNITS_HOST_MAP_SIZE: {
-        // the map's size in tiles (ee/EEMapDimensions.h)
-        long w = gWorld.mMap != NULL ? (long)gMapWidth : 0, h = gWorld.mMap != NULL ? (long)gMapHeight : 0;
-        return (int64_t)(((uint64_t)(uint32_t)h << 32) | (uint32_t)w);
-    }
-    case EE_AI_UNITS_HOST_CLASS_BY_NAME:
-        return EECPNextClassByName((const char*)(uintptr_t)a);
-    case EE_AI_UNITS_HOST_CLASS_NAME: {
-        std::string theName = EECPNextClassName((long)a);
-        size_t n = theName.size() < 1023 ? theName.size() : 1023;
-        memcpy(outRecord, theName.data(), n);
-        ((char*)outRecord)[n] = 0;
-        return (int64_t)n;
-    }
     case EE_AI_UNITS_HOST_DETACH:
         me->DetachUnitFromAI((EEComplexUnit*)(uintptr_t)a);
         return 0;
-    case EE_AI_UNITS_HOST_ATTACH: {
-        EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)a;
-        if (theUnit->mIsDetachedFromAI)
-            theUnit->mIsDetachedFromAI = false;
-        return 0;
-    }
-    case EE_AI_UNITS_HOST_UPGRADE: {
-        EEPlayer* theOwner = (EEPlayer*)(uintptr_t)a;
-        if (b < 0 || (unsigned long)b >= theOwner->mUnitClassUpgrades.size())
-            return 0;
-        return (int64_t)(uintptr_t)theOwner->mUnitClassUpgrades[(unsigned long)b];
-    }
+    case EE_AI_UNITS_HOST_UPGRADE_COUNT:
+        return (int64_t)((EEPlayer*)(uintptr_t)a)->mUnitClassUpgrades.size();
+    case EE_AI_UNITS_HOST_UPGRADE_AT:
+        return (int64_t)(uintptr_t)((EEPlayer*)(uintptr_t)a)->mUnitClassUpgrades[(size_t)b];
     case EE_AI_UNITS_HOST_TRACE_ON:
         return gCPTraceOn ? 1 : 0;
-    case EE_AI_UNITS_HOST_ASSIGNED:
-        return EECPNextAssigned(me, (EEUnit*)(uintptr_t)a);
-    case EE_AI_UNITS_HOST_HAS_ROOM:
-        return EECPNextHasRoom(me, (EEUnit*)(uintptr_t)a) ? 1 : 0;
     case EE_AI_UNITS_HOST_IS_HUMAN:
         return ((EEPlayer*)(uintptr_t)a)->IsHuman() ? 1 : 0;
     case EE_AI_UNITS_HOST_TEAMS:
@@ -307,25 +199,25 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return (int64_t)gWorld.mTeams[(size_t)a].GetNumPlayers();
     case EE_AI_UNITS_HOST_TEAM_PLAYER:
         return (int64_t)gWorld.mTeams[(size_t)a].GetPlayersAt((unsigned long)b);
-    case EE_AI_UNITS_HOST_GATHER_TARGET: {
-        EEUGRust* theGather = EEGatherGoalCast(((EEComplexUnit*)(uintptr_t)a)->GetGoalState());
-        if (theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mIsValid)
-            return (int64_t)theGather->GetGatherResource()->mUnitID;
+    case EE_AI_UNITS_HOST_GATHER_GOAL:
+        return (int64_t)(uintptr_t)EEGatherGoalCast(((EEComplexUnit*)(uintptr_t)a)->GetGoalState());
+    case EE_AI_UNITS_HOST_GATHER_RESOURCE:
+        return (int64_t)(uintptr_t)static_cast<RTSUnit*>(reinterpret_cast<EEUGRust*>((uintptr_t)a)->GetGatherResource());
+    case EE_AI_UNITS_HOST_ACTIVE_GROUP:
+        return (int64_t)(uintptr_t)me->mActiveGroup;
+    case EE_AI_UNITS_HOST_GROUP_CLEAR: me->mActiveGroup->Clear();
         return 0;
-    }
-    case EE_AI_UNITS_HOST_SELECT_BEGIN:
-        if (me->mActiveGroup == NULL)
-            return 0;
-        me->mActiveGroup->Clear();
-        return 1;
     case EE_AI_UNITS_HOST_SELECT_ADD:
         me->mActiveGroup->Add((EEComplexUnit*)(uintptr_t)a);
         return 0;
-    case EE_AI_UNITS_HOST_EXEC:
-        EECPUnitsExec(me, *(const EeAiUnitsMessage*)outRecord);
+    case EE_AI_UNITS_HOST_EXEC_RUN: EECPUnitsExec((unsigned char)a, *(const EeAiUnitsMessage*)outRecord, (unsigned char)b);
         return 0;
-    case EE_AI_UNITS_HOST_TECH_BY_NAME:
-        return EECPNextTechByName((const char*)(uintptr_t)a);
+    case EE_AI_UNITS_HOST_SLOT:
+        return me->mSlot;
+    case EE_AI_UNITS_HOST_SET_SLOT: me->mSlot = (unsigned char)a;
+        return 0;
+    case EE_AI_UNITS_HOST_SLOT_IS_ME:
+        return gWorld.GetPlayerBySlot((unsigned char)a) == me ? 1 : 0;
     case EE_AI_UNITS_HOST_CAN_PRODUCE:
         return me->EEPlayer::CanProduce((long)a, 0x20, 1, true, 3, NULL) ? 1 : 0;
     case EE_AI_UNITS_HOST_CAN_PLACE:
@@ -338,18 +230,12 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return me->mTechnologies->Get((long)a) != NULL ? 1 : 0;
     case EE_AI_UNITS_HOST_SEES_ALL:
         return EECPEngineSeesAll(me) ? 1 : 0;
-    case EE_AI_UNITS_HOST_BLOCK_TAKES: {
-        long theSize = *(const long*)outRecord;
-        return ee_units_uu_block_takes((uint64_t)(uintptr_t)me, (long)a, (long)b - 1, (long)c - 1, theSize + 2, theSize + 2, 0) ? 1 : 0;
-    }
     case EE_AI_UNITS_HOST_HAS_TREE:
         return me->mTechnologies != NULL ? 1 : 0;
-    case EE_AI_UNITS_HOST_NODE_AFFORD: {
-        EETechTreeNode* theNode = me->mTechnologies->Get((long)a);
-        if (theNode == NULL)
-            return -1;
-        return me->CanAfford(theNode, 0x20, 1) ? 1 : 0;
-    }
+    case EE_AI_UNITS_HOST_NODE_OF:
+        return (int64_t)(uintptr_t)me->mTechnologies->Get((long)a);
+    case EE_AI_UNITS_HOST_CAN_AFFORD:
+        return me->CanAfford((EETechTreeNode*)(uintptr_t)a, 0x20, 1) ? 1 : 0;
     case EE_AI_UNITS_HOST_FLIES_OVER:
         return ((EEUnitClass*)(uintptr_t)a)->FliesOver() ? 1 : 0;
     case EE_AI_UNITS_HOST_POP_COST:
@@ -368,21 +254,26 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return ((EETechTreeNode*)(uintptr_t)a)->GetIsAvailable() ? 1 : 0;
     case EE_AI_UNITS_HOST_NODE_OBSOLETE:
         return ((EETechTreeNode*)(uintptr_t)a)->GetIsObsolete() ? 1 : 0;
-    case EE_AI_UNITS_HOST_TECH_NAME: {
-        std::string theName = EECPNextTechName((long)a);
-        size_t n = theName.size() < 1023 ? theName.size() : 1023;
-        memcpy(outRecord, theName.data(), n);
-        ((char*)outRecord)[n] = 0;
-        return (int64_t)n;
-    }
     case EE_AI_UNITS_HOST_CAN_PRODUCE_AS:
         return me->CanProduce((long)a, (long)b, 1, c != 0, 3, NULL) ? 1 : 0;
     case EE_AI_UNITS_HOST_IS_EPOCH_ID:
         return EEIsEpochID((long)a) ? 1 : 0;
     case EE_AI_UNITS_HOST_EPOCH_COUNT:
         return EEEpochCount();
-    case EE_AI_UNITS_HOST_IMPROVE_COST:
-        return EECPUnitsImproveCost(me, (long)a, (long)b, *(EeAiUnitsImproveCost*)outRecord) ? 1 : 0;
+    case EE_AI_UNITS_HOST_NODE_HAS_DATA:
+        return ((EETechTreeNode*)(uintptr_t)a)->mData != NULL ? 1 : 0;
+    case EE_AI_UNITS_HOST_NODE_COST_AT:
+        return ((EETechTreeNode*)(uintptr_t)a)->mData->mCosts[kResourceFood + (long)b];
+    case EE_AI_UNITS_HOST_CLASS_IMPROVEMENTS:
+        return (int64_t)(uintptr_t)gUnitClassTable[(long)a]->mImprovements;
+    case EE_AI_UNITS_HOST_IMPROVE_MAX:
+        return ((EEUnitClassImprovementTable*)(uintptr_t)a)->GetMaxLevel();
+    case EE_AI_UNITS_HOST_IMPROVE_FACTOR: *(float*)outRecord = ((EEUnitClassImprovementTable*)(uintptr_t)a)->mEntries[(long)b].mCostFactor;
+        return 0;
+    case EE_AI_UNITS_HOST_IMPROVE_LEVEL:
+        return me->GetImprovementLevel((unsigned long)a, (long)b);
+    case EE_AI_UNITS_HOST_COST_SCALE: *(float*)outRecord = ((EEUnitClassUpgrade*)(uintptr_t)a)->mCostScale;
+        return 0;
     case EE_AI_UNITS_HOST_CAN_BUY:
         return me->CanBuy((long)a, (long)b, NULL) ? 1 : 0;
     case EE_AI_UNITS_HOST_IS_GATE_CLASS:
@@ -390,16 +281,8 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
     case EE_AI_UNITS_HOST_STANCE:
         gWorld.SetDiplomaticStance(me->mPlayerID, (long)a, (long)b);
         return 0;
-    case EE_AI_UNITS_HOST_GARRISON_FILL: {
-        EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)a;
-        return theUnit->AddGarrison(theUnit->mGarrisonCount + (long)b, theUnit->mGarrisonPopulation) ? 1 : 0;
-    }
-    case EE_AI_UNITS_HOST_SITE_BLOCKED:
-        return EECPNextSiteBlocked(me, (EEUnit*)(uintptr_t)a, NULL);
-    case EE_AI_UNITS_HOST_BUILD_UNSAFE:
-        return EECPNextBuildUnsafe(me, (long)a, (long)b);
-    case EE_AI_UNITS_HOST_SITE_THREAT:
-        return EECPNextSiteThreat(me, (long)a, (long)b, false, NULL);
+    case EE_AI_UNITS_HOST_ADD_GARRISON:
+        return ((EEComplexUnit*)(uintptr_t)a)->AddGarrison((long)b, (long)c) ? 1 : 0;
     case EE_AI_UNITS_HOST_FILLS_GARRISON:
         return EECPEngineFillsGarrison(me) ? 1 : 0;
     case EE_AI_UNITS_HOST_GOAL_LOCATION: reinterpret_cast<EEUGRust*>((uintptr_t)a)->GetGoalLocation(*(GE3DPoint*)outRecord);
@@ -428,11 +311,8 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
         return me->EEPlayer::GetPopulationLimit(0);
     case EE_AI_UNITS_HOST_T_BEHAVIORS:
         return (int64_t)(uintptr_t)gCPBehaviors;
-    case EE_AI_UNITS_HOST_TILES_LEVEL: {
-        std::vector<U2DPoint<long> > theFive;
-        EECPUnitsTilesIn(*(EeAiUnitsTiles*)outRecord, theFive);
-        return EEAreTilesLevel(theFive) ? 1 : 0;
-    }
+    case EE_AI_UNITS_HOST_TILES_LEVEL:
+        return EEAreTilesLevel(sLevelTiles = std::vector<U2DPoint<long> >((const U2DPoint<long>*)((EeAiUnitsTiles*)outRecord)->xy, (const U2DPoint<long>*)((EeAiUnitsTiles*)outRecord)->xy + ((EeAiUnitsTiles*)outRecord)->len)) ? 1 : 0;
     case EE_AI_UNITS_HOST_NODE_EVENT:
         return ((EETechTreeNode*)(uintptr_t)a)->mData->mResearchedEvent;
     case EE_AI_UNITS_HOST_EVENT_EFFECTS:

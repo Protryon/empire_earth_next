@@ -242,7 +242,7 @@ public:
     }
     virtual int64_t BaseCall(uint32_t inVirtual, int64_t inA, int64_t inB, float* ioF);
     EE_SHELL_SELF
-    static bool EnterKey() { return UIControl::sEnterKey->GetValue() != 0; }
+    static bool EnterKey() { return UIControl::Key(EeUiKey::Enter)->GetValue() != 0; }
 };
 
 class EEUIShellEdit : public UIEditBox, public EEUIShell {
@@ -349,7 +349,6 @@ protected:
     EE_SHELL_RECT(UIForm, SetRectangle, EE_SCREENS_SV_SET_RECTANGLE, void, return)
 };
 
-class UIControlsTable;
 
 // the file combo box (EEUIFileComboBox, shells_files.rs): "none", then inPath's files matching inPattern without their
 // extensions; CreateEntries refills it, SelectFile selects the line of a name (else "none": kErrorNotFound)

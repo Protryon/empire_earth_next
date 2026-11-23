@@ -100,16 +100,23 @@ pub trait TownHost {
     fn call(&mut self, op: i32, player: u32, index: u32, io: &mut EeUnitsTownIo) -> i32;
 }
 
-struct FfiHost {
-    ctx: *mut c_void,
-    f: EeUnitsTownFn,
+/// The game's host: EETownSaveHost's operations, the compound ones as their statements (town_split.rs).
+#[cfg(not(test))]
+fn host(ctx: *mut c_void, f: EeUnitsTownFn) -> impl TownHost {
+    crate::units::town_split::game::host(ctx, f)
 }
 
-impl TownHost for FfiHost {
-    fn call(&mut self, op: i32, player: u32, index: u32, io: &mut EeUnitsTownIo) -> i32 {
-        // SAFETY: the C++ host's contract (ee_units_towns_*)
-        unsafe { (self.f)(self.ctx, op, player, index, io) }
+/// (the unit tests call the walks with their own hosts)
+#[cfg(test)]
+fn host(ctx: *mut c_void, f: EeUnitsTownFn) -> impl TownHost {
+    struct FfiHost(*mut c_void, EeUnitsTownFn);
+    impl TownHost for FfiHost {
+        fn call(&mut self, op: i32, player: u32, index: u32, io: &mut EeUnitsTownIo) -> i32 {
+            // SAFETY: the C++ host's contract (ee_units_towns_*)
+            unsafe { (self.1)(self.0, op, player, index, io) }
+        }
     }
+    FfiHost(ctx, f)
 }
 
 /// A saved town.
@@ -416,7 +423,7 @@ pub fn apply(host: &mut dyn TownHost, pending: Option<&PendingTowns>, player: u3
 /// `f` is callable with `ctx` as [`EeUnitsTownFn`] documents.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_towns_save(ctx: *mut c_void, f: EeUnitsTownFn) -> i32 {
-    save(&mut FfiHost { ctx, f })
+    save(&mut host(ctx, f))
 }
 
 /// `EELoadTowns` over the C++ host: on success the towns are pending (returns the read result; `*pending` 1 when
@@ -426,7 +433,7 @@ pub unsafe extern "C" fn ee_units_towns_save(ctx: *mut c_void, f: EeUnitsTownFn)
 /// As [`ee_units_towns_save`]; `pending` writable.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_towns_load(ctx: *mut c_void, f: EeUnitsTownFn, areas: bool, pending: *mut u8) -> i32 {
-    let (r, towns) = load(&mut FfiHost { ctx, f }, areas);
+    let (r, towns) = load(&mut host(ctx, f), areas);
     // SAFETY: the caller's contract
     unsafe { *pending = u8::from(towns.is_some()) };
     if towns.is_some() {
@@ -449,7 +456,7 @@ pub extern "C" fn ee_units_towns_clear() {
 pub unsafe extern "C" fn ee_units_towns_repair(ctx: *mut c_void, f: EeUnitsTownFn, player: u32, apply: bool) -> bool {
     // the pending towns are a copy while the host runs (it never comes back here)
     let towns = pending().clone();
-    let mut host = FfiHost { ctx, f };
+    let mut host = self::host(ctx, f);
     if apply {
         self::apply(&mut host, towns.as_ref(), player);
         true

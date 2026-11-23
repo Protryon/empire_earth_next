@@ -5,6 +5,7 @@
 // ee/EEUIBUpgrade.h.
 #ifndef EE_EEUIFMGSTATUSBAR_H
 #define EE_EEUIFMGSTATUSBAR_H
+#include "rust/game/screens.h"
 
 class GEBitmap;
 class GEText;
@@ -19,16 +20,23 @@ public:
     EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout, unsigned long inScreenWidth,
                      unsigned long inScreenHeight, const GERectangle& inRectangle, UIForm* inForm, bool inScenarioEditor,
                      bool inEnabled, bool inArg10);
-    virtual ~EEUIFMGStatusBar();
-    virtual long CopyData();                // +0x14 0x269896
-    virtual long DrawPolygons();            // +0x18 0x26993f
-    virtual long DrawTextA();               // +0x1c 0x26997f
+    // Destroys the status bar button and its parts
+    virtual ~EEUIFMGStatusBar() { ee_screens_sba_destroy((uintptr_t)this); }
+    // Snapshots the button and its parts for drawing; shows the number of queued improvements
+    virtual long CopyData() { return (long)ee_screens_sba_copy_data((uintptr_t)this); }                // +0x14 0x269896
+    // Draws the button face (when enabled), the icon, the bar and the labels
+    virtual long DrawPolygons() { return (long)ee_screens_sba_draw_polygons((uintptr_t)this); }            // +0x18 0x26993f
+    // Draws the parts' texts, the second label when it has text, and the queued count
+    virtual long DrawTextA() { return (long)ee_screens_sba_draw_text((uintptr_t)this); }               // +0x1c 0x26997f
 protected:
-    virtual long MouseLButtonDown();        // +0x34 0x269a40
-    virtual long MouseLButtonUp();          // +0x38 0x269a9c
-    virtual long MouseMove(const GE2DPoint& inLocation);   // +0x40 0x269afa
-    virtual long MouseRButtonDown();        // +0x44 0x269b8b
-    virtual long MouseRButtonUp();          // +0x48 0x269be6
+    // The presses and the drag: inside an enabled button the icon nudged down-right as pressed (left and right presses),
+    // back on the release, following the mouse while captured; then the button's own (ee_screens upgrade.rs bar_mouse over
+    // the improvement button's host)
+    virtual long MouseLButtonDown() { return this->BarMouse(EE_SCREENS_UP_BAR_L_DOWN, NULL); }        // +0x34 0x269a40
+    virtual long MouseLButtonUp() { return this->BarMouse(EE_SCREENS_UP_BAR_L_UP, NULL); }          // +0x38 0x269a9c
+    virtual long MouseMove(const GE2DPoint& inLocation) { return this->BarMouse(EE_SCREENS_UP_BAR_MOVE, &inLocation); }   // +0x40 0x269afa
+    virtual long MouseRButtonDown() { return this->BarMouse(EE_SCREENS_UP_BAR_R_DOWN, NULL); }        // +0x44 0x269b8b
+    virtual long MouseRButtonUp() { return this->BarMouse(EE_SCREENS_UP_BAR_R_UP, NULL); }          // +0x48 0x269be6
     // the mouse handler EE_SCREENS_UP_BAR_* in Rust (ee_screens upgrade.rs bar_mouse; MoveIcon 0x269c43 is its)
     long BarMouse(uint32_t inWhich, const GE2DPoint* inLocation);
     // (SetIconBitmap 0x26c42a is Rust's: ee_screens status_box_calls.rs set_icon_bitmap)

@@ -20,23 +20,38 @@ public:
     UICheckBox(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
                UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inScaleBitmap);
     // the dtor (0x1005f9da) deleted the label: the Rust button's release does
-    void ChangeWidth(unsigned long inWidth);
-    virtual long CopyData();
-    virtual long DrawPolygons();
-    virtual long DrawTextA();
-    bool GetIsChecked() const;
-    UITextLabel* GetTextLabel() const;
+    // Resizes the check box and its label to a new width. No marker: ICF-folded into UITriStateCheckBox::ChangeWidth
+    // (0x10080916), the same body over the same offsets.
+    void ChangeWidth(unsigned long inWidth) { this->SubCall(EeUiButtonCall::CheckChangeWidth, (intptr_t)inWidth); }
+    // Copies the button and its label for the draw pass, deleting the label once the text was cleared
+    virtual long CopyData() { return (long)this->SubCall(EeUiButtonCall::CheckCopyData); }
+    // Draws the box bitmap (scaled to the control height when scaling) and the label
+    virtual long DrawPolygons() { return (long)this->SubCall(EeUiButtonCall::CheckDrawPolygons); }
+    // Draws the control's text and the label. No marker: ICF-folded into UITriStateCheckBox::DrawTextA (0x10080a05).
+    virtual long DrawTextA() { return (long)this->SubCall(EeUiButtonCall::CheckDrawText); }
+    bool GetIsChecked() const { return this->SubCall(EeUiButtonCall::CheckIsChecked) != 0; }
+    UITextLabel* GetTextLabel() const { return (UITextLabel*)this->SubCall(EeUiButtonCall::TextLabel); }
     virtual unsigned long GetType() const { return kControlTypeCheckBox; }
-    void SetChecked(bool inChecked);
-    void SetDisabled(bool inDisabled);
-    virtual void SetLocation(const GE2DPoint& inLocation);
-    void SetText(const UWideString& inText, GEFont* inFont);
+    // Checks or unchecks the box (unless disabled), swapping its bitmaps and firing the checked or unchecked trigger
+    void SetChecked(bool inChecked) { this->SubCall(EeUiButtonCall::CheckSetChecked, inChecked); }
+    // Enables or disables the box; a disabled box shows pressed, an enabled one normal
+    // Fixed (kept): enabling shows the box normal, not pressed
+    void SetDisabled(bool inDisabled) { this->SubCall(EeUiButtonCall::CheckSetDisabled, inDisabled); }
+    // Moves the check box and its label
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->SubCall(EeUiButtonCall::CheckSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY()); }
+    // Sets the label text, creating the label on first use; empty text hides the label
+    void SetText(const UWideString& inText, GEFont* inFont) { this->SubCall(EeUiButtonCall::CheckSetText, (intptr_t)&inText, (intptr_t)inFont); }
 protected:
-    virtual void ButtonUp();                // 0x1005fa07: the toggle, then UIButton's
-    virtual void ButtonDown();
-    virtual long MouseLButtonDown();
-    virtual long MouseLButtonUp();
-    virtual long MouseMove(const GE2DPoint& inLocation);
+    // Toggles the check, then releases the button
+    virtual void ButtonUp() { this->SubCall(EeUiButtonCall::CheckButtonUp); } // 0x1005fa07: the toggle, then UIButton's
+    // Presses the box unless it is disabled
+    virtual void ButtonDown() { this->SubCall(EeUiButtonCall::CheckButtonDown); }
+    // Handles a left-button press unless the box is disabled
+    virtual long MouseLButtonDown() { return (long)this->SubCall(EeUiButtonCall::CheckMouseLButtonDown); }
+    // Handles a left-button release unless the box is disabled
+    virtual long MouseLButtonUp() { return (long)this->SubCall(EeUiButtonCall::CheckMouseLButtonUp); }
+    // Handles mouse movement unless the box is disabled
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->SubCall(EeUiButtonCall::CheckMouseMove, 0, 0, inLocation.GetX(), inLocation.GetY()); }
     // Shows the box pressed
     virtual void MouseOver() { UIButton::MouseOver(); }
     virtual long MouseRButtonDown() { return kErrorOK; }

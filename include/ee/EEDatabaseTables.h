@@ -124,9 +124,9 @@ public:
     UString mName;
     UString mTextureName;                   // the lead string: the texture file, numbered _1 .. _n
     GEColor mColor;
-    GETexture* mPreviewTexture;             // the terrain list's preview (EELoadTerrainPreviews)
-    GETexture** mTextures;                  // [mColumns * row + column]
-    long mFirstTexture;                     // the textures numbered over the table
+    GETexture* mPreviewTexture = NULL;      // the terrain list's preview (EELoadTerrainPreviews)
+    GETexture** mTextures = NULL;           // [mColumns * row + column]
+    long mFirstTexture = 0;                 // the textures numbered over the table
     long mTextureSetID;                     // the mesh's texture set index
     std::vector<long> mUnitClasses;         // ambient unit classes (gUnitClassTable indices; Handle408 loads their media)
     static std::vector<EETerrainTable*> sTable;

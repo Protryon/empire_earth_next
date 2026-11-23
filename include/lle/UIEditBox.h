@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <vector>   // units including this header rely on it
+#include "rust/ui/editobj.h"
 
 class GEFont;
 class GEText;
@@ -30,57 +31,61 @@ public:
     UIEditBox(const UIEditBox&) = delete;
     UIEditBox& operator=(const UIEditBox&) = delete;
     virtual ~UIEditBox();
-    virtual void AddIMEResultString(const UWideString& inString);
+    virtual void AddIMEResultString(const UWideString& inString) { this->Call(EeUiEditCall::AddImeResult, (intptr_t)(const char*)inString); }
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-                                            unsigned long inCursor);
-    virtual void ChangeFont(GEFont* inFont);
-    void ChangeWidth(unsigned long inWidth);
-    virtual long CloseIMECompositionString();
-    void Copy();
-    virtual long CopyData();
-    void Cut();
+                                            unsigned long inCursor) { return (long)this->Call(EeUiEditCall::ImeChange, (intptr_t)(const char*)inString, inCursor, (intptr_t)(const char*)inAttributes); }
+    virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiEditCall::ChangeFont, (intptr_t)inFont); }
+    void ChangeWidth(unsigned long inWidth) { this->Call(EeUiEditCall::ChangeWidth, inWidth); }
+    virtual long CloseIMECompositionString() { return (long)this->Call(EeUiEditCall::ImeClose); }
+    void Copy() { this->Call(EeUiEditCall::Copy); }
+    virtual long CopyData() { return (long)this->Call(EeUiEditCall::CopyData); }
+    void Cut() { this->Call(EeUiEditCall::Cut); }
     void DeleteText(unsigned long inStartIndex, unsigned long inStartLine, unsigned long inEndIndex,
-                    unsigned long inEndLine);
-    void DeleteText();
-    virtual long DrawPolygons();
-    virtual long DrawTextA();
-    void GetAllText(UWideString& outString) const;
-    GEText* GetGEText() const;
-    virtual bool GetIMEEnabled() const;
-    unsigned long GetLineCount() const;
-    const char* GetText(unsigned long inLine) const;
+                    unsigned long inEndLine) { this->Call(EeUiEditCall::DeleteRange, inStartIndex, inStartLine, inEndIndex, inEndLine); }
+    void DeleteText() { this->Call(EeUiEditCall::Clear); }
+    virtual long DrawPolygons() { return (long)this->Call(EeUiEditCall::DrawPolygons); }
+    virtual long DrawTextA() { return (long)this->Call(EeUiEditCall::DrawText); }
+    void GetAllText(UWideString& outString) const { outString = (const char*)this->Call(EeUiEditCall::AllText); }
+    GEText* GetGEText() const { return reinterpret_cast<GEText*>(this->Call(EeUiEditCall::Text)); }
+    virtual bool GetIMEEnabled() const { return this->Call(EeUiEditCall::ImeEnabled) != 0; }
+    unsigned long GetLineCount() const { return (unsigned long)this->Call(EeUiEditCall::LineCount); }
+    const char* GetText(unsigned long inLine) const { return (const char*)this->Call(EeUiEditCall::Line, inLine); }
     long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
-    virtual long OpenIMECompositionString();
-    virtual void ReleaseCapturedKeyboard();
-    void SelectText();
+    virtual long OpenIMECompositionString() { return (long)this->Call(EeUiEditCall::ImeOpen); }
+    virtual void ReleaseCapturedKeyboard() { this->Call(EeUiEditCall::ReleaseKeyboard); }
+    void SelectText() { this->Call(EeUiEditCall::SelectAll); }
     void SelectText(unsigned long inCaretIndex, unsigned long inStartIndex, unsigned long inCaretLine,
-                    unsigned long inStartLine);
-    void SetCaretLocation(unsigned long inIndex, unsigned long inLine);
-    void SetCursorColor(const GEColor& inColor);
-    void SetIsPasswordBox(bool inPasswordBox);
-    virtual void SetLocation(const GE2DPoint& inLocation);
-    void SetSelectedBgColor(const GEColor& inColor);
-    void SetText(const UWideString& inString);
+                    unsigned long inStartLine) { this->Call(EeUiEditCall::Select, inCaretIndex, inStartIndex, inCaretLine, inStartLine); }
+    void SetCaretLocation(unsigned long inIndex, unsigned long inLine) { this->Call(EeUiEditCall::SetCaretLocation, inIndex, inLine); }
+    void SetCursorColor(const GEColor& inColor) { this->CallColor(EeUiEditCall::SetCursorColor, inColor); }
+    void SetIsPasswordBox(bool inPasswordBox) { this->Call(EeUiEditCall::SetIsPasswordBox, inPasswordBox); }
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->CallPoint(EeUiEditCall::SetLocation, inLocation); }
+    void SetSelectedBgColor(const GEColor& inColor) { this->CallColor(EeUiEditCall::SetSelectedBgColor, inColor); }
+    void SetText(const UWideString& inString) { this->Call(EeUiEditCall::SetText, (intptr_t)(const char*)inString); }
     void SetText(unsigned long inValue)
     {
         char theBuffer[50];
         PlatIToA(inValue, theBuffer, 10);
         this->SetText(theBuffer);
     }
-    virtual long UpdateKeyboard();
-    virtual long UpdateTranslatedKey(const char* inKey, short inRepeat);
+    virtual long UpdateKeyboard() { return (long)this->Call(EeUiEditCall::UpdateKeyboard); }
+    virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return (long)this->Call(EeUiEditCall::UpdateTranslatedKey, (intptr_t)inKey, inRepeat); }
 protected:
     virtual void ButtonDown() { this->SetDirty(true); }  // slot 0x88
-    virtual long MouseLButtonDoublePressed();
-    virtual long MouseLButtonDown();
-    virtual long MouseLButtonUp();
-    virtual long MouseMove(const GE2DPoint& inLocation);
+    virtual long MouseLButtonDoublePressed() { return (long)this->Call(EeUiEditCall::MouseDoublePressed); }
+    virtual long MouseLButtonDown() { return (long)this->Call(EeUiEditCall::MouseLButtonDown); }
+    virtual long MouseLButtonUp() { return (long)this->Call(EeUiEditCall::MouseLButtonUp); }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->CallPoint(EeUiEditCall::MouseMove, inLocation); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
-    virtual void ProcessEnterKey();         // slot 0x8c
-    virtual void TabbedFrom();
-    virtual void TabbedTo();
+    virtual void ProcessEnterKey() { this->Call(EeUiEditCall::ProcessEnterKey); } // slot 0x8c
+    virtual void TabbedFrom() { this->Call(EeUiEditCall::TabbedFrom); }
+    virtual void TabbedTo() { this->Call(EeUiEditCall::TabbedTo); }
 private:
+private:
+    intptr_t CallColor(EeUiEditCall c, const GEColor& k) const { return this->Call(c, 0, 0, 0, 0, k.GetRed(), k.GetGreen(), k.GetBlue()); }
+    intptr_t CallPoint(EeUiEditCall c, const GE2DPoint& p, intptr_t a = 0) const { return this->Call(c, a, 0, 0, 0, p.GetX(), p.GetY()); }
+    intptr_t Call(EeUiEditCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, intptr_t d = 0, float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f) const { float f[4] = {f0, f1, f2, 0.0f}; return ee_ui_edit_call(this->mRust, c, a, b, cc, d, f); }
     EeUiEdit* mRust;                        // the state (editobj.rs)
 };
 

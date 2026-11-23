@@ -77,11 +77,15 @@ bool EETown::UpdateNearWater()
     return ee_cp_town_update_near_water(EETOWN_ARGS);
 }
 
+// a Rust point as the U2DPoint it is
+static U2DPoint<long> EETownPoint(const EeHerdPoint& inPoint)
+{
+    return U2DPoint<long>(inPoint.mX, inPoint.mY);
+}
+
 U2DPoint<long> EETown::GetRandomPoint()
 {
-    EeHerdPoint thePoint;
-    ee_cp_town_random_point(EETOWN_ARGS, &thePoint);
-    return U2DPoint<long>(thePoint.mX, thePoint.mY);
+    return EETownPoint(ee_cp_town_random_point(EETOWN_ARGS));
 }
 
 bool EETown::RemoveUnit(EEUnit* inUnit)
@@ -118,14 +122,6 @@ static int64_t EETownPack(const EETileCoordinate& inTile)
     return (int64_t)(((uint64_t)(uint32_t)inTile.mX << 32) | (uint32_t)inTile.mY);
 }
 
-static std::vector<U2DPoint<long> > EETownInputPoints(const TownIo* io)
-{
-    std::vector<U2DPoint<long> > thePoints;
-    for (size_t i = 0; i < io->input_len; i++)
-        thePoints.push_back(U2DPoint<long>((long)io->input[2 * i], (long)io->input[2 * i + 1]));
-    return thePoints;
-}
-
 extern "C" int64_t ee_cp_town_host(void* inTown, int32_t inOp, uint64_t inA, uint64_t inB, TownIo* io)
 {
     EETown* me = static_cast<EETown*>(inTown);
@@ -138,7 +134,7 @@ extern "C" int64_t ee_cp_town_host(void* inTown, int32_t inOp, uint64_t inA, uin
         return (int64_t)(uintptr_t)me->mPlayer;
     case EE_CP_TOWN_HAS_PATROL:
         return me->mPatrolGroup != NULL ? 1 : 0;
-    case EE_CP_TOWN_SET_PATROL: EEPGSetPatrolPoints(me->mPatrolGroup, EETownInputPoints(io), me->mPlayer->GetPlayerID());
+    case EE_CP_TOWN_SET_PATROL: EEPGSetPatrolPoints(me->mPatrolGroup, std::vector<U2DPoint<long> >((const U2DPoint<long>*)(uintptr_t)io->v[0], (const U2DPoint<long>*)(uintptr_t)io->v[0] + io->v[1]), me->mPlayer->GetPlayerID());
         return 0;
     case EE_CP_TOWN_FLAGS:
         return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);

@@ -11,6 +11,8 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIBUpgrade.h"
 #include "ee/EEUIFMGAttribute.h"
+#include "ee/EEScreensShims.h"
+#include "rust/game/screens.h"
 
 // Creates the main game form's attribute upgrade button with a level text in its corner
 EEUIFMGAttribute::EEUIFMGAttribute(GEFont* inFont, UIForm* inForm, const GERectangle& inRectangle,
@@ -20,11 +22,7 @@ EEUIFMGAttribute::EEUIFMGAttribute(GEFont* inFont, UIForm* inForm, const GERecta
                    (unsigned long)inRectangle.GetHeight(), inForm, inIndex, inScenarioEditor, inBorderThickness),
       mShowLevel(false)
 {
-    this->mLevelText = new GEText(inFont);
-    this->mLevelText->SetIsTransparent(true);
-    this->mLevelText->SetFgColor(inTextColor);
-    this->mLevelText->SetLocation(this->GetRectangle().GetLeft() + this->GetBorderThickness() * 2.0f,
-                            this->GetRectangle().GetTop() + this->GetBorderThickness() * 2.0f);
+    ee_screens_att_construct((uintptr_t)this, (uintptr_t)inFont, (uintptr_t)&inTextColor);   // (hud_more.rs)
 }
 
 // Destroys the attribute button and its level text
@@ -33,32 +31,28 @@ EEUIFMGAttribute::~EEUIFMGAttribute()
     delete this->mLevelText;
 }
 
-// Snapshots the button for drawing; shows the number of queued upgrades as its level text
-long EEUIFMGAttribute::CopyData()
+// the Rust bodies' shims (ee_screens hud_more.rs: the constructor's level text, CopyData, DrawTextA)
+#define ATT(a) reinterpret_cast<EEUIFMGAttribute*>(a)
+extern "C" uintptr_t ee_screenscpp_att_new_text(uintptr_t inAttr, uintptr_t inFont) { return (uintptr_t)(ATT(inAttr)->mLevelText = new GEText(reinterpret_cast<GEFont*>(inFont))); }
+extern "C" void ee_screenscpp_att_text_transparent(uintptr_t inAttr) { ATT(inAttr)->mLevelText->SetIsTransparent(true); }
+extern "C" void ee_screenscpp_att_text_fg(uintptr_t inAttr, uintptr_t inColor) { ATT(inAttr)->mLevelText->SetFgColor(*reinterpret_cast<const GEColor*>(inColor)); }
+extern "C" float ee_screenscpp_att_left(uintptr_t inAttr) { return ATT(inAttr)->GetRectangle().GetLeft(); }
+extern "C" float ee_screenscpp_att_top(uintptr_t inAttr) { return ATT(inAttr)->GetRectangle().GetTop(); }
+extern "C" uint32_t ee_screenscpp_att_border(uintptr_t inAttr) { return (uint32_t)ATT(inAttr)->GetBorderThickness(); }
+extern "C" void ee_screenscpp_att_text_set_location(uintptr_t inAttr, float inX, float inY) { ATT(inAttr)->mLevelText->SetLocation(inX, inY); }
+extern "C" int64_t ee_screenscpp_att_base_copy_data(uintptr_t inAttr) { return ATT(inAttr)->EEUIBUpgrade::CopyData(); }
+extern "C" int64_t ee_screenscpp_att_queued(uintptr_t inAttr) { return ATT(inAttr)->mNumQueued; }
+extern "C" void ee_screenscpp_att_level_text(uintptr_t inAttr, EeScreensShimText inText) { ATT(inAttr)->mLevelText->SetText(EEShimText(inText)); }
+extern "C" void ee_screenscpp_att_set_show(uintptr_t inAttr, bool inShow) { ATT(inAttr)->mShowLevel = inShow; }
+extern "C" bool ee_screenscpp_att_show(uintptr_t inAttr) { return ATT(inAttr)->mShowLevel; }
+extern "C" float ee_screenscpp_att_text_x(uintptr_t inAttr) { return ATT(inAttr)->mLevelText->GetLocation().GetX(); }
+extern "C" float ee_screenscpp_att_text_y(uintptr_t inAttr) { return ATT(inAttr)->mLevelText->GetLocation().GetY(); }
+extern "C" uint32_t ee_screenscpp_att_height(uintptr_t inAttr) { return (uint32_t)ATT(inAttr)->GetHeight(); }
+extern "C" uint32_t ee_screenscpp_att_width(uintptr_t inAttr) { return (uint32_t)ATT(inAttr)->GetWidth(); }
+extern "C" int64_t ee_screenscpp_att_base_draw_text(uintptr_t inAttr) { return ATT(inAttr)->EEUIBUpgrade::DrawTextA(); }
+extern "C" int64_t ee_screenscpp_att_draw_level(uintptr_t inAttr, float inLeft, float inTop, float inRight, float inBottom)
 {
-    long theResult = EEUIBUpgrade::CopyData();
-    if (this->mNumQueued > 0) {
-        char theBuffer[32];
-        PlatIToA(this->mNumQueued, theBuffer, 10);
-        this->mLevelText->SetText(UWideString(theBuffer));
-        this->mShowLevel = true;
-    } else
-        this->mShowLevel = false;
-    return theResult;
-}
-
-// Draws the button and, when shown, its level text
-long EEUIFMGAttribute::DrawTextA()
-{
-    float theBottom = this->mLevelText->GetLocation().GetY();
-    float theRight = this->mLevelText->GetLocation().GetX();
-    theBottom += this->GetHeight();
-    theRight += this->GetWidth();
-    GERectangle theRectangle(GE2DPoint(this->mLevelText->GetLocation()), GE2DPoint(theRight, theBottom));
-    long theResult = EEUIBUpgrade::DrawTextA();
-    if (this->mShowLevel)
-        theResult = this->GetForm()->DrawClippedText(theRectangle, this->mLevelText, this);
-    return theResult;
+    return ATT(inAttr)->GetForm()->DrawClippedText(GERectangle(GE2DPoint(inLeft, inTop), GE2DPoint(inRight, inBottom)), ATT(inAttr)->mLevelText, ATT(inAttr));
 }
 
 // Returns the icon's rectangle: the whole button, or a 17-pixel strip at its left in free camera mode

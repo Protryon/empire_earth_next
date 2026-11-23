@@ -96,10 +96,11 @@ pub const EE_SCREENS_SELTX_ADD_PENDING: u32 = 62;
 pub const EE_SCREENS_SELTX_REMOVE_KILLED: u32 = 63;
 pub const EE_SCREENS_SELTX_RELEASE_PENDING: u32 = 64;
 
-/// The text actions' (p1 a file spec `FSFileSpec*`): the export action p0's `&mFile`, the import action p0's `&mFile`
-/// and `mValidate`; p1's `FOpen("w")` / `FOpen("r")`, `Close()`, `feof`, `fgets` into the buffer (0x200 bytes; the
-/// answer: not NULL); `gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup()` / `ResumeCurrentGroup()`; the
-/// `"{Version_%ld}\n\n"` header's `fprintf` (as an `unsigned long`); `gSETextVersion`.
+/// The text actions' (p1 a file spec `FSFileSpec*`): the action p0's file and its validate flag (answered in Rust by
+/// the adapter from the action's [`EeScreensSeltInfo`]); p1's `FOpen("w")` / `FOpen("r")`, `Close()`, `feof`, `fgets`
+/// into the buffer (0x200 bytes; the answer: not NULL); `gUIManager->GetScenarioEditorForm()->RefreshCurrentGroup()`
+/// / `ResumeCurrentGroup()`; the `"{Version_%ld}\n\n"` header's `fprintf` (as an `unsigned long`) of a0 (the adapter
+/// passes [`EE_SCREENS_SELT_TEXT_VERSION`]); the version (answered by the adapter).
 pub const EE_SCREENS_SELTX_EXPORT_FILE: u32 = 70;
 pub const EE_SCREENS_SELTX_IMPORT_FILE: u32 = 71;
 pub const EE_SCREENS_SELTX_IMPORT_VALIDATE: u32 = 72;
@@ -128,9 +129,10 @@ pub const EE_SCREENS_SELTX_FORM_MESSAGE: u32 = 91;
 pub const EE_SCREENS_SELTX_QUESTION: u32 = 92;
 pub const EE_SCREENS_SELTX_FORM_QUESTION: u32 = 93;
 /// The specs and answers: `new FSFileSpec`, `new FSFileSpec(*p1)`, `delete p1`, p1's `SetVolume(gStartupVolume)`,
-/// `SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\")`, `SetFile(the text)`; `new EESEImportInfo{*p1, a0 !=
-/// 0}`, `delete` it; `gUserInterface->PostAction(new EESEIAExport(*p1))`, `PostAction(new EESEIAImport(p1->mFile,
-/// p1->mValidate))`.
+/// `SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\")`, `SetFile(the text)`; the import info (once `new
+/// EESEImportInfo{*p1, a0 != 0}`) and its `delete`, the posts of the export action (p1 a spec, copied) and of the
+/// import action (p1 an info, copied): answered by the adapter over `SPEC_COPY`, `SPEC_DELETE` and
+/// [`EE_SCREENS_SELTX_POST_TEXT_ACTION`].
 pub const EE_SCREENS_SELTX_SPEC_NEW: u32 = 100;
 pub const EE_SCREENS_SELTX_SPEC_COPY: u32 = 101;
 pub const EE_SCREENS_SELTX_SPEC_DELETE: u32 = 102;
@@ -141,6 +143,26 @@ pub const EE_SCREENS_SELTX_INFO_NEW: u32 = 106;
 pub const EE_SCREENS_SELTX_INFO_DELETE: u32 = 107;
 pub const EE_SCREENS_SELTX_POST_EXPORT: u32 = 108;
 pub const EE_SCREENS_SELTX_POST_IMPORT: u32 = 109;
+/// `gUserInterface->PostAction(new EESEARust(a0, p1))`: a text action (`EE_SCREENS_SEW_TEXT_*`) on its info.
+pub const EE_SCREENS_SELTX_POST_TEXT_ACTION: u32 = 5000;
+/// The trigger text files' version (`{Version_1}`; the original's `gSETextVersion` 0x4c2cb8, .data = 1).
+pub const EE_SCREENS_SELT_TEXT_VERSION: i64 = 1;
+/// The instructions screen's export and import buttons' events (`EESEERust` kinds; once `EESEIEExport` and
+/// `EESEIEImport`, vtables 0x442bd4 and 0x442be8): their `ProcessEvent` is `export_event` / `import_event`.
+pub const EE_SCREENS_SEE_TEXT_EXPORT: u32 = 5000;
+pub const EE_SCREENS_SEE_TEXT_IMPORT: u32 = 5001;
+/// The text actions (`EESEARust` kinds over an [`EeScreensSeltInfo`]; once `EESEIAExport`, vtable 0x442bb0, and
+/// `EESEIAImport`, vtable 0x442bc0): their `Virtual4` is `export` / `import`.
+pub const EE_SCREENS_SEW_TEXT_EXPORT: u32 = 5000;
+pub const EE_SCREENS_SEW_TEXT_IMPORT: u32 = 5001;
+
+/// A text action's or the import question's payload (once the actions' `mFile`/`mValidate` and `EESEImportInfo`,
+/// new 0x4c): the action's own copy of the file spec and whether the import only validates.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeScreensSeltInfo {
+    pub spec: usize,
+    pub validate: bool,
+}
 
 /// The statements answered in Rust by the adapter: `UMGetFloatingPointPrecision() == kFPPrecision53`,
 /// `UMSetFloatingPointPrecision(kFPPrecision53)`, `UMGetFloatingPointRoundingMode()`,

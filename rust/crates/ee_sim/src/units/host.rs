@@ -470,7 +470,6 @@ pub mod game {
     extern "C" {
         fn ee_units_host_random(low: i32, high: i32) -> i32;
         fn ee_units_host_play_acknowledgement(player: *mut c_void, group: *mut c_void, index: i32);
-        fn ee_units_host_map_height(x: f32, y: f32) -> f32;
         fn ee_units_host_send_group_command(
             group: *mut c_void,
             target: u32,
@@ -479,99 +478,33 @@ pub mod game {
             queue: i32,
         );
         fn ee_units_host_acknowledge_unit(player: *mut c_void, unit: u32);
-        fn ee_units_host_town_patrol_point(unit: u32, found: *mut u8) -> u32;
-        fn ee_units_host_unit_add_build_target(unit: u32, target: u32);
-        fn ee_units_host_unit_order_repair(unit: u32, target: u32);
-        fn ee_units_host_patrol_new_lone(player: *mut c_void, x: f32, y: f32);
-        fn ee_units_host_unit_goal_patrol_route(unit: u32) -> *mut c_void;
-        fn ee_units_host_goal_patrol_add_point(goal: *mut c_void, x: f32, y: f32, player: *mut c_void);
-        fn ee_units_host_path_to_point(first: u32, x: *mut f32, y: *mut f32) -> f32;
-        fn ee_units_host_wall_plan(
-            player: *mut c_void,
-            technology: i32,
-            start_x: f32,
-            start_y: f32,
-            end_x: f32,
-            end_y: f32,
-            count: *mut usize,
-        ) -> *mut c_void;
         fn ee_units_host_wall_build(group: *mut c_void, pieces: *mut c_void);
         fn ee_units_host_wall_release(pieces: *mut c_void);
         fn ee_units_host_unload_warning(player: *mut c_void, x: i64, y: i64);
         fn ee_units_host_can_produce(player: *mut c_void, technology: i32) -> u8;
-        fn ee_units_host_make_building(player: *mut c_void, unit_type: i64, x: i64, y: i64) -> u32;
-        fn ee_units_host_free_farms(unit: u32, out: *mut u32, capacity: usize) -> usize;
-        fn ee_units_host_sort_farms(farms: *mut u32, count: usize, x: i64, y: i64, greater: u8);
         fn ee_units_host_unit_add_farm_target(unit: u32, target: u32);
         fn ee_units_host_unit_order_build(unit: u32, target: u32);
-        fn ee_units_host_unit_start_action(unit: u32, action: i32);
-        fn ee_units_host_unit_load_farm(unit: u32) -> u32;
-        fn ee_units_host_farm_drop_sites(farm: u32, out: *mut u32, capacity: usize, found: *mut u8) -> usize;
-        fn ee_units_host_can_take(target: u32, unit: u32) -> u8;
         fn ee_units_host_unit_drop_gathered(unit: u32);
         fn ee_units_host_work_farm(farm: u32, unit: u32);
-        fn ee_units_host_calamity_of(
-            player: *mut c_void,
-            technology: i32,
-            class_enum: *mut i32,
-            cast_by_all: *mut u8,
-        ) -> *mut c_void;
-        fn ee_units_host_calamity_can_cast_at(class: *mut c_void, unit: u32, x: i32, y: i32, target: u32) -> i64;
         fn ee_units_host_technology_contains(player: *mut c_void, technology: i32, unit_type: i64) -> u8;
         fn ee_units_host_calamity_cost(class: *mut c_void) -> i64;
-        fn ee_units_host_group_split_calamity_casters(
-            group: *mut c_void,
-            class: *mut c_void,
-            player: *mut c_void,
-            technology: i32,
-            target: u32,
-        );
         fn ee_units_host_unit_clear_goals(unit: u32);
         fn ee_units_host_player_selection(player: *mut c_void) -> *mut c_void;
         fn ee_units_host_unit_seen_by(unit: u32, player: *mut c_void) -> u8;
-        fn ee_units_host_unit_ghost_seen(unit: u32) -> u8;
-        fn ee_units_host_unit_attackable(unit: u32, damage_index: i64) -> u8;
         fn ee_units_host_unit_can_attack_class(unit: u32, target: u32) -> u8;
         fn ee_units_host_unit_clear_goal_queue(unit: u32, queue: i64);
         fn ee_units_host_unit_clear_all_goal_queues(unit: u32);
         fn ee_units_host_unit_queue_goal(unit: u32, goal: *mut c_void, queue: i64);
-        fn ee_units_host_garrison_rally_load(garrison: u32) -> *mut c_void;
-        fn ee_units_host_unit_clear_air_traffic(unit: u32);
         fn ee_units_host_unit_clear_build_targets(unit: u32);
         fn ee_units_host_unit_action_changed(unit: u32);
         fn ee_units_host_unit_halt(unit: u32);
-        fn ee_units_host_unit_load_traits(unit: u32) -> u8;
-        fn ee_units_host_unit_load_goal(unit: u32, kind: u8) -> *mut c_void;
-        fn ee_units_host_load_goal_add_units(goal: *mut c_void, units: *const u32, count: usize);
-        fn ee_units_host_load_goal_new(
-            kind: u8,
-            carrier: u32,
-            units: *const u32,
-            count: usize,
-            flag: u8,
-        ) -> *mut c_void;
-        fn ee_units_host_load_goal_fields(goal: *mut c_void, x: *mut i64, y: *mut i64) -> u8;
         fn ee_units_host_player_event(player: *mut c_void, x: i64, y: i64, code: i32);
-        fn ee_units_host_research_node(player: *mut c_void, technology: i32, kind: *mut i32) -> u8;
         fn ee_units_host_scenario_game() -> u8;
         fn ee_units_host_unit_queue_research(unit: u32, technology: i32, front: u8);
         fn ee_units_host_player_class_scale(player_id: i64, unit_type: i32) -> f32;
-        fn ee_units_host_hack_create_unit(unit_type: i32, x: f32, y: f32, player_id: i64);
-        fn ee_units_host_hack_create_building(unit_type: i32, x: i64, y: i64, player_id: i64);
-        fn ee_units_host_transport_filter(transport: u32, units: *mut u32, count: usize, rejected: *mut u32) -> usize;
     }
 
-    /// A list the host fills: one call (`capacity` 0) for the count, a second for the ids. The host answers the
-    /// second call from the list the first computed (it keeps the last one), so the search runs once.
-    fn read_ids(out: &mut Vec<u32>, mut read: impl FnMut(*mut u32, usize) -> usize) {
-        out.clear();
-        let n = read(std::ptr::null_mut(), 0);
-        out.resize(n, 0);
-        if n > 0 {
-            let m = read(out.as_mut_ptr(), n);
-            out.truncate(m.min(n));
-        }
-    }
+    use crate::units::uh_body::{self as uh, game::UhGame};
 
     pub struct GameHost;
 
@@ -635,7 +568,7 @@ pub mod game {
         // SAFETY (each call below): plain values, and objects the host handed out as above; a unit id the host
         // resolves through the registry (the units a body names are alive for its call)
         fn map_height(&mut self, x: f32, y: f32) -> f32 {
-            unsafe { ee_units_host_map_height(x, y) }
+            uh::map_height(&mut UhGame, x, y)
         }
         fn group_keep_ground_attackers(&mut self, group: HostRef) {
             unsafe { go::keep(&mut GameGroups, grp(group), 1) }
@@ -647,9 +580,7 @@ pub mod game {
             unsafe { ee_units_host_acknowledge_unit(player.0, unit) }
         }
         fn town_patrol_point(&mut self, unit: u32) -> Option<u32> {
-            let mut found = 0u8;
-            let point = unsafe { ee_units_host_town_patrol_point(unit, &mut found) };
-            (found != 0).then_some(point)
+            uh::town_patrol_point(&mut UhGame, unit)
         }
         fn patrol_add_unit_tile(&mut self, unit: u32, target: u32, player: HostRef) {
             let route = view_of(unit, |u| u.patrol_group_handle()).unwrap_or(0);
@@ -674,10 +605,10 @@ pub mod game {
             crate::units::ag::spread_around_tile(&mut AgGame, group.0 as u64, x as i32, y as i32, false)
         }
         fn unit_add_build_target(&mut self, unit: u32, target: u32) {
-            unsafe { ee_units_host_unit_add_build_target(unit, target) }
+            uh::unit_add_build_target(&mut UhGame, unit, target)
         }
         fn unit_order_repair(&mut self, unit: u32, target: u32) {
-            unsafe { ee_units_host_unit_order_repair(unit, target) }
+            uh::unit_order_repair(&mut UhGame, unit, target)
         }
         fn group_add_member(&mut self, group: HostRef, unit: u32) {
             // `UnitOf(unit)->mComplexUnit->mComplexUnit`
@@ -688,7 +619,7 @@ pub mod game {
             unsafe { go::keep(&mut GameGroups, grp(group), 0) }
         }
         fn patrol_new_lone(&mut self, player: HostRef, x: f32, y: f32) {
-            unsafe { ee_units_host_patrol_new_lone(player.0, x, y) }
+            uh::patrol_new_lone(&mut UhGame, player.0 as usize as u64, x, y)
         }
         fn patrol_insert_point_at(&mut self, unit: u32, x: f32, y: f32, player: HostRef) {
             let object = crate::units::ffi::ee_units_resolve(unit);
@@ -697,15 +628,15 @@ pub mod game {
             unsafe { pg::ee_units_pg_insert_at(pg_of(route), x, y, player_id(player), object) }
         }
         fn unit_goal_patrol_route(&mut self, unit: u32) -> HostRef {
-            HostRef(unsafe { ee_units_host_unit_goal_patrol_route(unit) })
+            HostRef(uh::unit_goal_patrol_route(&mut UhGame, unit) as usize as *mut c_void)
         }
         fn patrol_add_point(&mut self, route: HostRef, x: f32, y: f32, player: HostRef) {
             // SAFETY: a live patrol group
             unsafe { pg::ee_units_pg_add_point(route.0.cast(), x, y, player_id(player)) }
         }
         fn goal_patrol_add_point(&mut self, goal: &GoalHandle, x: f32, y: f32, player: HostRef) {
-            // SAFETY: a goal the host created and nothing consumed yet
-            unsafe { ee_units_host_goal_patrol_add_point(goal.as_ptr(), x, y, player.0) }
+            // a goal the host created and nothing consumed yet
+            uh::goal_patrol_add_point(&mut UhGame, goal.as_ptr() as usize as u64, x, y, player.0 as usize as u64)
         }
         fn group_spread_around_unit(&mut self, group: HostRef, target: u32, x: i64, y: i64) {
             let target = crate::units::ffi::ee_units_resolve(target) as u64;
@@ -716,10 +647,7 @@ pub mod game {
             view_of(unit, |u| u.complex_unit().map_or(EE_UNIT_ID_NONE, |c| c.id())).unwrap_or(EE_UNIT_ID_NONE)
         }
         fn path_to_point(&mut self, first: u32, x: f32, y: f32) -> (f32, f32, f32) {
-            let (mut x, mut y) = (x, y);
-            // SAFETY: two floats the host reads and writes for the call
-            let z = unsafe { ee_units_host_path_to_point(first, &mut x, &mut y) };
-            (x, y, z)
+            uh::path_to_point(&mut UhGame, first, x, y)
         }
         fn group_reset_paths(&mut self, group: HostRef) {
             unsafe { go::reset_units_paths(&mut GameGroups, grp(group)) }
@@ -734,11 +662,8 @@ pub mod game {
             start: (f32, f32),
             end: (f32, f32),
         ) -> (HostRef, usize) {
-            let mut count = 0usize;
-            // SAFETY: the count is written for the call
-            let pieces =
-                unsafe { ee_units_host_wall_plan(player.0, technology, start.0, start.1, end.0, end.1, &mut count) };
-            (HostRef(pieces), count)
+            let (pieces, count) = uh::wall_plan(&mut UhGame, player.0 as usize as u64, technology, start, end);
+            (HostRef(pieces as usize as *mut c_void), count)
         }
         fn wall_build(&mut self, group: HostRef, pieces: HostRef) {
             unsafe { ee_units_host_wall_build(group.0, pieces.0) }
@@ -805,15 +730,13 @@ pub mod game {
             }
         }
         fn make_building(&mut self, player: HostRef, unit_type: i64, x: i64, y: i64) -> u32 {
-            unsafe { ee_units_host_make_building(player.0, unit_type, x, y) }
+            uh::make_building(&mut UhGame, player.0 as usize as u64, unit_type, x, y)
         }
         fn free_farms(&mut self, unit: u32, out: &mut Vec<u32>) {
-            // SAFETY: the host fills at most `capacity` ids
-            read_ids(out, |ids, capacity| unsafe { ee_units_host_free_farms(unit, ids, capacity) });
+            uh::free_farms(&mut UhGame, unit, out)
         }
         fn sort_farms(&mut self, farms: &mut [u32], x: i64, y: i64, greater: bool) {
-            // SAFETY: the host permutes the `count` ids in place
-            unsafe { ee_units_host_sort_farms(farms.as_mut_ptr(), farms.len(), x, y, greater as u8) }
+            uh::sort_farms(&mut UhGame, farms, x, y, greater)
         }
         fn unit_add_farm_target(&mut self, unit: u32, target: u32) {
             unsafe { ee_units_host_unit_add_farm_target(unit, target) }
@@ -822,19 +745,24 @@ pub mod game {
             unsafe { ee_units_host_unit_order_build(unit, target) }
         }
         fn unit_start_action(&mut self, unit: u32, action: i32) {
-            unsafe { ee_units_host_unit_start_action(unit, action) }
+            uh::unit_start_action(&mut UhGame, unit, action)
         }
         fn unit_load_farm(&mut self, unit: u32) -> u32 {
-            unsafe { ee_units_host_unit_load_farm(unit) }
+            uh::unit_load_farm(&mut UhGame, unit)
         }
         fn farm_drop_sites(&mut self, farm: u32, out: &mut Vec<u32>) -> bool {
-            let mut found = 0u8;
-            // SAFETY: as free_farms; the flag is written for the call
-            read_ids(out, |ids, capacity| unsafe { ee_units_host_farm_drop_sites(farm, ids, capacity, &mut found) });
-            found != 0
+            uh::farm_drop_sites(&mut UhGame, farm, out)
         }
         fn can_take(&mut self, target: u32, unit: u32) -> bool {
-            unsafe { ee_units_host_can_take(target, unit) != 0 }
+            uh::UhHost::uh(
+                &mut UhGame,
+                uh::EE_UNITS_UH_CAN_TAKE,
+                u64::from(target),
+                u64::from(unit),
+                0,
+                0,
+                &mut [0.0; 4],
+            ) != 0
         }
         fn unit_drop_gathered(&mut self, unit: u32) {
             unsafe { ee_units_host_unit_drop_gathered(unit) }
@@ -857,13 +785,11 @@ pub mod game {
             unsafe { go::finish(&mut GameGroups, grp(group)) }
         }
         fn calamity_of(&mut self, player: HostRef, technology: i32) -> Option<(HostRef, i32, bool)> {
-            let (mut class_enum, mut all) = (0i32, 0u8);
-            // SAFETY: the two values are written for the call
-            let class = unsafe { ee_units_host_calamity_of(player.0, technology, &mut class_enum, &mut all) };
-            (!class.is_null()).then_some((HostRef(class), class_enum, all != 0))
+            let (class, class_enum, all) = uh::calamity_of(&mut UhGame, player.0 as usize as u64, technology);
+            (class != 0).then_some((HostRef(class as usize as *mut c_void), class_enum, all))
         }
         fn calamity_can_cast_at(&mut self, class: HostRef, unit: u32, x: i32, y: i32, target: u32) -> i64 {
-            unsafe { ee_units_host_calamity_can_cast_at(class.0, unit, x, y, target) }
+            uh::calamity_can_cast_at(&mut UhGame, class.0 as usize as u64, unit, x, y, target)
         }
         fn technology_contains(&mut self, player: HostRef, technology: i32, unit_type: i64) -> bool {
             unsafe { ee_units_host_technology_contains(player.0, technology, unit_type) != 0 }
@@ -886,7 +812,14 @@ pub mod game {
             technology: i32,
             target: u32,
         ) {
-            unsafe { ee_units_host_group_split_calamity_casters(group.0, class.0, player.0, technology, target) }
+            uh::group_split_calamity_casters(
+                &mut UhGame,
+                group.0 as usize as u64,
+                class.0 as usize as u64,
+                player.0 as usize as u64,
+                technology,
+                target,
+            )
         }
         fn goal_clone(&mut self, goal: &GoalHandle) -> Option<GoalHandle> {
             // SAFETY: a goal the host created and nothing consumed
@@ -915,10 +848,11 @@ pub mod game {
             unsafe { ee_units_host_unit_seen_by(unit, player.0) != 0 }
         }
         fn unit_ghost_seen(&mut self, unit: u32) -> bool {
-            unsafe { ee_units_host_unit_ghost_seen(unit) != 0 }
+            uh::unit_ghost_seen(&mut UhGame, unit)
         }
         fn unit_attackable(&mut self, unit: u32, damage_index: i64) -> bool {
-            unsafe { ee_units_host_unit_attackable(unit, damage_index) != 0 }
+            uh::UhHost::uh(&mut UhGame, uh::EE_UNITS_UH_ATTACKABLE, u64::from(unit), 0, damage_index, 0, &mut [0.0; 4])
+                != 0
         }
         fn unit_class_targetable(&mut self, unit: u32) -> bool {
             // `EEUUGetIsUnitClassTargetable(NULL, unit->mUnitClass)`
@@ -983,7 +917,7 @@ pub mod game {
             GoalHandle::from_ptr(unsafe { crate::units::goal_spec::clone(goal) } as usize as *mut c_void)
         }
         fn garrison_rally_load(&mut self, garrison: u32) -> Option<GoalHandle> {
-            GoalHandle::from_ptr(unsafe { ee_units_host_garrison_rally_load(garrison) })
+            GoalHandle::from_ptr(uh::garrison_rally_load(&mut UhGame, garrison) as usize as *mut c_void)
         }
         fn object_record(&mut self, unit: u32) -> Option<EeUnitRecord> {
             // a unit the store does not hold, read on the object (rally.rs `selected`): the fields
@@ -1019,7 +953,7 @@ pub mod game {
             }
         }
         fn unit_clear_air_traffic(&mut self, unit: u32) {
-            unsafe { ee_units_host_unit_clear_air_traffic(unit) }
+            uh::UhHost::uh(&mut UhGame, uh::EE_UNITS_UH_CLEAR_AIR_TRAFFIC, u64::from(unit), 0, 0, 0, &mut [0.0; 4]);
         }
         fn unit_refresh_goals(&mut self, unit: u32) {
             // RefreshGoals, then RefreshActiveGoal (goals.rs)
@@ -1037,24 +971,19 @@ pub mod game {
             unsafe { ee_units_host_unit_halt(unit) }
         }
         fn unit_load_traits(&mut self, unit: u32) -> u8 {
-            unsafe { ee_units_host_unit_load_traits(unit) }
+            uh::unit_load_traits(&mut UhGame, unit)
         }
         fn unit_load_goal(&mut self, unit: u32, kind: u8) -> HostRef {
-            HostRef(unsafe { ee_units_host_unit_load_goal(unit, kind) })
+            HostRef(uh::unit_load_goal(&mut UhGame, unit, kind) as usize as *mut c_void)
         }
         fn load_goal_add_units(&mut self, goal: HostRef, units: &[u32]) {
-            // SAFETY: the host reads `count` ids for the call
-            unsafe { ee_units_host_load_goal_add_units(goal.0, units.as_ptr(), units.len()) }
+            uh::load_goal_add_units(&mut UhGame, goal.0 as usize as u64, units)
         }
         fn load_goal_new(&mut self, kind: u8, carrier: u32, units: &[u32], flag: bool) -> HostRef {
-            // SAFETY: as load_goal_add_units
-            HostRef(unsafe { ee_units_host_load_goal_new(kind, carrier, units.as_ptr(), units.len(), flag as u8) })
+            HostRef(uh::load_goal_new(&mut UhGame, kind, carrier, units, flag) as usize as *mut c_void)
         }
         fn load_goal_fields(&mut self, goal: HostRef) -> (bool, i64, i64) {
-            let (mut x, mut y) = (0i64, 0i64);
-            // SAFETY: the two values are written for the call
-            let valid = unsafe { ee_units_host_load_goal_fields(goal.0, &mut x, &mut y) };
-            (valid != 0, x, y)
+            uh::load_goal_fields(&mut UhGame, goal.0 as usize as u64)
         }
         fn load_goal_clone(&mut self, goal: HostRef) -> Option<GoalHandle> {
             // SAFETY: a live load goal the unit's queue holds
@@ -1074,18 +1003,20 @@ pub mod game {
             unsafe { go::add_member(&mut GameGroups, grp(group), complex, true) }
         }
         fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>) {
-            let mut out = vec![0u32; units.len()];
-            // SAFETY: the host keeps at most `count` ids in `units` and writes the others (at most `count`) to `out`
-            let kept =
-                unsafe { ee_units_host_transport_filter(transport, units.as_mut_ptr(), units.len(), out.as_mut_ptr()) };
-            let gone = units.len() - kept.min(units.len());
-            units.truncate(kept);
-            rejected.extend_from_slice(&out[..gone]);
+            // the kept ids in place, the rejected as the first `gone` of a zeroed buffer as long as the units
+            let (kept, out) = uh::transport_filter(&mut UhGame, transport, units);
+            let gone = units.len() - kept.len().min(units.len());
+            let mut buffer = vec![0u32; units.len()];
+            for (slot, id) in buffer.iter_mut().zip(out) {
+                *slot = id;
+            }
+            units.truncate(kept.len());
+            let n = units.len();
+            units.copy_from_slice(&kept[..n]);
+            rejected.extend_from_slice(&buffer[..gone]);
         }
         fn research_node(&mut self, player: HostRef, technology: i32) -> Option<crate::units::research::ResearchNode> {
-            let mut kind = 0i32;
-            // SAFETY: the kind is written for the call
-            let bits = unsafe { ee_units_host_research_node(player.0, technology, &mut kind) };
+            let (bits, kind) = uh::research_node(&mut UhGame, player.0 as usize as u64, technology);
             (bits & EE_UNITS_RESEARCH_FOUND != 0).then_some(crate::units::research::ResearchNode {
                 kind,
                 hero: bits & EE_UNITS_RESEARCH_HERO != 0,
@@ -1144,10 +1075,10 @@ pub mod game {
             crate::world::WorldView::global(&t).and_then(|w| w.map()).and_then(|m| m.tile(x, y)).is_some()
         }
         fn hack_create_unit(&mut self, unit_type: i32, x: f32, y: f32, player_id: i64) {
-            unsafe { ee_units_host_hack_create_unit(unit_type, x, y, player_id) }
+            uh::hack_create_unit(&mut UhGame, unit_type, x, y, player_id)
         }
         fn hack_create_building(&mut self, unit_type: i32, x: i64, y: i64, player_id: i64) {
-            unsafe { ee_units_host_hack_create_building(unit_type, x, y, player_id) }
+            uh::hack_create_building(&mut UhGame, unit_type, x, y, player_id)
         }
     }
 }

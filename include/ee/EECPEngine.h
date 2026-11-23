@@ -37,9 +37,7 @@ enum EECPEngineKind {
 
 // the lobby's choices (EEGameOptionsPlayer::mEngine; the engine box's lines, in this order)
 enum EECPEngineChoice {
-    kEECPChoiceClassic = 0,
-    kEECPChoiceRandom = 1,
-    kEECPChoiceFirstAI = 2,         // + k: the manifest's entry k
+    kEECPChoiceClassic = 0,         // 1 random, 2 + k the manifest's entry k
 };
 
 // an AI of the manifest (Data/ai/ais.json "ais"; its texts live as long as the process): id ([a-z0-9_]+, unique),
@@ -96,9 +94,5 @@ inline unsigned long EECPEngineResolve(unsigned long inChoice, unsigned long inS
 {
     return (unsigned long)ee_cp_engine_resolve(inChoice, inSeed, inSlot, inPlayerID);
 }
-
-// the next engine's start (EEComputerPlayer::Update, the first tick): resolves the script and loads it -> false
-// when it cannot (logged), and the seat then stands idle
-bool EECPNextPrepare(EEComputerPlayer* inPlayer);
 
 #endif

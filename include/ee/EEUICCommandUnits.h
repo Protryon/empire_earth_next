@@ -21,7 +21,8 @@ public:
     // 0x257881 (the user-defined control factory 0x274931; EESEUICCommandUnits 0x197274): a 2x2 rectangle at
     // gViewport's view rectangle top-left; references inListener
     EEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inListener);
-    virtual ~EEUICCommandUnits();
+    // Destroys the command control, its arrow model and texture
+    virtual ~EEUICCommandUnits() { ee_screens_cu_destroy((uintptr_t)this); }
     virtual long CopyData() { return this->Rust(EE_SCREENS_CU_DO_COPY_DATA); }
     virtual long DrawPolygons() { return this->Rust(EE_SCREENS_CU_DO_DRAW); }
     // +0x88 0x25829c: a right button press at inLocation (EEUIFMainGame; EESEUICCommandUnits 0x197383)
@@ -30,7 +31,12 @@ protected:
     virtual long MouseLButtonDoublePressed() { return 0; }
     virtual long MouseMove(const GE2DPoint& inLocation) { return this->Rust(EE_SCREENS_CU_DO_MOUSE_MOVE, &inLocation); }
     virtual long MouseRButtonUp() { return this->Rust(EE_SCREENS_CU_DO_MOUSE_R_UP); }
-    long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL);
+    // ComputeAngle, CopyData, DrawPolygons, the drag, the release and StartCommand: ee_screens command_units.rs
+    // (EE_SCREENS_CU_DO_*) over the arrow's, the view's, the selection's and the action's ops below
+    long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL)
+    {
+        return (long)ee_screens_command_units(this, this->Host(), inWhich, inLocation ? inLocation->GetX() : 0.0f, inLocation ? inLocation->GetY() : 0.0f);
+    }
 
 public:   // (for the shims of ee_screens command_units_calls.rs)
     EEAMouseClick* mListener;               // referenced (EEUIFMainGame's mouse click action)

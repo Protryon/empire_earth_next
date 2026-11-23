@@ -187,31 +187,54 @@ pub enum EeUiFormCall {
     SetDrawToolTipShadow = 94,
 }
 
-/// `UIDbDataForms`, the form record the database constructor reads (268 bytes on every target).
+/// `UIDbDataForms`, the form record the database constructor reads (268 bytes on every target; UI round 13: the C++
+/// struct is this one, generated under its name with the C++ members' names; the field docs are the offsets).
+/// cbindgen:field-names=[mLabel, mMusicFile, mUnusedID, mFormID, mControlCount, mControlGroupCount, mLeftOffset, mRightOffset, mBottomOffset, mTopOffset, mDesignedWidth, mDesignedHeight, mHelpTextTimeDelay, mUnused, mLeftOffsetType, mRightOffsetType, mTopOffsetType, mBottomOffsetType, mTabbingOn, mUseToolTips, mUseExclusiveCoords]
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct DbForm {
-    label: [u8; 0x64],
-    music: [u8; 0x64],
-    unused_id: i32,
-    form_id: i32,
-    control_count: u32,
-    group_count: u32,
-    left: f32,
-    right: f32,
-    bottom: f32,
-    top: f32,
-    designed_width: u32,
-    designed_height: u32,
-    help_delay: u32,
-    unused: u32,
-    left_type: u32,
-    right_type: u32,
-    top_type: u32,
-    bottom_type: u32,
-    tabbing: bool,
-    tool_tips: bool,
-    exclusive: bool,
+    /// +0x000
+    pub label: [u8; 0x64],
+    /// +0x064 "none" stops the music
+    pub music_file: [u8; 0x64],
+    /// +0x0c8 (provisional name)
+    pub unused_id: i32,
+    /// +0x0cc 0 or less: no form
+    pub form_id: i32,
+    /// +0x0d0
+    pub control_count: u32,
+    /// +0x0d4
+    pub control_group_count: u32,
+    /// +0x0d8
+    pub left_offset: f32,
+    /// +0x0dc
+    pub right_offset: f32,
+    /// +0x0e0
+    pub bottom_offset: f32,
+    /// +0x0e4
+    pub top_offset: f32,
+    /// +0x0e8
+    pub designed_width: u32,
+    /// +0x0ec
+    pub designed_height: u32,
+    /// +0x0f0
+    pub help_text_time_delay: u32,
+    /// +0x0f4 (provisional name)
+    pub unused: u32,
+    /// +0x0f8
+    pub left_offset_type: u32,
+    /// +0x0fc
+    pub right_offset_type: u32,
+    /// +0x100
+    pub top_offset_type: u32,
+    /// +0x104
+    pub bottom_offset_type: u32,
+    /// +0x108
+    pub tabbing_on: bool,
+    /// +0x109
+    pub use_tool_tips: bool,
+    /// +0x10a
+    pub use_exclusive_coords: bool,
 }
 
 const _: () = assert!(core::mem::size_of::<DbForm>() == 268);
@@ -352,11 +375,11 @@ impl EeUiForm {
     pub fn new_db(host: Host, manager: isize, d: &DbForm, music: &[u8], gdi: bool) -> Self {
         let mut s = Self::blank(manager);
         s.control_count = d.control_count as c_long;
-        s.group_count = d.group_count as c_long;
+        s.group_count = d.control_group_count as c_long;
         s.form_id = d.form_id as c_ulong;
-        s.use_tool_tips = d.tool_tips;
-        s.draw_shadow = d.tool_tips;
-        s.help_delay = d.help_delay as c_ulong;
+        s.use_tool_tips = d.use_tool_tips;
+        s.draw_shadow = d.use_tool_tips;
+        s.help_delay = d.help_text_time_delay as c_ulong;
         s.music = music.to_vec();
         if s.music.last() != Some(&0) {
             s.music.push(0);
@@ -364,20 +387,20 @@ impl EeUiForm {
         let f = EeUiForm { host, s: UnsafeCell::new(s) };
         f.init();
         f.with(|s| {
-            s.layout.left_type = d.left_type as c_ulong;
-            s.layout.left_offset = d.left;
-            s.layout.top_type = d.top_type as c_ulong;
-            s.layout.top_offset = d.top;
-            s.layout.right_type = d.right_type as c_ulong;
-            s.layout.right_offset = d.right;
-            s.layout.bottom_type = d.bottom_type as c_ulong;
-            s.layout.bottom_offset = d.bottom;
+            s.layout.left_type = d.left_offset_type as c_ulong;
+            s.layout.left_offset = d.left_offset;
+            s.layout.top_type = d.top_offset_type as c_ulong;
+            s.layout.top_offset = d.top_offset;
+            s.layout.right_type = d.right_offset_type as c_ulong;
+            s.layout.right_offset = d.right_offset;
+            s.layout.bottom_type = d.bottom_offset_type as c_ulong;
+            s.layout.bottom_offset = d.bottom_offset;
             s.designed_height = d.designed_height as c_ulong;
             s.designed_width = d.designed_width as c_ulong;
             s.use_gdi = gdi;
-            s.exclusive = d.exclusive;
+            s.exclusive = d.use_exclusive_coords;
         });
-        f.set_tabbing(d.tabbing);
+        f.set_tabbing(d.tabbing_on);
         f
     }
 

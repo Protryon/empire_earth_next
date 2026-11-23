@@ -29,62 +29,6 @@
 #include "ee/EEScreensShims.h"
 #include "rust/game/screens.h"   // ee_screens_sci_* (sci_calls.rs)
 
-// Resets the scenario intro manager: no open files and every flag cleared
-void EEUISCIFormManager::Clear() { ee_screens_sci_clear((uintptr_t)this); }
-
-// Closes and deletes the manager's map, scenario and sound files
-void EEUISCIFormManager::DeleteObjects() { ee_screens_sci_delete_objects((uintptr_t)this); }
-
-// Returns the scenario intro form's manager, creating and attaching it on first use
-EEUISCIFormManager* EEUISCIFormManager::Get() { return reinterpret_cast<EEUISCIFormManager*>(ee_screens_sci_get()); }
-
-// Returns the scenario's briefing text
-UWideString EEUISCIFormManager::GetBriefing()
-{
-    return this->mMediaStrings.mInstructions;
-}
-
-// Opens the scenario's map picture (.jpg, else .png; the original's second choice was .tga) from Scenarios; returns
-// whether one was found
-bool EEUISCIFormManager::OpenMap() { return ee_screens_sci_open_map((uintptr_t)this); }
-
-// Reopens the scenario file by name from Scenarios or the data path; returns whether it was found
-bool EEUISCIFormManager::OpenScenario() { return ee_screens_sci_open_scenario((uintptr_t)this); }
-
-// Opens the scenario's sound (.mp3) from Sounds; returns whether it was found
-bool EEUISCIFormManager::OpenSound() { return ee_screens_sci_open_sound((uintptr_t)this); }
-
-// Returns the scenario's history text
-UWideString EEUISCIFormManager::GetHistory()
-{
-    return this->mMediaStrings.mHistory;
-}
-
-// Returns the scenario's hints text
-UWideString EEUISCIFormManager::GetHints()
-{
-    return this->mMediaStrings.mHints;
-}
-
-// Opens the scenario's map picture, the scenario file or the sound and copies its file spec; returns whether it was
-// found
-bool EEUISCIFormManager::GetMap(FSFileSpec& outSpec) { return ee_screens_sci_get_map((uintptr_t)this, (uintptr_t)&outSpec); }
-bool EEUISCIFormManager::GetScenario(FSFileSpec& outSpec)
-{
-    return ee_screens_sci_get_scenario((uintptr_t)this, (uintptr_t)&outSpec);
-}
-bool EEUISCIFormManager::GetSound(FSFileSpec& outSpec)
-{
-    return ee_screens_sci_get_sound((uintptr_t)this, (uintptr_t)&outSpec);
-}
-
-// Returns whether the scenario has any briefing, hints, history, map or sound (the original counted its movie too;
-// no movie plays)
-bool EEUISCIFormManager::HasMedia() { return ee_screens_sci_has_media((uintptr_t)this); }
-
-// Starts or stops the main game's briefing button blinking, showing the large briefing alert while it blinks
-void EEUISCIFormManager::SetBlinking(bool inBlinking) { ee_screens_sci_set_blinking(inBlinking); }
-
 // ---- the shims (sci_calls.rs), each one statement on the manager (inM) or the main game form
 #define SCI(inM) reinterpret_cast<EEUISCIFormManager*>(inM)
 extern "C" void ee_screenscpp_sci_clear_loading(uintptr_t inM) { SCI(inM)->mIsLoadingFromGame = false; }

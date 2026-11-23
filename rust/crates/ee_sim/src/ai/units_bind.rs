@@ -127,6 +127,9 @@ unsafe fn ee_ai_units_host(op: i32, player: *mut c_void, a: i64, b: i64, c: i64,
     if let Some(r) = world_ops::op(op, player, a, b, c, out) {
         return r;
     }
+    if let Some(r) = case_ops::op(op, player, a, b, c, out) {
+        return r;
+    }
     match world_op(op, a, b, c, out) {
         Some(r) => r,
         None => ee_ai_units_host_cpp(op, player, a, b, c, out),
@@ -3583,3 +3586,7 @@ mod host_ops;
 // the host's operations whose bodies are Rust (AI Thread cluster round 8; were EECPNextUnits.cpp's)
 #[path = "units_world.rs"]
 mod world_ops;
+
+// the host's operations whose bodies are Rust (AI Thread cluster round 9; were EECPNextUnits.cpp's)
+#[path = "units_cases.rs"]
+mod case_ops;

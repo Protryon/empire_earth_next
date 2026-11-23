@@ -80,6 +80,16 @@ struct EeFsFileCalls {
   int32_t (*write_i32)(void *file, int32_t value);
   /// `Write(const float&)`.
   int32_t (*write_f32)(void *file, float value);
+  /// `Read(unsigned char&)`.
+  int32_t (*read_u8)(void *file, uint8_t *value);
+  /// `Read(unsigned short&)`.
+  int32_t (*read_u16)(void *file, uint16_t *value);
+  /// `Write(const unsigned char&)`.
+  int32_t (*write_u8)(void *file, uint8_t value);
+  /// `Write(const unsigned short&)`.
+  int32_t (*write_u16)(void *file, uint16_t value);
+  /// `GetIsOpen()`.
+  bool (*is_open)(void *file);
 };
 
 /// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.

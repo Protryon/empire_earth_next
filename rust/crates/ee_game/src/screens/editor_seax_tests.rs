@@ -573,3 +573,40 @@ fn seu_rotation_kill_unload_and_pick() {
     assert_eq!(pick(&mut h, 99, 4), [50, 51]);
     assert_eq!(seu(&mut h, EE_SCREENS_SEU_SELECT, 8, 0, 0.0), None);
 }
+
+/// A C++ enumerator's value (`NAME = value,`) in the header `path` (from the repository's root).
+fn cpp_enumerator(path: &str, name: &str) -> i64 {
+    let path = format!("{}/../../../{path}", env!("CARGO_MANIFEST_DIR"));
+    let text = std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+    for line in String::from_utf8_lossy(&text).lines() {
+        if let [n, "=", v, ..] = line.split_whitespace().collect::<Vec<_>>().as_slice() {
+            if *n == name {
+                let v = v.trim_end_matches(',');
+                return match v.strip_prefix("0x") {
+                    Some(h) => i64::from_str_radix(h, 16).unwrap(),
+                    None => v.parse().unwrap(),
+                };
+            }
+        }
+    }
+    panic!("{name} not in {path}")
+}
+
+#[test]
+fn the_message_ids_and_unit_types_equal_the_cpp_enumerators() {
+    // (once EESEARust.cpp's static_asserts)
+    use crate::screens::editor_actions::*;
+    let m = |n| cpp_enumerator("include/ee/EEMessageID.h", n);
+    assert_eq!(m("kMessageSelectUnit"), EE_SCREENS_SEU_MSG_SELECT_UNIT as i64);
+    assert_eq!(m("kMessageAddUnitToSelectedGroup"), EE_SCREENS_SEU_MSG_ADD_UNIT as i64);
+    assert_eq!(m("kMessageAlwaysAddUnitToSelectedGroup"), EE_SCREENS_SEU_MSG_ALWAYS_ADD_UNIT as i64);
+    assert_eq!(m("kMessageUnselectAllUnits"), EE_SCREENS_SEU_MSG_UNSELECT_ALL as i64);
+    assert_eq!(m("kMessageSelectUnits"), EE_SCREENS_SEU_MSG_SELECT_UNITS as i64);
+    assert_eq!(m("kMessageAddUnitsToSelectedGroup"), EE_SCREENS_SEU_MSG_ADD_UNITS as i64);
+    assert_eq!(m("kMessageAddAndRemoveUnitsFromSelectedGroup"), EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS as i64);
+    let u = |n| cpp_enumerator("include/ee/EEUnitClassIDs.h", n);
+    assert_eq!(u("kUnitTypeAirport"), i64::from(EE_SCREENS_SEAX_TYPE_AIRPORT));
+    assert_eq!(u("kUnitTypeGranary"), i64::from(EE_SCREENS_SEAX_TYPE_GRANARY));
+    assert_eq!(u("kUnitTypeGranaryImproved"), i64::from(EE_SCREENS_SEAX_TYPE_GRANARY_IMPROVED));
+    assert_eq!(u("kUnitTypeCameraObject"), i64::from(EE_SCREENS_SEAX_TYPE_CAMERA_OBJECT));
+}

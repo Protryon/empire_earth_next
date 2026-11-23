@@ -139,18 +139,6 @@ UIFileListBox::UIFileListBox(unsigned long inId, GEFont* inFont, bool inAutoSele
 }
 
 UIFileListBox::~UIFileListBox() { ee_ui_file_list_free(this->mRust); }
-void UIFileListBox::AddValidExtension(const UString& inExtension)
-{
-    ee_ui_file_list_call(this->mRust, EeUiFileListCall::AddExtension, (intptr_t)(const char*)inExtension);
-}
-void UIFileListBox::CreateEntries(unsigned long inSortType)
-{
-    ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType);
-}
-void UIFileListBox::SetSearchPaths(FSPath* inPath)
-{
-    ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath);
-}
 
 // Creates an empty file combo box (the given entries are ignored) with no search path
 UIFileComboBox::UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData,
@@ -165,17 +153,3 @@ UIFileComboBox::UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, 
 }
 
 UIFileComboBox::~UIFileComboBox() { ee_ui_file_list_free(this->mRust); }
-void UIFileComboBox::AddValidExtension(const UString& inExtension)
-{
-    ee_ui_file_list_call(this->mRust, EeUiFileListCall::AddExtension, (intptr_t)(const char*)inExtension);
-}
-void UIFileComboBox::CreateEntries(unsigned long inSortType)
-{
-    ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType);
-}
-long UIFileComboBox::DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }
-FSPath* UIFileComboBox::GetFilePath() const { return (FSPath*)ee_ui_file_list_call(this->mRust, EeUiFileListCall::FilePath, 0); }
-void UIFileComboBox::SetSearchPaths(FSPath* inPath)
-{
-    ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath);
-}

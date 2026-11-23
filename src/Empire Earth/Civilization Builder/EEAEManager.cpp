@@ -64,20 +64,6 @@ EEAEManager::EEAEManager()
 {
 }
 
-// Destroys the manager, releasing every template and effect
-EEAEManager::~EEAEManager()
-{
-    this->Clear();
-}
-
-// Adds the list's effects to every living unit they cover around a location (a radius-0 effect: to every
-// unit of every player); a healing effect skips its own unit and shows on the units it covers
-void EEAEManager::CollectEffects(float inRadius, GE2DPoint& inLocation, unsigned long inPlayerID,
-                           EEUnitAreaEffectList* inList, EEComplexUnit* inUnit)
-{
-    ee_screens_aem_collect(inRadius, inLocation.mX, inLocation.mY, inPlayerID, inList, inUnit);
-}
-
 // CollectEffects' and FindEffect's logic: area_effect_manager.rs over the one-statement shims below (UI lane
 // round 11)
 static std::vector<EEComplexUnit*> sAEMUnits;   // the living units around the location
@@ -110,79 +96,11 @@ extern "C" uintptr_t ee_screenscpp_aem_effects_at(uintptr_t inManager, uintptr_t
 extern "C" int64_t ee_screenscpp_aem_effect_player(uintptr_t inEffect)
 { return (int64_t)((EEAreaEffect*)inEffect)->mPlayer; }
 
-// Empties the list of active area effects
-void EEAEManager::ClearEffects() { ee_screens_aem_clear_effects((uintptr_t)this); }
-
-// Reads the area-effect templates from the area-effect file (an empty slot for records with id 0); returns 3
-// when a template fails to initialize
-long EEAEManager::Load(FSFile* inFile)
-{
-    return ee_screens_aes_load_templates(this, inFile);
-}
-
-// Creates the area effect of the template at an index (its kind's: healing, morale, calamity and conversion immunity,
-// morale from buildings, from military heroes, economy from units, cloaking) for a unit; NULL for an unknown kind
-EEAreaEffect* EEAEManager::CreateAreaEffect(unsigned long inIndex, EEComplexUnit* inUnit)
-{
-    return (EEAreaEffect*)ee_screens_aem_create((uintptr_t)this, inIndex, (uintptr_t)inUnit);
-}
-
-// Finds an active effect of a kind covering a point that affects the player (immunities only, by the
-// reversed player test, in immunity mode), skipping protected units' effects and those in the exclusion list
-EEAreaEffect* EEAEManager::FindEffect(long inKind, float inX, float inY, unsigned long inPlayer, bool inMode,
-                                    EEUnitAreaEffectList* inExclude)
-{
-    return static_cast<EEAreaEffect*>(ee_screens_aem_find(this, inKind, inX, inY, inPlayer, inMode, inExclude));
-}
-
 // Tells whether a point lies in the effect's scaled area around its location
 bool EEAreaEffect::IsInRange(const GE2DPoint& inPoint)
 {
     return this->mTemplate->IsWithin(inPoint, this->mLocation, this->GetScale(), NULL);
 }
-
-// Tells whether any active effect of the kind covers the point for the player
-bool EEAEManager::HasEffect(long inKind, float inX, float inY, unsigned long inPlayer, bool inMode,
-                           EEUnitAreaEffectList* inList)
-{
-    return this->FindEffect(inKind, inX, inY, inPlayer, inMode, inList) != NULL;
-}
-
-// Tells whether an effect of the kind covers a tile for the player
-bool EEAEManager::EffectAtTile(long inKind, long inX, long inY, long inPlayer, bool inMode)
-{
-    return this->HasEffect(inKind, (float)inX, (float)inY, inPlayer, inMode, NULL);
-}
-
-// Tells whether an effect of the kind covers a tile and affects the player
-bool EEAEManager::HasAreaEffect(long inKind, long inX, long inY, long inPlayer)
-{
-    return this->EffectAtTile(inKind, inX, inY, inPlayer, false);
-}
-
-// Tells whether an immunity effect of the kind covers a tile against the player
-bool EEAEManager::HasAreaEffect2(long inKind, long inX, long inY, long inPlayer)
-{
-    return this->EffectAtTile(inKind, inX, inY, inPlayer, true);
-}
-
-// Returns the effect of the kind that covers a tile and affects the player, or NULL
-EEAreaEffect* EEAEManager::FindEffectAtTile(long inKind, long inX, long inY, unsigned long inPlayer)
-{
-    return this->FindEffect(inKind, (float)inX, (float)inY, inPlayer, false, NULL);
-}
-
-// Loads the media of the template at an index, if any
-void EEAEManager::LoadTemplateMedia(unsigned long inIndex) { ee_screens_aem_template_media((uintptr_t)this, inIndex, true); }
-
-// Releases every template and empties the active effect list
-void EEAEManager::Clear() { ee_screens_aem_clear((uintptr_t)this); }
-
-// Unloads the media of the template at an index, if any
-void EEAEManager::UnloadTemplateMedia(unsigned long inIndex) { ee_screens_aem_template_media((uintptr_t)this, inIndex, false); }
-
-// Runs one area-effect tick: clear, apply, keep the strongest, update generators, rebuild the list, tick effects
-void EEAEManager::Tick(float inElapsed) { ee_screens_aem_tick((uintptr_t)this, inElapsed); }
 
 // port (save version 0.256, EEPWorldHelper): the area effects' running state. The original saved none of it: a
 // loaded game made each unit's own effects anew (MakeAreaEffects: no location, morale from buildings to be counted)

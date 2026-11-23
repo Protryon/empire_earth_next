@@ -81,7 +81,7 @@ static FOLDERS: [Folder; 6] = [
 ];
 
 #[cfg(not(test))]
-pub use game::fold;
+pub use game::{ee_combat_capture_condition, fold};
 
 #[cfg(not(test))]
 mod game {

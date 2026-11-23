@@ -998,9 +998,6 @@ constexpr static const uint32_t EE_SCENARIO_EN_MANAGER = 20;
 /// `manager->Reset()`.
 constexpr static const uint32_t EE_SCENARIO_EN_MANAGER_RESET = 21;
 
-/// `effect->ExecuteUncaptured(a)` (the run's context is C++: EESMEffectRun).
-constexpr static const uint32_t EE_SCENARIO_EN_EFFECT_RUN = 22;
-
 /// The save's version (major << 32 | minor), the capture's.
 constexpr static const uint32_t EE_SCENARIO_EN_SAVE_VERSION = 23;
 
@@ -1115,6 +1112,29 @@ constexpr static const uint32_t EE_SCENARIO_MN_PREPARE = 2;
 
 /// `Reset`: the numbers and the timed effects, the lists and their built-ins, the pending effects cleared.
 constexpr static const uint32_t EE_SCENARIO_MN_RESET = 3;
+
+/// The destructor's body (manager_compose.rs destroy).
+constexpr static const uint32_t EE_SCENARIO_MN_DESTROY = 3000;
+
+/// `EndCinematic`, `ExitCinematic`, `StartCinematic`, `ApplyPendingEffects` (cinematic.rs).
+constexpr static const uint32_t EE_SCENARIO_MN_END_CINEMATIC = 3001;
+
+constexpr static const uint32_t EE_SCENARIO_MN_EXIT_CINEMATIC = 3002;
+
+constexpr static const uint32_t EE_SCENARIO_MN_START_CINEMATIC = 3003;
+
+constexpr static const uint32_t EE_SCENARIO_MN_APPLY_PENDING = 3004;
+
+/// `MoveCameraToStart` (manager_compose.rs).
+constexpr static const uint32_t EE_SCENARIO_MN_MOVE_CAMERA = 3005;
+
+/// `AddV134Effect(*effect)`, `SetTimedEffectHasRun(effect, a != 0)` (manager_compose.rs).
+constexpr static const uint32_t EE_SCENARIO_MN_ADD_PENDING = 3006;
+
+constexpr static const uint32_t EE_SCENARIO_MN_SET_TIMED_HAS_RUN = 3007;
+
+/// `ReplaceUnit(a, b)` (cinematic.rs).
+constexpr static const uint32_t EE_SCENARIO_MN_REPLACE_UNIT = 3008;
 
 /// `gEventEffects.data()` (`EeScenarioEvEffect*`), `.size()`; `gLoadingSavedGame`; `gEventsEnabled`.
 constexpr static const uint32_t EE_SCENARIO_EV_EFFECTS_DATA = 0;
@@ -1340,6 +1360,15 @@ constexpr static const uint32_t EE_SCENARIO_EV_EVENT_ALLOC = 129;
 constexpr static const uint32_t EE_SCENARIO_EV_READ_EFFECTS = 130;
 
 constexpr static const uint32_t EE_SCENARIO_EV_EVENT_NO_EFFECTS = 131;
+
+/// File a0's `GetLength(*(unsigned long*)a1)` (the value kept on failure).
+constexpr static const uint32_t EE_SCENARIO_EV_FILE_LENGTH_INTO = 3000;
+
+/// `gResource->GetString(UMFloatToLong(f(a0)), sEvText)`.
+constexpr static const uint32_t EE_SCENARIO_EV_NAME_TEXT = 3001;
+
+/// Upgrade a0's `SetName(sEvText)`.
+constexpr static const uint32_t EE_SCENARIO_EV_SET_NAME_TEXT = 3002;
 
 /// The most players a choice can list (`EEScenarioManager::ChoosePlayer`'s out buffer; the world has at most 17).
 constexpr static const size_t EE_SCENARIO_MAX_PLAYERS = 64;
@@ -3238,6 +3267,9 @@ constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_COUNT = 19;
 /// The manager's media strings: `Load` (`slot` 0) or `Save` (1).
 constexpr static const uint32_t EE_SCENARIO_IO_MEDIA = 20;
 
+/// The media strings' `Save(major, minor, file)` (`EE_SCENARIO_IO_MEDIA` is their `Load`).
+constexpr static const uint32_t EE_SCENARIO_IO_MEDIA_SAVE = 3000;
+
 /// The manager's dialog messages (`EESMLoadVector` / `EESMSaveVector`): `slot` 0 load, 1 save.
 constexpr static const uint32_t EE_SCENARIO_IO_MESSAGES = 21;
 
@@ -4302,13 +4334,27 @@ constexpr static const uint32_t EE_SCENARIO_WC_SOUND_LOCAL = 731;
 
 constexpr static const uint32_t EE_SCENARIO_WC_SOUND_PLAY = 732;
 
+/// `new EESMEffectRun((EESMEffect*)a)` (the context is unused).
+constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_NEW = 3000;
+
+/// `delete inRun`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_FREE = 3001;
+
+/// `inRun->mObject = gWorld.mScenarioManager->GetScenarioObject(inRun->mEffect->mObject)` (Create Units' object).
+constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_OBJECT = 3002;
+
+/// `inRun->mCreatedUnits.size()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_CREATED = 3003;
+
+/// `inRun->mObject->SetUnits(inRun->mCreatedUnits)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_RUN_SET_UNITS = 3004;
+
 /// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
 struct EeScenarioTiles;
 
 /// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
 struct EeScenarioTimedQueue;
 
-/// `EEScenarioManager`'s numbers, in the class's order.
 struct EeScenarioManagerFields {
   long mGameResult;
   /// The camera zoom `StartCinematic` saves.
@@ -4681,10 +4727,6 @@ struct EeScenarioHostContext {
   void *object;
   void *cursor;
   void *tiles;
-  void *created;
-  void *location;
-  void *wall_pieces;
-  void *transform;
 };
 
 /// The stream's context record (`EESMStream`, ee/EEScenarioHost.h).
@@ -4751,6 +4793,31 @@ struct EeScenarioEvEffect {
   int32_t mUnused7;
   /// (sizeof 0x58)
   int32_t mUnused8;
+};
+
+/// One condition entry of a trigger (`EESMTConditionWrapper`, ee/EESMTrigger.h's typedef of this record; the C++ news
+/// it value-initialized: every field 0, the operator `EE_SCENARIO_SM_TRIGGER_OPERATOR_END`): the condition's index,
+/// the operator to the next entry, the negation.
+struct EeScenarioTConditionWrapper {
+  unsigned long mValue;
+  long mOperator;
+  bool mIsNot;
+};
+
+/// `EEScenarioManager`'s numbers, in the class's order.
+/// One unit class whose media the scenario loaded (`EESMUnitClassMedia`, ee/EEScenarioManager.h's typedef of this
+/// record; the manager's `mUnitClassMedia`): the player and the unit class type.
+struct EeScenarioUnitClassMedia {
+  long mPlayer;
+  long mUnitClass;
+};
+
+/// One effect entry of a trigger (`EESMTEffectWrapper`, ee/EESMTrigger.h's typedef of this record; value-initialized
+/// as the condition's): the operator to the next entry, the delay, the effect's index.
+struct EeScenarioTEffectWrapper {
+  long mOperator;
+  unsigned long mDelay;
+  unsigned long mEffectIndex;
 };
 
 extern "C" {
@@ -4867,8 +4934,12 @@ void ee_scenario_en_effect_set_player_attribute(void *e,
                                                 long mode,
                                                 long amount);
 
-/// `EESMEffect::Execute` (with the SMEX record; the run is the C++'s `ExecuteUncaptured`).
+/// `EESMEffect::Execute` (with the SMEX record; the run's context the C++'s EESMEffectRun).
 void ee_scenario_en_effect_execute(void *e, bool cinematic);
+
+/// `EESMEffect::CreateUnits`: on its own effect run, the effect's object (none: nothing); create.rs's units, which
+/// become the object's units when it made any.
+void ee_scenario_en_effect_create_units(void *e);
 
 /// `EESMEffect::ExpandTokens` (with the SMTK record): `text` and `out` the C++ strings (they may be one).
 void ee_scenario_en_effect_expand_tokens(void *e,
@@ -4897,6 +4968,28 @@ long ee_scenario_en_manager_load(void *m, void *file, unsigned long major, unsig
 
 /// `EEScenarioManager::Save`.
 long ee_scenario_en_manager_save(void *m, void *file, unsigned long major, unsigned long minor);
+
+/// TEST ONLY: SMUP of manager `m` (`human` a human plays) with the save version.
+void ee_scenario_en_cap_update(const void *m, bool human);
+
+/// TEST ONLY: SMCU (`kind`, the 7 longs at `args`, the unit, player and upgrade, the seed) with the save version.
+///
+/// # Safety
+/// `args` must hold 7 longs; the objects as `ee_scenario_cap_unit_change` takes them.
+void ee_scenario_en_cap_unit_change(long kind,
+                                    const long *args,
+                                    const void *unit,
+                                    const void *player,
+                                    const void *upgrade,
+                                    uint32_t seed);
+
+/// The manager's methods over its round host (`EE_SCENARIO_MN_DESTROY` ..): `effect` the effect of the pending and
+/// timed ones, `a`, `b` their numbers.
+void ee_scenario_en_round(void *m,
+                          uint32_t op,
+                          const void *effect,
+                          long a,
+                          long b);
 
 /// `EEScenarioManager::Update`, `ShowDialogMessage`, `Prepare` (`EE_SCENARIO_MN_*`).
 void ee_scenario_en_manager(void *m, uint32_t op);
@@ -4969,13 +5062,6 @@ size_t ee_scenario_area_region_inputs(EeScenarioArea *inputs,
 
 extern int64_t ee_scenariocpp_entry(uint32_t op, void *p, int64_t a, int64_t b);
 
-extern int64_t ee_scenariocpp_host_read(void *ctx,
-                                        uint32_t op,
-                                        int32_t a,
-                                        int32_t b,
-                                        int32_t c,
-                                        int32_t d);
-
 extern void ee_scenariocpp_host_players(void *ctx,
                                         int32_t kind,
                                         bool single,
@@ -4985,13 +5071,6 @@ extern void ee_scenariocpp_host_players(void *ctx,
                                         size_t count,
                                         uint32_t seed);
 
-extern void ee_scenariocpp_host_write(void *ctx,
-                                      uint32_t op,
-                                      long player,
-                                      int64_t b,
-                                      int64_t c,
-                                      int64_t d);
-
 extern void ee_scenariocpp_host_tiles(void *ctx,
                                       uint32_t op,
                                       int32_t a,
@@ -4999,32 +5078,7 @@ extern void ee_scenariocpp_host_tiles(void *ctx,
                                       int32_t c,
                                       EeScenarioTiles *list);
 
-extern int64_t ee_scenariocpp_host_world(void *ctx, uint32_t op, const int64_t *args);
-
 extern const EeScenarioObjectFields *ee_scenariocpp_host_object(void *ctx, int32_t index);
-
-extern int32_t ee_scenariocpp_stream_io(void *ctx,
-                                        uint32_t op,
-                                        uint32_t slot,
-                                        unsigned long index,
-                                        void *value);
-
-extern void *ee_scenariocpp_list_op(void *ctx,
-                                    uint32_t op,
-                                    uint32_t list,
-                                    size_t index,
-                                    void *element,
-                                    const char *text);
-
-extern int64_t ee_scenariocpp_round_op(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
-
-extern void *ee_scenariocpp_text_op(void *ctx,
-                                    uint32_t op,
-                                    uint32_t slot,
-                                    long value,
-                                    void *element,
-                                    const char *text,
-                                    const char *text2);
 
 /// `EEEvent::Trigger`: runs every effect of event `event` for a player (a given player's own index wins); the last
 /// effect's result.
@@ -5650,7 +5704,15 @@ int64_t ee_scenario_trigger_member(void *trigger,
 /// `host` must be valid for the call, `trigger` a live trigger.
 void ee_scenario_trigger_evaluate_member(const EeScenarioHost *host, void *trigger, float time);
 
-extern int64_t ee_scenariocpp_trigger(uint32_t op, void *trigger, int64_t i, int64_t v);
+/// A float's bits as the scenario channels carry them (the low 32 bits).
+int64_t ee_scenario_f32_bits(float value);
+
+/// The float whose bits are the low 32 bits of `bits`.
+float ee_scenario_bits_f32(int64_t bits);
+
+/// Two longs as one value: `x` in the low 32 bits, `y` in the high (the reads' points; area.rs unpack).
+int64_t ee_scenario_pack_xy(long x,
+                            long y);
 
 }  // extern "C"
 

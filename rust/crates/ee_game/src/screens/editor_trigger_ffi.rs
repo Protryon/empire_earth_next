@@ -14,6 +14,8 @@ mod sys {
     use core::ffi::c_void;
 
     extern "C" {
+        // (the file's statement host answers these ops too since round 6)
+        #[link_name = "ee_screenscpp_setrx"]
         pub fn ee_screenscpp_setr(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
     }
 }

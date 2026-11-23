@@ -7,34 +7,18 @@
 
 #include <vector>
 
-class EESMEffect;
-class FSArchive;
 
 class EECampaign {
 public:
     // EECampaign.cpp 0x28befc..0x28d82d (provisional name; the archive tag keys' chains, then the members in
     // alphabetical order); the dtor is implicit (inline COMDAT 0x1317a9). Names are provisional.
     EECampaign();                           // 0x28c08c (+0x74 = gStartupDirectory + "data\")
-    // 0x28c122: copies every file of inFiles found in gDataPath to the list outFiles (refilled) names
-    bool CopyScenarioFiles(std::vector<UWideString>& inFiles, std::vector<UWideString>& outFiles);
-    bool CreateScenarioList(const UWideString& inFile, UWideString& outError);
-    UWideString DecryptPassword(const UWideString& inPassword);    // 0x28c4a5 (UEDecryptUString)
-    UWideString EncryptPassword(const UWideString& inPassword);    // 0x28c517 (UEEncryptUString)
-    UWideString GetScenarioListFile();      // 0x28c589 ("Campaigns\" + gU52A280 + "ScenarioList.txt")
     const UWideString& GetAuthorEmail();    // 0x28c5f2 (+0x10)
     const UWideString& GetAuthorName();     // 0x28c5f6 (+0x24)
     const UWideString& GetCampaignName();   // 0x28c602 (+0x60)
     const UWideString& GetPassword();       // 0x28c606 (+0x88)
-    // 0x28ca06: the scenario files (and, through ListScenarioMedia, their media) of the campaign
+    // 0x28ca06: the scenario files and their media of the campaign (ee_game campaign.rs, with Save)
     bool ListScenarioFiles(std::vector<UWideString>& outFiles, UWideString& outError, bool inAdd, bool inPrefixed);
-    bool ListScenarioMedia(const UWideString& inFile, std::vector<UWideString>& ioFiles, UWideString& outError,
-                           bool inPrefixed);
-    bool ListEffectSound(const UWideString& inFile, EESMEffect* inEffect, std::vector<UWideString>& ioFiles,
-                         UWideString& outError, bool inPrefixed);
-    bool ListEffectSounds(const UWideString& inFile, std::vector<UWideString>& ioFiles, UWideString& outError,
-                          bool inPrefixed);
-    bool NotArchived(UWideString inFile);
-    bool SaveArchive(FSArchive* inArchive, UWideString& outError);
     bool Save(UWideString& outError);
     void SetAuthorEmail(const UWideString& inText);         // 0x28d79b (+0x10)
     void SetAuthorName(const UWideString& inText);          // 0x28d7ab (+0x24)

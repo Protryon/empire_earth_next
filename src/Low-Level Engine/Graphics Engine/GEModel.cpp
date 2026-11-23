@@ -325,32 +325,19 @@ const EeGePhysicalModels* GEPhysicalModelTable() { return &kPMModels; }   // the
 
 // Places a model in the world at a location and scale, holding a reference to it, at frame 0
 GEPhysicalModel::GEPhysicalModel(GEModel* inModel, const GETransformation& inLocation, float inScale)
+    : mLocation(inLocation), mModel(NULL), mScale(inScale), mFrame(0)
 {
-    this->mModel = inModel;
-    if (inModel)
-        inModel->Reference();
-    this->mLocation = inLocation;
-    this->mScale = inScale;
-    this->mFrame = 0;
+    this->SetModel(inModel);
 }
 
 // Destroys the placed model, releasing its model
-GEPhysicalModel::~GEPhysicalModel()
-{
-    if (this->mModel)
-        this->mModel->Dereference();
-}
+GEPhysicalModel::~GEPhysicalModel() { this->SetModel(NULL); }
 
 // Copies another placed model (model reference, location, scale, frame)
 GEPhysicalModel& GEPhysicalModel::operator=(const GEPhysicalModel& inModel)
 {
-    if (this->mModel)
-        this->mModel->Dereference();
-    this->mModel = inModel.mModel;
-    if (this->mModel)
-        this->mModel->Reference();
-    this->mLocation = inModel.mLocation;
-    this->mScale = inModel.mScale;
+    this->SetModel(inModel.mModel);
+    this->SetLocationAndScale(inModel.mLocation, inModel.mScale);
     this->mFrame = inModel.mFrame;
     return *this;
 }
@@ -403,14 +390,8 @@ bool GEPhysicalModel::Intersects(const GEViewport& inViewport, bool inOrthograph
 }
 
 // Replaces the placed model's model, keeping a reference to the new one
-void GEPhysicalModel::SetModel(GEModel* inModel)
-{
-    if (this->mModel)
-        this->mModel->Dereference();
-    this->mModel = inModel;
-    if (inModel)
-        inModel->Reference();
-}
+// (the old model released first: ee_ge_pm_set_model)
+void GEPhysicalModel::SetModel(GEModel* inModel) { ee_ge_pm_set_model(reinterpret_cast<void**>(&this->mModel), inModel); }
 
 // vector<vector<GEBoundingBox> > / vector<GEBoundingBox> COMDATs (Intersects of two models)
 
@@ -480,13 +461,11 @@ GETerrainMesh::~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }
 
 long GETerrainMesh::Load(unsigned long, unsigned long, FSFile& inFile)
 {
-    EeGeFieldIo theIO = GERustFieldIO(inFile);
-    return ee_ge_tm_load(this->mRust, &theIO);
+    return ee_ge_tm_load(this->mRust, &inFile);
 }
 
 long GETerrainMesh::Save(FSFile& inFile) const
 {
-    EeGeFieldIo theIO = GERustFieldIO(inFile);
-    return ee_ge_tm_save(this->mRust, &theIO);
+    return ee_ge_tm_save(this->mRust, &inFile);
 }
 

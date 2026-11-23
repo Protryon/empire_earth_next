@@ -45,6 +45,7 @@ pub mod graphobj;
 pub mod groupobj;
 pub mod hotkey;
 pub mod hotkeyobj;
+pub mod ids;
 pub mod label_fit;
 pub mod labelobj;
 pub mod layout;

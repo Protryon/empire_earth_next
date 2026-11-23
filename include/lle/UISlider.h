@@ -11,6 +11,7 @@
 
 #include "lle/GETextureCoordinate.h"
 #include "lle/GEBitmap.h"      // the units including this header rely on it
+#include "rust/ui/sliderobj.h"
 
 struct EeUiSlider;
 
@@ -23,31 +24,35 @@ public:
     UISlider(const UISlider&) = delete;
     UISlider& operator=(const UISlider&) = delete;
     virtual ~UISlider();
-    virtual long CopyData();
-    virtual long DrawPolygons();
-    long GetCurrentRangeValue() const;
-    long GetMaxRange() const;
-    unsigned long GetSliderStyle() const;
+    virtual long CopyData() { return (long)this->Call(EeUiSliderCall::CopyData); }
+    virtual long DrawPolygons() { return (long)this->Call(EeUiSliderCall::DrawPolygons); }
+    long GetCurrentRangeValue() const { return (long)this->Call(EeUiSliderCall::CurrentRangeValue); }
+    long GetMaxRange() const { return (long)this->Call(EeUiSliderCall::MaxRange); }
+    unsigned long GetSliderStyle() const { return (unsigned long)this->Call(EeUiSliderCall::Style); }
     virtual bool GetTabable() const { return false; }
-    void SetCurrentRangeValue(long inValue);
-    virtual void SetLocation(const GE2DPoint& inLocation);
-    void SetPageSize(unsigned long inPageSize);
-    void SetRange(unsigned long inMin, unsigned long inMax);
+    void SetCurrentRangeValue(long inValue) { this->Call(EeUiSliderCall::SetCurrentRangeValue, inValue); }
+    virtual void SetLocation(const GE2DPoint& inLocation) { this->CallAt(EeUiSliderCall::SetLocation, inLocation); }
+    void SetPageSize(unsigned long inPageSize) { this->Call(EeUiSliderCall::SetPageSize, inPageSize); }
+    void SetRange(unsigned long inMin, unsigned long inMax) { this->Call(EeUiSliderCall::SetRange, inMin, inMax); }
     virtual long UpdateKeyboard() { return kErrorOK; }
 protected:
     virtual void ButtonDown() {}            // slot 0x88
-    virtual void ButtonUp();                // slot 0x8c
-    virtual void ChangeRange(unsigned long inValue);   // slot 0x90
-    void DecrementByPageSize();
-    void IncrementByPageSize();
-    virtual long MouseLButtonDown();
-    virtual long MouseLButtonUp();
-    virtual long MouseMove(const GE2DPoint& inLocation);
+    virtual void ButtonUp() { this->Call(EeUiSliderCall::ButtonUp); } // slot 0x8c
+    virtual void ChangeRange(unsigned long inValue) { this->Call(EeUiSliderCall::ChangeRange, inValue); } // slot 0x90
+    void DecrementByPageSize() { this->Call(EeUiSliderCall::DecrementByPageSize); }
+    void IncrementByPageSize() { this->Call(EeUiSliderCall::IncrementByPageSize); }
+    virtual long MouseLButtonDown() { return (long)this->Call(EeUiSliderCall::MouseLButtonDown); }
+    virtual long MouseLButtonUp() { return (long)this->Call(EeUiSliderCall::MouseLButtonUp); }
+    virtual long MouseMove(const GE2DPoint& inLocation) { return (long)this->CallAt(EeUiSliderCall::MouseMove, inLocation); }
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void TabbedFrom() {}
     virtual void TabbedTo() {}
 
+private:
+    intptr_t Call(EeUiSliderCall c, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_slider_call(this->mRust, c, a, b, f); }
+    intptr_t CallAt(EeUiSliderCall c, const GE2DPoint& p) const { float f[4] = {p.GetX(), p.GetY(), 0.0f, 0.0f}; return ee_ui_slider_call(this->mRust, c, 0, 0, f); }
+protected:
     EeUiSlider* mRust;                      // the state (sliderobj.rs)
 };
 

@@ -77,12 +77,6 @@ static_assert(EE_SCREENS_BOX_IMPROVEMENT_FLIGHT_OR_POWER == kImprovementFlightTi
                   kDisplayModeShown == 1,
               "status_box.rs's constants");
 
-// The control an EE_SCREENS_BOX_CTL_* names
-UIControl* EEUIFMGStatusBox::GetBoxControl(int64_t inControl) const
-{
-    return static_cast<UIControl*>(ee_screens_status_box_control(this, inControl));   // (the record's slots)
-}
-
 // The call's unit (an EEUnit*) for the status box's view of it (hud_views.rs status_box_view, the original's
 // EEStatusBoxView), and whether the box has its third and fourth bars
 extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall, bool* outTwoBars)
@@ -91,7 +85,6 @@ extern "C" int64_t ee_screenscpp_status_box_unit(void* inCall, bool* outTwoBars)
     *outTwoBars = theCall.mBox->mCA8 != NULL && theCall.mBox->mCAC != NULL;
     return (int64_t)theCall.mUnit;
 }
-
 
 // ---- the one-statement shims of ee_screens status_box_calls.rs (UI lane round 8; once HostOp's cases and
 // EEUIFMGStatusBar::SetIconBitmap): each one call, no logic
@@ -254,11 +247,6 @@ void EEUIFMGStatusBox::LoadIcons()
     ee_screens_status_box_load_icons(&theCall);   // ee_screens status_box.rs load_icons (the cells, the texture choice)
 }
 
-// Releases the 50 attribute icon bitmaps
-void EEUIFMGStatusBox::UnloadIcons()
-{
-    ee_screens_sb_unload_icons();   // (status_box_calls.rs)
-}
 // Refreshes the status box texts for the unit: name, civilization, hit points, attributes, cargo, flight time
 // or power, garrison, and the resource it carries
 void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
@@ -272,16 +260,6 @@ void EEUIFMGStatusBox::UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovem
 {
     EEUIFMGStatusBoxCall theCall = {this, NULL, inUnit};
     ee_screens_status_box_update_queued(&theCall);   // ee_screens status_box.rs update_queued_counts
-}
-
-// Reloads the three unit improvement textures (after a device loss); returns the first error
-long EEUIFMGStatusBox::ReloadIcons()
-{
-    return (long)ee_screens_sb_reload_icons();   // (status_box_calls.rs)
-}
-
-EEUIFMGStatusBox::~EEUIFMGStatusBox()
-{
 }
 
 // the icons' load, unload and reload as the game's media calls them (Empire Earth.cpp: ee/EEGameUI.h)

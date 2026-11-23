@@ -45,20 +45,7 @@
 
 static_assert(sizeof(EeGeRastFog) == 0x20 && sizeof(GEColor) == sizeof(EeGeRastColor), "fog");
 
-static intptr_t GEFloatBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
-static float GEBitsFloat(intptr_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, 4);
-    return theValue;
-}
+static intptr_t GEFloatBits(float inValue) { return UFloatBits(inValue); }
 
 // The calls the Rust rasterizer makes on other objects (EeGeRastOp), in the original's order.
 struct GERasterizerHost {
@@ -79,7 +66,7 @@ struct GERasterizerHost {
         case EeGeRastOp::TextSetBgColor: static_cast<GEText*>(inObj)->SetBgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
         case EeGeRastOp::TextSetFont: static_cast<GEText*>(inObj)->SetFont(reinterpret_cast<GEFont*>(a)); return 0;
         case EeGeRastOp::TextSetIsTransparent: static_cast<GEText*>(inObj)->SetIsTransparent(a != 0); return 0;
-        case EeGeRastOp::TextSetLocation: static_cast<GEText*>(inObj)->SetLocation(GEBitsFloat(a), GEBitsFloat(b)); return 0;
+        case EeGeRastOp::TextSetLocation: static_cast<GEText*>(inObj)->SetLocation(UBitsFloat(a), UBitsFloat(b)); return 0;
         case EeGeRastOp::ActivateRasterizer: return static_cast<GERasterizer*>(inOwner)->ActivateRasterizer();
         case EeGeRastOp::FontBitmapNew:
             new GEFontBitmap(static_cast<GERasterizer*>(inOwner), reinterpret_cast<GEFont*>(a), (unsigned long)b);
@@ -152,8 +139,7 @@ float GERasterizer::GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inV
 
 void GERasterizer::SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
 {
-    float theRipple[3] = {inWaterRipple0, inWaterRipple1, inWaterRipple2};
-    ee_ge_rast_ripple(this->mRust, &theRipple, true);
+    ee_ge_rast_ripple_values(this->mRust, inWaterRipple0, inWaterRipple1, inWaterRipple2);
 }
 
 // 0x1002398a: GEText's scalar deleting dtor (see ~GERasterizer). A `delete p` compiles to a ??_G call whenever the
