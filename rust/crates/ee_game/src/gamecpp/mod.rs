@@ -120,6 +120,7 @@ pub mod msg_host;
 pub mod msg_objs;
 pub mod persist_text;
 pub mod session_objs;
+pub mod tech_hooks;
 //
 //
 
@@ -3477,6 +3478,14 @@ pub enum EeGameCpp {
     // ---- round 11, lane B (EECore11OpB's cases)
     //
     // ---- round 11, lane C (EECore11OpC's cases)
+    C11TcUnitComplex,
+    C11TcUnitId,
+    C11TcUnitType,
+    C11TcUnitHitPoints,
+    C11TcUnitTileNode,
+    C11TcComplexBuilt,
+    C11TcComplexPrevious,
+    C11TcComplexFlightTime,
     C11NmSender,
     C11NmPlayer,
     C11NmCurrent,

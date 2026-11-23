@@ -19,7 +19,7 @@
 
 // ------------------------------------------------------------------------- round 11, lane C: the run's host
 
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechCapture.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 
@@ -32,7 +32,7 @@ int64_t EECore11OpC6(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::C11CalHostNew: return P64((new EECalamityUpdateHost{(EECalamityClass*)p, (EECalamity*)a[0], {(EESoundObject*)a[1], (EESoundObject*)a[2]}, {}, NULL, {}, {}}));
     case O::C11CalHostDelete: delete (EECalamityUpdateHost*)p;
         break;
-    default: return EECore11OpE(inOp, p, a, f);
+    default: return EECore11OpC7(inOp, p, a, f);
     }
     return 0;
 }

@@ -29,22 +29,17 @@
 // the node's, epoch's and tree's states: their Rust records (ee_sim tech capture_rec.rs)
 static void EETechCaptureNodeImpl(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
 {
-    unsigned char theBytes[EE_TECH_CAPTURE_NODE_SIZE];
-    EETechTree* theTree = inNode->mTree;
-    ioRecord.Bytes(theBytes, ee_tech_capture_node(inNode, inNode->mData, theTree, EEEpochCount(), theBytes));
+    ee_gamecpp_tech_capture_node_rec(&ioRecord, inNode);   // (gamecpp tech_hooks.rs)
 }
 
 static void EETechCaptureEpochImpl(EESimCaptureRecord& ioRecord, EETechTreeEpoch* inEpoch)
 {
-    unsigned char theBytes[EE_TECH_CAPTURE_EPOCH_SIZE];
-    EETechCaptureNode(ioRecord, inEpoch);
-    ioRecord.Bytes(theBytes, ee_tech_capture_epoch(inEpoch, theBytes));
+    ee_gamecpp_tech_capture_epoch_rec(&ioRecord, inEpoch);
 }
 
 static void EETechCaptureTreeImpl(EESimCaptureRecord& ioRecord, EETechTree* inTree)
 {
-    unsigned char theBytes[EE_TECH_CAPTURE_TREE_SIZE];
-    ioRecord.Bytes(theBytes, ee_tech_capture_tree(inTree, inTree->mPlayerIndex, theBytes));
+    ee_gamecpp_tech_capture_tree_rec(&ioRecord, inTree);
 }
 
 static long EETechCapturePlayerIndexImpl(EETechTree* inTree)
@@ -122,14 +117,7 @@ static void EECalamityCaptureSweepImpl()
 
 static void EETechCaptureUnitStepImpl(EEUnit* inUnit, bool inApplies, long inValue)
 {
-    if (!EESimCaptureRecord::Active())
-        return;
-    EEComplexUnit* theComplex = inUnit->mComplexUnit;
-    ee_tech_capture_unit_step(inUnit->mUnitID, inUnit->mUnitClass->mUnitType, inUnit->GetHitPoints(),
-                              (theComplex != NULL ? 1u : 0u) | (theComplex != NULL && theComplex->mIsBuilt ? 2u : 0u) |
-                                  (inUnit->mTileNode != NULL ? 4u : 0u) |
-                                  (theComplex != NULL && theComplex->mPreviousPart != NULL ? 8u : 0u),
-                              theComplex != NULL ? (long)theComplex->mFlightTime : 0, inApplies, inValue);
+    ee_gamecpp_tech_capture_unit_step(inUnit, inApplies, inValue);   // (gamecpp tech_hooks.rs)
 }
 
 static void EECalamityCaptureStartEventImpl(long inOp, long inA, long inB, float inC, float inD)
@@ -217,3 +205,29 @@ static const bool sCaptureHooksSet = (EECalamityCanCastEnter = CanCastEnter, EEC
                                       EETechCaptureUnitStep = EETechCaptureUnitStepImpl,
                                       EETechCaptureUnitWalkHook = ee_tech_capture_unit_walk,
                                       EETechCaptureUpgrade = EETechCaptureUpgradeImpl, true);
+
+// ------------------------------------------------------------------------- round 11, lane C: the hooks' C++
+
+int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+#define TCU ((EEUnit*)p)
+#define TCX ((EEComplexUnit*)p)
+
+// the EVUN unit step's members (gamecpp tech_hooks.rs; p the unit or its complex unit; EECalamityUpdate.cpp's
+// EECore11OpC6 default): one statement each
+int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::C11TcUnitComplex: return P64(TCU->mComplexUnit);
+    case O::C11TcUnitId: return (int64_t)TCU->mUnitID;
+    case O::C11TcUnitType: return (int64_t)TCU->mUnitClass->mUnitType;
+    case O::C11TcUnitHitPoints: return (long)TCU->GetHitPoints();
+    case O::C11TcUnitTileNode: return TCU->mTileNode != NULL;
+    case O::C11TcComplexBuilt: return TCX->mIsBuilt;
+    case O::C11TcComplexPrevious: return TCX->mPreviousPart != NULL;
+    case O::C11TcComplexFlightTime: return (long)TCX->mFlightTime;
+    default: return EECore11OpE(inOp, p, a, f);
+    }
+    return 0;
+}

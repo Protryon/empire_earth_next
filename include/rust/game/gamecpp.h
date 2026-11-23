@@ -3297,6 +3297,14 @@ enum class EeGameCpp : uint32_t {
   WsRecHuman,
   WsSetCurrentRecord,
   WsRecPlayTime,
+  C11TcUnitComplex,
+  C11TcUnitId,
+  C11TcUnitType,
+  C11TcUnitHitPoints,
+  C11TcUnitTileNode,
+  C11TcComplexBuilt,
+  C11TcComplexPrevious,
+  C11TcComplexFlightTime,
   C11NmSender,
   C11NmPlayer,
   C11NmCurrent,
@@ -5673,17 +5681,20 @@ void ee_gamecpp_env_set_enabled(void *manager, bool enabled);
 /// `DeleteStorms`: every storm released and deleted, the list emptied.
 void ee_gamecpp_env_delete_storms(void *manager);
 
+/// EECalamity::Load (`loading`) or Save: the calamity's record read from or written to the saved game (the class by
+/// id; target and caster as ids, -1 if none); the first error.
+///
+/// # Safety
+/// `calamity` and `file` are live.
+long ee_gamecpp_calamity_io(void *calamity,
+                            void *file,
+                            bool loading);
+
 /// The host ee_sim's bodies call (`EeNetMsgHostFn`).
 ///
 /// # Safety
 /// `c` is the body's live call; its objects are the world's.
 int64_t ee_gamecpp_netmsg_host(uint32_t op, void *c);
-
-/// GetSaveTextName: the answer as a C string (the thread's buffer, valid until its next call).
-///
-/// # Safety
-/// `name` is a C string.
-const char *ee_gamecpp_save_text_name(const char *name, unsigned long length, bool keep);
 
 /// EEMessage::BuildEEMessage: the game message object of a received buffer from its type byte (a record; NULL and
 /// an assert for an unknown type), then the capture's NMIM record (TEST ONLY).
@@ -5722,14 +5733,11 @@ bool ee_gamecpp_farm_key_order(long cx,
                                const EeGamecppFarmKey *b,
                                bool greater);
 
-/// EECalamity::Load (`loading`) or Save: the calamity's record read from or written to the saved game (the class by
-/// id; target and caster as ids, -1 if none); the first error.
+/// GetSaveTextName: the answer as a C string (the thread's buffer, valid until its next call).
 ///
 /// # Safety
-/// `calamity` and `file` are live.
-long ee_gamecpp_calamity_io(void *calamity,
-                            void *file,
-                            bool loading);
+/// `name` is a C string.
+const char *ee_gamecpp_save_text_name(const char *name, unsigned long length, bool keep);
 
 /// EEServer's constructor body: the members, the fast selection, the three locks (search, fast selection, attempt).
 void ee_gamecpp_server_init(void *server);
@@ -5784,6 +5792,31 @@ void ee_gamecpp_server_xfer_status(void *server,
 
 /// EEServer::ServerSlot48: message 0x12 posted to the UI thread (two zero parameters).
 void ee_gamecpp_server_post_12();
+
+/// A node's state record (TNRS, TNPR, ...: id, epochs, flags, delay, prerequisites, the tree's epochs).
+///
+/// # Safety
+/// `record` is the live capture record, `node` a live node.
+void ee_gamecpp_tech_capture_node_rec(void *record,
+                                      void *node);
+
+/// An epoch's state record: its node's, then its SOL counters.
+///
+/// # Safety
+/// As [`ee_gamecpp_tech_capture_node_rec`] (`epoch` a live epoch).
+void ee_gamecpp_tech_capture_epoch_rec(void *record, void *epoch);
+
+/// A tree's state record (its epochs, the player).
+///
+/// # Safety
+/// `record` is the live capture record, `tree` a live tree.
+void ee_gamecpp_tech_capture_tree_rec(void *record, void *tree);
+
+/// EVUN: one unit an effect walks (its id, type, hit points, flags, flight time), when capturing.
+///
+/// # Safety
+/// `unit` is a live unit.
+void ee_gamecpp_tech_capture_unit_step(void *unit, bool applies, long value);
 
 extern int64_t ee_contagion_world(uint32_t op,
                                   uint64_t a,
