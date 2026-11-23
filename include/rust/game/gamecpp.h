@@ -7,7 +7,15 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/math.h"
+#include "rust/game/app.h"
+#include "rust/render/gfx.h"
 #include "rust/sim/tech.h"
+#include "rust/sim/units.h"
+
+/// `kSlotServer`, `kSlotNone` (NEMessageID.h).
+constexpr static const int64_t SS_SLOT_SERVER = 254;
+
+constexpr static const int64_t SS_SLOT_NONE = 255;
 
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
 enum class EeGameCpp : uint32_t {
@@ -152,11 +160,6 @@ enum class EeGameCpp : uint32_t {
   CalEffectHandle,
   CalSound,
   CalSecondary,
-  CalSetSound,
-  CalSetSecondary,
-  CalSetTarget,
-  CalStopSound,
-  CalStopSecondary,
   CalCreateUnit,
   KlFields,
   KlEffect1,
@@ -221,7 +224,6 @@ enum class EeGameCpp : uint32_t {
   CpNewGame,
   CpRefreshResourceCenters,
   CpReplaceOnLoad,
-  CpRestoreDeferredManagers,
   CxClearCollisionState,
   CxClearContacts,
   CxContainer,
@@ -258,7 +260,6 @@ enum class EeGameCpp : uint32_t {
   LogSkipRemoved,
   MapFogSeen,
   MapPlayerCount,
-  MapSetPlayerCount,
   MapSize,
   MemFileDelete,
   MemFileNew,
@@ -356,7 +357,6 @@ enum class EeGameCpp : uint32_t {
   SetHerdUnreadValue,
   SetLocalPlayerOut,
   SetSightUpdates,
-  ShowSinglePlayerScreen,
   ShutdownInProgress,
   SightRevealScopeNew,
   SightScopeDelete,
@@ -390,7 +390,6 @@ enum class EeGameCpp : uint32_t {
   StRandomSeed,
   StReadLock,
   StReadUnlock,
-  StRepairRestorables,
   StRevealMap,
   StScenarioManager,
   StTeamToRust,
@@ -398,7 +397,6 @@ enum class EeGameCpp : uint32_t {
   StTownIDCounter,
   StUnitImprovementsAllowed,
   StUsingCarbon,
-  StopAllSounds,
   StrComputerName,
   StrFree,
   StrNew,
@@ -512,12 +510,9 @@ enum class EeGameCpp : uint32_t {
   WSetGameSpeed,
   WSetInfluenceRaw,
   WSetMap,
-  WSetNumPlayers,
   WSetPlayer,
-  WSetPopulationLimit,
   WSetScenarioManager,
   WSetScenarioRaw,
-  WSetTimeOfDay,
   WShowCollisionSpheres,
   WStartTime,
   WStatisticsReset,
@@ -603,8 +598,6 @@ enum class EeGameCpp : uint32_t {
   KlSetSecondary,
   KlSetSound,
   KlUnloadMedia,
-  KlValidLocation,
-  KlValidTarget,
   MapAreaOnMap,
   MapIsEdgeTile,
   MeshIsSpaceMap,
@@ -749,7 +742,6 @@ enum class EeGameCpp : uint32_t {
   VecPlayersPush,
   VecPlayersSize,
   CreateRandomMap,
-  EpochCount,
   RandomNew,
   RandomDelete,
   RandomSetSeed,
@@ -760,7 +752,6 @@ enum class EeGameCpp : uint32_t {
   PhysicsPresent,
   CxSetPoolSize,
   ActionDereference,
-  AttackPlayers,
   BehaviorAt,
   BuildGate,
   CameraSetZoom,
@@ -1343,7 +1334,6 @@ enum class EeGameCpp : uint32_t {
   LetterboxIn,
   LetterboxOut,
   InitialiseScene,
-  ReleaseScene,
   GfxQueueDoneSet,
   RtsGfxHandleMessage,
   RtsGfxRestoreSurfaces,
@@ -1359,6 +1349,1367 @@ enum class EeGameCpp : uint32_t {
   GfxRenderTo,
   CaptureSave,
   CaptureDoneSet,
+  PkCapacity,
+  PkClassCategory,
+  PkClassFamily,
+  PkClassIsWall,
+  PkClassPickable,
+  PkClassProjectile,
+  PkClassUnitType,
+  PkCount,
+  PkCurrentPlayerAllied,
+  PkEntry,
+  PkEntryAssignPhysical,
+  PkEntryId,
+  PkEntryReleaseModel,
+  PkEntrySetFrame0,
+  PkEntrySetId,
+  PkEntrySetLocation,
+  PkEntrySetModel,
+  PkEntrySetScale,
+  PkEntryUnit,
+  PkFindUnit,
+  PkFogAttributes,
+  PkGroupNonEmpty,
+  PkLock,
+  PkMainCameraInverse,
+  PkPixelSize,
+  PkPushId,
+  PkRastFogOff,
+  PkStatsScale,
+  PkTakeView,
+  PkUnitIdField,
+  PkUnitReference,
+  PkUnitResourceType,
+  PkUnitTileX,
+  PkUnlock,
+  RoPlayerId,
+  RoViewedUnitId,
+  RoSelectedViewedUnitId,
+  RoGroupContainsComplex,
+  RoUnitHitPointsValue,
+  RoUnitResourceAmount,
+  RoCxFrame,
+  RoCxNextFrame,
+  RoCxAnimation,
+  RoCxCommandType,
+  RoCxIsBuilt,
+  RoCxAnimationFraction,
+  GobjLoadMedia,
+  GobjUnloadMedia,
+  RoAmbientColor,
+  RoAmbientCountTree,
+  RoAmbientCountUnit,
+  RoAmbientFrameCountIncrement,
+  RoAmbientUpdate,
+  RoAmbientUpdateDue,
+  RoAreaEffectTextureReference,
+  RoBitmapDereference,
+  RoCameraFollowing,
+  RoCaptureFill,
+  RoCaptureFillPresent,
+  RoCivilizationUnchanged,
+  RoClassCategory,
+  RoClassF170,
+  RoClassFacesCamera,
+  RoClassFamily,
+  RoClassScale,
+  RoClassShadowScale,
+  RoClassTileSize,
+  RoClassUnitType,
+  RoCliffTexturesCount,
+  RoCliffTexturesPush,
+  RoCollisionSphereMode,
+  RoComplexInView,
+  RoComplexIsFoundation,
+  RoComplexLocation,
+  RoCopyViewport,
+  RoDoppelAnimation,
+  RoDoppelFrame,
+  RoDoppelHitPoints,
+  RoDoppelIsBuilt,
+  RoDoppelIsComplex,
+  RoDoppelIsFoundation,
+  RoDoppelMaxHitPoints,
+  RoDoppelModel,
+  RoDoppelPlayer,
+  RoDoppelPlayerColor,
+  RoDoppelPlayerMember,
+  RoDoppelScale,
+  RoDoppelTransformation,
+  RoDoppelUnit,
+  RoEditorDrawText,
+  RoEditorSelectUnits,
+  RoEnvironment,
+  RoEnvironmentWind,
+  RoFindWaypoint,
+  RoFlag529065,
+  RoFlag529066,
+  RoFlag529068,
+  RoFogColor,
+  RoGeLineDelete,
+  RoGeLineDraw,
+  RoGeLineEnd,
+  RoGeLineNew,
+  RoGeLineOpacity,
+  RoGeLineStart,
+  RoGhostAnimation,
+  RoGhostAt,
+  RoGhostCanPlace,
+  RoGhostClass,
+  RoGhostCount,
+  RoGhostFrame,
+  RoGhostLock,
+  RoGhostModel,
+  RoGhostPlayerColor,
+  RoGhostRecordCopy,
+  RoGhostRecordDelete,
+  RoGhostRecordNew,
+  RoGhostRecordsBackSource,
+  RoGhostRecordsCount,
+  RoGhostRecordsPop,
+  RoGhostRecordsPush,
+  RoGhostScale,
+  RoGhostTransformation,
+  RoGhostUnitsChanged,
+  RoGhostUnlock,
+  RoGobjFrameCount,
+  RoGobjModel,
+  RoGobjShadowTexture,
+  RoGobjTexture,
+  RoGridPhase,
+  RoGroupContains,
+  RoHiddenUnitsMode,
+  RoHideAllBackgrounds,
+  RoLabelCivilizationName,
+  RoLabelPlayerName,
+  RoLetterboxZoom,
+  RoLightAttenuation0,
+  RoLightAttenuation1,
+  RoLightAttenuation2,
+  RoLightColor,
+  RoLightDirection,
+  RoLightIntensity,
+  RoLightStyle,
+  RoLineDereference,
+  RoLinePointSet,
+  RoLinePointsResize,
+  RoLineSetTexture,
+  RoLineSetWidth,
+  RoLinesBack,
+  RoLinesClear,
+  RoLinesCount,
+  RoLinesPushBack,
+  RoLoadTexture,
+  RoMainGameDrawText,
+  RoMainSelectUnits,
+  RoMainViewportDepthRange,
+  RoMainViewportRearClipping,
+  RoMainViewportSetRearClipping,
+  RoMeshCliffTextureCount,
+  RoMeshSetCliffTextures,
+  RoMeshWaterTile,
+  RoModelInView,
+  RoMusicFollowsBattle,
+  RoMusicIntensity,
+  RoNewBitmap,
+  RoNodeNext,
+  RoNodeUnit,
+  RoNodeUnitIsTree,
+  RoObjectCount,
+  RoObjectUnloadMedia,
+  RoObjectsClear,
+  RoObjectsInsert,
+  RoOrbitalCount,
+  RoOrthographic,
+  RoPhysicsTicks,
+  RoPickTriggerUnitsInRectangle,
+  RoPickUnitUnreferenced,
+  RoPickUnits,
+  RoPickUnitsInRectangle,
+  RoPickedClear,
+  RoPickedIds,
+  RoPickerAdd,
+  RoPickerContains,
+  RoPostClearRenderObjects,
+  RoPostPushRenderObject,
+  RoRastAddLight,
+  RoRastAmbientColor,
+  RoRastAmbientIntensity,
+  RoRastClearBlack,
+  RoRastFog,
+  RoRastFogColor,
+  RoRastFogRange,
+  RoRastFogType,
+  RoRastLightMesh,
+  RoRastLighting,
+  RoRastRemoveLights,
+  RoRastSetMainViewport,
+  RoRastSetViewport,
+  RoRastUpdateLight,
+  RoRastViewRectangle,
+  RoRastViewport,
+  RoRenderObject,
+  RoRenderUnit,
+  RoScaffoldingModel,
+  RoSceneFade,
+  RoScreenPoint,
+  RoSelectedClear,
+  RoSelectedObjectsClear,
+  RoSelectedObjectsPush,
+  RoSelectedUnitsClear,
+  RoSelectedUnitsPush,
+  RoSelectionIsDrawn,
+  RoSetLabelUnit,
+  RoSetSelectedUnit,
+  RoShowAllBackgrounds,
+  RoSpaceStationHeight,
+  RoSpaceTurretHeight,
+  RoSunDirection,
+  RoTexAddressing,
+  RoTexAlphaMode,
+  RoTexColorMode,
+  RoTexMagFilter,
+  RoTexMinFilter,
+  RoTexMipBias,
+  RoTexMipFilter,
+  RoTexReference,
+  RoTextDelete,
+  RoTextNew,
+  RoTextSetCentred,
+  RoTextSetColor,
+  RoTextSetLocation,
+  RoTextSetText,
+  RoTextSetTransparent,
+  RoTileDoppelganger,
+  RoTileDoppelgangerCount,
+  RoTileFirstNode,
+  RoTileSeenBy,
+  RoTransformToCamera,
+  RoTriggerSelectUnits,
+  RoTriggerSelectionIsDrawn,
+  RoTurretPartCount,
+  RoUnitAreaEffectCount,
+  RoUnitAreaEffectKind,
+  RoUnitAreaEffectStrength,
+  RoUnitBarSet,
+  RoUnitBarsClear,
+  RoUnitBarsCount,
+  RoUnitBarsResize,
+  RoUnitComplexIsFoundation,
+  RoUnitCount,
+  RoUnitHitPoints,
+  RoUnitHitPointsIsOne,
+  RoUnitId,
+  RoUnitIsObstacle,
+  RoUnitIsTree,
+  RoUnitLighting,
+  RoUnitNameClear,
+  RoUnitNameFromStats,
+  RoUnitNextPart,
+  RoUnitOpacity,
+  RoUnitOrbitalSet,
+  RoUnitOrbitalsResize,
+  RoUnitPartsClear,
+  RoUnitPhysicalFrame,
+  RoUnitPhysicalScale,
+  RoUnitSidePart,
+  RoUnitStatsRange,
+  RoUnitStatsScale,
+  RoUnitTileSize,
+  RoUnitTint,
+  RoUnitTurretSet,
+  RoUnitTurretsResize,
+  RoUnitWheelSet,
+  RoUnitWheelsResize,
+  RoUnitsClear,
+  RoUnitsInsert,
+  RoUpdateVisibleTerrain,
+  RoViewportRearClipping,
+  RoViewportSetCamera,
+  RoVisibleRow,
+  RoVisibleRowCount,
+  RoWaypointLocation,
+  RoWheelCount,
+  RoWindDirection,
+  RoWorldTransformation,
+  RoWorldUnit,
+  RoZoomLock,
+  FxTileTerrainType,
+  FxNextTile,
+  FxLandRipple,
+  FxWorldPlacedEffect,
+  FxTerrainColor,
+  FxVertexColor,
+  FxVertexNormal,
+  FxComputeSound,
+  FxSetSoundParameters,
+  FxPlayAnimationSound,
+  FxPlayNodeNamed,
+  FxSoundStop,
+  FxSoundObjectUnload,
+  FxSoundObjectLoad,
+  FxCxGetClass,
+  FxGatePart,
+  FxDynComplex,
+  FxIsFoundation,
+  FxCxIsSidePart,
+  FxCxTileX,
+  FxCxTileY,
+  FxUnitTile,
+  FxDoppelgangerGet,
+  FxDoppelgangerIsBuilt,
+  FxHasDoppelganger,
+  FxFreeCamera,
+  FxUnitOpacity,
+  FxGeffObject,
+  FxGeffLinked2,
+  FxGeffLinked1TagKind,
+  FxQueueGoalCount,
+  FxQueueGoalAt,
+  FxQueueGoalGetAt,
+  FxLocationGoalCast,
+  FxLoadGarrisonCast,
+  FxAttackUnitCast,
+  FxGoalForcedMove,
+  FxGoalAutoWaypoint,
+  FxGoalLocation,
+  FxGoalLoadContainer,
+  FxGoalAttackTarget,
+  FxCxActiveGoal,
+  FxCxFnE123D,
+  FxCxGetAnimation,
+  FxCxIsCloaked,
+  FxCxGetPlayer,
+  FxUnGetHitPoints,
+  FxUnMaxHitPoints,
+  FxTileVisibleTo,
+  FxTileSeenBy,
+  FxPlIsAlly,
+  FxPlSelectedGroup,
+  FxPlCurrentEpoch,
+  FxGroupHasType,
+  FxGroupUnit,
+  FxGroupNumUnits,
+  FxVisibleBottomLeft,
+  FxVisibleDimensions,
+  FxTagPoints,
+  FxModelTagList,
+  FxTagCount,
+  FxWeaponPoint,
+  FxCreateSurface,
+  FxFindTexture,
+  FxSurfaceLoadPng,
+  FxFileSpecDelete,
+  FxSurfaceLock,
+  FxSurfaceMemory,
+  FxSurfaceBytesPerRow,
+  FxSurfaceUnlock,
+  FxSurfaceDereference,
+  FxCreateVolcanoModel,
+  FxModelReference,
+  FxMaterialPolygonStart,
+  FxMaterialPolygonLength,
+  FxMaterialVertexStart,
+  FxMaterialVertexLength,
+  FxStoreMesh,
+  FxModelComputeNormals,
+  FxModelComputeBounds,
+  FxModelSetPostTransform,
+  FxModelPrepare,
+  FxModelCenter,
+  FxModelSetTexture,
+  FxSetEffectDetail,
+  FxEffectDetail,
+  FxMemoryLength,
+  FxMemoryData,
+  FxBatchSetVertex,
+  FxBatchPolygonsNew,
+  FxPolygonSetIndices,
+  FxBatchVerticesNew,
+  FxBatchPolygonsDelete,
+  FxBatchVerticesDelete,
+  FxAmbientEffects,
+  FxDrawBlood,
+  FxShellHoleEffect,
+  FxBloodStainEffect,
+  MpRts,
+  MpFields,
+  MpWorldMap,
+  MpUnitRegionsFree,
+  MpEffectRegionsFree,
+  MpSetUnitRegions,
+  MpSetEffectRegions,
+  MpDeleteTiles,
+  MpTileArray,
+  MpSetTiles,
+  MpNewTiles,
+  MpWords,
+  MpSetWords,
+  MpTileAt,
+  MpTileSetVisibility,
+  MpTileSize,
+  MpRtsTile,
+  MpGetTile,
+  MpGroundPoint,
+  MpRtsCreate,
+  MpSightEnabled,
+  MpTileVecNew,
+  MpTileVecDelete,
+  MpUpdateCliffs,
+  MpSeedRandom,
+  MpGlobalWaterSet,
+  MpTextureSetId,
+  MpValidTile,
+  MpSetTextureSet,
+  MpMeshRust,
+  MpClosestTileToPoint,
+  MpClosestTileToLine,
+  MpTileSetHeight,
+  MpTileLoad,
+  MpTileSave,
+  MpTileSetTerrainType,
+  MpFileReadUlong,
+  MpDumpTitle,
+  MpDumpTileTitle,
+  MpDumpNewLine,
+  MpDefaultTerrain,
+  MpTerrainCount,
+  MpTerrainGet,
+  MpTerrainExists,
+  MpTerrainTextureSet,
+  MpTerrainLoad,
+  MpTerrainUnload,
+  MpTerrainTextureSetOf,
+  MpTerrainTypeOf,
+  MpTerrainColorType,
+  MpTerrainIsWater,
+  MpTerrainWaterPeriod,
+  MpTerrainAttach,
+  MpTerrainSetTextureSet,
+  MpNewTextureSet,
+  MpRegisterTextureSet,
+  MpTypeCount,
+  MpTypeGet,
+  MpTypeFirstColor,
+  MpTypeLastColor,
+  MpTypeSetColorSet,
+  MpTypeColorSet,
+  MpColorSetNew,
+  MpColorSetDelete,
+  MpColorSetClear,
+  MpColorSetPush,
+  MpRegisterColorSet,
+  MpColorCount,
+  MpColorExists,
+  MpColorsNew,
+  MpColorsDelete,
+  MpColorsPush,
+  MpSetWaterState,
+  MpSetColorTable,
+  MpCliffFirst,
+  MpCliffLast,
+  MpUnitGetClass,
+  MpPlaceOnGround,
+  MpLocalPlayer,
+  MpPlAlliedWith,
+  MpPlSharedLos,
+  MpAddSharedSight,
+  MpRemoveSharedSight,
+  MpAddOwnSight,
+  MpRemoveOwnSight,
+  MpTileVecClear,
+  MpTileVecData,
+  MpTileVecSize,
+  MpCountCellOn,
+  MpCountCellOff,
+  MpOrthographic,
+  MpDenormalizePerspective,
+  MpDenormalizeOrthographic,
+  MpLineDefine,
+  MpLineSolveForZ,
+  MpMeshZ,
+  MpTerrainWaterDepth,
+  MpViewHalfWidth,
+  MpViewXCenter,
+  MpViewYCenter,
+  MpViewFrontClip,
+  MpViewRearClip,
+  MmTail,
+  MmRust,
+  MmSetRust,
+  MmTransforms,
+  MmCorners,
+  MmSetPixels,
+  MmSetPixelsPerRow,
+  MmUnitLock,
+  MmUnitUnlock,
+  MmUnitMemory,
+  MmUnitBytesPerRow,
+  MmUnitCopyToWorld,
+  MmUnitClear,
+  MmTerrainEnter,
+  MmTerrainLeave,
+  MmTerrainLock,
+  MmTerrainUnlock,
+  MmTerrainMemory,
+  MmTerrainBytesPerRow,
+  MmUiUpdate,
+  MmLight,
+  MmLightSet,
+  MmLightNormalize,
+  MmViewport,
+  MmNumPlayers,
+  MmDoppUnit,
+  MmDoppPlayer,
+  MmDoppPlayerField,
+  MmDoppIsComplex,
+  MmDoppOnTile,
+  MmPackDark,
+  MmPackColor2,
+  MmPackShade,
+  MmPackPlayerColor,
+  MmTileVisibility,
+  MmTileDoppCount,
+  MmTileDopp,
+  MmNodeUnit,
+  MmNodeNext,
+  MmTerrainColor,
+  TlRtsChecksum,
+  TlRtsLoad,
+  TlRtsSave,
+  TlRtsDump,
+  TlLoadImage,
+  TlImageSetTile,
+  TlImageValid,
+  TlImageTileNull,
+  TlImageSave,
+  TlEraseImage,
+  TlDumpImage,
+  TlWriteUlong,
+  TlDynMap,
+  TlSetIsSpace,
+  TlValidPoint,
+  TlSetTerrainTypeField,
+  TlHeight,
+  TlMapTileSize,
+  TlMeshZ,
+  CgUnitReference,
+  CgUnitDereference,
+  CgClassFlags,
+  CgUnitsNew,
+  CgUnitsDelete,
+  CgUnitsCount,
+  CgUnitsAt,
+  CgUnitsInArea,
+  CgCaptureContagion,
+  CgCalamityIndex,
+  CgWriteClassId,
+  CgFileReadLong,
+  CgFileWriteLong,
+  CgSetClass,
+  CgTileAddr,
+  FxGeffSize,
+  FxGeffParam2,
+  PsSetLoadingScenario,
+  PsClearLoadingScenario,
+  PchClearCalamities,
+  PchCalamities,
+  PchNewCalamities,
+  PchNewCalamity,
+  PchCalamityLoad,
+  PchCalamitySave,
+  PchPush,
+  PchContagionLoad,
+  PchCount,
+  PchAt,
+  PchSetCaster,
+  PchPlaySound,
+  PchDeleteAt,
+  PchRestoreContagions,
+  PchActive,
+  PchVerifyActive,
+  VecCalamitiesCount,
+  VecCalamitiesAt,
+  PchClassIndex,
+  PchVerifyClassIndex,
+  PchGetTarget,
+  PchContagionSave,
+  PcRust,
+  PcUStrLoad,
+  PcUStrText,
+  PcSaveText,
+  PmPhysicsLoad,
+  PmPhysicsSave,
+  PmServerSetPhysicsTick,
+  PmClientSetPhysicsTick,
+  PmCommCtsProcessed,
+  PmCommLastTick,
+  PmServerLastCt,
+  PmServerCt,
+  PmServerPt,
+  PmServerMessageNumber,
+  PmClientCt,
+  PmClientPt,
+  PphFields,
+  PphPush,
+  PphCopyPlayers,
+  PphPlayerChecksum,
+  PphChecksumLocal,
+  PphNewHuman,
+  PphNewComputer,
+  PphVerifyType3,
+  PphPlayerLoad,
+  PphPlayerSave,
+  PphComputerOf,
+  PphHasHuman,
+  PphVerifyPlayerType,
+  PphCpSetEngineNext,
+  PphCpEngine,
+  PphAiKnown,
+  PphLogUnknownAi,
+  PphCpSetAi,
+  PphCpLoadState,
+  PphCpUnitsLoad,
+  PphHasUnitsLuaState,
+  PphIsAllied,
+  PphAddAlly,
+  PphStrNew,
+  PphStrDelete,
+  PphStrSize,
+  PphStrData,
+  PphCpEngineAi,
+  PphClassicAiPresent,
+  PphClassicAiId,
+  PphCpSaveState,
+  PphCpUnitsSave,
+  HdrNameLoad,
+  HdrNameSave,
+  HdrDescriptionLoad,
+  HdrDescriptionSave,
+  HdrPlayerNamesLoad,
+  HdrPlayerNamesSave,
+  HdrDateLoad,
+  HdrDateSave,
+  HdrOptionsLoad,
+  HdrOptionsSave,
+  HdrMediaLoad,
+  HdrMediaSave,
+  PwhFields,
+  PwhScenario,
+  PwhSetScenario,
+  PwhTeamsFromWorld,
+  PwhTeamsCount,
+  PwhTeamsResize,
+  PwhTeamLoad,
+  PwhTeamSave,
+  PwWorldPopulationLimit,
+  PwStSetScenario,
+  PwStTeamsFromHelper,
+  PwHasLiveState,
+  PwChatLogLoad,
+  PwChatLogSave,
+  PwMainFormLoad,
+  PwMainFormSave,
+  PwPrimitive,
+  PwHasRunningState,
+  PwHasRegionOrder,
+  PwHasExperimentTimers,
+  PwHasTowns,
+  PwHasTownAreas,
+  PwHasGhosts,
+  PwHasGhostResources,
+  PwHasGoalGhosts,
+  PwHasContinentRegions,
+  PwHasResourceState,
+  PwHasPlayerUnitOrder,
+  PwHasPathSearches,
+  PwHasActiveGroups,
+  PwHasGraphSearches,
+  PwHasTechAllowed,
+  PwHasTileTypes,
+  PwPathRunningLoad,
+  PwPathRunningSave,
+  PwAreaEffectsLoad,
+  PwAreaEffectsSave,
+  PwExperimentTimersLoad,
+  PwExperimentTimersSave,
+  PwTownsLoad,
+  PwTownsSave,
+  PwContinentRegionsLoad,
+  PwContinentRegionsSave,
+  PwResourceStateLoad,
+  PwResourceStateSave,
+  PwPathSearchesLoad,
+  PwPathSearchesSave,
+  PwActiveGroupsLoad,
+  PwActiveGroupsSave,
+  PwGraphSearchesLoad,
+  PwGraphSearchesSave,
+  PwDebugText,
+  PwChainFirst,
+  PwChainHead,
+  PwTileNodeNext,
+  PwNodePrev,
+  PwLink,
+  PwComplexOfSavedId,
+  PwHandleId,
+  PwUnitReference,
+  PwUnitDereference,
+  PwComplexOfId,
+  PwForestCount,
+  PwForestAt,
+  PwForestRenewal,
+  PwForestSetRenewal,
+  PwForestSize,
+  PwForestTiles,
+  PwForestAtTile,
+  PwPointsNew,
+  PwPointsDelete,
+  PwPointsCount,
+  PwPointX,
+  PwPointY,
+  PwMap,
+  PwMapSize,
+  PwMapTileAt,
+  PwMapRegions,
+  PwNodeUnit,
+  PwNodeSetUnit,
+  PwNodeNext,
+  PwTileSetTerrainType,
+  PwNumPlayers,
+  PwPlayerFirstUnit,
+  PwPlayerGetUnit,
+  PwPlayerSetBucketFirst,
+  PwPlayerSetFirstUnit,
+  PwPlayerSetLastUnit,
+  PwUnitNext,
+  PwUnitSetPrevious,
+  PwUnitSetNext,
+  PwDynComplex,
+  PwCxLastAttacker,
+  PwCxGoalQueueCount,
+  PwCxGoalCount,
+  PwCxGoalAt,
+  PwAttackUnitCast,
+  PwAttackTarget,
+  PwGatherGoalCast,
+  PwGatherResource,
+  PwGatherStorage,
+  PwCxGetPlacement,
+  PwCxSetPlacement,
+  PwUnitClassCount,
+  PwUnitClassAt,
+  PwComplexCreate,
+  PwCxInitUnit,
+  PwUnitCreate,
+  PwUnitInit,
+  PwUnitSetTile,
+  PwRegisterUnit,
+  PwPlayerTechTree,
+  PwTreeNodeIds,
+  PwTreeGet,
+  PwNodeAllowed,
+  PwNodeSetAllowed,
+  PwCameraZoom,
+  PwWorldGameSpeed,
+  PfReadULong,
+  PfReadLong,
+  PfReadU16,
+  PfReadI8,
+  PfReadU8,
+  PfReadF32,
+  PfReadBool,
+  PfReadChars,
+  PfWriteULong,
+  PfWriteLong,
+  PfWriteU16,
+  PfWriteI8,
+  PfWriteU8,
+  PfWriteF32,
+  PfWriteBool,
+  PfWriteChars,
+  PvLongsNew,
+  PvLongsDelete,
+  PvLongsCount,
+  PvLongsAt,
+  PvAfterLoad,
+  PsMajorVersion,
+  PsListNew,
+  PsListDelete,
+  PsListPush,
+  PsListCount,
+  PsListAt,
+  PsListClear,
+  PsPersistentTag,
+  PsPersistentDelete,
+  PsNewChecksumChunk,
+  PsWorldChecksum,
+  PsNewSeedChunk,
+  PsNewMapChunk,
+  PsMapChunkUnown,
+  PsMapChunkObject,
+  PsNewCameraChunk,
+  PsCameraChunkValue,
+  PsNewScenarioChunk,
+  PsScenarioChunkUnown,
+  PsScenarioChunkObject,
+  PsNewEffectsChunk,
+  PsEffectsChunkUnown,
+  PsEffectsChunkObject,
+  PsNewEnvironmentChunk,
+  PsEnvironmentChunkUnown,
+  PsEnvironmentChunkObject,
+  PsNewPlayerHelper,
+  PsNewWorldHelper,
+  PsNewMultiplayerHelper,
+  PsNewCalamityHelper,
+  PsCastChecksum,
+  PsCastSeed,
+  PsSeedValue,
+  PsCastEffects,
+  PsCastCamera,
+  PsCastMap,
+  PsCastPlayers,
+  PsCastWorld,
+  PsCastScenario,
+  PsCastCalamities,
+  PsCastEnvironment,
+  PsHeaderNew,
+  PsHeaderDelete,
+  PsHeaderSave,
+  PsHeaderLoad,
+  PsHdrSetName,
+  PsHdrDefaultDescription,
+  PsHdrVersions,
+  PsHdrNumbers,
+  PsHdrNamesClear,
+  PsHdrNamesAppendPlayer,
+  PsHdrNamesAppendSpace,
+  PsHdrSetDate,
+  PsHdrTagsClear,
+  PsHdrTagsPush,
+  PsHdrTagsCount,
+  PsHdrTagAt,
+  PsWorldScenario,
+  PsHdrMediaFromScenario,
+  PsHdrOptionsFromWorld,
+  PsMaxPlayers,
+  PsSpecNew,
+  PsSpecDelete,
+  PsSpecSetDirectory,
+  PsSpecFirstFile,
+  PsSpecNextFile,
+  PsSpecsNew,
+  PsSpecsDelete,
+  PsSpecsCount,
+  PsSpecLess,
+  PsSpecsInsert,
+  PsSpecsDeleteFirst,
+  PsSpecsEraseFirst,
+  PsSpecSetStartupVolume,
+  PsSpecSetStartupDirectory,
+  PsSpecSetFile,
+  PsSpecDeleteFile,
+  PsSpecCreate,
+  PsSpecOpen,
+  PsSpecClose,
+  PsSpecOpenAny,
+  PsFileIsOpen,
+  PsFileCloseAny,
+  PsChunksNew,
+  PsChunksDelete,
+  PsChunksResize,
+  PsChunksClear,
+  PsChunkSavePersistent,
+  PsChunkSaveToFile,
+  PsChunkNew,
+  PsChunkDelete,
+  PsChunkLoadHeader,
+  PsChunkGetSize,
+  PsChunkSkip,
+  PsChunkLoadFromFile,
+  PsChunkLoadPersistent,
+  PsMemFileNew,
+  PsMemFileNew1000,
+  PsMemFileDelete,
+  PsMemFileSave,
+  PsMemFileLoad,
+  PsUStrNew,
+  PsUStrDelete,
+  PsSaveTextName,
+  PsDeleteTextTwin,
+  PsReportSaved,
+  PsReportSaveError,
+  PsMessageString,
+  PsMessageStringVerify,
+  PsResourceString,
+  PsResourceStringVerify,
+  PsGameState,
+  PsValidateIntoMessage,
+  PsGraphicsPostResume,
+  PsUiResumeGraphics,
+  PsMapApplyVertexColors,
+  PsSetMasterVolume,
+  PsSetMusicVolume,
+  PsSleep,
+  PsCommPresent,
+  PsShowSplash,
+  PsShowSelectionAreas,
+  PsOpenMainGameForm,
+  PsWaitRenderNow,
+  PsSetLoadingSavedGame,
+  PsStClear,
+  PsStReset,
+  PsStInit,
+  PsStWriteLock,
+  PsStWriteUnlock,
+  PsStFinishLoad,
+  PsStOptionsFromHeader,
+  PsStSetChecksum,
+  PsStSetEffectManager,
+  PsStSetMap,
+  PsStSetCalamityHelper,
+  PsStSetEnvironmentManager,
+  PsStRestorablePushEffects,
+  PsStRestorablePushCalamities,
+  PsStRestorablePushEnvironment,
+  PsStLoadedPlayerPush,
+  PsPlayerRemoveAlly,
+  PsEditorFormPresent,
+  PsEditorClearSelection,
+  PsPreloadWaitQueue,
+  PsWorldClear,
+  PsWorldStartGame,
+  PsInScenarioEditor,
+  PsTextIsUtf8,
+  PsLegacyTextLoad,
+  PsReportCorrupt,
+  PsDebugCorrupt,
+  PsDataPathFind,
+  PsMapL195610,
+  PsMapL195614,
+  PsPphMaxPlayers,
+  PsPphLocalIndex,
+  PsPphPlayerCount,
+  PsPphPlayerAt,
+  PsWStrsNew,
+  PsWStrsDelete,
+  PsWStrsClear,
+  PsWStrsPush,
+  PsWStrsPushSlotName,
+  PsWStrsCount,
+  PsWStrsAt,
+  PsWStrsContains,
+  PsWStrNew,
+  PsWStrDelete,
+  PsWStrClear,
+  PsWStrLength,
+  PsSprintfNumber,
+  PsSprintfText,
+  PsSprintfTwoNumbers,
+  PsLoadProgress,
+  PsMasterVolume,
+  PsMusicVolume,
+  SsLockCt,
+  SsUnlockCt,
+  SsOptionsWriteLock,
+  SsOptionsWriteUnlock,
+  SsWorldWriteLock,
+  SsWorldWriteUnlock,
+  SsStopPing,
+  SsStartPing,
+  SsSearchLock,
+  SsAttemptLock,
+  SsServerFastLock,
+  SsClientFastLock,
+  SsSectionEnter,
+  SsSectionLeave,
+  SsPhysicsQueueEnter,
+  SsPhysicsQueueLeave,
+  SsFrameServer,
+  SsMultiplayerGame,
+  SsOptionsMultiplayer,
+  SsLoadType,
+  SsGameState,
+  SsDefaultColor,
+  SsCitizensDefault,
+  SsVersionMatch,
+  SsBinaryChecksum,
+  SsCurrentCt,
+  SsCtsInPhysics,
+  SsHumans,
+  SsMpSession,
+  SsPlayerNumber,
+  SsCurrentPt,
+  SsMySendToSlot,
+  SsNumPlayers,
+  SsWorldPlayers,
+  SsTime,
+  SsWon,
+  SsScreenActive,
+  SsEngineChoices,
+  SsFormById,
+  SsCurrentForm,
+  SsFormVisible,
+  SsSendToSlot,
+  SsPlayerSendToSlot,
+  SsSHasLeft,
+  SsCHasLeft,
+  SsSMigrating,
+  SsCMigrating,
+  SsSFastId,
+  SsCFastId,
+  SsSExecuting,
+  SsCExecuting,
+  SsLoadState,
+  SsDroppedLoaders,
+  SsVoteEdict,
+  SsYesVotes,
+  SsNoVotes,
+  SsNumVotes,
+  SsVoted,
+  SsLagMask,
+  SsUiSlot,
+  SsAllowMigration,
+  SsIgnoreTimeout,
+  SsServerLost,
+  SsHasLoaded,
+  SsLostAfterLoading,
+  SsWasBooted,
+  SsReg,
+  SsRegLoadOptions,
+  SsRegLoadLobby,
+  SsRegLoadReg,
+  SsRegStoreOptions,
+  SsRegStoreLobby,
+  SsRegNameClear,
+  SsRegNameCopy,
+  SsRegNameIcmp,
+  SsRegNameEq,
+  SsRegNameFromMsg,
+  SsRegNameIcmpPlayer,
+  SsSendResponse,
+  SsSendLocalResponse,
+  SsSendFullOptions,
+  SsNewPlayerInfo,
+  SsMsgSetOriginServer,
+  SsLocalInput,
+  SsCommsLocalInput,
+  SsNewRecord0,
+  SsNewRecord2,
+  SsNewRecord3,
+  SsNewRecord4,
+  SsSendPingStat,
+  SsNewString,
+  SsDeleteString,
+  SsClientAddress,
+  SsSlotInfoServer,
+  SsSlotInfoRecord,
+  SsNewPhysicsTick,
+  SsConnectionCheckResponse,
+  SsMsgType,
+  SsMsgOrigin,
+  SsMsgForSlot,
+  SsMsgNeValue,
+  SsMsgRecord,
+  SsMsgInputCount,
+  SsMsgInput,
+  SsMsgReference,
+  SsMsgDereference,
+  SsMsgExecute,
+  SsMsgSetFastId,
+  SsMsgIsGame,
+  SsMsgQueue,
+  SsMsgLogResponse,
+  SsBroadcast,
+  SsSendToAll,
+  SsTakeConnectionRequest,
+  SsLobbyUpdatePlayer,
+  SsNewRemovePlayer,
+  SsNewBootClient,
+  SsNewServerMigration,
+  SsPostAction,
+  SsActionDereference,
+  SsNewPauseEvent,
+  SsPostEvent,
+  SsEventDereference,
+  SsGetString,
+  SsDisplayMessage,
+  SsSprintfName,
+  SsIdsMsgGame,
+  SsChatGameLine,
+  SsChatText,
+  SsCloseForm,
+  SsOpenForm,
+  SsPushForm,
+  SsCancelGame,
+  SsCancelCallback,
+  SsLobbyForm,
+  SsHostMigrated,
+  SsTransfer,
+  SsConnectStatus,
+  SsSprintfRetry,
+  SsSprintfVersions,
+  SsNewWonInfo,
+  SsDeleteWonInfo,
+  SsWonGetInfo,
+  SsWonSetInfo,
+  SsWonInfoHumans,
+  SsWonInfoPlayers,
+  SsWonJoined,
+  SsWonClearGameList,
+  SsWonRejoinRoom,
+  SsSoundLoadServer,
+  SsSoundPlayServer,
+  SsLoadSound,
+  SsWorldPlayer,
+  SsWorldPlayerBySlot,
+  SsPlIsHuman,
+  SsPlSlot,
+  SsPlHasHuman,
+  SsPlId,
+  SsPlSetSlot,
+  SsPlSetFirewall,
+  SsPlNameFromMsg,
+  SsWorldReconnect,
+  SsWorldRemove,
+  SsExecuteSelection,
+  SsSetCt,
+  SsSetCtsInPhysics,
+  SsIncrementCts,
+  SsSetMpSession,
+  SsSetHumans,
+  SsSetPt,
+  SsRegisterSlot,
+  SsUnregisterSlot,
+  SsSendToClear,
+  SsSendToInsert,
+  SsSendToErase,
+  SsAbortXfer,
+  SsRemoveInProgress,
+  SsOpenSaveGame,
+  SsNewHeader,
+  SsDeleteHeader,
+  SsHeaderSetVersions,
+  SsHeaderLoad,
+  SsXferToClient,
+  SsStartGame,
+  SsPauseGame,
+  SsCommsStopPing,
+  SsCommsResetXfer,
+  SsCommsPresent,
+  SsCommsDelete,
+  SsCommsNewClient,
+  SsClientStartThreads,
+  SsLowestCts,
+  SsDisconnect,
+  SsLocalOut,
+  SsSleep,
+  SsFrameProtocol,
+  SsStartTimeFromMsg,
+  SsPhysicsRandom,
+  SsNumTeams,
+  SsGetProtocol,
+  SsProtocolStatus,
+  SsPostResume,
+  SsGfxPaused,
+  SsPhysicsPostStart,
+  SsTimerRunning,
+  SsMainGameUiState0,
+  ClNewBootDefault,
+  ClNameLength,
+  ClExtension,
+  ClExtIsSaved,
+  ClExtIsScenario,
+  ClExtIsCampaign,
+  ClNewFileSpec,
+  ClFileSetVolume,
+  ClFileSetDirectory,
+  ClFileSetFile,
+  ClFileFree,
+  ClFileOpenRead,
+  ClFileClose,
+  ClFileDeleteOnDisk,
+  ClFileCreateWrite,
+  ClHeaderLoad,
+  ClHeaderChecksum,
+  ClIdsNotResponding,
+  ClIdsSeconds,
+  ClTimeoutFormat,
+  ClSprintfSeconds,
+  TkTreeFields,
+  TkCurrentPlayer,
+  TkPlayerIndex,
+  TkPlId,
+  TkEpochTitle,
+  TkPostShowEpochName,
+  TkMainGameForm,
+  TkRefreshGroup,
+  TkEpochCount,
+  TkEpochAt,
+  TkEpochRef,
+  TkEpochNodes,
+  TkUnitId,
+  TkGet,
+  TkSetRef,
+  TkNeedsUnitMedia,
+  TkTrigger,
+  TkGetPlayer,
+  TkTreePlayer,
+  TkEpochReached,
+  TkStatReset,
+  TkStatSet,
+  TkUnloadClassMedia,
+  TkClassMedia,
+  TkClassButtonsLoad,
+  TkClassButtonsUnload,
+  TkEpochMediaLoaded,
+  TkEpochMediaUnloaded,
+  TkEventsEnabled,
+  TkIsLocal,
+  TkAssert,
+  TkEvent,
+  TkEventEffects,
+  TkEventEffect,
+  TkEffKind,
+  TkEffUnitClass,
+  TkEffTechnology,
+  TkEffButton,
+  TkEffAreaEffect,
+  TkEffMediaIndex,
+  TkEffNewUnitClass,
+  TkEffSoundId,
+  TkEffAttribute,
+  TkButtonAcquire,
+  TkButtonRelease,
+  TkItemLoad,
+  TkItemUnload,
+  TkAeTemplateLoad,
+  TkAeTemplateUnload,
+  TkSoundLoad,
+  TkSoundUnload,
+  TkClassCount,
+  TkClassAt,
+  TkClassType,
+  TkClassTechnology,
+  TkFileOpenRead,
+  TkFileLength,
+  TkFilePosition,
+  TkFileClose,
+  TkEpochsResize,
+  TkEpochLoad,
+  TkEpochUnload,
+  TkNodeUnitClass0,
+  TkNodeIsAvailable,
+  TkNodeGetCost,
+  TkNodeFields,
+  TkNodeData,
+  TkNodeTree,
+  TkClassCosts,
+  TkUpgrade,
+  TkInCostSet,
+  TkPlayerJit,
+  TkClassHasRallyPoint,
+  TkNodeCount,
+  TkNodeAt,
+  TkNodeKeyAt,
+  TkNodeUnload,
+  TkNodeDelete,
+  TkNodesClear,
+  TkEpochDeleteData,
+  TkPushId,
+  TkLoadedClassesPush,
+  TkLoadedClassesCount,
+  TkLoadedClassAt,
+  TkLoadedClassesClear,
+  TkNodeLoadMedia,
+  TkNodeUnloadMedia,
+  TkEpochCostFactor,
+  TkCostSetFactor,
+  TkStatsCostScale,
+  TkJitFactor,
+  RunRustInit,
+  RunFixtureConfigure,
+  RunSplashNew,
+  RunSplashDelete,
+  RunSplashStart,
+  RunSplashStop,
+  RunInstanceMutex,
+  RunSetEventPump,
+  RunNativeHook,
+  RunComInit,
+  RunComUninit,
+  RunFloatingPoint,
+  RunSqrtTable,
+  RunSetInstance,
+  RunEsInitialize,
+  RunFsInitialize,
+  RunNewResource,
+  RunDefaultSettings,
+  RunPreferencesLoad,
+  RunSimPreferences,
+  RunUserInterface,
+  RunUShutdown,
+  RunReleaseDataPath,
+  RunReleaseCivilizationPath,
+  EntrySpecFirstFile,
+  EntrySpecNextFile,
+  EntryDecryptExcluded,
+  EntrySpecFileIsNot,
+  EntrySpecVecNew,
+  EntrySpecVecDelete,
+  EntrySpecVecPush,
+  EntrySpecVecSort,
+  EntrySpecVecSize,
+  EntrySpecVecGet,
+  EntrySpecOpenRead,
+  EntrySpecLength,
+  EntrySpecRead,
+  EntrySpecClose,
+  EntrySpecFullPath,
+  EntryUStrData,
+  EntryUStrSet,
+  EntrySetNetworkFolder,
+  EntryNeInitialize,
+  EntryRegisterNeMessages,
+  EntryRegisterEeMessages,
+  EntryRegisterEmptyShutdown,
+  EntryArchiveCount,
+  EntryArchiveTimestamp,
+  EntryStrData,
+  EntrySetBinaryChecksum,
+  EntryVersionTrim,
+  EntryVersionAppend,
+  EntryNewClient,
+  EntryClientSetTries,
+  EntryClientStartThreads,
+  EntryDeleteCommunicationsKeep,
+  EntryNullCommunications,
+  EntrySetPlayerName,
+  EntrySetHostGameName,
+  EntryPushMainMenu,
+  EntryNewMultiPlayerEvent,
+  EntryProcessOnMainMenu,
+  EntryDereferenceEvent,
+  EntryNewJoinOrHost,
+  EntryPostAction,
+  EntryDereferenceAction,
+  EntryOpenSavedGame,
+  EntryOptionsWriteLock,
+  EntryOptionsWriteUnlock,
+  EntryOptionsLoadType,
+  EntryOptionsMapTypeOf,
+  EntryNotMultiplayer,
+  EntryNewServer,
+  EntryServerStartThreads,
+  EntryServerNoLoadResponses,
+  EntrySetGameStateLoadType,
+  EntryServerStopPing,
+  EntryServerLoadState,
+  EntryNotInEditor,
+  EntryStartLoadingInput,
+  EntryUpdateSavedGames,
 };
 
 extern "C" {
@@ -2113,6 +3464,853 @@ void ee_gamecpp_world_screen_to_world(const float (*point)[2],
 unsigned long ee_gamecpp_world_resource_users(void *w,
                                               void *u,
                                               int32_t delta);
+
+/// EEUnitPicker::Contains: whether the picker holds a unit (by id, from the last entry).
+bool ee_gamecpp_picker_contains(void *picker, void *unit);
+
+/// EEUnitPicker::PickUnit (`reference`: the unit referenced) and PickUnitUnreferenced: the unit under a screen point,
+/// searched under the picker's lock.
+///
+/// # Safety
+/// `point` is a readable screen point (two floats).
+void *ee_gamecpp_picker_pick(void *picker,
+                             const float *point,
+                             long prefer_resources,
+                             bool reference);
+
+/// EEUnitPicker::Clear: the entries' models released, the picker emptied.
+void ee_gamecpp_picker_clear(void *picker);
+
+/// EEUnitPicker::Reset: emptied, then the frame's viewport, projection and see-through mode taken.
+void ee_gamecpp_picker_reset(void *picker);
+
+/// EEUnitPicker::AddUnit: a unit at a transformation when there is room and it is big enough on screen (ee_gfx
+/// pick.rs admits): its id, and its complex unit's physical model at the transformation, or its graphic's first model
+/// at its stats' scale.
+///
+/// # Safety
+/// `transformation` is a readable transformation (sixteen floats).
+void ee_gamecpp_picker_add_unit(void *picker,
+                                void *unit,
+                                const float *transformation,
+                                float pixel_size);
+
+/// The walks' host for a picker (EEUnitPicker.cpp's FindUnit and PickBox pass it to ee_gfx pick_walk.rs).
+///
+/// # Safety
+/// `out` is a writable `EeGfxPickHost`.
+void ee_gamecpp_picker_host(void *picker,
+                            void *out);
+
+/// EEInitialiseScene: the light and the time-of-day colour, the fade and letterbox, the scene's flags, the effect
+/// queues, the render units' bars, once per scene, and the shared bitmap.
+void ee_gamecpp_ro_initialise_scene();
+
+/// EEReleaseScene: the effect queues' references dropped, the render pools and lists emptied, the shared bitmap
+/// released and the unit picker reset (only after EEInitialiseScene).
+void ee_gamecpp_ro_release_scene();
+
+/// EEStartLetterboxOut / EEStartLetterboxIn over a number of frames (at once for 0).
+void ee_gamecpp_ro_letterbox(bool out, unsigned long frames);
+
+/// EERenderObject::Fn10C036: the grid, water and cloud clocks, the light fade, the letterbox and the view zoom (the
+/// bars cleared, the view band set, the UI's backgrounds shown or hidden), the camera and viewport, and the light
+/// colours on a time-of-day change; once per frame (gB529066).
+void ee_gamecpp_ro_fn10c036(void *_ro);
+
+/// EERenderObject::Fn10E8D1: the terrain pass's set-up: the frame's scene state, the space-cliff textures, the
+/// visible terrain and its lighting, then the camera transform (at most every 100 ms while the camera follows).
+void ee_gamecpp_ro_fn10e8d1(void *ro);
+
+/// The raster table's load_texture (ee_gfx raster.rs): a texture loaded with its stage settings.
+///
+/// # Safety
+/// `name` is a NUL-terminated path, `load` a readable `EeGfxTextureLoad`.
+void *ee_gamecpp_ro_load_texture(const uint8_t *name, const void *load);
+
+/// EERenderObject::QueueEffects: the effect render queues rebuilt over the visible tile rows (ee_gfx effect_obj.rs).
+void ee_gamecpp_ro_queue_effects(void *_ro);
+
+/// The lighting set-ups (SetSceneFog, SetLightingOff, SetTerrainLighting, the raster table's): ee_gfx lighting.rs's
+/// rasterizer calls over the environment, applied in order.
+void ee_gamecpp_ro_lighting(uint32_t kind);
+
+/// The raster table's fog_factor: `GetFogFactor` at a point.
+///
+/// # Safety
+/// `location` is a readable point (three floats).
+float ee_gamecpp_ro_fog_factor(const float *location, uint32_t fog);
+
+/// The raster table's depth_range: the main viewport's depth range, then the viewport set on the rasterizer.
+void ee_gamecpp_ro_depth_range(float near_z,
+                               float far_z);
+
+/// The raster table's screen_point: EEROUnits.cpp's GetScreenPoint.
+///
+/// # Safety
+/// The pointers are valid (`point` three floats).
+void ee_gamecpp_ro_screen_point(const float *point, float *x, float *y);
+
+/// The raster table's draw_text (EEE3DGoal::DrawPass3, 0xf13db): centred transparent Tahoma 10 at a point, clipped
+/// to the viewport by the game's or the scenario editor's form.
+///
+/// # Safety
+/// `text` is NUL-terminated.
+void ee_gamecpp_ro_draw_text(float x,
+                             float y,
+                             const uint8_t *text,
+                             float red,
+                             float green,
+                             float blue);
+
+/// The raster table's screen_line (EEE3DMarchingLine::DrawPass4, 0xf3c68): a GELine between two screen points, its
+/// opacity per vertex.
+int32_t ee_gamecpp_ro_screen_line(float x0,
+                                  float y0,
+                                  float x1,
+                                  float y1,
+                                  float opacity0,
+                                  float opacity1);
+
+/// The raster table's rear_clipping: the main viewport's rear clipping distance set, the old one answered.
+float ee_gamecpp_ro_rear_clipping(float distance);
+
+/// EEPostGraphicsAll (`all`) / EEResetGraphicsValues: the game's render objects posted to the graphics thread, the
+/// user interface's last (left out of the reset).
+void ee_gamecpp_ro_post_render_objects(bool all);
+
+/// EERenderObject::FillRenderLists: the frame's render lists: the pools reset, the units picked, the visible tiles
+/// walked (units, map objects, remembered ones), the ghost units, then the music intensity and the ambient sounds.
+void ee_gamecpp_ro_fill_render_lists(void *ro);
+
+/// RFIL's world key (TEST ONLY; EERenderCapture.cpp's WorldKey): the fill's world as far as two runs can differ in it,
+/// FNV-1a over the current player and its viewed units, every tile of the visible rows (its sight and remembered
+/// units) and every unit on them (its id, hit points, resource, and a complex unit's location, frame, animation,
+/// command, build state and selection).
+uint64_t ee_gamecpp_ro_world_key();
+
+/// EERenderObject::FillUnit et al. are FillRenderLists' own; the scene's pieces the C++ still names.
+void ee_gamecpp_ro_light_fade(bool down,
+                              unsigned long frames);
+
+/// EE_CONTAGION_WORLD_REFERENCE: the unit referenced (`add`) or dereferenced.
+int64_t ee_gamecpp_contagion_reference(uint64_t unit, uint64_t add);
+
+/// EE_CONTAGION_WORLD_MARK: the calamity's class flags set on (`set`) or cleared from the unit's complex unit.
+int64_t ee_gamecpp_contagion_mark(uint64_t unit,
+                                  uint64_t calamity,
+                                  uint64_t set);
+
+/// EE_CONTAGION_WORLD_NEAR (GetUnitsInArea): the units in the square of the radius around the unit, unless it is
+/// inside a carrier.
+int64_t ee_gamecpp_contagion_near(uint64_t unit,
+                                  float radius,
+                                  void *list);
+
+/// EE_CONTAGION_WORLD_IMMUNE: the unit is immune (its effect 3 played on it, CONT's record first).
+int64_t ee_gamecpp_contagion_immune(uint64_t unit);
+
+/// EE_CONTAGION_WORLD_CALAMITY_INDEX: the calamity's index in the manager (-1: none).
+int64_t ee_gamecpp_contagion_calamity_index(uint64_t calamity);
+
+/// EE_CALAMITY_IO_CLASS: the class saved by id, or read by id and looked up.
+long ee_gamecpp_calamity_io_class(void *calamity, void *file, bool loading);
+
+/// EE_CALAMITY_IO_TILE_X / _Y: the place holder's coordinate saved as a long, or read into it.
+long ee_gamecpp_calamity_io_tile(void *calamity, void *file, bool loading, bool y);
+
+/// The tile is deep or shallow water (false off the map).
+bool ee_gamecpp_fx_storm_is_water(void*, int32_t x, int32_t y);
+
+/// `EEGetNextTile(from, EEGetTileDirection(from, to), 1)` into `out`.
+void ee_gamecpp_fx_storm_step_toward(void*,
+                                     int32_t fx,
+                                     int32_t fy,
+                                     int32_t tx,
+                                     int32_t ty,
+                                     int32_t *out);
+
+/// The land ripple where a drop hit the water.
+void ee_gamecpp_fx_storm_ripple(void*, float x, float y);
+
+/// The frame's sound at the unit, kept as the effect's (EEE3DDisease::Step and SetSound, 0xec6bd).
+void ee_gamecpp_fx_animation_sound(void *ask, uint32_t frame, bool changed);
+
+/// The energy wall's posts on a gate: its two end parts (EEE3DEnergyWall::Place, 0xed784).
+bool ee_gamecpp_fx_wall_gate_posts(void *ask, EeGe3DPoint *first, EeGe3DPoint *second);
+
+/// The height of the last living, finished wall piece or gate side part of the wall's owner on a tile (0xee00c).
+bool ee_gamecpp_fx_wall_piece(void *ask,
+                              int32_t x,
+                              int32_t y,
+                              float *z);
+
+/// The volcano's model over the record's mesh lists (EEE3DVolcano::BuildModel, 0xfe79d): each tile of its area split
+/// 3x3, following the terrain, coloured by terrain and lighting and blended into textures\Volcano.png near the centre,
+/// and the cone heights from the image's alpha (ee_gfx volcano.rs); the model made and referenced, placed at its
+/// centre, the bounding radius to the cone's top, the texture.
+int32_t ee_gamecpp_fx_volcano_build(void *ask,
+                                    EeGe3DPoint *points,
+                                    float *heights,
+                                    uint32_t count);
+
+/// The terrain under a farm field (the world's mesh).
+EeGfxFarmTerrain ee_gamecpp_fx_farm_terrain(void*);
+
+/// The farm's drop site: the first drop site's tile.
+bool ee_gamecpp_fx_farm_drop_site(void *ask, int32_t *x, int32_t *y);
+
+/// The current player's doppelganger of the farm: 1 built, 0 not, -1 none (or the free camera, or a player who sees
+/// everything).
+int32_t ee_gamecpp_fx_farm_doppelganger(void *ask);
+
+/// The farm's draw opacity (Fn23CEE2).
+float ee_gamecpp_fx_farm_opacity(void *ask, float opacity);
+
+/// The earthquake's ground under a point (EEE3DEarthquake, 0xec6e4..0xed606).
+EeGe3DPoint ee_gamecpp_fx_ground_point(void*, const EeGe3DPoint *point);
+
+/// The rain's sounds (EEE3DRain::StartSounds, 0xf8195): the loop at the start or after a load, the thunder `rumble`
+/// (1 or 2), both levels.
+void ee_gamecpp_fx_rain_sounds(void *ask,
+                               bool start,
+                               int32_t rumble);
+
+/// The emitter's animation sound at its place (its graphic effect's object, if any).
+void ee_gamecpp_fx_emitter_sound(void *ask, const EeGe3DPoint *location, bool first);
+
+/// The goal a state-0 confirmation shows: the last goal of the unit's goal queue as a location goal (on the tile at
+/// the effect: blocked when the unit cannot stand there and its player sees it; forced; a move), else whether its
+/// active goal unloads a transport (EEE3DCommandConfirmation::SetUp).
+EeGfxConfirmGoal ee_gamecpp_fx_confirm_goal(void *ask,
+                                            uint32_t queue,
+                                            int32_t tx,
+                                            int32_t ty);
+
+/// The kept object's (`part0`: the first part's) animation sound for the frame at the location, kept as the effect's
+/// (EEE2DImpact::Step and SetSound, 0xe166b / 0xe17ed).
+void ee_gamecpp_fx_part_sound(void *ask,
+                              EeGe3DPoint at,
+                              uint32_t frame,
+                              bool changed,
+                              bool part0);
+
+/// The unit's area effects count set (`FnE123D` at 0).
+void ee_gamecpp_fx_set_area_effects(void *ask, int32_t count);
+
+/// The unit's type is in its player's active group; a town centre or capitol also with 0x23 or 0x29 there.
+bool ee_gamecpp_fx_icons_selected(void *ask);
+
+/// The ground point under `at` when its tile is on the map.
+EeGfx2DPoint ee_gamecpp_fx_ground_at(void*, EeGe3DPoint at);
+
+/// The glow's area: the visible terrain's bottom left and size, the unit's tile.
+EeGfxGlowArea ee_gamecpp_fx_glow_area(void *ask);
+
+/// EEEDamagedEffect::Step's facts (0x10225c): its graphic effect's, then its unit's (the outer part on the map), the
+/// damage tag points of linked effect 1's kind, its health, hidden when cloaked to the current player's enemy.
+EeGfxDamagedTick ee_gamecpp_fx_damaged_tick(EffectPtr e);
+
+EeGfxGoalPlayer ee_gamecpp_fx_goal_player(void*, uint32_t player);
+
+EeGfxGoalUnit ee_gamecpp_fx_goal_facts(void*, uint32_t unit);
+
+uint32_t ee_gamecpp_fx_goal_count(void*, uint32_t unit, uint32_t queue);
+
+/// A goal's kind, automatic waypoint, garrison container or attack target, and location.
+EeGfxGoalStep ee_gamecpp_fx_goal_step(void*, uint32_t unit, uint32_t queue, uint32_t goal);
+
+bool ee_gamecpp_fx_goal_location(void*,
+                                 uint32_t unit,
+                                 uint32_t queue,
+                                 uint32_t goal,
+                                 EeGe3DPoint *out);
+
+EeGe3DPoint ee_gamecpp_fx_goal_unit_location(void*, uint32_t unit, bool on_tile);
+
+/// A placed target's outer part; a land building's: the goal's point on its centre's tile corner.
+void *ee_gamecpp_fx_goal_target(void*, void *target, EeGe3DPoint *to);
+
+bool ee_gamecpp_fx_goal_ground(void*, const EeGe3DPoint *point, EeGe3DPoint *out);
+
+/// The capture's records (EESimCaptureRecord) as the manager's captures write them.
+uint32_t ee_gamecpp_fx_capture(EeGfxCaptureOp op, uint32_t tag, const uint8_t *data, uint32_t len);
+
+/// A sound node stopped and dereferenced.
+void ee_gamecpp_fx_sound_release(uint64_t node);
+
+void ee_gamecpp_fx_sound_object_unload(uint32_t id);
+
+void ee_gamecpp_fx_sound_object_load(uint32_t id);
+
+/// The map tile at (x, y): -1 none, else whether the current player sees it.
+int32_t ee_gamecpp_fx_tile_seen(int64_t x, int64_t y);
+
+/// The current player's doppelganger of the unit (or its complex unit) on the tile at (x, y).
+bool ee_gamecpp_fx_doppelganger(int64_t x, int64_t y, uint64_t unit, bool complex);
+
+/// A shooter's weapon point (ee_combat's weapon_point with its CBEW capture): with the tag points at its animation
+/// when `test_list` finds them, else assumed.
+EeGe3DPoint ee_gamecpp_fx_weapon_point(uint64_t unit,
+                                       int32_t site,
+                                       bool test_list,
+                                       bool *tagged);
+
+/// `gEffectDetail` (`set` >= 0: set it first).
+uint32_t ee_gamecpp_fx_effect_detail(int64_t set);
+
+/// An `FSMemoryFile`'s bytes and length.
+const uint8_t *ee_gamecpp_fx_memory_file_data(void *file, uint32_t *len);
+
+/// A batch's quad: its four vertices from `index` on (the raster table's batch_quad; AddEffectQuad).
+void ee_gamecpp_fx_batch_quad(uint32_t which,
+                              const EeGfxEffectQuad *quad,
+                              uint32_t index);
+
+/// The quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays.
+void ee_gamecpp_fx_batch_create();
+
+/// The quad batches' arrays deleted.
+void ee_gamecpp_fx_batch_delete();
+
+/// Up to N shell-hole decals of the unit's class around a point (ambient effects on; ee_gfx effect_placement.rs).
+void ee_gamecpp_fx_place_impact_decal(void *cx,
+                                      const EeGe3DPoint *at);
+
+/// The unit class's blood-stain decal under the unit if ambient effects and blood are on (moved forward along the
+/// heading for giraffes and horses).
+void ee_gamecpp_fx_place_track_decal(void *cx);
+
+/// EEMap::~EEMap: the region tables, tiles and visibility words freed, the terrain textures unloaded.
+void ee_gamecpp_map_destroy(void *map);
+
+/// EEMap::CreateTile: the next reserved tile at the height, with its slice of the visibility words.
+void *ee_gamecpp_map_create_tile(void *map, float height);
+
+/// EEMap::ReserveTiles: the tiles and cleared visibility words (two players a word), the old ones dropped.
+void ee_gamecpp_map_reserve_tiles(void *map,
+                                  unsigned long count);
+
+/// EEMap::SetPlayerCount: every tile's visibility words resized, the visibility kept.
+void ee_gamecpp_map_set_player_count(void *map, unsigned long players);
+
+/// EEMap::GetTileCount (ee_app map.rs).
+unsigned long ee_gamecpp_map_tile_count(void *map);
+
+/// EEMap::PlaceUnitOnGround: a placed unit dropped onto the ground at its position (camera objects excluded).
+void ee_gamecpp_map_place_on_ground(void *unit);
+
+/// EEMap::CreateMap's body (after its capture scope): the base map, fresh region tables, every tile on the base
+/// terrain (ee_app map.rs).
+void ee_gamecpp_map_create_map(void *map,
+                               long width,
+                               long height,
+                               unsigned long players);
+
+/// EEMap::GetScreenLine.
+void ee_gamecpp_map_screen_line(const EeGe2DPoint *at, EeGe3DLine *out);
+
+/// EEMap::GetTileAt: the tile under a screen point and its coordinates (in orthographic view, where the ray meets z 0).
+void *ee_gamecpp_map_tile_at(void *map,
+                             const EeGe2DPoint *at,
+                             long *x,
+                             long *y);
+
+/// EEMap::GetTileLocation: the ground point at a tile's centre; false without the tile.
+bool ee_gamecpp_map_tile_location(void *map, long x, long y, EeGe3DPoint *out);
+
+/// EEMap::GetTerrainPitch: from the ground heights 0.65 ahead of and behind the location.
+float ee_gamecpp_map_terrain_pitch(void *map, const EeGeTransformation *t);
+
+/// EEMap::GetTerrainRoll: from the ground heights 0.65 to either side of the location.
+float ee_gamecpp_map_terrain_roll(void *map, const EeGeTransformation *t);
+
+/// EEMap::Initialize: empty (no tiles or region tables), its random generator seeded, the terrain sets registered.
+void ee_gamecpp_map_initialize(void *map);
+
+/// EEMap::SetTileTerrain: a tile's texture set, the new terrain's textures loaded (the old one's unloaded first).
+void ee_gamecpp_map_set_tile_terrain(void *map,
+                                     long x,
+                                     long y,
+                                     long set,
+                                     bool unload);
+
+/// EEMap::LoadTile: the next tile from the saved game (saves up to 0.46 also carry its terrain).
+void *ee_gamecpp_map_load_tile(void *map,
+                               unsigned long major,
+                               unsigned long minor,
+                               void *file,
+                               long x,
+                               long y);
+
+/// EEMap::DumpOutOfSynch: every tile's state to the out-of-sync dump file.
+void ee_gamecpp_map_dump(void *map, void *file);
+
+/// EEMap::RegisterTerrainSets: every terrain's texture set and every terrain type's colour set registered with the
+/// terrain mesh, then the water state and the colour table.
+void ee_gamecpp_map_register_terrain_sets(void *map);
+
+/// TILE_SAVE: the tile at (x, y), if any, saved.
+int32_t ee_gamecpp_map_save_tile(void *map, void *file, long x, long y);
+
+/// PICK_DEFAULT: the load's default terrain (the map's base terrain when saved, made valid; else the default).
+int32_t ee_gamecpp_map_pick_default(void *map,
+                                    size_t *default_,
+                                    uint8_t saved);
+
+/// TERRAIN_TYPE: the tile's terrain table (kept for TERRAIN_LOAD), whether there is one and its type.
+int32_t ee_gamecpp_map_save_terrain_type(void *map,
+                                         size_t *terrain,
+                                         long x,
+                                         long y,
+                                         EeUnitsPlayerSaveIo *io);
+
+/// SET_TYPE (and the map host's SET_TERRAIN_TYPE): the tile's terrain type.
+int32_t ee_gamecpp_map_set_terrain_type(void *map, long x, long y, long kind);
+
+/// SET_DEFAULT: the tile on the default terrain (its texture set, then its type).
+int32_t ee_gamecpp_map_save_set_default(void *map, size_t default_, long x, long y);
+
+/// FINISH: fresh region tables, the cliffs over the whole map.
+int32_t ee_gamecpp_map_save_finish(void *map);
+
+/// TERRAIN: a terrain's texture set, type and colour type.
+void ee_gamecpp_map_host_terrain(EeAppMapIo *io);
+
+/// CLIFF: a cliff terrain's first and last terrain.
+void ee_gamecpp_map_host_cliff(EeAppMapIo *io);
+
+/// LOCAL_SEES: the local player sees through the player (itself, or with shared sight between allies).
+void ee_gamecpp_map_host_local_sees(void *player,
+                                    EeAppMapIo *io);
+
+/// TILES_NEAR: the tiles near a point (the context's vector), their coordinates and number.
+void ee_gamecpp_map_host_tiles_near(void *tiles, EeAppMapIo *io);
+
+/// SIGHT_AT: the player's own or shared sight added at or removed from the tile.
+void ee_gamecpp_map_host_sight_at(void *player, const EeAppMapIo *io);
+
+/// COUNT_CELL: the mini map's cell counted on or off.
+void ee_gamecpp_map_host_count_cell(const EeAppMapIo *io);
+
+/// The sight capture's record for the world's map, with the tile's index in the map's tile array (-1: not one of
+/// them).
+void ee_gamecpp_map_sight_record(uint32_t shape,
+                                 uint32_t kind,
+                                 uint64_t player,
+                                 uint64_t tile,
+                                 long tile_x,
+                                 long tile_y,
+                                 unsigned long value,
+                                 const float *args);
+
+/// One of the map's edits (ee_app_map_edit's entries: 0 the water, 1 the base terrain's fill, 2 the cliffs, 3 the
+/// flat cliffs, 4 a tile's paint, 5 a rectangle's).
+void ee_gamecpp_map_edit(void *map,
+                         uint32_t what,
+                         long a,
+                         long b,
+                         long c,
+                         long d,
+                         long e,
+                         long f);
+
+/// EEMap::AddSight / RemoveSight's body (between their capture scopes): a player's own or shared sight of the
+/// mesh-flagged tiles within a radius (ee_app map.rs).
+void ee_gamecpp_map_sight(void *map,
+                          void *player,
+                          float x,
+                          float y,
+                          float radius,
+                          bool shared,
+                          bool add);
+
+/// EEMap::ComputeChecksum: the next 64 x 64 window's tile and corner-height checksums, the window advanced (MAPK).
+long ee_gamecpp_map_checksum(void *map);
+
+/// EEMiniMap's constructor's body: the Rust half, the map attached if given, the terrain light.
+void ee_gamecpp_minimap_construct(void *mm, void *map);
+
+/// EEMiniMap's destructor's body.
+void ee_gamecpp_minimap_destroy(void *mm);
+
+/// AddDoppelganger (4) and RemoveDoppelganger (5): a building image's dot (a wall's next three segments too).
+void ee_gamecpp_minimap_doppelganger(void *mm,
+                                     void *d,
+                                     long x,
+                                     long y,
+                                     bool wall,
+                                     bool add);
+
+/// MoveUnit: a unit's dot between cells (-10000: off the map).
+void ee_gamecpp_minimap_move_unit(void *mm, void *unit, long ox, long oy, long x, long y);
+
+/// CountCellOff (0) and CountCellOn (1).
+void ee_gamecpp_minimap_count_cell(void *mm, long x, long y, bool on);
+
+/// UpdateWorldTexture: the 64 x 64 unit layer copied into the world texture and locked again.
+void ee_gamecpp_minimap_update_world_texture(void *mm);
+
+/// LockUnitLayer: the unit layer locked, its pixels to the Rust half.
+void ee_gamecpp_minimap_lock_unit_layer(void *mm);
+
+/// SetMap: the map/pixel and map/cell transformations (rotated 45 degrees, centred), the map size of one pixel, the
+/// mini map redrawn (ee_gfx minimap.rs).
+void ee_gamecpp_minimap_set_map(void *mm,
+                                void *map);
+
+/// Redraw: the unit layer and every dot cleared, every tile's sight and contents read again (ee_app minimap.rs).
+void ee_gamecpp_minimap_redraw(void *mm);
+
+/// Recolor: every player's dots in their current colours (units in the player colour, buildings in the shade).
+void ee_gamecpp_minimap_recolor(void *mm);
+
+/// Refresh: the camera's view trapezoid on the mini map (ee_gfx minimap.rs).
+void ee_gamecpp_minimap_refresh(void *mm);
+
+/// RedrawAll: every terrain pixel recomputed, the terrain texture flagged changed.
+void ee_gamecpp_minimap_redraw_all(void *mm);
+
+/// RedrawRect: the terrain pixels covering a map rectangle recomputed, the texture flagged changed.
+void ee_gamecpp_minimap_redraw_rect(void *mm, long left, long right, long bottom, long top);
+
+/// RedrawPixels: each pixel's terrain colour in a texture rectangle (ee_app minimap.rs), MMPX's record.
+void ee_gamecpp_minimap_redraw_pixels(void *mm,
+                                      long left,
+                                      long right,
+                                      long bottom,
+                                      long top);
+
+/// EETile::GetChecksum: the tile's base checksum plus the unit ids of its building images.
+long ee_gamecpp_tile_checksum(const void *tile, unsigned long players);
+
+/// EETile::Load: the tile and its building images from the saved game; the image count's read result.
+long ee_gamecpp_tile_load(void *tile,
+                          unsigned long major,
+                          unsigned long minor,
+                          void *file,
+                          unsigned long players);
+
+/// EETile::Dump: the building images' unit ids, then the base state, to the out-of-sync dump.
+void ee_gamecpp_tile_dump(const void *tile, void *file, unsigned long players);
+
+/// EETile::RemoveDoppelganger: the image removed from the tile, if it is there.
+void ee_gamecpp_tile_remove_image(void *tile, void *image);
+
+/// EETile::Save: the tile and its valid building images that belong to it (or to none); the first error.
+long ee_gamecpp_tile_save(void *tile,
+                          void *file,
+                          unsigned long players);
+
+/// EETile::SetTerrainType: the terrain type and the mesh's space flag; a tile below sea level becomes deep water when
+/// deep, else shallow water unless three of its corners are dry.
+void ee_gamecpp_tile_set_terrain_type(void *tile,
+                                      long kind,
+                                      long x,
+                                      long y,
+                                      void *map);
+
+/// `EEPPlayerHelper()`: for loading, three slots, local player 0.
+void ee_gamecpp_pph_init(void *helper);
+
+/// `EEPPlayerHelper(EEWorld&)`: for saving, the world's existing players, slot count and current player.
+void ee_gamecpp_pph_from_world(void *helper,
+                               void *world);
+
+/// `EEPPlayerHelper::GetChecksum`: every player's checksum and the local player index.
+void ee_gamecpp_pph_checksum(const void *helper, void *checksum);
+
+/// `EEPPlayerHelper::GetLocalPlayerIndex`: the loaded local player index; 13 unless the chunk was loaded.
+///
+/// # Safety
+/// `out` is the caller's live value.
+long ee_gamecpp_pph_local_index(void *helper,
+                                long *out);
+
+/// `EEPPlayerHelper::GetPlayers`: the loaded players; 13 unless the chunk was loaded.
+long ee_gamecpp_pph_players(void *helper, void *out);
+
+/// `EEPPlayerHelper::Load`: the slot count, the local player index and each player (human or computer), then each
+/// player's ally list filled with the allies that share line of sight; the first read error.
+long ee_gamecpp_pph_load(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPPlayerHelper::Save`: the player count, slot count, local player index and each player with its type (and a
+/// computer player's engine, AI id, next engine's state and per-unit Lua state); fails for a loading chunk or no
+/// players.
+long ee_gamecpp_pph_save(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPSaveGameHeader::Load`: the name and version part, then the body (a save older than 0.255 holds Windows-1252
+/// text, converted as it loads); the first read error.
+long ee_gamecpp_hdr_load(void *header,
+                         void *file);
+
+/// `EEPSaveGameHeader::LoadFromFile`: a save file opened, copied into memory and its header read from there.
+long ee_gamecpp_hdr_load_from_file(void *header,
+                                   void *file);
+
+/// `EEPSaveGameHeader::Save`: the name and version part, then the body; the first write error.
+long ee_gamecpp_hdr_save(void *header, void *file);
+
+/// `EEPMultiplayerHelper::Load`: the physics state and the eight network tick counters; only the server's or client's
+/// physics tick restored from them; the first read error.
+long ee_gamecpp_pmh_load(unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPMultiplayerHelper::Save`: the physics state and the server's or client's network tick counters (nothing for
+/// versions up to 0.12); the first write error.
+long ee_gamecpp_pmh_save(unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPCalamityHelper::Load`: the active calamities, then the contagion manager; the contagion manager's error.
+long ee_gamecpp_pch_load(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPCalamityHelper::RepairPointers`: the loaded calamities reconnected to their caster and target units and their
+/// media loaded (those whose units are gone deleted); then the contagions reconnected.
+long ee_gamecpp_pch_repair(void *helper);
+
+/// `EEPCalamityHelper::Save`: the calamity manager's active calamities (with their current target ids) and the world's
+/// contagions.
+long ee_gamecpp_pch_save(unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPChecksum::Load`: the verbose flag and the described checksum entries; the first read error.
+long ee_gamecpp_pc_load(void *chunk, void *file);
+
+/// `EEPChecksum::Save`: the verbose flag and the described checksum entries; the first write error.
+long ee_gamecpp_pc_save(void *chunk, void *file);
+
+/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it too).
+void ee_gamecpp_ps_build_chunks(void *list);
+
+/// `TrimAutoSaves`: the files matching a pattern in a directory deleted, lowest (FSFileSpec order) first, until at
+/// most `max` remain.
+long ee_gamecpp_ps_trim_auto_saves(const void *pattern,
+                                   const void *directory,
+                                   unsigned long max);
+
+/// `LoadSavedGameFile`: a saved game validated and loaded with the sound muted (a multiplayer reload or into the game
+/// state), the graphics resumed after when asked; 9 when the file is not a valid save.
+long ee_gamecpp_ps_load_saved_game_file(void *file,
+                                        bool reload,
+                                        bool quiet,
+                                        bool resume);
+
+/// `EELoadSavedGameFile`: a saved game opened from a directory, validated and loaded into the game state with the sound
+/// muted, the graphics resumed after when asked; the first error.
+long ee_gamecpp_ps_load_from_directory(const void *name,
+                                       bool reload,
+                                       bool quiet,
+                                       const void *directory,
+                                       bool resume);
+
+/// `SaveGame`: the game saved to a file in a directory with the sound muted; the first error.
+long ee_gamecpp_ps_save_game(const void *name,
+                             unsigned long time,
+                             bool quiet,
+                             const void *directory);
+
+/// `EECheckSavedGameOptions`: a save's players against the lobby (the scenario slots for a multiplayer scenario, else
+/// every lobby player a saved one and all saved humans present); the problems listed; whether there are none.
+bool ee_gamecpp_ps_check_saved_options(void *saved,
+                                       void *current,
+                                       bool all_found,
+                                       void *missing,
+                                       long count);
+
+/// `EEValidateSaveGameFile`: whether a file holds a save this build can load; on failure the error message set (the
+/// header check's specific text, else the generic "save game invalid").
+bool ee_gamecpp_ps_validate(void *file,
+                            void *message);
+
+/// `SaveGameToFile`'s C++ entry (EESaveLoad.cpp's `SaveGameToFile`, 0x14d34b).
+long ee_gamecpp_ps_save_to_file(void *file, unsigned long time);
+
+/// `WriteSaveGame`'s C++ entry.
+long ee_gamecpp_ps_write_save(const void *name, unsigned long time, void *file, void *other);
+
+/// `EEGameStateLoader::Load`'s C++ entry.
+bool ee_gamecpp_loader_load(void *state, void *file);
+
+/// `EEGameStateLoader::LoadGame`: the game state restored from a saved header and its chunks; on failure "Load game
+/// file is corrupt." reported and the state cleared; whether it worked.
+bool ee_gamecpp_loader_load_game(void *state,
+                                 void *header_file,
+                                 void *file);
+
+/// `EEGameState::SetDefaultMapCenter`: the camera centred on the middle of the map, if there is one.
+void ee_gamecpp_st_default_map_center(void *state);
+
+/// `EELoadPersistent`: one chunk (by tag) read out of a saved game file without loading the rest; the read error.
+long ee_gamecpp_ps_load_persistent(const void *name,
+                                   long tag,
+                                   void **out);
+
+/// `EEPWorldHelper()`: no teams, improvements, team lock and cheats allowed.
+void ee_gamecpp_pwh_init(void *helper);
+
+/// `EEPWorldHelper(EEWorld&)`: the world's teams, time of day, zoom, speed, limits, victory and cheat settings and id
+/// counters.
+void ee_gamecpp_pwh_from_world(void *helper,
+                               void *world);
+
+/// `EEPWorldHelper::Load`: the teams, world settings and id counters (the Carbon flag from 0.239 on), the running
+/// state (from 0.254: world_save.rs), then the chat log and the main game form; only the form's error.
+long ee_gamecpp_pwh_load(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPWorldHelper::Save`: as Load's order (the Carbon flag always), the running state, the chat log and the main game
+/// form; only the form's error.
+long ee_gamecpp_pwh_save(void *helper,
+                         unsigned long major,
+                         unsigned long minor,
+                         void *file);
+
+/// `EEPWorldHelper::Restore`: the loaded teams, world settings and id counters into the game state (and its scenario
+/// manager, if any).
+void ee_gamecpp_pwh_restore(void *helper,
+                            void *state);
+
+/// The host of world_save.rs (was EEPWorldHost): the file's primitives, the version's predicates, the other systems'
+/// parts and the world's units by address.
+///
+/// # Safety
+/// `ctx` is null (the first tick's restore) or a live [`PwCtx`]; `io` is a live record.
+int64_t ee_gamecpp_pworld_host(void *ctx,
+                               int32_t op,
+                               EeUnitsWorldIo *io);
+
+/// `EEFindLoadedGhostUnit` (save 0.262 on): the unit made for the ghost of id `id` (made at the first ask, held by
+/// world_save.rs until the first tick), or null.
+void *ee_gamecpp_find_loaded_ghost_unit(unsigned long id);
+
+/// EEClient::HandleSlotUpdate: this client booted from the canceled game when the host's slot (0) has become open
+/// (closed), else the slot's line refreshed.
+void ee_gamecpp_client_slot_update(uint8_t slot,
+                                   const EeAppOptionsPlayerFields *player);
+
+/// EEClient::CreateXferFile: the file a transfer writes (a saved game, scenario or campaign by its extension, under
+/// the data folder); NULL for another extension, a name under five characters, a file already there with the same
+/// checksum, or one that cannot be created and opened for writing.
+void *ee_gamecpp_client_xfer_file(const void *name,
+                                  unsigned long size);
+
+/// EEClient::HandleConnectionTimeoutWarning: the server migration's countdown in the chat log ("host not
+/// responding (%d seconds)").
+void ee_gamecpp_client_timeout_warning(unsigned long remaining);
+
+/// The session host (ee_sim `EeNetSessHostFn`; `call` an `EeNetSessCall`: the frame and the values).
+///
+/// # Safety
+/// `call` is the session's live call record; its frame is EEServer.cpp's `EESessionFrame`.
+int64_t ee_gamecpp_session_host(uint32_t op,
+                                void *call);
+
+/// EETechTree::UpdateInterface: for the local player's tree, the new epoch's name shown and the main game form's
+/// group panel refreshed.
+void ee_gamecpp_tech_update_interface(void *tree,
+                                      bool epoch_changed);
+
+/// The walks' host (ee_sim tech nodes.rs EE_TECH_HOST_*; was EETechTree.cpp's EETechHost): the tree's containers, the
+/// entry points the simulation capture wraps, the world, the events, the interface and the media.
+///
+/// # Safety
+/// `io` is the walk's live record; `tree` an EETechTree.
+int32_t ee_gamecpp_tech_host(void *tree,
+                             int32_t op,
+                             void *io);
+
+/// EETechTree::Load (the tech tree file): every epoch block (the original: exactly 15), the epoch count, and the
+/// epoch range reset to all epochs.
+long ee_gamecpp_tech_load_file(void *tree,
+                               void *file);
+
+/// EETechTree::UnloadAll: every epoch unloaded.
+void ee_gamecpp_tech_unload_all(void *tree);
+
+/// EETechTree::GetNodeIDs (`all`) and GetEpochNodeIDs: the node ids of every epoch, or of one (out of range: none).
+void ee_gamecpp_tech_node_ids(void *tree,
+                              bool all,
+                              long epoch,
+                              void *out);
+
+/// EETechTree::SumCostsUncaptured: the resource costs of a tech and every unresearched prerequisite and upgrade path
+/// to it (ee_sim's sum over the tree's nodes).
+///
+/// # Safety
+/// `costs` holds 7 longs.
+void ee_gamecpp_tech_sum_costs(void *tree,
+                               long id,
+                               long unit_class,
+                               long *costs);
+
+/// EETechTreeNode::GetCostUncaptured: the node's cost in a resource for a unit class (the class's own costs when it
+/// has some), scaled; a unit's by the wonder's epochs, the variant's cost set, the player's upgrade and the
+/// just-in-time manufacturing (ee_sim's `ee_tech_node_cost`).
+long ee_gamecpp_tech_node_cost(void *node,
+                               long resource,
+                               long unit_class,
+                               float scale);
+
+/// EETechTreeEpoch::DeleteNodes (`unload`: Unload, each node unloaded first, then the epoch's data deleted; 0).
+long ee_gamecpp_tech_epoch_delete_nodes(void *epoch,
+                                        bool unload);
+
+/// EETechTreeEpoch::GetNodeIDs: the epoch's node ids appended.
+void ee_gamecpp_tech_epoch_node_ids(void *epoch, void *out);
+
+/// EETechTreeEpoch::LoadMedia: the media of every unit class the epoch's buildings make (kept in its loaded list),
+/// then the epoch's own.
+void ee_gamecpp_tech_epoch_load_media(void *epoch,
+                                      void *player);
+
+/// EETechTreeEpoch::UnloadMedia: the unit class media it loaded, then its own.
+void ee_gamecpp_tech_epoch_unload_media(void *epoch, void *player);
+
+/// EEGetFileChecksum: the checksum over the directory's files matching the pattern, in file name order (one encrypted
+/// name skipped): each file's bytes, or with `use_file_times` its write time's high word plus its size. A file that
+/// cannot be opened is skipped; a read that returns nothing ends that file (the port's fix of two endless loops).
+///
+/// # Safety
+/// `directory` is a live FSFileSpec, `pattern` a live UString.
+unsigned long ee_gamecpp_entry_file_checksum(void *directory,
+                                             const void *pattern,
+                                             long use_file_times);
+
+/// EEInitializeNetwork: the network engine started and its message types registered, then the checksum of the exe,
+/// the db tables, the unit AI scripts, the models, the computer players' AIs and the archives' timestamps, its low 13
+/// bits appended to the game version.
+void ee_gamecpp_entry_initialize_network();
+
+/// EEParseCommandLine: the command line's commands run in order; without one a client and the main menu. False when
+/// the game should quit (update_saved_games).
+///
+/// # Safety
+/// `line` is a terminated C string.
+bool ee_gamecpp_entry_parse_command_line(const char *line);
+
+/// EERun: the game's run from its entry point (WinMain, main): the Rust library's start, the fixture's switches, the
+/// single instance, the window system, the engine's initialisation, the splash screen around the start-up, the menus,
+/// the threads, the command line and the user interface's run, then the shutdown. 1 when the window system cannot
+/// start, else 0.
+///
+/// # Safety
+/// `command_line` is a terminated C string; `instance` the module's.
+int32_t ee_gamecpp_entry_run(void *instance,
+                             const char *command_line);
 
 }  // extern "C"
 

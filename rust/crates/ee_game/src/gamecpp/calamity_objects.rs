@@ -1502,8 +1502,21 @@ unsafe extern "C" fn cast_call(
             host.target = hp(O::WorldUnit, 0, &[id as i64]);
             r.ok = host.target != 0;
         }
-        C::ValidLocation => r.ok = h(O::KlValidLocation, host.class, &[pa(unit), x as i64, y as i64]) != 0,
-        C::ValidTarget => r.ok = h(O::KlValidTarget, host.class, &[pa(unit), pa(host.target)]) != 0,
+        C::ValidLocation => {
+            r.ok = ee_gamecpp_calamity_class_valid_location(
+                host.class as *mut std::ffi::c_void,
+                unit as *mut std::ffi::c_void,
+                x as c_ulong,
+                y as c_ulong,
+            )
+        }
+        C::ValidTarget => {
+            r.ok = ee_gamecpp_calamity_class_valid_target(
+                host.class as *mut std::ffi::c_void,
+                unit as *mut std::ffi::c_void,
+                host.target as *mut std::ffi::c_void,
+            )
+        }
         C::TargetView => r.flags = target_view(host),
         C::AreaOnMap => r.ok = h(O::MapAreaOnMap, 0, &[x as i64, y as i64, c.value as u32 as i64]) != 0,
         C::ValidTile => r.ok = h(O::MeshValidTile, 0, &[x as i64, y as i64]) != 0,

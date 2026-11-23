@@ -20,31 +20,26 @@
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/game/gamecpp.h"
 
+
+// The saved players' bodies are ee_game gamecpp persist_parts.rs (game core lane, round 9): the constructors, the
+// checksum, the loaded index and players, Load (each player with its type; a computer player's engine, AI id, the
+// next engine's state and the per-unit Lua state) and Save. The methods forward; their C++ calls and members are
+// EEPHelpersOp's cases below (CreatePlayer and GetPlayerType were file statics: cases and Rust now).
 
 // Creates an empty saved-players chunk for loading (three player slots, local player 0)
 EEPPlayerHelper::EEPPlayerHelper()
     : FSPersistent(kPersistentPlayers)
 {
-    this->mLocalPlayerIndex = 0;
-    this->mLoaded = false;
-    this->mIsForLoading = true;
-    this->mMaxPlayers = 3;
+    ee_gamecpp_pph_init(this);
 }
 
 // Creates the saved-players chunk for saving from the world's existing players, slot count and current player
 EEPPlayerHelper::EEPPlayerHelper(EEWorld& inWorld)
     : FSPersistent(kPersistentPlayers)
 {
-    for (long i = 0; i < 17; i++) {
-        EEPlayer* thePlayer = inWorld.mPlayers[i];
-        if (thePlayer != NULL)
-            this->mPlayers.push_back(thePlayer);
-    }
-    this->mIsForLoading = false;
-    this->mLocalPlayerIndex = inWorld.mCurrentPlayer;
-    this->mLoaded = false;
-    this->mMaxPlayers = inWorld.mMaxPlayers;
+    ee_gamecpp_pph_from_world(this, &inWorld);
 }
 
 // Creates an empty saved-players chunk for loading (persistent factory)
@@ -56,238 +51,33 @@ FSPersistent* EEPPlayerHelper::CreateDefault() const
 // Adds every player's checksum and the local player index to a running checksum
 void EEPPlayerHelper::GetChecksum(ESChecksum& ioChecksum) const
 {
-    for (unsigned long i = 0; i < this->mPlayers.size(); i++)
-        this->mPlayers[i]->GetChecksum(ioChecksum);
-    ioChecksum.AddChecksum("EEPPlayerHelper::mLocalPlayerIndex", this->mLocalPlayerIndex);
+    ee_gamecpp_pph_checksum(this, &ioChecksum);
 }
 
 // Returns the loaded local player index; error 13 unless the chunk was loaded
 long EEPPlayerHelper::GetLocalPlayerIndex(long& outIndex)
 {
-    long theResult = 13;
-    if (this->mIsForLoading && this->mLoaded) {
-        outIndex = this->mLocalPlayerIndex;
-        theResult = kErrorOK;
-    }
-    return theResult;
+    return ee_gamecpp_pph_local_index(this, &outIndex);
 }
 
 // Returns the loaded players; error 13 unless the chunk was loaded
 long EEPPlayerHelper::GetPlayers(std::vector<EEPlayer*>& outPlayers)
 {
-    long theResult = 13;
-    if (this->mIsForLoading && this->mLoaded) {
-        outPlayers = this->mPlayers;
-        theResult = kErrorOK;
-    }
-    return theResult;
+    return ee_gamecpp_pph_players(this, &outPlayers);
 }
-
-static EEPlayer* CreatePlayer(long inType);
-static long GetPlayerType(EEPlayer* inPlayer);
 
 // Reads the slot count, the local player index and each player (human or computer) from a saved game, then fills
 // each player's ally list with the allies that share line of sight; returns the first read error
 long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = kErrorOK;
-    EEPlayer* thePlayer = NULL;
-    unsigned long theCount = 0;
-    long theType = 0;
-    unsigned long i;
-    unsigned long j;
-    if (this->mIsForLoading) {
-        theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(this->mMaxPlayers);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(this->mLocalPlayerIndex);
-                if (theResult == kErrorOK) {
-                    for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                        theResult = inFile.Read(theType);
-                        if (theResult == kErrorOK) {
-                            thePlayer = CreatePlayer(theType);
-                            // An unknown player type (corrupt save) creates no player: fail the load instead of
-                            // calling through NULL.
-                            if (thePlayer == NULL)
-                                theResult = kErrorFailed;
-                            else
-                                theResult = thePlayer->Load(inMajorVersion, inMinorVersion, inFile);
-                            // port: a computer player's engine from version 0.251 (ee/EECPEngine.h), and from 0.253
-                            // the next engine's AI id after it (a uint32 length, then the bytes; before, the next
-                            // engine played boom). An AI the manifest no longer lists fails the load. A seat saved
-                            // with the deleted C++ classic (or before 0.251) plays the manifest's "classic" AI.
-                            if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer != NULL
-                                && (inMajorVersion > 0 || inMinorVersion >= 251)) {
-                                unsigned char theEngine = kEECPEngineClassic;
-                                theResult = inFile.Read(theEngine);
-                                thePlayer->mComputerPlayer->mEngine = kEECPEngineNext;
-                                if (theResult == kErrorOK && theEngine == kEECPEngineNext) {
-                                    std::string theAI = "boom";
-                                    if (inMajorVersion > 0 || inMinorVersion >= 253) {
-                                        unsigned long theLength = 0;
-                                        theResult = inFile.Read(theLength);
-                                        if (theResult == kErrorOK && (theLength == 0 || theLength > 64))
-                                            theResult = kErrorFailed;
-                                        if (theResult == kErrorOK) {
-                                            theAI.assign(theLength, '\0');
-                                            unsigned long theRead = 0;
-                                            theResult = inFile.Read(&theAI[0], theLength, theRead);
-                                            if (theResult == kErrorOK && theRead != theLength)
-                                                theResult = kErrorFailed;
-                                        }
-                                    }
-                                    if (theResult == kErrorOK && theAI != "none" && EECPAIByID(theAI) == NULL) {
-                                        EECPEngineLog("the saved game's player %lu plays the AI '%s', which "
-                                                      "Data/ai/ais.json does not list: the game cannot be loaded",
-                                                      thePlayer->mPlayerID, theAI.c_str());
-                                        theResult = kErrorFailed;
-                                    }
-                                    if (theResult == kErrorOK) {
-                                        EECPNextSetAI(thePlayer->mComputerPlayer, theAI);
-                                    }
-                                }
-                            }
-                            // port: from version 0.252 the next engine's state and its script's memory (ee/EECPNext.h
-                            // EECPNextSaveState; a uint32 length, 0 for none, then the bytes)
-                            if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer != NULL
-                                && (inMajorVersion > 0 || inMinorVersion >= 252)) {
-                                unsigned long theLength = 0;
-                                theResult = inFile.Read(theLength);
-                                if (theResult == kErrorOK && theLength > 0) {
-                                    std::string theBytes(theLength, '\0');
-                                    unsigned long theRead = 0;
-                                    theResult = theLength > (64u << 20) ? kErrorFailed
-                                        : inFile.Read(&theBytes[0], theLength, theRead);
-                                    if (theResult == kErrorOK && (theRead != theLength
-                                        || !EECPNextLoadState(thePlayer->mComputerPlayer, theBytes)))
-                                        theResult = kErrorFailed;
-                                }
-                            }
-                            // port: from version 0.280 the per-unit Lua interface's state (ee/EECPNextUnits.h; a uint32
-                            // length, 0 for none, then the bytes; 0.254 on main, EESaveHasUnitsLuaState)
-                            if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer != NULL
-                                && EESaveHasUnitsLuaState(inMajorVersion, inMinorVersion)) {
-                                unsigned long theLength = 0;
-                                theResult = inFile.Read(theLength);
-                                if (theResult == kErrorOK && theLength > 0) {
-                                    std::string theBytes(theLength, ' ');
-                                    unsigned long theRead = 0;
-                                    theResult = theLength > (64u << 20) ? kErrorFailed
-                                        : inFile.Read(&theBytes[0], theLength, theRead);
-                                    if (theResult == kErrorOK && (theRead != theLength
-                                        || !EECPUnitsLoad(thePlayer->mComputerPlayer, theBytes)))
-                                        theResult = kErrorFailed;
-                                }
-                            }
-                            if (theResult == kErrorOK)
-                                this->mPlayers.push_back(thePlayer);
-                        }
-                        this->mLoaded = true;
-                    }
-                }
-            }
-        }
-    }
-    for (i = 0; i < this->mPlayers.size(); i++) {
-        for (j = 0; j < this->mPlayers.size(); j++) {
-            if (j != i && this->mPlayers[j]->IsAlliedWith(this->mPlayers[i]) && this->mPlayers[j]->mSharedLOS == true) {
-                EEPlayer* theAlly = this->mPlayers[i];
-                this->mPlayers[j]->mAllies.push_back(theAlly);
-            }
-        }
-    }
-    return theResult;
-}
-
-// Creates an empty human (type 0) or computer (type 1) player; NULL (and an assert for type 3) otherwise
-static EEPlayer* CreatePlayer(long inType)
-{
-    EEPlayer* thePlayer = NULL;
-    switch (inType) {
-    case 0:
-        thePlayer = new EEHumanPlayer;
-        break;
-    case 1:
-        thePlayer = new EEComputerPlayer;
-        break;
-    case 3:
-        ESVERIFY_AT(false, 251);
-        break;
-    }
-    return thePlayer;
-}
-
-// Returns a player's save type: 0 human, 1 computer, 3 for both (asserts when it is neither)
-static long GetPlayerType(EEPlayer* inPlayer)
-{
-    bool theIsComputerPlayer = inPlayer->mComputerPlayer != NULL;
-    bool theIsHumanPlayer = inPlayer->mHumanPlayer != NULL;
-    ESVERIFY_AT(theIsComputerPlayer || theIsHumanPlayer, 274);
-    if (theIsComputerPlayer && theIsHumanPlayer)
-        return 3;
-    if (theIsHumanPlayer)
-        return 0;
-    return 1;
+    return ee_gamecpp_pph_load(this, inMajorVersion, inMinorVersion, &inFile);
 }
 
 // Writes the player count, slot count, local player index and each player with its type to a save; fails for a
 // loading chunk or no players
 long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    if (this->mIsForLoading || this->mPlayers.size() <= 0)
-        return kErrorFailed;
-    unsigned long theCount = this->mPlayers.size();
-    long theResult = outFile.Write(theCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mMaxPlayers);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mLocalPlayerIndex);
-    if (theResult != kErrorOK)
-        return theResult;
-    for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
-        EEPlayer* thePlayer = this->GetPlayer(i);
-
-        long theType = GetPlayerType(thePlayer);
-        theResult = outFile.Write(theType);
-        if (theResult == kErrorOK)
-            theResult = thePlayer->Save(inMajorVersion, inMinorVersion, outFile);
-        if (theResult == kErrorOK && theType == 1)   // port: the computer player's engine (Load: from 0.251)
-            theResult = outFile.Write(thePlayer->mComputerPlayer->mEngine);
-        if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer->mEngine == kEECPEngineNext) {
-            // port: the next engine's AI id (Load: from 0.253)
-            std::string theAI = EECPEngineAI(thePlayer->mComputerPlayer);
-            if (theAI.empty())
-                theAI = EECPClassicAI() != NULL ? EECPAIID(EECPClassicAI()) : std::string("none");
-            unsigned long theLength = (unsigned long)theAI.size();
-            unsigned long theWritten = 0;
-            theResult = outFile.Write(theLength);
-            if (theResult == kErrorOK)
-                theResult = outFile.Write(theAI.data(), theLength, theWritten);
-        }
-        if (theResult == kErrorOK && theType == 1) {   // port: the next engine's state (Load: from 0.252)
-            std::string theBytes;
-            EECPNextSaveState(thePlayer->mComputerPlayer, theBytes);   // a script's failure is logged; its state goes
-            unsigned long theLength = (unsigned long)theBytes.size();
-            theResult = outFile.Write(theLength);
-            unsigned long theWritten = 0;
-            if (theResult == kErrorOK && theLength > 0)
-                theResult = outFile.Write(theBytes.data(), theLength, theWritten);
-        }
-        if (theResult == kErrorOK && theType == 1) {   // port: the per-unit Lua interface's state (Load: from 0.280)
-            std::string theBytes;
-            EECPUnitsSave(thePlayer->mComputerPlayer, theBytes);
-            unsigned long theLength = (unsigned long)theBytes.size();
-            theResult = outFile.Write(theLength);
-            unsigned long theWritten = 0;
-            if (theResult == kErrorOK && theLength > 0)
-                theResult = outFile.Write(theBytes.data(), theLength, theWritten);
-        }
-    }
-    return theResult;
-    return kErrorFailed;
+    return ee_gamecpp_pph_save(this, inMajorVersion, inMinorVersion, &outFile);
 }
 
 // Does nothing (no address: empty, ICF-folded into 0x157269; EEGameStateLoader::RestorePlayers 0x14a98d calls it
@@ -295,4 +85,80 @@ long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVe
 // the helper; provisional name)
 void EEPPlayerHelper::Fn157269(EEGameState* inState)
 {
+}
+
+// ------------------------------------------------------------------------- the saved players' C++ (gamecpp persist_parts.rs)
+
+int64_t EEPHeaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+
+static_assert(kEECPEngineClassic == 0 && kEECPEngineNext == 1, "gamecpp persist_parts.rs");
+
+#define P64(x) ((int64_t)(intptr_t)(x))
+#define PPH ((EEPPlayerHelper*)p)
+#define PL ((EEPlayer*)p)
+#define CP ((EEComputerPlayer*)p)
+#define STR (*(std::string*)p)
+#define BYTES std::string((const char*)a[0], (size_t)a[1])
+
+// The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
+int64_t EEPHelpersOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::PphFields: return P64(&PPH->mLocalPlayerIndex);
+    case O::PphPush: PPH->mPlayers.push_back((EEPlayer*)a[0]);
+        break;
+    case O::PphCopyPlayers: *(std::vector<EEPlayer*>*)a[0] = PPH->mPlayers;
+        break;
+    case O::PphPlayerChecksum: PL->GetChecksum(*(ESChecksum*)a[0]);
+        break;
+    case O::PphChecksumLocal: ((ESChecksum*)p)->AddChecksum("EEPPlayerHelper::mLocalPlayerIndex", (unsigned long)a[0]);
+        break;
+    case O::PphNewHuman: return P64(static_cast<EEPlayer*>(new EEHumanPlayer));
+    case O::PphNewComputer: return P64(static_cast<EEPlayer*>(new EEComputerPlayer));
+    case O::PphVerifyType3: ESVERIFY_AT(false, 251);
+        break;
+    case O::PphPlayerLoad: return PL->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
+    case O::PphPlayerSave: return PL->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
+    case O::PphComputerOf: return P64(PL->mComputerPlayer);
+    case O::PphHasHuman: return PL->mHumanPlayer != NULL;
+    case O::PphVerifyPlayerType: ESVERIFY_AT(a[0] != 0, 274);
+        break;
+    case O::PphCpSetEngineNext: CP->mEngine = kEECPEngineNext;
+        break;
+    case O::PphCpEngine: return CP->mEngine;
+    case O::PphAiKnown: return EECPAIByID(BYTES) != NULL;
+    case O::PphLogUnknownAi: EECPEngineLog("the saved game's player %lu plays the AI '%s', which Data/ai/ais.json does not list: the game cannot be loaded", PL->mPlayerID, BYTES.c_str());
+        break;
+    case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
+        break;
+    case O::PphCpLoadState: return EECPNextLoadState(CP, BYTES);
+    case O::PphCpUnitsLoad: return EECPUnitsLoad(CP, BYTES);
+    case O::PphHasUnitsLuaState: return EESaveHasUnitsLuaState((unsigned long)a[0], (unsigned long)a[1]);
+    case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
+    case O::PphAddAlly: PL->mAllies.push_back((EEPlayer*)a[0]);
+        break;
+    case O::PphStrNew: return P64(new std::string);
+    case O::PphStrDelete: delete &STR;
+        break;
+    case O::PphStrSize: return (int64_t)STR.size();
+    case O::PphStrData: return P64(STR.data());
+    case O::PphCpEngineAi: *(std::string*)a[0] = EECPEngineAI(CP);
+        break;
+    case O::PphClassicAiPresent: return EECPClassicAI() != NULL;
+    case O::PphClassicAiId: *(std::string*)a[0] = EECPAIID(EECPClassicAI());
+        break;
+    case O::PphCpSaveState: EECPNextSaveState(CP, *(std::string*)a[0]);
+        break;
+    case O::PphCpUnitsSave: EECPUnitsSave(CP, *(std::string*)a[0]);
+        break;
+    default: return EEPHeaderOp(inOp, p, a, f);
+    }
+    return 0;
+}
+
+double EEPHelpersOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpDF(inOp, p, a, f);
 }

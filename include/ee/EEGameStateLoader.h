@@ -15,13 +15,10 @@ class UString;
 class EEGameStateLoader {
 public:
     EEGameStateLoader(EEGameState* inState);
-    // 0x14a0a4: reads one persistent per entry of inTags from inFile and restores it into the state (3: bad tag)
-    long RestorePersistents(std::vector<long>& inTags, FSFile& inFile);
+    // the bodies (0x14a0a4 RestorePersistents, 0x14a765 ReadPersistent, RestorePlayers: ee_game gamecpp persist_save.rs)
     bool Load(FSFile& inFile);                                                  // 0x14a3eb (copies inFile to memory first)
     // 0x14a4ef: the header from inHeaderFile, then the persistents from inFile; false (and the state cleared) on failure
     bool LoadGame(FSFile& inHeaderFile, FSFile& inFile);
-    long ReadPersistent(FSFile& inFile, FSPersistent*& outPersistent);          // 0x14a765 (one chunk)
-    long RestorePlayers(EEPPlayerHelper* inHelper);
 
     EEGameState* mState;                    // +0x00
 };

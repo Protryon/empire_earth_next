@@ -516,7 +516,7 @@ fn create_new(st: P, opt: P, l: &Locals) {
             slot_fields(opt_slot(mine, i as c_ulong)).mEngine = engines[i] as c_ulong;
         }
     }
-    if opts(opt).mEpochStart == h(O::EpochCount, 0, &[]) as c_long {
+    if opts(opt).mEpochStart == ee_sim::tech::tech_ids::ee_tech_epoch_count() as c_long {
         // random
         let random = Owned::new(O::RandomNew, O::RandomDelete);
         h(O::RandomSetSeed, random.0, &[h(O::UiRandomSeed, 0, &[])]);
