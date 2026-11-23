@@ -614,7 +614,13 @@ mod tests {
         w.call(EeWonRootScreenCall::TabSelected, 8, 0);
         assert_eq!(
             w.take(),
-            vec!["WindowGet 0 0 0", "WindowRectGet 0 0 0", "ClientRectGet 0 0 0", "Relayout 0 0 0", "SaveUserPrefs 0 0 0"]
+            vec![
+                "WindowGet 0 0 0",
+                "WindowRectGet 0 0 0",
+                "ClientRectGet 0 0 0",
+                "Relayout 0 0 0",
+                "SaveUserPrefs 0 0 0"
+            ]
         );
     }
 }
