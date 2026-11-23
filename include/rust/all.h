@@ -137,6 +137,7 @@
 #include "rust/won_gui/guictor.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guiedit.h"
+#include "rust/won_gui/guienum.h"
 #include "rust/won_gui/guievent.h"
 #include "rust/won_gui/guifocus.h"
 #include "rust/won_gui/guihost.h"
