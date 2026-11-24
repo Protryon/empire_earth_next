@@ -290,7 +290,15 @@ impl UuHost for Game {
     }
     fn tile_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, ends: bool, thin: bool) -> Vec<Tile> {
         // `EEGetTileLine` (uu_line.rs: one call, its CBTL record written once)
-        let tiles = crate::units::uu_line::tile_line_recorded(&mut crate::units::uu_line::game_host(), x1, y1, x2, y2, ends, thin);
+        let tiles = crate::units::uu_line::tile_line_recorded(
+            &mut crate::units::uu_line::game_host(),
+            x1,
+            y1,
+            x2,
+            y2,
+            ends,
+            thin,
+        );
         tiles.iter().map(|&(x, y)| [x, y]).collect()
     }
     fn reserved(&mut self, group: u64, point: [f32; 3]) -> bool {
@@ -672,7 +680,10 @@ pub unsafe fn tiles_of(v: *const c_void) -> Vec<Tile> {
         if begin.is_null() {
             return Vec::new();
         }
-        std::slice::from_raw_parts(begin, end.offset_from(begin) as usize).iter().map(|t| [t[0] as i32, t[1] as i32]).collect()
+        std::slice::from_raw_parts(begin, end.offset_from(begin) as usize)
+            .iter()
+            .map(|t| [t[0] as i32, t[1] as i32])
+            .collect()
     }
 }
 

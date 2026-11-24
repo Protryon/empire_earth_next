@@ -372,11 +372,20 @@ impl AgHost for AgGame {
     fn can_take(&mut self, storage: u64, u: u64, resource_type: u32) -> bool {
         self.op(EE_UNITS_AG_CAN_TAKE, storage, u, resource_type as i64, 0) != 0
     }
+    // (`c_long` is 32 bits on Windows and 64 elsewhere: the casts are needed there)
+    #[allow(clippy::unnecessary_cast)]
     fn nearest_footprint(&mut self, u: u64, target: u64, x: i32, y: i32) -> (i32, i32) {
         // `u->GetNearestFootprintTile(target, &x, &y)` (eu_body.rs; the outs start as the caller's values)
         let (mut x, mut y) = (x as std::os::raw::c_long, y as std::os::raw::c_long);
         // SAFETY: two live units of the body's world; the outs are locals
-        unsafe { ee_units_eu_nearest_footprint_tile(u as usize as *mut c_void, target as usize as *mut c_void, &mut x, &mut y) };
+        unsafe {
+            ee_units_eu_nearest_footprint_tile(
+                u as usize as *mut c_void,
+                target as usize as *mut c_void,
+                &mut x,
+                &mut y,
+            )
+        };
         (x as i32, y as i32)
     }
     fn has_tile(&mut self, x: i32, y: i32) -> bool {
@@ -494,8 +503,17 @@ impl AgHost for AgGame {
     fn new_location(&mut self, l: NewLocation) -> u64 {
         // `EEUGRust::NewLocation(&point, b1c, forced, face, yaw, auto_waypoint, group_state)` (goal_calls.rs)
         let [x, y, z] = l.point;
-        crate::units::goal_calls::ee_units_goal_new_location(l.b1c, x, y, z, l.forced, l.face, l.yaw, l.auto_waypoint, l.group_state)
-            as usize as u64
+        crate::units::goal_calls::ee_units_goal_new_location(
+            l.b1c,
+            x,
+            y,
+            z,
+            l.forced,
+            l.face,
+            l.yaw,
+            l.auto_waypoint,
+            l.group_state,
+        ) as usize as u64
     }
     fn new_unload(&mut self, u: u64, x: i32, y: i32) -> u64 {
         // `NewUnloadTransport(u, x, y, true)`

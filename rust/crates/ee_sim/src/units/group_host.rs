@@ -404,7 +404,9 @@ impl GroupHost for GameGroups {
     fn set_group_path(&mut self, unit: u64, points: &[[f32; 3]]) {
         // `unit->SetGroupPathGoals(points)` (waypoints.rs)
         // SAFETY: a live complex unit of the body's world
-        unsafe { crate::units::waypoints::ee_units_waypoints_group_path_goals(unit, points.as_ptr().cast(), points.len()) }
+        unsafe {
+            crate::units::waypoints::ee_units_waypoints_group_path_goals(unit, points.as_ptr().cast(), points.len())
+        }
     }
     fn clear_build_targets(&mut self, unit: u64) {
         self.op(EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS, unit, 0, 0, 0);
