@@ -395,41 +395,8 @@ static void EETestFixtureConfigure()
 extern void (*gEETestFixtureConfigure)();   // EEGlobals.cpp
 static const bool sEETestFixtureRegistered = (gEETestFixtureConfigure = EETestFixtureConfigure, true);
 
-// TEST ONLY: the legacy debugger harness (tools/harness/game_state_probe.py) reads the communications' numbers from
-// this mirror, by its map name: their state is Rust's (ee_net), at no offset of the C++ object. The presentation
-// bridge (tools/harness/presentation_bridge.c) refreshes it before each present through EETestCommsRefresh.
-extern "C" {
-struct EETestComms {
-    int32_t mLastTickReceived;
-    uint32_t mCTsProcessed;
-    uint8_t mPaused;
-    uint8_t mMultiplayer;
-    uint8_t mValid;   // 0: no communications object
-};
-EETestComms gEETestComms;
-// The render thread calls it, so it reads gCommunications only under the UI copy lock, taken without waiting (as the
-// bridge's ui_test takes it: a UI event can hold the lock while it waits for the render thread): the UI thread's
-// actions and events replace the communications object under that lock (EEAJoinOrHostAGame's delete and new when a
-// game is set up), and a read between the delete and the new (the legacy tour's crash in this function) used a
-// freed object. When the lock is busy the mirror keeps its last values until the next present.
-void EETestCommsRefresh()
-{
-    TSCriticalSection* theLock = gUIManager ? gUIManager->GetUILock() : NULL;
-    if (!theLock || !theLock->TryEnter())
-        return;
-    NESynchronousCommunications* theCommunications = gCommunications;
-    if (!theCommunications) {
-        gEETestComms.mValid = 0;
-    } else {
-        gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
-        gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
-        gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
-        gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
-        gEETestComms.mValid = 1;
-    }
-    theLock->Leave();
-}
-}
+// TEST ONLY: the legacy debugger harness's communications mirror and its refresh are Rust's (fixture comms.rs),
+// kept in the link by name (the probe and the presentation bridge find them in the map)
 #if defined(_MSC_VER)
 #pragma comment(linker, "/include:EETestCommsRefresh")
 #pragma comment(linker, "/include:gEETestComms")
