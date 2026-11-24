@@ -158,7 +158,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
 {
     typedef EeSimDriverSed O;
     switch (inOp) {
-    case O::Editor: return P64(gUIManager->GetScenarioEditorForm());
     case O::FormSlot: return (int64_t)ED->GetSlot((uint32_t)a[0]);
     case O::ControlById: return P64(ED->GetControlById((unsigned long)a[0]));
     case O::FormControl: return P64(ED->GetControl((unsigned long)a[0]));
