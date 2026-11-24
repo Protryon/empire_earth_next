@@ -562,7 +562,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             h(O::PhysPost, 0, &[i[1]]);
         }
         EE_NETMSG_WACT_COLLISION_UNIT => {
-            h(O::SetCollisionDetectionUnit, 0, &[i[1]]);
+            super::globals::set!(gCollisionDetectionUnit, i[1] as std::ffi::c_ulong);
         }
         EE_NETMSG_WACT_COLLISION_FLAGS => {
             // SAFETY: the world's member

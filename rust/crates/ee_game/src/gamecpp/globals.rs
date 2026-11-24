@@ -1,7 +1,7 @@
 //! The game's plain global pointers and scalars, stored by Rust (were EEGlobals.cpp's definitions; the C++ headers
 //! keep declaring them `extern`, so every C++ user reads the same symbol as before): the subsystem, manager, font
 //! and render object pointers, the TEST ONLY hooks, the campaigns' network checksums, the install checksum, the
-//! space units' heights, gFreeCamera, sIconsLoaded and gEmptyString. Each is exported under the C++ symbol: MSVC's
+//! space units' heights, the collision period and its unit (were EEPhysicsModel.cpp's), gFreeCamera, sIconsLoaded and gEmptyString. Each is exported under the C++ symbol: MSVC's
 //! mangled name on Windows (from the link map), the plain name elsewhere (Itanium does not mangle a global's name).
 //! Rust reads and writes them through `get!`, `have!` and `set!` where a host case only did that, and passes a
 //! few pointers on to a Rust export (gDataPath, gGraphics, gPhysics, gDataPreLoading: reads on the thread that
@@ -9,7 +9,7 @@
 //! pointer has the same size and alignment), `long` is `c_long` (32 bits on Windows, 64 on LP64), `bool` is `bool`.
 #![allow(non_upper_case_globals)]
 
-use core::ffi::{c_char, c_long, c_void};
+use core::ffi::{c_char, c_long, c_ulong, c_void};
 
 /// A pointer global's storage: `*mut c_void` is not Sync, so the statics are `static mut` (C++ writes them).
 macro_rules! ee_globals {
@@ -111,6 +111,8 @@ ee_globals! {
     val gBinaryChecksum: u32 = 0 => "?gBinaryChecksum@@3IA";
     val gSpaceTurretHeight: f32 = 0.7 => "?gSpaceTurretHeight@@3MA";
     val gSpaceStationHeight: f32 = 1.5 => "?gSpaceStationHeight@@3MA";
+    val gCollisionDetectionUnit: c_ulong = 2000 => "?gCollisionDetectionUnit@@3KA";
+    val gCollisionPeriod: c_ulong = 1 => "?gCollisionPeriod@@3KA";
     val gFreeCamera: bool = false => "?gFreeCamera@@3_NA";
     val sIconsLoaded: bool = false => "?sIconsLoaded@@3_NA";
     val gEmptyString: [c_char; 4] = [0; 4] => "?gEmptyString@@3PADA";

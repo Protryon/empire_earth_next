@@ -196,26 +196,6 @@ void EEWorld::SetDiplomaticStance(unsigned long inPlayerID, long inOther, long i
 }
 
 
-// port: the deactivations queued before the unit had an id (EEWorld::DeactivateUnit), Reference()d, in call order
-static std::vector<EEComplexUnit*> sUnbornDeactivations;
-
-static void EEDropUnbornDeactivations()
-{
-    for (size_t i = 0; i < sUnbornDeactivations.size(); i++)
-        sUnbornDeactivations[i]->Dereference();
-    sUnbornDeactivations.clear();
-}
-
-// the active lists' reference changes (ee_sim app active.rs), applied as each is made
-static void EEActiveRefs(uint32_t inID, int32_t inDelta)
-{
-    EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);
-    for (; inDelta > 0; inDelta--)
-        theUnit->Reference();
-    for (; inDelta < 0; inDelta++)
-        theUnit->Dereference();
-}
-
 // Tears down the current game: records the end statistics, unloads media, removes every unit, ghost, effect,
 // calamity and manager, frees the minimap and active unit lists, and returns campaign games to the campaign screen
 void EEWorld::Clear()
@@ -370,8 +350,7 @@ EEStatisticsRecord::EEStatisticsRecord()
 // Applies the queued unit activations and deactivations to the list of units updated every tick
 void EEWorld::UpdateActiveUnits()
 {
-    ee_gamecpp_world_queue_born();   // QueueBornDeactivations
-    ee_app_active_update(EEActiveRefs);
+    ee_gamecpp_world_update_active();   // (gamecpp world.rs: QueueBornDeactivations, then the lists' update)
 }
 
 // Queues a unit for activation unless it is NULL, has no id, is a path point or is already queued
@@ -627,6 +606,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::WGhostUnlock: W->mGhostUnitsLock->Leave();
         break;
     case O::WGhostCount: return (int64_t)W->mGhostUnits.size();
+    case O::C13bGhostLockFree: TSScheduler::DestroyCriticalSection(W->mGhostUnitsLock);   // the world's dtor (world.rs ee_gamecpp_world_destroy)
+        break;
+    case O::C13bGhostAt: return P64(W->mGhostUnits[(size_t)a[0]]);
     case O::WGhostBack: return P64(W->mGhostUnits.back());
     case O::WGhostPop: W->mGhostUnits.pop_back();
         break;
@@ -862,15 +844,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::LogAfterGone: fprintf(stderr, "EE-UNITLIST: placement after a unit no longer in the list (id %08lx), from the head\n", ((RTSUnit*)p)->mUnitID);
         break;
-    case O::UnbornContains: return std::find(sUnbornDeactivations.begin(), sUnbornDeactivations.end(), CX) != sUnbornDeactivations.end();
-    case O::UnbornPush: sUnbornDeactivations.push_back(CX);
-        break;
-    case O::UnbornCount: return (int64_t)sUnbornDeactivations.size();
-    case O::UnbornAt: return P64(sUnbornDeactivations[a[0]]);
-    case O::UnbornClear: sUnbornDeactivations.clear();
-        break;
-    case O::ActiveClear: ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);   // the lists and their references (ee_sim app active.rs)
-        break;
     // the map, the managers and the globals
     case O::MapSize: return ((EEMap*)p)->mSize;
     case O::MapPlayerCount: return ((EEMap*)p)->mU19561C;
@@ -940,8 +913,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::NewCalamityHelper: return P64(static_cast<FSPersistent*>(new EEPCalamityHelper));
     case O::SetLocalPlayerOut: gLocalPlayerOut = a[0] != 0;
-        break;
-    case O::SetCollisionDetectionUnit: gCollisionDetectionUnit = (unsigned long)a[0];
         break;
     case O::SetSightUpdates: gSightUpdatesEnabled = a[0] != 0;
         break;

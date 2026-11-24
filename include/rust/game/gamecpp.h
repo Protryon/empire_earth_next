@@ -302,7 +302,6 @@ enum class EeGameCpp : uint32_t {
   CxIsWarpColor,
   CxSetWarpColor,
   CxSetBlackColor,
-  ActiveClear,
   AeClearEffects,
   AiCollectComputerPlayers,
   AmbientEnable,
@@ -447,7 +446,6 @@ enum class EeGameCpp : uint32_t {
   ServerPause,
   ServerUnpause,
   SetCameraFollowing,
-  SetCollisionDetectionUnit,
   SetDeferComputerRestore,
   SetHerdUnreadValue,
   SetLocalPlayerOut,
@@ -519,11 +517,6 @@ enum class EeGameCpp : uint32_t {
   UnTileNext,
   UnTilePrev,
   UnUnlink,
-  UnbornAt,
-  UnbornClear,
-  UnbornContains,
-  UnbornCount,
-  UnbornPush,
   UnitClassCount,
   UpdateLandContinents,
   UpgradeHitPoints,
@@ -4400,6 +4393,10 @@ long ee_gamecpp_world_pause(bool pause);
 
 /// EEWorld::ActivateUnit: queued for activation unless NULL, without an id, a path point or already queued.
 void ee_gamecpp_world_activate(void *cx);
+
+/// EEWorld::UpdateActiveUnits: the queued unit activations and deactivations applied to the list of units stepped
+/// every tick.
+void ee_gamecpp_world_update_active();
 
 /// EEWorld::DeactivateUnit: queued for deactivation unless a path point or already queued; a unit without an id
 /// waits by pointer (as the original's queue held it).

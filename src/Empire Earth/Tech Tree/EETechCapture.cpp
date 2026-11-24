@@ -215,8 +215,6 @@ static const bool sCaptureHooksSet = (EECalamityCanCastEnter = CanCastEnter, EEC
 
 // ------------------------------------------------------------------------- round 11, lane C: the hooks' C++
 
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
 #define TCU ((EEUnit*)p)
 #define TCX ((EEComplexUnit*)p)
 
@@ -435,7 +433,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkNodeUnitClass0: return TNODE->GetUnitClass(0);
     case O::TkNodeIsAvailable: return TNODE->GetIsAvailable();
     case O::TkNodeGetCost: return TNODE->GetCost((long)a[0], (long)a[1], 1.0f);
-    default: return EECore11OpE(inOp, p, a, f);
+    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);   // the end of the chain
     }
     return 0;
 }

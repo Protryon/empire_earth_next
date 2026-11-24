@@ -139,7 +139,6 @@ public:
     void SwapUnit(EEUnit* inOld, EEUnit* inNew);
     void UpdateCivTimer();
     void ServeLoadSaveRequests();
-    unsigned long UpdateUnits();
     void UpdateWeather();
 
     std::vector<NEMessage*> mLoadSaveRequests;  // +0x06c (queued under mSaveGameLock, referenced; Init dereferences them)

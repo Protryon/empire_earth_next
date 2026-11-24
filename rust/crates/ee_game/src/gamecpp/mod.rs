@@ -369,7 +369,6 @@ pub enum EeGameCpp {
     CxSetBlackColor,
     // ---- the world's bodies (world.rs): EEWorld (p the world), the game state (St: p the EEGameState), the
     // players, the units, the managers and globals they call
-    ActiveClear,
     AeClearEffects,
     AiCollectComputerPlayers,
     AmbientEnable,
@@ -514,7 +513,6 @@ pub enum EeGameCpp {
     ServerPause,
     ServerUnpause,
     SetCameraFollowing,
-    SetCollisionDetectionUnit,
     SetDeferComputerRestore,
     SetHerdUnreadValue,
     SetLocalPlayerOut,
@@ -586,11 +584,6 @@ pub enum EeGameCpp {
     UnTileNext,
     UnTilePrev,
     UnUnlink,
-    UnbornAt,
-    UnbornClear,
-    UnbornContains,
-    UnbornCount,
-    UnbornPush,
     UnitClassCount,
     UpdateLandContinents,
     UpgradeHitPoints,
