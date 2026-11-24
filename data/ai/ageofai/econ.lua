@@ -13,6 +13,7 @@ local MT = require("ageofai.metal")     -- [metal.c] workers_to_metals
 local PK = require("ageofai.packing")   -- [packing.c] the production buildings packed against their kind
 local W = require("ageofai.work")       -- [work.c] THE WORK: the need model, the citizen plan's caps, the mine crowds
 local TT = require("ageofai.territories")   -- [territories.c] the border towers and their stone sink
+local PL = require("ageofai.plans")         -- [plans.c] the strategy plans (plan_f on the pressure lever)
 local M = {}
 
 local cur_memory = nil   -- [priority.c] the memory of the step under way (the buildings ask the list)
@@ -222,6 +223,11 @@ function M.accounts(view, mem, reserve, reserve_civ)
         end
     end
     local share = view.epoch >= FARM_EPOCH and S.military_income_share_farms or S.military_income_share
+    -- [plans.c LN_PRESSURE] the plan's factor on the pressure lever (1.0 when the plans are off)
+    share = math.floor(share * PL.plan_f(memory, 3) + 0.5)
+    if share < 0 then
+        share = 0
+    end
     -- early_army (econ.c hook_add_resource): no army in the first epoch (share 0 unless early_soldiers), then
     -- food-free ranged soldiers: the army's food share small (early_army_food_share) and at most 300 held before
     -- farms, so the citizens keep their food

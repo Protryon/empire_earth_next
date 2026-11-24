@@ -63,6 +63,7 @@ local S = require("ageofai.settings")
 local V = require("lib.view")
 local G = require("lib.groups")    -- the force's role (where it meets the enemy, combat_at)
 local AIR = require("ageofai.air")   -- is_aa / is_bomber, the wing's airport timer (airstrike.c)
+local PL = require("ageofai.plans")   -- [plans.c] the air-force leaning
 
 local M = {}
 
@@ -904,6 +905,10 @@ function M.step(view, memory, orders, budget, events)
     -- THE AIR FORCE'S SIZE and the Airports for it
     local nm = #ids
     local pct = S.air_force_share or 0
+    pct = math.floor(pct * PL.plan_f(memory, 0) + 0.5)
+    if pct < 0 then
+        pct = 0
+    end
     local sz, sz_f, sz_b, holds = 0, 0, 0, AFS_PORT_HOLDS
     if pct > 0 then
         local cap = cls("b_airport").transport or 0

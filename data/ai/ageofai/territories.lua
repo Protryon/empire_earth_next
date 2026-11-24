@@ -75,6 +75,7 @@
 -- ai.can_place.
 local V = require("lib.view")
 local S = require("ageofai.settings")
+local PL = require("ageofai.plans")   -- [plans.c] the defences leaning (border towers/walls pace)
 
 local M = {}
 
@@ -1454,6 +1455,10 @@ function M.border_tower(view, memory)
     local sink = S.stone_sink ~= false and (view.stock.stone or 0) >= BW_SINK
     local space = sink and BW_SINK_SPACE or BW_SPACE
     local every = sink and BW_SINK_EVERY or BW_EVERY
+    local f = PL.plan_f(memory, 4)
+    if f ~= nil and f > 0 and f ~= 1 then
+        every = math.max(5000, math.floor(every / f))
+    end
     if bw.t ~= nil and now >= bw.t and now - bw.t < every then
         return nil
     end

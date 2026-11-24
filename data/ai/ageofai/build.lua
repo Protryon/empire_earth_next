@@ -75,6 +75,7 @@
 local V = require("lib.view")
 local S = require("ageofai.settings")
 local P = require("ageofai.priority")   -- [priority.c] the list every spender asks
+local PL = require("ageofai.plans")     -- [plans.c] the spread leaning (claim cadence)
 local PK = require("ageofai.packing")   -- [packing.c] the packed production buildings
 local M = {}
 
@@ -1187,7 +1188,12 @@ local function claim_lay(ctx)
         B.claim_why = "claims still going up"
         return nil
     end
-    if B.claim_t ~= nil and ctx.now - B.claim_t < BD_CLAIM_EVERY then
+    local claim_every = BD_CLAIM_EVERY
+    local f = PL.plan_f(ctx.memory, 5)
+    if f ~= nil and f > 0 and f ~= 1 then
+        claim_every = math.max(60000, math.floor(claim_every / f))
+    end
+    if B.claim_t ~= nil and ctx.now - B.claim_t < claim_every then
         B.claim_why = "the last one too recent"
         return nil
     end

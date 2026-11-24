@@ -50,6 +50,7 @@ local LA = require("lib.army")   -- [forces.c] home_threat
 local S = require("ageofai.settings")
 local F = require("ageofai.fleet")
 local MT = require("ageofai.metal")      -- [metal.c] the fleet's size by the enemy's, the calm sea's account
+local PL = require("ageofai.plans")      -- [plans.c] the navy leaning (share)
 local M = {}
 
 local ACC_CAP = 600
@@ -172,6 +173,8 @@ local function share(mem)
         return 0
     end
     local sh = S.navy_share * 100
+    local f = (mem.plan_factor or 1000) / 1000.0
+    sh = math.floor(sh * f + 0.5)
     local t, miss = mem.target or 0, (mem.target or 0) - (mem.war or 0)
     if t > 0 and miss > 0 and S.navy_share_max > S.navy_share and fleet_builds(mem) then
         sh = sh + (S.navy_share_max - S.navy_share) * 100 * miss // t
@@ -1401,6 +1404,8 @@ function M.step(view, memory, orders, budget, force)
     memory.navy = memory.navy or {}
     local mem = memory.navy
     memory.eco = memory.eco or {}
+    -- [plans.c LN_NAVY] the plan's factor on the navy leaning, cached for share() this step
+    mem.plan_factor = math.floor(PL.plan_f(memory, 1) * 1000 + 0.5)
     local function order(o)
         orders[#orders + 1] = o
     end
