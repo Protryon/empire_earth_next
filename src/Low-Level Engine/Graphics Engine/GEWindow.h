@@ -9,19 +9,14 @@
 #include <stdbool.h>
 
 struct PlatWindow;
-struct EeGeWin;
-struct EeGe2DPoint;
 #include "lle/LLEForward.h"
-extern "C" const EeGe2DPoint* ee_ge_win_origin(EeGeWin* p);
-extern "C" unsigned long ee_ge_win_size(const EeGeWin* p, bool height);
-extern "C" void* ee_ge_win_os(const EeGeWin* p);
-extern "C" void ee_ge_win_resize(EeGeWin* p, unsigned long width, unsigned long height);
+#include "rust/render/ge.h"   // the window (ee_ge_win_*)
 
 class LLE_API GEWindow {
 public:
     GEWindow(PlatWindow* inWindow, unsigned long inWidth, unsigned long inHeight, unsigned long inDepth,
              bool inIsFullScreen);
-    ~GEWindow();   // destroys the platform window only in full-screen mode
+    ~GEWindow() { ee_ge_win_destroy(this->mRust); }   // destroys the platform window only in full-screen mode
     // the screen position of the client area
     const GE2DPoint& GetClientOrigin() { return *reinterpret_cast<const GE2DPoint*>(ee_ge_win_origin(this->mRust)); }
     unsigned long GetHeight() const { return ee_ge_win_size(this->mRust, true); }

@@ -16,8 +16,10 @@
 class NEConnection;                         // the plug-in's connection handle (ee_net_tcp's Connection), never defined
 class NEServer;                             // the plug-in's server handle (ee_net_tcp's Server), never defined
 
-LLE_API long NEInitialize(FSFileSpec& inDirectory);
-void NEShutdown(bool inForced);   // Network Engine.cpp's shutdown hook (frees the protocols)
+// Registers the network protocol, TCP/IP (the original loaded every 'ntwk' plug-in in the directory; the one there
+// was is linked in, Rust: ee_net net_tcp) after the shutdown hook that frees the protocols; fails if its plug-in is
+// not usable (ee_net ffi_protocol.rs)
+inline long NEInitialize(FSFileSpec&) { return ee_net_initialize(); }
 
 class LLE_API NEProtocol : URustView {
 public:

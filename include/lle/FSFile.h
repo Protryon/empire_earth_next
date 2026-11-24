@@ -24,12 +24,8 @@
 static_assert(sizeof(short) == 2 && sizeof(float) == 4 && sizeof(double) == 8 && sizeof(bool) == 1,
               "FSFile value widths");
 
-// Open() access modes (names from NERecordPlayback.cpp's assert texts; values from its calls: Open(1) to read a
-// playback file, Open(2) to write a record file; FSBasicFile +0x34 stores the mode)
-enum {                                      // FSFileAccess is Rust's (rust/base/lle_enums.h)
-    kfsaRead = kFileAccessRead,             // spelled this way in the original's assert strings
-    kfsaWrite = kFileAccessWrite
-};
+// (Open()'s access modes are FSFileAccess, rust/base/lle_enums.h: kFileAccessRead 1, kFileAccessWrite 2; the original's
+// assert texts spelled them kfsaRead and kfsaWrite.)
 
 #include "lle/LLEForward.h"
 

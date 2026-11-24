@@ -184,6 +184,19 @@ pub extern "C" fn ee_net_pr_initialize() -> i32 {
     }
 }
 
+/// `NEInitialize`: the shutdown hook (`NEShutdown`) on the engine's shutdown list, then the protocols; the list's
+/// error if it refuses.
+#[no_mangle]
+pub extern "C" fn ee_net_initialize() -> i32 {
+    extern "C" fn shutdown(_forced: bool) {
+        ee_net_pr_shutdown();
+    }
+    match ee_base::util::ee_util_register_shutdown(shutdown) {
+        0 => ee_net_pr_initialize(),
+        e => e as i32,
+    }
+}
+
 /// `NEShutdown`: every registered protocol freed.
 #[no_mangle]
 pub extern "C" fn ee_net_pr_shutdown() {

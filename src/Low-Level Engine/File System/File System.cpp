@@ -67,16 +67,9 @@ static const bool sFSCppCallsRegistered = ee_fs_cpp_register(&kFSCppCalls);
 // FSBasicFile and FSFileSpec are their Rust records from the vtable pointer on (lle/FSFileSpec.h; fs spec.rs)
 static_assert(sizeof(UString) == sizeof(EeFsString), "a UString member is an EeFsString");
 static_assert(sizeof(FSFileSpec) == sizeof(EeFsSpec), "FSFileSpec is an EeFsSpec");
-struct FSSpecLayout : FSFileSpec {   // (the members are protected)
-    static void Check()
-    {
-        static_assert(offsetof(FSSpecLayout, mVolume) == offsetof(EeFsSpec, volume), "layout");
-        static_assert(offsetof(FSSpecLayout, mFileAccess) == offsetof(EeFsSpec, file_access), "layout");
-        static_assert(offsetof(FSSpecLayout, mIsOpen) == offsetof(EeFsSpec, is_open), "layout");
-        static_assert(offsetof(FSSpecLayout, mHandle) == offsetof(EeFsSpec, handle), "layout");
-        static_assert(offsetof(FSSpecLayout, mStream) == offsetof(EeFsSpec, stream), "layout");
-    }
-};
+static_assert(offsetof(FSFileSpec, mVolume) == offsetof(EeFsSpec, volume) && offsetof(FSFileSpec, mFileAccess) == offsetof(EeFsSpec, file_access) &&
+              offsetof(FSFileSpec, mIsOpen) == offsetof(EeFsSpec, is_open) && offsetof(FSFileSpec, mHandle) == offsetof(EeFsSpec, handle) &&
+              offsetof(FSFileSpec, mStream) == offsetof(EeFsSpec, stream), "FSFileSpec's layout");
 
 // Splits a path into its volume (drive or UNC server share) and its directory (with a trailing backslash) into outSpec
 // (rust/crates/ee_base/src/fs spec.rs, LLE lane round 6)

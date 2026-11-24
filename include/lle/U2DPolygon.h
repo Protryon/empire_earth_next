@@ -22,10 +22,6 @@
 // ee/EEAIArea.h now records them; kinds 3 GetClosestPoints and 7 GetScanLines had no caller) and of the areas' (AREA).
 // Only the outermost captured call of a thread is recorded: a scope made while another is alive is not outer, so the
 // calls an algorithm makes inside another (and that leave the C++ with it) never reach the digests.
-enum {
-    kGeomCaptureHull = 0x4c4c5548,          // "HULL"
-    kGeomCaptureArea = 0x41455241,          // "AREA"
-};
 class EEGeomCaptureScope {
 public:
     // mOuter: the capture is on and no other scope is alive on this thread
@@ -40,16 +36,6 @@ inline void EEGeomCapturePoint(const U2DPoint<long>& inPoint)
 {
     ee_sim_capture_geom_point((int32_t)inPoint.mX, (int32_t)inPoint.mY);
 }
-// inWhole: the count and every point; else the count and an FNV-1a hash of the points (a hull's identity)
-inline void EEGeomCapturePoints(const U2DPoint<long>* inPoints, size_t inCount, bool inWhole)
-{
-    static_assert(sizeof(U2DPoint<long>) == 2 * sizeof(long), "a point is two longs");
-    ee_sim_capture_geom_points(reinterpret_cast<const long*>(inPoints), inCount, inWhole);
-}
-inline void EEGeomCapturePoints(const std::vector<U2DPoint<long> >& inPoints, bool inWhole)
-{
-    EEGeomCapturePoints(inPoints.empty() ? NULL : &inPoints[0], inPoints.size(), inWhole);
-}
 inline void EEGeomCaptureCommit() { ee_sim_capture_geom_commit(); }
 
 // New (port): the seam's point type is U2DPoint<long>'s layout, so a point vector passes in place
@@ -57,13 +43,6 @@ static_assert(sizeof(U2DPoint<long>) == sizeof(EeHullPoint), "EeHullPoint");
 inline const EeHullPoint* U2DHullPoints(const std::vector<U2DPoint<long> >& inPoints)
 {
     return inPoints.empty() ? NULL : reinterpret_cast<const EeHullPoint*>(&inPoints[0]);
-}
-inline EeHullPoint U2DHullPointOf(const U2DPoint<long>& inPoint)
-{
-    EeHullPoint thePoint;
-    thePoint.x = inPoint.mX;
-    thePoint.y = inPoint.mY;
-    return thePoint;
 }
 inline U2DPoint<long> U2DHullPoint(EeHullPoint inPoint)
 {
