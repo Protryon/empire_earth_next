@@ -10379,6 +10379,89 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWNS_CLEAR = 258;
 /// `EEReadAreaBytes(the b bytes at c, *town a)` (b and c: an address and a length)
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_TOWN_READ_AREA = 259;
 
+/// `MoveToLocation(f[0], f[1], b != 0)`
+constexpr static const int32_t EE_UNITS_CU_T_MOVE_TO_LOCATION = 12000;
+
+/// `mPhysicalModel.SetLocationXY(f[0], f[1])`
+constexpr static const int32_t EE_UNITS_CU_T_PM_SET_XY = 12001;
+
+/// `mPhysicalModel.SetLocationXYZ(GE3DPoint(f[0], f[1], f[2]))`
+constexpr static const int32_t EE_UNITS_CU_T_PM_SET_XYZ = 12002;
+
+/// `mPhysicalModel.SetLocation(*(const GETransformation*)a)`
+constexpr static const int32_t EE_UNITS_CU_T_PM_SET_LOCATION = 12003;
+
+/// `mPhysicalModel.SetModel((GEModel*)a)`
+constexpr static const int32_t EE_UNITS_CU_T_PM_SET_MODEL = 12004;
+
+/// `mPhysicalModel.SetScale(GetUnitClass()->GetTileSize())`
+constexpr static const int32_t EE_UNITS_CU_T_PM_SET_TILE_SCALE = 12005;
+
+/// a unit from the pool (from the heap with `EE_UNIT_POOL=0`: `b`); no unit yet
+constexpr static const int32_t EE_UNITS_CU_T_POOL_NEW = 12006;
+
+/// `Init(class, transformation, player, goal queue count)`: `a` the four words
+constexpr static const int32_t EE_UNITS_CU_T_INIT = 12007;
+
+/// `UList<EEComplexUnit*>::sNodePool.SetSize(b, c, 3)`; no unit
+constexpr static const int32_t EE_UNITS_CU_T_NODE_POOL_SET_SIZE = 12008;
+
+/// `EEComplexUnit::sMemoryPool.SetSize(b, c, 1)`; no unit
+constexpr static const int32_t EE_UNITS_CU_T_POOL_SET_SIZE = 12009;
+
+/// `EEComplexUnit::sMemoryPool.DumpStats(false)`; no unit
+constexpr static const int32_t EE_UNITS_CU_T_POOL_DUMP_STATS = 12010;
+
+/// `EEComplexUnit::sMemoryPool.Release()`; no unit
+constexpr static const int32_t EE_UNITS_CU_T_POOL_RELEASE = 12011;
+
+/// the used pool unit `b`'s `mReferenceCount = 0`; no unit
+constexpr static const int32_t EE_UNITS_CU_T_LEAKED_ZERO_REFERENCES = 12012;
+
+/// `mWeaponTagPoint`
+constexpr static const int32_t EE_UNITS_CU_T_WEAPON_TAG = 12013;
+
+/// `EECombatIsInReach(this, (EEUnit*)a)`
+constexpr static const int32_t EE_UNITS_CU_T_IN_REACH = 12014;
+
+/// `EECombatCaptureHostRead(EE_COMBAT_HR_IN_REACH, this, a, b != 0, c, mWeaponTagPoint)` (TEST ONLY: CBQR)
+constexpr static const int32_t EE_UNITS_CU_T_CAPTURE_IN_REACH = 12015;
+
+/// `ee_combat_host_read_enter(0)`: whether this is the outermost host read
+constexpr static const int32_t EE_UNITS_CU_T_READ_ENTER = 12016;
+
+/// `ee_combat_host_read_leave(0)`
+constexpr static const int32_t EE_UNITS_CU_T_READ_LEAVE = 12017;
+
+/// `mOwner = (EEComplexUnit*)a`
+constexpr static const int32_t EE_UNITS_CU_T_SET_OWNER_FIELD = 12018;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_SET_LOCATION_XY = 1;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_SET_LOCATION = 2;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_SET_TRANSFORMATION = 3;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_SET_SCALED_MODEL = 4;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_CREATE = 5;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_CREATE_INIT = 6;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_SET_POOL_SIZE = 7;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_RELEASE_POOL = 8;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_REPORT_LEAKING = 9;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_IS_IN_REACH = 10;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_SET_OWNER = 11;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_CLEAR_HOLDER = 12;
+
+constexpr static const int32_t EE_UNITS_CU_T_DO_HAS_EFFECT = 13;
+
 /// goal `b`'s `mKind`
 constexpr static const int32_t EE_UNITS_UAI_GOAL_KIND = 100;
 
@@ -16785,89 +16868,6 @@ constexpr static const int64_t EE_UNITS_WORLD_PART_TECH_ALLOWED = 10;
 /// `EELoadTileTypes` / `EESaveTileTypes` (every map tile's terrain type, from 0.283)
 constexpr static const int64_t EE_UNITS_WORLD_PART_TILE_TYPES = 11;
 
-/// `MoveToLocation(f[0], f[1], b != 0)`
-constexpr static const int32_t EE_UNITS_CU_T_MOVE_TO_LOCATION = 12000;
-
-/// `mPhysicalModel.SetLocationXY(f[0], f[1])`
-constexpr static const int32_t EE_UNITS_CU_T_PM_SET_XY = 12001;
-
-/// `mPhysicalModel.SetLocationXYZ(GE3DPoint(f[0], f[1], f[2]))`
-constexpr static const int32_t EE_UNITS_CU_T_PM_SET_XYZ = 12002;
-
-/// `mPhysicalModel.SetLocation(*(const GETransformation*)a)`
-constexpr static const int32_t EE_UNITS_CU_T_PM_SET_LOCATION = 12003;
-
-/// `mPhysicalModel.SetModel((GEModel*)a)`
-constexpr static const int32_t EE_UNITS_CU_T_PM_SET_MODEL = 12004;
-
-/// `mPhysicalModel.SetScale(GetUnitClass()->GetTileSize())`
-constexpr static const int32_t EE_UNITS_CU_T_PM_SET_TILE_SCALE = 12005;
-
-/// a unit from the pool (from the heap with `EE_UNIT_POOL=0`: `b`); no unit yet
-constexpr static const int32_t EE_UNITS_CU_T_POOL_NEW = 12006;
-
-/// `Init(class, transformation, player, goal queue count)`: `a` the four words
-constexpr static const int32_t EE_UNITS_CU_T_INIT = 12007;
-
-/// `UList<EEComplexUnit*>::sNodePool.SetSize(b, c, 3)`; no unit
-constexpr static const int32_t EE_UNITS_CU_T_NODE_POOL_SET_SIZE = 12008;
-
-/// `EEComplexUnit::sMemoryPool.SetSize(b, c, 1)`; no unit
-constexpr static const int32_t EE_UNITS_CU_T_POOL_SET_SIZE = 12009;
-
-/// `EEComplexUnit::sMemoryPool.DumpStats(false)`; no unit
-constexpr static const int32_t EE_UNITS_CU_T_POOL_DUMP_STATS = 12010;
-
-/// `EEComplexUnit::sMemoryPool.Release()`; no unit
-constexpr static const int32_t EE_UNITS_CU_T_POOL_RELEASE = 12011;
-
-/// the used pool unit `b`'s `mReferenceCount = 0`; no unit
-constexpr static const int32_t EE_UNITS_CU_T_LEAKED_ZERO_REFERENCES = 12012;
-
-/// `mWeaponTagPoint`
-constexpr static const int32_t EE_UNITS_CU_T_WEAPON_TAG = 12013;
-
-/// `EECombatIsInReach(this, (EEUnit*)a)`
-constexpr static const int32_t EE_UNITS_CU_T_IN_REACH = 12014;
-
-/// `EECombatCaptureHostRead(EE_COMBAT_HR_IN_REACH, this, a, b != 0, c, mWeaponTagPoint)` (TEST ONLY: CBQR)
-constexpr static const int32_t EE_UNITS_CU_T_CAPTURE_IN_REACH = 12015;
-
-/// `ee_combat_host_read_enter(0)`: whether this is the outermost host read
-constexpr static const int32_t EE_UNITS_CU_T_READ_ENTER = 12016;
-
-/// `ee_combat_host_read_leave(0)`
-constexpr static const int32_t EE_UNITS_CU_T_READ_LEAVE = 12017;
-
-/// `mOwner = (EEComplexUnit*)a`
-constexpr static const int32_t EE_UNITS_CU_T_SET_OWNER_FIELD = 12018;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_SET_LOCATION_XY = 1;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_SET_LOCATION = 2;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_SET_TRANSFORMATION = 3;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_SET_SCALED_MODEL = 4;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_CREATE = 5;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_CREATE_INIT = 6;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_SET_POOL_SIZE = 7;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_RELEASE_POOL = 8;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_REPORT_LEAKING = 9;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_IS_IN_REACH = 10;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_SET_OWNER = 11;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_CLEAR_HOLDER = 12;
-
-constexpr static const int32_t EE_UNITS_CU_T_DO_HAS_EFFECT = 13;
-
 /// The list a host operation fills.
 struct EeUnitsAgListHandle;
 
@@ -21321,6 +21321,54 @@ bool ee_units_towns_repair(void *ctx,
 /// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
 void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
 
+/// `EEComplexUnit`'s body `what` (`EE_UNITS_CU_T_DO_*`) on `unit` (NULL for the pool's).
+///
+/// # Safety
+/// `unit` is a live `EEComplexUnit` or NULL as the body needs it, `a` live likewise; the simulation thread.
+int64_t ee_units_cu_tiny(int32_t what,
+                         void *unit,
+                         const void *a,
+                         int64_t b,
+                         int64_t c,
+                         float x,
+                         float y,
+                         float z);
+
+/// `EEComplexUnit::Create(class, transformation, player, goal queue count)`: the new unit.
+///
+/// # Safety
+/// The class, the transformation and the player are live; the simulation thread.
+void *ee_units_cu_create_init(void *class_,
+                              const void *transformation,
+                              void *player,
+                              unsigned long goal_queues);
+
+/// `EEComplexUnit::ClearGarrison()` over the unit's record.
+///
+/// # Safety
+/// `fields` is a live unit's record.
+void ee_units_cu_clear_garrison(EeUnitsComplexUnitFields *fields);
+
+/// `EEComplexUnit::ClearCollisionState()` over the unit's record.
+///
+/// # Safety
+/// `fields` is a live unit's record.
+void ee_units_cu_clear_collision_state(EeUnitsComplexUnitFields *fields);
+
+/// `EEComplexUnit::DistanceSquaredTo`: between two transformations' positions (row-major 4 x 4: x and y are
+/// rows 0 and 1 of the last column).
+///
+/// # Safety
+/// Both are live transformations.
+float ee_units_cu_distance_squared(const float (*from)[4][4],
+                                   const float (*to)[4][4]);
+
+/// `EEComplexUnit::DistanceSquaredToTileXY`: from a transformation's position to a tile.
+///
+/// # Safety
+/// `from` is a live transformation.
+float ee_units_cu_distance_squared_to_tile(const float (*from)[4][4], long tile_x, long tile_y);
+
 /// the class host (EEUnitClass.cpp; uc_class.rs's too)
 extern int64_t ee_units_uc_host(int32_t op,
                                 void *class_,
@@ -23077,54 +23125,6 @@ void ee_units_world_ghost_made(void *unit);
 /// # Safety
 /// `unit_id` is valid for every made unit.
 void *ee_units_world_ghost_made_find(unsigned long id, unsigned long (*unit_id)(void*));
-
-/// `EEComplexUnit`'s body `what` (`EE_UNITS_CU_T_DO_*`) on `unit` (NULL for the pool's).
-///
-/// # Safety
-/// `unit` is a live `EEComplexUnit` or NULL as the body needs it, `a` live likewise; the simulation thread.
-int64_t ee_units_cu_tiny(int32_t what,
-                         void *unit,
-                         const void *a,
-                         int64_t b,
-                         int64_t c,
-                         float x,
-                         float y,
-                         float z);
-
-/// `EEComplexUnit::Create(class, transformation, player, goal queue count)`: the new unit.
-///
-/// # Safety
-/// The class, the transformation and the player are live; the simulation thread.
-void *ee_units_cu_create_init(void *class_,
-                              const void *transformation,
-                              void *player,
-                              unsigned long goal_queues);
-
-/// `EEComplexUnit::ClearGarrison()` over the unit's record.
-///
-/// # Safety
-/// `fields` is a live unit's record.
-void ee_units_cu_clear_garrison(EeUnitsComplexUnitFields *fields);
-
-/// `EEComplexUnit::ClearCollisionState()` over the unit's record.
-///
-/// # Safety
-/// `fields` is a live unit's record.
-void ee_units_cu_clear_collision_state(EeUnitsComplexUnitFields *fields);
-
-/// `EEComplexUnit::DistanceSquaredTo`: between two transformations' positions (row-major 4 x 4: x and y are
-/// rows 0 and 1 of the last column).
-///
-/// # Safety
-/// Both are live transformations.
-float ee_units_cu_distance_squared(const float (*from)[4][4],
-                                   const float (*to)[4][4]);
-
-/// `EEComplexUnit::DistanceSquaredToTileXY`: from a transformation's position to a tile.
-///
-/// # Safety
-/// `from` is a live transformation.
-float ee_units_cu_distance_squared_to_tile(const float (*from)[4][4], long tile_x, long tile_y);
 
 }  // extern "C"
 
