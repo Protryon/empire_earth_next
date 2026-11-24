@@ -24,18 +24,6 @@
 // The tile-unit list nodes (provisional name).
 UMemoryPool<EETUnitList> gTileUnitListPool;
 
-// Destroys the tile, releasing every unit standing on it
-EETile::~EETile()
-{
-    this->RemoveAllUnits();
-}
-
-// Records a building image (doppelganger) on the tile
-void EETile::AddDoppelganger(EEDoppelganger* inDoppelganger)
-{
-    this->mDoppelgangers.push_back(inDoppelganger);
-}
-
 // Takes a unit list node from the pool for a unit (holding a reference to it) ahead of inNext; returns the node
 RTSTileUnitNode* EETile::AddUnit(EEUnit* inUnit, RTSTileUnitNode* inNext)
 {
@@ -60,45 +48,6 @@ void EETile::FreeUnitNode(RTSTileUnitNode* inNode)
     inNode->mUnit = NULL;
     inNode->mNext = NULL;
     gTileUnitListPool.Delete((EETUnitList*)inNode);
-}
-
-// Returns the tile's base checksum plus the unit ids of its building images
-long EETile::GetChecksum(unsigned long inPlayerCount) const
-{
-    return ee_gamecpp_tile_checksum(this, inPlayerCount);
-}
-
-// Reads the tile and its building images from the saved game; returns the image count's read result
-long EETile::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
-                  unsigned long inPlayerCount)
-{
-    return ee_gamecpp_tile_load(this, inMajorVersion, inMinorVersion, &inFile, inPlayerCount);
-}
-
-// Writes the tile's building image unit ids, then its base state, to the out-of-sync dump
-void EETile::Dump(FILE* inFile, unsigned long inPlayerCount) const
-{
-    ee_gamecpp_tile_dump(this, inFile, inPlayerCount);
-}
-
-// Removes a building image from the tile, if it is there
-void EETile::RemoveDoppelganger(EEDoppelganger* inDoppelganger)
-{
-    ee_gamecpp_tile_remove_image(this, inDoppelganger);
-}
-
-// Writes the tile and its valid building images that belong to this tile (or to none) to the saved game;
-// returns the first error
-long EETile::Save(FSFile& outFile, unsigned long inPlayerCount)
-{
-    return ee_gamecpp_tile_save(this, &outFile, inPlayerCount);
-}
-
-// Sets the tile's terrain type and its space flag; a tile below sea level becomes deep water when deep,
-// else shallow water unless three of its corners are dry
-void EETile::SetTerrainType(long inTerrainType, const EETileLocation& inLocation, RTSMap* inMap)
-{
-    ee_gamecpp_tile_set_terrain_type(this, inTerrainType, inLocation.mX, inLocation.mY, inMap);
 }
 
 // Sizes the tile unit list pool (chunk size and chunk limit)

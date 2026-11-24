@@ -10,6 +10,7 @@
 #include "lle/GEQuaternion.h"
 #include "ee/EEUnitHandle.h"
 #include "rust/game/app.h"
+#include "rust/game/gamecpp.h"
 
 class GE3DPoint;
 class EEUnit;
@@ -31,19 +32,22 @@ public:
     // false and zeros; provisional name and argument meanings)
     void MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlagA, float inDuration, EEUnit* inUnitB,
                   GE3DPoint inLocationB, bool inFlagB, float inZoom, float inTurnYaw, float inTurnPitch);
-    void Update(float inElapsedTime);       // 0x129a34 (EEMLoadMainScreen passes 1.0; provisional name)
+    // 0x129a34 (EEMLoadMainScreen passes 1.0; provisional name)
+    void Update(float inElapsedTime) { ee_gamecpp_camera_update(this, inElapsedTime); }
     // inline (the grab scroll copies it to a temporary before its GetValue call, 0x1d9a5c)
     float GetZoom() const { return this->mZoom; }
     // port: the end offset and focus as the C++ value class (the scenario's camera keys, the test fixture)
     const GE3DPoint& GetEndOffset() const { return reinterpret_cast<const GE3DPoint&>(this->mEndOffset); }
     const GE3DPoint& GetEndFocus() const { return reinterpret_cast<const GE3DPoint&>(this->mEndFocus); }
-    void ResetZoom();                       // 0x12934f: SetZoom(1.0f)
+    // 0x12934f: SetZoom(1.0f)
+    void ResetZoom() { this->SetZoom(1.0f); }
     void Revolve(const GE3DPoint& inAngles);    // 0x128722 (the mouse revolve event; provisional name)
     void Rotate(const GE3DPoint& inAngles);     // 0x12887d (the mouse rotate event; provisional name)
     // 0x129844: moves the camera to inLocation (copied); the hot-key unit selection passes (theCenter, false, true)
     void SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain);
     void SetMode(long inMode);              // 0x1299c0: mMode = inMode, then SetZoom(mZoom)
-    void SetChanged();                      // 0x1299dc: if (!mLocked) mChanged = true
+    // 0x1299dc: if (!mLocked) mChanged = true
+    void SetChanged() { ee_app_camera_set_changed(this); }
     void ClearUnitA();                      // 0x1299ed: dereferences and clears mUnitA (provisional name)
     void ClearUnitB();                      // 0x129a04: the same for mUnitB, then resets mIsFollowingUnitB/mF0C4.. (provisional name)
     // 0x129dfe (ret 0x14; EEPhysics 0x153474 pushes (unit, (byte) mIsFollowingUnitB, 1.0f, mTurnYaw, mTurnPitch))
@@ -63,10 +67,12 @@ public:
     void SetOffsetTurn(const GETransformation& inTransformation, bool inFlag);  // 0x1296b6 (key +0x40)
     // the rest of the camera unit (provisional names)
     EECameraControl();
-    long AddKey(const EECameraKey& inKey);      // 0x1277e5: appends a key unless locked (5)
+    // 0x1277e5: appends a key unless locked (5)
+    long AddKey(const EECameraKey& inKey) { return ee_gamecpp_camera_add_key(this, &inKey); }
     void SetClippingDistances();            // 0x1279f0: the viewport's clipping distances
     void GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint);
-    void GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint);  // 0x12844f: the point to look at on a unit
+    // 0x12844f: the point to look at on a unit
+    void GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint) { ee_gamecpp_camera_unit_point(inUnit, &outPoint); }
     void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation);
     static float GetPitch(float inZoom, long inMode);   // 0x1285ec (cdecl): the pitch for a zoom
     void StartPath();                       // 0x1286fa: plays the key list

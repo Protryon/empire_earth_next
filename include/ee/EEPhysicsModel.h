@@ -10,6 +10,7 @@
 #ifndef EE_EEPHYSICSMODEL_H
 #define EE_EEPHYSICSMODEL_H
 
+#include "rust/sim/units.h"
 class EEComplexUnit;
 class GE3DPoint;
 
@@ -18,11 +19,11 @@ public:
     explicit EEPhysicsModel(long inKind) : mKind(inKind) {}
 
     // 0x156897: the step of the unit's physics action (0..5), then the after-step work (the collisions, the push)
-    void Step(EEComplexUnit* inUnit);
+    void Step(EEComplexUnit* inUnit) { ee_units_pm_step((int32_t)this->mKind, inUnit); }
     // the action-0 step alone (EE-SIM's missile sweep flies a missile with it)
-    void Step0(EEComplexUnit* inUnit);
+    void Step0(EEComplexUnit* inUnit) { ee_units_pm_step0((int32_t)this->mKind, inUnit); }
     // +0x60 of the airplane models: the displayed bank for the turn rate (the airplane classes' death roll)
-    float ComputeRoll(EEComplexUnit* inUnit, float inValue);
+    float ComputeRoll(EEComplexUnit* inUnit, float inValue) { return ee_units_pm_compute_roll((int32_t)this->mKind, inUnit, inValue); }
     // an EEPMAirplane (the airplane or the air animal model: the classes' dynamic_casts)
     bool IsAirplane() const { return this->mKind == 1 || this->mKind == 10; }
 

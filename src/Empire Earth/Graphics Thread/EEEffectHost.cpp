@@ -83,27 +83,12 @@ const bool kRegistered = (EEGfxObjectLayoutRegister(), true);
 
 // the effects' file, the manager's Load, Save and entry points, an effect's local flag: gamecpp fx_world.rs
 EeGfxEffectFile EEEffectFile(FSFile& inFile) { return ee_gamecpp_fw_file(&inFile); }
-long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_fw_load(this->mRust, &inFile, inMajorVersion, inMinorVersion); }
-long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_fw_save(this->mRust, &outFile, inMajorVersion, inMinorVersion); }
-long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, bool inKeepsUnit, long inTagPoint, long inGoalIndex) { return ee_gamecpp_fw_unit_effect(this->mRust, inUnit, inEffect, reinterpret_cast<uint32_t*>(outHandle), inKeepsUnit, inTagPoint, inGoalIndex); }
-long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_between_units(this->mRust, inFrom, inTo, inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-long EEEffectManager::CreateEffect(EEUnit* inUnit, const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, long inGoalIndex) { return ee_gamecpp_fw_unit_to_point(this->mRust, inUnit, reinterpret_cast<const EeGe3DPoint*>(&inLocation), inEffect, reinterpret_cast<uint32_t*>(outHandle), inGoalIndex); }
-long EEEffectManager::CreatePlacedEffect(const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_placed(this->mRust, reinterpret_cast<const EeGe3DPoint*>(&inLocation), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-long EEEffectManager::CreateTransformationEffect(const GETransformation& inTransformation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_transformation(this->mRust, reinterpret_cast<const EeGeTransformation*>(&inTransformation), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-long EEEffectManager::CreateEffectBetween(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_between(this->mRust, reinterpret_cast<const EeGe3DPoint*>(&inFrom), reinterpret_cast<const EeGe3DPoint*>(&inTo), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_weather(this->mRust, reinterpret_cast<const long*>(inTiles.data()), inTiles.size(), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-void EEEffect::SetLocalTo(long inPlayer) { ee_gamecpp_fw_set_local(this->mRecord, inPlayer); }
 
 // the weather storms' (EEEMStorm's): every tile one step towards its place around the new centre, the storm
 // recentred on the terrain there; the tiles' bounds (gamecpp ro_views.rs over ee_gfx effect_storm.rs)
 void EEEffect::Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds)
 {
     ee_gamecpp_fx_storm_move(this, inCenter.mX, inCenter.mY, reinterpret_cast<EeGameCppTileBounds*>(&outBounds));
-}
-
-void EEEffect::GetBounds(U2DRectangle<long>& outBounds)
-{
-    ee_gamecpp_fx_storm_bounds(this->mRecord, reinterpret_cast<EeGameCppTileBounds*>(&outBounds));
 }
 
 U2DPoint<long> EEEffect::GetCenterPoint() const

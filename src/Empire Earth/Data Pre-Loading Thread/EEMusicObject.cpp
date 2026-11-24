@@ -38,20 +38,6 @@ EEMusicObject::EEMusicObject(const unsigned char* inRecord) : EeDataMediaUse()
     this->mScoreID = -1;
 }
 
-// Destroys the song (nothing of its own to free)
-EEMusicObject::~EEMusicObject()
-{
-}
-
-// Files every song of the music table under the epochs it plays in; a New Music.txt override replaces
-// the table with that one song. Returns the last read result
-// The epochs and their songs are the rules' (epochs.yaml music, EERules.cpp); without epochs.yaml they are the
-// table's per-epoch flags, as in the original (the space age plays the nano age's songs).
-long EEMusicObject::LoadTable(FSFile* inFile)
-{
-    return ee_preload_load_music(inFile);   // (preload_media.rs; the override: Data\Music\New Music.txt)
-}
-
 // This unit's database lock (the songs' uses: preload_media.rs)
 TSCriticalSection* EEMusicDatabaseLock()
 {
@@ -71,29 +57,4 @@ EEMusicObject* EEMusicObject::GetRandom(long inEpoch)
         [](void*, long inMinimum, long inMaximum) { return gMusicRandom.Generate(inMinimum, inMaximum); }, NULL));
 }
 
-// Loads the song's score on first use (counting later uses, which wait for the load); returns the load result
-long EEMusicObject::LoadScore()
-{
-    return ee_preload_music_load_score(this);   // (preload_media.rs)
-}
-
-// Counts one use down; on the last use unloads the score unless the conductor reports it busy (5)
-long EEMusicObject::UnloadScore()
-{
-    return ee_preload_music_unload_score(this);   // (preload_media.rs)
-}
-
 // (0x4da37a: vector<EEMusicObject*>::push_back, ICF-shared)
-
-// Loads the song's score (media interface)
-// EEMedia's slots: `this` arrives as the EEMedia part (add ecx, -8), then a tail jump
-long EEMusicObject::LoadMedia()
-{
-    return this->LoadScore();
-}
-
-// Unloads the song's score (media interface)
-long EEMusicObject::UnloadMedia()
-{
-    return this->UnloadScore();
-}

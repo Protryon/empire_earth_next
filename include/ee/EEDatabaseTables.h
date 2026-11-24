@@ -16,6 +16,7 @@
 #include "rust/sim/combat.h"
 #include "ee/EEDbList.h"
 #include "rust/data/media.h"
+#include "rust/game/gamecpp.h"
 
 class FSFileSpec;
 class EEUnitClass;
@@ -102,20 +103,24 @@ extern EEWorldTable gWorldTable;            // 0x52fca0 (Empire Earth.cpp)
 // count (mMediaCount, mIsLoading) is EeDataMediaUse (media.rs).
 class EETerrainTable : public EeDataTerrainFields, public EeDataMediaUse {
 public:
-    EETerrainTable();
-    virtual ~EETerrainTable();
+    EETerrainTable() : EeDataMediaUse() { ee_data_terrain_default(this); }
+    virtual ~EETerrainTable() {  }
 
     // (from EESELoadThread's Handle408 0x172433; provisional names)
     // 0xdbc39 (cdecl): the loaded entry inIndex of the static table, 0 past its end or when the entry's id is negative
     static EETerrainTable* Get(long inIndex);
-    static long Load(FSFileSpec* inFile);   // 0xdb2ce (db\dbterrain.dat)
-    static void Unload();
-    static void DumpAllLoadedMedia(FSFileSpec& inFile);
-    void Load(GETerrainMesh& ioMesh);       // 0xdb5c8 (counted by mLoadCount; sets the mesh's texture sets)
-    void Unload(GETerrainMesh& ioMesh);
-    GETexture* LoadTexture(const UString& inFile);
-    void LoadTextures();                    // 0xdb762 (Load's worker, outside the lock; provisional name)
-    void AttachTextures(GETextureSet* inTextureSet);  // 0xdb96c (EEMap::RegisterTerrainSets hands it the registered set) (provisional name)
+    // 0xdb2ce (db\dbterrain.dat)
+    static long Load(FSFileSpec* inFile) { return ee_gamecpp_db_terrain_load(inFile); }
+    static void Unload() { ee_gamecpp_db_terrain_unload(); }
+    static void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_gamecpp_db_terrain_dump(&inFile); }
+    // 0xdb5c8 (counted by mLoadCount; sets the mesh's texture sets)
+    void Load(GETerrainMesh& ioMesh) { ee_gamecpp_db_terrain_mesh(this, &ioMesh, true); }
+    void Unload(GETerrainMesh& ioMesh) { ee_gamecpp_db_terrain_mesh(this, &ioMesh, false); }
+    GETexture* LoadTexture(const UString& inFile) { return (GETexture*)ee_gamecpp_db_terrain_texture(this, (const char*)inFile); }
+    // 0xdb762 (Load's worker, outside the lock; provisional name)
+    void LoadTextures() { ee_gamecpp_db_terrain_textures(this); }
+    // 0xdb96c (EEMap::RegisterTerrainSets hands it the registered set) (provisional name)
+    void AttachTextures(GETextureSet* inTextureSet) { ee_gamecpp_db_terrain_attach(this, inTextureSet); }
     static unsigned long GetNumCliffTerrains() { return EETerrainTable::sCliffTable.size(); }
     static unsigned long GetNumTables() { return EETerrainTable::sTable.size(); }
     unsigned long GetNumUnitClasses() const { return this->mUnitClasses.size(); }
@@ -139,8 +144,10 @@ class EECliffTerrainTable : public EeDataCliffTerrainFields {
 public:
     EECliffTerrainTable() : EeDataCliffTerrainFields() {}
     virtual ~EECliffTerrainTable() {}
-    static long Load(FSFileSpec* inFile);   // 0xdbb22 (records with a negative index stay NULL)
-    static long Unload();                   // 0xdbbfb (returns 0)
+    // 0xdbb22 (records with a negative index stay NULL)
+    static long Load(FSFileSpec* inFile) { return ee_gamecpp_db_cliff_load(inFile); }
+    // 0xdbbfb (returns 0)
+    static long Unload() { return ee_gamecpp_db_cliff_unload(); }
 
     UString mName;
 };

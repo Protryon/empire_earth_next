@@ -183,38 +183,11 @@ EEWorld::~EEWorld()
     delete this->mCalamityHelper;
 }
 
-// Appends a ghost unit to the world's ghost list
-void EEWorld::AddGhostUnit(EEGhostUnit* inGhost)
-{
-    this->mGhostUnits.push_back(inGhost);
-}
-
-// Adds a team of the given players, first merging in every existing team whose players are allied both ways with them
-// (the teams are Rust's, ee_sim app teams.rs, the world's callbacks and the C++ mirror, mTeams: the AI thread's, the
-// server's and the save's, rebuilt after every change, gamecpp teams.rs)
-void EEWorld::AddTeam(const std::vector<unsigned long>& inPlayers)
-{
-    ee_gamecpp_world_teams_add(this, inPlayers.data(), inPlayers.size());
-}
-
-// Puts two players on one team, merging in every existing team whose players are allied both ways with both of them
-void EEWorld::AddAlliance(long inPlayer1, long inPlayer2)
-{
-    ee_gamecpp_world_teams_ally(this, (uint32_t)inPlayer1, (uint32_t)inPlayer2);
-}
-
 // Grants each player the wonder power 4 population share bonus when they hold it with no enemy holder or only allies
 // hold it, and takes it away when only enemies hold it (mixed allies and enemies: no change)
 void EEWorld::ApplyShareBonus()
 {
     EEPlayerShareBonus(false);   // (ee_units player_units.rs: the player lane, round 2)
-}
-
-// Sets a player's stance toward another; joins their teams when the alliance becomes mutual, splits them when a mutual
-// alliance ends
-void EEWorld::SetDiplomaticStance(unsigned long inPlayerID, long inOther, long inStance)
-{
-    ee_gamecpp_world_set_stance(this, inPlayerID, inOther, inStance);
 }
 
 
@@ -238,33 +211,6 @@ static void EEActiveRefs(uint32_t inID, int32_t inDelta)
         theUnit->Dereference();
 }
 
-// port: the waiting deactivations whose units have an id now join the queue (one entry per unit, as the original's
-// pointer queue kept it); a unit still without one is dropped, as the original's lookup of its id found nothing
-void EEWorld::QueueBornDeactivations()
-{
-    ee_gamecpp_world_queue_born();
-}
-
-// Tears down the current game: records the end statistics, unloads media, removes every unit, ghost, effect,
-// calamity and manager, frees the minimap and active unit lists, and returns campaign games to the campaign screen
-void EEWorld::Clear()
-{
-    ee_gamecpp_world_clear(this);
-}
-
-// Turns every unit's sight back on and refreshes the local player's terrain visibility
-void EEWorld::RestartUnits()
-{
-    ee_gamecpp_world_sight_all(this, true);
-}
-
-// Replaces a player with a human player copied from it by a save and load, killing the old player's units and moving
-// its alliances, pending units and media over to the copy
-void EEWorld::ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion, unsigned long inMinorVersion, EEMap* inMap)
-{
-    ee_gamecpp_world_replace_player(this, inIndex, inMajorVersion, inMinorVersion, inMap);
-}
-
 // Resets the unit's collision state, collision tile and collision resolution count
 // (an EEComplexUnit member defined here: ReplacePlayer and the unit change call it; provisional name)
 void EEComplexUnit::ClearCollisionState()
@@ -272,52 +218,6 @@ void EEComplexUnit::ClearCollisionState()
     this->mCollisionState = 0;
     this->mCollisionTile.mY = this->mCollisionTile.mX = -10000;
     this->mCollisionResolutionCount = 0.0f;
-}
-
-// Rebuilds the teams from diplomacy (one per non-observer player, merged by mutual alliances) and sets Gaia and every
-// player at war with each other
-void EEWorld::RebuildTeams()
-{
-    ee_gamecpp_world_teams_rebuild(this, (uint32_t)this->mNumPlayers);
-}
-
-// Counts one gatherer fewer on a resource unit (an untracked unit is ignored)
-void EEWorld::ReleaseResourceUser(EEUnit* inUnit)
-{
-    ee_gamecpp_world_resource_users(this, inUnit, -1);
-}
-
-// Kills and removes every player's units (pending ones included) and the queued placements, emptying the unit list
-void EEWorld::RemoveAllUnits()
-{
-    ee_gamecpp_world_remove_all_units(this);
-}
-
-// Deletes every ghost unit under the ghost lock
-void EEWorld::ClearGhostUnits()
-{
-    ee_gamecpp_world_clear_ghosts(this);
-}
-
-// Writes a report of all loaded media (players, effects, graphic objects, sounds, buttons, terrain, textures, models)
-// to a file, plus the leaked units and references when inLeaks is set
-void EEWorld::DumpMedia(FSFileSpec& inFile, bool inLeaks)
-{
-    ee_gamecpp_world_dump_media(this, &inFile, inLeaks);
-}
-
-// Takes a player out of the game: marks them out, drops them from their teams, reveals the map to them (except a lost
-// scenario), stamps their end time and ends any cinematic; for the local player it redraws the minimap
-void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)
-{
-    ee_gamecpp_world_remove_player(this, inHasWon, inPlayerID);
-}
-
-// Fills the empty player slots after the game state's players with computer players in unused colours and 999,999
-// of each resource (scenario editor), loading their foundation media
-void EEWorld::AddComputerPlayers(EEGameState* inState)
-{
-    ee_gamecpp_world_add_computers(this, inState);
 }
 
 // Moves the world and viewport camera, unless a scenario camera move is running and the move is not forced
@@ -343,43 +243,12 @@ EEContagionManager* EEWorld::GetContagionManager()
     return (static_cast<EEPCalamityHelper*>(this->mCalamityHelper))->mContagionManager;
 }
 
-// Returns how many gatherers use a resource unit, starting its count at 0 when it is not tracked yet
-unsigned long EEWorld::GetResourceUsers(EEUnit* inUnit)
-{
-    return ee_gamecpp_world_resource_users(this, inUnit, 0);
-}
-
 // Returns whether a map tile's height is below 0
 bool EEWorld::IsTileBlocked(unsigned long inX, unsigned long inY)
 {
     return this->mMap->GetTile(inX, inY)->GetHeight() < 0.0f;
 }
 
-// Converts a screen point to a point on the orthographic view plane (Y = 0) around the viewport centre
-void EEWorld::ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint)
-{
-    ee_gamecpp_world_screen_to_world((const float(*)[2])&inPoint.mX, (float(*)[3])&outPoint.mX);
-}
-
-// Returns the player (Gaia excluded) in a lobby slot, or NULL
-EEPlayer* EEWorld::GetPlayerBySlot(unsigned char inSlot)
-{
-    return (EEPlayer*)ee_gamecpp_world_player_by_slot(this, inSlot);
-}
-
-// Counts one more gatherer on a resource unit
-void EEWorld::AddResourceUser(EEUnit* inUnit)
-{
-    ee_gamecpp_world_resource_users(this, inUnit, 1);
-}
-
-
-// Sets up the world from a game state (map, players, teams, local player, camera, sight, minimap, calamities, music,
-// media), reporting load progress; in multiplayer it finds the local player by name
-void EEWorld::StartGame(EEGameState* inState, bool inLocked)
-{
-    ee_gamecpp_world_start_game(this, inState, inLocked);
-}
 
 // Replaces the world's map, deleting the old one
 void EEWorld::SetMap(EEMap* inMap)
@@ -417,25 +286,6 @@ void EEWorld::CreateMiniMap(EEGameState* inState)
     gEEGameUI.mMiniMapUpdate(gMiniMap);   // EEUIMiniMap::Update (ee/EEGameUI.h)
 }
 
-// Installs the game state's players: places their pending units, applies tech trees, map restrictions and variant hit
-// points and loads media; for a loaded game it repairs pointers and replaces flagged computer players
-void EEWorld::CreatePlayers(EEGameState* inState)
-{
-    ee_gamecpp_world_create_players(this, inState);
-}
-
-// Loads the shared command confirmation effects and button sounds, once per game
-void EEWorld::LoadMedia()
-{
-    ee_gamecpp_world_load_media(this);
-}
-
-// Pauses a running single-player game on the server; returns 2 when it is already paused, else 0
-long EEWorld::PauseGame()
-{
-    return ee_gamecpp_world_pause(true);
-}
-
 // Builds the post-game statistics: the history's fields here, the scores, the computers' top-ups, the records' order
 // and flags and the computers' play times in Rust (ee_sim app statistics.rs), then the records filled
 extern "C" void ee_gamecpp_world_record_statistics(uintptr_t inWorld);   // gamecpp world_stats.rs (cbindgen:ignore: its
@@ -464,67 +314,10 @@ void EEWorld::UpdateActiveUnits()
     ee_app_active_update(EEActiveRefs);
 }
 
-// Queues a unit for activation unless it is NULL, has no id, is a path point or is already queued
-void EEWorld::ActivateUnit(EEComplexUnit* inUnit)
-{
-    ee_gamecpp_world_activate(inUnit);
-}
-
-// Queues a unit for deactivation unless it is a path point or is already queued
-void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
-{
-    ee_gamecpp_world_deactivate(inUnit);
-}
-
-// Rebuilds the active unit list from the placed units (first parts; units of inactive classes only when dead),
-// dropping the pending activation queues
-void EEWorld::RebuildActiveUnits()
-{
-    ee_gamecpp_world_rebuild_active(this);
-}
-
-// Resets the world: clears effects and calamities, gives it a fresh calamity helper, removes every unit and drops the
-// scenario and environment managers
-void EEWorld::Reset()
-{
-    ee_gamecpp_world_reset(this);
-}
-
-// Turns every unit's sight off and refreshes the local player's terrain visibility
-void EEWorld::RefreshUnits()
-{
-    ee_gamecpp_world_sight_all(this, false);
-}
-
-// Takes a disconnected player out: flags them disconnected (unless observing), drops them from their teams, marks them
-// out and frees their slot
-void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer)
-{
-    ee_gamecpp_world_remove_disconnected(this, inPlayer);
-}
-
-// Removes a player from every team, re-adding each team's remaining players as a new team
-void EEWorld::RemovePlayerFromTeams(unsigned long inPlayer)
-{
-    ee_gamecpp_world_teams_remove(this, (uint32_t)inPlayer);
-}
-
 // Undoes the wonder power 4 population share bonus ApplyShareBonus gave or took for every player
 void EEWorld::RemoveShareBonus()
 {
     EEPlayerShareBonus(true);   // (ee_units player_units.rs)
-}
-
-// Splits every team holding both players into new teams without each of them
-void EEWorld::BreakAlliance(long inPlayer1, long inPlayer2)
-{
-    ee_gamecpp_world_teams_break(this, (uint32_t)inPlayer1, (uint32_t)inPlayer2);
-}
-
-// Lets every player finish loading its units after a saved game was read
-void EEWorld::NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    ee_gamecpp_world_notify_loaded(this, inMajorVersion, inMinorVersion);
 }
 
 // Moves a unit to its place in the world's unit list, which is sorted by tile x
@@ -542,12 +335,6 @@ void EEWorld::SetCalamityHelper(FSPersistent* inObject)
     }
 }
 
-// Moves the camera unless a scenario camera move is running
-void EEWorld::SetCameraTransformation(const GETransformation& inTransformation)
-{
-    this->SetCamera(inTransformation, false);
-}
-
 // Replaces the environment (weather) manager, deleting the old one
 void EEWorld::SetEnvironmentManager(EEEnvironmentManager* inManager)
 {
@@ -562,59 +349,8 @@ void EEWorld::SetInfluenceTable(EEInfluenceTable* inTable)
     this->mInfluenceTable = inTable;
 }
 
-// Sets the population limit and recomputes every player's share bonus and civilization population bonus
-void EEWorld::SetPopulationLimit(unsigned long inLimit)
-{
-    ee_gamecpp_world_set_count(this, true, inLimit);
-}
-
-// Sets the player count and recomputes every player's share bonus and civilization population bonus
-void EEWorld::SetNumPlayers(unsigned long inNumPlayers)
-{
-    ee_gamecpp_world_set_count(this, false, inNumPlayers);
-}
-
-// Puts a player into observer mode and marks their game options entry as out (type 2)
-void EEWorld::MarkPlayerOut(unsigned long inPlayer)
-{
-    ee_gamecpp_world_mark_out(this, inPlayer);
-}
-
-// Sets the time of day and recomputes the sun and moon light directions
-void EEWorld::SetTimeOfDay(float inTimeOfDay)
-{
-    ee_gamecpp_world_set_time_of_day(this, inTimeOfDay);
-}
-
-// Places the queued units: adds them to their tiles, the minimap, regions and influence table, links them into the
-// x-sorted unit list and finds their contacts
-void EEWorld::PlaceQueuedUnits()
-{
-    ee_gamecpp_world_place_queued(this);
-}
-
-// Moves a player to a new lobby slot and name, handing its old slot and name to the slot's previous holder; switches
-// the local view to it when it takes the local slot
-void EEWorld::MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused)
-{
-    ee_gamecpp_world_move_to_slot(inSlot, (uint8_t)inNewSlot, inPlayer, &inName);
-}
-
 // A file-scope global defined mid-file (its init chain sits between MovePlayerToSlot and UnloadMedia; no reader):
 UString gDefaultCampaignUser("default");
-
-// Unloads the per-player foundation media and the shared effects and button sounds of the game (the light glow's
-// model, never drawn, is gone since R4.4's twenty-first round)
-void EEWorld::UnloadMedia()
-{
-    ee_gamecpp_world_unload_media(this);
-}
-
-// Unpauses a running single-player game on the server; always returns 0
-long EEWorld::UnpauseGame()
-{
-    return ee_gamecpp_world_pause(false);
-}
 
 // The end-of-game check's world calls (ee_units game_over.rs reads the players and units through the world views)
 extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t inB)
@@ -639,14 +375,6 @@ extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t in
     return 0;
 }
 
-// Ends the game when decided: applies team victories, defeats players out of units (and, with gameoptions.yaml's
-// defeat_without_recovery on a random map, players who cannot come back) and lets a last team win; returns 2 when
-// someone won, 1 when no human (or only one player) is left, else 0 (ee_units game_over.rs)
-long EEWorld::CheckGameOver()
-{
-    return (long)ee_units_check_game_over((uint64_t)(uintptr_t)this);
-}
-
 // Updates the physics timing after the game speed changed
 void EEWorld::GameSpeedChanged()
 {
@@ -658,16 +386,6 @@ void EEWorld::GameSpeedChanged()
 EETeam::EETeam()
 {
     this->mVictoryCondition = new EEVCWonder(this);
-}
-
-void EEWorld::CameraChanged(class GETransformation const &)
-{
-}
-
-// Returns the player's index in the world, -1 if absent
-long EEWorld::GetPlayerIndex(EEPlayer* inPlayer)
-{
-    return ee_gamecpp_world_player_index(this, inPlayer);
 }
 
 
