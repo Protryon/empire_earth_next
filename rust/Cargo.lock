@@ -372,6 +372,7 @@ name = "ee_base"
 version = "0.1.0"
 dependencies = [
  "libc",
+ "ttf-parser",
  "windows-sys 0.59.0",
  "windows-sys 0.60.2",
 ]
@@ -1711,6 +1712,12 @@ name = "toml_writer"
 version = "1.2.0+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "009dbb7700f11c55ef83aebbe4c0e9cf1f1ac0844bd8d6f00dc38f302026e13a"
+
+[[package]]
+name = "ttf-parser"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 
 [[package]]
 name = "typenum"

@@ -100,11 +100,7 @@ impl Registry {
         if data.len() < 12 {
             return false;
         }
-        let offset = ttf::font_offset_for_index(data, 0);
-        if offset < 0 {
-            return false;
-        }
-        let Some(info) = ttf::init_font(data, offset as u32) else {
+        let Some(info) = ttf::init_font(data) else {
             return false;
         };
         self.faces.push(Face { name: face.to_vec(), bold, italic, info });
@@ -217,15 +213,14 @@ fn create(
 ) -> Option<Box<PlatFont>> {
     let face = registry.find_face(face_name, bold != 0, italic != 0)?;
     let info = face.info;
-    let d = info.data;
-    let units_per_em = u16_be(d, info.head as usize + 18);
+    let units_per_em = info.face.units_per_em() as i32;
     // usWinAscent / usWinDescent (OS/2), else hhea's ascender / descender
     let (win_ascent, win_descent, average);
-    let os2 = ttf::find_table(d, info.fontstart, b"OS/2");
-    if os2 != 0 {
-        win_ascent = u16_be(d, os2 as usize + 74);
-        win_descent = u16_be(d, os2 as usize + 76);
-        average = i16_be(d, os2 as usize + 2);
+    let os2 = info.table(b"OS/2");
+    if !os2.is_empty() {
+        win_ascent = u16_be(os2, 74);
+        win_descent = u16_be(os2, 76);
+        average = i16_be(os2, 2);
     } else {
         let (a, de, _) = info.vmetrics();
         win_ascent = a;
