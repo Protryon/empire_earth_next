@@ -323,7 +323,10 @@ return {
     strategy_plans = false,
     plan_lean_air = 50, plan_lean_navy = 50, plan_lean_anti_air = 50,
     plan_lean_pressure = 50, plan_lean_defences = 50, plan_lean_spread = 50,
-    -- the force by territory (stations.c; the alternative land force to army.lua)
+    -- [persona.c] the persona (traits + leanings); the leanings only change play when persona_style is on
+    persona = "balanced",           -- "balanced", "aggressive", "defensive", "tall", "wide", "naval" or "random"
+    persona_style = false,          -- upstream [ai_base] ai_style (default off): personalities only talk/negotiate;
+                                    -- here, off keeps the leanings neutral (50) and the plan's play as before
     stations = false,               -- the switch; upstream runs it while [ai_base] game_ai = 0 (off as shipped)
     -- the holy (holy.c): priests and prophets, a strike category of their own
     holy = false,                   -- off until measured

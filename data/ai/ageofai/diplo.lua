@@ -24,6 +24,7 @@
 -- Deviations are marked DEVIATION; the numbers are upstream's.
 local S = require("ageofai.settings")
 local V = require("lib.view")
+local PS = require("ageofai.personas")   -- [persona.c] the persona's traits (default 50)
 
 local D = {}
 
@@ -915,6 +916,13 @@ function D.step(view, memory, events)
         M = {}
         memory.diplo = M
         init(M, view, me)
+    end
+    -- [persona.c] the persona's traits (default 50) drive the diplomacy model
+    local t = (memory.persona or {}).trait
+    if type(t) == "table" then
+        for k, v in pairs(t) do
+            TRAIT[k] = v
+        end
     end
     local now = view.time
     -- the players as the engine shows them: my stance, alive, human (the fields `hostile` and `allies` when they come)
