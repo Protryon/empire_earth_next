@@ -819,10 +819,15 @@ mod tests {
     fn a_new_factor_continues_the_clocks_without_a_jump() {
         with_factor(1000, 1, || {
             PlatSleep(2000); // 2 real ms
+            let real = std::time::Instant::now();
             let before = PlatTimeMilliseconds64();
             assert_eq!(PlatSimSetTimeFactor(1, 1), 1);
             let after = PlatTimeMilliseconds64();
-            assert!(after >= before && after - before < 50, "{before} -> {after}");
+            // No jump: the clock went on by no more than the real time between the two reads at the old factor (a
+            // real microsecond is a virtual ms at 1000) and 50 ms. A fixed 50 ms failed when this thread lost the CPU
+            // for 0.144 real ms between the reads ("568680133 -> 568680277").
+            let most = real.elapsed().as_micros() as u64 + 50;
+            assert!(after >= before && after - before < most, "{before} -> {after}, at most {most}");
             assert_eq!(PlatSimSetTimeFactor(0, 1), 0, "refused");
             assert_eq!(PlatSimSetTimeFactor(5000, 1), 0, "refused");
         });
