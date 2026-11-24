@@ -31,11 +31,7 @@ extern "C" intptr_t ee_won_guicpp_layout_call(void*, EeWonGuiOp op, intptr_t a, 
     switch (op) {
     case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
     case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* r = (const EeWonRect4*)b;
-        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
-        return 0;
-    }
+    case Op::ChildSetPosSize: Container::Place(Comp(a), *(const EeWonRect4*)b); return 0;
     case Op::LaySetSizeAtLeast: Comp(a)->SetSizeAtLeast((int)b, (int)c); return 0;
     case Op::LayHold: ((ChildLayoutInstructionBase*)a)->AddRef(); return 0;
     case Op::LayRelease: ((ChildLayoutInstructionBase*)a)->Release(); return 0;

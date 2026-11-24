@@ -43,10 +43,7 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::CtChild: if ((V)b == V::RequestFocus) Comp(a)->RequestFocus(); return 0; // (the next radio's)
     case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
     case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
-    case Op::CtContainerOf: {
-        Container* aContainer = dynamic_cast<Container*>(Comp(a));
-        return aContainer != NULL ? (intptr_t)aContainer->mCt : 0;
-    }
+    case Op::CtContainerOf: return Container::ObjectOf(Comp(a));
     case Op::BtnOf: {
         Button* aButton = dynamic_cast<Button*>(Comp(a));
         return aButton != NULL ? (intptr_t)aButton->mBtn : 0;
@@ -81,16 +78,6 @@ Button::~Button() { ee_won_btn_free(this->mBtn); }
 bool Button::HandleActivate() { return true; }
 
 void Button::SetTextHook(const GUIString&) {}
-// Makes a button the dialog's default button and the current default
-void Button::SetDialogDefaultButton(Button* b)
-{
-    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::SetDialogDefault,(intptr_t)static_cast<Component*>(b));
-}
-// Clears the dialog's default button if it is this one, and drops it as the current default
-void Button::UnSetDialogDefaultButton(Button* b)
-{
-    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDialogDefault,(intptr_t)static_cast<Component*>(b));
-}
 // Copies another button's flags and click sound
 void Button::CopyAttributes(Button* from)
 {

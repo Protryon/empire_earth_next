@@ -19,14 +19,13 @@ using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
 
+extern "C" intptr_t ee_won_guicpp_btn_call(void*, EeWonGuiOp, intptr_t, intptr_t, intptr_t, intptr_t); // Button.cpp
 extern "C" intptr_t ee_won_guicpp_dlg_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     Dialog* t = static_cast<Dialog*>((Component*)inComp);
     switch (op) {
-    case Op::DlgDefaultButton:
-        if (a) Button::SetDialogDefaultButton((Button*)(Component*)b);
-        else Button::UnSetDialogDefaultButton((Button*)(Component*)b);
-        return 0;
+    // (Button::SetDialogDefaultButton and UnSetDialogDefaultButton, 0x2f31c0 and 0x2f3230: the Rust button's statics)
+    case Op::DlgDefaultButton: ee_won_btn_static(ee_won_guicpp_btn_call, a ? EeWonBtnStatic::SetDialogDefault : EeWonBtnStatic::UnSetDialogDefault, b); return 0;
     // (the original's BringToTop compared the child's parent with `this` before reading itself; the Rust asks only
     // with a next sibling, so a parent exists, and the guard keeps a NULL parent unread: round 30's hazard)
     case Op::DlgBringToTop: if (t->mParent != NULL) t->mParent->BringToTop(t); return 0;

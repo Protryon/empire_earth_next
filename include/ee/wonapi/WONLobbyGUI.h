@@ -403,6 +403,10 @@ public:
     virtual Component* FindChildById(int id) { return (Component*)this->CCall(EeWonCtCall::FindChildById,id); }
 
     EeWonContainer* mCt;
+    // the Rust container of a component that is a container, else 0 (the hosts' CtContainerOf)
+    static intptr_t ObjectOf(Component* c) { Container* k = dynamic_cast<Container*>(c); return k != NULL ? (intptr_t)k->mCt : 0; }
+    // a child placed at a rectangle Rust made (the hosts' ChildSetPosSize)
+    static void Place(Component* c, const EeWonRect4& r) { c->SetPosSize(r.x, r.y, r.w, r.h); }
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
     intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }
@@ -516,8 +520,6 @@ public:
     int GetMouseDownState() { return (int)this->BCall(EeWonBtnCall::GetField,(intptr_t)EeWonBtnField::MouseDownState); } // 0 up, 1 down outside, 2 down over
     SmartPtr<Sound> mClickSound; // at +0x3c
     EeWonButton* mBtn;
-    static void SetDialogDefaultButton(Button*); //2f31c0
-    static void UnSetDialogDefaultButton(Button*); //2f3230
     void CopyAttributes(Button*); //2f3310
     void ButtonDown() { this->BCall(EeWonBtnCall::ButtonDown); } //2f3660
     void ButtonUp(bool a) { this->BCall(EeWonBtnCall::ButtonUp,a); } //2f36d0

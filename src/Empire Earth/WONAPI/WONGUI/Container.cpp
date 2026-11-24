@@ -139,10 +139,7 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     // (a viewport whose area was never set: no area, not visible; the forwarder would read its object through NULL)
     case Op::VpAreaRectVisible:
         return a != 0 && static_cast<ScrollArea*>(Comp(a))->IsRectVisible(*(WONRectangle*)b) ? 1 : 0;
-    case Op::CtContainerOf: {
-        Container* aContainer = dynamic_cast<Container*>(Comp(a));
-        return aContainer != NULL ? (intptr_t)aContainer->mCt : 0;
-    }
+    case Op::CtContainerOf: return Container::ObjectOf(Comp(a));
     case Op::ChildHold: Comp(a)->AddRef(); return 0;
     case Op::ChildRelease: Comp(a)->Release(); return 0;
     case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
