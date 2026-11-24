@@ -61,7 +61,10 @@ function M.step(view, memory)
             print(string.format("voice: %s", ans))
         end
     end
-    -- a line now and then
+    -- a line now and then (not while a decision waits for the model: one request at a time)
+    if v.dec ~= nil and next(v.dec) ~= nil then
+        return
+    end
     if view.time - (v.t or 0) < EVERY or (v.req or 0) >= MAX_REQ then
         return
     end
@@ -73,6 +76,42 @@ function M.step(view, memory)
         v.req = (v.req or 0) + 1
         v.last_seq = seq
     end
+end
+
+-- an LLM yes/no, asynchronous: nil while it thinks (the caller waits), true/false when it answers, `default` with
+-- the model off, failing, or after 30 s. Only with settings.llm_decide (upstream default off).
+function M.decide(memory, key, question, default)
+    if not S.llm_decide or not available() or memory == nil then
+        return default
+    end
+    memory.voice = memory.voice or {}
+    local v = memory.voice
+    v.dec = v.dec or {}
+    local d = v.dec[key]
+    if d == nil then
+        local now = (ai.time ~= nil and ai.time()) or 0
+        v.dec[key] = {t = now}
+        ai.llm(question, "Answer with exactly ACCEPT or REJECT, nothing else. You are the computer player; the game's rules bind you.")
+        return nil
+    end
+    local ans = ai.llm()
+    if ans ~= nil then
+        v.dec[key] = nil
+        local a = string.upper(ans)
+        if string.find(a, "ACCEPT", 1, true) ~= nil then
+            return true
+        end
+        if string.find(a, "REJECT", 1, true) ~= nil then
+            return false
+        end
+        return default
+    end
+    local now = (ai.time ~= nil and ai.time()) or 0
+    if now - (d.t or 0) > 30000 then
+        v.dec[key] = nil
+        return default
+    end
+    return nil
 end
 
 function M.clear(memory)

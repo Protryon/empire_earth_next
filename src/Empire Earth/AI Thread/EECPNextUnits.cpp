@@ -4622,7 +4622,23 @@ static int LuaSay(lua_State* L) {
         lua_pushboolean(L, 0);
         return 1;
     }
-    UWideString text(lua_tostring(L, 1));
+    // the answer is UTF-8; the game's chat is in its own codepage (the language the game runs in)
+    const char* utf8 = lua_tostring(L, 1);
+    std::wstring wide;
+    int wn = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+    if (wn > 0) {
+        wide.resize((size_t)wn);
+        MultiByteToWideChar(CP_UTF8, 0, utf8, -1, &wide[0], wn);
+    }
+    std::string local;
+    if (!wide.empty()) {
+        int an = WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, NULL, 0, NULL, NULL);
+        if (an > 0) {
+            local.resize((size_t)an);
+            WideCharToMultiByte(CP_ACP, 0, wide.c_str(), -1, &local[0], an, NULL, NULL);
+        }
+    }
+    UWideString text(!local.empty() ? local.c_str() : utf8);
     EEMInGameChat* msg = new EEMInGameChat(text);
     msg->SetOriginatingSlot(me->mSlot);
     msg->Execute();

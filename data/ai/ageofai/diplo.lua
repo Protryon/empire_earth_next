@@ -586,6 +586,11 @@ end
 -- AI me offers `best` an alliance against `lead`. Upstream answered for an AI at once with its opinion (one
 -- process); here every offer stands like one to a human (OFFER_AI_MS for an AI)
 local function offer_alliance(M, me, best, lead, now)
+    -- [llm_decide] the model may refuse the offer: off, the rule's own answer stands
+    if VC.decide(cur_memory, "ally_" .. tostring(best),
+            "Offer an alliance against a common enemy?", true) ~= true then
+        return
+    end
     M.offer_last[best] = now
     M.offer_t[best] = now > 0 and now or 1
     M.offer_kind[best] = OFFER_KIND_ALLY
@@ -597,6 +602,10 @@ end
 
 -- the betrayal of ally j: war on j - and with blocks on j's whole block (no one left to take sides)
 local function betray_now(M, P, by, me, j, now)
+    -- [llm_decide] the model may refuse the betrayal: off, the rule's own answer stands
+    if VC.decide(cur_memory, "betray_" .. tostring(j), "Betray your ally and attack him?", true) ~= true then
+        return
+    end
     local blk = blocks_on() and blocks_compute(M, P, by, me) or {}
     declare_war(M, by[j], now, me, "betrayal")
     VC.say(cur_memory, "betrayal")
@@ -710,6 +719,11 @@ end
 -- caution/4 % + (100 - greed)/4 %). The tribute stays in the stock while the offer stands (it fights on and spends
 -- what it needs) and is paid when he turns allied, as far as the stock still has it
 local function capitulate(M, view, me, a, now)
+    -- [llm_decide] the model may refuse to offer (rules bind it): off, the rule's own answer stands
+    if VC.decide(cur_memory, "capitulate", "Your enemy is stronger and inside your base. Offer him peace and a tribute?",
+            true) ~= true then
+        return
+    end
     local share, total = capit_share(), 0
     for _, r in ipairs(V.resources) do
         local n = view.stock[r] > 0 and math.floor(view.stock[r] * share) or 0
