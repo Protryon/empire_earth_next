@@ -697,6 +697,7 @@ extern "C" int32_t ee_units_uu_host_spot(int32_t inWhich, uint64_t inUnit, int32
     case 10: UUUnit(inUnit)->GetPosition(*(GE3DPoint*)outPoint); return 0;
     case 12: return ((EEAIPathArea*)(uintptr_t)inUnit)->GetID();
     case 13: EEUnitClassOfKind<EE_CLASS_KIND_GATE>(UUUnit(inUnit)->mUnitClass)->GetLastLinkedCarrier(static_cast<EEComplexUnit*>(UUUnit(inUnit))->GetOutermostCarrier())->GetPosition(*(GE3DPoint*)outPoint); return 0;
+    case 13030: *(GE3DPoint*)outPoint = UUUnit(inUnit)->GetModel()->mModels[UUUnit(inUnit)->mComplexUnit->GetAnimation()]->GetBoundingBox(UUUnit(inUnit)->mComplexUnit->mPhysicalModel.GetFrame()).GetTopRightBack(); return 0;   // a wall's model box top at its frame (EEIsTileTopAbove's wall rise)
     case 14: EEUnitClassOfKind<EE_CLASS_KIND_GATE>(UUUnit(inUnit)->mUnitClass)->GetLastLinked(static_cast<EEComplexUnit*>(UUUnit(inUnit))->GetOutermostCarrier())->GetPosition(*(GE3DPoint*)outPoint); return 0;
     }
     return 0;
@@ -785,21 +786,12 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     return 0;
 }
 
-// a wall's model box top at its frame through its location (EEIsTileTopAbove's wall rise)
-static GE3DPoint UUBoxTop(EEUnit* inUnit)
-{
-    GE3DPoint thePoint;
-    inUnit->mComplexUnit->mPhysicalModel.GetLocation().Apply(inUnit->GetModel()->mModels[inUnit->mComplexUnit->GetAnimation()]->GetBoundingBox(inUnit->mComplexUnit->mPhysicalModel.GetFrame()).GetTopRightBack(), thePoint);
-    return thePoint;
-}
-
 extern "C" float ee_units_uu_host_world_f(int32_t inWhich, uint64_t inA, uint64_t inB, float inF)
 {
     switch (inWhich) {
     case 1: return ee_units_cgq_in_gather_reach(inF, inA, inB) ? 1.0f : 0.0f;   // EEIsInGatherReach (cg_query.rs)
     // (EEIsTileTopAbove's wall rise: ee_sim units uu_world_ops.rs wall_rise over the cases from 5)
     case 4: return ::gWorld.GetGameVariant()->mDepositFactor;
-    case 5: return UUBoxTop(UUUnit(inA)).GetZ();
     case 6: return UUUnit(inA)->mStats->GetScale();
     case 7: return (float)UUUnit(inA)->mComplexUnit->mHitPoints;
     case 8: return (float)UUUnit(inA)->mComplexUnit->mStats->mMaxHitPoints;
@@ -865,12 +857,12 @@ static U2DRectangle<long> sUbArea;
 // EEMovePassengers' place for the unloaded cargo (off the map)
 static const float kUbOffMap[4][4] = {{1.0f, 0.0f, 0.0f, -10000.0f}, {0.0f, 1.0f, 0.0f, -10000.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}};
 
-// EEFindNewTargetNearOld's search near the old target (its screen and tile are the original's locals)
+// EEFindNewTargetNearOld's search near the old target: EEFindNewTarget (uu_search.rs) with the original's local screen,
+// here a temporary that lives through the call
+static uint64_t UbScreen(const EEFOFindNewTargetScreenBase& inScreen) { return UUHandle(&inScreen); }
 static bool UbFindNewTarget(EEComplexUnit* inTarget, EEComplexUnit* inUnit, long inX, long inY, long inRadius)
 {
-    EETileCoordinate theTile(inX, inY);
-    EEFOFindNewTargetNearOldTarget theScreen(inTarget, 25.0f);
-    return EEFindNewTarget(&theScreen, inUnit->GetLoadGoal(), inUnit, &theTile, inRadius, true, 0);
+    return ee_units_sr_find_new_target(UbScreen(EEFOFindNewTargetNearOldTarget(inTarget, 25.0f)), UUHandle(inUnit->GetLoadGoal()), UUHandle(inUnit), inX, inY, inRadius, true, 0) != 0;
 }
 
 extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, int64_t inE, float (*ioF)[4])
