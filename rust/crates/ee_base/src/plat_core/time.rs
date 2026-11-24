@@ -839,9 +839,9 @@ mod tests {
             SCALED_TICKS.store(0, Ordering::SeqCst);
             // 25 virtual ms = 0.5 real ms: at most 2 periods a real ms (+ slack for the timer's start), and 40 ticks
             // reached however long a loaded machine takes (a 1 ms timer would need 40 real ms)
+            let start = std::time::Instant::now(); // before the timer's start, as the periodic callback test's
             let id = unsafe { PlatTimerStartCallback(25, 1, Some(scaled_tick), std::ptr::null_mut()) };
             assert_ne!(id, 0);
-            let start = std::time::Instant::now();
             wait_until(20_000, || SCALED_TICKS.load(Ordering::SeqCst) >= 40);
             assert_eq!(PlatTimerStop(id), 1);
             let real = real_ms(start);
@@ -928,9 +928,11 @@ mod tests {
     fn periodic_callback_timers_tick_until_stopped() {
         let _guard = crate::plat_core::test_globals();
         TICKS.store(0, Ordering::SeqCst);
+        // the real time from before the timer's start: this thread may lose the CPU for many periods between the
+        // start's return and its next statement, and those ticks counted against a later start ("45 ticks in 120 ms")
+        let start = std::time::Instant::now();
         let id = unsafe { PlatTimerStartCallback(10, 1, Some(tick), 0x1234 as *mut c_void) };
         assert_ne!(id, 0);
-        let start = std::time::Instant::now();
         wait_until(20_000, || TICKS.load(Ordering::SeqCst) >= 5);
         PlatSleep(100); // keeps ticking (about 10 more periods)
         assert_eq!(PlatTimerStop(id), 1);
