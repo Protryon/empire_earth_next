@@ -39,6 +39,28 @@ static uint64_t EESightObject(const void* inObject)
     return (uint64_t)(uintptr_t)inObject;
 }
 
+// the Rust sight calls inside their TSGT capture scope (TEST ONLY): a circle (inOn 0 add, 1 remove, 4 move), a tile's
+// sight (inOn 1 add, 0 remove) and a player's own or shared sight of a tile (a removal names no coordinates: -1 to the
+// capture, 0 to Rust, as the original's calls)
+static void EESightCircle(unsigned int inKind, int inOn, EEPlayer* inPlayer, float inX0, float inY0, float inX1, float inY1, float inRadius)
+{
+    EESightScope theCapture(inKind, inPlayer, inX0, inY0, inX1, inY1, inRadius);
+    ee_units_tile_sight_circle(EESightWorld(), (uint8_t)inOn, inX0, inY0, inX1, inY1, inRadius, EESightObject(inPlayer));
+}
+
+static void EESightTile(unsigned int inKind, int inOn, RTSTile* inTile, EEPlayer* inPlayer)
+{
+    EESightScope theCapture(inKind, inPlayer, inTile);
+    ee_units_tile_sight_tile(EESightWorld(), (uint8_t)inOn, EESightObject(inTile), EESightObject(inPlayer));
+}
+
+static void EESightPlayer(unsigned int inKind, int inOn, int inShared, EEPlayer* inPlayer, RTSTile* inTile, long inX, long inY)
+{
+    EESightScope theCapture(inKind, inPlayer, inTile, inX, inY);
+    ee_units_tile_sight_player(EESightWorld(), (uint8_t)inOn, (uint8_t)inShared, EESightObject(inPlayer), EESightObject(inTile),
+                               inOn ? inX : 0, inOn ? inY : 0);
+}
+
 // The world calls of the Rust tile sight (ee_units tile_sight_host.rs)
 extern "C" int64_t ee_units_tile_sight_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD)
 {
@@ -65,43 +87,37 @@ extern "C" int64_t ee_units_tile_sight_host(int32_t inOp, uint64_t inA, uint64_t
 // is that player or an ally both sharing line of sight
 void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
 {
-    EESightScope theCapture(kSightCircleAdd, inPlayer, inX, inY, 0.0f, 0.0f, inRadius);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_circle(EESightWorld(), 0, inX, inY, 0.0f, 0.0f, inRadius, EESightObject(inPlayer));
+    EESightCircle(kSightCircleAdd, 0, inPlayer, inX, inY, 0.0f, 0.0f, inRadius);
 }
 
 // Removes a player's sight from every tile within a radius (at most 32) of a point
 void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
 {
-    EESightScope theCapture(kSightCircleRemove, inPlayer, inX, inY, 0.0f, 0.0f, inRadius);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_circle(EESightWorld(), 1, inX, inY, 0.0f, 0.0f, inRadius, EESightObject(inPlayer));
+    EESightCircle(kSightCircleRemove, 1, inPlayer, inX, inY, 0.0f, 0.0f, inRadius);
 }
 
 // Moves a unit's sight: a step of at most one tile updates only the outer rings, a longer one redoes the whole circle
 void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer)
 {
-    EESightScope theCapture(kSightCircleMove, inPlayer, inOldX, inOldY, inNewX, inNewY, inRadius);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_circle(EESightWorld(), 4, inOldX, inOldY, inNewX, inNewY, inRadius, EESightObject(inPlayer));
+    EESightCircle(kSightCircleMove, 4, inPlayer, inOldX, inOldY, inNewX, inNewY, inRadius);
 }
 
 // Drops one of the player's sight references on the tile; the last one leaves it explored
 void RTSTile::RemoveSight(EEPlayer* inPlayer)
 {
-    EESightScope theCapture(kSightTileRemove, inPlayer, this);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_tile(EESightWorld(), 0, EESightObject(this), EESightObject(inPlayer));
+    EESightTile(kSightTileRemove, 0, this, inPlayer);
 }
 
 // Adds a sight reference of the player to the tile; an unexplored tile becomes seen
 void RTSTile::AddSight(EEPlayer* inPlayer)
 {
-    EESightScope theCapture(kSightTileAdd, inPlayer, this);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_tile(EESightWorld(), 1, EESightObject(this), EESightObject(inPlayer));
+    EESightTile(kSightTileAdd, 1, this, inPlayer);
 }
 
 // Removes the player's sight from a tile, and its allies' sight when line of sight is shared
 void EEPlayer::RemoveSharedSight(RTSTile* inTile)
 {
-    EESightScope theCapture(kSightPlayerRemoveShared, this, inTile);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_player(EESightWorld(), 0, 1, EESightObject(this), EESightObject(inTile), 0, 0);
+    EESightPlayer(kSightPlayerRemoveShared, 0, 1, this, inTile, -1, -1);
 }
 
 // Removes the player's and its sight-sharing allies' sight from the tile at a location
@@ -113,8 +129,7 @@ void EEPlayer::RemoveSharedSightAt(const EETileLocation& inLocation)
 // Removes only the player's own sight from a tile
 void EEPlayer::RemoveOwnSight(RTSTile* inTile)
 {
-    EESightScope theCapture(kSightPlayerRemoveOwn, this, inTile);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_player(EESightWorld(), 0, 0, EESightObject(this), EESightObject(inTile), 0, 0);
+    EESightPlayer(kSightPlayerRemoveOwn, 0, 0, this, inTile, -1, -1);
 }
 
 // Removes only the player's own sight from the tile at a location
@@ -126,27 +141,23 @@ void EEPlayer::RemoveOwnSightAt(const EETileLocation& inLocation)
 // Reveals a tile to the player and, with shared line of sight, to every ally that shares it too
 void EEPlayer::AddSharedSight(EETile* inTile, long inX, long inY)
 {
-    EESightScope theCapture(kSightPlayerAddShared, this, inTile, inX, inY);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_player(EESightWorld(), 1, 1, EESightObject(this), EESightObject(inTile), inX, inY);
+    EESightPlayer(kSightPlayerAddShared, 1, 1, this, inTile, inX, inY);
 }
 
 // Reveals the tile at a map location to the player and its sight-sharing allies
 void EEPlayer::AddSharedSightAt(const EETileLocation& inLocation)
 {
-    EETile* theTile = gWorld.mMap->GetTileAtLocation(inLocation);
-    this->AddSharedSight(theTile, inLocation.GetX(), inLocation.GetY());
+    this->AddSharedSight(gWorld.mMap->GetTileAtLocation(inLocation), inLocation.GetX(), inLocation.GetY());
 }
 
 // Reveals a tile to the player only (a first sighting adds to statistics series 0x18)
 void EEPlayer::AddOwnSight(EETile* inTile, long inX, long inY)
 {
-    EESightScope theCapture(kSightPlayerAddOwn, this, inTile, inX, inY);   // TSGT (TEST ONLY)
-    ee_units_tile_sight_player(EESightWorld(), 1, 0, EESightObject(this), EESightObject(inTile), inX, inY);
+    EESightPlayer(kSightPlayerAddOwn, 1, 0, this, inTile, inX, inY);
 }
 
 // Reveals the tile at a map location to the player only
 void EEPlayer::AddOwnSightAt(const EETileLocation& inLocation)
 {
-    EETile* theTile = gWorld.mMap->GetTileAtLocation(inLocation);
-    this->AddOwnSight(theTile, inLocation.GetX(), inLocation.GetY());
+    this->AddOwnSight(gWorld.mMap->GetTileAtLocation(inLocation), inLocation.GetX(), inLocation.GetY());
 }
