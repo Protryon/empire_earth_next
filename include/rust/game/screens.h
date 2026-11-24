@@ -17941,11 +17941,12 @@ long ee_screens_frame_draw(void *background,
                            uint32_t flags,
                            const void *clip);
 
-/// The constructor's members (the record value-initialised, its kind set).
+/// The constructor's members (the record value-initialised): its kind set, then the kind's defaults.
 ///
 /// # Safety
 /// `r` is the action's record.
-void ee_screens_ga_init(EeScreensGaFields *r);
+void ee_screens_ga_init(EeScreensGaFields *r,
+                        uint32_t kind);
 
 /// The destructor's releases.
 ///
@@ -18052,11 +18053,16 @@ bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
                                   int32_t right,
                                   int32_t bottom);
 
-/// The improvement's constructor: the unit (an `EEUnit*`) referenced and held, the action posted.
+/// The improvement's constructor: the improvement, raise (else lower) and in-game (else the scenario editor's)
+/// flags set, the unit (an `EEUnit*`) referenced and held, the action posted.
 ///
 /// # Safety
 /// As `ee_screens_ga_init`.
-void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
+void ee_screens_ga_upgrade_begin(EeScreensGaFields *r,
+                                 void *unit,
+                                 int32_t improvement,
+                                 bool raise,
+                                 bool in_game);
 
 /// `EEUIBGenericBackground`'s constructor's body (`color` the `GEColor*`).
 void ee_screens_gb_construct(size_t bg,
