@@ -41,6 +41,7 @@
 --   (ratio 1): the boat goes to its nearest dock; released a minute later (the engine gives it new work).
 -- The fleet's own warship orders (fl_build) are in ageofai.navy (the account pays them).
 local S = require("ageofai.settings")
+local ST = require("ageofai.storms")   -- [storms.c] the enemy storms' danger zones
 local M = {}
 
 -- roles (navy.c nv_role): 0 none, F frigates, L battleships, A galleys and catapult ships, S attack submarines,
@@ -292,6 +293,13 @@ function M.scan(view, mem, exclude)
                     s.ec[#s.ec + 1] = {id = seen[k], x = cols.x[k], y = cols.y[k], type = cols.type[k], category = cat, hp = cols.hp[k], seen = true}
                 end
             end
+        end
+    end
+    -- [storms.c] the enemy storms it sees are danger zones of the scan (the ships inside sail out in storms.lua;
+    -- a way a storm covers is no way)
+    for _, z in ipairs(ST.zones()) do
+        if #s.dz < 384 then
+            s.dz[#s.dz + 1] = {x = z.x, y = z.y, r = z.r}
         end
     end
     return s

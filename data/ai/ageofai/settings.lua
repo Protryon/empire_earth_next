@@ -286,12 +286,16 @@ return {
     local_mines = false,            -- a citizen works a mine near its own town (a drop site within 40) first
     town_work = false,              -- the mod decides the citizens' work, a site 60+ tiles from the citizen swapped
                                     -- for work in its own town
-    herd_keep = true,               -- the hunters take grown animals only and leave a herd's minimum living
+    herd_keep = true,               -- the hunters take grown animals only and leave a herd's minimum living (not read
+                                    -- yet: no unit record carries a herd, the engine's finder picks the animal)
     wood_drop = true,               -- a Settlement by the forest when 8+ woodcutters cut 15+ tiles from a drop site
     citizen_mine_cap = true,        -- the citizens wanted at most half the cap and at most the known mines x places
     claim_from_towers = false,      -- [ai_base] claim_from_towers, off (no gain measured)
     mine_fill = false,              -- mine_fill (empty upstream = off): the game's AI's mine help; mine_places_first
     mine_places_first = true,       -- ... the mines' free places before more food and wood (mines_first, on)
+    work_needs = false,             -- work.c wk_needs: the worker plan from what each resource spends, saves for and
+                                    -- its soldiers would use (3 minutes of samples); off until measured, the port's
+                                    -- shortfall plan stands under it
     food_plan = "count_trained,back_to_food",   -- the food plan's parts (food.c; upstream 3 + its newer parts)
     food_hunt_range = 15,           -- tiles from a drop site the hunters go
     citizen_plan = "mine_slots,food_pays",      -- citizen_plan's parts (citizens.c)
@@ -301,9 +305,17 @@ return {
     paid_upgrades = true,           -- the epoch's upgrades researched and paid, not granted (research.lua)
     unit_improvements = true,       -- the "+" improvements a player buys (research.lua)
     savings = true,                 -- a bigger want holds the stock before a small spender takes it (savings.lua)
+    claims = 31,                    -- claims.c's mask of what is claimed: 1 ships and aircraft, 2 citizens, 4 the rest,
+                                    -- 8 a ferry's passengers, 16 the muster's (31 = all; claims.lua)
+    produce = true,                 -- produce.c runs (the production buildings by territory, the shares: produce.lua;
+                                    -- upstream has no key, it runs with the game's computer player off)
     train_by_need = true,           -- the producers train what the need asks (produce.lua)
     fleet_by_need = false,          -- ... the fleet likewise (off upstream)
     train_room = 65535,             -- a mask of players whose producers count the room (all)
+    build_by_territory = false,     -- build.lua's buildings by territory instead of econ.lua's settlements,
+                                    -- production and farms; off, the module does nothing (build.c)
+    backland_radius = 60,           -- build.lua's fallback: on a map without territories.lua the ground this near the
+                                    -- base with no enemy building known round it is the backland
     -- armies.c (the port forward): the force
     raid_parties = true,            -- a part of the force answers a raid it beats by 200% instead of the whole force
                                     -- (army.lua; armies.c RAID PARTIES)

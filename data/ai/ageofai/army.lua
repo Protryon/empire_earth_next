@@ -35,7 +35,9 @@ local MS = require("ageofai.mass")     -- [mass.c] the army as one: the reinforc
 local DT = require("ageofai.detach")   -- [armies.c det] the detachments, the raiders, the riders' look, the sites
 local SK = require("ageofai.skirmish") -- [skirmish.c] the sharpshooters' sorties, the spotter
 local MT = require("ageofai.metal")    -- [metal.c] the soldier that does most per gold + iron
+local SV = require("ageofai.savings")  -- [savings.c] SAVING FIRST: a type the budget refuses is saved for
 local FR = require("ageofai.fronts")   -- [fronts.c] the front station
+local TV = require("ageofai.territories")   -- [territories.c] the front's station (AR_FRONT_TER)
 local M = {}
 
 local SG_FOE = 20                   -- tiles round the target the enemy there is counted in
@@ -239,6 +241,14 @@ local function station(view, mem, memory)
     if tx < 0 then
         return nil
     end
+    -- [territories.c AR_FRONT_TER, force_at_front] the force's home in the land front with the heaviest open
+    -- border: its middle, toward the neighbour nobody of its side holds, and out of the danger
+    if S.force_at_front ~= false and memory ~= nil then
+        local tx2, ty2 = TV.front_station(view)
+        if tx2 ~= nil and ai.danger(tx2, ty2) == 0 then
+            return tx2, ty2
+        end
+    end
     -- [fronts.c] armies.c ar_home: the first front's station (its tower nearest the heaviest front, FA_BEHIND back
     -- towards the base) when it is out of danger; else as below
     if memory ~= nil then
@@ -326,6 +336,15 @@ local function train(view, memory, mem, order, budget)
         return mem.plan
     end
     local pick, n = M.pick_soldier(view, budget.avail, math.min(target - home, 5))
+    -- [savings.c] SAVING FIRST: a type the budget refused is saved for while its money grows (sv_want/sv_type)
+    local saved = SV.type(view, memory, SV.ARMY)
+    if saved ~= nil then
+        local c = V.cost(view, saved)
+        if c ~= nil and SV.may(view, memory, SV.ARMY, saved, c.cost, budget.avail) then
+            pick = c
+            n = math.min(target - home, 5)
+        end
+    end
     -- [metal.c] best_per_metal: the soldier asked for (the strongest affordable) is trained as the one that does most
     -- against the enemy army known per gold + iron, when that one is 25% better (mt_choose; the budget pays as before)
     do
@@ -334,7 +353,24 @@ local function train(view, memory, mem, order, budget)
             pick, n = alt, an
         end
     end
+    if pick ~= nil and not SV.may(view, memory, SV.ARMY, pick.type, pick.cost, budget.avail) then
+        pick = nil   -- the money is the saving's, not another kind's
+    end
     if pick == nil then
+        -- [savings.c] SAVING FIRST: the strongest soldier is wanted and its money saved for rather than a cheaper
+        -- one now; the workers gather for it (the stock is measured against its whole price)
+        local rich = {food = 1e9, wood = 1e9, stone = 1e9, gold = 1e9, iron = 1e9}
+        local want_pick, want_n = M.pick_soldier(view, rich, math.min(target - home, 5))
+        if want_pick ~= nil and want_n > 0 then
+            local f = SV.fraction(view, budget.avail, want_pick.type)
+            if SV.want(view, memory, SV.ARMY, want_pick.type, f, view.threat_strength > 0) then
+                for _, r in ipairs(V.resources) do
+                    want[r] = want_pick.cost[r] * want_n
+                end
+                mem.plan = {producer = want_pick.producer, busy = true, wants = want}
+                return mem.plan
+            end
+        end
         -- what the cheapest soldier costs: the workers gather for it
         local cheap = nil
         for _, c in ipairs(view.costs) do
@@ -361,6 +397,7 @@ local function train(view, memory, mem, order, budget)
         n = math.min(n, S.train_queue * (b and b.finished or 1) - pick.requested - pick.in_production)
         if n > 0 then
             order({verb = "train", type = pick.type, n = n})
+            SV.bought(view, memory, pick.type)   -- [savings.c] the saving's type bought: its hold is over
             mem.last_producer = pick.producer
             mem.trained = (mem.trained or 0) + n
         end

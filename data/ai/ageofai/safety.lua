@@ -12,6 +12,7 @@
 -- This engine's own danger zones (a hit citizen's spot for 30 s, EECPRMResourceInDanger) stay on underneath.
 local S = require("ageofai.settings")
 local G = require("lib.groups")
+local TV = require("ageofai.territories")   -- [territories.c] the territory being lost and its refuge
 
 local M = {}
 
@@ -226,6 +227,28 @@ function M.step(mem, memory, now)
                     local site = ai.unit(ai.units{category = "resource", near = {sx, sy, 2}, limit = 1}[1] or -1)
                     kind = site ~= nil and site.kind or nil
                 end
+                -- [territories.c TERRITORY SHELTER] the ground is being lost: every citizen in it into a Fortress
+                -- with room on its land, else to its nearest drop site in a territory that is not - not while the
+                -- town holds there. Nobody works a territory being lost (its sites are dangerous below too).
+                local sheltered = false
+                if TV.unsafe(sx, sy) and not raid_held(sx, sy) then
+                    local fx, fy, fid, fk = TV.refuge(sx, sy)
+                    if fk == "fortress" and fid ~= nil then
+                        ai.garrison({id}, fid)
+                        mem.sent_back[id] = now + 20000
+                        sent = sent + 1
+                        sheltered = true
+                    elseif fx ~= nil then
+                        ai.move({id}, fx, fy, {forced = true})
+                        mem.sent_back[id] = now + 8000
+                        sent = sent + 1
+                        sheltered = true
+                    end
+                    if eco ~= nil then
+                        eco.site_danger = eco.site_danger or {}
+                        eco.site_danger[tostring(sx) .. "," .. tostring(sy)] = now + 30000
+                    end
+                end
                 local mineral = kind == "stone" or kind == "gold" or kind == "iron"
                 -- GOLD AND IRON STAY (attack.c, 7a17182: "it scares citizens away from work way too aggressively, for
                 -- farms and wood that's fine ... but gold and iron are abandoned way too quickly"): a gold or iron
@@ -236,7 +259,7 @@ function M.step(mem, memory, now)
                     raided = false
                 end
                 local hurt = not raided and nh >= (mineral and 3 or 1)
-                if (raided or hurt) then
+                if not sheltered and (raided or hurt) then
                     if raid_held(sx, sy) then
                         held = held + 1
                     else
@@ -266,6 +289,9 @@ end
 
 -- whether a site at x,y is dangerous by the safety's book (econ.lua's claims: released, not claimed again)
 function M.site_dangerous(eco, x, y, now)
+    if TV.unsafe(x, y) then
+        return true   -- [territories.c] no site in a territory being lost
+    end
     local d = eco ~= nil and eco.site_danger or nil
     if d == nil then
         return false

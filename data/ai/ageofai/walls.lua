@@ -33,6 +33,7 @@
 -- "gate" aliases), upstream's line (Copper onward), a piece 10 stone.
 local S = require("ageofai.settings")
 local V = require("lib.view")
+local TT = require("ageofai.territories")   -- [territories.c] the border walls and their runs
 
 local M = {}
 
@@ -950,7 +951,7 @@ end
 -- the open walls' stone) and the ring's tower spots (def_slot with enclose ready)
 
 function M.step(view, memory)
-    if not S.defence_layout or (not S.defence_walls and not S.enclose) then
+    if not S.defence_layout or (not S.defence_walls and not S.enclose and not S.border_walls) then
         return
     end
     memory.walls = memory.walls or {t = nil, nf = 0, f = {}, tick_t = 0, bld = {}, built = 0, gates = 0}
@@ -988,6 +989,22 @@ function M.step(view, memory)
     end
     if S.defence_walls then
         front_walls(view, w, s, now)
+    end
+    -- [territories.c BORDER WALLS] the shortest border between a territory it holds and land nobody of its side
+    -- holds, a gate in the middle, from the stone above 1000 and never so that something is shut in (the plan is
+    -- territories.lua's; the pieces are this module's builders). The gate's five tiles are laid when they stand.
+    if S.border_walls and view.stock.stone > 1000 then
+        local wtype = newest(view, WALL_LINE)
+        local plan = wtype ~= nil and TT.border_wall(view, memory, wtype) or nil
+        if plan ~= nil then
+            for _, r in ipairs(TT.border_runs(plan, wtype)) do
+                local ids = builders((r[1] + r[3]) // 2, (r[2] + r[4]) // 2, 2)
+                if #ids > 0 then
+                    ai.wall(ids, wtype, r[1], r[2], r[3], r[4])
+                    w.border_runs = (w.border_runs or 0) + 1
+                end
+            end
+        end
     end
 end
 

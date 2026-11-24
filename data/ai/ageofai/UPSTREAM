@@ -52,21 +52,87 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 citizens on safe sites).
                 citizens_home part 2 ported (econ.lua: the idle citizens away from the towns walk home, every 3 s);
                 its parts 1 and 3 (the base point moved, stacked foundations) are the original's bugs: ENGINE.
-  work.c        NOT STARTED -> work.lua (port forward 7a17182). The citizens' work while the game's own computer
-                player is off: the worker targets by need and by the mine slots, the mine crowds (the walkers count
-                against a mine's places), the local mines and the town work, the herds kept, the forest settlement,
-                the food plan's parts, the work a claim leaves.
-  build.c       NOT STARTED -> build.lua (port forward 7a17182). The buildings by territory: which building in
-                which territory (production at the front, farming and wood in the backland), the claims of empty
-                territories, a building it cannot place dropped, the repairs.
-  produce.c     NOT STARTED -> produce.lua (port forward 7a17182). The production by territory and the force shares
-                (the pools: main force, siege, anti-air, explorers; train_by_need, fleet_by_need, train_room).
-  research.c    NOT STARTED -> research.lua (port forward 7a17182). The research by rank (the epoch's buildings'
-                techs, the unit upgrades of the units it has, the unit improvements a player buys with the "+").
-  savings.c     NOT STARTED -> savings.lua (port forward 7a17182). The savings for an expensive want: a spender
-                asks whether a bigger want holds the stock before it spends.
-  claims.c      NOT STARTED -> claims.lua (port forward 7a17182). Orders by priority: who may order a claimed unit,
-                its stance while claimed, the priorities and their life.
+                From the port forward (7a17182): budget_reserve/spend_reserve unchanged for the port (no human to
+                follow; rush holds at once already; the epoch count is the data's, not 14); can_pay-before-layout is
+                the verbs' CanAfford (ENGINE); game_ai/own_soldiers/own_ships/own_citizens, census, prod_sync,
+                train_call's counter leak and idle_transports belong to the game's own AI (not applicable: no game AI
+                here) or to navy/transports; the savings are savings.lua's, the strategy plans' share (plan_f
+                LN_PRESSURE) is not ported.
+  work.c        PARTLY -> work.lua (port forward 7a17182). Ported: THE NEEDS (per resource the last 10 minutes' income,
+                spend and citizen-minutes, a citizen brings 3..80 a minute, needed = spend + the reserve's shortfall
+                over 5 minutes + the army's appetite (the land producers x one soldier each 30 s, the metals at least
+                half each, from min_workforce, nothing for a resource 400 above the reserve; food at least
+                cz_nonstop_food), x1.5 under 150, x0.5/x0.2 when it piles up, never under 4% of the total; the
+                split's weight when 3 minutes are sampled - settings work_needs, off until measured, econ.lua's
+                shortfall plan stands under it), the mines' share cut to the places a mine has, THE MINES FIRST
+                (mine_places_first: the free places fill by each mineral's need before more food and wood), FEED
+                (citizen_plan food_pays: one producer per ten missing citizens at the measured food a gatherer
+                brings), FIRST (before_reserve), citizen_mine_cap, workforce_plan CAP and WOOD, MINE CROWDS (the
+                gatherers sent - walking and waiting included - count against a mine's 6 places; every 10 s up to 20
+                beyond them go to the nearest free mine of the kind, farthest first, on the citizen's land; none
+                free: they wait), MINE CHOICE, local_mines/town_work's own-town preference, WOOD DROP (8 cutters 15+
+                tiles out) and mine_settlement, and work asks claims.lua at CLP_ROUTINE/CLW_WORK before its own moves.
+                ENGINE/gaps: the territories (WHERE, ITS TERRITORY, wk_cost, the retreat, the ferry), HERDS KEPT (no
+                herd on a unit record; the engine's finder picks the animal), THE HUNTER'S OWN NEXT ANIMAL (the
+                game's citizen_next_resource hook), A CROWD ON ONE ANIMAL (3 in the engine, upstream 4), ITS LOAD
+                FIRST (the engine's assignment), wk_pool (bunker.c's shelf), the logs.
+  build.c       PORTED -> build.lua (S.build_by_territory, off by default: the territory-driven replacement of
+                econ.lua's settlements, production and farms; port forward 7a17182). Ported, one building a look on
+                the territory view: FIELDS (the 8 places round a finished granary, FARMS PAID FIRST), A GRANARY (from
+                the Copper Age, every field laid, backland first; A GRANARY BEFORE THE NEXT asks tactics.garrison
+                for the room inside), THE RESEARCH BUILDINGS (University, the first production building, Hospital,
+                Temple, the pair 3-5 tiles), PRODUCTION (produce.lua's when wired, else the army's busy producer,
+                packed through packing.lua), A MINE'S SETTLEMENT / TOWER, A HERD'S SETTLEMENT, TO THE TREES ACROSS,
+                A FISHING DOCK, A CLAIM (a tower or a Barracks in a quiet territory beside one it holds with 3 of its
+                soldiers; claim_from_towers), A WATCH TOWER, THE MORALE'S HOUSES, THE WOOD / STONE SINKS, HOLDING THE
+                GROUND (its idle citizens where enemy soldiers are within 12), LAID NOT PAID (memory.build.com, the
+                priority row "laid"), a building it cannot place dropped after 3 tries, LEFT ON LOST GROUND.
+                Deviations: the territories are territories.lua's when it is up, ai.tile's continents and a
+                backland_radius around the base when not; spots are ai.find_site/ai.can_place; one building a look;
+                a field's raiders test 12 tiles; the herd counts the animals within 8; fish are class family 0x12;
+                explored ground only. ENGINE: the builders, the wall pieces' builders and the repair rounds (the
+                verbs, ai.wall); bd_hold_site (attack.c) and the ferry's bd_waits are not ported. Missing: AN
+                AIRPORT (air.lua's own), watch.c's DIM spot (a held territory's middle stands in), g_gu_gran's ask,
+                plans.c's SPREAD on the claim cadence, the log lines.
+  produce.c     PORTED -> produce.lua (port forward 7a17182). Ported: SHARES / HAS / SHORT / WHAT / FED (the attack's
+                share first with PR_MARGIN and PR_HOLD, the rest by weight - a front's guard a third of its citizens
+                3..12, 8 with enemies seen in 5 minutes, attack 10 + the enemy buildings, 30 at most -, a neighbour's
+                free share counts, the way to the nearest production with PR_SEA/PR_FAR, PR_LOCAL's claim,
+                established PR_BLD and secured, the first production while none stands, the first PR_KIND, a kind it
+                has nowhere, one more of the army plan's busy kind with the 2-minute expiry, FED 2 granaries or the
+                food rate). Deviations: the territories are fronts.lua's stations plus the home town and "in a
+                territory" is a PR_NEAR radius; the way is distance steps; EXPLORATION is 0 (scouts are army.lua's);
+                enemy buildings are those the memory knows within PR_REACH; the citizen train time is assumed 30 s;
+                a refused spot is keyed by the station's tile. Missing: which producer trains what and a refused
+                unit's replacement (the engine's unit manager and army.lua), the "air"/"laid" rows, the log line.
+                M.room/M.room_by_pool/M.pools are the pool service stations.lua would read.
+  research.c    PARTLY -> research.lua (port forward 7a17182). Ported: the ranks 1 and 4 (the techs a Town Center,
+                Capitol, University, Hospital or granary researches - the gathering techs first - and every other
+                kind-0 tech of its epoch or an earlier one, cheapest first), RS_EVERY, the no-object/price/available
+                filters, the finished maker, the hold of the next RS_HOLD1 of rank 1 and RS_HOLD2 of rank 2 (M.hold,
+                memory.rs.hold; the priority row "research" spreads it), the units' improvements (unit_improvements:
+                the range ones first in rank 2, the others in rank 4, ai.improve_cost's price and max). ENGINE:
+                paid_upgrades (the engine researches the epoch's kind-7 techs free on EnterEpoch, so there is never a
+                line upgrade to buy), a lost upgrade's retry, RS_QUEUE and the maker's queue load (the verb and the
+                runner pick the building). Missing: rank 3 (the epoch is econ.lua's: the engine's requirement is SOL
+                buildings, not techs), the temple's range techs in rank 1 (ai.techs has no effect list), the armour,
+                area-effect, flight, leadership and transport improvements (the improve verb's names four), the
+                improvement points pot and the setup's switch (unreadable), the autotest lines. Deviations: the tech
+                tree is read every 30 s and the prices every 60 s; a bought candidate is marked.
+  savings.c     PORTED -> savings.lua (port forward 7a17182). sv_want/sv_bought/sv_type/sv_gave/sv_held/sv_hold/
+                sv_log, the army's and the navy's pools, SV_ASKED 30 s, SV_STALL 2 min, SV_HORIZON 10 min, SV_OBSERVE
+                90 s, SV_AGAIN 3 min, the measure in thousandths and the spender's question (M.fraction/M.avail/
+                M.may). Wired: army.lua's SAVING FIRST (a refused type is saved for while its money grows, the
+                cheapest soldier not taken in its place) and the priority row "savings". DEVIATION: sv_hold's
+                per-order type is an argument (upstream's g_sv_order global). The navy's pool waits for the fleet's
+                own account (memory.eco.navy_hold). Not applicable: the autotest variants.
+  claims.c      PORTED -> claims.lua (port forward 7a17182). cl_take, cl_may, cl_stance, cl_end, cl_live, cl_bit,
+                cl_on, M.sweep, M.log, the priorities (survive, repair, carry, hold, task, routine), a repair's
+                120 s / survival's 15 s / a citizen's 30 s, the stance from before restored on end or expiry, the 5 s
+                sweep and the per-pair refusal matrix, the mask (claims, 31). DEVIATIONS: engine ids key the table
+                (no 4096-slot hash; ids are stable); a dead unit is ai.unit == nil. Not applicable: pc_held (a human
+                cannot order a computer's units). Wired so far: work.lua asks before its mine moves; the other
+                orderers (army, tactics, safety, detach, navy/fleet) do not ask yet.
   early.c       PARTLY -> econ.lua (towers), tactics.lua (bait). Ported: early_towers (two towers by the town
                 The fidelity pass: tower_bait as upstream's rule (every 2 s to the Bronze Age, a citizen with an enemy
                 soldier within 5 tiles or attacking it, outside its own towers' reach, to the spot 1.5 tiles behind
@@ -84,11 +150,21 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 3 x and its no-loss estimate (stats.lua has no damage tables). The reflex has no switch for a script
                 (ai.reflex takes naval_flee, danger and memory_ms; the militia key of docs/AI_LUA_UNITS.md §4 is not
                 built): an interface gap. A Lua militia in the micro step would compete with the reflex's orders.
-  food.c        PORTED -> econ.lua (workers, claims): food_plan_needs (the citizens' food, the real wood need), the
-                hunters, the patches (the engine's claims stand in for the site lists).
-  mines.c       PORTED -> econ.lua (settlements): mine_drops / wood_drops (a settlement at the unworked mine or
-                forest edge nearest a drop site).
-  citizens.c    PORTED -> econ.lua (citizens): cz_targets (the citizens wanted from the mines' places, FEED).
+  food.c        PORTED -> econ.lua (workers, claims), work.lua (port forward 7a17182): food_plan_needs (the citizens'
+                food, the real wood need), the hunters, the patches (the engine's claims stand in for the site lists);
+                PULL (back_to_food: food 2+ under its target, up to 4 from the resource farthest above it) and
+                count_trained (the trained citizens' food in the plan) are work.lua's/econ.lua's. NEAR/HUNT/WILD/CAMP
+                are the engine's food runner; food_area (an animal's land) and herd_keep are engine gaps (no herd on
+                a unit record).
+  mines.c       PORTED -> econ.lua (settlements), work.lua (port forward 7a17182): mine_drops / wood_drops (a
+                settlement at the unworked mine or forest edge nearest a drop site); wood_drops' newer rule (8+
+                woodcutters 15+ tiles from a drop site, the densest cluster, a Settlement at its edge) is work.lua's
+                M.wood_drop_ok, with the port's deviation: its cutters work only by a drop site, so the rule means the
+                edge 15+ tiles out and either 8 cutters or no tree by a drop site at all.
+  citizens.c    PORTED -> econ.lua (citizens), work.lua (port forward 7a17182): cz_targets (the citizens wanted from
+                the mines' places, FEED); cz_feed, cz_visible_food (before_reserve), cz_mine_cap and workforce_plan's
+                targets are work.lua's; cz_own's 2-second orders are the train verb's; the counter's leak and the
+                queue depth are the engine's.
   defence.c     PARTLY -> econ.lua (towers), army.lua (home guard, muster, hold the town), tactics.lua (bunkers),
                 home_guard's room (ENGINE): unit_limit is the cap that follows the human upstream; here the lobby's
                 limit, so the room counts home_guard_cap (166) at least and the own population when larger.
@@ -150,12 +226,31 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 the class name, the best kind to train by hp x attack, "looked at" from the riders' own cells and what
                 is visible now, the base threatened is view.threat_strength > 0, the target's life from the memory.
                 Missing: the force's own breach (AR_BREACH, off upstream: the stand-off before a defended position;
-                attack.lua's breach through a wall is attack.c's).
-  territories.c NOT STARTED -> territories.lua (port forward 7a17182). The territories as an AI sees them: the land
-                and the seas, held, a front or the backland, the foes and the guard, unsafe with its refuge, the seas
-                claimed by the shore, the border towers and walls, the harbours. The retail game splits the map into
-                40 regions in game/territory.c and this engine has no such split: the port grows its own region grid
-                from ai.tile (the deviation), fog-honest and chunked over steps as fronts.lua does the fronts.
+                attack.lua's breach through a wall is attack.c's). From the port forward (7a17182): RAID PARTIES
+                (raid_parties, army.lua: a part of the force that beats a raid by 200% answers it as an army of its
+                own). Missing of the newer armies.c: TRAINING BY NEED (ar_fill_type), SCOUTING by the fastest
+                soldier, HELD GROUND and FRONT STATION (territories.c), OVER THE SEA (the landing's lending),
+                ALLY AID (off upstream), the force's army view (army_view.c).
+  territories.c PARTLY -> territories.lua (port forward 7a17182). Ported: the foes and the guard of each territory,
+                UNSAFE with its calm timers and the TV_HOT rotation, the guard wanted, holds (its finished buildings
+                that shoot or train; no wall piece, no Fortress), front and backland, the seas' claim by the shore
+                (a border sea claimed by both, an open sea by nobody), the refuge, the border towers and border walls
+                (the stone sink), the harbours' advice, the front station and the sea queries. THE MODEL IS THE PORT'S
+                (deviation): the retail game's 40-region split is not exposed, so the module grows its own region
+                grid from ai.tile - a TC_CELL lattice of seeds on each land mass, a multi-source BFS chunked over
+                steps, stable once assigned; a sea is one territory per water body. The boundaries therefore differ
+                from the retail game's; the decisions keep their intent. Fog-honest (explored cells only; the facts
+                are what it sees and remembers), the facts every 2 s and the roles every 10 s. Consumed so far by
+                build.lua; the defence, expand and stations consumers are stage 2. Note the game's own computer
+                player is off in this engine's Lua seats, so upstream's GAME_AI half of TV_HOLDS (3 buildings) is not
+                the live rule: one shooting or training building holds, and a stray Settlement or house does not.
+  watch.c       PARTLY -> watch.lua (port forward 7a17182). Ported: the cells (4 x 4 tiles) with when each was last in
+                its sight and how much of the time, ITS GROUND (the open land of the territories it holds and beside
+                them that nobody of its side holds with no enemy building known), DARK (out of sight for WT_AGE) and
+                the PATCHES of them (4+ side by side, largest first), the patrols wanted / their targets / a patch
+                given up (M.patrols_wanted, M.patrol_target, M.skip - stations.c sends the soldiers, not ported),
+                DIM (seen less than a quarter of the time after WT_WARM) and the WATCH TOWER places (M.watch_tower;
+                build.lua lays them). Missing/ENGINE: the stations' patrol consumers and the log lines.
   stations.c    NOT STARTED -> stations.lua (port forward 7a17182). The force by territory: a station for every land
                 soldier, the shares, giving and marching, the pushes without an attack time, the scouts and the
                 patrols, the demolition, the bridgehead, the coast batteries.
@@ -168,9 +263,18 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   stage.c       PORTED -> army.lua: the staging point (the last point of the way out of the enemy's reach).
   intel.c       ENGINE -> C++ (ai.memory, ai.seen): honest vision's memory (buildings until seen gone, soldiers
                 remembered 3 minutes).
-  explore.c     NOT STARTED -> explore.lua (port forward 7a17182). Exploring: the citizens round their town for
-                food, the Canine Scout's rings, the territory scouts walking the unexplored ground and the parts
-                looked at longest ago.
+  explore.c     PORTED -> explore.lua (port forward 7a17182). Ported: xp_goal (the unexplored edge of the unit's land
+                nearest the base, through ai.unexplored), off the other explorers' goals and the goals given up
+                lately, never on ai.danger; THE FOOD SEARCH (citizens explore round the town until enough food is
+                found, half released once every food citizen is placed; then idle citizens and the nearest
+                woodcutters), THE BASE SCOUT (a Canine Scout circles the base ring after ring, the economy's money,
+                3 tries: a citizen stands in), THE NEXT GOAL AT ONCE (every step: a goal its sight took in gets the
+                next, a goal given up is avoided), the explorers claimed as CLW_EXPLORE, and the territory scouts'
+                goals as M.territory_goal / M.stale for stations.lua (not ported). Missing/ENGINE: XP_CLAIM_T (a
+                claim lasts until the release), the scenario's Explore toggle (no player_ai_toggle), the log line.
+                Deviations: the dark map is ai.unexplored (12 searches a look, 4 a step at most); the goal is an
+                unexplored grid point, not the explored edge tile; XP_STALE reads the explorers' own cell stamps;
+                the dog's base is the town; the dog is a direct ai.train with the reserve checked here.
   danger.c      ENGINE -> C++ ai.danger "threat": the threat map (defences at range, soldiers, hurt citizens).
   cover.c       ENGINE -> C++ ai.danger "lost": DANGER_LOST (where own units traded badly, 20 minutes).
   shiproute.c   ENGINE -> C++ ai.route (cells): danger-aware routes.
@@ -255,8 +359,15 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
   squadrons.c   NOT STARTED -> squadrons.lua (port forward 7a17182). The squadrons: a main squadron per stretch of
                 valuable water that holds it and calls the others for help, scout and raid groups, hunter groups,
                 the missile submarines and the shore fire.
-  storms.c      NOT STARTED -> storms.lua (port forward 7a17182). The storms: the ships within reach of the enemy
-                prophet's hurricane sail straight out of it, and nobody is sent in.
+  storms.c      PORTED -> storms.lua (port forward 7a17182). Ported: the storm units (hurricane, anti_matter_storm:
+                9999 hit points, attack 0, so invisible to the fleet's scan), st_way_out (out 12 tiles, the way from
+                the ship first then +-30 degrees up to 150, open water of its sea, none in another storm's 5), the
+                dodge (every ship within 5: warships, transports, fishing boats - whatever they were doing; the
+                order given again while a manager's took its place: the step runs after the army's navy/fleet), and
+                the fleet's danger zones (fleet.lua's scan adds M.zones(); M.danger for any other reader). Fog-honest
+                (a storm it cannot see is not dodged). Deviations: the look is every game second (upstream 250 ms);
+                a ship must be on water (a hurricane can stand over land). Missing: the autotest/log formats; the
+                claim's CLP_SURVIVE priority is the step's order here.
   transports.c  ENGINE -> C++ (the unload retries at the next shore tile; the stalled transport watchdog is the
                 engine's own transport goal; the player's load split and unload spread are UI). Nothing to port.
   landing.c     PORTED -> navy.lua (landing), lib/navy.lua (N.beach, N.plan, N.landing_step). Ported: ld_phase_plan
@@ -352,9 +463,21 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 gone (fog-honest); a bomber landed in its airport is inside a container and ai.attack refuses it
                 (cannot_do) where upstream's game air order launched it - an interface gap (counted:
                 memory.air.refused).
-  airguard.c    NOT STARTED -> airguard.lua (port forward 7a17182). The air guard: the anti-air before any aircraft
-                is seen, the fighters by role (air fighters, fighter/bombers, anti-tank planes), the sweeps, the air
-                bases moving forward, the aircraft parked in an Airport.
+  airguard.c    PORTED -> airguard.lua (port forward 7a17182; beside air.lua, which is airstrike.c's bomber wing).
+                Ported: AA BUILDINGS (the anti-air defence.c wants: 2 + (air+1)/2, 1 + want/4 at most 4, while enemy
+                aircraft were seen near its towns in 10 minutes, by the drop site nearest them, one a minute), THE
+                AIR FORCE'S SIZE (air_force_share of land soldiers + fighters + bombers, 40% fighters else the
+                enemy's fighters known + 2, the rest bombers), FIGHTERS (4 an Airport at most, 2 a batch, 6 in all,
+                the strongest of the role it lacks by hp x attack per cost, air fighters first, anti-tank planes
+                never trained - upstream's rule; paid as a priority order at the forward Airport), the roles by the
+                data's names, INTERCEPT (enemy aircraft within 18 of an own building, the ready at 60%), the LEASH,
+                THE SWEEPS (a flight of 4 from the home Airport over 8-tile cells worth 600 an aircraft / 120 a
+                citizen / 400 a land unit within 40% of the flight time's reach, one flight a cell, 150 s a run, 5
+                minutes a look), and the aircraft held. GAPS (no ai.air): the airport commands (rebase, scramble,
+                return-to-base) and a parked aircraft cannot be ordered - an airborne fighter is ordered directly, a
+                parked flight launched by its Airport's rally (ai.rally), an Airport the bomber wing is based at is
+                left alone; sw_survives stands in with a count of the enemy anti-air within 14 of the target.
+                Missing: the logs (a summary a minute).
   diplo.c       PARTLY -> diplo.lua. Ported: diplo_tick (the first look takes the stances as they are; a player
                 turned hostile: opinion -40, a betrayal after 2 minutes of alliance -60, x (0.5 + pride/100);
                 ANSWER WAR 3-6 s later through ai.diplomacy; a player turned allied while at war: the peace offer
@@ -468,8 +591,6 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 regions are the land masses (ai.tile's continent); a cell's land from 16 of its 64 tiles, explored
                 ones only (fog), 96 cells a look; front_army's second station fights lib.groups' one force (the
                 defend task walks them back) - off as upstream. Not ported: the overlay, the autotest log counts.
-  watch.c       NOT STARTED -> watch.lua (port forward 7a17182). Watching its own ground: the 4 x 4 cells' patches
-                out of sight, the patrols that look at them, the watch towers for the patches it sees least.
   creep.c       NOT STARTED -> creep.lua (port forward 7a17182). Tower creep: 12 citizens walk up to an unguarded
                 enemy building and build a tower in range of it, then the next building from the new towers.
   sites.c       ENGINE -> C++: the next engine's finders take the mine nearest a drop site, the bush nearest a drop
@@ -533,14 +654,20 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
 
 PORT FORWARD STAGES. The forward is carried in stages, each a commit that changes the modules it names and their
 lines here:
-  stage 1 (2026-11-23): the map above, settings.lua's new keys, and GOLD AND IRON STAY (safety.lua, attack.c). The
-            mod's own economy and its pieces (work.lua, build.lua, produce.lua, research.lua, savings.lua,
-            claims.lua), the territories and the watch (territories.lua, watch.lua), the exploring and the air
-            guard (explore.lua, airguard.lua, storms.lua) are the first modules of the forward.
-  stage 2: the consumers of the territories and the force by territory (stations.c, defence.c's shelter, expand.c's
-            front guards, navy.c's fleet station and harbours), the ferry and the crossings (ferry.c, crossing.c,
-            convoy.c), the squadrons (squadrons.c), the holy (holy.c), the plans and the returns (plans.c,
-            returns.c), news.c, scen_targets.c, and the modified files' lines brought up to 7a17182.
+  stage 1 (2026-11-23/24): the map above, settings.lua's new keys, GOLD AND IRON STAY (safety.lua, attack.c), RAID
+            PARTIES (army.lua, armies.c), and the mod's own pieces: work.lua (work.c, in econ.lua), claims.lua,
+            savings.lua (wired into army.lua's SAVING FIRST and the priority row), research.lua, produce.lua,
+            build.lua (its BEHIND build_by_territory, off as the shipped default), territories.lua and watch.lua
+            (the model and the facts; the border towers, border walls and the territory shelter wired, the rest
+            offered), explore.lua, airguard.lua and storms.lua (the fleet's scan takes their danger zones).
+            Checked with headless Age of AI games (up to 5 players, 40 minutes, no script error and the engine's
+            memory validator clean).
+  stage 2: the force by territory (stations.c, army_view.c: the shares, the pushes, the scouts and patrols, the
+            demolition, the bridgehead) and its consumers still standing in fronts.lua - defence.c's town guards and
+            anti-air rows, expand.c's front guards, navy.c's fleet station and harbours, towns.c's party; the ferry
+            and the crossings (ferry.c, crossing.c, convoy.c); the squadrons (squadrons.c); the holy (holy.c); the
+            plans and the returns (plans.c, returns.c); creep.c, news.c, scen_targets.c; and the modified files'
+            lines brought up to 7a17182.
 A decision this engine cannot express (no territory split of the retail game, no stance-claimed orders, no
 personality leanings, no unit-improvement data) is a gap named in the file's line, not a silent omission.
 

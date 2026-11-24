@@ -32,6 +32,7 @@
 -- building therefore waits for the epoch too, where upstream's buildings (the epoch row skips S_BUILD) spent it.
 local V = require("lib.view")
 local S = require("ageofai.settings")
+local SV = require("ageofai.savings")   -- [savings.c] the pools' savings
 local M = {}
 
 -- the spenders (priority.c S_*)
@@ -78,6 +79,18 @@ end
 
 -- the rows: {name, hold(view, memory, spender, r), skip, only, apart}
 local ROWS = {
+    -- [build.c LAID, NOT PAID] the price of the foundations its own building code has laid, until they show (the
+    -- map build.lua leaves in memory.build.com; zero while build_by_territory is off)
+    {name = "laid", skip = 0, only = 0, apart = false,
+     hold = function(view, memory, s, r)
+         add_map((memory.build or {}).com, r)
+     end},
+    -- [research.c] what its ranks 1 and 2 still wait for, above the epoch as upstream's list has it (its own rank 1
+    -- and 4 ask with it too: M.hold inside research.lua)
+    {name = "research", skip = M.S_TR_ECON, only = 0, apart = false,
+     hold = function(view, memory, s, r)
+         add_map((memory.rs or {}).hold, r)
+     end},
     {name = "epoch", skip = M.S_BUILD, only = 0, apart = false,
      hold = function(view, memory, s, r)
          add_map((memory.eco or {}).epoch_reserve, r)
@@ -140,6 +153,12 @@ local ROWS = {
          if sp ~= nil and (sp.n or 0) > 0 and sp.t ~= nil and view.time >= sp.t and view.time - sp.t <= SP_KEEP then
              add_cost(view, sp.type, sp.n, r)
          end
+     end},
+    -- [savings.c] a soldier's or a warship's order leaves its pool's saving alone (the stock is one; apart: the
+    -- warships that see the stock past the rows see it)
+    {name = "savings", skip = M.S_REQ | M.S_ORDER | M.S_BUILD, only = M.S_MIL | M.S_SHIP, apart = true,
+     hold = function(view, memory, s, r)
+         SV.hold(view, memory, r)
      end},
 }
 M.rows = ROWS
