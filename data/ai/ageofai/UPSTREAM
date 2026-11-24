@@ -552,11 +552,20 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 AIs upstream answered an offer at once (one process) - here it stands 2 minutes (OFFER_AI_MS) like
                 one to a human. DEVIATION: a vassal's tribute every 3 minutes of a quarter of each resource (the
                 language model's bounds made a rule).
-  plans.c       NOT STARTED -> plans.lua (port forward 7a17182). The strategy plans: a plan picked by the
-                personality's leanings and changed on what the fighting shows; without personas, the port's default
-                leanings (50 each) apply.
-  returns.c     NOT STARTED -> returns.lua (port forward 7a17182). The returns: what each kind of force kills and
-                loses for what it fields, the recent fighting weighed most.
+  plans.c       PORTED -> plans.lua (port forward 7a17182; strategy_plans, off until the consumers are wired).
+                Ported: the plan table (8 plans, levers, bounds, lean spans), the lean factors, the start pick, the
+                periodic change on the returns, plan_f (1.0 when off). Deviations: persona leanings unavailable
+                (default 50, overridable via settings.plan_lean_* and memory.plan.leanings); the navy sea-power gate
+                (PL_SEA_MIN) not checked; the random draw uses a deterministic LCG seeded from memory.plan_seed/
+                view.time instead of rnd_game32. Missing/ENGINE: persist.c saved-game plan/returns blocks, the
+                [autotest] variant switches, the # plan: logs, game_seed draw. The consumers still use 1.0.
+  returns.c     PORTED -> returns.lua (port forward 7a17182; strategy_plans, off until the consumers are wired).
+                Ported: 8 kinds, rt_kind classification, died-event tracking (killer/dead/value), per-kind ring
+                with RT_HALF decay, field refresh, worth/worth_of clamped 0.2..2.0 with prior. Deviations: memory
+                holds only integers/tables so sums and decay are rounded per RT_EVERY step, and plan factors are
+                stored as integer thousandths; rt_kind uses category/name heuristics (no class ids/families); value
+                uses view.costs then ai.class cost, falling back to 1 for citizens/unknown; returns decay is per-AI
+                memory rather than one global. Missing/ENGINE: save hooks, the # returns: logs.
   news.c        NOT STARTED -> news.lua (port forward 7a17182). The lines the pushes and the territories give an AI
                 to say (the port's tests have no personalities, so the trace's lines stand in).
   scen_targets.c NOT STARTED -> scen_targets.lua (port forward 7a17182). A scenario's military targets: the trigger's
