@@ -47,40 +47,9 @@
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern long gDefaultTerrain;                // EETerrainTable.cpp
 
-// The bodies are Rust (ee_game gamecpp state.rs) over the cases below (EEGameStateOp)
-void EEGameState::Clear()
-{
-    ee_gamecpp_state_clear(this);
-}
-
-void EEGameState::RepairRestorables()
-{
-    ee_gamecpp_state_repair_restorables(this);
-}
-
-void EEGameState::Init()
-{
-    ee_gamecpp_state_init(this);
-}
-
 bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
 {
     return ee_gamecpp_state_create(this, &inOptions, &outErrorMessage);
-}
-
-void EEGameState::Reset()
-{
-    ee_gamecpp_state_reset(this);
-}
-
-void EEGameState::SetCalamityHelper(EEPCalamityHelper* inHelper)
-{
-    ee_gamecpp_state_set_calamity_helper(this, inHelper);
-}
-
-void EEGameState::SetEnvironmentManager(EEEnvironmentManager* inManager)
-{
-    ee_gamecpp_state_set_environment(this, inManager);
 }
 
 // Returns the colour of a player colour index (the default colour past the table's end)
@@ -100,13 +69,6 @@ EEStartingResources* EEGetResourceLevel(long inIndex)
 EETeam::~EETeam()
 {
     delete this->mVictoryCondition;
-}
-
-// Does nothing after a game is loaded (no address: empty, ICF-folded into 0x163d6f; EEGameStateLoader::LoadGame
-// 0x14a5ba calls it with the save's versions: `push hdr.mMinorVersion; mov ecx, [esi] (the EEGameState*); push
-// hdr.mMajorVersion; call 0x163d6f`, a direct thiscall on the state; provisional name)
-void EEGameState::FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
 }
 
 // ------------------------------------------------------------------------- the state bodies' C++ (gamecpp state.rs)

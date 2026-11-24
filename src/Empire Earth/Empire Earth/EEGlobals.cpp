@@ -101,7 +101,6 @@ bool& gWorldClearing = gWorld.mClearing;   // +0xb99
 bool& gUnitImprovementsAllowed = gWorld.mUnitImprovementsAllowed;   // +0xb9b
 bool& gShowCollisionSpheres = gWorld.mShowCollisionSpheres;   // +0xb9c
 bool& gInCinematic = gWorld.mInCinematic;   // +0xba0
-bool& gLoadingPlayerMedia = gWorld.mLoadingPlayerMedia;   // +0xba3
 bool& gUsingCarbon = gWorld.mUsingCarbon;   // +0xba4
 EE_GLOBAL_STORAGE(EEEvent, gEvent, "?gEvent@@3VEEEvent@@A");
 EE_GLOBAL_STORAGE(EEDatabase, gDatabaseObjects, "?gDatabaseObjects@@3VEEDatabase@@A");
@@ -119,7 +118,6 @@ long& gDCGameSpeed = gContinentManager.mRecord.num_water_tiles;   // +0x134
 long& gNumSpaceTiles = gContinentManager.mRecord.num_space_tiles;   // +0x13c
 unsigned long& gMapWidth = reinterpret_cast<unsigned long&>(gContinentManager.mRecord.width);   // +0x144
 unsigned long& gMapHeight = reinterpret_cast<unsigned long&>(gContinentManager.mRecord.height);   // +0x148
-bool& gContinentManagerClearing = gContinentManager.mRecord.clearing;   // +0x14c
 EE_GLOBAL_STORAGE(EEWorldTable, gWorldTable, "?gWorldTable@@3VEEWorldTable@@A");
 EE_GLOBAL_STORAGE(EETerrainTable, gTerrainTable, "?gTerrainTable@@3VEETerrainTable@@A");
 EE_GLOBAL_STORAGE(EETerrainColorTable, gTerrainColorTable, "?gTerrainColorTable@@3VEETerrainColorTable@@A");

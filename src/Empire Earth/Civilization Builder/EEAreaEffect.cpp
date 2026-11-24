@@ -195,8 +195,6 @@ void EEAreaEffect::Dump(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Player Number %ld\n", this->mPlayer);
 }
 
-EEAreaEffectTemplate::EEAreaEffectTemplate() { ee_screens_aet_construct((uintptr_t)this); }
-
 long EEAreaEffect::Checksum()
 {
     return ee_area_effect_checksum(this, this->mLocation.mX, this->mLocation.mY, this->mUnit != NULL ? (long)this->mUnit->mUnitID : 0);

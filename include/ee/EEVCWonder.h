@@ -4,11 +4,16 @@
 #ifndef EE_EEVCWONDER_H
 #define EE_EEVCWONDER_H
 
+#include "rust/game/gamecpp.h"
 class EEVCWonder : public EEVictoryCondition {
 public:
     EEVCWonder(EETeam* inTeam) : EEVictoryCondition(inTeam) {}   // inline (EETeam's ctors 0x13d013..)
-    virtual long GetVictoryState();         // +0x04 0x1374c1 (1: a wonder has stood long enough)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x08 0x13744b
+    // Returns 1 (won) when the team's wonder countdown has run out, outside cinematics; else 0
+    // +0x04 0x1374c1 (1: a wonder has stood long enough)
+    virtual long GetVictoryState() { return ee_gamecpp_wonder_state(this); }
+    // Reads and discards the wonder list of old saved games (before version 0.225); returns the first read error
+    // +0x08 0x13744b
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_wonder_load(inMajorVersion, inMinorVersion, &inFile); }
 };
 
 #endif

@@ -34,11 +34,3 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEUnitPicker.h"
 #include "rust/sim/units.h"
-
-// Returns the game variant with the given index
-// Probably inline in the real header (an out-of-line COMDAT right after its first user, EECCEarthquake's Update);
-// defined here, with the earthquake's update parameters (Update above)
-EEGameVariant* EEGameVariant::GetGameVariant(long inIndex)
-{
-    return gGameVariants[inIndex];
-}
