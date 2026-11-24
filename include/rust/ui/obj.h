@@ -718,6 +718,14 @@ enum class EeUiOp : uint32_t {
   /// The virtual `TabbedTo()` (the direct path's, `direct.rs`; `ReleaseMouse`, `SetDisplayMode` and `SetBgOpacity`
   /// are its other virtuals on the record's host).
   CtlTabbedTo = 534,
+  /// The rasterizer's `Draw(the copied background rhombus, the screen)` (`UIControl::DrawPolygons`, UI round 16).
+  CtlDrawCopiedBg = 535,
+  /// The virtual `DrawBorder(f, a)` -> its result.
+  CtlVirtDrawBorder = 536,
+  /// The virtual `MouseLButtonDown()` -> its result.
+  CtlVirtMouseDown = 537,
+  /// *Pure*: the background rhombus's opacity (`GetOpacityPerVertex`'s last vertex) -> `f[0]`.
+  CtlBgRhombusOpacity = 538,
   /// The form's `AddBackground(this)`.
   BgAdd = 540,
   /// *Pure*: the manager's window's `GetWidth()` (a 0) or `GetHeight()` (a 1).

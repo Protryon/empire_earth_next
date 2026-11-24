@@ -121,6 +121,14 @@ pub enum EeUiControlCall {
     SetBgOpacity = 20,
     /// `SetBorderThickness(a)`, then the (virtual) `SetDirty(true)`.
     SetBorderThickness = 21,
+    /// `UIControl::DrawPolygons()`: the copied background when it draws, then the (virtual) `DrawBorder` of the
+    /// copied draw rectangle -> its result (UI round 16).
+    DrawPolygons = 22,
+    /// `UIControl::MouseLButtonDoublePressed()`: the left button down, then the (virtual) `MouseLButtonDown()` -> its
+    /// result.
+    MouseDoublePressed = 23,
+    /// `GetBgOpacity()` -> `f[0]`.
+    BgOpacity = 24,
 }
 
 /// The background rhombus (the rhombus ops' `a`; 1 is its copy, `RhombusCopy`'s target).
@@ -525,6 +533,24 @@ impl Ctl {
                 crate::draw2d::rhombus_set_opacity(bg, buf[0], || {
                     h.op_f(Op::RhombusSetOpacity, BG, 0, 0, 0, &mut [buf[0], 0.0, 0.0, 0.0])
                 });
+            }
+            C::DrawPolygons => {
+                if self.get(|r| r.mCopiedHasBgOpacity) {
+                    self.op(Op::CtlDrawCopiedBg, 0, 0);
+                }
+                let r = self.get(|r| r.mCopiedDrawRectangle);
+                let thickness = self.get(|r| r.mBorderThickness) as isize;
+                return self.host().op_rect(Op::CtlVirtDrawBorder, thickness, 0, r);
+            }
+            C::MouseDoublePressed => {
+                self.set(|r| r.mLeftButtonDown = true);
+                return self.op(Op::CtlVirtMouseDown, 0, 0);
+            }
+            C::BgOpacity => {
+                let mut out = [0.0f32; 4];
+                self.host().op_f(Op::CtlBgRhombusOpacity, 0, 0, 0, 0, &mut out);
+                // SAFETY: the contract (BgOpacity's caller passes four floats)
+                unsafe { *f = out[0] };
             }
             C::SetBorderThickness => {
                 self.set(|r| r.mBorderThickness = a as c_ulong);

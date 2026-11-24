@@ -49,20 +49,6 @@ long EEPChecksum::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
 
 // ------------------------------------------------------------------------- the checksum's C++ (gamecpp persist_parts.rs)
 
-int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 
-// The checksum's C++ calls and members (EEPCalamityHelper.cpp's EEPCalamityOp default; the end of lane C): one
-// statement each
-int64_t EEPChecksumOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::PcRust: return P64(static_cast<EEPChecksum*>((FSPersistent*)p)->GetRust());
-    case O::PcUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
-    case O::PcUStrText: return P64((const char*)*(UString*)p);
-    case O::PcSaveText: return UString((const char*)a[0]).Save(*(FSFile*)p);
-    default: return EECore9OpD(inOp, p, a, f);
-    }
-}

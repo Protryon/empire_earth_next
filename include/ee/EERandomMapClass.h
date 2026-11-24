@@ -13,19 +13,6 @@ class EEMap;
 class EEPlayer;
 class GE3DPoint;
 
-// sRandomMapGenerators' element (0x38 bytes: idiv 0x38; implicit ctor 0x286d4f and dtor 0x286d6e, out of line)
-struct EERMGenerator {
-    // inline: Initialize's std::sort expands it (the UWideString operator< import on +0x14 inside the sort COMDATs)
-    bool operator<(const EERMGenerator& inOther) const { return mDisplayName < inOther.mDisplayName; }
-
-    UWideString mName;                      // +0x00 the script name (EERMGetGeneratorName; compared with the map type)
-    UWideString mDisplayName;               // +0x14 (the StringTableID string, else the name)
-    UString mModuleName;                    // +0x28 the generator PIM's name ("UseMapGenerator")
-};
-
-// the generator's name, which a .rmv script's UseMapGenerator names (the linked Default plug-in's PIMGetName)
-#define kEERMGeneratorName "Default"
-
 class EERandomMap {
 public:
     // 0x28655a: up to 11 tries with fresh seeds until the players can reach each other (cdecl)
@@ -35,8 +22,8 @@ public:
     // 0x286804 ("EERandomMap::Initialize: %s random map generator detected."): the generator list from
     // Data\Random Map Scripts\*.rmv
     static long Initialize(const FSFileSpec& inDirectory);
-
-    static std::vector<EERMGenerator> sRandomMapGenerators;   // 0x565570 (guard bit 2)
+    // sRandomMapGenerators (0x565570: 0x38-byte entries of the name, the display name and the module) is ee_sim rmap
+    // object.rs' generator list (ee/EERandomMapGenerators.h)
 };
 
 // other units' functions the random map calls (cdecl; provisional names)

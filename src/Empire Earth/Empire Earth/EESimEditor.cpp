@@ -11,12 +11,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <algorithm>
-#include <chrono>
-#include <condition_variable>
 #include <deque>
-#include <functional>
 #include <map>
-#include <mutex>
 #include <string>
 #include <typeinfo>
 #include <vector>
@@ -88,101 +84,22 @@ static_assert(sizeof(GERectangle) == 16 && sizeof(GEColor) == 12 && sizeof(GETra
 
 namespace {
 
-std::mutex sStepLock;
-std::condition_variable sStepDone;
-bool sStepFinished = false;
-long sStepClock = 1000;                     // the time TMGetTime answers on the UI thread for the next step
+// A step's action and end (sim_driver sed_run.rs: the steps, the marker's reposts, the end's rounds and the driver's
+// wait; inState is the run's state)
+class EESimEditorAction : public EEAction {
+public:
+    explicit EESimEditorAction(void* inState) : EEAction(false), mState(inState) {}
+    virtual void Virtual4() { ee_sim_driver_sed_action(this, this->mState); }
+    virtual void Virtual8() {}
+    void* mState;
+};
 
-class EESimEditorMarker;
-void PostMarker(long inLeft, long inRounds);
-
-// The step's end, after the events it posted to the UI thread's queue: inRounds more rounds through the action queue
-// first (a step makes one), then lets the clock run and wakes the driver. The round: a control's trigger event (a
-// list's selection, a question's Yes, a check box's change) is processed by a UI update, and what it posts (the
-// civilization choice's load of the selected file, the delete after the Yes, the hide-UI box's view change:
-// PostEvent) reached this queue after the first end, so the next step read the state before or after them depending
-// on when the update came: the gates' flakes under load (the civilization builder's choice statistics empty with
-// "Please wait" shown, or filled; the editor's view after the hide-UI box and the trigger tab's check boxes). After
-// the round every such event is processed before the end.
 class EESimEditorDone : public UIEvent {
 public:
-    explicit EESimEditorDone(long inRounds) : mRounds(inRounds) {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-    {
-        if (this->mRounds > 0) {
-            PostMarker(3, this->mRounds - 1);
-            return 0;
-        }
-        ee_time_pin(-1);
-        std::lock_guard<std::mutex> theGuard(sStepLock);
-        sStepFinished = true;
-        sStepDone.notify_all();
-        return 0;
-    }
-    long mRounds;
+    explicit EESimEditorDone(void* inState) : mState(inState) {}
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_sim_driver_sed_done(this->mState); }
+    void* mState;
 };
-
-// The last action of a step: posted after the step's own actions, it posts itself again inLeft times (an action run
-// by a step's action, e.g. the blank map's terrain paint, is queued after it), then posts the step's end
-// (EESimEditorDone) to the UI thread's message queue.
-class EESimEditorMarker : public EEAction {
-public:
-    EESimEditorMarker(long inLeft, long inRounds) : EEAction(false), mLeft(inLeft), mRounds(inRounds) {}
-    virtual void Virtual4()
-    {
-        if (this->mLeft-- > 0) {
-            gUserInterface->PostAction(this);
-            return;
-        }
-        // the end goes through the UI thread's message queue too: the events a step posted there (e.g. the hide-UI
-        // box's viewport change) are processed first (one queue, in order)
-        UIEvent* theDone = new EESimEditorDone(this->mRounds);
-        gUserInterface->PostEvent(theDone, NULL);
-        theDone->Dereference();
-    }
-    virtual void Virtual8() {}
-    long mLeft;
-    long mRounds;   // the rounds through the action queue still to make after this marker's end (EESimEditorDone)
-};
-
-void PostMarker(long inLeft, long inRounds)
-{
-    EESimEditorMarker* theMarker = new EESimEditorMarker(inLeft, inRounds);
-    gUserInterface->PostAction(theMarker);
-    theMarker->Dereference();
-}
-
-// A step: on the UI thread, in the action queue (under the UI copy lock and the world's write lock, as every
-// editor action runs), the clock pinned, the step's code, then the marker.
-class EESimEditorStep : public EEAction {
-public:
-    EESimEditorStep(const std::function<void()>& inCode, long inRounds)
-        : EEAction(false), mCode(inCode), mRounds(inRounds) {}
-    virtual void Virtual4()
-    {
-        ee_time_pin(sStepClock);
-        this->mCode();
-        PostMarker(3, this->mRounds);
-    }
-    virtual void Virtual8() {}
-    std::function<void()> mCode;
-    long mRounds;
-};
-
-// Runs a step and waits for its marker (inRounds: EESimEditorDone's); false after a minute without it
-bool RunStep(const std::function<void()>& inCode, long inRounds = 1)
-{
-    {
-        std::lock_guard<std::mutex> theGuard(sStepLock);
-        sStepFinished = false;
-    }
-    sStepClock += 1000;
-    EESimEditorStep* theStep = new EESimEditorStep(inCode, inRounds);
-    gUserInterface->PostAction(theStep);
-    theStep->Dereference();
-    std::unique_lock<std::mutex> theLock(sStepLock);
-    return sStepDone.wait_for(theLock, std::chrono::seconds(60), [] { return sStepFinished; });
-}
 
 // the protected virtuals a person's mouse reaches: a button's release, a combo box's chosen line, an edit box's Enter
 struct ButtonAccess : UIButton {
@@ -207,11 +124,6 @@ std::string sText;                          // the last text answered (the UI th
 
 }   // namespace
 
-// The step's code (Rust's) run as a step -> false when it did not finish within a minute
-extern "C" bool ee_simcpp_sed_run(void (*inCode)(void*), void* inContext)
-{
-    return RunStep([inCode, inContext] { inCode(inContext); });
-}
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define ED ((EEUIFScenarioEditor*)p)
@@ -376,13 +288,13 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::LoadThreadClearDone: ((EESELoadThread*)p)->mMessageQueueDone->Clear();
         break;
-    case O::UnitWallStart: SU->mBuildWall.mStart.SetXY(f[0], f[1]);
+    case O::UnitWallStart: SU->mBuildWall.mStart = {f[0], f[1]};
         break;
-    case O::UnitWallEnd: SU->mBuildWall.mEnd.SetXY(f[0], f[1]);
+    case O::UnitWallEnd: SU->mBuildWall.mEnd = {f[0], f[1]};
         break;
-    case O::UnitWallBuild: SU->mBuildWall.Build();
+    case O::UnitWallBuild: ee_screens_wall_build(&SU->mBuildWall);
         break;
-    case O::UnitWallCancel: SU->mBuildWall.Cancel();
+    case O::UnitWallCancel: ee_screens_wall_cancel(&SU->mBuildWall);
         break;
     case O::UnitGateTileX: SU->mBuildGate.mTileX = (long)a[0];
         break;
@@ -390,11 +302,19 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::UnitGateDirection: SU->mBuildGate.mDirection = (long)a[0];
         break;
-    case O::UnitGateBuild: SU->mBuildGate.Build(GE2DPoint(f[0], f[1]), (long)a[0]);
+    case O::UnitGateBuild: ee_screens_gate_build(&SU->mBuildGate, f[0], f[1], (int32_t)a[0]);
         break;
-    case O::UnitGateCancel: SU->mBuildGate.Cancel();
+    case O::UnitGateCancel: ee_screens_gate_cancel(&SU->mBuildGate);
         break;
     // the actions and messages
+    case O::C12ActionNew: return P64(static_cast<EEAction*>(new EESimEditorAction((void*)p)));
+    case O::C12ActionPost: gUserInterface->PostAction((EEAction*)p);
+        break;
+    case O::C12DoneNew: return P64(static_cast<UIEvent*>(new EESimEditorDone((void*)p)));
+    case O::C12DonePost: gUserInterface->PostEvent((UIEvent*)p, NULL);
+        break;
+    case O::C12Dereference: a[0] ? ((UIEvent*)p)->Dereference() : ((EEAction*)p)->Dereference();
+        break;
     case O::SeaNew:
         return P64(static_cast<EEAction*>(
             new EESEARust((uint32_t)a[0], (void*)p, (int32_t)a[1], (int32_t)a[2], (int32_t)a[3], (int32_t)a[4])));

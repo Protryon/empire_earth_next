@@ -17,19 +17,6 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "rust/game/screens.h"   // ee_screens_upgrade_bar_mouse's constants (ee_screens upgrade.rs)
 
-// Creates an improvement button drawn as an icon, a green status bar and two value labels (and a queued
-// count), laid out for the main game or the scenario editor
-EEUIFMGStatusBar::EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout,
-                                   unsigned long inScreenWidth, unsigned long inScreenHeight, const GERectangle& inRectangle,
-                                   UIForm* inForm, bool inScenarioEditor, bool inEnabled, bool inArg10)
-    : EEUIBUpgrade(inId, inRectangle.GetTopLeft(), (unsigned long)inRectangle.GetWidth(),
-                   (unsigned long)inRectangle.GetHeight(), inForm, inIndex, inScenarioEditor, inScenarioEditor == true),
-      EeScreensStatusBarFields()
-{
-    this->mEnabled = inEnabled;
-    ee_screens_sba_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uintptr_t)inForm, inScenarioEditor,
-                             inArg10);   // (status_bar_calls.rs)
-}
 
 // ---- the one-statement shims of ee_screens status_bar_calls.rs (UI lane round 8: the constructor's layout, the
 // destructor, CopyData, DrawPolygons, DrawTextA): each one call, no logic

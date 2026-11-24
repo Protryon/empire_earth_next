@@ -39,14 +39,9 @@ fn the_hot_keys() {
          mg_hot_key_unpressed_event(50, 62)\nevent_dereference(62)\nmg_add_hot_key(128, 50)\nmg_hot_key_delete(50)"
     );
     let mut f = Fake::default();
-    f.answer("mg_event_button", &[30, 30]).answer("mg_event_pressed", &[1, 0]);
-    hot_key_event(&mut f, 1);
-    hot_key_event(&mut f, 1);
-    assert_eq!(
-        f.calls(),
-        "mg_event_button(1)\nmg_event_pressed(1)\nmg_button_hot_key_down(30)\nmg_saved_groups_reset()\n\
-         mg_event_button(1)\nmg_event_pressed(1)\nsbt_pressed(30)"
-    );
+    hot_key_event(&mut f, 30, true);
+    hot_key_event(&mut f, 30, false);
+    assert_eq!(f.calls(), "mg_button_hot_key_down(30)\nmg_saved_groups_reset()\nsbt_pressed(30)");
 }
 
 #[test]

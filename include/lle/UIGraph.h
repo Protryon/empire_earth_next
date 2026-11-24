@@ -13,12 +13,11 @@
 #include "rust/ui/graphobj.h"
 #include "rust/ui/lle_hosts.h"
 
-class GEFont;
 
 class LLE_API UIGraph : public UIControl {
 public:
     UIGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, EeUiGraphKind inKind = EeUiGraphKind::Line, EeUiGraphFormatFn inFormat = NULL) : UIControl(kControlTypeGraph, inId, inRectangle, inForm, inIndex, inBorderThickness) { this->mRust = ee_ui_graph_new(this, ee_ui_graph_host, inKind, inFormat); }
-    virtual ~UIGraph();
+    virtual ~UIGraph() { ee_ui_graph_free(this->mRust); }
     virtual long CopyData() { return (long)this->Call(EeUiGraphCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiGraphCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiGraphCall::DrawText); }

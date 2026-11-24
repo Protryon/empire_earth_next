@@ -11,6 +11,13 @@
 enum class EePhysCpp : uint32_t {
   /// `static_cast<EeUnitsPhysicsSaved*>(this)`
   Rec = 1,
+  /// `RTSPhysics::Load(a1, a2, *(FSFile*)a0)`, `RTSPhysics::Save(a1, a2, *(FSFile*)a0)` (the base's part of a save)
+  RtsLoad,
+  RtsSave,
+  /// `TSScheduler::CreateCriticalSection(mSaveGameLock) == keseOK`
+  CreateSaveLock,
+  /// `mStartThreadMainLoop->Set()`
+  StartMainLoop,
   /// `mSpeed` (float)
   Speed,
   SetSpeed,
@@ -28,8 +35,12 @@ enum class EePhysCpp : uint32_t {
   ThreadPost,
   RtsHandleMessage,
   UpdateUnits,
-  /// the loaded game's fixups (EEAfterLoad, EEAfterLoadLast)
-  RunAfterLoad,
+  /// `(*(std::function<void()>*)p)()` (a loaded game's fixup: EEAfterLoad, EEAfterLoadLast)
+  FixupRun,
+  /// `delete (std::function<void()>*)p`
+  FixupDelete,
+  /// `EEUnitOrderReset()`
+  UnitOrderReset,
   ServerLockEnter,
   ServerLockLeave,
   ServerQueueSize,
@@ -187,15 +198,23 @@ enum class EePhysCpp : uint32_t {
   AiUpdate,
   WorldTableLong,
   HasJitPower,
-  /// the just-in-time manufacturing chat line
-  JitChat,
+  /// `new UWideString`
+  TextNew,
+  TextDelete,
+  /// `gResource->GetString(a0, *(UWideString*)p)`
+  ResourceString,
+  /// `gUserInterface->AddChatLogEntry(*(UWideString*)p, 0)`
+  ChatLog,
   CivBuilderBlink,
   IsMainGameForm,
   OptionsButtonBlink,
   CivTimerLimit,
   CivTimerSecondWarning,
   CivTimerFirstWarning,
-  ShiftKeyUp,
+  /// `gISKeyboard != NULL ? gISKeyboard->GetEntity(kKeyShift, *(ISEntity**)a0) : -1`
+  ShiftKey,
+  /// `((ISEntity*)p)->GetValue()`
+  EntityValue,
   AutoSaves,
   AutoSaveMilliseconds,
   SetLastAutoSave,
@@ -212,8 +231,8 @@ enum class EePhysCpp : uint32_t {
   ContinentChecksum,
   StoreChecksumFlag1,
   StoreChecksumFlag2,
-  /// the campaign progress's won scenario (EndGame)
-  CampaignWin,
+  /// the campaign user (a0 0), the game's campaign (1) or scenario (2) into the buffer a1 (room a2): its length
+  CampaignText,
   AppTeamsClear,
   Srand,
   Rand,
@@ -221,6 +240,28 @@ enum class EePhysCpp : uint32_t {
 };
 
 extern "C" {
+
+/// Queues a fixup (`last`: after every EEAfterLoad fixup of that tick).
+void ee_physics_after_load(bool last, void *fixup);
+
+/// The constructor's body: the save-game lock, the clocks and queues reset (`Init`), the thread's main loop started.
+void ee_physics_construct(void *p);
+
+/// `EEPhysics::Load`: the record's two era bodies (ee_units physics_save.rs); the loaded seed comes back at the first
+/// tick.
+///
+/// # Safety
+/// `p` is the live physics; `file` a live `FSFile`.
+long ee_physics_load(void *p,
+                     void *file,
+                     uint32_t major,
+                     uint32_t minor);
+
+/// `EEPhysics::Save`: as [`ee_physics_load`].
+///
+/// # Safety
+/// As [`ee_physics_load`].
+long ee_physics_save(void *p, void *file, uint32_t major, uint32_t minor);
 
 /// A loaded game's seed, put back at its first tick.
 void ee_physics_loaded_seed(uint32_t seed);

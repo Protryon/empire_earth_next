@@ -11,15 +11,21 @@
 #include <vector>
 #include "lle/UIComboBox.h"
 #include "rust/ui/filelistobj.h"
+#include "rust/ui/lle_hosts.h"
 
-class FSPath;
 
 class LLE_API UIFileComboBox : public UIComboBox {
 public:
     UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont,
                    const GE2DPoint& inLocation, float inWidth, unsigned long inMaxListBoxHeight, UIForm* inForm,
-                   unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness);
-    virtual ~UIFileComboBox();
+                   unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness)
+        : UIComboBox(inId, inTextBoxType, std::vector<UWideString>(), inFont,
+                 GERectangle(inLocation, GE2DPoint(inLocation.GetX() + inWidth, inLocation.GetY() + kScrollBarWidth)),
+                 inMaxListBoxHeight, inForm, inIndex, inMaxChars, inBorderThickness)
+{
+    this->mRust = ee_ui_file_list_new(this, ee_ui_file_combo_host, true);
+}
+    virtual ~UIFileComboBox() { ee_ui_file_list_free(this->mRust); }
     void AddValidExtension(const UString& inExtension) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::AddExtension, (intptr_t)(const char*)inExtension); }
     void CreateEntries(unsigned long inSortType) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType); }
     long DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }

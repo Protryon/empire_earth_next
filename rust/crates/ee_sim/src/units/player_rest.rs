@@ -11,10 +11,10 @@
 use std::os::raw::{c_long, c_ulong};
 
 use crate::units::player_body::{
-    EE_UNITS_PLAYER_BODY_CLASS_COUNT, EE_UNITS_PLAYER_BODY_CLASS_STATS, EE_UNITS_PLAYER_BODY_IS_LOCAL,
-    EE_UNITS_PLAYER_BODY_NEXT_UNIT, EE_UNITS_PLAYER_BODY_PATROL_AT, EE_UNITS_PLAYER_BODY_PATROL_COUNT,
-    EE_UNITS_PLAYER_BODY_TILE_X, EE_UNITS_PLAYER_BODY_TILE_Y, EE_UNITS_PLAYER_BODY_TOWN_PATROL,
-    EE_UNITS_PLAYER_BODY_TOWN_REFRESH, EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED,
+    EE_UNITS_PLAYER_BODY_CLASS_COUNT, EE_UNITS_PLAYER_BODY_CLASS_STATS, EE_UNITS_PLAYER_BODY_IS_HUMAN,
+    EE_UNITS_PLAYER_BODY_IS_LOCAL, EE_UNITS_PLAYER_BODY_NEXT_UNIT, EE_UNITS_PLAYER_BODY_PATROL_AT,
+    EE_UNITS_PLAYER_BODY_PATROL_COUNT, EE_UNITS_PLAYER_BODY_TILE_X, EE_UNITS_PLAYER_BODY_TILE_Y,
+    EE_UNITS_PLAYER_BODY_TOWN_PATROL, EE_UNITS_PLAYER_BODY_TOWN_REFRESH, EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED,
 };
 use crate::units::player_lists::EE_UNITS_LISTS_SOUND_CLASSES;
 use crate::units::player_save::EeUnitsPlayerSaved;
@@ -89,8 +89,7 @@ pub const EE_UNITS_PLAYER_BODY_INFLUENCE_REMOVE: i32 = 234;
 /// `gPlatSimNoHumanDefeat`, and `gPlatSimNoHumanDefeatHits++` (TEST ONLY: the headless simulation)
 pub const EE_UNITS_PLAYER_BODY_NO_HUMAN_DEFEAT: i32 = 235;
 pub const EE_UNITS_PLAYER_BODY_NO_DEFEAT_HIT: i32 = 236;
-/// the chat log's line of the player's victory (b 1) or defeat (0) (`EEPlayerAnnounceResult`)
-pub const EE_UNITS_PLAYER_BODY_ANNOUNCE_RESULT: i32 = 237;
+// (237: the result line's chat entry, now `announce_result`)
 /// town `a`'s `GetHullPointCount()`, `GetHullPoint(b)` (packed as the closest point)
 pub const EE_UNITS_PLAYER_BODY_HULL_COUNT: i32 = 238;
 pub const EE_UNITS_PLAYER_BODY_HULL_POINT: i32 = 239;
@@ -162,6 +161,23 @@ pub const EE_UNITS_PLAYER_BODY_DUMP_COUNT: i32 = 303;
 pub const EE_UNITS_PLAYER_BODY_DUMP_TITLE: i32 = 304;
 pub const EE_UNITS_PLAYER_BODY_WARNINGS_SIZE: i32 = 305;
 pub const EE_UNITS_PLAYER_BODY_DUMP_WARNING: i32 = 306;
+/// the result line's texts: `new UWideString`, `delete (UWideString*)a`, `gResource->GetString(b, *(UWideString*)a)`
+pub const EE_UNITS_PLAYER_BODY_TEXT_NEW: i32 = 307;
+pub const EE_UNITS_PLAYER_BODY_TEXT_DELETE: i32 = 308;
+pub const EE_UNITS_PLAYER_BODY_TEXT_RESOURCE: i32 = 309;
+/// `sprintf(*(UWideString*)a, *(UWideString*)b, (const char*)*(UWideString*)c)`
+pub const EE_UNITS_PLAYER_BODY_TEXT_FORMAT: i32 = 310;
+/// `*(UWideString*)a = mName`; `sprintf(*(UWideString*)a, "%s - (%s)", mCivilization.mName, mName)`
+pub const EE_UNITS_PLAYER_BODY_TEXT_NAME: i32 = 311;
+pub const EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME: i32 = 312;
+/// `gUserInterface->AddChatLogEntry(GEColor(1, 1, 1), *(UWideString*)a, *(UWideString*)b,
+/// gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0)`
+pub const EE_UNITS_PLAYER_BODY_CHAT_RESULT: i32 = 313;
+
+/// IDS_MSG_GAME, IDS_PLAYER_HAS_BEEN_DEFEATED, IDS_PLAYER_IS_VICTORIOUS (ee/EEStringIDs.h)
+const IDS_MSG_GAME: i64 = 31813;
+const IDS_PLAYER_HAS_BEEN_DEFEATED: i64 = 31814;
+const IDS_PLAYER_IS_VICTORIOUS: i64 = 31815;
 
 // ---- the members (`ee_units_player_rest`'s `what`)
 pub const EE_UNITS_PLAYER_REST_NEAREST_AREA: u32 = 1;
@@ -460,10 +476,31 @@ pub fn set_game_result<H: RestHost + ?Sized>(h: &mut H, p: u64, state: c_long) {
     let old = unsafe { (*h.saved(p)).mGameResult };
     let announce = if state == 1 { old != 1 } else { state == 2 && old != 2 };
     if announce && !local {
-        h.body(EE_UNITS_PLAYER_BODY_ANNOUNCE_RESULT, p, 0, i64::from(state == 1), 0);
+        announce_result(h, p, state == 1);
     }
     // SAFETY: as above
     unsafe { (*h.saved(p)).mGameResult = state as c_ulong };
+}
+
+/// The chat log's line of a player's victory or defeat ("--GAME--", the reason with the player's name; a computer
+/// player's civilization before its name), white, shown twice the chat log's display time.
+pub fn announce_result<H: RestHost + ?Sized>(h: &mut H, p: u64, victory: bool) {
+    let mut text = || h.body(EE_UNITS_PLAYER_BODY_TEXT_NEW, p, 0, 0, 0) as u64;
+    let (line, reason, title, name) = (text(), text(), text(), text());
+    let id = if victory { IDS_PLAYER_IS_VICTORIOUS } else { IDS_PLAYER_HAS_BEEN_DEFEATED };
+    h.body(EE_UNITS_PLAYER_BODY_TEXT_RESOURCE, p, reason, id, 0);
+    h.body(EE_UNITS_PLAYER_BODY_TEXT_RESOURCE, p, title, IDS_MSG_GAME, 0);
+    let named = if h.body(EE_UNITS_PLAYER_BODY_IS_HUMAN, p, 0, 0, 0) != 0 {
+        EE_UNITS_PLAYER_BODY_TEXT_NAME
+    } else {
+        EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME
+    };
+    h.body(named, p, name, 0, 0);
+    h.body(EE_UNITS_PLAYER_BODY_TEXT_FORMAT, p, line, reason as i64, name as i64);
+    h.body(EE_UNITS_PLAYER_BODY_CHAT_RESULT, p, title, line as i64, 0);
+    for t in [line, reason, title, name] {
+        h.body(EE_UNITS_PLAYER_BODY_TEXT_DELETE, p, t, 0, 0);
+    }
 }
 
 /// `AdoptTownPatrol(town)`: a town patrol no other town holds, with a point on one of the town's hull vertices,

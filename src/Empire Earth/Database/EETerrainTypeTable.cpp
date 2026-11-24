@@ -35,7 +35,7 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
             theIn.attacker_human = thePlayer->IsHuman() && inPlayer != 0;
             theIn.target_human = theTarget->IsHuman() && inTargetPlayer != 0;
             theIn.factor = EEDamageFactor(inClass->mFamily, inKind);
-            const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
+            const EERuleList<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
             unsigned long theDifficulty = gWorld.mGameOptions.mDifficulty;
             theIn.has_rule = theDifficulty < theList.size();
             if (theIn.has_rule) {

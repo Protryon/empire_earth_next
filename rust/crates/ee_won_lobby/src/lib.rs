@@ -11,6 +11,7 @@ pub mod chatctl;
 pub mod chatlink;
 pub mod chatobj;
 pub mod dialogs;
+pub mod dirread;
 pub mod dlglogic;
 pub mod eecolor;
 pub mod eegame;
@@ -63,3 +64,6 @@ pub mod statusstr;
 pub mod widgets;
 pub mod wonfront;
 pub mod wonnet;
+// R6 WON round 34 (the dialog lane)
+pub mod dlgsplit;
+pub mod eesplit;

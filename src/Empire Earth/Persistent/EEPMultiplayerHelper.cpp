@@ -55,32 +55,8 @@ long EEPMultiplayerHelper::Save(unsigned long inMajorVersion, unsigned long inMi
 
 // ------------------------------------------------------------------------- the multiplayer state's C++ (gamecpp persist_parts.rs)
 
-int64_t EEPCalamityOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define SERVER dynamic_cast<NESynchronousServer*>(gCommunications)
 #define CLIENT dynamic_cast<NESynchronousClient*>(gCommunications)
 #define COMMS dynamic_cast<NESynchronousCommunications*>(gCommunications)
 
-// The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
-int64_t EEPMultiplayerOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::PmPhysicsLoad: return gPhysics->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
-    case O::PmPhysicsSave: return gPhysics->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
-    case O::PmServerSetPhysicsTick: SERVER->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
-        break;
-    case O::PmClientSetPhysicsTick: CLIENT->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
-        break;
-    case O::PmCommCtsProcessed: return COMMS->GetNumberOfCTsProcessedInPhysics();
-    case O::PmCommLastTick: return COMMS->GetLastTickReceived();
-    case O::PmServerLastCt: return SERVER->GetLastCTMessageID();
-    case O::PmServerCt: return SERVER->GetCurrentCommunicationsTick();
-    case O::PmServerPt: return SERVER->GetCurrentPhysicsTick();
-    case O::PmServerMessageNumber: return SERVER->GetMessageManagerCurrentMessageNumber();
-    case O::PmClientCt: return CLIENT->GetCurrentCommunicationsTick();
-    case O::PmClientPt: return CLIENT->GetCurrentPhysicsTick();
-    default: return EEPCalamityOp(inOp, p, a, f);
-    }
-    return 0;
-}

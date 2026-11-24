@@ -135,6 +135,7 @@ struct DirEntityList {
     bool empty() const { Log("DirEntityList empty"); return this->mOp % 2 == 0; }
     ~DirEntityList() { Log("delete DirEntityList #" + N(this->mOp)); }
 };
+typedef DirEntityList DirList; // the hosts' name since R6 WON round 34
 struct ServerContext : RefCount {
     void Clear() { Log(Id(this) + " Clear"); }
     void RemoveAllAddresses() { Log(Id(this) + " RemoveAllAddresses"); }
@@ -214,6 +215,7 @@ static void WorldHostopSet(RustServerOp* op, int w, RefCount* o) { Log(Id(op) + 
 struct DNSTestOp : AsyncOp {
     explicit DNSTestOp(const std::string& h) { Log("new DNSTestOp " + Id(this) + " " + h); }
 };
+static DNSTestOp* NewDnsTestOp(const std::string& h) { return new DNSTestOp(h); } // the hosts' call since R6 WON round 34
 struct DetectFirewallOp : AsyncOp {
     explicit DetectFirewallOp(ServerContext* c) { Log("new DetectFirewallOp " + Id(this) + " " + Id(c)); }
     void SetListenPort(int p) { Log(Id(this) + " SetListenPort " + N(p)); }
@@ -224,6 +226,8 @@ struct DetectFirewallOp : AsyncOp {
 struct HTTPSession : RefCount {
     void AddOp(RustServerOp* o) { Log(Id(this) + " AddOp " + Id(o)); }
 };
+// the hosts' call since R6 WON round 34 (WONRouting.h)
+static void HttpSessionAddOp(HTTPSession* s, RustServerOp* o) { s->AddOp(o); }
 static NativeImage* sImage;
 struct Window {
     static Window* GetDefaultWindow() { static Window w; return &w; }

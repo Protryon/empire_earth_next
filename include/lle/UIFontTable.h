@@ -7,10 +7,8 @@
 
 #include "rust/ui/fonttableobj.h"
 #include "rust/ui/lle_hosts.h"
+#include "lle/UIObjHost.h"
 
-class FSFileSpec;
-class GEFont;
-class UIManager;
 
 // Whole in Rust (rust/crates/ee_ui/src/fonttableobj.rs, R6 ui round 18): the records and the shared fonts are the
 // Rust statics; every member forwards.

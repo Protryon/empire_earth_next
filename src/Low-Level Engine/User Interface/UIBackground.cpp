@@ -97,16 +97,7 @@ typedef EeUiBgCall C;
 extern "C" uintptr_t ee_uicpp_bg_texture_load(uintptr_t inRecord, EeUiShimText inName, uintptr_t inDescription)
 { return (uintptr_t)UIBGM(inRecord)->GetRasterizer()->GetTextureManager(UIBGM(inRecord)->GetScreen())->LoadTexture(UIShimString(inName), *reinterpret_cast<const GETextureDescription*>(inDescription)); }
 
-// Creates a background with its layout and draw priority and adds it to the form
-UIBackground::UIBackground(unsigned long inBackgroundID, const UILayoutUtility& inLayout, UIForm* inForm,
-                           unsigned long inDrawPriority, bool inVisible)
-{
-    ee_ui_bg_init(this, static_cast<EeUiBackgroundFields*>(this), ee_ui_background_host, inBackgroundID,
-                  reinterpret_cast<const EeUiLayout*>(&inLayout), inForm, inDrawPriority, inVisible, this);
-}
 
-UIBackground::~UIBackground() { ee_ui_bg_free(this); }
-UIBitmapBackground::~UIBitmapBackground() { this->Call(C::BitmapRelease); }
 long UIBitmapBackground::DrawStrectchedBackground(const GERectangle& inSource, const GERectangle& inDestination)
 {
     return (long)this->Call(C::BitmapStretched, 0, 0, UIF8(inSource, inDestination));
@@ -120,7 +111,4 @@ long UITiledBackground::DrawTiledBackground(const GERectangle& inClip, unsigned 
                             UIF8(inClip, UIF4::Bits((int32_t)inFirstColumn), UIF4::Bits((int32_t)inLastColumn), inWidth, inHeight));
 }
 
-UIBFull::~UIBFull() { this->Call(C::BFullRelease); }
-UIFullBackground::~UIFullBackground() { ee_ui_bg_full_free(this); }
 
-long UIFullBackground::DrawBackground(const GERectangle& inRectangle) { return (long)ee_ui_bg_call(this, EeUiBgCall::FullDraw, 0, 0, UIF4(inRectangle)); }

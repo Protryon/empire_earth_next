@@ -42,25 +42,7 @@ EEGraphicEffect::~EEGraphicEffect()
 // above 0 stay NULL) and links each effect's three follow-on effects by index; returns the last read result
 long EEGraphicEffect::LoadTable(FSFile* inFile)
 {
-    std::vector<EeDataGraphicEffectLinks> theLinks;
-    std::vector<EEGraphicEffect*> theEffects;
-    long theResult = EEDbReadRecords(inFile, ee_data_graphic_effect_record_size(),
-        [&](unsigned long inCount) {
-            theEffects.resize(inCount, NULL);
-            theLinks.resize(inCount);
-            return true;
-        },
-        [&](unsigned long inIndex, const unsigned char* inRecord) {
-            EeDataGraphicEffectFields theFields;
-            EEGraphicEffect* theEffect = NULL;
-            if (ee_data_graphic_effect_from_record(inRecord, &theFields, &theLinks[inIndex]))
-                theEffect = new EEGraphicEffect(theFields,
-                    static_cast<EEGraphicObject*>(EEMedia::Get(theLinks[inIndex].media)));
-            theEffects[inIndex] = theEffect;
-        });
-    ee_preload_link_effects(reinterpret_cast<void* const*>(theEffects.data()), theLinks.data(), (std::min)(theEffects.size(), theLinks.size()));
-    ee_gfx_geffect_table_set(reinterpret_cast<void* const*>(theEffects.data()), theEffects.size());
-    return theResult;
+    return ee_preload_load_effects(inFile);   // (preload_media.rs)
 }
 
 // Writes to the file every graphic effect that was used without being preloaded (the recorded ids, each read as a

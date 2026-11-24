@@ -72,6 +72,22 @@ enum class EeWonEeColorOp : uint32_t {
   GameRust,
   /// `((RefCount*)a)->Release()`.
   Release,
+  /// `new EELobbyColorChooser` (no reference).
+  ChooserAlloc = 100,
+  /// `((EELobbyColorChooser*)a)->AddRef()`.
+  ChooserAddRef,
+  /// `new PopupParams((Component*)b, 0x23e7, (Component*)a, c, d)` (OpenPopup's local).
+  PopupNew,
+  /// `((PopupParams*)b)->mAvoidRect.height = c`.
+  PopupAvoidHeight,
+  /// `((PopupParams*)b)->mAvoidRect.y = c`.
+  PopupAvoidY,
+  /// `((PopupParams*)b)->mInputComponent = (Component*)a`.
+  PopupInput,
+  /// `((Component*)a)->GetRoot()->OpenPopup(*(PopupParams*)b)`.
+  PopupOpen,
+  /// `delete (PopupParams*)b`.
+  PopupFree,
 };
 
 /// The inward calls (the classes' methods and virtuals).
@@ -142,6 +158,19 @@ uint32_t ee_won_eecolor_palette(uint32_t i);
 /// # Safety
 /// `colors` holds `n` values.
 void ee_won_eecolor_set_palette(const uint32_t *colors, uint32_t n);
+
+/// The drivers' entry (won_ctl35_test): ChooserNew (its result) or OpenPopup (`a` the button, `b` the chooser, `c`
+/// and `d` the place) as the game composes them, over `host` with the object `obj`; `INTPTR_MIN` for another op.
+///
+/// # Safety
+/// `host` answers the ops (a driver's world).
+ptrdiff_t ee_won_eecolor_split_op(void *obj,
+                                  EeWonEeColorHostFn host,
+                                  EeWonEeColorOp op,
+                                  ptrdiff_t a,
+                                  ptrdiff_t b,
+                                  ptrdiff_t c,
+                                  ptrdiff_t d);
 
 }  // extern "C"
 

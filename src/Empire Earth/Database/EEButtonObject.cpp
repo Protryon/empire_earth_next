@@ -128,54 +128,9 @@ UIHotKey* EEButtonObject::GetHotKey()
 
 // ------------------------------------------------------------------------- round 10, lane B: the buttons' C++
 
-int64_t EECore10OpB4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEAnimal.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define BTN ((EEButtonObject*)p)
 #define BTEX ((GETexture*)p)
 #define BMP ((GEBitmap*)p)
 
-// the buttons' C++ calls and members (gamecpp db_media.rs; p the button, the texture or the bitmap): one statement each
-int64_t EECore10OpB3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::DbtFields: return P64(static_cast<EeDataButtonFields*>(BTN));
-    case O::DbtUse: return P64(static_cast<EeDataMediaUse*>(BTN));
-    case O::DbtLock: return P64(sDatabaseLock.mLock);
-    case O::DbtNew: return P64(new EEButtonObject);
-    case O::DbtDelete: delete BTN;
-        break;
-    case O::DbtResize: EEButtonObject::sTable.resize((unsigned long)a[0], NULL);
-        break;
-    case O::DbtCount: return (int64_t)EEButtonObject::sTable.size();
-    case O::DbtAt: return P64(EEButtonObject::sTable[a[0]]);
-    case O::DbtSet: EEButtonObject::sTable[a[0]] = (EEButtonObject*)a[1];
-        break;
-    case O::DbtCopyName: EEDbCopyName(BTN->mName, *(const EeDataName*)a[0]);
-        break;
-    case O::DbtName: return P64((const char*)BTN->mName);
-    case O::DbtTexture: return P64(&BTN->mTexture);
-    case O::DbtCellU: return P64(&BTN->mCellU);
-    case O::DbtCellV: return P64(&BTN->mCellV);
-    case O::DbtLoadTexture: return P64(gTextureManager->LoadTexture(BTN->mName, *(const GETextureDescription*)a[0]));
-    case O::DbtReloadTexture: return gTextureManager->ReloadTexture(BTN->mName, *(const GETextureDescription*)a[0]);
-    case O::DbtPixelDepth: return (int64_t)gTexturePixelDepth;
-    case O::DbtScreenWidth: return (int64_t)gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth();
-    case O::DbtTexWidth: return (int64_t)BTEX->GetWidth();
-    case O::DbtTexHeight: return (int64_t)BTEX->GetHeight();
-    case O::DbtTexMipDrop: return (int64_t)BTEX->GetNumMipLevelsToDrop();
-    case O::DbtTexSurface: return P64(BTEX->GetSurface());
-    case O::DbtTexSurfaceHeight: return (int64_t)BTEX->GetSurface()->GetHeight();
-    case O::DbtBitmapTexture: BMP->SetTexture((GETexture*)a[0], (unsigned long)a[1]);
-        break;
-    case O::DbtBitmapCoordinates: BMP->SetTextureCoordinates(GETextureCoordinate(f[0], f[1]), GETextureCoordinate(f[2], f[1]), GETextureCoordinate(f[0], f[3]), GETextureCoordinate(f[2], f[3]));
-        break;
-    case O::DbtBitmapScale: BMP->SetXYScale(f[0], f[1]);
-        break;
-    case O::DbtHotKeyCount: return (int64_t)UIHotKey::GetHotKeyCount();
-    case O::DbtHotKey: return P64(UIHotKey::GetHotKey((unsigned long)a[0]));
-    default: return EECore10OpB4(inOp, p, a, f);
-    }
-    return 0;
-}

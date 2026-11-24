@@ -89,7 +89,6 @@ void EEPPlayerHelper::Fn157269(EEGameState* inState)
 
 // ------------------------------------------------------------------------- the saved players' C++ (gamecpp persist_parts.rs)
 
-int64_t EEPHeaderOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 static_assert(kEECPEngineClassic == 0 && kEECPEngineNext == 1, "gamecpp persist_parts.rs");
@@ -100,63 +99,6 @@ static_assert(kEECPEngineClassic == 0 && kEECPEngineNext == 1, "gamecpp persist_
 #define CP ((EEComputerPlayer*)p)
 #define STR (*(std::string*)p)
 #define BYTES std::string((const char*)a[0], (size_t)a[1])
-
-// The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
-int64_t EEPHelpersOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::PphFields: return P64(&PPH->mLocalPlayerIndex);
-    case O::PphPush: PPH->mPlayers.push_back((EEPlayer*)a[0]);
-        break;
-    case O::PphCopyPlayers: *(std::vector<EEPlayer*>*)a[0] = PPH->mPlayers;
-        break;
-    case O::PphPlayerChecksum: PL->GetChecksum(*(ESChecksum*)a[0]);
-        break;
-    case O::PphChecksumLocal: ((ESChecksum*)p)->AddChecksum("EEPPlayerHelper::mLocalPlayerIndex", (unsigned long)a[0]);
-        break;
-    case O::PphNewHuman: return P64(static_cast<EEPlayer*>(new EEHumanPlayer));
-    case O::PphNewComputer: return P64(static_cast<EEPlayer*>(new EEComputerPlayer));
-    case O::PphVerifyType3: ESVERIFY_AT(false, 251);
-        break;
-    case O::PphPlayerLoad: return PL->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
-    case O::PphPlayerSave: return PL->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
-    case O::PphComputerOf: return P64(PL->mComputerPlayer);
-    case O::PphHasHuman: return PL->mHumanPlayer != NULL;
-    case O::PphVerifyPlayerType: ESVERIFY_AT(a[0] != 0, 274);
-        break;
-    case O::PphCpSetEngineNext: CP->mEngine = kEECPEngineNext;
-        break;
-    case O::PphCpEngine: return CP->mEngine;
-    case O::PphAiKnown: return EECPAIByID(BYTES) != NULL;
-    case O::PphLogUnknownAi: EECPEngineLog("the saved game's player %lu plays the AI '%s', which Data/ai/ais.json does not list: the game cannot be loaded", PL->mPlayerID, BYTES.c_str());
-        break;
-    case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
-        break;
-    case O::PphCpLoadState: return EECPNextLoadState(CP, BYTES);
-    case O::PphCpUnitsLoad: return EECPUnitsLoad(CP, BYTES);
-    case O::PphHasUnitsLuaState: return EESaveHasUnitsLuaState((unsigned long)a[0], (unsigned long)a[1]);
-    case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
-    case O::PphAddAlly: PL->mAllies.push_back((EEPlayer*)a[0]);
-        break;
-    case O::PphStrNew: return P64(new std::string);
-    case O::PphStrDelete: delete &STR;
-        break;
-    case O::PphStrSize: return (int64_t)STR.size();
-    case O::PphStrData: return P64(STR.data());
-    case O::PphCpEngineAi: *(std::string*)a[0] = EECPEngineAI(CP);
-        break;
-    case O::PphClassicAiPresent: return EECPClassicAI() != NULL;
-    case O::PphClassicAiId: *(std::string*)a[0] = EECPAIID(EECPClassicAI());
-        break;
-    case O::PphCpSaveState: EECPNextSaveState(CP, *(std::string*)a[0]);
-        break;
-    case O::PphCpUnitsSave: EECPUnitsSave(CP, *(std::string*)a[0]);
-        break;
-    default: return EEPHeaderOp(inOp, p, a, f);
-    }
-    return 0;
-}
 
 double EEPHelpersOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {

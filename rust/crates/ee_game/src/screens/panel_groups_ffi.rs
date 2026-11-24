@@ -1,20 +1,15 @@
-//! `extern "C"` for the main game form's panel groups (`panel_groups.rs`): `group` is the `EEUIFMGGRust`; its
-//! values are one-statement shims each (`User Interface Thread/EEUIFMGMainGroup.cpp`), its texts printed here and
+//! `extern "C"` for the main game form's panel groups (`panel_groups.rs`), the kinds by the form's `mCurrentGroup`; their
+//! values are one-statement shims each (`User Interface Thread/EEUIFMGMainGroup.cpp`), their texts printed here and
 //! set on the form's label through the screens' shims.
-
-use core::ffi::c_void;
 
 use crate::screens::game_calls::string;
 use crate::screens::game_cpp::{Cpp, EeScreensShimOut, EeScreensShimText, Ffi};
+use crate::screens::hud_direct::EeScreensFormCallObjects;
 use crate::screens::panel_groups::*;
 
 /// cbindgen:ignore
 mod sys {
-    use core::ffi::c_void;
-
     extern "C" {
-        /// The group's main game form.
-        pub fn ee_screenscpp_group_owner(group: *mut c_void) -> usize;
         pub fn ee_screenscpp_group_conversions() -> i32;
         pub fn ee_screenscpp_group_conversions_max() -> i32;
         pub fn ee_screenscpp_group_wonders_to_win() -> i32;
@@ -25,7 +20,8 @@ mod sys {
     }
 }
 
-struct Host(*mut c_void);
+/// The main game form.
+struct Host(usize);
 
 impl GroupHost for Host {
     fn value(&mut self, which: u32) -> i32 {
@@ -48,8 +44,7 @@ impl GroupHost for Host {
         let first = string(t.strings[0] as u32);
         let second = if t.strings[1] != -1 { string(t.strings[1] as u32) } else { Vec::new() };
         let text = group_line(t, &first, &second);
-        // SAFETY: the group is live; its owner is the main game form
-        let form = unsafe { sys::ee_screenscpp_group_owner(self.0) };
+        let form = self.0;
         let label = Ffi.form_control(form, t.control);
         if t.if_changed {
             let mut shown = Vec::new();
@@ -62,8 +57,11 @@ impl GroupHost for Host {
     }
 }
 
-/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
+/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind, on the main game
+/// form of the form's call record `rec` (an `EEUIFMGFormCall*`).
 #[no_mangle]
-pub extern "C" fn ee_screens_group_call(group: *mut c_void, kind: u32, call: u32) {
-    group_call(kind, call, &mut Host(group));
+pub extern "C" fn ee_screens_group_call(rec: usize, kind: u32, call: u32) {
+    // SAFETY: the record is the form's live call record (its head the Rust record)
+    let form = unsafe { (*(rec as *const EeScreensFormCallObjects)).mForm } as usize;
+    group_call(kind, call, &mut Host(form));
 }

@@ -473,8 +473,7 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
             PlatMessageShow(c"Empire Earth".as_ptr(), PlatWindowLastError(), ENTRY_MESSAGE_ERROR);
             return 1;
         }
-        h(O::RunSetEventPump, 0, &[]);
-        h(O::RunNativeHook, 0, &[]);
+        super::window_pump::install();
         let com = h(O::RunComInit, 0, &[]);
         h(O::Verify, 0, &[(com == ENTRY_S_OK || com == ENTRY_S_FALSE) as i64, 3600]);
         h(O::RunFloatingPoint, 0, &[]);
@@ -492,7 +491,7 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
         let loaded = h(O::RunPreferencesLoad, 0, &[]);
         h(O::Verify, 0, &[(loaded == ENTRY_OK) as i64, 3637]);
         if sim {
-            h(O::RunSimPreferences, 0, &[]);
+            sim_preferences();
         }
         super::startup::ee_gamecpp_startup_network_settings();
         super::startup::ee_gamecpp_startup_data_paths();
@@ -573,4 +572,24 @@ mod tests {
         assert!(entry_commands(b"-hostgame \"Max\"").is_empty());
         assert!(entry_commands(b"-nothing").is_empty());
     }
+}
+
+/// EESimPreferences (TEST ONLY; was Empire Earth.cpp's): the settings the simulation runs with, over config.yaml
+/// (after gGamePreferences.Load): a window (hidden: DX7Screen::CreateAWindow), the harness's pins (32-bit, Min = Max
+/// PTs per Second, the driver's rate), the driver's autosave period, no music, no v-sync.
+fn sim_preferences() {
+    let (pt_rate, autosave) = crate::sim_driver::driver::driver().map_or((40, 0), |d| d.preferences());
+    let settings = hp(O::EpPrefsSettings, hp(O::EpGlobalPrefs, 0, &[]), &[]);
+    // SAFETY: gGamePreferences.mSettings' plain members (ee_game app settings.rs), on the main thread at start-up
+    let s = unsafe { &mut *(hp(O::EpSettingsFields, settings, &[]) as *mut crate::app::settings::EeAppSettingsFields) };
+    s.mFullScreen = false;
+    s.mGameBitDepth = 32;
+    s.mTextureBitDepth = 32;
+    s.mGameWindowWidth = 800;
+    s.mGameWindowHeight = 600;
+    s.mMinPTsPerSecond = pt_rate;
+    s.mMaxPTsPerSecond = pt_rate;
+    s.mAutoSaveInMilliseconds = autosave as std::ffi::c_ulong;
+    s.mMusicEnabled = false;
+    s.mWaitForVSync = false;
 }

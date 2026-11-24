@@ -22,6 +22,80 @@ mod sys {
         pub fn ee_screenscpp_pl_ghosts_clear();
         pub fn ee_screenscpp_pl_gate_load_media(player: i32, unit_class: *mut c_void);
         pub fn ee_screenscpp_pl_gate_unload_media(player: i32, unit_class: *mut c_void);
+        // the main game form's Cancel and Build (EEUIBuildWall.cpp), the scenario editor's (EESEUnit.cpp)
+        pub fn ee_screenscpp_pl_main_cancel();
+        pub fn ee_screenscpp_pl_main_build_wall(start_x: f32, start_y: f32, end_x: f32, end_y: f32);
+        pub fn ee_screenscpp_pl_main_build_gate(x: f32, y: f32, direction: i32);
+        pub fn ee_screenscpp_se_wall_cancel(wall: *mut c_void);
+        pub fn ee_screenscpp_se_wall_build();
+        pub fn ee_screenscpp_se_gate_cancel(gate: *mut c_void);
+        pub fn ee_screenscpp_se_gate_build();
+    }
+}
+
+/// `EEUIBuildWall()` (`editor`: `EESEUIBuildWall()`).
+#[no_mangle]
+pub extern "C" fn ee_screens_wall_new(editor: bool) -> EeScreensBuildWallFields {
+    EeScreensBuildWallFields::new(editor)
+}
+
+/// `EEUIBuildGate()` (`editor`: `EESEUIBuildGate()`).
+#[no_mangle]
+pub extern "C" fn ee_screens_gate_new(editor: bool) -> EeScreensBuildGateFields {
+    EeScreensBuildGateFields::new(editor)
+}
+
+/// `EEUIBuildWall::Cancel` (the main game form leaves the mode) or `EESEUIBuildWall::Cancel` (the unit tab's).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_wall_cancel(wall: *mut EeScreensBuildWallFields) {
+    // SAFETY: the placement's live record
+    unsafe {
+        if (*wall).editor {
+            sys::ee_screenscpp_se_wall_cancel(wall.cast());
+        } else {
+            sys::ee_screenscpp_pl_main_cancel();
+        }
+    }
+}
+
+/// `EEUIBuildWall::Build` (the main game form's build action builds the wall from the start to the end) or
+/// `EESEUIBuildWall::Build` (the unit tab places it).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_wall_build(wall: *mut EeScreensBuildWallFields) {
+    // SAFETY: the placement's live record
+    unsafe {
+        let w = &*wall;
+        if w.editor {
+            sys::ee_screenscpp_se_wall_build();
+        } else {
+            sys::ee_screenscpp_pl_main_build_wall(w.start.x, w.start.y, w.end.x, w.end.y);
+        }
+    }
+}
+
+/// `EEUIBuildGate::Cancel` or `EESEUIBuildGate::Cancel`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_gate_cancel(gate: *mut EeScreensBuildGateFields) {
+    // SAFETY: the placement's live record
+    unsafe {
+        if (*gate).editor {
+            sys::ee_screenscpp_se_gate_cancel(gate.cast());
+        } else {
+            sys::ee_screenscpp_pl_main_cancel();
+        }
+    }
+}
+
+/// `EEUIBuildGate::Build(location, direction)` (the main game form's build action) or `EESEUIBuildGate::Build`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_gate_build(gate: *mut EeScreensBuildGateFields, x: f32, y: f32, direction: i32) {
+    // SAFETY: the placement's live record
+    unsafe {
+        if (*gate).editor {
+            sys::ee_screenscpp_se_gate_build();
+        } else {
+            sys::ee_screenscpp_pl_main_build_gate(x, y, direction);
+        }
     }
 }
 

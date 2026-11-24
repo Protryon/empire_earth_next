@@ -4,7 +4,7 @@
 // 0x100666cb). Layout proven by the implicit copy ctor 0x10066153 (every member copied on its own: no arrays) and
 // the UIDbControl ctor 0x1006796f. The inline members are all exported; the ones emitted at 0x10065f69..0x10066153
 // are in declaration order, the others are ICF-folded with earlier getters (their position here is a guess).
-// Requires lle/UIForm.h (UIEventData), lle/UILayoutUtility.h, lle/GEColor.h, <vector>.
+// Requires lle/UILayoutUtility.h, lle/GEColor.h, <vector>.
 #ifndef LLE_UICONTROLSTABLE_H
 #define LLE_UICONTROLSTABLE_H
 
@@ -13,27 +13,22 @@
 #include "rust/ui/controls_table.h"
 #include "rust/ui/lle_table.h"
 #include "lle/UIShims.h"
+#include "lle/UIObjHost.h"
 #include "rust/ui/ids.h"
 #include "rust/ui/tableobj.h"
+#include "rust/ui/lle_hosts.h"
 
-class FSFileSpec;
-class GEBitmap;
-class GEFont;
-class GEText;
-class UIControl;
-class UIForm;
-class UIManager;
 
 // The class is whole in Rust (rust/crates/ee_ui/src/tableobj.rs, R6 ui round 18): its record, layout, colours, names,
 // events and font, the static array of tables, Create, AddControlLike, MoveControlsHorizontally, DeleteAll,
 // CreateControl and its factories, CreateControlEvent, RelayoutControl and SetupFont are the Rust object mRust; the
-// getters read its data in place. UIControlsTable.cpp keeps the three members that only call GE objects (CreateBitmap,
-// SetupGEText, SetupStringArray; the original's CreateMovie left with the movies) and the host, UIControlsTable::HostOp.
+// getters read its data in place. UIControlsTable.cpp holds the Rust table's calls out, one statement each (ee_ui
+// lle_hosts_tables.rs table, UI round 16; the original's CreateMovie left with the movies).
 class LLE_API UIControlsTable {
 public:
-    UIControlsTable();
-    virtual ~UIControlsTable();
-    void AddEvent(const UIEventData& inEvent) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::AddEvent, inEvent.mEventID, inEvent.mEventType, NULL); }
+    // Destroys the control description, releasing its font
+    virtual ~UIControlsTable() { ee_ui_controls_table_free(this->mRust); }
+    void AddEvent(unsigned long inEventID, unsigned long inEventType) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::AddEvent, inEventID, inEventType, NULL); }
     // Loads every control record from the file and registers each valid one with its form; returns the last read result
     static long Create(FSFileSpec& inFile, UIManager* inManager)
     {
@@ -109,7 +104,8 @@ public:
     }
     // Picks the description's font: scaled to the control or window height when the record asks, else the table font
     void SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow) { ee_ui_controls_table_call(this->mRust, EeUiTableCall::SetupFont, (intptr_t)inManager, inScaleToWindow, const_cast<float*>(&inRectangle.mBottom)); }
-    void SetupGEText(GEText* inText) const;
+    // Sets text to transparent in the description's text colour (ee_ui lle_hosts.rs)
+    void SetupGEText(GEText* inText) const { ee_ui_table_setup_text(const_cast<UIControlsTable*>(this), inText); }
     // Fills a list with the description's string-table range (empty when the range is unset)
     void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const { ee_ui_table_setup_strings(this, inManager, &outStrings); }
     UIControlsTable(EeUiControlsTable* inRust) : mRust(inRust) {}

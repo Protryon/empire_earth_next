@@ -653,34 +653,6 @@ pub unsafe extern "C" fn ee_ui_background_full_host(
     unsafe { chain(&[background], o, op, a, b, c, d, f) }
 }
 
-/// The host still C++ (`UIControlsTableHost::Op`): a table of every op.
-macro_rules! cpp_hosts {
-    ($( $(#[$m:meta])* $name:ident = $sym:ident; )*) => {$(
-        $(#[$m])*
-        #[cfg(not(any(test, feature = "no_cpp")))]
-        pub(crate) unsafe fn $name(
-            o: *mut c_void,
-            op: EeUiOp,
-            a: isize,
-            b: isize,
-            c: isize,
-            d: isize,
-            f: *mut f32,
-        ) -> Option<isize> {
-            extern "C" {
-                fn $sym(o: *mut c_void, op: EeUiOp, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize;
-            }
-            // SAFETY: the host contract
-            Some(unsafe { $sym(o, op, a, b, c, d, f) })
-        }
-    )*};
-}
-
-cpp_hosts! {
-    /// The controls table's.
-    table = ee_uicpp_table_host;
-}
-
 /// The file lists' `FlDirFirst`: directory `c` of the path `b` into the search `a`, then its first file.
 ///
 /// # Safety
@@ -927,4 +899,169 @@ pub unsafe extern "C" fn ee_ui_bg_table_host(
 ) -> isize {
     // SAFETY: the contract
     unsafe { chain(&[bg_table], o, op, a, b, c, d, f) }
+}
+
+// ---- the controls table's constructors, setters and texts (UI round 16: UIControlsTableHost's switches)
+
+/// A shim answering a number.
+#[cfg(not(any(test, feature = "no_cpp")))]
+type Shim = unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize;
+/// A shim answering nothing.
+#[cfg(not(any(test, feature = "no_cpp")))]
+type VoidShim = unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32);
+
+/// `TblMake`'s constructors by [`EeUiTableKind`](crate::tableobj::EeUiTableKind) (UIControlsTable.cpp).
+#[cfg(not(any(test, feature = "no_cpp")))]
+const MAKE: [Shim; 18] = [
+    ee_uicpp_tbl_make_bitmap,
+    ee_uicpp_tbl_make_button,
+    ee_uicpp_tbl_make_blinking_button,
+    ee_uicpp_tbl_make_scalable_button,
+    ee_uicpp_tbl_make_button,
+    ee_uicpp_tbl_make_check_box,
+    ee_uicpp_tbl_make_combo_box,
+    ee_uicpp_tbl_make_file_combo_box,
+    ee_uicpp_tbl_make_edit_box,
+    ee_uicpp_tbl_make_file_list_box,
+    ee_uicpp_tbl_make_line_graph,
+    ee_uicpp_tbl_make_list_box,
+    ee_uicpp_tbl_make_radio_button,
+    ee_uicpp_tbl_make_scroll_bar,
+    ee_uicpp_tbl_make_scrolling_label,
+    ee_uicpp_tbl_make_slider,
+    ee_uicpp_tbl_make_status_bar,
+    ee_uicpp_tbl_make_text_label,
+];
+
+/// `TblSet`'s setters by [`Set`] (`None`: Rust's, [`table_set`] and [`table_call`]).
+#[cfg(not(any(test, feature = "no_cpp")))]
+const SET: [Option<VoidShim>; 45] = [
+    Some(ee_uicpp_tbl_set_button_text),
+    Some(ee_uicpp_tbl_set_button_focused_color),
+    Some(ee_uicpp_tbl_set_button_down_sound),
+    Some(ee_uicpp_tbl_set_button_up_sound),
+    None,
+    Some(ee_uicpp_tbl_set_check_set_checked),
+    Some(ee_uicpp_tbl_set_combo_focused_rect),
+    Some(ee_uicpp_tbl_set_combo_selected_bg),
+    Some(ee_uicpp_tbl_set_combo_selection),
+    Some(ee_uicpp_tbl_set_combo_text_box_opacity),
+    Some(ee_uicpp_tbl_set_combo_text_box_color),
+    Some(ee_uicpp_tbl_set_combo_list_always_dirty),
+    Some(ee_uicpp_tbl_set_edit_number),
+    Some(ee_uicpp_tbl_set_edit_text),
+    Some(ee_uicpp_tbl_set_edit_selected_bg),
+    Some(ee_uicpp_tbl_set_list_focused_rect),
+    Some(ee_uicpp_tbl_set_list_selected_bg),
+    Some(ee_uicpp_tbl_set_list_scroll_opacity),
+    Some(ee_uicpp_tbl_set_list_selection),
+    None,
+    Some(ee_uicpp_tbl_set_graph_font),
+    Some(ee_uicpp_tbl_set_graph_font_color),
+    Some(ee_uicpp_tbl_set_radio_up_unchecked),
+    None,
+    Some(ee_uicpp_tbl_set_scroll_range),
+    Some(ee_uicpp_tbl_set_scroll_value),
+    Some(ee_uicpp_tbl_set_slider_range),
+    Some(ee_uicpp_tbl_set_slider_value),
+    Some(ee_uicpp_tbl_set_slider_page),
+    Some(ee_uicpp_tbl_set_status_range),
+    Some(ee_uicpp_tbl_set_status_value),
+    Some(ee_uicpp_tbl_set_status_color),
+    Some(ee_uicpp_tbl_set_status_opacity),
+    Some(ee_uicpp_tbl_set_status_text),
+    Some(ee_uicpp_tbl_set_status_focused_color),
+    Some(ee_uicpp_tbl_set_label_number),
+    Some(ee_uicpp_tbl_set_label_align),
+    Some(ee_uicpp_tbl_set_label_scroll_opacity),
+    Some(ee_uicpp_tbl_set_label_fit),
+    Some(ee_uicpp_tbl_set_bg_color),
+    Some(ee_uicpp_tbl_set_bg_opacity),
+    Some(ee_uicpp_tbl_set_always_dirty),
+    Some(ee_uicpp_tbl_set_set_rectangle),
+    Some(ee_uicpp_tbl_set_change_font),
+    Some(ee_uicpp_tbl_set_set_trigger),
+];
+
+/// `SetupText`'s texts by class (tableobj.rs `TEXT_*`).
+#[cfg(not(any(test, feature = "no_cpp")))]
+const TEXT: [Shim; 8] = [
+    ee_uicpp_tbl_text_button,
+    ee_uicpp_tbl_text_check,
+    ee_uicpp_tbl_text_combo,
+    ee_uicpp_tbl_text_edit,
+    ee_uicpp_tbl_text_list,
+    ee_uicpp_tbl_text_radio,
+    ee_uicpp_tbl_text_label,
+    ee_uicpp_tbl_text_status,
+];
+
+/// `TblMake`: the constructor of the record at `a`'s kind -> the control.
+///
+/// # Safety
+/// The host contract: `a` a live [`crate::tableobj::EeUiTableMake`].
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn table_make(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    let kind = unsafe { (*(a as *const crate::tableobj::EeUiTableMake)).kind } as usize;
+    use crate::buttonobj::EeUiButtonCall as B;
+    use crate::tableobj::EeUiTableKind as K;
+    // SAFETY: the contract; the kind's constructor
+    let control = unsafe { MAKE[kind](o, a, b, c, d, f) };
+    // the folded button subclasses' constructor parts (UI round 16): UIScalableButton's three slice rectangles and
+    // its text rectangle (the control's), UIDualButton's right button
+    // SAFETY: the contract
+    let m = unsafe { &*(a as *const crate::tableobj::EeUiTableMake) };
+    let button = |call: B, i: isize, r: &crate::rect::UiRect| {
+        let mut buf = [r.bottom, r.left, r.right, r.top];
+        let o = crate::direct::find(crate::direct::Kind::Button, control as *const c_void);
+        if !o.is_null() {
+            // SAFETY: a live button; buf four floats
+            unsafe { crate::buttonobj::ee_ui_button_call(o as *const _, call, i, 0, buf.as_mut_ptr()) };
+        }
+    };
+    if m.kind == K::ScalableButton {
+        for (i, r) in [m.normal_rect, m.focused_rect, m.pressed_rect].iter().enumerate() {
+            button(B::ScalableInit, i as isize, r);
+        }
+        button(B::SetTextRectangle, 0, &m.rect);
+    } else if m.kind == K::DualButton {
+        button(B::DualInit, 0, &m.rect);
+    }
+    control
+}
+
+/// `TblSet`: control `a`'s setter `b` with `c`, `d` and `f`; `SetupText` sets up the text of class `c` (tableobj.rs
+/// `TEXT_*`) through [`ee_ui_table_setup_text`].
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn table_set(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    use crate::tableobj::EeUiTableSet as Set;
+    if b == Set::SetupText as isize {
+        // SAFETY: the contract; the class's text
+        let text = unsafe { TEXT[c as usize](o, a, b, c, d, f) };
+        // SAFETY: the table and the control's text
+        unsafe { ee_ui_table_setup_text(o, text as *mut c_void) };
+    } else if let Some(Some(set)) = SET.get(b as usize) {
+        // SAFETY: the contract; the selector's setter
+        unsafe { set(o, a, b, c, d, f) };
+    }
+    0
+}
+
+/// `UIControlsTable::SetupGEText(text)`: the text transparent, in the description's text colour.
+///
+/// # Safety
+/// `table` is a live C++ `UIControlsTable`, `text` a live `GEText`.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_table_setup_text(table: *mut c_void, text: *mut c_void) {
+    let mut f = [0.0f32; 4];
+    // SAFETY: the contract
+    unsafe {
+        ee_uicpp_tbl_text_transparent(table, text as isize, 0, 0, 0, f.as_mut_ptr());
+        ee_uicpp_tbl_text_fg(table, text as isize, 0, 0, 0, f.as_mut_ptr());
+    }
 }

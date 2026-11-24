@@ -139,10 +139,10 @@ static intptr_t WonNetHostCall(EEWonNet* w, EeWonNetOp inOp, intptr_t a, intptr_
     case Op::DirOpIs: return (AsyncOp*)a == (AsyncOp*)w->mDirOp.get();
     case Op::ServersClear: w->mServers.clear(); return 0;
     case Op::EntitiesLoad: sEntities = ((RustServerOp*)(AsyncOp*)a)->GetEntities(EE_WON_REQOP_DIR_LIST); return 0;
-    case Op::EntityFirst: sEntity = sEntities.begin(); return 0;
-    case Op::EntityAtEnd: return sEntity == sEntities.end();
-    case Op::EntityIsRouting: return (*sEntity)->mName == kWonRoutingServerType;
-    case Op::EntityKeep: w->mServers.push_back(*sEntity); return 0;
+    case Op::EntityFirst: sEntity = 0; return 0;
+    case Op::EntityAtEnd: return sEntity == sEntities.size();
+    case Op::EntityIsRouting: return sEntities.Name(sEntity) == kWonRoutingServerType;
+    case Op::EntityKeep: w->mServers.Keep(sEntities, sEntity); return 0;
     case Op::EntityNext: sEntity++; return 0;
     case Op::FileSetVolume: sFile.SetVolume(gStartupVolume); return 0;
     case Op::FileSetDirectory: sFile.SetDirectory(gStartupDirectory); return 0;

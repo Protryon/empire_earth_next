@@ -110,4 +110,4 @@ void EETile::SetUnitListPoolSize(unsigned long inChunkSize, unsigned long inMaxC
 // ------------------------------------------------------------------------- round 9, lane B: the tile's bodies' C++
 
 // (their cases: EEMap.cpp's EECore9OpB2)
-static_assert(kTerrainDeepWater == 1 && kTerrainShallowWater == 10 && kTerrainSpace == 12, "gamecpp tile.rs");
+// (its constants are checked against the headers by gamecpp cpp_consts_tests.rs)

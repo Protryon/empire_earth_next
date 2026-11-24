@@ -10,12 +10,7 @@
 class LLE_API UIEMouseWheelScroll : public UIEvent {
 public:
     // Scrolls the control under the mouse by the manager's wheel scroll amount
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-    {
-        if (UIControl* theControl = inForm->GetMouseOverControl())
-            theControl->MouseWheelTurned(UIManager::GetMouseWheelScrollAmount());
-        return kErrorOK;
-    }
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)inForm->Call(EeUiFormCall::WheelScroll); }
 };
 
 #endif

@@ -126,9 +126,7 @@
 #include "lle/UITextureBackground.h"
 
 extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
-void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
-unsigned long EEMenuWidth();   // Empire Earth.cpp
-unsigned long EEMenuHeight();
+#include "gx/GX.h"   // GXGameSize
 
 // 0x562fd8 (EEUserInterface.cpp keeps the WON password in it): stored in EEGlobals.cpp (ee/EEGlobalStorage.h),
 // constructed here, where its definition was
@@ -780,7 +778,7 @@ extern "C" uintptr_t ee_screenscpp_world_unit(uint64_t inId) { return (uintptr_t
 extern "C" void ee_screenscpp_camera_follow(uintptr_t inUnit, bool inFollow)
 { gWorld.mCameraControl.Follow(reinterpret_cast<EEUnit*>(inUnit), inFollow, 1.0f, 0.0f, 0.0f); }
 extern "C" uintptr_t ee_screenscpp_main_group_selected_unit()
-{ return (uintptr_t)static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0])->GetSelectedUnit(); }
+{ return (uintptr_t)gUIManager->GetMainGameForm()->mMainGroup->GetSelectedUnit(); }
 extern "C" bool ee_screenscpp_unit_has_complex(uintptr_t inUnit)
 { return reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit != NULL; }
 extern "C" bool ee_screenscpp_unit_has_class(uintptr_t inUnit)
@@ -1228,7 +1226,7 @@ extern "C" void ee_screenscpp_sc_hk_group_button(uintptr_t inForm, uint32_t inCo
 extern "C" bool ee_screenscpp_sc_ch_mouse_inside(uintptr_t inForm)
 { return F(inForm)->GetRectangle().Contains(F(inForm)->GetMouseLocation()); }
 extern "C" void ee_screenscpp_sc_cl_unpause() { gWorld.UnpauseGame(); }
-extern "C" void ee_screenscpp_sc_mg_clear_gate_ghosts(uintptr_t inForm) { MGF(inForm)->mBuildGate.ClearGhostUnits(); }
+extern "C" void ee_screenscpp_sc_mg_clear_gate_ghosts(uintptr_t inForm) { ee_screens_gate_clear_ghosts(&MGF(inForm)->mBuildGate); }
 extern "C" void ee_screenscpp_sc_mg_set_ui_state(uintptr_t inForm, int32_t inState)
 { MGF(inForm)->SetUIState((long)inState); }
 extern "C" void ee_screenscpp_sc_mg_pointer(int32_t inPointer) { gMouse->mPointer = (long)inPointer; }

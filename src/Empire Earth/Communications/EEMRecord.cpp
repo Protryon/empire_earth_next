@@ -138,8 +138,6 @@ EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
 
 // ------------------------------------------------------------------------- round 11, lane C: Communications, Calamities, Database, Tech Tree, Persistent
 
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the C++ calls and members of lane C's bodies in Rust (gamecpp session_objs.rs, ...; EeGameCpp's round 11 lane C
 // section) are the cases of a chain of switches beside the members they read: EEServer.cpp (C2) -> EEClient.cpp (C3)

@@ -45,16 +45,4 @@
 #include "lle/UIButtonRust.h"
 
 
-// Creates a radio button with the shared radio bitmaps (checked ones when checked), 19x19 unless scaled, and a label
-UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFont* inFont,
-                             const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                             unsigned long inBorderThickness, bool inIsPushButton, bool inIsChecked,
-                             bool inScaleBitmap)
-    : UIButton(inId, inForm->GetManager()->GetRadioOff(), NULL, inForm->GetManager()->GetRadioDownOff(),
-               UIButtonRust::Rect(ee_ui_button_box_rect(UIButtonRust::Rect(inRectangle), inScaleBitmap)),
-               inForm, inIndex, inBorderThickness)
-{
-    this->SubCall(EeUiButtonCall::RadioInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inIsPushButton ? 1.0f : 0.0f,
-                inIsChecked ? 1.0f : 0.0f, inScaleBitmap ? 1.0f : 0.0f);
-}
 

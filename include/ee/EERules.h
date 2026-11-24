@@ -10,6 +10,8 @@
 #ifndef EE_EERULES_H
 #define EE_EERULES_H
 
+#include <algorithm>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -35,19 +37,37 @@ enum EEDamageForm {
     kDamageTrample                          // a moving unit pushing a stopped enemy (EEPhysicsModel)
 };
 
+// A list the Rust rules own (ee_data rules.rs RuleListC): read like a const std::vector
+template <class T>
+struct EERuleList {
+    const T* mData = nullptr;
+    size_t mSize = 0;
+
+    size_t size() const { return mSize; }
+    bool empty() const { return mSize == 0; }
+    const T& operator[](size_t inIndex) const { return mData[inIndex]; }
+    const T* begin() const { return mData; }
+    const T* end() const { return mData + mSize; }
+    bool contains(const T& inValue) const { return std::find(begin(), end(), inValue) != end(); }
+};
+
+// A NUL-terminated text the Rust rules own (ee_data rules.rs RuleTextC)
+struct EERuleText {
+    const char* mData = "";
+    size_t mSize = 0;
+
+    const char* c_str() const { return mData; }
+    std::string str() const { return std::string(mData, mSize); }
+    operator std::string() const { return str(); }
+};
+
 #include "ee/EERulesGen.h"
 
 // ------------------------------------------------------------------------------------------------ all of them
 
-struct EERules {
-    EECombatRules mCombat;
-    EEGameOptionRules mGameOptions;
-    EECivBuilderRules mCivBuilder;
-    EECivPowerRules mCivPowers;
-    EEAIPersonalityRules mAIPersonalities;
-    std::vector<EEEpochMedia> mEpochs;      // by epoch position (the original's 15 by default)
-    bool mEpochMusicFromText = false;       // the songs came from epochs.yaml (else dbmusic's flags)
-
+// the members (EERulesData): mCombat, mGameOptions, mCivBuilder, mCivPowers, mAIPersonalities, mEpochs (by epoch
+// position, the original's 15 by default), mEpochMusicFromText (the songs came from epochs.yaml, else dbmusic's flags)
+struct EERules : EERulesData {
     EERules();
     ~EERules();
     EERules(const EERules&) = delete;
@@ -60,7 +80,7 @@ struct EERules {
     const EEEpochMedia& Epoch(long inEpoch) const;
     // the Rust rules the C++ structs snapshot (ee_tech's civilization manager reads them in place)
     const EeDataRules* RustRules() const { return mRust; }
-    void Refresh();                         // the C++ structs from the Rust rules' snapshot (EELoadRules: db_text.rs)
+    void Refresh();                         // the C++ structs written by the Rust rules (EELoadRules: db_text.rs)
 
 private:
     EeDataRules* mRust;                     // the rules' owner (rust/crates/ee_data)

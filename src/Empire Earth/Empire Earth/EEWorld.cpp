@@ -189,48 +189,18 @@ void EEWorld::AddGhostUnit(EEGhostUnit* inGhost)
     this->mGhostUnits.push_back(inGhost);
 }
 
-// The teams are Rust's (ee_sim app teams.rs): the stances it reads, and the C++ mirror (mTeams: the AI thread's, the
-// server's and the save's) rebuilt after every change (a team's victory condition keeps only its team's address)
-static bool EETeamsPresent(void*, uint32_t inPlayer)
-{
-    return inPlayer < 17 && gWorld.mPlayers[inPlayer] != NULL;
-}
-
-static bool EETeamsObserver(void*, uint32_t inPlayer)
-{
-    return gWorld.mPlayers[inPlayer]->mObserverMode;
-}
-
-static bool EETeamsEnemy(void*, uint32_t inPlayer, uint32_t inOther)
-{
-    return gWorld.mPlayers[inPlayer]->mEnemies[inOther] != 0;
-}
-
-static const EeAppTeamsWorld kTeamsWorld = {NULL, EETeamsPresent, EETeamsObserver, EETeamsEnemy};
-
-static void EEMirrorTeams(std::vector<EETeam>& outTeams)
-{
-    outTeams.resize(ee_app_teams_get(SIZE_MAX, NULL, 0));
-    for (size_t k = 0; k < outTeams.size(); k++) {
-        std::vector<uint32_t> thePlayers(ee_app_teams_get(k, NULL, 0));
-        ee_app_teams_get(k, thePlayers.data(), thePlayers.size());
-        outTeams[k].mPlayers.assign(thePlayers.begin(), thePlayers.end());
-    }
-}
-
 // Adds a team of the given players, first merging in every existing team whose players are allied both ways with them
+// (the teams are Rust's, ee_sim app teams.rs, the world's callbacks and the C++ mirror, mTeams: the AI thread's, the
+// server's and the save's, rebuilt after every change, gamecpp teams.rs)
 void EEWorld::AddTeam(const std::vector<unsigned long>& inPlayers)
 {
-    std::vector<uint32_t> thePlayers(inPlayers.begin(), inPlayers.end());
-    ee_app_teams_add(thePlayers.data(), thePlayers.size(), &kTeamsWorld);
-    EEMirrorTeams(this->mTeams);
+    ee_gamecpp_world_teams_add(this, inPlayers.data(), inPlayers.size());
 }
 
 // Puts two players on one team, merging in every existing team whose players are allied both ways with both of them
 void EEWorld::AddAlliance(long inPlayer1, long inPlayer2)
 {
-    ee_app_teams_ally((uint32_t)inPlayer1, (uint32_t)inPlayer2, &kTeamsWorld);
-    EEMirrorTeams(this->mTeams);
+    ee_gamecpp_world_teams_ally(this, (uint32_t)inPlayer1, (uint32_t)inPlayer2);
 }
 
 // Grants each player the wonder power 4 population share bonus when they hold it with no enemy holder or only allies
@@ -308,10 +278,7 @@ void EEComplexUnit::ClearCollisionState()
 // player at war with each other
 void EEWorld::RebuildTeams()
 {
-    ee_app_teams_rebuild((uint32_t)this->mNumPlayers, &kTeamsWorld);
-    EEMirrorTeams(this->mTeams);
-    ee_gamecpp_world_gaia_stances(this);
-    this->TeamsChanged();
+    ee_gamecpp_world_teams_rebuild(this, (uint32_t)this->mNumPlayers);
 }
 
 // Counts one gatherer fewer on a resource unit (an untracked unit is ignored)
@@ -539,9 +506,7 @@ void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer)
 // Removes a player from every team, re-adding each team's remaining players as a new team
 void EEWorld::RemovePlayerFromTeams(unsigned long inPlayer)
 {
-    ee_app_teams_remove((uint32_t)inPlayer, &kTeamsWorld);
-    EEMirrorTeams(this->mTeams);
-    this->TeamsChanged();
+    ee_gamecpp_world_teams_remove(this, (uint32_t)inPlayer);
 }
 
 // Undoes the wonder power 4 population share bonus ApplyShareBonus gave or took for every player
@@ -553,9 +518,7 @@ void EEWorld::RemoveShareBonus()
 // Splits every team holding both players into new teams without each of them
 void EEWorld::BreakAlliance(long inPlayer1, long inPlayer2)
 {
-    ee_app_teams_break((uint32_t)inPlayer1, (uint32_t)inPlayer2, &kTeamsWorld);
-    EEMirrorTeams(this->mTeams);
-    this->TeamsChanged();
+    ee_gamecpp_world_teams_break(this, (uint32_t)inPlayer1, (uint32_t)inPlayer2);
 }
 
 // Lets every player finish loading its units after a saved game was read
@@ -707,9 +670,6 @@ long EEWorld::GetPlayerIndex(EEPlayer* inPlayer)
     return ee_gamecpp_world_player_index(this, inPlayer);
 }
 
-void EEWorld::TeamsChanged()
-{
-}
 
 // Returns the unit with the id (its top byte is the player), 0 if none
 EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
@@ -819,8 +779,12 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WTeamsClear: W->mTeams.clear();
         break;
-    case O::WMirrorTeams: EEMirrorTeams(W->mTeams);
+    case O::C12TeamsResize: W->mTeams.resize((size_t)a[0]);   // round 12, fork D (gamecpp teams.rs)
         break;
+    case O::C12TeamSetPlayers: W->mTeams[(size_t)a[0]].mPlayers.assign((const uint32_t*)a[1], (const uint32_t*)a[1] + a[2]);
+        break;
+    case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
+    case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
     case O::WRebuildTeams: W->RebuildTeams();
         break;
     case O::WRemoveFromTeams: W->RemovePlayerFromTeams((unsigned long)a[0]);
@@ -1241,7 +1205,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::CampaignRestoreCivilization: ((EECampaignProgress*)p)->RestoreCivilization(UWideString(gDefaultCampaignUser), ((EEGameState*)a[0])->mGameOptions.mCampaignName, ((EEGameState*)a[0])->mGameOptions.mScenarioName, ((EEGameState*)a[0])->mGameOptions.mCampaignChecksum);
         break;
-    case O::ClearFormManager: EEUIECLEFormManager::Clear();
+    case O::ClearFormManager: ee_screens_chat_log_clear();
         break;
     case O::StrNew: return P64(new UWideString);
     case O::StrFree: delete (UWideString*)p;
@@ -1393,21 +1357,5 @@ double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::WsRandom: return gPhysics->GetRandom(f[0], f[1]);
     default: return EECore11OpAF(inOp, p, a, f);
     }
-    return 0.0;
-}
-
-// ------------------------------------------------------------------------- round 11, lane E: the test drivers, the entry, the world (the end of the chain)
-
-// the C++ calls and members of lane E's bodies in Rust (gamecpp; EeGameCpp's round 11 lane E section): one
-// statement each
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
-    return 0;
-}
-
-double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
     return 0.0;
 }

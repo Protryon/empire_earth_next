@@ -105,19 +105,7 @@ static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee
 #include "ee/EEStatisticsRecord.h"
 #include <cstring>
 
-static int32_t EEPlayerFloatBits(float inValue)
-{
-    int32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
-static float EEPlayerBitsFloat(int32_t inBits)
-{
-    float theValue;
-    memcpy(&theValue, &inBits, 4);
-    return theValue;
-}
+// (a float's bits: UFloatBits and UBitsFloat, lle/LowLevelEngineCore.h)
 
 // the decisions' record measures a reason text (ee_units player_econ.rs)
 extern "C" uint32_t ee_units_player_wide_length(const void* inText) { return static_cast<const UWideString*>(inText)->GetLength(); }
@@ -1510,24 +1498,7 @@ void EEPlayer::RefreshTerrainVisibility()
 }
 
 // Sets the player's game result; a new victory or defeat of another player is announced in the chat log
-// the chat log's line of a player's victory or defeat (player_rest.rs set_game_result)
-static void EEPlayerAnnounceResult(EEPlayer* inPlayer, bool inVictory)
-{
-    GEColor theColor(1.0f, 1.0f, 1.0f);
-    UWideString theText;
-    UWideString theReason;
-    UWideString theTitle;
-    UWideString thePlayerName;
-    gResource->GetString(inVictory ? IDS_PLAYER_IS_VICTORIOUS : IDS_PLAYER_HAS_BEEN_DEFEATED, theReason);
-    gResource->GetString(IDS_MSG_GAME, theTitle);
-    if (inPlayer->IsHuman())
-        sprintf(theText, theReason, (const char*)inPlayer->mName);
-    else {
-        sprintf(thePlayerName, "%s - (%s)", (const char*)inPlayer->mCivilization.mName, (const char*)inPlayer->mName);
-        sprintf(theText, theReason, (const char*)thePlayerName);
-    }
-    gUserInterface->AddChatLogEntry(theColor, theTitle, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-}
+// (the chat log's line of a player's victory or defeat: player_rest.rs announce_result)
 
 void EEPlayer::SetGameResult(long inState)
 {
@@ -1951,10 +1922,10 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_KILL_UNIT: thePlayer->KillUnit(theUnit, false);
         return 0;
     // the second batch (player_body.rs)
-    case EE_UNITS_PLAYER_BODY_LINE_OF_SIGHT: return EEPlayerFloatBits(static_cast<EEUnit*>(theUnit)->GetStats()->GetLineOfSight());
+    case EE_UNITS_PLAYER_BODY_LINE_OF_SIGHT: return (int32_t)UFloatBits(static_cast<EEUnit*>(theUnit)->GetStats()->GetLineOfSight());
     case EE_UNITS_PLAYER_BODY_COMPLEX_SIGHT_OFF: static_cast<EEUnit*>(theUnit)->GetComplexUnit()->SightOffHere();
         return 0;
-    case EE_UNITS_PLAYER_BODY_SET_SIGHT: static_cast<EEUnit*>(theUnit)->GetComplexUnit()->SetSight(EEPlayerBitsFloat((int32_t)inB));
+    case EE_UNITS_PLAYER_BODY_SET_SIGHT: static_cast<EEUnit*>(theUnit)->GetComplexUnit()->SetSight(UBitsFloat((int32_t)inB));
         return 0;
     case EE_UNITS_PLAYER_BODY_SIGHT_ON: theUnit->SightOnHere();
         return 0;
@@ -2094,7 +2065,17 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_NO_HUMAN_DEFEAT: return gPlatSimNoHumanDefeat;
     case EE_UNITS_PLAYER_BODY_NO_DEFEAT_HIT: gPlatSimNoHumanDefeatHits++;
         return 0;
-    case EE_UNITS_PLAYER_BODY_ANNOUNCE_RESULT: EEPlayerAnnounceResult(thePlayer, inB != 0);
+    case EE_UNITS_PLAYER_BODY_TEXT_NEW: return (int64_t)(intptr_t)new UWideString;
+    case EE_UNITS_PLAYER_BODY_TEXT_DELETE: delete EEPlayerPtr<UWideString>(inA);
+        return 0;
+    case EE_UNITS_PLAYER_BODY_TEXT_RESOURCE: return gResource->GetString((unsigned long)inB, *EEPlayerPtr<UWideString>(inA));
+    case EE_UNITS_PLAYER_BODY_TEXT_FORMAT: sprintf(*EEPlayerPtr<UWideString>(inA), *EEPlayerPtr<UWideString>(inB), (const char*)*EEPlayerPtr<UWideString>(inC));
+        return 0;
+    case EE_UNITS_PLAYER_BODY_TEXT_NAME: *EEPlayerPtr<UWideString>(inA) = thePlayer->mName;
+        return 0;
+    case EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME: sprintf(*EEPlayerPtr<UWideString>(inA), "%s - (%s)", (const char*)thePlayer->mCivilization.mName, (const char*)thePlayer->mName);
+        return 0;
+    case EE_UNITS_PLAYER_BODY_CHAT_RESULT: gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), *EEPlayerPtr<UWideString>(inA), *EEPlayerPtr<UWideString>(inB), gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
         return 0;
     case EE_UNITS_PLAYER_BODY_HULL_COUNT: return (int64_t)EEPlayerTownAt(inA)->GetHullPointCount();
     case EE_UNITS_PLAYER_BODY_HULL_POINT: return EEPlayerPackPoint(EEPlayerTownAt(inA)->GetHullPoint((long)inB));
@@ -2121,7 +2102,7 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
         return 0;
     case EE_UNITS_PLAYER_BODY_TILE_EMPTY: return gWorld.mMap->GetTile((long)inB, (long)inC) != NULL && gWorld.mMap->GetTile((long)inB, (long)inC)->mUnits == NULL;
     case EE_UNITS_PLAYER_BODY_MESH_VALID: return gWorld.mMap->mTerrainMesh.GetIsValidTile((long)inB, (long)inC);
-    case EE_UNITS_PLAYER_BODY_MESH_Z: return (uint32_t)EEPlayerFloatBits(gWorld.mMap->mTerrainMesh.GetMeshZ(EEPlayerPtr<float>(inA)[0], EEPlayerPtr<float>(inA)[1]));
+    case EE_UNITS_PLAYER_BODY_MESH_Z: return (uint32_t)UFloatBits(gWorld.mMap->mTerrainMesh.GetMeshZ(EEPlayerPtr<float>(inA)[0], EEPlayerPtr<float>(inA)[1]));
     case EE_UNITS_PLAYER_BODY_DROP_PATH: theComplex->DropPath();
         return 0;
     case EE_UNITS_PLAYER_BODY_START_IDLE: theComplex->StartAction(kActionIdle);

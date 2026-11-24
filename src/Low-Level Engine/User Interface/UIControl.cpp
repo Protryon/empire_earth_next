@@ -78,6 +78,10 @@ EE_UI_VOID(ctl_set_bg_opacity) { ctl->SetBgOpacity(f[0]); }
 EE_UI_VOID(ctl_part_set_bg_color) { ctl->SetBgColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(ctl_bg_opacity) { f[0] = ctl->GetBgOpacity(); }
 EE_UI_VOID(ctl_tabbed_to) { ctl->TabbedTo(); }
+EE_UI_VOID(ctl_draw_copied_bg) { ctl->GetRasterizer()->Draw(ctl->CopiedBgRhombus(), ctl->GetScreenIndex()); }
+EE_UI_CASE(ctl_virt_draw_border) { return ctl->DrawBorder(UIObjHost::Rect(f), (unsigned long)a); }
+EE_UI_CASE(ctl_virt_mouse_down) { return ctl->MouseLButtonDown(); }
+EE_UI_VOID(ctl_bg_rhombus_opacity) { ctl->BgRhombus()->GetOpacityPerVertex(f[0], f[0], f[0], f[0]); }
 #undef theForm
 #undef ctl
 
@@ -112,13 +116,6 @@ extern "C" void ee_uicpp_rhombus_delete(void* inRhombus) { delete static_cast<GE
 
 
 
-// Draws the copied background and the border
-long UIControl::DrawPolygons()
-{
-    if (this->mCopiedHasBgOpacity)
-        this->GetRasterizer()->Draw(this->CopiedBgRhombus(), this->GetScreenIndex());
-    return this->DrawBorder(this->GetCopiedDrawRectangle(), this->mBorderThickness);
-}
 
 // The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
 #define ctl static_cast<UIControl*>(inObj)
@@ -193,24 +190,6 @@ EE_UI_VOID(obj_part_set_rectangle) { part->SetRectangle(UIObjHost::Rect(f)); }
 EE_UI_VOID(obj_part_set_bg_color) { part->SetBgColor(GEColor(f[0], f[1], f[2])); }
 EE_UI_VOID(obj_part_set_bg_opacity) { part->SetBgOpacity(f[0]); }
 #undef part
-GERasterizer* UIControl::GetRasterizer() const { return this->GetForm()->GetManager()->GetRasterizer(); }
-
-unsigned long UIControl::GetScreenIndex() const { return this->GetForm()->GetManager()->GetScreen(); }
-
-SESoundManager* UIControl::GetSoundManager() const { return this->GetForm()->GetManager()->GetSoundManager(); }
-
-
-
-
-
-
-long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
-{
-    return ee_ui_control_draw_border(this->GetRasterizer(), this->GetScreenIndex(), *reinterpret_cast<const EeUiRect*>(&inRectangle),
-                                     inThickness, this->mCopiedBorderOpacity, this->mCopiedBorderType);
-}
-
-const GE2DPoint& UIControl::GetMouseLocation() const { return this->GetForm()->GetMouseLocation(); }
 
 // the key predicates' calls (lle_control.rs key_pressed)
 extern "C" long ee_uicpp_entity_long_value(uintptr_t inEntity) { return reinterpret_cast<ISEntity*>(inEntity)->GetValue(); }

@@ -86,18 +86,7 @@ EEGraphicObject::EEGraphicObject() : EeDataMediaUse()
 // Destroys the graphic object: unloads its media if loaded, frees its file names
 EEGraphicObject::~EEGraphicObject()
 {
-    if (this->mMediaCount > 0) {
-        this->mMediaCount = 1;
-        this->UnloadMedia();
-    }
-    delete this->mFileName;
-    delete this->mTextureName;
-    delete this->mShadowModelName;
-    delete this->mShadowTextureName;
-    for (unsigned long i = 0; i < 14; i++) {
-        delete this->mModelNames[i];
-        delete this->mTextureNames[i];
-    }
+    ee_preload_graphic_free(static_cast<EEMedia*>(this));   // (preload_media.rs)
 }
 
 // Reads the graphics table into the media table (each record after its 32 names; the record and its copy are ee_data
@@ -105,39 +94,7 @@ EEGraphicObject::~EEGraphicObject()
 // Returns the last read result
 long EEGraphicObject::LoadTable(FSFile* inFile)
 {
-    UString theName;
-    EEGraphicObject* theObject = NULL;
-    auto theNextName = [&]() { theName.Load(*inFile); return new UString((const char*)theName); };
-    return EEDbReadLeadRecords(inFile, ee_data_graphic_object_record_size(),
-        [](unsigned long inCount) { gMediaTable.resize(inCount, NULL); return true; },
-        [&](unsigned long inIndex) {
-            theObject = new EEGraphicObject;
-            gMediaTable[inIndex] = theObject;
-            theName.Load(*inFile);
-            theObject->mFileName = theNextName();
-            theObject->mTextureName = theNextName();
-            for (unsigned long j = 0; j < 14; j++) {
-                theObject->mTextureNames[j] = theNextName();
-                theObject->mModelNames[j] = theNextName();
-            }
-            theObject->mShadowModelName = theNextName();
-            theObject->mShadowTextureName = theNextName();
-        },
-        [&](unsigned long inIndex, const unsigned char* inRecord) {
-            EeDataGraphicObjectSounds theSounds = ee_data_graphic_object_from_record(inRecord, theObject);
-            for (unsigned long i = 0; i < 14; i++) {
-                theObject->mSounds1[i] = EESoundObject::Get(theSounds.sound1[i]);
-                if (theObject->mSounds1[i] == NULL)
-                    theObject->mSound1Frames[i] = -1;
-                theObject->mSounds2[i] = EESoundObject::Get(theSounds.sound2[i]);
-                if (theObject->mSounds2[i] == NULL)
-                    theObject->mSound2Frames[i] = -1;
-            }
-            if (theObject->mMediaIndex == 0) {
-                delete theObject;
-                gMediaTable[inIndex] = NULL;
-            }
-        });
+    return ee_preload_load_graphic_objects(inFile);   // (preload_media.rs)
 }
 
 // Deletes every entry of the media table and empties it (ee_game preload_media.rs)
@@ -183,18 +140,7 @@ static const EeGfxGobjHost kGobjHost = {
         static_cast<EEGraphicObject*>(inObject)->mWheels.push_back(new EEWheel(static_cast<GEModel*>(inModel)));
         return true;
     },
-    [](void* inObject) {
-        EEGraphicObject* theObject = static_cast<EEGraphicObject*>(inObject);
-        for (unsigned long i = 0; i < theObject->mOrbitals.size(); i++)
-            delete theObject->mOrbitals[i];
-        theObject->mOrbitals.clear();
-        for (unsigned long i = 0; i < theObject->mTurretParts.size(); i++)
-            delete theObject->mTurretParts[i];
-        theObject->mTurretParts.clear();
-        for (unsigned long i = 0; i < theObject->mWheels.size(); i++)
-            delete theObject->mWheels[i];
-        theObject->mWheels.clear();
-    },
+    ee_preload_graphic_clear_parts,   // (preload_media.rs)
 };
 static_assert(sizeof(GEModelManager) == sizeof(void*) && sizeof(GETextureManager) == sizeof(void*),
               "the managers are their Rust objects (gobj_media.rs reads them in place)");

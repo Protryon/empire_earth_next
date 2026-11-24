@@ -12,15 +12,14 @@
 #include "lle/UString.h"
 #include "lle/UWideString.h"
 #include "rust/ui/obj.h"
+#include "rust/ui/lle_cpp.h"   // ee_ui_shim_out
 
-enum class EeUiOp : uint32_t;
 
 struct EeUiShimText {
     const uint8_t* ptr;
     size_t len;
 };
 
-extern "C" void ee_ui_shim_out(void* inOut, const uint8_t* inText, size_t inLength);
 // the UI database files' calls (UIHotKey.cpp), shared by the database loaders' shims
 extern "C" void ee_uicpp_file_open(void* inFile);
 extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount);

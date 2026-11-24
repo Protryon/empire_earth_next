@@ -53,6 +53,14 @@ enum class EeUiControlCall : uint32_t {
   SetBgOpacity = 20,
   /// `SetBorderThickness(a)`, then the (virtual) `SetDirty(true)`.
   SetBorderThickness = 21,
+  /// `UIControl::DrawPolygons()`: the copied background when it draws, then the (virtual) `DrawBorder` of the
+  /// copied draw rectangle -> its result (UI round 16).
+  DrawPolygons = 22,
+  /// `UIControl::MouseLButtonDoublePressed()`: the left button down, then the (virtual) `MouseLButtonDown()` -> its
+  /// result.
+  MouseDoublePressed = 23,
+  /// `GetBgOpacity()` -> `f[0]`.
+  BgOpacity = 24,
 };
 
 /// The trigger events (`std::map<unsigned long, UIEvent*>`): event id -> the event (referenced), in id order.
