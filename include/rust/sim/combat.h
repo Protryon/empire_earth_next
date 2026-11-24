@@ -3383,6 +3383,18 @@ int32_t ee_combat_screen(EeCombatScreenIn *input,
                          void *context,
                          EeCombatScreenDistance distance);
 
+/// `EEFOFindNewTargetInMeleeRange::Virtual04`/`Virtual08` (units round 12; was EEUnitClass.cpp's EEMeleeScreen): the
+/// candidate (`hit_points`) is alive and nearer to the screen's unit than `range` (`EEGetHitDistanceSquared` of the
+/// unit and the candidate, measured from the unit); TEST ONLY: the CBFS capture record (the record, then the answer
+/// as an `int32_t`, as `EECombatCapture` wrote it).
+///
+/// # Safety
+/// `unit` and `candidate` are live complex units.
+bool ee_units_melee_screen(uint64_t unit,
+                           uint64_t candidate,
+                           int32_t hit_points,
+                           float range);
+
 /// A shot's `ActionChanged` over the C++ host (`unit`: the shot, its plain reads the store's).
 ///
 /// # Safety
