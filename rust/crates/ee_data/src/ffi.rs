@@ -363,24 +363,25 @@ pub unsafe extern "C" fn ee_data_rules_load(
     }
 }
 
-/// Writes the C++ `EERulesData` (ee/EERulesGen.h) of the rules in place: its lists and texts point into storage the
-/// rules own until the next call. `sizes` are the C++ structs' sizes (`kEERulesMirrorSizes`); a layout that differs
-/// from the Rust mirror's stops the game.
+/// Writes the C++ `EEEpochMedia` of an epoch the rules do not hold (`rules::epoch_none`: the defaults, no lists).
 ///
 /// # Safety
-/// `rules` live, `out` an `EERulesData` (no list or text of it read across the call), `sizes` readable for `count`.
+/// `out` an `EEEpochMedia`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_data_rules_mirror(
-    rules: *mut EeDataRules,
-    out: *mut c_void,
-    sizes: *const usize,
-    count: usize,
-) {
-    let theirs = std::slice::from_raw_parts(sizes, count);
-    assert_eq!(theirs, &rules_gen::mirror_sizes()[..], "ee/EERulesGen.h's layout is not rules_gen.rs's");
+pub unsafe extern "C" fn ee_data_rules_epoch_none(out: *mut c_void) {
+    std::ptr::write(out as *mut rules_gen::EEEpochMedia, rules::epoch_none());
+}
+
+/// Writes the C++ `EERulesData` (rules_gen.rs's record, which cbindgen emits: the one layout) of the rules in place:
+/// its lists and texts point into storage the rules own until the next call.
+///
+/// # Safety
+/// `rules` live, `out` an `EERulesData` (no list or text of it read across the call).
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_rules_mirror(rules: *mut EeDataRules, out: *mut c_void) {
     let mut store = rules::MirrorStore::default();
     let data = (*rules).rules.mirror(&mut store);
-    std::ptr::write(out as *mut rules_gen::RulesDataC, data);
+    std::ptr::write(out as *mut rules_gen::EERulesData, data);
     (*rules).mirror = store;
 }
 
@@ -466,8 +467,7 @@ pub unsafe extern "C" fn ee_data_rules_override_problems(out: *mut EeDataBytes) 
     *out = EeDataBytes::from_vec(text);
 }
 
-/// The names of the unit categories, for C++: `kEERuleCategoryNames[]` is generated (EERulesGen.h); this is its count
-/// source of truth for a consistency check in tests.
+/// The number of unit category names (rules_gen.rs `UNIT_CATEGORY_NAMES`), for a consistency check in tests.
 #[no_mangle]
 pub extern "C" fn ee_data_rule_category_count() -> usize {
     crate::generated::rules_gen::UNIT_CATEGORY_NAMES.len()
@@ -638,10 +638,12 @@ mod tests {
             let mut out = EeDataBytes::empty();
             ee_data_rules_dump(r, &mut out);
             assert!(take(&mut out).starts_with(b"\"rules.combat\":{\"minimum_damage\":2,"));
-            let sizes = rules_gen::mirror_sizes();
-            let mut data = std::mem::MaybeUninit::<rules_gen::RulesDataC>::uninit();
-            ee_data_rules_mirror(r, data.as_mut_ptr() as *mut c_void, sizes.as_ptr(), sizes.len());
-            assert_eq!(data.assume_init().combat.minimum_damage, 2);
+            let mut data = std::mem::MaybeUninit::<rules_gen::EERulesData>::uninit();
+            ee_data_rules_mirror(r, data.as_mut_ptr() as *mut c_void);
+            assert_eq!(data.assume_init().mCombat.mMinimumDamage, 2);
+            let mut none = std::mem::MaybeUninit::<rules_gen::EEEpochMedia>::uninit();
+            ee_data_rules_epoch_none(none.as_mut_ptr() as *mut c_void);
+            assert_eq!(none.assume_init().mRemovalSound, 374);
             let flags = [true; 14];
             ee_data_rules_set_music_from_flags(r, 3, flags.as_ptr(), flags.len());
             ee_data_rules_free(r);

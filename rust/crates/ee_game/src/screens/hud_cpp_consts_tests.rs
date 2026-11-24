@@ -21,7 +21,7 @@ const HEADERS: [&str; 9] = [
     "include/rust/sim/game_ids.h",
     "include/ee/EEUnitClassIDs.h",
     "include/rust/sim/unit_ids.h",
-    "include/ee/EEWorldConstants.h",
+    "include/rust/data/world_constants.h",
     "include/ee/EEControlEventID.h",
     "include/rust/base/lle_enums.h",
     "include/rust/ui/ids.h",

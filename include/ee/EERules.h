@@ -1,7 +1,7 @@
 // ee/EERules.h (new, not in the original game): the game rules that were literals in the code, as data
 // (docs/DATA_FORMATS.md 8.8). Rules documents next to the db tables, db\combat.yaml, db\gameoptions.yaml,
 // db\civbuilder.yaml, db\civpowers.yaml, db\aipersonalities.yaml, plus each epoch's media in db\epochs.yaml. The
-// fields and their defaults are generated from tools/eedata/rules_schema.json (ee/EERulesGen.h); the reader is Rust
+// fields and their defaults are generated from tools/eedata/rules_schema.json (ee_data rules_gen.rs); the reader is Rust
 // (rust/crates/ee_data/src/rules.rs). Every member starts at the original game's value; a document on the data path
 // sets every value it holds (references by id, resolved by the db tables' Content). Without the documents (the binary
 // db tree) the game plays with these defaults, which equal the vanilla documents tools/eedata writes (eedata.py
@@ -57,7 +57,10 @@ struct EERuleText {
     operator std::string() const { return str(); }
 };
 
-#include "ee/EERulesGen.h"
+// The rules documents' records and enums (EECombatRules .. EERulesData; EECivStat, EECivMode, EECivPowerAction,
+// EEAICheat): Rust's (ee_data generated/rules_gen.rs, from tools/eedata/rules_schema.json), emitted back by cbindgen.
+// Rust writes every value in place (EERules::Refresh); the lists and texts point into the Rust rules' storage.
+#include "rust/data/generated.h"
 
 // ------------------------------------------------------------------------------------------------ all of them
 
