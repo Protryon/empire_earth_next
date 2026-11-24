@@ -170,7 +170,6 @@ extern "C" int64_t ee_campaigncpp(EeCampaignCpp inOp, uintptr_t p, const int64_t
         break;
     case O::WideClear: ((std::vector<UWideString>*)p)->clear();
         break;
-    case O::MbsICmp: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)a[0]), reinterpret_cast<const unsigned char*>((const char*)a[1]));
     case O::BuiltInCampaign: return EECampaignFormManager::GetBuiltInCampaign(UWideString((const char*)a[0]));
     case O::AvailablePoints: return gWorld.GetCurrentPlayer()->mCivilization.GetAvailablePoints();
     case O::AddPoints: gWorld.GetCurrentPlayer()->mCivilization.AddPoints((unsigned long)a[0]);

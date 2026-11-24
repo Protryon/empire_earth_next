@@ -172,35 +172,13 @@ EEStatisticsHistory::EEStatisticsHistory()
 // Destroys the world, deleting its influence table, ghost units and effect, scenario, environment and calamity managers
 EEWorld::~EEWorld()
 {
-    TSScheduler::DestroyCriticalSection(this->mGhostUnitsLock);
-    delete this->mInfluenceTable;
-    delete this->mEffectManager;
-    for (std::vector<EEGhostUnit*>::iterator it = this->mGhostUnits.begin(); it != this->mGhostUnits.end(); ++it)
-        delete *it;
-    this->mGhostUnits.clear();
-    delete this->mScenarioManager;
-    delete this->mEnvironmentManager;
-    delete this->mCalamityHelper;
+    ee_gamecpp_world_destroy(this);   // (gamecpp world.rs)
 }
 
 // Appends a ghost unit to the world's ghost list
 void EEWorld::AddGhostUnit(EEGhostUnit* inGhost)
 {
     this->mGhostUnits.push_back(inGhost);
-}
-
-// Adds a team of the given players, first merging in every existing team whose players are allied both ways with them
-// (the teams are Rust's, ee_sim app teams.rs, the world's callbacks and the C++ mirror, mTeams: the AI thread's, the
-// server's and the save's, rebuilt after every change, gamecpp teams.rs)
-void EEWorld::AddTeam(const std::vector<unsigned long>& inPlayers)
-{
-    ee_gamecpp_world_teams_add(this, inPlayers.data(), inPlayers.size());
-}
-
-// Puts two players on one team, merging in every existing team whose players are allied both ways with both of them
-void EEWorld::AddAlliance(long inPlayer1, long inPlayer2)
-{
-    ee_gamecpp_world_teams_ally(this, (uint32_t)inPlayer1, (uint32_t)inPlayer2);
 }
 
 // Grants each player the wonder power 4 population share bonus when they hold it with no enemy holder or only allies
@@ -238,13 +216,6 @@ static void EEActiveRefs(uint32_t inID, int32_t inDelta)
         theUnit->Dereference();
 }
 
-// port: the waiting deactivations whose units have an id now join the queue (one entry per unit, as the original's
-// pointer queue kept it); a unit still without one is dropped, as the original's lookup of its id found nothing
-void EEWorld::QueueBornDeactivations()
-{
-    ee_gamecpp_world_queue_born();
-}
-
 // Tears down the current game: records the end statistics, unloads media, removes every unit, ghost, effect,
 // calamity and manager, frees the minimap and active unit lists, and returns campaign games to the campaign screen
 void EEWorld::Clear()
@@ -258,13 +229,6 @@ void EEWorld::RestartUnits()
     ee_gamecpp_world_sight_all(this, true);
 }
 
-// Replaces a player with a human player copied from it by a save and load, killing the old player's units and moving
-// its alliances, pending units and media over to the copy
-void EEWorld::ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion, unsigned long inMinorVersion, EEMap* inMap)
-{
-    ee_gamecpp_world_replace_player(this, inIndex, inMajorVersion, inMinorVersion, inMap);
-}
-
 // Resets the unit's collision state, collision tile and collision resolution count
 // (an EEComplexUnit member defined here: ReplacePlayer and the unit change call it; provisional name)
 void EEComplexUnit::ClearCollisionState()
@@ -274,23 +238,10 @@ void EEComplexUnit::ClearCollisionState()
     this->mCollisionResolutionCount = 0.0f;
 }
 
-// Rebuilds the teams from diplomacy (one per non-observer player, merged by mutual alliances) and sets Gaia and every
-// player at war with each other
-void EEWorld::RebuildTeams()
-{
-    ee_gamecpp_world_teams_rebuild(this, (uint32_t)this->mNumPlayers);
-}
-
 // Counts one gatherer fewer on a resource unit (an untracked unit is ignored)
 void EEWorld::ReleaseResourceUser(EEUnit* inUnit)
 {
     ee_gamecpp_world_resource_users(this, inUnit, -1);
-}
-
-// Kills and removes every player's units (pending ones included) and the queued placements, emptying the unit list
-void EEWorld::RemoveAllUnits()
-{
-    ee_gamecpp_world_remove_all_units(this);
 }
 
 // Deletes every ghost unit under the ghost lock
@@ -311,22 +262,6 @@ void EEWorld::DumpMedia(FSFileSpec& inFile, bool inLeaks)
 void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)
 {
     ee_gamecpp_world_remove_player(this, inHasWon, inPlayerID);
-}
-
-// Fills the empty player slots after the game state's players with computer players in unused colours and 999,999
-// of each resource (scenario editor), loading their foundation media
-void EEWorld::AddComputerPlayers(EEGameState* inState)
-{
-    ee_gamecpp_world_add_computers(this, inState);
-}
-
-// Moves the world and viewport camera, unless a scenario camera move is running and the move is not forced
-void EEWorld::SetCamera(const GETransformation& inTransformation, bool inForce)
-{
-    if (inForce || this->mScenarioManager == NULL || !this->mScenarioManager->mIsMovingCamera) {
-        RTSWorld::SetCameraTransformation(inTransformation);
-        gViewport.SetCamera(inTransformation);
-    }
 }
 
 // Adds the world's state and the game's random seed to a sync checksum
@@ -388,13 +323,6 @@ void EEWorld::SetMap(EEMap* inMap)
     this->mMap = inMap;
 }
 
-// Replaces the effect manager, deleting the old one
-void EEWorld::SetEffectManager(EEEffectManager* inManager)
-{
-    delete this->mEffectManager;
-    this->mEffectManager = inManager;
-}
-
 // Replaces the scenario manager, deleting the old one
 void EEWorld::SetScenarioManager(EEScenarioManager* inManager)
 {
@@ -405,7 +333,8 @@ void EEWorld::SetScenarioManager(EEScenarioManager* inManager)
 // Creates the influence table for a map and the world's player count
 void EEWorld::CreateInfluenceTable(EEMap* inMap)
 {
-    this->SetInfluenceTable(new EEInfluenceTable(inMap->mSize, this->mNumPlayers));
+    delete this->mInfluenceTable;   // SetInfluenceTable 0x13c201
+    this->mInfluenceTable = new EEInfluenceTable(inMap->mSize, this->mNumPlayers);
 }
 
 // Replaces the minimap with a new one for the world's map, viewed by the game state's local player
@@ -415,19 +344,6 @@ void EEWorld::CreateMiniMap(EEGameState* inState)
     gMiniMap = new EEMiniMap(GERasterizer::GetActiveRasterizer()->GetScreen(gScreenIndex), 0, inState->GetPlayer(inState->mLocalPlayer));
     gMiniMap->SetMap(this->mMap);
     gEEGameUI.mMiniMapUpdate(gMiniMap);   // EEUIMiniMap::Update (ee/EEGameUI.h)
-}
-
-// Installs the game state's players: places their pending units, applies tech trees, map restrictions and variant hit
-// points and loads media; for a loaded game it repairs pointers and replaces flagged computer players
-void EEWorld::CreatePlayers(EEGameState* inState)
-{
-    ee_gamecpp_world_create_players(this, inState);
-}
-
-// Loads the shared command confirmation effects and button sounds, once per game
-void EEWorld::LoadMedia()
-{
-    ee_gamecpp_world_load_media(this);
 }
 
 // Pauses a running single-player game on the server; returns 2 when it is already paused, else 0
@@ -451,16 +367,10 @@ EEStatisticsRecord::EEStatisticsRecord()
     this->Clear();
 }
 
-// Clears the AI continent data for the world's map
-void EEWorld::ClearContinents()
-{
-    gContinentManager.Clear(this->mMap);
-}
-
 // Applies the queued unit activations and deactivations to the list of units updated every tick
 void EEWorld::UpdateActiveUnits()
 {
-    this->QueueBornDeactivations();
+    ee_gamecpp_world_queue_born();   // QueueBornDeactivations
     ee_app_active_update(EEActiveRefs);
 }
 
@@ -476,24 +386,11 @@ void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
     ee_gamecpp_world_deactivate(inUnit);
 }
 
-// Rebuilds the active unit list from the placed units (first parts; units of inactive classes only when dead),
-// dropping the pending activation queues
-void EEWorld::RebuildActiveUnits()
-{
-    ee_gamecpp_world_rebuild_active(this);
-}
-
 // Resets the world: clears effects and calamities, gives it a fresh calamity helper, removes every unit and drops the
 // scenario and environment managers
 void EEWorld::Reset()
 {
     ee_gamecpp_world_reset(this);
-}
-
-// Turns every unit's sight off and refreshes the local player's terrain visibility
-void EEWorld::RefreshUnits()
-{
-    ee_gamecpp_world_sight_all(this, false);
 }
 
 // Takes a disconnected player out: flags them disconnected (unless observing), drops them from their teams, marks them
@@ -503,28 +400,10 @@ void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer)
     ee_gamecpp_world_remove_disconnected(this, inPlayer);
 }
 
-// Removes a player from every team, re-adding each team's remaining players as a new team
-void EEWorld::RemovePlayerFromTeams(unsigned long inPlayer)
-{
-    ee_gamecpp_world_teams_remove(this, (uint32_t)inPlayer);
-}
-
 // Undoes the wonder power 4 population share bonus ApplyShareBonus gave or took for every player
 void EEWorld::RemoveShareBonus()
 {
     EEPlayerShareBonus(true);   // (ee_units player_units.rs)
-}
-
-// Splits every team holding both players into new teams without each of them
-void EEWorld::BreakAlliance(long inPlayer1, long inPlayer2)
-{
-    ee_gamecpp_world_teams_break(this, (uint32_t)inPlayer1, (uint32_t)inPlayer2);
-}
-
-// Lets every player finish loading its units after a saved game was read
-void EEWorld::NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    ee_gamecpp_world_notify_loaded(this, inMajorVersion, inMinorVersion);
 }
 
 // Moves a unit to its place in the world's unit list, which is sorted by tile x
@@ -533,19 +412,13 @@ void EEWorld::ResortUnit(RTSUnit* inUnit)
     ee_gamecpp_world_resort(static_cast<EEUnit*>(inUnit));
 }
 
-// Replaces the calamity helper, deleting the old one unless it is the same object
-void EEWorld::SetCalamityHelper(FSPersistent* inObject)
-{
-    if (inObject != this->mCalamityHelper) {
-        delete this->mCalamityHelper;
-        this->mCalamityHelper = inObject;
-    }
-}
-
-// Moves the camera unless a scenario camera move is running
+// Moves the world and viewport camera unless a scenario camera move is running (SetCamera 0x1394b2 unforced)
 void EEWorld::SetCameraTransformation(const GETransformation& inTransformation)
 {
-    this->SetCamera(inTransformation, false);
+    if (this->mScenarioManager == NULL || !this->mScenarioManager->mIsMovingCamera) {
+        RTSWorld::SetCameraTransformation(inTransformation);
+        gViewport.SetCamera(inTransformation);
+    }
 }
 
 // Replaces the environment (weather) manager, deleting the old one
@@ -553,13 +426,6 @@ void EEWorld::SetEnvironmentManager(EEEnvironmentManager* inManager)
 {
     delete this->mEnvironmentManager;
     this->mEnvironmentManager = inManager;
-}
-
-// Replaces the influence table, deleting the old one
-void EEWorld::SetInfluenceTable(EEInfluenceTable* inTable)
-{
-    delete this->mInfluenceTable;
-    this->mInfluenceTable = inTable;
 }
 
 // Sets the population limit and recomputes every player's share bonus and civilization population bonus
@@ -572,12 +438,6 @@ void EEWorld::SetPopulationLimit(unsigned long inLimit)
 void EEWorld::SetNumPlayers(unsigned long inNumPlayers)
 {
     ee_gamecpp_world_set_count(this, false, inNumPlayers);
-}
-
-// Puts a player into observer mode and marks their game options entry as out (type 2)
-void EEWorld::MarkPlayerOut(unsigned long inPlayer)
-{
-    ee_gamecpp_world_mark_out(this, inPlayer);
 }
 
 // Sets the time of day and recomputes the sun and moon light directions
@@ -593,6 +453,18 @@ void EEWorld::PlaceQueuedUnits()
     ee_gamecpp_world_place_queued(this);
 }
 
+// Rebuilds the active unit list from the placed units, dropping the pending activation queues (gamecpp world.rs)
+void EEWorld::RebuildActiveUnits()
+{
+    ee_gamecpp_world_rebuild_active(this);
+}
+
+// Turns every unit's sight off and refreshes the local player's terrain visibility
+void EEWorld::RefreshUnits()
+{
+    ee_gamecpp_world_sight_all(this, false);
+}
+
 // Moves a player to a new lobby slot and name, handing its old slot and name to the slot's previous holder; switches
 // the local view to it when it takes the local slot
 void EEWorld::MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused)
@@ -602,13 +474,6 @@ void EEWorld::MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned ch
 
 // A file-scope global defined mid-file (its init chain sits between MovePlayerToSlot and UnloadMedia; no reader):
 UString gDefaultCampaignUser("default");
-
-// Unloads the per-player foundation media and the shared effects and button sounds of the game (the light glow's
-// model, never drawn, is gone since R4.4's twenty-first round)
-void EEWorld::UnloadMedia()
-{
-    ee_gamecpp_world_unload_media(this);
-}
 
 // Unpauses a running single-player game on the server; always returns 0
 long EEWorld::UnpauseGame()
@@ -637,14 +502,6 @@ extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t in
     }
     }
     return 0;
-}
-
-// Ends the game when decided: applies team victories, defeats players out of units (and, with gameoptions.yaml's
-// defeat_without_recovery on a random map, players who cannot come back) and lets a last team win; returns 2 when
-// someone won, 1 when no human (or only one player) is left, else 0 (ee_units game_over.rs)
-long EEWorld::CheckGameOver()
-{
-    return (long)ee_units_check_game_over((uint64_t)(uintptr_t)this);
 }
 
 // Updates the physics timing after the game speed changed
@@ -765,8 +622,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WStatisticsReset: W->mStatistics.Reset();
         break;
-    case O::WRecordStatistics: W->RecordStatistics();
-        break;
     case O::WGhostLock: W->mGhostUnitsLock->Enter();
         break;
     case O::WGhostUnlock: W->mGhostUnitsLock->Leave();
@@ -785,16 +640,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
     case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
-    case O::WRebuildTeams: W->RebuildTeams();
-        break;
-    case O::WRemoveFromTeams: W->RemovePlayerFromTeams((unsigned long)a[0]);
-        break;
-    case O::WAddAlliance: W->AddAlliance((long)a[0], (long)a[1]);
-        break;
-    case O::WBreakAlliance: W->BreakAlliance((long)a[0], (long)a[1]);
-        break;
-    case O::WFlushQueued: W->FlushQueuedPlacements();
-        break;
     case O::WQueuedCount: return (int64_t)W->mQueuedPlacements.size();
     case O::WQueuedUnit: return P64(W->mQueuedPlacements[a[0]].mUnit);
     case O::WQueuedAfter: return P64(W->mQueuedPlacements[a[0]].mInsertAfter);
@@ -802,9 +647,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
         break;
-    case O::WAddUnitEntry: W->AddUnitEntry((RTSUnit*)a[0], (RTSUnit*)a[1]);
-        break;
-    case O::WPlayerBySlot: return P64(W->GetPlayerBySlot((unsigned char)a[0]));
     case O::WWriteLock: W->mLock->WriteLock();
         break;
     case O::WWriteUnlock: W->mLock->WriteUnlock();
@@ -813,21 +655,21 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WSetMap: W->SetMap((EEMap*)a[0]);
         break;
-    case O::WSetEffectManager: W->SetEffectManager((EEEffectManager*)a[0]);
+    case O::WSetEffectManager: delete W->mEffectManager;   // the owning setter 0x13a219
+        W->mEffectManager = (EEEffectManager*)a[0];
         break;
     case O::WCreateInfluenceTable: W->CreateInfluenceTable((EEMap*)a[0]);
         break;
-    case O::WClearContinents: W->ClearContinents();
+    case O::WClearContinents: gContinentManager.Clear(W->mMap);
         break;
     case O::WCreateMiniMap: W->CreateMiniMap((EEGameState*)a[0]);
         break;
     case O::WSetGameSpeed: W->SetGameSpeed(f[0]);
         break;
-    case O::WSetScenarioManager: W->SetScenarioManager((EEScenarioManager*)a[0]);
-        break;
-    case O::WSetEnvironmentManager: W->SetEnvironmentManager((EEEnvironmentManager*)a[0]);
-        break;
-    case O::WSetCalamityHelper: W->SetCalamityHelper((FSPersistent*)a[0]);
+    case O::WSetCalamityHelper: if ((FSPersistent*)a[0] != W->mCalamityHelper) {   // 0x13c1ad: the same object is kept
+            delete W->mCalamityHelper;
+            W->mCalamityHelper = (FSPersistent*)a[0];
+        }
         break;
     case O::WOptionsPlayerColorFix: W->mGameOptions.mPlayers[a[0] - 1].mColor = EEColorTable::FindIndex(W->mPlayers[a[0]]->mColor);
         break;
@@ -889,14 +731,8 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)ST->mPlayers[a[0]]->mName), reinterpret_cast<const unsigned char*>((const char*)(a[1] ? gWonPlayerName : gPlayerName))) == 0;
     case O::ReportGameLoaded: EEReportLoadFailure(UString("Game loaded."), false, &ST->mChecksum);
         break;
-    case O::ReportGameInitialized: EEReportLoadFailure(UString("Game initialized."), false, NULL);
-        break;
     // the players
     case O::PlFirstUnit: return P64(PL->mFirstUnit);
-    case O::PlKillUnit: PL->KillUnit((EEUnit*)a[0], a[1] != 0);
-        break;
-    case O::PlRemoveKilled: PL->RemoveKilledUnits();
-        break;
     case O::PlReleasePending: PL->ReleasePendingUnits();
         break;
     case O::PlAddPendingUnits: PL->AddPendingUnits(a[0] != 0, a[1] != 0);
@@ -906,8 +742,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::PlAlliesCount: return (int64_t)PL->mAllies.size();
     case O::PlAllyAt: return P64(PL->mAllies[a[0]]);
     case O::PlAlliesPush: PL->mAllies.push_back((EEPlayer*)a[0]);
-        break;
-    case O::PlRemoveAlly: PL->RemoveAlly((EEPlayer*)a[0]);
         break;
     case O::PlSaveTo: PL->EEPlayer::Save((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
         break;
@@ -932,14 +766,10 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlSetStance: PL->SetDiplomaticStance((EEPlayer*)a[0], (long)a[1], (EEMap*)a[2]);
         break;
-    case O::PlDumpMedia: PL->DumpMedia(*(FSFileSpec*)a[0]);
-        break;
     case O::PlSetEndTimeNow: PL->mSavedGroups.mEndTime = gPhysics->mGameTime;
         break;
     case O::PlColorIsPlayerColor: return EEGetPlayerColor((unsigned long)a[0]) == PL->mColor;
     case O::PlSetPlayerColor: PL->SetColor(EEGetPlayerColor((unsigned long)a[0]));
-        break;
-    case O::PlSetAllResources: PL->SetAllResources((long)a[0]);
         break;
     case O::PlCivApplyDeferred: PL->mCivilization.ApplyDeferred(PL, ((EEGameState*)a[0])->mMajorVersion, ((EEGameState*)a[0])->mMinorVersion);
         break;
@@ -947,24 +777,14 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlCivSetName: PL->mCivilization.SetName(*(UWideString*)a[0]);
         break;
-    case O::PlApplyMapRestrictions: PL->ApplyMapRestrictions();
-        break;
     case O::PlComputerPlayer: return P64(PL->mComputerPlayer);
     case O::PlRefreshTownGroups: PL->RefreshTownGroups();
-        break;
-    case O::PlRefreshTerrainVisibility: PL->RefreshTerrainVisibility();
         break;
     case O::PlAddOwnSight: PL->AddOwnSight((EEMapTile*)a[0], (long)a[1], (long)a[2]);
         break;
     case O::PlRemoveOwnSight: PL->RemoveOwnSight((EEMapTile*)a[0]);
         break;
     case O::PlRestartTowns: PL->RestartTowns();
-        break;
-    case O::PlRestorePatrols: PL->RestorePatrols();
-        break;
-    case O::PlKillStrandedUnits: PL->KillStrandedUnits();
-        break;
-    case O::PlFinishUnitsLoad: PL->FinishUnitsLoad((unsigned long)a[0], (unsigned long)a[1]);
         break;
     case O::PlIsHuman: return PL->IsHuman();
     case O::HumanGetName: *(UWideString*)a[0] = static_cast<EEHumanPlayer*>(PL)->GetName();
@@ -978,8 +798,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::CpRefreshResourceCenters: ((EEComputerPlayer*)p)->RefreshResourceCenters();
         break;
     case O::CpReplaceOnLoad: return ((EEComputerPlayer*)p)->mReplaceOnLoad;
-    case O::CpNewGame: EECPNewGame();   // port: the computer players' per-game file statics cleared (ee/EECPTrace.h)
-        break;
     case O::SetDeferComputerRestore: gDeferComputerPlayerRestore = a[0] != 0;
         break;
     case O::SaveHasTowns: return EESaveHasTowns((unsigned long)a[0], (unsigned long)a[1]);
@@ -1081,7 +899,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::MiniMapMoveUnit: gMiniMap->MoveUnit(UN, (long)a[0], (long)a[1], (long)a[2], (long)a[3]);
         break;
-    case O::ShutdownInProgress: return UShutdownInProgress();
     case O::PickerLock: gUnitPicker.GetLock()->Enter();
         break;
     case O::PickerReset: gUnitPicker.Reset();
@@ -1165,7 +982,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::ClientFastSelect: (static_cast<EEClient*>(gCommunications))->mFastSelectionID = static_cast<EEClient*>(gCommunications)->mFastSelection[(unsigned char)a[0]];
         break;
-    case O::ContinentRegionsPending: return EEContinentRegionsPending();
     case O::ContinentRestoreRegions: EERestoreContinentRegions();
         break;
     case O::ContinentBuildRegions: gContinentManager.BuildRegions((EEMap*)a[0]);

@@ -852,7 +852,7 @@ pub fn run<H: RestHost + ?Sized>(h: &mut H, p: u64, what: u32, a: u64, b: i64, c
 }
 
 #[cfg(not(test))]
-mod game {
+pub mod game {
     use super::*;
     use crate::units::patrol_group::{
         ee_units_pg_dereference, ee_units_pg_is_town_patrol, ee_units_pg_point, ee_units_pg_point_count,
