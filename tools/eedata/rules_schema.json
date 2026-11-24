@@ -1,7 +1,7 @@
 {
  "comment": [
   "The rules documents (docs/DATA_FORMATS.md 8.8) as data: the machine-readable schema both languages generate from.",
-  "Hand-edited; tools/eedata/rulesgen.py writes the C++ (include/ee/EERulesGen.h, EERulesGenDecode.inl) and the Rust (ee_data rules_gen.rs); eedata.py check verifies they are current."
+  "Hand-edited; tools/eedata/rulesgen.py writes the Rust (ee_data rules_gen.rs), whose #[repr(C)] records and enums cbindgen emits as the C++ ones (include/rust/data/generated.h; EECombatRules' Is* members: rust/cbindgen.toml [export.body]); eedata.py check verifies it is current."
  ],
  "enums": {
   "unit_category": {
@@ -188,12 +188,6 @@
    "name": "EECombatRules",
    "rust": "CombatRules",
    "section": "combat.yaml",
-   "methods": [
-    "bool IsElevationAttacker(long inCategory) const;",
-    "bool IsElevationLauncher(long inCategory) const;",
-    "bool IsElevationTarget(long inCategory) const;",
-    "bool IsMoraleBuilding(long inUnitType) const;"
-   ],
    "fields": [
     {
      "cpp": "mMinimumDamage",
