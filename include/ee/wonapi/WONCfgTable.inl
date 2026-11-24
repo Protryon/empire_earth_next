@@ -347,9 +347,9 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     case EE_CFG_KEY(CONTAINER,4): EE_CFG(ContainerConfig)->mCurLayoutId=i[0]; break;
     case EE_CFG_KEY(CONTAINER,5): CfgComp(a,EeWonCfgComp::EnableLayout); break;
     case EE_CFG_KEY(CONTAINER,6): EE_CFG(ContainerConfig)->mContainer->Relayout(); break;
-    case EE_CFG_KEY(CONTAINER,9): a.lay=new SameSizeLayout(true,true); break;
-    case EE_CFG_KEY(CONTAINER,10): a.lay=new SameSizeLayout(true,false); break;
-    case EE_CFG_KEY(CONTAINER,11): a.lay=new SameSizeLayout(false,true); break;
+    case EE_CFG_KEY(CONTAINER,9): a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::SameSize,NULL,NULL,0,0,0,true,true); break;
+    case EE_CFG_KEY(CONTAINER,10): a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::SameSize,NULL,NULL,0,0,0,true,false); break;
+    case EE_CFG_KEY(CONTAINER,11): a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::SameSize,NULL,NULL,0,0,0,false,true); break;
     case EE_CFG_KEY(CONTAINER,12): a.lay=new CenterLayout(c[--a.nc],true,true); break;
     case EE_CFG_KEY(CONTAINER,13): a.lay=new CenterLayout(c[--a.nc],true,false); break;
     case EE_CFG_KEY(CONTAINER,14): a.lay=new CenterLayout(c[--a.nc],false,true); break;
