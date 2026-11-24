@@ -1392,12 +1392,24 @@ static std::string CanConnect(unsigned short inPort)
     aSocket->Close();
     return aStatus == WS_Success ? "yes" : "no";
 }
+// a completion that keeps its op: the op outlives its clean-up, so the probe after it sees the clean-up's close and
+// not the destructor's
+class KeepDone : public RouteDone {
+public:
+    KeepDone(const char* inName) : RouteDone(inName) {}
+    virtual void Complete(AsyncOpPtr inOp)
+    {
+        this->mOp = inOp;
+        RouteDone::Complete(inOp);
+    }
+    AsyncOpPtr mOp;
+};
 static void FirewallListen(RoutingConnection* c)
 {
     Log("== firewall listen");
     Log("listening before " + CanConnect(kFirewallPort));
     {
-        SmartPtr<RouteDone> aDone = new RouteDone("firewall listen");
+        SmartPtr<KeepDone> aDone = new KeepDone("firewall listen");
         RoutingRequests(c).DetectFirewall(kFirewallPort, 5, true, aDone.get());
         sServer.Expect("firewall listen");
         Log("listening " + CanConnect(kFirewallPort));
