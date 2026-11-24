@@ -60,11 +60,6 @@ struct EEAEAliveUnit {
     bool operator()(EEComplexUnit* inUnit) const { return inUnit->mHitPoints > 0; }
 };
 
-// Creates the area-effect manager with no templates or effects
-EEAEManager::EEAEManager()
-{
-}
-
 // CollectEffects' and FindEffect's logic: area_effect_manager.rs over the one-statement shims below (UI lane
 // round 11)
 extern "C" int32_t ee_screenscpp_aem_floor(float inV) { return UMFloor(inV); }

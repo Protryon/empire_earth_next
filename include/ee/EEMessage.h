@@ -133,7 +133,8 @@ public:
             memcpy((void*)&theList[0], &this->mList[0], theList.size() * sizeof(T));
         return theList;
     }
-    unsigned char* Field(uint32_t inIndex, size_t inSize) const;
+    // member inIndex's place in the record (its kind and size verified)
+    unsigned char* Field(uint32_t inIndex, size_t inSize) const { return ee_gamecpp_mrecord_field(static_cast<const NEMessage*>(this), inIndex, inSize); }
     virtual void ImportMessage(unsigned char* inData);   // the codec, then the string's text and the list's records
 
     unsigned char mRecord[64];   // EE_NETMSG_RECORD_BYTES

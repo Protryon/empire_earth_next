@@ -168,14 +168,6 @@ void EECalamityClass::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY
     ee_gamecpp_calamity_class_place(this, inUnit, inX, inY);
 }
 
-// Returns the game variant with the given index
-// Probably inline in the real header (an out-of-line COMDAT right after its first user, EECCEarthquake's Update);
-// defined here, with the earthquake's update parameters (Update above)
-EEGameVariant* EEGameVariant::GetGameVariant(long inIndex)
-{
-    return gGameVariants[inIndex];
-}
-
 // (the base's: every class's own, by tables keyed by its enum)
 // Starts the calamity's sound: the earthquake's, hurricane's and volcano's as its looping main sound, the meteor
 // storm's once at the target (ee_tech calamity_class.rs sound_mode); nothing for the others

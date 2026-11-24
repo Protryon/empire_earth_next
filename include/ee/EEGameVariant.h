@@ -16,7 +16,10 @@
 // Layout gap-free; names are provisional unless a reader names them.
 class EEGameVariant : public EeDataGameVariantFields {
 public:
-    static EEGameVariant* GetGameVariant(long inIndex);
+    // Returns the game variant with the given index
+    // Probably inline in the real header (an out-of-line COMDAT right after its first user, EECCEarthquake's Update);
+    // defined here, with the earthquake's update parameters (Update above)
+    static EEGameVariant* GetGameVariant(long inIndex) { return gGameVariants[inIndex]; }
     // db\dbGameVariant.dat into the Rust list (rows with a negative index skipped); the last read status (requires
     // ee/EEDbRecords.h). Header-only since the game's leaves round 2 (EEGameVariant.cpp went).
     template <class F> static long Load(F* inFile) { return EEDbLoadList(inFile, EeDataList::GameVariants); }

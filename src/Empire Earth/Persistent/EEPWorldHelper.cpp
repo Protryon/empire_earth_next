@@ -112,12 +112,6 @@ EEPWorldHelper::EEPWorldHelper(EEWorld& inWorld)
     ee_gamecpp_pwh_from_world(this, &inWorld);
 }
 
-// Creates an empty saved-world chunk (persistent factory)
-FSPersistent* EEPWorldHelper::CreateDefault() const
-{
-    return new EEPWorldHelper;
-}
-
 // port (save version 0.262): the dead attackers (and from 0.272/0.275 the units the goals hold out of the world). A
 // unit's mLastAttacker holds a reference, so the running game keeps an attacker that died since as a unit out of the
 // world, and reads it (the triggers, the AI, a predator's strike back); the save wrote its id and the load found no
@@ -131,12 +125,6 @@ EEComplexUnit* EEFindLoadedGhost(unsigned long inID)
 EEUnit* EEFindLoadedGhostUnit(unsigned long inID)
 {
     return static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID));
-}
-
-// Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
-void EEPWorldHelper::Restore(EEGameState& ioState)
-{
-    ee_gamecpp_pwh_restore(this, &ioState);
 }
 
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)

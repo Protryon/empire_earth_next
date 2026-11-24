@@ -30,9 +30,12 @@ public:
     // then the chat log and the main game form; returns only the main game form's error
     // +0x0c 0x14c449
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_pwh_save(this, inMajorVersion, inMinorVersion, &outFile); }
-    virtual FSPersistent* CreateDefault() const;                                // +0x14 0x14c2a6
+    // Creates an empty saved-world chunk (persistent factory)
+    // +0x14 0x14c2a6
+    virtual FSPersistent* CreateDefault() const { return new EEPWorldHelper; }
     // 0x14c3a7: hands the saved state to the game being loaded (the loader 0x14a0a4 dynamic_casts the helper)
-    void Restore(EEGameState& ioState);
+    // Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
+    void Restore(EEGameState& ioState) { ee_gamecpp_pwh_restore(this, &ioState); }
     // inline: Restore hands the floats over through the FPU (fld/fstp; provisional names from the keys)
     float GetTimeOfDay() const { return this->mTimeOfDay; }
     float GetZoom() const { return this->mZoom; }

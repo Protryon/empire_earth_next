@@ -68,13 +68,6 @@ void EEMiniMap::RefreshView()
         this->Refresh();
 }
 
-// Moves a unit's dot between mini map cells (or just updates its position within a cell); -10000 means
-// not on the map. Classes without a mini map colour and other players' foundations get no dot
-void EEMiniMap::MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, long inY)
-{
-    ee_gamecpp_minimap_move_unit(this, inUnit, inOldX, inOldY, inX, inY);
-}
-
 // ------------------------------------------------------------------------- round 9, lane B: the mini map's bodies' C++ (their
 // cases: EEMap.cpp's EECore9OpB2)
 

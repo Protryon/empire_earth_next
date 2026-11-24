@@ -86,11 +86,6 @@ EESEUICCommandUnits::EESEUICCommandUnits(UIForm* inForm, unsigned long inId, uns
     this->mRotateAction = new EESEARust(EE_SCREENS_SEW_ROTATE);
 }
 
-EESEUICCommandUnits::~EESEUICCommandUnits()
-{
-    this->mRotateAction->Dereference();
-}
-
 int64_t EESEUICCommandUnits::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
     switch (inOp) {

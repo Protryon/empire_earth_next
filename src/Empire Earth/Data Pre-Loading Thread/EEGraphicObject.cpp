@@ -61,11 +61,6 @@ EEWheel::EEWheel(const EEWheel& inWheel)
     this->mAngle = inWheel.mAngle;
 }
 
-// Destroys the wheel (nothing to release)
-EEWheel::~EEWheel()
-{
-}
-
 // Returns whether a model part is a wheel (its name starts with "wheel", any case)
 bool EEIsWheelModel(GEModel* inModel)
 {

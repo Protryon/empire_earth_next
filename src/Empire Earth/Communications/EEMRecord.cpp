@@ -56,12 +56,6 @@ EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue>
     ee_gamecpp_mrecord_init(static_cast<NEMessage*>(this), reinterpret_cast<const EeGamecppMrValue*>(inValues.begin()), inValues.size());
 }
 
-// member inIndex's place in the record (its kind and size verified)
-unsigned char* EEMRecord::Field(uint32_t inIndex, size_t inSize) const
-{
-    return ee_gamecpp_mrecord_field(static_cast<const NEMessage*>(this), inIndex, inSize);
-}
-
 // the codec over the slots, then the string member's text from where the codec found it (UWideString::Import), the
 // list's records from where it found them, the blob's bytes as many as it found
 void EEMRecord::ImportMessage(unsigned char* inPayloadPointer)

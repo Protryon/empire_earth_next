@@ -131,7 +131,10 @@ struct MMMapUnit {
     void AddDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall) { ee_gamecpp_minimap_doppelganger(this, inDoppelganger, inX, inY, inIsWall, true); }
     // Removes a building image's dot from its mini map cell (and a wall's next three segments)
     void RemoveDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall) { ee_gamecpp_minimap_doppelganger(this, inDoppelganger, inX, inY, inIsWall, false); }
-    void MoveUnit(EEUnit* inUnit, long inX, long inY, long inArg4, long inArg5);   // 0x1203b9 (EEUnit::Fn229D73; -10000, -10000) (provisional name)
+    // Moves a unit's dot between mini map cells (or just updates its position within a cell); -10000 means
+    // not on the map. Classes without a mini map colour and other players' foundations get no dot
+    // 0x1203b9 (EEUnit::Fn229D73; -10000, -10000) (provisional name)
+    void MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, long inY) { ee_gamecpp_minimap_move_unit(this, inUnit, inOldX, inOldY, inX, inY); }
     // EEMiniMap.cpp's other members in address order (provisional names)
     // Attaches a map: builds the map/pixel and map/cell transformations (rotated 45 degrees, centred) and the
     // map size of one pixel, then redraws the mini map
