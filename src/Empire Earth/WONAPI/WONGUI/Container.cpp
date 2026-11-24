@@ -128,10 +128,7 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     case Op::CtOwnScheme: return (intptr_t)Comp(a)->GetOwnColorScheme();
     case Op::CtScheme: return (intptr_t)((Graphics*)a)->mColorScheme;
     case Op::CtRoot: return (intptr_t)static_cast<Component*>(t->GetRootContainer());
-    case Op::CtRootFocused: {
-        Window* aWindow = t->GetRoot(); // GetWindow in the SDK
-        return aWindow->mManager->GetFocusWindow() == aWindow ? 1 : 0;
-    }
+    case Op::CtRootFocused: return t->GetRoot()->mManager->GetFocusWindow() == t->GetRoot() ? 1 : 0; // (GetWindow in the SDK)
     case Op::CtMouseInClient: return t->GetRoot()->IsMouseInClientArea() ? 1 : 0;
     case Op::CtDefaultCursor: return (intptr_t)t->GetDefaultCursor();
     case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
