@@ -1040,6 +1040,9 @@ WON_TESTS["won_host36_test"] = []
 # the lobby's ping op (R6 WON lobby and network round 36: a UDPManagerSendRecvOp with a Rust body) against the
 # original PingGameOp over a real UDPManager on 127.0.0.1, with mutations; its units are won_ops_test's
 WON_TESTS["won_ping36_test"] = WON_TESTS["won_ops_test"]
+# the network library's moves of R6 WON lobby and network round 37 that no other driver covers (InitLogic's SaveTOU:
+# ee_won_lobby flow.rs) against the original statements over real files
+WON_TESTS["won_net37_test"] = []
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes

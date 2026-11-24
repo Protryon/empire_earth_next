@@ -42,23 +42,6 @@ static void InitAddAll(ServerContext* inList, const std::list<std::string>& inNa
     }
 }
 
-// the terms-of-use document of an owner written to its file: true unless the writer threw (the original counts
-// a file it could not open as written)
-static bool InitSaveTOU(RustServerOp* inOp, int inOwner)
-{
-    FileWriter writer;
-    try {
-        if (writer.Open((inOwner == HTTPDocOwner_Sys ? LobbyGetSysTOUPath() : LobbyGetGameTOUPath()).c_str(), true)) {
-            ByteBufferPtr document = inOp->GetHttpDocument(inOwner);
-            size_t aBytes = document.get() != NULL ? ee_won_init_document_bytes(document->length()) : 0;
-            if (aBytes != 0)
-                writer.WriteBytes(document->data(), aBytes);
-        }
-        return true;
-    } catch (FileWriterException&) {}
-    return false;
-}
-
 static ServerContext* InitList(intptr_t inWhich)
 {
     switch (inWhich) {
@@ -87,6 +70,9 @@ template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
     return (intptr_t)inPtr.get();
 }
 static const uint8_t* B(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
+// the terms-of-use document of an owner written to its file (ee_won flow.rs: true unless the write failed)
+static bool InitSaveTOU(const std::string& inPath, const std::string& inDocument)
+{ return ee_won_init_save_tou(inPath.c_str(), B(inDocument), inDocument.size()); }
 
 // The host: each case one statement; the decisions and the order are the Rust's (logics.rs, and netlogicops.rs
 // for the cases R6 WON round 32 split).
@@ -145,7 +131,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
         return 0;
     }
     case O::OpNum: return (intptr_t)R(a)->GetNum((int)b, c);
-    case O::SaveTOU: return InitSaveTOU(R(a), (int)b);
+    case O::SaveTOU: return InitSaveTOU(b == HTTPDocOwner_Sys ? LobbyGetSysTOUPath() : LobbyGetGameTOUPath(), R(a)->GetBytes(EE_WON_HTTPDOC_DOCUMENT, b));
     case O::BroadcastDocument: LobbyBroadcastEvent(GotHTTPDocumentEvent(R(a)), true); return 0;
     case O::DocBytes: {
         ByteBufferPtr document = R(a)->GetHttpDocument((int)b);
