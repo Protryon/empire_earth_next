@@ -111,6 +111,8 @@ mod tests {
     #[test]
     fn stream_exchange_with_readiness_events() {
         let _serial = startup();
+        // the event waits below must succeed: not under a plat_core test's harness clock (thread.rs)
+        let _clock = crate::plat_core::test_globals();
         unsafe {
             let (listen, bound) = bound_listener();
             let accept_event = PlatEventCreate(1, 0);

@@ -22,8 +22,8 @@ extern "C" {
 /// Creates the system keyboard's and mouse's devices (`ISInitialize`); a second call keeps the first ones.
 void ee_input_system_init();
 
-/// Destroys both system devices (`ISShutdown`, after the keyboard and the mouse that read them). As in the original,
-/// the window thread must not be inside `ee_input_handle_event` meanwhile.
+/// Destroys both system devices (`ISShutdown`, after the keyboard and the mouse that read them). A call that is
+/// using a device on another thread (the window thread inside `ee_input_handle_event`) finishes first.
 void ee_input_system_shutdown();
 
 /// `ISHandleEvent`: a window event's type and the fields the Input System reads (the key's scan code, the mouse's

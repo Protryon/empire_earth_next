@@ -49,6 +49,18 @@ def cargo_env(target=None):
     env = dict(os.environ, CARGO_TARGET_DIR=str(TARGET_DIR))
     if target in ("macos-arm64", "macos-x86_64"):   # as the C++ (tools/xbuild.py)
         env.setdefault("MACOSX_DEPLOYMENT_TARGET", "11.0" if target == "macos-arm64" else "10.15")
+    if target == "linux-x86_64" and sys.platform != "linux":
+        # the library's one C part (Lua, compiled by mlua-sys's build script through the cc crate) needs the cross
+        # compiler tools/xbuild.py uses for the C++: LLVM's clang against the Debian sysroot
+        sys.path.insert(0, str(ROOT / "tools"))   # (python -I leaves the script's folder out)
+        import ee
+        triple = TRIPLES[target].replace("-", "_")
+        exe = ".exe" if sys.platform == "win32" else ""
+        llvm = ee.LLVM if sys.platform == "win32" else pathlib.Path()
+        env.setdefault(f"CC_{triple}", str(llvm / f"clang{exe}"))
+        env.setdefault(f"AR_{triple}", str(llvm / f"llvm-ar{exe}"))
+        sysroot = (ee.TOOLCHAIN / "sysroot" / "debian_bullseye_amd64").as_posix()
+        env.setdefault(f"CFLAGS_{triple}", f"--target=x86_64-linux-gnu --sysroot={sysroot}")
     return env
 
 
