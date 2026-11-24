@@ -33,7 +33,7 @@ public:
     GETerrainMesh();
     // the mesh's Rust object (the DX7 plug-in's terrain draws read its visible frame there: ee_dx7 draw_ffi.rs)
     EeGeTerrainMesh* GetRust() const { return this->mRust; }
-    virtual ~GETerrainMesh();
+    virtual ~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }
 
     void ComputeShorelines(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 7, 0); }
     void ComputeVertexNormal(unsigned long inX, unsigned long inY)

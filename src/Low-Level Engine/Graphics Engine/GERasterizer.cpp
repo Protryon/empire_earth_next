@@ -117,28 +117,14 @@ intptr_t DX7RasterizerHost(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_
 // Creates a rasterizer with its drawing lock and a white-on-black Arial 9 debug text, not yet activated, and no device
 // (the model store gate's: loads, no draws)
 GERasterizer::GERasterizer(const UString& inName)
-{
-    this->mRust = ee_ge_rast_new(&GERasterizerHost::Call, this, &inName);
-    ee_ge_draw2d_init(&GERasterizerDraw2D, &GEVertexHost);
-}
+    : mRust(ee_ge_rast_new_drawing(&GERasterizerHost::Call, this, &inName, &GERasterizerDraw2D, &GEVertexHost)) {}
 
 // The game's: also its DX7 rasterizer with a dark blue debug colour (inTnL: the T&L rasterizer), which the 2D draw list
 // draws on in Rust
 GERasterizer::GERasterizer(const UString& inName, bool inTnL)
     : GERasterizer(inName)
 {
-    this->mDX7 = ee_dx7r_new(&DX7RasterizerHost, this, this->mRust, inTnL);
-    ee_ge_draw2d_direct(this, this->mDX7);
-}
-
-// Destroys the DX7 records, then the debug font and text and the drawing lock
-GERasterizer::~GERasterizer()
-{
-    if (this->mDX7 != NULL) {
-        ee_ge_draw2d_direct(this, NULL);
-        ee_dx7r_destroy(this->mDX7);
-    }
-    ee_ge_rast_destroy(this->mRust);
+    this->mDX7 = ee_dx7r_new_direct(&DX7RasterizerHost, this, this->mRust, inTnL);
 }
 
 // 0x1002398a: GEText's scalar deleting dtor (see ~GERasterizer). A `delete p` compiles to a ??_G call whenever the

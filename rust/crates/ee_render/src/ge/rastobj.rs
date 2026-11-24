@@ -681,6 +681,28 @@ pub unsafe extern "C" fn ee_ge_rast_new(
     unsafe { EeGeRasterizer::create(host, owner as usize, name as usize) }
 }
 
+/// `GERasterizer(name)` whole: the rasterizer, then the 2D draw list's executor and vertex host set (the game's;
+/// `None` leaves the list as it is, as a rasterizer made in a test does).
+///
+/// # Safety
+/// As [`ee_ge_rast_new`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_rast_new_drawing(
+    host: EeGeRastHostFn,
+    owner: *mut c_void,
+    name: *const c_void,
+    exec: crate::ge::list2d::EeGeDraw2DExecFn,
+    vertex_host: crate::ge::list2d::EeGeDraw2DVertexHost,
+) -> *mut EeGeRasterizer {
+    // SAFETY: the caller's contract
+    let p = unsafe { ee_ge_rast_new(host, owner, name) };
+    if exec.is_some() || vertex_host.is_some() {
+        // SAFETY: the two are the game's functions
+        unsafe { crate::ge::list2d::ee_ge_draw2d_init(exec, vertex_host) };
+    }
+    p
+}
+
 /// `~GERasterizer()`.
 ///
 /// # Safety

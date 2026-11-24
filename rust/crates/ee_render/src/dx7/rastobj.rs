@@ -1197,6 +1197,43 @@ pub unsafe extern "C" fn ee_dx7r_new(
     EeDx7Rasterizer::create(host, owner as usize, base, tnl)
 }
 
+/// `GERasterizer(name, tnl)`'s DX7 half: the DX7 rasterizer on `base`, which the 2D draw list then draws on for
+/// `owner` (the C++ rasterizer).
+///
+/// # Safety
+/// As [`ee_dx7r_new`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_new_direct(
+    host: EeDx7RastHostFn,
+    owner: *mut c_void,
+    base: *mut EeGeRasterizer,
+    tnl: bool,
+) -> *mut EeDx7Rasterizer {
+    // SAFETY: the caller's contract
+    unsafe {
+        let p = ee_dx7r_new(host, owner, base, tnl);
+        crate::ge::list2d::ee_ge_draw2d_direct(owner, p.cast());
+        p
+    }
+}
+
+/// `~GERasterizer()` whole: with a DX7 rasterizer the 2D draw list forgets `owner` and the DX7 records go; then the
+/// base (its debug font and text, the drawing lock).
+///
+/// # Safety
+/// `base` is live, `dx7` live or null; neither is used again.
+#[no_mangle]
+pub unsafe extern "C" fn ee_dx7r_destroy_all(owner: *mut c_void, base: *mut EeGeRasterizer, dx7: *mut EeDx7Rasterizer) {
+    // SAFETY: the caller's contract
+    unsafe {
+        if !dx7.is_null() {
+            crate::ge::list2d::ee_ge_draw2d_direct(owner, core::ptr::null_mut());
+            ee_dx7r_destroy(dx7);
+        }
+        crate::ge::rastobj::ee_ge_rast_destroy(base);
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_destroy(p: *mut EeDx7Rasterizer) {
     // SAFETY: the caller's contract

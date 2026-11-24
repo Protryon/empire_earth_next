@@ -2386,6 +2386,17 @@ void ee_ge_prim_assign(EeGePrim *p, const EeGePrim *from);
 /// `host` answers every operation for `owner`; `name` is a C++ `UString`.
 EeGeRasterizer *ee_ge_rast_new(EeGeRastHostFn host, void *owner, const void *name);
 
+/// `GERasterizer(name)` whole: the rasterizer, then the 2D draw list's executor and vertex host set (the game's;
+/// `None` leaves the list as it is, as a rasterizer made in a test does).
+///
+/// # Safety
+/// As [`ee_ge_rast_new`].
+EeGeRasterizer *ee_ge_rast_new_drawing(EeGeRastHostFn host,
+                                       void *owner,
+                                       const void *name,
+                                       EeGeDraw2DExecFn exec,
+                                       EeGeDraw2DVertexHost vertex_host);
+
 /// `~GERasterizer()`.
 ///
 /// # Safety

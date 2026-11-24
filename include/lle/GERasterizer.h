@@ -226,7 +226,8 @@ public:
     // a rasterizer with no device (tools/eemodel/storegate: model and texture loads, no draws)
     GERasterizer(const UString& inName, bool inTnL);
     explicit GERasterizer(const UString& inName);
-    ~GERasterizer();                        // slot 0x114
+    // destroys the DX7 records (the 2D draw list forgetting them first), then the debug font and text and the drawing lock
+    ~GERasterizer() { ee_dx7r_destroy_all(this, this->mRust, this->mDX7); }   // slot 0x114
     // The plug-in's access to the base's state (the census of R4.3's twelfth part: no member is read directly)
     EeGeRastScreen* GetScreenState(unsigned long inScreen) const { return ee_ge_rast_screen(this->mRust, inScreen); }
     // The original's eight pure slots after the dtor (vtable 0x10097954 ends at 0x138; DX7HRDisplay.dll's exports
