@@ -87,8 +87,6 @@
 #include "ee/EEComputerPlayer.h"
 
 
-// EEWheel.cpp's cdecl helper (below); original 0x23cd32 fills a real GE2DPoint.
-bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint);
 
 // The genuine existing free predicate at 0x2414d2 (defined in EEFOFindNewTargetNearOldTarget.cpp).
 
@@ -102,18 +100,6 @@ const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 
 // 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
 
-// Creates a complex unit with every unit, mobile-unit and reference state reset to defaults (out of line: the members'
-// destructors need the complete EEUnitVectorItem)
-EEComplexUnit::EEComplexUnit()
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_CONSTRUCT_COMPLEX, static_cast<EEUnit*>(this), NULL, 0, 0);   // eu_more.rs
-}
-
-// Destroys the unit, freeing its turret angles, orbitals, wheels and model
-EEComplexUnit::~EEComplexUnit()
-{
-    this->FreeNode();
-}
 
 // chain at 0x5f5954 (wrapper)
 //   object 0x963198  ctor ??0?$UMemoryPool@VEEComplexUnit@@@@QAE@XZ  dtor ?Release@?$UMemoryPool@VEEComplexUnit@@@@QAE_NXZ
@@ -140,69 +126,15 @@ extern char gEmptyString[];
 // (cu_body.rs; the thresholds there: 0x4c76f0)
 
 
-// New (debugging): EE_UNIT_POOL=0 takes every unit from operator new instead of the pool (UMemoryPool::Delete deletes
-// what no chunk holds). A pool slot is reused at once, so a unit released one reference too early is read as the
-// next unit given that slot, unseen by AddressSanitizer; from the heap, ASan reports the first stale read with the
-// stack of the release that freed it (tools/play_posix.py sets it). The leak reports then list no unit.
-static EEComplexUnit* EENewPoolUnit()
-{
-    static const bool sPoolOff = [] {
-        const char* theValue = getenv("EE_UNIT_POOL");
-        return theValue != NULL && theValue[0] == '0';
-    }();
-    return sPoolOff ? new EEComplexUnit : EEComplexUnit::sMemoryPool.New();
-}
-
-// Takes a unit from the pool and resets it to defaults
-EEComplexUnit* EEComplexUnit::Create()
-{
-    EEComplexUnit* theUnit = EENewPoolUnit();
-    theUnit->Reset();
-    theUnit->ResetEEUnit();
-    theUnit->ResetEEComplexUnit(true, false);
-    return theUnit;
-}
-
-// Sizes the unit pool and the unit-list node pool (twice the chunk size); returns the unit pool's result
-bool EEComplexUnit::SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
-{
-    UList<EEComplexUnit*>::sNodePool.SetSize(inChunkSize * 2, inMaxChunks, 3);
-    return EEComplexUnit::sMemoryPool.SetSize(inChunkSize, inMaxChunks, 1);
-}
-
-// Takes a unit from the pool and initialises it for a class, placement, player and goal queue count
-EEComplexUnit* EEComplexUnit::Create(EEUnitClass* inClass, const GETransformation& inTransformation,
-                                     EEPlayer* inPlayer, unsigned long inGoalQueueCount)
-{
-    EEComplexUnit* theUnit = EENewPoolUnit();
-    theUnit->Init(inClass, inTransformation, inPlayer, inGoalQueueCount);
-    return theUnit;
-}
 
 
-// Empties the garrison count and population
-void EEComplexUnit::ClearGarrison()
-{
-    this->mGarrisonPopulation = 0;
-    this->mGarrisonCount = 0;
-}
-
-// Dumps the unit pool's statistics and releases the pool
-void EEComplexUnit::ReleasePool()
-{
-    EEComplexUnit::sMemoryPool.DumpStats(false);
-    EEComplexUnit::sMemoryPool.Release();
-}
 
 // Clears every used pool unit's reference count. The original also built a "!Leaking Unit" line per unit and walked
 // the reference-counter buckets, but its report was compiled away: neither had an effect (provisional name, from
 // Empire Earth.cpp)
 void EEReportLeakingUnits()
 {
-    std::vector<EEComplexUnit*> theUnits;
-    EEComplexUnit::sMemoryPool.GetUsed(theUnits);
-    for (long i = (long)theUnits.size() - 1; i >= 0; i--)
-        theUnits[i]->mReferenceCount = 0;
+    ee_units_cu_tiny(EE_UNITS_CU_T_DO_REPORT_LEAKING, NULL, NULL, 0, 0, 0.0f, 0.0f, 0.0f);   // u12a_small.rs
 }
 
 // Writes every used pool unit to the dump file with its class, tile, id, action and growth
@@ -219,19 +151,6 @@ static void EEDumpWrite(void* inFile, const char* inText, size_t inLength)
     fwrite(inText, 1, inLength, static_cast<FILE*>(inFile));
 }
 
-// Returns whether an area effect of the given kind acts on the unit
-bool EEComplexUnit::HasEffect(long inKind)
-{
-    EEGraphicEffect* theEffect = NULL;
-    return this->GetEffect(inKind, theEffect);
-}
-
-
-// Returns the unit's model, or the player's foundation graphic for a foundation
-EEModel* EEComplexUnit::GetModel()
-{
-    return !this->mIsFoundation ? this->GetStats()->mModel : EEGetPlayerClassGraphic(this->GetPlayer(), this->GetUnitClass());
-}
 
 
 
@@ -299,54 +218,8 @@ bool EEUnitClass::IsAircraft()
     return this->mAirTrafficType != 0 && !this->IsLandBuilding() && this->mCategory != kUnitCategoryNavalBuilding && this->mCategory != kUnitCategorySpaceBuilding;
 }
 
-// Sets the unit's model, scaled by its class tile size
-void EEComplexUnit::SetScaledModel(GEModel* inModel)
-{
-    this->mPhysicalModel.SetModel(inModel);
-    this->mPhysicalModel.SetScale(this->GetUnitClass()->GetTileSize());
-}
-
-// Moves the unit and its model to an x/y point
-void EEComplexUnit::SetLocationXY(float inX, float inY, bool inUpdateTiles)
-{
-    this->MoveToLocation(inX, inY, inUpdateTiles);
-    this->mPhysicalModel.SetLocationXY(inX, inY);
-}
-
-// Moves the unit and its model to a 3D point
-void EEComplexUnit::SetLocation(const GE3DPoint& inLocation, bool inUpdateTiles)
-{
-    this->MoveToLocation(inLocation.GetX(), inLocation.GetY(), inUpdateTiles);
-    this->mPhysicalModel.SetLocationXYZ(inLocation);
-}
-
-// Moves the unit and sets its model's transformation
-void EEComplexUnit::SetTransformation(const GETransformation& inTransformation, bool inUpdateTiles)
-{
-    this->MoveToLocation(inTransformation.GetX(), inTransformation.GetY(), inUpdateTiles);
-    this->mPhysicalModel.SetLocation(inTransformation);
-}
-
-// Returns true if the unit can hit a target from where it stands (melee contact, range, or a ballistic shot from
-// any weapon tag point; a legionnaire's special attack uses its heal range)
-bool EEComplexUnit::IsInReach(EEUnit* inTarget)
-{
-    EECombatHostReadScope theScope;
-    uint32_t theTagBefore = (uint32_t)this->mWeaponTagPoint;
-    // ee_combat reads.rs in_reach over the C++ host (EECombatGoals.cpp); CBQR records the outcome
-    bool theReach = EECombatIsInReach(this, inTarget);
-    if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_IN_REACH, this, inTarget, theReach, theTagBefore, (uint32_t)this->mWeaponTagPoint);
-    return theReach;
-}
 
 
-// Moves the unit's area effects to its position and updates them for the elapsed time
-void EEComplexUnit::UpdateAreaEffects(unsigned long inValue)
-{
-    GE2DPoint thePoint(this->mPhysicalModel.GetLocation().GetX(), this->mPhysicalModel.GetLocation().GetY());
-    this->mAreaEffects.MoveAndUpdate(thePoint, (float)inValue);
-}
 
 
 // Returns the number of wheels on the graphic object
@@ -483,6 +356,26 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     FILE* theFile = EECuObject<FILE>(inA);
     float* f = *ioF;
     switch (inOp) {
+    // u12a_small.rs's statements (units round 12)
+    case EE_UNITS_CU_T_MOVE_TO_LOCATION: theUnit->MoveToLocation(f[0], f[1], inB != 0); return 0;
+    case EE_UNITS_CU_T_PM_SET_XY: theUnit->mPhysicalModel.SetLocationXY(f[0], f[1]); return 0;
+    case EE_UNITS_CU_T_PM_SET_XYZ: theUnit->mPhysicalModel.SetLocationXYZ(GE3DPoint(f[0], f[1], f[2])); return 0;
+    case EE_UNITS_CU_T_PM_SET_LOCATION: theUnit->mPhysicalModel.SetLocation(*EECuObject<GETransformation>(inA)); return 0;
+    case EE_UNITS_CU_T_PM_SET_MODEL: theUnit->mPhysicalModel.SetModel(EECuObject<GEModel>(inA)); return 0;
+    case EE_UNITS_CU_T_PM_SET_TILE_SCALE: theUnit->mPhysicalModel.SetScale(theUnit->GetUnitClass()->GetTileSize()); return 0;
+    case EE_UNITS_CU_T_POOL_NEW: return (int64_t)(uintptr_t)(inB != 0 ? new EEComplexUnit : EEComplexUnit::sMemoryPool.New());
+    case EE_UNITS_CU_T_INIT: theUnit->Init(EECuObject<EEUnitClass>(EECuObject<uint64_t>(inA)[0]), *EECuObject<GETransformation>(EECuObject<uint64_t>(inA)[1]), EECuObject<EEPlayer>(EECuObject<uint64_t>(inA)[2]), (unsigned long)EECuObject<uint64_t>(inA)[3]); return 0;
+    case EE_UNITS_CU_T_NODE_POOL_SET_SIZE: UList<EEComplexUnit*>::sNodePool.SetSize((unsigned long)inB, (unsigned long)inC, 3); return 0;
+    case EE_UNITS_CU_T_POOL_SET_SIZE: return EEComplexUnit::sMemoryPool.SetSize((unsigned long)inB, (unsigned long)inC, 1);
+    case EE_UNITS_CU_T_POOL_DUMP_STATS: EEComplexUnit::sMemoryPool.DumpStats(false); return 0;
+    case EE_UNITS_CU_T_POOL_RELEASE: EEComplexUnit::sMemoryPool.Release(); return 0;
+    case EE_UNITS_CU_T_LEAKED_ZERO_REFERENCES: sCuLeaked[(size_t)inB]->mReferenceCount = 0; return 0;
+    case EE_UNITS_CU_T_WEAPON_TAG: return (uint32_t)theUnit->mWeaponTagPoint;
+    case EE_UNITS_CU_T_IN_REACH: return EECombatIsInReach(theUnit, EECuObject<EEUnit>(inA));
+    case EE_UNITS_CU_T_CAPTURE_IN_REACH: EECombatCaptureHostRead(EE_COMBAT_HR_IN_REACH, theUnit, EECuObject<EEUnit>(inA), inB != 0, (uint32_t)inC, (uint32_t)theUnit->mWeaponTagPoint); return 0;
+    case EE_UNITS_CU_T_READ_ENTER: return ee_combat_host_read_enter(0);
+    case EE_UNITS_CU_T_READ_LEAVE: ee_combat_host_read_leave(0); return 0;
+    case EE_UNITS_CU_T_SET_OWNER_FIELD: theUnit->mOwner = theOther; return 0;
     // cu_small.rs's
     case EE_UNITS_CU_S_ANIMATION_MODEL: theUnit->mPhysicalModel.SetModel(theUnit->GetModel()->mModels[theUnit->mAnimation]); return 0;
     case EE_UNITS_CU_S_SET_MODEL_FRAME: theUnit->mPhysicalModel.SetFrame((unsigned long)inB); return 0;
@@ -965,7 +858,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_DUMP_TILE: return inB == 0 ? theUnit->GetTileX() : theUnit->GetTileY();
     case EE_UNITS_CU_DUMP_ANGULAR_VELOCITY: f[0] = inB == 0 ? theUnit->mAngularVelocity.GetYaw() : inB == 1 ? theUnit->mAngularVelocity.GetPitch() : theUnit->mAngularVelocity.GetRoll(); return 0;
     case EE_UNITS_CU_DUMP_QUEUE_SIZE: return (int64_t)(inB == 0 ? theUnit->mBuildQueue.size() : theUnit->mCitizenBuildQueue.size());
-    case EE_UNITS_CU_DUMP_COLLISION_TILE: return inB == 0 ? theUnit->mCollisionTile.mX : theUnit->mCollisionTile.GetY();
+    case EE_UNITS_CU_DUMP_COLLISION_TILE: return inB == 0 ? theUnit->mCollisionTile.mX : theUnit->mCollisionTile.mY;
     case EE_UNITS_CU_DUMP_FRAME: return (int64_t)theUnit->mPhysicalModel.GetFrame();
     case EE_UNITS_CU_DUMP_PROJECTILE_START: f[0] = inB == 0 ? theUnit->mProjectileStart.GetX() : inB == 1 ? theUnit->mProjectileStart.GetY() : theUnit->mProjectileStart.GetZ(); return 0;
     case EE_UNITS_CU_DUMP_LOCATION_ELEMENT: f[0] = theUnit->mPhysicalModel.GetLocation().GetElement((unsigned long)inB, (unsigned long)inC); return 0;
@@ -1017,7 +910,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_DESCRIBE_COLLISION: sprintf(sCuText, "coll %d", theUnit->mCollisionState); return 0;
     case EE_UNITS_CU_COLLISION_STATE: return theUnit->mCollisionState;
     case EE_UNITS_CU_DESCRIBE_COLLISION_TILE:
-        sprintf(sCuText, " / tile(%ld,%ld)", theUnit->mCollisionTile.GetX(), theUnit->mCollisionTile.GetY());
+        sprintf(sCuText, " / tile(%ld,%ld)", theUnit->mCollisionTile.mX, theUnit->mCollisionTile.mY);
         return 0;
     case EE_UNITS_CU_DESCRIBE_COLON: *EECuObject<UWideString>(inA) += ":"; return 0;
     case EE_UNITS_CU_DESCRIBE_VELOCITY: sprintf(sCuText, "vel %.4f:", theUnit->mVelocity); return 0;
@@ -1450,17 +1343,6 @@ extern "C" int64_t ee_units_wp_host(int32_t inOp, uint64_t inUnit, uint64_t inAr
     return 0;
 }
 
-// Copies a replaced unit's state into this one: position, timers, scaled hit points, goals, cargo, links
-void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_COPY_FROM, this, (int64_t)(uintptr_t)EEUnitCast<EEComplexUnit>(inUnit), (int64_t)(uintptr_t)inUnit, 0);   // cu_life.rs
-}
-
-// Returns the goals of a goal queue
-EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
-{
-    return this->mGoalQueues[inIndex].mGoals;
-}
 
 // ---- EEWheel.cpp's bodies (0x23c83a..0x23ceca: the wheels' update and some cdecl unit helpers; units round 11:
 // the file is gone)

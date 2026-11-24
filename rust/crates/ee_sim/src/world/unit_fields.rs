@@ -58,8 +58,9 @@ pub struct EeUnitsUnitFields {
 }
 
 /// `EEComplexUnit`'s plain members (ee/EEUnit.h), in the class's order, then its pointer members (units round 10: the
-/// C++ reads them by name, typed `class X*`; the layout's offsets of them are derived here, layout.rs); its effect
-/// handles (`mConversionEffect`, `mHealEffect`, `mFireEffect`), points, containers and parts stay C++ members.
+/// C++ reads them by name, typed `class X*`; the layout's offsets of them are derived here, layout.rs); then (units round
+/// 12) its collision tile and effect handles; its patrol group (the units module's type), points, orientations (C++ classes the generated header
+/// cannot name by value), containers and parts stay C++ members.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeUnitsComplexUnitFields {
@@ -223,6 +224,31 @@ pub struct EeUnitsComplexUnitFields {
     pub mBlockingUnit: *mut EeCxxRtsUnit,
     /// +0x25c
     pub mSound: *mut EeCxxSoundInstance,
+    /// the tile of the last collision (-10000: none; units round 12, with the handles below)
+    pub mCollisionTile: EeUnitsTilePoint,
+    /// saved; -1: none (`ReleaseConversionEffect`)
+    pub mConversionEffect: EeUnitsEffectHandle,
+    /// saved; -1: none (`ReleaseHealEffect`)
+    pub mHealEffect: EeUnitsEffectHandle,
+    /// the fire functor's effect on the unit (saved; 0: none)
+    pub mFireEffect: EeUnitsEffectHandle,
+}
+
+/// A tile as two C++ `long`s (`EEComplexUnit::mCollisionTile`; the layout of a `U2DPoint<long>`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeUnitsTilePoint {
+    pub mX: c_long,
+    pub mY: c_long,
+}
+
+/// An effect's handle (units round 12: the C++ `EEEffectHandle`, rust/cbindgen.toml's rename; ee/EEEffect.h has its
+/// comparisons and the "no effect" constant). A struct, not an integer: the original compares and copies it through
+/// memory.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeUnitsEffectHandle {
+    pub mValue: u32,
 }
 
 /// `EEComplexUnit::mBuildQueue`'s element (units round 11: the C++ `EEProductionEntry`, rust/cbindgen.toml's rename): a

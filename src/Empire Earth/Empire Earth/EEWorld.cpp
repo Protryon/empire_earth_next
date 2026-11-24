@@ -265,15 +265,6 @@ void EEWorld::ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion,
     ee_gamecpp_world_replace_player(this, inIndex, inMajorVersion, inMinorVersion, inMap);
 }
 
-// Resets the unit's collision state, collision tile and collision resolution count
-// (an EEComplexUnit member defined here: ReplacePlayer and the unit change call it; provisional name)
-void EEComplexUnit::ClearCollisionState()
-{
-    this->mCollisionState = 0;
-    this->mCollisionTile.mY = this->mCollisionTile.mX = -10000;
-    this->mCollisionResolutionCount = 0.0f;
-}
-
 // Rebuilds the teams from diplomacy (one per non-observer player, merged by mutual alliances) and sets Gaia and every
 // player at war with each other
 void EEWorld::RebuildTeams()

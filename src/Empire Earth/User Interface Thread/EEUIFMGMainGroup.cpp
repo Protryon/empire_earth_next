@@ -56,12 +56,6 @@ EEUIFMGMainGroup::~EEUIFMGMainGroup()
 // (EETechTreeNode::GetHotKey and EEButtonObject::GetHotKey, the inline COMDATs the original emitted here: their
 // classes' units, Tech Tree/EETechTreeNode.cpp and Database/EEButtonObject.cpp)
 
-// Returns the citizen's queued build target at an index
-EEUnit* EEComplexUnit::GetCitizenBuildTarget(unsigned long inIndex)
-{
-    return this->mCitizenBuildQueue[inIndex];
-}
-
 // The panel groups' values (ee_screens panel_groups_ffi.rs, which prints their texts): each one call, no logic
 extern "C" int32_t ee_screenscpp_group_conversions() { return gWorld.GetCurrentPlayer()->mSavedGroups.GetLastValue(5); }
 extern "C" int32_t ee_screenscpp_group_conversions_max() { return gWorldTable.GetLongValue(kWorldConversionsStatisticMax); }

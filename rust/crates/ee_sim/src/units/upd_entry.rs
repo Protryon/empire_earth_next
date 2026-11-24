@@ -4,15 +4,31 @@
 //! `ee_units_upd_read` and `ee_units_upd_act`. ActionChanged's USST notes (kind 13) bracket the sequence.
 
 use crate::units::update::EeUnitsUpdateHost;
+use crate::world::unit_fields::{EeCxxComplexUnit, EeCxxUnit, EeCxxUnitClass};
 
-/// EEUnitUpdate.cpp's `EEUpdateContext` (four pointers; asserted there).
+/// EEUnitUpdate.cpp's `EEUpdateContext` (units round 12: this record, rust/cbindgen.toml's rename): the class, the
+/// unit, an ActionChanged's healee found (`EE_UNITS_ACT_FIND_HEALEE`) and the nearest airport found
+/// (`EE_UNITS_ACT_FIND_NEAREST_AIRPORT`).
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[allow(non_snake_case)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EeUnitsUpdateContext {
-    pub class: u64,
-    pub unit: u64,
-    pub healee: u64,
-    pub airport: u64,
+    pub mClass: *mut EeCxxUnitClass,
+    pub mUnit: *mut EeCxxComplexUnit,
+    pub mHealee: *mut EeCxxUnit,
+    pub mAirport: *mut EeCxxComplexUnit,
+}
+
+impl EeUnitsUpdateContext {
+    /// A sequence's fresh context: nothing found yet.
+    pub fn new(class: u64, unit: u64) -> Self {
+        Self {
+            mClass: class as usize as *mut EeCxxUnitClass,
+            mUnit: unit as usize as *mut EeCxxComplexUnit,
+            mHealee: std::ptr::null_mut(),
+            mAirport: std::ptr::null_mut(),
+        }
+    }
 }
 
 /// The sequences and the unit's id, as a trait (the game's; the tests' mock).
@@ -34,7 +50,7 @@ pub fn host_of(
         ctx: context as *mut EeUnitsUpdateContext as *mut core::ffi::c_void,
         read,
         act,
-        class: context.class,
+        class: context.mClass as usize as u64,
     }
 }
 
@@ -46,7 +62,7 @@ pub fn class_update<E: UpdEntry + ?Sized>(
     unit: u64,
     host: impl FnOnce(&mut EeUnitsUpdateContext) -> EeUnitsUpdateHost,
 ) {
-    let mut context = EeUnitsUpdateContext { class, unit, healee: 0, airport: 0 };
+    let mut context = EeUnitsUpdateContext::new(class, unit);
     let h = host(&mut context);
     let id = e.unit_id(unit);
     e.update(kind, id, unit, &h);
@@ -62,7 +78,7 @@ pub fn class_action_changed<E: UpdEntry + ?Sized>(
 ) {
     let id = e.unit_id(unit);
     e.note_action_begin(id);
-    let mut context = EeUnitsUpdateContext { class, unit, healee: 0, airport: 0 };
+    let mut context = EeUnitsUpdateContext::new(class, unit);
     let h = host(&mut context);
     e.action_changed(kind, id, unit, &h);
     e.note_action_end();
@@ -169,13 +185,7 @@ mod tests {
     fn the_update_runs_over_a_fresh_context_of_the_class_and_unit() {
         let mut m = Mock::default();
         class_update(&mut m, 3, 0x10, 0x20, |c| host_of(c, read, act));
-        assert_eq!(
-            m.log,
-            [format!(
-                "update 3 33 32 16 {:?}",
-                EeUnitsUpdateContext { class: 0x10, unit: 0x20, healee: 0, airport: 0 }
-            )]
-        );
+        assert_eq!(m.log, [format!("update 3 33 32 16 {:?}", EeUnitsUpdateContext::new(0x10, 0x20))]);
     }
 
     #[test]
