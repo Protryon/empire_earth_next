@@ -44,7 +44,7 @@ extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local s
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 void CreatePlaneModels();                   // 0x1030ab (EEEffect.cpp)
 
-// (EEConvertGameFile and EEUpdateSavedGames, "update_saved_games": ee_game gamecpp saved_games.rs over EECore10OpE2)
+// (EEConvertGameFile and EEUpdateSavedGames, "update_saved_games": ee_game gamecpp saved_games.rs over EECommandLineOp)
 
 // Runs the command-line commands after startup; without one, starts a client and opens the main menu. Returns
 // false when the game should quit (update_saved_games) (ee_game gamecpp entry.rs; the original's four file statics
@@ -60,7 +60,7 @@ bool EEParseCommandLine(const char* inCommandLine)
 #define SPEC ((FSFileSpec*)p)
 #define SERVER static_cast<EEServer*>(gCommunications)
 
-// The command line's C++ calls and members (EeGameCpp's lane E section; Empire Earth.cpp's EECore9OpE default): one
+// The command line's C++ calls and members (EeGameCpp's lane E section; EEPWorldHelper.cpp's EEPWorldOp default): one
 // statement each; the end of the chain
 
 int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEROUnits.cpp
@@ -119,22 +119,7 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
         break;
     case O::EntryStartLoadingInput: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
         break;
-    default: return EERoUnitsOp(inOp, p, a, f);
-    }
-    return 0;
-}
-
-// ------------------------------------------------------------------------- round 10, lane E: saved_games.rs's C++
-
-#define USTRA(k) (*(UString*)a[k])
-
-int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
-
-// the C++ calls and members of "update_saved_games" (gamecpp saved_games.rs): one statement each
-int64_t EECore10OpE2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
+    // "update_saved_games" (gamecpp saved_games.rs)
     case O::UsgWorldWriteLock: gWorld.mLock->WriteLock();
         break;
     case O::UsgWorldWriteUnlock: gWorld.mLock->WriteUnlock();
@@ -162,7 +147,7 @@ int64_t EECore10OpE2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::UsgCameraUpdate: gWorld.mCameraControl.Update(f[0]);
         break;
     case O::UsgSave: return SaveGame((const char*)a[0], (unsigned long)a[1], false, (const char*)a[2]);
-    default: return EECore10OpE3(inOp, p, a, f);
+    default: return EERoUnitsOp(inOp, p, a, f);
     }
     return 0;
 }

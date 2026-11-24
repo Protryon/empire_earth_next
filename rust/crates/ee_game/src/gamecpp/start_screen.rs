@@ -37,7 +37,7 @@ impl StartScreen {
     /// In full screen only: starts the splash thread and waits until it has painted (or ended: no bitmap, no
     /// window; the original waited forever then).
     pub fn start(&mut self) {
-        if !cfg!(windows) || h(O::RunSplashFullScreen, 0, &[]) == 0 {
+        if !cfg!(windows) || h(O::PrefFullScreen, 0, &[]) == 0 {
             return;
         }
         PAINTED.store(false, Ordering::SeqCst);
@@ -52,7 +52,7 @@ impl StartScreen {
 
     /// In full screen only: tells the thread to quit and waits for it to end.
     pub fn stop(&mut self) {
-        if !cfg!(windows) || h(O::RunSplashFullScreen, 0, &[]) == 0 {
+        if !cfg!(windows) || h(O::PrefFullScreen, 0, &[]) == 0 {
             return;
         }
         self.quit.store(true, Ordering::SeqCst);

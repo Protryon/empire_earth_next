@@ -36,9 +36,7 @@ pub const EE_GAME_STORAGE_FACTOR: usize = 2;
 
 // The objects' sizes on Windows (`sizeof`: build/clang/layout.json; UString 24, UWideString 32, std::vector 24);
 // each storage is EE_GAME_STORAGE_FACTOR times its size.
-pub const EE_GAME_SIZE_gU530BE0: usize = 24;
 pub const EE_GAME_SIZE_gU530BC8: usize = 32;
-pub const EE_GAME_SIZE_gExecutableName: usize = 24;
 pub const EE_GAME_SIZE_gSavedGameExtension: usize = 24;
 pub const EE_GAME_SIZE_gScenarioExtension: usize = 24;
 pub const EE_GAME_SIZE_gU530B88: usize = 24;
@@ -76,14 +74,6 @@ pub const EE_GAME_SIZE_gGraphicsThreadName: usize = 24;
 pub const EE_GAME_SIZE_gDataPreLoadingThreadName: usize = 24;
 pub const EE_GAME_SIZE_gMousePointerThreadName: usize = 24;
 pub const EE_GAME_SIZE_gScenarioEditorThreadName: usize = 24;
-pub const EE_GAME_SIZE_gUserInterfaceThreadName: usize = 24;
-pub const EE_GAME_SIZE_gCommSendThreadName: usize = 24;
-pub const EE_GAME_SIZE_gCommRecvThreadName: usize = 24;
-pub const EE_GAME_SIZE_gCommMainThreadName: usize = 24;
-pub const EE_GAME_SIZE_gCommLagLossThreadName: usize = 24;
-pub const EE_GAME_SIZE_gCommRecPlayThreadName: usize = 24;
-pub const EE_GAME_SIZE_gSoundScavengerThreadName: usize = 24;
-pub const EE_GAME_SIZE_gCDAudioThreadName: usize = 24;
 pub const EE_GAME_SIZE_gMultiplayerString: usize = 24;
 pub const EE_GAME_SIZE_gUnitClassTable: usize = 24;
 pub const EE_GAME_SIZE_EEUnitClassUnitTypes: usize = 24;
@@ -116,9 +106,7 @@ macro_rules! ee_objects {
 }
 
 ee_objects! {
-    gU530BE0: EE_GAME_SIZE_gU530BE0 => "?gU530BE0@@3VUString@@A", "gU530BE0";
     gU530BC8: EE_GAME_SIZE_gU530BC8 => "?gU530BC8@@3VUWideString@@A", "gU530BC8";
-    gExecutableName: EE_GAME_SIZE_gExecutableName => "?gExecutableName@@3VUString@@A", "gExecutableName";
     gSavedGameExtension: EE_GAME_SIZE_gSavedGameExtension => "?gSavedGameExtension@@3VUString@@A", "gSavedGameExtension";
     gScenarioExtension: EE_GAME_SIZE_gScenarioExtension => "?gScenarioExtension@@3VUString@@A", "gScenarioExtension";
     gU530B88: EE_GAME_SIZE_gU530B88 => "?gU530B88@@3VUString@@A", "gU530B88";
@@ -168,18 +156,6 @@ ee_objects! {
         => "?gMousePointerThreadName@@3VUString@@A", "gMousePointerThreadName";
     gScenarioEditorThreadName: EE_GAME_SIZE_gScenarioEditorThreadName
         => "?gScenarioEditorThreadName@@3VUString@@A", "gScenarioEditorThreadName";
-    gUserInterfaceThreadName: EE_GAME_SIZE_gUserInterfaceThreadName
-        => "?gUserInterfaceThreadName@@3VUString@@A", "gUserInterfaceThreadName";
-    gCommSendThreadName: EE_GAME_SIZE_gCommSendThreadName => "?gCommSendThreadName@@3VUString@@A", "gCommSendThreadName";
-    gCommRecvThreadName: EE_GAME_SIZE_gCommRecvThreadName => "?gCommRecvThreadName@@3VUString@@A", "gCommRecvThreadName";
-    gCommMainThreadName: EE_GAME_SIZE_gCommMainThreadName => "?gCommMainThreadName@@3VUString@@A", "gCommMainThreadName";
-    gCommLagLossThreadName: EE_GAME_SIZE_gCommLagLossThreadName
-        => "?gCommLagLossThreadName@@3VUString@@A", "gCommLagLossThreadName";
-    gCommRecPlayThreadName: EE_GAME_SIZE_gCommRecPlayThreadName
-        => "?gCommRecPlayThreadName@@3VUString@@A", "gCommRecPlayThreadName";
-    gSoundScavengerThreadName: EE_GAME_SIZE_gSoundScavengerThreadName
-        => "?gSoundScavengerThreadName@@3VUString@@A", "gSoundScavengerThreadName";
-    gCDAudioThreadName: EE_GAME_SIZE_gCDAudioThreadName => "?gCDAudioThreadName@@3VUString@@A", "gCDAudioThreadName";
     // 0x562fd8 the WON password the UI thread keeps (constructed in UI Events/EEScreens.cpp)
     gMultiplayerString: EE_GAME_SIZE_gMultiplayerString => "?gMultiplayerString@@3VUString@@A", "gMultiplayerString";
     // the unit classes by type and the registered unit types (constructed in EEUnitClass.cpp; ee/EEUnit.h)
@@ -502,7 +478,7 @@ mod tests {
 
     #[test]
     fn symbols_and_counts() {
-        assert_eq!(OBJECTS.len(), 52);
+        assert_eq!(OBJECTS.len(), 42);
         assert_eq!(REFS.len(), 46);
         for (name, _, msvc) in OBJECTS {
             let plain = name.strip_prefix("EEUnitClassUnitTypes").map(|_| "sUnitTypes").unwrap_or(name);
@@ -586,7 +562,7 @@ mod tests {
             let Some(&(real, _)) = layout.get(class) else { continue };
             assert!(real as usize <= bytes * EE_GAME_STORAGE_FACTOR, "{name}: {class} is {real} bytes");
         }
-        for (class, bytes) in [("UString", EE_GAME_SIZE_gExecutableName), ("UWideString", EE_GAME_SIZE_gU52A280)] {
+        for (class, bytes) in [("UString", EE_GAME_SIZE_gSavedGameExtension), ("UWideString", EE_GAME_SIZE_gU52A280)] {
             assert_eq!(size(class), bytes as u64, "{class}");
         }
         assert_eq!(size("EEGameOptions"), core::mem::size_of::<GameOptionsM>() as u64);

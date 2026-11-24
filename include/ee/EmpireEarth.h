@@ -42,7 +42,6 @@ bool EECanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX
 class EEPlayer;
 class EESoundObject;
 unsigned long EEPlayForLocalPlayer(EEPlayer* inPlayer, EESoundObject* inSound);  // 0x14831c (cdecl; returns -1 or Play's result; EEMSavedGroupSelect; plays inSound for the current player)
-void EEAttackPlayers(long inPlayer, unsigned char inFlag);   // 0x13f5e9 (Empire Earth.cpp; EEMAttackPlayers)
 extern unsigned long gCollisionDetectionUnit;   // 0x4c2378 (unsigned: EEPhysics 0x15401e's fidiv) (initialised .data; EEMToggleCollisionDetection sets it)
 class UWideString;
 // 0x280a05 (Civilization Builder; EEMCivUpgradesRequested): requires <vector>
@@ -135,7 +134,6 @@ class GERectangle;
 // settings pass (0, 35, 1600, 1085) (provisional name)
 void EESetGameViewRectangle(const GERectangle& inRectangle);
 // (provisional names): what EEDataPreLoading::LoadGame (0xd439f) reads and calls
-void EECreateGameTimer();                  // 0x13fc7c (EEPhysics::CreateGameTimer; provisional name)
 extern bool& gLoadingSavedGame;
 extern bool& gWorldClearing;                // 0x5318d9 (EETown 0xac573 tests it after gLoadingSavedGame; provisional name)
 extern unsigned long& gEffectDetail;        // 0x53089c (compared with an effect's +0x84 before it plays: a detail level? EEUCProjectile::UpdateEffects; provisional name)

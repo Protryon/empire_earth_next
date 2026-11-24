@@ -1122,7 +1122,6 @@ pub enum EeGameCpp {
     RastSetWaterRipple,
     PhysTimerRunning,
     CpOnAttackPlayer,
-    SetCampaignChecksum,
     RegisterShutdownMutex,
     IsInitialize,
     WindowHide,
@@ -1142,7 +1141,6 @@ pub enum EeGameCpp {
     NewRoEffects,
     UStrFromW,
     FontCreate,
-    FontAt,
     PersistChecksum,
     PersistGeneric2,
     PersistMap,
@@ -1161,7 +1159,6 @@ pub enum EeGameCpp {
     UiUnloadIcons,
     UiMiniMapUnloadMedia,
     NewFsPath,
-    FileSpecSetDirStartupSub,
     FileSpecSetArchiveName,
     DataArchivePresent,
     FsPathAddArchive,
@@ -1219,7 +1216,6 @@ pub enum EeGameCpp {
     EffectTextureCount,
     EffectTextureDereference,
     TexturesRemoveAll,
-    ScreenRestoreOriginalMode,
     ScreenReleaseWindow,
     FontDereference,
     DisplayRasterizersClear,
@@ -1283,7 +1279,7 @@ pub enum EeGameCpp {
     CreateGameWindow,
     WindowSetFixedSize,
     WindowTextInputStart,
-    SaveOriginalVideoMode,
+    ScreenCurrentModeIndex,
     SeInitialize,
     MixerGet,
     MixerUse,
@@ -1359,7 +1355,6 @@ pub enum EeGameCpp {
     NewArtificialIntelligence,
     NewCheatCodes,
     NewGameTimer,
-    GameTimerPresent,
     DeleteGameTimer,
     ContinentsShutdown,
     DeleteCheatCodes,
@@ -2636,8 +2631,8 @@ pub enum EeGameCpp {
     TkStatsCostScale,
     TkJitFactor,
     //
-    // ---- round 9, lane E (EECore9OpE's cases)
-    // the entry wiring (entry.rs; Empire Earth.cpp's EECore9OpE, EECommandLine.cpp's EECommandLineOp)
+    // ---- round 9, lane E (were EECore9OpE's cases; now EEStartupOp's)
+    // the entry wiring (entry.rs; Empire Earth.cpp's EEStartupOp, EECommandLine.cpp's EECommandLineOp)
     RunRustInit,
     RunFixtureConfigure,
     RunInstanceMutex,
@@ -2653,7 +2648,6 @@ pub enum EeGameCpp {
     RunReleaseCivilizationPath,
     EntrySpecFirstFile,
     EntrySpecNextFile,
-    EntryDecryptExcluded,
     EntrySpecFileIsNot,
     EntrySpecVecNew,
     EntrySpecVecDelete,
@@ -2668,7 +2662,6 @@ pub enum EeGameCpp {
     EntrySpecFullPath,
     EntryUStrData,
     EntryUStrSet,
-    EntrySetNetworkFolder,
     EntryNeInitialize,
     EntryRegisterNeMessages,
     EntryRegisterEeMessages,
@@ -3248,10 +3241,9 @@ pub enum EeGameCpp {
     DkFrontClipping,
     DkRearClipping,
     //
-    // ---- round 10, lane E (EECore10OpE's cases)
-    // the start screen (start_screen.rs; Empire Earth.cpp's EECore10OpE)
-    RunSplashFullScreen,
-    // update_saved_games (saved_games.rs; EECommandLine.cpp's EECore10OpE2)
+    // ---- round 10, lane E (were EECore10OpE's and EECore10OpE2's)
+    // the start screen (start_screen.rs; PrefFullScreen)
+    // update_saved_games (saved_games.rs; EECommandLine.cpp's EECommandLineOp)
     UsgWorldWriteLock,
     UsgWorldWriteUnlock,
     UsgSetDirectory,

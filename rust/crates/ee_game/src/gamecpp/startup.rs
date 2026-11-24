@@ -10,7 +10,8 @@
 // the C++'s own casts and tests, kept as written
 #![allow(clippy::unnecessary_cast, clippy::bool_comparison, clippy::nonminimal_bool)]
 
-use std::ffi::{c_long, c_ulong, c_void};
+use std::ffi::{c_char, c_long, c_ulong, c_void, CStr};
+use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
 
 use ee_base::math::types::GeRectangle;
 use ee_base::util::fp;
@@ -82,6 +83,97 @@ const FONTS: [(u8, bool, i64, i64); 38] = [
     (3, false, 48, 1519),
     (3, false, 72, 1522),
 ];
+
+/// The font globals in [`FONTS`] order (were Empire Earth.cpp's `kFonts`).
+fn font_slot(k: usize) -> *mut *mut c_void {
+    use super::globals as g;
+    use core::ptr::addr_of_mut;
+    // (the addresses of the globals' storage: nothing is read or written here)
+    [
+        addr_of_mut!(g::gFontArial8),
+        addr_of_mut!(g::gFontArial9),
+        addr_of_mut!(g::gU531930),
+        addr_of_mut!(g::gU531934),
+        addr_of_mut!(g::gU531938),
+        addr_of_mut!(g::gFontArial16),
+        addr_of_mut!(g::gFontArial18),
+        addr_of_mut!(g::gFontArial20),
+        addr_of_mut!(g::gFontArial24),
+        addr_of_mut!(g::gFontArial36),
+        addr_of_mut!(g::gFontArial48),
+        addr_of_mut!(g::gFontArial72),
+        addr_of_mut!(g::gFontArialBold8),
+        addr_of_mut!(g::gFontArialBold9),
+        addr_of_mut!(g::gFontArialBold10),
+        addr_of_mut!(g::gFontArialBold12),
+        addr_of_mut!(g::gFontArialBold14),
+        addr_of_mut!(g::gFontArialBold16),
+        addr_of_mut!(g::gFontTimesNewRoman9),
+        addr_of_mut!(g::gFontTimesNewRoman10),
+        addr_of_mut!(g::gFontTimesNewRoman12),
+        addr_of_mut!(g::gFontTimesNewRoman14),
+        addr_of_mut!(g::gFontCourier8),
+        addr_of_mut!(g::gFontCourier10),
+        addr_of_mut!(g::gFontCourier12),
+        addr_of_mut!(g::gFontCourier14),
+        addr_of_mut!(g::gFontTahoma8),
+        addr_of_mut!(g::gU531994),
+        addr_of_mut!(g::gFontTahoma10),
+        addr_of_mut!(g::gFontTahoma12),
+        addr_of_mut!(g::gFontTahoma14),
+        addr_of_mut!(g::gFontTahoma16),
+        addr_of_mut!(g::gFontTahoma18),
+        addr_of_mut!(g::gFontTahoma20),
+        addr_of_mut!(g::gFontTahoma24),
+        addr_of_mut!(g::gFontTahoma36),
+        addr_of_mut!(g::gFontTahoma48),
+        addr_of_mut!(g::gFontTahoma72),
+    ][k]
+}
+
+/// The game's timer (was Empire Earth.cpp's `sTimer`, 0x5319ec): a `TMTimer*`, made with the game objects and
+/// handed to the physics.
+static GAME_TIMER: AtomicUsize = AtomicUsize::new(0);
+/// The video mode index found at start-up, restored at shutdown (was Empire Earth.cpp's `sOriginalVideoMode`,
+/// 0x52a1a8).
+static ORIGINAL_VIDEO_MODE: AtomicI64 = AtomicI64::new(0);
+/// The start-up's user folders under the start-up directory (were Empire Earth.cpp's `kStartupFolders`): data, its
+/// campaigns, saved games and scenarios, Users and its default.
+const STARTUP_FOLDERS: [&CStr; 6] =
+    [c"data\\", c"data\\Campaigns\\", c"data\\Saved Games\\", c"data\\Scenarios\\", c"Users\\", c"Users\\default\\"];
+
+/// `spec->SetDirectory(gStartupDirectory + STARTUP_FOLDERS[k])`.
+fn set_startup_folder(spec: P, k: usize) {
+    h(O::UsgSetDirectory, spec, &[pa(STARTUP_FOLDERS[k].as_ptr() as P)]);
+}
+
+/// `strtoul(text, NULL, 10)` (the C library's: white space, a sign, the digits; ULONG_MAX past its range).
+pub fn startup_strtoul(text: &[u8]) -> c_ulong {
+    let mut i = 0;
+    while i < text.len() && (text[i] == b' ' || (b'\t'..=b'\r').contains(&text[i])) {
+        i += 1;
+    }
+    let negative = i < text.len() && text[i] == b'-';
+    if i < text.len() && (text[i] == b'-' || text[i] == b'+') {
+        i += 1;
+    }
+    let mut value: c_ulong = 0;
+    let mut overflow = false;
+    while i < text.len() && text[i].is_ascii_digit() {
+        match value.checked_mul(10).and_then(|v| v.checked_add((text[i] - b'0') as c_ulong)) {
+            Some(v) => value = v,
+            None => overflow = true,
+        }
+        i += 1;
+    }
+    if overflow {
+        c_ulong::MAX
+    } else if negative {
+        value.wrapping_neg()
+    } else {
+        value
+    }
+}
 
 /// The fonts' release order (EEGraphicsShutdown): the Times New Roman fonts first, then the others in creation
 /// order.
@@ -238,7 +330,17 @@ pub extern "C" fn ee_gamecpp_startup_network_settings() {
     let s = Owned::new(O::StrNew, O::StrFree);
     for (k, id) in [0x32i64, 0x33, 0x34, 0x37, 0x36].into_iter().enumerate() {
         if h(O::ResString, s.0, &[id]) == KESE_OK {
-            h(O::SetCampaignChecksum, s.0, &[k as i64]);
+            // SAFETY: the string's text, read before the next C++ call
+            let text = unsafe { CStr::from_ptr(hp(O::EntryStrData, s.0, &[]) as *const c_char) };
+            let value = startup_strtoul(text.to_bytes()) as c_long;
+            use super::globals as g;
+            match k {
+                0 => g::set!(gAOCRomanChecksum, value),
+                1 => g::set!(gAOCPacificChecksum, value),
+                2 => g::set!(gAOCAsianChecksum, value),
+                3 => g::set!(gEEDemoChecksum, value),
+                _ => g::set!(gEELearningChecksum, value),
+            }
         }
     }
 }
@@ -312,8 +414,10 @@ pub extern "C" fn ee_gamecpp_startup_graphics() {
             h(O::ResString, resource_name.0, &[FONT_FAMILY_NAMES[family]]);
             h(O::UStrFromW, font_name.0, &[pa(resource_name.0)]);
         }
-        h(O::FontCreate, font_name.0, &[k as i64, bold as i64, size]);
-        verify(h(O::FontAt, 0, &[k as i64]) != 0, line);
+        let font = hp(O::FontCreate, font_name.0, &[bold as i64, size]) as *mut c_void;
+        // SAFETY: the font global's storage, written on the start-up thread as the C++ did
+        unsafe { *font_slot(k) = font };
+        verify(!font.is_null(), line);
     }
     let r = register_shutdown(graphics_shutdown);
     verify(r == KESE_OK, 1526);
@@ -384,14 +488,14 @@ pub extern "C" fn ee_gamecpp_startup_data_paths() {
     let data = hp(O::NewFsPath, 0, &[]);
     let civilizations = hp(O::NewFsPath, 0, &[]);
     h(O::FileSpecSetVolumeStartup, archive_file.0, &[]);
-    h(O::FileSpecSetDirStartupSub, archive_file.0, &[0]);
+    set_startup_folder(archive_file.0, 0);
     h(O::FileSpecSetArchiveName, archive_file.0, &[]);
     if h(O::DataArchivePresent, 0, &[]) != 0 {
         h(O::ArchiveSet, archive.0, &[pa(archive_file.0)]);
         h(O::FsPathAddArchive, data, &[pa(archive.0)]);
     }
     h(O::FileSpecSetVolumeStartup, directory.0, &[]);
-    h(O::FileSpecSetDirStartupSub, directory.0, &[0]);
+    set_startup_folder(directory.0, 0);
     h(O::FsPathAddDirectory, data, &[pa(directory.0)]);
     h(O::FileSpecSetVolumeStartup, directory.0, &[]);
     h(O::FileSpecSetCivilizationDir, directory.0, &[]);
@@ -443,7 +547,7 @@ pub extern "C" fn ee_gamecpp_startup_threads() {
     verify(crate::gamecpp::globals::have!(gGraphics), 2018);
     h(O::NewDataPreLoading, 0, &[]);
     verify(crate::gamecpp::globals::have!(gDataPreLoading), 2022);
-    h(O::NewPhysics, 0, &[]);
+    h(O::NewPhysics, GAME_TIMER.load(Ordering::Relaxed) as P, &[]);
     verify(crate::gamecpp::globals::have!(gPhysics), 2026);
     let r = register_shutdown(shutdown_threads);
     verify(r == KESE_OK, 2030);
@@ -573,10 +677,11 @@ pub extern "C" fn ee_gamecpp_startup_graphics_shutdown() {
         h(O::EffectTextureDereference, 0, &[i]);
     }
     h(O::TexturesRemoveAll, 0, &[]);
-    h(O::ScreenRestoreOriginalMode, 0, &[]);
+    h(O::ScreenSetMode, 0, &[screen(), ORIGINAL_VIDEO_MODE.load(Ordering::Relaxed)]);
     h(O::ScreenReleaseWindow, 0, &[]);
     for k in font_release_order() {
-        h(O::FontDereference, 0, &[k as i64]);
+        // SAFETY: the font global's storage
+        h(O::FontDereference, unsafe { *font_slot(k) } as P, &[]);
     }
     h(O::DisplayRasterizersClear, 0, &[]);
     h(O::DeleteGameWindow, 0, &[]);
@@ -806,7 +911,7 @@ pub extern "C" fn ee_gamecpp_startup_display() -> bool {
     h(O::WindowTextInputStart, 0, &[]);
     let r = h(O::ScreenCapture, 0, &[]);
     verify(r == KESE_OK, 3527);
-    h(O::SaveOriginalVideoMode, 0, &[]);
+    ORIGINAL_VIDEO_MODE.store(h(O::ScreenCurrentModeIndex, 0, &[]), Ordering::Relaxed);
     true
 }
 
@@ -939,11 +1044,11 @@ pub extern "C" fn ee_gamecpp_startup_database() {
     verify(r == KESE_OK, 0x47a);
     let directory = Owned::new(O::FileSpecNew, O::FileSpecDelete);
     // the user folders: data\Campaigns, data\Saved Games, data\Scenarios, Users, Users\default, its civilizations
-    for (k, volume) in [(1i64, true), (2, true), (3, false), (4, false), (5, false)] {
+    for (k, volume) in [(1usize, true), (2, true), (3, false), (4, false), (5, false)] {
         if volume {
             h(O::FileSpecSetVolumeStartup, directory.0, &[]);
         }
-        h(O::FileSpecSetDirStartupSub, directory.0, &[k]);
+        set_startup_folder(directory.0, k);
         if h(O::FileSpecIsDirectory, directory.0, &[]) == 0 {
             h(O::FileSpecCreateDirectory, directory.0, &[]);
         }
@@ -1013,8 +1118,9 @@ pub extern "C" fn ee_gamecpp_startup_game_objects() {
     verify(crate::gamecpp::globals::have!(gArtificialIntelligence), 0x514);
     h(O::NewCheatCodes, 0, &[]);
     verify(crate::gamecpp::globals::have!(gCheatCodes), 0x518);
-    h(O::NewGameTimer, 0, &[]);
-    verify(h(O::GameTimerPresent, 0, &[]) != 0, 1876);
+    let timer = h(O::NewGameTimer, 0, &[]);
+    GAME_TIMER.store(timer as usize, Ordering::Relaxed);
+    verify(timer != 0, 1876);
     let r = register_shutdown(delete_game_objects);
     verify(r == KESE_OK, 0x51f);
 }
@@ -1023,7 +1129,7 @@ pub extern "C" fn ee_gamecpp_startup_game_objects() {
 /// and the world and the game state cleared.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_delete_game_objects() {
-    h(O::DeleteGameTimer, 0, &[]);
+    h(O::DeleteGameTimer, GAME_TIMER.swap(0, Ordering::Relaxed) as P, &[]);
     h(O::ContinentsShutdown, 0, &[]);
     h(O::DeleteCheatCodes, 0, &[]);
     h(O::DeleteArtificialIntelligence, 0, &[]);

@@ -41,6 +41,7 @@
 #include "ee/EEStartingResources.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEEffectManager.h"
+#include "ee/EEGamePreferences.h"
 #include "ee/EERules.h"
 #include "rust/game/gamecpp.h"
 
@@ -272,12 +273,13 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     return 0;
 }
 
-double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // Empire Earth.cpp
+double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EERenderObject.cpp
 double EEGameStateOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
     case O::RulesSpeedFactor: return EERuleFloat(EEGetRules().mGameOptions.mSpeeds[a[0]].mFactor);
-    default: return EEStartupOpF(inOp, p, a, f);
+    case O::PrefMaxSounds: return gGamePreferences.mSettings.GetMaxNumberOfSounds();
+    default: return EECore9OpAF(inOp, p, a, f);
     }
 }

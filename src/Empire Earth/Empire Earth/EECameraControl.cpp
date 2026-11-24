@@ -197,7 +197,7 @@ bool EEIsSeen(EEUnit* inUnit)
 
 // ------------------------------------------------------------------------- round 10, lane D: the camera
 
-int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define CAM ((EECameraControl*)p)
@@ -283,7 +283,7 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::EcSetRearClipping: gViewport.SetRearClippingDistance(f[0]);
         break;
-    default: return EECore10OpE(inOp, p, a, f);
+    default: return EECore10OpE3(inOp, p, a, f);
     }
     return 0;
 }
