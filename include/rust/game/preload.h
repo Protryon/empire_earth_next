@@ -67,6 +67,20 @@ enum class EePreloadCpp : uint32_t {
   SetHasLoaded,
   ExitGame,
   DisplayError,
+  /// `TSScheduler::CreateEvent(<a0: 0 mThreadCreated, 1 mThreadDone, 2 mMessageQueueDone>) == keseOK`
+  CreateEvent,
+  /// `TSScheduler::DestroyEvent(<a0 as CreateEvent>)`
+  DestroyEvent,
+  /// `TSScheduler::CreateThread(mThread, EEDataPreLoading::Main, p) == keseOK`
+  CreateThread,
+  DestroyThread,
+  /// `mThread->SetPriority(a0) == keseOK`
+  SetThreadPriorityOk,
+  ThreadCreatedWait,
+  /// `mThread->SetName(gDataPreLoadingThreadName)`
+  SetThreadName,
+  /// `ESVERIFY_AT(a0 != 0, a1)`
+  Verify,
 };
 
 extern "C" {
@@ -83,6 +97,14 @@ void ee_preload_flush_queue(void *p);
 void ee_preload_start_queueing();
 
 /// The pre-loader made (`fresh`) or destroyed: the flags cleared, the queued messages dropped.
+/// The constructor's body: the three events, the queue reset, the thread made at `priority` and waited for, then
+/// named.
+void ee_preload_construct(void *p,
+                          long priority);
+
+/// The destructor's body: the events destroyed, the queue reset, the thread destroyed.
+void ee_preload_destruct(void *p);
+
 void ee_preload_reset();
 
 /// `WaitForMessageQueue`: waits until the thread has handled every message posted so far -> the post's result.

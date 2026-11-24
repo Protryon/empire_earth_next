@@ -76,11 +76,164 @@ pub fn end<W: UcbdWorld + ?Sized>(w: &mut W, on: bool, words: &[u32]) {
     state.calls += 1;
 }
 
+/// What a note reads of the world: the units' ids, the classes' types, a unit's path, location and goal, the C++
+/// vectors' elements (the game: the views; the tests: a mock).
+pub trait NoteWorld {
+    /// `((const RTSUnit*)unit)->mUnitID` of a live unit
+    fn unit_id(&mut self, unit: u64) -> u32;
+    /// `class->mUnitType` of a live class
+    fn class_type(&mut self, class: u64) -> u32;
+    /// the complex unit's waypoints: location x, y, z, distance, start distance
+    fn path(&mut self, unit: u64) -> Vec<[f32; 5]>;
+    /// `mPhysicalModel.GetLocation()`'s x, y, z
+    fn location(&mut self, unit: u64) -> [f32; 3];
+    /// `mGoalState`: its kind and, a location (or heal) goal's, its point
+    fn goal(&mut self, unit: u64) -> Option<(u8, Option<[f32; 3]>)>;
+    /// a `std::vector<U2DPoint<long> >`'s tiles
+    fn tiles(&mut self, v: u64) -> Vec<[i32; 2]>;
+    /// a `std::vector<EEUnit*>`'s (or `<EEComplexUnit*>`'s) units
+    fn units(&mut self, v: u64) -> Vec<u64>;
+    /// the unit's `mHomeBase` (0: none)
+    fn home_base(&mut self, unit: u64) -> u64;
+    /// the unit's `mResourceAmount` and `mResourceType`
+    fn resource(&mut self, unit: u64) -> (i32, u32);
+}
+
+/// A note (`EEUCNote`): its words gathered while it is on (the thread's outermost note with the capture running), in
+/// the order the C++ wrote them; [`Note::end`] folds them.
+pub struct Note {
+    on: bool,
+    words: Vec<u32>,
+}
+
+impl Note {
+    /// `EEUCNote theNote(kind)`.
+    pub fn begin<W: UcbdWorld + ?Sized>(w: &mut W, kind: u32) -> Note {
+        let mut n = Note { on: begin(w), words: Vec::new() };
+        n.i(i64::from(kind));
+        n
+    }
+    pub fn is_on(&self) -> bool {
+        self.on
+    }
+    pub fn words(&self) -> &[u32] {
+        &self.words
+    }
+    /// `I`: a value (its low 32 bits)
+    pub fn i(&mut self, v: i64) -> &mut Self {
+        if self.on {
+            self.words.push(v as u32);
+        }
+        self
+    }
+    /// `F`: a float's bits
+    pub fn f(&mut self, v: f32) -> &mut Self {
+        self.i(i64::from(v.to_bits()))
+    }
+    /// `P`: a point
+    pub fn p(&mut self, p: [f32; 3]) -> &mut Self {
+        self.f(p[0]).f(p[1]).f(p[2])
+    }
+    /// `T`: a tile
+    pub fn t(&mut self, t: [i32; 2]) -> &mut Self {
+        self.i(i64::from(t[0])).i(i64::from(t[1]))
+    }
+    /// `U`: a unit's id (-2: none)
+    pub fn u<N: NoteWorld + ?Sized>(&mut self, n: &mut N, unit: u64) -> &mut Self {
+        if !self.on {
+            return self;
+        }
+        let v = if unit == 0 { -2 } else { i64::from(n.unit_id(unit)) };
+        self.i(v)
+    }
+    /// `C`: a class's unit type (-2: none)
+    pub fn c<N: NoteWorld + ?Sized>(&mut self, n: &mut N, class: u64) -> &mut Self {
+        if !self.on {
+            return self;
+        }
+        let v = if class == 0 { -2 } else { i64::from(n.class_type(class)) };
+        self.i(v)
+    }
+    /// `Ts`: a tile vector's length and tiles
+    pub fn ts<N: NoteWorld + ?Sized>(&mut self, n: &mut N, v: u64) -> &mut Self {
+        if !self.on {
+            return self;
+        }
+        let tiles = n.tiles(v);
+        self.i(tiles.len() as i64);
+        for t in tiles {
+            self.t(t);
+        }
+        self
+    }
+    /// `Us`: a unit vector's length and ids
+    pub fn us<N: NoteWorld + ?Sized>(&mut self, n: &mut N, v: u64) -> &mut Self {
+        if !self.on {
+            return self;
+        }
+        let units = n.units(v);
+        self.i(units.len() as i64);
+        for u in units {
+            self.u(n, u);
+        }
+        self
+    }
+    /// `S`: a unit's path, location, goal kind (-1: none) and a location goal's point (-2: no unit)
+    pub fn s<N: NoteWorld + ?Sized>(&mut self, n: &mut N, unit: u64) -> &mut Self {
+        if !self.on || unit == 0 {
+            return self.i(-2);
+        }
+        let path = n.path(unit);
+        self.i(path.len() as i64);
+        for w in path {
+            self.f(w[0]).f(w[1]).f(w[2]).f(w[3]).f(w[4]);
+        }
+        let at = n.location(unit);
+        self.p(at);
+        match n.goal(unit) {
+            None => {
+                self.i(-1);
+            }
+            Some((kind, point)) => {
+                self.i(i64::from(kind));
+                if let Some(p) = point {
+                    self.p(p);
+                }
+            }
+        }
+        self
+    }
+    /// `U` of the unit's home base
+    pub fn home<N: NoteWorld + ?Sized>(&mut self, n: &mut N, unit: u64) -> &mut Self {
+        if !self.on {
+            return self;
+        }
+        let base = n.home_base(unit);
+        self.u(n, base)
+    }
+    /// `I(mResourceAmount).I((long)mResourceType)`
+    pub fn resource<N: NoteWorld + ?Sized>(&mut self, n: &mut N, unit: u64) -> &mut Self {
+        if !self.on {
+            return self;
+        }
+        let (amount, kind) = n.resource(unit);
+        self.i(i64::from(amount)).i(i64::from(kind))
+    }
+    /// The note's end (`~EEUCNote`): its words folded.
+    pub fn end<W: UcbdWorld + ?Sized>(self, w: &mut W) {
+        end(w, self.on, &self.words);
+    }
+}
+
+#[cfg(not(test))]
+pub(crate) use game::Game as UcbdGame;
+
 #[cfg(not(test))]
 mod game {
     use super::*;
 
-    struct Game;
+    /// The capture and the physics' ticks (the notes' world).
+    pub(crate) struct Game;
 
     impl UcbdWorld for Game {
         fn active(&mut self) -> bool {

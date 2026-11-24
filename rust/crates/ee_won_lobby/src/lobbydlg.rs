@@ -448,6 +448,30 @@ pub enum EeWonLobbyDlgOp {
     /// `aTitle = gLobbyResources[b].mString; aTitle.append(" "); aTitle.append(((LobbyClient*)c)->GetName());
     /// ((Label*)a)->SetText(aTitle, true)`.
     AdminTitleRes,
+    // R6 WON round 34: the statements of the cases dlgsplit.rs composes in the game (the compound cases above are
+    // the drivers' ops: in the game no C++ case answers them)
+    /// `((GUIStringData*)a)->Compare((GUIStringData*)b)`.
+    TextCompare,
+    /// `new GUIStringData(RecordText((const uint16_t*)a, b))` with a reference (a bad user record's text).
+    TextRecord,
+    /// `LobbyFormatString(gLobbyResources[a].mString, GUIString((GUIStringData*)b))`'s text with a reference.
+    TextFormatRes,
+    /// `new GUIString(gLobbyResources[a].mString)` (AdminTitleRes's local, freed by `TitleFree`).
+    TitleNew,
+    /// `((GUIString*)a)->append(GUIString(new GUIStringData(" ")))`.
+    TitleAppendSpace,
+    /// `((GUIString*)a)->append(((LobbyClient*)b)->GetName())`.
+    TitleAppendName,
+    /// `delete (GUIString*)a`.
+    TitleFree,
+    /// `((MultiListArea*)a)->SetString(0, 0, ChooseNetworkAdapterDialog_Default_String, NULL)`.
+    AdapterSetDefaultName,
+    /// `GUIString((const char*)a).length()` (a found file's name).
+    NameLength,
+    /// `((ListArea*)a)->InsertString(GUIString((const char*)b)` cut to `c` characters`, -1)`.
+    FileListInsertName,
+    /// `new ScrollingTextComponent` (the credits dialog's, which the object holds).
+    NewScrollText,
 }
 
 /// The resource row of a dialog string (LobbyDialogHost.cpp's `AdminString` as it was), `None` for the EE game's
@@ -828,7 +852,20 @@ impl EeWonLobbyDlg {
             if let Some(r) = crate::widgets::dlg_op(self.dialog as isize, op, a, b, c) {
                 return r;
             }
+            // the compound cases' statements (R6 WON round 34), while the network core is bound
+            if ee_won_net::cppnet::bound() {
+                if let Some(r) =
+                    crate::dlgsplit::game_op(op, a, b, c, &|o, x, y, z| self.host_op(o, x, y, z), self.host)
+                {
+                    return r;
+                }
+            }
         }
+        self.host_op(op, a, b, c)
+    }
+
+    /// An op of the C++ host itself.
+    fn host_op(&self, op: Op, a: isize, b: isize, c: isize) -> isize {
         match self.host {
             // SAFETY: the host is the C++ dialog's (or a test's), called with the dialog it was given for
             Some(f) => unsafe { f(self.dialog, op, a, b, c) },
@@ -1723,6 +1760,15 @@ pub extern "C" fn ee_won_lobbydlg_new_model(
 ) -> *mut EeWonLobbyDlg {
     let d = EeWonLobbyDlg::new(dialog, kind, host);
     d.model.set(true);
+    // the subclasses' constructors: the status dialog's start tick, the credits' scrolling text
+    if kind == EeWonLobbyDlgKind::Status {
+        let tick = d.op(Op::TickCount, 0, 0, 0);
+        d.call(EeWonLobbyDlgCall::SetStartTick, tick, 0, 0);
+    }
+    if kind == EeWonLobbyDlgKind::Credits {
+        let text = d.host_op(Op::NewScrollText, 0, 0, 0);
+        d.call(EeWonLobbyDlgCall::HoldScrollText, text, 0, 0);
+    }
     Box::into_raw(Box::new(d))
 }
 

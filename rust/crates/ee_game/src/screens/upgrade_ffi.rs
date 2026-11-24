@@ -1,19 +1,10 @@
 //! `extern "C"` for the improvement button (`upgrade.rs`): `EEUIBUpgrade`'s members forward here with their call
-//! record (`EEUIBUpgradeCall`); the host is `ee_screenscpp_upgrade` (`User Interface Thread/EEUIBUpgrade.cpp`).
+//! record (`EEUIBUpgradeCall`); the host is Rust's (`upgrade_calls.rs`, `upgrade_ops.rs` over `User Interface Thread/EEUIBUpgrade.cpp`'s shims).
 #![allow(clippy::missing_safety_doc)]
 
 use core::ffi::c_void;
 
 use crate::screens::upgrade::{self, UpgradeHost};
-
-/// cbindgen:ignore
-mod sys {
-    use core::ffi::c_void;
-
-    extern "C" {
-        pub fn ee_screenscpp_upgrade(call: *mut c_void, op: u32, a: i64, b: i64, c: i64) -> i64;
-    }
-}
 
 struct Call(*mut c_void);
 
@@ -27,7 +18,7 @@ impl UpgradeHost for Call {
         {
             return r;
         }
-        unsafe { sys::ee_screenscpp_upgrade(self.0, op, a, b, c) }
+        crate::screens::upgrade_ops::op(&mut crate::screens::game_cpp::Ffi, self.0 as usize, op, a, b).unwrap_or(0)
     }
 }
 

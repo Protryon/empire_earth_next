@@ -9,6 +9,7 @@ use crate::screens::game_cpp::{Cpp, EeScreensShimLongOut as OutL, EeScreensShimU
 use crate::screens::main_form::*;
 use crate::screens::main_game::{EE_SCREENS_MG_CANCEL_UI_MODE, EE_SCREENS_MG_PAUSE};
 use crate::screens::mouse_modes::*;
+use crate::screens::panel_groups::{EE_SCREENS_GROUP_REFRESH, EE_SCREENS_GROUP_SELECT};
 use crate::screens::shells_icon_bar::EE_SCREENS_SKOP_IB_UPDATE;
 use crate::screens::shells_saved::EE_SCREENS_SKOP_SG_REFRESH;
 
@@ -180,12 +181,17 @@ pub(crate) fn call<C: Cpp + ?Sized>(
             }
             0
         }
+        // the current panel group's call: the main group's object (0; its Select is empty), else a Rust kind's
+        // (Refresh and Select; Reset empty, WantsRefresh false)
         EE_SCREENS_MF_OP_GROUP => {
-            match a {
-                EE_SCREENS_MF_GROUP_RESET => c.mf_group_reset(rec),
-                EE_SCREENS_MF_GROUP_REFRESH => c.mf_group_refresh(rec),
-                EE_SCREENS_MF_GROUP_SELECT => c.mf_group_select(rec),
-                _ => return Some(c.mf_group_wants_refresh(rec) as i64),
+            let kind = c.mf_current_group(rec);
+            match (kind, a) {
+                (0, EE_SCREENS_MF_GROUP_RESET) => c.mf_group_reset(rec),
+                (0, EE_SCREENS_MF_GROUP_REFRESH) => c.mf_group_refresh(rec),
+                (0, EE_SCREENS_MF_GROUP_WANTS_REFRESH) => return Some(c.mf_group_wants_refresh(rec) as i64),
+                (_, EE_SCREENS_MF_GROUP_REFRESH) => c.panel_group(rec, kind, EE_SCREENS_GROUP_REFRESH),
+                (_, EE_SCREENS_MF_GROUP_SELECT) if kind != 0 => c.panel_group(rec, kind, EE_SCREENS_GROUP_SELECT),
+                _ => {}
             }
             0
         }

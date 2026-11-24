@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include "rust/sim/units.h"   // the scripts' names (ee_units script.rs)
+
 class UString;
 
 class EEUnitAction {
@@ -14,10 +16,11 @@ public:
     unsigned long GetType() const { return this->mType; }
     uint32_t mType;                         // the action id (5000 is the idle action)
 
-    static long GetActionID(const char* inName);        // 0x22c70b (0: unknown)
-    static const char* GetActionName(unsigned long inAction);   // 0x22c75a ("" for an unknown id)
+    static long GetActionID(const char* inName) { return ee_units_script_action_id(inName); }   // 0x22c70b (0: unknown)
+    // 0x22c75a ("" for an unknown id)
+    static const char* GetActionName(unsigned long inAction) { return ee_units_script_action_name((uint32_t)inAction); }
     static void* GetScript(const UString& inName);       // 0x22c7e0 (the script's handle; ee_units_script_find)
-    static void DeleteScripts();
+    static void DeleteScripts() { ee_units_script_delete_all(); }
 
 private:
     EEUnitAction();                         // made only by the Rust scripts

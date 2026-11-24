@@ -60,6 +60,30 @@ enum class EeWonEeXferOp : uint32_t {
   Send,
   /// `TimeLeft()`.
   TimeLeft,
+  /// `new QueueSocket(0)` (no reference: the Rust adds it).
+  NewQueueSocket = 60,
+  /// `((QueueSocket*)a)->SetRepeatCompletion(completion(b))` (`b` an `EeWonEeXferCall`).
+  SetRepeatCompletion,
+  /// `((QueueSocket*)a)->SetRepeatOp(new AcceptOp(NULL))`.
+  SetRepeatAccept,
+  /// `((QueueSocket*)a)->SetCloseCompletion(completion(b))`.
+  SetCloseCompletion,
+  /// `((QueueSocket*)a)->QueueOp(new SendFileOp(path b, c bytes), -1)`.
+  QueueSendFile,
+  /// `((QueueSocket*)a)->QueueOp(new CloseOp(NULL), -1)`.
+  QueueCloseOp,
+  /// `new RecvBytesOp(0, NULL)` (no reference).
+  NewRecvBytes,
+  /// `((SocketOp*)a)->SetCompletion(completion(b))`.
+  OpSetCompletion,
+  /// `((SocketOp*)a)->SetFilePath(path b, c bytes)`.
+  OpSetFilePath,
+  /// `((SocketOp*)a)->SetProgressCompletion(completion(OnProgress), 10000)`.
+  OpSetProgress,
+  /// `((QueueSocket*)a)->QueueOp(new ConnectOp(this->mHost), -1)`.
+  QueueConnect,
+  /// `((QueueSocket*)a)->QueueOp((SocketOp*)b, -1)`.
+  QueueOpOn,
 };
 
 /// The transfer's inward calls.

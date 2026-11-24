@@ -203,3 +203,18 @@ fn the_messages_events_and_actions() {
     );
     assert_eq!(action(&mut Fake::default(), 0xffff), None);
 }
+
+#[test]
+fn window_events_one_call_ops() {
+    use crate::screens::ui_thread::{
+        EE_SCREENS_UI_EV_HAS, EE_SCREENS_UI_EV_SET_MASTER_VOLUME, EE_SCREENS_UI_GLOBAL_CONDUCTOR,
+        EE_SCREENS_UI_GLOBAL_WINDOW,
+    };
+    let mut f = Fake::default();
+    f.answer("conductor", &[5]).answer("ui_has_window", &[1]);
+    assert_eq!(ui_event(&mut f, EE_SCREENS_UI_EV_HAS, EE_SCREENS_UI_GLOBAL_CONDUCTOR, 0, 0), Some(1));
+    assert_eq!(ui_event(&mut f, EE_SCREENS_UI_EV_HAS, EE_SCREENS_UI_GLOBAL_WINDOW, 0, 0), Some(1));
+    let bits = 0.5f32.to_bits() as i64;
+    assert_eq!(ui_event(&mut f, EE_SCREENS_UI_EV_SET_MASTER_VOLUME, bits, 0, 0), Some(0));
+    assert_eq!(f.calls(), "conductor()\nui_has_window()\nui_set_master_volume(0.5)");
+}

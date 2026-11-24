@@ -79,31 +79,10 @@ pub struct EeSimDriverHost {
     pub dump_after_load: unsafe extern "C" fn(*const c_char),
     /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
     pub extension: unsafe extern "C" fn(i32, *mut c_char, usize) -> usize,
-    /// `gPlatSimRun`
-    pub set_run: unsafe extern "C" fn(i32),
-    /// `gPlatSimAfterTick` to the driver's after-tick (true) or none
-    pub set_after_tick: unsafe extern "C" fn(bool),
     /// `gUserInterface->PostCancelGame()`
     pub cancel_game: unsafe extern "C" fn(),
-    /// `EESimCaptureRecord::Active()`
-    pub capture_active: unsafe extern "C" fn() -> bool,
     /// `EECPChoiceByName` (-1: none)
     pub engine_choice: unsafe extern "C" fn(*const c_char) -> c_long,
-    /// the C library's environment (`_putenv_s` / `setenv`)
-    pub set_env: unsafe extern "C" fn(*const c_char, *const c_char),
-    /// a duplicate of the process's stderr descriptor
-    pub dup_stderr: unsafe extern "C" fn() -> i32,
-    /// stderr (descriptor 2) from the file (opened for writing) or, for NULL, back to the descriptor
-    pub set_stderr: unsafe extern "C" fn(*const c_char, i32),
-    /// bytes to the C library's stdout (1) or stderr (2), or to a descriptor (3 + fd); flushed when asked (stderr
-    /// always)
-    pub write: unsafe extern "C" fn(i32, *const u8, usize, bool),
-    /// --rng-trace: from game ms `ms` into the file
-    pub rng_trace: unsafe extern "C" fn(c_long, *const c_char),
-    /// --dump-tick: the physics' after-tick hook to the driver's
-    pub tick_hook: unsafe extern "C" fn(),
-    /// the C library's streams and the capture flushed, then the process ended with the code
-    pub quit: unsafe extern "C" fn(i32),
     /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
     /// node of `technology`, the class's unit type), every resource summed
     pub wonders: unsafe extern "C" fn(u64) -> c_long,
@@ -232,10 +211,21 @@ impl Game for CppGame {
         text_of(|b, n| unsafe { (self.0.extension)(which, b, n) })
     }
     fn set_run(&self, run: bool) {
-        unsafe { (self.0.set_run)(i32::from(run)) }
+        #[cfg(not(test))]
+        ee_base::plat_core::sim::gPlatSimRun.set(i32::from(run));
+        #[cfg(test)]
+        let _ = run;
     }
     fn set_after_tick(&self, on: bool) {
-        unsafe { (self.0.set_after_tick)(on) }
+        // the driver's after-tick on the communications ticks, or none
+        #[cfg(not(test))]
+        ee_base::plat_core::sim::gPlatSimAfterTick.set(if on {
+            Some(super::ffi::ee_sim_driver_after_tick)
+        } else {
+            None
+        });
+        #[cfg(test)]
+        let _ = on;
     }
     fn set_switches(&self, s: &EeSimDriverSwitches) {
         super::sim_host::set_switches(s)
@@ -259,7 +249,7 @@ impl Game for CppGame {
         super::sim_host::volcano_boulders()
     }
     fn capture_active(&self) -> bool {
-        unsafe { (self.0.capture_active)() }
+        super::sim_ops::h(super::sim_ops::EeSimDriverSim::CaptureActive, 0, &[]) != 0
     }
     fn sweep(&self, kind: i32, arg: c_long) {
         super::sim_host::sweep(kind, arg)
@@ -277,27 +267,32 @@ impl Game for CppGame {
         super::sim_host::engine_ids()
     }
     fn set_env(&self, name: &str, value: &str) {
-        unsafe { (self.0.set_env)(c(name).as_ptr(), c(value).as_ptr()) }
+        super::stdio::set_env(name, value)
     }
     fn dup_stderr(&self) -> i32 {
-        unsafe { (self.0.dup_stderr)() }
+        super::stdio::dup_stderr()
     }
     fn set_stderr(&self, file: Option<&str>, fd: i32) {
-        let file = file.map(c);
-        unsafe { (self.0.set_stderr)(file.as_ref().map_or(std::ptr::null(), |f| f.as_ptr()), fd) }
+        super::stdio::set_stderr(file, fd)
     }
     fn write(&self, stream: i32, bytes: &[u8], flush: bool) {
-        unsafe { (self.0.write)(stream, bytes.as_ptr(), bytes.len(), flush) }
+        super::stdio::write(stream, bytes, flush)
     }
     fn rng_trace(&self, ms: c_long, path: &str) {
-        unsafe { (self.0.rng_trace)(ms, c(path).as_ptr()) }
+        super::stdio::rng_trace(ms, path)
     }
     fn tick_hook(&self) {
-        unsafe { (self.0.tick_hook)() }
+        // --dump-tick: the physics' after-tick hook (gPhysicsAfterTickHook, gamecpp globals.rs) to the driver's
+        #[cfg(not(test))]
+        let hook: extern "C" fn() = super::ffi::ee_sim_driver_tick_dump;
+        #[cfg(not(test))]
+        // SAFETY: the hook pointer, set before the game's physics runs
+        unsafe {
+            *std::ptr::addr_of_mut!(crate::gamecpp::globals::gPhysicsAfterTickHook) = hook as *mut c_void
+        };
     }
     fn quit(&self, code: i32) -> ! {
-        unsafe { (self.0.quit)(code) };
-        std::process::exit(code)
+        super::stdio::quit(code)
     }
     fn wonders(&self, player: u64) -> c_long {
         unsafe { (self.0.wonders)(player) }

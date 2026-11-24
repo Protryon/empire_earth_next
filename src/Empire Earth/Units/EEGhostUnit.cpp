@@ -46,84 +46,6 @@ template <class T> static T* EEGhostObject(uint64_t inHandle)
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
 }
 
-static int64_t EEGhostBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, sizeof theBits);
-    return theBits;
-}
-
-static float EEGhostFloat(int64_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, sizeof theValue);
-    return theValue;
-}
-
-
-// Creates a placement ghost of a unit class for a player, loading the class media unless told not to
-EEGhostUnit::EEGhostUnit(long inUnitClass, EEPlayer* inPlayer, bool inNoMedia)
-{
-    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_CONSTRUCT, this, inPlayer, inUnitClass, inNoMedia);   // ghost_more.rs
-}
-
-// Destroys the ghost, unloading its class media (queued unless in free camera or shutting down)
-EEGhostUnit::~EEGhostUnit()
-{
-    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_DESTROY, this, NULL, 0, 0);   // ghost_more.rs
-}
-
-// Fills a space building's footprint and heights: placeable when its space dock site is open or every
-// inner cell is, with 2+ land rim tiles; then turns it to the space dock yaw or the dock facing
-void EEGhostUnit::FillDockSquare()
-{
-    ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_DOCK_SQUARE, this, NULL, NULL);   // ghost_body.rs
-}
-
-// Fills a dock's footprint and heights: placeable when every inner cell is and at least 3 rim tiles are land
-void EEGhostUnit::FillRimSquare()
-{
-    ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_RIM_SQUARE, this, NULL, NULL);   // ghost_body.rs
-}
-
-// Marks a mining building's whole footprint placeable when a unit of its overlap set stands on tile (x-1, y-1)
-void EEGhostUnit::UpdateFootprint()
-{
-    ee_units_ghost_body(EE_UNITS_GHOST_DO_UPDATE_FOOTPRINT, this, NULL, NULL);   // ghost_body.rs
-}
-
-// Fills the ghost's footprint and heights and whether it can be placed; mining, dock, space, volcano have variants
-void EEGhostUnit::FillSquare()
-{
-    ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_SQUARE, this, NULL, NULL);   // ghost_body.rs
-}
-
-// Fills a volcano's footprint and heights: each cell unblocked, off the map edge and free of area effect 3
-void EEGhostUnit::FillVolcanoSquare()
-{
-    ee_units_ghost_body(EE_UNITS_GHOST_DO_FILL_VOLCANO_SQUARE, this, NULL, NULL);   // ghost_body.rs
-}
-
-// Resets the ghost to an empty, unplaceable one at the origin with animation 7
-void EEGhostUnit::Reset()
-{
-    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_RESET, this, NULL, 0, 0);   // ghost_more.rs
-}
-
-// Replaces the placement ghosts with a unit's ghost, plus 3 runway ghosts for an airport (0x42) and the
-// farm ghosts around a granary unless it is being moved
-void EEGhostUnit::Create(const GE2DPoint& inLocation, long inUnitType, EEPlayer* inPlayer, float inRotation,
-                         bool inIsMove)
-{
-    ee_units_ghost_create(inUnitType, inPlayer, inRotation, inIsMove);   // ghost_make.rs
-}
-
-// Replaces the placement ghosts with a gate's three parts (left, middle, right), each turned as its part
-void EEGhostUnit::CreateGate(float inRotation, EEUnitClass* inClass, EEPlayer* inPlayer)
-{
-    ee_units_ghost_create_gate(inRotation, inClass, inPlayer);   // ghost_make.rs
-}
 
 // Replaces the placement ghosts with one wall ghost per planned tile, shaped by its corner and set on the ground
 // (free function; whether it was static is not known) (provisional name)
@@ -134,54 +56,11 @@ void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>
     ee_units_ghost_build_walls(&theArgs);   // ghost_make.rs
 }
 
-// Adds the ghost's player number and unit class name to the sync checksum
-void EEGhostUnit::AddChecksum(ESChecksum& ioChecksum)
-{
-    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_ADD_CHECKSUM, this, &ioChecksum, 0, 0);   // ghost_more.rs
-}
-
-// Returns the half-width of the footprint square around the ghost's tile (1 for a one-tile unit)
-float EEGhostUnit::GetFootprintOffset()
-{
-    return EEGhostFloat(ee_units_ghost_body(EE_UNITS_GHOST_DO_FOOTPRINT_OFFSET, this, NULL, NULL));   // ghost_body.rs
-}
-
-// Reads the unit class and player ids from the saved game; returns the first read error
-long EEGhostUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return (long)ee_units_ghost_more(EE_UNITS_GHOST_M_DO_LOAD, this, &inFile, 0, 0);   // ghost_more.rs
-}
-
-// Moves a farm ghost to the slot tile in the given direction from its tile
-void EEGhostUnit::SetFarmSlotTile(EEGhostUnit* inGhost, long inDirection)
-{
-    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_SET_FARM_SLOT_TILE, inGhost, NULL, inDirection, 0);   // ghost_more.rs
-}
-
-// Writes the unit type and player id to the saved game; returns the first write error
-long EEGhostUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return (long)ee_units_ghost_more(EE_UNITS_GHOST_M_DO_SAVE, this, &outFile, 0, 0);   // ghost_more.rs
-}
-
-// Sets the ghost's animation and its frame to that animation's first
-void EEGhostUnit::SetAnimation(long inIndex)
-{
-    ee_units_ghost_more(EE_UNITS_GHOST_M_DO_SET_ANIMATION, this, NULL, inIndex, 0);   // ghost_more.rs
-}
-
 // Moves the placement ghosts under the cursor and rechecks where each can be placed; an airport turns
 // to its facing quarter with its runways behind it, farm ghosts take their slots
 void EEPreviewPlacement(const GE2DPoint& inLocation)
 {
     ee_units_ghost_body(EE_UNITS_GHOST_DO_PREVIEW_PLACEMENT, NULL, &inLocation, NULL);   // ghost_body.rs
-}
-
-// Moves the gate ghost's three parts onto the wall tiles under the cursor; placeable only over a marked
-// wall piece, whose gate direction it takes
-void EEGhostUnit::PreviewGate(const GE2DPoint& inLocation, long& ioDirection)
-{
-    ee_units_ghost_body(EE_UNITS_GHOST_DO_PREVIEW_GATE, NULL, &inLocation, &ioDirection);   // ghost_body.rs
 }
 
 // ghost_body.rs's scratch values: the fills' position (their thePosition), the preview's position and tile, the gate
@@ -220,23 +99,23 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_TILE_Y: return theGhost->mTileY;
     case EE_UNITS_GHOST_SET_TILE_X: theGhost->mTileX = (long)inB; return 0;
     case EE_UNITS_GHOST_SET_TILE_Y: theGhost->mTileY = (long)inB; return 0;
-    case EE_UNITS_GHOST_UM_CEIL: return EEGhostBits(UMCeil(EEGhostFloat(inB)));
+    case EE_UNITS_GHOST_UM_CEIL: return UFloatBits(UMCeil(UBitsFloat((uint32_t)(inB))));
     case EE_UNITS_GHOST_POSITION_FROM_TRANSFORM: sGhostFillPosition = GE3DPoint(theGhost->mTransformation); return 0;
     case EE_UNITS_GHOST_CAN_PLACE_AT:
         return EECanPlace(theGhost->mPlayer, theGhost->mUnitClass->GetUnitType(), &sGhostFillPosition, (long)inB, (long)inC, 0, 0);
     case EE_UNITS_GHOST_TILE_EXISTS: return theMap->GetTile((long)inB, (long)inC) != NULL;
     case EE_UNITS_GHOST_TILE_TERRAIN: return theMap->GetTile((long)inB, (long)inC)->mTerrainType;
-    case EE_UNITS_GHOST_TERRAIN_Z: return EEGhostBits(theMap->mTerrainMesh.GetZ((long)inB, (long)inC));
-    case EE_UNITS_GHOST_SET_HEIGHT: theGhost->mHeights[inB] = EEGhostFloat(inC); return 0;
+    case EE_UNITS_GHOST_TERRAIN_Z: return UFloatBits(theMap->mTerrainMesh.GetZ((long)inB, (long)inC));
+    case EE_UNITS_GHOST_SET_HEIGHT: theGhost->mHeights[inB] = UBitsFloat((uint32_t)(inC)); return 0;
     case EE_UNITS_GHOST_SET_FOOTPRINT: theGhost->mFootprint[inB][inC] = inA != 0; return 0;
     case EE_UNITS_GHOST_IS_LAND_TERRAIN: return EEIsLandTerrain((long)inB);
     case EE_UNITS_GHOST_SPACE_DOCK_SITE_OPEN: return EEIsSpaceDockSiteOpen(theGhost->mTileX, theGhost->mTileY, theGhost->mPlayer);
     case EE_UNITS_GHOST_DOCK_FACING: return EEGetDockFacing(theGhost->mTileX, theGhost->mTileY);
     case EE_UNITS_GHOST_SPACE_DOCK_YAW:
-        return EEGhostBits(EEGetSpaceDockYaw(theGhost->mTileX, theGhost->mTileY, theGhost->mUnitClass->GetTileSize()));
+        return UFloatBits(EEGetSpaceDockYaw(theGhost->mTileX, theGhost->mTileY, theGhost->mUnitClass->GetTileSize()));
     case EE_UNITS_GHOST_SET_CAN_PLACE: theGhost->mCanPlace = inB != 0; return 0;
     case EE_UNITS_GHOST_CAN_PLACE: return theGhost->mCanPlace;
-    case EE_UNITS_GHOST_SET_YAW: theGhost->mTransformation.SetOrientationYPR(EEGhostFloat(inB), 0.0f, 0.0f); return 0;
+    case EE_UNITS_GHOST_SET_YAW: theGhost->mTransformation.SetOrientationYPR(UBitsFloat((uint32_t)(inB)), 0.0f, 0.0f); return 0;
     case EE_UNITS_GHOST_TILE_FIRST_NODE:
         return theMap->GetTile((long)inB, (long)inC) != NULL ? (uint64_t)(uintptr_t)theMap->GetTile((long)inB, (long)inC)->mUnits : 0;
     case EE_UNITS_GHOST_NODE_NEXT: return (uint64_t)(uintptr_t)theNode->mNext;
@@ -254,8 +133,8 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_SET_CHANGED: gGhostUnitsChanged = inB != 0; return 0;
     case EE_UNITS_GHOST_GHOST_AT: return (uint64_t)(uintptr_t)gWorld.mGhostUnits[(size_t)inB];
     case EE_UNITS_GHOST_POINT_UNIT_OR_TILE: return EEPointUnitOrTile(*theLocation, sGhostTile, sGhostPosition, true);
-    case EE_UNITS_GHOST_POSITION: return EEGhostBits(EEGhostPart(sGhostPosition, inB));
-    case EE_UNITS_GHOST_SET_POSITION_PART: EEGhostPart(sGhostPosition, inB) = EEGhostFloat(inC); return 0;
+    case EE_UNITS_GHOST_POSITION: return UFloatBits(EEGhostPart(sGhostPosition, inB));
+    case EE_UNITS_GHOST_SET_POSITION_PART: EEGhostPart(sGhostPosition, inB) = UBitsFloat((uint32_t)(inC)); return 0;
     case EE_UNITS_GHOST_GET_MODEL: theGhost->GetModel(); return 0;
     case EE_UNITS_GHOST_AIRPORT_TILE_SIZE: return EEUnitClassOfKind<EE_CLASS_KIND_BUILDING>(gUnitClassTable[kUnitTypeAirport])->GetTileSize();
     case EE_UNITS_GHOST_FACING_QUARTER: return EEGetFacingQuarter((long)inB, (long)inC);
@@ -279,9 +158,9 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_SCRATCH_TRANSFORM_GET: sGhostTransform = theGhost->mTransformation; return 0;
     case EE_UNITS_GHOST_TURN_GATE_PART: theGhost->SetAnimation(EETurnGatePart(sGhostTransform, (long)inB, (long)inC)); return 0;
     case EE_UNITS_GHOST_SCRATCH_TRANSFORM_SET: theGhost->mTransformation = sGhostTransform; return 0;
-    case EE_UNITS_GHOST_MESH_Z: return EEGhostBits(theMap->mTerrainMesh.GetMeshZ(EEGhostFloat(inB), EEGhostFloat(inC)));
+    case EE_UNITS_GHOST_MESH_Z: return UFloatBits(theMap->mTerrainMesh.GetMeshZ(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC))));
     case EE_UNITS_GHOST_SET_POSITION_XYZ:
-        theGhost->mTransformation.SetPosition(EEGhostFloat(inB), EEGhostFloat(inC), EEGhostFloat((int64_t)inA));
+        theGhost->mTransformation.SetPosition(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC)), UBitsFloat((uint32_t)((int64_t)inA)));
         return 0;
     case EE_UNITS_GHOST_FOOTPRINT_FROM_CAN_PLACE: theGhost->mFootprint[0][0] = theGhost->mCanPlace; return 0;
     case EE_UNITS_GHOST_POSITION_RESET: sGhostPosition = GE3DPoint(); return 0;
@@ -309,9 +188,9 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_RAISED_CORNERS: return gWorld.GetMap()->GetNumRaisedCorners((long)inB, (long)inC);
     case EE_UNITS_GHOST_CORNER_AT: return (*EEGhostObject<std::vector<long> >(inA))[(size_t)inB];
     case EE_UNITS_GHOST_ORIENT_WALL: EEOrientWallGhost(theGhost, (long)inB, (long)inC); return 0;
-    case EE_UNITS_GHOST_SET_X: theGhost->mTransformation.SetX(EEGhostFloat(inB)); return 0;
-    case EE_UNITS_GHOST_SET_Y: theGhost->mTransformation.SetY(EEGhostFloat(inB)); return 0;
-    case EE_UNITS_GHOST_SET_Z: theGhost->mTransformation.SetZ(EEGhostFloat(inB)); return 0;
+    case EE_UNITS_GHOST_SET_X: theGhost->mTransformation.SetX(UBitsFloat((uint32_t)(inB))); return 0;
+    case EE_UNITS_GHOST_SET_Y: theGhost->mTransformation.SetY(UBitsFloat((uint32_t)(inB))); return 0;
+    case EE_UNITS_GHOST_SET_Z: theGhost->mTransformation.SetZ(UBitsFloat((uint32_t)(inB))); return 0;
     // ghost_more.rs's
     case EE_UNITS_GHOST_M_SET_PLAYER: theGhost->mPlayer = EEGhostObject<EEPlayer>((uint64_t)inB); return 0;
     case EE_UNITS_GHOST_M_SET_CLASS: theGhost->mUnitClass = EEGhostObject<EEUnitClass>((uint64_t)inB); return 0;

@@ -24,6 +24,7 @@
 #include "rust/won_net/certhost.h"
 #include "rust/won_net/debug.h"
 #include "rust/won_net/dir.h"
+#include "rust/won_net/dirlist.h"
 #include "rust/won_net/ffi_net.h"
 #include "rust/won_net/fwhost.h"
 #include "rust/won_net/hostbase.h"
@@ -38,6 +39,9 @@
 #include "rust/won_net/routeconn.h"
 #include "rust/won_net/routecpp.h"
 #include "rust/won_net/routeop.h"
+#include "rust/won_net/routereq.h"
+#include "rust/won_net/rustref.h"
+#include "rust/won_net/dnstest.h"
 #include "rust/won_net/servconn.h"
 #include "rust/won_net/smartroute.h"
 #include "rust/won_net/sockobj.h"
@@ -142,19 +146,8 @@ private:
 };
 typedef SmartPtr<AsyncOp> AsyncOpPtr;
 
-// Event: 8 bytes (vptr, HANDLE at 4); 29f7c0, embedded in AsyncOpContainer at 0x1c. A platform event (the
-// original's alertable wait had no APC user); the timeout is 32-bit as WaitForSingleObjectEx's was
-class Event {
-public:
-    explicit Event(bool manualReset=false,bool initiallySet=false)
-        { this->mEvent=PlatEventCreate(manualReset,initiallySet); }
-    virtual ~Event() { if(this->mEvent!=NULL) PlatEventDestroy(this->mEvent); }
-    void Set() {PlatEventSet(this->mEvent);}
-    void Reset() {PlatEventReset(this->mEvent);}
-    bool WaitFor(unsigned long milliseconds)
-        {return PlatEventWait(this->mEvent,(uint32_t)milliseconds)==0;}
-    PlatEvent* mEvent; //04
-};
+// Event (8 bytes: vptr, HANDLE at 4; 29f7c0), embedded in AsyncOpContainer at 0x1c, is the Rust container's signal
+// (thread.rs); its C++ shim had no user and went in R6 WON round 34.
 // AsyncOpContainer: a Rust object (ee_won thread.rs EeWonOpContainer: the queue holding a reference per op, the op
 // being pumped, the lock, the signal, the pump and the purge) behind this shim; each op's steps come back through
 // AsyncOp.cpp's hooks. The original unit (AsyncOpContainer.cpp) is deleted.
@@ -179,28 +172,8 @@ inline void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
 class SocketOp;
 // (MsgTransform, 2ad880, and its one class, CryptTransform, are Rust's since net round 29: ee_won cppcore.rs)
 
-// WON SDK NetStats: static functions only. The counters are Rust's (rust/crates/ee_won_net/src/netstats.rs)
-class NetStats
-{
-public:
-	static void Enable(bool isEnabled) { ee_won_netstats_enable(isEnabled); }
-
-	static void IncrementNumConstructedSockets(int theAmount) { ee_won_netstats_add(0, theAmount); }
-	static void IncrementNumOpenSockets(int theAmount) { ee_won_netstats_add(1, theAmount); }
-
-	static void IncrementBytesSent(int theAmount) { ee_won_netstats_add(2, theAmount); }
-	static void IncrementBytesReceived(int theAmount) { ee_won_netstats_add(3, theAmount); }
-	static void IncrementMessagesSent(int theAmount) { ee_won_netstats_add(4, theAmount); }
-	static void IncrementMessagesReceived(int theAmount) { ee_won_netstats_add(5, theAmount); }
-
-	static int GetNumConstructedSockets() { return static_cast<int>(ee_won_netstats_get(0)); }
-	static int GetNumOpenSockets() { return static_cast<int>(ee_won_netstats_get(1)); }
-
-	static __int64 GetNumBytesSent() { return ee_won_netstats_get(2); }
-	static __int64 GetNumBytesReceived() { return ee_won_netstats_get(3); }
-	static __int64 GetNumMessagesSent() { return ee_won_netstats_get(4); }
-	static __int64 GetNumMessagesReceived() { return ee_won_netstats_get(5); }
-};
+// WON SDK NetStats (static functions only) is Rust's (rust/crates/ee_won_net/src/netstats.rs, ee_won_netstats_add /
+// _get / _enable); its C++ shim had no caller and went in R6 WON round 34.
 
 // AsyncSocket.cpp's original addresses: the constructor 2b0340, Duplicate 2b0420, the destructor 2b04a0, the length
 // field 2b0600 / 2b0610, AddMsgTransform 2b0620, the transforms 2b0730 / 2b07e0, GetLastSocketError 2b0890, IsValid
@@ -608,53 +581,29 @@ public:
     SmartPtr<T> mObject;                    // +0x10; original allocation0x14
 };
 
-// HTTPConnection (partial), RTTI 44d3a4 > RefCount
-// Held only through SmartPtr (maps); never constructed, sized or copied here.
 class RustServerOp; // an HTTPGetOp (httpget.rs)
-class HTTPSession;
-// HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
-// ee_won's (rust/crates/ee_won_net/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold.
-// Its calls back are Rust's since net round 26 (httpcpp.rs, over the core table; HTTPEngine.cpp is deleted); the
-// forwarders that take an op are below RustServerOp.
-class HTTPConnection : public RefCount {
+// A Rust object a C++ reference holds (R6 WON round 34): HTTPConnection (RTTI 44d3a4 > RefCount; ctor 2d2c80, dtor
+// 2d2d50: a host's keep-alive connection, its socket, queues, running ops, pipelining and retry) and HTTPSession (0x2c
+// bytes; ctor 2d27b0, dtor 2d2870: the connections by host) are wholly ee_won's (httpengine.rs EeWonHttpConn and
+// EeWonHttpSession, their calls httpcpp.rs, made and freed by rustref.rs). This is the RefCount the ops' completions
+// and the session hold, of one kind (EeWonCoreObject::HttpConn or HttpSession), with the lock the Rust takes; the
+// library's core table finds both (AsyncOp.cpp CoreObjectOf).
+class WonRustRef : public RefCount {
 public:
-    // 2d2c80 (new 64 at 2d2a97): idle, pipelining on
-    HTTPConnection(HTTPSession* inSession = NULL) : mSession(inSession)
-    { this->mImpl = ee_won_http_conn_new_core(static_cast<RefCount*>(this), WonCore()); }
-    virtual ~HTTPConnection() { ee_won_http_conn_free(this->mImpl); } //2d2d50: the socket, queues and completions
-    void Kill() { ee_won_http_conn_kill(this->mImpl); } //2d3600: the running and queued requests killed (finished)
-    void QueueOp(RustServerOp* inOp); //2d33a0: send-only on the pipeline queue, a full request without pipelining
-    void QueueOp(RustServerOp* inOp, int inId); //2d3290: on the send (0) or receive (1) queue, started when it was empty
-    void RunOp(int inId) { ee_won_http_conn_run_op(this->mImpl, inId); } //2d3430: a queue's next request on the socket
-    int GetNumOps() { return ee_won_http_conn_num_ops(this->mImpl); }
-    PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
-    EeWonHttpConn* GetConnObject() const { return this->mImpl; }
-protected:
-    // 2d2e80: a sent request queued for its reply, or completed; all requeued when the pipeline drops
-    void OpCallback(AsyncOp* inOp) { ee_won_http_conn_op_callback(this->mImpl, static_cast<RefCount*>(inOp)); }
+    explicit WonRustRef(EeWonCoreObject inKind)
+        : mKind(inKind), mImpl(ee_won_rustref_new(inKind, static_cast<RefCount*>(this), WonCore())) {}
+    virtual ~WonRustRef() { ee_won_rustref_free(this->mKind, this->mImpl); }
+    // the kind's Rust object, or the lock (NULL for another kind)
+    void* Get(EeWonCoreObject inKind) const
+    { return inKind == this->mKind ? this->mImpl : inKind == EeWonCoreObject::Lock ? static_cast<void*>(this->mDataCrit.mCrit) : NULL; }
 private:
-    CriticalSection mDataCrit; //08..20
-    HTTPSession* mSession; //20 NONOWNING, ctor raw assignment
-    EeWonHttpConn* mImpl;   // owned: 0x24..0x64 (socket, counts, flag, last use, queues, retry, running ops)
+    WonRustRef(const WonRustRef&);
+    WonRustRef& operator=(const WonRustRef&);
+    CriticalSection mDataCrit; // before the Rust object, which may lock it
+    EeWonCoreObject mKind;
+    void* mImpl; // owned
 };
-typedef SmartPtr<HTTPConnection> HTTPConnectionPtr;
-
-// 0x2c bytes: constructor 2d27b0, map destruction 2d2870. The connections by host (StringLessNoCase) are ee_won's
-// (httpengine.rs EeWonHttpSession).
-class HTTPSession : public RefCount {
-public:
-    HTTPSession() { this->mImpl = ee_won_http_session_new_core(static_cast<RefCount*>(this), WonCore()); } //2d27b0
-    virtual ~HTTPSession() { ee_won_http_session_free(this->mImpl); } //2d2870, the map
-    void AddOp(RustServerOp*); //2d28f0: on its host's connection, made at the first use
-    void KillAll() { ee_won_http_session_kill_all(this->mImpl); } //2d2bc0: every connection's requests killed
-    int GetNumOps() { return ee_won_http_session_num_ops(this->mImpl); }
-    PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
-    EeWonHttpSession* GetSessionObject() const { return this->mImpl; }
-private:
-    CriticalSection mDataCrit;              //08..20
-    EeWonHttpSession* mImpl;                //20..2c, owned
-};
-typedef SmartPtr<HTTPSession> HTTPSessionPtr;
+typedef WonRustRef HTTPSession; // of the kind EeWonCoreObject::HttpSession (HttpSessionNew)
 
 
 class RoutingConnection;
@@ -767,12 +716,12 @@ inline const char* GetBufferData(const ByteBufferPtr& inBuffer)
 // the WON server list the account ops use (??_G 0xceaec, dtor 0xceb08; sizeof 0x3c).: layout from
 // the dtor and the base game's out-of-line ctor (base exe 0x4c772a; AoC's WONAPI inlines it: 0x2ddb70, 0x3628c0);
 // (provisional member names)
-typedef std::map<std::wstring,DirEntityList> DirEntityMap;
 typedef std::set<IPAddr> AddrSet;
 // A shim over ee_won's server list (rust/crates/ee_won_net/src/servctx.rs: the addresses, their order, the one-time
 // shuffle and the lock); the original's 0x3c-byte layout is gone
 // a shim over ee_won's server list (servctx.rs: the addresses, their order, the one-time shuffle and the lock);
-// header-only since net round 27 (ServerContext.cpp deleted): it converts IPAddr values and walks the entities
+// header-only since net round 27 (ServerContext.cpp deleted): it converts IPAddr values; the directory's entities are
+// walked in Rust (dirlist.rs, R6 WON round 34: the path-map overloads had no caller and went with DirEntityMap)
 class ServerContext : public RefCount {
 public:
     EeWonServerList* GetListObject() const { return this->mList; }
@@ -784,13 +733,8 @@ public:
     // a server that failed to the end of the list
     void NotifyFailed(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); ee_won_ctx_notify_failed(this->mList, &a); } //2ac980
     // the directory's services' addresses (only those of the name when one is given)
-    bool AddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter=NULL) //2acab0/332
-    {
-        std::vector<IPAddr> anAddrs = DirAddresses(inDir, inNameFilter);
-        bool added = false;
-        for (size_t i = 0; i < anAddrs.size(); i++) if (this->AddAddress(anAddrs[i])) added = true;
-        return added;
-    }
+    bool AddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL) //2acab0/332
+    { return ee_won_ctx_add_from_dir(this->mList, inDir.get(), inNameFilter, WideLength(inNameFilter), sizeof(wchar_t)); }
     void RemoveAllAddresses() { this->Clear(); } //2acc00
     unsigned long GetNumAddresses() { return (unsigned long)ee_won_ctx_len(this->mList); }
     typedef std::list<IPAddr> AddrList;
@@ -798,44 +742,16 @@ public:
     void CopyAddresses(AddrList& outCopy) { outCopy.clear(); ee_won_ctx_copy(this->mList, Rand, ToList, &outCopy); } //2ac6d0
     bool RemoveAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_remove(this->mList, &a); }
     void CopyAddresses(AddrSet& outCopy) { outCopy.clear(); ee_won_ctx_copy_sorted(this->mList, ToSet, &outCopy); }
-    bool AddAddressesFromDir(const DirEntityMap& inDir, const std::wstring& inPath, const wchar_t* inNameFilter=NULL)
-    {
-        DirEntityMap::const_iterator i = inDir.find(inPath);
-        return i != inDir.end() && this->AddAddressesFromDir(i->second, inNameFilter);
-    }
     // cleared and refilled under the list's one lock
-    bool AtomicClearAndAddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter=NULL)
-    {
-        std::vector<IPAddr> anAddrs = DirAddresses(inDir, inNameFilter);
-        std::vector<EeWonAddr> aRaw;
-        for (size_t i = 0; i < anAddrs.size(); i++) aRaw.push_back(anAddrs[i].ToRaw());
-        return ee_won_ctx_replace(this->mList, aRaw.empty() ? NULL : &aRaw[0], aRaw.size());
-    }
-    bool AtomicClearAndAddAddressesFromDir(const DirEntityMap& inDir, const std::wstring& inPath, const wchar_t* inNameFilter=NULL)
-    {
-        DirEntityMap::const_iterator i = inDir.find(inPath);
-        if (i != inDir.end()) return this->AtomicClearAndAddAddressesFromDir(i->second, inNameFilter);
-        ee_won_ctx_replace(this->mList, NULL, 0); // the original cleared the list before looking the path up
-        return false;
-    }
+    bool AtomicClearAndAddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL)
+    { return ee_won_ctx_replace_from_dir(this->mList, inDir.get(), inNameFilter, WideLength(inNameFilter), sizeof(wchar_t)); }
     // the original's public mShuffleAddresses (copies shuffle once while it is on)
     void SetShuffleAddresses(bool inShuffle) { ee_won_ctx_set_shuffle(this->mList, inShuffle); }
 
 private:
     ServerContext(const ServerContext&);
     ServerContext& operator=(const ServerContext&);
-    static std::vector<IPAddr> DirAddresses(const DirEntityList& inDir, const wchar_t* inNameFilter)
-    {
-        std::wstring aFilter;
-        if (inNameFilter != NULL) aFilter = inNameFilter;
-        std::vector<IPAddr> anAddrs;
-        for (DirEntityList::const_iterator i = inDir.begin(); i != inDir.end(); ++i) {
-            DirEntity* e = i->get();
-            if (e->mType == 'D' || (!aFilter.empty() && !(aFilter == e->mName))) continue;
-            anAddrs.push_back(e->GetNetAddrAsIP());
-        }
-        return anAddrs;
-    }
+    static size_t WideLength(const wchar_t* inText) { return inText != NULL ? wcslen(inText) : 0; }
     static IPAddr FromRaw(const EeWonAddr* inRaw) { IPAddr a; a.FromRaw(*inRaw); return a; }
     static void ToList(void* inList, const EeWonAddr* inRaw) { static_cast<AddrList*>(inList)->push_back(FromRaw(inRaw)); }
     static void ToSet(void* inSet, const EeWonAddr* inRaw)
@@ -909,12 +825,13 @@ public:
     static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
     IPAddr GetCurAddr() const; // a request's current server (EE_WON_REQHOST_CUR_ADDR)
     IPAddr GetAddr() const; // a request's first server (an invalid address: none)
+    IPAddr AddrOf(int inWhich) const; // an address's six bytes by number (an invalid address: none)
     void Set(int inWhich, RefCount* inObj); // an object setter (the op takes its own reference)
     void SetNum(int inWhich, long long inNum); // a number setter
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
     // the results of a directory or account op (ee_won reqdir.rs): its entities by number and element
     // (EE_WON_REQOP_DIR_LIST and a query's index, EE_WON_REQOP_DIR_SERVICE), a number, bytes
-    DirEntityList GetEntities(int inWhich, long long inIndex = 0) const;
+    DirList GetEntities(int inWhich, long long inIndex = 0) const { return DirList(ee_won_dirlist_of_op(this->mRustOp, inWhich, inIndex)); }
     long long GetNum(int inWhich, long long inIndex = 0) const { return ee_won_hostop_num(this->mRustOp, inWhich, inIndex); }
     std::string GetBytes(int inWhich, long long inIndex = 0) const;
     // the directory and account ops the game makes (ee_won reqdir.rs), with their members
@@ -961,29 +878,26 @@ protected:
     virtual ~RustServerOp();
 private:
     static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
-    IPAddr AddrOf(int inWhich) const;
     EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
-// the HTTP engine's forwarders that take an HTTP get op (HTTPEngine.cpp's, 2d33a0, 2d3290, 2d28f0)
-inline void HTTPConnection::QueueOp(RustServerOp* inOp)
-{ ee_won_http_conn_queue_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
-inline void HTTPConnection::QueueOp(RustServerOp* inOp, int inId)
-{ ee_won_http_conn_queue_op_id(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp)), inId); }
-inline void HTTPSession::AddOp(RustServerOp* inOp)
-{ ee_won_http_session_add_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
+// HTTPSession's calls (2d27b0, 2d28f0: an HTTP get op on its host's connection, made at the first use; 2d2bc0: every
+// connection's requests killed); a connection's are the Rust's own (httpcpp.rs)
+inline HTTPSession* HttpSessionNew() { return new WonRustRef(EeWonCoreObject::HttpSession); }
+inline EeWonHttpSession* HttpSessionOf(HTTPSession* inSession)
+{ return static_cast<EeWonHttpSession*>(inSession->Get(EeWonCoreObject::HttpSession)); }
+inline void HttpSessionAddOp(HTTPSession* inSession, RustServerOp* inOp)
+{ ee_won_http_session_add_op(HttpSessionOf(inSession), static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
+inline void HttpSessionKillAll(HTTPSession* inSession) { ee_won_http_session_kill_all(HttpSessionOf(inSession)); }
+inline int HttpSessionNumOps(HTTPSession* inSession) { return ee_won_http_session_num_ops(HttpSessionOf(inSession)); }
 
 // AuthSession (0x10cc bytes in the original) is an ee_won handle (hostauth.rs over peerauth.rs's session, round 22):
 // the peer auth op that makes it, the auth context's session cache and the sockets' transforms hold it.
 
 
-// The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
-// objects (DirEntityReplyParser.cpp), for RustServerOp::GetEntities. GetEntityRequest, GetDirOp, GetMultiDirOp,
-// GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs).
-class DirEntityReplyParser {
-public:
-    static void TakeEntity(void* inList, const EeWonDirEntity* inEntity); // appends to the DirEntityList
-};
+// The directory server's entity replies: the reading and the lists of what it read are ee_won's (dir.rs, dirlist.rs:
+// DirEntityReplyParser::TakeEntity is gone with DirEntity, R6 WON round 34). GetEntityRequest, GetDirOp,
+// GetMultiDirOp, GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs).
 
 // PeerAuthOp (0x2244 bytes, ctor 2e6a10) and PeerAuthServerOp (0x2240, ctor 2e8950): Rust ops on the base (ee_won
 // peerop.rs over peerobj.rs: the address, the certificate refresh status, the peer data, the handshake of
@@ -1051,37 +965,10 @@ class Thread : public ThreadBase {
 public:
     void SetAutoDelete(bool inAutoDelete) { ee_won_thread_set_auto_delete(this->mThread,inAutoDelete); }
 };
-class DNSTestOp : public AsyncOp {
-    friend class DNSTestThread;
-public:
-    DNSTestOp(const std::string& inHost) { this->mHostString = inHost; } //2d95a0 (header-only since net round 27)
-    // Accessor as in the SDK's DNSTestOp.h; the LAN family 3e28d0 reads
-    // receiver+54 directly (no out-of-line helper).
-    const IPAddr& GetHostAddr() { return this->mHostAddr; }
-protected:
-    virtual ~DNSTestOp() {}                 //2d9740
-    virtual void RunHook();                 //2d97f0: a self-deleting thread resolves the host
-    std::string mHostString;                //44..54
-    IPAddr mHostAddr;                       //54..7c
-};
-typedef SmartPtr<DNSTestOp> DNSTestOpPtr;
-class DNSTestThread : public Thread {
-public:
-    DNSTestThread(DNSTestOp* inOp) : mOp(inOp) {} //inline constructor 2d9826..985d
-    // the op finished with success or the host-lookup failure status
-    virtual void ThreadFunc() //slot10 2d9920
-    {
-        this->mOp->mHostAddr.SetWithDefaultPort(this->mOp->mHostString, 0);
-        this->mOp->Finish(this->mOp->mHostAddr.IsValid() ? WS_Success : WS_InvalidAddress);
-    }
-    DNSTestOpPtr mOp; //1c,owned; full20. Implicit dtor2d98b0 no ownvptr store.
-};
-inline void DNSTestOp::RunHook()
-{
-    DNSTestThread* aThread = new DNSTestThread(this);
-    aThread->SetAutoDelete(true);
-    aThread->Start();
-}
+// DNSTestOp (0x7c bytes; ctor 2d95a0, dtor 2d9740, RunHook 2d97f0) and DNSTestThread (ThreadFunc 2d9920) are a Rust op
+// (rust/crates/ee_won_net/src/dnstest.rs, R6 WON round 34): its run starts a thread holding the op, which resolves
+// the host (SetWithDefaultPort, port 0) and finishes the op; GetHostAddr is AddrOf(EE_WON_DNSTEST_ADDR)
+inline RustServerOp* NewDnsTestOp(const std::string& inHost) { return new RustServerOp(ee_won_dnstest_new(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size())); }
 
 
 // WONAPI's HTTP document request (sizeof 0xdc; implicit dtor 0x4cff46; ctor out of line in the base game,
@@ -1269,31 +1156,26 @@ public:
 // A request helper's values in parameter order: numbers, texts (UTF-16), data types, a buffer (or none), recipients
 class RoutingRequestValues {
 public:
-    RoutingRequestValues& N(long long inNum) { return this->Add(inNum, std::string()); }
-    RoutingRequestValues& W(const std::wstring& inText) { std::string b; WideAppendUtf16LE(b, inText); return this->Add(0, b); }
-    RoutingRequestValues& S(const std::string& inBytes) { return this->Add(0, inBytes); }
+    // the values are a Rust builder's (rust/crates/ee_won_net/src/routereq.rs, R6 WON round 34)
+    RoutingRequestValues() : mReq(ee_won_routereq_new()) {}
+    ~RoutingRequestValues() { ee_won_routereq_free(this->mReq); }
+    RoutingRequestValues& N(long long inNum) { return this->Add(inNum, NULL, 0); }
+    RoutingRequestValues& W(const std::wstring& inText)
+    { ee_won_routereq_wide(this->mReq, inText.data(), sizeof(wchar_t), inText.length()); return *this; }
+    RoutingRequestValues& S(const std::string& inBytes) { return this->Add(0, inBytes.data(), inBytes.size()); }
     RoutingRequestValues& D(const ByteBuffer* inData)
-    { return inData == NULL ? this->Add(0, std::string()) : this->Add(1, std::string(inData->data(), inData->length())); }
+    { return inData == NULL ? this->Add(0, NULL, 0) : this->Add(1, inData->data(), inData->length()); }
     RoutingRequestValues& L(const std::list<unsigned short>& inIds)
-    {
-        std::string b;
-        for (std::list<unsigned short>::const_iterator i = inIds.begin(); i != inIds.end(); ++i)
-            b.append(1, (char)(*i & 0xff)).append(1, (char)(*i >> 8));
-        return this->Add(0, b);
-    }
+    { ee_won_routereq_ids(this->mReq, std::vector<uint16_t>(inIds.begin(), inIds.end()).data(), inIds.size()); return *this; }
     void Run(RefCount* inConn, int inKind, CompletionBase<AsyncOpPtr>* inCompletion)
-    {
-        std::vector<EeWonAdminValue> v;
-        for (std::list<std::pair<long long, std::string> >::iterator i = mValues.begin(); i != mValues.end(); ++i) {
-            EeWonAdminValue x = {i->first, reinterpret_cast<const uint8_t*>(i->second.data()), i->second.size()};
-            v.push_back(x);
-        }
-        ee_won_routeconn_request(inConn, inKind, v.empty() ? NULL : &v[0], v.size(), static_cast<RefCount*>(inCompletion));
-    }
+    { ee_won_routereq_run(this->mReq, inConn, inKind, static_cast<RefCount*>(inCompletion)); }
+    const EeWonRouteReq* GetReq() const { return this->mReq; }
 private:
-    RoutingRequestValues& Add(long long inNum, const std::string& inBytes)
-    { this->mValues.push_back(std::make_pair(inNum, inBytes)); return *this; }
-    std::list<std::pair<long long, std::string> > mValues;
+    RoutingRequestValues(const RoutingRequestValues&);
+    RoutingRequestValues& operator=(const RoutingRequestValues&);
+    RoutingRequestValues& Add(long long inNum, const void* inBytes, size_t inLength)
+    { ee_won_routereq_add(this->mReq, inNum, static_cast<const uint8_t*>(inBytes), inLength); return *this; }
+    EeWonRouteReq* mReq; // owned
 };
 typedef CompletionBase<AsyncOpPtr> RouteCompletion;
 class RoutingConnection : public ServerConnection {

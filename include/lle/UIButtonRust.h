@@ -12,8 +12,8 @@ struct UIButtonRust {
     // the form's manager's check box bitmaps (UIManager::GetCheckOff, GetCheckDownOff; UICheckBox.cpp), for the
     // check boxes' UIButton parts
     // the check boxes' UIButton parts (UIButtonRust.h)
-    static GEBitmap* CheckOff(UIForm* inForm);
-    static GEBitmap* CheckDownOff(UIForm* inForm);
+    static GEBitmap* CheckOff(UIForm* inForm) { return inForm->GetManager()->GetCheckOff(); }
+    static GEBitmap* CheckDownOff(UIForm* inForm) { return inForm->GetManager()->GetCheckDownOff(); }
     // a whole subclass's method (its record is the Rust button's, buttonobj.rs Sub): one inward call
     static intptr_t Call(const UIButton* inButton, EeUiButtonCall inCall, intptr_t a = 0, intptr_t b = 0,
                          float f0 = 0.0f, float f1 = 0.0f, float f2 = 0.0f, float f3 = 0.0f)

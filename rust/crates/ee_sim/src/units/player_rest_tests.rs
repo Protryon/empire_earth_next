@@ -268,7 +268,7 @@ fn a_game_result_is_announced_once_for_another_player() {
     let mut w = World::default();
     set_game_result(&mut w, 1, 1);
     set_game_result(&mut w, 1, 1);
-    assert_eq!(w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_ANNOUNCE_RESULT).count(), 1);
+    assert_eq!(w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_CHAT_RESULT).count(), 1);
     assert_eq!(unsafe { (*w.saved(1)).mGameResult }, 1);
     set_game_result(&mut w, 1, 0);
     assert_eq!(unsafe { (*w.saved(1)).mGameResult }, 0);
@@ -475,4 +475,17 @@ fn a_color_and_its_shade() {
     unsafe { ee_units_player_set_color(&mut color, &mut shade, &[1.0, 0.5, 0.25]) };
     assert_eq!(color, [1.0, 0.5, 0.25]);
     assert_eq!(shade, [1.0f32 * 0.6, 0.5 * 0.6, 0.25 * 0.6]);
+}
+
+#[test]
+fn a_computer_players_result_names_its_civilization() {
+    let mut w = World::default();
+    announce_result(&mut w, 1, true);
+    let ops = w.ops();
+    assert_eq!(ops.iter().filter(|&&o| o == EE_UNITS_PLAYER_BODY_TEXT_NEW).count(), 4);
+    assert_eq!(ops.iter().filter(|&&o| o == EE_UNITS_PLAYER_BODY_TEXT_DELETE).count(), 4);
+    let at = |op| ops.iter().position(|&o| o == op).unwrap();
+    assert!(at(EE_UNITS_PLAYER_BODY_TEXT_CIV_NAME) < at(EE_UNITS_PLAYER_BODY_TEXT_FORMAT));
+    assert!(at(EE_UNITS_PLAYER_BODY_TEXT_FORMAT) < at(EE_UNITS_PLAYER_BODY_CHAT_RESULT));
+    assert!(!ops.contains(&EE_UNITS_PLAYER_BODY_TEXT_NAME));
 }

@@ -9,8 +9,8 @@
 #include "rust/ui/groupobj.h"
 #include "rust/ui/lle_hosts.h"
 #include "rust/ui/obj.h"
+#include "lle/UIObjHost.h"
 
-class UIEntity;
 
 class LLE_API UIEntityGroup {
 public:

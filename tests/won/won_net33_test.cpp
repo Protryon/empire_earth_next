@@ -33,6 +33,7 @@
 #include "rust/won_net/peerop.h"
 #include "rust/won_net/certhost.h"
 #include "rust/won_net/udpops.h"
+#include "won_direntity_orig.h" // DirEntity and its records as they were (R6 WON round 34 made them Rust's)
 
 using namespace WONAPI;
 

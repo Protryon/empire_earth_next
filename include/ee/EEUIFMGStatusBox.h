@@ -18,7 +18,7 @@ class UIForm;
 // the box's pointer is the record's (status_box.rs reads it through the call record)
 class EEUIFMGStatusBox : public EeScreensStatusBoxFields {
 public:
-    EEUIFMGStatusBox(UIForm* inForm);
+    EEUIFMGStatusBox(UIForm* inForm) { ee_screens_status_box_init(this, inForm); }   // (main_form_fields.rs)
     ~EEUIFMGStatusBox() {}                    // (ICF-folded into the empty 0xe123d)
     void Fill(EEUnit* inUnit);              // 0x26b593 (the main group's new selection)
     void HideBackgrounds();                 // 0x26c470 (before the main group fills the controls in)
@@ -44,8 +44,7 @@ public:
     // inline (EEUIFMGMainGroup::Open loads the label first: the arguments are evaluated right to left)
     void SetControls(long inIndex, UIControl* inIcon, UIControl* inLabel)
     {
-        this->mIcons[inIndex] = inIcon;
-        this->mLabels[inIndex] = inLabel;
+        ee_screens_status_box_set_controls(this, (int64_t)inIndex, inIcon, inLabel);   // (main_form_fields.rs)
     }
 };
 

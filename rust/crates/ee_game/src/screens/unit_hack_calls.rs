@@ -1,7 +1,7 @@
 //! The unit hack's host's cases of more than one call (`ee_screenscpp_unit_hack`, `EEUIFMainGame.cpp`) in Rust over
 //! one-statement shims (UI lane round 10): the class's flags and name, the object list's append, first selection
 //! (without its change event) and selection, the lists' selections, the keys, the place message, the point under
-//! the mouse. The host's one-statement cases stay its (`unit_hack_ffi.rs` asks here first).
+//! the mouse; and from UI lane round 16 the host's one-statement cases too (the C++ host switch is gone).
 
 use core::ffi::c_ulong;
 
@@ -9,9 +9,12 @@ use crate::screens::game_cpp::{
     Cpp, EeScreensShimOut as Out, EeScreensShimText as Text, EeScreensShimULongOut as ULongOut,
 };
 use crate::screens::unit_hack::{
-    EE_SCREENS_UH_OP_CLASS, EE_SCREENS_UH_OP_CLASS_NAME, EE_SCREENS_UH_OP_COMBO_APPEND,
-    EE_SCREENS_UH_OP_COMBO_SELECTION, EE_SCREENS_UH_OP_COMBO_SELECT_FIRST, EE_SCREENS_UH_OP_KEY,
-    EE_SCREENS_UH_OP_LIST_SELECTION, EE_SCREENS_UH_OP_POINT, EE_SCREENS_UH_OP_SEND_PLACE,
+    EE_SCREENS_UH_OP_CLASS, EE_SCREENS_UH_OP_CLASS_CATEGORY, EE_SCREENS_UH_OP_CLASS_COUNT, EE_SCREENS_UH_OP_CLASS_NAME,
+    EE_SCREENS_UH_OP_CLASS_TYPE, EE_SCREENS_UH_OP_COMBO_APPEND, EE_SCREENS_UH_OP_COMBO_CLEAR,
+    EE_SCREENS_UH_OP_COMBO_SELECTION, EE_SCREENS_UH_OP_COMBO_SELECT_FIRST, EE_SCREENS_UH_OP_IN_VIEW,
+    EE_SCREENS_UH_OP_KEY, EE_SCREENS_UH_OP_LEFT_BUTTON, EE_SCREENS_UH_OP_LIST_SELECTION, EE_SCREENS_UH_OP_LOCAL_PLAYER,
+    EE_SCREENS_UH_OP_PLAYER_SKIPPED, EE_SCREENS_UH_OP_POINT, EE_SCREENS_UH_OP_SEND_LOAD, EE_SCREENS_UH_OP_SEND_PLACE,
+    EE_SCREENS_UH_OP_TILE,
 };
 
 /// The host's moved op `op` on the form; `None` for the C++ host's.
@@ -93,6 +96,24 @@ pub(crate) fn call<C: Cpp + ?Sized>(
             f[1] = c.uh_point_y();
             found as i32
         }
+        EE_SCREENS_UH_OP_CLASS_COUNT => c.uh_class_count(),
+        EE_SCREENS_UH_OP_CLASS_CATEGORY => c.uh_class_category(a),
+        EE_SCREENS_UH_OP_CLASS_TYPE => c.uh_class_type(a),
+        EE_SCREENS_UH_OP_COMBO_CLEAR => {
+            c.uh_combo_clear(form);
+            0
+        }
+        EE_SCREENS_UH_OP_TILE => c.uh_tile(f[0], f[1]) as i32,
+        EE_SCREENS_UH_OP_PLAYER_SKIPPED => c.uh_player_skipped(a) as i32,
+        EE_SCREENS_UH_OP_LOCAL_PLAYER => c.uh_local_player(),
+        EE_SCREENS_UH_OP_SEND_LOAD => {
+            c.uh_send_load(a);
+            0
+        }
+        EE_SCREENS_UH_OP_IN_VIEW => c.uh_in_view(f[0], f[1]) as i32,
+        EE_SCREENS_UH_OP_LEFT_BUTTON => {
+            (if a == 0 { c.mouse_left_just_pressed() } else { c.mouse_left_just_unpressed() }) as i32
+        }
         _ => return None,
     })
 }
@@ -159,6 +180,24 @@ mod tests {
              key_shift_value()\nuh_control_value()\nuh_combo_append(256, \"ab\")\nuh_send_place(12, 1.5, 2.5, 3)\n\
              uh_point_reset()\nuh_point(1.5, 2.5)\nuh_point_x()\nuh_point_y()"
         );
-        assert_eq!(run(&mut fake, 1, 0, 0, &mut f, &mut out, &mut text), None);
+        assert_eq!(run(&mut fake, 999, 0, 0, &mut f, &mut out, &mut text), None);
+    }
+
+    #[test]
+    fn the_one_call_ops() {
+        let mut fake = Fake::default();
+        fake.answer("uh_class_count", &[40]).answer("uh_tile", &[1]).answer("mouse_left_just_unpressed", &[1]);
+        let (mut f, mut out, mut text) = ([3.5, 4.5], 0, [0u8; 0]);
+        assert_eq!(run(&mut fake, EE_SCREENS_UH_OP_CLASS_COUNT, 0, 0, &mut f, &mut out, &mut text), Some(40));
+        assert_eq!(run(&mut fake, EE_SCREENS_UH_OP_TILE, 0, 0, &mut f, &mut out, &mut text), Some(1));
+        assert_eq!(run(&mut fake, EE_SCREENS_UH_OP_SEND_LOAD, 7, 0, &mut f, &mut out, &mut text), Some(0));
+        assert_eq!(run(&mut fake, EE_SCREENS_UH_OP_LEFT_BUTTON, 1, 0, &mut f, &mut out, &mut text), Some(1));
+        assert_eq!(
+            fake.calls(),
+            "uh_class_count()
+uh_tile(3.5, 4.5)
+uh_send_load(7)
+mouse_left_just_unpressed()"
+        );
     }
 }

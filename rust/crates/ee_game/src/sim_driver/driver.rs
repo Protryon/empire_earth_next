@@ -46,6 +46,27 @@ pub struct EeSimDriverEvents {
     pub load_scenario_button: u32,
 }
 
+impl EeSimDriverEvents {
+    /// The game's screen events and ids (ee_game screens; were EESim.cpp's table).
+    pub fn game() -> Self {
+        use crate::screens::{menus as m, post_game, save_load, scenario_screens as sc, ui_ids};
+        EeSimDriverEvents {
+            sp_load_game: m::EE_SCREENS_SP_LOAD_GAME,
+            spl_load: save_load::EE_SCREENS_SPL_LOAD,
+            pc_learning: m::EE_SCREENS_PC_LEARNING,
+            sp_campaign: m::EE_SCREENS_SP_CAMPAIGN,
+            pc_campaign: [m::EE_SCREENS_PC_CAMPAIGN_1, m::EE_SCREENS_PC_CAMPAIGN_2, m::EE_SCREENS_PC_CAMPAIGN_3],
+            cs_start: sc::EE_SCREENS_CS_START,
+            si_start: sc::EE_SCREENS_SI_START,
+            editors_open: m::EE_SCREENS_EDITORS_OPEN,
+            editors_scenario_editor: m::EE_SCREENS_EDITORS_SCENARIO_EDITOR,
+            pgs_exit: post_game::EE_SCREENS_PGS_EXIT,
+            form_post_game_summary: ui_ids::EEFormID::kFormPostGameSummary as u32,
+            load_scenario_button: ui_ids::EELoadGameControl::kLoadGameLoadButton as u32,
+        }
+    }
+}
+
 const LOAD_NAME: &str = "EE-SIM load";
 const SCENARIO_NAME: &str = "EE-SIM scenario";
 

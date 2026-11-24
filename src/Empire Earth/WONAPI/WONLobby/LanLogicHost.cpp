@@ -256,11 +256,11 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
                                                                LobbyGetLobbyPort());
         anAddress.SetWithDefaultPortNoDNS(l->mDirectConnectDialog->InputText(1), aDefaultPort);
         if (!anAddress.IsValid()) {
-            SmartPtr<DNSTestOp> anOp = new DNSTestOp(l->mDirectConnectDialog->InputText(1));
+            SmartPtr<RustServerOp> anOp = NewDnsTestOp(l->mDirectConnectDialog->InputText(1));
             LobbyRunOpWithStatus(anOp.get(), LOBBY_STRING(LANLogic_CheckingAddressTitle_String), LOBBY_STRING(LANLogic_CheckingAddressDetails_String), 1, 0);
             if (!anOp->Succeeded())
                 return 0;
-            anAddress = anOp->GetHostAddr();
+            anAddress = anOp->AddrOf(EE_WON_DNSTEST_ADDR);
             if (anAddress.GetPort() == 0)
                 anAddress.SetPort(aDefaultPort);
         }

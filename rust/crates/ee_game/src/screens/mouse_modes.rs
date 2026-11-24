@@ -220,8 +220,10 @@ const EE_SCREENS_MM_EVENT_GARRISON_FULL: i64 = 0x7c3a;
 const EE_SCREENS_MM_EVENT_GARRISON_NONE: i64 = 0x7c41;
 const EE_SCREENS_MM_EVENT_UNLOAD_NONE: i64 = 0x7c3b;
 
-/// `EEUIBuildWall`'s members from `mState` on (the class's vptr before them): placing (0 no start, 1 dragging),
-/// the tile centres, the wall's technology and player.
+/// `EEUIBuildWall` (the C++ name is a typedef of this record; UI lane round 16: the class and its vtable gone): placing
+/// (0 no start, 1 dragging), the tile centres, the wall's technology and player; `editor` the scenario editor's
+/// placement (the original's `EESEUIBuildWall`, whose Cancel and Build were its own).
+/// cbindgen:field-names=[mState, mStart, mEnd, mTechnology, mPlayer, mEditor]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EeScreensBuildWallFields {
@@ -230,10 +232,13 @@ pub struct EeScreensBuildWallFields {
     pub end: EeScreensPoint,
     pub technology: i32,
     pub player: i32,
+    pub editor: bool,
 }
 
-/// `EEUIBuildGate`'s members from `mUnitClass` on: the gate's class, the tile of the last build, the technology,
-/// the highlighted walls' type, the gate's direction, the player.
+/// `EEUIBuildGate` (a typedef of this record, as the wall's): the gate's class, the tile of the last build, the
+/// technology, the highlighted walls' type, the gate's direction, the player; `editor` the scenario editor's
+/// (`EESEUIBuildGate`).
+/// cbindgen:field-names=[mUnitClass, mTileX, mTileY, mTechnology, mWallType, mDirection, mPlayer, mEditor]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeScreensBuildGateFields {
@@ -244,6 +249,34 @@ pub struct EeScreensBuildGateFields {
     pub wall_type: i32,
     pub direction: i32,
     pub player: i32,
+    pub editor: bool,
+}
+
+/// `kTechNone`: the placements' technology until one is started.
+pub const EE_SCREENS_PLACEMENT_TECH_NONE: i32 = 100_000;
+
+impl EeScreensBuildWallFields {
+    /// `EEUIBuildWall()`: no start, no points (-99, -99), no technology.
+    pub const fn new(editor: bool) -> Self {
+        let none = EeScreensPoint { x: -99.0, y: -99.0 };
+        Self { state: 0, start: none, end: none, technology: EE_SCREENS_PLACEMENT_TECH_NONE, player: 0, editor }
+    }
+}
+
+impl EeScreensBuildGateFields {
+    /// `EEUIBuildGate()`: no class, no tile (-99), facing 2, no technology.
+    pub const fn new(editor: bool) -> Self {
+        Self {
+            unit_class: core::ptr::null_mut(),
+            tile_x: -99,
+            tile_y: -99,
+            technology: EE_SCREENS_PLACEMENT_TECH_NONE,
+            wall_type: 0,
+            direction: 2,
+            player: 0,
+            editor,
+        }
+    }
 }
 
 thread_local! {

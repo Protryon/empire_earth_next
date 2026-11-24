@@ -14,8 +14,8 @@ public:
     EEFOFindNewTargetScreenBase() {}        // inline
     virtual ~EEFOFindNewTargetScreenBase() {} // +0x00 (inline: ??_G 0x239ec5)
     // +0x04/+0x08: a unit passes the screen (the finder 0x245dd6 calls them on its candidates)
-    virtual bool Virtual04(EEComplexUnit* inUnit);   // +0x04 0x220a18 NEW trivial: mov al, 1; ret 4 (ICF: Component@WONAPI, EEFOLocationScreenBase...)
-    virtual bool Virtual08(EEComplexUnit* inUnit);   // +0x08 0x220a18 NEW trivial: mov al, 1; ret 4 (ICF: Component@WONAPI, EEFOLocationScreenBase...)
+    virtual bool Virtual04(EEComplexUnit*) { return true; }   // +0x04 0x220a18 NEW trivial: mov al, 1; ret 4 (ICF: Component@WONAPI, EEFOLocationScreenBase...)
+    virtual bool Virtual08(EEComplexUnit*) { return true; }   // +0x08 0x220a18 NEW trivial: mov al, 1; ret 4 (ICF: Component@WONAPI, EEFOLocationScreenBase...)
 };
 
 #endif

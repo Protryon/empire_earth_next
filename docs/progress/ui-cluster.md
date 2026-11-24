@@ -1,7 +1,7 @@
 # The UI cluster lane (the main game HUD, the menus, the UI events, the LLE UI's hosts)
 
 The lane's state. Each round rewrites this file to the current state; the round's story goes in PORT_LEARNINGS.md
-("The UI cluster lane, round 1" .. "round 5", "The UI lane, round 6" .. "round 15").
+("The UI cluster lane, round 1" .. "round 5", "The UI lane, round 6" .. "round 16").
 
 **Scope (the lane scopes of 2026-11-19).** `src/Empire Earth/User Interface Thread/*` but the editor-only
 controls (`EESE*`, `EEUIFSE*`), `EEFOFindNewTargetNearOldTarget.cpp` (the units' lane) and the WON boxes
@@ -97,15 +97,35 @@ The totals are in PORT_LEARNINGS.md "The UI lane, round 14".
 
 The totals are in PORT_LEARNINGS.md "The UI lane, round 15".
 
+## Round 16 (branches `rust-ui16a` toolkit then civilization builder and UI thread, `rust-ui16b` game UI then HUD, two passes each, merged on `rust-ui16`, 2026-11-23)
+
+The collapse phase: classes deleted, not only bodies moved. Lane classes 115 -> 96 (+2 outside the lane).
+
+| Piece | What moved |
+|---|---|
+| ee_ui table host | UIControlsTableHost's Make/Text/Set/Op switches as Rust tables over one-statement shims; SetupGEText Rust's |
+| ee_ui buttons | UIScalableButton, UIDualButton, UIScrollButton folded into UIButton (dispatch on the Rust record, `Virt*` calls); their headers deleted |
+| toolkit skeletons | UIControl's lookups inline, DrawPolygons/MouseLButtonDoublePressed/GetBgOpacity Rust's; a dozen ctors and dtors inline; UICDatabase, UIEventData, UWSNoCaseAlphaSort, UIScrollBarRust gone; the forward declarations one list (lle/UIObjHost.h) |
+| ee_game panel groups | EEUIFMGGroup, EEUIFMGGRust deleted; `mMainGroup` plus five Rust kinds by `mCurrentGroup` |
+| ee_game `cpp_events.rs` | EEUIECancel, EEUIELoadUnit, EEUIEMGHotKeyStatusButton, EEUIEProcessTimerExpired, EEUIEndCinematicModeEvent as EEScreenEvent codes; EEUIECLEFormManager and EEChatLogEntry gone (the chat line `EeScreensChatEntry`) |
+| ee_game placements | EEUIBuildWall/EEUIBuildGate typedefs of the Rust records; EESEUIBuildWall/Gate deleted (cross-lane: EESEUnit, EESimEditor) |
+| host switches | the unit hack's, cursor's, UI events', select control's (`select_units_ops.rs`) and improvement button's (`upgrade_ops.rs`) switches as one-statement shims the Rust hosts call |
+| HUD constructors | seven HUD classes' constructors inline forwards with their records filled in the initializers; access toggles gone |
+| UI thread prototypes | six callees named in Rust by the shim list; three declarations in their callees' own headers; two externs read through their owners |
+
+The totals are in PORT_LEARNINGS.md "The UI lane, round 16".
+
 ## What is left (the lane's part)
 
-Lane logic 973 (from 1,553 at round 14's end), 629 of it in headers; toolkit 398, game 575. The biggest: EEUIShell.h's
-switch frames (44), UIForm's, UIControl's and UIManager's class skeletons, UIControlsTable's three host switches,
-UIControl's out-of-line lookups; EEUIFMainGame's `mStrings`, `mGroups` (other lanes read them typed), the unit-hack
-and cursor op switches; EEUIBuildWall's and EEUIBuildGate's members (the scenario editor and sim_editor use them by
-name: a cross-lane move); EECBCivilizationFiles' context and directory code; EEUserInterface's and EEUIManager's
-prototypes and the ui-event switch; one-line prototypes of functions with no header.
-- Left on purpose (as rounds 7-14): the printfs of a resource format (`EEAreaEffect::Dump`), qualified base-class
+Lane logic 628 (from 973 at round 15's end), 385 of it in headers. The biggest: EEUIShell.h (44: the shells' Make
+cannot move into a shared template constructor, the kind would be built before the derived shell's virtuals exist) and
+EEUIShell.cpp (10); lle/UIObjHost.h's forward-declaration list and UIF4 (42); EECBCivilizationFiles' context and
+directory code (25); EEUIFMainGame's `mStrings` and `EEUIFMGFormCall` (24 + 12); EEAreaEffect's predicate structs and
+Dump (23); UIListBox.h's op switch and UILBNoSort (17, EEUIShell.cpp uses it); UIShims.h's hand-written host
+declarations (15, cbindgen cannot see macro-made functions); EEUIManager.h, EEUserInterface.h, EEScreens.cpp's media and
+lobby-rule helpers; the status box's call record, the status button's declarations, the command units' and main
+group's constructors; the WON glue prototypes (EEIsLobbyOpen, EESetQuitFlag, EELobbyShutdown: WON-lane C++).
+- Left on purpose (as rounds 7-15): the printfs of a resource format (`EEAreaEffect::Dump`), qualified base-class
   calls, the collectors' predicates (C++ templates).
 
 ## Checks

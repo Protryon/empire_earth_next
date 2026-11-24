@@ -9,16 +9,10 @@
 
 #include "ee/EEUnitGoal.h"
 
-class FSFile;
-class GE3DPoint;
 struct EeUnitsGoalIo;
 
 typedef EEUnitGoal EEUGRust;
-// a Rust point (ee_base math types.rs Ge3DPoint) as a GE3DPoint (a template: GE3DPoint is complete where it is used)
-template <class P = GE3DPoint> inline P EEGoalPointOf(const EeGe3DPoint& inPoint) { return P(inPoint.mX, inPoint.mY, inPoint.mZ); }
 
-// one body of inGoal through the kind dispatch (ee_units_rust_goal over EEUGRust.cpp's host), for the accessors
-// defined outside EEUGRust.cpp (EEUGRustCombat.cpp)
 // the combat goals' host operations (EE_COMBAT_G_*, from 1000; EEUGRustCombat.cpp), the host's other cases
 int64_t EECombatGoalHostOp(int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs);
 
@@ -80,11 +74,12 @@ inline bool EEGoalHasLocation(const EEUnitGoal* inGoal)
 {
     return inGoal != NULL && (inGoal->mKind == kGoalLocation || inGoal->mKind == kGoalHealUnit);
 }
-// such a goal's location goal members (EEUGRustCombat.cpp): its location (GetLocation, SetLocation) and yaw (GetYaw;
-// a heal goal's is 0); 0, 0, 0 and 0 for another goal
-GE3DPoint EELocationGoalPoint(EEUnitGoal* inGoal);
-void EESetLocationGoalPoint(EEUnitGoal* inGoal, const GE3DPoint& inLocation);
-float EELocationGoalYaw(EEUnitGoal* inGoal);
+// such a goal's location goal members (ee_units goal_calls.rs): its location (GetLocation, SetLocation) and yaw
+// (GetYaw; a heal goal's is 0); 0, 0, 0 and 0 for another goal
+inline GE3DPoint EELocationGoalPoint(EEUnitGoal* inGoal) { return EEUnitGoal::PointOf(ee_units_goal_location_point_any(inGoal->Base())); }
+inline void EESetLocationGoalPoint(EEUnitGoal* inGoal, const GE3DPoint& inLocation)
+    { ee_units_goal_set_location_point_any(inGoal->Base(), inLocation.GetX(), inLocation.GetY(), inLocation.GetZ()); }
+inline float EELocationGoalYaw(EEUnitGoal* inGoal) { return ee_units_goal_location_yaw_any(inGoal->Base()); }
 // the old dynamic_cast<EEUGLoadTransport*>, <EEUGLoadGarrison*> and <EEUGLoadContainer*> (either)
 inline EEUGRust* EELoadTransportGoalCast(EEUnitGoal* inGoal)
 {

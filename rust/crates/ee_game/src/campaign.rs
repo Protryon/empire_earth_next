@@ -155,6 +155,14 @@ pub enum EeCampaignCpp {
     BuiltInName,
     /// built-in campaign a0's checksum (gAOCRomanChecksum ..)
     BuiltInChecksum,
+    /// `gUIManager->GetFormByID(kFormCampaignScenarioSelect)`
+    SelectForm,
+    /// `((UIForm*)p)->GetFormManager()`
+    FormManager,
+    /// `((UIForm*)p)->SetFormManager((UIFormManager*)a0)`
+    SetFormManager,
+    /// `static_cast<UIFormManager*>(new EECampaignFormManager)`
+    NewFormManager,
 }
 
 use EeCampaignCpp as O;
@@ -1151,6 +1159,19 @@ pub fn built_in_campaign(name: &[u8]) -> c_ulong {
         }
     }
     result
+}
+
+/// `EECampaignFormManager::Get`: the campaign scenario selection form's manager (a `UIFormManager*`), made and
+/// attached on first use.
+#[no_mangle]
+pub extern "C" fn ee_campaign_form_manager() -> *mut c_void {
+    let form = h(O::SelectForm, 0, &[]) as P;
+    let mut manager = h(O::FormManager, form, &[]) as P;
+    if manager == 0 {
+        manager = h(O::NewFormManager, 0, &[]) as P;
+        h(O::SetFormManager, form, &[manager as i64]);
+    }
+    manager as *mut c_void
 }
 
 /// # Safety

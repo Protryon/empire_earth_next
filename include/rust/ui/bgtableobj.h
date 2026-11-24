@@ -59,6 +59,9 @@ EeUiBgTableFields *ee_ui_bgtable_at(unsigned long i);
 /// `UIManager::CreateBackgrounds()` (`manager` the host's object).
 void ee_ui_bgtable_create_backgrounds(void *manager, EeUiHostFn host);
 
+/// `UIInitialize` (User Interface.cpp, UI round 16): registers the user interface's shutdown hook; always kErrorOK.
+long ee_ui_initialize();
+
 }  // extern "C"
 
 #endif  // EE_RUST_UI_BGTABLEOBJ_H

@@ -101,48 +101,8 @@ void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffect
 
 namespace {
 
-// (the per-CT checksum line's fields and the state dump: sim_driver dump.rs, over the Dm cases below)
-
-FILE* sRngFile = NULL;
-// --rng-trace MS=FILE (TEST ONLY, the save/load fidelity hunt): every draw of the physics random stream after game ms
-// MS (gURandomTraceHook, lle/URandom.h), one line each: the draw's number, the new seed, the game ms and the callers
-// as exe-relative addresses (tools/sim.py resolve adds the map's preferred base). The same MS in a continued game and
-// in the game loaded from its save at MS gives two traces whose first differing caller names the state that differs.
-// At most kRngTraceMax draws; the hook reads only.
-std::string sRngTraceFile;
-long sRngTraceMs = -1;
-unsigned long sRngLines = 0;
-const unsigned long kRngTraceMax = 50000;
-
-void RngTraceHook(URandom* inRandom)
-{
-    if (gPhysics == NULL || inRandom != &gPhysics->mRandom || gPhysics->mGameTime <= sRngTraceMs)
-        return;
-    if (sRngFile == NULL) {
-        sRngFile = fopen(sRngTraceFile.c_str(), "w");
-        if (sRngFile == NULL) {
-            gURandomTraceHook = NULL;
-            return;
-        }
-    }
-    if (++sRngLines > kRngTraceMax) {
-        fclose(sRngFile);
-        sRngFile = NULL;
-        gURandomTraceHook = NULL;
-        return;
-    }
-    void* theFrames[16];
-    unsigned short theCount = RtlCaptureStackBackTrace(1, 16, theFrames, NULL);
-    uintptr_t theBase = (uintptr_t)GetModuleHandleA(NULL);
-    fprintf(sRngFile, "%lu %08lx %ld u=%lu", sRngLines, (unsigned long)inRandom->GetSeed(), gPhysics->mGameTime,
-            gPhysicsSteppingUnit != NULL ? gPhysicsSteppingUnit->mUnitID : 0UL);   // the unit being stepped (0 outside UpdateUnits)
-    for (unsigned short i = 0; i < theCount; i++) {
-        uintptr_t theFrame = (uintptr_t)theFrames[i];
-        if (theFrame >= theBase)
-            fprintf(sRngFile, " %llx", (unsigned long long)(theFrame - theBase));
-    }
-    fprintf(sRngFile, "\n");
-}
+// (the per-CT checksum line's fields and the state dump: sim_driver dump.rs, over the Dm cases below; the C
+// library's environment, descriptors and streams, the quit and --rng-trace: sim_driver stdio.rs)
 
 // ------------------------------------------------------------------------------------------------ the driver's host
 
@@ -180,128 +140,14 @@ size_t HostExtension(int inWhich, char* outBuffer, size_t inCapacity)
                    inCapacity);
 }
 
-void HostSetRun(int inRun)
-{
-    gPlatSimRun = inRun;
-}
-
-void AfterTickTrampoline()
-{
-    ee_sim_driver_after_tick();
-}
-
-void HostSetAfterTick(bool inOn)
-{
-    gPlatSimAfterTick = inOn ? AfterTickTrampoline : NULL;
-}
-
 void HostCancelGame()
 {
     gUserInterface->PostCancelGame();
 }
 
-bool HostCaptureActive()
-{
-    return EESimCaptureRecord::Active();
-}
-
 long HostEngineChoice(const char* inName)
 {
     return EECPChoiceByName(inName);
-}
-
-void HostSetEnv(const char* inName, const char* inValue)
-{
-#ifdef _WIN32
-    _putenv_s(inName, inValue);
-#else
-    setenv(inName, inValue, 1);
-#endif
-}
-
-int HostDupStderr()
-{
-#ifdef _WIN32
-    return _dup(2);
-#else
-    return dup(2);
-#endif
-}
-
-void SetStderr(int inFile)
-{
-    fflush(stderr);
-#ifdef _WIN32
-    _dup2(inFile, 2);
-#else
-    dup2(inFile, 2);
-#endif
-}
-
-void HostSetStderr(const char* inFile, int inDescriptor)
-{
-    if (inFile == NULL) {
-        SetStderr(inDescriptor);
-        return;
-    }
-    FILE* theErr = fopen(inFile, "w");
-    if (theErr != NULL) {
-#ifdef _WIN32
-        SetStderr(_fileno(theErr));
-#else
-        SetStderr(fileno(theErr));
-#endif
-        fclose(theErr);
-    }
-}
-
-void HostWrite(int inStream, const uint8_t* inBytes, size_t inLength, bool inFlush)
-{
-    if (inStream >= 3) {   // a descriptor (the batch's markers on the process's stderr)
-        fflush(stderr);
-#ifdef _WIN32
-        _write(inStream - 3, inBytes, (unsigned)inLength);
-#else
-        if (write(inStream - 3, inBytes, inLength) < 0)
-            return;
-#endif
-        return;
-    }
-    FILE* theOut = inStream == 1 ? stdout : stderr;
-    if (inLength > 0)
-        fwrite(inBytes, 1, inLength, theOut);
-    if (inFlush || inStream == 2)
-        fflush(theOut);
-}
-
-void HostRngTrace(long inMs, const char* inPath)
-{
-    sRngTraceMs = inMs;
-    sRngTraceFile = inPath;
-    gURandomTraceHook = RngTraceHook;
-}
-
-void TickDumpTrampoline()
-{
-    ee_sim_driver_tick_dump();
-}
-
-void HostTickHook()
-{
-    gPhysicsAfterTickHook = TickDumpTrampoline;
-}
-
-void HostQuit(int inCode)
-{
-    fflush(stdout);
-    fflush(stderr);
-    if (sRngFile)
-        fflush(sRngFile);
-    EESimCaptureRecord::Flush();
-#ifdef _WIN32
-    TerminateProcess(GetCurrentProcess(), (UINT)inCode);
-#endif
-    _exit(inCode);
 }
 
 long HostWonders(uint64_t inPlayer)
@@ -362,25 +208,8 @@ void EESimGameEnded(int inResult);
 int EESimMain(int argc, char** argv)
 {
     static const EeSimDriverHost kHost = {
-        HostLock, HostDumpAfterLoad, HostExtension, HostSetRun, HostSetAfterTick,
-        HostCancelGame, HostCaptureActive, HostEngineChoice, HostSetEnv, HostDupStderr, HostSetStderr, HostWrite,
-        HostRngTrace, HostTickHook, HostQuit, HostWonders};
-    EeSimDriverEvents theEvents = {};
-    theEvents.sp_load_game = EE_SCREENS_SP_LOAD_GAME;
-    theEvents.spl_load = EE_SCREENS_SPL_LOAD;
-    theEvents.pc_learning = EE_SCREENS_PC_LEARNING;
-    theEvents.sp_campaign = EE_SCREENS_SP_CAMPAIGN;
-    theEvents.pc_campaign[0] = EE_SCREENS_PC_CAMPAIGN_1;
-    theEvents.pc_campaign[1] = EE_SCREENS_PC_CAMPAIGN_2;
-    theEvents.pc_campaign[2] = EE_SCREENS_PC_CAMPAIGN_3;
-    theEvents.cs_start = EE_SCREENS_CS_START;
-    theEvents.si_start = EE_SCREENS_SI_START;
-    theEvents.editors_open = EE_SCREENS_EDITORS_OPEN;
-    theEvents.editors_scenario_editor = EE_SCREENS_EDITORS_SCENARIO_EDITOR;
-    theEvents.pgs_exit = EE_SCREENS_PGS_EXIT;
-    theEvents.form_post_game_summary = kFormPostGameSummary;
-    theEvents.load_scenario_button = kLoadGameLoadButton;
-    int theCode = ee_sim_driver_main(argc, argv, &kHost, &theEvents);
+        HostLock, HostDumpAfterLoad, HostExtension, HostCancelGame, HostEngineChoice, HostWonders};
+    int theCode = ee_sim_driver_main(argc, argv, &kHost);   // (the screens' events: sim_driver driver.rs)
     if (theCode != EE_SIM_DRIVER_CONTINUE)
         return theCode;
     PlatDebugSetHandler(DebugTrampoline);
@@ -592,6 +421,9 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::TorpedoCategory: return kUnitCategoryTorpedo;
     // the capture and its sweeps
     case O::CaptureActive: return EESimCaptureRecord::Active();
+    case O::CaptureFlush: EESimCaptureRecord::Flush();
+        break;
+    case O::PhysicsRandom: return gPhysics != NULL ? P64(&gPhysics->mRandom) : 0;
     case O::CaptureOnly: EESimCaptureRecord::Only((unsigned int)a[0]);
         break;
     case O::CaptureOnlyList: EESimCaptureRecord::Only((const unsigned int*)a[0], (size_t)a[1]);

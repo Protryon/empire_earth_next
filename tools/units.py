@@ -80,8 +80,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Scenario Manager/EEScenarioCapture.cpp",
                        # the scenario logic's host: the world's reads for ee_scenario (ee/EEScenarioHost.h; RUST_PLAN R5b.5)
                        "Empire Earth/Scenario Manager/EEScenarioHost.cpp",
-                       # the host of the calamity classes' Rust updates (ee/EECalamityUpdate.h; ee_tech calamity_update.rs)
-                       "Empire Earth/Calamities/EECalamityUpdate.cpp",
                        # TEST ONLY: the calamity lane's capture records (ee/EECalamityCapture.h: CALI, CALK)
                        "Empire Earth/Calamities/EECalamityCapture.cpp",
                        # TEST ONLY: the area effects' capture records (ee/EEAECapture.h: AETP, AEFX)

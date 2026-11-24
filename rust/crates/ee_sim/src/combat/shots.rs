@@ -728,6 +728,44 @@ pub unsafe extern "C" fn ee_combat_shot_update(kind: i32, unit: u64, host: *cons
     update(kind, &mut StoredShot { host: &mut h, unit });
 }
 
+/// A shot's `ActionChanged` (`update` false: the host-read scope's slot 1) or `Update` (slot 2) as the unit class's
+/// members ran it (EEUnitClassShots.cpp: the projectile's, the missile's and the torpedo's): the scope entered, the
+/// unit's command before, the step over the C++ host, the CBSO record (`func`) when the scope is the outermost, the
+/// scope left.
+///
+/// # Safety
+/// As [`ee_combat_shot_action_changed`]; `unit` is a live complex unit.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_shot_step(
+    kind: i32,
+    update: bool,
+    func: u32,
+    unit: u64,
+    host: *const EeCombatShotHost,
+) {
+    let slot = if update { 2 } else { 1 };
+    let outer = crate::combat::cg_query::ee_combat_host_read_enter(slot);
+    // EECombatCommandOf: the command's type (0: none)
+    // SAFETY: the shot's thread holds the world; a live complex unit
+    let before = {
+        let t = unsafe { crate::world::WorldRead::begin() };
+        unsafe { crate::world::UnitView::of(&t, unit) }.map_or(0, |u| u.command_type())
+    };
+    // SAFETY: the caller's contract
+    unsafe {
+        if update {
+            ee_combat_shot_update(kind, unit, host);
+        } else {
+            ee_combat_shot_action_changed(kind, unit, host);
+        }
+    }
+    if outer {
+        crate::combat::capture_units::ee_combat_capture_shot(func, unit, before);
+    }
+    crate::combat::cg_query::ee_combat_host_read_leave(slot);
+}
+
 /// `EEUGHealUnit::Work` over its reads.
 ///
 /// # Safety

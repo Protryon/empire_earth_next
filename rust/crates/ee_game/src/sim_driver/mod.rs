@@ -30,9 +30,12 @@ pub mod report;
 pub mod sed_civ;
 pub mod sed_digest;
 pub mod sed_host;
+pub mod sed_run;
 pub mod sed_steps;
 pub mod sim_host;
 pub mod sim_ops;
+/// cbindgen:ignore
+pub mod stdio;
 
 #[cfg(test)]
 mod tests;

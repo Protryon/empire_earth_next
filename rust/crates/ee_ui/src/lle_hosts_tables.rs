@@ -455,6 +455,10 @@ tables! {
         PartSetBgColor => v ee_uicpp_ctl_part_set_bg_color,
         BgOpacity => v ee_uicpp_ctl_bg_opacity,
         CtlTabbedTo => v ee_uicpp_ctl_tabbed_to,
+        CtlDrawCopiedBg => v ee_uicpp_ctl_draw_copied_bg,
+        CtlVirtDrawBorder => r ee_uicpp_ctl_virt_draw_border,
+        CtlVirtMouseDown => r ee_uicpp_ctl_virt_mouse_down,
+        CtlBgRhombusOpacity => v ee_uicpp_ctl_bg_rhombus_opacity,
     }
     /// the scroll bar's own ops (its slider and buttons)
     scroll_bar {
@@ -519,5 +523,34 @@ tables! {
         FlLineLength => r ee_uicpp_fl_combo_line_length,
         FlLineCopy => v ee_uicpp_fl_combo_line_copy,
         FlDeleteLine => v ee_uicpp_fl_combo_delete_line,
+    }
+    /// The controls table's (UIControlsTable.cpp; lle_table.rs: the constructors, setters and texts)
+    table {
+        TblWindowWidth => r ee_uicpp_tbl_window_width,
+        TblWindowHeight => r ee_uicpp_tbl_window_height,
+        TblFormById => r ee_uicpp_tbl_form_by_id,
+        TblFormExclusive => r ee_uicpp_tbl_form_exclusive,
+        TblFormDesignedHeight => r ee_uicpp_tbl_form_designed_height,
+        TblFormGdi => r ee_uicpp_tbl_form_gdi,
+        TblFontHeight => r ee_uicpp_tbl_font_height,
+        TblFontHasBitmap => r ee_uicpp_tbl_font_has_bitmap,
+        TblStringLength => r ee_uicpp_tbl_string_length,
+        TblFileOpen => v ee_uicpp_tbl_file_open,
+        TblFileClose => v ee_uicpp_tbl_file_close,
+        TblWrap => r ee_uicpp_tbl_wrap,
+        TblDelete => v ee_uicpp_tbl_delete,
+        TblReserveIndex => v ee_uicpp_tbl_reserve_index,
+        TblStringDelete => v ee_uicpp_tbl_string_delete,
+        TblStringsDelete => v ee_uicpp_tbl_strings_delete,
+        TblFontGet => r ee_uicpp_tbl_font_get,
+        TblFontClosest => r ee_uicpp_tbl_font_closest,
+        TblFontRelease => v ee_uicpp_tbl_font_release,
+        TblFontBitmapNew => v ee_uicpp_tbl_font_bitmap_new,
+        TblUserDefined => r ee_uicpp_tbl_user_defined,
+        TblEventNew => r ee_uicpp_tbl_event_new,
+        TblEventRelease => v ee_uicpp_tbl_event_release,
+        TblFormControl => r ee_uicpp_tbl_form_control,
+        TblMake => x table_make,
+        TblSet => x table_set,
     }
 }

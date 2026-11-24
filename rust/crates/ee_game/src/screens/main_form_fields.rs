@@ -170,6 +170,24 @@ pub unsafe extern "C" fn ee_screens_status_box_init(record: *mut EeScreensStatus
     };
 }
 
+/// `EEUIFMGStatusBox::SetControls(index, icon, label)`: the attribute row's icon and label controls.
+///
+/// # Safety
+/// `record` is a live box's record; `index` is below 9.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_status_box_set_controls(
+    record: *mut EeScreensStatusBoxFields,
+    index: i64,
+    icon: *mut c_void,
+    label: *mut c_void,
+) {
+    // SAFETY: the contract
+    unsafe {
+        (*record).mIcons[index as usize] = icon;
+        (*record).mLabels[index as usize] = label;
+    }
+}
+
 /// `EEUIFMGStatusBox::GetBoxControl(id)`: the control an `EE_SCREENS_BOX_CTL_*` names.
 ///
 /// # Safety
@@ -404,5 +422,23 @@ mod tests {
         assert_eq!(group_op(&mut r, EE_SCREENS_MGR_OP_FIELD, 99, 0), Some(0));
         assert_eq!(group_op(&mut r, EE_SCREENS_MGR_OP_UI_STATE, 0, 0), None);
         assert!(r.mReset && r.mHitPoints == -3);
+    }
+}
+
+#[cfg(test)]
+mod set_controls_tests {
+    use super::*;
+
+    #[test]
+    fn a_row_takes_its_icon_and_label() {
+        let mut record = core::mem::MaybeUninit::<EeScreensStatusBoxFields>::uninit();
+        // SAFETY: a local record, written whole by the init
+        unsafe {
+            ee_screens_status_box_init(record.as_mut_ptr(), core::ptr::null_mut());
+            ee_screens_status_box_set_controls(record.as_mut_ptr(), 3, 0x10 as *mut c_void, 0x20 as *mut c_void);
+            let r = record.assume_init();
+            assert_eq!((r.mIcons[3] as usize, r.mLabels[3] as usize, r.mIcons[2] as usize), (0x10, 0x20, 0));
+            assert_eq!(r.mAttributes[0], -1);
+        }
     }
 }

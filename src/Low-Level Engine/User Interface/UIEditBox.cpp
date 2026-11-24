@@ -101,12 +101,4 @@ extern "C" float ee_uicpp_text_fg_red(uintptr_t inText) { return ((GEText*)inTex
 extern "C" float ee_uicpp_text_fg_green(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetGreen(); }
 extern "C" float ee_uicpp_text_fg_blue(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetBlue(); }
 
-// Creates an empty edit box (one blank line) with caret, key-repeat timers and text; multi-line boxes get a scroll bar
-UIEditBox::UIEditBox(unsigned long inId, GEFont* inFont, unsigned long inMaxChars, bool inNumbersOnly,
-                     const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                     unsigned long inBorderThickness, bool inMultiLine, bool inPasswordBox)
-    : UIControl(kControlTypeEditBox, inId, inRectangle, inForm, inIndex, inBorderThickness),
-      mRust(ee_ui_edit_new(this, ee_ui_edit_host, inFont, inMaxChars, ee_ui_edit_flags(inNumbersOnly, inMultiLine, inPasswordBox),
-                           inBorderThickness)) {}
 
-UIEditBox::~UIEditBox() { ee_ui_edit_free(this->mRust); }

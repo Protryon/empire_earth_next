@@ -164,9 +164,7 @@ static_assert(offsetof(EERenderFrameInfo, mYaw) == sizeof(void*) && offsetof(EER
               && offsetof(EERenderFrameInfo, mAmbient) == sizeof(void*) + 8 + sizeof(long), "render_object.rs FrameInfo");
 static_assert(offsetof(GETextureDescription, mIs3DRenderable) == 4 * sizeof(long)
               && offsetof(GETextureDescription, mUseTexturePack) == 4 * sizeof(long) + 4, "render_object.rs TextureDescription");
-static_assert(kUnitTypeRoboticFarm == 0x33a && kUnitTypeSpaceTurret == 0x302 && kUnitTypeOrbitalSpaceStation == 0x31f
-              && kAreaEffectMorale == 2 && kAreaEffectMoraleFromBuildings == 5 && kAreaEffectMoraleFromMilitaryHeroes == 6
-              && kStageOpModulate == 2 && (int)EeGfxLighting::DimUnit == 10, "render_object.rs constants");
+// (its constants are checked against the headers by gamecpp cpp_consts_tests.rs)
 
 #define RO_P64(x) ((int64_t)(intptr_t)(x))
 #define RS (EERenderLists::sInstance)

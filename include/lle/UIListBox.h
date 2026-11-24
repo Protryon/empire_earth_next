@@ -28,15 +28,7 @@ public:
     bool operator()(const T& inLeft, const T& inRight) const { return false; }
 };
 
-// Case-insensitive alphabetical order (UIFileComboBox's InsertLine).
-class LLE_API UWSNoCaseAlphaSort {
-public:
-    UWSNoCaseAlphaSort() {}                 // user-declared: exported ??0UWSNoCaseAlphaSort@@QAE@XZ (ICF-folded, 0x1093c)
-    bool operator()(const UWideString& inLeft, const UWideString& inRight) const
-    {
-        return ee_ui_text_less_no_case(inLeft, inRight);   // ee_ui/src/listobj.rs
-    }
-};
+// (the original's UWSNoCaseAlphaSort, UIFileComboBox's case-insensitive order: ee_ui_text_less_no_case, listobj.rs)
 
 // A line type's members for the Rust list (EeUiLineOps): a UWideString line's text both ways, nothing for another type
 inline const char* UILineText(const UWideString* inLine) { return *inLine; }
@@ -68,8 +60,6 @@ public:
     uint32_t mWhich;
 };
 
-class GERhombus;
-class UIScrollBar;
 template <class T> struct UIListBoxRust;
 template <class T> class UIListBox : public UIControl {
 public:

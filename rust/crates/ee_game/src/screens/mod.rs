@@ -166,6 +166,7 @@ mod civ_whole_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod command_units;
+pub mod cpp_events;
 pub mod cursor;
 #[cfg(not(test))]
 mod cursor_ffi;
@@ -264,10 +265,13 @@ pub mod frame;
 #[cfg(not(test))]
 mod frame_ffi;
 pub mod game_actions;
+#[cfg(test)]
+mod game_actions_cpp_consts_tests;
 #[cfg(not(test))]
 mod game_actions_ffi;
 #[cfg(test)]
 mod game_actions_golden;
+pub mod game_actions_host;
 #[cfg(test)]
 mod game_actions_tests;
 #[cfg(test)]
@@ -430,6 +434,7 @@ pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
 pub(crate) mod screens_calls;
 pub(crate) mod screens_more_calls;
+pub(crate) mod select_units_ops;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
@@ -464,3 +469,4 @@ pub mod upgrade;
 pub(crate) mod upgrade_calls;
 #[cfg(not(test))]
 mod upgrade_ffi;
+pub(crate) mod upgrade_ops;

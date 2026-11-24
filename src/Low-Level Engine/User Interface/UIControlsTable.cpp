@@ -51,7 +51,6 @@
 #include "lle/UIButton.h"
 #include "lle/UIBlinkingButton.h"
 #include "lle/UISlider.h"
-#include "lle/UIScrollButton.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UITextLabel.h"
 #include "lle/UICheckBox.h"
@@ -59,12 +58,10 @@
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
-#include "lle/UIDualButton.h"
 #include "lle/UIFileComboBox.h"
 #include "lle/UIFileListBox.h"
 #include "lle/UIGraph.h"
 #include "lle/UIRadioButton.h"
-#include "lle/UIScalableButton.h"
 #include "lle/UITLScrolling.h"
 #include "lle/UIStatusBar.h"
 #include "lle/UIFontTable.h"
@@ -81,7 +78,7 @@
 #define STRINGS(x) reinterpret_cast<std::vector<UWideString>*>(x)
 #define RECT(x) reinterpret_cast<const GERectangle*>(x)
 extern "C" void ee_uicpp_form_add_database_control(uintptr_t inForm, uint32_t inIndex)
-{ FORM(inForm)->AddDatabaseControl(UICDatabase{inIndex, NULL}); }
+{ FORM(inForm)->AddDatabaseControl(inIndex, NULL); }
 extern "C" uintptr_t ee_uicpp_string_new() { return (uintptr_t) new UWideString; }
 extern "C" void ee_uicpp_mgr_string(uintptr_t inM, uint32_t inId, uintptr_t inString)
 { MGR(inM)->GetStringTable()->GetString(inId, *reinterpret_cast<UWideString*>(inString)); }
@@ -115,194 +112,128 @@ extern "C" uintptr_t ee_uicpp_texture_load_ui_string(uintptr_t inManager, uintpt
 extern "C" void ee_uicpp_bitmap_stretch(uintptr_t inB, uintptr_t inRect, uintptr_t inTextureRect, uint32_t inScreen)
 { reinterpret_cast<GEBitmap*>(inB)->ComputeStretchedCoordsAndScale(*RECT(inRect), *RECT(inRect), *RECT(inTextureRect), inScreen); }
 
-// The Rust table's calls out (EeUiOp, obj.rs; ee_ui tableobj.rs); the cases of more than one call are Rust's
-// (lle_table.rs, the host ee_ui_table_host): a is the form, font, file, string, bitmap,
-// control or event the op names, d the manager where the op needs one; rectangles and colours travel in f
-struct UIControlsTableHost {
-    static GERectangle R(const float* f) { return GERectangle(f[1], f[3], f[2], f[0]); }
-    static GERectangle R(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
-    static GEColor C(const float* f) { return GEColor(f[0], f[1], f[2]); }
-
-    // A control's constructor (the factories' new: CreateBitmap .. CreateTextLabel)
-    static UIControl* Make(const EeUiTableMake& m)
-    {
-#define r R(m.rect)
-#define theForm reinterpret_cast<UIForm*>(m.form)
-#define theFont reinterpret_cast<GEFont*>(m.font)
-#define theText reinterpret_cast<const UWideString*>(m.text)
-#define theStrings reinterpret_cast<std::vector<UWideString>*>(m.strings)
-#define n reinterpret_cast<GEBitmap*>(m.normal)
-#define fo reinterpret_cast<GEBitmap*>(m.focused)
-#define p reinterpret_cast<GEBitmap*>(m.pressed)
-        switch (m.kind) {
-        case EeUiTableKind::Bitmap: return new UIBitmap(m.id, n, r, theForm, m.index);
-        case EeUiTableKind::Button: return new UIButton(m.id, n, fo, p, r, theForm, m.index, m.border);
-        case EeUiTableKind::BlinkingButton: return new UIBlinkingButton(m.id, n, fo, p, r, theForm, m.index, m.border, m.blink_rate);
-        case EeUiTableKind::ScalableButton: return new UIScalableButton(m.id, n, fo, p, R(m.normal_rect), R(m.focused_rect), R(m.pressed_rect), r, r, theForm, m.index);
-        case EeUiTableKind::DualButton: return new UIDualButton(m.id, n, fo, p, r, theForm, m.index, m.border);
-        case EeUiTableKind::CheckBox: return new UICheckBox(m.id, *theText, theFont, r, theForm, m.index, m.border, m.flag_a);
-        case EeUiTableKind::ComboBox: return new UIComboBox(m.id, m.style, *theStrings, theFont, r, m.list_height, theForm, m.index, m.max_chars, m.border);
-        case EeUiTableKind::FileComboBox: return new UIFileComboBox(m.id, 1, *theStrings, theFont, r.GetTopLeft(), m.length, m.list_height, theForm, m.index, m.max_chars, m.border);
-        case EeUiTableKind::EditBox: return new UIEditBox(m.id, theFont, m.max_chars, m.flag_a, r, theForm, m.index, m.border, m.flag_b, m.flag_c);
-        case EeUiTableKind::FileListBox: return new UIFileListBox(m.id, theFont, false, r, theForm, m.index, m.border);
-        case EeUiTableKind::LineGraph: return new UIGraph(m.id, r, theForm, m.index, m.border);
-        case EeUiTableKind::ListBox: return new UILBString(m.id, *theStrings, theFont, m.flag_a, r, theForm, m.index, m.border);
-        case EeUiTableKind::RadioButton: return new UIRadioButton(m.id, *theText, theFont, r, theForm, m.index, m.border, m.flag_a, m.flag_b, m.flag_c);
-        case EeUiTableKind::ScrollBar: return new UIScrollBar(m.id, r.GetTopLeft(), m.length, m.style, theForm, m.index, m.border);
-        case EeUiTableKind::ScrollingLabel: return new UITLScrolling(*theText, theFont, m.id, r, theForm, m.index, m.border);
-        case EeUiTableKind::Slider: return new UISlider(m.id, r, m.style, theForm, m.index, m.border);
-        case EeUiTableKind::StatusBar: return new UIStatusBar(m.id, r, theForm, m.index, m.border);
-        case EeUiTableKind::TextLabel: return new UITextLabel(*theText, theFont, m.id, r, theForm, m.style, m.index, m.border);
-        }
-        return NULL;
-    }
-#undef r
-#undef theForm
-#undef theFont
-#undef theText
-#undef theStrings
-#undef n
-#undef fo
-#undef p
-
-    // SetupGEText of a made control's text (EeUiTableSet::SetupText's classes)
-    static GEText* Text(UIControl* c, intptr_t inClass)
-    {
-        switch (inClass) {
-        case 0: return static_cast<UIButton*>(c)->GetGEText();
-        case 1: return static_cast<UICheckBox*>(c)->GetTextLabel()->GetGEText();
-        case 2: return static_cast<UIComboBox*>(c)->GetGEText();
-        case 3: return static_cast<UIEditBox*>(c)->GetGEText();
-        case 4: return static_cast<UILBString*>(c)->GetGEText();
-        case 5: return static_cast<UIRadioButton*>(c)->GetTextLabel()->GetGEText();
-        case 6: return static_cast<UITextLabel*>(c)->GetGEText();
-        default: return static_cast<UIStatusBar*>(c)->GetGEText();
-        }
-    }
-
-    // A made control's setter
-    static void Set(const UIControlsTable* t, UIControl* c, EeUiTableSet inSet, intptr_t a, intptr_t b, const float* f)
-    {
-#define theButton static_cast<UIButton*>(c)
-#define theCombo static_cast<UIComboBox*>(c)
-#define theList static_cast<UILBString*>(c)
-#define theRadio static_cast<UIRadioButton*>(c)
-#define theBar static_cast<UIStatusBar*>(c)
-#define theLabel static_cast<UITextLabel*>(c)
-#define theBitmap reinterpret_cast<GEBitmap*>(a)
-#define theText (*reinterpret_cast<const UWideString*>(a))
-        switch (inSet) {
-        case EeUiTableSet::ButtonText: theButton->SetText(theText, reinterpret_cast<GEFont*>(b)); break;
-        case EeUiTableSet::ButtonFocusedColor: theButton->SetFocusedTextColor(C(f)); break;
-        case EeUiTableSet::ButtonDownSound: theButton->SetButtonDownSound(UString(reinterpret_cast<const char*>(a))); break;
-        case EeUiTableSet::ButtonUpSound: theButton->SetButtonUpSound(UString(reinterpret_cast<const char*>(a))); break;
-        case EeUiTableSet::SetupText: t->SetupGEText(Text(c, a)); break;
-        case EeUiTableSet::CheckSetChecked: static_cast<UICheckBox*>(c)->SetChecked(a != 0); break;
-        case EeUiTableSet::ComboFocusedRect: theCombo->SetListBoxFocusedRectColor(C(f)); break;
-        case EeUiTableSet::ComboSelectedBg: theCombo->SetListBoxSelectedBgColor(C(f)); break;
-        case EeUiTableSet::ComboSelection: theCombo->SetCurrentSelection((long)a); break;
-        case EeUiTableSet::ComboTextBoxOpacity: theCombo->SetTextBoxBgOpacity(f[0]); break;
-        case EeUiTableSet::ComboTextBoxColor: theCombo->SetTextBoxBgColor(C(f)); break;
-        case EeUiTableSet::ComboListAlwaysDirty: theCombo->SetListBoxAlwaysDirty(a != 0); break;
-        case EeUiTableSet::EditNumber: static_cast<UIEditBox*>(c)->SetText((unsigned long)a); break;
-        case EeUiTableSet::EditText: static_cast<UIEditBox*>(c)->SetText(theText); break;
-        case EeUiTableSet::EditSelectedBg: static_cast<UIEditBox*>(c)->SetSelectedBgColor(C(f)); break;
-        case EeUiTableSet::ListFocusedRect: theList->SetFocusedRectColor(C(f)); break;
-        case EeUiTableSet::ListSelectedBg: theList->GetSelectedBackground()->SetColor(C(f)); break;
-        case EeUiTableSet::ListScrollOpacity: theList->SetScrollBarBgOpacity(f[0]); break;
-        case EeUiTableSet::ListSelection: theList->ChangeSelectionIndex((unsigned long)a, false, false); break;
-        case EeUiTableSet::FileListExtensions: break;   // (Rust's: lle_table.rs)
-        case EeUiTableSet::GraphFont: static_cast<UIGraph*>(c)->SetFont(reinterpret_cast<GEFont*>(a)); break;
-        case EeUiTableSet::GraphFontColor: static_cast<UIGraph*>(c)->SetFontColor(C(f)); break;
-        case EeUiTableSet::RadioUpUnchecked: theRadio->SetUpUncheckedBitmap(theBitmap); break;
-        case EeUiTableSet::RadioPressed: break;   // (Rust's: lle_table.rs)
-        case EeUiTableSet::ScrollRange: static_cast<UIScrollBar*>(c)->SetRange((long)a, (long)b); break;
-        case EeUiTableSet::ScrollValue: static_cast<UIScrollBar*>(c)->SetCurrentRangeValue((long)a); break;
-        case EeUiTableSet::SliderRange: static_cast<UISlider*>(c)->SetRange((long)a, (long)b); break;
-        case EeUiTableSet::SliderValue: static_cast<UISlider*>(c)->SetCurrentRangeValue((long)a); break;
-        case EeUiTableSet::SliderPage: static_cast<UISlider*>(c)->SetPageSize((long)a); break;
-        case EeUiTableSet::StatusRange: theBar->SetRange((long)a, (long)b); break;
-        case EeUiTableSet::StatusValue: theBar->SetCurrentRangeValue((long)a); break;
-        case EeUiTableSet::StatusColor: theBar->SetStatusBarColor(C(f)); break;
-        case EeUiTableSet::StatusOpacity: theBar->SetStatusBarOpacity(f[0]); break;
-        case EeUiTableSet::StatusText: theBar->SetText(theText, reinterpret_cast<GEFont*>(b)); break;
-        case EeUiTableSet::StatusFocusedColor: theBar->SetFocusedTextColor(C(f)); break;
-        case EeUiTableSet::LabelNumber: theLabel->SetText((long)a); break;
-        case EeUiTableSet::LabelAlign: theLabel->SetAlignment((long)a); break;
-        case EeUiTableSet::LabelScrollOpacity: theLabel->SetScrollBarBgOpacity(f[0]); break;
-        case EeUiTableSet::LabelFit: theLabel->SetFitRectToText(a != 0); break;
-        case EeUiTableSet::BgColor: c->SetBgColor(C(f)); break;
-        case EeUiTableSet::BgOpacity: c->SetBgOpacity(f[0]); break;
-        case EeUiTableSet::AlwaysDirty: c->SetAlwaysDirty(a != 0); break;
-        case EeUiTableSet::SetRectangle: c->SetRectangle(R(f)); break;
-        case EeUiTableSet::ChangeFont: c->ChangeFont(reinterpret_cast<GEFont*>(a)); break;
-        case EeUiTableSet::SetTrigger: c->SetTriggerEvent((unsigned long)a, reinterpret_cast<UIEvent*>(b)); break;
-        }
-    }
-#undef theButton
-#undef theCombo
-#undef theList
-#undef theRadio
-#undef theBar
-#undef theLabel
-#undef theBitmap
-#undef theText
-
-    static intptr_t Op(void* inTable, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
-    {
-#define t static_cast<UIControlsTable*>(inTable)
-#define m reinterpret_cast<UIManager*>(d)
-#define theForm reinterpret_cast<UIForm*>(a)
-#define theFont reinterpret_cast<GEFont*>(a)
-#define theFile reinterpret_cast<FSFileSpec*>(a)
-        switch (inOp) {
-        case EeUiOp::TblWindowWidth: return m->GetRasterizer()->GetWindow(m->GetScreen())->GetWidth();
-        case EeUiOp::TblWindowHeight: return m->GetRasterizer()->GetWindow(m->GetScreen())->GetHeight();
-        case EeUiOp::TblFormById: return (intptr_t)m->GetFormByID((unsigned long)a);
-        case EeUiOp::TblFormExclusive: return theForm->GetUseExclusiveCoords();
-        case EeUiOp::TblFormDesignedHeight: return theForm->GetDesignedHeight();
-        case EeUiOp::TblFormGdi: return theForm->GetUseGDIForText();
-        case EeUiOp::TblFontHeight: return theFont->GetHeight();
-        case EeUiOp::TblFontHasBitmap: return theFont->GetFontBitmap() != NULL;
-        case EeUiOp::TblStringLength: return reinterpret_cast<const UWideString*>(a)->GetLength();
-        case EeUiOp::TblFileOpen: theFile->Open(kFileAccessRead); return 0;
-        case EeUiOp::TblFileClose: theFile->Close(); return 0;
-        case EeUiOp::TblWrap: return (intptr_t) new UIControlsTable(reinterpret_cast<EeUiControlsTable*>(a));
-        case EeUiOp::TblDelete: delete reinterpret_cast<UIControlsTable*>(a); return 0;
-        case EeUiOp::TblReserveIndex: theForm->ReserveControlIndex((unsigned long)b); return 0;
-        case EeUiOp::TblStringDelete: delete reinterpret_cast<UWideString*>(a); return 0;
-        case EeUiOp::TblStringsDelete: delete reinterpret_cast<std::vector<UWideString>*>(a); return 0;
-        case EeUiOp::TblFontGet: return (intptr_t)UIFontTable::GetFont((unsigned long)a);
-        case EeUiOp::TblFontClosest: return (intptr_t)UIFontTable::CreateClosestFont((unsigned long)a, (unsigned long)b);
-        case EeUiOp::TblFontRelease: theFont->Dereference(); return 0;
-        case EeUiOp::TblFontBitmapNew: new GEFontBitmap(m->GetRasterizer(), theFont, m->GetScreen()); return 0;
-        case EeUiOp::TblMake: return (intptr_t)Make(*reinterpret_cast<const EeUiTableMake*>(a));
-        case EeUiOp::TblSet: Set(t, reinterpret_cast<UIControl*>(a), (EeUiTableSet)b, c, d, f); return 0;
-        case EeUiOp::TblUserDefined: return (intptr_t)m->CreateUserDefinedControl(*t);
-        case EeUiOp::TblEventNew: return (intptr_t)theForm->GetManager()->CreateControlEvent(theForm, (unsigned long)b);
-        case EeUiOp::TblEventRelease: reinterpret_cast<UIEvent*>(a)->Dereference(); return 0;
-        case EeUiOp::TblFormControl: return (intptr_t)theForm->GetControl((unsigned long)b);
-        default: return 0;
-        }
-    }
-#undef t
-#undef m
-#undef theForm
-#undef theFont
-#undef theFile
-};
-
-// Creates an empty control description (a bitmap with no font, files or layout)
-extern "C" intptr_t ee_uicpp_table_host(EE_UI_HOST_ARGS) { return UIControlsTableHost::Op(inObj, inOp, a, b, c, d, f); }
-UIControlsTable::UIControlsTable() : mRust(ee_ui_controls_table_new(this, ee_ui_table_host)) {}
-
-// Destroys the control description, releasing its font
-UIControlsTable::~UIControlsTable() { ee_ui_controls_table_free(this->mRust); }
-
-// port: see the header
-// Sets text to transparent in the description's text colour
-void UIControlsTable::SetupGEText(GEText* inText) const
-{
-    inText->SetIsTransparent(true);
-    inText->SetFgColor(this->GetTextForeground());
-}
+// The Rust table's calls out (EeUiOp, obj.rs; ee_ui tableobj.rs), one statement each (ee_ui lle_hosts_tables.rs
+// table; lle_table.rs: the cases of more than one call, the constructors by kind, the setters and texts by
+// selector): a is the form, font, file, string, bitmap, control or event the op names, d the manager where the op
+// needs one; rectangles and colours travel in f
+#define TM reinterpret_cast<UIManager*>(d)
+#define TF reinterpret_cast<UIForm*>(a)
+EE_UI_CASE(tbl_window_width) { return TM->GetRasterizer()->GetWindow(TM->GetScreen())->GetWidth(); }
+EE_UI_CASE(tbl_window_height) { return TM->GetRasterizer()->GetWindow(TM->GetScreen())->GetHeight(); }
+EE_UI_CASE(tbl_form_by_id) { return (intptr_t)TM->GetFormByID((unsigned long)a); }
+EE_UI_CASE(tbl_form_exclusive) { return TF->GetUseExclusiveCoords(); }
+EE_UI_CASE(tbl_form_designed_height) { return TF->GetDesignedHeight(); }
+EE_UI_CASE(tbl_form_gdi) { return TF->GetUseGDIForText(); }
+EE_UI_CASE(tbl_font_height) { return reinterpret_cast<GEFont*>(a)->GetHeight(); }
+EE_UI_CASE(tbl_font_has_bitmap) { return reinterpret_cast<GEFont*>(a)->GetFontBitmap() != NULL; }
+EE_UI_CASE(tbl_string_length) { return reinterpret_cast<const UWideString*>(a)->GetLength(); }
+EE_UI_VOID(tbl_file_open) { reinterpret_cast<FSFileSpec*>(a)->Open(kFileAccessRead); }
+EE_UI_VOID(tbl_file_close) { reinterpret_cast<FSFileSpec*>(a)->Close(); }
+EE_UI_CASE(tbl_wrap) { return (intptr_t) new UIControlsTable(reinterpret_cast<EeUiControlsTable*>(a)); }
+EE_UI_VOID(tbl_delete) { delete reinterpret_cast<UIControlsTable*>(a); }
+EE_UI_VOID(tbl_reserve_index) { TF->ReserveControlIndex((unsigned long)b); }
+EE_UI_VOID(tbl_string_delete) { delete reinterpret_cast<UWideString*>(a); }
+EE_UI_VOID(tbl_strings_delete) { delete reinterpret_cast<std::vector<UWideString>*>(a); }
+EE_UI_CASE(tbl_font_get) { return (intptr_t)UIFontTable::GetFont((unsigned long)a); }
+EE_UI_CASE(tbl_font_closest) { return (intptr_t)UIFontTable::CreateClosestFont((unsigned long)a, (unsigned long)b); }
+EE_UI_VOID(tbl_font_release) { reinterpret_cast<GEFont*>(a)->Dereference(); }
+EE_UI_VOID(tbl_font_bitmap_new) { new GEFontBitmap(TM->GetRasterizer(), reinterpret_cast<GEFont*>(a), TM->GetScreen()); }
+EE_UI_CASE(tbl_user_defined) { return (intptr_t)TM->CreateUserDefinedControl(*static_cast<UIControlsTable*>(inObj)); }
+EE_UI_CASE(tbl_event_new) { return (intptr_t)TF->GetManager()->CreateControlEvent(TF, (unsigned long)b); }
+EE_UI_VOID(tbl_event_release) { reinterpret_cast<UIEvent*>(a)->Dereference(); }
+EE_UI_CASE(tbl_form_control) { return (intptr_t)TF->GetControl((unsigned long)b); }
+#undef TF
+#undef TM
+// A control's constructor (the factories' new: CreateBitmap .. CreateTextLabel), its arguments at a
+#define MK (*reinterpret_cast<const EeUiTableMake*>(a))
+#define MK_R GERectangle(MK.rect.left, MK.rect.top, MK.rect.right, MK.rect.bottom)
+#define MK_FORM reinterpret_cast<UIForm*>(MK.form)
+#define MK_FONT reinterpret_cast<GEFont*>(MK.font)
+#define MK_TEXT reinterpret_cast<const UWideString*>(MK.text)
+#define MK_STRINGS reinterpret_cast<std::vector<UWideString>*>(MK.strings)
+#define MK_N reinterpret_cast<GEBitmap*>(MK.normal)
+#define MK_FO reinterpret_cast<GEBitmap*>(MK.focused)
+#define MK_P reinterpret_cast<GEBitmap*>(MK.pressed)
+EE_UI_CASE(tbl_make_bitmap) { return (intptr_t)static_cast<UIControl*>(new UIBitmap(MK.id, MK_N, MK_R, MK_FORM, MK.index)); }
+EE_UI_CASE(tbl_make_button) { return (intptr_t)static_cast<UIControl*>(new UIButton(MK.id, MK_N, MK_FO, MK_P, MK_R, MK_FORM, MK.index, MK.border)); }
+EE_UI_CASE(tbl_make_blinking_button) { return (intptr_t)static_cast<UIControl*>(new UIBlinkingButton(MK.id, MK_N, MK_FO, MK_P, MK_R, MK_FORM, MK.index, MK.border, MK.blink_rate)); }
+// (the scalable and dual buttons are buttons whose Rust record the factory then sets: lle_hosts.rs table_make)
+EE_UI_CASE(tbl_make_scalable_button) { return (intptr_t)static_cast<UIControl*>(new UIButton(MK.id, MK_N, MK_FO, MK_P, MK_R, MK_FORM, MK.index, 0)); }
+EE_UI_CASE(tbl_make_check_box) { return (intptr_t)static_cast<UIControl*>(new UICheckBox(MK.id, *MK_TEXT, MK_FONT, MK_R, MK_FORM, MK.index, MK.border, MK.flag_a)); }
+EE_UI_CASE(tbl_make_combo_box) { return (intptr_t)static_cast<UIControl*>(new UIComboBox(MK.id, MK.style, *MK_STRINGS, MK_FONT, MK_R, MK.list_height, MK_FORM, MK.index, MK.max_chars, MK.border)); }
+EE_UI_CASE(tbl_make_file_combo_box) { return (intptr_t)static_cast<UIControl*>(new UIFileComboBox(MK.id, 1, *MK_STRINGS, MK_FONT, MK_R.GetTopLeft(), MK.length, MK.list_height, MK_FORM, MK.index, MK.max_chars, MK.border)); }
+EE_UI_CASE(tbl_make_edit_box) { return (intptr_t)static_cast<UIControl*>(new UIEditBox(MK.id, MK_FONT, MK.max_chars, MK.flag_a, MK_R, MK_FORM, MK.index, MK.border, MK.flag_b, MK.flag_c)); }
+EE_UI_CASE(tbl_make_file_list_box) { return (intptr_t)static_cast<UIControl*>(new UIFileListBox(MK.id, MK_FONT, false, MK_R, MK_FORM, MK.index, MK.border)); }
+EE_UI_CASE(tbl_make_line_graph) { return (intptr_t)static_cast<UIControl*>(new UIGraph(MK.id, MK_R, MK_FORM, MK.index, MK.border)); }
+EE_UI_CASE(tbl_make_list_box) { return (intptr_t)static_cast<UIControl*>(new UILBString(MK.id, *MK_STRINGS, MK_FONT, MK.flag_a, MK_R, MK_FORM, MK.index, MK.border)); }
+EE_UI_CASE(tbl_make_radio_button) { return (intptr_t)static_cast<UIControl*>(new UIRadioButton(MK.id, *MK_TEXT, MK_FONT, MK_R, MK_FORM, MK.index, MK.border, MK.flag_a, MK.flag_b, MK.flag_c)); }
+EE_UI_CASE(tbl_make_scroll_bar) { return (intptr_t)static_cast<UIControl*>(new UIScrollBar(MK.id, MK_R.GetTopLeft(), MK.length, MK.style, MK_FORM, MK.index, MK.border)); }
+EE_UI_CASE(tbl_make_scrolling_label) { return (intptr_t)static_cast<UIControl*>(new UITLScrolling(*MK_TEXT, MK_FONT, MK.id, MK_R, MK_FORM, MK.index, MK.border)); }
+EE_UI_CASE(tbl_make_slider) { return (intptr_t)static_cast<UIControl*>(new UISlider(MK.id, MK_R, MK.style, MK_FORM, MK.index, MK.border)); }
+EE_UI_CASE(tbl_make_status_bar) { return (intptr_t)static_cast<UIControl*>(new UIStatusBar(MK.id, MK_R, MK_FORM, MK.index, MK.border)); }
+EE_UI_CASE(tbl_make_text_label) { return (intptr_t)static_cast<UIControl*>(new UITextLabel(*MK_TEXT, MK_FONT, MK.id, MK_R, MK_FORM, MK.style, MK.index, MK.border)); }
+#undef MK_P
+#undef MK_FO
+#undef MK_N
+#undef MK_STRINGS
+#undef MK_TEXT
+#undef MK_FONT
+#undef MK_FORM
+#undef MK_R
+#undef MK
+// A made control's (a) setter by selector, its values c, d and f; the texts SetupText sets up
+#define SC reinterpret_cast<UIControl*>(a)
+EE_UI_VOID(tbl_set_button_text) { static_cast<UIButton*>(SC)->SetText((*reinterpret_cast<const UWideString*>(c)), reinterpret_cast<GEFont*>(d)); }
+EE_UI_VOID(tbl_set_button_focused_color) { static_cast<UIButton*>(SC)->SetFocusedTextColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_button_down_sound) { static_cast<UIButton*>(SC)->SetButtonDownSound(UString(reinterpret_cast<const char*>(c))); }
+EE_UI_VOID(tbl_set_button_up_sound) { static_cast<UIButton*>(SC)->SetButtonUpSound(UString(reinterpret_cast<const char*>(c))); }
+EE_UI_VOID(tbl_set_check_set_checked) { static_cast<UICheckBox*>(SC)->SetChecked(c != 0); }
+EE_UI_VOID(tbl_set_combo_focused_rect) { static_cast<UIComboBox*>(SC)->SetListBoxFocusedRectColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_combo_selected_bg) { static_cast<UIComboBox*>(SC)->SetListBoxSelectedBgColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_combo_selection) { static_cast<UIComboBox*>(SC)->SetCurrentSelection((long)c); }
+EE_UI_VOID(tbl_set_combo_text_box_opacity) { static_cast<UIComboBox*>(SC)->SetTextBoxBgOpacity(f[0]); }
+EE_UI_VOID(tbl_set_combo_text_box_color) { static_cast<UIComboBox*>(SC)->SetTextBoxBgColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_combo_list_always_dirty) { static_cast<UIComboBox*>(SC)->SetListBoxAlwaysDirty(c != 0); }
+EE_UI_VOID(tbl_set_edit_number) { static_cast<UIEditBox*>(SC)->SetText((unsigned long)c); }
+EE_UI_VOID(tbl_set_edit_text) { static_cast<UIEditBox*>(SC)->SetText((*reinterpret_cast<const UWideString*>(c))); }
+EE_UI_VOID(tbl_set_edit_selected_bg) { static_cast<UIEditBox*>(SC)->SetSelectedBgColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_list_focused_rect) { static_cast<UILBString*>(SC)->SetFocusedRectColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_list_selected_bg) { static_cast<UILBString*>(SC)->GetSelectedBackground()->SetColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_list_scroll_opacity) { static_cast<UILBString*>(SC)->SetScrollBarBgOpacity(f[0]); }
+EE_UI_VOID(tbl_set_list_selection) { static_cast<UILBString*>(SC)->ChangeSelectionIndex((unsigned long)c, false, false); }
+EE_UI_VOID(tbl_set_graph_font) { static_cast<UIGraph*>(SC)->SetFont(reinterpret_cast<GEFont*>(c)); }
+EE_UI_VOID(tbl_set_graph_font_color) { static_cast<UIGraph*>(SC)->SetFontColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_radio_up_unchecked) { static_cast<UIRadioButton*>(SC)->SetUpUncheckedBitmap(reinterpret_cast<GEBitmap*>(c)); }
+EE_UI_VOID(tbl_set_scroll_range) { static_cast<UIScrollBar*>(SC)->SetRange((long)c, (long)d); }
+EE_UI_VOID(tbl_set_scroll_value) { static_cast<UIScrollBar*>(SC)->SetCurrentRangeValue((long)c); }
+EE_UI_VOID(tbl_set_slider_range) { static_cast<UISlider*>(SC)->SetRange((long)c, (long)d); }
+EE_UI_VOID(tbl_set_slider_value) { static_cast<UISlider*>(SC)->SetCurrentRangeValue((long)c); }
+EE_UI_VOID(tbl_set_slider_page) { static_cast<UISlider*>(SC)->SetPageSize((long)c); }
+EE_UI_VOID(tbl_set_status_range) { static_cast<UIStatusBar*>(SC)->SetRange((long)c, (long)d); }
+EE_UI_VOID(tbl_set_status_value) { static_cast<UIStatusBar*>(SC)->SetCurrentRangeValue((long)c); }
+EE_UI_VOID(tbl_set_status_color) { static_cast<UIStatusBar*>(SC)->SetStatusBarColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_status_opacity) { static_cast<UIStatusBar*>(SC)->SetStatusBarOpacity(f[0]); }
+EE_UI_VOID(tbl_set_status_text) { static_cast<UIStatusBar*>(SC)->SetText((*reinterpret_cast<const UWideString*>(c)), reinterpret_cast<GEFont*>(d)); }
+EE_UI_VOID(tbl_set_status_focused_color) { static_cast<UIStatusBar*>(SC)->SetFocusedTextColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_label_number) { static_cast<UITextLabel*>(SC)->SetText((long)c); }
+EE_UI_VOID(tbl_set_label_align) { static_cast<UITextLabel*>(SC)->SetAlignment((long)c); }
+EE_UI_VOID(tbl_set_label_scroll_opacity) { static_cast<UITextLabel*>(SC)->SetScrollBarBgOpacity(f[0]); }
+EE_UI_VOID(tbl_set_label_fit) { static_cast<UITextLabel*>(SC)->SetFitRectToText(c != 0); }
+EE_UI_VOID(tbl_set_bg_color) { SC->SetBgColor(GEColor(f[0], f[1], f[2])); }
+EE_UI_VOID(tbl_set_bg_opacity) { SC->SetBgOpacity(f[0]); }
+EE_UI_VOID(tbl_set_always_dirty) { SC->SetAlwaysDirty(c != 0); }
+EE_UI_VOID(tbl_set_set_rectangle) { SC->SetRectangle(UIObjHost::Rect(f)); }
+EE_UI_VOID(tbl_set_change_font) { SC->ChangeFont(reinterpret_cast<GEFont*>(c)); }
+EE_UI_VOID(tbl_set_set_trigger) { SC->SetTriggerEvent((unsigned long)c, reinterpret_cast<UIEvent*>(d)); }
+EE_UI_CASE(tbl_text_button) { return (intptr_t)static_cast<UIButton*>(SC)->GetGEText(); }
+EE_UI_CASE(tbl_text_check) { return (intptr_t)static_cast<UICheckBox*>(SC)->GetTextLabel()->GetGEText(); }
+EE_UI_CASE(tbl_text_combo) { return (intptr_t)static_cast<UIComboBox*>(SC)->GetGEText(); }
+EE_UI_CASE(tbl_text_edit) { return (intptr_t)static_cast<UIEditBox*>(SC)->GetGEText(); }
+EE_UI_CASE(tbl_text_list) { return (intptr_t)static_cast<UILBString*>(SC)->GetGEText(); }
+EE_UI_CASE(tbl_text_radio) { return (intptr_t)static_cast<UIRadioButton*>(SC)->GetTextLabel()->GetGEText(); }
+EE_UI_CASE(tbl_text_label) { return (intptr_t)static_cast<UITextLabel*>(SC)->GetGEText(); }
+EE_UI_CASE(tbl_text_status) { return (intptr_t)static_cast<UIStatusBar*>(SC)->GetGEText(); }
+#undef SC
+// SetupGEText's two calls (lle_table.rs ee_ui_table_setup_text) on the text a
+EE_UI_VOID(tbl_text_transparent) { reinterpret_cast<GEText*>(a)->SetIsTransparent(true); }
+EE_UI_VOID(tbl_text_fg) { reinterpret_cast<GEText*>(a)->SetFgColor(static_cast<UIControlsTable*>(inObj)->GetTextForeground()); }

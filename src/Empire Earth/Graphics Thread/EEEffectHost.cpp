@@ -161,12 +161,7 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 
 // the C++ calls and members of this file's bodies in Rust (gamecpp; EeGameCpp's lane B section): one statement each
 // the constants the Rust names (gamecpp effect_host.rs)
-static_assert(kTerrainDeepWater == 1 && kTerrainShallowWater == 10 && kUnitCategoryGate == 0x19 && kUnitTypeWallSpace == 0x2fe &&
-                  kUnitTypeGateSpace == 0x2ff && kUnitTypeTownCenter == 0x23 && kUnitTypeCapitol == 0x29 &&
-                  kUnitTypeResGiraffe == 0x124 && kUnitTypeResHorse == 0x175 && kGoalLocation == 1 && kGoalAttackUnit == 2 &&
-                  kGoalUnloadTransport == 8 && kGoalLoadGarrison == 12 && kTechEpochAtomicWW2 == 10 &&
-                  kPixelFormatA8R8G8B8 == 0 && kSurfaceSystemMemory == 4,
-              "gamecpp effect_host.rs");
+// (its constants are checked against the headers by gamecpp cpp_consts_tests.rs)
 static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GEVector) == sizeof(EeGeVector) &&
                   sizeof(EETileCoordinate) == 2 * sizeof(long) && sizeof(GESurfaceDescription) == 9 * sizeof(unsigned long),
               "gamecpp effect_host.rs: the values the Rust passes by address");

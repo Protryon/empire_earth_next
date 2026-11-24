@@ -68,82 +68,6 @@ void EEUnitHandleResolve(uint32_t inUnitID, EEComplexUnit*& outUnit)
     outUnit = static_cast<EEComplexUnit*>(static_cast<EEUnit*>(RTSResolveUnitID(inUnitID)));
 }
 
-const UString EEUnit::sHitPoints("EEUnit-HitPoints");
-
-const UString EEUnit::sData("EEUnit-Data");
-
-// Creates an empty unit with no class, player, resources or hit points and no references
-EEUnit::EEUnit()
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_CONSTRUCT, this, NULL, 0, 0);   // eu_more.rs
-}
-
-// Removes the unit from the game, unloading its class media at once
-void EEUnit::Invalidate()
-{
-    EEUnit::Remove(false);
-}
-
-// Returns the unit's 3D model (from its player's stats for the class)
-EEModel* EEUnit::GetModel()
-{
-    return this->mStats->mModel;
-}
-
-// Resets the unit to an empty, invalid unit
-void EEUnit::Clear()
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_CLEAR, this, NULL, 0, 0);   // eu_more.rs
-}
-
-// Destroys the unit, freeing its tile node
-EEUnit::~EEUnit()
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_DESTROY, this, NULL, 0, 0);   // eu_more.rs
-}
-
-// Adds inValue (negative: takes it) to the resource amount the unit holds
-void EEUnit::AddResourceAmount(long inValue)
-{
-    this->mResourceAmount += inValue;
-}
-
-// FindAreaTile's tile from eu_body.rs's answer (x in the low 32 bits, y in the high)
-static EETileCoordinate EEEuTile(int64_t inPacked)
-{
-    return EETileCoordinate((long)(int32_t)(uint32_t)inPacked, (long)(int32_t)(uint32_t)((uint64_t)inPacked >> 32));
-}
-
-// Returns whether the unit may gather from inUnit (visible tile, resource left unless inIgnoreAmount): a land citizen
-// takes its own fully repaired farm or a dead or enemy non-citizen off deep water; a naval citizen enemy naval units
-// Reads through the inline getters: the original refuses RTSMap::GetTile under EEMap::GetTile (inline budget: the
-// getter sites after it leave the wrapper too small a share).
-bool EEUnit::CanGather(EEUnit* inUnit, long inX, long inY, bool inIsVisible, bool inIgnoreAmount)
-{
-    return ee_units_eu_can_gather(this, inUnit, inX, inY, inIsVisible, inIgnoreAmount) != 0;   // eu_body.rs
-}
-
-// Removes the unit from the game: unloads its class media (queued to the preloader if asked), zeroes its hit points
-// and deactivates it
-void EEUnit::Remove(bool inUnloadInBackground)
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_REMOVE, this, NULL, inUnloadInBackground, 0);   // eu_more.rs
-}
-
-// Copies another unit's resource type and amount and its health fraction (scaled to this unit's maximum hit points)
-void EEUnit::CopyFrom(RTSUnit* inUnit)
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_COPY_FROM, this, inUnit, 0, 0);   // eu_more.rs
-}
-
-// Rechecks, staggered by game-time phase, whether a unit or moving object stands on or beside this obstacle (a
-// complex unit: hides the obstacles behind it when it moved) and sets the hidden flags; returns whether it is hidden.
-// Port (the units' round 1): both classes' bodies are Rust over the world views (ee_units hidden.rs)
-bool EEUnit::UpdateHidden()
-{
-    return ee_units_update_hidden(EEObj(this));
-}
-
 // Creates a simple unit of inClass for inPlayer at tile (inX, inY)
 EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
 {
@@ -152,99 +76,12 @@ EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPla
     return theUnit;
 }
 
-// Creates an empty simple unit
-EEUnit* EEUnit::Create()
-{
-    return new EEUnit;
-}
-
-// Frees the unit's tile node (the RTSUnit part)
-void EEUnit::FreeNode()
-{
-    RTSUnit::FreeNode();
-}
-
-// Returns whether inUnit may pass the unit: non-blocking units, dead non-resources, and wood for forest-crossing units
-bool EEUnit::IsPassableBy(EEComplexUnit* inUnit)
-{
-    return !this->mUnitClass->mBlocksTile || (this->mHitPoints == 0 && this->mUnitClass->mCategory != kUnitCategoryResource) || (this->mUnitClass->mResourceType == kResourceWood && inUnit != NULL && (bool)((inUnit->mStats->mTerrainMask >> 14) & 1));
-}
-
-// Returns 0 (a simple unit adds nothing to the sync checksum)
-long EEUnit::GetChecksum(unsigned long)
-{
-    return 0;
-}
-
-// Returns the squared tile distance to the nearest edge tile of inUnit's footprint and that tile's coordinates
-// NEAR: register choice only (edi/ebx and where x is spilled)
-float EEUnit::GetNearestFootprintTile(EEUnit* inUnit, long* outX, long* outY)
-{
-    return ee_units_eu_nearest_footprint_tile(this, inUnit, outX, outY);   // eu_body.rs
-}
-
-// Appends the unit's one-line debug text: base text, resource type and amount, class type, hit points
-void EEUnit::Describe(UWideString& ioString)
-{
-    ee_units_eu_describe(this, &ioString, false);   // eu_describe.rs
-}
-
-// Appends the unit's long debug text: base text, class (simple units), resource and health
-void EEUnit::DescribeLong(UWideString& ioString)
-{
-    ee_units_eu_describe(this, &ioString, true);   // eu_describe.rs
-}
-
-// Returns the unit's tile, or for a multi-tile unit off a continent of kind inFlag, the first tile within inRange
-// of its footprint that lies on such a continent
-EETileCoordinate EEUnit::FindAreaTile(bool inFlag, long inRange)
-{
-    return EEEuTile(ee_units_eu_body(EE_UNITS_EU_DO_FIND_AREA_TILE, this, inFlag, inRange, 0));   // eu_body.rs
-}
-
 // Returns the centre of the unit's tile at ground height
 void EEUnit::GetPosition(GE3DPoint& outPosition)
 {
     outPosition.SetX(this->mTileX + 0.5f);
     outPosition.SetY(this->mTileY + 0.5f);
     outPosition.SetZ(this->mTile->mHeight);
-}
-
-// Initialises the unit as a simple unit of inClass for inPlayer and places it at tile (inX, inY)
-void EEUnit::Init(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_INIT_AT, this, inClass, (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)(uintptr_t)inPlayer);   // eu_more.rs
-}
-
-// Initialises the unit part of a complex unit of inClass for inPlayer, with no resources or hit points yet
-void EEUnit::Init(EEUnitClass* inClass, EEPlayer* inPlayer)
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_INIT_COMPLEX, this, inClass, 0, (int64_t)(uintptr_t)inPlayer);   // eu_more.rs
-}
-
-// Clears the unit's class, stats, resources, hit points and hidden flags
-void EEUnit::ResetEEUnit()
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_RESET, this, NULL, 0, 0);   // eu_more.rs
-}
-
-// Loads the unit class's media for the owner: at once, or for a foundation queued to the preloader
-void EEUnit::LoadMedia(bool inIsFoundation)
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_LOAD_MEDIA, this, NULL, inIsFoundation, 0);   // eu_more.rs
-}
-
-// Kills the unit: updates sight and doppelgangers, plays a simple unit's death effect and sound, empties farms and
-// citizens, takes it off the minimap and camera and reports a simple unit lost
-void EEUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
-{
-    ee_units_eu_body(EE_UNITS_EU_DO_KILL, this, inKilled | inKeepResearch << 1 | inOther << 2, 0, 0);   // eu_body.rs
-}
-
-// Frees the unit's tile node and deletes the unit once its last reference goes
-void EEUnit::LastDereference()
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_LAST_DEREFERENCE, this, NULL, 0, 0);   // eu_more.rs
 }
 
 // Reads the unit from a saved game (resource type, health fraction held in mHitPoints until FinishLoad, amount);
@@ -265,12 +102,6 @@ long EEUnit::FinishLoad(long, long)
     return 0;
 }
 
-// Repairs the unit's pointers after loading (the RTSUnit part only)
-long EEUnit::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return RTSUnit::RepairPointers(inMajorVersion, inMinorVersion);
-}
-
 // Writes the unit to the saved game (base unit part, resource type, health fraction, amount, a zero); returns the
 // first write error. port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs unit_save)
 long EEUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -278,35 +109,6 @@ long EEUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     EEUnitSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
     EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
     return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, this, NULL, &theIn);
-}
-
-// Sets the unit's hit points, activates a dead unit of an inactive class and refreshes the icon bar if it is selected
-void EEUnit::SetHitPoints(long inHitPoints)
-{
-    ee_units_eu_body(EE_UNITS_EU_DO_SET_HIT_POINTS, this, inHitPoints, 0, 0);   // eu_body.rs
-}
-
-// Moves the unit to tile (inX, inY); with inUpdateTiles also updates the off-map list, minimap, sight, tile, region
-// and influence tables, activation and the world's sort order
-// NEAR: the original calls the first GetTile out of line (0x2f85) and expands the second (inline budget)
-// and divides into reused slots; the four (EEComplexUnit*)this casts follow the EEUnitClass slot types (likely EEUnit*)
-void EEUnit::MoveTo(long inX, long inY, bool inUpdateTiles)
-{
-    ee_units_eu_body(EE_UNITS_EU_DO_MOVE_TO, this, inX, inY, inUpdateTiles);   // eu_body.rs
-}
-
-// Takes inAmount from the resource; an exhausted resource unit leaves the minimap and is removed from the game
-void EEUnit::DepleteResource(long inAmount)
-{
-    ee_units_eu_body(EE_UNITS_EU_DO_DEPLETE_RESOURCE, this, inAmount, 0, 0);   // eu_body.rs
-}
-
-// Applies inDamage from inAttacker: area effects and morale adjust it and the attacker is remembered, then the unit
-// loses hit points with damage and impact effects, an attack event and minimap ping, or dies. port (the units' lane,
-// round 7): the body is Rust (ee_units eu_hit.rs) over ee_units_eu_host's statements
-void EEUnit::TakeHit(EEUnit* inAttacker, long inDamage, unsigned long inPlayerNumber, long inMode)
-{
-    ee_units_eu_take_hit(this, inAttacker, inDamage, (uint32_t)inPlayerNumber, inMode);
 }
 
 // TakeHit's locals (the modifiers' input, the area damage, the damage) and the hit formula's answer
@@ -324,13 +126,6 @@ static UWideString sEuText;
 template <class T> static T* EEEuObject(uint64_t inHandle)
 {
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
-
-static int64_t EEEuBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, sizeof theBits);
-    return theBits;
 }
 
 // The C++ of EEUnit::TakeHit's Rust body (ee_units eu_hit.rs; EE_UNITS_EU_*): one statement of the original each, in
@@ -485,7 +280,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_MAP_SIZE: return inB == 0 ? (int64_t)gMapWidth : (int64_t)gMapHeight;
     case EE_UNITS_EU_CONTINENT_ID: return gContinentManager.GetContinentID((long)inB, (long)inC);
     case EE_UNITS_EU_CONTINENT_BY_ID: return (uint64_t)(uintptr_t)gContinentManager.GetContinentByID((unsigned short)inB);
-    case EE_UNITS_EU_TILE_DISTANCE_SQUARED: return EEEuBits(theUnit->GetTileDistanceSquared(theOther));
+    case EE_UNITS_EU_TILE_DISTANCE_SQUARED: return UFloatBits(theUnit->GetTileDistanceSquared(theOther));
     case EE_UNITS_EU_TILE_SIZE_OF: return theOther->mUnitClass->mTileSize;
     case EE_UNITS_EU_HAS_TILE_NODE: return theUnit->mTileNode != NULL;
     case EE_UNITS_EU_KILL_UNIT: theUnit->mPlayer->KillUnit(theUnit, false); return 0;
@@ -572,54 +367,9 @@ extern "C" int64_t ee_units_eum_host(int32_t inOp, void* inUnit, uint64_t inA, i
     default: return 0;
     }
 }
-// Remembers the unit's last attacker, moving the reference from the previous one (eu_more.rs)
-void EEComplexUnit::SetLastAttacker(EEComplexUnit* inUnit)
-{
-    ee_units_eu_more(EE_UNITS_EUM_DO_SET_LAST_ATTACKER, static_cast<EEUnit*>(this), inUnit, 0, 0);
-}
 
-// Regrows trees in the forest of a cut tree when its renewal is due (fewer, nearer ones when a citizen cut it), then
-// schedules the next renewal 125-275 s ahead; never for carbon rock (eu_more.rs)
-void EEUnit::RegrowForest(EEComplexUnit* inUnit)
+// Returns whether inUnit may pass the unit: non-blocking units, dead non-resources, and wood for forest-crossing units
+bool EEUnit::IsPassableBy(EEComplexUnit* inUnit)
 {
-    ee_units_eu_more(EE_UNITS_EUM_DO_REGROW_FOREST, this, inUnit, 0, 0);
-}
-
-// Returns whether inUnitType is one of the carbon rock unit types
-bool EEUnit::IsCarbonRock(unsigned long inUnitType)
-{
-    return inUnitType == 0x2fb || inUnitType == 0x306 || inUnitType == 0x307
-        || (inUnitType >= 0x340 && inUnitType <= 0x345) || inUnitType == 0x348 || inUnitType == 0x24b
-        || inUnitType == 0x24c;
-}
-
-// Does nothing (a simple unit has no sight to move)
-void EEUnit::SightMoved(unsigned long, unsigned long, unsigned long, unsigned long)
-{
-}
-
-// The empty slots EEUnit overrides; ICF folded each into a shared body elsewhere (no address of their own):
-void EEUnit::SightOnHere()
-{
-}
-
-void EEUnit::SightOffHere()
-{
-}
-
-void EEUnit::SightOn(unsigned long, unsigned long)
-{
-}
-
-void EEUnit::OutOfSynchDump(FILE*, unsigned long)
-{
-}
-
-bool EEUnit::IsFoundation()
-{
-    return false;
-}
-
-void EEUnit::SightOff(unsigned long, unsigned long)
-{
+    return !this->mUnitClass->mBlocksTile || (this->mHitPoints == 0 && this->mUnitClass->mCategory != kUnitCategoryResource) || (this->mUnitClass->mResourceType == kResourceWood && inUnit != NULL && (bool)((inUnit->mStats->mTerrainMask >> 14) & 1));
 }

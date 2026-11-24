@@ -56,24 +56,9 @@ extern "C" int64_t ee_units_script_host(int32_t inOp, uint64_t inA, int64_t inB)
     }
 }
 
-long EEUnitAction::GetActionID(const char* inName)
-{
-    return ee_units_script_action_id(inName);
-}
-
-const char* EEUnitAction::GetActionName(unsigned long inAction)
-{
-    return ee_units_script_action_name((uint32_t)inAction);
-}
-
 void* EEUnitAction::GetScript(const UString& inName)
 {
     return reinterpret_cast<void*>(static_cast<uintptr_t>(ee_units_script_get((const uint8_t*)(const char*)inName, inName.GetLength())));   // script.rs
-}
-
-void EEUnitAction::DeleteScripts()
-{
-    ee_units_script_delete_all();
 }
 
 // IsActive's action (the gather test's local)
@@ -83,26 +68,25 @@ static unsigned long sAIAction;
 // each; inA an object, inB a value
 extern "C" int64_t ee_units_ai_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB)
 {
-    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
     switch (inOp) {
-    case EE_UNITS_AI_H_COMMAND_TYPE: return theUnit->mCommand != NULL ? (int64_t)theUnit->mCommand->mType : 0;
-    case EE_UNITS_AI_H_NEXT_TRIGGER_TIME: return (int64_t)theUnit->mNextTriggerTime;
-    case EE_UNITS_AI_H_GOAL_KIND: return theUnit->mGoalState != NULL ? (int32_t)theUnit->mGoalState->mKind : -1;
-    case EE_UNITS_AI_H_COMMAND: return (int64_t)reinterpret_cast<uintptr_t>(theUnit->mCommand);
-    case EE_UNITS_AI_H_HAS_GOAL: return theUnit->mGoalState != NULL;
+    case EE_UNITS_AI_H_COMMAND_TYPE: return (static_cast<EEComplexUnit*>(inUnit))->mCommand != NULL ? (int64_t)(static_cast<EEComplexUnit*>(inUnit))->mCommand->mType : 0;
+    case EE_UNITS_AI_H_NEXT_TRIGGER_TIME: return (int64_t)(static_cast<EEComplexUnit*>(inUnit))->mNextTriggerTime;
+    case EE_UNITS_AI_H_GOAL_KIND: return (static_cast<EEComplexUnit*>(inUnit))->mGoalState != NULL ? (int32_t)(static_cast<EEComplexUnit*>(inUnit))->mGoalState->mKind : -1;
+    case EE_UNITS_AI_H_COMMAND: return (int64_t)reinterpret_cast<uintptr_t>((static_cast<EEComplexUnit*>(inUnit))->mCommand);
+    case EE_UNITS_AI_H_HAS_GOAL: return (static_cast<EEComplexUnit*>(inUnit))->mGoalState != NULL;
     case EE_UNITS_AI_H_GOAL_ACTION_RESET: sAIAction = 0; return 0;
-    case EE_UNITS_AI_H_GOAL_ACTIVE: return theUnit->mGoalState->IsActive(&sAIAction);
+    case EE_UNITS_AI_H_GOAL_ACTIVE: return (static_cast<EEComplexUnit*>(inUnit))->mGoalState->IsActive(&sAIAction);
     case EE_UNITS_AI_H_GOAL_ACTION: return (int64_t)sAIAction;
-    case EE_UNITS_AI_H_CONDITION: return theUnit->mUnitClass->EvaluateCondition(theUnit, (long)inB);
+    case EE_UNITS_AI_H_CONDITION: return (static_cast<EEComplexUnit*>(inUnit))->mUnitClass->EvaluateCondition((static_cast<EEComplexUnit*>(inUnit)), (long)inB);
     case EE_UNITS_AI_H_ACTION_TYPE: return reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inA))->mType;
-    case EE_UNITS_AI_H_START_ACTION: theUnit->StartAction((long)inB); return 0;
-    case EE_UNITS_AI_H_ACTION_CHANGED: theUnit->GetUnitClass()->ActionChanged(theUnit); return 0;
-    case EE_UNITS_AI_H_DROP_FINISHED_GOALS: theUnit->DropFinishedGoals(false); return 0;
-    case EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: theUnit->UpdateCamouflage((long)inB); return 0;
-    case EE_UNITS_AI_H_SET_COMMAND: theUnit->mCommand = reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inA)); return 0;
-    case EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME: theUnit->mNextTriggerTime = (unsigned long)inB; return 0;
-    case EE_UNITS_AI_H_UNIT_ID: return (int64_t)theUnit->mUnitID;
-    case EE_UNITS_AI_H_IS_CITIZEN: return theUnit->mIsCitizen;
+    case EE_UNITS_AI_H_START_ACTION: (static_cast<EEComplexUnit*>(inUnit))->StartAction((long)inB); return 0;
+    case EE_UNITS_AI_H_ACTION_CHANGED: (static_cast<EEComplexUnit*>(inUnit))->GetUnitClass()->ActionChanged((static_cast<EEComplexUnit*>(inUnit))); return 0;
+    case EE_UNITS_AI_H_DROP_FINISHED_GOALS: (static_cast<EEComplexUnit*>(inUnit))->DropFinishedGoals(false); return 0;
+    case EE_UNITS_AI_H_UPDATE_CAMOUFLAGE: (static_cast<EEComplexUnit*>(inUnit))->UpdateCamouflage((long)inB); return 0;
+    case EE_UNITS_AI_H_SET_COMMAND: (static_cast<EEComplexUnit*>(inUnit))->mCommand = reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(inA)); return 0;
+    case EE_UNITS_AI_H_SET_NEXT_TRIGGER_TIME: (static_cast<EEComplexUnit*>(inUnit))->mNextTriggerTime = (unsigned long)inB; return 0;
+    case EE_UNITS_AI_H_UNIT_ID: return (int64_t)(static_cast<EEComplexUnit*>(inUnit))->mUnitID;
+    case EE_UNITS_AI_H_IS_CITIZEN: return (static_cast<EEComplexUnit*>(inUnit))->mIsCitizen;
     case EE_UNITS_AI_H_GAME_TIME: return (int64_t)gPhysics->mGameTime;
     default: return 0;
     }

@@ -39,18 +39,6 @@ static GERectangle sFrameCornerCell(0.0f, 0.0f, 28.0f, 38.0f);     // 0x564548 (
 static GERectangle sCornerCell(49.0f, 0.0f, 56.0f, 7.0f);          // 0x564538 (the small corners)
 static GERectangle sSideCell(30.0f, 0.0f, 48.0f, 20.0f);           // 0x564528 (the side ornaments)
 
-// Creates a tinted form background with optional frame pieces (flags: 1 edges, 2 frame corners, 4 sides)
-EEUIBGenericBackground::EEUIBGenericBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
-                                               const GETextureDescription& inDescription,
-                                               const UILayoutUtility& inLayout, UIForm* inForm,
-                                               unsigned long inDrawPriority, const GEColor& inColor, bool inVisible,
-                                               float inOpacity, float inScaleX, float inScaleY, unsigned long inFlags)
-    : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, GERectangle(), inLayout, inForm,
-                         inDrawPriority, inVisible),
-      EeScreensBackgroundFields()
-{
-    ee_screens_gb_construct((uintptr_t)this, inOpacity, (uint32_t)inFlags, (uintptr_t)&inColor, inScaleX, inScaleY);
-}
 
 // ---- the one-statement shims of ee_screens backgrounds_calls.rs (UI lane round 8: the frame's fill and pieces,
 // Open, the map's LoadBackground): each one call, no logic

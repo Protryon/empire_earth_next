@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_net/hostop.h"
+#include "rust/won_net/servctx.h"
 
 /// the finished list's length
 constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;
@@ -45,6 +46,16 @@ extern "C" {
 
 /// `new MultiPingOp`: the Rust op a `RustServerOp` runs.
 EeWonHostOp *ee_won_multiping_new();
+
+/// `GetServerContext(discardNonResponsiveServers)` (WONPing.h's MultiPingServerContext, R6 WON round 34): the finished
+/// servers in order into the C++ `ServerContext`'s list `ctx` (the unanswered too unless discarded; an element whose
+/// address is not six bytes is left out), then the list's shuffling off.
+///
+/// # Safety
+/// `op` is a live multi-ping op; `ctx` a live server list.
+void ee_won_multiping_fill_context(const EeWonHostOp *op,
+                                   const EeWonServerList *ctx,
+                                   bool discard_non_responsive);
 
 }  // extern "C"
 

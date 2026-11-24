@@ -190,6 +190,12 @@ ptrdiff_t ee_ui_bg_table_host(void *o,
                               ptrdiff_t d,
                               float *f);
 
+/// `UIControlsTable::SetupGEText(text)`: the text transparent, in the description's text colour.
+///
+/// # Safety
+/// `table` is a live C++ `UIControlsTable`, `text` a live `GEText`.
+void ee_ui_table_setup_text(void *table, void *text);
+
 }  // extern "C"
 
 #endif  // EE_RUST_UI_LLE_HOSTS_H

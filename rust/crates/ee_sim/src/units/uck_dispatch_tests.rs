@@ -5,6 +5,10 @@ impl UckRust for Mock {
     fn footprint(&mut self, which: i32, unit: u64) {
         self.log.push((-7, unit, i64::from(which), 0));
     }
+    fn has_sunk(&mut self, unit: u64) -> bool {
+        self.log.push((-8, unit, 0, 0));
+        unit == 2
+    }
 }
 
 fn run(h: &mut Mock, row: usize, a: u64, b: i64, c: i64) -> i64 {
@@ -105,4 +109,16 @@ fn the_air_sound_hands_its_out_pointers() {
     unsafe { sound(&mut h, 1, 2, 3, outs) };
     assert_eq!(h.args(EE_UNITS_UCK_D_AIR_SOUND).len(), 1);
     assert_eq!(h.args(EE_UNITS_UCK_D_AIR_SOUND)[0].0, 2);
+}
+
+#[test]
+fn the_dock_sinks_by_the_trigger_test() {
+    let mut h = Mock::default().answer(EE_UNITS_UCK_BODY, 1);
+    assert_eq!(run(&mut h, EE_UNITS_BODY_HAS_SUNK, 0, 0, 0), 1);
+    assert_eq!(h.args(-8), [(2, 0, 0)]);
+    let mut h = Mock::default().answer(EE_UNITS_UCK_BODY, 2);
+    assert_eq!(run(&mut h, EE_UNITS_BODY_HAS_SUNK, 0, 0, 0), 1);
+    assert!(h.args(-8).is_empty());
+    let mut h = Mock::default();
+    assert_eq!(run(&mut h, EE_UNITS_BODY_HAS_SUNK, 0, 0, 0), 0);
 }

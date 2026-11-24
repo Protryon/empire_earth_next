@@ -139,6 +139,9 @@ enum class EeUiFormCall : uint32_t {
   UseGdiForText = 92,
   DrawToolTipShadow = 93,
   SetDrawToolTipShadow = 94,
+  /// `UIEMouseWheelScroll::ProcessEvent` (UI round 16): the control under the mouse scrolled by the manager's wheel
+  /// scroll amount -> kErrorOK.
+  WheelScroll = 95,
 };
 
 /// The Rust UIForm.

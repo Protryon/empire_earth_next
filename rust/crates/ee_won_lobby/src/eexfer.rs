@@ -74,6 +74,32 @@ pub enum EeWonEeXferOp {
     Send,
     /// `TimeLeft()`.
     TimeLeft,
+    // ---- R6 WON round 34: the statements of the compound cases eesplit.rs composes (the compound ops above are the
+    // drivers': in the game no C++ case answers them)
+    /// `new QueueSocket(0)` (no reference: the Rust adds it).
+    NewQueueSocket = 60,
+    /// `((QueueSocket*)a)->SetRepeatCompletion(completion(b))` (`b` an `EeWonEeXferCall`).
+    SetRepeatCompletion,
+    /// `((QueueSocket*)a)->SetRepeatOp(new AcceptOp(NULL))`.
+    SetRepeatAccept,
+    /// `((QueueSocket*)a)->SetCloseCompletion(completion(b))`.
+    SetCloseCompletion,
+    /// `((QueueSocket*)a)->QueueOp(new SendFileOp(path b, c bytes), -1)`.
+    QueueSendFile,
+    /// `((QueueSocket*)a)->QueueOp(new CloseOp(NULL), -1)`.
+    QueueCloseOp,
+    /// `new RecvBytesOp(0, NULL)` (no reference).
+    NewRecvBytes,
+    /// `((SocketOp*)a)->SetCompletion(completion(b))`.
+    OpSetCompletion,
+    /// `((SocketOp*)a)->SetFilePath(path b, c bytes)`.
+    OpSetFilePath,
+    /// `((SocketOp*)a)->SetProgressCompletion(completion(OnProgress), 10000)`.
+    OpSetProgress,
+    /// `((QueueSocket*)a)->QueueOp(new ConnectOp(this->mHost), -1)`.
+    QueueConnect,
+    /// `((QueueSocket*)a)->QueueOp((SocketOp*)b, -1)`.
+    QueueOpOn,
 }
 
 /// The transfer's inward calls.
@@ -126,6 +152,12 @@ fn host_call(host: EeWonEeXferHostFn, obj: *mut c_void, op: EeWonEeXferOp, a: is
     // the ops on the network objects, on their Rust objects in the game (netops.rs)
     if let Some(r) = crate::netops::xfer_op(op, a) {
         return r;
+    }
+    // the compound cases' statements (R6 WON round 34), while the network core is bound
+    if ee_won_net::cppnet::bound() {
+        if let Some(r) = crate::eesplit::xfer_op(op, a, b, c, &|o, x, y, z| host_call(host, obj, o, x, y, z)) {
+            return r;
+        }
     }
     match host {
         // SAFETY: the host's contract (an op on its own object)

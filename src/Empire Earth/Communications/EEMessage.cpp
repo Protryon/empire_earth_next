@@ -41,7 +41,7 @@
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
 #include "ee/EEARust.h"
-#include "ee/EEUIEProcessTimerExpired.h"
+#include "ee/EEScreenEvent.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEAreaUtilities.h"
@@ -118,6 +118,7 @@ void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
 bool gLocalPlayerOut;                      // 0x4e6099 (.bss between this unit's Execute statics 0x4e6098/0x4e609a; ee/EEMessage.h)
 
 #include "ee/EESaveLoad.h"
+#include <vector>
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
@@ -251,6 +252,38 @@ static_assert(sizeof(EETileCoordinate) == 2 * sizeof(long) && sizeof(GE2DPoint) 
 #define CLIENT static_cast<EEClient*>(gCommunications)
 #define MAIN_FORM gUIManager->GetMainGameForm()
 
+
+double EEMessageOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EEMessageOpNextF(inOp, p, a, f);
+}
+
+// the next bodies' cases (Empire Earth.cpp)
+int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EEMessageOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EEStartupOp(inOp, p, a, f);   // the start-up bodies' (Empire Earth.cpp)
+}
+
+double EEMessageOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EEStartupOpF(inOp, p, a, f);
+}
+
+// ------------------------------------------------------------------------- round 11, lane C: the messages' C++
+
+
+#define NC ((EeNetMsgCall*)p)
+#define NM_M ((EEMRecord*)(uintptr_t)NC->message)
+#define NM_P ((EEPlayer*)(uintptr_t)NC->a)
+#define NM_G ((EEGroup*)(uintptr_t)NC->a)
+#define NM_U ((EEComplexUnit*)(uintptr_t)NC->b)   // an EEUnit* when a world lookup gave it
+#define NM_I (NC->i)
+
+#define MCMSG ((NEMessage*)p)
+#define MCNE (static_cast<NEMRecord*>(MCMSG))
+#define MCMR (static_cast<EEMRecord*>(MCMSG))
 // The message bodies' C++ calls and members (EeGameCpp's message section; EEGameState.cpp's EEGameStateOp default):
 // one statement each
 int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
@@ -274,7 +307,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::NewStartGameRecord: return P64(static_cast<NEMessage*>(new NEMRecord(kNetMessageStartGame, {(unsigned long)a[0]})));
     case O::NewLoadMainScreenRecord: return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadMainScreen, {0})));
     case O::NewChatAction: return P64(static_cast<EEAction*>(new EEAAddChatMessage(MSG->mString, a[0] != 0)));
-    case O::NewTimerExpiredEvent: return P64(static_cast<UIEvent*>(new EEUIEProcessTimerExpired));
+    case O::NewTimerExpiredEvent: return P64(static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_TIMER_EXPIRED)));
     case O::VecCivUpgradesOfMsg: return P64(new std::vector<EECivUpgrade>(MSG->GetList<EECivUpgrade>()));
     case O::VecCivUpgradesDelete: delete (std::vector<EECivUpgrade>*)p;
         break;
@@ -591,7 +624,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::MainFormUpdateHelp: MAIN_FORM->UpdateHelpString();
         break;
-    case O::MainFormGroup0: return P64(static_cast<EEUIFMGMainGroup*>(MAIN_FORM->mGroups[0]));
+    case O::MainFormGroup0: return P64(MAIN_FORM->mMainGroup);
     case O::MainGroupReset: ((EEUIFMGMainGroup*)p)->Reset();
         break;
     case O::GameUiShowCommands: gEEGameUI.mShowCommands((EEUIFMGMainGroup*)p, ((EEUIFMGMainGroup*)p)->GetSelectedUnit());
@@ -612,46 +645,8 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::CameraSetZoom: gWorld.mCameraControl.SetZoom(f[0]);
         break;
-    default: return EEMessageOpNext(inOp, p, a, f);
-    }
-    return 0;
-}
-
-double EEMessageOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEMessageOpNextF(inOp, p, a, f);
-}
-
-// the next bodies' cases (Empire Earth.cpp)
-int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EEMessageOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEStartupOp(inOp, p, a, f);   // the start-up bodies' (Empire Earth.cpp)
-}
-
-double EEMessageOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEStartupOpF(inOp, p, a, f);
-}
-
-// ------------------------------------------------------------------------- round 11, lane C: the messages' C++
-
-int64_t EECore11OpC5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEContagionManager.cpp
-
-#define NC ((EeNetMsgCall*)p)
-#define NM_M ((EEMRecord*)(uintptr_t)NC->message)
-#define NM_P ((EEPlayer*)(uintptr_t)NC->a)
-#define NM_G ((EEGroup*)(uintptr_t)NC->a)
-#define NM_U ((EEComplexUnit*)(uintptr_t)NC->b)   // an EEUnit* when a world lookup gave it
-#define NM_I (NC->i)
-
-// the C++ calls and members of this file's bodies in Rust (gamecpp; EEClient.cpp's EECore11OpC3 default): one
-// statement each
-int64_t EECore11OpC4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
+    // (EECore11OpC4) the C++ calls and members of this file's bodies in Rust (gamecpp; EEClient.cpp's EECore11OpC3 default): one
+    // statement each
     // the net message host (gamecpp msg_host.rs; p the host's call, EeNetMsgCall)
     case O::C11NmSender: return P64(gWorld.GetPlayerBySlot(NM_M->GetOriginatingSlot()));
     case O::C11NmPlayer: return P64(gWorld.mPlayers[NM_I[0]]);
@@ -748,7 +743,56 @@ int64_t EECore11OpC4(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::C11LongsAssign: ((std::vector<long>*)p)->assign((const int32_t*)a[0], (const int32_t*)a[0] + a[1]);
         break;
-    default: return EECore11OpC5(inOp, p, a, f);
+    // (EECore10OpC) lane C's chain link (round 10): the C++ calls and members of gamecpp msg_capture.rs and mrecord.rs (p a message),
+    // then EECivCapture.cpp's, then lane D's link: one statement each
+    case O::LcMsgType: return MCMSG->GetType();
+    case O::LcMsgForSlot: return MCMSG->GetForSpecificSlot();
+    case O::LcMsgOrigSlot: return MCMSG->GetOriginatingSlot();
+    case O::LcMsgIsGame: return EEGameMessageCast(MCMSG) != NULL;
+    case O::LcMsgExportSize: return (int64_t)MCMSG->ExportSize();
+    case O::LcMsgExport: MCMSG->ExportMessage((unsigned char**)a[0], *(unsigned long*)a[1]);
+        break;
+    case O::LcBytesDelete: delete[] (unsigned char*)p;
+        break;
+    case O::LcMsgCodecSlots: return (int64_t)EEGameMessageCast(MCMSG)->GetCodecSlots((EeNetMsgSlot*)a[0], *(uint32_t*)a[1]);
+    case O::LcMsgSelectIDs: EESelectUnitsIDs(static_cast<EEMRecord*>(EEGameMessageCast(MCMSG)), *(std::vector<long>*)a[0]);
+        break;
+    case O::LcMsgBuildGame: return P64(EEMessage::BuildEEMessage((unsigned char*)a[0]));
+    case O::LcMsgBuildEngine: return P64(NEMessage::BuildNEMessage((unsigned char*)a[0]));
+    case O::LcMsgDereference: MCMSG->Dereference();
+        break;
+    case O::LcNeInputs: return (int64_t)MCNE->mPlayerInputs.size();
+    case O::LcNeInputAt: return P64(MCNE->mPlayerInputs[a[0]]);
+    case O::LcNeString: return P64(&MCNE->GetString((uint32_t)a[0]));
+    case O::LcNeRecord: return P64(MCNE->mRecord);
+    case O::LcWideLength: return (int64_t)((const UWideString*)p)->GetLength();
+    // the messages' codec and the records (gamecpp mrecord.rs; p the message)
+    case O::LcEmCodecSlots: return (int64_t)static_cast<EEMessage*>(MCMSG)->GetCodecSlots((EeNetMsgSlot*)a[0], *(uint32_t*)a[1]);
+    case O::LcBytesNew: return P64(new unsigned char[a[0]]);
+    case O::LcMrRecord: return P64(MCMR->mRecord);
+    case O::LcMrFastId: return P64(&MCMR->mFastSelectionID);
+    case O::LcMrHeaderSlots: MCMR->GetHeaderSlots((EeNetMsgSlot*)a[0]);
+        break;
+    case O::LcMrSetString: MCMR->mString = *(const UWideString*)a[0];
+        break;
+    case O::LcMrStringText: return P64((const char*)MCMR->mString);
+    case O::LcMrStringImport: MCMR->mString.Import((unsigned char*)a[0]);
+        break;
+    case O::LcMrListAppend: MCMR->mList.insert(MCMR->mList.end(), (const unsigned char*)a[0], (const unsigned char*)a[0] + a[1]);
+        break;
+    case O::LcMrListAssign: MCMR->mList.assign((const unsigned char*)a[0], (const unsigned char*)a[0] + a[1]);
+        break;
+    case O::LcMrListClear: MCMR->mList.clear();
+        break;
+    case O::LcMrListData: return P64(MCMR->mList.empty() ? NULL : &MCMR->mList[0]);
+    case O::LcMrListSize: return (int64_t)MCMR->mList.size();
+    case O::LcWideText: return (int64_t)(intptr_t)(const char*)*(const UWideString*)p;
+    case O::LcLongVecNew: return (int64_t)(intptr_t)(new std::vector<long>);
+    case O::LcLongVecDelete: delete (std::vector<long>*)p;
+        break;
+    case O::LcLongVecSize: return (int64_t)((std::vector<long>*)p)->size();
+    case O::LcLongVecAt: return (*(std::vector<long>*)p)[a[0]];
+    default: return EEMessageOpNext(inOp, p, a, f);
     }
     return 0;
 }

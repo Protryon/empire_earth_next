@@ -20,7 +20,6 @@ const UString kDbFamilyFile("db\\dbfamily.dat");
 const UString kDbColorTableFile("db\\dbcolortable.dat");
 const UString kDbAIUnitTargetingFile("db\\dbaiunittargeting.dat");
 const UString kDbTerrainFile("db\\dbterrain.dat");
-const UString kDbTerrainColorFile("db\\dbterrainColor.dat");
 const UString kDbTerrainTypeFile("db\\dbterrainType.dat");
 const UString kDbWorldFile("db\\dbworld.dat");
 const UString kDbCivilizationFile("db\\dbcivilization.dat");
@@ -29,7 +28,6 @@ const UString kDbWeaponToHitFile("db\\dbweapontohit.dat");
 const UString kDbCalamityFile("db\\dbcalamity.dat");
 const UString kDbUnitSetFile("db\\dbunitset.dat");
 const UString kDbAreaEffectFile("db\\dbareaeffect.dat");
-const UString kDbFontsFile("db\\dbfonts.dat");
 const UString kDbUpgradeFile("db\\dbupgrade.dat");
 const UString kDbCPBehaviorFile("db\\dbcpbehavior.dat");
 const UString kDbAmbientSoundsFile("db\\dbambientsounds.dat");
@@ -44,7 +42,7 @@ const UString kDbCivPowersFile("db\\dbcivpowers.dat");
 // ------------------------------------------------------------------------- round 10, lane B: the Database, the Tech Tree, Persistent
 
 double EECore10OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EECore10OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETerrainTable.cpp
+int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the C++ calls and members of lane B's bodies in Rust (gamecpp db_media.rs, db_text.rs, tech_load.rs, tech_capture.rs, persist_more.rs;
 // EeGameCpp's round 10 lane B section) are the cases of a chain of switches beside the statics they read:
@@ -52,7 +50,7 @@ int64_t EECore10OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
 // EETechCapture.cpp (B6) -> EETechTreeEpoch.cpp (B7) -> EEPCalamityHelper.cpp (B8) -> EETerrainColorTable.cpp (B9) -> lane C
 int64_t EECore10OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    return EECore10OpB2(inOp, p, a, f);
+    return EECore10OpB5(inOp, p, a, f);
 }
 
 double EECore10OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)

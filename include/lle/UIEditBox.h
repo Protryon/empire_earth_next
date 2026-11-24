@@ -17,15 +17,16 @@
 #include <vector>   // units including this header rely on it
 #include "rust/ui/editobj.h"
 
-class GEFont;
-class GEText;
 
 class LLE_API UIEditBox : public UIControl {
 public:
     UIEditBox(unsigned long inId, GEFont* inFont, unsigned long inMaxChars, bool inNumbersOnly,
               const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness,
-              bool inMultiLine, bool inPasswordBox);
-    virtual ~UIEditBox();
+              bool inMultiLine, bool inPasswordBox)
+        : UIControl(kControlTypeEditBox, inId, inRectangle, inForm, inIndex, inBorderThickness),
+      mRust(ee_ui_edit_new(this, ee_ui_edit_host, inFont, inMaxChars, ee_ui_edit_flags(inNumbersOnly, inMultiLine, inPasswordBox),
+                           inBorderThickness)) {}
+    virtual ~UIEditBox() { ee_ui_edit_free(this->mRust); }
     virtual void AddIMEResultString(const UWideString& inString) { this->Call(EeUiEditCall::AddImeResult, (intptr_t)(const char*)inString); }
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                             unsigned long inCursor) { return (long)this->Call(EeUiEditCall::ImeChange, (intptr_t)(const char*)inString, inCursor, (intptr_t)(const char*)inAttributes); }

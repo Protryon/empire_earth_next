@@ -366,9 +366,83 @@ pub unsafe extern "C" fn ee_units_goal_location_yaw_any(goal: *const EeUnitsGoal
     0.0
 }
 
+/// How `EEUnitGoal::CreateGoal` makes the load's empty goal of a kind (the New function each case called).
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum EmptyGoal {
+    /// `New(kind, false, op)`
+    Io(i32),
+    /// `NewCall(kind, false, op, 0, 0, i0)`
+    Call(i32, i64),
+    /// `NewAttackGround(GE3DPoint(), false)`
+    Point(i32),
+    /// `NewLocation(false, false, false, false)`
+    Location,
+}
+
+/// The load's empty goal of `kind` (none for an unknown kind), in CreateGoal's switch order.
+fn empty_goal(kind: u8) -> Option<EmptyGoal> {
+    use crate::combat::goal_dispatch::{EE_COMBAT_GOAL_NEW_ATTACK, EE_COMBAT_GOAL_NEW_GROUND, EE_COMBAT_GOAL_NEW_HEAL};
+    use crate::units::rust_goal::{
+        EE_UNITS_GOAL_BUILD_NEW_EMPTY, EE_UNITS_GOAL_CALAMITY_NEW_EMPTY, EE_UNITS_GOAL_GATHER_NEW_EMPTY,
+        EE_UNITS_GOAL_LOAD_NEW_EMPTY, EE_UNITS_GOAL_NEW_EXPLORE, EE_UNITS_GOAL_PATROL_NEW_EMPTY,
+        EE_UNITS_GOAL_UNLOAD_NEW_EMPTY,
+    };
+    Some(match kind {
+        3 => EmptyGoal::Point(EE_COMBAT_GOAL_NEW_GROUND),
+        2 => EmptyGoal::Call(EE_COMBAT_GOAL_NEW_ATTACK, 2),
+        4 => EmptyGoal::Io(EE_UNITS_GOAL_BUILD_NEW_EMPTY),
+        11 => EmptyGoal::Io(EE_UNITS_GOAL_CALAMITY_NEW_EMPTY),
+        10 => EmptyGoal::Io(EE_UNITS_GOAL_NEW_EXPLORE),
+        6 => EmptyGoal::Io(EE_UNITS_GOAL_GATHER_NEW_EMPTY),
+        7 | 12 => EmptyGoal::Io(EE_UNITS_GOAL_LOAD_NEW_EMPTY),
+        1 => EmptyGoal::Location,
+        9 => EmptyGoal::Io(EE_UNITS_GOAL_PATROL_NEW_EMPTY),
+        8 => EmptyGoal::Io(EE_UNITS_GOAL_UNLOAD_NEW_EMPTY),
+        15 => EmptyGoal::Call(EE_COMBAT_GOAL_NEW_HEAL, 2),
+        _ => return None,
+    })
+}
+
+/// `EEUnitGoal::CreateGoal(kind)` (0x23c3e6): the load's empty goal of `kind` given the id it drew back (the loaded
+/// record sets its own), or null for an unknown kind.
+#[no_mangle]
+pub extern "C" fn ee_units_goal_create(kind: u8) -> *mut EeUnitsGoalBase {
+    let goal = match empty_goal(kind) {
+        None => return std::ptr::null_mut(),
+        // SAFETY: no handles, no block
+        Some(EmptyGoal::Io(op)) => unsafe { ee_units_goal_new_io(kind, false, op, 0, 0, std::ptr::null_mut()) },
+        // SAFETY: no handles
+        Some(EmptyGoal::Call(op, i0)) => unsafe { ee_units_goal_new_call(kind, false, op, 0, 0, i0, 0, 0) },
+        Some(EmptyGoal::Point(op)) => ee_units_goal_new_point(kind, false, op, 0.0, 0.0, 0.0),
+        Some(EmptyGoal::Location) => ee_units_goal_new_location(false, 0.0, 0.0, 0.0, false, false, 0.0, false, 0),
+    };
+    // SAFETY: the goal just made
+    unsafe { (*goal).id = crate::units::goal_obj::ee_units_goal_counter_back() };
+    goal
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn create_goal_makes_each_kind_s_empty_goal_by_its_new_function() {
+        use crate::combat::goal_dispatch::{
+            EE_COMBAT_GOAL_NEW_ATTACK, EE_COMBAT_GOAL_NEW_GROUND, EE_COMBAT_GOAL_NEW_HEAL,
+        };
+        use crate::units::rust_goal::{EE_UNITS_GOAL_LOAD_NEW_EMPTY, EE_UNITS_GOAL_NEW_EXPLORE};
+        assert_eq!(empty_goal(3), Some(EmptyGoal::Point(EE_COMBAT_GOAL_NEW_GROUND)));
+        assert_eq!(empty_goal(2), Some(EmptyGoal::Call(EE_COMBAT_GOAL_NEW_ATTACK, 2)));
+        assert_eq!(empty_goal(15), Some(EmptyGoal::Call(EE_COMBAT_GOAL_NEW_HEAL, 2)));
+        assert_eq!(empty_goal(10), Some(EmptyGoal::Io(EE_UNITS_GOAL_NEW_EXPLORE)));
+        assert_eq!(empty_goal(7), empty_goal(12));
+        assert_eq!(empty_goal(12), Some(EmptyGoal::Io(EE_UNITS_GOAL_LOAD_NEW_EMPTY)));
+        assert_eq!(empty_goal(1), Some(EmptyGoal::Location));
+        for unknown in [0u8, 5, 13, 14, 16, 255] {
+            assert_eq!(empty_goal(unknown), None);
+        }
+        assert!(ee_units_goal_create(5).is_null());
+    }
 
     #[test]
     fn the_location_setters_change_one_field() {

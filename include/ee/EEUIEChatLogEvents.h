@@ -11,35 +11,10 @@
 
 #include "rust/game/screens.h"   // ee_screens_chat_log_*
 
-class FSFile;
+// (the original's EEChatLogEntry, one chat line of sizeof 0x3c: colour, sender, text, type (2: not logged), time, is
+// the Rust EeScreensChatEntry: ee_screens chat_log_ffi.rs, UI lane round 16)
 
-// One chat line (sizeof 0x3c in the original)
-struct EEChatLogEntry {
-    GEColor mColor;                         // +0x00
-    UWideString mName;                      // +0x0c the sender (empty: a game message)
-    UWideString mText;                      // +0x20
-    unsigned long mType;                    // +0x34 (2: not logged, EEUserInterface 0x2787f7)
-    unsigned long mTime;                    // +0x38 (provisional name)
-};
-
-class EEUIECLEFormManager {
-public:
-    static void AddEntry(const EEChatLogEntry& inEntry)   // 0x1d32bf (keeps the last 40)
-    {
-        EeScreensChatLogHead theHead = {{inEntry.mColor.mRed, inEntry.mColor.mGreen, inEntry.mColor.mBlue},
-                                        (uint32_t)inEntry.mType, (uint32_t)inEntry.mTime};
-        ee_screens_chat_log_add(&theHead, (const uint8_t*)(const char*)inEntry.mName, inEntry.mName.GetTCHARLength(),
-                                (const uint8_t*)(const char*)inEntry.mText, inEntry.mText.GetTCHARLength());
-    }
-    static void Clear() { ee_screens_chat_log_clear(); }
-    static long Load(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
-    {
-        return ee_screens_chat_log_load(&inFile);
-    }
-    static long Save(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
-    {
-        return ee_screens_chat_log_save(&inFile);
-    }
-};
+// (EEUIECLEFormManager's statics AddEntry 0x1d32bf (keeps the last 40), Clear, Load and Save are the Rust log's
+// ee_screens_chat_log_add, _clear, _load and _save: UI lane round 16)
 
 #endif
