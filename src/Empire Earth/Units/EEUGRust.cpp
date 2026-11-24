@@ -127,13 +127,14 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
 
 namespace {
 
-// where a body's file calls and text go (rust_goal.rs EeUnitsGoalContext: the file calls are Rust's, goal_obj.rs
-// file_call)
-struct EEGoalContext {
-    FSFile* mFile;
-    UWideString* mText;
-    FILE* mDump;
-};
+// where a body's file calls and text go: rust_goal.rs EeUnitsGoalContext (the file calls are Rust's, goal_obj.rs
+// file_call; the text is a UWideString*, the dump a FILE*)
+static_assert(sizeof(EeUnitsGoalContext) == 3 * sizeof(void*), "EeUnitsGoalContext: file, text, dump");
+
+UWideString& TextOf(void* inContext)
+{
+    return *static_cast<UWideString*>(static_cast<EeUnitsGoalContext*>(inContext)->text);
+}
 
 uint64_t Handle(const void* inObject)
 {
@@ -166,8 +167,7 @@ static std::vector<EEComplexUnit*> sGoalComplexes;
 static std::vector<EETileCoordinate> sGoalTiles;
 static EEEffectHandle sGoalEffect;
 static EEUnit* sGoalBlocker;
-static long sGoalArg4;
-static long sGoalArg5;
+static long sGoalBlockTile[2];   // x, y
 
 void LongPairOut(EeUnitsGoalIo* ioArgs, const U2DPoint<long>& inPoint)
 {
@@ -212,15 +212,15 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         ObjectOf<EEComplexUnit>(inA)->DropPath();
         return 0;
     // (the file calls: Rust's, goal_obj.rs file_call)
-    case EE_UNITS_GOAL_HOST_X_HAS_TEXT: return static_cast<EEGoalContext*>(inContext)->mText != NULL;
+    case EE_UNITS_GOAL_HOST_X_HAS_TEXT: return static_cast<EeUnitsGoalContext*>(inContext)->text != NULL;
     case EE_UNITS_GOAL_HOST_X_APPEND_TEXT:
-        *static_cast<EEGoalContext*>(inContext)->mText += std::string((const char*)ioArgs->text, ioArgs->len).c_str();
+        TextOf(inContext) += std::string((const char*)ioArgs->text, ioArgs->len).c_str();
         return 0;
     case EE_UNITS_GOAL_HOST_X_APPEND_DUMP:
-        fputs(std::string((const char*)ioArgs->text, ioArgs->len).c_str(), static_cast<EEGoalContext*>(inContext)->mDump);
+        fputs(std::string((const char*)ioArgs->text, ioArgs->len).c_str(), static_cast<FILE*>(static_cast<EeUnitsGoalContext*>(inContext)->dump));
         return 0;
     case EE_UNITS_GOAL_HOST_APPEND_CLASS_NAME:
-        *static_cast<EEGoalContext*>(inContext)->mText += (const char*)ObjectOf<EEUnit>(inA)->mUnitClass->mName;
+        TextOf(inContext) += (const char*)ObjectOf<EEUnit>(inA)->mUnitClass->mName;
         return 0;
 
     // the patrol's (the groups' own calls are Rust's: rust_goal.rs)
@@ -452,7 +452,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST: return Handle(EEFindLoadedGhost((unsigned long)inA));
     case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST_UNIT: return Handle(EEFindLoadedGhostUnit((unsigned long)inA));
-    case EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: return EEIsLineToUnitBlocked(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), &sGoalBlocker, &sGoalArg4, &sGoalArg5);
+    case EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: return EEIsLineToUnitBlocked(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), &sGoalBlocker, &sGoalBlockTile[0], &sGoalBlockTile[1]);
     // the gathering's (world.rs: BeginGathering, Work, SearchNavalResource)
     case EE_UNITS_GOAL_HOST_TAKE_HIT:
         ObjectOf<EEUnit>(inA)->TakeHit(ObjectOf<EEComplexUnit>(inB), UMFloatToLong(ObjectOf<EEComplexUnit>(inB)->mStats->mAttack), 0, 1);
@@ -496,7 +496,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
 int64_t Goal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t inB = 0,
              EeUnitsGoalIo* ioArgs = NULL, FSFile* inFile = NULL, UWideString* inText = NULL, FILE* inDump = NULL)
 {
-    EEGoalContext theContext = {inFile, inText, inDump};
+    EeUnitsGoalContext theContext = {inFile, inText, inDump};
     EeUnitsGoalHost theHost = {&theContext, GoalOp};
     EeUnitsGoalIo theArgs = {};
     return ee_units_rust_goal(inOperation, inGoal->mKind, Handle(inGoal), inA, inB,

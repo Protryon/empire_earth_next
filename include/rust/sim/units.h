@@ -18214,6 +18214,15 @@ struct EeUnitsSrLine {
   long y;
 };
 
+/// Where a goal body's file calls and text go (EEUGRust.cpp's `Goal` hands it as its table's `context`): the
+/// C++ `FSFile*` of a Load or Save (Rust reads and writes it: goal_obj.rs), the `UWideString*` of a debug line and
+/// the `FILE*` of an out-of-synch dump (the C++ appends to those).
+struct EeUnitsGoalContext {
+  void *file;
+  void *text;
+  void *dump;
+};
+
 /// `kWorldHighGroundHeight`, `kWorldLowGroundHeight`, `kWorldHighGroundAttackFactor`, `kWorldLowGroundAttackFactor`
 /// (the world table's rows, ee/EEWorldConstants.h)
 constexpr static const int64_t WORLD_ELEVATION_ROWS[4] = { 53, 54, 55, 56, };
@@ -19499,6 +19508,20 @@ float ee_units_goal_location_yaw_any(const EeUnitsGoalBase *goal);
 /// `EEUnitGoal::CreateGoal(kind)` (0x23c3e6): the load's empty goal of `kind` given the id it drew back (the loaded
 /// record sets its own), or null for an unknown kind.
 EeUnitsGoalBase *ee_units_goal_create(uint8_t kind);
+
+/// `EEUnitGoal::IsActive(out)`.
+///
+/// # Safety
+/// `goal` a live goal, `out` writable.
+bool ee_units_goal_is_active(const EeUnitsGoalBase *goal, unsigned long *out);
+
+/// `EEUnitGoal::AddLoadUnits(units)` (units round 12, was ee/EEUnitGoal.h's loop): `AddLoadUnit` of each unit of the
+/// `std::vector<EEComplexUnit*>` in order.
+///
+/// # Safety
+/// `goal` a live load goal, `units` a live vector of live units.
+void ee_units_goal_add_load_units(const EeUnitsGoalBase *goal,
+                                  const void *units);
 
 /// `new EEUnitGoal(inKind, inArg)` (`EEUnitGoal::Make`): see [`goal_new`].
 EeUnitsGoalBase *ee_units_goal_new(uint8_t kind, bool arg);
