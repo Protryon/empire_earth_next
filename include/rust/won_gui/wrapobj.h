@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_gui/guidraw.h"
+#include "rust/won_gui/platfont.h"
 
 /// The Rust WrappedText (the original's members but the text and font).
 struct EeWonWrapText;
@@ -81,6 +82,30 @@ size_t ee_won_wrap_paint(const EeWonWrapText *o,
                          const EeWonTextMeasure *m,
                          EeWonDrawOp *out,
                          size_t cap);
+
+/// `WrappedText::CalcWrap()` whole: the `len` units at `text` wrapped for the font `font` (null: none) by its
+/// widths and height.
+///
+/// # Safety
+/// `o` is live; `font` null or a live font; `text` holds `len` units (or is NULL with 0).
+void ee_won_wrap_calc_font(EeWonWrapText *o,
+                           const EeWonPlatFont *font,
+                           const void *text,
+                           int32_t len);
+
+/// `WrappedText::Paint`'s plan for the `length` units at `text` in the font `font` at (`x`, `y`): the first `cap`
+/// operations into `out`, their count returned.
+///
+/// # Safety
+/// `o` and `font` are live; `text` holds `length` units; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_wrap_paint_font(const EeWonWrapText *o,
+                              const EeWonPlatFont *font,
+                              const void *text,
+                              int32_t length,
+                              int32_t x,
+                              int32_t y,
+                              EeWonDrawOp *out,
+                              size_t cap);
 
 }  // extern "C"
 

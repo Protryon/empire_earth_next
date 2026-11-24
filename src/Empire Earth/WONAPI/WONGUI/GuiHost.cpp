@@ -754,30 +754,23 @@ PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }
 }
 
 // WrappedText (R6 WON round 38): the Rust object (wrapobj.rs) wraps the text it is handed with the font's measure
+// (the measure is wrapobj.rs's too, over platfont.rs: R6 WON GUI round 36)
 namespace WONAPI {
 WrappedText::WrappedText() : mObj(ee_won_wrap_new()) {}
 WrappedText::WrappedText(const GUIString& theText) : mText(theText), mObj(ee_won_wrap_new()) {}
 // Recomputes the line breaks and the text's width and height for the font and maximum width
 void WrappedText::CalcWrap()
 {
-    WONDrawMeasure aMeasure = { this->mFont.get(), &this->mText };
-    EeWonTextMeasure m = aMeasure.Get();
-    ee_won_wrap_calc(this->mObj, this->mFont.get() != NULL, this->mText.mData->mText, this->mText.length(), sizeof(wchar_t), &m,
-                     this->mFont.get() != NULL ? this->mFont->GetHeight() : 0);
+    ee_won_wrap_calc_font(this->mObj, this->mFont.get() != NULL ? this->mFont->mRust : NULL, this->mText.mData->mText, this->mText.length());
 }
 // Draws each wrapped line (centred if set) from the given top-left point (wrapobj.rs over guidraw.rs wrapped_text)
 void WrappedText::Paint(Graphics& g, int x, int y)
 {
     if (this->mFont.get() == NULL)
         return;
-    WONDrawMeasure aMeasure = { this->mFont.get(), &this->mText };
-    EeWonTextMeasure m = aMeasure.Get();
-    int aFontHeight = this->mFont->GetHeight();
-    WONDrawSlots aSlots;
-    aSlots.mFont = this->mFont.get();
-    aSlots.mString = &this->mText;
     WONDrawRun(g, WONDrawOps([&](EeWonDrawOp* o, size_t n) {
-        return ee_won_wrap_paint(this->mObj, this->mText.length(), aFontHeight, x, y, &m, o, n); }), aSlots);
+        return ee_won_wrap_paint_font(this->mObj, this->mFont->mRust, this->mText.mData->mText, this->mText.length(), x, y, o, n); }),
+        WONDrawSlots(this->mFont.get(), &this->mText));
 }
 }
 
