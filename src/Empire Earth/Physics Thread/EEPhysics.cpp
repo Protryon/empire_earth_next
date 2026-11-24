@@ -325,7 +325,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     // the captures (TEST ONLY)
     case O::CaptureExecuted: EEMessageCaptureExecuted(MSG);
         break;
-    case O::SimCaptureActive: return EESimCaptureRecord::Active();
     case O::UnitStoreCheck: EEUnitStoreCheck((unsigned long)a[0]);
         break;
     case O::TestHookSet: return gEEMessageExecutedTestHook != NULL;
@@ -359,8 +358,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::NumPlayers: return gWorld.mNumPlayers;
     case O::Player: return P64(gWorld.mPlayers[a[0]]);
     case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
-    case O::FlushQueuedPlacements: gWorld.FlushQueuedPlacements();
-        break;
     case O::UpdateActiveUnits: gWorld.UpdateActiveUnits();
         break;
     case O::InCinematic: return gWorld.mInCinematic;
@@ -423,8 +420,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::PlayerGameResult: return PL->mGameResult;
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(0, 1);
         break;
-    case O::PlayerRemoveKilledUnits: PL->RemoveKilledUnits();
-        break;
     case O::PlayerUnitsSwapped: PL->UnitsSwapped(((EEPhysics*)a[0])->mUnitSwaps);
         break;
     case O::PlayerCivChosen: return PL->mCivilizationChosen;
@@ -478,8 +473,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ResourceString: return gResource->GetString((unsigned long)a[0], *(UWideString*)p);
     case O::ChatLog: gUserInterface->AddChatLogEntry(*(UWideString*)p, 0);
         break;
-    case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
-        break;
     case O::IsMainGameForm: return dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL;
     case O::OptionsButtonBlink: (static_cast<UIBlinkingButton*>(gUIManager->GetMainGameForm()->GetControl(kMainGameIngameOptions)))->SetIsBlinking(true);
         break;
@@ -495,6 +488,8 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::SavePreferences: gGamePreferences.Save();
         break;
     case O::SavedGameExtension: snprintf((char*)a[0], (size_t)a[1], "%s", (const char*)gSavedGameExtension);
+        break;
+    case O::CivBuilderBlink: EESetCivBuilderButtonBlinking(a[0] != 0);
         break;
     case O::LoadOrSave: return EELoadOrSave(static_cast<EEMRecord*>(MSG));
     case O::FileOpen: return P64(PlatFOpen((const char*)a[0], "w"));

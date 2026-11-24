@@ -170,6 +170,55 @@ fn player_body(pl: P, what: u32) {
     unsafe { ee_sim::units::player_body::game::ee_units_player_body(pl as *mut c_void, what, 0, 0, 0, 0.0) };
 }
 
+/// The RTS world's and player's members (rts world.rs, units.rs; the tests run no host).
+#[cfg(not(test))]
+mod rts {
+    use super::{c_void, P};
+    use crate::rts::{units::ffi as units, world::ffi as world};
+
+    /// `RTSWorld::FlushQueuedPlacements`.
+    pub fn flush_queued(w: P) {
+        // SAFETY: the live world, on the thread that owns it
+        unsafe { world::ee_rts_world_flush_queued_placements(w as *mut c_void) };
+    }
+
+    /// `RTSWorld::AddUnitEntry(unit, NULL)`.
+    pub fn add_unit_entry(w: P, u: P) {
+        // SAFETY: the live world and unit
+        unsafe { world::ee_rts_world_add_unit_entry(w as *mut c_void, u as *mut c_void, std::ptr::null_mut()) };
+    }
+
+    /// `RTSPlayer::KillUnit(unit, false)`.
+    pub fn kill_unit(pl: P, u: P) {
+        units::ee_rts_player_kill_unit(pl as *mut c_void, u as *mut c_void, false);
+    }
+
+    /// `RTSPlayer::RemoveKilledUnits`.
+    pub fn remove_killed(pl: P) {
+        units::ee_rts_player_remove_killed_units(pl as *mut c_void);
+    }
+}
+
+#[cfg(test)]
+mod rts {
+    use super::P;
+    pub fn flush_queued(_: P) {
+        panic!("no host in the tests")
+    }
+    pub fn add_unit_entry(_: P, _: P) {
+        panic!("no host in the tests")
+    }
+    pub fn kill_unit(_: P, _: P) {
+        panic!("no host in the tests")
+    }
+    pub fn remove_killed(_: P) {
+        panic!("no host in the tests")
+    }
+}
+
+use rts::{add_unit_entry as rts_add_unit_entry, kill_unit as rts_kill_unit};
+pub(crate) use rts::{flush_queued as rts_flush_queued, remove_killed as rts_remove_killed};
+
 /// EEWorld::RemovePlayerFromTeams.
 fn remove_from_teams(w: P, id: c_ulong) {
     // SAFETY: the live world
@@ -202,10 +251,10 @@ fn kill_units(pl: P) {
             h(O::CxClearCollisionState, cx, &[]);
         }
         h(O::UnKill, u, &[0, 0, 0]);
-        h(O::PlKillUnit, pl, &[pa(u), 0]);
+        rts_kill_unit(pl, u);
         u = next;
     }
-    h(O::PlRemoveKilled, pl, &[]);
+    rts_remove_killed(pl);
     h(O::PlReleasePending, pl, &[]);
 }
 
@@ -304,7 +353,7 @@ pub extern "C" fn ee_gamecpp_world_destroy(w: *mut c_void) {
 pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
     let w = w as P;
     *wm::<bool>(O::WClearing, w) = true;
-    if h(O::ShutdownInProgress, 0, &[]) == 0 && map(w) != 0 {
+    if !ee_base::util::system::ee_util_shutdown_in_progress() && map(w) != 0 {
         super::world_stats::ee_gamecpp_world_record_statistics(w);
         h(O::PickerLock, 0, &[]);
         h(O::PickerReset, 0, &[]);
@@ -410,7 +459,7 @@ pub extern "C" fn ee_gamecpp_world_replace_player(
     let w = w as P;
     let file = hp(O::MemFileNew, 0, &[1000, 1, 1]);
     let old = player(w, index);
-    h(O::WFlushQueued, w, &[]);
+    rts_flush_queued(w);
     let new = hp(O::NewHumanPlayer, 0, &[]);
     h(O::PlSaveTo, old, &[major as i64, minor as i64, pa(file)]);
     h(O::MemFileRewind, file, &[]);
@@ -448,7 +497,7 @@ pub extern "C" fn ee_gamecpp_world_replace_player(
     while k < h(O::PlNumPending, new, &[]) {
         let u = hp(O::PlPendingAt, new, &[k]);
         h(O::RtsUpdateTile, u, &[m as i64]);
-        h(O::WAddUnitEntry, w, &[pa(u), 0]);
+        rts_add_unit_entry(w, u);
         k += 1;
     }
     h(O::PlReleasePending, new, &[]);
@@ -709,7 +758,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     h(O::WCreateMiniMap, w, &[pa(st)]);
     progress(20);
     *wm::<bool>(O::WUsingCarbon, w) = *sm::<bool>(O::StUsingCarbon, st);
-    ee_sim::ai::next_game::trace::ee_ai_new_game();   // the computer players' per-game statics cleared
+    ee_sim::ai::next_game::trace::ee_ai_new_game(); // the computer players' per-game statics cleared
     ee_gamecpp_world_create_players(w as *mut c_void, st as *mut c_void);
     progress(21);
     if *sm::<bool>(O::StInScenarioEditor, st) == true {
@@ -756,7 +805,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     if loaded {
         h(O::ReportGameLoaded, st, &[]);
     } else {
-        h(O::ReportGameInitialized, 0, &[]);
+        super::utilities::ee_gamecpp_report_load_failure(c"Game initialized.".as_ptr(), false, std::ptr::null_mut());
     }
     if num_players(w) as i64 != h(O::MapPlayerCount, map(w), &[]) {
         super::map::ee_gamecpp_map_set_player_count(map(w) as *mut std::ffi::c_void, num_players(w) as c_ulong);
@@ -928,7 +977,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
             if !*sm::<bool>(O::StIsLoadedGame, st) && hp(O::UnTileNode, u, &[]) != 0 {
                 h(O::CxMakeAreaEffects, u, &[]);
             }
-            h(O::WAddUnitEntry, w, &[pa(u), 0]);
+            rts_add_unit_entry(w, u);
             j += 1;
         }
         if *sm::<bool>(O::StIsLoadedGame, st) {
@@ -994,7 +1043,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         // SAFETY: the C++'s restore of the computer players' deferred managers, on the loading thread
         unsafe { ee_sim::cp::player_game::ee_cp_pl_restore_deferred(major as c_ulong, minor as c_ulong) };
     }
-    h(O::WFlushQueued, w, &[]);
+    rts_flush_queued(w);
     if *sm::<bool>(O::StInScenarioEditor, st) == true {
         ee_gamecpp_world_add_computers(w as *mut c_void, st as *mut c_void);
     }
@@ -1179,7 +1228,13 @@ pub extern "C" fn ee_gamecpp_world_notify_loaded(w: *mut c_void, major: c_ulong,
     let w = w as P;
     for i in 0..num_players(w) {
         if player(w, i) != 0 {
-            player_rest(player(w, i), pr::EE_UNITS_PLAYER_REST_FINISH_UNITS_LOAD, 0, major as c_long as i64, minor as c_long as i64);
+            player_rest(
+                player(w, i),
+                pr::EE_UNITS_PLAYER_REST_FINISH_UNITS_LOAD,
+                0,
+                major as c_long as i64,
+                minor as c_long as i64,
+            );
         }
     }
 }

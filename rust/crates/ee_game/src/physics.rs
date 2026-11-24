@@ -107,7 +107,6 @@ pub enum EePhysCpp {
     NewCivTimerExpired,
     // ---- the captures
     CaptureExecuted,
-    SimCaptureActive,
     UnitStoreCheck,
     TestHookSet,
     TestHookCall,
@@ -133,7 +132,6 @@ pub enum EePhysCpp {
     NumPlayers,
     Player,
     CurrentPlayer,
-    FlushQueuedPlacements,
     UpdateActiveUnits,
     InCinematic,
     ScenarioResult,
@@ -182,13 +180,13 @@ pub enum EePhysCpp {
     PlayerObserver,
     PlayerGameResult,
     PlayerAddPendingUnits,
-    PlayerRemoveKilledUnits,
     /// `UnitsSwapped(((EEPhysics*)a0)->mUnitSwaps)`
     PlayerUnitsSwapped,
     PlayerCivChosen,
     PlayerShiftMode,
     PlayerAvailablePoints,
     PlayerSavedGroupLast,
+    CivBuilderBlink,
     PlayerId,
     PlayerSlot,
     PlayerGetSlot,
@@ -227,7 +225,6 @@ pub enum EePhysCpp {
     ResourceString,
     /// `gUserInterface->AddChatLogEntry(*(UWideString*)p, 0)`
     ChatLog,
-    CivBuilderBlink,
     IsMainGameForm,
     OptionsButtonBlink,
     CivTimerLimit,
@@ -326,7 +323,15 @@ fn world() -> P {
 fn set_game_result(player: P, result: c_long) {
     use ee_sim::units::player_rest as pr;
     // SAFETY: a live player of the world, on the physics thread
-    unsafe { pr::game::ee_units_player_rest(player as *mut c_void, pr::EE_UNITS_PLAYER_REST_SET_GAME_RESULT, 0, result as i64, 0) };
+    unsafe {
+        pr::game::ee_units_player_rest(
+            player as *mut c_void,
+            pr::EE_UNITS_PLAYER_REST_SET_GAME_RESULT,
+            0,
+            result as i64,
+            0,
+        )
+    };
 }
 
 fn b(op: O, p: P, a: &[i64]) -> bool {
@@ -637,7 +642,7 @@ fn auto_save(_p: P) {
 fn flush_world(p: P) {
     let players = h0(O::NumPlayers);
     h0(O::CheckUnitList);
-    h0(O::FlushQueuedPlacements);
+    crate::gamecpp::world::rts_flush_queued(world());
     for i in 0..players {
         let player = hp(O::Player, 0, &[i]);
         if player != 0 {
@@ -649,7 +654,7 @@ fn flush_world(p: P) {
     for i in 0..players {
         let player = hp(O::Player, 0, &[i]);
         if player != 0 {
-            h(O::PlayerRemoveKilledUnits, player, &[]);
+            crate::gamecpp::world::rts_remove_killed(player);
         }
     }
 }
@@ -759,7 +764,12 @@ fn dump_out_of_synch(p: P, flags: c_ulong) {
         }
         for k in 0..4 {
             // SAFETY: the player's live air traffic control, the open dump file
-            unsafe { ee_sim::units::atc::ee_units_atc_dump(hp(O::PlayerAirTraffic, player, &[k]) as *mut _, file as *mut c_void) };
+            unsafe {
+                ee_sim::units::atc::ee_units_atc_dump(
+                    hp(O::PlayerAirTraffic, player, &[k]) as *mut _,
+                    file as *mut c_void,
+                )
+            };
         }
     }
     h(O::PathManagerDump, 0, &[file as i64]);
@@ -858,7 +868,8 @@ fn out_of_synch_checksum(p: P, dump: bool, flags: c_ulong) -> c_ulong {
         }
         for k in 0..4 {
             // SAFETY: the player's live air traffic control
-            let atc = unsafe { ee_sim::units::atc::ee_units_atc_checksum(hp(O::PlayerAirTraffic, player, &[k]) as *mut _) };
+            let atc =
+                unsafe { ee_sim::units::atc::ee_units_atc_checksum(hp(O::PlayerAirTraffic, player, &[k]) as *mut _) };
             add(&mut sum, atc as i64);
         }
     }
@@ -981,7 +992,7 @@ fn idle(p: P) {
 /// effects, the units, the effects, the calamities, the AI, the scenario and the game over), then the timing averages
 /// and, on a server, the autosave clock.
 fn tick(p: P) {
-    if h0(O::SimCaptureActive) != 0 {
+    if ee_sim::app::capture::ee_app_capture_active() {
         // TEST ONLY: the unit store equals the objects; the world views' check
         h(O::UnitStoreCheck, 0, &[0]);
         let ticks = get!(rec(p), mNumTicksDone) as u32;
@@ -1174,7 +1185,7 @@ fn drain_input(p: P) {
             }
             // TEST ONLY: the simulation capture's NMEX record; the unit store before the message; the UI fixture
             h(O::CaptureExecuted, input, &[]);
-            if h0(O::SimCaptureActive) != 0 {
+            if ee_sim::app::capture::ee_app_capture_active() {
                 h(O::UnitStoreCheck, 0, &[h(O::MsgType, input, &[])]);
             }
             if h0(O::TestHookSet) != 0 {

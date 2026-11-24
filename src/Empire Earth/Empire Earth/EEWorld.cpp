@@ -640,16 +640,12 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
     case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
-    case O::WFlushQueued: W->FlushQueuedPlacements();
-        break;
     case O::WQueuedCount: return (int64_t)W->mQueuedPlacements.size();
     case O::WQueuedUnit: return P64(W->mQueuedPlacements[a[0]].mUnit);
     case O::WQueuedAfter: return P64(W->mQueuedPlacements[a[0]].mInsertAfter);
     case O::WQueuedClear: W->mQueuedPlacements.clear();
         break;
     case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
-        break;
-    case O::WAddUnitEntry: W->AddUnitEntry((RTSUnit*)a[0], (RTSUnit*)a[1]);
         break;
     case O::WWriteLock: W->mLock->WriteLock();
         break;
@@ -735,14 +731,8 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)ST->mPlayers[a[0]]->mName), reinterpret_cast<const unsigned char*>((const char*)(a[1] ? gWonPlayerName : gPlayerName))) == 0;
     case O::ReportGameLoaded: EEReportLoadFailure(UString("Game loaded."), false, &ST->mChecksum);
         break;
-    case O::ReportGameInitialized: EEReportLoadFailure(UString("Game initialized."), false, NULL);
-        break;
     // the players
     case O::PlFirstUnit: return P64(PL->mFirstUnit);
-    case O::PlKillUnit: PL->KillUnit((EEUnit*)a[0], a[1] != 0);
-        break;
-    case O::PlRemoveKilled: PL->RemoveKilledUnits();
-        break;
     case O::PlReleasePending: PL->ReleasePendingUnits();
         break;
     case O::PlAddPendingUnits: PL->AddPendingUnits(a[0] != 0, a[1] != 0);
@@ -909,7 +899,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::MiniMapMoveUnit: gMiniMap->MoveUnit(UN, (long)a[0], (long)a[1], (long)a[2], (long)a[3]);
         break;
-    case O::ShutdownInProgress: return UShutdownInProgress();
     case O::PickerLock: gUnitPicker.GetLock()->Enter();
         break;
     case O::PickerReset: gUnitPicker.Reset();
