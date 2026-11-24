@@ -737,10 +737,11 @@ A decision this engine cannot express (no territory split of the retail game, no
 personality leanings, no unit-improvement data) is a gap named in the file's line, not a silent omission.
 
 THE VOICE (2026-11-24): the engine now carries an LLM transport of its own (EECPNextLLM.cpp, ai.llm: a table
-configures, a string asks on a worker thread, no argument polls; Windows WinHTTP, inert on POSIX) and the Lua side
-speaks through it (voice.lua, off unless settings.llm_enabled). What is still missing for upstream's voice: the
-game's chat door (persona_say / stance_lines), the persona texts, and the LLM's part in a decision - this engine's
-AIs print their lines into the AI trace for now.
+configures, a string asks on a worker thread, no argument polls; Windows WinHTTP, inert on POSIX), a chat door
+(ai.say: an in-game chat line as the computer player; no effect in the headless simulation) and the Lua side speaks
+through them (voice.lua, off unless settings.llm_enabled). What is still missing for upstream's voice: the persona
+texts (persona_say / stance_lines and the personality files), the LLM's part in a decision (llm_decide), and the
+lines in the game's language (the answer is written as the game's codepage, not converted).
 
 Still not ported of the files modified since 0ac6495 (their lines above describe the port at 0ac6495 unless they
 name a newer piece): defence.c's STRONG ANTI-AIR row, TOWN GUARDS, BUILDERS UNDER COVER and its anti-air record

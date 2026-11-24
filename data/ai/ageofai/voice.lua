@@ -47,12 +47,18 @@ function M.step(view, memory)
             return
         end
     end
-    -- the answer, when it comes
+    -- the answer, when it comes: into the game's chat (ai.say) when the game has it, else the trace
     local ans = ai.llm()
     if ans ~= nil and ans ~= "" then
         v.line = ans
         v.answered = (v.answered or 0) + 1
-        print(string.format("voice: %s", ans))
+        local said = false
+        if ai.say ~= nil and S.llm_lines ~= false then
+            said = ai.say(ans) ~= false
+        end
+        if not said then
+            print(string.format("voice: %s", ans))
+        end
     end
     -- a line now and then
     if view.time - (v.t or 0) < EVERY or (v.req or 0) >= MAX_REQ then

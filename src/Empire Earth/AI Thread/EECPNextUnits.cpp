@@ -4614,6 +4614,23 @@ extern "C" unsigned long long EECPNextLLMRequest(const char* system_prompt, cons
 extern "C" int EECPNextLLMPoll(unsigned long long since, char* out, int cap);
 extern "C" unsigned long long EECPNextLLMSeq(void);
 
+// ai.say: a chat line as this computer player (the game's in-game chat; no effect in the headless simulation)
+static int LuaSay(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    if (me == NULL || !lua_isstring(L, 1) || gPlatSimMode) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+    UWideString text(lua_tostring(L, 1));
+    EEMInGameChat* msg = new EEMInGameChat(text);
+    msg->SetOriginatingSlot(me->mSlot);
+    msg->Execute();
+    msg->Dereference();
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
 // ai.llm: no argument = the last answer (nil while none or still busy); a table = configure; a string = ask
 static int LuaLlm(lua_State* L) {
     EECPUnitsCharge(L, kCostCall);
@@ -4685,7 +4702,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
-        {"llm", LuaLlm},
+        {"llm", LuaLlm}, {"say", LuaSay},
         {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {
