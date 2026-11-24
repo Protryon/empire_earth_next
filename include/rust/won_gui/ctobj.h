@@ -128,6 +128,27 @@ EeWonContainer *ee_won_ct_new(void *component,
 void ee_won_ct_layout_new(const EeWonContainer *ct,
                           EeWonGuiHostFn host);
 
+/// `Container::Container` whole (R6 WON GUI round 36): the Rust container, its child layout manager (`layout_host`
+/// the layout objects' host) and the component's want-focus flag.
+///
+/// # Safety
+/// `component` is the C++ component being constructed (its members laid out as compmem's block).
+EeWonContainer *ee_won_ct_make(void *component,
+                               EeWonGuiHostFn host,
+                               EeWonGuiHostFn layout_host,
+                               bool wheel_to_focus);
+
+/// `ScreenContainer::ShowScreen` (0x306ab0): the current screen (at `cur`) hidden and `screen` shown, focused when
+/// `take_focus`, the container `me` invalidated; nothing when `screen` is the current one. As the original, `screen`
+/// is shown before it is tested for NULL.
+///
+/// # Safety
+/// `me` and `screen` are live components; `cur` is the container's current-screen member.
+void ee_won_ct_show_screen(void *me,
+                           void **cur,
+                           void *screen,
+                           bool take_focus);
+
 /// One of the container's layout methods (`EeWonContainer::layout_call`).
 ///
 /// # Safety

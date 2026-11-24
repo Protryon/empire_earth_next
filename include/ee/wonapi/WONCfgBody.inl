@@ -29,13 +29,13 @@ static intptr_t CfgBodyHost(void* inFrame, EeWonCfgBodyOp op, void* c, intptr_t 
     case O::EnsureComma: return CFG_BODY_GV(k->EnsureComma());
     case O::BtnSetSize: CFG_BTN->SetSize((int)x, (int)y); return 0;
     case O::TextFree: delete (GUIString*)x; return 0;
-    case O::PercentNew: return (intptr_t)new SmartPtr<PercentLayoutConfig>(new PercentLayoutConfig);
+    case O::PercentNew: return (intptr_t)new SmartPtr<PercentLayoutConfig>(new PercentLayoutConfig(EeWonCfgKind::PercentLayout));
     case O::PercentParse: return CFG_BODY_G(k->ParseChild(*(ConfigParser*)y, CFG_PCT(x).get(), false, true));
     case O::PercentRef: return (intptr_t)CFG_PCT(x)->refs[y];
     case O::PercentRefSelf: CFG_PCT(x)->refs[0] = k->mComponent.get(); return 0;
     case O::PercentAdd: return CFG_BODY_GV(static_cast<ContainerConfig*>(k)->mContainer->AddChildLayout(WONNewPercentLayout(CFG_PCT(x)->target, CFG_PCT(x)->refs, CFG_PCT(x)->params), static_cast<ContainerConfig*>(k)->mCurLayoutId));
     case O::PercentFree: delete &CFG_PCT(x); return 0;
-    case O::SchemeNew: return (intptr_t)new SmartPtr<ColorSchemeConfig>(new ColorSchemeConfig);
+    case O::SchemeNew: return (intptr_t)new SmartPtr<ColorSchemeConfig>(new ColorSchemeConfig(EeWonCfgKind::ColorScheme));
     case O::SchemeParse: return CFG_BODY_G(k->ParseChild(*(ConfigParser*)y, ((SmartPtr<ColorSchemeConfig>*)x)->get(), false, true));
     case O::SchemeSet: static_cast<ContainerConfig*>(k)->mContainer->SetColorScheme((*(SmartPtr<ColorSchemeConfig>*)x)->mColorScheme.get()); return 0;
     case O::SchemeFree: delete (SmartPtr<ColorSchemeConfig>*)x; return 0;

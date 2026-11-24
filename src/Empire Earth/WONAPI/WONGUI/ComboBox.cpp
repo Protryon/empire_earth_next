@@ -65,9 +65,7 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
     case Op::ComboDeliverSel: t->DeliverEvent(new ComboSelChangedEvent(t, Item(a), b != 0), false); return 0;
     case Op::ComboItemCount: return t->mListArea->GetNumItems();
     case Op::ComboItemAt: return (intptr_t)t->mListArea->GetItem((int)a);
-    case Op::ComboItemTextIs:
-        if (b == 0) return Item(a)->mText == t->mEdit->GetText() ? 1 : 0;
-        return Item(a)->mText == *(const GUIString*)b ? 1 : 0;
+    case Op::ComboItemTextIs: return Item(a)->mText == (b == 0 ? t->mEdit->GetText() : *(const GUIString*)b) ? 1 : 0; // (b 0: the edit's)
     case Op::ComboOpenPopup: {
         Window* window = t->GetRoot();
         int x = 0, y = t->Height();
@@ -104,9 +102,7 @@ namespace WONAPI {
 // 200 x 150 list box)
 ComboBox::ComboBox()
 {
-    this->mCombo=ee_won_combo_new(static_cast<Component*>(this),ee_won_guicpp_combo_call,this->mCt);
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->SetOnlyChildInput(true); // byte at +0x7c
+    this->mCombo=ee_won_combo_make(static_cast<Component*>(this),ee_won_guicpp_combo_call,this->mCt);
 }
 // Destroys the combo box, first detaching it from its list box's listeners (the Rust combo box)
 ComboBox::~ComboBox() { ee_won_combo_free(this->mCombo); }

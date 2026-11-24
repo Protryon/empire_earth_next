@@ -377,4 +377,14 @@ void ComponentListItem::SetPos(int x,int y)
     PaintItem::SetPos(x,y);
     this->mComponent->SetPos(x,y);
 }
+// ComponentListItem's paint as it was (MenuSeparator.cpp at 2d31b7328, R6 WON GUI round 36)
+void ComponentListItem::Paint(PaintGraphics& g,PaintList* area)
+{
+    if(this->mComponent.get()==NULL)
+        return;
+    if(this->mIsSizable)
+        this->mComponent->SetSize(area->GetPaintWidth(),this->mComponent->Height());
+    this->mComponent->MarkInvalid();
+    this->mComponent->Paint(g);
+}
 } // namespace LfOrig

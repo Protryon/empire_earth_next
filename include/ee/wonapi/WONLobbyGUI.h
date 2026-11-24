@@ -30,6 +30,7 @@
 #include "rust/won_gui/dialogobj.h"
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/gfxobj.h"
+#include "rust/won_gui/guidraw.h" // SelectionColor
 #include "rust/won_gui/grabobj.h"
 #include "rust/won_gui/imgobj.h"
 #include "rust/won_gui/guihost.h"
@@ -392,6 +393,10 @@ public:
     virtual Component* FindChildById(int id) { return (Component*)this->CCall(EeWonCtCall::FindChildById,id); }
 
     EeWonContainer* mCt;
+    // the Rust container of a component that is a container, else 0 (the hosts' CtContainerOf)
+    static intptr_t ObjectOf(Component* c) { Container* k = dynamic_cast<Container*>(c); return k != NULL ? (intptr_t)k->mCt : 0; }
+    // a child placed at a rectangle Rust made (the hosts' ChildSetPosSize)
+    static void Place(Component* c, const EeWonRect4& r) { c->SetPosSize(r.x, r.y, r.w, r.h); }
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
     intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }
@@ -403,15 +408,8 @@ public:
     ScreenContainer() : mCurScreen(NULL) {}
     // Implicit destructor (0x306a60) jumps to Container's at 0x2f5e80; the screen at +0x84 is not owned.
     // 0x306ab0: hides the current screen and shows the given one, optionally focused; nothing if it is current
-    void ShowScreen(Component* inScreen, bool inTakeFocus = true)
-    {
-        if (inScreen == this->mCurScreen) return;
-        if (this->mCurScreen != NULL) this->mCurScreen->SetVisible(false);
-        inScreen->SetVisible(true);
-        this->mCurScreen = inScreen;
-        if (inScreen != NULL && inTakeFocus) inScreen->RequestFocus();
-        this->Invalidate();
-    }
+    // (ee_won_gui ctobj.rs, R6 WON GUI round 36)
+    void ShowScreen(Component* inScreen, bool inTakeFocus = true) { ee_won_ct_show_screen(static_cast<Component*>(this), (void**)&this->mCurScreen, inScreen, inTakeFocus); }
     // 0x306a70: adds a hidden screen laid out to the container's size
     void AddScreen(Component* inScreen) { inScreen->SetVisible(false); this->Fn2F6140(inScreen, 3, this, 0, 0, 0, 0, 0); this->AddChild(inScreen); }
     Component* mCurScreen; //84, borrowed
@@ -512,10 +510,6 @@ public:
     int GetMouseDownState() { return (int)this->BCall(EeWonBtnCall::GetField,(intptr_t)EeWonBtnField::MouseDownState); } // 0 up, 1 down outside, 2 down over
     SmartPtr<Sound> mClickSound; // at +0x3c
     EeWonButton* mBtn;
-    static void SetDialogDefaultButton(Button*); //2f31c0
-    static void UnSetDialogDefaultButton(Button*); //2f3230
-    static void SetDefaultButton(Button*); //2f3280
-    static void UnSetDefaultButton(Button*); //2f3300
     void CopyAttributes(Button*); //2f3310
     void ButtonDown() { this->BCall(EeWonBtnCall::ButtonDown); } //2f3660
     void ButtonUp(bool a) { this->BCall(EeWonBtnCall::ButtonUp,a); } //2f36d0
@@ -539,6 +533,8 @@ public:
 private:
     intptr_t BCall(EeWonBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_btn_call(this->mBtn,c,a,b,cc); }
 };
+// the skinned buttons' hosts' shared ops (WONButton, MSButtonBase: the size, the button's and component's state; Button.cpp)
+intptr_t ButtonHostCall(Button* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c);
 
 // WrappedText (R6 WON round 38): the breaks, size, maximum width and the wrap and centre settings are the Rust
 // object's (rust/crates/ee_won_gui/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
@@ -627,17 +623,15 @@ private:
 
 
 
-// SelectionColor (0x0c bytes) with read-only color helpers.
-class SelectionColor {
-public:
-    SelectionColor(); //3494a0, back80000007/fore80000008/mode2
-    SelectionColor(DWORD,ForegroundSelectionMode = ForegroundSelectionMode_InvertOriginalColor); //3494c0, foreFFFFFF
-    SelectionColor(DWORD,DWORD); //3494e0, mode2
-    unsigned long GetBackgroundColor(Graphics&) const; //349500
-    unsigned long GetForegroundColor(Graphics&, unsigned long) const; //349510
-    unsigned long mBackgroundColor;
-    unsigned long mForegroundColor;
-    ForegroundSelectionMode mMode;
+// SelectionColor (0x0c bytes; constructors 0x3494a0, 0x3494c0, 0x3494e0): guidraw.rs's record (the background, the
+// foreground and the mode a selected text's colour is chosen by) since R6 WON GUI round 36; SelectionColor.cpp gone
+struct SelectionColor : EeWonSelColor {
+    SelectionColor() : EeWonSelColor{0x80000007u, 0x80000008u, ForegroundSelectionMode_UseForegroundColor} {}
+    SelectionColor(DWORD b, ForegroundSelectionMode m = ForegroundSelectionMode_InvertOriginalColor) : EeWonSelColor{(uint32_t)b, 0xffffffu, m} {}
+    SelectionColor(DWORD b, DWORD f) : EeWonSelColor{(uint32_t)b, (uint32_t)f, ForegroundSelectionMode_UseForegroundColor} {}
+    unsigned long GetBackgroundColor(Graphics&) const { return this->background; } //349500 (the graphics unused)
+    // 349510: the original colour, its inverse, the set foreground, else white (guidraw.rs sel_foreground)
+    unsigned long GetForegroundColor(Graphics&, unsigned long o) const { return ee_won_gui_sel_foreground(this->background, this->foreground, this->mode, (uint32_t)o); }
 };
 
 // InputBox (0xec bytes): Background values at +0xc4 and +0xd8
@@ -956,14 +950,12 @@ template<EeWonCfgKind K> ComponentConfig* NewConfigOf() { return CfgNewOfKind(K)
 template<class T> Component* NewComponentOf() { return new T; }
 inline Component* NoComponent() { return NULL; } // the font and image configs make none
 
-// FontConfig is declared after FontDescriptor below.
-class FontConfig;
 
 // Exception record (0x1c bytes); the implicit copy and destructor are the original's helpers.
 class ConfigObjectException : public std::exception {
 public:
     ConfigObjectException(const std::string& inText, bool inFlag = true)
-        : mText() { this->mText = inText; this->mFlag = inFlag; }
+        : mText(inText), mFlag(inFlag) {}
     std::string mText;                     // +08
     bool mFlag;                            // +18
 };
@@ -1724,19 +1716,8 @@ inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned sho
 }
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
-// FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
-class FontConfig : public ComponentConfig {
-public:
-    FontConfig();
-    Font* GetFont(); // 0x38a300; recalculates the font on demand
-    void SetFont(Font*); //38a3e0
-    virtual bool PostParse(ConfigParser*) { return true; } // 0x3099f0 (shared hook body: no desired size)
-    virtual bool GetNamedValue(const std::string&,int&); //38a580
-    SmartPtr<Font> mFont; //78
-    FontDescriptor mDescriptor; //7c..93
-    bool mNeedRecalcFont; // at +0x94; +0x95..0x97 padding; the class is 0x98 bytes
-    // Implicit destructor; 0x38a250 has no own vptr store.
-};
+// FontConfig (0x98 bytes, the factory 0x38a160, constructor 0x38a1c0) is a kind of the media config
+// (WONLobbyConfigImages.h, R6 WON GUI round 36).
 inline int WrappedText::GetHeight() { int h=ee_won_wrap_height(this->mObj); return h==0 ? this->mFont->GetHeight() : h; }
 // The images (R6 WONLobby round 24): every image class is one object of ee_won_gui's imgobj.rs, its kind the
 // original's class (Image's virtuals, NativeImage, NativeMask and PlatNativeImage, the 32-, 8- and 1-bit raw images and
@@ -2219,11 +2200,6 @@ public:
     EeWonMHead* mHead;
 private:
     intptr_t HCall(EeWonMHeadCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_mhead_call(this->mHead,c,a,b,cc); }
-};
-
-struct GUIStringLessNoCase {
-    bool operator()(const GUIString& inLeft, const GUIString& inRight) const
-    { return inLeft.CompareNoCase(inRight) < 0; }
 };
 
 // Keyboard.h modifiers; the exe tests bits 1 and 2.

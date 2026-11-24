@@ -93,6 +93,20 @@ extern "C" {
 /// A new Rust Button for the C++ `component`, its calls out through `host`.
 EeWonButton *ee_won_btn_new(void *component, EeWonGuiHostFn host);
 
+/// `Button::Button` whole (R6 WON GUI round 36): the Rust button and the component's want-tab-focus flag.
+///
+/// # Safety
+/// `component` is the C++ component being constructed (its members laid out as compmem's block).
+EeWonButton *ee_won_btn_make(void *component,
+                             EeWonGuiHostFn host);
+
+/// `ImageButton::ImageButton`'s flags (R6 WON GUI round 36): button flag 1, want focus, no tab focus.
+///
+/// # Safety
+/// `btn` is the live Rust button of the C++ `component` being constructed.
+void ee_won_btn_image_init(const EeWonButton *btn,
+                           void *component);
+
 /// Frees a Rust Button (the original's destructor had no statement).
 ///
 /// # Safety

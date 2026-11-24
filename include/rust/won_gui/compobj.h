@@ -11,6 +11,8 @@
 /// `ComponentFlag_*` (WONComponentFlags.h; the C++ asserts them).
 constexpr static const int32_t EE_WON_COMP_FLAG_INVISIBLE = 1;
 
+constexpr static const int32_t EE_WON_COMP_FLAG_WANT_FOCUS = 8;
+
 constexpr static const int32_t EE_WON_COMP_FLAG_HAS_FOCUS = 16;
 
 constexpr static const int32_t EE_WON_COMP_FLAG_DISABLED = 128;

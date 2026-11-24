@@ -18,4 +18,23 @@ int ListArea::NumberSortFunc(ListArea*,const ListItem* left,const ListItem* righ
 {
     return ((TextListItem*)left)->mText.mData->ToInt(0)-((TextListItem*)right)->mText.mData->ToInt(0);
 }
+// ---- the default (empty) bodies of ListItem's virtuals (ListItemDefaults.cpp until R6 WON GUI round 36)
+// ListItem's ctor, Virtual04 and Virtual10 live in ListArea.cpp (same object: the ctor must be seen before
+// ListArea's `new ListItem`).
+// Leaves the item's size unchanged
+void ListItem::CalcDimensions(ListArea*) {}
+// Ignores the viewport (the linker folds this body into the identical one at 0x004ac9c8)
+void ListItem::SetViewport(ListArea*,Container*) {}
+// Ignores the mouse entering (the linker folds this body into the identical one at 0x006907a3)
+void ListItem::MouseEnter(ListArea*,int,int) {}
+// Ignores the mouse leaving (the linker folds this body into the identical one at 0x00556dd8)
+void ListItem::MouseExit(ListArea*) {}
+// Ignores mouse movement (the linker folds this body into the identical one at 0x006907a3)
+void ListItem::MouseMove(ListArea*,int,int) {}
+// Ignores a mouse drag (the linker folds this body into the identical one at 0x006907a3)
+void ListItem::MouseDrag(ListArea*,int,int) {}
+// Ignores a mouse button press (the linker folds this body into the identical one at 0x004df42d)
+void ListItem::MouseDown(ListArea*,int,int,int) {}
+// Ignores a mouse button release (the linker folds this body into the identical one at 0x004df42d)
+void ListItem::MouseUp(ListArea*,int,int,int) {}
 }

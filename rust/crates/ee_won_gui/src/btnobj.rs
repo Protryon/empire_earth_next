@@ -613,6 +613,30 @@ pub extern "C" fn ee_won_btn_new(component: *mut c_void, host: EeWonGuiHostFn) -
     made
 }
 
+/// `Button::Button` whole (R6 WON GUI round 36): the Rust button and the component's want-tab-focus flag.
+///
+/// # Safety
+/// `component` is the C++ component being constructed (its members laid out as compmem's block).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_btn_make(component: *mut c_void, host: EeWonGuiHostFn) -> *mut EeWonButton {
+    let made = ee_won_btn_new(component, host);
+    crate::compobj::comp().set_flags(component as isize, crate::compobj::EE_WON_COMP_FLAG_WANT_TAB_FOCUS, true);
+    made
+}
+
+/// `ImageButton::ImageButton`'s flags (R6 WON GUI round 36): button flag 1, want focus, no tab focus.
+///
+/// # Safety
+/// `btn` is the live Rust button of the C++ `component` being constructed.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_btn_image_init(btn: *const EeWonButton, component: *mut c_void) {
+    // SAFETY: the contract
+    unsafe { (*btn).set_button_flags(1, true) };
+    let k = crate::compobj::comp();
+    k.set_flags(component as isize, crate::compobj::EE_WON_COMP_FLAG_WANT_FOCUS, true);
+    k.set_flags(component as isize, crate::compobj::EE_WON_COMP_FLAG_WANT_TAB_FOCUS, false);
+}
+
 /// Frees a Rust Button (the original's destructor had no statement).
 ///
 /// # Safety

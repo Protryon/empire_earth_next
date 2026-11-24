@@ -120,14 +120,7 @@ inline void WONMsPaint(Graphics& g, const EeWonMsPaint& p, MSButtonBase* text = 
 
 // (the font measures a wrapped text's plan asks for are wrapobj.rs's, over platfont.rs: R6 WON GUI round 36)
 
-inline EeWonSelColor WONDrawSelOf(const SelectionColor& s)
-{
-    EeWonSelColor r;
-    r.background = (uint32_t)s.mBackgroundColor;
-    r.foreground = (uint32_t)s.mForegroundColor;
-    r.mode = (int32_t)s.mMode;
-    return r;
-}
+inline EeWonSelColor WONDrawSelOf(const SelectionColor& s) { return s; } // (the Rust record itself)
 
 }
 #endif
