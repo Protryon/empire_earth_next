@@ -28,8 +28,4 @@ static void MsDraw(Graphics& g, EeWonMsPaintKind k, int a, int b, int w, int h, 
 void LobbyDraw3DFrame(Graphics &g, int x, int y, int width, int height, bool down) { MsDraw(g,EeWonMsPaintKind::Frame3D,x,y,width,height,down); }
 // Draws a raised button frame, or a flat shadow-coloured rectangle when down
 void LobbyDrawFrame(Graphics &g, int x, int y, int width, int height, bool down) { MsDraw(g,EeWonMsPaintKind::Frame,x,y,width,height,down); }
-// Draws a sunken check box (face colour while pressed, window colour otherwise) with a tick if checked
-void MSGraphicsUtil::DrawCheck(Graphics &g, int x, int y, int width, int height, bool down, bool checked) { MsDraw(g,EeWonMsPaintKind::Check,x,y,width,height,down,checked); }
-// Draws a sunken radio circle (face colour while pressed, window colour otherwise) with a dot if checked
-void MSGraphicsUtil::DrawRadio(Graphics &g, int x, int y, int width, int height, bool down, bool checked) { MsDraw(g,EeWonMsPaintKind::Radio,x,y,width,height,down,checked); }
 }

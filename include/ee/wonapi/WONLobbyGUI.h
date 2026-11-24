@@ -609,13 +609,8 @@ protected:
     intptr_t MCall(EeWonMsBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t d=0) { return ee_won_msbtn_call(this->mMsb,c,a,b,d); }
     void MSet(EeWonMsBtnField f,int v) { this->MCall(EeWonMsBtnCall::Set,(intptr_t)f,v); }
 };
-// SDK utility class: static functions only, never instantiated (the MS button base's check box and radio circle;
-// the frames, arrows, tabs and close X the MS kinds draw are mspaint.rs plans).
-class MSGraphicsUtil {
-public:
-    static void DrawCheck(Graphics&,int,int,int,int,bool,bool); //2fe250
-    static void DrawRadio(Graphics&,int,int,int,int,bool,bool); //2fe3b0
-};
+// (MSGraphicsUtil, the SDK's static drawing class: its check box and radio circle are mspaint.rs plans the MS button
+// base's host asks for, MSButtonBase.cpp; the frames, arrows, tabs and close X the MS kinds draw too.)
 // The concrete MS controls (MSButton, MSCheckbox, MSRadioButton, MSArrowButton, MaxSplitterButton, MSTabButton,
 // MS3DFrame, ...) are shell kinds (ee/wonapi/WONGUIShell.h, ee_won_gui shell_ms.rs).
 
