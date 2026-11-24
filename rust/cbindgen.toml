@@ -38,6 +38,8 @@ exclude = ["EeCxxPlayer", "EeCxxGraphicObject", "EeCxxUnitClass", "EeCxxComplexU
 "EeCxxHerd" = "class EEHerd"
 "EeCxxUnitBehavior" = "class EEUnitBehavior"
 "EeCxxSoundInstance" = "class SESMInstanceNode"
+# units round 12: the effect handle of the complex unit record (unit_fields.rs)
+"EeUnitsEffectHandle" = "EEEffectHandle"
 "EeCxxGraphicEffect" = "class EEGraphicEffect"
 "EeCxxButtonObject" = "class EEButtonObject"
 "EeCxxSoundObject" = "class EESoundObject"

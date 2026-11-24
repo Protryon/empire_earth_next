@@ -322,9 +322,23 @@ struct EeUnitsUnitFields {
   class EEUnitClassUpgrade *mStats;
 };
 
+/// A tile as two C++ `long`s (`EEComplexUnit::mCollisionTile`; the layout of a `U2DPoint<long>`).
+struct EeUnitsTilePoint {
+  long mX;
+  long mY;
+};
+
+/// An effect's handle (units round 12: the C++ `EEEffectHandle`, rust/cbindgen.toml's rename; ee/EEEffect.h has its
+/// comparisons and the "no effect" constant). A struct, not an integer: the original compares and copies it through
+/// memory.
+struct EEEffectHandle {
+  uint32_t mValue;
+};
+
 /// `EEComplexUnit`'s plain members (ee/EEUnit.h), in the class's order, then its pointer members (units round 10: the
-/// C++ reads them by name, typed `class X*`; the layout's offsets of them are derived here, layout.rs); its effect
-/// handles (`mConversionEffect`, `mHealEffect`, `mFireEffect`), points, containers and parts stay C++ members.
+/// C++ reads them by name, typed `class X*`; the layout's offsets of them are derived here, layout.rs); then (units round
+/// 12) its collision tile and effect handles; its patrol group (the units module's type), points, orientations (C++ classes the generated header
+/// cannot name by value), containers and parts stay C++ members.
 struct EeUnitsComplexUnitFields {
   float mHeight;
   float mInitialContactHeading;
@@ -486,6 +500,14 @@ struct EeUnitsComplexUnitFields {
   class RTSUnit *mBlockingUnit;
   /// +0x25c
   class SESMInstanceNode *mSound;
+  /// the tile of the last collision (-10000: none; units round 12, with the handles below)
+  EeUnitsTilePoint mCollisionTile;
+  /// saved; -1: none (`ReleaseConversionEffect`)
+  EEEffectHandle mConversionEffect;
+  /// saved; -1: none (`ReleaseHealEffect`)
+  EEEffectHandle mHealEffect;
+  /// the fire functor's effect on the unit (saved; 0: none)
+  EEEffectHandle mFireEffect;
 };
 
 /// `EEMap`'s plain members (ee/EEMap.h), in the class's order.

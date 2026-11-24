@@ -79,9 +79,7 @@ EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPla
 // Returns the centre of the unit's tile at ground height
 void EEUnit::GetPosition(GE3DPoint& outPosition)
 {
-    outPosition.SetX(this->mTileX + 0.5f);
-    outPosition.SetY(this->mTileY + 0.5f);
-    outPosition.SetZ(this->mTile->mHeight);
+    outPosition = GE3DPoint(this->mTileX + 0.5f, this->mTileY + 0.5f, this->mTile->mHeight);
 }
 
 // Turns the loaded health fraction into hit points (at least 1 if the fraction was not 0; port, R5b.4 round 27:

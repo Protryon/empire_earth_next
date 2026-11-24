@@ -235,5 +235,6 @@ mod uu_world_tests;
 pub mod waypoints;
 pub mod world;
 pub mod world_save;
+pub mod u12a_small;
 
 pub use registry::Registry;
