@@ -320,25 +320,9 @@ public:
 };
 
 // a component holding others (0x84 bytes: EELobbyGameOptionsCtrl's members start at +0x84; vtable 0x84d7cc, 51 slots)
-// ChildLayoutManager (R6 WON round 31): its instructions (held, in order) and layout points (held) are the Rust layout
-// manager (rust/crates/ee_won_gui/src/layoutobj.rs); a container owns it by pointer. The methods are forwarders
-// (ChildLayouts.cpp is the host).
-class ChildLayoutManager : public RefCount {
-public:
-    ChildLayoutManager();
-    virtual ~ChildLayoutManager(); // the layout points, then the instructions, released (the original's members)
-    void ExecuteInstructions(Component* c) { this->MCall(EeWonLayoutMgrCall::Execute,(intptr_t)c); }
-    void AddInstruction(ChildLayoutInstructionBase*);
-    void AddLayoutPoint(LayoutPoint* p) { this->MCall(EeWonLayoutMgrCall::AddLayoutPoint,(intptr_t)static_cast<Component*>(p)); }
-    void RemoveComponent(Component* c) { this->MCall(EeWonLayoutMgrCall::RemoveComponent,(intptr_t)c); }
-    void Clear() { this->MCall(EeWonLayoutMgrCall::Clear); }
-    void EnableInstructions(int g, bool e) { this->MCall(EeWonLayoutMgrCall::EnableInstructions,g,e); }
-    // Container::AddChildLayout's statements (the group, the first run, the hold)
-    void AddChildLayout(ChildLayoutInstructionBase* instr, int id, Component* container);
-    EeWonLayoutMgr* mMgr;
-private:
-    intptr_t MCall(EeWonLayoutMgrCall c,intptr_t a=0,intptr_t b=0) { return ee_won_lmgr_call(this->mMgr,c,a,b,0,0); }
-};
+// The child layout manager (R6 WON GUI round 35): a container's instructions (held, in order) and layout points
+// (held) are the Rust container's own manager (rust/crates/ee_won_gui/src/ctobj.rs `layout`, layoutobj.rs); the C++
+// ChildLayoutManager shell is gone (ChildLayouts.cpp is the layout objects' host).
 // Container (R6 WON round 26): its children (held), mouse and focus children, timer children, focus ids, current
 // cursor, flags and modal count are the Rust Container (rust/crates/ee_won_gui/src/ctobj.rs); this is the type every
 // component holds and the base of every screen, dialog, list and control group, with the child layout manager. Its
@@ -382,10 +366,10 @@ public:
     virtual Component* GetMouseChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::MouseChild); }
     // 0x2f6140 (ret 0x20): adds inChild laid out against inRef (EELobbyInterface 0x2972c6: the lobby screen, 3,
     // the root, 0, 0, 0, 0, 0; provisional name)
-    void Fn2F6140(Component* inChild, int inFlags, Component* inRef, int inA, int inB, int inC, int inD, int inE);
-    void AddChildLayout(ChildLayoutInstructionBase*,int=0); // 0x2f61d0: keeps the instruction; group id 0 runs first (the test reads the full int, the id is stored as a byte)
-    void EnableLayoutInstructions(int inId, bool inEnabled);
-    void Relayout();
+    inline void Fn2F6140(Component* inChild, int inFlags, Component* inRef, int inA, int inB, int inC, int inD, int inE);
+    inline void AddChildLayout(ChildLayoutInstructionBase*,int=0); // 0x2f61d0: keeps the instruction; group id 0 runs first (the test reads the full int, the id is stored as a byte)
+    void EnableLayoutInstructions(int inId, bool inEnabled) { ee_won_ct_layout_call(this->mCt,EeWonLayoutMgrCall::EnableInstructions,inId,inEnabled,0); }
+    void Relayout() { ee_won_ct_relayout(this->mCt); } // the size-changed layout, then Invalidate
     void EnterModal() { this->CCall(EeWonCtCall::EnterModal); } // 0x2f6210: counts the modal level and moves the focus
     void LeaveModal() { this->CCall(EeWonCtCall::LeaveModal); } // 0x2f6260: ends the modal state and moves the focus
     void RemoveAllChildren() { this->CCall(EeWonCtCall::RemoveAllChildren); }
@@ -393,7 +377,8 @@ public:
     void MouseAt() { this->CCall(EeWonCtCall::MouseAt); } // 0x2f66c0: refreshes the mouse state
     void SetOnlyChildInput(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::OnlyChildInput,v); }
     void SetIsolateTabFocus(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::IsolateTabFocus,v); }
-    void AddLayoutPoint(LayoutPoint*); // 0x2f6100: keeps the layout point as a child
+    // 0x2f6100: keeps the layout point (its parent this container)
+    void AddLayoutPoint(LayoutPoint* p) { ee_won_ct_layout_call(this->mCt,EeWonLayoutMgrCall::AddLayoutPoint,(intptr_t)static_cast<Component*>(p),0,0); }
     void AddChildEx(Component* c,int p) { this->CCall(EeWonCtCall::AddChildEx,(intptr_t)c,p); }
     void BringToTop(Component* c) { this->CCall(EeWonCtCall::BringToTop,(intptr_t)c); }
     bool HasUsedDialogKeys() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::HasUsedDialogKeys)!=0; }
@@ -418,7 +403,6 @@ public:
     virtual Component* FindChildById(int id) { return (Component*)this->CCall(EeWonCtCall::FindChildById,id); }
 
     EeWonContainer* mCt;
-    ChildLayoutManager* mChildLayout; // owned: destroyed between the cursor and the timer children, as the member was
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
     intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }
@@ -453,6 +437,11 @@ public:
 class ChildLayoutInstructionBase : public RefCount {
 public:
     ChildLayoutInstructionBase() : mLay(NULL) {} // a subclass makes its Rust instruction (Make)
+    // an instruction of class `k` (R6 WON GUI round 35: the clear-right, space-evenly, no-overlap and size-at-least
+    // classes were this constructor's callers; see EeWonLayoutKind for each class's numbers)
+    ChildLayoutInstructionBase(EeWonLayoutKind k,Component* r0,Component* r1=NULL,int i0=0,int i1=0,int i2=0,bool h=false,bool v=false) { this->Make(k,r0,r1,i0,i1,i2,h,v); }
+    // an instruction of a record Rust made (Fn2F6140's child instruction, the percentage layout)
+    explicit ChildLayoutInstructionBase(const EeWonLayoutInit& init) { this->Make(init); }
     virtual ~ChildLayoutInstructionBase();
     virtual void Execute(Component* p) { if (this->mLay) ee_won_layout_call(this->mLay,EeWonLayoutCall::Execute,(intptr_t)p,0); } // 0x30a800 (empty in the base)
     virtual bool UsesComponent(Component* c) { return this->mLay && ee_won_layout_call(this->mLay,EeWonLayoutCall::UsesComponent,(intptr_t)c,0)!=0; } // 0x3a90d0 (false in the base)
@@ -471,6 +460,10 @@ public:
     CenterLayout* Add(Component* component) { this->AddComponent(component); return this; }
     static void Center(Component* inParent, Component* inChild, bool inHorz, bool inVert); // 337690
 };
+// 0x2f61d0: the group (a byte), group 0 enabled and run at once before the manager holds it, any other disabled
+inline void Container::AddChildLayout(ChildLayoutInstructionBase* l,int id) { ee_won_ct_layout_call(this->mCt,EeWonLayoutMgrCall::AddChildLayout,(intptr_t)l,(intptr_t)l->mLay,id); }
+// the SDK's AddChildLayout overload for one child placed against a reference (flags, offsets, size)
+inline void Container::Fn2F6140(Component* child,int flags,Component* reference,int x,int y,int width,int height,int groupId) { this->AddChildLayout(new ChildLayoutInstructionBase(ee_won_layout_init_child(flags,child,reference,x,y,width,height)),groupId); }
 
 // a modal or popup dialog (0x98 bytes in the original: EELobbyConnectDialog's members start at +0x98).
 // Dialog (R6 WON round 26): its drag, Escape result and default button are the Rust Dialog
@@ -612,13 +605,8 @@ protected:
     intptr_t MCall(EeWonMsBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t d=0) { return ee_won_msbtn_call(this->mMsb,c,a,b,d); }
     void MSet(EeWonMsBtnField f,int v) { this->MCall(EeWonMsBtnCall::Set,(intptr_t)f,v); }
 };
-// SDK utility class: static functions only, never instantiated (the MS button base's check box and radio circle;
-// the frames, arrows, tabs and close X the MS kinds draw are mspaint.rs plans).
-class MSGraphicsUtil {
-public:
-    static void DrawCheck(Graphics&,int,int,int,int,bool,bool); //2fe250
-    static void DrawRadio(Graphics&,int,int,int,int,bool,bool); //2fe3b0
-};
+// (MSGraphicsUtil, the SDK's static drawing class: its check box and radio circle are mspaint.rs plans the MS button
+// base's host asks for, MSButtonBase.cpp; the frames, arrows, tabs and close X the MS kinds draw too.)
 // The concrete MS controls (MSButton, MSCheckbox, MSRadioButton, MSArrowButton, MaxSplitterButton, MSTabButton,
 // MS3DFrame, ...) are shell kinds (ee/wonapi/WONGUIShell.h, ee_won_gui shell_ms.rs).
 
@@ -756,12 +744,13 @@ public:
 // bar height and overlap, arrows, placement flags, pages and selected page are the Rust objects
 // (rust/crates/ee_won_gui/src/tabobj.rs); these are the types the configs, the skins (MSTabCtrl, WONTabCtrl) and the root
 // screen use, with one-line forwarders (TabCtrl.cpp is their host). The control's four containers and its page area's
-// layout point stay its members: its constructor makes them and gives them to the Rust control.
+// layout point are made and held by the Rust control (R6 WON GUI round 35: its constructor's statements); only the
+// layout point stays a member (the configs and the skins read it).
 class TabCtrl;
 class LayoutPoint;
 class TabBar : public Container {
 public:
-    TabBar(TabCtrl*);
+    explicit TabBar(EeWonTabCtrl*); // the Rust control it is the bar of (NULL: none)
     virtual ~TabBar(); // the implicit destructor (0x3081f0): the Rust bar gives the buttons back
     virtual void HandleComponentEvent(ComponentEvent* e) { ee_won_tabbar_call(this->mBar,EeWonTabBarCall::HandleComponentEvent,(intptr_t)e); }
     EeWonTabBar* mBar;
@@ -785,10 +774,7 @@ public:
     void RemoveTab(int id) { this->TCall(EeWonTabCall::RemoveTab,id); } // removes the tab and reselects
     // the selected tab's id and the configs' writes (TabCtrlConfig, RootScreen)
     int GetCurTabId() { return (int)this->TCall(EeWonTabCall::GetField,(intptr_t)EeWonTabField::CurTabId); }
-    SmartPtr<TabBar> mBottomTabBar; //84
-    SmartPtr<Container> mTopTabBar; //88
-    SmartPtr<Container> mBottomTabBarContainer; //8c
-    SmartPtr<Container> mTopTabBarContainer; //90
+    // the bottom bar, the top bar and their two containers (0x84..0x90) are the Rust control's (round 35)
     SmartPtr<LayoutPoint> mContainerLayout; //94 (TabCtrlConfig's CONTAINERLAYOUT, the skins' frames)
     EeWonTabCtrl* mTab;
 private:

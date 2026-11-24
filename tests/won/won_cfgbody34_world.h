@@ -93,6 +93,11 @@ struct PercentLayout : Layout {
         tr(s + ")");
     }
 };
+// the game's maker (R6 WON GUI round 35: the param's borders are the Rust record's)
+static Layout* WONNewPercentLayout(Component* t, Component* const* r, const int* p)
+{
+    return new PercentLayout(t, PercentLayoutParam(r[0], r[1], r[2], r[3], p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]));
+}
 struct Container : Component {
     void AddChildLayout(Layout* l, int id) { SmartPtr<Layout> keep = l; tr(Name() + ".AddChildLayout(" + PP(l) + "," + P(id) + ")"); }
     void SetColorScheme(ColorScheme* s) { tr(Name() + ".SetColorScheme(" + PS(s) + ")"); }
