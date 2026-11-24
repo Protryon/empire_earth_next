@@ -45,11 +45,7 @@ void MenuItem::Paint(Graphics& g,ListArea* area)
 // until R6 WON GUI round 36)
 // Creates an enabled menu item with the given text and listener and menu id 0
 MenuItem::MenuItem(const GUIString& text,ComponentListener* listener)
-    :TextListItem(text),mListener(listener)
-{
-    this->mDisabled=false;
-    this->mMenuId=0;
-}
+    :TextListItem(text),mMenuId(0),mDisabled(false),mListener(listener) {}
 // Adds a text item with a menu id and no listener (this overload is 0x006fd440; the listener overload
 // below is 0x006fd460)
 MenuItem* PopupMenu::AddItem(const GUIString& text,int id)
