@@ -121,6 +121,16 @@ EEPhysics::~EEPhysics()
 
 void EEPhysics::Lock() { gWorld.mLock->WriteLock(); }
 void EEPhysics::Unlock() { gWorld.mLock->WriteUnlock(); }
+// its own lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
+void EEPhysics::Tick()
+{
+    ee_physics_tick(this);
+}
+// its own lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
+void EEPhysics::ReportStatistics()
+{
+    ee_physics_report_statistics(this);
+}
 
 // Returns the game speed and elapsed game time as text ("<speed> hh:mm:ss")
 UWideString EEPhysics::GetTimeString()

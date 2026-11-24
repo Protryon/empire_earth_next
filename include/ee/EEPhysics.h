@@ -116,7 +116,7 @@ public:
     // +0x1c 0x15305a
     virtual void Idle() { ee_physics_idle(this); }
     // +0x20 0x153082
-    virtual void Tick() { ee_physics_tick(this); }
+    virtual void Tick();                    // +0x20 0x153082 (out of line: the test profile's harness hook)
     virtual void Unlock();                  // +0x28 0x153c4d
     // 0x151e4d (EEDataPreLoading::LoadGame, under gWorld's lock; provisional name)
     void ClearServerMessages() { ee_physics_clear_server_messages(this); }
@@ -145,7 +145,7 @@ public:
     // 0x153f47 (Virtual20's; provisional name)
     void CheckShiftMode() { ee_physics_check_shift_mode(this); }
     // 0x153836 (Virtual20's; provisional name)
-    void ReportStatistics() { ee_physics_report_statistics(this); }
+    void ReportStatistics();                // 0x153836 (out of line: the test profile's harness hook)
     // 0x1534d1 (the queued unit swaps: every player's Virtual9C, then each swap)
     void ProcessUnitSwaps() { ee_physics_process_unit_swaps(this); }
     // the thread messages (provisional names)

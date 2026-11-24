@@ -86,7 +86,7 @@ public:
     // inline: the chat log evaluates it before the entry it is compared with (0x1d3608)
     EEPlayer* GetCurrentPlayer() { return this->mPlayers[this->mCurrentPlayer]; }
     // 0x1391f2 (EEMResign: (0, player id); bool: the callee's `cmp byte`; provisional name)
-    void RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID) { ee_gamecpp_world_remove_player(this, inHasWon, inPlayerID); }
+    void RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID);   // out of line: the test profile's harness hook
     // 0x1384dd (EEMSetDiplomaticStance; provisional name)
     void SetDiplomaticStance(unsigned long inPlayerID, long inOther, long inStance) { ee_gamecpp_world_set_stance(this, inPlayerID, inOther, inStance); }
     // 0x13a7e8 (pauses a single-player game; 2: already paused; provisional name)

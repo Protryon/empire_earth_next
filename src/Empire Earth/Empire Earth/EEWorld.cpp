@@ -155,6 +155,14 @@ inline unsigned long EEGameState::GetNumTeams() const
     return this->mTeams.size();
 }
 
+// Takes a player out of the game: marks them out, drops them from their teams, reveals the map to them (except a lost
+// scenario), stamps their end time and ends any cinematic; for the local player it redraws the minimap. Its own
+// lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
+void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)
+{
+    ee_gamecpp_world_remove_player(this, inHasWon, inPlayerID);
+}
+
 // Creates the game world with default settings (time of day 0.35, cheats and unit improvements allowed), no managers
 // and empty statistics
 EEWorld::EEWorld()
