@@ -121,7 +121,7 @@ fn args(r: &mut Rng, call: EeWonGfxCall) -> [i32; 7] {
     let mut a = [0i32; 7];
     match call {
         EeWonGfxCall::SetColor => {
-            a[0] = if r.next() % 3 == 0 { (0x8000_0000u32 + r.next() % 19) as i32 } else { r.next() as i32 }
+            a[0] = if r.next().is_multiple_of(3) { (0x8000_0000u32 + r.next() % 19) as i32 } else { r.next() as i32 }
         }
         EeWonGfxCall::StandardColor | EeWonGfxCall::SetSysColor => a[0] = r.range(-1, 18),
         EeWonGfxCall::Translate => {
