@@ -342,35 +342,36 @@ pub extern "C" fn ee_gamecpp_startup_persistents() {
     verify(r == KESE_OK, 1863);
 }
 
+/// CreatePlaneModels: the effects' plane models, made with the render objects' rasterizer.
+pub(super) fn create_plane_models() {
+    // SAFETY: the render objects' rasterizer
+    unsafe { ee_render::gfx::ffi::ee_gfx_effect_planes_create(super::ro_raster::ee_gamecpp_ro_raster()) };
+}
+
 /// EELoadGameMedia: the status box's icons, the mini map's, the effects', the units', the sky's and the ground
 /// shadows' media.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_load_media() {
-    for op in [
-        O::UiLoadIcons,
-        O::UiMiniMapLoadMedia,
-        O::CreatePlaneModels,
-        O::RoUnitsLoadMedia,
-        O::RoSkyCreate,
-        O::RoShadowCreate,
-    ] {
-        h(op, 0, &[]);
-    }
+    h(O::UiLoadIcons, 0, &[]);
+    h(O::UiMiniMapLoadMedia, 0, &[]);
+    create_plane_models();
+    h(O::RoUnitsLoadMedia, 0, &[]);
+    super::ro_views::ee_gamecpp_te_create_sky_model();
+    // SAFETY: the render objects' rasterizer
+    unsafe { ee_render::gfx::shadows::ee_gfx_ground_shadows_create(super::ro_raster::ee_gamecpp_ro_raster()) };
 }
 
 /// EEUnloadGameMedia: the same released.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_unload_media() {
-    for op in [
-        O::UiUnloadIcons,
-        O::UiMiniMapUnloadMedia,
-        O::ReleasePlaneModels,
-        O::RoUnitsReleaseMedia,
-        O::RoSkyRelease,
-        O::RoShadowRelease,
-    ] {
-        h(op, 0, &[]);
-    }
+    h(O::UiUnloadIcons, 0, &[]);
+    h(O::UiMiniMapUnloadMedia, 0, &[]);
+    // SAFETY: the render objects' rasterizer
+    unsafe { ee_render::gfx::ffi::ee_gfx_effect_planes_release(super::ro_raster::ee_gamecpp_ro_raster()) };
+    super::ro_units::ee_gamecpp_ru_release_media();
+    super::ro_views::ee_gamecpp_te_release_sky_models();
+    // SAFETY: the same
+    unsafe { ee_render::gfx::shadows::ee_gfx_ground_shadows_release(super::ro_raster::ee_gamecpp_ro_raster()) };
 }
 
 /// EEShowSinglePlayerScreen: the data search path (the game's Data folder, behind a Data\data.ssa when one is
@@ -607,7 +608,13 @@ const THREAD_MESSAGE_QUIT: c_ulong = 0x401;
 pub unsafe extern "C" fn ee_gamecpp_startup_quit_thread(thread: *mut c_void, done: *mut c_void) {
     // SAFETY: the caller's live thread and event
     unsafe {
-        ee_base::ts::ee_ts_thread_post(thread.cast(), THREAD_MESSAGE_QUIT, core::ptr::null_mut(), core::ptr::null_mut(), true);
+        ee_base::ts::ee_ts_thread_post(
+            thread.cast(),
+            THREAD_MESSAGE_QUIT,
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            true,
+        );
         ee_base::ts::ee_ts_event_wait(done.cast(), ee_base::plat_sys::constants::PLAT_WAIT_INFINITE);
     }
 }
@@ -960,7 +967,7 @@ pub extern "C" fn ee_gamecpp_startup_database() {
     }
     h(O::GfxEffectsSortMedia, 0, &[]);
     // (EEFn0FCA98, which returns 0, is checked here: 0x4c1)
-    h(O::CreatePlaneModels, 0, &[]);
+    create_plane_models();
     ee_gamecpp_startup_game_pools();
     super::db_text::ee_gamecpp_db_dump_rules();
     let r = register_shutdown(ee_gamecpp_startup_delete_database);
@@ -1052,13 +1059,13 @@ pub extern "C" fn ee_gamecpp_startup_delete_database(shutdown: bool) {
     h(O::AmbientClearSounds, 0, &[]);
     ee_sim::combat::damage_table::ee_combat_damage_table_clear();
     h(O::CalamityClassesDestroy, 0, &[shutdown as i64]);
+    h(O::DatabaseObjectsClear, 0, &[]);
+    h(O::ButtonsUnload, 0, &[]);
+    crate::preload_media::ee_preload_unload_effects();
+    crate::preload_media::ee_preload_delete_media_table();
+    h(O::MusicObjectsClear, 0, &[]);
+    crate::preload_media::ee_preload_unload_sounds();
     for op in [
-        O::DatabaseObjectsClear,
-        O::ButtonsUnload,
-        O::GfxEffectsUnloadTable,
-        O::DeleteMediaTable,
-        O::MusicObjectsClear,
-        O::SoundObjectsUnloadTable,
         O::ColorTableUnload,
         O::TargetingTableUnload,
         O::TerrainTableUnload,

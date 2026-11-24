@@ -335,7 +335,6 @@ void EECreateGameTimer()
 }
 
 
-void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
 
 // Loads the status box icons, mini map, effect, unit, sky and ground shadow media
 void EELoadGameMedia()
@@ -398,7 +397,6 @@ void EEStopAllSounds()
     ee_gamecpp_startup_stop_sounds();
 }
 
-void ReleasePlaneModels(); // effect media cleanup, defined in EEEffect.cpp
 
 // Releases the status box icons, mini map, effect, unit, sky and ground shadow media
 void EEUnloadGameMedia()
@@ -651,7 +649,6 @@ void EEInitializeGameObjects()
 
 // Cleanup routines defined in other units
 void EEReportLeakingUnits();
-void EEDeleteMediaTable();
 
 // ------------------------------------------------------------------------- the start-up's C++ (gamecpp startup.rs)
 
@@ -937,21 +934,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::UiMiniMapUnloadMedia: gEEGameUI.mMiniMapUnloadMedia();
         break;
     case O::IconsLoaded: return sIconsLoaded == true;
-    case O::CreatePlaneModels: CreatePlaneModels();
-        break;
-    case O::ReleasePlaneModels: ReleasePlaneModels();
-        break;
     case O::RoUnitsLoadMedia: EEROUnits::LoadMedia();
-        break;
-    case O::RoUnitsReleaseMedia: EEROUnits::ReleaseMedia();
-        break;
-    case O::RoSkyCreate: EEROTerrain::CreateSkyModel();
-        break;
-    case O::RoSkyRelease: EEROTerrain::ReleaseSkyModels();
-        break;
-    case O::RoShadowCreate: EEROGroundShadows::CreateShadowModel();
-        break;
-    case O::RoShadowRelease: EEROGroundShadows::ReleaseShadowModel();
         break;
     // the data paths and folders
     case O::NewFsPath: return P64(new FSPath);
@@ -1159,13 +1142,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ButtonsUnload: EEButtonObject::Unload();
         break;
-    case O::GfxEffectsUnloadTable: EEGraphicEffect::UnloadTable();
-        break;
-    case O::DeleteMediaTable: EEDeleteMediaTable();
-        break;
     case O::MusicObjectsClear: EEMusicObject::ClearAll();
-        break;
-    case O::SoundObjectsUnloadTable: EESoundObject::UnloadTable();
         break;
     case O::ColorTableUnload: EEColorTable::Unload();
         break;
@@ -1328,8 +1305,6 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RunFixtureConfigure: gEETestFixtureConfigure != NULL ? gEETestFixtureConfigure() : (void)0;
         break;
     case O::RunInstanceMutex: return EECreateInstanceMutex();
-    case O::RunSetEventPump: TSThread::SetEventPump((bool (*)())a[0], PlatCurrentThreadId());   // gamecpp window_pump.rs
-        break;
     // round 12, fork D (gamecpp window_pump.rs)
     case O::C12GameWindowSize: return gGameWindow == NULL ? 0 : a[0] == 0 ? gGameWindow->GetWidth() : gGameWindow->GetHeight();
     case O::C12DebugText: ESDebugOut("%s", (const char*)a[0]);
