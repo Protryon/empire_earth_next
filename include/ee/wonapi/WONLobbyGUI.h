@@ -113,7 +113,6 @@ class Image;
 class NativeImage;
 class NativeIcon;
 class SelectionColor;
-class RawImage32;
 class DisplayContext;
 struct FontDescriptor;
 class Button;
@@ -1829,7 +1828,7 @@ public:
     // black, inWidth x inHeight logical pixels at the pixel scale (at least 1); the context is not kept
     NativeImage(DisplayContext*,int inWidth,int inHeight,float inScale=1.0f) : Image(ee_won_image_new_native(WONImageHost,inWidth,inHeight,inScale)) {}
     Graphics& GetGraphics() { return *(Graphics*)this->Call(EeWonImageCall::Graphics); }
-    SmartPtr<RawImage32> GetRaw();
+    SmartPtr<RawImage> GetRaw(); // a 32-bit copy
     uint32_t* GetPixels() { return (uint32_t*)this->Get(EeWonImageField::Pixels); }
     int GetPitchPixels() { return (int)this->Get(EeWonImageField::PitchPixels); }
     int GetPixelWidth() { return (int)this->Get(EeWonImageField::PixelWidth); }
@@ -1837,27 +1836,20 @@ public:
     float GetScale() const { uint32_t s=(uint32_t)this->Get(EeWonImageField::Scale); float f; memcpy(&f,&s,4); return f; }
     SurfaceBase* GetSurface() { return (SurfaceBase*)this->Get(EeWonImageField::Surface); }
 };
+// R6 WON GUI round 35: RawImage32 and RawImage8 were RawImage with a constructor of their kind and the 32-bit image's
+// two calls; the kind is the Rust image's (imgobj.rs), so the one class is every raw image's handle
 class RawImage : public Image {
 public:
     explicit RawImage(EeWonImage* r) : Image(r) {}
     int GetType() const { return (int)this->Get(EeWonImageField::RawType); } // 0 1-bit, 1 8-bit, 2 32-bit
     bool HasTransparency() const { return this->Get(EeWonImageField::HasTransparency)!=0; }
+    DWORD* GetImageData() { return (DWORD*)this->Get(EeWonImageField::Pixels); } // a 32-bit image's
+    void SetDoTransparency(bool v) { this->Call(EeWonImageCall::SetTransparency,v); } // a 32-bit image's
 };
-class RawImage32 : public RawImage {
-public:
-    explicit RawImage32(EeWonImage* r) : RawImage(r) {}
-    RawImage32(int w,int h) : RawImage(ee_won_image_new_raw32(WONImageHost,w,h)) {}
-    DWORD* GetImageData() { return (DWORD*)this->Get(EeWonImageField::Pixels); }
-    void SetDoTransparency(bool v) { this->Call(EeWonImageCall::SetTransparency,v); }
-};
-class RawImage8 : public RawImage {
-public:
-    explicit RawImage8(EeWonImage* r) : RawImage(r) {}
-    RawImage8(int w,int h) : RawImage(ee_won_image_new_raw8(WONImageHost,w,h)) {} // no palette
-};
+typedef RawImage RawImage32;
 inline SmartPtr<Image> Image::Duplicate() { return WONImageAdopt<Image>(this->Call(EeWonImageCall::Duplicate)); }
 inline SmartPtr<NativeImage> Image::GetNative(DisplayContext* c) { return WONImageAdopt<NativeImage>(this->Call(EeWonImageCall::Native,(intptr_t)c)); }
-inline SmartPtr<RawImage32> NativeImage::GetRaw() { return WONImageAdopt<RawImage32>(this->Call(EeWonImageCall::Raw)); }
+inline SmartPtr<RawImage> NativeImage::GetRaw() { return WONImageAdopt<RawImage>(this->Call(EeWonImageCall::Raw)); }
 // the filters (ImageFilters.cpp's crop, scale and tint and the transparent colour; imgobj.rs): a new image, or the
 // image itself (NULL for an image of a type the filter has none for)
 inline SmartPtr<RawImage> ImageCrop(RawImage* i,int x,int y,int w,int h) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::Crop,x,y,w,h)); }

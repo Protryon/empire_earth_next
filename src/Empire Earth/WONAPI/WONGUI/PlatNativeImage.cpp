@@ -55,9 +55,7 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             EeWonImage* theRust = (EeWonImage*)a;
             Image* theImage;
             switch (ee_won_image_kind(theRust)) {
-                case EeWonImageKind::Raw32: theImage = new RawImage32(theRust); break;
-                case EeWonImageKind::Raw8: theImage = new RawImage8(theRust); break;
-                case EeWonImageKind::Raw1: theImage = new RawImage(theRust); break;
+                case EeWonImageKind::Raw32: case EeWonImageKind::Raw8: case EeWonImageKind::Raw1: theImage = new RawImage(theRust); break;
                 case EeWonImageKind::Native: theImage = new NativeImage(theRust); break;
                 case EeWonImageKind::Stretch: theImage = new StretchImage(theRust); break;
                 case EeWonImageKind::StretchCenter: theImage = new StretchCenterImage(theRust); break;
