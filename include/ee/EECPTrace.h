@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include "ee/EERules.h"
+#include "rust/sim/ai.h"   // ee_ai_new_game, ee_ai_out_of_synch_checksum (next_trace.rs)
 
 class EEComputerPlayer;
 
@@ -33,14 +34,14 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
 // a new game (EEWorld, before its players are made): the per-player state the computer players keep in file statics
 // (the trace's counters, the loss incidents, the reflexes' cool-downs) cleared, as at the process's start, so a game
 // plays and traces the same after another game in the process (EE-SIM --games) as alone
-void EECPNewGame();   // ee_ai_new_game (ee_sim::ai next_trace.rs)
+inline void EECPNewGame() { ee_ai_new_game(); }
 
 #define EE_CP_TRACE(player, event, ...) \
     do { if (gCPTraceOn) EECPTraceOut((player), (event), __VA_ARGS__); } while (0)
 
 
 // the computer players' share of the out-of-synch checksum (EEPhysics::GetOutOfSynchChecksum; not a trace: always on)
-unsigned long EECPOutOfSynchChecksum();
+inline unsigned long EECPOutOfSynchChecksum() { return ee_ai_out_of_synch_checksum(); }
 // TEST ONLY (EE-SIM's state dumps): its parts per player and the computer players' own timers, one line each
 void EECPOutOfSynchDump(FILE* inFile);
 

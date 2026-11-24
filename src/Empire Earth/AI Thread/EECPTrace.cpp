@@ -24,13 +24,6 @@
 bool gCPTraceOn = false;
 bool gCPTraceHashOn = false;
 
-// a new game (EEWorld, before its players are made): the computer players' per-game statics, now Rust's (the
-// trace's counters and next hash line, the loss incidents, the reflexes' cool-downs), cleared as at the start
-void EECPNewGame()
-{
-    ee_ai_new_game();
-}
-
 // the Rust accessors' first read (EE_AI_TRACE, and the TEST ONLY switches EE_AI_PERSONALITY, EE_AI_DEMAND,
 // EE_AI_CHEATS, EE_AI_EXP: ee_ai personality.rs, switches.rs, read once), and the lobby's difficulty
 extern "C" void ee_ai_host_trace_init()
@@ -78,9 +71,4 @@ void EECPOutOfSynchDump(FILE* inFile)
     std::string theText;
     ee_ai_out_of_synch_dump(&theText);
     fputs(theText.c_str(), inFile);
-}
-
-unsigned long EECPOutOfSynchChecksum()
-{
-    return ee_ai_out_of_synch_checksum();
 }

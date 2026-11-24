@@ -14,9 +14,6 @@
 
 class EEComputerPlayer;
 class EEPlayer;
-class EEComplexUnit;
-class EEUnit;
-class FSFile;
 struct EeCpPlacement;                       // the Rust data (rust/sim/cp.h)
 
 // 0x23d1f1 (cdecl; callers EECPBuildManager::FindSpaceSite for class 0x2d8 and 0x2037c6): whether (inX, inY) suits inPlayer's

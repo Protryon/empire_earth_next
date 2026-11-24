@@ -26,6 +26,7 @@
 #include <string>
 
 #include "rust/game/cp_engine.h"
+#include "ee/EECPNext.h"   // EECPNextAI
 
 class EEComputerPlayer;
 
@@ -67,10 +68,16 @@ inline void EECPEngineLog(const char* inFormat, ...)
 
 // the computer player's engine: kEECPEngineClassic or kEECPEngineNext
 long EECPEngine(const EEComputerPlayer* inPlayer);
-// what it plays: its AI's id ("none": a seat without one; the trace and the game log's engine=)
-std::string EECPEngineName(const EEComputerPlayer* inPlayer);
 // the next engine's AI id of a computer player ("" none)
-std::string EECPEngineAI(const EEComputerPlayer* inPlayer);
+inline std::string EECPEngineAI(const EEComputerPlayer* inPlayer)
+{
+    return EECPEngine(inPlayer) != kEECPEngineNext ? std::string() : EECPNextAI(inPlayer);
+}
+// what it plays: its AI's id ("none": a seat without one; the trace and the game log's engine=)
+inline std::string EECPEngineName(const EEComputerPlayer* inPlayer)
+{
+    return EECPEngineAI(inPlayer).empty() ? std::string("none") : EECPEngineAI(inPlayer);
+}
 // whether the seat's AI declares "sees_all" in the manifest (false for the classic and every other seat)
 bool EECPEngineSeesAll(const EEComputerPlayer* inPlayer);
 // whether the seat's AI declares "fills_garrison" in the manifest (false for the classic and every other seat)
