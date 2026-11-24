@@ -1,7 +1,15 @@
-//! The computer player's Lua runtime (`ee/EECPLua.h`, `EECPLuaState`'s body): one sandboxed, deterministic Lua 5.4
-//! state per computer player over the vendored Lua (`src/ThirdParty/lua/ee_lua.c`, compiled by the C++ build with
-//! its determinism macros), through `lua_api` (`mlua-sys`'s types and constants, `lua54` + `external`: no Lua of its
-//! own; the functions declared `extern "C"`, see there).
+//! The computer player's Lua runtime (`ee/EECPLua.h`, `EECPLuaState`'s body): one sandboxed, deterministic Lua 5.5
+//! state per computer player, through `lua_api` (`mlua-sys`'s types and constants, `lua55` + `vendored`: Lua 5.5
+//! compiled unmodified from the `lua-src` crate into the Rust library; the functions declared `extern "C"`, see
+//! there).
+//!
+//! Determinism (lockstep: every peer and every run computes the same; docs/progress/lua.md). The Lua is unmodified,
+//! so what its build leaves to chance is fixed here:
+//!   - the string hash seed is [`HASH_SEED`] (`lua_newstate`'s argument since 5.5; `luaL_newstate` would take the
+//!     time and an address, and `pairs` over string keys would differ between runs);
+//!   - `table.sort` is `lua_sort`'s (the library's picks a pivot from the time after an unbalanced partition);
+//!   - math.random and the functions libm computes differently per platform are removed, the float texts go
+//!     through this module's print, tostring and string.format.
 //!
 //! Every Lua API call is the one `EECPLua.cpp` made, in its order, so the state allocates the same blocks (the byte
 //! count and the collector's pace are the same) and a script sees the same tables:
@@ -25,6 +33,10 @@ use std::ptr;
 use crate::ai::lua_api::*;
 
 use crate::ai::lua_value::{self, EeAiLuaTreeOps, Key, Kind, OwnedKey, Tree, Value, MAX_DEPTH};
+
+/// The string hash seed of every state (`lua_newstate`): fixed, so that a table's iteration order is the same in
+/// every run and on every peer.
+const HASH_SEED: std::ffi::c_uint = 0x5eed_5eed;
 
 /// Instructions between two calls of the count hook (`kEECPLuaHookStep`).
 pub(crate) const HOOK_STEP: i64 = 1000;
@@ -378,9 +390,30 @@ unsafe fn deterministic_tostring(l: *mut lua_State, index: c_int) -> *const c_ch
             }
             lua_pop(l, 1);
         }
+        LUA_TNUMBER if lua_isinteger(l, index) == 0 => {
+            if let Some(text) = non_finite_text(lua_tonumber(l, index)) {
+                lua_pushstring(l, text.as_ptr());
+                return lua_tostring(l, -1);
+            }
+        }
         _ => {}
     }
     luaL_tolstring(l, index, ptr::null_mut())
+}
+
+/// One spelling of NaN and the infinities (the C libraries differ: UCRT prints "-nan(ind)"); None for a finite float,
+/// whose text is Lua's (%.15g, or %.17g when that does not read back: correctly rounded by every C library we build
+/// with).
+fn non_finite_text(v: lua_Number) -> Option<&'static CStr> {
+    if v.is_nan() {
+        Some(c"nan")
+    } else if v == f64::INFINITY {
+        Some(c"inf")
+    } else if v == f64::NEG_INFINITY {
+        Some(c"-inf")
+    } else {
+        None
+    }
 }
 
 unsafe extern "C-unwind" fn lua_tostring_fn(l: *mut lua_State) -> c_int {
@@ -451,6 +484,12 @@ unsafe extern "C-unwind" fn lua_format(l: *mut lua_State) -> c_int {
             continue; // the original reports the missing argument
         }
         let is_float = lua_type(l, argument) == LUA_TNUMBER && lua_isinteger(l, argument) == 0;
+        if c == b's' && is_float {
+            if let Some(text) = non_finite_text(lua_tonumber(l, argument)) {
+                lua_pushstring(l, text.as_ptr());
+                lua_replace(l, argument);
+            }
+        }
         if c == b'q' && is_float {
             return luaL_error(l, c"string.format: %%q of a float differs between platforms".as_ptr());
         }
@@ -877,6 +916,9 @@ unsafe fn setup(h: *mut Host, l: *mut lua_State) {
         lua_pushnil(l);
         lua_setfield(l, 3, n.as_ptr());
     }
+    lua_getfield(l, 1, c"table".as_ptr()); // 4
+    lua_pushcfunction(l, super::lua_sort::lua_table_sort);
+    lua_setfield(l, 4, c"sort".as_ptr());
     lua_settop(l, 0);
     lua_newtable(l);
     lua_setfield(l, LUA_REGISTRYINDEX, LOADED_KEY.as_ptr());
@@ -1038,7 +1080,7 @@ pub unsafe fn new(config: Config, ops: *const EeAiLuaTreeOps, owner: *mut c_void
         syntax: false,
         alloc_failed: false,
     }));
-    (*h).l = lua_newstate(lua_allocate, h as *mut c_void);
+    (*h).l = lua_newstate(lua_allocate, h as *mut c_void, HASH_SEED);
     if (*h).l.is_null() {
         fail(h, Status::NoState, b"lua_newstate failed (memory limit too small?)".to_vec());
         return h;
@@ -1286,11 +1328,6 @@ pub unsafe fn restore_memory(h: *mut Host, b: &[u8]) -> bool {
     (*h).rng = rng;
     true
 }
-
-// The vendored Lua for the tests (build.rs compiles it; the game links the C++ build's)
-#[cfg(test)]
-#[link(name = "ee_ai_lua_test", kind = "static")]
-extern "C" {}
 
 #[cfg(test)]
 mod tests {
@@ -1541,6 +1578,26 @@ mod tests {
         let start = all.iter().position(|l| *l == "== part B").unwrap();
         let end = all.iter().position(|l| l.starts_with("status 0 ")).unwrap();
         let want = &all[start..end];
+        if std::env::var_os("EE_LUA_GOLDEN_WRITE").is_some() {
+            // a declared re-baseline (another Lua version): part B replaced by this run's lines
+            let lines: Vec<&str> = all[..start]
+                .iter()
+                .copied()
+                .chain(got.iter().map(String::as_str))
+                .chain(all[end..].iter().copied())
+                .collect();
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/ai/golden_lua.txt");
+            std::fs::write(
+                path,
+                lines.join(
+                    "
+",
+                ) + "
+",
+            )
+            .unwrap();
+            return;
+        }
         for (i, (g, w)) in got.iter().zip(want).enumerate() {
             assert_eq!(g, w, "part B line {}", i + 1);
         }
@@ -1564,8 +1621,8 @@ mod tests {
 
     #[test]
     fn luaconf_facts() {
-        // what EECPLua.cpp's static_asserts check on the C side
-        assert_eq!(LUA_REGISTRYINDEX, -1001000);
+        // what the host's own code assumes of Lua 5.5's luaconf.h (mlua-sys's constants)
+        assert_eq!(LUA_REGISTRYINDEX, -(i32::MAX / 2 + 1000));
         assert_eq!(LUAL_BUFFERSIZE, 1024);
         assert_eq!(std::mem::size_of::<luaL_Buffer>(), 4 * 8 + 1024);
         assert_eq!(LUA_MASKCOUNT, 8);

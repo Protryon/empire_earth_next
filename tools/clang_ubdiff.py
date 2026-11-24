@@ -68,7 +68,7 @@ def main():
                     help="list every function whose code changes (default: only those that lose null tests)")
     a = ap.parse_args()
     mods = a.names or units.MODULES
-    jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
+    jobs = [j for m in mods for j in units.jobs_for(m)]
     out = ROOT / "build" / "ubdiff"
     for j in jobs:
         verify.include_paths(verify.stage_source(j[1]))

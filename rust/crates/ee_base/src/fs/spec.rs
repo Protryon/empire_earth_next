@@ -1242,6 +1242,6 @@ pub(crate) mod tests {
             assert_eq!(ee_fs_spec_unlock(&s.0), status::OK as c_long);
             assert_eq!(ee_fs_basic_delete(&s.0), status::OK as c_long);
         }
-        std::fs::remove_dir_all(&dir).unwrap();
+        crate::plat_core::test_remove_dir(&dir);
     }
 }

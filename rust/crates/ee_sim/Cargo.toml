@@ -12,11 +12,8 @@ crate-type = ["rlib"]
 ee_base = { path = "../ee_base" }
 ee_data = { path = "../ee_data" }
 libc = "0.2"
-mlua-sys = { version = "0.13", default-features = false, features = ["lua54", "external"] }
+mlua-sys = { version = "0.13", default-features = false, features = ["lua55", "vendored"] }
 
 [features]
 # TEST ONLY: `world::layout::with_test_layout` for the dependents' tests (ee_game's, through its dev-dependency)
 test_layout = []
-
-[build-dependencies]
-cc = "1"
