@@ -78,12 +78,6 @@ private:
     FileReader(const FileReader&);
     FileReader& operator=(const FileReader&);
 };
-// closes a FILE* when it goes out of scope
-struct AutoFile {
-    FILE* mFile;
-    AutoFile(FILE* file) : mFile(file) {}
-    ~AutoFile() { fclose(this->mFile); }
-};
 class FileWriter {
 public:
     FileWriter() { ee_won_file_writer_init(&this->mCore); }

@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStatus.h"
-#include "ee/wonapi/WONTimerThread.h"
 #include <string.h>
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
