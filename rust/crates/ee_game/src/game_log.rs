@@ -37,7 +37,7 @@ fn wide_text(member: P) -> String {
 
 /// The physics' game time and game over (0, false without the physics).
 fn physics() -> (u64, bool) {
-    let ph = hp(O::EgPhysics, 0, &[]);
+    let ph = (crate::gamecpp::globals::get!(gPhysics) as P);
     if ph == 0 {
         return (0, false);
     }

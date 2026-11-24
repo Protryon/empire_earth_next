@@ -76,8 +76,6 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
         break;
     case O::EntryDeleteCommunicationsKeep: delete gCommunications;
         break;
-    case O::EntryNullCommunications: gCommunications = NULL;
-        break;
     case O::EntrySetPlayerName: gPlayerName = UWideString((const char*)a[0]);
         break;
     case O::EntrySetHostGameName: gGamePreferences.mSettings.mHostGameName = UWideString((const char*)a[0]);

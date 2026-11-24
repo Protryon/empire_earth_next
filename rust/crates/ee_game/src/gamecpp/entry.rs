@@ -201,7 +201,7 @@ pub extern "C" fn ee_gamecpp_entry_initialize_network() {
     h(O::Verify, 0, &[(result == ENTRY_OK) as i64, 1578]);
     h(O::EntryRegisterNeMessages, 0, &[]);
     h(O::EntryRegisterEeMessages, 0, &[]);
-    let result = h(O::EntryRegisterEmptyShutdown, 0, &[]);
+    let result = i64::from(ee_base::util::system::ee_util_register_shutdown(empty_shutdown));
     h(O::Verify, 0, &[(result == ENTRY_OK) as i64, 1586]);
     h(O::FileSpecSetVolumeStartup, file.0, &[]);
     h(O::TimeNow, 0, &[]);
@@ -239,7 +239,7 @@ pub extern "C" fn ee_gamecpp_entry_initialize_network() {
         }
     }
     h(O::TimeNow, 0, &[]);
-    h(O::EntrySetBinaryChecksum, 0, &[checksum as i64]);
+    crate::gamecpp::globals::set!(gBinaryChecksum, checksum);
     h(O::EntryVersionTrim, 0, &[]);
     let suffix = cstr(entry_version_suffix(checksum).as_bytes());
     h(O::EntryVersionAppend, 0, &[pa(suffix.as_ptr() as P)]);
@@ -327,7 +327,7 @@ fn start_client(tries: Option<i32>) {
 /// host action posted.
 fn host_or_join(kind: i64, player: &[u8], other: &[u8], tries: Option<i32>) {
     h(O::EntryDeleteCommunicationsKeep, 0, &[]);
-    h(O::EntryNullCommunications, 0, &[]);
+    crate::gamecpp::globals::set!(gCommunications, core::ptr::null_mut());
     start_client(tries);
     let player = cstr(player);
     let other = cstr(other);
@@ -347,7 +347,7 @@ fn host_or_join(kind: i64, player: &[u8], other: &[u8], tries: Option<i32>) {
 /// "loadgame": the saved game started on a local server (or a client when it cannot be opened), then the main menu.
 fn load_game(name: &[u8]) {
     h(O::EntryDeleteCommunicationsKeep, 0, &[]);
-    h(O::EntryNullCommunications, 0, &[]);
+    crate::gamecpp::globals::set!(gCommunications, core::ptr::null_mut());
     let name = cstr(name);
     let mut file: P = 0;
     if h(O::EntryOpenSavedGame, 0, &[pa(name.as_ptr() as P), ptr(&mut file)]) == ENTRY_OK {
@@ -452,6 +452,9 @@ const ENTRY_MESSAGE_ERROR: u32 = 0x10;
 const ENTRY_S_OK: i64 = 0;
 const ENTRY_S_FALSE: i64 = 1;
 
+/// EEEmptyShutdown: the network's shutdown routine does nothing.
+extern "C" fn empty_shutdown(_shutdown: bool) {}
+
 /// EERun: the game's run from its entry point (WinMain, main): the Rust library's start, the fixture's switches, the
 /// single instance, the window system, the engine's initialisation, the splash screen around the start-up, the menus,
 /// the threads, the command line and the user interface's run, then the shutdown. 1 when the window system cannot
@@ -477,18 +480,18 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
         super::window_pump::install();
         let com = h(O::RunComInit, 0, &[]);
         h(O::Verify, 0, &[(com == ENTRY_S_OK || com == ENTRY_S_FALSE) as i64, 3600]);
-        h(O::RunFloatingPoint, 0, &[]);
+        ee_base::util::fp::ee_util_fp_set_precision(ee_base::lle_enums::UMFloatingPointPrecision::kFPPrecision53 as c_ulong);
         h(O::RunSqrtTable, 0, &[]);
         // (the original's first command-line pass here only chose whether to play the intro movies)
         h(O::RunSetInstance, 0, &[pa(instance as P)]);
-        h(O::RunEsInitialize, 0, &[pa(instance as P)]);
+        ee_base::error::ee_error_initialize();
         // the game's directory is the data root (the executable's directory, or EE_DATA_ROOT), wherever it was started
         // from: its Data, Users and config.yaml are found relative to it (the original used the current directory)
         PlatPathEnterDataRoot();
         h(O::RunFsInitialize, 0, &[]);
         let resource = h(O::RunNewResource, 0, &[pa(instance as P)]);
         h(O::Verify, 0, &[resource, 3632]);
-        h(O::RunDefaultSettings, 0, &[]);
+        super::preferences::ee_gamecpp_prefs_init_defaults();
         let loaded = h(O::RunPreferencesLoad, 0, &[]);
         h(O::Verify, 0, &[(loaded == ENTRY_OK) as i64, 3637]);
         if sim {
@@ -514,12 +517,12 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
             if ee_gamecpp_entry_parse_command_line(command_line) {
                 initialized = h(O::RunUserInterface, 0, &[pa(command_line as P)]) == ENTRY_OK;
                 super::startup::ee_gamecpp_startup_clear_game();
-                h(O::RunUShutdown, 0, &[initialized as i64]);
+                ee_base::util::system::ee_util_shutdown(initialized, false);
                 h(O::RunReleaseDataPath, 0, &[]);
                 h(O::RunReleaseCivilizationPath, 0, &[]);
             }
         } else {
-            h(O::RunUShutdown, 0, &[initialized as i64]);
+            ee_base::util::system::ee_util_shutdown(initialized, false);
             h(O::RunReleaseDataPath, 0, &[]);
             h(O::RunReleaseCivilizationPath, 0, &[]);
         }

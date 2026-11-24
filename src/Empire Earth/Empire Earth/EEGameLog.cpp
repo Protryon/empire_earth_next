@@ -134,7 +134,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EpWindowSizeDefaulted: gGameWindowSizeDefaulted = a[0] != 0;
         break;
     case O::EpResourceLanguage: return gResource->GetLanguage();
-    case O::EpOsLanguage: return UGetOSLanguage();
     case O::EpCameraMaxZoom: gCameraMaxZoom = f[0];
         break;
     case O::EpWideLength: return (int64_t)strlen((const char*)*B_W);
@@ -184,7 +183,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EoResourceLevels: return EEGetNumberOfResourceLevels();
     case O::EoVariants: return EEGetNumberOfGameVariants();
     case O::EoFindGenerator: return EERMFindGenerator(*B_W, *(unsigned long*)a[0]);
-    case O::EoGeneratorCount: return EERMGetNumberOfGenerators();
     case O::EoFirstGeneratorName: *B_W = EERMGetGeneratorName(0);
         break;
     case O::EoInScenarioEditor: return gUIManager->mInScenarioEditor;
@@ -216,7 +214,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::EaForgetSound: B_SND->mSound = NULL;
         break;
-    case O::EaTime: return TMGetTime();
     case O::EaVisibleTiles: return gWorld.mMap->mTerrainMesh.GetNumVisibleTiles();
     case O::EaFileOpen: B_FILE->Open(kFileAccessRead);
         break;
@@ -256,7 +253,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::EgGatherResource: return P64(static_cast<EEUGRust*>((EEUnitGoal*)p)->GetGatherResource());
     case O::EgLastAttacker: return P64(B_UN->mComplexUnit->mLastAttacker);
-    case O::EgPhysics: return P64(gPhysics);
     case O::EgGameTime: return (unsigned long)((EEPhysics*)p)->mGameTime;
     case O::EgGameOver: return ((EEPhysics*)p)->mGameOver;
     case O::EgTraceOn: gCPTraceOn = true;
@@ -355,7 +351,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DcEraseQueued: B_PL->EraseQueuedImprovements((long)a[0]);
         break;
-    case O::DcEpochCount: return EEEpochCount();
     case O::DcCurrentEpoch: return B_PL->mTechnologies->mCurrentEpoch;
     case O::DcSetEpoch: B_PL->SetEpoch((long)a[0]);
         break;
@@ -366,7 +361,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DcAddResource: B_PL->AddResource((long)a[0], (long)a[1]);
         break;
     // the app profile's cheat sweep (TEST ONLY)
-    case O::DcHaveCheats: return gCheatCodes != NULL;
     case O::DcParse: gCheatCodes->ParseCheatCode(UWideString((const char*)a[0]), *(long*)a[1], *(long*)a[2]);
         break;
     case O::DcApply: gCheatCodes->ApplyCheatCode((long)a[0], (long)a[1], (long)a[2]);

@@ -139,7 +139,7 @@ fn config_int(block: &CStr, key: &CStr) -> Option<i32> {
 /// `IsNotKorean`: neither the game resources' language nor the system's is Korean.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_is_not_korean() -> bool {
-    !(h(O::EpResourceLanguage, 0, &[]) == KOREAN || h(O::EpOsLanguage, 0, &[]) == KOREAN)
+    !(h(O::EpResourceLanguage, 0, &[]) == KOREAN || i64::from(ee_base::util::system::ee_util_os_language()) == KOREAN)
 }
 
 /// The texture packs (`EESetTextureResolution`; docs/DATA_FORMATS.md "Texture packs"): resolution 2 draws

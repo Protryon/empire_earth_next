@@ -166,7 +166,7 @@ pub extern "C" fn ee_gamecpp_options_assign(options: *mut c_void, other: *const 
 /// The map type the first generator's name ("" with none).
 fn first_generator(o: P) {
     let map_type = o + gobj::OPT_MAP_TYPE;
-    if h(O::EoGeneratorCount, 0, &[]) >= 1 {
+    if ee_sim::rmap::object::ee_rmap_generator_count() >= 1 {
         h(O::EoFirstGeneratorName, map_type, &[]);
     } else {
         set_text(map_type, true, b"");

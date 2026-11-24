@@ -265,7 +265,6 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::LobbyMapTypeScenDefault: gGameOptions.mMapType = UWideString(UString("ScenDefault") + gScenarioExtension);
         break;
-    case O::PhysicsPresent: return gPhysics != NULL;
     case O::CxSetPoolSize: EEComplexUnit::SetPoolSize((unsigned long)a[0], (unsigned long)a[1]);
         break;
     default: return EEMessageOp(inOp, p, a, f);   // the message bodies' (EEMessage.cpp)
