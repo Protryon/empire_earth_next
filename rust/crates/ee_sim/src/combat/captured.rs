@@ -81,7 +81,8 @@ pub unsafe extern "C" fn ee_combat_chain_capture(
         return;
     }
     // SAFETY: the caller's contract
-    let (i, c, o) = unsafe { (bytes(input, input_size), bytes(chain.cast(), chain_floats * 4), bytes(output, output_size)) };
+    let (i, c, o) =
+        unsafe { (bytes(input, input_size), bytes(chain.cast(), chain_floats * 4), bytes(output, output_size)) };
     capture::commit(tag, &payload(i, c, o));
 }
 
