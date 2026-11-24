@@ -15,6 +15,7 @@ pub mod cfgkind;
 pub mod cfgload;
 pub mod cfgset;
 pub mod cfgtab;
+pub mod clipobj;
 pub mod comboobj;
 pub mod compcfg;
 pub mod compmem;

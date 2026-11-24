@@ -123,6 +123,7 @@
 #include "rust/won_gui/cfgload.h"
 #include "rust/won_gui/cfgset.h"
 #include "rust/won_gui/cfgtab.h"
+#include "rust/won_gui/clipobj.h"
 #include "rust/won_gui/comboobj.h"
 #include "rust/won_gui/compcfg.h"
 #include "rust/won_gui/compmem.h"
