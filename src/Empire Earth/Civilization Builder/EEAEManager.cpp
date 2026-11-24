@@ -59,11 +59,6 @@ struct EEAEAliveUnit {
     bool operator()(EEComplexUnit* inUnit) const { return inUnit->mHitPoints > 0; }
 };
 
-// Creates the area-effect manager with no templates or effects
-EEAEManager::EEAEManager()
-{
-}
-
 // CollectEffects' and FindEffect's logic: area_effect_manager.rs over the one-statement shims below (UI lane
 // round 11)
 extern "C" int32_t ee_screenscpp_aem_floor(float inV) { return UMFloor(inV); }
@@ -93,12 +88,6 @@ extern "C" uintptr_t ee_screenscpp_aem_effects_at(uintptr_t inManager, uintptr_t
 { return (uintptr_t)((EEAEManager*)inManager)->mEffects.mItems[inIndex]; }
 extern "C" int64_t ee_screenscpp_aem_effect_player(uintptr_t inEffect)
 { return (int64_t)((EEAreaEffect*)inEffect)->mPlayer; }
-
-// Tells whether a point lies in the effect's scaled area around its location
-bool EEAreaEffect::IsInRange(const GE2DPoint& inPoint)
-{
-    return this->mTemplate->IsWithin(inPoint, this->mLocation, this->GetScale(), NULL);
-}
 
 // port (save version 0.256, EEPWorldHelper): the area effects' running state. The original saved none of it: a
 // loaded game made each unit's own effects anew (MakeAreaEffects: no location, morale from buildings to be counted)

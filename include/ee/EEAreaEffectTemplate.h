@@ -31,10 +31,10 @@ typedef EeAreaEffectData EEAreaEffectData;
 // .. mAlpha +0x50.., mF60, mB64..mB68, and the color (+0x08 GEColor) as mColorRed, mColorGreen, mColorBlue.
 class EEAreaEffectTemplate : public UReferenceCounter, public EeAreaEffectTemplateFields {
 public:
-    EEAreaEffectTemplate();
+    EEAreaEffectTemplate() { ee_screens_aet_construct((uintptr_t)this); }
     virtual ~EEAreaEffectTemplate() { ee_screens_aet_destroy((uintptr_t)this); }        // 0x27c199 (??_G 0x27c17d): dereferences both graphic effects
     // 0x27c5ab: EEGraphicEffect::Load(inArg) on both graphic effects, then mMedia's LoadMedia
-    void Load(bool inIsOnDemand);
+    void Load(bool inIsOnDemand) { ee_screens_ael_template_load(this, inIsOnDemand); }
     // Unloads the template's graphic effects and sound media
     void Unload() { ee_screens_ael_template_unload(this); }                          // 0x27c5de: EEGraphicEffect::Unload on both, then mMedia's UnloadMedia
     // 0x27c1c5: player inOther counts for inPlayer under mMode (4 everyone, 1 itself, 2 allies, 3 players it is at

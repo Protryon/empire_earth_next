@@ -191,10 +191,6 @@ extern "C" bool ee_screenscpp_cbl_tabable(uintptr_t inList) { return ((EECBUILis
 
 // ------------------------------------------------------------------------------------------------ the powers
 
-EECivPowersManager::EECivPowersManager()
-{
-}
-
 // the db files' reads, the premade copies, ApplyUpgrade's capture halves and the powers' test: civ_manager_obj.rs over
 // these (UI lane round 12)
 extern "C" uintptr_t ee_screenscpp_civm_capture_begin(uint32_t inUpgrade, int64_t inPlayer)

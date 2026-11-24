@@ -9,10 +9,6 @@ class FSFile;
 #include <vector>
 #include "ee/EEAreaEffect.h"               // mEffects by value (UReferenceContainer<EEAreaEffect*>)
 
-class EEAreaEffectTemplate;
-class EEComplexUnit;
-class GE2DPoint;
-
 class EEAEManager {
 public:
     // Returns the effect of the kind that covers a tile and affects the player, or NULL
@@ -25,7 +21,7 @@ public:
     // Reads the area-effect templates from the area-effect file (an empty slot for records with id 0); returns 3
     // when a template fails to initialize
     long Load(FSFile* inFile) { return ee_screens_aes_load_templates(this, inFile); } // original-backed 0x27b079; caller1414a3, FSFile IO proof
-    EEAEManager();                          // 0x27adb0 (Empire Earth.cpp's chain)
+    EEAEManager() {}                        // 0x27adb0 (Empire Earth.cpp's chain)
     // Destroys the manager, releasing every template and effect
     virtual ~EEAEManager() { this->Clear(); }
     // Runs one area-effect tick: clear, apply, keep the strongest, update generators, rebuild the list, tick effects
