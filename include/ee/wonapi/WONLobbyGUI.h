@@ -119,7 +119,6 @@ class ChildLayoutInstructionBase;
 class Container;
 class ComponentConfig;
 class ComponentEvent;
-class ComponentExtra;
 class BackgroundGrabber;
 class ListArea;
 class MultiListArea;
@@ -254,7 +253,6 @@ public:
     bool Intersects(Component* c) { return this->KCall(EeWonCompCall::Intersects,(intptr_t)c)!=0; }
     Cursor* GetDefaultCursor() { return (Cursor*)this->KCall(EeWonCompCall::DefaultCursor); }
     BackgroundGrabber* GetGrabBG() { return (BackgroundGrabber*)this->KCall(EeWonCompCall::GrabBG); }
-    void AllocateExtraStuff();
     bool CheckGrabBG() { return this->KCall(EeWonCompCall::CheckGrabBG)!=0; }
     void EnsureOnTopOf(Component* c) { this->KCall(EeWonCompCall::EnsureOnTopOf,(intptr_t)c); }
     void SetDefaultCursor(Cursor* c) { this->KCall(EeWonCompCall::SetDefaultCursor,(intptr_t)c); }
@@ -294,7 +292,7 @@ public:
     unsigned char mFocusId; //28
     char mInvalidState; //29
     char mTimerFlags; //2a
-    ComponentExtra* mExtraStuff; // at +0x2c, owned (allocated on demand)
+    EeWonCompExtraData* mExtraStuff; // at +0x2c, owned (made on demand): compobj.rs's, the original's ComponentExtra
 private:
     friend intptr_t ee_won_guicpp_comp_call(void*,EeWonGuiOp,intptr_t,intptr_t,intptr_t,intptr_t);
     intptr_t KCall(EeWonCompCall k,intptr_t a=0,intptr_t b=0,intptr_t c=0) { return ee_won_comp_call(this,ee_won_guicpp_comp_call,k,a,b,c); }
@@ -1170,20 +1168,9 @@ public:
     Callback mCallback; //08; implicit real base/member cleanup
 };
 
-// ComponentExtra (0x1c bytes; RTTI 0x4d5eb8, vtable 0x44d714), only a virtual destructor.
-// Allocated by Component::AllocateExtraStuff (0x2f4ac0).
-// The four SmartPtr members release themselves; mGrabBG is owned outright.
-class ComponentExtra {
-public:
-    ComponentExtra();
-    virtual ~ComponentExtra(); // destructor 0x2f48d0, deleting 0x2f48b0
-    SmartPtr<ColorScheme> mColorScheme; //04
-    SmartPtr<ComponentListener> mListener; //08, AddListener2f4b10 /Deliver2f54e0
-    SmartPtr<Cursor> mDefaultCursor; //0c
-    BackgroundGrabber* mGrabBG; // at +0x10, owned; the destructor deletes the grabber (0x38 bytes)
-    SmartPtr<Component> mToolTip; //14
-    bool mDontDoTip; // at +0x18; +0x19..0x1b padding
-};
+// ComponentExtra (0x1c bytes; RTTI 0x4d5eb8, vtable 0x44d714; allocated by Component::AllocateExtraStuff, 0x2f4ac0):
+// the colour scheme, the listener, the default cursor (held), the background grabber (owned), the tool tip and its
+// flag are compobj.rs's EeWonCompExtraData since R6 WON GUI round 36; Component's destructor frees it.
 
 // a listener that hands the events on to a component (0x0c bytes; vtable 0x84c134: ??_G ICF-folded 0x291f6f,
 // +0x04 0x337bf0)
