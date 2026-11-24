@@ -136,9 +136,8 @@ static const float kBasicPriestSoundFactor = 4.0f;     // 0x446fe4 (the conversi
 // Returns the faith a conversion by a unit costs: the world table's entry 46, at most the unit's own power (0 if none)
 long EEGetConversionCost(EEComplexUnit* inUnit)
 {
-    EeCombatConversionCostIn theIn = {(int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost),
-                                      (int32_t)inUnit->mStats->mPower};
-    return EECombatConversionCost(theIn);
+    return EECombatConversionCost(EeCombatConversionCostIn{(int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost),
+                                                           (int32_t)inUnit->mStats->mPower});
 }
 
 // Works a conversion with enough faith: stops at an ally or own unit, shows the effects and warns the target's owner,
