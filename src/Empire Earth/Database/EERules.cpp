@@ -8,11 +8,8 @@
 
 #include <cstdint>
 #include <cstring>
-#include <string>
-#include <vector>
 
-#include "EEDataText.h"   // TakeBytes
-
+#include "EEDataText.h"   // the ee_data C API
 
 EERuleNumber EERuleNumber::Constant(float inValue)
 {
@@ -34,12 +31,6 @@ bool EECombatRules::IsElevationAttacker(long inCategory) const { return this->mE
 bool EECombatRules::IsElevationLauncher(long inCategory) const { return this->mElevationLaunchers.contains(inCategory); }
 bool EECombatRules::IsElevationTarget(long inCategory) const { return this->mElevationTargets.contains(inCategory); }
 bool EECombatRules::IsMoraleBuilding(long inUnitType) const { return this->mMoraleBuildings.contains(inUnitType); }
-
-long EEDifficultyAILevel(unsigned long inDifficulty)
-{
-    const EERuleList<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
-    return inDifficulty < theList.size() ? theList[inDifficulty].mAILevel : (long)inDifficulty;
-}
 
 const EEEpochMedia& EERules::Epoch(long inEpoch) const
 {
@@ -76,27 +67,4 @@ EERules& EEGetRules()
 {
     static EERules sRules;
     return sRules;
-}
-
-bool EERulesAddOverride(const std::string& inSpec, std::string& outError)
-{
-    EeDataBytes theError{nullptr, 0};
-    if (!ee_data_rules_add_override(reinterpret_cast<const uint8_t*>(inSpec.data()), inSpec.size(), &theError)) {
-        outError = EEDataText::TakeBytes(theError);
-        return false;
-    }
-    return true;
-}
-
-void EERulesOverrideProblems(std::vector<std::string>& out)
-{
-    out.clear();
-    EeDataBytes theBytes{nullptr, 0};
-    ee_data_rules_override_problems(&theBytes);
-    std::string theText = EEDataText::TakeBytes(theBytes);
-    for (size_t theStart = 0; theStart < theText.size();) {
-        size_t theEnd = theText.find('\n', theStart);
-        out.push_back(theText.substr(theStart, theEnd - theStart));
-        theStart = theEnd + 1;
-    }
 }

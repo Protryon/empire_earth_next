@@ -408,6 +408,20 @@ pub unsafe extern "C" fn ee_data_rules_set_music_from_flags(
     (*rules).rules.set_music_from_flags(song, f);
 }
 
+/// The computer players' level (0 easy .. 2 hard: their records' values) of a game option difficulty; past the
+/// list, the difficulty itself (was EERules.cpp's EEDifficultyAILevel).
+///
+/// # Safety
+/// `rules` live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_rules_ai_level(rules: *const EeDataRules, difficulty: std::ffi::c_ulong) -> std::ffi::c_long {
+    let r = &*rules;
+    match r.rules.game_options.difficulties.get(difficulty as usize) {
+        Some(d) => d.ai_level as std::ffi::c_long,
+        None => difficulty as std::ffi::c_long,
+    }
+}
+
 /// The binary load's songs: every row of a dbmusic.dat file's per-epoch flags (the gate's and tools' path).
 ///
 /// # Safety
@@ -660,6 +674,18 @@ mod tests {
             let epochs = &(*r).rules.epochs;
             assert_eq!(epochs[0].music, vec![0]);
             assert!(!ee_data_rules_music_from_dbmusic(r, d.as_ptr(), 3));
+            ee_data_rules_free(r);
+        }
+    }
+
+    #[test]
+    fn a_difficulty_s_ai_level_or_the_difficulty_past_the_list() {
+        unsafe {
+            let r = ee_data_rules_new();
+            assert_eq!((0..3).map(|k| ee_data_rules_ai_level(r, k)).collect::<Vec<_>>(), vec![0, 1, 2]);
+            (*r).rules.game_options.difficulties[1].ai_level = 7;
+            assert_eq!(ee_data_rules_ai_level(r, 1), 7);
+            assert_eq!(ee_data_rules_ai_level(r, 5), 5);
             ee_data_rules_free(r);
         }
     }
