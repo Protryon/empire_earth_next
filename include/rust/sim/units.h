@@ -4622,6 +4622,15 @@ constexpr static const int32_t EE_UNITS_DOP_CONTACTS_UNIT = 343;
 /// the scratch contacts' entry `b`'s unit's `AddContact((EEComplexUnit*)a)`
 constexpr static const int32_t EE_UNITS_DOP_CONTACTS_ADD = 344;
 
+/// the doppelganger's `EeUnitsComplexDopFields` base
+constexpr static const int32_t EE_UNITS_DOP_FIELDS = 10000;
+
+/// `dynamic_cast<EEComplexDoppelganger*>(a)`'s `EeUnitsComplexDopFields` base
+constexpr static const int32_t EE_UNITS_DOP_OTHER_FIELDS = 10001;
+
+/// `mTransformation = dynamic_cast<EEComplexDoppelganger*>(a)->mTransformation`
+constexpr static const int32_t EE_UNITS_DOP_COPY_TRANSFORMATION = 10002;
+
 /// the members the loads, saves and copies name (`EE_UNITS_DOP_READ_FIELD`'s and the others' `b`)
 constexpr static const int64_t EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS = 0;
 

@@ -111,50 +111,6 @@ static long sDopModelID;
 static EeUnitsFinishLoadIn sDopMaxima;   // FinishLoad's maxima (dop_more.rs)
 static std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vector<unsigned long> > > sDopContacts;
 
-// a complex doppelganger's member (dop_file.rs EE_UNITS_DOP_FIELD_*) read from the file
-static long EEDopReadField(EEComplexDoppelganger* inDop, FSFile& inFile, int64_t inField)
-{
-    switch (inField) {
-    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: return inFile.Read(inDop->mPackedHitPoints);
-    case EE_UNITS_DOP_FIELD_FRAME: return inFile.Read(inDop->mFrame);
-    case EE_UNITS_DOP_FIELD_ANIMATION: return inFile.Read(inDop->mAnimation);
-    case EE_UNITS_DOP_FIELD_SCALE: return inFile.Read(inDop->mScale);
-    case EE_UNITS_DOP_FIELD_TILE_X: return inFile.Read(inDop->mTileX);
-    case EE_UNITS_DOP_FIELD_TILE_Y: return inFile.Read(inDop->mTileY);
-    default: return inFile.Read(inDop->mIsFoundation);
-    }
-}
-
-// a complex doppelganger's member written to the file
-static long EEDopWriteField(EEComplexDoppelganger* inDop, FSFile& outFile, int64_t inField)
-{
-    switch (inField) {
-    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: return outFile.Write(inDop->mPackedHitPoints);
-    case EE_UNITS_DOP_FIELD_FRAME: return outFile.Write(inDop->mFrame);
-    case EE_UNITS_DOP_FIELD_ANIMATION: return outFile.Write(inDop->mAnimation);
-    case EE_UNITS_DOP_FIELD_SCALE: return outFile.Write(inDop->mScale);
-    case EE_UNITS_DOP_FIELD_TILE_X: return outFile.Write(inDop->mTileX);
-    case EE_UNITS_DOP_FIELD_TILE_Y: return outFile.Write(inDop->mTileY);
-    default: return outFile.Write(inDop->mIsFoundation);
-    }
-}
-
-// a complex doppelganger's member copied from another's
-static void EEDopCopyField(EEComplexDoppelganger* inDop, EEComplexDoppelganger* inOther, int64_t inField)
-{
-    switch (inField) {
-    case EE_UNITS_DOP_FIELD_MODEL: inDop->mModel = inOther->mModel; break;
-    case EE_UNITS_DOP_FIELD_FRAME: inDop->mFrame = inOther->mFrame; break;
-    case EE_UNITS_DOP_FIELD_ANIMATION: inDop->mAnimation = inOther->mAnimation; break;
-    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: inDop->mPackedHitPoints = inOther->mPackedHitPoints; break;
-    case EE_UNITS_DOP_FIELD_SCALE: inDop->mScale = inOther->mScale; break;
-    case EE_UNITS_DOP_FIELD_TRANSFORMATION: inDop->mTransformation = inOther->mTransformation; break;
-    case EE_UNITS_DOP_FIELD_TILE_X: inDop->mTileX = inOther->mTileX; break;
-    case EE_UNITS_DOP_FIELD_TILE_Y: inDop->mTileY = inOther->mTileY; break;
-    default: inDop->mIsFoundation = inOther->mIsFoundation; break;
-    }
-}
-
 // The C++ of EEComplexUnit::RepairPointers's Rust body (ee_units dop_repair.rs; EE_UNITS_DOP_*): one statement of the
 // original each, in its order; inA an object, inB and inC values
 extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, int64_t inB, int64_t inC)
@@ -313,11 +269,10 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_LOAD_TRANSFORMATION: theDop->mTransformation.Load(*theFile); return 0;
     case EE_UNITS_DOP_READ_MODEL_ID: return theFile->Read(sDopModelID);
     case EE_UNITS_DOP_SET_MODEL_FROM_ID: theDop->mModel = reinterpret_cast<EEModel*>(sDopModelID); return 0;
-    case EE_UNITS_DOP_READ_FIELD: return EEDopReadField(theDop, *theFile, inB);
+    // (the fields' reads, writes and copies: Rust over the record, dop_file.rs)
     case EE_UNITS_DOP_BASE_SAVE: return theDop->EEDoppelganger::Save((unsigned long)inB, (unsigned long)inC, *theFile);
     case EE_UNITS_DOP_SAVE_TRANSFORMATION: theDop->mTransformation.Save(*theFile); return 0;
     case EE_UNITS_DOP_WRITE_MODEL_ID: return theFile->Write((long)theDop->mModel->mMediaIndex);
-    case EE_UNITS_DOP_WRITE_FIELD: return EEDopWriteField(theDop, *theFile, inB);
     case EE_UNITS_DOP_BASE_INITIALIZE:
         theDop->EEDoppelganger::Initialize(theSeen, EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC));
         return 0;
@@ -354,7 +309,9 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_BASE_INITIALIZE_COPY:
         theDop->EEDoppelganger::Initialize(EEDopObject<EEDoppelganger>(inA), EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC));
         return 0;
-    case EE_UNITS_DOP_COPY_FIELD: EEDopCopyField(theDop, dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA)), inB); return 0;
+    case EE_UNITS_DOP_FIELDS: return (int64_t)EEDopHandle(static_cast<EeUnitsComplexDopFields*>(theDop));
+    case EE_UNITS_DOP_OTHER_FIELDS: return (int64_t)EEDopHandle(static_cast<EeUnitsComplexDopFields*>(dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA))));
+    case EE_UNITS_DOP_COPY_TRANSFORMATION: theDop->mTransformation = dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA))->mTransformation; return 0;
     case EE_UNITS_DOP_CONTACTS_TAKE: sDopContacts.clear(); sDopContacts.swap(sLoadedContacts); return 0;
     case EE_UNITS_DOP_CONTACTS_COUNT: return (int64_t)sDopContacts.size();
     case EE_UNITS_DOP_CONTACTS_VALID:
