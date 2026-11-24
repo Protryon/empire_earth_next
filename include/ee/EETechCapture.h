@@ -49,7 +49,7 @@ constexpr unsigned int EECaptureTag(const char (&inName)[5])
 }
 
 // The hooks the game calls are inline forwarders to the Rust records (ee_game gamecpp tech_hooks.rs, tech_capture.rs,
-// calamity_capture.rs; ee_sim tech capture_rec.rs); the three whose bodies read C++ objects are pointers that
+// calamity_capture.rs; ee_sim tech capture_rec.rs); the one whose body reads a C++ object is a pointer that
 // EETechCapture.cpp sets before main, so no game unit names a symbol of that TEST ONLY unit (PORT_LEARNINGS "Cycle
 // cuts")
 
@@ -62,10 +62,6 @@ inline void EETechCaptureTree(EESimCaptureRecord& ioRecord, EETechTree* inTree) 
 inline void EETechCaptureUpgrade(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUpgrade) { ee_gamecpp_tech_capture_upgrade(&ioRecord, inUpgrade); }
 // the player's fields the effects change (population bonus, tribute fee, mBB44)
 inline void EETechCapturePlayer(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer) { ee_gamecpp_tech_capture_player(&ioRecord, inPlayer); }
-inline long (*EETechCapturePlayerIndex)(EETechTree* inTree) = nullptr;
-// one TCST record (inKind 0: a node's GetCost, 1: an epoch's)
-inline void (*EETechCaptureCost)(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass,
-                                 float inScale, long inCost) = nullptr;
 // one EVHP record: what (0 hit points, 1 flight time), the unit, its value, the old and new maximum, the new value
 inline void EETechCaptureRescale(long inWhat, unsigned long inUnitID, long inValue, unsigned long inOldMaximum,
                                  long inNewMaximum, float inAmount)

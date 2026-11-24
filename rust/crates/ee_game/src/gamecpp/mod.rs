@@ -57,7 +57,6 @@ pub mod persistent;
 
 // ---- round 9, lane D: the session, the civilization builder and the tech tree (Communications, Civ Builder, Tech Tree)
 pub mod server;
-pub mod tech;
 //
 //
 
@@ -77,7 +76,6 @@ pub mod db_media;
 pub mod db_text;
 pub mod persist_more;
 pub mod tech_capture;
-pub mod tech_load;
 //
 //
 
@@ -2701,7 +2699,7 @@ pub enum EeGameCpp {
     ClIdsSeconds,
     ClTimeoutFormat,
     ClSprintfSeconds,
-    // the tech tree's host (tech.rs; EETechTree.cpp's EECore9OpD6, EETechTreeNode.cpp's EECore9OpD7)
+    // the tech tree's host (tech_tree host.rs; EETechTree.cpp's EECore9OpD6, EETechTreeNode.cpp's EECore9OpD7)
     TkTreeFields,
     TkCurrentPlayer,
     TkPlayerIndex,
@@ -2713,7 +2711,6 @@ pub enum EeGameCpp {
     TkEpochCount,
     TkEpochAt,
     TkEpochRef,
-    TkEpochNodes,
     TkUnitId,
     TkGet,
     TkSetRef,
@@ -2773,6 +2770,7 @@ pub enum EeGameCpp {
     TkClassCosts,
     TkUpgrade,
     TkInCostSet,
+    TkVariant,
     TkPlayerJit,
     TkClassHasRallyPoint,
     TkNodeCount,
@@ -3121,6 +3119,7 @@ pub enum EeGameCpp {
     TbEpochInsert,
     TbSetPlayerIndex,
     TbCopyPlayer,
+    TbSetPlayer,
     TbIsHuman,
     TbClassFamily,
     TbNodeIsObsolete,

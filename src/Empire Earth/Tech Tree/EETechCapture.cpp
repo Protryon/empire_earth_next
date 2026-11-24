@@ -53,19 +53,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 
-static long EETechCapturePlayerIndexImpl(EETechTree* inTree)
-{
-    return inTree != NULL ? inTree->mPlayerIndex : -1;
-}
-
-static void EETechCaptureCostImpl(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass,
-                                  float inScale, long inCost)
-{
-    ee_tech_capture_cost(inKind, EETechCapturePlayerIndex(inNode->mTree), inNode->mData->mID,
-                         inNode->mTree != NULL ? inNode->mTree->mCurrentEpoch : -1, inResource, inUnitClass, inScale, inCost);
-}
-
-
 // CCAS: an outermost CanCastAt's record (ee_game gamecpp calamity_capture.rs)
 
 static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComplexUnit* inUnit,
@@ -80,14 +67,12 @@ static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComp
 
 
 #define P64(x) ((int64_t)(intptr_t)(x))
-int32_t EETechEpochNodes(EETechTreeEpoch* inEpoch, EeTechHostIo* io);   // EETechTree.cpp
 #define TC_UPGRADE ((EEUnitClassUpgrade*)p)
 #define TC_PLAYER ((EEPlayer*)p)
 
-// The game calls these three through the header's hook pointers, set here before main: the game's units name no
+// The game calls this one through the header's hook pointer, set here before main: the game's units name no
 // symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EECalamityCanCastRecord = CanCastRecordImpl, EETechCapturePlayerIndex = EETechCapturePlayerIndexImpl,
-                                      EETechCaptureCost = EETechCaptureCostImpl, true);
+static const bool sCaptureHooksSet = (EECalamityCanCastRecord = CanCastRecordImpl, true);
 
 // ------------------------------------------------------------------------- round 11, lane C: the hooks' C++
 
@@ -169,6 +154,8 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::TbCopyPlayer: BTREE->mPlayer = ((const EETechTree*)a[0])->mPlayer;
         break;
+    case O::TbSetPlayer: BTREE->mPlayer = (EEPlayer*)a[0];
+        break;
     case O::TbIsHuman: return ((EEPlayer*)p)->IsHuman();
     case O::TbClassFamily: return ((EEUnitClass*)p)->mFamily;
     case O::TbNodeIsObsolete: return BNODE->GetIsObsolete();
@@ -185,6 +172,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkNodeTree: return P64(TNODE->mTree);
     case O::TkClassCosts: return P64(TNODE->mData->mClassCosts.count((long)a[0]) != 0 ? TNODE->mData->mClassCosts[(long)a[0]] : NULL);
     case O::TkUpgrade: return P64(static_cast<EEUnitStats*>(((EEPlayer*)p)->mUnitClassUpgrades[a[0]]));
+    case O::TkVariant: return P64(static_cast<EeDataGameVariantFields*>(TVARIANT));
     case O::TkInCostSet: return gUnitSetManager.GetSet(TVARIANT->mCostSet) != NULL && gUnitSetManager.GetSet(TVARIANT->mCostSet)->Contains((long)a[0]);
     case O::TkPlayerJit: return ((EEPlayer*)p)->mJITManufacturing;
     case O::TkClassHasRallyPoint: return gUnitClassTable[a[0]] != NULL && gUnitClassTable[a[0]]->HasRallyPoint();
@@ -232,7 +220,6 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkEpochAt: return P64(&TREE->mEpochs[(long)a[0]]);
     case O::TkEpochRef: ((EeTechHostIo*)a[1])->node = TREE->mEpochs[(long)a[0]].Ref();
         break;
-    case O::TkEpochNodes: return EETechEpochNodes((EETechTreeEpoch*)p, (EeTechHostIo*)a[0]);
     case O::TkUnitId: return (int64_t)((EEComplexUnit*)p)->mUnitID;
     case O::TkGet: return P64(TREE->Get((long)a[0]));
     case O::TkSetRef: ((EeTechHostIo*)a[0])->node = TNODE->Ref();

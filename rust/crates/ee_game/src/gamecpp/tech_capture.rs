@@ -18,8 +18,8 @@ use ee_sim::tech::capture_rec::{
 use ee_sim::tech::tech_ids::ee_tech_epoch_count;
 
 use super::persistent::Longs;
-use super::tech::ee_gamecpp_tech_node_ids;
-use super::tech_load::{data_of, ee_gamecpp_tech_sum_costs_captured, node_data, node_fields, tree_fields, TbRecord};
+use crate::tech_tree::host::ee_gamecpp_tech_node_ids;
+use crate::tech_tree::load::{data_of, ee_gamecpp_tech_sum_costs_captured, node_data, node_fields, tree_fields, TbRecord};
 use super::{h, hf, hp, O, P};
 
 /// `kTechEpochPrehistoric`, `kTechNone` (static_assert'd in EETechTreeEpoch.cpp): SumCosts walks the ids between.

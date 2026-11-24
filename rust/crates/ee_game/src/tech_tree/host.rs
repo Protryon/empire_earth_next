@@ -1,7 +1,7 @@
 //! The tech tree's C++ bodies (was EETechTree.cpp's EETechHost and EETechMedia, the tree's file load, its
 //! interface refresh and the cost sum's callbacks; EETechTreeEpoch.cpp's node list walks and media; EETechTreeNode.cpp's
 //! cost): the walks themselves are ee_sim tech's (nodes.rs); this is the host they call, now Rust over one-statement
-//! cases of EETechTree.cpp's `EECore9OpD6` and EETechTreeNode.cpp's `EECore9OpD7` ([`super::EeGameCpp`]'s `Tk` ops).
+//! cases of EETechTree.cpp's `EECore9OpD6` and EETechTreeNode.cpp's `EECore9OpD7` ([`crate::gamecpp::EeGameCpp`]'s `Tk` ops).
 //! The trees', epochs', nodes' and node data's plain members are read in place through their Rust records.
 //!
 //! Simulation code (RUST_PLAN 2.1): the cost's inputs are the C++'s values; the formula is ee_sim's `ee_tech_node_cost`.
@@ -11,7 +11,7 @@ use std::ffi::{c_long, c_void};
 use ee_sim::tech::ffi::{ee_tech_node_cost, ee_tech_sum_costs, EeTechSumCostsCallbacks, EeTechSumNode};
 use ee_sim::tech::node_media::{EE_TECH_HOST_MEDIA, EE_TECH_HOST_MEDIA_EFFECT};
 use ee_sim::tech::nodes::{
-    EeTechHostIo, EeTechNodeDataFields, EeTechNodeFields, EeTechTreeFields, EE_TECH_HOST_ASSERT,
+    EeTechHostIo, EeTechNodeDataFields, EeTechNodeRef, EeTechNodeFields, EeTechTreeFields, EE_TECH_HOST_ASSERT,
     EE_TECH_HOST_CLASS_TYPE, EE_TECH_HOST_EFFECT, EE_TECH_HOST_EFFECT_COUNT, EE_TECH_HOST_EPOCH, EE_TECH_HOST_EPOCHS,
     EE_TECH_HOST_EPOCH_NODES, EE_TECH_HOST_EVENTS_ENABLED, EE_TECH_HOST_IS_LOCAL, EE_TECH_HOST_NEEDS_UNIT_MEDIA,
     EE_TECH_HOST_NODE, EE_TECH_HOST_ON_RESEARCHED, EE_TECH_HOST_SHOW_EPOCH_NAME, EE_TECH_HOST_STATISTIC,
@@ -21,7 +21,12 @@ use ee_sim::tech::nodes_capture::{EE_TECH_HOST_PLAYER_INDEX, EE_TECH_HOST_UNIT_I
 use ee_sim::tech::tech_ids::{ee_tech_clear_node_epochs, ee_tech_set_epoch_count};
 use ee_sim::tech::tree::EeTechCostInput;
 
-use super::{h, hd, hp, ptr, O, P};
+use super::load;
+use crate::gamecpp::{h, hd, hf, hp, ptr, O, P};
+use ee_data::tables::EeDataGameVariantFields;
+use ee_sim::tech::capture_rec::ee_tech_capture_cost;
+use ee_sim::tech::ffi::ee_tech_epoch_cost_scale;
+use ee_sim::tech::node_media::cost_string;
 
 /// `kErrorOK`.
 const TK_OK: i64 = 0;
@@ -30,17 +35,17 @@ const TK_STAT_EPOCHS: i64 = 0x13;
 
 fn tree_fields(tree: P) -> *mut EeTechTreeFields {
     // SAFETY: the tree's record (EETechTree's base)
-    unsafe { super::rec::<EeTechTreeFields>(O::TkTreeFields, tree) }
+    unsafe { crate::gamecpp::rec::<EeTechTreeFields>(O::TkTreeFields, tree) }
 }
 
 fn node_fields(node: P) -> EeTechNodeFields {
     // SAFETY: the node's record (RTSTechTreeNode's base), copied out
-    unsafe { *super::rec::<EeTechNodeFields>(O::TkNodeFields, node) }
+    unsafe { *crate::gamecpp::rec::<EeTechNodeFields>(O::TkNodeFields, node) }
 }
 
 fn node_data(node: P) -> EeTechNodeDataFields {
     // SAFETY: the node's data record (RTSTechTreeNodeData's base), copied out
-    unsafe { *super::rec::<EeTechNodeDataFields>(O::TkNodeData, node) }
+    unsafe { *crate::gamecpp::rec::<EeTechNodeDataFields>(O::TkNodeData, node) }
 }
 
 /// The media mask's media kinds (ee_sim tech node_media.rs EE_TECH_MEDIA_*): one media call on the player's behalf.
@@ -157,13 +162,24 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
     let io_addr = io as *mut EeTechHostIo as usize as i64;
     let node = io.node.obj as P;
     let unit = io.unit as P;
+    let (nodes, count) = (io.nodes, io.count);
     let v = &mut io.v;
     match op {
         EE_TECH_HOST_EPOCHS => v[0] = h(O::TkEpochCount, tree, &[]) as i32,
         EE_TECH_HOST_EPOCH => {
             h(O::TkEpochRef, tree, &[v[0] as i64, io_addr]);
         }
-        EE_TECH_HOST_EPOCH_NODES => return h(O::TkEpochNodes, node, &[io_addr]) as i32,
+        EE_TECH_HOST_EPOCH_NODES => {
+            // the epoch's nodes in its map's order into the walk's buffer (at most its count); their count
+            let n = h(O::TkNodeCount, node, &[]);
+            for k in 0..n.min(count as i64) {
+                let at = hp(O::TkNodeAt, node, &[k]);
+                let r = EeTechNodeRef { obj: at as *mut c_void, node: load::node_fields(at), data: load::node_data(at) };
+                // SAFETY: the walk's buffer of `count` refs
+                unsafe { *nodes.add(k as usize) = r };
+            }
+            return n as i32;
+        }
         EE_TECH_HOST_PLAYER_INDEX => v[0] = h(O::TkPlayerIndex, tree, &[]) as i32,
         EE_TECH_HOST_UNIT_ID => v[0] = if unit != 0 { h(O::TkUnitId, unit, &[]) as i32 } else { -1 },
         EE_TECH_HOST_NODE => {
@@ -417,6 +433,82 @@ pub extern "C" fn ee_gamecpp_tech_node_cost(
     }
     // SAFETY: the record
     unsafe { ee_tech_node_cost(&input) as c_long }
+}
+
+/// TCST (TEST ONLY: ee_sim tech capture_rec.rs): a node's (`kind` 0) or an epoch's (1) GetCost, recorded while the
+/// capture is active (was EETechCapture.cpp's EETechCaptureCost hook).
+fn capture_cost(node: P, kind: c_long, resource: c_long, unit_class: c_long, scale: f32, cost: c_long) {
+    if !ee_sim::app::capture::ee_app_capture_active() {
+        return;
+    }
+    let tree = hp(O::TkNodeTree, node, &[]);
+    let (player, epoch) = if tree != 0 {
+        // SAFETY: the tree's record
+        (h(O::TkPlayerIndex, tree, &[]) as c_long, unsafe { (*tree_fields(tree)).mCurrentEpoch })
+    } else {
+        (-1, -1)
+    };
+    ee_tech_capture_cost(kind, player, node_data(node).mID, epoch, resource, unit_class, scale, cost);
+}
+
+/// EETechTreeNode::GetCost: [`ee_gamecpp_tech_node_cost`], recorded (TCST kind 0).
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_tech_node_get_cost(
+    node: *mut c_void,
+    resource: c_long,
+    unit_class: c_long,
+    scale: f32,
+) -> c_long {
+    let cost = ee_gamecpp_tech_node_cost(node, resource, unit_class, scale);
+    capture_cost(node as P, 0, resource, unit_class, scale, cost);
+    cost
+}
+
+/// EETechTreeEpoch::GetCost: the node's cost (recorded) at the scale of the epochs advanced in this game (the game
+/// variant's first, second or later epoch cost factor: ee_sim's `ee_tech_epoch_cost_scale`), recorded (TCST kind 1).
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_tech_epoch_get_cost(
+    epoch: *mut c_void,
+    resource: c_long,
+    unit_class: c_long,
+    scale: f32,
+) -> c_long {
+    // SAFETY: the game variant's record (EEGameVariant's base), copied out
+    let v = unsafe { *crate::gamecpp::rec::<EeDataGameVariantFields>(O::TkVariant, 0) };
+    let t = tree_fields(hp(O::TkNodeTree, epoch as P, &[]));
+    // SAFETY: the epoch's tree's record
+    let epochs = unsafe { (*t).mCurrentEpoch.wrapping_sub((*t).mStartEpoch) } as u32;
+    let s = ee_tech_epoch_cost_scale(
+        epochs,
+        v.mEpochCostFactor,
+        v.mEpochCostFactor,
+        v.mSecondEpochCostFactor,
+        v.mFirstEpochCostFactor,
+        scale,
+    );
+    let cost = ee_gamecpp_tech_node_get_cost(epoch, resource, unit_class, s);
+    capture_cost(epoch as P, 1, resource, unit_class, scale, cost);
+    cost
+}
+
+/// EETechTreeNode::GetCostString: the "Food: n Gold: n ..." text of the node's (virtual) GetCost for a unit class
+/// into `out` (a UWideString; wood shown as carbon on the carbon maps; ee_sim tech node_media.rs; 511 bytes at most).
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_tech_cost_string(node: *mut c_void, unit_class: c_long, scale: f32, out: *mut c_void) {
+    let node = node as P;
+    // SAFETY: the world's bool member
+    let carbon = unsafe { *(hp(O::WUsingCarbon, hp(O::WorldAddr, 0, &[]), &[]) as *const bool) };
+    let mut cost = |r: i32, s: f32| hf(O::TbNodeGetCost, node, &[r as i64, unit_class as i64], &[s]) as i32;
+    let mut text = cost_string(&mut cost, scale, carbon).into_bytes();
+    text.truncate(511);
+    text.push(0);
+    h(O::EpWideSet, out as P, &[text.as_ptr() as usize as i64]);
+}
+
+/// EETechTree::GetPlayer for the inline members that know the tree only by its forward declaration.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_tech_tree_player(tree: *mut c_void) -> *mut c_void {
+    hp(O::TkGetPlayer, tree as P, &[]) as *mut c_void
 }
 
 /// The epoch's nodes, in their map's order.
