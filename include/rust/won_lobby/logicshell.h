@@ -49,7 +49,7 @@ enum class EeWonLogicShellV : uint32_t {
   SetGameInProgress,
   LeaveGame,
   Suspend,
-  /// Answers 1 when the C++ runs `LobbyLeaveGame(0)` (LanLogic's).
+  /// Answers 1 when the C++ runs `LobbyLeaveGame(0)` (LanLogic's), 0 after another kind's call.
   Resume,
   Logout,
 };

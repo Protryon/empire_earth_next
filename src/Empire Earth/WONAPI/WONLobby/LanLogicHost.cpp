@@ -23,6 +23,7 @@
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyLan.h"
+#include "ee/wonapi/WONLobbyStaging.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
@@ -34,9 +35,6 @@
 #include "rust/won_net/ipobj.h"
 #include "rust/won_net/qsock.h"
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in WONGUI/GUIEmptyWideString.cpp)
-namespace WONAPI {
-AuthContext* GetLobbyAuthContext(); // the lobby's authentication context (cdecl)
-}
 using namespace WONAPI;
 
 extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void* inA, void* inB, intptr_t inC,
@@ -100,13 +98,10 @@ void* LanLogicMake(RustLogic* inSelf)
 
 // ---- the LanLogic ops (lobbyhost.rs documents each)
 
-static const ByteBuffer* LanMessageOf(void* inBuffer, intptr_t inBytes, intptr_t inLength, ByteBufferPtr& outHold)
-{
-    if (inBuffer != NULL) return static_cast<const ByteBuffer*>(inBuffer);
-    if (inBytes == 0) return NULL;
-    outHold = new ByteBuffer(reinterpret_cast<const void*>(inBytes), (unsigned long)inLength, false);
-    return outHold.get();
-}
+// the third and fourth bytes of an address's six-byte form (the fourth times 256)
+static intptr_t LanSubnet(const IPAddr& inAddr) { return (intptr_t)((uint32_t)(unsigned char)inAddr.GetSixByte()[2] | (uint32_t)(unsigned char)inAddr.GetSixByte()[3] << 8); }
+static void LanStagingBytes(ReadBuffer inBuffer, LobbyClient* inClient) { LobbyHandleStagingReadBuffer(inBuffer, inClient); }
+static bool LanGameReadSummary(ReadBuffer inBuffer, LobbyGame* inGame) { return inGame->ReadSummary(inBuffer); }
 
 // a connect op to the address (the op copies it)
 static SocketOp* LanNewConnectOp(LobbyLanSocket* inSocket, IPAddr inAddress) { return new SocketOp(EeWonCoreSocketOp::Connect, inSocket, NULL, &inAddress); }
@@ -128,14 +123,9 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
         return 0;
     case EeWonLobbyOp::LanSocketLastTime: return sock->GetLastMessageTime();
     case EeWonLobbyOp::LanMyGame: return (intptr_t)GetMyLobbyGame();
-    case EeWonLobbyOp::LanSubnets: {
-        IPAddr aLocalAddr = IPAddr::GetLocalAddr();
-        IPAddr aPeerAddr = sock->GetDestAddr();   // a copy: the bytes point into it
-        const char* aPeerBytes = aPeerAddr.GetSixByte();
-        const char* aLocalBytes = aLocalAddr.GetSixByte();
-        return (intptr_t)((uint32_t)(unsigned char)aPeerBytes[2] | (uint32_t)(unsigned char)aPeerBytes[3] << 8 |
-                          (uint32_t)(unsigned char)aLocalBytes[2] << 16 | (uint32_t)(unsigned char)aLocalBytes[3] << 24);
-    }
+    // LanSubnets is lobbyops.rs's over these (R6 WON round 36)
+    case EeWonLobbyOp::LanPeerSubnet: return LanSubnet(sock->GetDestAddr());
+    case EeWonLobbyOp::LanLocalSubnet: return LanSubnet(IPAddr::GetLocalAddr());
     case EeWonLobbyOp::LanGamePasswordIs: return LanWide(inC, inD) == std::wstring(g->GetPassword());
     // LanNewClient, LanPortDialogRun and LanNewTimer are lobbyops.rs's over these (R6 WON round 32)
     case EeWonLobbyOp::LanClientAlloc: return Held(new LobbyLanClient);
@@ -153,17 +143,10 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::ClientLeftGame: LobbyClientLeftGame(cl); return 0;
     case EeWonLobbyOp::LanSocketStamp: sock->SetLastMessageTime(time(NULL)); return 0;
     case EeWonLobbyOp::LanClientSocket: return (intptr_t)lc->mSocket;
-    case EeWonLobbyOp::LanClientSocketSend: static_cast<LobbyLanClient*>(static_cast<LobbyClient*>(inB))->mSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::SendMsg, NULL, LanMessageOf(inA, inC, inD, aHold)), -1); return 0;
+    case EeWonLobbyOp::LanClientSocketSend: static_cast<LobbyLanClient*>(static_cast<LobbyClient*>(inB))->mSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::SendMsg, NULL, LobbyHostMessage(inA, inC, inD, aHold)), -1); return 0;
     case EeWonLobbyOp::LanRecvChat: LobbyBroadcastEvent(RecvChatEvent(8, (unsigned long)(inD >> 32), cl, LanWide(inC, inD & 0xffffffff), static_cast<LobbyClient*>(inB)), true); return 0;
-    case EeWonLobbyOp::LanStagingRead: {
-        ReadBuffer aBuffer(reinterpret_cast<const void*>(inC), (unsigned long)inD);
-        try {
-            aBuffer.ReadByte();
-            LobbyHandleStagingReadBuffer(aBuffer, static_cast<LobbyClient*>(inB));
-        }
-        catch (ReadBufferException&) {}
-        return 0;
-    }
+    // LanStagingRead is lobbyops.rs's over this (R6 WON round 36)
+    case EeWonLobbyOp::LanStagingBytes: LanStagingBytes(ReadBuffer(reinterpret_cast<const void*>(inC), (unsigned long)inD), static_cast<LobbyClient*>(inB)); return 0;
     case EeWonLobbyOp::LanNameDialogRun: l->mDialog[kLanName]->LCall(EeWonLobbyDlgCall::Reset); return LobbyDoDialog(l->mDialog[kLanName].get());
     case EeWonLobbyOp::LanNameDialogLength: return (intptr_t)l->mDialog[kLanName]->InputText(0).length();
     case EeWonLobbyOp::LanBroadcastPort: return LobbyGetLanBroadcastPort();
@@ -194,12 +177,9 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
     case EeWonLobbyOp::LanJoinedRoom:
         LobbyBroadcastEvent(JoinedRoomEvent("", g->GetName(), 10, (unsigned short)inC, g->GetClients().get()), true);
         return 0;
-    case EeWonLobbyOp::LanSummaryTake: {
-        WriteBuffer aBuffer(0, true);
-        g->WriteSummary(aBuffer);
-        ee_won_lobby_sink(inB, reinterpret_cast<const uint8_t*>(aBuffer.data()), aBuffer.length());
-        return 0;
-    }
+    // LanSummaryTake is lobbyops.rs's over these and WbufNew / WbufFree (R6 WON round 36)
+    case EeWonLobbyOp::GameWriteSummary: g->WriteSummary(*static_cast<WriteBuffer*>(inB)); return 0;
+    case EeWonLobbyOp::WbufSink: ee_won_lobby_sink(inB, reinterpret_cast<const uint8_t*>(static_cast<WriteBuffer*>(inA)->data()), static_cast<WriteBuffer*>(inA)->length()); return 0;
     case EeWonLobbyOp::LanPasswordDialog: l->mDialog[kLanPassword]->LCall(EeWonLobbyDlgCall::Reset); return LobbyDoDialog(l->mDialog[kLanPassword].get());
     case EeWonLobbyOp::LanPasswordTake: Take(inB, LanUtf16(l->mDialog[kLanPassword]->InputText(0))); return 0;
     case EeWonLobbyOp::LanPingGame: LobbyPingGame(g, false); return 0;
@@ -208,40 +188,16 @@ intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* 
         return 0;
     case EeWonLobbyOp::LanDirectNameAt: g->SetName(LobbyGetDirectConnectNameAt((size_t)inC)); return 0;
     case EeWonLobbyOp::LanRemoveSavedDirect: LobbyRemoveDirectConnect(g->GetAddress()); return 0;
-    case EeWonLobbyOp::LanDirectAsk: {
-        l->mDialog[kLanDirectConnect]->LCall(EeWonLobbyDlgCall::Reset);
-        if (LobbyDoDialog(l->mDialog[kLanDirectConnect].get()) != 0x186a1)
-            return 0;
-        IPAddr anAddress;
-        LobbyConfig* aConfig = GetLobbyConfig();
-        // (the configured port moved by the harness slot's offset, as LobbyBindUDPPort's: TEST ONLY)
-        int aDefaultPort = ee_won_lanlogic_direct_default_port(aConfig != NULL,
-                                                               aConfig != NULL ? aConfig->mLobbyPort + LobbyTestPortOffset() : 0,
-                                                               LobbyGetLobbyPort());
-        anAddress.SetWithDefaultPortNoDNS(l->mDialog[kLanDirectConnect]->InputText(1), aDefaultPort);
-        if (!anAddress.IsValid()) {
-            SmartPtr<RustServerOp> anOp = NewDnsTestOp(l->mDialog[kLanDirectConnect]->InputText(1));
-            LobbyRunOpWithStatus(anOp.get(), LOBBY_STRING(LANLogic_CheckingAddressTitle_String), LOBBY_STRING(LANLogic_CheckingAddressDetails_String), 1, 0);
-            if (!anOp->Succeeded())
-                return 0;
-            anAddress = anOp->AddrOf(EE_WON_DNSTEST_ADDR);
-            if (anAddress.GetPort() == 0)
-                anAddress.SetPort(aDefaultPort);
-        }
-        ee_won_ipaddr_assign(static_cast<EeWonIpAddr*>(inA), anAddress.GetValue());
-        return 1;
-    }
-    case EeWonLobbyOp::LanReadSummary: {
-        // the game's summary follows the type and the port (LobbyGame::ReadSummary)
-        const ByteBuffer* aBytes = static_cast<SocketOp*>(op)->GetBytes().get();
-        ReadBuffer aBuffer(aBytes->data(), aBytes->length());
-        try {
-            aBuffer.ReadByte();
-            aBuffer.ReadShort();
-            return static_cast<LobbyGame*>(inB)->ReadSummary(aBuffer);
-        }
-        catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
-    }
+    // LanDirectAsk and LanReadSummary are lobbyops.rs's over these (R6 WON round 36)
+    case EeWonLobbyOp::LanDirectReset: l->mDialog[kLanDirectConnect]->LCall(EeWonLobbyDlgCall::Reset); return 0;
+    case EeWonLobbyOp::LanDirectDo: return LobbyDoDialog(l->mDialog[kLanDirectConnect].get());
+    // (the configured port moved by the harness slot's offset, as LobbyBindUDPPort's: TEST ONLY)
+    case EeWonLobbyOp::ConfigLobbyPortTest: return static_cast<LobbyConfig*>(inA)->mLobbyPort + LobbyTestPortOffset();
+    case EeWonLobbyOp::LobbyPort: return LobbyGetLobbyPort();
+    case EeWonLobbyOp::LanDirectHostTake: Take(inB, std::string(l->mDialog[kLanDirectConnect]->InputText(1))); return 0;
+    case EeWonLobbyOp::LanDirectDnsHeld: return Held(NewDnsTestOp(l->mDialog[kLanDirectConnect]->InputText(1)));
+    case EeWonLobbyOp::DnsOpAddrAssign: ee_won_ipaddr_assign(static_cast<EeWonIpAddr*>(inA), static_cast<RustServerOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inB)))->AddrOf(EE_WON_DNSTEST_ADDR).GetValue()); return 0;
+    case EeWonLobbyOp::LanGameReadSummary: return LobbyReadGuard([&] { return LanGameReadSummary(ReadBuffer(reinterpret_cast<const void*>(inC), (unsigned long)inD), static_cast<LobbyGame*>(inB)); });
     case EeWonLobbyOp::LanClientOptions: {
         LobbyOpenRustPopup(EeWonLobbyPopupKind::Client, (intptr_t)cl, (intptr_t)inB, (int)inC);
         return 0;

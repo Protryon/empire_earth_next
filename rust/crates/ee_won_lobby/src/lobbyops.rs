@@ -8,6 +8,7 @@
 
 use crate::lobbyhost::EeWonLobbyOp as Op;
 use crate::resource::EeWonLobbyRes as Res;
+use ee_won_net::ipobj::EeWonIpAddr;
 use std::ffi::c_void;
 use std::ptr::null_mut;
 
@@ -15,6 +16,8 @@ use std::ptr::null_mut;
 pub(crate) type Out<'a> = &'a dyn Fn(Op, *mut c_void, *mut c_void, isize, isize) -> isize;
 
 const WS_SUCCESS: isize = 0;
+/// A read past its buffer's end (the host's `EeWonLobbyResult::Threw`).
+const THREW: isize = crate::lobbyhost::EeWonLobbyResult::Threw as isize;
 
 /// A box's or status wait's two resource rows as the host's `c` (`MessageBoxRows`, `RunOpWithStatusRows`).
 fn rows(title: Res, details: Res) -> isize {
@@ -300,6 +303,132 @@ pub(crate) fn lobby_op(op: Op, a: *mut c_void, b: *mut c_void, c: isize, d: isiz
             out(Op::AddDirectConnectNamed, null_mut(), b, field, 0);
             0
         }
+        // ---- R6 WON lobby and network round 36: the hosts' last compound cases
+        // LobbyLogicHost.cpp's: every client's player made not ready, each change broadcast
+        Op::GameResetReadyFlags => {
+            let iter = on(Op::GameClientsIterNew, a);
+            while on(Op::ClientsIterHasMore, p(iter)) != 0 {
+                let mut client: *mut c_void = null_mut();
+                let player = out(Op::ClientsIterNext, p(iter), &mut client as *mut *mut c_void as *mut c_void, 0, 0);
+                if player != 0 && !client.is_null() {
+                    out(Op::PlayerSetReady, p(player), null_mut(), 0, 0);
+                    out(Op::ClientChanged, client, null_mut(), 2, 0);
+                }
+            }
+            on(Op::ClientsIterFree, p(iter));
+            0
+        }
+        // the game's join reply for the client `d` (read from `b`), sent to it: 1 sent, 0 none, Threw
+        Op::GameJoinReplySend => {
+            let reply = out(Op::GameJoinReplyHeld, a, b, 0, d);
+            if reply == THREW || reply == 0 {
+                return Some(reply);
+            }
+            out(Op::StSendToClientBuf, p(reply), p(d), 0, 0);
+            on(Op::RefRelease, p(reply));
+            1
+        }
+        // a new player read from `b` and set on the client `a`: 1, 0 when the read failed, Threw
+        Op::ClientReadPlayer => {
+            let player = on(Op::PlayerCreateHeld, null_mut());
+            let read = out(Op::PlayerReadFrom, p(player), b, 0, 0);
+            if read != THREW && read != 0 {
+                out(Op::ClientSetPlayer, a, p(player), 0, 0);
+            }
+            on(Op::RefRelease, p(player));
+            match read {
+                THREW => THREW,
+                0 => 0,
+                _ => 1,
+            }
+        }
+        // the player-joined message of the client `a` (its head, then the player) broadcast to the game
+        Op::ClientBroadcastJoined => {
+            let id = on(Op::ClientId, a) as u16;
+            let head =
+                crate::staging::room_message(&crate::staging::RoomMsg { kind: 3, id, flag: false, ping: 0, rest: 0 });
+            let buffer = on(Op::WbufNew, null_mut());
+            out(Op::WbufAppend, p(buffer), null_mut(), head.as_ptr() as isize, head.len() as isize);
+            out(Op::ClientWritePlayer, a, p(buffer), 0, 0);
+            on(Op::StBroadcastWbuf, p(buffer));
+            on(Op::WbufFree, p(buffer));
+            0
+        }
+        // a new op run behind the status box with the texts `c` (the text code) in the mode `d` for half a second:
+        // whether it was killed (the box cancelled)
+        Op::RunWaitOp => {
+            let wait = on(Op::LanTimerAlloc, null_mut());
+            out(Op::RunOpWithStatusMode, p(wait), null_mut(), crate::lobbyhost::lobby_text(c), d);
+            let killed = on(Op::OpIsKilled, p(wait));
+            on(Op::RefRelease, p(wait));
+            killed
+        }
+        // LanLogicHost.cpp's: the third and fourth address bytes of the socket's peer and of this machine
+        Op::LanSubnets => on(Op::LanPeerSubnet, a) | on(Op::LanLocalSubnet, null_mut()) << 16,
+        // a staging message past its type byte to the staging logic (nothing when the byte is missing: the
+        // original's read threw and was caught)
+        Op::LanStagingRead => {
+            if d >= 1 {
+                out(Op::LanStagingBytes, null_mut(), b, c + 1, d - 1);
+            }
+            0
+        }
+        // the game's summary appended to the sink `b`
+        Op::LanSummaryTake => {
+            let buffer = on(Op::WbufNew, null_mut());
+            out(Op::GameWriteSummary, a, p(buffer), 0, 0);
+            out(Op::WbufSink, p(buffer), b, 0, 0);
+            on(Op::WbufFree, p(buffer));
+            0
+        }
+        // the summary in the receive op `a`'s packet, past its type byte and port, read into the game `b`: its
+        // result, or Threw (a packet too short for the head, or the summary's own read)
+        Op::LanReadSummary => {
+            let mut packet: Vec<u8> = Vec::new();
+            out(Op::LanDiscoveryTake, a, &mut packet as *mut Vec<u8> as *mut c_void, 0, 0);
+            match packet.get(3..) {
+                Some(rest) => out(Op::LanGameReadSummary, null_mut(), b, rest.as_ptr() as isize, rest.len() as isize),
+                None => THREW,
+            }
+        }
+        // the direct-connect dialog run and its address into `a` (resolved by a DNS op when it is no dotted
+        // address): 1 with the address, 0 cancelled or unresolved (`a` untouched)
+        Op::LanDirectAsk => {
+            on(Op::LanDirectReset, null_mut());
+            if on(Op::LanDirectDo, null_mut()) != 0x186a1 {
+                return Some(0);
+            }
+            let config = on(Op::LobbyConfigGet, null_mut());
+            let config_port = if config != 0 { on(Op::ConfigLobbyPortTest, p(config)) } else { 0 };
+            let port = crate::lanlogic::direct_default_port(
+                config != 0,
+                config_port as i32,
+                on(Op::LobbyPort, null_mut()) as i32,
+            ) as u16;
+            let mut host: Vec<u8> = Vec::new();
+            out(Op::LanDirectHostTake, null_mut(), &mut host as *mut Vec<u8> as *mut c_void, 0, 0);
+            let mut address = EeWonIpAddr::default();
+            address.set_no_dns(&host, port);
+            if !address.valid {
+                let dns = on(Op::LanDirectDnsHeld, null_mut());
+                let r = rows(Res::LANLogic_CheckingAddressTitle_String, Res::LANLogic_CheckingAddressDetails_String);
+                out(Op::RunOpWithStatusRows, p(dns), null_mut(), r, 0);
+                if on(Op::OpSucceededOf, p(dns)) == 0 {
+                    on(Op::RefRelease, p(dns));
+                    return Some(0);
+                }
+                out(Op::DnsOpAddrAssign, &mut address as *mut EeWonIpAddr as *mut c_void, p(dns), 0, 0);
+                if address.port() == 0 {
+                    address.set_port(port);
+                }
+                on(Op::RefRelease, p(dns));
+            }
+            if !a.is_null() {
+                // SAFETY: the op's contract: `a` is the caller's live address
+                unsafe { ee_won_net::ipobj::ee_won_ipaddr_assign(a as *mut EeWonIpAddr, &address) };
+            }
+            1
+        }
         _ => return None,
     };
     let _ = d;
@@ -390,6 +519,246 @@ mod tests {
             run(Op::GameNewCopy, 40, 0),
             (Some(77), vec!["GameCreateHeld 40 0".into(), "GameCopyFrom 77 0".into()])
         );
+    }
+
+    /// `lobby_op` with all four arguments, the calls logged with theirs.
+    fn run4(
+        op: Op,
+        a: isize,
+        b: isize,
+        c: isize,
+        d: isize,
+        answer: &dyn Fn(Op, usize) -> isize,
+    ) -> (Option<isize>, Vec<String>) {
+        let log = RefCell::new(Vec::new());
+        let out = |op: Op, a: *mut c_void, b: *mut c_void, c: isize, d: isize| {
+            let n = log.borrow().len();
+            // (the appended bytes are the arm's own: their address is not a value to compare)
+            let known = |x: isize| if op == Op::WbufAppend && x == c { "ptr".to_string() } else { format!("{x:#x}") };
+            log.borrow_mut().push(format!(
+                "{op:?} {} {} {} {}",
+                known(a as isize),
+                known(b as isize),
+                known(c),
+                known(d)
+            ));
+            answer(op, n)
+        };
+        let r = lobby_op(op, a as *mut c_void, b as *mut c_void, c, d, &out);
+        (r, log.into_inner())
+    }
+
+    #[test]
+    fn round_36_the_ready_flags_reset() {
+        // two clients: the first with a player, the second without (Next leaves the client and answers 0)
+        let (r, ops) = run4(Op::GameResetReadyFlags, 0x10, 0, 0, 0, &|op, n| match op {
+            Op::GameClientsIterNew => 0x50,
+            Op::ClientsIterHasMore => (n < 6) as isize,
+            Op::ClientsIterNext => 0, // the out client stays NULL: no player change
+            _ => 0,
+        });
+        assert_eq!(r, Some(0));
+        assert_eq!(ops.first().unwrap(), "GameClientsIterNew 0x10 0x0 0x0 0x0");
+        assert_eq!(ops.last().unwrap(), "ClientsIterFree 0x50 0x0 0x0 0x0");
+        assert!(ops.iter().all(|o| !o.starts_with("PlayerSetReady") && !o.starts_with("ClientChanged")));
+        // an empty game: the iterator made and freed
+        let (_, ops) =
+            run4(Op::GameResetReadyFlags, 0x10, 0, 0, 0, &|op, _| if op == Op::GameClientsIterNew { 0x50 } else { 0 });
+        assert_eq!(ops.len(), 3);
+    }
+
+    #[test]
+    fn round_36_the_join_reply() {
+        let threw = THREW;
+        // the read threw: nothing sent, nothing released
+        let (r, ops) = run4(Op::GameJoinReplySend, 0x10, 0x20, 0, 0x30, &|_, _| threw);
+        assert_eq!((r, ops.len()), (Some(threw), 1));
+        assert_eq!(ops[0], "GameJoinReplyHeld 0x10 0x20 0x0 0x30");
+        // no reply
+        let (r, ops) = run4(Op::GameJoinReplySend, 0x10, 0x20, 0, 0x30, &|_, _| 0);
+        assert_eq!((r, ops.len()), (Some(0), 1));
+        // a reply: sent to the client, then released
+        let (r, ops) = run4(Op::GameJoinReplySend, 0x10, 0x20, 0, 0x30, &|op, _| {
+            if op == Op::GameJoinReplyHeld {
+                0x40
+            } else {
+                0
+            }
+        });
+        assert_eq!(r, Some(1));
+        assert_eq!(
+            ops[1..],
+            ["StSendToClientBuf 0x40 0x30 0x0 0x0".to_string(), "RefRelease 0x40 0x0 0x0 0x0".to_string()]
+        );
+    }
+
+    #[test]
+    fn round_36_the_player_read() {
+        for (read, want, set) in [(1, 1, true), (0, 0, false), (THREW, THREW, false)] {
+            let (r, ops) = run4(Op::ClientReadPlayer, 0x10, 0x20, 0, 0, &|op, _| match op {
+                Op::PlayerCreateHeld => 0x60,
+                Op::PlayerReadFrom => read,
+                _ => 0,
+            });
+            assert_eq!(r, Some(want));
+            assert_eq!(ops[0], "PlayerCreateHeld 0x0 0x0 0x0 0x0");
+            assert_eq!(ops[1], "PlayerReadFrom 0x60 0x20 0x0 0x0");
+            assert_eq!(ops.iter().any(|o| o == "ClientSetPlayer 0x10 0x60 0x0 0x0"), set);
+            // the player's reference goes on every path
+            assert_eq!(ops.last().unwrap(), "RefRelease 0x60 0x0 0x0 0x0");
+        }
+    }
+
+    #[test]
+    fn round_36_the_joined_broadcast_and_the_summary() {
+        let (r, ops) = run4(Op::ClientBroadcastJoined, 0x10, 0, 0, 0, &|op, _| match op {
+            Op::ClientId => 7,
+            Op::WbufNew => 0x70,
+            _ => 0,
+        });
+        assert_eq!(r, Some(0));
+        let head =
+            crate::staging::room_message(&crate::staging::RoomMsg { kind: 3, id: 7, flag: false, ping: 0, rest: 0 });
+        assert_eq!(
+            ops,
+            [
+                "ClientId 0x10 0x0 0x0 0x0".to_string(),
+                "WbufNew 0x0 0x0 0x0 0x0".to_string(),
+                format!("WbufAppend 0x70 0x0 ptr {:#x}", head.len()),
+                "ClientWritePlayer 0x10 0x70 0x0 0x0".to_string(),
+                "StBroadcastWbuf 0x70 0x0 0x0 0x0".to_string(),
+                "WbufFree 0x70 0x0 0x0 0x0".to_string(),
+            ]
+        );
+        let (r, ops) = run4(Op::LanSummaryTake, 0x10, 0x20, 0, 0, &|op, _| if op == Op::WbufNew { 0x70 } else { 0 });
+        assert_eq!(r, Some(0));
+        assert_eq!(
+            ops,
+            [
+                "WbufNew 0x0 0x0 0x0 0x0",
+                "GameWriteSummary 0x10 0x70 0x0 0x0",
+                "WbufSink 0x70 0x20 0x0 0x0",
+                "WbufFree 0x70 0x0 0x0 0x0"
+            ]
+        );
+    }
+
+    #[test]
+    fn round_36_the_wait_the_subnets_and_the_staging_bytes() {
+        // the wait op: made, run with the text code's rows in the mode, asked, released
+        let (r, ops) = run4(Op::RunWaitOp, 0, 0, 6, 2, &|op, _| match op {
+            Op::LanTimerAlloc => 0x80,
+            Op::OpIsKilled => 1,
+            _ => 0,
+        });
+        assert_eq!(r, Some(1));
+        assert_eq!(ops[0], "LanTimerAlloc 0x0 0x0 0x0 0x0");
+        assert_eq!(ops[1], format!("RunOpWithStatusMode 0x80 0x0 {:#x} 0x2", crate::lobbyhost::lobby_text(6)));
+        assert_eq!(ops[2..], ["OpIsKilled 0x80 0x0 0x0 0x0".to_string(), "RefRelease 0x80 0x0 0x0 0x0".to_string()]);
+        // the subnets: the peer's two bytes low, this machine's high
+        let (r, _) =
+            run4(Op::LanSubnets, 0x10, 0, 0, 0, &|op, _| if op == Op::LanPeerSubnet { 0x0201 } else { 0x0403 });
+        assert_eq!(r, Some(0x0403_0201));
+        // a staging message: past its type byte; an empty one is not passed on
+        let (r, ops) = run4(Op::LanStagingRead, 0, 0x20, 0x5000, 4, &|_, _| 9);
+        assert_eq!((r, ops), (Some(0), vec!["LanStagingBytes 0x0 0x20 0x5001 0x3".to_string()]));
+        let (r, ops) = run4(Op::LanStagingRead, 0, 0x20, 0x5000, 1, &|_, _| 9);
+        assert_eq!((r, ops), (Some(0), vec!["LanStagingBytes 0x0 0x20 0x5001 0x0".to_string()]));
+        let (r, ops) = run4(Op::LanStagingRead, 0, 0x20, 0x5000, 0, &|_, _| 9);
+        assert_eq!((r, ops.len()), (Some(0), 0));
+    }
+
+    /// A packet handed to the take op's sink.
+    fn give(b: *mut c_void, bytes: &[u8]) {
+        // SAFETY: the sink is the arm's Vec
+        unsafe { crate::lobbyhost::ee_won_lobby_sink(b, bytes.as_ptr(), bytes.len()) };
+    }
+
+    #[test]
+    fn round_36_the_summary_read() {
+        let run = |packet: &'static [u8], answer: isize| {
+            let log = RefCell::new(Vec::new());
+            let out = |op: Op, a: *mut c_void, b: *mut c_void, _c: isize, d: isize| {
+                log.borrow_mut().push(format!("{op:?} {:#x} {d}", a as isize));
+                if op == Op::LanDiscoveryTake {
+                    give(b, packet);
+                    return 0;
+                }
+                answer
+            };
+            let r = lobby_op(Op::LanReadSummary, p(0x10), p(0x20), 0, 0, &out);
+            (r, log.into_inner())
+        };
+        // the head (a type byte and a port) and three summary bytes
+        assert_eq!(
+            run(&[1, 2, 3, 4, 5, 6], 1),
+            (Some(1), vec!["LanDiscoveryTake 0x10 0".to_string(), "LanGameReadSummary 0x0 3".to_string()])
+        );
+        assert_eq!(run(&[1, 2, 3], 0).0, Some(0));
+        assert_eq!(run(&[1, 2, 3], THREW).0, Some(THREW));
+        // too short for the head: the original's ReadByte or ReadShort threw
+        for short in [&[][..], &[1][..], &[1, 2][..]] {
+            let short: &'static [u8] = short.to_vec().leak();
+            assert_eq!(run(short, 1), (Some(THREW), vec!["LanDiscoveryTake 0x10 0".to_string()]));
+        }
+    }
+
+    #[test]
+    fn round_36_the_direct_connect_address() {
+        let ask = |host: &'static [u8], dialog: isize, config: isize, dns_ok: isize, dns_port: u16| {
+            let mut address = EeWonIpAddr::default();
+            let log = RefCell::new(Vec::new());
+            let out = |op: Op, a: *mut c_void, b: *mut c_void, _c: isize, _d: isize| {
+                log.borrow_mut().push(format!("{op:?}"));
+                match op {
+                    Op::LanDirectDo => dialog,
+                    Op::LobbyConfigGet => config,
+                    Op::ConfigLobbyPortTest => 2500,
+                    Op::LobbyPort => 2300,
+                    Op::LanDirectHostTake => {
+                        give(b, host);
+                        0
+                    }
+                    Op::LanDirectDnsHeld => 0x90,
+                    Op::OpSucceededOf => dns_ok,
+                    Op::DnsOpAddrAssign => {
+                        let mut found = EeWonIpAddr::default();
+                        found.set_no_dns(b"10.1.2.3", dns_port);
+                        // SAFETY: `a` is the arm's address
+                        unsafe { ee_won_net::ipobj::ee_won_ipaddr_assign(a as *mut EeWonIpAddr, &found) };
+                        0
+                    }
+                    _ => 0,
+                }
+            };
+            let r = lobby_op(Op::LanDirectAsk, &mut address as *mut EeWonIpAddr as *mut c_void, null_mut(), 0, 0, &out);
+            (r, address.valid, address.port(), log.into_inner())
+        };
+        // cancelled: only the dialog
+        let (r, valid, _, ops) = ask(b"1.2.3.4", 0x186a2, 0x40, 1, 0);
+        assert_eq!((r, valid), (Some(0), false));
+        assert_eq!(ops, ["LanDirectReset", "LanDirectDo"]);
+        // a dotted address without a port: the config's port, no DNS
+        let (r, valid, port, ops) = ask(b"1.2.3.4", 0x186a1, 0x40, 1, 0);
+        assert_eq!((r, valid, port), (Some(1), true, crate::lanlogic::direct_default_port(true, 2500, 2300) as u16));
+        assert!(!ops.iter().any(|o| o == "LanDirectDnsHeld"));
+        // its own port wins
+        let (_, _, port, _) = ask(b"1.2.3.4:999", 0x186a1, 0x40, 1, 0);
+        assert_eq!(port, 999);
+        // no config: the lobby's port, the config's not asked
+        let (_, _, port, ops) = ask(b"1.2.3.4", 0x186a1, 0, 1, 0);
+        assert_eq!(port, crate::lanlogic::direct_default_port(false, 0, 2300) as u16);
+        assert!(!ops.iter().any(|o| o == "ConfigLobbyPortTest"));
+        // a name: the DNS op run behind the status box; failed: released, no address
+        let (r, valid, _, ops) = ask(b"some.host", 0x186a1, 0x40, 0, 0);
+        assert_eq!((r, valid), (Some(0), false));
+        assert_eq!(ops[ops.len() - 4..], ["LanDirectDnsHeld", "RunOpWithStatusRows", "OpSucceededOf", "RefRelease"]);
+        // resolved without a port: the default port; with one: its own
+        let (r, valid, port, ops) = ask(b"some.host", 0x186a1, 0x40, 1, 0);
+        assert_eq!((r, valid, port), (Some(1), true, crate::lanlogic::direct_default_port(true, 2500, 2300) as u16));
+        assert_eq!(ops[ops.len() - 2..], ["DnsOpAddrAssign", "RefRelease"]);
+        let (_, _, port, _) = ask(b"some.host", 0x186a1, 0x40, 1, 4242);
+        assert_eq!(port, 4242);
     }
 
     #[test]

@@ -4,6 +4,7 @@
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "rust/won_lobby/stagingobj.h"
+#include "rust/won_lobby/lobbyhost.h"
 namespace WONAPI {
 // RTTI: StagingLogic > LobbyLogic > RefCount; vtable 0x855ae0 with six slots; constructor 0x7ef160.
 // A Rust object since round 20 (rust/crates/ee_won_lobby/src/stagingobj.rs): its methods and scalar state (the join
@@ -15,5 +16,14 @@ enum { kStagingGame, kStagingMyClient, kStagingJoinOp }; // mSlot: mGame (0x40),
 enum { kStagingCreateGame }; // mDialog: mCreateGameDialog (0x58)
 // The room message from the buffer's position (ee_won reads its type and fixed fields); LobbyLogicHost.cpp
 void StagingHandleMessage(RustLogic* inStaging, ReadBuffer& inBuffer, LobbyClient* inClient);
+// The same over a buffer of the caller's bytes
+inline void StagingHandleBytes(RustLogic* inStaging, ReadBuffer inBuffer, LobbyClient* inClient) { StagingHandleMessage(inStaging, inBuffer, inClient); }
+// A host case's read: its result, or Threw for a read past the buffer's end
+template <class F> intptr_t LobbyReadGuard(F inRead)
+{
+    try { return (intptr_t)inRead(); } catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
+}
+// A message op's message: the C++ ByteBuffer, or one over the bytes Rust built (held by outHold), or none
+const ByteBuffer* LobbyHostMessage(void* inBuffer, intptr_t inBytes, intptr_t inLength, ByteBufferPtr& outHold);
 }
 #endif

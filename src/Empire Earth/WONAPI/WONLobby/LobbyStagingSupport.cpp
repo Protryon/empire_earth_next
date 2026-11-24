@@ -86,8 +86,7 @@ void LobbySetLobbyPort(unsigned short port) { if(gLobbyData.get()!=NULL) gLobbyD
 // Kicks or bans a client from our game
 void LobbyKickClient(LobbyClient* client,bool ban) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::KickClient, NULL, client, ban); }
 // Passes a game room message from a client to the staging logic
-static void StagingHandleBytes(ReadBuffer inBuffer, LobbyClient* inClient) { StagingHandleMessage(gLobbyData->mStagingLogic.get(), inBuffer, inClient); }
-void LobbyHandleStagingMessage(const ByteBuffer* data,LobbyClient* client) { if(gLobbyData.get()!=NULL && data!=NULL) StagingHandleBytes(ReadBuffer(data->data(), data->length()), client); }
+void LobbyHandleStagingMessage(const ByteBuffer* data,LobbyClient* client) { if(gLobbyData.get()!=NULL && data!=NULL) StagingHandleBytes(gLobbyData->mStagingLogic.get(), ReadBuffer(data->data(), data->length()), client); }
 // Passes a game room message being read from a client to the staging logic
 void LobbyHandleStagingReadBuffer(ReadBuffer& data,LobbyClient* client) { if(gLobbyData.get()!=NULL) StagingHandleMessage(gLobbyData->mStagingLogic.get(), data, client); }
 // Leaves the game after losing the connection, optionally telling the player

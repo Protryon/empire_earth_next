@@ -54,13 +54,9 @@ void StagingHandleMessage(RustLogic* inStaging, ReadBuffer& inBuffer, LobbyClien
 // ---- the calls out
 
 
-static void AppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
-{
-    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
-}
 
 // a message op's message: the C++ ByteBuffer, or one over the bytes Rust built, or none
-static const ByteBuffer* Message(void* inBuffer, intptr_t inBytes, intptr_t inLength, ByteBufferPtr& outHold)
+const ByteBuffer* WONAPI::LobbyHostMessage(void* inBuffer, intptr_t inBytes, intptr_t inLength, ByteBufferPtr& outHold)
 {
     if (inBuffer != NULL) return static_cast<const ByteBuffer*>(inBuffer);
     if (inBytes == 0) return NULL;
@@ -68,10 +64,10 @@ static const ByteBuffer* Message(void* inBuffer, intptr_t inBytes, intptr_t inLe
     return outHold.get();
 }
 
-static intptr_t Held(LobbyGame* inGame)
+template <class T> static intptr_t Held(T* inObj)
 {
-    if (inGame != NULL) inGame->AddRef();
-    return (intptr_t)inGame;
+    if (inObj != NULL) inObj->AddRef();
+    return (intptr_t)inObj;
 }
 
 extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void* inA, void* inB, intptr_t inC,
@@ -114,31 +110,16 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::GamePreNetJoin: return g->PreNetJoinGame();
     case EeWonLobbyOp::GamePostNetJoin: return g->PostNetJoinGame();
     case EeWonLobbyOp::GameHandlePlayerJoined: g->HandlePlayerJoined(clB); return 0;
-    case EeWonLobbyOp::GameResetReadyFlags: {
-        LobbyClientSetIterator anItr(g->GetClients().get());
-        while (anItr.HasMore()) {
-            LobbyClient* aClient = NULL;
-            LobbyPlayer* aPlayer = anItr.Next(&aClient);
-            if (aPlayer != NULL && aClient != NULL) {
-                aPlayer->SetReady(false);
-                LobbyBroadcastEvent(PlayerChangedEvent(aClient, 2), true);
-            }
-        }
-        return 0;
-    }
-    case EeWonLobbyOp::GameJoinReplySend:
-        try {
-            LobbyClient* aClient = reinterpret_cast<LobbyClient*>(inD);
-            ConstSmartPtr<ByteBuffer> aReply = g->GetJoinReply(*buf, aClient);
-            if (aReply.get() == NULL) return 0;
-            st->CallMessage(EeWonStagingCall::SendToClient, aReply.get(), aClient);
-            return 1;
-        } catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
-    case EeWonLobbyOp::GameHandleJoinReply:
-        try { return g->HandleJoinReply(*buf); } catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
-    case EeWonLobbyOp::GameHandleGameMessage:
-        try { g->HandleGameMessage((unsigned char)inC, *buf, reinterpret_cast<LobbyClient*>(inD)); return 0; }
-        catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
+    // GameResetReadyFlags and GameJoinReplySend are lobbyops.rs's over these (R6 WON round 36)
+    case EeWonLobbyOp::GameClientsIterNew: return (intptr_t) new LobbyClientSetIterator(g->GetClients().get());
+    case EeWonLobbyOp::ClientsIterHasMore: return static_cast<LobbyClientSetIterator*>(inA)->HasMore();
+    case EeWonLobbyOp::ClientsIterNext: return (intptr_t) static_cast<LobbyClientSetIterator*>(inA)->Next(static_cast<LobbyClient**>(inB));
+    case EeWonLobbyOp::ClientsIterFree: delete static_cast<LobbyClientSetIterator*>(inA); return 0;
+    case EeWonLobbyOp::PlayerSetReady: static_cast<LobbyPlayer*>(inA)->SetReady(inC != 0); return 0;
+    case EeWonLobbyOp::GameJoinReplyHeld: return LobbyReadGuard([&] { return Held(const_cast<ByteBuffer*>(g->GetJoinReply(*buf, reinterpret_cast<LobbyClient*>(inD)).get())); });
+    case EeWonLobbyOp::StSendToClientBuf: st->CallMessage(EeWonStagingCall::SendToClient, static_cast<const ByteBuffer*>(inA), clB); return 0;
+    case EeWonLobbyOp::GameHandleJoinReply: return LobbyReadGuard([&] { return g->HandleJoinReply(*buf); });
+    case EeWonLobbyOp::GameHandleGameMessage: return LobbyReadGuard([&] { g->HandleGameMessage((unsigned char)inC, *buf, reinterpret_cast<LobbyClient*>(inD)); return 0; });
     case EeWonLobbyOp::GameShowStatus:
         LobbyMessageBox(LOBBY_STRING(GameStagingLogic_JoinGameErrorTitle_String), g->GetStatusString((short)inC));
         return 0;
@@ -148,38 +129,23 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return 0;
     }
     // a client
-    case EeWonLobbyOp::ClientReadPlayer:
-        try {
-            SmartPtr<LobbyPlayer> aPlayer = LobbyPlayer::CreatePlayer();
-            if (!aPlayer->ReadFromBuffer(*buf)) return 0;
-            cl->SetPlayer(aPlayer.get());
-            return 1;
-        } catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
-    case EeWonLobbyOp::ClientBroadcastJoined: {
-        EeWonRoomMsg aMsg;
-        memset(&aMsg, 0, sizeof(aMsg));
-        aMsg.kind = 3;
-        aMsg.id = cl->GetClientId();
-        std::string aHead;
-        ee_won_room_message(&aMsg, AppendBytes, &aHead);
-        WriteBuffer aBuffer(0, true);
-        aBuffer.AppendBytes(aHead.data(), (unsigned long)aHead.length());
-        cl->GetPlayer()->WriteToBuffer(aBuffer);
-        st->CallMessage(EeWonStagingCall::BroadcastToGame, aBuffer.ToByteBuffer(true).get(), NULL);
-        return 0;
-    }
+    // ClientReadPlayer and ClientBroadcastJoined are lobbyops.rs's over these (R6 WON round 36)
+    case EeWonLobbyOp::PlayerCreateHeld: return Held(LobbyPlayer::CreatePlayer());
+    case EeWonLobbyOp::PlayerReadFrom: return LobbyReadGuard([&] { return static_cast<LobbyPlayer*>(inA)->ReadFromBuffer(*buf); });
+    case EeWonLobbyOp::ClientSetPlayer: cl->SetPlayer(static_cast<LobbyPlayer*>(inB)); return 0;
+    case EeWonLobbyOp::WbufNew: return (intptr_t) new WriteBuffer(0, true);
+    case EeWonLobbyOp::WbufAppend: static_cast<WriteBuffer*>(inA)->AppendBytes(reinterpret_cast<const void*>(inC), (unsigned long)inD); return 0;
+    case EeWonLobbyOp::ClientWritePlayer: cl->GetPlayer()->WriteToBuffer(*static_cast<WriteBuffer*>(inB)); return 0;
+    case EeWonLobbyOp::StBroadcastWbuf: st->CallMessage(EeWonStagingCall::BroadcastToGame, static_cast<WriteBuffer*>(inA)->ToByteBuffer(true).get(), NULL); return 0;
+    case EeWonLobbyOp::WbufFree: delete static_cast<WriteBuffer*>(inA); return 0;
     case EeWonLobbyOp::ClientChanged: LobbyBroadcastEvent(PlayerChangedEvent(cl, (int)inC), true); return 0;
     case EeWonLobbyOp::ClientTeamChanged: LobbyBroadcastEvent(PlayerTeamChangedEvent(cl, (int)inC), true); return 0;
     // a message, a read buffer, events
     case EeWonLobbyOp::BufSkip: buf->SetPos((int)(buf->pos() + inC)); return 0;
-    case EeWonLobbyOp::HandleBytes: {
-        ReadBuffer aBuffer(reinterpret_cast<const void*>(inC), (unsigned long)inD);
-        StagingHandleMessage(st, aBuffer, clB);
-        return 0;
-    }
-    case EeWonLobbyOp::NetSendToCaptain: LobbyNetSendToCaptain(Message(inA, inC, inD, aHold)); return 0;
-    case EeWonLobbyOp::NetBroadcastToGame: LobbyNetBroadcastToGame(Message(inA, inC, inD, aHold)); return 0;
-    case EeWonLobbyOp::NetSendToClient: LobbyNetSendToClient(clB, Message(inA, inC, inD, aHold)); return 0;
+    case EeWonLobbyOp::HandleBytes: StagingHandleBytes(st, ReadBuffer(reinterpret_cast<const void*>(inC), (unsigned long)inD), clB); return 0;
+    case EeWonLobbyOp::NetSendToCaptain: LobbyNetSendToCaptain(LobbyHostMessage(inA, inC, inD, aHold)); return 0;
+    case EeWonLobbyOp::NetBroadcastToGame: LobbyNetBroadcastToGame(LobbyHostMessage(inA, inC, inD, aHold)); return 0;
+    case EeWonLobbyOp::NetSendToClient: LobbyNetSendToClient(clB, LobbyHostMessage(inA, inC, inD, aHold)); return 0;
     case EeWonLobbyOp::NetKickClient: LobbyNetKickClient(clB, inC != 0); return 0;
     case EeWonLobbyOp::NetRemoveGameAdvertisement: LobbyNetRemoveGameAdvertisement(g); return 0;
     case EeWonLobbyOp::NetHostGame: return LobbyNetHostGame(g);
@@ -189,11 +155,9 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::BroadcastLobbyEvent: LobbyBroadcastLobbyEvent((int)inC, true); return 0;
     case EeWonLobbyOp::MessageBox: LobbyMessageBox(aTitle, aDetails); return 0;
     case EeWonLobbyOp::YesNo: return LobbyDoYesNoDialog(aTitle, aDetails, true);
-    case EeWonLobbyOp::RunWaitOp: {
-        SmartPtr<AsyncOp> anOp = new AsyncOp;
-        LobbyRunOpWithStatus(anOp.get(), aTitle, aDetails, (int)inD, 500);
-        return anOp->IsKilled();
-    }
+    // RunWaitOp is lobbyops.rs's over these and LanTimerAlloc (R6 WON round 36)
+    case EeWonLobbyOp::RunOpWithStatusMode: LobbyRunOpWithStatus(static_cast<AsyncOp*>(static_cast<RefCount*>(inA)), aTitle, aDetails, (int)inD, 500); return 0;
+    case EeWonLobbyOp::OpIsKilled: return static_cast<AsyncOp*>(static_cast<RefCount*>(inA))->IsKilled();
     case EeWonLobbyOp::PlaySound: LobbyPlaySound(gLobbyResources[inC].mSound.get()); return 0; // a resource row
     case EeWonLobbyOp::FirewallTestDone: return LobbyIsFirewallTestDone();
     case EeWonLobbyOp::BehindFirewall: return LobbyIsBehindFirewall();
