@@ -23,6 +23,7 @@
 #include "ee/wonapi/WONAuthPeerData.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
+#include "won_net37_orig.h"
 #include "platform/PlatFile.h"
 #include "rust/won_net/authflow.h"
 #include "rust/won_net/blowfish.h"
@@ -387,6 +388,18 @@ int main(int argc, char** argv)
         Log("hash file " + N(ctx->SetHashFile(L"EmpireEarth", sDir + "hashed.bin")));
         Num("hashes", Call(EE_WON_HOST_CERT_HASHES, C, NULL, NULL, 0, 0, "0123456789abcdef"));
         Num("hashes no seed", Call(EE_WON_HOST_CERT_HASHES, C));
+        { // the exe's hash file (R6 WON lobby and network round 37: the Rust's against the original's; the exe's
+          // bytes change with each build, so only the comparison is logged)
+            bool aNew = ctx->SetHashFile(L"EmpireEarth");
+            Answer aNewHashes = Call(EE_WON_HOST_CERT_HASHES, C, NULL, NULL, 0, 0, "0123456789abcdef");
+            bool aOld = OrigSetHashFileExe(ctx, L"EmpireEarth");
+            Answer aOldHashes = Call(EE_WON_HOST_CERT_HASHES, C, NULL, NULL, 0, 0, "0123456789abcdef");
+            ctx->SetHashFile(L"EmpireEarth", sDir + "hashed.bin");
+            Answer aFileHashes = Call(EE_WON_HOST_CERT_HASHES, C, NULL, NULL, 0, 0, "0123456789abcdef");
+            Log("hash exe " + N(aNew) + " as the original's " + N(aNew == aOld && aNewHashes.mBytes == aOldHashes.mBytes &&
+                                                                 aNewHashes.mCall.out_num == aOldHashes.mCall.out_num) +
+                " not the file's " + N(aNewHashes.mBytes != aFileHashes.mBytes));
+        }
         Call(EE_WON_HOST_CERT_SET_PASSWORD, C, NULL, NULL, 0, 0, Utf16("newpass") + "x");
         Log("password now " + Text(ctx->GetPassword()));
         Num("password", Call(EE_WON_HOST_CERT_PASSWORD, C));

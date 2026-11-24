@@ -27,6 +27,7 @@
 #include "rust/won_net/ffi_net.h"
 #include "rust/won_net/fwhost.h"
 #include "rust/won_net/hostbase.h"
+#include "rust/won_net/hostnative.h"
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/httpcpp.h"
 #include "rust/won_net/httpdoc.h"
@@ -269,13 +270,11 @@ public:
     }
     // an op of a class on the socket: the class's bytes (a reference taken), address and length or size
     SocketOp(EeWonCoreSocketOp inKind, AsyncSocket* inSocket = NULL, const ByteBuffer* inBytes = NULL,
-             const IPAddr* inAddr = NULL, unsigned long inSize = 0) : mSockOp(ee_won_socketop_new(static_cast<void*>(this),WonCore()))
-    {
-        this->SetSocket(inSocket);
-        this->SetRunAsyncImmediately(inKind != EeWonCoreSocketOp::QueueClose && SocketOp::mRunAsyncImmediatelyDef);
-        ee_won_socketop_init_kind(this->mSockOp, inKind, const_cast<RefCount*>(static_cast<const RefCount*>(inBytes)),
-                                  inAddr != NULL ? inAddr->GetValue() : NULL, static_cast<uint32_t>(inSize));
-    }
+             const IPAddr* inAddr = NULL, unsigned long inSize = 0)
+        : mSockOp(ee_won_socketop_new_kind(static_cast<void*>(this), WonCore(), inKind, inSocket,
+                                           const_cast<RefCount*>(static_cast<const RefCount*>(inBytes)),
+                                           inAddr != NULL ? inAddr->GetValue() : NULL, static_cast<uint32_t>(inSize)))
+    { this->SetRunAsyncImmediately(inKind != EeWonCoreSocketOp::QueueClose && SocketOp::mRunAsyncImmediatelyDef); }
     virtual ~SocketOp() { ee_won_socketop_free(this->mSockOp); } // the original's was implicit, 29153d
     // +0x04 0x2b6070: started (finished InvalidSocket first without a socket); a pending start goes to the socket
     // thread (async) or is continued and finished (blocking), any other result finishes it
@@ -659,7 +658,7 @@ public:
     unsigned long GetNumAddresses() { return (unsigned long)ee_won_ctx_len(this->mList); }
     typedef std::list<IPAddr> AddrList;
     // shuffled the first time (the CRT's srand(time(NULL)) and rand, as random_shuffle drew)
-    void CopyAddresses(AddrList& outCopy) { outCopy.clear(); ee_won_ctx_copy(this->mList, Rand, ToList, &outCopy); } //2ac6d0
+    void CopyAddresses(AddrList& outCopy) { outCopy.clear(); ee_won_ctx_copy(this->mList, ee_won_crt_rand, ToList, &outCopy); } //2ac6d0
     bool RemoveAddress(const IPAddr& inAddress) { return ee_won_ctx_ip(this->mList, 2, inAddress.GetValue()); }
     // cleared and refilled under the list's one lock
     bool AtomicClearAndAddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL)
@@ -671,7 +670,6 @@ private:
     static size_t WideLength(const wchar_t* inText) { return inText != NULL ? wcslen(inText) : 0; }
     static IPAddr FromRaw(const EeWonAddr* inRaw) { IPAddr a; a.FromRaw(*inRaw); return a; }
     static void ToList(void* inList, const EeWonAddr* inRaw) { static_cast<AddrList*>(inList)->push_back(FromRaw(inRaw)); }
-    static int32_t Rand(bool inSeed) { if (inSeed) { srand((unsigned)time(NULL)); return 0; } return rand(); }
     EeWonServerList* mList;
 };
 

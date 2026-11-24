@@ -2,6 +2,8 @@
 // include/ee/wonapi/WONRouting.h and WONTimerThread.h as they were there. Include after ee/wonapi/WONRouting.h.
 #ifndef EE_TESTS_WON_NET37_ORIG_H
 #define EE_TESTS_WON_NET37_ORIG_H
+#include "platform/PlatFile.h" // PLAT_MAX_PATH
+#include "platform/PlatPath.h"
 #include "rust/won_net/hostop.h"
 namespace WONAPI {
 // AsyncOpContainer: a Rust object (ee_won thread.rs EeWonOpContainer: the queue holding a reference per op, the op
@@ -81,5 +83,15 @@ private:
     TimerThread(const TimerThread&);
     TimerThread& operator=(const TimerThread&);
 };
+// AuthContext::SetHashFile(community) as it was (AuthContext.cpp until round 37; ee_won authlogin.rs
+// ee_won_auth_login_hash_exe since): the community's hash file, the running exe in the data root
+inline bool OrigSetHashFileExe(AuthContext* inContext, const std::wstring& inCommunity)
+{
+    char directory[PLAT_MAX_PATH];
+    char name[PLAT_MAX_PATH];
+    if (PlatPathGetDataRoot(directory, PLAT_MAX_PATH) > 0 && PlatPathGetExecutableName(name, PLAT_MAX_PATH) > 0)
+        return inContext->SetHashFile(inCommunity, std::string(directory) + name);
+    return false;
+}
 }
 #endif

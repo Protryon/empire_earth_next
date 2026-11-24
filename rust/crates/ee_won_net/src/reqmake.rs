@@ -104,6 +104,41 @@ pub unsafe extern "C" fn ee_won_reqmake_get_multi_dir(
     op(EE_WON_REQOPS_DIR_MULTI, m)
 }
 
+/// InitLogic's directory query (`GetMultiDirOp` over InitLogic.cpp's `InitDirPaths` until R6 WON lobby and network
+/// round 37): the first `count` (at most four) of the auth, database proxy and firewall services' paths and the
+/// product's patch servers' (`product_dir` + "/Patch"; an empty path without a product directory, as without a
+/// config), each with the op's flags and no data types.
+///
+/// # Safety
+/// `product_dir` is NULL or holds `product_len` characters of `wchar` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqmake_init_dirs(
+    flags: u32,
+    product_dir: *const c_void,
+    product_len: usize,
+    wchar: u32,
+    count: i32,
+) -> *mut EeWonReqOp {
+    // SAFETY: the caller's text
+    let product = (!product_dir.is_null()).then(|| unsafe { wide(product_dir, product_len, wchar) });
+    op(EE_WON_REQOPS_DIR_MULTI, init_dirs(flags, product, count))
+}
+
+fn init_dirs(flags: u32, product_dir: Option<Vec<u16>>, count: i32) -> Members {
+    let units = |s: &str| s.encode_utf16().collect::<Vec<u16>>();
+    let mut patch = product_dir.clone().unwrap_or_default();
+    if product_dir.is_some() {
+        patch.extend(units("/Patch"));
+    }
+    let paths =
+        [units("/TitanServers/Auth"), units("/TitanServers/DBProxy"), units("/TitanServers/Firewall"), patch];
+    let mut m = Members::default().n(i64::from(count));
+    for p in paths.iter().take(count.max(0) as usize) {
+        m = m.n(i64::from(flags)).w(p).n(0);
+    }
+    m
+}
+
 /// `GetServiceOp(context, path, name, netaddr)` (`Init`'s flags: the services, their display names, data objects,
 /// names and addresses).
 ///

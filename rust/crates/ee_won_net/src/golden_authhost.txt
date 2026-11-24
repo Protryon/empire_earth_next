@@ -139,6 +139,7 @@ hashes num 0 obj null bytes 1:00
 hash file 1
 hashes num 0 obj null bytes 58:01010b0045006d00700069007200650045006100720074006800bbe1d76330eb43269a43c8e280ea2df9581269add217
 hashes no seed num 0 obj null bytes 58:01010b0045006d00700069007200650045006100720074006800bbe1d76330eb43269a43c8e280ea2df987adce06c827
+hash exe 1 as the original's 1 not the file's 1
 password now 'newpass'
 password num 0 obj null bytes 14:6e00650077007000610073007300
 password empty ''

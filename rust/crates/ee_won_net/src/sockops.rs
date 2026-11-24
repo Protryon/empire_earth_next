@@ -940,6 +940,29 @@ pub unsafe extern "C" fn ee_won_socketop_init_kind(
     // SAFETY: the caller's value
     op!(o).init_kind(kind, bytes as usize, unsafe { addr.as_ref() }, size)
 }
+/// `SocketOp(kind, socket, bytes, addr, size)` (R6 WON lobby and network round 37: the C++ constructor's
+/// statements): a new op object for the C++ op `op` on `socket` (a reference held), of the class `kind`.
+///
+/// # Safety
+/// As `ee_won_socketop_new`, `ee_won_socketop_set_socket` and `ee_won_socketop_init_kind`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_socketop_new_kind(
+    op: *mut c_void,
+    core: *const crate::cppcore::EeWonCoreHooks,
+    kind: EeWonCoreSocketOp,
+    socket: *mut c_void,
+    bytes: *mut c_void,
+    addr: *const EeWonIpAddr,
+    size: u32,
+) -> *mut EeWonSocketOp {
+    // SAFETY: the callers' contracts
+    unsafe {
+        let o = crate::sockop::ee_won_socketop_new(op, core);
+        (*o).set_socket(socket);
+        (*o).init_kind(kind, bytes as usize, addr.as_ref(), size);
+        o
+    }
+}
 /// The op's class (`EeWonCoreSocketOp`), or -1 for a C++ class of its own.
 ///
 /// # Safety

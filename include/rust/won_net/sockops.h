@@ -70,6 +70,19 @@ void ee_won_socketop_init_kind(const EeWonSocketOp *o,
                                const EeWonIpAddr *addr,
                                uint32_t size);
 
+/// `SocketOp(kind, socket, bytes, addr, size)` (R6 WON lobby and network round 37: the C++ constructor's
+/// statements): a new op object for the C++ op `op` on `socket` (a reference held), of the class `kind`.
+///
+/// # Safety
+/// As `ee_won_socketop_new`, `ee_won_socketop_set_socket` and `ee_won_socketop_init_kind`.
+EeWonSocketOp *ee_won_socketop_new_kind(void *op,
+                                        const EeWonCoreHooks *core,
+                                        EeWonCoreSocketOp kind,
+                                        void *socket,
+                                        void *bytes,
+                                        const EeWonIpAddr *addr,
+                                        uint32_t size);
+
 /// The op's class (`EeWonCoreSocketOp`), or -1 for a C++ class of its own.
 ///
 /// # Safety

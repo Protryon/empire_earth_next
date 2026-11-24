@@ -134,7 +134,11 @@ public:
     {
         this->LoginSet(EE_WON_AUTH_LOGIN_CDKEY, inCommunity, inKey.KeyBytes(), (inKey.HasKey() ? 1 : 0) | (inKey.IsValid() ? 2 : 0));
     }
-    bool SetHashFile(const std::wstring&); //2e06d0: the exe's path (AuthContext.cpp)
+    bool SetHashFile(const std::wstring& inCommunity) //2e06d0: the running exe in the data root (authlogin.rs)
+    {
+        return ee_won_auth_login_hash_exe(ee_won_authctx_login(this->mCore), inCommunity.data(), sizeof(wchar_t),
+                                          inCommunity.size());
+    }
     bool SetHashFile(const std::wstring& inCommunity, const std::string& inFile) //2e07f0
     { return this->SetHashFileList(inCommunity, std::list<std::string>(1, inFile)); }
     bool SetHashFileList(const std::wstring& inCommunity, const std::list<std::string>& inFiles) //2e08e0

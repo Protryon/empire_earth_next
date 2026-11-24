@@ -133,18 +133,6 @@ static SocketOp* SockOp(void* inOp) { return static_cast<SocketOp*>(static_cast<
 static long CoreSocketOpStart(void* inOp) { return SockOp(inOp)->Start(); }
 static void CoreAddToSocketThread(void* inOp) { ee_won_api_socket_op(static_cast<void*>(SockOp(inOp)), true); } // WONAPICore's AddToSocketThread
 static void* CoreBytesAdopt(EeWonByteBuffer* inBytes) { return static_cast<RefCount*>(new ByteBuffer(inBytes)); } // (its first reference is Rust's)
-// the socket's transform chain on the message in *ioMessage (a reference held; the result's replaces it)
-static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
-{
-    ByteBufferPtr aMessage=static_cast<const ByteBuffer*>(static_cast<RefCount*>(*ioMessage));
-    AsyncSocket* aSocket=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket));
-    WONStatus aStatus=inSend ? aSocket->TransformSendMsg(aMessage) : aSocket->TransformRecvMsg(aMessage);
-    RefCount* aResult=const_cast<ByteBuffer*>(aMessage.get());
-    if(aResult!=NULL) aResult->AddRef();
-    if(*ioMessage!=NULL) static_cast<RefCount*>(*ioMessage)->Release();
-    *ioMessage=aResult;
-    return aStatus;
-}
 // the socket's virtual Duplicate (cppcore.rs n_accept: AsyncSocket::Accept is Rust's)
 static void* CoreSocketDuplicate(void* inSocket)
 {
@@ -186,7 +174,7 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreNewQueueSocket,CoreNewUdpRecvOp,CoreUdpCheck,
                                         reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
                                         CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
-                                        CoreAddToSocketThread,CoreBytesAdopt,CoreTransform,
+                                        CoreAddToSocketThread,CoreBytesAdopt,NULL /* the transform: cppcore.rs n_transform */,
                                         CoreSocketDuplicate,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
