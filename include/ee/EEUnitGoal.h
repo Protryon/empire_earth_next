@@ -43,7 +43,7 @@ class GE3DPoint;
 class UWideString;
 struct EeUnitsGoalIo;
 
-class EEUnitGoal {
+class EEUnitGoal : public EeUnitsGoalBase {
 public:
     // New (units behaviour, round 3): a goal is a Rust object (ee_units goal_obj.rs) whose head is these members:
     // made by Make (0x23c375: active, idle, kind inKind, the next goal id, stamped with the game time; its own state
@@ -344,15 +344,9 @@ public:
     // gatherer's line of sight (NULL if none)
     bool FindGatherSpot(EEComplexUnit* inUnit) { return this->Call(EE_UNITS_GOAL_GATHER_FIND_SPOT, H(inUnit)) != 0; }
 
-    bool mIsActive;                         // +0x04 (of the original: +0x00 was its vptr)
-    unsigned char mKind;                    // +0x05
-    unsigned long mAction;                  // +0x08 (FSFile Read/Write(unsigned long))
-    unsigned long mStartTime;               // +0x0c (saved from minor version 0x9d)
-    unsigned long mCreationTime;            // +0x10 (saved from 0xa4)
-    unsigned long mID;                      // +0x14 the goal's number (saved from 0x64)
-    long mPathAttempts;                     // +0x18
-    bool mB1C;                              // +0x1c (saved from 0xf)
-    bool mB1D;                              // +0x1d (saved from 0x87)
+    // the members (mIsActive +0x04 of the original, mKind, mAction, mStartTime (saved from minor version 0x9d),
+    // mCreationTime (from 0xa4), mID the goal's number (from 0x64), mPathAttempts, mB1C (from 0xf), mB1D (from 0x87)):
+    // the Rust record EeUnitsGoalBase, the base above (ee_sim units goal_obj.rs)
 };
 
 // EEUnitGoal::mKind's kinds: Rust's enum (ee_sim unit_ids.rs, rust/sim/unit_ids.h).

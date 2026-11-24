@@ -40463,3 +40463,58 @@ one-statement case is free in this metric, so a collapse only shows where a forw
   UiPostStartLoading, the civ builder cases); MiniMapRedraw; the FreeCamera case in physics.rs and EESim.cpp's
   MiniMapPresent/PhysicsPresent; EEPhysics.cpp's UpdateUnits tick host (a real port) and the player's host
   prologues (not reached); EEARust.h's constructors and EEIsValidName; EERules::Epoch and EEDifficultyAILevel.
+
+## The units' lane, round 11: the class's and the units' pointer members and small records Rust's; the store's entry points, the goal queue's and the goals' file calls in Rust; three .cpp files and nine classes gone (ee_sim world unit_class_fields.rs, stats_fields.rs, unit_fields.rs; units us_fill.rs, goals.rs, goal_obj.rs, dop_file.rs, ucn_noted.rs; branch rust-units11, 2026-11-24)
+
+Numbers: docs/progress/units.md ("Round 11"). The lane's files (perfile.py, b04764c69 -> the forks' merge 9a580dbb2)
+2,177 -> 1,679 (**-498**); the whole tree 22,337 -> 21,804; classes 714 -> 707; the lane's .cpp files 31 -> 28. The
+target was -1,200.
+
+- **A round stopped three times.** A usage limit stopped the first lead and its forks half an hour in, with
+  uncommitted edits in three worktrees; a second limit and a full disk stopped the resumed forks. What made the
+  restart cheap: each fork had its own worktree and branch, so `git diff` was the whole hand-over; `git stash create`
+  gives a revision of an uncommitted tree for perfile.py without touching it.
+- **The disk is a shared resource the heavy lock does not guard.** C: went from 48 GB free to 0 while three forks and
+  the other lanes built. A fork's own build tree is about 1.7 GB; the space went to stale `build/rust/debug` trees
+  (5.7 GB in the lead's worktree), stray `rust/target` directories and other lanes. Run cargo only through
+  `tools/rust_build.py` (a bare `cargo test` in `rust/` makes a second target directory, `rust/target`); delete a
+  merged fork's `build/` at once.
+- **The fair lock made each fork's cycle 25-35 minutes.** With three forks and one heavy job at a time, the forks
+  batched several concerns into one build, so some commits were not built alone (below). Two forks would have done
+  nearly as much.
+- **A pointer record beside the plain record.** EEUnitClass's 47 pointer members and EEUnitClassUpgrade's nine are
+  their own records (`EeUnitsUnitClassLinks`, `EeUnitsUnitClassUpgradeLinks`), not fields of the plain records: the
+  constructor's fill writes the plain record whole after the pointers are set. The "contiguous members" static
+  asserts became Rust tests of the records.
+- **A record replaces a C++ struct through a cbindgen rename** when C++ only builds and reads it:
+  EEProductionEntry, EEComplexUnitAttacker, the improvement table (`EeDataUpgradeFields*`), EEUnitGoal's base.
+  An `operator==` a std::find needed became a free function.
+- **A bool from a file is a byte in Rust.** The FSFile calls table's bool read takes a `uint8_t*`; the C++ lambda
+  reads into a local bool and stores 0 or 1, so Rust never holds a bool made from an arbitrary byte.
+- **cbindgen did not emit `EeUnitsGoalContext`** although it is in the include list (not found why). EEUGRust.cpp
+  keeps its three-pointer struct; rust_goal.rs and goals.rs mirror it with no assert. The file pointer is first.
+- **`world_field!` inside an `unsafe` closure** is clippy's unused-unsafe (the macro has its own block):
+  `#[allow(unused_unsafe)]` on the function (ucn_noted.rs ee_units_ucn_impact_unit).
+- **Commits that were not built alone**: A's 8e05fb509 (several concerns, one build); B's commits between
+  8c8edfad9 and 836fc108f (split by file from two built trees); C's 2a959dffa and 2c0e26cc5 (built as one tree).
+  A's two commits were checked by the oracle and captures only after the merge.
+- **Call-site edits outside the lane**:
+  - File System.cpp: the bool read and write entries of the FSFile calls table (the listed edit); ee_base
+    fs/cppfile.rs with them;
+  - EECPNextUnits.cpp, EEPlayer.cpp, EEUIBUpgrade.cpp: the improvement table's field names;
+  - EEAIAStarBoundedPathGoalModifiers.cpp: IsSidePart and IsMiddlePart, now inline, deleted;
+  - include/ee/RTSUnit.h: EEUnitFile's declaration; rust/cbindgen.toml.
+- **Behaviour changes**: none observed. EEUnitClassUpgrade's layout changed (the links record is its first base).
+  The hit point upgrade walks the player's units itself (the functor's empty ApplyToUnit calls are gone). The
+  doppelganger's foundation flag goes through the file's unsigned char calls (one byte either way). EEUnitFile
+  heap-allocates the complex load's stand-in goal queue. The oracle, the captures and the saveloads are identical.
+  - Only a drawn game reaches: the wall ghost orientation and EEPickWallPieces, the improvement name and gain
+    texts, EEGetTradePrice, the wheels.
+- **Gates** on 1ae2125e5 (the forks, origin/rust 17682d86c = batch 22):
+  - builds and the test profile 0/0; headers current (334);
+  - Rust gate PASS; oracle seeds 2-7 identical;
+  - the twelve capture profiles PASS at seeds 2-3;
+  - saveloads plain and matrix (`--expect`) PASS;
+  - scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS;
+  - the tour `random-game --box-select --orders --seed 7` PASS; gates.sh GATES PASS.
+  - Not run: the POSIX builds.

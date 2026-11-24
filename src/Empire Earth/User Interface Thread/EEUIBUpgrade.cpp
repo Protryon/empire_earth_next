@@ -96,9 +96,9 @@ extern "C" void ee_screenscpp_up_set_disabled(uintptr_t inCall, bool inValue) { 
 extern "C" uintptr_t ee_screenscpp_up_editor_complex(uintptr_t inCall)
 { return (uintptr_t)static_cast<EEUnit*>(static_cast<EEUIFScenarioEditor*>(UPB(inCall)->GetForm())->GetFirstSelectedUnit()->GetComplexUnit()); }
 extern "C" float ee_screenscpp_up_step(uintptr_t inCall, uintptr_t inUnit)
-{ return reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mImprovements->mEntries[UPB(inCall)->mAttribute].mStepFactor; }
+{ return reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mImprovements->mFactors[UPB(inCall)->mAttribute].mOffset; }
 extern "C" float ee_screenscpp_up_cost_factor(uintptr_t inCall, uintptr_t inUnit)
-{ return reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mImprovements->mEntries[UPB(inCall)->mAttribute].mCostFactor; }
+{ return reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mImprovements->mFactors[UPB(inCall)->mAttribute].mScale; }
 extern "C" int64_t ee_screenscpp_up_unit_type(uintptr_t inUnit)
 { return (int64_t)reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->GetUnitType(); }
 extern "C" bool ee_screenscpp_up_class_exists(int64_t inUnitType) { return gUnitClassTable[(long)inUnitType] != NULL; }

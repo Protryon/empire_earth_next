@@ -589,3 +589,160 @@ pub extern "C" fn ee_units_ucn_faces_target(class: u64, unit: u64, target: u64, 
     crate::combat::cg_query::ee_combat_host_read_leave(0);
     faces
 }
+
+/// `FacesPoint` within its host-read scope (slot 0); its CBQR record (the point's x and y bits, the tolerance) when
+/// outermost (units round 11; was EEUnitClass.cpp's).
+#[no_mangle]
+pub extern "C" fn ee_units_ucn_faces_point(class: u64, unit: u64, x: f32, y: f32, tolerance: bool) -> bool {
+    use crate::combat::cg_query as q;
+    let outer = q::ee_combat_host_read_enter(0);
+    // SAFETY: the member's live class and unit
+    let faces = unsafe { q::ee_units_cgq_faces_point(class, unit, x, y, tolerance) };
+    if outer {
+        let (e0, e1) = (x.to_bits(), y.to_bits());
+        q::ee_combat_capture_read_of(
+            0,
+            q::EE_COMBAT_HR_FACES_POINT,
+            unit,
+            0,
+            i32::from(faces),
+            e0,
+            e1,
+            u32::from(tolerance),
+        );
+    }
+    q::ee_combat_host_read_leave(0);
+    faces
+}
+
+/// `FindImpactUnit` within its host-read scope (slot 0); its CBQR record (the attack goal's target, the unit found's
+/// id, the owner's firing-high flag or all ones without an owner) when outermost (units round 11).
+#[no_mangle]
+#[allow(unused_unsafe)] // world_field! brings its own block inside the view's
+pub extern "C" fn ee_units_ucn_impact_unit(unit: u64) -> u64 {
+    use crate::combat::cg_query as q;
+    let outer = q::ee_combat_host_read_enter(0);
+    // SAFETY: the member's live unit
+    let found = unsafe { q::ee_units_cgq_impact_unit(unit) };
+    if outer {
+        // SAFETY: the live unit and its owner
+        let (goal, firing) = read(|t| unsafe {
+            UnitView::of(t, unit).map_or((0, u32::MAX), |u| {
+                let attack = u.goal().is_some_and(|g| g.0 == crate::combat::goal_dispatch::GOAL_ATTACK_UNIT);
+                let firing = UnitView::of(t, u.owner_handle())
+                    .map_or(u32::MAX, |o| u32::from(crate::world_field!(o.complex(), mIsFiringHigh)));
+                (if attack { u.goal_handle() } else { 0 }, firing)
+            })
+        });
+        let target = if goal != 0 { crate::combat::goal_attack::ee_combat_attack_of(goal).target } else { 0 };
+        let id = if found != 0 { W.unit_id(found) } else { 0 };
+        q::ee_combat_capture_read_of(
+            0,
+            q::EE_COMBAT_HR_IMPACT_UNIT,
+            unit,
+            target,
+            i32::from(found != 0),
+            id,
+            firing,
+            0,
+        );
+    }
+    q::ee_combat_host_read_leave(0);
+    found
+}
+
+// ---- EEUnitClassBuildings.cpp: the gate pieces (units round 11; the C++ EEUCNote's last two users)
+
+fn rest(what: i32, class: u64, a: u64) -> u64 {
+    // SAFETY: the noted member's live class and unit
+    unsafe {
+        crate::units::uc_rest::game::ee_units_uc_rest(
+            what,
+            ptr(class),
+            std::ptr::null_mut(),
+            a,
+            0,
+            0,
+            std::ptr::null_mut(),
+        ) as u64
+    }
+}
+
+/// `EETurnGatePart(transformation, direction, index)` (note 24): the piece's animation; a turning piece faces its
+/// yaw (`SetOrientationYPR(yaw, 0, 0)`).
+///
+/// # Safety
+/// `t` is a live transformation.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_ucn_turn_gate_part(
+    t: *mut ee_base::math::types::GeTransformation,
+    direction: i32,
+    index: i32,
+) -> c_long {
+    let mut n = note(24);
+    n.i(i64::from(direction)).i(i64::from(index));
+    let (action, turn) = crate::units::cls_building::gate_part_turn(direction, index);
+    // SAFETY: the caller's contract
+    let t = unsafe { &mut *t };
+    if let Some(yaw) = turn {
+        t.set_orientation(ee_base::math::transform::RotationOrder::Ypr, yaw, 0.0, 0.0);
+    }
+    n.i(i64::from(action)).f(t.yaw());
+    done(n);
+    c_long::from(action)
+}
+
+/// `EEUnitClass::GetPart(gate, index)` (note 29): piece 0..4 of a gate along its linked chain (2 the gate itself, 4
+/// the last linked, 0 the one before it, 3 and 1 the fourth and second parts; 0 for another index).
+#[no_mangle]
+pub extern "C" fn ee_units_ucn_gate_part(class: u64, gate: u64, index: c_long) -> u64 {
+    use crate::units::uc_rest as r;
+    let mut n = note(29);
+    n.c(&mut W, class).u(&mut W, gate).i(i64::from(index));
+    let part = match index {
+        4 => rest(r::EE_UNITS_UC_DO_R_LAST_LINKED, class, gate),
+        3 => rest(r::EE_UNITS_UC_DO_R_FOURTH_PART, class, gate),
+        2 => gate,
+        1 => rest(r::EE_UNITS_UC_DO_R_SECOND_PART, class, gate),
+        // GetLastLinkedCarrier: the last linked part's previous part
+        0 => {
+            let last = rest(r::EE_UNITS_UC_DO_R_LAST_LINKED, class, gate);
+            // SAFETY: the gate's live last part
+            read(|t| unsafe { UnitView::of(t, last) }.map_or(0, |u| u.previous_part_handle()))
+        }
+        _ => 0,
+    };
+    n.u(&mut W, part);
+    done(n);
+    part
+}
+
+// ---- EEUnitClass.cpp: the shot and the attacked reaction with their CBXA records (units round 11)
+
+/// `FireShot(unit)`: the world plan's shot (ee_combat world.rs fire_shot over the world host), then its CBXA record
+/// with the shot's target.
+#[no_mangle]
+pub extern "C" fn ee_units_ucn_fire_shot(class: u64, unit: u64) {
+    use crate::combat::cg_query as q;
+    let null = std::ptr::null_mut();
+    // SAFETY: the member's live class and unit
+    let target = unsafe {
+        q::ee_units_cgq_world(crate::combat::world::EE_COMBAT_WORLD_FIRE_SHOT, unit, 0, class, null, null);
+        q::ee_units_cgq_shot_target(unit)
+    };
+    crate::combat::capture_units::ee_combat_capture_x_action(q::EE_COMBAT_XA_FIRE_SHOT, unit, target, 0);
+}
+
+/// `Attacked(unit)`: the world plan's reaction (world.rs attacked), then its CBXA record with the last attacker's id
+/// from before it (0: none).
+#[no_mangle]
+pub extern "C" fn ee_units_ucn_attacked(class: u64, unit: u64) {
+    use crate::combat::cg_query as q;
+    // SAFETY: the member's live unit and its last attacker
+    let attacker = read(|t| unsafe { UnitView::of(t, unit) }.map_or(0, |u| u.last_attacker_handle()));
+    let before = if attacker != 0 { W.unit_id(attacker) } else { 0 };
+    let null = std::ptr::null_mut();
+    // SAFETY: the member's live class and unit
+    unsafe { q::ee_units_cgq_world(crate::combat::world::EE_COMBAT_WORLD_ATTACKED, unit, 0, class, null, null) };
+    crate::combat::capture_units::ee_combat_capture_x_action(q::EE_COMBAT_XA_ATTACKED, unit, 0, before);
+}

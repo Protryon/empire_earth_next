@@ -6,8 +6,9 @@
 //! `mGoalQueues` vector (the layout's `complex_goal_queues`: one queue pointer per container).
 //!
 //! The container's save and load (`save`, `load`: its `EEGoalQueueContainer` record) and the per-tick update
-//! (`update_unit`: the timer's expiry, then the goals' refresh) are Rust over a host table (`EeGoalQueueHost`) of
-//! typed `FSFile` reads and writes, the goals' own `Save`/`CreateGoal`+`Load` and the unit's refresh.
+//! (`update_unit`: the timer's expiry, then the goals' refresh) are Rust over a host ([`GoalQueueHost`]): the C++
+//! file's typed reads and writes (ee_base's `CppFile`), the goals' own `Save`/`CreateGoal`+`Load` (goal_obj.rs over
+//! the registered goal host) and the unit's refresh (units round 11: EEGoalQueueContainer.cpp deleted).
 
 // `c_long` and `c_ulong` are 32 bits on Windows and 64 elsewhere: the casts are needed there
 #![allow(clippy::unnecessary_cast)]
@@ -318,50 +319,124 @@ pub fn update_unit(unit: u64, now: c_ulong, host: &mut dyn GoalQueueHost, w: &mu
     }
 }
 
-/// The C++ host of the codec and the update (`EEGoalQueueContainer.cpp`'s table).
-#[repr(C)]
-pub struct EeGoalQueueHost {
-    pub context: *mut std::ffi::c_void,
-    pub write_u32: unsafe extern "C" fn(context: *mut std::ffi::c_void, value: u32) -> i32,
-    pub write_u8: unsafe extern "C" fn(context: *mut std::ffi::c_void, value: u8) -> i32,
-    pub write_bool: unsafe extern "C" fn(context: *mut std::ffi::c_void, value: bool) -> i32,
-    pub read_u32: unsafe extern "C" fn(context: *mut std::ffi::c_void, value: *mut u32) -> i32,
-    pub read_u8: unsafe extern "C" fn(context: *mut std::ffi::c_void, value: *mut u8) -> i32,
-    pub read_bool: unsafe extern "C" fn(context: *mut std::ffi::c_void, value: *mut bool) -> i32,
-    pub save_goal: unsafe extern "C" fn(context: *mut std::ffi::c_void, goal: u64) -> i32,
-    pub load_goal: unsafe extern "C" fn(context: *mut std::ffi::c_void, kind: u8, goal: *mut u64) -> i32,
-    pub refresh: unsafe extern "C" fn(context: *mut std::ffi::c_void),
+/// The goals' own records in a queue's file (`theGoal->Save(...)`, `CreateGoal(kind)` and its `Load`, `delete
+/// theGoal`): goal_obj.rs's bodies over the registered goal host, or a fake in the tests.
+pub trait GoalRecords {
+    /// `EEUnitGoal::CreateGoal(kind)`: an empty goal (0 for an unknown kind)
+    fn create(&mut self, kind: u8) -> u64;
+    /// `theGoal->Load(major, minor, file)`
+    fn load(&mut self, goal: u64) -> i32;
+    /// `theGoal->Save(major, minor, file)`
+    fn save(&mut self, goal: u64) -> i32;
+    /// `delete theGoal`
+    fn delete(&mut self, goal: u64);
 }
 
-impl GoalQueueHost for &EeGoalQueueHost {
-    // SAFETY (every call): the table's contract: `context` is live for the FFI call that handed it out
+/// `QueueLoadGoal` (the old EEGoalQueueContainer.cpp): `CreateGoal` and its `Load`, the goal kept on success and
+/// deleted otherwise (0 then). An unknown kind (no goal: the original read through NULL) fails the load.
+pub fn load_goal_record(records: &mut dyn GoalRecords, kind: u8, goal: &mut u64) -> i32 {
+    let made = records.create(kind);
+    if made == 0 {
+        *goal = 0;
+        return ee_base::fs::status::FAILED;
+    }
+    let result = records.load(made);
+    *goal = made;
+    if result != ee_base::fs::status::OK {
+        records.delete(made);
+        *goal = 0;
+    }
+    result
+}
+
+/// The C++ goal body's file context (EEUGRust.cpp's `EEGoalContext`: the file, the text, the dump; one pointer
+/// each, in that order): what the registered goal host's file cases read.
+#[repr(C)]
+struct GoalFileContext {
+    file: *mut std::ffi::c_void,
+    text: *mut std::ffi::c_void,
+    dump: *mut std::ffi::c_void,
+}
+
+/// The game's goal records over a C++ `FSFile*` and the save's version.
+struct FileRecords {
+    file: *mut std::ffi::c_void,
+    major: c_ulong,
+    minor: c_ulong,
+}
+
+impl FileRecords {
+    fn body(&mut self, op: i32, goal: u64) -> i32 {
+        let mut context = GoalFileContext { file: self.file, text: std::ptr::null_mut(), dump: std::ptr::null_mut() };
+        // SAFETY: a live goal; the context lives across the call (EEUGRust::Load/Save's `Goal(op, this, major, minor,
+        // NULL, &file)`)
+        unsafe {
+            goal_obj::call_in(op, goal, self.major as u64, self.minor as u64, std::ptr::addr_of_mut!(context).cast())
+                as i32
+        }
+    }
+}
+
+impl GoalRecords for FileRecords {
+    fn create(&mut self, kind: u8) -> u64 {
+        crate::units::goal_calls::ee_units_goal_create(kind) as usize as u64
+    }
+    fn load(&mut self, goal: u64) -> i32 {
+        self.body(crate::units::rust_goal::EE_UNITS_GOAL_LOAD, goal)
+    }
+    fn save(&mut self, goal: u64) -> i32 {
+        self.body(crate::units::rust_goal::EE_UNITS_GOAL_SAVE, goal)
+    }
+    fn delete(&mut self, goal: u64) {
+        // SAFETY: the goal just made and failed, owned by no one
+        unsafe { goal_obj::goal_delete(goal) }
+    }
+}
+
+/// The codec's host over a C++ `FSFile*` (its virtual `Read`/`Write` overloads through ee_base's file calls; a
+/// `bool` is its byte) and the goals' records; the update's refresh is the unit's.
+struct FileQueueHost<R: GoalRecords> {
+    file: ee_base::fs::CppFile,
+    records: R,
+    unit: u64,
+}
+
+impl<R: GoalRecords> GoalQueueHost for FileQueueHost<R> {
     fn write_u32(&mut self, value: u32) -> i32 {
-        unsafe { (self.write_u32)(self.context, value) }
+        ee_base::fs::FsWrite::write_u32(&mut self.file, value)
     }
     fn write_u8(&mut self, value: u8) -> i32 {
-        unsafe { (self.write_u8)(self.context, value) }
+        self.file.write_u8(value)
     }
     fn write_bool(&mut self, value: bool) -> i32 {
-        unsafe { (self.write_bool)(self.context, value) }
+        self.file.write_u8(u8::from(value))
     }
     fn read_u32(&mut self, value: &mut u32) -> i32 {
-        unsafe { (self.read_u32)(self.context, value) }
+        ee_base::fs::FsFile::read_u32(&mut self.file, value)
     }
     fn read_u8(&mut self, value: &mut u8) -> i32 {
-        unsafe { (self.read_u8)(self.context, value) }
+        self.file.read_u8(value)
     }
     fn read_bool(&mut self, value: &mut bool) -> i32 {
-        unsafe { (self.read_bool)(self.context, value) }
+        let mut byte = u8::from(*value);
+        let result = self.file.read_u8(&mut byte);
+        *value = byte != 0;
+        result
     }
     fn save_goal(&mut self, goal: u64) -> i32 {
-        unsafe { (self.save_goal)(self.context, goal) }
+        self.records.save(goal)
     }
     fn load_goal(&mut self, kind: u8, goal: &mut u64) -> i32 {
-        unsafe { (self.load_goal)(self.context, kind, goal) }
+        load_goal_record(&mut self.records, kind, goal)
     }
     fn refresh(&mut self) {
-        unsafe { (self.refresh)(self.context) }
+        refresh_goals(self.unit);
+        refresh_active_goal(self.unit);
     }
+}
+
+fn file_host(file: *mut std::ffi::c_void, major: c_ulong, minor: c_ulong, unit: u64) -> FileQueueHost<FileRecords> {
+    FileQueueHost { file: ee_base::fs::CppFile(file), records: FileRecords { file, major, minor }, unit }
 }
 
 // ---- the container's entry points (ee/EEUnitVectorItem.h's inline members; `q` a live queue throughout)
@@ -516,37 +591,46 @@ pub unsafe extern "C" fn ee_units_gq_timer(q: *mut EeUnitsGoalQueue, op: i32, ti
     }
 }
 
-/// The container's save (`save`): the status.
+/// `EEGoalQueueContainer::Save(major, minor, file)` (`save` over the C++ file): the status.
 ///
 /// # Safety
-/// `q` is a live queue, `host` a valid table for the call.
+/// `q` is a live queue, `file` a live C++ `FSFile*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_gq_save(q: *const EeUnitsGoalQueue, host: *const EeGoalQueueHost) -> i32 {
+pub unsafe extern "C" fn ee_units_gq_save_file(
+    q: *const EeUnitsGoalQueue,
+    file: *mut std::ffi::c_void,
+    major: c_ulong,
+    minor: c_ulong,
+) -> c_long {
     // SAFETY: the caller's contract
-    let (q, mut h) = unsafe { (&*q, &*host) };
-    save(q, &mut h)
+    let q = unsafe { &*q };
+    save(q, &mut file_host(file, major, minor, q.unit)) as c_long
 }
 
-/// The container's load (`load`): the status.
+/// `EEGoalQueueContainer::Load(major, minor, file)` (`load` over the C++ file): the status.
 ///
 /// # Safety
-/// `q` is a live queue, `host` a valid table for the call.
+/// `q` is a live queue, `file` a live C++ `FSFile*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_gq_load(q: *mut EeUnitsGoalQueue, host: *const EeGoalQueueHost) -> i32 {
+pub unsafe extern "C" fn ee_units_gq_load_file(
+    q: *mut EeUnitsGoalQueue,
+    file: *mut std::ffi::c_void,
+    major: c_ulong,
+    minor: c_ulong,
+) -> c_long {
     // SAFETY: the caller's contract
-    let mut h = unsafe { &*host };
-    load(q, &mut h, &mut Goals)
+    let unit = unsafe { (*q).unit };
+    load(q, &mut file_host(file, major, minor, unit), &mut Goals) as c_long
 }
 
-/// The unit's goal queues' per-tick update (`update_unit`).
+/// The unit's goal queues' per-tick update (`update_unit`, the refresh the unit's `RefreshGoals` and
+/// `RefreshActiveGoal`).
 ///
 /// # Safety
-/// `unit` is a live complex unit, `host` a valid table for the call.
+/// `unit` is a live complex unit.
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_goal_queues_update(unit: u64, host: *const EeGoalQueueHost) {
-    // SAFETY: the caller's contract
-    let mut h = unsafe { &*host };
-    update_unit(unit, game_time(), &mut h, &mut Goals);
+pub unsafe extern "C" fn ee_units_goal_queues_tick(unit: u64) {
+    update_unit(unit, game_time(), &mut file_host(std::ptr::null_mut(), 0, 0, unit), &mut Goals);
 }
 
 /// The length of a unit's queue `index`; -1 when it has no such queue.
@@ -889,6 +973,51 @@ pub(crate) mod tests {
             0
         }
         fn refresh(&mut self) {}
+    }
+
+    /// Goal records as numbers: a made goal is the kind + 500, a load fails for an odd kind, every call logged.
+    #[derive(Default)]
+    struct Records {
+        log: Vec<String>,
+    }
+
+    impl GoalRecords for Records {
+        fn create(&mut self, kind: u8) -> u64 {
+            self.log.push(format!("create {kind}"));
+            if kind == 0xff {
+                0
+            } else {
+                u64::from(kind) + 500
+            }
+        }
+        fn load(&mut self, goal: u64) -> i32 {
+            self.log.push(format!("load {goal}"));
+            if goal % 2 == 1 {
+                0x12
+            } else {
+                0
+            }
+        }
+        fn save(&mut self, goal: u64) -> i32 {
+            self.log.push(format!("save {goal}"));
+            0
+        }
+        fn delete(&mut self, goal: u64) {
+            self.log.push(format!("delete {goal}"));
+        }
+    }
+
+    #[test]
+    fn a_goal_record_is_kept_on_a_good_load_and_deleted_on_a_failed_one() {
+        let mut r = Records::default();
+        let mut goal = 7;
+        assert_eq!(load_goal_record(&mut r, 4, &mut goal), 0);
+        assert_eq!(goal, 504);
+        assert_eq!(load_goal_record(&mut r, 3, &mut goal), 0x12);
+        assert_eq!(goal, 0);
+        assert_eq!(load_goal_record(&mut r, 0xff, &mut goal), ee_base::fs::status::FAILED);
+        assert_eq!(goal, 0);
+        assert_eq!(r.log, ["create 4", "load 504", "create 3", "load 503", "delete 503", "create 255"]);
     }
 
     #[test]
