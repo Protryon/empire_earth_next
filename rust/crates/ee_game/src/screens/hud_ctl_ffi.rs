@@ -237,6 +237,19 @@ impl crate::screens::hud_ctl::HudHost for CuViews {
     }
 }
 
+/// The select control's host: its own ops in Rust (`select_units_ops.rs`), then [`Views`]'.
+struct SuViews(*mut c_void);
+
+impl crate::screens::hud_ctl::HudHost for SuViews {
+    fn op(&mut self, op: u32, a: i64, b: i64, f: &mut [f32]) -> i64 {
+        let ffi = &mut crate::screens::game_cpp::Ffi;
+        if let Some(r) = crate::screens::select_units_ops::op(ffi, self.0 as usize, op, a, b, f) {
+            return r;
+        }
+        crate::screens::hud_ctl::HudHost::op(&mut Views(self.0, crate::screens::hud_views::select_units), op, a, b, f)
+    }
+}
+
 /// `EEUICSelectUnits`' members: `EE_SCREENS_SU_DO_*` with the mouse location (x, y) where one is taken.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_select_units(
@@ -246,7 +259,7 @@ pub unsafe extern "C" fn ee_screens_select_units(
     x: f32,
     y: f32,
 ) -> i64 {
-    let (r, h) = (&Rec::new(rec), &mut Views(ctl, crate::screens::hud_views::select_units));
+    let (r, h) = (&Rec::new(rec), &mut SuViews(ctl));
     match which {
         EE_SCREENS_SU_DO_COPY_DATA => select_units::copy_data(r, h),
         EE_SCREENS_SU_DO_DRAW => select_units::draw(r, h),

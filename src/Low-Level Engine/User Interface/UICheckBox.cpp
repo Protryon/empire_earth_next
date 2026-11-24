@@ -29,7 +29,6 @@
 #include "lle/UIControl.h"
 #include "lle/UIButton.h"
 #include "lle/UISlider.h"
-#include "lle/UIScrollButton.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UITextLabel.h"
 #include "lle/UICheckBox.h"
@@ -51,16 +50,5 @@
 
 
 
-// Creates an unchecked check box with an optional text label to the right of the box bitmap
-UICheckBox::UICheckBox(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
-                       UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inScaleBitmap)
-    : UIButton(inId, inForm->GetManager()->GetCheckOff(), NULL, inForm->GetManager()->GetCheckDownOff(),
-               UIButtonRust::Rect(ee_ui_button_box_rect(UIButtonRust::Rect(inRectangle), inScaleBitmap)),
-               inForm, inIndex, inBorderThickness)
-{
-    this->SubCall(EeUiButtonCall::CheckInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inScaleBitmap ? 1.0f : 0.0f);
-}
 
-GEBitmap* UIButtonRust::CheckOff(UIForm* inForm) { return inForm->GetManager()->GetCheckOff(); }
 
-GEBitmap* UIButtonRust::CheckDownOff(UIForm* inForm) { return inForm->GetManager()->GetCheckDownOff(); }

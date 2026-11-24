@@ -125,7 +125,7 @@ thread_local! {
     static LIST_OPS: core::cell::RefCell<Vec<(u32, isize, isize, isize)>> = const { core::cell::RefCell::new(Vec::new()) };
 }
 
-/// A list box's per-type host in the tests: two lines, a selection of 1, every op recorded.
+/// A list box's per-type host in the tests: every op recorded (the lines are the Rust list's, UI round 15).
 unsafe extern "C" fn list_host(
     _: *mut c_void,
     o: ee_ui::obj::EeUiOp,
@@ -133,38 +133,73 @@ unsafe extern "C" fn list_host(
     b: isize,
     c: isize,
     _: isize,
-    f: *mut f32,
+    _: *mut f32,
 ) -> isize {
-    use ee_ui::obj::EeUiOp as O;
     LIST_OPS.with(|l| l.borrow_mut().push((o as u32, a, b, c)));
-    match o {
-        O::ListLineCount => 2,
-        O::ListLineText if a == 0 => c"first".as_ptr() as isize,
-        O::ListLineText if a == 1 => c"second".as_ptr() as isize,
-        O::ListSelection => {
-            // SAFETY: the op's four floats
-            unsafe { *f = f32::from_bits(1) };
-            0
-        }
-        _ => 0,
-    }
+    0
+}
+
+// a line: boxed NUL-terminated bytes
+unsafe extern "C" fn line_make() -> *mut c_void {
+    Box::into_raw(Box::new(vec![0u8])) as *mut c_void
+}
+unsafe extern "C" fn line_clone(l: *const c_void) -> *mut c_void {
+    // SAFETY: a boxed line
+    Box::into_raw(Box::new(unsafe { (*(l as *const Vec<u8>)).clone() })) as *mut c_void
+}
+unsafe extern "C" fn line_free(l: *mut c_void) {
+    // SAFETY: a boxed line
+    drop(unsafe { Box::from_raw(l as *mut Vec<u8>) });
+}
+unsafe extern "C" fn line_assign(to: *mut c_void, from: *const c_void) {
+    // SAFETY: boxed lines
+    unsafe { *(to as *mut Vec<u8>) = (*(from as *const Vec<u8>)).clone() };
+}
+unsafe extern "C" fn line_text(l: *const c_void) -> *const core::ffi::c_char {
+    // SAFETY: a boxed line
+    unsafe { (*(l as *const Vec<u8>)).as_ptr() as *const core::ffi::c_char }
+}
+unsafe extern "C" fn line_from_text(t: *const core::ffi::c_char) -> *mut c_void {
+    // SAFETY: NUL-terminated bytes
+    Box::into_raw(Box::new(unsafe { core::ffi::CStr::from_ptr(t) }.to_bytes_with_nul().to_vec())) as *mut c_void
 }
 
 #[test]
 fn the_list_ops_reach_the_list_s_lines() {
     use ee_ui::obj::EeUiOp as O;
     let cpp = p(0x6700);
-    // SAFETY: the host answers every op
-    let list = unsafe { ee_ui::listobj::ee_ui_list_new(cpp, Some(list_host), 12, false, 1) };
+    let ops = ee_ui::listobj::EeUiLineOps {
+        make: line_make,
+        clone: line_clone,
+        free: line_free,
+        assign: line_assign,
+        text: line_text,
+        from_text: line_from_text,
+    };
+    let lines = [b"first\0".to_vec(), b"second\0".to_vec()];
+    // SAFETY: the host answers every op; two lines of the ops' type
+    let list = unsafe {
+        ee_ui::listobj::ee_ui_list_new(
+            cpp,
+            Some(list_host),
+            &ops,
+            lines.as_ptr() as *const c_void,
+            2,
+            core::mem::size_of::<Vec<u8>>(),
+            12,
+            false,
+            1,
+        )
+    };
     LIST_OPS.with(|l| l.borrow_mut().clear());
     assert_eq!(direct::list_line(cpp, 1), Some(b"second".to_vec()));
     assert_eq!(direct::list_line(cpp, 2), None);
-    assert_eq!(list_selection(cpp), Some((0, 1)));
+    assert_eq!(list_selection(cpp), Some((0, 0)));
     list_select(cpp, 4, true, false);
-    list_op(cpp, O::ListAppendText, 0x77, 0, 0);
+    list_op(cpp, O::ListAppendText, c"third".as_ptr() as isize, 0, 0);
     let seen: Vec<(u32, isize, isize, isize)> = LIST_OPS.with(|l| l.borrow().clone());
     assert!(seen.contains(&(O::ListChangeSelection as u32, 4, 1, 0)), "{seen:?}");
-    assert!(seen.contains(&(O::ListAppendText as u32, 0x77, 0, 0)), "{seen:?}");
+    assert!(seen.iter().any(|s| s.0 == O::ListAppendLine as u32), "{seen:?}");
     // not a list: nothing
     assert_eq!(direct::list_line(p(0x6800), 0), None);
     assert_eq!(list_selection(p(0x6800)), None);

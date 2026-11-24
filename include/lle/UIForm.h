@@ -18,42 +18,16 @@
 #include "rust/ui/ids.h"
 #include "rust/ui/obj.h"
 #include "lle/UIObjHost.h"
+#include "lle/UIShims.h"
 
-class FSFileSpec;
-class GEBitmap;
-class GEText;
-class ISEntity;
-class TMPoll;
-class TSCriticalSection;
-class UIBackground;
-class UIControl;
-class UIEMouseWheelScroll;
-class UIEntityGroup;
-class UIEvent;
-class UIFormManager;
-class UIHotKey;
-class UIManager;
-class UITextLabel;
 
 // The form record of the UI database (0x10c bytes; UIForm::Create 0x100716c0 reads it). Exported parameter type
 // (??0UIForm@@QAE@PAVUIManager@@ABUUIDbDataForms@@_N@Z); field names are provisional, offsets proven by that ctor.
 // struct UIDbDataForms: rust/ui/formobj.h (ee_ui formobj.rs DbForm, under the members' names; UI round 13)
 
-// A control the form creates from the controls table when it opens (exported AddDatabaseControl parameter type;
-// 8-byte vector element at UIForm +0x48)
-struct UICDatabase {
-    unsigned long mTableIndex;              // +0x00 UIControlsTable::GetUIControlsTable index
-    UIControl* mControl;                    // +0x04 created by Open, deleted by Close
-};
+// (the original's UICDatabase and UIEventData records, AddDatabaseControl's and AddEvent's parameters, are their two
+// numbers: the table index and control; the event ID and type)
 
-// A form event the form creates when it opens (exported AddEvent parameter type; 8-byte vector element at +0x08)
-struct UIEventData {
-    unsigned long mEventID;                 // +0x00 UIManager::CreateFormEvent argument
-    unsigned long mEventType;               // +0x04 SetFormEvent selector (0..12)
-};
-
-enum class EeUiOp : uint32_t;              // rust/ee_ui.h: the Rust form's calls out
-enum class EeUiFormCall : uint32_t;        // rust/ee_ui.h: its methods
 
 // The class is whole in Rust (rust/crates/ee_ui/src/formobj.rs, R6 ui round 16): its state (the controls, groups,
 // backgrounds, hot keys, database records, events, the dirty-rectangle lists, the captures, the popup, the help text,
@@ -65,12 +39,18 @@ enum class EeUiFormCall : uint32_t;        // rust/ee_ui.h: its methods
 // GE2DPoint's layouts); GetMusicFileName answers a copy.
 class LLE_API UIForm {
 public:
+    // Creates an empty form with the given control and group counts, tool tips and tabbing off
     UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
-           unsigned long inFormID, bool inUseGDIForText);
-    UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIForText);
+           unsigned long inFormID, bool inUseGDIForText)
+        : mRust(ee_ui_form_new(this, ee_ui_form_host, inControlCount, inControlGroupCount, inManager, inFormID,
+                               inUseGDIForText)) {}
+    // Creates a form from its UI database record: counts, layout, tool-tip settings, music file (lower-cased), tabbing
+    UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIForText)
+        : mRust(ee_ui_form_new_db(this, ee_ui_form_host, inManager, &inData, inUseGDIForText)) {}
     UIForm(const UIForm&) = delete;         // holds a Rust object; nothing copied a form
     UIForm& operator=(const UIForm&) = delete;
-    virtual ~UIForm();
+    // Destroys the form, releasing its events, hot keys, groups, backgrounds, database-created controls and draw lock
+    virtual ~UIForm() { ee_ui_form_free(this->mRust); }
     // Starts the form's music (or stops the music for "none"), restores the tab stop and fires the activate event
     virtual void Activate() { this->Call(EeUiFormCall::Activate); }                // slot 0x04
     // Passes an IME result string to the control holding the keyboard
@@ -118,25 +98,33 @@ public:
     void AddClipRectangle(const GERectangle& inRectangle) { this->CallRect(EeUiFormCall::AddClipRectangle, 0, 0, inRectangle); }
     // Puts a control into its form slot (when the slot is empty) and adds it to the given group
     void AddControl(UIControl* inControl, unsigned long inGroup) { this->Call(EeUiFormCall::AddControl, (intptr_t)inControl, (intptr_t)inGroup); }
-    void AddDatabaseControl(const UICDatabase& inControl) { this->Call(EeUiFormCall::AddDatabaseControl, (intptr_t)inControl.mTableIndex, (intptr_t)inControl.mControl); }
+    void AddDatabaseControl(unsigned long inTableIndex, UIControl* inControl) { this->Call(EeUiFormCall::AddDatabaseControl, (intptr_t)inTableIndex, (intptr_t)inControl); }
     // port: makes room for a control at inIndex (the controls the table did not have: UIControlsTable::AddControlLike);
     // grows the control arrays (made with the form, mControlCount long)
     // port: see the header
     void ReserveControlIndex(unsigned long inIndex) { this->Call(EeUiFormCall::ReserveControlIndex, (intptr_t)inIndex); }
-    void AddEvent(const UIEventData& inEvent) { this->Call(EeUiFormCall::AddEvent, (intptr_t)inEvent.mEventID, (intptr_t)inEvent.mEventType); }
+    void AddEvent(unsigned long inEventID, unsigned long inEventType) { this->Call(EeUiFormCall::AddEvent, (intptr_t)inEventID, (intptr_t)inEventType); }
     // Copies a hot key into the given group and the form's list, keeping both sorted by key count, always-fire keys last
     void AddHotKey(const UIHotKey& inHotKey, unsigned long inGroup) { this->Call(EeUiFormCall::AddHotKey, (intptr_t)&inHotKey, (intptr_t)inGroup); }
     void AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
                    unsigned long inModifier3, UIEvent* inJustPressedEvent, UIEvent* inPressedEvent,
                    UIEvent* inJustUnpressedEvent, UIEvent* inDoublePressedEvent, unsigned long inGroup,
-                   bool inAlwaysFire);
+                   bool inAlwaysFire)
+    {
+        ee_ui_form_add_hot_key(this->mRust, inKey, inModifier1, inModifier2, inModifier3, inJustPressedEvent,
+                               inPressedEvent, inJustUnpressedEvent, inDoublePressedEvent, inGroup, inAlwaysFire);
+    }
     void ClearAllClipRectangles() { this->Call(EeUiFormCall::ClearAllClipRectangles); }
     // Reads every form record from the UI database file and creates, registers and enables each form with an ID above 0
     static long Create(FSFileSpec& inFile, UIManager* inManager) { return ee_ui_form_create(&inFile, inManager); }
     // Draws the part of a bitmap's texture under a rectangle at a screen location
     long DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GE2DPoint& inTextureSize) { return (long)this->CallRect(EeUiFormCall::DrawBitmap, (intptr_t)inBitmap, ee_ui_float_pair_bits(inTextureSize.GetX(), inTextureSize.GetY()), inRectangle); }
+    // Draws a bitmap tiled over a tile area, clipped to the rectangle, one piece per tile
     long DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
-                        const GERectangle& inTileRectangle);
+                        const GERectangle& inTileRectangle)
+    {
+        return ee_ui_form_draw_tiles(this->mRust, inBitmap, UIRect(inRectangle), UIRect(inDrawRectangle), UIRect(inTileRectangle));
+    }
     // Draws text clipped around the form's clip rectangles, the copied popup or the IME candidate window
     long DrawClippedText(const GERectangle& inRectangle, GEText* inText, UIControl* inControl) { return (long)this->CallRect(EeUiFormCall::DrawClippedText, (intptr_t)inText, (intptr_t)inControl, inRectangle); }
     // Returns the background with the given ID, or NULL
@@ -155,7 +143,8 @@ public:
     unsigned long GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
     UIFormManager* GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
     UIEvent* GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
-    UITextLabel* GetHelpTextLabel() const;
+    // (UITextLabel derives from UIControl alone: the control's address is the label's)
+    UITextLabel* GetHelpTextLabel() const { return reinterpret_cast<UITextLabel*>(this->Call(EeUiFormCall::HelpTextLabel)); }
     bool GetIsKeyboardCaptured() const { return this->GetKeyboardCaptured() != NULL; }
     bool GetIsMouseCaptured() const { return this->GetMouseCaptured() != NULL; }
     bool GetUseExclusiveCoords() const { return this->Call(EeUiFormCall::UseExclusiveCoords) != 0; }
@@ -193,7 +182,7 @@ public:
     // one (the event's index in the Rust form: formobj.rs EV_*)
     void SetFormOpenEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 0, (intptr_t)inEvent); }
     void SetFormUpdateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 13, (intptr_t)inEvent); }
-    void SetHelpTextLabel(UITextLabel* inLabel);
+    void SetHelpTextLabel(UITextLabel* inLabel) { this->Call(EeUiFormCall::SetHelpTextLabel, (intptr_t)inLabel); }
     void SetHelpTextTimeDelay(unsigned long inTimeDelay) { this->Call(EeUiFormCall::SetHelpTextTimeDelay, (intptr_t)inTimeDelay); }
     // Enables or disables every hot key of a group
     void SetHotKeyGroupEnabled(unsigned long inGroup, bool inEnabled) { this->Call(EeUiFormCall::SetHotKeyGroupEnabled, (intptr_t)inGroup, inEnabled); }

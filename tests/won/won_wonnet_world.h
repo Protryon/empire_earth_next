@@ -454,7 +454,11 @@ struct CDKey {
 };
 struct GetCertOp : AsyncOp { explicit GetCertOp(AuthContext*) { Log("cert op new"); } void SetCreateAccount(bool b) { Log("cert op create " + N(b)); } };
 struct DirEntity : RefCount { std::wstring mName; };
-typedef std::list<SmartPtr<DirEntity> > DirEntityList;
+// the original's list, and the reads the host makes of the Rust list since R6 WON round 34 (ee/EEWonNet.h DirList)
+struct DirEntityList : std::list<SmartPtr<DirEntity> > {
+    std::wstring Name(size_t i) const { return (*std::next(this->begin(), i))->mName; }
+    void Keep(const DirEntityList& f, size_t i) { this->push_back(*std::next(f.begin(), i)); }
+};
 enum { EE_WON_REQOP_DIR_LIST = 1, EE_WON_REQOP_ACCOUNT_CLEAR_NEWSLETTERS = 2, EE_WON_REQOP_ACCOUNT_NEWSLETTER = 3, EE_WON_REQOP_ACCOUNT_EMAIL = 4 };
 struct ServerContext : RefCount { void AddAddress(const IPAddr& a) { Log("dir servers add " + a.mText); } };
 struct RustServerOp : AsyncOp {
@@ -817,7 +821,13 @@ struct DirEntity : W::RefCount {
     std::wstring mDisplayName, mName;
     IPAddrFE GetNetAddrAsIP() const { return IPAddrFE{W::WS(mName) + ":15101"}; }
 };
-typedef std::list<W::SmartPtr<DirEntity> > DirEntityList;
+// the original's list, and the reads the host makes of the Rust list since R6 WON round 34 (ee/EEWonNet.h DirList)
+struct DirEntityList : std::list<W::SmartPtr<DirEntity> > {
+    const DirEntity* At(size_t i) const { return std::next(this->begin(), i)->get(); }
+    std::wstring Name(size_t i) const { return At(i)->mName; }
+    std::wstring DisplayName(size_t i) const { return At(i)->mDisplayName; }
+    IPAddrFE Addr(size_t i) const { return At(i)->GetNetAddrAsIP(); }
+};
 }
 struct UserFE { std::wstring GetName() const { return sK.mUser; } };
 struct FEWonNet {

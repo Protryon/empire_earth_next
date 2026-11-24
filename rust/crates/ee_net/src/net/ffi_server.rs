@@ -869,8 +869,9 @@ pub extern "C" fn ee_net_sv_log_checksum_response(s: *const EeNetServer, tick: u
 }
 
 #[no_mangle]
-pub extern "C" fn ee_net_sv_log_response(s: *const EeNetServer, msg: *mut c_void) {
-    sv(s).log_response(msg as Msg)
+pub extern "C" fn ee_net_sv_log_response(s: *const EeNetServer, msg: *mut c_void) -> i32 {
+    sv(s).log_response(msg as Msg);
+    0 // kErrorOK (LogResponse's answer)
 }
 
 /// PauseGame (`pause`) and UnpauseGame

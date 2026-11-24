@@ -11651,6 +11651,21 @@ constexpr static const int32_t EE_UNITS_UC_DO_BASE_UNIT_CREATED = 30;
 /// `class a`'s `mCategory` (the creations read the field, as `GetCategory()` does)
 constexpr static const int32_t EE_UNITS_UC_CLASS_CATEGORY_FIELD = 410;
 
+/// `IsDropSite()`: units can drop resources off at the class.
+constexpr static const int32_t EE_UNITS_UC_IS_DROP_SITE = 0;
+
+/// `IsCrusader()`: one of the four crusader types.
+constexpr static const int32_t EE_UNITS_UC_IS_CRUSADER = 1;
+
+/// `IsTransport()`: a land, helicopter, naval or space transport or a fortress.
+constexpr static const int32_t EE_UNITS_UC_IS_TRANSPORT = 2;
+
+/// `IsAirBase()`: air traffic on a building, naval building or space building.
+constexpr static const int32_t EE_UNITS_UC_IS_AIR_BASE = 3;
+
+/// `IsPriest()`: a land, naval, helicopter or building priest.
+constexpr static const int32_t EE_UNITS_UC_IS_PRIEST = 4;
+
 /// `class->mAcknowledgeSounds[b]`
 constexpr static const int32_t EE_UNITS_UC_ACKNOWLEDGE_SOUND = 520;
 
@@ -13400,9 +13415,6 @@ constexpr static const int32_t EE_UNITS_UCK_D_BUILDING_GROUND_LOCATION = 3530;
 
 /// `class->SubmergedNavalGroundLocation(f[0..3])`
 constexpr static const int32_t EE_UNITS_UCK_D_SUBMERGED_GROUND_LOCATION = 3531;
-
-/// `class->NavalBuildingHasSunk(unit)`
-constexpr static const int32_t EE_UNITS_UCK_D_NAVAL_BUILDING_SUNK = 3532;
 
 /// `class->IsSidePart(unit)`
 constexpr static const int32_t EE_UNITS_UCK_D_IS_SIDE_PART = 3533;
@@ -16564,6 +16576,19 @@ constexpr static const int32_t EE_UNITS_SR_OWN_TECHNOLOGY = 53;
 /// technology `a`'s `mData->mKind`
 constexpr static const int32_t EE_UNITS_SR_TECHNOLOGY_KIND = 54;
 
+/// The view's reads of [`EeUnitsUuSoundView`] (`EE_UNITS_UU_SOUND_*`, the C++ host `ee_units_uu_host_sound_view`):
+/// whether the current player sees the location's tile, `EEGetCameraPoint` (the screen point and depth into the four
+/// outputs), the camera's position, the viewport's y clipping plane, the camera control's zoom.
+constexpr static const int32_t EE_UNITS_UU_SOUND_SEEN = 0;
+
+constexpr static const int32_t EE_UNITS_UU_SOUND_CAMERA_POINT = 1;
+
+constexpr static const int32_t EE_UNITS_UU_SOUND_CAMERA = 2;
+
+constexpr static const int32_t EE_UNITS_UU_SOUND_Y_CLIP = 3;
+
+constexpr static const int32_t EE_UNITS_UU_SOUND_ZOOM = 4;
+
 /// `GetPathStart`'s and the others' "no path" answer.
 constexpr static const int32_t EE_UNITS_WAYPOINTS_NONE = 7;
 
@@ -18086,6 +18111,42 @@ struct EeUnitsPlayerUnit {
   long build_queue;
 };
 
+/// `EEGhostUnit`'s plain members (after its vtable; its `mTransformation` follows the record).
+struct EeUnitsGhostFields {
+  /// the footprint's ground heights (Reset zeroes them)
+  float mHeights[144];
+  long mTileX;
+  long mTileY;
+  long mFrame;
+  /// 7 after Reset
+  long mAnimation;
+  class EEPlayer *mPlayer;
+  /// `gUnitClassTable[inUnitClass]`
+  class EEUnitClass *mUnitClass;
+  long mUnitSet;
+  /// per footprint tile: placeable (UpdateFootprint fills it with mCanPlace; Reset clears it)
+  bool mFootprint[12][12];
+  bool mCanPlace;
+  bool mNoMedia;
+  int16_t mU332;
+};
+
+/// `EEComplexDoppelganger`'s plain members (its `mTransformation`, the unit's location, follows the record).
+struct EeUnitsComplexDopFields {
+  class EEGraphicObject *mModel;
+  /// the unit's animation
+  unsigned long mAnimation;
+  /// the unit's model scale
+  float mScale;
+  /// the hit points, bit 31 the built flag
+  long mPackedHitPoints;
+  long mTileX;
+  long mTileY;
+  /// the unit's model frame
+  unsigned long mFrame;
+  bool mIsFoundation;
+};
+
 /// `kWorldHighGroundHeight`, `kWorldLowGroundHeight`, `kWorldHighGroundAttackFactor`, `kWorldLowGroundAttackFactor`
 /// (the world table's rows, ee/EEWorldConstants.h)
 constexpr static const int64_t WORLD_ELEVATION_ROWS[4] = { 53, 54, 55, 56, };
@@ -18651,6 +18712,20 @@ void ee_units_cu_out_of_synch_dump(void *unit, void *file);
 /// # Safety
 /// `unit` is a live `EEComplexUnit`, `text` a live `UWideString`.
 void ee_units_cu_describe(void *unit, void *text);
+
+/// `EEComplexUnit::GetOutermostCarrier`.
+///
+/// # Safety
+/// `unit` and its carriers are live complex units.
+class EEComplexUnit *ee_units_cu_outermost_carrier(class EEComplexUnit *unit);
+
+/// `EEComplexUnit::SetVelocity`: `unit` and `cx` are the unit's two records, its `mStats` a live class upgrade.
+///
+/// # Safety
+/// Both records are the same live complex unit's.
+void ee_units_cu_set_velocity(const EeUnitsUnitFields *unit,
+                              EeUnitsComplexUnitFields *cx,
+                              float value);
 
 /// `EEComplexUnit::Init(class, placement, player, goal_queues)` on `unit` (more arguments than
 /// `ee_units_cu_body` carries).
@@ -19353,6 +19428,10 @@ void ee_units_goal_set_location_point_any(const EeUnitsGoalBase *goal,
 /// # Safety
 /// `goal` a live goal or null.
 float ee_units_goal_location_yaw_any(const EeUnitsGoalBase *goal);
+
+/// `EEUnitGoal::CreateGoal(kind)` (0x23c3e6): the load's empty goal of `kind` given the id it drew back (the loaded
+/// record sets its own), or null for an unknown kind.
+EeUnitsGoalBase *ee_units_goal_create(uint8_t kind);
 
 /// `new EEUnitGoal(inKind, inArg)` (`EEUnitGoal::Make`): see [`goal_new`].
 EeUnitsGoalBase *ee_units_goal_new(uint8_t kind, bool arg);
@@ -21217,6 +21296,9 @@ void *ee_units_uc_create_at(void *class_,
                             void *map,
                             float heading);
 
+/// `EEUnitClass::Is*()` (`which` an `EE_UNITS_UC_IS_*`) of the live class `class`.
+bool ee_units_uc_is(uint64_t class_, int32_t which);
+
 /// `EEUnitClass::ProduceUnit(unit, made, arg)` of `class`.
 ///
 /// # Safety
@@ -21418,6 +21500,156 @@ int64_t ee_units_uck_call(int32_t what,
                           int64_t c,
                           float f);
 
+/// `CanUnloadAt` (note 2).
+bool ee_units_ucn_can_unload_at(uint64_t class_, uint64_t transport, int32_t x, int32_t y);
+
+/// `FilterLoadable` (note 6).
+///
+/// # Safety
+/// `units` and `rejected` are live `std::vector<EEComplexUnit*>`.
+void ee_units_ucn_filter_loadable(uint64_t class_,
+                                  uint64_t units,
+                                  uint64_t transport,
+                                  uint64_t rejected);
+
+/// `FindBoardingLocation` (note 32).
+///
+/// # Safety
+/// `at` is a live point, `out` a writable one.
+bool ee_units_ucn_boarding_location(uint64_t class_,
+                                    uint64_t unit,
+                                    uint64_t transport,
+                                    const float *at,
+                                    float *out);
+
+/// `FindRendezvousTiles` (note 4).
+///
+/// # Safety
+/// `units` a live `std::vector<EEComplexUnit*>`, the outs writable tiles.
+void ee_units_ucn_rendezvous_tiles(uint64_t class_,
+                                   uint64_t units,
+                                   uint64_t transport,
+                                   long (*out_transport)[2],
+                                   long (*out_unit)[2]);
+
+/// `FindUnloadTiles` (note 5).
+///
+/// # Safety
+/// `destination` a live tile, the outs writable tiles.
+void ee_units_ucn_unload_tiles(uint64_t class_,
+                               uint64_t transport,
+                               const long (*destination)[2],
+                               long (*out_unload)[2],
+                               long (*out_first)[2],
+                               long (*out_tile)[2]);
+
+/// `GetHeightAt` (note 11).
+float ee_units_ucn_height_at(uint64_t class_, uint64_t unit, float x, float y, float z);
+
+/// `GetSurroundingTiles` (note 31): `tiles` a live `std::vector<EETileCoordinate>`.
+void ee_units_ucn_surrounding_tiles(uint64_t class_,
+                                    uint64_t unit,
+                                    uint64_t tiles,
+                                    int32_t corners,
+                                    bool append);
+
+/// `HasArrived` (note 7).
+bool ee_units_ucn_has_arrived(uint64_t class_, uint64_t unit, float value);
+
+/// `HasRoom` (note 10).
+bool ee_units_ucn_has_room(uint64_t class_, uint64_t unit, uint64_t cargo);
+
+/// `SelectUnitToRelease` (note 30).
+bool ee_units_ucn_select_to_release(uint64_t class_, uint64_t unit);
+
+/// `LandableReturnToAirport` (note 19).
+bool ee_units_ucn_return_to_airport(uint64_t class_, uint64_t unit);
+
+/// `RouteDockWaypoint` (note 20).
+void ee_units_ucn_route_dock_waypoint(uint64_t class_, uint64_t unit);
+
+/// `IsBombOnTarget` (note 17).
+bool ee_units_ucn_bomb_on_target(uint64_t class_, uint64_t unit);
+
+/// `ApproachCarrier` (note 13).
+void ee_units_ucn_approach_carrier(uint64_t class_, uint64_t unit, bool steep);
+
+/// `TakeOffFromCarrier` (note 14): the unit's state and its model's scale after.
+void ee_units_ucn_take_off_from_carrier(uint64_t class_, uint64_t unit);
+
+/// `GetNextFlightState` (note 12).
+uint32_t ee_units_ucn_next_flight_state(uint64_t class_, uint64_t unit);
+
+/// `ApproachRunway` (note 15).
+void ee_units_ucn_approach_runway(uint64_t class_, uint64_t unit, int32_t dx, int32_t dy);
+
+/// `TakeOffFromRunway` (note 16).
+void ee_units_ucn_take_off_from_runway(uint64_t class_, uint64_t unit, int32_t dx, int32_t dy);
+
+/// `IsAwayFromGoal` (note 18).
+bool ee_units_ucn_away_from_goal(uint64_t class_, uint64_t unit);
+
+/// `FindResourceOfKind` (note 41): `units` a live `std::vector<EEUnit*>` (the units already taken).
+uint64_t ee_units_ucn_resource_of_kind(uint64_t class_,
+                                       uint32_t category,
+                                       uint64_t unit,
+                                       uint64_t center,
+                                       uint64_t wanted,
+                                       int32_t range,
+                                       uint32_t kind,
+                                       uint64_t units,
+                                       bool farms);
+
+/// `FindStorage` (note 43).
+uint64_t ee_units_ucn_find_storage(uint64_t class_, uint64_t unit, bool any_storage);
+
+/// `HasGatherPoint` (note 45).
+bool ee_units_ucn_has_gather_point(uint64_t class_, uint64_t unit, uint64_t resource);
+
+/// `CanLoad` (note 8).
+bool ee_units_ucn_can_load(uint64_t class_, uint64_t transport, uint64_t unit);
+
+/// `CanUnloadNear` (note 9).
+///
+/// # Safety
+/// Three live tiles.
+bool ee_units_ucn_can_unload_near(uint64_t class_,
+                                  uint64_t transport,
+                                  uint64_t cargo,
+                                  const long (*unload)[2],
+                                  const long (*first)[2],
+                                  const long (*destination)[2]);
+
+/// `EEGetDockFacing` (note 23), `GetNavyYardFacing` (22), `EEGetFacingQuarter` (21): `which` 0, 1, 2.
+int32_t ee_units_ucn_facing(int32_t which,
+                            int32_t x,
+                            int32_t y);
+
+/// `FindNearestTargetBuilding` (note 35).
+uint64_t ee_units_ucn_nearest_target_building(uint64_t class_, uint64_t unit);
+
+/// `EEDoesWallGateFit` (note 25): `units` a live `std::vector<EEUnit*>` (the units in the way, out).
+bool ee_units_ucn_wall_gate_fit(int32_t x,
+                                int32_t y,
+                                int32_t direction,
+                                uint32_t unit_type,
+                                uint64_t units);
+
+/// `EEGetWallGateTiles` (note 33): `tiles` a live `std::vector<U2DPoint<long> >`.
+void ee_units_ucn_wall_gate_tiles(int32_t x, int32_t y, int32_t direction, uint64_t tiles);
+
+/// `AreEnemiesNear` (note 27) and `IsPasserNear` (note 28).
+bool ee_units_ucn_gate_near(uint64_t class_, uint64_t unit, bool passers);
+
+/// `EEAreTilesLevel` (note 26): `tiles` a live `std::vector<U2DPoint<long> >`.
+bool ee_units_ucn_tiles_level(uint64_t tiles);
+
+/// `FacesTarget` within its host-read scope (slot 0); its CBQR record (`EECombatCaptureHostRead`) when outermost.
+bool ee_units_ucn_faces_target(uint64_t class_,
+                               uint64_t unit,
+                               uint64_t target,
+                               bool tolerance);
+
 extern int64_t ee_units_ucp_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -21536,7 +21768,7 @@ void ee_units_complex_dump(uint32_t part,
                            void *ctx);
 
 /// `EEUnitClass::EEUnitClass`'s plain stores: `out` (the class's record base) set from the db row `row`
-/// (an `EEUnitClassRecord`, ee/EEUnitClassRecord.h, the layout ee_data's generated record asserts).
+/// (an `EEUnitClassRecord`, ee_data tables.rs `DbUnitClass`, the layout ee_data's generated record asserts).
 ///
 /// # Safety
 /// `out` is a writable `EeUnitsUnitClassFields`; `row` a readable `EEUnitClassRecord`; `input` readable.
@@ -22262,6 +22494,21 @@ void ee_units_uu_sound_parameters(const EeUnitsUuSoundView *view,
                                   const float (*location)[3],
                                   float (*out)[3]);
 
+extern float ee_units_uu_host_sound_view(int32_t which,
+                                         const float (*location)[3],
+                                         float (*out)[4]);
+
+/// `EEComputeSoundParameters` whole: the camera's view of `location` (the C++ reads, before the note), then the
+/// note (82) and the arithmetic; `volume`, `pan`, `pitch` written in that order after `location` is read.
+///
+/// # Safety
+/// `location` holds three floats; `volume_out`, `pan`, `pitch` are writable.
+void ee_units_uu_compute_sound(float volume,
+                               const float (*location)[3],
+                               float *volume_out,
+                               float *pan,
+                               float *pitch);
+
 /// `EEGetDopplerPitch` (83)'s factor (`pitch` written unless silent or still).
 ///
 /// # Safety
@@ -22498,13 +22745,8 @@ void ee_units_lf_tile_line(int32_t x1,
                            uint8_t thin,
                            void *out);
 
-/// `EESimCaptureRecord::Active()` (0), the physics' ticks done (1), the UUTL record of (a tick, b calls, c and d
-/// the digest's halves) written (2).
-extern uint32_t ee_units_uu_host_note(int32_t which,
-                                      uint32_t a,
-                                      uint32_t b,
-                                      uint32_t c,
-                                      uint32_t d);
+/// `gPhysics != NULL ? gPhysics->mNumTicksDone : 0`
+extern uint32_t ee_units_uu_host_ticks();
 
 /// Opens a note of `kind`; whether it records (its words are worth sending).
 uint8_t ee_units_uu_note_begin(uint32_t kind);
@@ -22646,11 +22888,15 @@ bool ee_units_waypoints_next_auto(uint64_t unit);
 /// `unit` is a live complex unit; `points` holds `count` points (or is null with none).
 void ee_units_waypoints_group_path_goals(uint64_t unit, const float *points, size_t count);
 
-/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, its index in `index`.
+/// `FindWaypointAtTile(x, y)` of complex unit `unit`: whether found, the waypoint in `out` (valid until the list
+/// changes).
 ///
 /// # Safety
-/// `unit` is a live complex unit; `index` writable.
-bool ee_units_waypoints_at_tile(uint64_t unit, long x, long y, size_t *index);
+/// `unit` is a live complex unit; `out` writable.
+bool ee_units_waypoints_at_tile(uint64_t unit,
+                                long x,
+                                long y,
+                                const EeUnitsWaypoint **out);
 
 /// the path bodies' C++ calls (`EE_UNITS_WP_*`, EEComplexUnit.cpp)
 extern int64_t ee_units_wp_host(int32_t op, uint64_t unit, uint64_t arg, float *point);

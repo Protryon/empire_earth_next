@@ -10,16 +10,18 @@
 #include "ee/EEUnitHandle.h"
 #include "ee/EEUIRustControl.h"
 
-class EEButtonObject;
 class EEUnit;
-class GEBitmap;
-class GEText;
 
-class EEUICPortrait : public EEUIRustControl {
+class EEUICPortrait : public EEUIRustControl, public EeScreensPortraitFields {
 public:
     // 0x25861c (the user-defined control factory 0x274965; the scenario editor 0x1a4f39)
     EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, unsigned long inId, unsigned long inIndex,
-                  bool inShowLevel);
+                  bool inShowLevel)
+        : EEUIRustControl(inId, inRectangle, inForm, inIndex, 0), EeScreensPortraitFields()
+    {
+        ee_screens_portrait_init(this, inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(),
+                                 inRectangle.GetBottom(), inShowLevel);
+    }
     // Destroys the portrait, releasing its unit and button
     virtual ~EEUICPortrait() { ee_screens_portrait_free(this); }
     // The bars' rectangles, the drawing, the tooltip, the click and the update from the unit (the original's
@@ -43,15 +45,8 @@ public:
     virtual long MouseMove(const GE2DPoint& inLocation) { return ee_screens_portrait_mouse_move(this); }    // +0x40 0x258f5d
     virtual long MouseRButtonDown() { return this->MouseLButtonDown(); }  // +0x44 0x258f7d
 
-    GEText* mText;                          // +0x0a0 the level number
-    GEBitmap* mPortrait;                    // +0x0a4 (new GEBitmap)
     // (+0x0a8 mFirstBar, +0x0ac mBackground, +0x0b0 mSecondBar: the bars are Rust's, ee_screens hud_draw.rs)
     EEUnitHandle<EEUnit> mUnit;             // +0x0b4 (referenced; a handle since R5a.4: read on the UI thread and in CopyData)
-    EEButtonObject* mButton;                // +0x0b8 the unit class's button (loaded while shown)
-    unsigned long mLevel;                   // +0x0bc
-    bool mShowFirstBar;                     // +0x0c0
-    bool mShowSecondBar;                    // +0x0c1
-    bool mShowLevel;                        // +0x0c2
 };
 
 #endif

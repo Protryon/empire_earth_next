@@ -1004,6 +1004,30 @@ pub unsafe extern "C" fn ee_ui_manager_free(manager: *mut EeUiManager) {
     drop(unsafe { Box::from_raw(manager) });
 }
 
+/// `ChangeIMECompositionString`'s arguments (the C++ `UWideString`, `UString` and cursor), handed on to the top
+/// form's.
+#[repr(C)]
+pub struct EeUiImeComposition {
+    pub string: *const c_void,
+    pub attributes: *const c_void,
+    pub cursor: c_ulong,
+}
+
+/// `ChangeIMECompositionString(string, attributes, cursor)` -> the top form's result.
+///
+/// # Safety
+/// `manager` is live; `composition` and what it points at are live for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_manager_change_composition(
+    manager: *const EeUiManager,
+    composition: *const EeUiImeComposition,
+) -> c_long {
+    // SAFETY: the contract
+    unsafe {
+        (*manager).call(EeUiManagerCall::ChangeComposition, composition as isize, 0, 0, core::ptr::null_mut()) as c_long
+    }
+}
+
 /// One of UIManager's methods ([`EeUiManagerCall`]).
 ///
 /// # Safety

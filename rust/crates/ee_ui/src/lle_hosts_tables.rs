@@ -32,7 +32,7 @@ tables! {
         BgtTextureDepth => r ee_uicpp_bgt_texture_depth,
         BgtEntryAlpha => r ee_uicpp_bgt_entry_alpha,
         BgtEntryFormId => r ee_uicpp_bgt_entry_form_id,
-        BgtMake => r ee_uicpp_bgt_make,
+        BgtMake => x bgt_make,
     }
     /// the button's own ops (its virtuals, the sounds, the label, the radio group, the polls, the stretch)
     button {
@@ -78,10 +78,10 @@ tables! {
         BarSetValue => v ee_uicpp_edit_bar_set_value,
         BarMax => r ee_uicpp_edit_bar_max,
         VirtSetRectangle => v ee_uicpp_edit_virt_set_rectangle,
-        EditKey => r ee_uicpp_edit_key,
+        EditKey => x ui_key,
         VirtProcessEnterKey => v ee_uicpp_edit_virt_process_enter_key,
         ClipboardSet => v ee_uicpp_edit_clipboard_set,
-        ClipboardGet => r ee_uicpp_edit_clipboard_get,
+        ClipboardGet => x clipboard_get,
         TranslatedKey => v ee_uicpp_edit_translated_key,
         TextInputCancel => v ee_uicpp_edit_text_input_cancel,
         BaseReleaseKeyboard => v ee_uicpp_edit_base_release_keyboard,
@@ -112,9 +112,9 @@ tables! {
         MgrFormUseGdi => r ee_uicpp_mgr_form_use_gdi,
         MgrFormKeyboard => r ee_uicpp_mgr_form_keyboard,
         MgrFormMouse => r ee_uicpp_mgr_form_mouse,
-        MgrFormCall => r ee_uicpp_mgr_form_call,
-        MgrFormRectCall => r ee_uicpp_mgr_form_rect_call,
-        MgrFormIme => r ee_uicpp_mgr_form_ime,
+        MgrFormCall => x mgr_form_call,
+        MgrFormRectCall => x mgr_form_rect_call,
+        MgrFormIme => x mgr_form_ime,
         MgrCtlIme => r ee_uicpp_mgr_ctl_ime,
         PartRect => v ee_uicpp_mgr_part_rect,
         MgrEventProcess => v ee_uicpp_mgr_event_process,
@@ -218,10 +218,10 @@ tables! {
         FormHotKeyDelete => v ee_uicpp_form_hot_key_delete,
         FormHotKeySetEnabled => v ee_uicpp_form_hot_key_set_enabled,
         FormHotKeyFire => r ee_uicpp_form_hot_key_fire,
-        FormHotKeyTemp => r ee_uicpp_form_hot_key_temp,
+        FormHotKeyTemp => x form_hot_key_temp,
         FormHotKeySetModifier => v ee_uicpp_form_hot_key_set_modifier,
         FormHotKeySetAlways => v ee_uicpp_form_hot_key_set_always,
-        FormKeyEntity => r ee_uicpp_form_key_entity,
+        FormKeyEntity => x form_key_entity,
         FormKeysReady => r ee_uicpp_form_keys_ready,
         FormTabJustPressed => r ee_uicpp_form_tab_just_pressed,
         FormShiftValue => r ee_uicpp_form_shift_value,
@@ -229,7 +229,7 @@ tables! {
         FormWheelEventNew => r ee_uicpp_form_wheel_event_new,
         FormMouseWheel => r ee_uicpp_form_mouse_wheel,
         FormWheelAmount => r ee_uicpp_form_wheel_amount,
-        FormMouseEntity => r ee_uicpp_form_mouse_entity,
+        FormMouseEntity => x form_mouse_entity,
         FormTable => r ee_uicpp_form_table,
         FormTableFormIndex => r ee_uicpp_form_table_form_index,
         FormTableGroup => r ee_uicpp_form_table_group,
@@ -322,9 +322,20 @@ tables! {
         VirtSetLocation => v ee_uicpp_label_virt_set_location,
         VirtSetRectangle => v ee_uicpp_label_virt_set_rectangle,
     }
+    /// the combo box's calls out (its queries and actions one shim each: lle_hosts.rs combo_query, combo_act)
+    combo {
+        ComboQuery => x combo_query,
+        ComboAct => x combo_act,
+        RhombusCreate => r ee_uicpp_combo_rhombus_create,
+        RhombusDelete => v ee_uicpp_combo_rhombus_delete,
+        DrawCountDecrement => v ee_uicpp_combo_draw_count_decrement,
+    }
     /// the list boxes' ops that do not depend on T (the polls, the rhombi, the line, the scroll bar, the keys)
     list {
-        EditKey => r ee_uicpp_list_edit_key,
+        EditKey => x ui_key,
+        StringListTextAt => v ee_uicpp_lbs_text_at,
+        StringListTextLine => v ee_uicpp_lbs_text_line,
+        StringListDrawClipped => r ee_uicpp_lbs_draw_clipped,
         PollCreate => r ee_uicpp_list_poll_create,
         PollDelete => v ee_uicpp_list_poll_delete,
         PollRunning => r ee_uicpp_list_poll_running,
@@ -444,6 +455,10 @@ tables! {
         PartSetBgColor => v ee_uicpp_ctl_part_set_bg_color,
         BgOpacity => v ee_uicpp_ctl_bg_opacity,
         CtlTabbedTo => v ee_uicpp_ctl_tabbed_to,
+        CtlDrawCopiedBg => v ee_uicpp_ctl_draw_copied_bg,
+        CtlVirtDrawBorder => r ee_uicpp_ctl_virt_draw_border,
+        CtlVirtMouseDown => r ee_uicpp_ctl_virt_mouse_down,
+        CtlBgRhombusOpacity => v ee_uicpp_ctl_bg_rhombus_opacity,
     }
     /// the scroll bar's own ops (its slider and buttons)
     scroll_bar {
@@ -508,5 +523,34 @@ tables! {
         FlLineLength => r ee_uicpp_fl_combo_line_length,
         FlLineCopy => v ee_uicpp_fl_combo_line_copy,
         FlDeleteLine => v ee_uicpp_fl_combo_delete_line,
+    }
+    /// The controls table's (UIControlsTable.cpp; lle_table.rs: the constructors, setters and texts)
+    table {
+        TblWindowWidth => r ee_uicpp_tbl_window_width,
+        TblWindowHeight => r ee_uicpp_tbl_window_height,
+        TblFormById => r ee_uicpp_tbl_form_by_id,
+        TblFormExclusive => r ee_uicpp_tbl_form_exclusive,
+        TblFormDesignedHeight => r ee_uicpp_tbl_form_designed_height,
+        TblFormGdi => r ee_uicpp_tbl_form_gdi,
+        TblFontHeight => r ee_uicpp_tbl_font_height,
+        TblFontHasBitmap => r ee_uicpp_tbl_font_has_bitmap,
+        TblStringLength => r ee_uicpp_tbl_string_length,
+        TblFileOpen => v ee_uicpp_tbl_file_open,
+        TblFileClose => v ee_uicpp_tbl_file_close,
+        TblWrap => r ee_uicpp_tbl_wrap,
+        TblDelete => v ee_uicpp_tbl_delete,
+        TblReserveIndex => v ee_uicpp_tbl_reserve_index,
+        TblStringDelete => v ee_uicpp_tbl_string_delete,
+        TblStringsDelete => v ee_uicpp_tbl_strings_delete,
+        TblFontGet => r ee_uicpp_tbl_font_get,
+        TblFontClosest => r ee_uicpp_tbl_font_closest,
+        TblFontRelease => v ee_uicpp_tbl_font_release,
+        TblFontBitmapNew => v ee_uicpp_tbl_font_bitmap_new,
+        TblUserDefined => r ee_uicpp_tbl_user_defined,
+        TblEventNew => r ee_uicpp_tbl_event_new,
+        TblEventRelease => v ee_uicpp_tbl_event_release,
+        TblFormControl => r ee_uicpp_tbl_form_control,
+        TblMake => x table_make,
+        TblSet => x table_set,
     }
 }

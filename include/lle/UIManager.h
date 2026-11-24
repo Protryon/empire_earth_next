@@ -16,21 +16,6 @@
 #include "rust/ui/obj.h"
 #include "lle/UIObjHost.h"
 
-class FSPath;
-class GEBitmap;
-class GEFont;
-class GERasterizer;
-class GESurface;
-class ISEntity;
-class SESMInstanceNode;
-class SESoundManager;
-class UIBackground;
-class UIBackgroundTable;
-class TSCriticalSection;
-class UIControl;
-class UIControlsTable;
-class UResourceFile;
-struct UIDbDataForms;
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
 
@@ -39,8 +24,6 @@ struct UIDbDataForms;
 #undef AddForm
 #endif
 
-enum class EeUiOp : uint32_t;              // rust/ee_ui.h: the Rust manager's calls out
-enum class EeUiManagerCall : uint32_t;     // rust/ee_ui.h: its methods
 
 // The class is whole in Rust (rust/crates/ee_ui/src/managerobj.rs, R6 ui round 17): its state (the event factories,
 // the stack, the forms, the visible and copied forms, the queued events, the fonts, the music, the UI texture and the
@@ -51,11 +34,20 @@ enum class EeUiManagerCall : uint32_t;     // rust/ee_ui.h: its methods
 // UpdateKeyboard and UpdateMouse; the Rust UpdateUI calls them through the C++ object.
 class LLE_API UIManager {
 public:
+    // Creates the UI manager: its locks, the UIControls texture and the check box, radio, sort and scroll-bar
+    // bitmaps cut from it; looks up the shared mouse buttons and wheel on first use; no music playing
+    // (ee_ui_manager_start: Init's ops read the manager through the forwarders, so it runs after mRust is set)
     UIManager(GERasterizer* inRasterizer, SESoundManager* inSoundManager, unsigned long inNumberOfSurfaces,
-              unsigned long inUITextureBitDepth, UResourceFile* inStringTable, unsigned long inScreen);
+              unsigned long inUITextureBitDepth, UResourceFile* inStringTable, unsigned long inScreen)
+        : mRust(ee_ui_manager_new(this, ee_ui_manager_host, inRasterizer, inSoundManager, inNumberOfSurfaces,
+                                  inUITextureBitDepth, inStringTable, inScreen))
+    {
+        ee_ui_manager_start(this->mRust);
+    }
     UIManager(const UIManager&) = delete;   // holds a Rust object; nothing copied a manager
     UIManager& operator=(const UIManager&) = delete;
-    virtual ~UIManager();
+    // Destroys the UI manager: stops the music, frees the locks, texture, bitmaps, forms, hot keys, IME window and database
+    virtual ~UIManager() { ee_ui_manager_destroy(this->mRust); }
     // Marks a rectangle dirty: on the top form directly, else on that form and every visible form above that overlaps it
     void AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm) { this->CallRect(EeUiManagerCall::AddDirtyRectangle, (intptr_t)inForm, inRectangle); }
     // Queues an event (referenced) to run on the next update for a form and entity
@@ -65,15 +57,15 @@ public:
     void AddIMEResultString(const UWideString& inString) { this->Call(EeUiManagerCall::AddImeResult, (intptr_t)&inString); }
     // Passes the IME composition string, attributes and cursor to the top form under the UI lock; returns its result
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-                                            unsigned long inCursor);
+                                            unsigned long inCursor)
+    {
+        return ee_ui_manager_change_composition(this->mRust, &(const EeUiImeComposition&)EeUiImeComposition{&inString, &inAttributes, inCursor});
+    }
     void ChangeRasterizer(GERasterizer* inRasterizer) { this->Call(EeUiManagerCall::ChangeRasterizer, (intptr_t)inRasterizer); }
     // Tells the top form the IME composition string closed, under the UI lock; returns its result
     virtual long CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
     // Snapshots every visible form (and the candidate window when open) for drawing; returns the last copy result
     long CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
-    // (their bodies need the form's, the manager's or the background table's class)
-    // Creates every background in the UI background database on its form, by type (bgtableobj.rs)
-    void CreateBackgrounds();
     // Creates a copy of a bitmap's texture region scaled to fill a control rectangle (20-pixel source)
     GEBitmap* CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle) { return reinterpret_cast<GEBitmap*>(this->CallRect(EeUiManagerCall::ScaledBitmap, (intptr_t)inBitmap, inRectangle)); }
     // Asks each registered control-event factory in turn for a form's event; returns the first one made, or NULL
@@ -124,8 +116,6 @@ public:
     static ISEntity* GetMouseWheel() { return *reinterpret_cast<ISEntity**>(ee_ui_key_slot(EeUiKey::MouseWheel)); }
 #endif
 #endif
-    // Returns the mouse wheel's scroll step: -1 when rolled forward, 1 when rolled back, 0 when still
-    static long GetMouseWheelScrollAmount();
     unsigned long GetNumberOfSurfaces() const { return (unsigned long)this->Call(EeUiManagerCall::NumberOfSurfaces); }
     GEBitmap* GetRadioDownOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 18)); }
     GEBitmap* GetRadioOff() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, 17)); }
@@ -196,12 +186,7 @@ public:
     intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const { return this->Call(inCall, 0, 0, 0, UIF4(inX, inY)); }
 
     EeUiManager* mRust;                     // the state (managerobj.rs)
-#ifdef LOWLEVELENGINE_EXPORTS
-#if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
-    // Inferred: visible to its users only (shown to UIControl.cpp it renumbers that unit's $E chains)
-    static bool sMouseLeftHanded;
-#endif
-#endif
+    // (the original's sMouseLeftHanded is Rust's: ee_ui lle_manager.rs, ee_ui_mouse_left_handed)
 };
 
 #endif

@@ -708,6 +708,34 @@ fn ping_results(op: &Op) -> String {
     r
 }
 
+/// R6 WON round 34: `ee_won_multiping_fill_context` against WONPing.h's MultiPingServerContext statements as they
+/// were at ab1b33bcb (each finished element kept by its rule, its six bytes as an `IPAddr`, `AddAddress`, then the
+/// shuffling off), both rules.
+fn check_server_context(op: &Op) {
+    for discard in [true, false] {
+        let want = crate::servctx::ServerList::new();
+        let keep = if discard { EE_WON_MULTIPING_KEEPS } else { EE_WON_MULTIPING_KEEPS_ALL };
+        for i in 0..op.num(EE_WON_MULTIPING_COUNT, 0) {
+            let six = op.h().op.bytes(EE_WON_MULTIPING_ADDR, i).unwrap_or_default();
+            if op.num(keep, i) == 0 || six.len() != 6 {
+                continue;
+            }
+            let mut a = crate::ipobj::EeWonIpAddr::default();
+            // SAFETY: six bytes
+            unsafe { crate::ipobj::ee_won_ipaddr_set_six(&mut a, six.as_ptr()) };
+            // SAFETY: a live value
+            let raw = unsafe { crate::ipobj::ee_won_ipaddr_to_raw(&a) };
+            // SAFETY: a live list and address
+            unsafe { crate::servctx::ee_won_ctx_add(&want, &raw) };
+        }
+        want.set_shuffle(false);
+        let got = crate::servctx::ServerList::new();
+        // SAFETY: a live op and list
+        unsafe { crate::multiping::ee_won_multiping_fill_context(op.0, &got, discard) };
+        assert_eq!(format!("{:?}", got), format!("{:?}", want), "discard {discard}");
+    }
+}
+
 fn with<R>(f: impl FnOnce(&mut Standin) -> R) -> R {
     S.with(|s| f(&mut s.borrow_mut()))
 }
@@ -759,7 +787,10 @@ fn step(op: &Op, which: char, kind: i32, a: i64, b: i64, data: &[u8], timer: &mu
                 ret = if h.callback(2, Obj(done as usize)) { "1" } else { "0" }.into();
             }
             10 => h.cleanup(),
-            11 => ret = ping_results(op),
+            11 => {
+                ret = ping_results(op);
+                check_server_context(op);
+            }
             _ => {}
         }
     } else if which == 'R' {

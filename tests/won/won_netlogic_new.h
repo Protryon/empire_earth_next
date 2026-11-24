@@ -120,7 +120,7 @@ static intptr_t Init(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, int
     case O::HttpGetNew: return Held(RustServerOp::NewHttpGet(std::string(reinterpret_cast<const char*>(a), (size_t)b)));
     case O::HttpGetSetCache: ee_won_hostop_set(R(a)->GetRustOp(), EE_WON_HTTPGET_CACHE, 0, NULL, 0, NULL, ee_won_http_cache_global(B(WONAPICore::GetDefaultFileDirectory()), WONAPICore::GetDefaultFileDirectory().size())); return 0;
     case O::HttpGetSetPromotionCompletion: R(a)->SetCompletion(new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion, aLogic)); return 0;
-    case O::SessionAddOp: aLogic->mHTTPSession->AddOp(R(a)); return 0;
+    case O::SessionAddOp: HttpSessionAddOp(aLogic->mHTTPSession.get(), R(a)); return 0;
     case O::ServerAddFromDir: SC(a)->AddAddressesFromDir(R(b)->GetEntities(EE_WON_REQOP_DIR_LIST, c), NULL); return 0;
     case O::ServerNotifyFailed: SC(a)->NotifyFailed(R(b)->GetCurAddr()); return 0;
     case O::ClearAcceptOp: aLogic->mAcceptOp = NULL; return 0;
@@ -128,7 +128,7 @@ static intptr_t Init(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, int
     case O::AcceptOpNewFirewall: aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, aLogic->mFirewallSocket.get()); return 0;
     case O::AcceptOpRun: aLogic->RunOp(aLogic->mAcceptOp.get(), new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion, aLogic), gLobbyAcceptTimeout); return 0;
     case O::SetFirewallAddress: aLogic->mFirewallAddress = FW(a)->GetCurAddr(); return 0;
-    case O::DnsOpNew: return Held(new DNSTestOp(config->mDirServers.front()));
+    case O::DnsOpNew: return Held(NewDnsTestOp(config->mDirServers.front()));
     case O::RunTrackedDns: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DNSCompletion, aLogic), 0); return 0;
     case O::RunTrackedDocument: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, aLogic), 0); return 0;
     case O::RunTrackedDirectory: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DirectoryCompletion, aLogic), 0); return 0;
@@ -207,12 +207,12 @@ static intptr_t Route(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, intptr_t 
     case O::StatusOpRust: return (intptr_t)US(a)->GetRust();
     case O::EvModeratedGroup: Broadcast(ClientModeratedEvent(C(a), (int)b, G(c)->GetName(), (int)d, (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true, GUIString(RO(e)->Text(EE_WON_RTT_COMMENT)))); return 0;
     case O::EvModeratedServer: Broadcast(ClientModeratedEvent(C(a), (int)b, S(c)->GetName(), (int)d, (unsigned long)RO(e)->Num(EE_WON_RTF_TIME), true, GUIString(RO(e)->Text(EE_WON_RTT_COMMENT)))); return 0;
-    case O::DirListFree: delete reinterpret_cast<DirEntityList*>(a); return 0;
+    case O::DirListFree: delete reinterpret_cast<DirList*>(a); return 0;
     case O::IterFree: delete reinterpret_cast<LobbyClientIterator*>(a); return 0;
     case O::EvAlertTimed: Broadcast(AlertEvent(4, (int)a, (unsigned long)RO(b)->Num(EE_WON_RTF_TIME), GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT))))); return 0;
     case O::EvAlertPlain: Broadcast(AlertEvent(4, (int)a, 0, GUIString(new GUIStringData(RO(b)->Text(EE_WON_RTT_TEXT))))); return 0;
-    case O::DirEntitiesNew: return (intptr_t) new DirEntityList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));
-    case O::DirListEmpty: return reinterpret_cast<DirEntityList*>(a)->empty();
+    case O::DirEntitiesNew: return (intptr_t) new DirList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));
+    case O::DirListEmpty: return reinterpret_cast<DirList*>(a)->empty();
     case O::GroupQueryNew: return HeldOp(RustServerOp::NewGroupListReq(S(a)->GetAddress(), 0x29));
     case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone, L), 0); return 0;
     case O::EventComponent: return (intptr_t)E(a)->mComponent;

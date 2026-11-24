@@ -248,9 +248,6 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
 // statement on the shell's control or the world
 #include "ee/EEScreensShims.h"
 static UIControl* C(uintptr_t inControl) { return reinterpret_cast<UIControl*>(inControl); }
-static EETile* sShimTile;          // the paint areas' pick: its tile and point (locals of the original case)
-static GE3DPoint sShimPoint;
-static EEMapTile* sShimMapTile;    // the map tile read's
 // shims6
 extern "C" void ee_screenscpp_shell_text_fg(uintptr_t inControl, uint32_t inWhich, float inRed, float inGreen, float inBlue)
 { EEUIShell::Of(C(inControl))->Text(inWhich)->SetFgColor(GEColor(inRed, inGreen, inBlue)); }
@@ -309,23 +306,23 @@ extern "C" void ee_screenscpp_shell_clear_slot(uintptr_t inControl, uint32_t inS
 extern "C" void ee_screenscpp_text_delete(uintptr_t inText) { delete reinterpret_cast<GEText*>(inText); }
 extern "C" float ee_screenscpp_control_width(uintptr_t inControl) { return C(inControl)->GetRectangle().GetWidth(); }
 extern "C" float ee_screenscpp_control_height(uintptr_t inControl) { return C(inControl)->GetRectangle().GetHeight(); }
-extern "C" void ee_screenscpp_shim_tile_clear() { sShimTile = NULL; }
-extern "C" void ee_screenscpp_shim_point_clear() { sShimPoint = GE3DPoint(); }
+extern "C" void ee_screenscpp_shim_tile_clear() { EEScratch<EETile*>(kScratchUIShellShimTile) = NULL; }
+extern "C" void ee_screenscpp_shim_point_clear() { EEScratch<GE3DPoint>(kScratchShimPoint) = GE3DPoint(); }
 extern "C" bool ee_screenscpp_pick_tile_xy(float inX, float inY, long* inTileX, long* inTileY)
-{ return EEPointUnitOrTileXY(GE2DPoint(inX, inY), sShimTile, *inTileX, *inTileY, false); }
-extern "C" bool ee_screenscpp_shim_tile_exists() { return sShimTile != NULL; }
-extern "C" float ee_screenscpp_shim_tile_height() { return sShimTile->GetHeight(); }
+{ return EEPointUnitOrTileXY(GE2DPoint(inX, inY), EEScratch<EETile*>(kScratchUIShellShimTile), *inTileX, *inTileY, false); }
+extern "C" bool ee_screenscpp_shim_tile_exists() { return EEScratch<EETile*>(kScratchUIShellShimTile) != NULL; }
+extern "C" float ee_screenscpp_shim_tile_height() { return EEScratch<EETile*>(kScratchUIShellShimTile)->GetHeight(); }
 extern "C" void ee_screenscpp_pick_map_location(float inX, float inY)
-{ sShimTile = gWorld.GetMap()->GetLocationAt(GE2DPoint(inX, inY), sShimPoint, false); }
+{ EEScratch<EETile*>(kScratchUIShellShimTile) = gWorld.GetMap()->GetLocationAt(GE2DPoint(inX, inY), EEScratch<GE3DPoint>(kScratchShimPoint), false); }
 extern "C" void ee_screenscpp_pick_unit_or_tile(float inX, float inY)
-{ EEPointUnitOrTile(GE2DPoint(inX, inY), sShimTile, sShimPoint, false); }
-extern "C" float ee_screenscpp_shim_point_x() { return sShimPoint.GetX(); }
-extern "C" float ee_screenscpp_shim_point_y() { return sShimPoint.GetY(); }
-extern "C" float ee_screenscpp_shim_point_z() { return sShimPoint.GetZ(); }
+{ EEPointUnitOrTile(GE2DPoint(inX, inY), EEScratch<EETile*>(kScratchUIShellShimTile), EEScratch<GE3DPoint>(kScratchShimPoint), false); }
+extern "C" float ee_screenscpp_shim_point_x() { return EEScratch<GE3DPoint>(kScratchShimPoint).GetX(); }
+extern "C" float ee_screenscpp_shim_point_y() { return EEScratch<GE3DPoint>(kScratchShimPoint).GetY(); }
+extern "C" float ee_screenscpp_shim_point_z() { return EEScratch<GE3DPoint>(kScratchShimPoint).GetZ(); }
 extern "C" void ee_screenscpp_map_tile_load(uint32_t inX, uint32_t inY)
-{ sShimMapTile = gWorld.mMap->GetTile((unsigned long)inX, (unsigned long)inY); }
-extern "C" bool ee_screenscpp_shim_map_tile_exists() { return sShimMapTile != NULL; }
-extern "C" float ee_screenscpp_shim_map_tile_height() { return sShimMapTile->GetHeight(); }
+{ EEScratch<EEMapTile*>(kScratchShimMapTile) = gWorld.mMap->GetTile((unsigned long)inX, (unsigned long)inY); }
+extern "C" bool ee_screenscpp_shim_map_tile_exists() { return EEScratch<EEMapTile*>(kScratchShimMapTile) != NULL; }
+extern "C" float ee_screenscpp_shim_map_tile_height() { return EEScratch<EEMapTile*>(kScratchShimMapTile)->GetHeight(); }
 extern "C" float ee_screenscpp_mouse_x() { return gMouse->mPosition.GetX(); }
 extern "C" float ee_screenscpp_mouse_y() { return gMouse->mPosition.GetY(); }
 extern "C" float ee_screenscpp_shell_mouse_x(uintptr_t inControl)
@@ -341,27 +338,19 @@ extern "C" float ee_screenscpp_view_bottom() { return gViewport.GetViewRectangle
 // ---- the rest of the multi-statement cases (UI lane round 9: shell_calls.rs), each one statement, and the
 // cases' locals (EEShellTree and EEShellRotate are Rust's)
 #define TREE(inTree) reinterpret_cast<EETechTree*>(inTree)
-static std::set<UString> sShFiles;              // FILE_APPEND_LISTED's files, in order, and the line
-static std::vector<UString> sShLines;
-static UWideString sShText;
-static UWideString sShFormat;                   // APPEND_NUMBERED's format
-static UILBNoSort<UWideString> sShNoSort;       // LIST_INSERT_BYTES' order
-static GETransformation sShTransformation;      // ROTATE's
-static ISEntity* sShKey;                        // KEY's and SPACE's
 static const unsigned long kShKeys[] = {kKeyComma, kKeyPeriod, kKeySpace};
-static GE3DLine sShLine;                        // SCREEN_LINE's
-extern "C" void ee_screenscpp_sh_files_clear() { sShFiles.clear(); }
+extern "C" void ee_screenscpp_sh_files_clear() { EEScratch<std::set<UString>>(kScratchShFiles).clear(); }
 extern "C" void ee_screenscpp_sh_files_list(uintptr_t inPath, uintptr_t inPattern)
-{ reinterpret_cast<FSPath*>(inPath)->ListFiles(UString(reinterpret_cast<const char*>(inPattern)), sShFiles); }
-extern "C" void ee_screenscpp_sh_files_snapshot() { sShLines.assign(sShFiles.begin(), sShFiles.end()); }
-extern "C" uint32_t ee_screenscpp_sh_files_count() { return (uint32_t)sShLines.size(); }
-extern "C" void ee_screenscpp_sh_text_from_file(uint32_t inIndex) { sShText = sShLines[inIndex]; }
-extern "C" void ee_screenscpp_sh_text_trim4() { sShText.InsertString("", sShText.GetLength() - 4, true); }
+{ reinterpret_cast<FSPath*>(inPath)->ListFiles(UString(reinterpret_cast<const char*>(inPattern)), EEScratch<std::set<UString>>(kScratchShFiles)); }
+extern "C" void ee_screenscpp_sh_files_snapshot() { EEScratch<std::vector<UString>>(kScratchShLines).assign(EEScratch<std::set<UString>>(kScratchShFiles).begin(), EEScratch<std::set<UString>>(kScratchShFiles).end()); }
+extern "C" uint32_t ee_screenscpp_sh_files_count() { return (uint32_t)EEScratch<std::vector<UString>>(kScratchShLines).size(); }
+extern "C" void ee_screenscpp_sh_text_from_file(uint32_t inIndex) { EEScratch<UWideString>(kScratchShText) = EEScratch<std::vector<UString>>(kScratchShLines)[inIndex]; }
+extern "C" void ee_screenscpp_sh_text_trim4() { EEScratch<UWideString>(kScratchShText).InsertString("", EEScratch<UWideString>(kScratchShText).GetLength() - 4, true); }
 extern "C" void ee_screenscpp_sh_combo_append_text(uintptr_t inControl)
-{ static_cast<UIComboBox*>(C(inControl))->AppendLine(sShText); }
-extern "C" void ee_screenscpp_sh_numbered_format(int64_t inId) { gResource->GetString((unsigned long)inId, sShFormat); }
+{ static_cast<UIComboBox*>(C(inControl))->AppendLine(EEScratch<UWideString>(kScratchShText)); }
+extern "C" void ee_screenscpp_sh_numbered_format(int64_t inId) { gResource->GetString((unsigned long)inId, EEScratch<UWideString>(kScratchShFormat)); }
 extern "C" void ee_screenscpp_sh_numbered_print(uint32_t inNumber)
-{ sprintf(sShText, sShFormat, (unsigned long)inNumber); }
+{ sprintf(EEScratch<UWideString>(kScratchShText), EEScratch<UWideString>(kScratchShFormat), (unsigned long)inNumber); }
 extern "C" void ee_screenscpp_sh_radio_clear_down_checked(uintptr_t inControl)
 { static_cast<UIRadioButton*>(C(inControl))->SetDownCheckedBitmap(NULL); }
 extern "C" void ee_screenscpp_sh_radio_clear_up_checked(uintptr_t inControl)
@@ -429,7 +418,7 @@ extern "C" int64_t ee_screenscpp_sh_class_epoch(int64_t inUnitClass)
 extern "C" int64_t ee_screenscpp_sh_class_family(int64_t inUnitClass)
 { return (int64_t)gUnitClassTable[(long)inUnitClass]->mFamily; }
 extern "C" void ee_screenscpp_sh_list_insert(uintptr_t inControl, uintptr_t inText, int64_t inIndex)
-{ static_cast<UILBString*>(C(inControl))->InsertLine(UWideString(reinterpret_cast<const char*>(inText)), (unsigned long)inIndex, sShNoSort); }
+{ static_cast<UILBString*>(C(inControl))->InsertLine(UWideString(reinterpret_cast<const char*>(inText)), (unsigned long)inIndex, EEScratch<UILBNoSort<UWideString>>(kScratchShNoSort)); }
 extern "C" void ee_screenscpp_sh_list_data(uintptr_t inControl, int64_t inIndex, void* inOut)
 { EEShimOutC(inOut, (const char*)static_cast<UILBString*>(C(inControl))->GetData((unsigned long)inIndex)); }
 extern "C" int64_t ee_screenscpp_sh_unit_name_id(uintptr_t inUnit)
@@ -442,10 +431,10 @@ extern "C" void ee_screenscpp_sh_ghosts_leave() { gWorld.mGhostUnitsLock->Leave(
 extern "C" bool ee_screenscpp_sh_ghost_turns(uint32_t inIndex)
 { return gUnitClassTable[static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mUnitClass->mUnitType]->mAngularAcceleration > 0.0f; }
 extern "C" void ee_screenscpp_sh_tr_from_ghost(uint32_t inIndex)
-{ sShTransformation = static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mTransformation; }
-extern "C" void ee_screenscpp_sh_tr_orient(float inAngle) { sShTransformation.SetOrientationYPR(inAngle, 0.0f, 0.0f); }
+{ EEScratch<GETransformation>(kScratchShTransformation) = static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mTransformation; }
+extern "C" void ee_screenscpp_sh_tr_orient(float inAngle) { EEScratch<GETransformation>(kScratchShTransformation).SetOrientationYPR(inAngle, 0.0f, 0.0f); }
 extern "C" void ee_screenscpp_sh_tr_to_ghost(uint32_t inIndex)
-{ static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mTransformation = sShTransformation; }
+{ static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mTransformation = EEScratch<GETransformation>(kScratchShTransformation); }
 extern "C" uint32_t ee_screenscpp_sh_editor_selected_count(uintptr_t inControl)
 { return (uint32_t)static_cast<EEUIFScenarioEditor*>(C(inControl)->GetForm())->GetSelectedUnitCount(); }
 extern "C" uintptr_t ee_screenscpp_sh_editor_selected(uintptr_t inControl, uint32_t inIndex)
@@ -455,22 +444,22 @@ extern "C" bool ee_screenscpp_sh_unit_has_complex(uintptr_t inUnit)
 extern "C" bool ee_screenscpp_sh_unit_turns(uintptr_t inUnit)
 { return reinterpret_cast<EEUnit*>(inUnit)->mUnitClass->mAngularAcceleration > 0.0f; }
 extern "C" void ee_screenscpp_sh_tr_from_unit(uintptr_t inUnit)
-{ sShTransformation = reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit->mPhysicalModel.GetLocation(); }
+{ EEScratch<GETransformation>(kScratchShTransformation) = reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit->mPhysicalModel.GetLocation(); }
 extern "C" void ee_screenscpp_sh_tr_to_unit(uintptr_t inUnit)
-{ reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit->SetTransformation(sShTransformation, true); }
+{ reinterpret_cast<EEUnit*>(inUnit)->mComplexUnit->SetTransformation(EEScratch<GETransformation>(kScratchShTransformation), true); }
 extern "C" int64_t ee_screenscpp_sh_key_load(uint32_t inWhich)
-{ return (int64_t)gISKeyboard->GetEntity(kShKeys[inWhich], sShKey); }
-extern "C" bool ee_screenscpp_sh_key_just_pressed() { return sShKey->JustPressed() != 0; }
-extern "C" bool ee_screenscpp_sh_key_just_unpressed() { return sShKey->JustUnpressed() != 0; }
-extern "C" int64_t ee_screenscpp_sh_key_value() { return (int64_t)sShKey->GetValue(); }
+{ return (int64_t)gISKeyboard->GetEntity(kShKeys[inWhich], EEScratch<ISEntity*>(kScratchShKey)); }
+extern "C" bool ee_screenscpp_sh_key_just_pressed() { return EEScratch<ISEntity*>(kScratchShKey)->JustPressed() != 0; }
+extern "C" bool ee_screenscpp_sh_key_just_unpressed() { return EEScratch<ISEntity*>(kScratchShKey)->JustUnpressed() != 0; }
+extern "C" int64_t ee_screenscpp_sh_key_value() { return (int64_t)EEScratch<ISEntity*>(kScratchShKey)->GetValue(); }
 extern "C" void ee_screenscpp_sh_screen_line(float inX, float inY)
-{ gWorld.mMap->GetScreenLine(GE2DPoint(inX, inY), sShLine); }
-extern "C" float ee_screenscpp_sh_line_start_x() { return sShLine.GetStart().GetX(); }
-extern "C" float ee_screenscpp_sh_line_start_y() { return sShLine.GetStart().GetY(); }
-extern "C" float ee_screenscpp_sh_line_start_z() { return sShLine.GetStart().GetZ(); }
-extern "C" float ee_screenscpp_sh_line_direction_x() { return sShLine.GetDirection().GetX(); }
-extern "C" float ee_screenscpp_sh_line_direction_y() { return sShLine.GetDirection().GetY(); }
-extern "C" float ee_screenscpp_sh_line_direction_z() { return sShLine.GetDirection().GetZ(); }
+{ gWorld.mMap->GetScreenLine(GE2DPoint(inX, inY), EEScratch<GE3DLine>(kScratchShLine)); }
+extern "C" float ee_screenscpp_sh_line_start_x() { return EEScratch<GE3DLine>(kScratchShLine).GetStart().GetX(); }
+extern "C" float ee_screenscpp_sh_line_start_y() { return EEScratch<GE3DLine>(kScratchShLine).GetStart().GetY(); }
+extern "C" float ee_screenscpp_sh_line_start_z() { return EEScratch<GE3DLine>(kScratchShLine).GetStart().GetZ(); }
+extern "C" float ee_screenscpp_sh_line_direction_x() { return EEScratch<GE3DLine>(kScratchShLine).GetDirection().GetX(); }
+extern "C" float ee_screenscpp_sh_line_direction_y() { return EEScratch<GE3DLine>(kScratchShLine).GetDirection().GetY(); }
+extern "C" float ee_screenscpp_sh_line_direction_z() { return EEScratch<GE3DLine>(kScratchShLine).GetDirection().GetZ(); }
 extern "C" bool ee_screenscpp_sh_right_down(uintptr_t inControl) { return C(inControl)->GetRightMouseButtonDown(); }
 extern "C" bool ee_screenscpp_sh_left_down(uintptr_t inControl) { return C(inControl)->GetLeftMouseButtonDown(); }
 extern "C" bool ee_screenscpp_sh_has_capture(uintptr_t inControl) { return C(inControl)->GetHasMouseCapture(); }

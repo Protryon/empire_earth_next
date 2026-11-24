@@ -645,12 +645,3 @@ void EEClient::HandleStopGame()
 {
 }
 
-bool EEClient::IsClient()
-{
-    return true;
-}
-
-bool EEClient::IsServer()
-{
-    return false;
-}

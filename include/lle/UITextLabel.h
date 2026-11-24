@@ -18,12 +18,11 @@
 #include "rust/ui/labelobj.h"
 #include "rust/ui/lle_hosts.h"
 
-class GEText;
 
 class LLE_API UITextLabel : public UIControl {
 public:
     UITextLabel(const UWideString& inText, GEFont* inFont, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inLabelType, unsigned long inIndex, unsigned long inBorderThickness) : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness), mRust(ee_ui_label_new(this, ee_ui_label_host, UIF4(inRectangle), inFont, inLabelType, inBorderThickness)) { this->Call(EeUiLabelCall::Init, (intptr_t)(const char*)inText); }
-    virtual ~UITextLabel();
+    virtual ~UITextLabel() { ee_ui_label_free(this->mRust); }
     virtual void AppendText(const UWideString& inText) { this->SetText(inText, false); }   // slot 0x88
     virtual void ChangeFont(GEFont* inFont) { this->Call(EeUiLabelCall::ChangeFont, (intptr_t)inFont); }
     virtual long CopyData() { return (long)this->Call(EeUiLabelCall::CopyData); }
@@ -50,13 +49,7 @@ public:
     void SetScrollBarBgOpacity(float inOpacity) { this->Call(EeUiLabelCall::SetScrollBarBgOpacity, 0, 0, inOpacity); }
     void SetScrollBarBgColor(const GEColor& inColor) { this->Call(EeUiLabelCall::SetScrollBarBgColor, 0, 0, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }
     void SetText(const UWideString& inText) { this->SetText(inText, true); }
-    void SetText(long inValue)
-    {
-        char theBuffer[50];
-        PlatIToA(inValue, theBuffer, 10);
-        UWideString theText(theBuffer);
-        this->SetText(theText, true);
-    }
+    void SetText(long inValue) { ee_ui_label_set_number(this->mRust, inValue); }   // _itoa's decimal
     virtual long UpdateKeyboard() { return kErrorFailed; }
     virtual void CheckScrollBar() { this->Call(EeUiLabelCall::CheckScrollBar); } // slot 0x90
     virtual long MouseLButtonDown() { return (long)this->Call(EeUiLabelCall::MouseLButtonDown); }

@@ -78,7 +78,7 @@ extern EEAIContinentManager gContinentManager;
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
 extern bool gGameWindowSizeDefaulted;        // EEPreferences.cpp
 extern float gCameraMaxZoom;                 // EECameraControl.cpp
-extern bool& gInCinematic;                   // 0x5318e0
+extern bool& gInCinematic;
 extern char gEmptyString[];                  // 0x4e5b98 (pooled "")
 extern EECivilizationManager gCivilizationManager;
 

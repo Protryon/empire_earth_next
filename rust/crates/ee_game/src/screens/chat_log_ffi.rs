@@ -135,3 +135,141 @@ pub unsafe extern "C" fn ee_screens_chat_log_load(file: *mut c_void) -> c_long {
 pub unsafe extern "C" fn ee_screens_chat_log_save(file: *mut c_void) -> c_long {
     crate::screens::chat_log::save(&CHAT_LOG, &mut HostFile(file))
 }
+
+/// A chat line posted to the UI thread (message 0x418; the dialog log's line): the original's `EEChatLogEntry`
+/// (UI round 16), its name and text NUL-terminated (`UWideString`'s bytes).
+#[repr(C)]
+pub struct EeScreensChatEntry {
+    pub head: EeScreensChatLogHead,
+    pub name: *mut core::ffi::c_char,
+    pub text: *mut core::ffi::c_char,
+}
+
+fn c_text(text: *const core::ffi::c_char) -> *mut core::ffi::c_char {
+    let bytes = if text.is_null() {
+        Vec::new()
+    } else {
+        // SAFETY: the caller's NUL-terminated text
+        unsafe { core::ffi::CStr::from_ptr(text) }.to_bytes().to_vec()
+    };
+    std::ffi::CString::new(bytes).unwrap_or_default().into_raw()
+}
+
+fn entry<'a>(entry: usize) -> &'a mut EeScreensChatEntry {
+    // SAFETY: every caller's entry came from ee_screens_chat_entry_new / _blank and is not freed
+    unsafe { &mut *(entry as *mut EeScreensChatEntry) }
+}
+
+/// `new EEChatLogEntry{colour, name, text, kind, time}` (`EEUserInterface::AddChatLogEntry`) -> the entry.
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_new(
+    head: EeScreensChatLogHead,
+    name: *const core::ffi::c_char,
+    text: *const core::ffi::c_char,
+) -> *mut EeScreensChatEntry {
+    Box::into_raw(Box::new(EeScreensChatEntry { head, name: c_text(name), text: c_text(text) }))
+}
+
+/// `new EEChatLogEntry` (the dialog log's: white, no name or text, kind and time 0; the original left the kind and
+/// time unset) -> the entry.
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_blank() -> usize {
+    let head = EeScreensChatLogHead { colour: [1.0; 3], kind: 0, time: 0 };
+    ee_screens_chat_entry_new(head, core::ptr::null(), core::ptr::null()) as usize
+}
+
+/// The entry's text set from NUL-terminated bytes.
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_set_text(e: usize, text: *const core::ffi::c_char) {
+    let e = entry(e);
+    // SAFETY: made by c_text
+    drop(unsafe { std::ffi::CString::from_raw(e.text) });
+    e.text = c_text(text);
+}
+
+/// The entry's kind (`mType`).
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_set_kind(e: usize, kind: u32) {
+    entry(e).head.kind = kind;
+}
+
+/// The entry's kind (`mType`).
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_kind(e: usize) -> i64 {
+    entry(e).head.kind as i64
+}
+
+/// The entry added to the chat log (the original's `EEUIECLEFormManager::AddEntry`).
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_log(e: usize) {
+    let e = entry(e);
+    // SAFETY: made by c_text
+    let (name, text) = unsafe { (core::ffi::CStr::from_ptr(e.name), core::ffi::CStr::from_ptr(e.text)) };
+    let line = ChatLogEntry {
+        colour: e.head.colour,
+        name: name.to_bytes().to_vec(),
+        text: text.to_bytes().to_vec(),
+        kind: e.head.kind,
+        time: e.head.time,
+    };
+    CHAT_LOG.lock().unwrap().add(line);
+}
+
+/// The entry freed.
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_free(e: usize) {
+    if e == 0 {
+        return;
+    }
+    // SAFETY: made by ee_screens_chat_entry_new, not used again
+    let e = unsafe { Box::from_raw(e as *mut EeScreensChatEntry) };
+    // SAFETY: made by c_text
+    unsafe {
+        drop(std::ffi::CString::from_raw(e.name));
+        drop(std::ffi::CString::from_raw(e.text));
+    }
+}
+
+/// The dialog log's add (the shim list's second name for [`ee_screens_chat_entry_log`]).
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_add(e: usize) {
+    ee_screens_chat_entry_log(e);
+}
+
+/// The dialog log's delete (the shim list's second name for [`ee_screens_chat_entry_free`]).
+#[no_mangle]
+pub extern "C" fn ee_screens_chat_entry_delete(e: usize) {
+    ee_screens_chat_entry_free(e);
+}
+
+#[cfg(test)]
+mod entry_tests {
+    use super::*;
+
+    #[test]
+    fn a_posted_entry_logs_its_fields_and_frees() {
+        let head = EeScreensChatLogHead { colour: [0.5, 0.25, 1.0], kind: 3, time: 7 };
+        let e = ee_screens_chat_entry_new(head, c"Ann".as_ptr(), c"hello".as_ptr()) as usize;
+        assert_eq!(ee_screens_chat_entry_kind(e), 3);
+        ee_screens_chat_entry_set_kind(e, 1);
+        ee_screens_chat_entry_set_text(e, c"bye".as_ptr());
+        let before = 0;
+        ee_screens_chat_entry_log(e);
+        let log = CHAT_LOG.lock().unwrap();
+        let last = log.entries.back().unwrap();
+        let _ = before;
+        assert_eq!(
+            (last.name.as_slice(), last.text.as_slice(), last.kind, last.time),
+            (&b"Ann"[..], &b"bye"[..], 1, 7)
+        );
+        drop(log);
+        ee_screens_chat_entry_free(e);
+    }
+
+    #[test]
+    fn a_blank_entry_is_white_and_empty() {
+        let e = ee_screens_chat_entry_blank();
+        assert_eq!(entry(e).head, EeScreensChatLogHead { colour: [1.0; 3], kind: 0, time: 0 });
+        ee_screens_chat_entry_free(e);
+    }
+}

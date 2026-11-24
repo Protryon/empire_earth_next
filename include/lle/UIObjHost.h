@@ -5,9 +5,40 @@
 #define LLE_UIOBJHOST_H
 #include <string.h>
 #include "rust/ui/obj.h"
+#include "rust/ui/rect.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEColor.h"
 #include "lle/GERectangle.h"
+
+// The toolkit's classes its headers name (one list: lle/UIControl.h, UIForm.h, UIManager.h, UIControlsTable.h and the
+// controls' headers include this one)
+class FSFileSpec;
+class FSPath;
+class GEBitmap;
+class GEFont;
+class GERasterizer;
+class GERhombus;
+class GETexture;
+struct GETextureDescription;
+class GEText;
+class ISEntity;
+class SESoundManager;
+class TSCriticalSection;
+class UIBackground;
+class UIBackgroundTable;
+class UIControl;
+class UIControlsTable;
+struct UIDbDataForms;
+class UIEntity;
+class UIEntityGroup;
+class UIEvent;
+class UIForm;
+class UIFormManager;
+class UIHotKey;
+class UIManager;
+class UIScrollBar;
+class UITextLabel;
+class UResourceFile;
 
 // Four floats for a Rust call (ee_ui obj.rs's buffer: a point's x and y, a colour's red, green and blue, a
 // rectangle's bottom, left, right and top), alive for the call's full expression
@@ -35,6 +66,9 @@ template <class F, class... A> UIF4 UIOut(F inCall, A... inArgs)
     inCall(inArgs..., theOut.f);
     return theOut;
 }
+
+// a rectangle as the Rust record (EeUiRect is GERectangle's layout: lle/UILayoutUtility.h's asserts)
+inline EeUiRect UIRect(const GERectangle& inRectangle) { return *reinterpret_cast<const EeUiRect*>(&inRectangle); }
 
 struct UIObjHost {
     // the buffer's rectangle (bottom, left, right, top: GERectangle's own order) and the buffer set from one

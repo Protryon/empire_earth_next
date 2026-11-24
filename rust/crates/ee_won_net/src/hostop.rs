@@ -901,6 +901,10 @@ pub struct EeWonHostOp {
 }
 
 impl EeWonHostOp {
+    /// The op's directory listing (`GetEntities(which, index)`, R6 WON round 34's DirList).
+    pub(crate) fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity> {
+        self.op.entities(which, index)
+    }
     pub(crate) fn boxed<P: Plan>(plan: P) -> *mut EeWonHostOp {
         Box::into_raw(Box::new(EeWonHostOp { op: Box::new(Host::new(plan)) }))
     }

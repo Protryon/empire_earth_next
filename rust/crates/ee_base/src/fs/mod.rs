@@ -12,6 +12,7 @@ mod archive;
 pub mod archive_obj;
 mod chunk;
 pub mod cppfile;
+pub mod cppobj;
 pub mod ffi;
 mod file;
 mod memfile;

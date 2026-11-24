@@ -255,3 +255,16 @@ pub extern "C" fn ee_ui_bgtable_create_backgrounds(manager: *mut c_void, host: E
 #[cfg(test)]
 #[path = "bgtableobj_tests.rs"]
 mod tests;
+
+/// The user interface's shutdown hook (User Interface.cpp's `UIShutdown`): every background table entry deleted.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe extern "C" fn ui_shutdown(_forced: bool) {
+    ee_ui_bgtable_delete_all(Some(crate::lle_hosts::ee_ui_bg_table_host));
+}
+
+/// `UIInitialize` (User Interface.cpp, UI round 16): registers the user interface's shutdown hook; always kErrorOK.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub extern "C" fn ee_ui_initialize() -> core::ffi::c_long {
+    ee_base::util::system::ee_util_register_shutdown(ui_shutdown)
+}

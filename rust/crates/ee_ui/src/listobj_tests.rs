@@ -2,7 +2,9 @@
 //! the template's statements at the census commit (lle/UIListBox.h over the list record FFI and draw_ffi's list
 //! functions), replayed op for op against the Rust list box: the constructor's parts and first scroll bar check,
 //! the lines' insertions and deletions, the copies and draws, the key repeat, the mouse, the scroll bar's creation
-//! and removal, and the virtuals re-entering (`do` lines).
+//! and removal, and the virtuals re-entering (`do` lines). UI round 15 (the lines Rust's): the per-`T` copy op (194)
+//! left the golden, the copy being this object's, and the four `ProcessDown`..`ProcessEnd` ops (195 with `a` 0..3)
+//! became one op each (900..903).
 
 use super::*;
 use crate::obj::replay::Replay;
@@ -83,4 +85,84 @@ fn the_sort_order_folds_case() {
         assert!(ee_ui_text_less_no_case(c"apple".as_ptr(), c"Banana".as_ptr()));
         assert!(!ee_ui_text_less_no_case(c"banana".as_ptr(), c"Apple".as_ptr()));
     }
+}
+
+// ---- the lines (UI round 15): boxed numbers through a fake line type
+
+unsafe extern "C" fn make() -> *mut c_void {
+    Box::into_raw(Box::new(0u32)) as *mut c_void
+}
+unsafe extern "C" fn clone(l: *const c_void) -> *mut c_void {
+    // SAFETY: a boxed number
+    Box::into_raw(Box::new(unsafe { *(l as *const u32) })) as *mut c_void
+}
+unsafe extern "C" fn free(l: *mut c_void) {
+    // SAFETY: made by make or clone
+    drop(unsafe { Box::from_raw(l as *mut u32) });
+}
+unsafe extern "C" fn assign(to: *mut c_void, from: *const c_void) {
+    // SAFETY: boxed numbers
+    unsafe { *(to as *mut u32) = *(from as *const u32) };
+}
+unsafe extern "C" fn text(_: *const c_void) -> *const c_char {
+    core::ptr::null()
+}
+unsafe extern "C" fn from_text(_: *const c_char) -> *mut c_void {
+    core::ptr::null_mut()
+}
+unsafe extern "C" fn less(_: *mut c_void, a: *const c_void, b: *const c_void) -> bool {
+    // SAFETY: boxed numbers
+    unsafe { *(a as *const u32) < *(b as *const u32) }
+}
+unsafe extern "C" fn eq(a: *const c_void, b: *const c_void) -> bool {
+    // SAFETY: boxed numbers
+    unsafe { *(a as *const u32) == *(b as *const u32) }
+}
+
+/// A host answering every op 0 but the line count (the virtual `GetNumLines`), read from the object.
+unsafe extern "C" fn host(o: *mut c_void, op: Op, _: isize, _: isize, _: isize, _: isize, _: *mut f32) -> isize {
+    if op == Op::ListNumLines && !o.is_null() {
+        // SAFETY: the test's list (set below)
+        return unsafe { (*(o as *const EeUiList)).line_count(0) as isize };
+    }
+    0
+}
+
+fn numbers(o: &EeUiList) -> Vec<u32> {
+    // SAFETY: boxed numbers
+    (0..o.line_count(0)).map(|i| unsafe { *(o.line(0, i) as *const u32) }).collect()
+}
+
+#[test]
+fn the_lines_are_owned_inserted_found_and_freed() {
+    let ops = EeUiLineOps { make, clone, free, assign, text, from_text };
+    let data = [5u32, 1, 9];
+    let mut o = EeUiList::new(Host { obj: core::ptr::null_mut(), f: Some(host) }, 16, true, 2);
+    // SAFETY: three numbers
+    unsafe { o.set_lines(ops, data.as_ptr() as *const c_void, 3, 4) };
+    let o = Box::new(o);
+    assert_eq!(numbers(&o), [5, 1, 9]);
+    let shown = o.line_count(1);
+    let n = 7u32;
+    // SAFETY: a number; the halving search over [1, 9] from index 1 puts 7 before 9
+    unsafe { o.insert(&n as *const u32 as *const c_void, 1, core::ptr::null_mut(), Some(less)) };
+    assert_eq!(numbers(&o), [5, 1, 7, 9]);
+    // SAFETY: a number; no predicate: at the index
+    unsafe { o.insert(&n as *const u32 as *const c_void, 0, core::ptr::null_mut(), None) };
+    assert_eq!(numbers(&o), [7, 5, 1, 7, 9]);
+    o.delete_line(1);
+    assert_eq!(numbers(&o), [7, 1, 7, 9]);
+    let nine = 9u32;
+    // SAFETY: numbers
+    assert_eq!(unsafe { o.find(&nine as *const u32 as *const c_void, eq) }, None, "the host's line count is 0");
+    o.copy_lines(shown + 2, 1, 3);
+    assert_eq!(o.line_count(1), shown + 2);
+    // SAFETY: boxed numbers
+    assert_eq!(unsafe { (*(o.line(1, 0) as *const u32), *(o.line(1, 1) as *const u32)) }, (1, 7));
+    assert!(o.line(0, 99).is_null());
+    o.delete_all();
+    assert_eq!(o.line_count(0), 0);
+    let p = Box::into_raw(o);
+    // SAFETY: made above
+    unsafe { ee_ui_list_free(p) };
 }

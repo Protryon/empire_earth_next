@@ -45,28 +45,14 @@ extern unsigned long& gTexturePixelDepth;
 
 // (EEMSendFlare's inline ctor: ee/EEMessage.h)
 
-static GEBitmap* sMapBitmap;                // 0x565328 the terrain texture
-static GEBitmap* sWorldBitmap;              // 0x56532c the units' texture (twice the scale)
-static GEBitmap* sFlareBitmap;              // 0x565330 "textures\Flare"
 GERectangle EEUIMiniMap::sBounds;
 static GEColor sFlareColor(1.0f, 0.0f, 0.0f);
-static GEColor sFlareBlinkColor;            // 0x5652f8 (1, 1, 1)
 
 // Creates the mini map control with its click action, the map drawn inside its border
-EEUIMiniMap::EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
-                         unsigned long inBorderThickness)
-    : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    ee_screens_mm_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uint32_t)inBorderThickness);   // (mini_map_calls.rs)
-}
 
 // Snapshots the mini map for drawing: refreshes the units texture, scales the map to the window, places the
 // camera outline and the blinking flare (redrawing the screen when the flare leaves the map's inner area); the
 // numbers are ee_screens mini_map.rs', the C++ reads and applies them in the original's order
-long EEUIMiniMap::CopyData()
-{
-    return (long)ee_screens_mm_copy_data((uintptr_t)this);   // (mini_map_calls.rs)
-}
 
 // NEAR: the original's frame has a zeroed dword at -4 (not identified) and builds the message's tile in the
 // tile's slot after operator new
@@ -77,15 +63,12 @@ long EEUIMiniMap::CopyData()
 // ---- the one-statement shims of ee_screens mini_map_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"
 #define MM(x) reinterpret_cast<EEUIMiniMap*>(x)
-static GEBitmap** const kMMBitmaps[3] = {&sMapBitmap, &sWorldBitmap, &sFlareBitmap};
-static const GEColor* const kMMFlareColors[2] = {&sFlareColor, &sFlareBlinkColor};
+static GEBitmap** const kMMBitmaps[3] = {&EEScratch<GEBitmap*>(kScratchMapBitmap), &EEScratch<GEBitmap*>(kScratchWorldBitmap), &EEScratch<GEBitmap*>(kScratchFlareBitmap)};
+static const GEColor* const kMMFlareColors[2] = {&sFlareColor, &EEScratch<GEColor>(kScratchFlareBlinkColor)};
 static bool EEUIMiniMap::* const kMMLines[4] = {&EEUIMiniMap::mDrawLine0, &EEUIMiniMap::mDrawLine1,
                                                 &EEUIMiniMap::mDrawLine2, &EEUIMiniMap::mDrawLine3};
 static GE2DPoint EEMiniMap::* const kMMCorners[4] = {&EEMiniMap::mCorner0, &EEMiniMap::mCorner1, &EEMiniMap::mCorner2,
                                                      &EEMiniMap::mCorner3};
-static GETextureDescription sMMDescription;   // LoadMedia's description
-static GERectangle sMMViewRect;               // DrawPolygons' kept view rectangle
-static GEViewport sMMViewport;                // and its viewport (the original's locals)
 extern "C" float ee_screenscpp_mm_rect_left(uintptr_t inRect)
 { return reinterpret_cast<const GERectangle*>(inRect)->GetLeft(); }
 extern "C" float ee_screenscpp_mm_rect_top(uintptr_t inRect)
@@ -100,8 +83,8 @@ extern "C" void ee_screenscpp_mm_set_show_flare(uintptr_t inMap, bool inShow) { 
 extern "C" void ee_screenscpp_mm_set_flare_blink(uintptr_t inMap, bool inBlink) { MM(inMap)->mFlareBlink = inBlink; }
 extern "C" bool ee_screenscpp_mm_show_flare(uintptr_t inMap) { return MM(inMap)->mShowFlare; }
 extern "C" bool ee_screenscpp_mm_flare_blink(uintptr_t inMap) { return MM(inMap)->mFlareBlink; }
-extern "C" uintptr_t ee_screenscpp_mm_action(uintptr_t inMap) { return (uintptr_t)MM(inMap)->mAction; }
-extern "C" void ee_screenscpp_mm_action_dereference(uintptr_t inMap) { MM(inMap)->mAction->Dereference(); }
+extern "C" uintptr_t ee_screenscpp_mm_action(uintptr_t inMap) { return (uintptr_t)static_cast<EEAMiniMap*>(MM(inMap)->mAction); }
+extern "C" void ee_screenscpp_mm_action_dereference(uintptr_t inMap) { static_cast<EEAMiniMap*>(MM(inMap)->mAction)->Dereference(); }
 extern "C" float ee_screenscpp_mm_origin_x(uintptr_t inMap) { return MM(inMap)->mOrigin.GetX(); }
 extern "C" float ee_screenscpp_mm_origin_y(uintptr_t inMap) { return MM(inMap)->mOrigin.GetY(); }
 extern "C" uintptr_t ee_screenscpp_mm_map_rect(uintptr_t inMap) { return (uintptr_t)&MM(inMap)->GetRectangle(); }
@@ -123,30 +106,30 @@ extern "C" float ee_screenscpp_mm_map_to_pixel(uint32_t inRow, uint32_t inColumn
 { return gMiniMap->mMapToPixel.mMatrix[inRow][inColumn]; }
 extern "C" float ee_screenscpp_mm_pixel_to_map(uint32_t inRow, uint32_t inColumn)
 { return gMiniMap->mPixelToMap.mMatrix[inRow][inColumn]; }
-extern "C" uintptr_t ee_screenscpp_mm_flare_texture() { return (uintptr_t)sFlareBitmap->GetTexture(gScreenIndex); }
+extern "C" uintptr_t ee_screenscpp_mm_flare_texture() { return (uintptr_t)EEScratch<GEBitmap*>(kScratchFlareBitmap)->GetTexture(gScreenIndex); }
 extern "C" uint32_t ee_screenscpp_mm_texture_height(uintptr_t inTexture)
 { return (uint32_t)reinterpret_cast<GETexture*>(inTexture)->GetHeight(); }
 extern "C" uint32_t ee_screenscpp_mm_texture_width(uintptr_t inTexture)
 { return (uint32_t)reinterpret_cast<GETexture*>(inTexture)->GetWidth(); }
-extern "C" float ee_screenscpp_mm_flare_location_x() { return sFlareBitmap->GetLocation().GetX(); }
-extern "C" float ee_screenscpp_mm_flare_location_y() { return sFlareBitmap->GetLocation().GetY(); }
-extern "C" float ee_screenscpp_mm_flare_width() { return sFlareBitmap->GetWidth(); }
+extern "C" float ee_screenscpp_mm_flare_location_x() { return EEScratch<GEBitmap*>(kScratchFlareBitmap)->GetLocation().GetX(); }
+extern "C" float ee_screenscpp_mm_flare_location_y() { return EEScratch<GEBitmap*>(kScratchFlareBitmap)->GetLocation().GetY(); }
+extern "C" float ee_screenscpp_mm_flare_width() { return EEScratch<GEBitmap*>(kScratchFlareBitmap)->GetWidth(); }
 extern "C" bool ee_screenscpp_mm_free_camera() { return gFreeCamera; }
 extern "C" void ee_screenscpp_mm_bitmap_at_origin(uint32_t inBitmap, uintptr_t inMap)
 { (*kMMBitmaps[inBitmap])->SetLocation(MM(inMap)->mOrigin); }
 extern "C" void ee_screenscpp_mm_bitmap_scale(uint32_t inBitmap, float inX, float inY)
 { (*kMMBitmaps[inBitmap])->SetXYScale(inX, inY); }
-extern "C" void ee_screenscpp_mm_flare_color(bool inBlink) { sFlareBitmap->SetColor(*kMMFlareColors[inBlink]); }
+extern "C" void ee_screenscpp_mm_flare_color(bool inBlink) { EEScratch<GEBitmap*>(kScratchFlareBitmap)->SetColor(*kMMFlareColors[inBlink]); }
 extern "C" void ee_screenscpp_mm_redraw_all() { gUIManager->RedrawAll(); }
-extern "C" void ee_screenscpp_mm_flare_at(float inX, float inY) { sFlareBitmap->SetLocation(GE2DPoint(inX, inY)); }
+extern "C" void ee_screenscpp_mm_flare_at(float inX, float inY) { EEScratch<GEBitmap*>(kScratchFlareBitmap)->SetLocation(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_mm_line_start(uintptr_t inMap, uint32_t inLine, float inX, float inY)
 { MM(inMap)->mLines[inLine].SetStartPoint(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_mm_line_end(uintptr_t inMap, uint32_t inLine, float inX, float inY)
 { MM(inMap)->mLines[inLine].SetEndPoint(GE2DPoint(inX, inY)); }
 extern "C" int64_t ee_screenscpp_mm_base_copy_data(uintptr_t inMap) { return MM(inMap)->UIControl::CopyData(); }
-extern "C" uintptr_t ee_screenscpp_mm_description() { return (uintptr_t)&sMMDescription; }
+extern "C" uintptr_t ee_screenscpp_mm_description() { return (uintptr_t)&EEScratch<GETextureDescription>(kScratchMMDescription); }
 extern "C" void ee_screenscpp_mm_set_description()
-{ sMMDescription = GETextureDescription{1, 0, gTexturePixelDepth, 0, false, false, true, true}; }
+{ EEScratch<GETextureDescription>(kScratchMMDescription) = GETextureDescription{1, 0, gTexturePixelDepth, 0, false, false, true, true}; }
 extern "C" void ee_screenscpp_mm_bitmap_new(uint32_t inBitmap) { *kMMBitmaps[inBitmap] = new GEBitmap; }
 extern "C" uintptr_t ee_screenscpp_mm_bitmap(uint32_t inBitmap) { return (uintptr_t)*kMMBitmaps[inBitmap]; }
 extern "C" void ee_screenscpp_mm_bitmap_dereference(uint32_t inBitmap) { (*kMMBitmaps[inBitmap])->Dereference(); }
@@ -154,7 +137,7 @@ extern "C" void ee_screenscpp_mm_bitmap_clear(uint32_t inBitmap) { *kMMBitmaps[i
 extern "C" void ee_screenscpp_texture_wrap(uintptr_t inTexture)
 { reinterpret_cast<GETexture*>(inTexture)->SetStageTextureAddressingMode(kAddressingWrap, -1); }
 extern "C" void ee_screenscpp_mm_flare_texture_set(uintptr_t inTexture)
-{ sFlareBitmap->SetTexture(reinterpret_cast<GETexture*>(inTexture), gScreenIndex); }
+{ EEScratch<GEBitmap*>(kScratchFlareBitmap)->SetTexture(reinterpret_cast<GETexture*>(inTexture), gScreenIndex); }
 extern "C" void ee_screenscpp_mm_terrain_enter() { gMiniMap->mTerrainCriticalSection->Enter(); }
 extern "C" void ee_screenscpp_mm_terrain_leave() { gMiniMap->mTerrainCriticalSection->Leave(); }
 extern "C" int64_t ee_screenscpp_mm_base_draw(uintptr_t inMap) { return MM(inMap)->UIControl::DrawPolygons(); }
@@ -163,14 +146,14 @@ extern "C" int64_t ee_screenscpp_mm_draw_bitmap(uintptr_t inMap, uint32_t inBitm
 extern "C" int64_t ee_screenscpp_mm_draw_line(uintptr_t inMap, uint32_t inLine)
 { return MM(inMap)->GetRasterizer()->Draw(&MM(inMap)->mLines[inLine], 1, gScreenIndex); }
 extern "C" void ee_screenscpp_mm_save_view_rect(uintptr_t inMap)
-{ sMMViewRect = MM(inMap)->GetRasterizer()->GetViewport(gScreenIndex).GetViewRectangle(); }
+{ EEScratch<GERectangle>(kScratchMMViewRect) = MM(inMap)->GetRasterizer()->GetViewport(gScreenIndex).GetViewRectangle(); }
 extern "C" void ee_screenscpp_mm_viewport_load(uintptr_t inMap)
-{ sMMViewport = MM(inMap)->GetRasterizer()->GetViewport(gScreenIndex); }
+{ EEScratch<GEViewport>(kScratchMMViewport) = MM(inMap)->GetRasterizer()->GetViewport(gScreenIndex); }
 extern "C" void ee_screenscpp_mm_viewport_clip(float inLeft, float inTop, float inRight, float inBottom)
-{ sMMViewport.SetViewRectangle(GERectangle(inLeft, inTop, inRight, inBottom)); }
-extern "C" void ee_screenscpp_mm_viewport_saved() { sMMViewport.SetViewRectangle(sMMViewRect); }
+{ EEScratch<GEViewport>(kScratchMMViewport).SetViewRectangle(GERectangle(inLeft, inTop, inRight, inBottom)); }
+extern "C" void ee_screenscpp_mm_viewport_saved() { EEScratch<GEViewport>(kScratchMMViewport).SetViewRectangle(EEScratch<GERectangle>(kScratchMMViewRect)); }
 extern "C" void ee_screenscpp_mm_viewport_apply(uintptr_t inMap)
-{ MM(inMap)->GetRasterizer()->SetViewport(sMMViewport, gScreenIndex); }
+{ MM(inMap)->GetRasterizer()->SetViewport(EEScratch<GEViewport>(kScratchMMViewport), gScreenIndex); }
 extern "C" float ee_screenscpp_mm_mouse_x(uintptr_t inMap) { return MM(inMap)->GetMouseLocation().GetX(); }
 extern "C" float ee_screenscpp_mm_mouse_y(uintptr_t inMap) { return MM(inMap)->GetMouseLocation().GetY(); }
 extern "C" float ee_screenscpp_mm_form_mouse_x(uintptr_t inMap)
@@ -180,12 +163,12 @@ extern "C" float ee_screenscpp_mm_form_mouse_y(uintptr_t inMap)
 extern "C" uintptr_t ee_screenscpp_mm_bounds() { return (uintptr_t)&EEUIMiniMap::sBounds; }
 extern "C" uint32_t ee_screenscpp_mm_modifiers() { return (uint32_t)gISKeyboard->GetModifierState(); }
 extern "C" void ee_screenscpp_mm_action_mode(uintptr_t inMap, int64_t inMode)
-{ MM(inMap)->mAction->mMode = (long)inMode; }
+{ static_cast<EEAMiniMap*>(MM(inMap)->mAction)->mMode = (long)inMode; }
 extern "C" void ee_screenscpp_mm_action_point(uintptr_t inMap, float inX, float inY)
-{ MM(inMap)->mAction->mPoint = GE2DPoint(inX, inY); }
+{ static_cast<EEAMiniMap*>(MM(inMap)->mAction)->mPoint = GE2DPoint(inX, inY); }
 extern "C" void ee_screenscpp_mm_action_modifiers(uintptr_t inMap, uint32_t inModifiers)
-{ MM(inMap)->mAction->mModifiers = inModifiers; }
-extern "C" void ee_screenscpp_mm_post_action(uintptr_t inMap) { gUserInterface->PostAction(MM(inMap)->mAction); }
+{ static_cast<EEAMiniMap*>(MM(inMap)->mAction)->mModifiers = inModifiers; }
+extern "C" void ee_screenscpp_mm_post_action(uintptr_t inMap) { gUserInterface->PostAction(static_cast<EEAMiniMap*>(MM(inMap)->mAction)); }
 extern "C" void ee_screenscpp_mm_capture(uintptr_t inMap) { MM(inMap)->CaptureMouse(); }
 extern "C" void ee_screenscpp_mm_base_set_location(uintptr_t inMap, float inX, float inY)
 { MM(inMap)->UIControl::SetLocation(GE2DPoint(inX, inY)); }
@@ -207,15 +190,15 @@ extern "C" int32_t ee_screenscpp_mm_map_size() { return (int32_t)::gWorld.mMap->
 extern "C" float ee_screenscpp_mm_update_map_to_pixel(uintptr_t inMinimap, uint32_t inRow, uint32_t inColumn)
 { return reinterpret_cast<EEMiniMap*>(inMinimap)->mMapToPixel.mMatrix[inRow][inColumn]; }
 extern "C" void ee_screenscpp_mm_world_coordinates(float inExtent)
-{ sWorldBitmap->SetTextureCoordinates(GETextureCoordinate(), GETextureCoordinate(inExtent, 0.0f), GETextureCoordinate(0.0f, inExtent), GETextureCoordinate(inExtent, inExtent)); }
+{ EEScratch<GEBitmap*>(kScratchWorldBitmap)->SetTextureCoordinates(GETextureCoordinate(), GETextureCoordinate(inExtent, 0.0f), GETextureCoordinate(0.0f, inExtent), GETextureCoordinate(inExtent, inExtent)); }
 extern "C" void ee_screenscpp_mm_set_bounds(float inLeft, float inTop, float inRight, float inBottom)
 { EEUIMiniMap::sBounds = GERectangle(inLeft, inTop, inRight, inBottom); }
 extern "C" void ee_screenscpp_mm_set_transformation(uintptr_t inMinimap)
 { gMiniMapTransformation = reinterpret_cast<EEMiniMap*>(inMinimap)->mPixelToMap; }
 extern "C" void ee_screenscpp_mm_terrain_texture_set(uintptr_t inMinimap)
-{ sMapBitmap->SetTexture(reinterpret_cast<EEMiniMap*>(inMinimap)->mTerrainTexture, gScreenIndex); }
+{ EEScratch<GEBitmap*>(kScratchMapBitmap)->SetTexture(reinterpret_cast<EEMiniMap*>(inMinimap)->mTerrainTexture, gScreenIndex); }
 extern "C" void ee_screenscpp_mm_world_texture_set(uintptr_t inMinimap)
-{ sWorldBitmap->SetTexture(reinterpret_cast<EEMiniMap*>(inMinimap)->mWorldTexture, gScreenIndex); }
+{ EEScratch<GEBitmap*>(kScratchWorldBitmap)->SetTexture(reinterpret_cast<EEMiniMap*>(inMinimap)->mWorldTexture, gScreenIndex); }
 
 // the media and the update as the game calls them (Empire Earth.cpp, the world, the mini map: ee/EEGameUI.h)
 #include "ee/EEGameUI.h"

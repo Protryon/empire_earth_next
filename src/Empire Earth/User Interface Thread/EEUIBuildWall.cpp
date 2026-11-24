@@ -24,12 +24,7 @@ extern "C" void ee_screenscpp_pl_wall_unload_media(int32_t inPlayer, int32_t inT
 { gWorld.GetPlayer(inPlayer)->UnloadUnitClassMedia(gWorld.GetPlayer(inPlayer)->GetTechTree()->Get(inTechnology)->mData->mUnitClass); }
 extern "C" void ee_screenscpp_pl_unlock_cursor() { gUIManager->GetMainGameForm()->mIsCursorLocked = false; }
 
-void EEUIBuildWall::Cancel()
-{
-    gUIManager->GetMainGameForm()->SetUIState(0);
-}
-
-void EEUIBuildWall::Build()
-{
-    gUIManager->GetMainGameForm()->mBuild->BuildWall(this->mStart, this->mEnd);
-}
+// the main game form's Cancel (0x2561b6, ICF with EEUIBuildGate's) and Build (0x25643d) (placement_ffi.rs)
+extern "C" void ee_screenscpp_pl_main_cancel() { gUIManager->GetMainGameForm()->SetUIState(0); }
+extern "C" void ee_screenscpp_pl_main_build_wall(float inStartX, float inStartY, float inEndX, float inEndY)
+{ static_cast<EEABuild*>(gUIManager->GetMainGameForm()->mBuild)->BuildWall(GE2DPoint(inStartX, inStartY), GE2DPoint(inEndX, inEndY)); }

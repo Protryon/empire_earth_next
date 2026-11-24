@@ -45,32 +45,6 @@
 #include "lle/UIShims.h"
 #include "rust/ui/lle_hosts.h"
 
-struct UIEditBoxRust {
-    // EditKey (ee_ui edit_keys.rs): UIControl's key predicates and the keyboard's A, L and Return entities
-    static bool Key(intptr_t inKey)
-    {
-        switch (inKey) {
-        case 0: return UIControl::ShiftKeyPressed();
-        case 1: return UIControl::Key(EeUiKey::Control)->GetValue() != 0;
-        case 2: return UIControl::Key(EeUiKey::BackSpace)->GetValue() != 0;
-        case 3: return UIControl::DeleteKeyPressed();
-        case 4: return UIControl::RightKeyPressed();
-        case 5: return UIControl::LeftKeyPressed();
-        case 6: return UIControl::HomeKeyPressed();
-        case 7: return UIControl::EndKeyPressed();
-        case 8: return UIControl::UpKeyPressed();
-        case 9: return UIControl::DownKeyPressed();
-        case 10: return UIControl::EnterKeyPressed();
-        case 11: return UIControl::CutKeyPressed();
-        case 12: return UIControl::CopyKeyPressed();
-        case 13: return UIControl::PasteKeyPressed();
-        case 17: return UIControl::Key(EeUiKey::Enter)->JustPressed();
-        case 18: return UIControl::Key(EeUiKey::NumEnter)->JustPressed();
-        }
-        return false;
-    }
-};
-static char* sClipboard = NULL;
 #define e static_cast<UIEditBox*>(inObj)
 #define theBar reinterpret_cast<UIScrollBar*>(a)
 #define thePoll reinterpret_cast<TMPoll*>(a)
@@ -93,15 +67,8 @@ EE_UI_CASE(edit_bar_value) { return theBar->GetSlider()->GetCurrentRangeValue();
 EE_UI_VOID(edit_bar_set_value) { theBar->SetCurrentRangeValue((unsigned long)b); }
 EE_UI_CASE(edit_bar_max) { return theBar->GetSlider()->GetMaxRange(); }
 EE_UI_VOID(edit_virt_set_rectangle) { e->SetRectangle(UIObjHost::Rect(f)); }
-EE_UI_CASE(edit_key) { return UIEditBoxRust::Key(a); }
 EE_UI_VOID(edit_virt_process_enter_key) { e->ProcessEnterKey(); }
 EE_UI_VOID(edit_clipboard_set) { PlatClipboardSetText(reinterpret_cast<const char*>(a)); }
-EE_UI_CASE(edit_clipboard_get)
-{
-    free(sClipboard);
-                sClipboard = PlatClipboardGetText();
-                return (intptr_t)sClipboard;
-}
 EE_UI_VOID(edit_translated_key) { e->GetForm()->GetManager()->UpdateTranslatedKey(reinterpret_cast<const char*>(a), 1); }
 EE_UI_VOID(edit_text_input_cancel) { PlatTextInputCancel(e->GetRasterizer()->GetWindow(e->GetScreenIndex())->GetOSRepresentation()); }
 EE_UI_VOID(edit_base_release_keyboard) { e->UIControl::ReleaseCapturedKeyboard(); }
@@ -121,9 +88,8 @@ EE_UI_VOID(edit_text_set_transparent) { theText->SetIsTransparent(b != 0); }
 // the keyboard's A, L and Return keys, the scroll bar, the form's mouse, the lines and the text colour: Rust's (ee_ui
 // lle_bg_edit.rs, UI lane round 12) before the host above
 #define UIEB(e) static_cast<UIEditBox*>(reinterpret_cast<UIControl*>(e))
-static const unsigned long kUIEditKeys[] = {kKeyA, kKeyL, kKeyReturn};
-extern "C" void ee_uicpp_edit_key_fetch(uint32_t inWhich, uintptr_t* inOut)
-{ gISKeyboard->GetEntity(kUIEditKeys[inWhich], *reinterpret_cast<ISEntity**>(inOut)); }
+extern "C" void ee_uicpp_keyboard_entity(uint32_t inKey, uintptr_t* inOut)
+{ gISKeyboard->GetEntity(inKey, *reinterpret_cast<ISEntity**>(inOut)); }
 extern "C" uintptr_t ee_uicpp_edit_scroll_bar_new(uintptr_t inEdit, float inX, float inY, float inLength)
 { return (uintptr_t) new UIScrollBar(UIEB(inEdit)->GetId(), GE2DPoint(inX, inY), inLength, 1, UIEB(inEdit)->GetForm(), UIEB(inEdit)->GetIndex(), UIEB(inEdit)->GetBorderThickness()); }
 extern "C" float ee_uicpp_edit_form_mouse_x(uintptr_t inEdit) { return UIEB(inEdit)->GetForm()->GetMouseLocation().GetX(); }
@@ -135,14 +101,4 @@ extern "C" float ee_uicpp_text_fg_red(uintptr_t inText) { return ((GEText*)inTex
 extern "C" float ee_uicpp_text_fg_green(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetGreen(); }
 extern "C" float ee_uicpp_text_fg_blue(uintptr_t inText) { return ((GEText*)inText)->GetFgColor().GetBlue(); }
 
-// Creates an empty edit box (one blank line) with caret, key-repeat timers and text; multi-line boxes get a scroll bar
-UIEditBox::UIEditBox(unsigned long inId, GEFont* inFont, unsigned long inMaxChars, bool inNumbersOnly,
-                     const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
-                     unsigned long inBorderThickness, bool inMultiLine, bool inPasswordBox)
-    : UIControl(kControlTypeEditBox, inId, inRectangle, inForm, inIndex, inBorderThickness)
-{
-    uint32_t theFlags = (inNumbersOnly ? 1u : 0u) | (inMultiLine ? 2u : 0u) | (inPasswordBox ? 4u : 0u);
-    this->mRust = ee_ui_edit_new(this, ee_ui_edit_host, inFont, inMaxChars, theFlags, inBorderThickness);
-}
 
-UIEditBox::~UIEditBox() { ee_ui_edit_free(this->mRust); }

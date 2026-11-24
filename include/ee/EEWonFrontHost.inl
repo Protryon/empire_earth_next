@@ -25,7 +25,6 @@ static intptr_t FrontMbs(const std::wstring& inName, intptr_t inSink)
     return FrontBytes(theBuffer, inSink);
 }
 
-static WONAPI::DirEntity* FrontServer(intptr_t inIndex) { return std::next(gWonNet->mServers.begin(), inIndex)->get(); }
 
 static UIEvent* FrontNewEvent(EeWonFrontEvent inEvent)
 {
@@ -204,10 +203,10 @@ static intptr_t WonFrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t
     case Op::ConnectToLobby: gWonNet->ConnectToLobby(); return 0;
     case Op::UpdateAccount: gWonNet->UpdateAccount(UWideString((const char*)a), UWideString((const char*)b), c != 0); return 0;
     case Op::ServerCount: return (intptr_t)gWonNet->mServers.size();
-    case Op::ServerDisplayNameSize: return (intptr_t)FrontServer(a)->mDisplayName.size();
-    case Op::ServerDisplayName: return FrontMbs(FrontServer(a)->mDisplayName, c);
-    case Op::ServerName: return FrontMbs(FrontServer(a)->mName, c);
-    case Op::SelectServer: gWonNet->SelectServer(FrontServer(a)->mDisplayName, FrontServer(a)->GetNetAddrAsIP()); return 0;
+    case Op::ServerDisplayNameSize: return (intptr_t)gWonNet->mServers.DisplayName(a).size();
+    case Op::ServerDisplayName: return FrontMbs(gWonNet->mServers.DisplayName(a), c);
+    case Op::ServerName: return FrontMbs(gWonNet->mServers.Name(a), c);
+    case Op::SelectServer: gWonNet->SelectServer(gWonNet->mServers.DisplayName(a), gWonNet->mServers.Addr(a)); return 0;
     // texts
     case Op::TextSetText: ((GEText*)a)->SetText(UWideString((const char*)b)); return 0;
     case Op::TextSetFgDefault: ((GEText*)a)->SetFgColor(GEColor()); return 0;

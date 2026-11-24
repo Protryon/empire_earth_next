@@ -7,7 +7,7 @@
 //! The C++ locals the statements shared (the resource table, the player colour, the saved game's length, the
 //! address list) are the host's statics, set and cleared by ops where the local was made and went out of scope.
 
-use crate::eeglue::EeWonEeGlueOp as Op;
+use crate::eeglue::{EeWonEeGlueField as F, EeWonEeGlueOp as Op};
 
 /// The calls out: the host's op with its six arguments.
 pub(crate) type Out<'a> = &'a dyn Fn(Op, isize, isize, isize, isize, isize, isize) -> isize;
@@ -111,9 +111,89 @@ pub(crate) fn game_op(op: Op, v: [isize; 6], out: Out) -> Option<isize> {
             o(Op::WorldWriteLock, 0, 0);
             0
         }
+        // the options' and players' fields: the field's own op (R6 WON round 35; an unknown field reads 0)
+        Op::OptionsField if b == F::MapTypeIndex as isize => {
+            o(Op::MapIndexClear, 0, 0);
+            o(Op::OptGetMapTypeIndex, a, 0)
+        }
+        Op::OptionsField => opt_get(b).map_or(0, |op| o(op, a, 0)),
+        Op::OptionsPlayer => player_get(c).map_or(0, |op| o(op, o(Op::OptionsPlayerAt, a, b), 0)),
+        Op::OptionSet => opt_set(a).map_or(0, |op| o(op, b, 0)),
+        Op::PlayerSet => player_set(a).map_or(0, |op| o(op, b, 0)),
         _ => return None,
     };
     Some(r)
+}
+
+/// The field ops (R6 WON round 35): a field's read of the options, its write of the game's options, a player's
+/// read and the player being made's write (`None`: the original's `default` case, 0 and no statement).
+fn opt_get(f: isize) -> Option<Op> {
+    Some(match f {
+        x if x == F::MapSize as isize => Op::OptGetMapSize,
+        x if x == F::Resources as isize => Op::OptGetResources,
+        x if x == F::EpochStart as isize => Op::OptGetEpochStart,
+        x if x == F::EpochEnd as isize => Op::OptGetEpochEnd,
+        x if x == F::Variant as isize => Op::OptGetVariant,
+        x if x == F::Difficulty as isize => Op::OptGetDifficulty,
+        x if x == F::GameSpeed as isize => Op::OptGetGameSpeed,
+        x if x == F::UnitLimit as isize => Op::OptGetUnitLimit,
+        x if x == F::WondersForVictory as isize => Op::OptGetWondersForVictory,
+        x if x == F::RevealMap as isize => Op::OptGetRevealMap,
+        x if x == F::AllowCustomCivs as isize => Op::OptGetAllowCustomCivs,
+        x if x == F::LockTeams as isize => Op::OptGetLockTeams,
+        x if x == F::LockSpeed as isize => Op::OptGetLockSpeed,
+        x if x == F::Victory as isize => Op::OptGetVictory,
+        _ => return None,
+    })
+}
+fn opt_set(f: isize) -> Option<Op> {
+    Some(match f {
+        x if x == F::LoadType as isize => Op::OptSetLoadType,
+        x if x == F::MapSize as isize => Op::OptSetMapSize,
+        x if x == F::Resources as isize => Op::OptSetResources,
+        x if x == F::EpochStart as isize => Op::OptSetEpochStart,
+        x if x == F::EpochEnd as isize => Op::OptSetEpochEnd,
+        x if x == F::Variant as isize => Op::OptSetVariant,
+        x if x == F::Difficulty as isize => Op::OptSetDifficulty,
+        x if x == F::GameSpeed as isize => Op::OptSetGameSpeed,
+        x if x == F::UnitLimit as isize => Op::OptSetUnitLimit,
+        x if x == F::WondersForVictory as isize => Op::OptSetWondersForVictory,
+        x if x == F::RevealMap as isize => Op::OptSetRevealMap,
+        x if x == F::AllowCustomCivs as isize => Op::OptSetAllowCustomCivs,
+        x if x == F::LockTeams as isize => Op::OptSetLockTeams,
+        x if x == F::LockSpeed as isize => Op::OptSetLockSpeed,
+        x if x == F::Victory as isize => Op::OptSetVictory,
+        _ => return None,
+    })
+}
+fn player_get(f: isize) -> Option<Op> {
+    Some(match f {
+        x if x == F::Type as isize => Op::PlayerGetType,
+        x if x == F::LoadedType as isize => Op::PlayerGetLoadedType,
+        x if x == F::Slot as isize => Op::PlayerGetSlot,
+        x if x == F::Color as isize => Op::PlayerGetColor,
+        x if x == F::Team as isize => Op::PlayerGetTeam,
+        x if x == F::StartingCitizens as isize => Op::PlayerGetStartingCitizens,
+        x if x == F::IsLocal as isize => Op::PlayerGetIsLocal,
+        x if x == F::IsReady as isize => Op::PlayerGetIsReady,
+        x if x == F::B36 as isize => Op::PlayerGetB36,
+        x if x == F::NameEmpty as isize => Op::PlayerGetNameEmpty,
+        _ => return None,
+    })
+}
+fn player_set(f: isize) -> Option<Op> {
+    Some(match f {
+        x if x == F::Type as isize => Op::PlayerSetType,
+        x if x == F::LoadedType as isize => Op::PlayerSetLoadedType,
+        x if x == F::Slot as isize => Op::PlayerSetSlot,
+        x if x == F::Color as isize => Op::PlayerSetColor,
+        x if x == F::Team as isize => Op::PlayerSetTeam,
+        x if x == F::StartingCitizens as isize => Op::PlayerSetStartingCitizens,
+        x if x == F::IsLocal as isize => Op::PlayerSetIsLocal,
+        x if x == F::IsReady as isize => Op::PlayerSetIsReady,
+        x if x == F::B36 as isize => Op::PlayerSetB36,
+        _ => return None,
+    })
 }
 
 #[cfg(test)]
@@ -165,5 +245,38 @@ mod tests {
         let (_, log) = run(Op::DeleteCommunications, [0; 6], &|_| 0);
         assert_eq!(log, vec!["CommDelete 0 0", "CommClear 0 0"]);
         assert_eq!(run(Op::MyGame, [0; 6], &|_| 0).0, None);
+    }
+
+    #[test]
+    fn the_fields_are_one_op_each() {
+        let (r, log) = run(Op::OptionsField, [70, F::MapSize as isize, 0, 0, 0, 0], &|_| 4);
+        assert_eq!((r, log), (Some(4), vec!["OptGetMapSize 70 0".into()]));
+        let (r, log) = run(Op::OptionsField, [70, F::MapTypeIndex as isize, 0, 0, 0, 0], &|_| 6);
+        assert_eq!((r, log), (Some(6), vec!["MapIndexClear 0 0".into(), "OptGetMapTypeIndex 70 0".into()]));
+        // the original's default cases: 0 and no statement
+        assert_eq!(run(Op::OptionsField, [70, F::LoadType as isize, 0, 0, 0, 0], &|_| 6), (Some(0), vec![]));
+        assert_eq!(run(Op::OptionSet, [F::MapTypeIndex as isize, 3, 0, 0, 0, 0], &|_| 6), (Some(0), vec![]));
+        assert_eq!(run(Op::PlayerSet, [F::NameEmpty as isize, 3, 0, 0, 0, 0], &|_| 6), (Some(0), vec![]));
+        assert_eq!(run(Op::OptionsPlayer, [70, 2, F::Victory as isize, 0, 0, 0], &|_| 6), (Some(0), vec![]));
+        let (r, log) = run(Op::OptionsPlayer, [70, 2, F::Team as isize, 0, 0, 0], &|op| {
+            if op == Op::OptionsPlayerAt {
+                900
+            } else {
+                3
+            }
+        });
+        assert_eq!((r, log), (Some(3), vec!["OptionsPlayerAt 70 2".into(), "PlayerGetTeam 900 0".into()]));
+        let (_, log) = run(Op::OptionSet, [F::LoadType as isize, 5, 0, 0, 0, 0], &|_| 0);
+        assert_eq!(log, vec!["OptSetLoadType 5 0"]);
+        let (_, log) = run(Op::PlayerSet, [F::B36 as isize, 1, 0, 0, 0, 0], &|_| 0);
+        assert_eq!(log, vec!["PlayerSetB36 1 0"]);
+        // every field of the options reads through its own op
+        for f in F::MapSize as isize..=F::Victory as isize {
+            assert!(opt_get(f).is_some() && opt_set(f).is_some());
+        }
+        for f in F::Type as isize..=F::B36 as isize {
+            assert!(player_get(f).is_some() && player_set(f).is_some());
+        }
+        assert!(player_get(F::NameEmpty as isize).is_some());
     }
 }

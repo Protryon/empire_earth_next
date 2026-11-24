@@ -12,10 +12,8 @@
 #include "ee/EEUIRustControl.h"
 
 class EEAMouseClick;
-class GEModel;
-class GETexture;
 
-class EEUICCommandUnits : public EEUIRustControl, protected EeScreensCommandUnitsFields {
+class EEUICCommandUnits : public EEUIRustControl, protected EeScreensCommandUnitsFields, public EeScreensCommandUnitsObjects {
 public:
     virtual bool GetTabable() const { return false; }
     // 0x257881 (the user-defined control factory 0x274931; EESEUICCommandUnits 0x197274): a 2x2 rectangle at
@@ -39,9 +37,6 @@ protected:
     }
 
 public:   // (for the shims of ee_screens command_units_calls.rs)
-    EEAMouseClick* mListener;               // referenced (EEUIFMainGame's mouse click action)
-    GEModel* mModel;                        // referenced
-    GETexture* mTexture;                    // referenced
 };
 
 #endif

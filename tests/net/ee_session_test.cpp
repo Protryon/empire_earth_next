@@ -21,6 +21,7 @@
 #include "ee/EEServer.h"
 #include "ee/EEClient.h"
 #include "rust/sim/netmsg.h"
+#include "rust/game/gamecpp.h"
 
 // ---- the trace ----
 static std::string sTrace;
@@ -80,25 +81,48 @@ std::string TPlayer(const EEGameOptionsPlayer& p)
     return theText;
 }
 
-// ---- the engine functions the units call ----
-// (the engine's ESVerify, ESRecordNativeError, ESChecksum::AddChecksum, TMGetTime, UResourceFile::GetString and
-// EECPEngineChoiceCount are inlines over the Rust library now: the stand-ins define the Rust functions they call,
-// which the link takes before the library's (/FORCE:MULTIPLE, xbuild.py NET_TESTS))
-extern "C" void ee_error_verify(const char* inFile, unsigned long inLine, const char* inExpression)
+// ---- the engine functions the units call (inline over Rust: ee_stand/lle/LowLevelEngineCore.h renames the calls
+// the golden traces to these; ESVerify's through the verify handler) ----
+static void TraceVerify(const char* inFile, unsigned long inLine, const char* inExpression)
 {
     T("ESVERIFY %lu %s", inLine, inExpression);
 }
-extern "C" unsigned long ee_error_record_native(unsigned long inError)
-{
-    return inError;
-}
-extern "C" void ee_error_checksum_add(EeErrorChecksum*, const char*, unsigned long)
-{
-}
-extern "C" uint32_t ee_time_get()
+extern "C" uint32_t ee_stand_time_get()
 {
     T("time");
     return gFake.mTime;
+}
+
+// the game's operation host (EEGameOps.cpp's ee_gamecpp, not linked): the message records' C++ reads first
+// (EEMessageCapture.cpp's link: EEMRecord's bodies are Rust, ee_game gamecpp mrecord.rs), then the session's bodies
+// (Rust, ee_game gamecpp server.rs) over the session cases of EEServer.cpp and EEClient.cpp (EECore9OpD, D2, D3);
+// the chain's next link (EETechTree.cpp) is not linked either, and any operation reaching it is a trace line. The
+// original units (ee_session_orig) define no EECore9OpD: their bodies are C++ and ask none, so the link's alternate
+// name for it is EESessionNoOps.
+int64_t EECore9OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore10OpC(inOp, p, a, f);
+}
+int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    return EECore9OpD(inOp, p, a, f);
+}
+double EECore10OpDF(EeGameCpp, uintptr_t, const int64_t*, const float*)
+{
+    return 0.0;
+}
+int64_t EESessionNoOps(EeGameCpp inOp, uintptr_t, const int64_t*, const float*)
+{
+    T("gamecpp op %u", (unsigned)inOp);
+    return 0;
+}
+#pragma comment(linker, "/alternatename:?EECore9OpD@@YA_JW4EeGameCpp@@_KPEB_JPEBM@Z=?EESessionNoOps@@YA_JW4EeGameCpp@@_KPEB_JPEBM@Z")
+int64_t EECore9OpD6(EeGameCpp inOp, uintptr_t, const int64_t*, const float*)
+{
+    T("gamecpp op %u", (unsigned)inOp);
+    return 0;
 }
 
 // ---- the stand-in world's objects and answers ----
@@ -181,9 +205,10 @@ std::string EEABootClientFromCanceledGame::Describe()
 }
 static long sResourceStorage[8];
 UResourceFile* gResource = reinterpret_cast<UResourceFile*>(sResourceStorage);
-extern "C" const uint8_t* ee_util_resource_string(uint16_t inID)
+extern "C" long ee_stand_resource_string_get(uint16_t inID16, void (*inAssign)(void*, const char*), void* inTarget)
 {
-    static char theText[64];
+    long inID = inID16;
+    char theText[64];
     switch (inID) {
     case IDS_PLAYER_IS_OUT_OF_SYNCH:
     case IDS_PLAYER_HAS_DROPPED_OUT_OF_GAME:
@@ -198,8 +223,9 @@ extern "C" const uint8_t* ee_util_resource_string(uint16_t inID)
         snprintf(theText, sizeof(theText), "<%ld>", (long)inID);
         break;
     }
-    T("resource %ld", (long)inID);
-    return (const uint8_t*)theText;
+    T("resource %ld", inID);
+    inAssign(inTarget, theText);
+    return 0;
 }
 static SESoundManager sSoundManager;
 SESoundManager* gSoundManager = &sSoundManager;
@@ -265,6 +291,7 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
                                          unsigned long inStepUp, unsigned long inStepDown, unsigned long inCT, unsigned long inPT,
                                          UWideString& inName, bool inAllowNew, bool inAnnounce, unsigned long inAdapter)
 {
+    this->mIsServer = true;
     T("server base ctor %u %lu %u %lu %lu %g %lu %lu %lu %lu %lu %s %d %d %lu", inMaxPlayers, inDefaultSendInterval,
       inPTsPerCT, inMaxPTs, inMinPTs, inTuning, inMaxCTSend, inStepUp, inStepDown, inCT, inPT, TName(inName).c_str(),
       inAllowNew, inAnnounce, inAdapter);
@@ -283,7 +310,7 @@ UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
     T("local address %lu", inAdapter);
     return sAddress;
 }
-extern "C" uint64_t ee_cp_engine_choice_count()
+extern "C" uint64_t ee_stand_engine_choice_count()
 {
     return gFake.mEngineChoices;
 }
@@ -934,6 +961,7 @@ static void ClientCall(unsigned long inStep)
 
 int main(int argc, char** argv)
 {
+    ee_error_set_verify_hook(TraceVerify);
     const char* thePrint = NULL;
     unsigned long theSteps = 6000;
     for (int i = 1; i < argc; i++) {

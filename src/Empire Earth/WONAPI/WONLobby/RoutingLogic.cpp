@@ -91,7 +91,7 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     switch (inOp) {
     case O::TextFree: delete T(a); return 0;
     case O::TextLength: return T(a)->length();
-    case O::DirListFree: delete reinterpret_cast<DirEntityList*>(a); return 0;
+    case O::DirListFree: delete reinterpret_cast<DirList*>(a); return 0;
     case O::IterFree: delete reinterpret_cast<LobbyClientIterator*>(a); return 0;
     case O::TextUnits: // the text's wchar_t units (to b when not 0); 0 is the empty text
         if (b != 0)
@@ -317,10 +317,10 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::RunTrackedGroups: L->RunTrackedOp(AO(a), new LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone, L), 0); return 0;
     case O::RoomDirServers: return Held(SmartPtr<ServerContext>(LobbyGetRoomDirServers()));
     case O::DirOpNew: return HeldOp(RustServerOp::NewGetDir(reinterpret_cast<ServerContext*>(a), GetLobbyConfig()->mProductDirectory, 0x04000622, kDirTypes, 2));
-    case O::DirEntitiesNew: return (intptr_t) new DirEntityList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));
-    case O::DirListEmpty: return reinterpret_cast<DirEntityList*>(a)->empty();
+    case O::DirEntitiesNew: return (intptr_t) new DirList(RS(a)->GetEntities(EE_WON_REQOP_DIR_LIST));
+    case O::DirListEmpty: return reinterpret_cast<DirList*>(a)->empty();
     case O::DirNotifyFailed: reinterpret_cast<ServerContext*>(a)->NotifyFailed(RS(b)->GetCurAddr()); return 0;
-    case O::DirUpdate: L->mServerList->UpdateFromDirectory(*reinterpret_cast<DirEntityList*>(a)); return 0;
+    case O::DirUpdate: L->mServerList->UpdateFromDirectory(*reinterpret_cast<DirList*>(a)); return 0;
     }
     return 0;
 }

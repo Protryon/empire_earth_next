@@ -143,7 +143,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     // HTTPCache::GetGlobalCache(): the Rust cache in the WON directory (ee_won httpcache.rs), the op's reference
     case O::HttpGetSetCache: ee_won_hostop_set(R(a)->GetRustOp(), EE_WON_HTTPGET_CACHE, 0, NULL, 0, NULL, ee_won_http_cache_global(B(WONAPICore::GetDefaultFileDirectory()), WONAPICore::GetDefaultFileDirectory().size())); return 0;
     case O::HttpGetSetPromotionCompletion: R(a)->SetCompletion(new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion, aLogic)); return 0;
-    case O::SessionAddOp: aLogic->mHTTPSession->AddOp(R(a)); return 0;
+    case O::SessionAddOp: HttpSessionAddOp(aLogic->mHTTPSession.get(), R(a)); return 0;
     case O::TOUTimes: {
         long systemTime, gameTime;
         LobbyGetTOUTimes(systemTime, gameTime);
@@ -185,7 +185,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::SetPublicAddress: LobbySetPublicAddress(FW(a)->GetPublicAddr()); return 0;
     case O::HasFirewallSocket: return aLogic->mFirewallSocket.get() != NULL;
     case O::DnsTestReady: return config != NULL && !config->mDirServers.empty();
-    case O::DnsOpNew: return Held(new DNSTestOp(config->mDirServers.front()));
+    case O::DnsOpNew: return Held(NewDnsTestOp(config->mDirServers.front()));
     case O::RunTrackedDns: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DNSCompletion, aLogic), 0); return 0;
     case O::RunTrackedDocument: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, aLogic), 0); return 0;
     case O::RunTrackedDirectory: aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<InitLogic>(&InitLogic::DirectoryCompletion, aLogic), 0); return 0;
@@ -213,7 +213,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::AcceptOpKill: aLogic->mAcceptOp->Kill(true); return 0;
     case O::AcceptOpHasSocket: return aLogic->mAcceptOp->GetSocket() != NULL;
     case O::AcceptOpCloseSocket: aLogic->mAcceptOp->GetSocket()->Close(); return 0;
-    case O::KillHttp: aLogic->mHTTPSession->KillAll(); return 0;
+    case O::KillHttp: HttpSessionKillAll(aLogic->mHTTPSession.get()); return 0;
     case O::ShowInternet: LobbyShowInternetScreen(); return 0;
     case O::AdapterReset: aLogic->mNetworkAdapterDialog->LCall(EeWonLobbyDlgCall::Reset); return 0;
     case O::AdapterDo: return LobbyDoDialog(aLogic->mNetworkAdapterDialog.get());
@@ -225,7 +225,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
 // Creates the lobby start-up logic with its own HTTP session
 InitLogic::InitLogic() : mRust(ee_won_logic_new(EeWonLogicKind::Init, this, InitHost))
 {
-    this->mHTTPSession = new HTTPSession;
+    this->mHTTPSession = HttpSessionNew();
 }
 
 InitLogic::~InitLogic() { ee_won_logic_free(this->mRust); }

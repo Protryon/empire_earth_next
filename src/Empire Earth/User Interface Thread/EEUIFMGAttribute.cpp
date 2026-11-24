@@ -14,45 +14,35 @@
 #include "ee/EEScreensShims.h"
 #include "rust/game/screens.h"
 
-// Creates the main game form's attribute upgrade button with a level text in its corner
-EEUIFMGAttribute::EEUIFMGAttribute(GEFont* inFont, UIForm* inForm, const GERectangle& inRectangle,
-                                   unsigned long inIndex, unsigned long inId, const GEColor& inTextColor,
-                                   bool inScenarioEditor, unsigned long inBorderThickness)
-    : EEUIBUpgrade(inId, inRectangle.GetTopLeft(), (unsigned long)inRectangle.GetWidth(),
-                   (unsigned long)inRectangle.GetHeight(), inForm, inIndex, inScenarioEditor, inBorderThickness),
-      mShowLevel(false)
-{
-    ee_screens_att_construct((uintptr_t)this, (uintptr_t)inFont, (uintptr_t)&inTextColor);   // (hud_more.rs)
-}
 
 // Destroys the attribute button and its level text
 EEUIFMGAttribute::~EEUIFMGAttribute()
 {
-    delete this->mLevelText;
+    delete static_cast<GEText*>(this->mLevelText);
 }
 
 // the Rust bodies' shims (ee_screens hud_more.rs: the constructor's level text, CopyData, DrawTextA)
 #define ATT(a) reinterpret_cast<EEUIFMGAttribute*>(a)
 extern "C" uintptr_t ee_screenscpp_att_new_text(uintptr_t inAttr, uintptr_t inFont) { return (uintptr_t)(ATT(inAttr)->mLevelText = new GEText(reinterpret_cast<GEFont*>(inFont))); }
-extern "C" void ee_screenscpp_att_text_transparent(uintptr_t inAttr) { ATT(inAttr)->mLevelText->SetIsTransparent(true); }
-extern "C" void ee_screenscpp_att_text_fg(uintptr_t inAttr, uintptr_t inColor) { ATT(inAttr)->mLevelText->SetFgColor(*reinterpret_cast<const GEColor*>(inColor)); }
+extern "C" void ee_screenscpp_att_text_transparent(uintptr_t inAttr) { static_cast<GEText*>(ATT(inAttr)->mLevelText)->SetIsTransparent(true); }
+extern "C" void ee_screenscpp_att_text_fg(uintptr_t inAttr, uintptr_t inColor) { static_cast<GEText*>(ATT(inAttr)->mLevelText)->SetFgColor(*reinterpret_cast<const GEColor*>(inColor)); }
 extern "C" float ee_screenscpp_att_left(uintptr_t inAttr) { return ATT(inAttr)->GetRectangle().GetLeft(); }
 extern "C" float ee_screenscpp_att_top(uintptr_t inAttr) { return ATT(inAttr)->GetRectangle().GetTop(); }
 extern "C" uint32_t ee_screenscpp_att_border(uintptr_t inAttr) { return (uint32_t)ATT(inAttr)->GetBorderThickness(); }
-extern "C" void ee_screenscpp_att_text_set_location(uintptr_t inAttr, float inX, float inY) { ATT(inAttr)->mLevelText->SetLocation(inX, inY); }
+extern "C" void ee_screenscpp_att_text_set_location(uintptr_t inAttr, float inX, float inY) { static_cast<GEText*>(ATT(inAttr)->mLevelText)->SetLocation(inX, inY); }
 extern "C" int64_t ee_screenscpp_att_base_copy_data(uintptr_t inAttr) { return ATT(inAttr)->EEUIBUpgrade::CopyData(); }
 extern "C" int64_t ee_screenscpp_att_queued(uintptr_t inAttr) { return ATT(inAttr)->mNumQueued; }
-extern "C" void ee_screenscpp_att_level_text(uintptr_t inAttr, EeScreensShimText inText) { ATT(inAttr)->mLevelText->SetText(EEShimText(inText)); }
+extern "C" void ee_screenscpp_att_level_text(uintptr_t inAttr, EeScreensShimText inText) { static_cast<GEText*>(ATT(inAttr)->mLevelText)->SetText(EEShimText(inText)); }
 extern "C" void ee_screenscpp_att_set_show(uintptr_t inAttr, bool inShow) { ATT(inAttr)->mShowLevel = inShow; }
 extern "C" bool ee_screenscpp_att_show(uintptr_t inAttr) { return ATT(inAttr)->mShowLevel; }
-extern "C" float ee_screenscpp_att_text_x(uintptr_t inAttr) { return ATT(inAttr)->mLevelText->GetLocation().GetX(); }
-extern "C" float ee_screenscpp_att_text_y(uintptr_t inAttr) { return ATT(inAttr)->mLevelText->GetLocation().GetY(); }
+extern "C" float ee_screenscpp_att_text_x(uintptr_t inAttr) { return static_cast<GEText*>(ATT(inAttr)->mLevelText)->GetLocation().GetX(); }
+extern "C" float ee_screenscpp_att_text_y(uintptr_t inAttr) { return static_cast<GEText*>(ATT(inAttr)->mLevelText)->GetLocation().GetY(); }
 extern "C" uint32_t ee_screenscpp_att_height(uintptr_t inAttr) { return (uint32_t)ATT(inAttr)->GetHeight(); }
 extern "C" uint32_t ee_screenscpp_att_width(uintptr_t inAttr) { return (uint32_t)ATT(inAttr)->GetWidth(); }
 extern "C" int64_t ee_screenscpp_att_base_draw_text(uintptr_t inAttr) { return ATT(inAttr)->EEUIBUpgrade::DrawTextA(); }
 extern "C" int64_t ee_screenscpp_att_draw_level(uintptr_t inAttr, float inLeft, float inTop, float inRight, float inBottom)
 {
-    return ATT(inAttr)->GetForm()->DrawClippedText(GERectangle(GE2DPoint(inLeft, inTop), GE2DPoint(inRight, inBottom)), ATT(inAttr)->mLevelText, ATT(inAttr));
+    return ATT(inAttr)->GetForm()->DrawClippedText(GERectangle(GE2DPoint(inLeft, inTop), GE2DPoint(inRight, inBottom)), static_cast<GEText*>(ATT(inAttr)->mLevelText), ATT(inAttr));
 }
 
 // Returns the icon's rectangle: the whole button, or a 17-pixel strip at its left in free camera mode

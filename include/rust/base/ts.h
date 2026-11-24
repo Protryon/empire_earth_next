@@ -159,7 +159,7 @@ long ee_ts_thread_free(EeTsThread *thread);
 EeTsThread *ee_ts_thread_current();
 
 /// `TSScheduler::GetCurrentThreadIndex` (-1 when the calling thread is not registered).
-uint32_t ee_ts_thread_current_index();
+unsigned long ee_ts_thread_current_index();
 
 /// # Safety
 /// `thread` is live.

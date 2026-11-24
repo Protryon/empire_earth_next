@@ -43,18 +43,12 @@ int32_t QueueWriteBool(void* inContext, bool inValue) { return (int32_t)File(inC
 int32_t QueueReadU32(void* inContext, uint32_t* ioValue) { return (int32_t)File(inContext).Read(*ioValue); }
 int32_t QueueReadBool(void* inContext, bool* ioValue) { return (int32_t)File(inContext).Read(*ioValue); }
 
-int32_t QueueReadU8(void* inContext, uint8_t* ioValue)
-{
-    unsigned char theValue = *ioValue;
-    long theResult = File(inContext).Read(theValue);
-    *ioValue = theValue;
-    return (int32_t)theResult;
-}
+int32_t QueueReadU8(void* inContext, uint8_t* ioValue) { return (int32_t)File(inContext).Read(*(unsigned char*)ioValue); }
 
 int32_t QueueSaveGoal(void* inContext, uint64_t inGoal)
 {
-    EEGoalQueueIO* theIO = static_cast<EEGoalQueueIO*>(inContext);
-    return (int32_t)EEGoalDeque::Goal(inGoal)->Save(theIO->mMajor, theIO->mMinor, *theIO->mFile);
+    return (int32_t)EEGoalDeque::Goal(inGoal)->Save(static_cast<EEGoalQueueIO*>(inContext)->mMajor, static_cast<EEGoalQueueIO*>(inContext)->mMinor,
+                                                    File(inContext));
 }
 
 // CreateGoal and its Load: the goal kept on success, deleted otherwise

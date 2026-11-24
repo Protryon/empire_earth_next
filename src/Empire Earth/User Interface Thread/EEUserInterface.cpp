@@ -3,10 +3,7 @@
 // HandleMessage (the 0x401..0x443 switch), the Post* members, the window procedure, then the template COMDATs of
 // the message vector. Unit flags: the exe module set. Names are provisional unless the header says otherwise.
 #include <windows.h>
-extern "C" void SPIMSetMuted(bool inMuted);   // port: the mixer plug-in (lle/SEMixer.h)
 #include "platform/PlatSim.h"
-unsigned long EEMenuWidth();    // port: the menus' resolution (Empire Earth.cpp)
-unsigned long EEMenuHeight();
 #include <list>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -83,20 +80,11 @@ unsigned long EEMenuHeight();
 #include "ee/RTSMousePointer.h"
 #include "ee/EEStatisticsRecord.h"
 // free functions of other units (declared where they are used, as their own units do) (provisional names)
-void DeleteEffectBatchBuffers();            // 0x102e1b (before the rasterizer is deactivated)
-void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFlag);  // 0x140306 (Empire Earth.cpp)
-void EEUnloadGameMedia();
-void EEUpdateLandContinents();
-long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 bool EEIsLobbyOpen();                       // 0x297eca (the external lobby is running)
 void EESetQuitFlag();
-void EEResetGraphicsValues();               // 0x10fc7e (before a screen capture without the cursor)
-void EEPostGraphicsAll();
 // CivBuilderEditCivilization 0x280faf, CivBuilderCreateCivilization 0x280ffd: ee/EECivilizationBuilder.h; EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h
 void EELobbyShutdown();
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested scenario starts) (provisional name)
-extern RTSRenderObject* gU56534C;           // 0x56534c (the UI's render object; stored in EEGlobals.cpp)
-void EEStopAllSounds();                     // 0x140ceb (Empire Earth.cpp)
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreensShims.h"
 
@@ -112,7 +100,6 @@ extern "C" void ee_screenscpp_ug_screen_active(bool inActive) { gGameScreenActiv
 extern "C" void ee_screenscpp_ug_path_reset() { gPathManager.Reset(); }
 extern "C" void ee_screenscpp_ug_sight_on() { gSightUpdatesEnabled = true; }
 extern "C" void ee_screenscpp_ug_restart_units() { gWorld.RestartUnits(); }
-extern "C" void ee_screenscpp_ug_land_continents() { EEUpdateLandContinents(); }
 extern "C" void ee_screenscpp_ug_resize_game(uintptr_t inUi, bool inA, bool inB)
 { UG_UI(inUi)->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, inA, inB); }
 extern "C" void ee_screenscpp_ug_resize_menu(uintptr_t inUi, bool inA, bool inB)
@@ -129,7 +116,6 @@ extern "C" void ee_screenscpp_ug_max_players() { gWorld.SetNumPlayers(gWorld.mMa
 extern "C" void ee_screenscpp_ug_collect_computers() { gArtificialIntelligence->CollectComputerPlayers(); }
 extern "C" bool ee_screenscpp_ug_timer_running() { return gPhysics->mTimerRunning; }
 extern "C" void ee_screenscpp_ug_state_clear() { gGameState.Clear(); }
-extern "C" void ee_screenscpp_ug_stop_sounds() { EEStopAllSounds(); }
 extern "C" void ee_screenscpp_ug_options_defaults() { gGameOptions.SetDefaults(); }
 extern "C" uint64_t ee_screenscpp_ug_file_name_length(uintptr_t inFile)
 { return (uint64_t)reinterpret_cast<FSFile*>(inFile)->GetFile().GetLength(); }
@@ -147,7 +133,6 @@ extern "C" bool ee_screenscpp_ug_has_communications() { return gCommunications !
 extern "C" bool ee_screenscpp_ug_is_client() { return gCommunications->IsClient(); }
 extern "C" bool ee_screenscpp_ug_server_lost_after_loading()
 { return static_cast<EEClient*>(gCommunications)->mServerLostAfterLoading; }
-extern "C" void ee_screenscpp_ug_unload_media() { EEUnloadGameMedia(); }
 extern "C" bool ee_screenscpp_ug_lobby_open() { return EEIsLobbyOpen(); }
 extern "C" void ee_screenscpp_ug_create_editor() { gUIManager->CreateScenarioEditor(); }
 extern "C" int64_t ee_screenscpp_ug_load_scendefault()
@@ -168,7 +153,7 @@ extern "C" bool ee_screenscpp_action_undoable(EEAction* inAction) { return inAct
 // the one-statement shims below (UI lane round 11)
 #define UIM(u) static_cast<EEUserInterface*>((void*)(u))
 #define UIM_CAP(c) reinterpret_cast<EEScreenCapture*>(c)
-#define UIM_CHAT(e) reinterpret_cast<EEChatLogEntry*>(e)
+#define UIM_CHAT(e) reinterpret_cast<EeScreensChatEntry*>(e)
 extern "C" void ee_screenscpp_uim_pause(uintptr_t inUi) { UIM(inUi)->PauseGraphics(); }
 extern "C" void ee_screenscpp_uim_resume(uintptr_t inUi) { UIM(inUi)->ResumeGraphics(); }
 extern "C" void ee_screenscpp_uim_status_value(uintptr_t inForm, uint64_t inControl, int64_t inValue)
@@ -186,7 +171,6 @@ extern "C" void ee_screenscpp_uim_main_rust(uintptr_t inMain, uint32_t inWhich, 
 extern "C" bool ee_screenscpp_uim_gfx_post_pause() { return gGraphics->PostPause() == kErrorOK; }
 extern "C" bool ee_screenscpp_uim_gfx_paused() { return gGraphics->mIsPaused; }
 extern "C" void ee_screenscpp_uim_gfx_post_resume() { gGraphics->PostResume(); }
-extern "C" void ee_screenscpp_uim_reset_gfx_values() { EEResetGraphicsValues(); }
 extern "C" bool ee_screenscpp_uim_capture_event(uintptr_t inCapture)
 { return TSScheduler::CreateEvent(UIM_CAP(inCapture)->mCaptureComplete) == keseOK; }
 extern "C" void ee_screenscpp_uim_capture_post(uintptr_t inCapture) { gGraphics->PostScreenShot(UIM_CAP(inCapture)); }
@@ -209,10 +193,7 @@ extern "C" void ee_screenscpp_uim_delete_form(uintptr_t inForm) { delete (UIForm
 extern "C" void ee_screenscpp_uim_delete_error_data(uintptr_t inData)
 { delete reinterpret_cast<EEUIFErrorCallbackData*>(inData); }
 extern "C" void ee_screenscpp_uim_chat_show(uintptr_t inMain, uintptr_t inEntry)
-{ ((EEUIFMainGame*)inMain)->DisplayChat(UIM_CHAT(inEntry)->mColor, UIM_CHAT(inEntry)->mName, UIM_CHAT(inEntry)->mText, UIM_CHAT(inEntry)->mTime, UIM_CHAT(inEntry)->mType); }
-extern "C" int64_t ee_screenscpp_uim_chat_type(uintptr_t inEntry) { return (int64_t)UIM_CHAT(inEntry)->mType; }
-extern "C" void ee_screenscpp_uim_chat_log(uintptr_t inEntry) { EEUIECLEFormManager::AddEntry(*UIM_CHAT(inEntry)); }
-extern "C" void ee_screenscpp_uim_delete_chat(uintptr_t inEntry) { delete UIM_CHAT(inEntry); }
+{ ((EEUIFMainGame*)inMain)->DisplayChat(GEColor(UIM_CHAT(inEntry)->head.colour[0], UIM_CHAT(inEntry)->head.colour[1], UIM_CHAT(inEntry)->head.colour[2]), UWideString(UIM_CHAT(inEntry)->name), UWideString(UIM_CHAT(inEntry)->text), UIM_CHAT(inEntry)->head.time, UIM_CHAT(inEntry)->head.kind); }
 extern "C" void ee_screenscpp_uim_show_information(uintptr_t inMain, uintptr_t inInfo)
 { ((EEUIFMainGame*)inMain)->ShowInformation(reinterpret_cast<EEUIFMGInformation*>(inInfo)); }
 extern "C" void ee_screenscpp_uim_delete_dialog(uintptr_t inDialog)
@@ -233,40 +214,28 @@ extern "C" void ee_screenscpp_uim_delete_wstring(uintptr_t inText) { delete rein
 
 // (the posts the game makes, ResumeGraphics and HandleEvent are inline: ee/EEUserInterface.h)
 
-// The window events' calls (EE_SCREENS_UI_EV_*): the globals' NULL tests, the lobby, the volumes, the input
-// devices, the mouse pointer's thread, the input method; inA is the event's text for the IME ops
-extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    switch (inOp) {
-    case EE_SCREENS_UI_EV_HAS:
-        switch (inA) {
-        case EE_SCREENS_UI_GLOBAL_CONDUCTOR: return gConductor != NULL;
-        case EE_SCREENS_UI_GLOBAL_SOUND: return gSoundManager != NULL;
-        case EE_SCREENS_UI_GLOBAL_KEYBOARD: return gISKeyboard != NULL;
-        case EE_SCREENS_UI_GLOBAL_MOUSE: return gISMouse != NULL;
-        case EE_SCREENS_UI_GLOBAL_WINDOW_AND_MOUSE: return gGameWindow != NULL && gMouse != NULL;
-        case EE_SCREENS_UI_GLOBAL_POINTER: return gMousePointer != NULL;
-        default: return gGameWindow != NULL;
-        }
-    case EE_SCREENS_UI_EV_LOBBY_SHOWN: return EELobbyIsShown();
-    case EE_SCREENS_UI_EV_LOBBY_OPEN: return EEIsLobbyOpen();
-    case EE_SCREENS_UI_EV_LOBBY_SHUTDOWN: EELobbyShutdown(); break;
-    case EE_SCREENS_UI_EV_SET_MUSIC_VOLUME: gConductor->GetConductor().SetVolume(EEShimBitsFloat(inA)); break;
-    case EE_SCREENS_UI_EV_SET_MASTER_VOLUME: gSoundManager->SetMasterVolume(EEShimBitsFloat(inA)); break;
-    case EE_SCREENS_UI_EV_MUTE: SPIMSetMuted(inA != 0); break;   // port: "Mute in Background"
-    case EE_SCREENS_UI_EV_CENTER_MOUSE:
-        gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1), (float)(gGameWindow->GetHeight() >> 1)));
-        break;
-    case EE_SCREENS_UI_EV_POINTER_POST: gMousePointer->mThread->Post(inA, NULL, NULL, true); break;
-    case EE_SCREENS_UI_EV_POINTER_SHOWN: return gMousePointer->mIsShown;
-    case EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND: return gGamePreferences.mSettings.mMuteInBackground;   // port
-    case EE_SCREENS_UI_EV_FULL_SCREEN: return gGamePreferences.mSettings.GetFullScreen();
-    case EE_SCREENS_UI_EV_MINIMIZE: PlatWindowMinimize(gGameWindow->GetOSRepresentation()); break;   // CloseWindow
-    case EE_SCREENS_UI_EV_IME_RESULT: gUIManager->AddIMEResultString(reinterpret_cast<const char*>(inA)); break;   // the committed composition
-    case EE_SCREENS_UI_EV_TRANSLATED_KEY: gUIManager->UpdateTranslatedKey(reinterpret_cast<const char*>(inA), 1); break;
-    }
-    return 0;
-}
+// The window events' one-call ops (EE_SCREENS_UI_EV_*; ui_calls.rs ui_event): the globals' NULL tests, the lobby, the
+// volumes, the input devices, the mouse pointer's thread, the input method
+extern "C" bool ee_screenscpp_ui_has_keyboard() { return gISKeyboard != NULL; }
+extern "C" bool ee_screenscpp_ui_has_mouse() { return gISMouse != NULL; }
+extern "C" bool ee_screenscpp_ui_has_window_and_mouse() { return gGameWindow != NULL && gMouse != NULL; }
+extern "C" bool ee_screenscpp_ui_has_pointer() { return gMousePointer != NULL; }
+extern "C" bool ee_screenscpp_ui_has_window() { return gGameWindow != NULL; }
+extern "C" bool ee_screenscpp_ui_lobby_open() { return EEIsLobbyOpen(); }
+extern "C" void ee_screenscpp_ui_lobby_shutdown() { EELobbyShutdown(); }
+extern "C" void ee_screenscpp_ui_set_music_volume(float inVolume) { gConductor->GetConductor().SetVolume(inVolume); }
+extern "C" void ee_screenscpp_ui_set_master_volume(float inVolume) { gSoundManager->SetMasterVolume(inVolume); }
+extern "C" void ee_screenscpp_ui_mute(bool inMuted) { SPIMSetMuted(inMuted); }   // port: "Mute in Background"
+extern "C" void ee_screenscpp_ui_center_mouse()
+{ gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1), (float)(gGameWindow->GetHeight() >> 1))); }
+extern "C" void ee_screenscpp_ui_pointer_post(int64_t inMessage) { gMousePointer->mThread->Post(inMessage, NULL, NULL, true); }
+extern "C" bool ee_screenscpp_ui_pointer_shown() { return gMousePointer->mIsShown; }
+extern "C" bool ee_screenscpp_ui_mute_in_background() { return gGamePreferences.mSettings.mMuteInBackground; }   // port
+extern "C" bool ee_screenscpp_ui_full_screen() { return gGamePreferences.mSettings.GetFullScreen(); }
+extern "C" void ee_screenscpp_ui_minimize() { PlatWindowMinimize(gGameWindow->GetOSRepresentation()); }   // CloseWindow
+// the committed composition
+extern "C" void ee_screenscpp_ui_ime_result(uintptr_t inText) { gUIManager->AddIMEResultString(reinterpret_cast<const char*>(inText)); }
+extern "C" void ee_screenscpp_ui_translated_key(uintptr_t inText) { gUIManager->UpdateTranslatedKey(reinterpret_cast<const char*>(inText), 1); }
 
 // ---- the shims of the moved code (UI lane round 7: ee_game screens ui_calls.rs, game_cpp.rs), each one C++
 // statement
@@ -282,8 +251,6 @@ extern "C" void ee_screenscpp_pointer_post(uint32_t inMessage)
 { gMousePointer->mThread->Post(inMessage, NULL, NULL, true); }
 extern "C" void ee_screenscpp_pointer_post_surface(uint32_t inMessage)
 { gMousePointer->mThread->Post(inMessage, gRasterizer->GetPrimarySurface(gScreenIndex), NULL, true); }
-extern "C" void ee_screenscpp_change_game_screen(uint32_t inWidth, uint32_t inHeight, bool inFlag)
-{ EEChangeGameScreen(inWidth, inHeight, inFlag); }
 extern "C" void ee_screenscpp_manager_relayout_all() { gUIManager->RelayoutAllForms(); }
 extern "C" uintptr_t ee_screenscpp_mini_map() { return (uintptr_t)gMiniMap; }
 extern "C" void ee_screenscpp_world_write_lock() { gWorld.mLock->WriteLock(); }
@@ -295,7 +262,6 @@ extern "C" void ee_screenscpp_game_window_client_origin() { gGameWindow->GetClie
 extern "C" uint32_t ee_screenscpp_rasterizer_screen_count() { return (uint32_t)gRasterizer->GetScreenCount(); }
 extern "C" void ee_screenscpp_rasterizer_release_screen(uint32_t inIndex)
 { gRasterizer->GetScreen(inIndex)->Release(gGameWindow); }
-extern "C" void ee_screenscpp_delete_effect_batch_buffers() { DeleteEffectBatchBuffers(); }
 extern "C" int32_t ee_screenscpp_rasterizer_deactivate() { return (int32_t)gRasterizer->Deactivate(); }
 extern "C" void ee_screenscpp_verify_rasterizer_deactivated(int32_t inResult) { ESVERIFY_AT(inResult == keseOK, 252); }
 extern "C" void ee_screenscpp_rasterizer_select(int32_t inIndex) { gRasterizer = GERasterizer::GetRasterizer(inIndex); }
@@ -394,7 +360,7 @@ extern "C" uintptr_t ee_screenscpp_boot_client_new(int32_t inId)
 extern "C" void ee_screenscpp_music_pause() { gMusicManager->Pause(); }
 extern "C" void ee_screenscpp_ambient_stop_sounds() { gAmbientSoundManager.StopSounds(); }
 extern "C" void ee_screenscpp_ambient_pause() { gAmbientSoundManager.Pause(); }
-extern "C" void ee_screenscpp_chat_log_clear() { EEUIECLEFormManager::Clear(); }
+extern "C" void ee_screenscpp_chat_log_clear() { ee_screens_chat_log_clear(); }
 extern "C" void ee_screenscpp_civ_builder_button_blinking(bool inBlinking)
 { EESetCivBuilderButtonBlinking(inBlinking); }
 extern "C" void ee_screenscpp_player_civilization_chosen()
@@ -405,15 +371,8 @@ extern "C" void ee_screenscpp_event_process(uintptr_t inEvent, uintptr_t inEntit
 { reinterpret_cast<UIEvent*>(inEvent)->ProcessEvent(NULL, reinterpret_cast<UIEntity*>(inEntity)); }
 extern "C" void ee_screenscpp_quick_save_set_load(uintptr_t inAction)
 { reinterpret_cast<EEAQuickSaveLoad*>(inAction)->mIsLoad = true; }
-extern "C" uintptr_t ee_screenscpp_chat_entry_new() { return (uintptr_t)new EEChatLogEntry; }
 extern "C" void ee_screenscpp_chat_entry_text_from_dialog(uintptr_t inEntry, uintptr_t inDialog)
-{ reinterpret_cast<EEChatLogEntry*>(inEntry)->mText = reinterpret_cast<EESMDialogMessage*>(inDialog)->mText; }
-extern "C" void ee_screenscpp_chat_entry_set_type(uintptr_t inEntry, uint32_t inKind)
-{ reinterpret_cast<EEChatLogEntry*>(inEntry)->mType = inKind; }
-extern "C" void ee_screenscpp_chat_log_add(uintptr_t inEntry)
-{ EEUIECLEFormManager::AddEntry(*reinterpret_cast<EEChatLogEntry*>(inEntry)); }
-extern "C" void ee_screenscpp_chat_entry_delete(uintptr_t inEntry)
-{ delete reinterpret_cast<EEChatLogEntry*>(inEntry); }
+{ ee_screens_chat_entry_set_text(inEntry, (const char*)reinterpret_cast<EESMDialogMessage*>(inDialog)->mText); }
 extern "C" void ee_screenscpp_set_quit_flag() { EESetQuitFlag(); }
 extern "C" uintptr_t ee_screenscpp_boot_client_host_gone_new()
 { return (uintptr_t)static_cast<EEAction*>(new EEABootClientFromCanceledGame(IDS_HOST_OF_THIS_GAME_HAS_GONE)); }

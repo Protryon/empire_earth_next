@@ -21,9 +21,8 @@
 #include "lle/NEMessage.h"
 #include "rust/sim/netmsg.h"
 
-// ---- the engine functions the units call
+// ---- the engine's verifies (ESVerify and Rust's are ee_error_verify: the driver's handler traces them)
 
-void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression);
 static std::string sTrace;
 
 static void Line(const char* inFormat, ...)
@@ -36,21 +35,9 @@ static void Line(const char* inFormat, ...)
     sTrace += theLine;
     sTrace += '\n';
 }
-void ESVerify(const char*, unsigned long inLine, const char*)
+static void TraceVerify(const char*, unsigned long inLine, const char*)
 {
     Line("  verify %lu", inLine);
-}
-unsigned long ESRecordNativeError(unsigned long inError)
-{
-    return inError;
-}
-void ESChecksum::AddChecksum(const UString&, unsigned long)
-{
-}
-float URandom::Generate()   // as GEBitmap.cpp (the strings' units call it)
-{
-    this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
-    return (float)((double)this->mSeed / (double)this->mModulus);
 }
 
 static std::string Hex(const unsigned char* inData, size_t inSize)
@@ -406,6 +393,7 @@ static void Factory()
 
 int main(int argc, char** argv)
 {
+    ee_error_set_verify_hook(TraceVerify);
     const char* thePrint = NULL;
     const char* theGolden = NULL;
     for (int i = 1; i < argc; i++) {

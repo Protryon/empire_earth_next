@@ -7,6 +7,18 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// A `UWideString`'s state, held by value in the C++ class (after its vtable pointer).
+struct EeUWideString {
+  /// The buffer (`mString`): `capacity` bytes, at least 1.
+  char *string;
+  /// The bytes of the characters (`mByteLength`, `GetTCHARLength`).
+  unsigned long byte_length;
+  /// The characters (`mLength`, `GetLength`).
+  unsigned long length;
+  /// The bytes allocated (`mCapacity`).
+  unsigned long capacity;
+};
+
 /// A `UString`'s state, held by value in the C++ class (after its vtable pointer).
 struct EeUString {
   /// The buffer (`mString`): `capacity` bytes, at least 1.
@@ -20,18 +32,6 @@ struct EeUString {
 /// Receives `ee_ustring_tokens`' calls (`UString::PushToken`): first with `s` NULL (clear the vector), then once
 /// per token with the string and the token's first and last bytes.
 using EeUStringPushToken = void(*)(void *tokens, const EeUString *s, uint32_t first, uint32_t last);
-
-/// A `UWideString`'s state, held by value in the C++ class (after its vtable pointer).
-struct EeUWideString {
-  /// The buffer (`mString`): `capacity` bytes, at least 1.
-  char *string;
-  /// The bytes of the characters (`mByteLength`, `GetTCHARLength`).
-  unsigned long byte_length;
-  /// The characters (`mLength`, `GetLength`).
-  unsigned long length;
-  /// The bytes allocated (`mCapacity`).
-  unsigned long capacity;
-};
 
 /// Receives `ee_uwstring_tokens`' calls (`UWideString::PushToken`): first with `s` NULL (clear the vector), then
 /// once per token with the string and the token's first and last characters.

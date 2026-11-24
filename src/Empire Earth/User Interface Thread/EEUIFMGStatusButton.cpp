@@ -60,7 +60,7 @@ long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy); 
 EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable)
     : UIButton(inTable.GetID(), NULL, NULL, NULL, inRectangle, inManager->GetFormByID(inTable.GetFormID()),
                inTable.GetFormIndex(), 0),
-      EeScreensStatusButtonFields()
+      EeScreensStatusButtonFields(), EeScreensStatusButtonObjects()
 {
     ee_screens_status_button_fields(this, static_cast<EeScreensStatusButtonFields*>(this));
     ee_screens_sbt_construct((uintptr_t)this, (uintptr_t)inManager, (uintptr_t)&inRectangle, (uintptr_t)&inTable);   // (status_button_calls.rs)
@@ -93,26 +93,22 @@ extern "C" uint32_t ee_screenscpp_sbm_state(uintptr_t inButton) { return (uint32
 extern "C" void ee_screenscpp_sbm_hot_key_up(uintptr_t inButton) { SBM(inButton)->HotKeyUp(); }
 extern "C" void ee_screenscpp_sbm_base_tabbed_from(uintptr_t inButton) { SBM(inButton)->BaseTabbedFrom(); }
 
-// Ends the cinematic at its saved end time (sends the end-cinematic message)
-// (EEMEndCinematic takes the end time as a float)
-long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone);
-    return kErrorOK;
-}
+// EEUIEndCinematicModeEvent's body (cpp_events.rs): ends the cinematic at its saved end time (EEMEndCinematic takes the
+// end time as a float)
+extern "C" void ee_screenscpp_ev_end_cinematic()
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone); }
 
 // ---- the one-statement shims of ee_screens status_button_calls.rs (UI lane round 8): each one call, no logic
 #include "ee/EEScreensShims.h"
 #define SBR(x) reinterpret_cast<EEUIFMGFormCall*>(x)
-#define SBRB(x) SBR(x)->mButton
-#define SBRF(x) static_cast<EEUIFMainGame*>(SBR(x)->mButton->GetForm())
+#define SBRB(x) static_cast<EEUIFMGStatusButton*>(SBR(x)->mButton)
+#define SBRF(x) static_cast<EEUIFMainGame*>(static_cast<EEUIFMGStatusButton*>(SBR(x)->mButton)->GetForm())
 #define SBB(x) reinterpret_cast<EEUIFMGStatusButton*>(x)
 #define SBU(x) reinterpret_cast<EEComplexUnit*>(x)
 #define SBN(x) reinterpret_cast<EETechTreeNode*>(x)
 #define SBK(x) reinterpret_cast<EEUnitClass*>(x)
 #define SBM(x) reinterpret_cast<UIManager*>(x)
 #define SBT(x) (*reinterpret_cast<UIControlsTable*>(x))
-static UWideString sSBTString;   // the chat line's string (the original's local)
 extern "C" uintptr_t ee_screenscpp_sbt_unit(int64_t inIndex)
 { return (uintptr_t)gWorld.GetCurrentPlayer()->mSelectedGroup->GetUnit(inIndex); }
 extern "C" int64_t ee_screenscpp_sbt_unit_get_power(uintptr_t inUnit) { return SBU(inUnit)->GetPower(); }
@@ -123,11 +119,11 @@ extern "C" int64_t ee_screenscpp_sbt_conversion_cost(uintptr_t inUnit)
 { return EEGetConversionCost(SBU(inUnit)->mComplexUnit); }
 extern "C" int64_t ee_screenscpp_sbt_unload_cost() { return gFortressUnloadCost; }
 extern "C" int64_t ee_screenscpp_sbt_first_category(uintptr_t inRec)
-{ return SBR(inRec)->mFirst->GetUnitClass()->mCategory; }
+{ return static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->GetUnitClass()->mCategory; }
 extern "C" int64_t ee_screenscpp_sbt_first_type(uintptr_t inRec)
-{ return SBR(inRec)->mFirst->GetUnitClass()->mUnitType; }
+{ return static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->GetUnitClass()->mUnitType; }
 extern "C" void ee_screenscpp_sbt_send_unload(uintptr_t inRec)
-{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageUnloadTransport, {SBR(inRec)->mFirst->mUnitID, SBR(inRec)->mFirst->GetTileX(), SBR(inRec)->mFirst->GetTileY()}), kSlotNone); }
+{ gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageUnloadTransport, {static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->mUnitID, static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->GetTileX(), static_cast<EEComplexUnit*>(SBR(inRec)->mFirst)->GetTileY()}), kSlotNone); }
 extern "C" void ee_screenscpp_sbt_send_research(uintptr_t inRec, bool inShift)
 { gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageResearchTechnology, {SBRB(inRec)->mUnitID, SBRB(inRec)->mTechnology, inShift}), kSlotNone); }
 extern "C" void ee_screenscpp_sbt_send_remove(uintptr_t inRec, bool inShift)
@@ -144,9 +140,9 @@ extern "C" int64_t ee_screenscpp_sbt_game_resources() { return gGameResources; }
 extern "C" float ee_screenscpp_sbt_game_clock() { return gPhysics->GetGameClock(); }
 extern "C" int64_t ee_screenscpp_sbt_world_long(int64_t inConstant)
 { return gWorldTable.GetLongValue((EEWorldConstant)inConstant); }
-extern "C" void ee_screenscpp_sbt_string_clear() { sSBTString = UWideString(); }
-extern "C" void ee_screenscpp_sbt_string_load(int64_t inId) { gResource->GetString(inId, sSBTString); }
-extern "C" void ee_screenscpp_sbt_chat_add_string() { gUserInterface->AddChatLogEntry(sSBTString, 0); }
+extern "C" void ee_screenscpp_sbt_string_clear() { EEScratch<UWideString>(kScratchSBTString) = UWideString(); }
+extern "C" void ee_screenscpp_sbt_string_load(int64_t inId) { gResource->GetString(inId, EEScratch<UWideString>(kScratchSBTString)); }
+extern "C" void ee_screenscpp_sbt_chat_add_string() { gUserInterface->AddChatLogEntry(EEScratch<UWideString>(kScratchSBTString), 0); }
 extern "C" bool ee_screenscpp_sbt_shift() { return UIControl::ShiftKeyPressed(); }
 extern "C" bool ee_screenscpp_sbt_is_command(uintptr_t inRec) { return SBRB(inRec)->mIsCommand; }
 extern "C" uintptr_t ee_screenscpp_sbt_node(uintptr_t inRec)
@@ -178,7 +174,7 @@ extern "C" bool ee_screenscpp_sbt_can_produce_quiet(uintptr_t inRec)
 extern "C" void ee_screenscpp_sbt_button_up(uintptr_t inRec) { SBRB(inRec)->ButtonUp(); }
 extern "C" bool ee_screenscpp_sbt_mouse_inside(uintptr_t inRec) { return SBRB(inRec)->IsMouseInside(); }
 extern "C" void ee_screenscpp_sbt_count_text(uintptr_t inRec, EeScreensShimText inText)
-{ SBRB(inRec)->mBuildQueue->SetText(EEShimText(inText)); }
+{ static_cast<GEText*>(SBRB(inRec)->mBuildQueue)->SetText(EEShimText(inText)); }
 extern "C" bool ee_screenscpp_sbt_in_fanatic_set(int64_t inUnit)
 { return gUnitSetManager.GetSet(0x2f)->Contains((unsigned long)inUnit); }
 extern "C" void ee_screenscpp_sbt_text_string(uintptr_t inRec, int64_t inId)
@@ -197,20 +193,20 @@ extern "C" void ee_screenscpp_sbt_text_node_cost(uintptr_t inRec, uintptr_t inNo
 extern "C" int64_t ee_screenscpp_sbt_text_length(uintptr_t inRec) { return (int64_t)strlen(SBR(inRec)->mText); }
 extern "C" int64_t ee_screenscpp_sbt_trade_price(int64_t inResource, bool inBuy)
 { return EEGetTradePrice(gWorld.GetCurrentPlayer(), (long)inResource, inBuy); }
-extern "C" bool ee_screenscpp_sbt_has_object(uintptr_t inRec) { return SBRB(inRec)->mButtonObject != NULL; }
+extern "C" bool ee_screenscpp_sbt_has_object(uintptr_t inRec) { return static_cast<EEButtonObject*>(SBRB(inRec)->mButtonObject) != NULL; }
 extern "C" void ee_screenscpp_sbt_set_draw_icon(uintptr_t inRec, bool inDraw) { SBRB(inRec)->mDrawIcon = inDraw; }
 extern "C" void ee_screenscpp_sbt_object_pressed_icon(uintptr_t inRec)
-{ SBRB(inRec)->mButtonObject->SetPressedBitmap(SBRB(inRec)->mIcon, SBRB(inRec)->GetRectangle(), SBRB(inRec)->GetScreenIndex()); }
+{ static_cast<EEButtonObject*>(SBRB(inRec)->mButtonObject)->SetPressedBitmap(static_cast<GEBitmap*>(SBRB(inRec)->mIcon), SBRB(inRec)->GetRectangle(), SBRB(inRec)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_sbt_object_face_icon(uintptr_t inRec)
-{ SBRB(inRec)->mButtonObject->SetFaceBitmap(SBRB(inRec)->mIcon, SBRB(inRec)->GetRectangle(), SBRB(inRec)->GetScreenIndex()); }
+{ static_cast<EEButtonObject*>(SBRB(inRec)->mButtonObject)->SetFaceBitmap(static_cast<GEBitmap*>(SBRB(inRec)->mIcon), SBRB(inRec)->GetRectangle(), SBRB(inRec)->GetScreenIndex()); }
 extern "C" void ee_screenscpp_sbt_main_group_l1c(int64_t inValue)
-{ static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0])->mL1C = (long)inValue; }
+{ gUIManager->GetMainGameForm()->mMainGroup->mL1C = (long)inValue; }
 extern "C" void ee_screenscpp_sbt_main_group_reset()
-{ static_cast<EEUIFMGMainGroup*>(gUIManager->GetMainGameForm()->mGroups[0])->mReset = true; }
-extern "C" uintptr_t ee_screenscpp_sbt_object(uintptr_t inButton) { return (uintptr_t)SBB(inButton)->mButtonObject; }
-extern "C" void ee_screenscpp_sbt_object_release(uintptr_t inButton) { SBB(inButton)->mButtonObject->Release(); }
+{ gUIManager->GetMainGameForm()->mMainGroup->mReset = true; }
+extern "C" uintptr_t ee_screenscpp_sbt_object(uintptr_t inButton) { return (uintptr_t)static_cast<EEButtonObject*>(SBB(inButton)->mButtonObject); }
+extern "C" void ee_screenscpp_sbt_object_release(uintptr_t inButton) { static_cast<EEButtonObject*>(SBB(inButton)->mButtonObject)->Release(); }
 extern "C" void ee_screenscpp_sbt_object_clear(uintptr_t inButton) { SBB(inButton)->mButtonObject = NULL; }
-extern "C" void ee_screenscpp_sbt_object_acquire(uintptr_t inButton) { SBB(inButton)->mButtonObject->Acquire(); }
+extern "C" void ee_screenscpp_sbt_object_acquire(uintptr_t inButton) { static_cast<EEButtonObject*>(SBB(inButton)->mButtonObject)->Acquire(); }
 extern "C" void ee_screenscpp_sbt_set_object(uintptr_t inButton, uint32_t inIndex)
 { SBB(inButton)->mButtonObject = EEButtonObject::Get(inIndex); }
 extern "C" void ee_screenscpp_sbt_set_node_object(uintptr_t inButton, int64_t inTechnology)
@@ -225,32 +221,32 @@ extern "C" void ee_screenscpp_sbt_set_technology(uintptr_t inButton, int64_t inT
 extern "C" void ee_screenscpp_sbt_set_unit_type(uintptr_t inButton, uint32_t inKind)
 { SBB(inButton)->mUnitType = inKind; }
 extern "C" void ee_screenscpp_sbt_set_unit_id(uintptr_t inButton, uint32_t inId) { SBB(inButton)->mUnitID = inId; }
-extern "C" void ee_screenscpp_sbt_icon_dereference(uintptr_t inButton) { SBB(inButton)->mIcon->Dereference(); }
-extern "C" void ee_screenscpp_sbt_queue_delete(uintptr_t inButton) { delete SBB(inButton)->mBuildQueue; }
-extern "C" void ee_screenscpp_sbt_dither_dereference(uintptr_t inButton) { SBB(inButton)->mDither->Dereference(); }
+extern "C" void ee_screenscpp_sbt_icon_dereference(uintptr_t inButton) { static_cast<GEBitmap*>(SBB(inButton)->mIcon)->Dereference(); }
+extern "C" void ee_screenscpp_sbt_queue_delete(uintptr_t inButton) { delete static_cast<GEText*>(SBB(inButton)->mBuildQueue); }
+extern "C" void ee_screenscpp_sbt_dither_dereference(uintptr_t inButton) { static_cast<GEBitmap*>(SBB(inButton)->mDither)->Dereference(); }
 extern "C" bool ee_screenscpp_sbt_draw_icon(uintptr_t inButton) { return SBB(inButton)->mDrawIcon; }
 extern "C" void ee_screenscpp_sbt_icon_white(uintptr_t inButton)
-{ SBB(inButton)->mIcon->SetColor(GEColor(1.0f, 1.0f, 1.0f)); }
+{ static_cast<GEBitmap*>(SBB(inButton)->mIcon)->SetColor(GEColor(1.0f, 1.0f, 1.0f)); }
 extern "C" void ee_screenscpp_sbt_draw_icon_bitmap(uintptr_t inButton)
-{ SBB(inButton)->GetRasterizer()->Draw(SBB(inButton)->mIcon, SBB(inButton)->GetScreenIndex()); }
+{ SBB(inButton)->GetRasterizer()->Draw(static_cast<GEBitmap*>(SBB(inButton)->mIcon), SBB(inButton)->GetScreenIndex()); }
 extern "C" bool ee_screenscpp_sbt_available(uintptr_t inButton) { return SBB(inButton)->mAvailable; }
 extern "C" void ee_screenscpp_sbt_dither_at_drawn(uintptr_t inButton)
-{ SBB(inButton)->mDither->SetLocation(SBB(inButton)->GetCopiedDrawRectangle().GetTopLeft()); }
+{ static_cast<GEBitmap*>(SBB(inButton)->mDither)->SetLocation(SBB(inButton)->GetCopiedDrawRectangle().GetTopLeft()); }
 extern "C" void ee_screenscpp_sbt_draw_dither(uintptr_t inButton)
-{ SBB(inButton)->GetRasterizer()->Draw(SBB(inButton)->mDither, SBB(inButton)->GetScreenIndex()); }
+{ SBB(inButton)->GetRasterizer()->Draw(static_cast<GEBitmap*>(SBB(inButton)->mDither), SBB(inButton)->GetScreenIndex()); }
 extern "C" int64_t ee_screenscpp_sbt_base_draw_polygons(uintptr_t inButton)
 { return SBB(inButton)->UIButton::DrawPolygons(); }
 extern "C" bool ee_screenscpp_sbt_show_count(uintptr_t inButton) { return SBB(inButton)->mShowCount; }
 extern "C" void ee_screenscpp_sbt_draw_count(uintptr_t inButton)
-{ SBB(inButton)->GetForm()->DrawClippedText(SBB(inButton)->GetRectangle(), SBB(inButton)->mBuildQueue, SBB(inButton)); }
+{ SBB(inButton)->GetForm()->DrawClippedText(SBB(inButton)->GetRectangle(), static_cast<GEText*>(SBB(inButton)->mBuildQueue), SBB(inButton)); }
 extern "C" int64_t ee_screenscpp_sbt_base_draw_text(uintptr_t inButton) { return SBB(inButton)->UIButton::DrawTextA(); }
 extern "C" bool ee_screenscpp_sbt_pressed(uintptr_t inButton)
 { return SBB(inButton)->GetState() == kButtonStatePressed; }
 extern "C" void ee_screenscpp_sbt_up(uintptr_t inButton) { SBB(inButton)->ButtonUp(); }
 extern "C" void ee_screenscpp_sbt_icon_at(uintptr_t inButton, float inX, float inY)
-{ SBB(inButton)->mIcon->SetLocation(GE2DPoint(inX, inY)); }
+{ static_cast<GEBitmap*>(SBB(inButton)->mIcon)->SetLocation(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_sbt_queue_at(uintptr_t inButton, float inX, float inY)
-{ SBB(inButton)->mBuildQueue->SetLocation(GE2DPoint(inX, inY)); }
+{ static_cast<GEText*>(SBB(inButton)->mBuildQueue)->SetLocation(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_sbt_base_set_location(uintptr_t inButton, float inX, float inY)
 { SBB(inButton)->UIButton::SetLocation(GE2DPoint(inX, inY)); }
 extern "C" uintptr_t ee_screenscpp_sbt_normal_bitmap(uintptr_t inButton, uintptr_t inManager, uintptr_t inTable)
@@ -268,20 +264,20 @@ extern "C" float ee_screenscpp_sbt_left(uintptr_t inButton) { return SBB(inButto
 extern "C" float ee_screenscpp_sbt_top(uintptr_t inButton) { return SBB(inButton)->GetRectangle().GetTop(); }
 extern "C" void ee_screenscpp_sbt_queue_new(uintptr_t inButton, uintptr_t inTable)
 { SBB(inButton)->mBuildQueue = new GEText(SBT(inTable).GetFont()); }
-extern "C" void ee_screenscpp_sbt_queue_verify(uintptr_t inButton) { ESVERIFY_AT(SBB(inButton)->mBuildQueue, 195); }
+extern "C" void ee_screenscpp_sbt_queue_verify(uintptr_t inButton) { ESVERIFY_AT(static_cast<GEText*>(SBB(inButton)->mBuildQueue), 195); }
 extern "C" void ee_screenscpp_sbt_queue_setup(uintptr_t inButton, uintptr_t inTable)
-{ SBT(inTable).SetupGEText(SBB(inButton)->mBuildQueue); }
+{ SBT(inTable).SetupGEText(static_cast<GEText*>(SBB(inButton)->mBuildQueue)); }
 extern "C" uintptr_t ee_screenscpp_sbt_load_dither(uintptr_t inManager)
 { return (uintptr_t)SBM(inManager)->GetRasterizer()->GetTextureManager(SBM(inManager)->GetScreen())->LoadTexture("textures\\Dither", GETextureDescription{1, 0, SBM(inManager)->GetUITextureBitDepth(), 0, false, false, true, true}); }
 extern "C" void ee_screenscpp_sbt_dither_new(uintptr_t inButton) { SBB(inButton)->mDither = new GEBitmap; }
 extern "C" void ee_screenscpp_sbt_dither_texture(uintptr_t inButton, uintptr_t inTexture, uintptr_t inManager)
-{ SBB(inButton)->mDither->SetTexture(reinterpret_cast<GETexture*>(inTexture), SBM(inManager)->GetScreen()); }
+{ static_cast<GEBitmap*>(SBB(inButton)->mDither)->SetTexture(reinterpret_cast<GETexture*>(inTexture), SBM(inManager)->GetScreen()); }
 extern "C" float ee_screenscpp_sbt_texture_width(uintptr_t inTexture)
 { return (float)reinterpret_cast<GETexture*>(inTexture)->GetSurface()->GetWidth(); }
 extern "C" float ee_screenscpp_sbt_texture_height(uintptr_t inTexture)
 { return (float)reinterpret_cast<GETexture*>(inTexture)->GetSurface()->GetHeight(); }
 extern "C" void ee_screenscpp_sbt_dither_stretch(uintptr_t inButton, uintptr_t inRectangle, float inWidth, float inHeight, uintptr_t inManager)
-{ SBB(inButton)->mDither->ComputeStretchedCoordsAndScale(*reinterpret_cast<const GERectangle*>(inRectangle), *reinterpret_cast<const GERectangle*>(inRectangle), GERectangle(0.0f, 0.0f, inWidth, inHeight), SBM(inManager)->GetScreen()); }
+{ static_cast<GEBitmap*>(SBB(inButton)->mDither)->ComputeStretchedCoordsAndScale(*reinterpret_cast<const GERectangle*>(inRectangle), *reinterpret_cast<const GERectangle*>(inRectangle), GERectangle(0.0f, 0.0f, inWidth, inHeight), SBM(inManager)->GetScreen()); }
 
 void EEUIFMGStatusButton::ButtonUp()
 {

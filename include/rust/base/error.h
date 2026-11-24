@@ -6,14 +6,17 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/base/ustring.h"
 
 /// A checksum set (`ESChecksum`).
 struct EeErrorChecksum;
 
-/// Error texts from `ee_error_checksum_compare`, read with `ee_error_texts_count` / `_get`, freed with `_free`.
-struct EeErrorTexts;
-
 extern "C" {
+
+/// Sets (or with `None` clears) the verify handler of [`VERIFY_HOOK`] (test drivers only).
+void ee_error_set_verify_hook(void (*hook)(const char *file,
+                                           unsigned long line,
+                                           const char *expression));
 
 /// Whether `Filter.txt` was read (C++ reads it on the first debug message that has a startup path).
 bool ee_error_filters_loaded();
@@ -26,6 +29,22 @@ bool ee_error_filters_loaded();
 /// # Safety
 /// `text` is a NUL-terminated string; `volume` and `directory` are live `UString`s (`EeFsString`).
 void ee_error_debug_out(const char *text,
+                        const void *volume,
+                        const void *directory);
+
+/// `ESDebugOut`'s buffer for its formatted text (`UFormat`, lle/LowLevelEngineCore.h): `size` bytes (at least 1),
+/// freed by [`ee_error_debug_end`].
+char *ee_error_debug_buffer(void *_state,
+                            unsigned long size);
+
+/// `ESDebugOut`'s end: the formatted text cut at 1023 bytes (the original's 1024-byte `vsnprintf`) through
+/// [`ee_error_debug_out`], then the buffer freed.
+///
+/// # Safety
+/// `text` and `size` are from [`ee_error_debug_buffer`], the text NUL-terminated inside it; as
+/// [`ee_error_debug_out`] for `volume` and `directory`.
+void ee_error_debug_end(char *text,
+                        unsigned long size,
                         const void *volume,
                         const void *directory);
 
@@ -133,31 +152,21 @@ void ee_error_checksum_clear(EeErrorChecksum *c);
 /// `c` is a live set; `description` a NUL-terminated string.
 void ee_error_checksum_push(EeErrorChecksum *c, const char *description, uint32_t value);
 
-/// `Compare(other)`: whether they match; the error texts into `*out_texts` (free with `ee_error_texts_free`).
+/// `Compare(other, errors)`: whether they match; each error text (its NULs dropped) handed to `sink` with `target`
+/// in order (`ESChecksum::Compare`'s vector push).
 ///
 /// # Safety
-/// Both are live sets; `out_texts` is valid.
+/// Both are live sets; `sink` takes `target` and a NUL-terminated text valid for the call.
 bool ee_error_checksum_compare(const EeErrorChecksum *c,
                                const EeErrorChecksum *other,
-                               EeErrorTexts **out_texts);
+                               void (*sink)(void *target, const char *text),
+                               void *target);
 
-/// The number of texts.
+/// `UWideString::GetChecksum`: the string's checksum added to the set as "UWideString (<text>)".
 ///
 /// # Safety
-/// `t` is from `ee_error_checksum_compare`.
-size_t ee_error_texts_count(const EeErrorTexts *t);
-
-/// Text `i` (valid until `ee_error_texts_free`).
-///
-/// # Safety
-/// `t` is from `ee_error_checksum_compare`; `i` is below the count.
-const char *ee_error_texts_get(const EeErrorTexts *t, size_t i);
-
-/// Frees the texts.
-///
-/// # Safety
-/// `t` is from `ee_error_checksum_compare` or NULL, not used afterwards.
-void ee_error_texts_free(EeErrorTexts *t);
+/// `c` is a live set, `s` a live string.
+void ee_error_checksum_add_wide(EeErrorChecksum *c, const EeUWideString *s);
 
 }  // extern "C"
 

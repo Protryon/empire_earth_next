@@ -7,19 +7,23 @@
 #define EE_EEUIFMGSTATUSBAR_H
 #include "rust/game/screens.h"
 
-class GEBitmap;
-class GEText;
-class UIBitmap;
-class UIStatusBar;
 class UITextLabel;
 class UILayoutUtility;
 
-class EEUIFMGStatusBar : public EEUIBUpgrade {
+class EEUIFMGStatusBar : public EEUIBUpgrade, public EeScreensStatusBarFields {
 public:
     // 0x2691b2: args3..5 unread; arg3 actual layout address, pointer-vs-reference spelling inferred
+    // Creates an improvement button drawn as an icon, a green status bar and two value labels (and a queued count),
+    // laid out for the main game or the scenario editor (status_bar_calls.rs)
     EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout, unsigned long inScreenWidth,
                      unsigned long inScreenHeight, const GERectangle& inRectangle, UIForm* inForm, bool inScenarioEditor,
-                     bool inEnabled, bool inArg10);
+                     bool inEnabled, bool inArg10)
+        : EEUIBUpgrade(inId, inRectangle.GetTopLeft(), (unsigned long)inRectangle.GetWidth(),
+                       (unsigned long)inRectangle.GetHeight(), inForm, inIndex, inScenarioEditor, inScenarioEditor == true),
+          EeScreensStatusBarFields{NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, false, false, inEnabled}
+    {
+        ee_screens_sba_construct((uintptr_t)this, (uintptr_t)&inRectangle, (uintptr_t)inForm, inScenarioEditor, inArg10);
+    }
     // Destroys the status bar button and its parts
     virtual ~EEUIFMGStatusBar() { ee_screens_sba_destroy((uintptr_t)this); }
     // Snapshots the button and its parts for drawing; shows the number of queued improvements
@@ -28,7 +32,6 @@ public:
     virtual long DrawPolygons() { return (long)ee_screens_sba_draw_polygons((uintptr_t)this); }            // +0x18 0x26993f
     // Draws the parts' texts, the second label when it has text, and the queued count
     virtual long DrawTextA() { return (long)ee_screens_sba_draw_text((uintptr_t)this); }               // +0x1c 0x26997f
-protected:
     // The presses and the drag: inside an enabled button the icon nudged down-right as pressed (left and right presses),
     // back on the release, following the mouse while captured; then the button's own (ee_screens upgrade.rs bar_mouse over
     // the improvement button's host)
@@ -38,24 +41,15 @@ protected:
     virtual long MouseRButtonDown() { return this->BarMouse(EE_SCREENS_UP_BAR_R_DOWN, NULL); }        // +0x44 0x269b8b
     virtual long MouseRButtonUp() { return this->BarMouse(EE_SCREENS_UP_BAR_R_UP, NULL); }          // +0x48 0x269be6
     // the mouse handler EE_SCREENS_UP_BAR_* in Rust (ee_screens upgrade.rs bar_mouse; MoveIcon 0x269c43 is its)
-    long BarMouse(uint32_t inWhich, const GE2DPoint* inLocation);
+    long BarMouse(uint32_t inWhich, const GE2DPoint* inLocation)
+    {
+        return (long)ee_screens_upgrade_bar_mouse(EEUIBUpgradeCall(this, NULL, inLocation).Ptr(), inWhich);
+    }
     // (SetIconBitmap 0x26c42a is Rust's: ee_screens status_box_calls.rs set_icon_bitmap)
-public:
     // inline: the value labels' first lines (out of line after their first user, EEUIFMGStatusBox::Fn26CBE1:
     // 0x26dac9 / 0x26dad8, in this order) (provisional names)
-    const UWideString& GetValueText() const { return this->mValue->GetText(0); }
-    const UWideString& GetValue2Text() const { return this->mValue2->GetText(0); }
-    UIBitmap* mIcon;                        // +0x130
-    UITextLabel* mValue;                    // +0x134 ("this->mValue")
-    UITextLabel* mValue2;                   // +0x138
-    UIStatusBar* mBar;                      // +0x13c ("this->mBar")
-    GEBitmap* mBitmap140;                   // +0x140 (dereferenced by the dtor)
-    GEBitmap* mBitmap144;                   // +0x144
-    GEText* mCount;                         // +0x148 mL128 as text (CopyData)
-    bool mPressed;                          // +0x14c the icon is moved by (1, 1)
-    bool mShowCount;                        // +0x14d
-    bool mCopiedEnabled;                    // +0x14e mEnabled as of the last CopyData (DrawPolygons)
-    bool mEnabled;                          // +0x14f
+    const UWideString& GetValueText() const { return static_cast<UITextLabel*>(this->mValue)->GetText(0); }
+    const UWideString& GetValue2Text() const { return static_cast<UITextLabel*>(this->mValue2)->GetText(0); }
 };
 
 #endif

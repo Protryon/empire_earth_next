@@ -37,8 +37,11 @@ void operator delete[](void* p, size_t) noexcept { free(p); }
 
 // ---------------------------------------------------------------------------------------------------- surfaces --
 
-StoreSurface::StoreSurface(GEScreen* inScreen, const GESurfaceDescription& inDescription, long inLevel)
-    : mScreen(inScreen), mDescription(inDescription), mNext(NULL), mLocked(false), mLockCount(0), mLevel(inLevel)
+static long sStoreLevel = 0;   // the MIP level of the surface ee_dx7sf_new makes next
+
+StoreSurface::StoreSurface(GESurface* inOwner, GEScreen* inScreen, const GESurfaceDescription& inDescription, long inLevel)
+    : mOwner(inOwner), mScreen(inScreen), mDescription(inDescription), mNext(NULL), mLocked(false), mLockCount(0),
+      mLevel(inLevel)
 {
     unsigned long theBytes = mDescription.mPixelDepth / 8;
     mBytesPerRow = mDescription.mWidth * theBytes + 8;   // 8 bytes past each row: a loader's row skip shows
@@ -47,7 +50,9 @@ StoreSurface::StoreSurface(GEScreen* inScreen, const GESurfaceDescription& inDes
         GESurfaceDescription theNext = mDescription;
         theNext.mWidth = mDescription.mWidth > 1 ? mDescription.mWidth / 2 : 1;
         theNext.mHeight = mDescription.mHeight > 1 ? mDescription.mHeight / 2 : 1;
-        mNext = new StoreSurface(inScreen, theNext, inLevel + 1);
+        sStoreLevel = inLevel + 1;
+        mNext = new GESurface(NULL, theNext, inScreen);
+        sStoreLevel = 0;
     }
 }
 
@@ -57,26 +62,22 @@ StoreSurface::~StoreSurface()
         mNext->Dereference();
 }
 
-unsigned long StoreSurface::GetAllocatedSize()
-{
-    return (unsigned long)mPixels.size() + (mNext ? mNext->GetAllocatedSize() : 0);
-}
-
 // A logical rectangle -> pixel bounds within the surface
-static void StorePixelRect(const StoreSurface* inSurface, const GERectangle& inRect, long& outLeft, long& outTop,
+static void StorePixelRect(const StoreSurface* inSurface, const float* inRect, long& outLeft, long& outTop,
                            long& outRight, long& outBottom)
 {
-    long theShift = (long)inSurface->GetLogicalShift();
-    outLeft = (long)inRect.GetLeft() << theShift;
-    outTop = (long)inRect.GetTop() << theShift;
-    outRight = (long)inRect.GetRight() << theShift;
-    outBottom = (long)inRect.GetBottom() << theShift;
+    const GERectangle& theRect = *reinterpret_cast<const GERectangle*>(inRect);
+    long theShift = (long)inSurface->mOwner->GetLogicalShift();
+    outLeft = (long)theRect.GetLeft() << theShift;
+    outTop = (long)theRect.GetTop() << theShift;
+    outRight = (long)theRect.GetRight() << theShift;
+    outBottom = (long)theRect.GetBottom() << theShift;
 }
 
 // Copies a rectangle into another, nearest pixel (inBox: the average of the source block per byte instead)
-static long StoreCopy(StoreSurface* inSource, GESurface* inTarget, GERectangle& inFrom, GERectangle& inTo, bool inBox)
+static long StoreCopy(StoreSurface* inSource, void* inTarget, const float* inFrom, const float* inTo, bool inBox)
 {
-    StoreSurface* theTarget = dynamic_cast<StoreSurface*>(inTarget);
+    StoreSurface* theTarget = inTarget ? StoreSurface::Of(static_cast<GESurface*>(inTarget)) : NULL;
     if (!theTarget || theTarget->mDescription.mPixelDepth != inSource->mDescription.mPixelDepth)
         return kErrorFailed;
     long sl, st, sr, sb, dl, dt, dr, db;
@@ -118,25 +119,74 @@ static long StoreCopy(StoreSurface* inSource, GESurface* inTarget, GERectangle& 
     return kErrorOK;
 }
 
-long StoreSurface::CopyTo(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination, bool inTransparent)
+// The surface's and the screen's Rust functions as the memory objects (the members GESurface and GEScreen call; the
+// link takes these before the Rust library's, and storegate.py checks that its duplicates are exactly these). The
+// ones the store never reaches answer zero.
+#define SS(p) reinterpret_cast<StoreSurface*>(p)
+extern "C" {
+EeDx7Surface* ee_dx7sf_new(EeDx7ObjHostFn, void* inOwner, void*, const EeDx7SurfaceDescription* inDescription, void* inParent)
 {
-    return StoreCopy(this, inTarget, inSource, inDestination, false);
+    return reinterpret_cast<EeDx7Surface*>(new StoreSurface(static_cast<GESurface*>(inOwner), static_cast<GEScreen*>(inParent),
+                                                            *reinterpret_cast<const GESurfaceDescription*>(inDescription), sStoreLevel));
 }
+void ee_dx7sf_destroy(EeDx7Surface* p) { delete SS(p); }
+int32_t ee_dx7sf_attach(EeDx7Surface*, void*) { return kErrorFailed; }
+int32_t ee_dx7sf_clear(EeDx7Surface*, const float*, const float*, float) { return 0; }
+int32_t ee_dx7sf_copy_to(EeDx7Surface* p, void* inTarget, const float* inSource, const float* inDestination, bool)
+    { return StoreCopy(SS(p), inTarget, inSource, inDestination, false); }
+int32_t ee_dx7sf_copy_with_filter(EeDx7Surface* p, void* inTarget, const float* inSource, const float* inDestination)
+    { return StoreCopy(SS(p), inTarget, inSource, inDestination, true); }
+int32_t ee_dx7sf_detach(EeDx7Surface*, unsigned long) { return kErrorFailed; }
+int32_t ee_dx7sf_flip(EeDx7Surface*, bool) { return 0; }
+unsigned long ee_dx7sf_allocated_size(EeDx7Surface* p)
+    { return (unsigned long)SS(p)->mPixels.size() + (SS(p)->mNext ? SS(p)->mNext->GetAllocatedSize() : 0); }
+int32_t ee_dx7sf_lock(EeDx7Surface* p) { SS(p)->mLocked = true; SS(p)->mLockCount++; return kErrorOK; }
+int32_t ee_dx7sf_unlock(EeDx7Surface* p) { SS(p)->mLocked = false; return kErrorOK; }
+int32_t ee_dx7sf_restore(EeDx7Surface*) { return kErrorOK; }
+void ee_dx7sf_set_transparency_color(EeDx7Surface* p, const float* inColor)
+    { SS(p)->mTransparency = *reinterpret_cast<const GEColor*>(inColor); }
+int32_t ee_dx7sf_text_lock(EeDx7Surface*, bool) { return kErrorOK; }
+float ee_dx7sf_render_scale(EeDx7Surface*) { return 1.0f; }
+unsigned long ee_dx7sf_logical_size(EeDx7Surface* p, unsigned long, unsigned long inShift, bool inHeight)
+    { return (inHeight ? SS(p)->mDescription.mHeight : SS(p)->mDescription.mWidth) >> inShift; }
+const EeDx7SurfaceDescription* ee_dx7sf_description(EeDx7Surface* p)
+    { return reinterpret_cast<const EeDx7SurfaceDescription*>(&SS(p)->mDescription); }
+const float* ee_dx7sf_transparency(EeDx7Surface* p) { return reinterpret_cast<const float*>(&SS(p)->mTransparency); }
+void* ee_dx7sf_attached(EeDx7Surface* p, unsigned long inIndex) { return inIndex == 0 ? SS(p)->mNext : NULL; }
+unsigned long ee_dx7sf_attached_count(EeDx7Surface* p) { return SS(p)->mNext ? 1 : 0; }
+void* ee_dx7sf_gx(EeDx7Surface*) { return NULL; }
+void* ee_dx7sf_parent(EeDx7Surface* p) { return SS(p)->mScreen; }
+uint8_t* ee_dx7sf_memory(EeDx7Surface* p) { return SS(p)->mLocked ? SS(p)->mPixels.data() : NULL; }
+unsigned long ee_dx7sf_bytes_per_row(EeDx7Surface* p) { return SS(p)->mBytesPerRow; }
+bool ee_dx7sf_text_locked(EeDx7Surface*) { return false; }
 
-long StoreSurface::CopyWithFilter(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination)
+EeDx7Screen* ee_dx7sc_new(EeDx7ObjHostFn, void* inOwner, void*, void*, const void*, bool, bool)
+    { return reinterpret_cast<EeDx7Screen*>(new StoreScreen{static_cast<GEScreen*>(inOwner)}); }
+void ee_dx7sc_start(EeDx7Screen*) {}
+void ee_dx7sc_destroy(EeDx7Screen* p) { delete reinterpret_cast<StoreScreen*>(p); }
+int32_t ee_dx7sc_create_surface(EeDx7Screen* p, EeDx7SurfaceDescription* inDescription, void** outSurface)
 {
-    return StoreCopy(this, inTarget, inSource, inDestination, true);
-}
-
-long StoreScreen::CreateSurface(GESurfaceDescription& inDescription, GESurface** outSurface)
-{
-    if (inDescription.mWidth == 0 || inDescription.mHeight == 0 || inDescription.mWidth > 65536
-        || inDescription.mHeight > 65536) {
+    const GESurfaceDescription& theDescription = *reinterpret_cast<const GESurfaceDescription*>(inDescription);
+    if (theDescription.mWidth == 0 || theDescription.mHeight == 0 || theDescription.mWidth > 65536
+        || theDescription.mHeight > 65536) {
         *outSurface = NULL;
         return kErrorFailed;
     }
-    *outSurface = new StoreSurface(this, inDescription, 0);
+    *outSurface = new GESurface(NULL, theDescription, reinterpret_cast<StoreScreen*>(p)->mOwner);
     return kErrorOK;
+}
+int32_t ee_dx7sc_capture(EeDx7Screen*, void*, bool) { return 0; }
+int32_t ee_dx7sc_release(EeDx7Screen*, void*) { return 0; }
+const float* ee_dx7sc_desktop_rectangle(EeDx7Screen*) { static float s[4]; return s; }
+int32_t ee_dx7sc_restore_all(EeDx7Screen*) { return 0; }
+int32_t ee_dx7sc_set_mode(EeDx7Screen*, unsigned long) { return 0; }
+const EeDx7VideoMode* ee_dx7sc_mode(EeDx7Screen*, unsigned long) { static EeDx7VideoMode s; return &s; }
+const EeDx7VideoMode* ee_dx7sc_current_mode(EeDx7Screen*) { static EeDx7VideoMode s; return &s; }
+unsigned long ee_dx7sc_current_mode_index(EeDx7Screen*) { return 0; }
+unsigned long ee_dx7sc_mode_count(EeDx7Screen*) { return 0; }
+const void* ee_dx7sc_name(EeDx7Screen*) { static UString s; return &s; }
+void* ee_dx7sc_direct_draw(EeDx7Screen*) { return NULL; }
+bool ee_dx7sc_flag(EeDx7Screen*, uint32_t) { return false; }
 }
 
 // -------------------------------------------------------------------------------------------------------- main --
@@ -248,7 +298,7 @@ int main(int argc, char** argv)
     thePath->AddDirectory(theDirectory, true);
     GERasterizer* theRasterizer = new GERasterizer(UString("storegate"));   // no device (LLE round 12)
     theRasterizer->Activate();
-    StoreScreen* theScreen = new StoreScreen;
+    GEScreen* theScreen = new GEScreen(NULL, NULL, UString("storegate"), false, false);
 
     unsigned long theCount = 0;
     if (theModels) {

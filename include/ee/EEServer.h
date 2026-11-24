@@ -24,11 +24,9 @@ public:
                    inAllowNewConnections, inAnnounce) {}
 #endif
     virtual ~EEServer();                    // +0x00 0xcaa86 (??_G 0xcaa6a)
-    // the engine's pure callbacks, implemented by the game (vtable 0x43e384; EEServer.cpp 0xca90f..0xcd4f9; names by
+    // the engine's callbacks (NESynchronousServer::GameHost calls them by name; the original's vtable 0x43e384; EEServer.cpp 0xca90f..0xcd4f9; names by
     // base slot, signatures from the bodies)
     virtual void ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting);   // +0x04 0xcb8f6
-    virtual bool IsClient();                // +0x0c (ICF: 0xac9f3, false)
-    virtual bool IsServer();                // +0x10 (ICF: 0x18aa9, true: the server)
     virtual void BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsExiting);  // +0x24 0xcb405
     virtual bool ServerSlot28();            // +0x28 0xcbb41
     virtual bool IsMigrating();             // +0x2c 0xcbb65

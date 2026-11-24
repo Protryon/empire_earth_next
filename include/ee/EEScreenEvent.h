@@ -7,15 +7,20 @@
 #define EE_EESCREENEVENT_H
 #include "rust/game/screens.h"
 
+// An event of the game's C++ carries two arguments (UI lane round 16, ee_screens cpp_events.rs EE_SCREENS_EV_*: the
+// original's EEUIECancel (the form to open), EEUIELoadUnit, EEUIEMGHotKeyStatusButton (the button, pressed),
+// EEUIEProcessTimerExpired and EEUIEndCinematicModeEvent)
 class EEScreenEvent : public UIEvent {
 public:
-    explicit EEScreenEvent(unsigned long inEvent) : mEvent(inEvent) {}
+    explicit EEScreenEvent(unsigned long inEvent, uintptr_t inA = 0, uintptr_t inB = 0) : mEvent(inEvent), mA(inA), mB(inB) {}
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     {
-        return ee_screens_event(this->mEvent, inForm, inEntity);
+        return ee_screens_event_args(this->mEvent, this->mA, this->mB, inForm, inEntity);
     }
 
     unsigned long mEvent;                   // EE_SCREENS_*
+    uintptr_t mA;
+    uintptr_t mB;
 };
 
 // The event of a code: an EEScreenEvent, or a C++ event class for an EE_SCREENS_CPP_* code; NULL for 0

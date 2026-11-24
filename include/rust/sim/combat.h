@@ -3325,6 +3325,19 @@ size_t ee_combat_regions_collect(const EeCombatUnitRegions *table,
                                  uint64_t *out,
                                  size_t cap);
 
+/// [`EeCombatUnitRegions::walk`] of the tiles (left, top) to (right, bottom) into `out` (up to `cap`); answers the
+/// units' number.
+///
+/// # Safety
+/// `table` is a live table; `out` is null or holds `cap` values.
+size_t ee_combat_regions_walk(const EeCombatUnitRegions *table,
+                              int32_t left,
+                              int32_t top,
+                              int32_t right,
+                              int32_t bottom,
+                              uint64_t *out,
+                              size_t cap);
+
 /// The saved order (see [`EeCombatUnitRegions::order`]; a null table: no region) into `out` (up to `cap`); answers
 /// its length.
 ///
@@ -3363,6 +3376,19 @@ void ee_combat_shot_action_changed(int32_t kind, uint64_t unit, const EeCombatSh
 /// # Safety
 /// As [`ee_combat_shot_action_changed`].
 void ee_combat_shot_update(int32_t kind, uint64_t unit, const EeCombatShotHost *host);
+
+/// A shot's `ActionChanged` (`update` false: the host-read scope's slot 1) or `Update` (slot 2) as the unit class's
+/// members ran it (EEUnitClassShots.cpp: the projectile's, the missile's and the torpedo's): the scope entered, the
+/// unit's command before, the step over the C++ host, the CBSO record (`func`) when the scope is the outermost, the
+/// scope left.
+///
+/// # Safety
+/// As [`ee_combat_shot_action_changed`]; `unit` is a live complex unit.
+void ee_combat_shot_step(int32_t kind,
+                         bool update,
+                         uint32_t func,
+                         uint64_t unit,
+                         const EeCombatShotHost *host);
 
 /// `EEUGHealUnit::Work` over its reads.
 ///

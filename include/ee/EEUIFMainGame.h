@@ -13,61 +13,32 @@
 #include "ee/EEUIBuildWall.h"
 #include "rust/ui/formobj.h"
 
-class EEABuild;
-class EEACalamity;
-class EEALasso;
-class EEAMouseClick;
-class EEAScroll;
-class EEUIFMGGroup;
+class EEUIFMGMainGroup;
 class EEUIFMGStatusButton;
 class EEUIFMGInformation;
-class EEUIFMGUnitHack;
-class EEUnit;
-class UIBackground;
-class TMPoll;
-class TSCriticalSection;
 class EEUIFMainGame;
 class EESMDialogMessage;
-class EETechTreeNode;
-class EECalamityClass;
-class EEMedia;
-class EEComplexUnit;
-class EETile;
 #include "rust/game/screens.h"   // EeScreensMainFormFields, EeScreensMainFormIo
 
-// One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the form, the
-// picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
-struct EEUIFMGFormCall {
-    EEUIFMainGame* mForm;                   // first: main_form_ffi.rs reads it (the toolkit's direct path)
-    EEUnit* mPicked = NULL;
+// One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the Rust record's
+// form, picked unit, chat line's colour and flags, dialog message, start modes' objects, media, mouse modes' first
+// unit and tile, placement, command button and its help string's result (EeScreensFormCallObjects, hud_direct.rs:
+// untyped, cast at their uses), then the held text and the chat line's name and text
+struct EEUIFMGFormCall : public EeScreensFormCallObjects {
     UWideString mText;
-    const GEColor* mColor = NULL;
     UWideString mName;
     UWideString mChat;
-    unsigned long mFlags = 0;
-    const EESMDialogMessage* mMessage = NULL;
-    EETechTreeNode* mNode = NULL;           // the start modes' tech tree node, unit, caster, calamity
-    EEUnit* mUnit = NULL;
-    EEUnit* mCaster = NULL;
-    EECalamityClass* mCalamity = NULL;
-    EEMedia* mOldMedia = NULL;              // UpdateBackgroundMedia's old and new media
-    EEMedia* mMedia = NULL;
-    EEComplexUnit* mFirst = NULL;           // the mouse modes' first selected unit and pointed tile
-    EETile* mTile = NULL;
-    EEUIBuildWall* mWall = NULL;            // the placement whose Update runs (the game form's or the editor's)
-    EEUIBuildGate* mGate = NULL;
-    EEUIFMGStatusButton* mButton = NULL;    // a command button's press, CopyData or help string (its result)
-    UWideString* mOut = NULL;
-    explicit EEUIFMGFormCall(EEUIFMainGame* inForm) : mForm(inForm) {}
+    explicit EEUIFMGFormCall(EEUIFMainGame* inForm) : EeScreensFormCallObjects{inForm} {}
     // a chat line's (DisplayChatLine), an information message's, a placement's Update, a command button's member
     EEUIFMGFormCall(EEUIFMainGame* inForm, const GEColor& inColor, const UWideString& inName, const UWideString& inChat,
                     unsigned long inFlags)
-        : mForm(inForm), mColor(&inColor), mName(inName), mChat(inChat), mFlags(inFlags) {}
-    EEUIFMGFormCall(EEUIFMainGame* inForm, const EESMDialogMessage* inMessage) : mForm(inForm), mMessage(inMessage) {}
-    EEUIFMGFormCall(EEUIFMainGame* inForm, EEUIBuildWall* inWall) : mForm(inForm), mWall(inWall) {}
-    EEUIFMGFormCall(EEUIFMainGame* inForm, EEUIBuildGate* inGate) : mForm(inForm), mGate(inGate) {}
+        : EeScreensFormCallObjects{inForm, NULL, &inColor, inFlags}, mName(inName), mChat(inChat) {}
+    EEUIFMGFormCall(EEUIFMainGame* inForm, const EESMDialogMessage* inMessage)
+        : EeScreensFormCallObjects{inForm, NULL, NULL, 0, inMessage} {}
+    EEUIFMGFormCall(EEUIFMainGame* inForm, EEUIBuildWall* inWall) : EeScreensFormCallObjects{inForm} { this->mWall = inWall; }
+    EEUIFMGFormCall(EEUIFMainGame* inForm, EEUIBuildGate* inGate) : EeScreensFormCallObjects{inForm} { this->mGate = inGate; }
     EEUIFMGFormCall(EEUIFMainGame* inForm, EEUIFMGStatusButton* inButton, UWideString* inOut)
-        : mForm(inForm), mButton(inButton), mOut(inOut) {}
+        : EeScreensFormCallObjects{inForm} { this->mButton = inButton, this->mOut = inOut; }
     // the record of a call (a temporary's, for the full expression)
     EEUIFMGFormCall* Ptr() { return this; }
 };
@@ -76,14 +47,14 @@ struct EEUIFMGFormCall {
 // the plain members (+0x520 mKeyboardModes .. +0x5f3 mIsButtonBlinking: the modes of each interface state, the state,
 // the media, the groups, the poll's time, the hot key and clock modes, the flags) are the Rust record
 // EeScreensMainFormFields (ee_screens main_form_fields.rs), under their names
-class EEUIFMainGame : public UIForm, public EeScreensMainFormFields {
+class EEUIFMainGame : public UIForm, public EeScreensMainFormFields, public EeScreensMainFormObjects {
 public:
     virtual void SetHelpTextPopupLocation() {}   // +0x24 datacmp: slot 9 = 0x4e123d (an empty `ret`)
     // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity), the
     // mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
     // construct; it reads no control: they are made after it)
     EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData)
-        : UIForm(inManager, inData, true), EeScreensMainFormFields()
+        : UIForm(inManager, inData, true), EeScreensMainFormFields(), EeScreensMainFormObjects()
     {
         ee_screens_main_form_new(EEUIFMGFormCall(this).Ptr(), static_cast<EeScreensMainFormFields*>(this));
     }
@@ -203,26 +174,15 @@ public:
     }
     void ShowAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_SHOW_BACKGROUNDS); }   // 0x26568e (EERenderObject's)
     void HideAllBackgrounds() { this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS); }
-    // UIForm's protected members the host's shims call (main_form_calls.rs)
-    using UIForm::GetDrawToolTipShadow;
-    using UIForm::SetDrawToolTipShadow;
 
     UWideString mStrings[0x24];             // +0x1a0 (CopyData copies them into control 0x1b's list while mStringsChanged)
-    EEUIBuildWall mBuildWall;               // +0x494
-    EEUIBuildGate mBuildGate;               // +0x4b4
-    UIBackground* mUnitInfoBackground;      // +0x4d4 the background 0x64 (Open)
-    UIEvent* mWheelZoom;                    // +0x4d8 (EE_SCREENS_CAM_WHEEL_ZOOM)
-    UIEvent* mGrabScroll;                   // +0x4dc (the middle button's pressed and unpressed event: EECreateGrabScroll)
-    TSCriticalSection* mErrorCriticalSection;        // +0x4e4 (guards mStrings)
-    EEUIFMGUnitHack* mUnitHack;             // +0x4e8
-    EEUIFMGGroup* mGroups[6];               // +0x4ec (0: EEUIFMGMainGroup, 1: statistics, 2: chat, 3: diplomacy,
-                                            //  4: options, 5: civilization builder; CreateGroup 0x26522b)
-    TMPoll* mPoll;                          // +0x504 (200 ms)
-    EEAScroll* mScroll;                     // +0x508
-    EEAMouseClick* mMouseClick;             // +0x50c
-    EEALasso* mLasso;                       // +0x510
-    EEABuild* mBuild;                       // +0x514
-    EEACalamity* mCalamity;                 // +0x518
+    EEUIBuildWall mBuildWall = ee_screens_wall_new(false);   // +0x494
+    EEUIBuildGate mBuildGate = ee_screens_gate_new(false);   // +0x4b4
+    // (+0x4d4 mUnitInfoBackground .. +0x518 mCalamity but the panel groups: the Rust record
+    // EeScreensMainFormObjects, untyped)
+    // +0x4ec the panel groups (0: the main group, 1: statistics, 2: chat, 3: diplomacy, 4: options, 5: civilization
+    // builder; CreateGroup 0x26522b): the main group's object; the other five are Rust's kinds (panel_groups.rs)
+    EEUIFMGMainGroup* mMainGroup;
 };
 
 #endif

@@ -70,11 +70,7 @@ struct GEStoreDigest {
 static void HashSurface(Hash& ioHash, GESurface* inSurface)
 {
     for (unsigned long theLevel = 0; inSurface; theLevel++) {
-        StoreSurface* theSurface = dynamic_cast<StoreSurface*>(inSurface);
-        if (!theSurface) {
-            ioHash.U(0xdead);
-            return;
-        }
+        StoreSurface* theSurface = StoreSurface::Of(inSurface);
         const GESurfaceDescription& d = theSurface->mDescription;
         ioHash.U(d.mType);
         ioHash.U(d.mPixelFormat);
@@ -87,10 +83,10 @@ static void HashSurface(Hash& ioHash, GESurface* inSurface)
         ioHash.U(d.mIs3DRenderable);
         ioHash.U(d.mIsTransparencyEnabled);
         ioHash.U(d.mNoAlpha);
-        ioHash.U(theSurface->GetLogicalShift());
+        ioHash.U(inSurface->GetLogicalShift());
         ioHash.U(theSurface->mLocked);
         ioHash.U(theSurface->mLockCount);
-        ioHash.U(theSurface->GetReferenceCount());
+        ioHash.U(inSurface->GetReferenceCount());
         ioHash.Bytes(theSurface->mPixels.data(), theSurface->mPixels.size());
         inSurface = theSurface->mNext;
     }

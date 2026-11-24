@@ -225,8 +225,8 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwStTeamsFromHelper: ((EEGameState*)p)->mTeams = ((EEPWorldHelper*)a[0])->mTeams;
         break;
-    case O::PwChatLogLoad: return EEUIECLEFormManager::Load(VERSION, FILE_);
-    case O::PwChatLogSave: return EEUIECLEFormManager::Save(VERSION, FILE_);
+    case O::PwChatLogLoad: return ee_screens_chat_log_load(&FILE_);
+    case O::PwChatLogSave: return ee_screens_chat_log_save(&FILE_);
     case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
     case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
     case O::PwAreaEffectsLoad: return EEAELoadRunningState(FILE_);

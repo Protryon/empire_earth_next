@@ -51,22 +51,13 @@ static void Set(RTSUnit* inUnit, uint32_t inField, int64_t inValue)
     ee_units_store_set(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), inField, inValue);
 }
 
-static uint32_t FloatBits(float inValue)
+void EEUnitStoreMoved(const void* inModel)
 {
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
-void EEUnitStoreWrote(unsigned int inField, const void* inMember)
-{
-    if (inField != kUnitFieldLocation)
-        return;
-    EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPhysicalModel));
+    EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inModel, offsetof(EEComplexUnit, mPhysicalModel));
     if (theUnit->mInUnitStore) {
         const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
         ee_units_store_set_location(static_cast<uint32_t>(theUnit->mUnitID), reinterpret_cast<uintptr_t>(theUnit),
-                                    FloatBits(theLocation.GetX()), FloatBits(theLocation.GetY()), FloatBits(theLocation.GetZ()));
+                                    UFloatBits(theLocation.GetX()), UFloatBits(theLocation.GetY()), UFloatBits(theLocation.GetZ()));
     }
 }
 
@@ -173,7 +164,7 @@ extern "C" int64_t ee_units_us_host(int32_t inOp, uint64_t inA, int64_t inB, uin
     case EE_UNITS_US_F_OBJECT_KIND: return UsUnit(inA)->mObjectKind.mValue;
     case EE_UNITS_US_F_ON_MAP: return OnMap(UsUnit(inA));
     case EE_UNITS_US_F_STATS: return (int64_t)reinterpret_cast<uintptr_t>(static_cast<EEUnit*>(UsUnit(inA))->mStats);
-    case EE_UNITS_US_F_LOCATION: return FloatBits(inB == 0 ? static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetX() : inB == 1 ? static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetY() : static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetZ());
+    case EE_UNITS_US_F_LOCATION: return UFloatBits(inB == 0 ? static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetX() : inB == 1 ? static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetY() : static_cast<EEComplexUnit*>(UsUnit(inA))->mPhysicalModel.GetLocation().GetZ());
     case EE_UNITS_US_F_FIELDS: return inB == 0 ? (int64_t)reinterpret_cast<uintptr_t>(static_cast<const EeUnitsRtsUnitFields*>(UsUnit(inA))) : inB == 1 ? (int64_t)reinterpret_cast<uintptr_t>(static_cast<const EeUnitsUnitFields*>(static_cast<EEUnit*>(UsUnit(inA)))) : (int64_t)reinterpret_cast<uintptr_t>(static_cast<const EeUnitsComplexUnitFields*>(static_cast<EEComplexUnit*>(UsUnit(inA))));
     default: return 0;
     }

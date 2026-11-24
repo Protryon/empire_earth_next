@@ -60,13 +60,6 @@
 #include "lle/UIObjHost.h"
 #include "rust/ui/lle_hosts.h"
 
-// the UI database file's calls (UIHotKey.cpp)
-extern "C" void ee_uicpp_file_open(void* inFile);
-extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength);
-extern "C" void ee_uicpp_file_close(void* inFile);
-
-bool UIManager::sMouseLeftHanded;
-
 // The Rust manager's calls out (EeUiOp, obj.rs): a is the form, event, bitmap, texture, lock, sound instance or
 // other object the op names; rectangles and points travel in f. The cases of more than one call are Rust's (ee_ui
 // lle_manager.rs, the host ee_ui_manager_host), over the one-statement shims below.
@@ -77,8 +70,6 @@ static GERectangle UIManagerRect(const float* inF) { return GERectangle(inF[1], 
 #define UVS(x) reinterpret_cast<GETextureCoordinate*>(x)
 #define FILE_SPEC(x) reinterpret_cast<FSFileSpec*>(x)
 static UWideString sUIManagerKey;   // UpdateTranslatedKey's character (the UI thread's)
-// the database's table files in load order, the shared mouse buttons (lle_manager.rs)
-static const unsigned long kUIManagerMouseKeys[] = {kMouseLeftButton, kMouseRightButton, kMouseZAxis};
 extern "C" uint32_t ee_uicpp_mgr_screen(uintptr_t inM) { return MGR(inM)->GetScreen(); }
 extern "C" void ee_uicpp_mgr_rasterizer_screen(uintptr_t inM)
 { MGR(inM)->GetRasterizer()->GetScreen(MGR(inM)->GetScreen()); }
@@ -148,9 +139,9 @@ extern "C" uintptr_t ee_uicpp_table_get(uint32_t inIndex)
 extern "C" uintptr_t ee_uicpp_mgr_form_by_id(uintptr_t inM, uint32_t inId)
 { return (uintptr_t)MGR(inM)->GetFormByID(inId); }
 extern "C" void ee_uicpp_table_add_event(uintptr_t inTable, uint32_t inId, uint32_t inKind)
-{ reinterpret_cast<UIControlsTable*>(inTable)->AddEvent(UIEventData{inId, inKind}); }
+{ reinterpret_cast<UIControlsTable*>(inTable)->AddEvent(inId, inKind); }
 extern "C" void ee_uicpp_form_add_event(uintptr_t inForm, uint32_t inId, uint32_t inKind)
-{ reinterpret_cast<UIForm*>(inForm)->AddEvent(UIEventData{inId, inKind}); }
+{ reinterpret_cast<UIForm*>(inForm)->AddEvent(inId, inKind); }
 extern "C" long ee_uicpp_db_find(uintptr_t inPath, uintptr_t inDirectory, EeUiShimText inName, uintptr_t* inFile)
 { return EEDbFindFile(reinterpret_cast<FSPath*>(inPath), *reinterpret_cast<const UString*>(inDirectory) + UIShimString(inName), *reinterpret_cast<FSFileSpec**>(inFile)); }
 extern "C" long ee_uicpp_db_fonts(uintptr_t inFile, uintptr_t inM)
@@ -158,7 +149,7 @@ extern "C" long ee_uicpp_db_fonts(uintptr_t inFile, uintptr_t inM)
 extern "C" long ee_uicpp_db_forms(uintptr_t inFile, uintptr_t inM)
 { return UIForm::Create(*FILE_SPEC(inFile), MGR(inM)); }
 extern "C" long ee_uicpp_db_backgrounds(uintptr_t inFile) { return UIBackgroundTable::Create(*FILE_SPEC(inFile)); }
-extern "C" void ee_uicpp_db_create_backgrounds(uintptr_t inM) { MGR(inM)->CreateBackgrounds(); }
+extern "C" void ee_uicpp_db_create_backgrounds(uintptr_t inM) { ee_ui_bgtable_create_backgrounds(MGR(inM), ee_ui_bg_table_host); }
 extern "C" void ee_uicpp_db_controls(uintptr_t inFile, uintptr_t inM)
 { UIControlsTable::Create(*FILE_SPEC(inFile), MGR(inM)); }
 extern "C" void ee_uicpp_db_control_events(uintptr_t inFile) { UIEvent::CreateControlEvents(*FILE_SPEC(inFile)); }
@@ -170,18 +161,10 @@ extern "C" void ee_uicpp_db_remove_controls() { UIControlsTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_backgrounds() { UIBackgroundTable::DeleteAll(); }
 extern "C" void ee_uicpp_db_remove_fonts() { UIFontTable::DeleteAll(); }
 extern "C" bool ee_uicpp_mouse_buttons_ready() { return UIControl::Key(EeUiKey::LeftMouse) != NULL; }
-extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich)
-{ gISMouse->GetEntity(kUIManagerMouseKeys[inWhich], UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
-extern "C" bool ee_uicpp_mouse_left_handed() { return UIManager::sMouseLeftHanded; }
+// the shared mouse button inButton into the key slot inWhich after the left button's (lle_manager.rs)
+extern "C" void ee_uicpp_mouse_button_fetch(uint32_t inWhich, uint32_t inButton)
+{ gISMouse->GetEntity(inButton, UIControl::Key((EeUiKey)((uint32_t)EeUiKey::LeftMouse + inWhich))); }
 extern "C" void ee_uicpp_mouse_swap_buttons() { std::swap(UIControl::Key(EeUiKey::LeftMouse), UIControl::Key(EeUiKey::RightMouse)); }
-extern "C" void ee_uicpp_mouse_set_left_handed(bool inLeft) { UIManager::sMouseLeftHanded = inLeft; }
-
-// ChangeIMECompositionString's arguments, through the Rust IME call
-struct UIManagerComposition {
-    const UWideString* mString;
-    const UString* mAttributes;
-    unsigned long mCursor;
-};
 
 // a call with a rectangle (GERectangle is the buffer's order: bottom, left, right, top) or two floats
 #define FORM reinterpret_cast<UIForm*>(a)
@@ -192,48 +175,38 @@ EE_UI_CASE(mgr_form_id) { return FORM->GetFormID(); }
 EE_UI_CASE(mgr_form_use_gdi) { return FORM->GetUseGDIForText(); }
 EE_UI_CASE(mgr_form_keyboard) { return (intptr_t)FORM->GetKeyboardCaptured(); }
 EE_UI_CASE(mgr_form_mouse) { return (intptr_t)FORM->GetMouseCaptured(); }
-EE_UI_CASE(mgr_form_call)
-{
-    switch (b) {
-    case 0: FORM->Open(); return 0;
-    case 1: FORM->Close(); return 0;
-    case 2: FORM->Activate(); return 0;
-    case 3: FORM->Deactivate(); return 0;
-    case 4: FORM->ClearAllClipRectangles(); return 0;
-    case 5: FORM->SetAllControlsDirty(); return 0;
-    case 6: return FORM->CopyData();
-    case 7: return FORM->DrawPolygons();
-    case 8: return FORM->DrawTextA();
-    case 9: return FORM->UpdateKeyboard();
-    case 10: return FORM->UpdateMouse();
-    default: delete FORM; return 0;
-    }
-}
-EE_UI_CASE(mgr_form_rect_call)
-{
-    switch (b) {
-    case 0: FORM->AddDirtyRectangle(UIManagerRect(f)); return 0;
-    case 1: FORM->RedrawIntersectControls(UIManagerRect(f)); return 0;
-    case 2: FORM->AddClipRectangle(UIManagerRect(f)); return 0;
-    case 3: FORM->RelayoutForm(UIManagerRect(f)); return 0;
-    default: FORM->UpdateMouseLocation(GE2DPoint(f[0], f[1])); return 0;
-    }
-}
-EE_UI_CASE(mgr_form_ime)
-{
-    switch (b) {
-    case 0: FORM->AddIMEResultString(*reinterpret_cast<const UWideString*>(c)); return kErrorOK;
-    case 1: return FORM->ChangeIMECompositionString(*reinterpret_cast<const UIManagerComposition*>(c)->mString, *reinterpret_cast<const UIManagerComposition*>(c)->mAttributes, reinterpret_cast<const UIManagerComposition*>(c)->mCursor);
-    case 2: return FORM->CloseIMECompositionString();
-    default: return FORM->OpenIMECompositionString();
-    }
-}
+// the form calls (lle_hosts.rs mgr_form_call, mgr_form_rect_call, mgr_form_ime: b the call)
+EE_UI_VOID(mgr_form_open) { FORM->Open(); }
+EE_UI_VOID(mgr_form_close) { FORM->Close(); }
+EE_UI_VOID(mgr_form_activate) { FORM->Activate(); }
+EE_UI_VOID(mgr_form_deactivate) { FORM->Deactivate(); }
+EE_UI_VOID(mgr_form_clear_clips) { FORM->ClearAllClipRectangles(); }
+EE_UI_VOID(mgr_form_all_dirty) { FORM->SetAllControlsDirty(); }
+EE_UI_CASE(mgr_form_copy) { return FORM->CopyData(); }
+EE_UI_CASE(mgr_form_draw_polygons) { return FORM->DrawPolygons(); }
+EE_UI_CASE(mgr_form_draw_text) { return FORM->DrawTextA(); }
+EE_UI_CASE(mgr_form_update_keyboard) { return FORM->UpdateKeyboard(); }
+EE_UI_CASE(mgr_form_update_mouse) { return FORM->UpdateMouse(); }
+EE_UI_VOID(mgr_form_delete) { delete FORM; }
+EE_UI_VOID(mgr_form_add_dirty) { FORM->AddDirtyRectangle(UIManagerRect(f)); }
+EE_UI_VOID(mgr_form_redraw) { FORM->RedrawIntersectControls(UIManagerRect(f)); }
+EE_UI_VOID(mgr_form_add_clip) { FORM->AddClipRectangle(UIManagerRect(f)); }
+EE_UI_VOID(mgr_form_relayout) { FORM->RelayoutForm(UIManagerRect(f)); }
+EE_UI_VOID(mgr_form_mouse_location) { FORM->UpdateMouseLocation(GE2DPoint(f[0], f[1])); }
+#define COMPOSITION (*reinterpret_cast<const EeUiImeComposition*>(c))
+EE_UI_VOID(mgr_form_ime_result) { FORM->AddIMEResultString(*reinterpret_cast<const UWideString*>(c)); }
+EE_UI_CASE(mgr_form_ime_change) { return FORM->ChangeIMECompositionString(*static_cast<const UWideString*>(COMPOSITION.string), *static_cast<const UString*>(COMPOSITION.attributes), COMPOSITION.cursor); }
+EE_UI_CASE(mgr_form_ime_close) { return FORM->CloseIMECompositionString(); }
+EE_UI_CASE(mgr_form_ime_open) { return FORM->OpenIMECompositionString(); }
+#undef COMPOSITION
 EE_UI_CASE(mgr_ctl_ime) { return reinterpret_cast<UIControl*>(a)->GetIMEEnabled(); }
 EE_UI_VOID(mgr_part_rect) { UIObjHost::PutRect(f, reinterpret_cast<UIControl*>(a)->GetRectangle()); }
 EE_UI_VOID(mgr_event_process) { reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); }
 EE_UI_CASE(mgr_keyboard_should_update) { return gISKeyboard->GetShouldUpdate(); }
 EE_UI_CASE(mgr_mouse_should_update) { return gISMouse->GetShouldUpdate(); }
-EE_UI_VOID(mgr_hot_key_poll) { UIHotKey::UpdatePressedPollAmount(); }
+// the hot keys' pressed poll (the original's UIHotKey::sPressedPoll: 50 ms), polled once per update
+static TMPoll sHotKeyPressedPoll(50, 0, true);
+EE_UI_VOID(mgr_hot_key_poll) { sHotKeyPressedPoll.Poll(); }
 EE_UI_VOID(mgr_hot_keys_delete) { UIHotKey::DeleteHotKeys(); }
 EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
 EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }
@@ -252,24 +225,6 @@ EE_UI_VOID(mgr_sound_parameters) { SOUNDS->SetSoundParameters(INSTANCE, f[0], 0.
 #undef INSTANCE
 #undef SOUNDS
 
-// Creates the UI manager: its locks, the UIControls texture and the check box, radio, sort and scroll-bar
-// bitmaps cut from it; looks up the shared mouse buttons and wheel on first use; no music playing
-UIManager::UIManager(GERasterizer* inRasterizer, SESoundManager* inSoundManager, unsigned long inNumberOfSurfaces,
-                     unsigned long inUITextureBitDepth, UResourceFile* inStringTable, unsigned long inScreen)
-    : mRust(NULL)
-{
-    this->mRust = ee_ui_manager_new(this, ee_ui_manager_host, inRasterizer, inSoundManager, inNumberOfSurfaces,
-                                    inUITextureBitDepth, inStringTable, inScreen);
-    this->Call(EeUiManagerCall::Init);   // its ops read the manager through the forwarders: after mRust is set
-    ee_ui_manager_fetch_mouse_buttons();
-}
-
-// Destroys the UI manager: stops the music, frees the locks, texture, bitmaps, forms, hot keys, IME window and database
-UIManager::~UIManager()
-{
-    ee_ui_manager_free(this->mRust);
-    ee_ui_manager_remove_database();
-}
 
 
 // UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
@@ -298,9 +253,4 @@ extern "C" void* EETestUIFormControl(UIForm* inForm, unsigned long inIndex) { re
 #pragma comment(linker, "/include:EETestUIFormControl")
 #endif
 
-long UIManager::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
-    unsigned long inCursor) { return (long)this->Call(EeUiManagerCall::ChangeComposition, (intptr_t)&(const UIManagerComposition&)UIManagerComposition{&inString, &inAttributes, inCursor}); }
 
-void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
-
-long UIManager::GetMouseWheelScrollAmount() { return ee_ui_manager_wheel_scroll_amount(UIControl::Key(EeUiKey::MouseWheel)->GetNormalizedValue()); }

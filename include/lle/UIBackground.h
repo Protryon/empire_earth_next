@@ -12,8 +12,8 @@
 #include "rust/ui/bgobj.h"
 #include "lle/UILayoutUtility.h"
 #include "lle/UIObjHost.h"
+#include "lle/UIShims.h"
 
-class UIForm;
 
 // winspool.h maps GetForm to GetFormA; the export is ?GetForm@UIBackground@@
 #ifdef GetForm
@@ -23,10 +23,13 @@ class UIForm;
 class LLE_API UIBackground : public EeUiBackgroundFields {
 public:
     UIBackground(unsigned long inBackgroundID, const UILayoutUtility& inLayout, UIForm* inForm,
-                 unsigned long inDrawPriority, bool inVisible);
+                 unsigned long inDrawPriority, bool inVisible) {
+    ee_ui_bg_init(this, static_cast<EeUiBackgroundFields*>(this), ee_ui_background_host, inBackgroundID,
+                  reinterpret_cast<const EeUiLayout*>(&inLayout), inForm, inDrawPriority, inVisible, this);
+}
     UIBackground(const UIBackground&) = delete;
     UIBackground& operator=(const UIBackground&) = delete;
-    virtual ~UIBackground();
+    virtual ~UIBackground() { ee_ui_bg_free(this); }
     virtual void Close() { this->Call(EeUiBgCall::Close); }                   // slot 0x04
     virtual void Open() { this->Call(EeUiBgCall::Open); }
     virtual void RelayoutBackground() { this->Call(EeUiBgCall::Relayout); }

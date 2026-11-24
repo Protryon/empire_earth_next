@@ -998,6 +998,12 @@ WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
 # R6 WON round 33's network moves (CDKey whole, DirMakeEntity, RustServerOp's settings and requests, RoutingOp's
 # members, the user status op's settings, ThreadBase::Stop) against the original statements copied into the driver
 WON_TESTS["won_net33_test"] = WON_TESTS["won_serverop_test"]
+# R6 WON round 34: the directory's entities whole in Rust (dirlist.rs, dirread.rs, the C++ DirList) against
+# DirEntity and its readers as they were (won_direntity_orig.h and the driver's copies)
+WON_TESTS["won_dir34_test"] = [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"]
+# R6 WON round 34 (net, second batch): DNSTestOp whole in Rust (dnstest.rs) against the classes as they were; the
+# op machinery and the core: won_serverop_test's units
+WON_TESTS["won_net34_test"] = WON_TESTS["won_serverop_test"]
 # the lobby model reading the routing server's records in Rust (modelobj.rs route_record_op) against RoutingOp.cpp's
 # copies, RoutingLogic.cpp's cases and LobbyModelHost.cpp's reads as they were, on real routing ops (golden:
 # rust/crates/ee_won_lobby/src/golden_routerec.txt); won_servconn_test's units (a connection binds the core)
@@ -1007,6 +1013,12 @@ WON_TESTS["won_routemodel_test"] = WON_TESTS["won_servconn_test"]
 WON_TESTS["won_apicore_test"] = WON_TESTS["won_ops_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp"))]
+# the lobby dialog host's and the EE game host's compound cases R6 WON round 34 composed in Rust (dlgsplit.rs, the
+# bad user row rows.rs BadUser) against the deleted code over a stand-in world, with mutations
+WON_TESTS["won_dlg34_test"] = []
+# the control host's compound cases R6 WON round 35 composed in Rust (hostops.rs split_op, lobbycfgrd.rs's
+# SetComponent calls) against the deleted LobbyNetCtrlHost.cpp code over a stand-in world, every new op skipped in turn
+WON_TESTS["won_ctl35_test"] = []
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes
@@ -1105,7 +1117,8 @@ def cmd_wontest(a):
 
 SESSION_STAND = ROOT / "tests" / "net" / "ee_stand"
 SESSION_UNITS = [ROOT / "src" / p for p in (
-    "Low-Level Engine/Network Engine/NEMessage.cpp", "Empire Earth/Communications/EEMRecord.cpp")]
+    "Low-Level Engine/Network Engine/NEMessage.cpp", "Empire Earth/Communications/EEMRecord.cpp",
+    "Empire Earth/Communications/EEMessageCapture.cpp")]   # the records' C++ reads (gamecpp mrecord.rs: ee_gamecpp)
 
 # program -> the units it links besides its source (the originals it compares are #included over tests/net/orig's
 # stand-in headers)

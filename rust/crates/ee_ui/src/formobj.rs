@@ -185,6 +185,9 @@ pub enum EeUiFormCall {
     UseGdiForText = 92,
     DrawToolTipShadow = 93,
     SetDrawToolTipShadow = 94,
+    /// `UIEMouseWheelScroll::ProcessEvent` (UI round 16): the control under the mouse scrolled by the manager's wheel
+    /// scroll amount -> kErrorOK.
+    WheelScroll = 95,
 }
 
 /// `UIDbDataForms`, the form record the database constructor reads (268 bytes on every target; UI round 13: the C++
@@ -1211,6 +1214,13 @@ impl EeUiForm {
             C::SetHelpTextPopupLocation => self.set_help_text_popup_location(),
             C::UpdateKeyboard => return hotkey::update_keyboard(&mut Life(self)) as isize,
             C::UpdateMouse => return mouse::form_update_mouse(&mut Life(self)) as isize,
+            C::WheelScroll => {
+                let c = self.with(|s| s.mouse_over);
+                if c != 0 {
+                    let amount = self.op(Op::FormWheelAmount, 0, 0);
+                    self.op(Op::FormCtlWheelTurned, c, amount);
+                }
+            }
             C::SetRectangle => self.with(|s| s.rect = rect),
             C::AddBackground => self.add_background(a),
             C::AddClipRectangle => self.with(|s| s.clips.push(rect)),
@@ -1817,28 +1827,76 @@ pub extern "C" fn ee_ui_form_new(
     )
 }
 
-/// A new Rust form from the database record `data` (a `UIDbDataForms*`) and its lower-cased music file name.
+/// A new Rust form from the database record `data` (a `UIDbDataForms*`); its music file name lower-cased
+/// (`PlatMbsLwr`).
 ///
 /// # Safety
-/// `data` is a live record; `music` NUL-terminated bytes.
+/// `data` is a live record.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_form_new_db(
     form: *mut c_void,
     host: EeUiHostFn,
     manager: *mut c_void,
     data: *const c_void,
-    music: *const c_char,
     gdi: bool,
 ) -> *mut EeUiForm {
     // SAFETY: the contract
     let d = unsafe { &*(data as *const DbForm) };
-    // SAFETY: the contract
-    let music = unsafe { core::ffi::CStr::from_ptr(music) }.to_bytes_with_nul();
+    let n = d.music_file.iter().position(|&b| b == 0).unwrap_or(d.music_file.len());
+    let mut music = d.music_file[..n].to_vec();
+    music.push(0);
+    // SAFETY: NUL-terminated
+    unsafe { ee_base::plat_core::string::PlatMbsLwr(music.as_mut_ptr()) };
     crate::direct::made(
         crate::direct::Kind::Form,
         form,
-        Box::into_raw(Box::new(EeUiForm::new_db(Host { obj: form, f: host }, manager as isize, d, music, gdi))),
+        Box::into_raw(Box::new(EeUiForm::new_db(Host { obj: form, f: host }, manager as isize, d, &music, gdi))),
     )
+}
+
+/// `AddHotKey(key, m1, m2, m3, just pressed, pressed, just unpressed, double pressed, group, always)`.
+///
+/// # Safety
+/// `form` is live; the events are NULL or live `UIEvent`s.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_ui_form_add_hot_key(
+    form: *const EeUiForm,
+    key: c_ulong,
+    m1: c_ulong,
+    m2: c_ulong,
+    m3: c_ulong,
+    just_pressed: *mut c_void,
+    pressed: *mut c_void,
+    just_unpressed: *mut c_void,
+    double_pressed: *mut c_void,
+    group: c_ulong,
+    always: bool,
+) {
+    // SAFETY: the contract
+    let f = unsafe { &*form };
+    f.with(|s| {
+        s.pending_events = [just_pressed as isize, pressed as isize, just_unpressed as isize, double_pressed as isize]
+    });
+    f.add_hot_key_build(crate::lle_form::ee_ui_form_pack_keys(key, m1, m2, m3), group, always);
+}
+
+/// `DrawBackground(bitmap, rectangle, draw rectangle, tile rectangle)`: the bitmap tiled -> OK.
+///
+/// # Safety
+/// `form` is live; `bitmap` a live `GEBitmap`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_form_draw_tiles(
+    form: *const EeUiForm,
+    bitmap: *mut c_void,
+    rect: UiRect,
+    draw: UiRect,
+    tile: UiRect,
+) -> c_long {
+    // SAFETY: the contract
+    let f = unsafe { &*form };
+    background::form_tiles(&mut Tiles { f, bitmap: bitmap as isize }, rect, draw, tile);
+    0
 }
 
 /// The destructor: the events, hot keys, groups, backgrounds, database controls, poll, form manager and lock

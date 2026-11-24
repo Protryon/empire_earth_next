@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/ui/obj.h"
+#include "rust/ui/rect.h"
 
 /// The inward calls (the C++ shim's methods). Rectangles and points travel in `f`.
 enum class EeUiFormCall : uint32_t {
@@ -138,6 +139,9 @@ enum class EeUiFormCall : uint32_t {
   UseGdiForText = 92,
   DrawToolTipShadow = 93,
   SetDrawToolTipShadow = 94,
+  /// `UIEMouseWheelScroll::ProcessEvent` (UI round 16): the control under the mouse scrolled by the manager's wheel
+  /// scroll amount -> kErrorOK.
+  WheelScroll = 95,
 };
 
 /// The Rust UIForm.
@@ -201,16 +205,42 @@ EeUiForm *ee_ui_form_new(void *form,
                          unsigned long id,
                          bool gdi);
 
-/// A new Rust form from the database record `data` (a `UIDbDataForms*`) and its lower-cased music file name.
+/// A new Rust form from the database record `data` (a `UIDbDataForms*`); its music file name lower-cased
+/// (`PlatMbsLwr`).
 ///
 /// # Safety
-/// `data` is a live record; `music` NUL-terminated bytes.
+/// `data` is a live record.
 EeUiForm *ee_ui_form_new_db(void *form,
                             EeUiHostFn host,
                             void *manager,
                             const void *data,
-                            const char *music,
                             bool gdi);
+
+/// `AddHotKey(key, m1, m2, m3, just pressed, pressed, just unpressed, double pressed, group, always)`.
+///
+/// # Safety
+/// `form` is live; the events are NULL or live `UIEvent`s.
+void ee_ui_form_add_hot_key(const EeUiForm *form,
+                            unsigned long key,
+                            unsigned long m1,
+                            unsigned long m2,
+                            unsigned long m3,
+                            void *just_pressed,
+                            void *pressed,
+                            void *just_unpressed,
+                            void *double_pressed,
+                            unsigned long group,
+                            bool always);
+
+/// `DrawBackground(bitmap, rectangle, draw rectangle, tile rectangle)`: the bitmap tiled -> OK.
+///
+/// # Safety
+/// `form` is live; `bitmap` a live `GEBitmap`.
+long ee_ui_form_draw_tiles(const EeUiForm *form,
+                           void *bitmap,
+                           EeUiRect rect,
+                           EeUiRect draw,
+                           EeUiRect tile);
 
 /// The destructor: the events, hot keys, groups, backgrounds, database controls, poll, form manager and lock
 /// released; the object freed.

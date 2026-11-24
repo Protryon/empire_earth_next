@@ -28,20 +28,8 @@ class EELobbyGame;
 // one player slot of a lobby game (0x18 bytes in the original; EELobbyGame +0xc0, eight of them). Its six options:
 // 0 state (0 open, 1 computer, 2 closed, 3 a client's, 4 reserved by name for a human player of a saved game), 1
 // team, 2 color, 3 citizen (1-based), 4 observe, 5 file transfer percent (100: done).
-// R6 WONLobby round 5: the slot is the Rust game's (ee_won eegame.rs); this is its view (the game and the slot's
-// number), whose methods forward (WONLobby/EELobbyGameHost.cpp). Option/SetRawOption are the original's direct
-// mOptions reads and stores, GetClient its mClient.mPtr.
-class EELobbyPlayerSlot {
-public:
-    EELobbyPlayerSlot() : mGame(NULL), mIndex(0) {}
-    unsigned char GetIndex() { return this->mIndex; }
-    unsigned char Option(int inOption);     // mOptions[inOption]
-
-    EELobbyGame* mGame;
-    unsigned char mIndex;
-private:
-    intptr_t RCall(EeWonEeGameCall inCall, intptr_t b = 0, intptr_t c = 0);
-};
+// R6 WONLobby round 5: the slot is the Rust game's (ee_won eegame.rs). R6 WON round 34: its C++ view
+// (EELobbyPlayerSlot: the game and the slot's number) is gone; a player names its slot by the two (EELobbyPlayer).
 
 // a saved game's transfer between the host and the clients (EELobbyFileTransfer.cpp 0x291463..; 0x68 bytes;
 // vtable 0x84c440) (provisional name). R6 WONLobby round 7: a shell over ee_won's eexfer.rs object (the path, the
@@ -90,7 +78,6 @@ public:
     intptr_t RCall(EeWonEeGameCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0);
 
     EeWonEeGame* mRust;
-    EELobbyPlayerSlot mSlots[8];            // the slots' views
 };
 
 // EELobbyGame's notifications to the lobby's controls: a
@@ -118,8 +105,9 @@ public:
     unsigned char GetTeam();
     unsigned char GetSlot() { return this->mSlot; }  // 0x299adf (+0x10)
 
-    EELobbyPlayerSlot* mPlayerSlot;         // +0x0c (the slot's view, set by the Rust game)
+    EELobbyGame* mSlotGame;                 // +0x0c the slot's game (the original's slot pointer: NULL for none)
     unsigned char mSlot;                    // +0x10
+    unsigned char mSlotIndex;               // the slot's number in mSlotGame (set by the Rust game with it)
 };
 
 // a player's colour button (EELobbyColorButton.cpp; 0x4c bytes; vtable 0x84c074): a click opens the colour
@@ -222,14 +210,13 @@ class EEGameOptionsPlayer;
 class EEPSaveGameHeader;
 class UWideString;
 // 0x297f2d: a saved game's file length and header checksum (false when it cannot be read)
-bool EELobbyGetSavedGameInfo(const char* inFile, unsigned long& outLength, unsigned long& outChecksum);
+bool EELobbyGetSavedGameInfo(const char* inFile, uint32_t& outLength, uint32_t& outChecksum);
 bool EELobbyLoadSavedGame(const char* inFile);              // 0x298005 (checks the room's players against it)
 WONAPI::GUIString EELobbyToGUIString(const UWideString& inText);
 void EELobbyFillMapTypeCombo(WONAPI::ComboBox* inCombo);    // 0x29876a (fills the map types)
 unsigned long EELobbyGetNumMapTypes();                      // 0x298824 (jmp EERMGetNumberOfGenerators)
 void EELobbySetDefaultGameOptions(WONAPI::EELobbyGame* inGame);  // 0x2988d8 (the preferences' last game options)
 const WONAPI::GUIString& EELobbyFn2988E9();                 // 0x2988e9 (a function-local static GUIString)
-void EELobbyGetVersion(WONAPI::GUIString& outVersion, unsigned long& outChecksum);
 // the 0x296aaa unit
 void EELobbyClose();
 bool EELobbyHostGame();

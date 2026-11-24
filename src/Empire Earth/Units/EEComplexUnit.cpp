@@ -98,70 +98,11 @@ const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 
 // 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
 
-// chain at 0x5f5805 (wrapper)
-//   object 0x963218  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 1): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sData@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sData("EEComplexUnit-Data");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f5848 (wrapper)
-//   object 0x963200  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 2): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sCloakableOpacity@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sCloakableOpacity("EEComplexUnit-CloakableOpacity");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f588b (wrapper)
-//   object 0x9631f0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 4): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sIsCloaked@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sIsCloaked("EEComplexUnit-IsCloaked");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f58ce (wrapper)
-//   object 0x9631e0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 8): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sDrawAreaEffects@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sDrawAreaEffects("EEComplexUnit-DrawAreaEffects");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f5911 (wrapper)
-//   object 0x9631d0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-//   guarded dtor (byte ptr [0x963210], 0x10): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sAreaEffectsTick@EEComplexUnit@@2VUString@@B
-const UString EEComplexUnit::sAreaEffectsTick("EEComplexUnit-AreaEffectsTick");   // class static member (owner from the key prefix; EEComplexUnit declares `static const UString ...;`; provisional name)
-
-// chain at 0x5f5954 (wrapper)
-//   object 0x963198  ctor ??0?$UMemoryPool@VEEComplexUnit@@@@QAE@XZ  dtor ?Release@?$UMemoryPool@VEEComplexUnit@@@@QAE_NXZ
-//   guarded dtor (byte ptr [0x963210], 0x20): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
-//   object bound as ?sMemoryPool@EEComplexUnit@@2V?$UMemoryPool@VEEComplexUnit@@@@A
-UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
-
-// Creates a complex unit with every unit, mobile-unit and reference state reset to defaults
+// Creates a complex unit with every unit, mobile-unit and reference state reset to defaults (out of line: the members'
+// destructors need the complete EEUnitVectorItem)
 EEComplexUnit::EEComplexUnit()
 {
     ee_units_eu_more(EE_UNITS_EUM_DO_CONSTRUCT_COMPLEX, static_cast<EEUnit*>(this), NULL, 0, 0);   // eu_more.rs
-}
-
-// Adds the unit's line of sight at its current tile
-void EEComplexUnit::SightOnHere()
-{
-    this->SightOn(this->GetTileX(), this->GetTileY());
-}
-
-// Returns whether the unit is still a building foundation
-bool EEComplexUnit::IsFoundation()
-{
-    return this->mIsFoundation;
-}
-
-// Resets the unit to its default state and marks it invalid (back in the pool)
-void EEComplexUnit::Clear()
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR, this, NULL, 0);   // cu_small.rs
-}
-
-// Removes the unit's line of sight at its current tile
-void EEComplexUnit::SightOffHere()
-{
-    this->SightOff(this->GetTileX(), this->GetTileY());
 }
 
 // Destroys the unit, freeing its turret angles, orbitals, wheels and model
@@ -170,76 +111,17 @@ EEComplexUnit::~EEComplexUnit()
     this->FreeNode();
 }
 
+// chain at 0x5f5954 (wrapper)
+//   object 0x963198  ctor ??0?$UMemoryPool@VEEComplexUnit@@@@QAE@XZ  dtor ?Release@?$UMemoryPool@VEEComplexUnit@@@@QAE_NXZ
+//   guarded dtor (byte ptr [0x963210], 0x20): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
+//   object bound as ?sMemoryPool@EEComplexUnit@@2V?$UMemoryPool@VEEComplexUnit@@@@A
+UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
+
 // Makes the unit hold another unit, keeping the held units sorted by growth
 // the mHeldUnits order (std::sort 0x200df9: its heap code compares the units' mGrowth) (provisional name)
 struct EEComplexUnitGrowthLess {
     bool operator()(EEComplexUnit* inA, EEComplexUnit* inB) const { return inA->GetGrowth() < inB->GetGrowth(); }
 };
-
-void EEComplexUnit::HoldUnit(EEComplexUnit* inUnit)
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_HOLD_UNIT, this, inUnit, 0);   // cu_small.rs
-}
-
-// Sets the unit that holds this one, swapping the references
-void EEComplexUnit::SetHolder(EEComplexUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_HOLDER, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_world.rs
-}
-
-// Ignores a target for 30 seconds from both units' current tiles, or renews an existing ignore entry
-void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_IGNORE_TARGET, this, inTarget, 0);   // cu_small.rs (CBXR after the world call)
-}
-
-// Loads a living unit as cargo if there is room (or room is ignored), taking it off the map; returns 0 or 7
-long EEComplexUnit::LoadCargo(EEComplexUnit* inCargo, bool inIgnoreRoom, bool inArg3)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, this, (int64_t)(uintptr_t)inCargo, inIgnoreRoom, inArg3);   // cu_cargo.rs
-}
-
-// Garrisons a unit if capacity allows: adds its weight and population, then removes it as a dead unit
-bool EEComplexUnit::GarrisonUnit(EEComplexUnit* inCargo)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_GARRISON_UNIT, this, (int64_t)(uintptr_t)inCargo, 0, 0) != 0;   // cu_cargo.rs
-}
-
-// Adds garrison weight (never below 0) and sets the garrisoned population, if capacity allows
-bool EEComplexUnit::AddGarrison(long inAmount, long inGarrisonPopulation)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_ADD_GARRISON, this, inAmount, inGarrisonPopulation, 0) != 0;   // cu_cargo.rs
-}
-
-// Queues and pays for a technology or unit at this building (front or back), honouring the hero limit
-// (TEST ONLY: a capture records the research start, TQRS; cu_more.rs)
-void EEComplexUnit::QueueResearch(long inTechnology, bool inFront)
-{
-    ee_units_cu_more(EE_UNITS_CUM_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);
-}
-
-void EEComplexUnit::QueueResearchUncaptured(long inTechnology, bool inFront)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0);   // cu_cargo.rs
-}
-
-// Stops the citizen's goals and puts the target first in its build queue, keeping a current build target
-void EEComplexUnit::OrderRepair(EEUnit* inTarget)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_ORDER_REPAIR, this, (int64_t)(uintptr_t)inTarget, 0, 0);   // cu_cargo.rs
-}
-
-// Appends a building to the citizen's build queue unless it is already queued
-void EEComplexUnit::AddBuildTarget(EEUnit* inTarget)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_ADD_BUILD_TARGET, this, (int64_t)(uintptr_t)inTarget, 0, 0);   // cu_cargo.rs
-}
-
-// Adds a unit to the contact (collision) list unless it is already there
-void EEComplexUnit::AddContact(EEComplexUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_ADD_CONTACT, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_cargo.rs
-}
 
 #include "ee/EEStringIDs.h"
 #include "ee/EEEffectManager.h"
@@ -253,132 +135,9 @@ bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before 
 
 extern char gEmptyString[];
 
-// a float's bits as a cu_body.rs argument, and back
-static int64_t EECuBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, sizeof(theBits));
-    return theBits;
-}
-
-static float EECuFloat(int64_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, sizeof(theValue));
-    return theValue;
-}
-
-// FindAreaTile's tile from cu_world.rs's answer (x in the low 32 bits, y in the high)
-static EETileCoordinate EECuTile(int64_t inPacked)
-{
-    return EETileCoordinate((long)(int32_t)(uint32_t)inPacked, (long)(int32_t)(uint32_t)((uint64_t)inPacked >> 32));
-}
-
 // Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
 // (cu_body.rs; the thresholds there: 0x4c76f0)
 
-void EEComplexUnit::PayInsurance(float inFraction)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_PAY_INSURANCE, this, EECuBits(inFraction), 0, 0);   // cu_body.rs
-}
-
-
-// Records as mutual contacts the living collidable units under the unit's footprint in the same layer
-void EEComplexUnit::FindContacts()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_FIND_CONTACTS, this, 0, 0, 0);   // cu_body.rs
-}
-
-// Returns whether the unit accepts the resource type (any, or the one it carries)
-bool EEComplexUnit::CanTake(EEComplexUnit* inCargo, unsigned long inValue)
-{
-    return this->mResourceType == kResourceAny || this->mResourceType == inValue ? true : false;
-}
-
-// Removes the unit from play: drops its path, goals, queues, sound and every unit reference it holds
-void EEComplexUnit::Invalidate()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_INVALIDATE, this, 0, 0, 0);   // cu_body.rs
-}
-
-// Releases the unit's sound instance
-void EEComplexUnit::ReleaseSound()
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_SOUND, this, NULL, 0);   // cu_small.rs
-}
-
-// Clears every goal queue of the unit
-void EEComplexUnit::ClearAllGoalQueues()
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR_ALL_GOAL_QUEUES, this, NULL, 0);   // cu_small.rs
-}
-
-// Releases every held unit, detaching those this unit holds
-void EEComplexUnit::ReleaseHeldUnits()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_HELD_UNITS, this, 0, 0, 0);   // cu_world.rs
-}
-
-// Takes the unit out of every area effect acting on it and empties that list
-void EEComplexUnit::RemoveAffectingAreaEffects()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_REMOVE_AFFECTING, this, 0, 0, 0);   // cu_world.rs
-}
-
-// Refunds the current research and every queued item, re-allowing techs and updating the hero count
-void EEComplexUnit::UpdateJITManufacturing()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_JIT, this, 0, 0, 0);   // cu_cargo.rs
-}
-
-// Empties the citizen's build queue, releasing each building
-void EEComplexUnit::ClearBuildTargets()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_BUILD_TARGETS, this, 0, 0, 0);   // cu_world.rs
-}
-
-// Empties the contact list, removing this unit from each contact's list too
-void EEComplexUnit::ClearContacts()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_CONTACTS, this, 0, 0, 0);   // cu_world.rs
-}
-
-// Destroys the unit's conversion graphic effect, if any
-void EEComplexUnit::ReleaseConversionEffect()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_CONVERSION_EFFECT, this, 0, 0, 0);   // cu_world.rs
-}
-
-// Clears one goal queue (abandoning the main queue's goals first) and frees the unit's airport slot
-void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOAL_QUEUE, this, inIndex, 0, 0);   // cu_misc.rs
-}
-
-// Destroys the unit's heal graphic effect, if any
-void EEComplexUnit::ReleaseHealEffect()
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_RELEASE_HEAL_EFFECT, this, NULL, 0);   // cu_small.rs
-}
-
-// Destroys the fire effect of a citizen, gate or wall, or removes a cloak effect from a CP market
-void EEComplexUnit::ReleaseFireEffect()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_FIRE_EFFECT, this, 0, 0, 0);   // cu_misc.rs
-}
-
-// Copies a replaced unit's state into this one: position, timers, scaled hit points, goals, cargo, links
-void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_COPY_FROM, this, (int64_t)(uintptr_t)EEUnitCast<EEComplexUnit>(inUnit), (int64_t)(uintptr_t)inUnit, 0);   // cu_life.rs
-}
-
-// Replaces the unit's sound instance, referencing the new one
-void EEComplexUnit::SetSound(SESMInstanceNode* inSound)
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_SET_SOUND, this, inSound, 0);   // cu_small.rs
-}
 
 // New (debugging): EE_UNIT_POOL=0 takes every unit from operator new instead of the pool (UMemoryPool::Delete deletes
 // what no chunk holds). A pool slot is reused at once, so a unit released one reference too early is read as the
@@ -419,43 +178,6 @@ EEComplexUnit* EEComplexUnit::Create(EEUnitClass* inClass, const GETransformatio
     return theUnit;
 }
 
-// Reallocates the turret angle array with the given count, all zero
-void EEComplexUnit::ResizeTurretAngles(unsigned long inCount)
-{
-    ee_units_cu_more(EE_UNITS_CUM_DO_RESIZE_TURRETS, this, (int64_t)inCount, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);   // cu_more.rs
-}
-
-// Sets the water state of a sea or space unit from its class's water kind (and the tile's depth level)
-void EEComplexUnit::UpdateWaterState(bool inArg)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_WATER_STATE, this, inArg, 0, 0);   // cu_misc.rs
-}
-
-// Adds the unit's sight at a tile for its player, sight sharers and allies, revealing it on the minimap (ee_units
-// sight.rs over ee_units_sight_host)
-void EEComplexUnit::SightOn(unsigned long inX, unsigned long inY)
-{
-    ee_units_sight(EEObj(this), (uint32_t)inX, (uint32_t)inY, 1);
-}
-
-
-// Abandons goals of a queue from the front until one that suits the unit starts
-void EEComplexUnit::ClearGoals(long inIndex)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOALS, this, inIndex, 0, 0);   // cu_life.rs
-}
-
-// Frees the unit's turret angles, orbitals, wheels and model, then the base unit's data
-void EEComplexUnit::FreeNode()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_FREE_NODE, this, 0, 0, 0);   // cu_life.rs
-}
-
-// Kills every cargo unit and records each as a dead unit in its player's statistics
-void EEComplexUnit::KillCargo()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_KILL_CARGO, this, 0, 0, 0);   // cu_cargo.rs
-}
 
 // Empties the garrison count and population
 void EEComplexUnit::ClearGarrison()
@@ -496,89 +218,11 @@ static void EEDumpWrite(void* inFile, const char* inText, size_t inLength)
     fwrite(inText, 1, inLength, static_cast<FILE*>(inFile));
 }
 
-// Writes the unit's goals, physics, class stats, waypoints and area effects to the out-of-sync dump
-void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
-{
-    ee_units_cu_out_of_synch_dump(this, inFile);   // cu_dump.rs
-}
-
-// Applies the built unit's area effects to the units within the largest effect radius
-void EEComplexUnit::ApplyAreaEffects()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_APPLY_AREA_EFFECTS, this, 0, 0, 0);   // cu_world.rs
-}
-
-// Adds the finished building's sight and, for other players' units, shows it on the minimap
-void EEComplexUnit::PartFinished()
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_PART_FINISHED, this, NULL, 0);   // cu_small.rs
-}
-
-// Returns the unit's line of sight: its upgraded stat plus its sight bonus
-float EEComplexUnit::GetLineOfSight()
-{
-    return this->GetStats()->mLineOfSight + this->mSight;
-}
-
 // Returns whether an area effect of the given kind acts on the unit
 bool EEComplexUnit::HasEffect(long inKind)
 {
     EEGraphicEffect* theEffect = NULL;
     return this->GetEffect(inKind, theEffect);
-}
-
-// Finds the graphic effect of the first area effect of a kind acting on the unit; returns whether found
-bool EEComplexUnit::GetEffect(long inKind, EEGraphicEffect*& outEffect)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_GET_EFFECT, this, inKind, (int64_t)(uintptr_t)&outEffect, 0) != 0;   // cu_world.rs
-}
-
-// Returns whether the unit may be deleted; a built unit of the citizen tech's types not with one capitol
-bool EEComplexUnit::CanDelete()
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_CAN_DELETE, this, 0, 0, 0) != 0;   // cu_world.rs
-}
-
-// Returns whether a unit may pass through this gate (closed and locked rules, Trojan horse) or tile blocker
-bool EEComplexUnit::IsPassableBy(EEComplexUnit* inUnit)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_IS_PASSABLE_BY, this, (int64_t)(uintptr_t)inUnit, 0, 0) != 0;   // cu_world.rs
-}
-
-// Returns the cargo unit with the given id, or NULL
-EEComplexUnit* EEComplexUnit::FindPassenger(unsigned long inUnitID)
-{
-    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_FIND_PASSENGER, this, inUnitID, 0, 0)));   // cu_world.rs
-}
-
-// Moves a tile position to the centre of the unit's footprint
-void EEComplexUnit::AddCenterOffset(float& ioX, float& ioY)
-{
-    ee_units_cu_more(EE_UNITS_CUM_DO_CENTER_OFFSET, this, 0, 0, 0, ioX, ioY, 0.0f, &ioX, &ioY);   // cu_more.rs
-}
-
-// Returns the unit's out-of-sync checksum for the selected parts (tile, physics, goals, area effects)
-long EEComplexUnit::GetChecksum(unsigned long inFlags)
-{
-    return (long)ee_units_cu_body(EE_UNITS_CU_DO_GET_CHECKSUM, this, inFlags, 0, 0);   // cu_life.rs
-}
-
-// Returns the goals of a goal queue
-EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
-{
-    return this->mGoalQueues[inIndex].mGoals;
-}
-
-// Appends a debug description: action, collision state, velocity and the current goal
-void EEComplexUnit::Describe(UWideString& ioString)
-{
-    ee_units_cu_describe(this, &ioString);   // cu_dump.rs
-}
-
-// Returns the unit's (or its container's) tile, or a nearby tile on a continent of the wanted kind
-EETileCoordinate EEComplexUnit::FindAreaTile(bool inFlag, long inRange)
-{
-    return EECuTile(ee_units_cu_body(EE_UNITS_CU_DO_FIND_AREA_TILE, this, inFlag, inRange, 0));   // cu_world.rs
 }
 
 
@@ -590,138 +234,8 @@ EEModel* EEComplexUnit::GetModel()
     return EEGetPlayerClassGraphic(this->GetPlayer(), this->GetUnitClass());
 }
 
-// Returns the unit's world position
-void EEComplexUnit::GetPosition(GE3DPoint& outPosition)
-{
-    this->mPhysicalModel.GetLocation().GetPosition(outPosition);
-}
-
-// Returns the height of the model's top for effects, scaled by build progress while unbuilt
-float EEComplexUnit::GetEffectHeight(bool inUseCurrentFrame)
-{
-    return ee_units_cu_more(EE_UNITS_CUM_DO_EFFECT_HEIGHT, this, inUseCurrentFrame, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);   // cu_more.rs
-}
-
-// Returns whether a target is ignored (optionally only from the same tiles), dropping expired entries
-bool EEComplexUnit::IsTargetIgnored(EEComplexUnit* inTarget, bool inCheckLocation)
-{
-    return ee_units_cu_small(EE_UNITS_CU_S_DO_IS_TARGET_IGNORED, this, inTarget, inCheckLocation) != 0;   // cu_small.rs (CBXR after the world call)
-}
-
-// Returns whether the unit is disabled by a time warp (reasons 0x1a / 0x1c)
-bool EEComplexUnit::IsProtected()
-{
-    return this->mIsDisabled && (this->mDisabledReason == 0x1a || this->mDisabledReason == 0x1c);
-}
-
-// Returns whether the unit's current goal is gathering
-bool EEComplexUnit::IsGathering()
-{
-    return this->mGoalState != NULL && this->mGoalState->mKind == kGoalGather;
-}
-
-// Returns whether another unit is on another continent (space docks and turrets by their planet)
-bool EEComplexUnit::IsOnOtherContinentThan(EEComplexUnit* inUnit)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_IS_ON_OTHER_CONTINENT_THAN, this, (int64_t)(uintptr_t)inUnit, 0, 0) != 0;   // cu_world.rs
-}
-
-// Returns whether a tile is out of reach: unreachable for air, else on another planet in a space map
-bool EEComplexUnit::IsOnOtherContinent(long inTileX, long inTileY)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_IS_ON_OTHER_CONTINENT, this, inTileX, inTileY, 0) != 0;   // cu_world.rs
-}
-
-// Returns whether the unit can get to a target, directly or through connected continents
-bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
-{
-    return ee_units_cu_small(EE_UNITS_CU_S_DO_CAN_REACH_UNIT, this, inTarget, 0) != 0;   // cu_small.rs (CBXR after the world call)
-}
-
-// Returns the player's town containing the unit's tile, else the town whose outline is nearest
-EETown* EEComplexUnit::FindNearestTown()
-{
-    return reinterpret_cast<EETown*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_FIND_NEAREST_TOWN, this, 0, 0, 0)));   // cu_world.rs
-}
-
-// Makes the unit fanatic for a while: costs a share of its hit points (at least 1 left) and tints it
-void EEComplexUnit::GoFanatic()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_GO_FANATIC, this, 0, 0, 0);   // cu_world.rs
-}
-
-// Returns whether the unit's fanaticism timer is running
-bool EEComplexUnit::IsCloaked()
-{
-    return this->mCloaked > 0;
-}
-
-// Removes the unit's colour tint
-void EEComplexUnit::ClearTint()
-{
-    this->SetIsTinted(false);
-}
-
-// Pulses a fanatic unit's colour between the fanaticism effect's two colours; ends it when time runs out
-void EEComplexUnit::UpdateFanaticismColor()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_FANATICISM_COLOR, this, 0, 0, 0);   // cu_life.rs (its statics are Rust's)
-}
-
-// Returns whether a tile is the unit's tile or one of the side or corner tiles around its footprint
-bool EEComplexUnit::IsNextToTile(long inX, long inY)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_IS_NEXT_TO_TILE, this, inX, inY, 0) != 0;   // cu_life.rs
-}
 
 
-// Resets every mobile-unit field to defaults with the given goal queue count, optionally a random heading
-void EEComplexUnit::ResetEEComplexUnit(unsigned long inGoalQueueCount, bool inRandomHeading)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_RESET, this, inGoalQueueCount, inRandomHeading, 0);   // cu_life.rs
-}
-
-// Initialises a new unit from its class, placement and player: collision, hiding, tile, scale, area effects
-void EEComplexUnit::Init(EEUnitClass* inClass, const GETransformation& inPlacement,
-                         EEPlayer* inPlayer, unsigned long inGoalQueueCount)
-{
-    ee_units_cu_init(this, inClass, &inPlacement, inPlayer, (uint32_t)inGoalQueueCount);   // cu_life.rs
-}
-
-// Kills or removes the unit: records death statistics and insurance, releases cargo, garrison, holder, goals
-// and effects, then kills its later parts and spawns its death and remains units
-void EEComplexUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_KILL, this, inKilled | inKeepResearch << 1 | inOther << 2, 0, 0);   // cu_body.rs
-}
-
-
-
-// Returns the unit to the complex-unit memory pool when its last reference goes
-void EEComplexUnit::LastDereference()
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_LAST_DEREFERENCE, this, NULL, 0);   // cu_small.rs
-}
-
-// Loads the unit's model (the foundation model, or the animation model with turret angles, orbitals and wheels)
-// and, except for land buildings, the player's buttons for its class
-void EEComplexUnit::LoadMedia(bool inIsFoundation)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_LOAD_MEDIA, this, inIsFoundation, 0, 0);   // cu_misc.rs
-}
-
-// Moves an idle or gathering unit to a random free tile around a footprint being placed (a waiting gatherer looks for
-// another gather spot instead); returns true if it was sent away
-bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX, long inY, bool inForce)
-{
-    return ee_units_cu_step_aside(this, inPlayer, inClass, inX, inY, inForce) != 0;   // cu_life.rs
-}
-
-// Returns true if the unit is built, alive and below its maximum hit points
-bool EEComplexUnit::IsRepairable()
-{
-    return this->mHitPoints > 0 && this->mHitPoints < this->GetStats()->mMaxHitPoints && this->mIsBuilt;
-}
 
 // Adjusts a value by the unit's morale: positive morale takes a share off, negative morale adds one (combat.yaml
 // morale: 80% and 60% in the original)
@@ -730,96 +244,6 @@ void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
     EeCombatMoraleIn theIn = {(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
                               EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale};
     outValue = EECombatMorale(theIn);
-}
-
-// Pops the citizen's build queue until a still-valid unit comes out; returns it, or NULL when the queue runs out
-EEUnit* EEComplexUnit::PopBuildTarget()
-{
-    return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_POP_BUILD_TARGET, this, 0, 0, 0)));   // cu_world.rs
-}
-
-// Moves the unit away after a calamity: a computer player's prophet steps away from the cast, other AI units go idle,
-// a human's unit walks to a random point ahead (unless inArg is set)
-void EEComplexUnit::FleeAfterCalamity(long inArg)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_FLEE_AFTER_CALAMITY, this, inArg, 0, 0);   // cu_misc.rs
-}
-
-// Swaps replaced units (old -> new pairs) in the unit's goals, cargo, parts and build queue
-void EEComplexUnit::ReplaceUnits(const std::vector<EEPUnitSwap>& inReplacements)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_UNITS, this, (int64_t)(uintptr_t)&inReplacements, 0, 0);   // cu_world.rs
-}
-
-// Places the unit on the ground at the location, pitching and rolling it with the terrain when its class does
-void EEComplexUnit::PlaceOnGround(const GE3DPoint& inLocation)
-{
-    ee_units_cu_more(EE_UNITS_CUM_DO_PLACE_ON_GROUND, this, 0, 0, 0, inLocation.GetX(), inLocation.GetY(), inLocation.GetZ(), NULL, NULL);   // cu_more.rs
-}
-
-// Queues a goal on squadron queues 1..3 (1..4 with the paratroopers power), as the goal or clones of it
-void EEComplexUnit::QueueSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_SQUADRON_GOALS, this, (int64_t)(uintptr_t)inGoal, inCloneGoal, 0);   // cu_world.rs
-}
-
-// Removes a unit from the units this one holds; returns true if it was held
-bool EEComplexUnit::ReleaseHeld(EEComplexUnit* inUnit)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_HELD, this, (int64_t)(uintptr_t)inUnit, 0, 0) != 0;   // cu_world.rs
-}
-
-// Removes a unit from the cargo and gives its room back; refreshes the icon bar if the transport is selected
-void EEComplexUnit::ReleaseCargo(EEComplexUnit* inCargo)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_RELEASE_CARGO, this, (int64_t)(uintptr_t)inCargo, 0, 0);   // cu_cargo.rs
-}
-
-// Unloads every cargo unit that fits near the tile (teleporters show the teleport effect) and drops dead ones;
-// posts an unload-failed event if any stay aboard
-void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT_TILE, this, inX, inY, inArg);   // cu_cargo.rs
-}
-
-// Empties the build queue, refunding each entry and allowing its technology again
-void EEComplexUnit::CancelQueuedProduction()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_CANCEL_QUEUED_PRODUCTION, this, 0, 0, 0);   // cu_cargo.rs
-}
-
-// Unloads a cargo unit at the location (aircraft at cruise altitude) and sets it idle; returns it if something else
-// still references it, else NULL
-EEComplexUnit* EEComplexUnit::UnloadCargoAt(unsigned long inIndex, const GETransformation& inLocation)
-{
-    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(
-        ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_AT, this, inIndex, (int64_t)(uintptr_t)&inLocation, 0)));   // cu_cargo.rs
-}
-
-// Unloads one cargo unit next to the transport now (a dead one is just released); returns true on success
-bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_NOW, this, (int64_t)(uintptr_t)inCargo, 0, 0) != 0;   // cu_cargo.rs
-}
-
-// Unloads the cargo unit with the given unit id at the location; returns what UnloadCargoAt returns, or NULL
-EEComplexUnit* EEComplexUnit::UnloadCargoByID(unsigned long inUnitID, const GETransformation& inLocation)
-{
-    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_UNLOAD_CARGO_BY_ID, this, inUnitID, (int64_t)(uintptr_t)&inLocation, 0)));   // cu_world.rs
-}
-
-// Removes a unit from this unit's contact list
-void EEComplexUnit::RemoveContactUnit(EEComplexUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_REMOVE_CONTACT_UNIT, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_world.rs
-}
-
-// Removes the unit's line of sight at the tile for its player, its sight sharers, the minimap and terrain mesh
-// (plus a wonder's extra sight; kind-4 units also clear it for every player): SightOn's statements with each Add a
-// Remove, the tiles not tested for NULL (ee_units sight.rs)
-void EEComplexUnit::SightOff(unsigned long inX, unsigned long inY)
-{
-    ee_units_sight(EEObj(this), (uint32_t)inX, (uint32_t)inY, 0);
 }
 
 // SightOn's and SightOff's host (ee_units sight.rs, sight_host.rs; EE_UNITS_SIGHT_*): the unit's and players' reads and
@@ -871,73 +295,10 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
 }
 
 
-// Cancels the building's current research or production, refunding it and clearing the production time
-void EEComplexUnit::ToggleJITManufacturing()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_TOGGLE_JIT, this, 0, 0, 0);   // cu_cargo.rs
-}
-
-// Removes a technology from the build queue with a refund (the first match only unless inRemoveAll); if none was
-// queued, cancels it when it is the building's current research
-void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_REMOVE_RESEARCH, this, inTechnology, inRemoveAll, 0);   // cu_cargo.rs
-}
-
-// Takes the unit and its parts off the map (deselected, moved to -10000, deactivated) and sets it idle
-void EEComplexUnit::TakeOffMap()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_TAKE_OFF_MAP, this, 0, 0, 0);   // cu_misc.rs
-}
-
-// Starts the next build-queue entry the built building can produce (a citizen may come out female), dropping and
-// refunding unavailable entries
-void EEComplexUnit::StartProduction()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_START_PRODUCTION, this, 0, 0, 0);   // cu_body.rs
-}
-
 // Returns true if the class uses air traffic control and is not a building
 bool EEUnitClass::IsAircraft()
 {
     return this->mAirTrafficType != 0 && !this->IsLandBuilding() && this->mCategory != kUnitCategoryNavalBuilding && this->mCategory != kUnitCategorySpaceBuilding;
-}
-
-// Switches the unit to an action and updates its camouflage; a dying unit refuses any non-dying action
-void EEComplexUnit::StartAction(long inAction)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_START_ACTION, this, inAction, 0, 0);   // cu_body.rs
-}
-
-// Switches the unit's animation and frame, stops its sound and plays the new frame's sound
-void EEComplexUnit::SetAnimation(long inPart, long inFrame, bool inIsAnimationPaused)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_ANIMATION, this, inPart, inFrame, inIsAnimationPaused);   // cu_body.rs
-}
-
-// Sets the unit's mine (reference counted)
-void EEComplexUnit::SetMine(EEUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_MINE, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_world.rs
-}
-
-// Sets the unit that blocks this one (reference counted)
-void EEComplexUnit::SetBlockingUnit(RTSUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_BLOCKING_UNIT, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_world.rs
-}
-
-// Marks the unit and its parts built or unbuilt; finishing one updates sight, airports and completion stats
-// (a granary replants farms) and pays for it
-void EEComplexUnit::SetBuilt(long inIsBuilt, long inUpdateSight, long inLoadButtons)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_BUILT, this, inIsBuilt, inUpdateSight, inLoadButtons);   // cu_body.rs
-}
-
-// Sets the resource the unit gathers, releasing the old one and sending a gatherer waiting for it
-void EEComplexUnit::SetGatheredResource(EEUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_GATHERED_RESOURCE, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_misc.rs
 }
 
 // Sets the unit's model, scaled by its class tile size
@@ -945,36 +306,6 @@ void EEComplexUnit::SetScaledModel(GEModel* inModel)
 {
     this->mPhysicalModel.SetModel(inModel);
     this->mPhysicalModel.SetScale(this->GetUnitClass()->GetTileSize());
-}
-
-// Replaces the goals on squadron queues 1..3 (1..4 with the paratroopers power) with the goal or clones of it
-void EEComplexUnit::SetSquadronGoals(EEUnitGoal* inGoal, bool inCloneGoal)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_SQUADRON_GOALS, this, (int64_t)(uintptr_t)inGoal, inCloneGoal, 0);   // cu_world.rs
-}
-
-// Sets the unit's growth scale, scaling its model and collision radius (at least 0.05)
-void EEComplexUnit::SetGrowth(float inScale)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_GROWTH, this, EECuBits(inScale), 0, 0);   // cu_world.rs
-}
-
-// Disables or re-enables the unit for a reason, updating its airport and the time-warp tint
-void EEComplexUnit::SetDisabled(bool inAway, long inReason)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_DISABLED, this, inAway, inReason, 0);   // cu_misc.rs
-}
-
-// Sets the last resource the unit gathered from (reference counted)
-void EEComplexUnit::SetLastResource(RTSUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_LAST_RESOURCE, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_world.rs
-}
-
-// Moves the unit to the tile under a point, refreshing its contacts, flight height and swim animation
-void EEComplexUnit::MoveToLocation(float inX, float inY, bool inUpdateTiles)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_MOVE_TO_LOCATION, this, EECuBits(inX), EECuBits(inY), inUpdateTiles);   // cu_world.rs
 }
 
 // Moves the unit and its model to an x/y point
@@ -998,66 +329,6 @@ void EEComplexUnit::SetTransformation(const GETransformation& inTransformation, 
     this->mPhysicalModel.SetLocation(inTransformation);
 }
 
-// Links the unit as the next part of another unit, unlinking it from its previous part
-void EEComplexUnit::LinkPart(EEComplexUnit* inUnit)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_LINK_PART, this, (int64_t)(uintptr_t)inUnit, 0, 0);   // cu_misc.rs
-}
-
-// Sets the unit's patrol group (reference counted)
-void EEComplexUnit::SetPatrolGroup(EEPPatrolGroup* inGroup)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_PATROL_GROUP, this, (int64_t)(uintptr_t)inGroup, 0, 0);   // cu_world.rs
-}
-
-// Sets the unit's home base (reference counted)
-void EEComplexUnit::SetHomeBase(EEComplexUnit* inBase)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_HOME_BASE, this, (int64_t)(uintptr_t)inBase, 0, 0);   // cu_world.rs
-}
-
-// Sets the reload timer to a reload time scaled by a random factor from world table entry 87
-void EEComplexUnit::SetRandomReloadTimer(long inReloadTime)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SET_RANDOM_RELOAD_TIMER, this, inReloadTime, 0, 0);   // cu_world.rs
-}
-
-// Sets the building's current research, unloading the old one's media and preloading the new one's (100000 = none)
-void EEComplexUnit::PlayEffect(long inTechnology)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_PLAY_EFFECT, this, inTechnology, 0, 0);   // cu_misc.rs
-}
-
-// Replaces a cargo unit with another, adjusting the cargo room
-void EEComplexUnit::ReplaceCargo(EEComplexUnit* inOld, EEComplexUnit* inNew)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_CARGO, this, (int64_t)(uintptr_t)inOld, (int64_t)(uintptr_t)inNew, 0);   // cu_cargo.rs
-}
-
-// Turns the unit level to face a point
-void EEComplexUnit::FaceToward(GE3DPoint inPoint)
-{
-    ee_units_cu_more(EE_UNITS_CUM_DO_FACE_TOWARD, this, 0, 0, 0, inPoint.GetX(), inPoint.GetY(), inPoint.GetZ(), NULL, NULL);   // cu_more.rs
-}
-
-// Turns the unit level to face the center of a square of tiles
-void EEComplexUnit::FaceTowardSquare(long inX, long inY, long inSize)
-{
-    ee_units_cu_more(EE_UNITS_CUM_DO_FACE_SQUARE, this, inX, inY, inSize, 0.0f, 0.0f, 0.0f, NULL, NULL);   // cu_more.rs
-}
-
-// Turns the unit to face a target: a large target's footprint center, else its scaled top point or position
-void EEComplexUnit::FaceTarget(EEUnit* inTarget)
-{
-    ee_units_cu_more(EE_UNITS_CUM_DO_FACE_TARGET, this, (int64_t)(uintptr_t)inTarget, 0, 0, 0.0f, 0.0f, 0.0f, NULL, NULL);   // cu_more.rs
-}
-
-// Stops the unit: clears its build targets, goals and airport queue and sets it idle (aircraft circle)
-void EEComplexUnit::Halt()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_HALT, this, 0, 0, 0);   // cu_misc.rs
-}
-
 // Returns true if the unit can hit a target from where it stands (melee contact, range, or a ballistic shot from
 // any weapon tag point; a legionnaire's special attack uses its heal range)
 bool EEComplexUnit::IsInReach(EEUnit* inTarget)
@@ -1071,49 +342,6 @@ bool EEComplexUnit::IsInReach(EEUnit* inTarget)
     return theReach;
 }
 
-// Returns true if the unit can attack a tile from where it stands (melee: adjacent; ballistic: a clear arc;
-// else in range and on the same continent)
-bool EEComplexUnit::CanReachTile(long inX, long inY)
-{
-    return ee_units_cu_body(EE_UNITS_CU_DO_CAN_REACH_TILE, this, inX, inY, 0) != 0;   // cu_world.rs
-}
-
-
-// Evaluates the unit's current action and switches to the next one (dropping finished goals); an idle unit stops
-// evaluating 350 ticks after it went idle until its trigger time is reset
-// Rust over the unit store (ee_units ai.rs ai_step_noted, with its USST note); the reads, the goal's activity, the
-// actions' starts and changes, the finished goals' drop, the camouflage and the command's write are
-// ee_units_ai_host's statements (EEUnitAction.cpp)
-void EEComplexUnit::AIStep()
-{
-    ee_units_cu_ai_step(this);   // ai.rs
-}
-
-// Returns true if a range-1 unit stands on the target's tile or a tile along its sides or corners
-bool EEComplexUnit::IsOnTileBorderingTarget(EEUnit* inTarget)
-{
-    return ee_units_cu_small(EE_UNITS_CU_S_DO_IS_ON_TILE_BORDERING, this, inTarget, 0) != 0;   // cu_small.rs (CBXR after the world call)
-}
-
-// Replaces a unit in the cargo, and relinks this unit to the new one if the old one was its previous part
-void EEComplexUnit::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_UNIT, this, (int64_t)(uintptr_t)inOld, (int64_t)(uintptr_t)inNew, 0);   // cu_world.rs
-}
-
-// Returns the last attacker while it is still attacking this unit (in reach with a clear line, or a ground attack
-// covering it); otherwise forgets it and returns NULL
-EEComplexUnit* EEComplexUnit::GetConditionTarget()
-{
-    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_cu_body(EE_UNITS_CU_DO_CONDITION_TARGET, this, 0, 0, 0)));   // cu_world.rs
-}
-
-// Updates the camouflage power's timers when the unit changes action (idling starts it); without vital buildings
-// the unit loses its cloak
-void EEComplexUnit::UpdateCamouflage(long inAction)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_CAMOUFLAGE, this, inAction, 0, 0);   // cu_misc.rs
-}
 
 // Moves the unit's area effects to its position and updates them for the elapsed time
 void EEComplexUnit::UpdateAreaEffects(unsigned long inValue)
@@ -1122,30 +350,6 @@ void EEComplexUnit::UpdateAreaEffects(unsigned long inValue)
     this->mAreaEffects.MoveAndUpdate(thePoint, (float)inValue);
 }
 
-// Moves the unit's line of sight from the old tile to the new one (adds or removes it when either is off the map)
-void EEComplexUnit::SightMoved(unsigned long inOldX, unsigned long inOldY, unsigned long inNewX, unsigned long inNewY)
-{
-    ee_units_cu_sight_moved(this, (long)inOldX, (long)inOldY, (long)inNewX, (long)inNewY);   // cu_world.rs
-}
-
-
-// Switches the unit to another graphic, keeping its animation progress and turret, orbital and wheel angles
-void EEComplexUnit::SwapGraphic(EEGraphicObject* inOldModel, EEGraphicObject* inNewModel)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_SWAP_GRAPHIC, this, (int64_t)(uintptr_t)inOldModel, (int64_t)(uintptr_t)inNewModel, 0);   // cu_life.rs
-}
-
-// Replaces a technology in the current research and the build queue with another (100000 removes it)
-void EEComplexUnit::ReplaceResearch(long inTechnology, long inNewTechnology)
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_REPLACE_RESEARCH, this, inTechnology, inNewTechnology, 0);   // cu_cargo.rs
-}
-
-// Recreates the unit's area effects from the four area-effect templates in its stats
-void EEComplexUnit::MakeAreaEffects()
-{
-    ee_units_cu_body(EE_UNITS_CU_DO_MAKE_AREA_EFFECTS, this, 0, 0, 0);   // cu_world.rs
-}
 
 // Returns the number of wheels on the graphic object
 // Declared out of line in ee/EEGraphicObject.h like GetOrbitalCount; its only out-of-line copy follows this
@@ -1153,14 +357,6 @@ void EEComplexUnit::MakeAreaEffects()
 unsigned long EEGraphicObject::GetWheelCount() const
 {
     return this->mWheels.size();
-}
-
-void EEComplexUnit::DescribeLong(class UWideString &)
-{
-}
-
-void EEComplexUnit::FnE123D()
-{
 }
 
 // FleeAfterCalamity's point ahead is the body's first two floats
@@ -1374,9 +570,9 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_GET_INSURANCE: return gCivPowersManager.GetPower(kCivPowerInsurance, sInsurancePower);
     case EE_UNITS_CU_INSURANCE_COVERS:
         return gUnitSetManager.Contains(theUnit->GetUnitClass()->GetUnitType(), sInsurancePower.mUnitSet);
-    case EE_UNITS_CU_INSURANCE_AMOUNT: return EECuBits(sInsurancePower.mAmount);
+    case EE_UNITS_CU_INSURANCE_AMOUNT: return UFloatBits(sInsurancePower.mAmount);
     case EE_UNITS_CU_IS_BUILT: return theUnit->mIsBuilt;
-    case EE_UNITS_CU_PAY_INSURANCE: theUnit->PayInsurance(EECuFloat(inB)); return 0;
+    case EE_UNITS_CU_PAY_INSURANCE: theUnit->PayInsurance(UBitsFloat(inB)); return 0;
     case EE_UNITS_CU_LAST_ATTACKER: return (uint64_t)(uintptr_t)theUnit->mLastAttacker;
     case EE_UNITS_CU_DEREFERENCE: EECuObject<RTSUnit>(inA)->Dereference(); return 0;
     case EE_UNITS_CU_CLEAR_LAST_ATTACKER: theUnit->mLastAttacker = NULL; return 0;
@@ -1461,12 +657,12 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_NODE_MAKES_UNIT: return theNode->mData->mMakesUnit;
     case EE_UNITS_CU_NODE_UNIT_CLASS: return theNode->mData->mUnitClass;
     case EE_UNITS_CU_CLASS_TABLE: return (uint64_t)(uintptr_t)gUnitClassTable[(long)inB];
-    case EE_UNITS_CU_BUILD_TIME_SCALE: return EECuBits(theUnit->GetPlayer()->GetUpgrade((long)inB)->mBuildTimeScale);
+    case EE_UNITS_CU_BUILD_TIME_SCALE: return UFloatBits(theUnit->GetPlayer()->GetUpgrade((long)inB)->mBuildTimeScale);
     case EE_UNITS_CU_CLASS_IS_AIRCRAFT: return theClass->IsAircraft();
     case EE_UNITS_CU_CLASS_WEIGHT: return theClass->mWeight;
     case EE_UNITS_CU_ATC_CARGO: return ee_units_atc_cargo(theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1], (int32_t)inB);
     case EE_UNITS_CU_CLASS_UNIT_TYPE: return theClass->mUnitType;
-    case EE_UNITS_CU_RANDOM: return EECuBits(gPhysics->mRandom.Generate());
+    case EE_UNITS_CU_RANDOM: return UFloatBits(gPhysics->mRandom.Generate());
     case EE_UNITS_CU_CLASS_TECHNOLOGY: return theClass->GetTechnology();
     case EE_UNITS_CU_INSTANT_BUILD: return theUnit->GetPlayer()->mInstantBuild;
     case EE_UNITS_CU_NODE_BUILD_TIME: return theNode->GetBuildTime();
@@ -1474,7 +670,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UI_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
     case EE_UNITS_CU_QUEUE_POP_FRONT: theUnit->mBuildQueue.erase(theUnit->mBuildQueue.begin()); return 0;
     case EE_UNITS_CU_REFUND_TECHNOLOGY:
-        theUnit->GetPlayer()->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), EECuFloat(inB));
+        theUnit->GetPlayer()->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), UBitsFloat(inB));
         return 0;
     case EE_UNITS_CU_QUEUE_EMPTY: return theUnit->mBuildQueue.empty();
     // SetBuilt's (inA the part)
@@ -1530,7 +726,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_REFUND_TOTAL: return thePlayer->mInsuranceRefunds[inB];
     case EE_UNITS_CU_RESOURCE: return thePlayer->mResourceCaps[inB];
     case EE_UNITS_CU_PLAYER_REFUND_TECHNOLOGY:
-        theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), EECuFloat(inB));
+        theUnit->mPlayer->RefundTechnology(theNode, theUnit->GetUnitClass()->GetUnitType(), UBitsFloat(inB));
         return 0;
     case EE_UNITS_CU_SET_REFUND_TOTAL: thePlayer->mInsuranceRefunds[inB] = (long)inC; return 0;
     case EE_UNITS_CU_CURRENT_PLAYER: return (uint64_t)(uintptr_t)::gWorld.GetCurrentPlayer();
@@ -1542,11 +738,11 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
         EECuObject<EESoundObject>(inA)->Play(EECuObject<EESoundObject>(inA)->GetVolume(), 0.0f, 1.0f);
         return 0;
     // FindContacts' (inA a class, 0: the unit's; a tile, a node or another unit)
-    case EE_UNITS_CU_INNER_SPHERE: return EECuBits(theUnit->GetUnitClass()->GetInnerCollisionSphere());
+    case EE_UNITS_CU_INNER_SPHERE: return UFloatBits(theUnit->GetUnitClass()->GetInnerCollisionSphere());
     case EE_UNITS_CU_FLIES_OVER: return theClass->FliesOver();
     case EE_UNITS_CU_IS_AIR_CATEGORY: return theClass->IsAirCategory();
-    case EE_UNITS_CU_LOCATION_X: return EECuBits(theUnit->mPhysicalModel.GetLocation().GetX());
-    case EE_UNITS_CU_LOCATION_Y: return EECuBits(theUnit->mPhysicalModel.GetLocation().GetY());
+    case EE_UNITS_CU_LOCATION_X: return UFloatBits(theUnit->mPhysicalModel.GetLocation().GetX());
+    case EE_UNITS_CU_LOCATION_Y: return UFloatBits(theUnit->mPhysicalModel.GetLocation().GetY());
     case EE_UNITS_CU_MAP_TILE: return (uint64_t)(uintptr_t)::gWorld.mMap->GetTile((long)inB, (long)inC);
     case EE_UNITS_CU_TILE_FIRST_NODE: return (uint64_t)(uintptr_t)EECuObject<EEMapTile>(inA)->mUnits;
     case EE_UNITS_CU_NODE_NEXT: return (uint64_t)(uintptr_t)EECuObject<RTSTileUnitNode>(inA)->mNext;
@@ -1625,9 +821,9 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNIT_SET_TRANSFORMATION: theOther->SetTransformation(*EECuObject<GETransformation>((uint64_t)inB), true); return 0;
     case EE_UNITS_CU_UNIT_DOMAINS: return theOther->mUnitClass->mDomains;
     case EE_UNITS_CU_UNIT_SET_PLANET: theOther->mPlanetID = EEGetLandContinentOf(theOther); return 0;
-    case EE_UNITS_CU_UNIT_CRUISE_ALTITUDE: return EECuBits(theOther->mUnitClass->GetCruiseAltitude());
+    case EE_UNITS_CU_UNIT_CRUISE_ALTITUDE: return UFloatBits(theOther->mUnitClass->GetCruiseAltitude());
     case EE_UNITS_CU_UNIT_SET_TRANSFORMATION_AT_Z:
-        EECuSetTransformationAtZ(theOther, *EECuObject<GETransformation>((uint64_t)inB), EECuFloat(inC));
+        EECuSetTransformationAtZ(theOther, *EECuObject<GETransformation>((uint64_t)inB), UBitsFloat(inC));
         return 0;
     case EE_UNITS_CU_UNIT_TILE_X: return theOther->GetTileX();
     case EE_UNITS_CU_ACTIVATE_UNIT: ::gWorld.ActivateUnit(theOther); return 0;
@@ -1636,10 +832,10 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNIT_START_ACTION: theOther->StartAction((long)inB); return 0;
     case EE_UNITS_CU_UNIT_ACTION_CHANGED: theOther->mUnitClass->ActionChanged(theOther); return 0;
     case EE_UNITS_CU_UNIT_REFERENCE_COUNT: return theOther->mReferenceCount;
-    case EE_UNITS_CU_STATS_RANGE: return EECuBits(theUnit->GetStats()->mRange);
+    case EE_UNITS_CU_STATS_RANGE: return UFloatBits(theUnit->GetStats()->mRange);
     case EE_UNITS_CU_TRANSPORT_HAS_ROOM:
         return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theUnit->GetUnitClass())->HasRoom(theUnit, theOther->GetComplexUnit());
-    case EE_UNITS_CU_TRANSPORT_UNLOAD_RANGE: return EECuBits(EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theUnit->GetUnitClass())->mUnloadRange);
+    case EE_UNITS_CU_TRANSPORT_UNLOAD_RANGE: return UFloatBits(EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theUnit->GetUnitClass())->mUnloadRange);
     case EE_UNITS_CU_UNLOAD_CARGO_AT:
         return (uint64_t)(uintptr_t)theUnit->UnloadCargoAt((unsigned long)inB, *EECuObject<GETransformation>(inA));
     case EE_UNITS_CU_TELEPORT_IN_EFFECT:
@@ -1847,8 +1043,8 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_LINE_FROM_BLOCKED: return EEIsLineToUnitBlocked(theOther, theUnit, &sCuBlocker, &sCuBlockX, &sCuBlockY);
     case EE_UNITS_CU_GROUND_GOAL_OF: return (uint64_t)(uintptr_t)EEAttackGroundCast(theOther->GetGoal());
     case EE_UNITS_CU_GROUND_TARGET:
-        return EECuBits(inB == 0 ? EECuObject<EEUGRust>(inA)->GetGroundTarget().GetX() : EECuObject<EEUGRust>(inA)->GetGroundTarget().GetY());
-    case EE_UNITS_CU_AREA_EFFECT_OF: return EECuBits(theOther->mStats->mAreaEffect);
+        return UFloatBits(inB == 0 ? EECuObject<EEUGRust>(inA)->GetGroundTarget().GetX() : EECuObject<EEUGRust>(inA)->GetGroundTarget().GetY());
+    case EE_UNITS_CU_AREA_EFFECT_OF: return UFloatBits(theOther->mStats->mAreaEffect);
     case EE_UNITS_CU_CARGO_DEREFERENCE_AT: theUnit->mCargo[(size_t)inB]->Dereference(); return 0;
     case EE_UNITS_CU_LINK_PART_TO: theUnit->LinkPart(theOther); return 0;
     case EE_UNITS_CU_DEACTIVATE_THIS: ::gWorld.DeactivateUnit(theUnit); return 0;
@@ -1884,7 +1080,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit, theUnit->GetStats(), &sCuPosition, &sCuDestination, &sCuPitch);
     case EE_UNITS_CU_LINE_BLOCKED:
         return EEIsLineBlocked(theUnit->GetTileX(), theUnit->GetTileY(), (long)inB, (long)inC, &sCuBlocker, &sCuBlockX, &sCuBlockY);
-    case EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE: return EECuBits(theUnit->DistanceSquaredToTileXY((long)inB, (long)inC));
+    case EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE: return UFloatBits(theUnit->DistanceSquaredToTileXY((long)inB, (long)inC));
     case EE_UNITS_CU_CAN_GET_TO: return ::gContinentManager.CanGetTo(theUnit, (long)inB, (long)inC);
     case EE_UNITS_CU_IS_SPACE_MAP: return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
     case EE_UNITS_CU_CONTINENT_NON_SPACE: return ::gContinentManager.GetContinent(theUnit, kAIPathNonSpace);
@@ -1912,11 +1108,11 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_HAS_SWIM_ANIMATION: return theUnit->HasSwimAnimation();
     case EE_UNITS_CU_IS_SWIMMING: return theUnit->IsSwimming();
     case EE_UNITS_CU_SET_ANIMATION_STATE: theUnit->SetAnimation((long)inB, -1, 0); return 0;
-    case EE_UNITS_CU_GROWTH: return EECuBits(theUnit->mGrowth);
-    case EE_UNITS_CU_SET_GROWTH: theUnit->mGrowth = EECuFloat(inB); return 0;
-    case EE_UNITS_CU_STATS_SCALE: return EECuBits(theUnit->GetStats()->GetScale());
-    case EE_UNITS_CU_COLLISION_RADIUS: return EECuBits(theUnit->mCollisionRadius);
-    case EE_UNITS_CU_SET_COLLISION_RADIUS: theUnit->mCollisionRadius = EECuFloat(inB); return 0;
+    case EE_UNITS_CU_GROWTH: return UFloatBits(theUnit->mGrowth);
+    case EE_UNITS_CU_SET_GROWTH: theUnit->mGrowth = UBitsFloat(inB); return 0;
+    case EE_UNITS_CU_STATS_SCALE: return UFloatBits(theUnit->GetStats()->GetScale());
+    case EE_UNITS_CU_COLLISION_RADIUS: return UFloatBits(theUnit->mCollisionRadius);
+    case EE_UNITS_CU_SET_COLLISION_RADIUS: theUnit->mCollisionRadius = UBitsFloat(inB); return 0;
     case EE_UNITS_CU_ZERO_NUM_AREA_EFFECTS: theUnit->mNumAreaEffects = 0; return 0;
     case EE_UNITS_CU_STATS_AREA_TEMPLATE: return theUnit->GetStats()->mAreaEffectTemplates[inB];
     case EE_UNITS_CU_COUNT_AREA_EFFECT: theUnit->mNumAreaEffects++; return 0;
@@ -1924,8 +1120,8 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_QUEUED_GOAL: return (uint64_t)(uintptr_t)theUnit->GetQueuedGoal((unsigned long)inB);
     case EE_UNITS_CU_QUEUE_GOAL: theUnit->QueueGoal(EECuObject<EEUnitGoal>(inA), (unsigned long)inB); return 0;
     case EE_UNITS_CU_AREA_EFFECTS_SIZE: return (int64_t)theUnit->mAreaEffects.GetSize();
-    case EE_UNITS_CU_AREA_EFFECT_RADIUS: return EECuBits(theUnit->mAreaEffects.mItems[(size_t)inB]->GetRadius());
-    case EE_UNITS_CU_COLLECT_EFFECTS: ::gAEManager.CollectEffects(EECuFloat(inB), sCuLocation = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()), (unsigned long)inC, &theUnit->mAreaEffects, theUnit); return 0;
+    case EE_UNITS_CU_AREA_EFFECT_RADIUS: return UFloatBits(theUnit->mAreaEffects.mItems[(size_t)inB]->GetRadius());
+    case EE_UNITS_CU_COLLECT_EFFECTS: ::gAEManager.CollectEffects(UBitsFloat(inB), sCuLocation = GE2DPoint(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY()), (unsigned long)inC, &theUnit->mAreaEffects, theUnit); return 0;
     case EE_UNITS_CU_PLAYER_ID: return theUnit->mPlayer->mPlayerID;
     case EE_UNITS_CU_AFFECTING_KIND: return theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->mTemplate->mKind;
     case EE_UNITS_CU_SET_OUT_EFFECT:
@@ -1935,7 +1131,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CITIZEN_POP_FRONT: theUnit->mCitizenBuildQueue.pop_front(); return 0;
     case EE_UNITS_CU_UNIT_VALID: return EECuObject<EEUnit>(inA)->mIsValid;
     case EE_UNITS_CU_START_FANATICISM: theUnit->mCloaked = gPhysics->mGameTime + gWorldTable.GetLongValue(kWorldFanaticism); return 0;
-    case EE_UNITS_CU_FANATICISM_COST: return EECuBits(gWorldTable.GetFloatValue(kWorldFanaticism));
+    case EE_UNITS_CU_FANATICISM_COST: return UFloatBits(gWorldTable.GetFloatValue(kWorldFanaticism));
     case EE_UNITS_CU_SET_HIT_POINTS: theUnit->SetHitPoints((long)inB); return 0;
     case EE_UNITS_CU_IS_DELETABLE: return theUnit->mIsDeletable;
     case EE_UNITS_CU_CITIZEN_TECH_HAS_TYPE:
@@ -1973,8 +1169,8 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNLOAD_CARGO_AT_INDEX:
         return (uint64_t)(uintptr_t)theUnit->UnloadCargoAt((unsigned long)inB, *EECuObject<const GETransformation>(inA));
     case EE_UNITS_CU_RELOAD_RANGE:
-        return EECuBits(inB == 0 ? gWorldTable.GetFloatValue(kWorldReloadTimeRandomRange) : gWorldTable.GetFloatValue2(kWorldReloadTimeRandomRange));
-    case EE_UNITS_CU_RANDOM_BETWEEN: return EECuBits(gPhysics->GetRandom(EECuFloat(inB), EECuFloat(inC)));
+        return UFloatBits(inB == 0 ? gWorldTable.GetFloatValue(kWorldReloadTimeRandomRange) : gWorldTable.GetFloatValue2(kWorldReloadTimeRandomRange));
+    case EE_UNITS_CU_RANDOM_BETWEEN: return UFloatBits(gPhysics->GetRandom(UBitsFloat(inB), UBitsFloat(inC)));
     case EE_UNITS_CU_SET_RELOAD_TIMER: theUnit->SetReloadTimer((long)inB); return 0;
     // cu_life.rs: CopyFrom's
     case EE_UNITS_CU_COPY_PROJECTILE_START: theUnit->mProjectileStart = theOther->mProjectileStart; return 0;
@@ -2067,7 +1263,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_RESET_CONVERSION_EFFECT: theUnit->mConversionEffect.mValue = -1; return 0;
     case EE_UNITS_CU_RESET_HEAL_EFFECT: theUnit->mHealEffect.mValue = -1; return 0;
     case EE_UNITS_CU_PM_CLEAR_MODEL: theUnit->mPhysicalModel.SetModel(NULL); return 0;
-    case EE_UNITS_CU_PM_SET_SCALE: theUnit->mPhysicalModel.SetScale(EECuFloat(inB)); return 0;
+    case EE_UNITS_CU_PM_SET_SCALE: theUnit->mPhysicalModel.SetScale(UBitsFloat(inB)); return 0;
     case EE_UNITS_CU_PM_RESET_LOCATION: theUnit->mPhysicalModel.SetLocation(GETransformation()); return 0;
     case EE_UNITS_CU_PM_RESET_FRAME: theUnit->mPhysicalModel.SetFrame(0); return 0;
     case EE_UNITS_CU_RESET_PITCH: theUnit->mAngularVelocity.SetPitch(0.0f); return 0;
@@ -2100,7 +1296,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_GRAPHIC_START_FRAME: return (int64_t)EECuObject<EEGraphicObject>(inA)->mStartFrames[inB];
     case EE_UNITS_CU_GRAPHIC_FRAME_COUNT: return (int64_t)EECuObject<EEGraphicObject>(inA)->mFrameCounts[inB];
     case EE_UNITS_CU_GRAPHIC_LAST_FRAME: return (int64_t)EECuObject<EEGraphicObject>(inA)->mLastFrames[inB];
-    case EE_UNITS_CU_FLOAT_TO_LONG: return UMFloatToLong(EECuFloat(inB));
+    case EE_UNITS_CU_FLOAT_TO_LONG: return UMFloatToLong(UBitsFloat(inB));
     case EE_UNITS_CU_SET_ANIMATION_FRAME: theUnit->SetAnimationFrame((unsigned long)inB); return 0;
     case EE_UNITS_CU_GRAPHIC_NUM_PARTS: return (int64_t)EECuObject<EEGraphicObject>(inA)->GetNumParts();
     case EE_UNITS_CU_SCRATCH_ANGLES_NEW: sCuAngles = new float[(size_t)inB]; return 0;
@@ -2122,8 +1318,8 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_SET_NUM_WHEELS: theUnit->mNumWheels = (unsigned long)inB; return 0;
     // StepAside's
     case EE_UNITS_CU_CLASS_FAMILY: return theUnit->GetUnitClass()->mFamily;
-    case EE_UNITS_CU_STATS_ATTACK: return EECuBits(theUnit->GetStats()->mAttack);
-    case EE_UNITS_CU_STATS_MAX_VELOCITY: return EECuBits(theUnit->GetStats()->mMaxVelocity);
+    case EE_UNITS_CU_STATS_ATTACK: return UFloatBits(theUnit->GetStats()->mAttack);
+    case EE_UNITS_CU_STATS_MAX_VELOCITY: return UFloatBits(theUnit->GetStats()->mMaxVelocity);
     case EE_UNITS_CU_PLAYER_IS_FRIEND: return thePlayer == theUnit->mPlayer || theUnit->mPlayer->mEnemies[thePlayer->mPlayerID] == 0;
     case EE_UNITS_CU_GATHER_GOAL: return (uint64_t)(uintptr_t)EEGatherGoalCast(theUnit->GetGoal());
     case EE_UNITS_CU_FIND_GATHER_SPOT: return EECuObject<EEUGRust>(inA)->FindGatherSpot(theUnit);
@@ -2157,14 +1353,14 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CLOAKED: return (int64_t)theUnit->mCloaked;
     case EE_UNITS_CU_CLEAR_CLOAKED_TIME: theUnit->mCloaked = 0; return 0;
     case EE_UNITS_CU_FANATICISM_PERIOD: return EEGraphicEffect::Get(kGraphicEffectFanaticismEffect)->mIntParam1;
-    case EE_UNITS_CU_FANATICISM_PARAM: return EECuBits(EECuFanaticismParam(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect), inB));
+    case EE_UNITS_CU_FANATICISM_PARAM: return UFloatBits(EECuFanaticismParam(EEGraphicEffect::Get(kGraphicEffectFanaticismEffect), inB));
     case EE_UNITS_CU_SET_COLOR: theUnit->SetColor(GEColor(f[0], f[1], f[2])); return 0;
     // GetChecksum's
     case EE_UNITS_CU_TIMES_UPDATED: return (int64_t)theUnit->mComplexUnit->mTimesUpdated;
     case EE_UNITS_CU_HAS_ACTIVE_GROUP: return theUnit->mComplexUnit->mActiveGroup != NULL;
     case EE_UNITS_CU_COMMAND_OR_ZERO: return theUnit->mComplexUnit->mCommand ? theUnit->mComplexUnit->mCommand->mType : 0;
-    case EE_UNITS_CU_CHECKSUM_LOCATION: return EECuBits(inB == 0 ? theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetX() : inB == 1 ? theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetY() : theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetZ());
-    case EE_UNITS_CU_HEIGHT: return EECuBits(theUnit->mComplexUnit->mHeight);
+    case EE_UNITS_CU_CHECKSUM_LOCATION: return UFloatBits(inB == 0 ? theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetX() : inB == 1 ? theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetY() : theUnit->mComplexUnit->mPhysicalModel.GetLocation().GetZ());
+    case EE_UNITS_CU_HEIGHT: return UFloatBits(theUnit->mComplexUnit->mHeight);
     case EE_UNITS_CU_GOAL_CHECKSUM: return theUnit->mComplexUnit->GetQueueGoals((unsigned long)inB)[(size_t)inC]->GetOutOfSynchChecksum();
     case EE_UNITS_CU_AFFECTING_COUNT: return (int64_t)theUnit->mAffectingAreaEffects.mItems.size();
     case EE_UNITS_CU_AFFECTING_CHECKSUM: return theUnit->mAffectingAreaEffects.mItems[(size_t)inB]->Checksum();
@@ -2175,16 +1371,16 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_UNIT_INIT: theUnit->EEUnit::Init(theClass, EECuObject<EEPlayer>((uint64_t)inB)); return 0;
     case EE_UNITS_CU_INIT_COLLIDABLE: theUnit->mIsCollidable = theClass->mIsCollidable && (!(theClass->mDomains & kMovementAir) || theClass->FliesOver()) && !theClass->mIsProjectile && theClass->mUnitType != kUnitTypeWaypoint; return 0;
     case EE_UNITS_CU_INIT_CAN_BE_HIDDEN: theUnit->mCanBeHidden = (!(theClass->mDomains & kMovementAir) && !theClass->mIsObstacle && !theClass->mIsProjectile && theClass->mMaxVelocity > 0.0f) || theClass->mFamily == kUnitFamilyAABuilding; return 0;
-    case EE_UNITS_CU_UM_FLOOR: return UMFloor(EECuFloat(inB));
+    case EE_UNITS_CU_UM_FLOOR: return UMFloor(UBitsFloat(inB));
     case EE_UNITS_CU_MOVE_TO: theUnit->MoveTo((long)inB, (long)inC, false); return 0;
     case EE_UNITS_CU_UPDATE_WATER_STATE_OFF: theUnit->UpdateWaterState(false); return 0;
     case EE_UNITS_CU_PLACEMENT_COPY: sCuPlacement = *EECuObject<const GETransformation>(inA); return 0;
-    case EE_UNITS_CU_PLACEMENT_X: return EECuBits(sCuPlacement.GetX());
-    case EE_UNITS_CU_PLACEMENT_Y: return EECuBits(sCuPlacement.GetY());
-    case EE_UNITS_CU_PLACEMENT_SET_X: sCuPlacement.SetX(EECuFloat(inB)); return 0;
-    case EE_UNITS_CU_PLACEMENT_SET_Y: sCuPlacement.SetY(EECuFloat(inB)); return 0;
+    case EE_UNITS_CU_PLACEMENT_X: return UFloatBits(sCuPlacement.GetX());
+    case EE_UNITS_CU_PLACEMENT_Y: return UFloatBits(sCuPlacement.GetY());
+    case EE_UNITS_CU_PLACEMENT_SET_X: sCuPlacement.SetX(UBitsFloat(inB)); return 0;
+    case EE_UNITS_CU_PLACEMENT_SET_Y: sCuPlacement.SetY(UBitsFloat(inB)); return 0;
     case EE_UNITS_CU_PM_SET_PLACEMENT: theUnit->mPhysicalModel.SetLocation(sCuPlacement); return 0;
-    case EE_UNITS_CU_CLASS_SCALE: return EECuBits(theClass->mScale);
+    case EE_UNITS_CU_CLASS_SCALE: return UFloatBits(theClass->mScale);
     case EE_UNITS_CU_INIT_CARGO_ROOM: theUnit->mCargoRoom = theClass->mTransportCapacity; return 0;
     case EE_UNITS_CU_INIT_COLLISION_RADIUS: theUnit->mCollisionRadius = theClass->GetInnerCollisionSphere(); return 0;
     case EE_UNITS_CU_SET_IS_CITIZEN: theUnit->mIsCitizen = inB != 0; return 0;
@@ -2263,4 +1459,16 @@ extern "C" int64_t ee_units_wp_host(int32_t inOp, uint64_t inUnit, uint64_t inAr
     }
     }
     return 0;
+}
+
+// Copies a replaced unit's state into this one: position, timers, scaled hit points, goals, cargo, links
+void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
+{
+    ee_units_cu_body(EE_UNITS_CU_DO_COPY_FROM, this, (int64_t)(uintptr_t)EEUnitCast<EEComplexUnit>(inUnit), (int64_t)(uintptr_t)inUnit, 0);   // cu_life.rs
+}
+
+// Returns the goals of a goal queue
+EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
+{
+    return this->mGoalQueues[inIndex].mGoals;
 }

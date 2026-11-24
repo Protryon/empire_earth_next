@@ -296,7 +296,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_STRING: gResource->GetString(i[1], sMessage); return 0;
     case EE_SCREENS_GAH_N_SHOW: gUIManager->DisplayMessage(sMessage, true, NULL, i[2] ? EEAJoinOrHostAGameRestartClient : NULL, true); return 0;
     case GA_K(NET, N_IS_SERVER): return gCommunications->IsServer() == true;
-    case GA_K(NET, N_BOOT_PLAYER): static_cast<NESynchronousServer*>(gCommunications)->BootPlayer(GA_A->mPlayer, GA_A->mB0D, GA_A->mIsExiting); return 0;
+    case GA_K(NET, N_BOOT_PLAYER): static_cast<EEServer*>(gCommunications)->BootPlayer(GA_A->mPlayer, GA_A->mB0D, GA_A->mIsExiting); return 0;
     case GA_K(NET, N_CTS_PROCESSED): return gCommunications->GetNumberOfCTsProcessedInPhysics() > 0;
     case GA_K(NET, N_USER_PAUSED): return gWorld.mUserPaused == true;
     case EE_SCREENS_GAH_N_PAUSE: dynamic_cast<EEServer*>(gCommunications)->PauseGame(); return 0;
@@ -482,25 +482,6 @@ bool EEIsValidName(const UWideString& inName)
     for (unsigned long i = 0; i < theLength; i++)
         theChars[i] = (unsigned char)inName[(int)i];
     return ee_screens_valid_name(theChars.data(), theLength);
-}
-
-// Returns whether the unit class is a building that handles aircraft (an air base or carrier)
-bool EEUnitClass::IsAirBase()
-{
-    return this->mAirTrafficType != 0 && (this->mCategory == kUnitCategoryBuilding || this->mCategory == kUnitCategoryNavalBuilding || this->mCategory == kUnitCategorySpaceBuilding);
-}
-
-// Returns whether units can drop resources off at the unit class
-bool EEUnitClass::IsDropSite()
-{
-    return this->mUnitType == kUnitTypeMechZeusPrototype ||
-           this->IsLandBuilding() && this->mUnitType != kUnitTypeFarm && this->mUnitType != kUnitTypeDock && this->mUnitType != kUnitTypeNavyYard && this->mResourceType > kResourceNone && this->mResourceType < 7;
-}
-
-// Returns whether the unit class is a land, helicopter or naval transport
-bool EEUnitClass::IsTransport()
-{
-    return this->mCategory == kUnitCategoryLandTransport || this->mCategory == kUnitCategoryHelicopterTransport || this->mCategory == kUnitCategoryNavalTransport || this->mCategory == kUnitCategorySpaceTransport || this->mCategory == kUnitCategoryFortress;
 }
 
 // Returns whether the tile is visible to a player (or the player sees everything)

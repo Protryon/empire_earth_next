@@ -29,6 +29,7 @@
 #include "rust/won_net/miscops.h"
 #include "rust/won_net/reqop.h"
 #include "rust/won_net/reqops.h"
+#include "won_direntity_orig.h" // DirEntity and its records as they were (R6 WON round 34 made them Rust's)
 
 #ifndef VEROP_RUST
 #define VEROP_RUST 1

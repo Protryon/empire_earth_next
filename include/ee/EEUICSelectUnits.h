@@ -10,7 +10,10 @@
 
 #include "ee/EEUIRustControl.h"
 
-class EEUICSelectUnits : public EEUIRustControl, protected EeScreensSelectUnitsFields {
+class EEAMouseClick;
+class EEALasso;
+
+class EEUICSelectUnits : public EEUIRustControl, protected EeScreensSelectUnitsFields, public EeScreensSelectUnitsObjects {
 public:
     virtual bool GetTabable() const { return false; }
     // 0x25958f (the user-defined control factory 0x2748f7; EESEUICTriggerSelectUnits 0x1973a8): a 2x2 rectangle at
@@ -35,7 +38,6 @@ protected:
     virtual long MouseLButtonUp() { return this->Rust(EE_SCREENS_SU_DO_MOUSE_L_UP); }
     virtual long MouseLButtonDoublePressed() { return this->Rust(EE_SCREENS_SU_DO_DOUBLE_CLICK); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return this->Rust(EE_SCREENS_SU_DO_MOUSE_MOVE, &inLocation); }
-    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
     // CopyData, DrawPolygons, the double click, the release, the drag and StartSelection: ee_screens select_units.rs
     // (EE_SCREENS_SU_DO_*) over the picker's and actions' ops below (the lines and the unit's reads: hud_ctl_ffi.rs)
     long Rust(uint32_t inWhich, const GE2DPoint* inLocation = NULL)
@@ -44,8 +46,6 @@ protected:
     }
 
 public:   // (the constructor's and destructor's shims: EEUICSelectUnits.cpp)
-    EEAMouseClick* mClick;                  // referenced; the mouse click action
-    EEALasso* mLasso;                       // referenced
 };
 
 #endif

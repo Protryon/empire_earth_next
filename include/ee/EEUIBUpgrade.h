@@ -8,33 +8,29 @@
 #include "rust/game/screens.h"
 
 class EEUnit;
-class UITextLabel;
 class EEUIBUpgrade;
 
 // One call into ee_screens upgrade.rs: the button, the out text (the tooltip, the refusal's reason, the new cost;
 // NULL for none, the call's own mReason for a reason nobody reads), the held text, the mouse location
-struct EEUIBUpgradeCall {
-    EEUIBUpgrade* mButton;
-    UWideString* mOut;
+struct EEUIBUpgradeCall : public EeScreensUpgradeCallObjects {   // the pointers: the Rust record (hud_fields.rs)
     UWideString mText;
-    const GE2DPoint* mLocation;
     UWideString mReason;
     EEUIBUpgradeCall(EEUIBUpgrade* inButton, UWideString* inOut = NULL, const GE2DPoint* inLocation = NULL)
-        : mButton(inButton), mOut(inOut), mLocation(inLocation) {}
-    EEUIBUpgradeCall(EEUIBUpgrade* inButton, bool) : mButton(inButton), mOut(&mReason), mLocation(NULL) {}
+        : EeScreensUpgradeCallObjects{inButton, inOut, inLocation} {}
+    EEUIBUpgradeCall(EEUIBUpgrade* inButton, bool) : EeScreensUpgradeCallObjects{inButton} { this->mOut = &this->mReason; }
     // the record of a call (a temporary's, for the full expression)
     EEUIBUpgradeCall* Ptr() { return this; }
 };
 
 
-class EEUIBUpgrade : public UIButton {
+class EEUIBUpgrade : public UIButton, public EeScreensUpgradeFields {
 public:
     // Creates an improvement button, faintly tinted with a thin border, without a cost label
     EEUIBUpgrade(unsigned long inId, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
                  UIForm* inForm, unsigned long inIndex, bool inScenarioEditor, unsigned long inBorderThickness)
         : UIButton(inId, NULL, NULL, NULL, GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex,
                    inBorderThickness),
-          mScenarioEditor(inScenarioEditor)
+          EeScreensUpgradeFields{0, NULL, 0, 0, 0, inScenarioEditor, false}
     {
         ee_screens_upb_construct((uintptr_t)this);
     }
@@ -54,7 +50,6 @@ public:
     {
         ee_screens_upgrade_update_cost(EEUIBUpgradeCall(this, const_cast<UWideString*>(&inText)).Ptr());
     }
-protected:
     // Presses the button unless the improvement is unavailable, and updates the help text
     virtual void ButtonDown() { ee_screens_upb_button_down((uintptr_t)this); }
     virtual void ButtonUp() { ee_screens_upgrade_button_up(EEUIBUpgradeCall(this, true).Ptr()); }
@@ -70,7 +65,6 @@ protected:
     // Presses the button on a right press, capturing the mouse
     virtual long MouseRButtonDown() { return (long)ee_screens_upb_right_down((uintptr_t)this); }
     virtual long MouseRButtonUp() { return (long)ee_screens_upgrade_mouse_r_up(EEUIBUpgradeCall(this).Ptr()); }
-public:
     virtual ~EEUIBUpgrade() {}
     // +0x94: the unit the improvement applies to (the selected group's first unit, or the scenario editor's first
     // selected unit) and whether it can be raised; outReason gets the player's reason why not
@@ -80,21 +74,12 @@ public:
     }
     // +0x98: whether the button is greyed out (the improvement can no longer be raised)
     virtual bool GetDisabled() { return ee_screens_upgrade_disabled(EEUIBUpgradeCall(this).Ptr()); }
-    // the button's host (ee_screenscpp_upgrade, EEUIBUpgrade.cpp): a member for the protected toolkit calls
-    static int64_t HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
     // the base and protected calls of the Rust bodies' shims (EEUIBUpgrade.cpp, hud_bodies.rs)
     static void BaseButtonDown(EEUIBUpgrade* inButton) { inButton->UIButton::ButtonDown(); }
     static void BaseMouseOver(EEUIBUpgrade* inButton) { inButton->UIButton::MouseOver(); }
     static void ButtonDownOf(EEUIBUpgrade* inButton) { inButton->ButtonDown(); }
     static void CaptureOf(EEUIBUpgrade* inButton) { inButton->CaptureMouse(); }
 
-    long mAttribute;                        // +0x118 the improvement (0x10: help string only, 0xc: no cost)
-    UITextLabel* mCostLabel;                // +0x11c
-    unsigned long mLastMessageTime;         // +0x120 TMGetTime of the last "cannot" chat line
-    long mLevel;                            // +0x124 the level last shown
-    long mNumQueued;                        // +0x128
-    bool mScenarioEditor;                   // +0x12c the button is on the scenario editor's form
-    bool mDisabled;                         // +0x12d GetDisabled() as of the last UpdateCost
 };
 
 #endif

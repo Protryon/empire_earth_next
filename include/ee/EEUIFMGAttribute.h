@@ -7,14 +7,20 @@
 #define EE_EEUIFMGATTRIBUTE_H
 #include "rust/game/screens.h"
 
-class GEText;
 
-class EEUIFMGAttribute : public EEUIBUpgrade {
+class EEUIFMGAttribute : public EEUIBUpgrade, public EeScreensAttributeFields {
 public:
     // 0x26783d (callers 0x1a526d, 0x274868)
+    // Creates the main game form's attribute upgrade button with a level text in its corner (hud_more.rs)
     EEUIFMGAttribute(GEFont* inFont, UIForm* inForm, const GERectangle& inRectangle, unsigned long inIndex,
                      unsigned long inId, const GEColor& inTextColor, bool inScenarioEditor,
-                     unsigned long inBorderThickness);
+                     unsigned long inBorderThickness)
+        : EEUIBUpgrade(inId, inRectangle.GetTopLeft(), (unsigned long)inRectangle.GetWidth(),
+                       (unsigned long)inRectangle.GetHeight(), inForm, inIndex, inScenarioEditor, inBorderThickness),
+          EeScreensAttributeFields()
+    {
+        ee_screens_att_construct((uintptr_t)this, (uintptr_t)inFont, (uintptr_t)&inTextColor);
+    }
     virtual ~EEUIFMGAttribute();
     // Snapshots the button; shows the number of queued upgrades as its level text (ee_screens hud_more.rs)
     virtual long CopyData() { return (long)ee_screens_att_copy_data((uintptr_t)this); }
@@ -22,13 +28,9 @@ public:
     virtual long DrawTextA() { return (long)ee_screens_att_draw_text((uintptr_t)this); }
     // 0x267a6b: the rectangle the status box stretches the button's bitmaps to (EEUIFMGStatusBox 0x26ae16)
     GERectangle GetIconRectangle() const;
-protected:
     virtual void TabbedTo() {}
     virtual void TabbedFrom() {}
     virtual long UpdateKeyboard() { return 0; }
-public:   // (the Rust bodies' shims: EEUIFMGAttribute.cpp)
-    GEText* mLevelText;                     // +0x130
-    bool mShowLevel;                        // +0x134 mL128 > 0 as of the last CopyData
 };
 
 #endif

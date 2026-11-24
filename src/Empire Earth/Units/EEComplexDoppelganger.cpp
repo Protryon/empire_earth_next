@@ -67,130 +67,6 @@ static void RestoreLoadedContacts()
     ee_units_dop_body(EE_UNITS_DOP_DO_RESTORE_CONTACTS, NULL, NULL, 0, 0);   // dop_file.rs
 }
 
-// Creates an empty complex doppelganger with no model, hit points or tile
-EEComplexDoppelganger::EEComplexDoppelganger()
-{
-    this->Reset();
-}
-
-// Returns the remembered unit's animation state
-long EEComplexDoppelganger::GetAnimation()
-{
-    return this->mAnimation;
-}
-
-// Returns itself: this doppelganger is a complex one
-EEComplexDoppelganger* EEComplexDoppelganger::GetComplexDoppelganger()
-{
-    return this;
-}
-
-// Returns whether the remembered unit was fully built (the top bit of the packed hit points)
-bool EEComplexDoppelganger::IsBuilt()
-{
-    return (this->mPackedHitPoints & 0x80000000) > 0;
-}
-
-// Returns the remembered animation frame
-long EEComplexDoppelganger::GetFrame()
-{
-    return this->mFrame;
-}
-
-// Returns the remembered model
-EEModel* EEComplexDoppelganger::GetModel()
-{
-    return this->mModel;
-}
-
-// Returns whether the remembered unit was a building foundation
-bool EEComplexDoppelganger::IsFoundation()
-{
-    return this->mIsFoundation;
-}
-
-// Copies the remembered position and orientation into the caller's transformation
-void EEComplexDoppelganger::GetTransformation(GETransformation& outTransformation)
-{
-    outTransformation = this->mTransformation;
-}
-
-// Returns the remembered scale
-float EEComplexDoppelganger::GetScale()
-{
-    return this->mScale;
-}
-
-// Returns the remembered hit points (a resource's amount) without the built bit
-long EEComplexDoppelganger::GetHitPoints()
-{
-    return this->mPackedHitPoints & 0x7fffffff;
-}
-
-// Returns the tile X the unit was seen on
-long EEComplexDoppelganger::GetTileX()
-{
-    return this->mTileX;
-}
-
-// Returns the tile Y the unit was seen on
-long EEComplexDoppelganger::GetTileY()
-{
-    return this->mTileY;
-}
-
-// Destroys the complex doppelganger, releasing its unit and model media
-EEComplexDoppelganger::~EEComplexDoppelganger()
-{
-    this->Clear();
-}
-
-// Forgets the model, hit points, frame, animation, scale and tile (-10000, off the map) without releasing anything
-void EEComplexDoppelganger::Reset()
-{
-    ee_units_dop_more(EE_UNITS_DOPX_DO_RESET, this, 0, 0);   // dop_more.rs
-}
-
-// Releases the remembered unit and the model's media, then resets
-void EEComplexDoppelganger::Clear()
-{
-    ee_units_dop_more(EE_UNITS_DOPX_DO_CLEAR, this, 0, 0);   // dop_more.rs
-}
-
-// Remembers what a viewing player sees of a unit: model, frame, animation, hit points (a resource's amount),
-// built flag, position and scale (a unit with no complex part stands built at its tile centre), then loads the media
-void EEComplexDoppelganger::Initialize(EEUnit* inUnit, EEPlayer* inPlayer, RTSTile* inTile)
-{
-    ee_units_dop_body(EE_UNITS_DOP_DO_INITIALIZE, this, inUnit, (int64_t)(uintptr_t)inPlayer, (int64_t)(uintptr_t)inTile);   // dop_file.rs
-}
-
-// Copies another complex doppelganger's remembered view for a new viewing player
-void EEComplexDoppelganger::Initialize(EEDoppelganger* inOther, EEPlayer* inPlayer, RTSTile* inTile)
-{
-    ee_units_dop_body(EE_UNITS_DOP_DO_INITIALIZE_COPY, this, inOther, (int64_t)(uintptr_t)inPlayer, (int64_t)(uintptr_t)inTile);   // dop_file.rs
-}
-
-// Reads the transformation, model index, hit points, frame, animation, scale and tile after the base data (the
-// foundation flag only from minor version 0xe6 on); returns the first read error
-long EEComplexDoppelganger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return (long)ee_units_dop_body(EE_UNITS_DOP_DO_LOAD, this, &inFile, inMajorVersion, inMinorVersion);   // dop_file.rs
-}
-
-// Turns the loaded model index back into its media (clamping the frame) and puts the doppelganger on its tile; frees
-// it if the unit or model is gone; returns 0
-long EEComplexDoppelganger::RepairPointers(unsigned long inFirst, unsigned long inSecond)
-{
-    return (long)ee_units_dop_more(EE_UNITS_DOPX_DO_REPAIR_POINTERS, this, (int64_t)inFirst, (int64_t)inSecond);   // dop_more.rs
-}
-
-// Writes the transformation, model index, hit points, frame, animation, scale, tile and foundation flag after the base
-// data; returns the first write error
-long EEComplexDoppelganger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return (long)ee_units_dop_body(EE_UNITS_DOP_DO_SAVE, this, &outFile, inMajorVersion, inMinorVersion);   // dop_file.rs
-}
-
 // the load's scratch values: the build queue entry's second, the slot of the next held unit or unit variable
 static unsigned long sLoadSecond;
 static size_t sLoadSlot;
@@ -209,42 +85,10 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, this, this, &theIn);
 }
 
-// Load stores the saved fractions as floats in the longs.
-// Turns the saved hit point, flight, garrison and power fractions back into amounts (at least 1 if nonzero; port,
-// R5b.4 round 27: ee_units unit_load.rs finish_fractions over the record); marks an old save's (<= 200) unbuilt land
-// building at 1 hit point as a foundation, reloading its media
-long EEComplexUnit::FinishLoad(long inMajorVersion, long inMinorVersion)
-{
-    return (long)ee_units_dop_more(EE_UNITS_DOPX_DO_FINISH_LOAD, this, inMajorVersion, inMinorVersion);   // dop_more.rs
-}
-
-/// Turns the loaded ids back into units, groups, research and behaviour, dropping the missing ones; strands a unit whose
-// transport or owner vanished and clears goal queues that fail to repair; returns the last status. port (the units'
-// lane, round 7): the body is Rust (ee_units dop_repair.rs) over ee_units_dop_host's statements
-long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return (long)ee_units_dop_repair_pointers(this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-}
-
 // RepairPointers's locals (the cargo and research kept, the new turret angles)
 static std::vector<EEComplexUnit*> sRepairCargo;
 static std::vector<EEProductionEntry> sRepairResearch;
 static float* sRepairTurrets;
-
-static float EEDopFloat(int64_t inBits)
-{
-    uint32_t theBits = (uint32_t)inBits;
-    float theValue;
-    memcpy(&theValue, &theBits, sizeof theValue);
-    return theValue;
-}
-
-static int64_t EEDopBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, sizeof theBits);
-    return theBits;
-}
 
 template <class T> static T* EEDopObject(uint64_t inHandle)
 {
@@ -410,8 +254,8 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_MODEL_PARTS: return (int64_t)theUnit->GetModel()->GetNumParts();
     case EE_UNITS_DOP_NUM_TURRET_ANGLES: return (int64_t)theUnit->mNumTurretAngles;
     case EE_UNITS_DOP_SCRATCH_TURRETS_NEW: sRepairTurrets = inB == 0 ? NULL : new float[(size_t)inB]; return 0;
-    case EE_UNITS_DOP_TURRET_ANGLE: return EEDopBits(theUnit->mTurretAngles[(size_t)inB]);
-    case EE_UNITS_DOP_SCRATCH_TURRET_SET: sRepairTurrets[(size_t)inB] = EEDopFloat(inC); return 0;
+    case EE_UNITS_DOP_TURRET_ANGLE: return UFloatBits(theUnit->mTurretAngles[(size_t)inB]);
+    case EE_UNITS_DOP_SCRATCH_TURRET_SET: sRepairTurrets[(size_t)inB] = UBitsFloat((uint32_t)(inC)); return 0;
     case EE_UNITS_DOP_TURRETS_DELETE: delete[] theUnit->mTurretAngles; return 0;
     case EE_UNITS_DOP_TURRETS_ASSIGN: theUnit->mTurretAngles = sRepairTurrets; return 0;
     case EE_UNITS_DOP_PAST_LAST_FRAME:
@@ -498,11 +342,11 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_SCALE_OF_CLASS: theDop->mScale = theSeen->mUnitClass->GetScale(); return 0;
     case EE_UNITS_DOP_NOT_FOUNDATION: theDop->mIsFoundation = false; return 0;
     case EE_UNITS_DOP_IDENTITY: theDop->mTransformation.MakeIdentity(); return 0;
-    case EE_UNITS_DOP_HALF_SIZE: return EEDopBits(theSeen->mUnitClass->mTileSize * 0.5f);
+    case EE_UNITS_DOP_HALF_SIZE: return UFloatBits(theSeen->mUnitClass->mTileSize * 0.5f);
     case EE_UNITS_DOP_SEEN_TILE: return inB == 0 ? theSeen->mTileX : theSeen->mTileY;
-    case EE_UNITS_DOP_MESH_Z: return EEDopBits(::gWorld.mMap->mTerrainMesh.GetMeshZ(EEDopFloat(inB), EEDopFloat(inC)));
+    case EE_UNITS_DOP_MESH_Z: return UFloatBits(::gWorld.mMap->mTerrainMesh.GetMeshZ(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC))));
     case EE_UNITS_DOP_SET_POSITION:
-        theDop->mTransformation.SetPosition(GE3DPoint(EEDopFloat(inB), EEDopFloat(inC), EEDopFloat((int64_t)inA)));
+        theDop->mTransformation.SetPosition(GE3DPoint(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC)), UBitsFloat((uint32_t)((int64_t)inA))));
         return 0;
     case EE_UNITS_DOP_SET_TILE_X: theDop->mTileX = (long)inB; return 0;
     case EE_UNITS_DOP_SET_TILE_Y: theDop->mTileY = (long)inB; return 0;
@@ -521,12 +365,12 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_CONTACTS_ADD: sDopContacts[(size_t)inB].first.first->AddContact(theOther); return 0;
     // dop_load.rs's live state at the first tick
     case EE_UNITS_DOP_IS_WORLD_UNIT: return static_cast<RTSUnit*>(theUnit) == gWorld.GetUnit((unsigned long)inB);
-    case EE_UNITS_DOP_SET_ANIMATION_FRACTION: theUnit->mAnimationFraction = EEDopFloat(inB); return 0;
+    case EE_UNITS_DOP_SET_ANIMATION_FRACTION: theUnit->mAnimationFraction = UBitsFloat((uint32_t)(inB)); return 0;
     case EE_UNITS_DOP_SET_NEXT_FRAME: theUnit->mNextFrame = (long)inB; return 0;
-    case EE_UNITS_DOP_SET_COLLISION_RADIUS: theUnit->mCollisionRadius = EEDopFloat(inB); return 0;
-    case EE_UNITS_DOP_SET_PUSH_VELOCITY_X: theUnit->mPushVelocityX = EEDopFloat(inB); return 0;
-    case EE_UNITS_DOP_SET_PUSH_VELOCITY_Y: theUnit->mPushVelocityY = EEDopFloat(inB); return 0;
-    case EE_UNITS_DOP_SET_F24C: theUnit->mF24C = EEDopFloat(inB); return 0;
+    case EE_UNITS_DOP_SET_COLLISION_RADIUS: theUnit->mCollisionRadius = UBitsFloat((uint32_t)(inB)); return 0;
+    case EE_UNITS_DOP_SET_PUSH_VELOCITY_X: theUnit->mPushVelocityX = UBitsFloat((uint32_t)(inB)); return 0;
+    case EE_UNITS_DOP_SET_PUSH_VELOCITY_Y: theUnit->mPushVelocityY = UBitsFloat((uint32_t)(inB)); return 0;
+    case EE_UNITS_DOP_SET_F24C: theUnit->mF24C = UBitsFloat((uint32_t)(inB)); return 0;
     case EE_UNITS_DOP_SET_AI_STATE: theUnit->mAIState = (long)inB; return 0;
     case EE_UNITS_DOP_SET_NEXT_TRIGGER_TIME: theUnit->mNextTriggerTime = (unsigned long)inB; return 0;
     case EE_UNITS_DOP_IGNORED_TARGETS_CLEAR: theUnit->mIgnoredTargets.clear(); return 0;
@@ -540,7 +384,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_SET_POWER: theUnit->mPower = (long)inB; return 0;
     case EE_UNITS_DOP_MODEL_PARTS_OR_ZERO: return theUnit->GetModel() != NULL ? (int64_t)theUnit->GetModel()->GetNumParts() : 0;
     case EE_UNITS_DOP_HAS_TURRET_ANGLES: return theUnit->mTurretAngles != NULL;
-    case EE_UNITS_DOP_SET_TURRET_ANGLE: theUnit->mTurretAngles[(size_t)inB] = EEDopFloat(inC); return 0;
+    case EE_UNITS_DOP_SET_TURRET_ANGLE: theUnit->mTurretAngles[(size_t)inB] = UBitsFloat((uint32_t)(inC)); return 0;
     // dop_more.rs's (the doppelganger's Reset, Clear, RepairPointers; the unit's FinishLoad)
     case EE_UNITS_DOPX_ZERO_SCALE: theDop->mScale = 0.0f; return 0;
     case EE_UNITS_DOPX_CLEAR_MODEL: theDop->mModel = NULL; return 0;
@@ -568,13 +412,6 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOPX_BASE_FINISH_LOAD: return theUnit->EEUnit::FinishLoad((long)inB, (long)inC);
     default: return 0;
     }
-}
-
-// RepairPointers's helper, out of line in this unit.
-// Shows the model of the unit's current animation state at the given frame
-void EEComplexUnit::SetAnimationFrame(unsigned long inFrame)
-{
-    ee_units_cu_small(EE_UNITS_CU_S_DO_SET_ANIMATION_FRAME, this, NULL, (int64_t)inFrame);   // cu_small.rs
 }
 
 // Writes the complex unit's state to the saved game, units and groups as ids and hit points, flight time, garrison
@@ -722,9 +559,4 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
     default:
         return 0;
     }
-}
-
-bool EEComplexDoppelganger::IsComplex()
-{
-    return true;
 }

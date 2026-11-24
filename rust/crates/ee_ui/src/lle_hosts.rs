@@ -104,6 +104,326 @@ unsafe fn base_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _
     (if a < 2 { cpp.entity_just_pressed(k) } else { cpp.entity_just_unpressed(k) }) as isize
 }
 
+/// `CreateBackgrounds`' background for the entry `a` on the form `b` (texture description `c`): the entry's type's
+/// class (`UIBackgroundType`), a tiled one with its tiling and, stretched, its across and down percents; another
+/// type the manager's user-defined background.
+///
+/// # Safety
+/// The host contract: `a` a live `EeUiBgTableFields` (the `UIBackgroundTable`'s base).
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn bgt_make(o: *mut c_void, a: isize, b: isize, c: isize, _d: isize, _f: *mut f32) -> isize {
+    use crate::ids::UITiling as T;
+    // SAFETY: the contract
+    let e = unsafe { *(a as *const crate::bgtableobj::EeUiBgTableFields) };
+    let mut f = [0.0f32; 4];
+    let tiled = |tiling: T, f: &mut [f32; 4]| {
+        // SAFETY: the contract
+        unsafe { ee_uicpp_bgt_make_tiled(o, a, b, c, tiling as isize, f.as_mut_ptr()) }
+    };
+    // SAFETY: the contract
+    unsafe {
+        match e.mBackgroundType {
+            0 => ee_uicpp_bgt_make_bitmap(o, a, b, c, 0, f.as_mut_ptr()),
+            1 => tiled(T::kTilingBoth, &mut f),
+            2 => ee_uicpp_bgt_make_full(o, a, b, c, 0, f.as_mut_ptr()),
+            3 => tiled(T::kTilingLeftRight, &mut f),
+            4 => tiled(T::kTilingTopBottom, &mut f),
+            5 => {
+                f[0] = e.mTileWidthPercent;
+                f[1] = e.mTileHeightPercent;
+                tiled(T::kTilingStretched, &mut f)
+            }
+            _ => ee_uicpp_bgt_make_user(o, a, b, c, 0, f.as_mut_ptr()),
+        }
+    }
+}
+
+/// The combo box's `ComboQuery` (`a`: the query in the top 8 bits, its argument below) and `ComboAct` (`a` the
+/// action, `b`, `c`, `d`, `f` its arguments): one shim each; 0 for one that has none.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn combo_query(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract (a query's argument goes in a)
+    unsafe { combo_shim(combo_query_shim(a >> 24), o, a & 0xff_ffff, b, c, d, f) }
+}
+
+/// See [`combo_query`].
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn combo_act(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    use crate::comboobj::EeUiComboAct as A;
+    let shim = match a {
+        x if x == A::ListChangeSelection as isize => V(ee_uicpp_combo_a_list_change_selection),
+        x if x == A::ListInsertLine as isize => V(ee_uicpp_combo_a_list_insert_line),
+        x if x == A::ListDeleteLine as isize => V(ee_uicpp_combo_a_list_delete_line),
+        x if x == A::ListDeleteAll as isize => V(ee_uicpp_combo_a_list_delete_all),
+        x if x == A::ListChangeWidth as isize => V(ee_uicpp_combo_a_list_change_width),
+        x if x == A::PartMouseDown as isize => R(ee_uicpp_combo_a_part_mouse_down),
+        x if x == A::PartMouseUp as isize => R(ee_uicpp_combo_a_part_mouse_up),
+        x if x == A::PartMouseMove as isize => R(ee_uicpp_combo_a_part_mouse_move),
+        x if x == A::ListWheel as isize => R(ee_uicpp_combo_a_list_wheel),
+        x if x == A::PartUpdateKeyboard as isize => R(ee_uicpp_combo_a_part_update_keyboard),
+        x if x == A::PartTranslatedKey as isize => R(ee_uicpp_combo_a_part_translated_key),
+        x if x == A::PartSetRectangle as isize => V(ee_uicpp_combo_a_part_set_rectangle),
+        x if x == A::PartSetLocation as isize => V(ee_uicpp_combo_a_part_set_location),
+        x if x == A::PartCopyData as isize => R(ee_uicpp_combo_a_part_copy_data),
+        x if x == A::BaseCopyData as isize => R(ee_uicpp_combo_a_base_copy_data),
+        x if x == A::SetPopup as isize => V(ee_uicpp_combo_a_set_popup),
+        x if x == A::SetDirty as isize => V(ee_uicpp_combo_a_set_dirty),
+        x if x == A::SetRectangle as isize => V(ee_uicpp_combo_a_set_rectangle),
+        x if x == A::BaseSetRectangle as isize => V(ee_uicpp_combo_a_base_set_rectangle),
+        x if x == A::BaseSetLocation as isize => V(ee_uicpp_combo_a_base_set_location),
+        x if x == A::SetAlwaysDirty as isize => V(ee_uicpp_combo_a_set_always_dirty),
+        x if x == A::Fire as isize => V(ee_uicpp_combo_a_fire),
+        x if x == A::CaptureMouse as isize => V(ee_uicpp_combo_a_capture_mouse),
+        x if x == A::CaptureKeyboard as isize => V(ee_uicpp_combo_a_capture_keyboard),
+        x if x == A::ReleaseMouse as isize => V(ee_uicpp_combo_a_release_mouse),
+        x if x == A::ReleaseKeyboard as isize => V(ee_uicpp_combo_a_release_keyboard),
+        x if x == A::OpenList as isize => V(ee_uicpp_combo_a_open_list),
+        x if x == A::CloseList as isize => V(ee_uicpp_combo_a_close_list),
+        x if x == A::AddString as isize => R(ee_uicpp_combo_a_add_string),
+        x if x == A::ChangeSelection as isize => V(ee_uicpp_combo_a_change_selection),
+        _ => None,
+    };
+    // SAFETY: the contract
+    unsafe { combo_shim(shim, o, a, b, c, d, f) }
+}
+
+/// The shim of a combo box query.
+#[cfg(not(any(test, feature = "no_cpp")))]
+fn combo_query_shim(q: isize) -> Option<ComboShim> {
+    use crate::comboobj::EeUiComboQuery as Q;
+    match q {
+        x if x == Q::RectOf as isize => V(ee_uicpp_combo_q_rect_of),
+        x if x == Q::TextBoxBorder as isize => R(ee_uicpp_combo_q_text_box_border),
+        x if x == Q::LineCount as isize => R(ee_uicpp_combo_q_line_count),
+        x if x == Q::Line as isize => R(ee_uicpp_combo_q_line),
+        x if x == Q::LineHeight as isize => R(ee_uicpp_combo_q_line_height),
+        x if x == Q::ListBorder as isize => R(ee_uicpp_combo_q_list_border),
+        x if x == Q::ListScrollBarCaptured as isize => R(ee_uicpp_combo_q_list_scroll_bar_captured),
+        x if x == Q::WindowHeight as isize => R(ee_uicpp_combo_q_window_height),
+        x if x == Q::EditText as isize => R(ee_uicpp_combo_q_edit_text),
+        x if x == Q::TabbingOn as isize => R(ee_uicpp_combo_q_tabbing_on),
+        x if x == Q::TabStop as isize => R(ee_uicpp_combo_q_tab_stop),
+        x if x == Q::HasMouseCapture as isize => R(ee_uicpp_combo_q_has_mouse_capture),
+        _ => None,
+    }
+}
+
+/// A combo box shim: a number's or a void one.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[derive(Clone, Copy)]
+enum ComboShim {
+    R(unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize),
+    V(unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32)),
+}
+
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[allow(non_snake_case)]
+fn R(f: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize) -> Option<ComboShim> {
+    Some(ComboShim::R(f))
+}
+
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[allow(non_snake_case)]
+fn V(f: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32)) -> Option<ComboShim> {
+    Some(ComboShim::V(f))
+}
+
+/// Calls the shim (0 for none or a void one).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn combo_shim(
+    s: Option<ComboShim>,
+    o: *mut c_void,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the contract
+    unsafe {
+        match s {
+            Some(ComboShim::R(r)) => r(o, a, b, c, d, f),
+            Some(ComboShim::V(v)) => {
+                v(o, a, b, c, d, f);
+                0
+            }
+            None => 0,
+        }
+    }
+}
+
+/// The manager's form calls (`b`: managerobj.rs F_OPEN .. F_DELETE) -> the call's result (0 for the void ones).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn mgr_form_call(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    let r: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize = match b {
+        6 => ee_uicpp_mgr_form_copy,
+        7 => ee_uicpp_mgr_form_draw_polygons,
+        8 => ee_uicpp_mgr_form_draw_text,
+        9 => ee_uicpp_mgr_form_update_keyboard,
+        10 => ee_uicpp_mgr_form_update_mouse,
+        _ => {
+            let v: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) = match b {
+                0 => ee_uicpp_mgr_form_open,
+                1 => ee_uicpp_mgr_form_close,
+                2 => ee_uicpp_mgr_form_activate,
+                3 => ee_uicpp_mgr_form_deactivate,
+                4 => ee_uicpp_mgr_form_clear_clips,
+                5 => ee_uicpp_mgr_form_all_dirty,
+                _ => ee_uicpp_mgr_form_delete,
+            };
+            // SAFETY: the contract
+            unsafe { v(o, a, b, c, d, f) };
+            return 0;
+        }
+    };
+    // SAFETY: the contract
+    unsafe { r(o, a, b, c, d, f) }
+}
+
+/// The manager's form calls with a rectangle or a point in `f` (`b`: managerobj.rs R_ADD_DIRTY .. R_MOUSE_LOCATION).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn mgr_form_rect_call(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    let v: unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) = match b {
+        0 => ee_uicpp_mgr_form_add_dirty,
+        1 => ee_uicpp_mgr_form_redraw,
+        2 => ee_uicpp_mgr_form_add_clip,
+        3 => ee_uicpp_mgr_form_relayout,
+        _ => ee_uicpp_mgr_form_mouse_location,
+    };
+    // SAFETY: the contract
+    unsafe { v(o, a, b, c, d, f) };
+    0
+}
+
+/// The manager's IME calls on form `a` (`b` a manager_media.rs `ImeCall`, `c` its argument) -> the form's result.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn mgr_form_ime(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    unsafe {
+        match b {
+            0 => {
+                ee_uicpp_mgr_form_ime_result(o, a, b, c, d, f);
+                0
+            }
+            1 => ee_uicpp_mgr_form_ime_change(o, a, b, c, d, f),
+            2 => ee_uicpp_mgr_form_ime_close(o, a, b, c, d, f),
+            _ => ee_uicpp_mgr_form_ime_open(o, a, b, c, d, f),
+        }
+    }
+}
+
+/// The form's temporary hot key (AddHotKey's): made, on the form, its key `a` -> the hot key.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn form_hot_key_temp(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    unsafe {
+        let k = ee_uicpp_form_hot_key_new(o, 0, 0, 0, 0, f);
+        ee_uicpp_form_hot_key_set_form(o, k, 0, 0, 0, f);
+        ee_uicpp_form_hot_key_set_key(o, k, a, 0, 0, f);
+        k
+    }
+}
+
+/// The keyboard's input entity for key `a` (NULL when it has none).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn form_key_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+    let mut e: *mut c_void = core::ptr::null_mut();
+    // SAFETY: the contract; the slot is live for the call
+    unsafe { ee_uicpp_form_key_entity_get(o, a, &mut e as *mut *mut c_void as isize, 0, 0, f) };
+    e as isize
+}
+
+/// The mouse's input entity for button `a` (NULL when it has none).
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn form_mouse_entity(o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, f: *mut f32) -> isize {
+    let mut e: *mut c_void = core::ptr::null_mut();
+    // SAFETY: the contract; the slot is live for the call
+    unsafe { ee_uicpp_form_mouse_entity_get(o, a, &mut e as *mut *mut c_void as isize, 0, 0, f) };
+    e as isize
+}
+
+/// The edit and list boxes' key questions (`EditKey`, edit_keys.rs' numbering): UIControl's key predicates, Control's
+/// and Backspace's values, Enter's and the keypad Enter's presses; false for another number.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn ui_key(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    use crate::lle_control::{ee_ui_key_pressed, key, EeUiKey as K, EeUiKeyPress as P};
+    use crate::lle_cpp::Cpp;
+    let mut c = crate::lle_cpp::Ffi;
+    let p = |w: P| ee_ui_key_pressed(w);
+    (match a {
+        0 => p(P::Shift),
+        1 => c.entity_value(key(K::Control)) != 0,
+        2 => c.entity_value(key(K::BackSpace)) != 0,
+        3 => p(P::Delete),
+        4 => p(P::Right),
+        5 => p(P::Left),
+        6 => p(P::Home),
+        7 => p(P::End),
+        8 => p(P::Up),
+        9 => p(P::Down),
+        10 => p(P::Enter),
+        11 => p(P::Cut),
+        12 => p(P::Copy),
+        13 => p(P::Paste),
+        17 => c.entity_just_pressed(key(K::Enter)),
+        18 => c.entity_just_pressed(key(K::NumEnter)),
+        _ => false,
+    }) as isize
+}
+
+/// The edit box's paste text (`PlatClipboardGetText`'s copy, kept until the next ask, which frees it).
+#[cfg(not(any(test, feature = "no_cpp")))]
+static CLIPBOARD: core::sync::atomic::AtomicPtr<core::ffi::c_char> =
+    core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
+
+/// The clipboard's text (NULL without one), the previous ask's freed.
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn clipboard_get(_o: *mut c_void, _a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+    extern "C" {
+        fn PlatClipboardGetText() -> *mut core::ffi::c_char;
+        fn free(p: *mut c_void);
+    }
+    // SAFETY: the platform's malloc'ed copy; the previous one is not used again
+    unsafe {
+        let text = PlatClipboardGetText();
+        free(CLIPBOARD.swap(text, core::sync::atomic::Ordering::Relaxed) as *mut c_void);
+        text as isize
+    }
+}
+
 /// `UIObjHost::Media`'s text extent: the text's width and height in `f[0]`, `f[1]`.
 ///
 /// # Safety
@@ -331,36 +651,6 @@ pub unsafe extern "C" fn ee_ui_background_full_host(
 ) -> isize {
     // SAFETY: the contract
     unsafe { chain(&[background], o, op, a, b, c, d, f) }
-}
-
-/// The hosts still C++ (`UIComboBox::Rust::Op`, `UIControlsTableHost::Op`): each a table of every op.
-macro_rules! cpp_hosts {
-    ($( $(#[$m:meta])* $name:ident = $sym:ident; )*) => {$(
-        $(#[$m])*
-        #[cfg(not(any(test, feature = "no_cpp")))]
-        pub(crate) unsafe fn $name(
-            o: *mut c_void,
-            op: EeUiOp,
-            a: isize,
-            b: isize,
-            c: isize,
-            d: isize,
-            f: *mut f32,
-        ) -> Option<isize> {
-            extern "C" {
-                fn $sym(o: *mut c_void, op: EeUiOp, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize;
-            }
-            // SAFETY: the host contract
-            Some(unsafe { $sym(o, op, a, b, c, d, f) })
-        }
-    )*};
-}
-
-cpp_hosts! {
-    /// The combo box's.
-    combo = ee_uicpp_combo_host;
-    /// The controls table's.
-    table = ee_uicpp_table_host;
 }
 
 /// The file lists' `FlDirFirst`: directory `c` of the path `b` into the search `a`, then its first file.
@@ -609,4 +899,169 @@ pub unsafe extern "C" fn ee_ui_bg_table_host(
 ) -> isize {
     // SAFETY: the contract
     unsafe { chain(&[bg_table], o, op, a, b, c, d, f) }
+}
+
+// ---- the controls table's constructors, setters and texts (UI round 16: UIControlsTableHost's switches)
+
+/// A shim answering a number.
+#[cfg(not(any(test, feature = "no_cpp")))]
+type Shim = unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32) -> isize;
+/// A shim answering nothing.
+#[cfg(not(any(test, feature = "no_cpp")))]
+type VoidShim = unsafe extern "C" fn(*mut c_void, isize, isize, isize, isize, *mut f32);
+
+/// `TblMake`'s constructors by [`EeUiTableKind`](crate::tableobj::EeUiTableKind) (UIControlsTable.cpp).
+#[cfg(not(any(test, feature = "no_cpp")))]
+const MAKE: [Shim; 18] = [
+    ee_uicpp_tbl_make_bitmap,
+    ee_uicpp_tbl_make_button,
+    ee_uicpp_tbl_make_blinking_button,
+    ee_uicpp_tbl_make_scalable_button,
+    ee_uicpp_tbl_make_button,
+    ee_uicpp_tbl_make_check_box,
+    ee_uicpp_tbl_make_combo_box,
+    ee_uicpp_tbl_make_file_combo_box,
+    ee_uicpp_tbl_make_edit_box,
+    ee_uicpp_tbl_make_file_list_box,
+    ee_uicpp_tbl_make_line_graph,
+    ee_uicpp_tbl_make_list_box,
+    ee_uicpp_tbl_make_radio_button,
+    ee_uicpp_tbl_make_scroll_bar,
+    ee_uicpp_tbl_make_scrolling_label,
+    ee_uicpp_tbl_make_slider,
+    ee_uicpp_tbl_make_status_bar,
+    ee_uicpp_tbl_make_text_label,
+];
+
+/// `TblSet`'s setters by [`Set`] (`None`: Rust's, [`table_set`] and [`table_call`]).
+#[cfg(not(any(test, feature = "no_cpp")))]
+const SET: [Option<VoidShim>; 45] = [
+    Some(ee_uicpp_tbl_set_button_text),
+    Some(ee_uicpp_tbl_set_button_focused_color),
+    Some(ee_uicpp_tbl_set_button_down_sound),
+    Some(ee_uicpp_tbl_set_button_up_sound),
+    None,
+    Some(ee_uicpp_tbl_set_check_set_checked),
+    Some(ee_uicpp_tbl_set_combo_focused_rect),
+    Some(ee_uicpp_tbl_set_combo_selected_bg),
+    Some(ee_uicpp_tbl_set_combo_selection),
+    Some(ee_uicpp_tbl_set_combo_text_box_opacity),
+    Some(ee_uicpp_tbl_set_combo_text_box_color),
+    Some(ee_uicpp_tbl_set_combo_list_always_dirty),
+    Some(ee_uicpp_tbl_set_edit_number),
+    Some(ee_uicpp_tbl_set_edit_text),
+    Some(ee_uicpp_tbl_set_edit_selected_bg),
+    Some(ee_uicpp_tbl_set_list_focused_rect),
+    Some(ee_uicpp_tbl_set_list_selected_bg),
+    Some(ee_uicpp_tbl_set_list_scroll_opacity),
+    Some(ee_uicpp_tbl_set_list_selection),
+    None,
+    Some(ee_uicpp_tbl_set_graph_font),
+    Some(ee_uicpp_tbl_set_graph_font_color),
+    Some(ee_uicpp_tbl_set_radio_up_unchecked),
+    None,
+    Some(ee_uicpp_tbl_set_scroll_range),
+    Some(ee_uicpp_tbl_set_scroll_value),
+    Some(ee_uicpp_tbl_set_slider_range),
+    Some(ee_uicpp_tbl_set_slider_value),
+    Some(ee_uicpp_tbl_set_slider_page),
+    Some(ee_uicpp_tbl_set_status_range),
+    Some(ee_uicpp_tbl_set_status_value),
+    Some(ee_uicpp_tbl_set_status_color),
+    Some(ee_uicpp_tbl_set_status_opacity),
+    Some(ee_uicpp_tbl_set_status_text),
+    Some(ee_uicpp_tbl_set_status_focused_color),
+    Some(ee_uicpp_tbl_set_label_number),
+    Some(ee_uicpp_tbl_set_label_align),
+    Some(ee_uicpp_tbl_set_label_scroll_opacity),
+    Some(ee_uicpp_tbl_set_label_fit),
+    Some(ee_uicpp_tbl_set_bg_color),
+    Some(ee_uicpp_tbl_set_bg_opacity),
+    Some(ee_uicpp_tbl_set_always_dirty),
+    Some(ee_uicpp_tbl_set_set_rectangle),
+    Some(ee_uicpp_tbl_set_change_font),
+    Some(ee_uicpp_tbl_set_set_trigger),
+];
+
+/// `SetupText`'s texts by class (tableobj.rs `TEXT_*`).
+#[cfg(not(any(test, feature = "no_cpp")))]
+const TEXT: [Shim; 8] = [
+    ee_uicpp_tbl_text_button,
+    ee_uicpp_tbl_text_check,
+    ee_uicpp_tbl_text_combo,
+    ee_uicpp_tbl_text_edit,
+    ee_uicpp_tbl_text_list,
+    ee_uicpp_tbl_text_radio,
+    ee_uicpp_tbl_text_label,
+    ee_uicpp_tbl_text_status,
+];
+
+/// `TblMake`: the constructor of the record at `a`'s kind -> the control.
+///
+/// # Safety
+/// The host contract: `a` a live [`crate::tableobj::EeUiTableMake`].
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn table_make(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    // SAFETY: the contract
+    let kind = unsafe { (*(a as *const crate::tableobj::EeUiTableMake)).kind } as usize;
+    use crate::buttonobj::EeUiButtonCall as B;
+    use crate::tableobj::EeUiTableKind as K;
+    // SAFETY: the contract; the kind's constructor
+    let control = unsafe { MAKE[kind](o, a, b, c, d, f) };
+    // the folded button subclasses' constructor parts (UI round 16): UIScalableButton's three slice rectangles and
+    // its text rectangle (the control's), UIDualButton's right button
+    // SAFETY: the contract
+    let m = unsafe { &*(a as *const crate::tableobj::EeUiTableMake) };
+    let button = |call: B, i: isize, r: &crate::rect::UiRect| {
+        let mut buf = [r.bottom, r.left, r.right, r.top];
+        let o = crate::direct::find(crate::direct::Kind::Button, control as *const c_void);
+        if !o.is_null() {
+            // SAFETY: a live button; buf four floats
+            unsafe { crate::buttonobj::ee_ui_button_call(o as *const _, call, i, 0, buf.as_mut_ptr()) };
+        }
+    };
+    if m.kind == K::ScalableButton {
+        for (i, r) in [m.normal_rect, m.focused_rect, m.pressed_rect].iter().enumerate() {
+            button(B::ScalableInit, i as isize, r);
+        }
+        button(B::SetTextRectangle, 0, &m.rect);
+    } else if m.kind == K::DualButton {
+        button(B::DualInit, 0, &m.rect);
+    }
+    control
+}
+
+/// `TblSet`: control `a`'s setter `b` with `c`, `d` and `f`; `SetupText` sets up the text of class `c` (tableobj.rs
+/// `TEXT_*`) through [`ee_ui_table_setup_text`].
+///
+/// # Safety
+/// The host contract.
+#[cfg(not(any(test, feature = "no_cpp")))]
+unsafe fn table_set(o: *mut c_void, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
+    use crate::tableobj::EeUiTableSet as Set;
+    if b == Set::SetupText as isize {
+        // SAFETY: the contract; the class's text
+        let text = unsafe { TEXT[c as usize](o, a, b, c, d, f) };
+        // SAFETY: the table and the control's text
+        unsafe { ee_ui_table_setup_text(o, text as *mut c_void) };
+    } else if let Some(Some(set)) = SET.get(b as usize) {
+        // SAFETY: the contract; the selector's setter
+        unsafe { set(o, a, b, c, d, f) };
+    }
+    0
+}
+
+/// `UIControlsTable::SetupGEText(text)`: the text transparent, in the description's text colour.
+///
+/// # Safety
+/// `table` is a live C++ `UIControlsTable`, `text` a live `GEText`.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_table_setup_text(table: *mut c_void, text: *mut c_void) {
+    let mut f = [0.0f32; 4];
+    // SAFETY: the contract
+    unsafe {
+        ee_uicpp_tbl_text_transparent(table, text as isize, 0, 0, 0, f.as_mut_ptr());
+        ee_uicpp_tbl_text_fg(table, text as isize, 0, 0, 0, f.as_mut_ptr());
+    }
 }

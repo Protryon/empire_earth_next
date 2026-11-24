@@ -1150,6 +1150,116 @@ pub enum EeWonLobbyCtlOp {
     FileDialogListSaves,
     /// `LobbyDoDialog((EELobbyFileDialog*)a)`.
     DoDialog,
+    // ---- R6 WON round 35: the statements of LobbyNetCtrlHost.cpp's compound cases hostops.rs composes in the game
+    /// `((ListItem*)a)->mHeight` (ItemGet's fields, one op each).
+    ItemGetHeight = 1600,
+    /// `((ListItem*)a)->mTop`.
+    ItemGetTop,
+    /// `((ListItem*)a)->mWidth`.
+    ItemGetWidth,
+    /// `((ListItem*)a)->mSelected` (0 or 1).
+    ItemGetSelected,
+    /// `((ListItem*)a)->mSelectable` (0 or 1).
+    ItemGetSelectable,
+    /// `((TextListItem*)a)->mColor`.
+    ItemGetColor,
+    /// `((ListItem*)a)->mHeight = b` (ItemSet's fields).
+    ItemSetHeight,
+    /// `((ListItem*)a)->mTop = b`.
+    ItemSetTop,
+    /// `((ListItem*)a)->mWidth = b`.
+    ItemSetWidth,
+    /// `((ListItem*)a)->mSelected = b != 0`.
+    ItemSetSelected,
+    /// `((ListItem*)a)->mSelectable = b != 0`.
+    ItemSetSelectable,
+    /// `((TextListItem*)a)->mColor = b`.
+    ItemSetColor,
+    /// `dynamic_cast<ChatLink*>(((TextLinkActivatedEvent*)a)->mLink.get())` (EvGet's TlaLink).
+    EvTlaLink,
+    /// `new GUIStringData((const char*)a, b)` (no reference; TextNew's first statement).
+    TextAlloc,
+    /// `sEELobbyBytes = (std::string)GUIString(a)` (TextBytes' local).
+    BytesOfText,
+    /// `sEELobbyBytes = ((RustServerOp*)a)->GetBytes(EE_WON_HTTPDOC_PATH, HTTPDocOwner_Sys)` (HttpDocPath's).
+    BytesOfHttpDocSys,
+    /// As BytesOfHttpDocSys with `HTTPDocOwner_Game`.
+    BytesOfHttpDocGame,
+    /// `sEELobbyBytes.length()`.
+    BytesLen,
+    /// `memcpy((char*)a, sEELobbyBytes.data(), b)`.
+    BytesCopy,
+    /// `std::string().swap(sEELobbyBytes)` (the local gone).
+    BytesDrop,
+    /// `sEELobbyText = (GUIStringData*)a` (TextAppend's local, a reference added).
+    TextTake,
+    /// `sEELobbyText = GetEmptyGUIStringData()` (ParserCommandText's local).
+    TextStartEmpty,
+    /// `sEELobbyText.append(GUIString(a))`.
+    TextAppendText,
+    /// `sEELobbyText.append(GUIString(new GUIStringData((const char*)a, b)))`.
+    TextAppendRaw,
+    /// `sEELobbyText.append(((ChatCommandParser*)a)->GetPrefix())`.
+    TextAppendParserPrefix,
+    /// `sEELobbyText.append(((ChatCommandParser*)a)->GetCommandString(b))`.
+    TextAppendParserCommand,
+    /// `sEELobbyText.append(GUIString(" \""))`.
+    TextAppendQuoteOpen,
+    /// `sEELobbyText.append(((ChatCommandParser*)a)->GetTargetName())`.
+    TextAppendParserTarget,
+    /// `sEELobbyText.append(GUIString(new GUIStringData("\" ")))`.
+    TextAppendQuoteClose,
+    /// `sEELobbyText`'s data with one reference added (the result).
+    TextHeldOut,
+    /// `sEELobbyText = GUIString()` (the local gone).
+    TextDrop,
+    /// `sEELobbyFmtStrings[a] = GUIString(b)` (ChatAddFormatted's locals; 0 empties it).
+    FmtSetString,
+    /// `sEELobbyFmtLinks[a] = (ChatLink*)b`.
+    FmtSetLink,
+    /// `sEELobbyFmtFonts[a] = (Font*)b`.
+    FmtSetFont,
+    /// `sEELobbyFmtText` (the two strings' pointers).
+    FmtTexts,
+    /// `sEELobbyFmtLinks`.
+    FmtLinks,
+    /// `LobbyAppendFormattedText(f->output, f->format, b, f->num_strings, f->colors, 9, sEELobbyFmtFonts, 3, c,
+    /// f->num_links, f->line_break != 0)` of the format `f` = `a`.
+    FmtAppend,
+    /// `sEELobbyEvent = CreateAccountEvent()` (DeliverCreateAccount's local).
+    EvCreateAccountNew,
+    /// `LobbyEvtSetStr(sEELobbyEvent.get(), a, (std::wstring)((InputBox*)b)->GetText())`.
+    EvSetWide,
+    /// `LobbyEvtSetStr(sEELobbyEvent.get(), a, (std::string)((InputBox*)b)->GetText())`.
+    EvSetNarrow,
+    /// `LobbyEvtSet(sEELobbyEvent.get(), a, b)`.
+    EvSetNum,
+    /// `this->DeliverEvent(sEELobbyEvent.get(), false)`.
+    EvDeliverHeld,
+    /// `sEELobbyEvent = NULL`.
+    EvDrop,
+    /// `sEELobbyColumnText = GUIString(a)` (EeColumn's local; 0 empties it).
+    ColumnTextSet,
+    /// `&sEELobbyColumnText`.
+    ColumnText,
+    /// `((ChatLink*)a)->mKind` (LinkGet's members, one op each).
+    LinkGetKind,
+    /// `((ChatLink*)a)->mClient.get()`.
+    LinkGetClient,
+    /// `((ChatLink*)a)->mFriend.get()`.
+    LinkGetFriend,
+    /// `((ChatLink*)a)->mNext.get()`.
+    LinkGetNext,
+    /// `((ChatLink*)a)->mPrevious`.
+    LinkGetPrevious,
+    /// `((ChatLink*)a)->mColor = b` (LinkSet's).
+    LinkSetColor,
+    /// `((ChatLink*)a)->mEnabled = b != 0`.
+    LinkSetEnabled,
+    /// `((ChatLink*)a)->mNext = (ChatLink*)b`.
+    LinkSetNext,
+    /// `((ChatLink*)a)->mPrevious = (ChatLink*)b`.
+    LinkSetPrevious,
 }
 
 /// The resource row of a control string (LobbyCtrlHost.cpp's `CtlString` as it was).

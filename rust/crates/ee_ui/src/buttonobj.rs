@@ -227,6 +227,25 @@ pub enum EeUiButtonCall {
     ScalableCopyData = 111,
     /// `DrawPolygons()` -> its result.
     ScalableDrawPolygons = 112,
+    /// `UIDualButton`'s constructor part (UI round 16: the class folded into UIButton): the right button presses and
+    /// releases as the left.
+    DualInit = 113,
+    /// `GetTabable()`: a scroll arrow is not tabbable.
+    Tabable = 114,
+    /// `MouseRButtonDown()` -> its result (a dual button's press, else kErrorOK).
+    MouseRButtonDown = 115,
+    /// `MouseRButtonUp()` -> its result (a dual button's release, else kErrorOK).
+    MouseRButtonUp = 116,
+    /// The virtual `CopyData()`: a scalable button's, else `CopyData` (UIButton's own).
+    VirtCopyData = 117,
+    /// The virtual `DrawPolygons()`: a scalable button's, else `DrawPolygons`.
+    VirtDrawPolygons = 118,
+    /// The virtual `ButtonDown()`: a scroll arrow's, else `ButtonDown`.
+    VirtButtonDown = 119,
+    /// The virtual `ButtonUp()`: a scroll arrow's, else `ButtonUp`.
+    VirtButtonUp = 120,
+    /// The virtual `UpdateKeyboard()`: a scroll arrow's (kErrorOK), else `UpdateKeyboard`.
+    VirtUpdateKeyboard = 121,
 }
 
 /// A subclass's own record (its constructor's init call sets it): what were the C++ subclass's members.
@@ -246,6 +265,8 @@ pub(crate) enum Sub {
     Blink(crate::variantobj::BlinkObj),
     /// `UIScalableButton` (`variantobj.rs`).
     Scalable(crate::variantobj::ScalableFields),
+    /// `UIDualButton` (no record of its own).
+    Dual,
 }
 
 /// The Rust UIButton.
@@ -566,6 +587,38 @@ impl EeUiButton {
         let at = UiPoint { x: buf[0], y: buf[1] };
         let mut h = Btn::new(self);
         let fields = self.fields();
+        // the folded subclasses' overrides (UI round 16: UIScalableButton, UIDualButton, UIScrollButton): the C++
+        // virtuals make the Virt* calls; the plain calls stay UIButton's own (a subclass's qualified base call)
+        let sub = *self.sub.borrow();
+        let own = match call {
+            C::VirtCopyData => Some(C::CopyData),
+            C::VirtDrawPolygons => Some(C::DrawPolygons),
+            C::VirtButtonDown => Some(C::ButtonDown),
+            C::VirtButtonUp => Some(C::ButtonUp),
+            C::VirtUpdateKeyboard => Some(C::UpdateKeyboard),
+            _ => None,
+        };
+        match (call, sub) {
+            (C::VirtCopyData, Sub::Scalable(_)) => return self.call_variant(C::ScalableCopyData, a, b, buf),
+            (C::VirtDrawPolygons, Sub::Scalable(_)) => return self.call_variant(C::ScalableDrawPolygons, a, b, buf),
+            (C::VirtButtonDown, Sub::Scroll(_)) => return self.call_variant(C::ScrollButtonDown, a, b, buf),
+            (C::VirtButtonUp, Sub::Scroll(_)) => return self.call_variant(C::ScrollButtonUp, a, b, buf),
+            (C::VirtUpdateKeyboard, Sub::Scroll(_)) => return 0,
+            (C::Tabable, Sub::Scroll(_)) => return 0,
+            (C::Tabable, _) => return 1,
+            (C::MouseRButtonDown, Sub::Dual) => return button::dual_mouse_r_button_down(&mut h) as isize,
+            (C::MouseRButtonUp, Sub::Dual) => return button::dual_mouse_r_button_up(&mut h) as isize,
+            (C::MouseRButtonDown | C::MouseRButtonUp, _) => return 0,
+            (C::DualInit, _) => {
+                *self.sub.borrow_mut() = Sub::Dual;
+                return 0;
+            }
+            _ => {}
+        }
+        if let Some(own) = own {
+            // SAFETY: the contract (the same floats)
+            return unsafe { self.call(own, a, b, f) };
+        }
         match call {
             C::CopyData => return button::copy_data(&mut h) as isize,
             C::DrawPolygons => return self.draw_polygons(),

@@ -166,6 +166,7 @@ mod civ_whole_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod command_units;
+pub mod cpp_events;
 pub mod cursor;
 #[cfg(not(test))]
 mod cursor_ffi;
@@ -296,6 +297,8 @@ pub mod hud_ctl;
 mod hud_ctl_ffi;
 pub(crate) mod hud_direct;
 pub mod hud_draw;
+// the game UI classes' members as Rust records (round 15)
+pub mod hud_fields;
 pub(crate) mod hud_sends;
 pub(crate) mod hud_views;
 pub mod icon_bar;
@@ -358,6 +361,8 @@ mod scenario_editor_ffi;
 pub mod scenario_screens;
 #[cfg(not(test))]
 mod scenario_screens_ffi;
+// the C++ objects the shims keep between calls (the files' scratch statics), Rust-owned slots
+pub mod scratch;
 pub mod select_units;
 pub mod settings;
 pub mod settings_form;
@@ -429,6 +434,7 @@ pub(crate) mod post_game_calls;
 pub(crate) mod sci_calls;
 pub(crate) mod screens_calls;
 pub(crate) mod screens_more_calls;
+pub(crate) mod select_units_ops;
 pub(crate) mod status_bar_calls;
 pub(crate) mod status_box_calls;
 pub(crate) mod status_button_calls;
@@ -463,3 +469,4 @@ pub mod upgrade;
 pub(crate) mod upgrade_calls;
 #[cfg(not(test))]
 mod upgrade_ffi;
+pub(crate) mod upgrade_ops;

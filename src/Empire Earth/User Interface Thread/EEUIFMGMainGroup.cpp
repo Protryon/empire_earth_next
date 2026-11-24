@@ -37,20 +37,11 @@
 #include "ee/EEUIShell.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
-#include "ee/EEUIEMGHotKeyStatusButton.h"
-
-// Presses or releases a status button by hot key (pressing also resets the saved-group state). The original (0x6601da)
-// lay among the main game form's events (EEUIEMainGameEvents.cpp, now Rust's: ee_screens main_game.rs); this one
-// holds a C++ button, so it stays with the panel that makes it.
-long EEUIEMGHotKeyStatusButton::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ee_screens_mg_hot_key_event((uintptr_t)this);   // (main_group_calls.rs)
-    return kErrorOK;
-}
+#include "ee/EEScreenEvent.h"
 
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
-    : EEUIFMGGroup(inOwner), EeScreensMainGroupFields()
+    : EeScreensMainGroupFields(), mOwner(inOwner)
 {
     ee_screens_main_group_fields(this, static_cast<EeScreensMainGroupFields*>(this));   // (the record zeroed)
     this->mStatusBox = new EEUIFMGStatusBox(inOwner);
@@ -71,49 +62,14 @@ EEUnit* EEComplexUnit::GetCitizenBuildTarget(unsigned long inIndex)
     return this->mCitizenBuildQueue[inIndex];
 }
 
-// Returns the epoch the tech tree shows to the player (two past the start, at most the end; at least the Bronze
-// Age's): the statistics group's "wonders available in" (inline in the original EEUIFMGGStatistics.h)
-long EETechTree::GetShownEpoch() const
-{
-    long theEpoch = this->mStartEpoch + 2 > this->mEndEpoch ? this->mEndEpoch : this->mStartEpoch + 2;
-    return theEpoch > kTechEpochBronze ? theEpoch : 3;
-}
-
-// The panel groups' host (ee_screens panel_groups.rs): a value (EE_SCREENS_GROUP_VALUE_*), or a label's text
-// printed from the format with the resource strings[0] and strings[1] (when not -1) or strings[0] and the two values
-extern "C" int32_t ee_screenscpp_group(void* inGroup, bool inPrint, uint32_t inWhich, uint32_t inControl,
-                                       bool inIfChanged, const char* inFormat, const int32_t* inStrings,
-                                       const int32_t* inValues)
-{
-    EEUIFMGGRust* theGroup = static_cast<EEUIFMGGRust*>(inGroup);
-    if (!inPrint) {
-        switch (inWhich) {
-        case EE_SCREENS_GROUP_VALUE_CONVERSIONS:
-            return gWorld.GetCurrentPlayer()->mSavedGroups.GetLastValue(5);
-        case EE_SCREENS_GROUP_VALUE_CONVERSIONS_MAX:
-            return gWorldTable.GetLongValue(kWorldConversionsStatisticMax);
-        case EE_SCREENS_GROUP_VALUE_WONDERS_TO_WIN:
-            return gWorld.mNumberOfWondersToWin;
-        case EE_SCREENS_GROUP_VALUE_EPOCH_TITLE:
-            return EEEpochTitleID(gWorld.GetCurrentPlayer()->GetTechTree()->GetShownEpoch());
-        case EE_SCREENS_GROUP_VALUE_HAS_PLAYER:
-            return gWorld.GetCurrentPlayer() != NULL;
-        }
-        return 0;
-    }
-    UWideString theText, theFirst, theSecond;
-    gResource->GetString(inStrings[0], theFirst);
-    if (inStrings[1] != -1) {
-        gResource->GetString(inStrings[1], theSecond);
-        sprintf(theText, inFormat, (const char*)theFirst, (const char*)theSecond);
-    } else {
-        sprintf(theText, inFormat, (const char*)theFirst, (long)inValues[0], (long)inValues[1]);
-    }
-    UITextLabel* theLabel = static_cast<UITextLabel*>(theGroup->mOwner->GetControl(inControl));
-    if (!inIfChanged || theLabel->GetText(0) != theText)
-        theLabel->SetText(theText);
-    return 0;
-}
+// The panel groups' values (ee_screens panel_groups_ffi.rs, which prints their texts): each one call, no logic
+extern "C" int32_t ee_screenscpp_group_conversions() { return gWorld.GetCurrentPlayer()->mSavedGroups.GetLastValue(5); }
+extern "C" int32_t ee_screenscpp_group_conversions_max() { return gWorldTable.GetLongValue(kWorldConversionsStatisticMax); }
+extern "C" int32_t ee_screenscpp_group_wonders_to_win() { return gWorld.mNumberOfWondersToWin; }
+extern "C" bool ee_screenscpp_group_has_player() { return gWorld.GetCurrentPlayer() != NULL; }
+extern "C" int32_t ee_screenscpp_group_start_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mStartEpoch; }
+extern "C" int32_t ee_screenscpp_group_end_epoch() { return gWorld.GetCurrentPlayer()->GetTechTree()->mEndEpoch; }
+extern "C" int32_t ee_screenscpp_group_epoch_title(int32_t inEpoch) { return EEEpochTitleID(inEpoch); }
 
 // ---- the one-statement shims of ee_screens main_group_calls.rs (UI lane round 8: the group's host, ShowCommands,
 // the status buttons' hot keys): each one call, no logic
@@ -193,15 +149,11 @@ extern "C" uintptr_t ee_screenscpp_mg_hot_key_copy(uintptr_t inGroup, uintptr_t 
 extern "C" void ee_screenscpp_mg_hot_key_shift(uintptr_t inKey) { MGK(inKey)->SetModifier(kKeyShift, 0); }
 extern "C" void ee_screenscpp_mg_hot_key_delete(uintptr_t inKey) { delete MGK(inKey); }
 extern "C" uintptr_t ee_screenscpp_mg_hot_key_event_new(uintptr_t inButton, bool inPressed)
-{ return (uintptr_t)static_cast<UIEvent*>(new EEUIEMGHotKeyStatusButton(SBB(inButton), inPressed)); }
+{ return (uintptr_t)static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_HOT_KEY, inButton, inPressed)); }
 extern "C" void ee_screenscpp_mg_hot_key_pressed_event(uintptr_t inKey, uintptr_t inEvent)
 { MGK(inKey)->SetJustPressedEvent(reinterpret_cast<UIEvent*>(inEvent)); }
 extern "C" void ee_screenscpp_mg_hot_key_unpressed_event(uintptr_t inKey, uintptr_t inEvent)
 { MGK(inKey)->SetJustUnpressedEvent(reinterpret_cast<UIEvent*>(inEvent)); }
-extern "C" uintptr_t ee_screenscpp_mg_event_button(uintptr_t inEvent)
-{ return (uintptr_t)reinterpret_cast<EEUIEMGHotKeyStatusButton*>(inEvent)->mButton; }
-extern "C" bool ee_screenscpp_mg_event_pressed(uintptr_t inEvent)
-{ return reinterpret_cast<EEUIEMGHotKeyStatusButton*>(inEvent)->mPressed; }
 extern "C" void ee_screenscpp_mg_button_hot_key_down(uintptr_t inButton) { SBB(inButton)->HotKeyDown(); }
 extern "C" void ee_screenscpp_mg_saved_groups_reset() { gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x14, 1); }
 extern "C" void ee_screenscpp_mg_remove_cloak(uintptr_t inUnit)

@@ -907,8 +907,8 @@ pub extern "C" fn ee_ts_thread_current() -> *mut EeTsThread {
 }
 /// `TSScheduler::GetCurrentThreadIndex` (-1 when the calling thread is not registered).
 #[no_mangle]
-pub extern "C" fn ee_ts_thread_current_index() -> u32 {
-    SCHEDULER.current_index(&PlatHost).map_or(u32::MAX, |i| i as u32)
+pub extern "C" fn ee_ts_thread_current_index() -> std::ffi::c_ulong {
+    SCHEDULER.current_index(&PlatHost).map_or(std::ffi::c_ulong::MAX, |i| i as std::ffi::c_ulong)
 }
 /// # Safety
 /// `thread` is live.

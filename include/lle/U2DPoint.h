@@ -55,21 +55,12 @@ public:
     // exe: the squared distance (out-of-line COMDAT ICF-identical to EETileDistanceLess::DistanceSquared 0x8a3f; the no-/Og
     // header sort functor 0x408fd7 calls it on GetTile()'s result). Inline: VC6's /Os post-check undoes it at every
     // site; at a no-/Og site its locals and the getter temps keep 4 caller frame slots (r37_load family note)
-    T DistanceSquared(const U2DPoint& inPoint) const
-    {
-        T theDY = this->mY - inPoint.GetY();
-        T theDX = this->mX - inPoint.GetX();
-        theDX *= theDX;
-        theDY *= theDY;
-        return theDX + theDY;
-    }
+    T DistanceSquared(const U2DPoint& inPoint) const { return this->DistanceToSquared(inPoint); }
     float DistanceToSquaredF(const U2DPoint& inPoint) const
     {
         return (float)((this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX())) +
                (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY());
     }
-#else
-    float DistanceToSquaredF(const U2DPoint& inPoint) const;
 #endif
 #ifdef LLE_EXE_HEADERS
     // exe view only: the tiles a line from this tile to inTo crosses, one step of inStep tiles at a time, inTo last
@@ -81,21 +72,11 @@ public:
         { static_cast<std::vector<U2DPoint>*>(outTiles)->assign(reinterpret_cast<const U2DPoint*>(inTiles), reinterpret_cast<const U2DPoint*>(inTiles) + inCount); }
 #endif
 #ifdef LLE_EXE_HEADERS
-    // exe: the squares are summed in the FPU (fild dx2; fiadd dy2; EECPResourceCenter COMDAT 0x48d421), not as T
+    // exe: the squares are summed as floats (fild dx2; fiadd dy2; EECPResourceCenter COMDAT 0x48d421), not as T
     T DistanceTo(const U2DPoint& inPoint) const
-    {
-        T theDY = this->mY - inPoint.GetY();
-        T theDX = this->mX - inPoint.GetX();
-        theDX *= theDX;
-        theDY *= theDY;
-        return (T)sqrt((float)theDX + theDY);
-    }
+        { return (T)sqrt((float)((this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX())) + (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY())); }
 #else
-    T DistanceTo(const U2DPoint& inPoint) const
-    {
-        T theDistance = (this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX()) + (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY());
-        return (T)sqrt(theDistance);
-    }
+    T DistanceTo(const U2DPoint& inPoint) const { return (T)sqrt(this->DistanceToSquared(inPoint)); }
 #endif
     // each difference written out twice (a squaring macro's shape): the one form that gives both the float copy
     // (GETerrainMesh.cpp 0x1002fe6c: y difference first, the squares from st0/st2) and the long copy

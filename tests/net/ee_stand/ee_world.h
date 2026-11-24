@@ -6,6 +6,7 @@
 #ifndef EE_STAND_WORLD_H
 #define EE_STAND_WORLD_H
 
+#include "rust/game/screens.h"   // the form ids (kFormMainGame, kFormLobby, ...: a Rust enum since batch 18)
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -16,6 +17,8 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
+#include "rust/game/app.h"
+#include "rust/net/net.h"
 #include "lle/GEColor.h"
 #include "lle/UResourceFile.h"
 #include "ee/EEWorldConstants.h"
@@ -70,24 +73,10 @@ public:
 };
 
 // ---- the lobby's options ----
-class EEGameOptionsPlayer {
+class EEGameOptionsPlayer : public EeAppOptionsPlayerFields {   // the game's: its plain members are the Rust record
 public:
-    EEGameOptionsPlayer()
-        : mType(0), mLoadedType(0), mPing(0.0f), mSlot(0), mColor(0), mTeam(0), mStartingCitizens(0), mTransferID(0),
-          mIsLocal(false), mIsReady(false), mB36(true), mEngine(0) {}
-    unsigned long mType;
-    long mLoadedType;
+    EEGameOptionsPlayer() : EeAppOptionsPlayerFields{0, 0, 0.0f, 0, 0, 0, 0, 0, false, false, true, 0} {}
     UWideString mName;
-    float mPing;
-    unsigned long mSlot;
-    unsigned long mColor;
-    unsigned long mTeam;
-    unsigned long mStartingCitizens;
-    unsigned long mTransferID;
-    bool mIsLocal;
-    bool mIsReady;
-    bool mB36;
-    unsigned long mEngine;
 };
 std::string TPlayer(const EEGameOptionsPlayer& inPlayer);
 
@@ -227,6 +216,7 @@ public:
 class EEUserInterface {
 public:
     EEUserInterface() : mThread(new EEThreadFake("ui")) {}
+    EEThreadFake* GetThread() { return this->mThread; }
     void PostLobbyUpdatePlayer(unsigned long inSlot, unsigned long inFlags) { T("ui lobby update player %lu %lu", inSlot, inFlags); }
     void PostAction(EEAction* inAction) { T("ui action %s", inAction->Describe().c_str()); }
     void AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText, long inTime, long inKind)
@@ -252,12 +242,10 @@ public:
     UIForm* GetFormByID(unsigned long inID);
     UIForm* GetCurrentForm();
     bool IsFormVisible(UIForm* inForm);
+    EEUIFMainGame* GetMainGameForm() { return this->mMainGameForm; }
     EEUIFMainGame* mMainGameForm;
 };
 extern EEUIManager* gUIManager;
-const unsigned long kFormMainGame = 11;
-const unsigned long kFormLobby = 26;
-const unsigned long kFormAvailableGames = 32;
 extern UResourceFile* gResource;
 
 // ---- sounds, graphics, physics ----
@@ -341,8 +329,10 @@ public:
     virtual ~NESynchronousCommunications() {}
     virtual void ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting) = 0;
     virtual unsigned long GetCurrentCommunicationsTick() const { T("comms current ct"); return gFake.mCurrentCT; }
-    virtual bool IsClient() = 0;
-    virtual bool IsServer() = 0;
+    // non-virtual since LLE round 13 (the engine's answer by the Rust object the subclass made)
+    bool IsClient() const { return !this->mIsServer; }
+    bool IsServer() const { return this->mIsServer; }
+    bool mIsServer = false;
     virtual long ProcessLocalUserInput(NEMessage* inMessage, unsigned char inPlayer);
     virtual void SetCurrentCommunicationsTick(unsigned long inTick) { T("comms set ct %lu", inTick); gFake.mCurrentCT = inTick; }
     bool GetIsGamePaused() { return gFake.mGamePaused; }
@@ -357,14 +347,21 @@ public:
 };
 extern NESynchronousCommunications* gCommunications;
 
-enum { kServerStateOpen = 0, kServerStateClosed = 1, kServerStateRunning = 3, kServerStatePaused = 4 };
-
 class NESynchronousServer : public NESynchronousCommunications {
 public:
     NESynchronousServer(unsigned char inMaxPlayers, unsigned long inDefaultSendInterval, unsigned char inPTsPerCT,
                         unsigned long inMaxPTs, unsigned long inMinPTs, float inTuning, unsigned long inMaxCTSend,
                         unsigned long inStepUp, unsigned long inStepDown, unsigned long inCT, unsigned long inPT,
                         UWideString& inName, bool inAllowNew, bool inAnnounce, unsigned long inAdapter);
+    // the engine's since LLE round 13: the game's hosts first (GameHost<Game>, GameMessageManagerHost<Game>)
+    NESynchronousServer(EeNetSvHostFn, EeNetMmHostFn, unsigned char inMaxPlayers, unsigned long inDefaultSendInterval,
+                        unsigned char inPTsPerCT, unsigned long inMaxPTs, unsigned long inMinPTs, float inTuning,
+                        unsigned long inMaxCTSend, unsigned long inStepUp, unsigned long inStepDown, unsigned long inCT,
+                        unsigned long inPT, UWideString& inName, bool inAllowNew, bool inAnnounce, unsigned long inAdapter)
+        : NESynchronousServer(inMaxPlayers, inDefaultSendInterval, inPTsPerCT, inMaxPTs, inMinPTs, inTuning, inMaxCTSend,
+                              inStepUp, inStepDown, inCT, inPT, inName, inAllowNew, inAnnounce, inAdapter) {}
+    template <class Game> static ptrdiff_t GameHost(void*, EeNetSvOp, size_t, size_t, size_t, size_t) { return 0; }
+    template <class Game> static ptrdiff_t GameMessageManagerHost(void*, EeNetMmOp, size_t, size_t, size_t, size_t) { return 0; }
     virtual ~NESynchronousServer() {}
     void ClearSendToSlotArray() { T("server clear send-to slots"); }
     long GetClientAddress(unsigned long inIndex, UWideString& outAddress);
@@ -424,6 +421,8 @@ public:
 class NESynchronousClient : public NESynchronousCommunications {
 public:
     NESynchronousClient() { T("client base ctor"); }
+    explicit NESynchronousClient(EeNetClHostFn) : NESynchronousClient() {}   // the engine's since LLE round 13
+    template <class Game> static ptrdiff_t GameHost(void*, EeNetClOp, size_t, size_t, size_t, size_t) { return 0; }
     virtual ~NESynchronousClient() {}
     unsigned long GetCurrentPhysicsTick() const { T("client current pt"); return gFake.mCurrentPT; }
     unsigned char GetMySendToSlot() const { T("client my send-to slot"); return gFake.mMySendToSlot; }

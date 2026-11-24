@@ -113,14 +113,6 @@ static void EECBAnswerAccept(UIForm* inForm)
 // ---- the host's shims (civ_host.rs: every op of the builder's host and of the list's in Rust; UI lane round 11)
 
 static const EEUIFErrorCallback kCBAnswers[3] = {EECBAnswerWrite, EECBAnswerDelete, EECBAnswerAccept};
-static FSPath* sCBPath = NULL;          // the file list's search path being made
-static FSFileSpec sCBSpec;              // its directory
-static UWideString sCBString;           // a string read, printed or loaded
-static UWideString sCBFormat;           // a format read
-static unsigned long sCBWritten = 0;    // the civilization file's bytes written
-static std::vector<EECivUpgrade> sCBUpgrades;   // a request's or a loaded civilization's upgrades
-static std::vector<unsigned long> sCBPlayers;   // the players whose civilization is reloaded
-static GERectangle sCBRect;             // the list line's rectangle
 
 extern "C" uintptr_t ee_screenscpp_cbh_form(uint32_t inId) { return (uintptr_t)gUIManager->GetFormByID(inId); }
 extern "C" uintptr_t ee_screenscpp_cbh_control_by_id(uintptr_t inForm, uint32_t inId)
@@ -152,16 +144,16 @@ extern "C" void ee_screenscpp_cbh_label_set_number(uintptr_t inLabel, int32_t in
 extern "C" int32_t ee_screenscpp_cbh_push(uintptr_t inForm) { return gUIManager->Push((UIForm*)inForm); }
 extern "C" int32_t ee_screenscpp_cbh_close_form() { return gUserInterface->CloseForm(NULL); }
 extern "C" uintptr_t ee_screenscpp_cbh_current_form() { return (uintptr_t)gUIManager->GetCurrentForm(); }
-extern "C" void ee_screenscpp_cbh_path_new() { sCBPath = new FSPath; }
-extern "C" void ee_screenscpp_cbh_spec_volume() { sCBSpec.SetVolume(gStartupVolume); }
+extern "C" void ee_screenscpp_cbh_path_new() { EEScratch<FSPath*>(kScratchCBPath) = new FSPath; }
+extern "C" void ee_screenscpp_cbh_spec_volume() { EEScratch<FSFileSpec>(kScratchCBSpec).SetVolume(gStartupVolume); }
 extern "C" void ee_screenscpp_cbh_spec_directory()
-{ sCBSpec.SetDirectory(gStartupDirectory + "Users\\default\\Civilizations\\"); }
-extern "C" void ee_screenscpp_cbh_path_add() { sCBPath->AddDirectory(sCBSpec, true); }
-extern "C" void ee_screenscpp_cbh_fl_set_paths(uintptr_t inList) { ((UIFileListBox*)inList)->SetSearchPaths(sCBPath); }
+{ EEScratch<FSFileSpec>(kScratchCBSpec).SetDirectory(gStartupDirectory + "Users\\default\\Civilizations\\"); }
+extern "C" void ee_screenscpp_cbh_path_add() { EEScratch<FSPath*>(kScratchCBPath)->AddDirectory(EEScratch<FSFileSpec>(kScratchCBSpec), true); }
+extern "C" void ee_screenscpp_cbh_fl_set_paths(uintptr_t inList) { ((UIFileListBox*)inList)->SetSearchPaths(EEScratch<FSPath*>(kScratchCBPath)); }
 extern "C" void ee_screenscpp_cbh_fl_add_extension(uintptr_t inList)
 { ((UIFileListBox*)inList)->AddValidExtension(UString(".civ")); }
 extern "C" void ee_screenscpp_cbh_fl_create_entries(uintptr_t inList) { ((UIFileListBox*)inList)->CreateEntries(1); }
-extern "C" void ee_screenscpp_cbh_path_release() { sCBPath->Dereference(); }
+extern "C" void ee_screenscpp_cbh_path_release() { EEScratch<FSPath*>(kScratchCBPath)->Dereference(); }
 extern "C" int32_t ee_screenscpp_cbh_fl_selection(uintptr_t inList, unsigned long* inIndex)
 { return ((UIFileListBox*)inList)->GetCurrentSelection(*inIndex); }
 extern "C" void ee_screenscpp_cbh_fl_line(uintptr_t inList, uint32_t inLine, void* inOut)
@@ -175,14 +167,14 @@ extern "C" void ee_screenscpp_cbh_form_set_close_event(uintptr_t inForm, uintptr
 { ((UIForm*)inForm)->SetFormCloseEvent((UIEvent*)inEvent); }
 extern "C" void ee_screenscpp_cbh_event_release(uintptr_t inEvent) { ((UIEvent*)inEvent)->Dereference(); }
 extern "C" uint32_t ee_screenscpp_cbh_form_id(uintptr_t inForm) { return ((UIForm*)inForm)->GetFormID(); }
-extern "C" int32_t ee_screenscpp_cbh_string_load(uint32_t inId) { return gResource->GetString(inId, sCBString); }
-extern "C" void ee_screenscpp_cbh_string_out(void* inOut) { EEShimOut(inOut, sCBString); }
-extern "C" void ee_screenscpp_cbh_format_percent() { gResource->GetString(IDS_FORMAT_PERCENT_6_2G, sCBFormat); }
+extern "C" int32_t ee_screenscpp_cbh_string_load(uint32_t inId) { return gResource->GetString(inId, EEScratch<UWideString>(kScratchCBString)); }
+extern "C" void ee_screenscpp_cbh_string_out(void* inOut) { EEShimOut(inOut, EEScratch<UWideString>(kScratchCBString)); }
+extern "C" void ee_screenscpp_cbh_format_percent() { gResource->GetString(IDS_FORMAT_PERCENT_6_2G, EEScratch<UWideString>(kScratchCBFormat)); }
 extern "C" void ee_screenscpp_cbh_format_reserved()
-{ gResource->GetString(IDS_FILE_NAME_YOU_SPECIFIED_IS_RESERVED, sCBFormat); }
-extern "C" void ee_screenscpp_cbh_print_float(float inValue) { sprintf(sCBString, sCBFormat, inValue); }
+{ gResource->GetString(IDS_FILE_NAME_YOU_SPECIFIED_IS_RESERVED, EEScratch<UWideString>(kScratchCBFormat)); }
+extern "C" void ee_screenscpp_cbh_print_float(float inValue) { sprintf(EEScratch<UWideString>(kScratchCBString), EEScratch<UWideString>(kScratchCBFormat), inValue); }
 extern "C" void ee_screenscpp_cbh_print_text(EeScreensShimText inText)
-{ sprintf(sCBString, sCBFormat, (const char*)EEShimString(inText)); }
+{ sprintf(EEScratch<UWideString>(kScratchCBString), EEScratch<UWideString>(kScratchCBFormat), (const char*)EEShimString(inText)); }
 extern "C" void ee_screenscpp_cbh_quote(EeScreensShimText inText, void* inOut)
 { EEShimOutC(inOut, EEDataText::QuoteText(std::string((const char*)inText.ptr, inText.len)).c_str()); }
 extern "C" int32_t ee_screenscpp_cbh_civ_base_cost(uintptr_t inCiv, uint32_t inUpgrade)
@@ -203,12 +195,12 @@ extern "C" uint32_t ee_screenscpp_cbh_civ_purchased(uintptr_t inCiv, uint32_t in
 { return ((EECivilization*)inCiv)->GetPurchasedUpgrades()[inIndex]; }
 extern "C" void ee_screenscpp_cbh_civ_name(uintptr_t inCiv, void* inOut)
 { EEShimOut(inOut, ((EECivilization*)inCiv)->mName); }
-extern "C" void ee_screenscpp_cbh_upgrades_clear() { sCBUpgrades.clear(); }
-extern "C" void ee_screenscpp_cbh_upgrades_push(uint32_t inUpgrade) { sCBUpgrades.push_back((EECivUpgrade)inUpgrade); }
-extern "C" uint32_t ee_screenscpp_cbh_upgrades_count() { return (uint32_t)sCBUpgrades.size(); }
-extern "C" uint32_t ee_screenscpp_cbh_upgrades_at(uint32_t inIndex) { return sCBUpgrades[inIndex]; }
+extern "C" void ee_screenscpp_cbh_upgrades_clear() { EEScratch<std::vector<EECivUpgrade>>(kScratchCBUpgrades).clear(); }
+extern "C" void ee_screenscpp_cbh_upgrades_push(uint32_t inUpgrade) { EEScratch<std::vector<EECivUpgrade>>(kScratchCBUpgrades).push_back((EECivUpgrade)inUpgrade); }
+extern "C" uint32_t ee_screenscpp_cbh_upgrades_count() { return (uint32_t)EEScratch<std::vector<EECivUpgrade>>(kScratchCBUpgrades).size(); }
+extern "C" uint32_t ee_screenscpp_cbh_upgrades_at(uint32_t inIndex) { return EEScratch<std::vector<EECivUpgrade>>(kScratchCBUpgrades)[inIndex]; }
 extern "C" uintptr_t ee_screenscpp_cbh_request_new(uint8_t inPlayer, EeScreensShimText inName)
-{ return (uintptr_t) new EEMRecord(kMessageCivUpgradesRequested, {inPlayer, 0, sCBUpgrades, EEShimText(inName)}); }
+{ return (uintptr_t) new EEMRecord(kMessageCivUpgradesRequested, {inPlayer, 0, EEScratch<std::vector<EECivUpgrade>>(kScratchCBUpgrades), EEShimText(inName)}); }
 extern "C" bool ee_screenscpp_cbh_multiplayer() { return gCommunications->GetIsMultiplayerSession(); }
 extern "C" void ee_screenscpp_cbh_send_server(uintptr_t inMessage)
 { gCommunications->ProcessLocalUserInput((NEMessage*)inMessage, kSlotServer); }
@@ -229,7 +221,7 @@ extern "C" void ee_screenscpp_cbh_set_civ_locked(bool inValue)
 { gWorld.GetCurrentPlayer()->mCivilizationLocked = inValue; }
 extern "C" bool ee_screenscpp_cbh_free_camera() { return gFreeCamera; }
 extern "C" bool ee_screenscpp_cbh_can_buy() { return gWorld.mGameOptions.CanBuyCivilization(); }
-extern "C" bool ee_screenscpp_cbh_campaign_name() { return gWorld.mGameOptions.GetCampaignMapName(sCBString); }
+extern "C" bool ee_screenscpp_cbh_campaign_name() { return gWorld.mGameOptions.GetCampaignMapName(EEScratch<UWideString>(kScratchCBString)); }
 extern "C" bool ee_screenscpp_cbh_custom_civs() { return gAllowCustomCivs; }
 extern "C" uint32_t ee_screenscpp_cbh_sound_load(EeScreensShimText inName)
 { return (uint32_t)gSoundManager->Load(EEShimString(inName), 0, 1); }
@@ -258,20 +250,20 @@ extern "C" int32_t ee_screenscpp_cbh_f_close() { return gU565518.Close(); }
 extern "C" int32_t ee_screenscpp_cbh_f_delete() { return gU565518.Delete(); }
 extern "C" int32_t ee_screenscpp_cbh_f_create() { return gU565518.Create(); }
 extern "C" int32_t ee_screenscpp_cbh_f_write(EeScreensShimText inBytes)
-{ return gU565518.Write((const char*)inBytes.ptr, (unsigned long)inBytes.len, sCBWritten); }
+{ return gU565518.Write((const char*)inBytes.ptr, (unsigned long)inBytes.len, EEScratch<unsigned long>(kScratchCBWritten)); }
 extern "C" void ee_screenscpp_cbh_f_file(void* inOut) { EEShimOut(inOut, gU565518.GetFile()); }
 extern "C" void ee_screenscpp_cbh_startup_directory(void* inOut) { EEShimOut(inOut, gStartupDirectory); }
 extern "C" uint32_t ee_screenscpp_cbh_num_players() { return gWorld.mNumPlayers; }
 extern "C" bool ee_screenscpp_cbh_player_civ_file_is(uint32_t inPlayer, EeScreensShimText inFile)
 { return gWorld.mPlayers[inPlayer]->mCivilizationFile + ".civ" == EEShimString(inFile); }
-extern "C" void ee_screenscpp_cbh_players_clear() { sCBPlayers.clear(); }
-extern "C" void ee_screenscpp_cbh_players_push(uint32_t inPlayer) { sCBPlayers.push_back(inPlayer); }
-extern "C" uintptr_t ee_screenscpp_cbh_reset_players_new() { return (uintptr_t) new EEAResetAllPlayerInfo(sCBPlayers); }
+extern "C" void ee_screenscpp_cbh_players_clear() { EEScratch<std::vector<unsigned long>>(kScratchCBPlayers).clear(); }
+extern "C" void ee_screenscpp_cbh_players_push(uint32_t inPlayer) { EEScratch<std::vector<unsigned long>>(kScratchCBPlayers).push_back(inPlayer); }
+extern "C" uintptr_t ee_screenscpp_cbh_reset_players_new() { return (uintptr_t) new EEAResetAllPlayerInfo(EEScratch<std::vector<unsigned long>>(kScratchCBPlayers)); }
 extern "C" void ee_screenscpp_cbh_post_action(uintptr_t inAction) { gUserInterface->PostAction((EEAction*)inAction); }
 extern "C" void ee_screenscpp_cbh_action_release(uintptr_t inAction) { ((EEAction*)inAction)->Dereference(); }
-extern "C" void ee_screenscpp_cbh_string_clear() { sCBString = UWideString(); }
+extern "C" void ee_screenscpp_cbh_string_clear() { EEScratch<UWideString>(kScratchCBString) = UWideString(); }
 extern "C" int32_t ee_screenscpp_cbh_load_civilization(EeScreensShimText inName, bool inUser)
-{ return EELoadCivilization(EEShimString(inName), EEGetCivilizationDirectory(inUser), sCBString, sCBUpgrades); }
+{ return EELoadCivilization(EEShimString(inName), EEGetCivilizationDirectory(inUser), EEScratch<UWideString>(kScratchCBString), EEScratch<std::vector<EECivUpgrade>>(kScratchCBUpgrades)); }
 extern "C" uint32_t ee_screenscpp_cbl_count(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetNumLines(); }
 extern "C" void ee_screenscpp_cbl_line(uintptr_t inList, uint32_t inLine, void* inOut)
 { EEShimOut(inOut, ((EECBUIListBox*)inList)->mData[inLine]); }
@@ -309,13 +301,13 @@ extern "C" uint32_t ee_screenscpp_cbl_draw_count(uintptr_t inList) { return ((EE
 extern "C" void ee_screenscpp_cbl_copy_line(uintptr_t inList, uint32_t inLine, void* inOut)
 { EEShimOut(inOut, ((EECBUIListBox*)inList)->mCopyLineArray[inLine]); }
 extern "C" void ee_screenscpp_cbl_rect_copy(uintptr_t inList)
-{ sCBRect = ((EECBUIListBox*)inList)->GetCopyTextRectangle(); }
-extern "C" float ee_screenscpp_cbl_rect_left() { return sCBRect.GetLeft(); }
-extern "C" float ee_screenscpp_cbl_rect_right() { return sCBRect.GetRight(); }
-extern "C" void ee_screenscpp_cbl_rect_set_left(float inValue) { sCBRect.SetLeft(inValue); }
-extern "C" void ee_screenscpp_cbl_rect_set_right(float inValue) { sCBRect.SetRight(inValue); }
-extern "C" void ee_screenscpp_cbl_rect_set_top(float inValue) { sCBRect.SetTop(inValue); }
-extern "C" void ee_screenscpp_cbl_rect_set_bottom(float inValue) { sCBRect.SetBottom(inValue); }
+{ EEScratch<GERectangle>(kScratchCBRect) = ((EECBUIListBox*)inList)->GetCopyTextRectangle(); }
+extern "C" float ee_screenscpp_cbl_rect_left() { return EEScratch<GERectangle>(kScratchCBRect).GetLeft(); }
+extern "C" float ee_screenscpp_cbl_rect_right() { return EEScratch<GERectangle>(kScratchCBRect).GetRight(); }
+extern "C" void ee_screenscpp_cbl_rect_set_left(float inValue) { EEScratch<GERectangle>(kScratchCBRect).SetLeft(inValue); }
+extern "C" void ee_screenscpp_cbl_rect_set_right(float inValue) { EEScratch<GERectangle>(kScratchCBRect).SetRight(inValue); }
+extern "C" void ee_screenscpp_cbl_rect_set_top(float inValue) { EEScratch<GERectangle>(kScratchCBRect).SetTop(inValue); }
+extern "C" void ee_screenscpp_cbl_rect_set_bottom(float inValue) { EEScratch<GERectangle>(kScratchCBRect).SetBottom(inValue); }
 extern "C" uint32_t ee_screenscpp_cbl_line_height(uintptr_t inList)
 { return ((EECBUIListBox*)inList)->GetLineHeight(); }
 extern "C" float ee_screenscpp_cbl_copy_top(uintptr_t inList)
@@ -335,10 +327,10 @@ extern "C" void ee_screenscpp_cbl_colour_header(uintptr_t inText, uintptr_t inLi
 extern "C" void ee_screenscpp_cbl_colour(uintptr_t inText, float inRed, float inGreen, float inBlue)
 { ((GEText*)inText)->SetFgColor(GEColor(inRed, inGreen, inBlue)); }
 extern "C" void ee_screenscpp_cbl_location_top_right(uintptr_t inText)
-{ ((GEText*)inText)->SetLocation(sCBRect.GetTopRight()); }
+{ ((GEText*)inText)->SetLocation(EEScratch<GERectangle>(kScratchCBRect).GetTopRight()); }
 extern "C" void ee_screenscpp_cbl_location_top_left(uintptr_t inText)
-{ ((GEText*)inText)->SetLocation(sCBRect.GetTopLeft()); }
+{ ((GEText*)inText)->SetLocation(EEScratch<GERectangle>(kScratchCBRect).GetTopLeft()); }
 extern "C" int32_t ee_screenscpp_cbl_draw_clipped(uintptr_t inList, uintptr_t inText)
-{ return ((EECBUIListBox*)inList)->GetForm()->DrawClippedText(sCBRect, (GEText*)inText, (EECBUIListBox*)inList); }
+{ return ((EECBUIListBox*)inList)->GetForm()->DrawClippedText(EEScratch<GERectangle>(kScratchCBRect), (GEText*)inText, (EECBUIListBox*)inList); }
 extern "C" int32_t ee_screenscpp_cbl_draw_end(uintptr_t inList)
 { return ((EECBUIListBox*)inList)->DrawScrollBarText(); }

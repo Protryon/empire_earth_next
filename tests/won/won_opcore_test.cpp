@@ -562,19 +562,19 @@ int main(int argc, char** argv)
 
         // ---- an HTTP session's AddOp
         {
-            SmartPtr<HTTPSession> aSession = new HTTPSession;
+            SmartPtr<HTTPSession> aSession = HttpSessionNew();
             char aHost[64];
             snprintf(aHost, sizeof(aHost), "127.0.0.1:%u", (unsigned)sPort);
             SmartPtr<RustServerOp> aQueued = RustServerOp::NewHttpGet(aHost, "/session");
-            Log("session " + Fresh(R(aSession.get())) + " ops " + N(aSession->GetNumOps()) + " queued "
+            Log("session " + Fresh(R(aSession.get())) + " ops " + N(HttpSessionNumOps(aSession.get())) + " queued "
                 + Fresh(R(aQueued.get())) + " refs " + N(Refs(R(aQueued.get()))));
             sOp = aGet.get();
             Call(EE_WON_HOST_SESSION_ADD, R(aSession.get()), R(aQueued.get()));
-            Log("session ops " + N(aSession->GetNumOps()) + " queued status " + N(aQueued->GetStatus()) + " refs "
+            Log("session ops " + N(HttpSessionNumOps(aSession.get())) + " queued status " + N(aQueued->GetStatus()) + " refs "
                 + N(Refs(R(aQueued.get()))));
-            aSession->KillAll();
+            HttpSessionKillAll(aSession.get());
             for (int i = 0; i < 5; i++) aCore.Pump(10);
-            Log("session killed ops " + N(aSession->GetNumOps()) + " queued status " + N(aQueued->GetStatus()));
+            Log("session killed ops " + N(HttpSessionNumOps(aSession.get())) + " queued status " + N(aQueued->GetStatus()));
         }
 
         sOp = NULL;

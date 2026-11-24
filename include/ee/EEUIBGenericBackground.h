@@ -7,14 +7,20 @@
 #define EE_EEUIBGENERICBACKGROUND_H
 #include "rust/game/screens.h"
 
-class EEUIBGenericBackground : public UIBitmapBackground {
+class EEUIBGenericBackground : public UIBitmapBackground, public EeScreensBackgroundFields {
 public:
     // 0x254a05: UIBitmapBackground(inID, inTextureFileName, inDescription, GERectangle(), inLayout, inForm,
     // inDrawPriority, inVisible); then +0x7c, +0x94 and the colour (+0x88: GEColor(), then inColor), +0x80, +0x84
     EEUIBGenericBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
                            const GETextureDescription& inDescription, const UILayoutUtility& inLayout,
                            UIForm* inForm, unsigned long inDrawPriority, const GEColor& inColor, bool inVisible,
-                           float inOpacity, float inScaleX, float inScaleY, unsigned long inFlags);
+                           float inOpacity, float inScaleX, float inScaleY, unsigned long inFlags)
+        : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, GERectangle(), inLayout, inForm,
+                             inDrawPriority, inVisible),
+          EeScreensBackgroundFields()
+    {
+        ee_screens_gb_construct((uintptr_t)this, inOpacity, (uint32_t)inFlags, (uintptr_t)&inColor, inScaleX, inScaleY);
+    }
     // Destroys the form background
     virtual ~EEUIBGenericBackground() {}
     // +0x14 0x255131: the tinted rhombus, then the frame pieces mFrameFlags asks for (1 edges + small corners, 2 large
@@ -37,11 +43,7 @@ public:
         this->mScaleY = inScaleY;
     }
 
-    float mOpacity;                         // +0x7c (provisional name)
-    float mScaleX;                          // +0x80 EEUIFError::Open: game window width / 1024
-    float mScaleY;                          // +0x84 EEUIFError::Open: game window height / 768
     GEColor mColor;                         // +0x88
-    unsigned long mFrameFlags;              // +0x94 (3 from EEUIFError)
 };
 
 #endif
