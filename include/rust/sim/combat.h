@@ -246,6 +246,15 @@ constexpr static const int32_t EE_UNITS_CG_MODEL_PARTS = 5000;
 /// `mStats->GetScale()` of the unit (`f[0]`)
 constexpr static const int32_t EE_UNITS_CG_STATS_SCALE = 5001;
 
+/// turret part `c` of the unit's model: its `mPosition` into the three floats at `b` (units round 12)
+constexpr static const int32_t EE_UNITS_CG_TURRET_POSITION = 13010;
+
+/// the model's `GetTurretPartTransformation(c)` into the sixteen floats at `b`
+constexpr static const int32_t EE_UNITS_CG_TURRET_TRANSFORMATION = 13011;
+
+/// the unit's `mTurretAngles[c]` (`f[0]`)
+constexpr static const int32_t EE_UNITS_CG_TURRET_ANGLE = 13012;
+
 /// `object->mIgnoredTargets[a[0]].mTileX`
 constexpr static const int32_t EE_COMBAT_W_IGN_TILE_X = 100;
 
@@ -2738,6 +2747,15 @@ void ee_combat_capture_read_of(uint32_t which,
                                uint32_t e0,
                                uint32_t e1,
                                uint32_t e2);
+
+/// The query host's footprint read (`EeCombatQueryHost::footprint_tile`, EECombatGoals.cpp's EEQueryHostOf): the tile
+/// of `object`'s footprint nearest to the context's unit, `mUnit->GetNearestFootprintTile(object, &x, &y)`.
+/// # Safety
+/// `context` is EECombatGoals.cpp's query context, whose first member is the call's unit; `object` a live unit;
+/// `out` two ints.
+void ee_units_cgq_footprint_tile(void *context,
+                                 uint64_t object,
+                                 int32_t (*out)[2]);
 
 /// `EECombatFacesPoint(class, unit, location, useTolerance)` (the point's x, y)
 /// # Safety
