@@ -48,11 +48,7 @@ extern "C" int64_t ee_screenscpp_att_draw_level(uintptr_t inAttr, float inLeft, 
 // Returns the icon's rectangle: the whole button, or a 17-pixel strip at its left in free camera mode
 GERectangle EEUIFMGAttribute::GetIconRectangle() const
 {
-    GERectangle theRectangle;
-    if (!gFreeCamera)
-        theRectangle = this->GetRectangle();
-    else
-        theRectangle = GERectangle(GE2DPoint(this->GetRectangle().GetLeft(), this->GetRectangle().GetTop()), 17.0f,
-                                   this->GetRectangle().GetHeight());
-    return theRectangle;
+    return !gFreeCamera ? this->GetRectangle()
+                        : GERectangle(GE2DPoint(this->GetRectangle().GetLeft(), this->GetRectangle().GetTop()), 17.0f,
+                                      this->GetRectangle().GetHeight());
 }

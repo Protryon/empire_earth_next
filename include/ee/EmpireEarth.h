@@ -68,6 +68,8 @@ extern unsigned long& gStartTime;           // 0x5318d0 (EEClient 0xb80ef/EEServ
 
 // 0x27a432 (User Interface Thread): the text of a resource reference through gResource->GetString, else a copy
 // (provisional name and meaning; the campaign editor shows its fields through it)
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
+extern unsigned long& gTexturePixelDepth;   // the textures' depth (Empire Earth.cpp)
 void EEExitGame();                         // 0x27a93e (disconnects and leaves the game; provisional name)
 class EEUnit;
 // 0x27a737 (cdecl): the tile picked at inPoint (EEMap::PickScreenTile; true) or else the tile under it (false) and its

@@ -36,7 +36,6 @@
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreensShims.h"
-extern unsigned long& gTexturePixelDepth;
 
 static GEColor kStatusColor1(0.0f, 0.0f, 1.0f);
 static GEColor kStatusColor2(1.0f, 1.0f, 0.0f);
@@ -46,8 +45,6 @@ extern bool sIconsLoaded;                           // 0x5652ec; cross-TU flag (
 
 // Creates the main panel's status box with no controls bound and no attributes shown
 
-// Existing pooled empty byte string, original reference26b6d9; no equal-content alias.
-extern char gEmptyString[];
 
 // The host's record of one status box call (ee_screens status_box.rs): the box, the unit (Fill, Refresh), the
 // complex unit (UpdateQueuedCounts), the held text (the original's `theText`), LoadIcons' description and textures
