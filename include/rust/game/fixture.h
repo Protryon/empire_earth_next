@@ -152,7 +152,6 @@ enum class EeFixtureOp : uint32_t {
   LobbySnapshot,
   /// control i0 of form h: an edit box's text set to the number i1 (`SetText(unsigned long)`) -> 1, 0 not an edit box
   EditNumber,
-  FxInstallFault,
   FxInstallLasso,
   FxMessageType,
   FxMessageLocal,
@@ -400,7 +399,7 @@ void ee_fixture_message(uint64_t message,
                         int32_t phase);
 
 /// The WON lobby's work on its own message loop (EETestFixture.cpp's UserEvent; lobby.rs).
-void ee_fixture_lobby_work();
+void ee_fixture_lobby_work(int _param);
 
 }  // extern "C"
 

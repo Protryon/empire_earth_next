@@ -70,7 +70,9 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             if i[0] == 0 {
                 // the game's debug output (PlatDebugOutput: GX's log, EE-AI lines, ...) to stderr
                 ee_base::plat_core::sim::PlatDebugSetHandler(Some(debug_to_stderr));
-                go(Op::FxInstallFault, 0, &[]);
+                // the fault report (sim_driver fault.rs, EE-SIM's own)
+                // SAFETY: a NUL-ended text
+                unsafe { crate::sim_driver::fault::ee_sim_driver_fault_install(c"EE-AOC".as_ptr()) };
             } else {
                 go(Op::FxInstallLasso, 0, &[]);
                 // each executed input's view (gEEMessageExecutedTestHook, gamecpp globals.rs)

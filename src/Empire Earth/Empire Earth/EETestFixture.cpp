@@ -73,20 +73,14 @@
 #include "ee/EEScreenEvent.h"
 #include <algorithm>
 #include "rust/game/fixture.h"
-#include "rust/game/sim_driver.h"   // the fault report (fault.rs)
 #include "ee/EECombatGoals.h"
 
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open
 extern void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs);   // EEMessage.cpp: each box selection's ids
 
-// ---- the WON lobby (TEST ONLY): its walk, commands and snapshot are the Rust fixture's (lobby.rs), run on the
-// lobby's own message loop by a UserEvent (this trampoline)
+// (the WON lobby (TEST ONLY): its walk, commands and snapshot are the Rust fixture's (lobby.rs), run on the lobby's
+// own message loop by a UserEvent: ee_fixture_lobby_work)
 namespace {
-
-void LobbyWork(int)
-{
-    ee_fixture_lobby_work();
-}
 
 // ---- the actions and hooks
 
@@ -189,8 +183,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::CalamityCount: return CALAMITIES != NULL ? (int64_t)CALAMITIES->GetCalamityClassCount() : 0;
     // ---- the compound operations' finer ones (compound.rs)
-    case EeFixtureOp::FxInstallFault: ee_sim_driver_fault_install("EE-AOC");
-        return 0;
     case EeFixtureOp::FxInstallLasso: gEESelectUnitsTestHook = LassoHook;   // each box selection's ids (the boxselect command)
         return 0;
     case EeFixtureOp::FxMessageType: return As<NEMessage>(c->h)->GetType();
@@ -328,7 +320,7 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxLobbyOpen: return EEIsLobbyOpen() ? 1 : 0;
     case EeFixtureOp::FxLobbyManager: return Handle(WONAPI::GetLobbyWindow());
     case EeFixtureOp::FxLobbyRootWindow: return Handle(WONAPI::LobbyGetRootWindow());
-    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(new WONAPI::UserEvent(LobbyWork, 0));
+    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(new WONAPI::UserEvent(ee_fixture_lobby_work, 0));
         return 0;
     case EeFixtureOp::FxWindowRoot: return Handle(As<WONAPI::Window>(c->h)->mRoot.get());
     case EeFixtureOp::FxManagerModal: return Handle(As<WONAPI::WindowManager>(c->h)->GetModalComponent());

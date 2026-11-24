@@ -141,29 +141,16 @@ void EESimGameEnded(int inResult);
 // ..." and goes on with the game when it returns -1.
 int EESimMain(int argc, char** argv)
 {
-    int theCode = ee_sim_driver_main(argc, argv);   // (the screens' events: sim_driver driver.rs)
+    // (the screens' events, the debug output, the Windows fault report and Linux's dummy video: sim_driver ffi.rs)
+    int theCode = ee_sim_driver_main(argc, argv);
     if (theCode != EE_SIM_DRIVER_CONTINUE)
         return theCode;
-    PlatDebugSetHandler(ee_sim_driver_debug);
-#ifdef _WIN32
-    ee_sim_driver_fault_install("EE-SIM");
-#else
-    EESimInstallFaultHandler();
-#if !defined(__APPLE__)
-    // Linux, where a bench machine has no display: SDL's dummy video driver (the hidden window needs none, and
-    // nothing is presented; macOS keeps Cocoa: its windows are Metal windows, which the dummy driver refuses). The
-    // GPU device the renderer still creates is any Vulkan adapter, on a machine without a GPU Mesa's lavapipe, kept
-    // to one rasterizer thread (it starts one per core, and a bench runs one simulation per core). The environment
-    // wins over both.
-    setenv("SDL_VIDEO_DRIVER", "dummy", 0);
-    setenv("LP_NUM_THREADS", "1", 0);
-#endif
-#endif
 #ifdef _WIN32
     char theEmpty[1] = {0};
     EESimGameEnded(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));
     return 4;
 #else
+    EESimInstallFaultHandler();
     return -1;   // the POSIX main goes on with the game (Empire Earth.cpp: ee-aoc --sim ...)
 #endif
 }

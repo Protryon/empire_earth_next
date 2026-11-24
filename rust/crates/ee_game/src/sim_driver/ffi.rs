@@ -65,6 +65,24 @@ pub unsafe extern "C" fn ee_sim_driver_main(argc: c_int, argv: *const *const c_c
         }
     };
     d.start_process(&data, &config, ai_trace, &games_name);
+    // the game's debug strings to the driver; on Windows the fault report (POSIX: EESim.cpp's signal handler)
+    ee_base::plat_core::sim::PlatDebugSetHandler(Some(ee_sim_driver_debug));
+    #[cfg(windows)]
+    // SAFETY: a NUL-ended text
+    unsafe {
+        super::fault::ee_sim_driver_fault_install(c"EE-SIM".as_ptr())
+    };
+    // Linux, where a bench machine has no display: SDL's dummy video driver (the hidden window needs none, and
+    // nothing is presented; macOS keeps Cocoa: its windows are Metal windows, which the dummy driver refuses). The
+    // GPU device the renderer still creates is any Vulkan adapter, on a machine without a GPU Mesa's lavapipe, kept
+    // to one rasterizer thread (it starts one per core, and a bench runs one simulation per core). The environment
+    // wins over both.
+    #[cfg(all(unix, not(target_os = "macos")))]
+    for (name, value) in [("SDL_VIDEO_DRIVER", "dummy"), ("LP_NUM_THREADS", "1")] {
+        if std::env::var_os(name).is_none() {
+            super::stdio::set_env(name, value);
+        }
+    }
     EE_SIM_DRIVER_CONTINUE
 }
 
