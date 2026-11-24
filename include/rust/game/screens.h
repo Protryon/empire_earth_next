@@ -18656,8 +18656,14 @@ void ee_screens_shell_free(EeScreensShell *s);
 /// `sUnitTypeMode` (the unit tab's host).
 int32_t ee_screens_shell_unit_type_mode();
 
-/// `EEIsValidName` over the name's `count` characters (each one's first byte).
-bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+/// `EEIsValidName`: the UWideString's text and `GetLength()` (its characters); the rule reads each character's first
+/// byte (`operator[]`, ee_base ustring wide.rs `ee_uwstring_at`; the loop was EEARust.cpp's).
+bool ee_screens_valid_name(const char *text,
+                           unsigned long length);
+
+/// EEAJoinOrHostAGameRestartClient: the join's message box callback (a `void (*)(UIForm*)`; the form is unused; was
+/// EEARust.cpp's): the communications object replaced with a freshly started client.
+void ee_screens_join_restart_client(void *_form);
 
 /// `EEUIFMGStatusBox::Fill` (`unit`: the call's unit is set).
 void ee_screens_status_box_fill(void *call, bool unit);

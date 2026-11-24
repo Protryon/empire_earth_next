@@ -266,8 +266,6 @@ public:
 
 // the mini map's pixel-to-map transformation (EEUIMiniMap sets it)
 extern GETransformation gMiniMapTransformation;
-// the join's message box callback: a fresh client started
-void EEAJoinOrHostAGameRestartClient(UIForm* inForm);
 // a player name is non-empty and free of control, quote, backslash and @ characters (ee_screens single_player.rs)
 bool EEIsValidName(const UWideString& inName);
 // the civilization file applied to a player (EECBCivilizationFiles.cpp)
