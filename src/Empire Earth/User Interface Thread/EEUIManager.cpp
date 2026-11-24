@@ -47,7 +47,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEScreenEvent.h"
-#include "ee/EEUIEWonNetStatsEvents.h"
+#include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIBGenericBackground.h"
