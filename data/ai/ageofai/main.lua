@@ -29,6 +29,8 @@ local FY = require("ageofai.ferry")       -- [ferry.c] the ferry service (crossi
 local WT = require("ageofai.watch")      -- [watch.c] the patches out of sight, the patrols, the watch towers
 local CR = require("ageofai.creep")      -- [creep.c] tower creep (off unless S.tower_creep)
 local HL = require("ageofai.holy")       -- [holy.c] the priests' conversions, the prophets' calamities (off unless S.holy)
+local PL = require("ageofai.plans")       -- [plans.c] the strategy plans (off unless S.strategy_plans)
+local RT = require("ageofai.returns")     -- [returns.c] the returns, step 1 of the plans
 local V = require("lib.view")
 local S = require("ageofai.settings")
 
@@ -54,6 +56,9 @@ function M.step(view, memory)
     memory.hits = {}
     memory.epoch_now = view.epoch
     memory.town_x, memory.town_y = view.town_x, view.town_y   -- the micro modules' town (no view there)
+    -- [returns.c] track kills/losses/fielded from this step's died events, then [plans.c] pick/change the plan
+    RT.step(view, memory, events)
+    PL.step(view, memory)
     local budget = E.step(view, memory, orders, memory.army_plan)
     -- [territories.c] the territories as the AI sees them (chunked over steps): the holds, the fronts, the guard,
     -- the unsafe ground and its refuge, the seas' claims; the consumers are build.lua and the modules to come

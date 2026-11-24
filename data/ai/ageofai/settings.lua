@@ -318,6 +318,11 @@ return {
                                     -- base with no enemy building known round it is the backland
     holy_log = false,               -- holy.lua's minute line (upstream: [autotest] only)
     creep_log = false,              -- creep.lua's log (upstream: [autotest] only)
+    -- the strategy plans (plans.c, returns.c): off until the consumers (metal/econ/defence/territories/build/airguard/
+    -- navy) are wired to plan_f/worth; default leanings are 50 (neutral) since personas are not ported
+    strategy_plans = false,
+    plan_lean_air = 50, plan_lean_navy = 50, plan_lean_anti_air = 50,
+    plan_lean_pressure = 50, plan_lean_defences = 50, plan_lean_spread = 50,
     -- the force by territory (stations.c; the alternative land force to army.lua)
     stations = false,               -- the switch; upstream runs it while [ai_base] game_ai = 0 (off as shipped)
     -- the holy (holy.c): priests and prophets, a strike category of their own
@@ -383,5 +388,6 @@ return {
     transport_lifeboat = true,      -- a sinking transport runs for the nearest beach (convoy.c: not ported yet)
     transport_escort = true,        -- the ferry's escort ahead (convoy.c)
     transport_park = true,          -- transports held at a park
-    strategy_plans = true,          -- the strategy plans (plans.c: not ported yet; the port's play is its default)
+    strategy_plans = false,         -- the strategy plans (plans.c: ported, off until the consumers are wired to
+                                    -- plan_f/worth)
 }
