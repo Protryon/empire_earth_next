@@ -966,7 +966,7 @@ inline Component* NoComponent() { return NULL; } // the font and image configs m
 class ConfigObjectException : public std::exception {
 public:
     ConfigObjectException(const std::string& inText, bool inFlag = true)
-        : mText() { this->mText = inText; this->mFlag = inFlag; }
+        : mText(inText), mFlag(inFlag) {}
     std::string mText;                     // +08
     bool mFlag;                            // +18
 };
