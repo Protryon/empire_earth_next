@@ -29,7 +29,6 @@ struct EECivilizationEntry : EeTechCivEntry {
 
 // Actual serialized600-byte category row,35 records at manager+4. Names provisional.
 // The records are Rust's (ee_sim tech civ.rs EeTechCivLevel, EeTechCivCategory, with the size assert).
-typedef EeTechCivLevel EECivilizationUpgradeValue;
 typedef EeTechCivCategory EECivilizationCategoryEntry;
 
 // Whole in Rust (ee_tech civ.rs, civ_apply.rs; civilization builder lane, round 2): the tables (the categories and
@@ -111,13 +110,6 @@ public:
     {
         return ee_screens_civm_to_legacy(inUpgrade, &outLegacy);
     }
-    // the keyed form `<category id>.<attribute id>` (keyed .civ files); false without ids (the binary tables)
-    bool UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const;
-    bool FindUpgradeKey(const std::string& inKey, EECivUpgrade& outUpgrade) const
-    {
-        return ee_tech_civ_find_upgrade_key(reinterpret_cast<const uint8_t*>(inKey.data()), inKey.size(), &outUpgrade);
-    }
-    std::vector<EECivUpgrade> GetUpgrades();      // 0x281ded (every upgrade of every category, in order)
     // (provisional names)
     bool MatchesPremadeCivilization(const UWideString& inFile, const UWideString& inName, std::vector<EECivUpgrade>& inUpgrades, long* outNameID)
     {
@@ -131,9 +123,8 @@ public:
 };
 
 extern EECivilizationManager gCivilizationManager;
-// EECivilizationManager.cpp's two init-chain strings, read by the civilization file unit (0x27fdfe..; extern, so the
-// definitions have external linkage)
-extern const UString kCivKey;               // 0x5654d0 ".civ"
+// EECivilizationManager.cpp's init-chain string, read by the civilization file unit (0x27fdfe..; extern, so the
+// definition has external linkage; the other, kCivKey 0x5654d0 ".civ", is civ_load.rs')
 extern const UString kCivilizationsKey;     // 0x5654c0 "Civilizations"
 
 // Civilization Builder helpers (cdecl; provisional names): 0x27ffc0 the civilizations'

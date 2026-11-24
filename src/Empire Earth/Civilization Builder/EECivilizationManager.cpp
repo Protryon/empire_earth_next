@@ -41,10 +41,6 @@
 // 0x24f0e9 (EEFOFindNewTargetNearOldTarget.cpp; as ee/EEUnitUtilities.h and EEWorld.cpp declare it)
 #include "ee/EEUnitUtilities.h"   // EEUpgradeHitPoints
 
-// chain at 0x6813f4 (wrapper)
-//   object 0x9654d0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-const UString kCivKey(".civ");
-
 // chain at 0x681426 (wrapper)
 //   object 0x9654c0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 const UString kCivilizationsKey("Civilizations");
@@ -53,27 +49,6 @@ const UString kCivilizationsKey("Civilizations");
 EECivilizationManager::EECivilizationManager()
 {
     ee_tech_civ_bind_rules(EEGetRules().RustRules());
-}
-
-bool EECivilizationManager::UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const
-{
-    struct Sink {
-        static void Put(void* inCtx, const uint8_t* inBytes, size_t inLength)
-        {
-            static_cast<std::string*>(inCtx)->assign(reinterpret_cast<const char*>(inBytes), inLength);
-        }
-    };
-    return ee_tech_civ_upgrade_key(inUpgrade, &outKey, &Sink::Put);
-}
-
-std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
-{
-    struct Sink {
-        static void Push(void* inCtx, uint32_t inUpgrade) { static_cast<std::vector<EECivUpgrade>*>(inCtx)->push_back(inUpgrade); }
-    };
-    std::vector<EECivUpgrade> theUpgrades;
-    ee_tech_civ_upgrades(&theUpgrades, &Sink::Push);
-    return theUpgrades;
 }
 
 // ------------------------------------------------------------------------------------------------ the simulation's host
