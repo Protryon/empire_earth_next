@@ -268,14 +268,29 @@ fn for_each_unit_of_walks_the_units_then_the_pending_ones() {
 fn the_hit_point_upgrade_scales_the_upgrade_then_the_units() {
     let mut h = Mock::default()
         .answer(EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS, 60, 100)
-        .answer(EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS, 60, 200)
-        .answer(EE_UNITS_UB_MAKE_UPGRADER, 0, 8);
+        .answer(EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS, 60, 200);
     upgrade_hit_points(&mut h, 60, 3, 0.5, 0);
-    let make = h.find(EE_UNITS_UB_MAKE_UPGRADER)[0];
-    assert_eq!((make.3, flt(make.4)), (3, 1.25));
     assert_eq!(h.find(EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS)[0].3, 250);
     // a NULL player: nothing walked
     assert_eq!(h.count(EE_UNITS_UB_FIRST_UNIT), 0);
+}
+
+#[test]
+fn the_hit_point_upgrade_scales_the_players_complex_units_of_the_type() {
+    // ratio (100 * 0.5 + 200) / 200 = 1.25: unit 1 (complex, of the type, 8 hit points) becomes 10; unit 2 is not complex
+    let mut h = Mock::default()
+        .answer(EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS, 60, 100)
+        .answer(EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS, 60, 200)
+        .answer(EE_UNITS_UB_FIRST_UNIT, PLAYER, 1)
+        .answer(EE_UNITS_UB_NEXT_UNIT, 1, 2)
+        .answer(EE_UNITS_UB_COMPLEX_OF, 1, 1)
+        .answer(EE_UNITS_UB_UNIT_CLASS, 1, CLASS as i64)
+        .answer(EE_UNITS_UB_CLASS_TYPE, CLASS, 3)
+        .answer(EE_UNITS_UB_HIT_POINTS, 1, 8);
+    upgrade_hit_points(&mut h, 60, 3, 0.5, PLAYER);
+    let set = h.find(EE_UNITS_UB_SET_HIT_POINTS);
+    assert_eq!((set.len(), set[0].1, set[0].3), (1, 1, 10));
+    assert_eq!(h.count(EE_UNITS_UB_APPLY) + h.count(EE_UNITS_UB_APPLY_TO_UNIT), 0);
 }
 
 #[test]
@@ -283,10 +298,10 @@ fn the_functor_scales_a_living_unit_of_its_type() {
     let mut h = Mock::default()
         .answer(EE_UNITS_UB_UNIT_CLASS, UNIT, CLASS as i64)
         .answer(EE_UNITS_UB_CLASS_TYPE, CLASS, 3)
-        .answer(EE_UNITS_UB_UPGRADER_TYPE, 8, 3)
-        .answer(EE_UNITS_UB_HIT_POINTS, UNIT, 3)
-        .answer(EE_UNITS_UB_UPGRADER_RATIO, 8, bits(1.5));
-    hit_point_apply(&mut h, 8, UNIT);
+        .answer(EE_UNITS_UB_HIT_POINTS, UNIT, 3);
+    hit_point_apply(&mut h, 4, 1.5, UNIT);
+    assert_eq!(h.count(EE_UNITS_UB_SET_HIT_POINTS), 0, "another type");
+    hit_point_apply(&mut h, 3, 1.5, UNIT);
     // lrintf(4.5) = 4
     assert_eq!(h.find(EE_UNITS_UB_SET_HIT_POINTS)[0].3, 4);
 }

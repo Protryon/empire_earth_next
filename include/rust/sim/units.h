@@ -6473,30 +6473,7 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_PLAIN = 602;
 /// `a->mActiveGroup->TellGroup(a, f[0..3])`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TELL_GROUP = 603;
 
-/// the file's `Write((uint32_t)i[1])`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_U32 = 604;
-
-/// the file's `Write((int32_t)i[1])`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_I32 = 605;
-
-/// the file's `Write(float of the bits i[1])`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_F32 = 606;
-
-/// the file's `Write(i[1] != 0)`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_BOOL = 607;
-
-/// the file's `Read` of a `uint32_t` from and into `i[1]`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_U32 = 608;
-
-/// the file's `Read` of an `int32_t`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_I32 = 609;
-
-/// the file's `Read` of a float (its bits)
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_F32 = 610;
-
-/// the file's `Read` of a `bool`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_BOOL = 611;
-
+/// (604..611: the typed file calls, Rust's: goal_obj.rs file_call)
 /// the context's `mText != NULL`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_HAS_TEXT = 612;
 
@@ -15825,9 +15802,6 @@ constexpr static const int32_t EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS = 153;
 /// upgrade `a`'s `GetMaxHitPoints()`
 constexpr static const int32_t EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS = 154;
 
-/// the hit point functor = `EEHitPointUpgrader(c, the float of the bits d)`; its address
-constexpr static const int32_t EE_UNITS_UB_MAKE_UPGRADER = 155;
-
 /// upgrade `a`'s `mMaxHitPoints = c`
 constexpr static const int32_t EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS = 156;
 
@@ -15854,12 +15828,6 @@ constexpr static const int32_t EE_UNITS_UB_PENDING_UNIT = 163;
 
 /// `gWorld.mNumPlayers`
 constexpr static const int32_t EE_UNITS_UB_NUM_PLAYERS = 164;
-
-/// functor `a`'s (an `EEHitPointUpgrader`) `mUnitType`
-constexpr static const int32_t EE_UNITS_UB_UPGRADER_TYPE = 165;
-
-/// the bits of functor `a`'s (an `EEHitPointUpgrader`) `mRatio`
-constexpr static const int32_t EE_UNITS_UB_UPGRADER_RATIO = 166;
 
 /// complex unit `a`'s `GetNumCargoUnits()`
 constexpr static const int32_t EE_UNITS_UB_NUM_CARGO = 167;
@@ -16021,8 +15989,6 @@ constexpr static const int32_t EE_UNITS_UB_DO_UPDATE_UNIT_TILE = 11;
 constexpr static const int32_t EE_UNITS_UB_DO_WAITING_GATHERER = 12;
 
 constexpr static const int32_t EE_UNITS_UB_DO_UPGRADE_HIT_POINTS = 13;
-
-constexpr static const int32_t EE_UNITS_UB_DO_HIT_POINT_APPLY = 14;
 
 constexpr static const int32_t EE_UNITS_UB_DO_FOR_EACH_UNIT_OF = 15;
 
@@ -17225,19 +17191,21 @@ struct EeUnitsGhostWalls {
   float rotation;
 };
 
-/// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object.
+/// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object. The C++
+/// `class EEUnitGoal` derives from it and reads the members by their C++ names (units round 11).
+///
 struct EeUnitsGoalBase {
-  bool is_active;
-  uint8_t kind;
+  bool mIsActive;
+  uint8_t mKind;
   /// `mAction` (the action the goal starts: `kActionIdle` when made)
-  unsigned long action;
-  unsigned long start_time;
-  unsigned long creation_time;
+  unsigned long mAction;
+  unsigned long mStartTime;
+  unsigned long mCreationTime;
   /// `mID`: the goal's number (`sGoalCounter`'s value when made)
-  unsigned long id;
-  long path_attempts;
-  bool b1c;
-  bool b1d;
+  unsigned long mID;
+  long mPathAttempts;
+  bool mB1C;
+  bool mB1D;
 };
 
 /// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
@@ -22007,6 +21975,14 @@ void ee_units_uu_slot_tile(int32_t x, int32_t y, int32_t direction, int32_t (*ou
 /// `EEOrientWallPiece`'s frame set and yaw.
 EeUnitsUuWallPiece ee_units_uu_wall_piece(int32_t corner);
 
+/// `EEOrientWallPiece(transformation, corner, raised)`: the piece's frame set; a turning piece faces its yaw
+/// (`SetOrientationYPR(yaw, 0, 0)`; the raised corners are unused, as in the original).
+///
+/// # Safety
+/// `t` is a live transformation.
+long ee_units_uu_orient_wall_piece(EeGeTransformation *t,
+                                   int32_t corner);
+
 /// `EEIsCornerBlocked` (23).
 uint8_t ee_units_uu_is_corner_blocked(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
@@ -22141,8 +22117,8 @@ int32_t ee_units_uu_extend_wall_line(const void *tiles,
 /// `EEPickWallPieces`: one piece per tile into `out`.
 ///
 /// # Safety
-/// `tiles` a live tile vector; `out` holds as many `int32_t`s.
-void ee_units_uu_pick_wall_pieces(uint64_t map, const void *tiles, int32_t *out);
+/// `tiles` a live tile vector; `out` holds as many `long`s.
+void ee_units_uu_pick_wall_pieces(uint64_t map, const void *tiles, long *out);
 
 /// `EEMakeWallJunctions`.
 ///

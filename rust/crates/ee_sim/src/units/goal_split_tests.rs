@@ -116,25 +116,7 @@ fn tell_group_only_with_a_group() {
 }
 
 #[test]
-fn the_file_calls_go_by_kind() {
-    let mut h = Mock::default();
-    for kind in [0, 1, 3, 2] {
-        split(&mut h, EE_UNITS_GOAL_HOST_WRITE, 0, 0, &mut io_ints(&[kind, 5]));
-        split(&mut h, EE_UNITS_GOAL_HOST_READ, 0, 0, &mut io_ints(&[kind, 5]));
-    }
-    assert_eq!(
-        h.ops(),
-        [
-            EE_UNITS_GOAL_HOST_X_WRITE_U32,
-            EE_UNITS_GOAL_HOST_X_READ_U32,
-            EE_UNITS_GOAL_HOST_X_WRITE_I32,
-            EE_UNITS_GOAL_HOST_X_READ_I32,
-            EE_UNITS_GOAL_HOST_X_WRITE_F32,
-            EE_UNITS_GOAL_HOST_X_READ_F32,
-            EE_UNITS_GOAL_HOST_X_WRITE_BOOL,
-            EE_UNITS_GOAL_HOST_X_READ_BOOL
-        ]
-    );
+fn the_text_goes_to_the_text_or_the_dump() {
     let mut h = Mock::default().answer(EE_UNITS_GOAL_HOST_X_HAS_TEXT, 0, 1);
     split(&mut h, EE_UNITS_GOAL_HOST_APPEND, 0, 0, &mut EeUnitsGoalIo::default());
     assert_eq!(h.ops(), [EE_UNITS_GOAL_HOST_X_HAS_TEXT, EE_UNITS_GOAL_HOST_X_APPEND_TEXT]);
