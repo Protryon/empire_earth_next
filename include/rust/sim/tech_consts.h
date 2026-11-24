@@ -7,6 +7,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The level's bits of an [`EECivUpgrade`] (its category is above them).
+constexpr static const unsigned long kCivUpgradeLevelBits = 16;
+
+/// The level of an [`EECivUpgrade`].
+constexpr static const unsigned long kCivUpgradeLevelMask = 65535;
+
 /// Civilization power ids (`EECivPower::mID`, dbcivpowers.dat record +0x68; `EECivPowersManager::GetPower` 0x6831d0 /
 /// GetPowerRecord index the records by id - 0x26; HasPower tests the civilization attribute index); names from the
 /// record names (+0x00).
@@ -104,5 +110,31 @@ enum EEContagionCaptureOp {
   /// the functor's Update (its update count)
   kContagionFunctorUpdate = 10,
 };
+
+/// `EEAreaEffectTemplate::mKind`: EEAEManager::CreateAreaEffect creates the area-effect class by kind; names from the
+/// RTTI class (EEAE prefix dropped).
+enum EEAreaEffectKind {
+  /// RTTI EEAEHealing: EEAEManager::CreateAreaEffect case 1
+  kAreaEffectHealing = 1,
+  /// RTTI EEAEMorale: case 2
+  kAreaEffectMorale = 2,
+  /// RTTI EEAECalamityImmunity: case 3
+  kAreaEffectCalamityImmunity = 3,
+  /// RTTI EEAEConversionImmunity: case 4
+  kAreaEffectConversionImmunity = 4,
+  /// RTTI EEAEMoraleFromBuildings: case 5
+  kAreaEffectMoraleFromBuildings = 5,
+  /// RTTI EEAEMoraleFromMilitaryHeroes: case 6
+  kAreaEffectMoraleFromMilitaryHeroes = 6,
+  /// RTTI EEAEEconomyFromUnits: case 7
+  kAreaEffectEconomyFromUnits = 7,
+  /// RTTI EEAECloaking: case 8
+  kAreaEffectCloaking = 8,
+};
+
+/// A civilization builder upgrade id, a category and a level: (category << 16) | level. The original packed them in
+/// an unsigned short as (category << 6) | level (35 categories, 60 levels); the legacy .civ files and the premade
+/// civilizations' checksums keep that form (EECivilizationManager::FromLegacy / ToLegacy).
+using EECivUpgrade = uint32_t;
 
 #endif  // EE_RUST_SIM_TECH_CONSTS_H

@@ -1,6 +1,7 @@
-//! The civilization powers' ids (ee/EECivPowerIDs.h) and the calamity captures' event ids (ee/EETechCapture.h), as
-//! plain (unscoped) C enums for the C++ headers; each comment gives the evidence for its name, "(provisional name)"
-//! marks an inferred one. (The tech ids are tech_tree_ids.rs.)
+//! The civilization powers' ids (ee/EECivPowerIDs.h), the calamity captures' event ids (ee/EETechCapture.h) and the
+//! area-effect kinds (ee/EEAreaEffectKindIDs.h), as plain (unscoped) C enums for the C++ headers; each comment gives
+//! the evidence for its name, "(provisional name)" marks an inferred one; and the civilization builder's upgrade id
+//! (ee/EECivUpgrade.h). (The tech ids are tech_tree_ids.rs.)
 #![allow(non_camel_case_types, non_upper_case_globals, clippy::enum_variant_names, clippy::upper_case_acronyms)]
 
 /// Civilization power ids (`EECivPower::mID`, dbcivpowers.dat record +0x68; `EECivPowersManager::GetPower` 0x6831d0 /
@@ -110,6 +111,39 @@ pub enum EEContagionCaptureOp {
     kContagionFunctorUpdate = 10,
 }
 
+/// `EEAreaEffectTemplate::mKind`: EEAEManager::CreateAreaEffect creates the area-effect class by kind; names from the
+/// RTTI class (EEAE prefix dropped).
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EEAreaEffectKind {
+    /// RTTI EEAEHealing: EEAEManager::CreateAreaEffect case 1
+    kAreaEffectHealing = 1,
+    /// RTTI EEAEMorale: case 2
+    kAreaEffectMorale = 2,
+    /// RTTI EEAECalamityImmunity: case 3
+    kAreaEffectCalamityImmunity = 3,
+    /// RTTI EEAEConversionImmunity: case 4
+    kAreaEffectConversionImmunity = 4,
+    /// RTTI EEAEMoraleFromBuildings: case 5
+    kAreaEffectMoraleFromBuildings = 5,
+    /// RTTI EEAEMoraleFromMilitaryHeroes: case 6
+    kAreaEffectMoraleFromMilitaryHeroes = 6,
+    /// RTTI EEAEEconomyFromUnits: case 7
+    kAreaEffectEconomyFromUnits = 7,
+    /// RTTI EEAECloaking: case 8
+    kAreaEffectCloaking = 8,
+}
+
+/// A civilization builder upgrade id, a category and a level: (category << 16) | level. The original packed them in
+/// an unsigned short as (category << 6) | level (35 categories, 60 levels); the legacy .civ files and the premade
+/// civilizations' checksums keep that form (EECivilizationManager::FromLegacy / ToLegacy).
+pub type EECivUpgrade = u32;
+/// The level's bits of an [`EECivUpgrade`] (its category is above them).
+pub const kCivUpgradeLevelBits: std::os::raw::c_ulong = 16;
+/// The level of an [`EECivUpgrade`].
+pub const kCivUpgradeLevelMask: std::os::raw::c_ulong = 0xffff;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -127,5 +161,23 @@ mod tests {
         assert_eq!(EECalamityStartOp::kCalamityStartStep as i32, 8);
         assert_eq!(EEContagionCaptureOp::kContagionNew as i32, 4);
         assert_eq!(EEContagionCaptureOp::kContagionFunctorUpdate as i32, 10);
+    }
+
+    #[test]
+    fn the_area_effect_kinds_are_the_tech_constants() {
+        use crate::tech::area_effect::*;
+        let kinds = [
+            (EEAreaEffectKind::kAreaEffectHealing, EE_AREA_EFFECT_HEALING),
+            (EEAreaEffectKind::kAreaEffectMorale, EE_AREA_EFFECT_MORALE),
+            (EEAreaEffectKind::kAreaEffectCalamityImmunity, EE_AREA_EFFECT_CALAMITY_IMMUNITY),
+            (EEAreaEffectKind::kAreaEffectConversionImmunity, EE_AREA_EFFECT_CONVERSION_IMMUNITY),
+            (EEAreaEffectKind::kAreaEffectMoraleFromBuildings, EE_AREA_EFFECT_MORALE_FROM_BUILDINGS),
+            (EEAreaEffectKind::kAreaEffectMoraleFromMilitaryHeroes, EE_AREA_EFFECT_MORALE_FROM_MILITARY_HEROES),
+            (EEAreaEffectKind::kAreaEffectEconomyFromUnits, EE_AREA_EFFECT_ECONOMY_FROM_UNITS),
+            (EEAreaEffectKind::kAreaEffectCloaking, EE_AREA_EFFECT_CLOAKING),
+        ];
+        for (kind, value) in kinds {
+            assert_eq!(kind as std::os::raw::c_long, value);
+        }
     }
 }
