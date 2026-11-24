@@ -246,9 +246,9 @@ struct RTSTechTreeNodeData : public EeTechNodeDataFields {
     unsigned long GetCalamity() const { return this->mCalamity; }
 };
 
-// RTTI RTSTechTreeNode (vtable 0x446174). Entirely inline: its ??_G 0x1cfed2 (user-declared empty dtor: the vptr
-// store) and the two accessors 0x1cfeca/0x1cfece close EETechTreeNode.cpp, the only unit that uses its vtable (the
-// EETechTreeNode dtor's last store).
+// The original's base RTSTechTreeNode (RTTI, vtable 0x446174: entirely inline, its ??_G 0x1cfed2 and the two
+// accessors 0x1cfeca/0x1cfece close EETechTreeNode.cpp) is folded into EETechTreeNode (player/tech lane round 1: its
+// mData and the init of the record; its two accessors were overridden by both classes).
 // port (R5b.4, round 29): the plain members of RTSTechTreeNode, EETechTreeNode and EETechTreeEpoch are the Rust record
 // EeTechNodeFields (ee_tech nodes.rs; names and C++ types kept): mIsResearched (+0x04), mIsObsolete (+0x05: the flag),
 // mIsAvailable (+0x06), mPrerequisiteFlags (+0x20: 1 the epoch, 2/4/8/0x10 the four prerequisites), mIsAllowed (+0x21),
@@ -256,21 +256,10 @@ struct RTSTechTreeNodeData : public EeTechNodeDataFields {
 // mResearchDelay (+0x1c: ResearchNode counts it down); an epoch's mIsCountingSOL (+0x50), mRequiredSOL (+0x40),
 // mFirstNodeID (+0x44), mCurrentSOL (+0x48: the techs researched toward it), mNextEpoch (+0x4c), mTitleID. The
 // bodies are Rust over EETechHost
-class RTSTechTreeNode : public EeTechNodeFields {
+class EETechTreeNode : public EeTechNodeFields {
 public:
-    // inline (EETechTreeNode's ctor 0x1cedce: these stores come first, its own init list next, the one vptr store last)
-    RTSTechTreeNode() : mData(NULL) { ee_tech_node_fields_init(this); }
-    virtual ~RTSTechTreeNode() {}           // +0x00 (??_G 0x1cfed2)
-    virtual bool GetIsAvailable() { return this->mIsAvailable; }  // +0x04 0x1cfeca
-    virtual bool GetIsObsolete() { return this->mIsObsolete; }  // +0x08 0x1cfece
-
-    RTSTechTreeNodeData* mData;             // +0x08
-};
-
-class EETechTreeNode : public RTSTechTreeNode {
-public:
-    // (the record's values, allowed and obsolete only after the space epoch: RTSTechTreeNode's ee_tech_node_fields_init)
-    EETechTreeNode() : mTree(NULL), mButton(NULL) {}
+    // ctor 0x1cedce (the record's values, allowed and obsolete only after the space epoch)
+    EETechTreeNode() : mData(NULL), mTree(NULL), mButton(NULL) { ee_tech_node_fields_init(this); }
     // +0x00 0x1cee25 (??_G 0x1cee09): its unit media unloaded and its unit classes given their default buttons back
     virtual ~EETechTreeNode() { ee_gamecpp_tech_node_free(this, true); }
     // whether the node can be researched now (wonders only after enough epochs or in the last epoch)
@@ -322,21 +311,11 @@ public:
     EeTechNodeRef Ref() { return EeTechNodeRef{this, this, this->mData}; }
     int32_t Walk(EeTechNodeOp inOp, long inA = 0, bool inB = false, EEComplexUnit* inUnit = NULL);
 
+    RTSTechTreeNodeData* mData;             // +0x08
     EETechTree* mTree;                      // +0x0c (GetPlayer 0x1ccb1f)
     EEButtonObject* mButton;                // +0x10 (EEButtonObject::Get of the record's +0xb0)
 };
 typedef EETechTreeNode EETechnology;
-
-// RTTI RTSTechTree (vtable 0x446120). Entirely inline: EETechTree's ctor stores mU04 and the vptr first; ??_G 0x1cdeef
-// and SetPlayerIndex 0x1cdee5 close EETechTree.cpp.
-class RTSTechTree {
-public:
-    RTSTechTree() : mPlayerIndex(0) {}
-    virtual ~RTSTechTree() {}               // +0x00 (??_G 0x1cdeef)
-    virtual void SetPlayerIndex(long inValue) { this->mPlayerIndex = inValue; }  // +0x04 0x1cdee5 (the player's index; provisional name)
-
-    long mPlayerIndex;                      // +0x04 (EETechTree's ctor zeroes it before its vptr store)
-};
 
 // One epoch of a tech tree (RTTI EETechTreeEpoch > EETechTreeNode > RTSTechTreeNode, vtable 0x44612c; sizeof 0x54:
 // EETechTree's ctor builds 15 of them in a loop of 0x54-byte steps; ctor 0x1cdf68 calls EETechTreeNode's 0x1cedce,
@@ -415,11 +394,13 @@ private:
 // (+0x538; EEMusicManager 0x132022 passes it to EEMusicObject's pick), mStartEpoch (+0x53c), mEndEpoch (+0x540, = 14),
 // mEpochsBeforeWonders (+0x544, = 1), mMediaID (+0x548), mEpochNameID (+0x54c: 30145 + the epoch, a string id),
 // mIsLoaded (+0x550); the saved game's research lists (+0x4f4 .. +0x524) are Rust's (mSaved). The bodies are Rust
-// over EETechHost
-class EETechTree : public RTSTechTree, public EeTechTreeFields {
+// over EETechHost. The original's base RTSTechTree (RTTI, vtable 0x446120: entirely inline, its ??_G 0x1cdeef and
+// SetPlayerIndex 0x1cdee5 close EETechTree.cpp; mPlayerIndex its +0x04) is folded in (player/tech lane round 1).
+class EETechTree : public EeTechTreeFields {
 public:
-    EETechTree() : mPlayer(NULL) { ee_gamecpp_tech_tree_init(this); }   // every epoch, the prehistoric one current
+    EETechTree() : mPlayerIndex(0), mPlayer(NULL) { ee_gamecpp_tech_tree_init(this); }   // every epoch, the prehistoric one current
     virtual ~EETechTree() { ee_tech_tree_fields_free(this); }   // +0x00 0x1cbd99 (??_G 0x1cbd7d) (the saved game's lists are Rust's)
+    void SetPlayerIndex(long inValue) { this->mPlayerIndex = inValue; }   // the player's index (provisional name)
     // inline in the real header (the COMDAT 0x18a4 sits in EEABuild.cpp, its first user; every caller calls it
     // out of line). An epoch's id is its position; a node is found in its epoch (EETechTreeEpochOf).
     EETechTreeNode* Get(long inID)
@@ -474,6 +455,7 @@ public:
     EETechTree& operator=(const EETechTree& inOther) { return *(EETechTree*)ee_gamecpp_tech_tree_assign(this, &inOther); }
 
     // Layout (from the ctor 0x1cbcc2; provisional names)
+    long mPlayerIndex;                      // (RTSTechTree's +0x04)
     EETechTreeEpochList mEpochs;            // +0x008 one per epoch (the original: 15, the ids below 15)
     EEPlayer* mPlayer;                      // +0x534 (GetPlayer: else gWorld.mPlayers[mU04])
     long GetCurrentEpoch() const { return this->mCurrentEpoch; }
