@@ -122,10 +122,7 @@ EEComplexUnit::~EEComplexUnit()
 UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 
 // Makes the unit hold another unit, keeping the held units sorted by growth
-// the mHeldUnits order (std::sort 0x200df9: its heap code compares the units' mGrowth) (provisional name)
-struct EEComplexUnitGrowthLess {
-    bool operator()(EEComplexUnit* inA, EEComplexUnit* inB) const { return inA->GetGrowth() < inB->GetGrowth(); }
-};
+// (the mHeldUnits order, std::sort 0x200df9 by the units' mGrowth: EE_UNITS_CU_S_HELD_SORT's lambda)
 
 #include "ee/EEStringIDs.h"
 #include "ee/EEEffectManager.h"
@@ -504,7 +501,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_S_REFERENCE_OTHER: theOther->Reference(); return 0;
     case EE_UNITS_CU_S_SET_HOLDER_OF: theOther->SetHolder(theUnit); return 0;
     case EE_UNITS_CU_S_HELD_PUSH: theUnit->mHeldUnits.push_back(theOther); return 0;
-    case EE_UNITS_CU_S_HELD_SORT: std::sort(theUnit->mHeldUnits.begin(), theUnit->mHeldUnits.end(), EEComplexUnitGrowthLess()); return 0;
+    case EE_UNITS_CU_S_HELD_SORT: std::sort(theUnit->mHeldUnits.begin(), theUnit->mHeldUnits.end(), [](EEComplexUnit* inA, EEComplexUnit* inB) { return inA->GetGrowth() < inB->GetGrowth(); }); return 0;
     case EE_UNITS_CU_S_NUM_GOAL_QUEUES: return (int64_t)theUnit->GetNumGoalQueues();
     case EE_UNITS_CU_S_CLEAR_GOAL_QUEUE: theUnit->ClearGoalQueue((unsigned long)inB); return 0;
     case EE_UNITS_CU_S_SIGHT_ON_HERE: theUnit->SightOn(theUnit->GetTileX(), theUnit->GetTileY()); return 0;
