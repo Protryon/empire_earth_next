@@ -600,7 +600,6 @@ enum class EeSimDriverSim : uint32_t {
   UnitId,
   UnitTileX,
   UnitTileY,
-  UnitPlayer,
   ComplexOnMap,
   ComplexTileX,
   ComplexTileY,

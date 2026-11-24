@@ -247,7 +247,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     typedef EeSimDriverSim O;
     switch (inOp) {
     // the user interface
-    case O::UiPresent: return gUIManager != NULL;
     case O::EditorForm: return P64(static_cast<UIForm*>(gUIManager->GetScenarioEditorForm()));
     case O::FormId: return UF->GetFormID();
     case O::FormShellOf: return P64(EEUIShell::Of(UF));

@@ -77,7 +77,6 @@ pub enum EeSimDriverSim {
     UnitId,
     UnitTileX,
     UnitTileY,
-    UnitPlayer,
     ComplexOnMap,
     ComplexTileX,
     ComplexTileY,
