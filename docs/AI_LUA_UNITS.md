@@ -406,7 +406,8 @@ route skips:
 | `ai.pack(ids, on)` | PackUnpack | | |
 | `ai.cast(ids, power, target or x, y)` | CastCalamity | | |
 | `ai.tribute(player, amounts)`, `ai.trade(resource, buy, n)`, `ai.diplomacy(player, stance)` | PayTribute, ExchangeResources, SetDiplomaticStance | | |
-| `ai.air(...)` | the airport messages | stage L6 or later | |
+| `ai.air(...)` | the airport messages | stage L6 or later |
+| `ai.llm(config)` / `ai.llm(prompt[, system])` / `ai.llm()` | the AI's voice: a table configures the LLM transport (`url`, `api_key`, `model`, `timeout`, `enabled`, `think`); a string starts one request on a worker thread and returns its sequence number (nil when disabled or busy); no argument returns the last answer or nil. Windows WinHTTP; inert on POSIX. Never blocks the step (`EECPNextLLM.cpp`). | this port | |
 
 **The ownership calls (§7):**
 - `ai.take(ids)`, `ai.release(ids)`;

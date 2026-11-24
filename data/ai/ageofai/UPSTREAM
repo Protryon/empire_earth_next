@@ -736,6 +736,12 @@ lines here:
 A decision this engine cannot express (no territory split of the retail game, no stance-claimed orders, no
 personality leanings, no unit-improvement data) is a gap named in the file's line, not a silent omission.
 
+THE VOICE (2026-11-24): the engine now carries an LLM transport of its own (EECPNextLLM.cpp, ai.llm: a table
+configures, a string asks on a worker thread, no argument polls; Windows WinHTTP, inert on POSIX) and the Lua side
+speaks through it (voice.lua, off unless settings.llm_enabled). What is still missing for upstream's voice: the
+game's chat door (persona_say / stance_lines), the persona texts, and the LLM's part in a decision - this engine's
+AIs print their lines into the AI trace for now.
+
 Still not ported of the files modified since 0ac6495 (their lines above describe the port at 0ac6495 unless they
 name a newer piece): defence.c's STRONG ANTI-AIR row, TOWN GUARDS, BUILDERS UNDER COVER and its anti-air record
 (airguard.lua builds and counts the AA itself), bunker.c's stash_by_territory, let-out-few and territory reserve,

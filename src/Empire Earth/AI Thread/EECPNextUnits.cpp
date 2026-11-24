@@ -4607,6 +4607,61 @@ static int LuaEpoch(lua_State* L)
 // ---------------------------------------------------------------------------------------------------------------
 // Opening, the micro step
 
+// the LLM transport (EECPNextLLM.cpp): configure, start a request, poll the last answer
+extern "C" void EECPNextLLMConfigure(const char* url, const char* key, const char* model, int enabled, int timeout_s,
+                                     int think);
+extern "C" unsigned long long EECPNextLLMRequest(const char* system_prompt, const char* prompt);
+extern "C" int EECPNextLLMPoll(unsigned long long since, char* out, int cap);
+extern "C" unsigned long long EECPNextLLMSeq(void);
+
+// ai.llm: no argument = the last answer (nil while none or still busy); a table = configure; a string = ask
+static int LuaLlm(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    if (lua_isnoneornil(L, 1)) {
+        static char buf[8192];
+        if (EECPNextLLMPoll(0, buf, sizeof buf)) {
+            lua_pushstring(L, buf);
+        } else {
+            lua_pushnil(L);
+        }
+        return 1;
+    }
+    if (lua_istable(L, 1)) {
+        std::string url, key, model;
+        int enabled = 0, timeout = 20, think = 0;
+        lua_getfield(L, 1, "enabled");
+        enabled = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "url");
+        if (lua_isstring(L, -1)) url = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "api_key");
+        if (lua_isstring(L, -1)) key = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "model");
+        if (lua_isstring(L, -1)) model = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "timeout");
+        if (lua_isnumber(L, -1)) timeout = (int)lua_tointeger(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "think");
+        think = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        EECPNextLLMConfigure(url.c_str(), key.c_str(), model.c_str(), enabled, timeout, think);
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+    const char* prompt = lua_isstring(L, 1) ? lua_tostring(L, 1) : NULL;
+    const char* system = lua_isstring(L, 2) ? lua_tostring(L, 2) : NULL;
+    unsigned long long seq = EECPNextLLMRequest(system, prompt);
+    if (seq == 0) {
+        lua_pushnil(L);
+    } else {
+        lua_pushinteger(L, (lua_Integer)seq);
+    }
+    return 1;
+}
+
 void EECPUnitsOpen(lua_State* L, void* inPlayer)
 {
     EEComputerPlayer* thePlayer = (EEComputerPlayer*)inPlayer;
@@ -4630,6 +4685,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
+        {"llm", LuaLlm},
         {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {

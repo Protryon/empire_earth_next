@@ -127,7 +127,7 @@ def static_libs():
             str(ee.wgpu_dir() / "lib" / "wgpu_native.lib"), "gdi32.lib", "advapi32.lib", "ws2_32.lib",
             "userenv.lib", "ntdll.lib", "bcrypt.lib", "oleaut32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib",
             "opengl32.lib", "propsys.lib", "runtimeobject.lib", "uuid.lib", "synchronization.lib", "shell32.lib",
-            "dwmapi.lib"]
+            "dwmapi.lib", "winhttp.lib"]
 
 
 LINK_FLAGS = ["/INCREMENTAL:NO", "/OPT:REF", "/OPT:ICF", "/MACHINE:X64", "/SUBSYSTEM:WINDOWS", "/NODEFAULTLIB",

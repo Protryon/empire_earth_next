@@ -32,6 +32,7 @@ local HL = require("ageofai.holy")       -- [holy.c] the priests' conversions, t
 local PL = require("ageofai.plans")       -- [plans.c] the strategy plans (off unless S.strategy_plans)
 local RT = require("ageofai.returns")     -- [returns.c] the returns, step 1 of the plans
 local PS = require("ageofai.personas")    -- [persona.c] personas (traits + leanings), the Lua-side stand-in
+local VO = require("ageofai.voice")       -- [voice/llm.c] the optional LLM voice (off unless S.llm_enabled)
 local V = require("lib.view")
 local S = require("ageofai.settings")
 
@@ -59,6 +60,8 @@ function M.step(view, memory)
     memory.town_x, memory.town_y = view.town_x, view.town_y   -- the micro modules' town (no view there)
     -- [persona.c] pick the persona (traits for diplo, leanings for the plans when persona_style is on)
     PS.step(memory, view)
+    -- [voice/llm.c] the optional LLM voice: ask for a line now and then, print the answer into the trace
+    VO.step(view, memory)
     -- [returns.c] track kills/losses/fielded from this step's died events, then [plans.c] pick/change the plan
     RT.step(view, memory, events)
     PL.step(view, memory)

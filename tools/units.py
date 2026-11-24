@@ -55,6 +55,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + MUSIC_UNITS,
                        "Empire Earth/AI Thread/EECPNextLua.cpp",
                        # its per-unit Lua queries and human-level commands (docs/AI_LUA_UNITS.md)
                        "Empire Earth/AI Thread/EECPNextUnits.cpp",
+                       # the optional LLM transport for the AI's voice (no original address; Windows WinHTTP)
+                       "Empire Earth/AI Thread/EECPNextLLM.cpp",
                        # the game log: every game, human and computer players (ee/EEGameLog.h)
                        "Empire Earth/Empire Earth/EEGameLog.cpp",
                        # TEST ONLY: the headless simulation's driver (EE-SIM.exe: build.py --sim links its entry)
