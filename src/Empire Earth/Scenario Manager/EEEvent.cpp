@@ -18,7 +18,6 @@
 #include "lle/UResourceFile.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
-#include "ee/EETechRust.h"
 #include "rust/sim/scenario.h"
 #include "ee/EEScenarioHost.h"
 #include "ee/EEUnitUtilities.h"   // EEReplaceQueuedTechnology

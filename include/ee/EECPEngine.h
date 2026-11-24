@@ -29,16 +29,8 @@
 
 class EEComputerPlayer;
 
-// EEComputerPlayer::mEngine: the engine a computer player plays with
-enum EECPEngineKind {
-    kEECPEngineClassic = 0,
-    kEECPEngineNext = 1,
-};
-
-// the lobby's choices (EEGameOptionsPlayer::mEngine; the engine box's lines, in this order)
-enum EECPEngineChoice {
-    kEECPChoiceClassic = 0,         // 1 random, 2 + k the manifest's entry k
-};
+// (EEComputerPlayer::mEngine's kinds, EECPEngineKind, and the lobby's choices, EECPEngineChoice: Rust's enums,
+// rust/game/cp_engine.h)
 
 // an AI of the manifest (Data/ai/ais.json "ais"; its texts live as long as the process): id ([a-z0-9_]+, unique),
 // name (the lobby's text, UTF-8), script (the Lua module: dots are folders under Data/ai), random (the lobby's

@@ -28,12 +28,6 @@ EECivilization::EECivilization()
     ee_gamecpp_civ_init(this);
 }
 
-// Returns an upgrade's cost: the base cost plus the step for each upgrade already bought in its category
-long EECivilization::ComputeCost(long inBase, long inStep, long inCount)
-{
-    return inBase + inStep * inCount;
-}
-
 // Returns whether the civilization can afford an upgrade (always, when custom civilizations are off) and its cost
 // against a list (by default the purchased upgrades): ee_tech civilization.rs
 bool EECivilization::CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList)
@@ -51,52 +45,10 @@ bool EECivilization::CanAffordAll(std::vector<EECivUpgrade>& inUpgrades)
                                       gGameOptions.mAllowCustomCivs);
 }
 
-// Returns an upgrade's base cost (its level's bonus times 100), or 0 when unknown
-long EECivilization::GetBaseCost(EECivUpgrade inUpgrade)
-{
-    return ee_tech_civ_base_cost(inUpgrade);
-}
-
-// Returns whether no points were ever added
-bool EECivilization::GetNoPointsAdded()
-{
-    return this->mNoPointsAdded;
-}
-
-// Returns the extra cost per upgrade already bought in an upgrade's category
-long EECivilization::GetExtraCost(EECivUpgrade inUpgrade)
-{
-    return gCivilizationManager.GetExtraCost(inUpgrade);
-}
-
 // Counts the upgrades of an upgrade's category in a list (by default the purchased upgrades)
 long EECivilization::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
 {
     return gCivilizationManager.CountInCategory(inUpgrade, inList != NULL ? inList : &this->mPurchasedUpgrades);
-}
-
-// Returns whether the civilization is unchanged
-bool EECivilization::GetUnchanged()
-{
-    return this->mUnchanged;
-}
-
-// Returns the points left to spend
-long EECivilization::GetAvailablePoints()
-{
-    return this->mAvailablePoints;
-}
-
-// Returns the maximum points
-long EECivilization::GetMaxPoints()
-{
-    return this->mMaxPoints;
-}
-
-// Returns the purchased upgrades
-std::vector<EECivUpgrade>& EECivilization::GetPurchasedUpgrades()
-{
-    return this->mPurchasedUpgrades;
 }
 
 // Adds points to both the available and the maximum points
@@ -147,12 +99,6 @@ long EECivilization::ApplyDeferred(EEPlayer* inPlayer, unsigned long inMajorVers
 long EECivilization::Save(FSFile& outFile)
 {
     return ee_gamecpp_civ_save(this, &outFile);
-}
-
-// Sets the points left to spend
-void EECivilization::SetPoints(long inPoints)
-{
-    this->mAvailablePoints = inPoints;
 }
 
 // Sets both the available and the maximum points

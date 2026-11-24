@@ -35,7 +35,6 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EETechRust.h"   // EETechHost: the tree view's lookups (tech_view.rs)
 #include "rust/sim/world.h"
 
 // the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object

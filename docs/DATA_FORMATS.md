@@ -987,7 +987,7 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 ### 3.6 `db\dbtechtree.dat`: Tech tree (epochs and nodes)
 
-* **Loader:** `EETechTree::Load` 0x5cbdf0 -> `EETechTreeEpoch::Load` 0x5ce10e -> `EETechTreeNode::Load` 0x5cf370 (src/Empire Earth/Tech Tree/); record in include/ee/EETechTreeRecord.h
+* **Loader:** `EETechTree::Load` 0x5cbdf0 -> `EETechTreeEpoch::Load` 0x5ce10e -> `EETechTreeNode::Load` 0x5cf370 (src/Empire Earth/Tech Tree/); record: ee_sim tech nodes.rs `EeTechTreeRecord`
 * **Container:** No global count. **15 epoch blocks**, each: `u32 nodeCount`, the epoch's own 268-byte record, `u32 n` + n x `u32` parent unit types, then nodeCount x (268-byte record + `u32 n` + n x `u32`). In AoC the epochs have 929/55/201/111/202/901/103/93/95/205/921/113/210/301/39 node slots (4,494 records in all). Only 793 are real: each epoch is a dense id range (e.g. epoch 0 ids 1004..1928), and the empty ids are 0xCC hole records with id 0.
 * **AoC data:** 4494 records, 1,226,932 bytes unpacked. Bytes per record: read 50%, label 39%, unused 11%, padding 0%.
 * **Semantics:** Nodes with `mID <= 15` (`kTechEpochAll`) are dropped. Node epoch = id / 1000 - 1. The trailing list is the unit types offering the node (the converter log calls them "Parents"); costs are scaled per parent by `mFactor1..4` (parents 2..5). The `mCost2..6` names follow the resource slots: Food=mCost2, Wood=mCost3, Stone=mCost4, Gold=mCost5, Iron=mCost6. The 0xCC words at `mUD4..mUE0`, `mUF8`, `mFirstNodeID` and in `mBB6/mBB7` appear in hole rows only.
@@ -1639,7 +1639,7 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 ### 3.28 `db\dbcpbehavior.dat`: Computer-player behaviour values
 
-* **Loader:** `EECPBehavior::Load` 0x4d5f97 (src/Empire Earth/Database/EECPBehaviorTable.cpp); record include/ee/EECPBehavior.h
+* **Loader:** `EECPBehavior::Load` 0x4d5f97 (src/Empire Earth/Database/EECPBehaviorTable.cpp); record: ee_data tables.rs `EeDataCpBehavior`
 * **Container:** `u32 count` + count x 56-byte `EECPBehavior` (**no name column**; +0x00 = dbId, +0x04 = slot index).
 * **AoC data:** 126 records, 7,060 bytes unpacked. Bytes per record: read 80%, label 0%, unused 14%, padding 5%.
 * **Semantics:** Stored into `gCPBehaviors[index]` (129 slots). The names come from Language.rc 28000+index and from the `EECPBehaviorID` enum (114 named ids). Slot 48 (maximum attack response range) is squared after loading.

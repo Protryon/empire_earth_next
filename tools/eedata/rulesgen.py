@@ -18,7 +18,7 @@ INC = ROOT / 'include' / 'ee'
 CPP_TYPES = INC / 'EERulesGen.h'
 RUST_OUT = ROOT / 'rust' / 'crates' / 'ee_data' / 'src' / 'generated' / 'rules_gen.rs'
 HEADERS = [('../rust/sim/unit_ids.h', 'kUnitCategory'), ('../rust/sim/unit_ids.h', 'kUnitType'), ('EEStringIDs.h', 'IDS_'),
-           ('EETechTreeTechID.h', 'kTech'), ('EECivPowerIDs.h', 'kCivPower')]
+           ('EETechTreeTechID.h', 'kTech'), ('../rust/sim/tech_consts.h', 'kCivPower')]
 
 
 def load():

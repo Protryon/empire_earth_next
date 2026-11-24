@@ -36,6 +36,14 @@ enum class EeDataList {
   Colors = 5,
 };
 
+/// Computer player behaviour record ids (the `gCPBehaviors` index = the record's `mIndex`): the one the C++ reads; the
+/// readers' names of every record are tools/eedata ids.py CPBEHAVIOR_NAMES (the computer player that read them is
+/// Rust).
+enum EECPBehaviorID {
+  /// Language.rc 28048 "Maximum Attack Response Range": the record whose float value is kept squared
+  kCPBehaviorMaximumAttackResponseRange = 48,
+};
+
 /// `EEAnimal`'s plain members, in the class's order (`include/ee/EEAnimal.h`: the class's base).
 struct EeDataAnimalFields {
   float mF28;
@@ -841,6 +849,39 @@ struct EEUnitClassRecord {
   uint32_t mAttributes[200];
   /// +0x7a4
   uint8_t mHasSpecialAttack;
+};
+
+/// One record of dbcpbehavior (`EECPBehavior`, ee/EECPBehavior.h, 56 bytes): an AI attribute's values and the
+/// scenario editor's slider ranges.
+struct EeDataCpBehavior {
+  /// +0x00
+  int32_t mUnused1;
+  /// The slot (records with an index of 0 or less are skipped).
+  int32_t mIndex;
+  /// +0x08
+  int32_t mIntValue1Min;
+  /// +0x0c
+  int32_t mIntValue1Max;
+  /// +0x10
+  int32_t mIntValue1;
+  /// +0x14
+  int32_t mIntValue2Min;
+  /// +0x18
+  int32_t mIntValue2Max;
+  /// +0x1c
+  int32_t mIntValue2;
+  /// +0x20
+  int32_t mUnused2;
+  /// +0x24
+  int32_t mFloatSliderMin;
+  /// +0x28
+  int32_t mFloatSliderMax;
+  /// +0x2c
+  int32_t mFloatSliderScale;
+  /// Squared after loading, for record 48 (the maximum attack response range) only.
+  float mFloatValue;
+  /// +0x34
+  bool mIsSettable;
 };
 
 extern "C" {

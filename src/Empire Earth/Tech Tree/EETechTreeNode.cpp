@@ -26,21 +26,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechCapture.h"
-#include "ee/EETechRust.h"
 #include "rust/game/gamecpp.h"
-// Creates an empty tech node, allowed and obsolete only after the space epoch
-EETechTreeNode::EETechTreeNode()
-    : mTree(NULL), mButton(NULL)
-{
-    // the record's values (allowed, obsolete after the space epoch): RTSTechTreeNode's ee_tech_node_fields_init
-}
-
-// Returns the node's research time
-long EETechTreeNode::GetBuildTime()
-{
-    return this->mData->mBuildTime;
-}
-
 // Destroys the node, unloading its unit media and giving its unit classes their default buttons back
 EETechTreeNode::~EETechTreeNode()
 {
@@ -91,26 +77,6 @@ long EETechTreeNode::Load(FSFile& inFile, EETechTree* inTree)
     return ee_gamecpp_tech_node_load(this, &inFile, inTree);   // (gamecpp tech_load.rs)
 }
 
-// Tells whether the node can be researched now (wonders only after enough epochs or in the last epoch)
-bool EETechTreeNode::GetIsAvailable()
-{
-    return EETechNodeWalk(this, EeTechNodeOp::IsAvailable) != 0;
-}
-
-// Tells whether the node lists a unit class
-bool EETechTreeNode::Contains(long inUnitClass)
-{
-    std::vector<unsigned long>::iterator theUnitClass;
-    theUnitClass = std::find(this->mData->mUnitClasses.begin(), this->mData->mUnitClasses.end(), inUnitClass);
-    return theUnitClass != this->mData->mUnitClasses.end();
-}
-
-// Tells whether the node is obsolete, by flag or because its obsolete epoch has passed
-bool EETechTreeNode::GetIsObsolete()
-{
-    return EETechNodeWalk(this, EeTechNodeOp::IsObsolete) != 0;
-}
-
 // Tells whether the node makes a building or mine whose media this game needs
 bool EETechTreeNode::NeedsUnitMedia()
 {
@@ -122,62 +88,10 @@ bool EETechTreeNode::NeedsUnitMediaUncaptured()
     return ee_gamecpp_tech_needs_unit_media(this, false);
 }
 
-// Tells whether the node depends on a tech, directly or through its prerequisites (ee_tech depends_on)
-bool EETechTreeNode::DependsOn(long inID)
-{
-    return EETechNodeWalk(this, EeTechNodeOp::DependsOn, inID) != 0;
-}
-
-// Loads the node's media: the unit class and its buttons, and the media its research event uses (ee_sim tech
-// node_media.rs)
-void EETechTreeNode::LoadMedia(EEPlayer* inPlayer)
-{
-    EETechNodeWalk(this, EeTechNodeOp::Media, 1, false, reinterpret_cast<EEComplexUnit*>(inPlayer));
-}
-
-// Satisfies one prerequisite (an epoch or one of the four techs); with all met the node becomes available
-// (event 0x7d1, statistics series 0x16)
-void EETechTreeNode::SetPrerequisite(long inID)
-{
-    EETechNodeWalk(this, EeTechNodeOp::SetPrerequisite, inID);   // (TNPR, TEST ONLY: ee_sim tech nodes_capture.rs)
-}
-
-// Makes the node available with every prerequisite met
-void EETechTreeNode::MakeAvailable()
-{
-    EETechNodeWalk(this, EeTechNodeOp::MakeAvailable);
-}
-
-// Researches the node if available: fires its event; returns 2 when already researched (repeatable kind 3 excepted),
-// 9 when not possible; counts down a research delay
-long EETechTreeNode::ResearchNode(EEComplexUnit* inUnit)
-{
-    return EETechNodeWalk(this, EeTechNodeOp::Research, 0, false, inUnit);   // (TNRS, TEST ONLY: nodes_capture.rs)
-}
-
-// Sets the scenario editor's obsoleted flag; recursively obsoletes the nodes depending on it, or un-obsoletes
-// its prerequisites
-void EETechTreeNode::SetScenEditorObsoleted(bool inValue, bool inRecurse)
-{
-    EETechNodeWalk(this, EeTechNodeOp::SetEditorObsoleted, inValue ? 1 : 0, inRecurse);
-}
-
-// Makes the node obsolete (obsolete event, unloading its unit media unless kept) or clears the flag
-void EETechTreeNode::SetObsolete(bool inValue, bool inKeepMedia)
-{
-    EETechNodeWalk(this, EeTechNodeOp::SetObsolete, inValue ? 1 : 0, inKeepMedia);
-}
-
 // Gives the node a new button and swaps it into its unit classes
 void EETechTreeNode::SetButton(unsigned long inButton)
 {
     ee_gamecpp_tech_node_set_button(this, inButton);
-}
-
-// Unloads the node's media: the unit class and its buttons, and the media its research event uses
-void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
-{
-    EETechNodeWalk(this, EeTechNodeOp::Media, 0, false, reinterpret_cast<EEComplexUnit*>(inPlayer));
 }
 
 // Copies another node's state and shares its data (with its class cost tables)

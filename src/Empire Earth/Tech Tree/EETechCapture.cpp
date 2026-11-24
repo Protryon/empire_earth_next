@@ -28,7 +28,6 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EETechTreeRecord.h"
-#include "ee/EETechRust.h"
 #include "ee/EEStringIDs.h"
 #include <iterator>
 #include <utility>
@@ -54,35 +53,9 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 
-// the node's, epoch's and tree's states: their Rust records (ee_sim tech capture_rec.rs)
-static void EETechCaptureNodeImpl(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
-{
-    ee_gamecpp_tech_capture_node_rec(&ioRecord, inNode);   // (gamecpp tech_hooks.rs)
-}
-
-static void EETechCaptureEpochImpl(EESimCaptureRecord& ioRecord, EETechTreeEpoch* inEpoch)
-{
-    ee_gamecpp_tech_capture_epoch_rec(&ioRecord, inEpoch);
-}
-
-static void EETechCaptureTreeImpl(EESimCaptureRecord& ioRecord, EETechTree* inTree)
-{
-    ee_gamecpp_tech_capture_tree_rec(&ioRecord, inTree);
-}
-
 static long EETechCapturePlayerIndexImpl(EETechTree* inTree)
 {
     return inTree != NULL ? inTree->mPlayerIndex : -1;
-}
-
-static void EETechCaptureUpgradeImpl(EESimCaptureRecord& ioRecord, EEUnitClassUpgrade* inUpgrade)
-{
-    ee_gamecpp_tech_capture_upgrade(&ioRecord, inUpgrade);   // (gamecpp tech_capture.rs)
-}
-
-static void EETechCapturePlayerImpl(EESimCaptureRecord& ioRecord, EEPlayer* inPlayer)
-{
-    ee_gamecpp_tech_capture_player(&ioRecord, inPlayer);   // (gamecpp tech_capture.rs)
 }
 
 static void EETechCaptureCostImpl(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass,
@@ -93,40 +66,7 @@ static void EETechCaptureCostImpl(EETechTreeNode* inNode, long inKind, long inRe
 }
 
 
-// the calamities' game (EE-SIM --calamities: ee_game gamecpp calamity_capture.rs)
-static void EETechCaptureCastCalamitiesImpl(long inCall)
-{
-    ee_gamecpp_capture_cast_calamities(inCall);
-}
-
-// TSWP: per player and node its availability, obsolescence, costs, SumCosts and prerequisite closure, and the tree's
-// checksum (gamecpp tech_capture.rs)
-static void EETechCaptureSweepImpl()
-{
-    ee_gamecpp_tech_capture_sweep();
-}
-
-// ---- CALW, CCAS, CALT, CONT: the calamities' runs (their records: ee_game gamecpp calamity_capture.rs) -----------
-
-static void EECalamityCaptureEventImpl(long inOp, long inA, long inB, float inC, float inD)
-{
-    ee_gamecpp_capture_calamity_event(inOp, inA, inB, inC, inD);
-}
-
-static long EECalamityCaptureUpdateImpl(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime)
-{
-    return ee_gamecpp_capture_calamity_update(inClass, inCalamity, inElapsedTime);
-}
-
-static bool CanCastEnter()
-{
-    return ee_gamecpp_capture_can_cast_enter();
-}
-
-static void CanCastLeave()
-{
-    ee_gamecpp_capture_can_cast_leave();
-}
+// CCAS: an outermost CanCastAt's record (ee_game gamecpp calamity_capture.rs)
 
 static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComplexUnit* inUnit,
                               const GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
@@ -134,48 +74,6 @@ static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComp
 {
     return ee_gamecpp_capture_can_cast_record(inOutermost, inClass, inUnit, (const float(*)[3])&inLocation.mX, inX, inY,
                                               inCheck, inTargetUnit, inResult);
-}
-
-static void EECalamityCaptureSweepImpl()
-{
-    ee_gamecpp_capture_calamity_sweep();
-}
-
-// ---- EVUN: the units an effect walks (the collection: ee_sim tech capture_rec.rs) ----------------------------------
-
-static void EETechCaptureUnitStepImpl(EEUnit* inUnit, bool inApplies, long inValue)
-{
-    ee_gamecpp_tech_capture_unit_step(inUnit, inApplies, inValue);   // (gamecpp tech_hooks.rs)
-}
-
-static void EECalamityCaptureStartEventImpl(long inOp, long inA, long inB, float inC, float inD)
-{
-    ee_gamecpp_capture_start_event(inOp, inA, inB, inC, inD);
-}
-
-static void EECalamityCaptureStartPointImpl(long inWhich, float inX, float inY, float inZ)
-{
-    ee_gamecpp_capture_start_point(inWhich, inX, inY, inZ);
-}
-
-static bool EECalamityCaptureStartImpl(EECalamityClass* inClass, EECalamity* inCalamity)
-{
-    return ee_gamecpp_capture_calamity_start(inClass, inCalamity, false);
-}
-
-static void EECalamityCaptureStopImpl(EECalamityClass* inClass, EECalamity* inCalamity)
-{
-    ee_gamecpp_capture_calamity_start(inClass, inCalamity, true);
-}
-
-static void EECalamityCaptureContagionEventImpl(long inOp, long inA, long inB, float inC, float inD)
-{
-    ee_gamecpp_capture_contagion_event(inOp, inA, inB, inC, inD);
-}
-
-static void EECalamityCaptureContagionImpl(EeContagionHelper* inHelper, float inElapsedTime)
-{
-    ee_gamecpp_capture_contagion(inHelper, inElapsedTime);
 }
 
 // ------------------------------------------------------------------------- round 10, lane B: the records' C++
@@ -186,32 +84,10 @@ int32_t EETechEpochNodes(EETechTreeEpoch* inEpoch, EeTechHostIo* io);   // EETec
 #define TC_UPGRADE ((EEUnitClassUpgrade*)p)
 #define TC_PLAYER ((EEPlayer*)p)
 
-// The game calls these through the header's hook pointers, set here before main: the game's units name no
+// The game calls these three through the header's hook pointers, set here before main: the game's units name no
 // symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EECalamityCanCastEnter = CanCastEnter, EECalamityCanCastLeave = CanCastLeave,
-                                      EECalamityCanCastRecord = CanCastRecordImpl,
-                                      EECalamityCaptureStart = EECalamityCaptureStartImpl,
-                                      EECalamityCaptureUpdate = EECalamityCaptureUpdateImpl,
-                                      EETechCapturePlayerIndex = EETechCapturePlayerIndexImpl,
-                                      EECalamityCapture = ee_tech_capture_calamity,
-                                      EECalamityCaptureContagion = EECalamityCaptureContagionImpl,
-                                      EECalamityCaptureContagionEventHook = EECalamityCaptureContagionEventImpl,
-                                      EECalamityCaptureEventHook = EECalamityCaptureEventImpl,
-                                      EECalamityCaptureStartEventHook = EECalamityCaptureStartEventImpl,
-                                      EECalamityCaptureStartPoint = EECalamityCaptureStartPointImpl,
-                                      EECalamityCaptureStop = EECalamityCaptureStopImpl,
-                                      EECalamityCaptureSweep = EECalamityCaptureSweepImpl,
-                                      EETechCaptureCastCalamities = EETechCaptureCastCalamitiesImpl,
-                                      EETechCaptureCost = EETechCaptureCostImpl,
-                                      EETechCaptureEpoch = EETechCaptureEpochImpl,
-                                      EETechCaptureNode = EETechCaptureNodeImpl,
-                                      EETechCapturePlayer = EETechCapturePlayerImpl,
-                                      EETechCaptureRescale = ee_tech_capture_rescale,
-                                      EETechCaptureSweep = EETechCaptureSweepImpl,
-                                      EETechCaptureTree = EETechCaptureTreeImpl,
-                                      EETechCaptureUnitStep = EETechCaptureUnitStepImpl,
-                                      EETechCaptureUnitWalkHook = ee_tech_capture_unit_walk,
-                                      EETechCaptureUpgrade = EETechCaptureUpgradeImpl, true);
+static const bool sCaptureHooksSet = (EECalamityCanCastRecord = CanCastRecordImpl, EETechCapturePlayerIndex = EETechCapturePlayerIndexImpl,
+                                      EETechCaptureCost = EETechCaptureCostImpl, true);
 
 // ------------------------------------------------------------------------- round 11, lane C: the hooks' C++
 
@@ -298,7 +174,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TbNodeIsObsolete: return BNODE->GetIsObsolete();
     case O::TbNodeDependsOn: return BNODE->DependsOn((long)a[0]);
     case O::TbNodeGetCost: return BNODE->GetCost((long)a[0], (long)a[1], f[0]);
-    case O::TbTreeChecksum: return (int64_t)(uint32_t)EETechTreeWalk(BTREE, EeTechTreeOp::Checksum);
+    case O::TbTreeChecksum: return (int64_t)(uint32_t)BTREE->Walk(EeTechTreeOp::Checksum);
     case O::TbWorldPlayers: return (int64_t)gWorld.GetNumPlayers();
     case O::TbWorldPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
     case O::TbPlayerTree: return P64(((EEPlayer*)p)->GetTechTree());
@@ -354,12 +230,12 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::TkEpochCount: return TREE->mEpochs.size();
     case O::TkEpochAt: return P64(&TREE->mEpochs[(long)a[0]]);
-    case O::TkEpochRef: ((EeTechHostIo*)a[1])->node = EETechRef(&TREE->mEpochs[(long)a[0]]);
+    case O::TkEpochRef: ((EeTechHostIo*)a[1])->node = TREE->mEpochs[(long)a[0]].Ref();
         break;
     case O::TkEpochNodes: return EETechEpochNodes((EETechTreeEpoch*)p, (EeTechHostIo*)a[0]);
     case O::TkUnitId: return (int64_t)((EEComplexUnit*)p)->mUnitID;
     case O::TkGet: return P64(TREE->Get((long)a[0]));
-    case O::TkSetRef: ((EeTechHostIo*)a[0])->node = EETechRef(TNODE);
+    case O::TkSetRef: ((EeTechHostIo*)a[0])->node = TNODE->Ref();
         break;
     case O::TkNeedsUnitMedia: return TNODE->NeedsUnitMedia();
     case O::TkTrigger: EEEvent::Trigger((long)a[0], TREE->mPlayerIndex, (long)a[1], TREE->mPlayer, (EEComplexUnit*)a[2]);

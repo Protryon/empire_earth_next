@@ -82,7 +82,7 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Scenario Manager/EEScenarioHost.cpp",
                        # TEST ONLY: the calamity lane's capture records (ee/EECalamityCapture.h: CALI, CALK)
                        "Empire Earth/Calamities/EECalamityCapture.cpp",
-                       # TEST ONLY: the area effects' capture records (ee/EEAECapture.h: AETP, AEFX)
+                       # TEST ONLY: the area effects' capture records (AETP, AEFX)
                        "Empire Earth/Civilization Builder/EEAECapture.cpp",
                        # TEST ONLY: the civilization builder lane's capture records (ee/EECivCapture.h: CVMG, CVAP, CVLD, CVAF)
                        "Empire Earth/Civilization Builder/EECivCapture.cpp",

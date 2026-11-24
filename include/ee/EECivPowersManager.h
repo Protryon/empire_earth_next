@@ -13,24 +13,8 @@ class UWideString;
 
 // One civilization power record (0x98 bytes: EECivPowersManager::GetPower copies 0x26 dwords; provisional name;
 // layout inferred)
-struct EECivPower {
-    char mLabel[100];                      // +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming
-                                           //  Arrows" .. "Just In Time Manufacturing"; only copied whole)
-    int32_t mUnusedDatabaseID;             // +0x64
-    int32_t mID;                           // +0x68
-    float mBonus;                           // +0x6c (EECivilizationManager::Load copies it as a level bonus: a dword move into a float)
-    int32_t mUnitSet;                      // +0x70
-    int32_t mTechnology;                   // +0x74 (EEMResearchTechnology compares it with the node's +0x5c)
-    int32_t mMiningLimit;                  // +0x78
-    int32_t mChance;                       // +0x7c
-    int32_t mUnused1;                      // +0x80
-    float mAmount;                          // +0x84
-    int32_t mUnused2;                      // +0x88
-    int32_t mUnused3;                      // +0x8c
-    int32_t mUnused4;                      // +0x90
-    int32_t mUnitType;                     // +0x94
-};
-static_assert(sizeof(EECivPower) == 152, "on-disk record: 152 bytes on every target");
+// the record is Rust's (ee_sim tech civ.rs EeTechCivPower: the fields and the size assert)
+typedef EeTechCivPower EECivPower;
 
 class EEPlayer;
 
@@ -45,7 +29,7 @@ public:
     long Load(FSFile* inFile) { return ee_screens_civm_load((uintptr_t)inFile, 2); } // original-backed 0x283124; caller1414a3, FSFile IO proof
     bool GetPower(long inID, EECivPower& outPower)
     {
-        return ee_tech_civ_power((int32_t)inID, reinterpret_cast<EeTechCivPower*>(&outPower));
+        return ee_tech_civ_power((int32_t)inID, &outPower);
     }   // 0x2831d0 (inID - 0x26 indexes the records)
     // (an upgrade whose attribute applies the power: civbuilder.yaml; the original compared the level with the id)
     bool HasPower(EEPlayer* inPlayer, long inID) { return ee_screens_civm_has_power((uintptr_t)inPlayer, inID); }   // 0x283248 (whether inPlayer's civilization has power inID; EEPlayer 0x1654be; provisional name)

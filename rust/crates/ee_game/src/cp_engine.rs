@@ -11,8 +11,26 @@ use std::sync::OnceLock;
 use ee_sim::ai::manifest::{self, Entry};
 use ee_sim::ai::seat;
 
-/// The lobby's choices (`EECPEngineChoice`).
-const CHOICE_CLASSIC: u64 = 0;
+/// `EEComputerPlayer::mEngine`: the engine a computer player plays with.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types, clippy::enum_variant_names)]
+pub enum EECPEngineKind {
+    kEECPEngineClassic = 0,
+    kEECPEngineNext = 1,
+}
+
+/// The lobby's choices (`EEGameOptionsPlayer::mEngine`; the engine box's lines, in this order): 0 classic, 1 random,
+/// 2 + k the manifest's entry k.
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types, clippy::enum_variant_names)]
+pub enum EECPEngineChoice {
+    kEECPChoiceClassic = 0,
+}
+const CHOICE_CLASSIC: u64 = EECPEngineChoice::kEECPChoiceClassic as u64;
 const CHOICE_RANDOM: u64 = 1;
 const CHOICE_FIRST_AI: u64 = 2;
 /// The manifest's entries past this are not offered to the resolve (`kEECPMaxAIs`).
