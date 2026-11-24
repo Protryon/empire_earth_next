@@ -796,6 +796,20 @@ struct EEProductionEntry {
   long mFlag;
 };
 
+/// `EEComplexUnit::mIgnoredTargets`' element (units round 11: the C++ `EEComplexUnitAttacker`, rust/cbindgen.toml's
+/// rename): an attacker the unit ignores until a game time. All zero when made (`push_front(EEComplexUnitAttacker())`).
+struct EEComplexUnitAttacker {
+  /// the attacked unit's tile
+  long mTileX;
+  long mTileY;
+  /// the attacker's tile
+  long mFromX;
+  long mFromY;
+  unsigned long mUnitID;
+  /// the game time the entry runs out (the tick's time plus 30000)
+  unsigned long mTime;
+};
+
 extern "C" {
 
 /// The C++ registers the build's layout (`EEWorldLayoutRegister`, once at start-up). False for a layout of another

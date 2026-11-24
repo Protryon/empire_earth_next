@@ -235,6 +235,22 @@ pub struct EeUnitsProductionEntry {
     pub mFlag: c_long,
 }
 
+/// `EEComplexUnit::mIgnoredTargets`' element (units round 11: the C++ `EEComplexUnitAttacker`, rust/cbindgen.toml's
+/// rename): an attacker the unit ignores until a game time. All zero when made (`push_front(EEComplexUnitAttacker())`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeUnitsIgnoredTarget {
+    /// the attacked unit's tile
+    pub mTileX: c_long,
+    pub mTileY: c_long,
+    /// the attacker's tile
+    pub mFromX: c_long,
+    pub mFromY: c_long,
+    pub mUnitID: c_ulong,
+    /// the game time the entry runs out (the tick's time plus 30000)
+    pub mTime: c_ulong,
+}
+
 /// A `bool` member's byte, read without making a Rust `bool` of it (any non-zero byte is true, as C++ tests it).
 ///
 /// # Safety
