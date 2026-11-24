@@ -25,6 +25,8 @@ public:
         return s ? ee_won_shell_op(s->mShell, op, a, b) : 0;
     }
     static bool IsKind(Component* c, EeWonShellKind k) { WONShell* s = Of(c); return s && ee_won_shell_kind(s->mShell) == k; }
+    // whether c is a shell of the WON skin class name or of one derived from it (shell.rs skin_part_fits)
+    static bool IsSkinPart(Component* c, const char* name) { WONShell* s = Of(c); return ee_won_shell_skin_part(s ? s->mShell : NULL, name); }
     const char* KindName() const { return ee_won_shell_name(this->mShell); }
     // the base class's virtual v, for the kind
     virtual intptr_t BaseCall(EeWonShellVirt v, intptr_t a, intptr_t b, intptr_t c) = 0;
@@ -165,21 +167,8 @@ inline intptr_t WONShellFrameOp(Component* c, EeWonShellOp op, const WONFrame& f
 // one: a scroll thumb is a simple button, a list control a scroll container)
 inline Component* SafeConfigGetSkinPart(Component* c, const char* name)
 {
-    static const struct { const char* n; EeWonShellKind k1, k2; } kKinds[] = {
-        {"WONSimpleButton", EeWonShellKind::WonSimpleButton, EeWonShellKind::WonScrollThumb},
-        {"WONHeaderButton", EeWonShellKind::WonHeaderButton, EeWonShellKind::WonHeaderButton},
-        {"WONScrollbar", EeWonShellKind::WonScrollbar, EeWonShellKind::WonScrollbar},
-        {"WONScrollContainer", EeWonShellKind::WonScrollContainer, EeWonShellKind::WonListCtrl},
-        {"WONListCtrl", EeWonShellKind::WonListCtrl, EeWonShellKind::WonListCtrl},
-        {"WONTabCtrl", EeWonShellKind::WonTabCtrl, EeWonShellKind::WonTabCtrl},
-        {"WONComboBox", EeWonShellKind::WonComboBox, EeWonShellKind::WonComboBox},
-        {"WONPopupBack", EeWonShellKind::WonFrameComponent, EeWonShellKind::WonFrameComponent},
-        {"WONDialogBack", EeWonShellKind::WonFrameComponent, EeWonShellKind::WonFrameComponent},
-    };
-    for (size_t i = 0; i < sizeof kKinds / sizeof kKinds[0]; i++)
-        if (strcmp(kKinds[i].n, name) == 0 && (WONShell::IsKind(c, kKinds[i].k1) || WONShell::IsKind(c, kKinds[i].k2)))
-            return c;
-    throw ConfigObjectException(std::string("Invalid ") + name);
+    if (!WONShell::IsSkinPart(c, name)) throw ConfigObjectException(std::string("Invalid ") + name);
+    return c;
 }
 // the game's skin (the original's gSkin; made by the first WONSkin group's PreParse)
 inline EeWonSkin* WONSkinGlobal() { return ee_won_skin_global(); }
