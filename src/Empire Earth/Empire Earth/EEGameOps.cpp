@@ -58,14 +58,6 @@
 #include "lle/FSMemoryFile.h"
 #include "rust/game/gamecpp.h"
 
-// a memory file's position (GetPosition's out value)
-static long ee_gamecpp_mem_position(FSMemoryFile* inFile)
-{
-    long thePosition = 0;
-    inFile->GetPosition(thePosition);
-    return thePosition;
-}
-
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
 
@@ -481,7 +473,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     // the calamity capture's (calamity_capture.rs, TEST ONLY)
     case O::SoundObjectIndex: return std::find(gSoundObjects.begin(), gSoundObjects.end(), (EESoundObject*)p) - gSoundObjects.begin();
     case O::CalamityManager: return P64(EECalamityManager::GetInstance());
-    case O::MemFilePosition: return ee_gamecpp_mem_position((FSMemoryFile*)p);
+    case O::MemFilePosition: return ((FSMemoryFile*)p)->GetPosition(*(long*)a[0]);
     case O::MemFileData: return P64(((FSMemoryFile*)p)->GetData());
     case O::MemFileNewDefault: return P64(new FSMemoryFile);
     case O::SaveMinorVersion: return kSaveGameMinorVersion;
