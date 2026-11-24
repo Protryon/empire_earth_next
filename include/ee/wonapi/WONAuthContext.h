@@ -71,13 +71,8 @@ protected:
     virtual ~AuthContext() { ee_won_authctx_free(this->mCore); } //2de370, scalar2ddf90/30; genuine SDK protected access
 public:
     AuthContext() { this->Init(); } //2dddf0
-    AuthContext(const std::wstring& inUserName, const std::wstring& inCommunity, const std::wstring& inPassword)
-    {
-        this->Init();
-        this->SetUserName(inUserName);
-        this->SetPassword(inPassword);
-        this->AddCommunity(inCommunity);
-    }
+    // (the SDK's AuthContext(user, community, password), Init then the three setters, had no caller and went in R6
+    // WON lobby and network round 37)
     bool AddAddress(const IPAddr& inAddr) { return this->GetServerContext()->AddAddress(inAddr); }
     bool AddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter = NULL)
     { return this->GetServerContext()->AddAddressesFromDir(inDir, inNameFilter); }

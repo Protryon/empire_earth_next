@@ -53,18 +53,10 @@ class LobbyFriend;
 
 typedef EeWonPersistCall LobbyPC_;
 inline EeWonPersistText LobbyPersistIn(const GUIString& inText)
-{
-    EeWonPersistText t = {inText.mData->mText, (size_t)inText.length(), sizeof(wchar_t)};
-    return t;
-}
-inline EeWonPersistText LobbyPersistNone() { EeWonPersistText t = {NULL, 0, sizeof(wchar_t)}; return t; }
+{ return EeWonPersistText{inText.mData->mText, (size_t)inText.length(), sizeof(wchar_t)}; }
+inline EeWonPersistText LobbyPersistNone() { return EeWonPersistText{NULL, 0, sizeof(wchar_t)}; }
 inline GUIString LobbyPersistString(const uint32_t* inUnits, size_t inCount)
-{
-    std::wstring aText;
-    aText.reserve(inCount);
-    for (size_t i = 0; i < inCount; i++) aText += (wchar_t)inUnits[i];
-    return GUIString(aText);
-}
+{ return GUIString(std::wstring(inUnits, inUnits + inCount)); } // each unit a wchar_t
 inline intptr_t LobbyPC(LobbyPC_ c, int64_t a = 0, int64_t b = 0)
 { return ee_won_persist_call(LobbyPersist(), c, LobbyPersistNone(), LobbyPersistNone(), a, b, NULL); }
 inline intptr_t LobbyPC1(LobbyPC_ c, const GUIString& t, int64_t a = 0)

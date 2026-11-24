@@ -763,13 +763,7 @@ public:
     static RustServerOp* NewGetDir(ServerContext* inContext, const std::wstring& inPath, DWORD inFlags,
                                    const char* const* inTypes = NULL, int inTypeCount = 0)
     { return NewRequest(ee_won_reqmake_get_dir(inFlags, inPath.data(), inPath.size(), sizeof(wchar_t), inTypes, inTypeCount), inContext); }
-    static RustServerOp* NewGetMultiDir(ServerContext* inContext, DWORD inFlags, const std::wstring* inPaths, int inCount)
-    {
-        std::vector<const void*> aPaths(inCount + 1);
-        std::vector<size_t> aLengths(inCount + 1);
-        for (int i = 0; i < inCount; i++) { aPaths[i] = inPaths[i].data(); aLengths[i] = inPaths[i].size(); }
-        return NewRequest(ee_won_reqmake_get_multi_dir(inFlags, &aPaths[0], &aLengths[0], inCount, sizeof(wchar_t)), inContext);
-    }
+    // (NewGetMultiDir went in R6 WON lobby and network round 37: InitLogic's query is ee_won_reqmake_init_dirs)
     static RustServerOp* NewGetAccount(ServerContext* inContext, AuthContext* inAuth)
     { return MadeOp(ee_won_hostop_new_request(ee_won_reqmake_get_account(), true, static_cast<RefCount*>(inContext), NULL, AUTH_TYPE_SESSION, static_cast<RefCount*>(inAuth))); }
     static RustServerOp* NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
