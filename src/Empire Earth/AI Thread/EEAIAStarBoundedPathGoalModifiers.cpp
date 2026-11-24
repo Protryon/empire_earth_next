@@ -36,15 +36,4 @@ extern "C" const void* ee_astar_mod_host_influence(int32_t* outRegionSize)
     return theTable ? theTable->mTable : NULL;
 }
 
-// Returns whether a gate part is an end part (last, with a part before it) or the middle part
-// (EEUCGate::IsSidePart: out of line after its first user Virtual10)
-bool EEUnitClass::IsSidePart(EEComplexUnit* inGate)
-{
-    return inGate->mNextPart == NULL && inGate->mPreviousPart != NULL || this->IsMiddlePart(inGate);
-}
-
-// Returns whether a gate part is second to last with a part before it (the middle of a three-part gate)
-bool EEUnitClass::IsMiddlePart(EEComplexUnit* inGate)
-{
-    return inGate->mNextPart != NULL && inGate->mNextPart->mNextPart == NULL && inGate->mPreviousPart != NULL;
-}
+// (EEUnitClass::IsSidePart and IsMiddlePart, the gate's: inline in ee/EEUnit.h)

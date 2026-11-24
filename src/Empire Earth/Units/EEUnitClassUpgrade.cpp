@@ -99,15 +99,10 @@ EEUnitClassUpgrade::~EEUnitClassUpgrade()
 }
 
 // Raises another copy's improvements by this copy's levels above 1, moving its stats
-void EEUnitClassUpgrade::CopyUpgradeLevels(EEUnitClassUpgrade* inOther)
-{
-    this->mImprovement.CopyLevelsTo(inOther, inOther->GetImprovement());
-}
 
 // Writes the class name and media count to the dump file when the copy's media is still loaded
 void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
 {
-    UWideString theName;
     if (this->mMediaCount > 0)
         fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)this->mUnitClass->mName, this->mMediaCount);
 }
@@ -116,45 +111,21 @@ void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
 // Returns the copy's improvement levels
 // Returns selection sound inIndex; -1 alternates between the two (one turn shared by every class)
 // Builds the upgrade button's " + n" help text for an improvement's next level
-void EEUnitClassUpgrade::GetImprovementGainText(UWideString& outText, long inImprovement, long inLevel)
-{
-    this->mImprovement.GetGainText(this, inLevel, inImprovement, outText);
-}
 
 // Returns an improvement's display name for this unit class
-void EEUnitClassUpgrade::GetImprovementName(UWideString& outName, long inImprovement)
-{
-    this->mImprovement.GetName(this->mUnitClass, inImprovement, outName);
-}
 
 // Raises or lowers an improvement by inDelta levels, moving this copy's stats
-void EEUnitClassUpgrade::ChangeLevel(long inImprovement, long inDelta)
-{
-    this->mImprovement.ChangeLevel(this->mUnitClass, this, inImprovement, inDelta);
-}
 
 // Returns the unit class this copy belongs to (the original folded it with EEComplexDoppelganger::GetTileX, the same
 // `mov eax,[ecx+0x60]`; written out so the member is read at this build's offset)
 // Resets the copy to its unit class: media, button, stats and inverse speeds, area-effect templates and terrain mask
 // (flag 0x4000 added when the class's +0x315 is set), then reapplies the improvement levels
 // Reads the copy's name and improvement levels (applied to its stats) from a saved game; returns the first read error
-long EEUnitClassUpgrade::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_UPGRADE_LOAD, this->mImprovement.mLevels, &this->mImprovement.mTotalCost,
-                                EEImprovementContext{&this->mImprovement, this->mUnitClass, this, &inFile}, &EEImprovementHost,
-                                (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);   // ee_units improvement.rs
-}
 
 // Loads the class's buttons on the first request; later requests are counted and wait while the first one loads
 // On the first request loads the sounds and model chosen by inMediaFlags (dropping sounds that fail), the button,
 // the area-effect templates and the class's media; later requests are counted and wait while the first one loads
 // Writes the copy's name and improvement levels to the saved game; returns the first write error
-long EEUnitClassUpgrade::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_UPGRADE_SAVE, this->mImprovement.mLevels, &this->mImprovement.mTotalCost,
-                                EEImprovementContext{&this->mImprovement, this->mUnitClass, this, &outFile}, &EEImprovementHost,
-                                0, 0);   // ee_units improvement.rs
-}
 
 // Replaces acknowledge sound inIndex; while media is loaded, unloads the old sound and loads the new one
 // Replaces the creation sound; while media is loaded, unloads the old sound and loads the new one

@@ -201,8 +201,6 @@ void EEWorldLayoutRegister()
     theLayout.placement_rust = offsetof(EECPPlacement, mRust);
     theLayout.player_group_lists = offsetof(EEPlayer, mGroupLists);   // the groups lane, round 2 (group_obj.rs)
     theLayout.player_lists = offsetof(EEPlayer, mLists);   // (player_body.rs)
-    if (offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect) != 28 * sizeof(void*))
-        Fail("the class's 29 effect pointers are not contiguous");
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

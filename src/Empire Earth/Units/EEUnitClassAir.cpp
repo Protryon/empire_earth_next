@@ -47,7 +47,6 @@
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
 // 0x24485b: the enemy unit near (inX, inY) within inRange that inUnit can attack (provisional name)
-EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRange);
 
 // Takes off from the ground: rolls 3 ahead, climbs 7 ahead to 3/4 cruising height (plus the ground height when the
 // ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control

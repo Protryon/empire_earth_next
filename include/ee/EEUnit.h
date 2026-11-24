@@ -48,6 +48,8 @@ class EEPhysicsModel;                       // ee/EEPhysicsModel.h (EEUnitClass 
 class EESoundObject;
 
 #include "ee/EEUnitClassImprovement.h"
+#include "ee/EEUnitKind.h"               // EEClassBody (EEUnitClass::IsBuilding, Virtual70)
+#include "ee/EEUnitUpdate.h"             // EEUnitClassActionChanged (EEUnitClass::HandleActionChanged)
 #include "rust/sim/units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
 #include "rust/sim/astar.h"              // ee_astar_cm_footprint_continent (GetFootprintContinent)
 
@@ -67,7 +69,7 @@ class EEUnitClassUpgrade : public EeUnitsUnitClassUpgradeLinks, public EeUnitsUn
 public:
     EEUnitClassUpgrade(EEUnitClass* inUnitClass);   // 0x23b6ae (then Init)
     virtual ~EEUnitClassUpgrade();          // +0x00 dtor 0x23b729 (??_G 0x23b70d)
-    virtual void CopyUpgradeLevels(EEUnitClassUpgrade* inOther);  // +0x04 0x23b7a4 (forwards to mImprovement)
+    virtual void CopyUpgradeLevels(EEUnitClassUpgrade* inOther) { this->mImprovement.CopyLevelsTo(inOther, inOther->GetImprovement()); }  // +0x04 0x23b7a4 (forwards to mImprovement)
 
     // the media bodies (ee_units upgrade_media.rs) over the eight media members (mButton .. mSelectionSounds[1],
     // contiguous), the busy flags and the record's counts
@@ -88,13 +90,13 @@ public:
     // EEUnitClassUpgrade.cpp (provisional names)
     EEUnitClassImprovement* GetImprovement() { return &this->mImprovement; }  // 0x23b827 (&mImprovement; defined after its first user Virtual04, so called)
     void DumpMediaCount(FSFileSpec& inFile);  // 0x23b7c1 (the media-count dump line)
-    void ChangeLevel(long inImprovement, long inDelta);  // 0x23b87a (mImprovement.ChangeLevel)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x23bbf9 (mName, then mImprovement)
+    void ChangeLevel(long inImprovement, long inDelta) { this->mImprovement.ChangeLevel(this->mUnitClass, this, inImprovement, inDelta); }  // 0x23b87a (mImprovement.ChangeLevel)
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_UPGRADE_LOAD, this->mImprovement.mLevels, &this->mImprovement.mTotalCost, EEImprovementContext{&this->mImprovement, this->mUnitClass, this, &inFile}, &EEImprovementHost, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion); }   // 0x23bbf9 (mName, then mImprovement)
     void SetMaxVelocity(float inValue);    // 0x23c005 (EEUnitClassImprovement::ChangeLevel: improvement 14) (provisional name)
     void SetRange(float inValue);          // 0x23c101 (EEUnitClassImprovement::ChangeLevel: improvement 11) (provisional name)
     void UnloadMedia(EEPlayer* inPlayer) { this->Media(EE_UNITS_UPGRADE_MEDIA_UNLOAD, 0, inPlayer, NULL); }  // 0x23c24f (EEPlayer::UnloadUnitClassMedia; provisional name)
     EEUnitClass* GetUnitClass() { return this->mUnitClass; }  // 0x1f1f81 (mUnitClass; ICF-shared; EEScenarioManager::Prepare's trace) (provisional name)
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x23be43 (EEPlayer::Save; provisional name)
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_UPGRADE_SAVE, this->mImprovement.mLevels, &this->mImprovement.mTotalCost, EEImprovementContext{&this->mImprovement, this->mUnitClass, this, &outFile}, &EEImprovementHost, 0, 0); }   // 0x23be43 (EEPlayer::Save; provisional name)
     void SetAcknowledgeSound(EESoundObject* inSound, long inIndex) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_ACKNOWLEDGE + inIndex, NULL, inSound); }  // 0x23be6f (mAcknowledgeSounds[inIndex])
     void SetCreationSound(EESoundObject* inSound) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_CREATION, NULL, inSound); }  // 0x23bed9 (mCreationSound)
     void SetDeathSound(EESoundObject* inSound) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_DEATH, NULL, inSound); }  // 0x23bf3d (mDeathSound)
@@ -102,8 +104,8 @@ public:
     void SetButton(EEButtonObject* inButton) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_BUTTON, NULL, inButton); }  // 0x23c09d (sets the button +0x64: Release on the old, Acquire on the new)
     void SetSelectionSound(EESoundObject* inSound, long inIndex) { this->Media(EE_UNITS_UPGRADE_MEDIA_SET, EE_UNITS_MEDIA_SELECTION + inIndex, NULL, inSound); }  // 0x23c185 (mSelectionSounds[inIndex])
     // the improvement button's help text (EEUIBUpgrade 0x256c83; provisional names)
-    void GetImprovementName(UWideString& outName, long inImprovement);
-    void GetImprovementGainText(UWideString& outText, long inImprovement, long inLevel);
+    void GetImprovementName(UWideString& outName, long inImprovement) { this->mImprovement.GetName(this->mUnitClass, inImprovement, outName); }
+    void GetImprovementGainText(UWideString& outText, long inImprovement, long inLevel) { this->mImprovement.GetGainText(this, inLevel, inImprovement, outText); }
     // inline: EETechTreeNode::GetCost loads it first (fld; fimul; provisional name)
     float GetCostScale() const { return this->mCostScale; }
     // inline: EEUGAttackUnit::EvaluateCondition keeps it in a temporary across the GetLineOfSight call (0x21dce8)
@@ -829,10 +831,6 @@ const unsigned long kAnyUnitType = 0xffffffffUL;
 // 0x531d58: the EEPM* physics model singletons (EEPMLand.cpp; the EEUC* ctors pass one to EEUnitClass) (provisional
 // name)
 extern EEPhysicsModel* gPhysicsModels[12];
-// 0x4e872c: EEUCUpgradeTable::sTable's _First (the unit class ctor indexes it with its record +0x238) (provisional
-// alias)
-struct EEUnitClassImprovementTable;
-extern EEUnitClassImprovementTable** gUnitClassImprovementTables;
 // Unit action names use the real UString value in EEUnitAction::sActionNames (0x563668).
 
 
@@ -869,24 +867,10 @@ void EEUpdateUnitTile(GETransformation* inTransformation, EEComplexUnit* inUnit,
 // are provisional.
 struct EEUnitClassRecord;                   // a dbunits.dat record (the ctor copies it field by field; +0x374 a count)
 
-// The class's improvement table (EEUnitClass::mImprovements): per improvement attribute a pair of
-// floats (EEUIBUpgrade 0x256bd3/0x256c83: `fld [p + attr*8 + 8]` (attr 12 has none) and `[p + attr*8 + 4]` times the
-// level), and the maximum level at +0x84 (EEPlayer 0x164fac: signed `jg` against GetImprovementLevel). Names are
-// provisional.
-struct EEUnitClassImprovementEntry {
-    float mCostFactor;
-    float mStepFactor;
-};
-
-// It is EEUCUpgradeTable read through another type (EEUnitClass::EEUnitClass reinterpret_casts it), so its first member
-// stands for that class's vtable pointer: pointer-sized (a 4-byte `long` here put every entry 4 bytes off on 64-bit
-// Windows, and the maximum level read a step factor, 0: no improvement could be bought; docs/AI_RESEARCH.md §8.35).
-// mMaxLevel is `long` as EEUCUpgradeTable's is (8 bytes on LP64, both).
-struct EEUnitClassImprovementTable {
-    long GetMaxLevel() const { return this->mMaxLevel; }  // (provisional name; inline-budget evidence: 0x563c6d)
-    EEUnitClassImprovementEntry mEntries[16];   // +0x04
-    long mMaxLevel;                         // +0x84
-};
+// The class's improvement table (EEUnitClass::mImprovements) is the upgrade table's Rust record EeDataUpgradeFields
+// (rust/data/tables.h; EEUCUpgradeTable's base): per improvement attribute a factor (mScale the cost factor, mOffset
+// the step factor; attribute 12 has no cost) and the maximum level (units round 11: the C++ views of it,
+// EEUnitClassImprovementTable and its entry, are gone).
 
 
 // The plain members (mAirTrafficType, mCommands and the block mCruiseAltitude +0x11c .. mIsParatrooperBomber +0x326:
@@ -930,13 +914,13 @@ public:
     // +0x38/+0x3c: a new unit of this class for inPlayer on inMap at a tile / at a point, facing inHeading (the random
     // map's PlaceWall 0x2859e7, PlaceTerrainUnit 0x287c18, 0x288426 / PlaceFeatures 0x2849f2) (provisional names)
     EEUnit* CreateUnitAtTile(EEPlayer* inPlayer, long inX, long inY, EEMap* inMap, float inHeading) { return (EEUnit*)ee_units_uc_create_at(this, inPlayer, (float)(unsigned long)inX + 0.5f, (float)(unsigned long)inY + 0.5f, (uint32_t)inX, (uint32_t)inY, inMap, inHeading); }
-    EEUnit* CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY, EEMap* inMap, float inHeading);
+    EEUnit* CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY, EEMap* inMap, float inHeading) { return (EEUnit*)ee_units_uc_create_at(this, inPlayer, inX, inY, UMFloorUnsigned(inX), UMFloorUnsigned(inY), inMap, inHeading); }   // uc_create.rs
     void Flee(EEComplexUnit* inUnit) { ee_units_mv_flee(H(this), H(inUnit)); }  // original ret4, all37 actual class vtables
     // +0x44 (the footprint tiles; EEUGBuildRepair 0x21e3a6); the 4th argument is a bool (0x234965 `cmp byte`)
     void GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend) { ee_units_ucn_surrounding_tiles(H(this), H(inUnit), H(&outTiles), (int32_t)inCorners, inAppend); }
-    bool IsBuilding();              // +0x48
+    bool IsBuilding() { return EEClassBody(this, EE_UNITS_BODY_IS_BUILDING) == 1; }   // +0x48
     bool Virtual4C(unsigned long) { return false; }  // +0x4c
-    void Virtual50(unsigned long);  // +0x50
+    void Virtual50(unsigned long) {}   // +0x50
     bool IsLandBuilding() { return ee_units_uck_dispatch(EE_UNITS_BODY_IS_LAND_BUILDING, this, NULL, 0, 0, 0, NULL) != 0; }  // +0x54
     bool IsPartLeftOut(EEComplexUnit* inUnit) { return ee_units_uck_dispatch(EE_UNITS_BODY_IS_PART_LEFT_OUT, this, inUnit, 0, 0, 0, NULL) != 0; }  // +0x58 (EEUCGate 0x211370)
     bool FliesOver() { return ee_units_uck_dispatch(EE_UNITS_BODY_FLIES_OVER, this, NULL, 0, 0, 0, NULL) != 0; }  // +0x5c
@@ -944,15 +928,15 @@ public:
     bool IsSelectable(EEUnit* inUnit) { return ee_units_uck_dispatch(EE_UNITS_BODY_IS_SELECTABLE, this, NULL, H(inUnit), 0, 0, NULL) != 0; }  // +0x64 (a unit: EEPlayer::SelectUnit 0x16a53b)
     bool CanBeAttacked() { return !this->mIsFlare; }  // +0x68 inline (COMDAT 0x216d81; the Hero unit tests al)
     long GetPopulationCost() { return this->mWeight; }  // +0x6c (mL258)
-    long Virtual70();               // +0x70
+    long Virtual70() { return EEClassBody(this, EE_UNITS_BODY_VIRTUAL70); }   // +0x70 (1 a building, 2 a resource)
     void ActionChanged(EEComplexUnit* inUnit) { ee_units_uck_call(EE_UNITS_UCK_DO_ACTION_CHANGED, this, inUnit, 0, 0, 0, 0.0f); }  // +0x74 (the cloaking calamity calls it on each cloaked unit)
     bool CanMoveOnTerrain(EEUnit* inUnit, long inTerrainType) { return ee_units_cls_can_move_on_terrain(this, inUnit != NULL ? inUnit->mStats : NULL, (int32_t)inTerrainType) != 0; }  // 0x234ad8 (the missile's +0xe4: true = stays) (provisional name)
     void RouteDockWaypoint(EEComplexUnit* inUnit) { ee_units_ucn_route_dock_waypoint(H(this), H(inUnit)); }  // 0x213db5 (the airplane on its carrier after its move: EEPMAirplane::OrientOnCarrier) (provisional name)
     bool FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance) { return ee_units_ucn_faces_target(H(this), H(inUnit), H(inTarget), inUseTolerance); }  // 0x233a14 (EEUGHealUnit)
     // 0x238087: the projectile launch from the weapon tag point (FireShot) (provisional name)
     void LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation) { ee_units_uc_call(EE_UNITS_UC_DO_LAUNCH_FROM_TURRET, this, inUnit, H(inTarget), 0, 0, (const float(*)[3])&inLocation.mX, NULL); }
-    void FireShot(EEComplexUnit* inUnit);   // 0x231312 (EEUGAttackGround::Step; provisional name)
-    bool FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);  // 0x233a72 (EEUGAttackGround::EvaluateCondition)
+    void FireShot(EEComplexUnit* inUnit) { ee_units_ucn_fire_shot(H(this), H(inUnit)); }   // 0x231312 (EEUGAttackGround::Step; provisional name)
+    bool FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance) { return ee_units_ucn_faces_point(H(this), H(inUnit), inLocation.mX, inLocation.mY, inUseTolerance); }  // 0x233a72 (EEUGAttackGround::EvaluateCondition)
     // the building classes' VirtualB8 helpers (EEUCSpaceBuilding 0x21a1cb; provisional names)
     void RefreshSound(EEComplexUnit* inUnit) { ee_units_uc_body(EE_UNITS_UC_DO_REFRESH_SOUND, this, inUnit); }
     void CreateRipples(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_CREATE_RIPPLES, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x234779 (void, ret4; transform effects)
@@ -998,7 +982,7 @@ public:
     bool ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool inArg) { return ee_units_uc_produce(this, inUnit, inClass, inArg); }  // original thiscall ret12
     void CreateDeathUnit(EEComplexUnit* inUnit) { ee_units_uc_body(EE_UNITS_UC_DO_CREATE_DEATH_UNIT, this, inUnit); }  // original class update ret4
     long GetPassableFlags(EEUnit* inUnit) { return ee_units_cls_passable_flags(this, inUnit != NULL ? inUnit->mStats : NULL); }  // 0x2349b1 (the CanMoveOnTerrain terrain bits)
-    bool FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** outTarget);  // 0x234a05 (a target near the unit)
+    bool FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** outTarget) { return ee_units_uc_rest(EE_UNITS_UC_DO_R_FIND_TARGET_NEAR, this, inUnit, 0, UFloatBits(inRange), (int64_t)H(outTarget), NULL) != 0; }  // 0x234a05 (a target near the unit)
     long GetNumGoalQueues() { return ee_units_cls_num_goal_queues(this); }
     static void GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>& outClasses) { ee_units_uc_call(EE_UNITS_UC_DO_CLASSES_IN_SET, NULL, NULL, H(&outClasses), inSet, 0, NULL, NULL); }
     bool SharesRallyPoint(unsigned long inUnitType) { return ee_units_cls_shares_rally_point(this, inUnitType) != 0; }
@@ -1012,8 +996,8 @@ public:
     void CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation);  // 0x232e4a (CreateUnitAt for unit type 0x42; bool: CreateUnitAt passes its bool through) (provisional name)
     void ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer) { ee_units_uc_call(EE_UNITS_UC_DO_REPLANT_FARM, this, inUnit, H(inPlayer), 0, 0, NULL, NULL); }  // 0x232c9f (EEMReplantFarms, farm classes)
     // EEUCProjectile.cpp's callees (provisional names)
-    void HandleActionChanged(EEComplexUnit* inUnit);  // 0x22db0f (the default +0x74 command handling)
-    EEUnit* FindImpactUnit(EEComplexUnit* inUnit);  // 0x233410 (a target for inUnit, or 0)
+    void HandleActionChanged(EEComplexUnit* inUnit) { EEUnitClassActionChanged(EE_UNITS_ACTION_BASE, this, inUnit); }  // 0x22db0f (the default +0x74 command handling)
+    EEUnit* FindImpactUnit(EEComplexUnit* inUnit) { return (EEUnit*)(uintptr_t)ee_units_ucn_impact_unit(H(inUnit)); }  // 0x233410 (a target for inUnit, or 0)
     void CreateRemainsUnit(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_CREATE_REMAINS_UNIT, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x237e79 (the class's +0x108 unit where inUnit ends)
     void UpdateRipples(EEComplexUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_UPDATE_RIPPLES, this, inUnit, 0, 0, 0, NULL, NULL); }  // 0x2393ff (like UpdateTrail, the +0x80 media)
     void UpdateAnimal(EEComplexUnit* inUnit) { ee_units_uc_body(EE_UNITS_UC_DO_UPDATE_ANIMAL, this, inUnit); }  // 0x239644 (EEUCLand::Update for a herd animal of a player) (provisional name)
@@ -1026,7 +1010,7 @@ public:
     void LaunchStoredMissile(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_LAUNCH_STORED, this, inUnit, 0, NULL); }  // 0x20e50c (in EEUCBomb.cpp's range; FireShot: the carrier drops its first bomb) (provisional name)
     void LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation, EEComplexUnit* inCargo) { ee_units_uc_call(EE_UNITS_UC_DO_LAUNCH_SHOT, this, inUnit, H(inTarget), (int64_t)H(inCargo), 0, (const float(*)[3])&inLocation.mX, NULL); }  // 0x2340a7 (LaunchStoredMissile) (provisional name)
     void FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFrame) { ee_units_uc_call(EE_UNITS_UC_DO_FIRE_ON_ATTACK_FRAME, this, inUnit, 0, inArg, inFrame, NULL, NULL); }  // 0x2386cf (the spaceship's attack commands)
-    void UpdateDone(EEComplexUnit* inUnit);   // 0x157269 (empty, `ret 4`; ICF-folded; the last call of EEUCSpaceship::Update)
+    void UpdateDone(EEComplexUnit*) {}   // 0x157269 (empty, `ret 4`; ICF-folded; the last call of EEUCSpaceship::Update)
     // 0x23525a: moves inUnit from inFrom towards inTo (EEUCPlanetSpaceship::ActionChanged's landing) (provisional name)
     void PathToward(EEComplexUnit* inUnit, GE3DPoint& inFrom, GE3DPoint& inTo, bool inSnapToMap) { ee_units_mv_path_toward(H(inUnit), inFrom.mX, inFrom.mY, inFrom.mZ, inTo.mX, inTo.mY, inTo.mZ, inSnapToMap); }
     // +0x78..+0xdc: arguments by `ret N` (inferred types)
@@ -1056,7 +1040,7 @@ public:
     void Heal(EEComplexUnit* inUnit) { ee_units_uc_body(EE_UNITS_UC_DO_HEAL, this, inUnit); }  // +0xd0
     void PathToGoal(EEComplexUnit* inUnit) { ee_units_mv_path_to_goal(H(this), H(inUnit)); }  // +0xd4
     void FindPath(EEComplexUnit* inUnit) { ee_units_mv_find_path(H(this), H(inUnit)); }  // +0xd8
-    void Attacked(EEComplexUnit* inUnit);    // +0xdc
+    void Attacked(EEComplexUnit* inUnit) { ee_units_ucn_attacked(H(this), H(inUnit)); }    // +0xdc
     // The kinds' own virtuals (the EEUC* families' vtable slots until R5b.4 round 32), dispatchers by kind like
     // the ones above (EEUnitClassKinds.cpp); a kind without a body answers the default
     void CallParatroopPlane(EEComplexUnit* inUnit) { ee_units_uck_dispatch(EE_UNITS_BODY_CALL_PARATROOP_PLANE, this, inUnit, 0, 0, 0, NULL); }  // (EEUCLand)
@@ -1112,7 +1096,7 @@ public:
     void GateGateReplaced(EEUnit* inGate, EEUnit* inUnit) { ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_REPLACED, this, inUnit, H(inGate), 0, 0, 0.0f); }
     void GateGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend) { ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_SURROUNDING, this, inUnit, H(&outTiles), inCorners, inAppend, 0.0f); }
     void GateUnitCreated(EEComplexUnit* inUnit) { ee_units_ucb_gate(EE_UNITS_UCB_DO_GATE_UNIT_CREATED, this, inUnit, 0, 0, 0, 0.0f); }
-    EEComplexUnit* GetPart(EEComplexUnit* inGate, long inIndex);
+    EEComplexUnit* GetPart(EEComplexUnit* inGate, long inIndex) { return (EEComplexUnit*)(uintptr_t)ee_units_ucn_gate_part(H(this), H(inGate), inIndex); }
     bool AreEnemiesNear(EEComplexUnit* inUnit) { return ee_units_ucn_gate_near(H(this), H(inUnit), false); }
     bool IsPasserNear(EEComplexUnit* inUnit) { return ee_units_ucn_gate_near(H(this), H(inUnit), true); }
     void HelicopterPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch) { ee_units_uc_rest_sound(EE_UNITS_UC_SOUND_HELICOPTER_PRIEST, this, inUnit, inSound, outVolume, outPan, outPitch); }
@@ -1183,8 +1167,8 @@ public:
     bool TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo, GE3DPoint& inLocation, GE3DPoint& outLocation) { return ee_units_ucx_boarding(this, inTransport, inCargo, (const float(*)[3])&inLocation.mX, (float(*)[3])&outLocation.mX); }
     void TransportUnloadAt(EEComplexUnit* inTransport, long inX, long inY) { ee_units_ucx_call(EE_UNITS_UCX_DO_UNLOAD_AT, this, inTransport, 0, inX, inY); }
     bool CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCargo, U2DPoint<long>* ioUnloadTile, U2DPoint<long>* ioFirstCargoTile, U2DPoint<long>* inDestination) { return ee_units_ucn_can_unload_near(H(this), H(inTransport), H(inCargo), (const long(*)[2])ioUnloadTile, (const long(*)[2])ioFirstCargoTile, (const long(*)[2])inDestination); }
-    bool IsSidePart(EEComplexUnit* inGate);    // the gate's (EEAIAStarBoundedPathGoalModifiers.cpp)
-    bool IsMiddlePart(EEComplexUnit* inGate);
+    bool IsSidePart(EEComplexUnit* inGate) { return inGate->mNextPart == NULL && inGate->mPreviousPart != NULL || this->IsMiddlePart(inGate); }    // the gate's (EEAIAStarBoundedPathGoalModifiers.cpp)
+    bool IsMiddlePart(EEComplexUnit* inGate) { return inGate->mNextPart != NULL && inGate->mNextPart->mNextPart == NULL && inGate->mPreviousPart != NULL; }   // second to last with a part before it
     // the base bodies of the dispatched virtuals
     void BaseAddToRegion(EEUnit* inUnit) { ee_units_uc_call(EE_UNITS_UC_DO_ADD_TO_REGION, this, NULL, H(inUnit), 0, 0, NULL, NULL); }
     void BaseAddToTile(EEUnit* inUnit) { ee_units_uc_rest(EE_UNITS_UC_DO_R_BASE_ADD_TO_TILE, this, NULL, H(inUnit), 0, 0, NULL); }

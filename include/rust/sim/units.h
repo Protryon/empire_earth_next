@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/math.h"
+#include "rust/data/tables.h"
 #include "rust/sim/astar.h"
 #include "rust/sim/world.h"
 
@@ -19847,17 +19848,18 @@ void ee_units_upgrade_set_range(EeUnitsUnitClassUpgradeFields *upgrade,
                                 const EeUnitsUnitClassFields *projectile,
                                 float value);
 
-/// `ChangeLevel` over the records ([`change_level_records`]); `step_factors` the class's table's 16 (null: none).
+/// `ChangeLevel` over the records ([`change_level_records`]); `table` the class's improvement table (null: none; its
+/// factors' offsets are the 16 step factors).
 ///
 /// # Safety
-/// The pointers name live records (`projectile`, `step_factors` may be null); `levels` points to 16 words.
+/// The pointers name live records (`projectile`, `table` may be null); `levels` points to 16 words.
 void ee_units_improve_change_level_records(const EeUnitsUnitClassFields *class_,
-                                           const float *step_factors,
+                                           const EeDataUpgradeFields *table,
                                            EeUnitsUnitClassUpgradeFields *upgrade,
                                            const EeUnitsUnitClassFields *own,
                                            const EeUnitsUnitClassFields *projectile,
                                            int32_t *levels,
-                                           int32_t *total_cost,
+                                           long *total_cost,
                                            int32_t improvement,
                                            int32_t delta);
 
@@ -19866,7 +19868,7 @@ void ee_units_improve_change_level_records(const EeUnitsUnitClassFields *class_,
 /// # Safety
 /// As [`ee_units_improve_change_level_records`].
 int32_t ee_units_improve_gain_records(const EeUnitsUnitClassFields *class_,
-                                      const float *step_factors,
+                                      const EeDataUpgradeFields *table,
                                       const EeUnitsUnitClassUpgradeFields *upgrade,
                                       const int32_t *levels,
                                       int32_t level,
@@ -21356,15 +21358,6 @@ int64_t ee_units_ucb_call(int32_t what,
 /// `flag` is a live bool.
 int32_t ee_units_ucb_wall_piece_part(int32_t index, bool *flag);
 
-/// `EEUCNote`'s constructor: whether the note records.
-uint8_t ee_units_ucbd_begin();
-
-/// `EEUCNote`'s destructor: its words folded (`on` its constructor's answer).
-///
-/// # Safety
-/// `words` holds `count` words (or is NULL with 0).
-void ee_units_ucbd_end(uint8_t on, const uint32_t *words, size_t count);
-
 extern int64_t ee_units_ucg_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -21592,6 +21585,43 @@ bool ee_units_ucn_faces_target(uint64_t class_,
                                uint64_t unit,
                                uint64_t target,
                                bool tolerance);
+
+/// `FacesPoint` within its host-read scope (slot 0); its CBQR record (the point's x and y bits, the tolerance) when
+/// outermost (units round 11; was EEUnitClass.cpp's).
+bool ee_units_ucn_faces_point(uint64_t class_,
+                              uint64_t unit,
+                              float x,
+                              float y,
+                              bool tolerance);
+
+/// `FindImpactUnit` within its host-read scope (slot 0); its CBQR record (the attack goal's target, the unit found's
+/// id, the owner's firing-high flag or all ones without an owner) when outermost (units round 11).
+uint64_t ee_units_ucn_impact_unit(uint64_t unit);
+
+/// `EETurnGatePart(transformation, direction, index)` (note 24): the piece's animation; a turning piece faces its
+/// yaw (`SetOrientationYPR(yaw, 0, 0)`).
+///
+/// # Safety
+/// `t` is a live transformation.
+long ee_units_ucn_turn_gate_part(EeGeTransformation *t,
+                                 int32_t direction,
+                                 int32_t index);
+
+/// `EEUnitClass::GetPart(gate, index)` (note 29): piece 0..4 of a gate along its linked chain (2 the gate itself, 4
+/// the last linked, 0 the one before it, 3 and 1 the fourth and second parts; 0 for another index).
+uint64_t ee_units_ucn_gate_part(uint64_t class_,
+                                uint64_t gate,
+                                long index);
+
+/// `FireShot(unit)`: the world plan's shot (ee_combat world.rs fire_shot over the world host), then its CBXA record
+/// with the shot's target.
+void ee_units_ucn_fire_shot(uint64_t class_,
+                            uint64_t unit);
+
+/// `Attacked(unit)`: the world plan's reaction (world.rs attacked), then its CBXA record with the last attacker's id
+/// from before it (0: none).
+void ee_units_ucn_attacked(uint64_t class_,
+                           uint64_t unit);
 
 extern int64_t ee_units_ucp_host(int32_t op,
                                  void *class_,

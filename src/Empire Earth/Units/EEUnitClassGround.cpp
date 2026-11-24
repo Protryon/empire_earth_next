@@ -44,7 +44,6 @@
 // first user VirtualB8.
 
 // 0x20b6ff (EEUCAirplane.cpp): the plane's flight for inPlayer (provisional name)
-void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer);
 
 // 0xde4a9 (EEE2DBattlefieldAmbient.cpp's range): the unit's battlefield ambience (provisional name)
 

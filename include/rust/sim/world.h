@@ -6,6 +6,13 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/data/tables.h"
+
+/// The class's 29 effects and 6 related classes in the constructor's order (the record's: EEUnitClass.cpp's member
+/// pointer tables until units round 11).
+constexpr static const size_t EE_UNIT_CLASS_EFFECTS = 29;
+
+constexpr static const size_t EE_UNIT_CLASS_RELATED = 6;
 
 /// The world's player slots (`RTSWorld::mPlayers`).
 constexpr static const size_t EE_WORLD_PLAYER_SLOTS = 17;
@@ -847,7 +854,8 @@ struct EeUnitsUnitClassLinks {
   class EEUnitClass *mPackedClass;
   /// the class's physics model
   class EEPhysicsModel *mPhysicsModel;
-  struct EEUnitClassImprovementTable *mImprovements;
+  /// the record's upgrade table (`EEUCUpgradeTable::sTable`'s entry: its Rust record)
+  EeDataUpgradeFields *mImprovements;
   /// the units' default behaviour (EEUnitBehavior::sTable[record->mBehavior])
   class EEUnitBehavior *mBehavior;
 };
@@ -892,6 +900,30 @@ void ee_world_read_end();
 /// `world` is the live world (`&gWorld`); the caller holds it (the physics thread at its tick).
 void ee_world_view_check(uint64_t world,
                          uint32_t ticks);
+
+/// `&class->` effect `i` (the constructor's order; EEUnitClass.cpp's host).
+///
+/// # Safety
+/// `links` is a live class's record; `i` below 29.
+class EEGraphicEffect **ee_units_uc_effect_slot(EeUnitsUnitClassLinks *links, int32_t i);
+
+/// `&class->` related class `k`.
+///
+/// # Safety
+/// `links` is a live class's record; `k` below 6.
+class EEUnitClass **ee_units_uc_related_slot(EeUnitsUnitClassLinks *links, int32_t k);
+
+/// The record's effect id `i`.
+///
+/// # Safety
+/// `record` is a live record; `i` below 29.
+int32_t ee_units_uc_record_effect(const EEUnitClassRecord *record, int32_t i);
+
+/// The record's related unit type `k`.
+///
+/// # Safety
+/// `record` is a live record; `k` below 6.
+int32_t ee_units_uc_record_related(const EEUnitClassRecord *record, int32_t k);
 
 }  // extern "C"
 
