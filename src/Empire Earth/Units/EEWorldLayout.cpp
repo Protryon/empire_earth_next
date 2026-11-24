@@ -169,8 +169,7 @@ void EEWorldLayoutRegister()
     theLayout.node_data_unit_classes = offsetof(RTSTechTreeNodeData, mUnitClasses);
     theLayout.tech_host = (uint64_t)(uintptr_t)&EETechHost;
     theLayout.cp_fields = BaseOffset<EEComputerPlayer, EeCpFields>();
-    theLayout.stats_unit_class = offsetof(EEUnitClassUpgrade, mUnitClass);
-    theLayout.stats_button = offsetof(EEUnitClassUpgrade, mButton);
+    theLayout.stats_links = BaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeLinks>();
     theLayout.physics_pointer = (uint64_t)(uintptr_t)&gPhysics;   // the units' round 1 (the game time, the tick)
     theLayout.physics_saved = BaseOffset<EEPhysics, EeUnitsPhysicsSaved>();
     // the units' saves (the units' state lane: unit_save_views.rs)
@@ -194,8 +193,7 @@ void EEWorldLayoutRegister()
     theLayout.complex_orientation = offsetof(EEComplexUnit, mOrientation);
     theLayout.build_entry_flag = offsetof(EEProductionEntry, mFlag);
     theLayout.herd_id = offsetof(EEHerd, mID);
-    theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);
-    theLayout.class_effects = offsetof(EEUnitClass, mAttachedEffect);
+    theLayout.class_links = BaseOffset<EEUnitClass, EeUnitsUnitClassLinks>();
     theLayout.active_group_fields = offsetof(EEActiveGroup, mFields);   // the group objects (group_obj.rs)
     theLayout.active_group_goal = offsetof(EEActiveGroup, mGoal);
     theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - BaseOffset<EEComputerPlayer, EEPlayer>();

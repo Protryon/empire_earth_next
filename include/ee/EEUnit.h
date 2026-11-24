@@ -63,7 +63,7 @@ class EESoundObject;
 // Init's copies and SetMaxVelocity are Rust. The volatile busy flags stay here.
 class EEButtonObject;
 class FSFileSpec;
-class EEUnitClassUpgrade : public EeUnitsUnitClassUpgradeFields {
+class EEUnitClassUpgrade : public EeUnitsUnitClassUpgradeLinks, public EeUnitsUnitClassUpgradeFields {
 public:
     EEUnitClassUpgrade(EEUnitClass* inUnitClass);   // 0x23b6ae (then Init)
     virtual ~EEUnitClassUpgrade();          // +0x00 dtor 0x23b729 (??_G 0x23b70d)
@@ -121,13 +121,7 @@ public:
 
     EEUnitClassImprovement mImprovement;    // +0x04 (ctor 0x23a5bf)
     UWideString mName;                      // +0x4c (= "" in the ctor)
-    EEUnitClass* mUnitClass;                // +0x60 (ctor argument; Init reads its +0xd8.. fields)
-    EEButtonObject* mButton;                // +0x64 (Init: mUnitClass +0xdc) the unit's portrait button (EEUIBSavedGroup::SetUnit 0x2560e1 calls EEButtonObject::SetFaceBitmap on it)
-    EEModel* mModel;                        // +0x68 (EEUnit::GetModel's; the doppelgangers call its slots +4/+8)
-    EESoundObject* mCreationSound;          // +0x6c (a sound: EEUCBasicPriest 0x20d6c9 plays its sample; from mUnitClass +0xe0)
-    EESoundObject* mDeathSound;             // +0x70 (EEUnitClass::UnitDied plays it where the unit dies)
-    EESoundObject* mAcknowledgeSounds[2];   // +0x74 (the dtor's loop of two; GetAcknowledgeSound hands one to EEPlayForLocalPlayer, which plays it)
-    EESoundObject* mSelectionSounds[2];     // +0x7c (likewise GetSelectionSound)
+    // +0x60 mUnitClass, +0x64 mButton .. +0x7c mSelectionSounds[1]: the Rust record EeUnitsUnitClassUpgradeLinks (a base)
     // +0x84 mAreaEffectScale .. +0x168 mIsInitialized: the record EeUnitsUnitClassUpgradeFields (the base above)
     float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEActiveGroup::ComputeValues 0x5ed692 copies it through fld/fstp)
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (mFAC / mFB4 sites read both as values)
@@ -898,7 +892,7 @@ struct EEUnitClassImprovementTable {
 // The plain members (mAirTrafficType, mCommands and the block mCruiseAltitude +0x11c .. mIsParatrooperBomber +0x326:
 // numbers, flags and their arrays, names and types kept) are the Rust record EeUnitsUnitClassFields (ee_units
 // unit_class_fields.rs), the second base after UReferenceCounter; the ctor's copies from the db row are its fill.
-class EEUnitClass : public UReferenceCounter, public EeUnitsUnitClassFields {
+class EEUnitClass : public UReferenceCounter, public EeUnitsUnitClassFields, public EeUnitsUnitClassLinks {
 public:
     // an object's handle for the Rust calls of the inline members (its address)
     static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
@@ -1235,54 +1229,9 @@ public:
     UString mAIScriptName;                  // +0x008 the ctor's member ctor, then UString::Copy
     UString mName;                          // +0x018 the ctor's member ctor, then UString::Copy
     std::vector<long> mResearchTechnologies;  // +0x02c 4-byte elements: the ctor's `_Buy(0)`
-    void* mAIScript;                        // +0x060 the class's AI script (EEUnitAction::GetScript of its name: a Rust script's handle; FindAction finds an action in it)
-    EEGraphicEffect* mAttachedEffect;   // +0x064 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mDeathEffect;          // +0x068 provisional name (VirtualC4: played on the dying unit)
-    EEGraphicEffect* mDamageEffect;     // +0x06c (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mHealEffect;       // +0x070 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mFireTrailEffect;  // +0x074 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mTrailEffect;      // +0x078 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mMuzzleFlashEffect;  // +0x07c (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mRippleEffect;     // +0x080 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mSplashEffect;     // +0x084 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mImpactSparksEffect;  // +0x088 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mImpactBloodEffect;  // +0x08c (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mEffect090;        // +0x090 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mCreationEffect;       // +0x094 provisional name (PlayCreationEffect 0x234084)
-    EEGraphicEffect* mEffect098;        // +0x098 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mEffect09C;        // +0x09c (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mEffect0A0;        // +0x0a0 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mEffect0A4;        // +0x0a4 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mEffect0A8;        // +0x0a8 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mSpecialAttackEffect;  // +0x0ac (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mEffect0B0;        // +0x0b0 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mShotEffect;       // +0x0b4 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mLeprosyEffect;        // +0x0b8 provisional name (EELeprosyFunctor plays it on an infected unit)
-    EEGraphicEffect* mPlagueEffect;         // +0x0bc provisional name (EEPlagueFunctor)
-    EEGraphicEffect* mPulseCannonEffect;  // +0x0c0 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mMoraleEffect;         // +0x0c4 provisional name (the morale calamity plays it on the unit)
-    EEGraphicEffect* mBattleCryEffect;  // +0x0c8 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mShellHoleEffect;  // +0x0cc (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mEffect0D0;        // +0x0d0 (dereferenced by the dtor 0x2305ee: an effect)
-    EEGraphicEffect* mBloodStainEffect;  // +0x0d4 (dereferenced by the dtor 0x2305ee: an effect)
-    // +0x0d8..+0x0f4: the class media (LoadClassMedia loads each through EEMedia +0x04, UnloadClassMedia unloads
-    // through +0x08, two loops of two; the button through EEButtonObject::Acquire/Release) (provisional names)
-    EEModel* mModel;                        // +0x0d8 (EEUnitClassUpgrade::Init hands it to SetModel: its mModel)
-    EEButtonObject* mButton;                // +0x0dc
-    EESoundObject* mCreationSound;          // +0x0e0 (EESoundObject::Get in the ctor)
-    EESoundObject* mAcknowledgeSounds[2];   // +0x0e4 (LoadClassMedia/UnloadClassMedia loop over both)
-    EESoundObject* mSelectionSounds[2];     // +0x0ec (likewise)
-    EESoundObject* mDeathSound;             // +0x0f4
-    EEUnitClass* mProjectileClass;           // +0x0f8 (dereferenced and cleared by the dtor 0x2305ee; a unit class)
-    EEUnitClass* mScaffoldingClass;          // +0x0fc (dereferenced and cleared by the dtor 0x2305ee; a unit class)
-    EEUnitClass* mDeathClass;                // +0x100 (dereferenced and cleared by the dtor 0x2305ee; VirtualC4 creates a unit of it where the unit dies)
-    EEUnitClass* mDeathSpawnClass;           // +0x104 (dereferenced and cleared by the dtor 0x2305ee; a unit class)
-    EEUnitClass* mRemainsClass;              // +0x108 (dereferenced and cleared by the dtor 0x2305ee; a unit class)
-    EEUnitClass* mPackedClass;              // +0x10c the ctor stores it (the class it packs/unpacks into: EEMPackUnpack)
-    EEPhysicsModel* mPhysicsModel;          // +0x110 (the class's physics model: EEUCSpaceBuilding/NavalBuilding::VirtualB8 call its 0x156897) (provisional name)
-    EEUnitClassImprovementTable* mImprovements;   // +0x114 the ctor stores it
+    // +0x060 mAIScript .. +0x118 mBehavior (the effects, media, related classes, physics model, improvements,
+    // behaviour): the Rust record EeUnitsUnitClassLinks (the third base above)
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
-    EEUnitBehavior* mBehavior;              // +0x118 the ctor stores it (EEUnitBehavior::sTable[record +0x390]; the units' default behaviour)
     // inline (EEE3DDamageVent::SetUp 0xeabb5 loads it as a value before the effect's height)
     // (provisional name)
     float GetScale() const { return this->mScale; }

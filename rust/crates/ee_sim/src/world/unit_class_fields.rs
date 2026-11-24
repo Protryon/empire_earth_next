@@ -8,7 +8,9 @@
 
 #![allow(non_snake_case)]
 
-use std::os::raw::{c_long, c_ulong};
+use crate::units::obj_fields::EeCxxGraphicObject;
+use crate::world::unit_fields::{EeCxxUnitBehavior, EeCxxUnitClass};
+use std::os::raw::{c_long, c_ulong, c_void};
 
 /// `EEUnitClass`'s plain members (ee/EEUnit.h), in the class's order.
 #[repr(C)]
@@ -194,4 +196,110 @@ pub struct EeUnitsUnitClassFields {
     /// port (not in the original): the class's `IsLandBuilding()`, set by `CreateUnitClasses` once the class's
     /// vtable is final; the unit store reads it (store.rs)
     pub mIsLandBuildingClass: bool,
+}
+
+/// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of
+/// `class EEUnitClass : public UReferenceCounter, public EeUnitsUnitClassFields, public EeUnitsUnitClassLinks`, in
+/// the original's member order (+0x060 `mAIScript` .. +0x118 `mBehavior`). A record of its own: `fill` writes the
+/// plain record whole after the constructor has set these. The C++ reads them by name, typed `class X*` (the
+/// renames in rust/cbindgen.toml). The 29 effects are contiguous from `mAttachedEffect` (`GetEffects`' array).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeUnitsUnitClassLinks {
+    /// the class's AI script (EEUnitAction::GetScript of its name: a Rust script's handle)
+    pub mAIScript: *mut c_void,
+    pub mAttachedEffect: *mut EeCxxGraphicEffect,
+    pub mDeathEffect: *mut EeCxxGraphicEffect,
+    pub mDamageEffect: *mut EeCxxGraphicEffect,
+    pub mHealEffect: *mut EeCxxGraphicEffect,
+    pub mFireTrailEffect: *mut EeCxxGraphicEffect,
+    pub mTrailEffect: *mut EeCxxGraphicEffect,
+    pub mMuzzleFlashEffect: *mut EeCxxGraphicEffect,
+    pub mRippleEffect: *mut EeCxxGraphicEffect,
+    pub mSplashEffect: *mut EeCxxGraphicEffect,
+    pub mImpactSparksEffect: *mut EeCxxGraphicEffect,
+    pub mImpactBloodEffect: *mut EeCxxGraphicEffect,
+    pub mEffect090: *mut EeCxxGraphicEffect,
+    pub mCreationEffect: *mut EeCxxGraphicEffect,
+    pub mEffect098: *mut EeCxxGraphicEffect,
+    pub mEffect09C: *mut EeCxxGraphicEffect,
+    pub mEffect0A0: *mut EeCxxGraphicEffect,
+    pub mEffect0A4: *mut EeCxxGraphicEffect,
+    pub mEffect0A8: *mut EeCxxGraphicEffect,
+    pub mSpecialAttackEffect: *mut EeCxxGraphicEffect,
+    pub mEffect0B0: *mut EeCxxGraphicEffect,
+    pub mShotEffect: *mut EeCxxGraphicEffect,
+    pub mLeprosyEffect: *mut EeCxxGraphicEffect,
+    pub mPlagueEffect: *mut EeCxxGraphicEffect,
+    pub mPulseCannonEffect: *mut EeCxxGraphicEffect,
+    pub mMoraleEffect: *mut EeCxxGraphicEffect,
+    pub mBattleCryEffect: *mut EeCxxGraphicEffect,
+    pub mShellHoleEffect: *mut EeCxxGraphicEffect,
+    pub mEffect0D0: *mut EeCxxGraphicEffect,
+    pub mBloodStainEffect: *mut EeCxxGraphicEffect,
+    /// the class media (LoadClassMedia, UnloadClassMedia)
+    pub mModel: *mut EeCxxGraphicObject,
+    pub mButton: *mut EeCxxButtonObject,
+    pub mCreationSound: *mut EeCxxSoundObject,
+    pub mAcknowledgeSounds: [*mut EeCxxSoundObject; 2],
+    pub mSelectionSounds: [*mut EeCxxSoundObject; 2],
+    pub mDeathSound: *mut EeCxxSoundObject,
+    /// the related classes (referenced; the destructor dereferences them)
+    pub mProjectileClass: *mut EeCxxUnitClass,
+    pub mScaffoldingClass: *mut EeCxxUnitClass,
+    /// `VirtualC4` creates a unit of it where the unit dies
+    pub mDeathClass: *mut EeCxxUnitClass,
+    pub mDeathSpawnClass: *mut EeCxxUnitClass,
+    pub mRemainsClass: *mut EeCxxUnitClass,
+    /// the class it packs/unpacks into (EEMPackUnpack)
+    pub mPackedClass: *mut EeCxxUnitClass,
+    /// the class's physics model
+    pub mPhysicsModel: *mut EeCxxPhysicsModel,
+    pub mImprovements: *mut EeCxxImprovementTable,
+    /// the units' default behaviour (EEUnitBehavior::sTable[record->mBehavior])
+    pub mBehavior: *mut EeCxxUnitBehavior,
+}
+
+impl Default for EeUnitsUnitClassLinks {
+    fn default() -> Self {
+        // SAFETY: every field is a raw pointer: all zero is each one's default
+        unsafe { std::mem::zeroed() }
+    }
+}
+
+// SAFETY: the pointers are the C++ class's members, read and written only on the simulation thread
+unsafe impl Send for EeUnitsUnitClassLinks {}
+unsafe impl Sync for EeUnitsUnitClassLinks {}
+
+/// The C++ classes the links point to (opaque; written `class X` / `struct X` in the generated header).
+pub struct EeCxxGraphicEffect {
+    _opaque: [u8; 0],
+}
+pub struct EeCxxButtonObject {
+    _opaque: [u8; 0],
+}
+pub struct EeCxxSoundObject {
+    _opaque: [u8; 0],
+}
+pub struct EeCxxPhysicsModel {
+    _opaque: [u8; 0],
+}
+pub struct EeCxxImprovementTable {
+    _opaque: [u8; 0],
+}
+
+#[cfg(test)]
+mod links_tests {
+    use super::*;
+    use std::mem::{offset_of, size_of};
+
+    #[test]
+    fn the_effects_are_one_array_and_the_media_follow() {
+        let p = size_of::<*mut c_void>();
+        assert_eq!(offset_of!(EeUnitsUnitClassLinks, mBloodStainEffect) - offset_of!(EeUnitsUnitClassLinks, mAttachedEffect), 28 * p);
+        assert_eq!(offset_of!(EeUnitsUnitClassLinks, mModel), 30 * p);
+        assert_eq!(offset_of!(EeUnitsUnitClassLinks, mBehavior), 46 * p);
+        assert_eq!(size_of::<EeUnitsUnitClassLinks>(), 47 * p);
+        assert!(EeUnitsUnitClassLinks::default().mBehavior.is_null());
+    }
 }

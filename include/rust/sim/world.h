@@ -724,6 +724,8 @@ struct EeWorldLayout {
   /// `EEButtonObject*`)
   uint64_t stats_unit_class;
   uint64_t stats_button;
+  /// `EeUnitsUnitClassUpgradeLinks` in `EEUnitClassUpgrade` (units round 11: the two above are derived from it)
+  uint64_t stats_links;
   /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
   uint64_t physics_pointer;
   uint64_t physics_saved;
@@ -773,6 +775,8 @@ struct EeWorldLayout {
   /// `EEGraphicEffect*` members, `GetEffects()`)
   uint64_t class_projectile_class;
   uint64_t class_effects;
+  /// `EeUnitsUnitClassLinks` in `EEUnitClass` (units round 11: the two above are derived from it)
+  uint64_t class_links;
   /// `EeUnitsActiveGroupFields` in `EEActiveGroup` (its second base) and `EEActiveGroup::mGoal` (an
   /// `EEUnitGoal*`)
   uint64_t active_group_fields;
@@ -786,6 +790,83 @@ struct EeWorldLayout {
   uint64_t player_group_lists;
   /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
   uint64_t player_lists;
+};
+
+/// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of
+/// `class EEUnitClass : public UReferenceCounter, public EeUnitsUnitClassFields, public EeUnitsUnitClassLinks`, in
+/// the original's member order (+0x060 `mAIScript` .. +0x118 `mBehavior`). A record of its own: `fill` writes the
+/// plain record whole after the constructor has set these. The C++ reads them by name, typed `class X*` (the
+/// renames in rust/cbindgen.toml). The 29 effects are contiguous from `mAttachedEffect` (`GetEffects`' array).
+struct EeUnitsUnitClassLinks {
+  /// the class's AI script (EEUnitAction::GetScript of its name: a Rust script's handle)
+  void *mAIScript;
+  class EEGraphicEffect *mAttachedEffect;
+  class EEGraphicEffect *mDeathEffect;
+  class EEGraphicEffect *mDamageEffect;
+  class EEGraphicEffect *mHealEffect;
+  class EEGraphicEffect *mFireTrailEffect;
+  class EEGraphicEffect *mTrailEffect;
+  class EEGraphicEffect *mMuzzleFlashEffect;
+  class EEGraphicEffect *mRippleEffect;
+  class EEGraphicEffect *mSplashEffect;
+  class EEGraphicEffect *mImpactSparksEffect;
+  class EEGraphicEffect *mImpactBloodEffect;
+  class EEGraphicEffect *mEffect090;
+  class EEGraphicEffect *mCreationEffect;
+  class EEGraphicEffect *mEffect098;
+  class EEGraphicEffect *mEffect09C;
+  class EEGraphicEffect *mEffect0A0;
+  class EEGraphicEffect *mEffect0A4;
+  class EEGraphicEffect *mEffect0A8;
+  class EEGraphicEffect *mSpecialAttackEffect;
+  class EEGraphicEffect *mEffect0B0;
+  class EEGraphicEffect *mShotEffect;
+  class EEGraphicEffect *mLeprosyEffect;
+  class EEGraphicEffect *mPlagueEffect;
+  class EEGraphicEffect *mPulseCannonEffect;
+  class EEGraphicEffect *mMoraleEffect;
+  class EEGraphicEffect *mBattleCryEffect;
+  class EEGraphicEffect *mShellHoleEffect;
+  class EEGraphicEffect *mEffect0D0;
+  class EEGraphicEffect *mBloodStainEffect;
+  /// the class media (LoadClassMedia, UnloadClassMedia)
+  class EEGraphicObject *mModel;
+  class EEButtonObject *mButton;
+  class EESoundObject *mCreationSound;
+  class EESoundObject *mAcknowledgeSounds[2];
+  class EESoundObject *mSelectionSounds[2];
+  class EESoundObject *mDeathSound;
+  /// the related classes (referenced; the destructor dereferences them)
+  class EEUnitClass *mProjectileClass;
+  class EEUnitClass *mScaffoldingClass;
+  /// `VirtualC4` creates a unit of it where the unit dies
+  class EEUnitClass *mDeathClass;
+  class EEUnitClass *mDeathSpawnClass;
+  class EEUnitClass *mRemainsClass;
+  /// the class it packs/unpacks into (EEMPackUnpack)
+  class EEUnitClass *mPackedClass;
+  /// the class's physics model
+  class EEPhysicsModel *mPhysicsModel;
+  struct EEUnitClassImprovementTable *mImprovements;
+  /// the units' default behaviour (EEUnitBehavior::sTable[record->mBehavior])
+  class EEUnitBehavior *mBehavior;
+};
+
+/// `EEUnitClassUpgrade`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), its first base before
+/// [`EeUnitsUnitClassUpgradeFields`]: the class it upgrades, then the eight media members `Media()` walks as one
+/// array from `mButton` (button, model, creation and death sounds, two acknowledge and two selection sounds).
+struct EeUnitsUnitClassUpgradeLinks {
+  /// the constructor's argument (`Init` reads the class)
+  class EEUnitClass *mUnitClass;
+  /// the unit's portrait button
+  class EEButtonObject *mButton;
+  /// `EEUnit::GetModel`'s
+  class EEGraphicObject *mModel;
+  class EESoundObject *mCreationSound;
+  /// `EEUnitClass::UnitDied` plays it where the unit dies
+  class EESoundObject *mDeathSound;
+  class EESoundObject *mAcknowledgeSounds[2];
+  class EESoundObject *mSelectionSounds[2];
 };
 
 extern "C" {

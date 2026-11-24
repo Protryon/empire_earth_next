@@ -47,8 +47,6 @@ EEUnitClassUpgrade::EEUnitClassUpgrade(EEUnitClass* inUnitClass)
 // port (the groups lane, round 1): the media bodies are Rust (ee_units upgrade_media.rs) over the eight media members
 // (mButton .. mSelectionSounds[1], contiguous), the busy flags and the record's counts; each C++ call is one case of
 // ee_units_upgrade_host
-static_assert(offsetof(EEUnitClassUpgrade, mSelectionSounds) + sizeof(void*) == offsetof(EEUnitClassUpgrade, mButton) + 7 * sizeof(void*),
-              "the eight media members are contiguous");
 static_assert(offsetof(EEUnitClassUpgrade, mIsLoadingButtons) == offsetof(EEUnitClassUpgrade, mIsLoadingMedia) + 1,
               "the busy flags are adjacent");
 

@@ -97,10 +97,7 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     ee_units_uc_class(EE_UNITS_UC_DO_CONSTRUCT, this, inRecord, inIsComplex, inPhysicsModel);   // uc_class.rs
 }
 
-// the class's effects as GetEffects' array (the members are contiguous: 29 pointers from mAttachedEffect)
-static const long kUnitClassEffectCount = 29;
-static_assert(offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect)
-                  == (kUnitClassEffectCount - 1) * sizeof(EEGraphicEffect*), "the class's effects are one array");
+// (the effects are contiguous, GetEffects' array: EeUnitsUnitClassLinks, its Rust test)
 
 // Destroys the unit class, releasing its graphic effects and its projectile, scaffolding, death and remains classes
 EEUnitClass::~EEUnitClass()
