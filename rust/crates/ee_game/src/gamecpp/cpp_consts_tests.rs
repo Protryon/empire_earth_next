@@ -13,7 +13,7 @@ const HEADERS: [&str; 8] = [
     "include/rust/render/gestate.h",
     "include/ee/EEMap.h",
     "include/ee/EEUnitGoal.h",
-    "include/rust/sim/tech_consts.h",
+    "include/ee/EETechTreeTechID.h",
     "include/ee/EEResourceType.h",
 ];
 

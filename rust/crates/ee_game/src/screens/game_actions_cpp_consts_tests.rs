@@ -18,7 +18,7 @@ const HEADERS: [&str; 10] = [
     "include/ee/EEUnitClassIDs.h",
     "include/rust/sim/unit_ids.h",
     "include/ee/EEGraphicEffect.h",
-    "include/rust/sim/tech_consts.h",
+    "include/ee/EETechTreeTechID.h",
     "include/rust/net/msgid.h",
     "include/rust/base/lle_enums.h",
     "include/ee/EEResourceType.h",
