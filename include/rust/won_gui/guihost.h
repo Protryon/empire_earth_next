@@ -1205,6 +1205,10 @@ using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
 
 extern "C" {
 
+/// The `Cursor*` a host op's cursor names (GuiHost.cpp's CursorOf until R6 WON GUI round 36): the standard
+/// table's cursor of its kind (cursorobj.rs), NULL for `None`, an unknown value or a kind never set.
+ptrdiff_t ee_won_gui_cursor(ptrdiff_t cursor);
+
 /// The `WindowEventType` a `FireEvent` op delivers (`ee/wonapi/WONEventTypes.h`): the host fires exactly this, so
 /// no event code needs a case of its own in the C++ (round 23's lists fired every event but InputReturn as
 /// InputTextChanged through such a switch). The goldens trace the type listeners receive through this function and

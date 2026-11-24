@@ -50,17 +50,8 @@ using namespace WONAPI;
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;
 
-static Cursor* CursorOf(intptr_t inCursor)
-{
-    switch ((EeWonGuiCursor)inCursor) {
-    case EeWonGuiCursor::Hand: return Cursor::GetStandardCursor(StandardCursor_Hand);
-    case EeWonGuiCursor::IBeam: return Cursor::GetStandardCursor(StandardCursor_IBeam);
-    case EeWonGuiCursor::NorthSouthEastWest: return Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest);
-    case EeWonGuiCursor::EastWest: return Cursor::GetStandardCursor(StandardCursor_EastWest);
-    case EeWonGuiCursor::NorthSouth: return Cursor::GetStandardCursor(StandardCursor_NorthSouth);
-    default: return NULL;
-    }
-}
+// the standard cursor a host op names (guihost.rs over cursorobj.rs's table; NULL for none)
+static Cursor* CursorOf(intptr_t inCursor) { return (Cursor*)ee_won_gui_cursor(inCursor); }
 
 // a text the Rust object hands out (u32 units)
 static GUIString UnitsText(intptr_t inUnits, intptr_t inCount)
