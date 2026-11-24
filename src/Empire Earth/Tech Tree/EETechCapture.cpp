@@ -28,7 +28,6 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EETechTreeRecord.h"
-#include "ee/EETechRust.h"
 #include "ee/EEStringIDs.h"
 #include <iterator>
 #include <utility>
@@ -298,7 +297,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TbNodeIsObsolete: return BNODE->GetIsObsolete();
     case O::TbNodeDependsOn: return BNODE->DependsOn((long)a[0]);
     case O::TbNodeGetCost: return BNODE->GetCost((long)a[0], (long)a[1], f[0]);
-    case O::TbTreeChecksum: return (int64_t)(uint32_t)EETechTreeWalk(BTREE, EeTechTreeOp::Checksum);
+    case O::TbTreeChecksum: return (int64_t)(uint32_t)BTREE->Walk(EeTechTreeOp::Checksum);
     case O::TbWorldPlayers: return (int64_t)gWorld.GetNumPlayers();
     case O::TbWorldPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
     case O::TbPlayerTree: return P64(((EEPlayer*)p)->GetTechTree());
@@ -354,12 +353,12 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::TkEpochCount: return TREE->mEpochs.size();
     case O::TkEpochAt: return P64(&TREE->mEpochs[(long)a[0]]);
-    case O::TkEpochRef: ((EeTechHostIo*)a[1])->node = EETechRef(&TREE->mEpochs[(long)a[0]]);
+    case O::TkEpochRef: ((EeTechHostIo*)a[1])->node = TREE->mEpochs[(long)a[0]].Ref();
         break;
     case O::TkEpochNodes: return EETechEpochNodes((EETechTreeEpoch*)p, (EeTechHostIo*)a[0]);
     case O::TkUnitId: return (int64_t)((EEComplexUnit*)p)->mUnitID;
     case O::TkGet: return P64(TREE->Get((long)a[0]));
-    case O::TkSetRef: ((EeTechHostIo*)a[0])->node = EETechRef(TNODE);
+    case O::TkSetRef: ((EeTechHostIo*)a[0])->node = TNODE->Ref();
         break;
     case O::TkNeedsUnitMedia: return TNODE->NeedsUnitMedia();
     case O::TkTrigger: EEEvent::Trigger((long)a[0], TREE->mPlayerIndex, (long)a[1], TREE->mPlayer, (EEComplexUnit*)a[2]);

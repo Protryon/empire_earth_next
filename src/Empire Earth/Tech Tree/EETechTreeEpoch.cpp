@@ -15,7 +15,6 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EETechTreeRecord.h"
 #include "ee/EETechCapture.h"
-#include "ee/EETechRust.h"
 #include "rust/game/gamecpp.h"
 #include "ee/EEUnit.h"
 #include "ee/EEStringIDs.h"
@@ -23,18 +22,6 @@
 #include <utility>
 
 
-
-// Creates an empty epoch node (no techs counted toward it yet)
-EETechTreeEpoch::EETechTreeEpoch()
-{
-    // the counters start at 0 (the record's init)
-}
-
-// Destroys the epoch and the tech nodes it owns
-EETechTreeEpoch::~EETechTreeEpoch()
-{
-    this->DeleteNodes();
-}
 
 // Deletes every tech node of the epoch
 void EETechTreeEpoch::DeleteNodes()
@@ -62,12 +49,6 @@ long EETechTreeEpoch::GetCostUncaptured(long inResource, long inUnitClass, float
     return EETechTreeNode::GetCost(inResource, inUnitClass, theScale);
 }
 
-// Returns how many techs counting toward this epoch were researched
-long EETechTreeEpoch::GetCurrentSOL()
-{
-    return this->mCurrentSOL;
-}
-
 // Returns the epoch's research time; computer players need half of it
 long EETechTreeEpoch::GetBuildTime()
 {
@@ -92,25 +73,6 @@ void EETechTreeEpoch::GetNodeIDs(std::vector<long>& outIDs)
     ee_gamecpp_tech_epoch_node_ids(this, &outIDs);
 }
 
-// Tells whether the epoch can be researched: available, not obsolete, not researched
-bool EETechTreeEpoch::GetIsAvailable()
-{
-    return EETechNodeWalk(this, EeTechNodeOp::IsAvailable) != 0;
-}
-
-// Tells whether the epoch is obsolete
-bool EETechTreeEpoch::GetIsObsolete()
-{
-    return this->mIsObsolete;
-}
-
-// Counts one more tech toward the epoch; when enough are researched the epoch becomes available (event 0x7d2)
-void EETechTreeEpoch::AddSOL()
-{
-    if (this->mTree != NULL)   // (TSOL, TEST ONLY: ee_sim tech nodes_capture.rs)
-        EETechEpochWalk(this, EeTechEpochOp::AddSol);
-}
-
 // Loads the media of every unit class the epoch's buildings make and the epoch's own media
 void EETechTreeEpoch::LoadMedia(EEPlayer* inPlayer)
 {
@@ -120,34 +82,7 @@ void EETechTreeEpoch::LoadMedia(EEPlayer* inPlayer)
 // Loads the media of the epoch's nodes of one kind (ee_sim tech node_media.rs)
 void EETechTreeEpoch::LoadMediaOfKind(long inKind)
 {
-    EETechEpochWalk(this, EeTechEpochOp::MediaOfKind, inKind, true, reinterpret_cast<EEComplexUnit*>(this->mTree->GetPlayer()));
-}
-
-// Makes the epoch available once enough techs count toward it, and gives its nodes the epoch prerequisite
-void EETechTreeEpoch::UpdateAvailability()
-{
-    if (this->mTree != NULL)   // (TSOL, TEST ONLY: ee_sim tech nodes_capture.rs)
-        EETechEpochWalk(this, EeTechEpochOp::UpdateAvailability);
-}
-
-// Researches the epoch itself
-long EETechTreeEpoch::ResearchNode(EEComplexUnit* inUnit)
-{
-    long theID = this->mData->mID;
-    return this->Research(theID, inUnit);
-}
-
-// Researches the epoch's nodes of one kind (only those researched with the epoch when asked)
-void EETechTreeEpoch::ResearchKind(long inKind, bool inEpochOnly)
-{
-    EETechEpochWalk(this, EeTechEpochOp::ResearchKind, inKind, inEpochOnly);
-}
-
-// Researches a node of the epoch, or the epoch itself: fires its event, makes it current, obsoletes outdated nodes;
-// returns 2 when already researched, 9 when not possible
-long EETechTreeEpoch::Research(long inID, EEComplexUnit* inUnit)
-{
-    return EETechEpochWalk(this, EeTechEpochOp::Research, inID, false, inUnit);   // (TNRS, TEST ONLY: nodes_capture.rs)
+    this->EpochWalk(EeTechEpochOp::MediaOfKind, inKind, true, reinterpret_cast<EEComplexUnit*>(this->mTree->GetPlayer()));
 }
 
 // Unloads the unit class media the epoch loaded and the epoch's own media
@@ -159,7 +94,7 @@ void EETechTreeEpoch::UnloadMedia(EEPlayer* inPlayer)
 // Unloads the media of the epoch's nodes of one kind
 void EETechTreeEpoch::UnloadMediaOfKind(long inKind)
 {
-    EETechEpochWalk(this, EeTechEpochOp::MediaOfKind, inKind, false, reinterpret_cast<EEComplexUnit*>(this->mTree->GetPlayer()));
+    this->EpochWalk(EeTechEpochOp::MediaOfKind, inKind, false, reinterpret_cast<EEComplexUnit*>(this->mTree->GetPlayer()));
 }
 
 // Copies another epoch's state and deep-copies its nodes for this tree (the node data stays shared)

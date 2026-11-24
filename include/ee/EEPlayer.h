@@ -221,7 +221,12 @@ public:
 // carries the RTTI names). Slots named by offset. Layouts and member functions decoded
 // from src/Empire Earth/Tech Tree/ (EETechTree.cpp 0x1cba2f, EETechTreeEpoch.cpp 0x1cdf25, EETechTreeNode.cpp
 // 0x1cedce); names are provisional.
+#include <algorithm>
 class EETechTree;
+extern EETechTree gTechTree;                // 0x52fd98 (Empire Earth.cpp: the database's tree)
+// the host of every walk (ctx: the tree; EETechTree.cpp): the containers, the captured entry points, the events, the
+// interface, the player, the media and the file
+int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io);
 
 // What a tech tree node's +0x08 points to (provisional name; the logic bomb tests +0x48 == 4). sizeof 0x84
 // (the nodes' Load news 0x84 bytes; the implicit ctor 0x1ce39e builds the map and the vector). Most fields are copied
@@ -249,7 +254,7 @@ struct RTSTechTreeNodeData : public EeTechNodeDataFields {
 // mScenEditorObsoleted (+0x22), mIsUnitMediaLoaded (+0x23), mEpoch (+0x14), mObsoleteEpoch (+0x18, = 14),
 // mResearchDelay (+0x1c: ResearchNode counts it down); an epoch's mIsCountingSOL (+0x50), mRequiredSOL (+0x40),
 // mFirstNodeID (+0x44), mCurrentSOL (+0x48: the techs researched toward it), mNextEpoch (+0x4c), mTitleID. The
-// bodies are Rust over EETechHost (ee/EETechRust.h)
+// bodies are Rust over EETechHost
 class RTSTechTreeNode : public EeTechNodeFields {
 public:
     // inline (EETechTreeNode's ctor 0x1cedce: these stores come first, its own init list next, the one vptr store last)
@@ -263,29 +268,40 @@ public:
 
 class EETechTreeNode : public RTSTechTreeNode {
 public:
-    EETechTreeNode();
+    // (the record's values, allowed and obsolete only after the space epoch: RTSTechTreeNode's ee_tech_node_fields_init)
+    EETechTreeNode() : mTree(NULL), mButton(NULL) {}
     virtual ~EETechTreeNode();              // +0x00 0x1cee25 (??_G 0x1cee09)
-    virtual bool GetIsAvailable();          // +0x04 0x1cf686
-    virtual bool GetIsObsolete();           // +0x08 0x1cf742
+    // whether the node can be researched now (wonders only after enough epochs or in the last epoch)
+    virtual bool GetIsAvailable() { return this->Walk(EeTechNodeOp::IsAvailable) != 0; }   // +0x04 0x1cf686
+    // obsolete by flag or because its obsolete epoch has passed
+    virtual bool GetIsObsolete() { return this->Walk(EeTechNodeOp::IsObsolete) != 0; }   // +0x08 0x1cf742
     // the cost of resource inResource for unit class inUnitClass, scaled (EETechTree::SumCosts passes 2..6, 1.0f)
     virtual long GetCost(long inResource, long inUnitClass, float inScale);     // +0x0c 0x1cef26
-    virtual long GetBuildTime();            // +0x10 0x1cee02 (mU08->mU58)
-    virtual void LoadMedia(EEPlayer* inPlayer);   // +0x14 0x1cf882 (loads the media; EESELoadThread Handle406 0x1723e3)
-    virtual long ResearchNode(EEComplexUnit* inUnit);  // +0x18 0x1cfa53 (inUnit: the researching unit) (researches it: 0, 2 or 9)
-    virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x1c 0x1cfcc9 (unloads the media; Handle407 0x172b00)
+    virtual long GetBuildTime() { return this->mData->mBuildTime; }   // +0x10 0x1cee02 (mU08->mU58)
+    // +0x14 0x1cf882 (EESELoadThread Handle406 0x1723e3): the unit class and its buttons, and the media its research
+    // event uses (ee_sim tech node_media.rs)
+    virtual void LoadMedia(EEPlayer* inPlayer) { this->Walk(EeTechNodeOp::Media, 1, false, reinterpret_cast<EEComplexUnit*>(inPlayer)); }
+    // +0x18 0x1cfa53 (inUnit: the researching unit): fires its event; 2 when already researched (repeatable kind 3
+    // excepted), 9 when not possible; counts down a research delay (TNRS, TEST ONLY: nodes_capture.rs)
+    virtual long ResearchNode(EEComplexUnit* inUnit) { return this->Walk(EeTechNodeOp::Research, 0, false, inUnit); }
+    virtual void UnloadMedia(EEPlayer* inPlayer) { this->Walk(EeTechNodeOp::Media, 0, false, reinterpret_cast<EEComplexUnit*>(inPlayer)); }   // +0x1c 0x1cfcc9 (Handle407 0x172b00)
 
     void ClearClassCosts();                 // 0x1ceeb3 (delete[]s mU08->mClassCosts' arrays, then clear())
     long Unload();                          // 0x1ceefc (deletes mU08; 0)
     void GetCostString(UWideString& outString, long inUnitClass, float inScale);
     long Load(FSFile& inFile, EETechTree* inTree);  // 0x1cf370 (one 0x10c-byte database record)
-    bool Contains(long inUnitClass);        // 0x1cf6e5 (std::find in mU08->mUnitClasses)
+    bool Contains(long inUnitClass) { return std::find(this->mData->mUnitClasses.begin(), this->mData->mUnitClasses.end(), inUnitClass) != this->mData->mUnitClasses.end(); }   // 0x1cf6e5
     bool NeedsUnitMedia();
     bool NeedsUnitMediaUncaptured();        // (TNWK, TEST ONLY: NeedsUnitMedia records its answer)
-    bool DependsOn(long inID);              // 0x1cf79a (recursive over the prerequisites)
-    void SetPrerequisite(long inID);
-    void MakeAvailable();
-    void SetScenEditorObsoleted(bool inValue, bool inRecurse);
-    void SetObsolete(bool inValue, bool inKeepMedia);
+    bool DependsOn(long inID) { return this->Walk(EeTechNodeOp::DependsOn, inID) != 0; }   // 0x1cf79a (recursive over the prerequisites)
+    // one prerequisite met (an epoch or one of the four techs); with all met the node becomes available (event 0x7d1,
+    // statistics series 0x16) (TNPR, TEST ONLY: ee_sim tech nodes_capture.rs)
+    void SetPrerequisite(long inID) { this->Walk(EeTechNodeOp::SetPrerequisite, inID); }
+    void MakeAvailable() { this->Walk(EeTechNodeOp::MakeAvailable); }   // with every prerequisite met
+    // the scenario editor's flag; recursively obsoletes the nodes depending on it, or un-obsoletes its prerequisites
+    void SetScenEditorObsoleted(bool inValue, bool inRecurse) { this->Walk(EeTechNodeOp::SetEditorObsoleted, inValue ? 1 : 0, inRecurse); }
+    // obsolete (the obsolete event, unloading its unit media unless kept) or the flag cleared
+    void SetObsolete(bool inValue, bool inKeepMedia) { this->Walk(EeTechNodeOp::SetObsolete, inValue ? 1 : 0, inKeepMedia); }
     void SetButton(unsigned long inButton);
     // GetCost's body (the virtual adds the simulation capture's record: ee/EETechCapture.h)
     long GetCostUncaptured(long inResource, long inUnitClass, float inScale);
@@ -299,6 +315,9 @@ public:
     // (provisional name)
     unsigned long GetNumUnitClasses() { return this->mData->mUnitClasses.size(); }
     bool GetScenEditorObsoleted() const { return this->mScenEditorObsoleted; }
+    // the node (or the epoch) as the Rust walks take it, and a walk of it (ee_tech_walk_node over the node's tree)
+    EeTechNodeRef Ref() { return EeTechNodeRef{this, this, this->mData}; }
+    int32_t Walk(EeTechNodeOp inOp, long inA = 0, bool inB = false, EEComplexUnit* inUnit = NULL);
 
     EETechTree* mTree;                      // +0x0c (GetPlayer 0x1ccb1f)
     EEButtonObject* mButton;                // +0x10 (EEButtonObject::Get of the record's +0xb0)
@@ -322,27 +341,34 @@ public:
 // other nodes of its ids.
 class EETechTreeEpoch : public EETechTreeNode {
 public:
-    EETechTreeEpoch();
-    virtual ~EETechTreeEpoch();             // +0x00 0x1cdfcf (??_G 0x1cdfb3)
-    virtual bool GetIsAvailable();          // +0x04 0x1ce474
-    virtual bool GetIsObsolete();           // +0x08 0x1ce494
+    EETechTreeEpoch() {}                    // (the counters start at 0: the record's init)
+    virtual ~EETechTreeEpoch() { this->DeleteNodes(); }   // +0x00 0x1cdfcf (??_G 0x1cdfb3)
+    // (+0x04 0x1ce474 GetIsAvailable: the node's walk, which answers for an epoch: available, not obsolete, not
+    // researched)
+    virtual bool GetIsObsolete() { return this->mIsObsolete; }   // +0x08 0x1ce494
     virtual long GetCost(long inResource, long inUnitClass, float inScale);     // +0x0c 0x1ce038
     virtual long GetBuildTime();            // +0x10 0x1ce0eb
     virtual void LoadMedia(EEPlayer* inPlayer);   // +0x14 0x1ce5b5
-    virtual long ResearchNode(EEComplexUnit* inUnit);  // +0x18 0x1ce862
+    virtual long ResearchNode(EEComplexUnit* inUnit) { return this->Research(this->mData->mID, inUnit); }   // +0x18 0x1ce862 (the epoch itself)
     virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x1c 0x1cea53
 
     void DeleteNodes();
-    long GetCurrentSOL();
+    long GetCurrentSOL() { return this->mCurrentSOL; }   // the techs counting toward this epoch that were researched
     long GetRequiredSOL() const { return this->mRequiredSOL; }  // inline (AttemptEpochAdvance 0x6f406 loads it before the GetCurrentSOL call) (provisional name)
     long Load(FSFile& inFile, EETechTree* inTree);  // 0x1ce10e (the epoch's record, then its nodes)
     long Unload();
     void GetNodeIDs(std::vector<long>& outIDs);
-    void AddSOL();
+    // one more tech toward the epoch; with enough researched it becomes available (event 0x7d2) (TSOL, TEST ONLY)
+    void AddSOL() { if (this->mTree != NULL) this->EpochWalk(EeTechEpochOp::AddSol); }
     void LoadMediaOfKind(long inKind);
-    void UpdateAvailability();
-    void ResearchKind(long inKind, bool inEpochOnly);
-    long Research(long inID, EEComplexUnit* inUnit);
+    // available once enough techs count toward it; gives its nodes the epoch prerequisite (TSOL, TEST ONLY)
+    void UpdateAvailability() { if (this->mTree != NULL) this->EpochWalk(EeTechEpochOp::UpdateAvailability); }
+    // the epoch's nodes of one kind researched (only those researched with the epoch when asked)
+    void ResearchKind(long inKind, bool inEpochOnly) { this->EpochWalk(EeTechEpochOp::ResearchKind, inKind, inEpochOnly); }
+    // a node of the epoch, or the epoch itself: fires its event, makes it current, obsoletes outdated nodes; 2 when
+    // already researched, 9 when not possible (TNRS, TEST ONLY: nodes_capture.rs)
+    long Research(long inID, EEComplexUnit* inUnit) { return this->EpochWalk(EeTechEpochOp::Research, inID, false, inUnit); }
+    int32_t EpochWalk(EeTechEpochOp inOp, long inA = 0, bool inB = false, EEComplexUnit* inUnit = NULL);   // ee_tech_walk_epoch
     long GetCostUncaptured(long inResource, long inUnitClass, float inScale);   // GetCost's body (ee/EETechCapture.h)
     void UnloadMediaOfKind(long inKind);
     // 0x1ceaeb (EETechTree::Get's lookup in one epoch; provisional name): the epoch for its own id, else one of its
@@ -383,11 +409,11 @@ private:
 // (+0x538; EEMusicManager 0x132022 passes it to EEMusicObject's pick), mStartEpoch (+0x53c), mEndEpoch (+0x540, = 14),
 // mEpochsBeforeWonders (+0x544, = 1), mMediaID (+0x548), mEpochNameID (+0x54c: 30145 + the epoch, a string id),
 // mIsLoaded (+0x550); the saved game's research lists (+0x4f4 .. +0x524) are Rust's (mSaved). The bodies are Rust
-// over EETechHost (ee/EETechRust.h)
+// over EETechHost
 class EETechTree : public RTSTechTree, public EeTechTreeFields {
 public:
     EETechTree();
-    virtual ~EETechTree();                  // +0x00 0x1cbd99 (??_G 0x1cbd7d)
+    virtual ~EETechTree() { ee_tech_tree_fields_free(this); }   // +0x00 0x1cbd99 (??_G 0x1cbd7d) (the saved game's lists are Rust's)
     // inline in the real header (the COMDAT 0x18a4 sits in EEABuild.cpp, its first user; every caller calls it
     // out of line). An epoch's id is its position; a node is found in its epoch (EETechTreeEpochOf).
     EETechTreeNode* Get(long inID)
@@ -402,26 +428,32 @@ public:
     // 0x5aa0d1, 0x59721b): the tech's node data. Provisional name.
     RTSTechTreeNodeData* GetData(long inID) { return this->Get(inID)->mData; }
     long Load(FSFileSpec& inFile);          // 0x1cbdf0 (the database: every epoch block of the file)
-    static void BuildUnitClassInfo();       // 0x1cbe4a (gTechTree's events by unit class)
+    static void BuildUnitClassInfo() { gTechTree.Walk(EeTechTreeOp::BuildUnitClassInfo); }   // 0x1cbe4a (gTechTree's events by unit class)
     void UnloadAll();
     void GetNodeIDs(std::vector<long>& outIDs);
     void GetEpochNodeIDs(long inEpoch, std::vector<long>& outIDs);
     void GetChecksum(ESChecksum& ioChecksum);
     void SumCosts(long inID, long inUnitClass, long* ioCosts);
-    static bool IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind);
+    // whether a tech's model or sound effect for a unit class is the latest one the tree still uses
+    static bool IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind) { return ee_tech_is_latest_effect(inTree, &EETechHost, inTree, (int32_t)inID, (int32_t)inUnitClass, (int32_t)inKind); }
     EEPlayer* GetPlayer();
-    void AdvanceEpoch();
-    void ApplySavedState(bool inApplyObsoleted, bool inApplyResearch);
+    void AdvanceEpoch() { this->Walk(EeTechTreeOp::AdvanceEpoch); }   // to the next epoch unless the end epoch is reached
+    // a loaded tree's state reapplied: editor-obsoleted techs, the epoch range, research, each epoch's counters, then
+    // the interface
+    void ApplySavedState(bool inApplyObsoleted, bool inApplyResearch) { this->Walk(EeTechTreeOp::ApplySavedState, inApplyObsoleted ? 1 : 0, inApplyResearch ? 1 : 0); }
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x1ccbc9 (saved game)
-    void MakeObsolete(long inID);
-    void SetPrerequisite(long inID, long inPrerequisite);
-    void Research(long inID, EEComplexUnit* inUnit);   // 0x1ccec2 (inUnit: the researching unit, passed on to EEEvent::Trigger)
+    void MakeObsolete(long inID) { this->Walk(EeTechTreeOp::MakeObsolete, inID); }
+    void SetPrerequisite(long inID, long inPrerequisite) { this->Walk(EeTechTreeOp::SetPrerequisite, inID, inPrerequisite); }
+    // 0x1ccec2 (inUnit: the researching unit, passed on to EEEvent::Trigger): a researched tech that counts toward the
+    // next epoch adds to its count, an epoch updates statistics series 0xc (TTRS, TEST ONLY: nodes_capture.rs)
+    void Research(long inID, EEComplexUnit* inUnit) { this->Walk(EeTechTreeOp::Research, inID, 0, inUnit); }
     void SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts);   // SumCosts' body (ee/EETechCapture.h)
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    void SetEpoch(long inEpoch);
-    void SetEpochRange(long inStart, long inEnd);
-    void ResetEpochRange(long inStart, long inEnd);
-    void SetNodeAvailable(long inID, bool inValue);
+    // forward to an epoch (never back), recorded in statistics series 0xc, researching up to it
+    void SetEpoch(long inEpoch) { this->Walk(EeTechTreeOp::SetEpoch, inEpoch); }
+    void SetEpochRange(long inStart, long inEnd) { this->Walk(EeTechTreeOp::SetEpochRange, inStart, inEnd); }   // researches up to the start
+    void ResetEpochRange(long inStart, long inEnd) { this->Walk(EeTechTreeOp::ResetEpochRange, inStart, inEnd); }   // the current epoch its start, no research
+    void SetNodeAvailable(long inID, bool inValue) { this->Walk(EeTechTreeOp::SetNodeAvailable, inID, inValue ? 1 : 0); }   // unless it has a research delay
     void SetPlayer(EEPlayer* inPlayer);
     void UpdateInterface(bool inEpochChanged);
     EETechTree& operator=(const EETechTree& inOther);
@@ -430,9 +462,18 @@ public:
     EETechTreeEpochList mEpochs;            // +0x008 one per epoch (the original: 15, the ids below 15)
     EEPlayer* mPlayer;                      // +0x534 (GetPlayer: else gWorld.mPlayers[mU04])
     long GetCurrentEpoch() const { return this->mCurrentEpoch; }
+    // a walk of the tree (ee_tech_walk_tree)
+    int32_t Walk(EeTechTreeOp inOp, long inA = 0, long inB = 0, EEComplexUnit* inUnit = NULL) { return ee_tech_walk_tree(this, &EETechHost, inOp, this, (int32_t)inA, (int32_t)inB, inUnit); }
 };
 typedef EETechTree EETechnologyTable;
-extern EETechTree gTechTree;                // 0x52fd98 (Empire Earth.cpp: the database's tree)
+inline int32_t EETechTreeNode::Walk(EeTechNodeOp inOp, long inA, bool inB, EEComplexUnit* inUnit)
+{
+    return ee_tech_walk_node(this->mTree, &EETechHost, inOp, this->mTree, this->Ref(), (int32_t)inA, inB, inUnit);
+}
+inline int32_t EETechTreeEpoch::EpochWalk(EeTechEpochOp inOp, long inA, bool inB, EEComplexUnit* inUnit)
+{
+    return ee_tech_walk_epoch(this->mTree, &EETechHost, inOp, this->mTree, this->Ref(), (int32_t)inA, inB, inUnit);
+}
 
 // One point of a player's statistics series (8 bytes on Windows; the layout of ee_units' EeUnitsStatPoint, which
 // GetSeries copies into)
