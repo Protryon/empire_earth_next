@@ -51,20 +51,6 @@ public:
 // (WONLobbyModelObj.h; R6 WON lobby and network round 37) made by the EE factory (EELobbyGameHost.cpp)
 LobbyGame* EELobbyNewGame();
 
-// EELobbyGame's notifications to the lobby's controls: a
-// player slot (type 100063) or a game option (100062) changed, its number in mParam
-class EELobbySyncPlayerEvent : public LobbyEvent {
-public:
-    EELobbySyncPlayerEvent(int inSlot) : LobbyEvent(LobbyEvent_EELobbySyncPlayer), mParam(inSlot) {}
-    int mParam;                            // +0x20 the slot number
-};
-
-class EELobbySyncOptionEvent : public LobbyEvent {
-public:
-    EELobbySyncOptionEvent(int inOption) : LobbyEvent(LobbyEvent_EELobbySyncOption), mParam(inOption) {}
-    int mParam;                            // +0x20 the option number
-};
-
 // a game room player (0x14 bytes in the original; EELobbyPlayer.cpp's methods are in WONLobby/EELobbyGameHost.cpp)
 class EELobbyPlayer : public LobbyPlayer {
 public:
@@ -112,44 +98,16 @@ public:
     EeWonEeColor* mRust;
 };
 
-// the players' connection state before a game starts (EELobbyConnectDialog.cpp; 0xa4 bytes; vtable 0x84c1f0).
-// R6 WONLobby round 5: a lobbydlg.rs kind (the list and cancel button held, the running and ended flags, Run, End,
-// SetConnected); the host and its list line are WONLobby/LobbyDialogHost.cpp's
-class EELobbyConnectDialog : public LobbyRustDialog {
-public:
-    EELobbyConnectDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Connect) {}
-    // runs the dialog: true when every player connected (0x290a8a)
-    bool Run(LobbyGame* inGame) { return this->LCall(EeWonLobbyDlgCall::ConnectRun, (intptr_t)inGame) != 0; }
-    void End(bool inOK) { this->LCall(EeWonLobbyDlgCall::ConnectEnd, inOK); }  // 0x290c85 (100001 / 100002)
-};
-
-// the saved-games dialog (EELobbyFileDialog.cpp; 0xc8 bytes; vtable 0x84c338).
-// R6 WONLobby round 6: a lobbydlg.rs kind (its list and buttons held, the directory and extension, ListFiles, the
-// selected file's load or delete); the host is WONLobby/LobbyDialogHost.cpp's
-class EELobbyFileDialog : public LobbyRustDialog {
-public:
-    EELobbyFileDialog() : LobbyRustDialog(EeWonLobbyDlgKind::File) {}
-    void ListFiles(const std::string& inDirectory, const std::string& inExtension)  // 0x290fd9 (lists the files)
-    { this->LCall(EeWonLobbyDlgCall::FileListFiles, (intptr_t)inDirectory.c_str(), (intptr_t)inExtension.c_str()); }
-};
-
-// the game room's game options (EELobbyGameOptionsCtrl.cpp; 0xd8 bytes; vtable 0x84c540). Its 16 option controls
-// are named by a table (0x9657b8) of combo boxes (type 0) and check boxes (type 1); control ids are index + 1.
-// R6 WONLobby round 4: a lobbyctl.rs object (the controls, the room flags, the active flag, every rule); the
-// shell is WONLobbyRustCtrl.h's, the host WONLobby/LobbyCtrlHost.cpp
-class EELobbyGameOptionsCtrl : public LobbyRustCtrl {
-public:
-    EELobbyGameOptionsCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::GameOptions) {}
-};
-
-// the game room's players: eight rows of a name combo, team, color, citizen, observe and transfer controls
-// (EELobbyPlayerOptionsCtrl.cpp; 0x154 bytes; vtable 0x84c718); control ids are slot * 6 + column + 1.
-// R6 WONLobby round 5: a lobbyctl.rs object (the 48 controls, the room flags, the active and host flags, its own
-// slot, every rule); the shell is WONLobbyRustCtrl.h's, the host WONLobby/LobbyCtrlHost.cpp
-class EELobbyPlayerOptionsCtrl : public LobbyRustCtrl {
-public:
-    EELobbyPlayerOptionsCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::PlayerOptions) {}
-};
+// R6 WON lobby and network round 37: the EE dialogs and controls are plain shells of their Rust kinds (the factories
+// in EELobbyGlueHost.cpp):
+// - EELobbyConnectDialog (EELobbyConnectDialog.cpp; 0xa4 bytes; vtable 0x84c1f0): the players' connection state
+//   before a game starts, lobbydlg.rs's Connect (Run 0x290a8a, End 0x290c85);
+// - EELobbyFileDialog (EELobbyFileDialog.cpp; 0xc8 bytes; vtable 0x84c338): the saved games, lobbydlg.rs's File
+//   (ListFiles 0x290fd9);
+// - EELobbyGameOptionsCtrl (EELobbyGameOptionsCtrl.cpp; 0xd8 bytes; vtable 0x84c540): the game room's 16 game
+//   options (a table 0x9657b8 of combo and check boxes, ids index + 1), lobbyctl.rs's GameOptions;
+// - EELobbyPlayerOptionsCtrl (EELobbyPlayerOptionsCtrl.cpp; 0x154 bytes; vtable 0x84c718): the game room's eight
+//   player rows (ids slot * 6 + column + 1), lobbyctl.rs's PlayerOptions.
 
 // the lobby's configuration: WONAPI's plus the file transfer port (0xfc bytes; vtable 0x44c610)
 class EELobbyConfig : public LobbyConfig {
@@ -165,7 +123,7 @@ public:
 bool EELobbyIsConnectDialogRunning();
 void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected);
 void EELobbyCancelConnectDialog();
-WONAPI::EELobbyFileDialog* EELobbyGetFileDialog();
+WONAPI::LobbyRustDialog* EELobbyGetFileDialog(); // the File kind
 
 // EELobbyResource.cpp
 WONAPI::ResourceConfigTablePtr EELobbyResource_Init(WONAPI::ResourceConfigTable* inCollection);

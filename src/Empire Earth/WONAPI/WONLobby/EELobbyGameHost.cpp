@@ -110,6 +110,15 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
 
 typedef EeWonEeGameCall GC;
 
+// EELobbyGame's notifications to the lobby's controls: a player slot (type 100063) or a game option (100062)
+// changed, its number in the event's Value (the original's EELobbySyncPlayerEvent / EELobbySyncOptionEvent, mParam
+// +0x20; Rust events since R6 WON lobby and network round 37, lobbyevt.rs)
+static LobbyEvent* EELobbySyncEvent(int inType, LobbyEvtKind inKind, int inValue)
+{
+    const intptr_t aArgs[] = {inValue};
+    return LobbyEvtNew(inType, inKind, aArgs);
+}
+
 static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 
 
@@ -213,8 +222,8 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::NotifyStagingChange: LobbyNotifyStagingChange(); return 0;
     case Op::AdvertiseGame: LobbyNetAdvertiseGame(); return 0;
     case Op::ResetReadyFlags: LobbyResetReadyFlags(); return 0;
-    case Op::SyncPlayer: LobbyBroadcastEvent(new EELobbySyncPlayerEvent((int)a), true); return 0;
-    case Op::SyncOption: LobbyBroadcastEvent(new EELobbySyncOptionEvent((int)a), true); return 0;
+    case Op::SyncPlayer: LobbyBroadcastEvent(EELobbySyncEvent(LobbyEvent_EELobbySyncPlayer, LobbyEvtKind::EELobbySyncPlayer, (int)a), true); return 0;
+    case Op::SyncOption: LobbyBroadcastEvent(EELobbySyncEvent(LobbyEvent_EELobbySyncOption, LobbyEvtKind::EELobbySyncOption, (int)a), true); return 0;
     case Op::TeamChanged: LobbyBroadcastEvent(PlayerTeamChangedEvent(aClient, b != 0), true); return 0;
     case Op::LobbyEvent: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case Op::KickClient: LobbyKickClient(aClient, false); return 0;

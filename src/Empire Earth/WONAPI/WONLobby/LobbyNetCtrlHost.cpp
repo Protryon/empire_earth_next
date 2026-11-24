@@ -399,9 +399,9 @@ intptr_t LobbyNetCtrlHost(Container* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, in
     case Op::LabelSetPercentText: reinterpret_cast<Label*>(a)->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), Txt(b)));
         return 0;
     case Op::FileDialogGet: return (intptr_t)EELobbyGetFileDialog();
-    case Op::FileDialogListSaves: reinterpret_cast<EELobbyFileDialog*>(a)->ListFiles(EELobbyFn2988E9(), ".ees");
+    case Op::FileDialogListSaves: reinterpret_cast<LobbyRustDialog*>(a)->LCall(EeWonLobbyDlgCall::FileListFiles, (intptr_t)std::string(EELobbyFn2988E9()).c_str(), (intptr_t)".ees");
         return 0;
-    case Op::DoDialog: return LobbyDoDialog(reinterpret_cast<EELobbyFileDialog*>(a));
+    case Op::DoDialog: return LobbyDoDialog(reinterpret_cast<LobbyRustDialog*>(a));
     case Op::GfxDrawLine: g->DrawLine(Lo(b), Hi(b), Lo(c), Hi(c)); return 0;
     case Op::GfxDrawImage: g->DrawImage(reinterpret_cast<Image*>(b), Lo(c), Hi(c)); return 0;
     case Op::TextCompareNoCase: return Txt(a).CompareNoCase(Txt(b));

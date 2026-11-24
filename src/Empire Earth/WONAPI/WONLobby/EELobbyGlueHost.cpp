@@ -245,11 +245,9 @@ static LobbyPlayer* EELobbyNewPlayer() { return new EELobbyPlayer; }
 static ComponentConfig* EELobbyNewButtonConfig() { return CfgNewOfKind(EeWonCfgKind::Button); }
 static ComponentConfig* EELobbyNewContainerConfig() { return new ContainerConfig; }
 static ComponentConfig* EELobbyNewDialogConfig() { return CfgNewOfKind(EeWonCfgKind::Dialog); }
-static Component* EELobbyNewGameOptionsCtrl() { return new EELobbyGameOptionsCtrl; }
-static Component* EELobbyNewPlayerOptionsCtrl() { return new EELobbyPlayerOptionsCtrl; }
+static Component* EELobbyNewGameOptionsCtrl() { return new LobbyRustCtrl(EeWonLobbyCtlKind::GameOptions); }
+static Component* EELobbyNewPlayerOptionsCtrl() { return new LobbyRustCtrl(EeWonLobbyCtlKind::PlayerOptions); }
 static Component* EELobbyNewColorButton() { return new EELobbyColorButton; }
-static Component* EELobbyNewFileDialog() { return new EELobbyFileDialog; }
-static Component* EELobbyNewConnectDialog() { return new EELobbyConnectDialog; }
 static LobbyConfig* EELobbyNewConfig() { return new EELobbyConfig; }
 static void EELobbyGetComponents(ComponentConfig* inConfig) { Glue(GL::GetComponents, (intptr_t)inConfig); }
 static void EELobbySendConnectStatus(int inConnected) { Glue(GL::SendConnectStatus, inConnected); }
@@ -288,10 +286,10 @@ static intptr_t HeldData(const GUIString& inText)
     inText.mData->AddRef();
     return (intptr_t)inText.mData.get();
 }
-template <class T> static intptr_t FindHeldDialog(ComponentConfig* inConfig, const char* inName, int inLine)
+static intptr_t FindHeldDialog(ComponentConfig* inConfig, EeWonLobbyDlgKind inKind, const char* inName, int inLine)
 {
-    SmartPtr<T> aPtr;
-    SafeGetComponent(inConfig, aPtr, inName, "EELobbyInit.cpp", inLine);
+    SmartPtr<LobbyRustDialog> aPtr;
+    SafeGetDialog(inConfig, aPtr, inKind, inName, "EELobbyInit.cpp", inLine);
     if (aPtr.get() != NULL) aPtr->AddRef();
     return (intptr_t)aPtr.get();
 }  // the game player being made (EELobbyFillPlayers' local)
@@ -749,8 +747,8 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::ResAllocGameOptions: sEELobbyResources->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl); return 0;
     case Op::ResAllocPlayerOptions: sEELobbyResources->AddAllocator("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl); return 0;
     case Op::ResAllocColorButton: sEELobbyResources->AddAllocator("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton); return 0;
-    case Op::ResAllocFileDialog: sEELobbyResources->AddAllocator("EELobbyFileDialog", EELobbyNewDialogConfig, EELobbyNewFileDialog); return 0;
-    case Op::ResAllocConnectDialog: sEELobbyResources->AddAllocator("EELobbyConnectDialog", EELobbyNewDialogConfig, EELobbyNewConnectDialog); return 0;
+    case Op::ResAllocFileDialog: sEELobbyResources->AddAllocator("EELobbyFileDialog", EELobbyNewDialogConfig, NewLobbyDialog<EeWonLobbyDlgKind::File>); return 0;
+    case Op::ResAllocConnectDialog: sEELobbyResources->AddAllocator("EELobbyConnectDialog", EELobbyNewDialogConfig, NewLobbyDialog<EeWonLobbyDlgKind::Connect>); return 0;
     // EELobbyAddResources: the LobbyGlobal section with the lobby music
     case Op::ResAddMusic: sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(SoundDescriptor("", 2))); return 0;
     case Op::ResAddLoader: LobbyAddComponentLoader(sEELobbyResources.mPtr, EELobbyGetComponents); return 0;
@@ -759,8 +757,8 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::PlayerColorRed: *reinterpret_cast<float*>(a) = sEELobbyColor.GetRed(); return 0;
     case Op::PlayerColorGreen: *reinterpret_cast<float*>(a) = sEELobbyColor.GetGreen(); return 0;
     case Op::PlayerColorBlue: *reinterpret_cast<float*>(a) = sEELobbyColor.GetBlue(); return 0;
-    case Op::FindConnectDialog: return FindHeldDialog<EELobbyConnectDialog>(reinterpret_cast<ComponentConfig*>(a), "EELobbyConnectDialog", 329);
-    case Op::FindFileDialog: return FindHeldDialog<EELobbyFileDialog>(reinterpret_cast<ComponentConfig*>(a), "EELobbyFileDialog", 328);
+    case Op::FindConnectDialog: return FindHeldDialog(reinterpret_cast<ComponentConfig*>(a), EeWonLobbyDlgKind::Connect, "EELobbyConnectDialog", 329);
+    case Op::FindFileDialog: return FindHeldDialog(reinterpret_cast<ComponentConfig*>(a), EeWonLobbyDlgKind::File, "EELobbyFileDialog", 328);
     case Op::SaveAlloc: return (intptr_t)new EELobbySavedGame;
     case Op::SaveSetFile: aSave->mSpec.SetFile(reinterpret_cast<const char*>(b)); return 0;
     case Op::SaveLengthClear: sEELobbySaveLength = 0; return 0;
@@ -857,7 +855,7 @@ void EELobbyInit()
 }
 void EELobbyShutdown() { Glue(GL::Shutdown); }
 unsigned short EELobbyGetFileTransferPort() { return (unsigned short)Glue(GL::FileTransferPort); }
-EELobbyFileDialog* EELobbyGetFileDialog() { return reinterpret_cast<EELobbyFileDialog*>(Glue(GL::FileDialog)); }
+LobbyRustDialog* EELobbyGetFileDialog() { return reinterpret_cast<LobbyRustDialog*>(Glue(GL::FileDialog)); }
 bool EELobbyRunConnectDialog() { return Glue(GL::RunConnectDialog) != 0; }
 void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected) { Glue(GL::SetSlotConnected, inSlot, inConnected); }
 void EELobbyCancelConnectDialog() { Glue(GL::CancelConnectDialog); }

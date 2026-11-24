@@ -615,7 +615,7 @@ pub enum EeWonLobbyCtlOp {
     LabelSetName,
     /// `LobbyIAmCaptain()` (0 or 1).
     IAmCaptain,
-    /// `((EELobbySyncOptionEvent*)a)->mParam`.
+    /// `LobbyEvtGet(a, LobbyEvtField::Value)` (a sync event's slot or option; R6 WON lobby and network round 37).
     EventParam,
     /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
     /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
