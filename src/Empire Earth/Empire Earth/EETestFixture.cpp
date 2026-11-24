@@ -162,13 +162,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     const int64_t* i = c->i;
     EEComplexUnit* u = As<EEComplexUnit>(c->h);
     switch (c->op) {
-    case EeFixtureOp::Stderr:
-        fputs(c->s, stderr);
-        fflush(stderr);
-        return 0;
-    case EeFixtureOp::Exit:
-        exit((int)i[0]);
-    case EeFixtureOp::SetTimeFactor: return PlatSimSetTimeFactor((uint32_t)i[0], (uint32_t)i[1]) ? 1 : 0;
     case EeFixtureOp::ScreenEvent:   // as a dialog's answer posts it (the editor exercise's "exit without saving")
         ee_screens_event((uint32_t)i[0], As<UIForm>(c->h), NULL);
         return 0;
@@ -178,25 +171,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::UiUpdate: gUIManager->ForceUIUpdate();
         return 0;
-    case EeFixtureOp::Input: {
-        static const uint32_t kTypes[] = {PLAT_EVENT_KEY_DOWN, PLAT_EVENT_KEY_UP, PLAT_EVENT_MOUSE_DOWN,
-                                          PLAT_EVENT_MOUSE_UP, PLAT_EVENT_MOUSE_WHEEL};
-        PlatInputEvent theEvent;
-        memset(&theEvent, 0, sizeof(theEvent));
-        theEvent.mType = kTypes[i[0]];
-        if (i[0] <= 1)
-            theEvent.mKey.mScanCode = (uint32_t)i[1];
-        else if (i[0] <= 3)
-            theEvent.mMouse.mButton = (uint32_t)i[1];
-        else
-            theEvent.mMouse.mWheel = c->f[0];
-        ISHandleEvent(theEvent);
-        return 0;
-    }
-    case EeFixtureOp::State:
-        return (gPhysics != NULL ? 1 : 0) | (gWorld.mMap != NULL ? 2 : 0) | (gWorld.mLock != NULL ? 4 : 0)
-            | (gMouse != NULL ? 8 : 0) | (gISKeyboard != NULL ? 16 : 0) | (gUserInterface != NULL ? 32 : 0)
-            | (EEIsLobbyOpen() ? 64 : 0) | (gUIManager != NULL ? 128 : 0);
     case EeFixtureOp::SelectControl:
         return Handle(kMainGameSelectUnits < FORM->GetControlCount() ? dynamic_cast<EEUICSelectUnits*>(FORM->GetControl(kMainGameSelectUnits)) : NULL);
     case EeFixtureOp::Mark: PostAction(NULL);
@@ -302,14 +276,9 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxStatusButtonShows: return BUTTON->mIsCommand && BUTTON->mButton == (unsigned long)i[0] && BUTTON->GetDisplayMode() == kDisplayModeShown;
     case EeFixtureOp::FxStatusButtonCenter: c->f[0] = i[0] == 0 ? (BUTTON->GetRectangle().GetLeft() + BUTTON->GetRectangle().GetRight()) * 0.5f : (BUTTON->GetRectangle().GetTop() + BUTTON->GetRectangle().GetBottom()) * 0.5f;
         return 0;
-    case EeFixtureOp::FxWorldHasLock: return gWorld.mLock != NULL;
-    case EeFixtureOp::FxWorldLockStep: i[0] == 0 ? gWorld.mLock->ReadLock() : i[0] == 1 ? gWorld.mLock->ReadUnlock() : i[0] == 2 ? gWorld.mLock->WriteLock() : gWorld.mLock->WriteUnlock();
-        return 0;
-    case EeFixtureOp::FxPhysicsPresent: return gPhysics != NULL;
     case EeFixtureOp::FxPhysicsValue: return i[0] == 0 ? (int64_t)(long)gPhysics->mGameTime : i[0] == 1 ? (int64_t)(unsigned long)gPhysics->mNumTicksDone : (gPhysics->mGameOver ? 1 : 0);
     case EeFixtureOp::FxCommsPresent: return gCommunications != NULL;
     case EeFixtureOp::FxCommsValue: return i[0] == 0 ? (int64_t)gCommunications->GetNumberOfCTsProcessedInPhysics() : i[0] == 1 ? (int64_t)(long)gCommunications->GetLastTickReceived() : i[0] == 2 ? (gCommunications->GetIsGamePaused() ? 1 : 0) : (gCommunications->GetIsMultiplayerSession() ? 1 : 0);
-    case EeFixtureOp::FxMapPresent: return gWorld.GetMap() != NULL;
     case EeFixtureOp::FxCameraFocus: CAMERA.GetLocation(CAMERA.mFraction, *(GE3DPoint*)&c->f[0]);
         return 0;
     case EeFixtureOp::FxCameraEndFocus: *(GE3DPoint*)&c->f[0] = CAMERA.GetEndFocus();

@@ -296,15 +296,19 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             found
         }
         Op::WorldLock => {
-            if go(Op::FxWorldHasLock, 0, &[]) == 0 {
+            if crate::sim_driver::sim_host::world_map_and_lock().1.is_null() {
                 0
             } else {
-                go(Op::FxWorldLockStep, 0, &[i[0].clamp(0, 3)]);
+                // 0 read, 1 read unlock, 2 write, 3 write unlock
+                use crate::sim_driver::host::*;
+                let ops =
+                    [EE_SIM_DRIVER_READ_LOCK, EE_SIM_DRIVER_READ_UNLOCK, EE_SIM_DRIVER_WRITE_LOCK, EE_SIM_DRIVER_WRITE_UNLOCK];
+                crate::sim_driver::sim_host::world_lock(ops[i[0].clamp(0, 3) as usize]);
                 1
             }
         }
         Op::Physics => {
-            if go(Op::FxPhysicsPresent, 0, &[]) == 0 {
+            if !crate::gamecpp::globals::have!(gPhysics) {
                 0
             } else {
                 for k in 0..3 {
@@ -325,7 +329,7 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
         }
         Op::Camera => {
             // plain reads: the scroll check compares polls a second apart
-            if go(Op::FxMapPresent, 0, &[]) == 0 {
+            if crate::sim_driver::sim_host::world_map_and_lock().0 == 0 {
                 0
             } else {
                 let focus = on(Op::FxCameraFocus, 0).run();

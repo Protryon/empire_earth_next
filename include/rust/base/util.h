@@ -402,8 +402,6 @@ long ee_util_resource_string_get(uint16_t id,
                                  void (*assign)(void*, const char*),
                                  void *target);
 
-extern void exit(int code);
-
 extern void abort();
 
 /// `URegisterShutdown`: always 0 (`kErrorOK`).
