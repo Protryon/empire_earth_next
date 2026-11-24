@@ -59,26 +59,15 @@
 #include "ee/wonapi/WONRouting.h" // AuthContext (WONAuthContext.h)
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
-#include "ee/EEUIEWonNetModifyUserAccountEvents.h"
-#include "ee/EEUIEWonNetArenaRoomEvents.h"
+#include "ee/EEUIEWonNetArenaGameEvents.h"
+#include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEWonNetUI.h"
 #include "rust/won_lobby/wonfront.h"
 
 // R6 WON round 32: the bodies are Rust (ee_won_lobby wonfront.rs; the host is EEUIEWonNetArenaGameEvents.cpp's)
-long EEUIEWNARUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArUpdateForm, inForm, (intptr_t)inEntity); }
-long EEUIEWNARActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArActivateForm, inForm, (intptr_t)inEntity); }
-long EEUIEWNARDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArDeactivateForm, inForm, (intptr_t)inEntity); }
-long EEUIEWNARDoubleClickRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArDoubleClickRoom, inForm, (intptr_t)inEntity); }
-long EEUIEWNARClickUpdateAccount::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArClickUpdateAccount, inForm, (intptr_t)inEntity); }
-long EEUIEWNARJoinRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArJoinRoom, inForm, (intptr_t)inEntity); }
-long EEUIEWNAROpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::ArOpenScreen, inForm, (intptr_t)inEntity); }
 
-long EEUIEWNARBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    return inForm->GetManager()->Pop();
-}
 
 // The UI that the WON network code (EEWonNet.cpp) calls, set before main (ee/EEWonNetUI.h)
 static void WonNetDisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,

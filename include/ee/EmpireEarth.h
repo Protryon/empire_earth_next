@@ -68,8 +68,8 @@ extern unsigned long& gStartTime;           // 0x5318d0 (EEClient 0xb80ef/EEServ
 
 // 0x27a432 (User Interface Thread): the text of a resource reference through gResource->GetString, else a copy
 // (provisional name and meaning; the campaign editor shows its fields through it)
-void EETranslateString(const UWideString& inText, UWideString& outText);
-void EEDisplayScenarioIntro();             // 0x27a470 (the briefing; provisional name)
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
+extern unsigned long& gTexturePixelDepth;   // the textures' depth (Empire Earth.cpp)
 void EEExitGame();                         // 0x27a93e (disconnects and leaves the game; provisional name)
 class EEUnit;
 // 0x27a737 (cdecl): the tile picked at inPoint (EEMap::PickScreenTile; true) or else the tile under it (false) and its
@@ -92,7 +92,6 @@ class EEComplexUnit;
 bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit);
 // 0x27a7f5 (cdecl): message 0x41b for the keyboard's modifier state in the game / scenario editor forms (0x27518a)
 // (provisional name)
-void EEPostF9Key();
 class EEUIFMainGame;
 extern EEUIFMainGame* gSavedMainGameForm;  // 0x563144 (LoadScenario stores gUIManager->GetMainGameForm(); provisional name)
 extern UString gMultiplayerString;         // 0x562fd8 (EEGlobals.cpp; constructed by UI Events/EEScreens.cpp, ""; provisional name)

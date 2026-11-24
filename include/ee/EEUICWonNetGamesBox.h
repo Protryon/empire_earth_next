@@ -58,9 +58,6 @@ public:
     float mInProgressWidth;                 // +0x178 (likewise mInProgressLabel)
     GEText* mCopiedText;                    // +0x17c (ctor: new GEText(argument 2, the font))
     GEText* mText;                          // +0x180 (likewise)
-    long mReserved184[6];   // never accessed (gbscan.py); sizeof 0x19c from new 0x19c in EEUIManager 0x274647
-    // (owner-approved reserved tail, docs/LOST_DEBUG.md: neither the ctor, the dtor, this class's members
-    // 0x25b68e..0x25bb37 nor any caller touches +0x184..+0x19c)
 };
 
 #endif

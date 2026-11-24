@@ -9,7 +9,7 @@
 use core::ffi::{c_long, c_ulong};
 
 use crate::lle_cpp::{
-    lle_host, Cpp, EeUiShimBytes as Bytes, EeUiShimU8Out as U8Out, EeUiShimULongOut as ULongOut, HostArgs,
+    Cpp, EeUiShimBytes as Bytes, EeUiShimU8Out as U8Out, EeUiShimULongOut as ULongOut, HostArgs,
 };
 use crate::lle_manager::new_lock;
 use crate::obj::EeUiOp as Op;
@@ -83,10 +83,24 @@ pub(crate) fn form_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isiz
     })
 }
 
-lle_host!(
-    /// The form's host: [`form_call`], then `UIForm::HostOp`.
-    ee_ui_form_host => form_call, [crate::lle_hosts::form]
-);
+/// The form's host: [`form_call`], then `UIForm::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_form_host(
+    obj: *mut core::ffi::c_void,
+    op: crate::obj::EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the host contract, the arguments as given
+    unsafe { crate::lle_cpp::host(form_call, &[crate::lle_hosts::form], obj, op, a, b, c, d, f) }
+}
 
 /// `UIForm::Create(file, manager)`: every forms record read from the file; each with a form id above 0 made by the
 /// manager (`CreateForm`), added and its group 0 enabled. The last read's result (the count's when it failed).

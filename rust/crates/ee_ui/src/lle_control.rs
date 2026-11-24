@@ -6,7 +6,7 @@
 // the logic is the FFI hosts' (absent with no_cpp: a crate's tests that call the toolkit)
 #![cfg_attr(feature = "no_cpp", allow(dead_code))]
 
-use crate::lle_cpp::{lle_host, Cpp, HostArgs};
+use crate::lle_cpp::{Cpp, HostArgs};
 use crate::mouse::{ButtonQuery, ControlMouseCall};
 use crate::obj::EeUiOp as Op;
 use core::ffi::c_void;
@@ -33,10 +33,24 @@ pub(crate) fn event_call4<C: Cpp + ?Sized>(c: &mut C, event: usize, b: isize) {
     }
 }
 
-lle_host!(
-    /// The control's host: [`control_call`], then `UIControl::HostOp`.
-    ee_ui_control_host => control_call, [crate::lle_hosts::control]
-);
+/// The control's host: [`control_call`], then `UIControl::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_control_host(
+    obj: *mut core::ffi::c_void,
+    op: crate::obj::EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the host contract, the arguments as given
+    unsafe { crate::lle_cpp::host(control_call, &[crate::lle_hosts::control], obj, op, a, b, c, d, f) }
+}
 
 /// The shared UI keys (`UIControl`'s statics in the constructor's order: Space, Enter, Control, Alt, End, Home, the
 /// arrows, Delete, Backspace, the keypad's End, Home, arrows, Del and Enter, X, C, V, Insert) by their key codes.

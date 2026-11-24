@@ -470,3 +470,4 @@ pub(crate) mod upgrade_calls;
 #[cfg(not(test))]
 mod upgrade_ffi;
 pub(crate) mod upgrade_ops;
+pub(crate) mod ui_helpers;
