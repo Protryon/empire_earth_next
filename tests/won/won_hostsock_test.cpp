@@ -148,8 +148,8 @@ static string Framed(const string& inMsg)
 static std::vector<unsigned long> sProgress;
 static void ProgressCallback(AsyncOpPtr inOp, SmartPtr<RefCount>)
 {
-    RecvChunkOp* aChunk = dynamic_cast<RecvChunkOp*>(inOp.get());
-    sProgress.push_back(aChunk != NULL && aChunk->GetRecvOp() != NULL ? aChunk->GetRecvOp()->GetBytesRead() : 99999);
+    SocketOp* aRecv = RecvChunkOf(inOp.get());
+    sProgress.push_back(aRecv != NULL ? aRecv->GetBytesRead() : 99999);
 }
 
 int main(int argc, char** argv)

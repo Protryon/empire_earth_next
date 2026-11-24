@@ -139,6 +139,8 @@ public:
     //: 0x291983 (an inline COMDAT of EELobbyFileTransfer.cpp): finished without error
     bool Succeeded() { return this->GetStatus()==0 && !this->IsKilled(); }
     EeWonAsyncOp* GetOpObject() const { return this->mOp; }
+    // a receive's progress chunk's receiving op (the original's RecvChunkOp::GetRecvOp), NULL for any other op
+    RefCount* GetSubject() const { return static_cast<RefCount*>(ee_won_asyncop_subject(this->mOp)); }
 
 private:
     AsyncOp(const AsyncOp&);
@@ -330,16 +332,10 @@ private:
     EeWonSocketOp* mSockOp;
 };
 
-// what a receive's progress completion gets: 0x2b520d news one (0x48 bytes; RTTI RecvChunkOp : AsyncOp, vtable
-// 0x84cae4) with +0x44 = the receiving op
-class RecvChunkOp : public AsyncOp {
-public:
-    RecvChunkOp(SocketOp* inOp) : mRecvOp(inOp) {}
-    SocketOp* GetRecvOp() const { return this->mRecvOp.get(); }
-    virtual void RunHook() { this->Finish(0); }  //2b5370, 8-byte override of slot 04
-private:
-    SmartPtr<SocketOp> mRecvOp;          // +0x44
-};
+// what a receive's progress completion gets (the original's RecvChunkOp, 0x48 bytes: an AsyncOp with the receiving
+// op at +0x44, its RunHook 2b5370 Finish(0)) is a plain AsyncOp whose subject is the receiving op since R6 WON lobby
+// and network round 36 (ee_won opobj.rs, cppcore.rs n_progress); NULL for an op that is no progress chunk
+inline SocketOp* RecvChunkOf(AsyncOp* inOp) { return static_cast<SocketOp*>(static_cast<AsyncOp*>(inOp->GetSubject())); }
 
 
 // the completion interface (vtable 0x43e4a0: ??_G, pure Complete)
@@ -474,6 +470,10 @@ public:
     static WONStatus StaticCheckResponse(ReadBuffer& inMessage, void* inParam)
     { return static_cast<UDPManagerSendRecvOp*>(inParam)->CheckResponse(inMessage); }
     UDPManagerSendRecvOp() : mUdp(ee_won_udpsendrecvop_new(static_cast<RefCount*>(this), WonCore())) {}
+    // a request with a Rust body (udpops.rs EeWonUdpBody: what the lobby's subclasses PingGameOp and
+    // RoutingGetUserStatusOp added, both deleted in R6 WON lobby and network round 36), its address and manager set;
+    // the body's members by kind are ee_won_udp_body_of(op, EE_WON_UDP_BODY_*)
+    UDPManagerSendRecvOp(EeWonUdpBody inBody, const IPAddr& inAddr, UDPManager* inManager);
     virtual ~UDPManagerSendRecvOp() { ee_won_udpsendrecvop_free(this->mUdp); } // the original's was implicit (2b7140)
     void SetUDPManager(UDPManager* theManager);
     void SetMsgTimeout(DWORD theTimeout) { ee_won_udpsendrecvop_set_timeout(this->mUdp, static_cast<uint32_t>(theTimeout)); }
@@ -538,6 +538,8 @@ inline UDPManager* UDPManagerRecvOp::GetUDPManager() const
 { return static_cast<UDPManager*>(static_cast<RefCount*>(ee_won_udprecvop_manager(this->mUdp))); }
 inline void UDPManagerSendRecvOp::SetUDPManager(UDPManager* theManager)
 { ee_won_udpsendrecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
+inline UDPManagerSendRecvOp::UDPManagerSendRecvOp(EeWonUdpBody inBody, const IPAddr& inAddr, UDPManager* inManager)
+    : mUdp(ee_won_udpsendrecvop_new_body(static_cast<RefCount*>(this), WonCore(), inBody, inAddr.GetValue(), static_cast<RefCount*>(inManager))) {}
 
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;
@@ -671,40 +673,12 @@ protected:
 typedef SmartPtr<RoutingOp> RoutingOpPtr;
 #define EE_WON_ROUTE_OPS_RUST 1 // the ops are Rust objects (won_routeops_test reads them so)
 
-// The friend status map (the original's +0x88), the request datagram and the reply's read are a Rust object since
-// net round 19 (rust/crates/ee_won_net/src/userstatus.rs EeWonUserStatus); the map is read and set in Rust
-class RoutingGetUserStatusOp : public UDPManagerSendRecvOp {
-public:
-    typedef std::map<unsigned long,unsigned char> FriendStatusMap;
-    // 2c6630: a query to the server address, 3 retransmits, a 1 s message timeout
-    RoutingGetUserStatusOp(const IPAddr& inAddress, UDPManager* inManager) : mStatus(ee_won_userstatus_new())
-    { ee_won_udpsendrecvop_setup(this->GetUdpObject(), inAddress.GetValue(), static_cast<RefCount*>(inManager), 3, 1000); }
-    virtual ~RoutingGetUserStatusOp() { ee_won_userstatus_free(this->mStatus); } // (the original's implicit 2c6750)
-    // 2c6970: the datagram listing every queried id, then the send and receive
-    virtual void RunHook()
-    {
-        ByteBufferPtr aMessage;
-        ee_won_userstatus_request(this->mStatus, WonByteBufferSink, &aMessage);
-        this->SetOutgoing(aMessage);
-        UDPManagerSendRecvOp::RunHook();
-    }
-    // 2c6ab0: the reply's header, count and each user's status (a reply cut short: an unpack failure, what was
-    // read kept)
-    virtual WONStatus CheckResponse(ReadBuffer& inMessage)
-    {
-        size_t aPos = 0;
-        WONStatus aStatus = ee_won_userstatus_reply(this->mStatus, reinterpret_cast<const uint8_t*>(inMessage.data()),
-                                                    inMessage.length(), (size_t)inMessage.pos(), &aPos);
-        inMessage.SetPos((int)aPos);
-        return aStatus;
-    }
-    void AddWONUserId(unsigned long inId) { ee_won_userstatus_add(this->mStatus, inId); } //2c68c0, status 0 until the reply
-    // the friend status map, read and set by the routing logic in Rust (R6 WON round 32: netlogicops.rs; the
-    // original's GetFriendStatusMap / SetFriendStatusMap copies)
-    EeWonUserStatus* GetRust() const { return this->mStatus; }
-private:
-    EeWonUserStatus* mStatus; // owned
-};
+// RoutingGetUserStatusOp (ctor 2c6630, RunHook 2c6970, CheckResponse 2c6ab0) is a UDPManagerSendRecvOp with a Rust
+// body since R6 WON lobby and network round 36 (ee_won userstatus.rs: the friend status map, the request datagram,
+// the reply's read, 3 retransmits and a 1 s wait): new UDPManagerSendRecvOp(ee_won_userstatus_body(), addr, manager);
+// its map (AddWONUserId: ee_won_userstatus_add) is UserStatusOf(op)
+inline EeWonUserStatus* UserStatusOf(AsyncOp* inOp)
+{ return static_cast<EeWonUserStatus*>(ee_won_udp_body_of(static_cast<RefCount*>(inOp), EE_WON_UDP_BODY_USER_STATUS)); }
 #define EE_WON_USER_STATUS_RUST 1 // the map is a Rust object (won_userstatus_test sets it so)
 
 
@@ -863,11 +837,11 @@ public:
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
+    AsyncOpTracker mTracker; // its sub-ops (the original's AsyncOpWithTracker, 44..78)
 protected:
     virtual ~RustServerOp();
 private:
     static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
-    AsyncOpTracker mTracker; // its sub-ops (the original's AsyncOpWithTracker, 44..78)
     EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;

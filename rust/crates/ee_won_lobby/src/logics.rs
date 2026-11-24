@@ -1375,8 +1375,11 @@ impl EeWonLogic {
 /// `PingGameOp`'s members: the request id, the ping time (0xffff: no reply yet), the reply's flags (the request's
 /// until a reply), the retries and the reply's bytes after its flags.
 pub struct EeWonPingOp {
-    obj: *mut c_void,
+    /// the C++ op the host's calls get (a body's: set at its run, R6 WON lobby and network round 36)
+    obj: Cell<*mut c_void>,
     host: EeWonLogicHostFn,
+    /// `mGame` (a body's, a reference held; 0 for a driver's op, whose shell keeps it)
+    game: isize,
     request_id: u16,
     ping: Cell<u16>,
     flags: Cell<u8>,
@@ -1392,13 +1395,14 @@ pub enum EeWonPingOpCall {
     RunHook = 1,
     /// `CheckResponse(*(EeWonReadBuffer*)a)`: the status, or [`EE_WON_LOGIC_THREW`].
     CheckResponse,
-    /// a member: 0 the request id, 1 the ping, 2 the flags, 3 the retries, 4 the reply's length (-1: none).
+    /// a member: 0 the request id, 1 the ping, 2 the flags, 3 the retries, 4 the reply's length (-1: none), 5 a
+    /// body's game.
     Field,
 }
 
 impl EeWonPingOp {
     fn op(&self, op: Op, a: isize, b: isize) -> isize {
-        host_call(self.host, self.obj, op, a, b, 0, 0)
+        host_call(self.host, self.obj.get(), op, a, b, 0, 0)
     }
 
     fn run_hook(&self, game: isize) {
@@ -1482,14 +1486,69 @@ pub extern "C" fn ee_won_pingop_new(
     flags: u8,
 ) -> *mut EeWonPingOp {
     Box::into_raw(Box::new(EeWonPingOp {
-        obj,
+        obj: Cell::new(obj),
         host,
+        game: 0,
         request_id,
         ping: Cell::new(0),
         flags: Cell::new(flags),
         retries: Cell::new(0),
         reply: RefCell::new(None),
     }))
+}
+
+// `PingGameOp::RunHook`: the request built and handed to the host (`RequestSend`), before the base's run
+unsafe extern "C" fn ping_body_run(ctx: *mut c_void, op: *mut c_void, _r: *const ee_won_net::udpops::EeWonUdpSendRecvOp) {
+    // SAFETY: the body's contract: the op's live members
+    let x = unsafe { &*(ctx as *const EeWonPingOp) };
+    x.obj.set(op);
+    x.run_hook(x.game);
+}
+// `PingGameOp::CheckResponse`
+unsafe extern "C" fn ping_body_check(ctx: *mut c_void, op: *mut c_void, reader: *mut EeWonReadBuffer) -> i64 {
+    // SAFETY: the body's contract: the op's live members and a live reader
+    let x = unsafe { &*(ctx as *const EeWonPingOp) };
+    x.obj.set(op);
+    x.check_response(unsafe { &mut *reader })
+}
+// `~PingGameOp`: the members freed, the game's reference given back
+unsafe extern "C" fn ping_body_free(ctx: *mut c_void) {
+    // SAFETY: the body's members, freed once
+    let x = unsafe { Box::from_raw(ctx as *mut EeWonPingOp) };
+    x.op(Op::Release, x.game, 0);
+}
+
+/// `PingGameOp(game, request id, flags)`'s body (the C++ class went in R6 WON lobby and network round 36): its
+/// members and a reference to the game (the host's `AddRef` / `Release`). The op is
+/// `new UDPManagerSendRecvOp(body, game->GetAddress(), manager)`; its members are
+/// `ee_won_udp_body_of(op, EE_WON_UDP_BODY_PING)`.
+#[no_mangle]
+pub extern "C" fn ee_won_pingop_body(
+    game: isize,
+    host: EeWonLogicHostFn,
+    request_id: u16,
+    flags: u8,
+) -> ee_won_net::udpops::EeWonUdpBody {
+    let x = Box::new(EeWonPingOp {
+        obj: Cell::new(std::ptr::null_mut()),
+        host,
+        game,
+        request_id,
+        ping: Cell::new(0),
+        flags: Cell::new(flags),
+        retries: Cell::new(0),
+        reply: RefCell::new(None),
+    });
+    x.op(Op::AddRef, game, 0);
+    ee_won_net::udpops::EeWonUdpBody {
+        kind: ee_won_net::udpops::EE_WON_UDP_BODY_PING,
+        ctx: Box::into_raw(x) as *mut c_void,
+        run: Some(ping_body_run),
+        check: Some(ping_body_check),
+        free: Some(ping_body_free),
+        retry_limit: 0,
+        timeout: 10000,
+    }
 }
 
 /// The ping op's destructor.
@@ -1524,6 +1583,7 @@ pub unsafe extern "C" fn ee_won_pingop_call(p: *const EeWonPingOp, call: EeWonPi
             1 => x.ping.get() as i64,
             2 => x.flags.get() as i64,
             3 => x.retries.get() as i64,
+            5 => x.game as i64,
             _ => x.reply.borrow().as_ref().map_or(-1, |r| r.len() as i64),
         },
     }

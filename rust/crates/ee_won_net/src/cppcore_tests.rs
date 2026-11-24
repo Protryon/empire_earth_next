@@ -60,7 +60,6 @@ static CORE_STUB: EeWonCoreHooks = EeWonCoreHooks {
     socket_thread_add: None,
     bytes_adopt: None,
     transform: None,
-    progress: None,
     accept: None,
     socket_hook: None,
     new_route_op: None,

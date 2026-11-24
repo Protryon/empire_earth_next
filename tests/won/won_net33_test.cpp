@@ -590,7 +590,7 @@ static void RoutingPhase(int inCases)
                 u->SetUDPManager(aManager);
                 u->SetNumRetransmits(Mutate(12) ? 2 : 3);
                 u->SetMsgTimeout(1000);
-            } else u = new RoutingGetUserStatusOp(anAddr, aManager);
+            } else u = new UDPManagerSendRecvOp(ee_won_userstatus_body(), anAddr, aManager);
             u->AddRef();
             st += " status " + u->GetDestAddr().GetHostAndPortString() + " " + N(u->GetNumRetransmits()) + " " +
                   N(u->GetMsgTimeout()) + " " + N(ee_won_udpsendrecvop_manager(u->GetUdpObject()) == static_cast<RefCount*>(aManager));

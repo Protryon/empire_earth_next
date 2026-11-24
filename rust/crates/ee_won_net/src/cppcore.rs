@@ -163,8 +163,6 @@ pub struct EeWonCoreHooks {
     /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
     /// result's
     pub transform: Option<unsafe extern "C" fn(socket: *mut c_void, message: *mut *mut c_void, send: bool) -> c_long>,
-    /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
-    pub progress: Option<unsafe extern "C" fn(op: *mut c_void, completion: *mut c_void)>,
     /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
     pub accept: Option<unsafe extern "C" fn(socket: *mut c_void, out: *mut *mut c_void) -> c_long>,
     /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
@@ -681,6 +679,17 @@ unsafe extern "C" fn n_recv_set_msg(o: *mut c_void, b: *mut c_void) {
     }
 }
 unsafe extern "C" fn n_recv_check(o: *mut c_void, data: *const u8, length: usize, threw: *mut bool) -> c_long {
+    // the reply wait of a request with a Rust body (PingGameOp, RoutingGetUserStatusOp: R6 WON lobby and network
+    // round 36): `CheckMessage` -> `StaticCheckResponse` -> the request's `CheckResponse`, a read past the end `threw`
+    let r = udp_recv(o);
+    // SAFETY: the wait's live Rust object; its request lives while the wait is checked (the verifier's contract)
+    let request = if r.is_null() { 0 } else { unsafe { (*r).request() } } as *const EeWonUdpSendRecvOp;
+    if !request.is_null() {
+        // SAFETY: as above; the datagram's bytes; the caller's flag
+        let (status, t) = unsafe { (*request).check_body(crate::ffi::bytes(data, length)) };
+        unsafe { *threw = t };
+        return status as c_long;
+    }
     // SAFETY: the table's contract
     core().and_then(|c| c.udp_check).map_or(0, |h| unsafe { h(o, data, length, threw) })
 }
@@ -776,6 +785,12 @@ unsafe extern "C" fn n_udp_new_wait(r: *mut c_void, a: *const EeWonIpAddr) -> *m
         let check = core().map_or(null_mut(), |c| c.udp_response_check);
         // SAFETY: the new op's Rust object
         unsafe { ee_won_udprecvop_set_verifier(wo, check, r) };
+        // a request with a Rust body: its reply check is called here (n_recv_check), not through the C++ virtuals
+        let so = object_of(r, EeWonCoreObject::UdpSendRecv) as *const EeWonUdpSendRecvOp;
+        // SAFETY: the request's live Rust object; the new op's
+        if !so.is_null() && unsafe { (*so).has_body() } {
+            unsafe { (*wo).set_request(so as usize) };
+        }
     }
     w
 }
@@ -936,7 +951,19 @@ unsafe extern "C" fn n_file_set_time(p: *const u8, n: usize, t: i64) {
     // SAFETY: the caller's bytes
     crate::hostnative::set_file_time(unsafe { crate::ffi::bytes(p, n) }, t);
 }
-pass!(n_progress, progress, (o: *mut c_void, c: *mut c_void));
+/// A progress chunk (the deleted `CoreProgress` and `RecvChunkOp`, R6 WON lobby and network round 36): a new plain
+/// op whose subject is the receiving op `o`, with the completion `c`, run in the receiving op's mode with no
+/// timeout; it finishes at once.
+unsafe extern "C" fn n_progress(o: *mut c_void, c: *mut c_void) {
+    let chunk = hold(new_plain_op());
+    let Some(x) = op(chunk.get()) else { return };
+    // SAFETY: the live receiving op and its completion
+    unsafe {
+        x.set_subject(o);
+        x.set_completion(c);
+    }
+    x.run(n_op_mode(o), 0);
+}
 pass!(n_accept, accept, (s: *mut c_void, out: *mut *mut c_void) -> c_long, WS_NONE as c_long);
 /// `delete transform`: a crypt transform's session reference given back (`~CryptTransform`), a C++ one deleted
 unsafe extern "C" fn n_transform_free(t: *mut c_void) {

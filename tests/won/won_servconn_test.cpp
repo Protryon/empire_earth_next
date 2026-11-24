@@ -79,6 +79,9 @@ static std::string TypeName(const void* inObject, const std::type_info& inType)
 static std::string TypeName(const AsyncOp* inObject, const std::type_info& inType)
 {
     const char* aKind = WonSocketOpClass(inObject);
+    // (the peer authentication op is a RustServerOp made by NewPeerAuth since R6 WON lobby and network round 36: this
+    // driver makes no other RustServerOp; the golden keeps the class's name)
+    if (aKind == NULL && dynamic_cast<const RustServerOp*>(inObject) != NULL) return "PeerAuthOp";
     return aKind != NULL ? std::string(aKind) : TypeName(static_cast<const void*>(inObject), inType);
 }
 // a routing op's class name: the original's op classes by type (the ops are one RoutingOp over a Rust op since net

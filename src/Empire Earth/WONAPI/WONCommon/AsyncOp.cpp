@@ -154,15 +154,6 @@ static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
     *ioMessage=aResult;
     return aStatus;
 }
-// a progress chunk: a RecvChunkOp of the receiving op with its completion, run in the op's mode
-static void CoreProgress(void* inOp,void* inCompletion)
-{
-    SocketOp* anOp=SockOp(inOp);
-    SmartPtr<RecvChunkOp> aChunk=new RecvChunkOp(anOp);
-    aChunk->SetCompletion(static_cast<CompletionBase<AsyncOpPtr>*>(static_cast<RefCount*>(inCompletion)));
-    long aMode=anOp->GetMode();
-    aChunk->Run(aMode,0);
-}
 // Accept (the virtual Duplicate): the accepted socket in *outSocket with a reference, on success only
 static long CoreAccept(void* inSocket,void** outSocket)
 {
@@ -249,7 +240,7 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreNewQueueSocket,CoreNewUdpRecvOp,CoreUdpCheck,
                                         reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
                                         CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
-                                        &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreProgress,
+                                        &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,
                                         CoreAccept,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 

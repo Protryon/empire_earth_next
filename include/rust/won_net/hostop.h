@@ -580,8 +580,6 @@ struct EeWonCoreHooks {
   /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
   /// result's
   long (*transform)(void *socket, void **message, bool send);
-  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
-  void (*progress)(void *op, void *completion);
   /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
   long (*accept)(void *socket, void **out);
   /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
@@ -830,6 +828,12 @@ EeWonAsyncOp *ee_won_asyncop_new(void *op, const EeWonAsyncOpHooks *hooks);
 /// # Safety
 /// `o` came from `ee_won_asyncop_new` (or is null).
 void ee_won_asyncop_free(EeWonAsyncOp *o);
+
+/// A progress chunk's receiving op (`RecvChunkOp::GetRecvOp()`, a `RefCount*`), null for any other op.
+///
+/// # Safety
+/// `o` is valid.
+void *ee_won_asyncop_subject(const EeWonAsyncOp *o);
 
 /// `AsyncOp`'s run mode.
 ///
