@@ -30,6 +30,7 @@
 #include "rust/won_gui/dialogobj.h"
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/gfxobj.h"
+#include "rust/won_gui/guidraw.h" // SelectionColor
 #include "rust/won_gui/grabobj.h"
 #include "rust/won_gui/imgobj.h"
 #include "rust/won_gui/guihost.h"
@@ -631,17 +632,15 @@ private:
 
 
 
-// SelectionColor (0x0c bytes) with read-only color helpers.
-class SelectionColor {
-public:
-    SelectionColor(); //3494a0, back80000007/fore80000008/mode2
-    SelectionColor(DWORD,ForegroundSelectionMode = ForegroundSelectionMode_InvertOriginalColor); //3494c0, foreFFFFFF
-    SelectionColor(DWORD,DWORD); //3494e0, mode2
-    unsigned long GetBackgroundColor(Graphics&) const; //349500
-    unsigned long GetForegroundColor(Graphics&, unsigned long) const; //349510
-    unsigned long mBackgroundColor;
-    unsigned long mForegroundColor;
-    ForegroundSelectionMode mMode;
+// SelectionColor (0x0c bytes; constructors 0x3494a0, 0x3494c0, 0x3494e0): guidraw.rs's record (the background, the
+// foreground and the mode a selected text's colour is chosen by) since R6 WON GUI round 36; SelectionColor.cpp gone
+struct SelectionColor : EeWonSelColor {
+    SelectionColor() : EeWonSelColor{0x80000007u, 0x80000008u, ForegroundSelectionMode_UseForegroundColor} {}
+    SelectionColor(DWORD b, ForegroundSelectionMode m = ForegroundSelectionMode_InvertOriginalColor) : EeWonSelColor{(uint32_t)b, 0xffffffu, m} {}
+    SelectionColor(DWORD b, DWORD f) : EeWonSelColor{(uint32_t)b, (uint32_t)f, ForegroundSelectionMode_UseForegroundColor} {}
+    unsigned long GetBackgroundColor(Graphics&) const { return this->background; } //349500 (the graphics unused)
+    // 349510: the original colour, its inverse, the set foreground, else white (guidraw.rs sel_foreground)
+    unsigned long GetForegroundColor(Graphics&, unsigned long o) const { return ee_won_gui_sel_foreground(this->background, this->foreground, this->mode, (uint32_t)o); }
 };
 
 // InputBox (0xec bytes): Background values at +0xc4 and +0xd8

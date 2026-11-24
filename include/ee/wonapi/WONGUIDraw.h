@@ -143,14 +143,7 @@ struct WONDrawMeasure {
     }
 };
 
-inline EeWonSelColor WONDrawSelOf(const SelectionColor& s)
-{
-    EeWonSelColor r;
-    r.background = (uint32_t)s.mBackgroundColor;
-    r.foreground = (uint32_t)s.mForegroundColor;
-    r.mode = (int32_t)s.mMode;
-    return r;
-}
+inline EeWonSelColor WONDrawSelOf(const SelectionColor& s) { return s; } // (the Rust record itself)
 
 }
 #endif
