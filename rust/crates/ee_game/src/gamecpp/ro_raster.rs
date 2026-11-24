@@ -179,7 +179,7 @@ extern "C" fn opacity_physical_frame(_: *mut c_void, complex: u64) -> c_ulong {
     h(O::RrPhysicalFrame, complex as P, &[]) as c_ulong
 }
 extern "C" fn opacity_mesh_z(_: *mut c_void, x: f32, y: f32) -> f32 {
-    hd(O::MpMeshZ, hp(O::MpWorldMap, 0, &[]), &[], &[x, y])
+    super::rast::mesh_z(super::rast::world_mesh(), x, y)
 }
 
 /// EERenderObject::GetUnitOpacity: a unit's opacity this frame (see-through modes, its own fade, buildings fading in

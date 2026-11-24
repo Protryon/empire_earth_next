@@ -24,6 +24,9 @@ use ee_render::gfx::ro_terrain::{
 };
 use ee_render::gfx::shadows::{ee_gfx_ground_shadows_render, EeGfxShadow, EeGfxShadowScene, EeGfxUnitShadow};
 
+use super::rast::{
+    rast, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, COMPARE_LESS_EQUAL, CULL_NONE, Z_BUFFER_DISABLED, Z_BUFFER_TEST_ONLY,
+};
 use super::render_object::ee_gamecpp_ro_lighting;
 use super::ro_units::{lists_view, raster, RU_UNIT_PANEL_ACTIVE};
 use super::{cptr, h, hd, hf, hp, pa, ptr, O, P};
@@ -79,7 +82,7 @@ pub extern "C" fn ee_gamecpp_gu_scene_starting() {
         right: zero.right,
         bottom: zero.bottom,
     };
-    hf(O::GuClearZ, 0, &[cptr(&rectangle)], &[0.0]);
+    rast().clear_z(0.0, &rectangle);
     if !RU_UNIT_PANEL_ACTIVE.load(Ordering::Relaxed) {
         return;
     }
@@ -87,21 +90,22 @@ pub extern "C" fn ee_gamecpp_gu_scene_starting() {
     rectangle.top = height * GU_PANEL_TOP;
     rectangle.right = width * GU_UNIT_PANEL_RIGHT;
     rectangle.bottom = zero.bottom;
-    hf(O::GuClearZ, 0, &[cptr(&rectangle)], &[0.0]);
+    rast().clear_z(0.0, &rectangle);
 }
 
 /// EEROUserInterface::RenderScene: the UI's polygons over the whole render target with fog, lighting, alpha test and
 /// z buffer off, the fog and alpha reference restored (lighting stays off).
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_gu_render_scene(ro: *mut c_void) {
-    let fog = h(O::GuGetFog, 0, &[]);
-    let alpha_ref = hd(O::GuGetAlphaRef, 0, &[], &[]);
-    h(O::RoRastFog, 0, &[0]);
-    h(O::GuShadingColorSource, 0, &[1]);
-    h(O::RoRastLighting, 0, &[0]);
-    hf(O::GuSetAlphaRef, 0, &[], &[0.0]);
-    h(O::GuZBufferDisabled, 0, &[]);
-    h(O::GuCullNone, 0, &[]);
+    let r = rast();
+    let fog = r.fog();
+    let alpha_ref = r.alpha_ref();
+    r.set_fog(0);
+    r.set_shading_color_source(1);
+    r.set_lighting(0);
+    r.set_alpha_ref(0.0);
+    r.set_z_buffer(Z_BUFFER_DISABLED);
+    r.set_culling(CULL_NONE);
     let rectangle = GeRectangle {
         left: 0.0,
         top: 0.0,
@@ -111,8 +115,8 @@ pub extern "C" fn ee_gamecpp_gu_render_scene(ro: *mut c_void) {
     h(O::GuUiViewportSetRectangle, 0, &[cptr(&rectangle)]);
     h(O::GuSetUiViewport, 0, &[]);
     h(O::GuDrawPolygons, ro as P, &[]);
-    h(O::RoRastFog, 0, &[fog]);
-    hf(O::GuSetAlphaRef, 0, &[], &[alpha_ref]);
+    r.set_fog(fog);
+    r.set_alpha_ref(alpha_ref);
 }
 
 // ---- EEROWater
@@ -121,19 +125,20 @@ pub extern "C" fn ee_gamecpp_gu_render_scene(ro: *mut c_void) {
 /// scene's fog), then the effects' water pass (queue 4); the alpha reference restored.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_wa_render_scene() {
-    let alpha_ref = hd(O::GuGetAlphaRef, 0, &[], &[]);
-    hf(O::GuSetAlphaRef, 0, &[], &[0.0]);
-    h(O::WaBlending, 0, &[]);
-    h(O::WaZTestOnly, 0, &[]);
-    h(O::WaZCompareLessEqual, 0, &[]);
-    h(O::GuShadingColorSource, 0, &[1]);
-    h(O::GuCullNone, 0, &[]);
+    let r = rast();
+    let alpha_ref = r.alpha_ref();
+    r.set_alpha_ref(0.0);
+    r.set_blending(BLEND_SRC_ALPHA, BLEND_INV_SRC_ALPHA);
+    r.set_z_buffer(Z_BUFFER_TEST_ONLY);
+    r.set_z_compare(COMPARE_LESS_EQUAL);
+    r.set_shading_color_source(1);
+    r.set_culling(CULL_NONE);
     ee_gamecpp_ro_lighting(EeGfxLighting::Off as u32);
     ee_gamecpp_ro_lighting(EeGfxLighting::SceneFog as u32);
     h(O::WaDrawWater, 0, &[]);
     // SAFETY: the graphics thread's frame
     unsafe { ee_gfx_effect_queues_draw(6) };
-    hf(O::GuSetAlphaRef, 0, &[], &[alpha_ref]);
+    r.set_alpha_ref(alpha_ref);
 }
 
 // ---- EEROGroundShadows

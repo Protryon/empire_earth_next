@@ -83,17 +83,6 @@ int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::RuMainViewRectangle: *(GERectangle*)a[0] = gU4E8F08.GetViewRectangle();
         break;
     case O::GuMainUiState: return gUIManager->GetMainGameForm()->mUIState;
-    case O::GuClearZ: gRasterizer->ClearZBuffer(f[0], *(const GERectangle*)a[0], gScreenIndex);
-        break;
-    case O::GuGetFog: return gRasterizer->GetFog(gScreenIndex);
-    case O::GuSetAlphaRef: gRasterizer->SetAlphaTestingRefValue(f[0], gScreenIndex);
-        break;
-    case O::GuShadingColorSource: gRasterizer->SetShadingColorSource((unsigned long)a[0], gScreenIndex);
-        break;
-    case O::GuZBufferDisabled: gRasterizer->SetZBuffer(kZBufferDisabled, gScreenIndex);
-        break;
-    case O::GuCullNone: gRasterizer->SetCulling(kCullNone);
-        break;
     case O::GuTargetWidth: return gRasterizer->GetRenderTarget(gScreenIndex)->GetWidth();
     case O::GuTargetHeight: return gRasterizer->GetRenderTarget(gScreenIndex)->GetHeight();
     case O::GuUiViewportSetRectangle: gUIViewport.SetViewRectangle(*(const GERectangle*)a[0]);
@@ -103,12 +92,6 @@ int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GuDrawPolygons: ((EEROUserInterface*)p)->mUIManager->DrawPolygons();
         break;
     // the water
-    case O::WaBlending: gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, gScreenIndex);
-        break;
-    case O::WaZTestOnly: gRasterizer->SetZBuffer(kZBufferTestOnly, gScreenIndex);
-        break;
-    case O::WaZCompareLessEqual: gRasterizer->SetZCompare(kCompareLessEqual, gScreenIndex);
-        break;
     case O::WaDrawWater: gRasterizer->DrawWater(RV_MESH, gScreenIndex, gOrthographicView);
         break;
     // the ground shadows
@@ -198,7 +181,6 @@ double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::GuGetAlphaRef: return gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
     case O::GsClassScale: return gUnitClassTable[a[0]]->GetScale();
     case O::SnMapColoredOpacity: return RV_MAP->mColoredRectangles[a[0]].mOpacity;
     default: return EECore10OpDF(inOp, p, a, f);
