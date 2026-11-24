@@ -8,6 +8,7 @@
 #include "platform/PlatWindow.h"
 #include "rust/won_gui/platwin.h"
 #include "rust/won_gui/platwm.h"
+#include "rust/won_gui/platloop.h"
 namespace WONAPI {
 class DisplayContext;
 class NativeImage;

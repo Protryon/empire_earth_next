@@ -173,6 +173,7 @@
 #include "rust/won_gui/platfont.h"
 #include "rust/won_gui/platgfx.h"
 #include "rust/won_gui/platimg.h"
+#include "rust/won_gui/platloop.h"
 #include "rust/won_gui/platwin.h"
 #include "rust/won_gui/platwm.h"
 #include "rust/won_gui/rootobj.h"

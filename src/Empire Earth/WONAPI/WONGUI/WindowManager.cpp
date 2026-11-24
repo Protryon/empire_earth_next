@@ -23,6 +23,7 @@
 #include "rust/won_gui/platimg.h"
 #include "rust/won_gui/platwin.h"
 #include "rust/won_gui/platwm.h"
+#include "rust/won_gui/platloop.h"
 using namespace WONAPI;
 // The popup stack, the modal dialog, the message loop, focus and the caches are ee_won's Rust manager (wmobj.rs,
 // wmcache.rs; R6 WON round 33); the window set, the event list, the timers, the broadcasts, the event loop and the
@@ -199,8 +200,6 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
 namespace WONAPI {
 static_assert(sizeof(PlatInputEvent) == sizeof(EeWonPlatEvent), "platwm.rs reads PlatInputEvent as EeWonPlatEvent");
 
-static uint32_t TickNow() { return (uint32_t)PlatTimeMilliseconds64(); }
-
 static const int kInputTypes[] = {InputEvent_GotFocus, InputEvent_LostFocus, InputEvent_MouseExit};
 static const int kKeyTypes[] = {InputEvent_KeyDown, InputEvent_KeyUp, InputEvent_KeyChar};
 static const int kMouseTypes[] = {InputEvent_MouseMove, InputEvent_MouseDown, InputEvent_MouseDoubleClick,
@@ -347,70 +346,6 @@ DWORD WindowManager::mThreadId = 0;
 // the host behind the game's (guisplit.rs ee_won_gui_wm_game)
 [[maybe_unused]] static const bool sSplitWmHost = (ee_won_gui_split_register(EeWonGuiSplitHost::Wm, ee_won_guicpp_wm_call), true);
 
-namespace WONAPI {
-bool WindowManager::LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch,
-                                  int& outLogicalWidth, int& outLogicalHeight, uint32_t& outSerial)
-{
-    uint32_t v[6];
-    if (!ee_won_plat_wm_lock_frame(this->mRust, &outPixels, v))
-        return false;
-    outWidth = (int)v[0];
-    outHeight = (int)v[1];
-    outPitch = (int)v[2];
-    outLogicalWidth = (int)v[3];
-    outLogicalHeight = (int)v[4];
-    outSerial = v[5];
-    return true;
-}
-
-
-// ---- WindowManager
-
-// Waits for one platform event (GetMessage; at most until 50 ms after the last pass, the original's window timer),
-// handles it, runs ProcessEvents (the window procedure did after each message), then paints and composites
-void WindowManager::GetNextEvent()
-{
-    uint32_t theTimeout = (uint32_t)this->Call(EeWonPlatWmCall::BeginPass);
-    uint32_t theStart = TickNow();
-    PlatInputEvent theEvent;
-    if (PlatWindowWaitEvent(&theEvent, theTimeout))
-        this->HandlePlatEvent(theEvent);
-    else {
-        // no window system (or a spurious return): never spin
-        uint32_t theWaited = TickNow() - theStart;
-        if (theWaited < theTimeout)
-            PlatSleep(theTimeout - theWaited);
-    }
-    this->Call(EeWonPlatWmCall::EndWait);
-    this->ProcessEvents();
-    this->PaintAndComposite();
-}
-
-void WindowManager::GetScreenResolutionHook(int& outWidth, int& outHeight)
-{
-    outWidth = this->GetSurfaceWidth();
-    outHeight = this->GetSurfaceHeight();
-}
-
-// The lobby surface is the screen
-void WindowManager::GetScreenRect(WONRectangle& outRect)
-{
-    outRect.x = outRect.y = 0;
-    outRect.width = this->GetSurfaceWidth();
-    outRect.height = this->GetSurfaceHeight();
-}
-
-// The colour scheme's standard colours from the classic Windows scheme (platwm.rs CLASSIC)
-void WindowManager::GetSystemColorScheme()
-{
-    for (int i = 0; this->Call(EeWonPlatWmCall::Classic, i) >= 0; i++)
-        this->mColorScheme->SetStandardColor((StandardColor)i, (DWORD)this->Call(EeWonPlatWmCall::Classic, i));
-}
-
-// The platform event translated by the Rust; the events the game must still see go on to it
-void WindowManager::HandlePlatEvent(const PlatInputEvent& inEvent)
-{
-    if (ee_won_plat_wm_event(this->mRust, (const EeWonPlatEvent*)&inEvent) && this->mEventForward != NULL)
-        this->mEventForward(inEvent);
-}
-}
+// the platform's calls of an event pass (platloop.rs ee_won_plat_wm_next_event)
+const EeWonPlatLoopFns WindowManager::kLoopFns = {(int32_t (*)(void*, uint32_t))PlatWindowWaitEvent, PlatTimeMilliseconds64,
+                                                 PlatSleep};

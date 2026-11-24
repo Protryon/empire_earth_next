@@ -65,6 +65,7 @@ pub mod platcursor;
 pub mod platfont;
 pub mod platgfx;
 pub mod platimg;
+pub mod platloop;
 pub mod platwin;
 pub mod platwm;
 pub mod registry;

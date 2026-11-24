@@ -1351,15 +1351,17 @@ public:
     virtual ~WindowManager(); //32bff0
     // R6 WON GUI round 35: the one manager is the platform's (the original's MSWindowManager, the port's
     // PlatWindowManager, folded in; platwm.rs): the hooks are its calls, no longer virtual
-    void GetNextEvent(); // one platform event (at most 50 ms after the last pass), the events, the paint
-    void HandlePlatEvent(const PlatInputEvent& inEvent); // translated by the Rust; the game's go on to it
+    // one platform event (at most 50 ms after the last pass; the lobby's go on to the game's forward function),
+    // the queued events, the paint (platloop.rs)
+    void GetNextEvent() { ee_won_plat_wm_next_event(this->mRust, &kLoopFns, this->mWmObj.p, (EeWonPlatForward)this->mEventForward); }
+    static const EeWonPlatLoopFns kLoopFns; // the platform's wait, clock and sleep (WindowManager.cpp)
     bool SetScreenResolutionHook(int,int) { return true; } // the display mode is the game's
-    void GetScreenResolutionHook(int&,int&);
+    void GetScreenResolutionHook(int& w,int& h) { ee_won_plat_wm_surface_size(this->mRust, &w, &h); }
     void Signal() { this->Call(EeWonPlatWmCall::Signal); }
     bool AddWindow(Window* w) { return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)w) != 0; } //14 32d6a0
     bool RemoveWindow(Window* w) { return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)w) != 0; } //18 32d840
-    void GetScreenRect(WONRectangle&); // the lobby surface
-    void GetSystemColorScheme();
+    void GetScreenRect(WONRectangle& r) { ee_won_plat_wm_screen_rect(this->mRust, &r.x); } // the lobby surface
+    void GetSystemColorScheme() { ee_won_plat_wm_classic_colors((uint32_t*)this->mColorScheme->mColors); }
     // the game's interface and the windows' (the surface, the frame, the z order, focus and capture)
     typedef void (*EventForwardFunc)(const PlatInputEvent& inEvent);
     void SetSurfaceSize(int w, int h) { this->Call(EeWonPlatWmCall::SetSurfaceSize, w, h); }
@@ -1367,7 +1369,8 @@ public:
     float GetPixelScale() const { return ee_won_plat_wm_scale(this->mRust); }
     void SetPresentRect(float l, float t, float w, float h) { ee_won_plat_wm_present(this->mRust, l, t, w, h); }
     bool LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
-                   int& outLogicalHeight, uint32_t& outSerial);
+                   int& outLogicalHeight, uint32_t& outSerial)
+    { return ee_won_plat_wm_lock_frame_out(this->mRust, &outPixels, &outWidth, &outHeight, &outPitch, &outLogicalWidth, &outLogicalHeight, &outSerial); }
     void UnlockFrame() { this->Call(EeWonPlatWmCall::UnlockFrame); }
     void SetEventForward(EventForwardFunc f) { this->mEventForward = f; }
     void AddPlatWindow(Window* w) { this->Call(EeWonPlatWmCall::Add, (intptr_t)w); }
