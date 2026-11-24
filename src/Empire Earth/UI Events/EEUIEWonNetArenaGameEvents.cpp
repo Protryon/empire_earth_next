@@ -72,7 +72,11 @@
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
 #include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "rust/won_lobby/wonfront.h"
+#include "rust/won_lobby/wonnet.h"
 static void OnGamePassword(const char* inPassword);
+// gWonNet's user and server list: the Rust object's slots (R6 WON lobby and network round 35)
+static WONAPI::AuthContext* WonNetUser() { return static_cast<WONAPI::AuthContext*>(ee_won_wonnet_objects(gWonNet->mRust)->user); }
+static WONAPI::DirList& WonNetServers() { return *static_cast<WONAPI::DirList*>(ee_won_wonnet_objects(gWonNet->mRust)->servers); }
 
 #include "ee/EEWonFrontHost.inl"
 static const bool sWonFrontHostSet = (ee_won_front_set_host(WonFrontHost), true);

@@ -296,20 +296,15 @@ struct EEWonNetGameInfo {
     EEWonNetGameInfo& operator=(const EEWonNetGameInfo& inInfo) = default;
 };
 
-namespace WONAPI {
-class RustServerOp;
-class SmartRoutingConnection;
-class WONAPICore; //actual core owner, not a synthetic lobby-host alias
-class WONLobbyWindow;
-class ServerContext;
-}
-
 struct EeWonNet; // rust/won_lobby/wonnet.h
 
 // The game's WON front end (R6 WON round 31: whole in Rust, ee_won_lobby wonnet.rs). The data (the strings, the
 // game, room and client maps, the joined game's info, the ids and flags; the original's +0x054..+0x18e) are the
-// Rust object's; this class keeps the C++ objects and forwards every method (EEWonNet.cpp). Dead in AoC: gWonNet
-// is never created (the base game's 0x4c55df).
+// Rust object's, and so are the C++ objects it held (R6 WON lobby and network round 35: the locks, the routing
+// connection, the server contexts, the lobby and its window, the user, the server list, the ops and the cancel
+// flags of the original's +0x004..+0x189 are wonnet.rs's EeWonNetObjects, read by the host through
+// ee_won_wonnet_objects); this class forwards every method (EEWonNet.cpp). Dead in AoC: gWonNet is never created
+// (the base game's 0x4c55df).
 class EEWonNet {
 public:
     void ConnectToLobby();                 // 0xcd7d2 (the room screen's open; provisional name)
@@ -351,22 +346,7 @@ public:
     void GetTitanServerList();              // base 0x4c9883
     void Login(const char* inName, const char* inPassword);       // base 0x4c91a3
 
-    EeWonNet* mRust;                        // the front end (owned)
-    TSCriticalSection* mLock;               // +0x004
-    TSCriticalSection* mLock8;              // +0x008 (OnDataObjectChanged enters and leaves it)
-    WONAPI::SmartPtr<WONAPI::SmartRoutingConnection> mRouting;    // +0x00c
-    WONAPI::SmartPtr<WONAPI::ServerContext> mDirServers;          // +0x010: the directory servers
-    WONAPI::ServerContext* mAuthServers;    // +0x018 (the account ops get it)
-    WONAPI::WONAPICore* mLobby; //+0x020 actual core; FnCFFDD pumps milliseconds
-    WONAPI::WONLobbyWindow* mLobbyWindow;   // +0x024
-    WONAPI::AuthContext* mUser;                    // +0x028
-    WONAPI::DirList mServers;               // +0x02c (the server-select form lists them)
-    WONAPI::SmartPtr<WONAPI::RustServerOp> mMOTDOp;      // +0x038: the message-of-the-day request (base game)
-    WONAPI::SmartPtr<WONAPI::GetCertOp> mLoginOp;  // +0x03c (base game: Login)
-    WONAPI::SmartPtr<WONAPI::RustServerOp> mDirOp;       // +0x040: the directory query (a Rust GetDirOp)
-    WONAPI::SmartPtr<WONAPI::RustServerOp> mAccountOp;   // +0x050 (OpenUpdateAccount; a Rust GetAccountOp)
-    bool mCancelled;                        // +0x188 (the connect message's Cancel sets it through a pointer)
-    bool mJoinRoomCancelled;                // +0x189 (the room join's Cancel, the same)
+    EeWonNet* mRust;                        // the front end and its C++ objects (owned)
 };
 
 extern EEWonNet* gWonNet;

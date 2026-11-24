@@ -273,7 +273,7 @@ int main(int argc, char** argv)
         sOp = aCert.get();
         Log("get cert " + Fresh(R(aCert.get())));
         Own("get cert");
-        SmartPtr<DetectFirewallOp> aFirewall = new DetectFirewallOp(aContext.get());
+        SmartPtr<RustServerOp> aFirewall = RustServerOp::NewFirewall(aContext.get());
         sOp = aFirewall.get();
         Log("detect firewall " + Fresh(R(aFirewall.get())));
         Own("detect firewall");

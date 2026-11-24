@@ -17,89 +17,169 @@ enum class EeWonCcKind : int32_t {
   Component = 5,
 };
 
-/// The host's ops. `c` is a C++ object (a `ConfigObject*` for a config or resource group, an `Image*`, ...); texts
-/// are a pointer and a length; `ok` is cleared by an op that threw (its exception kept in the frame).
+/// The host's ops, each one C++ statement (R6 WON round 34: the compound cases' decisions are the Rust's). `c` is a
+/// C++ object (a `ConfigObject*` for a config or resource group, an `Image*`, ...); texts are a pointer and a length;
+/// `ok` is cleared by an op that threw (its exception kept in the frame).
 enum class EeWonCcOp : int32_t {
-  /// `c->AddRef()` (`b` > 0) or `c->Release()` of the object of kind `a` (`EeWonCcKind`).
-  Ref = 0,
+  /// `c->AddRef()` of a config or resource group.
+  CfgAddRef = 0,
+  /// `c->Release()` of a config or resource group.
+  CfgRelease,
+  /// `((Image*)c)->AddRef()`.
+  ImageAddRef,
+  /// `((Image*)c)->Release()`.
+  ImageRelease,
+  /// `((Font*)c)->AddRef()`.
+  FontAddRef,
+  /// `((Font*)c)->Release()`.
+  FontRelease,
+  /// `((Sound*)c)->AddRef()`.
+  SoundAddRef,
+  /// `((Sound*)c)->Release()`.
+  SoundRelease,
+  /// `((Component*)c)->AddRef()`.
+  CompAddRef,
+  /// `((Component*)c)->Release()`.
+  CompRelease,
   /// The frame's message: `a` bytes, `b` long (the C++ throws `ConfigObjectException` with it).
-  SetMessage = 1,
-  /// The Rust object of config `c` (`dynamic_cast<ComponentConfig*>`), NULL for another object.
-  CfgObj = 2,
-  /// The Rust object of resource group `c`.
-  ResObj = 3,
+  SetMessage,
   /// The Rust object of `ComponentConfig::mResourceConfigTable`, NULL for none.
-  CurTable = 4,
+  CurTable,
   /// `c->mParent` (a `ConfigObject*`, NULL for none).
-  Parent = 5,
+  Parent,
   /// `c->mParent = a`.
-  SetParent = 6,
+  SetParent,
   /// `c->mName` appended to the `Vec<u8>` at `a` (`ee_won_cc_append`).
-  Name = 7,
-  /// `c->mBaseName`, the same way.
-  BaseName = 8,
+  Name,
+  /// `c->mName` = `a`, `b` bytes.
+  SetName,
+  /// `c->mBaseName`, as `Name`.
+  BaseName,
+  /// Config `c`'s kind (`mKind`, an `EeWonCfgKind`).
+  Kind,
   /// Config `c`'s flag `a` (0 `mHasSetWidth`, 1 `mHasSetHeight`, 2 `mHaveInitedComponents`).
-  Flag = 9,
+  Flag,
   /// Flag `a` of config `c` = `b`.
-  SetFlag = 10,
-  /// `c->mComponent`'s Left, Right, Top, Bottom, Width or Height (`a` 0..5).
-  CompEdge = 11,
+  SetFlag,
+  /// `c->mComponent->Left()`.
+  CompLeft,
+  /// `c->mComponent->Right()`.
+  CompRight,
+  /// `c->mComponent->Top()`.
+  CompTop,
+  /// `c->mComponent->Bottom()`.
+  CompBottom,
+  /// `c->mComponent->Width()`.
+  CompWidth,
+  /// `c->mComponent->Height()`.
+  CompHeight,
   /// `c->mComponent->GetDesiredSize(w, h)` into the two ints at `a`.
-  CompDesired = 12,
+  CompDesired,
   /// `c->mComponent->SetSize(a, b)`.
-  CompSetSize = 13,
+  CompSetSize,
   /// `c->mComponent->SetWantGrabBG(true)`.
-  CompWantGrab = 14,
+  CompWantGrab,
   /// `c->mComponent->InitComponent(ComponentConfigInit(c))`.
-  CompInit = 15,
+  CompInit,
   /// `c->mComponent.get()`.
-  CompOf = 16,
+  CompOf,
+  /// The part `a` (`EeWonCfgPart`) of component `c` (borrowed).
+  CompPart,
+  /// `WONShell::Op(c, GetFrameBorder, a)` of component `c`.
+  CompFrameBorder,
+  /// `CfgNewOfKind(a)`: a new config of kind `a`, as its `ComponentConfig*` (no reference).
+  NewOfKind,
+  /// The `ConfigObject*` of the `ComponentConfig*` `c`.
+  AsObject,
+  /// The game's skin made when there is none (`ee_won_skin_ensure`).
+  SkinEnsure,
   /// `c->GetNamedValue(key, *d)`: `a`, `b` the key; true when it answered.
-  VNamed = 17,
+  VNamed,
   /// `c->CallNamedFunction(key, params, *out)` over the `EeWonCcCallArgs` at `a`.
-  VCall = 18,
-  /// `c->GetPredefinedComponent(name, config, component)`: `a`, `b` the name, the two pointers at `d`.
-  VPredefined = 19,
+  VCall,
+  /// `c->GetPredefinedComponent(name, config, component)`: `a`, `b` the name, the two pointers at `d` (the
+  /// config a `ComponentConfig*`).
+  VPredefined,
   /// `c->SetComponent(a)`.
-  VSetComponent = 20,
+  VSetComponent,
   /// `c->Virtual24(key)`: `a`, `b` the key.
-  V24 = 21,
+  V24,
   /// `c->ConfigObject::HandleInstruction(a, type)`: `b`, `d` the type.
-  CoHandleInstruction = 22,
+  CoHandleInstruction,
   /// `c->ConfigObject::HandleValueInstruction(a, key, *e)`: `b`, `d` the key, `e` the `StringParser*`.
-  CoHandleValue = 23,
-  /// `c->ReadGroupStart(*a, name, inherited)` into the `Vec<u8>`s at `b` and `d`.
-  ReadGroupStart = 24,
+  CoHandleValue,
+  /// A new empty `std::string` (the host's local).
+  StrNew,
+  /// `std::string` `c` appended to the `Vec<u8>` at `a`.
+  StrTake,
+  /// `std::string` `c` deleted.
+  StrFree,
+  /// `c->ReadGroupStart(*a, name, inherited)` into the `std::string`s `b` and `d`.
+  ReadGroupStart,
   /// `c->ParseGroup(*a, ...)` with the four flags of `b` (bit 0 the first).
-  ParseGroup = 25,
+  ParseGroup,
   /// `c->ParseChild(*a, b, flag 0, flag 1)` with the flags of `d`.
-  ParseChild = 26,
+  ParseChild,
   /// `c->IncludeGroup(*a, name)`: `b`, `d` the name.
-  IncludeGroup = 27,
+  IncludeGroup,
   /// `((ConfigParser*)c)->AddWarning(text)`: `a`, `b` the text.
-  AddWarning = 28,
-  /// A FontConfig's font: -1 when `c` is no FontConfig, else `GetFont()` (borrowed, may be NULL).
-  AsFont = 29,
-  /// An ImageConfig's image (`a` raw: `GetRawImage()`): -1 when `c` is no ImageConfig, else the image with a
-  /// reference for the caller (NULL for none).
-  AsImage = 30,
-  /// A decode of file `a`, `b` long: a raw image (`d` nonzero: the window's `DecodeImageRaw`) or a delay-loaded
-  /// one (the window manager's `DecodeDelayImage`), with a reference for the caller, NULL when it failed.
-  DecodeImage = 31,
+  AddWarning,
+  /// Whether `c` is a FontConfig (`dynamic_cast`).
+  IsFontCfg,
+  /// FontConfig `c`'s `GetFont()` (borrowed, may be NULL).
+  FontOf,
+  /// Whether `c` is an ImageConfig (`dynamic_cast`).
+  IsImageCfg,
+  /// ImageConfig `c`'s `GetImage()` with a reference for the caller (NULL for none).
+  ImageOf,
+  /// ImageConfig `c`'s `GetRawImage()` with a reference for the caller (NULL for none).
+  RawImageOf,
+  /// The window's `DecodeImageRaw` of file `a`, `b` long, with a reference for the caller, NULL when it failed.
+  DecodeRaw,
+  /// The window manager's `DecodeDelayImage` of file `a`, `b` long, as `DecodeRaw`.
+  DecodeDelay,
   /// `Window::GetDefaultWindow()->GetFont(FontDescriptor(face, d, e))`, the face `a`, `b` long: a reference.
-  FontGet = 32,
-  /// The window manager's `DecodeSound` of path `a`, `b` long, with the flags `d` set when `e`: a reference.
-  SoundDecode = 33,
-  /// `*(Background*)c` = the background of the `EeWonCcBackground` at `a`.
-  BgMake = 34,
-  /// The factories `a` (config) and `b` (component) called, the two results with a reference each at `d`.
-  Alloc = 35,
+  FontGet,
+  /// A new `SoundDescriptor` (the host's local).
+  SoundDescNew,
+  /// `SoundDescriptor` `c`'s `SetSoundFlags(a, true)`.
+  SoundDescFlags,
+  /// `SoundDescriptor` `c`'s path = `a`, `b` bytes.
+  SoundDescPath,
+  /// The window manager's `DecodeSound(*c)`: a reference, NULL when it failed.
+  SoundDecode,
+  /// `SoundDescriptor` `c` deleted.
+  SoundDescFree,
+  /// `*(Background*)c` = `Background()`.
+  BgReset,
+  /// `((Background*)c)->mImage = (Image*)a`.
+  BgImage,
+  /// `((Background*)c)->mColor = a`.
+  BgColor,
+  /// `((Background*)c)->mBorderColor = a`.
+  BgBorder,
+  /// `((Background*)c)->mUseOffsets = a != 0`.
+  BgOffsets,
+  /// `((Background*)c)->mStretchImage = a != 0`.
+  BgStretch,
+  /// `((Background*)c)->mWantGrabBG = a != 0`.
+  BgGrab,
+  /// The config factory `a` called: its config with a reference (`ConfigObject*`, NULL for none).
+  AllocConfig,
+  /// The component factory `a` called: its component with a reference (NULL for none).
+  AllocComp,
   /// The glue function `a` called with table `c`.
-  Glue = 36,
-  /// A new `ResourceConfig` named `a`, `b` long, with a reference.
-  NewRes = 37,
-  /// `*(GUIString*)c` = the `a` units, `b` long.
-  SetText = 38,
+  Glue,
+  /// A new `ResourceConfig` with a reference.
+  NewRes,
+  /// `*(GUIString*)c` = the `a` `wchar_t` units, `b` long.
+  SetText,
+  /// `*(SelectionColor*)c` = `SelectionColor(a, b)` (a foreground colour).
+  SelFore,
+  /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_InvertOriginalColor)`.
+  SelInvert,
+  /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_UseOriginalColor)`.
+  SelOriginal,
 };
 
 /// What `ee_won_cc_call` answers; `o` is the Rust object named, the arguments `a`..`d` as each says.
@@ -142,7 +222,7 @@ enum class EeWonCcCall : int32_t {
   ReadStandardCursor = 17,
   /// config: `*(int*)a` = `ReadCursor()`'s standard cursor
   ReadCursor = 18,
-  /// config: `*(EeWonCcSelColor*)a` = `ReadSelectionColor()`
+  /// config: `*(SelectionColor*)a` = `ReadSelectionColor()` (made by the host's `Sel*` ops)
   ReadSelectionColor = 19,
   /// config: `*(bool*)a` = `EndOfString()`
   EndOfString = 20,
@@ -164,7 +244,7 @@ enum class EeWonCcCall : int32_t {
   GetColorResource = 28,
   /// config: `*(Background*)a` = `GetBackgroundResource(b, c bytes)`
   GetBackgroundResource = 29,
-  /// config: `*(bool*)d` = `GetNamedValue(a, b bytes, *(int*)c)` (the base's)
+  /// config: `*(bool*)a` = `GetNamedValue(b, c bytes, *(int*)d)` (the base's: the kind's paddings, the edges)
   GetNamedValue = 30,
   /// config: `*(bool*)a` = `PreParse(b)` (the base's)
   PreParse = 31,
@@ -258,8 +338,14 @@ enum class EeWonCcCall : int32_t {
   SetResourceFolder = 75,
   /// `GetResourceFile(b, c bytes)` handed to the sink `d` (`EeWonCcSink`) with the context `a`
   GetResourceFile = 76,
-  /// config: `*(bool*)b` = `CallNamedFunction` over the `EeWonCcCallArgs` at `a` (the base's: MAX, MIN)
+  /// config: `*(bool*)a` = `CallNamedFunction` over the `EeWonCcCallArgs` at `b` (the base's: MAX, MIN)
   CallNamedFunction = 77,
+  /// config: `*(bool*)a` = `GetPredefinedComponent(the name of the EeWonCcKey b, *(ComponentConfig**)c,
+  /// *(Component**)d)` (the base's: the kind's predefined children, cfgkind.rs)
+  Predefined = 78,
+  /// `ComponentConfigMissing(b, c bytes, the file a, the line d)`: the message "InitComponent error: name
+  /// (file:line)" (the original's 512-byte snprintf) thrown as the original's ConfigObjectException
+  Missing = 79,
 };
 
 /// A config's members (`mConfigMap`, `mCurResourceConfig`, `mConfigParser`, `mStringParser`).

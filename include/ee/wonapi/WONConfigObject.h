@@ -1,4 +1,4 @@
-// ConfigObject (0x54 bytes) and ConfigValueBase (12 bytes) declarations, moved from GUI.
+// ConfigObject (0x54 bytes) declarations, moved from GUI.
 #ifndef EE_WONAPI_WONCONFIGOBJECT_H
 #define EE_WONAPI_WONCONFIGOBJECT_H
 #include <string>
@@ -7,29 +7,20 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONStringCompare.h"
 #include "rust/won_net/cfgobject.h"
+#include "rust/won_lobby/cfgval.h"
 #include <string.h>
 namespace WONAPI {
 class ConfigParser;
 class StringParser;
 class ConfigObject;
 typedef ConfigObject* (*ConfigObjectFactory)();
-// 12-byte abstract base; ConfigObject uses Initialize/Read/Write and the default flag.
-class ConfigValueBase : public RefCount {
-public:
-    virtual void InitializeDefaultHook()=0; //slot04
-    virtual bool CopyValueHook(ConfigValueBase*)=0; //slot08
-    virtual bool ReadValue(StringParser&)=0; //slot0c
-    virtual void WriteValue(std::string&)=0; //slot10
-    void CopyValue(ConfigValueBase* source) { if(this->CopyValueHook(source)) this->mIsDefault=source->mIsDefault; } //SDK inline; keeps the default flag only after a successful typed copy
-    ConfigValueBase():mIsDefault(false) {}
-    bool mIsDefault; //08; 3aed47/3b1149/3af2de, 09..0b padding
-};
-
+// the typed values (ConfigValueBase and its templates, 12 to 24 bytes in the original) are Rust objects since R6 WON
+// lobby and network round 35 (rust/crates/ee_won_lobby/src/cfgval.rs EeWonCfgVal, bound to the subclasses' members)
 // a configuration object (0x54 bytes in the original: LobbyConfig's members started at +0x54). Its children, child
 // iteration, registered key values and key groups and every method are ee_won's object (rust/crates/ee_won_net/src/
 // cfgobject.rs; ConfigObject.cpp keeps only its host): these are the forwards. The class keeps its vtable (the
 // subclasses override the eight hooks), its name, base name and parent (the subclasses read them) and the typed
-// values (ConfigValueBase, bound to the subclasses' members). An exception a hook let through comes back in a
+// values (cfgval.rs's, bound to the subclasses' members). An exception a hook let through comes back in a
 // CfgExc and is thrown again here, in the caller's frame, as the original's frames passed it on.
 class ConfigObject : public RefCount {
 public:
@@ -83,7 +74,7 @@ public:
     { CfgExc x; return Ret(ee_won_cfgo_include(this->mObj, &p, true, B(g), g.length(), r, &x), x); }
     bool ParseChild(ConfigParser& p, ConfigObject* c, bool a = true, bool r = true)
     { CfgExc x; return Ret(ee_won_cfgo_parse_child(this->mObj, &p, c, a, r, &x), x); }
-    void RegisterKeyValue(const char* k, ConfigValueBase* v) { ee_won_cfgo_register_key_value(this->mObj, (const uint8_t*)k, strlen(k), v); }
+    void RegisterKeyValue(const char* k, EeWonCfgVal* v) { ee_won_cfgo_register_key_value(this->mObj, (const uint8_t*)k, strlen(k), v); }
 
     std::string mName;                      // +0x18
     std::string mBaseName;                  // +0x28

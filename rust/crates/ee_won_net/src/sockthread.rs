@@ -283,6 +283,133 @@ pub unsafe extern "C" fn ee_won_socket_thread_do_op(
     crate::cppcore::NATIVE_SOCKET_THREAD.do_op(op as OpHandle)
 }
 
+/// The library's socket thread (R6 WON lobby and network round 35; SocketThread / SocketThreadSimple and the
+/// `ThreadBase` / `Thread` shims under them are deleted): the ops ([`EeWonSocketThread`]), the thread that pumps
+/// them, and the single-threaded flag the core sets (`mSingleThreaded`, never read). Its calls are the core's
+/// [`EeWonApiHooks`] table ([`ee_won_api_socket_hooks`]): what the C++ `SocketThread*` answered.
+pub struct EeWonApiSocketThread {
+    ops: std::mem::ManuallyDrop<EeWonSocketThread>,
+    thread: *mut crate::thread::EeWonThread,
+    single: std::sync::atomic::AtomicBool,
+}
+
+impl EeWonApiSocketThread {
+    /// `new SocketThreadSimple`: on its own thread (not single-threaded), no ops; its thread made, not started.
+    pub fn new() -> *mut EeWonApiSocketThread {
+        let p = Box::into_raw(Box::new(EeWonApiSocketThread {
+            ops: std::mem::ManuallyDrop::new(EeWonSocketThread::new(&crate::cppcore::NATIVE_SOCKET_THREAD)),
+            thread: std::ptr::null_mut(),
+            single: std::sync::atomic::AtomicBool::new(false),
+        }));
+        let body = crate::thread::EeWonThreadBody { run: Some(api_socket_run), destroy: None, context: p.cast() };
+        // SAFETY: just made; the thread is set before any call can reach it
+        unsafe { (*p).thread = crate::thread::ee_won_thread_new(body) };
+        p
+    }
+
+    fn thread(&self) -> &crate::thread::EeWonThread {
+        // SAFETY: made in `new`, freed only with the object
+        unsafe { &*self.thread }
+    }
+
+    /// `SocketThreadSimple::Pump(wait)`: every op continued once, the finished dropped, then a wait on the thread's
+    /// signal for the time the pump gives (none for 0).
+    pub fn pump(&self, wait: u32) {
+        let w = self.ops.pump(wait);
+        if w > 0 {
+            self.thread().wait_signal(w);
+        }
+    }
+
+    pub fn single_threaded(&self) -> bool {
+        self.single.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+impl Drop for EeWonApiSocketThread {
+    /// `~SocketThreadSimple` (every op still held killed: the ops' drop), then `~ThreadBase` (the thread freed).
+    fn drop(&mut self) {
+        // SAFETY: dropped once, here, before the thread, as the derived class's members went first
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.ops) };
+        // SAFETY: the object's own thread object; nothing uses it after this
+        unsafe { crate::thread::ee_won_thread_free(self.thread) };
+    }
+}
+
+/// `SocketThreadSimple::ThreadFunc`: pumps with a 20 ms wait until the thread is stopped.
+unsafe extern "C" fn api_socket_run(context: *mut c_void) {
+    // SAFETY: the body's context is the live object (its thread stops before it is freed)
+    let t = unsafe { &*(context as *const EeWonApiSocketThread) };
+    while !t.thread().is_stopped() {
+        t.pump(20);
+    }
+}
+
+fn api_sock<'a>(thread: *mut c_void) -> &'a EeWonApiSocketThread {
+    // SAFETY: the core's socket thread is one this table made (ee_won_api_socket_hooks' contract)
+    unsafe { &*(thread as *const EeWonApiSocketThread) }
+}
+unsafe extern "C" fn api_socket_new() -> *mut c_void {
+    EeWonApiSocketThread::new().cast()
+}
+unsafe extern "C" fn api_socket_delete(thread: *mut c_void) {
+    if !thread.is_null() {
+        // SAFETY: made by `api_socket_new`, deleted once
+        drop(unsafe { Box::from_raw(thread as *mut EeWonApiSocketThread) });
+    }
+}
+unsafe extern "C" fn api_socket_set_single(thread: *mut c_void, on: bool) {
+    api_sock(thread).single.store(on, std::sync::atomic::Ordering::SeqCst);
+}
+/// `NeedThread()`: always (SocketThread's).
+unsafe extern "C" fn api_socket_need_thread(_thread: *mut c_void) -> bool {
+    true
+}
+unsafe extern "C" fn api_socket_start(thread: *mut c_void) {
+    // SAFETY: the object's thread, at its address while it runs
+    unsafe { crate::thread::ee_won_thread_start(api_sock(thread).thread) }
+}
+unsafe extern "C" fn api_socket_stop(thread: *mut c_void, wait: bool) {
+    // SAFETY: as above
+    unsafe { crate::thread::ee_won_thread_stop(api_sock(thread).thread, wait) }
+}
+unsafe extern "C" fn api_socket_wait_for_stop(thread: *mut c_void) {
+    api_sock(thread).thread().wait_for_stop();
+}
+unsafe extern "C" fn api_socket_purge(thread: *mut c_void) {
+    api_sock(thread).ops.purge();
+}
+unsafe extern "C" fn api_socket_pump(thread: *mut c_void, wait: u32) {
+    api_sock(thread).pump(wait);
+}
+unsafe extern "C" fn api_socket_add(thread: *mut c_void, op: *mut c_void) {
+    api_sock(thread).ops.add(op as OpHandle);
+}
+unsafe extern "C" fn api_socket_remove(thread: *mut c_void, op: *mut c_void) {
+    api_sock(thread).ops.remove(op as OpHandle);
+}
+
+static API_SOCKET_HOOKS: crate::apicore::EeWonApiHooks = crate::apicore::EeWonApiHooks {
+    socket_new: Some(api_socket_new),
+    socket_delete: Some(api_socket_delete),
+    socket_set_single: Some(api_socket_set_single),
+    socket_need_thread: Some(api_socket_need_thread),
+    socket_start: Some(api_socket_start),
+    socket_stop: Some(api_socket_stop),
+    socket_wait_for_stop: Some(api_socket_wait_for_stop),
+    socket_purge: Some(api_socket_purge),
+    socket_pump: Some(api_socket_pump),
+    socket_add: Some(api_socket_add),
+    socket_remove: Some(api_socket_remove),
+};
+
+/// The core's socket thread table (`WONAPICore`'s): the library's own socket thread, [`EeWonApiSocketThread`].
+/// A socket thread set on a core with this table (`ee_won_api_set_socket_thread`) must be one it made.
+#[no_mangle]
+pub extern "C" fn ee_won_api_socket_hooks() -> *const crate::apicore::EeWonApiHooks {
+    &API_SOCKET_HOOKS
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -397,5 +524,30 @@ mod tests {
         take();
         drop(t);
         assert_eq!(take(), ["kill 1", "ref- 1"]);
+    }
+
+    #[test]
+    fn the_api_socket_thread_starts_pumps_stops_and_is_deleted() {
+        // SAFETY: the table's own calls on the thread it makes (no ops: the core table is not reached)
+        unsafe {
+            let h = &*ee_won_api_socket_hooks();
+            let t = h.socket_new.unwrap()();
+            assert!(!api_sock(t).single_threaded());
+            h.socket_set_single.unwrap()(t, true);
+            assert!(api_sock(t).single_threaded());
+            assert!(h.socket_need_thread.unwrap()(t));
+            assert!(!crate::thread::ee_won_thread_is_running(api_sock(t).thread));
+            h.socket_start.unwrap()(t);
+            assert!(crate::thread::ee_won_thread_is_running(api_sock(t).thread));
+            h.socket_pump.unwrap()(t, 0);
+            h.socket_purge.unwrap()(t);
+            h.socket_stop.unwrap()(t, true);
+            assert!(!crate::thread::ee_won_thread_is_running(api_sock(t).thread));
+            assert!(crate::thread::ee_won_thread_is_stopped(api_sock(t).thread));
+            h.socket_wait_for_stop.unwrap()(t);
+            assert_eq!(api_sock(t).ops.len(), 0);
+            h.socket_delete.unwrap()(t);
+            h.socket_delete.unwrap()(std::ptr::null_mut());
+        }
     }
 }

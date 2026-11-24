@@ -1,4 +1,6 @@
-// Text list items: size, sort order and painting (file name inferred)
+// Text list items: size, sort order and painting (file name inferred). R6 WON round 34: the measure and the paint are
+// Rust's (rust/crates/ee_won_gui/src/leafpaint.rs); this is their host, one statement per op (MenuBehavior.cpp's menu
+// items' host passes the others here).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -9,45 +11,44 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "rust/won_gui/leafpaint.h"
+using namespace WONAPI;
+typedef EeWonLeafOp Lo;
+extern "C" intptr_t ee_won_guicpp_textitem_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
+{
+    TextListItem* t = (TextListItem*)inMe;
+    ListArea* l = (ListArea*)a;
+    switch (op) {
+    case Lo::ItemHasFont: return t->mFont.get() != NULL ? 1 : 0;
+    case Lo::ItemTakeListFont: t->mFont = l->mFont; return 0;
+    case Lo::ItemColor: return (intptr_t)t->mColor;
+    case Lo::ItemTakeListColor: t->mColor = l->GetTextColor(); return 0;
+    case Lo::ItemHasImage: return t->mImage.get() != NULL ? 1 : 0;
+    case Lo::ItemImageWidth: return t->mImage->GetWidth();
+    case Lo::ItemImageHeight: return t->mImage->GetHeight();
+    case Lo::ItemTextWidth: return t->mFont->GetStringWidth(t->mText);
+    case Lo::ItemFontHeight: return t->mFont->GetHeight();
+    case Lo::ItemWidthAt: return (intptr_t)&t->mWidth;
+    case Lo::ItemHeightAt: return (intptr_t)&t->mHeight;
+    case Lo::ItemSelected: return t->mSelected ? 1 : 0;
+    case Lo::ItemListFlag: return l->ListFlagSet((int)b) ? 1 : 0;
+    case Lo::ItemListSel: *(EeWonSelColor*)b = WONDrawSelOf(l->GetSelColor()); return 0;
+    case Lo::ItemListPaintWidth: return l->GetPaintWidth();
+    case Lo::ItemDraw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(t->mFont.get(), &t->mText, t->mImage.get()), WONDrawNoCall()); return 0;
+    default: return 0;
+    }
+}
 namespace WONAPI {
 // Sizes the item from its text and optional image, taking the list's font and text colour when unset
-void TextListItem::CalcDimensions(ListArea* inList)
-{
-    if(this->mFont.get()==NULL) this->mFont=inList->mFont;
-    if(this->mColor==-1) this->mColor=inList->GetTextColor();
-    Image* i=this->mImage.get(); // the sizes are guidraw.rs text_item_size
-    ee_won_gui_text_item_size(this->mFont->GetStringWidth(this->mText),this->mFont->GetHeight(),i!=NULL,i?i->GetWidth():0,
-                              i?i->GetHeight():0,false,&this->mWidth,&this->mHeight);
-}
+void TextListItem::CalcDimensions(ListArea* inList) { ee_won_leaf_call(this, ee_won_guicpp_textitem_call, EeWonLeafCall::TextItemMeasure, (intptr_t)inList, 0); }
 // Orders two text items by their text, ignoring case
 int TextListItem::Compare(const ListItem* inOther,ListArea* inList) const
 {
     return this->mText.CompareNoCase(static_cast<const TextListItem*>(inOther)->mText);
 }
-// Paints the item's image and vertically centred text, with the selection background behind a
-// selected item
+// Paints the item's image and vertically centred text, with the selection background behind a selected item
 void TextListItem::Paint(Graphics& inGraphics,ListArea* inList)
 {
-    // the selection behind a selected item, the image, the text centred on the row (guidraw.rs text_row)
-    Image* anImage=this->mImage.get();
-    EeWonTextRowPaint r;
-    r.selected=this->mSelected;
-    r.full_row_select=inList->ListFlagSet(0x10);
-    r.no_image_select=inList->ListFlagSet(0x20);
-    r.has_image=anImage!=NULL;
-    r.sel=WONDrawSelOf(inList->GetSelColor());
-    r.color=(uint32_t)this->mColor;
-    r.paint_width=inList->GetPaintWidth();
-    r.width=this->mWidth;
-    r.height=this->mHeight;
-    r.image_width=anImage ? anImage->GetWidth() : 0;
-    r.image_height=anImage ? anImage->GetHeight() : 0;
-    r.font_height=this->mFont->GetHeight();
-    WONDrawSlots aSlots;
-    aSlots.mImages[0]=anImage;
-    aSlots.mFont=this->mFont.get();
-    aSlots.mString=&this->mText;
-    WONDrawOps anOps([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_text_row(&r,o,n); });
-    WONDrawRun(inGraphics,anOps,aSlots);
+    ee_won_leaf_call(this, ee_won_guicpp_textitem_call, EeWonLeafCall::TextItemPaint, (intptr_t)&inGraphics, (intptr_t)inList);
 }
 }
