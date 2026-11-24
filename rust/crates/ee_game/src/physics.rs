@@ -167,7 +167,6 @@ pub enum EePhysCpp {
     UnitDump,
     ContagionSwapUnit,
     ContagionDump,
-    MapChecksum,
     MapDump,
     CampaignNameLength,
     CampaignChecksum,
@@ -880,7 +879,8 @@ fn out_of_synch_checksum(p: P, dump: bool, flags: c_ulong) -> c_ulong {
     sum = sum.wrapping_add(tick_sum);
     add(&mut sum, ee_sim::ai::next_game::trace::ee_ai_out_of_synch_checksum() as i64);
     if flags & 4 != 0 {
-        add(&mut sum, h0(O::MapChecksum));
+        let map = crate::gamecpp::hp(crate::gamecpp::O::WMap, world(), &[]);
+        add(&mut sum, crate::gamecpp::map::ee_gamecpp_map_checksum(map as *mut c_void) as i64);
     }
     if flags & 0x100 != 0 {
         add(&mut sum, h0(O::ContinentChecksum));

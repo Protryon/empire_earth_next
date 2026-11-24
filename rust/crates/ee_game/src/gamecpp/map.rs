@@ -533,7 +533,7 @@ pub extern "C" fn ee_gamecpp_map_save_finish(map: *mut c_void) -> i32 {
     let m = map as P;
     make_regions(m);
     let size = rts(m).mSize as i64;
-    h(O::MpUpdateCliffs, m, &[0, size, 0, size]);
+    super::map_more::ee_gamecpp_mx_update_cliffs(m as *mut c_void, 0, size as c_long, 0, size as c_long);
     0
 }
 

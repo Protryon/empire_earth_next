@@ -982,7 +982,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::ClientFastSelect: (static_cast<EEClient*>(gCommunications))->mFastSelectionID = static_cast<EEClient*>(gCommunications)->mFastSelection[(unsigned char)a[0]];
         break;
-    case O::ContinentRegionsPending: return EEContinentRegionsPending();
     case O::ContinentRestoreRegions: EERestoreContinentRegions();
         break;
     case O::ContinentBuildRegions: gContinentManager.BuildRegions((EEMap*)a[0]);

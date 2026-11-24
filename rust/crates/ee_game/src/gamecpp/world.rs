@@ -753,7 +753,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     h(O::WClearContinents, w, &[]);
     // port (save version 0.263): a loaded game's continent manager is the saved one (made in place of BuildRegions,
     // below)
-    let saved_regions = loaded && h(O::ContinentRegionsPending, 0, &[]) != 0;
+    let saved_regions = loaded && ee_sim::astar::cm_file::ee_astar_cm_regions_pending();
     progress(19);
     h(O::WCreateMiniMap, w, &[pa(st)]);
     progress(20);

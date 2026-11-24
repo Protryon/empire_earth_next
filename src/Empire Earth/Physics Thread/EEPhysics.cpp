@@ -403,7 +403,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::ContagionDump: gWorld.GetContagionManager()->DumpOutOfSynch(FP(0));
         break;
-    case O::MapChecksum: return gWorld.mMap->ComputeChecksum();
     case O::MapDump: gWorld.mMap->DumpOutOfSynch(FP(0));
         break;
     case O::CampaignNameLength: return gWorld.mGameOptions.mCampaignName.GetLength();

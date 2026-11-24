@@ -140,7 +140,6 @@ enum class EePhysCpp : uint32_t {
   UnitDump,
   ContagionSwapUnit,
   ContagionDump,
-  MapChecksum,
   MapDump,
   CampaignNameLength,
   CampaignChecksum,
