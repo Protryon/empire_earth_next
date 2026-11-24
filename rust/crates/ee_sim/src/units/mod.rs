@@ -168,6 +168,7 @@ pub mod tile_sight_host;
 pub mod town_save;
 pub mod town_split;
 pub mod turret;
+pub mod u12a_small;
 pub mod uai_cond;
 pub mod uc_anim;
 pub mod uc_body;
@@ -235,6 +236,5 @@ mod uu_world_tests;
 pub mod waypoints;
 pub mod world;
 pub mod world_save;
-pub mod u12a_small;
 
 pub use registry::Registry;
