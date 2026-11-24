@@ -48,7 +48,6 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEEffectMesh.h"
 #include "ee/EEDoppelganger.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESoundObject.h"
@@ -60,6 +59,38 @@
 #include "rust/render/gfx.h"
 #include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"
+
+// The effects' meshes built in Rust (rust/crates/ee_render/src/gfx mesh.rs: the farm's, the volcano's) are stored
+// into a model's vertex and polygon arrays. Each record says which values its builder set; only those are stored
+// (the builders' later writes to a slot already won in Rust, as they did in the arrays): the raster table's store_mesh
+// into inModel's first vertex and polygon arrays.
+static void EEStoreMesh(GEModel* inModel, const EeGfxMeshVertex* inVertices, size_t inVertexCount,
+                        const EeGfxMeshTriangle* inTriangles, size_t inTriangleCount)
+{
+    GEVertexArray* theVertices = inModel->GetVertexArray(0);
+    for (unsigned long i = 0; i < inVertexCount; i++) {
+        const EeGfxMeshVertex& v = inVertices[i];
+        if (v.set & EE_GFX_MESH_POINT)
+            theVertices->SetPoint(GE3DPoint(v.point.mX, v.point.mY, v.point.mZ), i);
+        if (v.set & EE_GFX_MESH_NORMAL)
+            theVertices->SetNormal(GEVector(v.normal.mX, v.normal.mY, v.normal.mZ), i);
+        if (v.set & EE_GFX_MESH_COORD)
+            theVertices->SetTextureCoordinate(GETextureCoordinate(v.coord.u, v.coord.v), i);
+        if (v.set & EE_GFX_MESH_COLOR)
+            theVertices->SetColor(GEColor(v.color.red, v.color.green, v.color.blue), i);
+        if (v.set & EE_GFX_MESH_OPACITY)
+            theVertices->SetOpacity(v.opacity, i);
+    }
+    GEPolygonArray* thePolygons = inModel->GetPolygonArray(0);
+    for (unsigned long i = 0; i < inTriangleCount; i++) {
+        const EeGfxMeshTriangle& t = inTriangles[i];
+        if (t.set) {
+            thePolygons->SetVertexIndex1(i, t.v[0]);
+            thePolygons->SetVertexIndex2(i, t.v[1]);
+            thePolygons->SetVertexIndex3(i, t.v[2]);
+        }
+    }
+}
 
 class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)

@@ -34,7 +34,6 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EERenderLists.h"
 #include "ee/EERenderObject.h"
-#include "ee/EEEffectMesh.h"        // the table's store_mesh
 #include "ee/EERenderSnapshot.h"     // gRenderSnapshot (the Rust draws' camera)
 #include "ee/EEUnitPicker.h"
 #include "ee/EEGhostUnit.h"
