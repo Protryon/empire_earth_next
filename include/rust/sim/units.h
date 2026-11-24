@@ -377,6 +377,15 @@ constexpr static const int32_t EE_UNITS_AG_SEND = 8;
 /// heading)
 constexpr static const int32_t EE_UNITS_AG_ARRANGE = 9;
 
+/// group `a`'s formation: `mCenter = io.p` (units round 12)
+constexpr static const int32_t EE_UNITS_AG_FORMATION_CENTER = 13000;
+
+/// group `a`'s formation: `mHeading = io.f`
+constexpr static const int32_t EE_UNITS_AG_FORMATION_HEADING = 13001;
+
+/// group `a`'s formation: `mOrientation.SetOrientationYPR(io.f, 0, 0)`
+constexpr static const int32_t EE_UNITS_AG_FORMATION_ORIENT = 13002;
+
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 constexpr static const int32_t EE_UNITS_AG_WORLD_SPHERE = 15;
 
@@ -422,9 +431,6 @@ constexpr static const int32_t EE_UNITS_AG_SET_PLACE = 32;
 /// unit `a`'s `CanTake(b, c)`
 constexpr static const int32_t EE_UNITS_AG_CAN_TAKE = 33;
 
-/// unit `a`'s `GetNearestFootprintTile(b, &io.a, &io.b)`
-constexpr static const int32_t EE_UNITS_AG_FOOTPRINT = 34;
-
 /// `gWorld.mMap->GetTile(c, d) != NULL`
 constexpr static const int32_t EE_UNITS_AG_HAS_TILE = 35;
 
@@ -458,18 +464,8 @@ constexpr static const int32_t EE_UNITS_AG_SEEN_BY = 47;
 /// `EECanPriestConvert(a, b)`
 constexpr static const int32_t EE_UNITS_AG_PRIEST_CONVERT = 48;
 
-/// `U2DRectangle<float>` (top `io.p[0]`, left `io.p[1]`, bottom `io.p[2]`, right `io.q[0]`)'s
-/// `GetClosestPoint((io.q[1], io.q[2]))` into `io.p[0]`, `io.p[1]`
-constexpr static const int32_t EE_UNITS_AG_RECT_CLOSEST = 52;
-
 /// goal `a`'s `mKind` (-1: none)
 constexpr static const int32_t EE_UNITS_AG_GOAL_KIND = 60;
-
-/// goal `a`'s `GetGoalLocation(io.p)`
-constexpr static const int32_t EE_UNITS_AG_GOAL_LOCATION = 65;
-
-/// `EEUGRust::NewLocation(&io.p, a & 1, a & 2, a & 4, io.f, a & 8, io.b)` (`a` is `io.a`)
-constexpr static const int32_t EE_UNITS_AG_NEW_LOCATION = 66;
 
 /// gather goal `a`'s `GetGatherStorage()`
 constexpr static const int32_t EE_UNITS_AG_GATHER_STORAGE = 72;

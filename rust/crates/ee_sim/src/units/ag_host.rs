@@ -64,6 +64,12 @@ pub const EE_UNITS_AG_SEND: i32 = 8;
 /// group `a`'s formation: centre `io.p`, heading `io.f` when `c`, then `Arrange` (slots pushed: unit, position,
 /// heading)
 pub const EE_UNITS_AG_ARRANGE: i32 = 9;
+/// group `a`'s formation: `mCenter = io.p` (units round 12)
+pub const EE_UNITS_AG_FORMATION_CENTER: i32 = 13000;
+/// group `a`'s formation: `mHeading = io.f`
+pub const EE_UNITS_AG_FORMATION_HEADING: i32 = 13001;
+/// group `a`'s formation: `mOrientation.SetOrientationYPR(io.f, 0, 0)`
+pub const EE_UNITS_AG_FORMATION_ORIENT: i32 = 13002;
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 pub const EE_UNITS_AG_WORLD_SPHERE: i32 = 15;
 /// `ee_combat_regions_size(gWorld.mMap->mUnitRegions)`
@@ -94,8 +100,6 @@ pub const EE_UNITS_AG_SET_SPECIAL: i32 = 31;
 pub const EE_UNITS_AG_SET_PLACE: i32 = 32;
 /// unit `a`'s `CanTake(b, c)`
 pub const EE_UNITS_AG_CAN_TAKE: i32 = 33;
-/// unit `a`'s `GetNearestFootprintTile(b, &io.a, &io.b)`
-pub const EE_UNITS_AG_FOOTPRINT: i32 = 34;
 /// `gWorld.mMap->GetTile(c, d) != NULL`
 pub const EE_UNITS_AG_HAS_TILE: i32 = 35;
 /// `gContinentManager.CanGetTo(a, c, d)`
@@ -118,15 +122,8 @@ pub const EE_UNITS_AG_PASSABLE: i32 = 46;
 pub const EE_UNITS_AG_SEEN_BY: i32 = 47;
 /// `EECanPriestConvert(a, b)`
 pub const EE_UNITS_AG_PRIEST_CONVERT: i32 = 48;
-/// `U2DRectangle<float>` (top `io.p[0]`, left `io.p[1]`, bottom `io.p[2]`, right `io.q[0]`)'s
-/// `GetClosestPoint((io.q[1], io.q[2]))` into `io.p[0]`, `io.p[1]`
-pub const EE_UNITS_AG_RECT_CLOSEST: i32 = 52;
 /// goal `a`'s `mKind` (-1: none)
 pub const EE_UNITS_AG_GOAL_KIND: i32 = 60;
-/// goal `a`'s `GetGoalLocation(io.p)`
-pub const EE_UNITS_AG_GOAL_LOCATION: i32 = 65;
-/// `EEUGRust::NewLocation(&io.p, a & 1, a & 2, a & 4, io.f, a & 8, io.b)` (`a` is `io.a`)
-pub const EE_UNITS_AG_NEW_LOCATION: i32 = 66;
 /// gather goal `a`'s `GetGatherStorage()`
 pub const EE_UNITS_AG_GATHER_STORAGE: i32 = 72;
 /// gather goal `a`'s `GetGatherResource()`
@@ -166,6 +163,7 @@ pub const EE_UNITS_AG_TILE_TERRAIN: i32 = 103;
 extern "C" {
     fn ee_units_ag_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsAgIo) -> i64;
 }
+use crate::combat::cg_query::rust_calls::ee_units_eu_nearest_footprint_tile;
 
 /// Pushes an item onto a host operation's list.
 ///
@@ -249,8 +247,14 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_SEND, g, target, command as i64, 0);
     }
     fn arrange(&mut self, g: u64, center: [f32; 3], yaw: Option<f32>) -> Vec<Slot> {
+        // the original's statements in order: the centre, with a yaw the heading and the orientation, then Arrange
         let mut io = EeUnitsAgIo { p: center, f: yaw.unwrap_or(0.0), ..Default::default() };
-        let items = self.list(EE_UNITS_AG_ARRANGE, g, yaw.is_some() as i64, 0, &mut io);
+        self.io(EE_UNITS_AG_FORMATION_CENTER, g, 0, 0, 0, &mut io);
+        if yaw.is_some() {
+            self.io(EE_UNITS_AG_FORMATION_HEADING, g, 0, 0, 0, &mut io);
+            self.io(EE_UNITS_AG_FORMATION_ORIENT, g, 0, 0, 0, &mut io);
+        }
+        let items = self.list(EE_UNITS_AG_ARRANGE, g, 0, 0, &mut io);
         items.into_iter().map(|(unit, position, heading)| Slot { position, unit, heading }).collect()
     }
     fn new_group(&mut self, g: u64) -> u64 {
@@ -369,9 +373,11 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_CAN_TAKE, storage, u, resource_type as i64, 0) != 0
     }
     fn nearest_footprint(&mut self, u: u64, target: u64, x: i32, y: i32) -> (i32, i32) {
-        let mut io = EeUnitsAgIo { a: x as i64, b: y as i64, ..Default::default() };
-        self.io(EE_UNITS_AG_FOOTPRINT, u, target, 0, 0, &mut io);
-        (io.a as i32, io.b as i32)
+        // `u->GetNearestFootprintTile(target, &x, &y)` (eu_body.rs; the outs start as the caller's values)
+        let (mut x, mut y) = (x as std::os::raw::c_long, y as std::os::raw::c_long);
+        // SAFETY: two live units of the body's world; the outs are locals
+        unsafe { ee_units_eu_nearest_footprint_tile(u as usize as *mut c_void, target as usize as *mut c_void, &mut x, &mut y) };
+        (x as i32, y as i32)
     }
     fn has_tile(&mut self, x: i32, y: i32) -> bool {
         // SAFETY: as above
@@ -391,10 +397,9 @@ impl AgHost for AgGame {
         self.op(EE_UNITS_AG_CAN_GET_TO, u, 0, x as i64, y as i64) != 0
     }
     fn can_convert(&mut self, u: u64, target: u64, flag: &mut bool) -> bool {
-        let mut io = EeUnitsAgIo { a: *flag as i64, ..Default::default() };
-        let result = self.io(EE_UNITS_AG_CAN_CONVERT, u, target, 0, 0, &mut io) != 0;
-        *flag = io.a != 0;
-        result
+        // (the flag in place: `io.list` names the caller's bool)
+        let mut io = EeUnitsAgIo { list: (flag as *mut bool).cast(), ..Default::default() };
+        self.io(EE_UNITS_AG_CAN_CONVERT, u, target, 0, 0, &mut io) != 0
     }
     fn can_attack_class(&mut self, u: u64, class: u64) -> bool {
         self.op(EE_UNITS_AG_CAN_ATTACK_CLASS, u, class, 0, 0) != 0
@@ -448,9 +453,8 @@ impl AgHost for AgGame {
         GameGroups.dereference_unit(u)
     }
     fn rect_closest(&mut self, r: Rect, p: [f32; 2]) -> [f32; 2] {
-        let mut io = EeUnitsAgIo { p: [r.top, r.left, r.bottom], q: [r.right, p[0], p[1]], ..Default::default() };
-        self.io(EE_UNITS_AG_RECT_CLOSEST, 0, 0, 0, 0, &mut io);
-        [io.p[0], io.p[1]]
+        // `U2DRectangle<float>::GetClosestPoint` (ee_base math u2d.rs)
+        ee_base::math::u2d::rect_closest_point([r.left, r.top, r.right, r.bottom], p)
     }
     fn goal_kind(&mut self, goal: u64) -> i32 {
         goal_kind_of(goal)
@@ -473,14 +477,25 @@ impl AgHost for AgGame {
         goal_b1c(goal)
     }
     fn goal_location(&mut self, goal: u64) -> [f32; 3] {
-        let mut io = EeUnitsAgIo::default();
-        self.io(EE_UNITS_AG_GOAL_LOCATION, goal, 0, 0, 0, &mut io);
-        io.p
+        // `goal->GetGoalLocation(point)` (ee/EEUnitGoal.h: the goal call seeded with the point)
+        let mut point = [0.0f32; 3];
+        // SAFETY: a live goal of the body's
+        unsafe {
+            crate::units::goal_calls::ee_units_goal_point(
+                crate::units::rust_goal::EE_UNITS_GOAL_LOCATION,
+                goal as usize as *const _,
+                0,
+                &mut point,
+                true,
+            )
+        };
+        point
     }
     fn new_location(&mut self, l: NewLocation) -> u64 {
-        let flags = l.b1c as i64 | (l.forced as i64) << 1 | (l.face as i64) << 2 | (l.auto_waypoint as i64) << 3;
-        let mut io = EeUnitsAgIo { a: flags, b: l.group_state as i64, p: l.point, f: l.yaw, ..Default::default() };
-        self.io(EE_UNITS_AG_NEW_LOCATION, 0, 0, 0, 0, &mut io) as u64
+        // `EEUGRust::NewLocation(&point, b1c, forced, face, yaw, auto_waypoint, group_state)` (goal_calls.rs)
+        let [x, y, z] = l.point;
+        crate::units::goal_calls::ee_units_goal_new_location(l.b1c, x, y, z, l.forced, l.face, l.yaw, l.auto_waypoint, l.group_state)
+            as usize as u64
     }
     fn new_unload(&mut self, u: u64, x: i32, y: i32) -> u64 {
         // `NewUnloadTransport(u, x, y, true)`
