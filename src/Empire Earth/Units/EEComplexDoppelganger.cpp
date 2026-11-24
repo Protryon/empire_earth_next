@@ -2,6 +2,7 @@
 // unit's doppelganger (what another player last saw of it), then EEComplexUnit's Load/FinishLoad/RepairPointers/Save
 // (0x1f2452..0x1f5180; the std template COMDATs close the unit at 0x1f5180..0x1f57d3). 0x1f1f19..0x1f57d3 (after
 // EEActiveGroup.cpp; EEComplexUnit.cpp follows).
+#include <memory>
 #include <windows.h>
 #include <stdio.h>
 
@@ -71,18 +72,20 @@ static void RestoreLoadedContacts()
 static unsigned long sLoadSecond;
 static size_t sLoadSlot;
 
-// Reads the complex unit's state from the saved game, keeping units and groups as ids for RepairPointers and queueing
-// its pending path; fields newer than the file get defaults; returns the read status. port (R5b.4, round 26): the
-// body is Rust (ee_units unit_load.rs, with RTSUnit's and EEUnit's parts) over the records this class derives from,
-// EEUnitSaveOperation's parts and dop_save.rs's sections
-long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+// A unit's Load (inLoad) or Save: the Rust body (ee_units unit_load.rs, unit_save.rs) over the records of the unit's
+// parts (inDepth 0: RTSUnit's alone, 1: with EEUnit's, 2: with EEComplexUnit's, whose load has a stand-in goal queue
+// and whose versions name the live and running state) and EEUnitSaveOperation's parts
+long EEUnitFile(bool inLoad, RTSUnit* inUnit, int inDepth, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& ioFile)
 {
-    EEUnitVectorItem theGoals(this);
-    EEUnitSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, &theGoals};
+    EEUnit* theUnit = inDepth >= 1 ? static_cast<EEUnit*>(inUnit) : NULL;
+    EEComplexUnit* theComplex = inDepth >= 2 ? static_cast<EEComplexUnit*>(inUnit) : NULL;
+    std::unique_ptr<EEUnitVectorItem> theGoals(inLoad && theComplex != NULL ? new EEUnitVectorItem(theComplex) : NULL);
+    EEUnitSaveContext theContext = {inUnit, &ioFile, inMajorVersion, inMinorVersion, theGoals.get()};
     EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
-                               (uint8_t)(EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0),
-                               (uint8_t)(EESaveHasRunningState(inMajorVersion, inMinorVersion) ? 1 : 0)};
-    return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, this, this, &theIn);
+                               (uint8_t)(theComplex != NULL && EESaveHasLiveState(inMajorVersion, inMinorVersion)),
+                               (uint8_t)(theComplex != NULL && EESaveHasRunningState(inMajorVersion, inMinorVersion))};
+    return inLoad ? ee_units_unit_load(&theContext, &EEUnitSaveOperation, inUnit, theUnit, theComplex, &theIn)
+                  : ee_units_unit_save(&theContext, &EEUnitSaveOperation, inUnit, theUnit, theComplex, &theIn);
 }
 
 // RepairPointers's locals (the cargo and research kept, the new turret angles)
@@ -369,19 +372,6 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOPX_BASE_FINISH_LOAD: return theUnit->EEUnit::FinishLoad((long)inB, (long)inC);
     default: return 0;
     }
-}
-
-// Writes the complex unit's state to the saved game, units and groups as ids and hit points, flight time, garrison
-// and power as fractions of their maximum; returns the write status.
-// port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs, with RTSUnit's and EEUnit's parts) over the records
-// this class derives from and EEUnitSaveOperation's parts
-long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    EEUnitSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
-    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
-                               (uint8_t)(EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0),
-                               (uint8_t)(EESaveHasRunningState(inMajorVersion, inMinorVersion) ? 1 : 0)};
-    return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, this, this, &theIn);
 }
 
 // The C++ parts of the units' saves (ee_units unit_save.rs): the file's primitives with the overload the original

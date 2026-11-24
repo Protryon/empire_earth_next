@@ -199,8 +199,8 @@ public:
     virtual void SightOffHere() {}            // +0x24 (ICF-folded empty `ret` 0x1720c6)
     virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return RTSUnit::RepairPointers(inMajorVersion, inMinorVersion); }  // +0x28 0x2299d5: RTSUnit::RepairPointers (folded at 0x27cf38)
     virtual void Clear() { ee_units_eu_more(EE_UNITS_EUM_DO_CLEAR, this, NULL, 0, 0); }                   // +0x20 0x228d05: ResetEEUnit, Reset, mIsValid = false
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x2298fb
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x2c 0x2299e5
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return EEUnitFile(true, this, 1, inMajorVersion, inMinorVersion, inFile); }   // +0x1c 0x2298fb
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return EEUnitFile(false, this, 1, inMajorVersion, inMinorVersion, outFile); }  // +0x2c 0x2299e5
     virtual void FreeNode() { RTSUnit::FreeNode(); }                // +0x30 0x2292c4 (RTSUnit::FreeNode)
     virtual void LastDereference() { ee_units_eu_more(EE_UNITS_EUM_DO_LAST_DEREFERENCE, this, NULL, 0, 0); }         // +0x34 0x2298e1 (Virtual30, the count = 0, delete this)
     // +0x38 0x228e7f: unloads the class media (now, or through gDataPreLoading when inArg and not shutting down),
@@ -587,11 +587,11 @@ public:
     virtual void SightOnHere() { this->SightOn(this->GetTileX(), this->GetTileY()); }             // +0x0c 0x1f5b5b: Virtual3C(tile)
     virtual void Describe(UWideString& ioString) { ee_units_cu_describe(this, &ioString); }   // +0x10 0x1fa269
     virtual void DescribeLong(UWideString&) {}  // +0x14 (ICF-folded empty `ret 4` 0x157269)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x1f2452
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return EEUnitFile(true, this, 2, inMajorVersion, inMinorVersion, inFile); }   // +0x1c 0x1f2452
     virtual void Clear() { ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR, this, NULL, 0); }                   // +0x20 0x1f5b6e
     virtual void SightOffHere() { this->SightOff(this->GetTileX(), this->GetTileY()); }            // +0x24 0x1f5b8e: MarkInvalid(tile)
     virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return (long)ee_units_dop_repair_pointers(this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion); }  // +0x28 0x1f353f
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x2c 0x1f417e
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return EEUnitFile(false, this, 2, inMajorVersion, inMinorVersion, outFile); }  // +0x2c 0x1f417e
     virtual void FreeNode() { ee_units_cu_body(EE_UNITS_CU_DO_FREE_NODE, this, 0, 0, 0); }                // +0x30 0x1f8a43
     virtual void LastDereference() { ee_units_cu_small(EE_UNITS_CU_S_DO_LAST_DEREFERENCE, this, NULL, 0); }         // +0x34 0x1fb7fb (Virtual30, the count = 0, back to sMemoryPool)
     virtual void SightOn(unsigned long inX, unsigned long inY) { ee_units_sight((uint64_t)(uintptr_t)this, (uint32_t)inX, (uint32_t)inY, 1); }      // +0x3c 0x1f7ce7
