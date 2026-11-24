@@ -127,11 +127,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     typedef EeGameCpp O;
     switch (inOp) {
     // the preferences (preferences.rs)
-    case O::EpGlobalPrefs: return P64(&gGamePreferences);
-    case O::EpPrefsSettings: return P64(&((EEGamePreferences*)p)->mSettings);
     case O::EpDefaultSettings: return P64(&EEGamePreferences::sDefaultSettings);
-    case O::EpSettingsFields: return P64(static_cast<EeAppSettingsFields*>(B_SET));
-    case O::EpOptionsFields: return P64(static_cast<EeAppOptionsFields*>(&B_SET->mGameOptions));
     case O::EpNewSettings: return P64(new EEGameSettings());
     case O::EpDeleteSettings: delete B_SET;
         break;
@@ -141,19 +137,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EpOsLanguage: return UGetOSLanguage();
     case O::EpCameraMaxZoom: gCameraMaxZoom = f[0];
         break;
-    case O::EpPlayerName: return P64(&B_SET->mPlayerName);
-    case O::EpHostGameName: return P64(&B_SET->mHostGameName);
-    case O::EpLastQuickSave: return P64(&B_SET->mLastQuickSave);
-    case O::EpLastAutoSave: return P64(&B_SET->mLastAutoSave);
-    case O::EpMapType: return P64(&B_SET->mGameOptions.mMapType);
-    case O::EpSierraUserID: return P64(&B_SET->mSierraUserID);
-    case O::EpSierraGameName: return P64(&B_SET->mSierraGameName);
-    case O::EpLastGameFile: return P64(&B_SET->mLastGameFile);
-    case O::EpLastScenarioFile: return P64(&B_SET->mLastScenarioFile);
-    case O::EpRasterizerName: return P64(&B_SET->mRasterizerName);
-    case O::EpInstalledVolume: return P64(&B_SET->mInstalledFromVolume);
-    case O::EpInstalledDirectory: return P64(&B_SET->mInstalledFromDirectory);
-    case O::EpWonNetPassword: return P64(&B_SET->mWonNetPassword);
     case O::EpWideLength: return (int64_t)strlen((const char*)*B_W);
     case O::EpWideGet: B_TEXT((const char*)*B_W);
         break;
@@ -179,18 +162,10 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EpUnknownName: gResource->GetString(IDS_GAME_UNKNOWN, *B_W);
         break;
     // the game options (options.rs)
-    case O::EoFields: return P64(static_cast<EeAppOptionsFields*>(B_OPT));
-    case O::EoSlot: return P64(static_cast<EeAppOptionsPlayerFields*>(&B_OPT->mPlayers[a[0]]));
-    case O::EoSlotName: return P64(&B_OPT->mPlayers[a[0]].mName);
     case O::EoSlotEmpty: B_OPT->mPlayers[a[0]] = EEGameOptionsPlayer();
         break;
     case O::EoSlotCopy: B_OPT->mPlayers[a[0]] = ((const EEGameOptions*)a[1])->mPlayers[a[0]];
         break;
-    case O::EoCampaignName: return P64(&B_OPT->mCampaignName);
-    case O::EoScenarioName: return P64(&B_OPT->mScenarioName);
-    case O::EoMapType: return P64(&B_OPT->mMapType);
-    case O::EoMapName: return P64(&B_OPT->mMapName);
-    case O::EoLock: return P64(&B_OPT->mLock);
     case O::EoWideLoad: return B_W->Load(*(FSFile*)a[0]);
     case O::EoWideSave: return B_W->Save(*(FSFile*)a[0]);
     case O::EoVariantKnown: return gGameVariants[a[0]] != NULL;

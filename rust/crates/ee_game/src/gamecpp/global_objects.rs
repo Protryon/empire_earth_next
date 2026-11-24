@@ -419,6 +419,53 @@ ee_refs! {
         "mGameOptions.mIsMultiplayer" => "?gGameStateIsMultiplayer@@3AEA_NEA";
 }
 
+// ---- the members' addresses, for Rust's direct use (the settings' and options' plain members, strings, lock)
+
+/// `&gGamePreferences`.
+pub fn prefs() -> usize {
+    addr_of_mut!(gGamePreferences) as usize
+}
+
+/// `gGamePreferences.mSettings`' plain members (its base, EeAppSettingsFields).
+pub fn settings() -> *mut EeAppSettingsFields {
+    (prefs() + PREFS_SETTINGS) as *mut EeAppSettingsFields
+}
+
+/// `EEGamePreferences::mSettings`.
+pub const PREFS_SETTINGS: usize = offset_of!(GamePreferencesM, mSettings);
+// EEGameSettings' members (the plain ones are its base, at 0)
+pub const SET_OPTIONS: usize = offset_of!(GameSettingsM, mGameOptions);
+pub const SET_HOST_GAME_NAME: usize = offset_of!(GameSettingsM, mHostGameName);
+pub const SET_LAST_QUICK_SAVE: usize = offset_of!(GameSettingsM, mLastQuickSave);
+pub const SET_LAST_AUTO_SAVE: usize = offset_of!(GameSettingsM, mLastAutoSave);
+pub const SET_PLAYER_NAME: usize = offset_of!(GameSettingsM, mPlayerName);
+pub const SET_SIERRA_USER_ID: usize = offset_of!(GameSettingsM, mSierraUserID);
+pub const SET_SIERRA_GAME_NAME: usize = offset_of!(GameSettingsM, mSierraGameName);
+pub const SET_RASTERIZER_NAME: usize = offset_of!(GameSettingsM, mRasterizerName);
+pub const SET_INSTALLED_VOLUME: usize = offset_of!(GameSettingsM, mInstalledFromVolume);
+pub const SET_INSTALLED_DIRECTORY: usize = offset_of!(GameSettingsM, mInstalledFromDirectory);
+pub const SET_LAST_GAME_FILE: usize = offset_of!(GameSettingsM, mLastGameFile);
+pub const SET_LAST_SCENARIO_FILE: usize = offset_of!(GameSettingsM, mLastScenarioFile);
+pub const SET_WON_NET_PASSWORD: usize = offset_of!(GameSettingsM, mWonNetPassword);
+/// the last game options' map type
+pub const SET_MAP_TYPE: usize = offset_of!(GameSettingsM, mGameOptions) + offset_of!(GameOptionsM, mMapType);
+// EEGameOptions' members (the plain ones are its base, at 0)
+pub const OPT_CAMPAIGN_NAME: usize = offset_of!(GameOptionsM, mCampaignName);
+pub const OPT_SCENARIO_NAME: usize = offset_of!(GameOptionsM, mScenarioName);
+pub const OPT_MAP_TYPE: usize = offset_of!(GameOptionsM, mMapType);
+pub const OPT_MAP_NAME: usize = offset_of!(GameOptionsM, mMapName);
+pub const OPT_LOCK: usize = offset_of!(GameOptionsM, mLock);
+
+/// `&o->mPlayers[i]` (its plain members, the slot's base).
+pub fn opt_slot(o: usize, i: u32) -> usize {
+    o + offset_of!(GameOptionsM, mPlayers) + i as usize * core::mem::size_of::<GameOptionsPlayerM>()
+}
+
+/// `&o->mPlayers[i].mName`.
+pub fn opt_slot_name(o: usize, i: u32) -> usize {
+    opt_slot(o, i) + offset_of!(GameOptionsPlayerM, mName)
+}
+
 /// The C++ class each storage holds, as build/clang/layout.json names it (the tests).
 #[cfg(test)]
 fn class_of(object: &str) -> &'static str {
@@ -541,6 +588,12 @@ mod tests {
             assert_eq!(size(class), bytes as u64, "{class}");
         }
         assert_eq!(size("EEGameOptions"), core::mem::size_of::<GameOptionsM>() as u64);
+        assert_eq!(field("EEGameOptions", "mPlayers"), Some((opt_slot(0, 0)) as u64));
+        assert_eq!(opt_slot_name(0, 1) - opt_slot(0, 1), 40, "EEGameOptionsPlayer.mName");
+        assert_eq!(field("EEGameOptions", "mLock"), Some(OPT_LOCK as u64));
+        assert_eq!(field("EEGameSettings", "mWonNetPassword"), Some(SET_WON_NET_PASSWORD as u64));
+        assert_eq!(field("EEGameSettings", "mGameOptions.mMapType"), Some(SET_MAP_TYPE as u64));
+        assert_eq!(field("EEGamePreferences", "mSettings"), Some(PREFS_SETTINGS as u64));
         assert_eq!(size("EEGameSettings"), core::mem::size_of::<GameSettingsM>() as u64);
     }
 }

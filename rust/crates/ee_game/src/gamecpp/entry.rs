@@ -13,6 +13,7 @@ use std::ffi::{c_char, c_long, c_ulong, CStr, CString};
 
 use ee_base::ustring::{nested_tokenize, tokenize};
 
+use super::global_objects as gobj;
 use super::{h, hp, pa, ptr, Owned, O, P};
 
 /// `kErrorOK` / `keseOK`.
@@ -579,9 +580,9 @@ mod tests {
 /// PTs per Second, the driver's rate), the driver's autosave period, no music, no v-sync.
 fn sim_preferences() {
     let (pt_rate, autosave) = crate::sim_driver::driver::driver().map_or((40, 0), |d| d.preferences());
-    let settings = hp(O::EpPrefsSettings, hp(O::EpGlobalPrefs, 0, &[]), &[]);
+    let settings = gobj::prefs() + gobj::PREFS_SETTINGS;
     // SAFETY: gGamePreferences.mSettings' plain members (ee_game app settings.rs), on the main thread at start-up
-    let s = unsafe { &mut *(hp(O::EpSettingsFields, settings, &[]) as *mut crate::app::settings::EeAppSettingsFields) };
+    let s = unsafe { &mut *(settings as *mut crate::app::settings::EeAppSettingsFields) };
     s.mFullScreen = false;
     s.mGameBitDepth = 32;
     s.mTextureBitDepth = 32;

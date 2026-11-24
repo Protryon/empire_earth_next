@@ -28,6 +28,7 @@ use crate::app::save_io::{
 };
 
 use super::preferences::set_text;
+use super::global_objects as gobj;
 use super::{h, hp, pa, ptr, O, P};
 
 // ee_app save_io.rs mirrors EESavePrimitive's operations and record (ee_sim units player_save.rs)
@@ -52,15 +53,15 @@ const OPTIONS_CPP: &std::ffi::CStr = c"C:\\EEX\\Empire Earth\\Empire Earth\\EEGa
 const LOCK_EXPRESSION: &std::ffi::CStr = c"TSScheduler::CreateReadWriteLock(this->mLock) == keseOK";
 
 /// The option strings by index (`EE_APP_OPTIONS_CAMPAIGN`, `_SCENARIO`, `_MAP_NAME`).
-const STRINGS: [O; 3] = [O::EoCampaignName, O::EoScenarioName, O::EoMapName];
+const STRINGS: [usize; 3] = [gobj::OPT_CAMPAIGN_NAME, gobj::OPT_SCENARIO_NAME, gobj::OPT_MAP_NAME];
 
 fn fields<'a>(o: P) -> &'a mut EeAppOptionsFields {
     // SAFETY: the options' plain members (the base), used before the next C++ call that writes them
-    unsafe { &mut *(hp(O::EoFields, o, &[]) as *mut EeAppOptionsFields) }
+    unsafe { &mut *(o as *mut EeAppOptionsFields) }
 }
 
 fn slot(o: P, i: u32) -> *mut EeAppOptionsPlayerFields {
-    hp(O::EoSlot, o, &[i64::from(i)]) as *mut EeAppOptionsPlayerFields
+    gobj::opt_slot(o, i) as *mut EeAppOptionsPlayerFields
 }
 
 /// `EEGameOptionsDefaults`: what the constructors read (the rules and the epoch count only: the global options are
@@ -100,7 +101,7 @@ fn limits(load: bool) -> EeAppOptionsLimits {
 /// The lock (`TSScheduler::CreateReadWriteLock`: ee_base's Thread System, asserted at the constructor's line) and
 /// the defaults' plain members.
 fn construct(o: P, line: c_ulong) {
-    let lock = hp(O::EoLock, o, &[]) as *mut *mut ee_base::ts::EeTsLock;
+    let lock = (o + gobj::OPT_LOCK) as *mut *mut ee_base::ts::EeTsLock;
     // SAFETY: the options' lock member
     if unsafe { ee_base::ts::ee_ts_lock_new(lock) } != ee_base::ts::EE_TS_OK {
         // SAFETY: C strings
@@ -112,8 +113,8 @@ fn construct(o: P, line: c_ulong) {
 
 /// The four strings "" and the sixteen slots empty (`EEGameOptionsPlayer()`).
 fn clear_strings_and_slots(o: P) {
-    for op in [O::EoMapType, O::EoCampaignName, O::EoScenarioName, O::EoMapName] {
-        set_text(hp(op, o, &[]), true, b"");
+    for off in [gobj::OPT_MAP_TYPE, gobj::OPT_CAMPAIGN_NAME, gobj::OPT_SCENARIO_NAME, gobj::OPT_MAP_NAME] {
+        set_text(o + off, true, b"");
     }
     for i in 0..EE_APP_OPTIONS_SLOTS {
         h(O::EoSlotEmpty, o, &[i64::from(i)]);
@@ -147,15 +148,15 @@ pub extern "C" fn ee_gamecpp_options_assign(options: *mut c_void, other: *const 
     let mut target = *fields(o);
     game_options::assign(&mut target, &source, &l);
     *fields(o) = target;
-    let map_type = hp(O::EoMapType, src, &[]);
+    let map_type = src + gobj::OPT_MAP_TYPE;
     let mut index: c_ulong = 0;
     if source.mLoadType != 0 || h(O::EoFindGenerator, map_type, &[ptr(&mut index)]) == 0 {
-        h(O::EpWideCopy, hp(O::EoMapType, o, &[]), &[pa(map_type)]);
+        h(O::EpWideCopy, o + gobj::OPT_MAP_TYPE, &[pa(map_type)]);
     } else {
         first_generator(o);
     }
     for op in STRINGS {
-        h(O::EpWideCopy, hp(op, o, &[]), &[pa(hp(op, src, &[]))]);
+        h(O::EpWideCopy, o + op, &[pa(src + op)]);
     }
     for i in 0..EE_APP_OPTIONS_SLOTS {
         h(O::EoSlotCopy, o, &[i64::from(i), pa(src)]);
@@ -164,7 +165,7 @@ pub extern "C" fn ee_gamecpp_options_assign(options: *mut c_void, other: *const 
 
 /// The map type the first generator's name ("" with none).
 fn first_generator(o: P) {
-    let map_type = hp(O::EoMapType, o, &[]);
+    let map_type = o + gobj::OPT_MAP_TYPE;
     if h(O::EoGeneratorCount, 0, &[]) >= 1 {
         h(O::EoFirstGeneratorName, map_type, &[]);
     } else {
@@ -182,7 +183,7 @@ pub extern "C" fn ee_gamecpp_options_set_defaults(options: *mut c_void) {
     game_options::set_defaults(fields(o), &l, h(O::EoDifficultyLevel, 0, &[]) as c_ulong);
     first_generator(o);
     for op in STRINGS {
-        set_text(hp(op, o, &[]), true, b"");
+        set_text(o + op, true, b"");
     }
     for i in 0..EE_APP_OPTIONS_SLOTS {
         h(O::EoSlotEmpty, o, &[i64::from(i)]);
@@ -211,11 +212,11 @@ pub unsafe extern "C" fn ee_gamecpp_options_map_dimensions(
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_options_campaign_map_name(options: *mut c_void, name: *mut c_void) -> bool {
     let o = options as P;
-    let found = h(O::EpWideLength, hp(O::EoCampaignName, o, &[]), &[]) > 0
+    let found = h(O::EpWideLength, o + gobj::OPT_CAMPAIGN_NAME, &[]) > 0
         && fields(o).mCampaignChecksum > 0
-        && h(O::EpWideLength, hp(O::EoMapName, o, &[]), &[]) > 0;
+        && h(O::EpWideLength, o + gobj::OPT_MAP_NAME, &[]) > 0;
     if found {
-        h(O::EpWideCopy, name as P, &[pa(hp(O::EoMapName, o, &[]))]);
+        h(O::EpWideCopy, name as P, &[pa(o + gobj::OPT_MAP_NAME)]);
     } else {
         set_text(name as P, true, b"");
     }
@@ -238,10 +239,10 @@ impl SaveHost for OptionsFile {
     fn call(&mut self, op: i32, index: u32, io: &mut EeAppSaveIo) -> i32 {
         let i = i64::from(index);
         (match op {
-            EE_APP_OPTIONS_NAME_LOAD => h(O::EoWideLoad, hp(O::EoSlotName, self.o, &[i]), &[pa(self.file)]),
-            EE_APP_OPTIONS_NAME_SAVE => h(O::EoWideSave, hp(O::EoSlotName, self.o, &[i]), &[pa(self.file)]),
-            EE_APP_OPTIONS_STRING_LOAD => h(O::EoWideLoad, hp(STRINGS[index as usize], self.o, &[]), &[pa(self.file)]),
-            EE_APP_OPTIONS_STRING_SAVE => h(O::EoWideSave, hp(STRINGS[index as usize], self.o, &[]), &[pa(self.file)]),
+            EE_APP_OPTIONS_NAME_LOAD => h(O::EoWideLoad, gobj::opt_slot_name(self.o, index), &[pa(self.file)]),
+            EE_APP_OPTIONS_NAME_SAVE => h(O::EoWideSave, gobj::opt_slot_name(self.o, index), &[pa(self.file)]),
+            EE_APP_OPTIONS_STRING_LOAD => h(O::EoWideLoad, self.o + STRINGS[index as usize], &[pa(self.file)]),
+            EE_APP_OPTIONS_STRING_SAVE => h(O::EoWideSave, self.o + STRINGS[index as usize], &[pa(self.file)]),
             EE_APP_OPTIONS_VARIANT_KNOWN => h(O::EoVariantKnown, 0, &[i]),
             _ => h(O::EoPrimitive, self.file, &[i64::from(op), ptr(io)]),
         }) as i32
@@ -290,9 +291,9 @@ mod tests {
 
     #[test]
     fn the_strings_are_in_the_files_order() {
-        assert_eq!(STRINGS[EE_APP_OPTIONS_CAMPAIGN as usize], O::EoCampaignName);
-        assert_eq!(STRINGS[EE_APP_OPTIONS_SCENARIO as usize], O::EoScenarioName);
-        assert_eq!(STRINGS[EE_APP_OPTIONS_MAP_NAME as usize], O::EoMapName);
+        assert_eq!(STRINGS[EE_APP_OPTIONS_CAMPAIGN as usize], gobj::OPT_CAMPAIGN_NAME);
+        assert_eq!(STRINGS[EE_APP_OPTIONS_SCENARIO as usize], gobj::OPT_SCENARIO_NAME);
+        assert_eq!(STRINGS[EE_APP_OPTIONS_MAP_NAME as usize], gobj::OPT_MAP_NAME);
         assert_eq!(LOAD_TYPES, 6);
     }
 }

@@ -19,6 +19,7 @@ use std::sync::Mutex;
 
 use ee_sim::world::{PlayerView, UnitView, WorldRead, WorldView};
 
+use crate::gamecpp::global_objects as gobj;
 use crate::gamecpp::{h, hd, hp, rec, O, P};
 
 /// A text from a C++ call that writes it into a buffer of 1024 bytes (`snprintf`).
@@ -59,10 +60,10 @@ pub fn text_mode(text: &str) -> std::borrow::Cow<'_, str> {
 
 /// The log wanted (the settings' game log on, not EE-SIM) -> the data root.
 fn wanted() -> Option<String> {
-    let settings = hp(O::EpPrefsSettings, hp(O::EpGlobalPrefs, 0, &[]), &[]);
+    let settings = gobj::prefs() + gobj::PREFS_SETTINGS;
     // SAFETY: the settings' plain members, read at once
     let on =
-        unsafe { (*rec::<crate::app::settings::EeAppSettingsFields>(O::EpSettingsFields, settings)).mGameLog } != 0;
+        unsafe { (*(settings as *const crate::app::settings::EeAppSettingsFields)).mGameLog } != 0;
     if !on || ee_base::plat_core::sim::gPlatSimMode.get() != 0 {
         return None;
     }
@@ -242,10 +243,10 @@ fn open(l: &mut Log) {
     let Some(world) = WorldView::global(&t) else { return };
     let lobby = hp(O::EgLobbyOptions, 0, &[]);
     // SAFETY: the lobby options' plain members, copied
-    let o = unsafe { *rec::<crate::app::game_options::EeAppOptionsFields>(O::EoFields, lobby) };
+    let o = unsafe { *(lobby as *const crate::app::game_options::EeAppOptionsFields) };
     write(&format!(
         "EE-GAME 0 p0 start map={} size={} difficulty={} players={}\n",
-        narrow(&wide_text(hp(O::EoMapType, lobby, &[]))),
+        narrow(&wide_text(lobby + gobj::OPT_MAP_TYPE)),
         o.mMapSize,
         o.mDifficulty,
         world.num_players() as c_ulong
