@@ -51,12 +51,6 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer);
 // Sets up a new land unit: its class's resource (and amount when it has one) and, for the radio man, its power
 // Calls a paratroop plane (class 0x2e1): it appears over the last map tile beyond the unit in +y and flies to the
 // unit's goal location to unload its cargo
-// Updates each of the unit's wheels
-void EEComplexUnit::UpdateWheels()
-{
-    ee_units_ucg_sea(EE_UNITS_UCG_DO_UPDATE_WHEELS, NULL, this, 0, 0, 0, NULL);   // ucg_sea.rs
-}
-
 // ---- EEUCLandMilitaryHero.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The military
 // hero's unit class: 0x216d4b..0x216d57 (after EEUCLandCitizen.cpp; EEUCLandPriest.cpp follows). One unit per EEUC*

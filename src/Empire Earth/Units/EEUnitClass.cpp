@@ -449,24 +449,12 @@ void EEUnitClass::Attacked(EEComplexUnit* inUnit)
 // Advances a unit's animation by this tick, plays the frame sounds and returns the number of frames stepped
 // Counts down a unit's trail timer and creates the class's trail effect each time it runs out
 // Creates ripples behind a unit on water at a rate that grows with its speed
-// Returns one over the unit's top speed, its active group's when it moves in one
-float EEComplexUnit::GetInverseMaxVelocity()
-{
-    return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_INVERSE_MAX_VELOCITY, NULL, this, 0, 0.0f, 0.0f, 0.0f);   // uc_rest.rs
-}
-
 // Ticks a building: finishes its production countdown (a unit, retried in 5 seconds when it cannot be placed,
 // or a technology), then its orbitals, camouflage, effects, rotting, production queue and garrison healing
 // EEUCBuilding::Update; production is instant under the player's mInstantBuild
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
 // Ticks an animal: physics, effects, timers and animation; fires on attack frames and lets its carcass rot
-// Sets or clears the unit's camouflaged flag (the top bit of its camouflage timer)
-void EEComplexUnit::SetCamouflaged(bool inValue)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_SET_CAMOUFLAGED, NULL, this, 0, inValue, 0, NULL);   // uc_rest.rs
-}
-
 extern GEViewport gViewport;
 extern bool& gOrthographicView;
 
