@@ -193,7 +193,7 @@ pub extern "C" fn ee_net_initialize() -> i32 {
     }
     match ee_base::util::ee_util_register_shutdown(shutdown) {
         0 => ee_net_pr_initialize(),
-        e => e as i32,
+        e => e,
     }
 }
 
