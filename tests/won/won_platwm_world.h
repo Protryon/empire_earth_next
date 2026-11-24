@@ -16,8 +16,10 @@ struct WONRectangle {
     WONRectangle() : x(0), y(0), width(0), height(0) {}
     WONRectangle(int a, int b, int c, int d) : x(a), y(b), width(c), height(d) {}
 };
-enum { InputEvent_GotFocus = 101, InputEvent_LostFocus, InputEvent_MouseExit, InputEvent_KeyDown, InputEvent_KeyUp, InputEvent_KeyChar,
-       InputEvent_MouseMove, InputEvent_MouseDown, InputEvent_MouseDoubleClick, InputEvent_MouseUp, InputEvent_MouseWheel, InputEvent_Size };
+// WONEventTypes.h's values (platwm.rs passes them since R6 WON GUI round 36)
+enum { InputEvent_Size = 1, InputEvent_MouseMove = 2, InputEvent_MouseDown = 3, InputEvent_MouseDoubleClick = 4, InputEvent_MouseUp = 6,
+       InputEvent_MouseWheel = 7, InputEvent_KeyDown = 8, InputEvent_KeyUp = 9, InputEvent_KeyChar = 10, InputEvent_GotFocus = 11,
+       InputEvent_LostFocus = 12, InputEvent_MouseExit = 13 };
 enum StandardColor { StandardColor_3DDarkShadow = 0, StandardColor_3DFace, StandardColor_3DHilight, StandardColor_3DShadow,
     StandardColor_Scrollbar, StandardColor_ButtonText, StandardColor_GrayText, StandardColor_Hilight, StandardColor_HilightText,
     StandardColor_ToolTipBack, StandardColor_ToolTipText, StandardColor_MenuBack, StandardColor_MenuText, StandardColor_Back,

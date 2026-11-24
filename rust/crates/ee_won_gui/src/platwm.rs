@@ -163,12 +163,12 @@ pub enum EeWonPlatWmOp {
     FollowSurface,
     /// `a`'s FollowPixelScale (platwin.rs), `b` the new pixel scale's bits.
     FollowPixelScale,
-    /// `a->QueueEvent(new InputEvent(t))`, `t` GotFocus (b 0), LostFocus (1), MouseExit (2).
+    /// `a->QueueEvent(new InputEvent(b))`, `b` GotFocus, LostFocus or MouseExit (`INPUT_TYPES`).
     QueueInput,
-    /// `a->QueueEvent(new KeyEvent(t, c, d))`, `t` KeyDown (b 0), KeyUp (1), KeyChar (2).
+    /// `a->QueueEvent(new KeyEvent(b, c, d))`, `b` KeyDown, KeyUp or KeyChar (`KEY_TYPES`).
     QueueKey,
-    /// `a->QueueMouse(t, p[0], p[1], p[2], p[3])` with `p` the four ints at `c`, `t` MouseMove (b 0), MouseDown (1),
-    /// MouseDoubleClick (2), MouseUp (3), MouseWheel (4).
+    /// `a->QueueMouse(b, p[0], p[1], p[2], p[3])` with `p` the four ints at `c`, `b` MouseMove, MouseDown,
+    /// MouseDoubleClick, MouseUp or MouseWheel (`MOUSE_TYPES`).
     QueueMouse,
     /// `dynamic_cast<PlatGUIWindow*>(a->GetParent())`.
     Parent,
@@ -200,6 +200,14 @@ pub enum EeWonPlatWmOp {
     /// `PlatWindowWake()`.
     Wake,
 }
+
+/// The events' WindowEventType values (WONEventTypes.h: the GUI's enum; WindowManager.cpp's three tables until R6 WON
+/// GUI round 36): GotFocus, LostFocus, MouseExit.
+const INPUT_TYPES: [isize; 3] = [11, 12, 13];
+/// KeyDown, KeyUp, KeyChar.
+const KEY_TYPES: [isize; 3] = [8, 9, 10];
+/// MouseMove, MouseDown, MouseDoubleClick, MouseUp, MouseWheel.
+const MOUSE_TYPES: [isize; 5] = [2, 3, 4, 6, 7];
 
 /// The host: `(manager, op, a, b, c, d) -> result`.
 pub type EeWonPlatWmHost =
@@ -585,10 +593,10 @@ impl EeWonPlatWm {
         let old = self.focus.get();
         self.focus.set(w);
         if !old.is_null() && self.info(old).open && self.active.get() {
-            self.call(EeWonPlatWmOp::QueueInput, old as isize, 1, 0, 0);
+            self.call(EeWonPlatWmOp::QueueInput, old as isize, INPUT_TYPES[1], 0, 0);
         }
         if !w.is_null() && self.active.get() {
-            self.call(EeWonPlatWmOp::QueueInput, w as isize, 0, 0, 0);
+            self.call(EeWonPlatWmOp::QueueInput, w as isize, INPUT_TYPES[0], 0, 0);
         }
         self.dirty.set(true);
     }
@@ -686,7 +694,7 @@ impl EeWonPlatWm {
                 // SAFETY: a terminated buffer (PLAT_TEXT_TERMINATED) into 64 units
                 let n = unsafe { PlatUtf8ToWide(text.as_ptr() as *const c_char, u32::MAX, wide.as_mut_ptr(), 64) };
                 for &c in &wide[..(n as usize).min(64)] {
-                    self.call(EeWonPlatWmOp::QueueKey, target as isize, 2, c as isize, m as isize);
+                    self.call(EeWonPlatWmOp::QueueKey, target as isize, KEY_TYPES[2], c as isize, m as isize);
                 }
                 false
             }
@@ -694,7 +702,7 @@ impl EeWonPlatWm {
                 self.active.set(true);
                 let f = self.focus.get();
                 if !f.is_null() {
-                    self.call(EeWonPlatWmOp::QueueInput, f as isize, 0, 0, 0);
+                    self.call(EeWonPlatWmOp::QueueInput, f as isize, INPUT_TYPES[0], 0, 0);
                 } else {
                     let mut i = self.z_len();
                     while i > 0 {
@@ -715,7 +723,7 @@ impl EeWonPlatWm {
             EV_FOCUS_LOST => {
                 let f = self.focus.get();
                 if !f.is_null() {
-                    self.call(EeWonPlatWmOp::QueueInput, f as isize, 1, 0, 0);
+                    self.call(EeWonPlatWmOp::QueueInput, f as isize, INPUT_TYPES[1], 0, 0);
                 }
                 self.active.set(false);
                 self.dirty.set(true);
@@ -745,7 +753,7 @@ impl EeWonPlatWm {
     }
 
     fn queue_mouse(&self, w: *mut c_void, kind: isize, p: [i32; 4]) {
-        self.call(EeWonPlatWmOp::QueueMouse, w as isize, kind, p.as_ptr() as isize, 0);
+        self.call(EeWonPlatWmOp::QueueMouse, w as isize, MOUSE_TYPES[kind as usize], p.as_ptr() as isize, 0);
     }
 
     /// Mouse input: to the capture window, else to the topmost window under the pointer; a press on a frame closes
@@ -842,7 +850,7 @@ impl EeWonPlatWm {
                     self.call(EeWonPlatWmOp::Minimize, pw as isize, 0, 0, 0);
                 }
             } else {
-                self.call(EeWonPlatWmOp::QueueKey, target as isize, if down { 0 } else { 1 }, key as isize, m);
+                self.call(EeWonPlatWmOp::QueueKey, target as isize, KEY_TYPES[if down { 0 } else { 1 }], key as isize, m);
                 let mut ch = 0;
                 if down {
                     ch = match key {
@@ -857,7 +865,7 @@ impl EeWonPlatWm {
                     };
                 }
                 if ch != 0 {
-                    self.call(EeWonPlatWmOp::QueueKey, target as isize, 2, ch, m);
+                    self.call(EeWonPlatWmOp::QueueKey, target as isize, KEY_TYPES[2], ch, m);
                 }
             }
         }
