@@ -1415,7 +1415,7 @@ def cmd_census(a):
         sys.exit(f"{t.name}: {why}")
     import units
     mods = a.modules or units.MODULES
-    jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
+    jobs = [j for m in mods for j in units.jobs_for(m)]
     jobs = [j for j in jobs if "Platform/Win32" not in units.rel_src(j[1]).as_posix()]
     if a.only:
         jobs = [j for j in jobs if a.only in str(j[1])]
@@ -1696,7 +1696,7 @@ def cmd_game(a):
     out = t.out / ("game" if not a.sanitize else f"game-{a.sanitize}")
     (out / "obj").mkdir(parents=True, exist_ok=True)
     mods = units.TARGET_MODULES["exe"]
-    jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
+    jobs = [j for m in mods for j in units.jobs_for(m)]
     jobs = [j for j in jobs if "Platform/Win32" not in units.rel_src(j[1]).as_posix()]
     have = {pathlib.Path(j[1]).resolve() for j in jobs}
     for s in platform_sources(t):

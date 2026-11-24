@@ -314,14 +314,22 @@ mod tests {
     fn the_null_device_pulls_the_mix_in_real_time() {
         let frames = Arc::new(AtomicU64::new(0));
         let f = frames.clone();
+        let before = Instant::now(); // before the device thread's own start
         let rate = open("", true, move |buf: &mut [f32]| {
             f.fetch_add(buf.len() as u64 / 2, Ordering::SeqCst);
         });
         assert_eq!(rate, NULL_RATE);
-        std::thread::sleep(Duration::from_millis(200));
+        // Waits for the frames, not a fixed time: on a loaded machine the device thread may not run for a long while
+        // (a fixed 200 ms saw too few frames), and this thread may oversleep (it then saw too many).
+        while frames.load(Ordering::SeqCst) < 4800 && before.elapsed() < Duration::from_secs(60) {
+            std::thread::sleep(Duration::from_millis(5));
+        }
         close();
         let n = frames.load(Ordering::SeqCst);
-        assert!((4800..=48000).contains(&n), "{n} frames in 0.2 s");
+        let seconds = before.elapsed().as_secs_f64();
+        assert!(n >= 4800, "{n} frames in {seconds} s");
+        // real time: never ahead of the clock (so the first 4,800 frames took 0.1 s or more)
+        assert!(n as f64 <= seconds * f64::from(NULL_RATE), "{n} frames in {seconds} s");
         let after = frames.load(Ordering::SeqCst);
         std::thread::sleep(Duration::from_millis(50));
         assert_eq!(frames.load(Ordering::SeqCst), after, "closed: no more mixing");

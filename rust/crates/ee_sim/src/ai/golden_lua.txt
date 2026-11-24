@@ -4027,358 +4027,351 @@ splitmix 18446744073709551615: 16490336266968443936 16834447057089888969 4048727
 splitmix 5299989643266: 1711213534267772020 16429631016069706723 12785118238637346251 13268951026061269154 3485756682576260050 10788850412044149726 state 13064061994800179328
 == part B
 new 1 2000000 33554432 0 1 open=1
-new -> ok status=ok instr=0 mem=13117 peak=13165 rng=1
-run sandbox -> ok status=ok instr=0 mem=14315 peak=14580 rng=1 result=true
-run names -> ok status=ok instr=0 mem=18889 peak=18889 rng=1 result="_G _VERSION ai assert each error getmetatable ipairs math next pairs pcall print rawequal rawget rawlen rawset require select setmetatable string table tonumber tostring type utf8 xpcall"
-run strnames -> ok status=ok instr=0 mem=13686 peak=21851 rng=1 result="byte char find format gmatch gsub len lower match rep reverse sub upper"
-run mathnames -> ok status=ok instr=0 mem=18325 peak=21851 rng=1 result="abs:function ceil:function deg:function floor:function fmod:function huge:number max:function maxinteger:number min:function mininteger:number modf:function pi:number rad:function sqrt:function tointeger:function type:function ult:function"
-run ainames -> ok status=ok instr=0 mem=19948 peak=21851 rng=1 result="cost keys random used"
-run tostrings -> ok status=ok instr=0 mem=23597 peak=23597 rng=1 result=["table","function","nil","true","12","1.5","x","meta","table","nan","inf","-inf","9.2233720368548e+18","-0.0","1e+300","3.1415926535898"]
-run tostringnone -> FAIL status=runtime error instr=0 mem=23922 peak=24626 rng=1 result=nil
+new -> ok status=ok instr=0 mem=13208 peak=13287 rng=1
+run sandbox -> ok status=ok instr=0 mem=14846 peak=15151 rng=1 result=true
+run names -> ok status=ok instr=0 mem=18627 peak=18627 rng=1 result="_G _VERSION ai assert each error getmetatable ipairs math next pairs pcall print rawequal rawget rawlen rawset require select setmetatable string table tonumber tostring type utf8 xpcall"
+run strnames -> ok status=ok instr=0 mem=21118 peak=21118 rng=1 result="byte char find format gmatch gsub len lower match rep reverse sub upper"
+run mathnames -> ok status=ok instr=0 mem=24923 peak=24923 rng=1 result="abs:function ceil:function deg:function floor:function fmod:function frexp:function huge:number ldexp:function max:function maxinteger:number min:function mininteger:number modf:function pi:number rad:function sqrt:function tointeger:function type:function ult:function"
+run ainames -> ok status=ok instr=0 mem=26682 peak=26682 rng=1 result="cost keys random used"
+run tostrings -> ok status=ok instr=0 mem=29989 peak=30128 rng=1 result=["table","function","nil","true","12","1.5","x","meta","table","nan","inf","-inf","9.2233720368547758e+18","-0.0","1e+300","3.1415926535897931"]
+run tostringnone -> FAIL status=runtime error instr=0 mem=30960 peak=31088 rng=1 result=nil
   error: tostringnone: tostringnone:1: bad argument #1 to 'tostring' (value expected)
 stack traceback:
-	[C]: in function 'tostring'
+	[C]: in global 'tostring'
 	tostringnone:1: in main chunk
 	[C]: in ?
-run print -> ok status=ok instr=0 mem=22201 peak=32015 rng=1 result=1
+run print -> ok status=ok instr=0 mem=31983 peak=36509 rng=1 result=1
   print: a	1	2.5	table	nil	true	function	m
   print: 
   print: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
   print: zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz	1
-run printbadtostring -> FAIL status=runtime error instr=0 mem=23669 peak=32015 rng=1 result=nil
+run printbadtostring -> FAIL status=runtime error instr=0 mem=33476 peak=36509 rng=1 result=nil
   error: printbadtostring: printbadtostring:1: '__tostring' must return a string
 stack traceback:
-	[C]: in function 'print'
+	[C]: in global 'print'
 	printbadtostring:1: in main chunk
 	[C]: in ?
-run format0 -> ok status=ok instr=0 mem=24576 peak=32015 rng=1 result="table|   ab|3"
-run format1 -> ok status=ok instr=0 mem=25126 peak=32015 rng=1 result="5"
-run format2 -> ok status=ok instr=0 mem=25794 peak=32015 rng=1 result="0.125"
-run format3 -> ok status=ok instr=0 mem=26339 peak=32015 rng=1 result="%"
-run format4 -> ok status=ok instr=0 mem=26959 peak=32015 rng=1 result="    t|"
-run format5 -> ok status=ok instr=0 mem=27542 peak=32015 rng=1 result="ff FF 10 A"
-run format6 -> ok status=ok instr=0 mem=28092 peak=32015 rng=1 result="3"
-run format7 -> ok status=ok instr=0 mem=28689 peak=32015 rng=1 result="5       |+5| 5|0xff"
-run format8 -> ok status=ok instr=0 mem=29370 peak=32015 rng=1 result="function nil"
-run format9 -> ok status=ok instr=0 mem=30122 peak=32015 rng=1 result="1.5 2.500000e+00 1E+20 3.000000E+00"
-run format10 -> ok status=ok instr=0 mem=30798 peak=32015 rng=1 result="    3.1416"
-run format11 -> FAIL status=syntax error instr=0 mem=31384 peak=32015 rng=1 result=nil
+run format0 -> ok status=ok instr=0 mem=34519 peak=36509 rng=1 result="table|   ab|3"
+run format1 -> ok status=ok instr=0 mem=35309 peak=36509 rng=1 result="5"
+run format2 -> ok status=ok instr=0 mem=36121 peak=36509 rng=1 result="0.125"
+run format3 -> ok status=ok instr=0 mem=27551 peak=36678 rng=1 result="%"
+run format4 -> ok status=ok instr=0 mem=28403 peak=36678 rng=1 result="    t|"
+run format5 -> ok status=ok instr=0 mem=29226 peak=36678 rng=1 result="ff FF 10 A"
+run format6 -> ok status=ok instr=0 mem=30016 peak=36678 rng=1 result="3"
+run format7 -> ok status=ok instr=0 mem=30853 peak=36678 rng=1 result="5       |+5| 5|0xff"
+run format8 -> ok status=ok instr=0 mem=31678 peak=36678 rng=1 result="function nil"
+run format9 -> ok status=ok instr=0 mem=32678 peak=36678 rng=1 result="1.5 2.500000e+00 1E+20 3.000000E+00"
+run format10 -> ok status=ok instr=0 mem=33498 peak=36678 rng=1 result="    3.1416"
+run format11 -> FAIL status=syntax error instr=0 mem=34284 peak=36678 rng=1 result=nil
   error: format11: format11:1: unfinished string near <eof>
 stack traceback:
 	[C]: in ?
-run format12 -> FAIL status=runtime error instr=0 mem=32340 peak=32468 rng=1 result=nil
+run format12 -> FAIL status=runtime error instr=0 mem=35430 peak=36678 rng=1 result=nil
   error: format12: bad argument #2 to '?' (no value)
 stack traceback:
 	[C]: in ?
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	format12:1: in main chunk
 	[C]: in ?
-run format13 -> ok status=ok instr=0 mem=33069 peak=33093 rng=1 result="1.5"
-run format14 -> ok status=ok instr=0 mem=13669 peak=33651 rng=1 result="3"
-run format15 -> ok status=ok instr=0 mem=14986 peak=33651 rng=1 result="true|tt"
-run format16 -> ok status=ok instr=0 mem=15575 peak=33651 rng=1 result="table"
-run fmt_p -> FAIL status=runtime error instr=0 mem=16596 peak=33651 rng=1 result=nil
+run format13 -> ok status=ok instr=0 mem=36303 peak=36678 rng=1 result="1.5"
+run format14 -> ok status=ok instr=0 mem=37068 peak=37152 rng=1 result="3"
+run format15 -> ok status=ok instr=0 mem=38654 peak=38727 rng=1 result="true|tt"
+run format16 -> ok status=ok instr=0 mem=39475 peak=39518 rng=1 result="table"
+run fmt_p -> FAIL status=runtime error instr=0 mem=40525 peak=40653 rng=1 result=nil
   error: fmt_p: fmt_p:1: string.format: %p prints an address
 stack traceback:
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_p:1: in main chunk
 	[C]: in ?
-run fmt_a -> FAIL status=runtime error instr=0 mem=17499 peak=33651 rng=1 result=nil
+run fmt_a -> FAIL status=runtime error instr=0 mem=24174 peak=41080 rng=1 result=nil
   error: fmt_a: fmt_a:1: string.format: %a differs between platforms
 stack traceback:
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_a:1: in main chunk
 	[C]: in ?
-run fmt_A -> FAIL status=runtime error instr=0 mem=18403 peak=33651 rng=1 result=nil
+run fmt_A -> FAIL status=runtime error instr=0 mem=25332 peak=41080 rng=1 result=nil
   error: fmt_A: fmt_A:1: string.format: %A differs between platforms
 stack traceback:
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_A:1: in main chunk
 	[C]: in ?
-run fmt_qf -> FAIL status=runtime error instr=0 mem=19457 peak=33651 rng=1 result=nil
+run fmt_qf -> FAIL status=runtime error instr=0 mem=26517 peak=41080 rng=1 result=nil
   error: fmt_qf: fmt_qf:1: string.format: %q of a float differs between platforms
 stack traceback:
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_qf:1: in main chunk
 	[C]: in ?
-run fmt_qi -> ok status=ok instr=0 mem=20107 peak=33651 rng=1 result="7"
-run fmt_inf -> FAIL status=runtime error instr=0 mem=21058 peak=33651 rng=1 result=nil
+run fmt_qi -> ok status=ok instr=0 mem=27407 peak=41080 rng=1 result="7"
+run fmt_inf -> FAIL status=runtime error instr=0 mem=28516 peak=41080 rng=1 result=nil
   error: fmt_inf: fmt_inf:1: string.format: %f of nan or inf differs between platforms
 stack traceback:
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_inf:1: in main chunk
 	[C]: in ?
-run fmt_nan -> FAIL status=runtime error instr=0 mem=22137 peak=33651 rng=1 result=nil
+run fmt_nan -> FAIL status=runtime error instr=0 mem=29753 peak=41080 rng=1 result=nil
   error: fmt_nan: fmt_nan:1: string.format: %g of nan or inf differs between platforms
 stack traceback:
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_nan:1: in main chunk
 	[C]: in ?
-run fmt_Enan -> FAIL status=runtime error instr=0 mem=23227 peak=33651 rng=1 result=nil
+run fmt_Enan -> FAIL status=runtime error instr=0 mem=31001 peak=41080 rng=1 result=nil
   error: fmt_Enan: fmt_Enan:1: string.format: %E of nan or inf differs between platforms
 stack traceback:
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_Enan:1: in main chunk
 	[C]: in ?
-run fmt_missing -> FAIL status=runtime error instr=0 mem=24111 peak=33651 rng=1 result=nil
+run fmt_missing -> FAIL status=runtime error instr=0 mem=32098 peak=41080 rng=1 result=nil
   error: fmt_missing: bad argument #3 to '?' (no value)
 stack traceback:
 	[C]: in ?
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_missing:1: in main chunk
 	[C]: in ?
-run fmt_bad -> FAIL status=runtime error instr=0 mem=24895 peak=33651 rng=1 result=nil
+run fmt_bad -> FAIL status=runtime error instr=0 mem=23323 peak=41080 rng=1 result=nil
   error: fmt_bad: invalid conversion '%y' to 'format'
 stack traceback:
 	[C]: in ?
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_bad:1: in main chunk
 	[C]: in ?
-run fmt_nul -> FAIL status=runtime error instr=0 mem=25678 peak=33651 rng=1 result=nil
+run fmt_nul -> FAIL status=runtime error instr=0 mem=24344 peak=41080 rng=1 result=nil
   error: fmt_nul: invalid conversion '%' to 'format'
 stack traceback:
 	[C]: in ?
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_nul:1: in main chunk
 	[C]: in ?
-run fmt_nul2 -> FAIL status=runtime error instr=0 mem=26588 peak=33651 rng=1 result=nil
+run fmt_nul2 -> FAIL status=runtime error instr=0 mem=25396 peak=41080 rng=1 result=nil
   error: fmt_nul2: invalid conversion '%5' to 'format'
 stack traceback:
 	[C]: in ?
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_nul2:1: in main chunk
 	[C]: in ?
-run fmt_trailing -> FAIL status=runtime error instr=0 mem=13895 peak=33651 rng=1 result=nil
+run fmt_trailing -> FAIL status=runtime error instr=0 mem=26373 peak=41080 rng=1 result=nil
   error: fmt_trailing: invalid conversion '%5' to 'format'
 stack traceback:
 	[C]: in ?
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_trailing:1: in main chunk
 	[C]: in ?
-run fmt_method -> ok status=ok instr=0 mem=14601 peak=33651 rng=1 result="4-table"
-run fmt_noarg -> FAIL status=runtime error instr=0 mem=15449 peak=33651 rng=1 result=nil
+run fmt_method -> ok status=ok instr=0 mem=27159 peak=41080 rng=1 result="4-table"
+run fmt_noarg -> FAIL status=runtime error instr=0 mem=28109 peak=41080 rng=1 result=nil
   error: fmt_noarg: fmt_noarg:1: bad argument #1 to 'format' (string expected, got no value)
 stack traceback:
-	[C]: in function 'string.format'
+	[C]: in field 'format'
 	fmt_noarg:1: in main chunk
 	[C]: in ?
-run setmeta -> ok status=ok instr=0 mem=16577 peak=33651 rng=1 result=7
-run setmeta_gc -> FAIL status=runtime error instr=0 mem=17853 peak=33651 rng=1 result=nil
+run setmeta -> ok status=ok instr=0 mem=29413 peak=41080 rng=1 result=7
+run setmeta_gc -> FAIL status=runtime error instr=0 mem=30893 peak=41080 rng=1 result=nil
   error: setmeta_gc: setmeta_gc:1: setmetatable: __gc is not allowed (the collector's timing is not deterministic)
 stack traceback:
-	[C]: in function 'setmetatable'
+	[C]: in global 'setmetatable'
 	setmeta_gc:1: in main chunk
 	[C]: in ?
-run setmeta_mode -> FAIL status=runtime error instr=0 mem=19051 peak=33651 rng=1 result=nil
+run setmeta_mode -> FAIL status=runtime error instr=0 mem=32337 peak=41080 rng=1 result=nil
   error: setmeta_mode: setmeta_mode:1: setmetatable: __mode is not allowed (the collector's timing is not deterministic)
 stack traceback:
-	[C]: in function 'setmetatable'
+	[C]: in global 'setmetatable'
 	setmeta_mode:1: in main chunk
 	[C]: in ?
-run setmeta_nil -> ok status=ok instr=0 mem=19995 peak=33651 rng=1 result=true
-run setmeta_bad -> FAIL status=runtime error instr=0 mem=20729 peak=33651 rng=1 result=nil
+run setmeta_nil -> ok status=ok instr=0 mem=23343 peak=41080 rng=1 result=true
+run setmeta_bad -> FAIL status=runtime error instr=0 mem=14204 peak=41080 rng=1 result=nil
   error: setmeta_bad: bad argument #1 to '?' (table expected, got number)
 stack traceback:
 	[C]: in ?
-	[C]: in function 'setmetatable'
+	[C]: in global 'setmetatable'
 	setmeta_bad:1: in main chunk
 	[C]: in ?
-run setmeta_protected -> FAIL status=runtime error instr=0 mem=21880 peak=33651 rng=1 result=nil
+run setmeta_protected -> FAIL status=runtime error instr=0 mem=15543 peak=41080 rng=1 result=nil
   error: setmeta_protected: cannot change a protected metatable
 stack traceback:
 	[C]: in ?
-	[C]: in function 'setmetatable'
+	[C]: in global 'setmetatable'
 	setmeta_protected:1: in main chunk
 	[C]: in ?
-run pow -> FAIL status=bad value instr=0 mem=22423 peak=33651 rng=1 result=nil
+run pow -> FAIL status=bad value instr=0 mem=16118 peak=41080 rng=1 result=nil
   error: pow: result[1]: a float (only integers, strings, booleans and tables)
-run powfloat -> FAIL status=runtime error instr=0 mem=23272 peak=33651 rng=1 result=nil
-  error: powfloat: powfloat:1: exponent is not an integer ('^' is integral only: pow differs between platforms)
-stack traceback:
-	powfloat:1: in main chunk
-	[C]: in ?
-run powconst -> FAIL status=runtime error instr=0 mem=23973 peak=33651 rng=1 result=nil
-  error: powconst: exponent is not an integer ('^' is integral only: pow differs between platforms)
-stack traceback:
-	[C]: in ?
-stack traceback:
-	[C]: in ?
-run ascii -> ok status=ok instr=0 mem=25120 peak=33651 rng=1 result=true
-run bytecode -> FAIL status=syntax error instr=0 mem=25570 peak=33651 rng=1 result=nil
+run powfloat -> FAIL status=bad value instr=0 mem=16685 peak=41080 rng=1 result=nil
+  error: powfloat: result: a float (only integers, strings, booleans and tables)
+run powconst -> FAIL status=bad value instr=0 mem=17147 peak=41080 rng=1 result=nil
+  error: powconst: result: a float (only integers, strings, booleans and tables)
+run ascii -> ok status=ok instr=0 mem=18414 peak=41080 rng=1 result=true
+run bytecode -> FAIL status=syntax error instr=0 mem=18960 peak=41080 rng=1 result=nil
   error: bytecode: bytecode:1: unexpected symbol near '\'
 stack traceback:
 	[C]: in ?
-run syntax -> FAIL status=syntax error instr=0 mem=26164 peak=33651 rng=1 result=nil
+run syntax -> FAIL status=syntax error instr=0 mem=19626 peak=41080 rng=1 result=nil
   error: syntax: syntax:1: unexpected symbol near '+'
 stack traceback:
 	[C]: in ?
-run sorts -> ok status=ok instr=24000 mem=74604 peak=74604 rng=1 result=[375,390,144,258,72,295,343,151,85,83,479,206,221,344]
-run each -> ok status=ok instr=0 mem=78575 peak=78575 rng=1 result=["-9223372036854775808","-5","1","2","3","9223372036854775807","","B","a","a\x00","aa","b","\xff"]
-run eachbig -> ok status=ok instr=32000 mem=406039 peak=406039 rng=1 result=[2997,[-1353,-1207,-1063,-918,-770,-625,-481,-336,-188,-43,103,246,394,537,683,828,976,1121,1265,1410,"k130","k218","k305","k393","k480","k568","k655","k742","k83","k917"]]
-run eachremove -> ok status=ok instr=0 mem=407775 peak=407775 rng=1 result=[1,3]
-run eachadd -> ok status=ok instr=0 mem=409344 peak=409368 rng=1 result=[1,2]
-run eachbool -> FAIL status=runtime error instr=0 mem=410712 peak=410840 rng=1 result=nil
+run sorts -> ok status=ok instr=24000 mem=67103 peak=67179 rng=1 result=[375,390,144,258,72,295,343,151,85,83,479,206,221,344]
+run each -> ok status=ok instr=0 mem=71168 peak=71244 rng=1 result=["-9223372036854775808","-5","1","2","3","9223372036854775807","","B","a","a\x00","aa","b","\xff"]
+run eachbig -> ok status=ok instr=32000 mem=353411 peak=353489 rng=1 result=[2997,[-1353,-1207,-1063,-918,-770,-625,-481,-336,-188,-43,103,246,394,537,683,828,976,1121,1265,1410,"k130","k218","k305","k393","k480","k568","k655","k742","k83","k917"]]
+run eachremove -> ok status=ok instr=0 mem=354921 peak=354934 rng=1 result=[1,3]
+run eachadd -> ok status=ok instr=0 mem=356306 peak=356330 rng=1 result=[1,2]
+run eachbool -> FAIL status=runtime error instr=0 mem=357673 peak=357801 rng=1 result=nil
   error: eachbool: eachbool:1: each: a boolean key (keys are integers or strings)
 stack traceback:
-	[C]: in function 'each'
+	[C]: in global 'each'
 	eachbool:1: in main chunk
 	[C]: in ?
-run eachfloat -> FAIL status=runtime error instr=0 mem=411966 peak=412094 rng=1 result=nil
+run eachfloat -> FAIL status=runtime error instr=0 mem=359010 peak=359138 rng=1 result=nil
   error: eachfloat: eachfloat:1: each: a float key (keys are integers or strings)
 stack traceback:
-	[C]: in function 'each'
+	[C]: in global 'each'
 	eachfloat:1: in main chunk
 	[C]: in ?
-run eachtable -> FAIL status=runtime error instr=0 mem=413249 peak=413377 rng=1 result=nil
+run eachtable -> FAIL status=runtime error instr=0 mem=360360 peak=360488 rng=1 result=nil
   error: eachtable: eachtable:1: each: a table key (keys are integers or strings)
 stack traceback:
-	[C]: in function 'each'
+	[C]: in global 'each'
 	eachtable:1: in main chunk
 	[C]: in ?
-run eachnotable -> FAIL status=runtime error instr=0 mem=414385 peak=414513 rng=1 result=nil
+run eachnotable -> FAIL status=runtime error instr=0 mem=361574 peak=361702 rng=1 result=nil
   error: eachnotable: eachnotable:1: bad argument #1 to 'each' (table expected, got number)
 stack traceback:
-	[C]: in function 'each'
+	[C]: in global 'each'
 	eachnotable:1: in main chunk
 	[C]: in ?
-run keys -> ok status=ok instr=0 mem=416411 peak=416411 rng=1 result=[[9,10,"z"],{},[2]]
-run keysbad -> FAIL status=runtime error instr=0 mem=417339 peak=417467 rng=1 result=nil
+run keys -> ok status=ok instr=0 mem=363576 peak=363598 rng=1 result=[[9,10,"z"],{},[2]]
+run keysbad -> FAIL status=runtime error instr=0 mem=364799 peak=364927 rng=1 result=nil
   error: keysbad: keysbad:1: bad argument #1 to 'keys' (table expected, got string)
 stack traceback:
 	[C]: in field 'keys'
 	keysbad:1: in main chunk
 	[C]: in ?
-run random -> ok status=ok instr=0 mem=420871 peak=420871 rng=6110722306163509217 result=[66,20,91,36,62,49,46,34,21,51,38,71,85,23,17,40,56,42,15,93,47,45,86,77,44,60,10,12,32,55,37,23,94,57,76,81,54,82,89,65,83,80,56,19,22,73,39,19,20,19,1,6,5,1,6,2,4,3,5,3,1,6,3,6,1,5,4,6,2,6,6,4,2,4,3,2,6,5,2,6,-2,-4,-1,4,3,-5,0,-4,1,2,5172761501532508584,7159328670391257150,1,3,-1,3]
-run randomempty -> FAIL status=runtime error instr=0 mem=421744 peak=421872 rng=6110722306163509217 result=nil
+run random -> ok status=ok instr=0 mem=367631 peak=368211 rng=6110722306163509217 result=[66,20,91,36,62,49,46,34,21,51,38,71,85,23,17,40,56,42,15,93,47,45,86,77,44,60,10,12,32,55,37,23,94,57,76,81,54,82,89,65,83,80,56,19,22,73,39,19,20,19,1,6,5,1,6,2,4,3,5,3,1,6,3,6,1,5,4,6,2,6,6,4,2,4,3,2,6,5,2,6,-2,-4,-1,4,3,-5,0,-4,1,2,5172761501532508584,7159328670391257150,1,3,-1,3]
+run randomempty -> FAIL status=runtime error instr=0 mem=368616 peak=368744 rng=6110722306163509217 result=nil
   error: randomempty: randomempty:1: bad argument #2 to 'random' (interval is empty)
 stack traceback:
 	[C]: in field 'random'
 	randomempty:1: in main chunk
 	[C]: in ?
-run randomempty1 -> FAIL status=runtime error instr=0 mem=422643 peak=422771 rng=6110722306163509217 result=nil
+run randomempty1 -> FAIL status=runtime error instr=0 mem=369627 peak=369755 rng=6110722306163509217 result=nil
   error: randomempty1: randomempty1:1: bad argument #1 to 'random' (interval is empty)
 stack traceback:
 	[C]: in field 'random'
 	randomempty1:1: in main chunk
 	[C]: in ?
-run randomfloat -> FAIL status=runtime error instr=0 mem=423609 peak=423737 rng=6110722306163509217 result=nil
+run randomfloat -> FAIL status=runtime error instr=0 mem=370753 peak=370881 rng=6110722306163509217 result=nil
   error: randomfloat: randomfloat:1: bad argument #1 to 'random' (number has no integer representation)
 stack traceback:
 	[C]: in field 'random'
 	randomfloat:1: in main chunk
 	[C]: in ?
-run randomnone -> FAIL status=runtime error instr=0 mem=424581 peak=424709 rng=6110722306163509217 result=nil
+run randomnone -> FAIL status=runtime error instr=0 mem=371837 peak=371965 rng=6110722306163509217 result=nil
   error: randomnone: randomnone:1: bad argument #1 to 'random' (number expected, got no value)
 stack traceback:
 	[C]: in field 'random'
 	randomnone:1: in main chunk
 	[C]: in ?
-run randomstr -> ok status=ok instr=0 mem=425165 peak=425165 rng=17511437125486707702 result=2
-run require -> ok status=ok instr=0 mem=428215 peak=428594 rng=17511437125486707702 result=["hello x",true]
-run require_secret -> FAIL status=no such module instr=0 mem=429109 peak=429237 rng=17511437125486707702 result=nil
+run randomstr -> ok status=ok instr=0 mem=309575 peak=372396 rng=17511437125486707702 result=2
+run require -> ok status=ok instr=0 mem=312583 peak=372396 rng=17511437125486707702 result=["hello x",true]
+run require_secret -> FAIL status=no such module instr=0 mem=313550 peak=372396 rng=17511437125486707702 result=nil
   error: require_secret: require_secret:1: require: no module 'secret' (Data/ai/secret.lua)
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_secret:1: in main chunk
 	[C]: in ?
-run require_dots -> FAIL status=no such module instr=0 mem=430187 peak=430315 rng=17511437125486707702 result=nil
+run require_dots -> FAIL status=no such module instr=0 mem=314738 peak=372396 rng=17511437125486707702 result=nil
   error: require_dots: require_dots:1: require: '..secret' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_dots:1: in main chunk
 	[C]: in ?
-run require_slash -> FAIL status=no such module instr=0 mem=431271 peak=431399 rng=17511437125486707702 result=nil
+run require_slash -> FAIL status=no such module instr=0 mem=315932 peak=372396 rng=17511437125486707702 result=nil
   error: require_slash: require_slash:1: require: 'lib/util' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_slash:1: in main chunk
 	[C]: in ?
-run require_trail -> FAIL status=no such module instr=0 mem=432339 peak=432467 rng=17511437125486707702 result=nil
+run require_trail -> FAIL status=no such module instr=0 mem=317110 peak=372396 rng=17511437125486707702 result=nil
   error: require_trail: require_trail:1: require: 'lib.' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_trail:1: in main chunk
 	[C]: in ?
-run require_empty -> FAIL status=no such module instr=0 mem=433391 peak=433519 rng=17511437125486707702 result=nil
+run require_empty -> FAIL status=no such module instr=0 mem=318272 peak=372396 rng=17511437125486707702 result=nil
   error: require_empty: require_empty:1: require: '' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_empty:1: in main chunk
 	[C]: in ?
-run require_long -> FAIL status=no such module instr=0 mem=434999 peak=435127 rng=17511437125486707702 result=nil
+run require_long -> FAIL status=no such module instr=0 mem=320054 peak=372396 rng=17511437125486707702 result=nil
   error: require_long: require_long:1: require: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_long:1: in main chunk
 	[C]: in ?
-run require_long96 -> FAIL status=no such module instr=0 mem=437120 peak=437248 rng=17511437125486707702 result=nil
+run require_long96 -> FAIL status=no such module instr=0 mem=322079 peak=372396 rng=17511437125486707702 result=nil
   error: require_long96: require_long96:1: require: no module 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' (Data/ai/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.lua)
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_long96:1: in main chunk
 	[C]: in ?
-run require_syntax -> FAIL status=syntax error instr=0 mem=438503 peak=438631 rng=17511437125486707702 result=nil
+run require_syntax -> FAIL status=syntax error instr=0 mem=323604 peak=372396 rng=17511437125486707702 result=nil
   error: require_syntax: ai/syntax_error.lua:3: unexpected symbol near 'return'
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_syntax:1: in main chunk
 	[C]: in ?
-run require_nostep -> FAIL status=bad value instr=0 mem=439914 peak=439914 rng=17511437125486707702 result=nil
+run require_nostep -> FAIL status=bad value instr=0 mem=325207 peak=372396 rng=17511437125486707702 result=nil
   error: require_nostep: result.init: a function (only integers, strings, booleans and tables)
-run require_missing_deep -> FAIL status=no such module instr=0 mem=440850 peak=440978 rng=17511437125486707702 result=nil
+run require_missing_deep -> FAIL status=no such module instr=0 mem=326253 peak=372396 rng=17511437125486707702 result=nil
   error: require_missing_deep: require_missing_deep:1: require: no module 'lib.deeper.missing' (Data/ai/lib/deeper/missing.lua)
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_missing_deep:1: in main chunk
 	[C]: in ?
-run require_num -> FAIL status=no such module instr=0 mem=441677 peak=441805 rng=17511437125486707702 result=nil
+run require_num -> FAIL status=no such module instr=0 mem=327206 peak=372396 rng=17511437125486707702 result=nil
   error: require_num: require_num:1: require: no module '5' (Data/ai/5.lua)
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_num:1: in main chunk
 	[C]: in ?
-run require_none -> FAIL status=runtime error instr=0 mem=442599 peak=442727 rng=17511437125486707702 result=nil
+run require_none -> FAIL status=runtime error instr=0 mem=328262 peak=372396 rng=17511437125486707702 result=nil
   error: require_none: require_none:1: bad argument #1 to 'require' (string expected, got no value)
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	require_none:1: in main chunk
 	[C]: in ?
-run errtable -> FAIL status=runtime error instr=0 mem=443428 peak=443556 rng=17511437125486707702 result=nil
+run errtable -> FAIL status=runtime error instr=0 mem=329190 peak=372396 rng=17511437125486707702 result=nil
   error: errtable: table
 stack traceback:
-	[C]: in function 'error'
+	[C]: in global 'error'
 	errtable:1: in main chunk
 	[C]: in ?
-run errmeta -> FAIL status=runtime error instr=0 mem=444670 peak=444798 rng=17511437125486707702 result=nil
+run errmeta -> FAIL status=runtime error instr=0 mem=330638 peak=372396 rng=17511437125486707702 result=nil
   error: errmeta: custom error
 stack traceback:
-	[C]: in function 'error'
+	[C]: in global 'error'
 	errmeta:1: in main chunk
 	[C]: in ?
-run errnil -> FAIL status=runtime error instr=0 mem=445125 peak=445253 rng=17511437125486707702 result=nil
+run errnil -> FAIL status=runtime error instr=0 mem=331235 peak=372396 rng=17511437125486707702 result=nil
   error: errnil: nil
 stack traceback:
-	[C]: in function 'error'
+	[C]: in global 'error'
 	errnil:1: in main chunk
 	[C]: in ?
-run errnum -> FAIL status=runtime error instr=0 mem=445675 peak=445803 rng=17511437125486707702 result=nil
+run errnum -> FAIL status=runtime error instr=0 mem=331927 peak=372396 rng=17511437125486707702 result=nil
   error: errnum: 42
 stack traceback:
-	[C]: in function 'error'
+	[C]: in global 'error'
 	errnum:1: in main chunk
 	[C]: in ?
-run errlevel -> FAIL status=runtime error instr=0 mem=447250 peak=447442 rng=17511437125486707702 result=nil
+run errlevel -> FAIL status=runtime error instr=0 mem=333700 peak=372396 rng=17511437125486707702 result=nil
   error: errlevel: errlevel:1: deep
 stack traceback:
-	[C]: in function 'error'
+	[C]: in global 'error'
 	errlevel:1: in upvalue 'f'
 	errlevel:1: in local 'g'
 	errlevel:1: in main chunk
 	[C]: in ?
-run errnested -> FAIL status=runtime error instr=0 mem=450287 peak=453487 rng=17511437125486707702 result=nil
+run errnested -> FAIL status=runtime error instr=0 mem=336439 peak=372396 rng=17511437125486707702 result=nil
   error: errnested: errnested:1: bottom
 stack traceback:
-	[C]: in function 'error'
+	[C]: in global 'error'
 	errnested:1: in upvalue 'r'
 	errnested:1: in upvalue 'r'
 	errnested:1: in upvalue 'r'
@@ -4401,270 +4394,270 @@ stack traceback:
 	errnested:1: in function <errnested:1>
 	(...tail calls...)
 	[C]: in ?
-run pcallok -> ok status=ok instr=0 mem=450861 peak=453487 rng=17511437125486707702 result=[false,"x",false,"table"]
-run results -> ok status=ok instr=0 mem=451228 peak=453487 rng=17511437125486707702 result=1
-run resultnone -> ok status=ok instr=0 mem=451554 peak=453487 rng=17511437125486707702 result=nil
-run resultfloat -> FAIL status=bad value instr=0 mem=452359 peak=453487 rng=17511437125486707702 result=nil
+run pcallok -> ok status=ok instr=0 mem=337117 peak=372396 rng=17511437125486707702 result=[false,"x",false,"table"]
+run results -> ok status=ok instr=0 mem=337548 peak=372396 rng=17511437125486707702 result=1
+run resultnone -> ok status=ok instr=0 mem=337962 peak=372396 rng=17511437125486707702 result=nil
+run resultfloat -> FAIL status=bad value instr=0 mem=338869 peak=372396 rng=17511437125486707702 result=nil
   error: resultfloat: result.a.b[2]: a float (only integers, strings, booleans and tables)
-run resultintfloat -> FAIL status=bad value instr=0 mem=452723 peak=453487 rng=17511437125486707702 result=nil
+run resultintfloat -> FAIL status=bad value instr=0 mem=339297 peak=372396 rng=17511437125486707702 result=nil
   error: resultintfloat: result: a float (only integers, strings, booleans and tables)
-run resultfunc -> FAIL status=bad value instr=0 mem=453282 peak=453487 rng=17511437125486707702 result=nil
+run resultfunc -> FAIL status=bad value instr=0 mem=339936 peak=372396 rng=17511437125486707702 result=nil
   error: resultfunc: result.f: a function (only integers, strings, booleans and tables)
-run resultcycle -> FAIL status=bad value instr=0 mem=453837 peak=454027 rng=17511437125486707702 result=nil
+run resultcycle -> FAIL status=bad value instr=0 mem=340547 peak=372396 rng=17511437125486707702 result=nil
   error: resultcycle: result.t: a cycle
-run resultshared -> ok status=ok instr=0 mem=454626 peak=454747 rng=17511437125486707702 result={a=[1],b=[1]}
-run resultmeta -> FAIL status=bad value instr=0 mem=455163 peak=455174 rng=17511437125486707702 result=nil
+run resultshared -> ok status=ok instr=0 mem=341413 peak=372396 rng=17511437125486707702 result={a=[1],b=[1]}
+run resultmeta -> FAIL status=bad value instr=0 mem=342046 peak=372396 rng=17511437125486707702 result=nil
   error: resultmeta: result: a table with a metatable
-run resultfloatkey -> FAIL status=bad value instr=0 mem=455694 peak=455719 rng=17511437125486707702 result=nil
+run resultfloatkey -> FAIL status=bad value instr=0 mem=342630 peak=372396 rng=17511437125486707702 result=nil
   error: resultfloatkey: result: a float key
-run resultboolkey -> FAIL status=bad value instr=0 mem=456208 peak=456221 rng=17511437125486707702 result=nil
+run resultboolkey -> FAIL status=bad value instr=0 mem=343173 peak=372396 rng=17511437125486707702 result=nil
   error: resultboolkey: result: a key that is not an integer or a string
-run resulttablekey -> FAIL status=bad value instr=0 mem=456760 peak=456760 rng=17511437125486707702 result=nil
+run resulttablekey -> FAIL status=bad value instr=0 mem=343770 peak=372396 rng=17511437125486707702 result=nil
   error: resulttablekey: result: a key that is not an integer or a string
-run resultdeep -> ok status=ok instr=0 mem=464361 peak=464361 rng=17511437125486707702 result=[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[{}]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
-run resultdeep2 -> FAIL status=bad value instr=0 mem=469897 peak=469897 rng=17511437125486707702 result=nil
+run resultdeep -> ok status=ok instr=0 mem=350062 peak=372396 rng=17511437125486707702 result=[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[{}]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+run resultdeep2 -> FAIL status=bad value instr=0 mem=354726 peak=372396 rng=17511437125486707702 result=nil
   error: resultdeep2: result[1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1]: nested too deep
-run resultdeep3 -> FAIL status=bad value instr=0 mem=476441 peak=476441 rng=17511437125486707702 result=nil
+run resultdeep3 -> FAIL status=bad value instr=0 mem=360566 peak=372396 rng=17511437125486707702 result=nil
   error: resultdeep3: result.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x: nested too deep
-run resultholes -> ok status=ok instr=0 mem=476955 peak=476955 rng=17511437125486707702 result={[1]=1,[3]=3}
-run resultarr -> ok status=ok instr=0 mem=478494 peak=478494 rng=17511437125486707702 result=[{},[1,2,{a="b"}],{[0]=1,[1]=2},{[1]=1,[3]=3},{[-1]="n"},"str\x00x\xff"]
-run resultkeysorder -> ok status=ok instr=0 mem=479786 peak=479786 rng=17511437125486707702 result={[-2]=4,[5]=2,[""]=5,["1x"]=7,_u=8,a=3,["a b"]=6,zz=1}
-run resultthread -> FAIL status=bad value instr=0 mem=480275 peak=480296 rng=17511437125486707702 result=nil
+run resultholes -> ok status=ok instr=0 mem=361095 peak=372396 rng=17511437125486707702 result={[1]=1,[3]=3}
+run resultarr -> ok status=ok instr=0 mem=362643 peak=372396 rng=17511437125486707702 result=[{},[1,2,{a="b"}],{[0]=1,[1]=2},{[1]=1,[3]=3},{[-1]="n"},"str\x00x\xff"]
+run resultkeysorder -> ok status=ok instr=0 mem=364131 peak=372396 rng=17511437125486707702 result={[-2]=4,[5]=2,[""]=5,["1x"]=7,_u=8,a=3,["a b"]=6,zz=1}
+run resultthread -> FAIL status=bad value instr=0 mem=364721 peak=372396 rng=17511437125486707702 result=nil
   error: resultthread: result[1]: a function (only integers, strings, booleans and tables)
-run budgetloop -> FAIL status=budget exceeded instr=2001000 mem=480761 peak=480953 rng=17511437125486707702 result=nil
+run budgetloop -> FAIL status=budget exceeded instr=2001000 mem=365215 peak=372396 rng=17511437125486707702 result=nil
   error: budgetloop: instruction budget exceeded (2000000 instructions)
 stack traceback:
 	budgetloop:1: in main chunk
 	[C]: in ?
-run budgetpcall -> FAIL status=budget exceeded instr=2002000 mem=481694 peak=481822 rng=17511437125486707702 result=nil
+run budgetpcall -> FAIL status=budget exceeded instr=2002000 mem=366188 peak=372396 rng=17511437125486707702 result=nil
   error: budgetpcall: instruction budget exceeded (2000000 instructions)
 stack traceback:
 	budgetpcall:1: in main chunk
 	[C]: in ?
-run budgetpcall2 -> FAIL status=budget exceeded instr=2002000 mem=482966 peak=483094 rng=17511437125486707702 result=nil
+run budgetpcall2 -> FAIL status=budget exceeded instr=2002000 mem=367412 peak=372396 rng=17511437125486707702 result=nil
   error: budgetpcall2: instruction budget exceeded (2000000 instructions)
 stack traceback:
 	budgetpcall2:1: in main chunk
 	[C]: in ?
-run usual -> ok status=ok instr=40000 mem=483604 peak=484005 rng=17511437125486707702 result=200010000
-run usual2 -> ok status=ok instr=40000 mem=484243 peak=484644 rng=17511437125486707702 result=200010000
-run cost -> ok status=ok instr=10 mem=484930 peak=484930 rng=17511437125486707702 result=[7,10,2000000]
-run costover -> FAIL status=budget exceeded instr=3000000 mem=485801 peak=485929 rng=17511437125486707702 result=nil
+run usual -> ok status=ok instr=40000 mem=368082 peak=372396 rng=17511437125486707702 result=200010000
+run usual2 -> ok status=ok instr=40000 mem=368753 peak=372396 rng=17511437125486707702 result=200010000
+run cost -> ok status=ok instr=10 mem=369655 peak=372396 rng=17511437125486707702 result=[7,10,2000000]
+run costover -> FAIL status=budget exceeded instr=3000000 mem=370686 peak=372396 rng=17511437125486707702 result=nil
   error: costover: costover:1: instruction budget exceeded (2000000 instructions)
 stack traceback:
 	[C]: in field 'cost'
 	costover:1: in main chunk
 	[C]: in ?
-run costpcall -> FAIL status=budget exceeded instr=3001000 mem=486757 peak=486885 rng=17511437125486707702 result=nil
+run costpcall -> FAIL status=budget exceeded instr=3001000 mem=371810 peak=372396 rng=17511437125486707702 result=nil
   error: costpcall: instruction budget exceeded (2000000 instructions)
 stack traceback:
 	costpcall:1: in main chunk
 	[C]: in ?
-run costmany -> ok status=ok instr=1602000 mem=487851 peak=488183 rng=17511437125486707702 result=[1602000,2000000]
-run costneg -> ok status=ok instr=0 mem=488477 peak=488477 rng=17511437125486707702 result=[7,0,2000000]
-run alloc -> ok status=ok instr=160000 mem=3150255 peak=3150255 rng=17511437125486707702 result=20000
-run strings -> ok status=ok instr=1000 mem=3178311 peak=3178311 rng=17511437125486707702 result=[200,"BCDEFGHIJKLMNOPQRSTUVWXYZABCDE","BCDEF","\xc3\xa9\xe4\xb8\xad",1,"abc,abc,abc",65,1]
-run tablelib -> ok status=ok instr=0 mem=3179898 peak=3179898 rng=17511437125486707702 result=["0,1,3,5,8",9,1,2,3]
-run mathlib -> ok status=ok instr=0 mem=3182052 peak=3182299 rng=17511437125486707702 result={[1]=2,[2]=3,[3]=3,[4]=9,[5]=2,[6]=3,[7]="integer",[8]="float",[10]=true,[11]=1,[12]=true,[13]=9223372036854775807,[14]=-9223372036854775808,[15]=true,[16]=3,[17]=-2,[18]=-4}
-run gsub -> ok status=ok instr=0 mem=3183401 peak=3183401 rng=17511437125486707702 result=["hell0 w0rld",4,"key","val"]
-run selectstuff -> FAIL status=bad value instr=0 mem=3185125 peak=3185125 rng=17511437125486707702 result=nil
+run costmany -> ok status=ok instr=1602000 mem=373014 peak=373148 rng=17511437125486707702 result=[1602000,2000000]
+run costneg -> ok status=ok instr=0 mem=373855 peak=373868 rng=17511437125486707702 result=[7,0,2000000]
+run alloc -> ok status=ok instr=160000 mem=2560358 peak=2560371 rng=17511437125486707702 result=20000
+run strings -> ok status=ok instr=1000 mem=2590066 peak=2590133 rng=17511437125486707702 result=[200,"BCDEFGHIJKLMNOPQRSTUVWXYZABCDE","BCDEF","\xc3\xa9\xe4\xb8\xad",1,"abc,abc,abc",65,1]
+run tablelib -> ok status=ok instr=0 mem=2591777 peak=2591799 rng=17511437125486707702 result=["0,1,3,5,8",9,1,2,3]
+run mathlib -> ok status=ok instr=0 mem=2594625 peak=2595266 rng=17511437125486707702 result={[1]=2,[2]=3,[3]=3,[4]=9,[5]=2,[6]=3,[7]="integer",[8]="float",[10]=true,[11]=1,[12]=true,[13]=9223372036854775807,[14]=-9223372036854775808,[15]=true,[16]=3,[17]=-2,[18]=-4}
+run gsub -> ok status=ok instr=0 mem=2596382 peak=2596487 rng=17511437125486707702 result=["hell0 w0rld",4,"key","val"]
+run selectstuff -> FAIL status=bad value instr=0 mem=2598446 peak=2598531 rng=17511437125486707702 result=nil
   error: selectstuff: result[10]: a float (only integers, strings, booleans and tables)
-run globals -> ok status=ok instr=0 mem=3185624 peak=3186392 rng=17511437125486707702 result=5
-run globals2 -> ok status=ok instr=0 mem=3186022 peak=3186392 rng=17511437125486707702 result=5
-run ipairs -> ok status=ok instr=0 mem=3187186 peak=3187398 rng=17511437125486707702 result=[8,10,12]
-load test_personality -> ok status=ok instr=0 mem=3191813 peak=3192371 rng=17511437125486707702
-init none -> ok status=ok instr=0 mem=3192160 peak=3192371 rng=17511437125486707702 result={hello="hello none"}
-step none -> ok status=ok instr=0 mem=3192408 peak=3192408 rng=10465407871100354571 result={last=785,steps=1,sum=785}
-step echo -> ok status=ok instr=0 mem=3193475 peak=3193475 rng=3419378616714001440 result={big=-9223372036854775808,empty={},emptya={},flag=false,list={[1]=0,[2]=10,[3]=20,[4]=30,[5]=40,[7]=7},name="a\x00b",units={[-3]="tower",[1007]="clubman"}}
-step keys -> ok status=ok instr=0 mem=3194398 peak=3194398 rng=14820093436037199925 result=[40,"alpha","zeta"]
-step big -> ok status=ok instr=0 mem=3222025 peak=3222025 rng=7774064181650846794 result={last=554,steps=4,sum=1584}
-step float -> FAIL status=bad value instr=0 mem=3222329 peak=3222329 rng=728034927264493663 result=nil
+run globals -> ok status=ok instr=0 mem=2599801 peak=2600577 rng=17511437125486707702 result=5
+run globals2 -> ok status=ok instr=0 mem=2600311 peak=2600577 rng=17511437125486707702 result=5
+run ipairs -> ok status=ok instr=0 mem=2601304 peak=2601493 rng=17511437125486707702 result=[8,10,12]
+load test_personality -> ok status=ok instr=0 mem=2607123 peak=2607644 rng=17511437125486707702
+init none -> ok status=ok instr=0 mem=2607446 peak=2607644 rng=17511437125486707702 result={hello="hello none"}
+step none -> ok status=ok instr=0 mem=2607675 peak=2607675 rng=10465407871100354571 result={last=785,steps=1,sum=785}
+step echo -> ok status=ok instr=0 mem=2608650 peak=2608663 rng=3419378616714001440 result={big=-9223372036854775808,empty={},emptya={},flag=false,list={[1]=0,[2]=10,[3]=20,[4]=30,[5]=40,[7]=7},name="a\x00b",units={[-3]="tower",[1007]="clubman"}}
+step keys -> ok status=ok instr=0 mem=2609454 peak=2609476 rng=14820093436037199925 result=[40,"alpha","zeta"]
+step big -> ok status=ok instr=0 mem=2632380 peak=2632380 rng=7774064181650846794 result={last=554,steps=4,sum=1584}
+step float -> FAIL status=bad value instr=0 mem=2632632 peak=2632632 rng=728034927264493663 result=nil
   error: test_personality.step: result.build.count: a float (only integers, strings, booleans and tables)
-step intfloat -> FAIL status=bad value instr=0 mem=3222489 peak=3222489 rng=12128749746587692148 result=nil
+step intfloat -> FAIL status=bad value instr=0 mem=2632776 peak=2632776 rng=12128749746587692148 result=nil
   error: test_personality.step: result.count: a float (only integers, strings, booleans and tables)
-step error -> FAIL status=runtime error instr=0 mem=3223023 peak=3223151 rng=5082720492201339017 result=nil
+step error -> FAIL status=runtime error instr=0 mem=2633281 peak=2633409 rng=5082720492201339017 result=nil
   error: test_personality.step: ai/test_personality.lua:23: step failed on purpose
 stack traceback:
-	[C]: in function 'error'
+	[C]: in global 'error'
 	ai/test_personality.lua:23: in function <ai/test_personality.lua:13>
 	[C]: in ?
-step loop -> FAIL status=budget exceeded instr=2001000 mem=3223409 peak=3223473 rng=16483435311524537502 result=nil
+step loop -> FAIL status=budget exceeded instr=2001000 mem=2633675 peak=2633739 rng=16483435311524537502 result=nil
   error: test_personality.step: instruction budget exceeded (2000000 instructions)
 stack traceback:
 	ai/test_personality.lua:25: in function <ai/test_personality.lua:13>
 	[C]: in ?
-step none -> ok status=ok instr=0 mem=3223897 peak=3223897 rng=9437406057138184371 result={last=220,steps=9,sum=3061}
-opt micro plain 1000 notfound -> ok status=ok instr=0 mem=3223927 peak=3223927 rng=9437406057138184371 result=nil
-opt step plain 0 found -> ok status=ok instr=0 mem=3224189 peak=3224189 rng=2391376802751831240 result={last=160,steps=10,sum=3221}
-opt step loop 20000 notfound -> FAIL status=budget exceeded instr=21000 mem=3224385 peak=3224513 rng=13792091622075029725 result=nil
+step none -> ok status=ok instr=0 mem=2634091 peak=2634091 rng=9437406057138184371 result={last=220,steps=9,sum=3061}
+opt micro plain 1000 notfound -> ok status=ok instr=0 mem=2634121 peak=2634121 rng=9437406057138184371 result=nil
+opt step plain 0 found -> ok status=ok instr=0 mem=2634367 peak=2634367 rng=2391376802751831240 result={last=160,steps=10,sum=3221}
+opt step loop 20000 notfound -> FAIL status=budget exceeded instr=21000 mem=2634571 peak=2634699 rng=13792091622075029725 result=nil
   error: test_personality.step: instruction budget exceeded (20000 instructions)
 stack traceback:
 	ai/test_personality.lua:25: in function <ai/test_personality.lua:13>
 	[C]: in ?
-opt init plain 0 found -> ok status=ok instr=0 mem=3224665 peak=3224665 rng=13792091622075029725 result={hello="hello none"}
-step plain -> ok status=ok instr=0 mem=3224977 peak=3224977 rng=6746062367688676594 result={last=261,steps=1,sum=261}
-save -> ok status=ok instr=0 mem=3224977 peak=3224977 rng=6746062367688676594
+opt init plain 0 found -> ok status=ok instr=0 mem=2634827 peak=2634827 rng=13792091622075029725 result={hello="hello none"}
+step plain -> ok status=ok instr=0 mem=2635120 peak=2635120 rng=6746062367688676594 result={last=261,steps=1,sum=261}
+save -> ok status=ok instr=0 mem=2635120 peak=2635120 rng=6746062367688676594
   bytes 87 45454c4d01f2d4b632fbd39e5d050300000004040000006e616d6504040000006e6f6e6504040000007365656e050100000003010000000000000003050100000000000004050000007374657073030100000000000000
-getmem -> ok status=ok instr=0 mem=3224977 peak=3224977 rng=6746062367688676594 result={name="none",seen=[261],steps=1}
-step badmemory -> ok status=ok instr=0 mem=3225225 peak=3225225 rng=18146777187011875079 result={last=972,steps=2,sum=1233}
-save -> FAIL status=bad value instr=0 mem=3225225 peak=3225225 rng=18146777187011875079
+getmem -> ok status=ok instr=0 mem=2635120 peak=2635120 rng=6746062367688676594 result={name="none",seen=[261],steps=1}
+step badmemory -> ok status=ok instr=0 mem=2635345 peak=2635345 rng=18146777187011875079 result={last=972,steps=2,sum=1233}
+save -> FAIL status=bad value instr=0 mem=2635345 peak=2635345 rng=18146777187011875079
   error: memory.bad: a float (only integers, strings, booleans and tables)
   bytes 0 
-getmem -> FAIL status=bad value instr=0 mem=3225225 peak=3225225 rng=18146777187011875079 result=nil
+getmem -> FAIL status=bad value instr=0 mem=2635345 peak=2635345 rng=18146777187011875079 result=nil
   error: memory.bad: a float (only integers, strings, booleans and tables)
-step fixmemory -> ok status=ok instr=0 mem=3225489 peak=3225489 rng=11100747932625521948 result={last=131,steps=3,sum=1364}
-save -> ok status=ok instr=0 mem=3225489 peak=3225489 rng=11100747932625521948
+step fixmemory -> ok status=ok instr=0 mem=2635579 peak=2635579 rng=11100747932625521948 result={last=131,steps=3,sum=1364}
+save -> ok status=ok instr=0 mem=2635579 peak=2635579 rng=11100747932625521948
   bytes 123 45454c4d011ccd4b316ec70d9a050300000004040000006e616d6504040000006e6f6e6504040000007365656e050300000003010000000000000003050100000000000003020000000000000003cc0300000000000003030000000000000003830000000000000004050000007374657073030300000000000000
-reload -> ok status=ok instr=0 mem=3231274 peak=3231541 rng=11100747932625521948
-step none -> ok status=ok instr=0 mem=3231506 peak=3231541 rng=4054718678239168817 result={last=863,steps=4,sum=2227}
-save -> ok status=ok instr=0 mem=3231506 peak=3231541 rng=4054718678239168817
+reload -> ok status=ok instr=0 mem=2642380 peak=2642547 rng=11100747932625521948
+step none -> ok status=ok instr=0 mem=2642596 peak=2642596 rng=4054718678239168817 result={last=863,steps=4,sum=2227}
+save -> ok status=ok instr=0 mem=2642596 peak=2642596 rng=4054718678239168817
   bytes 141 45454c4d01314996b027414538050300000004040000006e616d6504040000006e6f6e6504040000007365656e050400000003010000000000000003050100000000000003020000000000000003cc03000000000000030300000000000000038300000000000000030400000000000000035f0300000000000004050000007374657073030400000000000000
-restore 0 0 -> ok status=ok instr=0 mem=3231778 peak=3231778 rng=4054718678239168817
-step none -> ok status=ok instr=0 mem=3232074 peak=3232074 rng=15455433497562367302 result={last=231,steps=5,sum=2458}
-restore 1 10 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+restore 0 0 -> ok status=ok instr=0 mem=2642828 peak=2642828 rng=4054718678239168817
+step none -> ok status=ok instr=0 mem=2643080 peak=2643080 rng=15455433497562367302 result={last=231,steps=5,sum=2458}
+restore 1 10 -> FAIL status=bad value instr=0 mem=2643080 peak=2643080 rng=15455433497562367302
   error: memory: not an EELM version 1 block
-restore 1 5 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+restore 1 5 -> FAIL status=bad value instr=0 mem=2643080 peak=2643080 rng=15455433497562367302
   error: memory: not an EELM version 1 block
-restore 1 0 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+restore 1 0 -> FAIL status=bad value instr=0 mem=2643080 peak=2643080 rng=15455433497562367302
   error: memory: not an EELM version 1 block
-restore 2 0 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+restore 2 0 -> FAIL status=bad value instr=0 mem=2643080 peak=2643080 rng=15455433497562367302
   error: memory: bytes after the table
-restore 3 0 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+restore 3 0 -> FAIL status=bad value instr=0 mem=2643080 peak=2643080 rng=15455433497562367302
   error: memory: not an EELM version 1 block
-restore 3 4 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+restore 3 4 -> FAIL status=bad value instr=0 mem=2643080 peak=2643080 rng=15455433497562367302
   error: memory: not an EELM version 1 block
-restore 3 13 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+restore 3 13 -> FAIL status=bad value instr=0 mem=2643080 peak=2643080 rng=15455433497562367302
   error: memory: unknown tag
-restore 3 20 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+restore 3 20 -> FAIL status=bad value instr=0 mem=2643080 peak=2643080 rng=15455433497562367302
   error: memory: truncated string
-step none -> ok status=ok instr=0 mem=3232306 peak=3232306 rng=8409404243176014171 result={last=699,steps=6,sum=3157}
-save -> ok status=ok instr=0 mem=3232306 peak=3232306 rng=8409404243176014171
+step none -> ok status=ok instr=0 mem=2643296 peak=2643296 rng=8409404243176014171 result={last=699,steps=6,sum=3157}
+save -> ok status=ok instr=0 mem=2643296 peak=2643296 rng=8409404243176014171
   bytes 177 45454c4d015b412baf9a34b474050300000004040000006e616d6504040000006e6f6e6504040000007365656e050600000003010000000000000003050100000000000003020000000000000003cc03000000000000030300000000000000038300000000000000030400000000000000035f0300000000000003050000000000000003e70000000000000003060000000000000003bb0200000000000004050000007374657073030600000000000000
 rand 3411870698499120919
 rand 1847537496640338450
-step none -> ok status=ok instr=0 mem=3232538 peak=3232538 rng=5718060553726506394 result={last=776,steps=7,sum=3933}
+step none -> ok status=ok instr=0 mem=2643512 peak=2643512 rng=5718060553726506394 result={last=776,steps=7,sum=3933}
 new 12345 2000000 33554432 0 0 open=1
-new -> ok status=ok instr=0 mem=13011 peak=13059 rng=12345
-load test_personality -> ok status=ok instr=0 mem=20139 peak=20342 rng=12345
-restore 0 0 -> ok status=ok instr=0 mem=20443 peak=20443 rng=8409404243176014171
-step none -> ok status=ok instr=0 mem=20707 peak=20707 rng=1363374988789661040 result={last=920,steps=7,sum=4077}
-save -> ok status=ok instr=0 mem=20707 peak=20707 rng=1363374988789661040
+new -> ok status=ok instr=0 mem=13102 peak=13181 rng=12345
+load test_personality -> ok status=ok instr=0 mem=21226 peak=21357 rng=12345
+restore 0 0 -> ok status=ok instr=0 mem=21476 peak=21476 rng=8409404243176014171
+step none -> ok status=ok instr=0 mem=21710 peak=21710 rng=1363374988789661040 result={last=920,steps=7,sum=4077}
+save -> ok status=ok instr=0 mem=21710 peak=21710 rng=1363374988789661040
   bytes 195 45454c4d0170bd752e54aeeb12050300000004040000006e616d6504040000006e6f6e6504040000007365656e050700000003010000000000000003050100000000000003020000000000000003cc03000000000000030300000000000000038300000000000000030400000000000000035f0300000000000003050000000000000003e70000000000000003060000000000000003bb0200000000000003070000000000000003980300000000000004050000007374657073030700000000000000
 new 1 2000000 33554432 0 0 open=1
-new -> ok status=ok instr=0 mem=13011 peak=13059 rng=1
-step none -> FAIL status=no personality loaded instr=0 mem=13011 peak=13059 rng=1 result=nil
+new -> ok status=ok instr=0 mem=13102 peak=13181 rng=1
+step none -> FAIL status=no personality loaded instr=0 mem=13102 peak=13181 rng=1 result=nil
   error: no personality loaded
-init none -> FAIL status=no personality loaded instr=0 mem=13011 peak=13059 rng=1 result=nil
+init none -> FAIL status=no personality loaded instr=0 mem=13102 peak=13181 rng=1 result=nil
   error: no personality loaded
-opt step none 0 notfound -> FAIL status=no personality loaded instr=0 mem=13011 peak=13059 rng=1 result=nil
+opt step none 0 notfound -> FAIL status=no personality loaded instr=0 mem=13102 peak=13181 rng=1 result=nil
   error: no personality loaded
-reload -> FAIL status=no personality loaded instr=0 mem=13011 peak=13059 rng=1
+reload -> FAIL status=no personality loaded instr=0 mem=13102 peak=13181 rng=1
   error: no personality loaded
-load syntax_error -> FAIL status=syntax error instr=0 mem=14000 peak=14064 rng=1
+load syntax_error -> FAIL status=syntax error instr=0 mem=14147 peak=14211 rng=1
   error: syntax_error: ai/syntax_error.lua:3: unexpected symbol near 'return'
 stack traceback:
 	[C]: in function 'require'
 	[C]: in ?
-load no_step -> FAIL status=runtime error instr=0 mem=15015 peak=15079 rng=1
+load no_step -> FAIL status=runtime error instr=0 mem=15249 peak=15313 rng=1
   error: no_step: personality 'no_step': no step function
 stack traceback:
 	[C]: in ?
-load missing -> FAIL status=no such module instr=0 mem=15253 peak=15317 rng=1
+load missing -> FAIL status=no such module instr=0 mem=15503 peak=15567 rng=1
   error: missing: require: no module 'missing' (Data/ai/missing.lua)
 stack traceback:
 	[C]: in function 'require'
 	[C]: in ?
-load lib.util -> FAIL status=runtime error instr=0 mem=17659 peak=18064 rng=1
+load lib.util -> FAIL status=runtime error instr=0 mem=17749 peak=18038 rng=1
   error: lib.util: personality 'lib.util': no step function
 stack traceback:
 	[C]: in ?
-load bad/name -> FAIL status=no such module instr=0 mem=17990 peak=18064 rng=1
+load bad/name -> FAIL status=no such module instr=0 mem=18096 peak=18160 rng=1
   error: bad/name: require: 'bad/name' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
 stack traceback:
 	[C]: in function 'require'
 	[C]: in ?
-load test_personality -> ok status=ok instr=0 mem=18652 peak=22561 rng=1
-step none -> FAIL status=runtime error instr=0 mem=19235 peak=22561 rng=1 result=nil
+load test_personality -> ok status=ok instr=0 mem=24016 peak=24437 rng=1
+step none -> FAIL status=runtime error instr=0 mem=24554 peak=24682 rng=1 result=nil
   error: test_personality.step: ai/test_personality.lua:14: attempt to perform arithmetic on a nil value (field 'steps')
 stack traceback:
 	ai/test_personality.lua:14: in function <ai/test_personality.lua:13>
 	[C]: in ?
 new 5 2000000 33554432 0 6 open=1
-new -> ok status=ok instr=0 mem=13011 peak=13059 rng=5
-run noreader -> FAIL status=no such module instr=0 mem=14340 peak=14468 rng=5 result=nil
+new -> ok status=ok instr=0 mem=13102 peak=13181 rng=5
+run noreader -> FAIL status=no such module instr=0 mem=14534 peak=14662 rng=5 result=nil
   error: noreader: noreader:1: require: no module 'lib.util' (Data/ai/lib/util.lua)
 stack traceback:
-	[C]: in function 'require'
+	[C]: in global 'require'
 	noreader:1: in main chunk
 	[C]: in ?
-load test_personality -> FAIL status=no such module instr=0 mem=14648 peak=14712 rng=5
+load test_personality -> FAIL status=no such module instr=0 mem=14937 peak=15001 rng=5
   error: test_personality: require: no module 'test_personality' (Data/ai/test_personality.lua)
 stack traceback:
 	[C]: in function 'require'
 	[C]: in ?
 new 9 2000000 33554432 1 0 open=1
-new -> ok status=ok instr=0 mem=13011 peak=13059 rng=9
-load test_personality -> ok status=ok instr=0 mem=20139 peak=20342 rng=9
-init none -> ok status=ok instr=0 mem=20486 peak=20486 rng=9 result={hello="hello none"}
-step none -> ok status=ok instr=0 mem=20734 peak=20734 rng=11400714819323198494 result={last=229,steps=1,sum=229}
-step badmemory -> FAIL status=bad value instr=0 mem=20982 peak=20982 rng=4354685564936845363 result={last=107,steps=2,sum=336}
+new -> ok status=ok instr=0 mem=13102 peak=13181 rng=9
+load test_personality -> ok status=ok instr=0 mem=21226 peak=21357 rng=9
+init none -> ok status=ok instr=0 mem=21549 peak=21549 rng=9 result={hello="hello none"}
+step none -> ok status=ok instr=0 mem=21778 peak=21778 rng=11400714819323198494 result={last=229,steps=1,sum=229}
+step badmemory -> FAIL status=bad value instr=0 mem=22003 peak=22003 rng=4354685564936845363 result={last=107,steps=2,sum=336}
   error: memory.bad: a float (only integers, strings, booleans and tables)
-step fixmemory -> ok status=ok instr=0 mem=21246 peak=21246 rng=15755400384260043848 result={last=639,steps=3,sum=975}
-step none -> ok status=ok instr=0 mem=21478 peak=21478 rng=8709371129873690717 result={last=585,steps=4,sum=1560}
-opt step badmemory 0 found -> FAIL status=bad value instr=0 mem=16825 peak=21774 rng=1663341875487337586 result={last=602,steps=5,sum=2162}
+step fixmemory -> ok status=ok instr=0 mem=22237 peak=22237 rng=15755400384260043848 result={last=639,steps=3,sum=975}
+step none -> ok status=ok instr=0 mem=22453 peak=22453 rng=8709371129873690717 result={last=585,steps=4,sum=1560}
+opt step badmemory 0 found -> FAIL status=bad value instr=0 mem=22705 peak=22705 rng=1663341875487337586 result={last=602,steps=5,sum=2162}
   error: memory.bad: a float (only integers, strings, booleans and tables)
 new 3 100000 33554432 0 1 open=1
-new -> ok status=ok instr=0 mem=13117 peak=13165 rng=3
-run small -> ok status=ok instr=40000 mem=13843 peak=14244 rng=3 result=200010000
-run small2 -> FAIL status=budget exceeded instr=101000 mem=14628 peak=14692 rng=3 result=nil
+new -> ok status=ok instr=0 mem=13208 peak=13287 rng=3
+run small -> ok status=ok instr=40000 mem=13966 peak=14223 rng=3 result=200010000
+run small2 -> FAIL status=budget exceeded instr=101000 mem=14734 peak=14798 rng=3 result=nil
   error: small2: instruction budget exceeded (100000 instructions)
 stack traceback:
 	small2:1: in main chunk
 	[C]: in ?
-run small3 -> ok status=ok instr=80000 mem=15357 peak=15668 rng=3 result=1
-run small4 -> FAIL status=budget exceeded instr=104000 mem=16387 peak=16515 rng=3 result=nil
+run small3 -> ok status=ok instr=80000 mem=15543 peak=15678 rng=3 result=1
+run small4 -> FAIL status=budget exceeded instr=104000 mem=16677 peak=16805 rng=3 result=nil
   error: small4: small4:1: instruction budget exceeded (100000 instructions)
 stack traceback:
 	[C]: in field 'cost'
 	small4:1: in main chunk
 	[C]: in ?
-load test_personality -> ok status=ok instr=0 mem=19600 peak=21618 rng=3
-init none -> ok status=ok instr=0 mem=19947 peak=21618 rng=3 result={hello="hello none"}
-step loop -> FAIL status=budget exceeded instr=101000 mem=20367 peak=21618 rng=11400714819323198488 result=nil
+load test_personality -> ok status=ok instr=0 mem=24765 peak=24896 rng=3
+init none -> ok status=ok instr=0 mem=22986 peak=24909 rng=3 result={hello="hello none"}
+step loop -> FAIL status=budget exceeded instr=101000 mem=23350 peak=24909 rng=11400714819323198488 result=nil
   error: test_personality.step: instruction budget exceeded (100000 instructions)
 stack traceback:
 	ai/test_personality.lua:25: in function <ai/test_personality.lua:13>
 	[C]: in ?
-step none -> ok status=ok instr=0 mem=20679 peak=21618 rng=4354685564936845357 result={last=562,steps=2,sum=616}
+step none -> ok status=ok instr=0 mem=23703 peak=24909 rng=4354685564936845357 result={last=562,steps=2,sum=616}
 new 1 1000000000 2097152 0 0 open=1
-new -> ok status=ok instr=0 mem=13011 peak=13059 rng=1
-run memlimit -> FAIL status=out of memory instr=108000 mem=2097038 peak=2097102 rng=1 result=nil
+new -> ok status=ok instr=0 mem=13102 peak=13181 rng=1
+run memlimit -> FAIL status=out of memory instr=146000 mem=2097080 peak=2097144 rng=1 result=nil
   error: memlimit: not enough memory
-run memrep -> FAIL status=out of memory instr=0 mem=13193 peak=2097134 rng=1 result=nil
+run memrep -> FAIL status=out of memory instr=0 mem=13308 peak=2097144 rng=1 result=nil
   error: memrep: not enough memory
-run memok -> ok status=ok instr=0 mem=14761 peak=2097134 rng=1 result=1000
-run memstrings -> FAIL status=out of memory instr=145000 mem=2097084 peak=2097150 rng=1 result=nil
+run memok -> ok status=ok instr=0 mem=14972 peak=2097144 rng=1 result=1000
+run memstrings -> FAIL status=out of memory instr=158000 mem=2096986 peak=2097150 rng=1 result=nil
   error: memstrings: not enough memory
-run memafter -> ok status=ok instr=0 mem=142010 peak=2097150 rng=1 result=1
-load test_personality -> ok status=ok instr=0 mem=149074 peak=2097150 rng=1
-init none -> ok status=ok instr=0 mem=149421 peak=2097150 rng=1 result={hello="hello none"}
-step none -> ok status=ok instr=0 mem=149669 peak=2097150 rng=11400714819323198486 result={last=466,steps=1,sum=466}
+run memafter -> ok status=ok instr=0 mem=142325 peak=2097150 rng=1 result=1
+load test_personality -> ok status=ok instr=0 mem=150413 peak=2097150 rng=1
+init none -> ok status=ok instr=0 mem=150736 peak=2097150 rng=1 result={hello="hello none"}
+step none -> ok status=ok instr=0 mem=150965 peak=2097150 rng=11400714819323198486 result={last=466,steps=1,sum=466}
 new 1 1000000000 300000 0 0 open=1
-new -> ok status=ok instr=0 mem=13011 peak=13059 rng=1
-run memtiny -> FAIL status=out of memory instr=32000 mem=274993 peak=275950 rng=1 result=nil
+new -> ok status=ok instr=0 mem=13102 peak=13181 rng=1
+run memtiny -> FAIL status=out of memory instr=32000 mem=160351 peak=235137 rng=1 result=nil
   error: memtiny: not enough memory
-load test_personality -> ok status=ok instr=0 mem=282123 peak=282326 rng=1
+load test_personality -> ok status=ok instr=0 mem=168477 peak=235137 rng=1
 new 1 1000000000 40000 0 0 open=1
-new -> ok status=ok instr=0 mem=13011 peak=13059 rng=1
-run memsetup -> ok status=ok instr=0 mem=13369 peak=13409 rng=1 result=1
+new -> ok status=ok instr=0 mem=13102 peak=13181 rng=1
+run memsetup -> ok status=ok instr=0 mem=13524 peak=13564 rng=1 result=1
 new 1 1000000000 4000 0 0 open=0
-new -> FAIL status=no Lua state instr=0 mem=0 peak=3982 rng=1
+new -> FAIL status=no Lua state instr=0 mem=0 peak=3995 rng=1
   error: lua_newstate failed (memory limit too small?)
-run memnone -> FAIL status=no Lua state instr=0 mem=0 peak=3982 rng=1 result=nil
+run memnone -> FAIL status=no Lua state instr=0 mem=0 peak=3995 rng=1 result=nil
   error: no Lua state
 new 1 1000000000 22000 0 1 open=1
-new -> ok status=ok instr=0 mem=13117 peak=13165 rng=1
-run memjustabout -> ok status=ok instr=0 mem=13479 peak=13519 rng=1 result=1
+new -> ok status=ok instr=0 mem=13208 peak=13287 rng=1
+run memjustabout -> ok status=ok instr=0 mem=13634 peak=13674 rng=1 result=1
 status 0 ok
 status 1 no Lua state
 status 2 no personality loaded
