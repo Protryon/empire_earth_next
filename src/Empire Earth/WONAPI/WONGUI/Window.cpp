@@ -197,12 +197,10 @@ SmartPtr<Font> Window::GetFont(const FontDescriptor &theDescriptor)
 {
 	return (Font*)ee_won_win_get_font(this->mWinObj.p, this->mFontMap.p, (intptr_t)&theDescriptor, (const uint8_t*)theDescriptor.mFace.data(), theDescriptor.mFace.size(), theDescriptor.mStyle, theDescriptor.mSize);
 }
-Window::FontMap::~FontMap()
-{
-	for(intptr_t aFont; (aFont = ee_won_fontmap_pop(this->p)) >= 0; )
-		if(aFont!=0) ((Font*)aFont)->Release();
-	ee_won_fontmap_free(this->p);
-}
+// the map's reference to a font given back
+static void ReleaseFont(intptr_t inFont) { ((Font*)inFont)->Release(); }
+// Gives each cached font's reference back and frees the map (fontmap.rs)
+Window::FontMap::~FontMap() { ee_won_fontmap_free_releasing(this->p, ReleaseFont); }
 
 // Sets the window title, updating the platform window when open
 void Window::SetTitle(const GUIString &theTitle)
