@@ -2674,7 +2674,6 @@ pub enum EeGameCpp {
     TkCurrentPlayer,
     TkPlayerIndex,
     TkPlId,
-    TkEpochTitle,
     TkPostShowEpochName,
     TkMainGameForm,
     TkRefreshGroup,

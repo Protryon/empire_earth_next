@@ -2473,7 +2473,6 @@ enum class EeGameCpp : uint32_t {
   TkCurrentPlayer,
   TkPlayerIndex,
   TkPlId,
-  TkEpochTitle,
   TkPostShowEpochName,
   TkMainGameForm,
   TkRefreshGroup,
