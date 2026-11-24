@@ -15,6 +15,7 @@
 pub mod capture;
 pub mod capture_fold;
 pub mod capture_units;
+pub mod captured;
 pub mod cg_goal;
 pub mod cg_query;
 pub mod cg_world;
