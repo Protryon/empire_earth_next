@@ -633,10 +633,13 @@ inline void WonStringSink(void* inContext, const uint8_t* inBytes, size_t inLeng
 class RoutingOp : public AsyncOp {
 public:
     RoutingOp(RoutingConnection* inConnection, RoutingOpType inType); // a connection-less op with NULL
-    //2c7d20: in blocking mode finishes BlockMode_NotSupported (100009), else SendRequest
-    virtual void RunHook() { if (this->GetMode() == OP_MODE_BLOCK) this->Finish(100009); else this->SendRequest(); }
-    // the op's request (Rust's), sent on the connection; added to its list when it waits for a reply
-    virtual void SendRequest() { ee_won_routeop_send(this->mRust, static_cast<RefCount*>(this)); }
+    //2c7d20: in blocking mode finishes BlockMode_NotSupported (100009), else the op's request (Rust's) sent on the
+    // connection, the op added to its list when it waits for a reply. A firewall check (the original's
+    // RoutingDetectFirewallOp, whose class went in R6 WON lobby and network round 36) listens first when asked and
+    // closes its listening socket in the clean-up (routecpp.rs); its settings are EE_WON_RTF_LISTEN_PORT,
+    // EE_WON_RTF_MAX_WAIT and EE_WON_RTF_DO_LISTEN
+    virtual void RunHook() { ee_won_routeop_run(this->mRust, static_cast<RefCount*>(this)); }
+    virtual void CleanupHook() { ee_won_routeop_cleanup(this->mRust); }
     virtual RoutingOpType GetType() const { return (RoutingOpType)ee_won_routeop_type(this->mRust); }
     RoutingConnection* GetConnection() { return this->mConnection.get(); }
 

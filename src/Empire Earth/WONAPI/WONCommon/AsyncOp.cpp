@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONTimerThread.h"
-#include "ee/wonapi/WONRoutingDetectFirewallOp.h"
 #include <string.h>
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
@@ -179,9 +178,7 @@ static RoutingConnection* RouteConn(void* inConn)
 { return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(inConn))); }
 static void* CoreNewRouteOp(void* inConn,int32_t inType)
 {
-    RoutingConnection* aConn=inConn!=NULL ? RouteConn(inConn) : NULL;
-    RoutingOp* anOp=inType==RoutingOp_DetectFirewall ? new RoutingDetectFirewallOp(aConn) : new RoutingOp(aConn,inType);
-    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(new RoutingOp(inConn!=NULL ? RouteConn(inConn) : NULL,inType)));
 }
 static void* CoreRouteVirtual(void* inConn,int32_t inWhich,void* inOp,uint8_t inType)
 {

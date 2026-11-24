@@ -331,7 +331,7 @@ fn new_udp_recv_op(addr: *const EeWonIpAddr) -> *mut c_void {
     // SAFETY: the table's contract
     core().and_then(|c| c.new_udp_recv_op).map_or(null_mut(), |h| unsafe { h(addr) })
 }
-fn bind_local(s: *mut c_void, port: u16) -> c_long {
+pub(crate) fn bind_local(s: *mut c_void, port: u16) -> c_long {
     // SAFETY: the table's contract
     core().and_then(|c| c.socket_bind_local).map_or(WS_NONE as c_long, |h| unsafe { h(s, port, false) })
 }
@@ -363,7 +363,7 @@ unsafe extern "C" fn n_op_timeout(o: *mut c_void) -> u32 {
 unsafe extern "C" fn n_op_timeout_long(o: *mut c_void) -> c_long {
     op(o).map_or(0, EeWonAsyncOp::timeout) as c_long
 }
-unsafe extern "C" fn n_op_mode(o: *mut c_void) -> i32 {
+pub(crate) unsafe extern "C" fn n_op_mode(o: *mut c_void) -> i32 {
     op(o).map_or(0, EeWonAsyncOp::run_mode)
 }
 pub(crate) unsafe extern "C" fn n_op_completion(o: *mut c_void) -> *mut c_void {
