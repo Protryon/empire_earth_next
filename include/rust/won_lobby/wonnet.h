@@ -28,8 +28,6 @@ enum class EeWonNetOp {
   Lock8Enter,
   /// `mLock8->Leave()`
   Lock8Leave,
-  /// `mLobbyWindow != NULL`
-  LobbyWindowExists,
   /// `mLobbyWindow->Close(true)`
   LobbyWindowClose,
   /// `mLobbyWindow->mClosed`
@@ -40,28 +38,16 @@ enum class EeWonNetOp {
   LobbyWindowVirtual18,
   /// `delete mLobby`
   LobbyDelete,
-  /// `mLobby != NULL`
-  LobbyExists,
   /// `mLobby->Pump((unsigned long)a, 0)`
   LobbyPump,
-  /// `mCancelled` / `mCancelled = a`
-  CancelledGet,
-  CancelledSet,
-  /// `mJoinRoomCancelled` / `mJoinRoomCancelled = a`
-  JoinRoomCancelledGet,
-  JoinRoomCancelledSet,
   /// `gWonNet != NULL`
   WonNetExists,
   /// `gWonClientId = a`
   ClientIdSet,
-  /// `mRouting.get() != NULL`
-  RoutingExists,
-  /// `mRouting = new SmartRoutingConnection`
+  /// `new SmartRoutingConnection` (a `RefCount*`; the object's `routing` holds it)
   RoutingNew,
   /// `mRouting->Kill()`
   RoutingKill,
-  /// `mRouting = NULL`
-  RoutingClear,
   /// `mRouting->SetAuth(mUser, AUTH_TYPE_PERSISTENT)`
   RoutingSetAuth,
   /// `mRouting->SetConnectCompletion(` a gWonNet completion of call `a` `)`
@@ -237,14 +223,15 @@ enum class EeWonNetOp {
   KeyValid,
   /// `CDKey(kWonProductName).SaveToRegistry()`
   KeySave,
-  /// `mLoginOp = new GetCertOp(mUser)`, its completion (call a), `SetCreateAccount(false)`, `RunAsync(15000)`
+  /// `new GetCertOp(mUser)` (a `RefCount*`, held as `login_op`), its completion (call a), `SetCreateAccount(false)`, `RunAsync(15000)`
   LoginOpNew,
   LoginOpSetCompletion,
   LoginOpNoCreate,
   LoginOpRun,
   /// `a == mLoginOp.get()`
   LoginOpIs,
-  /// `mDirOp = RustServerOp::NewGetDir(mDirServers.get(), kWonProductDirectory, 0x703003a)`, its completion
+  /// `RustServerOp::NewGetDir(mDirServers.get(), kWonProductDirectory, 0x703003a)` (held as `dir_op`), its
+  /// completion
   /// (call a), `RunAsync(15000)`
   DirOpNew,
   DirOpSetCompletion,
@@ -270,7 +257,7 @@ enum class EeWonNetOp {
   FileOpen,
   FileGets,
   FileClose,
-  /// `mDirServers = new ServerContext`
+  /// `new ServerContext` (held as `dir_servers`)
   DirServersNew,
   /// `mDirServers->AddAddress(IPAddr(std::string((const char*)a)))`
   DirServersAdd,
@@ -283,7 +270,7 @@ enum class EeWonNetOp {
   UpdateOpNewsletter,
   UpdateOpRun,
   UpdateOpRelease,
-  /// `mAccountOp = RustServerOp::NewGetAccount(mAuthServers, mUser)`, its completion (call a), `RunAsync(15000)`,
+  /// `RustServerOp::NewGetAccount(mAuthServers, mUser)` (held as `account_op`), its completion (call a), `RunAsync(15000)`,
   /// `SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1)`
   AccountOpNew,
   AccountOpSetCompletion,
@@ -311,6 +298,12 @@ enum class EeWonNetOp {
   InfoSetHost,
   InfoSetFlags,
   InfoSetRoom,
+  /// `((RefCount*)a)->AddRef()` / `((RefCount*)a)->Release()`: a slot's reference (the members' SmartPtr)
+  RefAdd,
+  RefRelease,
+  /// `new DirList` (the server list, `servers`) / `delete (DirList*)a`
+  ServersNew,
+  ServersDelete,
 };
 
 /// The C++ forwards' calls: `(obj, call, a, b, c, d)`; the completions' too (an `AsyncOp*` in `a`).
@@ -399,6 +392,28 @@ using EeWonNetHostFn = ptrdiff_t(*)(void *cpp,
                                     ptrdiff_t c,
                                     ptrdiff_t d);
 
+/// The C++ objects EEWonNet held as members (+0x004..+0x189), the Rust object's slots; the host reads them through
+/// `ee_won_wonnet_objects`. Each pointer is the object as its own class (`routing` a `SmartRoutingConnection*`
+/// as a `RefCount*`, the locks `TSCriticalSection*`); the counted ones (routing, dir_servers, the ops) hold a
+/// reference, as the SmartPtr members did. The flags are written by the cancel boxes through their address.
+struct EeWonNetObjects {
+  void *lock;
+  void *lock8;
+  void *routing;
+  void *dir_servers;
+  void *auth_servers;
+  void *lobby;
+  void *lobby_window;
+  void *user;
+  void *servers;
+  void *motd_op;
+  void *login_op;
+  void *dir_op;
+  void *account_op;
+  bool cancelled;
+  bool join_room_cancelled;
+};
+
 extern "C" {
 
 /// Sets the host (EEWonNet.cpp at static initialisation, a driver before its first call).
@@ -426,6 +441,12 @@ EeWonNet *ee_won_wonnet_new(void *cpp);
 /// # Safety
 /// `obj` from `ee_won_wonnet_new`, not used again.
 void ee_won_wonnet_free(EeWonNet *obj);
+
+/// The object's C++ objects (the host's and the cancel boxes' view of the slots; valid while the object lives).
+///
+/// # Safety
+/// `obj` from `ee_won_wonnet_new` (or NULL: NULL).
+EeWonNetObjects *ee_won_wonnet_objects(const EeWonNet *obj);
 
 /// One call on the object.
 ///

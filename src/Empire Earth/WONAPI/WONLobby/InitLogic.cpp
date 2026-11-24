@@ -81,7 +81,7 @@ static const std::wstring* InitDirPaths(LobbyConfig* inConfig)
 static RustServerOp* R(intptr_t a) { return static_cast<RustServerOp*>(reinterpret_cast<AsyncOp*>(a)); }
 static GUIString* T(intptr_t a) { return reinterpret_cast<GUIString*>(a); }
 static ServerContext* SC(intptr_t a) { return reinterpret_cast<ServerContext*>(a); }
-static DetectFirewallOp* FW(intptr_t a) { return static_cast<DetectFirewallOp*>(reinterpret_cast<AsyncOp*>(a)); }
+static RustServerOp* FW(intptr_t a) { return static_cast<RustServerOp*>(reinterpret_cast<AsyncOp*>(a)); }
 // a new object with one reference the Rust gives back (the original's SmartPtr local)
 static intptr_t Held(AsyncOp* inOp)
 {
@@ -182,7 +182,7 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::AcceptOpNewFirewall: aLogic->mAcceptOp = new SocketOp(EeWonCoreSocketOp::Accept, aLogic->mFirewallSocket.get()); return 0;
     case O::AcceptOpRun: aLogic->RunOp(aLogic->mAcceptOp.get(), new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion, aLogic), gLobbyAcceptTimeout); return 0;
     case O::SetFirewallAddress: aLogic->mFirewallAddress = FW(a)->GetCurAddr(); return 0;
-    case O::SetPublicAddress: LobbySetPublicAddress(FW(a)->GetPublicAddr()); return 0;
+    case O::SetPublicAddress: LobbySetPublicAddress(FW(a)->AddrOf(EE_WON_FWOP_PUBLIC_ADDR)); return 0;
     case O::HasFirewallSocket: return aLogic->mFirewallSocket.get() != NULL;
     case O::DnsTestReady: return config != NULL && !config->mDirServers.empty();
     case O::DnsOpNew: return Held(NewDnsTestOp(config->mDirServers.front()));
@@ -201,10 +201,10 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     case O::VersionCheckNew: return Held(RustServerOp::NewRequest(ee_won_reqop_version_check(B(config->mProductName), config->mProductName.size(), B(config->mLanguage), config->mLanguage.size(), B(config->mVersion), config->mVersion.size()), LobbyGetPatchServers()));
     case O::FirewallServers: return (intptr_t)LobbyGetFirewallDetectServers();
     case O::ResetFirewallTest: LobbyResetFirewallTest(); return 0;
-    case O::FirewallOpNew: return Held(new DetectFirewallOp(SC(a)));
-    case O::FirewallSetListenPort: FW(a)->SetListenPort(LobbyGetLobbyPort()); return 0;
-    case O::FirewallSetDoListen: FW(a)->SetDoListen(b != 0); return 0;
-    case O::FirewallSetWaitForConnect: FW(a)->SetWaitForConnect(b != 0); return 0;
+    case O::FirewallOpNew: return Held(RustServerOp::NewFirewall(SC(a)));
+    case O::FirewallSetListenPort: FW(a)->SetNum(EE_WON_FWOP_LISTEN_PORT, LobbyGetLobbyPort()); return 0;
+    case O::FirewallSetDoListen: FW(a)->SetNum(EE_WON_FWOP_DO_LISTEN, b != 0); return 0;
+    case O::FirewallSetWaitForConnect: FW(a)->SetNum(EE_WON_FWOP_WAIT_FOR_CONNECT, b != 0); return 0;
     case O::FirewallSocketNew: aLogic->mFirewallSocket = new AsyncSocket(0); return 0;
     case O::FirewallBind: return (int)aLogic->mFirewallSocket->Fn2B0D90(LobbyGetLobbyPort(), 0);
     case O::FirewallListen: return (int)aLogic->mFirewallSocket->Listen(1000);

@@ -2,6 +2,8 @@
 #ifndef EE_WONAPI_WONLOBBYLOGIC_H
 #define EE_WONAPI_WONLOBBYLOGIC_H
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONLobbyGuard.h"
+#include "rust/won_lobby/logicmgr.h"
 namespace WONAPI {
 class ComponentConfig;
 class ComponentEvent;
@@ -26,19 +28,25 @@ public:
     AsyncOpTracker mTracker; // 0x08, 0x34 bytes
     bool mKilled; // 0x3c
 };
-// LobbyLogicMgr (0x0c bytes, no vtable): owns the logic modules and dispatches events to them.
+// LobbyLogicMgr (0x0c bytes, no vtable): owns the logic modules and dispatches events to them. Its list and every
+// method are a Rust object since R6 WON lobby and network round 35 (rust/crates/ee_won_lobby/src/logicmgr.rs; the
+// host is LobbyLogicMgr.cpp's): these forward; a logic's exception comes back and is thrown again here.
 class LobbyLogicMgr {
+    intptr_t Call(EeWonLogicMgrCall c, intptr_t a = 0, intptr_t b = 0) { return WonRethrow(ee_won_logicmgr_call(this->mRust, c, a, b)); }
 public:
     LobbyLogicMgr();
-    void AddLogic(LobbyLogic*); // 0x7e5c10; appends to the logic list
-    void Init(ComponentConfig*);
-    void Kill();
-    void DispatchControlEvent(int);
-    void DispatchComponentEvent(ComponentEvent*);
-    void DispatchTimerEvent(); // 0x7e5e30; calls Reset (slot 0x0c) on every logic
-    void HandleComponentEvent(ComponentEvent*);
-    typedef std::list<SmartPtr<LobbyLogic> > LogicList;
-    LogicList mLogicList; // 0x00 allocator, 0x04 head, 0x08 count
+    ~LobbyLogicMgr();
+    void AddLogic(LobbyLogic* l) { this->Call(EeWonLogicMgrCall::AddLogic, (intptr_t)l); } // 0x7e5c10
+    void Init(ComponentConfig* c) { this->Call(EeWonLogicMgrCall::Init, (intptr_t)c); }
+    void Kill() { this->Call(EeWonLogicMgrCall::Kill); }
+    void DispatchControlEvent(int i) { this->Call(EeWonLogicMgrCall::DispatchControlEvent, i); }
+    void DispatchComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::DispatchComponentEvent, (intptr_t)e); }
+    void DispatchTimerEvent() { this->Call(EeWonLogicMgrCall::DispatchTimerEvent); } // 0x7e5e30; Reset (slot 0x0c)
+    void HandleComponentEvent(ComponentEvent* e); // the event's type passed with it (LobbyLogicMgr.cpp)
+    EeWonLogicMgr* mRust; // owned
+private:
+    LobbyLogicMgr(const LobbyLogicMgr&);
+    LobbyLogicMgr& operator=(const LobbyLogicMgr&);
 };
 
 // RTTI: NetLogic > LobbyLogic > RefCount; vtable 0x855974 adds 14 pure virtual slots.

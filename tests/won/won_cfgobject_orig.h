@@ -5,7 +5,7 @@
 #ifndef EE_TESTS_WON_CFGOBJECT_ORIG_H
 #define EE_TESTS_WON_CFGOBJECT_ORIG_H
 #include "ee/wonapi/WONLobbyConfig.h"
-#include "ee/wonapi/WONConfigValue.h"
+#include "won_cfgvalue_orig.h"
 #include "rust/won_net/configobj.h"
 namespace WONAPI {
 class OrigConfigObject;

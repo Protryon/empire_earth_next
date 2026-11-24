@@ -188,7 +188,7 @@ static const bool sWonNetHostSet = (ee_won_wonnet_set_host(WonNetHost), true);
 
 // the class: the C++ objects here, every method a forward to the Rust object (DEAD-IN-AOC: base exe 0x4c55df ctor,
 // 0x4c5924 dtor; nothing creates gWonNet in AoC)
-EEWonNet::EEWonNet() : mRust(ee_won_wonnet_new(this)), mLock(NULL), mLock8(NULL), mAuthServers(NULL), mLobby(NULL), mLobbyWindow(NULL), mUser(NULL), mCancelled(false), mJoinRoomCancelled(false) { ee_won_wonnet_call(this->mRust, Call::Construct, 0, 0, 0); }
+EEWonNet::EEWonNet() : mRust(ee_won_wonnet_new(this)) { ee_won_wonnet_call(this->mRust, Call::Construct, 0, 0, 0); }
 EEWonNet::~EEWonNet() { ee_won_wonnet_free(this->mRust); }
 void EEWonNet::ConnectToLobby() { ee_won_wonnet_call(this->mRust, Call::ConnectToLobby, 0, 0, 0); }
 void EEWonNet::FnCFFDD(long inArg) { ee_won_wonnet_call(this->mRust, Call::FnCFFDD, inArg, 0, 0); }

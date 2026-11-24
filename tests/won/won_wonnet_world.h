@@ -245,7 +245,7 @@ class SmartRoutingConnection : public RefCount {
 public:
     SmartModel* mModel = new SmartModel;
     PlatMutexW mLock = {0};
-    ~SmartRoutingConnection() { delete mModel; }
+    ~SmartRoutingConnection() { Log("routing deleted"); delete mModel; }
     PlatMutexW* GetDataLock() { return &mLock; }
     void SetAuth(AuthContext*, int t) { Log("routing auth " + N(t)); }
     void SetConnectCompletion(CompletionBase<AsyncOpPtr>* c) { Log("routing connect completion " + Keep(c)); }
@@ -452,7 +452,7 @@ struct CDKey {
     bool LoadFromRegistry() { Log("key load"); mValid = sK.mKeyValid; return true; }
     void SaveToRegistry() { Log("key save"); }
 };
-struct GetCertOp : AsyncOp { explicit GetCertOp(AuthContext*) { Log("cert op new"); } void SetCreateAccount(bool b) { Log("cert op create " + N(b)); } };
+struct GetCertOp : AsyncOp { explicit GetCertOp(AuthContext*) { Log("cert op new"); } ~GetCertOp() { Log("cert op deleted"); } void SetCreateAccount(bool b) { Log("cert op create " + N(b)); } };
 struct DirEntity : RefCount { std::wstring mName; };
 // the original's list, and the reads the host makes of the Rust list since R6 WON round 34 (ee/EEWonNet.h DirList)
 struct DirEntityList : std::list<SmartPtr<DirEntity> > {
@@ -460,8 +460,13 @@ struct DirEntityList : std::list<SmartPtr<DirEntity> > {
     void Keep(const DirEntityList& f, size_t i) { this->push_back(*std::next(f.begin(), i)); }
 };
 enum { EE_WON_REQOP_DIR_LIST = 1, EE_WON_REQOP_ACCOUNT_CLEAR_NEWSLETTERS = 2, EE_WON_REQOP_ACCOUNT_NEWSLETTER = 3, EE_WON_REQOP_ACCOUNT_EMAIL = 4 };
-struct ServerContext : RefCount { void AddAddress(const IPAddr& a) { Log("dir servers add " + a.mText); } };
+struct ServerContext : RefCount {
+    ~ServerContext() { Log("dir servers deleted"); }
+    void AddAddress(const IPAddr& a) { Log("dir servers add " + a.mText); }
+};
 struct RustServerOp : AsyncOp {
+    // (the ops' lifetimes: the front end's members and slots hold them; R6 WON lobby and network round 35)
+    ~RustServerOp() { Log("server op deleted"); }
     static RustServerOp* NewGetDir(ServerContext* c, const wchar_t* d, long f) { Log("dir op new " + N(c != NULL) + " " + WS(d) + " " + N(f)); return new RustServerOp; }
     static RustServerOp* NewUpdateAccount(ServerContext*, AuthContext*, const std::wstring& n, const std::string& p) { Log("update op new " + WS(n) + " " + p); return new RustServerOp; }
     static RustServerOp* NewGetAccount(ServerContext*, AuthContext*) { Log("account op new"); return new RustServerOp; }

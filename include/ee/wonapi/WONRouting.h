@@ -820,6 +820,10 @@ protected:
 class RustServerOp : public ServerOp {
 public:
     explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; its length field and time limits, no auth
+    RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj); // and the init's members (hostbase.rs)
+    // DetectFirewallOp(servers) (fwhost.rs): the public address is AddrOf(EE_WON_FWOP_PUBLIC_ADDR), port 0
+    static RustServerOp* NewFirewall(ServerContext* inContext)
+    { return new RustServerOp(ee_won_hostop_firewall(), EeWonHostInit::Firewall, inContext); }
     // ServerRequestOp(context or address) with a Rust op derived from it (ee_won_reqop_* constructors), taken
     static RustServerOp* NewRequest(EeWonReqOp* inOp, ServerContext* inContext);
     static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
@@ -922,49 +926,10 @@ class FileWriter;
 // HTTPGetOp is a Rust op on the base (rust/crates/ee_won_net/src/httpget.rs): RustServerOp::NewHttpGet, its members by
 // EE_WON_HTTPGET_* number
 
-// DNS operation, 0x7c bytes; explicit destructor and borrowed address getter.
-// ThreadBase 0x14 / Thread 0x1c. Event (8 bytes) comes from AsyncOpContainer above.
-// Base ctor 2a6c10 and base dtor 2a6c80; DNSThread allocation 0x20 at 2d980a.
-enum ThreadPriority { ThreadPriority_Highest,ThreadPriority_High,ThreadPriority_Normal,ThreadPriority_Low,ThreadPriority_Lowest };
-// ThreadBase / Thread: a Rust object (ee_won thread.rs EeWonThread: the run flags, priority, signal event and the
-// platform thread) behind these shims; the object's thread calls the virtual ThreadFunc (and deletes an
-// auto-deleting thread after it). The original units (Thread.cpp: the start, stop and priority hooks) are deleted.
-class ThreadBase {
-protected:
-    virtual void ThreadFunc()=0;
-public:
-    ThreadBase();
-    virtual ~ThreadBase() { ee_won_thread_free(this->mThread); }
-    virtual void Signal() { ee_won_thread_signal(this->mThread); }
-    void Start() { ee_won_thread_start(this->mThread); }
-    // marks the thread stopped, signals it and waits for it when asked (nothing when it was stopped)
-    void Stop(bool waitForStop=true) { ee_won_thread_stop(this->mThread,waitForStop); } // (thread.rs; Signal has no override)
-    bool InThisThread() { return ee_won_thread_in_this_thread(this->mThread); }
-    void WaitForStop() { ee_won_thread_wait_for_stop(this->mThread); }
-    void SetPriority(ThreadPriority thePriority)
-    { ee_won_thread_set_priority(this->mThread,static_cast<int32_t>(thePriority)); }
-protected:
-    // the original's mStopped and mSignalEvent, as a ThreadFunc reads them
-    bool IsStopped() const { return ee_won_thread_is_stopped(this->mThread); }
-    bool WaitForSignal(unsigned long inMilliseconds)
-    { return ee_won_thread_wait_signal(this->mThread,static_cast<uint32_t>(inMilliseconds)); }
-    EeWonThread* mThread;
-private:
-    ThreadBase(const ThreadBase&);
-    ThreadBase& operator=(const ThreadBase&);
-    static void RunThreadFunc(void* inThread);     // the Rust thread's body (AsyncOp.cpp: the crash dump's SEH filter)
-    static void DeleteThread(void* inThread);
-};
-// WON SDK static-only diagnostics API (ee_won debug.rs: the stack file and the crash dump; the trace is Rust's of
-// the calling thread, the filter's: theInfo is not read)
-class WONDebug {
-public:
-    static int DumpStackToFile(void* = NULL) { return ee_won_debug_dump_stack(); }
-};
-class Thread : public ThreadBase {
-public:
-    void SetAutoDelete(bool inAutoDelete) { ee_won_thread_set_auto_delete(this->mThread,inAutoDelete); }
-};
+// ThreadBase / Thread (0x14 / 0x1c), WONDebug, SocketThread (0x38) and SocketThreadSimple (0x44) had no C++ user but
+// the library's socket thread: since R6 WON lobby and network round 35 that is wholly Rust (ee_won sockthread.rs
+// EeWonApiSocketThread over thread.rs EeWonThread, the core's table ee_won_api_socket_hooks). The drivers that build
+// the old classes have them in tests/won/won_thread_orig.h.
 // DNSTestOp (0x7c bytes; ctor 2d95a0, dtor 2d9740, RunHook 2d97f0) and DNSTestThread (ThreadFunc 2d9920) are a Rust op
 // (rust/crates/ee_won_net/src/dnstest.rs, R6 WON round 34): its run starts a thread holding the op, which resolves
 // the host (SetWithDefaultPort, port 0) and finishes the op; GetHostAddr is AddrOf(EE_WON_DNSTEST_ADDR)
@@ -1013,16 +978,9 @@ public:
 // forms are ee_won patch.rs, the ops that read them verop.rs; no game code made the C++ classes, deleted in WON
 // Internet round 21 (their statements are tests/won/won_patch_msg.h, over the drivers' stand-ins)
 // CheckValidVersionOp is a Rust op (rust/crates/ee_won_net/src/reqops.rs)
-// DetectFirewallOp (2cf600): a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step);
-// the class is its constructor (ServerOp.cpp) and the setters and the public address the lobby uses.
-class DetectFirewallOp : public RustServerOp {
-public:
-    explicit DetectFirewallOp(ServerContext* inContext); //2cf600
-    void SetListenPort(unsigned short inPort) { this->SetNum(EE_WON_FWOP_LISTEN_PORT, inPort); }
-    void SetDoListen(bool inDoListen) { this->SetNum(EE_WON_FWOP_DO_LISTEN, inDoListen); }
-    void SetWaitForConnect(bool inWait) { this->SetNum(EE_WON_FWOP_WAIT_FOR_CONNECT, inWait); }
-    IPAddr GetPublicAddr() const; // a copy (the original returned a reference to the member)
-};
+// DetectFirewallOp (2cf600) is a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step):
+// RustServerOp::NewFirewall, its setters and public address by EE_WON_FWOP_* number (its C++ class went in R6 WON
+// lobby and network round 35)
 
 // RequestPasswordEmailOp and RequestAccountInfoEmailOp are Rust ops (rust/crates/ee_won_net/src/adminop.rs)
 
@@ -1050,43 +1008,6 @@ public:
 // BlockingSocket (0xa0) and the AuthContext/PeerAuthOp pointees must be declared before use.
 // Socket virtual04/08/0c are void(), factory10 returns AsyncSocket* (LAN owner).
 
-// SocketThread (0x38) / SocketThreadSimple (0x44).
-// Needs Thread (0x1c) / Event (8) from above.
-// SocketThread.cpp's original addresses: SocketThread 2b60d0 / 2b6120 / ThreadFunc 2b6140 / DoOp 2b6160,
-// SocketThreadSimple 2b61a0 / PurgeOps 2b6380 / AddSocketOp 2b64f0 / RemoveSocketOp 2b6660 / Pump 2b6760 / ThreadFunc
-// 2b6890. The unit is deleted (net round 25): the ops' calls are answered in Rust (ee_won cppcore.rs)
-class SocketThread : public Thread {
-public:
-    SocketThread() { this->mSingleThreaded=false; } //2b60d0: on its own thread
-    virtual ~SocketThread() {} //2b6120, explicit own vtable 44cb10
-    virtual void ThreadFunc() { while(!this->IsStopped()) this->Pump(1000); } //base slot10,2b6140
-    virtual void AddSocketOp(SocketOp*) {} //new slot1c, 2fa500 (empty)
-    virtual void RemoveSocketOp(SocketOp*) {} //20, version-empty2fa500
-    virtual void Pump(unsigned long) {} //24, version-empty2fa500
-    virtual void PurgeOps() {} //28, version-empty4142a0
-    virtual bool NeedThread() {return true;} //2c, true2f30d0
-    void SetSingleThreaded(bool value) { this->mSingleThreaded=value; } //inline bool 34 (WON SDK)
-    // continues a pending op and finishes it unless it still waits; whether it is done (2b6160, cdecl)
-    bool mSingleThreaded; //34; total38 (the original's lock at 1c is SocketThreadSimple's Rust object's)
-};
-// SocketThreadSimple: a Rust object since round 13 (rust/crates/ee_won_net/src/sockthread.rs EeWonSocketThread: the ops
-// held, a reference each, in address order as the original's std::set of SmartPtrs; the lock; DoOp, the pump, the
-// purge, the adds and removes) behind this shim; the ops' steps come back through SocketThread.cpp's hook table. The
-// thread is the Thread shim's; ThreadFunc pumps the object, then waits on the thread's signal
-class SocketThreadSimple : public SocketThread {
-public:
-    SocketThreadSimple() : mOps(ee_won_socket_thread_new(WonCore())) {}
-    virtual ~SocketThreadSimple() { ee_won_socket_thread_free(this->mOps); } //2b61a0: every op still held killed
-    virtual void ThreadFunc() { while(!this->IsStopped()) this->Pump(20); } //2b6890
-    virtual void AddSocketOp(SocketOp* inOp) { ee_won_socket_thread_add(this->mOps,static_cast<AsyncOp*>(inOp)); }
-    virtual void RemoveSocketOp(SocketOp* inOp) { ee_won_socket_thread_remove(this->mOps,static_cast<AsyncOp*>(inOp)); }
-    // every op continued once, the finished dropped, then a wait of up to 20 ms for a signal (2b6760)
-    virtual void Pump(unsigned long inWaitTime)
-    { ee_won_socket_thread_pump_wait(this->mOps,this->mThread,static_cast<uint32_t>(inWaitTime)); }
-    virtual void PurgeOps() { ee_won_socket_thread_purge(this->mOps); } //2b6380: killed and forgotten
-private:
-    EeWonSocketThread* mOps; //owned
-};
 
 // A Rust object since net round 16 (rust/crates/ee_won_net/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
 // type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period

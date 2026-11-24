@@ -65,6 +65,10 @@ void RustServerOp::SetClientKeySize(unsigned char inSize, bool inUseClientKey)
 {
     ee_won_hostop_set_client_key(this->mRustOp, inSize, inUseClientKey);
 }
+RustServerOp::RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj) : mRustOp(inRustOp)
+{
+    ee_won_hostop_bind_init(inRustOp, static_cast<AsyncOp*>(this), this->GetOpObject(), this->mTracker.GetTrackerObject(), inInit, inObj);
+}
 // a request's C++ op as reqhost.rs made it (the maker's: NewHostOp above)
 static RustServerOp* MadeOp(void* inOp) { return static_cast<RustServerOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))); }
 RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, ServerContext* inContext)
@@ -96,17 +100,6 @@ PeerAuthServerOp::PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSoc
     : RustServerOp(ee_won_hostop_peerauth_server())
 {
     ee_won_hostop_set_auth(this->GetRustOp(), AUTH_TYPE_NONE, static_cast<RefCount*>(inContext), true, static_cast<RefCount*>(inSocket));
-}
-DetectFirewallOp::DetectFirewallOp(ServerContext* inContext) : RustServerOp(ee_won_hostop_firewall())
-{
-    this->Set(EE_WON_REQHOST_CONTEXT, inContext);
-}
-IPAddr DetectFirewallOp::GetPublicAddr() const
-{
-    IPAddr anAddr;
-    if (ee_won_hostop_num(this->GetRustOp(), EE_WON_FWOP_HAS_PUBLIC, 0))
-        anAddr.Fn2B2C20(static_cast<long>(ee_won_hostop_num(this->GetRustOp(), EE_WON_FWOP_PUBLIC_HOST, 0)), 0);
-    return anAddr;
 }
 void RustServerOp::SetNum(int inWhich, long long inNum)
 {
