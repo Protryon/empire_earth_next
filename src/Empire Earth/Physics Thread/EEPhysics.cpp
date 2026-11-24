@@ -328,14 +328,9 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::SimCaptureActive: return EESimCaptureRecord::Active();
     case O::UnitStoreCheck: EEUnitStoreCheck((unsigned long)a[0]);
         break;
-    case O::WorldViewCheck: ee_world_view_check(reinterpret_cast<uintptr_t>(&gWorld), (uint32_t)a[0]);
-        break;
     case O::TestHookSet: return gEEMessageExecutedTestHook != NULL;
     case O::TestHookCall: gEEMessageExecutedTestHook(MSG, (int)a[0]);
         break;
-    case O::OrderLog: ee_units_order_log((uint64_t)a[0], (uint64_t)a[1], (uint8_t)a[2], (const uint8_t*)a[3], (uint32_t)a[4], (uint8_t)a[5]);
-        break;
-    case O::GameLogOn: return EEGameLogOn();
     // the communications
     case O::IsServer: return gCommunications->IsServer();
     case O::IsClient: return gCommunications->IsClient();
@@ -364,16 +359,10 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::NumPlayers: return gWorld.mNumPlayers;
     case O::Player: return P64(gWorld.mPlayers[a[0]]);
     case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
-    case O::PlayerBySlot: return P64(gWorld.GetPlayerBySlot((unsigned char)a[0]));
     case O::FlushQueuedPlacements: gWorld.FlushQueuedPlacements();
-        break;
-    case O::QueueBornDeactivations: gWorld.QueueBornDeactivations();
         break;
     case O::UpdateActiveUnits: gWorld.UpdateActiveUnits();
         break;
-    case O::RemovePlayerFromGame: gWorld.RemovePlayerFromGame(a[0] != 0, (unsigned long)a[1]);
-        break;
-    case O::CheckGameOver: return gWorld.CheckGameOver();
     case O::InCinematic: return gWorld.mInCinematic;
     case O::ScenarioResult: return gWorld.mScenarioManager->mGameResult;
     case O::SetScenarioResult: gWorld.mScenarioManager->mGameResult = (long)a[0];
@@ -397,8 +386,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::CameraClearB: gWorld.mCameraControl.ClearUnitB();
         break;
     case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
-        break;
-    case O::SetTimeOfDay: gWorld.SetTimeOfDay(f[0]);
         break;
     case O::SetWindYaw: gWorld.mWindYaw = f[0];
         break;
@@ -433,8 +420,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     // a player
     case O::PlayerObserver: return PL->mObserverMode;
-    case O::PlayerSetGameResult: PL->SetGameResult((long)a[0]);
-        break;
     case O::PlayerGameResult: return PL->mGameResult;
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(0, 1);
         break;
@@ -517,16 +502,8 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::FileClose: fclose((FILE*)p);
         break;
-    case O::AtcChecksum: return ee_units_atc_checksum((EeUnitsAtc*)p);
-    case O::AtcDump: ee_units_atc_dump((EeUnitsAtc*)p, FP(0));
-        break;
-    case O::CpChecksum: return EECPOutOfSynchChecksum();
     case O::ContinentChecksum: return gContinentManagerChecksum;
-    case O::StoreChecksumFlag1: return (int64_t)ee_units_store_checksum_flag1();
-    case O::StoreChecksumFlag2: return (int64_t)ee_units_store_checksum_flag2();
     case O::CampaignText: return snprintf((char*)a[1], (size_t)a[2], "%s", a[0] == 0 ? (const char*)gCampaignUser : a[0] == 1 ? (const char*)gWorld.mGameOptions.mCampaignName : (const char*)gWorld.mGameOptions.mScenarioName);
-    case O::AppTeamsClear: ee_app_teams_clear();   // (the teams: ee_sim app teams.rs)
-        break;
     case O::Srand: srand((unsigned int)a[0]);
         break;
     case O::Rand: return rand();
