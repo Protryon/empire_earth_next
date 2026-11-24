@@ -21,6 +21,7 @@ struct World {
     popup_hit: bool,
     invalid: bool,
     plat_window: isize,
+    offscreen: isize,
 }
 
 thread_local! { static ME_PTR: std::cell::RefCell<isize> = const { std::cell::RefCell::new(0) }; }
@@ -83,13 +84,14 @@ extern "C" fn host(me: *mut c_void, op: EeWonPlatWinOp, a: isize, b: isize, c: i
         O::InvalidateRoot => "InvalidateRoot".into(),
         O::MouseIn => return isize::from(w.mouse_in),
         O::RootContains => return isize::from(a >= 0 && b >= 0 && a < w.root.0 as isize && b < w.root.1 as isize),
-        O::Paint => {
-            if !w.invalid {
-                return 0;
-            }
-            w.log.push("paint".into());
-            return 1;
-        }
+        O::RootInvalid => return isize::from(w.invalid),
+        O::Offscreen => return w.offscreen,
+        O::Paint => "prepaint".into(),
+        O::RootPaint => "paint".into(),
+        O::NewContext => "new context".into(),
+        O::OffscreenOfRoot => "offscreen of root".into(),
+        O::CopyOffscreen => format!("copy offscreen {a}x{b}"),
+        O::RootInvalidate => "root Invalidate".into(),
         O::ParentVisible => return w.parent_visible,
         O::WindowClose => "Window::PlatformClose".into(),
         O::WindowTimer => format!("Window::TimerEvent {a}"),
@@ -139,13 +141,13 @@ fn a_framed_window_from_its_client_rect_is_centred_and_shown() {
     assert_eq!(rect(w, true), [103, 71, 200, 120]);
     assert_eq!(
         world.log,
-        ["Window::Create 103,71,200,120", "wm Add me", "Center 1", "SetIsShowing 1", "PlatformShow 1"]
+        ["Window::Create 103,71,200,120", "new context", "offscreen of root", "wm Add me", "Center 1", "SetIsShowing 1", "PlatformShow 1"]
     );
     // a hidden start (0x02) and the default position (0x80); without 0x40 the rectangle is the window's
     world.log.clear();
     world.style = 0x82;
     create(w, [100, 50, 200, 120]);
-    assert_eq!(world.log, ["Window::Create 103,71,194,96", "wm Add me", "Center 0", "SetIsShowing 0"]);
+    assert_eq!(world.log, ["Window::Create 103,71,194,96", "new context", "offscreen of root", "wm Add me", "Center 0", "SetIsShowing 0"]);
     free(w);
 }
 
@@ -270,11 +272,13 @@ fn cursors_minimize_close_and_mouse_events() {
     world.log.clear();
     run(w, EeWonPlatWinCall::QueueMouse, p.as_ptr() as isize, 0, 0, 0);
     world.invalid = true;
+    run(w, EeWonPlatWinCall::Paint, 0, 0, 0, 0); // no offscreen image: nothing
+    world.offscreen = 1;
     run(w, EeWonPlatWinCall::Paint, 0, 0, 0, 0);
     run(w, EeWonPlatWinCall::Close, 0, 0, 0, 0);
     assert_eq!(
         world.log,
-        ["mouse [3, 100, 50, 4, 1]", "paint", "wm SetDirty 0", "Window::PlatformClose", "wm Remove me"]
+        ["mouse [3, 100, 50, 4, 1]", "prepaint", "paint", "wm SetDirty 0", "Window::PlatformClose", "wm Remove me"]
     );
     assert_eq!(run(w, EeWonPlatWinCall::IsVisible, 0, 0, 0, 0), 0);
     // the manager's fields
@@ -330,4 +334,35 @@ fn focus_moves_and_exits_at_the_edges() {
     run(w, EeWonPlatWinCall::Timer, 2, 0, 0, 0);
     assert_eq!(world.log, ["Window::TimerEvent 2", "exit"]);
     free(w);
+}
+
+extern "C" fn no_image_host(_: crate::imgobj::EeWonImageHost, _: isize, _: isize, _: isize, _: isize) -> isize {
+    0
+}
+
+/// FollowPixelScale (Window.cpp's until R6 WON GUI round 36): only an open window with a manager and an offscreen
+/// image at another scale gets a new image (the old one's logical size), the root invalidated and the manager dirty.
+#[test]
+fn follow_pixel_scale() {
+    let mut world = World { has_wm: true, open: true, ..Default::default() };
+    let w = win(&mut world);
+    let follow = |k: f32| run(w, EeWonPlatWinCall::FollowPixelScale, k.to_bits() as isize, 0, 0, 0);
+    follow(2.0); // no offscreen image
+    let img = crate::imgobj::ee_won_image_new_native(no_image_host, 30, 20, 1.5);
+    world.offscreen = img as isize;
+    follow(1.5); // the same scale
+    world.open = false;
+    follow(2.0);
+    world.open = true;
+    world.has_wm = false;
+    follow(2.0);
+    assert!(world.log.is_empty(), "{:?}", world.log);
+    world.has_wm = true;
+    follow(2.0);
+    assert_eq!(world.log, ["copy offscreen 30x20", "root Invalidate", "wm SetDirty 0"]);
+    // SAFETY: the test's image and window
+    unsafe {
+        crate::imgobj::ee_won_image_free(img);
+        ee_won_plat_win_free(w);
+    }
 }

@@ -20,7 +20,7 @@ enum class EeWonPlatWmOp : uint32_t {
   SetRegistered,
   /// `a->FollowSurface()`.
   FollowSurface,
-  /// `a->FollowPixelScale()`.
+  /// `a`'s FollowPixelScale (platwin.rs), `b` the new pixel scale's bits.
   FollowPixelScale,
   /// `a->QueueEvent(new InputEvent(t))`, `t` GotFocus (b 0), LostFocus (1), MouseExit (2).
   QueueInput,

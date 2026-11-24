@@ -25,7 +25,7 @@ enum class EeWonPlatWinOp : int32_t {
   Open = 6,
   /// `GetStyle()`.
   Style = 7,
-  /// `Window::Create(WONRectangle(a..d))`, the display context and the offscreen image of the root's size.
+  /// `BaseCreate(c, d)`: Window::Create's statements on the client rectangle `a..d` (the size `c, d`).
   WindowCreate = 8,
   /// `Center(a)`.
   Center = 9,
@@ -45,7 +45,7 @@ enum class EeWonPlatWinOp : int32_t {
   MouseIn = 16,
   /// `mRoot->Contains(a, b)`.
   RootContains = 17,
-  /// The root repainted into the offscreen image when it is invalid and there is one -> whether it was.
+  /// `mRoot->PrePaint(mOffscreenImage->GetGraphics())`.
   Paint = 18,
   /// The parent when it is a PlatGUIWindow and visible, else 0.
   ParentVisible = 19,
@@ -61,6 +61,20 @@ enum class EeWonPlatWinOp : int32_t {
   CursorShow = 24,
   /// `PlatWindowMinimize((PlatWindow*)a)`.
   PlatMinimize = 25,
+  /// `mDisplayContext = new DisplayContext(NULL)`.
+  NewContext = 26,
+  /// `mOffscreenImage = CreateImage(mRoot->Width(), mRoot->Height())`.
+  OffscreenOfRoot = 27,
+  /// The offscreen image's Rust image (`mOffscreenImage->mRust`), 0 for none.
+  Offscreen = 28,
+  /// `mRoot->mInvalidState != 0`.
+  RootInvalid = 29,
+  /// `mRoot->Paint(mOffscreenImage->GetGraphics())`.
+  RootPaint = 30,
+  /// A new offscreen image of `a` x `b` with the old one drawn into it at 0, 0 (the window's WinNewOffscreen).
+  CopyOffscreen = 31,
+  /// `mRoot->Invalidate()`.
+  RootInvalidate = 32,
 };
 
 /// The window's calls (`ee_won_plat_win`).
@@ -107,6 +121,8 @@ enum class EeWonPlatWinCall : int32_t {
   /// `QueueMouse(a, b[0], b[1], b[2], b[3])`: the event type `a` and the four ints at `b` (the surface's x and y,
   /// the modifiers, the button or amount), as the manager hands them.
   QueueMouseAt = 22,
+  /// FollowPixelScale: `a` the manager's new pixel scale's bits.
+  FollowPixelScale = 23,
 };
 
 /// The window's own state.

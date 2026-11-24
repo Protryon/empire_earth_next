@@ -161,7 +161,7 @@ pub enum EeWonPlatWmOp {
     SetRegistered,
     /// `a->FollowSurface()`.
     FollowSurface,
-    /// `a->FollowPixelScale()`.
+    /// `a`'s FollowPixelScale (platwin.rs), `b` the new pixel scale's bits.
     FollowPixelScale,
     /// `a->QueueEvent(new InputEvent(t))`, `t` GotFocus (b 0), LostFocus (1), MouseExit (2).
     QueueInput,
@@ -459,7 +459,7 @@ impl EeWonPlatWm {
         self.shared.with(|_| self.scale.store(k.to_bits(), Ordering::Relaxed));
         let mut i = 0;
         while let Some(win) = self.z_at(i) {
-            self.w(EeWonPlatWmOp::FollowPixelScale, win, 0);
+            self.w(EeWonPlatWmOp::FollowPixelScale, win, k.to_bits() as isize);
             i += 1;
         }
         self.dirty.set(true);

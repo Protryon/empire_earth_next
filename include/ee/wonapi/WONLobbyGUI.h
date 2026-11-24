@@ -1497,7 +1497,6 @@ public:
     bool HasFrame() const { return this->GetParent() != NULL && !(this->GetStyle() & 0x20); }
     void GetInfo(EeWonPlatWinInfo& outInfo) { this->Rust(EeWonPlatWinCall::Info, (intptr_t)&outInfo); } // what the manager reads
     void FollowSurface() { this->Rust(EeWonPlatWinCall::FollowSurface); } // a window that fills the surface takes its new size
-    void FollowPixelScale(); // a new offscreen image at the manager's pixel scale, repainted
     void OnPaint() { this->Rust(EeWonPlatWinCall::Paint); } // repaints an invalid root into the offscreen image
     // the manager while its platform part lives (the original's dynamic_cast: none in the manager's last moments)
     WindowManager* GetPlatManager() { return this->mManager != NULL && this->mManager->mRust != NULL ? this->mManager : NULL; }

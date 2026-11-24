@@ -20,11 +20,11 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     case Op::Popup: return me->IsPopup();
     case Op::Open: return me->GetWindowState() == Window::WindowState_Open;
     case Op::Style: return me->GetStyle();
-    case Op::WindowCreate:
-        me->Window::Create(WONRectangle((int)a, (int)b, (int)c, (int)d));
-        me->mDisplayContext = new DisplayContext(NULL);
-        me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height());
-        return 0;
+    case Op::WindowCreate: me->Window::Create(WONRectangle((int)a, (int)b, (int)c, (int)d)); return 0;
+    case Op::NewContext: me->mDisplayContext = new DisplayContext(NULL); return 0;
+    case Op::OffscreenOfRoot: me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height()); return 0;
+    case Op::Offscreen: return (intptr_t)me->mOffscreenImage.get(); // (only tested for NULL: no FollowPixelScale here)
+    case Op::CopyOffscreen: return 0;
     case Op::Center: me->Center(a != 0); return 0;
     case Op::Showing: me->SetIsShowing(a != 0); return 0;
     case Op::Show: me->PlatformShow(a != 0); return 0;
@@ -38,12 +38,10 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     case Op::InvalidateRoot: me->InvalidateRoot(); return 0;
     case Op::MouseIn: return me->IsMouseInClientArea();
     case Op::RootContains: return me->mRoot->Contains((int)a, (int)b);
-    case Op::Paint:
-        if (me->mRoot->mInvalidState == 0 || me->mOffscreenImage.get() == NULL)
-            return 0;
-        me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics());
-        me->mRoot->Paint(me->mOffscreenImage->GetGraphics());
-        return 1;
+    case Op::RootInvalid: return me->mRoot->mInvalidState != 0;
+    case Op::Paint: me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics()); return 0;
+    case Op::RootPaint: me->mRoot->Paint(me->mOffscreenImage->GetGraphics()); return 0;
+    case Op::RootInvalidate: return 0; // (no FollowPixelScale here)
     case Op::ParentVisible: {
         PlatGUIWindow* theParent = dynamic_cast<PlatGUIWindow*>(me->GetParent());
         return theParent != NULL && theParent->Rust(EeWonPlatWinCall::IsVisible) ? (intptr_t)theParent : 0;
