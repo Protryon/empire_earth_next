@@ -788,6 +788,14 @@ struct EeWorldLayout {
   uint64_t player_lists;
 };
 
+/// `EEComplexUnit::mBuildQueue`'s element (units round 11: the C++ `EEProductionEntry`, rust/cbindgen.toml's rename): a
+/// queued research or production order, its technology and its player flag (0x1f5f97 pushes the pair). The layout's
+/// build entry stride and offsets are derived from it (layout.rs).
+struct EEProductionEntry {
+  long mTechnology;
+  long mFlag;
+};
+
 extern "C" {
 
 /// The C++ registers the build's layout (`EEWorldLayoutRegister`, once at start-up). False for a layout of another

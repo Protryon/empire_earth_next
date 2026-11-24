@@ -113,11 +113,7 @@ void EEWorldLayoutRegister()
     theLayout.complex_location = offsetof(EEComplexUnit, mPhysicalModel) + theLocation;
     theLayout.complex_cargo = offsetof(EEComplexUnit, mCargo);
     theLayout.complex_build_queue = offsetof(EEComplexUnit, mBuildQueue);
-    theLayout.build_entry_stride = sizeof(EEProductionEntry);
-    theLayout.build_entry_technology = offsetof(EEProductionEntry, mTechnology);
     theLayout.complex_goal_queues = offsetof(EEComplexUnit, mGoalQueues);
-    theLayout.goal_kind = offsetof(EEUnitGoal, mKind);
-    theLayout.goal_id = offsetof(EEUnitGoal, mID);
     theLayout.action_type = offsetof(EEUnitAction, mType);
     theLayout.player_color = offsetof(EEPlayer, mColor);
     theLayout.player_first_unit = offsetof(EEPlayer, mFirstUnit);
@@ -192,7 +188,6 @@ void EEWorldLayoutRegister()
     theLayout.complex_heal_effect = offsetof(EEComplexUnit, mHealEffect);
     theLayout.complex_angular_velocity = offsetof(EEComplexUnit, mAngularVelocity);
     theLayout.complex_orientation = offsetof(EEComplexUnit, mOrientation);
-    theLayout.build_entry_flag = offsetof(EEProductionEntry, mFlag);
     theLayout.herd_id = offsetof(EEHerd, mID);
     theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);
     theLayout.class_effects = offsetof(EEUnitClass, mAttachedEffect);

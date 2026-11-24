@@ -225,6 +225,16 @@ pub struct EeUnitsComplexUnitFields {
     pub mSound: *mut EeCxxSoundInstance,
 }
 
+/// `EEComplexUnit::mBuildQueue`'s element (units round 11: the C++ `EEProductionEntry`, rust/cbindgen.toml's rename): a
+/// queued research or production order, its technology and its player flag (0x1f5f97 pushes the pair). The layout's
+/// build entry stride and offsets are derived from it (layout.rs).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeUnitsProductionEntry {
+    pub mTechnology: c_long,
+    pub mFlag: c_long,
+}
+
 /// A `bool` member's byte, read without making a Rust `bool` of it (any non-zero byte is true, as C++ tests it).
 ///
 /// # Safety

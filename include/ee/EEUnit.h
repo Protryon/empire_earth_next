@@ -301,15 +301,11 @@ struct EEComplexUnitAttacker {
     unsigned long mTime = 0;                // +0x14 (gPhysics +0xd0 plus 30000)
 };
 
-// A queued research/production order (EEComplexUnit::mBuildQueue; 0x1f5f97 pushes (technology, player flag)). Not a tile:
-// a POD, its entries are built field by field with no zeroing. Name is provisional.
-struct EEProductionEntry {
-    // inline (std::find(mBuildQueue.begin(), mBuildQueue.end(), inTechnology) in EEComplexUnit::IsResearchQueued
-    // 0x937dd: the find COMDAT 0x963ff compares the first dword with the value)
-    bool operator==(long inTechnology) const { return this->mTechnology == inTechnology; }
-    long mTechnology;
-    long mFlag;
-};
+// A queued research/production order (EEComplexUnit::mBuildQueue; 0x1f5f97 pushes (technology, player flag)): the
+// Rust record EEProductionEntry (ee_sim world unit_fields.rs EeUnitsProductionEntry: mTechnology, mFlag; units
+// round 11). std::find(mBuildQueue.begin(), mBuildQueue.end(), inTechnology) in IsResearchQueued 0x937dd compares
+// the first dword with the value (the find COMDAT 0x963ff).
+inline bool operator==(const EEProductionEntry& inEntry, long inTechnology) { return inEntry.mTechnology == inTechnology; }
 
 // New (R5b.4): EEComplexUnit::mPhysicalModel. GEPhysicalModel's layout (no member of its own); its location setters
 // report the new location to the unit store (ee/EEUnitStore.h: the record's x, y, z). Not copied: it lives only in
