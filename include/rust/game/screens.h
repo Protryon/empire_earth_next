@@ -8927,29 +8927,9 @@ constexpr static const uint32_t EE_SCREENS_GAH_G_BOUNDS = ((EE_SCREENS_GA_OP_GRO
 
 constexpr static const uint32_t EE_SCREENS_GAH_P_EVENT = ((EE_SCREENS_GA_OP_PLAYER << 8) | 100);
 
-constexpr static const uint32_t EE_SCREENS_GAH_P_EVENT_X = ((EE_SCREENS_GA_OP_PLAYER << 8) | 101);
-
-constexpr static const uint32_t EE_SCREENS_GAH_P_EVENT_Y = ((EE_SCREENS_GA_OP_PLAYER << 8) | 102);
-
-constexpr static const uint32_t EE_SCREENS_GAH_FS_SET = ((EE_SCREENS_GA_OP_FIRST_SELECTED << 8) | 100);
-
 constexpr static const uint32_t EE_SCREENS_GAH_FS_CALL = ((EE_SCREENS_GA_OP_FIRST_SELECTED << 8) | 101);
 
-constexpr static const uint32_t EE_SCREENS_GAH_FS_GET = ((EE_SCREENS_GA_OP_FIRST_SELECTED << 8) | 102);
-
-constexpr static const uint32_t EE_SCREENS_GAH_PT_SET_TILE = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 100);
-
-constexpr static const uint32_t EE_SCREENS_GAH_PT_SET_X = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 101);
-
-constexpr static const uint32_t EE_SCREENS_GAH_PT_SET_Y = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 102);
-
 constexpr static const uint32_t EE_SCREENS_GAH_PT_CALL = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 103);
-
-constexpr static const uint32_t EE_SCREENS_GAH_PT_TILE = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 104);
-
-constexpr static const uint32_t EE_SCREENS_GAH_PT_X = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 105);
-
-constexpr static const uint32_t EE_SCREENS_GAH_PT_Y = ((EE_SCREENS_GA_OP_POINT_TILE << 8) | 106);
 
 constexpr static const uint32_t EE_SCREENS_GAH_T_FIRST = ((EE_SCREENS_GA_OP_TILE << 8) | 100);
 

@@ -3,8 +3,9 @@
 //! and render object pointers, the TEST ONLY hooks, the campaigns' network checksums, the install checksum, the
 //! space units' heights, gFreeCamera, sIconsLoaded and gEmptyString. Each is exported under the C++ symbol: MSVC's
 //! mangled name on Windows (from the link map), the plain name elsewhere (Itanium does not mangle a global's name).
-//! Rust only stores them, but for a few pointers gamecpp passes on to a Rust export (gDataPath, gGraphics, gPhysics,
-//! gDataPreLoading: reads on the thread that owns the object). Types: a pointer is `*mut c_void` (the C++'s typed
+//! Rust reads and writes them through `get!`, `have!` and `set!` where a host case only did that, and passes a
+//! few pointers on to a Rust export (gDataPath, gGraphics, gPhysics, gDataPreLoading: reads on the thread that
+//! owns the object). Types: a pointer is `*mut c_void` (the C++'s typed
 //! pointer has the same size and alignment), `long` is `c_long` (32 bits on Windows, 64 on LP64), `bool` is `bool`.
 #![allow(non_upper_case_globals)]
 
@@ -133,9 +134,45 @@ pub(crate) fn graphics_post_pause() {
     };
 }
 
+/// A global's value, read at once (as the C++ statement `gX` read it: on the thread that owns the subsystem).
+macro_rules! get {
+    ($g:ident) => {
+        // SAFETY: a plain load of the global's storage; C++ writes it on the same threads as before
+        unsafe { *core::ptr::addr_of!($crate::gamecpp::globals::$g) }
+    };
+}
+pub(crate) use get;
+
+/// `gX != NULL`: whether a pointer global is set.
+macro_rules! have {
+    ($g:ident) => {
+        !$crate::gamecpp::globals::get!($g).is_null()
+    };
+}
+pub(crate) use have;
+
+/// `gX = value`.
+macro_rules! set {
+    ($g:ident, $value:expr) => {
+        // SAFETY: a plain store to the global's storage, on the thread the C++ statement ran on
+        unsafe { *core::ptr::addr_of_mut!($crate::gamecpp::globals::$g) = $value }
+    };
+}
+pub(crate) use set;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_macros_read_and_write_the_storage() {
+        assert!(!have!(gFontTahoma72));
+        assert!(!get!(gFreeCamera));
+        set!(gU531930, 8 as *mut c_void);
+        assert!(have!(gU531930));
+        set!(gU531930, core::ptr::null_mut());
+        assert!(!have!(gU531930));
+    }
 
     #[test]
     fn initial_values() {

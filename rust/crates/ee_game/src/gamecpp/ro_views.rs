@@ -71,7 +71,7 @@ pub extern "C" fn ee_gamecpp_gu_frame_starting(ro: *mut c_void) {
 pub extern "C" fn ee_gamecpp_gu_scene_starting() {
     let mut zero = GeRectangle::default();
     h(O::RuMainViewRectangle, 0, &[ptr(&mut zero)]);
-    if h(O::FreeCamera, 0, &[]) != 0 || h(O::GuMainUiState, 0, &[]) == GU_STATE_NO_PANELS {
+    if crate::gamecpp::globals::get!(gFreeCamera) || h(O::GuMainUiState, 0, &[]) == GU_STATE_NO_PANELS {
         return;
     }
     let width = h(O::GameWindowWidth, 0, &[]) as u32 as f32;
@@ -425,7 +425,7 @@ pub fn rc_fill(picked_unit: P, yaw: f32, fighting: f32, frame: u32, ambient: boo
     f.yaw = yaw;
     // SAFETY: gWorld.mTransformation
     f.world_transformation = unsafe { *(hp(O::RoWorldTransformation, 0, &[]) as *const GeTransformation) };
-    f.flags = (if h(O::FreeCamera, 0, &[]) != 0 { 1 } else { 0 })
+    f.flags = (if crate::gamecpp::globals::get!(gFreeCamera) { 1 } else { 0 })
         | (if h(O::RoOrthographic, 0, &[]) != 0 { 2 } else { 0 })
         | (if ambient { 4 } else { 0 });
     f.picked = if picked_unit != 0 { h(O::RoUnitId, picked_unit, &[]) as i32 } else { -1 };

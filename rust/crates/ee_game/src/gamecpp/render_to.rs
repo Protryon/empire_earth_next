@@ -164,7 +164,7 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
         let saved_orthographic = ortho_rectangle();
         let mut source = GeRectangle::default();
         let (window_width, window_height): (c_ulong, c_ulong);
-        if h(O::FreeCamera, 0, &[]) == 0 {
+        if !crate::gamecpp::globals::get!(gFreeCamera) {
             window_width = h(O::GameWindowWidth, 0, &[]) as c_ulong;
             window_height = h(O::GameWindowHeight, 0, &[]) as c_ulong;
         } else {

@@ -107,7 +107,7 @@ pub unsafe extern "C" fn ee_gamecpp_picker_add_unit(
         unit_type: h(O::PkClassUnitType, unit, &[]) as u32,
         category: h(O::PkClassCategory, unit, &[]) as u32,
         projectile: h(O::PkClassProjectile, unit, &[]) != 0,
-        free_camera: h(O::FreeCamera, 0, &[]) != 0,
+        free_camera: crate::gamecpp::globals::get!(gFreeCamera),
     };
     if !admits(&add) {
         return;

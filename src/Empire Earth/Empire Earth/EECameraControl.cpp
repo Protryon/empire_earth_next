@@ -222,7 +222,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DkSetFieldOfView: gViewport.SetFieldOfView(sCameraFieldOfView);
         break;
-    case O::DkHaveMiniMap: return gMiniMap != NULL;
     case O::DkMiniMapRefresh: gMiniMap->RefreshView();
         break;
     case O::DkClearB529066: gB529066 = false;
@@ -262,7 +261,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::EcPushKey: CAM->mKeys.push_back(*(const EECameraKey*)a[0]);
         break;
-    case O::EcFreeCamera: return gFreeCamera;
     case O::EcFarRearClipping: return gFarRearClipping;
     case O::EcOrthographic: return gOrthographicView;
     case O::EcHasMap: return gWorld.mMap != NULL;

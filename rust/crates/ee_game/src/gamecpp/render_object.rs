@@ -717,7 +717,7 @@ pub unsafe extern "C" fn ee_gamecpp_ro_draw_text(x: f32, y: f32, text: *const u8
     h(O::RoTextSetCentred, t, &[]);
     h(O::RoTextSetText, t, &[text as usize as i64]);
     hf(O::RoTextSetLocation, t, &[], &[x, y]);
-    if h(O::FreeCamera, 0, &[]) == 0 {
+    if !crate::gamecpp::globals::get!(gFreeCamera) {
         h(O::RoMainGameDrawText, t, &[cptr(&rect)]);
     } else {
         h(O::RoEditorDrawText, t, &[cptr(&rect)]);
@@ -895,7 +895,7 @@ fn fill_frame(info: &FrameInfo) -> EeGfxFillFrame {
     let sea_level = unsafe { (*env()).sea_level };
     EeGfxFillFrame {
         yaw: info.yaw,
-        free_camera: h(O::FreeCamera, 0, &[]) != 0,
+        free_camera: crate::gamecpp::globals::get!(gFreeCamera),
         sway_clock: SWAY_CLOCK.load(Relaxed),
         player: h(O::WorldCurrentPlayer, 0, &[]) as u64,
         map: h(O::WMap, world(), &[]) as u64,
@@ -1305,7 +1305,7 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
     clear_lists();
     unload_ghost_records();
     h(O::RoSetLabelUnit, 0, &[]);
-    let free_camera = h(O::FreeCamera, 0, &[]) != 0;
+    let free_camera = crate::gamecpp::globals::get!(gFreeCamera);
     if !free_camera {
         if h(O::RoSelectionIsDrawn, selection, &[]) != 0 {
             h(O::RoPickUnits, selection, &[pa(player)]);

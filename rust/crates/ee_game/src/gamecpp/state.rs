@@ -567,7 +567,7 @@ pub extern "C" fn ee_gamecpp_state_create(st: *mut c_void, opt: *mut c_void, err
     let mut file = hp(O::FileSpecNew, 0, &[]);
     let mut result = true;
     ee_gamecpp_state_init(st as *mut c_void);
-    if h(O::PhysicsPresent, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gPhysics) {
         h(O::CxSetPoolSize, 0, &[500, 40]);
     }
     if opts(opt).mLoadType == 5 {
