@@ -40658,3 +40658,101 @@ headers).
 
 Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds. Batch
 23 had not reached origin/rust when the round ended (origin/rust 17682d86c), so no origin merge was needed.
+
+## R6 WON lobby and network, round 36: the ServerOp hierarchy folded into RustServerOp; RecvChunkOp, PingGameOp, RoutingGetUserStatusOp and RoutingDetectFirewallOp gone; AsyncSocket::Accept in Rust; the six Rust logics one C++ shell; the logic hosts' last compound cases (ee_won_net hostbase.rs, opobj.rs, udpops.rs, userstatus.rs, routecpp.rs, cppcore.rs; ee_won_lobby logicshell.rs, lobbyops.rs, logics.rs; branch rust-wonnet36, 2026-11-24)
+
+Two forks in hand-made worktrees from 71c097464 (batch 23's tree): net (the network library's op classes) and logic
+(the lobby's logic classes and hosts). Both merged --no-ff into rust-wonnet36; the second merge's conflicts were
+LanLogicHost.cpp's peer authentication run and RoutingLogic.cpp's user status cases (the net fork's ops inside the
+logic fork's shell) and tools/xbuild.py (both forks' drivers kept). The round took what round 35 listed as left.
+
+### What moved (logic: `logic_lines.py`)
+
+| Part | What | Logic |
+|---|---|---|
+| net 4d1b7a531 | PeerAuthOp, PeerAuthServerOp, GetCertOp, ServerOp and AsyncOpWithTracker folded into RustServerOp: the three subclasses were constructors (`NewGetCert`, `NewPeerAuth`, `NewPeerAuthServer` over EeWonHostInit's new kinds, hostbase.rs); the tracker is RustServerOp's member, CallbackHook AsyncOp's virtual; the drivers construct through the factories, the tracking driver keeps the old class in tests/won/won_tracker_orig.h | -12 |
+| net f402dd207 | RecvChunkOp, PingGameOp and RoutingGetUserStatusOp deleted: a receive's progress chunk is a plain AsyncOp whose Rust object holds the receiving op and finishes when run (opobj.rs subject, cppcore.rs n_progress); UDPManagerSendRecvOp takes a Rust body (udpops.rs `EeWonUdpBody`), the user status op's in userstatus.rs, the ping op's in logics.rs | -47 |
+| net 56181d428, ce8a9288b, f3773896a | RoutingDetectFirewallOp whole in Rust: routecpp.rs's `ee_won_routeop_run` listens first for a firewall check, `ee_won_routeop_cleanup` closes the socket; the class, its header and SendRequest's virtual gone | -22 |
+| net 26f031ac7 | AsyncSocket::Accept (cppcore.rs n_accept, the virtual Duplicate through the core table's socket_duplicate entry), the server list's IPAddr calls (`ee_won_ctx_ip`), a host op's address and connected socket, the smart connection's two hooks | -46 |
+| logic 97ff55e16 | AccountLogic, DialogLogic, InitLogic, RoutingLogic, StagingLogic and LanLogic, their base NetLogic and RoutingOpCompletion are one C++ shell, RustLogic (kind, the kind's Rust object, counted slots), with ShellCompletion for every completion; logicshell.rs routes the virtuals, the dialogs, the control maps and the completions | -140 |
+| logic 5e5a1be45 | LobbyLogicHost.cpp's GameResetReadyFlags, GameJoinReplySend, ClientReadPlayer, ClientBroadcastJoined, RunWaitOp and LanLogicHost.cpp's LanSubnets, LanStagingRead, LanSummaryTake, LanReadSummary, LanDirectAsk are lobbyops.rs arms over 30 new one-statement cases; the ReadBuffer try/catch cases one statement each under LobbyReadGuard; the two hosts' message helpers one | -95 |
+| parent 2d9e6f6b8, 6fe1a41ce | won_ping36_test; rustfmt | 0 |
+
+Round total: 19,029 (71c097464) -> 18,667 (066f8fa96, both forks merged): **-362** (net -127, logic -235).
+
+Classes (`classes_tree.py`, which misses classes declared with an export macro): 679 -> 666, 15 gone
+(AsyncOpWithTracker, ServerOp, GetCertOp, PeerAuthOp, PeerAuthServerOp, RecvChunkOp, RoutingGetUserStatusOp,
+RoutingDetectFirewallOp; NetLogic, AccountLogic, DialogLogic, InitLogic, RoutingLogic, StagingLogic, LanLogic), 2
+new (the shell's). PingGameOp is gone too (the tool does not list it).
+
+### Goldens
+
+- **won_shell36_test** (new): the six logic classes as they were against the shell's routes: 1,004 cases, 0
+  mismatches, 77 of 77 spoiled routes caught. It found the routing kind's Resume leaving the game on a non-zero call
+  answer; fixed in the same commit.
+- **won_host36_test** (new): the four compound cases a LAN game does not reach (the ready reset, the player read, the
+  wait op, the direct-connect dialog): 568 cases, 0 mismatches, 0 objects and 0 iterators left, 17 of 17 op skips
+  caught.
+- **won_ping36_test** (new): the ping op with its Rust body against the original PingGameOp over a real UDPManager
+  on 127.0.0.1, 11 cases (the request, refused replies, flags and rest, the ping time, no reply, a blocking run, a
+  kill, the references): 72 lines, 0 mismatches, 6 of 6 mutations of the new side caught.
+- **won_routeops_test**: two listening cases recorded over the C++ RoutingDetectFirewallOp before the move
+  (golden_routeops.txt +11 lines): 555 lines, 0 failures; the clean-up's close and the listen each skipped by hand,
+  both caught.
+- The older drivers over the changed code, 0 mismatches each: won_net33_test 46,010 checks, won_wonnet_test 200,000
+  sequences (159 of 160 host ops), won_lobbyops_test 237,568 cases, won_logic35_test 30 checks and 70/70 skips,
+  won_asyncop_test 285 lines, won_apicore_test 3,000 sequences, won_opcore_test 110 lines, won_servconn_test 202
+  lines.
+
+### LAN reach
+
+- Reached (temporary probes over one LAN game, removed): the accept and the adopted buffers; the join reply, the
+  joined broadcast, the subnets, the staging read and both summaries; the logic shell (every lobby makes the six
+  logics).
+- Not reached (goldens): the ping op (a LAN game does not ping), the ready reset, the player read, the wait op, the
+  direct-connect dialog; the server op kinds, the user status op and the routing firewall check (Internet only).
+
+### Behaviour changes
+
+- A body request's reply wait is checked in Rust (n_recv_check): no ReadBufferException is thrown for it.
+- The adopted ByteBuffer's first reference is taken in Rust; the smart connection's two hooks take the connection's
+  lock themselves.
+- The firewall check's listening socket is the Rust op's: a new blocking socket bound and listening before the
+  request, a failure finishing the op with the bind's error.
+- The six logics' dialogs and other objects are counted slots of one shell instead of typed members.
+
+### Lessons
+
+- Record a golden over the C++ class before the move when the class owns a resource (the listening socket): the
+  first recording let the op go at the clean-up, so the probe could not see the clean-up's close; the case now keeps
+  its op past it (ce8a9288b).
+- A route test that spoils each route in turn is what found the routing kind's Resume bug.
+- The gate chain's per-profile clean-up was a `python -c` inside double quotes with a double-quoted string in it:
+  the shell ate the quotes (`NameError: name 'w36' is not defined`), nothing was deleted, and twelve profiles'
+  captures (up to 2.3 GB each) filled the disk during the saveload matrix (`OSError: [Errno 28]`), which also failed
+  the LAN compare and gates.sh. Put clean-up in a script file and check `df` before the long runs. The matrix, the
+  LAN game with its compare and gates.sh were run again after the captures were removed (below).
+- lan_capture_compare can differ on the animated mouse pointer: host-lobby-open differed in 310 pixels at
+  x 511..538, y 383..409, which is the gold pointer and nothing else (the two captures looked at side by side).
+
+### Gates (the merged tip 066f8fa96; build/w36_chain.log, build/w36_tail.log)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 6 --sim` | 0 / 0 (EE-AOC 411 inputs, EE-SIM 412) |
+| `build.py --test-profile windowed-software` | 0 / 0 (411 inputs) |
+| `rust_build.py header` | 348 headers current |
+| `rust_build.py gate` | PASS, 6,702 tests (0 failed, 8 ignored) |
+| `won_host_coverage.py` | PASS |
+| oracle against the main checkout's `ref` | seeds 2-7 identical, `oracle: PASS` |
+| `xbuild.py wontest` | exit 0, each of the 182 programs exits 0 (won_shell36 1,004 cases and 77/77, won_host36 568 cases and 17/17, won_ping36 72 lines, won_routeops 555 lines, won_net33 46,010 checks, won_wonnet 200,000 sequences 159/160 ops, won_lobbyops 237,568 cases, won_logic35 30 checks and 70/70) |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal |
+| saveload | plain seeds 2-7 PASS (exit 0, 18/18 identical); matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` (second run; the first ran out of disk) |
+| `scenario_check.py` | PASS 27/27 |
+| `eedata check`, `cppgate` | PASS, PASS |
+| LAN game (slot.py) | `RESULT PASS lan-game` PT host 2870 / joiner 2871 |
+| `lan_capture_compare.py` against build/w36lanA (the exe built at the round's start, build/w36base) | every lobby capture identical but three carets (host-staging-host, host-staging-ready, joiner-staging-joiner: 15 pixels each at x 121..122, y 329..344) and host-lobby-open's mouse pointer (310 pixels at x 511..538, y 383..409) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12009` units [4, 36, 37] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=3665 joiner=3667`, GATES PASS |
+
+Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds. The
+branch is on 71c097464, whose tree equals origin/rust fba26cc96's; that merge commit itself is not merged in.

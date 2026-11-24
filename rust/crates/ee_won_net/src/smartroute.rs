@@ -1903,6 +1903,52 @@ pub unsafe extern "C" fn ee_won_smart_close(r: *mut EeWonSmartRoute) {
     unsafe { model(r) }.close();
 }
 
+/// `SmartRoutingConnection::CloseHook` (R6 WON lobby and network round 36): the model closed under the
+/// connection's lock, then `RoutingConnection::CloseHook` (`route`).
+///
+/// # Safety
+/// `r` is a model; `lock` the connection's `PlatMutex*`; `route` its live routing object.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_smart_close_hook(
+    r: *mut EeWonSmartRoute,
+    lock: *mut c_void,
+    route: *const crate::routeconn::EeWonRouteConn,
+) {
+    use ee_base::plat_sys::thread::imp as plat;
+    // SAFETY: the caller's contract
+    unsafe {
+        plat::PlatMutexLock(lock.cast());
+        model(r).close();
+        plat::PlatMutexUnlock(lock.cast());
+        crate::routeconn::ee_won_routeconn_close_hook(route);
+    }
+}
+
+/// `SmartRoutingConnection::RoutingOpCompleteHook(op)`: under the connection's lock the model takes the completed
+/// op (its status the C++ op `cpp`'s); a handled op loses its completion.
+///
+/// # Safety
+/// `r` is a model; `lock` the connection's `PlatMutex*`; `op` the live Rust op of the C++ op `cpp` (`RefCount*`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_smart_routeop_hook(
+    r: *mut EeWonSmartRoute,
+    lock: *mut c_void,
+    op: *const routeop::EeWonRouteOp,
+    cpp: *mut c_void,
+) {
+    use ee_base::plat_sys::thread::imp as plat;
+    // SAFETY: the caller's contract
+    unsafe {
+        plat::PlatMutexLock(lock.cast());
+        if let Some(x) = crate::cppcore::op(cpp) {
+            if ee_won_smart_routeop(r, op, x.status() as i32) {
+                x.set_completion(std::ptr::null_mut());
+            }
+        }
+        plat::PlatMutexUnlock(lock.cast());
+    }
+}
+
 /// A number (see [`EeWonSmartNumber`]).
 ///
 /// # Safety

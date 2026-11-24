@@ -456,14 +456,35 @@ pub enum EeWonHostInit {
     None = 0,
     /// `DetectFirewallOp(obj)`: the server context `obj` (`Set(EE_WON_REQHOST_CONTEXT, obj)`)
     Firewall = 1,
+    /// `GetCertOp(auth)` (the deleted subclass, R6 WON lobby and network round 36): the auth context's server
+    /// context `obj`, then the auth context `obj2`
+    GetCert = 2,
+    /// `PeerAuthOp(addr, auth, type, socket)`: the auth type `num`, the auth context `obj`, the socket `obj2`
+    PeerAuth = 3,
+    /// `PeerAuthServerOp(auth, socket)`: no auth type, the auth context `obj`, the socket `obj2`
+    PeerAuthServer = 4,
 }
 
 /// The steps of `init` on a bound op (the deleted constructor's statements after the base's).
 ///
 /// # Safety
 /// `op` is a live, bound op; `obj` NULL or a live `RefCount*` of the kind `init` names.
-pub unsafe fn host_init(op: *const EeWonHostOp, init: EeWonHostInit, obj: *mut c_void) {
+pub unsafe fn host_init(op: *const EeWonHostOp, init: EeWonHostInit, obj: *mut c_void, obj2: *mut c_void, num: i32) {
     match init {
+        // SAFETY: the caller's contract
+        EeWonHostInit::GetCert => unsafe {
+            crate::hostop::ee_won_hostop_set_two(
+                op,
+                crate::reqhost::EE_WON_REQHOST_CONTEXT,
+                obj,
+                crate::certhost::EE_WON_GETCERT_AUTH_CONTEXT,
+                obj2,
+            )
+        },
+        // SAFETY: the caller's contract
+        EeWonHostInit::PeerAuth => unsafe { ee_won_hostop_set_auth(op, num, obj, true, obj2) },
+        // SAFETY: the caller's contract
+        EeWonHostInit::PeerAuthServer => unsafe { ee_won_hostop_set_auth(op, 0, obj, true, obj2) },
         EeWonHostInit::None => {}
         // SAFETY: the caller's contract
         EeWonHostInit::Firewall => unsafe {
@@ -485,11 +506,13 @@ pub unsafe extern "C" fn ee_won_hostop_bind_init(
     tracker: *const EeWonOpTracker,
     init: EeWonHostInit,
     obj: *mut c_void,
+    obj2: *mut c_void,
+    num: i32,
 ) {
     // SAFETY: the caller's contract
     unsafe {
         ee_won_hostop_bind_native(op, None, self_op, self_op, self_obj, tracker);
-        host_init(op, init, obj);
+        host_init(op, init, obj, obj2, num);
     }
 }
 

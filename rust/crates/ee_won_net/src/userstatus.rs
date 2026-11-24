@@ -156,6 +156,44 @@ pub unsafe extern "C" fn ee_won_userstatus_reply(
     status
 }
 
+// `RoutingGetUserStatusOp::RunHook` (2c6970): the datagram listing every queried id, before the base's send
+unsafe extern "C" fn body_run(ctx: *mut c_void, _op: *mut c_void, r: *const crate::udpops::EeWonUdpSendRecvOp) {
+    // SAFETY: the body's contract: the op's live map and Rust object
+    unsafe { (*r).set_outgoing_bytes(&(*(ctx as *const EeWonUserStatus)).request()) }
+}
+// `RoutingGetUserStatusOp::CheckResponse` (2c6ab0): the reply read from the reader's position, which moves
+unsafe extern "C" fn body_check(
+    ctx: *mut c_void,
+    _op: *mut c_void,
+    reader: *mut crate::buffer::EeWonReadBuffer,
+) -> i64 {
+    // SAFETY: the body's contract: the op's live map, a live reader over live bytes
+    let (s, r) = unsafe { (&mut *(ctx as *mut EeWonUserStatus), &mut *reader) };
+    let (status, pos) = s.reply(unsafe { ffi::bytes(r.data, r.length as usize) }, r.pos as usize);
+    r.pos = pos as _;
+    i64::from(status)
+}
+unsafe extern "C" fn body_free(ctx: *mut c_void) {
+    // SAFETY: the body's map, freed once
+    unsafe { ee_won_userstatus_free(ctx as *mut EeWonUserStatus) }
+}
+
+/// `RoutingGetUserStatusOp(addr, manager)`'s body (2c6630; the C++ class went in R6 WON lobby and network round 36):
+/// a new, empty map, 3 retransmits, a 1 s reply wait. The op is `new UDPManagerSendRecvOp(body, addr, manager)`; its
+/// map is `ee_won_udp_body_of(op, EE_WON_UDP_BODY_USER_STATUS)`.
+#[no_mangle]
+pub extern "C" fn ee_won_userstatus_body() -> crate::udpops::EeWonUdpBody {
+    crate::udpops::EeWonUdpBody {
+        kind: crate::udpops::EE_WON_UDP_BODY_USER_STATUS,
+        ctx: ee_won_userstatus_new() as *mut c_void,
+        run: Some(body_run),
+        check: Some(body_check),
+        free: Some(body_free),
+        retry_limit: 3,
+        timeout: 1000,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

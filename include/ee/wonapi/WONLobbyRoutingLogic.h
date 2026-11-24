@@ -5,55 +5,14 @@
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyEvents.h"
-class RoutingOpCompletion;
-struct EeWonRouteLogic;
 namespace WONAPI {
-class LobbyGameList;
-class LobbyRustDialog;
 // RTTI: RoutingLogic > NetLogic > LobbyLogic > RefCount; vtable 0x855a60.
-// A Rust object since R6 WONLobby round 9 (rust/crates/ee_won_lobby/src/routelogic.rs): the servers it is on and
-// connecting to, the joined rooms, the idle and moderator state, the last server refresh (the original's 0x40,
-// 0x5c..0x5f, 0x60..0x70) and every method; this shell keeps the lists it owns, the dialogs and the data type.
-class RoutingLogic : public NetLogic {
-public:
-    virtual void InitComponent(ComponentConfig* inConfig);
-    RoutingLogic();
-    virtual ~RoutingLogic();
-    virtual bool HostGame(LobbyGame* inGame);
-    virtual bool JoinGame(LobbyGame* inGame);
-    LobbyClientList* GetClientList(); // the current server's players, or NULL
-    LobbyServer* GetCurrentServer(); // the server joined, or NULL
-    LobbyGroup* GetChatGroup(); // the chat room joined, or NULL
-    virtual LobbyClient* GetMyClient();
-    virtual void SendToCaptain(const ByteBuffer* inData);
-    virtual void BroadcastToGame(const ByteBuffer* inData);
-    virtual void SendToClient(LobbyClient* inClient, const ByteBuffer* inData);
-    virtual void AdvertiseGame(LobbyGame* inGame);
-    virtual void RemoveGameAdvertisement(LobbyGame*);
-    virtual void KickClient(LobbyClient* inClient, bool inBan);
-    virtual void SetGameInProgress(bool inClose);
-    virtual void Reset();
-    virtual void LeaveGame(LobbyGame*);
-    virtual void Suspend();
-    virtual void Resume();
-    void EnterInternetScreen(bool); // 0x7ed430; enters the internet screen
-    // the completions' targets (LogicCompletion<RoutingLogic>)
-    void QueryServerGroupsDone(AsyncOp*); // 0x7e9e60; group query completion
-    void GetUserStatusComplete(AsyncOp*); // 0x7e7460; user status query completion
-    void ConnectionClosed(AsyncOp* inBaseOp);
-    virtual void Logout();
-    virtual void HandleControlEvent(int);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    EeWonRouteLogic* mRust; // owned
-    std::string mGameDataType; // 0x44, "G" from the constructor
-    SmartPtr<LobbyServerList> mServerList; // 0x54
-    SmartPtr<LobbyGameList> mGameList; // 0x58
-    SmartPtr<LobbyRustDialog> mAddFriendDialog; // 0x74; type descriptor 0x8e1608
-    SmartPtr<LobbyRustDialog> mAdminActionDialog; // 0x78; type descriptor 0x8e1630
-    SmartPtr<LobbyRustDialog> mBadUserDialog; // 0x7c; type descriptor 0x8e1658
-    SmartPtr<LobbyRustDialog> mCreateRoomDialog; // 0x80; type descriptor 0x8e1680
-    SmartPtr<LobbyRustDialog> mRoomDialog; // 0x84; type descriptor 0x8e16a8
-    SmartPtr<LobbyRustDialog> mPasswordDialog; // 0x88; type descriptor 0x8e15e0
-};
+// A Rust object since R6 WONLobby round 9 (rust/crates/ee_won_lobby/src/routelogic.rs: the servers it is on and
+// connecting to, the joined rooms, the idle and moderator state, the last server refresh and every method) and,
+// since R6 WON round 36, the RustLogic of kind Routing (ee/wonapi/WONLobbyLogic.h): the lists and dialogs the class
+// held are in the shell's slots, named here (the dialogs in the members' order; the game data type was "G").
+enum { kRoutingServerList, kRoutingGameList }; // mSlot: mServerList (0x54), mGameList (0x58)
+// mDialog: 0x74 (AddFriend) .. 0x88 (Password)
+enum { kRoutingAddFriend, kRoutingAdminAction, kRoutingBadUser, kRoutingCreateRoom, kRoutingRoom, kRoutingPassword };
 }
 #endif

@@ -81,6 +81,8 @@ static std::string TypeName(const void* inObject, const std::type_info& inType)
 // an op of a socket op kind by the original class's name (the kinds are one C++ class since WONLobby round 28)
 static std::string TypeName(const AsyncOp* inObject, const std::type_info& inType)
 {
+    // (a progress chunk is a plain AsyncOp with a subject since round 36: named as the class it was)
+    if (inObject != NULL && inObject->GetSubject() != NULL) return "RecvChunkOp";
     const char* aKind = WonSocketOpClass(inObject);
     return aKind != NULL ? std::string(aKind) : TypeName(static_cast<const void*>(inObject), inType);
 }
@@ -368,7 +370,7 @@ class ProgressDone : public CompletionBase<AsyncOpPtr> {
 public:
     virtual void Complete(AsyncOpPtr inOp)
     {
-        RecvChunkOp* aChunk = dynamic_cast<RecvChunkOp*>(inOp.get());
+        SocketOp* aChunk = RecvChunkOf(inOp.get());
         Log("progress " + TypeName(inOp.get(), typeid(*inOp.get())) + " " + St(inOp->GetStatus()) + " chunk " + N(aChunk != NULL));
     }
 };
@@ -753,10 +755,10 @@ public:
     ChunkDone() : mCount(0), mLog(true) {}
     virtual void Complete(AsyncOpPtr inOp)
     {
-        RecvChunkOp* aChunk = dynamic_cast<RecvChunkOp*>(inOp.get());
+        SocketOp* aChunk = RecvChunkOf(inOp.get());
         this->mCount++;
         if (this->mLog)
-            Log("chunk read " + N(aChunk != NULL ? (long long)aChunk->GetRecvOp()->GetBytesRead() : -1));
+            Log("chunk read " + N(aChunk != NULL ? (long long)aChunk->GetBytesRead() : -1));
     }
     int mCount;
     bool mLog;
