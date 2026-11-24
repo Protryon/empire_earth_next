@@ -16,10 +16,15 @@ use std::ptr::addr_of_mut;
 
 use ee_base::math::types::GeTransformation;
 use ee_sim::ai::next_game::schedule;
-use ee_sim::save_versions::*;
 use ee_sim::app::active_ffi::{ee_app_active_list, ee_app_active_set, ee_app_active_set_list};
+use ee_sim::astar::cm_file::{ee_astar_cm_load_regions, ee_astar_cm_save_regions};
+use ee_sim::astar::pm::ee_path_manager_file;
 use ee_sim::combat::regions::{ee_combat_regions_order, ee_combat_regions_restore, EeCombatUnitRegions};
+use ee_sim::cp::player_game::ee_cp_pl_state_block;
+use ee_sim::save_versions::*;
+use ee_sim::units::group_host::{ee_units_groups_load_active, ee_units_groups_save_active};
 use ee_sim::units::player_save::EeUnitsPlayerSaveIo;
+use ee_sim::units::save_prim::game::ee_units_save_primitive;
 use ee_sim::units::world_save::*;
 use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
@@ -321,15 +326,63 @@ fn has_op(which: i64) -> Option<extern "C" fn(c_ulong, c_ulong) -> bool> {
 /// The other systems' parts (`PART_*`) as their load and save cases; this file's two parts are Rust.
 fn part_ops(part: i64) -> Option<(O, O)> {
     Some(match part {
-        EE_UNITS_WORLD_PART_PATH_RUNNING => (O::PwPathRunningLoad, O::PwPathRunningSave),
         EE_UNITS_WORLD_PART_AREA_EFFECTS => (O::PwAreaEffectsLoad, O::PwAreaEffectsSave),
-        EE_UNITS_WORLD_PART_EXPERIMENT_TIMERS => (O::PwExperimentTimersLoad, O::PwExperimentTimersSave),
         EE_UNITS_WORLD_PART_TOWNS => (O::PwTownsLoad, O::PwTownsSave),
-        EE_UNITS_WORLD_PART_CONTINENT_REGIONS => (O::PwContinentRegionsLoad, O::PwContinentRegionsSave),
-        EE_UNITS_WORLD_PART_RESOURCE_STATE => (O::PwResourceStateLoad, O::PwResourceStateSave),
-        EE_UNITS_WORLD_PART_PATH_SEARCHES => (O::PwPathSearchesLoad, O::PwPathSearchesSave),
-        EE_UNITS_WORLD_PART_ACTIVE_GROUPS => (O::PwActiveGroupsLoad, O::PwActiveGroupsSave),
-        EE_UNITS_WORLD_PART_GRAPH_SEARCHES => (O::PwGraphSearchesLoad, O::PwGraphSearchesSave),
+        _ => return None,
+    })
+}
+
+/// `EESaveFilePrimitive`: the file primitives on the saved game's `FSFile` (the index unused).
+///
+/// # Safety
+/// `file` a live `FSFile`; `io` a live record.
+unsafe extern "C" fn file_primitive(file: *mut c_void, op: i32, _index: u32, io: *mut EeUnitsPlayerSaveIo) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe { ee_units_save_primitive(file, op, io) }
+}
+
+/// The parts whose load and save are Rust's: the path manager's three (`EEPathManager::LoadRunningState` ..
+/// `SaveGraphSearches`), the computer players' two state blocks (`EECPLoad/SaveExperimentTimers`,
+/// `EECPLoad/SaveResourceState`), the continent regions (`EELoad/SaveContinentRegions`) and the active groups
+/// (`EELoad/SaveActiveGroups`); a save's result is 0, as the C++ calls' was dropped. None for the other parts.
+fn rust_part(file: *mut c_void, load: bool, which: i64) -> Option<i64> {
+    let path = |what: i32| {
+        // SAFETY: the game's path manager (gPathManager's) and the saved game's file
+        let r = unsafe { ee_path_manager_file(ee_sim::astar::pm::global(), what, load, file) } as i64;
+        if load {
+            r
+        } else {
+            0
+        }
+    };
+    let state = |what: u32| {
+        // SAFETY: the saved game's file and its primitives
+        let r = unsafe { ee_cp_pl_state_block(file as u64, what + load as u32, file_primitive) } as i64;
+        if load {
+            r
+        } else {
+            0
+        }
+    };
+    // SAFETY (the calls below): the saved game's file, its primitives and the game's continent record
+    Some(match which {
+        EE_UNITS_WORLD_PART_PATH_RUNNING => path(0),
+        EE_UNITS_WORLD_PART_PATH_SEARCHES => path(1),
+        EE_UNITS_WORLD_PART_GRAPH_SEARCHES => path(2),
+        EE_UNITS_WORLD_PART_EXPERIMENT_TIMERS => state(0),
+        EE_UNITS_WORLD_PART_RESOURCE_STATE => state(2),
+        EE_UNITS_WORLD_PART_CONTINENT_REGIONS if load => (unsafe { ee_astar_cm_load_regions(file) }) as i64,
+        EE_UNITS_WORLD_PART_CONTINENT_REGIONS => {
+            unsafe { ee_astar_cm_save_regions(ee_sim::astar::world_view::cm_ptr(), file) };
+            0
+        }
+        EE_UNITS_WORLD_PART_ACTIVE_GROUPS if load => {
+            (unsafe { ee_units_groups_load_active(file, file_primitive) }) as i64
+        }
+        EE_UNITS_WORLD_PART_ACTIVE_GROUPS => {
+            unsafe { ee_units_groups_save_active(file, file_primitive) };
+            0
+        }
         _ => return None,
     })
 }
@@ -351,13 +404,14 @@ fn part(ctx: &PwCtx, load: bool, which: i64, town_areas: bool) -> i64 {
             save_tile_types(file);
             0
         }
-        _ => match part_ops(which) {
-            Some((l, _)) if load => h(l, file.0, &[town_areas as i64]),
-            Some((_, s)) => {
+        _ => match (rust_part(file.0 as *mut c_void, load, which), part_ops(which)) {
+            (Some(r), _) => r,
+            (None, Some((l, _))) if load => h(l, file.0, &[town_areas as i64]),
+            (None, Some((_, s))) => {
                 h(s, file.0, &[]);
                 0
             }
-            None => 0,
+            (None, None) => 0,
         },
     }
 }
@@ -381,7 +435,8 @@ pub unsafe extern "C" fn ee_gamecpp_pworld_host(ctx: *mut c_void, op: i32, io: *
         // SAFETY: a primitive comes with the file's context
         let c = unsafe { &*ctx };
         let mut sio = EeUnitsPlayerSaveIo { i: io.a, f: io.f, b: (io.b != 0) as u8 };
-        let r = h(O::PwPrimitive, c.file, &[op as i64, ptr(&mut sio)]) as i32;
+        // SAFETY: the saved game's file
+        let r = unsafe { ee_units_save_primitive(c.file as *mut c_void, op, &mut sio) };
         io.a = sio.i;
         io.f = sio.f;
         io.b = sio.b as i64;
@@ -948,7 +1003,8 @@ mod tests {
         }
         assert!(has_op(17).is_none());
         for p in 1..=9 {
-            assert!(part_ops(p).is_some(), "{p}");
+            let ours = p == EE_UNITS_WORLD_PART_AREA_EFFECTS || p == EE_UNITS_WORLD_PART_TOWNS;
+            assert!(part_ops(p).is_some() == ours, "{p}");
         }
         assert!(
             part_ops(EE_UNITS_WORLD_PART_TECH_ALLOWED).is_none() && part_ops(EE_UNITS_WORLD_PART_TILE_TYPES).is_none()
