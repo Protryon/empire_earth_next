@@ -75,7 +75,6 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/USingleton.h"
 #include "ee/EEUnit.h"
-#include "ee/EEFormation.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEMap.h"
@@ -376,8 +375,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::TorpedoCategory: return kUnitCategoryTorpedo;
     // the capture and its sweeps
     case O::PhysicsRandom: return gPhysics != NULL ? P64(&gPhysics->mRandom) : 0;
-    case O::FormationSweep: EEFormationCaptureSweep();
-        break;
     case O::GroupCommandSweep: EEGroupCommandSweep();
         break;
     case O::MiniMapSnapshot: ee_app_capture_minimap_snapshot(gMiniMap->mRust, gMiniMap->mPixels, gMiniMap->mPixelsPerRow);

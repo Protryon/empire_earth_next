@@ -653,7 +653,8 @@ pub fn sweep(kind: i32, arg: c_long) {
     match kind {
         EE_SIM_DRIVER_SWEEP_FIVE_MINUTES => {
             // every five game minutes of a captured game
-            h(O::FormationSweep, 0, &[]); // (ee/EEFormation.h)
+            // SAFETY: the simulation thread holds the world
+            unsafe { ee_sim::formations::units::capture_sweep() };
             combat_capture_sweep();
             tech_capture::ee_gamecpp_tech_capture_sweep(); // the tech trees' sweep (ee/EETechCapture.h)
             calamity_capture::ee_gamecpp_capture_calamity_sweep(); // CanCastAt over every calamity class (ee/EETechCapture.h)

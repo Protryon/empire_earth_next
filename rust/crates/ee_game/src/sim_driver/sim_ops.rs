@@ -117,7 +117,6 @@ pub enum EeSimDriverSim {
     TorpedoCategory,
     // the capture and its sweeps
     PhysicsRandom,
-    FormationSweep,
     GroupCommandSweep,
     MiniMapSnapshot,
     TradeFoodWood,

@@ -634,7 +634,6 @@ enum class EeSimDriverSim : uint32_t {
   MissileCategory,
   TorpedoCategory,
   PhysicsRandom,
-  FormationSweep,
   GroupCommandSweep,
   MiniMapSnapshot,
   TradeFoodWood,
