@@ -2,19 +2,24 @@
 //! system devices, the window thread's events, and the system keyboard and mouse with their entities, which the
 //! game threads read. Every pointer may be NULL: a NULL keyboard, mouse or entity reads as nothing held.
 //!
-//! Locks: a keyboard or mouse call holds that object's lock and, inside it, its device's; the window thread's events
-//! take a device's lock only. No call goes out to C++.
+//! Locks: a keyboard or mouse call holds that object's lock and, inside it, its device's slot (shared) and the
+//! device's own; the window thread's events take the two slots (shared) and a device's lock. `ee_input_system_init`
+//! and `ee_input_system_shutdown` take one slot at a time, exclusively, and nothing else: a shutdown waits for the
+//! calls that are using a device instead of freeing it under them. No call goes out to C++.
 
 use super::devices::{modifier_state, Keyboard, Mouse, ERROR_BEYOND_END, MOUSE_ENTITY_COUNT};
 use super::{handle_event, Device};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_long, c_ulong};
 use std::ptr;
-use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard};
 
-static KEYBOARD_DEVICE: AtomicPtr<Device> = AtomicPtr::new(ptr::null_mut());
-static MOUSE_DEVICE: AtomicPtr<Device> = AtomicPtr::new(ptr::null_mut());
+/// A system device's slot: empty before `ee_input_system_init` and after `ee_input_system_shutdown`.
+type Slot = RwLock<Option<Device>>;
+
+static KEYBOARD_DEVICE: Slot = RwLock::new(None);
+static MOUSE_DEVICE: Slot = RwLock::new(None);
 
 /// The double-press delay in ms (`gDoublePressTimeDelta`, 250 by default; the keys add 200).
 static DOUBLE_PRESS_DELAY: AtomicU64 = AtomicU64::new(250);
@@ -23,12 +28,11 @@ fn delay() -> c_ulong {
     DOUBLE_PRESS_DELAY.load(Ordering::Relaxed) as c_ulong
 }
 
-/// The system device of a slot.
-///
-/// # Safety
-/// The device lives until `ee_input_system_shutdown`, which the game calls after the keyboard and mouse are gone.
-unsafe fn device<'a>(slot: &AtomicPtr<Device>) -> Option<&'a Device> {
-    slot.load(Ordering::Acquire).as_ref()
+/// The system device of a slot (`.as_ref()`: None without one), kept alive while the guard is held. The slots were
+/// raw pointers once, and a shutdown on one thread freed the device a call on another thread was writing to: the
+/// test binary's heap corruption (PORT_LEARNINGS "The ee_base heap corruption").
+fn device(slot: &'static Slot) -> RwLockReadGuard<'static, Option<Device>> {
+    slot.read().unwrap_or_else(|e| e.into_inner())
 }
 
 /// The system keyboard (`ISKeyboard`; C++ holds a pointer to this static as `gISKeyboard`).
@@ -71,6 +75,14 @@ static MOUSE_ENTITIES: [EeInputEntity; MOUSE_ENTITY_COUNT] = [
     EeInputEntity { mouse: true, index: 6 },
 ];
 
+/// Serialises the tests that use the system devices, keyboard and mouse (one set a process, as in the game): this
+/// file's and system.rs's. Without it each created, replaced and shut down what the other was reading.
+#[cfg(test)]
+pub(crate) fn test_system() -> MutexGuard<'static, ()> {
+    static LOCK: Mutex<()> = Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 fn keyboard_lock() -> MutexGuard<'static, Option<Keyboard>> {
     SYSTEM_KEYBOARD.state.lock().unwrap_or_else(|e| e.into_inner())
 }
@@ -83,24 +95,17 @@ fn mouse_lock() -> MutexGuard<'static, Option<Mouse>> {
 #[no_mangle]
 pub extern "C" fn ee_input_system_init() {
     for slot in [&KEYBOARD_DEVICE, &MOUSE_DEVICE] {
-        let new = Box::into_raw(Box::new(Device::new()));
-        if slot.compare_exchange(ptr::null_mut(), new, Ordering::AcqRel, Ordering::Acquire).is_err() {
-            // SAFETY: `new` came from Box::into_raw above and was not published.
-            drop(unsafe { Box::from_raw(new) });
-        }
+        slot.write().unwrap_or_else(|e| e.into_inner()).get_or_insert_with(Device::new);
     }
 }
 
-/// Destroys both system devices (`ISShutdown`, after the keyboard and the mouse that read them). As in the original,
-/// the window thread must not be inside `ee_input_handle_event` meanwhile.
+/// Destroys both system devices (`ISShutdown`, after the keyboard and the mouse that read them). A call that is
+/// using a device on another thread (the window thread inside `ee_input_handle_event`) finishes first.
 #[no_mangle]
 pub extern "C" fn ee_input_system_shutdown() {
     for slot in [&KEYBOARD_DEVICE, &MOUSE_DEVICE] {
-        let old = slot.swap(ptr::null_mut(), Ordering::AcqRel);
-        if !old.is_null() {
-            // SAFETY: published by ee_input_system_init from Box::into_raw; taken out of the slot once.
-            drop(unsafe { Box::from_raw(old) });
-        }
+        let old = slot.write().unwrap_or_else(|e| e.into_inner()).take();
+        drop(old); // outside the slot's lock
     }
 }
 
@@ -108,9 +113,8 @@ pub extern "C" fn ee_input_system_shutdown() {
 /// motion, button and wheel; only those of the event's type are used).
 #[no_mangle]
 pub extern "C" fn ee_input_handle_event(kind: u32, scan_code: u32, dx: i32, dy: i32, button: u32, wheel: f32) {
-    // SAFETY: the slots hold devices from ee_input_system_init or NULL.
-    let (keyboard, mouse) = unsafe { (device(&KEYBOARD_DEVICE), device(&MOUSE_DEVICE)) };
-    handle_event(keyboard, mouse, kind, scan_code, dx, dy, button, wheel);
+    let (keyboard, mouse) = (device(&KEYBOARD_DEVICE), device(&MOUSE_DEVICE));
+    handle_event(keyboard.as_ref(), mouse.as_ref(), kind, scan_code, dx, dy, button, wheel);
 }
 
 /// `ISSetDoublePressTimeDelta` (and `ISInitialize`'s delay): the longest time between two presses of a double press.
@@ -155,7 +159,7 @@ pub unsafe extern "C" fn ee_input_keyboard_create(
             })
             .collect()
     });
-    let k = Keyboard::new(owned.as_deref(), device(&KEYBOARD_DEVICE), time, delay());
+    let k = Keyboard::new(owned.as_deref(), device(&KEYBOARD_DEVICE).as_ref(), time, delay());
     *keyboard_lock() = Some(k);
     &SYSTEM_KEYBOARD
 }
@@ -210,8 +214,7 @@ pub extern "C" fn ee_input_keyboard_should_update(k: *const EeInputKeyboard) -> 
 #[no_mangle]
 pub extern "C" fn ee_input_keyboard_refresh(k: *const EeInputKeyboard, time: c_ulong) {
     if let (false, Some(kb)) = (k.is_null(), keyboard_lock().as_mut()) {
-        // SAFETY: the device outlives the keyboard (see `device`).
-        kb.refresh(unsafe { device(&KEYBOARD_DEVICE) }, time, delay());
+        kb.refresh(device(&KEYBOARD_DEVICE).as_ref(), time, delay());
     }
 }
 
@@ -219,8 +222,7 @@ pub extern "C" fn ee_input_keyboard_refresh(k: *const EeInputKeyboard, time: c_u
 #[no_mangle]
 pub extern "C" fn ee_input_keyboard_resume(k: *const EeInputKeyboard, time: c_ulong) {
     if let (false, Some(kb)) = (k.is_null(), keyboard_lock().as_mut()) {
-        // SAFETY: as above.
-        kb.resume(unsafe { device(&KEYBOARD_DEVICE) }, time, delay());
+        kb.resume(device(&KEYBOARD_DEVICE).as_ref(), time, delay());
     }
 }
 
@@ -228,8 +230,7 @@ pub extern "C" fn ee_input_keyboard_resume(k: *const EeInputKeyboard, time: c_ul
 #[no_mangle]
 pub extern "C" fn ee_input_keyboard_suspend(k: *const EeInputKeyboard) {
     if let (false, Some(kb)) = (k.is_null(), keyboard_lock().as_mut()) {
-        // SAFETY: as above.
-        kb.suspend(unsafe { device(&KEYBOARD_DEVICE) });
+        kb.suspend(device(&KEYBOARD_DEVICE).as_ref());
     }
 }
 
@@ -239,8 +240,7 @@ pub extern "C" fn ee_input_keyboard_suspend(k: *const EeInputKeyboard) {
 /// C++ sets). A second call replaces it.
 #[no_mangle]
 pub extern "C" fn ee_input_mouse_create() -> *const EeInputMouse {
-    // SAFETY: as above.
-    let m = Mouse::new(unsafe { device(&MOUSE_DEVICE) });
+    let m = Mouse::new(device(&MOUSE_DEVICE).as_ref());
     *mouse_lock() = Some(m);
     &SYSTEM_MOUSE
 }
@@ -277,8 +277,7 @@ pub extern "C" fn ee_input_mouse_should_update(m: *const EeInputMouse) -> bool {
 #[no_mangle]
 pub extern "C" fn ee_input_mouse_refresh(m: *const EeInputMouse, time: c_ulong) {
     if let (false, Some(ms)) = (m.is_null(), mouse_lock().as_mut()) {
-        // SAFETY: as above.
-        ms.refresh(unsafe { device(&MOUSE_DEVICE) }, time, delay());
+        ms.refresh(device(&MOUSE_DEVICE).as_ref(), time, delay());
     }
 }
 
@@ -286,8 +285,7 @@ pub extern "C" fn ee_input_mouse_refresh(m: *const EeInputMouse, time: c_ulong) 
 #[no_mangle]
 pub extern "C" fn ee_input_mouse_refresh_xy(m: *const EeInputMouse) {
     if let (false, Some(ms)) = (m.is_null(), mouse_lock().as_mut()) {
-        // SAFETY: as above.
-        ms.refresh_xy(unsafe { device(&MOUSE_DEVICE) });
+        ms.refresh_xy(device(&MOUSE_DEVICE).as_ref());
     }
 }
 
@@ -295,8 +293,7 @@ pub extern "C" fn ee_input_mouse_refresh_xy(m: *const EeInputMouse) {
 #[no_mangle]
 pub extern "C" fn ee_input_mouse_resume(m: *const EeInputMouse) {
     if let (false, Some(ms)) = (m.is_null(), mouse_lock().as_mut()) {
-        // SAFETY: as above.
-        ms.resume(unsafe { device(&MOUSE_DEVICE) });
+        ms.resume(device(&MOUSE_DEVICE).as_ref());
     }
 }
 
@@ -304,8 +301,7 @@ pub extern "C" fn ee_input_mouse_resume(m: *const EeInputMouse) {
 #[no_mangle]
 pub extern "C" fn ee_input_mouse_suspend(m: *const EeInputMouse) {
     if let (false, Some(ms)) = (m.is_null(), mouse_lock().as_mut()) {
-        // SAFETY: as above.
-        ms.suspend(unsafe { device(&MOUSE_DEVICE) });
+        ms.suspend(device(&MOUSE_DEVICE).as_ref());
     }
 }
 
@@ -396,6 +392,7 @@ mod tests {
 
     #[test]
     fn system_keyboard_and_mouse_through_the_c_abi() {
+        let _guard = test_system();
         ee_input_system_init();
         let k = unsafe { ee_input_keyboard_create(ptr::null(), 0) };
         let m = ee_input_mouse_create();

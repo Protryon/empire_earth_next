@@ -7,14 +7,28 @@
 //! the `atexit` handlers) or `abort()`, as the original: not Rust's `process::exit`/`abort`.
 
 use std::ffi::{c_long, c_ulong};
+#[cfg(not(test))]
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(not(test))]
 use std::sync::Mutex;
 
 /// A shutdown function (`void (*)(bool inForced)`).
 pub type EeUtilShutdownFn = unsafe extern "C" fn(forced: bool);
 
+#[cfg(not(test))]
 static SHUTDOWN: Mutex<Vec<EeUtilShutdownFn>> = Mutex::new(Vec::new());
+#[cfg(not(test))]
 static IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+
+// This crate's tests: a list and a flag per thread. The tests of the other systems register their shutdowns (the
+// Input System's, the Time Manager's, the Thread System's) from their own test threads; with one list, the test of
+// the list here ran them all, among them `ee_input_shutdown` while the Input System's tests were using its devices
+// (PORT_LEARNINGS "The ee_base heap corruption").
+#[cfg(test)]
+thread_local! {
+    static SHUTDOWN: std::cell::RefCell<Vec<EeUtilShutdownFn>> = const { std::cell::RefCell::new(Vec::new()) };
+    static IN_PROGRESS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
 
 #[cfg(not(test))]
 extern "C" {
@@ -22,8 +36,16 @@ extern "C" {
     fn abort() -> !;
 }
 
+/// Runs `body` over the list (never while a registered function runs: one may register another).
+fn with_list<R>(body: impl FnOnce(&mut Vec<EeUtilShutdownFn>) -> R) -> R {
+    #[cfg(not(test))]
+    return body(&mut SHUTDOWN.lock().unwrap_or_else(|e| e.into_inner()));
+    #[cfg(test)]
+    SHUTDOWN.with_borrow_mut(body)
+}
+
 fn pop() -> Option<EeUtilShutdownFn> {
-    SHUTDOWN.lock().unwrap_or_else(|e| e.into_inner()).pop()
+    with_list(Vec::pop)
 }
 
 /// `UGetOSType` from a `GetVersion` value: 1 = 95, 2 = 98/ME, 3 = NT 5 or later, 4 = NT 4 or older (or a 9x major
@@ -49,7 +71,7 @@ pub fn os_type(version: u32) -> u32 {
 /// `URegisterShutdown`: always 0 (`kErrorOK`).
 #[no_mangle]
 pub extern "C" fn ee_util_register_shutdown(function: EeUtilShutdownFn) -> c_long {
-    SHUTDOWN.lock().unwrap_or_else(|e| e.into_inner()).push(function);
+    with_list(|list| list.push(function));
     0
 }
 
@@ -57,7 +79,10 @@ pub extern "C" fn ee_util_register_shutdown(function: EeUtilShutdownFn) -> c_lon
 /// process (`exit(0)` when forced, else `abort()`).
 #[no_mangle]
 pub extern "C" fn ee_util_shutdown(forced: bool, terminate: bool) {
+    #[cfg(not(test))]
     IN_PROGRESS.store(true, Ordering::SeqCst);
+    #[cfg(test)]
+    IN_PROGRESS.set(true);
     while let Some(function) = pop() {
         // SAFETY: a function the engine registered for this call
         unsafe { function(forced) };
@@ -80,7 +105,10 @@ pub extern "C" fn ee_util_shutdown(forced: bool, terminate: bool) {
 /// `UShutdownInProgress`.
 #[no_mangle]
 pub extern "C" fn ee_util_shutdown_in_progress() -> bool {
-    IN_PROGRESS.load(Ordering::SeqCst)
+    #[cfg(not(test))]
+    return IN_PROGRESS.load(Ordering::SeqCst);
+    #[cfg(test)]
+    IN_PROGRESS.get()
 }
 
 /// `UGetOSType`.
@@ -98,7 +126,7 @@ pub extern "C" fn ee_util_os_language() -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::AtomicU32;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
     static CALLS: AtomicU32 = AtomicU32::new(0);
 
@@ -125,6 +153,22 @@ mod tests {
         ee_util_shutdown(true, false);
         assert_eq!(CALLS.load(Ordering::SeqCst), 3);
         assert!(ee_util_shutdown_in_progress());
+    }
+
+    /// A shutdown run by one test must not run what another test's thread registered: that freed the Input System's
+    /// devices under its tests (the list is per thread in this crate's tests).
+    #[test]
+    fn another_threads_shutdown_does_not_run_this_threads_functions() {
+        static RAN: AtomicU32 = AtomicU32::new(0);
+        unsafe extern "C" fn mine(_: bool) {
+            RAN.fetch_add(1, Ordering::SeqCst);
+        }
+        ee_util_register_shutdown(mine);
+        std::thread::spawn(|| ee_util_shutdown(false, false)).join().unwrap();
+        assert_eq!(RAN.load(Ordering::SeqCst), 0);
+        assert!(!ee_util_shutdown_in_progress());
+        ee_util_shutdown(false, false);
+        assert_eq!(RAN.load(Ordering::SeqCst), 1);
     }
 
     #[test]

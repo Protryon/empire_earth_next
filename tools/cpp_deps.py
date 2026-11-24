@@ -18,7 +18,7 @@ A UNIT is one object and its source file (FILE: its path under src/, its file na
 
 Definers are classified as:
     cpp       a first-party unit (an object of src/, but src/ThirdParty);
-    vendored  src/ThirdParty (Lua);
+    vendored  src/ThirdParty;
     rust      ee_game.lib's external definitions;
     system    anything else, plus every symbol of namespace std / the CRT (`std::`, `__std`, `_Init_thread`, ...) and the
               compiler's constant-pool and literal COMDATs (`__real@`, `__xmm@`, `??_C@`): an object that emits its own
