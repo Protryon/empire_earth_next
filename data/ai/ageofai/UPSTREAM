@@ -251,9 +251,27 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 given up (M.patrols_wanted, M.patrol_target, M.skip - stations.c sends the soldiers, not ported),
                 DIM (seen less than a quarter of the time after WT_WARM) and the WATCH TOWER places (M.watch_tower;
                 build.lua lays them). Missing/ENGINE: the stations' patrol consumers and the log lines.
-  stations.c    NOT STARTED -> stations.lua (port forward 7a17182). The force by territory: a station for every land
-                soldier, the shares, giving and marching, the pushes without an attack time, the scouts and the
-                patrols, the demolition, the bridgehead, the coast batteries.
+  stations.c    PARTLY -> stations.lua (port forward 7a17182; the alternative land force, [ai_base] stations, OFF).
+                Ported: STATIONS (the main force's shares by weight, the siege's among the territories planning an
+                attack, STEADY by SN_BAND/SN_BAND_MIN, SN_MIN to the largest neighbour unless under attack), GIVING
+                (the most-short first, those under attack first, the BFS over land SN_GIVE_STEPS/_ATTACK deep, one
+                more of the surplus kept a step, SN_MOVES a look, SN_STAY, a pushing territory gives none), ORDERS
+                (the station's place from its finished Town Centre/Capitol/Settlement/other building, else the
+                middle; the enemies' middle seen there; the push's building or its soldiers' middle for the siege;
+                reach 10/5/4; SN_REORDER, AS A GROUP), A PUSH (SN_PUSH_MIN, three quarters there, the judgement by
+                hit points x attack against the memory's, SN_PUSH, on to the next building, SN_BACK, SN_PUSH_WAIT),
+                SCOUTS (SN_SCOUTS, the fastest that sees furthest, SN_SCOUT_GIVE_UP, SN_SCOUT_REST, A LOOK AGAIN
+                SN_RESCOUT), PATROLS (watch.lua's patrols_wanted/patrol_target/skip), DEMOLITION (SN_DEMO idle
+                soldiers at the nearest enemy wall/gate it knows), A STUCK ORDER. Deviations: the territories are
+                the port's cell model; the shares are computed from the territory's facts (held land 10, +10 an enemy
+                soldier seen, +10 an enemy building beside it, +guard_want/3) because produce.lua has no per-
+                territory share; the judgement has no damage tables; the first building of a push is the one nearest
+                the station's place, the next ones the nearest to the soldiers' middle; the station's place is the
+                first finished own building in the territory; claims.lua holds each soldier at CLP_ROUTINE/
+                CLW_STATION. Missing/ENGINE: ACROSS, THE BRIDGEHEAD, A BASE OVER THERE, COAST BATTERIES, ANTI-AIR,
+                THE SIEGE'S ESCORT AT A BREACH, SIEGE AT THE GATES, RAMS AT THE TOWERS, THE WAY/A BREACH, THE CALL,
+                THE RESERVE/THE LOADS, QUARANTINE, AN ESCORT (holy.c), A STANDING FORMATION, THE CLEARED GROUND,
+                A SCENARIO'S TOGGLES/TARGETS, THROUGH THE TERRITORY. Default off.
   army_view.c   NOT STARTED -> nothing to port yet (port forward 7a17182): a summary of the force for the deciding
                 parts to read as one army; the port's lib.groups sums the members on demand.
   crossing.c    NOT STARTED -> crossing.lua (port forward 7a17182). What a crossing risks and the way it takes (the
@@ -328,8 +346,21 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 view's population (which counts the units in production; upstream's bk_room left them out); a
                 fortress that lets nobody out is tried again on the next side until empty (upstream cleared the
                 shelter flag after the first order).
-  holy.c        NOT STARTED -> holy.lua (port forward 7a17182). The holy: the priest's conversions, the prophet's
-                calamities as its own strike category, the hit and run.
+  holy.c        PORTED -> holy.lua (port forward 7a17182; settings.holy, off). Ported: TRAINING (a finished Temple
+                making nothing, HL_PROPHET_EPOCHS, HL_CAP_PRIEST/HL_CAP_PROPHET, HL_BANK, the train verb), THE LOST
+                (a fall in the count, HL_LOSS_MAX in HL_LOSS_WINDOW), the prophets' THE POWERS by the group's kind
+                (malaria behind its own troops, the volcano one look in HL_VOLCANO_EVERY), AT HOME, THE TOWERS (the
+                earthquake HL_QUAKE_OFF before it), A PARTING GIFT, A STRIKE (HL_STRIKE, the guards, the tower struck
+                from beyond its reach), AT ITS TARGET, AWAY AT ONCE, WITH THE FORCE for the first prophet, the priests'
+                conversions (citizens first, HL_ALONE, out of the danger layer, the target kept, HL_PRIEST_LOOK), the
+                walk home and behind the force, the minute log (holy_log). Missing/ENGINE: the prophet's power and the
+                calamity's cost (no ai.unit power field, no calamity cost in ai.techs: the module keeps its own ready
+                clock HL_CAST_READY and gives a cast up at HL_CAST_LONG), calamity_check, the ferry across the water
+                (ferry.c PROPHETS ACROSS: its own land mass stands in for bk_land_of), hl_ordered's goal handle (the
+                unit's action `cast`), sn_escort/sn_escort_near/sn_prophet_escorted (the escort is the engine's idle
+                soldiers, ai.stop for the wait), g_priority_mil (the train verb), the [autotest] variant.
+                Deviations: the kinds by the class category and the data's names; the temple "making" of any queue; the
+                losses from the count each look.
   navy.c        PARTLY -> navy.lua, fleet.lua (the roles). Ported: navy_detect (the water map: enemies with
                 buildings known across the water, the strength; fog-honest, so looked at again every minute),
                 the navy account (navy_share x the strength of the wood, gold and iron income, 600 of each at
@@ -591,8 +622,22 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 regions are the land masses (ai.tile's continent); a cell's land from 16 of its 64 tiles, explored
                 ones only (fog), 96 cells a look; front_army's second station fights lib.groups' one force (the
                 defend task walks them back) - off as upstream. Not ported: the overlay, the autotest log counts.
-  creep.c       NOT STARTED -> creep.lua (port forward 7a17182). Tower creep: 12 citizens walk up to an unguarded
-                enemy building and build a tower in range of it, then the next building from the new towers.
+  creep.c       PORTED -> creep.lua (port forward 7a17182; settings.tower_creep, off as upstream). Ported: THE
+                STALEMATE (CR_STARVED without a food gatherer: the view's food gatherers), THE TARGET (a finished
+                enemy building, the nearest to one of its own however far, the guards CR_FOES/CR_CITS and its
+                territory's foes, CR_BAD_WAIT), THE SPOT (the ring at the edge of its reach with the upgrades, out of
+                the danger layer, ai.can_place, nearest its own), IN A TOWER'S REACH (CR_EDGE past its range, the
+                farthest first, CR_CREW_EXPOSED), BEHIND, THE CREW (CR_CREW_TOWER free citizens on its land), THE
+                WALK (half within CR_THERE), THE TOWERS (laid through ai.build with the crew, CR_TOWERS_B/
+                CR_TOWERS_T, CR_SECOND, the standing ones ordered onto the target, ai.repair under CR_REPAIR), THE END
+                (every drop test, the foundations deleted and refunded), THE SCOUT, the log (creep_log). Missing/ENGINE:
+                place_foundation/bd_send/bd_pays (ai.build places, pays and binds the crew), work.c wk_danger
+                (ai.danger), the per-tile intel ages (ai.unexplored), game/territory.c (territories.lua's foes,
+                ai.tile's continent for the land), citizen_free's list (ai.units' gather/idle), unit_destroy
+                (ai.delete), the [autotest] variant. Deviations: the crew is held (the economy leaves a held citizen
+                alone; upstream's went back to work between two towers), the danger layer includes armed units, the
+                exposed case is not tested against the other defences, a fogged target stands as last seen and "the
+                towers don't hurt it" is skipped while unseen, a remembered foundation is taken for a building.
   sites.c       ENGINE -> C++: the next engine's finders take the mine nearest a drop site, the bush nearest a drop
                 site, refuse a site behind known towers (the site's blocked == "tower"). Nothing to port.
   packing.c     PORTED -> packing.lua (tb_spot: the arc rule round the footprint, the lane a tile wide, s + 2 walkable

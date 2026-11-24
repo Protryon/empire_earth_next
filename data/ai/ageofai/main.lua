@@ -23,8 +23,12 @@ local EX = require("ageofai.explore")    -- [explore.c] the food search, the dog
 local AG = require("ageofai.airguard")   -- [airguard.c] the anti-air, the fighters, the sweeps
 local ST = require("ageofai.storms")     -- [storms.c] the storms' danger zones, the ships out
 local BD = require("ageofai.build")      -- [build.c] the buildings by territory (off unless S.build_by_territory)
+local SN = require("ageofai.stations")   -- [stations.c] the force by territory (off unless S.stations)
 local TV = require("ageofai.territories")   -- [territories.c] the territories as the AI sees them
+local FY = require("ageofai.ferry")       -- [ferry.c] the ferry service (crossing.lua is its crossing)
 local WT = require("ageofai.watch")      -- [watch.c] the patches out of sight, the patrols, the watch towers
+local CR = require("ageofai.creep")      -- [creep.c] tower creep (off unless S.tower_creep)
+local HL = require("ageofai.holy")       -- [holy.c] the priests' conversions, the prophets' calamities (off unless S.holy)
 local V = require("lib.view")
 local S = require("ageofai.settings")
 
@@ -69,11 +73,25 @@ function M.step(view, memory)
     -- [metal.c] the 5-minute line of the metal plan (what it picked, cut and freed)
     MT.tick(view, memory)
     -- [towns.c, expand.c] the towns on the home continent and the outposts on other islands (ageofai.towns)
+    -- [ferry.c] the soldiers and citizens across the water (off unless settings.ferry_service); before towns.lua's
+    -- own outpost ferry, so the service's hulls are its own
+    FY.step(view, memory, orders)
     TW.step(view, memory, orders, budget)
     -- [defence.c walls, enclose] the front walls and their gates, the ring round the town or the island's coast
     -- (ageofai.walls; econ.lua reads the stone it owes and the ring's tower spots from memory.eco)
     W.step(view, memory)
+    -- [creep.c] tower creep: its own crew walks up and towers an unguarded enemy building (off unless S.tower_creep)
+    CR.step(view, memory, orders)
     memory.army_plan = A.step(view, memory, orders, budget, events) or memory.army_plan
+    -- [stations.c] the force by territory: the alternative land force (off as shipped). It takes every land soldier
+    -- and siege weapon out of the force above at its look, and gives them back while the setting is off.
+    if S.stations then
+        SN.step(view, memory, orders, budget)
+    else
+        SN.release(view, memory)   -- a no-op unless the setting just turned off
+    end
+    -- [holy.c] the priests' conversions and the prophets' calamities (off unless S.holy)
+    HL.step(view, memory, orders)
     -- [research.c] the research by rank: the economy's techs, then the units' improvements (every 5 s)
     RS.step(view, memory, orders)
     -- [produce.c] the production buildings by territory: the shares and the hub that builds (every 10 s)

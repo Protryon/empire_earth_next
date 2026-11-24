@@ -316,6 +316,12 @@ return {
                                     -- production and farms; off, the module does nothing (build.c)
     backland_radius = 60,           -- build.lua's fallback: on a map without territories.lua the ground this near the
                                     -- base with no enemy building known round it is the backland
+    holy_log = false,               -- holy.lua's minute line (upstream: [autotest] only)
+    creep_log = false,              -- creep.lua's log (upstream: [autotest] only)
+    -- the force by territory (stations.c; the alternative land force to army.lua)
+    stations = false,               -- the switch; upstream runs it while [ai_base] game_ai = 0 (off as shipped)
+    -- the holy (holy.c): priests and prophets, a strike category of their own
+    holy = false,                   -- off until measured
     -- armies.c (the port forward): the force
     raid_parties = true,            -- a part of the force answers a raid it beats by 200% instead of the whole force
                                     -- (army.lua; armies.c RAID PARTIES)

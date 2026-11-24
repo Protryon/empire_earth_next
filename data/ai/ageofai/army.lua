@@ -340,7 +340,8 @@ local function train(view, memory, mem, order, budget)
     -- soldiers' orders (the player's game: 1 citizen bringing 15 food a minute, every 30 of it a soldier's, the
     -- bank never at a citizen's 50 - the AI trained soldiers instead of citizens)
     local avail = budget.avail
-    if S.citizens_first ~= false then
+    if S.citizens_first ~= false and not ((memory.army or {}).shelf or {}).want then
+        -- (citizens on the shelf are not missing: their room is the army's, bunker.c)
         local miss = (budget.citizens_wanted or 0) - view.citizens
         if miss > 0 then
             local cc = V.cost(view, "citizen")
