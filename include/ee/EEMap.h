@@ -14,6 +14,9 @@
 #include "ee/EESightCapture.h"       // TSGT (TEST ONLY): the sight functions' scope
 #include "rust/sim/combat.h"             // EeUnitsRtsMapFields, EeUnitsMapFields (the maps' plain members)
 #include "rust/sim/units.h"
+#include "rust/base/math.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/rts.h"
 
 // One map tile (provisional name and layout)
 class EEDoppelganger;
@@ -52,25 +55,26 @@ class EETUnitList : public RTSTUnitList {
 class RTSTile {
 public:
     RTSTile(float inHeight);                // 0x124684: +4/+8 = 0, +0x10 = inHeight, +0x14 = false
-    virtual ~RTSTile();                     // +0x00 (??_G 0x1246a1; 0x1246bd only stores the vptr)
+    // +0x00 (??_G 0x1246a1; 0x1246bd only stores the vptr)
+    virtual ~RTSTile() {  }
     // +0x04 0x124719: mTerrainType plus every player's visibility count (provisional name)
-    virtual long GetChecksum(unsigned long inPlayerCount) const;
+    virtual long GetChecksum(unsigned long inPlayerCount) const { return ee_rts_tile_checksum(this, inPlayerCount); }
     // +0x08 0x124756: mHeight, then the visibility words (Read(char*, n, outRead) into mVisibility)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
-                      unsigned long inPlayerCount);
+    virtual long Load(unsigned long, unsigned long, FSFile& inFile, unsigned long inPlayerCount) { return ee_rts_tile_load(this, &inFile, inPlayerCount); }
     // +0x0c 0x124793: fprintf of the visibility counts and the terrain type (provisional name)
-    virtual void Dump(FILE* inFile, unsigned long inPlayerCount) const;
+    virtual void Dump(FILE* inFile, unsigned long inPlayerCount) const { ee_rts_tile_dump(this, inFile, inPlayerCount); }
     // +0x10 0x124895: mHeight, then the visibility words (Write(const char*, n, outWritten))
-    virtual long Save(FSFile& outFile, unsigned long inPlayerCount);
+    virtual long Save(FSFile& outFile, unsigned long inPlayerCount) { return ee_rts_tile_save(this, &outFile, inPlayerCount); }
     // +0x14 0x1248ec: mTerrainType = inTerrainType (EETile's override also marks the mesh's space tiles)
-    virtual void SetTerrainType(long inTerrainType, const EETileLocation& inLocation, RTSMap* inMap);
+    virtual void SetTerrainType(long inValue, const EETileLocation&, RTSMap*) { this->mTerrainType = inValue; }
     // +0x18: inUnit enters the tile: a new node (pool 0x5297e0, inUnit referenced) in front of inNext
     // (EEUCResource::AddToTile stores the result in mUnits) (provisional name)
     virtual RTSTileUnitNode* AddUnit(EEUnit* inUnit, RTSTileUnitNode* inNext) = 0;
-    virtual void FreeUnitNode(RTSTileUnitNode* inNode);  // +0x1c 0x124708 (deletes it; EETile returns it to its pool)
-    void RemoveAllUnits();
-    void RemoveUnit(EEUnit* inUnit);
-    bool HasUnit(EEUnit* inUnit);
+    // +0x1c 0x124708 (deletes it; EETile returns it to its pool)
+    virtual void FreeUnitNode(RTSTileUnitNode* inNode) { delete inNode; }
+    void RemoveAllUnits() { ee_rts_tile_remove_all_units(this); }
+    void RemoveUnit(EEUnit* inUnit) { ee_rts_tile_remove_unit(this, inUnit); }
+    bool HasUnit(EEUnit* inUnit) { return ee_rts_tile_has_unit(this, inUnit); }
     // 0x1247ed (counts inPlayer in; a first sighting stores 2) (provisional name). The tile sight, SetVisibility
     // included, is Rust (ee_units tile_sight.rs; EESightRings.cpp forwards)
     void AddSight(EEPlayer* inPlayer);
@@ -99,19 +103,25 @@ class EETile : public RTSTile {
 public:
     // inline (out-of-line COMDAT 0x11e266 after its first user, EEMap::ReserveTiles's new[])
     EETile() : RTSTile(0.0f) {}
-    virtual ~EETile();                      // +0x00 (??_G 0x11bba9)
-    virtual long GetChecksum(unsigned long inPlayerCount) const;  // +0x04 0x12124e
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
-                      unsigned long inPlayerCount);           // +0x08 0x12128d
-    virtual void Dump(FILE* inFile, unsigned long inPlayerCount) const;   // +0x0c 0x1212ec
-    virtual long Save(FSFile& outFile, unsigned long inPlayerCount);   // +0x10 0x12139e
+    // +0x00 (??_G 0x11bba9)
+    virtual ~EETile() { this->RemoveAllUnits(); }
+    // +0x04 0x12124e
+    virtual long GetChecksum(unsigned long inPlayerCount) const { return ee_gamecpp_tile_checksum(this, inPlayerCount); }
+    // +0x08 0x12128d
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile, unsigned long inPlayerCount) { return ee_gamecpp_tile_load(this, inMajorVersion, inMinorVersion, &inFile, inPlayerCount); }
+    // +0x0c 0x1212ec
+    virtual void Dump(FILE* inFile, unsigned long inPlayerCount) const { ee_gamecpp_tile_dump(this, inFile, inPlayerCount); }
+    // +0x10 0x12139e
+    virtual long Save(FSFile& outFile, unsigned long inPlayerCount) { return ee_gamecpp_tile_save(this, &outFile, inPlayerCount); }
     // +0x14 0x1214bf: the mesh's space flag (type 12); a tile under water becomes type 1, or 10 when fewer than 3 of
     // its corners are above water
-    virtual void SetTerrainType(long inTerrainType, const EETileLocation& inLocation, RTSMap* inMap);
+    virtual void SetTerrainType(long inTerrainType, const EETileLocation& inLocation, RTSMap* inMap) { ee_gamecpp_tile_set_terrain_type(this, inTerrainType, inLocation.mX, inLocation.mY, inMap); }
     virtual RTSTileUnitNode* AddUnit(EEUnit* inUnit, RTSTileUnitNode* inNext);   // +0x18 0x1211f4
     virtual void FreeUnitNode(RTSTileUnitNode* inNode);  // +0x1c 0x12122a
-    void AddDoppelganger(EEDoppelganger* inDoppelganger);  // 0x1211e4 (mU18 takes it; EEDoppelganger::RepairPointers)
-    void RemoveDoppelganger(EEDoppelganger* inDoppelganger);  // 0x12133c (mU18 drops it; EEDoppelgangerManager) (provisional name)
+    // 0x1211e4 (mU18 takes it; EEDoppelganger::RepairPointers)
+    void AddDoppelganger(EEDoppelganger* inDoppelganger) { this->mDoppelgangers.push_back(inDoppelganger); }
+    // 0x12133c (mU18 drops it; EEDoppelgangerManager) (provisional name)
+    void RemoveDoppelganger(EEDoppelganger* inDoppelganger) { ee_gamecpp_tile_remove_image(this, inDoppelganger); }
     // the node pool (EETile.cpp's UMemoryPool<EETUnitList> 0x5297e0): its stats and release (0x121212, the shutdown
     // 0x1442e0) and its size (0x1216f3, the start-up 0x14318c: 500, 100) (provisional names)
     static void ReleaseUnitListPool();
@@ -136,7 +146,6 @@ typedef EETile EEMapTile;
 // its assert names mCriticalSectionForColoredRectangles). sizeof 0x195624. Names are provisional unless stated.
 class GE3DLine;
 class GEColor;
-template <class T> class U2DPoint;
 template <class T> class U2DRectangle;
 
 // An element of RTSMap::mColoredRectangles (0x24 bytes: `_Buy` 0xdf542 multiplies by 0x24; trivially destructible:
@@ -171,7 +180,7 @@ struct RTSMapVertexColors {
 // continent changes). Its two-point ctor is out of line (0xa016f, in the AI range, first used by 0x9d9e9; RTSMap.cpp
 // calls it); trivially destructible (the map's dtor `_Tidy` is ICF-folded 0xa9c2c). Name is provisional.
 struct RTSMapTileRun {
-    RTSMapTileRun(const U2DPoint<long>& inStart, const U2DPoint<long>& inEnd);
+    RTSMapTileRun(const U2DPoint<long>& inStart, const U2DPoint<long>& inEnd) : mStart(inStart), mEnd(inEnd) {  }
     // out of line (COMDAT 0x9fec3 among EECPWallManager.cpp's, called by its find 0x9fe9d; the four fields compared in
     // order) (provisional name)
     bool operator==(const RTSMapTileRun& inOther) const;
@@ -185,14 +194,16 @@ struct RTSMapTileRun {
 // second and third bases; RTSMap's and EEMap's Load and Save are Rust over them.
 class RTSMap : public FSRestorable, public EeUnitsRtsMapFields {
 public:
-    RTSMap(float inF1955F4);                // 0x121d41 (EEMap's ctors push a float constant; the vectors' allocator
+    // 0x121d41 (EEMap's ctors push a float constant; the vectors' allocator
+    RTSMap(float inF1955F4) { ee_rts_map_construct(this, inF1955F4); }
                                             // byte is read from the parameter's high byte)
     // +0x00: an out-of-line empty override (vtable 0x441d94 slot 0 = the ICF-folded `ret 4` 0x557269; EEMap::GetChecksum
     // 0x51c531 calls it, not FSRestorable's inline body)
-    virtual void GetChecksum(ESChecksum& ioChecksum) const;
+    virtual void GetChecksum(ESChecksum& ioChecksum) const {  }
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x123259
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x123807
-    virtual ~RTSMap();                      // +0x10 (??_G 0x121e20; RTSWorld's dtor deletes the map through it)
+    // +0x10 (??_G 0x121e20; RTSWorld's dtor deletes the map through it)
+    virtual ~RTSMap() { ee_rts_map_destruct(this); }
     // the pure slots: signatures from RTSMap.cpp's calls and EEMap's overrides' `ret N` (provisional names)
     virtual void UpdateWater(long inX, long inY) = 0;  // +0x14 (a vertex height changed: 0x122761, 0x123389)
     virtual EEMapTile* CreateTile(float inHeight) = 0;  // +0x18 (a new tile: 0x1229b3)
@@ -219,16 +230,17 @@ public:
     // RTSMap.cpp's non-virtual members in address order (provisional names unless stated); the terrain edits'
     // spreads (0x121e7d..), UpdateTiles (0x1225fa) and SmoothVertex are ee_ge map_raise.rs'
     long GetNumRaisedCorners(unsigned long inX, unsigned long inY);   // 0x1222ed (EEPlanWall; built without /Og)
-    void ClearU1955DC();                    // 0x1225ef (EESelectedGroup::ShowSelectionAreas)
-    void Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles);
-    void ApplyVertexColors();
+    // 0x1225ef (EESelectedGroup::ShowSelectionAreas)
+    void ClearU1955DC() { this->mU1955DC.clear(); }
+    void Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles) { ee_rts_map_create(this, inWidth, inHeight, inPlayerCount, inCreateTiles); }
+    void ApplyVertexColors() { ee_rts_map_apply_vertex_colors(this); }
     bool IsTileFlat(unsigned long inX, unsigned long inY);
     EEMapTile* GetTileOnLine(const GE3DLine& inLine, long& outX, long& outY, bool inHitWaterSurface);  // 0x122ee8 (EEMap::PickScreenTile)
     EEMapTile* GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocation, bool inHitWaterSurface);  // 0x12307d (EEMap::GetLocationAt)
-    const GEColor& GetVertexColor(long inX, long inY, long inCorner);
+    const GEColor& GetVertexColor(long inX, long inY, long inCorner) { return this->mTerrainMesh.GetVertexColor(inX + (inCorner == 1 || inCorner == 3), inY + (inCorner == 0 || inCorner == 1)); }
     void Raise(long* ioLeft, long* ioRight, long* ioTop, long* ioBottom, float inHeight, float inSlope,
                float inEdgeHeight, float inEdgeSlope, bool inRaise);  // 0x123389 (x in [left, right + 1], y in [bottom, top + 1])
-    void DeleteTiles();
+    void DeleteTiles() { delete[] this->mTiles; }
     void FogSeen(EEPlayer* inPlayer);       // 0x1236f3 (seen tiles become explored)
     void ExploreUnseen(EEPlayer* inPlayer);  // 0x12377f (unseen tiles become explored)
     void BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::vector<unsigned short>& inContinents);
@@ -261,11 +273,8 @@ extern float gMapTileSize;
 
 // The game map: RTTI EEMap > RTSMap, with an FSPersistent base at +0x195624 (secondary vtable 0x441c9c, tag 4).
 // Ctors 0x11b844 / 0x11b8d9 (both out of line), sizeof 0x195664 (new sites).
-template <class T> class RTSRegionTable;   // ee/RTSRegionTable.h
 struct EeGfxEffectRegions;               // rust/render/gfx.h (ee_gfx effect_obj.rs)
 struct EeCombatUnitRegions;               // rust/ee_combat.h (ee/EEUnitRegions.h)
-class EEComplexUnit;
-class EEEffect;
 class EEMap : public RTSMap, public FSPersistent, public EeUnitsMapFields {
 public:
     EEMap();                                // 0x11b844 (EEPTPRestorable<EEMap>::CreateDefault)
@@ -273,18 +282,19 @@ public:
     EEMap(long inWidth, long inHeight, unsigned long inPlayerCount, long inTerrain);
     // the overrides of both bases' FSRestorable slots (vtable 0x441cbc: +0x00 0x11c531, +0x04 0x11ca0d, +0x0c 0x11df3f;
     // the persistent templates call them through EEMap*)
-    virtual void GetChecksum(ESChecksum& ioChecksum) const;
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    virtual ~EEMap();                       // +0x10 (??_G 0x11b8bd)
+    virtual void GetChecksum(ESChecksum& ioChecksum) const { RTSMap::GetChecksum(ioChecksum); }
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_mx_load(this, &inFile, inMajorVersion, inMinorVersion); }
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_mx_save(this, &outFile, inMajorVersion, inMinorVersion); }
+    // +0x10 (??_G 0x11b8bd)
+    virtual ~EEMap() { ee_gamecpp_map_destroy(this); }
     // RTSMap's pure slots (vtable 0x441cbc +0x14..+0x24: 0x11bdaa, 0x11baa0, 0x11bae6, 0x11bd55, 0x11ceb0)
-    virtual void UpdateWater(long inX, long inY);
-    virtual EEMapTile* CreateTile(float inHeight);
-    virtual void ReserveTiles(unsigned long inCount);
+    virtual void UpdateWater(long inX, long inY) { ee_gamecpp_mx_update_water(this, inX, inY); }
+    virtual EEMapTile* CreateTile(float inHeight) { return (EEMapTile*)ee_gamecpp_map_create_tile(this, inHeight); }
+    virtual void ReserveTiles(unsigned long inCount) { ee_gamecpp_map_reserve_tiles(this, inCount); }
     virtual void PlaceUnitOnGround(EEUnit* inUnit);
-    virtual EEMapTile* LoadTile(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
-                                 long inX, long inY);
-    virtual FSPersistent* CreateDefault() const;   // the FSPersistent base's +0x14 (secondary vtable 0x441c9c)
+    virtual EEMapTile* LoadTile(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile, long inX, long inY) { return (EEMapTile*)ee_gamecpp_map_load_tile(this, inMajorVersion, inMinorVersion, &inFile, inX, inY); }
+    // the FSPersistent base's +0x14 (secondary vtable 0x441c9c)
+    virtual FSPersistent* CreateDefault() const { return new EEMap; }
     // inline over RTSMap's inline GetTile (the out-of-line COMDAT 0x2f85 from ~190 sites; small functions expand both
     // levels)
     EEMapTile* GetTile(unsigned long inX, unsigned long inY) { return RTSMap::GetTile(inX, inY); }
@@ -292,26 +302,27 @@ public:
     float GetHeight(const GE3DPoint& inPoint) { return this->mTerrainMesh.GetMeshZ(inPoint.GetX(), inPoint.GetY()); }
     // 0x11c5fb: the centre of tile (inX, inY) on the ground; false off the map (the cast-calamity goal) (provisional
     // name)
-    bool GetTileLocation(long inX, long inY, GE3DPoint& outLocation);
+    bool GetTileLocation(long inX, long inY, GE3DPoint& outLocation) { return ee_gamecpp_map_tile_location(this, inX, inY, reinterpret_cast<EeGe3DPoint*>(&outLocation)); }
     // 0xc0894 (out of line, first emitted in the AI range; EEUCTorpedo::CheckGroundImpact): inPoint's x/y with the height of
     // the ground at its tile (provisional name)
     void GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint);
     // 0x11c53d: the tile under the screen point inPoint (provisional name; aircraft hot key)
-    EETile* GetTileAt(const GE2DPoint& inPoint, long& outX, long& outY);
+    EETile* GetTileAt(const GE2DPoint& inPoint, long& outX, long& outY) { return (EETile*)ee_gamecpp_map_tile_at(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &outX, &outY); }
     // 0x11c96d: the map location under the screen point inPoint; 0 when there is none (provisional name and result)
-    EETile* GetLocationAt(const GE2DPoint& inPoint, GE3DPoint& outLocation, bool inHitWaterSurface);
+    EETile* GetLocationAt(const GE2DPoint& inPoint, GE3DPoint& outLocation, bool inHitWaterSurface) { return (EETile*)ee_gamecpp_mx_location_at(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), reinterpret_cast<EeGe3DPoint*>(&outLocation), inHitWaterSurface); }
     // 0x11c934 (ret 0x10): the tile under the screen point inPoint through the pick line (GetTileOnLine)
     // (provisional name)
-    EETile* PickScreenTile(const GE2DPoint& inPoint, long& outX, long& outY, bool inHitWaterSurface);
+    EETile* PickScreenTile(const GE2DPoint& inPoint, long& outX, long& outY, bool inHitWaterSurface) { return (EETile*)ee_gamecpp_mx_pick_tile(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &outX, &outY, inHitWaterSurface); }
     // 0x11c665 (ret 8): the pick line through the screen point inPoint (EESETSArea 0x17d0eb solves it for the
     // tile height; provisional name)
-    void GetScreenLine(const GE2DPoint& inPoint, GE3DLine& outLine);
+    void GetScreenLine(const GE2DPoint& inPoint, GE3DLine& outLine) { ee_gamecpp_map_screen_line(reinterpret_cast<const EeGe2DPoint*>(&inPoint), reinterpret_cast<EeGe3DLine*>(&outLine)); }
     // 0x11c75a (ret 4): a float from the ground under inLocation (the slope: EEPhysicsModel::SpeedMode /
     // EEPMSeaAnimal::SpeedMode scale it by 1.909859 = 6/pi) (provisional name)
-    float GetTerrainPitch(const GETransformation& inLocation);
-    float GetTerrainRoll(const GETransformation& inLocation);  // 0x11c847 (EEComplexUnit::PlaceOnGround: the roll, with mRollsWithTerrain) (provisional name)
+    float GetTerrainPitch(const GETransformation& inLocation) { return ee_gamecpp_map_terrain_pitch(this, reinterpret_cast<const EeGeTransformation*>(&inLocation)); }
+    // 0x11c847 (EEComplexUnit::PlaceOnGround: the roll, with mRollsWithTerrain) (provisional name)
+    float GetTerrainRoll(const GETransformation& inLocation) { return ee_gamecpp_map_terrain_roll(this, reinterpret_cast<const EeGeTransformation*>(&inLocation)); }
     // 0xc5bb: the tile at inLocation (EEPlayer::RemoveSharedSightAt/RemoveOwnSightAt; provisional name)
-    EETile* GetTileAtLocation(const EETileLocation& inLocation);
+    EETile* GetTileAtLocation(const EETileLocation& inLocation) { return this->GetTile(inLocation.GetX(), inLocation.GetY()); }
     // defined in RTSMap.cpp's range, so presumably RTSMap's in the original; kept EEMap's here because names.txt and
     // their callers bind the EEMap names (provisional names)
     void PrepareSave();                     // 0x122517 (EESEASaveScenario before saving a scenario)
@@ -319,24 +330,33 @@ public:
     EEMapTile* GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY);
     bool IsAreaOnMap(unsigned long inX, unsigned long inY, unsigned long inRadius);
     // EEMap.cpp members called by the random map (EERandomMap.cpp; provisional names)
-    void PaintTerrain(long inX, long inY, long inTerrain);  // 0x11d34b (the tile's terrain texture)
-    void UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop);
-    void SetCliffTexture(long inCliffTexture);  // 0x11df99 (+0x19565c = it, then UpdateCliffs over the whole map)
-    unsigned long GetTileCount();
-    long ComputeChecksum();                 // 0x11c3ca (EEPhysics::GetOutOfSynchChecksum: the out-of-synch checksum) (provisional name)
+    // 0x11d34b (the tile's terrain texture)
+    void PaintTerrain(long inX, long inY, long inTerrain) { ee_gamecpp_mx_paint(this, inX, inY, inTerrain); }
+    void UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop) { ee_gamecpp_mx_update_cliffs(this, inLeft, inRight, inBottom, inTop); }
+    // 0x11df99 (+0x19565c = it, then UpdateCliffs over the whole map)
+    void SetCliffTexture(long inCliffTexture) { ee_gamecpp_mx_set_cliff_texture(this, inCliffTexture); }
+    unsigned long GetTileCount() { return ee_gamecpp_map_tile_count(this); }
+    // 0x11c3ca (EEPhysics::GetOutOfSynchChecksum: the out-of-synch checksum) (provisional name)
+    long ComputeChecksum() { return ee_gamecpp_map_checksum(this); }
     // EEMap.cpp's other members in address order (provisional names)
-    void SetPlayerCount(unsigned long inPlayerCount);  // 0x11bc03 (the visibility words for a new player count)
-    void CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount);  // 0x11bf4a (Create + region tables + colours)
+    // 0x11bc03 (the visibility words for a new player count)
+    void SetPlayerCount(unsigned long inPlayerCount) { ee_gamecpp_map_set_player_count(this, inPlayerCount); }
+    // 0x11bf4a (Create + region tables + colours)
+    void CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount) { ee_gamecpp_mx_create_map(this, inWidth, inHeight, inPlayerCount); }
     // 0x11c13f / 0x11d006: inPlayer stops / starts seeing the tiles within inRadius of (inX, inY)
-    void RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared);
-    void Initialize();                      // 0x11c9a3 (the ctors' common part)
-    void AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared);
-    void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff);
-    void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop);
-    void RegisterTerrainSets();             // 0x11dd95 (registers the terrain texture and colour sets with the mesh)
-    void SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload);  // 0x11dfb7 (the tile's texture set)
+    void RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, false); }
+    // 0x11c9a3 (the ctors' common part)
+    void Initialize() { ee_gamecpp_map_initialize(this); }
+    void AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared) { ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, true); }
+    void PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff) { ee_gamecpp_mx_paint_rect(this, inLeft, inRight, inTop, inBottom, inTerrain, inCliff); }
+    void RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop) { ee_gamecpp_mx_remove_flat_cliffs(this, inLeft, inRight, inBottom, inTop); }
+    // 0x11dd95 (registers the terrain texture and colour sets with the mesh)
+    void RegisterTerrainSets() { ee_gamecpp_map_register_terrain_sets(this); }
+    // 0x11dfb7 (the tile's texture set)
+    void SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload) { ee_gamecpp_map_set_tile_terrain(this, inX, inY, inTextureSet, inUnload); }
 
-    virtual void DumpOutOfSynch(FILE* inFile);  // +0x28 0x11cf60 (ret 4: the out-of-synch dump's file, EEPhysics 0x152311) (provisional name)
+    // +0x28 0x11cf60 (ret 4: the out-of-synch dump's file, EEPhysics 0x152311) (provisional name)
+    virtual void DumpOutOfSynch(FILE* inFile) { ee_gamecpp_map_dump(this, inFile); }
 
     URandom mRandom;                        // +0x19562c (seed 1; provisional name)
     EeGfxEffectRegions* mEffectRegions;     // +0x19563c (the effects per region, ee_gfx effect_obj.rs; was RTSRegionTable<EEEffect*>; +0x19563c..+0x195660 zeroed by 0x11c9a3) (provisional name)

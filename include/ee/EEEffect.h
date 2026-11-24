@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include "lle/GE3DPoint.h"
 #include "rust/render/gfx.h"            // effect_obj.rs, effect_state.rs
+#include "rust/game/gamecpp.h"
 
 class EEUnit;
 class EEGraphicEffect;
@@ -51,7 +52,7 @@ public:
     long GetKind() const { return this->mRecord->kind; }
     EEEffectHandle GetHandle() const { return EEEffectHandle{this->mRecord->handle}; }
     // shown only to inPlayer, not saved (a player's confirmations, flares and goal markers; gamecpp fx_world.rs)
-    void SetLocalTo(long inPlayer);
+    void SetLocalTo(long inPlayer) { ee_gamecpp_fw_set_local(this->mRecord, inPlayer); }
     EEUnit* GetUnit() const { return this->mUnit; }
     EEGraphicEffect* GetGraphicEffect() const { return this->mGraphicEffect; }
     // 0x102f96: the graphic effect's object (a random one of its kind without one; 0 without a graphic effect)
@@ -62,7 +63,7 @@ public:
     // the weather storms' (EEEMStorm's): the tiles moved one step towards a new centre, the tiles' bounds, the
     // centre, the number of tiles (EEEffectHost.cpp)
     void Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds);
-    void GetBounds(U2DRectangle<long>& outBounds);
+    void GetBounds(U2DRectangle<long>& outBounds) { ee_gamecpp_fx_storm_bounds(this->mRecord, reinterpret_cast<EeGameCppTileBounds*>(&outBounds)); }
     U2DPoint<long> GetCenterPoint() const;
     unsigned long GetTileCount() const { return ee_gfx_storm_tile_count(this->mRecord); }
 

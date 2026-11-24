@@ -6,6 +6,7 @@
 #define EE_EEGRAPHICS_H
 
 #include "ee/RTSGraphics.h"
+#include "rust/game/gamecpp.h"
 
 class GESurface;
 class GEViewport;
@@ -25,27 +26,38 @@ public:
     // 0x10977e: RTSGraphics(..., the screen's GetIsFullScreen(), inThreadPriority), then mMessageQueueDone
     EEGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse, UIManager* inUIManager,
                long inThreadPriority);
-    virtual ~EEGraphics();                  // +0x00 (??_G 0x109803; dtor 0x10981f)
-    virtual long RestoreSurfaces();         // +0x04 0x1099dc
+    // +0x00 (??_G 0x109803; dtor 0x10981f)
+    virtual ~EEGraphics() { ee_gamecpp_gfx_destruct(this); }
+    // +0x04 0x1099dc
+    virtual long RestoreSurfaces() { return ee_gamecpp_gfx_restore_surfaces(this); }
     // +0x08 0x109902: the game's messages 0x501..0x50b, the rest to RTSGraphics
-    virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
-    virtual void FrameStarting();           // +0x0c 0x109840 (locks the world around RTSGraphics::FrameStarting)
-    virtual void SceneStarting();           // +0x14 0x109ada
-    virtual void RenderScene();             // +0x18 0x109adf
-    virtual void FrameDone();               // +0x1c 0x109ae4 (unlocks what Virtual0C locked)
-    virtual void SaveScreenShot(EEScreenCapture* inCapture);   // +0x20 0x109b22 (message 0x505; provisional name)
-    virtual void RenderTo(EEScreenCapture* inCapture);         // +0x24 0x109cd4
+    virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2) { ee_gamecpp_gfx_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
+    // +0x0c 0x109840 (locks the world around RTSGraphics::FrameStarting)
+    virtual void FrameStarting() { ee_gamecpp_gfx_frame_starting(this); }
+    // +0x14 0x109ada
+    virtual void SceneStarting() { RTSGraphics::SceneStarting(); }
+    // +0x18 0x109adf
+    virtual void RenderScene() { RTSGraphics::RenderScene(); }
+    // +0x1c 0x109ae4 (unlocks what Virtual0C locked)
+    virtual void FrameDone() { ee_gamecpp_gfx_frame_done(this); }
+    // +0x20 0x109b22 (message 0x505; provisional name)
+    virtual void SaveScreenShot(EEScreenCapture* inCapture) { ee_gamecpp_gfx_screenshot(this, inCapture); }
+    // +0x24 0x109cd4
+    virtual void RenderTo(EEScreenCapture* inCapture) { ee_gamecpp_gfx_render_to(this, inCapture); }
 
     // the message posts (thread messages 0x503..0x50b; provisional names)
-    void PostInitialiseScene();
-    void PostRedrawUI();
-    void PostScreenShot(EEScreenCapture* inCapture);   // 0x10a88c (0x505)
-    void PostReleaseScene();                // 0x10a8a5: mThread->Post(0x504, 0, 0, true)
-    void PostFadeIn(unsigned long inValue);
-    void PostFadeOut(unsigned long inValue);
-    void PostLetterboxIn(unsigned long inValue);
-    void PostLetterboxOut(unsigned long inValue);
-    long PostMessage50AAndWait();           // 0x10a91e: Post(0x50a, 0, 0, true), then waits on +0x6c when it worked
+    void PostInitialiseScene() { this->mThread->Post(0x503, NULL, NULL, true); }
+    void PostRedrawUI() { this->mThread->Post(0x50b, NULL, NULL, true); }
+    // 0x10a88c (0x505)
+    void PostScreenShot(EEScreenCapture* inCapture) { this->mThread->Post(0x505, inCapture, NULL, true); }
+    // 0x10a8a5: mThread->Post(0x504, 0, 0, true)
+    void PostReleaseScene() { this->mThread->Post(0x504, NULL, NULL, true); }
+    void PostFadeIn(unsigned long inValue) { this->mThread->Post(0x506, reinterpret_cast<void*>(inValue), NULL, true); }
+    void PostFadeOut(unsigned long inValue) { this->mThread->Post(0x507, reinterpret_cast<void*>(inValue), NULL, true); }
+    void PostLetterboxIn(unsigned long inValue) { this->mThread->Post(0x508, reinterpret_cast<void*>(inValue), NULL, true); }
+    void PostLetterboxOut(unsigned long inValue) { this->mThread->Post(0x509, reinterpret_cast<void*>(inValue), NULL, true); }
+    // 0x10a91e: Post(0x50a, 0, 0, true), then waits on +0x6c when it worked
+    long PostMessage50AAndWait() { return ee_gamecpp_gfx_post_50a_and_wait(this); }
 
     // Members from the ctor 0x10977e: GERectangle's inline ctor (top, left, bottom, right =
     // +0x68, +0x60, +0x5c, +0x64), then after the vptr `mov dword ptr [+0x70], 0` (a plain long would be `and`:
@@ -79,7 +91,6 @@ extern unsigned long& gGameWindowWidth;      // 0x53087c (1024 with the free cam
 extern unsigned long& gGameWindowHeight;     // 0x530878 (768 with the free camera)
 // 0x5309e0: the camera transformation (also EECCEarthquake.h; the 3D effects map their position through it,
 // EEEffect3D::Queue 0x10520b) (provisional name)
-class GETransformation;
 // 0x4e8f08: the viewport the 3D effects reset the depth range of around their draws (SetDepthRange(0, 0), then
 // (0, 1); EEE3DScreenFlash::DrawPass6 0xf8f1d) (provisional name)
 extern GEViewport gU4E8F08;

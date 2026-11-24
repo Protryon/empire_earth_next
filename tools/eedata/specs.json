@@ -2759,7 +2759,7 @@
   "EECalamityData": {
    "name": "EECalamityData",
    "size": 236,
-   "source": "include/ee/EECalamityClass.h",
+   "source": "rust/crates/ee_sim/src/tech/calamity_class.rs",
    "size_check": [
     236,
     "static_assert"

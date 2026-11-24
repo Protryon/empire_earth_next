@@ -23,6 +23,8 @@ class EEComplexUnit;
 #include "ee/EEStatisticsHistory.h"    // held by value (+0xd8)
 #include "ee/EEVoting.h"               // held by value (+0xb5c)
 #include "rust/sim/app.h"              // the active unit lists (ee_app_active_*)
+#include "rust/game/gamecpp.h"
+#include "rust/sim/units.h"
 
 class EEContagionManager;
 class EEEffectManager;
@@ -44,16 +46,24 @@ class EEWorld : public RTSWorld {
 public:
     EEWorld();
     virtual ~EEWorld();                     // +0x00 (??_G 0x137e2c; dtor 0x137e48)
-    virtual void Clear();                   // +0x08 0x138551
-    void RestartUnits();                    // 0x1388ee (before a scenario starts; provisional name)
+    // +0x08 0x138551
+    virtual void Clear() { ee_gamecpp_world_clear(this); }
+    // 0x1388ee (before a scenario starts; provisional name)
+    void RestartUnits() { ee_gamecpp_world_sight_all(this, true); }
     virtual void GetChecksum(ESChecksum& ioChecksum);   // +0x0c 0x1394e7 (RTSWorld's slot)
-    virtual void Reset();                   // +0x10 0x13bba0
+    // +0x10 0x13bba0
+    virtual void Reset() { ee_gamecpp_world_reset(this); }
     virtual void ResortUnit(RTSUnit* inUnit);   // +0x14 0x13c105 (re-sorts the unit's complex unit in its column list; EEUnit::MoveTo)
-    virtual void SetCameraTransformation(const GETransformation& inTransformation);  // +0x18 0x13c1d5 (RTSWorld's slot)
-    virtual void SetNumPlayers(unsigned long inNumPlayers);   // +0x1c 0x13c260 (RTSWorld's slot)
-    virtual void SetPopulationLimit(unsigned long inLimit);   // +0x20 0x13c21e
-    virtual void CameraChanged(const GETransformation& inTransformation);  // +0x24 (empty: ICF-folded `ret 4` 0x157269)
-    virtual void PlaceQueuedUnits();        // +0x28 0x13c445
+    // +0x18 0x13c1d5 (RTSWorld's slot)
+    virtual void SetCameraTransformation(const GETransformation& inTransformation) { this->SetCamera(inTransformation, false); }
+    // +0x1c 0x13c260 (RTSWorld's slot)
+    virtual void SetNumPlayers(unsigned long inNumPlayers) { ee_gamecpp_world_set_count(this, false, inNumPlayers); }
+    // +0x20 0x13c21e
+    virtual void SetPopulationLimit(unsigned long inLimit) { ee_gamecpp_world_set_count(this, true, inLimit); }
+    // +0x24 (empty: ICF-folded `ret 4` 0x157269)
+    virtual void CameraChanged(class GETransformation const &) {  }
+    // +0x28 0x13c445
+    virtual void PlaceQueuedUnits() { ee_gamecpp_world_place_queued(this); }
     virtual void GameSpeedChanged();        // +0x2c 0x13cdb9
 
     // 0x139528: mCalamityHelper's +0xc (out of line)
@@ -63,80 +73,102 @@ public:
     bool IsTileBlocked(unsigned long inX, unsigned long inY);
     // 0x138fe5 / 0x1396f3: inUnit leaves / joins a world list (EEComplexUnit::SetGatheredResource's mShadowScale)
     // (provisional name)
-    void ReleaseResourceUser(EEUnit* inUnit);
-    void AddResourceUser(EEUnit* inUnit);
+    void ReleaseResourceUser(EEUnit* inUnit) { ee_gamecpp_world_resource_users(this, inUnit, -1); }
+    void AddResourceUser(EEUnit* inUnit) { ee_gamecpp_world_resource_users(this, inUnit, 1); }
     // 0x1395cf: inPoint (a screen location) as a GE3DPoint for the camera transformation (EEACalamity; provisional
     // name)
-    void ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint);
+    void ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint) { ee_gamecpp_world_screen_to_world((const float(*)[2])&inPoint.mX, (float(*)[3])&outPoint.mX); }
     EEUnit* GetUnit(unsigned long inUnitID);    // 0x14804f: by id (its top byte is the player); 0 if none
-    long GetPlayerIndex(EEPlayer* inPlayer);    // 0x148024: index in mPlayers[0..mNumPlayers), -1 if none
-    EEPlayer* GetPlayerBySlot(unsigned char inSlot);   // 0x139670: the player whose +0x464 is inSlot, 0 if none
+    // 0x148024: index in mPlayers[0..mNumPlayers), -1 if none
+    long GetPlayerIndex(EEPlayer* inPlayer) { return ee_gamecpp_world_player_index(this, inPlayer); }
+    // 0x139670: the player whose +0x464 is inSlot, 0 if none
+    EEPlayer* GetPlayerBySlot(unsigned char inSlot) { return (EEPlayer*)ee_gamecpp_world_player_by_slot(this, inSlot); }
     // inline: the chat log evaluates it before the entry it is compared with (0x1d3608)
     EEPlayer* GetCurrentPlayer() { return this->mPlayers[this->mCurrentPlayer]; }
-    void RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID);  // 0x1391f2 (EEMResign: (0, player id); bool: the callee's `cmp byte`; provisional name)
-    void SetDiplomaticStance(unsigned long inPlayerID, long inOther, long inStance);  // 0x1384dd (EEMSetDiplomaticStance; provisional name)
-    long PauseGame();                       // 0x13a7e8 (pauses a single-player game; 2: already paused; provisional name)
-    void RemoveDisconnectedPlayer(unsigned long inPlayer);  // 0x13bc4a (EEServer::ExecuteRemovePlayer: a player left; provisional name)
+    // 0x1391f2 (EEMResign: (0, player id); bool: the callee's `cmp byte`; provisional name)
+    void RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID) { ee_gamecpp_world_remove_player(this, inHasWon, inPlayerID); }
+    // 0x1384dd (EEMSetDiplomaticStance; provisional name)
+    void SetDiplomaticStance(unsigned long inPlayerID, long inOther, long inStance) { ee_gamecpp_world_set_stance(this, inPlayerID, inOther, inStance); }
+    // 0x13a7e8 (pauses a single-player game; 2: already paused; provisional name)
+    long PauseGame() { return ee_gamecpp_world_pause(true); }
+    // 0x13bc4a (EEServer::ExecuteRemovePlayer: a player left; provisional name)
+    void RemoveDisconnectedPlayer(unsigned long inPlayer) { ee_gamecpp_world_remove_disconnected(this, inPlayer); }
     // inline: EEMGameSpeed::Execute (0xbefb9) stores the speed and calls slot +0x2c through the vtable (provisional
     // name)
     void SetGameSpeed(float inSpeed) { this->mGameSpeed = inSpeed; this->GameSpeedChanged(); }
     // inline: EEPWorldHelper's world ctor copies it through the FPU (fld/fstp)
     float GetTimeOfDay() const { return this->mTimeOfDay; }
-    void SetTimeOfDay(float inTimeOfDay);   // 0x13c301 (stores +0xb74, then the sun's transformation; EEPhysics 0x152f45 passes 0.35f; provisional name)
+    // 0x13c301 (stores +0xb74, then the sun's transformation; EEPhysics 0x152f45 passes 0.35f; provisional name)
+    void SetTimeOfDay(float inTimeOfDay) { ee_gamecpp_world_set_time_of_day(this, inTimeOfDay); }
     // inline: its COMDAT 0x1cedbe follows its first user EETechTreeEpoch::GetCost (the vector's operator[]
     // expanded) (provisional name)
     EEGameVariant* GetGameVariant() { return gGameVariants[this->mGameOptions.mVariant]; }
-    long UnpauseGame();                     // 0x13c964 (returns 0)
-    void StartGame(EEGameState* inState, bool inArg);  // 0x139749 (EEDataPreLoading::LoadGame; provisional name)
+    // 0x13c964 (returns 0)
+    long UnpauseGame() { return ee_gamecpp_world_pause(false); }
+    // 0x139749 (EEDataPreLoading::LoadGame; provisional name)
+    void StartGame(EEGameState* inState, bool inLocked) { ee_gamecpp_world_start_game(this, inState, inLocked); }
     // the owning setters: delete the old object (through its vtable), then store
     void SetEffectManager(EEEffectManager* inManager);           // 0x13a219 (+0xb1c)
     // the ghost units (EEGhostUnit::Create; both take mGhostUnitsLock; provisional names)
-    void ClearGhostUnits();                 // 0x1390e8 (the list at +0x9c0)
+    // 0x1390e8 (the list at +0x9c0)
+    void ClearGhostUnits() { ee_gamecpp_world_clear_ghosts(this); }
     // inline (out-of-line COMDAT 0xe4510 at the end of EEE2DMarchingIcons.cpp, after the unit's template COMDATs; 12
     // callers call it) (provisional name)
     unsigned long GetNumGhostUnits() { return this->mGhostUnits.size(); }
-    void AddGhostUnit(EEGhostUnit* inGhost);
-    void ActivateUnit(EEComplexUnit* inUnit);  // 0x13b8e8 (EEUnit::SetHitPoints: a dead unit of a +0x312 class) (provisional name)
-    void DeactivateUnit(EEComplexUnit* inUnit);  // 0x13b965 (EEUnit::Remove) (provisional name)
+    void AddGhostUnit(EEGhostUnit* inGhost) { this->mGhostUnits.push_back(inGhost); }
+    // 0x13b8e8 (EEUnit::SetHitPoints: a dead unit of a +0x312 class) (provisional name)
+    void ActivateUnit(EEComplexUnit* inUnit) { ee_gamecpp_world_activate(inUnit); }
+    // 0x13b965 (EEUnit::Remove) (provisional name)
+    void DeactivateUnit(EEComplexUnit* inUnit) { ee_gamecpp_world_deactivate(inUnit); }
     // port: the deactivations of units that had no id yet join the queue once their player has given them one
     // (EEPhysics::FlushWorld, UpdateActiveUnits; EEWorld.cpp)
-    void QueueBornDeactivations();
+    void QueueBornDeactivations() { ee_gamecpp_world_queue_born(); }
     // 0x13c5ad (thiscall, ret 0x14: the 5th argument is unused; the body names gWorld; EEUIEMGEnterScenarioEditor)
     // (provisional name)
-    void MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused);
-    unsigned long GetResourceUsers(EEUnit* inUnit); // 0x139532 (EEUGBuildRepair::FindNextWork: below 1, a gather goal) (provisional name)
+    void MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused) { ee_gamecpp_world_move_to_slot(inSlot, (uint8_t)inNewSlot, inPlayer, &inName); }
+    // 0x139532 (EEUGBuildRepair::FindNextWork: below 1, a gather goal) (provisional name)
+    unsigned long GetResourceUsers(EEUnit* inUnit) { return ee_gamecpp_world_resource_users(this, inUnit, 0); }
     void SetScenarioManager(EEScenarioManager* inManager);       // 0x13a237 (+0xb24; 0x1a594e: a new 0x23c-byte one)
     void SetEnvironmentManager(EEEnvironmentManager* inManager); // 0x13c1e3 (+0xb28; 0x1a596d: a new 0x5c-byte one)
     void SetInfluenceTable(EEInfluenceTable* inTable);           // 0x13c201 (+0xb20; deleted through slot 0)
     void UpdateActiveUnits();               // 0x13b6bc (EEPhysics::Tick, every tick) (provisional name)
-    long CheckGameOver();                   // 0x13c9b4 (EEPhysics::Tick: the game result, kept in the scenario manager's +0x200) (provisional name)
+    // 0x13c9b4 (EEPhysics::Tick: the game result, kept in the scenario manager's +0x200) (provisional name)
+    long CheckGameOver() { return (long)ee_units_check_game_over((uint64_t)(uintptr_t)this); }
     void SetCalamityHelper(FSPersistent* inObject);  // 0x13c1ad (+0xb2c; skips the delete when it is the same object)
     void CreateInfluenceTable(EEMap* inMap);    // 0x13a255: SetInfluenceTable(new EEInfluenceTable(inMap, mNumPlayers))
     unsigned long GetNumTeams();            // 0x3f81e (mTeams.size(); EECPIntelligence 0x8120b calls it) (provisional name)
     // EEWorld.cpp's other members (provisional names)
-    void AddTeam(const std::vector<unsigned long>& inPlayers);   // 0x137f7b (merges the teams none of inPlayers is at war with)
-    void AddAlliance(long inPlayer1, long inPlayer2);
+    // 0x137f7b (merges the teams none of inPlayers is at war with)
+    void AddTeam(const std::vector<unsigned long>& inPlayers) { ee_gamecpp_world_teams_add(this, inPlayers.data(), inPlayers.size()); }
+    void AddAlliance(long inPlayer1, long inPlayer2) { ee_gamecpp_world_teams_ally(this, (uint32_t)inPlayer1, (uint32_t)inPlayer2); }
     void ApplyShareBonus();                 // 0x138304 (the +0xb20 population bonus of the players)
-    void ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion, unsigned long inMinorVersion, EEMap* inMap);   // 0x138919 (a human player through an FSMemoryFile)
-    void RebuildTeams();
-    void RemoveAllUnits();
-    void DumpMedia(FSFileSpec& inFile, bool inLeaks);
-    void AddComputerPlayers(EEGameState* inState);   // 0x139264 (fills the free slots up to 17)
+    // 0x138919 (a human player through an FSMemoryFile)
+    void ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion, unsigned long inMinorVersion, EEMap* inMap) { ee_gamecpp_world_replace_player(this, inIndex, inMajorVersion, inMinorVersion, inMap); }
+    void RebuildTeams() { ee_gamecpp_world_teams_rebuild(this, (uint32_t)this->mNumPlayers); }
+    void RemoveAllUnits() { ee_gamecpp_world_remove_all_units(this); }
+    void DumpMedia(FSFileSpec& inFile, bool inLeaks) { ee_gamecpp_world_dump_media(this, &inFile, inLeaks); }
+    // 0x139264 (fills the free slots up to 17)
+    void AddComputerPlayers(EEGameState* inState) { ee_gamecpp_world_add_computers(this, inState); }
     void SetCamera(const GETransformation& inTransformation, bool inForce);   // 0x1394b2 (Virtual18's)
     void SetMap(EEMap* inMap);              // 0x13a1fb (deletes the old map through its vtable)
     void CreateMiniMap(EEGameState* inState);
-    void CreatePlayers(EEGameState* inState);
-    void LoadMedia();                       // 0x13a719 (the shared effects and sounds; mMediaLoaded)
+    void CreatePlayers(EEGameState* inState) { ee_gamecpp_world_create_players(this, inState); }
+    // 0x13a719 (the shared effects and sounds; mMediaLoaded)
+    void LoadMedia() { ee_gamecpp_world_load_media(this); }
     void RecordStatistics();                // 0x13a845 (the end-of-game scores into mStatistics)
     void ClearContinents();                 // 0x13b6ab (gContinentManager.Clear(mMap))
-    void RebuildActiveUnits();
-    void RefreshUnits();
-    void RemovePlayerFromTeams(unsigned long inPlayer);  // 0x13bc81 (inPlayer leaves its teams)
+    void RebuildActiveUnits() { ee_gamecpp_world_rebuild_active(this); }
+    void RefreshUnits() { ee_gamecpp_world_sight_all(this, false); }
+    // 0x13bc81 (inPlayer leaves its teams)
+    void RemovePlayerFromTeams(unsigned long inPlayer) { ee_gamecpp_world_teams_remove(this, (uint32_t)inPlayer); }
     void RemoveShareBonus();
-    void BreakAlliance(long inPlayer1, long inPlayer2);
-    void NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x13c0cb (each player's VirtualA0)
-    void MarkPlayerOut(unsigned long inPlayer);  // 0x13c2a2 (marks the player out: mObserverMode, its options slot type 2)
-    void UnloadMedia();                     // 0x13c772 (LoadMedia's twin)
+    void BreakAlliance(long inPlayer1, long inPlayer2) { ee_gamecpp_world_teams_break(this, (uint32_t)inPlayer1, (uint32_t)inPlayer2); }
+    // 0x13c0cb (each player's VirtualA0)
+    void NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion) { ee_gamecpp_world_notify_loaded(this, inMajorVersion, inMinorVersion); }
+    // 0x13c2a2 (marks the player out: mObserverMode, its options slot type 2)
+    void MarkPlayerOut(unsigned long inPlayer) { ee_gamecpp_world_mark_out(this, inPlayer); }
+    // 0x13c772 (LoadMedia's twin)
+    void UnloadMedia() { ee_gamecpp_world_unload_media(this); }
 
     EEStatisticsHistory mStatistics;        // +0x0d8 (provisional name; Reset() again at the end of the ctor)
     EEGameOptions& GetGameOptions() { return this->mGameOptions; }

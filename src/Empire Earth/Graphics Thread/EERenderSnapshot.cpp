@@ -39,12 +39,6 @@
 
 EERenderSnapshot gRenderSnapshot;
 
-EERenderSnapshot::EERenderSnapshot()
-    : mCameraYaw(0.0f), mCameraPitch(0.0f), mInCinematic(false), mTerrainMesh(NULL), mIsSpaceMap(false),
-      mBrushHighlightShown(false)
-{
-}
-
 // the snapshot's takes (the world-wide part under EEGraphics::FrameStarting's lock, EEROTerrain's part in its
 // FrameStarting) and the other render objects' bodies: gamecpp ro_views.rs
 

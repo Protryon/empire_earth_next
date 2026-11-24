@@ -93,14 +93,6 @@ bool EEComplexUnit::HasSwimAnimation()
     return this->mUnitClass->CanMoveOnTerrain(this, 1) && this->GetModel()->mFrameCounts[2] > 1;
 }
 
-// The step of the unit's physics action (0..5), then the after-step work (not after action 2, nor for a dead unit in
-// another action) and, while the capture runs, the TEST ONLY PMST note: Rust (ee_units pm.rs step, pm_note.rs)
-void EEPhysicsModel::Step(EEComplexUnit* inUnit) { ee_units_pm_step((int32_t)this->mKind, inUnit); }
-
-void EEPhysicsModel::Step0(EEComplexUnit* inUnit) { ee_units_pm_step0((int32_t)this->mKind, inUnit); }
-
-float EEPhysicsModel::ComputeRoll(EEComplexUnit* inUnit, float inValue) { return ee_units_pm_compute_roll((int32_t)this->mKind, inUnit, inValue); }
-
 // ---- the C++ the Rust models call (ee_units pm_host.rs; each the original statement it replaces)
 
 static EEComplexUnit* PMUnit(uint64_t inObject)

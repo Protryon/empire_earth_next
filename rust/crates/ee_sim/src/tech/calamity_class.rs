@@ -31,51 +31,93 @@ use crate::tech::calamity_update::{
 };
 use std::os::raw::{c_long, c_ulong};
 
-/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`,
-/// `ee/EECalamityClass.h`; 236 bytes on every target).
+/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`, the C++
+/// name of this record; 236 bytes on every target). Gap-free, from the file itself (36 records of 0xec bytes): the
+/// name, then floats, ids and flags. Field names are provisional unless a reader names them.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeCalamityData {
+    /// +0x00 ("Undefined", "Global Warming", ... "Special Location")
     pub mLabel: [u8; 100],
+    /// +0x64 (line of sight: the bonus)
     pub mFloatParam1: f32,
+    /// +0x68 (plague: functor argument)
     pub mFloatParam2: f32,
+    /// +0x6c (earthquake Initialize 0xb0765)
     pub mQuakeMinimumStrength: f32,
+    /// +0x70 (earthquake Initialize)
     pub mQuakeStrength: f32,
+    /// +0x74 (0 in every record)
     pub mUnused1: f32,
+    /// +0x78 -> EECalamityClass +0x1c (rounded)
     pub mRange: f32,
+    /// +0x7c (128..: the record's id)
     pub mUnusedDatabaseID: i32,
+    /// +0x80 -> +0x18 (an enum, as the class member it fills)
     pub mID: i32,
+    /// +0x84 -> +0x08
     pub mClassEnum: i32,
+    /// +0x88
     pub mUnusedTargetKind: i32,
+    /// +0x8c -> +0x04 (as float)
     pub mLifeTime: i32,
+    /// +0x90 (1 in every record)
     pub mUnused2: i32,
+    /// +0x94 EEGraphicEffect table index (area effects: +0x28)
     pub mGraphicEffectID1: i32,
+    /// +0x98 (area effects: +0x2c)
     pub mGraphicEffectID2: i32,
+    /// +0x9c (mind control: +0x30)
     pub mGraphicEffectID3: i32,
+    /// +0xa0 (time warp: +0x34)
     pub mGraphicEffectID4: i32,
+    /// +0xa4 (0 in every record)
     pub mUnused3: i32,
+    /// +0xa8 (0)
     pub mUnused4: i32,
+    /// +0xac (0)
     pub mUnused5: i32,
+    /// +0xb0 (drop object: the unit class to drop)
     pub mUnitClassIndex: i32,
+    /// +0xb4 (area effects: +0x44)
     pub mIntParam1: i32,
+    /// +0xb8 (area effects: +0x3c)
     pub mIntParam2: i32,
+    /// +0xbc (area effects: functor argument)
     pub mIntParam3: i32,
+    /// +0xc0 (fire: functor argument)
     pub mIntParam4: i32,
+    /// +0xc4 (earthquake Initialize)
     pub mIntParam5: i32,
+    /// +0xc8 (hurricane: the map area its location needs)
     pub mIntParam6: i32,
+    /// +0xcc (1 in 31 of 36 records)
     pub mUnused6: bool,
+    /// +0xcd (extra damage: functor argument)
     pub mBoolParam1: bool,
+    /// +0xce (0 in every record)
     pub mUnused7: bool,
+    /// +0xcf (0)
     pub mUnused8: bool,
+    /// +0xd0 -> +0x26
     pub mIsCastByAllSelected: bool,
+    /// +0xd1 -> +0x25
     pub mIsBlockedByImmunity: bool,
+    /// +0xd4 EESoundObject table index (area effects: +0x34)
     pub mSoundID: i32,
+    /// +0xd8 (plague: its second sound)
     pub mSecondarySoundID: i32,
+    /// +0xdc -> +0x20
     pub mCost: i32,
+    /// +0xe0 -> +0x10
     pub mUnitSet: u32,
+    /// +0xe4 -> +0x14
     pub mNameID: i32,
+    /// +0xe8 -> +0x24
     pub mUnusedClassFlag: bool,
 }
+
+const _: () = assert!(core::mem::size_of::<EeCalamityData>() == 236);
 
 impl Default for EeCalamityData {
     fn default() -> Self {

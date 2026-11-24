@@ -9,9 +9,7 @@
 #ifndef EE_EEDATAPRELOADING_H
 #define EE_EEDATAPRELOADING_H
 
-class EEPlayer;
-class EETechTreeNode;
-class EEUnitClass;
+#include "rust/game/preload.h"
 class TSEvent;
 class TSThread;
 class UIForm;
@@ -19,21 +17,31 @@ class UIForm;
 class EEDataPreLoading {
 public:
     void Shutdown();                        // COMDAT 0x1444ac: mThread->Post(0x401), mThreadDone->Wait (inline: defined in Empire Earth.cpp, its only user)
-    EEDataPreLoading(long inThreadPriority);
-    virtual ~EEDataPreLoading();                            // +0x00 0xd4121 (??_G 0xd4105)
+    EEDataPreLoading(long inThreadPriority) { ee_preload_construct(this, inThreadPriority); }
+    // +0x00 0xd4121 (??_G 0xd4105)
+    virtual ~EEDataPreLoading() { ee_preload_destruct(this); }
 
-    static unsigned long Main(void* inThis);                // 0xd4176 (the thread function)
-    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
+    // 0xd4176 (the thread function)
+    static unsigned long Main(void* inThis) { return ee_preload_main(inThis); }
+    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2) { ee_preload_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
     static void LoadGameErrorDone(UIForm* inForm);          // 0xd4613 (LoadGame's error box callback)
-    void StartQueueing();                                   // 0xd4621 (message 0x407)
-    void FlushQueue();                                      // 0xd4626 (message 0x408)
-    void QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
-    void PostLoadGame(bool inSkipGameMedia, bool inClearWorld);  // 0xd46a9 (0x402)
-    void PostLoadTechnology(long inPlayer, long inTechnology);    // 0xd46d2 (0x40a)
-    void PostLoadUnitClass(long inPlayer, long inUnitClass);      // 0xd46ed (0x404)
-    void PostUnloadTechnology(long inPlayer, long inTechnology);  // 0xd4708 (0x40b)
-    void PostUnloadUnitClass(long inPlayer, long inUnitClass);    // 0xd4723 (0x409)
-    long WaitForMessageQueue();                             // 0xd473e (0x40c, then mMessageQueueDone)
+    // 0xd4621 (message 0x407)
+    void StartQueueing() { ee_preload_start_queueing(); }
+    // 0xd4626 (message 0x408)
+    void FlushQueue() { ee_preload_flush_queue(this); }
+    void QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2) { ee_preload_queue_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
+    // 0xd46a9 (0x402)
+    void PostLoadGame(bool inSkipGameMedia, bool inClearWorld) { this->mThread->Post(0x402, (void*)(inSkipGameMedia == true), (void*)(inClearWorld == true), true); }
+    // 0xd46d2 (0x40a)
+    void PostLoadTechnology(long inPlayer, long inTechnology) { this->mThread->Post(0x40a, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inTechnology), true); }
+    // 0xd46ed (0x404)
+    void PostLoadUnitClass(long inPlayer, long inUnitClass) { this->mThread->Post(0x404, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inUnitClass), true); }
+    // 0xd4708 (0x40b)
+    void PostUnloadTechnology(long inPlayer, long inTechnology) { this->mThread->Post(0x40b, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inTechnology), true); }
+    // 0xd4723 (0x409)
+    void PostUnloadUnitClass(long inPlayer, long inUnitClass) { this->mThread->Post(0x409, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inUnitClass), true); }
+    // 0xd473e (0x40c, then mMessageQueueDone)
+    long WaitForMessageQueue() { return (long)ee_preload_wait_for_queue(this); }
 
     TSThread* mThread;                                      // +0x04
     TSEvent* mThreadCreated;                                // +0x08
