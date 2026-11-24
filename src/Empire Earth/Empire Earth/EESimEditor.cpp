@@ -480,14 +480,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::TriggerGetConditionAt: return P64(TR->GetConditionAt((unsigned long)a[0]));
     case O::TriggerGetEffectCount: return TR->GetEffectCount();
     case O::TriggerGetEffectAt: return P64(TR->GetEffectAt((unsigned long)a[0]));
-    case O::TriggerSetCondition: TR->SetCondition((unsigned long)a[0], a[1] != 0, (unsigned long)a[2]);
-        break;
-    case O::TriggerSetConditionOperator: TR->SetConditionOperator((unsigned long)a[0], (long)a[1]);
-        break;
-    case O::TriggerSetEffect: TR->SetEffect((unsigned long)a[0], (long)a[1], (unsigned long)a[2]);
-        break;
-    case O::TriggerSetEffectOperator: TR->SetEffectOperator((unsigned long)a[0], (long)a[1]);
-        break;
     case O::TriggerSetIsOn: TR->SetIsOn(a[0] != 0);
         break;
     case O::TriggerSetIsLooping: TR->SetIsLooping(a[0] != 0);

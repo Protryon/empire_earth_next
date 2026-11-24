@@ -10,9 +10,37 @@ use std::ffi::{c_long, c_ulong};
 
 use ee_render::gx::cformat::format_g;
 use ee_sim::scenario::fields::{EeScenarioConditionFields, EeScenarioEffectFields};
+use ee_sim::scenario::trigger_members::{
+    ee_scenario_trigger_member, EE_SCENARIO_TRM_SET, EE_SCENARIO_TRM_SET_OPERATOR,
+};
 
 use super::digest::{hex, Hash};
 use super::sed_host::{self as x, h, ht, num, sel, EeSimDriverSed as O};
+
+/// `EESMTrigger::SetCondition(index, not, condition)` (list 0) / `SetEffect(index, delay, effect)` (list 1).
+fn trigger_set(trigger: usize, list: i64, a: [i64; 3]) {
+    let second = if list == 0 { (a[1] != 0) as i64 } else { a[1] as c_long as c_ulong as i64 };
+    ee_scenario_trigger_member(
+        trigger as *mut _,
+        EE_SCENARIO_TRM_SET,
+        list,
+        a[0] as c_ulong as i64,
+        second,
+        a[2] as c_ulong as i64,
+    );
+}
+
+/// `EESMTrigger::SetConditionOperator(index, operator)` (list 0) / `SetEffectOperator(index, type)` (list 1).
+fn trigger_set_operator(trigger: usize, list: i64, a: [i64; 2]) {
+    ee_scenario_trigger_member(
+        trigger as *mut _,
+        EE_SCENARIO_TRM_SET_OPERATOR,
+        list,
+        a[0] as c_ulong as i64,
+        a[1] as c_long as i64,
+        0,
+    );
+}
 
 /// The save's chunks that differ by run though the editor writes none of them: the checksum (1, over the players),
 /// the players (5: per player a few words the computer players' AI thread and timers write), the multiplayer helper
@@ -470,12 +498,12 @@ pub fn scenario_list_step(w: &[String], out: &mut Vec<String>) {
         let (no, na) = (objects.len() as c_ulong, h(O::SmAreaCount, m, &[]) as c_ulong);
         for (j, &t) in triggers.iter().enumerate() {
             let j = j as c_ulong;
-            h(O::TriggerSetCondition, t, &[0, 0, ((j + 1) % nc) as i64]);
-            h(O::TriggerSetConditionOperator, t, &[0, 1]);
-            h(O::TriggerSetCondition, t, &[1, 1, ((j + 2) % nc) as i64]);
-            h(O::TriggerSetEffect, t, &[0, 0, ((j + 1) % ne) as i64]);
-            h(O::TriggerSetEffectOperator, t, &[0, 1]);
-            h(O::TriggerSetEffect, t, &[1, 5, ((j + 2) % ne) as i64]);
+            trigger_set(t, 0, [0, 0, ((j + 1) % nc) as i64]);
+            trigger_set_operator(t, 0, [0, 1]);
+            trigger_set(t, 0, [1, 1, ((j + 2) % nc) as i64]);
+            trigger_set(t, 1, [0, 0, ((j + 1) % ne) as i64]);
+            trigger_set_operator(t, 1, [0, 1]);
+            trigger_set(t, 1, [1, 5, ((j + 2) % ne) as i64]);
         }
         for (j, &c) in conditions.iter().enumerate() {
             let j = j as c_ulong;
@@ -1075,18 +1103,18 @@ pub fn trigger_report(setup: bool, out: &mut Vec<String>) {
         h(O::TriggerSetConditionDuration, t, &[7]);
         x::hs(O::TriggerSetName, t, "Report One");
         x::hs(O::TriggerSetText, t, "A described trigger");
-        h(O::TriggerSetCondition, t, &[0, 1, 1]);
-        h(O::TriggerSetConditionOperator, t, &[0, 2]); // kSMTriggerOperatorOr
-        h(O::TriggerSetCondition, t, &[1, 0, conditions.len() as i64 + 3]);
-        h(O::TriggerSetEffect, t, &[0, 4, 1]);
-        h(O::TriggerSetEffectOperator, t, &[0, 1]); // kSMTriggerOperatorAnd
-        h(O::TriggerSetEffect, t, &[1, 0, effects.len() as i64 + 2]);
+        trigger_set(t, 0, [0, 1, 1]);
+        trigger_set_operator(t, 0, [0, 2]); // kSMTriggerOperatorOr
+        trigger_set(t, 0, [1, 0, conditions.len() as i64 + 3]);
+        trigger_set(t, 1, [0, 4, 1]);
+        trigger_set_operator(t, 1, [0, 1]); // kSMTriggerOperatorAnd
+        trigger_set(t, 1, [1, 0, effects.len() as i64 + 2]);
         effect_fields(effects[1]).mType = 1; // kSMEffectObject
         effect_fields(effects[1]).mObjectAction = 10; // kSMObjectActionClassName
         effect_fields(effects[2]).mType = 0; // kSMEffectNone
         let u = triggers[1];
         h(O::TriggerSetIsLooping, u, &[1]);
-        h(O::TriggerSetEffect, u, &[0, 0, 2]);
+        trigger_set(u, 1, [0, 0, 2]);
         let objects = sm_list(O::SmObjectCount, O::SmObjectAt);
         if objects.len() >= 4 && h(O::SmAreaCount, x::sm(), &[]) >= 4 {
             h(O::EffectPushObject, effects[1], &[1]);
