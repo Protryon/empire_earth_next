@@ -149,6 +149,9 @@ typedef EeWonCcCall CcK;
 #define CC_GET(T, ...) CcGet<T>(this->mCfg, __VA_ARGS__)
 #define CC_P(s) (intptr_t)(s).data(), (intptr_t)(s).size()
 static EeWonCcText CcText(const GUIString& s) { EeWonCcText t = {s.mData->mText, s.mData->mLength}; return t; }
+static EeWonCcKey CcKey(const std::string& s) { EeWonCcKey k = {(const uint8_t*)s.data(), s.size()}; return k; }
+// a record argument's address (a temporary's lives through the call: the full expression)
+template<class T> static intptr_t CcArg(const T& x) { return (intptr_t)&x; }
 
 ComponentConfig::ComponentConfig(EeWonCfgKind inKind) : mHasSetWidth(false), mHasSetHeight(false), mHaveInitedComponents(false), mKind(inKind)
 { this->mCfg = ee_won_cc_new(static_cast<ConfigObject*>(this), CcHost); }
@@ -178,27 +181,21 @@ SelectionColor ComponentConfig::ReadSelectionColor() { return CC_GET(SelectionCo
 bool ComponentConfig::GetNamedValue(const std::string& k, int& v) { return CC_GET(bool, CcK::GetNamedValue, CC_P(k), (intptr_t)&v); }
 // the kind's predefined children (cfgkind.rs): a new config of the child's kind and the part
 bool ComponentConfig::GetPredefinedComponent(const std::string& n, ComponentConfig*& config, Component*& component)
-{
-    EeWonCcKey x = {(const uint8_t*)n.data(), n.size()};
-    return CC_GET(bool, CcK::Predefined, (intptr_t)&x, (intptr_t)&config, (intptr_t)&component);
-}
+{ return CC_GET(bool, CcK::Predefined, CcArg(CcKey(n)), (intptr_t)&config, (intptr_t)&component); }
 bool ComponentConfig::CallNamedFunction(const std::string& k, const std::vector<int>& p, int& v)
-{
-    EeWonCcCallArgs x = {(const uint8_t*)k.data(), k.size(), p.empty() ? NULL : &p[0], p.size(), &v};
-    return CC_GET(bool, CcK::CallNamedFunction, (intptr_t)&x);
-}
+{ return CC_GET(bool, CcK::CallNamedFunction, CcArg(EeWonCcCallArgs{(const uint8_t*)k.data(), k.size(), p.empty() ? NULL : &p[0], p.size(), &v})); }
 // the base group included; a WON skin's config then makes the game's skin (the Windows look) when there is none
 bool ComponentConfig::PreParse(ConfigParser* p) { return CC_GET(bool, CcK::PreParse, (intptr_t)p); }
 bool ComponentConfig::PostParse(ConfigParser*) { this->SetDesiredSizeIfNecessary(); return true; }
 void ComponentConfig::SetDesiredSizeIfNecessary() { CC(SetDesiredSize, 0); }
 bool ComponentConfig::HandleInstruction(ConfigParser* p, const std::string& t) { return CC_GET(bool, CcK::HandleInstruction, (intptr_t)p, CC_P(t)); }
 bool ComponentConfig::HandleValueInstruction(ConfigParser* p, const std::string& k, StringParser& v)
-{ EeWonCcKey x = {(const uint8_t*)k.data(), k.size()}; return CC_GET(bool, CcK::HandleValueInstruction, (intptr_t)p, (intptr_t)&x, (intptr_t)&v); }
+{ return CC_GET(bool, CcK::HandleValueInstruction, (intptr_t)p, CcArg(CcKey(k)), (intptr_t)&v); }
 Component* ComponentConfig::Fn386860(const std::string& n) { return (Component*)CC_GET(void*, CcK::ChildComponent, CC_P(n)); }
 Component* ComponentConfig::ReadComponent() { return (Component*)CC_GET(void*, CcK::ReadComponent); }
 bool ComponentConfig::HandleMapComponent() { return CC_GET(bool, CcK::HandleMapComponent); }
 void ComponentConfig::AddChildToConfigMap(const GUIString& n, ComponentConfig* c, bool inAlways)
-{ EeWonCcText t = CcText(n); CC(AddChild, (intptr_t)&t, (intptr_t)static_cast<ConfigObject*>(c), inAlways); }
+{ CC(AddChild, CcArg(CcText(n)), (intptr_t)static_cast<ConfigObject*>(c), inAlways); }
 bool ComponentConfig::HandleModify() { return CC_GET(bool, CcK::HandleModify); }
 void ComponentConfig::InitComponents() { CC(InitComponents, 0); }
 static void CcStringSink(void* c, const uint8_t* b, uintptr_t n) { static_cast<std::string*>(c)->assign((const char*)b, n); }
@@ -212,7 +209,7 @@ void ComponentConfigMissing(const std::string& n, const char* f, int l) { CcRun(
 ResourceConfig::ResourceConfig() { this->mRes = ee_won_cc_res_new(static_cast<ConfigObject*>(this)); }
 ResourceConfig::~ResourceConfig() { ee_won_cc_res_free(this->mRes, CcHost); }
 bool ResourceConfig::HandleValueInstruction(ConfigParser* p, const std::string& k, StringParser& v)
-{ EeWonCcKey x = {(const uint8_t*)k.data(), k.size()}; return CcGet<bool>(this->mRes, CcK::ResHandleValue, (intptr_t)p, (intptr_t)&x, (intptr_t)&v); }
+{ return CcGet<bool>(this->mRes, CcK::ResHandleValue, (intptr_t)p, CcArg(CcKey(k)), (intptr_t)&v); }
 bool ResourceConfig::PreParse(ConfigParser*) { CcRun(this->mRes, CcK::ResPreParse); return true; }
 GUIString ResourceConfig::SafeGetString(const std::string& k) { return CcGet<GUIString>(this->mRes, CcK::ResSafeGetString, CC_P(k)); }
 Image* ResourceConfig::SafeGetImage(const std::string& k) { return (Image*)CcGet<void*>(this->mRes, CcK::ResSafeGetPtr, CC_P(k), 0); }
