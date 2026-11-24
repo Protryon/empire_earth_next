@@ -28,7 +28,6 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEAECapture.h"
 #include "rust/game/screens.h"   // CollectEffects, FindEffect (area_effect_manager.rs)
 #include <memory>
 #include <stdint.h>
@@ -206,7 +205,7 @@ extern "C" uintptr_t ee_screenscpp_aem_templates_count(uintptr_t inManager)
 extern "C" uintptr_t ee_screenscpp_aem_template_at(uintptr_t inManager, uintptr_t inIndex)
 { return (uintptr_t)AEM_M(inManager)->mTemplates[inIndex]; }
 extern "C" void ee_screenscpp_aem_templates_clear(uintptr_t inManager) { AEM_M(inManager)->mTemplates.clear(); }
-extern "C" void ee_screenscpp_aem_capture_tick(float inElapsed) { EEAECaptureTick(inElapsed); }
+extern "C" void ee_screenscpp_aem_capture_tick(float inElapsed) { ee_screens_ae_capture_tick(inElapsed); }
 extern "C" uintptr_t ee_screenscpp_aem_effect_new(uintptr_t inT)
 { return (uintptr_t)new EEAreaEffect((EEAreaEffectTemplate*)inT); }
 extern "C" void ee_screenscpp_aem_set_effect_player(uintptr_t inEffect, uintptr_t inUnit)

@@ -1,6 +1,13 @@
-// New (port), TEST ONLY: the area effects' records of the simulation capture (ee/EEAECapture.h; tools/sim_capture.py,
+// New (port), TEST ONLY: the area effects' records of the simulation capture (tools/sim_capture.py,
 // every profile). Reads the world; writes nothing to it. UI lane round 12: the records are Rust's (ee_game screens
-// area_effect_capture.rs) over the one-statement shims below; the hook is set to its entry here.
+// area_effect_capture.rs) over the one-statement shims below; EEAEManager's tick calls ee_screens_ae_capture_tick.
+//   AETP  every area-effect template as Init left it (once, at the first area-effect tick): index, the numbers, the
+//         graphic effects and media by table index
+//   AEFX  the area effects after each EEAEManager::Tick: the elapsed time; per unit (players in order, each list in
+//         order) that owns or is affected by an effect: its id, hit points and cloakable flag, each own effect's kind,
+//         player, location, checksum, strength, radius, scale, immunity, the three modifiers of a probe value, the
+//         morale count, and its Covers of its own unit; each affecting effect as its owner and index; then the active
+//         list the same way and the running state's save bytes (EEAESaveRunningState)
 #include <windows.h>
 #include <algorithm>
 #include <string.h>
@@ -9,7 +16,6 @@
 #include "lle/LowLevelEngine.h"
 
 #include "ee/EETechCapture.h"
-#include "ee/EEAECapture.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPlayer.h"
@@ -48,7 +54,3 @@ extern "C" void ee_screenscpp_aec_mem_position(uintptr_t inFile, long* inOut)
 extern "C" void ee_screenscpp_aec_mem_bytes(uintptr_t inFile, void* inOut, uintptr_t inLength)
 { ee_screens_shim_out(inOut, ((FSMemoryFile*)inFile)->GetData(), inLength); }
 extern "C" void ee_screenscpp_aec_mem_free(uintptr_t inFile) { delete (FSMemoryFile*)inFile; }
-
-// The game calls the record through the header's hook pointer, set here before main: the game's units name no
-// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EEAECaptureTick = ee_screens_ae_capture_tick, true);
