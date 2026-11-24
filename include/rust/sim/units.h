@@ -22613,6 +22613,22 @@ int64_t ee_units_uu_lead_unit_id(uint64_t player);
 /// `target` and `out` hold three floats.
 void ee_units_uu_aim_point(uint64_t unit, const float (*target)[3], float (*out)[3]);
 
+/// `EEGetUnitsInRectangle(rect, units, predicate, unique)` (ee/EEUnitCollector.h's template): the units of the map's
+/// unit regions under the tile rectangle whose tile is in it and that `keep(context, unit)` holds for, appended to
+/// `io`; sorted by id and made unique when `unique` and one was bigger than a tile. Their number.
+///
+/// # Safety
+/// `io` a live `std::vector` of unit pointers; `keep` callable with `context` and a unit's handle, changing no unit
+/// region.
+int32_t ee_units_uu_collect_units(int32_t left,
+                                  int32_t top,
+                                  int32_t right,
+                                  int32_t bottom,
+                                  uint8_t (*keep)(const void*, uint64_t),
+                                  const void *context,
+                                  void *io,
+                                  bool unique);
+
 /// `EEGetUnitsNear`: `io` replaced; their number.
 ///
 /// # Safety
