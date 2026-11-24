@@ -360,13 +360,10 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PphCpSetEngineNext: CP->mEngine = kEECPEngineNext;
         break;
     case O::PphCpEngine: return CP->mEngine;
-    case O::PphAiKnown: return EECPAIByID(BYTES) != NULL;
     case O::PphLogUnknownAi: EECPEngineLog("the saved game's player %lu plays the AI '%s', which Data/ai/ais.json does not list: the game cannot be loaded", PL->mPlayerID, BYTES.c_str());
         break;
     case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
         break;
-    case O::PphCpLoadState: return EECPNextLoadState(CP, BYTES);
-    case O::PphCpUnitsLoad: return EECPUnitsLoad(CP, BYTES);
     case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
     case O::PphAddAlly: PL->mAllies.push_back((EEPlayer*)a[0]);
         break;
@@ -377,7 +374,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PphStrData: return P64(STR.data());
     case O::PphCpEngineAi: *(std::string*)a[0] = EECPEngineAI(CP);
         break;
-    case O::PphClassicAiPresent: return EECPClassicAI() != NULL;
     case O::PphClassicAiId: *(std::string*)a[0] = EECPAIID(EECPClassicAI());
         break;
     case O::PphCpSaveState: EECPNextSaveState(CP, *(std::string*)a[0]);

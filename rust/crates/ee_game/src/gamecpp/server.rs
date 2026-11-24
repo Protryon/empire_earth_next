@@ -10,8 +10,8 @@ use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::netmsg::session::*;
 
-use super::{h, hp, ptr, session_objs, Owned, O, P};
 use super::session_objs::{ee_gamecpp_server_send_to_slot, send_to_clear, send_to_erase, send_to_insert};
+use super::{h, hp, ptr, session_objs, Owned, O, P};
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
 /// `kSlotServer`, `kSlotNone` (NEMessageID.h).
@@ -248,7 +248,7 @@ fn fact(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_FACT_TIME => O::SsTime,
         EE_NETMSG_SESS_FACT_WON => O::SsWon,
         EE_NETMSG_SESS_FACT_SCREEN_ACTIVE => O::SsScreenActive,
-        EE_NETMSG_SESS_FACT_ENGINE_CHOICES => O::SsEngineChoices,
+        EE_NETMSG_SESS_FACT_ENGINE_CHOICES => return crate::cp_engine::ee_cp_engine_choice_count() as c_ulong as i64,
         EE_NETMSG_SESS_FACT_FORM_IS_CURRENT => {
             // the form looked up first (v2 0) or the current form first
             return if v[2] == 0 {

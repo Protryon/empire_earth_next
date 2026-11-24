@@ -597,7 +597,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
                 unsafe { &mut *rec::<crate::app::game_options::EeAppOptionsPlayerFields>(O::OptPlayerFields, slot.0) };
             match i[2] {
                 6 => {
-                    s.mEngine = if (value as i64) < h(O::CpEngineChoiceCount, 0, &[]) {
+                    s.mEngine = if (value as i64) < crate::cp_engine::ee_cp_engine_choice_count() as c_ulong as i64 {
                         value as c_ulong
                     } else {
                         ENGINE_CLASSIC

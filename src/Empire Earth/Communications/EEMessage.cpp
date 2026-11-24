@@ -558,7 +558,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ServerSendPlayerSlotInfo: SERVER->SendPlayerSlotInfo();
         break;
-    case O::CpEngineChoiceCount: return EECPEngineChoiceCount();
     case O::LobbyOptPlayer: return P64(&gGameOptions.mPlayers[a[0]]);
     case O::LobbyReadLock: gGameOptions.mLock->ReadLock();
         break;

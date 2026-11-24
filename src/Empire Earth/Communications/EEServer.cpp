@@ -428,7 +428,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsTime: return (long long)TMGetTime();
     case O::SsWon: return gWonNet != NULL;
     case O::SsScreenActive: return gGameScreenActive;
-    case O::SsEngineChoices: return (long long)EECPEngineChoiceCount();
     case O::SsFormById: return P64(gUIManager->GetFormByID(a[0]));
     case O::SsCurrentForm: return P64(gUIManager->GetCurrentForm());
     case O::SsFormVisible: return gUIManager->IsFormVisible(gUIManager->GetFormByID(a[0]));
