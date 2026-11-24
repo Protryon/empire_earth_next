@@ -17,7 +17,6 @@ class RTSGraphics;
 class EEGraphics;
 class EEUnit;
 class EEComplexUnit;
-class EEPlayer;
 class NEMessage;
 class TMTimer;
 class TSCriticalSection;

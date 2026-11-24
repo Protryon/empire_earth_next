@@ -10,9 +10,6 @@
 #define EE_EEDATAPRELOADING_H
 
 #include "rust/game/preload.h"
-class EEPlayer;
-class EETechTreeNode;
-class EEUnitClass;
 class TSEvent;
 class TSThread;
 class UIForm;

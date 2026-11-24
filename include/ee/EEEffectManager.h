@@ -16,7 +16,6 @@
 
 class EEGraphicEffect;
 class EEUnit;
-class GE3DLine;
 class GETransformation;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 

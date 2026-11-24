@@ -146,7 +146,6 @@ typedef EETile EEMapTile;
 // its assert names mCriticalSectionForColoredRectangles). sizeof 0x195624. Names are provisional unless stated.
 class GE3DLine;
 class GEColor;
-template <class T> class U2DPoint;
 template <class T> class U2DRectangle;
 
 // An element of RTSMap::mColoredRectangles (0x24 bytes: `_Buy` 0xdf542 multiplies by 0x24; trivially destructible:
@@ -274,11 +273,8 @@ extern float gMapTileSize;
 
 // The game map: RTTI EEMap > RTSMap, with an FSPersistent base at +0x195624 (secondary vtable 0x441c9c, tag 4).
 // Ctors 0x11b844 / 0x11b8d9 (both out of line), sizeof 0x195664 (new sites).
-template <class T> class RTSRegionTable;   // ee/RTSRegionTable.h
 struct EeGfxEffectRegions;               // rust/render/gfx.h (ee_gfx effect_obj.rs)
 struct EeCombatUnitRegions;               // rust/ee_combat.h (ee/EEUnitRegions.h)
-class EEComplexUnit;
-class EEEffect;
 class EEMap : public RTSMap, public FSPersistent, public EeUnitsMapFields {
 public:
     EEMap();                                // 0x11b844 (EEPTPRestorable<EEMap>::CreateDefault)

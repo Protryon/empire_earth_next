@@ -91,7 +91,6 @@ extern unsigned long& gGameWindowWidth;      // 0x53087c (1024 with the free cam
 extern unsigned long& gGameWindowHeight;     // 0x530878 (768 with the free camera)
 // 0x5309e0: the camera transformation (also EECCEarthquake.h; the 3D effects map their position through it,
 // EEEffect3D::Queue 0x10520b) (provisional name)
-class GETransformation;
 // 0x4e8f08: the viewport the 3D effects reset the depth range of around their draws (SetDepthRange(0, 0), then
 // (0, 1); EEE3DScreenFlash::DrawPass6 0xf8f1d) (provisional name)
 extern GEViewport gU4E8F08;
