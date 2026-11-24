@@ -36,6 +36,14 @@ enum class EeDataList {
   Colors = 5,
 };
 
+/// Computer player behaviour record ids (the `gCPBehaviors` index = the record's `mIndex`): the one the C++ reads; the
+/// readers' names of every record are tools/eedata ids.py CPBEHAVIOR_NAMES (the computer player that read them is
+/// Rust).
+enum EECPBehaviorID {
+  /// Language.rc 28048 "Maximum Attack Response Range": the record whose float value is kept squared
+  kCPBehaviorMaximumAttackResponseRange = 48,
+};
+
 /// `EEAnimal`'s plain members, in the class's order (`include/ee/EEAnimal.h`: the class's base).
 struct EeDataAnimalFields {
   float mF28;

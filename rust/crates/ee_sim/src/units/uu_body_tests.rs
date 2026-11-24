@@ -363,8 +363,8 @@ fn a_lone_target_searches_two_tiles_around_it() {
 #[test]
 fn the_constants_are_the_headers() {
     // CIV_POWER_* are checked here (header_consts.rs does not know the prefix)
-    let text =
-        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/ee/EECivPowerIDs.h")).unwrap();
+    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../include/rust/sim/tech_consts.h"))
+        .unwrap();
     for (name, value) in [
         ("kCivPowerFlamingArrows", CIV_POWER_FLAMING_ARROWS),
         ("kCivPowerCrusaders", CIV_POWER_CRUSADERS),

@@ -32,6 +32,7 @@
 #define EE_EETECHCAPTURE_H
 
 #include "ee/EESimCapture.h"
+#include "rust/sim/tech_consts.h"   // EECalamityStartOp, EEContagionCaptureOp
 
 class EETechTreeNode;
 class EETechTreeEpoch;
@@ -124,16 +125,6 @@ inline void EETechCaptureUnitWalk(long inLoop, long inEffect, long inUnitType, l
 // CALT: a calamity's Start (kind 0) or Stop (kind 1): the class, the calamity's state, its target's and caster's
 // unit state and the contagion manager's before, the world calls of the start or stop in order
 // (EECalamityCaptureStartEvent), the same after, the result
-enum EECalamityStartOp {
-    kCalamityStartEffect = 1,       // an effect the start creates (its location's x, y as floats; z as the int)
-    kCalamityStartSound,            // a sound started (volume, pan as floats)
-    kCalamityStartHelper,           // a contagion helper created (id, whether it exists)
-    kCalamityStopHelper,            // a contagion helper destroyed (id)
-    kCalamityStartDestroyEffect,    // the calamity's effect destroyed (handle)
-    kCalamityStartStopSound,        // StopSound / StopSecondarySound (0 / 1)
-    kCalamityStartKill,             // the target unit killed (id)
-    kCalamityStartStep,             // a class's own world step (its number)
-};
 inline void (*EECalamityCaptureStartEventHook)(long inOp, long inA, long inB, float inC, float inD) = nullptr;
 inline void EECalamityCaptureStartEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f)
 {
@@ -148,18 +139,7 @@ inline void (*EECalamityCaptureStop)(EECalamityClass* inClass, EECalamity* inCal
 // update's world calls in order (EECalamityCaptureContagionEvent: spread candidates with their answers and draws,
 // units added, immune, cured, applied, the damage), the timers and units after
 struct EeContagionHelper;
-enum EEContagionCaptureOp {
-    kContagionSpread = 1,       // Spread (the elapsed time, the chance)
-    kContagionUpdateUnits,      // the functor's UpdateUnits instead of a spread
-    kContagionCandidate,        // a near unit (id, the draw or -1; the distance squared or -1)
-    kContagionNew,              // a new unit (id; 1 added, 2 immune, 3 held or no complex)
-    kContagionApply,            // Apply on a living unit (id)
-    kContagionRemove,           // a dead unit removed and cured (id)
-    kContagionDamage,           // a functor's TakeHit (unit id, damage)
-    kContagionInfect,           // a functor's Infect (unit id)
-    kContagionCure,             // a functor's Cure (unit id)
-    kContagionFunctorUpdate,    // the functor's Update (its update count)
-};
+// (the events' ids, EECalamityStartOp and EEContagionCaptureOp: Rust's enums, rust/sim/tech_consts.h)
 inline void (*EECalamityCaptureContagionEventHook)(long inOp, long inA, long inB, float inC, float inD) = nullptr;
 inline void EECalamityCaptureContagionEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f)
 {

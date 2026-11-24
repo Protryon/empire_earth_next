@@ -3056,8 +3056,17 @@ const _: () = assert!(core::mem::size_of::<EeDataCpBehavior>() == 56);
 
 /// The slots of the behaviour table.
 pub const EE_DATA_CP_BEHAVIORS: usize = 129;
-/// The record whose float value is kept squared (`kCPBehaviorMaximumAttackResponseRange`).
-const MAXIMUM_ATTACK_RESPONSE_RANGE: usize = 48;
+/// Computer player behaviour record ids (the `gCPBehaviors` index = the record's `mIndex`): the one the C++ reads; the
+/// readers' names of every record are tools/eedata ids.py CPBEHAVIOR_NAMES (the computer player that read them is
+/// Rust).
+/// cbindgen:enum-class=false
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types, clippy::enum_variant_names)]
+pub enum EECPBehaviorID {
+    /// Language.rc 28048 "Maximum Attack Response Range": the record whose float value is kept squared
+    kCPBehaviorMaximumAttackResponseRange = 48,
+}
 
 /// `gCPBehaviors` (the C++ declares it `extern "C" EECPBehavior gCPBehaviors[129]`, the same record): zeroed, as
 /// the record's constructor left it, until the table loads.
@@ -3100,7 +3109,7 @@ pub fn cp_behavior_store(table: &mut [EeDataCpBehavior; EE_DATA_CP_BEHAVIORS], r
     }
     let i = r.mIndex as usize;
     table[i] = *r;
-    if i == MAXIMUM_ATTACK_RESPONSE_RANGE {
+    if i == EECPBehaviorID::kCPBehaviorMaximumAttackResponseRange as usize {
         table[i].mFloatValue *= table[i].mFloatValue;
     }
 }

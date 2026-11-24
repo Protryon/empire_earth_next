@@ -25,10 +25,6 @@ struct EECPBehavior : EeDataCpBehavior {
 
 extern "C" EECPBehavior gCPBehaviors[129];   // ee_data tables.rs
 
-// Computer player behaviour record ids (the gCPBehaviors index = EECPBehavior::mIndex): the one the C++ reads; the
-// readers' names of every record are tools/eedata ids.py CPBEHAVIOR_NAMES (the computer player that read them is Rust)
-enum EECPBehaviorID {
-    kCPBehaviorMaximumAttackResponseRange = 48,             // Language.rc 28048 "Maximum Attack Response Range"
-};
+// (the record ids, EECPBehaviorID: Rust's enum, rust/data/tables.h)
 
 #endif

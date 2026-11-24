@@ -28,7 +28,7 @@ pub type EeTechCivUpgrade = u32;
 pub(crate) const LEVEL_BITS: u32 = 16;
 pub(crate) const LEVEL_MASK: u32 = 0xffff;
 /// `kCivPowerFlamingArrows`: the first power id (the powers' records are indexed by id - 0x26)
-pub(crate) const POWER_FIRST: i32 = 0x26;
+pub(crate) const POWER_FIRST: i32 = crate::tech_consts::EECivPowerID::kCivPowerFlamingArrows as i32;
 /// `IDS_CIV_BONUS_BASE`, `IDS_CIV_POWER_BASE` (ee/EEStringIDs.h)
 pub(crate) const IDS_CIV_BONUS_BASE: i32 = 29716;
 pub(crate) const IDS_CIV_POWER_BASE: i32 = 32780;
