@@ -125,7 +125,9 @@ extern "C" fn host(op: EeWonImageHost, a: isize, b: isize, c: isize, d: isize) -
             0
         }
         // SAFETY: the caller's float
-        H::NewContext => fake(What::Ctx { surf: a as *mut EeWonSurface, scale: unsafe { *(b as *const f32) }, graphics: 0 }, 1),
+        H::NewContext => {
+            fake(What::Ctx { surf: a as *mut EeWonSurface, scale: unsafe { *(b as *const f32) }, graphics: 0 }, 1)
+        }
         H::NewGraphics => fake(What::Gfx { ctx: a, tx: 0, ty: 0 }, 1),
         H::FreeGraphics => host(H::Unref, a, 0, 0, 0),
         H::CreateImage => {
