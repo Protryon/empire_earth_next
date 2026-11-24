@@ -58,7 +58,6 @@ namespace WONAPI {
 // the SDK's enums are Rust's (rust/crates/ee_won_gui/src/guienum.rs, R6 WON GUI round 34): their enumerators are
 // global, the types named here
 typedef EeWonGuiLobbyGameType LobbyGameType;
-typedef EeWonGuiControlIdType ControlIdType;
 typedef EeWonGuiDirection Direction;
 typedef EeWonGuiHorzAlign HorzAlign;
 typedef EeWonGuiVertAlign VertAlign;
@@ -68,8 +67,6 @@ typedef EeWonGuiStandardColor StandardColor;
 typedef EeWonGuiMouseButton MouseButton;
 typedef EeWonGuiForegroundSelectionMode ForegroundSelectionMode;
 typedef EeWonGuiScrollbarCondition ScrollbarCondition;
-typedef EeWonGuiScrollButtonCondition ScrollButtonCondition;
-typedef EeWonGuiFontStyles FontStyles;
 typedef EeWonGuiListSortType ListSortType;
 typedef EeWonGuiHTMLFontSize HTMLFontSize;
 
@@ -111,7 +108,6 @@ public:
 class Font;
 class Image;
 class NativeImage;
-class NativeIcon;
 class SelectionColor;
 class DisplayContext;
 struct FontDescriptor;
@@ -119,7 +115,6 @@ class Button;
 class InputBox;
 class ListItem;
 class TextListItem;
-class Component;
 class ChildLayoutInstructionBase;
 class Container;
 class ComponentConfig;
@@ -136,8 +131,6 @@ class LobbyPlayer;
 class LobbyClientList;
 class ConfigParser;
 class StringParser;
-class ReadBuffer;
-class WriteBuffer;
 class ByteBuffer;
 class LobbyGroup;
 
@@ -154,7 +147,6 @@ struct ComponentConfigInit : public ComponentInit {
 class Graphics;
 class RootContainer;
 class ComponentListener;
-struct PopupParams;
 extern GUIString gEmptyGUIString;
 
 // a GUI component (0x30 bytes: EELobbyColorChooser's members start at +0x30; vtable 0x84d71c, 43
@@ -1204,7 +1196,6 @@ public:
 };
 
 // WONAPI's drawing context (provisional method names)
-class Font;
 // Graphics: vtable 0x450fe8;
 // the field accesses at 0x326ad0/0x326ce0/0x327140 show a 0x38-byte object.
 // R6 WON GUI round 35: the one Graphics is the platform's (the original's MSGraphics, the port's PlatGraphics, folded
@@ -1289,7 +1280,6 @@ class WindowEventBase;
 class InputEvent;
 class MouseEvent;
 class KeyEvent;
-class SizeEvent;
 // a window's drawing context (RTTI: DisplayContext : RefCount)
 // Only the prefix is used: 0x326c70 stores mGraphics at +0x0c.
 // DisplayContext (0x10 bytes): allocated and filled at 0x3cfab4..0x3cfad4; type descriptor 0x4e0ab0.
@@ -1444,7 +1434,6 @@ public:
     // (+08), the timer and input ticks (+98, +9c), the valid and full-screen flags (+a1, +ad), the screen sizes
     // (+b0..+bc), the default window and the window count (+fc, +100), the window set (+104), the event list
     // (+110), the timer sets (+11c, +128) and their flag (+134) and the broadcast set (+13c) (wmloop.rs; round 34)
-    SmartPtr<WindowEventBase> mCloseEvent; //138
 };
 // 0x361250: the default window manager, out of line (EELobbyInit 0x295ce3 calls it; a 6-byte body that reads
 // gDefaultWindowManager; its WON-side source is not written yet)
@@ -1565,7 +1554,6 @@ public:
     bool GetMinimizeOnResolutionRestore() const { return this->WField(EeWonWinField::MinimizeOnRestore) != 0; }
     Window* GetParent() const { return (Window*)this->WField(EeWonWinField::Parent); }
     enum WindowState { WindowState_Open, WindowState_Closing, WindowState_Closed };
-    typedef bool (*AllowCloseFunc)(Window*);
     // the Rust window, freed after every other member (the root's destruction may still call the window)
     struct WinObj { EeWonWindow* p; WinObj() : p(NULL) {} ~WinObj() { ee_won_win_free(this->p); } };
     WinObj mWinObj;
@@ -1577,14 +1565,12 @@ public:
     SmartPtr<DisplayContext> mDisplayContext; // +28
     WindowManager* GetWindowManager() { return this->mManager; } // inline
     WindowManager* mManager; // +7c
-    SmartPtr<WindowEventBase> mCloseEvent; // +90
-    AllowCloseFunc mAllowCloseFunc; // +94
+    // (the close event, +90, and the allow-close function, +94, were never set: gone, R6 WON GUI round 36)
     GUIString mTitle; // +9c
     SmartPtr<RootContainer> mRoot; // +a4
     // GetFont's cache (+a8; ee_won fontmap.rs): each font held once; released where the map member was destroyed
     struct FontMap { EeWonFontMap* p; FontMap() : p(ee_won_fontmap_new()) {} ~FontMap(); };
     FontMap mFontMap;
-    SmartPtr<Font> mDefaultFont; // +b4
 };
 
 

@@ -91,7 +91,7 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     }
     case Op::WinQueueClose: t->QueueEvent(new InputEvent(InputEvent_WindowClose)); return 0;
     case Op::WinCanClose: return ((Window*)a)->CanClose() ? 1 : 0;
-    case Op::WinAllowClose: return (t->mAllowCloseFunc != NULL && !t->mAllowCloseFunc(t)) ? 0 : 1;
+    case Op::WinAllowClose: return 1; // (no window ever had an allow-close function)
     case Op::WinChildSet: ((Window*)a)->WCall(EeWonWinCall::ChildSet, (intptr_t)t, b); return 0;
     case Op::WinStdArrow: return (intptr_t)Cursor::GetStandardCursor(StandardCursor_Arrow);
     case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
@@ -181,7 +181,6 @@ Window::Window()
 	this->mWinObj.p = ee_won_win_new(this, ee_won_guicpp_win_call);
 	this->mManager = WONAPI::WindowManager::GetDefaultWindowManager();
 	this->mRoot = new RootContainer(this);
-	this->mAllowCloseFunc = NULL;
 	this->mTitle = "Sierra App";
 	this->mRust = ee_won_plat_win_new(this, PlatWinHost);
 }

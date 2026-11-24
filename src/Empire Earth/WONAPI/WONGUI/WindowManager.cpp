@@ -114,7 +114,7 @@ static intptr_t WmWinCall(Window* t, intptr_t call, intptr_t c, intptr_t d)
     case EeWonWmWin::HandleKey: t->HandleKeyEvent((KeyEvent*)c); return 0;
     case EeWonWmWin::HandleInput: t->HandleInputEvent((InputEvent*)c); return 0;
     case EeWonWmWin::PlatformClose: t->PlatformClose(); return 0;
-    case EeWonWmWin::CloseEvent: return (intptr_t)t->mCloseEvent.get();
+    case EeWonWmWin::CloseEvent: return 0; // (no window ever had a close event)
     case EeWonWmWin::TimerEvent: t->TimerEvent((DWORD)c); return 0;
     case EeWonWmWin::IdleUpdate: t->IdleUpdate(); return 0;
     }
