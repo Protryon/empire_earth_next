@@ -506,8 +506,9 @@ int32_t ee_sound_mixers_initialize(EeSoundMixerStart *start);
 /// `SEInitialize`: [`ee_sound_shutdown`] registered with the engine's shutdown list (ee_util), then the mixers.
 ///
 /// # Safety
-/// As `ee_sound_mixers_initialize`.
-int32_t ee_sound_initialize(EeSoundMixerStart *start);
+/// `directory` (the C++ FSFileSpec, unread) and `window` (the C++ GEWindow) as the game passes them.
+int32_t ee_sound_initialize(const void *directory,
+                            void *window);
 
 /// `SEShutdown` (a shutdown-list function): every mixer deleted.
 ///

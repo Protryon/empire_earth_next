@@ -141,24 +141,6 @@ GERasterizer::~GERasterizer()
     ee_ge_rast_destroy(this->mRust);
 }
 
-// Returns a model's on-screen width in pixels (its scaled bounding diameter projected through the viewport)
-float GERasterizer::GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
-                                 float inScale, bool inOrthographic)
-{
-    return ee_ge_rast_pixel_size(this->mRust, inModel, GERust(*inViewport), GERust(inTransformation), inScale, inOrthographic);
-}
-
-// Returns a placed model's on-screen width in pixels, from its location, frame and scale
-float GERasterizer::GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic)
-{
-    return ee_ge_rast_placed_pixel_size(this->mRust, &inModel, GERust(inViewport), inOrthographic);
-}
-
-void GERasterizer::SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
-{
-    ee_ge_rast_ripple_values(this->mRust, inWaterRipple0, inWaterRipple1, inWaterRipple2);
-}
-
 // 0x1002398a: GEText's scalar deleting dtor (see ~GERasterizer). A `delete p` compiles to a ??_G call whenever the
 //   dtor body is inline-visible (even when the caller's budget is spent), and to ??1 + ??3 only when it is not;
 //   UIForm.cpp has both shapes for the same field (~UIForm ??1+??3, RelayoutForm ??_G).
@@ -184,22 +166,3 @@ unsigned long ee_gecpp_rast_screen_count(void* inRasterizer) { return static_cas
 void ee_gecpp_rast_deactivate(void* inRasterizer) { static_cast<GERasterizer*>(inRasterizer)->Deactivate(); }
 }
 
-// Starts the graphics engine (the directory is not read)
-long GEInitialize(FSFileSpec&, HINSTANCE__* const inInstance) { return ee_ge_initialize(inInstance); }
-
-// The pixel formats (ee_ge pixel.rs): a colour and alpha (0..1 floats, or 8 bits each) packed into a pixel, a
-// pixel's channels scaled to 8 bits
-unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor, float inAlpha)
-{
-    return ee_ge_pack_color_float(inFormat, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), inAlpha);
-}
-
-unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned long inGreen, unsigned long inBlue,
-                          unsigned long inAlpha)
-{
-    return ee_ge_pack_color(inFormat, inRed, inGreen, inBlue, inAlpha);
-}
-
-unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_red(inFormat, inColor); }
-unsigned char GEUnpackGreen(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_green(inFormat, inColor); }
-unsigned char GEUnpackBlue(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_blue(inFormat, inColor); }

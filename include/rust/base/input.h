@@ -150,6 +150,18 @@ long ee_input_initialize(void *window,
                          const EeInputKeyboard **keyboard,
                          const EeInputMouse **mouse);
 
+/// `ISInitialize` whole: the keys' names from the resource strings (`has_names`: the game passed a resource file;
+/// else the English names), then [`ee_input_initialize`].
+///
+/// # Safety
+/// As [`ee_input_initialize`].
+long ee_input_initialize_strings(void *window,
+                                 bool has_names,
+                                 unsigned long first_id,
+                                 unsigned long double_press_delay,
+                                 const EeInputKeyboard **keyboard,
+                                 const EeInputMouse **mouse);
+
 /// `ISShutdown` (a shutdown-list function): the mouse and the keyboard suspended and destroyed, their globals
 /// cleared, then the devices.
 ///

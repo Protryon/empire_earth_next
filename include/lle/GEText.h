@@ -8,6 +8,7 @@
 #define LLE_GETEXT_H
 #include "lle/LLEForward.h"
 
+#include "lle/UWideString.h"
 #include "lle/GEFont.h"
 #include "lle/GETextAlignment.h"
 

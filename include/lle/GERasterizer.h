@@ -11,6 +11,14 @@
 #include "rust/render/dx7.h"
 
 #include "lle/LLEForward.h"
+#include "lle/GERust.h"
+#include "lle/GEBitmap.h"
+#include "lle/GEText.h"
+#include "lle/GESurface.h"
+#include "lle/GETerrainMesh.h"
+#include "lle/GEPolygonArray.h"
+#include "lle/GEVertexArray.h"
+#include "GEWindow.h"
 
 // The fog's attributes and a screen's render state are the Rust records EeGeRastFog and EeGeRastScreen
 // (rust/crates/ee_render/src/ge rastobj.rs; rust/render/ge.h): the plug-in reads and writes the device-side fields
@@ -24,13 +32,13 @@ public:
     // port (LLE round 12): the plug-in's virtuals went with the plug-in boundary. The game links one rasterizer, the
     // DX7 one (rust/crates/ee_render/src/dx7 rastobj.rs; DX7Rasterizer, folded in here), so each method calls its Rust
     // object (mDX7) directly.
-    // The members that need a complete GE type are out of line (DX7Rasterizer.cpp); the terrain draws take the mesh
-    // (and the runs and the rectangle) as template parameters, so the units that never draw need not include them.
+    // (the GE types its members call are included above.)
 
     // Sets up a screen's primary, back buffer and optional Z-buffer (flipping chain full screen, offscreen buffer
     // windowed), activates Direct3D on them and forces every render state to its default
     long ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
-                        unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat);
+                        unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat)
+        { return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->GetWidth(), inWindow->GetHeight(), inBackBuffers, inZBuffer, inZBufferFormat); }
     // Takes a free light slot (of 8), sets the light into it and enables it; returns 7 when all slots are in use
     long AddLight(GELight& inLight, unsigned long inScreen, unsigned long& outIndex)
         { return ee_dx7r_add_light(this->mDX7, &inLight, inScreen, &outIndex); }
@@ -45,12 +53,14 @@ public:
     // (the original's two CreateMovie slots: no movie player since 2026-11-17)
     // A polygon array of the given size (16-bit indices: the renderer's DX7PolygonArray, now GEPolygonArray's); a
     // vertex array of type 0 (standard: DX7StandardVertexArray) or 1 (coloured: DX7StdColorVertexArray), else null
-    GEPolygonArray* CreatePolygonArray(unsigned long inCount);
-    GEVertexArray* CreateVertexArray(unsigned long inType, unsigned long inCount);   // slot 0x2c
+    GEPolygonArray* CreatePolygonArray(unsigned long inCount) { return new GEPolygonArray(inCount); }
+    GEVertexArray* CreateVertexArray(unsigned long inType, unsigned long inCount)   // slot 0x2c
+        { return inType <= 1 ? new GEVertexArray(inType, inCount) : NULL; }
     // Releases every screen's texture, vertex buffer, lights, device and Direct3D, deletes the screens and their states
     long Deactivate() { return ee_dx7r_deactivate(this->mDX7); }
     // The draws (ee_dx7 draw2d.rs, draw_model.rs, draw_terrain.rs: Rust reads the GE objects in place)
-    long Draw(GEBitmap* inBitmap, unsigned long inScreen);                           // slot 0x54
+    long Draw(GEBitmap* inBitmap, unsigned long inScreen)                            // slot 0x54
+        { return ee_dx7r_draw_bitmap(this->mDX7, inScreen, inBitmap->GetRust()); }
     long Draw(GELine* inLine, unsigned long inCount, unsigned long inScreen)         // slot 0x50
         { return ee_dx7r_draw_lines(this->mDX7, inScreen, inLine, inCount); }
     // a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)
@@ -60,15 +70,25 @@ public:
         { return ee_dx7r_draw_points(this->mDX7, inScreen, inPoint, inCount); }
     long Draw(GERhombus* inRhombus, unsigned long inScreen) { return ee_dx7r_draw_rhombus(this->mDX7, inScreen, inRhombus); }
     // a text with the platform fonts on the target, aligned; shadow fonts get a black or white shadow 1 pixel down-right
-    long Draw(GEText* inText, GESurface* inTarget);
+    long Draw(GEText* inText, GESurface* inTarget) { return ee_dx7r_draw_text(inText, NULL, *inTarget); }
     // a text clipped to a rectangle: with the font's bitmap font when it has one, else as the one above
-    long Draw(GEText* inText, const GERectangle& inRectangle, GESurface* inTarget);
+    long Draw(GEText* inText, const GERectangle& inRectangle, GESurface* inTarget)
+    {
+        return inText->GetFont()->GetFontBitmap() != NULL
+                   ? inText->GetFont()->GetFontBitmap()->Draw(inText, inRectangle, this, 0)
+                   : ee_dx7r_draw_text_clipped(inText, reinterpret_cast<const float(*)[4]>(&inRectangle), *inTarget);
+    }
     // the visible terrain texture by texture, unclipped then clipped polygons (space maps draw materials 1..8 first);
     // with no visible tile row fills the view with two black quads instead
-    long Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic);
+    long Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
+        { return ee_dx7r_draw_terrain(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic); }
     // an indexed triangle list with an identity world transform and D3D clipping on; counts the triangles drawn
     long Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVertexArray& inVertices,
-              unsigned long inVertexCount, GETexture* inTexture, unsigned long inScreen, bool inSorted);
+              unsigned long inVertexCount, GETexture* inTexture, unsigned long inScreen, bool inSorted)
+    {
+        return ee_dx7r_draw_polygon_array(this->mDX7, inScreen, inPolygons.GetIndices(), inCount, inVertices.GetType(),
+                                          inVertices.GetVertices(), inVertexCount, inTexture);
+    }
     // a textured polyline (at most 1200 segments) as a red line list in camera space, advancing the texture V along it
     // (without the drawing lock); the points are std::pair<GE3DPoint, float>: (x, y, z, advance)
     template <class Point> long Draw3DLine(std::vector<Point>& inPoints, GETexture* inTexture, float inV, unsigned long inScreen, bool inOrthographic)
@@ -175,9 +195,13 @@ public:
     unsigned long GetLighting(unsigned long inScreen) const { return this->GetScreenState(inScreen)->lighting; }
     const UString& GetName() const
         { return *reinterpret_cast<const UString*>(ee_ge_rast_get(this->mRust, EeGeRastVal::Name)); }
+    // a model's on-screen width in pixels (its scaled bounding diameter projected through the viewport); a placed
+    // model's, from its location, frame and scale
     float GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation, float inScale,
-                       bool inOrthographic);
-    float GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic);
+                       bool inOrthographic)
+        { return ee_ge_rast_pixel_size(this->mRust, inModel, GERust(*inViewport), GERust(inTransformation), inScale, inOrthographic); }
+    float GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic)
+        { return ee_ge_rast_placed_pixel_size(this->mRust, &inModel, GERust(inViewport), inOrthographic); }
     GESurface* GetPrimarySurface(unsigned long inScreen) const { return static_cast<GESurface*>(this->GetScreenState(inScreen)->primary_surface); }
     static GERasterizer* GetRasterizer(unsigned long inIndex)
         { return static_cast<GERasterizer*>(ee_ge_rast_list(3, NULL, inIndex)); }
@@ -196,7 +220,8 @@ public:
     unsigned long GetZBuffer(unsigned long inScreen) const { return this->GetScreenState(inScreen)->z_buffer; }
     unsigned long GetZCompare(unsigned long inScreen) const { return this->GetScreenState(inScreen)->z_compare; }
     void SetScreenID(unsigned long inID) { ee_ge_rast_set(this->mRust, EeGeRastVal::ScreenId, (intptr_t)inID); }
-    void SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2);
+    void SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
+        { ee_ge_rast_ripple_values(this->mRust, inWaterRipple0, inWaterRipple1, inWaterRipple2); }
     // the DX7 rasterizer of the given name (inTnL: its T&L flavour); the game has one (DX7TnLRasterizer). Without inTnL,
     // a rasterizer with no device (tools/eemodel/storegate: model and texture loads, no draws)
     GERasterizer(const UString& inName, bool inTnL);

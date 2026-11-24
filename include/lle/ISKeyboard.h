@@ -18,12 +18,7 @@ public:
     static unsigned long ComputeModifierState(unsigned long inKey) { return ee_input_modifier_state(inKey); }
     // the key at a scan code (NULL for a code without one); kErrorBeyondEnd past 255
     long GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
-    {
-        const EeInputEntity* theEntity;
-        long theResult = ee_input_keyboard_entity(Rust(), inIndex, &theEntity);
-        outEntity = reinterpret_cast<ISEntity*>(const_cast<EeInputEntity*>(theEntity));
-        return theResult;
-    }
+        { return ee_input_keyboard_entity(Rust(), inIndex, (const EeInputEntity**)&outEntity); }
     unsigned long GetModifierState() const { return ee_input_keyboard_modifiers(Rust()); }
     bool GetShouldUpdate() const { return ee_input_keyboard_should_update(Rust()); }
     // reads the buffered key events (presses, releases, modifiers, double presses) at TMGetTime

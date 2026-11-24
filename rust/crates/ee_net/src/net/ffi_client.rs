@@ -538,6 +538,52 @@ pub extern "C" fn ee_net_cl_connect(c: *const EeNetClient, strings: *const c_voi
     cl(c).connect(strings as usize)
 }
 
+/// `Connect(name, host, address)` from the three NUL-terminated texts (the C++ strings): their bytes measured here.
+///
+/// # Safety
+/// The three are NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn ee_net_cl_connect_text(
+    c: *const EeNetClient,
+    name: *const std::ffi::c_char,
+    host: *const std::ffi::c_char,
+    address: *const std::ffi::c_char,
+) -> i32 {
+    let strings = cl_strings(name, host, address);
+    ee_net_cl_connect(c, (&raw const strings).cast())
+}
+
+/// The three texts as `Connect`'s strings.
+///
+/// # Safety
+/// The three are NUL-terminated strings.
+pub unsafe fn cl_strings(
+    name: *const std::ffi::c_char,
+    host: *const std::ffi::c_char,
+    address: *const std::ffi::c_char,
+) -> EeNetClStrings {
+    let length = |p| std::ffi::CStr::from_ptr(p).to_bytes().len();
+    EeNetClStrings {
+        name: name.cast(),
+        name_length: length(name),
+        host: host.cast(),
+        host_length: length(host),
+        address: address.cast(),
+        address_length: length(address),
+    }
+}
+
+#[cfg(test)]
+mod connect_text_tests {
+    #[test]
+    fn the_texts_are_measured_to_their_nul() {
+        let s = unsafe { super::cl_strings(c"Ann".as_ptr(), c"".as_ptr(), c"10.0.0.7:33334".as_ptr()) };
+        assert_eq!((s.name_length, s.host_length, s.address_length), (3, 0, 14));
+        assert_eq!(unsafe { std::slice::from_raw_parts(s.address, s.address_length) }, b"10.0.0.7:33334");
+        assert_eq!(unsafe { *s.name }, b'A');
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn ee_net_cl_connect_for_xfer(c: *const EeNetClient) -> i32 {
     cl(c).connect_for_xfer()

@@ -175,6 +175,49 @@ pub unsafe fn store_frame(
     }
 }
 
+/// One B, G, R pixel (8 bits each) packed for a surface of `format` (a `GEPixelFormatID`): the 32-bit formats opaque,
+/// the 16-bit ones with their alpha bit or nibble set; any other format as R5G6B5.
+pub fn pack_bgrx(format: c_ulong, b: u32, g: u32, r: u32) -> u32 {
+    use crate::gestate::GEPixelFormatID as F;
+    const A8: c_ulong = F::kPixelFormatA8R8G8B8 as c_ulong;
+    const X8: c_ulong = F::kPixelFormatX8R8G8B8 as c_ulong;
+    const A4: c_ulong = F::kPixelFormatA4R4G4B4 as c_ulong;
+    const A1: c_ulong = F::kPixelFormatA1R5G5B5 as c_ulong;
+    const X1: c_ulong = F::kPixelFormatX1R5G5B5 as c_ulong;
+    const RA: c_ulong = F::kPixelFormatR5G5B5A1 as c_ulong;
+    const RX: c_ulong = F::kPixelFormatR5G5B5X1 as c_ulong;
+    match format {
+        A8 | X8 => 0xff00_0000 | r << 16 | g << 8 | b,
+        A4 => 0xf000 | (r >> 4) << 8 | (g >> 4) << 4 | b >> 4,
+        A1 | X1 => 0x8000 | (r >> 3) << 10 | (g >> 3) << 5 | b >> 3,
+        RA | RX => (r >> 3) << 11 | (g >> 3) << 6 | (b >> 3) << 1 | 1,
+        _ => (r >> 3) << 11 | (g >> 2) << 5 | b >> 3,
+    }
+}
+
+/// `GEPackBGRXRow` (lle/GEPixelPack.h, deleted): `width` pixels of 4 bytes (B, G, R, ignored) packed into a surface
+/// row of `format`, 4 bytes a pixel for the two 32-bit formats, else 2: the CPU frame copied to the back buffer (the
+/// WON lobby's composited frame, RTSGraphics::RenderLobby).
+///
+/// # Safety
+/// `source` holds `width` pixels and `row` has room for them in the format.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_pack_bgrx_row(source: *const u8, row: *mut u8, width: c_ulong, format: c_ulong) {
+    let wide = format <= crate::gestate::GEPixelFormatID::kPixelFormatX8R8G8B8 as c_ulong;
+    for x in 0..width as usize {
+        // SAFETY: the function's contract
+        unsafe {
+            let p = source.add(x * 4);
+            let packed = pack_bgrx(format, *p as u32, *p.add(1) as u32, *p.add(2) as u32);
+            if wide {
+                row.add(x * 4).cast::<u32>().write_unaligned(packed);
+            } else {
+                row.add(x * 2).cast::<u16>().write_unaligned(packed as u16);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -292,5 +335,32 @@ mod tests {
         unsafe { store_frame(&t, 2, 1, 4, [0xff, 0x80, 0x10, 0xf0, 0, 0, 0, 0].as_ptr(), memory.as_mut_ptr()) };
         assert_eq!(u16::from_le_bytes([memory[0], memory[1]]), 0xff81);
         assert_eq!(u16::from_le_bytes([memory[2], memory[3]]), 0);
+    }
+
+    #[test]
+    fn a_bgrx_row_packs_into_every_format() {
+        // B, G, R, x: one pixel with every channel's top bits distinct, one white, one black
+        let source = [0x12u8, 0x9c, 0xe7, 0x55, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff];
+        let row = |format: c_ulong, bytes: usize| {
+            let mut out = vec![0xaau8; 3 * bytes + 2];
+            unsafe { ee_ge_pack_bgrx_row(source.as_ptr(), out.as_mut_ptr(), 3, format) };
+            assert_eq!(out[3 * bytes..], [0xaa, 0xaa], "nothing past the row");
+            out.truncate(3 * bytes);
+            out
+        };
+        let words = |v: &[u8]| v.chunks(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>();
+        for format in [0, 1] {
+            assert_eq!(row(format, 4), [0x12, 0x9c, 0xe7, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0xff]);
+        }
+        assert_eq!(words(&row(2, 2)), [0xfe91, 0xffff, 0xf000]);
+        for format in [3, 5] {
+            assert_eq!(words(&row(format, 2)), [0x8000 | 28 << 10 | 19 << 5 | 2, 0xffff, 0x8000]);
+        }
+        for format in [4, 6] {
+            assert_eq!(words(&row(format, 2)), [28 << 11 | 19 << 6 | 2 << 1 | 1, 0xffff, 0x0001]);
+        }
+        for format in [7, 8, 14] {
+            assert_eq!(words(&row(format, 2)), [28 << 11 | 39 << 5 | 2, 0xffff, 0x0000]);
+        }
     }
 }

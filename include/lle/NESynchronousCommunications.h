@@ -17,8 +17,11 @@
 // the debug lock and the two bytes-per-second meters (no caller) went too.
 class LLE_API NESynchronousCommunications {
 public:
-    NESynchronousCommunications(unsigned long inNumberOfCTsProcessedInPhysics = 0);   // default arg: ??_F 0x4021b
-    virtual ~NESynchronousCommunications();
+    // the shared client/server state (ee_net comms.rs): the CTs processed given, the last tick received -2, the rest
+    // 0; the destructor gives up the base's reference (the Rust server or client, freed first, held its own)
+    NESynchronousCommunications(unsigned long inNumberOfCTsProcessedInPhysics = 0)   // default arg: ??_F 0x4021b
+        : mComms(ee_net_comms_new((uint32_t)inNumberOfCTsProcessedInPhysics)) {}
+    virtual ~NESynchronousCommunications() { ee_net_comms_free(this->mComms); }
     // a player left (EEServer 0xcb8f6 / EEClient 0xb7722: the player, then three flags; slot 1, provisional name):
     // the one virtual member left (the original's slots 2..8 are the members below, LLE round 13)
     virtual void ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting) = 0;

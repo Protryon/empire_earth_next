@@ -53,7 +53,8 @@ public:
     // New (round 6): registers a builder for the types inFirst..inLast (the original wrote sConstructors[256])
     static void RegisterBuilder(unsigned char inFirst, unsigned char inLast, NEMessage* (*inBuilder)(unsigned char*))
         { ee_netmsg_register_builder(inFirst, inLast, reinterpret_cast<void* (*)(uint8_t*)>(inBuilder)); }
-    void GetHeaderSlots(EeNetMsgSlot* outSlots);   // New (port): the header as the codec's first four slots
+    // New (port): the header as the codec's first four slots
+    void GetHeaderSlots(EeNetMsgSlot* outSlots) { ee_netmsg_header_slots(&this->mType, outSlots); }
 
     virtual ~NEMessage() {}
 
@@ -81,11 +82,15 @@ struct NEMRecordValue {
 // Members are numbered from 0 after the header, in the wire order of ee_netmsg engine.rs.
 class LLE_API NEMRecord : public NEMessage {
 public:
-    NEMRecord(unsigned char* inData);   // the factory's: the type at inData[1], then the import
+    // the factory's: the type at inData[1], then the import
+    NEMRecord(unsigned char* inData) { ee_ne_record_construct_from(this, inData); }
     NEMRecord(unsigned char inType, std::initializer_list<NEMRecordValue> inValues = {},
-              std::initializer_list<const char*> inStrings = {});
-    NEMRecord(unsigned char inType, const uint32_t* inValues, size_t inCount);   // the Rust's: fixed members only
-    virtual ~NEMRecord();   // releases the players' inputs
+              std::initializer_list<const char*> inStrings = {}) : NEMessage(inType)
+        { ee_ne_record_fill(this, reinterpret_cast<const int64_t*>(inValues.begin()), inValues.size(), inStrings.begin(), inStrings.size()); }
+    // the Rust's: fixed members only
+    NEMRecord(unsigned char inType, const uint32_t* inValues, size_t inCount) : NEMessage(inType)
+        { ee_ne_record_fill_u32(this, inValues, inCount); }
+    virtual ~NEMRecord() { ee_ne_record_destruct(this); }   // releases the players' inputs
     virtual bool GetCanSendWhilePaused() const
         { return (ee_netmsg_ne_type(this->mType).flags & EE_NETMSG_NE_PAUSED) != 0; }
     virtual bool GetCountsTowardsPlayerInputThrottle() const

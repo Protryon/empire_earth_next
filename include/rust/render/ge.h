@@ -1170,17 +1170,17 @@ struct EeGeStoreVertices {
   size_t opacities_len;
 };
 
-/// `GETextureDescription` (lle/GETextureManager.h), field for field.
+/// `GETextureDescription`: the C++ struct derives from it (lle/GETextureManager.h), so C++ names its fields.
 struct EeGeTextureDescription {
-  unsigned long surface_volatility;
-  unsigned long frame_format;
-  unsigned long pixel_depth;
-  long num_mip_levels_to_drop;
-  bool is_3d_renderable;
-  bool is_transparency_enabled;
-  bool has_alpha;
-  bool create_mipmaps;
-  bool use_texture_pack;
+  unsigned long mSurfaceVolatility;
+  unsigned long mFrameFormat;
+  unsigned long mPixelDepth;
+  long mNumMipLevelsToDrop;
+  bool mIs3DRenderable;
+  bool mIsTransparencyEnabled;
+  bool mHasAlpha;
+  bool mCreateMIPMaps;
+  bool mUseTexturePack;
 };
 
 /// The host: `owner` is the C++ texture of the object calling.
