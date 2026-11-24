@@ -573,17 +573,6 @@ pub unsafe fn cl_strings(
     }
 }
 
-#[cfg(test)]
-mod connect_text_tests {
-    #[test]
-    fn the_texts_are_measured_to_their_nul() {
-        let s = unsafe { super::cl_strings(c"Ann".as_ptr(), c"".as_ptr(), c"10.0.0.7:33334".as_ptr()) };
-        assert_eq!((s.name_length, s.host_length, s.address_length), (3, 0, 14));
-        assert_eq!(unsafe { std::slice::from_raw_parts(s.address, s.address_length) }, b"10.0.0.7:33334");
-        assert_eq!(unsafe { *s.name }, b'A');
-    }
-}
-
 #[no_mangle]
 pub extern "C" fn ee_net_cl_connect_for_xfer(c: *const EeNetClient) -> i32 {
     cl(c).connect_for_xfer()
@@ -693,4 +682,15 @@ pub extern "C" fn ee_net_cl_set_slow_playback(c: *const EeNetClient) {
 #[no_mangle]
 pub extern "C" fn ee_net_cl_set_normal_playback(c: *const EeNetClient) {
     cl(c).rec().set_normal_playback()
+}
+
+#[cfg(test)]
+mod connect_text_tests {
+    #[test]
+    fn the_texts_are_measured_to_their_nul() {
+        let s = unsafe { super::cl_strings(c"Ann".as_ptr(), c"".as_ptr(), c"10.0.0.7:33334".as_ptr()) };
+        assert_eq!((s.name_length, s.host_length, s.address_length), (3, 0, 14));
+        assert_eq!(unsafe { std::slice::from_raw_parts(s.address, s.address_length) }, b"10.0.0.7:33334");
+        assert_eq!(unsafe { *s.name }, b'A');
+    }
 }
