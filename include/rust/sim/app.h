@@ -233,6 +233,9 @@ struct EeAppTeamsWorld {
   bool (*enemy)(void*, uint32_t, uint32_t);
 };
 
+/// A unit-type callback (`EEUnitSetFunctor::Execute` through its C++ trampoline): false stops the walk.
+using EeUnitSetVisit = bool(*)(void *functor, uint32_t unit_type);
+
 /// `EEVoting`'s members (the class's base; zero when made).
 struct EeAppVoting {
   /// the proposed edict (0: none)
@@ -556,6 +559,23 @@ const char *ee_unit_set_name(const EeUnitSet *set);
 /// As [`ee_unit_set_contains`].
 uint32_t ee_unit_set_next(const EeUnitSet *set,
                           uint32_t after);
+
+/// `EEUnitSet::ForEach(functor)` (units round 12; was the C++ loop): each unit type of `set` in order (as
+/// `ee_unit_set_next` gives them, the table's lock not held across a call) until `visit` returns false.
+///
+/// # Safety
+/// `set` is a live set of the table; `visit` is called with `functor`.
+void ee_unit_set_for_each(const EeUnitSet *set,
+                          void *functor,
+                          EeUnitSetVisit visit);
+
+/// `EEUnitSetManager::ForEach(index, functor)`: set `index`'s walk when it exists; true (the original's answer).
+///
+/// # Safety
+/// As `ee_unit_set_for_each`.
+bool ee_unit_sets_for_each(size_t index,
+                           void *functor,
+                           EeUnitSetVisit visit);
 
 /// `EEVoting::Propose`
 ///
