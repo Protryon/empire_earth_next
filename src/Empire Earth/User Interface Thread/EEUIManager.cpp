@@ -153,7 +153,6 @@ extern "C" int64_t ee_screenscpp_um_engine_count() { return EECPEngineChoiceCoun
 extern "C" void ee_screenscpp_um_music(void* inCall)
 { static_cast<EEUIManager*>(static_cast<EEUIManagerCall*>(inCall)->mManager)->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume); }
 extern "C" int64_t ee_screenscpp_um_citizens() { return gWorldTable.GetLongValue(kWorldStartingCitizensDefault); }
-extern "C" void ee_screenscpp_um_post_f9() { EEPostF9Key(); }
 extern "C" int64_t ee_screenscpp_um_base_keyboard(void* inCall)
 { return EEUIManager::BaseKeyboard(static_cast<EEUIManager*>(static_cast<EEUIManagerCall*>(inCall)->mManager)); }
 extern "C" int64_t ee_screenscpp_um_base_mouse(void* inCall)
@@ -239,6 +238,8 @@ extern "C" uintptr_t ee_screenscpp_um_new_cancel(uintptr_t inForm)
 { return (uintptr_t)static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_CANCEL, inForm)); }
 extern "C" uintptr_t ee_screenscpp_um_new_load_unit() { return (uintptr_t)static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_LOAD_UNIT)); }
 // the events' bodies (cpp_events.rs)
+extern "C" bool ee_screenscpp_uh_in_game_form()
+{ return dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL || dynamic_cast<EEUIFScenarioEditor*>(gUIManager->GetCurrentForm()) != NULL; }
 extern "C" long ee_screenscpp_ev_open_form(uintptr_t inForm) { return gUserInterface->OpenForm(reinterpret_cast<UIForm*>(inForm)); }
 extern "C" void ee_screenscpp_ev_load_unit(uintptr_t inForm)
 { static_cast<EEUIFMGUnitHack*>(reinterpret_cast<EEUIFMainGame*>(inForm)->mUnitHack)->LoadUnitData(); }

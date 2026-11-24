@@ -480,7 +480,7 @@ fn root<C: Cpp + ?Sized>(c: &mut C, form: usize, op: u32, a: u32, b: u32) -> Opt
             0
         }
         EE_SCREENS_GAME_GO_BRIEFING => {
-            c.rc_go_briefing();
+            crate::screens::ui_helpers::display_scenario_intro(c);
             0
         }
         EE_SCREENS_GAME_GO_EXIT => {
