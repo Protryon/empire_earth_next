@@ -2058,15 +2058,27 @@ function M.run(memory, now, bombers, ids, px, py, shoot, aa, tg, remembered, doc
         local l = by[t.id]
         l[#l + 1] = ready[i]
     end
+    local target_info = {}
+    for _, t in ipairs(aa) do target_info[t.id] = {type = t.type, x = t.x, y = t.y} end
+    for _, t in ipairs(tg) do target_info[t.id] = {type = t.type, x = t.x, y = t.y} end
+    local view = doc ~= nil and doc.view or nil
+    local claim = doc ~= nil and doc.claim or false
     local sent, at_aa = 0, 0
     for _, tid in ipairs(order) do
-        local code, reason, n = ai.attack(by[tid], tid)
+        local flight = {}
+        for _, id in ipairs(by[tid]) do
+            local e = s.held[held_at(s, id)]
+            if e ~= nil then
+                flight[#flight + 1] = e
+            end
+        end
+        local ti = target_info[tid] or {}
+        local n, reason = send(view, memory, s, flight, tid, now, claim, AF_RUN_MS, ti.x, ti.y)
         if n > 0 then
-            for _, id in ipairs(by[tid]) do
-                local e = s.held[held_at(s, id)]
-                e.tgt = tid
-                e.t = now > 0 and now or 1
-                e.t0 = e.t
+            for _, e in ipairs(flight) do
+                if e.tgt == tid then
+                    e.ttype = ti.type or e.ttype or ""
+                end
             end
             sent = sent + n
             for f = 1, na do
@@ -2075,17 +2087,9 @@ function M.run(memory, now, bombers, ids, px, py, shoot, aa, tg, remembered, doc
                 end
             end
         end
-        if n < #by[tid] then
-            s.refused = (s.refused or 0) + #by[tid] - n
+        if n < #flight then
+            s.refused = (s.refused or 0) + #flight - n
             s.refused_reason = reason
-        end
-        if doc ~= nil and doc.claim then
-            for _, id in ipairs(by[tid]) do
-                local e = s.held[held_at(s, id)]
-                if e ~= nil and e.tgt == tid then
-                    C.take(doc.view, memory, id, C.PRIO.task, C.WHO.bombers, AF_RUN_MS, bombers[id])
-                end
-            end
         end
     end
     if sent == 0 then
