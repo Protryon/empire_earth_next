@@ -236,9 +236,10 @@ strategy's memory (§3.2).
 
 ## 3. The strategy layer (Lua)
 
-**Runtime: Lua 5.4, vendored** (MIT) under `src/ThirdParty/lua`, built as plain C units for Windows, macOS and Linux
-(`tools/units.py` LIB_UNITS, like miniaudio). In the Rust port mlua binds it unchanged. Luau is the alternative if
-types and the sandbox matter more than vendoring size (§7).
+**Runtime: Lua 5.5** (MIT), the unmodified sources of the `lua-src` crate, compiled by cargo through `mlua-sys`
+(`lua55`, `vendored`) into the Rust library on Windows, macOS and Linux (docs/progress/lua.md; until the Lua lane it
+was Lua 5.4.7 under `src/ThirdParty/lua`, one C unit of the C++ build). The runtime (ee_sim `ai/lua_host.rs`) calls
+Lua's C API directly.
 
 **Determinism**, the rules from MODDING_PLAN §3.4 and RUST_PLAN §2.1:
 - **No `math.random` and no `os` time;** each player has its own RNG, seeded from the game seed and the player id.
@@ -337,15 +338,16 @@ the caller passes the view in as a value tree and gets the orders back as one.
 - **`ai.random(n)` / `ai.random(lo, hi)`:** SplitMix64 (64-bit state, golden-gamma step, the reference mix), drawn
   uniformly by rejection sampling. Its state goes into the memory bytes.
 
-**Determinism in the vendored Lua** (`ee_lua.c` sets macros Lua leaves open; Lua's own files stay unmodified):
-- **The string hash seed** is fixed.
-- **`table.sort`** never randomises its pivot: the original reads `clock()` and `time()`.
-- **`^`** is square-and-multiply for integral exponents (`|y| < 2^53`). Any other exponent is an error, and a
-  constant like `2^0.5` already fails to compile.
-- **Float text** (`tostring`, `..`, `print`) spells NaN and the infinities `nan`, `inf` and `-inf`; UCRT prints
-  `-nan(ind)`. Finite floats keep `%.14g`, which every C library we build with rounds correctly.
-- **Character classes and case mapping** in lauxlib, base and string are ASCII only. The game sets a Windows locale
-  whose ctype knows Latin-1 letters, while POSIX stays in the C locale.
+**Determinism over an unmodified Lua** (the runtime fixes what Lua's build leaves to chance; `lua_host.rs`):
+- **The string hash seed** is fixed (`lua_newstate`'s seed argument, new in 5.5).
+- **`table.sort`** is the runtime's (`lua_sort.rs`: Lua 5.5's quicksort with a constant in the place of the pivot
+  randomisation, which reads the time and addresses).
+- **Float text**: `tostring`, `print` and `string.format("%s")` spell NaN and the infinities `nan`, `inf` and
+  `-inf` (UCRT prints `-nan(ind)`). Finite floats are Lua 5.5's: `%.15g`, or `%.17g` when that does not read back.
+- **Not covered any more** (they were macros of the old one-unit build; no script in `data/ai` depends on them):
+  - `^` is the C library's `pow` (x^2 is x*x): not guaranteed equal across platforms. Scripts multiply instead;
+  - `..` of a NaN or an infinity gives the C library's text;
+  - the string library's character classes and case mapping follow the C locale for bytes above 127.
 
 **Budget and memory.**
 - **The budget:** a count hook runs every 1,000 instructions. Past the budget it raises an error, then sets the

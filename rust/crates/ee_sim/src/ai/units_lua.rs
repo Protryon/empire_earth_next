@@ -657,7 +657,7 @@ mod tests {
     fn helpers_as_the_cpp() {
         let cases = include_str!("golden_units_lua_cases.lua");
         unsafe {
-            let l = lua_newstate(alloc, std::ptr::null_mut());
+            let l = lua_newstate(alloc, std::ptr::null_mut(), 0x5eed_5eed);
             luaL_requiref(l, c"_G".as_ptr(), luaopen_base, 1);
             luaL_requiref(l, c"table".as_ptr(), luaopen_table, 1);
             luaL_requiref(l, c"string".as_ptr(), luaopen_string, 1);
@@ -694,6 +694,12 @@ mod tests {
             lua_close(l);
         }
         let got = OUT.with(|o| o.borrow().clone());
+        if std::env::var_os("EE_LUA_GOLDEN_WRITE").is_some() {
+            // a declared re-baseline (another Lua version)
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/ai/golden_units_lua.txt");
+            std::fs::write(path, &got).unwrap();
+            return;
+        }
         let want = include_str!("golden_units_lua.txt");
         for (i, (g, w)) in got.lines().zip(want.lines()).enumerate() {
             assert_eq!(g, w, "line {}", i + 1);
