@@ -97,9 +97,9 @@ static intptr_t CcHost(void* inFrame, EeWonCcOp op, void* c, intptr_t a, intptr_
     case O::ParseChild: return CC_G(co->ParseChild(*(ConfigParser*)a, (ConfigObject*)b, (d & 1) != 0, (d & 2) != 0));
     case O::IncludeGroup: return CC_G(co->IncludeGroup(*(ConfigParser*)a, CcStr(b, d)));
     case O::AddWarning: return CC_GV(((ConfigParser*)c)->AddWarning(CcStr(a, b)));
-    case O::IsFontCfg: return dynamic_cast<FontConfig*>(co) != NULL;
+    case O::IsFontCfg: return WONCfgIs<FontConfig>(co, EeWonCfgKind::Font);
     case O::FontOf: return (intptr_t)static_cast<FontConfig*>(CcCfg(c))->GetFont();
-    case O::IsImageCfg: return dynamic_cast<ImageConfig*>(co) != NULL;
+    case O::IsImageCfg: return WONCfgIs<ImageConfig>(co, EeWonCfgKind::Image);
     case O::ImageOf: return CcGive(SmartPtr<Image>(static_cast<ImageConfig*>(CcCfg(c))->GetImage()));
     case O::RawImageOf: return CcGive(SmartPtr<Image>(static_cast<Image*>(static_cast<ImageConfig*>(CcCfg(c))->GetRawImage())));
     case O::DecodeRaw: return CC_G(CcGive(Window::GetDefaultWindow()->DecodeImageRaw(CcStr(a, b).c_str())));

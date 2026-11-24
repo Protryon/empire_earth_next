@@ -960,8 +960,6 @@ template<EeWonCfgKind K> ComponentConfig* NewConfigOf() { return CfgNewOfKind(K)
 template<class T> Component* NewComponentOf() { return new T; }
 inline Component* NoComponent() { return NULL; } // the font and image configs make none
 
-// FontConfig is declared after FontDescriptor below.
-class FontConfig;
 
 // Exception record (0x1c bytes); the implicit copy and destructor are the original's helpers.
 class ConfigObjectException : public std::exception {
@@ -1748,19 +1746,8 @@ inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned sho
 }
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
-// FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
-class FontConfig : public ComponentConfig {
-public:
-    FontConfig();
-    Font* GetFont(); // 0x38a300; recalculates the font on demand
-    void SetFont(Font*); //38a3e0
-    virtual bool PostParse(ConfigParser*) { return true; } // 0x3099f0 (shared hook body: no desired size)
-    virtual bool GetNamedValue(const std::string&,int&); //38a580
-    SmartPtr<Font> mFont; //78
-    FontDescriptor mDescriptor; //7c..93
-    bool mNeedRecalcFont; // at +0x94; +0x95..0x97 padding; the class is 0x98 bytes
-    // Implicit destructor; 0x38a250 has no own vptr store.
-};
+// FontConfig (0x98 bytes, the factory 0x38a160, constructor 0x38a1c0) is a kind of the media config
+// (WONLobbyConfigImages.h, R6 WON GUI round 36).
 inline int WrappedText::GetHeight() { int h=ee_won_wrap_height(this->mObj); return h==0 ? this->mFont->GetHeight() : h; }
 // The images (R6 WONLobby round 24): every image class is one object of ee_won_gui's imgobj.rs, its kind the
 // original's class (Image's virtuals, NativeImage, NativeMask and PlatNativeImage, the 32-, 8- and 1-bit raw images and

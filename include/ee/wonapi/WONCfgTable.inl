@@ -90,7 +90,7 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::CropFilter: return (intptr_t)new SmartPtr<RawImage>(ImageCrop(EE_CFG(ImageFilterConfig)->mRawImage.get(),(int)x,0,(int)y,EE_CFG(ImageFilterConfig)->mRawImage->GetHeight()));
     case O::HeldRaw: return (intptr_t)((SmartPtr<RawImage>*)x)->get();
     case O::RawFree: delete (SmartPtr<RawImage>*)x; return 0;
-    case O::StretchNew: return (intptr_t)new StretchImageConfig;
+    case O::StretchNew: return (intptr_t)new StretchImageConfig(EeWonCfgKind::StretchImage);
     case O::StretchCopy: ((StretchImageConfig*)x)->mStretchImage->CopyAttributes(EE_CFG(StretchImageConfig)->mStretchImage); return 0;
     case O::StretchHold: return (intptr_t)new SmartPtr<StretchImageConfig>((StretchImageConfig*)x);
     case O::StretchFree: delete (SmartPtr<StretchImageConfig>*)x; return 0;
@@ -100,7 +100,7 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::FrameChild: return (intptr_t)a.child.get();
     case O::FrameRaw: return (intptr_t)a.raw.get();
     case O::SetFrameChild: a.child=(StretchImageConfig*)x; return 0;
-    case O::FilterNew: return (intptr_t)new SmartPtr<ImageFilterConfig>(new ImageFilterConfig);
+    case O::FilterNew: return (intptr_t)new SmartPtr<ImageFilterConfig>(new ImageFilterConfig(EeWonCfgKind::ImageFilter));
     case O::FilterSetRaw: (*(SmartPtr<ImageFilterConfig>*)x)->SetRawImage((RawImage*)y); return 0;
     case O::FilterToParent: return CFG_GV(static_cast<ComponentConfig*>(a.mConfig->GetParentObject())->AddChildToConfigMap(GUIString(std::string((const char*)x,(size_t)y)),((SmartPtr<ImageFilterConfig>*)z)->get()));
     case O::FilterToParentS0: return CFG_GV(static_cast<ComponentConfig*>(a.mConfig->GetParentObject())->AddChildToConfigMap(a.s[0],((SmartPtr<ImageFilterConfig>*)z)->get()));
