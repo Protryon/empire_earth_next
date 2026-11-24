@@ -96,14 +96,7 @@ extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intpt
         case EeWonWbFont::Release: ((Font*)b)->Release(); return 0;
         default: return 0;
         }
-    case Op::Draw: {
-        WONDrawSlots aSlots;
-        aSlots.mImages[0] = Img(c);
-        aSlots.mText = Txt(d);
-        WONDrawNoCall aNoCall;
-        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
-        return 0;
-    }
+    case Op::Draw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, Img(c), Txt(d)), WONDrawNoCall()); return 0;
     default: return 0;
     }
 }
