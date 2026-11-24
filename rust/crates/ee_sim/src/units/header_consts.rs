@@ -143,6 +143,10 @@ mod tests {
         files.sort();
         // the unit constants' enums are Rust's (unit_ids.rs), emitted back as this generated header
         files.push(root().join("include/rust/sim/unit_ids.h"));
+        // so are the game's ids (game_ids.rs: terrain types, resources, ...), the random map's and the world constants
+        for generated in ["sim/game_ids.h", "sim/rmap_ids.h", "data/world_constants.h"] {
+            files.push(root().join("include/rust").join(generated));
+        }
         for path in files {
             if path.extension().and_then(|x| x.to_str()) != Some("h") {
                 continue;
