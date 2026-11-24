@@ -14,14 +14,11 @@
 2fa480 2fda7a WONGUI/ComponentListItemAdapters.cpp
 2faaf0 3035e4 WONGUI/ListControlAdapters.cpp
 2fb7b0 2fbac8 WONGUI/ListAreaToolTip.cpp
-2fcd30 2fd479 WONGUI/MenuItemLifetime.cpp
 2fcee0 2fdc3d WONGUI/MenuBehavior.cpp
-2fd480 2fd57a WONGUI/MenuAddItem.cpp
 2fdcd0 2fe6d1 WONGUI/MSGraphicsUtil.cpp
 2fe6e0 2febe6 WONGUI/MSButtonBase.cpp
 3040d0 304ded WONGUI/RootContainer.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
-30a800 30a803 WONGUI/ListItemDefaults.cpp
 311560 311677 WONGUI/TextLinkState.cpp
 318060 319193 WONGUI/WONButton.cpp
 319a70 31a05b WONGUI/SkinnedContainers.cpp
@@ -65,10 +62,6 @@
 365700 3c9c36 WONLobby/CrossPromotionButton.cpp
 366170 366b2f WONLobby/WONStatusString.cpp
 377670 381801 WONLobby/WONLobbyResource.cpp
-388000 3885cf WONGUI/ComponentLayoutConfigs.cpp
-3885d0 388834 WONGUI/ContainerConfigGroups.cpp
-38a080 38aa36 WONGUI/FontConfig.cpp
-38adf0 38cd5c WONGUI/ImageConfig.cpp
 3aea90 3b1b38 WONConfig/ConfigObject.cpp
 3bdd60 3bdfbe WONLobby/LobbyContainer.cpp
 3c3c00 3c4b66 WONLobby/RootScreen.cpp

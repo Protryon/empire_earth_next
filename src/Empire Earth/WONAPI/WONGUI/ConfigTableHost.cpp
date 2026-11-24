@@ -58,3 +58,41 @@ void CfgSkinClickSound(ComponentConfig* inConfig)
     ee_won_skin_click_sound(WONSkinGlobal(),sound.get());
 }
 }
+// ---- the config subclasses' forwards to their bodies (ee_won_gui cfgbody.rs over WONCfgBody.inl, R6 WON round 34;
+// here since R6 WON GUI round 36: ComponentLayoutConfigs.cpp, ContainerConfigGroups.cpp, FontConfig.cpp and
+// ImageConfig.cpp held nothing else)
+// Finds the component this config is named after in the parent config; reports an error if it is missing
+bool PercentLayoutConfig::PreParse(WONAPI::ConfigParser* p) { return WONAPI::CfgBodyCall(this, EeWonCfgBody::PercentPreParse, (intptr_t)p) != 0; }
+// Starts from the colors of the nearest parent component with its own scheme, else the window manager's
+bool ColorSchemeConfig::PreParse(WONAPI::ConfigParser* p) { return WONAPI::CfgBodyCall(this, EeWonCfgBody::SchemePreParse, (intptr_t)p) != 0; }
+namespace WONAPI {
+// Reads a PERCENTLAYOUT group into a percent layout (relative to the component if no reference is given) or a
+// COLORSCHEME group into the container's colour scheme; other instructions go to the base config (cfgbody.rs)
+bool ContainerConfig::HandleInstruction(ConfigParser* p, const std::string& t) { return CfgBodyCall(this, EeWonCfgBody::ContainerInstruction, (intptr_t)p, (intptr_t)t.data(), (intptr_t)t.size()) != 0; }
+// Creates a font config that needs its font looked up
+FontConfig::FontConfig() : ComponentConfig(EeWonCfgKind::Font)
+{
+    this->mHaveInitedComponents=true;
+    this->mNeedRecalcFont=true;
+}
+// The configured font, first fetched from the default window when the descriptor changed and no matching font is
+// held (cfgbody.rs)
+Font* FontConfig::GetFont() { return (Font*)CfgBodyCall(this, EeWonCfgBody::FontGet); }
+// Sets the font directly, taking its descriptor, so no lookup is needed
+void FontConfig::SetFont(Font* f) { CfgBodyCall(this, EeWonCfgBody::FontSet, (intptr_t)f); }
+// The font's SIZE or HEIGHT as a named value; false without a font or for other names
+bool FontConfig::GetNamedValue(const std::string& n, int& v) { return CfgBodyCall(this, EeWonCfgBody::FontNamed, (intptr_t)n.data(), (intptr_t)n.size(), (intptr_t)&v) != 0; }
+// The image's WIDTH or HEIGHT as a named value; false for any other name (cfgbody.rs)
+bool ImageConfig::GetNamedValue(const std::string& n, int& v) { return CfgBodyCall(this, EeWonCfgBody::ImageNamed, (intptr_t)n.data(), (intptr_t)n.size(), (intptr_t)&v) != 0; }
+// Sets the raw image (also as the current image) and marks the native image as not yet built
+void ImageFilterConfig::SetRawImage(RawImage* inImage)
+{
+    this->mRawImage=inImage;
+    this->mImage=inImage;
+    this->mImageIsRawImage=true;
+}
+// R6 WON round 41: ImageFilterConfig's instructions (SRC, FILTER and HandleFilter's filters, DUPLICATE,
+// MULTIHORZCROP, EXPORT) are programs of ee_won's table reader (cfgtab.rs, cfgimg.rs) over WONCfgTable.inl.
+// The image, first converting a pending raw image to a native one on the default window (cfgbody.rs)
+Image* ImageFilterConfig::GetImage() { return (Image*)CfgBodyCall(this, EeWonCfgBody::FilterImage); }
+}
