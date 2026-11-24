@@ -96,13 +96,6 @@ inline int PlatGUIPixels(int inLogical, float inScale)
 // texture pack's copies of the lobby's images are its decoder's)
 typedef NativeImage PlatNativeImage;
 
-class PlatNativeIcon : public NativeIcon {
-public:
-    PlatNativeIcon(DisplayContext* inContext, NativeImage* inImage) : NativeIcon(inContext), mImage(inImage) {}
-    virtual ~PlatNativeIcon();
-    SmartPtr<NativeImage> mImage;
-};
-
 // a pointer shape: one of the system's, or pixels (0xAARRGGBB) made into a platform cursor on first use (ee_won's
 // platcursor.rs, R6 WON round 41)
 class PlatCursor : public Cursor {

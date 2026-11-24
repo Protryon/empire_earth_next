@@ -1457,7 +1457,6 @@ public:
     SmartPtr<ColorScheme> mColorScheme; //20
     MultiImageDecoder mImageDecoder; // at +0x24..0x57 (0x34 bytes)
     SmartPtr<SoundDecoder> mSoundDecoder; //58
-    SmartPtr<NativeIcon> mDefaultWindowIcon; //60
     // the default font (+5c), the named fonts (+64) and the native, raw and delay-load image caches (+70, +7c, +88)
     // with their count (+94) are the Rust manager's (wmobj.rs, wmcache.rs; R6 WON round 33); so are the event lock
     // (+08), the timer and input ticks (+98, +9c), the valid and full-screen flags (+a1, +ad), the screen sizes
@@ -1470,14 +1469,8 @@ public:
 WindowManager* GetLobbyWindow();
 
 
-// a window's icon (0x0c bytes; vtable 0x85107c)
-class NativeIcon : public RefCount {
-public:
-    NativeIcon(DisplayContext* inContext);
-    virtual ~NativeIcon(); // 0x328a00; protected in the SDK, public here
-
-    SmartPtr<DisplayContext> mContext;      // +0x08
-};
+// (NativeIcon, a window's icon, is gone with PlatNativeIcon: R6 WON GUI round 35. Nothing ever made one: the lobby
+// surface has no window icons. winobj.rs keeps Window::Create's default-icon step and IconChanged.)
 
 
 struct FontDescriptor {
@@ -1573,7 +1566,6 @@ public:
     void InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
     void SetParent(Window* p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
     void SetTitle(const GUIString&);
-    void SetIcon(NativeIcon*);
     // R6 WON round 32: the state is the Rust window (rust/crates/ee_won_gui/src/winobj.rs); these read and set it
     int GetKeyMod() const { return (int)this->WField(EeWonWinField::KeyMod); }
     int GetWindowState() const { return (int)this->WField(EeWonWinField::State); }
@@ -1605,7 +1597,6 @@ public:
     WindowManager* mManager; // +7c
     SmartPtr<WindowEventBase> mCloseEvent; // +90
     AllowCloseFunc mAllowCloseFunc; // +94
-    SmartPtr<NativeIcon> mIcon; // +98
     GUIString mTitle; // +9c
     SmartPtr<RootContainer> mRoot; // +a4
     // GetFont's cache (+a8; ee_won fontmap.rs): each font held once; released where the map member was destroyed

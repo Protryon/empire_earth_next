@@ -108,8 +108,9 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     case Op::WinHostFont: return (intptr_t)sHostFont.get();
     case Op::WinFontHold: ((Font*)a)->AddRef(); return 0;
     case Op::WinHostFontClear: sHostFont = SmartPtr<Font>(); return 0;
-    case Op::WinHasIcon: return t->mIcon.get() != NULL ? 1 : 0;
-    case Op::WinIconDefault: t->mIcon = t->mManager->mDefaultWindowIcon.get(); return 0;
+    // (no window has an icon: the manager's default was never set either; R6 WON GUI round 35)
+    case Op::WinHasIcon: return 0;
+    case Op::WinIconDefault: return 0;
     default: return 0;
     }
 }
@@ -217,13 +218,6 @@ void Window::SetTitle(const GUIString &theTitle)
 {
 	this->mTitle = theTitle;
 	this->WCall(EeWonWinCall::TitleChanged);
-}
-
-// Sets the window icon, updating the platform window when open
-void Window::SetIcon(NativeIcon *theIcon)
-{
-	this->mIcon = theIcon;
-	this->WCall(EeWonWinCall::IconChanged);
 }
 
 // Returns the default window manager's default window

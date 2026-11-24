@@ -24,8 +24,6 @@
 
 namespace WONAPI {
 
-PlatNativeIcon::~PlatNativeIcon() {}
-
 void WONImageThrow(int inStatus) { FileReaderCheck(inStatus); }
 
 // A blank (black) image of the given size at the lobby surface's pixel scale (the windows' offscreen images and
