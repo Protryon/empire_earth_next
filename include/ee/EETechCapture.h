@@ -49,9 +49,8 @@ constexpr unsigned int EECaptureTag(const char (&inName)[5])
 }
 
 // The hooks the game calls are inline forwarders to the Rust records (ee_game gamecpp tech_hooks.rs, tech_capture.rs,
-// calamity_capture.rs; ee_sim tech capture_rec.rs); the one whose body reads a C++ object is a pointer that
-// EETechCapture.cpp sets before main, so no game unit names a symbol of that TEST ONLY unit (PORT_LEARNINGS "Cycle
-// cuts")
+// calamity_capture.rs; ee_sim tech capture_rec.rs), so no game unit names a symbol of the TEST ONLY EETechCapture.cpp
+// (PORT_LEARNINGS "Cycle cuts")
 
 // a node's state: id, epoch, obsolete epoch, the flags (researched, obsolete, available, editor-obsoleted, allowed),
 // the research delay, the prerequisite flags, the tree's current/start/end epoch; an epoch adds its SOL counters
@@ -101,17 +100,15 @@ inline long EECalamityCaptureUpdate(EECalamityClass* inClass, EECalamity* inCala
 }
 // CCAS kind 0: records an outermost CanCastAt's result (the scope counts the nesting of the overrides' calls)
 // (the scope: Enter answers whether it is the outermost, Record writes its record when outermost)
-inline long (*EECalamityCanCastRecord)(bool inOutermost, EECalamityClass* inClass, EEComplexUnit* inUnit,
-                                       const GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
-                                       EEUnit* inTargetUnit, long inResult) = nullptr;
 struct EECalamityCanCastScope {
     EECalamityCanCastScope() : mOutermost(ee_gamecpp_capture_can_cast_enter()) {}
     ~EECalamityCanCastScope() { ee_gamecpp_capture_can_cast_leave(); }
     long Record(EECalamityClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, unsigned long inX,
                 unsigned long inY, bool inCheck, EEUnit* inTargetUnit, long inResult)
     {
-        return EECalamityCanCastRecord(this->mOutermost, inClass, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
-                                       inResult);
+        // (GE3DPoint is its Rust record, mX first: ee_game gamecpp calamity_capture.rs)
+        return ee_gamecpp_capture_can_cast_record(this->mOutermost, inClass, inUnit, (const float(*)[3])&inLocation,
+                                                  inX, inY, inCheck, inTargetUnit, inResult);
     }
     bool mOutermost;
 };

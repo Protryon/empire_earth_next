@@ -53,16 +53,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 
-// CCAS: an outermost CanCastAt's record (ee_game gamecpp calamity_capture.rs)
-
-static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComplexUnit* inUnit,
-                              const GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
-                              EEUnit* inTargetUnit, long inResult)
-{
-    return ee_gamecpp_capture_can_cast_record(inOutermost, inClass, inUnit, (const float(*)[3])&inLocation.mX, inX, inY,
-                                              inCheck, inTargetUnit, inResult);
-}
-
 // ------------------------------------------------------------------------- round 10, lane B: the records' C++
 
 
@@ -70,9 +60,6 @@ static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComp
 #define TC_UPGRADE ((EEUnitClassUpgrade*)p)
 #define TC_PLAYER ((EEPlayer*)p)
 
-// The game calls this one through the header's hook pointer, set here before main: the game's units name no
-// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EECalamityCanCastRecord = CanCastRecordImpl, true);
 
 // ------------------------------------------------------------------------- round 11, lane C: the hooks' C++
 
