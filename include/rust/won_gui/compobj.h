@@ -285,6 +285,14 @@ enum class EeWonComp : uint32_t {
   VSetVisible,
   /// `GetMouseChild()`.
   VMouseChild,
+  /// `((RefCount*)b)->AddRef()`: a listener, cursor or colour scheme the extra data takes.
+  RefHold,
+  /// `((RefCount*)b)->Release()`: one it gives back.
+  RefDrop,
+  /// `new BackgroundGrabber`.
+  GNew,
+  /// `delete (BackgroundGrabber*)b`.
+  GDelete,
 };
 
 /// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).
@@ -303,7 +311,21 @@ enum class EeWonCompExtra : uint32_t {
   DontDoTip,
 };
 
+/// A component's extra data in the game (the C++ ComponentExtra until R6 WON GUI round 36; `mExtraStuff` points at
+/// it, made on first use, freed by the component's destructor): the members in the original's order. The
+/// listener, the cursor and the colour scheme are held as the SmartPtr members held them, the background grabber is
+/// owned; no code ever set the tool tip. A world's host (the drivers and the crate's tests) still answers
+/// `AllocExtra`, `Extra` and `SetExtra` with its own.
+struct EeWonCompExtraData;
+
 extern "C" {
+
+/// `delete mExtraStuff` (Component's destructor): the grabber deleted (~ComponentExtra's body), then the members
+/// given back last to first.
+///
+/// # Safety
+/// `x` is NULL or a component's extra data, not freed before; the game's host is registered.
+void ee_won_comp_extra_free(EeWonCompExtraData *x);
 
 /// Registers the game's component host: the one C++ host every Rust object's call on a component goes through
 /// (its virtuals, its parent, window, events and extra data).

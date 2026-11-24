@@ -653,6 +653,20 @@ static void Split()
     }
 }
 
+// R6 WON GUI round 36: the steps' run is Rust's too (ee_won_gui_text_append_formatted; TextFormat.cpp keeps the
+// area's four calls): this sink traces them as the original's statements were traced. The colours are their indices,
+// the fonts, strings and segments their indices as pointers (100.., 200.., 300..; index 1 NULL), the area's own
+// colour -1 and font 99
+static int FontIndex(void* font) { return (intptr_t)font == 99 ? -1 : (int)(intptr_t)font - 100; }
+static void SinkText(void*, const void* units, size_t len, int color, void* font, bool lineBreak)
+{ Rec(L"text " + std::wstring((const wchar_t*)units, len) + L" " + Num(color) + L" " + Num(FontIndex(font)) + (lineBreak ? L" b" : L"")); }
+static void SinkBreak(void*) { Rec(L"break"); }
+static void SinkString(void*, const void* string, int color, void* font)
+{ Rec(L"str " + Num((int)(intptr_t)string - 200) + L" " + Num(color) + L" " + Num(FontIndex(font))); }
+static void SinkSegment(void*, void* segment) { Rec(L"lseg " + Num((int)(intptr_t)segment - 300)); }
+static const EeWonFormatSink kSink = { SinkText, SinkBreak, SinkString, SinkSegment };
+static int sSinkCalls;
+
 static void Format()
 {
     static const wchar_t kUnits[] = { L'<', L'<', L'>', L'n', L'N', L'c', L'C', L'f', L's', L'l', L'L', L'1', L'2', L'3', L'0', L'x', L' ', 0xe9 };
@@ -728,7 +742,23 @@ static void Format()
             }
         }
         CHECK(orig == sTrace);
+        // the whole run in Rust, the area's calls through the sink: the original's trace, its "seg" and "last"
+        // both the area's AddSegment of a text
+        for (size_t i = 0; i < orig.size(); i++) {
+            if (orig[i].compare(0, 4, L"seg ") == 0) orig[i] = L"text " + orig[i].substr(4);
+            else if (orig[i].compare(0, 5, L"last ") == 0) orig[i] = L"text " + orig[i].substr(5);
+        }
+        sTrace.clear();
+        static const int kColors[3] = { 0, 1, 2 };
+        const void* strings[3] = { (void*)200, NULL, (void*)202 };
+        void* fonts[3] = { (void*)100, NULL, (void*)102 };
+        void* segments[3] = { (void*)300, NULL, (void*)302 };
+        EeWonFormatArgs args = { strings, numStrings, kColors, numColors, fonts, numFonts, segments, numSegments };
+        ee_won_gui_text_append_formatted(NULL, &kSink, len ? &format[0] : NULL, (uint16_t)len, &args, lineBreak, -1, (void*)99);
+        sSinkCalls += (int)sTrace.size();
+        CHECK(orig == sTrace);
     }
+    CHECK(sSinkCalls > 300000); // the sink is reached: more than a call a format
 }
 
 int main()

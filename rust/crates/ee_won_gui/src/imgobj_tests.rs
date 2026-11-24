@@ -85,10 +85,13 @@ extern "C" fn host(op: EeWonImageHost, a: isize, b: isize, c: isize, d: isize) -
             What::Ctx { surf, .. } => *surf as isize,
             _ => 0,
         },
-        H::CtxScale => match &*f(a).what.borrow() {
-            What::Ctx { scale, .. } => scale.to_bits() as isize,
-            _ => 0,
-        },
+        H::CtxScale => {
+            if let What::Ctx { scale, .. } = &*f(a).what.borrow() {
+                // SAFETY: the caller's float
+                unsafe { *(b as *mut f32) = *scale };
+            }
+            0
+        }
         H::GfxTrans => {
             if let What::Gfx { tx, ty, .. } = &*f(a).what.borrow() {
                 // SAFETY: two ints
@@ -121,19 +124,9 @@ extern "C" fn host(op: EeWonImageHost, a: isize, b: isize, c: isize, d: isize) -
             log("DrawImage".into());
             0
         }
-        H::NewSurface => {
-            let s = ee_won_surface_new(0);
-            // SAFETY: a new surface
-            unsafe { ee_won_surface_create(s, a.max(0) as i32, b.max(0) as i32) };
-            fake(What::Surface(s), 1)
-        }
-        H::SurfaceRust => match &*f(a).what.borrow() {
-            What::Surface(s) => *s as isize,
-            _ => 0,
-        },
+        // SAFETY: the caller's float
         H::NewContext => {
-            let surf = host(H::SurfaceRust, a, 0, 0, 0) as *mut EeWonSurface;
-            fake(What::Ctx { surf, scale: f32::from_bits(b as u32), graphics: 0 }, 1)
+            fake(What::Ctx { surf: a as *mut EeWonSurface, scale: unsafe { *(b as *const f32) }, graphics: 0 }, 1)
         }
         H::NewGraphics => fake(What::Gfx { ctx: a, tx: 0, ty: 0 }, 1),
         H::FreeGraphics => host(H::Unref, a, 0, 0, 0),
@@ -288,8 +281,11 @@ fn native_images_scale_mask_and_copy() {
 
 #[test]
 fn program_images_draw_through_the_graphics() {
-    let surface = host(EeWonImageHost::NewSurface, 4, 4, 0, 0);
-    let ctx = host(EeWonImageHost::NewContext, surface, 1.0f32.to_bits() as isize, 0, 0);
+    let s = ee_won_surface_new(0);
+    // SAFETY: a new surface
+    unsafe { ee_won_surface_create(s, 4, 4) };
+    let surface = fake(What::Surface(s), 1);
+    let ctx = host(EeWonImageHost::NewContext, s as isize, &1.0f32 as *const f32 as isize, 0, 0);
     let g = host(EeWonImageHost::NewGraphics, ctx, 0, 0, 0);
     if let What::Ctx { graphics, .. } = &mut *f(ctx).what.borrow_mut() {
         *graphics = g;

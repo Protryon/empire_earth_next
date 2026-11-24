@@ -384,6 +384,23 @@ unsafe extern "C" fn host(_me: *mut c_void, op: EeWonGuiOp, k: isize, b: isize, 
         K::IdIn => with(|w| w.ids.contains(&(c as i64)) as isize),
         // (the other Rust objects' calls on a component: compobj itself never makes them)
         K::VSetVisible | K::VMouseChild => unreachable!("compobj makes no {k:?}"),
+        // the game's own extra data (EeWonCompExtraData): the references it takes and gives back, its grabber
+        K::RefHold => {
+            t(format!("hold {b}"));
+            0
+        }
+        K::RefDrop => {
+            t(format!("drop {b}"));
+            0
+        }
+        K::GNew => {
+            t("new grab 7000".into());
+            7000
+        }
+        K::GDelete => {
+            t(format!("delete grab {b}"));
+            0
+        }
     }
 }
 
@@ -677,6 +694,75 @@ fn install(w: World) {
 
 fn cmp(m: EeWonCompMembers) -> Cmp {
     Cmp { m, ..Default::default() }
+}
+
+/// The game's extra data (R6 WON GUI round 36: the C++ ComponentExtra's statements, its SmartPtr members'
+/// assignments and its destructor) over the world's host.
+#[test]
+fn the_games_extra_data_holds_and_gives_back_as_componentextra_did() {
+    struct Own;
+    impl Drop for Own {
+        fn drop(&mut self) {
+            OWN_EXTRA.with(|f| f.set(false));
+        }
+    }
+    OWN_EXTRA.with(|f| f.set(true));
+    let _own = Own;
+    let _world = host_world(Some(host));
+    one(vec![cmp(EeWonCompMembers { bits: EE_WON_COMP_FLAG_GRAB_BG, ..Default::default() }), Cmp::default()]);
+    let trace = || with(|w| std::mem::take(&mut w.trace));
+    use EeWonCompCall as C;
+    // nothing made yet: the getters answer NULL without the data
+    assert_eq!(with(|w| w.comps[0].m.extra), 0);
+    assert_eq!(base(1, C::OwnColorScheme, 0, 0), 0);
+    assert_eq!(base(1, C::DefaultCursor, 0, 0), 0);
+    assert_eq!(base(1, C::GrabBG, 0, 0), 0);
+    assert!(trace().is_empty());
+    // AddListener: AllocateExtraStuff, then the SmartPtr's assignment (the new one held)
+    base(1, C::AddListener, 3001, 0);
+    assert_ne!(with(|w| w.comps[0].m.extra), 0);
+    assert_eq!(trace(), ["hold 3001"]);
+    let made = with(|w| w.comps[0].m.extra);
+    // the same listener again: nothing; another: the old one released first, then the new held
+    base(1, C::AddListener, 3001, 0);
+    assert!(trace().is_empty());
+    base(1, C::AddListener, 3002, 0);
+    assert_eq!(trace(), ["drop 3001", "hold 3002"]);
+    // the cursor and the scheme the same way; NULL releases without a hold; the data is made once
+    base(1, C::SetDefaultCursor, 4001, 0);
+    base(1, C::SetColorScheme, 5001, 0);
+    assert_eq!(trace(), ["hold 4001", "hold 5001"]);
+    assert_eq!(base(1, C::DefaultCursor, 0, 0), 4001);
+    assert_eq!(base(1, C::OwnColorScheme, 0, 0), 5001);
+    assert_eq!(base(1, C::ColorScheme, 0, 0), 5001);
+    base(1, C::SetDefaultCursor, 0, 0);
+    assert_eq!(trace(), ["drop 4001"]);
+    assert_eq!(base(1, C::DefaultCursor, 0, 0), 0);
+    base(1, C::SetDefaultCursor, 4002, 0);
+    assert_eq!(trace(), ["hold 4002"]);
+    assert_eq!(with(|w| w.comps[0].m.extra), made);
+    // CheckGrabBG: the grabber made on first use only
+    assert_eq!(base(1, C::CheckGrabBG, 0, 0), 1);
+    assert_eq!(trace(), ["new grab 7000"]);
+    assert_eq!(base(1, C::CheckGrabBG, 0, 0), 1);
+    assert!(trace().is_empty());
+    assert_eq!(base(1, C::GrabBG, 0, 0), 7000);
+    // the other component has none: its destructor's free is nothing
+    assert_eq!(with(|w| w.comps[1].m.extra), 0);
+    // SAFETY: NULL
+    unsafe { ee_won_comp_extra_free(std::ptr::null_mut()) };
+    assert!(trace().is_empty());
+    // ~ComponentExtra: the grabber deleted, then the cursor, the listener and the scheme given back
+    // SAFETY: the data made above, freed once
+    unsafe { ee_won_comp_extra_free(made as *mut EeWonCompExtraData) };
+    assert_eq!(trace(), ["delete grab 7000", "drop 4002", "drop 3002", "drop 5001"]);
+    // a component with only a scheme: only it is given back
+    with(|w| w.comps[0].m.extra = 0);
+    base(2, C::SetColorScheme, 5002, 0);
+    assert_eq!(trace(), ["hold 5002"]);
+    // SAFETY: the second component's data, freed once
+    unsafe { ee_won_comp_extra_free(with(|w| w.comps[1].m.extra) as *mut EeWonCompExtraData) };
+    assert_eq!(trace(), ["drop 5002"]);
 }
 
 #[test]

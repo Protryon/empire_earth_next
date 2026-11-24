@@ -45,6 +45,7 @@
 #include "rust/won_gui/rootobj.h"
 #include "rust/won_gui/rowobj.h"
 #include "rust/won_gui/scrollerobj.h"
+#include "rust/won_gui/surface.h" // EeWonSurface: what a DisplayContext draws into
 #include "rust/won_gui/tabobj.h"
 #include "rust/won_gui/treeobj.h"
 #include "rust/won_gui/winobj.h"
@@ -57,7 +58,6 @@ namespace WONAPI {
 // the SDK's enums are Rust's (rust/crates/ee_won_gui/src/guienum.rs, R6 WON GUI round 34): their enumerators are
 // global, the types named here
 typedef EeWonGuiLobbyGameType LobbyGameType;
-typedef EeWonGuiControlIdType ControlIdType;
 typedef EeWonGuiDirection Direction;
 typedef EeWonGuiHorzAlign HorzAlign;
 typedef EeWonGuiVertAlign VertAlign;
@@ -67,8 +67,6 @@ typedef EeWonGuiStandardColor StandardColor;
 typedef EeWonGuiMouseButton MouseButton;
 typedef EeWonGuiForegroundSelectionMode ForegroundSelectionMode;
 typedef EeWonGuiScrollbarCondition ScrollbarCondition;
-typedef EeWonGuiScrollButtonCondition ScrollButtonCondition;
-typedef EeWonGuiFontStyles FontStyles;
 typedef EeWonGuiListSortType ListSortType;
 typedef EeWonGuiHTMLFontSize HTMLFontSize;
 
@@ -78,7 +76,6 @@ typedef std::set<long> ControlIdSet;
 
 class WONRectangle;
 class Window;
-class SurfaceBase; // WONSurface.h: the software surface a DisplayContext draws into
 class Component;
 // Cursor (RefCount, 8 bytes); the constructor 0x326540 stores only the inherited refcount and vptr
 // R6 WON GUI round 35: one class over cursorobj.rs, which is the cursor by its kind: the plain Cursor, the platform's
@@ -111,7 +108,6 @@ public:
 class Font;
 class Image;
 class NativeImage;
-class NativeIcon;
 class SelectionColor;
 class DisplayContext;
 struct FontDescriptor;
@@ -119,12 +115,10 @@ class Button;
 class InputBox;
 class ListItem;
 class TextListItem;
-class Component;
 class ChildLayoutInstructionBase;
 class Container;
 class ComponentConfig;
 class ComponentEvent;
-class ComponentExtra;
 class BackgroundGrabber;
 class ListArea;
 class MultiListArea;
@@ -136,8 +130,6 @@ class LobbyPlayer;
 class LobbyClientList;
 class ConfigParser;
 class StringParser;
-class ReadBuffer;
-class WriteBuffer;
 class ByteBuffer;
 class LobbyGroup;
 
@@ -154,7 +146,6 @@ struct ComponentConfigInit : public ComponentInit {
 class Graphics;
 class RootContainer;
 class ComponentListener;
-struct PopupParams;
 extern GUIString gEmptyGUIString;
 
 // a GUI component (0x30 bytes: EELobbyColorChooser's members start at +0x30; vtable 0x84d71c, 43
@@ -262,7 +253,6 @@ public:
     bool Intersects(Component* c) { return this->KCall(EeWonCompCall::Intersects,(intptr_t)c)!=0; }
     Cursor* GetDefaultCursor() { return (Cursor*)this->KCall(EeWonCompCall::DefaultCursor); }
     BackgroundGrabber* GetGrabBG() { return (BackgroundGrabber*)this->KCall(EeWonCompCall::GrabBG); }
-    void AllocateExtraStuff();
     bool CheckGrabBG() { return this->KCall(EeWonCompCall::CheckGrabBG)!=0; }
     void EnsureOnTopOf(Component* c) { this->KCall(EeWonCompCall::EnsureOnTopOf,(intptr_t)c); }
     void SetDefaultCursor(Cursor* c) { this->KCall(EeWonCompCall::SetDefaultCursor,(intptr_t)c); }
@@ -302,7 +292,7 @@ public:
     unsigned char mFocusId; //28
     char mInvalidState; //29
     char mTimerFlags; //2a
-    ComponentExtra* mExtraStuff; // at +0x2c, owned (allocated on demand)
+    EeWonCompExtraData* mExtraStuff; // at +0x2c, owned (made on demand): compobj.rs's, the original's ComponentExtra
 private:
     friend intptr_t ee_won_guicpp_comp_call(void*,EeWonGuiOp,intptr_t,intptr_t,intptr_t,intptr_t);
     intptr_t KCall(EeWonCompCall k,intptr_t a=0,intptr_t b=0,intptr_t c=0) { return ee_won_comp_call(this,ee_won_guicpp_comp_call,k,a,b,c); }
@@ -327,7 +317,6 @@ public:
 // cursor, flags and modal count are the Rust Container (rust/crates/ee_won_gui/src/ctobj.rs); this is the type every
 // component holds and the base of every screen, dialog, list and control group, with the child layout manager. Its
 // virtuals and methods are forwarders; the calls the Rust makes are Container.cpp's host.
-class Container;
 // the container ops every container object's host falls back to (Container.cpp)
 intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 class Container : public Component {
@@ -1178,20 +1167,9 @@ public:
     Callback mCallback; //08; implicit real base/member cleanup
 };
 
-// ComponentExtra (0x1c bytes; RTTI 0x4d5eb8, vtable 0x44d714), only a virtual destructor.
-// Allocated by Component::AllocateExtraStuff (0x2f4ac0).
-// The four SmartPtr members release themselves; mGrabBG is owned outright.
-class ComponentExtra {
-public:
-    ComponentExtra();
-    virtual ~ComponentExtra(); // destructor 0x2f48d0, deleting 0x2f48b0
-    SmartPtr<ColorScheme> mColorScheme; //04
-    SmartPtr<ComponentListener> mListener; //08, AddListener2f4b10 /Deliver2f54e0
-    SmartPtr<Cursor> mDefaultCursor; //0c
-    BackgroundGrabber* mGrabBG; // at +0x10, owned; the destructor deletes the grabber (0x38 bytes)
-    SmartPtr<Component> mToolTip; //14
-    bool mDontDoTip; // at +0x18; +0x19..0x1b padding
-};
+// ComponentExtra (0x1c bytes; RTTI 0x4d5eb8, vtable 0x44d714; allocated by Component::AllocateExtraStuff, 0x2f4ac0):
+// the colour scheme, the listener, the default cursor (held), the background grabber (owned), the tool tip and its
+// flag are compobj.rs's EeWonCompExtraData since R6 WON GUI round 36; Component's destructor frees it.
 
 // a listener that hands the events on to a component (0x0c bytes; vtable 0x84c134: ??_G ICF-folded 0x291f6f,
 // +0x04 0x337bf0)
@@ -1204,7 +1182,6 @@ public:
 };
 
 // WONAPI's drawing context (provisional method names)
-class Font;
 // Graphics: vtable 0x450fe8;
 // the field accesses at 0x326ad0/0x326ce0/0x327140 show a 0x38-byte object.
 // R6 WON GUI round 35: the one Graphics is the platform's (the original's MSGraphics, the port's PlatGraphics, folded
@@ -1270,8 +1247,6 @@ LobbyGame* GetMyLobbyGame();
 // WONAPI's message buffers (provisional names)
 
 
-class ByteBuffer;
-template <class T> class SmartPtr;
 
 // 0x361b60 / 0x361b80 (cdecl): a game message to the lobby
 void LobbySendToCaptain(const ByteBuffer* inMessage);
@@ -1289,17 +1264,16 @@ class WindowEventBase;
 class InputEvent;
 class MouseEvent;
 class KeyEvent;
-class SizeEvent;
 // a window's drawing context (RTTI: DisplayContext : RefCount)
 // Only the prefix is used: 0x326c70 stores mGraphics at +0x0c.
 // DisplayContext (0x10 bytes): allocated and filled at 0x3cfab4..0x3cfad4; type descriptor 0x4e0ab0.
 class DisplayContext : public RefCount {
 public:
-    // The port draws into software surfaces (WONSurface.h; the backend: WONLobbyPlatform.h): a context is the
+    // The port draws into software surfaces (surface.rs; the backend: WONLobbyPlatform.h): a context is the
     // surface an image owns, which carries the clip. The original held the GDI device context (HDC) here.
-    DisplayContext(SurfaceBase* surface=NULL) : mSurface(surface),mGraphics(NULL),mPixelScale(1.0f) {}
+    DisplayContext(EeWonSurface* surface=NULL,float scale=1.0f) : mSurface(surface),mGraphics(NULL),mPixelScale(scale) {}
     virtual ~DisplayContext() {}
-    SurfaceBase* mSurface; // at +0x08, not owned (the owning image keeps it); NULL: nothing to draw into
+    EeWonSurface* mSurface; // at +0x08, not owned (the owning image's, imgobj.rs); NULL: nothing to draw into
     Graphics* mGraphics; //0c borrowed
     // port: the surface's pixels per logical pixel (WONLobbyPlatform.h "Pixel scale"): every coordinate the GUI
     // draws with is logical; the backend scales it to the surface's pixels
@@ -1444,7 +1418,6 @@ public:
     // (+08), the timer and input ticks (+98, +9c), the valid and full-screen flags (+a1, +ad), the screen sizes
     // (+b0..+bc), the default window and the window count (+fc, +100), the window set (+104), the event list
     // (+110), the timer sets (+11c, +128) and their flag (+134) and the broadcast set (+13c) (wmloop.rs; round 34)
-    SmartPtr<WindowEventBase> mCloseEvent; //138
 };
 // 0x361250: the default window manager, out of line (EELobbyInit 0x295ce3 calls it; a 6-byte body that reads
 // gDefaultWindowManager; its WON-side source is not written yet)
@@ -1521,7 +1494,6 @@ public:
     bool HasFrame() const { return this->GetParent() != NULL && !(this->GetStyle() & 0x20); }
     void GetInfo(EeWonPlatWinInfo& outInfo) { this->Rust(EeWonPlatWinCall::Info, (intptr_t)&outInfo); } // what the manager reads
     void FollowSurface() { this->Rust(EeWonPlatWinCall::FollowSurface); } // a window that fills the surface takes its new size
-    void FollowPixelScale(); // a new offscreen image at the manager's pixel scale, repainted
     void OnPaint() { this->Rust(EeWonPlatWinCall::Paint); } // repaints an invalid root into the offscreen image
     // the manager while its platform part lives (the original's dynamic_cast: none in the manager's last moments)
     WindowManager* GetPlatManager() { return this->mManager != NULL && this->mManager->mRust != NULL ? this->mManager : NULL; }
@@ -1565,7 +1537,6 @@ public:
     bool GetMinimizeOnResolutionRestore() const { return this->WField(EeWonWinField::MinimizeOnRestore) != 0; }
     Window* GetParent() const { return (Window*)this->WField(EeWonWinField::Parent); }
     enum WindowState { WindowState_Open, WindowState_Closing, WindowState_Closed };
-    typedef bool (*AllowCloseFunc)(Window*);
     // the Rust window, freed after every other member (the root's destruction may still call the window)
     struct WinObj { EeWonWindow* p; WinObj() : p(NULL) {} ~WinObj() { ee_won_win_free(this->p); } };
     WinObj mWinObj;
@@ -1577,14 +1548,12 @@ public:
     SmartPtr<DisplayContext> mDisplayContext; // +28
     WindowManager* GetWindowManager() { return this->mManager; } // inline
     WindowManager* mManager; // +7c
-    SmartPtr<WindowEventBase> mCloseEvent; // +90
-    AllowCloseFunc mAllowCloseFunc; // +94
-    GUIString mTitle; // +9c
+    // (the close event, +90, and the allow-close function, +94, were never set: gone, R6 WON GUI round 36)
+    // (+9c mTitle: platwin.rs's since R6 WON GUI round 36)
     SmartPtr<RootContainer> mRoot; // +a4
     // GetFont's cache (+a8; ee_won fontmap.rs): each font held once; released where the map member was destroyed
     struct FontMap { EeWonFontMap* p; FontMap() : p(ee_won_fontmap_new()) {} ~FontMap(); };
     FontMap mFontMap;
-    SmartPtr<Font> mDefaultFont; // +b4
 };
 
 
@@ -1749,7 +1718,7 @@ public:
 inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned short o, unsigned short n, int x, int y)
 {
     if (c != NULL)
-        ee_won_gfx_font_draw(this->mRust, c->mSurface != NULL ? c->mSurface->GetRust() : NULL, c->mPixelScale,
+        ee_won_gfx_font_draw(this->mRust, c->mSurface, c->mPixelScale,
                              c->mGraphics != NULL ? c->mGraphics->State() : NULL, c->mGraphics != NULL ? &c->mGraphics->mPlat : NULL,
                              s.mData->mText + o, n, x, y);
 }
@@ -1820,7 +1789,7 @@ public:
     int GetPixelWidth() { return (int)this->Get(EeWonImageField::PixelWidth); }
     int GetPixelHeight() { return (int)this->Get(EeWonImageField::PixelHeight); }
     float GetScale() const { uint32_t s=(uint32_t)this->Get(EeWonImageField::Scale); float f; memcpy(&f,&s,4); return f; }
-    SurfaceBase* GetSurface() { return (SurfaceBase*)this->Get(EeWonImageField::Surface); }
+    EeWonSurface* GetSurface() { return (EeWonSurface*)this->Get(EeWonImageField::Surface); }
 };
 // R6 WON GUI round 35: RawImage32 and RawImage8 were RawImage with a constructor of their kind and the 32-bit image's
 // two calls; the kind is the Rust image's (imgobj.rs), so the one class is every raw image's handle
