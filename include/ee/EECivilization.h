@@ -4,6 +4,7 @@
 #ifndef EE_EECIVILIZATION_H
 #define EE_EECIVILIZATION_H
 #include "ee/EECivUpgrade.h"
+#include "rust/sim/tech.h"             // ee_tech_civ_base_cost, ee_tech_civ_extra_cost
 
 #include <vector>
 
@@ -22,7 +23,7 @@ public:
     bool CanAffordAll(std::vector<EECivUpgrade>& inUpgrades);  // 0x12c648: every one affordable in turn
     // 0x12c847 (ret 0xc): inPurchase pays and records it; then applies it for inPlayer
     bool Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase);
-    void SetPoints(long inPoints);          // 0x12ca99: sets mAvailablePoints
+    void SetPoints(long inPoints) { this->mAvailablePoints = inPoints; }   // 0x12ca99
     void AddPoints(long inAmount);          // 0x12c73b: adds to both epoch fields and clears mB3C
     void SetPointsAndMax(long inEpoch);     // 0x12caa3 (sets +0x38 and +0x34)
     UWideString GetName() const { return this->mName; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)
@@ -32,20 +33,21 @@ public:
 
     // (provisional names): 0x12c6bc/0x12c6fe/0x12c5d9/0x12c70f never touch this (forwarders to
     // gCivilizationManager; the civilization builder calls them through its civilization)
-    long GetBaseCost(EECivUpgrade inUpgrade);
-    long GetExtraCost(EECivUpgrade inUpgrade);
-    long ComputeCost(long inBase, long inStep, long inCount);  // 0x12c5d9 (inA + inB * inC)
+    long GetBaseCost(EECivUpgrade inUpgrade) { return ee_tech_civ_base_cost(inUpgrade); }   // its level's bonus times 100, 0 when unknown
+    long GetExtraCost(EECivUpgrade inUpgrade) { return ee_tech_civ_extra_cost(inUpgrade); }   // per upgrade already bought in its category
+    // 0x12c5d9: the base cost plus the step for each upgrade already bought in its category
+    long ComputeCost(long inBase, long inStep, long inCount) { return inBase + inStep * inCount; }
     long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList);
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x12c74c, ret12/status
     long Save(FSFile& outFile);             // 0x12c9ee (EEPlayer::Save; provisional name)
-    bool GetNoPointsAdded();                // 0x12c6fa (mB3C; EEPlayer::RepairPointers; provisional name)
+    bool GetNoPointsAdded() { return this->mNoPointsAdded; }   // 0x12c6fa (mB3C; EEPlayer::RepairPointers; provisional name)
     long Reapply(class EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion);    // 0x12c916 (EEPlayer::RepairPointers)
     long ApplyDeferred(class EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x12c9a1 (EEWorld::Fn139749; provisional name)
     void ApplyLevel21ToWorld();             // 0x12c8ce (EEWorld::SetPopulationLimit; provisional name)
-    bool GetUnchanged();
-    long GetAvailablePoints();
-    long GetMaxPoints();
-    std::vector<EECivUpgrade>& GetPurchasedUpgrades();  // 0x12c738 (returns this)
+    bool GetUnchanged() { return this->mUnchanged; }
+    long GetAvailablePoints() { return this->mAvailablePoints; }   // the points left to spend
+    long GetMaxPoints() { return this->mMaxPoints; }
+    std::vector<EECivUpgrade>& GetPurchasedUpgrades() { return this->mPurchasedUpgrades; }  // 0x12c738 (returns this)
 
     std::vector<EECivUpgrade> mPurchasedUpgrades;  // +0x00 (clear() is 0x2987d, an ICF-shared COMDAT)
     std::vector<EECivUpgrade> mDeferredUpgrades;  // +0x10
