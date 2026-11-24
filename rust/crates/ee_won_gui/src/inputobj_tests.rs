@@ -356,3 +356,39 @@ fn units_and_characters() {
     // SAFETY: an empty text reads nothing
     assert!(unsafe { units_in(0, 5) }.is_empty());
 }
+
+/// `InputBox::NumericFilter` as the original's statements (the driver's copy), over every text of up to four units
+/// from an alphabet with both neighbours of the digits, the minus sign and a unit past 255.
+#[test]
+fn the_numeric_filter_is_the_originals() {
+    fn original(u: &[u32], sel_start: i32) -> bool {
+        let mut pos = 0usize;
+        let first = u.first().copied().unwrap_or(0);
+        if first == u32::from(b'-') {
+            if sel_start > 0 {
+                return false;
+            }
+            pos += 1;
+        }
+        while pos < u.len() {
+            if !(u[pos] >= u32::from(b'0') && u[pos] <= u32::from(b'9')) {
+                return false;
+            }
+            pos += 1;
+        }
+        true
+    }
+    let alphabet = [u32::from(b'-'), u32::from(b'/'), u32::from(b'0'), u32::from(b'9'), u32::from(b':'), 0x661, 0];
+    let mut cases = 0;
+    for len in 0..=4usize {
+        for code in 0..alphabet.len().pow(len as u32) {
+            let text: Vec<u32> =
+                (0..len).map(|i| alphabet[code / alphabet.len().pow(i as u32) % alphabet.len()]).collect();
+            for sel in [-1, 0, 1, 3] {
+                assert_eq!(crate::inputobj::numeric_filter(&text, sel), original(&text, sel), "{text:?} {sel}");
+                cases += 1;
+            }
+        }
+    }
+    assert_eq!(cases, 4 * (1 + 7 + 49 + 343 + 2401));
+}

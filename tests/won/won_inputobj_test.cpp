@@ -17,6 +17,7 @@
 //
 // The first 40 sequences and every later one that makes an op or a call none before made are
 // rust/crates/ee_won_gui/src/golden_inputobj.txt, which the Rust tests replay; `--print` prints them.
+#include <ctype.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -883,6 +884,39 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
     return sTrace;
 }
 
+// InputBox::NumericFilter as it was at 71c097464 (GuiHost.cpp; R6 WON GUI round 35 moved it to inputobj.rs
+// numeric_filter): theStr[0] of an empty text is its terminator, isdigit is asked only about 0..255 here (the
+// UCRT's answers 0 outside)
+static bool NumericOrig(const std::wstring& theStr, int inSelStart)
+{
+    int aPos = 0;
+    if (theStr.c_str()[0] == '-') {
+        if (inSelStart > 0)
+            return false;
+        aPos++;
+    }
+    for (; aPos < (int)theStr.length(); aPos++)
+        if (!(theStr[aPos] <= 255 && isdigit(theStr[aPos])))
+            return false;
+    return true;
+}
+
+// the filter's phase: random texts over the digits' neighbours; returns the mismatches (inMutate: the selection
+// start not handed over, which the phase must catch)
+static int NumericPhase(int inCases, bool inMutate)
+{
+    static const wchar_t kAlphabet[] = {'-', '/', '0', '5', '9', ':', 0x661, 'a'};
+    int aMismatches = 0;
+    for (int i = 0; i < inCases; i++) {
+        std::wstring aText;
+        for (unsigned n = R(6); n > 0; n--) aText.push_back(kAlphabet[R(3) ? 2 + R(3) : R(8)]);
+        int aSel = (int)R(4) - 1;
+        if (ee_won_input_numeric_filter(aText.c_str(), aText.length(), inMutate ? 0 : aSel) != NumericOrig(aText, aSel))
+            aMismatches++;
+    }
+    return aMismatches;
+}
+
 int main(int argc, char** argv)
 {
     bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
@@ -924,5 +958,11 @@ int main(int argc, char** argv)
         printf("won_inputobj_test: %d sequences, %u trace lines, %u ops and calls met, %d events fired, %d differing, "
                "%d checks, %d failures\n", kSequences, (unsigned)aLines, (unsigned)aSeen.size(), sFired / 2,
                aDiffering, sChecks, sFailures);
+    if (!aPrint) {
+        int aNumeric = NumericPhase(200000, false), aCaught = NumericPhase(200000, true);
+        printf("won_inputobj_test: the numeric filter: 200000 cases, %d mismatches; the mutation %s (%d)\n", aNumeric,
+               aCaught > 0 ? "caught" : "NOT caught", aCaught);
+        sFailures += aNumeric + (aCaught > 0 ? 0 : 1);
+    }
     return sFailures;
 }
