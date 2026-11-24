@@ -94,6 +94,7 @@
 #include "rust/ui/layout_ffi.h"
 #include "rust/ui/list.h"
 #include "rust/ui/listobj.h"
+#include "rust/ui/lle_bg_edit.h"
 #include "rust/ui/lle_combo.h"
 #include "rust/ui/lle_control.h"
 #include "rust/ui/lle_cpp.h"
