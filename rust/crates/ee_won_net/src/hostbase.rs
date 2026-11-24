@@ -447,6 +447,52 @@ pub unsafe extern "C" fn ee_won_hostop_set_client_key(op: *const EeWonHostOp, si
     }
 }
 
+/// What a new op of the game is given after its bind (R6 WON lobby and network round 35: the constructor of the C++
+/// subclass DetectFirewallOp, deleted; `RustServerOp::NewFirewall`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonHostInit {
+    /// nothing more
+    None = 0,
+    /// `DetectFirewallOp(obj)`: the server context `obj` (`Set(EE_WON_REQHOST_CONTEXT, obj)`)
+    Firewall = 1,
+}
+
+/// The steps of `init` on a bound op (the deleted constructor's statements after the base's).
+///
+/// # Safety
+/// `op` is a live, bound op; `obj` NULL or a live `RefCount*` of the kind `init` names.
+pub unsafe fn host_init(op: *const EeWonHostOp, init: EeWonHostInit, obj: *mut c_void) {
+    match init {
+        EeWonHostInit::None => {}
+        // SAFETY: the caller's contract
+        EeWonHostInit::Firewall => unsafe {
+            ee_won_hostop_set(op, crate::reqhost::EE_WON_REQHOST_CONTEXT, 0, std::ptr::null(), 0, std::ptr::null(), obj)
+        },
+    }
+}
+
+/// The game's op bound as [`ee_won_hostop_bind_native`] (no function; the host is the op), then given `init`'s
+/// members (`RustServerOp`'s constructor with an init).
+///
+/// # Safety
+/// As [`ee_won_hostop_bind_native`] and [`host_init`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_bind_init(
+    op: *const EeWonHostOp,
+    self_op: *mut c_void,
+    self_obj: *const EeWonAsyncOp,
+    tracker: *const EeWonOpTracker,
+    init: EeWonHostInit,
+    obj: *mut c_void,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_won_hostop_bind_native(op, None, self_op, self_op, self_obj, tracker);
+        host_init(op, init, obj);
+    }
+}
+
 #[cfg(test)]
 #[path = "hostbase_tests.rs"]
 mod tests;

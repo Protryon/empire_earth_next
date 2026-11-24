@@ -21,32 +21,8 @@ inline const bool gLobbyResourcesBound = (ee_won_lobbyres_bind(gLobbyResources, 
 #define LOBBY_IMAGE(theName) (gLobbyResources[(int)EeWonLobbyRes::theName].mImage)
 #define LOBBY_SOUND(theName) (gLobbyResources[(int)EeWonLobbyRes::theName].mSound)
 
-enum LobbyResourceCtrlId {
-    LobbyResourceCtrlId_Min=200000, // ControlId_UserMin; the first control ID is 200001
-    ID_ShowCreateAccount,
-    ID_ShowLostPassword,
-    ID_ShowLostUserName,
-    ID_ShowMOTD,
-    ID_ShowTOU,
-    ID_LoginScreenBack,
-    ID_ShowLoginHelp,
-    ID_ShowInternetScreen,
-    ID_ShowLanScreen,
-    ID_Logout,
-    ID_HostGame,
-    ID_ChangeRoom,
-    ID_JoinGame,
-    ID_LeaveGame,
-    ID_StartGame,
-    ID_RefreshGameList,
-    ID_AddFriend,
-    ID_RefreshFriends,
-    ID_AddLANName,
-    ID_ChangeLANBroadcast,
-    ID_FilterDirtyWordsCheck,
-    ID_AnonymousToFriendsCheck,
-    ID_ChooseNetworkAdapter,
-};
+// the lobby's control numbers (from 200001): Rust's constants since R6 WON lobby and network round 35
+#include "rust/won_lobby/lobbyids.h"
 
 typedef int LobbyResourceId; // a row of EeWonLobbyRes
 

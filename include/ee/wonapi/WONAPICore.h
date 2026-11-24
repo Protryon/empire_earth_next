@@ -3,15 +3,14 @@
 #include "ee/wonapi/WONTimerThread.h"
 #include "rust/won_net/apicore.h"
 #include "rust/won_net/hostnative.h"
+#include "rust/won_net/sockthread.h"
 namespace WONAPI {
-// the core's C++ calls: the socket thread's virtuals, its deletion, the default one (AsyncOp.cpp)
-const EeWonApiHooks* WonApiHooks();
 // WON API core singleton (0xd0 bytes in the original: 2f2750..2f2f3f): socket, timer and pump threads;
 // WONAPICoreEx adds the setters. A Rust object since R6 WONLobby round 12 (rust/crates/ee_won_net/src/apicore.rs
 // EeWonApiCore: the op container, the timer thread, the pump thread, the flags, the version, the WON directory's
 // rule, and Startup, Shutdown, Pump, WriteVersion and the static calls); WONAPI.cpp is deleted. This class keeps the
-// vtable (the destructor, Startup, Shutdown) and the calls the ops make; the socket thread stays a C++
-// SocketThread* the game may replace, reached through WonApiHooks().
+// vtable (the destructor, Startup, Shutdown) and the calls the ops make; the socket thread is the Rust one of the
+// core's table (ee_won_api_socket_hooks, sockthread.rs; a driver may hand another table).
 class WONAPICore {
 public:
     static void QueueOp(AsyncOp* op) { ee_won_api_queue_op(static_cast<void*>(op)); } //2f2e60, SDK QueueInContainer
@@ -36,7 +35,8 @@ protected:
     static void AddToSocketThread(SocketOp* op) { ee_won_api_socket_op(static_cast<void*>(op),true); } //2f2ef0
     static void RemoveFromSocketThread(SocketOp* op) { ee_won_api_socket_op(static_cast<void*>(op),false); } //2f2f20
     // 2f28d0 (Init 2f2750): version "wonapi121401", socket and timer threads on, no pump thread; Winsock started
-    WONAPICore(const char*) : mCore(ee_won_api_new(static_cast<void*>(this),WonCore(),WonApiHooks())) {}
+    WONAPICore(const char*,const EeWonApiHooks* inHooks=ee_won_api_socket_hooks())
+        : mCore(ee_won_api_new(static_cast<void*>(this),WonCore(),inHooks)) {}
     EeWonApiCore* mCore; // owned
 private:
     WONAPICore(WONAPICore&);
@@ -44,10 +44,11 @@ private:
 };
 class WONAPICoreEx : public WONAPICore {
 public:
-    WONAPICoreEx() : WONAPICore("") {} //2f2f40, implicit dtor 2f2f80
+    WONAPICoreEx(const EeWonApiHooks* inHooks=ee_won_api_socket_hooks()) : WONAPICore("",inHooks) {} //2f2f40, implicit dtor 2f2f80
     // each before start-up only
     void SetDefaultFileDirectory(const char* inDirectory) { ee_won_api_set_directory(this->mCore,inDirectory); }
-    void SetSocketThread(SocketThread* inThread) { ee_won_api_set_socket_thread(this->mCore,static_cast<void*>(inThread)); }
+    // a socket thread of the core's table (the drivers' own tables only: the game sets none)
+    void SetSocketThread(void* inThread) { ee_won_api_set_socket_thread(this->mCore,inThread); }
     void SetDoSocketAndTimerThreads(bool inOn) { ee_won_api_set(this->mCore,1,inOn); }
     void SetDoPumpThread(bool inOn) { ee_won_api_set(this->mCore,0,inOn); } //setter 2f2f90
 };
