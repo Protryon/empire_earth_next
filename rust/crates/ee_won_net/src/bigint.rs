@@ -9,8 +9,15 @@
 //! `a[N-1]*b[N-1]` to 32 bits for odd word counts above 16, read operand words past their length and wrote past its
 //! work buffer (AddressSanitizer: heap-buffer-overflow), so its product was wrong or depended on uninitialised memory
 //! there; everywhere else it is the exact product, which is what this gives (PORT_LEARNINGS "R6: WON's leaves").
+//!
+//! The magnitudes are `num-bigint`'s `BigUint` (docs/progress/deps.md): its sums, differences, products, shifts,
+//! quotients and remainders are the exact values the C++ loops computed word by word. WON's own rules stay here: the
+//! sign flag (a zero can carry it), which operations keep the target's sign, the signed comparison `st_div` starts
+//! with, and the errors.
 
 use std::cmp::Ordering;
+
+use num_bigint::BigUint;
 
 use crate::random::Random;
 
@@ -18,74 +25,25 @@ use crate::random::Random;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArithError(pub &'static str);
 
-/// A signed big integer. `n` holds exactly the significant words (no leading zero word); zero is `n` empty, and
-/// it can carry the negative flag (`negate()` of zero), as in the C++.
+/// A signed big integer: a magnitude and the negative flag. Zero can carry the flag (`negate()` of zero), as in the
+/// C++.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BigInt {
-    n: Vec<u32>,
+    n: BigUint,
     negative: bool,
 }
 
-fn trim(n: &mut Vec<u32>) {
-    while n.last() == Some(&0) {
-        n.pop();
+fn ucmp(a: &BigUint, b: &BigUint) -> i32 {
+    match a.cmp(b) {
+        Ordering::Less => -1,
+        Ordering::Equal => 0,
+        Ordering::Greater => 1,
     }
 }
 
-fn ucmp_words(a: &[u32], b: &[u32]) -> i32 {
-    if a.len() != b.len() {
-        return if a.len() > b.len() { 1 } else { -1 };
-    }
-    for i in (0..a.len()).rev() {
-        if a[i] != b[i] {
-            return if a[i] > b[i] { 1 } else { -1 };
-        }
-    }
-    0
-}
-
-/// |a| + |b|, exact.
-fn add_words(a: &[u32], b: &[u32]) -> Vec<u32> {
-    let (a, b) = if a.len() < b.len() { (b, a) } else { (a, b) };
-    let mut r = Vec::with_capacity(a.len() + 1);
-    let mut carry = 0u64;
-    for (i, &ai) in a.iter().enumerate() {
-        let s = u64::from(ai) + u64::from(*b.get(i).unwrap_or(&0)) + carry;
-        r.push(s as u32);
-        carry = s >> 32;
-    }
-    if carry != 0 {
-        r.push(carry as u32);
-    }
-    r
-}
-
-/// |a| - |b| for |a| >= |b|, trimmed.
-fn sub_words(a: &[u32], b: &[u32]) -> Vec<u32> {
-    let mut r = Vec::with_capacity(a.len());
-    let mut borrow = 0u64;
-    for (i, &ai) in a.iter().enumerate() {
-        let d = u64::from(ai).wrapping_sub(u64::from(*b.get(i).unwrap_or(&0))).wrapping_sub(borrow);
-        r.push(d as u32);
-        borrow = (d >> 32).wrapping_neg() & 1;
-    }
-    trim(&mut r);
-    r
-}
-
-fn mul_words(a: &[u32], b: &[u32]) -> Vec<u32> {
-    let mut r = vec![0u32; a.len() + b.len()];
-    for (i, &ai) in a.iter().enumerate() {
-        let mut carry = 0u64;
-        for (j, &bj) in b.iter().enumerate() {
-            let m = u64::from(r[i + j]) + u64::from(bj) * u64::from(ai) + carry;
-            r[i + j] = m as u32;
-            carry = m >> 32;
-        }
-        r[i + b.len()] = carry as u32;
-    }
-    trim(&mut r);
-    r
+/// The number of 32-bit words of a magnitude.
+fn word_count(n: &BigUint) -> usize {
+    (n.bits() as usize).div_ceil(32)
 }
 
 impl BigInt {
@@ -96,47 +54,32 @@ impl BigInt {
 
     /// One.
     pub fn one() -> BigInt {
-        BigInt { n: vec![1], negative: false }
+        BigInt { n: BigUint::from(1u32), negative: false }
     }
 
     /// `BigInteger(int)`.
     pub fn from_i32(v: i32) -> BigInt {
-        let mut n = vec![v.unsigned_abs()];
-        trim(&mut n);
-        BigInt { n, negative: v < 0 }
+        BigInt { n: BigUint::from(v.unsigned_abs()), negative: v < 0 }
     }
 
     /// `fromBinary`: big-endian unsigned bytes; the result is positive.
     pub fn from_binary(bytes: &[u8]) -> BigInt {
-        let mut n = vec![0u32; bytes.len().div_ceil(4)];
-        for (i, &b) in bytes.iter().rev().enumerate() {
-            n[i / 4] |= u32::from(b) << (8 * (i % 4));
-        }
-        trim(&mut n);
-        BigInt { n, negative: false }
+        BigInt { n: BigUint::from_bytes_be(bytes), negative: false }
     }
 
     /// `toBinary`: the magnitude in big-endian bytes, with a leading zero byte when the value is not negative and
     /// the top byte's high bit is set; zero is one zero byte.
     pub fn to_binary(&self) -> Vec<u8> {
-        let count = self.byte_length();
-        let mut out = Vec::with_capacity(count + 1);
-        if count == 0 {
-            out.push(0);
+        let mut out = self.n.to_bytes_be();
+        if !self.negative && out[0] & 0x80 != 0 {
+            out.insert(0, 0);
         }
-        for i in 0..count {
-            out.push((self.n[i / 4] >> (8 * (i % 4))) as u8);
-        }
-        if !self.negative && out[out.len() - 1] & 0x80 != 0 {
-            out.push(0);
-        }
-        out.reverse();
         out
     }
 
-    /// The words, least significant first.
-    pub fn words(&self) -> &[u32] {
-        &self.n
+    /// The words, least significant first (none for zero).
+    pub fn words(&self) -> Vec<u32> {
+        self.n.iter_u32_digits().collect()
     }
 
     /// The sign flag.
@@ -146,19 +89,16 @@ impl BigInt {
 
     /// No significant word.
     pub fn is_zero(&self) -> bool {
-        self.n.is_empty()
+        self.n.bits() == 0
     }
 
     fn low_word(&self) -> u32 {
-        self.n.first().copied().unwrap_or(0)
+        self.n.iter_u32_digits().next().unwrap_or(0)
     }
 
     /// `bitLength`.
     pub fn bit_length(&self) -> i32 {
-        match self.n.last() {
-            None => 0,
-            Some(&top) => (self.n.len() as i32 - 1) * 32 + (32 - top.leading_zeros() as i32),
-        }
+        self.n.bits() as i32
     }
 
     /// `byteLength`.
@@ -168,15 +108,13 @@ impl BigInt {
 
     /// `st_bit`: false past the length.
     pub fn bit(&self, i: i32) -> bool {
-        let w = (i / 32) as usize;
-        w < self.n.len() && self.n[w] & (1u32 << (i % 32)) != 0
+        self.n.bit(i as u64)
     }
 
-    /// `st_setBit`: does nothing past the length.
+    /// `st_setBit`: does nothing past the length (the words in use).
     pub fn set_bit(&mut self, i: i32) {
-        let w = (i / 32) as usize;
-        if w < self.n.len() {
-            self.n[w] |= 1u32 << (i % 32);
+        if ((i / 32) as usize) < word_count(&self.n) {
+            self.n.set_bit(i as u64, true);
         }
     }
 
@@ -187,14 +125,14 @@ impl BigInt {
 
     /// `st_cmp`: signed comparison (-1, 0, 1). Two zeros compare equal; a negative zero is below a positive value.
     pub fn cmp_signed(&self, b: &BigInt) -> i32 {
-        if self.n.is_empty() && b.n.is_empty() {
+        if self.is_zero() && b.is_zero() {
             return 0;
         }
         match (self.negative, b.negative) {
-            (true, true) => ucmp_words(&b.n, &self.n),
+            (true, true) => ucmp(&b.n, &self.n),
             (true, false) => -1,
             (false, true) => 1,
-            (false, false) => ucmp_words(&self.n, &b.n),
+            (false, false) => ucmp(&self.n, &b.n),
         }
     }
 
@@ -219,45 +157,39 @@ impl BigInt {
 // ---- the st_ functions: r is the target object
 
 fn st_zero(r: &mut BigInt) {
-    r.n.clear();
-    r.negative = false;
-}
-
-fn st_one(r: &mut BigInt) {
-    r.n = vec![1];
-    r.negative = false;
+    *r = BigInt::zero();
 }
 
 fn st_add_unsigned(r: &mut BigInt, a: &BigInt, b: &BigInt) {
-    r.n = add_words(&a.n, &b.n);
+    r.n = &a.n + &b.n;
     r.negative = false;
 }
 
 /// |a| - |b|; with `determine_sign` the sign is that of the difference, otherwise the target's stays.
 fn st_sub_unsigned(r: &mut BigInt, a: &BigInt, b: &BigInt, determine_sign: bool) {
-    match ucmp_words(&a.n, &b.n) {
+    match ucmp(&a.n, &b.n) {
         0 => st_zero(r),
         -1 => {
             if determine_sign {
                 r.negative = true;
             }
-            r.n = sub_words(&b.n, &a.n);
+            r.n = &b.n - &a.n;
         }
         _ => {
             if determine_sign {
                 r.negative = false;
             }
-            r.n = sub_words(&a.n, &b.n);
+            r.n = &a.n - &b.n;
         }
     }
 }
 
 fn st_add(r: &mut BigInt, a: &BigInt, b: &BigInt) {
-    if a.n.is_empty() {
+    if a.is_zero() {
         *r = b.clone();
         return;
     }
-    if b.n.is_empty() {
+    if b.is_zero() {
         *r = a.clone();
         return;
     }
@@ -273,14 +205,14 @@ fn st_add(r: &mut BigInt, a: &BigInt, b: &BigInt) {
 }
 
 fn st_sub(r: &mut BigInt, a: &BigInt, b: &BigInt) {
-    if a.n.is_empty() {
+    if a.is_zero() {
         *r = b.clone();
-        if !b.n.is_empty() {
+        if !b.is_zero() {
             r.negative = !b.negative;
         }
         return;
     }
-    if b.n.is_empty() {
+    if b.is_zero() {
         *r = a.clone();
         return;
     }
@@ -297,58 +229,29 @@ fn st_sub(r: &mut BigInt, a: &BigInt, b: &BigInt) {
 
 /// a << n; the target keeps its sign (zero input: zero, positive).
 fn st_shift_left(r: &mut BigInt, a: &BigInt, n: i32) {
-    if a.n.is_empty() {
+    if a.is_zero() {
         st_zero(r);
         return;
     }
-    let rem = (n % 32) as u32;
-    let blocks = (n / 32) as usize;
-    let mut out = vec![0u32; blocks];
-    out.extend_from_slice(&a.n);
-    if rem != 0 {
-        let mut carry = 0u32;
-        for w in out.iter_mut().skip(blocks) {
-            let l = *w;
-            *w = (l << rem) | carry;
-            carry = l >> (32 - rem);
-        }
-        if carry != 0 {
-            out.push(carry);
-        }
-    }
-    r.n = out;
+    r.n = &a.n << n as usize;
 }
 
-/// a >> n; the target keeps its sign (everything shifted out: zero, positive).
+/// a >> n; the target keeps its sign (every word shifted out: zero, positive).
 fn st_shift_right(r: &mut BigInt, a: &BigInt, n: i32) {
-    let rem = (n % 32) as u32;
-    let blocks = (n / 32) as usize;
-    if blocks >= a.n.len() {
+    if (n / 32) as usize >= word_count(&a.n) {
         st_zero(r);
         return;
     }
-    let mut out = a.n[blocks..].to_vec();
-    if rem != 0 {
-        let mut carry = 0u32;
-        for w in out.iter_mut().rev() {
-            let l = *w;
-            *w = (l >> rem) | carry;
-            carry = l << (32 - rem);
-        }
-        if out.last() == Some(&0) {
-            out.pop();
-        }
-    }
-    r.n = out;
+    r.n = &a.n >> n as usize;
 }
 
 fn st_mul(r: &mut BigInt, a: &BigInt, b: &BigInt) {
-    if a.n.is_empty() || b.n.is_empty() {
+    if a.is_zero() || b.is_zero() {
         st_zero(r);
         return;
     }
     r.negative = a.negative ^ b.negative;
-    r.n = mul_words(&a.n, &b.n);
+    r.n = &a.n * &b.n;
 }
 
 /// `st_kmul`: the product (see the module comment).
@@ -356,72 +259,32 @@ fn st_kmul(r: &mut BigInt, a: &BigInt, b: &BigInt) {
     st_mul(r, a, b);
 }
 
+/// `st_mod`: the magnitudes' remainder (the C++ subtracted the shifted divisor bit by bit; a zero divisor took
+/// nothing away); for a negative `m`, `d` plus the negated remainder.
 fn st_mod(r: &mut BigInt, m: &BigInt, d: &BigInt) {
-    *r = m.clone();
-    if ucmp_words(&m.n, &d.n) < 0 {
-        if m.negative {
-            r.negative = true;
-            let t = r.clone();
-            st_add(r, d, &t);
-        }
-        return;
-    }
-    r.negative = false;
-    let mut i = m.bit_length() - d.bit_length();
-    let mut ds = BigInt::zero();
-    st_shift_left(&mut ds, d, i);
-    while i >= 0 {
-        if r.cmp_signed(&ds) >= 0 {
-            let t = r.clone();
-            st_sub(r, &t, &ds);
-        }
-        let t = ds.clone();
-        st_shift_right(&mut ds, &t, 1);
-        i -= 1;
-    }
+    let n = if d.is_zero() { m.n.clone() } else { &m.n % &d.n };
+    *r = BigInt { n, negative: m.negative };
     if m.negative {
-        r.negative = true;
         let t = r.clone();
         st_add(r, d, &t);
     }
 }
 
-/// `st_div(dv, rem, m, d)`.
+/// `st_div(dv, rem, m, d)`. The C++ compared `m` and `d` as signed values first, then built the quotient bit by bit
+/// from the magnitudes with the remainder carrying `m`'s sign: a negative `m` never reached a subtraction (quotient
+/// zero, remainder `m`); otherwise the quotient and remainder are the magnitudes', the quotient with the divisor's
+/// sign.
 fn st_div(dv: &mut BigInt, rem: &mut BigInt, m: &BigInt, d: &BigInt) -> Result<(), ArithError> {
-    if d.n.is_empty() {
+    if d.is_zero() {
         return Err(ArithError("div: Divide by zero"));
     }
-    if m.cmp_signed(d) < 0 {
+    if m.cmp_signed(d) < 0 || m.negative {
         *rem = m.clone();
         st_zero(dv);
         return Ok(());
     }
-    let mut ds = BigInt::zero();
-    *rem = m.clone();
-    st_zero(dv);
-    let mut i = m.bit_length() - d.bit_length();
-    st_shift_left(&mut ds, d, i);
-    while i >= 0 {
-        if dv.n.is_empty() {
-            if rem.cmp_signed(&ds) >= 0 {
-                st_one(dv);
-                let t = rem.clone();
-                st_sub(rem, &t, &ds);
-            }
-        } else {
-            let t = dv.clone();
-            st_shift_left(dv, &t, 1);
-            if rem.cmp_signed(&ds) >= 0 {
-                dv.n[0] |= 1;
-                let t = rem.clone();
-                st_sub(rem, &t, &ds);
-            }
-        }
-        let t = ds.clone();
-        st_shift_right(&mut ds, &t, 1);
-        i -= 1;
-    }
-    dv.negative = m.negative ^ d.negative;
+    *dv = BigInt { n: &m.n / &d.n, negative: d.negative };
+    *rem = BigInt { n: &m.n % &d.n, negative: false };
     Ok(())
 }
 
@@ -463,7 +326,7 @@ fn st_inverse_mod_n(r: &mut BigInt, a: &BigInt, n: &BigInt) -> Result<(), ArithE
     let (mut y1, mut y2, mut y3) = (BigInt::zero(), BigInt::one(), n.clone());
     let (mut t1, mut t2, mut t3) = (BigInt::zero(), BigInt::zero(), BigInt::zero());
     let (mut q, mut p) = (BigInt::zero(), BigInt::zero());
-    while !y3.n.is_empty() {
+    while !y3.is_zero() {
         st_div(&mut q, &mut t3, &x3, &y3)?;
         st_mul(&mut t1, &q, &y2);
         st_sub(&mut t2, &x2, &t1);
@@ -489,7 +352,7 @@ fn st_euclid(r: &mut BigInt, x: &BigInt, y: &BigInt) {
     let mut a = x.clone();
     let mut b = y.clone();
     let mut shifts = 0;
-    while !b.n.is_empty() {
+    while !b.is_zero() {
         let a_odd = a.low_word() & 1 != 0;
         let b_odd = b.low_word() & 1 != 0;
         if a_odd && b_odd {
@@ -536,7 +399,7 @@ fn st_mod_exp_recip(
     if power.low_word() & 1 != 0 {
         st_mod(r, a, modulo);
     } else {
-        st_one(r);
+        *r = BigInt::one();
     }
     for i in 1..bits {
         let t = v.clone();

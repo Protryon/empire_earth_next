@@ -1,30 +1,22 @@
 //! WON's CRC-16 (`WONCommon/CRC16.cpp`): polynomial 0x8005, most significant bit first, no reflection, with a
 //! caller's initial and final XOR values. CD keys and the lobby's persistent data use it.
+//!
+//! The table and the register's step are the `crc` crate's (docs/progress/deps.md): its CRC-16/UMTS is this
+//! polynomial with no reflection, a zero initial value and no final XOR; the caller's initial value goes in through
+//! `digest_with_initial` and the final XOR stays here.
 
-const fn table() -> [u16; 256] {
-    let mut t = [0u16; 256];
-    let mut i = 0;
-    while i < 256 {
-        let mut r = (i as u16) << 8;
-        let mut b = 0;
-        while b < 8 {
-            r = if r & 0x8000 != 0 { (r << 1) ^ 0x8005 } else { r << 1 };
-            b += 1;
-        }
-        t[i] = r;
-        i += 1;
-    }
-    t
-}
+use crc::{Crc, Table, CRC_16_UMTS};
 
-const TABLE: [u16; 256] = table();
+static UMTS: Crc<u16, Table<1>> = Crc::<u16, Table<1>>::new(&CRC_16_UMTS);
+
+#[cfg(test)]
+const TABLE: [u16; 256] = Crc::<u16, Table<1>>::new(&CRC_16_UMTS).table()[0];
 
 /// Feeds bytes into a CRC register and returns the new register.
-pub fn put(mut register: u16, data: &[u8]) -> u16 {
-    for &b in data {
-        register = TABLE[usize::from((register >> 8) as u8 ^ b)] ^ (register << 8);
-    }
-    register
+pub fn put(register: u16, data: &[u8]) -> u16 {
+    let mut digest = UMTS.digest_with_initial(register);
+    digest.update(data);
+    digest.finalize()
 }
 
 /// A CRC with the C++ class's state: register, initial value, final XOR.
