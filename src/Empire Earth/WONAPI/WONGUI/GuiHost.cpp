@@ -104,9 +104,8 @@ static FontDescriptor Underlined(FontDescriptor inDescriptor)
     return inDescriptor;
 }
 
-extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     TextArea* t = (TextArea*)inComp;
     switch (op) {
     case Op::Get: return (Fd)a == Fd::Width || (Fd)a == Fd::Height ? ComponentOp(t, op, a, b) : t->GetField((Fd)a);
@@ -194,9 +193,8 @@ void TextArea::AddFormatedText(const GUIString& text,bool lineBreak) {
 
 // ---- the input box
 
-extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     InputBox* t = (InputBox*)inComp;
     switch (op) {
     case Op::FontHeight: return t->mFont->GetHeight();
@@ -251,9 +249,8 @@ InputBox::~InputBox() { ee_won_input_free(this->mRust); }
 
 // ---- the label
 
-extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     Label* t = (Label*)inComp;
     switch (op) {
     case Op::WrapSetMaxWidth: t->mWrappedText->SetMaxWidth((int)a); return 0;
@@ -334,17 +331,15 @@ Splitter::Splitter()
 Splitter::~Splitter() { ee_won_split_free(this->mRust); }
 }
 
-extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     return SplitterHostCall((Splitter*)inComp, op, a, b, c);
 }
 
 // ---- the scroll bar
 
-extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     Scrollbar* t = (Scrollbar*)inComp;
     switch (op) {
     case Op::NewButton: return (intptr_t)static_cast<Component*>(new Button);
@@ -363,9 +358,8 @@ Scrollbar::~Scrollbar() { ee_won_bar_free(this->mRust); }
 
 // ---- the scroller (`a` the scroll area or a bar)
 
-extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     Scroller* t = (Scroller*)inComp;
     ScrollArea* area = static_cast<ScrollArea*>(Comp(a));
     switch (op) {
@@ -395,9 +389,8 @@ Scroller::~Scroller() { ee_won_scroller_free(this->mRust); }
 
 // ---- the scroll area
 
-extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     ScrollArea* t = (ScrollArea*)inComp;
     switch (op) {
     case Op::ContainerPaint: t->Container::Paint(*(Graphics*)a); return 0;
@@ -603,9 +596,8 @@ void PopupMenu::AddSeperator()
 // ---- the multi-column list, its rows and header (multiobj.rs)
 
 // a row's own calls out (its SetPos and its cells' references)
-extern "C" intptr_t ee_won_guicpp_mrow_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_mrow_call(void* /*inComp*/, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t /*c*/, intptr_t /*d*/)
 {
-    (void)inComp; (void)c; (void)d;
     switch (op) {
     case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
     case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
@@ -615,9 +607,8 @@ extern "C" intptr_t ee_won_guicpp_mrow_call(void* inComp, EeWonGuiOp op, intptr_
     }
 }
 
-extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     MultiListHeader* t = (MultiListHeader*)inComp;
     switch (op) {
     case Op::MultiOf: return (intptr_t)((MultiListArea*)a)->mMulti;
@@ -688,9 +679,8 @@ ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
 // ---- the tree list and its rows (treeobj.rs)
 
 // a row's own calls out (its SetPos, its walks' other rows, its references)
-extern "C" intptr_t ee_won_guicpp_tnode_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_tnode_call(void* /*inComp*/, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)inComp; (void)d;
     switch (op) {
     case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
     case Op::ItemTop: return Item(a)->mTop;
