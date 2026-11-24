@@ -494,6 +494,17 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 gone (fog-honest); a bomber landed in its airport is inside a container and ai.attack refuses it
                 (cannot_do) where upstream's game air order launched it - an interface gap (counted:
                 memory.air.refused).
+                From the port forward (7a17182, 2026-11-21): THE DOCTRINE (bomber_doctrine, with bomber_survive,
+                bomber_come_home, bomber_value_wing and bomber_claim on under it, bomber_harass off): THE PICTURE,
+                THE SMALL RUNS, THE WAY HOME, THE VALUE WING, NO THEFT (claims.lua's CLW_BOMBERS at CLP_TASK), the
+                books and a summary a minute. Gaps: no damage/hit tables, armour or ammo (a shot is the class's
+                attack, AD_HIT 35%, AD_NOAMMO 4 shots; ai.can_hurt decides what can hit at all), no per-tile last-
+                seen time ("looked at" is in sight now), no ai.air (a parked bomber is launched by its Airport's
+                rally; the way home is ai.move home). Deviations: 12 targets a position (upstream 64), 4000 chords
+                a look, the way in and out share one leg, 128 seen and 64 remembered buildings; the counter-fire's
+                request is its shooters' spots, not af_request; remembered fighters are not counted (an Airport's
+                AD_FIGHTERS stands in); no per-kind model breakdown. Missing: af_request, g_ar_breach's focus,
+                ar_price_clear, the airport build-manager path, the [autotest] lines.
   airguard.c    PORTED -> airguard.lua (port forward 7a17182; beside air.lua, which is airstrike.c's bomber wing).
                 Ported: AA BUILDINGS (the anti-air defence.c wants: 2 + (air+1)/2, 1 + want/4 at most 4, while enemy
                 aircraft were seen near its towns in 10 minutes, by the drop site nearest them, one a minute), THE
