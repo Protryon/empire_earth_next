@@ -40,6 +40,71 @@ M.PERSONAS = {
 
 M.ORDER = {"balanced", "aggressive", "defensive", "tall", "wide", "naval"}
 
+-- THE LINES (upstream voice/persona.c persona_say: the texts a personality says on a situation). The port says
+-- them through ai.say (the game's chat) or the AI trace when the game has no chat. ASCII only.
+M.LINES = {
+    balanced = {
+        war = {"You leave me no choice. We fight.", "A pity. The sword is drawn."},
+        peace = {"Enough blood. Let us talk.", "Peace is the better bargain."},
+        alliance = {"An alliance, then. To both our gain.", "Together, we would be stronger."},
+        betrayal = {"Your promises were worth nothing.", "I should have seen this coming."},
+        capitulation = {"We have lost. I lay down my crown.", "You have won. Spare my people."},
+        push = {"The army is ready. We march.", "Time to take what is ours."},
+        greeting = {"Well met. Let us see who builds better.", "A new world. Let us begin."},
+    },
+    aggressive = {
+        war = {"Good. I was getting bored.", "Your lands are already mine."},
+        peace = {"A pause, not an end.", "Fine. I will sharpen my blades."},
+        alliance = {"Keep up, and I will not eat you.", "An ally. Do not disappoint me."},
+        betrayal = {"Traitor! You will pay for this.", "I knew you could not be trusted."},
+        capitulation = {"This is not over! ... Fine. It is over.", "I yield, but I do not forgive."},
+        push = {"Burn it all. Forward!", "The weak have held long enough."},
+        greeting = {"I smell weakness. This should be quick.", "Let us make it bloody."},
+    },
+    defensive = {
+        war = {"You attack a patient people. Come, then.", "Our walls will hold."},
+        peace = {"We have lost enough. Let us stop.", "A wall is better than a grave."},
+        alliance = {"A friend at my side is a wall the stronger.", "Agreed. We watch each other's backs."},
+        betrayal = {"You were to be trusted. Never again.", "The walls were for you, it seems."},
+        capitulation = {"We cannot hold. We will not die for pride.", "Take the town. Let the people live."},
+        push = {"We move when the ground is ready.", "Carefully. Then all at once."},
+        greeting = {"We will build high and hold what we have.", "Let them come to us."},
+    },
+    tall = {
+        war = {"You interrupt progress. That is costly.", "War is a poor investment, but I will pay."},
+        peace = {"Peace is the cheaper path. Let us take it.", "Good. Back to building."},
+        alliance = {"A shared telescope is better than a shared war.", "Agreed. Let us both grow."},
+        betrayal = {"You have cost me more than a war would.", "So be it. I will remember."},
+        capitulation = {"My towers are dust. I yield.", "The books will say I lost. Let them."},
+        push = {"The epoch is ours. Take the ground.", "Advance. The scholars will follow."},
+        greeting = {"Knowledge, then steel. In that order.", "Let us see who understands the game."},
+    },
+    wide = {
+        war = {"There is room for one of us.", "You stand where I want to build."},
+        peace = {"The map is big. Let us share it.", "A border, then, and no more."},
+        alliance = {"An ally who settles: useful.", "Together we can fill the map."},
+        betrayal = {"You took the land I gave you.", "This is what I get for sharing."},
+        capitulation = {"Too much land to hold. It is yours.", "I cannot be everywhere. You win."},
+        push = {"Spread out. Take the corners.", "New lands, new towns, forward."},
+        greeting = {"Every hill a town, every shore a dock.", "The world has room. I will take it."},
+    },
+    naval = {
+        war = {"The sea is mine. Your shore is not.", "You will hear my cannons before you see them."},
+        peace = {"Let the fleets rest.", "The tide turns. Let us stop."},
+        alliance = {"A port in your harbour: agreed.", "Together the waters are ours."},
+        betrayal = {"You sank my ships. Now it is personal.", "I will find your harbour."},
+        capitulation = {"The fleet is gone. I am beaten.", "Take the docks. Leave the sailors."},
+        push = {"Sail. Land. Take it.", "The crossing is clear."},
+        greeting = {"I will rule the waves and the coast.", "Let us see who can swim."},
+    },
+}
+
+function M.lines(id, situation)
+    local p = M.LINES[id] or M.LINES.balanced
+    return p[situation] or (M.LINES.balanced[situation] or {})
+end
+
+
 -- the persona picked for this AI (stored in memory.persona); "random" picks by the view's/ai's rng
 function M.pick(memory, view)
     memory.persona = memory.persona or {}

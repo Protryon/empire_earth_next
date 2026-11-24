@@ -6,6 +6,7 @@
 -- missing server never stalls the step. The lines are printed to the AI trace until the game's chat has a Lua door
 -- (upstream speaks through persona_say; this engine has no chat binding yet).
 local S = require("ageofai.settings")
+local PS = require("ageofai.personas")
 local M = {}
 
 local EVERY = 8000          -- a line every this long at most
@@ -78,6 +79,34 @@ function M.clear(memory)
     if memory ~= nil then
         memory.voice = nil
     end
+end
+
+-- a persona's line on a situation (war, peace, alliance, betrayal, capitulation, push, greeting): the game's chat
+-- through ai.say, else the AI trace. Independent of the LLM (settings.ai_lines).
+function M.say(memory, situation)
+    if memory == nil or S.ai_lines == false or situation == nil then
+        return false
+    end
+    local id = (memory.persona or {}).id or "balanced"
+    local list = PS.lines(id, situation)
+    if list == nil or #list == 0 then
+        return false
+    end
+    local k = 1
+    if ai ~= nil and ai.random ~= nil then
+        k = ai.random(1, #list)
+    end
+    local text = list[k]
+    memory.voice = memory.voice or {}
+    memory.voice.said = (memory.voice.said or 0) + 1
+    local said = false
+    if ai ~= nil and ai.say ~= nil then
+        said = ai.say(text) ~= false
+    end
+    if not said then
+        print(string.format("voice: %s", text))
+    end
+    return true
 end
 
 return M

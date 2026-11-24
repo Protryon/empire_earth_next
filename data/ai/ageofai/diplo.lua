@@ -25,11 +25,13 @@
 local S = require("ageofai.settings")
 local V = require("lib.view")
 local PS = require("ageofai.personas")   -- [persona.c] the persona's traits (default 50)
+local VC = require("ageofai.voice")      -- [persona.c persona_say] the lines it says
 
 local D = {}
 
 -- the personality's traits, 0-100 (persona.c trait(): 50 without a personality; the port has no personalities)
 local TRAIT = {aggression = 50, loyalty = 50, pride = 50, greed = 50, forgiveness = 50, caution = 50}
+local cur_memory = nil   -- the step's memory, for the lines (voice.lua) the diplomacy says
 local OFFER_AI_MS = 120000      -- an offer to an AI: off unanswered after 2 minutes
 local KILLS_RECENT_MIN = 20     -- the victor: whoever destroyed the most of it in the last 20 minutes
 local OFFER_KIND_ALLY, OFFER_KIND_CAPIT, OFFER_KIND_BLOCK = 0, 1, 2
@@ -272,6 +274,7 @@ local function make_peace(M, p, now, me, why)
     M.peace_due[j] = 0
     M.peace_refused[j] = false
     opinion_add(M, j, 10)
+    VC.say(cur_memory, "peace")
 end
 
 local function declare_war(M, p, now, me, why)
@@ -286,6 +289,7 @@ local function declare_war(M, p, now, me, why)
     stance_note(me, j, true, why)
     M.ally_since[j] = 0
     M.offer_t[j] = 0
+    VC.say(cur_memory, "war")
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -588,12 +592,14 @@ local function offer_alliance(M, me, best, lead, now)
     M.offer_vs[best] = lead
     say("offer me=%d alliance to=%d against=%d opinion=%d ignored=%d", me, best, lead, math.floor(opinion(M, best)),
         g(M.offer_ignored, best))
+    VC.say(cur_memory, "alliance")
 end
 
 -- the betrayal of ally j: war on j - and with blocks on j's whole block (no one left to take sides)
 local function betray_now(M, P, by, me, j, now)
     local blk = blocks_on() and blocks_compute(M, P, by, me) or {}
     declare_war(M, by[j], now, me, "betrayal")
+    VC.say(cur_memory, "betrayal")
     if blocks_on() then
         for _, p in ipairs(P) do
             local k = p.id
@@ -717,6 +723,7 @@ local function capitulate(M, view, me, a, now)
     say("capitulate me=%d to=%d tribute=%d share=%d power=%d/%d close=%d buildings=%d/%d", me, a, total,
         math.floor(share * 100), math.floor(power_of(M, me, me)), math.floor(power_of(M, me, a)), g(M.ws.close, a),
         M.ws.my_buildings, M.ws.peak)
+    VC.say(cur_memory, "capitulation")
 end
 
 local function pay_promise(M, view, me, j)   -- what was offered, as far as the stock still has it
@@ -910,6 +917,7 @@ end
 
 function D.step(view, memory, events)
     if not S.diplomacy then return end
+    cur_memory = memory
     local me = ai.me()
     local M = memory.diplo
     if M == nil then
