@@ -8,9 +8,7 @@
 
 use core::ffi::{c_long, c_ulong};
 
-use crate::lle_cpp::{
-    Cpp, EeUiShimBytes as Bytes, EeUiShimU8Out as U8Out, EeUiShimULongOut as ULongOut, HostArgs,
-};
+use crate::lle_cpp::{Cpp, EeUiShimBytes as Bytes, EeUiShimU8Out as U8Out, EeUiShimULongOut as ULongOut, HostArgs};
 use crate::lle_manager::new_lock;
 use crate::obj::EeUiOp as Op;
 

@@ -153,7 +153,19 @@ pub unsafe extern "C" fn ee_ui_combo_host(
     f: *mut f32,
 ) -> isize {
     // SAFETY: the host contract, the arguments as given
-    unsafe { crate::lle_cpp::host(combo_call, &[crate::lle_hosts::base, crate::lle_hosts::part, crate::lle_hosts::combo], obj, op, a, b, c, d, f) }
+    unsafe {
+        crate::lle_cpp::host(
+            combo_call,
+            &[crate::lle_hosts::base, crate::lle_hosts::part, crate::lle_hosts::combo],
+            obj,
+            op,
+            a,
+            b,
+            c,
+            d,
+            f,
+        )
+    }
 }
 
 /// The constructor's arguments past the combo box (`UIComboBox::UIComboBox`).

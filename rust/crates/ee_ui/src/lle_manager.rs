@@ -9,8 +9,8 @@
 use core::ffi::c_long;
 
 use crate::lle_cpp::{
-    Cpp, EeUiShimF32Out as F32Out, EeUiShimPtrOut as PtrOut, EeUiShimText as Text,
-    EeUiShimULongOut as ULongOut, HostArgs,
+    Cpp, EeUiShimF32Out as F32Out, EeUiShimPtrOut as PtrOut, EeUiShimText as Text, EeUiShimULongOut as ULongOut,
+    HostArgs,
 };
 use crate::obj::EeUiOp as Op;
 

@@ -449,6 +449,7 @@ pub mod ui_game;
 pub(crate) mod ui_game_calls;
 #[cfg(not(test))]
 mod ui_game_ffi;
+pub(crate) mod ui_helpers;
 pub mod ui_ids;
 pub mod ui_manager;
 pub(crate) mod ui_manager_calls;
@@ -470,4 +471,3 @@ pub(crate) mod upgrade_calls;
 #[cfg(not(test))]
 mod upgrade_ffi;
 pub(crate) mod upgrade_ops;
-pub(crate) mod ui_helpers;

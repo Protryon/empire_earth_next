@@ -103,7 +103,19 @@ pub unsafe extern "C" fn ee_ui_edit_host(
     f: *mut f32,
 ) -> isize {
     // SAFETY: the host contract, the arguments as given
-    unsafe { crate::lle_cpp::host(edit_call, &[crate::lle_hosts::base, crate::lle_hosts::media, crate::lle_hosts::part, crate::lle_hosts::edit], obj, op, a, b, c, d, f) }
+    unsafe {
+        crate::lle_cpp::host(
+            edit_call,
+            &[crate::lle_hosts::base, crate::lle_hosts::media, crate::lle_hosts::part, crate::lle_hosts::edit],
+            obj,
+            op,
+            a,
+            b,
+            c,
+            d,
+            f,
+        )
+    }
 }
 
 #[cfg(test)]
