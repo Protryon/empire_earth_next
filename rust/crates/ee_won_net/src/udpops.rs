@@ -311,8 +311,15 @@ pub const EE_WON_UDP_BODY_PING: i32 = 2;
 /// A body's check read past the reply's end.
 pub const EE_WON_UDP_BODY_THREW: i64 = i64::MIN;
 
-const NO_BODY: EeWonUdpBody =
-    EeWonUdpBody { kind: 0, ctx: std::ptr::null_mut(), run: None, check: None, free: None, retry_limit: 0, timeout: 10000 };
+const NO_BODY: EeWonUdpBody = EeWonUdpBody {
+    kind: 0,
+    ctx: std::ptr::null_mut(),
+    run: None,
+    check: None,
+    free: None,
+    retry_limit: 0,
+    timeout: 10000,
+};
 
 /// `UDPManagerSendRecvOp`'s state and steps.
 pub struct EeWonUdpSendRecvOp {
@@ -803,7 +810,11 @@ pub unsafe extern "C" fn ee_won_udp_body_of(op: *mut c_void, kind: i32) -> *mut 
 /// # Safety
 /// `r` is live; `data` holds `length` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_udpsendrecvop_set_outgoing_bytes(r: *const EeWonUdpSendRecvOp, data: *const u8, length: usize) {
+pub unsafe extern "C" fn ee_won_udpsendrecvop_set_outgoing_bytes(
+    r: *const EeWonUdpSendRecvOp,
+    data: *const u8,
+    length: usize,
+) {
     // SAFETY: the caller's bytes
     obj!(r).set_outgoing_bytes(unsafe { crate::ffi::bytes(data, length) })
 }

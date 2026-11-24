@@ -162,7 +162,11 @@ unsafe extern "C" fn body_run(ctx: *mut c_void, _op: *mut c_void, r: *const crat
     unsafe { (*r).set_outgoing_bytes(&(*(ctx as *const EeWonUserStatus)).request()) }
 }
 // `RoutingGetUserStatusOp::CheckResponse` (2c6ab0): the reply read from the reader's position, which moves
-unsafe extern "C" fn body_check(ctx: *mut c_void, _op: *mut c_void, reader: *mut crate::buffer::EeWonReadBuffer) -> i64 {
+unsafe extern "C" fn body_check(
+    ctx: *mut c_void,
+    _op: *mut c_void,
+    reader: *mut crate::buffer::EeWonReadBuffer,
+) -> i64 {
     // SAFETY: the body's contract: the op's live map, a live reader over live bytes
     let (s, r) = unsafe { (&mut *(ctx as *mut EeWonUserStatus), &mut *reader) };
     let (status, pos) = s.reply(unsafe { ffi::bytes(r.data, r.length as usize) }, r.pos as usize);

@@ -1498,7 +1498,11 @@ pub extern "C" fn ee_won_pingop_new(
 }
 
 // `PingGameOp::RunHook`: the request built and handed to the host (`RequestSend`), before the base's run
-unsafe extern "C" fn ping_body_run(ctx: *mut c_void, op: *mut c_void, _r: *const ee_won_net::udpops::EeWonUdpSendRecvOp) {
+unsafe extern "C" fn ping_body_run(
+    ctx: *mut c_void,
+    op: *mut c_void,
+    _r: *const ee_won_net::udpops::EeWonUdpSendRecvOp,
+) {
     // SAFETY: the body's contract: the op's live members
     let x = unsafe { &*(ctx as *const EeWonPingOp) };
     x.obj.set(op);

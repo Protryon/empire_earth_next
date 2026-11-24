@@ -20,8 +20,9 @@ use std::ptr::null_mut;
 
 use crate::buffer::EeWonWriteBuffer;
 use crate::cppcore::{
-    bind_local, core, hold, n_bytes_adopt, n_op_completion, n_op_finish, n_op_mode, new_socket, ref_add, n_op_kill, n_op_run_async, n_op_set_completion, n_ref_add,
-    n_ref_release, object_of, op, queue, ref_release, socket, EeWonCoreObject, EeWonCoreSocketOp,
+    bind_local, core, hold, n_bytes_adopt, n_op_completion, n_op_finish, n_op_kill, n_op_mode, n_op_run_async,
+    n_op_set_completion, n_ref_add, n_ref_release, new_socket, object_of, op, queue, ref_add, ref_release, socket,
+    EeWonCoreObject, EeWonCoreSocketOp,
 };
 use crate::routeconn::{EeWonRouteConn, EeWonRouteConnHooks};
 use crate::routeop::*;
