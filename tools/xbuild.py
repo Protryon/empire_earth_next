@@ -649,6 +649,12 @@ WON_TESTS = {
     "won_platwin_test": [],
     # the GUI hosts' cases R6 WON round 33 composed in Rust (guisplit.rs) against the deleted cases over a stand-in world
     "won_guisplit33_test": [],
+    # ComponentConfig::ReadConfig_Unsafe in Rust (R6 WON round 34: cfgload.rs) against its original body over a stand-in
+    # world: the failure paths, the exceptions and the parse-time report no LAN game reaches; each host op mutated
+    "won_cfgload34_test": [],
+    # the config subclasses' bodies in Rust (R6 WON round 34: cfgbody.rs) against their original statements over a
+    # stand-in world: the branches the lobby's files never take; each host op mutated
+    "won_cfgbody34_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -941,6 +947,9 @@ WON_TESTS = {
     # ConfigObject whole in Rust (WON round 21): the original statements (tests/won/won_cfgobject_orig.h) against the
     # game's class over ee_won_net cfgobject.rs, random config files through one subclass on each
     "won_cfgobject_test": [WON_SRC / "WONConfig" / "ConfigObject.cpp"],
+    # R6 WON round 34's leaf classes (browserobj.rs, tipobj.rs, localize.rs: BrowserComponent, ListAreaToolTip,
+    # StringLocalize::GetStr) against the deleted C++ over a stand-in world, real GUIStrings and real page files
+    "won_leaf34_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]

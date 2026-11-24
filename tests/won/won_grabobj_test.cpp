@@ -55,6 +55,9 @@ struct RawImage32 {
     DWORD* mImageData;
     int GetWidth() { return mWidth; }
     int GetHeight() { return mHeight; }
+    DWORD* GetImageData() { return mImageData; }
+    void AddRef() {}
+    void Release() {}
 };
 static uint64_t Fnv(const DWORD* p, size_t n)
 {
@@ -382,18 +385,26 @@ void BackgroundGrabber::SizeChanged(Component* theComponent)
 }
 }
 
-// ---- the ported grabber: its C++ members and its host (BackgroundGrabber.cpp's, over the stand-ins)
+// ---- the ported grabber: its C++ members and its host (BackgroundGrabber.cpp's, over the stand-ins; R6 WON round 34:
+// its one-statement cases, copied as they are)
 struct PortGrabber {
     SmartPtr<NativeImage> mBGImage;
     SmartPtr<DebugWindow> mDebugWindow;
     EeWonGrabber* mRust;
 };
 typedef EeWonGrab Gb;
+// the raw image's reference the Rust grabber holds (the stand-ins count none)
+static intptr_t Held(RawImage32* inObject)
+{
+    inObject->AddRef();
+    return (intptr_t)inObject;
+}
 static intptr_t PortHost(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     PortGrabber* t = (PortGrabber*)inMe;
     Component* comp = (Component*)b;
     Graphics* g = (Graphics*)b;
+    RawImage32* raw = (RawImage32*)c;
     if (op != EeWonGuiOp::Grab) { T("bad op %d", (int)op); return 0; }
     switch ((Gb)a) {
     case Gb::LocalToRoot: comp->LocalToRoot(((int*)c)[0], ((int*)c)[1]); return 0;
@@ -404,53 +415,33 @@ static intptr_t PortHost(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intp
         return 0;
     }
     case Gb::CompSize: ((int*)c)[0] = comp->Width(); ((int*)c)[1] = comp->Height(); return 0;
-    case Gb::ImageSize:
-        if (t->mBGImage.get() == NULL)
-            return 0;
-        ((int*)c)[0] = t->mBGImage->GetWidth(); ((int*)c)[1] = t->mBGImage->GetHeight();
-        return 1;
+    case Gb::HasImage: return t->mBGImage.get() != NULL ? 1 : 0;
+    case Gb::ImageWidth: return t->mBGImage->GetWidth();
+    case Gb::ImageHeight: return t->mBGImage->GetHeight();
     case Gb::NewImage: t->mBGImage = comp->GetRoot()->CreateImage((int)c, (int)d); return 0;
     case Gb::FlagSet: return comp->ComponentFlagSet((int)c) ? 1 : 0;
     case Gb::DebugExists: return t->mDebugWindow.get() != NULL ? 1 : 0;
-    case Gb::DebugCreate: {
-        t->mDebugWindow = CreateNativeWindow();
-        t->mDebugWindow->SetParent(comp->GetRoot());
-        t->mDebugWindow->SetStyle(0x40);
-        WONRectangle aRect(0, 0, t->mBGImage->GetWidth(), t->mBGImage->GetHeight());
-        t->mDebugWindow->Create(aRect);
-        return 0;
-    }
-    case Gb::DebugShow: {
-        t->mDebugWindow->mRoot.get()->RemoveAllChildren();
-        t->mDebugWindow->AddComponent(new ImageComponent(t->mBGImage.get()));
-        int x = 0, y = 0;
-        comp->LocalToRoot(x, y);
-        WONRectangle aScreenRect;
-        comp->GetRoot()->GetRect(aScreenRect, false);
-        t->mDebugWindow->SetPosSize(x + aScreenRect.x, y + aScreenRect.y, -1, -1);
-        return 0;
-    }
+    case Gb::DebugNew: t->mDebugWindow = CreateNativeWindow(); return 0;
+    case Gb::DebugParent: t->mDebugWindow->SetParent(comp->GetRoot()); return 0;
+    case Gb::DebugStyle: t->mDebugWindow->SetStyle(0x40); return 0;
+    case Gb::DebugCreateAt: t->mDebugWindow->Create(WONRectangle(0, 0, (int)c, (int)d)); return 0;
+    case Gb::DebugRemoveAll: t->mDebugWindow->mRoot.get()->RemoveAllChildren(); return 0;
+    case Gb::DebugAddImage: t->mDebugWindow->AddComponent(new ImageComponent(t->mBGImage.get())); return 0;
+    case Gb::ScreenRect: comp->GetRoot()->GetRect(*(WONRectangle*)c, false); return 0;
+    case Gb::DebugPos: t->mDebugWindow->SetPosSize((int)c, (int)d, -1, -1); return 0;
     case Gb::DebugInvalidate: t->mDebugWindow->mRoot.get()->Invalidate(); return 0;
-    case Gb::Capture: {
-        NativeImage* anImage = comp->GetRoot()->GetOffscreenImage();
-        int x = 0, y = 0;
-        comp->RootToChild(x, y);
-        t->mBGImage->GetGraphics().DrawImage(anImage, x, y);
-        return 0;
-    }
+    case Gb::Offscreen: return (intptr_t)comp->GetRoot()->GetOffscreenImage();
+    case Gb::RootToChild: comp->RootToChild(((int*)c)[0], ((int*)c)[1]); return 0;
+    case Gb::CaptureDraw: t->mBGImage->GetGraphics().DrawImage((NativeImage*)c, ((const int*)d)[0], ((const int*)d)[1]); return 0;
     case Gb::BlendSupported: return g->BlendSupported() ? 1 : 0;
-    case Gb::Blend: {
-        const int* p = (const int*)d;
-        g->SetColor((int)c);
-        g->FillRectBlend(0, 0, p[0], p[1], p[2]);
-        return 0;
-    }
-    case Gb::Tint: {
-        SmartPtr<RawImage32> aRawImage = t->mBGImage->GetRaw();
-        ee_won_grab_tint(aRawImage->mImageData, (size_t)aRawImage->GetWidth() * aRawImage->GetHeight(), (int)c, (int)d);
-        g->DrawImage(aRawImage.get(), 0, 0);
-        return 0;
-    }
+    case Gb::SetColor: g->SetColor((int)c); return 0;
+    case Gb::FillBlend: g->FillRectBlend(0, 0, ((const int*)d)[0], ((const int*)d)[1], ((const int*)d)[2]); return 0;
+    case Gb::RawNew: return Held(t->mBGImage->GetRaw().get());
+    case Gb::RawPixels: return (intptr_t)raw->GetImageData();
+    case Gb::RawWidth: return raw->GetWidth();
+    case Gb::RawHeight: return raw->GetHeight();
+    case Gb::DrawRaw: g->DrawImage(raw, 0, 0); return 0;
+    case Gb::RawRelease: raw->Release(); return 0;
     default: T("bad grab %d", (int)a); return 0;
     }
 }

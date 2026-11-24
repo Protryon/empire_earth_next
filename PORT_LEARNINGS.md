@@ -40063,3 +40063,142 @@ after both (339).
 | `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12289` units [4, 38, 38] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2762 joiner=2755`, GATES PASS |
 
 Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds.
+
+## R6 WON GUI, round 34: the component configs composed in Rust (ReadConfig_Unsafe, the config host, the table setters, the config subclasses' bodies), BrowserComponent whole, the leaf classes' paints, the SDK enums as Rust's (ee_won_gui cfgload.rs, cfgcomp.rs, cfgbody.rs, browserobj.rs, tipobj.rs, localize.rs, leafpaint.rs, guienum.rs; branch rust-wongui34, 2026-11-23)
+
+The first round of the WON lane's GUI half (the lobby, network and game glue are a parallel lane's). The parent
+built the capture base exe from the base commit at the start (round 33's lesson), wrote the briefs and the SDK enum
+move; two forks in their own worktrees with disjoint files moved code: cfg (the component configs) and leaf (the
+leaf classes). The aim was -1,200 C++ logic lines.
+
+### What moved (logic: `logic_lines.py` over the whole tree, from ab1b33bcb)
+
+| Part | What | Logic |
+|---|---|---|
+| cfg 62080a0fb | **no move**: WONCompCfg.inl's one-call guarded cases as one statement each (CC_G, CC_GV) | -9 |
+| cfg 4152e9799 | compcfg.rs: the config host's compound cases composed over one-statement ops (references by kind, the component edges, the decodes, the allocators' factories, the group start's strings, the font and image casts, SetText); the configs and resource groups found in a Rust registry under their `ConfigObject*` in place of `dynamic_cast` (the CfgObj and ResObj ops gone); GetNamedValue's WON frame paddings, GetPredefinedComponent and the WON skin's PreParse; the readers one statement each through a typed `CcGet<T>` (about -23 of this is that de-duplication) | -96 |
+| cfg 027442f0a | cfgload.rs: ComponentConfig::ReadConfig_Unsafe over WONCfgLoad.inl's one-statement ops; golden won_cfgload34_test | -17 |
+| cfg 9055665c3, 6e37f2578 | cfgcomp.rs: WONCfgTable.inl's compound setters and reads and Virtual24's walk over `CfgTabOp` / `CfgKeyHost` | -84 |
+| cfg 31c79ac95 | cfgbody.rs: the config subclasses' bodies (ContainerConfigGroups, ComponentLayoutConfigs, FontConfig, ImageConfig) over WONCfgBody.inl; golden won_cfgbody34_test | -68 |
+| cfg 6d37cdaf2 | compcfg.rs: the selection colour's mode, the background's members, ComponentConfigMissing's message | -15 |
+| leaf 2d36a5c62 | BrowserComponent whole in Rust (browserobj.rs: the view, scroller, font size, flags and location; Go, ShowFiles, ReadPage, Refresh, Reset, SetPageText, SetScroller, AddedToParent, SetTransparent); the C++ class a shim | -73 |
+| leaf 4accc6995 | ListAreaToolTip's Paint, DoTip and EndTip (tipobj.rs) | -29 |
+| leaf 89bd6053b | StringLocalize::GetStr (localize.rs); the class and WONStringLocalize.h gone | -38 |
+| leaf ca6271129, 23c2c9375, ab9d5fad6 | the measures and paints of ImageButton, TextListItem, MenuItem, Background::Paint, ComponentListItem's size, viewport and place (leafpaint.rs) | -76 |
+| leaf 4c1d59896 | BackgroundGrabber's host one statement per op, its runs composed in grabobj.rs | -33 |
+| leaf b83f498f0, bdee6dbeb | **no move, dead code**: ComponentListItem's empty CheckInvalid and its six calls; MSGraphicsUtil's four unused draws | -23 |
+| parent fd6df59e5 | the SDK enums (LobbyGameType, ControlIdType, Direction, HorzAlign, VertAlign, PopupFlags, StandardCursor, StandardColor, MouseButton, ForegroundSelectionMode, ScrollbarCondition, ScrollButtonCondition, FontStyles, ListSortType, HTMLFontSize) as Rust's `#[repr(C)]` enums (guienum.rs, `cbindgen:enum-class=false`): plain C++ enums with the C++ enumerator names, the types `EeWonGui*` named in WONAPI by one typedef each | -63 |
+
+Round total: 30,337 -> 29,713 (**-624**; -592 without the respelling and the dead code). Shim lines 42,700 ->
+43,162. Per file: WONCompCfg.inl 156 -> 40, WONCfgTable.inl 173 -> 89, ComponentConfigHost.cpp 52 -> 14,
+ConfigTableHost.cpp 27 -> 11, ContainerConfigGroups.cpp 20 -> 1, ComponentLayoutConfigs.cpp 21 -> 1, FontConfig.cpp
+21 -> 5, ImageConfig.cpp 16 -> 5, BrowserComponent.cpp 69 -> 8, ListAreaToolTip.cpp 33 -> 8, StringLocalize.cpp 27 ->
+1, ImageButton.cpp 28 -> 12, TextListItem.cpp 27 -> 8, MenuBehavior.cpp 25 -> 6, BackgroundGrabber.cpp 54 -> 21,
+Background.cpp 43 -> 25, ComponentListItemAdapters.cpp 29 -> 7, WONLobbyGUI.h 912 -> 829; new WONCfgLoad.inl 17,
+WONCfgBody.inl 13. The tip (d665ab1c6, with batches 19 and 20 merged): 23,996, against origin/rust 49707901b's
+24,620 the same -624 (after batch 19 alone: 4a255ad0d 29,674 -> ed19e1287 28,068, a difference that also holds
+round 33, which that origin/rust lacked).
+
+Classes (`classes_tree.py`, which misses classes declared with an export macro): 730 -> 729, StringLocalize gone;
+the tip 714 (origin/rust 49707901b 715). BrowserComponent, ListAreaToolTip and the config classes stay as C++
+shims over their Rust objects.
+
+### Proof
+
+- LAN-reached (every lobby open): the config host's ops, the readers, the table compositions, the subclass bodies,
+  ReadConfig_Unsafe's success path, the paints. The LAN game and lan_capture_compare against the base exe built from
+  ab1b33bcb in this session (build/w34base, its run build/w34lanA): every lobby capture identical but one staging
+  caret (15 pixels at x 121..122, y 329..344: the joiner's staging screen in the run before the batch 20 merge, the
+  host's ready screen in the merged tip's run). Round 33's host-lobby-open pointer frame did not show: the base
+  built in the same session gave the same frame.
+- Goldens (tests/won, wontest), each the deleted C++ at ab1b33bcb against the Rust over a logging world:
+  won_cfgload34_test (ReadConfig_Unsafe's failure paths, exceptions and the SHOWPARSETIME report: 20,000 runs, 0
+  mismatches, 23 of 23 host-op mutations), won_cfgbody34_test (30,000 runs, 0 mismatches, 43 of 43), won_leaf34_test
+  (BrowserComponent, the tool tip, GetStr, the paints, Background, ComponentListItem: 4,000 + 6,000 + 6,000 + 60,000
+  cases, 217,966 calls, 0 mismatches, 98 of 98 host-op mutations and 6 of 6 hand mutations of the Rust); updated:
+  won_compcfg_test (3,000 runs; ComponentConfigMissing 4,000 cases), won_cfgtab_test (383,620 checks, golden_cfgtab.txt
+  byte for byte), won_grabobj_test (1,600,000 checks, 6 of 6 hand mutations). The cfgcomp compositions rest on
+  won_cfgtab_test and the LAN game (no hand mutations).
+
+### Lessons
+
+- **No C++ exception crosses a Rust frame, again.** Each host op whose statement can throw runs under a per-host guard
+  that keeps the exception and clears `ok`; the Rust gives its host-made locals (strings, SmartPtr and
+  SoundDescriptor holders: ops that `new` and `delete`) back in the original's unwinding order and the one-statement
+  C++ entry rethrows. Where the original caught ConfigObjectException itself (ReadConfig_Unsafe around the glue and
+  the init), a catch op answers CAUGHT and the Rust takes the original's catch branch.
+- **A golden whose driver wraps the host mutates every op without a rebuild**: skip the op, flip or bump its answer,
+  run a pointer-making op twice. Mutate held-reference ops by doubling them, not by skipping: a skipped AddRef frees an
+  object its container still holds and the driver dies instead of mismatching. Make the world's texts counted
+  objects, or a skipped free goes unseen.
+- **The original's argument evaluation order is observable**: clang-cl evaluated snprintf's arguments right to left
+  (the parse-time report's three timer reads); the golden's trace showed it and the Rust keeps it.
+- **A `dynamic_cast` to the base config is a Rust registry**: each ComponentConfig makes its Rust object under its
+  `ConfigObject*`. Subclass casts (FontConfig, ImageConfig, ScrollArea, StretchImage) stay one-statement ops.
+- **A class with no data of its own needs no Rust record**: the tool tip and the paints are `ee_won_*_call(me, host,
+  call, ...)` with a stack object per call.
+- **Rust enums for a namespaced C++ header**: cbindgen puts them at global scope. With `Ee`-prefixed type names and
+  the C++ enumerator names as variants nothing collides (no `WONAPI::Enumerator` qualification existed); the types
+  are typedefs in WONAPI, so overloads and declarations read as before. The goldens' worlds keep their own copies in
+  their namespaces.
+- guidraw.rs's tiled `background` divides by the image width (as the x86 original faulted): world images must be at
+  least one pixel. A stand-in for WONDrawOps must ask again at the plan's length (a tiled background makes more than
+  64 operations).
+- Tooling: the Bash tool's heredocs turn `\\` into `\` (write scripts with the Write tool or use `chr(92)`);
+  `subprocess.run(input=str, text=True)` writes CR LF on Windows (pass bytes to `git apply`); open files with
+  `newline=""` to keep a file's line ends. The disk filled during the round (several lanes' capture chains):
+  `CARGO_INCREMENTAL=0` for cargo test, delete build/rust/debug/incremental after each Rust gate and each
+  build/sim_capture run after its check.
+- The batch 19 merge: `git merge-file --union` on PORT_LEARNINGS duplicated round 32's section (both sides had edited
+  it: ours removed a stale conflict block, theirs replaced it with the core 9 merge's notes, which also have their own
+  section); scratchpad plunion.py (a section union, ours for a section both edited) gave the clean file.
+- A final chain is for the tip that will be merged: the first chain (build/w34_chain.log, on ed19e1287, all passed)
+  ended as batch 20 reached origin/rust; after that merge the whole chain ran again (build/w34m_chain.log), the LAN
+  captures still against the base exe's run.
+
+### Behaviour changes
+
+- BrowserComponent::GetCurStatus returns the empty string (the member it read was never set).
+- GetStr's result is always a new GUIStringData, never the shared empty one (same content).
+- A background is built as a fresh `Background` with each member assigned (the same value; another order of
+  reference counts).
+
+### Left
+
+- WONLobbyGUI.h (829): declarations of classes C++ still holds by name (Component, Container, Window, WindowManager,
+  Graphics, the lists); whole-class moves only, most need the lobby lane's files.
+- GuiHost.cpp (175), GuiShell.cpp and WONGUIShell.h, PlatWindowManager.cpp, PlatGUIWindow.cpp, Window.cpp,
+  WindowManager.cpp, ComponentLifetime.cpp, Graphics.cpp (the parent's planned share this round, not reached).
+- The config side: WONCfgTable.inl's 29-line alias enum; the two-statement key-struct forwards (a fifth
+  `ee_won_cc_call` argument); the sequential constructors (ContainerConfig, ComponentConfigInit, FontConfig);
+  RunTable's frame and CfgTabRead's try/catch; ContainerConfigGroups.cpp and ComponentLayoutConfigs.cpp as units
+  (link/won/units.txt).
+- The leaf side: TabCtrl's constructor parts (its own host), Cursor/CursorRef's table, PlatNativeImage's Wrap and
+  New* runs, SkinnedContainers' two-statement cases, Background's Init and constructors.
+
+### The merges
+
+The two forks (--no-ff, clean: disjoint files), then origin/rust 4a255ad0d (batch 19) and 49707901b (batch 20), each
+with the same two conflicts: rust/cbindgen.toml (the export lists' union) and PORT_LEARNINGS.md (a section union).
+include/rust regenerated after batch 19 (ed19e1287: guienum.h; 334 headers), current after batch 20 (335).
+
+### Gates (the merged tip d665ab1c6; build/w34m_chain.log)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 8 --sim` | 0 / 0 (EE-AOC 412 inputs, EE-SIM 413) |
+| `build.py --test-profile windowed-software` | 0 / 0 (412 inputs) |
+| `rust_build.py header` | 335 headers current |
+| `rust_build.py gate` | PASS, 6,572 tests (0 failed, 8 ignored) |
+| `won_host_coverage.py` | PASS |
+| oracle against the main checkout's `ref` | seeds 2-7, `oracle: PASS` |
+| `xbuild.py wontest` | exit 0, each of the 174 programs exits 0 (won_cfgload34 20,000 runs and 23/23, won_cfgbody34 30,000 and 43/43, won_leaf34 217,966 calls and 98/98, won_compcfg 3,000 + 4,000, won_cfgtab 383,620 checks, won_grabobj 1,600,000, won_cfgset 244,000, won_guisplit33 39/39, won_split32 81/81) |
+| the 12 capture profiles (the default seeds) | PASS each: oracle 598, late 598, space 590, calamity 623, units 510, effects 18, missile 66, app 38, scenario 113, groups 6, placement 4, transport 185 digests equal |
+| saveload | plain seeds 2-7 `--at 600,1350,2100 --expect`: 18/18 identical, `saveload expect: PASS`; matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` |
+| `scenario_check.py` | PASS 27/27 |
+| `eedata check`, `cppgate` | PASS, PASS |
+| LAN game (slot.py) | `RESULT PASS lan-game` PT host 2902 / joiner 2892 (the base exe 2793 / 2787) |
+| `lan_capture_compare.py` against build/w34lanA (ab1b33bcb built this session) | every lobby capture identical but host-staging-ready's caret (15 pixels at x 121..122, y 329..344) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12551` units [4, 38, 39] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2706 joiner=2706`, GATES PASS |
+
+Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds.

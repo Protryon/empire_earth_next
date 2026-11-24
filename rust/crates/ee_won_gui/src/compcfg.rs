@@ -24,7 +24,7 @@
 //! entry returns 2, the C++ rethrowing it. No Rust reference to an object lives across a host op (they re-enter).
 
 use std::cell::{Cell, RefCell};
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 use std::sync::Mutex;
 
 use ee_won_net::cfgobject::EeWonCfgStringParser;
@@ -34,6 +34,7 @@ use ee_won_net::ffi_parse::{
 };
 use ee_won_net::strcase::compare_no_case;
 
+use crate::cfgkind::{self, EeWonCfgKind};
 use crate::guicfg::{self, ExprSource};
 use crate::guiconf::*;
 use crate::guistring;
@@ -44,91 +45,171 @@ type WChar = u16;
 type WChar = u32;
 const WCHAR_SIZE: u32 = std::mem::size_of::<WChar>() as u32;
 
-/// The host's ops. `c` is a C++ object (a `ConfigObject*` for a config or resource group, an `Image*`, ...); texts
-/// are a pointer and a length; `ok` is cleared by an op that threw (its exception kept in the frame).
+/// The host's ops, each one C++ statement (R6 WON round 34: the compound cases' decisions are the Rust's). `c` is a
+/// C++ object (a `ConfigObject*` for a config or resource group, an `Image*`, ...); texts are a pointer and a length;
+/// `ok` is cleared by an op that threw (its exception kept in the frame).
 #[repr(i32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeWonCcOp {
-    /// `c->AddRef()` (`b` > 0) or `c->Release()` of the object of kind `a` (`EeWonCcKind`).
-    Ref = 0,
+    /// `c->AddRef()` of a config or resource group.
+    CfgAddRef = 0,
+    /// `c->Release()` of a config or resource group.
+    CfgRelease,
+    /// `((Image*)c)->AddRef()`.
+    ImageAddRef,
+    /// `((Image*)c)->Release()`.
+    ImageRelease,
+    /// `((Font*)c)->AddRef()`.
+    FontAddRef,
+    /// `((Font*)c)->Release()`.
+    FontRelease,
+    /// `((Sound*)c)->AddRef()`.
+    SoundAddRef,
+    /// `((Sound*)c)->Release()`.
+    SoundRelease,
+    /// `((Component*)c)->AddRef()`.
+    CompAddRef,
+    /// `((Component*)c)->Release()`.
+    CompRelease,
     /// The frame's message: `a` bytes, `b` long (the C++ throws `ConfigObjectException` with it).
-    SetMessage = 1,
-    /// The Rust object of config `c` (`dynamic_cast<ComponentConfig*>`), NULL for another object.
-    CfgObj = 2,
-    /// The Rust object of resource group `c`.
-    ResObj = 3,
+    SetMessage,
     /// The Rust object of `ComponentConfig::mResourceConfigTable`, NULL for none.
-    CurTable = 4,
+    CurTable,
     /// `c->mParent` (a `ConfigObject*`, NULL for none).
-    Parent = 5,
+    Parent,
     /// `c->mParent = a`.
-    SetParent = 6,
+    SetParent,
     /// `c->mName` appended to the `Vec<u8>` at `a` (`ee_won_cc_append`).
-    Name = 7,
-    /// `c->mBaseName`, the same way.
-    BaseName = 8,
+    Name,
+    /// `c->mName` = `a`, `b` bytes.
+    SetName,
+    /// `c->mBaseName`, as `Name`.
+    BaseName,
+    /// Config `c`'s kind (`mKind`, an `EeWonCfgKind`).
+    Kind,
     /// Config `c`'s flag `a` (0 `mHasSetWidth`, 1 `mHasSetHeight`, 2 `mHaveInitedComponents`).
-    Flag = 9,
+    Flag,
     /// Flag `a` of config `c` = `b`.
-    SetFlag = 10,
-    /// `c->mComponent`'s Left, Right, Top, Bottom, Width or Height (`a` 0..5).
-    CompEdge = 11,
+    SetFlag,
+    /// `c->mComponent->Left()`.
+    CompLeft,
+    /// `c->mComponent->Right()`.
+    CompRight,
+    /// `c->mComponent->Top()`.
+    CompTop,
+    /// `c->mComponent->Bottom()`.
+    CompBottom,
+    /// `c->mComponent->Width()`.
+    CompWidth,
+    /// `c->mComponent->Height()`.
+    CompHeight,
     /// `c->mComponent->GetDesiredSize(w, h)` into the two ints at `a`.
-    CompDesired = 12,
+    CompDesired,
     /// `c->mComponent->SetSize(a, b)`.
-    CompSetSize = 13,
+    CompSetSize,
     /// `c->mComponent->SetWantGrabBG(true)`.
-    CompWantGrab = 14,
+    CompWantGrab,
     /// `c->mComponent->InitComponent(ComponentConfigInit(c))`.
-    CompInit = 15,
+    CompInit,
     /// `c->mComponent.get()`.
-    CompOf = 16,
+    CompOf,
+    /// The part `a` (`EeWonCfgPart`) of component `c` (borrowed).
+    CompPart,
+    /// `WONShell::Op(c, GetFrameBorder, a)` of component `c`.
+    CompFrameBorder,
+    /// `CfgNewOfKind(a)`: a new config of kind `a`, as its `ComponentConfig*` (no reference).
+    NewOfKind,
+    /// The `ConfigObject*` of the `ComponentConfig*` `c`.
+    AsObject,
+    /// The game's skin made when there is none (`ee_won_skin_ensure`).
+    SkinEnsure,
     /// `c->GetNamedValue(key, *d)`: `a`, `b` the key; true when it answered.
-    VNamed = 17,
+    VNamed,
     /// `c->CallNamedFunction(key, params, *out)` over the `EeWonCcCallArgs` at `a`.
-    VCall = 18,
-    /// `c->GetPredefinedComponent(name, config, component)`: `a`, `b` the name, the two pointers at `d`.
-    VPredefined = 19,
+    VCall,
+    /// `c->GetPredefinedComponent(name, config, component)`: `a`, `b` the name, the two pointers at `d` (the
+    /// config a `ComponentConfig*`).
+    VPredefined,
     /// `c->SetComponent(a)`.
-    VSetComponent = 20,
+    VSetComponent,
     /// `c->Virtual24(key)`: `a`, `b` the key.
-    V24 = 21,
+    V24,
     /// `c->ConfigObject::HandleInstruction(a, type)`: `b`, `d` the type.
-    CoHandleInstruction = 22,
+    CoHandleInstruction,
     /// `c->ConfigObject::HandleValueInstruction(a, key, *e)`: `b`, `d` the key, `e` the `StringParser*`.
-    CoHandleValue = 23,
-    /// `c->ReadGroupStart(*a, name, inherited)` into the `Vec<u8>`s at `b` and `d`.
-    ReadGroupStart = 24,
+    CoHandleValue,
+    /// A new empty `std::string` (the host's local).
+    StrNew,
+    /// `std::string` `c` appended to the `Vec<u8>` at `a`.
+    StrTake,
+    /// `std::string` `c` deleted.
+    StrFree,
+    /// `c->ReadGroupStart(*a, name, inherited)` into the `std::string`s `b` and `d`.
+    ReadGroupStart,
     /// `c->ParseGroup(*a, ...)` with the four flags of `b` (bit 0 the first).
-    ParseGroup = 25,
+    ParseGroup,
     /// `c->ParseChild(*a, b, flag 0, flag 1)` with the flags of `d`.
-    ParseChild = 26,
+    ParseChild,
     /// `c->IncludeGroup(*a, name)`: `b`, `d` the name.
-    IncludeGroup = 27,
+    IncludeGroup,
     /// `((ConfigParser*)c)->AddWarning(text)`: `a`, `b` the text.
-    AddWarning = 28,
-    /// A FontConfig's font: -1 when `c` is no FontConfig, else `GetFont()` (borrowed, may be NULL).
-    AsFont = 29,
-    /// An ImageConfig's image (`a` raw: `GetRawImage()`): -1 when `c` is no ImageConfig, else the image with a
-    /// reference for the caller (NULL for none).
-    AsImage = 30,
-    /// A decode of file `a`, `b` long: a raw image (`d` nonzero: the window's `DecodeImageRaw`) or a delay-loaded
-    /// one (the window manager's `DecodeDelayImage`), with a reference for the caller, NULL when it failed.
-    DecodeImage = 31,
+    AddWarning,
+    /// Whether `c` is a FontConfig (`dynamic_cast`).
+    IsFontCfg,
+    /// FontConfig `c`'s `GetFont()` (borrowed, may be NULL).
+    FontOf,
+    /// Whether `c` is an ImageConfig (`dynamic_cast`).
+    IsImageCfg,
+    /// ImageConfig `c`'s `GetImage()` with a reference for the caller (NULL for none).
+    ImageOf,
+    /// ImageConfig `c`'s `GetRawImage()` with a reference for the caller (NULL for none).
+    RawImageOf,
+    /// The window's `DecodeImageRaw` of file `a`, `b` long, with a reference for the caller, NULL when it failed.
+    DecodeRaw,
+    /// The window manager's `DecodeDelayImage` of file `a`, `b` long, as `DecodeRaw`.
+    DecodeDelay,
     /// `Window::GetDefaultWindow()->GetFont(FontDescriptor(face, d, e))`, the face `a`, `b` long: a reference.
-    FontGet = 32,
-    /// The window manager's `DecodeSound` of path `a`, `b` long, with the flags `d` set when `e`: a reference.
-    SoundDecode = 33,
-    /// `*(Background*)c` = the background of the `EeWonCcBackground` at `a`.
-    BgMake = 34,
-    /// The factories `a` (config) and `b` (component) called, the two results with a reference each at `d`.
-    Alloc = 35,
+    FontGet,
+    /// A new `SoundDescriptor` (the host's local).
+    SoundDescNew,
+    /// `SoundDescriptor` `c`'s `SetSoundFlags(a, true)`.
+    SoundDescFlags,
+    /// `SoundDescriptor` `c`'s path = `a`, `b` bytes.
+    SoundDescPath,
+    /// The window manager's `DecodeSound(*c)`: a reference, NULL when it failed.
+    SoundDecode,
+    /// `SoundDescriptor` `c` deleted.
+    SoundDescFree,
+    /// `*(Background*)c` = `Background()`.
+    BgReset,
+    /// `((Background*)c)->mImage = (Image*)a`.
+    BgImage,
+    /// `((Background*)c)->mColor = a`.
+    BgColor,
+    /// `((Background*)c)->mBorderColor = a`.
+    BgBorder,
+    /// `((Background*)c)->mUseOffsets = a != 0`.
+    BgOffsets,
+    /// `((Background*)c)->mStretchImage = a != 0`.
+    BgStretch,
+    /// `((Background*)c)->mWantGrabBG = a != 0`.
+    BgGrab,
+    /// The config factory `a` called: its config with a reference (`ConfigObject*`, NULL for none).
+    AllocConfig,
+    /// The component factory `a` called: its component with a reference (NULL for none).
+    AllocComp,
     /// The glue function `a` called with table `c`.
-    Glue = 36,
-    /// A new `ResourceConfig` named `a`, `b` long, with a reference.
-    NewRes = 37,
-    /// `*(GUIString*)c` = the `a` units, `b` long.
-    SetText = 38,
+    Glue,
+    /// A new `ResourceConfig` with a reference.
+    NewRes,
+    /// `*(GUIString*)c` = the `a` `wchar_t` units, `b` long.
+    SetText,
+    /// `*(SelectionColor*)c` = `SelectionColor(a, b)` (a foreground colour).
+    SelFore,
+    /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_InvertOriginalColor)`.
+    SelInvert,
+    /// `*(SelectionColor*)c` = `SelectionColor(a, ForegroundSelectionMode_UseOriginalColor)`.
+    SelOriginal,
 }
 
 /// What a `Ref` op counts.
@@ -227,12 +308,12 @@ impl Cx {
     }
     fn hold(&self, kind: EeWonCcKind, p: *mut c_void) {
         if !p.is_null() {
-            self.call(EeWonCcOp::Ref, p, kind as isize, 1, 0, 0);
+            self.call(ref_op(kind, true), p, 0, 0, 0, 0);
         }
     }
     fn release(&self, kind: EeWonCcKind, p: *mut c_void) {
         if !p.is_null() {
-            self.call(EeWonCcOp::Ref, p, kind as isize, -1, 0, 0);
+            self.call(ref_op(kind, false), p, 0, 0, 0, 0);
         }
     }
     fn bytes(&self, op: EeWonCcOp, c: *mut c_void) -> Vec<u8> {
@@ -240,21 +321,100 @@ impl Cx {
         self.call(op, c, &mut v as *mut Vec<u8> as isize, 0, 0, 0);
         v
     }
+    /// The Rust object of config `c` (the original's `dynamic_cast<ComponentConfig*>`: every ComponentConfig makes
+    /// its object, registered under its `ConfigObject*`), None for another object.
     fn cfg(&self, c: *mut c_void) -> Option<&EeWonCompCfg> {
-        let p = self.call(EeWonCcOp::CfgObj, c, 0, 0, 0, 0) as *const EeWonCompCfg;
+        let p = registered(&CONFIGS, c) as *const EeWonCompCfg;
         // SAFETY: the config's own object, alive while the config is (the caller holds the config)
         unsafe { p.as_ref() }
     }
+    /// The Rust object of resource group `c`.
     fn res(&self, c: *mut c_void) -> Option<&EeWonResCfg> {
-        let p = self.call(EeWonCcOp::ResObj, c, 0, 0, 0, 0) as *const EeWonResCfg;
+        let p = registered(&GROUPS, c) as *const EeWonResCfg;
         // SAFETY: as `cfg`
         unsafe { p.as_ref() }
+    }
+    /// The component edge `k` (0 left, 1 right, 2 top, 3 bottom, 4 width, 5 height) of config `c`.
+    fn edge(&self, c: *mut c_void, k: isize) -> i32 {
+        const EDGES: [EeWonCcOp; 6] = [
+            EeWonCcOp::CompLeft,
+            EeWonCcOp::CompRight,
+            EeWonCcOp::CompTop,
+            EeWonCcOp::CompBottom,
+            EeWonCcOp::CompWidth,
+            EeWonCcOp::CompHeight,
+        ];
+        self.call(EDGES[k.clamp(0, 5) as usize], c, 0, 0, 0, 0) as i32
+    }
+    /// A host `std::string` local's bytes, the local deleted.
+    fn take_str(&self, s: *mut c_void) -> Vec<u8> {
+        let mut v: Vec<u8> = Vec::new();
+        self.call(EeWonCcOp::StrTake, s, &mut v as *mut Vec<u8> as isize, 0, 0, 0);
+        self.call(EeWonCcOp::StrFree, s, 0, 0, 0, 0);
+        v
+    }
+    /// `c->ReadGroupStart(*parser, name, inherited)`: whether a group starts, its name and inherited group (the
+    /// host's two string locals given back however the read ends).
+    fn read_group_start(&self, c: *mut c_void, parser: isize) -> R<(bool, Vec<u8>, Vec<u8>)> {
+        let n = self.call(EeWonCcOp::StrNew, std::ptr::null_mut(), 0, 0, 0, 0);
+        let i = self.call(EeWonCcOp::StrNew, std::ptr::null_mut(), 0, 0, 0, 0);
+        let r = self.op(EeWonCcOp::ReadGroupStart, c, parser, n, i, 0);
+        let (name, inherited) = (self.take_str(n as *mut c_void), self.take_str(i as *mut c_void));
+        Ok((r? != 0, name, inherited))
     }
     fn table(&self) -> Option<&EeWonResTable> {
         let p = self.call(EeWonCcOp::CurTable, std::ptr::null_mut(), 0, 0, 0, 0) as *const EeWonResTable;
         // SAFETY: the static SmartPtr's table, alive during the parse
         unsafe { p.as_ref() }
     }
+}
+
+/// The ops that count a reference of an object of `kind` (a resource group is a config object).
+fn ref_op(kind: EeWonCcKind, add: bool) -> EeWonCcOp {
+    use EeWonCcOp as O;
+    match (kind, add) {
+        (EeWonCcKind::Config | EeWonCcKind::Res, true) => O::CfgAddRef,
+        (EeWonCcKind::Config | EeWonCcKind::Res, false) => O::CfgRelease,
+        (EeWonCcKind::Image, true) => O::ImageAddRef,
+        (EeWonCcKind::Image, false) => O::ImageRelease,
+        (EeWonCcKind::Font, true) => O::FontAddRef,
+        (EeWonCcKind::Font, false) => O::FontRelease,
+        (EeWonCcKind::Sound, true) => O::SoundAddRef,
+        (EeWonCcKind::Sound, false) => O::SoundRelease,
+        (EeWonCcKind::Component, true) => O::CompAddRef,
+        (EeWonCcKind::Component, false) => O::CompRelease,
+    }
+}
+
+/// The configs' and the resource groups' Rust objects by their C++ `ConfigObject*` (each made by the object's
+/// constructor and forgotten by its destructor).
+static CONFIGS: Mutex<Vec<(usize, usize)>> = Mutex::new(Vec::new());
+static GROUPS: Mutex<Vec<(usize, usize)>> = Mutex::new(Vec::new());
+
+fn registry(m: &Mutex<Vec<(usize, usize)>>) -> std::sync::MutexGuard<'_, Vec<(usize, usize)>> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
+}
+fn register(m: &Mutex<Vec<(usize, usize)>>, this_: *mut c_void, o: usize) {
+    let mut r = registry(m);
+    match r.binary_search_by_key(&(this_ as usize), |e| e.0) {
+        Ok(i) => r[i].1 = o,
+        Err(i) => r.insert(i, (this_ as usize, o)),
+    }
+}
+fn unregister(m: &Mutex<Vec<(usize, usize)>>, this_: *mut c_void, o: usize) {
+    let mut r = registry(m);
+    if let Ok(i) = r.binary_search_by_key(&(this_ as usize), |e| e.0) {
+        if r[i].1 == o {
+            r.remove(i);
+        }
+    }
+}
+fn registered(m: &Mutex<Vec<(usize, usize)>>, this_: *mut c_void) -> usize {
+    if this_.is_null() {
+        return 0;
+    }
+    let r = registry(m);
+    r.binary_search_by_key(&(this_ as usize), |e| e.0).map_or(0, |i| r[i].1)
 }
 
 /// Appends bytes to the `Vec<u8>` at `v` (the host's way to hand back a name).
@@ -839,14 +999,15 @@ pub fn safe_read_sound(cx: &Cx, sp: Sp) -> R<*mut c_void> {
         path = sp.read_string(false);
     }
     let file = resource_file(&path);
-    let s = cx.op(
-        EeWonCcOp::SoundDecode,
-        std::ptr::null_mut(),
-        file.as_ptr() as isize,
-        file.len() as isize,
-        flags,
-        has_flags as isize,
-    )? as *mut c_void;
+    // the original's local SoundDescriptor: its flags (when the value had them), its path, the decode
+    let desc = cx.call(EeWonCcOp::SoundDescNew, std::ptr::null_mut(), 0, 0, 0, 0) as *mut c_void;
+    if has_flags {
+        cx.call(EeWonCcOp::SoundDescFlags, desc, flags, 0, 0, 0);
+    }
+    cx.call(EeWonCcOp::SoundDescPath, desc, file.as_ptr() as isize, file.len() as isize, 0, 0);
+    let s = cx.op(EeWonCcOp::SoundDecode, desc, 0, 0, 0, 0);
+    cx.call(EeWonCcOp::SoundDescFree, desc, 0, 0, 0, 0);
+    let s = s? as *mut c_void;
     if s.is_null() {
         return msg(&[b"Failed to decode sound: ", &file]);
     }
@@ -854,14 +1015,8 @@ pub fn safe_read_sound(cx: &Cx, sp: Sp) -> R<*mut c_void> {
 }
 
 fn decode(cx: &Cx, file: &[u8], raw: bool) -> R<*mut c_void> {
-    Ok(cx.op(
-        EeWonCcOp::DecodeImage,
-        std::ptr::null_mut(),
-        file.as_ptr() as isize,
-        file.len() as isize,
-        raw as isize,
-        0,
-    )? as *mut c_void)
+    let op = if raw { EeWonCcOp::DecodeRaw } else { EeWonCcOp::DecodeDelay };
+    Ok(cx.op(op, std::ptr::null_mut(), file.as_ptr() as isize, file.len() as isize, 0, 0)? as *mut c_void)
 }
 
 /// `SafeReadImage`: a path decoded as a delay-loaded image (a reference).
@@ -940,8 +1095,8 @@ impl EeWonResTable {
         if let Some(&g) = self.groups.borrow().get(name) {
             return (g, true);
         }
-        let g = cx.call(EeWonCcOp::NewRes, std::ptr::null_mut(), name.as_ptr() as isize, name.len() as isize, 0, 0)
-            as *mut c_void;
+        let g = cx.call(EeWonCcOp::NewRes, std::ptr::null_mut(), 0, 0, 0, 0) as *mut c_void;
+        cx.call(EeWonCcOp::SetName, g, name.as_ptr() as isize, name.len() as isize, 0, 0);
         self.groups.borrow_mut().insert(name, g);
         (g, false)
     }
@@ -976,9 +1131,15 @@ impl EeWonResTable {
 fn allocate(cx: &Cx, ty: &[u8]) -> R<Option<[*mut c_void; 2]>> {
     let a = allocators().get(ty).copied();
     let Some((cf, pf)) = a else { return Ok(None) };
-    let mut out = [std::ptr::null_mut::<c_void>(); 2];
-    cx.op(EeWonCcOp::Alloc, std::ptr::null_mut(), cf as isize, pf as isize, out.as_mut_ptr() as isize, 0)?;
-    Ok(Some(out))
+    // the config made first, then the component; the config given back when the component's factory threw
+    let config = cx.op(EeWonCcOp::AllocConfig, std::ptr::null_mut(), cf as isize, 0, 0, 0)? as *mut c_void;
+    match cx.op(EeWonCcOp::AllocComp, std::ptr::null_mut(), pf as isize, 0, 0, 0) {
+        Ok(component) => Ok(Some([config, component as *mut c_void])),
+        Err(e) => {
+            cx.release(EeWonCcKind::Config, config);
+            Err(e)
+        }
+    }
 }
 
 // ---- ComponentConfig
@@ -1202,10 +1363,28 @@ impl EeWonCompCfg {
         msg(&[b"Invalid named value: ", &key])
     }
 
+    /// The config's kind (its C++ `mKind`).
+    pub fn kind(&self, cx: &Cx) -> EeWonCfgKind {
+        let k = cx.call(EeWonCcOp::Kind, self.this_, 0, 0, 0, 0) as i32;
+        // SAFETY: the C++ member holds an EeWonCfgKind
+        unsafe { std::mem::transmute::<i32, EeWonCfgKind>(k) }
+    }
+    /// `ComponentConfig::GetNamedValue`: the kind's own names (the WON frame's paddings, the sum of the frame
+    /// borders cfgkind.rs names, read in its order), else the component's edges.
+    pub fn base_named_value(&self, cx: &Cx, key: &[u8]) -> Option<i32> {
+        if let Some(sides) = cfgkind::named_borders(self.kind(cx), key).filter(|s| !s.is_empty()) {
+            let component = cx.call(EeWonCcOp::CompOf, self.this_, 0, 0, 0, 0) as *mut c_void;
+            let sum = sides.iter().fold(0i32, |s, &side| {
+                s.wrapping_add(cx.call(EeWonCcOp::CompFrameBorder, component, side as isize, 0, 0, 0) as i32)
+            });
+            return Some(sum);
+        }
+        self.named_value(cx, key)
+    }
     /// `GetNamedValue`'s own names: the component's LEFT, RIGHT, TOP, BOTTOM, WIDTH, HEIGHT.
     pub fn named_value(&self, cx: &Cx, key: &[u8]) -> Option<i32> {
         let k = key_index(EE_WON_CFG_KEYS_COMPONENTCONFIG_GETNAMEDVALUE_INNAME, key);
-        (0..6).contains(&k).then(|| cx.call(EeWonCcOp::CompEdge, self.this_, k as isize, 0, 0, 0) as i32)
+        (0..6).contains(&k).then(|| cx.edge(self.this_, k as isize))
     }
 
     // ---- the resources, this group's then the parents'
@@ -1321,7 +1500,11 @@ impl EeWonCompCfg {
                 let mut font: isize = -1;
                 while let Some(cfg) = cx.cfg(current) {
                     let found = cfg.component_config(cx, &wname, false)?;
-                    font = if found.is_null() { -1 } else { cx.call(EeWonCcOp::AsFont, found, 0, 0, 0, 0) };
+                    font = if found.is_null() || cx.call(EeWonCcOp::IsFontCfg, found, 0, 0, 0, 0) == 0 {
+                        -1
+                    } else {
+                        cx.call(EeWonCcOp::FontOf, found, 0, 0, 0, 0)
+                    };
                     if font != -1 {
                         break;
                     }
@@ -1354,10 +1537,11 @@ impl EeWonCompCfg {
                     let mut image: isize = -1;
                     while let Some(cfg) = cx.cfg(current) {
                         let found = cfg.component_config(cx, &name, false)?;
-                        image = if found.is_null() {
+                        image = if found.is_null() || cx.call(EeWonCcOp::IsImageCfg, found, 0, 0, 0, 0) == 0 {
                             -1
                         } else {
-                            cx.call(EeWonCcOp::AsImage, found, raw as isize, 0, 0, 0)
+                            let op = if raw { EeWonCcOp::RawImageOf } else { EeWonCcOp::ImageOf };
+                            cx.call(op, found, 0, 0, 0, 0)
                         };
                         if image != -1 {
                             break;
@@ -1444,7 +1628,7 @@ impl EeWonCompCfg {
     /// `SetDesiredSizeIfNecessary`
     pub fn set_desired_size(&self, cx: &Cx) {
         let c = self.this_;
-        let edge = |k: isize| cx.call(EeWonCcOp::CompEdge, c, k, 0, 0, 0) as i32;
+        let edge = |k: isize| cx.edge(c, k);
         let flag = |k: isize| cx.call(EeWonCcOp::Flag, c, k, 0, 0, 0) != 0;
         let set = |k: isize| cx.call(EeWonCcOp::SetFlag, c, k, 1, 0, 0);
         if edge(4) > 0 {
@@ -1533,6 +1717,9 @@ impl EeWonCompCfg {
                         out.as_mut_ptr() as isize,
                         0,
                     )? != 0;
+                    if !out[0].is_null() {
+                        out[0] = cx.call(EeWonCcOp::AsObject, out[0], 0, 0, 0, 0) as *mut c_void;
+                    }
                     config = out[0];
                     if got && !out[0].is_null() && !out[1].is_null() {
                         self.map_set(cx, &key, out[0]);
@@ -1610,15 +1797,7 @@ impl EeWonCompCfg {
     }
     /// `HandleModifyGroup`: the next group parsed into the named config.
     pub fn handle_modify_group(&self, cx: &Cx, parser: isize) -> R<bool> {
-        let (mut name, mut inherited): (Vec<u8>, Vec<u8>) = (Vec::new(), Vec::new());
-        let got = cx.op(
-            EeWonCcOp::ReadGroupStart,
-            self.this_,
-            parser,
-            &mut name as *mut Vec<u8> as isize,
-            &mut inherited as *mut Vec<u8> as isize,
-            0,
-        )? != 0;
+        let (got, name, _inherited) = cx.read_group_start(self.this_, parser)?;
         if !got {
             return Ok(true);
         }
@@ -1628,15 +1807,7 @@ impl EeWonCompCfg {
     }
     /// `HandleResourceGroup`: a named resource group parsed (overwriting allowed when it existed).
     pub fn handle_resource_group(&self, cx: &Cx, parser: isize) -> R<bool> {
-        let (mut name, mut inherited): (Vec<u8>, Vec<u8>) = (Vec::new(), Vec::new());
-        let got = cx.op(
-            EeWonCcOp::ReadGroupStart,
-            self.this_,
-            parser,
-            &mut name as *mut Vec<u8> as isize,
-            &mut inherited as *mut Vec<u8> as isize,
-            0,
-        )? != 0;
+        let (got, name, _inherited) = cx.read_group_start(self.this_, parser)?;
         if !got {
             return Ok(true);
         }
@@ -1779,7 +1950,7 @@ pub enum EeWonCcCall {
     ReadStandardCursor = 17,
     /// config: `*(int*)a` = `ReadCursor()`'s standard cursor
     ReadCursor = 18,
-    /// config: `*(EeWonCcSelColor*)a` = `ReadSelectionColor()`
+    /// config: `*(SelectionColor*)a` = `ReadSelectionColor()` (made by the host's `Sel*` ops)
     ReadSelectionColor = 19,
     /// config: `*(bool*)a` = `EndOfString()`
     EndOfString = 20,
@@ -1801,7 +1972,7 @@ pub enum EeWonCcCall {
     GetColorResource = 28,
     /// config: `*(Background*)a` = `GetBackgroundResource(b, c bytes)`
     GetBackgroundResource = 29,
-    /// config: `*(bool*)d` = `GetNamedValue(a, b bytes, *(int*)c)` (the base's)
+    /// config: `*(bool*)a` = `GetNamedValue(b, c bytes, *(int*)d)` (the base's: the kind's paddings, the edges)
     GetNamedValue = 30,
     /// config: `*(bool*)a` = `PreParse(b)` (the base's)
     PreParse = 31,
@@ -1895,8 +2066,14 @@ pub enum EeWonCcCall {
     SetResourceFolder = 75,
     /// `GetResourceFile(b, c bytes)` handed to the sink `d` (`EeWonCcSink`) with the context `a`
     GetResourceFile = 76,
-    /// config: `*(bool*)b` = `CallNamedFunction` over the `EeWonCcCallArgs` at `a` (the base's: MAX, MIN)
+    /// config: `*(bool*)a` = `CallNamedFunction` over the `EeWonCcCallArgs` at `b` (the base's: MAX, MIN)
     CallNamedFunction = 77,
+    /// config: `*(bool*)a` = `GetPredefinedComponent(the name of the EeWonCcKey b, *(ComponentConfig**)c,
+    /// *(Component**)d)` (the base's: the kind's predefined children, cfgkind.rs)
+    Predefined = 78,
+    /// `ComponentConfigMissing(b, c bytes, the file a, the line d)`: the message "InitComponent error: name
+    /// (file:line)" (the original's 512-byte snprintf) thrown as the original's ConfigObjectException
+    Missing = 79,
 }
 
 /// A key and the value parser of an instruction.
@@ -1945,14 +2122,16 @@ pub extern "C" fn ee_won_cc_record_size(
 /// A new config's Rust object over the C++ config `this_` (its `ConfigObject*`).
 #[no_mangle]
 pub extern "C" fn ee_won_cc_new(this_: *mut c_void, host: EeWonCcHost) -> *mut EeWonCompCfg {
-    Box::into_raw(Box::new(EeWonCompCfg {
+    let o = Box::into_raw(Box::new(EeWonCompCfg {
         this_,
         host,
         map: RefCell::default(),
         cur_res: Cell::new(std::ptr::null_mut()),
         parser: Cell::new(0),
         sp: Cell::new(std::ptr::null_mut()),
-    }))
+    }));
+    register(&CONFIGS, this_, o as usize);
+    o
 }
 
 /// The config's object freed: the current group given back, then the child configs (the members' order).
@@ -1966,6 +2145,7 @@ pub unsafe extern "C" fn ee_won_cc_free(o: *mut EeWonCompCfg) {
     }
     // SAFETY: the contract
     let b = unsafe { Box::from_raw(o) };
+    unregister(&CONFIGS, b.this_, o as usize);
     let cx = Cx { host: b.host, frame: std::ptr::null_mut() };
     cx.release(EeWonCcKind::Res, b.cur_res.replace(std::ptr::null_mut()));
     let children = b.map.borrow_mut().take();
@@ -1977,7 +2157,9 @@ pub unsafe extern "C" fn ee_won_cc_free(o: *mut EeWonCompCfg) {
 /// A new resource group's Rust object over the C++ group `this_`.
 #[no_mangle]
 pub extern "C" fn ee_won_cc_res_new(this_: *mut c_void) -> *mut EeWonResCfg {
-    Box::into_raw(Box::new(EeWonResCfg::new(this_)))
+    let o = Box::into_raw(Box::new(EeWonResCfg::new(this_)));
+    register(&GROUPS, this_, o as usize);
+    o
 }
 
 /// The group's object freed, its values given back.
@@ -1991,6 +2173,7 @@ pub unsafe extern "C" fn ee_won_cc_res_free(o: *mut EeWonResCfg, host: EeWonCcHo
     }
     // SAFETY: the contract
     let b = unsafe { Box::from_raw(o) };
+    unregister(&GROUPS, b.this_, o as usize);
     b.free(&Cx { host, frame: std::ptr::null_mut() });
 }
 
@@ -2052,13 +2235,43 @@ pub unsafe extern "C" fn ee_won_cc_call(
     }
 }
 
+/// `ComponentConfigMissing`'s message: `snprintf(512, "InitComponent error: %s (%s:%d)", name, file, line)`.
+unsafe fn missing_text(name: &[u8], file: *const c_char, line: i32) -> Vec<u8> {
+    let upto_nul = |b: &[u8]| b[..b.iter().position(|&c| c == 0).unwrap_or(b.len())].to_vec();
+    let file: Vec<u8> = if file.is_null() {
+        b"(null)".to_vec()
+    } else {
+        // SAFETY: the caller's NUL-terminated text
+        unsafe { std::ffi::CStr::from_ptr(file) }.to_bytes().to_vec()
+    };
+    let mut m =
+        [b"InitComponent error: ".as_slice(), &upto_nul(name), b" (", &file, b":", line.to_string().as_bytes(), b")"]
+            .concat();
+    m.truncate(511);
+    m
+}
+
+/// The bytes of the `EeWonCcKey` at `p`.
+unsafe fn key_at<'a>(p: isize) -> &'a [u8] {
+    // SAFETY: the caller's EeWonCcKey
+    let k = unsafe { &*(p as *const EeWonCcKey) };
+    // SAFETY: its bytes
+    unsafe { bytes(k.key as isize, k.len as isize) }
+}
+
+fn o_this(c: &EeWonCompCfg) -> *mut c_void {
+    c.this_
+}
+
 unsafe fn put<T>(a: isize, v: T) {
     // SAFETY: the caller's out pointer
     unsafe { *(a as *mut T) = v };
 }
 
 fn set_text(cx: &Cx, out: isize, units: &[u32]) {
-    cx.call(EeWonCcOp::SetText, out as *mut c_void, units.as_ptr() as isize, units.len() as isize, 0, 0);
+    // the host's wchar_t units (the original appended each unit cast to wchar_t)
+    let w: Vec<WChar> = units.iter().map(|&u| u as WChar).collect();
+    cx.call(EeWonCcOp::SetText, out as *mut c_void, w.as_ptr() as isize, w.len() as isize, 0, 0);
 }
 
 /// A `GUIString*`'s units (its data's `mText`, `mLength`: the first two words of `GUIStringData` after RefCount are
@@ -2079,8 +2292,16 @@ unsafe fn text_units(p: isize) -> Vec<u32> {
     unsafe { std::slice::from_raw_parts(t.units as *const WChar, t.len) }.iter().map(|&u| u as u32).collect()
 }
 
+/// `*out` = the background: the original's fresh `Background` with the record's members, assigned.
 fn bg_out(cx: &Cx, out: isize, bg: &EeWonCcBackground) {
-    cx.call(EeWonCcOp::BgMake, out as *mut c_void, bg as *const EeWonCcBackground as isize, 0, 0, 0);
+    let o = out as *mut c_void;
+    cx.call(EeWonCcOp::BgReset, o, 0, 0, 0, 0);
+    cx.call(EeWonCcOp::BgImage, o, bg.image as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgColor, o, bg.color as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgBorder, o, bg.border_color as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgOffsets, o, bg.use_offsets as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgStretch, o, bg.stretch_image as isize, 0, 0, 0);
+    cx.call(EeWonCcOp::BgGrab, o, bg.want_grab_bg as isize, 0, 0, 0);
 }
 
 unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isize, c: isize, d: isize) -> R<()> {
@@ -2101,9 +2322,7 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
     let txt = || unsafe { bytes(b, c) };
     let key = || -> &[u8] {
         // SAFETY: the EeWonCcKey at `c`
-        let k = unsafe { &*(c as *const EeWonCcKey) };
-        // SAFETY: its bytes
-        unsafe { bytes(k.key as isize, k.len as isize) }
+        unsafe { key_at(c) }
     };
     // SAFETY (every `put`): the out pointers of the call
     unsafe {
@@ -2138,7 +2357,16 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
             C::ReadImage => put(a, cfg().read_image(cx, b != 0)?),
             C::ReadStandardCursor => put(a, cfg().read_standard_cursor(cx)?),
             C::ReadCursor => put(a, cfg().read_cursor(cx)?),
-            C::ReadSelectionColor => put(a, cfg().read_selection_color(cx)?),
+            C::ReadSelectionColor => {
+                let x = cfg().read_selection_color(cx)?;
+                let (op, fore) = match x.mode {
+                    0 => (EeWonCcOp::SelFore, x.foreground as isize),
+                    1 => (EeWonCcOp::SelInvert, 0),
+                    _ => (EeWonCcOp::SelOriginal, 0),
+                };
+                cx.call(op, a as *mut c_void, x.background as isize, fore, 0, 0);
+            }
+            C::Missing => return Err(CcErr::Msg(missing_text(txt(), a as *const c_char, d as i32))),
             C::EndOfString => put(a, cfg().end_of_string()),
             C::SkipComma => cfg().skip_comma(),
             C::EnsureComma => cfg().ensure_comma()?,
@@ -2156,18 +2384,33 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
                 let bg = cfg().background_resource(cx, txt())?;
                 bg_out(cx, a, &bg);
             }
-            C::GetNamedValue => {
-                // SAFETY: the key
-                let k = bytes(a, b);
-                match cfg().named_value(cx, k) {
-                    Some(v) => {
-                        put(c, v);
-                        put(d, true);
+            C::GetNamedValue => match cfg().base_named_value(cx, txt()) {
+                Some(v) => {
+                    put(d, v);
+                    put(a, true);
+                }
+                None => put(a, false),
+            },
+            C::Predefined => {
+                let name = key_at(b);
+                match cfgkind::predefined(cfg().kind(cx), name) {
+                    Some((kind, part)) => {
+                        // the original's order: the child's config, then the part of this config's component
+                        put(c, cx.call(EeWonCcOp::NewOfKind, std::ptr::null_mut(), kind as isize, 0, 0, 0));
+                        let component = cx.call(EeWonCcOp::CompOf, o_this(cfg()), 0, 0, 0, 0) as *mut c_void;
+                        put(d, cx.call(EeWonCcOp::CompPart, component, part as isize, 0, 0, 0));
+                        put(a, true);
                     }
-                    None => put(d, false),
+                    None => put(a, false),
                 }
             }
-            C::PreParse => put(a, cfg().pre_parse(cx, b)?),
+            C::PreParse => {
+                let r = cfg().pre_parse(cx, b)?;
+                if r && cfg().kind(cx) == EeWonCfgKind::WonSkin {
+                    cx.call(EeWonCcOp::SkinEnsure, std::ptr::null_mut(), 0, 0, 0, 0);
+                }
+                put(a, r);
+            }
             C::SetDesiredSize => cfg().set_desired_size(cx),
             C::HandleInstruction => put(a, cfg().handle_instruction(cx, b, bytes(c, d))?),
             C::GetComponentConfig => put(a, cfg().component_config(cx, &text_units(b), c != 0)?),
@@ -2306,13 +2549,13 @@ unsafe fn dispatch(cx: &Cx, o: *mut c_void, call: EeWonCcCall, a: isize, b: isiz
             C::TableClearResources => table().clear_resources(cx),
             C::SetResourceFolder => set_resource_folder(txt()),
             C::CallNamedFunction => {
-                let x = &*(a as *const EeWonCcCallArgs);
+                let x = &*(b as *const EeWonCcCallArgs);
                 let params = if x.count == 0 { &[][..] } else { std::slice::from_raw_parts(x.params, x.count) };
                 let r = call_named_function(bytes(x.key as isize, x.key_len as isize), params);
                 if let Some(v) = r {
                     *x.out = v;
                 }
-                put(b, r.is_some());
+                put(a, r.is_some());
             }
             C::GetResourceFile => {
                 let f = resource_file(txt());

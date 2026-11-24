@@ -2,6 +2,9 @@
 #ifndef EE_WONAPI_WONLAYOUTCONFIGS_H
 #define EE_WONAPI_WONLAYOUTCONFIGS_H
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "rust/won_gui/cfgbody.h"
+// a config subclass's body in ee_won_gui cfgbody.rs (R6 WON round 34; the host: WONCfgBody.inl in ConfigTableHost.cpp)
+namespace WONAPI { intptr_t CfgBodyCall(ComponentConfig* inConfig, EeWonCfgBody inBody, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0); }
 // Borrowed view (0xac bytes), allocated at 0x0078860b, constructor 0x00787fb0.
 class PercentLayoutConfig : public WONAPI::ComponentConfig {
 public:
