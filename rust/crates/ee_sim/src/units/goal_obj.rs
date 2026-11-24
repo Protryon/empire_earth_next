@@ -21,14 +21,18 @@ use crate::units::gather::GOAL_GATHER;
 use crate::units::goals;
 use crate::units::location::GOAL_LOCATION;
 use crate::units::rust_goal::{
-    ee_units_rust_goal, EeUnitsGoalHost, EeUnitsGoalIo, EE_UNITS_GOAL_DESTROY, EE_UNITS_GOAL_HOST_BASE_FIELDS,
-    EE_UNITS_GOAL_HOST_GOAL_ARG, EE_UNITS_GOAL_HOST_LOCATION_GOAL, EE_UNITS_GOAL_HOST_NEW_GATHER,
-    EE_UNITS_GOAL_HOST_NEW_GOAL, EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH, EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS,
-    EE_UNITS_GOAL_HOST_SET_ACTIVE, EE_UNITS_GOAL_HOST_SET_GOAL, EE_UNITS_GOAL_NEW_GATHER, EE_UNITS_GOAL_NEW_LOCATION,
-    EE_UNITS_GOAL_SET_PATH_ATTEMPTS,
+    ee_units_rust_goal, EeUnitsGoalContext, EeUnitsGoalHost, EeUnitsGoalIo, EE_UNITS_GOAL_DESTROY,
+    EE_UNITS_GOAL_HOST_BASE_FIELDS, EE_UNITS_GOAL_HOST_FILE_OPEN, EE_UNITS_GOAL_HOST_GOAL_ARG,
+    EE_UNITS_GOAL_HOST_LOCATION_GOAL, EE_UNITS_GOAL_HOST_NEW_GATHER, EE_UNITS_GOAL_HOST_NEW_GOAL,
+    EE_UNITS_GOAL_HOST_READ, EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH, EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS,
+    EE_UNITS_GOAL_HOST_SET_ACTIVE, EE_UNITS_GOAL_HOST_SET_GOAL, EE_UNITS_GOAL_HOST_WRITE, EE_UNITS_GOAL_NEW_GATHER,
+    EE_UNITS_GOAL_NEW_LOCATION, EE_UNITS_GOAL_SET_PATH_ATTEMPTS,
 };
 
-/// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object.
+/// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object. The C++
+/// `class EEUnitGoal` derives from it and reads the members by their C++ names (units round 11).
+///
+/// cbindgen:field-names=[mIsActive, mKind, mAction, mStartTime, mCreationTime, mID, mPathAttempts, mB1C, mB1D]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EeUnitsGoalBase {
@@ -199,12 +203,99 @@ pub unsafe extern "C" fn base_host_op(context: *mut c_void, op: i32, a: u64, b: 
             }
             0
         }
+        // the typed file calls on the context's C++ file (`GetIsOpen`, `Write`, `Read` of `i[0]`'s kind)
+        EE_UNITS_GOAL_HOST_FILE_OPEN | EE_UNITS_GOAL_HOST_WRITE | EE_UNITS_GOAL_HOST_READ => {
+            // SAFETY: a table with file calls is EEUGRust.cpp's `Goal`, whose context is an `EeUnitsGoalContext`
+            let file = unsafe { (*(inner.context as *const EeUnitsGoalContext)).file };
+            file_call(&mut ee_base::fs::cppfile::CppFile(file), op, io)
+        }
         // the compound operations in their statements (goal_split.rs), the rest one statement of the wrapped table
         _ => {
             let mut h = crate::units::goal_split::FfiSplit(inner);
             crate::units::goal_split::split(&mut h, op, a, b, io)
                 .unwrap_or_else(|| crate::units::goal_split::GoalSplitHost::raw(&mut h, op, a, b, io))
         }
+    }
+}
+
+/// The goal file calls (the C++ `GoalOp`'s were `ReadInto<T>` and the typed `Write`s): `GetIsOpen()`; `Write` and
+/// `Read` of kind `i[0]` (0 `uint32_t`, 1 `int32_t`, 3 a float's bits, else `bool`) with the value in `i[1]`. A read
+/// starts from the old value and stores the value back whatever the status (a float as its bits, a bool as 0 or 1).
+pub fn file_call<F: GoalFile>(f: &mut F, op: i32, io: &mut EeUnitsGoalIo) -> i64 {
+    let v = io.i[1];
+    if op == EE_UNITS_GOAL_HOST_FILE_OPEN {
+        return i64::from(f.is_open());
+    }
+    if op == EE_UNITS_GOAL_HOST_WRITE {
+        return i64::from(match io.i[0] {
+            0 => f.write_u32(v as u32),
+            1 => f.write_i32(v as i32),
+            3 => f.write_f32(f32::from_bits(v as u32)),
+            _ => f.write_bool(v != 0),
+        });
+    }
+    let (status, value) = match io.i[0] {
+        0 => {
+            let mut x = v as u32;
+            (f.read_u32(&mut x), i64::from(x))
+        }
+        1 => {
+            let mut x = v as i32;
+            (f.read_i32(&mut x), i64::from(x))
+        }
+        3 => {
+            let mut x = f32::from_bits(v as u32);
+            (f.read_f32(&mut x), i64::from(x.to_bits()))
+        }
+        _ => {
+            let mut x = v != 0;
+            (f.read_bool(&mut x), i64::from(x))
+        }
+    };
+    io.i[1] = value;
+    i64::from(status)
+}
+
+/// The typed calls of a C++ `FSFile` the goals make ([`ee_base::fs::cppfile::CppFile`]; a test file in the tests).
+pub trait GoalFile {
+    fn is_open(&mut self) -> bool;
+    fn write_u32(&mut self, v: u32) -> i32;
+    fn write_i32(&mut self, v: i32) -> i32;
+    fn write_f32(&mut self, v: f32) -> i32;
+    fn write_bool(&mut self, v: bool) -> i32;
+    fn read_u32(&mut self, v: &mut u32) -> i32;
+    fn read_i32(&mut self, v: &mut i32) -> i32;
+    fn read_f32(&mut self, v: &mut f32) -> i32;
+    fn read_bool(&mut self, v: &mut bool) -> i32;
+}
+
+impl GoalFile for ee_base::fs::cppfile::CppFile {
+    fn is_open(&mut self) -> bool {
+        ee_base::fs::cppfile::CppFile::is_open(self)
+    }
+    fn write_u32(&mut self, v: u32) -> i32 {
+        ee_base::fs::FsWrite::write_u32(self, v)
+    }
+    fn write_i32(&mut self, v: i32) -> i32 {
+        ee_base::fs::cppfile::CppFile::write_i32(self, v)
+    }
+    fn write_f32(&mut self, v: f32) -> i32 {
+        ee_base::fs::cppfile::CppFile::write_f32(self, v)
+    }
+    fn write_bool(&mut self, v: bool) -> i32 {
+        ee_base::fs::cppfile::CppFile::write_bool(self, v)
+    }
+    fn read_u32(&mut self, v: &mut u32) -> i32 {
+        ee_base::fs::FsFile::read_u32(self, v)
+    }
+    fn read_i32(&mut self, v: &mut i32) -> i32 {
+        ee_base::fs::cppfile::CppFile::read_i32(self, v)
+    }
+    fn read_f32(&mut self, v: &mut f32) -> i32 {
+        ee_base::fs::cppfile::CppFile::read_f32(self, v)
+    }
+    fn read_bool(&mut self, v: &mut bool) -> i32 {
+        ee_base::fs::cppfile::CppFile::read_bool(self, v)
     }
 }
 
@@ -387,5 +478,114 @@ mod tests {
             dealloc(goal);
         }
         assert_eq!(calls, 1);
+    }
+
+    /// A file of a byte buffer: each call logged, reads from the front, writes appended.
+    #[derive(Default)]
+    struct TestFile {
+        data: Vec<u8>,
+        log: Vec<String>,
+    }
+
+    impl TestFile {
+        fn take<const N: usize>(&mut self) -> Option<[u8; N]> {
+            if self.data.len() < N {
+                return None;
+            }
+            let bytes: [u8; N] = self.data[..N].try_into().ok()?;
+            self.data.drain(..N);
+            Some(bytes)
+        }
+    }
+
+    impl GoalFile for TestFile {
+        fn is_open(&mut self) -> bool {
+            self.log.push("open".into());
+            true
+        }
+        fn write_u32(&mut self, v: u32) -> i32 {
+            self.log.push(format!("w u32 {v}"));
+            0
+        }
+        fn write_i32(&mut self, v: i32) -> i32 {
+            self.log.push(format!("w i32 {v}"));
+            0
+        }
+        fn write_f32(&mut self, v: f32) -> i32 {
+            self.log.push(format!("w f32 {v}"));
+            0
+        }
+        fn write_bool(&mut self, v: bool) -> i32 {
+            self.log.push(format!("w bool {v}"));
+            0
+        }
+        fn read_u32(&mut self, v: &mut u32) -> i32 {
+            self.log.push("r u32".into());
+            self.take::<4>().map_or(0x12, |b| {
+                *v = u32::from_le_bytes(b);
+                0
+            })
+        }
+        fn read_i32(&mut self, v: &mut i32) -> i32 {
+            self.log.push("r i32".into());
+            self.take::<4>().map_or(0x12, |b| {
+                *v = i32::from_le_bytes(b);
+                0
+            })
+        }
+        fn read_f32(&mut self, v: &mut f32) -> i32 {
+            self.log.push("r f32".into());
+            self.take::<4>().map_or(0x12, |b| {
+                *v = f32::from_le_bytes(b);
+                0
+            })
+        }
+        fn read_bool(&mut self, v: &mut bool) -> i32 {
+            self.log.push("r bool".into());
+            self.take::<1>().map_or(0x12, |b| {
+                *v = b[0] != 0;
+                0
+            })
+        }
+    }
+
+    fn io2(kind: i64, value: i64) -> EeUnitsGoalIo {
+        let mut io = EeUnitsGoalIo::default();
+        io.i[0] = kind;
+        io.i[1] = value;
+        io
+    }
+
+    #[test]
+    fn the_file_calls_go_by_kind_and_store_the_read_value() {
+        let mut f = TestFile::default();
+        assert_eq!(file_call(&mut f, EE_UNITS_GOAL_HOST_FILE_OPEN, &mut io2(0, 0)), 1);
+        for (kind, value) in [(0, -1), (1, -2), (3, i64::from(1.5f32.to_bits())), (2, 7)] {
+            assert_eq!(file_call(&mut f, EE_UNITS_GOAL_HOST_WRITE, &mut io2(kind, value)), 0);
+        }
+        assert_eq!(f.log, ["open", "w u32 4294967295", "w i32 -2", "w f32 1.5", "w bool true"]);
+        // reads: a u32 zero-extended, an i32 sign-extended, a float as its bits, a bool as 0 or 1
+        f.data = [0xffu8, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff].to_vec();
+        f.data.extend_from_slice(&2.5f32.to_le_bytes());
+        f.data.push(3);
+        let mut io = io2(0, 9);
+        assert_eq!(file_call(&mut f, EE_UNITS_GOAL_HOST_READ, &mut io), 0);
+        assert_eq!(io.i[1], 0xffff_ffff);
+        let mut io = io2(1, 9);
+        file_call(&mut f, EE_UNITS_GOAL_HOST_READ, &mut io);
+        assert_eq!(io.i[1], -2);
+        let mut io = io2(3, 9);
+        file_call(&mut f, EE_UNITS_GOAL_HOST_READ, &mut io);
+        assert_eq!(io.i[1], i64::from(2.5f32.to_bits()));
+        let mut io = io2(2, 0);
+        file_call(&mut f, EE_UNITS_GOAL_HOST_READ, &mut io);
+        assert_eq!(io.i[1], 1);
+        // a short read keeps the old value and passes the status on
+        let mut io = io2(1, -7);
+        assert_eq!(file_call(&mut f, EE_UNITS_GOAL_HOST_READ, &mut io), 0x12);
+        assert_eq!(io.i[1], -7);
+        let mut io = io2(2, 5);
+        file_call(&mut f, EE_UNITS_GOAL_HOST_READ, &mut io);
+        assert_eq!(io.i[1], 1);
     }
 }
