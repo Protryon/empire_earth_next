@@ -140,9 +140,9 @@ pub enum EEAreaEffectKind {
 /// civilizations' checksums keep that form (EECivilizationManager::FromLegacy / ToLegacy).
 pub type EECivUpgrade = u32;
 /// The level's bits of an [`EECivUpgrade`] (its category is above them).
-pub const kCivUpgradeLevelBits: std::os::raw::c_ulong = 16;
+pub const kCivUpgradeLevelBits: u32 = 16;
 /// The level of an [`EECivUpgrade`].
-pub const kCivUpgradeLevelMask: std::os::raw::c_ulong = 0xffff;
+pub const kCivUpgradeLevelMask: u32 = 0xffff;
 
 #[cfg(test)]
 mod tests {

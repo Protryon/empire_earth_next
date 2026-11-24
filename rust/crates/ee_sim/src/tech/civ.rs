@@ -25,8 +25,8 @@ use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 /// An upgrade id: (category << 16) | level (ee/EECivUpgrade.h).
 pub type EeTechCivUpgrade = u32;
 /// `kCivUpgradeLevelBits`, `kCivUpgradeLevelMask`
-pub(crate) const LEVEL_BITS: u32 = crate::tech_consts::kCivUpgradeLevelBits as u32;
-pub(crate) const LEVEL_MASK: u32 = crate::tech_consts::kCivUpgradeLevelMask as u32;
+pub(crate) const LEVEL_BITS: u32 = crate::tech_consts::kCivUpgradeLevelBits;
+pub(crate) const LEVEL_MASK: u32 = crate::tech_consts::kCivUpgradeLevelMask;
 /// `kCivPowerFlamingArrows`: the first power id (the powers' records are indexed by id - 0x26)
 pub(crate) const POWER_FIRST: i32 = crate::tech_consts::EECivPowerID::kCivPowerFlamingArrows as i32;
 /// `IDS_CIV_BONUS_BASE`, `IDS_CIV_POWER_BASE` (ee/EEStringIDs.h)

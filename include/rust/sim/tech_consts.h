@@ -8,10 +8,10 @@
 #include <stddef.h>
 
 /// The level's bits of an [`EECivUpgrade`] (its category is above them).
-constexpr static const unsigned long kCivUpgradeLevelBits = 16;
+constexpr static const uint32_t kCivUpgradeLevelBits = 16;
 
 /// The level of an [`EECivUpgrade`].
-constexpr static const unsigned long kCivUpgradeLevelMask = 65535;
+constexpr static const uint32_t kCivUpgradeLevelMask = 65535;
 
 /// Civilization power ids (`EECivPower::mID`, dbcivpowers.dat record +0x68; `EECivPowersManager::GetPower` 0x6831d0 /
 /// GetPowerRecord index the records by id - 0x26; HasPower tests the civilization attribute index); names from the
