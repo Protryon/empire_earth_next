@@ -17,10 +17,15 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
+// (the game's Graphics and Font have no virtual hooks since R6 WON GUI round 35: the port side is the shell as it
+// was, won_gfxobj_port.h, over the same gfxobj.rs)
+#define Graphics RealGraphics
+#define Font RealFont
 #include "ee/wonapi/WONLobbyGUI.h"
+#undef Graphics
+#undef Font
 #include "rust/won_gui/wmobj.h"
-
-using namespace WONAPI;
+#include "won_gfxobj_port.h"
 
 wchar_t gEmptyWideString[2];
 static std::vector<std::string> sTrace;
@@ -40,7 +45,6 @@ static int IdOf(const void* p);
 // gWONGfxImageLog for the port, LogDraw in the original's copy)
 static void LogDraw(Image* i, int x, int y, int l, int t, int w, int h) { T("part %d %d %d %d %d %d %d", IdOf(i), x, y, l, t, w, h); }
 static void LogEntire(Image* i, int x, int y) { T("entire %d %d %d", IdOf(i), x, y); }
-namespace WONAPI { extern void (*gWONGfxImageLog)(Image* inImage, bool inPart, const int32_t* inArgs); }
 static void PortLog(Image* i, bool part, const int32_t* a) { if (part) LogDraw(i, a[0], a[1], a[2], a[3], a[4], a[5]); else LogEntire(i, a[0], a[1]); }
 Font::Font(DisplayContext*, const FontDescriptor& d) : mDescriptor(d) {}
 Font::~Font() {}

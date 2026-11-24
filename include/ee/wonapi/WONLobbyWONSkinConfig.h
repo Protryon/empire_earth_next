@@ -2,16 +2,12 @@
 #define EE_WONAPI_WONLOBBYWONSKINCONFIG_H
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// ComponentCursor (0x14 bytes, allocated at 0x0079a0ab, constructor 0x00726710), four slots;
-// the constructor, destructor and virtuals are out of line.
+// ComponentCursor (0x14 bytes, allocated at 0x0079a0ab, constructor 0x00726710): a cursor drawn by a component, with
+// the mouse hot spot inside it. R6 WON GUI round 35: Cursor's component kind (cursorobj.rs holds the component and
+// the hot spot and answers GetComponent, 0x007267d0); the class is its constructor.
 class ComponentCursor : public Cursor {
-protected:
-    SmartPtr<Component> mComponent; //08
-    int mMouseX,mMouseY; //0c,10
 public:
-    // Implicit destructor (0x00726770): releases the component, then Cursor; stores no own vptr.
-    ComponentCursor(Component*,int=0,int=0); // at 0x00726710
-    virtual Component* GetComponent(int&,int&); // slot 0x08, at 0x007267d0
+    ComponentCursor(Component* c,int x=0,int y=0) : Cursor(ee_won_cursor_new_component(WONCursorHost,(intptr_t)c,x,y)) {}
 };
 }
 #endif
