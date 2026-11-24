@@ -1719,7 +1719,15 @@ impl EeWonNet {
         // `new EEAWonNet(3, text, humans, players, bits & 1, bits & 2, bits & 4)` (a game row)
         let row = |text: &[u8], humans: u32, players: u32, bits: isize| {
             let (humans, players) = (humans as i32 as c_long, players as i32 as c_long);
-            self.post_won(EeWonAction::new_game(3, c_text(text), humans, players, bits & 1 != 0, bits & 2 != 0, bits & 4 != 0));
+            self.post_won(EeWonAction::new_game(
+                3,
+                c_text(text),
+                humans,
+                players,
+                bits & 1 != 0,
+                bits & 2 != 0,
+                bits & 4 != 0,
+            ));
         };
         row(b"@@@@", 0, 0, 0);
         let games: Vec<GameInfo> = self.games.borrow().values().cloned().collect();

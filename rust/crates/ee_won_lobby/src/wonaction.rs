@@ -344,7 +344,7 @@ impl EeWonAction {
                         let name = cz(&self.text);
                         let line = EeWonActionLine {
                             name: name.as_ptr().cast(),
-                            description: b"\0".as_ptr().cast(),
+                            description: c"".as_ptr(),
                             humans: self.humans,
                             players: self.players,
                             has_password: self.has_password,
@@ -363,25 +363,23 @@ impl EeWonAction {
                     }
                 }
             }
-            2 => {
-                if h(Op::CurrentFormIs, FORM_AVAILABLE_ROOMS, 0) != 0 {
-                    let rooms = h(Op::RoomsBox, 0, 0);
-                    if self.room_name.is_empty() {
-                        h(Op::RoomsDeleteAll, rooms, 0);
-                    } else {
-                        let name = cz(&self.room_name);
-                        let description = cz(&self.text);
-                        let line = EeWonActionLine {
-                            name: name.as_ptr().cast(),
-                            description: description.as_ptr().cast(),
-                            humans: self.humans,
-                            players: self.l8c,
-                            has_password: false,
-                            is_private: false,
-                            is_in_progress: false,
-                        };
-                        h(Op::RoomsAppend, rooms, &line as *const EeWonActionLine as isize);
-                    }
+            2 if h(Op::CurrentFormIs, FORM_AVAILABLE_ROOMS, 0) != 0 => {
+                let rooms = h(Op::RoomsBox, 0, 0);
+                if self.room_name.is_empty() {
+                    h(Op::RoomsDeleteAll, rooms, 0);
+                } else {
+                    let name = cz(&self.room_name);
+                    let description = cz(&self.text);
+                    let line = EeWonActionLine {
+                        name: name.as_ptr().cast(),
+                        description: description.as_ptr().cast(),
+                        humans: self.humans,
+                        players: self.l8c,
+                        has_password: false,
+                        is_private: false,
+                        is_in_progress: false,
+                    };
+                    h(Op::RoomsAppend, rooms, &line as *const EeWonActionLine as isize);
                 }
             }
             _ => {}
