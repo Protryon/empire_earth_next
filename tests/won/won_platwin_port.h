@@ -42,9 +42,9 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     case Op::Paint: me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics()); return 0;
     case Op::RootPaint: me->mRoot->Paint(me->mOffscreenImage->GetGraphics()); return 0;
     case Op::RootInvalidate: return 0; // (no FollowPixelScale here)
-    case Op::ParentVisible: {
+    case Op::ParentPlat: {
         PlatGUIWindow* theParent = dynamic_cast<PlatGUIWindow*>(me->GetParent());
-        return theParent != NULL && theParent->Rust(EeWonPlatWinCall::IsVisible) ? (intptr_t)theParent : 0;
+        return theParent != NULL ? (intptr_t)theParent->mRust : 0;
     }
     case Op::WindowClose: me->Window::PlatformClose(); return 0;
     case Op::WindowTimer: me->Window::TimerEvent((DWORD)a); return 0;
@@ -54,10 +54,8 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
             theCursor->Apply();
         }
         return 0;
-    case Op::PopupHit: {
-        Window* thePopup = m->GetPopupWindow();
-        return thePopup != NULL && (m->GetPopupFlags() & PopupFlag_DontWantMouse) && thePopup == (PlatGUIWindow*)a;
-    }
+    case Op::PopupWindow: return (intptr_t)static_cast<PlatGUIWindow*>(m->GetPopupWindow());
+    case Op::PopupFlags: return m->GetPopupFlags();
     case Op::CursorShow: PlatCursorShow((int)a); return 0;
     case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
     }

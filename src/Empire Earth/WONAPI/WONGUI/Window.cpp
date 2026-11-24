@@ -154,17 +154,12 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     case Op::Paint: me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics()); return 0;
     case Op::RootPaint: me->mRoot->Paint(me->mOffscreenImage->GetGraphics()); return 0;
     case Op::RootInvalidate: me->mRoot->Invalidate(); return 0;
-    case Op::ParentVisible: {
-        Window* theParent = me->GetParent();
-        return theParent != NULL && theParent->Rust(EeWonPlatWinCall::IsVisible) ? (intptr_t)theParent : 0;
-    }
+    case Op::ParentPlat: return me->GetParent() != NULL ? (intptr_t)me->GetParent()->mRust : 0;
     case Op::WindowClose: me->BasePlatformClose(); return 0;
     case Op::WindowTimer: me->BaseTimerEvent((DWORD)a); return 0;
     case Op::ApplyCursor: ee_won_cursor_apply(a != 0 ? ((Cursor*)a)->mRust : NULL, (void (*)(int32_t))PlatCursorShow); return 0;
-    case Op::PopupHit: {
-        Window* thePopup = m->GetPopupWindow();
-        return thePopup != NULL && (m->GetPopupFlags() & PopupFlag_DontWantMouse) && thePopup == (Window*)a;
-    }
+    case Op::PopupWindow: return (intptr_t)m->GetPopupWindow();
+    case Op::PopupFlags: return m->GetPopupFlags();
     case Op::CursorShow: PlatCursorShow((int)a); return 0;
     case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
     }

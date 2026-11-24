@@ -61,16 +61,16 @@ pub enum EeWonPlatWinOp {
     RootContains = 17,
     /// `mRoot->PrePaint(mOffscreenImage->GetGraphics())`.
     Paint = 18,
-    /// The parent when it is a PlatGUIWindow and visible, else 0.
-    ParentVisible = 19,
+    /// The parent's platform window (`GetParent()->mRust`), 0 without a parent.
+    ParentPlat = 19,
     /// `Window::PlatformClose()`.
     WindowClose = 20,
     /// `Window::TimerEvent(a)`.
     WindowTimer = 21,
     /// The cursor `a` when it is a PlatCursor: the system pointer shown and the cursor applied.
     ApplyCursor = 22,
-    /// Whether the manager's popup window does not want the mouse and is the window `a`.
-    PopupHit = 23,
+    /// The manager's `GetPopupWindow()`.
+    PopupWindow = 23,
     /// `PlatCursorShow(a)`.
     CursorShow = 24,
     /// `PlatWindowMinimize((PlatWindow*)a)`.
@@ -90,6 +90,8 @@ pub enum EeWonPlatWinOp {
     CopyOffscreen = 31,
     /// `mRoot->Invalidate()`.
     RootInvalidate = 32,
+    /// The manager's `GetPopupFlags()`.
+    PopupFlags = 33,
 }
 
 pub type EeWonPlatWinHost =
@@ -323,7 +325,9 @@ fn show(w: W, on: bool) {
             wm(w, EeWonPlatWmCall::SetFocus, me, 0);
         }
     } else if wm(w, EeWonPlatWmCall::Focus, 0, 0) == me {
-        let next = host(w, Op::ParentVisible, 0, 0, 0, 0);
+        // the parent when it is visible (R6 WON GUI round 36: the parent's own platform window read here)
+        let p = host(w, Op::ParentPlat, 0, 0, 0, 0) as W;
+        let next = if p.is_null() || !st(p).visible { 0 } else { st(p).me as isize };
         wm(w, EeWonPlatWmCall::SetFocus, next, 0);
     }
 }
@@ -343,11 +347,18 @@ fn timer(w: W, elapsed: isize) {
     if hit == me && host(w, Op::RootContains, (p[0] - c[0]) as isize, (p[1] - c[1]) as isize, 0, 0) != 0 {
         return;
     }
-    if hit != me && host(w, Op::PopupHit, hit, 0, 0, 0) != 0 {
-        return;
+    // the manager's popup window that does not want the mouse
+    if hit != me {
+        let popup = host(w, Op::PopupWindow, 0, 0, 0, 0);
+        if popup != 0 && host(w, Op::PopupFlags, 0, 0, 0, 0) & POPUP_DONT_WANT_MOUSE != 0 && popup == hit {
+            return;
+        }
     }
     host(w, Op::QueueExit, 0, 0, 0, 0);
 }
+
+/// `PopupFlag_DontWantMouse`.
+const POPUP_DONT_WANT_MOUSE: isize = crate::guienum::EeWonGuiPopupFlags::PopupFlag_DontWantMouse as isize;
 
 /// FollowPixelScale (Window.cpp until R6 WON GUI round 36): an open window's offscreen image made again at the
 /// manager's new pixel scale `k` with the old one drawn into it, the root invalidated and the manager dirty.

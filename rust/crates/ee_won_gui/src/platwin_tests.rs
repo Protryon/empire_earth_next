@@ -17,8 +17,9 @@ struct World {
     root: (i32, i32),
     focus: isize,
     capture: isize,
-    parent_visible: isize,
-    popup_hit: bool,
+    parent_plat: isize,
+    popup_window: isize,
+    popup_flags: isize,
     invalid: bool,
     plat_window: isize,
     offscreen: isize,
@@ -92,11 +93,12 @@ extern "C" fn host(me: *mut c_void, op: EeWonPlatWinOp, a: isize, b: isize, c: i
         O::OffscreenOfRoot => "offscreen of root".into(),
         O::CopyOffscreen => format!("copy offscreen {a}x{b}"),
         O::RootInvalidate => "root Invalidate".into(),
-        O::ParentVisible => return w.parent_visible,
+        O::ParentPlat => return w.parent_plat,
         O::WindowClose => "Window::PlatformClose".into(),
         O::WindowTimer => format!("Window::TimerEvent {a}"),
         O::ApplyCursor => format!("cursor {a:x}"),
-        O::PopupHit => return isize::from(w.popup_hit),
+        O::PopupWindow => return w.popup_window,
+        O::PopupFlags => return w.popup_flags,
         O::CursorShow => format!("PlatCursorShow {a}"),
         O::PlatMinimize => format!("PlatWindowMinimize {a:x}"),
     };
@@ -200,9 +202,21 @@ fn hiding_the_focus_window_moves_the_focus_to_its_visible_parent() {
     assert_eq!(world.log, ["wm SetDirty 0", "InvalidateRoot", "wm BringToFront me", "wm SetFocus me"]);
     assert_eq!(run(w, EeWonPlatWinCall::IsVisible, 0, 0, 0, 0), 1);
     world.log.clear();
-    world.parent_visible = 0x55;
+    // a hidden parent takes no focus, a visible one does
+    let mut pworld = World { has_wm: true, open: true, style: 0x22, ..World::default() };
+    let pme = &mut pworld as *mut World as isize;
+    let pw = ee_won_plat_win_new(pme as *mut c_void, host);
+    world.parent_plat = pw as isize;
     run(w, EeWonPlatWinCall::Show, 0, 0, 0, 0);
-    assert_eq!(world.log, ["wm SetDirty 0", "wm SetFocus 55"]);
+    assert_eq!(world.log, ["wm SetDirty 0", "wm SetFocus 0"]);
+    run(w, EeWonPlatWinCall::Show, 1, 0, 0, 0);
+    run(pw, EeWonPlatWinCall::Show, 1, 0, 0, 0);
+    world.log.clear();
+    run(w, EeWonPlatWinCall::Show, 0, 0, 0, 0);
+    assert_eq!(world.log, ["wm SetDirty 0", format!("wm SetFocus {pme:x}").as_str()]);
+    world.parent_plat = 0;
+    // SAFETY: the parent made here
+    unsafe { ee_won_plat_win_free(pw) };
     // showing a popup does not take the focus; showing twice does nothing
     world.popup = true;
     world.log.clear();
@@ -226,11 +240,18 @@ fn the_timer_queues_a_mouse_exit_once_the_pointer_left() {
     assert_eq!(world.log, ["Window::TimerEvent 7"]);
     // over another window that is the popup not wanting the mouse: nothing
     world.hit = 0x99;
-    world.popup_hit = true;
+    world.popup_window = 0x99;
+    world.popup_flags = 0x4000;
     world.log.clear();
     run(w, EeWonPlatWinCall::Timer, 7, 0, 0, 0);
     assert_eq!(world.log, ["Window::TimerEvent 7"]);
-    world.popup_hit = false;
+    // another window is the popup, or the popup wants the mouse: the exit
+    world.popup_window = 0x98;
+    world.log.clear();
+    run(w, EeWonPlatWinCall::Timer, 7, 0, 0, 0);
+    assert_eq!(world.log, ["Window::TimerEvent 7", "exit"]);
+    world.popup_window = 0x99;
+    world.popup_flags = 0x2000;
     world.log.clear();
     run(w, EeWonPlatWinCall::Timer, 7, 0, 0, 0);
     assert_eq!(world.log, ["Window::TimerEvent 7", "exit"]);
@@ -329,7 +350,8 @@ fn focus_moves_and_exits_at_the_edges() {
     // over this window but outside its root: the exit, whatever the popup is
     world.mouse = Some((500, 500));
     world.hit = me_ptr();
-    world.popup_hit = true;
+    world.popup_window = me_ptr();
+    world.popup_flags = 0x4000;
     world.log.clear();
     run(w, EeWonPlatWinCall::Timer, 2, 0, 0, 0);
     assert_eq!(world.log, ["Window::TimerEvent 2", "exit"]);

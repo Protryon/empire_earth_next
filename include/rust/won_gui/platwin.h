@@ -47,16 +47,16 @@ enum class EeWonPlatWinOp : int32_t {
   RootContains = 17,
   /// `mRoot->PrePaint(mOffscreenImage->GetGraphics())`.
   Paint = 18,
-  /// The parent when it is a PlatGUIWindow and visible, else 0.
-  ParentVisible = 19,
+  /// The parent's platform window (`GetParent()->mRust`), 0 without a parent.
+  ParentPlat = 19,
   /// `Window::PlatformClose()`.
   WindowClose = 20,
   /// `Window::TimerEvent(a)`.
   WindowTimer = 21,
   /// The cursor `a` when it is a PlatCursor: the system pointer shown and the cursor applied.
   ApplyCursor = 22,
-  /// Whether the manager's popup window does not want the mouse and is the window `a`.
-  PopupHit = 23,
+  /// The manager's `GetPopupWindow()`.
+  PopupWindow = 23,
   /// `PlatCursorShow(a)`.
   CursorShow = 24,
   /// `PlatWindowMinimize((PlatWindow*)a)`.
@@ -75,6 +75,8 @@ enum class EeWonPlatWinOp : int32_t {
   CopyOffscreen = 31,
   /// `mRoot->Invalidate()`.
   RootInvalidate = 32,
+  /// The manager's `GetPopupFlags()`.
+  PopupFlags = 33,
 };
 
 /// The window's calls (`ee_won_plat_win`).
