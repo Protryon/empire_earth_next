@@ -1349,14 +1349,44 @@ public:
     static DWORD GetThreadId() { return WindowManager::mThreadId; }
     WindowManager(); // 0x32b660; the class is 0x148 bytes
     virtual ~WindowManager(); //32bff0
-    virtual void GetNextEvent() { PlatSleep(20); } //04 32e7c0: the base only sleeps 20 ms
-    virtual bool SetScreenResolutionHook(int,int) { return false; } //08 32c380
-    virtual void GetScreenResolutionHook(int&,int&) {} //0c 327440
-    virtual void Signal() {} //10 326b60
-    virtual bool AddWindow(Window* w) { return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)w) != 0; } //14 32d6a0
-    virtual bool RemoveWindow(Window* w) { return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)w) != 0; } //18 32d840
-    virtual void GetScreenRect(WONRectangle&) {} //1c 30a800
-    virtual void GetSystemColorScheme() {} //20 326b60
+    // R6 WON GUI round 35: the one manager is the platform's (the original's MSWindowManager, the port's
+    // PlatWindowManager, folded in; platwm.rs): the hooks are its calls, no longer virtual
+    void GetNextEvent(); // one platform event (at most 50 ms after the last pass), the events, the paint
+    void HandlePlatEvent(const PlatInputEvent& inEvent); // translated by the Rust; the game's go on to it
+    bool SetScreenResolutionHook(int,int) { return true; } // the display mode is the game's
+    void GetScreenResolutionHook(int&,int&);
+    void Signal() { this->Call(EeWonPlatWmCall::Signal); }
+    bool AddWindow(Window* w) { return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)w) != 0; } //14 32d6a0
+    bool RemoveWindow(Window* w) { return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)w) != 0; } //18 32d840
+    void GetScreenRect(WONRectangle&); // the lobby surface
+    void GetSystemColorScheme();
+    // the game's interface and the windows' (the surface, the frame, the z order, focus and capture)
+    typedef void (*EventForwardFunc)(const PlatInputEvent& inEvent);
+    void SetSurfaceSize(int w, int h) { this->Call(EeWonPlatWmCall::SetSurfaceSize, w, h); }
+    void SetPixelScale(float s) { ee_won_plat_wm_set_scale(this->mRust, s); }
+    float GetPixelScale() const { return ee_won_plat_wm_scale(this->mRust); }
+    void SetPresentRect(float l, float t, float w, float h) { ee_won_plat_wm_present(this->mRust, l, t, w, h); }
+    bool LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
+                   int& outLogicalHeight, uint32_t& outSerial);
+    void UnlockFrame() { this->Call(EeWonPlatWmCall::UnlockFrame); }
+    void SetEventForward(EventForwardFunc f) { this->mEventForward = f; }
+    void AddPlatWindow(Window* w) { this->Call(EeWonPlatWmCall::Add, (intptr_t)w); }
+    void RemovePlatWindow(Window* w) { this->Call(EeWonPlatWmCall::Remove, (intptr_t)w); }
+    void BringToFront(Window* w) { this->Call(EeWonPlatWmCall::BringToFront, (intptr_t)w); }
+    void SetFocusWindow(Window* w) { this->Call(EeWonPlatWmCall::SetFocus, (intptr_t)w); }
+    void SetCaptureWindow(Window* w) { this->Call(EeWonPlatWmCall::SetCapture, (intptr_t)w); }
+    Window* GetCaptureWindow() { return (Window*)this->Call(EeWonPlatWmCall::Capture); }
+    Window* GetPlatFocusWindow() { return (Window*)this->Call(EeWonPlatWmCall::Focus); }
+    Window* WindowFromPoint(int x, int y) { return (Window*)this->Call(EeWonPlatWmCall::WindowFromPoint, x, y); }
+    bool GetMousePosition(int& x, int& y) { return ee_won_plat_wm_mouse(this->mRust, &x, &y); }
+    void SetDirty() { this->Call(EeWonPlatWmCall::SetDirty); }
+    int GetSurfaceWidth() const { return (int)this->Call(EeWonPlatWmCall::SurfaceWidth); }
+    int GetSurfaceHeight() const { return (int)this->Call(EeWonPlatWmCall::SurfaceHeight); }
+    PlatWindow* GetPlatWindow() { return (PlatWindow*)this->Call(EeWonPlatWmCall::PlatWindow); }
+    void PaintAndComposite() { this->Call(EeWonPlatWmCall::PaintAndComposite); }
+    intptr_t Call(EeWonPlatWmCall c, intptr_t a = 0, intptr_t b = 0) const { return ee_won_plat_wm(this->mRust, c, a, b); }
+    EeWonPlatWm* mRust = NULL; // the platform manager (platwm.rs); none after the destructor's body
+    EventForwardFunc mEventForward;
     void InitColorScheme(); //32c230
     void NotifyLostFocus() { this->WmCall(EeWonWmCall::NotifyLostFocus); } //32c2d0
     void NotifyGotFocus(Window* w) { this->WmCall(EeWonWmCall::NotifyGotFocus, (intptr_t)w); } //32c300
@@ -1487,27 +1517,48 @@ public:
 
     Window();
     virtual ~Window();                     // 0x32a020, out of line
-    virtual SmartPtr<Font> PlatformGetFont(const FontDescriptor&) { return NULL; } // (the platform windows override these)
-    virtual bool IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
-    virtual void TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
-    virtual void PlatformSetTitle() {}
-    virtual void PlatformSetIcon() {}
-    virtual void PlatformSetCursor(Cursor*) {}
-    virtual void PlatformShowNativeCursor(bool) {}
-    virtual void PlatformShow(bool) {}
-    virtual void PlatformMinimize(bool) {}
-    virtual void PlatformSetTopMost(bool) {}
-    virtual void PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
-    virtual void Create(const WONRectangle&);
-    virtual void SetPosSize(int, int, int, int) {}
-    virtual void GetRect(WONRectangle&, bool) {}
-    virtual void PlatformSetFocus() {}
-    virtual void Show(bool s) { this->WCall(EeWonWinCall::Show, s ? 1 : 0); }
+    // R6 WON GUI round 35: the one window is the platform's (the original's MSWindow, the port's PlatGUIWindow,
+    // folded in; platwin.rs: a rectangle of the surface the manager composites): the Platform* calls are its
+    // Rust window's, no longer virtual; the Base* calls are what the platform window called on its base
+    SmartPtr<Font> PlatformGetFont(const FontDescriptor&);
+    bool IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
+    void TimerEvent(DWORD e) { this->Rust(EeWonPlatWinCall::Timer, e); }
+    void BaseTimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
+    void PlatformSetTitle() { this->Rust(EeWonPlatWinCall::SetTitle); }
+    void PlatformSetIcon() {} // window icons have no place on the lobby surface
+    void PlatformSetCursor(Cursor* c) { this->Rust(EeWonPlatWinCall::SetCursor, (intptr_t)c); }
+    void PlatformShowNativeCursor(bool s) { this->Rust(EeWonPlatWinCall::ShowNativeCursor, s); }
+    void PlatformShow(bool s) { this->Rust(EeWonPlatWinCall::Show, s); }
+    void PlatformMinimize(bool m) { this->Rust(EeWonPlatWinCall::Minimize, m); }
+    void PlatformSetTopMost(bool t) { this->Rust(EeWonPlatWinCall::SetTopMost, t); }
+    void PlatformClose() { this->Rust(EeWonPlatWinCall::Close); }
+    void BasePlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
+    void Create(const WONRectangle& r) { this->Rust(EeWonPlatWinCall::Create, (intptr_t)&r); } // (four ints)
+    void BaseCreate(int w, int h) { ee_won_win_create(this->mWinObj.p, w, h); } // the default icon, the parent, the root's size, the manager
+    void SetPosSize(int x, int y, int w, int h) { this->Rust(EeWonPlatWinCall::SetPosSize, x, y, w, h); }
+    void GetRect(WONRectangle& r, bool inClientArea) { this->Rust(EeWonPlatWinCall::GetRect, (intptr_t)&r, inClientArea); }
+    void GetClientRect(WONRectangle& r) { this->GetRect(r, true); }
+    void PlatformSetFocus() { this->Rust(EeWonPlatWinCall::SetFocus); }
+    void SetMinimizeOnAltTab(bool m) { this->Rust(EeWonPlatWinCall::SetMinimizeOnAltTab, m); }
+    void SetForwardKeyMsgToParent(bool f) { this->Rust(EeWonPlatWinCall::SetForwardKeys, f); }
+    bool FillsSurface() const { return this->GetParent() == NULL; }
+    bool HasFrame() const { return this->GetParent() != NULL && !(this->GetStyle() & 0x20); }
+    void GetInfo(EeWonPlatWinInfo& outInfo) { this->Rust(EeWonPlatWinCall::Info, (intptr_t)&outInfo); } // what the manager reads
+    void FollowSurface() { this->Rust(EeWonPlatWinCall::FollowSurface); } // a window that fills the surface takes its new size
+    void FollowPixelScale(); // a new offscreen image at the manager's pixel scale, repainted
+    void OnPaint() { this->Rust(EeWonPlatWinCall::Paint); } // repaints an invalid root into the offscreen image
+    void QueueMouse(int inType, int inSurfaceX, int inSurfaceY, int inMod, int inButtonOrAmount);
+    // the manager while its platform part lives (the original's dynamic_cast: none in the manager's last moments)
+    WindowManager* GetPlatManager() { return this->mManager != NULL && this->mManager->mRust != NULL ? this->mManager : NULL; }
+    EeWonPlatWin* mRust = NULL; // the platform window (platwin.rs); none yet in the constructor, none after the destructor's body
+    intptr_t Rust(EeWonPlatWinCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, intptr_t d = 0)
+    { return this->mRust != NULL ? ee_won_plat_win(this->mRust, c, a, b, cc, d) : 0; }
+    void Show(bool s) { this->WCall(EeWonWinCall::Show, s ? 1 : 0); }
     void Minimize(bool m) { this->WCall(EeWonWinCall::Minimize, m ? 1 : 0); }
     DisplayContext* GetDisplayContext() { return this->mDisplayContext.get(); } // inline, at +0x28
-    virtual void PlatformSetMouseCapture(bool) {}
-    virtual void QueueEvent(WindowEventBase*);
-    virtual bool PlatformIsVisible() { return this->IsShowing(); } // whether last shown
+    void PlatformSetMouseCapture(bool c) { this->Rust(EeWonPlatWinCall::SetCapture, c); }
+    void QueueEvent(WindowEventBase*);
+    bool PlatformIsVisible() { return this->Rust(EeWonPlatWinCall::IsVisible) != 0; }
     static Window* GetDefaultWindow();
     SmartPtr<NativeImage> DecodeImage(const char*);
     int RunDialog(Component* c) { return this->mManager->DoDialog(this, c); } // DoDialog in the WON SDK

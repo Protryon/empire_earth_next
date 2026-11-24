@@ -32,8 +32,8 @@ void WONImageThrow(int inStatus) { FileReaderCheck(inStatus); }
 // what the GUI composes for them)
 static NativeImage* NewOffscreen(int inWidth, int inHeight)
 {
-    PlatWindowManager* theManager = dynamic_cast<PlatWindowManager*>(WindowManager::GetDefaultWindowManager());
-    return new NativeImage(NULL, inWidth, inHeight, theManager != NULL ? theManager->GetPixelScale() : 1.0f);
+    WindowManager* theManager = WindowManager::GetDefaultWindowManager();
+    return new NativeImage(NULL, inWidth, inHeight, theManager != NULL && theManager->mRust != NULL ? theManager->GetPixelScale() : 1.0f);
 }
 
 SmartPtr<NativeImage> DisplayContext::CreateImage(int width, int height) { return NewOffscreen(width, height); }

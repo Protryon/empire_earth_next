@@ -18,6 +18,11 @@
 #include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/wmcache.h"
 #include "rust/won_gui/wmobj.h"
+#include "ee/wonapi/WONLobbyPlatform.h"
+#include "platform/PlatTime.h"
+#include "rust/won_gui/platimg.h"
+#include "rust/won_gui/platwin.h"
+#include "rust/won_gui/platwm.h"
 using namespace WONAPI;
 // The popup stack, the modal dialog, the message loop, focus and the caches are ee_won's Rust manager (wmobj.rs,
 // wmcache.rs; R6 WON round 33); the window set, the event list, the timers, the broadcasts, the event loop and the
@@ -190,6 +195,64 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     }
 }
 
+// R6 WON GUI round 35: the platform manager (the port's PlatWindowManager.cpp, folded into WindowManager)
+namespace WONAPI {
+static_assert(sizeof(PlatInputEvent) == sizeof(EeWonPlatEvent), "platwm.rs reads PlatInputEvent as EeWonPlatEvent");
+
+static uint32_t TickNow() { return (uint32_t)PlatTimeMilliseconds64(); }
+
+static const int kInputTypes[] = {InputEvent_GotFocus, InputEvent_LostFocus, InputEvent_MouseExit};
+static const int kKeyTypes[] = {InputEvent_KeyDown, InputEvent_KeyUp, InputEvent_KeyChar};
+static const int kMouseTypes[] = {InputEvent_MouseMove, InputEvent_MouseDown, InputEvent_MouseDoubleClick,
+                                  InputEvent_MouseUp, InputEvent_MouseWheel};
+
+// The Rust manager's calls on the windows and the platform (EeWonPlatWmOp), each the original's statement
+static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    WindowManager* me = (WindowManager*)inMe;
+    Window* w = (Window*)a;
+    typedef EeWonPlatWmOp Op;
+    switch (inOp) {
+    case Op::IsUiThread: return PlatCurrentThreadId() == WindowManager::GetThreadId();
+    case Op::Info: w->GetInfo(*(EeWonPlatWinInfo*)b); return 0;
+    case Op::SetRegistered: w->Rust(EeWonPlatWinCall::SetRegistered, b != 0); return 0;
+    case Op::FollowSurface: w->FollowSurface(); return 0;
+    case Op::FollowPixelScale: w->FollowPixelScale(); return 0;
+    case Op::QueueInput: w->QueueEvent(new InputEvent(kInputTypes[b])); return 0;
+    case Op::QueueKey: w->QueueEvent(new KeyEvent(kKeyTypes[b], (int)c, (int)d)); return 0;
+    case Op::QueueMouse: {
+        const int32_t* p = (const int32_t*)c;
+        w->QueueMouse(kMouseTypes[b], p[0], p[1], p[2], p[3]);
+        return 0;
+    }
+    case Op::Parent: return (intptr_t)w->GetParent();
+    case Op::Hold: w->AddRef(); return 0;
+    case Op::Release: w->Release(); return 0;
+    case Op::Close: w->Close(); return 0;
+    case Op::ClosePopup: w->ClosePopup(NULL); return 0;
+    case Op::NotModal: return me->NotModalWindow(w);
+    case Op::SetFocus: w->PlatformSetFocus(); return 0;
+    case Op::SetPosSize: w->SetPosSize((int)b, (int)c, -1, -1); return 0;
+    case Op::Paint: w->OnPaint(); return 0;
+    case Op::Title: {
+        static std::wstring theTitle;
+        theTitle = w->mTitle;
+        *(int32_t*)b = (int32_t)theTitle.size();
+        return (intptr_t)theTitle.c_str();
+    }
+    case Op::Offscreen: {
+        NativeImage* theImage = w->mOffscreenImage.get();
+        return theImage != NULL ? (intptr_t)theImage->GetSurface()->GetRust() : 0;
+    }
+    case Op::Modifiers: return (intptr_t)PlatModifiers();
+    case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;
+    case Op::Minimize: PlatWindowMinimize((PlatWindow*)a); return 0;
+    case Op::Wake: PlatWindowWake(); return 0;
+    }
+    return 0;
+}
+}
+
 // Creates the window manager: becomes the default manager, sets standard colours. The original registered BMP and
 // WIM decoders here; the port reads PNG and JPEG pictures only (D9; the lobby's game code registers both), so they
 // went (round 18)
@@ -200,12 +263,29 @@ WindowManager::WindowManager() {
     this->WmSet(EeWonWmField::LastTimerTick, (intptr_t)(uint32_t)WONTickCount());
     this->mColorScheme=new ColorScheme;
     this->InitColorScheme();
+    // the platform manager and the standard cursors: the WON hand from its bits, the others the system's
+    this->mRust = ee_won_plat_wm_new(this, PlatWmHost);
+    this->mEventForward = NULL;
+    std::vector<uint32_t> theHand(32 * 32);
+    ee_won_plat_hand_cursor(theHand.data());   // the WON hand (32x32, hot spot 12, 4; platimg.rs)
+    Cursor::SetStandardCursor(StandardCursor_Hand, new PlatCursor(theHand.data(), 32, 32, 12, 4));
+    Cursor::SetStandardCursor(StandardCursor_Arrow, new PlatCursor(PLAT_CURSOR_ARROW));
+    Cursor::SetStandardCursor(StandardCursor_IBeam, new PlatCursor(PLAT_CURSOR_IBEAM));
+    Cursor::SetStandardCursor(StandardCursor_EastWest, new PlatCursor(PLAT_CURSOR_SIZE_WE));
+    Cursor::SetStandardCursor(StandardCursor_NorthSouth, new PlatCursor(PLAT_CURSOR_SIZE_NS));
+    Cursor::SetStandardCursor(StandardCursor_NorthSouthEastWest, new PlatCursor(PLAT_CURSOR_SIZE_ALL));
     // The window set, the events, the timers, the broadcasts and the screen state start empty in the Rust manager
     // (wmloop.rs); the original left the image cache count and the full-screen size unset
 }
 
 // Destroys the window manager after closing every open window
-WindowManager::~WindowManager() { this->CloseAllWindows(); }
+WindowManager::~WindowManager()
+{
+    this->CloseAllWindows();
+    this->Call(EeWonPlatWmCall::UnregisterAll);
+    ee_won_plat_wm_free(this->mRust);
+    this->mRust = NULL;
+}
 
 // Fills the colour scheme with the 17 standard Windows-style colours (wmobj.rs's table)
 void WindowManager::InitColorScheme()
@@ -266,3 +346,71 @@ DWORD WindowManager::mThreadId = 0;
 
 // the host behind the game's (guisplit.rs ee_won_gui_wm_game)
 [[maybe_unused]] static const bool sSplitWmHost = (ee_won_gui_split_register(EeWonGuiSplitHost::Wm, ee_won_guicpp_wm_call), true);
+
+namespace WONAPI {
+bool WindowManager::LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch,
+                                  int& outLogicalWidth, int& outLogicalHeight, uint32_t& outSerial)
+{
+    uint32_t v[6];
+    if (!ee_won_plat_wm_lock_frame(this->mRust, &outPixels, v))
+        return false;
+    outWidth = (int)v[0];
+    outHeight = (int)v[1];
+    outPitch = (int)v[2];
+    outLogicalWidth = (int)v[3];
+    outLogicalHeight = (int)v[4];
+    outSerial = v[5];
+    return true;
+}
+
+
+// ---- WindowManager
+
+// Waits for one platform event (GetMessage; at most until 50 ms after the last pass, the original's window timer),
+// handles it, runs ProcessEvents (the window procedure did after each message), then paints and composites
+void WindowManager::GetNextEvent()
+{
+    uint32_t theTimeout = (uint32_t)this->Call(EeWonPlatWmCall::BeginPass);
+    uint32_t theStart = TickNow();
+    PlatInputEvent theEvent;
+    if (PlatWindowWaitEvent(&theEvent, theTimeout))
+        this->HandlePlatEvent(theEvent);
+    else {
+        // no window system (or a spurious return): never spin
+        uint32_t theWaited = TickNow() - theStart;
+        if (theWaited < theTimeout)
+            PlatSleep(theTimeout - theWaited);
+    }
+    this->Call(EeWonPlatWmCall::EndWait);
+    this->ProcessEvents();
+    this->PaintAndComposite();
+}
+
+void WindowManager::GetScreenResolutionHook(int& outWidth, int& outHeight)
+{
+    outWidth = this->GetSurfaceWidth();
+    outHeight = this->GetSurfaceHeight();
+}
+
+// The lobby surface is the screen
+void WindowManager::GetScreenRect(WONRectangle& outRect)
+{
+    outRect.x = outRect.y = 0;
+    outRect.width = this->GetSurfaceWidth();
+    outRect.height = this->GetSurfaceHeight();
+}
+
+// The colour scheme's standard colours from the classic Windows scheme (platwm.rs CLASSIC)
+void WindowManager::GetSystemColorScheme()
+{
+    for (int i = 0; this->Call(EeWonPlatWmCall::Classic, i) >= 0; i++)
+        this->mColorScheme->SetStandardColor((StandardColor)i, (DWORD)this->Call(EeWonPlatWmCall::Classic, i));
+}
+
+// The platform event translated by the Rust; the events the game must still see go on to it
+void WindowManager::HandlePlatEvent(const PlatInputEvent& inEvent)
+{
+    if (ee_won_plat_wm_event(this->mRust, (const EeWonPlatEvent*)&inEvent) && this->mEventForward != NULL)
+        this->mEventForward(inEvent);
+}
+}

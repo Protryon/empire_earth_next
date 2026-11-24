@@ -4,6 +4,10 @@
 #ifndef EE_WONAPI_WONLOBBYIMAGEDECODER_H
 #define EE_WONAPI_WONLOBBYIMAGEDECODER_H
 #include "rust/won_gui/imgobj.h"
+// (the platform window and manager, which WONLobbyGUI.h's Window and WindowManager are since R6 WON GUI round 35)
+#include "platform/PlatWindow.h"
+#include "rust/won_gui/platwin.h"
+#include "rust/won_gui/platwm.h"
 namespace WONAPI {
 class DisplayContext;
 class NativeImage;

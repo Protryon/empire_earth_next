@@ -15,6 +15,9 @@
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/winobj.h"
+#include "ee/wonapi/WONLobbyPlatform.h"
+#include "rust/won_gui/platwin.h"
+#include "rust/won_gui/platwm.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
@@ -111,6 +114,70 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     }
 }
 
+// R6 WON GUI round 35: the platform window (the port's PlatGUIWindow.cpp, folded into Window)
+namespace WONAPI {
+// The Rust window's calls on its shell (EeWonPlatWinOp), each the original's statement
+static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    Window* me = (Window*)inMe;
+    WindowManager* m = me->GetPlatManager();
+    typedef EeWonPlatWinOp Op;
+    switch (inOp) {
+    case Op::HasWm: return m != NULL;
+    case Op::Wm: return m->Call((EeWonPlatWmCall)a, b, c);
+    case Op::Mouse: return m->GetMousePosition(((int*)a)[0], ((int*)a)[1]);
+    case Op::Fills: return me->FillsSurface();
+    case Op::Frame: return me->HasFrame();
+    case Op::Popup: return me->IsPopup();
+    case Op::Open: return me->GetWindowState() == Window::WindowState_Open;
+    case Op::Style: return me->GetStyle();
+    case Op::WindowCreate:
+        me->BaseCreate((int)c, (int)d);
+        me->mDisplayContext = new DisplayContext(NULL);
+        me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height());
+        return 0;
+    case Op::Center: me->Center(a != 0); return 0;
+    case Op::Showing: me->SetIsShowing(a != 0); return 0;
+    case Op::Show: me->PlatformShow(a != 0); return 0;
+    case Op::QueueSize: me->QueueEvent(new SizeEvent((int)a, (int)b, (int)c, (int)d)); return 0;
+    case Op::QueueExit: me->QueueEvent(new InputEvent(InputEvent_MouseExit)); return 0;
+    case Op::QueueMouse: {
+        const int32_t* p = (const int32_t*)a;
+        me->QueueEvent(new MouseEvent(p[0], p[1], p[2], p[3], p[4]));
+        return 0;
+    }
+    case Op::InvalidateRoot: me->InvalidateRoot(); return 0;
+    case Op::MouseIn: return me->IsMouseInClientArea();
+    case Op::RootContains: return me->mRoot->Contains((int)a, (int)b);
+    case Op::Paint:
+        if (me->mRoot->mInvalidState == 0 || me->mOffscreenImage.get() == NULL)
+            return 0;
+        me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics());
+        me->mRoot->Paint(me->mOffscreenImage->GetGraphics());
+        return 1;
+    case Op::ParentVisible: {
+        Window* theParent = me->GetParent();
+        return theParent != NULL && theParent->Rust(EeWonPlatWinCall::IsVisible) ? (intptr_t)theParent : 0;
+    }
+    case Op::WindowClose: me->BasePlatformClose(); return 0;
+    case Op::WindowTimer: me->BaseTimerEvent((DWORD)a); return 0;
+    case Op::ApplyCursor:
+        if (PlatCursor* theCursor = dynamic_cast<PlatCursor*>((Cursor*)a)) {
+            PlatCursorShow(1);
+            theCursor->Apply();
+        }
+        return 0;
+    case Op::PopupHit: {
+        Window* thePopup = m->GetPopupWindow();
+        return thePopup != NULL && (m->GetPopupFlags() & PopupFlag_DontWantMouse) && thePopup == (Window*)a;
+    }
+    case Op::CursorShow: PlatCursorShow((int)a); return 0;
+    case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
+    }
+    return 0;
+}
+}
+
 // Creates a closed window on the default window manager with a new root container and the title "Sierra App" (the
 // Rust window: closed, hidden, no parent, the mouse outside, sizes 0..64000)
 Window::Window()
@@ -120,11 +187,16 @@ Window::Window()
 	this->mRoot = new RootContainer(this);
 	this->mAllowCloseFunc = NULL;
 	this->mTitle = "Sierra App";
+	this->mRust = ee_won_plat_win_new(this, PlatWinHost);
 }
 
-// Destroys the window: the members, then the Rust window (its child set; mWinObj is the first member)
+// Destroys the window: the platform window, the members, then the Rust window (its child set; mWinObj is the first
+// member)
 Window::~Window()
 {
+	this->Rust(EeWonPlatWinCall::Destroy);
+	ee_won_plat_win_free(this->mRust);
+	this->mRust = NULL;
 }
 
 // Returns the cached font for a descriptor, creating it through the platform on first use (a NULL platform font
@@ -152,12 +224,6 @@ void Window::SetIcon(NativeIcon *theIcon)
 {
 	this->mIcon = theIcon;
 	this->WCall(EeWonWinCall::IconChanged);
-}
-
-// Opens the window: default icon, registration with the parent, root sized to the rectangle, added to the manager
-void Window::Create(const WONRectangle& theWindowRectR)
-{
-	ee_won_win_create(this->mWinObj.p, theWindowRectR.Width(), theWindowRectR.Height());
 }
 
 // Returns the default window manager's default window
@@ -225,4 +291,35 @@ void Window::HandleMouseEvent(MouseEvent *e)
 void Window::HandleInputEvent(InputEvent *e)
 {
     ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleInputEvent, EeWonWinEventShape::Input, (intptr_t)e);
+}
+
+namespace WONAPI {
+Window* CreateNativeWindow() { return new Window; }
+
+SmartPtr<Font> Window::PlatformGetFont(const FontDescriptor& inDescriptor)
+{
+    return new PlatGUIFont(this->mDisplayContext.get(), inDescriptor);
+}
+
+// The manager's pixel scale changed: a new offscreen image at it (the old one drawn in until the repaint, as
+// Window::CheckResize does) and the whole root repainted
+void Window::FollowPixelScale()
+{
+    WindowManager* theManager = this->GetPlatManager();
+    NativeImage* theOld = this->mOffscreenImage.get();
+    if (theManager == NULL || theOld == NULL || this->GetWindowState() != WindowState_Open ||
+        theOld->GetScale() == theManager->GetPixelScale())
+        return;
+    SmartPtr<NativeImage> theImage = this->CreateImage(theOld->GetWidth(), theOld->GetHeight());
+    theImage->GetGraphics().DrawImage(theOld, 0, 0);
+    this->mOffscreenImage = theImage;
+    this->mRoot->Invalidate();
+    theManager->SetDirty();
+}
+
+void Window::QueueMouse(int inType, int inSurfaceX, int inSurfaceY, int inMod, int inButtonOrAmount)
+{
+    int p[5] = {inType, inSurfaceX, inSurfaceY, inMod, inButtonOrAmount};
+    this->Rust(EeWonPlatWinCall::QueueMouse, (intptr_t)p);
+}
 }
