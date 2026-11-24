@@ -883,7 +883,29 @@ struct FEWonNet {
     void ConnectToLobby() { Log("net connect lobby"); }
     void UpdateAccount(const UWideString& a, const UWideString& b, bool f) { Log("net update account " + T(a) + " " + T(b) + " " + N(f)); }
     void SelectServer(const std::wstring& n, WONAPI::IPAddrFE a) { Log("net select server " + W::WS(n) + " " + a.mText); }
+    FEWonNet* mRust = this; // (round 37: the host calls the Rust object, ee_won_wonnet_call below)
 };
 static FEWonNet* gWonNet;
+// R6 WON lobby and network round 37: the host makes the Rust object's calls where EEWonNet's forwards were; this
+// stand-in answers each as the forward's stand-in above did (the controls the casts gave, at their base's address)
+static intptr_t ee_won_wonnet_call(FEWonNet* n, EeWonNetCall inCall, intptr_t a, intptr_t b, intptr_t c)
+{
+    typedef EeWonNetCall Call;
+    switch (inCall) {
+    case Call::GameListPort: return n->GetGameListPort();
+    case Call::RefreshGameList: n->RefreshGameList((UIControl*)a); return 0;
+    case Call::UpdateGameList: n->UpdateGameList(); return 0;
+    case Call::HostGame: n->HostGame((const char*)a, (const char*)b); return 0;
+    case Call::JoinGame: n->JoinGame((const char*)a, (const char*)b); return 0;
+    case Call::SendChat: n->SendChat(UWideString((const char*)a)); return 0;
+    case Call::RoomListChanged: return n->GetRoomListChanged();
+    case Call::UpdateRoomList: n->UpdateRoomList((UIControl*)a, (UIControl*)b, (UIControl*)c); return 0;
+    case Call::JoinRoom: n->JoinRoom((const char*)a, (const char*)b); return 0;
+    case Call::OpenUpdateAccount: n->OpenUpdateAccount(); return 0;
+    case Call::ConnectToLobby: n->ConnectToLobby(); return 0;
+    case Call::UpdateAccount: n->UpdateAccount(UWideString((const char*)a), UWideString((const char*)b), c != 0); return 0;
+    default: Log("net unexpected call " + N((int)inCall)); return 0;
+    }
+}
 }
 #endif
