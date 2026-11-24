@@ -3895,7 +3895,6 @@ pub enum EeGameCpp {
     C11MsgBuildVerify,
     C11MsgNewRecord,
     C11MsgBuildUndefined,
-    C11MsgCaptureImport,
     C11UlongsNew,
     C11UlongsDelete,
     C11UlongsCount,

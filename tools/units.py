@@ -86,8 +86,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Civilization Builder/EEAECapture.cpp",
                        # TEST ONLY: the civilization builder lane's capture records (ee/EECivCapture.h: CVMG, CVAP, CVLD, CVAF)
                        "Empire Earth/Civilization Builder/EECivCapture.cpp",
-                       # TEST ONLY: the game messages' capture records (ee/EEMessageCapture.h; RUST_PLAN R5b.4)
-                       "Empire Earth/Communications/EEMessageCapture.cpp",
                        # the game messages' class: EEMessage's codec, EEMRecord (split from EEMessage.cpp)
                        "Empire Earth/Communications/EEMRecord.cpp",
                        # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)

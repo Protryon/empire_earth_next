@@ -59,7 +59,6 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEMessageCapture.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg
 #include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"   // the bodies (gamecpp message.rs)
@@ -695,8 +694,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::C11MsgNewRecord: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char*)p)));
     case O::C11MsgBuildUndefined: ESVERIFY_AT("Undefined message type" == NULL, 1275);
-        break;
-    case O::C11MsgCaptureImport: EEMessageCaptureImport((NEMessage*)a[0], (unsigned char*)p);   // TEST ONLY: NMIM
         break;
     // a box selection (p the record; the picked ids a C++ vector)
     case O::C11UlongsNew: return P64(new std::vector<unsigned long>);

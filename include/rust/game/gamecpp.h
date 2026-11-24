@@ -3655,7 +3655,6 @@ enum class EeGameCpp : uint32_t {
   C11MsgBuildVerify,
   C11MsgNewRecord,
   C11MsgBuildUndefined,
-  C11MsgCaptureImport,
   C11UlongsNew,
   C11UlongsDelete,
   C11UlongsCount,
