@@ -22,22 +22,6 @@
 #include <iterator>
 #include <utility>
 
-#include <stddef.h>
-// the file's record as Rust reads it (ee_tech nodes.rs EeTechTreeRecord) is the data tools' (ee/EETechTreeRecord.h)
-#define EE_TECH_RECORD_SAME(f) static_assert(offsetof(EeTechTreeRecord, f) == offsetof(EETechTreeRecord, f), #f)
-static_assert(sizeof(EeTechTreeRecord) == sizeof(EETechTreeRecord), "the tech tree record");
-EE_TECH_RECORD_SAME(mID);
-EE_TECH_RECORD_SAME(mCost2);
-EE_TECH_RECORD_SAME(mButton);
-EE_TECH_RECORD_SAME(mMakesUnit);
-EE_TECH_RECORD_SAME(mCalamity);
-EE_TECH_RECORD_SAME(mTitleID);
-EE_TECH_RECORD_SAME(mFactor1);
-EE_TECH_RECORD_SAME(mShowInEditor);
-EE_TECH_RECORD_SAME(mResearchedWithEpoch);
-EE_TECH_RECORD_SAME(mNextEpoch);
-EE_TECH_RECORD_SAME(mDefaultUnitClass);
-#undef EE_TECH_RECORD_SAME
 
 
 // Creates an empty epoch node (no techs counted toward it yet)

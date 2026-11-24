@@ -1626,14 +1626,19 @@ struct EeTechCivLevel {
 
 /// A category row of dbcivilization (`EECivilizationCategoryEntry`, 600 bytes).
 struct EeTechCivCategory {
+  /// +00, loader preserves/increments
   int32_t mDatabaseID;
+  /// +04, loader preserves/increments
   int32_t mIndex;
   /// the category name (the game never reads it)
   char mLabel[100];
+  /// +6c, actual name reader281c92
   int32_t mNameID;
   /// the extra cost per pick of the category
   int32_t mCost;
+  /// +74, actual loader writes102
   int32_t mUnitSet;
+  /// +78, actual1..<61 float-pair enumeration
   EeTechCivLevel mLevels[60];
 };
 
@@ -1642,32 +1647,49 @@ using EeTechCivUpgrade = uint32_t;
 
 /// A premade civilization (`EECivilizationEntry`, 120 bytes).
 struct EeTechCivEntry {
+  /// +0x00
   int32_t mUnusedDatabaseID;
+  /// +0x04
   int32_t mIndex;
   /// the civilization's file (NUL-terminated)
   char mFileName[100];
   /// the file's checksum: its name's characters, its legacy upgrade ids and their count
   int32_t mChecksum;
+  /// +0x70 string id of the name (gResource->GetString)
   int32_t mNameID;
+  /// +0x74
   int32_t mEraNameID;
 };
 
 /// A civilization power (`EECivPower`, 152 bytes).
 struct EeTechCivPower {
+  /// +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming Arrows" .. "Just In Time Manufacturing"; only copied whole)
   char mLabel[100];
+  /// +0x64
   int32_t mUnusedDatabaseID;
+  /// +0x68
   int32_t mID;
   /// the powers' category's level bonus
   float mBonus;
+  /// +0x70
   int32_t mUnitSet;
+  /// +0x74 (EEMResearchTechnology compares it with the node's +0x5c)
   int32_t mTechnology;
+  /// +0x78
   int32_t mMiningLimit;
+  /// +0x7c
   int32_t mChance;
+  /// +0x80
   int32_t mUnused1;
+  /// +0x84
   float mAmount;
+  /// +0x88
   int32_t mUnused2;
+  /// +0x8c
   int32_t mUnused3;
+  /// +0x90
   int32_t mUnused4;
+  /// +0x94
   int32_t mUnitType;
 };
 
@@ -1938,60 +1960,99 @@ using EeTechCostFn = int32_t(*)(void*, int32_t, int32_t, float);
 struct EeTechTreeRecord {
   /// +0x00 (not read: the name?)
   uint8_t mLabel[104];
+  /// +0x68 -> mU08->mU4C
   int32_t mID;
+  /// +0x6c -> the epoch's mL14
   int32_t mEpoch;
+  /// +0x70 -> mL18
   int32_t mObsoleteEpoch;
+  /// +0x74 -> mU08->mResearchedEvent
   int32_t mResearchedEvent;
+  /// +0x78 -> mU08->mObsoleteEvent
   int32_t mObsoleteEvent;
   /// +0x7c the cost of resource 3 (wood)
   int32_t mCost3;
   /// +0x80 stone
   int32_t mCost4;
+  /// +0x84
   int32_t mUnused1;
   /// +0x88 gold
   int32_t mCost5;
+  /// +0x8c
   int32_t mUnused2;
   /// +0x90 iron
   int32_t mCost6;
   /// +0x94 food
   int32_t mCost2;
+  /// +0x98 -> mU08->mU58
   int32_t mBuildTime;
+  /// +0x9c -> mU08->mU5C
   int32_t mPrerequisite1;
+  /// +0xa0 -> mU08->mU60
   int32_t mPrerequisite2;
+  /// +0xa4 -> mU08->mU64
   int32_t mPrerequisite3;
+  /// +0xa8 -> mU08->mSelectedObjects
   int32_t mPrerequisite4;
+  /// +0xac -> mU08->mUnitClass
   int32_t mUnitClass;
   /// +0xb0 `EEButtonObject::Get` -> the node's `mButton`
   int32_t mButton;
+  /// +0xb4 -> mU08->mB7C
   uint8_t mMakesUnit;
+  /// +0xb5 -> mU08->mB7D
   uint8_t mCountsTowardEpoch;
+  /// +0xb6
   uint8_t mUnused3;
+  /// +0xb7
   uint8_t mUnused4;
+  /// +0xb8 -> mU08->mU74
   int32_t mNameID;
+  /// +0xbc -> mU08->mU48
   int32_t mKind;
+  /// +0xc0 -> mU08->mU38
   int32_t mCostResource;
+  /// +0xc4 -> mU08->mU3C
   int32_t mRequiredStatistic;
+  /// +0xc8 -> mU08->mRequiredStatisticValue
   int32_t mRequiredStatisticValue;
+  /// +0xcc -> mU08->mFirstNodeID
   int32_t mCalamity;
+  /// +0xd0 -> mU08->mHotKey
   int32_t mHotKey;
   /// +0xd4 an epoch's title string (0: 30145 + the epoch)
   int32_t mTitleID;
+  /// +0xd8
   int32_t mUnused6;
+  /// +0xdc
   int32_t mUnused7;
+  /// +0xe0
   int32_t mUnused8;
   /// +0xe4 the node's cost factors of its second .. fifth unit class (the others 1.0f)
   float mFactor1;
+  /// +0xe8 (third)
   float mFactor2;
+  /// +0xec (fourth)
   float mFactor3;
+  /// +0xf0 (fifth; the others: 1.0f)
   float mFactor4;
+  /// +0xf4 -> mU08->mB7E
   uint8_t mShowInEditor;
+  /// +0xf5 -> mU08->mB7F
   uint8_t mObsoletedByDefault;
+  /// +0xf6 -> mU08->mHasParentalVengeance
   uint8_t mAvailableWithEpoch;
+  /// +0xf7 -> mU08->mHasGroupAttack
   uint8_t mResearchedWithEpoch;
+  /// +0xf8
   int32_t mUnused9;
+  /// +0xfc -> the epoch's mU4C
   int32_t mNextEpoch;
+  /// +0x100 -> the epoch's mU40
   int32_t mRequiredSOL;
+  /// +0x104 -> the epoch's mFirstNodeID
   int32_t mFirstNodeID;
+  /// +0x108 -> mU08->mU40
   int32_t mDefaultUnitClass;
 };
 

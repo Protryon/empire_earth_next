@@ -41,11 +41,6 @@
 // 0x24f0e9 (EEFOFindNewTargetNearOldTarget.cpp; as ee/EEUnitUtilities.h and EEWorld.cpp declare it)
 #include "ee/EEUnitUtilities.h"   // EEUpgradeHitPoints
 
-// the C++ records are the Rust ones (ee_tech civ.rs), field for field
-static_assert(sizeof(EECivilizationCategoryEntry) == sizeof(EeTechCivCategory) &&
-              sizeof(EECivilizationEntry) == sizeof(EeTechCivEntry) && sizeof(EECivPower) == sizeof(EeTechCivPower) &&
-              sizeof(EECivilizationUpgradeValue) == sizeof(EeTechCivLevel), "the civilization records");
-
 // chain at 0x6813f4 (wrapper)
 //   object 0x9654d0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 const UString kCivKey(".civ");

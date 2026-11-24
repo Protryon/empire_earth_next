@@ -3022,21 +3022,33 @@ mod world_tests {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EeDataCpBehavior {
+    /// +0x00
     pub mUnused1: i32,
     /// The slot (records with an index of 0 or less are skipped).
     pub mIndex: i32,
+    /// +0x08
     pub mIntValue1Min: i32,
+    /// +0x0c
     pub mIntValue1Max: i32,
+    /// +0x10
     pub mIntValue1: i32,
+    /// +0x14
     pub mIntValue2Min: i32,
+    /// +0x18
     pub mIntValue2Max: i32,
+    /// +0x1c
     pub mIntValue2: i32,
+    /// +0x20
     pub mUnused2: i32,
+    /// +0x24
     pub mFloatSliderMin: i32,
+    /// +0x28
     pub mFloatSliderMax: i32,
+    /// +0x2c
     pub mFloatSliderScale: i32,
     /// Squared after loading, for record 48 (the maximum attack response range) only.
     pub mFloatValue: f32,
+    /// +0x34
     pub mIsSettable: bool,
 }
 
