@@ -94,37 +94,9 @@ extern "C" int64_t ee_screenscpp_aem_effect_player(uintptr_t inEffect)
 // and every unit's affecting list and the active list were empty until the next area-effect tick (up to 2 s: no
 // morale in the damage, no immunities, no cloaking). Saved: per unit, its own effects' location (and the
 // morale-from-buildings count), then the effects acting on it, each as its owner unit and index; then the active list
-// the same way (the record and its bytes: ee_tech area_effect_save.rs). Put back at the loaded game's first tick
-// (EEAfterLoad).
-namespace {
-// FSFile's typed reads and writes for the Rust record (the calamities' I/O ops)
-long EEAEIoCall(void* inContext, uint32_t inOp, void* ioValue)
-{
-    FSFile& theFile = *static_cast<FSFile*>(inContext);
-    switch (inOp) {
-    case EE_CALAMITY_IO_READ_ULONG: return theFile.Read(*static_cast<unsigned long*>(ioValue));
-    case EE_CALAMITY_IO_READ_LONG: return theFile.Read(*static_cast<long*>(ioValue));
-    case EE_CALAMITY_IO_READ_FLOAT: return theFile.Read(*static_cast<float*>(ioValue));
-    case EE_CALAMITY_IO_READ_BOOL: return theFile.Read(*static_cast<bool*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_ULONG: return theFile.Write(*static_cast<const unsigned long*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_LONG: return theFile.Write(*static_cast<const long*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_FLOAT: return theFile.Write(*static_cast<const float*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_BOOL: return theFile.Write(*static_cast<const bool*>(ioValue));
-    }
-    return 1;
-}
-
-}
-
-void EEAESaveRunningState(FSFile& outFile)
-{
-    ee_screens_aes_save(&outFile, &EEAEIoCall);
-}
-
-long EEAELoadRunningState(FSFile& inFile)
-{
-    return ee_screens_aes_load(&inFile, &EEAEIoCall);
-}
+// the same way (the record and its bytes: ee_tech area_effect_save.rs; the FSFile's reads and writes: ee_screens
+// civ_whole_ffi.rs, ee_screens_aes_save and _load; the entry points are inline in ee/EEAEManager.h). Put back at the
+// loaded game's first tick (EEAfterLoad).
 
 // Load's, the save's and the load's fix-up's logic: area_effect_running.rs over the one-statement shims below (UI
 // lane round 11)

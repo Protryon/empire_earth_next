@@ -100,7 +100,7 @@ extern EEAEManager gAEManager;
 
 // port (save version 0.256, EEPWorldHelper): the units' own area effects' locations, the effects acting on each unit
 // and the active list (EEAEManager.cpp), which the original rebuilt only at the next area-effect tick
-void EEAESaveRunningState(FSFile& outFile);
-long EEAELoadRunningState(FSFile& inFile);
+inline void EEAESaveRunningState(FSFile& outFile) { ee_screens_aes_save(&outFile); }
+inline long EEAELoadRunningState(FSFile& inFile) { return ee_screens_aes_load(&inFile); }
 
 #endif
