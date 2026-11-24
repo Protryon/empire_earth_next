@@ -40,7 +40,8 @@ pub enum EeWonGrabCall {
     NeedDrawBG,
 }
 
-/// The host's calls (`EeWonGuiOp::Grab`; the receiver the C++ `BackgroundGrabber*`; `b`, `c`, `d` the arguments).
+/// The host's calls (`EeWonGuiOp::Grab`; the receiver the C++ `BackgroundGrabber*`; `b`, `c`, `d` the arguments;
+/// R6 WON round 34: each one statement of the original's, the runs of them composed here).
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeWonGrab {
@@ -52,33 +53,60 @@ pub enum EeWonGrab {
     Clip,
     /// `((Component*)b)->Width()` and `Height()` into the two ints at `c`.
     CompSize,
-    /// whether `mBGImage` is set (0 or 1), its `GetWidth()` and `GetHeight()` into the two ints at `c` when it is.
-    ImageSize,
+    /// `mBGImage.get() != NULL` (0 or 1).
+    HasImage,
+    /// `mBGImage->GetWidth()`.
+    ImageWidth,
+    /// `mBGImage->GetHeight()`.
+    ImageHeight,
     /// `mBGImage = ((Component*)b)->GetRoot()->CreateImage(c, d)`.
     NewImage,
     /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
     FlagSet,
     /// `mDebugWindow.get() != NULL` (0 or 1).
     DebugExists,
-    /// the debug window made (`CreateNativeWindow()`, parent `((Component*)b)->GetRoot()`, style 0x40, created at
-    /// the background image's size).
-    DebugCreate,
-    /// the debug window shows the background image at the component's place on the screen (its root emptied, a new
-    /// ImageComponent of the image added, moved to the component's root point plus its window's screen corner).
-    DebugShow,
+    /// `mDebugWindow = CreateNativeWindow()`.
+    DebugNew,
+    /// `mDebugWindow->SetParent(((Component*)b)->GetRoot())`.
+    DebugParent,
+    /// `mDebugWindow->SetStyle(0x40)`.
+    DebugStyle,
+    /// `mDebugWindow->Create(WONRectangle(0, 0, c, d))`.
+    DebugCreateAt,
+    /// `mDebugWindow->mRoot->RemoveAllChildren()`.
+    DebugRemoveAll,
+    /// `mDebugWindow->AddComponent(new ImageComponent(mBGImage))`.
+    DebugAddImage,
+    /// `((Component*)b)->GetRoot()->GetRect(r, false)` into the `EeWonRect4` at `c`.
+    ScreenRect,
+    /// `mDebugWindow->SetPosSize(c, d, -1, -1)`.
+    DebugPos,
     /// `mDebugWindow->mRoot->Invalidate()`.
     DebugInvalidate,
-    /// the screen under the component: `x = y = 0`, `((Component*)b)->RootToChild(x, y)`,
-    /// `mBGImage->GetGraphics().DrawImage(b->GetRoot()->GetOffscreenImage(), x, y)`.
-    Capture,
+    /// `((Component*)b)->GetRoot()->GetOffscreenImage()` (a pointer).
+    Offscreen,
+    /// `((Component*)b)->RootToChild(p[0], p[1])` with `p` the two ints at `c`.
+    RootToChild,
+    /// `mBGImage->GetGraphics().DrawImage((NativeImage*)c, p[0], p[1])` with `p` the two ints at `d`.
+    CaptureDraw,
     /// `((Graphics*)b)->BlendSupported()` (0 or 1).
     BlendSupported,
-    /// `g.SetColor(c); g.FillRectBlend(0, 0, w, h, alpha)` with `g` the Graphics `b` and `w`, `h`, `alpha` the
-    /// three ints at `d`.
-    Blend,
-    /// the background image's raw pixels tinted (`mBGImage->GetRaw()`, `ee_won_grab_tint(pixels, width * height,
-    /// c, d)`), then drawn: `((Graphics*)b)->DrawImage(raw, 0, 0)`.
-    Tint,
+    /// `((Graphics*)b)->SetColor(c)`.
+    SetColor,
+    /// `((Graphics*)b)->FillRectBlend(0, 0, w, h, alpha)` with `w`, `h`, `alpha` the three ints at `d`.
+    FillBlend,
+    /// `mBGImage->GetRaw()`, a reference held (a `RawImage32*`).
+    RawNew,
+    /// `((RawImage32*)c)->GetImageData()`.
+    RawPixels,
+    /// `((RawImage32*)c)->GetWidth()`.
+    RawWidth,
+    /// `((RawImage32*)c)->GetHeight()`.
+    RawHeight,
+    /// `((Graphics*)b)->DrawImage((RawImage32*)c, 0, 0)`.
+    DrawRaw,
+    /// `((RawImage32*)c)->Release()`.
+    RawRelease,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -230,18 +258,24 @@ impl EeWonGrabber {
             });
         }
         let (w, h) = self.comp_size(comp);
-        let mut size = [0i32; 2];
-        let has = self.op(EeWonGrab::ImageSize, 0, size.as_mut_ptr() as isize, 0) != 0;
-        if !has || w != size[0] || h != size[1] {
+        let has = self.op(EeWonGrab::HasImage, 0, 0, 0) != 0;
+        if !has
+            || w != self.op(EeWonGrab::ImageWidth, 0, 0, 0) as i32
+            || h != self.op(EeWonGrab::ImageHeight, 0, 0, 0) as i32
+        {
             self.op(EeWonGrab::NewImage, comp, w as isize, h as isize);
             if self.flag(comp, EE_WON_GRAB_FLAG_DEBUG_BG) && !self.debug_exists() {
-                self.op(EeWonGrab::DebugCreate, comp, 0, 0);
+                self.debug_create(comp);
             }
             if self.debug_exists() {
-                self.op(EeWonGrab::DebugShow, comp, 0, 0);
+                self.debug_show(comp);
             }
         }
-        self.op(EeWonGrab::Capture, comp, 0, 0);
+        // the screen under the component: the root's offscreen image drawn into the background image
+        let screen = self.op(EeWonGrab::Offscreen, comp, 0, 0);
+        let mut p = [0i32; 2];
+        self.op(EeWonGrab::RootToChild, comp, p.as_mut_ptr() as isize, 0);
+        self.op(EeWonGrab::CaptureDraw, 0, screen, p.as_ptr() as isize);
         let mut p = [0i32; 2];
         self.local_to_root(comp, &mut p);
         {
@@ -264,10 +298,46 @@ impl EeWonGrabber {
         if self.op(EeWonGrab::BlendSupported, g, 0, 0) != 0 {
             let (w, h) = self.comp_size(comp);
             let a = [w, h, 8i32.wrapping_sub(level).wrapping_mul(255) / 8];
-            self.op(EeWonGrab::Blend, g, color as isize, a.as_ptr() as isize);
+            self.op(EeWonGrab::SetColor, g, color as isize, 0);
+            self.op(EeWonGrab::FillBlend, g, 0, a.as_ptr() as isize);
             return;
         }
-        self.op(EeWonGrab::Tint, g, level as isize, tinted as isize);
+        // each pixel scaled to level/8 plus the colour's (8 - level)/8, then drawn
+        let raw = self.op(EeWonGrab::RawNew, 0, 0, 0);
+        let pixels = self.op(EeWonGrab::RawPixels, 0, raw, 0) as *mut u32;
+        let n = (self.op(EeWonGrab::RawWidth, 0, raw, 0) as i32 as usize).wrapping_mul(self.op(
+            EeWonGrab::RawHeight,
+            0,
+            raw,
+            0,
+        ) as i32 as usize);
+        if n != 0 && !pixels.is_null() {
+            // SAFETY: the raw image's pixels, held by the reference RawNew took
+            tint(unsafe { std::slice::from_raw_parts_mut(pixels, n) }, level, tinted);
+        }
+        self.op(EeWonGrab::DrawRaw, g, raw, 0);
+        self.op(EeWonGrab::RawRelease, 0, raw, 0);
+    }
+
+    /// The debug window made (parent the component's root, style 0x40, created at the background image's size).
+    fn debug_create(&self, comp: isize) {
+        let (w, h) = (self.op(EeWonGrab::ImageWidth, 0, 0, 0), self.op(EeWonGrab::ImageHeight, 0, 0, 0));
+        self.op(EeWonGrab::DebugNew, 0, 0, 0);
+        self.op(EeWonGrab::DebugParent, comp, 0, 0);
+        self.op(EeWonGrab::DebugStyle, 0, 0, 0);
+        self.op(EeWonGrab::DebugCreateAt, 0, w, h);
+    }
+
+    /// The debug window shows the background image at the component's place on the screen (its root emptied, a
+    /// new ImageComponent of the image added, moved to the component's root point plus its window's screen corner).
+    fn debug_show(&self, comp: isize) {
+        self.op(EeWonGrab::DebugRemoveAll, 0, 0, 0);
+        self.op(EeWonGrab::DebugAddImage, 0, 0, 0);
+        let mut p = [0i32; 2];
+        self.local_to_root(comp, &mut p);
+        let mut r = [0i32; 4];
+        self.op(EeWonGrab::ScreenRect, comp, r.as_mut_ptr() as isize, 0);
+        self.op(EeWonGrab::DebugPos, 0, p[0].wrapping_add(r[0]) as isize, p[1].wrapping_add(r[1]) as isize);
     }
 
     pub fn invalidate(&self) {

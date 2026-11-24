@@ -10,6 +10,7 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyImageButton.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/won_gui/leafpaint.h"
 using namespace WONAPI;
 // Creates an image button that takes focus but not tab focus, with stretching off
 ImageButton::ImageButton() {
@@ -20,32 +21,34 @@ ImageButton::ImageButton() {
 }
 // Destroys the image button (members only)
 ImageButton::~ImageButton() {}
-// Returns the largest width and height among the button's five state images
-void ImageButton::GetDesiredSize(int& outWidth,int& outHeight) {
-    int width=0,height=0;
-    for(int i=0;i<5;++i) {
-        Image* image=this->mImages[i].get();
-        if(image) {
-            if(image->GetWidth()>width) width=image->GetWidth();
-            if(image->GetHeight()>height) height=image->GetHeight();
-        }
+typedef EeWonLeafOp Lo;
+// the button's calls for leafpaint.rs (R6 WON round 34: GetDesiredSize and Paint are Rust's), one statement each
+extern "C" intptr_t ee_won_guicpp_imgbtn_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
+{
+    ImageButton* t = (ImageButton*)inMe;
+    Graphics* g = (Graphics*)a;
+    switch (op) {
+    case Lo::BtnHasImage: return t->mImages[a].get() != NULL ? 1 : 0;
+    case Lo::BtnImageWidth: return t->mImages[a]->GetWidth();
+    case Lo::BtnImageHeight: return t->mImages[a]->GetHeight();
+    case Lo::BtnBasePaint: t->Component::Paint(*g); return 0;
+    case Lo::BtnDisabled: return t->IsDisabled() ? 1 : 0;
+    case Lo::BtnChecked: return t->IsChecked() ? 1 : 0;
+    case Lo::BtnPressed: return t->IsPressed() ? 1 : 0;
+    case Lo::BtnMouseOver: return t->IsMouseOver() ? 1 : 0;
+    case Lo::BtnStretch: return t->mStretch ? 1 : 0;
+    case Lo::BtnWidth: return t->Width();
+    case Lo::BtnHeight: return t->Height();
+    case Lo::BtnImageFit: t->mImages[a]->SetSize(t->Width(), t->Height()); return 0;
+    case Lo::BtnDrawImage: g->DrawImage(t->mImages[b].get(), 0, 0); return 0;
+    default: return 0;
     }
-    outWidth=width;
-    outHeight=height;
+}
+// Returns the largest width and height among the button's five state images
+void ImageButton::GetDesiredSize(int& outWidth,int& outHeight)
+{
+    ee_won_leaf_call(this, ee_won_guicpp_imgbtn_call, EeWonLeafCall::ImageButtonSize, (intptr_t)&outWidth, (intptr_t)&outHeight);
 }
 // Draws the image for the current state (disabled, checked, down, over), falling back to the normal image,
 // resizing it to the button first when stretching
-void ImageButton::Paint(Graphics& g) {
-    Component::Paint(g);
-    Image* image=NULL;
-    if(this->IsDisabled()) image=this->mImages[ImageButtonType_Disabled].get();
-    else if(this->IsChecked() && this->mImages[ImageButtonType_Checked].get())
-        image=this->mImages[ImageButtonType_Checked].get();
-    else if(this->IsPressed()) image=this->mImages[ImageButtonType_Down].get();
-    else if(this->IsMouseOver()) image=this->mImages[ImageButtonType_Over].get();
-    if(!image) image=this->mImages[ImageButtonType_Normal].get();
-    if(!image) return;
-    if(this->mStretch && (image->GetWidth()!=this->Width() || image->GetHeight()!=this->Height()))
-        image->SetSize(this->Width(),this->Height());
-    g.DrawImage(image,0,0);
-}
+void ImageButton::Paint(Graphics& g) { ee_won_leaf_call(this, ee_won_guicpp_imgbtn_call, EeWonLeafCall::ImageButtonPaint, (intptr_t)&g, 0); }

@@ -4,7 +4,6 @@ use std::sync::Mutex;
 /// The ops a test host saw, and its answers.
 struct Mock {
     ops: Vec<(EeWonNetOp, isize, isize)>,
-    routing: bool,
     status: i32,
     group: u16,
     current_form: isize,
@@ -18,7 +17,6 @@ unsafe extern "C" fn host(_cpp: *mut c_void, op: EeWonNetOp, a: isize, b: isize,
     let m = g.as_mut().unwrap();
     m.ops.push((op, a, b));
     match op {
-        Op::RoutingExists => m.routing as isize,
         Op::OpStatus => m.status as isize,
         Op::OpNum => m.group as isize,
         Op::FormById => 100 + a,
@@ -39,9 +37,14 @@ fn with_mock<R>(
     f: impl FnOnce(&EeWonNet) -> R,
 ) -> (R, Vec<(EeWonNetOp, isize, isize)>) {
     let _s = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
-    *MOCK.lock().unwrap() = Some(Mock { ops: Vec::new(), routing, status, group, current_form: 0 });
+    *MOCK.lock().unwrap() = Some(Mock { ops: Vec::new(), status, group, current_form: 0 });
     ee_won_wonnet_set_host(Some(host));
     let net = EeWonNet::new(core::ptr::null_mut());
+    // a routing connection in the slot (never called through: the mock answers its ops)
+    if routing {
+        // SAFETY: the object's slot
+        unsafe { (*net.objects()).routing = 8 as *mut c_void };
+    }
     let r = f(&net);
     let ops = MOCK.lock().unwrap().take().unwrap().ops;
     ee_won_wonnet_set_host(None);
@@ -130,7 +133,7 @@ fn leave_groups_and_clear_games_send_their_requests_only_with_a_connection() {
         n.leave_groups();
         assert_eq!(n.join_room_id.get(), NONE);
     });
-    assert!(ops.iter().all(|o| o.0 == Op::RoutingExists));
+    assert!(ops.is_empty());
 }
 
 #[test]

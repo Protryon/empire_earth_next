@@ -374,19 +374,19 @@ pub(crate) fn logic_op(op: Op, a: isize, b: isize, c: isize, d: isize, out: Out)
     Some(r)
 }
 
-/// The lobby's control numbers (WONLobbyResourceGlobals.h's `LobbyResourceCtrlId`, from 200001).
-const ID_SHOW_CREATE_ACCOUNT: isize = 200001;
-const ID_SHOW_LOST_PASSWORD: isize = 200002;
-const ID_SHOW_LOST_USER_NAME: isize = 200003;
-const ID_LOGIN_SCREEN_BACK: isize = 200006;
-const ID_SHOW_INTERNET_SCREEN: isize = 200008;
-const ID_CHANGE_ROOM: isize = 200012;
-const ID_REFRESH_GAME_LIST: isize = 200016;
-const ID_ADD_FRIEND: isize = 200017;
-const ID_REFRESH_FRIENDS: isize = 200018;
-const ID_FILTER_DIRTY_WORDS_CHECK: isize = 200021;
-const ID_ANONYMOUS_TO_FRIENDS_CHECK: isize = 200022;
-const ID_CHOOSE_NETWORK_ADAPTER: isize = 200023;
+/// The lobby's control numbers (lobbyids.rs, from 200001), as the hosts pass them.
+const ID_SHOW_CREATE_ACCOUNT: isize = crate::lobbyids::ID_ShowCreateAccount as isize;
+const ID_SHOW_LOST_PASSWORD: isize = crate::lobbyids::ID_ShowLostPassword as isize;
+const ID_SHOW_LOST_USER_NAME: isize = crate::lobbyids::ID_ShowLostUserName as isize;
+const ID_LOGIN_SCREEN_BACK: isize = crate::lobbyids::ID_LoginScreenBack as isize;
+const ID_SHOW_INTERNET_SCREEN: isize = crate::lobbyids::ID_ShowInternetScreen as isize;
+const ID_CHANGE_ROOM: isize = crate::lobbyids::ID_ChangeRoom as isize;
+const ID_REFRESH_GAME_LIST: isize = crate::lobbyids::ID_RefreshGameList as isize;
+const ID_ADD_FRIEND: isize = crate::lobbyids::ID_AddFriend as isize;
+const ID_REFRESH_FRIENDS: isize = crate::lobbyids::ID_RefreshFriends as isize;
+const ID_FILTER_DIRTY_WORDS_CHECK: isize = crate::lobbyids::ID_FilterDirtyWordsCheck as isize;
+const ID_ANONYMOUS_TO_FRIENDS_CHECK: isize = crate::lobbyids::ID_AnonymousToFriendsCheck as isize;
+const ID_CHOOSE_NETWORK_ADAPTER: isize = crate::lobbyids::ID_ChooseNetworkAdapter as isize;
 
 /// AccountLogic::HandleControlEvent's choice: 1 create account, 2 lost password, 3 lost user name, 0 none.
 pub(crate) fn account_control_of(id: isize) -> isize {

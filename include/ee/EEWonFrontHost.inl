@@ -4,7 +4,8 @@
 // original's order (EeWonFrontOp documents them). Included by EEUIEWonNetArenaGameEvents.cpp and by
 // tests/won/won_wonnet_test.cpp (over its stand-ins), so both run these very statements. Needs, in scope: the UI
 // classes, the three boxes, EEWonNetAvailableGameFormManager, the screens' event classes, OnGamePassword, gWonNet,
-// gUIManager, gResource, gHostedGameName, EEIsValidName, TMGetTime, WONAPI::WStringToString.
+// gUIManager, gResource, gHostedGameName, EEIsValidName, TMGetTime, WONAPI::WStringToString, and gWonNet's user and
+// server list as WonNetUser() and WonNetServers() (the Rust object's slots since R6 WON lobby and network round 35).
 static_assert(sizeof(EeWonFrontRect) == sizeof(GERectangle), "EeWonFrontRect is GERectangle's layout");
 
 // a C string into a Rust sink
@@ -194,7 +195,7 @@ static intptr_t WonFrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t
     case Op::HostGame: gWonNet->HostGame((const char*)a, (const char*)b); return 0;
     case Op::JoinGame: gWonNet->JoinGame((const char*)a, (const char*)b); return 0;
     case Op::SendChat: gWonNet->SendChat(UWideString((const char*)a)); return 0;
-    case Op::UserName: return FrontBytes(WONAPI::WStringToString(gWonNet->mUser->GetName()).c_str(), c);
+    case Op::UserName: return FrontBytes(WONAPI::WStringToString(WonNetUser()->GetName()).c_str(), c);
     case Op::RoomName: return FrontBytes(WONAPI::WStringToString(gWonNet->GetRoomName()).c_str(), c);
     case Op::RoomListChanged: return gWonNet->GetRoomListChanged();
     case Op::UpdateRoomList: gWonNet->UpdateRoomList(dynamic_cast<R*>((UIControl*)a), dynamic_cast<UITextLabel*>((UIControl*)b), dynamic_cast<UITextLabel*>((UIControl*)c)); return 0;
@@ -202,11 +203,11 @@ static intptr_t WonFrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t
     case Op::OpenUpdateAccount: gWonNet->OpenUpdateAccount(); return 0;
     case Op::ConnectToLobby: gWonNet->ConnectToLobby(); return 0;
     case Op::UpdateAccount: gWonNet->UpdateAccount(UWideString((const char*)a), UWideString((const char*)b), c != 0); return 0;
-    case Op::ServerCount: return (intptr_t)gWonNet->mServers.size();
-    case Op::ServerDisplayNameSize: return (intptr_t)gWonNet->mServers.DisplayName(a).size();
-    case Op::ServerDisplayName: return FrontMbs(gWonNet->mServers.DisplayName(a), c);
-    case Op::ServerName: return FrontMbs(gWonNet->mServers.Name(a), c);
-    case Op::SelectServer: gWonNet->SelectServer(gWonNet->mServers.DisplayName(a), gWonNet->mServers.Addr(a)); return 0;
+    case Op::ServerCount: return (intptr_t)WonNetServers().size();
+    case Op::ServerDisplayNameSize: return (intptr_t)WonNetServers().DisplayName(a).size();
+    case Op::ServerDisplayName: return FrontMbs(WonNetServers().DisplayName(a), c);
+    case Op::ServerName: return FrontMbs(WonNetServers().Name(a), c);
+    case Op::SelectServer: gWonNet->SelectServer(WonNetServers().DisplayName(a), WonNetServers().Addr(a)); return 0;
     // texts
     case Op::TextSetText: ((GEText*)a)->SetText(UWideString((const char*)b)); return 0;
     case Op::TextSetFgDefault: ((GEText*)a)->SetFgColor(GEColor()); return 0;

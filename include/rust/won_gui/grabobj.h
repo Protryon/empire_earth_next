@@ -32,7 +32,8 @@ enum class EeWonGrabCall : uint32_t {
   NeedDrawBG,
 };
 
-/// The host's calls (`EeWonGuiOp::Grab`; the receiver the C++ `BackgroundGrabber*`; `b`, `c`, `d` the arguments).
+/// The host's calls (`EeWonGuiOp::Grab`; the receiver the C++ `BackgroundGrabber*`; `b`, `c`, `d` the arguments;
+/// R6 WON round 34: each one statement of the original's, the runs of them composed here).
 enum class EeWonGrab : uint32_t {
   /// `((Component*)b)->LocalToRoot(p[0], p[1])` with `p` the two ints at `c`.
   LocalToRoot = 1,
@@ -42,33 +43,60 @@ enum class EeWonGrab : uint32_t {
   Clip,
   /// `((Component*)b)->Width()` and `Height()` into the two ints at `c`.
   CompSize,
-  /// whether `mBGImage` is set (0 or 1), its `GetWidth()` and `GetHeight()` into the two ints at `c` when it is.
-  ImageSize,
+  /// `mBGImage.get() != NULL` (0 or 1).
+  HasImage,
+  /// `mBGImage->GetWidth()`.
+  ImageWidth,
+  /// `mBGImage->GetHeight()`.
+  ImageHeight,
   /// `mBGImage = ((Component*)b)->GetRoot()->CreateImage(c, d)`.
   NewImage,
   /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
   FlagSet,
   /// `mDebugWindow.get() != NULL` (0 or 1).
   DebugExists,
-  /// the debug window made (`CreateNativeWindow()`, parent `((Component*)b)->GetRoot()`, style 0x40, created at
-  /// the background image's size).
-  DebugCreate,
-  /// the debug window shows the background image at the component's place on the screen (its root emptied, a new
-  /// ImageComponent of the image added, moved to the component's root point plus its window's screen corner).
-  DebugShow,
+  /// `mDebugWindow = CreateNativeWindow()`.
+  DebugNew,
+  /// `mDebugWindow->SetParent(((Component*)b)->GetRoot())`.
+  DebugParent,
+  /// `mDebugWindow->SetStyle(0x40)`.
+  DebugStyle,
+  /// `mDebugWindow->Create(WONRectangle(0, 0, c, d))`.
+  DebugCreateAt,
+  /// `mDebugWindow->mRoot->RemoveAllChildren()`.
+  DebugRemoveAll,
+  /// `mDebugWindow->AddComponent(new ImageComponent(mBGImage))`.
+  DebugAddImage,
+  /// `((Component*)b)->GetRoot()->GetRect(r, false)` into the `EeWonRect4` at `c`.
+  ScreenRect,
+  /// `mDebugWindow->SetPosSize(c, d, -1, -1)`.
+  DebugPos,
   /// `mDebugWindow->mRoot->Invalidate()`.
   DebugInvalidate,
-  /// the screen under the component: `x = y = 0`, `((Component*)b)->RootToChild(x, y)`,
-  /// `mBGImage->GetGraphics().DrawImage(b->GetRoot()->GetOffscreenImage(), x, y)`.
-  Capture,
+  /// `((Component*)b)->GetRoot()->GetOffscreenImage()` (a pointer).
+  Offscreen,
+  /// `((Component*)b)->RootToChild(p[0], p[1])` with `p` the two ints at `c`.
+  RootToChild,
+  /// `mBGImage->GetGraphics().DrawImage((NativeImage*)c, p[0], p[1])` with `p` the two ints at `d`.
+  CaptureDraw,
   /// `((Graphics*)b)->BlendSupported()` (0 or 1).
   BlendSupported,
-  /// `g.SetColor(c); g.FillRectBlend(0, 0, w, h, alpha)` with `g` the Graphics `b` and `w`, `h`, `alpha` the
-  /// three ints at `d`.
-  Blend,
-  /// the background image's raw pixels tinted (`mBGImage->GetRaw()`, `ee_won_grab_tint(pixels, width * height,
-  /// c, d)`), then drawn: `((Graphics*)b)->DrawImage(raw, 0, 0)`.
-  Tint,
+  /// `((Graphics*)b)->SetColor(c)`.
+  SetColor,
+  /// `((Graphics*)b)->FillRectBlend(0, 0, w, h, alpha)` with `w`, `h`, `alpha` the three ints at `d`.
+  FillBlend,
+  /// `mBGImage->GetRaw()`, a reference held (a `RawImage32*`).
+  RawNew,
+  /// `((RawImage32*)c)->GetImageData()`.
+  RawPixels,
+  /// `((RawImage32*)c)->GetWidth()`.
+  RawWidth,
+  /// `((RawImage32*)c)->GetHeight()`.
+  RawHeight,
+  /// `((Graphics*)b)->DrawImage((RawImage32*)c, 0, 0)`.
+  DrawRaw,
+  /// `((RawImage32*)c)->Release()`.
+  RawRelease,
 };
 
 /// The Rust BackgroundGrabber.

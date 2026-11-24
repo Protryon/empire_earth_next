@@ -253,48 +253,5 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreProgress,
                                         CoreAccept,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
-// ---- WONAPICore's socket thread (ee_won apicore.rs; WONAPI.cpp is deleted): the C++ SocketThread's virtuals,
-// its deletion and the default one
-static SocketThread* ApiThread(void* inThread) { return static_cast<SocketThread*>(inThread); }
-static void* ApiSocketNew() { return static_cast<void*>(static_cast<SocketThread*>(new SocketThreadSimple)); }
-static void ApiSocketDelete(void* inThread) { delete ApiThread(inThread); }
-static void ApiSocketSingle(void* inThread,bool inOn) { ApiThread(inThread)->SetSingleThreaded(inOn); }
-static bool ApiSocketNeedThread(void* inThread) { return ApiThread(inThread)->NeedThread(); }
-static void ApiSocketStart(void* inThread) { ApiThread(inThread)->Start(); }
-static void ApiSocketStop(void* inThread,bool inWait) { ApiThread(inThread)->Stop(inWait); }
-static void ApiSocketWait(void* inThread) { ApiThread(inThread)->WaitForStop(); }
-static void ApiSocketPurge(void* inThread) { ApiThread(inThread)->PurgeOps(); }
-static void ApiSocketPump(void* inThread,uint32_t inWait) { ApiThread(inThread)->Pump(inWait); }
-static void ApiSocketAdd(void* inThread,void* inOp) { ApiThread(inThread)->AddSocketOp(static_cast<SocketOp*>(inOp)); }
-static void ApiSocketRemove(void* inThread,void* inOp) { ApiThread(inThread)->RemoveSocketOp(static_cast<SocketOp*>(inOp)); }
-static const EeWonApiHooks kApiHooks={ApiSocketNew,ApiSocketDelete,ApiSocketSingle,ApiSocketNeedThread,ApiSocketStart,
-                                      ApiSocketStop,ApiSocketWait,ApiSocketPurge,ApiSocketPump,ApiSocketAdd,
-                                      ApiSocketRemove};
-const EeWonApiHooks* WonApiHooks() { return &kApiHooks; }
-
-}
-
-// ---- the C++ side of the Rust thread, timer thread and op container (ee_won thread.rs): their calls into the
-// objects they hold (Thread.cpp, TimerThread.cpp and AsyncOpContainer.cpp are deleted)
-namespace WONAPI {
-// the thread's body: ThreadFunc, with the crash dump's SEH filter on Windows (elsewhere there is no SEH)
-void ThreadBase::RunThreadFunc(void* inThread)
-{
-    ThreadBase* aThread=static_cast<ThreadBase*>(inThread);
-#ifdef _WIN32
-    __try {
-        aThread->ThreadFunc();
-    } __except(WONDebug::DumpStackToFile(GetExceptionInformation())) {
-    }
-#else
-    aThread->ThreadFunc();
-#endif
-}
-void ThreadBase::DeleteThread(void* inThread) { delete static_cast<ThreadBase*>(inThread); }
-ThreadBase::ThreadBase()
-{
-    EeWonThreadBody aBody={&ThreadBase::RunThreadFunc,&ThreadBase::DeleteThread,this};
-    this->mThread=ee_won_thread_new(aBody);
-}
 
 }

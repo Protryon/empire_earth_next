@@ -19,6 +19,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
+#include "won_thread_orig.h" // the C++ thread shims as they were (the game's socket thread is Rust's)
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
 
@@ -636,11 +637,29 @@ static SmartPtr<ScriptOp> NewScriptOp(const char* inName, AsyncOpContainer* inCo
     return anOp;
 }
 
-static void SocketThreads()
+// the library's socket thread since R6 WON lobby and network round 35 (ee_won sockthread.rs EeWonApiSocketThread,
+// through the core's table): the same calls as SocketThreadSimple's, so the same phase runs over it
+class RustSocketThread {
+public:
+    RustSocketThread() : mHooks(ee_won_api_socket_hooks()), mThread(mHooks->socket_new()) {}
+    ~RustSocketThread() { mHooks->socket_delete(mThread); }
+    bool NeedThread() { return mHooks->socket_need_thread(mThread); }
+    void AddSocketOp(SocketOp* inOp) { mHooks->socket_add(mThread, inOp); }
+    void RemoveSocketOp(SocketOp* inOp) { mHooks->socket_remove(mThread, inOp); }
+    void Pump(unsigned long inWait) { mHooks->socket_pump(mThread, (uint32_t)inWait); }
+    void PurgeOps() { mHooks->socket_purge(mThread); }
+    void Start() { mHooks->socket_start(mThread); }
+    void Stop(bool inWait) { mHooks->socket_stop(mThread, inWait); }
+private:
+    const EeWonApiHooks* mHooks;
+    void* mThread;
+};
+
+template <class SocketThreadT> static void SocketThreads()
 {
     AsyncOpContainer* c = new AsyncOpContainer;
     {
-        SocketThreadSimple* t = new SocketThreadSimple;
+        SocketThreadT* t = new SocketThreadT;
         Log("socket thread need thread " + std::to_string(t->NeedThread() ? 1 : 0));
         SmartPtr<ScriptOp> a = NewScriptOp("sa", c, true), b = NewScriptOp("sb", c, true),
                            d = NewScriptOp("sd", c, false);
@@ -729,7 +748,21 @@ int main(int argc, char** argv)
     Threads();
     OpCases();
     Trackers();
-    SocketThreads();
+    SocketThreads<SocketThreadSimple>();
+    // the Rust socket thread's phase must log what the C++ class's did (the golden holds the C++ run only)
+    size_t aCppEnd = sLines.size();
+    size_t aCppStart = aCppEnd;
+    while (aCppStart > 0 && sLines[aCppStart - 1] != "trackers done") aCppStart--;
+    std::vector<std::string> aCppPhase(sLines.begin() + aCppStart, sLines.end());
+    SocketThreads<RustSocketThread>();
+    std::vector<std::string> aRustPhase(sLines.begin() + aCppEnd, sLines.end());
+    sLines.resize(aCppEnd);
+    int aRustDiffs = 0;
+    for (size_t i = 0; i < aCppPhase.size() || i < aRustPhase.size(); i++) {
+        std::string a = i < aCppPhase.size() ? aCppPhase[i] : "(none)", b = i < aRustPhase.size() ? aRustPhase[i] : "(none)";
+        if (a != b && aRustDiffs++ < 10) printf("FAIL rust socket thread line %d\n  got  %s\n  want %s\n", (int)i + 1, b.c_str(), a.c_str());
+    }
+    printf("won_asyncop_test: the Rust socket thread: %d lines, %d differ\n", (int)aRustPhase.size(), aRustDiffs);
     if (argc > 1 && strcmp(argv[1], "--print") == 0) {
         for (size_t i = 0; i < sLines.size(); i++)
             printf("%s\n", sLines[i].c_str());
@@ -760,7 +793,7 @@ int main(int argc, char** argv)
         }
     }
     printf("won_asyncop_test: %d lines, %d failures\n", (int)sLines.size(), aFailures);
-    return aFailures;
+    return aFailures + aRustDiffs;
 }
 
 // the stop flag and the signal wait, as a subclass's ThreadFunc reads them (the original's protected mStopped and

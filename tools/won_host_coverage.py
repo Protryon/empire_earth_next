@@ -51,7 +51,8 @@ CHECKS = [
     dict(enum="EeWonCcOp", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"], rust=[],
          allowed={}),
     dict(enum="EeWonCcKind", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"],
-         rust=[], allowed={"Component": "the Ref op's default case (a Component's AddRef / Release)"}),
+         rust=[], allowed={v: "R6 WON round 34: compcfg.rs's ref_op picks the kind's AddRef / Release op (no C++ case)"
+                           for v in ("Config", "Res", "Image", "Font", "Sound", "Component")}),
     # the lobby events' members are read in Rust (R6 WONLobby round 18)
     dict(enum="EeWonLobbyCtlEvField", header="won_lobby/lobbyctl.h",
          hosts=[LOBBY / "LobbyNetCtrlHost.cpp", LOBBY / "LobbyCtrlHost.cpp"],
@@ -145,7 +146,8 @@ CHECKS = [
          # the multi-statement cases composed in Rust over one-statement cases (R6 WON round 32)
          rust=[(RS / "ee_won_lobby" / "src" / "gluesplit.rs", "game_op")], allowed={}),
     dict(enum="EeWonDlgLogicOp", header="won_lobby/dlglogic.h",
-         hosts=[LOBBY / "DialogLogic.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "DialogLogic.cpp"],
+         rust=[(RS / "ee_won_lobby" / "src" / "logicsplit.rs", "dlg_op")], allowed={}),
     # LobbyConfig::PostParse (R6 WON round 32: lobbycfg.rs; LobbyConfig.cpp's host)
     dict(enum="EeWonLobbyCfgOp", header="won_lobby/lobbycfg.h",
          hosts=[LOBBY / "LobbyConfig.cpp"], rust=[], allowed={}),
@@ -186,6 +188,11 @@ CHECKS = [
          rust=[], allowed={}),
     # R6 WON round 34 (net): the model's directory reads (dirread.rs)
     dict(enum="EeWonDirReadOp", header="won_lobby/dirread.h", hosts=[LOBBY / "LobbyModelHost.cpp"], rust=[], allowed={}),
+    # R6 WON lobby and network round 35: the typed config values' containers, the logic manager, the error screen
+    dict(enum="EeWonCfgValOp", header="won_lobby/cfgval.h",
+         hosts=[ROOT / "src" / "Empire Earth" / "WONAPI" / "WONConfig" / "ConfigObject.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonLogicMgrOp", header="won_lobby/logicmgr.h", hosts=[LOBBY / "LobbyLogicMgr.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonErrScreenOp", header="won_lobby/errscreen.h", hosts=[LOBBY / "LobbyErrorScreen.cpp"], rust=[], allowed={}),
 ]
 
 

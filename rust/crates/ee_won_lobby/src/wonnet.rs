@@ -4,18 +4,20 @@
 //! owner's reference for the Internet code.
 //!
 //! The object's data (the strings, the game, room and client maps, the joined game's info, the ids and the flags)
-//! are this object's. The C++ class keeps what is a C++ object (the locks, the routing connection, the server
-//! contexts, the lobby and its window, the user, the server list, the ops, the two cancel flags the cancel boxes
-//! write through a pointer) and forwards each method here; every call on a C++ object is one op of the host given
-//! to `ee_won_wonnet_set_host` (EEWonNet.cpp's `WonNetHost`), the original's statements with no decision between
-//! them. won_wonnet_test runs the deleted C++ against this over a stand-in world.
+//! are this object's, and so are the C++ objects the class held (R6 WON lobby and network round 35): the locks,
+//! the routing connection, the server contexts, the lobby and its window, the user, the server list, the ops and
+//! the two cancel flags the cancel boxes write through a pointer are [`EeWonNetObjects`], this object's slots (a
+//! reference held on each counted object, released as the class's members were). The C++ class is the Rust
+//! object and its forwards; every call on a C++ object is one op of the host given to `ee_won_wonnet_set_host`
+//! (EEWonNet.cpp's `WonNetHost`, reading the slots through `ee_won_wonnet_objects`), the original's statements
+//! with no decision between them. won_wonnet_test runs the deleted C++ against this over a stand-in world.
 //!
 //! Texts: a `UWideString`'s bytes (UTF-8, decision D6) are `Vec<u8>` without the terminator; a `std::wstring` is
 //! `Vec<u32>` of `wchar_t` units (UTF-16 on Windows, UTF-32 elsewhere).
 #![allow(clippy::missing_safety_doc)]
 
 use core::ffi::{c_char, c_void};
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, RefCell, UnsafeCell};
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -58,8 +60,6 @@ pub enum EeWonNetOp {
     Lock8Enter,
     /// `mLock8->Leave()`
     Lock8Leave,
-    /// `mLobbyWindow != NULL`
-    LobbyWindowExists,
     /// `mLobbyWindow->Close(true)`
     LobbyWindowClose,
     /// `mLobbyWindow->mClosed`
@@ -70,28 +70,16 @@ pub enum EeWonNetOp {
     LobbyWindowVirtual18,
     /// `delete mLobby`
     LobbyDelete,
-    /// `mLobby != NULL`
-    LobbyExists,
     /// `mLobby->Pump((unsigned long)a, 0)`
     LobbyPump,
-    /// `mCancelled` / `mCancelled = a`
-    CancelledGet,
-    CancelledSet,
-    /// `mJoinRoomCancelled` / `mJoinRoomCancelled = a`
-    JoinRoomCancelledGet,
-    JoinRoomCancelledSet,
     /// `gWonNet != NULL`
     WonNetExists,
     /// `gWonClientId = a`
     ClientIdSet,
-    /// `mRouting.get() != NULL`
-    RoutingExists,
-    /// `mRouting = new SmartRoutingConnection`
+    /// `new SmartRoutingConnection` (a `RefCount*`; the object's `routing` holds it)
     RoutingNew,
     /// `mRouting->Kill()`
     RoutingKill,
-    /// `mRouting = NULL`
-    RoutingClear,
     /// `mRouting->SetAuth(mUser, AUTH_TYPE_PERSISTENT)`
     RoutingSetAuth,
     /// `mRouting->SetConnectCompletion(` a gWonNet completion of call `a` `)`
@@ -267,14 +255,15 @@ pub enum EeWonNetOp {
     KeyValid,
     /// `CDKey(kWonProductName).SaveToRegistry()`
     KeySave,
-    /// `mLoginOp = new GetCertOp(mUser)`, its completion (call a), `SetCreateAccount(false)`, `RunAsync(15000)`
+    /// `new GetCertOp(mUser)` (a `RefCount*`, held as `login_op`), its completion (call a), `SetCreateAccount(false)`, `RunAsync(15000)`
     LoginOpNew,
     LoginOpSetCompletion,
     LoginOpNoCreate,
     LoginOpRun,
     /// `a == mLoginOp.get()`
     LoginOpIs,
-    /// `mDirOp = RustServerOp::NewGetDir(mDirServers.get(), kWonProductDirectory, 0x703003a)`, its completion
+    /// `RustServerOp::NewGetDir(mDirServers.get(), kWonProductDirectory, 0x703003a)` (held as `dir_op`), its
+    /// completion
     /// (call a), `RunAsync(15000)`
     DirOpNew,
     DirOpSetCompletion,
@@ -300,7 +289,7 @@ pub enum EeWonNetOp {
     FileOpen,
     FileGets,
     FileClose,
-    /// `mDirServers = new ServerContext`
+    /// `new ServerContext` (held as `dir_servers`)
     DirServersNew,
     /// `mDirServers->AddAddress(IPAddr(std::string((const char*)a)))`
     DirServersAdd,
@@ -313,7 +302,7 @@ pub enum EeWonNetOp {
     UpdateOpNewsletter,
     UpdateOpRun,
     UpdateOpRelease,
-    /// `mAccountOp = RustServerOp::NewGetAccount(mAuthServers, mUser)`, its completion (call a), `RunAsync(15000)`,
+    /// `RustServerOp::NewGetAccount(mAuthServers, mUser)` (held as `account_op`), its completion (call a), `RunAsync(15000)`,
     /// `SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1)`
     AccountOpNew,
     AccountOpSetCompletion,
@@ -341,6 +330,70 @@ pub enum EeWonNetOp {
     InfoSetHost,
     InfoSetFlags,
     InfoSetRoom,
+    /// `((RefCount*)a)->AddRef()` / `((RefCount*)a)->Release()`: a slot's reference (the members' SmartPtr)
+    RefAdd,
+    RefRelease,
+    /// `new DirList` (the server list, `servers`) / `delete (DirList*)a`
+    ServersNew,
+    ServersDelete,
+}
+
+/// The C++ objects EEWonNet held as members (+0x004..+0x189), the Rust object's slots; the host reads them through
+/// `ee_won_wonnet_objects`. Each pointer is the object as its own class (`routing` a `SmartRoutingConnection*`
+/// as a `RefCount*`, the locks `TSCriticalSection*`); the counted ones (routing, dir_servers, the ops) hold a
+/// reference, as the SmartPtr members did. The flags are written by the cancel boxes through their address.
+#[repr(C)]
+#[derive(Debug)]
+pub struct EeWonNetObjects {
+    pub lock: *mut c_void,
+    pub lock8: *mut c_void,
+    pub routing: *mut c_void,
+    pub dir_servers: *mut c_void,
+    pub auth_servers: *mut c_void,
+    pub lobby: *mut c_void,
+    pub lobby_window: *mut c_void,
+    pub user: *mut c_void,
+    pub servers: *mut c_void,
+    pub motd_op: *mut c_void,
+    pub login_op: *mut c_void,
+    pub dir_op: *mut c_void,
+    pub account_op: *mut c_void,
+    pub cancelled: bool,
+    pub join_room_cancelled: bool,
+}
+
+impl Default for EeWonNetObjects {
+    fn default() -> Self {
+        let n = core::ptr::null_mut();
+        Self {
+            lock: n,
+            lock8: n,
+            routing: n,
+            dir_servers: n,
+            auth_servers: n,
+            lobby: n,
+            lobby_window: n,
+            user: n,
+            servers: n,
+            motd_op: n,
+            login_op: n,
+            dir_op: n,
+            account_op: n,
+            cancelled: false,
+            join_room_cancelled: false,
+        }
+    }
+}
+
+/// A counted slot of [`EeWonNetObjects`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Slot {
+    Routing,
+    DirServers,
+    MotdOp,
+    LoginOp,
+    DirOp,
+    AccountOp,
 }
 
 /// The C++ forwards' calls: `(obj, call, a, b, c, d)`; the completions' too (an `AsyncOp*` in `a`).
@@ -597,6 +650,7 @@ const ROUTING_OP_MAX_PLAYERS_CHANGED: isize = 30;
 /// The game's WON front end (the original's EEWonNet data; see the module's notes).
 pub struct EeWonNet {
     cpp: *mut c_void,
+    objects: UnsafeCell<EeWonNetObjects>,
     password: RefCell<Vec<u32>>,
     game_name: RefCell<Vec<u32>>,
     room_name: RefCell<Vec<u32>>,
@@ -886,6 +940,7 @@ impl EeWonNet {
     fn new(cpp: *mut c_void) -> Self {
         Self {
             cpp,
+            objects: UnsafeCell::new(EeWonNetObjects::default()),
             password: RefCell::default(),
             game_name: RefCell::default(),
             room_name: RefCell::default(),
@@ -934,6 +989,96 @@ impl EeWonNet {
     fn op2(&self, op: EeWonNetOp, a: isize, b: isize) -> isize {
         self.op(op, a, b, 0, 0)
     }
+
+    // ---- the C++ objects' slots
+
+    /// The slots (the host reads and the cancel boxes write them between this object's calls).
+    fn objects(&self) -> *mut EeWonNetObjects {
+        self.objects.get()
+    }
+    fn slot(&self, s: Slot) -> *mut *mut c_void {
+        let o = self.objects();
+        // SAFETY: the object's own slots; no reference into them is kept
+        unsafe {
+            match s {
+                Slot::Routing => &raw mut (*o).routing,
+                Slot::DirServers => &raw mut (*o).dir_servers,
+                Slot::MotdOp => &raw mut (*o).motd_op,
+                Slot::LoginOp => &raw mut (*o).login_op,
+                Slot::DirOp => &raw mut (*o).dir_op,
+                Slot::AccountOp => &raw mut (*o).account_op,
+            }
+        }
+    }
+    /// `member = new` as the SmartPtr member's assignment did: nothing for the same object; else the old one
+    /// released (the slot still naming it), the new one referenced, then stored.
+    fn hold(&self, s: Slot, new: isize) {
+        let slot = self.slot(s);
+        // SAFETY: the object's slot
+        let old = unsafe { slot.read() } as isize;
+        if old == new {
+            return;
+        }
+        if old != 0 {
+            self.op1(Op::RefRelease, old);
+        }
+        if new != 0 {
+            self.op1(Op::RefAdd, new);
+        }
+        // SAFETY: as above
+        unsafe { slot.write(new as *mut c_void) };
+    }
+    fn holds(&self, s: Slot) -> bool {
+        // SAFETY: the object's slot
+        !unsafe { self.slot(s).read() }.is_null()
+    }
+    fn lobby_window(&self) -> bool {
+        // SAFETY: the object's slot
+        !unsafe { (*self.objects()).lobby_window }.is_null()
+    }
+    fn lobby(&self) -> bool {
+        // SAFETY: the object's slot
+        !unsafe { (*self.objects()).lobby }.is_null()
+    }
+    /// `mCancelled` (`join`: `mJoinRoomCancelled`): read as memory a cancel box may have written.
+    fn cancelled(&self, join: bool) -> bool {
+        let o = self.objects();
+        // SAFETY: the object's flag (a C++ callback writes it through its address)
+        unsafe {
+            if join {
+                (&raw const (*o).join_room_cancelled).read_volatile()
+            } else {
+                (&raw const (*o).cancelled).read_volatile()
+            }
+        }
+    }
+    fn set_cancelled(&self, join: bool, v: bool) {
+        let o = self.objects();
+        // SAFETY: as above
+        unsafe {
+            if join {
+                (&raw mut (*o).join_room_cancelled).write_volatile(v)
+            } else {
+                (&raw mut (*o).cancelled).write_volatile(v)
+            }
+        }
+    }
+    /// The members' destruction after the destructor's body, in reverse order of declaration: the ops, the
+    /// server list, the directory servers, the routing connection.
+    fn release_objects(&self) {
+        for s in [Slot::AccountOp, Slot::DirOp, Slot::LoginOp, Slot::MotdOp] {
+            self.hold(s, 0);
+        }
+        // SAFETY: the object's slot
+        let servers = unsafe { (*self.objects()).servers } as isize;
+        if servers != 0 {
+            self.op1(Op::ServersDelete, servers);
+        }
+        // SAFETY: as above
+        unsafe { (*self.objects()).servers = core::ptr::null_mut() };
+        self.hold(Slot::DirServers, 0);
+        self.hold(Slot::Routing, 0);
+    }
     /// An op that fills a sink; the sink's units.
     fn sunk(&self, op: EeWonNetOp, a: isize, sink_arg: usize) -> (isize, WonNetSink) {
         let mut sink = WonNetSink::default();
@@ -948,7 +1093,7 @@ impl EeWonNet {
     // ---- the C++ objects' services
 
     fn routing(&self) -> bool {
-        self.op0(Op::RoutingExists) != 0
+        self.holds(Slot::Routing)
     }
     fn status(&self, op: isize) -> i32 {
         self.op1(Op::OpStatus, op) as i32
@@ -1061,6 +1206,10 @@ impl EeWonNet {
 
     /// The constructor's body: the two locks (the other members are this object's defaults).
     fn construct(&self) {
+        // the server list member (constructed before the body)
+        let servers = self.op0(Op::ServersNew) as *mut c_void;
+        // SAFETY: the object's slot
+        unsafe { (*self.objects()).servers = servers };
         self.op0(Op::LockCreate);
         self.op0(Op::Lock8Create);
     }
@@ -1068,7 +1217,7 @@ impl EeWonNet {
     /// The destructor's body.
     fn destruct(&self) {
         self.ignore_close.set(true);
-        if self.op0(Op::LobbyWindowExists) != 0 {
+        if self.lobby_window() {
             self.op0(Op::LobbyWindowClose);
             while self.op0(Op::LobbyWindowClosed) == 0 {}
             self.op0(Op::LobbyWindowDelete);
@@ -1171,7 +1320,7 @@ impl EeWonNet {
     /// Connects to a routing server: the connect, close, chat and data-object handlers, a cancel box.
     fn select_server(&self, name: Vec<u32>, address: isize) {
         self.disconnect();
-        self.op0(Op::RoutingNew);
+        self.hold(Slot::Routing, self.op0(Op::RoutingNew));
         self.op0(Op::RoutingSetAuth);
         self.op1(Op::RoutingSetConnectCompletion, Call::ConnectCallback as isize);
         self.op1(Op::RoutingSetCloseCompletion, Call::CloseCallback as isize);
@@ -1187,7 +1336,7 @@ impl EeWonNet {
             self.op2(Op::RoutingSetOpCompletion, kind, call as isize);
         }
         self.op1(Op::RoutingSetDefaultOpCompletion, Call::TempCallback as isize);
-        self.op1(Op::CancelledSet, 0);
+        self.set_cancelled(false, false);
         *self.server_name.borrow_mut() = name;
         self.op0(Op::RoutingClearProductName);
         self.op1(Op::RoutingConnect, address);
@@ -1199,7 +1348,7 @@ impl EeWonNet {
     /// only the server selection form closed.
     fn connect_callback(&self, op: isize) {
         let status = self.status(op);
-        if self.op1(Op::OpPeerSocketIsRouting, op) != 0 && status != WS_Killed && self.op0(Op::CancelledGet) == 0 {
+        if self.op1(Op::OpPeerSocketIsRouting, op) != 0 && status != WS_Killed && !self.cancelled(false) {
             if status != WS_Success {
                 self.disconnect();
                 self.close_form(Some(FORM_SELECT_SERVER));
@@ -1220,7 +1369,7 @@ impl EeWonNet {
             return;
         }
         self.op0(Op::LockUi);
-        if self.op0(Op::WonNetExists) != 0 && self.op0(Op::CancelledGet) == 0 {
+        if self.op0(Op::WonNetExists) != 0 && !self.cancelled(false) {
             self.op1(Op::PopTo, self.form(FORM_MULTIPLAYER));
             let event = self.op0(Op::NewRoomsOpenEvent);
             self.op2(Op::FormSetOpenEvent, self.form(FORM_AVAILABLE_ROOMS), event);
@@ -1467,7 +1616,7 @@ impl EeWonNet {
             *self.room_name.borrow_mut() = g.name.clone();
             let pw = wz(&password.map_or_else(Vec::new, |p| bytes_to_wide(&p)));
             self.op(Op::ReqJoinGroup, g.id as isize, pw.as_ptr() as isize, Call::JoinRoomCallback as isize, 0);
-            self.op1(Op::JoinRoomCancelledSet, 0);
+            self.set_cancelled(true, false);
             let t = cz(&self.text(IDS_JOINING_ROOM));
             self.op2(Op::ShowCancelJoinRoom, t.as_ptr() as isize, FORM_AVAILABLE_ROOMS);
             break;
@@ -1484,7 +1633,7 @@ impl EeWonNet {
             return;
         }
         self.join_room_id.set(NONE);
-        if self.op0(Op::JoinRoomCancelledGet) != 0 {
+        if self.cancelled(true) {
             return;
         }
         self.close_form(None);
@@ -1512,7 +1661,7 @@ impl EeWonNet {
         }
         self.ignore_close.set(true);
         self.op0(Op::RoutingKill);
-        self.op0(Op::RoutingClear);
+        self.hold(Slot::Routing, 0);
         self.leave_groups();
         self.clear_games();
         self.server_name.borrow_mut().clear();
@@ -1634,7 +1783,7 @@ impl EeWonNet {
     /// (Dead in AoC) the CD key checked, the certificate request started.
     fn login(&self) {
         if self.op0(Op::KeyValid) != 0 {
-            self.op0(Op::LoginOpNew);
+            self.hold(Slot::LoginOp, self.op0(Op::LoginOpNew));
             self.op1(Op::LoginOpSetCompletion, Call::LoginCallback as isize);
             self.op0(Op::LoginOpNoCreate);
             self.op0(Op::LoginOpRun);
@@ -1655,7 +1804,7 @@ impl EeWonNet {
 
     /// (Dead in AoC) asks the directory servers for the Titan servers.
     fn get_titan_server_list(&self) {
-        self.op0(Op::DirOpNew);
+        self.hold(Slot::DirOp, self.op0(Op::DirOpNew));
         self.op1(Op::DirOpSetCompletion, Call::GetTitanServerListCompletion as isize);
         self.op0(Op::DirOpRun);
     }
@@ -1699,7 +1848,7 @@ impl EeWonNet {
             }
             self.op0(Op::FileClose);
         }
-        self.op0(Op::DirServersNew);
+        self.hold(Slot::DirServers, self.op0(Op::DirServersNew));
         let servers = self.directory_servers.borrow().clone();
         for s in &servers {
             let z = cz(s);
@@ -1707,7 +1856,7 @@ impl EeWonNet {
         }
         self.is_behind_firewall.set(false);
         self.get_titan_server_list();
-        self.op0(Op::RoutingNew);
+        self.hold(Slot::Routing, self.op0(Op::RoutingNew));
         self.join_group_id.set(NONE);
         self.game_group_id.set(NONE);
         self.b187.set(false);
@@ -1790,7 +1939,7 @@ impl EeWonNet {
 
     /// Requests the current account info and shows a cancel box.
     fn open_update_account(&self) {
-        self.op0(Op::AccountOpNew);
+        self.hold(Slot::AccountOp, self.op0(Op::AccountOpNew));
         self.op1(Op::AccountOpSetCompletion, Call::GetAccountCallback as isize);
         self.op0(Op::AccountOpRun);
         // after RunAsync, as the original (the setter waits for the Rust op's lock)
@@ -2129,13 +2278,13 @@ impl EeWonNet {
             Call::Construct => self.construct(),
             Call::ConnectToLobby => self.connect_to_lobby(),
             Call::FnCFFDD => {
-                if self.op0(Op::LobbyExists) != 0 {
+                if self.lobby() {
                     self.op1(Op::LobbyPump, a);
                 }
             }
             Call::FnCFFF2 => {
                 // Fix (kept): test the window that is called (this used to test mLobby).
-                if self.op0(Op::LobbyWindowExists) != 0 {
+                if self.lobby_window() {
                     self.op0(Op::LobbyWindowVirtual18);
                 }
             }
@@ -2247,7 +2396,20 @@ pub unsafe extern "C" fn ee_won_wonnet_free(obj: *mut EeWonNet) {
         return;
     }
     (*obj).destruct();
+    (*obj).release_objects();
     drop(Box::from_raw(obj));
+}
+
+/// The object's C++ objects (the host's and the cancel boxes' view of the slots; valid while the object lives).
+///
+/// # Safety
+/// `obj` from `ee_won_wonnet_new` (or NULL: NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wonnet_objects(obj: *const EeWonNet) -> *mut EeWonNetObjects {
+    if obj.is_null() {
+        return core::ptr::null_mut();
+    }
+    (*obj).objects.get()
 }
 
 /// One call on the object.
