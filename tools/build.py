@@ -93,7 +93,7 @@ SIM_MAIN = ROOT / "src" / "Empire Earth" / "Empire Earth" / "EESimMain.cpp"   # 
 def compile_all(targets, out, opt, jobs, overlays=None, extra=(), more=()):
     """Compile every unit the targets link, in parallel -> objs(source, flags) -> object path; exits on a failure."""
     mods = [m for t in targets for m in units.TARGET_MODULES.get(t, [t])]
-    work = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods) + list(more)
+    work = [j for m in mods for j in units.jobs_for(m)] + list(more)
     for j in work:
         verify.include_paths(verify.stage_source(j[1]))
     table, failed = {}, []
@@ -178,9 +178,8 @@ def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
     shutil.rmtree(dst / ("lib" if name == "EE-AOC" else f"lib-{name}"), ignore_errors=True)
     game = [objs(p, MODULE_FLAGS["exe"]) for _, _, p in module_units("exe")]
     rest = [m for m in units.TARGET_MODULES["exe"] if m != "exe"]
-    first = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] + [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
+    first = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)]
     game += [objs(ROOT / "src" / rel, MODULE_FLAGS["exe"]) for rel in units.EXTRA_UNITS.get("exe", [])]
-    game += [objs(j[1], j[2]) for j in units.lib_jobs(["exe"])]   # the game's own libraries (Lua)
     res = [rsrc_rebuild.compile_rc(units.EXE_RC, out / "rsrc"),
            rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
     # the language strings are a generated table (ee_util language_strings.rs): it must be current and equal to rc.exe's
