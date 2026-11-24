@@ -393,4 +393,32 @@ return {
     transport_park = true,          -- transports held at a park
     strategy_plans = false,         -- the strategy plans (plans.c: ported, off until the consumers are wired to
                                     -- plan_f/worth)
+    -- ============================================================================================================
+    -- [llm] the AI voice (upstream config/ageofai.ini [llm], the keys ageofai_config.exe writes). This engine has
+    -- no voice/LLM subsystem (voice/persona.c and dll/voice/llm.c are the retail mod's), so these keys are recorded
+    -- for parity only: nothing reads them yet. An LLM key goes in llm_api_key.
+    -- ============================================================================================================
+    llm_enabled = false,            -- the language model speaks for the computer players (0 upstream)
+    llm_url = "http://localhost:1234/v1/chat/completions",
+    llm_model = "",                 -- the model name (empty: the server's default)
+    llm_api_key = "",               -- for a server that wants a key (a local one doesn't)
+    llm_lines = true,               -- the AI says its personality's lines
+    llm_chat = true,                -- ... and the chat lines
+    llm_decide = false,             -- the model decides its moves towards the human
+    llm_ai_talk = false,            -- an exchange with the human after an offer
+    llm_ai_talk_show = true,        -- ... the human reads along
+    llm_ai_talk_gap = 60,           -- seconds between exchanges
+    llm_ai_talk_turns = 4,          -- messages an exchange
+    llm_ai_decide = false,          -- the model decides between the AIs too
+    llm_constrained = true,         -- within the rules
+    llm_memory = 8,                 -- the messages the model keeps
+    llm_memory_mode = "pair",
+    llm_equal = false,
+    llm_timeout = 20,               -- seconds a request may take
+    llm_fallback = "rules",         -- what it does when the model fails
+    llm_max_tokens = 300,
+    llm_temperature = 80,           -- percent
+    llm_think = false,              -- false: requests ask for no reasoning (reasoning_effort none)
+    llm_extra = "",                 -- extra JSON for the request
+    llm_log = true,                 -- prompts and answers into the log
 }
