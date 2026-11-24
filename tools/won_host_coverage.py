@@ -172,6 +172,9 @@ CHECKS = [
                for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")],
          allowed={}),
     # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
+    # the front end's UI-thread action (R6 WON lobby and network round 37: wonaction.rs; ee/EEAWonNetHost.inl)
+    dict(enum="EeWonActionOp", header="won_lobby/wonaction.h",
+         hosts=[ROOT / "include" / "ee" / "EEAWonNetHost.inl"], rust=[], allowed={}),
     dict(enum="EeWonFrontOp", header="won_lobby/wonfront.h",
          hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
     # R6 WON round 33 (lobby): WONLobbyPrv (lobbyprv.rs), the model's buffers (modelbuf.rs), ChatCtrl's link

@@ -102,9 +102,7 @@ static intptr_t WonNetHostCall(EEWonNet* w, EeWonNetOp inOp, intptr_t a, intptr_
     case Op::EditBoxSetText: ((UIEditBox*)a)->SetText(UWideString((const char*)b)); return 0;
     case Op::LabelSetText: ((UITextLabel*)a)->SetText(UWideString((const char*)b)); return 0;
     case Op::NewJoinOrHost: return (intptr_t)static_cast<EEAction*>(new EEAJoinOrHostAGame(a, UWideString((const char*)b), UWideString((const char*)c)));
-    case Op::NewWonGame: return (intptr_t)static_cast<EEAction*>(new EEAWonNet(3, UWideString((const char*)a), (long)b, (long)c, (d & 1) != 0, (d & 2) != 0, (d & 4) != 0));
-    case Op::NewWonPlayer: return (intptr_t)static_cast<EEAction*>(new EEAWonNet(4, NULL, UWideString((const char*)a), false));
-    case Op::NewWonChat: return (intptr_t)static_cast<EEAction*>(new EEAWonNet(a & 0xff, (UITextLabel*)b, UWideString((const char*)c), UWideString((const char*)d), (a >> 8) != 0));
+    case Op::NewWonAction: return (intptr_t)static_cast<EEAction*>(new EEAWonNet(reinterpret_cast<EeWonAction*>(a)));
     case Op::PostAction: gUserInterface->PostAction((EEAction*)a); return 0;
     case Op::ActionDereference: ((EEAction*)a)->Dereference(); return 0;
     case Op::PostLoginDone: gUserInterface->PostLoginDone(); return 0;

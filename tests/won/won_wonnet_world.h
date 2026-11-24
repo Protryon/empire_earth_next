@@ -16,6 +16,7 @@
 #include "rust/won_net/reqdir.h"
 #include "rust/won_net/routeop.h"
 #include "rust/won_lobby/wonfront.h"
+#include "rust/won_lobby/wonaction.h"
 #include "rust/won_net/smartroute.h"
 
 namespace W {
@@ -407,12 +408,23 @@ template <class T> struct UIListBox {};
 struct EEAJoinOrHostAGame : EEAction {
     EEAJoinOrHostAGame(long m, const UWideString& p, const UWideString& g) { mText = "join/host " + N(m) + " " + (const char*)p + " " + (const char*)g; }
 };
+// R6 WON lobby and network round 37: the class is the Rust action's shell (wonaction.rs); both sides' stand-ins
+// log the action as the Rust describes it (the type, the list and label given, the texts, the counts, the flags
+// password / from me / in progress / private)
+static std::string WonActionText(long t, bool l, bool c, const char* p, const char* s, long h, long n, bool pw, bool me, bool prog, bool priv)
+{ return "won " + N(t) + " list=" + N(l) + " chat=" + N(c) + " prefix=" + p + " text=" + s + " humans=" + N(h) + " players=" + N(n) + " flags=" + N(pw) + N(me) + N(prog) + N(priv); }
+static std::string WonActionLabel(UITextLabel* l) { return " label=" + (l ? N(l->mForm) + "/" + N(l->mId) : std::string("NULL")); }
 struct EEAWonNet : EEAction {
-    EEAWonNet(long t, UIListBox<UWideString>* l, const UWideString& s, bool b) { mText = "won " + N(t) + " " + N(l != NULL) + " " + (const char*)s + " " + N(b); }
-    EEAWonNet(long t, const UWideString& s, long h, long p, bool a, bool b, bool c)
-    { mText = "won " + N(t) + " " + (const char*)s + " " + N(h) + " " + N(p) + " " + N(a) + N(b) + N(c); }
-    EEAWonNet(long t, UITextLabel* l, const UWideString& p, const UWideString& s, bool m)
-    { mText = "won " + N(t) + " " + (l ? N(l->mForm) + "/" + N(l->mId) : std::string("NULL")) + " " + (const char*)p + " " + (const char*)s + " " + N(m); }
+    EEAWonNet(long t, UIListBox<UWideString>* l, const UWideString& s, bool b) { mText = WonActionText(t, l != NULL, false, "", s, 0, 0, b, false, false, false) + WonActionLabel(NULL); }
+    EEAWonNet(long t, const UWideString& s, long h, long p, bool a, bool b, bool c) { mText = WonActionText(t, false, false, "", s, h, p, a, false, c, b) + WonActionLabel(NULL); }
+    EEAWonNet(long t, UITextLabel* l, const UWideString& p, const UWideString& s, bool m) { mText = WonActionText(t, false, l != NULL, p, s, 0, 0, false, m, false, false) + WonActionLabel(l); }
+    explicit EEAWonNet(EeWonAction* r)
+    {
+        char aText[1024];
+        ee_won_action_describe(r, aText, sizeof(aText));
+        mText = std::string("won ") + aText + WonActionLabel((UITextLabel*)ee_won_action_chat(r));
+        ee_won_action_free(r);
+    }
 };
 struct EEUICWNRBLine { UWideString mName; UWideString mDescription; long mNumPlayers; long mNumGames; };
 struct EEUICWonNetRoomsBox {

@@ -155,13 +155,9 @@ enum class EeWonNetOp {
   LabelSetText,
   /// `new EEAJoinOrHostAGame(a, UWideString((const char*)b), UWideString((const char*)c))`
   NewJoinOrHost,
-  /// `new EEAWonNet(3, UWideString((const char*)a), b, c, d & 1, d & 2, d & 4)` (a game row)
-  NewWonGame,
-  /// `new EEAWonNet(4, NULL, UWideString((const char*)a), false)` (a player row)
-  NewWonPlayer,
-  /// `new EEAWonNet(a & 0xff, (UITextLabel*)b, UWideString((const char*)c), UWideString((const char*)d),
-  /// (a >> 8) != 0)` (a chat line: the action type, the label, the sender, the text, from this client)
-  NewWonChat,
+  /// `new EEAWonNet((EeWonAction*)a)`: the action's C++ shell, which takes the action (round 37: wonaction.rs
+  /// makes a game row, a player row or a chat line as the three constructors did)
+  NewWonAction,
   /// `gUserInterface->PostAction((EEAction*)a)`
   PostAction,
   /// `((EEAction*)a)->Dereference()`

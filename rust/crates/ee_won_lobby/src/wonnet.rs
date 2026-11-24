@@ -16,7 +16,9 @@
 //! `Vec<u32>` of `wchar_t` units (UTF-16 on Windows, UTF-32 elsewhere).
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::{c_char, c_void};
+use core::ffi::{c_char, c_long, c_void};
+
+use crate::wonaction::EeWonAction;
 use std::cell::{Cell, RefCell, UnsafeCell};
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -187,13 +189,9 @@ pub enum EeWonNetOp {
     LabelSetText,
     /// `new EEAJoinOrHostAGame(a, UWideString((const char*)b), UWideString((const char*)c))`
     NewJoinOrHost,
-    /// `new EEAWonNet(3, UWideString((const char*)a), b, c, d & 1, d & 2, d & 4)` (a game row)
-    NewWonGame,
-    /// `new EEAWonNet(4, NULL, UWideString((const char*)a), false)` (a player row)
-    NewWonPlayer,
-    /// `new EEAWonNet(a & 0xff, (UITextLabel*)b, UWideString((const char*)c), UWideString((const char*)d),
-    /// (a >> 8) != 0)` (a chat line: the action type, the label, the sender, the text, from this client)
-    NewWonChat,
+    /// `new EEAWonNet((EeWonAction*)a)`: the action's C++ shell, which takes the action (round 37: wonaction.rs
+    /// makes a game row, a player row or a chat line as the three constructors did)
+    NewWonAction,
     /// `gUserInterface->PostAction((EEAction*)a)`
     PostAction,
     /// `((EEAction*)a)->Dereference()`
@@ -754,6 +752,11 @@ pub fn routing_op_type_name(kind: i64) -> &'static str {
     }
 }
 
+/// A text as the C string it was passed as: up to its first NUL.
+fn c_text(bytes: &[u8]) -> &[u8] {
+    &bytes[..bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len())]
+}
+
 /// A NUL-terminated copy of bytes, for a `(const char*)` argument.
 fn cz(bytes: &[u8]) -> Vec<u8> {
     let mut v = bytes.to_vec();
@@ -1134,6 +1137,11 @@ impl EeWonNet {
     fn post(&self, action: isize) {
         self.op1(Op::PostAction, action);
         self.op1(Op::ActionDereference, action);
+    }
+    /// Posts a WON action: its C++ shell made (it takes the action), posted and let go.
+    fn post_won(&self, action: EeWonAction) {
+        let shell = self.op1(Op::NewWonAction, Box::into_raw(Box::new(action)) as isize);
+        self.post(shell);
     }
     fn user_name(&self) -> Vec<u8> {
         wide_to_bytes(&self.sunk(Op::UserName, 0, 0).1.units)
@@ -1708,11 +1716,10 @@ impl EeWonNet {
         let show_closed = checked(AG_IN_PROGRESS_TOGGLE);
         let show_passworded = checked(AG_PASSWORD_TOGGLE);
         let show_firewalled = checked(AG_PRIVATE_TOGGLE);
+        // `new EEAWonNet(3, text, humans, players, bits & 1, bits & 2, bits & 4)` (a game row)
         let row = |text: &[u8], humans: u32, players: u32, bits: isize| {
-            let t = cz(text);
-            let action =
-                self.op(Op::NewWonGame, t.as_ptr() as isize, humans as i32 as isize, players as i32 as isize, bits);
-            self.post(action);
+            let (humans, players) = (humans as i32 as c_long, players as i32 as c_long);
+            self.post_won(EeWonAction::new_game(3, c_text(text), humans, players, bits & 1 != 0, bits & 2 != 0, bits & 4 != 0));
         };
         row(b"@@@@", 0, 0, 0);
         let games: Vec<GameInfo> = self.games.borrow().values().cloned().collect();
@@ -1764,11 +1771,8 @@ impl EeWonNet {
             self.is_listing_players.set(false);
             return;
         }
-        let row = |text: &[u8]| {
-            let t = cz(text);
-            let action = self.op1(Op::NewWonPlayer, t.as_ptr() as isize);
-            self.post(action);
-        };
+        // `new EEAWonNet(4, NULL, text, false)` (a player row)
+        let row = |text: &[u8]| self.post_won(EeWonAction::new_list(4, 0, c_text(text), false));
         row(b"@@@@");
         for m in members {
             let name = self.clients.borrow().get(&m).cloned();
@@ -1984,24 +1988,25 @@ impl EeWonNet {
         if self.op1(Op::OpRecipientsEmpty, op) != 0 {
             return;
         }
-        let from = cz(&wide_to_bytes(&name.unwrap_or_default()));
+        let from = wide_to_bytes(&name.unwrap_or_default());
         if self.num(op, EE_WON_RTF_FLAGS16) & 4 != 0 && client.id != self.my_client_id() {
             self.reply_client_id.set(sender);
         }
         let mut sink = WonNetSink::default();
         self.op(Op::OpText, op, EE_WON_RTT_TEXT as isize, &mut sink as *mut WonNetSink as isize, 0);
-        let text = cz(&wide_to_bytes(&sink.units));
+        let text = wide_to_bytes(&sink.units);
         let current = self.op0(Op::CurrentForm);
-        let mine = (client.id == self.my_client_id()) as isize;
+        let mine = client.id == self.my_client_id();
+        // `new EEAWonNet(6 or 7, the label, from, text, mine)` (a chat line)
         let action = if current == self.form(FORM_AVAILABLE_GAMES) {
             let label = self.op2(Op::FormControl, self.op0(Op::CurrentForm), CHAT_LABEL);
-            self.op(Op::NewWonChat, 6 | mine << 8, label, from.as_ptr() as isize, text.as_ptr() as isize)
+            EeWonAction::new_chat(6, label, c_text(&from), c_text(&text), mine)
         } else if current == self.form(FORM_LOBBY) {
-            self.op(Op::NewWonChat, 7 | mine << 8, 0, from.as_ptr() as isize, text.as_ptr() as isize)
+            EeWonAction::new_chat(7, 0, c_text(&from), c_text(&text), mine)
         } else {
             return;
         };
-        self.post(action);
+        self.post_won(action);
     }
 
     /// Does nothing (enters and leaves a lock).
@@ -2122,10 +2127,7 @@ impl EeWonNet {
                 }
                 message.extend_from_slice(&name.bytes());
                 let label = self.op2(Op::FormControl, self.op0(Op::CurrentForm), CHAT_LABEL);
-                let user = cz(&self.user_name());
-                let m = cz(&message);
-                let action = self.op(Op::NewWonChat, 6 | 1 << 8, label, user.as_ptr() as isize, m.as_ptr() as isize);
-                self.post(action);
+                self.post_won(EeWonAction::new_chat(6, label, c_text(&self.user_name()), c_text(&message), true));
             }
             b'T' | b't' => {
                 if t.len() < 8 {
