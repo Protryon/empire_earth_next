@@ -34,10 +34,8 @@ void RTSRegisterUnit(RTSUnit* inUnit) { ee_rts_unit_registry(inUnit, inUnit, tru
 void RTSUnregisterUnit(RTSUnit* inUnit) { ee_rts_unit_registry(inUnit, inUnit, false); }
 
 // A handle of a unit without an id resolves to nothing: reported once (such a holder must keep its pointer). The
-// EEUnit and EEComplexUnit overloads are in EEUnit.cpp (they need the complete classes).
+// typed halves are ee/EEUnitHandle.h's casts.
 uint32_t EEUnitHandleID(const RTSUnit* inUnit) { return ee_rts_unit_handle_id(inUnit); }
-
-void EEUnitHandleResolve(uint32_t inUnitID, RTSUnit*& outUnit) { outUnit = RTSResolveUnitID(inUnitID); }
 
 void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere) { ee_rts_unit_check_list(inHead, inWhere); }
 
