@@ -623,7 +623,7 @@ fn start(f: P, v: &[i64; 8]) {
         h(O::SsGetProtocol, f, &[ptr(&mut protocol)]);
         h(O::SsProtocolStatus, f, &[protocol as i64]);
     } else if v[0] == EE_NETMSG_SESS_START_RESUME {
-        h(O::SsPostResume, f, &[]);
+        super::globals::graphics_post_resume();
         while h(O::SsGfxPaused, f, &[]) != 0 {
             ee_base::plat_core::time::PlatSleep(1);
         }

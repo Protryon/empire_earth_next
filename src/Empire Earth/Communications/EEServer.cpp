@@ -686,8 +686,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsProtocolStatus: ((NEProtocol*)a[0])->GetStatus(UWideString(""), 0xffff0000);
         break;
-    case O::SsPostResume: gGraphics->PostResume();
-        break;
     case O::SsGfxPaused: return gGraphics->mIsPaused;
     case O::SsPhysicsPostStart: gPhysics->mThread->Post(0x404, NULL, NULL, true);
         break;

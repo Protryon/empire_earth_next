@@ -3,7 +3,8 @@
 //! and render object pointers, the TEST ONLY hooks, the campaigns' network checksums, the install checksum, the
 //! space units' heights, gFreeCamera, sIconsLoaded and gEmptyString. Each is exported under the C++ symbol: MSVC's
 //! mangled name on Windows (from the link map), the plain name elsewhere (Itanium does not mangle a global's name).
-//! Rust never reads or writes them; they are only storage. Types: a pointer is `*mut c_void` (the C++'s typed
+//! Rust only stores them, but for a few pointers gamecpp passes on to a Rust export (gDataPath, gGraphics, gPhysics,
+//! gDataPreLoading: reads on the thread that owns the object). Types: a pointer is `*mut c_void` (the C++'s typed
 //! pointer has the same size and alignment), `long` is `c_long` (32 bits on Windows, 64 on LP64), `bool` is `bool`.
 #![allow(non_upper_case_globals)]
 
@@ -112,6 +113,24 @@ ee_globals! {
     val gFreeCamera: bool = false => "?gFreeCamera@@3_NA";
     val sIconsLoaded: bool = false => "?sIconsLoaded@@3_NA";
     val gEmptyString: [c_char; 4] = [0; 4] => "?gEmptyString@@3PADA";
+}
+
+/// `gGraphics->PostResume()` (rts graphics.rs; its FFI is absent from a test binary).
+pub(crate) fn graphics_post_resume() {
+    // SAFETY: the game's graphics thread object
+    #[cfg(not(test))]
+    unsafe {
+        crate::rts::graphics::ee_rts_graphics_post_resume(*core::ptr::addr_of!(gGraphics))
+    };
+}
+
+/// `gGraphics->PostPause()`.
+pub(crate) fn graphics_post_pause() {
+    // SAFETY: the game's graphics thread object
+    #[cfg(not(test))]
+    unsafe {
+        crate::rts::graphics::ee_rts_graphics_post_pause(*core::ptr::addr_of!(gGraphics))
+    };
 }
 
 #[cfg(test)]

@@ -629,8 +629,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsGameState: return P64(&gGameState);
     case O::PsValidateIntoMessage: return EEValidateSaveGameFile(FILE_, gLoadSaveErrorMessage);
-    case O::PsGraphicsPostResume: gGraphics->PostResume();
-        break;
     case O::PsUiResumeGraphics: gUserInterface->ResumeGraphics();
         break;
     case O::PsMapApplyVertexColors: gWorld.GetMap()->ApplyVertexColors();
@@ -687,15 +685,11 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsEditorFormPresent: return gUIManager->GetScenarioEditorForm() != NULL;
     case O::PsEditorClearSelection: gUIManager->GetScenarioEditorForm()->ClearSelection();
         break;
-    case O::PsPreloadWaitQueue: gDataPreLoading->WaitForMessageQueue();
-        break;
     case O::PsWorldClear: gWorld.Clear();
         break;
     case O::PsWorldStartGame: gWorld.StartGame((EEGameState*)a[0], true);
         break;
     case O::PsInScenarioEditor: return gUIManager->mInScenarioEditor;
-    case O::PsLegacyTextLoad: USetLegacyTextLoad(a[0] != 0);
-        break;
     case O::PsReportCorrupt: EEReportLoadFailure("Load game file is corrupt.", false, NULL);
         break;
     case O::PsDebugCorrupt: ESDebugOut("EE load failure: Load game file is corrupt.\n");

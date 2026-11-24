@@ -129,7 +129,7 @@ struct TextureDescription {
 }
 
 fn now() -> c_ulong {
-    h(O::TimeNow, 0, &[]) as c_ulong
+    ee_base::time::ee_time_get() as c_ulong
 }
 
 fn world() -> P {

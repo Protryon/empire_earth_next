@@ -400,9 +400,9 @@ pub extern "C" fn ee_gamecpp_hdr_load(header: *mut c_void, file: *mut c_void) ->
     if r == PF_OK {
         // SAFETY: the header's versions
         let (maj, min) = unsafe { (*hdr_versions(header), *hdr_versions(header).add(1)) };
-        h(O::PsLegacyTextLoad, 0, &[!ee_sim::save_versions::EESaveTextIsUtf8(maj, min) as i64]);
+        ee_base::ustring::ee_ustring_set_legacy_text_load(!ee_sim::save_versions::EESaveTextIsUtf8(maj, min));
         r = load_body(header, file);
-        h(O::PsLegacyTextLoad, 0, &[0]);
+        ee_base::ustring::ee_ustring_set_legacy_text_load(false);
     }
     r as c_long
 }

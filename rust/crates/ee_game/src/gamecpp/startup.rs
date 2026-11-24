@@ -130,7 +130,7 @@ fn render_states(screen: i64, projection: bool) {
 
 /// Waits for the graphics thread to pause after asking it to.
 fn pause_graphics() {
-    h(O::GfxPostPause, 0, &[]);
+    super::globals::graphics_post_pause();
     let mut started = h(O::GfxIsPaused, 0, &[]) != 0;
     while !started {
         ee_base::plat_core::time::PlatSleep(1);
