@@ -35,10 +35,7 @@ bool EECombatRules::IsMoraleBuilding(long inUnitType) const { return this->mMora
 const EEEpochMedia& EERules::Epoch(long inEpoch) const
 {
     static const EEEpochMedia kNone;
-    if (this->mEpochs.empty())
-        return kNone;
-    size_t k = inEpoch < 0 ? 0 : (size_t)inEpoch;
-    return this->mEpochs[k < this->mEpochs.size() ? k : this->mEpochs.size() - 1];
+    return this->mEpochs.empty() ? kNone : this->mEpochs[ee_data_rules_epoch_index(inEpoch, this->mEpochs.size())];
 }
 
 EERules::EERules() : mRust(ee_data_rules_new())

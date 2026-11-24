@@ -170,6 +170,11 @@ void ee_data_rules_set_music_from_flags(EeDataRules *rules,
 long ee_data_rules_ai_level(const EeDataRules *rules,
                             unsigned long difficulty);
 
+/// `EERules::Epoch`'s entry: an epoch position's index in a list of `count` epochs (before the list the first, past
+/// it the last; `count` > 0).
+size_t ee_data_rules_epoch_index(long epoch,
+                                 size_t count);
+
 /// The binary load's songs: every row of a dbmusic.dat file's per-epoch flags (the gate's and tools' path).
 ///
 /// # Safety

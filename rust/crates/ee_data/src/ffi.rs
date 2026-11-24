@@ -422,6 +422,14 @@ pub unsafe extern "C" fn ee_data_rules_ai_level(rules: *const EeDataRules, diffi
     }
 }
 
+/// `EERules::Epoch`'s entry: an epoch position's index in a list of `count` epochs (before the list the first, past
+/// it the last; `count` > 0).
+#[no_mangle]
+pub extern "C" fn ee_data_rules_epoch_index(epoch: std::ffi::c_long, count: usize) -> usize {
+    let k = if epoch < 0 { 0 } else { epoch as usize };
+    k.min(count.saturating_sub(1))
+}
+
 /// The binary load's songs: every row of a dbmusic.dat file's per-epoch flags (the gate's and tools' path).
 ///
 /// # Safety
@@ -676,6 +684,12 @@ mod tests {
             assert!(!ee_data_rules_music_from_dbmusic(r, d.as_ptr(), 3));
             ee_data_rules_free(r);
         }
+    }
+
+    #[test]
+    fn an_epoch_position_is_clamped_to_the_list() {
+        assert_eq!([-3, 0, 4, 14, 15, 99].map(|e| ee_data_rules_epoch_index(e, 15)), [0, 0, 4, 14, 14, 14]);
+        assert_eq!(ee_data_rules_epoch_index(2, 1), 0);
     }
 
     #[test]
