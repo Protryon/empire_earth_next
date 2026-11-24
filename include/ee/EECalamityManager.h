@@ -13,18 +13,8 @@ class EECalamityClass;
 class EEPlayer;
 class FSFileSpec;
 
-// A calamity class's enum (dbcalamity.dat +0x84; EECalamityClass::mClassEnum). Enum and enumerator names are
-// provisional: the
-// game's callers of GetCalamityClass(const&) pass converted temporaries (`x - 6`, the literal 7), so the parameter
-// is a distinct type, and EECalamity::Load's long picks the unsigned long overload. Values from the class switch in
-// LoadCalamityClasses (1, 2, 5, 6, 11, 12 have no class).
-enum EECalamityEnum {
-    kCalamityEarthquake = 3, kCalamityHurricane = 4, kCalamityPlague = 7, kCalamityLeprosy = 8,
-    kCalamityVolcano = 9, kCalamityFire = 10, kCalamityMorale = 13, kCalamityTimeWarp = 14,
-    kCalamityTeleport = 15, kCalamityAreaEffect = 16, kCalamityAEExtraDamage = 17, kCalamitySpecialAttack = 18,
-    kCalamityAEMindControl = 19, kCalamityConscription = 20, kCalamityLogicBomb = 21, kCalamityDropObject = 22,
-    kCalamityCloaking = 23, kCalamityMeteorStorm = 24, kCalamityLineOfSight = 25, kCalamitySpecialLocation = 26
-};
+// A calamity class's enum (EECalamityEnum; dbcalamity.dat +0x84, EECalamityClass::mClassEnum): Rust's enums (ee_sim game_ids.rs), emitted back as plain C++ enums with their evidence comments.
+#include "rust/sim/game_ids.h"
 
 // Deletes every element of ioList and empties it; the number deleted (cdecl template COMDATs 0xaea54, 0xaeb53 at
 // the end of EECalamityManager.cpp; name and file name inferred: not in the unit, whose first assert is on line 77)

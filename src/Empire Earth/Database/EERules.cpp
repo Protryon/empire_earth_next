@@ -30,11 +30,6 @@ EERuleNumber EERuleNumber::World(long inRow, int inValue)
     return n;
 }
 
-bool EECombatRules::IsElevationAttacker(long inCategory) const { return this->mElevationAttackers.contains(inCategory); }
-bool EECombatRules::IsElevationLauncher(long inCategory) const { return this->mElevationLaunchers.contains(inCategory); }
-bool EECombatRules::IsElevationTarget(long inCategory) const { return this->mElevationTargets.contains(inCategory); }
-bool EECombatRules::IsMoraleBuilding(long inUnitType) const { return this->mMoraleBuildings.contains(inUnitType); }
-
 long EEDifficultyAILevel(unsigned long inDifficulty)
 {
     const EERuleList<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
@@ -43,7 +38,7 @@ long EEDifficultyAILevel(unsigned long inDifficulty)
 
 const EEEpochMedia& EERules::Epoch(long inEpoch) const
 {
-    static const EEEpochMedia kNone;
+    static const EEEpochMedia kNone = [] { EEEpochMedia theNone; ee_data_rules_epoch_none(&theNone); return theNone; }();
     if (this->mEpochs.empty())
         return kNone;
     size_t k = inEpoch < 0 ? 0 : (size_t)inEpoch;
@@ -62,8 +57,7 @@ EERules::~EERules()
 
 void EERules::Refresh()
 {
-    ee_data_rules_mirror(this->mRust, static_cast<EERulesData*>(this), kEERulesMirrorSizes,
-                         sizeof(kEERulesMirrorSizes) / sizeof(kEERulesMirrorSizes[0]));
+    ee_data_rules_mirror(this->mRust, static_cast<EERulesData*>(this));
 }
 
 void EERules::SetMusicFromFlags(long inSong, const bool* inFlags, unsigned long inCount)
