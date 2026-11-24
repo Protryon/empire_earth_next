@@ -978,6 +978,8 @@ enum class EeWonGuiOp : uint32_t {
   WmSizeEvSetW,
   /// `((SizeEvent*)a)->mHeight = b`.
   WmSizeEvSetH,
+  /// `t->AddSegment(((const GUIString*)a)->substr(b, c), d != 0)` (AddFormatedText's line, guitext.rs).
+  TextAddPart = 3400,
   /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
   TabNewContainer = 3200,
   /// TabCtrl's constructor: `new TabBar((EeWonTabCtrl*)a)` (unheld, as a `Component*`).

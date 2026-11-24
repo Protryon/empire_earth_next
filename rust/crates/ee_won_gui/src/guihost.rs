@@ -1117,6 +1117,9 @@ pub enum EeWonGuiOp {
     WmSizeEvSetW,
     /// `((SizeEvent*)a)->mHeight = b`.
     WmSizeEvSetH,
+    // ---- R6 WON GUI round 36, the hosts' share (values 3400..3599)
+    /// `t->AddSegment(((const GUIString*)a)->substr(b, c), d != 0)` (AddFormatedText's line, guitext.rs).
+    TextAddPart = 3400,
     // ---- R6 WON GUI round 35, the configs' and containers' share (values 3200..3399)
     /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
     TabNewContainer = 3200,

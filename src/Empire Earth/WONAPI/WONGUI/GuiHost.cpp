@@ -104,7 +104,7 @@ static FontDescriptor Underlined(FontDescriptor inDescriptor)
     return inDescriptor;
 }
 
-extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
+extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     TextArea* t = (TextArea*)inComp;
     switch (op) {
@@ -150,6 +150,7 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::SegSetFont: Seg(a)->mFont=(Font*)b; return 0;
     case Op::SegSetLineBreak: Seg(a)->mLineBreak=b!=0; return 0;
     case Op::AddSegmentOf: t->AddSegment(Seg(a)); return 0;
+    case Op::TextAddPart: t->AddSegment(((const GUIString*)a)->substr((unsigned short)b, (unsigned short)c), d != 0); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -183,11 +184,9 @@ void TextArea::AddSegment(const GUIString& text,int color,Font* font,bool lineBr
 
 // Appends text split at CR, LF and CRLF into one line-broken segment per line; the last line breaks
 // only when lineBreak is set
-void TextArea::AddFormatedText(const GUIString& text,bool lineBreak) {
-    std::vector<EeWonTextPart> aParts(text.length()+1);
-    size_t aCount=ee_won_gui_text_split(text.mData->mText,text.length(),sizeof(wchar_t),lineBreak,&aParts[0],aParts.size());
-    for(size_t i=0;i<aCount && i<aParts.size();i++)
-        this->AddSegment(text.substr((unsigned short)aParts[i].start,(unsigned short)aParts[i].len),aParts[i].line_break);
+void TextArea::AddFormatedText(const GUIString& text,bool lineBreak)
+{
+    ee_won_gui_add_formatted(this,ee_won_guicpp_text_call,&text,text.mData->mText,text.length(),sizeof(wchar_t),lineBreak);
 }
 }
 

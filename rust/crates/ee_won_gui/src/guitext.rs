@@ -1034,6 +1034,32 @@ pub unsafe extern "C" fn ee_won_gui_text_split(
     unsafe { emit(&split_lines(&t, line_break), out, room) }
 }
 
+/// TextArea::AddFormatedText (GuiHost.cpp's loop until R6 WON GUI round 36): each line of `split_lines` added as a
+/// segment of the text `text` (its `len` units at `units`) through the host's `TextAddPart`.
+///
+/// # Safety
+/// `units` holds `len` units of `wchar_size` bytes (or is NULL with 0); `host` is the text area's.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gui_add_formatted(
+    component: *mut c_void,
+    host: crate::guihost::EeWonGuiHostFn,
+    text: *const c_void,
+    units: *const c_void,
+    len: u16,
+    wchar_size: u32,
+    line_break: bool,
+) {
+    let Some(h) = host else { return };
+    // SAFETY: `len` units (the contract)
+    let t = unsafe { wide(units, usize::from(len), wchar_size) };
+    for p in split_lines(&t, line_break) {
+        // SAFETY: the text area's own host
+        unsafe {
+            h(component, crate::guihost::EeWonGuiOp::TextAddPart, text as isize, p.start as isize, p.len as isize, p.line_break as isize)
+        };
+    }
+}
+
 /// `format_ops` over a `GUIString`'s units: the first `room` steps into `out` (`2 * len + 2` is enough), their
 /// count.
 ///

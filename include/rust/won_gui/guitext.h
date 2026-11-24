@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/guihost.h"
 
 /// A line's vertical metrics (`TextLine`'s height, baseline and descent).
 struct EeWonTextLineM {
@@ -284,6 +285,19 @@ size_t ee_won_gui_text_split(const void *text,
                              bool line_break,
                              EeWonTextPart *out,
                              size_t room);
+
+/// TextArea::AddFormatedText (GuiHost.cpp's loop until R6 WON GUI round 36): each line of `split_lines` added as a
+/// segment of the text `text` (its `len` units at `units`) through the host's `TextAddPart`.
+///
+/// # Safety
+/// `units` holds `len` units of `wchar_size` bytes (or is NULL with 0); `host` is the text area's.
+void ee_won_gui_add_formatted(void *component,
+                              EeWonGuiHostFn host,
+                              const void *text,
+                              const void *units,
+                              uint16_t len,
+                              uint32_t wchar_size,
+                              bool line_break);
 
 /// `format_ops` over a `GUIString`'s units: the first `room` steps into `out` (`2 * len + 2` is enough), their
 /// count.
