@@ -183,8 +183,6 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     switch (inOp) {
     // the storms' map, the terrain under a volcano and a farm
     case O::FxTileTerrainType: return ((EEMapTile*)p)->mTerrainType;
-    case O::FxNextTile: EEGetNextTile(*(const EETileCoordinate*)a[0], *(EETileCoordinate*)a[1], (long)a[2], 1);
-        break;
     case O::FxLandRipple: return P64(EEGraphicEffect::Get(kGraphicEffectLandRipple));
     case O::FxWorldPlacedEffect: return gWorld.GetEffectManager()->CreatePlacedEffect(FXPT(0), (EEGraphicEffect*)a[1], NULL);
     case O::FxTerrainColor: *(GEColor*)a[2] = EETerrainTable::Get(gWorld.mMap->mTerrainMesh.GetTextureSetID((unsigned long)a[0], (unsigned long)a[1]))->mColor;
@@ -195,8 +193,6 @@ int64_t EECore9OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     // the sounds
     case O::FxComputeSound: EEComputeSoundParameters(f[0], FXPT(0), *(float*)a[1], *(float*)a[2], *(float*)a[3], f[1]);
-        break;
-    case O::FxSetSoundParameters: gSoundManager->SetSoundParameters((SESMInstanceNode*)p, f[0], f[1], f[2]);
         break;
     case O::FxPlayAnimationSound: return P64(PlayAnimationSound(FXPT(0), (EEGraphicObject*)a[1], 0, (SESMInstanceNode*)a[2], (unsigned long)a[3], a[4] != 0));
     case O::FxPlayNodeNamed: return P64(gSoundManager->PlayAndReturnReferencedNode(((EESoundObject*)p)->GetSampleID(), ((EESoundObject*)p)->GetVolume(), 0.0f, 1.0f, ((EESoundObject*)p)->GetLooping(), (char*)a[0]));
@@ -434,7 +430,6 @@ double EECore9OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::FwWorldSpeed: return gWorld.GetGameSpeed();
     case O::FwGameClock: return gPhysics->GetGameClock();
     case O::FwMeshGetZ: return ((EEMap*)p)->mTerrainMesh.GetZ((int32_t)a[0], (int32_t)a[1]);
-    case O::MpMeshZ: return M->mTerrainMesh.GetMeshZ(f[0], f[1]);
     case O::MpTerrainWaterDepth: return ((EETerrainTable*)p)->mWaterDepth;
     case O::MpViewHalfWidth: return gViewport.GetHalfWidth();
     case O::MpViewXCenter: return gViewport.GetXCenter();

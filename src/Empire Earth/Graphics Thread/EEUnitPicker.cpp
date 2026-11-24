@@ -193,8 +193,6 @@ int64_t EEPickOps::Op(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
         break;
     case O::PkFogAttributes: gRasterizer->GetFogAttributes(*(GERFogAttributes*)a[0], gScreenIndex);
         break;
-    case O::PkRastFogOff: gRasterizer->SetFog(0, gScreenIndex);
-        break;
     case O::PkMainCameraInverse: return PK_P64(&gU4E8F08.GetCameraInverse());
     // round 11, lane A: FindUnit, PickBox, the constructor and destructor (gamecpp picker.rs)
     case O::PzViewport: return PK_P64(&PK->mViewport);

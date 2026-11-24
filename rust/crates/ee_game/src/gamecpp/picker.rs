@@ -15,6 +15,7 @@ use ee_render::gfx::pick_walk::{
     EeGfxPickView,
 };
 
+use super::rast::rast;
 use super::{h, hd, hf, hp, pa, ptr, Owned, O, P};
 
 /// The picker's entry count (`mCount`).
@@ -143,7 +144,7 @@ pub fn fog_factor(location: Ge3DPoint, fog: c_ulong) -> f32 {
         scale: 0.0,
     };
     h(O::PkFogAttributes, 0, &[ptr(&mut attributes)]);
-    h(O::PkRastFogOff, 0, &[]);
+    rast().set_fog(0);
     // SAFETY: the main viewport's camera inverse
     let ci = unsafe { *(hp(O::PkMainCameraInverse, 0, &[]) as *const GeTransformation) };
     let distance = location.y * ci.m[1][1] + location.z * ci.m[1][2] + location.x * ci.m[1][0] + ci.m[1][3];

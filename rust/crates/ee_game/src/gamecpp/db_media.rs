@@ -26,6 +26,7 @@ use ee_data::tables::{
 use ee_render::ge::texture_ffi::{ee_ge_unpack_blue, ee_ge_unpack_green, ee_ge_unpack_red};
 
 use super::persistent::Pf;
+use super::rast::{tex_mip_bias, tex_reference, tex_stage, TexStage};
 use super::{cptr, h, hf, hp, pa, ptr, rec, O, P};
 
 /// `kErrorOK`.
@@ -345,16 +346,16 @@ pub extern "C" fn ee_gamecpp_db_terrain_attach(terrain: *mut c_void, texture_set
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_db_terrain_texture(terrain: *mut c_void, name: *const c_char) -> *mut c_void {
     let texture = hp(O::DtTerrainLoadTexture, terrain as P, &[name as usize as i64]);
-    h(O::RoTexReference, texture, &[]);
+    tex_reference(texture);
     h(O::DtTexSetFrame, texture, &[0]);
-    h(O::RoTexAlphaMode, texture, &[DB_STAGE_MODULATE]);
-    h(O::RoTexColorMode, texture, &[DB_STAGE_MODULATE]);
-    h(O::RoTexMinFilter, texture, &[1]);
-    h(O::RoTexMagFilter, texture, &[1]);
-    hf(O::RoTexMipBias, texture, &[], &[-1.0]);
-    h(O::RoTexAddressing, texture, &[DB_ADDRESSING_CLAMP]);
+    tex_stage(texture, TexStage::AlphaMode, DB_STAGE_MODULATE);
+    tex_stage(texture, TexStage::ColorMode, DB_STAGE_MODULATE);
+    tex_stage(texture, TexStage::MinFilterMode, 1);
+    tex_stage(texture, TexStage::MagFilterMode, 1);
+    tex_mip_bias(texture, -1.0);
+    tex_stage(texture, TexStage::TextureAddressingMode, DB_ADDRESSING_CLAMP);
     let mip = if h(O::DtTrilinearFilter, 0, &[]) != 0 { DB_MIP_LINEAR } else { DB_MIP_POINT };
-    h(O::RoTexMipFilter, texture, &[mip]);
+    tex_stage(texture, TexStage::MipFilterMode, mip);
     texture as *mut c_void
 }
 
@@ -620,11 +621,11 @@ pub extern "C" fn ee_gamecpp_db_button_load_texture(button: *mut c_void) -> c_lo
     if texture == 0 {
         return DB_NO_TEXTURE;
     }
-    h(O::RoTexReference, texture, &[]);
-    h(O::RoTexMinFilter, texture, &[0]);
-    h(O::RoTexMagFilter, texture, &[0]);
-    h(O::RoTexMipFilter, texture, &[DB_MIP_NONE]);
-    hf(O::RoTexMipBias, texture, &[], &[0.0]);
+    tex_reference(texture);
+    tex_stage(texture, TexStage::MinFilterMode, 0);
+    tex_stage(texture, TexStage::MagFilterMode, 0);
+    tex_stage(texture, TexStage::MipFilterMode, DB_MIP_NONE);
+    tex_mip_bias(texture, 0.0);
     let size = EeDataButtonTexture {
         width: h(O::DbtTexWidth, texture, &[]) as c_ulong,
         height: h(O::DbtTexHeight, texture, &[]) as c_ulong,

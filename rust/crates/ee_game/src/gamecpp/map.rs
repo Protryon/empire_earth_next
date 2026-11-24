@@ -276,7 +276,7 @@ pub extern "C" fn ee_gamecpp_map_tile_location(map: *mut c_void, x: c_long, y: c
     }
     let px = x as f32 + 0.5;
     let py = y as f32 + 0.5;
-    let z = hd(O::MpMeshZ, m, &[], &[px, py]);
+    let z = super::rast::mesh_z(super::rast::mesh_of(m), px, py);
     // SAFETY: the caller's point
     unsafe { *out = Ge3DPoint::new(px, py, z) };
     true
