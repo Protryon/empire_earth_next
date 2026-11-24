@@ -6,6 +6,7 @@
 //!
 //! Simulation code (RUST_PLAN 2.1): the cost's inputs are the C++'s values; the formula is ee_sim's `ee_tech_node_cost`.
 
+use std::collections::BTreeMap;
 use std::ffi::{c_long, c_void};
 
 use ee_sim::tech::ffi::{ee_tech_node_cost, ee_tech_sum_costs, EeTechSumCostsCallbacks, EeTechSumNode};
@@ -171,14 +172,13 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
         }
         EE_TECH_HOST_EPOCH_NODES => {
             // the epoch's nodes in its map's order into the walk's buffer (at most its count); their count
-            let n = h(O::TkNodeCount, node, &[]);
-            for k in 0..n.min(count as i64) {
-                let at = hp(O::TkNodeAt, node, &[k]);
+            let all = epoch_nodes(node);
+            for (k, &at) in all.iter().take(count as usize).enumerate() {
                 let r = EeTechNodeRef { obj: at as *mut c_void, node: load::node_fields(at), data: load::node_data(at) };
                 // SAFETY: the walk's buffer of `count` refs
-                unsafe { *nodes.add(k as usize) = r };
+                unsafe { *nodes.add(k) = r };
             }
-            return n as i32;
+            return all.len() as i32;
         }
         EE_TECH_HOST_PLAYER_INDEX => v[0] = h(O::TkPlayerIndex, tree, &[]) as i32,
         EE_TECH_HOST_UNIT_ID => v[0] = if unit != 0 { h(O::TkUnitId, unit, &[]) as i32 } else { -1 },
@@ -511,17 +511,60 @@ pub extern "C" fn ee_gamecpp_tech_tree_player(tree: *mut c_void) -> *mut c_void 
     hp(O::TkGetPlayer, tree as P, &[]) as *mut c_void
 }
 
+/// EETechTreeEpoch's containers (its `mLists`; were its std::map `mNodes` and std::vector `mLoadedUnitClasses`): its
+/// nodes by id (an `EETechTreeNode*` each, in the map's order) and the unit classes whose media LoadMedia loaded.
+#[derive(Default)]
+pub struct EeTechEpochLists {
+    nodes: BTreeMap<c_long, P>,
+    loaded: Vec<c_long>,
+}
+
+/// A new epoch's empty lists (EETechTreeEpoch's constructor).
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_tech_epoch_lists_new() -> *mut EeTechEpochLists {
+    Box::into_raw(Box::default())
+}
+
+/// The epoch's node of an id, or NULL (EETechTreeEpoch::Get's lookup).
+///
+/// # Safety
+/// `lists` is an epoch's live lists.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gamecpp_tech_epoch_find(lists: *const EeTechEpochLists, id: c_long) -> *mut c_void {
+    // SAFETY: the caller's lists
+    unsafe { &*lists }.nodes.get(&id).map_or(std::ptr::null_mut(), |&n| n as *mut c_void)
+}
+
+/// The epoch's lists (no C++ call is made while a borrow of them lives).
+fn lists<'a>(epoch: P) -> &'a mut EeTechEpochLists {
+    // SAFETY: the epoch's live lists (ee_gamecpp_tech_epoch_lists_new's)
+    unsafe { &mut *(hp(O::TkEpochLists, epoch, &[]) as *mut EeTechEpochLists) }
+}
+
+/// A node into its epoch by its id (a node already there under the id is kept: std::map::insert).
+pub(crate) fn epoch_insert(epoch: P, node: P) {
+    let id = node_data(node).mID;
+    lists(epoch).nodes.entry(id).or_insert(node);
+}
+
 /// The epoch's nodes, in their map's order.
-fn epoch_nodes(epoch: P) -> impl Iterator<Item = P> {
-    (0..h(O::TkNodeCount, epoch, &[])).map(move |i| hp(O::TkNodeAt, epoch, &[i]))
+pub(crate) fn epoch_nodes(epoch: P) -> Vec<P> {
+    lists(epoch).nodes.values().copied().collect()
+}
+
+/// EETechTreeEpoch's destructor: its nodes deleted, then its lists freed.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_tech_epoch_free(epoch: *mut c_void) {
+    ee_gamecpp_tech_epoch_delete_nodes(epoch, false);
+    // SAFETY: the epoch's lists, freed once (the epoch goes)
+    drop(unsafe { Box::from_raw(lists(epoch as P) as *mut EeTechEpochLists) });
 }
 
 /// EETechTreeEpoch::DeleteNodes (`unload`: Unload, each node unloaded first, then the epoch's data deleted; 0).
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_epoch_delete_nodes(epoch: *mut c_void, unload: bool) -> c_long {
     let epoch = epoch as P;
-    let nodes: Vec<P> = epoch_nodes(epoch).collect();
-    for node in nodes {
+    for node in epoch_nodes(epoch) {
         if unload {
             h(O::TkNodeUnload, node, &[]);
         }
@@ -529,7 +572,7 @@ pub extern "C" fn ee_gamecpp_tech_epoch_delete_nodes(epoch: *mut c_void, unload:
             h(O::TkNodeDelete, node, &[]);
         }
     }
-    h(O::TkNodesClear, epoch, &[]);
+    lists(epoch).nodes.clear();
     if unload {
         h(O::TkEpochDeleteData, epoch, &[]);
     }
@@ -539,10 +582,9 @@ pub extern "C" fn ee_gamecpp_tech_epoch_delete_nodes(epoch: *mut c_void, unload:
 /// EETechTreeEpoch::GetNodeIDs: the epoch's node ids appended.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_epoch_node_ids(epoch: *mut c_void, out: *mut c_void) {
-    let epoch = epoch as P;
-    for i in 0..h(O::TkNodeCount, epoch, &[]) {
-        let id = h(O::TkNodeKeyAt, epoch, &[i]);
-        h(O::TkPushId, 0, &[out as i64, id]);
+    let ids: Vec<c_long> = lists(epoch as P).nodes.keys().copied().collect();
+    for id in ids {
+        h(O::TkPushId, 0, &[out as i64, id as i64]);
     }
 }
 
@@ -551,12 +593,11 @@ pub extern "C" fn ee_gamecpp_tech_epoch_node_ids(epoch: *mut c_void, out: *mut c
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_epoch_load_media(epoch: *mut c_void, player: *mut c_void) {
     let (epoch, player) = (epoch as P, player as P);
-    let nodes: Vec<P> = epoch_nodes(epoch).collect();
-    for node in nodes {
+    for node in epoch_nodes(epoch) {
         if h(O::TkNeedsUnitMedia, node, &[]) != 0 {
-            let unit_class = node_data(node).mUnitClass as i64;
-            h(O::TkClassMedia, player, &[unit_class]);
-            h(O::TkLoadedClassesPush, epoch, &[unit_class]);
+            let unit_class = node_data(node).mUnitClass;
+            h(O::TkClassMedia, player, &[unit_class as i64]);
+            lists(epoch).loaded.push(unit_class);
         }
     }
     h(O::TkNodeLoadMedia, epoch, &[player as i64]);
@@ -566,11 +607,11 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load_media(epoch: *mut c_void, player: *
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_epoch_unload_media(epoch: *mut c_void, player: *mut c_void) {
     let (epoch, player) = (epoch as P, player as P);
-    for i in 0..h(O::TkLoadedClassesCount, epoch, &[]) {
-        let unit_class = h(O::TkLoadedClassAt, epoch, &[i]);
-        h(O::TkUnloadClassMedia, player, &[unit_class]);
+    let loaded = lists(epoch).loaded.clone();
+    for unit_class in loaded {
+        h(O::TkUnloadClassMedia, player, &[unit_class as i64]);
     }
-    h(O::TkLoadedClassesClear, epoch, &[]);
+    lists(epoch).loaded.clear();
     h(O::TkNodeUnloadMedia, epoch, &[player as i64]);
 }
 

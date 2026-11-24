@@ -2590,18 +2590,11 @@ enum class EeGameCpp : uint32_t {
   TkVariant,
   TkPlayerJit,
   TkClassHasRallyPoint,
-  TkNodeCount,
-  TkNodeAt,
-  TkNodeKeyAt,
+  TkEpochLists,
   TkNodeUnload,
   TkNodeDelete,
-  TkNodesClear,
   TkEpochDeleteData,
   TkPushId,
-  TkLoadedClassesPush,
-  TkLoadedClassesCount,
-  TkLoadedClassAt,
-  TkLoadedClassesClear,
   TkNodeLoadMedia,
   TkNodeUnloadMedia,
   TkEpochCostFactor,
@@ -2926,7 +2919,6 @@ enum class EeGameCpp : uint32_t {
   TbButtonGet,
   TbSwapButton,
   TbGlobalTree,
-  TbEpochInsert,
   TbSetPlayerIndex,
   TbCopyPlayer,
   TbSetPlayer,
@@ -3875,7 +3867,7 @@ bool ee_gamecpp_capture_can_cast_enter();
 /// EECalamityCanCastLeave.
 void ee_gamecpp_capture_can_cast_leave();
 
-/// EECalamityCanCastRecord: an outermost CanCastAt's CCAS record (kind 0); the result.
+/// EECalamityCanCastScope::Record: an outermost CanCastAt's CCAS record (kind 0); the result.
 ///
 /// # Safety
 /// `at` is three floats.

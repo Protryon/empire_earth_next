@@ -24,7 +24,9 @@ use ee_sim::tech::nodes_capture::ee_tech_capture_node_walk;
 use ee_sim::tech::tech_ids::{ee_tech_epoch_count, ee_tech_epoch_of, ee_tech_register_node, ee_tech_set_epoch_title};
 
 use crate::gamecpp::persistent::Pf;
-use super::host::{ee_gamecpp_tech_epoch_delete_nodes, ee_gamecpp_tech_host, ee_gamecpp_tech_sum_costs};
+use super::host::{
+    ee_gamecpp_tech_epoch_delete_nodes, ee_gamecpp_tech_host, ee_gamecpp_tech_sum_costs, epoch_insert, epoch_nodes,
+};
 use crate::gamecpp::{h, hp, pa, rec, O, P};
 
 /// `kErrorOK`.
@@ -150,7 +152,7 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load(epoch: *mut c_void, file: *mut c_vo
                 // SAFETY: the node's record
                 unsafe { (*node_fields(node)).mEpoch = data.mID };
                 ee_tech_register_node(id as i32, data.mID as i32);
-                h(O::TbEpochInsert, epoch, &[node as i64]);
+                epoch_insert(epoch, node);
             } else {
                 h(O::TkNodeUnload, node, &[]);
                 h(O::TkNodeDelete, node, &[]);
@@ -185,12 +187,11 @@ pub extern "C" fn ee_gamecpp_tech_epoch_assign(epoch: *mut c_void, other: *const
     // SAFETY: the two epochs' records (the record's fields, counting off: ee_tech nodes.rs assign)
     unsafe { ee_tech_node_assign(node_fields(e), node_fields(o), true) };
     ee_gamecpp_tech_epoch_delete_nodes(epoch, false);
-    let count = h(O::TkNodeCount, o, &[]);
-    for i in 0..count {
+    for node in epoch_nodes(o) {
         let copy = hp(O::TbNewNode, 0, &[]);
-        ee_gamecpp_tech_node_assign(copy as *mut c_void, hp(O::TkNodeAt, o, &[i]) as *const c_void);
+        ee_gamecpp_tech_node_assign(copy as *mut c_void, node as *const c_void);
         h(O::TbSetTree, copy, &[h(O::TkNodeTree, e, &[])]);
-        h(O::TbEpochInsert, e, &[copy as i64]);
+        epoch_insert(e, copy);
     }
     epoch
 }

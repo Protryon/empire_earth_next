@@ -323,8 +323,9 @@ typedef EETechTreeNode EETechnology;
 // other nodes of its ids.
 class EETechTreeEpoch : public EETechTreeNode {
 public:
-    EETechTreeEpoch() {}                    // (the counters start at 0: the record's init)
-    virtual ~EETechTreeEpoch() { ee_gamecpp_tech_epoch_delete_nodes(this, false); }   // +0x00 0x1cdfcf (??_G 0x1cdfb3)
+    EETechTreeEpoch() : mLists(ee_gamecpp_tech_epoch_lists_new()) {}   // (the counters start at 0: the record's init)
+    EETechTreeEpoch(const EETechTreeEpoch&) = delete;   // (operator= deep-copies; the lists are the epoch's own)
+    virtual ~EETechTreeEpoch() { ee_gamecpp_tech_epoch_free(this); }   // +0x00 0x1cdfcf (??_G 0x1cdfb3): its nodes, its lists
     // (+0x04 0x1ce474 GetIsAvailable: the node's walk, which answers for an epoch: available, not obsolete, not
     // researched)
     virtual bool GetIsObsolete() { return this->mIsObsolete; }   // +0x08 0x1ce494
@@ -357,18 +358,13 @@ public:
     int32_t EpochWalk(EeTechEpochOp inOp, long inA = 0, bool inB = false, EEComplexUnit* inUnit = NULL);   // ee_tech_walk_epoch
     // 0x1ceaeb (EETechTree::Get's lookup in one epoch; provisional name): the epoch for its own id, else one of its
     // nodes, else NULL (inline: EETechTree::Get's every caller makes it)
-    EETechTreeNode* Get(long inID)
-    {
-        if (inID == this->mData->mID)
-            return this;
-        std::map<long, EETechTreeNode*>::iterator theNode = this->mNodes.find(inID);
-        return theNode != this->mNodes.end() ? theNode->second : NULL;
-    }
+    EETechTreeNode* Get(long inID) { return inID == this->mData->mID ? this : (EETechTreeNode*)ee_gamecpp_tech_epoch_find(this->mLists, inID); }
     // another epoch's state, its nodes deep-copied for this tree (the node data stays shared)
     EETechTreeEpoch& operator=(const EETechTreeEpoch& inOther) { return *(EETechTreeEpoch*)ee_gamecpp_tech_epoch_assign(this, &inOther); }
 
-    std::map<long, EETechTreeNode*> mNodes; // +0x24 by id (0x18-byte nodes: _Init 0x617b6)
-    std::vector<long> mLoadedUnitClasses;   // +0x30 unit classes whose media Virtual14 loaded (_Buy 0xe7d2e)
+    // the original's +0x24 std::map of its nodes by id (0x18-byte nodes: _Init 0x617b6) and +0x30 std::vector of the
+    // unit classes whose media Virtual14 loaded (_Buy 0xe7d2e): Rust's (ee_game tech_tree host.rs)
+    EeTechEpochLists* mLists;
 };
 
 #include "ee/EETechTreeTechID.h"   // EETechTreeTechID (own header: ee/EETechTreeTechID.h)

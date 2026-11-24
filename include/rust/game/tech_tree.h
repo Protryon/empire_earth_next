@@ -7,6 +7,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// EETechTreeEpoch's containers (its `mLists`; were its std::map `mNodes` and std::vector `mLoadedUnitClasses`): its
+/// nodes by id (an `EETechTreeNode*` each, in the map's order) and the unit classes whose media LoadMedia loaded.
+struct EeTechEpochLists;
+
 extern "C" {
 
 /// EETechTree::UpdateInterface: for the local player's tree, the new epoch's name shown and the main game form's
@@ -74,6 +78,18 @@ void ee_gamecpp_tech_cost_string(void *node,
 
 /// EETechTree::GetPlayer for the inline members that know the tree only by its forward declaration.
 void *ee_gamecpp_tech_tree_player(void *tree);
+
+/// A new epoch's empty lists (EETechTreeEpoch's constructor).
+EeTechEpochLists *ee_gamecpp_tech_epoch_lists_new();
+
+/// The epoch's node of an id, or NULL (EETechTreeEpoch::Get's lookup).
+///
+/// # Safety
+/// `lists` is an epoch's live lists.
+void *ee_gamecpp_tech_epoch_find(const EeTechEpochLists *lists, long id);
+
+/// EETechTreeEpoch's destructor: its nodes deleted, then its lists freed.
+void ee_gamecpp_tech_epoch_free(void *epoch);
 
 /// EETechTreeEpoch::DeleteNodes (`unload`: Unload, each node unloaded first, then the epoch's data deleted; 0).
 long ee_gamecpp_tech_epoch_delete_nodes(void *epoch,
