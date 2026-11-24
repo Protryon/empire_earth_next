@@ -24,9 +24,9 @@ ChatCommandParser* LobbyGetRoomChatParser(int flags)
     ChatCommandParser* parser=gLobbyData->mChatCommandParser.get();
     LobbyClientList* clients=NULL;
     if(gLobbyData->mLobbyContainer->OnInternetScreen())
-        clients=gLobbyData->mRoutingLogic->GetClientList();
+        clients=reinterpret_cast<LobbyClientList*>(gLobbyData->mRoutingLogic->Call(EeWonRouteLogicCall::ClientList));
     else if(gLobbyData->mLobbyContainer->OnLanScreen())
-        clients=gLobbyData->mLanLogic->GetClientList();
+        clients=reinterpret_cast<LobbyClientList*>(gLobbyData->mLanLogic->Call(EeWonLanCall::ClientList));
     parser->SetClientList(clients,flags);
     return parser;
 }

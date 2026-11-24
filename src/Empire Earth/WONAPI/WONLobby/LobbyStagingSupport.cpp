@@ -76,27 +76,27 @@ LobbyClient* LobbyGetNetMyClient() { return (LobbyClient*)ee_won_netdisp_call(Ne
 // Logs out of the Internet lobby or the LAN, whichever screen is showing
 void LobbyNetLogout() { ee_won_netdisp_call(NetHost, EeWonNetDispCall::Logout, 0, 0); }
 // Joins a game through the staging logic
-void LobbyJoinGame(LobbyGame* game) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->JoinGame(game); }
+void LobbyJoinGame(LobbyGame* game) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::JoinGame, game); }
 // Hosts a new game through the staging logic
-void LobbyHostGame() { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->HostGame(); }
+void LobbyHostGame() { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::HostGame); }
 // Logs out through the staging logic; returns false when cancelled or without a lobby
-bool LobbyLogout(bool confirm) { return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->Logout(confirm):false; }
+bool LobbyLogout(bool confirm) { return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->Call(EeWonStagingCall::Logout, NULL, NULL, confirm)!=0:false; }
 // Sets the port the lobby uses
 void LobbySetLobbyPort(unsigned short port) { if(gLobbyData.get()!=NULL) gLobbyData->mLobbyPort=port; }
 // Kicks or bans a client from our game
-void LobbyKickClient(LobbyClient* client,bool ban) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->KickClient(client,ban); }
+void LobbyKickClient(LobbyClient* client,bool ban) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::KickClient, NULL, client, ban); }
 // Passes a game room message from a client to the staging logic
-void LobbyHandleStagingMessage(const ByteBuffer* data,LobbyClient* client) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->HandleMessageBuffer(data,client); }
+void LobbyHandleStagingMessage(const ByteBuffer* data,LobbyClient* client) { if(gLobbyData.get()!=NULL && data!=NULL) StagingHandleBytes(gLobbyData->mStagingLogic.get(), ReadBuffer(data->data(), data->length()), client); }
 // Passes a game room message being read from a client to the staging logic
-void LobbyHandleStagingReadBuffer(ReadBuffer& data,LobbyClient* client) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->HandleMessage(data,client); }
+void LobbyHandleStagingReadBuffer(ReadBuffer& data,LobbyClient* client) { if(gLobbyData.get()!=NULL) StagingHandleMessage(gLobbyData->mStagingLogic.get(), data, client); }
 // Leaves the game after losing the connection, optionally telling the player
-void LobbyGameDisconnected(bool showError) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->HandleDisconnect(showError); }
+void LobbyGameDisconnected(bool showError) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::HandleDisconnect, NULL, NULL, showError); }
 // Removes a departed client's player from the game
-void LobbyClientLeftGame(LobbyClient* client) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->HandleClientLeft(client); }
+void LobbyClientLeftGame(LobbyClient* client) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::HandleClientLeft, NULL, client); }
 // Handles a client's kick or ban from the game
-void LobbyClientKicked(LobbyClient* client,bool ban) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->HandleKicked(client,ban); }
+void LobbyClientKicked(LobbyClient* client,bool ban) { if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::HandleKicked, NULL, client, ban); }
 // Enters the Internet lobby screen, optionally joining the default room
-void LobbyEnterInternetScreen(bool joinDefault) { if(gLobbyData.get()!=NULL) gLobbyData->mRoutingLogic->EnterInternetScreen(joinDefault); }
+void LobbyEnterInternetScreen(bool joinDefault) { if(gLobbyData.get()!=NULL) gLobbyData->mRoutingLogic->Call(EeWonRouteLogicCall::EnterInternet, joinDefault); }
 }
 
 namespace WONAPI {
@@ -105,52 +105,52 @@ void LobbyNetAdvertiseGame() { ee_won_netdisp_call(NetHost, EeWonNetDispCall::Ad
 // Clears every player's ready flag in our game
 void LobbyResetReadyFlags()
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->ResetReadyFlags();
+    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::ResetReadyFlags);
 }
 // Marks our game as in progress or not
 void LobbySetGameInProgress(bool inProgress)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->SetGameInProgress(inProgress);
+    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::SetGameInProgress, NULL, NULL, inProgress);
 }
 // Leaves the current game; returns false when cancelled or without a lobby
 bool LobbyLeaveGame(bool confirm)
 {
-    return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->LeaveGame(confirm):false;
+    return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->Call(EeWonStagingCall::LeaveGame, NULL, NULL, confirm)!=0:false;
 }
 // Returns our own client in the current game, or NULL
 LobbyClient* GetMyLobbyClient()
 {
-    return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->mMyClient.get():NULL;
+    return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->Slot<LobbyClient>(kStagingMyClient):NULL;
 }
 // Tells the lobby screens that the game room changed
 void LobbyNotifyStagingChange()
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->NotifyStagingChange();
+    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::NotifyStagingChange);
 }
 // Sends a game room message to the host
 void LobbySendToCaptain(const ByteBuffer* message)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->SendToCaptain(message);
+    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->CallMessage(EeWonStagingCall::SendToCaptain, message, NULL);
 }
 // Host: sends a game room message to everyone in the game
 void LobbyBroadcastToGame(const ByteBuffer* message)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->BroadcastToGame(message);
+    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->CallMessage(EeWonStagingCall::BroadcastToGame, message, NULL);
 }
 // Host: sends a game room message to one client
 void LobbySendToClient(LobbyClient* client,const ByteBuffer* message)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->SendToClient(client,message);
+    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->CallMessage(EeWonStagingCall::SendToClient, message, client);
 }
 }
 
 namespace WONAPI {
 // (SDK LobbyStaging::GetGame)
 // Returns the game we are in, or NULL
-LobbyGame* GetMyLobbyGame() { return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->mGame.get():NULL; }
+LobbyGame* GetMyLobbyGame() { return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->Slot<LobbyGame>(kStagingGame):NULL; }
 // (SDK LobbyStaging::IAmCaptain)
 // Returns whether we host the current game
-bool LobbyIAmCaptain() { return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->IAmCaptain():false; }
+bool LobbyIAmCaptain() { return gLobbyData.get()!=NULL?gLobbyData->mStagingLogic->Call(EeWonStagingCall::IAmCaptain)!=0:false; }
 // (SDK LobbyStaging::IsBehindFirewall)
 // Returns whether the firewall test found us behind a firewall
 bool LobbyIsBehindFirewall() { return gLobbyData.get()!=NULL?gLobbyData->mBehindFirewall:false; }
@@ -167,7 +167,7 @@ LobbyPlayer* GetMyLobbyPlayer() { return (LobbyPlayer*)ee_won_netdisp_call(NetHo
 // Returns whether our own player is ready
 bool LobbyIAmReady()
 {
-    return gLobbyData.get()!=NULL ? gLobbyData->mStagingLogic->IAmReady() : false;
+    return gLobbyData.get()!=NULL ? gLobbyData->mStagingLogic->Call(EeWonStagingCall::IAmReady) != 0 : false;
 }
 // (SDK LobbyStagingPrv network dispatch)
 // Sends a message to the host over the current network
@@ -192,7 +192,7 @@ void LobbyNetResume() { ee_won_netdisp_call(NetHost, EeWonNetDispCall::Resume, 0
 // Reports our new ping to the host of a game we are in
 void LobbyNotifyPingChange(LobbyGame* game)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->NotifyPingChange(game);
+    if(gLobbyData.get()!=NULL) gLobbyData->mStagingLogic->Call(EeWonStagingCall::NotifyPingChange, game);
 }
 }
 

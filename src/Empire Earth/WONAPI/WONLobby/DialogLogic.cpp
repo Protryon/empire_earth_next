@@ -24,43 +24,8 @@ namespace WONAPI {
 
 static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 
-DialogLogic::DialogLogic() : mRust(ee_won_dlglogic_new(this, DialogLogicHost)) {}
-DialogLogic::~DialogLogic() { ee_won_dlglogic_free(this->mRust); }
-void DialogLogic::InitComponent(ComponentConfig* inConfig) { this->Call(EeWonDlgLogicCall::Init, (intptr_t)inConfig); }
-void DialogLogic::KillHook() { this->Call(EeWonDlgLogicCall::KillHook); }
-void DialogLogic::StatusOpComplete(AsyncOp* inOp) { this->Call(EeWonDlgLogicCall::StatusOpComplete, (intptr_t)inOp); }
-void DialogLogic::ClearDialogs() { this->Call(EeWonDlgLogicCall::ClearDialogs); }
-int DialogLogic::DoDialog(Component* inDialog) { return (int)this->Call(EeWonDlgLogicCall::DoDialog, (intptr_t)inDialog); }
-void DialogLogic::RunOpWithStatus(AsyncOp* inOp, unsigned long, const GUIString& inTitle, const GUIString& inStatus,
-                                  int inStatusMode, unsigned long inTimeout)
-{
-    this->Call(EeWonDlgLogicCall::RunOpWithStatus, (intptr_t)inOp, (intptr_t)&inTitle, (intptr_t)&inStatus,
-               inStatusMode, (intptr_t)inTimeout);
-}
-void DialogLogic::ShowStatus(const GUIString& inTitle, const GUIString& inStatus, bool inCancel)
-{
-    this->Call(EeWonDlgLogicCall::ShowStatus, (intptr_t)&inTitle, (intptr_t)&inStatus, inCancel);
-}
-void DialogLogic::ShowError(const GUIString& inTitle, const GUIString& inStatus)
-{
-    this->Call(EeWonDlgLogicCall::ShowError, (intptr_t)&inTitle, (intptr_t)&inStatus);
-}
-// An error box with a WON status's text (no sound)
-void DialogLogic::ShowError(const GUIString& inTitle, WONStatus inStatus)
-{
-    this->ShowStatus(inTitle, GetWONStatusString(inStatus), false);
-}
-int DialogLogic::ShowOkCancel(const GUIString& inTitle, const GUIString& inText, bool inPlaySound)
-{
-    return (int)this->Call(EeWonDlgLogicCall::ShowOkCancel, (intptr_t)&inTitle, (intptr_t)&inText, inPlaySound);
-}
-int DialogLogic::ShowYesNo(const GUIString& inTitle, const GUIString& inText, bool inPlaySound)
-{
-    return (int)this->Call(EeWonDlgLogicCall::ShowYesNo, (intptr_t)&inTitle, (intptr_t)&inText, inPlaySound);
-}
-void DialogLogic::Reset() { this->Call(EeWonDlgLogicCall::Reset); }
-void DialogLogic::UpdateStatus(WONStatus inStatus) { this->Call(EeWonDlgLogicCall::UpdateStatus, (intptr_t)inStatus); }
-bool DialogLogic::GetStatusCancelled() { return this->Call(EeWonDlgLogicCall::Field, 0) != 0; }
+// The dialog logic's Rust object over the shell (its virtuals and its status completion: logicshell.rs)
+void* DialogLogicMake(RustLogic* inSelf) { return ee_won_dlglogic_new(inSelf, DialogLogicHost); }
 
 // ---- the host
 
@@ -83,7 +48,7 @@ static const GUIString* sDlgButtons[2];
 static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonDlgLogicOp Op;
-    DialogLogic* aLogic = static_cast<DialogLogic*>(inLogic);
+    RustLogic* aLogic = static_cast<RustLogic*>(inLogic);
     Component* aComp = reinterpret_cast<Component*>(a);
     Window* aWindow = reinterpret_cast<Window*>(a);
     AsyncOp* anOp = reinterpret_cast<AsyncOp*>(a);
@@ -99,7 +64,7 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
     case Op::OpKill: anOp->Kill(true); return 0;
     case Op::OpForceFinishKilled: anOp->ForceFinish(WS_Killed); return 0;
     case Op::OpGetStatus: return (intptr_t)anOp->GetStatus();
-    case Op::RunOp: aLogic->RunOp(anOp, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, aLogic), (unsigned long)b); return 0;
+    case Op::RunOp: aLogic->RunOp(anOp, new ShellCompletion(aLogic, EeWonLogicShellDone::DlgStatusOp), (unsigned long)b); return 0;
     case Op::EndDialog: GetLobbyWindow()->EndDialog(-1, NULL, aComp); return 0;
     case Op::LobbyRoot: return (intptr_t)static_cast<Component*>(GetLobbyRoot());
     case Op::RootWindow: return (intptr_t)LobbyGetRootWindow();
