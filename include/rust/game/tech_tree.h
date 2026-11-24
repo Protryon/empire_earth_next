@@ -76,8 +76,11 @@ void ee_gamecpp_tech_cost_string(void *node,
                                  float scale,
                                  void *out);
 
-/// EETechTree::GetPlayer for the inline members that know the tree only by its forward declaration.
+/// EETechTree::GetPlayer: the tree's player, by its index when no player pointer is set.
 void *ee_gamecpp_tech_tree_player(void *tree);
+
+/// EETechTreeNode::GetHotKey: the node's hot key (its data's mHotKey), or NULL.
+void *ee_gamecpp_tech_node_hot_key(void *node);
 
 /// A new epoch's empty lists (EETechTreeEpoch's constructor).
 EeTechEpochLists *ee_gamecpp_tech_epoch_lists_new();

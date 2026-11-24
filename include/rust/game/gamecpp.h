@@ -2533,7 +2533,6 @@ enum class EeGameCpp : uint32_t {
   TkSetRef,
   TkNeedsUnitMedia,
   TkTrigger,
-  TkGetPlayer,
   TkTreePlayer,
   TkEpochReached,
   TkStatReset,

@@ -299,7 +299,7 @@ public:
     void SetButton(unsigned long inButton) { ee_gamecpp_tech_node_set_button(this, inButton); }   // swapped into its unit classes
     // 0x268dc6 (in EEUIFMGMainGroup.cpp after its first user ShowCommands, called out of line: defined there): the hot key
     // mU08->mHotKey, 0 out of range (provisional name)
-    UIHotKey* GetHotKey();
+    UIHotKey* GetHotKey() { return (UIHotKey*)ee_gamecpp_tech_node_hot_key(this); }
     // another node's state, sharing its data (with its class cost tables)
     EETechTreeNode& operator=(const EETechTreeNode& inOther) { return *(EETechTreeNode*)ee_gamecpp_tech_node_assign(this, &inOther); }
     // 0x2a995 (a COMDAT in the AI range: inline there?): mU08->mUnitClasses[inIndex], mU08->mU40 past the end
@@ -424,7 +424,7 @@ public:
     void SumCosts(long inID, long inUnitClass, long* ioCosts) { ee_gamecpp_tech_sum_costs_captured(this, inID, inUnitClass, ioCosts); }
     // whether a tech's model or sound effect for a unit class is the latest one the tree still uses
     static bool IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind) { return ee_tech_is_latest_effect(inTree, &EETechHost, inTree, (int32_t)inID, (int32_t)inUnitClass, (int32_t)inKind); }
-    EEPlayer* GetPlayer();                  // by index when no player pointer is set
+    EEPlayer* GetPlayer() { return (EEPlayer*)ee_gamecpp_tech_tree_player(this); }   // by index when no player pointer is set
     void AdvanceEpoch() { this->Walk(EeTechTreeOp::AdvanceEpoch); }   // to the next epoch unless the end epoch is reached
     // a loaded tree's state reapplied: editor-obsoleted techs, the epoch range, research, each epoch's counters, then
     // the interface

@@ -32,9 +32,3 @@ void EETechTree::GetChecksum(ESChecksum& ioChecksum)
 {
     ioChecksum.AddChecksum("EETechTree", (unsigned long)(uint32_t)this->Walk(EeTechTreeOp::Checksum));
 }
-
-// Returns the tree's player (by index when no player pointer is set)
-EEPlayer* EETechTree::GetPlayer()
-{
-    return this->mPlayer != NULL ? this->mPlayer : gWorld.mPlayers[this->mPlayerIndex];
-}

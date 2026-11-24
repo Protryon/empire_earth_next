@@ -202,7 +202,6 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkNeedsUnitMedia: return TNODE->NeedsUnitMedia();
     case O::TkTrigger: EEEvent::Trigger((long)a[0], TREE->mPlayerIndex, (long)a[1], TREE->mPlayer, (EEComplexUnit*)a[2]);
         break;
-    case O::TkGetPlayer: return P64(TREE->GetPlayer());
     case O::TkTreePlayer: return P64(TREE->mPlayer);
     case O::TkEpochReached: TPL->EpochReached((long)a[0]);
         break;

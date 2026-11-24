@@ -25,7 +25,7 @@ use ee_sim::tech::tech_ids::{ee_tech_epoch_count, ee_tech_epoch_of, ee_tech_regi
 
 use crate::gamecpp::persistent::Pf;
 use super::host::{
-    ee_gamecpp_tech_epoch_delete_nodes, ee_gamecpp_tech_host, ee_gamecpp_tech_sum_costs, epoch_insert, epoch_nodes,
+    ee_gamecpp_tech_epoch_delete_nodes, ee_gamecpp_tech_host, ee_gamecpp_tech_sum_costs, epoch_insert, epoch_nodes, tree_player,
 };
 use crate::gamecpp::{h, hp, pa, rec, O, P};
 
@@ -257,14 +257,14 @@ pub extern "C" fn ee_gamecpp_tech_node_free(node: *mut c_void, destroy: bool) {
     if destroy {
         let tree = hp(O::TkNodeTree, n, &[]);
         if fields_of(n).mIsUnitMediaLoaded {
-            let player = hp(O::TkGetPlayer, tree, &[]);
+            let player = tree_player(tree);
             if player != 0 {
                 h(O::TkUnloadClassMedia, player, &[data_of(n).mUnitClass as i64]);
             }
         }
         if !node_data(n).is_null() {
             for class in unit_classes(n) {
-                let player = hp(O::TkGetPlayer, tree, &[]);
+                let player = tree_player(tree);
                 if player != 0 {
                     h(O::TbSwapButton, player, &[class as i64, h(O::TbButton, n, &[]), 0]);
                 }
@@ -295,7 +295,7 @@ pub extern "C" fn ee_gamecpp_tech_node_unload(node: *mut c_void) -> c_long {
 pub extern "C" fn ee_gamecpp_tech_node_set_button(node: *mut c_void, button: c_ulong) {
     let n = node as P;
     for class in unit_classes(n) {
-        let player = hp(O::TkGetPlayer, hp(O::TkNodeTree, n, &[]), &[]);
+        let player = tree_player(hp(O::TkNodeTree, n, &[]));
         let new = hp(O::TbButtonGet, 0, &[button as i64]);
         h(O::TbSwapButton, player, &[class as i64, h(O::TbButton, n, &[]), new as i64]);
     }
@@ -351,7 +351,7 @@ pub extern "C" fn ee_gamecpp_tech_needs_unit_media(node: *mut c_void, captured: 
 pub extern "C" fn ee_gamecpp_tech_epoch_build_time(epoch: *mut c_void) -> c_long {
     let e = epoch as P;
     // (TNWK, TEST ONLY: asked once, as the test did)
-    let human = h(O::TbIsHuman, hp(O::TkGetPlayer, hp(O::TkNodeTree, e, &[]), &[]), &[]) as i32;
+    let human = h(O::TbIsHuman, tree_player(hp(O::TkNodeTree, e, &[])), &[]) as i32;
     let build_time = data_of(e).mBuildTime as i32;
     let result = ee_tech_epoch_build_time(human, build_time);
     ee_tech_capture_walk_begin(); // TNMT (TEST ONLY)

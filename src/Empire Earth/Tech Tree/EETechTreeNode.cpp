@@ -28,12 +28,6 @@
 #include "ee/EETechCapture.h"
 #include "rust/game/gamecpp.h"
 
-// Returns the tech node's hot key, or NULL (an inline COMDAT the original emitted in EEUIFMGMainGroup.cpp)
-UIHotKey* EETechTreeNode::GetHotKey()
-{
-    return (UIHotKey*)ee_gamecpp_db_hot_key(this->mData->mHotKey);
-}
-
 // ------------------------------------------------------------------------- round 9, lane D: the nodes' and epochs' C++
 
 double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);

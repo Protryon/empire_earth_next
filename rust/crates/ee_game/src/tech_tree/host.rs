@@ -197,7 +197,7 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
         EE_TECH_HOST_UPDATE_INTERFACE => ee_gamecpp_tech_update_interface(tree as *mut c_void, v[0] != 0),
         EE_TECH_HOST_ON_RESEARCHED => {
             // OnResearched 0x1ccdac: the player's epoch hook and statistics series 0x13 (its unit: always NULL)
-            let player = hp(O::TkGetPlayer, tree, &[]);
+            let player = tree_player(tree);
             if player != 0 {
                 h(O::TkEpochReached, player, &[v[0] as i64]);
                 h(O::TkStatReset, player, &[TK_STAT_EPOCHS]);
@@ -208,12 +208,12 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
                 let player = hp(O::TkTreePlayer, tree, &[]);
                 h(O::TkStatSet, player, &[v[1] as i64, v[2] as i64]);
             } else {
-                let player = if v[0] == 0 { hp(O::TkTreePlayer, tree, &[]) } else { hp(O::TkGetPlayer, tree, &[]) };
+                let player = if v[0] == 0 { hp(O::TkTreePlayer, tree, &[]) } else { tree_player(tree) };
                 h(O::TkStatReset, player, &[v[1] as i64]);
             }
         }
         EE_TECH_HOST_UNLOAD_UNIT_MEDIA => {
-            let player = hp(O::TkGetPlayer, tree, &[]);
+            let player = tree_player(tree);
             h(O::TkUnloadClassMedia, player, &[v[0] as i64]);
         }
         EE_TECH_HOST_EVENTS_ENABLED => {
@@ -395,7 +395,7 @@ pub extern "C" fn ee_gamecpp_tech_node_cost(
 ) -> c_long {
     let node = node as P;
     let tree = hp(O::TkNodeTree, node, &[]);
-    let player = hp(O::TkGetPlayer, tree, &[]);
+    let player = tree_player(tree);
     let d = node_data(node);
     let class_costs = hp(O::TkClassCosts, node, &[unit_class as i64]) as *const c_long;
     let mut input = EeTechCostInput {
@@ -505,10 +505,26 @@ pub extern "C" fn ee_gamecpp_tech_cost_string(node: *mut c_void, unit_class: c_l
     h(O::EpWideSet, out as P, &[text.as_ptr() as usize as i64]);
 }
 
-/// EETechTree::GetPlayer for the inline members that know the tree only by its forward declaration.
+/// EETechTree::GetPlayer: the tree's player, by its index when no player pointer is set.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_tree_player(tree: *mut c_void) -> *mut c_void {
-    hp(O::TkGetPlayer, tree as P, &[]) as *mut c_void
+    tree_player(tree as P) as *mut c_void
+}
+
+/// [`ee_gamecpp_tech_tree_player`].
+pub(crate) fn tree_player(tree: P) -> P {
+    let player = hp(O::TkTreePlayer, tree, &[]);
+    if player != 0 {
+        player
+    } else {
+        hp(O::TbWorldPlayer, 0, &[h(O::TkPlayerIndex, tree, &[])])
+    }
+}
+
+/// EETechTreeNode::GetHotKey: the node's hot key (its data's mHotKey), or NULL.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_tech_node_hot_key(node: *mut c_void) -> *mut c_void {
+    crate::gamecpp::db_media::ee_gamecpp_db_hot_key(node_data(node as P).mHotKey)
 }
 
 /// EETechTreeEpoch's containers (its `mLists`; were its std::map `mNodes` and std::vector `mLoadedUnitClasses`): its

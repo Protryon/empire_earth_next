@@ -2716,7 +2716,6 @@ pub enum EeGameCpp {
     TkSetRef,
     TkNeedsUnitMedia,
     TkTrigger,
-    TkGetPlayer,
     TkTreePlayer,
     TkEpochReached,
     TkStatReset,
