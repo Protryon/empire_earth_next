@@ -98,7 +98,13 @@ pub trait StoreSink {
 }
 
 /// `Fill`, then the record's object records: the record of the unit's object as it is now.
-fn filled<H: UsOps + ?Sized, S: StoreSink + ?Sized>(h: &mut H, s: &mut S, unit: u64, owner: u32, player: u64) -> EeUnitRecord {
+fn filled<H: UsOps + ?Sized, S: StoreSink + ?Sized>(
+    h: &mut H,
+    s: &mut S,
+    unit: u64,
+    owner: u32,
+    player: u64,
+) -> EeUnitRecord {
     let mut record = EeUnitRecord::default();
     let fields = fill(h, &mut record, unit, owner, player);
     s.set_fields(&mut record, fields);
@@ -200,7 +206,12 @@ mod game {
         fn set_fields(&mut self, record: &mut EeUnitRecord, f: [u64; 3]) {
             // SAFETY: the unit's live base subobjects (or null)
             unsafe {
-                crate::units::ffi::ee_units_store_set_fields(record, f[0] as usize as _, f[1] as usize as _, f[2] as usize as _)
+                crate::units::ffi::ee_units_store_set_fields(
+                    record,
+                    f[0] as usize as _,
+                    f[1] as usize as _,
+                    f[2] as usize as _,
+                )
             };
         }
         fn insert(&mut self, record: &EeUnitRecord) {
