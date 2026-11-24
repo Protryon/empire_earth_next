@@ -18,7 +18,8 @@
 -- nearest it that beats it by AR_PART_PCT (200%) - never fewer than the raid's band and 3 - goes as an army of its
 -- own and rejoins once no raider is seen for two looks or it no longer beats them; else the whole force attack-moves
 -- to it and goes home once no enemy fighter is seen there. Soldiers trained while the force is out gather at home
--- and join the next push.
+-- and join the next push. CITIZENS FIRST (citizens_first): while citizens are missing, the food of the next 4 of
+-- them is held from the soldiers' orders (army.c, 7a17182).
 -- HOME GUARD: every 10 s, fewer than 6 + home_guard x epoch soldiers at home (or home_guard_share of the military
 -- room) -> up to 5 more, the strongest soldier the account pays for (substitute_soldier).
 -- MUSTER: an enemy army in the base the soldiers and towers cannot fight (muster_enemies, muster_ratio): every own
@@ -335,12 +336,31 @@ local function train(view, memory, mem, order, budget)
         mem.plan = {producer = mem.last_producer, busy = false, wants = want}
         return mem.plan
     end
-    local pick, n = M.pick_soldier(view, budget.avail, math.min(target - home, 5))
+    -- [army.c CITIZENS FIRST, 7a17182] while citizens are missing, the food of the next 4 of them is held from the
+    -- soldiers' orders (the player's game: 1 citizen bringing 15 food a minute, every 30 of it a soldier's, the
+    -- bank never at a citizen's 50 - the AI trained soldiers instead of citizens)
+    local avail = budget.avail
+    if S.citizens_first ~= false then
+        local miss = (budget.citizens_wanted or 0) - view.citizens
+        if miss > 0 then
+            local cc = V.cost(view, "citizen")
+            local hold = math.min(miss, 4) * (cc ~= nil and cc.cost.food or 50)
+            if avail.food > view.stock.food - hold then
+                local copy = {}
+                for r, v in pairs(avail) do
+                    copy[r] = v
+                end
+                copy.food = math.max(view.stock.food - hold, 0)
+                avail = copy
+            end
+        end
+    end
+    local pick, n = M.pick_soldier(view, avail, math.min(target - home, 5))
     -- [savings.c] SAVING FIRST: a type the budget refused is saved for while its money grows (sv_want/sv_type)
     local saved = SV.type(view, memory, SV.ARMY)
     if saved ~= nil then
         local c = V.cost(view, saved)
-        if c ~= nil and SV.may(view, memory, SV.ARMY, saved, c.cost, budget.avail) then
+        if c ~= nil and SV.may(view, memory, SV.ARMY, saved, c.cost, avail) then
             pick = c
             n = math.min(target - home, 5)
         end
@@ -348,12 +368,12 @@ local function train(view, memory, mem, order, budget)
     -- [metal.c] best_per_metal: the soldier asked for (the strongest affordable) is trained as the one that does most
     -- against the enemy army known per gold + iron, when that one is 25% better (mt_choose; the budget pays as before)
     do
-        local alt, an = MT.choose(view, memory, pick, budget.avail, view.stock, budget.hold or {}, math.min(target - home, 5))
+        local alt, an = MT.choose(view, memory, pick, avail, view.stock, budget.hold or {}, math.min(target - home, 5))
         if alt ~= nil then
             pick, n = alt, an
         end
     end
-    if pick ~= nil and not SV.may(view, memory, SV.ARMY, pick.type, pick.cost, budget.avail) then
+    if pick ~= nil and not SV.may(view, memory, SV.ARMY, pick.type, pick.cost, avail) then
         pick = nil   -- the money is the saving's, not another kind's
     end
     if pick == nil then
@@ -362,7 +382,7 @@ local function train(view, memory, mem, order, budget)
         local rich = {food = 1e9, wood = 1e9, stone = 1e9, gold = 1e9, iron = 1e9}
         local want_pick, want_n = M.pick_soldier(view, rich, math.min(target - home, 5))
         if want_pick ~= nil and want_n > 0 then
-            local f = SV.fraction(view, budget.avail, want_pick.type)
+            local f = SV.fraction(view, avail, want_pick.type)
             if SV.want(view, memory, SV.ARMY, want_pick.type, f, view.threat_strength > 0) then
                 for _, r in ipairs(V.resources) do
                     want[r] = want_pick.cost[r] * want_n
@@ -385,11 +405,11 @@ local function train(view, memory, mem, order, budget)
             end
         end
         -- [metal.c] MIX counts what the refused order was short of (the cheapest soldier's price against the account)
-        MT.note_short(view, memory, cheap ~= nil and cheap.cost or nil, budget.avail)
+        MT.note_short(view, memory, cheap ~= nil and cheap.cost or nil, avail)
         mem.plan = {producer = mem.last_producer, busy = false, wants = want}
         return mem.plan
     end
-    MT.note_short(view, memory, nil, budget.avail)   -- [metal.c] the minute's window rolls
+    MT.note_short(view, memory, nil, avail)   -- [metal.c] the minute's window rolls
     -- the producers' queues: train_queue at most each
     local b = V.buildings(view, pick.producer)
     local busy = b ~= nil and b.finished > 0 and pick.requested + pick.in_production >= S.train_queue * b.finished

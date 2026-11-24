@@ -319,6 +319,8 @@ return {
     -- armies.c (the port forward): the force
     raid_parties = true,            -- a part of the force answers a raid it beats by 200% instead of the whole force
                                     -- (army.lua; armies.c RAID PARTIES)
+    citizens_first = true,          -- while citizens are missing, the food of the next 4 of them is held from the
+                                    -- soldiers' orders (army.c CITIZENS FIRST)
     ally_aid = false,               -- an ally's buildings within this many tiles of home are answered too (0 = off)
     mod_armies_sea = true,          -- the force on island maps too (its landings lent its soldiers: not ported yet)
     force_at_front = true,          -- the force's home in the land front with the heaviest open border (fronts.lua's
