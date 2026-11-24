@@ -135,8 +135,6 @@ void EEComplexUnit::ContinueProduction()
 // helpers that VirtualB8 calls (COMDATs after their first user: inline in the real header? written out of line
 // here), ShowConversionEffects, HideConversionEffects.
 
-void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
-                              float& outPitch, float inFactor);
 
 
 static const float kBasicPriestSoundFactor = 4.0f;     // 0x446fe4 (the conversion sound's distance factor)

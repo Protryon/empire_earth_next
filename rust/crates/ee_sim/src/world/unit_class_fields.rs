@@ -8,7 +8,9 @@
 
 #![allow(non_snake_case)]
 
-use std::os::raw::{c_long, c_ulong};
+use crate::units::obj_fields::EeCxxGraphicObject;
+use crate::world::unit_fields::{EeCxxUnitBehavior, EeCxxUnitClass};
+use std::os::raw::{c_long, c_ulong, c_void};
 
 /// `EEUnitClass`'s plain members (ee/EEUnit.h), in the class's order.
 #[repr(C)]
@@ -194,4 +196,257 @@ pub struct EeUnitsUnitClassFields {
     /// port (not in the original): the class's `IsLandBuilding()`, set by `CreateUnitClasses` once the class's
     /// vtable is final; the unit store reads it (store.rs)
     pub mIsLandBuildingClass: bool,
+}
+
+/// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of
+/// `class EEUnitClass : public UReferenceCounter, public EeUnitsUnitClassFields, public EeUnitsUnitClassLinks`, in
+/// the original's member order (+0x060 `mAIScript` .. +0x118 `mBehavior`). A record of its own: `fill` writes the
+/// plain record whole after the constructor has set these. The C++ reads them by name, typed `class X*` (the
+/// renames in rust/cbindgen.toml). The 29 effects are contiguous from `mAttachedEffect` (`GetEffects`' array).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeUnitsUnitClassLinks {
+    /// the class's AI script (EEUnitAction::GetScript of its name: a Rust script's handle)
+    pub mAIScript: *mut c_void,
+    pub mAttachedEffect: *mut EeCxxGraphicEffect,
+    pub mDeathEffect: *mut EeCxxGraphicEffect,
+    pub mDamageEffect: *mut EeCxxGraphicEffect,
+    pub mHealEffect: *mut EeCxxGraphicEffect,
+    pub mFireTrailEffect: *mut EeCxxGraphicEffect,
+    pub mTrailEffect: *mut EeCxxGraphicEffect,
+    pub mMuzzleFlashEffect: *mut EeCxxGraphicEffect,
+    pub mRippleEffect: *mut EeCxxGraphicEffect,
+    pub mSplashEffect: *mut EeCxxGraphicEffect,
+    pub mImpactSparksEffect: *mut EeCxxGraphicEffect,
+    pub mImpactBloodEffect: *mut EeCxxGraphicEffect,
+    pub mEffect090: *mut EeCxxGraphicEffect,
+    pub mCreationEffect: *mut EeCxxGraphicEffect,
+    pub mEffect098: *mut EeCxxGraphicEffect,
+    pub mEffect09C: *mut EeCxxGraphicEffect,
+    pub mEffect0A0: *mut EeCxxGraphicEffect,
+    pub mEffect0A4: *mut EeCxxGraphicEffect,
+    pub mEffect0A8: *mut EeCxxGraphicEffect,
+    pub mSpecialAttackEffect: *mut EeCxxGraphicEffect,
+    pub mEffect0B0: *mut EeCxxGraphicEffect,
+    pub mShotEffect: *mut EeCxxGraphicEffect,
+    pub mLeprosyEffect: *mut EeCxxGraphicEffect,
+    pub mPlagueEffect: *mut EeCxxGraphicEffect,
+    pub mPulseCannonEffect: *mut EeCxxGraphicEffect,
+    pub mMoraleEffect: *mut EeCxxGraphicEffect,
+    pub mBattleCryEffect: *mut EeCxxGraphicEffect,
+    pub mShellHoleEffect: *mut EeCxxGraphicEffect,
+    pub mEffect0D0: *mut EeCxxGraphicEffect,
+    pub mBloodStainEffect: *mut EeCxxGraphicEffect,
+    /// the class media (LoadClassMedia, UnloadClassMedia)
+    pub mModel: *mut EeCxxGraphicObject,
+    pub mButton: *mut EeCxxButtonObject,
+    pub mCreationSound: *mut EeCxxSoundObject,
+    pub mAcknowledgeSounds: [*mut EeCxxSoundObject; 2],
+    pub mSelectionSounds: [*mut EeCxxSoundObject; 2],
+    pub mDeathSound: *mut EeCxxSoundObject,
+    /// the related classes (referenced; the destructor dereferences them)
+    pub mProjectileClass: *mut EeCxxUnitClass,
+    pub mScaffoldingClass: *mut EeCxxUnitClass,
+    /// `VirtualC4` creates a unit of it where the unit dies
+    pub mDeathClass: *mut EeCxxUnitClass,
+    pub mDeathSpawnClass: *mut EeCxxUnitClass,
+    pub mRemainsClass: *mut EeCxxUnitClass,
+    /// the class it packs/unpacks into (EEMPackUnpack)
+    pub mPackedClass: *mut EeCxxUnitClass,
+    /// the class's physics model
+    pub mPhysicsModel: *mut EeCxxPhysicsModel,
+    /// the record's upgrade table (`EEUCUpgradeTable::sTable`'s entry: its Rust record)
+    pub mImprovements: *mut ee_data::tables::EeDataUpgradeFields,
+    /// the units' default behaviour (EEUnitBehavior::sTable[record->mBehavior])
+    pub mBehavior: *mut EeCxxUnitBehavior,
+}
+
+impl Default for EeUnitsUnitClassLinks {
+    fn default() -> Self {
+        // SAFETY: every field is a raw pointer: all zero is each one's default
+        unsafe { std::mem::zeroed() }
+    }
+}
+
+// SAFETY: the pointers are the C++ class's members, read and written only on the simulation thread
+unsafe impl Send for EeUnitsUnitClassLinks {}
+unsafe impl Sync for EeUnitsUnitClassLinks {}
+
+/// The C++ classes the links point to (opaque; written `class X` / `struct X` in the generated header).
+pub struct EeCxxGraphicEffect {
+    _opaque: [u8; 0],
+}
+pub struct EeCxxButtonObject {
+    _opaque: [u8; 0],
+}
+pub struct EeCxxSoundObject {
+    _opaque: [u8; 0],
+}
+pub struct EeCxxPhysicsModel {
+    _opaque: [u8; 0],
+}
+
+/// The class's 29 effects and 6 related classes in the constructor's order (the record's: EEUnitClass.cpp's member
+/// pointer tables until units round 11).
+pub const EE_UNIT_CLASS_EFFECTS: usize = 29;
+pub const EE_UNIT_CLASS_RELATED: usize = 6;
+
+impl EeUnitsUnitClassLinks {
+    /// Effect `i` of the constructor's order: death, damage, heal, fire trail, trail, muzzle flash, ripple, splash,
+    /// impact sparks, impact blood, attached, then the members from `mEffect090` on in their own order.
+    pub fn effect_slot(&mut self, i: usize) -> &mut *mut EeCxxGraphicEffect {
+        let member = match i {
+            0..=9 => i + 1,
+            10 => 0,
+            _ => i,
+        };
+        assert!(member < EE_UNIT_CLASS_EFFECTS, "a class has 29 effects");
+        // SAFETY: the 29 effect pointers are contiguous from mAttachedEffect (repr(C), the test below)
+        unsafe { &mut *(&raw mut self.mAttachedEffect).add(member) }
+    }
+
+    /// Related class `k`: projectile, scaffolding, death, death spawn, packed, remains.
+    pub fn related_slot(&mut self, k: usize) -> &mut *mut EeCxxUnitClass {
+        match k {
+            0 => &mut self.mProjectileClass,
+            1 => &mut self.mScaffoldingClass,
+            2 => &mut self.mDeathClass,
+            3 => &mut self.mDeathSpawnClass,
+            4 => &mut self.mPackedClass,
+            5 => &mut self.mRemainsClass,
+            _ => panic!("a class has 6 related classes"),
+        }
+    }
+}
+
+/// The record's effect id `i` (the constructor's order).
+pub fn record_effect(r: &ee_data::tables::DbUnitClass, i: usize) -> i32 {
+    [
+        r.mDeathEffect,
+        r.mDamageEffect,
+        r.mHealEffect,
+        r.mUnusedFireTrailEffect,
+        r.mTrailEffect,
+        r.mMuzzleFlashEffect,
+        r.mRippleEffect,
+        r.mSplashEffect,
+        r.mImpactSparksEffect,
+        r.mImpactBloodEffect,
+        r.mAttachedEffect,
+        r.mUnusedEffect1,
+        r.mCreationEffect,
+        r.mUnusedEffect2,
+        r.mUnusedEffect3,
+        r.mUnusedEffect4,
+        r.mUnusedEffect5,
+        r.mUnusedEffect6,
+        r.mSpecialAttackEffect,
+        r.mUnusedEffect7,
+        r.mShotEffect,
+        r.mLeprosyEffect,
+        r.mPlagueEffect,
+        r.mPulseCannonEffect,
+        r.mMoraleEffect,
+        r.mBattleCryEffect,
+        r.mShellHoleEffect,
+        r.mUnusedEffect8,
+        r.mBloodStainEffect,
+    ][i]
+}
+
+/// The record's related unit type `k` ([`EeUnitsUnitClassLinks::related_slot`]'s order).
+pub fn record_related(r: &ee_data::tables::DbUnitClass, k: usize) -> i32 {
+    [r.mProjectileType, r.mScaffoldingType, r.mDeathType, r.mDeathSpawnType, r.mPackedType, r.mRemainsType][k]
+}
+
+/// `&class->` effect `i` (the constructor's order; EEUnitClass.cpp's host).
+///
+/// # Safety
+/// `links` is a live class's record; `i` below 29.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uc_effect_slot(
+    links: *mut EeUnitsUnitClassLinks,
+    i: i32,
+) -> *mut *mut EeCxxGraphicEffect {
+    // SAFETY: the caller's contract
+    unsafe { (*links).effect_slot(i as usize) }
+}
+
+/// `&class->` related class `k`.
+///
+/// # Safety
+/// `links` is a live class's record; `k` below 6.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uc_related_slot(links: *mut EeUnitsUnitClassLinks, k: i32) -> *mut *mut EeCxxUnitClass {
+    // SAFETY: the caller's contract
+    unsafe { (*links).related_slot(k as usize) }
+}
+
+/// The record's effect id `i`.
+///
+/// # Safety
+/// `record` is a live record; `i` below 29.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uc_record_effect(record: *const ee_data::tables::DbUnitClass, i: i32) -> i32 {
+    // SAFETY: the caller's contract
+    record_effect(unsafe { &*record }, i as usize)
+}
+
+/// The record's related unit type `k`.
+///
+/// # Safety
+/// `record` is a live record; `k` below 6.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uc_record_related(record: *const ee_data::tables::DbUnitClass, k: i32) -> i32 {
+    // SAFETY: the caller's contract
+    record_related(unsafe { &*record }, k as usize)
+}
+
+#[cfg(test)]
+mod links_tests {
+    use super::*;
+    use std::mem::{offset_of, size_of};
+
+    #[test]
+    fn the_effects_are_one_array_and_the_media_follow() {
+        let p = size_of::<*mut c_void>();
+        assert_eq!(offset_of!(EeUnitsUnitClassLinks, mBloodStainEffect) - offset_of!(EeUnitsUnitClassLinks, mAttachedEffect), 28 * p);
+        assert_eq!(offset_of!(EeUnitsUnitClassLinks, mModel), 30 * p);
+        assert_eq!(offset_of!(EeUnitsUnitClassLinks, mBehavior), 46 * p);
+        assert_eq!(size_of::<EeUnitsUnitClassLinks>(), 47 * p);
+        assert!(EeUnitsUnitClassLinks::default().mBehavior.is_null());
+    }
+
+    #[test]
+    fn the_slots_follow_the_constructors_order() {
+        let mut l = EeUnitsUnitClassLinks::default();
+        let base = &raw const l as usize;
+        let at = |p: &mut *mut EeCxxGraphicEffect| p as *mut _ as usize - base;
+        assert_eq!(at(l.effect_slot(0)), offset_of!(EeUnitsUnitClassLinks, mDeathEffect));
+        assert_eq!(at(l.effect_slot(9)), offset_of!(EeUnitsUnitClassLinks, mImpactBloodEffect));
+        assert_eq!(at(l.effect_slot(10)), offset_of!(EeUnitsUnitClassLinks, mAttachedEffect));
+        assert_eq!(at(l.effect_slot(11)), offset_of!(EeUnitsUnitClassLinks, mEffect090));
+        assert_eq!(at(l.effect_slot(12)), offset_of!(EeUnitsUnitClassLinks, mCreationEffect));
+        assert_eq!(at(l.effect_slot(18)), offset_of!(EeUnitsUnitClassLinks, mSpecialAttackEffect));
+        assert_eq!(at(l.effect_slot(24)), offset_of!(EeUnitsUnitClassLinks, mMoraleEffect));
+        assert_eq!(at(l.effect_slot(28)), offset_of!(EeUnitsUnitClassLinks, mBloodStainEffect));
+        let rel = |p: &mut *mut EeCxxUnitClass| p as *mut _ as usize - base;
+        assert_eq!(rel(l.related_slot(4)), offset_of!(EeUnitsUnitClassLinks, mPackedClass));
+        assert_eq!(rel(l.related_slot(5)), offset_of!(EeUnitsUnitClassLinks, mRemainsClass));
+    }
+
+    #[test]
+    fn the_records_ids_follow_the_constructors_order() {
+        // SAFETY: the record is plain numbers and bytes: all zero is a value
+        let mut r: ee_data::tables::DbUnitClass = unsafe { std::mem::zeroed() };
+        r.mHealEffect = 3;
+        r.mUnusedFireTrailEffect = 4;
+        r.mAttachedEffect = 11;
+        r.mPulseCannonEffect = 24;
+        r.mMoraleEffect = 25;
+        r.mPackedType = 50;
+        r.mRemainsType = 60;
+        assert_eq!([2, 3, 10, 23, 24].map(|i| record_effect(&r, i)), [3, 4, 11, 24, 25]);
+        assert_eq!([record_related(&r, 4), record_related(&r, 5)], [50, 60]);
+    }
 }
