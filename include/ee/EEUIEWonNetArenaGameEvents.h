@@ -22,40 +22,20 @@ static void EEUIEWNSetTriggerEvent(UIEvent* inEvent, UIControl* inControl, unsig
 
 // The WON screens' events (the game room form 0x20's EEUIEWNAG*, the room list's EEUIEWNAR*, the update-account form
 // 0x25's EEUIEWNMUA*, the server list's EEUIEWNSS*, the statistics form's EEUIEWNS*): each was a class whose
-// ProcessEvent made its one call of the Rust front end (ee_won_lobby wonfront.rs); they are one template by the call.
+// ProcessEvent made its one call of the Rust front end (ee_won_lobby wonfront.rs); they are one class holding the call.
 // Back and the two Cancels pop the manager's form (the original's three identical bodies, ICF-folded).
-template <EeWonFrontCall kCall> struct EEWonFrontEvent : UIEvent {
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(kCall, inForm, (intptr_t)inEntity); }
+struct EEWonFrontEvent : UIEvent {
+    explicit EEWonFrontEvent(EeWonFrontCall inCall) : mCall(inCall) {}
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(mCall, inForm, (intptr_t)inEntity); }
+    EeWonFrontCall mCall;
 };
 struct EEUIEWNPop : UIEvent {
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
 };
-typedef EEUIEWNPop EEUIEWNARBack, EEUIEWNMUACancel, EEUIEWNSSCancel;
-typedef EEWonFrontEvent<EeWonFrontCall::AgActivateForm> EEUIEWNAGActivateForm;
-typedef EEWonFrontEvent<EeWonFrontCall::AgBack> EEUIEWNAGBack;
-typedef EEWonFrontEvent<EeWonFrontCall::AgCheckPassword> EEUIEWNAGCheckPassword;
-typedef EEWonFrontEvent<EeWonFrontCall::AgClickGameFilter> EEUIEWNAGClickGameFilter;
-typedef EEWonFrontEvent<EeWonFrontCall::AgCloseForm> EEUIEWNAGCloseForm;
-typedef EEWonFrontEvent<EeWonFrontCall::AgDeactivateForm> EEUIEWNAGDeactivateForm;
-typedef EEWonFrontEvent<EeWonFrontCall::AgDoubleclickUser> EEUIEWNAGDoubleclickUser;
-typedef EEWonFrontEvent<EeWonFrontCall::AgHostOrJoinGame> EEUIEWNAGHostOrJoinGame;
-typedef EEWonFrontEvent<EeWonFrontCall::AgOpenScreen> EEUIEWNAGOpenScreen;
-typedef EEWonFrontEvent<EeWonFrontCall::AgSendChat> EEUIEWNAGSendChat;
-typedef EEWonFrontEvent<EeWonFrontCall::AgToggleHostScreen> EEUIEWNAGToggleHostScreen;
-typedef EEWonFrontEvent<EeWonFrontCall::AgToggleJoinScreen> EEUIEWNAGToggleJoinScreen;
-typedef EEWonFrontEvent<EeWonFrontCall::AgUpdateForm> EEUIEWNAGUpdateForm;
-typedef EEWonFrontEvent<EeWonFrontCall::ArUpdateForm> EEUIEWNARUpdateForm;
-typedef EEWonFrontEvent<EeWonFrontCall::ArActivateForm> EEUIEWNARActivateForm;
-typedef EEWonFrontEvent<EeWonFrontCall::ArDeactivateForm> EEUIEWNARDeactivateForm;
-typedef EEWonFrontEvent<EeWonFrontCall::ArDoubleClickRoom> EEUIEWNARDoubleClickRoom;
-typedef EEWonFrontEvent<EeWonFrontCall::ArClickUpdateAccount> EEUIEWNARClickUpdateAccount;
-typedef EEWonFrontEvent<EeWonFrontCall::ArJoinRoom> EEUIEWNARJoinRoom;
-typedef EEWonFrontEvent<EeWonFrontCall::ArOpenScreen> EEUIEWNAROpenScreen;
-typedef EEWonFrontEvent<EeWonFrontCall::MuaOpenScreen> EEUIEWNMUAOpenScreen;
-typedef EEWonFrontEvent<EeWonFrontCall::MuaSubmit> EEUIEWNMUASubmit;
-typedef EEWonFrontEvent<EeWonFrontCall::SsOk> EEUIEWNSSOk;
-typedef EEWonFrontEvent<EeWonFrontCall::SsOpenScreen> EEUIEWNSSOpenScreen;
-typedef EEWonFrontEvent<EeWonFrontCall::StatsCancel> EEUIEWNSCancel;
-typedef EEWonFrontEvent<EeWonFrontCall::StatsOpen> EEUIEWNSOpen;
+// FrontNewEvent's event (ee_won_front_event_call: the event's call, or -1 for a pop)
+inline UIEvent* EEWonFrontNewEvent(int32_t inCall)
+{
+    return inCall < 0 ? static_cast<UIEvent*>(new EEUIEWNPop) : new EEWonFrontEvent((EeWonFrontCall)inCall);
+}
 
 #endif

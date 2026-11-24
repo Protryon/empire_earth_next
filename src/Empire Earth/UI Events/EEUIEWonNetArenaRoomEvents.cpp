@@ -86,6 +86,6 @@ static const bool sWonNetUIRegistered = (gEEWonNetUI = EEWonNetUI{
     [] { return gGamePreferences.Save(); },
     WonNetDisplayMessage,
     WonNetDisplayCancel,
-    []() -> UIEvent* { return new EEUIEWNAROpenScreen; },
-    []() -> UIEvent* { return new EEUIEWNAGOpenScreen; },
+    []() -> UIEvent* { return new EEWonFrontEvent(EeWonFrontCall::ArOpenScreen); },
+    []() -> UIEvent* { return new EEWonFrontEvent(EeWonFrontCall::AgOpenScreen); },
 }, true);

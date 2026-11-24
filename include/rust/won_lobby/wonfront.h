@@ -481,6 +481,10 @@ ptrdiff_t ee_won_front_call(EeWonFrontCall call_, void *obj, ptrdiff_t a);
 /// Resets the originals' statics (the driver, between its two sides' runs).
 void ee_won_front_reset();
 
+/// The front-end call a WON screen event's ProcessEvent makes (`EEWonFrontEvent`'s), or -1 for the three events
+/// that pop the manager's form instead (ArBack, MuaCancel, SsCancel: `EEUIEWNPop`): `FrontNewEvent`'s class.
+int32_t ee_won_front_event_call(EeWonFrontEvent event);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_LOBBY_WONFRONT_H
