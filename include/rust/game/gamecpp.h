@@ -760,7 +760,6 @@ enum class EeGameCpp : uint32_t {
   ArchiveSet,
   DataPathAddArchive,
   DataPathFindFile,
-  SetDataPaths,
   UiSetLoadingText,
   UiRandomSeed,
   FileSpecNew,
@@ -1157,7 +1156,6 @@ enum class EeGameCpp : uint32_t {
   MouseSetWindowBounds,
   MouseLoad,
   TexturesRefreshAll,
-  IconsLoaded,
   UiReloadIcons,
   MousePointerPostSurface,
   GeInitialize,
@@ -2998,7 +2996,6 @@ enum class EeGameCpp : uint32_t {
   DsMove,
   DsTileCount,
   DsSetIntensity,
-  DsGameSpeed,
   DsResetColor,
   DsPathAt,
   DsCenter,
@@ -3318,7 +3315,6 @@ enum class EeGameCpp : uint32_t {
   OvSetModel,
   OvModelName,
   EpAssignLastOptions,
-  EpCameraMaxZoom,
   EpDefaultSettings,
   EpDeleteSettings,
   EpNarrowCopy,
@@ -3640,6 +3636,9 @@ enum class EeGameCpp : uint32_t {
   C12PlayerEnemy,
   C13bGhostLockFree,
   C13bGhostAt,
+  TexturesSetPath,
+  ModelsSetPath,
+  SoundSetPath,
 };
 
 /// A `U2DRectangle<long>` as the C++ stores it: bottom, left, right, top.
@@ -4160,6 +4159,9 @@ void ee_gamecpp_startup_load_media();
 
 /// EEUnloadGameMedia: the same released.
 void ee_gamecpp_startup_unload_media();
+
+/// EESetDataPaths: the texture, model and sound managers pointed at the data search path.
+void ee_gamecpp_startup_set_data_paths();
 
 /// EEShowSinglePlayerScreen: the data search path (the game's Data folder, behind a Data\data.ssa when one is
 /// present) and the civilization path made, replacing the previous ones.

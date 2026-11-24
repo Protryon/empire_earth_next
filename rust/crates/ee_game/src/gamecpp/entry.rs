@@ -574,6 +574,18 @@ mod tests {
     }
 
     #[test]
+    fn the_excluded_name_and_the_network_folders() {
+        // the original's encrypted constant decrypts to a file name: text without a NUL, no path
+        let name = entry_excluded_name();
+        assert!(!name.as_bytes().is_empty());
+        assert!(!name.as_bytes().contains(&b'\\'));
+        assert_eq!(NET_EXE.to_bytes(), b"");
+        assert_eq!(NET_DB.to_bytes(), b"Data\\Db\\");
+        assert_eq!(NET_TAI.to_bytes(), b"Data\\Unit AI Scripts\\");
+        assert_eq!(NET_MODELS.to_bytes(), b"Data\\Models\\");
+    }
+
+    #[test]
     fn scan_long_is_sscanf_percent_ld() {
         assert_eq!(entry_scan_long(b"  1234x", 7), 1234);
         assert_eq!(entry_scan_long(b"-12", 7), -12);

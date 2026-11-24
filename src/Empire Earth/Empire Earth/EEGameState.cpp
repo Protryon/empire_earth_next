@@ -205,8 +205,6 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     case O::DataPathAddArchive: gDataPath->AddArchive(*(FSArchive*)p, true);
         break;
     case O::DataPathFindFile: return gDataPath->FindFile(UString(WSTR(0)), *(FSFileSpec**)a[1]);
-    case O::SetDataPaths: EESetDataPaths();
-        break;
     case O::UiSetLoadingText: gUserInterface->SetLoadingText((long)a[0]);
         break;
     case O::UiRandomSeed: return gUserInterface->mRandomSeed;

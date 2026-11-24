@@ -46,14 +46,8 @@ UWideString gGameVersion("2002.8.17.v1.00");
 extern bool& gFarRearClipping;               // 0x5308d2 (set: the far rear clipping distance; provisional name)
 extern bool& gInCinematic;                   // 0x5318e0 (set: scrolling keeps the free camera mode; provisional name)
 
-// port: the farthest zoom (1.0 in the original; the camera's distance grows linearly past it, its pitch stays at the
-// farthest), from config.yaml's camera: maximum_zoom_out (EEPreferences)
-float gCameraMaxZoom = 2.0f;
-
 // The limits (0x441e48..0x441eb8), the pitch limits, the clipping distances and the move speeds are Rust's (ee_app
 // camera.rs, ee_gfx camera.rs).
-// Initialises the camera's field of view (30 degrees)
-static float sCameraFieldOfView = 0.017453292f * 30.0f;
 
 // The camera's host (ee_app camera_ffi.rs): ee_game gamecpp camera_io.rs (its cases: EECore10OpD7 below); the
 // context is the camera
@@ -220,7 +214,7 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DkSetWorldCamera: gWorld.SetCameraTransformation(*EECameraRust<GETransformation>(CAM->mView));
         break;
-    case O::DkSetFieldOfView: gViewport.SetFieldOfView(sCameraFieldOfView);
+    case O::DkSetFieldOfView: gViewport.SetFieldOfView(f[0]);
         break;
     case O::DkMiniMapRefresh: gMiniMap->RefreshView();
         break;

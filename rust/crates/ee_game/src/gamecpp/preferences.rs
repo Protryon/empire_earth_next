@@ -21,7 +21,7 @@ use crate::app::settings::{
 use crate::app::settings_ffi::PlatConfig;
 
 use super::global_objects as gobj;
-use super::{h, hf, hp, pa, Owned, O, P};
+use super::{h, hp, pa, Owned, O, P};
 
 /// The resources' and the system's Korean language id.
 const KOREAN: i64 = 0x412;
@@ -162,7 +162,7 @@ pub extern "C" fn ee_gamecpp_prefs_texture_resolution(resolution: c_long) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_apply_port(settings: *mut c_void) {
     let s = *fields(settings as P);
-    hf(O::EpCameraMaxZoom, 0, &[], &[s.mMaximumZoomOut as f32 / 100.0f32]);
+    crate::gamecpp::globals::set!(gCameraMaxZoom, s.mMaximumZoomOut as f32 / 100.0f32);
     sys::render_percent(s.mRenderResolution as _);
     sys::frame_limit(s.mFrameRateLimit);
     sys::texture_filtering(s.mTextureFiltering as _);

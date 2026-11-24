@@ -852,7 +852,6 @@ pub enum EeGameCpp {
     ArchiveSet,
     DataPathAddArchive,
     DataPathFindFile,
-    SetDataPaths,
     UiSetLoadingText,
     UiRandomSeed,
     FileSpecNew,
@@ -1251,7 +1250,6 @@ pub enum EeGameCpp {
     MouseSetWindowBounds,
     MouseLoad,
     TexturesRefreshAll,
-    IconsLoaded,
     UiReloadIcons,
     MousePointerPostSurface,
     GeInitialize,
@@ -3129,7 +3127,6 @@ pub enum EeGameCpp {
     DsMove,
     DsTileCount,
     DsSetIntensity,
-    DsGameSpeed,
     DsResetColor,
     DsPathAt,
     DsCenter,
@@ -3464,7 +3461,6 @@ pub enum EeGameCpp {
     // ---- round 11, lane B (EECore11OpB's cases)
     // EEPreferences.cpp (preferences.rs)
     EpAssignLastOptions,
-    EpCameraMaxZoom,
     EpDefaultSettings,
     EpDeleteSettings,
     EpNarrowCopy,
@@ -3815,6 +3811,10 @@ pub enum EeGameCpp {
     //
     // ---- round 13, fork D (EECore11OpC2's cases)
     //
+    // ---- round 14, fork B (EEStartupOp's cases)
+    TexturesSetPath,
+    ModelsSetPath,
+    SoundSetPath,
 }
 
 pub use EeGameCpp as O;

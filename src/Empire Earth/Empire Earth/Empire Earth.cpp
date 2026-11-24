@@ -81,10 +81,8 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 
 class FSPath;
 // The ones no header this unit includes declares:
-extern UString gSavedGameExtension, gScenarioExtension, gU530B88, gCampaignExtension, gPhysicsThreadName,
-    gGraphicsThreadName, gDataPreLoadingThreadName, gMousePointerThreadName, gScenarioEditorThreadName;
-extern UWideString gU530BC8, gCampaignAOCRoman, gCampaignAOCPacific, gCampaignAOCAsian, gCampaignEEDemo,
-    gCampaignEELearning, gU52A280;
+extern UString gU530B88, gCampaignExtension, gPhysicsThreadName, gGraphicsThreadName, gMousePointerThreadName,
+    gScenarioEditorThreadName;
 extern EEEvent gEvent;
 extern EEToHitTable gToHitTable;
 extern EEAIUnitTargetingTable gAIUnitTargetingTable;
@@ -173,7 +171,6 @@ EE_CONSTRUCT_GLOBAL(UString, gDataPreLoadingThreadName, ("DataPreLd"));
 EE_CONSTRUCT_GLOBAL(UString, gMousePointerThreadName, ("MousePtr"));
 // chain at 0x53f0ec (wrapper)
 EE_CONSTRUCT_GLOBAL(UString, gScenarioEditorThreadName, ("ScenEdit"));
-extern FSPath* gDataPath;
 extern FSPath* gCivilizationDataPath;
 
 HINSTANCE gInstance;                        // 0x5319d8 (WinMain's instance, set by 0x540d73)
@@ -283,9 +280,7 @@ void EEStopAllSounds()
 // Points the texture, model and sound managers at the data search path
 void EESetDataPaths()
 {
-    gTextureManager->SetTexturePath(gDataPath);
-    gModelManager->SetModelPath(gDataPath);
-    gSoundManager->SetPath(gDataPath);
+    ee_gamecpp_startup_set_data_paths();
 }
 
 #ifdef _WIN32
@@ -335,7 +330,6 @@ extern std::vector<GETexture*> gU4E8EF0; // defined in EERenderObject.cpp
 
 #include "ee/EEButtonObject.h"
 
-extern bool sIconsLoaded; // the status box's icons-loaded flag (defined in EEUIFMGStatusBox's unit)
 
 // port: the menus' resolution. Their controls are laid out for 1024x768 (pixel sizes; the forms anchor to their
 // edges), so they keep its height of 768 and take the game resolution's aspect ratio: the frame scales to the window
@@ -501,6 +495,12 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::NewTextureManager: gTextureManager = new GETextureManager(gDataPath);
         break;
     case O::NewModelManager: gModelManager = new GEModelManager(gDataPath);
+        break;
+    case O::TexturesSetPath: gTextureManager->SetTexturePath(gDataPath);
+        break;
+    case O::ModelsSetPath: gModelManager->SetModelPath(gDataPath);
+        break;
+    case O::SoundSetPath: gSoundManager->SetPath(gDataPath);
         break;
     case O::PrefScreenID: return SCREEN_ID;
     case O::PrefScreenIDRaw: return SETTINGS.mScreenID;
@@ -709,7 +709,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::UiMiniMapUnloadMedia: gEEGameUI.mMiniMapUnloadMedia();
         break;
-    case O::IconsLoaded: return sIconsLoaded == true;
     case O::RoUnitsLoadMedia: EEROUnits::LoadMedia();
         break;
     // the data paths and folders

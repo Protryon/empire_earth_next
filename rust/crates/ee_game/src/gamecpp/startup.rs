@@ -478,6 +478,14 @@ pub extern "C" fn ee_gamecpp_startup_unload_media() {
     unsafe { ee_render::gfx::shadows::ee_gfx_ground_shadows_release(super::ro_raster::ee_gamecpp_ro_raster()) };
 }
 
+/// EESetDataPaths: the texture, model and sound managers pointed at the data search path.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_startup_set_data_paths() {
+    h(O::TexturesSetPath, 0, &[]);
+    h(O::ModelsSetPath, 0, &[]);
+    h(O::SoundSetPath, 0, &[]);
+}
+
 /// EEShowSinglePlayerScreen: the data search path (the game's Data folder, behind a Data\data.ssa when one is
 /// present) and the civilization path made, replacing the previous ones.
 #[no_mangle]
@@ -805,7 +813,7 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
     let r = h(O::TexturesRefreshAll, 0, &[]);
     verify(r == KESE_OK, 3070);
     super::db_media::ee_gamecpp_db_button_reload();
-    if h(O::IconsLoaded, 0, &[]) != 0 {
+    if crate::gamecpp::globals::get!(sIconsLoaded) {
         h(O::UiReloadIcons, 0, &[]);
         h(O::UiUnloadIcons, 0, &[]);
         h(O::UiLoadIcons, 0, &[]);
@@ -1242,6 +1250,28 @@ pub unsafe extern "C" fn ee_gamecpp_startup_load_sound(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn strtoul_is_the_c_librarys() {
+        assert_eq!(startup_strtoul(b"12345"), 12345);
+        assert_eq!(startup_strtoul(b"  	+77xyz"), 77);
+        assert_eq!(startup_strtoul(b"-1"), c_ulong::MAX);
+        assert_eq!(startup_strtoul(b"abc"), 0);
+        assert_eq!(startup_strtoul(b""), 0);
+        assert_eq!(startup_strtoul(b"99999999999999999999999"), c_ulong::MAX);
+    }
+
+    #[test]
+    fn font_slots_and_folders() {
+        let mut slots: Vec<usize> = (0..FONTS.len()).map(|k| font_slot(k) as usize).collect();
+        slots.sort_unstable();
+        slots.dedup();
+        assert_eq!(slots.len(), 38);
+        assert_eq!(font_slot(0), core::ptr::addr_of_mut!(super::super::globals::gFontArial8));
+        assert_eq!(font_slot(37), core::ptr::addr_of_mut!(super::super::globals::gFontTahoma72));
+        assert_eq!(STARTUP_FOLDERS[0].to_bytes(), b"data\\");
+        assert_eq!(STARTUP_FOLDERS[5].to_bytes(), b"Users\\default\\");
+    }
 
     #[test]
     fn the_fonts_are_the_globals_order_and_lines() {

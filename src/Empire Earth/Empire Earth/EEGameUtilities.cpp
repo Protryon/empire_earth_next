@@ -46,8 +46,6 @@
 #include "ee/EEEffect.h"
 #include "ee/EEEffectManager.h"
 
-extern EEWorld gWorld;
-extern EEUIManager* gUIManager;
 
 // the falloff of a graphic object's frame sound (own .rdata copy 0x4421fc: a named const, as kCalamitySoundFalloff)
 static const float kGraphicSoundFalloff = 4.0f;
@@ -132,7 +130,7 @@ void EEExitGame()
 // ------------------------------------------------------------------------- round 10, lane D: the Empire Earth directory's managers and utilities
 
 int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEEMStorm.cpp
-double EECore10OpD2F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECameraControl.cpp
 
 static_assert(kGraphicEffectCommandConfirmationMouseClickNoUnit == 0xd1 && kGraphicEffectCommandConfirmationMouseClickUnit == 0xd3
                   && kServerStateOpen == 0 && kServerStateRunning == 3 && kServerStatePaused == 4
@@ -258,6 +256,6 @@ double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     typedef EeGameCpp O;
     switch (inOp) {
     case O::DuMapHeight: return ::gWorld.mMap->GetHeight(PT(0));
-    default: return EECore10OpD2F(inOp, p, a, f);
+    default: return EECore10OpD7F(inOp, p, a, f);
     }
 }

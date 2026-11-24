@@ -1,7 +1,9 @@
 //! The game's plain global pointers and scalars, stored by Rust (were EEGlobals.cpp's definitions; the C++ headers
 //! keep declaring them `extern`, so every C++ user reads the same symbol as before): the subsystem, manager, font
 //! and render object pointers, the TEST ONLY hooks, the campaigns' network checksums, the install checksum, the
-//! space units' heights, the collision period and its unit (were EEPhysicsModel.cpp's), gFreeCamera, sIconsLoaded and gEmptyString. Each is exported under the C++ symbol: MSVC's
+//! space units' heights, the collision period and its unit (were EEPhysicsModel.cpp's), gFreeCamera, sIconsLoaded and gEmptyString,
+//! and the game's two UI tables (gEEGameUI, gEEWonNetUI: ee/EEGameUI.h, ee/EEWonNetUI.h; their members are function
+//! pointers, so the storage is the C++ struct's on every platform; the UI's units fill them at static initialization). Each is exported under the C++ symbol: MSVC's
 //! mangled name on Windows (from the link map), the plain name elsewhere (Itanium does not mangle a global's name).
 //! Rust reads and writes them through `get!`, `have!` and `set!` where a host case only did that, and passes a
 //! few pointers on to a Rust export (gDataPath, gGraphics, gPhysics, gDataPreLoading: reads on the thread that
@@ -116,6 +118,11 @@ ee_globals! {
     val gFreeCamera: bool = false => "?gFreeCamera@@3_NA";
     val sIconsLoaded: bool = false => "?sIconsLoaded@@3_NA";
     val gEmptyString: [c_char; 4] = [0; 4] => "?gEmptyString@@3PADA";
+    // port: the farthest zoom (1.0 in the original; the camera's distance grows linearly past it, its pitch stays at
+    // the farthest), from config.yaml's camera: maximum_zoom_out (EEPreferences; was EECameraControl.cpp's)
+    val gCameraMaxZoom: f32 = 2.0 => "?gCameraMaxZoom@@3MA";
+    val gEEGameUI: [*mut c_void; 9] = [core::ptr::null_mut(); 9] => "?gEEGameUI@@3UEEGameUI@@A";
+    val gEEWonNetUI: [*mut c_void; 5] = [core::ptr::null_mut(); 5] => "?gEEWonNetUI@@3UEEWonNetUI@@A";
 }
 
 /// `gGraphics->PostResume()` (rts graphics.rs; its FFI is absent from a test binary).
@@ -196,7 +203,7 @@ mod tests {
 
     #[test]
     fn symbols_are_msvc_names() {
-        assert_eq!(NAMES.len(), 83);
+        assert_eq!(NAMES.len(), 86);
         for (name, msvc) in NAMES {
             assert!(msvc.starts_with(&format!("?{name}@@3")), "{name}: {msvc}");
         }
