@@ -163,6 +163,9 @@ pub struct EeWonAsyncOp {
     /// `mContainer` (the C++ `AsyncOpContainer*`, not owned) and its Rust object
     container: AtomicPtr<c_void>,
     container_obj: AtomicPtr<EeWonOpContainer>,
+    /// a progress chunk's receiving op (the deleted `RecvChunkOp::mRecvOp`, a `RefCount*` with a reference; R6 WON
+    /// lobby and network round 36): an op with a subject finishes with success when run (`RecvChunkOp::RunHook`)
+    subject: AtomicPtr<c_void>,
 }
 
 // SAFETY: the fields are atomics or set once; the hooks' contract makes the C++ calls thread-safe as the C++ was
@@ -189,6 +192,33 @@ impl EeWonAsyncOp {
             completion: AtomicPtr::new(null_mut()),
             container: AtomicPtr::new(null_mut()),
             container_obj: AtomicPtr::new(null_mut()),
+            subject: AtomicPtr::new(null_mut()),
+        }
+    }
+
+    /// `RecvChunkOp(op)`: this op becomes a progress chunk of `subject` (a `RefCount*`, a reference taken).
+    ///
+    /// # Safety
+    /// `subject` is a live `RefCount*`; the op has not run and has no subject yet.
+    pub unsafe fn set_subject(&self, subject: *mut c_void) {
+        if let Some(h) = self.hooks.ref_add {
+            // SAFETY: the caller's live object
+            unsafe { h(subject) };
+        }
+        self.subject.store(subject, Relaxed);
+    }
+
+    /// `RecvChunkOp::GetRecvOp()` (null for any other op).
+    pub fn subject(&self) -> *mut c_void {
+        self.subject.load(Relaxed)
+    }
+
+    /// The virtual `RunHook`; a progress chunk's is `Finish(WS_Success)` (2b5370).
+    fn run_hook(&self) {
+        if self.subject().is_null() {
+            self.call(self.hooks.run_hook);
+        } else {
+            self.finish(crate::status::WS_SUCCESS);
         }
     }
 
@@ -415,7 +445,7 @@ impl EeWonAsyncOp {
 
     /// `StartRunAsync`: the run hook, then the timeout armed, or a zero timeout times out now.
     pub fn start_run_async(&self) {
-        self.call(self.hooks.run_hook);
+        self.run_hook();
         match self.state().after_run_hook() {
             TimerAction::Arm => {
                 if let Some(h) = self.hooks.timer_add {
@@ -438,7 +468,7 @@ impl EeWonAsyncOp {
             RunAction::StartAsync => self.start_run_async(),
             RunAction::Queue => self.queue_in_container(),
             RunAction::Block => {
-                self.call(self.hooks.run_hook);
+                self.run_hook();
                 self.complete();
             }
         }
@@ -469,6 +499,14 @@ impl EeWonAsyncOp {
 
 impl Drop for EeWonAsyncOp {
     fn drop(&mut self) {
+        // `~RecvChunkOp`: the receiving op's reference
+        let subject = self.subject.swap(null_mut(), Relaxed);
+        if !subject.is_null() {
+            if let Some(h) = self.hooks.ref_release {
+                // SAFETY: the reference this object held
+                unsafe { h(subject) };
+            }
+        }
         // `~AsyncOp`: the completion's reference, then the lock
         // SAFETY: null
         unsafe { self.set_completion(null_mut()) };
@@ -604,6 +642,16 @@ pub unsafe extern "C" fn ee_won_asyncop_free(o: *mut EeWonAsyncOp) {
         // SAFETY: the caller's contract
         drop(unsafe { Box::from_raw(o) });
     }
+}
+
+/// A progress chunk's receiving op (`RecvChunkOp::GetRecvOp()`, a `RefCount*`), null for any other op.
+///
+/// # Safety
+/// `o` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_asyncop_subject(o: *const EeWonAsyncOp) -> *mut c_void {
+    // SAFETY: the caller's contract
+    unsafe { &*o }.subject()
 }
 
 /// `AsyncOp`'s run mode.

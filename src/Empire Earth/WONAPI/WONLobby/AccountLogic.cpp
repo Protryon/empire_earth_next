@@ -70,7 +70,7 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
     case O::RunWithStatusRes: LobbyRunOpWithStatus(reinterpret_cast<AsyncOp*>(a), gLobbyResources[b].mString, gLobbyResources[c].mString, (int)(d & 0xff), (unsigned long)(d >> 8)); return 0;
     case O::OpSetNum: R(a)->SetNum((int)b, (long long)c); return 0;
-    case O::GetCertNew: return Held(new GetCertOp(A(a)));
+    case O::GetCertNew: return Held(RustServerOp::NewGetCert(A(a)));
     case O::GetAccountNew: return Held(RustServerOp::NewGetAccount(SC(a), A(b)));
     case O::PasswordEmailNew: return Held(RustServerOp::NewRequest(ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(a), (size_t)b), SC(c)));
     case O::InfoEmailNew: return Held(RustServerOp::NewRequest(ee_won_reqop_info_email(reinterpret_cast<const uint8_t*>(a), (size_t)b), SC(c)));

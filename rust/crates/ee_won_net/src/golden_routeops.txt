@@ -530,6 +530,17 @@ default completed type 60 WS_Success
 hook type 60 WS_Success
 default completed type 60 WS_Success
  msg=4 data=0:
+== firewall listen
+listening before no
+server got firewall listen 9:030712013d05000000
+listening yes
+hook type 17 WS_Success
+firewall listen completed type 17 WS_Success
+listening after no
+== firewall listen busy
+busy bind WS_Success listen WS_Success
+firewall listen busy completed type 17 WS_WSAEADDRINUSE
+listening after busy no
 == parse group list body
 parsed 1 flags 81
  groups 2

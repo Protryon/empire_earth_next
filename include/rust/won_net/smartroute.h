@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_net/ffi.h"
+#include "rust/won_net/routeconn.h"
 #include "rust/won_net/routeop.h"
 
 /// No request.
@@ -197,6 +198,25 @@ void ee_won_smart_set_path(EeWonSmartRoute *r, const uint8_t *path, size_t len);
 /// # Safety
 /// `r` is a model.
 void ee_won_smart_close(EeWonSmartRoute *r);
+
+/// `SmartRoutingConnection::CloseHook` (R6 WON lobby and network round 36): the model closed under the
+/// connection's lock, then `RoutingConnection::CloseHook` (`route`).
+///
+/// # Safety
+/// `r` is a model; `lock` the connection's `PlatMutex*`; `route` its live routing object.
+void ee_won_smart_close_hook(EeWonSmartRoute *r,
+                             void *lock,
+                             const EeWonRouteConn *route);
+
+/// `SmartRoutingConnection::RoutingOpCompleteHook(op)`: under the connection's lock the model takes the completed
+/// op (its status the C++ op `cpp`'s); a handled op loses its completion.
+///
+/// # Safety
+/// `r` is a model; `lock` the connection's `PlatMutex*`; `op` the live Rust op of the C++ op `cpp` (`RefCount*`).
+void ee_won_smart_routeop_hook(EeWonSmartRoute *r,
+                               void *lock,
+                               const EeWonRouteOp *op,
+                               void *cpp);
 
 /// A number (see [`EeWonSmartNumber`]).
 ///

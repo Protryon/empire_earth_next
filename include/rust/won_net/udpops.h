@@ -6,14 +6,42 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/buffer.h"
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/ipobj.h"
+
+/// `RoutingGetUserStatusOp` (userstatus.rs): `ctx` an `EeWonUserStatus*`.
+constexpr static const int32_t EE_WON_UDP_BODY_USER_STATUS = 1;
+
+/// `PingGameOp` (ee_won_lobby logics.rs): `ctx` an `EeWonPingOp*`.
+constexpr static const int32_t EE_WON_UDP_BODY_PING = 2;
+
+/// A body's check read past the reply's end.
+constexpr static const int64_t EE_WON_UDP_BODY_THREW = INT64_MIN;
 
 /// `UDPManagerRecvOp`'s state and steps.
 struct EeWonUdpRecvOp;
 
 /// `UDPManagerSendRecvOp`'s state and steps.
 struct EeWonUdpSendRecvOp;
+
+/// What a C++ subclass of `UDPManagerSendRecvOp` added, in Rust (R6 WON lobby and network round 36: PingGameOp and
+/// RoutingGetUserStatusOp, both deleted): its members (`ctx`), the start of its `RunHook` (the request datagram set
+/// before the base's run), its `CheckResponse` and its destructor, and the constructor's settings. `op` is the C++
+/// op (`RefCount*`).
+struct EeWonUdpBody {
+  /// which body (`EE_WON_UDP_BODY_*`; 0: none)
+  int32_t kind;
+  void *ctx;
+  void (*run)(void *ctx, void *op, const EeWonUdpSendRecvOp *r);
+  /// the status, or [`EE_WON_UDP_BODY_THREW`] for a read past the reply's end (the C++ threw a
+  /// `ReadBufferException`, which the reply wait's check caught)
+  int64_t (*check)(void *ctx, void *op, EeWonReadBuffer *reader);
+  void (*free)(void *ctx);
+  /// `SetNumRetransmits`, `SetMsgTimeout`
+  int32_t retry_limit;
+  uint32_t timeout;
+};
 
 extern "C" {
 
@@ -141,6 +169,33 @@ void ee_won_udpsendrecvop_setup(const EeWonUdpSendRecvOp *r,
 /// # Safety
 /// `op` is the C++ op as `RefCount*`, `core` the library's static table (as the receive op's).
 EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new(void *op, const EeWonCoreHooks *core);
+
+/// A request op's object with a Rust body, its address and manager set (the deleted subclasses' constructors).
+///
+/// # Safety
+/// As [`ee_won_udpsendrecvop_new`]; `body` is a new body this object takes; `addr` a live address; `manager` a
+/// live `UDPManager*` (`RefCount*`) or null.
+EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new_body(void *op,
+                                                  const EeWonCoreHooks *core,
+                                                  EeWonUdpBody body,
+                                                  const EeWonIpAddr *addr,
+                                                  void *manager);
+
+/// The body's members of a C++ op (`RefCount*`) when it is a request with a body of `kind`; null for a null op,
+/// another class (the core table's `dynamic_cast`) or another body.
+///
+/// # Safety
+/// `op` is null or a live `RefCount*`.
+void *ee_won_udp_body_of(void *op,
+                         int32_t kind);
+
+/// `SetOutgoing` of a new buffer of the bytes.
+///
+/// # Safety
+/// `r` is live; `data` holds `length` bytes.
+void ee_won_udpsendrecvop_set_outgoing_bytes(const EeWonUdpSendRecvOp *r,
+                                             const uint8_t *data,
+                                             size_t length);
 
 /// Frees the object, its references given back.
 ///

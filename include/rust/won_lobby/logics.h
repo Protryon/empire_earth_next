@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_net/udpops.h"
 
 /// `PingGameOp::CheckResponse`'s answer when a read went past the reply's end (the C++ rethrows
 /// `ReadBufferException`).
@@ -525,7 +526,8 @@ enum class EeWonPingOpCall : uint32_t {
   RunHook = 1,
   /// `CheckResponse(*(EeWonReadBuffer*)a)`: the status, or [`EE_WON_LOGIC_THREW`].
   CheckResponse,
-  /// a member: 0 the request id, 1 the ping, 2 the flags, 3 the retries, 4 the reply's length (-1: none).
+  /// a member: 0 the request id, 1 the ping, 2 the flags, 3 the retries, 4 the reply's length (-1: none), 5 a
+  /// body's game.
   Field,
 };
 
@@ -570,6 +572,15 @@ EeWonPingOp *ee_won_pingop_new(void *obj,
                                EeWonLogicHostFn host,
                                uint16_t request_id,
                                uint8_t flags);
+
+/// `PingGameOp(game, request id, flags)`'s body (the C++ class went in R6 WON lobby and network round 36): its
+/// members and a reference to the game (the host's `AddRef` / `Release`). The op is
+/// `new UDPManagerSendRecvOp(body, game->GetAddress(), manager)`; its members are
+/// `ee_won_udp_body_of(op, EE_WON_UDP_BODY_PING)`.
+EeWonUdpBody ee_won_pingop_body(ptrdiff_t game,
+                                EeWonLogicHostFn host,
+                                uint16_t request_id,
+                                uint8_t flags);
 
 /// The ping op's destructor.
 ///

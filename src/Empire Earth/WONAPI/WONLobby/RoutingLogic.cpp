@@ -50,7 +50,7 @@ static RoutingOp* RO(intptr_t a) { return reinterpret_cast<RoutingOp*>(a); }
 static RoutingConnection* RC(intptr_t a) { return reinterpret_cast<RoutingConnection*>(a); }
 static AsyncOp* AO(intptr_t a) { return reinterpret_cast<AsyncOp*>(a); }
 static RustServerOp* RS(intptr_t a) { return static_cast<RustServerOp*>(AO(a)); }
-static RoutingGetUserStatusOp* US(intptr_t a) { return static_cast<RoutingGetUserStatusOp*>(AO(a)); }
+static UDPManagerSendRecvOp* US(intptr_t a) { return static_cast<UDPManagerSendRecvOp*>(AO(a)); }
 static ChatCommandParser* P(intptr_t a) { return reinterpret_cast<ChatCommandParser*>(a); }
 template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
 {
@@ -284,13 +284,13 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     // ---- the friends' searches, the server and room lists
     case O::UdpManager: return (intptr_t)LobbyGetUDPManager();
-    case O::StatusOpNew: return HeldOp(new RoutingGetUserStatusOp(L->Slot<LobbyServerList>(kRoutingServerList)->AddressAt((size_t)a), reinterpret_cast<UDPManager*>(b)));
-    case O::StatusOpAddId: US(a)->AddWONUserId((unsigned long)b); return 0;
+    case O::StatusOpNew: return HeldOp(new UDPManagerSendRecvOp(ee_won_userstatus_body(), L->Slot<LobbyServerList>(kRoutingServerList)->AddressAt((size_t)a), reinterpret_cast<UDPManager*>(b)));
+    case O::StatusOpAddId: ee_won_userstatus_add(UserStatusOf(AO(a)), (unsigned long)b); return 0;
     case O::StatusOpRun:
         L->RunOp(AO(a), new ShellCompletion(L, EeWonLogicShellDone::RouteUserStatus), 10000);
         return 0;
     case O::StatusOpServer: return (intptr_t)L->Slot<LobbyServerList>(kRoutingServerList)->FindServer(US(a)->GetDestAddr());
-    case O::StatusOpRust: return (intptr_t)US(a)->GetRust();
+    case O::StatusOpRust: return (intptr_t)UserStatusOf(AO(a));
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
     // GetUserIdFromNameOp: a Rust op (ee_won reqops.rs) with the name, its id read back
     case O::UserIdOpNew: return HeldOp(RustServerOp::NewRequest(ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(a), (size_t)b), reinterpret_cast<ServerContext*>(c)));
