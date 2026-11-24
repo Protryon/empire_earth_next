@@ -480,7 +480,9 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
         super::window_pump::install();
         let com = h(O::RunComInit, 0, &[]);
         h(O::Verify, 0, &[(com == ENTRY_S_OK || com == ENTRY_S_FALSE) as i64, 3600]);
-        ee_base::util::fp::ee_util_fp_set_precision(ee_base::lle_enums::UMFloatingPointPrecision::kFPPrecision53 as c_ulong);
+        ee_base::util::fp::ee_util_fp_set_precision(
+            ee_base::lle_enums::UMFloatingPointPrecision::kFPPrecision53 as c_ulong,
+        );
         h(O::RunSqrtTable, 0, &[]);
         // (the original's first command-line pass here only chose whether to play the intro movies)
         h(O::RunSetInstance, 0, &[pa(instance as P)]);

@@ -62,8 +62,7 @@ pub fn text_mode(text: &str) -> std::borrow::Cow<'_, str> {
 fn wanted() -> Option<String> {
     let settings = gobj::prefs() + gobj::PREFS_SETTINGS;
     // SAFETY: the settings' plain members, read at once
-    let on =
-        unsafe { (*(settings as *const crate::app::settings::EeAppSettingsFields)).mGameLog } != 0;
+    let on = unsafe { (*(settings as *const crate::app::settings::EeAppSettingsFields)).mGameLog } != 0;
     if !on || ee_base::plat_core::sim::gPlatSimMode.get() != 0 {
         return None;
     }

@@ -538,7 +538,9 @@ mod tests {
         let mut layout = Layout::new();
         let mut class: Option<String> = None;
         let mut fields = std::collections::HashMap::new();
-        let key = |line: &str| line.strip_prefix('"').and_then(|l| l.rsplit_once("\": ")).map(|(k, v)| (k.to_string(), v.to_string()));
+        let key = |line: &str| {
+            line.strip_prefix('"').and_then(|l| l.rsplit_once("\": ")).map(|(k, v)| (k.to_string(), v.to_string()))
+        };
         for line in text.lines() {
             let Some((k, v)) = key(line.trim()) else { continue };
             if v == "{" && k != "fields" {

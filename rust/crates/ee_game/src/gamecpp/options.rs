@@ -27,8 +27,8 @@ use crate::app::save_io::{
     EE_APP_SAVE_WRITE_ULONG,
 };
 
-use super::preferences::set_text;
 use super::global_objects as gobj;
+use super::preferences::set_text;
 use super::{h, hp, pa, ptr, O, P};
 
 // ee_app save_io.rs mirrors EESavePrimitive's operations and record (ee_sim units player_save.rs)

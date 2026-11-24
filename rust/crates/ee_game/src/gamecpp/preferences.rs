@@ -77,10 +77,7 @@ fn fields<'a>(s: P) -> &'a mut EeAppSettingsFields {
 }
 
 fn records(s: P) -> Records {
-    Records {
-        settings: s as *mut EeAppSettingsFields,
-        options: (s + gobj::SET_OPTIONS) as *mut EeAppOptionsFields,
-    }
+    Records { settings: s as *mut EeAppSettingsFields, options: (s + gobj::SET_OPTIONS) as *mut EeAppOptionsFields }
 }
 
 /// The settings' strings (`s`) and their defaults' (`d`).
@@ -207,7 +204,9 @@ pub extern "C" fn ee_gamecpp_prefs_load(prefs: *mut c_void) -> c_long {
         copy(s + off, wide, defaults + off);
     }
     // the game's own location is where it runs from (the data root), never a stored path: a play folder can move
-    for (from, to) in [(O::EpStartupVolume, gobj::SET_INSTALLED_VOLUME), (O::EpStartupDirectory, gobj::SET_INSTALLED_DIRECTORY)] {
+    for (from, to) in
+        [(O::EpStartupVolume, gobj::SET_INSTALLED_VOLUME), (O::EpStartupDirectory, gobj::SET_INSTALLED_DIRECTORY)]
+    {
         let m = s + to;
         h(from, m, &[]);
         h(O::EpNarrowUpper, m, &[]);
@@ -335,7 +334,10 @@ mod tests {
         assert_eq!(member(EE_APP_SETTINGS_PLAYER_NAME), Member { off: gobj::SET_PLAYER_NAME, wide: true });
         assert_eq!(member(EE_APP_SETTINGS_MAP_TYPE), Member { off: gobj::SET_MAP_TYPE, wide: true });
         assert_eq!(member(EE_APP_SETTINGS_LAST_GAME_FILE), Member { off: gobj::SET_LAST_GAME_FILE, wide: false });
-        assert_eq!(member(EE_APP_SETTINGS_LAST_SCENARIO_FILE), Member { off: gobj::SET_LAST_SCENARIO_FILE, wide: false });
+        assert_eq!(
+            member(EE_APP_SETTINGS_LAST_SCENARIO_FILE),
+            Member { off: gobj::SET_LAST_SCENARIO_FILE, wide: false }
+        );
         assert!(member(EE_APP_SETTINGS_LAST_AUTO_SAVE).wide && member(EE_APP_SETTINGS_LAST_QUICK_SAVE).wide);
         assert!(member(EE_APP_SETTINGS_HOST_GAME_NAME).wide);
     }
