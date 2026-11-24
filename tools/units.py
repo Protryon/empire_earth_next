@@ -1,9 +1,7 @@
 """The build's modules, targets and compile jobs.
 
 Units come from link/<module>/units.txt (in link order), or every .cpp of the module's source folder when the module
-has no unit list; each compiles with its module's flags (ee.MODULE_FLAGS) or its own `// UNIT-FLAGS:` line. Library
-code built from source (LIB_UNITS: Lua for the computer players)
-is compiled with the modules that link it.
+has no unit list; each compiles with its module's flags (ee.MODULE_FLAGS) or its own `// UNIT-FLAGS:` line.
 """
 import pathlib
 import sys
@@ -152,10 +150,9 @@ WON_NOT_LINKED = set()
 
 
 EXTRA_UNITS["won"] = _won_extra_units()
-LIB_UNITS = {# Lua 5.4 for the computer player's strategy scripts (docs/AI_LUA_PLAN.md §3)
-             "lua": "ThirdParty/lua/ee_lua.c"}
-# (the sound device, the decoders and the music are Rust: rust/crates/ee_audio, on cpal, symphonia and rustysynth)
-LIB_MEMBERS = {"exe": ["lua"]}
+# (no library is built from C sources any more: the sound device, the decoders and the music are Rust,
+# rust/crates/ee_audio, on cpal, symphonia and rustysynth; the computer players' Lua is mlua-sys's vendored Lua 5.5,
+# compiled by cargo into the Rust library, docs/progress/lua.md)
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"
 
@@ -174,11 +171,6 @@ def jobs_for(mod):
         if not p.exists():
             sys.exit(f"{mod}: unit {p} does not exist")
     return [(mod, p, MODULE_FLAGS[mod]) for p in paths]
-
-
-def lib_jobs(mods):
-    """[("lib", source, flags)] of the library members the modules link."""
-    return [("lib", ROOT / "src" / LIB_UNITS[n], MODULE_FLAGS[m]) for m in mods for n in LIB_MEMBERS.get(m, [])]
 
 
 def obj_path(out, job):

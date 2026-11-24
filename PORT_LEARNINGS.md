@@ -40202,3 +40202,177 @@ include/rust regenerated after batch 19 (ed19e1287: guienum.h; 334 headers), cur
 | `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12551` units [4, 38, 39] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2706 joiner=2706`, GATES PASS |
 
 Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds.
+
+## The ee_base heap corruption (branch rust-heapfix, 2026-11-23)
+
+The Rust gate's `cargo test --workspace` died in ee_base's test binary with STATUS_HEAP_CORRUPTION (0xC0000374)
+in several lanes, each time on a loaded machine, each time passing on the rerun, and was written down as a load
+flake. It was two memory errors and three shared globals, none of them timing.
+
+- **How it was reproduced.** The test binary itself in a loop, 3-4 at once, the output of every failed run kept
+  (a 40-line Python script; `cargo test` only adds the build). On origin/rust 17682d86c the first 231 runs of the
+  whole binary had 2 heap corruptions, 3 access violations and 6 runs with a failed test: about one run in
+  twenty, which a gate that runs the binary once mostly misses.
+- **Bisecting by test filter**, 300 runs each:
+  - `input::ffi input::system` (two tests): 38 runs crashed or hung (31 heap corruptions, 4 access violations, 3
+    hangs) and 11 more failed an assertion; either test alone, 300 of 300 clean.
+  - `--skip input::`: still 9 heap corruptions and 5 access violations (two of them after `test result: ok`, at
+    exit), so a second cause; and 17 runs with a failed test: `com_is_initialised_on_platform_threads` 15,
+    `set_from_another_thread_wakes_a_waiter` 1, the implode golden 1 (a subtraction overflow at dcl.rs:128 in safe
+    code, which only foreign bytes in its buffers explain).
+- **Full page heap finds an overflow at once.** There is no gflags here (no Debugging Tools in the SDK), but it only
+  writes two registry values, and an administrator's shell can: under
+  `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\<image name>`, `GlobalFlag`
+  REG_DWORD 0x02000000 and `PageHeapFlags` REG_DWORD 3. Copy the test binary to a name of its own first
+  (`heapfix_ph.exe`), so that nothing else on the machine is affected, and delete the key afterwards. Every
+  allocation then ends at a guard page and a freed one is unmapped: the first bad access faults. The whole binary
+  crashed in the first run, every run, in one test. (lldb did not start a process under page heap, "failed to catch
+  stop after launch"; the test filter named the test without it.)
+- **Cause 1, the overflow: the list test over the pool tests' fake host** (util/pool.rs,
+  `the_list_links_like_the_template`). The fake host of the pool tests hands out 16-byte cells (`ELEM`); the list
+  test made a pool of `EeUtilListNode` (24 bytes) over the same host. The first `new` adds a chunk of 250: the host
+  allocated 4,000 bytes, and the pool hands out the last index first, so the first node was written at byte 5,976,
+  1,976 bytes past the end, and the next three below it. Whatever another test thread had there was overwritten with
+  three pointers: heap headers (0xC0000374 at a later free), another test's data (the implode golden's wrong hash
+  and its overflow), a lock (the hangs). The list test now has a host of node-sized cells.
+- **Cause 2, the use after free: the Input System's devices** (input/ffi.rs). The system keyboard's and mouse's
+  devices were raw pointers in two `AtomicPtr`s; `ee_input_system_shutdown` freed them while a call on another
+  thread could still hold the `&Device` it had loaded (`ee_input_handle_event`, a refresh, a resume), and that call
+  then locked and wrote the freed device. The game's order of shutdown keeps the two apart; nothing in the code did.
+  Two tests use the system devices (`system_keyboard_and_mouse_through_the_c_abi` and `initialize_and_shutdown`, the
+  second shuts down twice), in parallel since they are in one binary: each freed the other's devices and replaced the
+  other's keyboard. The slots are `RwLock<Option<Device>>` now: a call holds its slot shared while it uses the
+  device and a shutdown takes it exclusively, so it waits. The two tests share one keyboard and one mouse whatever
+  the slots are, so they also take one lock (`input::ffi::test_system`).
+- **A third way into cause 2: the shutdown list** (util/system.rs). `ee_input_initialize` registers
+  `ee_input_shutdown` with the engine's shutdown list, a process-wide vector; the list's own test,
+  `shutdown_runs_last_first`, ran everything in it, so it could run the Input System's shutdown from a third thread.
+  In this crate's tests the list and its in-progress flag are per thread now (as ee_data's rules overrides, "A
+  process-wide list read by a test that did not add to it").
+- **The "timeouts under load" were the harness clock** (plat_sys/thread.rs, socket.rs). plat_core's time tests set
+  `PlatSimSetTimeFactor` up to 1000 for the whole process, under `test_globals()`; the thread and socket tests'
+  waits (`PlatThreadWait(t, 10_000)`, `PlatEventWait(e, 10_000)`) took no lock, and a 10 s wait that began under
+  the factor lasted 10 real ms: `com_is_initialised_on_platform_threads` and `set_from_another_thread_wakes_a_waiter`
+  (whose setter sleeps 30 ms first) timed out. Load only made the overlap likelier. Every plat_sys test with a timed
+  wait that must succeed takes `test_globals()` now. The round that put the first one under it (the restructure)
+  had the reason in a comment; the others were missed.
+- **Three tests were timing after all**, each with a fixed time where a condition or a measured time belongs:
+  - `periodic_callback_timers_tick_until_stopped` ("45 ticks in 120 ms"): the real time was taken after
+    `PlatTimerStartCallback` returned, so the ticks of a gap between the two counted against too short a time. The
+    time is taken before the start now (also in `timers_under_a_factor_fire_at_the_scaled_rate_until_stopped`).
+  - `a_new_factor_continues_the_clocks_without_a_jump` ("568680133 -> 568680277"): at factor 1000 the allowed 50
+    virtual ms are 50 real microseconds between two reads. The bound is the real time between the reads plus 50 ms.
+  - ee_audio's `the_null_device_pulls_the_mix_in_real_time`: a fixed 200 ms sleep, then 4,800..48,000 frames
+    expected. It waits for 4,800 frames and checks the count against the time that passed.
+- **Not changed.** ee_won_lobby's palette test was fixed in 38e9e58ed (the glue replays put the palette back under
+  the test lock). Its window test (`eewindow.rs`) shares `WIDTH`/`HEIGHT` with the glue's Show, but no replay
+  reaches Show (the golden's calls end at 31, Show is 34): no other writer was found, and no failure of it to look
+  at.
+- **Lessons.**
+  - A crash of a test binary that "passes on the rerun" is a bug in the binary until shown otherwise. Loop the
+    binary before calling it load: this one failed one run in twenty.
+  - A wrong result in safe code that cannot be wrong (the implode hash) is the same signal as the crash: another
+    thread wrote there.
+  - A fake host or allocator in a test must take its sizes from the type under test, not from a constant of the
+    neighbouring tests.
+  - One test binary per crate (the restructure) put every module's process-wide state in one process: a module's
+    globals need their own test lock or a per-thread form under `cfg(test)`, and a test that runs "everything
+    registered" runs the other tests' registrations.
+  - Page heap is cheap here and deterministic for overflows: one run of each test binary under it is a useful check
+    after a round that adds unsafe code or FFI fakes (about 30 minutes for the workspace, half of it ee_won_net).
+
+| Check | Before (17682d86c) | After |
+|---|---|---|
+| the whole ee_base test binary in a loop, 3 at once, beside builds and gates | 11 of the first 231 runs failed (2 heap corruptions, 3 access violations, 6 with a failed test) | 600 of 600 clean |
+| `input::ffi input::system` (the two tests), 300 runs | 38 crashed or hung, 11 failed an assertion | 1,000 of 1,000 clean (with `util::system` and `util::pool`) |
+| `--skip input::`, 300 runs | 9 heap corruptions, 5 access violations, 17 with a failed test | (in the 600 above) |
+| ee_base's test binary under full page heap | faults every run in `the_list_links_like_the_template`; the two input tests alone 1 run in 40 | 3 of 3 runs clean (455 tests) |
+| every other test binary of the workspace under full page heap, once | not run | clean: ee_audio 73, ee_data 126, ee_game 1,153, ee_net 22, ee_net_tcp 56, ee_render 919, ee_sim 2,516, ee_ui 270, ee_won_gui 348, ee_won_lobby 264, ee_won_net 439 tests (xtask's did not end within 50 minutes under page heap and was left out) |
+| `rust_build.py gate` | the crash, about one whole run in twenty | PASS three times in a row (6,659 tests each), the first two under load (the stress loop, a build, `gates.sh`, the oracle) |
+| `build.py --sim`, `--test-profile windowed-software` | | 0 unresolved, 0 duplicates (EE-AOC, EE-SIM; the test image) |
+| oracle against the main checkout's `ref` | | seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines; oracle: PASS), run twice |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12294` units [4, 38, 38] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2999 joiner=3005`, GATES PASS |
+
+Two timing failures showed in the loop after the memory errors were gone (run 45 and run 78 of the binary before
+their fixes: the clock continuity check and the directory removal above); the 600 clean runs are of the binary with
+them. The page heap key is deleted again. Not run: eedata `check`/`cppgate` (no table, rule or compiler change),
+the captures and the POSIX builds (the only non-test change is the device slots in input/ffi.rs).
+
+## The Lua lane, round 1: Lua 5.5 from mlua-sys's vendored build in the Rust library; src/ThirdParty/lua and the build's library units deleted (ee_sim ai/lua_host.rs, lua_api.rs, lua_sort.rs; branch rust-lua1, 2026-11-23)
+
+The 27 C files of `src/ThirdParty/lua` (Lua 5.4.7 as one unit, `ee_lua.c`) were the last C the C++ build compiled.
+They, their headers, `include/ee/EELuaApi.h` and `tools/units.py`'s `LIB_UNITS`/`LIB_MEMBERS`/`lib_jobs` are gone
+(57 files, 26,101 lines). The computer players' scripts run on Lua 5.5.1, which `mlua-sys` (`lua55`, `vendored`)
+compiles unmodified from the `lua-src` crate into the Rust library. docs/progress/lua.md has the design.
+
+- **"Unmodified sources" was not "an unpatched Lua".** The vendored files were byte for byte Lua 5.4.7, but
+  `ee_lua.c` defined five macros Lua leaves open before including them: the hash seed, `table.sort`'s pivot, `^`,
+  a float's text and the libraries' character classes. A crate that compiles the same files (lua-src) gives none of
+  them and offers no hook for a define. The owner allowed a one-time behaviour change (2026-11-23), so the lane
+  chose the cleanest set-up and moved what matters into the host.
+- **Lua 5.5 because of the hash seed.** In 5.4 the seed is `luai_makeseed`, the time and an address unless the
+  build defines it; `pairs` over string keys follows it, and the scripts have some 25 such loops. In 5.5
+  `lua_newstate` takes the seed as its third argument. The host passes the old build's constant.
+- **The same seed gave the same games.** The oracle (seeds 2-7) is identical to the reference of the old build,
+  and so are the twelve capture profiles (the placement profile plays boom and Age of AI) and every saveload row:
+  with that seed 5.5 evidently walks the scripts' tables in the order 5.4.7 did. No game golden was re-baselined.
+  The other lanes need nothing: the main checkout's oracle `ref` stays valid.
+- **`table.sort` is the host's** (`lua_sort.rs`). 5.5's library function draws a new pivot seed from
+  `luaL_makeseed` (the time, addresses) after an unbalanced partition of more than 100 elements: elements that
+  compare equal would land differently per run. The port is ltablib.c's quicksort statement for statement with the
+  constant ltablib.c itself suggests (`~0`), installed over `table.sort` in `setup`. Its test sorts 168 arrays of
+  distinct elements (sorted, reversed, organ pipe, random; up to 5,000) and compares each with the library's result.
+- **Not kept**: `^` is the C library's `pow` again (the old macro raised for a non-integral exponent), `..` of a
+  NaN gives the C library's text, and the string library's classes follow the C locale above 127. No script in
+  `data/ai` uses `^`; the scripts and the engine's names are ASCII. `tostring`, `print` and `format("%s")` spell
+  `nan`, `inf` and `-inf` in the host.
+- **mlua-sys, not mlua.** The runtime was already Rust on the raw C API (R5a.8). mlua's safe API would add its own
+  registry objects to every state (the byte cap is observable: a script dies at it), raise through `C-unwind`
+  frames (an abort under `panic = "abort"`, R5a.8's finding) and replace 8,000 lines of stack code. `mlua-sys` with
+  `vendored` gives the build and the constants; `lua_api.rs` keeps its own `extern "C"` declarations.
+- **What 5.5 changed in the API the host uses**: only `lua_newstate`'s seed. `LUA_REGISTRYINDEX` is
+  `-(INT_MAX/2 + 1000)` (was -1001000): the host takes it from mlua-sys, the test that pinned the number was
+  updated. `luaL_Buffer`'s fields (`b`, `size`, `n`) kept their names.
+- **What 5.5 changed for a script** (seen in the test goldens' diff): a float's text is `%.15g`/`%.17g`
+  (`3.1415926535897931`), `math.frexp` and `math.ldexp` exist, `#{1,nil,3}` is 1 (was 3), tracebacks say "in global
+  'print'" and "in field 'format'", every byte count differs (a new state 13,208 bytes, was 13,117).
+- **The two test goldens with byte counts were re-baselined in their own commit** (`golden_lua.txt` part B,
+  `golden_units_lua.txt`): the tests write them under `EE_LUA_GOLDEN_WRITE=1`. They were the C++ driver's output
+  (R5a.8) and are regression goldens of the Rust host now; the diff was read line by line with the byte counts
+  masked (the list above is all of it).
+- **The build.** cargo's cc compiles Lua with cl on Windows without set-up (the build takes the profile's static
+  CRT). A debug build defines `LUA_USE_APICHECK` (lua-src), so the tests run with Lua's API assertions on.
+  `ee_sim/build.rs` no longer compiles a Lua of its own for the tests (the `cc` build dependency is gone): tests and
+  game link the same archive. The staticlib carries Lua's objects; the exe pulls only those the host references (no
+  io, os, package or debug library is linked).
+- **Cross builds.** `rust_build.cargo_env("linux-x86_64")` now sets `CC_`/`AR_`/`CFLAGS_x86_64_unknown_linux_gnu`
+  (LLVM's clang and llvm-ar, the Debian sysroot): Lua's archive cross-compiles from Windows. The whole library does
+  not, and did not before this lane: `alsa-sys` needs the target's pkg-config, and ee_sim has six `c_long` errors
+  on LP64 (`scenario/cinematic.rs:118`, `units/ucb_gate.rs:522`). A macOS target cannot compile C on Windows (no
+  SDK headers), so `rust_build.py build --target macos-*` works on a Mac only now.
+- **A helper outside tools/\*.py still called `units.lib_jobs`** (`tools/eemodel/storegate.py`): the first grep
+  covered only `tools/*.py`. Grep the whole of `tools/` when removing a build helper.
+- **A full disk looks like a behaviour change.** The placement capture first failed (CPEV and PLCE digests): the
+  EE-AI trace of the game was the old Lua's line for line but for 294 lines missing in one stretch, the capture file
+  was 60 MB short and a report was an empty `.tmp`. The plain saveload, started beside it, lost seed 7 to `OSError:
+  [Errno 28] No space left on device`. Five sims at once (two captures, three saveload games) beside the other
+  lanes had filled the disk for a minute. Rerun alone, both passed. One chain at a time, and before reading a
+  capture difference as a decision change, check the sizes of the run's files.
+- **Gates** (the final tree; origin/rust 17682d86c had not moved):
+| Gate | Result |
+|---|---|
+| `build.py -j 10 --sim` | EE-AOC 410 inputs, EE-SIM 411, 0 unresolved, 0 duplicates |
+| `build.py -j 10 --test-profile windowed-software` | 410 inputs, 0/0 |
+| `rust_build.py gate` | PASS (6,660 tests, clippy, rustfmt, headers current); a first run lost ee_base's `com_is_initialised_on_platform_threads` under load |
+| oracle, seeds 2-7 | identical to the main checkout's `ref`, the old Lua's (6,087, 5,300, 6,072, 7,649, 7,842 and 6,540 lines) |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4 digests equal |
+| saveload, plain (seeds 2-7 at 600, 1350, 2100 s) | 18/18 identical (seed 7 in a second run: its first stage met a full disk) |
+| saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) | PASS: every row as `saveload_expect.txt` (next seed 2: 915 and 276 ticks, as before) |
+| `scenario_check.py` | 27/27 |
+| `sim_editor.py`, `--civbuilder` | PASS (14,448 lines), PASS (4,062 lines) |
+| `eedata.py check`, `cppgate` | PASS, PASS |
+| `gates.sh` (the main checkout's tree) | GATES PASS: tour; ai-game time-cap, units [4, 38, 38], alive_computers [2, 3], engines classic_lua x 2; lan-game |
+| Linux cross build | Lua's archive compiles (clang, the Debian sysroot); the library does not link there for other reasons (above) |
+
+- **Behaviour changes**: none in a game. For a script: the list above (5.5's float text, `#` of a table with
+  holes, `^`, the locale-dependent classes, frexp/ldexp, the traceback texts, the byte counts).

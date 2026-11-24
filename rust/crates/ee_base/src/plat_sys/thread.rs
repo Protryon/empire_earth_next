@@ -218,6 +218,10 @@ mod tests {
 
     #[test]
     fn set_from_another_thread_wakes_a_waiter() {
+        // A wait that must succeed: not while a plat_core test runs the harness clock fast. Under its factor 1000 this
+        // wait's 10 s are 10 real ms, less than the setter's sleep: the "timeouts under load" of this file's tests
+        // (PORT_LEARNINGS "The ee_base heap corruption").
+        let _guard = crate::plat_core::test_globals();
         unsafe {
             let e = PlatEventCreate(0, 0);
             struct Shared(*mut PlatEvent);
@@ -243,6 +247,8 @@ mod tests {
 
     #[test]
     fn suspended_thread_runs_only_after_resume() {
+        // a timed wait that must succeed: see set_from_another_thread_wakes_a_waiter
+        let _guard = crate::plat_core::test_globals();
         unsafe {
             STARTED.store(0, Ordering::SeqCst);
             let mut id = 0u32;
@@ -276,6 +282,8 @@ mod tests {
 
     #[test]
     fn thread_exit_code_is_the_return_value_and_a_stack_size_is_accepted() {
+        // a timed wait that must succeed: see set_from_another_thread_wakes_a_waiter
+        let _guard = crate::plat_core::test_globals();
         unsafe {
             let mut id = 0u32;
             let t = PlatThreadCreate(return_argument, 7usize as *mut c_void, 64 * 1024, 0, &mut id);
@@ -353,6 +361,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn extra_suspends_of_a_held_thread_need_as_many_resumes() {
+        // a timed wait that must succeed: see set_from_another_thread_wakes_a_waiter
+        let _guard = crate::plat_core::test_globals();
         unsafe {
             let mut id = 0u32;
             let t = PlatThreadCreate(return_argument, 9usize as *mut c_void, 0, 1, &mut id);
@@ -368,6 +378,8 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn com_is_initialised_on_platform_threads() {
+        // a timed wait that must succeed: see set_from_another_thread_wakes_a_waiter
+        let _guard = crate::plat_core::test_globals();
         // PlatThreadCreate promises COM around inMain; a second CoInitialize on the thread then says S_FALSE (1)
         use windows_sys::Win32::System::Com::{CoInitialize, CoUninitialize};
         unsafe extern "C" fn second_init(_: *mut c_void) -> u32 {
