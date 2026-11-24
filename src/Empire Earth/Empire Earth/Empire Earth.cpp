@@ -208,7 +208,7 @@ EE_CONSTRUCT_GLOBAL(UString, gCDAudioThreadName, ("CDAudio"));
 extern FSPath* gDataPath;
 extern FSPath* gCivilizationDataPath;
 
-static TMTimer* sTimer;                     // 0x5319ec (EECreateGameTimer's assert names it)
+static TMTimer* sTimer;                     // 0x5319ec (EECreateGameTimer's assert names it; the timer's new is ee_gamecpp's O::NewGameTimer)
 extern HINSTANCE gInstance;                 // 0x5319d8 (WinMain's instance, set by 0x540d73)
 
 void EESetThreadFloatingPoint(const char* inThreadName);
@@ -355,13 +355,6 @@ void EEInitializeNetwork()
 void EERegisterPersistents()
 {
     ee_gamecpp_startup_persistents();
-}
-
-// Creates the game timer
-void EECreateGameTimer()
-{
-    sTimer = new TMTimer(0, 0, true);
-    ESVERIFY_AT(sTimer != NULL, 1876);
 }
 
 

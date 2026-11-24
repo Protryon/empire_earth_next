@@ -17,9 +17,7 @@ class EESMDialogMessage : public EeScenarioMessageFields {
 public:
     // Creates an empty dialog message: no unit or duration, no camera move (scroll speed -1), not for a cinematic
     EESMDialogMessage() : EeScenarioMessageFields(ee_scenario_message_defaults()) {  }
-    // the copies are member-wise (the original's 0x1b9ee9 / 0x1b9f4a copied field by field)
-    EESMDialogMessage(const EESMDialogMessage& inMessage) = default;
-    EESMDialogMessage& operator=(const EESMDialogMessage& inMessage) = default;
+    // the copies are the implicit member-wise ones (the original's 0x1b9ee9 / 0x1b9f4a copied field by field)
     // a dialog message's Load and Save (ee_scenario save.rs message_io): the text, unit type, sound, duration, unit,
     // scroll speed, and (a save, or a load from version 0.200 on) the cinematic flag; the first error
     // +0x00 0x1af92b
