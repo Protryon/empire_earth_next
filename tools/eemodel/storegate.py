@@ -55,7 +55,6 @@ def build(game_out, out):
     import rust_build
     mods = ["lle", "default", "tcp", "mixer", "dx7hrtnl"]
     objs = [units.obj_path(game_out, j) for m in mods for j in units.jobs_for(m)]
-    objs += [units.obj_path(game_out, j) for j in units.lib_jobs(mods)]
     missing = [o for o in objs if not o.exists()]
     if missing:
         sys.exit(f"{len(missing)} objects missing (first {missing[0]}): build the game first (python -I build.py)")
@@ -99,7 +98,6 @@ def game_symbols(game_out):
     """The external symbols the game's own objects define (the modules the driver leaves out)."""
     mods = ["exe", "won"]
     objs = [units.obj_path(game_out, j) for m in mods for j in units.jobs_for(m)]
-    objs += [units.obj_path(game_out, j) for j in units.lib_jobs(mods)]
     missing = [o for o in objs if not o.exists()]
     if missing:
         sys.exit(f"{len(missing)} game objects missing (first {missing[0]}): build the game first (python -I build.py)")
