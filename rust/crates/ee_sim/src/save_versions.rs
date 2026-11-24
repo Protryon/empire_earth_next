@@ -180,15 +180,23 @@ mod tests {
         assert!(!EESaveTextIsUtf8(0, 254) && EESaveTextIsUtf8(0, 255) && EESaveTextIsUtf8(1, 0));
         assert!(!EESaveHasRunningState(0, 255) && EESaveHasRunningState(0, 256) && EESaveHasRunningState(1, 0));
         assert!(!EESaveHasRegionOrder(0, 256) && EESaveHasRegionOrder(0, 257) && EESaveHasRegionOrder(1, 0));
-        assert!(!EESaveHasExperimentTimers(0, 257) && EESaveHasExperimentTimers(0, 258) && EESaveHasExperimentTimers(1, 0));
+        assert!(
+            !EESaveHasExperimentTimers(0, 257) && EESaveHasExperimentTimers(0, 258) && EESaveHasExperimentTimers(1, 0)
+        );
         assert!(!EESaveHasTowns(0, 259) && EESaveHasTowns(0, 260) && EESaveHasTowns(1, 0));
         assert!(!EESaveHasGhosts(0, 261) && EESaveHasGhosts(0, 262) && EESaveHasGhosts(1, 0));
-        assert!(!EESaveHasContinentRegions(0, 262) && EESaveHasContinentRegions(0, 263) && EESaveHasContinentRegions(1, 0));
+        assert!(
+            !EESaveHasContinentRegions(0, 262) && EESaveHasContinentRegions(0, 263) && EESaveHasContinentRegions(1, 0)
+        );
         assert!(!EESaveHasResourceState(0, 264) && EESaveHasResourceState(0, 265) && EESaveHasResourceState(1, 0));
         assert!(!EESaveHasTownAreas(0, 267) && EESaveHasTownAreas(0, 268) && EESaveHasTownAreas(1, 0));
-        assert!(!EESaveHasPlayerUnitOrder(0, 269) && EESaveHasPlayerUnitOrder(0, 270) && EESaveHasPlayerUnitOrder(1, 0));
+        assert!(
+            !EESaveHasPlayerUnitOrder(0, 269) && EESaveHasPlayerUnitOrder(0, 270) && EESaveHasPlayerUnitOrder(1, 0)
+        );
         assert!(!EESaveHasGhostResources(0, 271) && EESaveHasGhostResources(0, 272) && EESaveHasGhostResources(1, 0));
-        assert!(!EESaveHasContagionCounter(0, 272) && EESaveHasContagionCounter(0, 273) && EESaveHasContagionCounter(1, 0));
+        assert!(
+            !EESaveHasContagionCounter(0, 272) && EESaveHasContagionCounter(0, 273) && EESaveHasContagionCounter(1, 0)
+        );
         assert!(!EESaveHasGoalGhosts(0, 274) && EESaveHasGoalGhosts(0, 275) && EESaveHasGoalGhosts(1, 0));
         assert!(!EESaveHasPathSearches(0, 275) && EESaveHasPathSearches(0, 276) && EESaveHasPathSearches(1, 0));
         assert!(!EESaveHasGraphSearches(0, 277) && EESaveHasGraphSearches(0, 278) && EESaveHasGraphSearches(1, 0));
