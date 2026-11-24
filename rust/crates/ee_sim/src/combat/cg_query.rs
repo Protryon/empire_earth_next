@@ -216,6 +216,12 @@ const GOAL_ATTACK_UNIT: u8 = 2;
 pub const EE_UNITS_CG_MODEL_PARTS: i32 = 5000;
 /// `mStats->GetScale()` of the unit (`f[0]`)
 pub const EE_UNITS_CG_STATS_SCALE: i32 = 5001;
+/// turret part `c` of the unit's model: its `mPosition` into the three floats at `b` (units round 12)
+pub const EE_UNITS_CG_TURRET_POSITION: i32 = 13010;
+/// the model's `GetTurretPartTransformation(c)` into the sixteen floats at `b`
+pub const EE_UNITS_CG_TURRET_TRANSFORMATION: i32 = 13011;
+/// the unit's `mTurretAngles[c]` (`f[0]`)
+pub const EE_UNITS_CG_TURRET_ANGLE: i32 = 13012;
 
 /// What `EECombatFacesPoint` reads of the class, the unit and the C++.
 pub trait Facing {
@@ -464,8 +470,6 @@ mod facing {
 
     extern "C" {
         fn ee_units_cg_host(op: i32, unit: u64, a: u64, b: i64, c: i64, f: *mut [f32; 4]) -> i64;
-        /// EECombatGoals.cpp: turret part `index` of the unit's model
-        fn ee_units_cg_facing_turret(unit: u64, index: i32, out: *mut crate::combat::reads::EeCombatTurret);
     }
 
     pub struct Game;
@@ -502,10 +506,69 @@ mod facing {
         }
         fn turret(&mut self, unit: u64, index: i32) -> crate::combat::reads::EeCombatTurret {
             let mut out = crate::combat::reads::EeCombatTurret::default();
-            // SAFETY: an index below the model's part count; a local record
-            unsafe { ee_units_cg_facing_turret(unit, index, &mut out) };
+            let mut f = [0.0; 4];
+            let index = i64::from(index);
+            // SAFETY: an index below the model's part count; a local record's arrays (the original's order: the
+            // part's position, the model's part transformation, the unit's angle)
+            unsafe {
+                ee_units_cg_host(EE_UNITS_CG_TURRET_POSITION, unit, 0, out.position.as_mut_ptr() as i64, index, &mut f);
+                ee_units_cg_host(
+                    EE_UNITS_CG_TURRET_TRANSFORMATION,
+                    unit,
+                    0,
+                    out.transformation.as_mut_ptr() as i64,
+                    index,
+                    &mut f,
+                );
+                ee_units_cg_host(EE_UNITS_CG_TURRET_ANGLE, unit, 0, 0, index, &mut f);
+            }
+            out.angle = f[0];
             out
         }
+    }
+}
+
+// Rust entry points of other modules called by their C names (their modules are private).
+/// cbindgen:ignore
+#[cfg(not(test))]
+pub(crate) mod rust_calls {
+    use core::ffi::c_long;
+    extern "C" {
+        /// eu_body.rs's entry point (`EEUnit::GetNearestFootprintTile`)
+        pub fn ee_units_eu_nearest_footprint_tile(
+            unit: *mut std::ffi::c_void,
+            other: *mut std::ffi::c_void,
+            out_x: *mut c_long,
+            out_y: *mut c_long,
+        ) -> f32;
+        /// uc_rest.rs's entry point (`EEUnitClass`'s rest: `BaseGetSurroundingTiles` and the others)
+        pub fn ee_units_uc_rest(
+            what: i32,
+            class: *mut std::ffi::c_void,
+            unit: *mut std::ffi::c_void,
+            a: u64,
+            b: i64,
+            c: i64,
+            f: *mut [f32; 4],
+        ) -> i64;
+    }
+}
+
+/// The query host's footprint read (`EeCombatQueryHost::footprint_tile`, EECombatGoals.cpp's EEQueryHostOf): the tile
+/// of `object`'s footprint nearest to the context's unit, `mUnit->GetNearestFootprintTile(object, &x, &y)`.
+/// # Safety
+/// `context` is EECombatGoals.cpp's query context, whose first member is the call's unit; `object` a live unit;
+/// `out` two ints.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cgq_footprint_tile(context: *mut std::ffi::c_void, object: u64, out: *mut [i32; 2]) {
+    use rust_calls::ee_units_eu_nearest_footprint_tile;
+    let (mut x, mut y): (c_long, c_long) = (0, 0);
+    // SAFETY: the caller's contract (the context's first word is its unit's address)
+    unsafe {
+        let unit = *(context as *const *mut std::ffi::c_void);
+        ee_units_eu_nearest_footprint_tile(unit, object as usize as *mut std::ffi::c_void, &mut x, &mut y);
+        *out = [x as i32, y as i32];
     }
 }
 

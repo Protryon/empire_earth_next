@@ -52,11 +52,7 @@ public:
     enum { kNone = 0xffffffff };
     EEUnitHandle() : mUnitID(kNone) {}
     EEUnitHandle(T* inUnit) : mUnitID(inUnit != NULL ? EEUnitHandleID(inUnit) : (uint32_t)kNone) {}
-    EEUnitHandle& operator=(T* inUnit)
-    {
-        this->mUnitID = inUnit != NULL ? EEUnitHandleID(inUnit) : (uint32_t)kNone;
-        return *this;
-    }
+    EEUnitHandle& operator=(T* inUnit) { return *this = EEUnitHandle(inUnit); }
     T* Get() const
     {
         T* theUnit;

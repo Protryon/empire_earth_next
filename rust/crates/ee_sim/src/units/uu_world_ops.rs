@@ -94,8 +94,6 @@ pub(crate) const UW_COMPLEX_BUILT: i32 = 58;
 pub(crate) const UW_PATH_AREA: i32 = 59;
 
 // ---- `world_f`'s
-/// the z of unit `a`'s complex unit's location applied to its model's box top at its frame (`Apply`)
-pub(crate) const UWF_BOX_TOP_Z: i32 = 5;
 /// unit `a`'s `mStats->GetScale()`
 pub(crate) const UWF_STATS_SCALE: i32 = 6;
 /// `(float)` unit `a`'s `mComplexUnit->mHitPoints`
@@ -124,6 +122,8 @@ pub(crate) const US_PATH_AREA_ID: i32 = 12;
 pub(crate) const US_GATE_CARRIER_POSITION: i32 = 13;
 /// `out[0..3]` = the gate class's `GetLastLinked(gate's GetOutermostCarrier())->GetPosition()`
 pub(crate) const US_GATE_LINKED_POSITION: i32 = 14;
+/// `out[0..3]` = the top right back corner of the box of unit's model at its animation and frame (units round 12)
+pub(crate) const US_BOX_TOP: i32 = 13030;
 
 /// the UUTL notes' third values (the C++'s UUEvent)
 const EVENT_BUILD_TARGET: i32 = 1;
@@ -258,7 +258,11 @@ pub fn make_wall_piece<H: UuOps + ?Sized>(
 #[allow(clippy::assign_op_pattern)]
 pub fn wall_rise<H: UuOps + ?Sized>(h: &mut H, wall: u64) -> f32 {
     let z = if w(h, UW_CATEGORY, wall) as c_long as i64 != CATEGORY_GATE {
-        h.world_f(UWF_BOX_TOP_Z, wall, 0, 0.0)
+        // the z of the wall's location applied to its model's box top (the original's `Apply` into a local point)
+        let mut io = [0.0f32; 6];
+        h.spot(US_BOX_TOP, wall, 0, 0, &mut io);
+        h.spot(US_APPLY, wall, 0, 0, &mut io);
+        io[5]
     } else {
         GATE_RISE_Z
     };
