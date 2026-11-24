@@ -50,43 +50,13 @@ namespace WONAPI {
 // the classes folded: nothing else derived from either); the names stay for the game's glue
 typedef WindowManager PlatWindowManager;
 typedef Window PlatGUIWindow;
+// (so are the platform graphics and font: Graphics and Font)
 
 Window* CreateNativeWindow();
 
 // ---- drawing (backend internals)
 
 // Graphics on a DisplayContext's surface (MSGraphics' replacement): GDI's results per hook
-class PlatGraphics : public Graphics {
-public:
-    PlatGraphics();
-    virtual ~PlatGraphics();
-    virtual void Attach(DisplayContext* inContext);
-    virtual void Detach();
-    virtual void SetColorHook();
-    virtual DWORD GetPixelHook(int x, int y);
-    virtual void SetPixelHook(int x, int y, DWORD inColor);
-    virtual void DrawLineHook(int x1, int y1, int x2, int y2);
-    virtual void DrawRectHook(int x, int y, int width, int height);
-    virtual void DrawDottedRectHook(int x, int y, int width, int height);
-    virtual void FillRectHook(int x, int y, int width, int height);
-    virtual bool BlendSupported();
-    virtual void FillRectBlendHook(int x, int y, int width, int height, int inBlendAmount);
-    virtual void DrawPolygonHook(POINT* inPoints, int inCount);
-    virtual void FillPolygonHook(POINT* inPoints, int inCount);
-    virtual void DrawEllipseHook(int x, int y, int width, int height);
-    virtual void FillEllipseHook(int x, int y, int width, int height);
-    virtual void DrawArcHook(int x, int y, int width, int height, int inStartAngle, int inArcAngle);
-    virtual void ClearClipRectHook();
-    virtual void SetClipRectHook(int x, int y, int width, int height);
-    SurfaceBase* mSurface;                  // the context's, borrowed
-    float mScale;                           // the context's pixel scale (1: GDI's results, pixel for pixel)
-protected:
-    // the hook inOp (EeWonPlatGfx) of ee_won's platgfx.rs on the surface, the scale and the colour
-    DWORD Hook(int inOp, int a = 0, int b = 0, int c = 0, int d = 0, int e = 0, int f = 0);
-    void Polygon(POINT* inPoints, int inCount, bool inFill);
-};
-
-// a logical coordinate or size at a pixel scale (the one rounding every part of the backend and the game uses)
 inline int PlatGUIPixels(int inLogical, float inScale)
 {
     return inScale == 1.0f ? inLogical : (int)floorf((float)inLogical * inScale + 0.5f);
@@ -112,24 +82,6 @@ public:
 };
 
 // a font on platform/PlatFont.h (MSFont's replacement)
-class PlatGUIFont : public Font {
-public:
-    PlatGUIFont(DisplayContext* inContext, const FontDescriptor& inDescriptor);
-    virtual ~PlatGUIFont();
-    virtual void PrepareContext(DisplayContext* inContext);
-    virtual void DrawString(DisplayContext* inContext, const GUIString& inText, unsigned short inOffset,
-                            unsigned short inLength, int x, int y);
-    virtual int GetStringWidth(const GUIString& inText, unsigned short inOffset, unsigned short inLength);
-    virtual int GetCharacterWidth(int inChar);
-    virtual int GetHeight();
-    virtual int GetAscent();
-    virtual int GetDescent();
-    EeWonPlatFont* mRust;                   // the font (platfont.rs)
-};
-
-// wide text (GUIString) -> UTF-8 bytes (decision D6)
-std::string PlatGUIToUtf8(const wchar_t* inText, unsigned short inLength);
-
 } // namespace WONAPI
 
 #endif

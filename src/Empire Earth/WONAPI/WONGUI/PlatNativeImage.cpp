@@ -99,7 +99,7 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             return Held(theNew);
         }
         case H::NewGraphics: {
-            Graphics* theNew = new PlatGraphics;
+            Graphics* theNew = new Graphics;
             theNew->Attach(theContext);
             return (intptr_t)theNew;
         }

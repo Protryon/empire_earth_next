@@ -131,6 +131,7 @@
 #include "rust/won_gui/dialogobj.h"
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/gfxobj.h"
+#include "rust/won_gui/gfxplat.h"
 #include "rust/won_gui/grabobj.h"
 #include "rust/won_gui/guicfg.h"
 #include "rust/won_gui/guiconf.h"

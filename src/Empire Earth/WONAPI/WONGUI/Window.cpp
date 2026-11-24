@@ -292,7 +292,7 @@ Window* CreateNativeWindow() { return new Window; }
 
 SmartPtr<Font> Window::PlatformGetFont(const FontDescriptor& inDescriptor)
 {
-    return new PlatGUIFont(this->mDisplayContext.get(), inDescriptor);
+    return new Font(this->mDisplayContext.get(), inDescriptor);
 }
 
 // The manager's pixel scale changed: a new offscreen image at it (the old one drawn in until the repaint, as

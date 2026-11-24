@@ -23,6 +23,7 @@ pub mod ctobj;
 pub mod dialogobj;
 pub mod fontmap;
 pub mod gfxobj;
+pub mod gfxplat;
 pub mod grabobj;
 pub mod guicfg;
 pub mod guiconf;

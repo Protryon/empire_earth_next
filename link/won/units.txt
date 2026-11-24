@@ -29,8 +29,6 @@
 318060 319193 WONGUI/WONButton.cpp
 319a70 31a05b WONGUI/SkinnedContainers.cpp
 326540 3d0343 WONGUI/Cursor.cpp
-3267f0 326aca WONGUI/Font.cpp
-326a20 326a35 WONGUI/FontDefaults.cpp
 326ad0 32742b WONGUI/Graphics.cpp
 328450 3284f9 WONGUI/GUIStringSingleton.cpp
 328540 32b0f0 WONGUI/PopupValueAdapters.cpp

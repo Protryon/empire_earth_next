@@ -1225,50 +1225,41 @@ public:
 class Font;
 // Graphics: vtable 0x450fe8;
 // the field accesses at 0x326ad0/0x326ce0/0x327140 show a 0x38-byte object.
+// R6 WON GUI round 35: the one Graphics is the platform's (the original's MSGraphics, the port's PlatGraphics, folded
+// in): the virtual hooks are gone, the drawing ones answered on the surface in Rust (gfxplat.rs over platgfx.rs:
+// a software surface with the results the GDI backend had, at the surface's pixel scale); the host (Graphics.cpp)
+// answers the image draws and the text. The polygon hooks, which nothing called, are platgfx.rs's
+// ee_won_plat_gfx_polygon.
 class Graphics {
 public:
-    virtual void ClearClipRectHook() {}
-    virtual void SetClipRectHook(int, int, int, int) {}
-    virtual DWORD GetPixelHook(int, int) { return 0; }
-    virtual void SetPixelHook(int, int, DWORD) {}
-    virtual void SetColorHook() {}
-    virtual void DrawLineHook(int, int, int, int) {}
-    virtual void DrawRectHook(int, int, int, int);
-    virtual void DrawDottedRectHook(int, int, int, int);
-    virtual void FillRectHook(int, int, int, int);
-    virtual void DrawPolygonHook(POINT*, int) {}
-    virtual void FillPolygonHook(POINT*, int) {}
-    virtual void DrawEllipseHook(int, int, int, int) {}
-    virtual void FillEllipseHook(int, int, int, int) {}
-    virtual void DrawArcHook(int, int, int, int, int, int) {}
-    virtual void FillRectBlendHook(int, int, int, int, int) {}
     Graphics(); //326ad0
-    virtual ~Graphics(); //326b90
-    virtual void Attach(DisplayContext*); //326c70
-    virtual void Detach();
-    virtual bool BlendSupported() { return false; }
-    void SetColor(DWORD); //326ce0
-    DWORD GetStandardColor(int);
-    void SetSysColor(int);
+    ~Graphics(); //326b90
+    void Attach(DisplayContext*); //326c70: the context's surface and pixel scale; the colour starts black
+    void Detach();
+    bool BlendSupported() { return true; }
+    void SetColor(DWORD c) { this->GCall(EeWonGfxCall::SetColor, (int)c); } //326ce0
+    DWORD GetStandardColor(int i) { return this->GCall(EeWonGfxCall::StandardColor, i); }
+    void SetSysColor(int i) { this->GCall(EeWonGfxCall::SetSysColor, i); }
     void SetFont(Font*);
-    void Translate(int, int);
+    void Translate(int dx, int dy) { this->GCall(EeWonGfxCall::Translate, dx, dy); }
     void DoTranslate(int&, int&);
-    void SetPixel(int, int, DWORD);
-    void DrawImage(Image*, int, int);
-    void DrawImage(Image*, int, int, int, int, int, int);
-    void DrawLine(int, int, int, int);
-    void DrawRect(int, int, int, int);
-    void FillRect(int, int, int, int);
-    void FillRectBlend(int, int, int, int, int);
-    void DrawDottedRect(int, int, int, int);
-    void DrawEllipse(int, int, int, int);
-    void FillEllipse(int, int, int, int);
-    void DrawArc(int, int, int, int, int, int);
-    void DrawString(const GUIString&, int, int);
-    void DrawString(const GUIString&, unsigned short, unsigned short, int, int);
-    void PerformClip();
-    void PushClipRect(int, int, int, int);
-    void PopClipRect();
+    DWORD GetPixel(int x, int y) { return ee_won_plat_gfx(this->mPlat.surface, this->mPlat.scale, this->mColor, EeWonPlatGfx::GetPixel, x, y, 0, 0, 0, 0); }
+    void SetPixel(int x, int y, DWORD c) { this->GCall(EeWonGfxCall::SetPixel, x, y, (int)c); }
+    void DrawImage(Image* i, int x, int y) { this->GCall(EeWonGfxCall::DrawImage, x, y, 0, 0, 0, 0, 0, i); }
+    void DrawImage(Image* i, int x, int y, int l, int t, int w, int h) { this->GCall(EeWonGfxCall::DrawImagePart, x, y, l, t, w, h, 0, i); }
+    void DrawLine(int x1, int y1, int x2, int y2) { this->GCall(EeWonGfxCall::DrawLine, x1, y1, x2, y2); }
+    void DrawRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawRect, x, y, w, h); }
+    void FillRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillRect, x, y, w, h); }
+    void FillRectBlend(int x, int y, int w, int h, int n) { this->GCall(EeWonGfxCall::FillRectBlend, x, y, w, h, n); }
+    void DrawDottedRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawDottedRect, x, y, w, h); }
+    void DrawEllipse(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawEllipse, x, y, w, h); }
+    void FillEllipse(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillEllipse, x, y, w, h); }
+    void DrawArc(int x, int y, int w, int h, int s, int a) { this->GCall(EeWonGfxCall::DrawArc, x, y, w, h, s, a); }
+    void DrawString(const GUIString& s, int x, int y) { this->GCall(EeWonGfxCall::DrawString, x, y, s.length(), 0, 0, 0, 0, &s); }
+    void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { this->GCall(EeWonGfxCall::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
+    void PerformClip() { this->GCall(EeWonGfxCall::PerformClip); }
+    void PushClipRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::PushClip, x, y, w, h); }
+    void PopClipRect() { this->GCall(EeWonGfxCall::PopClip); }
     SmartPtr<DisplayContext> mDisplayContext; //04
     // R6 WONGUI B round 1: the methods are ee_won's gfxobj.rs. The translation, colour and clip rectangle are the block
     // of members it edits in place (EeWonGfxState: the original's +08, +0c, +14, +24; checked in Graphics.cpp), the
@@ -1276,9 +1267,11 @@ public:
     int mTransX, mTransY;
     DWORD mColor;
     WONRectangle mClipRect;
+    const EeWonGfxState* State() const { return (const EeWonGfxState*)&this->mTransX; }
     SmartPtr<Font> mFont; //10
     ColorScheme* mColorScheme; //34, borrowed
     EeWonGfx* mGfx; // the clip stack, owned
+    EeWonGfxPlat mPlat; // the context's surface (borrowed; none while detached) and its pixel scale (gfxplat.rs)
 private:
     DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL);
 };
@@ -1482,9 +1475,10 @@ struct FontDescriptor {
     int mSize;
     FontDescriptor() : mStyle(0), mSize(0) { } // the descriptor is 0x18 bytes
     FontDescriptor(const std::string& theFace, int theStyle, int theSize) : mFace(theFace), mStyle(theStyle), mSize(theSize) { }
-    bool operator<(const FontDescriptor&) const; // ordering for font lookups
-    bool operator==(const FontDescriptor&) const; //326840
-    bool operator!=(const FontDescriptor&) const; //326880
+    // the same size, style and face without case (fontmap.rs, whose key order was operator<; R6 WON GUI round 35)
+    bool operator==(const FontDescriptor& o) const //326840
+    { return ee_won_font_desc_same((const uint8_t*)this->mFace.data(), this->mFace.size(), this->mStyle, this->mSize, (const uint8_t*)o.mFace.data(), o.mFace.size(), o.mStyle, o.mSize); }
+    bool operator!=(const FontDescriptor& o) const { return !(*this == o); } //326880
 };
 
 // Window (0xb8 bytes): constructor and destructor out of line;
@@ -1746,21 +1740,34 @@ void LobbyKickClient(LobbyClient* inClient, bool inFlag);
 
 class Font : public RefCount {
 public:
-    Font(DisplayContext*, const FontDescriptor&); //3268a0
+    // R6 WON GUI round 35: the one Font is the platform's (the original's MSFont, the port's PlatGUIFont, folded
+    // in; platfont.rs: the platform fonts at the descriptor's size and at a surface's pixel scale, the metrics, the
+    // widths, the drawing with its underline): no virtuals; the context of the constructor was never used
+    Font(DisplayContext*, const FontDescriptor& d) : mDescriptor(d), mRust(ee_won_plat_font_new(d.mFace.c_str(), d.mSize, d.mStyle)) {} //3268a0
     const FontDescriptor& GetDescriptor() { return this->mDescriptor; }
     int GetSize() { return this->mDescriptor.mSize; }
     int GetStyle() { return this->mDescriptor.mStyle; }
-    virtual ~Font();                        // 0x326a60, out of line
-    virtual void PrepareContext(DisplayContext*);
-    virtual void DrawString(DisplayContext*, const GUIString&, unsigned short, unsigned short, int, int);
+    virtual ~Font() { ee_won_plat_font_free(this->mRust); } // 0x326a60
+    void PrepareContext(DisplayContext*) {} // (selecting the font into a DC: each string names its font)
+    void DrawString(DisplayContext* c, const GUIString& s, unsigned short o, unsigned short n, int x, int y);
     int GetStringWidth(const GUIString& theStr) { return this->GetStringWidth(theStr,0,(unsigned short)theStr.length()); }
-    virtual int GetStringWidth(const GUIString&, unsigned short, unsigned short);
-    virtual int GetCharacterWidth(int inChar);
-    virtual int GetHeight();
-    virtual int GetAscent();
-    virtual int GetDescent();
+    int GetStringWidth(const GUIString& s, unsigned short o, unsigned short n) { return n == 0 ? 0 : ee_won_plat_font_width(this->mRust, s.mData->mText + o, n); }
+    int GetCharacterWidth(int inChar) { return ee_won_plat_font_char_width(this->mRust, inChar); }
+    int GetHeight() { return ee_won_plat_font_metric(this->mRust, 0); }
+    int GetAscent() { return ee_won_plat_font_metric(this->mRust, 1); }
+    int GetDescent() { return ee_won_plat_font_metric(this->mRust, 2); }
     FontDescriptor mDescriptor;             // +08..1f
+    EeWonPlatFont* mRust;                   // the font (platfont.rs)
 };
+// the text into the context's surface in its Graphics' colour, the underline with that Graphics (gfxplat.rs); nothing
+// without a context
+inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned short o, unsigned short n, int x, int y)
+{
+    if (c != NULL)
+        ee_won_gfx_font_draw(this->mRust, c->mSurface != NULL ? c->mSurface->GetRust() : NULL, c->mPixelScale,
+                             c->mGraphics != NULL ? c->mGraphics->State() : NULL, c->mGraphics != NULL ? &c->mGraphics->mPlat : NULL,
+                             s.mData->mText + o, n, x, y);
+}
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
 // FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
