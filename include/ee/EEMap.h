@@ -370,13 +370,7 @@ inline RTSTUnitList::~RTSTUnitList()
 #endif
 
 
-// Tile terrain types (RTSTile::mTerrainType = dbterrain.dat record +0x78, plus the water kinds EETile::SetTerrainType derives from the height)
-enum EETerrainType {
-    kTerrainDeepWater = 1,    // EETile::SetTerrainType 0x5214bf: a tile below -0.75 elevation unit becomes 1; setrilo ai_astar.h '2 deep water for type 1'
-    kTerrainSnow = 5,         // dbterrain.dat type 5 (+0x78) = Ice, Snow, Snow - Tufts/Grass Patches/Dirt Patches, Mars glaciers/polar cap; EEUnitClass 0x638ce7 shows the horse breath effect at night or on type 5 (provisional name)
-    kTerrainCliff = 9,        // dbterrain.dat: the records of type 9 (+0x78) are exactly the cliff textures (Cliff, Cliffwinter, CliffRock); EEMap::UpdateCliffs sets 9 (setrilo rts_map.h)
-    kTerrainShallowWater = 10,  // EETile::SetTerrainType 0x5214bf: a tile under water with fewer than 3 dry corners becomes 10 (3+ dry corners keep the land type); setrilo ai_continents.h 'a water tile (types 1, 10)', shallows join land continents (provisional name)
-    kTerrainSpace = 12,       // dbterrain.dat: 'Space' is the only record of type 12 (+0x78); EETile::SetTerrainType 0x5214bf SetIsSpace(type == 12)
-};
+// The tile terrain types (EETerrainType): Rust's enum (ee_sim game_ids.rs), emitted back as a plain C++ enum with its evidence comments.
+#include "rust/sim/game_ids.h"
 
 #endif

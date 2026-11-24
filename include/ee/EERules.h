@@ -30,12 +30,8 @@ struct EERuleNumber {
     static EERuleNumber World(long inRow, int inValue);
 };
 
-// How a hit's damage is formed (EEUnitClass::ComputeDamage)
-enum EEDamageForm {
-    kDamageDirect,                          // a unit's or projectile's hit (EEUnitClass::ApplyHit)
-    kDamageSplash,                          // splash damage around it (EEUnitClass::ApplyAreaDamage)
-    kDamageTrample                          // a moving unit pushing a stopped enemy (EEPhysicsModel)
-};
+// How a hit's damage is formed (EEDamageForm): Rust's enums (ee_sim game_ids.rs), emitted back as plain C++ enums with their evidence comments.
+#include "rust/sim/game_ids.h"
 
 // A list the Rust rules own (ee_data rules.rs RuleListC): read like a const std::vector
 template <class T>
