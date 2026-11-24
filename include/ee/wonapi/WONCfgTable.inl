@@ -128,10 +128,10 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::CursorNew: return (intptr_t)new SmartPtr<Cursor>(new ComponentCursor(new ImageComponent(a.m[0].get())));
     case O::SetStdCursor: Cursor::SetStandardCursor((StandardCursor)a.i[0],((SmartPtr<Cursor>*)x)->get()); return 0;
     case O::CursorFree: delete (SmartPtr<Cursor>*)x; return 0;
-    case O::LaySpaceEvenly: a.lay=new SpaceEvenlyLayout(a.c[--a.nc],a.i[0],a.i[1],x!=0); return 0;
-    case O::LayClearRight: a.lay=new ClearRightLayout(a.c[--a.nc],a.i[0]); return 0;
-    case O::LaySizeAtLeast: a.lay=new SizeAtLeastLayout(a.c[--a.nc],a.i[0],a.i[1]); return 0;
-    case O::LayNoOverlap: a.lay=new NoOverlapLayout(a.c[0],a.i[2],a.c[1],a.i[0],a.i[1]); return 0;
+    case O::LaySpaceEvenly: a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::SpaceEvenly,a.c[--a.nc],NULL,a.i[0],a.i[1],0,x!=0); return 0;
+    case O::LayClearRight: a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::ClearRight,a.c[--a.nc],NULL,a.i[0]); return 0;
+    case O::LaySizeAtLeast: a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::SizeAtLeast,a.c[--a.nc],NULL,a.i[0],a.i[1]); return 0;
+    case O::LayNoOverlap: a.lay=new ChildLayoutInstructionBase(EeWonLayoutKind::NoOverlap,a.c[1],a.c[0],a.i[2],a.i[0],a.i[1]); return 0;
     case O::SetCompCount: a.nc=(int)x; return 0;
     default: return 0;
     }

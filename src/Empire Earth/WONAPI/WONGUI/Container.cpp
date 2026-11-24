@@ -121,13 +121,6 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
         if (aRoot != NULL) aRoot->AddBG((BackgroundGrabber*)a);
         return 0;
     }
-    case Op::CtLayout:
-        switch (a) {
-        case 0: t->mChildLayout->ExecuteInstructions(t); return 0;
-        case 1: t->mChildLayout->RemoveComponent(Comp(b)); return 0;
-        case 2: t->mChildLayout->Clear(); return 0;
-        default: delete t->mChildLayout; t->mChildLayout = NULL; return 0;
-        }
     case Op::CtCursorHold: ((Cursor*)a)->AddRef(); return 0;
     case Op::CtCursorRelease: ((Cursor*)a)->Release(); return 0;
     case Op::CtSetScheme: ((Graphics*)a)->mColorScheme = (ColorScheme*)b; return 0;
@@ -169,6 +162,8 @@ extern "C" intptr_t ee_won_guicpp_ct_call(void* inComp, EeWonGuiOp op, intptr_t 
     return ContainerHostCall(static_cast<Container*>((Component*)inComp), op, a, b, c, d);
 }
 
+// the layout objects' host (ChildLayouts.cpp)
+extern "C" intptr_t ee_won_guicpp_layout_call(void*, EeWonGuiOp, intptr_t, intptr_t, intptr_t, intptr_t);
 namespace WONAPI {
 bool Container::mMouseWheelGoesToFocusChildDef=false;
 // Creates an empty, focusable container (the Rust container: no child, no mouse or focus child, no cursor, no modal
@@ -176,7 +171,7 @@ bool Container::mMouseWheelGoesToFocusChildDef=false;
 Container::Container()
 {
     this->mCt=ee_won_ct_new(static_cast<Component*>(this),ee_won_guicpp_ct_call,Container::mMouseWheelGoesToFocusChildDef);
-    this->mChildLayout=new ChildLayoutManager;
+    ee_won_ct_layout_new(this->mCt,ee_won_guicpp_layout_call);
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
 }
 // Destroys the container: the Rust container detaches the children, then releases the cursor, the child layout, the
