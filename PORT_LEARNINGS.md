@@ -39912,3 +39912,121 @@ On 7cf0a9c9c (the round merged with origin/rust 4a255ad0d, batch 19), and before
   classic_lua x 2; lan-game PT 3396/3339). The batch 18 run before it passed the same (ai-game PT 11802, units
   [4, 36, 36]; lan-game 2994/2994).
 - Not run: the POSIX builds, `gates.sh --legacy`.
+
+## R6 WON lobby and network, round 35: EeColumn's golden; EEWonNet's C++ objects the Rust object's; the socket thread wholly Rust; DetectFirewallOp a RustServerOp kind; the lobby's ids, config values, LobbyLogicMgr, DialogLogic's and the error screen's cases in Rust (ee_won_lobby wonnet.rs EeWonNetObjects, lobbyids.rs, cfgval.rs, logicmgr.rs, logicsplit.rs, errscreen.rs; ee_won_net sockthread.rs, fwhost.rs; branch rust-wonnet35, 2026-11-23)
+
+The parent took round 34's gap (EeColumn) and EEWonNet; two forks in hand-made worktrees with disjoint files took the
+network shims (net) and the lobby's hosts and headers (lob). The parent merged origin/rust (batch 20) first, both
+forks (--no-ff), then origin/rust again (batch 21). The aim was about -1,000 C++ logic lines.
+
+### What moved (logic: `logic_lines.py`)
+
+| Part | What | Logic |
+|---|---|---|
+| parent 207fb805f | won_ctl35_test: EeColumn's Keep and Compare branches (and paints) against the deleted case (no move) | 0 |
+| parent 88a7bfbe1 | EEWonNet's C++ objects (locks, routing connection, server contexts, lobby and window, user, server list, ops, the two cancel flags) are wonnet.rs's `EeWonNetObjects`; the class is its Rust object and forwards; the host reads the slots through `ee_won_wonnet_objects`; 8 host cases gone, 4 ops added | -20 |
+| net 8c2153be9 | the library's socket thread wholly Rust (sockthread.rs): ThreadBase, Thread, WONDebug, SocketThread, SocketThreadSimple and AsyncOp.cpp's WonApiHooks table deleted; the old classes are tests/won/won_thread_orig.h | -33 |
+| net a51fb5b42, 5e91958ac | DetectFirewallOp's C++ class deleted: `RustServerOp::NewFirewall` with a Rust init after the bind (fwhost.rs); `GetPublicAddr` is `AddrOf(EE_WON_FWOP_PUBLIC_ADDR)` | -8 |
+| lob e2b457cd3 | LobbyEventType, LobbyChatCommand and LobbyResourceCtrlId as Rust constants under the same names (lobbyids.rs; a constants move like round 30's status codes, not a class move) | -98 |
+| lob b5358eb02 | ConfigValueBase and its templates wholly Rust (cfgval.rs, EeWonCfgVal); WONConfigValue.h deleted | -45 |
+| lob c3eea7b1a | DialogLogic's host: WmPopups, Bounds, NewWindow, SetUpPopup, StatusSetStatus, OkCancelSetText composed in logicsplit.rs | -30 |
+| lob 07856a937 | LobbyLogicMgr wholly Rust (logicmgr.rs); each logic's virtual under WON_GUARDED_V, the throw rethrown at the C++ entry | -32 |
+| lob 1e3ff1641 | LobbyResource_Init registers the controls from lobbyids.rs's name table | -20 |
+| lob 015fcff6c | LobbyGetContainer and its Lobby Error dialog composed in errscreen.rs | -21 |
+
+Round total: 24,121 (891d33d42, the batch 20 merge the round started from) -> 23,814 (225b20305, both forks
+merged): **-307** (parent -20, net -41, lob -246), short of -1,000 (below). The tip (0f693a3a9, batch 21 merged):
+22,940, against origin/rust 5f65f9a38's 23,746 -806, which is this round and round 34's -499 (origin/rust held
+neither); the round's base 77f36521f, before batch 20, read 28,193.
+
+Classes (`classes_tree.py`, which misses classes declared with an export macro): 706 -> 695, 11 gone
+(ConfigValueBase, ConfigValue, SimpleConfigValue, ConfigStringValue, ConfigListValue; ThreadBase, Thread, WONDebug,
+SocketThread, SocketThreadSimple; DetectFirewallOp); the tip 696 (origin/rust 5f65f9a38 716). EEWonNet and
+LobbyLogicMgr stay as C++ shims over their Rust objects.
+
+### Goldens
+
+- **won_ctl35_test**: the EeColumn phase runs every column call (compares, keeps over four filter texts, paints)
+  through hostops.rs and through the case as it was at f2bdb70f7, over eeglue.rs's calls on a stand-in glue host that
+  logs the filter text it is handed and its references: 2,801 checks, 0 mismatches; ColumnTextSet and ColumnText are
+  now skipped too: 116 of 116 skips caught. The gap of round 34 (the brief's first task) is closed by the golden:
+  the Keep and Compare branches run against the deleted case; there was no LAN probe for them.
+- **won_wonnet_test** over the slots: 200,000 sequences, 0 mismatches, 159 of 160 host ops (op 48 unreached, as before);
+  its stand-ins now log their destruction (routing, directory servers, the ops), so the members' release order is in
+  the trace. Hand mutations: the routing connection left unreleased (171,714 mismatching sequences, caught); the join
+  flag read as the connect flag (not caught: the world never sets one flag without the other).
+- **won_asyncop_test / won_apicore_test** over the Rust socket thread (the old classes in won_thread_orig.h): 285 golden
+  lines and 3,000 sequences, 0 failures. **won_net33_test**: DetectFirewallOp's constructor as a tenth kind, 46,010
+  checks, 0 mismatches, mutation 14 caught.
+- **won_cfgobject_test** (the original value classes in tests/won/won_cfgvalue_orig.h): 1,506 sequences, 0
+  mismatches, 6 of 6 hand mutations. **won_logic35_test** (new): DialogLogic's cases, LobbyLogicMgr as it was, the
+  error screen: 30 checks, 70 of 70 op skips caught.
+
+### LAN reach
+
+- Reached (the lob fork's temporary probe over one LAN game, removed): the config values' Init, Read, AddRef and
+  SetDefault (bool, unsigned short, string, wide string, string list), the control registration, DialogLogic's
+  WmPopups and Bounds, LobbyLogicMgr's AddLogic, Init, timer and component events (15, 21, 22, 29, 100027),
+  LobbyGetContainer's first branch; the socket thread (every lobby runs it).
+- Not reached (goldens): EEWonNet (gWonNet is never made in AoC), DetectFirewallOp (an Internet login), the config
+  values' Write, Copy, IsDefault, Release and the int kinds, DialogLogic's other four cases, the manager's Kill and menu
+  clicks, the error dialog, EeColumn.
+
+### Behaviour changes
+
+- The socket thread has no SEH frame: a crash in it reaches the process's crash handling instead of writing the WON
+  stack file and ending the thread quietly.
+- The firewall op's public address is rebuilt from six bytes (unit-tested equal to `Fn2B2C20(host, 0)`).
+- Bounds calls GetBounds four times instead of once; a logic's exception is kept and rethrown at the manager's C++
+  entry (same type, same stopping point); the composed cases' C++ locals are host statics.
+- EEWonNet: none (its objects' references and release order are the members').
+
+### Lessons
+
+- A skip-mutation driver must reset the host statics before each skip run: a skipped EvDrop left won_ctl35_test's
+  event set into the next run, which made LinkGetKind's skip look caught (its own case could not catch it: link 0's
+  kind was 0). Make every value a skip would zero non-zero in at least one case.
+- `wontest` rebuilds the Rust library per program: no edits while it runs, and `| tail` holds a background job's
+  output until the job ends (watch a log file instead).
+- Copy-Item keeps a file's old time stamp, so cargo skips the rebuild: touch a restored file. Git Bash's `sed -i`
+  rewrites a CRLF file as LF.
+- Bash heredocs passed through `bash -c` fail on long Python with quotes ("unexpected EOF"): write the script to a file.
+
+### Why short (-307 against -1,000)
+
+- What is left of the ServerOp hierarchy (PeerAuthOp, PeerAuthServerOp, GetCertOp, ServerOp / AsyncOpWithTracker) is
+  about -25 to -30 lines whose cost is in about 18 drivers that define or construct these classes; RecvChunkOp (~9)
+  needs a generic finish-on-run op; PingGameOp (~20) a Rust body hook in udpops.rs; RoutingLogic, InitLogic and
+  AccountLogic as classes a generic Rust logic shell on WONLobbyLogic.h.
+- NetworkAdapterListItem needs a multi-list row shell in WONLobbyGUI.h (the GUI lane's); the game host's SendFileOp and
+  completion sit on the socket op classes; FilterListItem, GlueText, TransferSetSavesPath and the glue's small helpers
+  are 2 to 10 lines each; StringParser's list helpers (~25) are still used by WONLobbyPrv and two drivers;
+  LobbyLogicHost's and LanLogicHost's compound cases re-enter (HandleMessage, the broadcasts).
+- EEWonNet's move is small in logic by nature: its members were declarations, its host cases one statement each.
+
+### The merges
+
+origin/rust 49707901b (batch 20) at the start, 5f65f9a38 (batch 21) after the forks: rust/cbindgen.toml by cbunion2.py
+(one block each time, toml checked), PORT_LEARNINGS rebuilt by pladd.py (ours plus their new sections); headers current
+after both (339).
+
+### Gates (the merged tip 0f693a3a9; build/w35_chain.log)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 6 --sim` | 0 / 0 (EE-AOC 412 inputs, EE-SIM 413) |
+| `build.py --test-profile windowed-software` | 0 / 0 (412 inputs) |
+| `rust_build.py header` | 339 headers current |
+| `rust_build.py gate` | PASS, 6,611 tests (0 failed, 8 ignored) |
+| `won_host_coverage.py` | PASS |
+| oracle against the main checkout's `ref` | seeds 2-7 identical, `oracle: PASS` |
+| `xbuild.py wontest` | exit 0, each of the 176 programs exits 0 (won_ctl35 2,801 checks and 116/116 skips, won_logic35 30 checks and 70/70 skips, won_wonnet 200,000 sequences 159/160 ops and its screens 100,000 147/147, won_asyncop 285 lines, won_apicore 3,000 sequences, won_net33 46,010 checks, won_cfgobject 1,506 sequences, won_dir34 97,000, won_net34 90, won_dlg34 3,393 and 19/19, won_httpsession 0 failures) |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal |
+| saveload | plain seeds 2-7 PASS (exit 0, 18/18 identical); matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` |
+| `scenario_check.py` | PASS 27/27 |
+| `eedata check`, `cppgate` | PASS, PASS |
+| LAN game (slot.py) | `RESULT PASS lan-game` PT host 2715 / joiner 2719 |
+| `lan_capture_compare.py` against build/w35lanA (the exe built at the round's start, on the batch 20 merge, build/w35base) | every lobby capture identical but two carets: host-staging-ready and joiner-staging-joiner, 15 pixels each at x 121..122, y 329..344 |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12289` units [4, 38, 38] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2762 joiner=2755`, GATES PASS |
+
+Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds.
