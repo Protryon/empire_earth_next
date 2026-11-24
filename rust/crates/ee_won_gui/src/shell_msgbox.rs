@@ -14,8 +14,8 @@ use crate::ctobj::EeWonCtCall as Ct;
 use crate::dialogobj::EeWonDlgCall as Dc;
 use crate::msbtnobj::EeWonMsBtnCall as M;
 use crate::shell::{
-    gui_string_len, EeWonShellHostOp as H, EeWonShellKind as K, EeWonShellHostFn, EeWonShellOp as O, EeWonShellVirt as V, Sh,
-    ShellKind,
+    gui_string_len, EeWonShellHostFn, EeWonShellHostOp as H, EeWonShellKind as K, EeWonShellOp as O,
+    EeWonShellVirt as V, Sh, ShellKind,
 };
 
 const HALIGN_CENTER: isize = 1;
@@ -155,7 +155,6 @@ impl ShellKind for MsMessageBox {
     }
 }
 
-
 /// `MSMessageBox::Msg` (GuiShell.cpp's MSMessageBoxMsg until R6 WON GUI round 36): the box made from `texts`, a
 /// native window with the parent, the title, style 0x59 and the box's size, the box added, its first button
 /// focused, the modal run, the window closed; the box's and the window's references (the original's two SmartPtrs)
@@ -164,7 +163,11 @@ impl ShellKind for MsMessageBox {
 /// # Safety
 /// `texts` is the box's texts (`EeWonMsgBoxTexts`, live through the call); `host` the C++ shell host.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_msgbox_run(host: EeWonShellHostFn, parent: isize, texts: *const EeWonMsgBoxTexts) -> i32 {
+pub unsafe extern "C" fn ee_won_msgbox_run(
+    host: EeWonShellHostFn,
+    parent: isize,
+    texts: *const EeWonMsgBoxTexts,
+) -> i32 {
     let sh = Sh::detached(host);
     let msg_box = sh.host(H::MsgBoxNew, texts as isize, 0, 0, 0);
     sh.host(H::Ref, msg_box, 1, 0, 0);

@@ -850,7 +850,13 @@ impl EeWonPlatWm {
                     self.call(EeWonPlatWmOp::Minimize, pw as isize, 0, 0, 0);
                 }
             } else {
-                self.call(EeWonPlatWmOp::QueueKey, target as isize, KEY_TYPES[if down { 0 } else { 1 }], key as isize, m);
+                self.call(
+                    EeWonPlatWmOp::QueueKey,
+                    target as isize,
+                    KEY_TYPES[if down { 0 } else { 1 }],
+                    key as isize,
+                    m,
+                );
                 let mut ch = 0;
                 if down {
                     ch = match key {

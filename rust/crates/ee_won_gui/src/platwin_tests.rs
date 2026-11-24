@@ -143,13 +143,24 @@ fn a_framed_window_from_its_client_rect_is_centred_and_shown() {
     assert_eq!(rect(w, true), [103, 71, 200, 120]);
     assert_eq!(
         world.log,
-        ["Window::Create 103,71,200,120", "new context", "offscreen of root", "wm Add me", "Center 1", "SetIsShowing 1", "PlatformShow 1"]
+        [
+            "Window::Create 103,71,200,120",
+            "new context",
+            "offscreen of root",
+            "wm Add me",
+            "Center 1",
+            "SetIsShowing 1",
+            "PlatformShow 1"
+        ]
     );
     // a hidden start (0x02) and the default position (0x80); without 0x40 the rectangle is the window's
     world.log.clear();
     world.style = 0x82;
     create(w, [100, 50, 200, 120]);
-    assert_eq!(world.log, ["Window::Create 103,71,194,96", "new context", "offscreen of root", "wm Add me", "Center 0", "SetIsShowing 0"]);
+    assert_eq!(
+        world.log,
+        ["Window::Create 103,71,194,96", "new context", "offscreen of root", "wm Add me", "Center 0", "SetIsShowing 0"]
+    );
     free(w);
 }
 
@@ -399,17 +410,17 @@ fn the_title_is_the_windows() {
         // SAFETY: the test's window
         let p = unsafe { ee_won_plat_win_title(w, &mut n) };
         // SAFETY: n units
-        let u: Vec<u16> = unsafe { std::slice::from_raw_parts(p as *const WChar, n as usize) }.iter().map(|&u| u as u16).collect();
-        String::from_utf16_lossy(&u)
+        unsafe { std::slice::from_raw_parts(p as *const WChar, n as usize) }.to_vec()
     };
-    assert_eq!(title(w), "Sierra App");
-    let t: Vec<WChar> = "Lobby \u{e9}".encode_utf16().map(WChar::from).collect();
+    let wide = |t: &str| -> Vec<WChar> { t.encode_utf16().map(|c| c as WChar).collect() };
+    assert_eq!(title(w), wide("Sierra App"));
+    let t = wide("Lobby \u{e9}");
     // SAFETY: the test's window and units
     unsafe { ee_won_plat_win_set_title(w, t.as_ptr() as *const c_void, t.len()) };
-    assert_eq!(title(w), "Lobby \u{e9}");
+    assert_eq!(title(w), t);
     // SAFETY: as above
     unsafe { ee_won_plat_win_set_title(w, std::ptr::null(), 0) };
-    assert_eq!(title(w), "");
+    assert!(title(w).is_empty());
     // SAFETY: the test's window
     unsafe { ee_won_plat_win_free(w) };
 }

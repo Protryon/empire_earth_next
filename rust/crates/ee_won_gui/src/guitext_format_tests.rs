@@ -192,19 +192,30 @@ unsafe extern "C" fn part_host(
 #[test]
 fn formatted_text_adds_one_segment_a_line() {
     for (s, lb) in [("one\r\ntwo\nthree", false), ("a\rb\r\n", true), ("", true), ("x", false), ("\n\n", false)] {
-        let u: Vec<WChar> = s.encode_utf16().map(WChar::from).collect();
+        let u: Vec<WChar> = s.encode_utf16().map(|c| c as WChar).collect();
         let n = u.len() as u16;
         let ws = std::mem::size_of::<WChar>() as u32;
         let mut parts = vec![EeWonTextPart { start: 0, len: 0, line_break: false }; u.len() + 1];
         // SAFETY: the units and the room
-        let k = unsafe { ee_won_gui_text_split(u.as_ptr() as *const c_void, n, ws, lb, parts.as_mut_ptr(), parts.len()) };
+        let k =
+            unsafe { ee_won_gui_text_split(u.as_ptr() as *const c_void, n, ws, lb, parts.as_mut_ptr(), parts.len()) };
         let expect: Vec<String> = parts[..k]
             .iter()
             .map(|p| format!("TextAddPart 77 {} {} {}", p.start, p.len, p.line_break as i32))
             .collect();
         take();
         // SAFETY: the units; the logging host
-        unsafe { ee_won_gui_add_formatted(std::ptr::null_mut(), Some(part_host), 0x77 as *const c_void, u.as_ptr() as *const c_void, n, ws, lb) };
+        unsafe {
+            ee_won_gui_add_formatted(
+                std::ptr::null_mut(),
+                Some(part_host),
+                0x77 as *const c_void,
+                u.as_ptr() as *const c_void,
+                n,
+                ws,
+                lb,
+            )
+        };
         assert_eq!(take(), expect, "{s:?}");
     }
 }

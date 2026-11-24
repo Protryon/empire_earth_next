@@ -491,7 +491,7 @@ pub extern "C" fn ee_won_plat_win_new(me: *mut c_void, host: EeWonPlatWinHost) -
     Box::into_raw(Box::new(EeWonPlatWin {
         me,
         host,
-        title: "Sierra App".encode_utf16().map(WChar::from).collect(),
+        title: "Sierra App".encode_utf16().map(|c| c as WChar).collect(),
         x: 0,
         y: 0,
         width: 0,

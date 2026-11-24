@@ -1055,7 +1055,14 @@ pub unsafe extern "C" fn ee_won_gui_add_formatted(
     for p in split_lines(&t, line_break) {
         // SAFETY: the text area's own host
         unsafe {
-            h(component, crate::guihost::EeWonGuiOp::TextAddPart, text as isize, p.start as isize, p.len as isize, p.line_break as isize)
+            h(
+                component,
+                crate::guihost::EeWonGuiOp::TextAddPart,
+                text as isize,
+                p.start as isize,
+                p.len as isize,
+                p.line_break as isize,
+            )
         };
     }
 }
