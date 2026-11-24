@@ -78,7 +78,7 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
     case Op::Time: return (intptr_t)(uint32_t)(unsigned long)PlatTimeMilliseconds64();
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
     case Op::GameProgress:
-        static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->UpdateTransferProgress((int)b, (int)c);
+        reinterpret_cast<LobbyGame*>(a)->EE(EeWonEeGameCall::UpdateTransferProgress, (int)b, (int)c);
         return 0;
     case Op::BytesRead: return (intptr_t) RecvChunkOf(anOp)->GetBytesRead();
     case Op::Bind: return aSocket->Fn2B0D90((unsigned short)b, 0);
@@ -113,59 +113,16 @@ typedef EeWonEeGameCall GC;
 static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 
 
-// ---- the shell
+// ---- the shell (R6 WON lobby and network round 37: EELobbyGame folded into LobbyGame, whose hooks are the Rust
+// game's when it holds one)
 
-// Creates a lobby game with every game option 0, its eight slots (the Rust game's) and no saved game file here
-EELobbyGame::EELobbyGame() : mRust(NULL)
-{
-    this->mRust = ee_won_eegame_new_model(this, EELobbyGameHost);
-}
+// the EE factory's game: every game option 0, its eight slots (the Rust game's) and no saved game file here
+LobbyGame* WONAPI::EELobbyNewGame() { return new LobbyGame(EELobbyGameHost); }
 
-// Destroys the lobby game, releasing its slots, player names and file transfer
-EELobbyGame::~EELobbyGame()
-{
-    ee_won_eegame_free(this->mRust);
-}
-
-intptr_t EELobbyGame::RCall(EeWonEeGameCall inCall, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
-{
-    return ee_won_eegame_call(this->mRust, inCall, a, b, c, d);
-}
-
-void EELobbyGame::UpdateTransferProgress(int inDone, int inTotal) { this->RCall(GC::UpdateTransferProgress, inDone, inTotal); }
-bool EELobbyGame::CanReadyHook() { return this->RCall(GC::CanReadyHook) != 0; }
-bool EELobbyGame::CanStartGameHook() { return this->RCall(GC::CanStartGameHook) != 0; }
-bool EELobbyGame::TryStartGameHook() { return this->RCall(GC::TryStartGameHook) != 0; }
-void EELobbyGame::PostNetLeaveGameHook() { this->RCall(GC::PostNetLeaveGameHook); }
-void EELobbyGame::NotifyStartGameHook() { this->RCall(GC::NotifyStartGameHook); }
-void EELobbyGame::HandleHostGameHook(LobbyClient* inClient) { this->RCall(GC::HandleHostGameHook, (intptr_t)inClient); }
-void EELobbyGame::GetJoinGameRequestHook(WriteBuffer& outBuffer) { this->RCall(GC::GetJoinGameRequestHook, (intptr_t)&outBuffer); }
-short EELobbyGame::HandleJoinGameRequestHook(ReadBuffer& inBuffer, LobbyClient* inClient)
-{
-    return (short)WonRethrow(this->RCall(GC::HandleJoinGameRequestHook, (intptr_t)&inBuffer, (intptr_t)inClient));
-}
-void EELobbyGame::GetJoinGameReplyHook(LobbyClient* inClient, WriteBuffer& outBuffer)
-{
-    this->RCall(GC::GetJoinGameReplyHook, (intptr_t)inClient, (intptr_t)&outBuffer);
-}
-void EELobbyGame::HandleJoinGameReplyHook(ReadBuffer& inBuffer) { WonRethrow(this->RCall(GC::HandleJoinGameReplyHook, (intptr_t)&inBuffer)); }
-void EELobbyGame::HandlePlayerLeftHook(LobbyClient* inClient, LobbyPlayer* inPlayer)
-{
-    this->RCall(GC::HandlePlayerLeftHook, (intptr_t)inClient, (intptr_t) static_cast<EELobbyPlayer*>(inPlayer));
-}
-void EELobbyGame::HandlePlayerJoinedHook(LobbyClient* inClient) { this->RCall(GC::HandlePlayerJoinedHook, (intptr_t)inClient); }
-void EELobbyGame::WriteSummaryHook(WriteBuffer& outBuffer) { this->RCall(GC::WriteSummaryHook, (intptr_t)&outBuffer); }
-void EELobbyGame::WriteDetailsHook(WriteBuffer& outBuffer) { this->RCall(GC::WriteDetailsHook, (intptr_t)&outBuffer); }
-bool EELobbyGame::ReadSummaryHook(ReadBuffer& inBuffer) { return WonRethrow(this->RCall(GC::ReadSummaryHook, (intptr_t)&inBuffer)) != 0; }
-bool EELobbyGame::ReadDetailsHook(ReadBuffer& inBuffer) { return WonRethrow(this->RCall(GC::ReadDetailsHook, (intptr_t)&inBuffer)) != 0; }
-void EELobbyGame::HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom)
-{
-    WonRethrow(this->RCall(GC::HandleGameMessageHook, inType, (intptr_t)&inBuffer, (intptr_t)inFrom));
-}
 // Returns the text for a refused join: not in the saved game, wrong version or modified game files
-GUIString EELobbyGame::GetStatusStringHook(short inStatus)
+GUIString WONAPI::EELobbyStatusString(intptr_t inStatus)
 {
-    switch (this->RCall(GC::GetStatusStringHook, inStatus)) {
+    switch (inStatus) {
     case 1: return EE_LOBBY_STRING(gEELobbyGameStatus_NotInSavedGame);
     case 2: return EE_LOBBY_STRING(gEELobbyGameStatus_InvalidVersion);
     case 3: return EE_LOBBY_STRING(gEELobbyGameStatus_CorruptBinaries);
@@ -201,7 +158,7 @@ bool EELobbyPlayer::IsTeammate(LobbyPlayer* inOther)
 unsigned char EELobbyPlayer::GetTeam()
 {
     if (this->mSlotGame != NULL)
-        return (unsigned char)this->mSlotGame->RCall(GC::SlotRawOption, this->mSlotIndex, 1);
+        return (unsigned char)this->mSlotGame->EE(GC::SlotRawOption, this->mSlotIndex, 1);
     return 0;
 }
 
@@ -220,7 +177,7 @@ static GUIStringData* ReadText(ReadBuffer* inBuffer)
 static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     typedef EeWonEeGameOp Op;
-    EELobbyGame* aGame = static_cast<EELobbyGame*>(inGame);
+    LobbyGame* aGame = static_cast<LobbyGame*>(inGame);
     WriteBuffer* aWrite = reinterpret_cast<WriteBuffer*>(a);
     LobbyClient* aClient = reinterpret_cast<LobbyClient*>(a);
     EELobbyPlayer* aPlayer = reinterpret_cast<EELobbyPlayer*>(a);

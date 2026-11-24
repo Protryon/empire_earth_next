@@ -198,7 +198,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::IsCombo: return dynamic_cast<ComboBox*>(aComp) != NULL ? 1 : 0;
     case Op::FillMapTypes: EELobbyFillMapTypeCombo(aCombo); return 0;
     case Op::ComboHasSel: return aCombo->mListArea->GetSelItem() != NULL ? 1 : 0;
-    case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(aGame)->mRust;
+    case Op::GameRust: return (intptr_t) aGame->mEE;
     case Op::LabelSetName: aLabel->SetText(EELobbyStr(b)); return 0;
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::EventParam: return static_cast<EELobbySyncOptionEvent*>(anEvent)->mParam;

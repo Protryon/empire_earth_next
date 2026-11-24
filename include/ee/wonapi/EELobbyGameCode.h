@@ -24,7 +24,6 @@ inline GUIString EELobbyStr(intptr_t inData)
     return inData == 0 ? GUIString() : GUIString(reinterpret_cast<GUIStringData*>(inData));
 }
 
-class EELobbyGame;
 // one player slot of a lobby game (0x18 bytes in the original; EELobbyGame +0xc0, eight of them). Its six options:
 // 0 state (0 open, 1 computer, 2 closed, 3 a client's, 4 reserved by name for a human player of a saved game), 1
 // team, 2 color, 3 citizen (1-based), 4 observe, 5 file transfer percent (100: done).
@@ -48,37 +47,9 @@ public:
     IPAddr mHost;                           // +0x3c (SetHost: fetch it from the host)
 };
 
-// the lobby's game (0x180 bytes in the original; RTTI EELobbyGame > LobbyGame; EELobbyGame.cpp 0x29222b..)
-// R6 WONLobby round 5: one Rust object (ee_won eegame.rs: the options, the slots, the counts, the file transfer, the
-// details' player names, every method and hook); the class keeps its virtual hooks and methods as forwards
-// (WONLobby/EELobbyGameHost.cpp) and the eight slot views.
-class EELobbyGame : public LobbyGame {
-public:
-    EELobbyGame();
-    virtual ~EELobbyGame();
-    virtual void PostNetLeaveGameHook();    // +0x18 0x292797 (ICF: +0x1c)
-    virtual void NotifyStartGameHook();
-    virtual bool TryStartGameHook();        // +0x20 0x292719 (false: everyone is on one team)
-    virtual bool CanStartGameHook();
-    virtual bool CanReadyHook();            // +0x28 0x2926df
-    virtual void HandleHostGameHook(LobbyClient* inClient);  // +0x30 0x292a23
-    virtual void GetJoinGameRequestHook(WriteBuffer& outBuffer);  // +0x34 0x292e42
-    virtual short HandleJoinGameRequestHook(ReadBuffer& inBuffer, LobbyClient* inClient);  // +0x38 0x292e9f
-    virtual void GetJoinGameReplyHook(LobbyClient* inClient, WriteBuffer& outBuffer);  // +0x3c 0x293029
-    virtual void HandleJoinGameReplyHook(ReadBuffer& inBuffer);  // +0x44 0x2930b5
-    virtual void HandlePlayerLeftHook(LobbyClient* inClient, LobbyPlayer* inPlayer);  // +0x48 0x29321e
-    virtual void HandlePlayerJoinedHook(LobbyClient* inClient);  // +0x4c 0x293195
-    virtual void WriteSummaryHook(WriteBuffer& outBuffer);  // +0x50 0x292b57
-    virtual void WriteDetailsHook(WriteBuffer& outBuffer);  // +0x54 0x292be0
-    virtual bool ReadSummaryHook(ReadBuffer& inBuffer);  // +0x58 0x292b95
-    virtual bool ReadDetailsHook(ReadBuffer& inBuffer);  // +0x5c 0x292c7e
-    virtual void HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom);  // +0x60 0x2932d9
-    virtual GUIString GetStatusStringHook(short inStatus);  // +0x64 0x292df3
-    void UpdateTransferProgress(int inDone, int inTotal); // 0x2925d8 (transfer progress)
-    intptr_t RCall(EeWonEeGameCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0);
-
-    EeWonEeGame* mRust;
-};
+// the lobby's game (EELobbyGame, 0x180 bytes; EELobbyGame.cpp 0x29222b..): LobbyGame holding the Rust game
+// (WONLobbyModelObj.h; R6 WON lobby and network round 37) made by the EE factory (EELobbyGameHost.cpp)
+LobbyGame* EELobbyNewGame();
 
 // EELobbyGame's notifications to the lobby's controls: a
 // player slot (type 100063) or a game option (100062) changed, its number in mParam
@@ -105,7 +76,7 @@ public:
     unsigned char GetTeam();
     unsigned char GetSlot() { return this->mSlot; }  // 0x299adf (+0x10)
 
-    EELobbyGame* mSlotGame;                 // +0x0c the slot's game (the original's slot pointer: NULL for none)
+    LobbyGame* mSlotGame;                   // +0x0c the slot's game (the original's slot pointer: NULL for none)
     unsigned char mSlot;                    // +0x10
     unsigned char mSlotIndex;               // the slot's number in mSlotGame (set by the Rust game with it)
 };
@@ -148,7 +119,7 @@ class EELobbyConnectDialog : public LobbyRustDialog {
 public:
     EELobbyConnectDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Connect) {}
     // runs the dialog: true when every player connected (0x290a8a)
-    bool Run(EELobbyGame* inGame) { return this->LCall(EeWonLobbyDlgCall::ConnectRun, (intptr_t)inGame) != 0; }
+    bool Run(LobbyGame* inGame) { return this->LCall(EeWonLobbyDlgCall::ConnectRun, (intptr_t)inGame) != 0; }
     void End(bool inOK) { this->LCall(EeWonLobbyDlgCall::ConnectEnd, inOK); }  // 0x290c85 (100001 / 100002)
 };
 
@@ -215,7 +186,7 @@ bool EELobbyLoadSavedGame(const char* inFile);              // 0x298005 (checks 
 WONAPI::GUIString EELobbyToGUIString(const UWideString& inText);
 void EELobbyFillMapTypeCombo(WONAPI::ComboBox* inCombo);    // 0x29876a (fills the map types)
 unsigned long EELobbyGetNumMapTypes();                      // 0x298824 (jmp EERMGetNumberOfGenerators)
-void EELobbySetDefaultGameOptions(WONAPI::EELobbyGame* inGame);  // 0x2988d8 (the preferences' last game options)
+void EELobbySetDefaultGameOptions(WONAPI::LobbyGame* inGame);  // 0x2988d8 (the preferences' last game options)
 const WONAPI::GUIString& EELobbyFn2988E9();                 // 0x2988e9 (a function-local static GUIString)
 // the 0x296aaa unit
 void EELobbyClose();

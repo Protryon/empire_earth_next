@@ -159,7 +159,7 @@ static intptr_t ColorHost(void*, EeWonEeColorOp inOp, intptr_t a, intptr_t b, in
     case Op::BaseAddedToParent: aComp->Component::AddedToParent(); return 0;
     case Op::BaseMouseExit: aComp->Component::MouseExit(); return 0;
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
-    case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->mRust;
+    case Op::GameRust: return (intptr_t) reinterpret_cast<LobbyGame*>(a)->mEE;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     // the statements of ChooserNew and OpenPopup (eecolor.rs composes them, R6 WON round 35)
     case Op::ChooserAlloc: return (intptr_t) new EELobbyColorChooser;
@@ -242,7 +242,6 @@ public:
 // (the locks are gluesplit.rs's LocksRelease and LocksRetake, one op per lock: R6 WON round 32)
 
 static LobbyPlayer* EELobbyNewPlayer() { return new EELobbyPlayer; }
-static LobbyGame* EELobbyNewGame() { return new EELobbyGame; }
 static ComponentConfig* EELobbyNewButtonConfig() { return CfgNewOfKind(EeWonCfgKind::Button); }
 static ComponentConfig* EELobbyNewContainerConfig() { return new ContainerConfig; }
 static ComponentConfig* EELobbyNewDialogConfig() { return CfgNewOfKind(EeWonCfgKind::Dialog); }
@@ -451,7 +450,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     EEGameOptionsPlayer* aPlayer = reinterpret_cast<EEGameOptionsPlayer*>(a);
     switch (inOp) {
     case Op::MyGame: return (intptr_t)GetMyLobbyGame();
-    case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->mRust;
+    case Op::GameRust: return (intptr_t) reinterpret_cast<LobbyGame*>(a)->mEE;
     case Op::GameIsHost: return reinterpret_cast<LobbyGame*>(a)->GetIsHost() ? 1 : 0;
     case Op::ItemGame: return ee_won_lobby_rows_ctl_op(EeWonLobbyCtlOp::RowGame, a, 0, 0); // a game list row's (rows.rs)
     case Op::DialogRust: return (intptr_t)reinterpret_cast<LobbyRustDialog*>(a)->mLobbyDlg;
@@ -870,5 +869,5 @@ bool EELobbyGetSavedGameInfo(const char* inFile, uint32_t& outLength, uint32_t& 
 }
 bool EELobbyLoadSavedGame(const char* inFile) { return Glue(GL::LoadSavedGame, (intptr_t)inFile) != 0; }
 void EELobbyFillMapTypeCombo(ComboBox* inCombo) { Glue(GL::FillMapTypeCombo, (intptr_t)inCombo); }
-void EELobbySetDefaultGameOptions(EELobbyGame* inGame) { Glue(GL::SetDefaultGameOptions, (intptr_t)inGame); }
+void EELobbySetDefaultGameOptions(LobbyGame* inGame) { Glue(GL::SetDefaultGameOptions, (intptr_t)inGame); }
 unsigned long EELobbyGetNumMapTypes() { return EERMGetNumberOfGenerators(); }
