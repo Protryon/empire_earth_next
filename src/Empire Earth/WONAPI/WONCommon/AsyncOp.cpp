@@ -57,8 +57,7 @@ static void* HookNewCompletion(EeWonCompletion* inBody)
 }
 static bool HookCallback(void* inOp,void* inChild,int32_t inParam)
 {
-    return static_cast<AsyncOpWithTracker*>(static_cast<AsyncOp*>(inOp))->CallbackHook(static_cast<AsyncOp*>(inChild),
-                                                                                      inParam);
+    return static_cast<AsyncOp*>(inOp)->CallbackHook(static_cast<AsyncOp*>(inChild),inParam);
 }
 static const EeWonAsyncOpHooks kAsyncOpHooks={HookRun,HookCleanup,HookCoreQueue,HookTimerAdd,HookTimerRemove,
                                              HookCompletionAddRef,HookCompletionRelease,HookCompletionCall,

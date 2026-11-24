@@ -151,20 +151,21 @@ void RustServerOp::RunHook()
     Log("peerauth connect " + St(aStatus));
     this->Finish(aStatus);
 }
-void RustServerOp::CleanupHook() { AsyncOpWithTracker::CleanupHook(); }
-bool RustServerOp::CallbackHook(AsyncOp* inOp, int inParam) { return AsyncOpWithTracker::CallbackHook(inOp, inParam); }
-PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
-                       bool inUseAuth2)
-    : RustServerOp(NULL)
+void RustServerOp::CleanupHook() { this->mTracker.KillAll(); }
+bool RustServerOp::CallbackHook(AsyncOp*, int) { return false; }
+RustServerOp* RustServerOp::NewPeerAuth(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
+                                        bool inUseAuth2)
 {
+    RustServerOp* that = new RustServerOp(static_cast<EeWonHostOp*>(NULL));
     PlatMutexLock(sLinesLock);
-    sPeerMembers[this].mSocket = inSocket;
-    sPeerMembers[this].mAuthContext = inContext;
-    sPeerMembers[this].mAuthType = inType;
-    sPeerAddr[this] = inAddr;
+    sPeerMembers[that].mSocket = inSocket;
+    sPeerMembers[that].mAuthContext = inContext;
+    sPeerMembers[that].mAuthType = inType;
+    sPeerAddr[that] = inAddr;
     sPeerMade++;
     PlatMutexUnlock(sLinesLock);
     Log(std::string("peerauth new auth2 ") + N(inUseAuth2));
+    return that;
 }
 }
 
@@ -339,7 +340,7 @@ static void AsyncConnect()
     SmartPtr<Done> aConnect = new Done("aconnect");
     c->SetConnectCompletion(aConnect);
     c->SetKeepAlivePeriod(1);
-    PeerAuthOp* anOp = c->ConnectAsync(s.Addr(), 4000);
+    AsyncOp* anOp = c->ConnectAsync(s.Addr(), 4000);
     Log(std::string("connect async op ") + (anOp != NULL ? "set" : "null") + " status " + St(anOp->GetStatus()));
     PumpUntil(aConnect, 1);
     s.Accept();

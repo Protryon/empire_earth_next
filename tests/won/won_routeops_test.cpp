@@ -136,18 +136,19 @@ void RustServerOp::RunHook()
     IPAddr anAddr = sPeerAddr[this];
     this->Finish(StandinConnect(sPeerMembers[this].mSocket.get(), anAddr, 5000));
 }
-void RustServerOp::CleanupHook() { AsyncOpWithTracker::CleanupHook(); }
-bool RustServerOp::CallbackHook(AsyncOp* inOp, int inParam) { return AsyncOpWithTracker::CallbackHook(inOp, inParam); }
-PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
-                       bool)
-    : RustServerOp(NULL)
+void RustServerOp::CleanupHook() { this->mTracker.KillAll(); }
+bool RustServerOp::CallbackHook(AsyncOp*, int) { return false; }
+RustServerOp* RustServerOp::NewPeerAuth(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
+                                        bool)
 {
+    RustServerOp* that = new RustServerOp(static_cast<EeWonHostOp*>(NULL));
     PlatMutexLock(sLinesLock);
-    sPeerMembers[this].mSocket = inSocket;
-    sPeerMembers[this].mAuthContext = inContext;
-    sPeerMembers[this].mAuthType = inType;
-    sPeerAddr[this] = inAddr;
+    sPeerMembers[that].mSocket = inSocket;
+    sPeerMembers[that].mAuthContext = inContext;
+    sPeerMembers[that].mAuthType = inType;
+    sPeerAddr[that] = inAddr;
     PlatMutexUnlock(sLinesLock);
+    return that;
 }
 }
 

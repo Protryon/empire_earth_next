@@ -23,7 +23,7 @@ namespace WONAPI {
 // the certificate op the auth flow makes (ee_won authcpp.rs: one maker for the program)
 static void* NewCertOp(void* inContext)
 {
-    return static_cast<RefCount*>(static_cast<AsyncOp*>(new GetCertOp(static_cast<AuthContext*>(static_cast<RefCount*>(inContext)))));
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(RustServerOp::NewGetCert(static_cast<AuthContext*>(static_cast<RefCount*>(inContext)))));
 }
 // The context's Rust object (its calls over the core table: ee_won authcpp.rs) with the login secrets in the WON
 // directory, a new server list and the directory's verifier key

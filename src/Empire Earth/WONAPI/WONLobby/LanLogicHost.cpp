@@ -295,11 +295,11 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         return 0;
     case EeWonLobbyOp::AuthCommunity: return (intptr_t)static_cast<AuthContext*>(inA)->GetPeerData()->GetFirstCommunity();
     case EeWonLobbyOp::CdKeyValid: return LobbyIsCDKeyValid() ? 1 : 0;
-    case EeWonLobbyOp::GetCertNew: return Held(new GetCertOp(static_cast<AuthContext*>(inA)));
-    case EeWonLobbyOp::LanRunPeerAuth: l->RunTrackedOp(SmartPtr<PeerAuthServerOp>(new PeerAuthServerOp(static_cast<AuthContext*>(inB), sock)).get(), new LogicCompletion<LanLogic>(&LanLogic::HandlePeerAuthDone, l), 30000);
+    case EeWonLobbyOp::GetCertNew: return Held(RustServerOp::NewGetCert(static_cast<AuthContext*>(inA)));
+    case EeWonLobbyOp::LanRunPeerAuth: l->RunTrackedOp(RustServerOpPtr(RustServerOp::NewPeerAuthServer(static_cast<AuthContext*>(inB), sock)).get(), new LogicCompletion<LanLogic>(&LanLogic::HandlePeerAuthDone, l), 30000);
         return 0;
-    case EeWonLobbyOp::PeerAuthSocket: return (intptr_t) static_cast<LobbyLanSocket*>(static_cast<PeerAuthServerOp*>(op)->GetSocket());
-    case EeWonLobbyOp::PeerAuthPermits: return static_cast<PeerAuthServerOp*>(op)->ClientPermits((DWORD)inC) ? 1 : 0;
+    case EeWonLobbyOp::PeerAuthSocket: return (intptr_t) static_cast<LobbyLanSocket*>(static_cast<RustServerOp*>(op)->GetSocket());
+    case EeWonLobbyOp::PeerAuthPermits: return static_cast<RustServerOp*>(op)->GetNum(EE_WON_PEEROP_CLIENT_PERMITS, (DWORD)inC) != 0;
     case EeWonLobbyOp::ChatSoundEffects: return LobbyGetChatSoundEffects() ? 1 : 0;
     case EeWonLobbyOp::PlayWhisperSound: LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_WhisperRecv_Sound).get());
         return 0;
@@ -324,7 +324,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         return 0;
     case EeWonLobbyOp::LanArmDiscoveryOp: static_cast<QueueSocket*>(inA)->SetRepeatOp(new SocketOp(EeWonCoreSocketOp::RecvFrom, NULL, NULL, NULL, 1024));
         return 0;
-    case EeWonLobbyOp::LanNewPeerAuthConnect: return Held(new PeerAuthOp(g->GetAddress(), reinterpret_cast<AuthContext*>(inC), AUTH_TYPE_PERSISTENT, static_cast<LobbyLanSocket*>(inB), true));
+    case EeWonLobbyOp::LanNewPeerAuthConnect: return Held(RustServerOp::NewPeerAuth(g->GetAddress(), reinterpret_cast<AuthContext*>(inC), AUTH_TYPE_PERSISTENT, static_cast<LobbyLanSocket*>(inB), true));
     case EeWonLobbyOp::LanNewConnect: return Held(LanNewConnectOp(static_cast<LobbyLanSocket*>(inB), g->GetAddress()));
     case EeWonLobbyOp::LanNewRecvMsg: return Held(new SocketOp(EeWonCoreSocketOp::RecvMsg, sock));
     case EeWonLobbyOp::LanArmCloseCompletion: sock->SetCloseCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleSocketClosed, l));

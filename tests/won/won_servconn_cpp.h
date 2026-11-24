@@ -13,9 +13,8 @@ inline RefCount* Ref(void* inObject) { return static_cast<RefCount*>(inObject); 
 inline ServerConnection* Conn(void* inConn) { return static_cast<ServerConnection*>(inConn); }
 inline void* HookNewPeerAuth(void* inConn,const void* inAddr,void* inContext,int32_t inAuthType)
 {
-    PeerAuthOp* anOp=new PeerAuthOp(*static_cast<const IPAddr*>(inAddr),static_cast<AuthContext*>(Ref(inContext)),
-                                    static_cast<AuthType>(inAuthType),Conn(inConn),true);
-    return static_cast<RefCount*>(anOp);
+    return static_cast<RefCount*>(RustServerOp::NewPeerAuth(*static_cast<const IPAddr*>(inAddr),static_cast<AuthContext*>(Ref(inContext)),
+                                                            static_cast<AuthType>(inAuthType),Conn(inConn),true));
 }
 inline void HookMsgCallback(void* inConn,void* inMessage)
 {

@@ -93,6 +93,7 @@ public:
     virtual ~AsyncOp() { ee_won_asyncop_free(this->mOp); } // 0x29f000: the completion and lock go with it
     virtual void RunHook() {}
     virtual void CleanupHook() {}
+    virtual bool CallbackHook(AsyncOp*,int) { return false; } // a tracked sub-op completed (2accc0: ignored)
     // (: AsyncOp's own vtable 0x84c834 has these three slots only; SocketOp and RoutingOp each introduce their
     // +0x0c/+0x10/+0x14: SocketOp's +0x14 returns 0, AcceptOp's a new AcceptOp; RoutingOp's +0x14 is GetType)
 
@@ -607,7 +608,6 @@ typedef WonRustRef HTTPSession; // of the kind EeWonCoreObject::HttpSession (Htt
 
 
 class RoutingConnection;
-class PeerAuthOp;
 
 // (the routing server's records, RoutingClientInfo .. RoutingBadUser, are the Rust ops' since net round 18 and
 // are read in Rust since R6 WONLobby round 12: ee_won_lobby modelobj.rs, EEWonNet.cpp and the lobby's bad user list
@@ -784,43 +784,28 @@ private:
     EeWonOpTracker* mTracker;               // owned
 };
 
-// an op that tracks sub-ops (the tracked sub-ops' completion is Rust's: ee_won opobj.rs EeWonAsyncOp::track; the
-// original's TrackerCompletion, 16 bytes, and its Callback, 0x2a00d0, are gone)
-class AsyncOpWithTracker : public AsyncOp {
-public:
-    // tracks a sub-op under the parameter, its completion back to this op (2a0100, protected in the SDK): while this
-    // op is pending and still tracks it, the sub-op leaves the tracker and CallbackHook runs
-    AsyncOp* Track(AsyncOp* op,int param)
-    {
-        return static_cast<AsyncOp*>(ee_won_asyncop_track(this->GetOpObject(),this->mTracker.GetTrackerObject(),op,
-                                                          op->GetOpObject(),param));
-    }
-    virtual void CleanupHook() { this->mTracker.KillAll(); } //slot08 2a0290
-    virtual bool CallbackHook(AsyncOp*,int) { return false; } //slot0c 2accc0: ignores the sub-op
-    AsyncOpTracker mTracker;                //44..78
-};
-
+// AsyncOpWithTracker (an op tracking sub-ops, Track 2a0100, CleanupHook 2a0290) and ServerOp (0x94 bytes, ctor 2acc10)
+// are folded into RustServerOp, their only subclass (R6 WON lobby and network round 36): the tracker is its member,
+// the tracking the Rust op's (opobj.rs EeWonAsyncOp::track), ServerOp's members the Rust op's since net round 24
+// (hostbase.rs). The drivers' tracking op has the old class in tests/won/won_tracker_orig.h.
 class BlockingSocket;
-// ServerOp (0x94 bytes, ctor 2acc10): the base of the server ops. RTTI: PeerAuthOp > ServerOp > AsyncOpWithTracker >
-// AsyncOp > RefCount. Its members (mSocket +0x78, mAuthContext +0x7c, mAuthType +0x80, mLengthFieldSize +0x84,
-// mClientKeySize +0x85, mUseClientKey +0x86, mMaxConnectTime, mMaxSendTime, mMaxRecvTime +0x88..+0x90) and its
-// ConnectTime 2ace50, SendTime 2ace80 and RecvTime 2aceb0 are the Rust op's since net round 24 (ee_won hostbase.rs):
-// RustServerOp's accessors. The SDK's SendMsgAsync / RecvMsgAsync (no caller) went with them: the Rust ops send and
-// receive through their own calls.
-class ServerOp : public AsyncOpWithTracker {
-protected:
-    ServerOp() {}
-};
-
 // An op of the Rust op base (rust/crates/ee_won_net/src/hostop.rs): its members and steps are the Rust op's
 // (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url;
 // the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there, and its calls
 // on the C++ objects are answered over the core table (hostcore.rs). Results and setters by number:
 // ee_won_hostop_num, ee_won_hostop_bytes, ee_won_hostop_set.
-class RustServerOp : public ServerOp {
+class RustServerOp : public AsyncOp {
 public:
     explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; its length field and time limits, no auth
-    RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj); // and the init's members (hostbase.rs)
+    // and the init's members (hostbase.rs)
+    RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj, RefCount* inObj2 = NULL, int inNum = 0);
+    // GetCertOp(auth) (2e3c30; certhost.rs), PeerAuthOp(addr, auth, type, socket) (2e6a10) and
+    // PeerAuthServerOp(auth, socket) (2e8950; peerop.rs): their C++ classes went in round 36. A server op's
+    // ClientPermits(community) is GetNum(EE_WON_PEEROP_CLIENT_PERMITS, community), a certificate op's
+    // SetCreateAccount SetNum(EE_WON_GETCERT_CREATE_ACCOUNT, flag)
+    static RustServerOp* NewGetCert(AuthContext* inContext);
+    static RustServerOp* NewPeerAuth(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2 = true);
+    static RustServerOp* NewPeerAuthServer(AuthContext* inContext, BlockingSocket* inSocket);
     // DetectFirewallOp(servers) (fwhost.rs): the public address is AddrOf(EE_WON_FWOP_PUBLIC_ADDR), port 0
     static RustServerOp* NewFirewall(ServerContext* inContext)
     { return new RustServerOp(ee_won_hostop_firewall(), EeWonHostInit::Firewall, inContext); }
@@ -882,6 +867,7 @@ protected:
     virtual ~RustServerOp();
 private:
     static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
+    AsyncOpTracker mTracker; // its sub-ops (the original's AsyncOpWithTracker, 44..78)
     EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
@@ -903,20 +889,8 @@ inline int HttpSessionNumOps(HTTPSession* inSession) { return ee_won_http_sessio
 // DirEntityReplyParser::TakeEntity is gone with DirEntity, R6 WON round 34). GetEntityRequest, GetDirOp,
 // GetMultiDirOp, GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs).
 
-// PeerAuthOp (0x2244 bytes, ctor 2e6a10) and PeerAuthServerOp (0x2240, ctor 2e8950): Rust ops on the base (ee_won
-// peerop.rs over peerobj.rs: the address, the certificate refresh status, the peer data, the handshake of
-// PeerAuthClient / PeerAuthServer, the session and every step); these classes are their constructors (the auth
-// context, the auth type and the socket are ServerOp's members) and the accessors the game reads.
-class PeerAuthServerOp : public RustServerOp {
-public:
-    PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket);
-    // the client's certificate's VerifyPermissions(0, community, 0) after the handshake (LanLogic's check)
-    bool ClientPermits(DWORD inCommunity) const { return this->GetNum(EE_WON_PEEROP_CLIENT_PERMITS, inCommunity) != 0; }
-};
-class PeerAuthOp : public RustServerOp {
-public:
-    PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2 = true);
-};
+// PeerAuthOp (0x2244 bytes, ctor 2e6a10) and PeerAuthServerOp (0x2240, ctor 2e8950) are Rust ops on the base (ee_won
+// peerop.rs over peerobj.rs): RustServerOp::NewPeerAuth and NewPeerAuthServer.
 
 // HTTP operation, 0x15c bytes.
 class FileReader;
@@ -960,18 +934,8 @@ enum HTTPDocOwner {
 // Storage, methods and inline virtual bodies live there; no duplicate class definition.
 
 
-// AoC GetCertOp (0x11fc bytes in the original; RTTI GetCertOp > ServerRequestOp > ...): a Rust op on the base
-// (ee_won certhost.rs over getcert.rs: its members, every step and the session key; its certificates, key blocks,
-// private key and peer data are Rust handles, hostauth.rs). The class is its constructor (the auth context and its
-// server list, ServerOp.cpp) and the two accessors the game uses.
-class AuthPeerData;
-class GetCertOp : public RustServerOp {
-public:
-    explicit GetCertOp(AuthContext*); //2e3c30
-    ConstSmartPtr<AuthPeerData> GetPeerData() const; // a shim over the Rust peer data; NULL before a login
-    void SetCreateAccount(bool value) { this->SetNum(EE_WON_GETCERT_CREATE_ACCOUNT, value); }
-};
-
+// AoC GetCertOp (0x11fc bytes in the original; RTTI GetCertOp > ServerRequestOp > ...) is a Rust op on the base
+// (ee_won certhost.rs over getcert.rs): RustServerOp::NewGetCert.
 
 // DBProxyOp is a Rust op base (rust/crates/ee_won_net/src/reqop.rs DbProxy)
 // The patch server's records (VersionData 0x48, PatchData 0xa4; constructors 2d83a0/2d86f0) are Rust's: their wire
@@ -1027,15 +991,14 @@ public:
     virtual void KillHook() { ee_won_servconn_kill_hook(this->mConn); }
     // the connect's result; on success the messages and the keep-alive start (2ab1f0, virtual in the SDK; nothing
     // overrides it)
-    void ConnectCallback(PeerAuthOp* inOp)
-    { ee_won_servconn_connect_callback(this->mConn,reinterpret_cast<RefCount*>(inOp)); }
+    void ConnectCallback(AsyncOp* inOp) { ee_won_servconn_connect_callback(this->mConn,static_cast<RefCount*>(inOp)); }
     virtual void MsgCallback(const ByteBuffer*) {} //MsgCallback2fa500,ret4
     void SetAuth(AuthContext* inContext, AuthType inType)
     { ee_won_servconn_set_auth(this->mConn,reinterpret_cast<RefCount*>(inContext),inType); }
     // the socket closed and an authenticated connect started; the peer authentication op (2abc40, borrowed)
-    PeerAuthOp* ConnectAsync(const IPAddr& address, unsigned long timeout)
+    AsyncOp* ConnectAsync(const IPAddr& address, unsigned long timeout)
     {
-        return reinterpret_cast<PeerAuthOp*>(static_cast<RefCount*>(
+        return static_cast<AsyncOp*>(static_cast<RefCount*>(
             ee_won_servconn_connect_async(this->mConn,static_cast<const void*>(&address),(long)timeout)));
     }
     // the socket closed, a blocking connect, then the connect callback's report; its status
