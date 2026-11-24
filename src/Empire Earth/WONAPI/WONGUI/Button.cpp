@@ -72,8 +72,7 @@ namespace WONAPI {
 // Creates a button that takes focus (the Rust button: no flags, not pressed)
 Button::Button()
 {
-    this->mBtn=ee_won_btn_new(static_cast<Component*>(this),ee_won_guicpp_btn_call);
-    this->SetComponentFlags(ComponentFlag_WantTabFocus,true);
+    this->mBtn=ee_won_btn_make(static_cast<Component*>(this),ee_won_guicpp_btn_call);
 }
 // Destroys the button (the Rust button; the click sound is a member)
 Button::~Button() { ee_won_btn_free(this->mBtn); }

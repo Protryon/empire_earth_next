@@ -104,9 +104,7 @@ namespace WONAPI {
 // 200 x 150 list box)
 ComboBox::ComboBox()
 {
-    this->mCombo=ee_won_combo_new(static_cast<Component*>(this),ee_won_guicpp_combo_call,this->mCt);
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->SetOnlyChildInput(true); // byte at +0x7c
+    this->mCombo=ee_won_combo_make(static_cast<Component*>(this),ee_won_guicpp_combo_call,this->mCt);
 }
 // Destroys the combo box, first detaching it from its list box's listeners (the Rust combo box)
 ComboBox::~ComboBox() { ee_won_combo_free(this->mCombo); }

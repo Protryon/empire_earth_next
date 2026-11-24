@@ -26,6 +26,7 @@ use crate::guilayout::{intersects, set_size, size_at_least, EeWonRect};
 
 /// `ComponentFlag_*` (WONComponentFlags.h; the C++ asserts them).
 pub const EE_WON_COMP_FLAG_INVISIBLE: i32 = 0x1;
+pub const EE_WON_COMP_FLAG_WANT_FOCUS: i32 = 0x8;
 pub const EE_WON_COMP_FLAG_HAS_FOCUS: i32 = 0x10;
 pub const EE_WON_COMP_FLAG_DISABLED: i32 = 0x80;
 pub const EE_WON_COMP_FLAG_GRAB_BG: i32 = 0x100;

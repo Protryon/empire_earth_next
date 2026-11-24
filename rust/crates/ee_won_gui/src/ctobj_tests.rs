@@ -737,3 +737,41 @@ fn golden_replay_fails_on_a_changed_line() {
     assert!(replay(&changed).is_some(), "{name} replayed with a changed line");
     assert!(replay(lines).is_none());
 }
+
+// ---- ScreenContainer::ShowScreen (R6 WON GUI round 36)
+thread_local! {
+    static SHOWN: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+unsafe extern "C" fn screen_host(_me: *mut c_void, op: Op, k: isize, b: isize, c: isize, _d: isize) -> isize {
+    assert_eq!(op, Op::Comp);
+    SHOWN.with(|s| s.borrow_mut().push(format!("{k} {b} {c}")));
+    0
+}
+
+#[test]
+fn show_screen_hides_the_current_screen_shows_the_new_one_and_invalidates() {
+    use crate::compobj::{Comp, EeWonComp as K};
+    let k = Comp::new(Some(screen_host));
+    let taken = || SHOWN.with(|s| std::mem::take(&mut *s.borrow_mut()));
+    let (me, a, b) = (0x100 as *mut c_void, 0x200 as *mut c_void, 0x300 as *mut c_void);
+    let mut cur: *mut c_void = std::ptr::null_mut();
+    // no current screen: the new one shown, the container invalidated
+    unsafe { super::show_screen(k, me, &mut cur, a, false) };
+    assert_eq!(cur, a);
+    assert_eq!(taken(), [format!("{} 512 1", K::VSetVisible as isize), format!("{} 256 0", K::VInvalidate as isize)]);
+    // the current screen again: nothing
+    unsafe { super::show_screen(k, me, &mut cur, a, true) };
+    assert!(taken().is_empty());
+    // another: the old one hidden first
+    unsafe { super::show_screen(k, me, &mut cur, b, false) };
+    assert_eq!(cur, b);
+    assert_eq!(
+        taken(),
+        [
+            format!("{} 512 0", K::VSetVisible as isize),
+            format!("{} 768 1", K::VSetVisible as isize),
+            format!("{} 256 0", K::VInvalidate as isize)
+        ]
+    );
+}

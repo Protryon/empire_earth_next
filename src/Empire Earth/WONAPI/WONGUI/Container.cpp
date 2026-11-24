@@ -169,11 +169,8 @@ bool Container::mMouseWheelGoesToFocusChildDef=false;
 // Creates an empty, focusable container (the Rust container: no child, no mouse or focus child, no cursor, no modal
 // state) with an empty child layout
 Container::Container()
-{
-    this->mCt=ee_won_ct_new(static_cast<Component*>(this),ee_won_guicpp_ct_call,Container::mMouseWheelGoesToFocusChildDef);
-    ee_won_ct_layout_new(this->mCt,ee_won_guicpp_layout_call);
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
-}
+{ this->mCt=ee_won_ct_make(static_cast<Component*>(this),ee_won_guicpp_ct_call,ee_won_guicpp_layout_call,Container::mMouseWheelGoesToFocusChildDef); }
+static_assert(ComponentFlag_WantFocus == EE_WON_COMP_FLAG_WANT_FOCUS, "compobj.rs flags");
 // Destroys the container: the Rust container detaches the children, then releases the cursor, the child layout, the
 // timer children and the children
 Container::~Container() { ee_won_ct_free(this->mCt); }

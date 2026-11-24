@@ -560,6 +560,33 @@ pub unsafe extern "C" fn ee_won_combo_new(
     made
 }
 
+/// `ComboBox::ComboBox` whole (R6 WON GUI round 36): the Rust combo box, the component's want-focus flag and the
+/// container's only-child-input flag.
+///
+/// # Safety
+/// As `ee_won_combo_new`; `component` is the C++ component being constructed.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_combo_make(
+    component: *mut c_void,
+    host: EeWonGuiHostFn,
+    ct: *const EeWonContainer,
+) -> *mut EeWonComboBox {
+    // SAFETY: the contract
+    let made = unsafe { ee_won_combo_new(component, host, ct) };
+    crate::compobj::comp().set_flags(component as isize, crate::compobj::EE_WON_COMP_FLAG_WANT_FOCUS, true);
+    // SAFETY: `ct` is live (the contract)
+    unsafe {
+        crate::ctobj::ee_won_ct_call(
+            ct,
+            crate::ctobj::EeWonCtCall::SetField,
+            crate::ctobj::EeWonCtField::OnlyChildInput as isize,
+            1,
+            0,
+        )
+    };
+    made
+}
+
 /// The destructor's statement (the list box's listener dropped), then the object freed.
 ///
 /// # Safety

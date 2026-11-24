@@ -414,15 +414,8 @@ public:
     ScreenContainer() : mCurScreen(NULL) {}
     // Implicit destructor (0x306a60) jumps to Container's at 0x2f5e80; the screen at +0x84 is not owned.
     // 0x306ab0: hides the current screen and shows the given one, optionally focused; nothing if it is current
-    void ShowScreen(Component* inScreen, bool inTakeFocus = true)
-    {
-        if (inScreen == this->mCurScreen) return;
-        if (this->mCurScreen != NULL) this->mCurScreen->SetVisible(false);
-        inScreen->SetVisible(true);
-        this->mCurScreen = inScreen;
-        if (inScreen != NULL && inTakeFocus) inScreen->RequestFocus();
-        this->Invalidate();
-    }
+    // (ee_won_gui ctobj.rs, R6 WON GUI round 36)
+    void ShowScreen(Component* inScreen, bool inTakeFocus = true) { ee_won_ct_show_screen(static_cast<Component*>(this), (void**)&this->mCurScreen, inScreen, inTakeFocus); }
     // 0x306a70: adds a hidden screen laid out to the container's size
     void AddScreen(Component* inScreen) { inScreen->SetVisible(false); this->Fn2F6140(inScreen, 3, this, 0, 0, 0, 0, 0); this->AddChild(inScreen); }
     Component* mCurScreen; //84, borrowed

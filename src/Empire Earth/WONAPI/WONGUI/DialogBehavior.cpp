@@ -49,8 +49,7 @@ namespace WONAPI {
 // (the Rust dialog: no drag, drag allowed and kept in the root, the Escape result -1, no default button)
 Dialog::Dialog()
 {
-    this->mDlg=ee_won_dlg_new(static_cast<Component*>(this),ee_won_guicpp_dlg_call,this->mCt);
-    this->SetComponentFlags(0x118,true);
+    this->mDlg=ee_won_dlg_make(static_cast<Component*>(this),ee_won_guicpp_dlg_call,this->mCt);
 }
 // Destroys the dialog: the Rust dialog gives the default button back (the implicit destructor in the original)
 Dialog::~Dialog() { ee_won_dlg_free(this->mDlg); }
