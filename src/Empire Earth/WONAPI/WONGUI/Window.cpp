@@ -305,10 +305,4 @@ void Window::FollowPixelScale()
     this->mRoot->Invalidate();
     theManager->SetDirty();
 }
-
-void Window::QueueMouse(int inType, int inSurfaceX, int inSurfaceY, int inMod, int inButtonOrAmount)
-{
-    int p[5] = {inType, inSurfaceX, inSurfaceY, inMod, inButtonOrAmount};
-    this->Rust(EeWonPlatWinCall::QueueMouse, (intptr_t)p);
-}
 }

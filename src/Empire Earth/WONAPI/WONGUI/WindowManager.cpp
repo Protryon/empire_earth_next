@@ -222,11 +222,7 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     case Op::FollowPixelScale: w->FollowPixelScale(); return 0;
     case Op::QueueInput: w->QueueEvent(new InputEvent(kInputTypes[b])); return 0;
     case Op::QueueKey: w->QueueEvent(new KeyEvent(kKeyTypes[b], (int)c, (int)d)); return 0;
-    case Op::QueueMouse: {
-        const int32_t* p = (const int32_t*)c;
-        w->QueueMouse(kMouseTypes[b], p[0], p[1], p[2], p[3]);
-        return 0;
-    }
+    case Op::QueueMouse: w->Rust(EeWonPlatWinCall::QueueMouseAt, kMouseTypes[b], c); return 0;
     case Op::Parent: return (intptr_t)w->GetParent();
     case Op::Hold: w->AddRef(); return 0;
     case Op::Release: w->Release(); return 0;

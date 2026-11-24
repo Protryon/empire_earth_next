@@ -1538,7 +1538,6 @@ public:
     void FollowSurface() { this->Rust(EeWonPlatWinCall::FollowSurface); } // a window that fills the surface takes its new size
     void FollowPixelScale(); // a new offscreen image at the manager's pixel scale, repainted
     void OnPaint() { this->Rust(EeWonPlatWinCall::Paint); } // repaints an invalid root into the offscreen image
-    void QueueMouse(int inType, int inSurfaceX, int inSurfaceY, int inMod, int inButtonOrAmount);
     // the manager while its platform part lives (the original's dynamic_cast: none in the manager's last moments)
     WindowManager* GetPlatManager() { return this->mManager != NULL && this->mManager->mRust != NULL ? this->mManager : NULL; }
     EeWonPlatWin* mRust = NULL; // the platform window (platwin.rs); none yet in the constructor, none after the destructor's body

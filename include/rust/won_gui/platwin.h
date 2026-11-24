@@ -104,6 +104,9 @@ enum class EeWonPlatWinCall : int32_t {
   SetMinimizeOnAltTab = 20,
   /// `SetForwardKeyMsgToParent(a)`.
   SetForwardKeys = 21,
+  /// `QueueMouse(a, b[0], b[1], b[2], b[3])`: the event type `a` and the four ints at `b` (the surface's x and y,
+  /// the modifiers, the button or amount), as the manager hands them.
+  QueueMouseAt = 22,
 };
 
 /// The window's own state.
