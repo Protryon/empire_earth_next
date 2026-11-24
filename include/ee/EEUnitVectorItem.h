@@ -21,8 +21,6 @@ class FSFile;
 // its users call). No writable reference leaves it.
 class EEGoalDeque {
 public:
-    typedef size_t size_type;
-
     EEGoalDeque() : mQueue(NULL) {}
     EEGoalDeque(const EEGoalDeque&) = delete;
     EEGoalDeque& operator=(const EEGoalDeque&) = delete;
@@ -30,9 +28,9 @@ public:
     static EEUnitGoal* Goal(uint64_t inGoal) { return reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(inGoal)); }
     static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
 
-    size_type size() const { return ee_units_gq_len(this->mQueue); }
+    size_t size() const { return ee_units_gq_len(this->mQueue); }
     bool empty() const { return this->size() == 0; }
-    EEUnitGoal* operator[](size_type inIndex) const { return Goal(ee_units_gq_get(this->mQueue, inIndex)); }
+    EEUnitGoal* operator[](size_t inIndex) const { return Goal(ee_units_gq_get(this->mQueue, inIndex)); }
     EEUnitGoal* front() const { return (*this)[0]; }
     EEUnitGoal* back() const { return (*this)[this->size() - 1]; }
 
@@ -49,11 +47,7 @@ class EEUnitVectorItem {
 public:
     explicit EEUnitVectorItem(EEComplexUnit* inUnit) { this->mGoals.mQueue = ee_units_gq_new(EEGoalDeque::H(inUnit)); }
     // 0x20569d: a copy of another queue: its goals cloned (last to first) for the same unit, its timer
-    EEUnitVectorItem(const EEUnitVectorItem& inItem)
-    {
-        this->mGoals.mQueue = ee_units_gq_new(0);
-        ee_units_gq_assign(this->mGoals.mQueue, inItem.mGoals.mQueue);
-    }
+    EEUnitVectorItem(const EEUnitVectorItem& inItem) { this->mGoals.mQueue = ee_units_gq_copy(inItem.mGoals.mQueue); }
     ~EEUnitVectorItem() { ee_units_gq_free(this->mGoals.mQueue); }   // +0x00 0x205768 (its goals deleted)
     EEUnitVectorItem& operator=(const EEUnitVectorItem& inItem)
     {

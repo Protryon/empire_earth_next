@@ -87,8 +87,6 @@
 #include "ee/EEComputerPlayer.h"
 
 
-// EEWheel.cpp's cdecl helper (below); original 0x23cd32 fills a real GE2DPoint.
-bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint);
 
 // The genuine existing free predicate at 0x2414d2 (defined in EEFOFindNewTargetNearOldTarget.cpp).
 

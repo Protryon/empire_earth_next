@@ -18203,6 +18203,16 @@ struct EeUnitsComplexDopFields {
   bool mIsFoundation;
 };
 
+/// EEUnitUpdate.cpp's `EEUpdateContext` (units round 12: this record, rust/cbindgen.toml's rename): the class, the
+/// unit, an ActionChanged's healee found (`EE_UNITS_ACT_FIND_HEALEE`) and the nearest airport found
+/// (`EE_UNITS_ACT_FIND_NEAREST_AIRPORT`).
+struct EEUpdateContext {
+  class EEUnitClass *mClass;
+  class EEComplexUnit *mUnit;
+  class EEUnit *mHealee;
+  class EEComplexUnit *mAirport;
+};
+
 /// `kWorldHighGroundHeight`, `kWorldLowGroundHeight`, `kWorldHighGroundAttackFactor`, `kWorldLowGroundAttackFactor`
 /// (the world table's rows, ee/EEWorldConstants.h)
 constexpr static const int64_t WORLD_ELEVATION_ROWS[4] = { 53, 54, 55, 56, };
@@ -19529,6 +19539,13 @@ void ee_units_goal_delete(EeUnitsGoalBase *goal);
 
 /// `EEUnitVectorItem(inUnit)`: an empty queue of the unit, its timer stopped.
 EeUnitsGoalQueue *ee_units_gq_new(uint64_t unit);
+
+/// `EEUnitVectorItem(const EEUnitVectorItem&)` (0x20569d): a copy of another queue: its goals cloned (last to first)
+/// for the same unit, its timer.
+///
+/// # Safety
+/// `other` is a live queue.
+EeUnitsGoalQueue *ee_units_gq_copy(const EeUnitsGoalQueue *other);
 
 /// `~EEUnitVectorItem()`: the queue cleared (its goals deleted), then freed.
 ///

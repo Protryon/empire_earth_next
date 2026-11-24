@@ -60,14 +60,9 @@ namespace {
 // EEUnitAI.cpp's: no initial contact heading
 const float kUnitAINoHeading = -10000.0f;
 
-// the host's context: the class, the unit, an ActionChanged's healee found (EE_UNITS_ACT_FIND_HEALEE), the nearest
-// airport found (EE_UNITS_ACT_FIND_NEAREST_AIRPORT)
-struct EEUpdateContext {
-    EEUnitClass* mClass;
-    EEComplexUnit* mUnit;
-    EEUnit* mHealee;
-    EEComplexUnit* mAirport;
-};
+// the host's context, EEUpdateContext: the class, the unit, an ActionChanged's healee found
+// (EE_UNITS_ACT_FIND_HEALEE), the nearest airport found (EE_UNITS_ACT_FIND_NEAREST_AIRPORT); the Rust record
+// EeUnitsUpdateContext (upd_entry.rs, a cbindgen rename)
 
 // (the initial contact location and heading, EEUpdateContact: ee_sim units upd_split.rs update_contact)
 
@@ -399,17 +394,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
 }  // namespace
 
 // the host table's reads and acts (ee_sim units upd_entry.rs makes the table over an EEUpdateContext)
-static_assert(sizeof(EEUpdateContext) == 4 * sizeof(void*), "the update context is upd_entry.rs EeUnitsUpdateContext");
 extern "C" int64_t ee_units_upd_read(void* inContext, int32_t inCode) { return EEUpdateRead(inContext, inCode); }
 extern "C" int64_t ee_units_upd_act(void* inContext, int32_t inCode, int64_t inA, int64_t inB) { return EEUpdateAct(inContext, inCode, inA, inB); }
 
-void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_class_update(inKind, EEObj(inClass), EEObj(inUnit));   // upd_entry.rs
-}
-
-// (its USST notes, kind 13, around the sequence: upd_entry.rs)
-void EEUnitClassActionChanged(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_class_action_changed(inKind, EEObj(inClass), EEObj(inUnit));
-}
+// (EEUnitClassUpdate and EEUnitClassActionChanged: inline in ee/EEUnitUpdate.h)
