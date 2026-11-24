@@ -366,7 +366,7 @@ pub fn step(w: &[String]) -> Step {
         }),
         "units" => Box::new(|out: &mut Vec<String>| {
             // every unit's id, type, player and tile (no hit points: they follow the epochs)
-            gc::h(gc::O::PhysFlushWorld, 0, &[]);
+            crate::physics::ee_physics_flush_world(crate::gamecpp::globals::get!(gPhysics));
             for i in 0..gc::h(gc::O::MmNumPlayers, 0, &[]) {
                 let p = gc::h(gc::O::SsWorldPlayer, 0, &[i]) as usize;
                 if p == 0 {
@@ -498,7 +498,7 @@ pub fn step(w: &[String]) -> Step {
         }),
         "placeghost" | "drop" => Box::new(|out: &mut Vec<String>| {
             // placeghost PLAYER [UNIT] | drop [UNIT]
-            gc::h(gc::O::PhysFlushWorld, 0, &[]); // the units placed before are in the world, as a person finds them
+            crate::physics::ee_physics_flush_world(crate::gamecpp::globals::get!(gPhysics)); // the units placed before are in the world, as a person finds them
             let screen = x::unit_tab();
             let word = if c == "drop" { 1 } else { 2 };
             let under = if w.len() > word { unit_ref(&w[word]) as i32 } else { -1 };
@@ -1008,7 +1008,7 @@ pub fn step(w: &[String]) -> Step {
         }),
         "digest" => Box::new(|out: &mut Vec<String>| {
             // the world flushed first: the physics thread flushes it on its own clock otherwise
-            gc::h(gc::O::PhysFlushWorld, 0, &[]);
+            crate::physics::ee_physics_flush_world(crate::gamecpp::globals::get!(gPhysics));
             d::digest(w1, out);
         }),
         _ => return Step::Unknown,

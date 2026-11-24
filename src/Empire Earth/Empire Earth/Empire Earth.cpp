@@ -336,14 +336,6 @@ void EECreateGameTimer()
 
 
 
-// Loads the status box icons, mini map, effect, unit, sky and ground shadow media
-void EELoadGameMedia()
-{
-    ee_gamecpp_startup_load_media();
-}
-
-
-
 // Builds the data search path and the civilization path, replacing the previous ones. The data is the game's own
 // Data folder (the data root's: the executable's directory), holding the content of both retail archives and the
 // original game's loose data (tools/open_data.py). The original searched four places: this install's Data\data.ssa

@@ -74,7 +74,7 @@ fn lines(list: usize) -> Vec<String> {
 
 /// The form on top's id (0: none).
 pub fn top_form() -> u32 {
-    if gc::h(gc::O::DuHaveUi, 0, &[]) == 0 {
+    if !crate::gamecpp::globals::have!(gUIManager) {
         return 0;
     }
     let _lock = UiLock::hold();
@@ -89,7 +89,7 @@ pub fn top_form() -> u32 {
 /// The form on top's class name (a form shell: the class its kind replaces; a message box is EEUIFError).
 pub fn top_form_class() -> String {
     let mut class = "none".to_string();
-    if gc::h(gc::O::DuHaveUi, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gUIManager) {
         let _lock = UiLock::hold();
         let form = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
         let shell = if form != 0 { h(O::FormShellOf, form, &[]) as usize } else { 0 };
@@ -685,7 +685,7 @@ pub fn sweep(kind: i32, arg: c_long) {
         EE_SIM_DRIVER_SWEEP_UNITS => unsafe { sys::ee_units_unit_sweep(arg as i64) }, // --unit-sweep
         EE_SIM_DRIVER_SWEEP_MINUTE => {
             // every game minute: the mini map's cells (MMSN; ee_game app world_capture.rs), the tile sight (TSGT)
-            if gc::h(gc::O::DkHaveMiniMap, 0, &[]) != 0 {
+            if crate::gamecpp::globals::have!(gMiniMap) {
                 h(O::MiniMapSnapshot, 0, &[]);
             }
             crate::sight_capture::ee_app_sight_open_whole(SIGHT_SNAPSHOT, std::ptr::null());

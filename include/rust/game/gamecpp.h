@@ -19,6 +19,113 @@ constexpr static const int64_t SS_SLOT_SERVER = 254;
 
 constexpr static const int64_t SS_SLOT_NONE = 255;
 
+/// A storage holds this many times its `EE_GAME_SIZE_*` bytes (ee/EEGlobalStorage.h's static_assert reads it).
+constexpr static const size_t EE_GAME_STORAGE_FACTOR = 2;
+
+constexpr static const size_t EE_GAME_SIZE_gU530BE0 = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gU530BC8 = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gExecutableName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gSavedGameExtension = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gScenarioExtension = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gU530B88 = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignExtension = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gViewport = 648;
+
+constexpr static const size_t EE_GAME_SIZE_gGamePreferences = 2096;
+
+constexpr static const size_t EE_GAME_SIZE_gWorld = 3712;
+
+constexpr static const size_t EE_GAME_SIZE_gEvent = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gDatabaseObjects = 16;
+
+constexpr static const size_t EE_GAME_SIZE_gTechTree = 88;
+
+constexpr static const size_t EE_GAME_SIZE_gToHitTable = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gAIUnitTargetingTable = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gPathManager = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gContinentManager = 144;
+
+constexpr static const size_t EE_GAME_SIZE_gWorldTable = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gTerrainTable = 184;
+
+constexpr static const size_t EE_GAME_SIZE_gTerrainColorTable = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gTerrainTypeTable = 28;
+
+constexpr static const size_t EE_GAME_SIZE_gGameState = 1688;
+
+constexpr static const size_t EE_GAME_SIZE_gComputerPlayerBehaviorTable = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gUnitSetManager = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gAEManager = 64;
+
+constexpr static const size_t EE_GAME_SIZE_gAmbientSoundManager = 128;
+
+constexpr static const size_t EE_GAME_SIZE_gCivilizationManager = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gDoppelgangerManager = 168;
+
+constexpr static const size_t EE_GAME_SIZE_gCivPowersManager = 8;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignAOCRoman = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignAOCPacific = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignAOCAsian = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignEEDemo = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gCampaignEELearning = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gU52A280 = 32;
+
+constexpr static const size_t EE_GAME_SIZE_gPhysicsThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gGraphicsThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gDataPreLoadingThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gMousePointerThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gScenarioEditorThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gUserInterfaceThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommSendThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommRecvThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommMainThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommLagLossThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCommRecPlayThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gSoundScavengerThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gCDAudioThreadName = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gMultiplayerString = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gUnitClassTable = 24;
+
+constexpr static const size_t EE_GAME_SIZE_EEUnitClassUnitTypes = 24;
+
+constexpr static const size_t EE_GAME_SIZE_gGameVariants = 1;
+
 /// The host operations. Each names the C++ it runs (see EEGameOps.cpp for the exact call).
 enum class EeGameCpp : uint32_t {
   UnRts = 1,
@@ -126,7 +233,6 @@ enum class EeGameCpp : uint32_t {
   ContagionHelper,
   ContagionCreate,
   ContagionDestroyVerify,
-  HelperAddUnit,
   AeHas,
   AeCreate,
   AeRadius,
@@ -617,7 +723,6 @@ enum class EeGameCpp : uint32_t {
   VecUnitsNew,
   WorldTileBlocked,
   WorldUnit,
-  GfxEffectIndex,
   SoundObjectIndex,
   CalamityManager,
   MemFilePosition,
@@ -723,7 +828,6 @@ enum class EeGameCpp : uint32_t {
   LobbyWriteLock,
   LobbyWriteUnlock,
   LobbyMapTypeScenDefault,
-  PhysicsPresent,
   CxSetPoolSize,
   ActionDereference,
   BehaviorAt,
@@ -950,27 +1054,17 @@ enum class EeGameCpp : uint32_t {
   RastSetVSyncPref,
   RastSetWaterRipple,
   PhysTimerRunning,
-  FpPrecision,
-  FpPrecision53,
-  FpSetPrecision53,
-  FpRounding,
-  FpSetRoundingNearest,
   CpOnAttackPlayer,
   SetCampaignChecksum,
   RegisterShutdownMutex,
-  TsInitialize,
-  TmInitialize,
   IsInitialize,
   WindowHide,
   MessageShowError,
-  InitializeNetwork,
   NewUserInterface,
   UStrNew,
   UStrFree,
   NewTextureManager,
-  TextureManagerPresent,
   NewModelManager,
-  ModelManagerPresent,
   PrefGameBitDepth,
   WindowResize,
   RastActivateScreen,
@@ -982,7 +1076,6 @@ enum class EeGameCpp : uint32_t {
   UStrFromW,
   FontCreate,
   FontAt,
-  RegisterShutdownGraphics,
   PersistChecksum,
   PersistGeneric2,
   PersistMap,
@@ -997,16 +1090,9 @@ enum class EeGameCpp : uint32_t {
   RegisterShutdownPersistents,
   UiLoadIcons,
   UiMiniMapLoadMedia,
-  CreatePlaneModels,
   RoUnitsLoadMedia,
-  RoSkyCreate,
-  RoShadowCreate,
   UiUnloadIcons,
   UiMiniMapUnloadMedia,
-  ReleasePlaneModels,
-  RoUnitsReleaseMedia,
-  RoSkyRelease,
-  RoShadowRelease,
   NewFsPath,
   FileSpecSetDirStartupSub,
   FileSpecSetArchiveName,
@@ -1014,28 +1100,20 @@ enum class EeGameCpp : uint32_t {
   FsPathAddArchive,
   FsPathAddDirectory,
   FileSpecSetCivilizationDir,
-  DataPathPresent,
   DataPathDereference,
-  CivPathPresent,
   CivPathDereference,
   SetCivPath,
   SetDataPath,
-  FreeCamera,
   GameWindowWidth,
   GameWindowHeight,
   RectRoundToNearest,
   ViewportSetViewRectangle,
   SceneFlagsClear,
   NewMusicManager,
-  MusicManagerPresent,
   NewMousePointer,
-  MousePointerPresent,
   NewGraphics,
-  GraphicsPresent,
   NewDataPreLoading,
-  DataPreLoadingPresent,
   NewPhysics,
-  RegisterShutdownThreads,
   ScreenModeCount,
   ScreenCurrentMode,
   DebugVideoModeActive,
@@ -1079,7 +1157,6 @@ enum class EeGameCpp : uint32_t {
   FontDereference,
   DisplayRasterizersClear,
   DeleteGameWindow,
-  DeleteEffectBatchBuffers,
   RastDeactivate,
   DeleteRoWater,
   DeleteRoGroundShadows,
@@ -1106,19 +1183,15 @@ enum class EeGameCpp : uint32_t {
   MouseRelease,
   RastIsActivated,
   RastActivate,
-  CreateEffectBatchBuffers,
   ScreenCapture,
   GfxSetSecondarySurface,
   MouseSetWindowBounds,
   MouseLoad,
   TexturesRefreshAll,
-  ButtonsReload,
   IconsLoaded,
   UiReloadIcons,
   MousePointerPostSurface,
-  FpSetPrecision,
   GeInitialize,
-  EnumerateDisplayDevices,
   RasterizerCount,
   RasterizerSelect,
   RasterizerIsPreferred,
@@ -1164,10 +1237,8 @@ enum class EeGameCpp : uint32_t {
   SoundSetCategoryPriority,
   SoundSetCategoryPercentage,
   SoundSetLatency,
-  RegisterShutdownSound,
   SoundManagerDestroy,
   SoundPoolDump,
-  SoundPoolCleanup,
   DbLoadStartingResources,
   DbLoadUnitBehavior,
   DbLoadSounds,
@@ -1195,7 +1266,6 @@ enum class EeGameCpp : uint32_t {
   DbLoadGameVariant,
   DbLoadPremadeCivs,
   LoadRules,
-  LoadEvents,
   TerrainColorsLoad,
   UiInitialize,
   FileSpecIsDirectory,
@@ -1203,8 +1273,6 @@ enum class EeGameCpp : uint32_t {
   FileSpecSetUserCivilizationsDir,
   AmbientLoad,
   GfxEffectsSortMedia,
-  DumpRules,
-  RegisterShutdownDatabase,
   TileSetUnitListPool,
   SoundsPoolInit,
   DoppelgangerSetPool,
@@ -1214,7 +1282,6 @@ enum class EeGameCpp : uint32_t {
   WorldOptionsSetDefaults,
   InitPhysicsModels,
   NewMouse,
-  MousePresent,
   MouseSetPositionXY,
   MouseSetSensitivityPref,
   CreateUnitClasses,
@@ -1223,38 +1290,28 @@ enum class EeGameCpp : uint32_t {
   UiSetLeftHandedPref,
   UiSetBorderColors,
   NewArtificialIntelligence,
-  ArtificialIntelligencePresent,
   NewCheatCodes,
-  CheatCodesPresent,
   NewGameTimer,
   GameTimerPresent,
-  RegisterShutdownGameObjects,
   DeleteGameTimer,
   ContinentsShutdown,
   DeleteCheatCodes,
   DeleteArtificialIntelligence,
   DeleteUIManager,
   DeleteMouse,
-  MiniMapPresent,
   AeManagerClear,
   FreePhysicsModels,
-  ClearRandomMapGenerators,
   PathManagerClear,
   TileReleaseUnitListPool,
   DoppelgangerRelease,
   ReportLeakingUnits,
-  UnitActionDeleteScripts,
   ReleaseUnitClasses,
   AnimalsUnload,
   AmbientClearSounds,
-  DamageTablesClear,
   CalamityClassesDestroy,
   DatabaseObjectsClear,
   ButtonsUnload,
-  GfxEffectsUnloadTable,
-  DeleteMediaTable,
   MusicObjectsClear,
-  SoundObjectsUnloadTable,
   ColorTableUnload,
   TargetingTableUnload,
   TerrainTableUnload,
@@ -2492,19 +2549,14 @@ enum class EeGameCpp : uint32_t {
   RunRustInit,
   RunFixtureConfigure,
   RunInstanceMutex,
-  RunSetEventPump,
   RunComInit,
   RunComUninit,
-  RunFloatingPoint,
   RunSqrtTable,
   RunSetInstance,
-  RunEsInitialize,
   RunFsInitialize,
   RunNewResource,
-  RunDefaultSettings,
   RunPreferencesLoad,
   RunUserInterface,
-  RunUShutdown,
   RunReleaseDataPath,
   RunReleaseCivilizationPath,
   EntrySpecFirstFile,
@@ -2528,18 +2580,15 @@ enum class EeGameCpp : uint32_t {
   EntryNeInitialize,
   EntryRegisterNeMessages,
   EntryRegisterEeMessages,
-  EntryRegisterEmptyShutdown,
   EntryArchiveCount,
   EntryArchiveTimestamp,
   EntryStrData,
-  EntrySetBinaryChecksum,
   EntryVersionTrim,
   EntryVersionAppend,
   EntryNewClient,
   EntryClientSetTries,
   EntryClientStartThreads,
   EntryDeleteCommunicationsKeep,
-  EntryNullCommunications,
   EntrySetPlayerName,
   EntrySetHostGameName,
   EntryPushMainMenu,
@@ -2888,7 +2937,6 @@ enum class EeGameCpp : uint32_t {
   DuErrorCount,
   DuErrorAt,
   DuChecksumDelete,
-  DuHaveUi,
   DuSetErrorString,
   DuDebugOut,
   DuPixelFormatA8R8G8B8,
@@ -3028,7 +3076,6 @@ enum class EeGameCpp : uint32_t {
   DcNewMakeVisible,
   DcSetOriginatingSlot,
   DcProcessInput,
-  DcEpochCount,
   DcCurrentEpoch,
   DcSetEpoch,
   DcSetHitPoints,
@@ -3044,7 +3091,6 @@ enum class EeGameCpp : uint32_t {
   DcApply,
   DcSwapCheatsEnabled,
   DcPlayerUpgradeCount,
-  DcHaveCheats,
   DvAvailable,
   DvMaximum,
   DvNoPointsAdded,
@@ -3082,7 +3128,6 @@ enum class EeGameCpp : uint32_t {
   DkSetOrtho,
   DkSetWorldCamera,
   DkSetFieldOfView,
-  DkHaveMiniMap,
   DkMiniMapRefresh,
   DkClearB529066,
   DkClearFollowing,
@@ -3311,30 +3356,13 @@ enum class EeGameCpp : uint32_t {
   EpCameraMaxZoom,
   EpDefaultSettings,
   EpDeleteSettings,
-  EpGlobalPrefs,
-  EpHostGameName,
-  EpInstalledDirectory,
-  EpInstalledVolume,
-  EpLastAutoSave,
-  EpLastGameFile,
-  EpLastQuickSave,
-  EpLastScenarioFile,
-  EpMapType,
   EpNarrowCopy,
   EpNarrowGet,
   EpNarrowLength,
   EpNarrowSet,
   EpNarrowUpper,
   EpNewSettings,
-  EpOptionsFields,
-  EpOsLanguage,
-  EpPlayerName,
-  EpPrefsSettings,
-  EpRasterizerName,
   EpResourceLanguage,
-  EpSettingsFields,
-  EpSierraGameName,
-  EpSierraUserID,
   EpStartupDirectory,
   EpStartupVolume,
   EpUnknownName,
@@ -3343,30 +3371,20 @@ enum class EeGameCpp : uint32_t {
   EpWideLength,
   EpWideSet,
   EpWindowSizeDefaulted,
-  EpWonNetPassword,
   EoAssign,
-  EoCampaignName,
   EoDifficulties,
   EoDifficultyLevel,
-  EoFields,
   EoFindGenerator,
   EoFirstGeneratorName,
-  EoGeneratorCount,
   EoInScenarioEditor,
   EoLobbyOptions,
-  EoLock,
-  EoMapName,
   EoMapSizeDefault,
   EoMapSizeTiles,
   EoMapSizes,
-  EoMapType,
   EoPrimitive,
   EoResourceLevels,
-  EoScenarioName,
-  EoSlot,
   EoSlotCopy,
   EoSlotEmpty,
-  EoSlotName,
   EoSpeedDefault,
   EoSpeeds,
   EoUnitLimitDefault,
@@ -3386,7 +3404,6 @@ enum class EeGameCpp : uint32_t {
   EcDereference,
   EcFacesCamera,
   EcFarRearClipping,
-  EcFreeCamera,
   EcFrontPlane,
   EcGameSpeed,
   EcHasMap,
@@ -3446,7 +3463,6 @@ enum class EeGameCpp : uint32_t {
   EaSoundFields,
   EaStart,
   EaStop,
-  EaTime,
   EaTimeOfDay,
   EaTownCount,
   EaTownHullContains,
@@ -3478,7 +3494,6 @@ enum class EeGameCpp : uint32_t {
   EgLobbyOptions,
   EgName,
   EgPersonality,
-  EgPhysics,
   EgTraceOn,
   EbEnvF40,
   EbEnvF44,
@@ -4219,6 +4234,14 @@ void ee_gamecpp_startup_menu_screen();
 /// EEGraphicsShutdown: the models, textures and fonts released, the start-up video mode restored, the game window
 /// destroyed, the render objects and the texture and model managers deleted.
 void ee_gamecpp_startup_graphics_shutdown();
+
+/// A thread's Shutdown (were RTSMousePointer's, RTSPhysics' and EEDataPreLoading's inlines): the quit message posted
+/// and queued, then the thread's done event awaited.
+///
+/// # Safety
+/// `thread` is the object's live TSThread, `done` its TSEvent (the Thread System's records).
+void ee_gamecpp_startup_quit_thread(void *thread,
+                                    void *done);
 
 /// EEShutdownThreads: the physics stopped, the communications and the WON connection deleted, then the physics,
 /// data preloading, graphics and mouse pointer threads shut down and deleted, the music manager and the user
