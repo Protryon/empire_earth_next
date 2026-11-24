@@ -232,12 +232,7 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     case Op::SetFocus: w->PlatformSetFocus(); return 0;
     case Op::SetPosSize: w->SetPosSize((int)b, (int)c, -1, -1); return 0;
     case Op::Paint: w->OnPaint(); return 0;
-    case Op::Title: {
-        static std::wstring theTitle;
-        theTitle = w->mTitle;
-        *(int32_t*)b = (int32_t)theTitle.size();
-        return (intptr_t)theTitle.c_str();
-    }
+    case Op::Title: return (intptr_t)ee_won_plat_win_title(w->mRust, (int32_t*)b);
     case Op::Offscreen: return w->mOffscreenImage.get() != NULL ? (intptr_t)w->mOffscreenImage->GetSurface() : 0;
     case Op::Modifiers: return (intptr_t)PlatModifiers();
     case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;

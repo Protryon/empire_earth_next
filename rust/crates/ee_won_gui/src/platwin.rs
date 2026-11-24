@@ -17,6 +17,7 @@
 use std::ffi::c_void;
 
 use crate::platwm::{EeWonPlatWinInfo, EeWonPlatWmCall};
+use ee_base::plat_core::string::WChar;
 
 /// What the window asks of its C++ shell (`me`).
 #[repr(i32)]
@@ -148,6 +149,8 @@ pub enum EeWonPlatWinCall {
 pub struct EeWonPlatWin {
     me: *mut c_void,
     host: EeWonPlatWinHost,
+    /// Window::mTitle (the C++ member until R6 WON GUI round 36): "Sierra App" from the constructor.
+    title: Vec<WChar>,
     x: i32,
     y: i32,
     width: i32,
@@ -477,6 +480,7 @@ pub extern "C" fn ee_won_plat_win_new(me: *mut c_void, host: EeWonPlatWinHost) -
     Box::into_raw(Box::new(EeWonPlatWin {
         me,
         host,
+        title: "Sierra App".encode_utf16().map(WChar::from).collect(),
         x: 0,
         y: 0,
         width: 0,
@@ -487,6 +491,30 @@ pub extern "C" fn ee_won_plat_win_new(me: *mut c_void, host: EeWonPlatWinHost) -
         minimize_on_alt_tab: false,
         forward_keys: false,
     }))
+}
+
+/// Window::SetTitle's member assignment: the `n` units (`wchar_t`) at `units`.
+///
+/// # Safety
+/// `w` is a live window; `units` holds `n` units (or `n` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_plat_win_set_title(w: *mut EeWonPlatWin, units: *const c_void, n: usize) {
+    // SAFETY: the contract
+    let t = if n == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(units as *const WChar, n) } };
+    st(w).title = t.to_vec();
+}
+
+/// The title's units (`n` gets their count); valid until the next SetTitle.
+///
+/// # Safety
+/// `w` is a live window, `n` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_plat_win_title(w: *const EeWonPlatWin, n: *mut i32) -> *const c_void {
+    // SAFETY: the contract
+    let t = unsafe { &(*w).title };
+    // SAFETY: the contract
+    unsafe { *n = t.len() as i32 };
+    t.as_ptr() as *const c_void
 }
 
 /// # Safety

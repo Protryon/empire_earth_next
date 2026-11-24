@@ -179,7 +179,6 @@ Window::Window()
 	this->mWinObj.p = ee_won_win_new(this, ee_won_guicpp_win_call);
 	this->mManager = WONAPI::WindowManager::GetDefaultWindowManager();
 	this->mRoot = new RootContainer(this);
-	this->mTitle = "Sierra App";
 	this->mRust = ee_won_plat_win_new(this, PlatWinHost);
 }
 
@@ -208,7 +207,7 @@ Window::FontMap::~FontMap()
 // Sets the window title, updating the platform window when open
 void Window::SetTitle(const GUIString &theTitle)
 {
-	this->mTitle = theTitle;
+	ee_won_plat_win_set_title(this->mRust, theTitle.mData->mText, theTitle.length());
 	this->WCall(EeWonWinCall::TitleChanged);
 }
 

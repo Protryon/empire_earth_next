@@ -366,3 +366,28 @@ fn follow_pixel_scale() {
         ee_won_plat_win_free(w);
     }
 }
+
+/// The title (Window::mTitle until R6 WON GUI round 36): "Sierra App" first, then what SetTitle gave.
+#[test]
+fn the_title_is_the_windows() {
+    let mut world = World::default();
+    let w = win(&mut world);
+    let title = |w: *mut EeWonPlatWin| {
+        let mut n = 0;
+        // SAFETY: the test's window
+        let p = unsafe { ee_won_plat_win_title(w, &mut n) };
+        // SAFETY: n units
+        let u: Vec<u16> = unsafe { std::slice::from_raw_parts(p as *const WChar, n as usize) }.iter().map(|&u| u as u16).collect();
+        String::from_utf16_lossy(&u)
+    };
+    assert_eq!(title(w), "Sierra App");
+    let t: Vec<WChar> = "Lobby \u{e9}".encode_utf16().map(WChar::from).collect();
+    // SAFETY: the test's window and units
+    unsafe { ee_won_plat_win_set_title(w, t.as_ptr() as *const c_void, t.len()) };
+    assert_eq!(title(w), "Lobby \u{e9}");
+    // SAFETY: as above
+    unsafe { ee_won_plat_win_set_title(w, std::ptr::null(), 0) };
+    assert_eq!(title(w), "");
+    // SAFETY: the test's window
+    unsafe { ee_won_plat_win_free(w) };
+}

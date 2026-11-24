@@ -140,6 +140,18 @@ extern "C" {
 /// A new window for the shell `me` and its host.
 EeWonPlatWin *ee_won_plat_win_new(void *me, EeWonPlatWinHost host);
 
+/// Window::SetTitle's member assignment: the `n` units (`wchar_t`) at `units`.
+///
+/// # Safety
+/// `w` is a live window; `units` holds `n` units (or `n` is 0).
+void ee_won_plat_win_set_title(EeWonPlatWin *w, const void *units, size_t n);
+
+/// The title's units (`n` gets their count); valid until the next SetTitle.
+///
+/// # Safety
+/// `w` is a live window, `n` writable.
+const void *ee_won_plat_win_title(const EeWonPlatWin *w, int32_t *n);
+
 /// # Safety
 /// `w` came from `ee_won_plat_win_new`, freed once (after its Destroy call).
 void ee_won_plat_win_free(EeWonPlatWin *w);

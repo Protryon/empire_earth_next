@@ -1552,7 +1552,7 @@ public:
     WindowManager* GetWindowManager() { return this->mManager; } // inline
     WindowManager* mManager; // +7c
     // (the close event, +90, and the allow-close function, +94, were never set: gone, R6 WON GUI round 36)
-    GUIString mTitle; // +9c
+    // (+9c mTitle: platwin.rs's since R6 WON GUI round 36)
     SmartPtr<RootContainer> mRoot; // +a4
     // GetFont's cache (+a8; ee_won fontmap.rs): each font held once; released where the map member was destroyed
     struct FontMap { EeWonFontMap* p; FontMap() : p(ee_won_fontmap_new()) {} ~FontMap(); };
