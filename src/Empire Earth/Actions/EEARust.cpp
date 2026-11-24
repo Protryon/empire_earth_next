@@ -97,12 +97,7 @@ static NEMessage* NewConnectionRequest(EEARust* a, bool inBehindFirewall)
 // the objects game_actions_host.rs's sequences keep between cases (the UI thread's)
 static UWideString sMessage, sFormat;      // a chat or message box line and its format
 static UString sAddress;                    // the connection's address
-static EETileLocation sSource;              // the next event's source
-static EEComplexUnit* sUnit;                // EEGetFirstSelectedUnit's
-static EETile* sTile;                       // EEPointUnitOrTileXY's
-static long sX, sY;                         // EEPointUnitOrTileXY's and GetClosestTile's
 static std::vector<EEUnit*> sFarmers;       // a farm's drop sites
-static EEEffectHandle sHandle;              // the effect made
 
 #define GA_A (static_cast<EEARust*>(r))
 #define GA_U AsUnit(p, i[1])
@@ -115,6 +110,7 @@ static EEEffectHandle sHandle;              // the effect made
 #define GA_K(op, field) (EE_SCREENS_GA_OP_##op << 8 | EE_SCREENS_GA_##field)
 #define GA_F2 (*reinterpret_cast<GE2DPoint*>(f))
 #define GA_F3 (*reinterpret_cast<GE3DPoint*>(f))
+#define GA_LONG(k) (*reinterpret_cast<long*>(&i[k]))   // a long kept in slot k (its low bytes)
 #define GA_SERVER static_cast<EEServer*>(gCommunications)
 #define GA_CLIENT static_cast<EEClient*>(gCommunications)
 #define GA_SYNC static_cast<NESynchronousClient*>(gCommunications)
@@ -207,20 +203,11 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(PLAYER, P_ID): return GA_PL->GetPlayerID();
     case GA_K(PLAYER, P_ENEMY): return GA_PL->GetEnemy(i[1]);
     case GA_K(PLAYER, P_CURRENT_ID): return gWorld.mPlayers[gWorld.mCurrentPlayer]->mPlayerID;
-    case EE_SCREENS_GAH_P_EVENT: return GA_PL->mEvents.GetNextEventSource(sSource);   // (ee_units player_events.rs)
-    case EE_SCREENS_GAH_P_EVENT_X: return sSource.GetX();
-    case EE_SCREENS_GAH_P_EVENT_Y: return sSource.GetY();
-    // EEGetFirstSelectedUnit, EEPointUnitOrTileXY over the kept objects
-    case EE_SCREENS_GAH_FS_SET: sUnit = reinterpret_cast<EEComplexUnit*>(i[1]); return 0;
-    case EE_SCREENS_GAH_FS_CALL: return EEGetFirstSelectedUnit(sUnit);
-    case EE_SCREENS_GAH_FS_GET: return (intptr_t)sUnit;
-    case EE_SCREENS_GAH_PT_SET_TILE: sTile = reinterpret_cast<EETile*>(i[1]); return 0;
-    case EE_SCREENS_GAH_PT_SET_X: sX = (long)i[1]; return 0;
-    case EE_SCREENS_GAH_PT_SET_Y: sY = (long)i[1]; return 0;
-    case EE_SCREENS_GAH_PT_CALL: return EEPointUnitOrTileXY(GE2DPoint(f[0], f[1]), sTile, sX, sY, i[0] != 0);
-    case EE_SCREENS_GAH_PT_TILE: return (intptr_t)sTile;
-    case EE_SCREENS_GAH_PT_X: return sX;
-    case EE_SCREENS_GAH_PT_Y: return sY;
+    case EE_SCREENS_GAH_P_EVENT: return GA_PL->mEvents.GetNextEventSource(*reinterpret_cast<EETileLocation*>(&i[1]));   // (ee_units player_events.rs)
+    // EEGetFirstSelectedUnit, EEPointUnitOrTileXY over the call's slots (in and out: the unit in i1; the tile in i1,
+    // x and y the longs at i2 and i3)
+    case EE_SCREENS_GAH_FS_CALL: return EEGetFirstSelectedUnit(*reinterpret_cast<EEComplexUnit**>(&i[1]));
+    case EE_SCREENS_GAH_PT_CALL: return EEPointUnitOrTileXY(GE2DPoint(f[0], f[1]), *reinterpret_cast<EETile**>(&i[1]), GA_LONG(2), GA_LONG(3), i[0] != 0);
     // the tile p
     case GA_K(TILE, T_DOPPEL_COUNT): return GA_TILE->GetNumDoppelgangers();
     case GA_K(TILE, T_DOPPEL_PLAYER): return (intptr_t)GA_TILE->GetDoppelganger(i[1])->mPlayer;
@@ -239,14 +226,14 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case GA_K(MAP, M_MESH_Z): f[0] = gWorld.mMap->mTerrainMesh.GetMeshZ(f[0], f[1]); return 0;
     case EE_SCREENS_GAH_M_TILE_PTR: return (intptr_t)gWorld.mMap->GetTile(i[1], i[2]);
     case EE_SCREENS_GAH_M_TILE_HEIGHT: f[0] = static_cast<EEMapTile*>(p)->mHeight; return 0;
-    case EE_SCREENS_GAH_M_CLOSEST: gWorld.mMap->GetClosestTile(&GA_F3, &sX, &sY); return 0;
+    case EE_SCREENS_GAH_M_CLOSEST: gWorld.mMap->GetClosestTile(&GA_F3, &GA_LONG(1), &GA_LONG(2)); return 0;
     case EE_SCREENS_GAH_M_PLANE:
         *reinterpret_cast<GE3DPlane*>(f) = i[1] == 0 ? gWorld.mMap->mTerrainMesh.GetLeftPlane() : i[1] == 1 ? gWorld.mMap->mTerrainMesh.GetRightPlane() : i[1] == 2 ? gWorld.mMap->mTerrainMesh.GetFrontPlane() : gWorld.mMap->mTerrainMesh.GetBackPlane();
         return 0;
     case GA_K(MAP, M_EXISTS): return gWorld.mMap != NULL;
     // the effects
-    case EE_SCREENS_GAH_FX_CREATE: gEffectManager->CreateEffect(static_cast<EEUnit*>(p), GA_F3, EEGraphicEffect::Get(i[0]), &sHandle, 0); return 0;
-    case EE_SCREENS_GAH_FX_LOCAL: gEffectManager->GetEffect(sHandle)->SetLocalTo(i[1]); return 0;
+    case EE_SCREENS_GAH_FX_CREATE: gEffectManager->CreateEffect(static_cast<EEUnit*>(p), GA_F3, EEGraphicEffect::Get(i[0]), reinterpret_cast<EEEffectHandle*>(&i[1]), 0); return 0;
+    case EE_SCREENS_GAH_FX_LOCAL: gEffectManager->GetEffect(*reinterpret_cast<EEEffectHandle*>(&i[2]))->SetLocalTo(i[1]); return 0;
     // the current player's technologies
     case GA_K(TECH, K_CAN_PRODUCE): return GA_PL->CanProduce(i[1], 0x20, 1, true, 3, NULL);
     case EE_SCREENS_GAH_K_CLASS: return (intptr_t)gUnitClassTable[GA_PL->mTechnologies->Get(i[1])->mData->mUnitClass];
