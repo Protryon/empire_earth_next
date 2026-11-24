@@ -117,6 +117,48 @@ static void OnGamePassword(const char* inPassword);
 // the stand-in front end's user and server list (the game reads the Rust object's slots)
 static auto WonNetUser() { return gWonNet->mUser; }
 static auto& WonNetServers() { return gWonNet->mServers; }
+// the game's one event class (ee/EEUIEWonNetEvent.h), named as the original class of its call so the traces compare
+static const char* FrontEventName(EeWonFrontCall inCall)
+{
+    switch (inCall) {
+    case EeWonFrontCall::AgUpdateForm: return "EEUIEWNAGUpdateForm";
+    case EeWonFrontCall::AgActivateForm: return "EEUIEWNAGActivateForm";
+    case EeWonFrontCall::AgBack: return "EEUIEWNAGBack";
+    case EeWonFrontCall::AgCheckPassword: return "EEUIEWNAGCheckPassword";
+    case EeWonFrontCall::AgClickGameFilter: return "EEUIEWNAGClickGameFilter";
+    case EeWonFrontCall::AgCloseForm: return "EEUIEWNAGCloseForm";
+    case EeWonFrontCall::AgDeactivateForm: return "EEUIEWNAGDeactivateForm";
+    case EeWonFrontCall::AgDoubleclickUser: return "EEUIEWNAGDoubleclickUser";
+    case EeWonFrontCall::AgHostOrJoinGame: return "EEUIEWNAGHostOrJoinGame";
+    case EeWonFrontCall::AgSendChat: return "EEUIEWNAGSendChat";
+    case EeWonFrontCall::AgToggleHostScreen: return "EEUIEWNAGToggleHostScreen";
+    case EeWonFrontCall::AgToggleJoinScreen: return "EEUIEWNAGToggleJoinScreen";
+    case EeWonFrontCall::AgOpenScreen: return "EEUIEWNAGOpenScreen";
+    case EeWonFrontCall::ArUpdateForm: return "EEUIEWNARUpdateForm";
+    case EeWonFrontCall::ArActivateForm: return "EEUIEWNARActivateForm";
+    case EeWonFrontCall::ArDeactivateForm: return "EEUIEWNARDeactivateForm";
+    case EeWonFrontCall::ArDoubleClickRoom: return "EEUIEWNARDoubleClickRoom";
+    case EeWonFrontCall::ArClickUpdateAccount: return "EEUIEWNARClickUpdateAccount";
+    case EeWonFrontCall::ArJoinRoom: return "EEUIEWNARJoinRoom";
+    case EeWonFrontCall::ArOpenScreen: return "EEUIEWNAROpenScreen";
+    case EeWonFrontCall::MuaSubmit: return "EEUIEWNMUASubmit";
+    case EeWonFrontCall::MuaOpenScreen: return "EEUIEWNMUAOpenScreen";
+    case EeWonFrontCall::SsOk: return "EEUIEWNSSOk";
+    case EeWonFrontCall::SsOpenScreen: return "EEUIEWNSSOpenScreen";
+    case EeWonFrontCall::StatsOpen: return "EEUIEWNSOpen";
+    case EeWonFrontCall::StatsCancel: return "EEUIEWNSCancel";
+    case EeWonFrontCall::ArBack: return "EEUIEWNARBack";
+    case EeWonFrontCall::MuaCancel: return "EEUIEWNMUACancel";
+    case EeWonFrontCall::SsCancel: return "EEUIEWNSSCancel";
+    default: return "?";
+    }
+}
+class EEUIEWonNetEvent : public UIEvent {
+public:
+    explicit EEUIEWonNetEvent(EeWonFrontCall inCall) : UIEvent(FrontEventName(inCall)), mCall(inCall) {}
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(this->mCall, inForm, (intptr_t)inEntity); }
+    EeWonFrontCall mCall;
+};
 #include "ee/EEWonFrontHost.inl"
 static int sFrontHits[256];   // the host's ops the sequences reached
 static intptr_t FrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t c) { sFrontHits[(int)inOp & 255]++; return WonFrontHost(inOp, a, b, c); }
@@ -148,10 +190,10 @@ FE_FWD(EEUIEWNSSOk, SsOk)
 FE_FWD(EEUIEWNSSOpenScreen, SsOpenScreen)
 FE_FWD(EEUIEWNSOpen, StatsOpen)
 FE_FWD(EEUIEWNSCancel, StatsCancel)
+FE_FWD(EEUIEWNARBack, ArBack)
+FE_FWD(EEUIEWNMUACancel, MuaCancel)
+FE_FWD(EEUIEWNSSCancel, SsCancel)
 #undef FE_FWD
-long EEUIEWNARBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
-long EEUIEWNMUACancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
-long EEUIEWNSSCancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
 static void OnGamePassword(const char* inPassword) { ee_won_front_call(EeWonFrontCall::AgOnGamePassword, NULL, (intptr_t)inPassword); }
 EEUICWonNetGamesBox::EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
                                          unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)

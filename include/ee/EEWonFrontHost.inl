@@ -27,38 +27,6 @@ static intptr_t FrontMbs(const std::wstring& inName, intptr_t inSink)
 }
 
 
-static UIEvent* FrontNewEvent(EeWonFrontEvent inEvent)
-{
-    typedef EeWonFrontEvent E;
-    switch (inEvent) {
-    case E::AgActivateForm: return new EEUIEWNAGActivateForm;
-    case E::AgBack: return new EEUIEWNAGBack;
-    case E::AgCheckPassword: return new EEUIEWNAGCheckPassword;
-    case E::AgClickGameFilter: return new EEUIEWNAGClickGameFilter;
-    case E::AgCloseForm: return new EEUIEWNAGCloseForm;
-    case E::AgDeactivateForm: return new EEUIEWNAGDeactivateForm;
-    case E::AgDoubleclickUser: return new EEUIEWNAGDoubleclickUser;
-    case E::AgHostOrJoinGame: return new EEUIEWNAGHostOrJoinGame;
-    case E::AgSendChat: return new EEUIEWNAGSendChat;
-    case E::AgToggleHostScreen: return new EEUIEWNAGToggleHostScreen;
-    case E::AgToggleJoinScreen: return new EEUIEWNAGToggleJoinScreen;
-    case E::AgUpdateForm: return new EEUIEWNAGUpdateForm;
-    case E::ArActivateForm: return new EEUIEWNARActivateForm;
-    case E::ArBack: return new EEUIEWNARBack;
-    case E::ArClickUpdateAccount: return new EEUIEWNARClickUpdateAccount;
-    case E::ArDeactivateForm: return new EEUIEWNARDeactivateForm;
-    case E::ArDoubleClickRoom: return new EEUIEWNARDoubleClickRoom;
-    case E::ArJoinRoom: return new EEUIEWNARJoinRoom;
-    case E::ArUpdateForm: return new EEUIEWNARUpdateForm;
-    case E::MuaCancel: return new EEUIEWNMUACancel;
-    case E::MuaOpenScreen: return new EEUIEWNMUAOpenScreen;
-    case E::MuaSubmit: return new EEUIEWNMUASubmit;
-    case E::SsCancel: return new EEUIEWNSSCancel;
-    case E::SsOk: return new EEUIEWNSSOk;
-    default: return NULL;
-    }
-}
-
 // the list lines' numbers and flags (EeWonFrontField)
 static intptr_t FrontGamesField(const EEUICWNGBLine& inLine, intptr_t inField)
 {
@@ -152,9 +120,8 @@ static intptr_t WonFrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t
     case Op::TextLength: return (intptr_t)UWideString((const char*)a).GetLength();
     case Op::IsValidName: return EEIsValidName(UWideString((const char*)a));
     // events
-    case Op::EventNew: return (intptr_t)FrontNewEvent((EeWonFrontEvent)a);
+    case Op::EventNew: return (intptr_t)static_cast<UIEvent*>(new EEUIEWonNetEvent((EeWonFrontCall)a));
     case Op::EventDeref: ((UIEvent*)a)->Dereference(); return 0;
-    case Op::SetTrigger: EEUIEWNSetTriggerEvent((UIEvent*)a, (UIControl*)b, (unsigned long)c); return 0;
     case Op::ControlSetTriggerEvent: ((UIControl*)a)->SetTriggerEvent((unsigned long)b, (UIEvent*)c); return 0;
     // controls
     case Op::ControlSetDisplayMode: ((UIControl*)a)->SetDisplayMode(b != 0 ? kDisplayModeShown : kDisplayModeHidden); return 0;

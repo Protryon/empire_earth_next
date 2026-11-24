@@ -15,6 +15,7 @@
 #include <functional>
 #include "rust/won_net/reqdir.h"
 #include "rust/won_net/routeop.h"
+#include "rust/won_lobby/wonfront.h"
 #include "rust/won_net/smartroute.h"
 
 namespace W {
@@ -385,6 +386,8 @@ struct UIManagerW {
     void UnlockUIForCopyData() { Log("ui unlock"); }
     void PopTo(UIForm* f) { Log("ui pop to " + N(f->mId)); }
     void Push(UIForm* f) { Log("ui push " + N(f->mId)); }
+    void DisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b);
+    void DisplayCancel(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), UIForm* c);
 };
 static UIManagerW sUIManager;
 static UIManagerW* gUIManager = &sUIManager;
@@ -433,13 +436,22 @@ static std::function<std::string(void (*)(UIForm*))> sCallbackName;   // the tes
 static std::function<std::string(UIForm*)> sFormArgName;
 static int sEventIds;
 static long SavePreferences() { Log("save preferences"); return 0; }
-static void DisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b)
+static void UiDisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b)
 { Log(std::string("message ") + (const char*)m + " " + N(a) + " " + sFormArgName(f) + " " + sCallbackName(cb) + " " + N(b)); }
-static void DisplayCancel(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), UIForm* c)
+static void UiDisplayCancel(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), UIForm* c)
 { Log(std::string("cancel box ") + (const char*)m + " " + N(a) + " " + sFormArgName(f) + " " + sCallbackName(cb) + " " + N(c->mId)); }
 static UIEvent* NewRooms() { UIEvent* e = new UIEvent{++sEventIds}; Log("new rooms event " + N(e->mId)); return e; }
 static UIEvent* NewGames() { UIEvent* e = new UIEvent{++sEventIds}; Log("new games event " + N(e->mId)); return e; }
-static EEWonNetUI gEEWonNetUI = {SavePreferences, DisplayMessage, DisplayCancel, NewRooms, NewGames};
+static EEWonNetUI gEEWonNetUI = {SavePreferences, UiDisplayMessage, UiDisplayCancel, NewRooms, NewGames};
+// R6 WON lobby and network round 37: the host calls the UI manager, the preferences and the one event class itself
+// (ee/EEWonNetUI.h is gone); the stand-ins log as the table's entries do
+void UIManagerW::DisplayMessage(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), bool b) { UiDisplayMessage(m, a, f, cb, b); }
+void UIManagerW::DisplayCancel(const UWideString& m, unsigned long a, UIForm* f, void (*cb)(UIForm*), UIForm* c) { UiDisplayCancel(m, a, f, cb, c); }
+struct GamePreferencesW { long Save() { return SavePreferences(); } };
+static GamePreferencesW gGamePreferences;
+struct EEUIEWonNetEvent : UIEvent {
+    explicit EEUIEWonNetEvent(EeWonFrontCall c) : UIEvent{++sEventIds} { Log(std::string(c == EeWonFrontCall::ArOpenScreen ? "new rooms event " : "new games event ") + N(this->mId)); }
+};
 
 // the network and the directory
 struct NEProtocol {

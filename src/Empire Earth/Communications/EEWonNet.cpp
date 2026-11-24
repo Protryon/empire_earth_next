@@ -49,7 +49,7 @@
 #include "ee/EEGamePreferences.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONAPICore.h"
-#include "ee/EEWonNetUI.h"
+#include "ee/EEUIEWonNetEvent.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEStringIDs.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"

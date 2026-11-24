@@ -209,9 +209,6 @@ EE_GLOBAL_STORAGE_AS(std::vector<EEUnitClass*>, gUnitClassTable,
                      "gUnitClassTable");
 EE_GLOBAL_STORAGE_AS(std::vector<unsigned long>, EEUnitClassUnitTypes,
                      "?sUnitTypes@EEUnitClass@@2V?$vector@KV?$allocator@K@std@@@std@@A", "_ZN11EEUnitClass10sUnitTypesE");
-// the game's UI as the WON network code uses it (ee/EEWonNetUI.h; EEUIEWonNetArenaRoomEvents.cpp fills it)
-#include "ee/EEWonNetUI.h"
-EEWonNetUI gEEWonNetUI;
 // the game's UI as the rest of the game calls it (ee/EEGameUI.h; the UI's units fill it)
 #include "ee/EEGameUI.h"
 EEGameUI gEEGameUI;

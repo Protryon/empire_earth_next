@@ -64,13 +64,10 @@
 #include "ee/wonapi/WONRouting.h" // AuthContext (WONAuthContext.h)
 #include "ee/EEUICWonNetGamesBox.h"
 #include "ee/EEWonNetAvailableGameFormManager.h"
-#include "ee/EEUIEWonNetArenaGameEvents.h"
+#include "ee/EEUIEWonNetEvent.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUICWonNetStatBox.h"
-#include "ee/EEUIEWonNetArenaRoomEvents.h"
-#include "ee/EEUIEWonNetModifyUserAccountEvents.h"
-#include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "rust/won_lobby/wonfront.h"
 #include "rust/won_lobby/wonnet.h"
 static void OnGamePassword(const char* inPassword);
@@ -81,19 +78,6 @@ static WONAPI::DirList& WonNetServers() { return *static_cast<WONAPI::DirList*>(
 #include "ee/EEWonFrontHost.inl"
 static const bool sWonFrontHostSet = (ee_won_front_set_host(WonFrontHost), true);
 
-long EEUIEWNAGUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgUpdateForm, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgActivateForm, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgBack, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGCheckPassword::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgCheckPassword, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGClickGameFilter::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgClickGameFilter, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGCloseForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgCloseForm, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgDeactivateForm, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGDoubleclickUser::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgDoubleclickUser, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGHostOrJoinGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgHostOrJoinGame, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGSendChat::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgSendChat, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGToggleHostScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgToggleHostScreen, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGToggleJoinScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgToggleJoinScreen, inForm, (intptr_t)inEntity); }
-long EEUIEWNAGOpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(EeWonFrontCall::AgOpenScreen, inForm, (intptr_t)inEntity); }
 
 // the password prompt's callback: joins the selected WON game with the password typed
 static void OnGamePassword(const char* inPassword) { ee_won_front_call(EeWonFrontCall::AgOnGamePassword, NULL, (intptr_t)inPassword); }
