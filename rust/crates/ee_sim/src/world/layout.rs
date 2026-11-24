@@ -292,6 +292,15 @@ pub fn derive_record_members(l: &mut EeWorldLayout) {
         fill(&mut l.stats_unit_class, l.stats_links, offset_of!(S, mUnitClass));
         fill(&mut l.stats_button, l.stats_links, offset_of!(S, mButton));
     }
+    // a goal is its Rust object (goal_obj.rs: the C++ EEUnitGoal is EeUnitsGoalBase, asserted in EEUGRust.cpp); a build
+    // queue entry the record EeUnitsProductionEntry (units round 11)
+    use crate::units::goal_obj::EeUnitsGoalBase;
+    use crate::world::unit_fields::EeUnitsProductionEntry;
+    fill(&mut l.goal_kind, 0, offset_of!(EeUnitsGoalBase, kind));
+    fill(&mut l.goal_id, 0, offset_of!(EeUnitsGoalBase, id));
+    fill(&mut l.build_entry_stride, 0, std::mem::size_of::<EeUnitsProductionEntry>());
+    fill(&mut l.build_entry_technology, 0, offset_of!(EeUnitsProductionEntry, mTechnology));
+    fill(&mut l.build_entry_flag, 0, offset_of!(EeUnitsProductionEntry, mFlag));
 }
 
 /// The registered layout (None before the C++ registered it, as in the unit tests).

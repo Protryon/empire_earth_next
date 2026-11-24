@@ -162,51 +162,14 @@ bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFla
 
 // Loads the conversion indicator effect and the class's media
 // Unloads the conversion indicator effect and the class's media
-// Updates each of the unit's orbitals
-void EEComplexUnit::UpdateOrbitals()
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_UPDATE_ORBITALS, NULL, this, 0, 0, 0, NULL);   // uc_rest.rs
-}
-
-// Counts the reload timer down by the tick, not below 0
-// New (R5b.4 leaf 6): the countdown is Rust over the unit store (ee_units step.rs step_countdown); the write is the
-// holder's. TEST ONLY: while the capture runs, USTM records it
-void EEComplexUnit::UpdateReloadTimer()
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_RELOAD_TIMER, NULL, this, 0, 0);   // ucp_people.rs
-}
-
-// Counts the target search timer down by the tick, not below 0
-// New (R5b.4 leaf 6): Rust over the unit store, as UpdateReloadTimer
-void EEComplexUnit::UpdateTargetSearchTimer()
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_TARGET_SEARCH_TIMER, NULL, this, 0, 0);   // ucp_people.rs
-}
-
-// New (R5b.4 leaf 6): Rust over the unit store (ee_units step.rs step_heal: the same f32 operations in order)
-void EEComplexUnit::UpdateHealSearchTimer()
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_HEAL_SEARCH_TIMER, NULL, this, 0, 0);   // ucp_people.rs
-}
-
 // New (R5b.4 leaf 6): the rotting countdown of the classes' Updates (kActionUnitRotting; 19 inline copies of it were
 // in the classes' Update bodies): the time left minus the tick, not below 0 (Rust over the unit store: ee_units step.rs
 // step_rotting), written through the holder; returns the time (the callers that rot linked parts give them the same).
 // TEST ONLY: while the capture runs, USTM records it
-long EEComplexUnit::UpdateRottingAwayTime()
-{
-    return (long)ee_units_ucp_call(EE_UNITS_UCP_DO_ROTTING_TIME, NULL, this, 0, 0);   // ucp_people.rs
-}
-
 // New (R5b.4 leaf 6): the resources' rotting of the classes' Updates (kActionResourcesRotting; 3 inline copies: the
 // animals, the fish, the default): the time plus the tick; past 4 s the resource amount loses one per whole 4 s (not
 // below 0) and the time keeps the rest (Rust over the unit store: ee_units step.rs step_resources_rotting). TEST ONLY:
 // while the capture runs, USTM records it
-void EEComplexUnit::UpdateResourcesRotting()
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_RESOURCES_ROTTING, NULL, this, 0, 0);   // ucp_people.rs
-}
-
 // Turns the unit's turrets when its model has parts
 void EEComplexUnit::UpdateTurrets()
 {

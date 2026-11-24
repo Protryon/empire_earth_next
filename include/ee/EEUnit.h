@@ -195,8 +195,8 @@ public:
     virtual void SightOffHere() {}            // +0x24 (ICF-folded empty `ret` 0x1720c6)
     virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return RTSUnit::RepairPointers(inMajorVersion, inMinorVersion); }  // +0x28 0x2299d5: RTSUnit::RepairPointers (folded at 0x27cf38)
     virtual void Clear() { ee_units_eu_more(EE_UNITS_EUM_DO_CLEAR, this, NULL, 0, 0); }                   // +0x20 0x228d05: ResetEEUnit, Reset, mIsValid = false
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x2298fb
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x2c 0x2299e5
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return EEUnitFile(true, this, 1, inMajorVersion, inMinorVersion, inFile); }   // +0x1c 0x2298fb
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return EEUnitFile(false, this, 1, inMajorVersion, inMinorVersion, outFile); }  // +0x2c 0x2299e5
     virtual void FreeNode() { RTSUnit::FreeNode(); }                // +0x30 0x2292c4 (RTSUnit::FreeNode)
     virtual void LastDereference() { ee_units_eu_more(EE_UNITS_EUM_DO_LAST_DEREFERENCE, this, NULL, 0, 0); }         // +0x34 0x2298e1 (Virtual30, the count = 0, delete this)
     // +0x38 0x228e7f: unloads the class media (now, or through gDataPreLoading when inArg and not shutting down),
@@ -287,25 +287,14 @@ public:
 // IgnoreTarget: six zero stores): an attacker record, found by its unit id (std::find 0x200eb6 with an unsigned long)
 // (provisional names). The ctor's six zero stores are the members' initializers; its out-of-line memberwise copy
 // 0x20018a (the deque erase family's) is the implicit one.
-struct EEComplexUnitAttacker {
-    bool operator==(unsigned long inUnitID) const { return this->mUnitID == inUnitID; }
-    long mTileX = 0;                        // +0x00 (the attacked unit's tile)
-    long mTileY = 0;                        // +0x04
-    long mFromX = 0;                        // +0x08 (the attacker's tile)
-    long mFromY = 0;                        // +0x0c
-    unsigned long mUnitID = 0;              // +0x10
-    unsigned long mTime = 0;                // +0x14 (gPhysics +0xd0 plus 30000)
-};
+// (the struct: the Rust record EEComplexUnitAttacker, ee_sim world unit_fields.rs EeUnitsIgnoredTarget: the attacked
+// unit's tile mTileX, mTileY, the attacker's mFromX, mFromY, mUnitID and mTime, gPhysics +0xd0 plus 30000; units round 11)
 
-// A queued research/production order (EEComplexUnit::mBuildQueue; 0x1f5f97 pushes (technology, player flag)). Not a tile:
-// a POD, its entries are built field by field with no zeroing. Name is provisional.
-struct EEProductionEntry {
-    // inline (std::find(mBuildQueue.begin(), mBuildQueue.end(), inTechnology) in EEComplexUnit::IsResearchQueued
-    // 0x937dd: the find COMDAT 0x963ff compares the first dword with the value)
-    bool operator==(long inTechnology) const { return this->mTechnology == inTechnology; }
-    long mTechnology;
-    long mFlag;
-};
+// A queued research/production order (EEComplexUnit::mBuildQueue; 0x1f5f97 pushes (technology, player flag)): the
+// Rust record EEProductionEntry (ee_sim world unit_fields.rs EeUnitsProductionEntry: mTechnology, mFlag; units
+// round 11). std::find(mBuildQueue.begin(), mBuildQueue.end(), inTechnology) in IsResearchQueued 0x937dd compares
+// the first dword with the value (the find COMDAT 0x963ff).
+inline bool operator==(const EEProductionEntry& inEntry, long inTechnology) { return inEntry.mTechnology == inTechnology; }
 
 // New (R5b.4): EEComplexUnit::mPhysicalModel. GEPhysicalModel's layout (no member of its own); its location setters
 // report the new location to the unit store (ee/EEUnitStore.h: the record's x, y, z). Not copied: it lives only in
@@ -433,7 +422,7 @@ public:
     // inline (EEUCLandTransport::BadlyHurt 0x217017: const operator[], `lea; mov [eax]`) (provisional name)
     EEComplexUnit* GetCargo(unsigned long inIndex) const { return this->mCargo[inIndex]; }
     void SetMine(EEUnit* inUnit) { ee_units_cu_body(EE_UNITS_CU_DO_SET_MINE, this, (int64_t)(uintptr_t)inUnit, 0, 0); }           // 0x1fe1df (keeps a reference; the mining building's mine) (provisional name)
-    void UpdateWheels();                    // 0x213c37: EEWheel::Update on each of mAreaEffectTemplate1 wheels at +0x1bc (provisional name)
+    void UpdateWheels() { ee_units_ucg_sea(EE_UNITS_UCG_DO_UPDATE_WHEELS, NULL, this, 0, 0, 0, NULL); }                      // 0x213c37: EEWheel::Update on each of mAreaEffectTemplate1 wheels at +0x1bc (provisional name)
     long LoadCargo(EEComplexUnit* inCargo, bool inIgnoreRoom, bool inArg3) { return ee_units_cu_body(EE_UNITS_CU_DO_LOAD_CARGO, this, (int64_t)(uintptr_t)inCargo, inIgnoreRoom, inArg3); }  // 0x1f5da1 (the load goals: 7 = refused) (provisional name)
     bool CanTake(EEComplexUnit* inCargo, unsigned long inValue) { return this->mResourceType == kResourceAny || this->mResourceType == inValue ? true : false; }    // 0x1f6a1a (mU38 is 1 or inValue) (provisional name)
     bool GarrisonUnit(EEComplexUnit* inCargo) { return ee_units_cu_body(EE_UNITS_CU_DO_GARRISON_UNIT, this, (int64_t)(uintptr_t)inCargo, 0, 0) != 0; }  // 0x1f5ebf (the garrison goal) (provisional name)
@@ -471,17 +460,17 @@ public:
     void SetCurrentPhysicsOrder(unsigned long inValue) { if (this->mCurrentPhysicsOrder != inValue) this->mCurrentPhysicsOrder = inValue; }
     void SetHasArrived(bool inValue) { if (this->mHasArrived != inValue) this->mHasArrived = inValue; }
     void SetRottingAwayTime(long inValue) { if (this->mRottingAwayTime != inValue) this->mRottingAwayTime = inValue; }
-    void UpdateOrbitals();                  // 0x20e086 (EEUCProjectile::Update, first) (provisional name)
-    void SetOpacityChain(float inValue);    // 0x216c22 (EEUCProjectile::Update: 1 - z/6 when below the ground) (provisional name)
+    void UpdateOrbitals() { ee_units_uc_rest(EE_UNITS_UC_DO_R_UPDATE_ORBITALS, NULL, this, 0, 0, 0, NULL); }                    // 0x20e086 (EEUCProjectile::Update, first) (provisional name)
+    void SetOpacityChain(float inValue) { ee_units_uca_call(EE_UNITS_UCA_DO_OPACITY_CHAIN, NULL, this, 0, 0, 0, &inValue); }      // 0x216c22 (EEUCProjectile::Update: 1 - z/6 when below the ground) (provisional name)
     void SetInitialContactLocation(const GE3DPoint& inPoint);  // 0x215246 (mInitialContactLocation = inPoint when it differs; EEUCLandable.cpp) (provisional name)
     void StartProduction() { ee_units_cu_body(EE_UNITS_CU_DO_START_PRODUCTION, this, 0, 0, 0); }
     void ContinueProduction();              // 0x216d2d (EEUCLandCitizen::Update: StartProduction when mL280 == 0 and mBuildQueue is not empty) (provisional name)
     void UpdateTurrets();                   // 0x20e14c (EEUCSpaceship::Update, after the physics model) (provisional name)
-    void UpdateReloadTimer();               // 0x20e0b2 (EEUCSpaceship::Update) (provisional name)
-    void UpdateTargetSearchTimer();         // 0x20e0db (EEUCSpaceship::Update) (provisional name)
-    void UpdateHealSearchTimer();           // 0x20e104 (EEUCBasicPriest::Update: mHealSearchTimer down by 0.001 per ms) (provisional name)
-    long UpdateRottingAwayTime();           // New (R5b.4 leaf 6): the classes' kActionUnitRotting countdown (returns the time)
-    void UpdateResourcesRotting();          // New (R5b.4 leaf 6): the classes' kActionResourcesRotting step
+    void UpdateReloadTimer() { ee_units_ucp_call(EE_UNITS_UCP_DO_RELOAD_TIMER, NULL, this, 0, 0); }                 // 0x20e0b2 (EEUCSpaceship::Update) (provisional name)
+    void UpdateTargetSearchTimer() { ee_units_ucp_call(EE_UNITS_UCP_DO_TARGET_SEARCH_TIMER, NULL, this, 0, 0); }           // 0x20e0db (EEUCSpaceship::Update) (provisional name)
+    void UpdateHealSearchTimer() { ee_units_ucp_call(EE_UNITS_UCP_DO_HEAL_SEARCH_TIMER, NULL, this, 0, 0); }             // 0x20e104 (EEUCBasicPriest::Update: mHealSearchTimer down by 0.001 per ms) (provisional name)
+    long UpdateRottingAwayTime() { return (long)ee_units_ucp_call(EE_UNITS_UCP_DO_ROTTING_TIME, NULL, this, 0, 0); }             // New (R5b.4 leaf 6): the classes' kActionUnitRotting countdown (returns the time)
+    void UpdateResourcesRotting() { ee_units_ucp_call(EE_UNITS_UCP_DO_RESOURCES_ROTTING, NULL, this, 0, 0); }            // New (R5b.4 leaf 6): the classes' kActionResourcesRotting step
     void SetF220(float inValue) { if (this->mF220 != inValue) this->mF220 = inValue; }
     // inline (EEPMNaval::PushMoving 0x55c1cb: fld; fadd; fcom; je; fstp) (provisional names)
     void SetTargetSearchTimer(long inValue) { if (this->mTargetSearchTimer != inValue) this->mTargetSearchTimer = inValue; }
@@ -587,11 +576,11 @@ public:
     virtual void SightOnHere() { this->SightOn(this->GetTileX(), this->GetTileY()); }             // +0x0c 0x1f5b5b: Virtual3C(tile)
     virtual void Describe(UWideString& ioString) { ee_units_cu_describe(this, &ioString); }   // +0x10 0x1fa269
     virtual void DescribeLong(UWideString&) {}  // +0x14 (ICF-folded empty `ret 4` 0x157269)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x1f2452
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return EEUnitFile(true, this, 2, inMajorVersion, inMinorVersion, inFile); }   // +0x1c 0x1f2452
     virtual void Clear() { ee_units_cu_small(EE_UNITS_CU_S_DO_CLEAR, this, NULL, 0); }                   // +0x20 0x1f5b6e
     virtual void SightOffHere() { this->SightOff(this->GetTileX(), this->GetTileY()); }            // +0x24 0x1f5b8e: MarkInvalid(tile)
     virtual long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion) { return (long)ee_units_dop_repair_pointers(this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion); }  // +0x28 0x1f353f
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x2c 0x1f417e
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return EEUnitFile(false, this, 2, inMajorVersion, inMinorVersion, outFile); }  // +0x2c 0x1f417e
     virtual void FreeNode() { ee_units_cu_body(EE_UNITS_CU_DO_FREE_NODE, this, 0, 0, 0); }                // +0x30 0x1f8a43
     virtual void LastDereference() { ee_units_cu_small(EE_UNITS_CU_S_DO_LAST_DEREFERENCE, this, NULL, 0); }         // +0x34 0x1fb7fb (Virtual30, the count = 0, back to sMemoryPool)
     virtual void SightOn(unsigned long inX, unsigned long inY) { ee_units_sight((uint64_t)(uintptr_t)this, (uint32_t)inX, (uint32_t)inY, 1); }      // +0x3c 0x1f7ce7
@@ -625,7 +614,7 @@ public:
     bool IsCloaked() { return this->mCloaked > 0; }                       // 0x1fa96c: mCloaked != 0 (provisional name)
     // 0x21ba6f: the squared distance from the position (+0x13c/+0x14c/+0x15c) to inPoint (the attack-ground test;
     // provisional name)
-    float DistanceSquared3D(const GE3DPoint& inPoint);
+    float DistanceSquared3D(const GE3DPoint& inPoint) { return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_DISTANCE_3D, NULL, this, 0, inPoint.mX, inPoint.mY, inPoint.mZ); }  
     void ClearTint() { this->SetIsTinted(false); }
     void UpdateFanaticismColor() { ee_units_cu_body(EE_UNITS_CU_DO_UPDATE_FANATICISM_COLOR, this, 0, 0, 0); }                        // 0x1fa98c (the cloak colour; function-static GEColors) (provisional name)
     // 0x1fdf31: the goal = the first queued one (returned: DropFinishedGoals) (provisional name)
@@ -710,8 +699,8 @@ public:
     void SetGateDirection(unsigned long inValue) { if (this->mGateDirection != inValue) this->mGateDirection = inValue; }  // (the gate's direction: EEUCGate.cpp)
     // 0x2394b0 (out of line in EEUnitClass.cpp after its first user UpdateRipples's neighbour): mActiveGroup's GetInverseMaxVelocity,
     // else mStats->mFD0 (provisional name)
-    float GetInverseMaxVelocity();
-    void SetCamouflaged(bool inValue);      // 0x239aad: bit 31 of mCamouflageTimer (EEUnitClass 0x23978b; in EEUnitClass.cpp) (provisional name)
+    float GetInverseMaxVelocity() { return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_INVERSE_MAX_VELOCITY, NULL, this, 0, 0.0f, 0.0f, 0.0f); }  
+    void SetCamouflaged(bool inValue) { ee_units_uc_rest(EE_UNITS_UC_DO_R_SET_CAMOUFLAGED, NULL, this, 0, inValue, 0, NULL); }        // 0x239aad: bit 31 of mCamouflageTimer (EEUnitClass 0x23978b; in EEUnitClass.cpp) (provisional name)
     void SetIsCommandable(bool inValue) { if (this->mIsCommandable != inValue) this->mIsCommandable = inValue; }  // (EEUnitClass::UnitDied)
     void SetB342(bool inValue) { if (this->mIsClearanceGranted != inValue) this->mIsClearanceGranted = inValue; }  // (EEAirTrafficControl::ClearAirportQueue: cmp then store through the address)
     void AddWaypoint(const GE3DPoint& inLocation, bool inSnapToMap) { ee_units_waypoints_add((uint64_t)(uintptr_t)this, &inLocation.mX, inSnapToMap); }  // 0x1f625b (EEUnitClass::AddWaypointAt)

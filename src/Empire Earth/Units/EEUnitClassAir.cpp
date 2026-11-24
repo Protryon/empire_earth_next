@@ -88,12 +88,6 @@ void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
 // Plans a runway take-off in a direction: rolls 3 tiles low, climbs to 3/4 cruising height 7 tiles out, then
 // flies to the goal (ee_units cls_air.rs)
 // Returns whether the move goal is more than 1 from the home carrier's deck point (tag point 0): the carrier moved
-// Sets the opacity of a unit and the pieces linked after it (stops at the first already at the value)
-void EEComplexUnit::SetOpacityChain(float inValue)
-{
-    ee_units_uca_call(EE_UNITS_UCA_DO_OPACITY_CHAIN, NULL, this, 0, 0, 0, &inValue);   // uca_air.rs (reads one float)
-}
-
 // ---- EEUCAirplane.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The airplane's unit
 // class: 0x20b192..0x20b9fc (after EEUCAirAnimal.cpp; EEUCAmbient.cpp follows). Unit flags: the exe's module set. Its
 // ctor is inline (EEUnitClass.cpp's factory). Order: Virtual74 with EEAirTrafficControl::GetNumSlots's COMDAT after
