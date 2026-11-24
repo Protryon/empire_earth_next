@@ -142,6 +142,7 @@ mod tests {
 
     #[test]
     fn initialize_and_shutdown() {
+        let _guard = test_system();
         static mut KEYBOARD: *const EeInputKeyboard = ptr::null();
         static mut MOUSE: *const EeInputMouse = ptr::null();
         RELATIVE_CALLS.lock().unwrap().clear();

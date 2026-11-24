@@ -593,6 +593,22 @@ mod tests {
     }
     const HOST: EeUtilPoolHost = EeUtilPoolHost { new_array, delete_array, new_one, delete_one };
 
+    /// The list's host: cells of a node's size and alignment. The list test ran over `HOST` once, whose cells are
+    /// 16 bytes under 24-byte nodes: the pool's first node (index 249 of 250) was written 1,976 bytes past the end of
+    /// the chunk's 4,000, into whatever the other tests' threads had there (the test binary's STATUS_HEAP_CORRUPTION,
+    /// PORT_LEARNINGS "The ee_base heap corruption").
+    const NODE_WORDS: usize = core::mem::size_of::<EeUtilListNode>() / core::mem::size_of::<usize>();
+    unsafe extern "C" fn new_nodes(count: usize) -> *mut c_void {
+        LOG.lock().unwrap_or_else(|e| e.into_inner()).push(format!("new[{count}]"));
+        Box::into_raw(vec![0usize; count * NODE_WORDS].into_boxed_slice()) as *mut usize as *mut c_void
+    }
+    unsafe extern "C" fn new_node() -> *mut c_void {
+        LOG.lock().unwrap_or_else(|e| e.into_inner()).push("new".into());
+        Box::into_raw(Box::new([0usize; NODE_WORDS])) as *mut c_void
+    }
+    const NODE_HOST: EeUtilPoolHost =
+        EeUtilPoolHost { new_array: new_nodes, delete_array, new_one: new_node, delete_one };
+
     fn log() -> Vec<String> {
         core::mem::take(&mut *LOG.lock().unwrap_or_else(|e| e.into_inner()))
     }
@@ -718,7 +734,7 @@ mod tests {
     fn the_list_links_like_the_template() {
         let _g = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         log();
-        let pool = ee_util_pool_new(core::mem::size_of::<EeUtilListNode>(), HOST);
+        let pool = ee_util_pool_new(core::mem::size_of::<EeUtilListNode>(), NODE_HOST);
         let mut list = EeUtilList { head: core::ptr::null_mut(), count: 0 };
         let datum = |i: usize| i as *mut c_void;
         unsafe {

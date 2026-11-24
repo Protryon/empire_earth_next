@@ -90,3 +90,22 @@ pub(crate) fn test_dir(name: &str) -> std::path::PathBuf {
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
+
+/// Removes a test's directory at its end. Another holder of the directory or of a file in it (a virus scanner or the
+/// indexer on the files just written, another test thread's relative path while the directory was the current one)
+/// makes Windows refuse the removal for a moment ("used by another process", seen once in 80 loaded runs of
+/// `enter_data_root_changes_the_directory`): this waits for the removal instead of failing the test at its cleanup.
+#[cfg(test)]
+pub(crate) fn test_remove_dir(dir: impl AsRef<std::path::Path>) {
+    let start = std::time::Instant::now();
+    loop {
+        match std::fs::remove_dir_all(&dir) {
+            Ok(()) => return,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return,
+            Err(e) if start.elapsed() > std::time::Duration::from_secs(30) => {
+                panic!("{}: still not removable after 30 s: {e}", dir.as_ref().display())
+            }
+            Err(_) => std::thread::sleep(std::time::Duration::from_millis(20)),
+        }
+    }
+}

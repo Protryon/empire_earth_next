@@ -992,6 +992,6 @@ mod disk_tests {
             crate::ustring::ee_ustring_free(temporary.us());
             ee_fs_mem_free(file);
         }
-        std::fs::remove_dir_all(&dir).unwrap();
+        crate::plat_core::test_remove_dir(&dir);
     }
 }

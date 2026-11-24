@@ -692,7 +692,7 @@ mod tests {
             assert_eq!(unsafe { PlatPathEnterDataRoot() }, 0);
             test_set_env("EE_DATA_ROOT", "");
             std::env::set_current_dir(before).unwrap();
-            std::fs::remove_dir_all(dir).unwrap();
+            crate::plat_core::test_remove_dir(dir);
         }
 
         #[test]
@@ -733,7 +733,7 @@ mod tests {
             assert_eq!(unsafe { PlatGetLastError() }, 87);
             assert_eq!(unsafe { PlatPathToNative(c"".as_ptr(), out.as_mut_ptr().cast(), 512) }, 0);
             assert_eq!(unsafe { PlatGetLastError() }, 3);
-            std::fs::remove_dir_all(dir).unwrap();
+            crate::plat_core::test_remove_dir(dir);
         }
     }
 }

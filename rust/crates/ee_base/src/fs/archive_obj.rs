@@ -796,6 +796,6 @@ mod tests {
             ee_ustring_free(a.archive_file.directory.us());
             ee_ustring_free(a.archive_file.file.us());
         }
-        std::fs::remove_dir_all(&dir).unwrap();
+        crate::plat_core::test_remove_dir(&dir);
     }
 }

@@ -81,7 +81,7 @@ DLLs only.
 
 | Module | Was | Source |
 |---|---|---|
-| `exe` | `EE-AOC.exe` (game; its libpng and zlib are gone: PNG is ee_openformats' reader) | `src/Empire Earth/`, `src/RTS Engine/`, `src/ThirdParty/lua` |
+| `exe` | `EE-AOC.exe` (game; its libpng and zlib are gone: PNG is ee_openformats' reader) | `src/Empire Earth/`, `src/RTS Engine/` |
 | `lle` | `Low-Level Engine.dll` (engine core, the DCL; its libjpeg is gone: JPEG is ee_base's decoder and the jpeg-encoder crate) | `src/Low-Level Engine/`, `src/ThirdParty/` |
 | `default` | `Default.dll` (random map generators) | `src/Empire Earth/Random Map/Random Map Generators/Default/` |
 | `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer; now on wgpu) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |
@@ -373,7 +373,8 @@ The `upstream` remote is the `empire_earth` reconstruction. Its `fixes-all` bran
 ## License
 
 No license is granted. Empire Earth is the property of its rights holders. The third-party libraries under
-`src/ThirdParty/` keep their own licenses.
+`src/ThirdParty/` keep their own licenses, as do the Rust crates the build fetches; among them Lua 5.5 (MIT; Lua.org,
+PUC-Rio), the computer players' script language, compiled from the `lua-src` crate's sources.
 
 The "Age of AI" computer player (`data/ai/ageofai/`) is a Lua port of Grille's
 [Empire Earth: Age of AI](https://github.com/Grille/Empire-Earth-Age-of-AI) (GPL-3.0, Copyright Grille and the Age
