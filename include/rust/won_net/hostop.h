@@ -580,8 +580,8 @@ struct EeWonCoreHooks {
   /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
   /// result's
   long (*transform)(void *socket, void **message, bool send);
-  /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
-  long (*accept)(void *socket, void **out);
+  /// the socket's virtual `Duplicate()`: a new, unopened socket of its class (no reference yet)
+  void *(*socket_duplicate)(void *socket);
   /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
   void (*socket_hook)(void *socket, int32_t which);
   /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
@@ -679,6 +679,15 @@ extern "C" {
 /// Sets the maker of a Rust op's C++ op.
 void ee_won_core_set_new_host_op(EeWonNewHostOp maker);
 
+/// `socket->Accept(out)` for the C++ callers (the drivers): the accepted socket handed to `sink` (which assigns
+/// the caller's `SmartPtr`), on success only.
+///
+/// # Safety
+/// `socket` is a live `AsyncSocket*` as its `RefCount*`; `sink` takes `context` and a `RefCount*`.
+long ee_won_asyncsocket_accept_to(void *socket,
+                                  void (*sink)(void *context, void *accepted),
+                                  void *context);
+
 /// `socket->AddMsgTransform(transform)` for a C++ transform: `call(transform, ByteBufferPtr*, send)` runs its
 /// `Send` or `Recv`, `free(transform)` deletes it; the socket owns it.
 ///
@@ -764,6 +773,22 @@ void ee_won_hostop_cleanup(const EeWonHostOp *op);
 /// # Safety
 /// `op` is a live op.
 int64_t ee_won_hostop_num(const EeWonHostOp *op, int32_t which, int64_t index);
+
+/// `RustServerOp::AddrOf`: a new address (the caller's `IPAddr` takes it) from a result's six bytes; an invalid
+/// address when the result is not six bytes.
+///
+/// # Safety
+/// `op` is a live op.
+EeWonIpAddr *ee_won_hostop_addr(const EeWonHostOp *op,
+                                int32_t which);
+
+/// `RustServerOp::GetHttpSocket`: the socket a result names (`which`: a `RefCount*` as a number) when it is
+/// connected, else null.
+///
+/// # Safety
+/// `op` is a live op whose result `which` is null or a live socket.
+void *ee_won_hostop_connected_socket(const EeWonHostOp *op,
+                                     int32_t which);
 
 /// A result's bytes by number, to `sink`: false (the sink not called) for none.
 ///

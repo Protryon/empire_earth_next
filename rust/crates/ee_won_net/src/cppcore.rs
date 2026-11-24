@@ -163,8 +163,8 @@ pub struct EeWonCoreHooks {
     /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
     /// result's
     pub transform: Option<unsafe extern "C" fn(socket: *mut c_void, message: *mut *mut c_void, send: bool) -> c_long>,
-    /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
-    pub accept: Option<unsafe extern "C" fn(socket: *mut c_void, out: *mut *mut c_void) -> c_long>,
+    /// the socket's virtual `Duplicate()`: a new, unopened socket of its class (no reference yet)
+    pub socket_duplicate: Option<unsafe extern "C" fn(socket: *mut c_void) -> *mut c_void>,
     /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
     pub socket_hook: Option<unsafe extern "C" fn(socket: *mut c_void, which: i32)>,
     /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
@@ -926,7 +926,13 @@ macro_rules! pass {
 pass!(n_so_start, socketop_start, (o: *mut c_void) -> c_long, WS_NONE as c_long);
 pass!(n_so_thread_add, socket_thread_add, (o: *mut c_void));
 pass!(n_bytes_of, bytes_of, (b: *mut c_void) -> *const EeWonByteBuffer, std::ptr::null());
-pass!(n_bytes_adopt, bytes_adopt, (b: *mut EeWonByteBuffer) -> *mut c_void, null_mut());
+/// A new `ByteBuffer` adopting the bytes, with one reference (the C++ makes it, the reference is taken here).
+pub(crate) unsafe extern "C" fn n_bytes_adopt(b: *mut EeWonByteBuffer) -> *mut c_void {
+    // SAFETY: the table's contract: a new buffer the C++ takes
+    let o = core().and_then(|c| c.bytes_adopt).map_or(null_mut(), |h| unsafe { h(b) });
+    ref_add(o);
+    o
+}
 pass!(n_transform, transform, (s: *mut c_void, m: *mut *mut c_void, send: bool) -> c_long, WS_NONE as c_long);
 // a receive op's target file (the deleted CoreFileOpen / Write / Close / SetTime of AsyncOp.cpp)
 unsafe extern "C" fn n_file_open(p: *const u8, n: usize, binary: bool, append: bool) -> *mut c_void {
@@ -964,7 +970,48 @@ unsafe extern "C" fn n_progress(o: *mut c_void, c: *mut c_void) {
     }
     x.run(n_op_mode(o), 0);
 }
-pass!(n_accept, accept, (s: *mut c_void, out: *mut *mut c_void) -> c_long, WS_NONE as c_long);
+/// `AsyncSocket::Accept` (R6 WON lobby and network round 36: the C++ body and AsyncOp.cpp's CoreAccept are gone):
+/// under the socket's lock the system accept, then a new socket of the same class (the virtual `Duplicate`) that
+/// adopts the handle and takes the peer as its destination. On success `*out` is the new socket with one
+/// reference; a failure leaves `*out`.
+pub(crate) unsafe extern "C" fn n_accept(s: *mut c_void, out: *mut *mut c_void) -> c_long {
+    let Some(x) = socket(s) else { return WS_NONE as c_long };
+    x.with_lock(|| match x.accept() {
+        Err(e) => e as c_long,
+        Ok((handle, peer)) => {
+            // SAFETY: the table's contract: the live socket
+            let n = core().and_then(|c| c.socket_duplicate).map_or(null_mut(), |h| unsafe { h(s) });
+            ref_add(n);
+            if let Some(y) = socket(n) {
+                y.adopt(handle, peer);
+            }
+            // SAFETY: the caller's out value
+            unsafe { *out = n };
+            0
+        }
+    })
+}
+/// `socket->Accept(out)` for the C++ callers (the drivers): the accepted socket handed to `sink` (which assigns
+/// the caller's `SmartPtr`), on success only.
+///
+/// # Safety
+/// `socket` is a live `AsyncSocket*` as its `RefCount*`; `sink` takes `context` and a `RefCount*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_asyncsocket_accept_to(
+    socket: *mut c_void,
+    sink: unsafe extern "C" fn(context: *mut c_void, accepted: *mut c_void),
+    context: *mut c_void,
+) -> c_long {
+    let mut out = null_mut();
+    // SAFETY: the caller's contract
+    let status = unsafe { n_accept(socket, &mut out) };
+    if status == 0 {
+        // SAFETY: the sink's contract; the reference n_accept took goes after the caller took its own
+        unsafe { sink(context, out) };
+        ref_release(out);
+    }
+    status
+}
 /// `delete transform`: a crypt transform's session reference given back (`~CryptTransform`), a C++ one deleted
 unsafe extern "C" fn n_transform_free(t: *mut c_void) {
     if t.is_null() {

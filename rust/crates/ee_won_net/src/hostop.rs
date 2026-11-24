@@ -1033,6 +1033,37 @@ pub unsafe extern "C" fn ee_won_hostop_num(op: *const EeWonHostOp, which: i32, i
     unsafe { (*op).op.num(which, index) }
 }
 
+/// `RustServerOp::AddrOf`: a new address (the caller's `IPAddr` takes it) from a result's six bytes; an invalid
+/// address when the result is not six bytes.
+///
+/// # Safety
+/// `op` is a live op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_addr(op: *const EeWonHostOp, which: i32) -> *mut crate::ipobj::EeWonIpAddr {
+    let mut a = crate::ipobj::EeWonIpAddr::default();
+    // SAFETY: as above
+    if let Some(Ok(six)) = unsafe { (*op).op.bytes(which, 0) }.map(|b| <[u8; 6]>::try_from(&b[..])) {
+        a.set_six(&six);
+    }
+    Box::into_raw(Box::new(a))
+}
+
+/// `RustServerOp::GetHttpSocket`: the socket a result names (`which`: a `RefCount*` as a number) when it is
+/// connected, else null.
+///
+/// # Safety
+/// `op` is a live op whose result `which` is null or a live socket.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_connected_socket(op: *const EeWonHostOp, which: i32) -> *mut c_void {
+    // SAFETY: as above
+    let s = unsafe { (*op).op.num(which, 0) } as usize as *mut c_void;
+    if crate::cppcore::socket(s).is_some_and(|x| x.is_connected()) {
+        s
+    } else {
+        std::ptr::null_mut()
+    }
+}
+
 /// A result's bytes by number, to `sink`: false (the sink not called) for none.
 ///
 /// # Safety

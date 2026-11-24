@@ -107,9 +107,7 @@ static void* CoreNewQueueSocket(int32_t inType,bool inBlocking)
 { return static_cast<RefCount*>(inBlocking ? new BlockingSocket(inType) : new QueueSocket(inType)); }
 static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr)
 {
-    UDPManagerRecvOp* anOp=inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)))
-                                        : new UDPManagerRecvOp;
-    return static_cast<RefCount*>(anOp);
+    return static_cast<RefCount*>(inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr))) : new UDPManagerRecvOp);
 }
 static long CoreUdpCheck(void* inOp,const uint8_t* inData,size_t inLength,bool* outThrew)
 {
@@ -135,12 +133,7 @@ static const EeWonByteBuffer* CoreBytesOf(void* inBuffer)
 static SocketOp* SockOp(void* inOp) { return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))); }
 static long CoreSocketOpStart(void* inOp) { return SockOp(inOp)->Start(); }
 void SocketOp::HookAddToSocketThread(void* inOp) { WONAPICore::AddToSocketThread(SockOp(inOp)); }
-static void* CoreBytesAdopt(EeWonByteBuffer* inBytes)
-{
-    RefCount* aBuffer=new ByteBuffer(inBytes);
-    aBuffer->AddRef();
-    return aBuffer;
-}
+static void* CoreBytesAdopt(EeWonByteBuffer* inBytes) { return static_cast<RefCount*>(new ByteBuffer(inBytes)); } // (its first reference is Rust's)
 // the socket's transform chain on the message in *ioMessage (a reference held; the result's replaces it)
 static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
 {
@@ -153,17 +146,10 @@ static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
     *ioMessage=aResult;
     return aStatus;
 }
-// Accept (the virtual Duplicate): the accepted socket in *outSocket with a reference, on success only
-static long CoreAccept(void* inSocket,void** outSocket)
+// the socket's virtual Duplicate (cppcore.rs n_accept: AsyncSocket::Accept is Rust's)
+static void* CoreSocketDuplicate(void* inSocket)
 {
-    SmartPtr<AsyncSocket> anAccepted;
-    WONStatus aStatus=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket))->Accept(anAccepted);
-    if(aStatus==0) {
-        RefCount* aResult=anAccepted.get();
-        if(aResult!=NULL) aResult->AddRef();
-        *outSocket=aResult;
-    }
-    return aStatus;
+    return static_cast<RefCount*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket))->Duplicate());
 }
 static void CoreSocketHook(void* inSocket,int32_t inWhich)
 {
@@ -216,18 +202,6 @@ WONStatus AsyncSocket::RecvFrom(void* outData,int inLength,IPAddr* outAddress,in
 }
 WONStatus AsyncSocket::Bind(const IPAddr& inAddress,bool inReuse)
 { return ee_won_asyncsocket_bind(this->mSock,AddressOf(inAddress),PortOf(inAddress),inReuse); }
-WONStatus AsyncSocket::Accept(SmartPtr<AsyncSocket>& outSocket)
-{
-    AutoCrit aCrit(this->GetDataLock());
-    PlatSocket aSocket=PLAT_SOCKET_INVALID;
-    uint32_t anAddress=0;
-    uint16_t aPort=0;
-    WONStatus aStatus=ee_won_asyncsocket_accept(this->mSock,&aSocket,&anAddress,&aPort);
-    if(aStatus!=0) return aStatus;
-    outSocket=this->Duplicate();
-    ee_won_asyncsocket_adopt(outSocket->mSock,aSocket,anAddress,aPort);
-    return 0;
-}
 static long CoreSocketOpContinue(void* inOp)
 {
     return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Continue();
@@ -238,7 +212,7 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
                                         CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
                                         &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,
-                                        CoreAccept,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
+                                        CoreSocketDuplicate,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
 }

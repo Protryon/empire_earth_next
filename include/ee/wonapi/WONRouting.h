@@ -219,7 +219,9 @@ public:
     // connects: an existing stream connection dropped, opened and bound to the local host if needed
     WONStatus Fn2B0E60(const IPAddr& inAddress)
     { return ee_won_asyncsocket_connect_to(this->mSock, inAddress.GetValue(), static_cast<uint32_t>(IPAddr::GetLocalHost())); }
-    WONStatus Accept(SmartPtr<AsyncSocket>&); // a new socket of the same type (the virtual Duplicate), a reference
+    // a new socket of the same type (the virtual Duplicate) with the accepted handle (cppcore.rs n_accept)
+    WONStatus Accept(SmartPtr<AsyncSocket>& outSocket) { return ee_won_asyncsocket_accept_to(static_cast<RefCount*>(this), AcceptSink, &outSocket); }
+    static void AcceptSink(void* inPtr, void* inSocket) { *static_cast<SmartPtr<AsyncSocket>*>(inPtr) = static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket)); }
     // success, the socket error or WS_TimedOut
     WONStatus WaitForConnect(unsigned long inWaitTime)
     { return ee_won_asyncsocket_wait_for_connect(this->mSock, static_cast<uint32_t>(inWaitTime)); }
@@ -705,10 +707,10 @@ public:
     ServerContext() : mList(ee_won_ctx_new()) {}
     virtual ~ServerContext() { ee_won_ctx_free(this->mList); }
     // a valid address not yet in the list appended; whether it was
-    bool AddAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_add(this->mList, &a); } //2ac4b0
+    bool AddAddress(const IPAddr& inAddress) { return ee_won_ctx_ip(this->mList, 0, inAddress.GetValue()); } //2ac4b0
     void Clear() { ee_won_ctx_clear(this->mList); } //2ac390: the one-time shuffle re-enabled
     // a server that failed to the end of the list
-    void NotifyFailed(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); ee_won_ctx_notify_failed(this->mList, &a); } //2ac980
+    void NotifyFailed(const IPAddr& inAddress) { ee_won_ctx_ip(this->mList, 1, inAddress.GetValue()); } //2ac980
     // the directory's services' addresses (only those of the name when one is given)
     bool AddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL) //2acab0/332
     { return ee_won_ctx_add_from_dir(this->mList, inDir.get(), inNameFilter, WideLength(inNameFilter), sizeof(wchar_t)); }
@@ -717,7 +719,7 @@ public:
     typedef std::list<IPAddr> AddrList;
     // shuffled the first time (the CRT's srand(time(NULL)) and rand, as random_shuffle drew)
     void CopyAddresses(AddrList& outCopy) { outCopy.clear(); ee_won_ctx_copy(this->mList, Rand, ToList, &outCopy); } //2ac6d0
-    bool RemoveAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_remove(this->mList, &a); }
+    bool RemoveAddress(const IPAddr& inAddress) { return ee_won_ctx_ip(this->mList, 2, inAddress.GetValue()); }
     void CopyAddresses(AddrSet& outCopy) { outCopy.clear(); ee_won_ctx_copy_sorted(this->mList, ToSet, &outCopy); }
     // cleared and refilled under the list's one lock
     bool AtomicClearAndAddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL)
@@ -1102,18 +1104,11 @@ public:
     // 2bfb00 (the 0x258 allocation is this class): the ignore file under the WON directory, the default chat commands
     SmartRoutingConnection() : mModel(ee_won_smart_new_default(sizeof(wchar_t))) {}
     // 2c4120: this client's id and record forgotten, then the routing connection closed
-    virtual void CloseHook()
-    {
-        { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_close(this->mModel); }
-        RoutingConnection::CloseHook();
-    }
+    virtual void CloseHook() { ee_won_smart_close_hook(this->mModel, this->GetDataLock(), this->GetRouteObject()); }
     // 2c0be0: the maps updated from a finished op by its type; a chat, invitation or join attempt from an ignored
     // client loses its completion
     virtual void RoutingOpCompleteHook(RoutingOp* inOp)
-    {
-        AutoCrit aCrit(this->GetDataLock());
-        if (ee_won_smart_routeop(this->mModel, inOp->mRust, inOp->GetStatus())) inOp->SetCompletion(NULL);
-    }
+    { ee_won_smart_routeop_hook(this->mModel, this->GetDataLock(), inOp->mRust, static_cast<RefCount*>(inOp)); }
     // (each call below holds the socket's lock around the model's call, as the original's AutoCrit: ee_won_smart_locked)
     void StartClientItr() { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Start, 0, 0, 0, 0); }
     void StartGroupItr() { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Start, 1, 0, 0, 0); }

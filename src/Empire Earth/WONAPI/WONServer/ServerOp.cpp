@@ -102,14 +102,7 @@ void RustServerOp::Set(int inWhich, RefCount* inObj)
 }
 IPAddr RustServerOp::GetCurAddr() const { return this->AddrOf(EE_WON_REQHOST_CUR_ADDR); }
 IPAddr RustServerOp::GetAddr() const { return this->AddrOf(EE_WON_REQHOST_ADDR); }
-IPAddr RustServerOp::AddrOf(int inWhich) const
-{
-    std::string anAddr;
-    ee_won_hostop_bytes(this->mRustOp, inWhich, 0, StrSink, &anAddr);
-    IPAddr a;
-    if (anAddr.size() == 6) a.SetSixByte(anAddr.data());
-    return a;
-}
+IPAddr RustServerOp::AddrOf(int inWhich) const { return IPAddr::FromValue(ee_won_hostop_addr(this->mRustOp, inWhich)); }
 void RustServerOp::StrSink(void* inContext, const uint8_t* inData, size_t inLength)
 {
     static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inData), inLength);
@@ -175,9 +168,7 @@ void RustServerOp::SetBytes(int inWhich, const std::string& inBytes)
 }
 BlockingSocket* RustServerOp::GetHttpSocket() const
 {
-    BlockingSocket* aSocket = static_cast<BlockingSocket*>(reinterpret_cast<RefCount*>((intptr_t)this->GetNum(EE_WON_HTTPGET_SOCKET)));
-    if (aSocket == NULL || !aSocket->IsConnected()) return NULL;
-    return aSocket;
+    return static_cast<BlockingSocket*>(static_cast<RefCount*>(ee_won_hostop_connected_socket(this->mRustOp, EE_WON_HTTPGET_SOCKET)));
 }
 RustServerOp* RustServerOp::NewHttpDocument(const std::string& inProduct, int inType)
 {

@@ -86,7 +86,7 @@ static AUTH_STUB: EeWonCoreHooks = EeWonCoreHooks {
     socket_thread_add: None,
     bytes_adopt: None,
     transform: None,
-    accept: None,
+    socket_duplicate: None,
     socket_hook: None,
     new_route_op: None,
     route_virtual: None,
