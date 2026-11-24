@@ -1,4 +1,8 @@
 // Software surface classes (optional; not identified in the original exe).
+// R6 WON GUI round 36: the game has no SurfaceBase any more (a native image's surface is the Rust image's own,
+// imgobj.rs; a DisplayContext names the Rust surface). This shell, the game's include/ee/wonapi/WONSurface.h until
+// then, stays for the drivers that draw on real surfaces through it (won_imgobj, won_platimg, won_platfont,
+// won_platgfx, won_platwm).
 // R6 WON round 37: the surface is ee_won's Rust object (rust/crates/ee_won_gui/src/surface.rs: the format, size, row
 // pitch, pixels, clip rectangle and colour, and every drawing method of the SDK's Surface.cpp); SurfaceBase is its
 // reference-counted shell, each method a forwarder. The SDK's Surface<PixelType> (Surface16, Surface32) is the one

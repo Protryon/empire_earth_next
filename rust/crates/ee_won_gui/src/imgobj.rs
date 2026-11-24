@@ -6,7 +6,7 @@
 //!
 //! One object, [`EeWonImage`], is each image; its kind is the original's class. The C++ `Image` is a handle with one
 //! pointer to it (the handle owns the object, the handle's reference count is the image's): what the GUI holds,
-//! draws and passes around. What an image holds of other C++ objects (other images, the surface and display context
+//! draws and passes around. What an image holds of other C++ objects (other images, the display context
 //! of a native image, its Graphics) it holds by their handles through the host (`EeWonImageHost`): references taken
 //! and given back as the original's SmartPtr members did, a new handle for each image a call makes (`Wrap`), the
 //! Graphics calls of a program image's draw (`GfxRun` runs a draw plan, guidraw.rs's operations). The palettes and
@@ -48,7 +48,7 @@ pub enum EeWonImageHost {
     CtxGraphics = 4,
     /// The `EeWonSurface*` of `((DisplayContext*)a)->mSurface` (0 for none or a NULL context).
     CtxSurface = 5,
-    /// `((DisplayContext*)a)->mPixelScale`'s bits.
+    /// `((DisplayContext*)a)->mPixelScale` into `*(float*)b`.
     CtxScale = 6,
     /// `((Graphics*)a)`'s translation into `((int*)b)[0..2]`.
     GfxTrans = 7,
@@ -59,11 +59,8 @@ pub enum EeWonImageHost {
     GfxRun = 9,
     /// `((Graphics*)a)->DrawImage((Image*)b, ((int*)c)[0], ((int*)c)[1])`.
     GfxDrawImage = 10,
-    /// A new black 32-bit surface of `a` x `b` pixels (negative sizes 0): its `SurfaceBase*` with one reference.
-    NewSurface = 11,
-    /// `((SurfaceBase*)a)->GetRust()`.
-    SurfaceRust = 12,
-    /// `new DisplayContext((SurfaceBase*)a)` with `mPixelScale` the bits `b`: one reference.
+    /// `new DisplayContext((EeWonSurface*)a, *(const float*)b)` (its pixel scale): one reference. (11 and 12 made the
+    /// C++ SurfaceBase and read its surface; a native image's surface is its own since R6 WON GUI round 36.)
     NewContext = 13,
     /// `new PlatGraphics` attached to `(DisplayContext*)a`: owned by the image.
     NewGraphics = 14,
@@ -193,7 +190,7 @@ pub enum Kind {
         bytes_per_row: i32,
     },
     Native {
-        surface: Held,
+        /// the image's own surface (the original's Surface32 member), freed with it
         surf: *mut EeWonSurface,
         context: Held,
         scale: f32,
@@ -393,16 +390,16 @@ impl EeWonImage {
     /// pixels (the scale at least 1) with its own display context at that scale.
     pub fn new_native(host: EeWonImageHostFn, w: i32, h: i32, scale: f32) -> Box<EeWonImage> {
         let scale = if scale >= 1.0 { scale } else { 1.0 };
-        let surface =
-            host(EeWonImageHost::NewSurface, plat_pixels(w, scale) as isize, plat_pixels(h, scale) as isize, 0, 0);
-        let surf = host(EeWonImageHost::SurfaceRust, surface, 0, 0, 0) as *mut EeWonSurface;
-        let context = host(EeWonImageHost::NewContext, surface, scale.to_bits() as isize, 0, 0);
+        // a new black 32-bit surface (negative sizes 0; `create` clears the pixels)
+        let surf = crate::surface::ee_won_surface_new(crate::surface::EE_WON_SURFACE_32);
+        // SAFETY: the new surface
+        unsafe { (*surf).create(plat_pixels(w, scale).max(0), plat_pixels(h, scale).max(0)) };
+        let context = host(EeWonImageHost::NewContext, surf as isize, &scale as *const f32 as isize, 0, 0);
         Self::boxed(
             host,
             w,
             h,
             Kind::Native {
-                surface: Held(Cell::new(surface)),
                 surf,
                 context: Held(Cell::new(context)),
                 scale,
@@ -583,7 +580,8 @@ impl EeWonImage {
         if dst.is_null() {
             return;
         }
-        let dscale = f32::from_bits(self.h(EeWonImageHost::CtxScale, ctx, 0, 0, 0) as u32);
+        let mut dscale = 0.0f32;
+        self.h(EeWonImageHost::CtxScale, ctx, &mut dscale as *mut f32 as isize, 0, 0);
         let m = self.native_mask();
         let pm = m.as_ref().map(|m| m.plat());
         // SAFETY: live surfaces; the mask's bits live while `m` does
@@ -1013,12 +1011,13 @@ impl Drop for EeWonImage {
                 rel(stretch.get());
                 rel(center.get());
             }
-            Kind::Native { surface, context, graphics, mask, .. } => {
+            Kind::Native { surf, context, graphics, mask, .. } => {
                 // ~PlatNativeImage: the Graphics, the surface; ~NativeImage: the mask, the context
                 if graphics.get() != 0 {
                     host(EeWonImageHost::FreeGraphics, graphics.get(), 0, 0, 0);
                 }
-                rel(surface.get());
+                // SAFETY: the image's own surface, made by new_native, freed once
+                unsafe { crate::surface::ee_won_surface_free(*surf) };
                 mask.borrow_mut().take();
                 rel(context.get());
             }
@@ -1225,7 +1224,7 @@ pub enum EeWonImageField {
     PixelHeight = 8,
     /// A native image's pixel scale's bits.
     Scale = 9,
-    /// A native image's `SurfaceBase*`.
+    /// A native image's `EeWonSurface*`.
     Surface = 10,
     /// A native image's display context.
     Context = 11,
@@ -1424,7 +1423,7 @@ pub unsafe extern "C" fn ee_won_image_get(o: *const EeWonImage, f: EeWonImageFie
         EeWonImageField::PixelHeight => surface(SF::Height),
         EeWonImageField::Scale => i.native_scale().to_bits() as isize,
         EeWonImageField::Surface => match &i.kind {
-            Kind::Native { surface, .. } => surface.get(),
+            Kind::Native { surf, .. } => *surf as isize,
             _ => 0,
         },
         EeWonImageField::Context => match &i.kind {

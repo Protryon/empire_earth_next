@@ -30,7 +30,7 @@
 #include <iterator>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
-#include "ee/wonapi/WONSurface.h"
+#include "won_surface_shell.h"
 #include "platform/PlatWindow.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatFont.h"

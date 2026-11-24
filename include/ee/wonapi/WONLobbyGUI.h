@@ -45,6 +45,7 @@
 #include "rust/won_gui/rootobj.h"
 #include "rust/won_gui/rowobj.h"
 #include "rust/won_gui/scrollerobj.h"
+#include "rust/won_gui/surface.h" // EeWonSurface: what a DisplayContext draws into
 #include "rust/won_gui/tabobj.h"
 #include "rust/won_gui/treeobj.h"
 #include "rust/won_gui/winobj.h"
@@ -78,7 +79,6 @@ typedef std::set<long> ControlIdSet;
 
 class WONRectangle;
 class Window;
-class SurfaceBase; // WONSurface.h: the software surface a DisplayContext draws into
 class Component;
 // Cursor (RefCount, 8 bytes); the constructor 0x326540 stores only the inherited refcount and vptr
 // R6 WON GUI round 35: one class over cursorobj.rs, which is the cursor by its kind: the plain Cursor, the platform's
@@ -1295,11 +1295,11 @@ class SizeEvent;
 // DisplayContext (0x10 bytes): allocated and filled at 0x3cfab4..0x3cfad4; type descriptor 0x4e0ab0.
 class DisplayContext : public RefCount {
 public:
-    // The port draws into software surfaces (WONSurface.h; the backend: WONLobbyPlatform.h): a context is the
+    // The port draws into software surfaces (surface.rs; the backend: WONLobbyPlatform.h): a context is the
     // surface an image owns, which carries the clip. The original held the GDI device context (HDC) here.
-    DisplayContext(SurfaceBase* surface=NULL) : mSurface(surface),mGraphics(NULL),mPixelScale(1.0f) {}
+    DisplayContext(EeWonSurface* surface=NULL,float scale=1.0f) : mSurface(surface),mGraphics(NULL),mPixelScale(scale) {}
     virtual ~DisplayContext() {}
-    SurfaceBase* mSurface; // at +0x08, not owned (the owning image keeps it); NULL: nothing to draw into
+    EeWonSurface* mSurface; // at +0x08, not owned (the owning image's, imgobj.rs); NULL: nothing to draw into
     Graphics* mGraphics; //0c borrowed
     // port: the surface's pixels per logical pixel (WONLobbyPlatform.h "Pixel scale"): every coordinate the GUI
     // draws with is logical; the backend scales it to the surface's pixels
@@ -1749,7 +1749,7 @@ public:
 inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned short o, unsigned short n, int x, int y)
 {
     if (c != NULL)
-        ee_won_gfx_font_draw(this->mRust, c->mSurface != NULL ? c->mSurface->GetRust() : NULL, c->mPixelScale,
+        ee_won_gfx_font_draw(this->mRust, c->mSurface, c->mPixelScale,
                              c->mGraphics != NULL ? c->mGraphics->State() : NULL, c->mGraphics != NULL ? &c->mGraphics->mPlat : NULL,
                              s.mData->mText + o, n, x, y);
 }
@@ -1820,7 +1820,7 @@ public:
     int GetPixelWidth() { return (int)this->Get(EeWonImageField::PixelWidth); }
     int GetPixelHeight() { return (int)this->Get(EeWonImageField::PixelHeight); }
     float GetScale() const { uint32_t s=(uint32_t)this->Get(EeWonImageField::Scale); float f; memcpy(&f,&s,4); return f; }
-    SurfaceBase* GetSurface() { return (SurfaceBase*)this->Get(EeWonImageField::Surface); }
+    EeWonSurface* GetSurface() { return (EeWonSurface*)this->Get(EeWonImageField::Surface); }
 };
 // R6 WON GUI round 35: RawImage32 and RawImage8 were RawImage with a constructor of their kind and the 32-bit image's
 // two calls; the kind is the Rust image's (imgobj.rs), so the one class is every raw image's handle

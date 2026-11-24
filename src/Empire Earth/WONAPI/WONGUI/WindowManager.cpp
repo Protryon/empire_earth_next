@@ -238,10 +238,7 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
         *(int32_t*)b = (int32_t)theTitle.size();
         return (intptr_t)theTitle.c_str();
     }
-    case Op::Offscreen: {
-        NativeImage* theImage = w->mOffscreenImage.get();
-        return theImage != NULL ? (intptr_t)theImage->GetSurface()->GetRust() : 0;
-    }
+    case Op::Offscreen: return w->mOffscreenImage.get() != NULL ? (intptr_t)w->mOffscreenImage->GetSurface() : 0;
     case Op::Modifiers: return (intptr_t)PlatModifiers();
     case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;
     case Op::Minimize: PlatWindowMinimize((PlatWindow*)a); return 0;
