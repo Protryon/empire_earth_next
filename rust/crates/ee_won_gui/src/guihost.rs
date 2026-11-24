@@ -1096,6 +1096,15 @@ pub enum EeWonGuiOp {
     WmSizeEvSetW,
     /// `((SizeEvent*)a)->mHeight = b`.
     WmSizeEvSetH,
+    // ---- R6 WON GUI round 35, the configs' and containers' share (values 3200..3399)
+    /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
+    TabNewContainer = 3200,
+    /// TabCtrl's constructor: `new TabBar((EeWonTabCtrl*)a)` (unheld, as a `Component*`).
+    TabNewBar,
+    /// `static_cast<TabBar*>((Component*)a)->mBar`.
+    TabBarOf,
+    /// TabCtrl's constructor: `mContainerLayout = new LayoutPoint` (the member holds it), as a `Component*`.
+    TabNewPoint,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).

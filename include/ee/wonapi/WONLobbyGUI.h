@@ -748,12 +748,13 @@ public:
 // bar height and overlap, arrows, placement flags, pages and selected page are the Rust objects
 // (rust/crates/ee_won_gui/src/tabobj.rs); these are the types the configs, the skins (MSTabCtrl, WONTabCtrl) and the root
 // screen use, with one-line forwarders (TabCtrl.cpp is their host). The control's four containers and its page area's
-// layout point stay its members: its constructor makes them and gives them to the Rust control.
+// layout point are made and held by the Rust control (R6 WON GUI round 35: its constructor's statements); only the
+// layout point stays a member (the configs and the skins read it).
 class TabCtrl;
 class LayoutPoint;
 class TabBar : public Container {
 public:
-    TabBar(TabCtrl*);
+    explicit TabBar(EeWonTabCtrl*); // the Rust control it is the bar of (NULL: none)
     virtual ~TabBar(); // the implicit destructor (0x3081f0): the Rust bar gives the buttons back
     virtual void HandleComponentEvent(ComponentEvent* e) { ee_won_tabbar_call(this->mBar,EeWonTabBarCall::HandleComponentEvent,(intptr_t)e); }
     EeWonTabBar* mBar;
@@ -777,10 +778,7 @@ public:
     void RemoveTab(int id) { this->TCall(EeWonTabCall::RemoveTab,id); } // removes the tab and reselects
     // the selected tab's id and the configs' writes (TabCtrlConfig, RootScreen)
     int GetCurTabId() { return (int)this->TCall(EeWonTabCall::GetField,(intptr_t)EeWonTabField::CurTabId); }
-    SmartPtr<TabBar> mBottomTabBar; //84
-    SmartPtr<Container> mTopTabBar; //88
-    SmartPtr<Container> mBottomTabBarContainer; //8c
-    SmartPtr<Container> mTopTabBarContainer; //90
+    // the bottom bar, the top bar and their two containers (0x84..0x90) are the Rust control's (round 35)
     SmartPtr<LayoutPoint> mContainerLayout; //94 (TabCtrlConfig's CONTAINERLAYOUT, the skins' frames)
     EeWonTabCtrl* mTab;
 private:
