@@ -671,6 +671,18 @@ lines here:
 A decision this engine cannot express (no territory split of the retail game, no stance-claimed orders, no
 personality leanings, no unit-improvement data) is a gap named in the file's line, not a silent omission.
 
+Still not ported of the files modified since 0ac6495 (their lines above describe the port at 0ac6495 unless they
+name a newer piece): defence.c's STRONG ANTI-AIR row, TOWN GUARDS, BUILDERS UNDER COVER and its anti-air record
+(airguard.lua builds and counts the AA itself), bunker.c's stash_by_territory, let-out-few and territory reserve,
+airstrike.c's bomber doctrine / harassment / survival / come-home / claim and the fighters' claims (air.lua and
+airguard.lua keep their own wings), navy.c's sea_fishing, sea_fleet, harbours and fleet station, fleet.c's
+harbours and station, landing.c's air transport, expand.c's FRONT GUARDS and THE LANDING AS THE PLAYER DOES IT,
+towns.c's THE PARTY, garrison.c's THE MINES' HOLDERS, A SECOND PRODUCER, A DRAIN NOT A COST and A GRANARY BEFORE
+THE NEXT (build.lua asks for the granary, tactics.lua's garrison fills any holder with room), priority.c's "air"
+row (research, laid and savings are in), packing.c's NO SHUT-IN PLACES (the engine's placement), and the newer
+parts of intel.c, cover.c, sites.c, stage.c, forces.c, stats.c, metal.c, diplo.c and skirmish.c, which are
+engine-level or named in the module that carries the decision.
+
 Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at the commit in UPSTREAM, with the
 deviations noted there (each marked why: an engine difference, or a measured call of the owner's). The keys of the
 port forward are there too, each marked with the module that reads it or "not read yet".
