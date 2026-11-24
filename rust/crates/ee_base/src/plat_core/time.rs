@@ -819,10 +819,15 @@ mod tests {
     fn a_new_factor_continues_the_clocks_without_a_jump() {
         with_factor(1000, 1, || {
             PlatSleep(2000); // 2 real ms
+            let real = std::time::Instant::now();
             let before = PlatTimeMilliseconds64();
             assert_eq!(PlatSimSetTimeFactor(1, 1), 1);
             let after = PlatTimeMilliseconds64();
-            assert!(after >= before && after - before < 50, "{before} -> {after}");
+            // No jump: the clock went on by no more than the real time between the two reads at the old factor (a
+            // real microsecond is a virtual ms at 1000) and 50 ms. A fixed 50 ms failed when this thread lost the CPU
+            // for 0.144 real ms between the reads ("568680133 -> 568680277").
+            let most = real.elapsed().as_micros() as u64 + 50;
+            assert!(after >= before && after - before < most, "{before} -> {after}, at most {most}");
             assert_eq!(PlatSimSetTimeFactor(0, 1), 0, "refused");
             assert_eq!(PlatSimSetTimeFactor(5000, 1), 0, "refused");
         });
@@ -839,9 +844,9 @@ mod tests {
             SCALED_TICKS.store(0, Ordering::SeqCst);
             // 25 virtual ms = 0.5 real ms: at most 2 periods a real ms (+ slack for the timer's start), and 40 ticks
             // reached however long a loaded machine takes (a 1 ms timer would need 40 real ms)
+            let start = std::time::Instant::now(); // before the timer's start, as the periodic callback test's
             let id = unsafe { PlatTimerStartCallback(25, 1, Some(scaled_tick), std::ptr::null_mut()) };
             assert_ne!(id, 0);
-            let start = std::time::Instant::now();
             wait_until(20_000, || SCALED_TICKS.load(Ordering::SeqCst) >= 40);
             assert_eq!(PlatTimerStop(id), 1);
             let real = real_ms(start);
@@ -928,9 +933,11 @@ mod tests {
     fn periodic_callback_timers_tick_until_stopped() {
         let _guard = crate::plat_core::test_globals();
         TICKS.store(0, Ordering::SeqCst);
+        // the real time from before the timer's start: this thread may lose the CPU for many periods between the
+        // start's return and its next statement, and those ticks counted against a later start ("45 ticks in 120 ms")
+        let start = std::time::Instant::now();
         let id = unsafe { PlatTimerStartCallback(10, 1, Some(tick), 0x1234 as *mut c_void) };
         assert_ne!(id, 0);
-        let start = std::time::Instant::now();
         wait_until(20_000, || TICKS.load(Ordering::SeqCst) >= 5);
         PlatSleep(100); // keeps ticking (about 10 more periods)
         assert_eq!(PlatTimerStop(id), 1);

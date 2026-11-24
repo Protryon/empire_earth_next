@@ -1,5 +1,5 @@
 //! The part of Lua's C API that `lua_host` calls, declared `extern "C"` (cannot unwind) over `mlua-sys`'s types and
-//! constants (`lua54`, `external`: the vendored Lua the C++ build compiles).
+//! constants (`lua55`, `vendored`: Lua 5.5 compiled unmodified from the `lua-src` crate, in the Rust library).
 //!
 //! Why not `mlua-sys`'s own functions: it declares them `extern "C-unwind"`. Lua raises an error with longjmp, and the
 //! MSVC CRT's longjmp unwinds the stack (an SEH unwind). With `panic = "abort"` (the release profile) every Rust
@@ -10,7 +10,7 @@
 //! the C defines it.
 #![allow(non_snake_case, non_camel_case_types, clippy::missing_safety_doc)]
 
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{c_char, c_int, c_uint, c_void};
 
 pub use mlua_sys::{
     luaL_Buffer, lua_Debug, lua_Integer, lua_Number, lua_State, lua_upvalueindex, LUAL_BUFFERSIZE, LUA_ERRMEM,
@@ -29,7 +29,7 @@ type lua_KFunction = unsafe extern "C-unwind" fn(L: *mut lua_State, status: c_in
 
 // (Lua's own declarations come from lua.h: lib.rs keeps this module out of the headers)
 extern "C" {
-    pub fn lua_newstate(f: lua_Alloc, ud: *mut c_void) -> *mut lua_State;
+    pub fn lua_newstate(f: lua_Alloc, ud: *mut c_void, seed: c_uint) -> *mut lua_State;
     pub fn lua_close(L: *mut lua_State);
     pub fn lua_atpanic(L: *mut lua_State, panicf: lua_CFunction) -> Option<lua_CFunction>;
     pub fn lua_getallocf(L: *mut lua_State, ud: *mut *mut c_void) -> lua_Alloc;
@@ -65,6 +65,9 @@ extern "C" {
     pub fn lua_getfield(L: *mut lua_State, idx: c_int, k: *const c_char) -> c_int;
     pub fn lua_rawget(L: *mut lua_State, idx: c_int) -> c_int;
     pub fn lua_rawgeti(L: *mut lua_State, idx: c_int, n: lua_Integer) -> c_int;
+    pub fn lua_geti(L: *mut lua_State, idx: c_int, n: lua_Integer) -> c_int;
+    pub fn lua_seti(L: *mut lua_State, idx: c_int, n: lua_Integer);
+    pub fn lua_compare(L: *mut lua_State, idx1: c_int, idx2: c_int, op: c_int) -> c_int;
     pub fn lua_createtable(L: *mut lua_State, narr: c_int, nrec: c_int);
     pub fn lua_newuserdatauv(L: *mut lua_State, sz: usize, nuvalue: c_int) -> *mut c_void;
     pub fn lua_getmetatable(L: *mut lua_State, objindex: c_int) -> c_int;
@@ -96,6 +99,7 @@ extern "C" {
     pub fn luaL_checktype(L: *mut lua_State, arg: c_int, t: c_int);
     pub fn luaL_checkany(L: *mut lua_State, arg: c_int);
     pub fn luaL_error(L: *mut lua_State, fmt: *const c_char, ...) -> c_int;
+    pub fn luaL_len(L: *mut lua_State, idx: c_int) -> lua_Integer;
     pub fn luaL_ref(L: *mut lua_State, t: c_int) -> c_int;
     pub fn luaL_unref(L: *mut lua_State, t: c_int, r: c_int);
     pub fn luaL_loadbufferx(
@@ -123,6 +127,9 @@ extern "C-unwind" {
 }
 
 // ---- lua.h's and lauxlib.h's macros
+
+/// `lua_compare`'s less-than.
+pub const LUA_OPLT: c_int = 1;
 
 #[inline(always)]
 pub unsafe fn lua_error(L: *mut lua_State) -> ! {

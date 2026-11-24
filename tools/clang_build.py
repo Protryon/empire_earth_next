@@ -221,7 +221,7 @@ def main():
         if a.out == str(ROOT / "build" / "clang"):
             a.out = str(ROOT / "build" / "clang-census")
     mods = a.names or units.MODULES
-    jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
+    jobs = [j for m in mods for j in units.jobs_for(m)]
     if a.only:
         jobs = [j for j in jobs if a.only in str(j[1])]
     out = pathlib.Path(a.out).resolve()
