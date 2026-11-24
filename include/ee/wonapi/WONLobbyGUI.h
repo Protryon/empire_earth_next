@@ -518,8 +518,6 @@ public:
     EeWonButton* mBtn;
     static void SetDialogDefaultButton(Button*); //2f31c0
     static void UnSetDialogDefaultButton(Button*); //2f3230
-    static void SetDefaultButton(Button*); //2f3280
-    static void UnSetDefaultButton(Button*); //2f3300
     void CopyAttributes(Button*); //2f3310
     void ButtonDown() { this->BCall(EeWonBtnCall::ButtonDown); } //2f3660
     void ButtonUp(bool a) { this->BCall(EeWonBtnCall::ButtonUp,a); } //2f36d0
@@ -2243,11 +2241,6 @@ public:
     EeWonMHead* mHead;
 private:
     intptr_t HCall(EeWonMHeadCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_mhead_call(this->mHead,c,a,b,cc); }
-};
-
-struct GUIStringLessNoCase {
-    bool operator()(const GUIString& inLeft, const GUIString& inRight) const
-    { return inLeft.CompareNoCase(inRight) < 0; }
 };
 
 // Keyboard.h modifiers; the exe tests bits 1 and 2.

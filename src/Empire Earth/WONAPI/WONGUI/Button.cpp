@@ -91,16 +91,6 @@ void Button::UnSetDialogDefaultButton(Button* b)
 {
     ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDialogDefault,(intptr_t)static_cast<Component*>(b));
 }
-// Makes a button the current default (the one Enter presses), repainting the old and the new one
-void Button::SetDefaultButton(Button* b)
-{
-    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::SetDefault,(intptr_t)static_cast<Component*>(b));
-}
-// Falls back to the dialog's default button as the current default (the original ignores the argument)
-void Button::UnSetDefaultButton(Button* b)
-{
-    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDefault,(intptr_t)static_cast<Component*>(b));
-}
 // Copies another button's flags and click sound
 void Button::CopyAttributes(Button* from)
 {
