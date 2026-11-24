@@ -20,7 +20,6 @@
 #ifndef EE_EECPENGINE_H
 #define EE_EECPENGINE_H
 
-#include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -56,13 +55,10 @@ inline long EECPChoiceByName(const std::string& inName) { return (long)ee_cp_eng
 inline uint32_t EECPAIFolderHash() { return ee_cp_engine_folder_hash(); }
 
 // a log line "EE-AI engine <text>" (the debug output, the game log when open, EE-SIM's stderr)
-inline void EECPEngineLog(const char* inFormat, ...)
+template <class... A> inline void EECPEngineLog(const char* inFormat, A... inArguments)
 {
     char theText[900];
-    va_list theArguments;
-    va_start(theArguments, inFormat);
-    vsnprintf(theText, sizeof(theText), inFormat, theArguments);
-    va_end(theArguments);
+    snprintf(theText, sizeof(theText), inFormat, inArguments...);
     ee_cp_engine_log(theText);
 }
 
