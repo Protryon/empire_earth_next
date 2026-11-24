@@ -69,7 +69,8 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
     case H::WrapWidthOf: return static_cast<MSButtonBase*>((Component*)a)->mText->GetWidth();
     case H::SetWrap: static_cast<MSButtonBase*>((Component*)a)->SetWrap(b != 0); return 0;
     case H::SameSize: {
-        SmartPtr<SameSizeLayout> l = (new SameSizeLayout((Component*)a, true, true))->Add((Component*)b)->Add((Component*)c);
+        SmartPtr<ChildLayoutInstructionBase> l = new ChildLayoutInstructionBase(EeWonLayoutKind::SameSize, NULL, NULL, 0, 0, 0, true, true);
+        for (intptr_t x : {a, b, c}) l->AddComponent((Component*)x);
         l->Execute(static_cast<Container*>(t));
         return 0;
     }

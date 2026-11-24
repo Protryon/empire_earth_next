@@ -26,6 +26,7 @@ use crate::guidraw::{EeWonDrawOp, EE_WON_DRAW_POP_CLIP, EE_WON_DRAW_PUSH_CLIP, E
 use crate::guievent;
 use crate::guifocus;
 use crate::guihost::{EeWonCtVirt as V, EeWonGuiHostFn, EeWonGuiOp as Op};
+use crate::layoutobj::{EeWonLayoutMgr, EeWonLayoutMgrCall};
 
 const FLAG_INVISIBLE: isize = 0x1;
 const FLAG_HAS_FOCUS: isize = 0x10;
@@ -256,6 +257,10 @@ pub struct EeWonContainer {
     comp: *mut c_void,
     host: EeWonGuiHostFn,
     st: RefCell<State>,
+    /// The child layout manager the container owns (R6 WON GUI round 35: `Container::mChildLayout`, a C++
+    /// `ChildLayoutManager` shell until then). None for a container made without one (the drivers' worlds): the layout
+    /// calls go to the host as `CtLayout` ops.
+    layout: RefCell<Option<Box<EeWonLayoutMgr>>>,
 }
 
 impl EeWonContainer {
@@ -280,7 +285,52 @@ impl EeWonContainer {
                 modal: 0,
                 viewport_area: 0,
             }),
+            layout: RefCell::new(None),
         }
+    }
+
+    /// The owned manager, live while the container is (never borrowed across a call out: the manager's calls out
+    /// re-enter the container).
+    fn layout_mgr(&self) -> Option<*const EeWonLayoutMgr> {
+        self.layout.borrow().as_ref().map(|m| &**m as *const EeWonLayoutMgr)
+    }
+
+    /// One of the container's calls on its child layout: the owned manager's method, or the host's `CtLayout` op.
+    fn layout_op(&self, which: isize, c: isize) {
+        let Some(m) = self.layout_mgr() else {
+            self.op(Op::CtLayout, which, c, 0, 0);
+            return;
+        };
+        // SAFETY: the box lives until `destroy` takes it; no borrow is held
+        let m = unsafe { &*m };
+        match which {
+            0 => m.execute(self.me()),
+            1 => m.remove_component(c),
+            _ => m.clear(),
+        }
+    }
+
+    /// The constructor's `mChildLayout = new ChildLayoutManager`, its calls out through `host`.
+    pub fn make_layout(&self, host: EeWonGuiHostFn) {
+        *self.layout.borrow_mut() = Some(Box::new(EeWonLayoutMgr::new(std::ptr::null_mut(), host)));
+    }
+
+    /// The container's layout methods: `AddChildLayout(a, c)` (`b` the instruction's Rust object),
+    /// `AddLayoutPoint(a)` (the point's parent set first), `EnableLayoutInstructions(a, b)`; the manager's other
+    /// calls as they are. 0 without a manager.
+    pub fn layout_call(&self, call: EeWonLayoutMgrCall, a: isize, b: isize, c: isize) -> isize {
+        let Some(m) = self.layout_mgr() else { return 0 };
+        if call == EeWonLayoutMgrCall::AddLayoutPoint {
+            mem::set_parent(a, self.me());
+        }
+        // SAFETY: as `layout_op`'s
+        unsafe { &*m }.call(call, a, b, c, self.me())
+    }
+
+    /// `Container::Relayout`: the size-changed virtual, then Invalidate.
+    pub fn relayout(&self) {
+        self.virt(V::SizeChanged, 0, 0);
+        self.op(Op::Invalidate, 0, 0, 0, 0);
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
@@ -386,7 +436,7 @@ impl EeWonContainer {
 
     pub fn size_changed(&self) {
         self.base(V::SizeChanged, 0, 0);
-        self.op(Op::CtLayout, 0, 0, 0, 0);
+        self.layout_op(0, 0);
     }
 
     pub fn desired_size(&self) -> (i32, i32) {
@@ -702,7 +752,7 @@ impl EeWonContainer {
             self.release(c);
         }
         if !removing_all {
-            self.op(Op::CtLayout, 1, c, 0, 0);
+            self.layout_op(1, c);
         }
         if c == self.focus() {
             self.set_focus_to_last_focus_child();
@@ -726,7 +776,7 @@ impl EeWonContainer {
             };
             self.virt(V::RemoveChild, front, 0);
         }
-        self.op(Op::CtLayout, 2, 0, 0, 0);
+        self.layout_op(2, 0);
         self.st.borrow_mut().removing_all = false;
         self.virt(V::SetCursor, 0, 0);
     }
@@ -1248,7 +1298,13 @@ impl EeWonContainer {
             mem::set_parent(c, 0);
         }
         self.set_cursor_field(0);
-        self.op(Op::CtLayout, 3, 0, 0, 0);
+        let layout = self.layout.borrow_mut().take();
+        match layout {
+            Some(m) => m.destroy(),
+            None => {
+                self.op(Op::CtLayout, 3, 0, 0, 0);
+            }
+        }
         let (timers, children) = {
             let mut s = self.st.borrow_mut();
             let t: Vec<usize> = std::mem::take(&mut s.timers).into_iter().collect();
@@ -1348,6 +1404,42 @@ pub extern "C" fn ee_won_ct_new(
     let made = Box::into_raw(Box::new(EeWonContainer::new(component, host, wheel_to_focus)));
     crate::registry::register(component, crate::registry::EeWonGuiKind::Container, made as *const std::ffi::c_void);
     made
+}
+
+/// `Container::Container`'s child layout manager, owned by the Rust container (`host` the layout objects' host).
+///
+/// # Safety
+/// `ct` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_ct_layout_new(ct: *const EeWonContainer, host: EeWonGuiHostFn) {
+    // SAFETY: the contract
+    unsafe { (*ct).make_layout(host) }
+}
+
+/// One of the container's layout methods (`EeWonContainer::layout_call`).
+///
+/// # Safety
+/// `ct` is live; an instruction passed with its live Rust object.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_ct_layout_call(
+    ct: *const EeWonContainer,
+    call: EeWonLayoutMgrCall,
+    a: isize,
+    b: isize,
+    c: isize,
+) -> isize {
+    // SAFETY: the contract; a shared reference: the calls out may re-enter
+    unsafe { (*ct).layout_call(call, a, b, c) }
+}
+
+/// `Container::Relayout`.
+///
+/// # Safety
+/// `ct` is live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_ct_relayout(ct: *const EeWonContainer) {
+    // SAFETY: the contract
+    unsafe { (*ct).relayout() }
 }
 
 /// The destructor's statements (children told, cursor, layout, timer children and children released), then the

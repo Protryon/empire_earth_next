@@ -33,7 +33,7 @@ static intptr_t CfgBodyHost(void* inFrame, EeWonCfgBodyOp op, void* c, intptr_t 
     case O::PercentParse: return CFG_BODY_G(k->ParseChild(*(ConfigParser*)y, CFG_PCT(x).get(), false, true));
     case O::PercentRef: return (intptr_t)CFG_PCT(x)->refs[y];
     case O::PercentRefSelf: CFG_PCT(x)->refs[0] = k->mComponent.get(); return 0;
-    case O::PercentAdd: return CFG_BODY_GV(static_cast<ContainerConfig*>(k)->mContainer->AddChildLayout(new PercentLayout(CFG_PCT(x)->target, PercentLayoutParam(CFG_PCT(x)->refs[0], CFG_PCT(x)->refs[1], CFG_PCT(x)->refs[2], CFG_PCT(x)->refs[3], CFG_PCT(x)->params[0], CFG_PCT(x)->params[1], CFG_PCT(x)->params[2], CFG_PCT(x)->params[3], CFG_PCT(x)->params[4], CFG_PCT(x)->params[5], CFG_PCT(x)->params[6], CFG_PCT(x)->params[7])), static_cast<ContainerConfig*>(k)->mCurLayoutId));
+    case O::PercentAdd: return CFG_BODY_GV(static_cast<ContainerConfig*>(k)->mContainer->AddChildLayout(WONNewPercentLayout(CFG_PCT(x)->target, CFG_PCT(x)->refs, CFG_PCT(x)->params), static_cast<ContainerConfig*>(k)->mCurLayoutId));
     case O::PercentFree: delete &CFG_PCT(x); return 0;
     case O::SchemeNew: return (intptr_t)new SmartPtr<ColorSchemeConfig>(new ColorSchemeConfig);
     case O::SchemeParse: return CFG_BODY_G(k->ParseChild(*(ConfigParser*)y, ((SmartPtr<ColorSchemeConfig>*)x)->get(), false, true));

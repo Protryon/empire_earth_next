@@ -137,9 +137,57 @@ unsafe fn bytes<'a>(p: *const u8, n: usize) -> &'a [u8] {
     }
 }
 
+/// `FontDescriptor::operator==`: the same size, the same style and the same face without case (`operator!=` is its
+/// negation; `operator<` is the map's `order`).
+///
+/// # Safety
+/// `a` points at `na` bytes and `b` at `nb` (or NULL with 0).
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_font_desc_same(
+    a: *const u8,
+    na: usize,
+    style_a: i32,
+    size_a: i32,
+    b: *const u8,
+    nb: usize,
+    style_b: i32,
+    size_b: i32,
+) -> bool {
+    // SAFETY: the caller's contract
+    size_a == size_b && style_a == style_b && compare_no_case(unsafe { bytes(a, na) }, unsafe { bytes(b, nb) }) == 0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Font.cpp's `operator==` at 71c097464: `if(mSize!=other.mSize) return false; if(mStyle!=other.mStyle) return
+    /// false; return StringCompareNoCase(mFace,other.mFace)==0;`
+    #[test]
+    fn descriptors_are_the_same_by_size_style_and_face_without_case() {
+        let same = |a: &[u8], sa: i32, za: i32, b: &[u8], sb: i32, zb: i32| {
+            // SAFETY: the slices
+            unsafe { ee_won_font_desc_same(a.as_ptr(), a.len(), sa, za, b.as_ptr(), b.len(), sb, zb) }
+        };
+        assert!(same(b"Arial", 1, 12, b"ARIAL", 1, 12));
+        assert!(!same(b"Arial", 1, 12, b"Arial", 1, 11));
+        assert!(!same(b"Arial", 1, 12, b"Arial", 0, 12));
+        assert!(!same(b"Arial", 1, 12, b"Arial2", 1, 12));
+        assert!(same(b"", 0, 0, b"", 0, 0));
+        // SAFETY: NULL with no bytes
+        assert!(unsafe { ee_won_font_desc_same(std::ptr::null(), 0, 3, 4, std::ptr::null(), 0, 3, 4) });
+        // equal exactly when neither is less in the map's order
+        let faces: [&[u8]; 4] = [b"a", b"A", b"b", b""];
+        for fa in faces {
+            for fb in faces {
+                for (sa, za, sb, zb) in [(0, 9, 0, 9), (0, 9, 1, 9), (1, 9, 1, 10)] {
+                    let e = Entry { face: fb.to_vec(), style: sb, size: zb, font: 0 };
+                    assert_eq!(same(fa, sa, za, fb, sb, zb), order(fa, sa, za, &e) == Ordering::Equal);
+                }
+            }
+        }
+    }
 
     #[test]
     fn a_descriptor_is_found_without_case_and_kept_once() {

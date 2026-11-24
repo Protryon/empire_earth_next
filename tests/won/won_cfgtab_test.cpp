@@ -27,6 +27,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
+#include "rust/won_gui/layoutobj.h"
 #include "rust/won_gui/cfgkind.h"
 #include "rust/won_gui/cfgtab.h"
 #include "rust/won_gui/cfgset.h"

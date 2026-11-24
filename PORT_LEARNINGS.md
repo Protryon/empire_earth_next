@@ -40518,3 +40518,143 @@ target was -1,200.
   - scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS;
   - the tour `random-game --box-select --orders --seed 7` PASS; gates.sh GATES PASS.
   - Not run: the POSIX builds.
+
+## R6 WON GUI, round 35: the platform window, manager, graphics, font and cursor classes folded into one class each over Rust; the child layout manager the Rust container's; 21 classes gone (ee_won_gui platloop.rs, gfxplat.rs, cursorobj.rs, clipobj.rs, ctobj.rs layout manager, layoutobj.rs, tabobj.rs make_parts, shell.rs skin_part_fits, inputobj.rs numeric_filter; branch rust-wongui35, 2026-11-24)
+
+The parent built the capture base exe from the base commit (71c097464, rust-batch23) at the start and took the
+census; two forks in hand-made worktrees with disjoint files and disjoint regions of WONLobbyGUI.h moved code: win
+(the window, manager, graphics, fonts, images, cursors) and cfg (the configs, layouts, containers). The aim was
+about -1,000 C++ logic lines and real class deletions.
+
+### What moved (logic: `logic_lines.py` over the whole tree, from 71c097464)
+
+| Part | What | Logic |
+|---|---|---|
+| win e9e591055 | PlatGUIWindow folded into Window, PlatWindowManager into WindowManager: nothing else derived from either, so the platform classes' Rust objects (platwin.rs, platwm.rs) are members of the one class each, the Platform* and hook virtuals plain forwards, the `dynamic_cast`s gone; the two names stay as typedefs for the game's glue; PlatGUIWindow.cpp and PlatWindowManager.cpp gone | -42 |
+| win b5dd2b782 | **no move, dead code**: NativeIcon and PlatNativeIcon (nothing ever made a window icon; the window host answers "no icon" to winobj.rs); NativeIconLifetime.cpp gone | -15 |
+| win b4ecc97e3 | platloop.rs: the platform manager's event pass (GetNextEvent: the wait, the forward to the game, the rest of the timeout slept, the queued events, the paint), HandlePlatEvent, LockFrame, GetScreenResolutionHook, GetScreenRect and GetSystemColorScheme composed over platwm.rs and wmobj.rs; the platform's wait, clock and sleep come as function pointers | -40 |
+| win bb4c16545 | PlatGraphics folded into Graphics, PlatGUIFont into Font (one subclass each): Graphics' virtual hooks gone, gfxplat.rs answers gfxobj.rs's drawing hooks on the context's surface, the font's draw with its underline composed there; FontDescriptor's `==` is fontmap.rs's; PlatGraphics.cpp, PlatGUIFont.cpp, Font.cpp and FontDefaults.cpp gone | -128 |
+| win 5d9f878c9 | clipobj.rs: Clipboard's Get and Set (the UTF-8 and wide conversions, the free of the platform's text) | -19 |
+| win 1bc63dcf6 | **no move**: PopupParams and WONRectangle have the Rust records' layouts (asserted), so DoPopup and AdjustPopupPosition hand the caller's record over; GetDefaultFontMod one expression | -15 |
+| win 36ef322d3 | cursorobj.rs: the cursors one Rust object by kind (plain, the platform's, a reference to another, a component's); the standard table, the manager's six installs and the window's cursor change in Rust; CursorRef and PlatCursor gone | -42 |
+| win 796ed61c1 | platwin.rs takes the manager's mouse event as handed (Window::QueueMouse's repack gone) | -8 |
+| win 8407037f1 | RawImage32 and RawImage8 are RawImage (the kind is the Rust image's) | -2 |
+| cfg 02229fb28 | Container's child layout manager is ctobj.rs's own (`ee_won_ct_layout_new`, `_call`, `ee_won_ct_relayout`); the instruction subclasses are ChildLayoutInstructionBase's kind constructors (`EeWonLayoutInit`; the percent layout's anchors in layoutobj.rs); ChildLayoutManager, ClearRightLayout, SpaceEvenlyLayout, NoOverlapLayout, SizeAtLeastLayout, ChildLayoutInstruction, PercentLayout and PercentLayoutParam gone; ChildLayoutsAdvanced.cpp, ChildLayoutRegistration.cpp and ComponentLayoutAdapters.cpp gone | -73 |
+| cfg 311307e03 | **no move**: WONCfgTable.inl's 29-line alias enum gone, the case labels paste cfgtab.rs's `EE_WON_CFG_T_*` constants | -28 |
+| cfg 8886e8ccd | **no move, dead code**: MSGraphicsUtil (two statics, one caller, now one `WONMsPaint` statement) and WONMSSkin's unused enums | -14 |
+| cfg e8205d514 | TabCtrl's constructor is tabobj.rs's (`ee_won_tab_make`: the two bar containers, the two bars, made and held through four host ops, EeWonGuiOp 3200..); four SmartPtr members gone | -19 |
+| parent 6b4a998fc | InputBox::NumericFilter is inputobj.rs's `numeric_filter` | -10 |
+| parent 67360f54d | SafeConfigGetSkinPart's table of class names and kinds is shell.rs's `skin_part_fits` | -11 |
+| parent b92a9f710 | SameSizeLayout gone: the shell host and the config table make the instruction by its kind | -2 |
+
+Round total: 19,029 -> 18,561 (**-468**: win -311, cfg -134, parent -23; of it -72 is no move or dead code, so
+-396 moved or folded). Short of -1,000 (below). Per file: WONLobbyGUI.h 829 -> 764, the WONGUI units 1,258 -> 1,038,
+WONCfgTable.inl 89 -> 61, WONGUIShell.h 89 -> 78, WONLobbyPlatform.h 105 -> 5.
+
+Classes (`classes_tree.py`): 679 -> 658, 21 gone: ChildLayoutInstruction, ChildLayoutManager, ClearRightLayout,
+CursorRef, MSGraphicsUtil, NativeIcon, NoOverlapLayout, PercentLayout, PercentLayoutParam, PlatCursor, PlatGUIFont,
+PlatGUIWindow, PlatGraphics, PlatNativeIcon, PlatWindowManager, RawImage32, RawImage8, SameSizeLayout,
+SizeAtLeastLayout, SpaceEvenlyLayout, WONMSSkin. `.cpp` files 367 -> 357: PlatGUIWindow, PlatWindowManager,
+NativeIconLifetime, PlatGraphics, PlatGUIFont, Font, FontDefaults, ChildLayoutsAdvanced, ChildLayoutRegistration,
+ComponentLayoutAdapters.
+
+### Why not -1,000
+
+The lane's C++ is what earlier rounds left: WONLobbyGUI.h's 764 are class heads, members, constructors' and virtuals'
+declarations of classes the lobby lane's C++ derives from or holds by name (Component, Container, Window, the
+lists); the units' rest is host frames (a signature, a switch and a default per host count as logic) and
+constructors. A class goes only when no C++ names it, which this round was true for the platform subclasses, the
+layout instructions and the dead ones. Two stops cost time besides: C: filled to 0 bytes during the forks' builds
+(other lanes' runs; the cfg fork stopped with its second batch unbuilt and finished it after the disk was freed),
+and the session's usage limit ended fork win before its report (its nine commits were complete and gated; the
+parent re-ran its gates on the merge).
+
+### Proof
+
+- LAN-reached (the tour and every lobby open): the folded Window, WindowManager, Graphics and Font, the event pass,
+  the cursors' table and changes, the mouse events, the images, the containers' layout manager and instructions,
+  TabCtrl's parts, the skin's part check, the alias constants. The LAN game and lan_capture_compare against the base
+  exe built from 71c097464 in this session (build/w35base, its run build/w35lanA): every lobby capture identical
+  but the staging caret (15 pixels at x 121..122, y 329..344, the host's two staging screens).
+- Goldens (tests/won, wontest): won_win35_test, new (the original cursor classes and statements against the shell
+  over cursorobj.rs: 3,000 sequences, 180,000 steps, 0 mismatches, 8 of 8 host-op mutations; PlatClipboard.cpp's
+  old bodies against clipobj.rs: 40,000 cases, 0 mismatches); won_gfxobj_test keeps the old Graphics shell
+  (won_gfxobj_port.h) to trace gfxobj.rs's hooks; won_inputobj_test's new phase (NumericFilter's deleted statements
+  over 200,000 texts, 0 mismatches; the mutation, the selection start dropped, caught in 2,378);
+  won_layoutobj_test (620,000 checks, the percent kind built through `ee_won_layout_init_percent`), won_ctobj_test,
+  won_tabobj_test (2,875,037 checks), won_cfgtab_test (383,620 checks, its world tracing the kind constructors as it
+  traced the classes), won_cfgbody34_test (30,000 runs, 43 of 43). Rust tests for the rest: platloop, gfxplat,
+  cursorobj, clipobj, the skin part table as it was, the percent anchors over all 16 masks.
+
+### Lessons
+
+- **A base class with one subclass is one class**: the Plat* classes were the platform layer's seam of the original
+  SDK; with one platform the subclass's Rust object is a member, the hook virtuals plain forwards and the
+  `dynamic_cast`s go. The old names stay as typedefs where another lane's file names them (no call-site edit).
+- **A record both sides lay out alike needs no copy**: assert the layout (PopupParams as EeWonWmPopup, WONRectangle
+  as EeWonRect4) and hand the caller's record over.
+- **Set the Rust object's pointer before the Rust makes the parts**: TabCtrl's first version stored `mTab` after
+  `make_parts`, while the adds it runs reach TabCtrl's virtuals, which read it; `ee_won_tab_make` writes the out
+  pointer first, as the original had the member set before its statements.
+- A driver world included in two namespaces cannot carry its own `#include` of a Rust header: include it at global
+  scope in the test .cpp. `tests/won/won_leaf34_gen.py` reads StringLocalize.cpp and StringLocalizeCalls.cpp from
+  the tree, so those units cannot be folded away without changing the generator.
+- An op enum several hosts share (EeWonGuiOp) is the cheapest place for new one-statement cases; forks take
+  disjoint numeric ranges (3000.., 3200..) so appends cannot clash.
+- Three parties can share one header when each owns named class regions and touches no other line: both fork merges
+  of WONLobbyGUI.h were clean.
+- Tooling: run cargo through `tools/rust_build.py` or with `CARGO_TARGET_DIR=<checkout>/build/rust`; a bare
+  `cargo test` in rust/ makes a second target directory (rust/target). A fresh worktree's first build is a full Rust
+  build (12 minutes under load). A wontest program killed by a full disk exits 1 with no output: rerun it alone
+  (won_multiobj_test did, and passes). The Bash tool's heredocs still turn `\\n` into a line break.
+
+### Behaviour changes
+
+- No window icon code is left (none was ever set); Window::SetIcon is gone.
+- Graphics and Font have no virtual hooks: a subclass can no longer replace the drawing (none did).
+- TabCtrl's four bar parts are released in its destructor's body, before the layout point's member destructor (the
+  original released the layout point first); each is still held by its parent's child list.
+- NumericFilter asks about `0`..`9` alone (the UCRT's `isdigit` in the C locale gave the same for every unit it
+  defined an answer for).
+
+### Left
+
+- WONLobbyGUI.h (764): Component, Container, Window, WindowManager, Graphics and the lists as classes; they go only
+  with the lobby lane's hosts and controls, which derive from them.
+- GuiHost.cpp (165: the hosts' frames, the text item makers, WrappedText, the paints), GuiShell.cpp (70) and
+  WONGUIShell.h (78), Window.cpp (91) and WindowManager.cpp (80: the hosts' compound cases and constructors),
+  ComponentLifetime.cpp (54), PlatNativeImage.cpp (48), Graphics.cpp (39).
+- The GUI-only config classes as kinds (PercentLayoutConfig, ColorSchemeConfig, ImageConfig and its three
+  subclasses, FontConfig: about -8 each, two driver worlds mirror their members); the key-struct forwards, RunTable's
+  frame and CfgTabRead's try/catch.
+- StretchCenterImage, TabBar, MSButtonBase, WONFrame, SelectionColor (members of InputBox and ListArea), CenterLayout
+  (the lobby lane's error screen and dialog logic name it), DisplayContext, the event classes, MultiImageDecoder.
+- The host frames of WONButton.cpp, ComboBox.cpp, Button.cpp, SkinnedContainers.cpp and Container.cpp; the
+  constant-assigning constructors (respellings only).
+
+### The merges
+
+Fork win, then fork cfg (--no-ff, both clean: disjoint files and header regions; include/rust regenerated, 351
+headers).
+
+### Gates (the tip b92a9f710 plus 14a353d51, a one-line clippy fix in a test; build/w35_chain.log, build/w35_rest.log, build/w35_gates2.log)
+
+| Gate | Result |
+|---|---|
+| `build.py -j 8 --sim` | 0 / 0 (EE-AOC 401 inputs, EE-SIM 402) |
+| `build.py --test-profile windowed-software` | 0 / 0 (401 inputs) |
+| `rust_build.py header` | 351 headers current |
+| `rust_build.py gate` | the first run stopped at clippy (`manual_is_multiple_of` in gfxplat_tests.rs, the fork's test; fixed in 14a353d51); the rerun PASS, 6,703 tests (0 failed, 8 ignored) |
+| `won_host_coverage.py` | PASS |
+| oracle against the main checkout's `ref` | seeds 2-7 identical, `oracle: PASS` |
+| `xbuild.py wontest` | exit 0, each of the 180 programs exits 0 (won_win35 180,000 steps, 8/8 and 40,000 clipboard cases; won_inputobj's filter phase 200,000 cases, its mutation caught; won_logic35 70/70) |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal |
+| saveload | plain seeds 2-7 `--at 600,1350,2100 --expect`: `saveload expect: PASS`; matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`: the first run died on a full disk (`OSError: No space left on device`, C: at 0 bytes from other lanes' runs), the rerun exit 0, `saveload expect: PASS` |
+| `scenario_check.py` | PASS 27/27 |
+| `eedata check`, `cppgate` | PASS, PASS |
+| LAN game (slot.py) | `RESULT PASS lan-game` PT host 2737 / joiner 2745 (the base exe 2743 / 2745) |
+| `lan_capture_compare.py` against build/w35lanA (71c097464 built this session) | every lobby capture identical but host-staging-host's and host-staging-ready's caret (15 pixels at x 121..122, y 329..344) |
+| `gates.sh` (EE_GATES_TREE the main checkout's tree) | the first run failed for the full disk; the second's tour failed with `GX: read-back of 1382x866 timed out` in game.log (the play frame read back as the earlier one: the read-back's time-out under machine load), its AI game and LAN game passed; the third: `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 11964` units [4, 36, 37] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2789 joiner=2791`, GATES PASS |
+
+Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds. Batch
+23 had not reached origin/rust when the round ended (origin/rust 17682d86c), so no origin merge was needed.

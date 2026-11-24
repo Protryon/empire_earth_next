@@ -608,10 +608,9 @@ static RInstr* RustNew(const NewSpec& s)
     init.horz = s.horz;
     init.vert = s.vert;
     if (s.kind == 8) {
-        // PercentLayoutParam's SetBorders (the C++ shell's statement before the Rust object is made)
-        int idx[4];
-        ee_won_gui_percent_borders((s.refs[1] ? 1u : 0u) | (s.refs[2] ? 2u : 0u) | (s.refs[3] ? 4u : 0u) | (s.refs[4] ? 8u : 0u), idx);
-        for (int i = 0; i < 4; i++) init.refs[1 + i] = idx[i] < 0 ? 0 : s.refs[1 + idx[i]];
+        // PercentLayoutParam's SetBorders with the record (R6 WON GUI round 35: ee_won_layout_init_percent)
+        void* given[4] = { (void*)(intptr_t)s.refs[1], (void*)(intptr_t)s.refs[2], (void*)(intptr_t)s.refs[3], (void*)(intptr_t)s.refs[4] };
+        init = ee_won_layout_init_percent((void*)(intptr_t)s.refs[0], given, s.ints);
     }
     RInstr* t = new RInstr;
     t->id = ++sNextId;
