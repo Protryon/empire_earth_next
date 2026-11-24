@@ -25,6 +25,7 @@
 #include "rust/data/tables.h"
 #include "rust/game/app.h"
 #include "rust/game/campaign.h"
+#include "rust/game/civilization.h"
 #include "rust/game/cp_engine.h"
 #include "rust/game/fixture.h"
 #include "rust/game/game_log.h"

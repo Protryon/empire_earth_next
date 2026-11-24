@@ -90,7 +90,6 @@ pub mod msg_capture;
 // ---- round 10, lane D: the Empire Earth directory's managers and utilities
 pub mod camera_host;
 pub mod cheats;
-pub mod civilization;
 pub mod utilities;
 pub mod weather;
 //

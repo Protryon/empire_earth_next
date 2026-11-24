@@ -5863,58 +5863,6 @@ void ee_gamecpp_cheats_parse(const EeAppCheats *cheats,
 /// EE-SIM --app-sweep's cheats (TEST ONLY: CHET, CHEF), when there are cheat codes.
 void ee_gamecpp_capture_cheat_sweep();
 
-/// `EECivilization()`: unnamed, no points or upgrades, unchanged.
-void ee_gamecpp_civ_init(void *civilization);
-
-/// `AddPoints`: to both the available and the maximum points.
-void ee_gamecpp_civ_add_points(void *civilization, long amount);
-
-/// `Load`: the purchased upgrades, the points, the flags and the name (before 0.216 a narrow one); the first read
-/// error.
-long ee_gamecpp_civ_load(void *civilization,
-                         unsigned long major,
-                         unsigned long minor,
-                         void *file);
-
-/// `Save`: as `Load`, stopping at the first failed upgrade write; the first write error.
-long ee_gamecpp_civ_save(void *civilization, void *file);
-
-/// `Buy`: an upgrade applied to a player, first paid for and recorded when buying; whether it applied.
-bool ee_gamecpp_civ_buy(void *civilization,
-                        uint32_t upgrade,
-                        long player,
-                        bool purchase);
-
-/// `AddUpgrades`: a list's upgrades bought in turn for a player, stopping at the first that fails.
-void ee_gamecpp_civ_add_upgrades(void *civilization, void *list, long player, bool purchase);
-
-/// `ApplyLevel21ToWorld`: the purchased upgrades of the deferred kind applied to player 0.
-void ee_gamecpp_civ_apply_level21(void *civilization);
-
-/// `Reapply`: after a load the purchased upgrades applied to the player but those of the deferred kind, which wait;
-/// 13 when one fails.
-long ee_gamecpp_civ_reapply(void *civilization,
-                            long player);
-
-/// `ApplyDeferred`: the deferred upgrades applied to the player and forgotten; 13 when one fails.
-long ee_gamecpp_civ_apply_deferred(void *civilization, long player);
-
-/// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).
-bool ee_gamecpp_wonder_enough(void *condition);
-
-/// `GetWonderCountdown`: the player whose wonder completes the team's count and the seconds left (NULL and 0 when
-/// the team lacks the wonders).
-void *ee_gamecpp_wonder_countdown(void *condition,
-                                  unsigned long *out);
-
-/// `EEVCWonder::GetVictoryState`: 1 (won) when the team's countdown has run out, outside cinematics.
-long ee_gamecpp_wonder_state(void *condition);
-
-/// `EEVCWonder::Load`: the wonder list of saves before 0.225, read and dropped; the first read error.
-long ee_gamecpp_wonder_load(unsigned long major,
-                            unsigned long minor,
-                            void *file);
-
 /// `EEPlayForLocalPlayer`: the sound played when the player is the local one; the instance, or -1.
 unsigned long ee_gamecpp_play_for_local(void *player, void *sound);
 
