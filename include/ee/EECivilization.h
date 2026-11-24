@@ -4,7 +4,7 @@
 #ifndef EE_EECIVILIZATION_H
 #define EE_EECIVILIZATION_H
 #include "ee/EECivUpgrade.h"
-#include "rust/sim/tech.h"             // ee_tech_civ_base_cost, ee_tech_civ_extra_cost
+#include "rust/sim/tech.h"             // ee_tech_civ_base_cost, _extra_cost, _count_in_category
 
 #include <vector>
 
@@ -16,7 +16,7 @@ public:
     // the save keys (EECivilization.cpp's guarded chains 0x12c3eb..0x12c57d, guard byte 0x529a88). EEPlayer holds an
     // EECivilization by value, so the original EEPlayer.h included this header and every includer saw these statics:
     // the $E/$S renumbering they cause is names.txt metadata (tools/rebind.py), not a source shape
-    ~EECivilization();
+    ~EECivilization() {}
     // 0x12c5e9 (ret 0xc): the cost of inUpgrade (inList, else mPurchasedUpgrades, for the category count) into outCost; true when
     // affordable (or gGameOptions.mAllowCustomCivs is clear)
     bool CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList);
@@ -25,9 +25,13 @@ public:
     bool Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase);
     void SetPoints(long inPoints) { this->mAvailablePoints = inPoints; }   // 0x12ca99
     void AddPoints(long inAmount);          // 0x12c73b: adds to both epoch fields and clears mB3C
-    void SetPointsAndMax(long inEpoch);     // 0x12caa3 (sets +0x38 and +0x34)
+    void SetPointsAndMax(long inEpoch) { this->mMaxPoints = this->mAvailablePoints = inEpoch; }   // 0x12caa3 (sets +0x38 and +0x34)
     UWideString GetName() const { return this->mName; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)
-    void SetName(const UWideString& inName);   // 0x12cab0: mName = inName, mUnchanged = false (provisional name)
+    void SetName(const UWideString& inName)   // 0x12cab0: mName = inName, mUnchanged = false (provisional name)
+    {
+        this->mName = inName;
+        this->mUnchanged = false;
+    }
     // 0x12c898: 0x12c847(id, inPlayer, inFlag) for every id of inUpgrades (EEMCivUpgradesPurchased; provisional name)
     void AddUpgrades(std::vector<EECivUpgrade>& inUpgrades, long inPlayer, bool inFlag);
 
@@ -37,7 +41,12 @@ public:
     long GetExtraCost(EECivUpgrade inUpgrade) { return ee_tech_civ_extra_cost(inUpgrade); }   // per upgrade already bought in its category
     // 0x12c5d9: the base cost plus the step for each upgrade already bought in its category
     long ComputeCost(long inBase, long inStep, long inCount) { return inBase + inStep * inCount; }
-    long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList);
+    // the upgrades of inUpgrade's category in inList (by default the purchased upgrades)
+    long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
+    {
+        return ee_tech_civ_count_in_category(inUpgrade, this->List(inList).data(), this->List(inList).size());
+    }
+    std::vector<EECivUpgrade>& List(std::vector<EECivUpgrade>* inList) { return inList != NULL ? *inList : this->mPurchasedUpgrades; }
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x12c74c, ret12/status
     long Save(FSFile& outFile);             // 0x12c9ee (EEPlayer::Save; provisional name)
     bool GetNoPointsAdded() { return this->mNoPointsAdded; }   // 0x12c6fa (mB3C; EEPlayer::RepairPointers; provisional name)

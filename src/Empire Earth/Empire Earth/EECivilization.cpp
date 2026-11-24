@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Empire Earth\EECivilization.cpp (name from the class and its keys "EECivilization-..."; no
 // __FILE__, no RTTI: not polymorphic). 0x12c3eb..0x12cac8: the six class static keys' guarded chains (guard byte
 // 0x529a88), the ctor, the upgrade purchase helpers (forwarders to gCivilizationManager), the accessors (ICF-folded
-// with other 4-byte getters), Load, Save. The dtor 0x162677 is EEPlayer.cpp's. Unit flags: the exe module set.
+// with other 4-byte getters), Load, Save. The dtor 0x162677 (EEPlayer.cpp's) is inline in the class. Unit flags: the exe module set.
 #include <windows.h>
 #include <vector>
 
@@ -14,8 +14,6 @@
 #include "rust/sim/tech.h"
 #include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp civilization.rs)
 
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
-extern EECivilizationManager gCivilizationManager;
 extern EEGameOptions& gGameOptions;
 
 // the six key statics' guarded chains 0x52c3eb..0x52c57d (guard byte 0x529a88)
@@ -32,8 +30,7 @@ EECivilization::EECivilization()
 // against a list (by default the purchased upgrades): ee_tech civilization.rs
 bool EECivilization::CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList)
 {
-    std::vector<EECivUpgrade>& theList = inList != NULL ? *inList : this->mPurchasedUpgrades;
-    return ee_tech_civ_can_afford(inUpgrade, theList.data(), theList.size(), this->mAvailablePoints,
+    return ee_tech_civ_can_afford(inUpgrade, this->List(inList).data(), this->List(inList).size(), this->mAvailablePoints,
                                   gGameOptions.mAllowCustomCivs, outCost);
 }
 
@@ -43,12 +40,6 @@ bool EECivilization::CanAffordAll(std::vector<EECivUpgrade>& inUpgrades)
     return ee_tech_civ_can_afford_all(this->mPurchasedUpgrades.data(), this->mPurchasedUpgrades.size(),
                                       inUpgrades.data(), inUpgrades.size(), this->mAvailablePoints,
                                       gGameOptions.mAllowCustomCivs);
-}
-
-// Counts the upgrades of an upgrade's category in a list (by default the purchased upgrades)
-long EECivilization::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
-{
-    return gCivilizationManager.CountInCategory(inUpgrade, inList != NULL ? inList : &this->mPurchasedUpgrades);
 }
 
 // Adds points to both the available and the maximum points
@@ -99,20 +90,6 @@ long EECivilization::ApplyDeferred(EEPlayer* inPlayer, unsigned long inMajorVers
 long EECivilization::Save(FSFile& outFile)
 {
     return ee_gamecpp_civ_save(this, &outFile);
-}
-
-// Sets both the available and the maximum points
-void EECivilization::SetPointsAndMax(long inEpoch)
-{
-    this->mMaxPoints = inEpoch;
-    this->mAvailablePoints = inEpoch;
-}
-
-// Renames the civilization and marks it changed
-void EECivilization::SetName(const UWideString& inName)
-{
-    this->mName = inName;
-    this->mUnchanged = false;
 }
 
 // (round 10, lane D: the civilization's cases are EEGameLog.cpp's EECore11OpB, round 11 lane B)
