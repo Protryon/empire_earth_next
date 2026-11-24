@@ -30,11 +30,15 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a);   // E
 
 class EEEvent {
 public:
-    EEEvent();
+    // Creates an event with no effects
+    EEEvent() : mEffects(NULL), mNumEffects(0), mID(0) {  }
     virtual ~EEEvent();
     // 0x1ca76c (cdecl): runs the effects of event inEvent (the tech tree passes the node's event id, the tree's
     // player index, the node id, the tree's player and the research's player) (provisional names)
-    static long Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit);
+    // Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result.
+    // RunEffect 0x1ca7cf and its handlers (the stats, button, model, sounds, research, unit conversion, with the EVRN
+    // and EVAT records) are ee_sim scenario event.rs, over the statements below
+    static long Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit) { return ee_scenario_ev_trigger(inEvent, inPlayerIndex, inID, inPlayer, inUnit); }
     // inline accessors: EETechTree::BuildUnitClassInfo expands them once, then calls the
     // out-of-line GetEffect copy 0x1cdf0c (EETechTree.cpp's last function)
     unsigned long GetNumEffects() const { return this->mNumEffects; }
@@ -51,7 +55,9 @@ public:
     static std::vector<std::unique_ptr<EEEvent>> sEvents;
     // 0x1ca63b (cdecl, 0x141937): every effect record of inEffects, then every event of inEvents (its 100-byte name,
     // +0x0c, count and indices) to the end of the file (both opened first; provisional names)
-    static long LoadEvents(FSFileSpec& inEvents, FSFileSpec& inEffects);
+    // Loads every event effect and every event with its effect list (as many as the files hold: the original read
+    // exactly 2000 effects and 1500 events); returns the last read's result (ee_sim scenario event.rs)
+    static long LoadEvents(FSFileSpec& inEvents, FSFileSpec& inEffects) { return ee_scenario_ev_load(&inEvents, &inEffects); }
 private:
     // the statements of the effects' Rust (ee_sim scenario event.rs; RunEffect 0x1ca7cf and its handlers) read them
     friend int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a);

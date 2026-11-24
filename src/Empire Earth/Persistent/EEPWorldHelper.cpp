@@ -133,29 +133,10 @@ EEUnit* EEFindLoadedGhostUnit(unsigned long inID)
     return static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID));
 }
 
-// Reads the teams, world settings and id counters (Carbon flag from version 0.239 on), the running state (from 0.254:
-// world_save.rs), then the chat log and the main game form; returns only the main game form's error
-long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_pwh_load(this, inMajorVersion, inMinorVersion, &inFile);
-}
-
 // Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
 void EEPWorldHelper::Restore(EEGameState& ioState)
 {
     ee_gamecpp_pwh_restore(this, &ioState);
-}
-
-// Writes the teams, world settings, id counters and Carbon flag, the running state (from 0.254: world_save.rs),
-// then the chat log and the main game form; returns only the main game form's error
-long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_gamecpp_pwh_save(this, inMajorVersion, inMinorVersion, &outFile);
-}
-
-// Adds nothing to the checksum (empty: folded into a shared empty function)
-void EEPWorldHelper::GetChecksum(ESChecksum& ioChecksum) const
-{
 }
 
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)

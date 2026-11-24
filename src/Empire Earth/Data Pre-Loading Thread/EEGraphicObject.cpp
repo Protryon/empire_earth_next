@@ -76,27 +76,6 @@ extern unsigned long& gTexturePixelDepth;
 extern unsigned long& gTextureMipLevelsToDrop;
 extern bool& gTrilinearFilter;
 
-// Creates an empty, unloaded graphic object: no names, models, textures or sounds, drawn, mip maps on (the record's
-// members: ee_data tables.rs)
-EEGraphicObject::EEGraphicObject() : EeDataMediaUse()
-{
-    ee_data_graphic_object_default(this);
-}
-
-// Destroys the graphic object: unloads its media if loaded, frees its file names
-EEGraphicObject::~EEGraphicObject()
-{
-    ee_preload_graphic_free(static_cast<EEMedia*>(this));   // (preload_media.rs)
-}
-
-// Reads the graphics table into the media table (each record after its 32 names; the record and its copy are ee_data
-// tables.rs': the animation states, the sounds by id, alpha and mip settings); entries with media index 0 are dropped.
-// Returns the last read result
-long EEGraphicObject::LoadTable(FSFile* inFile)
-{
-    return ee_preload_load_graphic_objects(inFile);   // (preload_media.rs)
-}
-
 // Deletes every entry of the media table and empties it (ee_game preload_media.rs)
 void EEDeleteMediaTable()
 {
@@ -107,18 +86,6 @@ void EEDeleteMediaTable()
 void EEDumpGraphicObjectTable(FSFileSpec& inFile)
 {
     ee_preload_dump_graphic_objects(&inFile);
-}
-
-// Returns the tag points of a kind on a part's model, or NULL when it has none (ee_gfx tags.rs)
-EETagPointList* EEGraphicObject::GetTagPoints(unsigned long inPart, long inKind)
-{
-    return reinterpret_cast<EETagPointList*>(ee_gfx_tags_find(this->mTags, this->mModels[inPart], inKind));
-}
-
-// Finds the turret part for a model and returns its index; returns 0 when found, else 3 (preload_media.rs)
-long EEGraphicObject::FindTurretPart(GEModel* inModel, unsigned long& outIndex)
-{
-    return ee_preload_find_turret_part(this, inModel, &outIndex);
 }
 
 // The calls ee_gfx gobj_media.rs makes back into the C++: the sounds' loads (the EEMedia virtuals) and the part
@@ -177,19 +144,4 @@ void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTrans
 {
     ee_gfx_tag_point(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inTransformation), GERust(inPart),
                      GERust(outPoint));
-}
-
-void EETagPoint::GetOffset(unsigned long inFrame, GE3DPoint& outPoint)
-{
-    ee_gfx_tag_offset(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, NULL, GERust(outPoint));
-}
-
-void EETagPoint::GetOffset(unsigned long inFrame, const GETransformation& inPart, GE3DPoint& outPoint)
-{
-    ee_gfx_tag_offset(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inPart), GERust(outPoint));
-}
-
-void EETagPointList::Scale(GETransformation& ioTransformation, float inScale)
-{
-    ee_gfx_tags_scale(GERust(ioTransformation), inScale);
 }

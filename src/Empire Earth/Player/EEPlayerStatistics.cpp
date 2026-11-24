@@ -78,11 +78,6 @@ void EEStatisticsRecord::Clear()
     ee_units_stats_record_clear(reinterpret_cast<EeUnitsStatsRecordTail*>(&this->mColor));
 }
 
-// Destroys the end-of-game record
-EEStatisticsRecord::~EEStatisticsRecord()
-{
-}
-
 // Clears the game history: times, map size, flags (the plain members from mStartTime to mIsCampaign: ee_units
 // player_stats.rs), campaign name and every record
 static_assert(offsetof(EEStatisticsHistory, mTeamsLocked) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, teams_locked) && offsetof(EEStatisticsHistory, mIsCampaign) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, is_campaign), "EeUnitsStatsHistoryTail");

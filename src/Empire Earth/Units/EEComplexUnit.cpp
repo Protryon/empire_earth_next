@@ -351,14 +351,6 @@ void EEComplexUnit::UpdateAreaEffects(unsigned long inValue)
 }
 
 
-// Returns the number of wheels on the graphic object
-// Declared out of line in ee/EEGraphicObject.h like GetOrbitalCount; its only out-of-line copy follows this
-// unit's template block (provisional name)
-unsigned long EEGraphicObject::GetWheelCount() const
-{
-    return this->mWheels.size();
-}
-
 // FleeAfterCalamity's point ahead is the body's first two floats
 static_assert(sizeof(GE2DPoint) == 2 * sizeof(float), "a GE2DPoint is two floats");
 

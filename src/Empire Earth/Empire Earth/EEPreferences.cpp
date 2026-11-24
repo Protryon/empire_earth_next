@@ -39,11 +39,6 @@ void EESetTextureResolution(long inResolution) { ee_gamecpp_prefs_texture_resolu
 // port: see EEGamePreferences.h (the camera's farthest zoom, the renderer's and the mixer's settings)
 void EEApplyPortSettings(const EEGameSettings& inSettings) { ee_gamecpp_prefs_apply_port(const_cast<EEGameSettings*>(&inSettings)); }
 
-// Destroys the game settings (members only)
-EEGameSettings::~EEGameSettings()
-{
-}
-
 // Creates the default game settings (Direct3D, volumes, scroll speeds, display, network and game options): the plain
 // members' are ee_app settings.rs's, the strings empty
 EEGameSettings::EEGameSettings()
@@ -52,19 +47,6 @@ EEGameSettings::EEGameSettings()
     this->mFullScreen = true;   // (also Rust's default) the test profile's windowed overlay patches this line (tools/build.py)
     this->mRasterizerName = "Direct3D";
 }
-
-// Creates the game preferences with default settings
-EEGamePreferences::EEGamePreferences()
-{
-}
-
-// Destroys the game preferences (members only)
-EEGamePreferences::~EEGamePreferences()
-{
-}
-
-// Returns whether neither the game resources nor the system language is Korean
-bool EEGamePreferences::IsNotKorean() { return ee_gamecpp_prefs_is_not_korean(); }
 
 // Sets the default player, host and Sierra names to the "unknown" string and the WON password to ""
 void EEInitializeDefaultSettings() { ee_gamecpp_prefs_init_defaults(); }
@@ -79,16 +61,3 @@ long EEGamePreferences::Load()
     this->mSettings.mFullScreen = this->mSettings.mWindowMode == 0;
     return theResult;
 }
-
-// Reads the last game options from config.yaml's game_options block, writing defaults for missing values; returns 0
-long EEGamePreferences::LoadGameOptions() { return ee_gamecpp_prefs_load_options(this); }
-
-// Writes every game setting to config.yaml, then the game options; returns the first failure (0 when every value
-// was written)
-long EEGamePreferences::Save() { return ee_gamecpp_prefs_save(this); }
-
-// Writes the last game options to config.yaml's game_options block; returns the first failure, else 0
-long EEGamePreferences::SaveGameOptions() { return ee_gamecpp_prefs_save_options(this); }
-
-// Remembers the options of a new random-map game as the last game options, then saves the preferences
-void EEGamePreferences::SetLastGameOptions(const EEGameOptions& inOptions) { ee_gamecpp_prefs_set_last_options(this, &inOptions); }

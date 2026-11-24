@@ -8,6 +8,7 @@
 // Requires ee/EEGameOptions.h (and lle/UString.h, lle/UWideString.h).
 #include "lle/UConfig.h"
 #include "rust/game/app.h"
+#include "rust/game/gamecpp.h"
 
 // The preference values (sizeof 0x5e0 in the original): the ctor 0x1324f8 (the defaults: ee_app settings.rs) and the
 // dtor 0x132466 are out of line in Empire Earth's preferences unit; the copy ctor is implicit (the game settings unit's
@@ -19,7 +20,8 @@
 class EEGameSettings : public EeAppSettingsFields {
 public:
     EEGameSettings();
-    ~EEGameSettings();
+    // Destroys the game settings (members only)
+    ~EEGameSettings() {  }
     // inline (the local servers' ctor argument is loaded into eax before the other pushes: SIE Start 0x1e8310, SPE
     // RandomMap 0x1e8d4c; provisional name)
     long GetNetworkAdapter() const { return this->mNetworkAdapter; }
@@ -63,22 +65,33 @@ void EEApplyPortSettings(const EEGameSettings& inSettings);
 class EEGamePreferences {
 public:
     // out of line (Empire Earth.cpp's chain 0x13eaeb jumps to them; the vptr is URegistry's, not modelled)
-    EEGamePreferences();
-    ~EEGamePreferences();
+    // Creates the game preferences with default settings
+    EEGamePreferences() {  }
+    // Destroys the game preferences (members only)
+    ~EEGamePreferences() {  }
     const EEGameOptions& GetLastGameOptions() const { return this->mSettings.mGameOptions; }
     // never inlined: every caller (game settings 0x1d71c9.., 0x9b0db, 0x113685) calls the COMDAT 0x1d99fb
     // `lea eax, [ecx+4]` (provisional name)
     EEGameSettings& GetSettings() { return this->mSettings; }
-    void SetLastGameOptions(const EEGameOptions& inOptions);
+    // Remembers the options of a new random-map game as the last game options, then saves the preferences
+    void SetLastGameOptions(const EEGameOptions& inOptions) { ee_gamecpp_prefs_set_last_options(this, &inOptions); }
     // 0x132848: false when the resource language or the OS language is Korean (0x412); the video tab shows check box
     // 13 only when true (provisional name)
-    bool IsNotKorean();
-    long Save();                            // 0x135943: writes the settings to config.yaml (the settings' Ok
+    // Returns whether neither the game resources nor the system language is Korean
+    bool IsNotKorean() { return ee_gamecpp_prefs_is_not_korean(); }
+    // Writes every game setting to config.yaml, then the game options; returns the first failure (0 when every value
+    // was written)
+    // 0x135943: writes the settings to config.yaml (the settings' Ok
+    long Save() { return ee_gamecpp_prefs_save(this); }
                                             // returns its result)
     // (provisional names)
     long Load();                            // 0x1328dd: reads the settings from config.yaml (defaults where missing)
-    long LoadGameOptions();                 // 0x13505e: the game_options block (Load's tail)
-    long SaveGameOptions();                 // 0x13670d (Save's tail)
+    // Reads the last game options from config.yaml's game_options block, writing defaults for missing values; returns 0
+    // 0x13505e: the game_options block (Load's tail)
+    long LoadGameOptions() { return ee_gamecpp_prefs_load_options(this); }
+    // Writes the last game options to config.yaml's game_options block; returns the first failure, else 0
+    // 0x13670d (Save's tail)
+    long SaveGameOptions() { return ee_gamecpp_prefs_save_options(this); }
 
     // +0x000 in the original: a URegistry member, not a base (the ctor 0x13281e and dtor 0x132834 store only its vptr);
     // the settings file (lle/UConfig.h) in its place

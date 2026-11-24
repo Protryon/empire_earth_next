@@ -358,12 +358,6 @@ extern "C" int64_t ee_units_sr_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
 // (0x250806, EEUUGetUnitsInArea, the units of an area's unit regions that a screen passes: ee_combat's units_in_area,
 // called from EEFindNewTarget's body)
 
-// Sums the other players' influence values on a rectangle of tiles
-long EEInfluenceTable::SumOthersValueOnTiles(unsigned long inPlayer, const U2DRectangle<long>& inTiles)
-{
-    return this->SumOthersValue(inPlayer, this->GetRegions(inTiles));
-}
-
 // Computes a sound's volume, pan and pitch as heard from the camera (silent off tiles the player sees)
 // Volume, pan and pitch of a sound of inVolume at inLocation, as heard from the camera (outPitch 1; volume 0 off a
 // tile the current player sees)

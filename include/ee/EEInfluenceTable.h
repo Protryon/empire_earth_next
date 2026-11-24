@@ -25,7 +25,8 @@ public:
     long SumOthersValue(unsigned long inPlayer, const U2DRectangle<long>& inRect)
         { return ee_cp_influence_sum(this->mTable, 1, (uint32_t)inPlayer, Rect(inRect)); }
     // 0x24495a (EEFOFindNewTargetNearOldTarget.cpp): SumOthersValue over the regions under inTiles
-    long SumOthersValueOnTiles(unsigned long inPlayer, const U2DRectangle<long>& inTiles);
+    // Sums the other players' influence values on a rectangle of tiles
+    long SumOthersValueOnTiles(unsigned long inPlayer, const U2DRectangle<long>& inTiles) { return this->SumOthersValue(inPlayer, this->GetRegions(inTiles)); }
     // 0xa5839 / 0xa58a7: the unit's class influence added to (or, clamped at 0, taken from) its owner's and the
     // total entry of the region of (inX, inY)
     void AddUnit(EEUnit* inUnit, long inX, long inY)
