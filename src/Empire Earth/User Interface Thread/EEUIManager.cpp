@@ -76,15 +76,6 @@
 #include "rust/ui/graphobj.h"
 #include "ee/EEScreensShims.h"
 #include "ee/EEGameState.h"   // gGameState
-// The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
-// UpdateMouse's location)
-struct EEUIManagerCall : public EeScreensManagerCallObjects {   // the pointers: the Rust record (hud_fields.rs)
-    explicit EEUIManagerCall(EEUIManager* inManager, const GE2DPoint* inMouse = NULL)
-        : EeScreensManagerCallObjects{inManager, inMouse} {}
-    UWideString mNames[2];
-    // the record of a call (a temporary's, for the full expression)
-    EEUIManagerCall* Ptr() { return this; }
-};
 
 // Creates the game's UI manager: registers the control and form event factories (the game settings one
 // twice), loads the UI database and finds the main game form
@@ -131,19 +122,8 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
     return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID));
 }
 
-// Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
-// (ee_screens ui_manager.rs)
-void EEUIManager::StartScenarioEditor() { ee_screens_ui_manager_start_editor(EEUIManagerCall(this).Ptr()); }
 
-// Handles F9 screenshots outside text entry; then the keys (ee_screens ui_manager.rs; the original first stopped a
-// playing movie on Escape, Return or Space)
-long EEUIManager::UpdateKeyboard() { return (long)ee_screens_ui_manager_update_keyboard(EEUIManagerCall(this).Ptr()); }
 
-// Handles the mouse (ee_screens ui_manager.rs; the original first stopped a playing movie on a click)
-long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
-{
-    return (long)ee_screens_ui_manager_update_mouse(EEUIManagerCall(this, &inMouseLocation).Ptr());
-}
 
 // (the ids' agreement with ee_screens ui_manager.rs' is ui_ids.rs' test)
 
