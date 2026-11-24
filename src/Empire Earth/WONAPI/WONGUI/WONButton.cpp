@@ -67,26 +67,7 @@ extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intpt
 {
     WONButton* t = (WONButton*)inComp;
     switch (op) {
-    case Op::Get:
-        if ((EeWonGuiField)a == EeWonGuiField::Width) return t->Width();
-        if ((EeWonGuiField)a == EeWonGuiField::Height) return t->Height();
-        return 0;
-    case Op::SetSize: t->SetSize((int)a,(int)b); return 0;
     case Op::WbBaseCopy: t->Button::CopyAttributes((Button*)a); return 0;
-    case Op::SkinBtn:
-        switch ((EeWonSkinBtn)a) {
-        case EeWonSkinBtn::IsDisabled: return t->IsDisabled() ? 1 : 0;
-        case EeWonSkinBtn::HasFocus: return t->HasFocus() ? 1 : 0;
-        case EeWonSkinBtn::Parent: return (intptr_t)t->mParent;
-        case EeWonSkinBtn::UsedDialogKeys: return ((Container*)b)->HasUsedDialogKeys() ? 1 : 0;
-        case EeWonSkinBtn::IsPressed: return t->IsPressed() ? 1 : 0;
-        case EeWonSkinBtn::ButtonFlags: return (intptr_t)(uint32_t)t->GetButtonFlags();
-        case EeWonSkinBtn::IsDefaultButton: return t->IsDefaultButton() ? 1 : 0;
-        case EeWonSkinBtn::FlagSet: return ((Component*)b)->ComponentFlagSet((int)c) ? 1 : 0;
-        case EeWonSkinBtn::SetFlag: t->SetComponentFlags((int)b,true); return 0;
-        case EeWonSkinBtn::SetGrabBG: t->SetComponentFlags(ComponentFlag_GrabBG,true); return 0;
-        default: return 0;
-        }
     case Op::WbText: return TextOp(a,b,c);
     case Op::WbImage: return ImageOp(a,b);
     case Op::WbFont:
@@ -97,6 +78,6 @@ extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intpt
         default: return 0;
         }
     case Op::Draw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, Img(c), Txt(d)), WONDrawNoCall()); return 0;
-    default: return 0;
+    default: return ButtonHostCall(t, op, a, b, c); // the size, the button's state
     }
 }

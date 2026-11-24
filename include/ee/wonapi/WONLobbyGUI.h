@@ -544,6 +544,8 @@ public:
 private:
     intptr_t BCall(EeWonBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_btn_call(this->mBtn,c,a,b,cc); }
 };
+// the skinned buttons' hosts' shared ops (WONButton, MSButtonBase: the size, the button's and component's state; Button.cpp)
+intptr_t ButtonHostCall(Button* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c);
 
 // WrappedText (R6 WON round 38): the breaks, size, maximum width and the wrap and centre settings are the Rust
 // object's (rust/crates/ee_won_gui/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
