@@ -16,7 +16,6 @@ public:
     void WriteUnlock();
     // implicit copy ctor (0x44f8) and operator= (folded 0x43ce)
 
-protected:
     TSReadWriteLock* mLock;                 // +0x04
 };
 

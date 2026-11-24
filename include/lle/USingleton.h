@@ -17,7 +17,6 @@ public:
     static void DestroyInstance() { delete USingleton::sInstance; USingleton::sInstance = NULL; }
 #endif
 
-protected:
     static T* sInstance;                    // 0x4e5fb0 for EECalamityManager
 };
 

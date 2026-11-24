@@ -8,11 +8,7 @@
 #include "rust/render/ge.h"   // the manager (ee_ge texobj.rs), its host's EeGeManOp
 #include "lle/UString.h"   // LoadTexture's name
 
-class FSFileSpec;
-class FSPath;
-class GEScreen;
-class GESurface;
-class GETexture;
+#include "lle/LLEForward.h"
 
 // How a texture file is loaded (the original's sizeof 0x14, copied with `rep movsd` x5 by the User Interface
 // backgrounds, UITextureBackground 0x1005c84e; 0x18 with the port's mUseTexturePack). Fields from
@@ -39,8 +35,6 @@ public:
     GETextureManager(FSPath* inTexturePath) { this->mRust = ee_ge_texman_new(&GETextureManager::Host, this, inTexturePath); }
     // removes every unreferenced texture, releases the path and the lock
     ~GETextureManager() { ee_ge_texman_free(this->mRust); }
-    GETextureManager(const GETextureManager&) = delete;   // port: one Rust object per manager
-    GETextureManager& operator=(const GETextureManager&) = delete;
     // Prints every loaded texture file and its reference count to a dump file
     void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_ge_texman_dump(this->mRust, &inFile); }
     // the sum of the cached textures' GetAllocatedSize()
@@ -85,14 +79,12 @@ public:
     static bool GetTexturePackName(const UString& inName, UString& outName) { return ee_ge_texpack_name(inName, &outName); }
     static long GetTexturePackLogicalShift() { return ee_ge_texpack_logical_shift(); }
     static long GetTexturePackMipLevelsToDrop() { return ee_ge_texpack_mip_levels_to_drop(); }
-private:
-    friend class GETexture;
     // Marks the texture as promoted; always succeeds
     long PromoteTexture(GETexture* inTexture) { return ee_ge_texman_promote(this->mRust, inTexture); }
     // the calls the Rust object makes on other objects (GETexture.cpp)
     static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
-    EeGeTextureManager* mRust;              // the cache (name -> texture), the lock, the path, the screen, the footprint
+    URust<EeGeTextureManager> mRust;              // the cache (name -> texture), the lock, the path, the screen, the footprint
 };
 
 #endif

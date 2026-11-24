@@ -6,7 +6,7 @@
 #ifndef EE_EEUIEWONNETARENAGAMEEVENTS_H
 #define EE_EEUIEWONNETARENAGAMEEVENTS_H
 
-class UIControl;
+#include "lle/LLEForward.h"
 
 // 0x1eadd6: sets inEvent as inControl's trigger event and drops the creator's reference. Name is provisional. A static
 // (non-inline) function of this header: every WON screen's OpenScreen calls it out of line, and WNAG's copy sits right

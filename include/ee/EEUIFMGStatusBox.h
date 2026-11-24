@@ -10,8 +10,7 @@
 
 class EEComplexUnit;
 class EEUnit;
-class UIControl;
-class UIForm;
+#include "lle/LLEForward.h"
 
 
 // the members are the Rust record EeScreensStatusBoxFields' (ee_screens main_form_fields.rs), the class's only base:

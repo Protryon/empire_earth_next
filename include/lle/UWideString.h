@@ -13,8 +13,7 @@
 #include <string.h>
 #include <mbstring.h>
 
-class FSFile;
-class ESChecksum;
+#include "lle/LLEForward.h"
 
 class LLE_API UWideString {                // proven sizeof 0x14 (TCP NPIMGetStatus stack local)
 public:
@@ -82,10 +81,6 @@ public:
     void Reallocate(unsigned long inSize) { ee_uwstring_reallocate(&this->mState, inSize); }
     static void SetDefaultAllocationLength(unsigned long inLength) { ee_uwstring_set_default_allocation(inLength); }
     static const unsigned char* Bytes(const char* inString) { return reinterpret_cast<const unsigned char*>(inString); }
-private:
-    friend UWideString operator+(const UWideString& inLeft, const UWideString& inRight);
-    friend UWideString operator+(const UWideString& inLeft, const char* inRight);
-    template <class... A> friend long sprintf(UWideString& outString, const char* inFormat, A... inArguments);   // sets the lengths
 
     enum Unset { kUnset };                  // a result the Rust side initialises
     explicit UWideString(Unset) {}

@@ -27,7 +27,6 @@ public:
         { ee_ge_light_set_direction(&this->mRust, reinterpret_cast<const float(*)[3]>(&inDirection)); }
     void SetIntensity(float inIntensity) { ee_ge_light_set_intensity(&this->mRust, inIntensity); }
     void SetStyle(unsigned long inStyle) { this->mRust.style = inStyle; }
-private:
     EeGeLight mRust;
 };
 

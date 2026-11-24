@@ -7,16 +7,13 @@
 #include <vector>
 #include "rust/render/ge.h"       // the grid arithmetic (ee_ge texture.rs)
 
-class GETexture;
-class GETextureCoordinate;
+#include "lle/LLEForward.h"
 
 class LLE_API GETextureSet {                // whole in Rust (ee_render ge texset.rs)
 public:
     GETextureSet(unsigned long inNumTexturesInWidth, unsigned long inNumTexturesInHeight, unsigned long inTextureTileCoverage)
         { this->mRust = ee_ge_tset_new(inNumTexturesInWidth, inNumTexturesInHeight, inTextureTileCoverage, Dereference); }
     ~GETextureSet() { ee_ge_tset_free(this->mRust); }
-    GETextureSet(const GETextureSet&) = delete;
-    GETextureSet& operator=(const GETextureSet&) = delete;
     unsigned long GetNumTexturesInHeight() { return ee_ge_tset_size(this->mRust, 1); }
     unsigned long GetNumTexturesInWidth() { return ee_ge_tset_size(this->mRust, 0); }
     GETexture* GetTexture(unsigned long inX, unsigned long inY) { return static_cast<GETexture*>(ee_ge_tset_get(this->mRust, inX, inY, true)); }
@@ -29,9 +26,8 @@ public:
     unsigned long GetTextureTileCoverage() { return ee_ge_tset_size(this->mRust, 2); }
     void SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture) { ee_ge_tset_set(this->mRust, inX, inY, inTexture); }
 
-private:
     static void Dereference(void* inTexture);   // GETexture.cpp: the texture's Dereference
-    EeGeTextureSet* mRust;
+    URust<EeGeTextureSet> mRust;
 };
 
 #endif

@@ -3,6 +3,7 @@
 // (rust/crates/ee_base/src/time, LLE lane round 3): the class owns the Rust timer and every member forwards.
 #ifndef LLE_TMTIMER_H
 #define LLE_TMTIMER_H
+#include "lle/LLEForward.h"
 
 #include "rust/base/time.h"
 #include "lle/TSEvent.h"
@@ -32,11 +33,8 @@ public:
     EeTimeTimer* Rust() const { return this->mTimer; }   // the Rust timer (ee_game rts physics.rs)
     long Stop(unsigned long& outElapsed, unsigned long& outRemaining)
         { return ee_time_timer_stop_elapsed(this->mTimer, &outElapsed, &outRemaining); }
-private:
-    TMTimer(const TMTimer&);
-    TMTimer& operator=(const TMTimer&);
 
-    EeTimeTimer* mTimer;
+    URust<EeTimeTimer> mTimer;
 };
 
 #endif

@@ -79,7 +79,6 @@ public:
     // New (port): where the handle is (ee_sim::astar cm_io.rs reads an area's tiles from its object)
     EeSparseArray* const* GetHandleSlot() const { return &this->mPoints; }
 
-private:
     static U2DPoint<long> Point(EePoint inPoint) { return U2DPoint<long>(inPoint.x, inPoint.y); }
     static float Generate(void* inRandom) { return static_cast<URandom*>(inRandom)->Generate(); }
     // The handle's point list (BuildPointList / GetOnlyExtremeEdgePoints) into outList, cleared first

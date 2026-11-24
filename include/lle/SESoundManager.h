@@ -10,9 +10,9 @@
 #include "lle/SESample.h"
 #include "lle/SESMInstanceNode.h"
 
-class FSPath;
+#include "lle/LLEForward.h"
 
-class LLE_API SESoundManager {
+class LLE_API SESoundManager : URustView {
 public:
     static SESoundManager* Create(FSPath* inPath, SEMixer* inMixer, unsigned long inCategoryCount,
                                   unsigned long inChannelCount)
@@ -82,13 +82,10 @@ public:
     long Stop(SESMInstanceNode* inNode, bool inImmediately) { return ee_sound_manager_stop_node(Rust(), Node(inNode), inImmediately); }
     long StopAllOneShotSounds() { return ee_sound_manager_stop_all_one_shots(Rust()); }
     long Unload(unsigned long inSampleID) { return ee_sound_manager_unload(Rust(), (uint32_t)inSampleID); }
-private:
     EeSoundManager* Rust() { return reinterpret_cast<EeSoundManager*>(this); }
     const EeSoundManager* Rust() const { return reinterpret_cast<const EeSoundManager*>(this); }
     const EeSoundManager* CRust() const { return reinterpret_cast<const EeSoundManager*>(this); }
     static EeSoundNode* Node(SESMInstanceNode* inNode) { return reinterpret_cast<EeSoundNode*>(inNode); }
-    SESoundManager() = delete;
-    ~SESoundManager() = delete;
 };
 
 #endif

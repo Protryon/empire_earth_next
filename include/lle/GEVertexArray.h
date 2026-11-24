@@ -12,8 +12,7 @@
 
 #include "lle/GERust.h"
 
-class GEColor;
-class GETextureCoordinate;
+#include "lle/LLEForward.h"
 
 class LLE_API GEVertexArray {
 public:
@@ -46,7 +45,6 @@ public:
     virtual unsigned long SizeOf() const { return ee_ge_va_size(this->mRust, true); }
     void* GetVertices() const { return this->mVertices; }   // the GPU's vertices (GXVERTEX or GXVERTEX_STD_COLOR)
 
-private:
     static float* Floats(const void* inValue) { return reinterpret_cast<float*>(const_cast<void*>(inValue)); }
     void Get(EeGeVaField inField, unsigned long inIndex, void* outValue) const
         { ee_ge_va_get(this->mRust, inField, inIndex, Floats(outValue)); }

@@ -122,7 +122,6 @@ public:
     void StartThreads() { ee_net_sv_start_threads(this->mServer); }
     void StopThreads() { ee_net_sv_stop_threads(this->mServer); }
 
-protected:
     // The server's calls out to the game (the original's pure virtuals, vtable 0x9891c slots 9..27; LLE round 13:
     // the subclass's members by name, no slots), then the engine's (Host): the subclass passes GameHost<itself>
     template <class Game> static Game* As(void* inServer) { return static_cast<Game*>(static_cast<NESynchronousServer*>(inServer)); }
@@ -175,7 +174,6 @@ protected:
     // the message manager's calls out that reach the C++ (ee_net's EeNetMmOp): the messages, the server, the files
     static ptrdiff_t MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d);
 
-private:
     EeNetProtocol* Protocol() const { return static_cast<EeNetProtocol*>(ee_net_sv_protocol(this->mServer)); }   // protocol 0 (ee_net ffi_protocol.rs)
     void* Server() const { return ee_net_sv_server(this->mServer); }   // the published server (the plug-in's handle)
     // the queues' common calls out (ee_net's EeNetQOp)

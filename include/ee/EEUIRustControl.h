@@ -18,7 +18,6 @@ public:
     virtual ~EEUIRustControl() { ee_screens_hud_draw_free(this); }   // its draw objects (ee_screens hud_draw.rs)
     // the host (ee_screenscpp_hud_ctl): EE_SCREENS_HC_* here, the class's own ops in RustOp
     static int64_t HostOp(EEUIRustControl* inControl, uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
-protected:
     void* Host() { return this; }   // the host's object (what ee_screenscpp_hud_ctl casts back)
     virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF) { return 0; }
     virtual long MouseLButtonDown() { return 0; }

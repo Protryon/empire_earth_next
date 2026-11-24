@@ -31,7 +31,7 @@ enum {                                      // FSFileAccess is Rust's (rust/base
     kfsaWrite = kFileAccessWrite
 };
 
-class FSFileSpec;
+#include "lle/LLEForward.h"
 
 // The file classes are one class (LLE round 12): FSFile holds what FSBasicFile (the names, access, version, open flag)
 // and FSFileSpec (a file on disk: the platform handle and stream) had, its members whole in Rust
@@ -118,7 +118,6 @@ public:
     long Write(const long& inValue) { return this->Write(static_cast<int32_t>(inValue)); }
     long Write(const unsigned long& inValue) { return this->Write(static_cast<uint32_t>(inValue)); }
 
-protected:
     FSFile() : mVolume(256), mDirectory(256), mFile(256) { ee_fs_basic_init(Rec()); }
     // the names copied; access, version and the open flag reset; no handle or stream
     FSFile(const FSFile& inFile) : mHandle(NULL), mStream(NULL) { ee_fs_basic_init_copy(Rec(), inFile.Rec()); }

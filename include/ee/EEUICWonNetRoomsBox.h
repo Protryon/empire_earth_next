@@ -5,7 +5,7 @@
 #ifndef EE_EEUICWONNETROOMSBOX_H
 #define EE_EEUICWONNETROOMSBOX_H
 
-class GEText;
+#include "lle/LLEForward.h"
 
 // one line of the rooms box (sizeof 0x30: GetCurrentSelection divides by 0x30)
 struct EEUICWNRBLine {

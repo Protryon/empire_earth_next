@@ -55,7 +55,6 @@ public:
         { ee_netmsg_register_builder(inFirst, inLast, reinterpret_cast<void* (*)(uint8_t*)>(inBuilder)); }
     void GetHeaderSlots(EeNetMsgSlot* outSlots);   // New (port): the header as the codec's first four slots
 
-protected:
     virtual ~NEMessage() {}
 
     unsigned char mType;                    // +0x08

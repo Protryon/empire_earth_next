@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include "rust/net/net.h"
 
-class NEMessage;
+#include "lle/LLEForward.h"
 
 // Its state is Rust's (ee_net comms.rs; PORT_LEARNINGS "LLE Network Engine, round 5"): the class keeps the type the
 // game holds, its pure virtuals and one-line forwarders. The original layout (sizeof 0x30) went with its fields;
@@ -67,7 +67,6 @@ public:
     void SetNumHumanPlayers(unsigned char inNumHumanPlayers) { this->Set(EeNetCommsField::NumHumanPlayers, inNumHumanPlayers); }
     void SetNumberOfCTsProcessedInPhysics(unsigned long inNumber) { this->Set(EeNetCommsField::CtsProcessed, inNumber); }
     void SetPlayerNumber(unsigned long inPlayerNumber) { this->Set(EeNetCommsField::PlayerNumber, inPlayerNumber); }
-protected:
     // the calls out of the lag simulator and the recorder (ee_net's EeNetQOp) that do not reach their owner: the
     // clock, events, threads, floating-point control, messages and record files (the owner answers Deliver)
     static ptrdiff_t QueueHostCommon(EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
@@ -75,13 +74,10 @@ protected:
     // the full expression)
     template <class T> static T& Temp(T&& inValue) { return inValue; }
 
-    EeNetComms* mComms;                     // the fields (the subclass hands them to its Rust server or client)
+    URust<EeNetComms> mComms;                     // the fields (the subclass hands them to its Rust server or client)
     EeNetServer* mServer = NULL;            // NESynchronousServer's Rust object (ee_net server.rs), else NULL
     EeNetClient* mClient = NULL;            // NESynchronousClient's (ee_net client.rs), else NULL
 
-private:
-    NESynchronousCommunications(const NESynchronousCommunications&);
-    NESynchronousCommunications& operator=(const NESynchronousCommunications&);
     uint32_t Get(EeNetCommsField inField) const { return ee_net_comms_get(this->mComms, inField); }
     void Set(EeNetCommsField inField, unsigned long inValue) { ee_net_comms_set(this->mComms, inField, (uint32_t)inValue); }
 };

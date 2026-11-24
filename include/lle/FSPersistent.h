@@ -12,7 +12,6 @@ public:
     virtual long GetTagID() const { return this->mTagID; }                      // +0x18 (folded 0x4380)
     // implicit copy ctor (0x442b)
 
-private:
     FSPersistent() {}
 
     long mTagID;                            // +0x04

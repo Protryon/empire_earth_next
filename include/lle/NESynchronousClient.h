@@ -57,7 +57,6 @@ public:
     void StartThreads() { ee_net_cl_start_threads(this->mClient); }
     void StopThreads() { ee_net_cl_stop_threads(this->mClient); }
 
-protected:
     // The client's calls out to the game (the original's pure virtuals, slots +0x24..+0x58; LLE round 13: the
     // subclass's members by name), then the engine's (Host): the subclass passes GameHost<itself> to the constructor
     template <class Game> static Game* As(void* inClient) { return static_cast<Game*>(static_cast<NESynchronousClient*>(inClient)); }
@@ -82,7 +81,6 @@ protected:
     // the client's calls out to the engine (ee_net's EeNetClOp): the protocol, the messages, the base class's fields
     static ptrdiff_t Host(void* inClient, EeNetClOp inOp, size_t a, size_t b, size_t c, size_t d);
 
-private:
     // the lag simulator's and the recorder's common calls out (ee_net's EeNetQOp)
     static ptrdiff_t QueueHost(void* inClient, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
         { return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d); }

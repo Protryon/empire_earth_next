@@ -3,8 +3,7 @@
 #ifndef LLE_GRAPHICSENGINE_H
 #define LLE_GRAPHICSENGINE_H
 
-class FSFileSpec;
-class GEColor;
+#include "lle/LLEForward.h"
 
 LLE_API long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance);
 LLE_API unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor, float inAlpha);

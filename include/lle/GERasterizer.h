@@ -10,17 +10,7 @@
 #include "rust/render/ge.h"
 #include "rust/render/dx7.h"
 
-class GEBitmap;
-class GELight;
-class GELine;
-class GEModel;
-class GEPhysicalModel;
-class GEPoint;
-class GEPolygonArray;
-class GERhombus;
-class GETerrainMesh;
-class GETexture;
-class GEText;
+#include "lle/LLEForward.h"
 
 // The fog's attributes and a screen's render state are the Rust records EeGeRastFog and EeGeRastScreen
 // (rust/crates/ee_render/src/ge rastobj.rs; rust/render/ge.h): the plug-in reads and writes the device-side fields
@@ -212,7 +202,6 @@ public:
     GERasterizer(const UString& inName, bool inTnL);
     explicit GERasterizer(const UString& inName);
     ~GERasterizer();                        // slot 0x114
-protected:
     // The plug-in's access to the base's state (the census of R4.3's twelfth part: no member is read directly)
     EeGeRastScreen* GetScreenState(unsigned long inScreen) const { return ee_ge_rast_screen(this->mRust, inScreen); }
     // The original's eight pure slots after the dtor (vtable 0x10097954 ends at 0x138; DX7HRDisplay.dll's exports
@@ -229,17 +218,11 @@ protected:
     // The state is Rust's (rust/crates/ee_render/src/ge rastobj.rs: the colours, the screen records, the debug font and text,
     // the drawing lock, the ripple, the culling, the flags, the name, the screen id, and the statics sRasterizers and
     // sActiveRasterizer); every call it makes on another object goes through GERasterizerHost (GERasterizer.cpp).
-    EeGeRasterizer* mRust;
+    URust<EeGeRasterizer> mRust;
     EeDx7Rasterizer* mDX7 = NULL;           // the DX7 rasterizer (ee_dx7 rastobj.rs; none in the store gate)
 
-    friend class GETexture;                 // calls CreateTextureHandle/DestroyTextureHandle (GETexture.cpp)
-    friend struct GERasterizerHost;
-public:
     // the two Rust objects, for the graphics thread's Rust (EERenderObject.cpp)
     static void* RustObjects(GERasterizer* inRasterizer, void** outBase) { return *outBase = inRasterizer->mRust, inRasterizer->mDX7; }
-private:
-    GERasterizer(const GERasterizer&) = delete;
-    GERasterizer& operator=(const GERasterizer&) = delete;
 };
 
 #endif

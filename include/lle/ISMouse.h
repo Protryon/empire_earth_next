@@ -5,11 +5,12 @@
 // mode, and Refresh passes TMGetTime (Input System.cpp). The class has no data.
 #ifndef LLE_ISMOUSE_H
 #define LLE_ISMOUSE_H
+#include "lle/LLEForward.h"
 #include "rust/base/lle_enums.h"
 
 #include "lle/ISEntity.h"
 
-class LLE_API ISMouse {
+class LLE_API ISMouse : URustView {
 public:
     // the axis or button at an index (ISMouseEntity); kErrorBeyondEnd past 6
     long GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
@@ -28,9 +29,6 @@ public:
     void SetUseBufferedMovement(bool inUse) { ee_input_mouse_set_use_buffered_movement(Rust(), inUse); }
     // releases the mouse (the pointer leaves relative mode)
     void Suspend() { ee_input_mouse_suspend_window(Rust()); }
-private:
-    ISMouse() = delete;
-    ~ISMouse() = delete;
     const EeInputMouse* Rust() const { return reinterpret_cast<const EeInputMouse*>(this); }
 };
 

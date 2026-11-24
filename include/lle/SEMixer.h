@@ -9,8 +9,7 @@
 #include "lle/SEConductor.h"
 
 struct IDirectSound;
-class FSFileSpec;
-class GEWindow;
+#include "lle/LLEForward.h"
 
 long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow);   // Sound Engine.cpp; (provisional names)
 // port: the start's state while SEInitializeMixers walks the plug-in table (rust/crates/ee_audio/src/sound mixerobj.rs
@@ -25,7 +24,7 @@ struct SEMixerStart {
 const UString& SEMixerPlugInName();
 bool SEMixerPlugInIsValid();
 
-class LLE_API SEMixer {
+class LLE_API SEMixer : URustView {
 public:
     static SEMixer* GetActiveMixer() { return reinterpret_cast<SEMixer*>(ee_sound_mixer_active()); }
     SEConductor& GetConductor() { return *reinterpret_cast<SEConductor*>(ee_sound_mixer_conductor(Rust())); }
@@ -45,10 +44,7 @@ public:
     static long UseMixer(SEMixer* inMixer) { return ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(inMixer)); }
     // this port's addition: the mixer's output rate
     unsigned long GetOutputRate() const { return ee_sound_mixer_output_rate(Rust()); }
-private:
     EeSoundMixer* Rust() const { return reinterpret_cast<EeSoundMixer*>(const_cast<SEMixer*>(this)); }
-    SEMixer() = delete;
-    ~SEMixer() = delete;
 };
 
 // port: the audio settings, in the mixer plug-in (Mixer.cpp; EEApplyAudioSettings): the master volume (0..1) over

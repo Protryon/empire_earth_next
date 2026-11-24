@@ -60,7 +60,7 @@ public:
     uint32_t mWhich;
 };
 
-template <class T> struct UIListBoxRust;
+#include "lle/LLEForward.h"
 template <class T> class UIListBox : public UIControl {
 public:
     typedef EeUiListCall UIListBoxCall;

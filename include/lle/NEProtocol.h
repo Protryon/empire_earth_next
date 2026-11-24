@@ -6,6 +6,7 @@
 // A connection (NEConnection*) and a published server (NEServer*) are the plug-in's own handles (round 5).
 #ifndef LLE_NEPROTOCOL_H
 #define LLE_NEPROTOCOL_H
+#include "lle/LLEForward.h"
 
 #include <string.h>
 #include <string>
@@ -18,7 +19,7 @@ class NEServer;                             // the plug-in's server handle (ee_n
 LLE_API long NEInitialize(FSFileSpec& inDirectory);
 void NEShutdown(bool inForced);   // Network Engine.cpp's shutdown hook (frees the protocols)
 
-class LLE_API NEProtocol {
+class LLE_API NEProtocol : URustView {
 public:
     static unsigned long GetCount() { return ee_net_pr_count(); }
     // the registered protocol at an index, or a beyond-end error
@@ -58,9 +59,6 @@ public:
     }
     EeNetProtocol* Rust() const { return reinterpret_cast<EeNetProtocol*>(const_cast<NEProtocol*>(this)); }
 
-private:
-    NEProtocol() = delete;
-    ~NEProtocol() = delete;
 };
 
 #endif
