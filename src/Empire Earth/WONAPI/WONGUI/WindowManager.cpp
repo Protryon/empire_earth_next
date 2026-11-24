@@ -29,11 +29,14 @@ using namespace WONAPI;
 // wmcache.rs; R6 WON round 33); the window set, the event list, the timers, the broadcasts, the event loop and the
 // screen resolution are its wmloop.rs (round 34). This unit keeps the colour scheme, the decoders, the font
 // helpers and the forwarders.
-static EeWonRect4 WinRect4(const WONRectangle& inRect)
-{
-    EeWonRect4 aRect = { inRect.x, inRect.y, inRect.width, inRect.height };
-    return aRect;
-}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(sizeof(WONRectangle) == sizeof(EeWonRect4) && sizeof(PopupParams) == sizeof(EeWonWmPopup) &&
+              offsetof(PopupParams, mOwnerComponent) == offsetof(EeWonWmPopup, owner) &&
+              offsetof(PopupParams, mFlags) == offsetof(EeWonWmPopup, flags) && offsetof(PopupParams, my) == offsetof(EeWonWmPopup, y) &&
+              offsetof(PopupParams, mAvoidRect) == offsetof(EeWonWmPopup, avoid),
+              "wmobj.rs reads a WONRectangle as EeWonRect4 and PopupParams as EeWonWmPopup (DoPopup, AdjustPopupPosition)");
+#pragma clang diagnostic pop
 // R6 WON rounds 33-34: the Rust manager's calls out (EeWonGuiOp's Wm* ops; rust/crates/ee_won_gui/src/wmobj.rs,
 // wmloop.rs)
 typedef EeWonGuiOp Op;
@@ -292,17 +295,11 @@ void WindowManager::InitColorScheme()
     ee_won_gui_wm_init_colors(ee_won_guicpp_wm_call, this);
 }
 
-// A font with another style and, when the size is positive, another size, from the default window (GetDefaultFontMod,
-// GetNamedFontMod)
-static Font* FontMod(WindowManager* inManager, Font* inFont, int inStyle, int inSize)
+// The default font with another style and, when the size is positive, another size, from the default window
+Font* WindowManager::GetDefaultFontMod(int inStyle, int inSize)
 {
-    FontDescriptor aDesc = inFont->mDescriptor;
-    aDesc.mStyle = inStyle;
-    if (inSize > 0)
-        aDesc.mSize = inSize;
-    return inManager->GetDefaultWindow()->GetFont(aDesc).get();
+    return this->GetDefaultWindow()->GetFont(FontDescriptor(this->GetDefaultFont()->mDescriptor.mFace, inStyle, inSize > 0 ? inSize : this->GetDefaultFont()->mDescriptor.mSize)).get();
 }
-Font* WindowManager::GetDefaultFontMod(int inStyle, int inSize) { return FontMod(this, this->GetDefaultFont(), inStyle, inSize); }
 
 // Decodes an image file for the default window's display context; NULL when there is no window
 SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
@@ -314,22 +311,6 @@ SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)
 {
     return this->mSoundDecoder.get() == NULL ? SmartPtr<Sound>(new Sound(theDesc)) : this->mSoundDecoder->DecodeDescriptor(theDesc);
-}
-// Moves a popup back inside the screen or the parent's root, flipping it to the other side of the avoid rectangle
-void WindowManager::AdjustPopupPosition(Window *theParent, Component *theComponent, bool inOwnWindow, const WONRectangle &theAvoidRect)
-{
-    EeWonRect4 anAvoid = WinRect4(theAvoidRect);
-    this->WmCall(EeWonWmCall::AdjustPopupPosition, (intptr_t)theParent, (intptr_t)theComponent, inOwnWindow ? 1 : 0,
-                 (intptr_t)&anAvoid);
-}
-// Opens a popup at the given or mouse position, in its own popup window or inside the parent window, per
-// the popup flags; ignored while another popup opens or closes, or when the parent lacks focus
-void WindowManager::DoPopup(const PopupParams &theParams)
-{
-    EeWonWmPopup aParams = { (intptr_t)theParams.mParent, (intptr_t)theParams.mPopup, (intptr_t)theParams.mInputComponent,
-                             (intptr_t)theParams.mOwnerComponent, theParams.mFlags, theParams.mx, theParams.my,
-                             WinRect4(theParams.mAvoidRect) };
-    this->WmCall(EeWonWmCall::DoPopup, (intptr_t)&aParams);
 }
 // The default window's font for a descriptor and its display context (NULL without a window; not identified in the
 // original exe)

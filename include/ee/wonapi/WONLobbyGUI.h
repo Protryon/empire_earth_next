@@ -1414,8 +1414,12 @@ public:
     int DoDialog(Window* w, Component* c) { return (int)this->WmCall(EeWonWmCall::DoDialog, (intptr_t)w, (intptr_t)c); } //32dc50
     void EndDialog(int r, Window* w, Component* c) { this->WmCall(EeWonWmCall::EndDialog, r, (intptr_t)w, (intptr_t)c); }
     void ExitMessageLoop() { this->WmCall(EeWonWmCall::ExitMessageLoop); } //32ddf0
-    void AdjustPopupPosition(Window*,Component*,bool,const WONRectangle&); //32de00
-    void DoPopup(const PopupParams&); //32e040
+    // moves a popup back inside the screen or the parent's root, flipping it to the other side of the avoid rectangle
+    void AdjustPopupPosition(Window* p,Component* c,bool own,const WONRectangle& avoid) { this->WmCall(EeWonWmCall::AdjustPopupPosition, (intptr_t)p, (intptr_t)c, own ? 1 : 0, (intptr_t)&avoid); } //32de00
+    // opens a popup at the given or mouse position, in its own popup window or inside the parent window, per the
+    // popup flags; ignored while another popup opens or closes, or when the parent lacks focus (the record is
+    // the Rust manager's EeWonWmPopup: WindowManager.cpp checks the layout)
+    void DoPopup(const PopupParams& p) { this->WmCall(EeWonWmCall::DoPopup, (intptr_t)&p); } //32e040
     void EndPopup(Component* c) { this->WmCall(EeWonWmCall::EndPopup, (intptr_t)c); } //32e4d0
     void CheckEndPopup(Component* c) { this->WmCall(EeWonWmCall::CheckEndPopup, (intptr_t)c); } //32e790
     int MessageLoop() { return (int)this->WmCall(EeWonWmCall::MessageLoop); } //32e7d0
