@@ -4,6 +4,12 @@
 #ifndef EE_EEUICWONNETGAMESBOX_H
 #define EE_EEUICWONNETGAMESBOX_H
 
+#include "lle/GEFont.h"
+#include "lle/GEText.h"
+#include "lle/GERectangle.h"
+#include "lle/UIListBox.h"
+#include "rust/won_lobby/wonfront.h"
+
 // one line of the games box (sizeof 0x20: the accessors index mData with << 5)
 struct EEUICWNGBLine {
     UWideString mName;                      // +0x00
@@ -18,12 +24,20 @@ class EEUICWonNetGamesBox : public UIListBox<EEUICWNGBLine> {
 public:
     // 0x25b2ce (ret 0x20): as EEUICWonNetRoomsBox's ctor, then the three bracketed column headers
     // (resource strings 0x8020..0x8022) and their widths
+    // (R6 WON round 32: the bodies are Rust, ee_won_lobby wonfront.rs, over the screens' host ee/EEWonFrontHost.inl)
     EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
-                        unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~EEUICWonNetGamesBox();
-    virtual long CopyData();                // +0x14 0x25b68e
-    virtual long DrawPolygons();            // +0x18 0x25b6b0 (the base's)
-    virtual long DrawTextA();               // +0x1c 0x25b6b5 (six columns; full or empty games greyed)
+                        unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
+        : UIListBox<EEUICWNGBLine>(inId, std::vector<EEUICWNGBLine>(), inFont->GetHeight(), false,
+                                   GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, inBorderThickness)
+    {
+        ee_won_front_call(EeWonFrontCall::GamesConstruct, this, (intptr_t)inFont);
+    }
+    virtual ~EEUICWonNetGamesBox() { ee_won_front_call(EeWonFrontCall::GamesDestruct, this, 0); }
+    // +0x14 0x25b68e
+    virtual long CopyData() { return (long)ee_won_front_call(EeWonFrontCall::GamesCopyData, this, 0); }
+    // +0x1c 0x25b6b5: six columns per line; joinable games (not in progress, not full) in bold black, the others in grey
+    // (DrawPolygons, +0x18 0x25b6b0, is the base's)
+    virtual long DrawTextA() { return (long)ee_won_front_call(EeWonFrontCall::GamesDrawText, this, 0); }
     // inline; emitted out of line after their first user (EEUIEWNAGHostOrJoinGame::ProcessEvent 0x1ea2fb) in
     // declaration order: 0x1ea583, 0x1ea5e7, 0x1ea618
     UWideString GetGameName(unsigned long inIndex)

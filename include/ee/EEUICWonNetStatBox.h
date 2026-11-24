@@ -4,6 +4,12 @@
 #ifndef EE_EEUICWONNETSTATBOX_H
 #define EE_EEUICWONNETSTATBOX_H
 
+#include "lle/GEFont.h"
+#include "lle/GEText.h"
+#include "lle/GERectangle.h"
+#include "lle/UIListBox.h"
+#include "rust/won_lobby/wonfront.h"
+
 // one line (sizeof 0x34: GetNumLines 0x25f4c9 divides by 0x34). The vector's _Tidy 0x25f7de (the list box's
 // +0xa0/+0xb0 and the stat box's +0x138) runs ~UWideString at +0 of each element and nothing else: a string, then
 // 0x20 trivially destructible bytes (not decoded)
@@ -23,12 +29,24 @@ struct EEUICWNSBStat {
 
 class EEUICWonNetStatBox : public UIListBox<EEUICWNSBStat> {
 public:
-    EEUICWonNetStatBox(unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorder); // original25e2f8/274b38 ret32, no body credit
     // 0x25e2f8 (ret 0x20): UIListBox's ctor 0x25ed50, mStats' allocator byte, then vptr 0x44a470, mRowHeight, mText
-    virtual ~EEUICWonNetStatBox();
-    virtual long CopyData();                // +0x14 0x25e3f9 (the base's; clears mCopiedHasSelection under two lines)
-    virtual long DrawTextA();               // +0x1c 0x25e413 (twelve columns per copied line)
-    virtual void Refresh();                 // +0xbc 0x25eca2 (the stats form's open event; provisional name)
+    // (the base gets mStats before mStats is constructed: the original pushes this+0x138). R6 WON round 32: the bodies
+    // are Rust (ee_won_lobby wonfront.rs), over the screens' host (ee/EEWonFrontHost.inl)
+    EEUICWonNetStatBox(unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
+                       unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorder)
+        : UIListBox<EEUICWNSBStat>(inID, mStats, inFont->GetHeight(), false,
+                                   GERectangle(inLocation, (float)inWidth, (float)inHeight), inForm, inIndex, inBorder)
+    {
+        ee_won_front_call(EeWonFrontCall::StatConstruct, this, (intptr_t)inFont);
+    }
+    virtual ~EEUICWonNetStatBox() { delete this->mText; }
+    // +0x14 0x25e3f9 (the base's; no selection highlight with fewer than two lines)
+    virtual long CopyData() { return (long)ee_won_front_call(EeWonFrontCall::StatCopyData, this, 0); }
+    // +0x1c 0x25e413: twelve blue columns per row: name, the counts, three percentages of games and the average game time
+    virtual long DrawTextA() { return (long)ee_won_front_call(EeWonFrontCall::StatDrawText, this, 0); }
+    // +0xbc 0x25eca2 (the stats form's open event; provisional name): one placeholder "Joe Mamma II" line (the
+    // developers') for every visible row
+    virtual void Refresh() { ee_won_front_call(EeWonFrontCall::StatRefresh, this, 0); }
 
     // the screens' host's reads of the protected base (R6 WON round 32: ee/EEWonFrontHost.inl)
     long FrontScrollBarText() { return this->DrawScrollBarText(); }
