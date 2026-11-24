@@ -377,6 +377,15 @@ constexpr static const int32_t EE_UNITS_AG_SEND = 8;
 /// heading)
 constexpr static const int32_t EE_UNITS_AG_ARRANGE = 9;
 
+/// group `a`'s formation: `mCenter = io.p` (units round 12)
+constexpr static const int32_t EE_UNITS_AG_FORMATION_CENTER = 13000;
+
+/// group `a`'s formation: `mHeading = io.f`
+constexpr static const int32_t EE_UNITS_AG_FORMATION_HEADING = 13001;
+
+/// group `a`'s formation: `mOrientation.SetOrientationYPR(io.f, 0, 0)`
+constexpr static const int32_t EE_UNITS_AG_FORMATION_ORIENT = 13002;
+
 /// `gWorld.GetUnit(c)`'s inner collision sphere into `io.f` (0: no unit)
 constexpr static const int32_t EE_UNITS_AG_WORLD_SPHERE = 15;
 
@@ -422,9 +431,6 @@ constexpr static const int32_t EE_UNITS_AG_SET_PLACE = 32;
 /// unit `a`'s `CanTake(b, c)`
 constexpr static const int32_t EE_UNITS_AG_CAN_TAKE = 33;
 
-/// unit `a`'s `GetNearestFootprintTile(b, &io.a, &io.b)`
-constexpr static const int32_t EE_UNITS_AG_FOOTPRINT = 34;
-
 /// `gWorld.mMap->GetTile(c, d) != NULL`
 constexpr static const int32_t EE_UNITS_AG_HAS_TILE = 35;
 
@@ -458,18 +464,8 @@ constexpr static const int32_t EE_UNITS_AG_SEEN_BY = 47;
 /// `EECanPriestConvert(a, b)`
 constexpr static const int32_t EE_UNITS_AG_PRIEST_CONVERT = 48;
 
-/// `U2DRectangle<float>` (top `io.p[0]`, left `io.p[1]`, bottom `io.p[2]`, right `io.q[0]`)'s
-/// `GetClosestPoint((io.q[1], io.q[2]))` into `io.p[0]`, `io.p[1]`
-constexpr static const int32_t EE_UNITS_AG_RECT_CLOSEST = 52;
-
 /// goal `a`'s `mKind` (-1: none)
 constexpr static const int32_t EE_UNITS_AG_GOAL_KIND = 60;
-
-/// goal `a`'s `GetGoalLocation(io.p)`
-constexpr static const int32_t EE_UNITS_AG_GOAL_LOCATION = 65;
-
-/// `EEUGRust::NewLocation(&io.p, a & 1, a & 2, a & 4, io.f, a & 8, io.b)` (`a` is `io.a`)
-constexpr static const int32_t EE_UNITS_AG_NEW_LOCATION = 66;
 
 /// gather goal `a`'s `GetGatherStorage()`
 constexpr static const int32_t EE_UNITS_AG_GATHER_STORAGE = 72;
@@ -6866,9 +6862,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_AT = 15;
 /// `gContinentManager.GetPathAreaIDAt(c, d)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_AREA_AT = 17;
 
-/// unit `a`'s `SetGroupPathGoals` of the `len` points at `list`
-constexpr static const int32_t EE_UNITS_GROUP_OP_SET_GROUP_PATH = 26;
-
 /// unit `a`'s `ClearBuildTargets()`
 constexpr static const int32_t EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS = 27;
 
@@ -6884,7 +6877,8 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUP = 31;
 /// `gWorld.mMap->ClearU1955DC()`
 constexpr static const int32_t EE_UNITS_GROUP_OP_CLEAR_AREAS = 34;
 
-/// `gWorld.mMap->BuildAreaOutlines`: the `len` areas (left, right, top, bottom) at `list`, the continents at `list2`
+/// `gWorld.mMap->BuildAreaOutlines`: the `len` areas at `list` (each a `U2DRectangle<long>`: bottom, left, right,
+/// top), the continents at `list2`
 constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_OUTLINES = 35;
 
 /// `gAEManager.mTemplates[c]->mRadius` into `io.f`
@@ -18213,6 +18207,13 @@ struct EEUpdateContext {
   class EEComplexUnit *mAirport;
 };
 
+/// `EEIsLineToUnitBlocked`'s outputs for a search (the blocker and two tiles, from -10000).
+struct EeUnitsSrLine {
+  uint64_t blocker;
+  long x;
+  long y;
+};
+
 /// `kWorldHighGroundHeight`, `kWorldLowGroundHeight`, `kWorldHighGroundAttackFactor`, `kWorldLowGroundAttackFactor`
 /// (the world table's rows, ee/EEWorldConstants.h)
 constexpr static const int64_t WORLD_ELEVATION_ROWS[4] = { 53, 54, 55, 56, };
@@ -22760,6 +22761,22 @@ int64_t ee_units_uu_lead_unit_id(uint64_t player);
 /// `target` and `out` hold three floats.
 void ee_units_uu_aim_point(uint64_t unit, const float (*target)[3], float (*out)[3]);
 
+/// `EEGetUnitsInRectangle(rect, units, predicate, unique)` (ee/EEUnitCollector.h's template): the units of the map's
+/// unit regions under the tile rectangle whose tile is in it and that `keep(context, unit)` holds for, appended to
+/// `io`; sorted by id and made unique when `unique` and one was bigger than a tile. Their number.
+///
+/// # Safety
+/// `io` a live `std::vector` of unit pointers; `keep` callable with `context` and a unit's handle, changing no unit
+/// region.
+int32_t ee_units_uu_collect_units(int32_t left,
+                                  int32_t top,
+                                  int32_t right,
+                                  int32_t bottom,
+                                  uint8_t (*keep)(const void*, uint64_t),
+                                  const void *context,
+                                  void *io,
+                                  bool unique);
+
 /// `EEGetUnitsNear`: `io` replaced; their number.
 ///
 /// # Safety
@@ -22831,21 +22848,12 @@ extern uint8_t ee_units_uu_host_can_move_on_terrain(uint64_t class_obj,
 
 extern int32_t ee_units_uu_host_passable_flags(uint64_t class_obj, uint64_t unit);
 
-extern uint32_t ee_units_uu_host_surrounding_tiles(uint64_t target,
-                                                   uint8_t virtual_call,
-                                                   int32_t (*out)[2],
-                                                   uint32_t capacity);
+/// a fresh `std::vector<U2DPoint<long> >` (a body's local list), and its end
+extern void *ee_units_uu_host_tiles_new();
+
+extern void ee_units_uu_host_tiles_delete(void *v);
 
 extern uint64_t ee_units_uu_host_container_continent(uint64_t container, uint64_t unit);
-
-extern uint32_t ee_units_uu_host_tile_line(int32_t x1,
-                                           int32_t y1,
-                                           int32_t x2,
-                                           int32_t y2,
-                                           uint8_t ends,
-                                           uint8_t thin,
-                                           int32_t (*out)[2],
-                                           uint32_t capacity);
 
 extern uint8_t ee_units_uu_host_reserved(uint64_t group, const float *point);
 
@@ -22867,11 +22875,7 @@ extern void ee_units_uu_host_set_animation(uint64_t complex, int32_t animation);
 
 extern void ee_units_uu_host_set_transformation(uint64_t complex, const float *m);
 
-extern uint32_t ee_units_uu_host_tiles_len(const void *v);
-
-extern void ee_units_uu_host_tiles_get(const void *v, int32_t (*out)[2]);
-
-extern void ee_units_uu_host_tiles_set(void *v, const int32_t (*tiles)[2], uint32_t count);
+extern void ee_units_uu_host_tiles_set(void *v, const long (*tiles)[2], uint32_t count);
 
 extern uint32_t ee_units_uu_host_units_len(const void *v);
 
@@ -22888,7 +22892,7 @@ extern uint8_t ee_units_uu_host_tile_test(int32_t which,
 extern void ee_units_uu_host_center_offset(uint64_t complex, float *io);
 
 extern uint8_t ee_units_uu_host_tiles_test(int32_t which,
-                                           const int32_t (*tiles)[2],
+                                           const long (*tiles)[2],
                                            uint32_t count,
                                            int32_t kind);
 
