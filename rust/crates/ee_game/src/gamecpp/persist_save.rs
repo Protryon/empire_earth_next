@@ -242,7 +242,7 @@ pub extern "C" fn ee_gamecpp_ps_load_saved_game_file(
         PS_NOT_LOADED
     };
     if resume {
-        h(O::PsGraphicsPostResume, 0, &[]);
+        super::globals::graphics_post_resume();
     }
     r as c_long
 }
@@ -335,7 +335,7 @@ fn mute(loading: bool, quiet: bool) -> i64 {
     MUSIC_VOLUME.store(hd(O::PsMusicVolume, 0, &[], &[]).to_bits(), Ordering::Relaxed);
     hf(O::PsSetMasterVolume, 0, &[], &[0.0]);
     hf(O::PsSetMusicVolume, 0, &[], &[0.0]);
-    h(O::PsSleep, 0, &[0x282]);
+    ee_base::plat_core::time::PlatSleep(0x282);
     if quiet || h(O::PsCommPresent, 0, &[]) == 0 || h(O::CommIsServer, 0, &[]) == 0 || loading != true {
         return 0;
     }
@@ -415,7 +415,8 @@ fn reload_saved_game(file: P) -> i64 {
         if h(O::PsEditorFormPresent, 0, &[]) != 0 {
             h(O::PsEditorClearSelection, 0, &[]);
         }
-        h(O::PsPreloadWaitQueue, 0, &[]);
+        // SAFETY: the game's preloading thread object
+        crate::preload::ee_preload_wait_for_queue(unsafe { *std::ptr::addr_of!(super::globals::gDataPreLoading) });
         h(O::PsWorldClear, 0, &[]);
         h(O::PsWorldStartGame, 0, &[pa(st)]);
         h(O::PsStReset, st, &[]);
@@ -654,12 +655,12 @@ fn load_game(st: P, header_file: P, file: P) -> bool {
         h(O::PsStOptionsFromHeader, st, &[pa(header.0)]);
         let tags = header_tags(header.0);
         // port (decision D6): the chunks of a save older than 0.255 hold Windows-1252 text, converted as it loads
-        h(O::PsLegacyTextLoad, 0, &[(h(O::PsTextIsUtf8, 0, &[hmaj as i64, hmin as i64]) == 0) as i64]);
+        ee_base::ustring::ee_ustring_set_legacy_text_load(!ee_sim::save_versions::EESaveTextIsUtf8(hmaj, hmin));
         if restore_persistents(st, &tags, file) == PF_OK {
             result = true;
         }
         h(O::PsStFinishLoad, st, &[hmaj as i64, hmin as i64]);
-        h(O::PsLegacyTextLoad, 0, &[0]);
+        ee_base::ustring::ee_ustring_set_legacy_text_load(false);
     }
     if !result {
         h(O::PsReportCorrupt, 0, &[]);
@@ -874,8 +875,8 @@ pub extern "C" fn ee_gamecpp_ps_load_persistent(name: *const c_void, tag: c_long
                 (*v, *v.add(1))
             };
             // port (decision D6): a chunk of a save older than 0.255 holds Windows-1252 text
-            let legacy = r == PF_OK && h(O::PsTextIsUtf8, 0, &[hmaj as i64, hmin as i64]) == 0;
-            h(O::PsLegacyTextLoad, 0, &[legacy as i64]);
+            let legacy = r == PF_OK && !ee_sim::save_versions::EESaveTextIsUtf8(hmaj, hmin);
+            ee_base::ustring::ee_ustring_set_legacy_text_load(legacy);
             for &t in &tags {
                 let chunk = owned(O::PsChunkNew, O::PsChunkDelete);
                 if t == tag {
@@ -887,7 +888,7 @@ pub extern "C" fn ee_gamecpp_ps_load_persistent(name: *const c_void, tag: c_long
                 }
                 h(O::PsChunkSkip, chunk.0, &[pa(memory.0)]);
             }
-            h(O::PsLegacyTextLoad, 0, &[0]);
+            ee_base::ustring::ee_ustring_set_legacy_text_load(false);
         }
         h(O::PsSpecDelete, found, &[]);
     }

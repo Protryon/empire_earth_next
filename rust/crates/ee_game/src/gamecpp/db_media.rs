@@ -85,7 +85,7 @@ extern "C" fn lock_leave(lock: *mut c_void) {
 }
 
 extern "C" fn lock_sleep() {
-    h(O::SsSleep, 0, &[1]);
+    ee_base::plat_core::time::PlatSleep(1);
 }
 
 /// A unit's `sDatabaseLock` (its `TSCriticalSection*`) as the use count's lock.
@@ -715,7 +715,7 @@ pub extern "C" fn ee_gamecpp_db_button_reload() -> c_long {
 /// EEButtonObject::GetHotKey (and the node's): the hot key of an index, NULL out of range.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_db_hot_key(index: c_long) -> *mut c_void {
-    if index > 0 && index < h(O::DbtHotKeyCount, 0, &[]) as c_long {
+    if index > 0 && index < ee_ui::hotkeyobj::ee_ui_hotkey_count() as c_long {
         return hp(O::DbtHotKey, 0, &[index as i64]) as *mut c_void;
     }
     std::ptr::null_mut()

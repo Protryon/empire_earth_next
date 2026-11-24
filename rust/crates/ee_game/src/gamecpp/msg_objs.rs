@@ -49,7 +49,8 @@ pub unsafe extern "C" fn ee_gamecpp_msg_build(memory: *mut c_void) -> *mut c_voi
         h(O::C11MsgBuildUndefined, m, &[]);
         0
     };
-    h(O::C11MsgCaptureImport, m, &[pa(message)]);
+    // TEST ONLY: NMIM
+    super::msg_capture::ee_gamecpp_msgcap_import(message as *mut c_void, memory as *const u8);
     message as *mut c_void
 }
 

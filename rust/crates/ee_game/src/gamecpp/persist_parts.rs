@@ -230,7 +230,11 @@ fn load_player(helper: P, file: Pf, major: c_ulong, minor: c_ulong, v: [i64; 2])
                     ai = bytes;
                 }
             }
-            if r == PF_OK && ai != b"none" && h(O::PphAiKnown, 0, &bytes_arg(&ai)) == 0 {
+            // SAFETY: the id's bytes
+            if r == PF_OK
+                && ai != b"none"
+                && unsafe { crate::cp_engine::ee_cp_engine_by_id(ai.as_ptr(), ai.len()) }.is_null()
+            {
                 let a = bytes_arg(&ai);
                 h(O::PphLogUnknownAi, pl, &[a[0], a[1]]);
                 r = PF_FAILED;
@@ -245,15 +249,23 @@ fn load_player(helper: P, file: Pf, major: c_ulong, minor: c_ulong, v: [i64; 2])
     if r == PF_OK && kind == 1 && cp != 0 && (major > 0 || minor >= 252) {
         let (rr, bytes) = read_block(file, PP_STATE_LIMIT, false, 0);
         r = rr;
-        if r == PF_OK && !bytes.is_empty() && h(O::PphCpLoadState, cp, &bytes_arg(&bytes)) == 0 {
+        // SAFETY: the loaded computer player and the block's bytes
+        if r == PF_OK
+            && !bytes.is_empty()
+            && !unsafe { ee_sim::ai::next_game::ee_ai_next_load(cp as *mut c_void, bytes.as_ptr(), bytes.len()) }
+        {
             r = PF_FAILED;
         }
     }
     // port: from 0.280 the per-unit Lua interface's state (0 for none; EESaveHasUnitsLuaState)
-    if r == PF_OK && kind == 1 && cp != 0 && h(O::PphHasUnitsLuaState, 0, &v) != 0 {
+    if r == PF_OK && kind == 1 && cp != 0 && ee_sim::save_versions::EESaveHasUnitsLuaState(major, minor) {
         let (rr, bytes) = read_block(file, PP_STATE_LIMIT, false, b' ');
         r = rr;
-        if r == PF_OK && !bytes.is_empty() && h(O::PphCpUnitsLoad, cp, &bytes_arg(&bytes)) == 0 {
+        // SAFETY: as above
+        if r == PF_OK
+            && !bytes.is_empty()
+            && !unsafe { ee_sim::ai::units_bind::ee_ai_units_load(cp as *mut c_void, bytes.as_ptr(), bytes.len()) }
+        {
             r = PF_FAILED;
         }
     }
@@ -329,7 +341,7 @@ pub extern "C" fn ee_gamecpp_pph_save(
             h(O::PphCpEngineAi, cp, &[pa(s.0)]);
             let mut ai = cpp_string(s.0);
             if ai.is_empty() {
-                if h(O::PphClassicAiPresent, 0, &[]) != 0 {
+                if !crate::cp_engine::ee_cp_engine_classic().is_null() {
                     h(O::PphClassicAiId, 0, &[pa(s.0)]);
                     ai = cpp_string(s.0);
                 } else {
@@ -388,9 +400,9 @@ pub extern "C" fn ee_gamecpp_hdr_load(header: *mut c_void, file: *mut c_void) ->
     if r == PF_OK {
         // SAFETY: the header's versions
         let (maj, min) = unsafe { (*hdr_versions(header), *hdr_versions(header).add(1)) };
-        h(O::PsLegacyTextLoad, 0, &[(h(O::PsTextIsUtf8, 0, &[maj as i64, min as i64]) == 0) as i64]);
+        ee_base::ustring::ee_ustring_set_legacy_text_load(!ee_sim::save_versions::EESaveTextIsUtf8(maj, min));
         r = load_body(header, file);
-        h(O::PsLegacyTextLoad, 0, &[0]);
+        ee_base::ustring::ee_ustring_set_legacy_text_load(false);
     }
     r as c_long
 }

@@ -196,22 +196,6 @@ unsigned char EEServer::GetPlayerSendToSlot(unsigned char inPlayer)
     return this->IsPlayerPresent(inPlayer) ? gWorld.mPlayers[inPlayer]->mSlot : 0xff;
 }
 
-// Returns the network slot of a lobby slot, 0xff when none
-unsigned char EEServer::GetSendToSlot(unsigned char inPlayer)
-{
-    std::map<unsigned char, unsigned char>::iterator theIt = this->mSendToSlots.find(inPlayer);
-    return theIt != this->mSendToSlots.end() ? theIt->second : 0xff;
-}
-
-// Returns the lobby slot that uses a network slot, 0 when none
-unsigned char EEServer::GetLobbySlot(unsigned char inValue)
-{
-    for (std::map<unsigned char, unsigned char>::iterator theIt = this->mSendToSlots.begin(); theIt != this->mSendToSlots.end(); ++theIt)
-        if (theIt->second == inValue)
-            return theIt->first;
-    return 0;
-}
-
 // Returns whether a world player index holds a player
 bool EEServer::IsPlayerPresent(unsigned char inPlayer)
 {
@@ -354,10 +338,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::C11SvDestroyAttemptLock: TSScheduler::DestroyCriticalSection(SV->mAttemptToRemovePlayerLock);
         break;
     case O::C11SvMaxPlayers: return SV->GetMaxPlayers();
-    case O::C11SvSendToSlot: return SV->GetSendToSlot((unsigned char)a[0]);
-    case O::C11SvLobbySlot: return SV->GetLobbySlot((unsigned char)a[0]);
-    case O::C11SvSendToErase: SV->mSendToSlots.erase((unsigned char)a[0]);
-        break;
     case O::C11SvUnregister: EESessionAccess::Unregister(SV, (unsigned char)a[0]);
         break;
     // the sends
@@ -448,11 +428,9 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsTime: return (long long)TMGetTime();
     case O::SsWon: return gWonNet != NULL;
     case O::SsScreenActive: return gGameScreenActive;
-    case O::SsEngineChoices: return (long long)EECPEngineChoiceCount();
     case O::SsFormById: return P64(gUIManager->GetFormByID(a[0]));
     case O::SsCurrentForm: return P64(gUIManager->GetCurrentForm());
     case O::SsFormVisible: return gUIManager->IsFormVisible(gUIManager->GetFormByID(a[0]));
-    case O::SsSendToSlot: return SS->GetSendToSlot((unsigned char)a[0]);
     case O::SsPlayerSendToSlot: return SS->GetPlayerSendToSlot((unsigned char)a[0]);
     // the server's and client's members (their addresses)
     case O::SsSHasLeft: return P64(&SS->mHasLeftGame);
@@ -661,12 +639,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsUnregisterSlot: EESessionAccess::Unregister(SS, (unsigned char)a[0]);
         break;
-    case O::SsSendToClear: SS->mSendToSlots.clear();
-        break;
-    case O::SsSendToInsert: SS->mSendToSlots.insert(std::map<unsigned char, unsigned char>::value_type((unsigned char)a[0], (unsigned char)a[1]));
-        break;
-    case O::SsSendToErase: SS->mSendToSlots.erase((unsigned char)a[0]);
-        break;
     case O::SsAbortXfer: SS->AbortXfer((unsigned long)a[0]);
         break;
     case O::SsRemoveInProgress: SS->RemovePlayerFromGameInProgress((unsigned char)a[0], a[1] != 0, false, a[2] != 0);
@@ -678,7 +650,7 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsHeaderSetVersions: ((EEPSaveGameHeader*)a[0])->mMajorVersion = kSaveGameMajorVersion, ((EEPSaveGameHeader*)a[0])->mMinorVersion = kSaveGameMinorVersion;
         break;
     case O::SsHeaderLoad: return ((EEPSaveGameHeader*)a[0])->LoadFromFile(*(FSFileSpec*)a[1]) == kErrorOK;
-    case O::SsXferToClient: SS->XferFileToClient(*(FSFileSpec*)a[0], ((EEPSaveGameHeader*)a[1])->mChecksum, SS->GetSendToSlot((unsigned char)a[2]), *(unsigned long*)a[3], false);
+    case O::SsXferToClient: SS->XferFileToClient(*(FSFileSpec*)a[0], ((EEPSaveGameHeader*)a[1])->mChecksum, (unsigned char)a[2], *(unsigned long*)a[3], false);
         break;
     case O::SsStartGame: SS->StartGame();
         break;
@@ -701,8 +673,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsLocalOut: gLocalPlayerOut = a[0] != 0;
         break;
-    case O::SsSleep: PlatSleep((unsigned long)a[0]);
-        break;
     case O::SsFrameProtocol: NEProtocol::GetProtocol(0, SF->mProtocol);
         break;
     // the game start
@@ -715,8 +685,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsGetProtocol: NEProtocol::GetProtocol(0, *(NEProtocol**)a[0]);
         break;
     case O::SsProtocolStatus: ((NEProtocol*)a[0])->GetStatus(UWideString(""), 0xffff0000);
-        break;
-    case O::SsPostResume: gGraphics->PostResume();
         break;
     case O::SsGfxPaused: return gGraphics->mIsPaused;
     case O::SsPhysicsPostStart: gPhysics->mThread->Post(0x404, NULL, NULL, true);

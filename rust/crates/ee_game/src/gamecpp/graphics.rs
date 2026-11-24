@@ -121,10 +121,10 @@ pub extern "C" fn ee_gamecpp_gfx_restore_surfaces(g: *mut c_void) -> c_long {
     if result == 0 {
         h(O::MousePointerPost, 0, &[0x402]);
         while h(O::MousePointerShown, 0, &[]) != 0 {
-            h(O::Sleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
         }
         while h(O::MousePointerShown, 0, &[]) != 0 {
-            h(O::Sleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
         }
         h(O::WorldWriteLock, 0, &[]);
         h(O::UiRedrawAll, 0, &[]);

@@ -203,7 +203,7 @@ pub extern "C" fn ee_gamecpp_entry_initialize_network() {
     let result = h(O::EntryRegisterEmptyShutdown, 0, &[]);
     h(O::Verify, 0, &[(result == ENTRY_OK) as i64, 1586]);
     h(O::FileSpecSetVolumeStartup, file.0, &[]);
-    h(O::TimeNow, 0, &[]);
+    ee_base::time::ee_time_get();
     // the game's code is all in its exe (the original summed the engine, Dinkum and TCP Protocol DLLs)
     let mut exe = [0u8; 4096];
     // SAFETY: the buffer and its size
@@ -237,7 +237,7 @@ pub extern "C" fn ee_gamecpp_entry_initialize_network() {
             checksum = checksum.wrapping_add(timestamp as u32);
         }
     }
-    h(O::TimeNow, 0, &[]);
+    ee_base::time::ee_time_get();
     h(O::EntrySetBinaryChecksum, 0, &[checksum as i64]);
     h(O::EntryVersionTrim, 0, &[]);
     let suffix = cstr(entry_version_suffix(checksum).as_bytes());
