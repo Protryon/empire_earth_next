@@ -36,8 +36,8 @@ LobbyConfig* LobbyConfig::DefaultAllocator()
 
 // the constructor's and HandleValueInstruction's statements (lobbyconf.rs composes them, R6 WON round 33); their
 // locals are these statics
-static RegKey* sConfRegistry;
-static DWORD sConfRegistryValue;
+static EeWonRegKey* sConfRegistry; // the WONLobby key (the original's RegKey, regkey.rs)
+static long long sConfRegistryValue;
 static std::string sConfName, sConfValue;
 static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intptr_t b, intptr_t cc)
 {
@@ -64,13 +64,13 @@ static intptr_t ConfHost(void* inConfig, EeWonLobbyConfOp inOp, intptr_t a, intp
     case Op::KeyAllowDuplicateNames: c->KeyAdd("AllowDuplicateNames", c->mAllowDuplicateNames, true); return 0;
     case Op::KeyAppendNumberToDefaultLanName: c->KeyAdd("AppendNumberToDefaultLanName", c->mAppendNumberToDefaultLanName, true); return 0;
     case Op::KeyAllowJoinGameWithoutPing: c->KeyAdd("AllowJoinGameWithoutPing", c->mAllowJoinGameWithoutPing, true); return 0;
-    case Op::RegistryOpen: sConfRegistry = new RegKey(2, "SOFTWARE\\Sierra\\WONLobby", false, true); return 0;
+    case Op::RegistryOpen: sConfRegistry = ee_won_regkey_new(2, (const uint8_t*)"SOFTWARE\\Sierra\\WONLobby", 24); return 0;
     case Op::RegistryValueClear: sConfRegistryValue = 0; return 0;
-    case Op::RegistryQuery: return (intptr_t)(sConfRegistry->QueryDWORD("UseLocalIP", sConfRegistryValue));
-    case Op::RegistryValue: return (intptr_t)(sConfRegistryValue);
+    case Op::RegistryQuery: return ee_won_regkey_op(sConfRegistry, EE_WON_REGKEY_QUERY_DWORD, (const uint8_t*)"UseLocalIP", 10, NULL, 0, &sConfRegistryValue, NULL, NULL);
+    case Op::RegistryValue: return (intptr_t)(DWORD)sConfRegistryValue;
     case Op::SetUseLocalIp: c->mUseLocalIP = a != 0; return 0;
     case Op::KeyUseLocalIp: c->KeyAdd("UseLocalIP", gLobbyUseLocalIP, a != 0); return 0;
-    case Op::RegistryClose: delete sConfRegistry; return 0;
+    case Op::RegistryClose: ee_won_regkey_free(sConfRegistry); return 0;
     case Op::KeyIsLobbyDefine: return (*(const std::string*)a == "LOBBYDEFINE") ? 1 : 0;
     case Op::DefineLocalsClear: sConfName = sConfValue = std::string(); return 0;
     case Op::DefineReadName: ((StringParser*)a)->ReadString(sConfName, true); return 0;
