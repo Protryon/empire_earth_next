@@ -8,7 +8,8 @@
 //! - `lua_value`: the Lua runtime's value tree (`EECPLuaValue`): the key order, equality, text, the memory's bytes,
 //!   the seed and SplitMix64;
 //! - `units_lua`: the per-unit bindings' Lua helpers (argument readers, result pushers, the units filter);
-//! - `lua_host`: the Lua runtime's state (`EECPLuaState`'s body) over the vendored Lua;
+//! - `lua_host`: the Lua runtime's state (`EECPLuaState`'s body) over Lua 5.5 (mlua-sys, vendored);
+//! - `lua_sort`: `table.sort` with a fixed pivot choice;
 //! - `binding_trace` (TEST ONLY): the trace of the bindings' calls, the port's golden;
 //! - `units_state`: the per-unit interface's state (`EECPUnitsState`): the held set, the events, the enemy memory,
 //!   the danger layers and the route;
@@ -27,6 +28,7 @@ pub mod json;
 /// cbindgen:ignore
 pub mod lua_api;
 pub mod lua_host;
+mod lua_sort;
 pub mod lua_value;
 pub mod manifest;
 pub mod military;

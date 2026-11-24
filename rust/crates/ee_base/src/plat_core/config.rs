@@ -1084,7 +1084,7 @@ mod tests {
             String::from_utf8(written).unwrap(),
             format!("{header}display:\n  resolution:\n    width: 1024\ntop: 3\n")
         );
-        std::fs::remove_dir_all(dir).unwrap();
+        crate::plat_core::test_remove_dir(dir);
     }
 
     #[test]
@@ -1098,7 +1098,7 @@ mod tests {
         assert!(!path.exists());
         assert!(store.set(b"a", b"k", b"w".to_vec(), false));
         assert!(path.exists());
-        std::fs::remove_dir_all(dir).unwrap();
+        crate::plat_core::test_remove_dir(dir);
     }
 
     /// A new key whose value happens to equal a fresh node's (empty, not plain) must still be written.
@@ -1109,7 +1109,7 @@ mod tests {
         assert!(store.set(b"a", b"k", Vec::new(), false));
         let written = std::fs::read(dir.join("config.yaml")).unwrap();
         assert!(written.ends_with(b"a:\n  k: \"\"\n"), "{}", String::from_utf8_lossy(&written));
-        std::fs::remove_dir_all(dir).unwrap();
+        crate::plat_core::test_remove_dir(dir);
     }
 
     #[test]
@@ -1120,7 +1120,7 @@ mod tests {
         assert!(!store.set(b".a", b"k", b"v".to_vec(), false));
         assert!(!store.set(b"a", b"bad.key", b"v".to_vec(), false));
         assert!(!dir.join("config.yaml").exists());
-        std::fs::remove_dir_all(dir).unwrap();
+        crate::plat_core::test_remove_dir(dir);
     }
 
     #[test]
@@ -1133,7 +1133,7 @@ mod tests {
         assert!(store.get(b"a", b"b").is_none());
         assert!(store.set(b"a.c", b"d", b"7".to_vec(), true)); // the value "a" becomes a block again
         assert_eq!(store.get(b"a.c", b"d").unwrap(), b"7");
-        std::fs::remove_dir_all(dir).unwrap();
+        crate::plat_core::test_remove_dir(dir);
     }
 
     /// A reader holding config.yaml without delete sharing (as a scanner does) delays a set's replace or makes it write in
@@ -1162,7 +1162,7 @@ mod tests {
         let mut again = store_in(&dir);
         assert_eq!(again.get(b"", b"b").unwrap(), b"2");
         assert_eq!(again.get(b"", b"a").unwrap(), b"1");
-        std::fs::remove_dir_all(dir).unwrap();
+        crate::plat_core::test_remove_dir(dir);
     }
 
     #[test]
@@ -1182,7 +1182,7 @@ mod tests {
             e.plain = false;
             root
         });
-        std::fs::remove_dir_all(dir).unwrap();
+        crate::plat_core::test_remove_dir(dir);
     }
 
     /// Golden values captured by running the deleted C++ (src/Platform/Common/PlatConfig.cpp) over the same inputs.
@@ -1259,6 +1259,6 @@ mod tests {
             *STORE.lock().unwrap() = None;
         }
         test_set_env("EE_CONFIG", "");
-        std::fs::remove_dir_all(dir).unwrap();
+        crate::plat_core::test_remove_dir(dir);
     }
 }
