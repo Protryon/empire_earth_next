@@ -266,9 +266,11 @@ fn for_each_unit_of_walks_the_units_then_the_pending_ones() {
 
 #[test]
 fn the_hit_point_upgrade_scales_the_upgrade_then_the_units() {
-    let mut h = Mock::default()
-        .answer(EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS, 60, 100)
-        .answer(EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS, 60, 200);
+    let mut h = Mock::default().answer(EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS, 60, 100).answer(
+        EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS,
+        60,
+        200,
+    );
     upgrade_hit_points(&mut h, 60, 3, 0.5, 0);
     assert_eq!(h.find(EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS)[0].3, 250);
     // a NULL player: nothing walked
