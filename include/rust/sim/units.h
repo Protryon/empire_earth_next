@@ -6862,9 +6862,6 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_CONTINENT_AT = 15;
 /// `gContinentManager.GetPathAreaIDAt(c, d)`
 constexpr static const int32_t EE_UNITS_GROUP_OP_PATH_AREA_AT = 17;
 
-/// unit `a`'s `SetGroupPathGoals` of the `len` points at `list`
-constexpr static const int32_t EE_UNITS_GROUP_OP_SET_GROUP_PATH = 26;
-
 /// unit `a`'s `ClearBuildTargets()`
 constexpr static const int32_t EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS = 27;
 
@@ -6880,7 +6877,8 @@ constexpr static const int32_t EE_UNITS_GROUP_OP_PLAYER_GROUP = 31;
 /// `gWorld.mMap->ClearU1955DC()`
 constexpr static const int32_t EE_UNITS_GROUP_OP_CLEAR_AREAS = 34;
 
-/// `gWorld.mMap->BuildAreaOutlines`: the `len` areas (left, right, top, bottom) at `list`, the continents at `list2`
+/// `gWorld.mMap->BuildAreaOutlines`: the `len` areas at `list` (each a `U2DRectangle<long>`: bottom, left, right,
+/// top), the continents at `list2`
 constexpr static const int32_t EE_UNITS_GROUP_OP_AREA_OUTLINES = 35;
 
 /// `gAEManager.mTemplates[c]->mRadius` into `io.f`
