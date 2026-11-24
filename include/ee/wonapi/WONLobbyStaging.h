@@ -5,48 +5,15 @@
 #include "ee/wonapi/WONLobbyModel.h"
 #include "rust/won_lobby/stagingobj.h"
 namespace WONAPI {
-class LobbyRustDialog;
 // RTTI: StagingLogic > LobbyLogic > RefCount; vtable 0x855ae0 with six slots; constructor 0x7ef160.
 // A Rust object since round 20 (rust/crates/ee_won_lobby/src/stagingobj.rs): its methods and scalar state (the join
 // status, the staging and ready flags, the last all-ready time) are Rust's, its calls out the host's ops
-// (WONLobby/LobbyLogicHost.cpp); this shell keeps the SmartPtrs the lobby reads and the virtual slots.
-class StagingLogic : public LobbyLogic {
-public:
-    StagingLogic();
-    virtual ~StagingLogic();
-    virtual void InitComponent(ComponentConfig* inConfig);
-    virtual void HandleControlEvent(int inControlId);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);
-    intptr_t Call(EeWonStagingCall inCall, void* inA = NULL, void* inB = NULL, intptr_t inC = 0)
-    { return ee_won_staging_call(this->mRust, inCall, inA, inB, inC, 0); }
-    // a message call: the ByteBuffer, its bytes and their length
-    void CallMessage(EeWonStagingCall inCall, const ByteBuffer* inMessage, LobbyClient* inClient);
-    void HandleMessage(ReadBuffer& inBuffer, LobbyClient* inClient);
-    void HandleMessageBuffer(const ByteBuffer* inMessage, LobbyClient* inClient);
-    void SendToCaptain(const ByteBuffer* inMessage) { this->CallMessage(EeWonStagingCall::SendToCaptain, inMessage, NULL); }
-    void BroadcastToGame(const ByteBuffer* inMessage) { this->CallMessage(EeWonStagingCall::BroadcastToGame, inMessage, NULL); }
-    void SendToClient(LobbyClient* inClient, const ByteBuffer* inMessage)
-    { this->CallMessage(EeWonStagingCall::SendToClient, inMessage, inClient); }
-    bool IAmCaptain() { return this->Call(EeWonStagingCall::IAmCaptain) != 0; }
-    bool IAmReady() { return this->Call(EeWonStagingCall::IAmReady) != 0; }
-    void JoinGame(LobbyGame* inGame) { this->Call(EeWonStagingCall::JoinGame, inGame); }
-    void HostGame() { this->Call(EeWonStagingCall::HostGame); }
-    bool Logout(bool inConfirm) { return this->Call(EeWonStagingCall::Logout, NULL, NULL, inConfirm) != 0; }
-    void KickClient(LobbyClient* inClient, bool inBan) { this->Call(EeWonStagingCall::KickClient, NULL, inClient, inBan); }
-    void HandleDisconnect(bool inShowError) { this->Call(EeWonStagingCall::HandleDisconnect, NULL, NULL, inShowError); }
-    void HandleClientLeft(LobbyClient* inClient) { this->Call(EeWonStagingCall::HandleClientLeft, NULL, inClient); }
-    void HandleKicked(LobbyClient* inClient, bool inBan) { this->Call(EeWonStagingCall::HandleKicked, NULL, inClient, inBan); }
-    void ResetReadyFlags() { this->Call(EeWonStagingCall::ResetReadyFlags); }
-    void SetGameInProgress(bool inInProgress) { this->Call(EeWonStagingCall::SetGameInProgress, NULL, NULL, inInProgress); }
-    bool LeaveGame(bool inConfirm) { return this->Call(EeWonStagingCall::LeaveGame, NULL, NULL, inConfirm) != 0; }
-    void NotifyStagingChange() { this->Call(EeWonStagingCall::NotifyStagingChange); }
-    void NotifyPingChange(LobbyGame* inGame) { this->Call(EeWonStagingCall::NotifyPingChange, inGame); }
-    SmartPtr<LobbyGame> mGame; // 0x40
-    SmartPtr<LobbyClient> mMyClient; // 0x44
-    SmartPtr<AsyncOp> mJoinOp; // 0x48
-    SmartPtr<LobbyRustDialog> mCreateGameDialog; // 0x58
-private:
-    EeWonStaging* mRust;
-};
+// (WONLobby/LobbyLogicHost.cpp). Since R6 WON round 36 it is the RustLogic of kind Staging
+// (ee/wonapi/WONLobbyLogic.h): its methods are the shell's Call(EeWonStagingCall, ..), the SmartPtrs the lobby reads
+// the shell's slots, named here.
+enum { kStagingGame, kStagingMyClient, kStagingJoinOp }; // mSlot: mGame (0x40), mMyClient (0x44), mJoinOp (0x48)
+enum { kStagingCreateGame }; // mDialog: mCreateGameDialog (0x58)
+// The room message from the buffer's position (ee_won reads its type and fixed fields); LobbyLogicHost.cpp
+void StagingHandleMessage(RustLogic* inStaging, ReadBuffer& inBuffer, LobbyClient* inClient);
 }
 #endif

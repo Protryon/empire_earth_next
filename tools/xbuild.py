@@ -1031,6 +1031,9 @@ WON_TESTS["won_ctl35_test"] = []
 # the lobby logics' host cases R6 WON lobby and network round 35 composed in Rust (logicsplit.rs) against the deleted
 # cases over a stand-in world, every new op skipped in turn
 WON_TESTS["won_logic35_test"] = []
+# the lobby logics' one shell (R6 WON lobby and network round 36: logicshell.rs's routes, dialog rows and completions)
+# against the six classes as they were, every route spoiled in turn
+WON_TESTS["won_shell36_test"] = []
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes
