@@ -519,7 +519,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
         gWorld.mMap->GetTile((unsigned long)(long)i[0], (unsigned long)(long)i[1])->mHeight = f[0];
         return 0;
     case EE_SCREENS_SEAX_PAINT_NEW:
-        return (intptr_t)static_cast<EEAction*>(new EESEAPaintRust(kSEAPaintTerrain, i[0], EETerrainTable::Get(i[0])->mColorType));
+        return (intptr_t)static_cast<EEAction*>(new EESEAPaintRust(EE_SCREENS_SEA_PAINT_TERRAIN, i[0], EETerrainTable::Get(i[0])->mColorType));
     case EE_SCREENS_SEAX_PAINT_SET_AREA:
         static_cast<EESEAPaint*>(static_cast<EEAction*>(p))->SetArea(i[0], i[1], i[2], i[3]);
         return 0;
