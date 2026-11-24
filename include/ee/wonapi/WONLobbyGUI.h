@@ -317,7 +317,6 @@ public:
 // cursor, flags and modal count are the Rust Container (rust/crates/ee_won_gui/src/ctobj.rs); this is the type every
 // component holds and the base of every screen, dialog, list and control group, with the child layout manager. Its
 // virtuals and methods are forwarders; the calls the Rust makes are Container.cpp's host.
-class Container;
 // the container ops every container object's host falls back to (Container.cpp)
 intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 class Container : public Component {
@@ -1248,8 +1247,6 @@ LobbyGame* GetMyLobbyGame();
 // WONAPI's message buffers (provisional names)
 
 
-class ByteBuffer;
-template <class T> class SmartPtr;
 
 // 0x361b60 / 0x361b80 (cdecl): a game message to the lobby
 void LobbySendToCaptain(const ByteBuffer* inMessage);
