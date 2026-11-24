@@ -30,6 +30,8 @@ use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields,
 
 use crate::app::game_options::EeAppOptionsFields;
 
+use ee_sim::units::{player_body as pb, player_rest as pr};
+
 use super::{cptr, h, hd, hf, hp, pa, rec, O, P};
 
 /// The per-player media the world loads and unloads, in the C++'s order: the foundations 1x1, 2x2, 3x3, 6x6 and
@@ -156,6 +158,24 @@ fn tile_prev(u: P) -> P {
     hp(O::UnTilePrev, u, &[])
 }
 
+/// EEPlayer's member `what` of player_rest.rs (the C++ member forwarded there).
+fn player_rest(pl: P, what: u32, a: u64, b: i64, c: i64) -> i64 {
+    // SAFETY: a live player of the world, on the thread that owns it
+    unsafe { ee_sim::units::player_rest::game::ee_units_player_rest(pl as *mut c_void, what, a, b, c) }
+}
+
+/// EEPlayer's argument-less member `what` of player_body.rs.
+fn player_body(pl: P, what: u32) {
+    // SAFETY: as player_rest
+    unsafe { ee_sim::units::player_body::game::ee_units_player_body(pl as *mut c_void, what, 0, 0, 0, 0.0) };
+}
+
+/// EEWorld::RemovePlayerFromTeams.
+fn remove_from_teams(w: P, id: c_ulong) {
+    // SAFETY: the live world
+    unsafe { super::teams::ee_gamecpp_world_teams_remove(w as *mut c_void, id as u32) };
+}
+
 fn progress(step: usize) {
     hf(O::UiLoadProgress, 0, &[], &[PROGRESS[step - 16]]);
 }
@@ -259,6 +279,25 @@ pub extern "C" fn ee_gamecpp_world_init(w: *mut c_void) {
     h(O::WStatisticsReset, w, &[]);
 }
 
+/// EEWorld::~EEWorld: the ghost lock freed; the influence table, effect manager, ghost units, scenario, environment
+/// and calamity managers deleted, in the C++'s order (the members' own dtors and RTSWorld's follow in C++).
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_world_destroy(w: *mut c_void) {
+    let w = w as P;
+    h(O::C13bGhostLockFree, w, &[]);
+    h(O::WDeleteInfluence, w, &[]);
+    h(O::WSetEffectManager, w, &[0]);
+    for i in 0..h(O::WGhostCount, w, &[]) {
+        h(O::GhostDelete, hp(O::C13bGhostAt, w, &[i]), &[]);
+    }
+    while h(O::WGhostCount, w, &[]) > 0 {
+        h(O::WGhostPop, w, &[]);
+    }
+    h(O::WDeleteScenario, w, &[]);
+    h(O::WDeleteEnvironment, w, &[]);
+    h(O::WDeleteCalamityHelper, w, &[]);
+}
+
 /// EEWorld::Clear: tears down the current game (the end statistics, the media, every unit, ghost, effect, calamity
 /// and manager, the minimap and active lists; campaign games back to the campaign screen).
 #[no_mangle]
@@ -266,7 +305,7 @@ pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
     let w = w as P;
     *wm::<bool>(O::WClearing, w) = true;
     if h(O::ShutdownInProgress, 0, &[]) == 0 && map(w) != 0 {
-        h(O::WRecordStatistics, w, &[]);
+        super::world_stats::ee_gamecpp_world_record_statistics(w);
         h(O::PickerLock, 0, &[]);
         h(O::PickerReset, 0, &[]);
         h(O::PickerUnlock, 0, &[]);
@@ -355,7 +394,7 @@ pub extern "C" fn ee_gamecpp_world_sight_all(w: *mut c_void, on: bool) {
         h(if on { O::UnSightOnHere } else { O::UnSightOffHere }, u, &[]);
         u = tile_next(u);
     }
-    h(O::PlRefreshTerrainVisibility, hp(O::WCurrentPlayerPtr, w, &[]), &[]);
+    player_body(hp(O::WCurrentPlayerPtr, w, &[]), pb::EE_UNITS_PLAYER_DO_REFRESH_TERRAIN);
 }
 
 /// EEWorld::ReplacePlayer: a human player copied from the player by a save and load replaces it; the old player's
@@ -386,7 +425,7 @@ pub extern "C" fn ee_gamecpp_world_replace_player(
                     j += 1;
                     continue;
                 }
-                h(O::PlRemoveAlly, player(w, i), &[pa(old)]);
+                player_rest(player(w, i), pr::EE_UNITS_PLAYER_REST_REMOVE_ALLY, old as u64, 0, 0);
                 h(O::PlAlliesPush, player(w, i), &[pa(new)]);
                 j += 1;
             }
@@ -472,10 +511,10 @@ pub extern "C" fn ee_gamecpp_world_set_stance(w: *mut c_void, id: c_ulong, other
     h(O::PlSetStance, pl, &[pa(ot), stance as i64, pa(map(w))]);
     if stance == 0 {
         if !was_allied && psaved(ot).mEnemies[id as usize] == 0 {
-            h(O::WAddAlliance, w, &[id as i64, other as i64]);
+            unsafe { super::teams::ee_gamecpp_world_teams_ally(w as *mut c_void, id as u32, other as u32) };
         }
     } else if was_allied && psaved(ot).mEnemies[id as usize] == 0 {
-        h(O::WBreakAlliance, w, &[id as i64, other as i64]);
+        unsafe { super::teams::ee_gamecpp_world_teams_break(w as *mut c_void, id as u32, other as u32) };
     }
 }
 
@@ -500,7 +539,7 @@ pub extern "C" fn ee_gamecpp_world_dump_media(w: *mut c_void, file: *mut c_void,
     let (w, file) = (w as P, file as P);
     for i in 0..num_players(w) {
         if player(w, i) != 0 {
-            h(O::PlDumpMedia, player(w, i), &[pa(file)]);
+            player_rest(player(w, i), pr::EE_UNITS_PLAYER_REST_DUMP_MEDIA, file as u64, 0, 0);
         }
         h(O::DumpBlankLines, file, &[]);
     }
@@ -529,7 +568,7 @@ pub extern "C" fn ee_gamecpp_world_remove_player(w: *mut c_void, won: bool, id: 
     }
     let pl = player(w, id);
     ee_gamecpp_world_mark_out(w as *mut c_void, id);
-    h(O::WRemoveFromTeams, w, &[id as i64]);
+    remove_from_teams(w, id);
     if !options(w).mIsScenarioGame || won == true {
         prts(pl).mSeesAll = true;
     }
@@ -574,7 +613,7 @@ pub extern "C" fn ee_gamecpp_world_add_computers(w: *mut c_void, st: *mut c_void
             used[c] = true;
             break;
         }
-        h(O::PlSetAllResources, pl, &[999999]);
+        player_rest(pl, pr::EE_UNITS_PLAYER_REST_SET_ALL_RESOURCES, 0, 999999, 0);
         h(O::WSetPlayer, w, &[i as i64, pa(pl)]);
         if media_loaded(w) || i == 0 {
             i += 1;
@@ -597,12 +636,12 @@ fn start_teams(w: P, st: P) {
         let mut i = num_players(w);
         while i <= 16 {
             if player(w, i) == 0 {
-                h(O::WRemoveFromTeams, w, &[i as i64]);
+                remove_from_teams(w, i);
             }
             i += 1;
         }
     } else {
-        h(O::WRebuildTeams, w, &[]);
+        unsafe { super::teams::ee_gamecpp_world_teams_rebuild(w as *mut c_void, num_players(w) as u32) };
     }
 }
 
@@ -670,7 +709,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     h(O::WCreateMiniMap, w, &[pa(st)]);
     progress(20);
     *wm::<bool>(O::WUsingCarbon, w) = *sm::<bool>(O::StUsingCarbon, st);
-    h(O::CpNewGame, 0, &[]);
+    ee_sim::ai::next_game::trace::ee_ai_new_game();   // the computer players' per-game statics cleared
     ee_gamecpp_world_create_players(w as *mut c_void, st as *mut c_void);
     progress(21);
     if *sm::<bool>(O::StInScenarioEditor, st) == true {
@@ -690,8 +729,11 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     hf(O::WSetGameSpeed, w, &[], &[*sm::<f32>(O::StGameSpeed, st)]);
     let observer = prts(hp(O::WCurrentPlayerPtr, w, &[])).mObserverMode;
     h(O::SetLocalPlayerOut, 0, &[observer as i64]);
-    h(O::WSetScenarioManager, w, &[pa(hp(O::StScenarioManager, st, &[]))]);
-    h(O::WSetEnvironmentManager, w, &[pa(hp(O::StEnvironmentManager, st, &[]))]);
+    // the owning setters (SetScenarioManager 0x13a237, SetEnvironmentManager 0x13c1e3): the old one deleted
+    h(O::WDeleteScenario, w, &[]);
+    h(O::WSetScenarioRaw, w, &[pa(hp(O::StScenarioManager, st, &[]))]);
+    h(O::WDeleteEnvironment, w, &[]);
+    h(O::WSetEnvironmentRaw, w, &[pa(hp(O::StEnvironmentManager, st, &[]))]);
     *wm::<bool>(O::WTeamsLocked, w) = state_options(st).mLockTeams;
     *wm::<bool>(O::WUnitImprovementsAllowed, w) = *sm::<bool>(O::StUnitImprovementsAllowed, st);
     *wm::<bool>(O::WCheatsEnabled, w) = state_options(st).mCheatCodes;
@@ -839,13 +881,13 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     for i in 0..num_players(w) {
         if player(w, i) != 0 {
             h(O::PlRestartTowns, player(w, i), &[]);
-            h(O::PlRestorePatrols, player(w, i), &[]);
+            player_body(player(w, i), pb::EE_UNITS_PLAYER_DO_RESTORE_PATROLS);
         }
     }
     *wm::<bool>(O::WLoadingPlayerMedia, w) = true;
     for i in 0..num_players(w) {
         if player(w, i) != 0 {
-            h(O::PlKillStrandedUnits, player(w, i), &[]);
+            player_body(player(w, i), pb::EE_UNITS_PLAYER_DO_KILL_STRANDED);
         }
     }
     *wm::<bool>(O::WLoadingPlayerMedia, w) = false;
@@ -894,7 +936,7 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         } else {
             h(O::PlAddPendingUnits, pl, &[0, 1]);
         }
-        h(O::PlApplyMapRestrictions, pl, &[]);
+        player_body(pl, pb::EE_UNITS_PLAYER_DO_MAP_RESTRICTIONS);
         if *sm::<bool>(O::StIsLoadedGame, st)
             && (prts(pl).mPlayerID as i64) < h(O::MapPlayerCount, hp(O::StMap, st, &[]), &[])
         {
@@ -1126,7 +1168,7 @@ pub extern "C" fn ee_gamecpp_world_remove_disconnected(w: *mut c_void, id: c_ulo
     if !prts(pl).mObserverMode {
         psaved(pl).mDisconnected = true;
     }
-    h(O::WRemoveFromTeams, w, &[id as i64]);
+    remove_from_teams(w, id);
     ee_gamecpp_world_mark_out(hp(O::WorldAddr, 0, &[]) as *mut c_void, id);
     prts(pl).mSlot = SLOT_NONE;
 }
@@ -1137,7 +1179,7 @@ pub extern "C" fn ee_gamecpp_world_notify_loaded(w: *mut c_void, major: c_ulong,
     let w = w as P;
     for i in 0..num_players(w) {
         if player(w, i) != 0 {
-            h(O::PlFinishUnitsLoad, player(w, i), &[major as i64, minor as i64]);
+            player_rest(player(w, i), pr::EE_UNITS_PLAYER_REST_FINISH_UNITS_LOAD, 0, major as c_long as i64, minor as c_long as i64);
         }
     }
 }
@@ -1312,7 +1354,7 @@ pub extern "C" fn ee_gamecpp_world_place_queued(w: *mut c_void) {
 pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_index: u8, name: *mut c_void) {
     let world = hp(O::WorldAddr, 0, &[]);
     let mut selected: P = 0;
-    let old = hp(O::WPlayerBySlot, world, &[slot as i64]);
+    let old = ee_gamecpp_world_player_by_slot(world as *mut c_void, slot) as P;
     let old_name = hp(O::StrNew, 0, &[]);
     let index = player_index as c_ulong;
     if !(index < num_players(world)) {
@@ -1342,7 +1384,7 @@ pub extern "C" fn ee_gamecpp_world_move_to_slot(slot: u8, new_slot: u8, player_i
         h(O::MiniMapSetViewer, 0, &[pa(player(world, index))]);
         h(O::MiniMapRedraw, 0, &[]);
         h(O::MiniMapRefresh, 0, &[]);
-        h(O::PlRefreshTerrainVisibility, pl, &[]);
+        player_body(pl, pb::EE_UNITS_PLAYER_DO_REFRESH_TERRAIN);
         h(O::TechUpdateInterface, hp(O::PlTechTree, pl, &[]), &[1]);
         h(O::UiPostUpdateBackground, 0, &[]);
         h(O::SetCameraFollowing, 0, &[0]);

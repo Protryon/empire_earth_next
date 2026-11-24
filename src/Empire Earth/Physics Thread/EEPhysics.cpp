@@ -597,7 +597,14 @@ void EEEnvironmentManager::Tick(unsigned long inTime)
 // statement each
 int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
-    ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // round 13, fork B: the world's dtor (gamecpp world.rs ee_gamecpp_world_destroy; p the world)
+    case O::C13bGhostLockFree: TSScheduler::DestroyCriticalSection(((EEWorld*)p)->mGhostUnitsLock);
+        break;
+    case O::C13bGhostAt: return P64(((EEWorld*)p)->mGhostUnits[(size_t)a[0]]);
+    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
+    }
     return 0;
 }
 
