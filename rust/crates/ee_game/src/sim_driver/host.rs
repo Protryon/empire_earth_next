@@ -81,8 +81,6 @@ pub struct EeSimDriverHost {
     pub extension: unsafe extern "C" fn(i32, *mut c_char, usize) -> usize,
     /// `gUserInterface->PostCancelGame()`
     pub cancel_game: unsafe extern "C" fn(),
-    /// `EECPChoiceByName` (-1: none)
-    pub engine_choice: unsafe extern "C" fn(*const c_char) -> c_long,
     /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
     /// node of `technology`, the class's unit type), every resource summed
     pub wonders: unsafe extern "C" fn(u64) -> c_long,
@@ -249,7 +247,7 @@ impl Game for CppGame {
         super::sim_host::volcano_boulders()
     }
     fn capture_active(&self) -> bool {
-        super::sim_ops::h(super::sim_ops::EeSimDriverSim::CaptureActive, 0, &[]) != 0
+        ee_sim::app::capture::ee_app_capture_active()
     }
     fn sweep(&self, kind: i32, arg: c_long) {
         super::sim_host::sweep(kind, arg)
@@ -261,7 +259,7 @@ impl Game for CppGame {
         super::sim_host::rules_problems()
     }
     fn engine_choice(&self, name: &str) -> c_long {
-        unsafe { (self.0.engine_choice)(c(name).as_ptr()) }
+        unsafe { crate::cp_engine::ee_cp_engine_choice_by_name(c(name).as_ptr()) as c_long }
     }
     fn engine_ids(&self) -> Vec<String> {
         super::sim_host::engine_ids()

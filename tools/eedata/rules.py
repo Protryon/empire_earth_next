@@ -221,7 +221,7 @@ attributes:
 
 
 def civpowers(ids, spec):
-    t = _consts('EETechTreeTechID.h', 'kTech')
+    t = _consts('../rust/sim/tech_tree_ids.h', 'kTech')
     ut = _consts('../rust/sim/unit_ids.h', 'kUnitType')
     snd = _consts('EESoundObject.h', 'kSound')
     gfx = _consts('EEGraphicEffect.h', 'kGraphicEffect')

@@ -5,6 +5,39 @@
 //! `unsigned long`), `%ld` and `%08lx` are written as the C++ wrote them ([`hexf`], [`lu`], [`ld`], [`x8`]).
 
 use super::sim_ops::{h, hdd, hs, EeSimDriverSim as O};
+use crate::gamecpp as gc;
+use ee_sim::units::patrol_group as pg;
+
+/// cbindgen:ignore
+mod sys {
+    extern "C" {
+        // `EECPOutOfSynchChecksum` (ee_sim ai next_trace.rs)
+        pub fn ee_ai_out_of_synch_checksum() -> std::ffi::c_ulong;
+    }
+}
+
+/// A patrol group's id (`EEPPatrolGroup`: ee_sim units patrol_group.rs).
+fn pg_id(group: usize) -> i64 {
+    // SAFETY: the group the player or town holds
+    unsafe { pg::ee_units_pg_id(group as *const _) as i64 }
+}
+
+/// A patrol group's town and loop flags.
+fn pg_flags(group: usize) -> (i64, i64) {
+    // SAFETY: as pg_id
+    unsafe {
+        (pg::ee_units_pg_is_town_patrol(group as *const _) as i64, pg::ee_units_pg_is_loop(group as *const _) as i64)
+    }
+}
+
+/// A patrol group's points (complex units; 0: none).
+fn pg_points(group: usize) -> Vec<usize> {
+    // SAFETY: as pg_id
+    unsafe {
+        let n = pg::ee_units_pg_point_count(group as *const _) as usize;
+        (0..n).map(|k| pg::ee_units_pg_point(group as *const _, k) as usize).collect()
+    }
+}
 
 /// The out-of-synch checksum's parts read for the per-CT line: unit hit points and tiles (1), positions, heights,
 /// commands and update counts (2), calamities (0x10), air traffic (0x40), the continent manager's checksum (0x100).
@@ -71,18 +104,19 @@ pub fn checksum_text() -> String {
     while u != 0 {
         units = units.wrapping_add(h(O::DmUnitChecksum, u as usize, &[3]) as u32);
         count = count.wrapping_add(1);
-        u = h(O::DmWorldNextUnit, u as usize, &[]);
+        u = gc::h(gc::O::UnTileNext, u as usize, &[]);
     }
     format!(
         "pt={} tick={} ms={} rng={} oos={} units={}/{} ai={} inputs={}\n",
         lu(h(O::DmPhysTicksDone, 0, &[])),
         lu(h(O::DmPhysCurrentTick, 0, &[])),
-        ld(h(O::PhysicsGameTime, 0, &[])),
+        ld(gc::h(gc::O::DwGameTime, 0, &[])),
         x8(h(O::DmPhysSeed, 0, &[])),
         x8(checksum),
         count,
         x8(i64::from(units)),
-        x8(h(O::DmCpOos, 0, &[])),
+        // SAFETY: the simulation thread's read (the CT's line)
+        x8(unsafe { sys::ee_ai_out_of_synch_checksum() } as i64),
         ld(h(O::DmPhysInputs, 0, &[])),
     )
 }
@@ -163,7 +197,7 @@ pub fn dump_state(path: &str) {
     let mut u = h(O::DmWorldFirstUnit, 0, &[]) as usize;
     while u != 0 {
         dump_unit(&mut o, u);
-        u = h(O::DmWorldNextUnit, u, &[]) as usize;
+        u = gc::h(gc::O::UnTileNext, u, &[]) as usize;
     }
     dump_calamities(&mut o);
     dump_regions(&mut o);
@@ -174,7 +208,7 @@ pub fn dump_state(path: &str) {
 fn dump_players(o: &mut Out) {
     let n = lu(h(O::NumPlayers, 0, &[]));
     for i in 0..n {
-        let p = h(O::GetPlayer, 0, &[i64::from(i)]) as usize;
+        let p = gc::h(gc::O::TbWorldPlayer, 0, &[i64::from(i)]) as usize;
         if p == 0 {
             continue;
         }
@@ -202,7 +236,7 @@ fn dump_players(o: &mut Out) {
                 "TOWN {i} {} units={} patrol={} hull=",
                 ld(h(O::DmTownId, town, &[])),
                 ld(h(O::DmTownUnits, town, &[])),
-                if group != 0 { ld(h(O::DmPgId, group as usize, &[])) } else { -1 }
+                if group != 0 { ld(pg_id(group as usize)) } else { -1 }
             ));
             for v in 0..lu(h(O::DmTownHullCount, town, &[])) {
                 s.push_str(&format!(
@@ -220,12 +254,11 @@ fn dump_players(o: &mut Out) {
             }
             s.push_str(&format!(
                 "PATROL {i} {} town={} loop={} points=",
-                lu(h(O::DmPgId, group, &[])),
-                h(O::DmPgTown, group, &[]),
-                h(O::DmPgLoop, group, &[])
+                lu(pg_id(group)),
+                pg_flags(group).0,
+                pg_flags(group).1
             ));
-            for k in 0..h(O::DmPgCount, group, &[]) {
-                let point = h(O::DmPgPoint, group, &[k]) as usize;
+            for point in pg_points(group) {
                 if point != 0 {
                     s.push_str(&format!(
                         "{}@{},{} ",
@@ -240,16 +273,16 @@ fn dump_players(o: &mut Out) {
         o.push(&s);
     }
     // each player's unit list in its order (save 0.270)
-    for i in 0..lu(h(O::WorldNumPlayers, 0, &[])) {
-        let p = h(O::WorldPlayersAt, 0, &[i64::from(i)]) as usize;
+    for i in 0..lu(gc::h(gc::O::MmNumPlayers, 0, &[])) {
+        let p = gc::h(gc::O::SsWorldPlayer, 0, &[i64::from(i)]) as usize;
         if p == 0 {
             continue;
         }
         let mut s = format!("PLAYERUNITS {i}:");
-        let mut u = h(O::PlayerFirstUnit, p, &[]) as usize;
+        let mut u = gc::h(gc::O::PlFirstUnit, p, &[]) as usize;
         while u != 0 {
             s.push_str(&format!(" {}", lu(h(O::DmUnitIdRaw, u, &[]))));
-            u = h(O::UnitNext, u, &[]) as usize;
+            u = gc::h(gc::O::UnNext, u, &[]) as usize;
         }
         s.push('\n');
         o.push(&s);
@@ -360,7 +393,7 @@ fn dump_unit(o: &mut Out, u: usize) {
 
 /// the active calamities, in order: their checksum's fields (EECalamity::GetOutOfSynchChecksum) and their units
 fn dump_calamities(o: &mut Out) {
-    let manager = h(O::DmCalManager, 0, &[]) as usize;
+    let manager = gc::h(gc::O::CalamityManager, 0, &[]) as usize;
     if manager == 0 {
         return;
     }

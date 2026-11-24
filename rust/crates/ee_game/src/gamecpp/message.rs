@@ -241,18 +241,18 @@ fn immediate_cargo_unload(m: P) {
 /// screen shown and the server answered with a load-main-screen response.
 fn load_main_screen(m: P) {
     if get::<u8>(m, 1) != 0 {
-        h(O::GfxPostResume, 0, &[]);
+        super::globals::graphics_post_resume();
         loop {
             if h(O::GfxIsPaused, 0, &[]) == 0 {
                 break;
             }
-            h(O::Sleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
         }
     } else {
-        h(O::GfxPostPause, 0, &[]);
+        super::globals::graphics_post_pause();
         let mut started = h(O::GfxIsPaused, 0, &[]) != 0;
         while !started {
-            h(O::Sleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
             started = h(O::GfxIsPaused, 0, &[]) != 0;
         }
         if *wm::<bool>(O::WGameScreenActive) {
@@ -283,7 +283,11 @@ fn load_or_save_game(m: P) {
         h(O::MsgSetOrigin, response, &[prts(current()).mSlot as i64]);
         h(O::ServerLogResponse, response, &[]);
     } else {
-        h(O::PhysQueueMessage, m, &[]);
+        // SAFETY: the game's physics
+        crate::physics::ee_physics_queue_message(
+            unsafe { *std::ptr::addr_of!(super::globals::gPhysics) },
+            m as *mut c_void,
+        );
         res(&format, IDS_SAVING_GAME_AS);
         h(O::StrFormatS, text.0, &[pa(format.0), pa(hp(O::MsgString, m, &[]))]);
         chat(text.0, 0);
@@ -597,7 +601,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
                 unsafe { &mut *rec::<crate::app::game_options::EeAppOptionsPlayerFields>(O::OptPlayerFields, slot.0) };
             match i[2] {
                 6 => {
-                    s.mEngine = if (value as i64) < h(O::CpEngineChoiceCount, 0, &[]) {
+                    s.mEngine = if (value as i64) < crate::cp_engine::ee_cp_engine_choice_count() as c_ulong as i64 {
                         value as c_ulong
                     } else {
                         ENGINE_CLASSIC
@@ -627,7 +631,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
         }
         EE_NETMSG_WACT_START_GAME => {
             // every human has shown the main screen: the start at the offset time
-            let time = h(O::TimeNow, 0, &[]);
+            let time = ee_base::time::ee_time_get() as i64;
             let message = hp(O::NewStartGameRecord, 0, &[time]);
             h(O::ServerSetLoadState, 0, &[0]);
             h(O::CommProcessLocal, message, &[MSG_SLOT_NONE as i64]);
@@ -640,7 +644,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             h(O::ServerSetLoadResponses, 0, &[i[1] as u8 as i64]);
         }
         EE_NETMSG_WACT_SEND_TO_SLOT => {
-            let to = h(O::ServerGetSendToSlot, 0, &[i[2] as u8 as i64]);
+            let to = super::session_objs::ee_gamecpp_server_send_to_slot(i[2] as u8) as i64;
             h(O::ServerSetSendToSlotForPlayer, 0, &[i[1] as u8 as i64, to]);
         }
         EE_NETMSG_WACT_ALL_LOADED => {
@@ -706,7 +710,8 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             chat_game_line(text.0);
         }
         EE_NETMSG_WACT_FLUSH => {
-            h(O::PhysFlushWorld, 0, &[]);
+            // SAFETY: the game's physics
+            crate::physics::ee_physics_flush_world(unsafe { *std::ptr::addr_of!(super::globals::gPhysics) });
         }
         _ => {}
     }

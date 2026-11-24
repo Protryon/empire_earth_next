@@ -89,7 +89,6 @@ void EEPPlayerHelper::Fn157269(EEGameState* inState)
 
 // ------------------------------------------------------------------------- the saved players' C++ (gamecpp persist_parts.rs)
 
-double EECore9OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 static_assert(kEECPEngineClassic == 0 && kEECPEngineNext == 1, "gamecpp persist_parts.rs");
 
@@ -100,7 +99,3 @@ static_assert(kEECPEngineClassic == 0 && kEECPEngineNext == 1, "gamecpp persist_
 #define STR (*(std::string*)p)
 #define BYTES std::string((const char*)a[0], (size_t)a[1])
 
-double EEPHelpersOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpDF(inOp, p, a, f);
-}

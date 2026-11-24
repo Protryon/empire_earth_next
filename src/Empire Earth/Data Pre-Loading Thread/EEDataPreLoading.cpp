@@ -136,14 +136,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::ThreadPriority: return DP->mThread->GetPriority();
     case O::SetThreadPriority: DP->mThread->SetPriority((long)a[0]);
         break;
-    case O::FpPrecisionIs53: return UMGetFloatingPointPrecision() == kFPPrecision53;
-    case O::SetFpPrecision53: UMSetFloatingPointPrecision(kFPPrecision53);
-        break;
-    case O::FpRoundingMode: return UMGetFloatingPointRoundingMode();
-    case O::SetFpRoundingNearest: UMSetFloatingPointRoundingMode(0);
-        break;
-    case O::Sleep1: PlatSleep(1);
-        break;
     case O::Player: return P64(gWorld.mPlayers[a[0]]);
     case O::Class: return P64(gUnitClassTable[a[0]]);
     case O::Technology: return P64(PL->mTechnologies->Get((long)a[0]));
@@ -177,8 +169,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
         break;
     case O::TextWaitingForPlayers: gUserInterface->SetLoadingText(IDS_WAITING_FOR_PLAYERS);
         break;
-    case O::LoadGameMedia: EELoadGameMedia();
-        break;
     case O::LoadType: return gGameOptions.mLoadType;
     case O::SetLoadingSavedGame: gLoadingSavedGame = a[0] != 0;
         break;
@@ -187,15 +177,11 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
         break;
     case O::ReleaseScene: gGraphics->PostReleaseScene();
         break;
-    case O::GraphicsWait50A: gGraphics->PostMessage50AAndWait();
-        break;
     case O::WorldWriteLock: gWorld.mLock->WriteLock();
         break;
     case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
         break;
     case O::WorldClear: gWorld.Clear();
-        break;
-    case O::PhysicsClearServerMessages: gPhysics->ClearServerMessages();
         break;
     case O::StartGame: gWorld.StartGame(&gGameState, false);
         break;
@@ -208,8 +194,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::ProcessLocalInput: gCommunications->ProcessLocalUserInput((NEMessage*)p, kSlotNone);
         break;
     case O::SetHasLoaded: (static_cast<EEClient*>(gCommunications))->mHasLoaded = true;
-        break;
-    case O::ExitGame: EEExitGame();
         break;
     case O::DisplayError: gUIManager->DisplayMessage(*(UWideString*)p, true, NULL, EEDataPreLoading::LoadGameErrorDone, true);
         break;

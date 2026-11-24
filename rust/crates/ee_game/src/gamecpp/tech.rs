@@ -102,7 +102,7 @@ fn media(player: P, what: i32, id: i32, load: bool) {
             }
         }
         EE_TECH_MEDIA_SLEEP => {
-            h(O::SsSleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
             return;
         }
         _ => return,
@@ -131,7 +131,7 @@ fn show_epoch_name(tree: P, epoch: Option<i64>) {
     let t = tree_fields(tree);
     // SAFETY: the tree's record, no C++ call while read
     let epoch = epoch.unwrap_or_else(|| unsafe { (*t).mCurrentEpoch } as i64);
-    let title = h(O::TkEpochTitle, 0, &[epoch]) as c_long;
+    let title = ee_sim::tech::tech_ids::ee_tech_epoch_title_id(epoch as c_long) as c_long;
     // SAFETY: as above
     unsafe { (*t).mEpochNameID = title };
     h(O::TkPostShowEpochName, 0, &[]);

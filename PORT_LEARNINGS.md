@@ -40376,3 +40376,90 @@ compiles unmodified from the `lua-src` crate into the Rust library. docs/progres
 
 - **Behaviour changes**: none in a game. For a script: the list above (5.5's float text, `#` of a table with
   holes, `^`, the locale-dependent classes, frexp/ldexp, the traceback texts, the byte counts).
+
+## The game core lane, round 13: the shim collapse starts (the EeGameCpp chain's pass-through links, the global objects' storage, EEWorld's destructor, the hosts' forwarding cases of the entry, world, physics, EE-SIM, graphics, pre-loading, persistent, message, server, tech and db files; the message and tech ids, the save versions' predicates, the send-to slots and the db file names in Rust), four forks in parallel worktrees (ee_game gamecpp global_objects.rs, rast.rs; ee_sim message_ids.rs, tech_tree_ids.rs, save_versions.rs; branch rust-core13, 2026-11-24)
+
+The brief: start the shim collapse (Rust calling Rust where the data is already Rust's, the C++ case, its EeGameCpp
+variant and the dead forwarder deleted), with three measures: C++ logic lines, C++ classes and .cpp files, plus shim
+and total lines; goals about -1,000 logic lines and a real drop in shim and total lines. **Score** (`logic_lines.py`,
+whole tree, origin/rust 17682d86c -> the merged tip): logic 19,960 -> 19,521, **-439** (the goal was missed: a
+one-statement case is free in this metric, so a collapse only shows where a forwarder had a body); shim 43,965 ->
+43,312, **-653**; all C++ lines 114,655 -> 113,104, **-1,551**; classes 691 -> 691; .cpp files 367 -> 365
+(EEMessageCapture.cpp, EEDbObject.cpp). Over 300 host cases and their variants are gone.
+
+| Commit | What | logic / shim / total |
+|---|---|---|
+| 24925db8b, 6e071b76f (lead) | the EeGameCpp chain's 20 pass-through links gone (build/core13/chain.py --collapse: each predecessor's default calls the next real switch); the fork markers | -22 / -38 / -119 |
+| fork A (f4e1e3330 .. afe85f429) | the 52 global objects' storage, 46 member references and the save version stored by Rust (global_objects.rs: offsets from `#[repr(C)]` mirrors, pinned against layout.json; `EE_CONSTRUCT_GLOBAL` static_asserts the storage size); the settings' and options' members addressed by Rust (25 cases); EEARust.cpp's five statics (the calls take their in/out values in the slots); 56 pass-through cases (globals.rs `get!`, `have!`, `set!`), the shutdown routines registered from Rust (eight C++ functions gone), the three thread Shutdown inlines one Rust function; the game media's loads and unloads and the event pump (11 cases) | -133 / -147 / -406 |
+| fork B (287d85b62 .. c2d1e03b3) | the physics host's 15 pass-through cases; EEWorld's destructor (world.rs `ee_gamecpp_world_destroy`), 27 forwarding members and 18 world cases; 15 more of the world, physics, campaign, random map and map hosts | -30 / -111 / -233 |
+| fork C (fd083f072 .. 12fda3ab7) | EE-SIM's and the scripted editor's pass-through cases (the captures, sweeps, patrol groups, AI checksum; 50 editor cases that repeated an EeGameCpp case; the trigger setters); the pre-loading thread's ten and the graphics thread's 43 forwarding cases (gamecpp rast.rs: the rasterizer's states, the textures' stages, the terrain mesh's reads); EEInitialiseScene, EEReleaseScene, the four EEStart* forwarders | -8 / -224 / -247 |
+| fork D (27a9a84bc .. 47d1dcb00) | EEMessageID, EETechTreeTechID and EETechPrerequisiteFlag as `#[repr(C)]` enums emitted back by cbindgen; the 20 save-version predicates (ee_sim save_versions.rs, under their C++ names); EEServer::mSendToSlots a Rust BTreeMap; the three host sleeps; the saved world's Rust parts, the AI manifest and state loads, the epoch title called from Rust; EEMessageCapture.cpp gone; the db tables' file names Rust's (EEDbObject.cpp gone); ten more forwarding cases | -246 / -133 / -546 |
+| 6d7829d24 | merge origin/rust 17682d86c (batch 22): EEPWorldHelper.cpp (UI 16's chat log calls kept, fork D's removals kept), cbindgen.toml (cbunion2.py) | 0 |
+| 51e166a20 | the merge's joins: fork C's sim_driver still called PhysFlushWorld (removed by D), DuHaveUi and DkHaveMiniMap (removed by A); EELoadGameMedia had no caller left | (in the totals) |
+
+- **What collapses and what does not**: a case whose statement calls a Rust export, or a C++ function that only
+  forwards to one, goes: its Rust caller calls the Rust by path, across crates where needed. A case that does one
+  C++ operation on a C++-owned object stays until the object's data is Rust's. After this round the second kind is
+  most of what is left (passthru.py's "fwd" class was 746 of 5,334 cases at the start).
+- **Private exports block a collapse**: several exports sit in private or `cfg(not(test))` FFI modules of another
+  lane (screens ui_objects_ffi, civ_whole_ffi, `ee_render::dx7::draw_ffi`): the host case stays until the module
+  gets a `pub(crate)` wrapper. Forks made `game` (ee_sim units player_body.rs, player_rest.rs), `ffi` (ee_game rts
+  world.rs, units.rs) and `world_view::cm_ptr` visible; a test binary needs a cfg-split helper where the FFI is
+  absent from it (globals.rs's graphics posts, world.rs's rts module).
+- **Rust reads its own globals**: `globals::get!`, `have!` and `set!` replace the host cases that only read, tested
+  or wrote a plain global; global_objects.rs gives the addresses of the C++ objects' members from mirrors whose
+  offsets a test pins against build/clang/layout.json. EEGlobals.cpp keeps 21 reference aliases into gWorld and
+  gGameState: their offsets depend on the standard library's containers.
+- **Enums and predicates under their C++ names**: a `#[repr(C)]` Rust enum emitted by cbindgen as the same unscoped
+  C++ enum lets the C++ header become one include, and other lanes' C++ is unchanged. Every header-reading test
+  must then list the generated header (ee_sim header_consts and three ee_game tests read message_ids.h and
+  tech_tree_ids.h, as round 12's read unit_ids.h).
+- **A removal script must be followed by a build**: 751dbf6e2 (fork C before the stop) deleted the variants of 50
+  cases but left the C++ of the two enums' first variants and the regenerated header behind: it and afa649735 do
+  not build alone. The cross-fork joins show the same: a variant one fork deletes can gain a caller in another.
+  `cargo check -p ee_game` after each merge finds them in a minute.
+- **The FIFO lock worked** (build/core13/locked.sh: a ticket per job, the oldest runs, a dead owner's ticket is
+  removed by the next waiter): no fork starved. A job stopped from outside leaves its children running: kill the
+  tree by PID before editing the worktree.
+- **Disk**: five worktrees with their own build/ filled C: twice (a fork's Rust gate, then the lead's transport
+  capture, which needs over 25 GB free at seeds 2-7). Delete a fork's build/rust, build/clang and build/eex as soon
+  as it is merged.
+- **The usage limit** stopped the round twice mid-fork; the forks' commits and their logs under build/c13X/ were
+  enough to resume. Fork A's and B's work was uncommitted at the first stop: commit before a long gate chain.
+- **Behaviour changes** (none intended): the shutdown routines are registered from Rust (the same order); the
+  actions' kept values (event source, first selected unit, point tile, closest tile, effect handle) travel in the
+  call's slots instead of C++ statics; `rast()` asks the host for the rasterizer twice per group of state calls;
+  EEWorld's destructor runs in Rust in the C++'s deletion order; a db table lookup passes its name as a C string;
+  the send-to slots are a BTreeMap (the same key order and first-insert rule).
+- **What only a live game exercises**: rast.rs (lighting, fog, the UI and water passes, the z clears, the letterbox),
+  the texture loads, graphics messages 0x503 and 0x506-0x509, the rain's sounds and the storm's step, the
+  pre-loading thread's load-game path, the graphics pause and resume posts, the shutdown routines and the thread
+  shutdowns (a clean exit), the world's destructor: the tour; the actions' slots: the random game with orders; the
+  send-to slots, the physics' queue and flush in a network game, the engine choice count: the LAN game.
+- **Gates** (on 51e166a20, origin/rust 17682d86c in): both builds 0/0 (EE-AOC 409 inputs, EE-SIM 410) and the test
+  profile 0/0 (409), headers current (337); the Rust gate PASS; the oracle seeds 2-7 identical; the 12 capture
+  profiles PASS (oracle 598 digests, late 598, space 590, calamity 623, units 510, effects 18, missile 66, app 38,
+  scenario 113, groups 6, placement 4, transport 185; the transport run was repeated after the disk filled);
+  saveload plain 18/18 identical and the matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) exit 0,
+  `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines) and `--civbuilder` PASS (4,062);
+  `eedata.py check` PASS and `cppgate` PASS; the tour RESULT PASS; `random-game --box-select --orders --seed 7`
+  RESULT PASS (BOX SELECT PASS; ORDERS PASS: gather, repair, repair-queued, move); the LAN game RESULT PASS (PT
+  host=2856 joiner=2858); `bash tools/gates.sh` `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 11863`
+  units [4, 36, 37] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2745
+  joiner=2747`, GATES PASS. The POSIX main: `xbuild.py census --target linux-x86_64 --only "Empire Earth.cpp"`
+  fails the same way on origin/rust and on this tip (ms dialect: clang's own intrinsics headers; gnu dialect: a
+  missing `typename` in ee/UReferenceContainer.h and ee/EECalamityManager.h), so it says nothing about round 12's
+  `#ifndef _WIN32` code; no POSIX build ran.
+- **Edits outside the lane**: src/Empire Earth/Actions/EEARust.cpp (its statics, in the brief); ee_sim units
+  player_body.rs and player_rest.rs (`mod game` made pub), rmap object.rs (TMGetTime's call), astar world_view.rs
+  (`cm_ptr` pub), header_consts.rs (the test's header list); ee_game rts world.rs and units.rs (`ffi`
+  `pub(crate)`), screens game_actions_host.rs and three header-reading tests' header lists; tools/units.py and
+  link/exe/units.txt (the two deleted units); tools/eedata/rules.py and rulesgen.py (they read the generated id
+  headers); rust/cbindgen.toml; the regenerated include/rust headers.
+- **Left** (docs/progress/game-leaves.md "Next", world.md "Next"): EEGlobals.cpp's 21 reference aliases; the cases
+  on C++-owned objects (about 120 in the entry's files, the message, session and chunk cases, EESim.cpp's and
+  EESimEditor.cpp's real operations); the cases behind private exports (the viewport setters and GhostsClear, the
+  rasterizer's light mesh, the water and terrain draws, the mouse frame, ResumeGraphics, LoadProgress,
+  UiPostStartLoading, the civ builder cases); MiniMapRedraw; the FreeCamera case in physics.rs and EESim.cpp's
+  MiniMapPresent/PhysicsPresent; EEPhysics.cpp's UpdateUnits tick host (a real port) and the player's host
+  prologues (not reached); EEARust.h's constructors and EEIsValidName; EERules::Epoch and EEDifficultyAILevel.

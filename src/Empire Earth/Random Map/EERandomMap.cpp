@@ -172,7 +172,6 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
         break;
     case O::DebugOut: ESDebugOut("%s", (const char*)a[0]);
         break;
-    case O::Time: return TMGetTime();
     case O::FindNew: return P64(new EERMFind);
     case O::FindDelete: delete (EERMFind*)p;
         break;

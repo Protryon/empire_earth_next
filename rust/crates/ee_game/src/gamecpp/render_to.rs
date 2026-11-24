@@ -12,6 +12,7 @@ use ee_base::math::types::{Ge3DLine, Ge3DPlane, Ge3DPoint, GeRectangle, GeTransf
 use ee_base::math::um::{lrintf, um_cos};
 use ee_render::dx7::api::SurfaceDescription;
 
+use super::rast::rast;
 use super::{cptr, h, hd, hf, hp, pa, ptr, O, P};
 
 /// RenderTo's constants (the unit's .rdata: the free camera's capture rectangle, scaled by 0.64; the floats widened)
@@ -163,7 +164,7 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
         let saved_orthographic = ortho_rectangle();
         let mut source = GeRectangle::default();
         let (window_width, window_height): (c_ulong, c_ulong);
-        if h(O::FreeCamera, 0, &[]) == 0 {
+        if !crate::gamecpp::globals::get!(gFreeCamera) {
             window_width = h(O::GameWindowWidth, 0, &[]) as c_ulong;
             window_height = h(O::GameWindowHeight, 0, &[]) as c_ulong;
         } else {
@@ -176,7 +177,7 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
             h(O::ViewportSetViewRectangle, 0, &[cptr(&source)]);
         }
         h(O::RtSetOrthographic, 0, &[1]);
-        h(O::RtProjectionMode, 0, &[0, screen]);
+        rast().set_projection_mode(0);
         set_zoom(1.0);
         camera_changed();
         let mut transformation = world_transformation();
@@ -337,7 +338,7 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
         h(O::ViewportSetViewRectangle, 0, &[cptr(&saved_view)]);
         h(O::RtSetViewportOrthoRectangle, 0, &[cptr(&saved_orthographic)]);
         h(O::RtSetOrthographic, 0, &[saved_orthographic_view as i64]);
-        h(O::RtProjectionMode, 0, &[1, screen]);
+        rast().set_projection_mode(1);
         set_zoom(the_zoom);
         h(O::CameraSetLocation, 0, &[cptr(&saved_location), 0, 1]);
         camera_changed();
