@@ -278,8 +278,7 @@ static GE3DPoint sCuWaypoint;
 static GE2DPoint sCuLocation;
 static EEEffectHandle sCuHandle;
 static EEUnit* sCuBlocker;
-static long sCuBlockX;
-static long sCuBlockY;
+static long sCuBlockTile[2];   // x, y
 
 
 // cu_life.rs's scratch values: SwapGraphic's new angles, orbitals and wheels, StepAside's tiles, IsNextToTile's
@@ -922,7 +921,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_IN_REACH_OF: return theOther->IsInReach(theUnit);
     case EE_UNITS_CU_SHOOTS_HIGH: return theUnit->GetUnitClass()->mShootsHigh;
     case EE_UNITS_CU_FIRES_OVER_WALLS: return theUnit->GetStats()->mCanFireOverWalls;
-    case EE_UNITS_CU_LINE_FROM_BLOCKED: return EEIsLineToUnitBlocked(theOther, theUnit, &sCuBlocker, &sCuBlockX, &sCuBlockY);
+    case EE_UNITS_CU_LINE_FROM_BLOCKED: return EEIsLineToUnitBlocked(theOther, theUnit, &sCuBlocker, &sCuBlockTile[0], &sCuBlockTile[1]);
     case EE_UNITS_CU_GROUND_GOAL_OF: return (uint64_t)(uintptr_t)EEAttackGroundCast(theOther->GetGoal());
     case EE_UNITS_CU_GROUND_TARGET:
         return UFloatBits(inB == 0 ? EECuObject<EEUGRust>(inA)->GetGroundTarget().GetX() : EECuObject<EEUGRust>(inA)->GetGroundTarget().GetY());
@@ -961,7 +960,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_GET_POSITION: theUnit->GetPosition(sCuPosition = GE3DPoint(0.0f, 0.0f, 0.0f)); return 0;
     case EE_UNITS_CU_BALLISTIC_PITCH: return EEGetBallisticPitch(theUnit, theUnit->GetStats(), &sCuPosition, &sCuDestination, &sCuPitch);
     case EE_UNITS_CU_LINE_BLOCKED:
-        return EEIsLineBlocked(theUnit->GetTileX(), theUnit->GetTileY(), (long)inB, (long)inC, &sCuBlocker, &sCuBlockX, &sCuBlockY);
+        return EEIsLineBlocked(theUnit->GetTileX(), theUnit->GetTileY(), (long)inB, (long)inC, &sCuBlocker, &sCuBlockTile[0], &sCuBlockTile[1]);
     case EE_UNITS_CU_DISTANCE_SQUARED_TO_TILE: return UFloatBits(theUnit->DistanceSquaredToTileXY((long)inB, (long)inC));
     case EE_UNITS_CU_CAN_GET_TO: return ::gContinentManager.CanGetTo(theUnit, (long)inB, (long)inC);
     case EE_UNITS_CU_IS_SPACE_MAP: return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();

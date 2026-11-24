@@ -113,12 +113,6 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
 // alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); VirtualB8,
 // then EEComplexUnit::ContinueProduction after its first user.
 
-// Starts the next production when nothing is being produced and the build queue is not empty
-void EEComplexUnit::ContinueProduction()
-{
-    if (this->mProductionTime == 0 && this->GetBuildQueueSize() != 0)
-        this->StartProduction();
-}
 
 // ---- EEUCNavalCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval citizen's
 // unit class (a fishing boat): 0x218490..0x21880c (after EEUCNavalBuilding.cpp; EEUCNavalPriest.cpp's out-of-line

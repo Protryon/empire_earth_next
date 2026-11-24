@@ -454,9 +454,9 @@ public:
     void SetRottingAwayTime(long inValue) { if (this->mRottingAwayTime != inValue) this->mRottingAwayTime = inValue; }
     void UpdateOrbitals() { ee_units_uc_rest(EE_UNITS_UC_DO_R_UPDATE_ORBITALS, NULL, this, 0, 0, 0, NULL); }                    // 0x20e086 (EEUCProjectile::Update, first) (provisional name)
     void SetOpacityChain(float inValue) { ee_units_uca_call(EE_UNITS_UCA_DO_OPACITY_CHAIN, NULL, this, 0, 0, 0, &inValue); }      // 0x216c22 (EEUCProjectile::Update: 1 - z/6 when below the ground) (provisional name)
-    void SetInitialContactLocation(const GE3DPoint& inPoint);  // 0x215246 (mInitialContactLocation = inPoint when it differs; EEUCLandable.cpp) (provisional name)
+    void SetInitialContactLocation(const GE3DPoint& inPoint) { if (this->mInitialContactLocation != inPoint) this->mInitialContactLocation = inPoint; }  // 0x215246 (EEUCLandable.cpp) (provisional name)
     void StartProduction() { ee_units_cu_body(EE_UNITS_CU_DO_START_PRODUCTION, this, 0, 0, 0); }
-    void ContinueProduction();              // 0x216d2d (EEUCLandCitizen::Update: StartProduction when mL280 == 0 and mBuildQueue is not empty) (provisional name)
+    void ContinueProduction() { if (this->mProductionTime == 0 && this->GetBuildQueueSize() != 0) this->StartProduction(); }  // 0x216d2d (EEUCLandCitizen::Update) (provisional name)
     void UpdateTurrets();                   // 0x20e14c (EEUCSpaceship::Update, after the physics model) (provisional name)
     void UpdateReloadTimer() { ee_units_ucp_call(EE_UNITS_UCP_DO_RELOAD_TIMER, NULL, this, 0, 0); }                 // 0x20e0b2 (EEUCSpaceship::Update) (provisional name)
     void UpdateTargetSearchTimer() { ee_units_ucp_call(EE_UNITS_UCP_DO_TARGET_SEARCH_TIMER, NULL, this, 0, 0); }           // 0x20e0db (EEUCSpaceship::Update) (provisional name)
