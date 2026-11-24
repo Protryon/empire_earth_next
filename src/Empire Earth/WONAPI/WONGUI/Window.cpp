@@ -162,12 +162,7 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     }
     case Op::WindowClose: me->BasePlatformClose(); return 0;
     case Op::WindowTimer: me->BaseTimerEvent((DWORD)a); return 0;
-    case Op::ApplyCursor:
-        if (PlatCursor* theCursor = dynamic_cast<PlatCursor*>((Cursor*)a)) {
-            PlatCursorShow(1);
-            theCursor->Apply();
-        }
-        return 0;
+    case Op::ApplyCursor: ee_won_cursor_apply(a != 0 ? ((Cursor*)a)->mRust : NULL, (void (*)(int32_t))PlatCursorShow); return 0;
     case Op::PopupHit: {
         Window* thePopup = m->GetPopupWindow();
         return thePopup != NULL && (m->GetPopupFlags() & PopupFlag_DontWantMouse) && thePopup == (Window*)a;

@@ -68,18 +68,7 @@ typedef NativeImage PlatNativeImage;
 
 // a pointer shape: one of the system's, or pixels (0xAARRGGBB) made into a platform cursor on first use (ee_won's
 // platcursor.rs, R6 WON round 41)
-class PlatCursor : public Cursor {
-protected:
-    virtual ~PlatCursor() { ee_won_plat_cursor_free(this->mRust); }
-public:
-    explicit PlatCursor(PlatSystemCursor inSystem) : mRust(ee_won_plat_cursor_system(&kFns, (uint32_t)inSystem)) {}
-    PlatCursor(const uint32_t* inPixels, int inWidth, int inHeight, int inHotX, int inHotY)
-        : mRust(ee_won_plat_cursor_pixels(&kFns, inPixels, inWidth, inHeight, inHotX, inHotY)) {}
-    static const EeWonPlatCursorFns kFns;   // the platform's cursor calls (PlatNativeImage.cpp)
-    virtual Cursor* GetNative() { return this; }
-    void Apply() { ee_won_plat_cursor_apply(this->mRust); }   // makes it the pointer's shape (UI thread)
-    EeWonPlatCursor* mRust;
-};
+// (PlatCursor is Cursor's platform kind: cursorobj.rs over platcursor.rs; R6 WON GUI round 35)
 
 // a font on platform/PlatFont.h (MSFont's replacement)
 } // namespace WONAPI

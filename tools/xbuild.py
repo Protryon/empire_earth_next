@@ -950,6 +950,10 @@ WON_TESTS = {
     # R6 WON round 34's leaf classes (browserobj.rs, tipobj.rs, localize.rs: BrowserComponent, ListAreaToolTip,
     # StringLocalize::GetStr) against the deleted C++ over a stand-in world, real GUIStrings and real page files
     "won_leaf34_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # R6 WON GUI round 35: the cursors as one Rust object (cursorobj.rs) against the original Cursor, CursorRef,
+    # ComponentCursor and PlatCursor, the standard cursors' table and the window's cursor change over a counted world;
+    # every host op mutated; the clipboard (clipobj.rs) against PlatClipboard.cpp's bodies
+    "won_win35_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]

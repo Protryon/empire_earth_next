@@ -129,6 +129,7 @@
 #include "rust/won_gui/compmem.h"
 #include "rust/won_gui/compobj.h"
 #include "rust/won_gui/ctobj.h"
+#include "rust/won_gui/cursorobj.h"
 #include "rust/won_gui/dialogobj.h"
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/gfxobj.h"

@@ -21,6 +21,7 @@ pub mod compcfg;
 pub mod compmem;
 pub mod compobj;
 pub mod ctobj;
+pub mod cursorobj;
 pub mod dialogobj;
 pub mod fontmap;
 pub mod gfxobj;

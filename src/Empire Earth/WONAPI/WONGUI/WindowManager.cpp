@@ -255,6 +255,10 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
 }
 }
 
+// the platform's cursor calls (cursorobj.rs's platform cursors)
+static const EeWonPlatCursorFns kCursorFns = {(void (*)(uint32_t))PlatCursorSetSystem, PlatCursorCreate, PlatCursorSet,
+                                              PlatCursorDestroy};
+
 // Creates the window manager: becomes the default manager, sets standard colours. The original registered BMP and
 // WIM decoders here; the port reads PNG and JPEG pictures only (D9; the lobby's game code registers both), so they
 // went (round 18)
@@ -268,14 +272,7 @@ WindowManager::WindowManager() {
     // the platform manager and the standard cursors: the WON hand from its bits, the others the system's
     this->mRust = ee_won_plat_wm_new(this, PlatWmHost);
     this->mEventForward = NULL;
-    std::vector<uint32_t> theHand(32 * 32);
-    ee_won_plat_hand_cursor(theHand.data());   // the WON hand (32x32, hot spot 12, 4; platimg.rs)
-    Cursor::SetStandardCursor(StandardCursor_Hand, new PlatCursor(theHand.data(), 32, 32, 12, 4));
-    Cursor::SetStandardCursor(StandardCursor_Arrow, new PlatCursor(PLAT_CURSOR_ARROW));
-    Cursor::SetStandardCursor(StandardCursor_IBeam, new PlatCursor(PLAT_CURSOR_IBEAM));
-    Cursor::SetStandardCursor(StandardCursor_EastWest, new PlatCursor(PLAT_CURSOR_SIZE_WE));
-    Cursor::SetStandardCursor(StandardCursor_NorthSouth, new PlatCursor(PLAT_CURSOR_SIZE_NS));
-    Cursor::SetStandardCursor(StandardCursor_NorthSouthEastWest, new PlatCursor(PLAT_CURSOR_SIZE_ALL));
+    ee_won_cursor_install_standard(WONCursorHost, &kCursorFns);
     // The window set, the events, the timers, the broadcasts and the screen state start empty in the Rust manager
     // (wmloop.rs); the original left the image cache count and the full-screen size unset
 }

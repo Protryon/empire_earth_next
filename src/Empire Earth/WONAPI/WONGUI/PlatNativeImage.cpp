@@ -115,7 +115,4 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
     return 0;
 }
 
-const EeWonPlatCursorFns PlatCursor::kFns = {(void (*)(uint32_t))PlatCursorSetSystem, PlatCursorCreate, PlatCursorSet,
-                                             PlatCursorDestroy};
-
 } // namespace WONAPI

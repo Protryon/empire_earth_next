@@ -81,25 +81,22 @@ class Window;
 class SurfaceBase; // WONSurface.h: the software surface a DisplayContext draws into
 class Component;
 // Cursor (RefCount, 8 bytes); the constructor 0x326540 stores only the inherited refcount and vptr
+// R6 WON GUI round 35: one class over cursorobj.rs, which is the cursor by its kind: the plain Cursor, the platform's
+// (MSCursor; the port's PlatCursor over platcursor.rs), CursorRef (holds another cursor and answers with it: what the
+// table of standard cursors holds, 0x326577) and ComponentCursor (WONLobbyWONSkinConfig.h). The table is Rust's too.
+// The host (Cursor.cpp) holds and drops the references a cursor keeps and makes the handles.
+intptr_t WONCursorHost(EeWonCursorOp op, intptr_t a, intptr_t b, intptr_t c);
 class Cursor : public RefCount {
 protected:
-    virtual ~Cursor(); // out of line
+    virtual ~Cursor() { ee_won_cursor_free(this->mRust); }
 public:
-    Cursor();
-    virtual Cursor* GetNative(); // vtable +0x04, out of line
-    virtual Component* GetComponent(int&,int&); // vtable +0x08, out of line
-    static Cursor* GetStandardCursor(StandardCursor); // 0x326550: returns a shared cursor (not owned by the caller)
-    static void SetStandardCursor(StandardCursor,Cursor*); //326560 mutable sharedreference
-};
-// Holds a cursor (0x0c bytes): SetStandardCursor (0x326577) allocates it and stores the owned cursor at +0x08
-class CursorRef : public Cursor {
-protected:
-    SmartPtr<Cursor> mCursor; //08
-public:
-    CursorRef(Cursor* cursor) : mCursor(cursor) {}
-    virtual Cursor* GetNative() { return this->mCursor->GetNative(); }
-    virtual Component* GetComponent(int& x,int& y) { return this->mCursor->GetComponent(x,y); }
-    void SetCursor(Cursor* cursor) { this->mCursor=cursor; }
+    Cursor() : mRust(ee_won_cursor_new()) {}
+    explicit Cursor(EeWonCursor* r) : mRust(r) {}
+    Cursor* GetNative() { return (Cursor*)ee_won_cursor_native(this->mRust, (intptr_t)this); } // the platform cursor, or none
+    Component* GetComponent(int& x,int& y) { return (Component*)ee_won_cursor_component(this->mRust, &x, &y); } // with its hot spot, or none
+    static Cursor* GetStandardCursor(StandardCursor t) { return (Cursor*)ee_won_cursor_standard(t); } // 0x326550: shared (not the caller's)
+    static void SetStandardCursor(StandardCursor t,Cursor* c) { ee_won_cursor_set_standard(WONCursorHost, t, (intptr_t)c); } //326560
+    EeWonCursor* mRust; // owned
 };
 
 enum { COLOR_INVALID = 0xffffffff };
