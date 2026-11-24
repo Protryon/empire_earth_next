@@ -18114,6 +18114,13 @@ struct EeUnitsComplexDopFields {
   bool mIsFoundation;
 };
 
+/// `EEIsLineToUnitBlocked`'s outputs for a search (the blocker and two tiles, from -10000).
+struct EeUnitsSrLine {
+  uint64_t blocker;
+  long x;
+  long y;
+};
+
 /// `kWorldHighGroundHeight`, `kWorldLowGroundHeight`, `kWorldHighGroundAttackFactor`, `kWorldLowGroundAttackFactor`
 /// (the world table's rows, ee/EEWorldConstants.h)
 constexpr static const int64_t WORLD_ELEVATION_ROWS[4] = { 53, 54, 55, 56, };
@@ -22677,21 +22684,12 @@ extern uint8_t ee_units_uu_host_can_move_on_terrain(uint64_t class_obj,
 
 extern int32_t ee_units_uu_host_passable_flags(uint64_t class_obj, uint64_t unit);
 
-extern uint32_t ee_units_uu_host_surrounding_tiles(uint64_t target,
-                                                   uint8_t virtual_call,
-                                                   int32_t (*out)[2],
-                                                   uint32_t capacity);
+/// a fresh `std::vector<U2DPoint<long> >` (a body's local list), and its end
+extern void *ee_units_uu_host_tiles_new();
+
+extern void ee_units_uu_host_tiles_delete(void *v);
 
 extern uint64_t ee_units_uu_host_container_continent(uint64_t container, uint64_t unit);
-
-extern uint32_t ee_units_uu_host_tile_line(int32_t x1,
-                                           int32_t y1,
-                                           int32_t x2,
-                                           int32_t y2,
-                                           uint8_t ends,
-                                           uint8_t thin,
-                                           int32_t (*out)[2],
-                                           uint32_t capacity);
 
 extern uint8_t ee_units_uu_host_reserved(uint64_t group, const float *point);
 
@@ -22713,11 +22711,7 @@ extern void ee_units_uu_host_set_animation(uint64_t complex, int32_t animation);
 
 extern void ee_units_uu_host_set_transformation(uint64_t complex, const float *m);
 
-extern uint32_t ee_units_uu_host_tiles_len(const void *v);
-
-extern void ee_units_uu_host_tiles_get(const void *v, int32_t (*out)[2]);
-
-extern void ee_units_uu_host_tiles_set(void *v, const int32_t (*tiles)[2], uint32_t count);
+extern void ee_units_uu_host_tiles_set(void *v, const long (*tiles)[2], uint32_t count);
 
 extern uint32_t ee_units_uu_host_units_len(const void *v);
 
@@ -22734,7 +22728,7 @@ extern uint8_t ee_units_uu_host_tile_test(int32_t which,
 extern void ee_units_uu_host_center_offset(uint64_t complex, float *io);
 
 extern uint8_t ee_units_uu_host_tiles_test(int32_t which,
-                                           const int32_t (*tiles)[2],
+                                           const long (*tiles)[2],
                                            uint32_t count,
                                            int32_t kind);
 

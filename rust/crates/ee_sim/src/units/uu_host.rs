@@ -23,18 +23,10 @@ extern "C" {
     fn ee_units_uu_host_is_foundation(obj: u64) -> u8;
     fn ee_units_uu_host_can_move_on_terrain(class_obj: u64, unit: u64, terrain: i32) -> u8;
     fn ee_units_uu_host_passable_flags(class_obj: u64, unit: u64) -> i32;
-    fn ee_units_uu_host_surrounding_tiles(target: u64, virtual_call: u8, out: *mut [i32; 2], capacity: u32) -> u32;
+    /// a fresh `std::vector<U2DPoint<long> >` (a body's local list), and its end
+    fn ee_units_uu_host_tiles_new() -> *mut c_void;
+    fn ee_units_uu_host_tiles_delete(v: *mut c_void);
     fn ee_units_uu_host_container_continent(container: u64, unit: u64) -> u64;
-    fn ee_units_uu_host_tile_line(
-        x1: i32,
-        y1: i32,
-        x2: i32,
-        y2: i32,
-        ends: u8,
-        thin: u8,
-        out: *mut [i32; 2],
-        capacity: u32,
-    ) -> u32;
     fn ee_units_uu_host_reserved(group: u64, point: *const f32) -> u8;
     fn ee_units_uu_host_ground_point(point: *const f32, out: *mut f32);
     fn ee_units_uu_host_terrain_tilt(m: *const f32, roll: u8) -> f32;
@@ -45,15 +37,13 @@ extern "C" {
     fn ee_units_uu_host_random_float(min: f32, max: f32) -> f32;
     fn ee_units_uu_host_set_animation(complex: u64, animation: i32);
     fn ee_units_uu_host_set_transformation(complex: u64, m: *const f32);
-    fn ee_units_uu_host_tiles_len(v: *const c_void) -> u32;
-    fn ee_units_uu_host_tiles_get(v: *const c_void, out: *mut [i32; 2]);
-    fn ee_units_uu_host_tiles_set(v: *mut c_void, tiles: *const [i32; 2], count: u32);
+    fn ee_units_uu_host_tiles_set(v: *mut c_void, tiles: *const [c_long; 2], count: u32);
     fn ee_units_uu_host_units_len(v: *const c_void) -> u32;
     fn ee_units_uu_host_units_get(v: *const c_void, out: *mut u64);
     fn ee_units_uu_host_units_set(v: *mut c_void, units: *const u64, count: u32);
     fn ee_units_uu_host_tile_test(which: i32, tile: u64, player: u64, x: i32, y: i32) -> u8;
     fn ee_units_uu_host_center_offset(complex: u64, io: *mut f32);
-    fn ee_units_uu_host_tiles_test(which: i32, tiles: *const [i32; 2], count: u32, kind: i32) -> u8;
+    fn ee_units_uu_host_tiles_test(which: i32, tiles: *const [c_long; 2], count: u32, kind: i32) -> u8;
     fn ee_units_uu_host_spot(which: i32, unit: u64, x: i32, y: i32, out: *mut f32) -> i32;
     fn ee_units_uu_host_world(which: i32, a: u64, b: u64, c: u64, x: i32, y: i32, f: f32) -> u64;
     fn ee_units_uu_host_world_f(which: i32, a: u64, b: u64, f: f32) -> f32;
@@ -83,18 +73,6 @@ const PLAYER_PASSABILITY: i32 = 5;
 const TILE_FLAT: i32 = 0;
 const TILE_VISIBLE: i32 = 1;
 const TILE_MESH_VALID: i32 = 2;
-
-/// A list the C++ writes into a buffer (its count first; again with the room it asked for when that was more).
-fn read_list<T: Copy + Default>(mut f: impl FnMut(*mut T, u32) -> u32) -> Vec<T> {
-    let mut out = vec![T::default(); 32];
-    let n = f(out.as_mut_ptr(), out.len() as u32) as usize;
-    if n > out.len() {
-        out.resize(n, T::default());
-        f(out.as_mut_ptr(), n as u32);
-    }
-    out.truncate(n);
-    out
-}
 
 /// `f` of the world map's unit regions (None before there are any).
 fn with_regions<R>(f: impl FnOnce(&crate::combat::regions::EeCombatUnitRegions) -> R) -> Option<R> {
@@ -245,8 +223,32 @@ impl UuHost for Game {
         unsafe { ee_units_uu_host_passable_flags(class_obj, unit) }
     }
     fn surrounding_tiles(&mut self, target: u64, virtual_call: bool) -> Vec<Tile> {
-        // SAFETY: a live unit; the buffer holds `capacity` tiles
-        read_list(|p, n| unsafe { ee_units_uu_host_surrounding_tiles(target, u8::from(virtual_call), p, n) })
+        // `target->mUnitClass->GetSurroundingTiles(target, tiles, 1, false)` (ucn_noted.rs) or its
+        // `BaseGetSurroundingTiles` (uc_rest.rs), into a fresh C++ list as the original's local
+        let class = read(|t| {
+            // SAFETY: the body's live target
+            unsafe { UnitView::of(t, target) }.and_then(|u| u.class()).map_or(0, |c| c.handle())
+        });
+        // SAFETY: a live unit and its class; the list lives until its delete
+        unsafe {
+            let list = ee_units_uu_host_tiles_new();
+            if virtual_call {
+                crate::units::ucn_noted::ee_units_ucn_surrounding_tiles(class, target, list as usize as u64, 1, false);
+            } else {
+                crate::combat::cg_query::rust_calls::ee_units_uc_rest(
+                    crate::units::uc_rest::EE_UNITS_UC_DO_R_BASE_SURROUNDING,
+                    class as usize as *mut c_void,
+                    target as usize as *mut c_void,
+                    list as usize as u64,
+                    1,
+                    0,
+                    std::ptr::null_mut(),
+                );
+            }
+            let tiles = tiles_of(list);
+            ee_units_uu_host_tiles_delete(list);
+            tiles
+        }
     }
     fn container_continent(&mut self, container: u64, unit: u64) -> u64 {
         // SAFETY: live units
@@ -287,26 +289,9 @@ impl UuHost for Game {
         crate::units::uu_world::line_blocked(self, x1, y1, x2, y2).0
     }
     fn tile_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, ends: bool, thin: bool) -> Vec<Tile> {
-        // one call (the C++ leaf writes its CBTL record each time): the room of the line's most tiles, two a step
-        // and its two ends (EEGetTileLine's own bound)
-        let room =
-            ((x1.wrapping_sub(x2)).unsigned_abs() as usize + (y1.wrapping_sub(y2)).unsigned_abs() as usize) * 4 + 8;
-        let mut out = vec![[0; 2]; room / 2];
-        // SAFETY: the buffer holds `room / 2` tiles
-        let n = unsafe {
-            ee_units_uu_host_tile_line(
-                x1,
-                y1,
-                x2,
-                y2,
-                u8::from(ends),
-                u8::from(thin),
-                out.as_mut_ptr(),
-                out.len() as u32,
-            )
-        };
-        out.truncate((n as usize).min(out.len()));
-        out
+        // `EEGetTileLine` (uu_line.rs: one call, its CBTL record written once)
+        let tiles = crate::units::uu_line::tile_line_recorded(&mut crate::units::uu_line::game_host(), x1, y1, x2, y2, ends, thin);
+        tiles.iter().map(|&(x, y)| [x, y]).collect()
     }
     fn reserved(&mut self, group: u64, point: [f32; 3]) -> bool {
         // SAFETY: a live group; three floats
@@ -454,10 +439,12 @@ impl UuHost for Game {
         crate::astar::cm_unit::footprint_region(complex, kind as c_long)
     }
     fn in_same_area(&mut self, tiles: &[Tile], kind: i32) -> bool {
+        let tiles = long_pairs(tiles);
         // SAFETY: the tiles' buffer
         unsafe { ee_units_uu_host_tiles_test(0, tiles.as_ptr(), tiles.len() as u32, kind) != 0 }
     }
     fn has_shore_tile(&mut self, tiles: &[Tile]) -> bool {
+        let tiles = long_pairs(tiles);
         // SAFETY: the tiles' buffer
         unsafe { ee_units_uu_host_tiles_test(1, tiles.as_ptr(), tiles.len() as u32, 0) != 0 }
     }
@@ -665,19 +652,27 @@ impl UuWorld for Game {
     }
 }
 
-/// A `std::vector<U2DPoint<long> >`'s tiles.
+/// Tiles as `U2DPoint<long>` holds them (`long` pairs: 32 bits each on Windows, 64 elsewhere).
+#[allow(clippy::unnecessary_cast)]
+fn long_pairs(tiles: &[Tile]) -> Vec<[c_long; 2]> {
+    tiles.iter().map(|t| [t[0] as c_long, t[1] as c_long]).collect()
+}
+
+/// A `std::vector<U2DPoint<long> >`'s tiles, read in place: a vector's first two words are its begin and end
+/// (EEWorldLayout.cpp checks that), a tile two longs.
 ///
 /// # Safety
 /// `v` points to a live vector of tiles.
+#[allow(clippy::unnecessary_cast)]
 pub unsafe fn tiles_of(v: *const c_void) -> Vec<Tile> {
-    // SAFETY: the caller's contract; the buffer holds the vector's length
+    // SAFETY: the caller's contract; [begin, end) holds the vector's tiles
     unsafe {
-        let n = ee_units_uu_host_tiles_len(v) as usize;
-        let mut out = vec![[0; 2]; n];
-        if n > 0 {
-            ee_units_uu_host_tiles_get(v, out.as_mut_ptr());
+        let words = v as *const *const [c_long; 2];
+        let (begin, end) = (*words, *words.add(1));
+        if begin.is_null() {
+            return Vec::new();
         }
-        out
+        std::slice::from_raw_parts(begin, end.offset_from(begin) as usize).iter().map(|t| [t[0] as i32, t[1] as i32]).collect()
     }
 }
 
@@ -686,6 +681,7 @@ pub unsafe fn tiles_of(v: *const c_void) -> Vec<Tile> {
 /// # Safety
 /// `v` points to a live vector of tiles.
 pub unsafe fn set_tiles(v: *mut c_void, tiles: &[Tile]) {
+    let tiles = long_pairs(tiles);
     // SAFETY: the caller's contract
     unsafe { ee_units_uu_host_tiles_set(v, tiles.as_ptr(), tiles.len() as u32) }
 }

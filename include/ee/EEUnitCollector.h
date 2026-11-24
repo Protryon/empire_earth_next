@@ -16,10 +16,10 @@ class EEUnit;
 // Units by id: the collector's sort-and-unique compares mUnitID (0x23dd96 / 0x23ddab, out of line in
 // EEFOFindNewTargetNearOldTarget.cpp, the TU's first functions; they take the pointers by value) (provisional names)
 struct EEUUUnitIDLess {
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const;
+    template <class U> bool operator()(U* inFirst, U* inSecond) const { return inFirst->mUnitID < inSecond->mUnitID; }
 };
 struct EEUUUnitIDEqual {
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const;
+    template <class U> bool operator()(U* inFirst, U* inSecond) const { return inFirst->mUnitID == inSecond->mUnitID; }
 };
 
 // The sort-and-unique of the collector (cdecl templates 0xe0b9 and 0xe104, emitted in EEAIArea.cpp's range)
