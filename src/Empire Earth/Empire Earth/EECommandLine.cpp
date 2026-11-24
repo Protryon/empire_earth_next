@@ -42,7 +42,6 @@
 
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local server starts; provisional name)
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
-void CreatePlaneModels();                   // 0x1030ab (EEEffect.cpp)
 
 // (EEConvertGameFile and EEUpdateSavedGames, "update_saved_games": ee_game gamecpp saved_games.rs over EECommandLineOp)
 

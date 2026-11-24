@@ -75,7 +75,6 @@
 #include "ee/EEGameLog.h"
 
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
-extern bool gGameWindowSizeDefaulted;        // EEPreferences.cpp
 extern bool& gInCinematic;
 extern char gEmptyString[];                  // 0x4e5b98 (pooled "")
 
@@ -127,8 +126,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EpDefaultSettings: return P64(&EEGamePreferences::sDefaultSettings);
     case O::EpNewSettings: return P64(new EEGameSettings());
     case O::EpDeleteSettings: delete B_SET;
-        break;
-    case O::EpWindowSizeDefaulted: gGameWindowSizeDefaulted = a[0] != 0;
         break;
     case O::EpResourceLanguage: return gResource->GetLanguage();
     case O::EpWideLength: return (int64_t)strlen((const char*)*B_W);

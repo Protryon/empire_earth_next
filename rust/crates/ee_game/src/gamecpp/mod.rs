@@ -364,9 +364,8 @@ pub enum EeGameCpp {
     CapStartEvent,
     CapStartPoint,
     CapContagion,
-    CxIsWarpColor,
-    CxSetWarpColor,
-    CxSetBlackColor,
+    CxIsColor,
+    CxSetColor,
     // ---- the world's bodies (world.rs): EEWorld (p the world), the game state (St: p the EEGameState), the
     // players, the units, the managers and globals they call
     AeClearEffects,
@@ -2631,8 +2630,6 @@ pub enum EeGameCpp {
     //
     // ---- round 9, lane E (were EECore9OpE's cases; now EEStartupOp's)
     // the entry wiring (entry.rs; Empire Earth.cpp's EEStartupOp, EECommandLine.cpp's EECommandLineOp)
-    RunRustInit,
-    RunFixtureConfigure,
     RunInstanceMutex,
     RunComInit,
     RunComUninit,
@@ -3477,7 +3474,6 @@ pub enum EeGameCpp {
     EpWideGet,
     EpWideLength,
     EpWideSet,
-    EpWindowSizeDefaulted,
     // EEGameOptions.cpp (options.rs)
     EoAssign,
     EoDifficulties,

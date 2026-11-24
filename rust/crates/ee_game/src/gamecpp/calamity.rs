@@ -1420,10 +1420,14 @@ fn answer(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool {
         C::WarpBlink => {
             let cx = complex(target(c));
             capture(cap::CAL_W_WARP_BLINK, 0, 0, 0.0, 0.0);
-            if h(O::CxIsWarpColor, cx, &[]) != 0 {
-                h(O::CxSetBlackColor, cx, &[]);
+            // the warped unit's tint, blinking while it is away (were EEGameOps.cpp's sWarpColor and sBlackColor:
+            // EECCTimeWarp's two .bss colours 0x4e5fb8/0x4e5fc8)
+            const WARP: [f32; 3] = [0.484375, 0.0, 0.734375];
+            const BLACK: [f32; 3] = [0.0, 0.0, 0.0];
+            if hf(O::CxIsColor, cx, &[], &WARP) != 0 {
+                hf(O::CxSetColor, cx, &[], &BLACK);
             } else {
-                h(O::CxSetWarpColor, cx, &[]);
+                hf(O::CxSetColor, cx, &[], &WARP);
             }
         }
         C::Hold => {

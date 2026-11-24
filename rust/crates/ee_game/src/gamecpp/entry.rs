@@ -483,6 +483,28 @@ const ENTRY_S_FALSE: i64 = 1;
 /// EEEmptyShutdown: the network's shutdown routine does nothing.
 extern "C" fn empty_shutdown(_shutdown: bool) {}
 
+/// A Rust panic's line (was EERust.cpp's EERustPanicLine): a panic aborts the process and a GUI exe has no stderr,
+/// so the line goes to the debugger's output (the harness logs it), stderr, and the game log when a game is running.
+///
+/// # Safety
+/// `line` is a terminated C string.
+unsafe extern "C" fn panic_line(line: *const c_char) {
+    use std::io::Write;
+    // SAFETY: the caller's contract
+    let mut text = unsafe { CStr::from_ptr(line) }.to_bytes().to_vec();
+    text.push(b'\n');
+    let text = CString::new(text).unwrap_or_default();
+    // SAFETY: a terminated string of this call
+    unsafe { ee_base::plat_core::message::PlatDebugOutput(text.as_ptr()) };
+    let mut stderr = std::io::stderr();
+    let _ = stderr.write_all(text.as_bytes());
+    let _ = stderr.flush();
+    if crate::game_log::ee_game_log_on() {
+        // SAFETY: as above
+        unsafe { crate::game_log::ee_game_log_line(text.as_ptr()) };
+    }
+}
+
 /// EERun: the game's run from its entry point (WinMain, main): the Rust library's start, the fixture's switches, the
 /// single instance, the window system, the engine's initialisation, the splash screen around the start-up, the menus,
 /// the threads, the command line and the user interface's run, then the shutdown. 1 when the window system cannot
@@ -492,8 +514,15 @@ extern "C" fn empty_shutdown(_shutdown: bool) {}
 /// `command_line` is a terminated C string; `instance` the module's.
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, command_line: *const c_char) -> i32 {
-    h(O::RunRustInit, 0, &[]); // first: a panic anywhere after this reaches a log
-    h(O::RunFixtureConfigure, 0, &[]); // TEST ONLY: nothing unless EE_TEST_UI is set
+    // SAFETY: panic_line is callable from any thread for the process' life
+    unsafe { crate::ee_rust_init(panic_line) }; // first: a panic anywhere after this reaches a log
+    // TEST ONLY: the fixture's configure step, which EETestFixture.cpp registers at static initialization (nothing
+    // unless EE_TEST_UI is set)
+    let configure = crate::gamecpp::globals::get!(gEETestFixtureConfigure);
+    if !configure.is_null() {
+        // SAFETY: a `void (*)()` the C++ stored
+        unsafe { core::mem::transmute::<*mut core::ffi::c_void, extern "C" fn()>(configure)() };
+    }
     let mut splash = super::start_screen::StartScreen::new(instance as usize);
     let sim = ee_base::plat_core::sim::gPlatSimMode.get() != 0;
     // the simulation: any number of copies at once

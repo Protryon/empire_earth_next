@@ -14,7 +14,6 @@
 // (ee_game fixture and sim_driver, called directly)
 #include "rust/game/fixture.h"
 #include "rust/game/sim_driver.h"
-extern void (*gEETestFixtureConfigure)();   // EEGlobals.cpp: the harness clock, seed and no-defeat switches
 #include "platform/PlatSim.h"
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
 #include "platform/PlatWindow.h"
@@ -364,7 +363,6 @@ bool EEInitializeDisplay()
 // (the previous instance and show command arguments are unused)
 // (EESimPreferences, the window's event pump and the native message hook: gamecpp entry.rs, window_pump.rs)
 
-void EERustInit();   // EERust.cpp
 
 // The game's run (ee_game gamecpp entry.rs): the Rust library's start first, the window system, the engine, the
 // start-up under the splash screen, the menus, the command line and the user interface's run, then the shutdown
@@ -1033,10 +1031,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EntryVersionTrim: gGameVersion = gGameVersion.GetIndexedSubstring(gGameVersion.Find("v", 0), gGameVersion.GetLength() - 1);
         break;
     case O::EntryVersionAppend: gGameVersion += (const char*)a[0];
-        break;
-    case O::RunRustInit: EERustInit();
-        break;
-    case O::RunFixtureConfigure: gEETestFixtureConfigure != NULL ? gEETestFixtureConfigure() : (void)0;
         break;
     case O::RunInstanceMutex: return EECreateInstanceMutex();
     // round 12, fork D (gamecpp window_pump.rs)

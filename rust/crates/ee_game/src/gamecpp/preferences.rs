@@ -178,8 +178,6 @@ pub extern "C" fn ee_gamecpp_prefs_apply_port(settings: *mut c_void) {
 pub extern "C" fn ee_gamecpp_prefs_load(prefs: *mut c_void) -> c_long {
     let s = prefs as P + gobj::PREFS_SETTINGS;
     let defaults = hp(O::EpDefaultSettings, 0, &[]);
-    // port: no saved game size: a full screen game takes the display's size (EEInitializeVideo)
-    h(O::EpWindowSizeDefaulted, 0, &[config_int(c"display.resolution", c"width").is_none() as i64]);
     read_settings(s, false);
     let korean = !ee_gamecpp_prefs_is_not_korean();
     let d = *fields(defaults);

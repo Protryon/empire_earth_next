@@ -47,9 +47,6 @@
 #include "ee/EEEffectManager.h"
 
 
-// the falloff of a graphic object's frame sound (own .rdata copy 0x4421fc: a named const, as kCalamitySoundFalloff)
-static const float kGraphicSoundFalloff = 4.0f;
-
 // chain at 0x5482e4 (wrapper)
 //   object 0x5319f8  ctor 0x1482ee, registrar 0x148306, atexit dtor 0x148312
 std::vector<EEDisplayRasterizer> gDisplayRasterizers;
@@ -215,7 +212,7 @@ int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DuNodeStop: gSoundManager->Stop(NODE, a[0] != 0);
         break;
-    case O::DuSoundParameters: EEComputeSoundParameters(f[0], PT(0), *(float*)a[1], *(float*)a[2], *(float*)a[3], kGraphicSoundFalloff);
+    case O::DuSoundParameters: EEComputeSoundParameters(f[0], PT(0), *(float*)a[1], *(float*)a[2], *(float*)a[3], f[1]);
         break;
     // the camera point, the click effect, the screen point's tile
     case O::DuCameraInverseApply: gU4E8F08.GetCameraInverse().Apply(*(GE3DPoint*)p, PT(0));
