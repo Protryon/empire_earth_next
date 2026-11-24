@@ -198,8 +198,8 @@ void EEWorldLayoutRegister()
     theLayout.active_group_fields = offsetof(EEActiveGroup, mFields);   // the group objects (group_obj.rs)
     theLayout.active_group_goal = offsetof(EEActiveGroup, mGoal);
     theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - BaseOffset<EEComputerPlayer, EEPlayer>();
-    theLayout.placement_town = offsetof(EECPPlacement, mTownCenterTile);
-    theLayout.placement_rust = offsetof(EECPPlacement, mRust);
+    theLayout.placement_town = offsetof(EECPPlacement, town);
+    theLayout.placement_rust = offsetof(EECPPlacement, rust);
     theLayout.player_group_lists = offsetof(EEPlayer, mGroupLists);   // the groups lane, round 2 (group_obj.rs)
     theLayout.player_lists = offsetof(EEPlayer, mLists);   // (player_body.rs)
     if (offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect) != 28 * sizeof(void*))
