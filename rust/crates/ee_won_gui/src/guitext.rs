@@ -1060,6 +1060,115 @@ pub unsafe extern "C" fn ee_won_gui_text_format(
     unsafe { emit(&ops, out, room) }
 }
 
+/// What `LobbyAppendFormattedText` asks of its text area (TextFormat.cpp's four statements): a segment of text
+/// units in a colour and font, a line break, one of the caller's strings as a segment, one of its segments.
+#[repr(C)]
+pub struct EeWonFormatSink {
+    /// `area->AddSegment(GUIString(units, len), color, font, line_break)`.
+    pub add_text: unsafe extern "C" fn(
+        area: *mut c_void,
+        units: *const c_void,
+        len: usize,
+        color: i32,
+        font: *mut c_void,
+        line_break: bool,
+    ),
+    /// `area->LineBreak(0)`.
+    pub line_break: unsafe extern "C" fn(area: *mut c_void),
+    /// `area->AddSegment(*string, color, font, false)`.
+    pub add_string: unsafe extern "C" fn(area: *mut c_void, string: *const c_void, color: i32, font: *mut c_void),
+    /// `area->AddSegment(segment)`.
+    pub add_segment: unsafe extern "C" fn(area: *mut c_void, segment: *mut c_void),
+}
+
+/// What a format's `<sN>`, `<cN>`, `<fN>` and `<lN>` name: the caller's strings (`GUIString*`), colours, fonts
+/// (`Font*`) and segments (`TextSegmentBase*`), any pointer NULL for none.
+#[repr(C)]
+pub struct EeWonFormatArgs {
+    pub strings: *const *const c_void,
+    pub num_strings: i32,
+    pub colors: *const i32,
+    pub num_colors: i32,
+    pub fonts: *const *mut c_void,
+    pub num_fonts: i32,
+    pub segments: *const *mut c_void,
+    pub num_segments: i32,
+}
+
+/// `LobbyAppendFormattedText` whole (R6 WON GUI round 36): the format's steps run on the area through `sink`, the
+/// pending text, the colour (first `color`) and the font (first `font`) kept here. The format's units are
+/// `wchar_t`s.
+///
+/// # Safety
+/// `format` holds `len` units (or is NULL with 0); `args`' arrays hold their counts; `sink`'s functions take `area`.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_gui_text_append_formatted(
+    area: *mut c_void,
+    sink: *const EeWonFormatSink,
+    format: *const c_void,
+    len: u16,
+    args: *const EeWonFormatArgs,
+    line_break: bool,
+    color: i32,
+    font: *mut c_void,
+) {
+    use ee_base::plat_core::string::WChar;
+    // SAFETY: the contract
+    let (sink, args) = unsafe { (&*sink, &*args) };
+    let units: &[WChar] = if len == 0 || format.is_null() {
+        &[]
+    } else {
+        // SAFETY: `len` units (the contract)
+        unsafe { std::slice::from_raw_parts(format as *const WChar, usize::from(len)) }
+    };
+    let wide: Vec<u32> = units.iter().map(|&u| u as u32).collect();
+    let counts = [args.num_strings, args.num_colors, args.num_fonts, args.num_segments];
+    let (mut color, mut font) = (color, font);
+    let mut text: Vec<WChar> = Vec::new();
+    for op in format_ops(&wide, counts, line_break) {
+        let i = op.a as usize;
+        // SAFETY: the steps' indices are inside the counts (format_ops), the sink takes the area
+        unsafe {
+            match op.kind {
+                // text.append(format, (unsigned short)a, (unsigned short)b)
+                0 => text.extend_from_slice(&units[usize::from(op.a as u16)..][..usize::from(op.b as u16)]),
+                1 => text.push('<' as WChar),
+                2 => {
+                    (sink.add_text)(area, text.as_ptr() as *const c_void, text.len(), color, font, false);
+                    text.clear();
+                }
+                3 => (sink.line_break)(area),
+                4 => color = *args.colors.add(i),
+                5 => {
+                    let f = *args.fonts.add(i);
+                    if !f.is_null() {
+                        font = f;
+                    }
+                }
+                6 => {
+                    let s = *args.strings.add(i);
+                    if !s.is_null() {
+                        (sink.add_string)(area, s, color, font);
+                    }
+                }
+                7 => {
+                    let s = *args.segments.add(i);
+                    if !s.is_null() {
+                        (sink.add_segment)(area, s);
+                    }
+                }
+                8 => (sink.add_text)(area, text.as_ptr() as *const c_void, text.len(), color, font, op.b != 0),
+                _ => {}
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "guitext_format_tests.rs"]
+mod format_tests;
+
 #[cfg(test)]
 mod tests {
     use super::*;
