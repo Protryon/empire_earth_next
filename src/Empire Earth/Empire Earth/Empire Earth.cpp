@@ -748,13 +748,6 @@ static GEFont** const kFonts[38] = {
     &gFontTahoma20, &gFontTahoma24, &gFontTahoma36, &gFontTahoma48, &gFontTahoma72};
 // the campaign checksums EELoadNetworkSettings reads (string resources 0x32..0x34, 0x37, 0x36)
 static long* const kCampaignChecksums[5] = {&gAOCRomanChecksum, &gAOCPacificChecksum, &gAOCAsianChecksum, &gEEDemoChecksum, &gEELearningChecksum};
-// the db tables' names in start-up order (startup.rs TABLES_1..3)
-static const UString* const kDbTableNames[26] = {
-    &kDbStartingResourcesFile, &kDbUnitBehaviorFile, &kDbSoundsFile, &kDbGraphicsFile, &kDbGfxEffectsFile,
-    &kDbMusicFile, &kDbWorldFile, &kDbFamilyFile, &kDbButtonsFile, &kDbTechTreeFile, &kDbAnimalsFile,
-    &kDbColorTableFile, &kDbAIUnitTargetingFile, &kDbTerrainFile, &kDbTerrainTypeFile, &kDbCliffTerrainFile,
-    &kDbCivPowersFile, &kDbCivilizationFile, &kDbWeaponToHitFile, &kDbCalamityFile, &kDbUnitSetFile,
-    &kDbAreaEffectFile, &kDbUpgradeFile, &kDbCPBehaviorFile, &kDbGameVariantFile, &kDbPremadeCivsFile};
 // the start-up directory as a file spec (the engines' initialisations take one)
 static FSFileSpec& EEStartupDirectorySpec()
 {
@@ -1215,10 +1208,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DumpRules: EEDumpRules();
         break;
-    case O::DbFindTable: return EEDbFindFile(gDataPath, *kDbTableNames[a[0]], *(FSFileSpec**)a[1]);
-    case O::DbFindEvents: return EEDbFindFile(gDataPath, kDbEventsFile, *(FSFileSpec**)a[0]);
-    case O::DbFindEffects: return EEDbFindFile(gDataPath, kDbEffectsFile, *(FSFileSpec**)a[0]);
-    case O::DbFindAmbientSounds: return EEDbFindFile(gDataPath, kDbAmbientSoundsFile, *(FSFileSpec**)a[0]);
     case O::LoadEvents: return EEEvent::LoadEvents(*SPEC, *(FSFileSpec*)a[0]);
     case O::TerrainColorsLoad: return EETerrainColorTable::Load();
     case O::DbLoadStartingResources: return EEStartingResources::Load(SPEC);

@@ -18,7 +18,6 @@ b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 d3ff4 d47a1 Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp
 d490f d5405 Empire Earth/Database/EEAnimal.cpp
 d5405 d5d08 Empire Earth/Database/EEButtonObject.cpp
-d61f7 d68c7 Empire Earth/Database/EEDbObject.cpp
 d6bed d72c1 Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp
 d72c1 d9b2b Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp
 d9b2b da3be Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp

@@ -813,12 +813,12 @@ pub extern "C" fn ee_gamecpp_startup_delete_sound_manager() {
     }
 }
 
-/// A db table found (its text form: EEDbFindFile, the name `k` of Empire Earth.cpp's `kDbTableNames`) and loaded
+/// A db table found (its text form: EEDbFindFile, the name `k` of db_text.rs's `DB_TABLE_FILES`) and loaded
 /// by its case; a failure stops the game (ESVerify at the original's lines: `line` the find, + 1 the file, + 3 the
 /// load).
 fn load_table(k: usize, load: O, line: i64) {
     let mut file: P = 0;
-    let r = h(O::DbFindTable, 0, &[k as i64, ptr(&mut file)]);
+    let r = super::db_text::find_in_data_path(super::db_text::DB_TABLE_FILES[k], &mut file);
     verify(r == KESE_OK, line);
     verify(file != 0, line + 1);
     let r = h(load, file, &[]);
@@ -868,10 +868,10 @@ pub extern "C" fn ee_gamecpp_startup_database() {
         k += 1;
     }
     let (mut events, mut effects): (P, P) = (0, 0);
-    let r = h(O::DbFindEvents, 0, &[ptr(&mut events)]);
+    let r = super::db_text::find_in_data_path(super::db_text::DB_EVENTS_FILE, &mut events);
     verify(r == KESE_OK, 0x3e2);
     verify(events != 0, 0x3e3);
-    let r = h(O::DbFindEffects, 0, &[ptr(&mut effects)]);
+    let r = super::db_text::find_in_data_path(super::db_text::DB_EFFECTS_FILE, &mut effects);
     verify(r == KESE_OK, 0x3e5);
     verify(effects != 0, 0x3e6);
     let r = h(O::LoadEvents, events, &[pa(effects)]);
@@ -909,7 +909,7 @@ pub extern "C" fn ee_gamecpp_startup_database() {
         h(O::FileSpecCreateDirectory, directory.0, &[]);
     }
     let mut file: P = 0;
-    let r = h(O::DbFindAmbientSounds, 0, &[ptr(&mut file)]);
+    let r = super::db_text::find_in_data_path(super::db_text::DB_AMBIENT_SOUNDS_FILE, &mut file);
     verify(r == KESE_OK, 0x4b3);
     verify(file != 0, 0x4b4);
     h(O::AmbientLoad, file, &[]);
