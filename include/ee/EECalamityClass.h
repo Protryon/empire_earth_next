@@ -26,57 +26,9 @@ class GE3DPoint;
 // where a 4.0f literal would be one shared __real COMDAT.
 static const float kCalamitySoundFalloff = 4.0f;
 
-// One record of db\dbcalamity.dat (provisional name). Gap-free, from the file itself (36 records of 0xec bytes):
-// the name, then floats, ids and flags. Field names
-// are provisional unless a reader names them.
-// what EECalamityData +0x80 / EECalamityClass +0x18 hold (an enum: see mL18; values not decoded, provisional name)
-enum EECalamityKind {
-    kCalamityKindNone = -1
-};
-
-struct EECalamityData {
-    char mLabel[100];                       // +0x00 ("Undefined", "Global Warming", ... "Special Location")
-    float mFloatParam1;                     // +0x64 (line of sight: the bonus)
-    float mFloatParam2;                     // +0x68 (plague: functor argument)
-    float mQuakeMinimumStrength;            // +0x6c (earthquake Initialize 0xb0765)
-    float mQuakeStrength;                   // +0x70 (earthquake Initialize)
-    float mUnused1;                         // +0x74 (0 in every record)
-    float mRange;                           // +0x78 -> EECalamityClass +0x1c (rounded)
-    int32_t mUnusedDatabaseID;              // +0x7c (128..: the record's id)
-    EECalamityKind mID;                     // +0x80 -> +0x18 (an enum, as the class member it fills)
-    int32_t mClassEnum;                     // +0x84 -> +0x08
-    int32_t mUnusedTargetKind;              // +0x88
-    int32_t mLifeTime;                      // +0x8c -> +0x04 (as float)
-    int32_t mUnused2;                       // +0x90 (1 in every record)
-    int32_t mGraphicEffectID1;              // +0x94 EEGraphicEffect table index (area effects: +0x28)
-    int32_t mGraphicEffectID2;              // +0x98 (area effects: +0x2c)
-    int32_t mGraphicEffectID3;              // +0x9c (mind control: +0x30)
-    int32_t mGraphicEffectID4;              // +0xa0 (time warp: +0x34)
-    int32_t mUnused3;                       // +0xa4 (0 in every record)
-    int32_t mUnused4;                       // +0xa8 (0)
-    int32_t mUnused5;                       // +0xac (0)
-    int32_t mUnitClassIndex;                // +0xb0 (drop object: the unit class to drop)
-    int32_t mIntParam1;                     // +0xb4 (area effects: +0x44)
-    int32_t mIntParam2;                     // +0xb8 (area effects: +0x3c)
-    int32_t mIntParam3;                     // +0xbc (area effects: functor argument)
-    int32_t mIntParam4;                     // +0xc0 (fire: functor argument)
-    int32_t mIntParam5;                     // +0xc4 (earthquake Initialize)
-    int32_t mIntParam6;                     // +0xc8 (hurricane: the map area its location needs)
-    bool mUnused6;                          // +0xcc (1 in 31 of 36 records)
-    bool mBoolParam1;                       // +0xcd (extra damage: functor argument)
-    bool mUnused7;                          // +0xce (0 in every record)
-    bool mUnused8;                          // +0xcf (0)
-    bool mIsCastByAllSelected;              // +0xd0 -> +0x26
-    bool mIsBlockedByImmunity;              // +0xd1 -> +0x25
-    int32_t mSoundID;                       // +0xd4 EESoundObject table index (area effects: +0x34)
-    int32_t mSecondarySoundID;              // +0xd8 (plague: its second sound)
-    int32_t mCost;                          // +0xdc -> +0x20
-    uint32_t mUnitSet;                      // +0xe0 -> +0x10
-    int32_t mNameID;                        // +0xe4 -> +0x14
-    bool mUnusedClassFlag;                  // +0xe8 -> +0x24
-};
-
-static_assert(sizeof(EECalamityData) == 236, "on-disk record: 236 bytes on every target");
+// One record of db\dbcalamity.dat: Rust's EeCalamityData (ee_sim tech calamity_class.rs; the evidence for each field
+// is there)
+typedef EeCalamityData EECalamityData;
 
 // New (port): the class's effects, sounds and numbers in one place for every class (ee_tech calamity_class.rs). The
 // numbers are the Rust record EeCalamityClassFields the class derives from (the base members, then the union of the

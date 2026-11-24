@@ -35,9 +35,6 @@
 #include "ee/EEUnitPicker.h"
 #include "rust/sim/units.h"
 
-static_assert(sizeof(EECalamityData) == sizeof(EeCalamityData), "the db record as ee_tech reads it");
-
-
 // Returns the game variant with the given index
 // Probably inline in the real header (an out-of-line COMDAT right after its first user, EECCEarthquake's Update);
 // defined here, with the earthquake's update parameters (Update above)
