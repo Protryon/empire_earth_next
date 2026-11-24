@@ -52,10 +52,6 @@ UString EEEMStorm::sStormData("Storm-Data");
 UString EEEMStorm::sEnvironmentData("Environment-Data");
 // Constructs the black storm colour at startup and registers its destructor
 GEColor gStormColor;                        // (read by Step: the environment manager's colour when a rain storm ends)
-// Constructs the light storm colour at startup and registers its destructor
-GEColor gStormColorLight(0.679f, 0.726f, 0.8f);
-// Constructs the dark storm colour at startup and registers its destructor
-GEColor gStormColorDark(0.273f, 0.343f, 0.457f);
 
 // (the storms' route planners and shaper, EEStormModifiers.h before: ee_sim::astar modifier_obj.rs)
 
