@@ -139,9 +139,6 @@ public:
     LobbyPersistentData();
     ~LobbyPersistentData() { ee_won_persist_free(this->mRust); }
     EeWonPersist* mRust;
-private:
-    LobbyPersistentData(const LobbyPersistentData&);
-    LobbyPersistentData& operator=(const LobbyPersistentData&);
 };
 EeWonPersist* LobbyPersist(); // the lobby's object (0x75c900's), NULL without lobby data
 // a saved login user (0x18 bytes in the original): the Rust record, alive while the user is saved

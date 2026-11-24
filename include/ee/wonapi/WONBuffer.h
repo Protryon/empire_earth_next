@@ -70,8 +70,6 @@ public:
     // adopts Rust's bytes (ToByteBuffer)
     explicit ByteBuffer(EeWonByteBuffer* inBytes) : mBytes(inBytes) {}
     virtual ~ByteBuffer() { ee_won_bytes_free(this->mBytes); }
-    ByteBuffer(const ByteBuffer&) = delete;
-    ByteBuffer& operator=(const ByteBuffer&) = delete;
     const char* data() const { return this ? reinterpret_cast<const char*>(ee_won_bytes_data(this->mBytes)) : NULL; }
     unsigned long length() const { return this ? ee_won_bytes_length(this->mBytes) : 0; }
 

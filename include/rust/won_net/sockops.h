@@ -106,6 +106,16 @@ void ee_won_socketop_recv_from_prepare(const EeWonSocketOp *o);
 /// As `ee_won_socketop_init_send`.
 long ee_won_socketop_close_file(const EeWonSocketOp *o, long status);
 
+/// `SocketOp::CleanupHook` (2b60c0, R6 WON lobby and network round 37): the op `cpp_op` (the C++ `SocketOp*`) leaves
+/// the socket thread if it was handed there, then a receive's target file is closed (`RecvBytesOp::CloseFile` with
+/// the op's `status`, 2b5580).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `cpp_op` is the object's C++ op.
+void ee_won_socketop_cleanup(const EeWonSocketOp *o,
+                             void *cpp_op,
+                             long status);
+
 /// The received bytes: a borrowed `ByteBuffer*` (null for none).
 ///
 /// # Safety

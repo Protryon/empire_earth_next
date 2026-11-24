@@ -873,9 +873,9 @@ static void Scenario()
     c->SetDoColonEmote(false);
     Input(s, c, L":plain");
     c->SetDoColonEmote(true);
-    c->AddCommandString(L"tell", Smart::InputCommand_Whisper);
-    c->AddCommandString(L"inv", Smart::InputCommand_Invite);
-    c->AddCommandString(L"uninv", Smart::InputCommand_Uninvite);
+    c->AddCommandString(L"tell", InputCommand_Whisper);
+    c->AddCommandString(L"inv", InputCommand_Invite);
+    c->AddCommandString(L"uninv", InputCommand_Uninvite);
     Input(s, c, L"/TELL Bobby x");
     Input(s, c, L"/inv Bobby welcome");
     Input(s, c, L"/uninv Bobby");
@@ -902,12 +902,12 @@ static void Scenario()
         for (int i = 0; i < 5; i++) {
 #ifndef EE_WON_SMART_ROUTE_RUST
             RoutingClientInfoPtr aFound;
-            Smart::MatchResult r = c->FindClient(kNames[i], aFound);
+            MatchResult r = c->FindClient(kNames[i], aFound);
             std::string aWho = aFound.get() == NULL ? std::string("-") : N(aFound->mClientId) + " " + Esc(aFound->mName);
 #else
             SmartCopies::ClientInfo aFound;
             bool aHas = false;
-            Smart::MatchResult r = SmartCopies(c).FindClient(kNames[i], aFound, aHas);
+            MatchResult r = SmartCopies(c).FindClient(kNames[i], aFound, aHas);
             std::string aWho = !aHas ? std::string("-") : N(aFound.mId) + " " + Esc(aFound.mName);
 #endif
             Log("FindClient " + Esc(kNames[i]) + " " + N(r) + " " + aWho);

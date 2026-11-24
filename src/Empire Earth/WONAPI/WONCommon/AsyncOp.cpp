@@ -131,7 +131,7 @@ static const EeWonByteBuffer* CoreBytesOf(void* inBuffer)
 // ---- the socket op base's and the socket's calls (SocketRunHooks.cpp and AsyncSocket.cpp are deleted)
 static SocketOp* SockOp(void* inOp) { return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))); }
 static long CoreSocketOpStart(void* inOp) { return SockOp(inOp)->Start(); }
-void SocketOp::HookAddToSocketThread(void* inOp) { WONAPICore::AddToSocketThread(SockOp(inOp)); }
+static void CoreAddToSocketThread(void* inOp) { ee_won_api_socket_op(static_cast<void*>(SockOp(inOp)), true); } // WONAPICore's AddToSocketThread
 static void* CoreBytesAdopt(EeWonByteBuffer* inBytes) { return static_cast<RefCount*>(new ByteBuffer(inBytes)); } // (its first reference is Rust's)
 // the socket's transform chain on the message in *ioMessage (a reference held; the result's replaces it)
 static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
@@ -176,31 +176,7 @@ static void* CoreRouteVirtual(void* inConn,int32_t inWhich,void* inOp,uint8_t in
     anOp->AddRef();
     return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp.get()));
 }
-// leaves the socket thread if it was handed there
-void SocketOp::CleanupHook()
-{
-    if(this->IsInSocketThread()) WONAPICore::RemoveFromSocketThread(this);
-    ee_won_socketop_close_file(this->mSockOp,this->GetStatus()); // a receive's target file closed (2b5580)
-}
 bool SocketOp::mRunAsyncImmediatelyDef; // a zero byte at 565f08 in the original
-static uint32_t AddressOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mAddress; }
-static uint16_t PortOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mPort; }
-
-// up to the time until writable or readable (no wait for 0 or a closed socket)
-void AsyncSocket::WaitForWrite(unsigned long inWaitTime)
-{ ee_won_asyncsocket_wait(this->mSock,PLAT_SOCKET_WAIT_WRITE,static_cast<uint32_t>(inWaitTime)); }
-void AsyncSocket::WaitForRead(unsigned long inWaitTime)
-{ ee_won_asyncsocket_wait(this->mSock,PLAT_SOCKET_WAIT_READ,static_cast<uint32_t>(inWaitTime)); }
-WONStatus AsyncSocket::SendTo(const void* inData,int inLength,const IPAddr& inAddress)
-{ return ee_won_asyncsocket_send_to(this->mSock,inData,inLength,AddressOf(inAddress),PortOf(inAddress)); }
-// the sender assigned as a new address of its platform address (sockobj.rs, R6 WON round 33)
-WONStatus AsyncSocket::RecvFrom(void* outData,int inLength,IPAddr* outAddress,int* outReceived)
-{
-    return ee_won_asyncsocket_recv_from_ip(this->mSock,outData,inLength,
-                                           outAddress!=NULL ? const_cast<EeWonIpAddr*>(outAddress->GetValue()) : NULL,outReceived);
-}
-WONStatus AsyncSocket::Bind(const IPAddr& inAddress,bool inReuse)
-{ return ee_won_asyncsocket_bind(this->mSock,AddressOf(inAddress),PortOf(inAddress),inReuse); }
 static long CoreSocketOpContinue(void* inOp)
 {
     return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Continue();
@@ -210,7 +186,7 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreNewQueueSocket,CoreNewUdpRecvOp,CoreUdpCheck,
                                         reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
                                         CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
-                                        &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,
+                                        CoreAddToSocketThread,CoreBytesAdopt,CoreTransform,
                                         CoreSocketDuplicate,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 

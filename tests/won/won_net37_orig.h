@@ -41,6 +41,13 @@ public:
     virtual void Complete(ResultType inResult) { this->mCallback(inResult, this->mParam); }
 };
 
+// SmartRoutingConnection's enums as they were in the class (the model's numbers: ee_won smartroute.rs)
+enum MatchResult { MatchResult_NotFound, MatchResult_Ambiguous, MatchResult_Partial, MatchResult_Exact };
+enum InputCommand { InputCommand_None, InputCommand_Broadcast, InputCommand_Whisper,
+    InputCommand_Emote, InputCommand_Ignore, InputCommand_Away, InputCommand_BecomeModerator,
+    InputCommand_ServerMute, InputCommand_ServerBan, InputCommand_Mute, InputCommand_Ban,
+    InputCommand_Unmute, InputCommand_ServerUnmute, InputCommand_Invite, InputCommand_Uninvite };
+
 enum RoutingBadUserListType {
     RoutingBadUserListType_BannedUsers=1,
     RoutingBadUserListType_MutedUsers=2
