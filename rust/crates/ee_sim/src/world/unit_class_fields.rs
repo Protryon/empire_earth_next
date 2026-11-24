@@ -377,7 +377,10 @@ pub unsafe extern "C" fn ee_units_uc_effect_slot(
 /// # Safety
 /// `links` is a live class's record; `k` below 6.
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_uc_related_slot(links: *mut EeUnitsUnitClassLinks, k: i32) -> *mut *mut EeCxxUnitClass {
+pub unsafe extern "C" fn ee_units_uc_related_slot(
+    links: *mut EeUnitsUnitClassLinks,
+    k: i32,
+) -> *mut *mut EeCxxUnitClass {
     // SAFETY: the caller's contract
     unsafe { (*links).related_slot(k as usize) }
 }
@@ -410,7 +413,10 @@ mod links_tests {
     #[test]
     fn the_effects_are_one_array_and_the_media_follow() {
         let p = size_of::<*mut c_void>();
-        assert_eq!(offset_of!(EeUnitsUnitClassLinks, mBloodStainEffect) - offset_of!(EeUnitsUnitClassLinks, mAttachedEffect), 28 * p);
+        assert_eq!(
+            offset_of!(EeUnitsUnitClassLinks, mBloodStainEffect) - offset_of!(EeUnitsUnitClassLinks, mAttachedEffect),
+            28 * p
+        );
         assert_eq!(offset_of!(EeUnitsUnitClassLinks, mModel), 30 * p);
         assert_eq!(offset_of!(EeUnitsUnitClassLinks, mBehavior), 46 * p);
         assert_eq!(size_of::<EeUnitsUnitClassLinks>(), 47 * p);

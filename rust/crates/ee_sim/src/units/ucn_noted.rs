@@ -600,7 +600,16 @@ pub extern "C" fn ee_units_ucn_faces_point(class: u64, unit: u64, x: f32, y: f32
     let faces = unsafe { q::ee_units_cgq_faces_point(class, unit, x, y, tolerance) };
     if outer {
         let (e0, e1) = (x.to_bits(), y.to_bits());
-        q::ee_combat_capture_read_of(0, q::EE_COMBAT_HR_FACES_POINT, unit, 0, i32::from(faces), e0, e1, u32::from(tolerance));
+        q::ee_combat_capture_read_of(
+            0,
+            q::EE_COMBAT_HR_FACES_POINT,
+            unit,
+            0,
+            i32::from(faces),
+            e0,
+            e1,
+            u32::from(tolerance),
+        );
     }
     q::ee_combat_host_read_leave(0);
     faces
@@ -609,6 +618,7 @@ pub extern "C" fn ee_units_ucn_faces_point(class: u64, unit: u64, x: f32, y: f32
 /// `FindImpactUnit` within its host-read scope (slot 0); its CBQR record (the attack goal's target, the unit found's
 /// id, the owner's firing-high flag or all ones without an owner) when outermost (units round 11).
 #[no_mangle]
+#[allow(unused_unsafe)] // world_field! brings its own block inside the view's
 pub extern "C" fn ee_units_ucn_impact_unit(unit: u64) -> u64 {
     use crate::combat::cg_query as q;
     let outer = q::ee_combat_host_read_enter(0);
@@ -626,7 +636,16 @@ pub extern "C" fn ee_units_ucn_impact_unit(unit: u64) -> u64 {
         });
         let target = if goal != 0 { crate::combat::goal_attack::ee_combat_attack_of(goal).target } else { 0 };
         let id = if found != 0 { W.unit_id(found) } else { 0 };
-        q::ee_combat_capture_read_of(0, q::EE_COMBAT_HR_IMPACT_UNIT, unit, target, i32::from(found != 0), id, firing, 0);
+        q::ee_combat_capture_read_of(
+            0,
+            q::EE_COMBAT_HR_IMPACT_UNIT,
+            unit,
+            target,
+            i32::from(found != 0),
+            id,
+            firing,
+            0,
+        );
     }
     q::ee_combat_host_read_leave(0);
     found
@@ -636,7 +655,17 @@ pub extern "C" fn ee_units_ucn_impact_unit(unit: u64) -> u64 {
 
 fn rest(what: i32, class: u64, a: u64) -> u64 {
     // SAFETY: the noted member's live class and unit
-    unsafe { crate::units::uc_rest::game::ee_units_uc_rest(what, ptr(class), std::ptr::null_mut(), a, 0, 0, std::ptr::null_mut()) as u64 }
+    unsafe {
+        crate::units::uc_rest::game::ee_units_uc_rest(
+            what,
+            ptr(class),
+            std::ptr::null_mut(),
+            a,
+            0,
+            0,
+            std::ptr::null_mut(),
+        ) as u64
+    }
 }
 
 /// `EETurnGatePart(transformation, direction, index)` (note 24): the piece's animation; a turning piece faces its
