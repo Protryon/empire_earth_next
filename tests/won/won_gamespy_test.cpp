@@ -21,7 +21,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
-#include "ee/wonapi/WONGameSpySupport.h"
+#include "won_gamespy.h"
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
