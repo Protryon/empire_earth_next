@@ -590,13 +590,9 @@ static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inI
     switch (inOp) {
     case EE_UNITS_PLAYER_SAVE_UNIT_SAVE: return theUnit->Save(c.mMajorVersion, c.mMinorVersion, *c.mFile);
     // the compound operations' statements (ee_units player_save_split.rs)
-    case EE_UNITS_PLAYER_SAVE_X_CLASS_THERE: return theClass != NULL;
-    case EE_UNITS_PLAYER_SAVE_X_CLASS_TYPE: return (int32_t)theClass->mUnitType;
-    case EE_UNITS_PLAYER_SAVE_X_CLASS_COMPLEX: return theClass->mIsComplex;
     case EE_UNITS_PLAYER_SAVE_X_UNIT_CREATE: io->i = EEPlayerUnitArg(theClass->CreateUnitAtTile(c.mPlayer, -10000, -10000, NULL, 3.1415927f));
         return 0;
     case EE_UNITS_PLAYER_SAVE_X_UNIT_LOAD: return theIt->Load(c.mMajorVersion, c.mMinorVersion, *c.mFile);
-    case EE_UNITS_PLAYER_SAVE_X_UNIT_QUEUED_DELETE: return theIt->mIsQueuedForDelete;
     case EE_UNITS_PLAYER_SAVE_X_UNIT_KILL: c.mPlayer->KillUnit(theIt, true);
         return 0;
     case EE_UNITS_PLAYER_SAVE_X_COMPLEX_NEW: io->i = EEPlayerUnitArg(EEComplexUnit::Create());

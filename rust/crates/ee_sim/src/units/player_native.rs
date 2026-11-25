@@ -359,6 +359,31 @@ pub unsafe fn save(
     use crate::units::player_save_split::*;
     use crate::world::{ClassView, WorldRead};
     let l = crate::world::layout::get()?;
+    // a unit's save or load (LoadUnit, SaveUnit: no player): the class table's and the unit's reads
+    if matches!(
+        op,
+        EE_UNITS_PLAYER_SAVE_X_CLASS_THERE
+            | EE_UNITS_PLAYER_SAVE_X_CLASS_TYPE
+            | EE_UNITS_PLAYER_SAVE_X_CLASS_COMPLEX
+            | EE_UNITS_PLAYER_SAVE_X_UNIT_QUEUED_DELETE
+    ) {
+        // SAFETY: the caller's contract (io.i the class index, or the loaded unit)
+        let t = unsafe { WorldRead::begin() };
+        let class = ClassView::by_index(&t, io.i as u64 as usize);
+        return Some(match op {
+            EE_UNITS_PLAYER_SAVE_X_CLASS_THERE => i32::from(class.is_some()),
+            EE_UNITS_PLAYER_SAVE_X_CLASS_TYPE => class?.unit_type() as i32,
+            EE_UNITS_PLAYER_SAVE_X_CLASS_COMPLEX => {
+                let v: c_long = crate::world_field!(class?.fields(), mIsComplex);
+                v as i32
+            }
+            // SAFETY: the unit the load holds
+            _ => i32::from(unsafe { crate::world::UnitView::of(&t, io.i as u64) }?.queued_for_delete()),
+        });
+    }
+    if p == 0 {
+        return None;
+    }
     // SAFETY (every block): the caller's contract
     unsafe {
         match op {

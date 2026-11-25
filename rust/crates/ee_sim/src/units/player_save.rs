@@ -883,12 +883,12 @@ fn lists_answer(
         EE_UNITS_PLAYER_SAVE_X_PATROL_AT, EE_UNITS_PLAYER_SAVE_X_WONDERS_CLEAR,
         EE_UNITS_PLAYER_SAVE_X_WONDERS_ITEMS_CLEAR,
     };
-    if p == 0 {
-        return None;
-    }
-    // the player's own Rust calls and plain reads (player_native.rs); SAFETY: a live player's save
+    // the player's own Rust calls and plain reads (player_native.rs); SAFETY: a live player's save (p 0: a unit's)
     if let Some(r) = unsafe { crate::units::player_native::save(op, p, index, io) } {
         return Some(r);
+    }
+    if p == 0 {
+        return None;
     }
     let at = |list: u32| player_op(p, list, ListOp::At(index as usize));
     let len = |list: u32| player_op(p, list, ListOp::Len) as i64;
