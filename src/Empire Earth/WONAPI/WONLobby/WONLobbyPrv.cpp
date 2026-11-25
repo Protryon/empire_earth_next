@@ -29,6 +29,7 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLobbyGuard.h"
 #include "rust/won_lobby/lobbyprv.h"
+#include "rust/won_lobby/cfgval.h"
 using namespace WONAPI;
 
 
@@ -103,7 +104,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::AuthClear: p->mAuthContext = NULL; return 0;
     case Op::HashSetClear: p->mHasSetHashFileList = false; return 0;
     case Op::HashListClear: p->mHashFileList.clear(); return 0;
-    case Op::HashListRead: StringParser(reinterpret_cast<const char*>(a)).ReadValue(p->mHashFileList); return 0;
+    case Op::HashListRead: ee_won_cfgval_read_strings(reinterpret_cast<const uint8_t*>(a), &p->mHashFileList); return 0;
     case Op::CommunitySet: p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a); return 0;
     case Op::AuthSetCommunity: p->mAuthContext->SetCommunity(p->mLoginCommunity); return 0;
     case Op::CdKeyCheck: return (p->mConfig->mCDKeyCheck) ? 1 : 0;
