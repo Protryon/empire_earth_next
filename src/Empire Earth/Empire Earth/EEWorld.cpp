@@ -893,8 +893,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::UiSetRandomSeed: gUserInterface->mRandomSeed = (long)a[0];
         break;
-    case O::UiLoadProgress: gUserInterface->SetLoadProgress(f[0]);
-        break;
     case O::DisplayWeatherEffects: return gDisplayWeatherEffects;
     case O::EnvSetEnabled: ((EEEnvironmentManager*)p)->SetEnabled(a[0] != 0);
         break;

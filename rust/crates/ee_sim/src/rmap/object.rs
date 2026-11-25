@@ -138,8 +138,6 @@ pub enum EeRmapCpp {
     // ---- the game (p: unused)
     /// `gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\"` into the sink a0
     ScriptDirectory,
-    /// `PlatFOpen(a0, "r")`'s whole text into the sink a1 -> false when missing
-    ReadText,
     SetUsingCarbon,
     LoadProgress,
     /// `ESDebugOut("%s", a0)`
@@ -152,8 +150,8 @@ pub enum EeRmapCpp {
     FindNext,
     /// the found file's name into the sink a0
     FindName,
-    /// the found file's text into the sink a0 -> false when it does not open
-    FindText,
+    /// the found file's volume, directory and name into the sink a0
+    FindPath,
     /// `gResource->GetString(a1, display)` into the sink a0 -> its result
     ResourceString,
     /// `ESVERIFY_AT(a0 != 0, a1)`
@@ -170,6 +168,33 @@ mod sys {
         // EERandomMap.cpp
         pub fn ee_rmap_cpp(op: EeRmapCpp, p: usize, a: *const i64, f: *const f32) -> i64;
         pub fn ee_rmap_cpp_f(op: EeRmapCpp, p: usize, a: *const i64, f: *const f32) -> f64;
+        // the platform layer's stdio open (src/Platform: the CRT's text mode, the game's paths)
+        pub fn PlatFOpen(path: *const core::ffi::c_char, mode: *const core::ffi::c_char) -> *mut core::ffi::c_void;
+    }
+    pub use libc::{fclose, fread};
+}
+
+/// A file's whole text as the C runtime's text mode reads it (`PlatFOpen(path, "r")`: the original script reader's
+/// fgets) -> None when it is missing. `path` is NUL-terminated.
+fn read_text(path: &[u8]) -> Option<Vec<u8>> {
+    debug_assert_eq!(path.last(), Some(&0));
+    // SAFETY: a NUL-terminated path and mode; the stream is read to its end, then closed
+    unsafe {
+        let stream = sys::PlatFOpen(path.as_ptr().cast(), c"r".as_ptr()) as *mut libc::FILE;
+        if stream.is_null() {
+            return None;
+        }
+        let mut text = Vec::new();
+        let mut buffer = [0u8; 0x1000];
+        loop {
+            let count = sys::fread(buffer.as_mut_ptr().cast(), 1, buffer.len(), stream);
+            if count == 0 {
+                break;
+            }
+            text.extend_from_slice(&buffer[..count]);
+        }
+        sys::fclose(stream);
+        Some(text)
     }
 }
 
@@ -183,6 +208,12 @@ mod sys {
     pub unsafe fn ee_rmap_cpp_f(op: EeRmapCpp, _: usize, _: *const i64, _: *const f32) -> f64 {
         panic!("no C++ in the tests ({op:?})")
     }
+    /// The test binary's open: the file as binary (the test scripts have LF line ends).
+    #[allow(non_snake_case)]
+    pub unsafe fn PlatFOpen(path: *const core::ffi::c_char, _: *const core::ffi::c_char) -> *mut core::ffi::c_void {
+        unsafe { libc::fopen(path, c"rb".as_ptr()).cast() }
+    }
+    pub use libc::{fclose, fread};
 }
 
 fn args(a: &[i64], f: &[f32]) -> ([i64; 6], [f32; 4]) {
@@ -688,10 +719,7 @@ impl ScriptHost for ReadHost<'_> {
         let mut path = self.directory.to_vec();
         path.extend_from_slice(name);
         path.extend_from_slice(b".rmv\0");
-        let mut sink = EeRmapScriptBytes(Vec::new());
-        let found =
-            h(O::ReadText, 0, &[path.as_ptr() as usize as i64, &mut sink as *mut EeRmapScriptBytes as usize as i64]);
-        (found != 0).then_some(sink.0)
+        read_text(&path)
     }
     fn draw_long(&mut self, minimum: i32, maximum: i32) -> i32 {
         self.random_integers.generate_int(minimum, maximum)
@@ -1148,10 +1176,11 @@ pub fn initialize_generators() {
     let find = h(O::FindNew, 0, &[]) as usize;
     if h(O::FindFirst, find, &[]) == 0 {
         loop {
-            let mut sink = EeRmapScriptBytes(Vec::new());
-            if h(O::FindText, find, &[&mut sink as *mut EeRmapScriptBytes as usize as i64]) != 0 {
+            let mut path = text(O::FindPath, find, &[]);
+            path.push(0);
+            if let Some(script) = read_text(&path) {
                 let file = text(O::FindName, find, &[]);
-                if let Some(g) = script_generator(&file, &sink.0) {
+                if let Some(g) = script_generator(&file, &script) {
                     // the valid plug-ins' find: a C string compare with the linked generator's name
                     if g.module.split(|&c| c == 0).next() == Some(&b"Default"[..]) {
                         let display = match g.string_id {

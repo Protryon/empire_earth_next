@@ -132,12 +132,12 @@ extern "C" fn ru_units_effects(_: *mut c_void) {
 pub extern "C" fn ee_gamecpp_ru_draw(labels: bool) {
     let frame = lists_view();
     // SAFETY: the address of gU4E9330 (a float)
-    let grid_phase = unsafe { *(hp(O::RoGridPhase, 0, &[]) as *const f32) };
+    let grid_phase = super::globals::get!(gU4E9330);
     let scene = EeGfxUnitsScene {
         context: std::ptr::null_mut(),
         viewport: hp(O::RuMainViewport, 0, &[]) as *const _,
         orthographic: h(O::RoOrthographic, 0, &[]) != 0,
-        cinematic: h(O::RuCinematic, 0, &[]) != 0,
+        cinematic: super::ro_views::snapshot().in_cinematic,
         collision_spheres: h(O::RuCollisionSpheres, 0, &[]) != 0,
         interpolate_frames: h(O::RuInterpolateFrames, 0, &[]) != 0,
         model_detail: h(O::RuModelDetail, 0, &[]) as i32,
@@ -178,7 +178,7 @@ pub extern "C" fn ee_gamecpp_ru_draw(labels: bool) {
 /// EEROUnits::FrameDone: the unit labels (not in cinematics), then the effects' pass 3.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_ru_frame_done() {
-    if h(O::RuCinematic, 0, &[]) == 0 {
+    if !super::ro_views::snapshot().in_cinematic {
         ee_gamecpp_ru_draw(true);
     }
     // SAFETY: the graphics thread's frame

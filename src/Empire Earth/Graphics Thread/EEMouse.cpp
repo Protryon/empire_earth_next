@@ -41,4 +41,4 @@ long EEMouse::Release()
     return ee_gamecpp_mo_release(this);
 }
 
-// (the mouse's C++ calls: EERenderSnapshot.cpp's EERoViewsOp)
+// (the pointer loads and the frame's calls are Rust's: ee_game rts mouse.rs)

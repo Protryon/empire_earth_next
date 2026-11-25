@@ -166,7 +166,6 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // EEWorld.cpp
 extern bool sLoadingScenario;                                     // EEGameStateLoader.cpp
 std::vector<EECalamity*>* EEActiveCalamities();                   // EEPCalamityHelper.cpp
-void DeleteSaveTextTwin(FSFileSpec& inFile);                      // EESaveLoad.cpp
 void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad.cpp
 #define PWH ((EEPWorldHelper*)p)
 #define FILE_ (*(FSFile*)p)
@@ -613,8 +612,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSaveTextName: *(UString*)a[0] = GetSaveTextName(SPEC->GetFile(), a[1] != 0);
         break;
-    case O::PsDeleteTextTwin: DeleteSaveTextTwin(*SPEC);
-        break;
     case O::PsReportSaved: EEReportLoadFailure(UString("Game saved.  "), false, NULL);
         break;
     case O::PsReportSaveError: EEReportLoadFailure(UString("Error saving game.  Please report this bug."), false, NULL);
@@ -629,8 +626,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsGameState: return P64(&gGameState);
     case O::PsValidateIntoMessage: return EEValidateSaveGameFile(FILE_, gLoadSaveErrorMessage);
-    case O::PsUiResumeGraphics: gUserInterface->ResumeGraphics();
-        break;
     case O::PsMapApplyVertexColors: gWorld.GetMap()->ApplyVertexColors();
         break;
     case O::PsSetMasterVolume: gSoundManager->SetMasterVolume(f[0]);
@@ -724,8 +719,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsSprintfText: sprintf(WSTR, *(UWideString*)a[0], (const char*)*(UWideString*)a[1]);
         break;
     case O::PsSprintfTwoNumbers: sprintf(WSTR, *(UWideString*)a[0], (size_t)a[1], (unsigned long)a[2]);
-        break;
-    case O::PsLoadProgress: gUserInterface->SetLoadProgress(f[0]);
         break;
     default: return EECommandLineOp(inOp, p, a, f);
     }

@@ -35,7 +35,6 @@
 #include "ee/EERenderLists.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEEffectMesh.h"        // the table's store_mesh
-#include "ee/EERenderSnapshot.h"     // gRenderSnapshot (the Rust draws' camera)
 #include "ee/EEUnitPicker.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDoppelganger.h"
@@ -68,7 +67,7 @@ EERenderLists EERenderLists::sInstance;
 
 // 0x4e9348 (17 colours) and its init chain: EEInitialiseScene's key frames, ee_gfx scene.rs initial_tables
 GEColor gU4E9338(1.0f, 1.0f, 1.0f);
-float gU4E9330;                            // 0x4e9330 (no init chain)
+// (0x4e9330, the grid's phase: gU4E9330, gamecpp globals.rs)
 // the three per-time-of-day tables (0x4e92ec, 0x4e92a8, 0x4e9264; 17 entries): ee_gfx scene.rs initial_tables
 // 0x4413ac: EEInitialiseScene's 0.549f is a literal (__real COMDAT; the fst chain of a literal, not a static const reload)
 // Fn10C036's constants (.rdata 0x441334..0x4413c4: the view band, the clocks' rates, the moon's hours, the fill share):
@@ -97,13 +96,8 @@ std::vector<GETexture*> gU4E8EF0;
 // letterbox (0x4be370 its direction, 0x4be378 its start, 0x52907c.. its rate and time, 0x529088 the bars to clear
 // again): ee_gfx scene.rs (RUST_PLAN R4.4), which steps them; the C++ keeps the storage
 static EeGfxSceneFade sSceneFade = {1.0f, 1.0f, 0, 0.0f, 0.0f, 1, 1.0f, 0.0f, 0.0f, false};
-float gF4BE374 = 1.0f;                     // 0x4be374 the letterbox's zoom (EEScenarioManager.cpp reads it)
-// the unit's other .bss globals (declared in ee/EERenderLists.h, ee/EEGraphics.h, ee/EmpireEarth.h; their address
-// neighbours and references are this unit's) (provisional names)
-bool gB529065;
-bool gB529066;
-bool gCameraFollowing;
-bool gB529068;
+// the letterbox's zoom gF4BE374 (0x4be374) and the unit's other .bss globals gB529065, gB529066, gCameraFollowing,
+// gB529068 (declared in ee/EEGraphics.h, ee/EmpireEarth.h): gamecpp globals.rs
 
 // Creates a game render object
 EERenderObject::EERenderObject()
@@ -182,15 +176,9 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     switch (inOp) {
     // the render globals
     case O::RoSceneFade: return RO_P64(&sSceneFade);
-    case O::RoGridPhase: return RO_P64(&gU4E9330);
-    case O::RoLetterboxZoom: return RO_P64(&gF4BE374);
     case O::RoAmbientColor: return RO_P64(&gU4E9338);
     case O::RoFogColor: return RO_P64(&gU4E9220);
     case O::RoSunDirection: return RO_P64(&gU4E9210);
-    case O::RoFlag529065: return RO_P64(&gB529065);
-    case O::RoFlag529066: return RO_P64(&gB529066);
-    case O::RoFlag529068: return RO_P64(&gB529068);
-    case O::RoCameraFollowing: return RO_P64(&gCameraFollowing);
     case O::RoWorldTransformation: return RO_P64(&gWorld.mTransformation);
     case O::RoWindDirection: return RO_P64(&gWorld.mWindDirection);
     case O::RoOrthographic: return gOrthographicView;
@@ -270,9 +258,7 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoLinesBack: return RO_P64(&gU529050[gU529050.size() - 1]);
     case O::RoLineSetWidth: RO_LINE->mWidth = gU4E9330;
         break;
-    case O::RoLineSetTexture: RO_LINE->mTexture = gAreaEffectTexture;
-        break;
-    case O::RoAreaEffectTextureReference: gAreaEffectTexture->Reference();
+    case O::RoLineSetTexture: RO_LINE->mTexture = (GETexture*)a[0];
         break;
     case O::RoLinePointsResize: RO_LINE->mPoints.resize((size_t)a[0], std::pair<GE3DPoint, float>());
         break;
@@ -395,30 +381,9 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoCliffTexturesCount: return (int64_t)gU4E8EF0.size();
     case O::RoCliffTexturesPush: gU4E8EF0.push_back(RO_TEX);
         break;
-    case O::RoUpdateVisibleTerrain: gWorld.mMap->mTerrainMesh.UpdateVisibleTerrain(gWorld.mTransformation, *(GEViewport*)p, 2, 1, 3, gOrthographicView);
-        break;
-    case O::RoTransformToCamera: gRasterizer->TransformToCamera(gWorld.mMap->mTerrainMesh, *(GEViewport*)p, f[0], gCameraFollowing, gOrthographicView);
-        break;
-    case O::RoRastViewport: return RO_P64(&gRasterizer->GetViewport(gScreenIndex));
-    case O::RoRastLightMesh: gRasterizer->Light(gWorld.mMap->mTerrainMesh, gScreenIndex);
-        break;
     case O::RoShowAllBackgrounds: gUIManager->GetMainGameForm()->ShowAllBackgrounds();
         break;
     case O::RoHideAllBackgrounds: gUIManager->GetMainGameForm()->HideAllBackgrounds();
-        break;
-    case O::RoViewportSetCamera: gViewport.SetCamera(gWorld.mTransformation);
-        break;
-    case O::RoRastSetViewport: gRasterizer->SetViewport(gViewport, gScreenIndex);
-        break;
-    case O::RoCopyViewport: gU4E8F08 = gViewport;
-        break;
-    case O::RoMainViewportDepthRange: gU4E8F08.SetDepthRange(f[0], f[1]);
-        break;
-    case O::RoRastSetMainViewport: gRasterizer->SetViewport(gU4E8F08, gScreenIndex);
-        break;
-    case O::RoMainViewportSetRearClipping: gU4E8F08.SetRearClippingDistance(f[0]);
-        break;
-    case O::RoRastViewRectangle: *(GERectangle*)a[0] = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
         break;
     case O::RoScreenPoint: GetScreenPoint(*(const GE3DPoint*)a[0], *(GE2DPoint*)a[1]);
         break;
@@ -479,8 +444,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     // round 11, lane A: the raster table and the opacity host (gamecpp ro_raster.rs)
     case O::RrModelDraw: return (int32_t)gRasterizer->Draw((GEModel*)p, gScreenIndex, f[0], gOrthographicView);
-    case O::RrCamera: *(GETransformation*)a[0] = gRenderSnapshot.mCamera;
-        break;
     case O::RrCreateModel: return RO_P64(gModelManager->CreateModel((uint32_t)a[0], (uint32_t)a[1], 1, 0, 1, (uint32_t)a[2], UString((const char*)a[3]), (uint32_t)a[4]));
     case O::RrCreateSubModel: return RO_P64(gModelManager->CreateSubModel((uint32_t)a[0], (uint32_t)a[1], 1, 0, 1, 0, 0, 0, (GEModel*)a[2]));
     case O::RrDrawSky: return (int32_t)gRasterizer->DrawSky((GEModel*)p, gScreenIndex, 1.0f, a[0] != 0);
@@ -508,8 +471,6 @@ double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     typedef EeGameCpp O;
     switch (inOp) {
     case O::RoEnvironmentWind: return gWorld.mEnvironmentManager->mWind;
-    case O::RoViewportRearClipping: return gViewport.GetRearClippingDistance();
-    case O::RoMainViewportRearClipping: return gU4E8F08.GetRearClippingDistance();
     case O::RoZoomLock: return gZoomLock;
     case O::RoSpaceTurretHeight: return gSpaceTurretHeight;
     case O::RoSpaceStationHeight: return gSpaceStationHeight;
@@ -523,8 +484,6 @@ double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoGhostScale: return RO_GH->GetScale();
     case O::RoCxAnimationFraction: return ((EEComplexUnit*)p)->mAnimationFraction;
     // round 11, lane A (gamecpp ro_raster.rs)
-    case O::RrCameraYaw: return gRenderSnapshot.mCameraYaw;
-    case O::RrCameraPitch: return gRenderSnapshot.mCameraPitch;
     case O::RrModelRadius: return RO_UN->GetModel()->mModels[a[0]]->GetBoundingRadius((unsigned long)a[1]);
     case O::RrPhysicalScale: return ((EEComplexUnit*)p)->mPhysicalModel.GetScale();
     default: return EEPickerOpF(inOp, p, a, f);

@@ -116,8 +116,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Empire Earth/EETestFixture.cpp",
                        # the C++ calls and members of the game's bodies in Rust (ee_game gamecpp; game core round 7)
                        "Empire Earth/Empire Earth/EEGameOps.cpp",
-                       # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
-                       "Empire Earth/Graphics Thread/EERenderSnapshot.cpp",
                        # TEST ONLY: RFIL, the render fill's capture (EE_RENDER_CAPTURE; ee/EERenderCapture.h, tools/rfil.py)
                        "Empire Earth/Graphics Thread/EERenderCapture.cpp",
                        # the host of the screens that are Rust's whole: their event class and toolkit and game calls

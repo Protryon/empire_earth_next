@@ -46,15 +46,6 @@ fn solve_for_z(line: &Ge3DLine, z: f32, point: &mut Ge3DPoint) {
     }
 }
 
-fn flag(op: O) -> *mut bool {
-    hp(op, 0, &[]) as *mut bool
-}
-
-fn set_flag(op: O, value: bool) {
-    // SAFETY: the address of a bool global (RO flags)
-    unsafe { *flag(op) = value };
-}
-
 fn world_transformation() -> GeTransformation {
     // SAFETY: the address of gWorld.mTransformation
     unsafe { *(hp(O::RoWorldTransformation, 0, &[]) as *const GeTransformation) }
@@ -146,10 +137,10 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
     let mut row: c_long = 0;
     let mut column: c_long = 0;
     // SAFETY: gB529065
-    let saved_b529065 = unsafe { *flag(O::RoFlag529065) };
+    let saved_b529065 = super::globals::get!(gB529065);
 
     h(O::WorldReadLock, 0, &[]);
-    set_flag(O::RoFlag529065, true);
+    super::globals::set!(gB529065, true);
     // SAFETY: the capture's mWidth (read and written only here, between C++ calls)
     if unsafe { *width_slot } == -1 {
         h(O::RtRender, g, &[]);
@@ -279,9 +270,9 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
         let column_step = Ge3DPoint { x: view_width as f32, y: 0.0, z: 0.0 };
         loop {
             loop {
-                set_flag(O::RoFlag529066, false);
-                set_flag(O::RoCameraFollowing, false);
-                set_flag(O::RoFlag529068, false);
+                super::globals::set!(gB529066, false);
+                super::globals::set!(gCameraFollowing, false);
+                super::globals::set!(gB529068, false);
                 h(O::RtRender, g, &[]);
                 if destination.bottom > description.mHeight as f32 {
                     destination.bottom = description.mHeight as f32;
@@ -343,10 +334,10 @@ pub extern "C" fn ee_gamecpp_gfx_render_to(g: *mut c_void, capture: *mut c_void)
         h(O::CameraSetLocation, 0, &[cptr(&saved_location), 0, 1]);
         camera_changed();
     }
-    set_flag(O::RoFlag529066, false);
-    set_flag(O::RoCameraFollowing, false);
-    set_flag(O::RoFlag529068, false);
-    set_flag(O::RoFlag529065, saved_b529065);
+    super::globals::set!(gB529066, false);
+    super::globals::set!(gCameraFollowing, false);
+    super::globals::set!(gB529068, false);
+    super::globals::set!(gB529065, saved_b529065);
     h(O::WorldReadUnlock, 0, &[]);
 }
 

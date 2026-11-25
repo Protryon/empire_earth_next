@@ -9,9 +9,14 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::GeRectangle;
+use ee_render::dx7::draw_ffi::{
+    ee_dx7r_draw_grid_lines, ee_dx7r_draw_terrain, ee_dx7r_draw_terrain_grid, ee_dx7r_draw_terrain_highlight,
+    ee_dx7r_draw_water, ee_dx7r_light_terrain, ee_dx7r_transform_to_camera,
+};
 use ee_render::dx7::rastobj::{
     ee_dx7r_card_flag, ee_dx7r_clear, ee_dx7r_remove_all_lights, ee_dx7r_set, ee_dx7r_set_blending, ee_dx7r_set_color,
-    ee_dx7r_set_culling, ee_dx7r_set_float, ee_dx7r_set_fog_range, EeDx7RastColor, EeDx7RastSet, EeDx7Rasterizer,
+    ee_dx7r_set_culling, ee_dx7r_set_float, ee_dx7r_set_fog_range, ee_dx7r_set_viewport, EeDx7RastColor, EeDx7RastSet,
+    EeDx7Rasterizer,
 };
 use ee_render::ge::cppobj;
 use ee_render::ge::rastobj::{
@@ -21,6 +26,7 @@ pub(crate) use ee_render::ge::texobj_tex::EeGeTexStageField as TexStage;
 use ee_render::ge::texobj_tex::{ee_ge_tex_set_stage, ee_ge_tex_set_stage_bias, EeGeTexture};
 use ee_render::ge::tmobj::{ee_ge_tm_get, ee_ge_tm_mesh_z, ee_ge_tm_visible_row_parts, EeGeTerrainMesh, EeGeTmVal};
 use ee_render::gestate::{GEBlendFactor, GECompareFunction, GECullMode, GEZBufferMode};
+use ee_render::geval::viewport::GeViewport;
 
 use super::{h, hp, O};
 
@@ -160,6 +166,120 @@ impl Rast {
         // SAFETY: the live rasterizer
         unsafe { ee_dx7r_card_flag(self.dx7, self.screen, true) }
     }
+    /// `Light(mesh)`: the visible terrain's vertices lit.
+    pub(crate) fn light_terrain(self, mesh: *const EeGeTerrainMesh) {
+        // SAFETY: the live rasterizer and a live map's mesh
+        unsafe { ee_dx7r_light_terrain(self.dx7, self.screen, mesh.cast_mut()) }
+    }
+    /// `Draw(mesh, orthographic)`: the visible terrain.
+    pub(crate) fn draw_terrain(self, mesh: *const EeGeTerrainMesh, orthographic: bool) {
+        // SAFETY: the live rasterizer and a live map's mesh
+        unsafe { ee_dx7r_draw_terrain(self.dx7, self.screen, mesh.cast_mut(), orthographic) };
+    }
+    /// `DrawWater(mesh, orthographic)`.
+    pub(crate) fn draw_water(self, mesh: *const EeGeTerrainMesh, orthographic: bool) {
+        // SAFETY: the live rasterizer and a live map's mesh
+        unsafe { ee_dx7r_draw_water(self.dx7, self.screen, mesh.cast_mut(), orthographic) };
+    }
+    /// `DrawTerrainGrid(mesh, orthographic)`.
+    pub(crate) fn draw_terrain_grid(self, mesh: *const EeGeTerrainMesh, orthographic: bool) {
+        // SAFETY: the live rasterizer and a live map's mesh
+        unsafe { ee_dx7r_draw_terrain_grid(self.dx7, self.screen, mesh.cast_mut(), orthographic) };
+    }
+    /// `DrawTerrainHighlight(mesh, rectangle, orthographic, colour, opacity)`: `rectangle` is a `U2DRectangle<long>`'s
+    /// members (bottom, left, right, top).
+    pub(crate) fn draw_terrain_highlight(
+        self,
+        mesh: *const EeGeTerrainMesh,
+        rectangle: &[c_long; 4],
+        color: &[f32; 3],
+        opacity: f32,
+        orthographic: bool,
+    ) {
+        // SAFETY: the live rasterizer, a live map's mesh; the rectangle and colour outlive the call
+        unsafe {
+            ee_dx7r_draw_terrain_highlight(
+                self.dx7,
+                self.screen,
+                mesh.cast_mut(),
+                rectangle.as_ptr(),
+                color.as_ptr(),
+                opacity,
+                orthographic,
+            )
+        };
+    }
+    /// `DrawGridLines(mesh, runs, texture, width, orthographic)`: each run is four longs.
+    pub(crate) fn draw_grid_lines(
+        self,
+        mesh: *const EeGeTerrainMesh,
+        runs: &[[c_long; 4]],
+        texture: usize,
+        width: f32,
+        orthographic: bool,
+    ) {
+        // SAFETY: the live rasterizer, a live map's mesh; the runs outlive the call
+        unsafe {
+            ee_dx7r_draw_grid_lines(
+                self.dx7,
+                self.screen,
+                mesh.cast_mut(),
+                runs.as_ptr(),
+                runs.len(),
+                texture as *mut c_void,
+                width,
+                orthographic,
+            )
+        };
+    }
+    /// `TransformToCamera(mesh, viewport, scale, water_only, orthographic)`.
+    pub(crate) fn transform_to_camera(
+        self,
+        mesh: *const EeGeTerrainMesh,
+        viewport: *const GeViewport,
+        scale: f32,
+        water_only: bool,
+        orthographic: bool,
+    ) {
+        // SAFETY: the live rasterizer, a live map's mesh and viewport
+        unsafe {
+            ee_dx7r_transform_to_camera(self.dx7, mesh.cast_mut(), viewport.cast(), scale, water_only, orthographic)
+        }
+    }
+    /// `SetViewport(viewport)`.
+    pub(crate) fn set_viewport(self, viewport: *const GeViewport) {
+        // SAFETY: the live rasterizer and viewport
+        unsafe { ee_dx7r_set_viewport(self.dx7, viewport.cast(), self.screen) }
+    }
+    /// `&GetViewport()`: the screen's viewport.
+    pub(crate) fn viewport(self) -> *mut GeViewport {
+        // SAFETY: the live rasterizer's screen record
+        unsafe { &mut (*ee_ge_rast_screen(self.ge, self.screen)).viewport }
+    }
+}
+
+// ---- the viewports (GEViewport's inline members over its Rust record)
+
+/// `&gViewport`: the game's viewport (its storage is Rust's: global_objects.rs).
+pub(crate) fn game_viewport() -> *mut GeViewport {
+    std::ptr::addr_of_mut!(super::global_objects::gViewport).cast()
+}
+
+/// `&gU4E8F08`: the frame's copy of the game's viewport (the units', the picker's and the command units').
+pub(crate) fn frame_viewport() -> *mut GeViewport {
+    hp(O::RuMainViewport, 0, &[]) as *mut GeViewport
+}
+
+/// `viewport.GetViewRectangle()`.
+pub(crate) fn view_rectangle(viewport: *const GeViewport) -> GeRectangle {
+    // SAFETY: a live viewport
+    unsafe { (*viewport).view_rectangle }
+}
+
+/// `viewport.GetRearClippingDistance()`.
+pub(crate) fn rear_clipping(viewport: *const GeViewport) -> f32 {
+    // SAFETY: a live viewport
+    unsafe { (*viewport).rear_clipping_distance }
 }
 
 // ---- a texture's stage (GETexture's inline setters over its Rust object; the stage argument is unused)

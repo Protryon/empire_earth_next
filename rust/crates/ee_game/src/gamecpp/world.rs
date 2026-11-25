@@ -226,7 +226,7 @@ fn remove_from_teams(w: P, id: c_ulong) {
 }
 
 fn progress(step: usize) {
-    hf(O::UiLoadProgress, 0, &[], &[PROGRESS[step - 16]]);
+    crate::screens::ui_objects::ui_set_load_progress(PROGRESS[step - 16]);
 }
 
 fn load_foundations(pl: P) {
@@ -708,7 +708,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     }
     h(O::WStatisticsReset, w, &[]);
     h(O::StReadLock, st, &[]);
-    hf(O::UiLoadProgress, 0, &[], &[0.5]);
+    crate::screens::ui_objects::ui_set_load_progress(0.5);
     h(O::WCopyGameOptions, w, &[]);
     h(O::SetSightUpdates, 0, &[0]);
     h(O::UiSetRandomSeed, 0, &[*sm::<c_long>(O::StRandomSeed, st) as i64]);

@@ -25,7 +25,6 @@ public:
     long mGridMode;                         // +0x04 (= 0 in the ctor; non-zero: Virtual08 draws the terrain grid) (provisional name)
 };
 
-extern GETexture* gAreaEffectTexture;       // 0x5293f4 (named by its assert)
-extern GETexture* gCircleAreaEffectTexture; // 0x5293f8 (named by its assert)
+// (the area-effect textures 0x5293f4 and 0x5293f8 are Rust's: gamecpp ro_views.rs)
 
 #endif
