@@ -559,6 +559,16 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 (PL_SEA_MIN) not checked; the random draw uses a deterministic LCG seeded from memory.plan_seed/
                 view.time instead of rnd_game32. Missing/ENGINE: persist.c saved-game plan/returns blocks, the
                 [autotest] variant switches, the # plan: logs, game_seed draw. The consumers still use 1.0.
+  personas.lua  the persona table (base/persona.c's traits, plans.c's leanings; port forward 7a17182): the port's
+                built-in six, and the retail mod's own six personalities (config/personalities/*.eeai at 7a17182,
+                vendored in personalities/ with their README and a NOTICE) as the source when tools/personas.py has
+                generated personas_data.lua: name, traits, leanings, character and the lines of the nine situations
+                voice.lua says. Ported: the traits/leanings/character and each situation's unconditional fallback
+                line. Not ported: the .eeai expression evaluation (conditions/chances - the port says the
+                personality's plain line, not the situation-specific one), the {placeholders} (stripped, so a line
+                can read bare), the talk trait and the other situations, title/civilization/colour (engine-side),
+                style and priorities (the experimental ai_style has no port), the mod/computer.eeai layer, and
+                upstream's per-game assignment without repeats (M.pick stays the port's deterministic pick).
   returns.c     PORTED -> returns.lua (port forward 7a17182; strategy_plans, off until the consumers are wired).
                 Ported: 8 kinds, rt_kind classification, died-event tracking (killer/dead/value), per-kind ring
                 with RT_HALF decay, field refresh, worth/worth_of clamped 0.2..2.0 with prior. Deviations: memory

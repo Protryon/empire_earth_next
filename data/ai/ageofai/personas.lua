@@ -8,11 +8,20 @@
 -- "personalities only talk and negotiate" - here they change the plan's lever, which is the port's equivalent).
 -- The traits are handed to diplo.lua (its TRAIT table) regardless of the style switch, so the diplomacy model
 -- always varies by persona.
+--
+-- The mod's own personalities (config/personalities/*.eeai, vendored unchanged in personalities/, turned into
+-- ageofai.personas_data by tools/personas.py) are the persona source when that generated file is there: their
+-- traits, leanings, character and lines. The table below is then the fallback - for an id the file does not have,
+-- and for every field or situation it leaves out. settings.persona names an id here or there; "random" picks among
+-- all of them (the built-in ids first, then the mod's, in the generated file's order).
 local S = require("ageofai.settings")
 local M = {}
 
 M.DEFAULT_TRAITS = {aggression = 50, loyalty = 50, pride = 50, greed = 50, forgiveness = 50, caution = 50}
 M.DEFAULT_LEANINGS = {air = 50, navy = 50, anti_air = 50, pressure = 50, defences = 50, spread = 50}
+
+-- the six traits in the .eeai files'/persona.c's order (aggression, loyalty, pride, greed, forgiveness, caution)
+M.TRAIT_KEYS = {"aggression", "loyalty", "pride", "greed", "forgiveness", "caution"}
 
 -- six leanings in the order plans.lua stores them (LN_AIR, LN_NAVY, LN_ANTI_AIR, LN_PRESSURE, LN_DEF, LN_SPREAD)
 M.LEAN_KEYS = {"air", "navy", "anti_air", "pressure", "defences", "spread"}
@@ -100,6 +109,87 @@ M.LINES = {
         greeting = {"I will rule the waves and the coast.", "Let us see who can swim."},
     },
 }
+
+-- THE MOD'S PERSONALITIES (upstream config/personalities, vendored in personalities/): the six the retail mod
+-- ships - Hedda the builder, Temur the conqueror, Livia the schemer, Benedict the merchant, Brann the brawler,
+-- Gunther the knight. tools/personas.py turns their .eeai files into ageofai.personas_data (the numbers, the
+-- character text and the lines of each situation; the .eeai conditions are not evaluated there). Loaded once, if
+-- the generated file is there; an id, a field or a situation it leaves out falls back to the table above.
+local function persona_add(id, p)
+    local e = M.PERSONAS[id]
+    if e == nil then
+        e = {}
+        M.PERSONAS[id] = e
+        M.ORDER[#M.ORDER + 1] = id      -- "random" picks among the mod's personalities too
+    end
+    e.traits = e.traits or {}
+    e.leanings = e.leanings or {}
+    local lines = M.LINES[id] or {}
+    M.LINES[id] = lines
+    e.lines = lines
+    e.name = e.name or id
+    if type(p.name) == "string" and p.name ~= "" then
+        e.name = p.name
+    end
+    if type(p.character) == "string" and p.character ~= "" then
+        e.character = p.character      -- for voice.lua (upstream voice/prompt: who this is, in a few words)
+    end
+    if type(p.traits) == "table" then
+        for i = 1, #M.TRAIT_KEYS do
+            local v = p.traits[M.TRAIT_KEYS[i]]
+            if type(v) == "number" then
+                e.traits[M.TRAIT_KEYS[i]] = v
+            end
+        end
+    end
+    if type(p.leanings) == "table" then
+        for i = 1, #M.LEAN_KEYS do
+            local v = p.leanings[M.LEAN_KEYS[i]]
+            if type(v) == "number" then
+                e.leanings[M.LEAN_KEYS[i]] = v
+            end
+        end
+    end
+    if type(p.lines) == "table" then
+        for situation, list in pairs(p.lines) do
+            if type(situation) == "string" and type(list) == "table" and #list > 0 then
+                lines[situation] = list
+            end
+        end
+    end
+end
+
+-- the generated table in its own order (the tool sorts it): data.list first, then anything a hand edit added
+local function personas_load()
+    local ok, data = pcall(require, "ageofai.personas_data")
+    if not ok or type(data) ~= "table" or type(data.personas) ~= "table" then
+        return
+    end
+    local ids, seen = {}, {}
+    local listed = type(data.list) == "table" and data.list or {}
+    for i = 1, #listed do
+        local id = listed[i]
+        if type(id) == "string" and type(data.personas[id]) == "table" and not seen[id] then
+            seen[id] = true
+            ids[#ids + 1] = id
+        end
+    end
+    local rest = {}
+    for id, p in pairs(data.personas) do
+        if type(id) == "string" and type(p) == "table" and not seen[id] then
+            rest[#rest + 1] = id
+        end
+    end
+    table.sort(rest)
+    for i = 1, #rest do
+        ids[#ids + 1] = rest[i]
+    end
+    for i = 1, #ids do
+        persona_add(ids[i], data.personas[ids[i]])
+    end
+end
+
+personas_load()
 
 function M.lines(id, situation)
     local p = M.LINES[id] or M.LINES.balanced

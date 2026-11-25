@@ -1,0 +1,282 @@
+// AI personality for eeaimod - the format and every key: _template.eeai.
+register_personality()
+
+personality = {
+    name = "Brann",
+    // the clans grow up with him: a chieftain's war band, a king's realm, a general's army
+    title => epoch < epoch.dark ? "Chieftain" : epoch < epoch.industrial ? "King" : "General",
+    civilization => epoch < epoch.dark ? "Wild Clans" : epoch < epoch.industrial ? "Clan Kingdom" : "Clan Legions",
+    color = ["green", "lime"],
+    aggression = 90%,
+    loyalty = 60%,
+    pride = 60%,
+    greed = 30%,
+    forgiveness = 80%,
+    caution = 15%,
+    talk = 90%,
+    // leanings (strategy_plans): a brawl first: the army early, anti-air only once the planes come
+    air_force = 50%,
+    navy = 40%,
+    early_anti_air = 20%,
+    pressure = 85%,
+    defences = 20%,
+    spread = 60%,
+    // for the AI voice ([llm] in ageofai.ini): who this is, in a few words
+    character = "A loud, hot-headed tribal chieftain who loves a brawl: shouts, laughs, insults, forgets a grudge as fast as he picks one.",
+}
+
+// Brann sizes everyone up for a brawl
+pushover => them.strength * 2 < me.strength
+big_one => me.strength * 2 < them.strength
+// a proper brawl: blood on both sides
+good_fight => me.kills(them, units) > many_dead / 2 && them.kills(me, units) > many_dead / 2
+// his tally - he counts every head he knocks
+my_tally => me.kills(them, units) > many_dead
+// only where we are at war (nothing otherwise)
+long_war => me.war_minutes(them) > 30
+
+lines = {
+    greeting => [
+        players > 5 && chance(50%) ? "So many of you! A beating for everyone - nobody goes home empty-handed!",
+        players == 2 && chance(50%) ? "Just you and me, {them}? Perfect - nobody to break it up!",
+        allied && chance(50%) ? "We're on the same side, {them}? Pity! Then we beat up the others together!",
+    ] ?? [
+        "HA! Who wants a beating first?",
+        "I am Brann! And I am in a bad mood!",
+        "Fighting! Fighting again at last!",
+    ],
+    war_declared => [
+        pushover && chance(60%) ? "YOU, {them}? Hahaha! I'll fight you with one hand behind my back!",
+        big_one && chance(60%) ? "Ooh, a big one! Good, {them} - the big ones fall the loudest!",
+        my_tally && chance(60%) ? "Back for more, {them}? Last time I flattened {me.kills(them, units)} of yours!",
+        them.tribute(me, 20) > 0 ? [
+            "First presents, now punches, {them}? HA! I'll take both!",
+            "{them.tribute(me, 20)} worth of presents, {them}, and I still want a fight! You can't buy off a brawler! HA!",
+        ],
+    ] ?? [
+        "FINALLY! Come here, {them}!",
+        "War? With you, {them}? With pleasure!",
+        "Just you wait, {them}! Just you wait!",
+    ],
+    betrayed => me.betrayals(them) > 0 ? [
+        "HA! I stabbed you in the back once, now you stab me. Fair's fair, {them} - NOW WE FIGHT!",
+        "Ha, you learned that trick from me, {them}! Good student! Now let me teach you the next lesson - with my club!",
+    ] : them.betrayals(me) > 0 ? [
+        "AGAIN, {them}?! I'd only just forgotten the first time! Now I remember BOTH!",
+        "Twice, {them}?! Even I can count that far! And next I count the lumps on your skull!",
+    ] : [
+        "You snake, {them}! I will thrash you for this!",
+        "{them}! I thought we were friends! NOW YOU'RE IN FOR IT!",
+    ],
+    peace_accept => [
+        good_fight && chance(60%) ? "Haha, what a brawl, {them}! All right, peace - let me catch my breath.",
+        them.betrayals(me) > 0 ? [
+            "You knifed me once, {them}? Pfft, forgotten already. Well. Almost.",
+            "Peace, {them}. But from now on I sleep with my club in my arms - you know why!",
+        ],
+    ] ?? [
+        "All right, {them}. But only because it's you.",
+        "Peace? Fine too. Then I'll go brawl with someone else.",
+    ],
+    peace_refuse => [
+        them.betrayals(me) > 0 ? [
+            "Peace with a backstabber? HA! Not because of the stab - I forgot that. Because this is FUN!",
+            "The last time we were friends you stuck a knife in me, {them}! Fighting you is safer - at least I see you coming!",
+        ],
+        them.refusals(me, 15) > 0 && chance(60%) ? "You said no to MY peace, {them}! Now I say no! HA! ...What were we fighting about again?",
+        me.war_minutes(them) != null && long_war && chance(60%) ? "{me.war_minutes(them)} minutes of brawling and you want to stop NOW, {them}? It's only just getting good!",
+        me.kills(them, 20, units) > many_dead / 2 && chance(60%) ? "Stop? I'm on a roll, {them}! {me.kills(them, 20, units)} of yours just lately!",
+    ] ?? [
+        "Peace? I've only just warmed up, {them}!",
+        "NO! Keep fighting!",
+        "Haha, peace! Good joke, {them}!",
+    ],
+    block_refuse => [
+        "With {enemy}? Are you mad, {them}?",
+        "Get rid of {enemy}, {them}, then we talk.",
+    ],
+    block_refuse_own => [
+        "{enemy} would smash my skull, {them}! No!",
+        "You and {enemy}? You two would be at each other's throats, {them}!",
+    ],
+    vassal_grumble => "Peace with {enemy}?! Grr... fine, {them}. But I don't like it!",
+    ask_lord => [
+        "Don't ask me, {them}! {enemy} is the boss now!",
+        "Ask {enemy}, {them}. I'm not allowed to decide anything any more!",
+    ],
+    alliance_offer => [
+        them.betrayals(me) > 0 ? [
+            "{them}, you knifed me once - water under the bridge! Let's knife {enemy} instead!",
+            "{them}! You've got a good knife arm, nobody knows that better than me! Use it on {enemy} this time!",
+        ],
+        enemy.strength > me.strength + them.strength && chance(60%) ? "{enemy} is huge, {them}! Too big for one, just right for two!",
+    ] ?? [
+        "Hey, {them}! The two of us knock {enemy} flat, what do you say?",
+        "{them}! Come on, let's beat up {enemy} together!",
+    ],
+    offer_accepted => [
+        them.betrayals(me) > 0 ? [
+            "Mates again, {them}! Just keep the knife where I can see it. HA!",
+            "Ha! Friends again, {them}! But this time you walk in front!",
+        ],
+    ] ?? [
+        enemy ? "YES! {enemy}, here we come!",
+        "Haha! This is going to be fun, {them}!",
+    ],
+    offer_withdrawn => them.ignored(me) > 0 ? [
+        "Nothing AGAIN, {them}? You're duller than a stone!",
+        "I've shouted at you {them.ignored(me) + 1} times now, {them}! Next time I'll shout with my club!",
+    ] : [
+        "Bore, {them}! Fine, then not!",
+        "Not a word, {them}? Fine! Then somebody else gets the fun!",
+    ],
+    betray => [
+        pushover && chance(60%) ? "You've gone soft, {them}! And soft things need a good thump!",
+        them.tribute(me, 30) > 0 && chance(50%) ? "Thanks for the presents, {them}! Here's one back: a punch!",
+    ] ?? [
+        "Sorry, {them}, I was bored!",
+        "I'm itching for trouble, {them}. And you're the closest!",
+    ],
+    tribute_thanks => [
+        at_war ? [
+            "Presents in the middle of a fight? Funny one, {them}! I'll take them and keep hitting!",
+            "You throw me gold while I throw rocks at you, {them}? You're doing this fight wrong! HA!",
+        ],
+        them.tribute(me) > big_tribute && chance(60%) ? "MORE?! {them}, you're my favourite! I'll name a club after you!",
+    ] ?? [
+        "Ha! Thanks, {them}! I'll buy new clubs with that!",
+        "Presents! I love presents!",
+    ],
+    tribute_small => at_war ? [
+        "That won't stop me, {them}! Not even for a sneeze!",
+        "A few coins in the middle of a brawl, {them}? I'll buy more rocks for you with them!",
+    ] : [
+        "Is that all, {them}? Cheapskate!",
+        "That's not a present, {them}, that's a crumb! I'm no sparrow!",
+    ],
+    attack => [
+        them.kills(me, 20, buildings) > 0 && chance(60%) ? "They smashed my houses! Now we smash theirs! At {them}!",
+        them.kills(me, 20, units) > many_dead / 2 && them.kills(me, 20, units) > me.kills(them, 20, units) && chance(60%) ? "{them} has knocked down more of ours than we of theirs! Let's fix that, lads!",
+        me.kills(them, 20, units) > many_dead / 2 && chance(50%) ? "That was fun just now! Again! At {them}!",
+    ] ?? [
+        "ATTACK! At {them}!",
+        "Come on, lads! {them} is waiting!",
+        "Last one to reach {them} is a coward!",
+    ],
+    attack_threat => [
+        my_tally && chance(50%) ? "{me.kills(them, units)} of yours flattened so far, {them}! Let's make it a round number!",
+        big_one && chance(50%) ? "You're big, {them}, and I'm coming anyway! HAHA!",
+    ] ?? [
+        "HERE WE COME, {them}!",
+        "{them}! Get ready for a beating!",
+        "Knock knock, {them}! Hahaha!",
+    ],
+    under_attack => [
+        me.soldiers < 10 ? [
+            "Visitors and nobody home?! Grab what you can - pots, pans, chairs!",
+            "Where are my lads?! All off brawling somewhere else! Fine - I'll hold the door myself!",
+        ],
+    ] ?? [
+        "HA! They come to US! How handy!",
+        "Visitors at last! Get the clubs!",
+    ],
+    building_lost => [
+        "My house! Someone's getting a beating for that!",
+        "So what? We'll build a new one!",
+    ],
+    landing => [
+        "Everybody off the boats! {them}'s right there - GET THEM!",
+        "Wet boots, {them}! But we're HERE!",
+    ],
+    territory_taken => [
+        pushover && chance(50%) ? "HAHA! That was too easy, {them}! Got any more land?",
+    ] ?? [
+        "MINE NOW, {them}! Hahaha!",
+        "That's my ground now, {them}! Come and take it back - I'd like that!",
+    ],
+    territory_lost => [
+        good_fight && chance(50%) ? "Ha! Good fight, {them}! Now I'll come and get it back - that'll be an even better one!",
+    ] ?? [
+        "HEY! That was MINE, {them}!",
+        "You took my land? Right. Lads, we're going back there!",
+    ],
+    territory_held => [
+        "And STAY out, {them}!",
+        "Is that all, {them}? I was just warming up!",
+    ],
+    title => [
+        "Call me {me} now! HA! Same fists, bigger hat!",
+        "{me}! Say it loud - and bow, or I knock you over!",
+    ],
+    epoch_up => [
+        epoch >= epoch.industrial && chance(50%) ? "{epoch}! Things that go BOOM! Finally!",
+        epoch == epoch.stone && chance(50%) ? "{epoch}! Sharper sticks! HA!",
+    ] ?? [
+        "{epoch}! Bigger weapons! HA!",
+        "Now it gets fun: {epoch}!",
+    ],
+    enemy_ahead => "{them} has new toys? I'll take them!",
+    winning => [
+        my_tally && chance(50%) ? "{me.kills(them, units)} flattened, {them}! I'm counting, you know! HAHA!",
+        good_fight && chance(50%) ? "Now THAT is a fight, {them}! Pity it's nearly over!",
+    ] ?? [
+        "Hahaha! Run, {them}, run!",
+        "Is that all, {them}?",
+    ],
+    losing => [
+        them.kills(me, units) > many_dead && chance(50%) ? "{them} has knocked {them.kills(me, units)} of my lads flat! I like this one!",
+        big_one && chance(50%) ? "{them} is a big one! Finally a proper fight!",
+    ] ?? [
+        "That was just the warm-up!",
+        "I haven't even started properly!",
+    ],
+    desperate => [
+        "Now I'm really angry!",
+        "EVERYONE! EVERYONE! NOW!",
+    ],
+    enemy_defeated => [
+        them.betrayals(me) > 0 ? [
+            "Bye, {them}! You stabbed me once, didn't you? Or was that someone else? Ah, never mind - GONE!",
+            "That's for the knife, {them}! ...See? I DID remember! HAHA!",
+        ],
+        my_tally && chance(60%) ? "{them} is flattened! {me.kills(them, units)} of those were mine! Who's next?",
+        good_fight && chance(60%) ? "{them} put up a proper fight! I'll miss that! ...Who's next?",
+    ] ?? [
+        "{them} is flattened! Who's next?",
+        "Bye, {them}! Hahaha!",
+    ],
+    ally_defeated => "{them}! NO! I'll smash everything for this!",
+    defeated => [
+        minutes < 30 ? [
+            "Already?! I'd only just started!",
+            "That was quick! I didn't even break a sweat!",
+        ],
+    ] ?? [
+        "That ... was ... great fun ...",
+        "Rematch! I want a rematch!",
+    ],
+    surrender => [
+        "Fine! FINE! I give up! Next time, {them}!",
+        "Bah! Nobody left to smash with. I'm out!",
+    ],
+    capitulate => "Okay, OKAY! You're strong, {them}! {tribute} and we're mates? Quick, before I change my mind!",
+    capitulate_accepted => "Here, {tribute}! Now we smash the others together!",
+    capitulate_refused => "No? NO?! Then come on, all of you!",
+    all_submitted => "FINE, {them}, you're the boss now! Happy?!",
+    other_victory => lord == them ? [
+        "Bah! Next game I'll get you, {them}!",
+        "Fine, you won, {them}! Happy now?!",
+    ] : [
+        "HA! We crushed them all, {them}!",
+        "Victory! Next time I'll take the bigger share, {them}!",
+    ],
+    wonder_threat => [
+        "A wonder! I have to knock that down!",
+        "Oh, something big to smash!",
+    ],
+    help_land => [
+        "I'm coming! Nobody starts without me!",
+        "Haha! Be right there!",
+    ],
+    help_none => "I'm busy myself! Hit them yourself!",
+}

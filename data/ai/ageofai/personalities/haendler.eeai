@@ -1,0 +1,297 @@
+// AI personality for eeaimod - the format and every key: _template.eeai.
+register_personality()
+
+personality = {
+    name = "Benedict",
+    // from a trader's stall to the guild's chair to the bank
+    title => epoch < epoch.middle ? "Merchant" : epoch < epoch.industrial ? "Guildmaster" : "Tycoon",
+    civilization => "Merchant Republic",
+    color = ["yellow", "lightyellow"],
+    aggression = 25%,
+    loyalty = 60%,
+    pride = 30%,
+    greed = 90%,
+    forgiveness = 70%,
+    caution = 60%,
+    talk = 70%,
+    // leanings (strategy_plans): the merchant's fleet: ships, the economy before the army
+    air_force = 50%,
+    navy = 80%,
+    early_anti_air = 55%,
+    pressure = 30%,
+    defences = 45%,
+    spread = 75%,
+    // for the AI voice ([llm] in ageofai.ini): who this is, in a few words
+    character = "A merchant prince who sees everything as a deal: friendly, chatty, always counting, talks of profit, prices and interest.",
+}
+
+style = {
+    // EXPERIMENTAL - only with ai_style=1 in ageofai.ini (default off: every AI plays the same, tested way).
+    // The same keys as in ageofai.ini; they replace the difficulty's values for this AI. The defaults for
+    // comparison: military_income_share 40%, from the Copper Age military_income_share_farms 65%.
+    military_income_share = 35%,
+}
+
+// Benedict keeps books on everyone: who paid whom, and what the war has cost
+good_customer => them.tribute(me) > 0
+i_paid => me.tribute(them) > 0
+big_spender => them.tribute(me) > big_tribute
+// losses are costs, their losses are returns - more than a skirmish
+my_costs => them.kills(me, units) > many_dead
+my_returns => me.kills(them, units) > many_dead
+// a full treasury - his own stock, the only one he can see
+full_coffers => me.gold > 1000
+
+lines = {
+    greeting => [
+        players > 5 && chance(50%) ? "So many at the table - so many customers! This will be a lively market.",
+        allied && chance(50%) ? "Partners from the very first day, {them}! That is how the best firms begin.",
+    ] ?? [
+        "Welcome, welcome! I am sure we will do fine business together.",
+        "A lovely day for trading, don't you think?",
+        "Gold rules the world. And I intend to own a great deal of it.",
+    ],
+    war_declared => [
+        them.tribute(me, 20) > 0 ? [
+            "First you pay me {them.tribute(me, 20)}, now you declare war, {them}? I am keeping the money, of course.",
+            "My best customer, now my enemy? {them.tribute(me, 20)} under your name in my books, {them} - I had you down as a regular.",
+        ],
+        me.tribute(them, 20) > 0 ? [
+            "I paid you {me.tribute(them, 20)}, {them}, and this is my receipt? Outrageous.",
+            "{me.tribute(them, 20)} I invested in you, {them}, and the return is a war. The worst deal of my career.",
+        ],
+        me.strength > them.strength * 2 && chance(50%) ? "War against me, {them}? On your budget? A very poor investment.",
+        them.strength > me.strength * 2 && chance(50%) ? "You can outspend me, {them}. But every war ends at the negotiating table - and there I am the stronger.",
+    ] ?? [
+        "War, {them}? That is bad for business. For YOURS.",
+        "You will regret this, {them}. With interest.",
+        "A declaration of war? How ... unprofitable of you, {them}.",
+    ],
+    betrayed => me.betrayals(them) > 0 ? [
+        "I cancelled our contract once, {them}. Now you cancel mine. The books balance - how dull.",
+        "You learned from me, {them}. I broke our deal first - I can hardly complain about the price now.",
+    ] : them.betrayals(me) > 0 ? [
+        "Twice, {them}? I do not extend credit a third time. Not to you, not at any rate.",
+        "A second broken contract, {them}. Your name goes on my list of bad debtors - in red ink.",
+    ] : ([
+        i_paid ? [
+            "I paid you {me.tribute(them)}, {them}, and THIS is what I bought? I want a refund - with interest.",
+            "{me.tribute(them)} paid in advance, {them}, and you deliver a knife in the back. I shall be collecting.",
+        ],
+    ] ?? [
+        "We had a deal, {them}! I should have put it in writing.",
+        "Betrayal, {them}? That will cost you more than you think.",
+    ]),
+    peace_accept => [
+        them.betrayals(me) > 0 ? [
+            "Peace, {them}. But this time I want a deposit - I know your record.",
+            "Peace, {them}. I sign - but after your last contract I read every line twice.",
+        ],
+        them.kills(me, this_war, units) > many_dead && them.kills(me, this_war, units) > me.kills(them, this_war, units) && chance(60%) ? "Agreed, {them}. {them.kills(me, this_war, units)} of my people - this war has cost me far too much already.",
+        good_customer && chance(60%) ? "You have paid me {them.tribute(me)} so far, {them}. A good customer deserves peace.",
+    ] ?? [
+        "Peace! Sensible again at last, {them}. Let us trade.",
+        "Agreed, {them}. War is far too expensive anyway.",
+    ],
+    peace_refuse => [
+        them.gold > max(1000, me.gold) && chance(50%) ? "My informants count {them.gold} gold in your treasury, {them}. Peace has a price - and you can clearly afford it.",
+        them.betrayals(me) > 0 ? [
+            "Peace with you, {them}? Your credit with me is used up. No.",
+            "You broke our last contract, {them}. Why would I sign another with the same customer?",
+        ],
+        them.refusals(me, 30) > 0 && chance(70%) ? "You turned down my offer once, {them}. Prices have gone up since.",
+        me.kills(them, this_war, units) > many_dead && me.kills(them, this_war, units) > them.kills(me, this_war, units) && chance(50%) ? "{me.kills(them, this_war, units)} of yours so far, {them}. This war is finally paying off - I do not sell a rising stock.",
+    ] ?? [
+        "Peace has its price, {them}. And you have not paid it yet.",
+        "You come to me empty-handed, {them}? No, thank you.",
+        "An offer with nothing in return? Not with me, {them}.",
+    ],
+    block_refuse => [
+        enemy.betrayals(me) > 0 ? [
+            "{enemy} cheated me once, {them}. I do no business with their partners.",
+            "Partners of {enemy} share their books, {them} - and {enemy}'s books show a cheat. No deal.",
+        ],
+    ] ?? [
+        "No deal while {enemy} sits in your alliance, {them}.",
+        "{enemy} would spoil every bargain, {them}. Not with them.",
+    ],
+    block_refuse_own => [
+        "My partner {enemy} would end our business, {them}. Too expensive.",
+        "{enemy} would not like this deal, {them}. And {enemy} pays well.",
+    ],
+    vassal_grumble => "Peace with {enemy} costs me dearly, {them}. But a contract is a contract.",
+    ask_lord => [
+        "My contracts are signed by {enemy} now, {them}. Kindly take it up with them.",
+        "Not my department any more, {them}. Talk to {enemy}.",
+    ],
+    alliance_offer => [
+        them.gold > max(1000, me.gold) && chance(50%) ? "{them.gold} gold in your treasury, {them} - my informants are thorough. Invest it with me: against {enemy}, it pays twice.",
+        enemy.strength > me.strength + them.strength && chance(60%) ? "{enemy}'s firm is bigger than both of ours, {them}. A merger is our only chance.",
+        good_customer && chance(60%) ? "You have always paid your bills, {them}. Let us go into business together - against {enemy}.",
+    ] ?? [
+        "{them}, {enemy} is ruining us both. A partnership would be ... most lucrative.",
+        "A business proposal, {them}: we share the costs - and {enemy}'s treasures.",
+    ],
+    offer_accepted => [
+        them.betrayals(me) > 0 ? [
+            "Partners again, {them}. This time I keep the receipts.",
+            "Partners again, {them}. Your last contract with me still hangs on my wall - in two halves.",
+        ],
+        enemy && chance(50%) ? "Partners! {enemy} will not enjoy the new competition.",
+    ] ?? [
+        "An excellent deal, {them}!",
+        "Partners! To good returns.",
+    ],
+    offer_withdrawn => them.ignored(me) > 0 ? [
+        "No answer again, {them}? Then I shall stop sending you my catalogue.",
+        "Another offer unanswered, {them}. I do not waste good paper on a customer who never writes back.",
+    ] : [
+        "A pity, {them}. The offer has expired.",
+        "You are letting a good deal slip away, {them}.",
+    ],
+    betray => [
+        me.strength > them.strength * 2 && chance(60%) ? "You have become a bad investment, {them}. I am selling.",
+        them.tribute(me, 30) > 0 && chance(50%) ? "Thank you for the {them.tribute(me, 30)}, {them}. The partnership is hereby dissolved.",
+        me.tribute(them, 30) > 0 && chance(50%) ? "I paid you {me.tribute(them, 30)}, {them}. Consider this war the collection of that debt.",
+    ] ?? [
+        "Nothing personal, {them}. Just business.",
+        "Our partnership no longer pays, {them}. I am cancelling it.",
+    ],
+    tribute_thanks => [
+        at_war ? [
+            "A payment in the middle of a war, {them}? Now we can talk terms.",
+            "Gold from my enemy, {them}? This war is going better for my accounts than I thought.",
+        ],
+        big_spender && chance(60%) ? "That makes {them.tribute(me) + tribute_total} in all, {them}. You are my favourite customer.",
+        i_paid && chance(60%) ? "I paid you {me.tribute(them)}, you have paid me {them.tribute(me) + tribute_total} - a sound trading relationship, {them}.",
+    ] ?? [
+        "Oh, how generous, {them}! Now we can talk.",
+        "I knew you had taste, {them}.",
+        "Most pleasing, {them}. Most pleasing indeed.",
+    ],
+    tribute_small => [
+        them.stock > me.stock * 2 && chance(60%) ? "{them.stock} in your storehouses, {them}, and this is what you send me? My spies are embarrassed for you.",
+        at_war ? [
+            "A down payment, {them}? This war costs a great deal more than that.",
+            "My enemy pays in coppers, {them}? Come back when you mean to buy peace.",
+        ],
+        big_spender && chance(60%) ? "{tribute}? Small - but it brings you to {them.tribute(me) + tribute_total} in all, {them}. I keep count.",
+    ] ?? [
+        "A tip, {them}? Well, it's something.",
+        "Small change, {them}. Still - every coin counts.",
+    ],
+    attack => [
+        them.kills(me, 20, buildings) > 0 && chance(60%) ? "{them} destroyed {them.kills(me, 20, buildings)} of my buildings. Time to deliver the invoice!",
+        them.kills(me, 20, units) > many_dead / 2 && them.kills(me, 20, units) > me.kills(them, 20, units) && chance(60%) ? "{them.kills(me, 20, units)} of my people, {them}. Now I collect - with interest!",
+    ] ?? [
+        "My mercenaries are paid - time they earned it. Against {them}!",
+        "An investment in {them}'s downfall.",
+    ],
+    attack_threat => [
+        them.betrayals(me) > 0 && chance(70%) ? "{them}, the bill for your betrayal is due. Payment on delivery.",
+        my_returns && chance(50%) ? "My ledger shows {me.kills(them, units)} of your men so far, {them}. Shall I keep adding?",
+    ] ?? [
+        "{them}, my mercenaries send their regards.",
+        "Consider this a hostile takeover, {them}.",
+        "{them}, your debts are due. I am coming to collect.",
+    ],
+    under_attack => [
+        me.soldiers < 10 ? [
+            "Hardly a guard left! Hire anyone who can hold a spear - whatever it costs!",
+            "My guards would not fill a counting-house! Every porter gets a spear - and a bonus!",
+        ],
+        full_coffers && chance(50%) ? "{round(me.gold)} gold in my vaults - and bandits at the gate! Guards!",
+    ] ?? [
+        "Guards! They are plundering my warehouses!",
+        "Double pay to whoever drives off these bandits!",
+    ],
+    building_lost => [
+        me.wood + me.stone < 200 && chance(60%) ? "And not even the wood and stone to rebuild it. Who will sell me some?",
+    ] ?? [
+        "That was a trading post! Do you know what that cost?",
+        "Losses, nothing but losses ...",
+    ],
+    landing => [
+        "Delivery to your shore, {them} - and you will be paying the freight.",
+        "We have opened a branch office on your coast, {them}.",
+    ],
+    territory_taken => [
+        "Under new management, {them}. The old owners are no longer with us.",
+        "A fine acquisition, {them}. The price was paid in full - by you.",
+    ],
+    territory_lost => [
+        full_coffers && chance(50%) ? "A write-off, {them}, nothing more. I have the gold to buy it back - with soldiers.",
+    ] ?? [
+        "That was prime property, {them}! Do you have any idea what it cost me?",
+        "Mark my words, {them}: I will take it back, and charge you rent for the time you held it.",
+    ],
+    territory_held => [
+        "My investment holds, {them}. Yours, I think, does not.",
+        "Thank you for the visit, {them}. Do leave your weapons at the door next time.",
+    ],
+    title => [
+        "{me}, at your service - the new title costs nothing, my prices stay the same.",
+        "Business is good: you speak to {me} now. Shall we talk terms?",
+    ],
+    epoch_up => [
+        epoch >= epoch.industrial && chance(50%) ? "{epoch}! Factories, railways - mass production at last.",
+        full_coffers && chance(50%) ? "{epoch} - and {round(me.gold)} gold in the treasury. Business is booming.",
+    ] ?? [
+        "{epoch}! New markets, new opportunities.",
+        "Progress is good for business: {epoch}.",
+    ],
+    enemy_ahead => "{them} is ahead of us? I shall have to correct my books.",
+    winning => [
+        my_returns && me.kills(them, units) > them.kills(me, units) && chance(50%) ? "{me.kills(them, units)} on your side, {them.kills(me, units)} on mine, {them}. The balance is in my favour.",
+    ] ?? [
+        "The balance sheet looks good. Very good indeed.",
+        "{them}, you should consider a settlement.",
+    ],
+    losing => [
+        my_costs && them.kills(me, units) > me.kills(them, units) && chance(60%) ? "{them.kills(me, units)} of my people lost to {them}. This war is eating my capital.",
+        full_coffers && chance(50%) ? "Still {round(me.gold)} gold in the vaults, {them}. Enough to hire a great many mercenaries.",
+    ] ?? [
+        "I do not like these numbers.",
+        "Perhaps now would be a good moment to negotiate, {them}?",
+    ],
+    desperate => [
+        me.gold > 500 && chance(60%) ? "{round(me.gold)} gold left - take it all, only hold the walls!",
+    ] ?? [
+        "I will pay any price! Any!",
+        "Save the treasury!",
+    ],
+    enemy_defeated => [
+        them.betrayals(me) > 0 ? [
+            "{them} is bankrupt. Cheating never pays in the long run.",
+            "{them} broke our contract - and now has nothing left to break. The books are closed.",
+        ],
+        good_customer && chance(60%) ? "{them} is gone. A pity about such a reliable customer: {them.tribute(me)} in tribute.",
+    ] ?? "{them} is bankrupt. How unfortunate. For {them}.",
+    ally_defeated => "We have lost a partner. {them} will be missed.",
+    defeated => [
+        "All ... lost ... and no buyer in sight.",
+        "I declare bankruptcy.",
+    ],
+    surrender => [
+        "This venture no longer pays. I withdraw.",
+        "I close my books. Congratulations, {them}.",
+    ],
+    capitulate => "{them}, let us be sensible. War is bad for business. {tribute} for peace - do we have a deal?",
+    capitulate_accepted => "A pleasure doing business. {tribute}, as agreed.",
+    capitulate_refused => "No deal? A pity. For both of us.",
+    all_submitted => "The market is yours, {them} - every competitor pays you tribute.",
+    other_victory => lord == them ? [
+        "A hostile takeover, well executed. Congratulations, {them}.",
+        "The books are closed. Your profit, {them}.",
+    ] : [
+        "A profitable partnership, {them}. The dividends are ours.",
+        "We closed the deal together, {them}. Splendid.",
+    ],
+    wonder_help => "A wonder! That draws traders from all over the world. I am sending guards.",
+    wonder_nohelp => "A splendid wonder! Sadly my troops are ... otherwise engaged at the moment.",
+    help_land => [
+        "My mercenaries are on their way. The bill comes later.",
+        "Help is coming - at a friendly price.",
+    ],
+    help_none => "Sorry, all my mercenaries are fully booked.",
+}

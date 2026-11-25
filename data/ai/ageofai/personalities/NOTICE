@@ -1,0 +1,29 @@
+Age of AI's personality files (.eeai)
+=====================================
+
+The files in this folder are copied unchanged from Grille's "Empire Earth: Age of AI", upstream commit
+7a17182b (2026-11-23), folder `config/personalities/`:
+
+    _template.eeai      an empty personality with every key, to copy
+    baumeister.eeai     Hedda, the master builder
+    eroberer.eeai       Temur, the steppe conqueror
+    fuchs.eeai          Livia, the scheming princess
+    haendler.eeai       Benedict, the merchant prince
+    hitzkopf.eeai       Brann, the hot-headed chieftain
+    ritter.eeai         Gunther, the honourable knight
+    README.md           the format, the expressions and every situation (the mod's own documentation)
+
+Copyright (C) 2025-2026 Grille and the Age of AI contributors. Licensed under the GNU General Public License
+version 3 (GPL-3.0), like the rest of this port; the port keeps its own LICENSE in data/ai/ageofai/LICENSE.
+These files are the mod's texts, not this repository's, and are kept as they are: edit the upstream files, not
+these copies.
+
+This engine has no .eeai loader. `tools/personas.py` reads the files next to this NOTICE and writes
+`data/ai/ageofai/personas_data.lua`, the persona table `ageofai.personas` loads (`python tools/personas.py
+--write`; `--check` fails while the generated file is behind). It reads the `personality` record and the `lines`
+record, and nothing else: the mod's own base layers (`mod/computer.eeai`, `mod/prompt.eeai`,
+`mod/system.eeai`, `mod/units.eeai`) and the files that include them are not vendored, because this port does not
+run the retail mod's line system. The conditions in the files are not evaluated: the generated table holds the
+unconditional line of each situation, with `{placeholders}` stripped, as the tool's header explains.
+
+Upstream: https://github.com/Grille/Empire-Earth-Age-of-AI (GPL-3.0).

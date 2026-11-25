@@ -29,11 +29,12 @@ end
 local function system_prompt(memory)
     local p = memory.persona or {}
     local t = p.trait or {}
+    local who = PS.get(p.id or "balanced")
     return string.format(
-        "You speak as %s, a computer player in Empire Earth: The Art of Conquest. One short line, at most 20 words, " ..
+        "You speak as %s, %s, a computer player in Empire Earth: The Art of Conquest. One short line, at most 20 words, " ..
         "no quotes and no stage directions. Traits: aggression %d, loyalty %d, pride %d, greed %d, forgiveness %d, " ..
-        "caution %d.", tostring(p.name or "an AI"), t.aggression or 50, t.loyalty or 50, t.pride or 50,
-        t.greed or 50, t.forgiveness or 50, t.caution or 50)
+        "caution %d.", tostring(p.name or "an AI"), (who ~= nil and who.character) or "an AI", t.aggression or 50,
+        t.loyalty or 50, t.pride or 50, t.greed or 50, t.forgiveness or 50, t.caution or 50)
 end
 
 function M.step(view, memory)
