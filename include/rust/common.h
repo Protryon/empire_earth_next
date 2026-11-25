@@ -141,6 +141,8 @@ uint32_t ee_rust_abi_version();
 /// call.
 void ee_rust_init(void (*log)(const char *line));
 
+extern void exit(int code);
+
 unsigned long gx_direct_draw_release(void *dd);
 
 unsigned long gx_surface_release(void *surface);

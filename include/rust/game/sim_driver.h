@@ -305,7 +305,6 @@ enum class EeSimDriverSed : uint32_t {
   NodeUnitId,
   UnitIsEditorSelected,
   GhostsChanged,
-  GhostsClear,
   GhostCount,
   GhostAt,
   GhostCreate,
@@ -438,8 +437,8 @@ enum class EeSimDriverSed : uint32_t {
   SpecCreate,
   SpecOpenRead,
   SpecOpenWrite,
-  SpecFOpenRead,
-  SpecFOpenWrite,
+  /// the spec's FOpen(s): its open mode ("r", "w") -> 0 opened
+  SpecFOpen,
   SpecClose,
   SpecWrite,
   SpecGets,
@@ -570,7 +569,6 @@ enum class EeSimDriverSim : uint32_t {
   PlayerAddPendingUnits,
   NodeData,
   NodeCost,
-  CastLocationCalamity,
   VolcanoProjectileType,
   RequestSaveNew,
   SendToAllAndWait,
@@ -584,11 +582,6 @@ enum class EeSimDriverSim : uint32_t {
   AnyPort,
   ClearNoHumanDefeatHits,
   NoHumanDefeatHits,
-  RulesAdd,
-  RulesError,
-  RulesProblemsLoad,
-  RulesProblemCount,
-  RulesProblem,
   UnitHitPoints,
   UnitHasStats,
   UnitIsBuilding,
@@ -778,22 +771,6 @@ struct EeSimDriverCombatSweep {
   int32_t (*host)(void *ctx, uint32_t op, uint64_t a, uint64_t b, float *out);
 };
 
-/// The C++ side (EESim.cpp). Every function is called with the documented locks; texts are NUL ended, buffers are
-/// written NUL ended within `cap` and return the full length.
-struct EeSimDriverHost {
-  /// `EE_SIM_DRIVER_*_LOCK` on `gWorld.mLock`
-  void (*lock)(int32_t);
-  /// `EEAfterLoad`: the state dump of the file at the loaded game's first tick
-  void (*dump_after_load)(const char*);
-  /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
-  size_t (*extension)(int32_t, char*, size_t);
-  /// `gUserInterface->PostCancelGame()`
-  void (*cancel_game)();
-  /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
-  /// node of `technology`, the class's unit type), every resource summed
-  long (*wonders)(uint64_t);
-};
-
 extern "C" {
 
 /// The sweep (EE-SIM's capture, every five game minutes, under the world).
@@ -801,12 +778,6 @@ extern "C" {
 /// # Safety
 /// `input` points to a valid record whose host answers for the world the caller holds.
 void ee_sim_driver_combat_sweep(const EeSimDriverCombatSweep *input);
-
-/// The state dump into the file (EESim.cpp's dump after a load, at the loaded game's first tick).
-///
-/// # Safety
-/// `path` is a NUL-ended text.
-void ee_sim_driver_dump_state(const char *path);
 
 /// Installs the fault report (first in the handler chain) with the exe's name as its prefix (`EE-SIM`, `EE-AOC`).
 ///
@@ -821,10 +792,9 @@ extern int32_t _write(int32_t fd, const void *buffer, uint32_t count);
 /// line, 66 a file that cannot be opened).
 ///
 /// # Safety
-/// `argv` holds `argc` NUL-ended texts; `host` points to a filled table (copied).
+/// `argv` holds `argc` NUL-ended texts.
 int ee_sim_driver_main(int argc,
-                       const char *const *argv,
-                       const EeSimDriverHost *host);
+                       const char *const *argv);
 
 /// The driver's thread started (EERun, after the engine and the threads are up, before the UI loop).
 void ee_sim_driver_start();

@@ -48,7 +48,6 @@ pub enum EeSimDriverSim {
     PlayerAddPendingUnits,
     NodeData,
     NodeCost,
-    CastLocationCalamity,
     VolcanoProjectileType,
     RequestSaveNew,
     SendToAllAndWait,
@@ -63,12 +62,6 @@ pub enum EeSimDriverSim {
     AnyPort,
     ClearNoHumanDefeatHits,
     NoHumanDefeatHits,
-    // the rules and the engines
-    RulesAdd,
-    RulesError,
-    RulesProblemsLoad,
-    RulesProblemCount,
-    RulesProblem,
     // the units
     UnitHitPoints,
     UnitHasStats,

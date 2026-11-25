@@ -463,17 +463,6 @@ fn dump_regions(o: &mut Out) {
     }
 }
 
-/// The state dump into the file (EESim.cpp's dump after a load, at the loaded game's first tick).
-///
-/// # Safety
-/// `path` is a NUL-ended text.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sim_driver_dump_state(path: *const std::ffi::c_char) {
-    // SAFETY: as the caller promises
-    let path = unsafe { std::ffi::CStr::from_ptr(path) }.to_string_lossy().into_owned();
-    dump_state(&path);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

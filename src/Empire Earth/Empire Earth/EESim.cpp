@@ -5,11 +5,9 @@
 // window, no rendering, no sound) and, instead of a player, a driver. The driver is Rust (ee_game sim_driver: its
 // options, the menus and the lobby as the harness drives them, the run on the physics thread's after-tick, the
 // samples, the end of the run, the JSON report, --games' batch; EE-SIM --help; the UI's and the world's reads and the
-// capture's sweeps: sim_host.rs). This file is its host: the table (EeSimDriverHost: the world lock, the platform
-// switches, the C library's streams and environment, the save's and the dump's hooks), the calls and members the
-// Rust reads (ee_simcpp_sim*: one case each, EeSimDriverSim), the TEST ONLY parts that read C++ objects whole: the
-// per-CT checksum line's fields (--checksum-trace), the state dump (--dump-at, --dump-load, --dump-tick) and the
-// physics random stream's trace (--rng-trace); and the fault handler.
+// capture's sweeps, the world lock, the save's and the dump's hooks: sim_host.rs). This file is its host: the calls
+// and members the Rust reads (ee_simcpp_sim*: one case each, EeSimDriverSim), EE-SIM's entry and the POSIX fault
+// handler.
 #ifdef _WIN32
 #include <winsock2.h>
 #include <io.h>
@@ -94,58 +92,9 @@
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
-namespace {
-
 // (the per-CT checksum line's fields and the state dump: sim_driver dump.rs, over the Dm cases below; the C
-// library's environment, descriptors and streams, the quit and --rng-trace: sim_driver stdio.rs)
-
-// ------------------------------------------------------------------------------------------------ the driver's host
-
-size_t PutText(const std::string& inText, char* outBuffer, size_t inCapacity)
-{
-    if (inCapacity > 0) {
-        size_t n = inText.size() < inCapacity - 1 ? inText.size() : inCapacity - 1;
-        memcpy(outBuffer, inText.data(), n);
-        outBuffer[n] = 0;
-    }
-    return inText.size();
-}
-
-void HostLock(int inOp)
-{
-    switch (inOp) {
-    case EE_SIM_DRIVER_WRITE_LOCK: gWorld.mLock->WriteLock(); break;
-    case EE_SIM_DRIVER_WRITE_UNLOCK: gWorld.mLock->WriteUnlock(); break;
-    case EE_SIM_DRIVER_READ_LOCK: gWorld.mLock->ReadLock(); break;
-    default: gWorld.mLock->ReadUnlock(); break;
-    }
-}
-
-std::string sDumpLoad;
-
-void HostDumpAfterLoad(const char* inPath)
-{
-    sDumpLoad = inPath;
-    EEAfterLoad([] { ee_sim_driver_dump_state(sDumpLoad.c_str()); });   // at the first tick, after the load's own fix-ups
-}
-
-size_t HostExtension(int inWhich, char* outBuffer, size_t inCapacity)
-{
-    return PutText(inWhich == 0 ? (const char*)gSavedGameExtension : (const char*)gScenarioExtension, outBuffer,
-                   inCapacity);
-}
-
-void HostCancelGame()
-{
-    gUserInterface->PostCancelGame();
-}
-
-long HostWonders(uint64_t inPlayer)
-{
-    return (long)reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer)->GetNumWonderUnits();
-}
-
-}   // namespace
+// library's environment, descriptors and streams, the quit and --rng-trace: sim_driver stdio.rs; the world lock, the
+// after-load dump, the extensions, the cancel and the wonder count: sim_host.rs)
 
 // (EESimPreferences is Empire Earth.cpp's, and EERun starts the driver's thread itself, ee_sim_driver_start: so the
 // game's start-up names no symbol of this driver)
@@ -192,31 +141,16 @@ void EESimGameEnded(int inResult);
 // ..." and goes on with the game when it returns -1.
 int EESimMain(int argc, char** argv)
 {
-    static const EeSimDriverHost kHost = {
-        HostLock, HostDumpAfterLoad, HostExtension, HostCancelGame, HostWonders};
-    int theCode = ee_sim_driver_main(argc, argv, &kHost);   // (the screens' events: sim_driver driver.rs)
+    // (the screens' events, the debug output, the Windows fault report and Linux's dummy video: sim_driver ffi.rs)
+    int theCode = ee_sim_driver_main(argc, argv);
     if (theCode != EE_SIM_DRIVER_CONTINUE)
         return theCode;
-    PlatDebugSetHandler(ee_sim_driver_debug);
-#ifdef _WIN32
-    ee_sim_driver_fault_install("EE-SIM");
-#else
-    EESimInstallFaultHandler();
-#if !defined(__APPLE__)
-    // Linux, where a bench machine has no display: SDL's dummy video driver (the hidden window needs none, and
-    // nothing is presented; macOS keeps Cocoa: its windows are Metal windows, which the dummy driver refuses). The
-    // GPU device the renderer still creates is any Vulkan adapter, on a machine without a GPU Mesa's lavapipe, kept
-    // to one rasterizer thread (it starts one per core, and a bench runs one simulation per core). The environment
-    // wins over both.
-    setenv("SDL_VIDEO_DRIVER", "dummy", 0);
-    setenv("LP_NUM_THREADS", "1", 0);
-#endif
-#endif
 #ifdef _WIN32
     char theEmpty[1] = {0};
     EESimGameEnded(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));
     return 4;
 #else
+    EESimInstallFaultHandler();
     return -1;   // the POSIX main goes on with the game (Empire Earth.cpp: ee-aoc --sim ...)
 #endif
 }
@@ -236,9 +170,6 @@ void EESimGameEnded(int inResult)
 #define UN ((EEUnit*)p)
 #define CX ((EEComplexUnit*)p)
 #define UC ((EEUnitClass*)p)
-
-static std::string sRulesError;             // EERulesAddOverride's problem
-static std::vector<std::string> sProblems;   // EERulesOverrideProblems'
 
 // The driver's C++ calls and members (sim_ops.rs EeSimDriverSim): p the object, a and f the arguments, s a text
 extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t* a, const float* f, const char* s)
@@ -287,9 +218,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::NodeData: return P64(((EETechTreeNode*)p)->mData);
     case O::NodeCost: return ((EETechTreeNode*)p)->GetCost((long)a[0], (unsigned long)a[1], 1.0f);
-    case O::CastLocationCalamity:
-        return USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(9, 0xffffffffUL, (long)a[0], (long)a[1],
-                                                                                    (unsigned long)a[2]);
     case O::VolcanoProjectileType: return kUnitTypeVolcanoProjectile;
     case O::RequestSaveNew:   // load, quiet, tick, time, auto-save, the wait id, the name
         return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadOrSaveGame,
@@ -315,11 +243,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::ClearNoHumanDefeatHits: gPlatSimNoHumanDefeatHits = 0;
         break;
     case O::NoHumanDefeatHits: return (long)gPlatSimNoHumanDefeatHits;
-    // the rules
-    case O::RulesAdd: return EERulesAddOverride(s, sRulesError);
-    case O::RulesProblemsLoad: EERulesOverrideProblems(sProblems);
-        break;
-    case O::RulesProblemCount: return sProblems.size();
     // the units
     case O::UnitHitPoints: return UN->mHitPoints;
     case O::UnitHasStats: return UN->mStats != NULL;
@@ -503,8 +426,6 @@ extern "C" const char* ee_simcpp_sim_text(EeSimDriverSim inOp, uintptr_t p, int6
     case O::ShellKindName: return (sText = ((EEUIShell*)p)->KindName()).c_str();
     case O::FormTypeName: return (sText = typeid(*UF).name()).c_str();
     case O::ListData: return (sText = (const char*)((UILBString*)p)->GetData((unsigned long)a)).c_str();
-    case O::RulesProblem: return (sText = sProblems[a]).c_str();
-    case O::RulesError: return sRulesError.c_str();
     default: break;
     }
     return NULL;
