@@ -89,7 +89,7 @@ enum class EeWonLobbyPrvOp : uint32_t {
   HashSetClear,
   /// `p->mHashFileList.clear()`.
   HashListClear,
-  /// `StringParser(reinterpret_cast<const char*>(a)).ReadValue(p->mHashFileList)`.
+  /// `ee_won_cfgval_read_strings(a, &p->mHashFileList)` (the original's `StringParser(a).ReadValue(list)`).
   HashListRead,
   /// `p->mLoginCommunity = *reinterpret_cast<const std::wstring*>(a)`.
   CommunitySet,
