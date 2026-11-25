@@ -10,11 +10,9 @@
 
 #include "rust/game/gamecpp.h"
 class EEUnit;
-class EEComplexUnit;
 class EEPlayer;
 class GERectangle;
 class GETransformation;
-class GE3DPlane;
 class TSCriticalSection;
 
 #ifdef LLE_GEVIEWPORT_H

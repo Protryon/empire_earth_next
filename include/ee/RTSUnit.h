@@ -82,8 +82,6 @@ public:
     void InsertAfter(RTSUnit* inUnit) { ee_rts_unit_insert_after(this, inUnit); }
     // 0x23dae5 (the mL08 list, after inUnit or at an RTSDummyUnit head)
     void Link(RTSUnit* inUnit) { ee_rts_unit_link(this, inUnit); }
-    // 0x23dbb7 (the mNext/mL10 list)
-    void RemoveFromList() { ee_rts_unit_remove_from_list(this); }
     // 0x23dbda (the mL08 list)
     void Unlink() { ee_rts_unit_unlink(this); }
     // 0x23dcf3: mL14 = the map's tile at (mTileX, mTileY)

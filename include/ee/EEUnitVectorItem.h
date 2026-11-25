@@ -64,11 +64,9 @@ public:
     // 0x205821: starts the timer at the game time the first time, then adds inTime (EEMIncrementRallyTimer 60000,
     // EEMScrambleAircraft 1000)
     void AddTime(long inTime) { ee_units_gq_timer(this->mGoals.mQueue, 1, inTime); }
-    void ResetTimer() { ee_units_gq_timer(this->mGoals.mQueue, 2, 0); }
     // 0x205843: inserts a goal at a position (appending past the end), the unit its owner
     void Insert(unsigned long inIndex, EEUnitGoal* inGoal) { this->GoalOp(2, inIndex, inGoal); }
     void Add(EEUnitGoal* inGoal) { this->GoalOp(0, 0, inGoal); }       // 0x1ed61b: appended, the unit its owner
-    void AddFront(EEUnitGoal* inGoal) { this->GoalOp(1, 0, inGoal); }
     void PopBack() { this->GoalOp(3, 0, NULL); }                         // the last goal removed and deleted
     void PopFront() { this->GoalOp(4, 0, NULL); }                        // the first goal removed and deleted
     EEUnitGoal* GetFront() { return this->mGoals.front(); }             // 0x1f8a26 (EEUICUnitIconBar 0x25ad15)
