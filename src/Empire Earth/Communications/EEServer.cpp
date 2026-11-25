@@ -77,74 +77,73 @@ EEServer::~EEServer()
 void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOptionsPlayer& inPlayer,
                                         const UWideString& inVersion, unsigned long inChecksum)
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_CONNECTION_REQUEST, inSlot, (long long)inChecksum, 0, 0, &inPlayer, &inVersion);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_CONNECTION_REQUEST, inSlot, (long long)inChecksum, 0, 0, &inPlayer, &inVersion);
 }
 
 // Removes a client: in a running game its player; the host leaving tells every client; in the lobby its slot reopened
 void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsExiting)
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_BOOT, inSlot, inWasBooted, inGameIsExiting);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_BOOT, inSlot, inWasBooted, inGameIsExiting, 0, NULL, NULL);
 }
 
 // A player's removal on the host: ours ends the game, another's is announced and removed
 void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_REMOVE, inPlayer, inWasBooted, inPlayerIsOOS, inGameIsExiting);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_REMOVE, inPlayer, inWasBooted, inPlayerIsOOS, inGameIsExiting, NULL, NULL);
 }
 
 // A system message on the host: ping answers, communications ticks, join requests, disconnections, reconnections
 void EEServer::ProcessSystemMessage(NEMessage* inMessage)
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_SYSTEM_MESSAGE, (long long)(uintptr_t)inMessage);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_SYSTEM_MESSAGE, (long long)(uintptr_t)inMessage, 0, 0, 0, NULL, NULL);
 }
 
 // Filters a client message (whether to pass it on): votes, pause and join requests; the host removed turns client
 bool EEServer::FilterPlayerInput(NEMessage* inMessage)
 {
-    return EESession(this, true, EE_NETMSG_SESS_DO_FILTER, (long long)(uintptr_t)inMessage) != 0;
+    return ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_FILTER, (long long)(uintptr_t)inMessage, 0, 0, 0, NULL, NULL) != 0;
 }
 
 // Stamps the host's local input with the fast-selection number; selection messages take a new one and run at once
 void EEServer::PrepareLocalInput(NEMessage* inMessage)
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_LOCAL_INPUT, (long long)(uintptr_t)inMessage);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_LOCAL_INPUT, (long long)(uintptr_t)inMessage, 0, 0, 0, NULL, NULL);
 }
 
 // A lobby message on the host: player info, transfer status, the game start, a joined player, slot info
 void EEServer::HandleLobbyInput(NEMessage* inMessage)
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_LOBBY_INPUT, (long long)(uintptr_t)inMessage);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_LOBBY_INPUT, (long long)(uintptr_t)inMessage, 0, 0, 0, NULL, NULL);
 }
 
 // Starts an edict vote (a running one closed with yes votes); true
 bool EEServer::StartVote(unsigned short inEdict)
 {
-    return EESession(this, true, EE_NETMSG_SESS_DO_START_VOTE, inEdict) != 0;
+    return ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_START_VOTE, inEdict, 0, 0, 0, NULL, NULL) != 0;
 }
 
 // A slot's vote on the edict; once all have voted the result is broadcast
 void EEServer::CastVote(unsigned char inIndex, bool inYes, unsigned char inCount)
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_CAST_VOTE, inIndex, inYes, inCount);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_CAST_VOTE, inIndex, inYes, inCount, 0, NULL, NULL);
 }
 
 // Restarts the game as the new host: the humans' migration slots, the new host announced, the restart
 void EEServer::HandleReconnectWaitTimedOut()
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_RECONNECT_TIMED_OUT);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_RECONNECT_TIMED_OUT, 0, 0, 0, 0, NULL, NULL);
 }
 
 // Broadcasts the lagging players: in multiplayer as a player bit mask (when it changed or forced), else the count
 void EEServer::ReportLaggers(std::vector<unsigned char>& inSlots, bool inFlag)
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_LAGGERS, inSlots.empty() ? 0 : (long long)(uintptr_t)&inSlots[0],
-              (long long)inSlots.size(), inFlag);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_LAGGERS, inSlots.empty() ? 0 : (long long)(uintptr_t)&inSlots[0], (long long)inSlots.size(), inFlag, 0, NULL, NULL);
 }
 
 // Sends every human player's network slot, address and firewall flag, when more than one human is left
 void EEServer::SendPlayerSlotInfo()
 {
-    EESession(this, true, EE_NETMSG_SESS_DO_SLOT_INFO);
+    ee_gamecpp_session(this, true, EE_NETMSG_SESS_DO_SLOT_INFO, 0, 0, 0, 0, NULL, NULL);
 }
 
 // ---- the members that stay C++ ----
@@ -233,22 +232,6 @@ void EEServer::BeforeRemovingPlayers()
 
 // ---- the host of ee_netmsg session.rs: ee_game gamecpp server.rs (ee_gamecpp_session_host) over the cases below ----
 
-// the engine's protected members the host calls (a friend of EEServer reaches them through the server)
-class EESessionAccess {
-public:
-    static void Unregister(EEServer* s, unsigned char inSlot) { s->UnregisterSlot(inSlot); }
-    static void Broadcast(EEServer* s, NEMessage* m) { s->BroadcastMessage(m); }
-    static void SendToAll(EEServer* s, NEMessage* m) { s->SendMessageToAll(m, false); }
-    static void SendTo(EEServer* s, unsigned char inSlot, NEMessage* m) { s->SendMessageTo(inSlot, m, true); }
-};
-
-// the server's or client's member inWhat (EE_NETMSG_SESS_DO_*) over the host
-long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_t inWhat, long long a, long long b,
-                    long long c, long long d, const EEGameOptionsPlayer* inPlayer, const UWideString* inVersion)
-{
-    return ee_gamecpp_session(inComms, inServer, inWhat, a, b, c, d, inPlayer, inVersion);
-}
-
 // ------------------------------------------------------------------------- round 9, lane D: this file's bodies' C++
 
 
@@ -305,12 +288,8 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::C11SvDestroyAttemptLock: TSScheduler::DestroyCriticalSection(SV->mAttemptToRemovePlayerLock);
         break;
-    case O::C11SvUnregister: EESessionAccess::Unregister(SV, (unsigned char)a[0]);
-        break;
     // the sends
     case O::C11SvNewResponse: return P64(SV->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]));
-    case O::C11SvSendTo: EESessionAccess::SendTo(SV, (unsigned char)a[0], (NEMessage*)a[1]);
-        break;
     case O::C11SvSendPlayerInfo: SV->ProcessLocalUserInput(EENewFullPlayerInformation(*(EEGameOptionsPlayer*)a[0]), kSlotNone);
         break;
     case O::C11SvPingStat: SV->ProcessLocalUserInput(new EEMRecord(kMessageUpdatePingStat, {(unsigned char)a[0], f[0]}), kSlotNone);
@@ -450,10 +429,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsMsgIsGame: return EEGameMessageCast(MSG) != NULL;
     case O::SsMsgQueue: gPhysics->QueueServerMessage(MSG);
         break;
-    case O::SsBroadcast: EESessionAccess::Broadcast(SS, MSG);
-        break;
-    case O::SsSendToAll: EESessionAccess::SendToAll(SS, MSG);
-        break;
     // the user interface
     case O::SsLobbyUpdatePlayer: gUserInterface->PostLobbyUpdatePlayer((long)a[0], 8);
         break;
@@ -545,8 +520,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsExecuteSelection: gWorld.GetCurrentPlayer()->ExecuteSelectionMessage((NEMessage*)a[0]);
         break;
     // the communications
-    case O::SsUnregisterSlot: EESessionAccess::Unregister(SS, (unsigned char)a[0]);
-        break;
     case O::SsOpenSaveGame: return EEOpenSaveGameFile((const char*)gGameOptions.mMapType, a[0] != 0 ? "Saved Games\\" : "Scenarios\\", *(FSFileSpec**)a[1]) == kErrorOK;
     case O::SsNewHeader: return P64(new EEPSaveGameHeader);
     case O::SsDeleteHeader: delete (EEPSaveGameHeader*)p;
@@ -556,9 +529,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsHeaderLoad: return ((EEPSaveGameHeader*)a[0])->LoadFromFile(*(FSFileSpec*)a[1]) == kErrorOK;
     case O::SsXferToClient: SS->XferFileToClient(*(FSFileSpec*)a[0], ((EEPSaveGameHeader*)a[1])->mChecksum, (unsigned char)a[2], *(unsigned long*)a[3], false);
         break;
-    case O::SsCommsResetXfer: static_cast<NESynchronousServer*>(gCommunications)->ResetXfer();
-        break;
-    case O::SsCommsPresent: return gCommunications != NULL;
     case O::SsCommsDelete: delete gCommunications;
         break;
     case O::SsCommsNewClient: gCommunications = new EEClient;

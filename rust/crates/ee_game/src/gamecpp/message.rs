@@ -26,7 +26,7 @@ use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUn
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
-use super::session_objs::{EeGamecppClientTail, EeGamecppServerTail};
+use super::session_objs::{client_tail, server_tail};
 use super::{cptr, h, hf, hp, pa, ptr, rec, Owned, O, P};
 use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_net::net::ffi_server::EeNetSvSet;
@@ -554,11 +554,9 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
         EE_NETMSG_WACT_MIGRATING_OFF => {
             // the host migration over as the game restarts
             if super::net::present() && super::net::global().is_client() {
-                let comms = super::globals::get!(gCommunications) as P;
-                // SAFETY: the live client's plain tail
-                unsafe { (*rec::<EeGamecppClientTail>(O::C11ClTail, comms)).is_migrating = false };
+                client_tail(super::globals::get!(gCommunications) as P).is_migrating = false;
             } else if super::net::present() {
-                server_tail().is_migrating = false;
+                host_tail().is_migrating = false;
             }
         }
         EE_NETMSG_WACT_LAG => {
@@ -644,7 +642,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             // every human has shown the main screen: the start at the offset time
             let time = ee_base::time::ee_time_get() as i64;
             let message = hp(O::NewStartGameRecord, 0, &[time]);
-            server_tail().load_state = 0;
+            host_tail().load_state = 0;
             super::net::global().local_input(message as *mut c_void, MSG_SLOT_NONE);
             super::net::global().sv_set(EeNetSvSet::GameState, 2);
         }
@@ -652,7 +650,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             ee_net::net::ffi_server::ee_net_sv_clear_send_to_slot_array(super::net::global().server);
         }
         EE_NETMSG_WACT_LOAD_RESPONSES => {
-            server_tail().num_load_responses = i[1] as u8;
+            host_tail().num_load_responses = i[1] as u8;
         }
         EE_NETMSG_WACT_SEND_TO_SLOT => {
             let to = super::session_objs::ee_gamecpp_server_send_to_slot(i[2] as u8) as i64;
@@ -662,7 +660,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
         EE_NETMSG_WACT_ALL_LOADED => {
             // every human has loaded: the slots sent, the main screen shown everywhere
             h(O::ServerSendPlayerSlotInfo, 0, &[]);
-            server_tail().load_state = 2;
+            host_tail().load_state = 2;
             let message = hp(O::NewLoadMainScreenRecord, 0, &[]);
             super::net::global().local_input(message as *mut c_void, MSG_SLOT_NONE);
         }
@@ -1033,23 +1031,18 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
 /// `gCommunications`' fast-selection id and its 16 last ids (the server's or the client's plain tail).
 fn fast_selection(server: bool) -> (*mut u8, *mut u8) {
     let comms = super::globals::get!(gCommunications) as P;
-    // SAFETY: the live communications object's plain tail
-    unsafe {
-        if server {
-            let t = &mut *rec::<EeGamecppServerTail>(O::C11SvTail, comms);
-            (&mut t.fast_selection_id, t.fast_selection.as_mut_ptr())
-        } else {
-            let t = &mut *rec::<EeGamecppClientTail>(O::C11ClTail, comms);
-            (&mut t.fast_selection_id, t.fast_selection.as_mut_ptr())
-        }
+    if server {
+        let t = server_tail(comms);
+        (&mut t.fast_selection_id, t.fast_selection.as_mut_ptr())
+    } else {
+        let t = client_tail(comms);
+        (&mut t.fast_selection_id, t.fast_selection.as_mut_ptr())
     }
 }
 
-/// The server's plain tail of `gCommunications` (the host's).
-fn server_tail() -> &'static mut EeGamecppServerTail {
-    let comms = super::globals::get!(gCommunications) as P;
-    // SAFETY: the live server's plain tail, no C++ call while used
-    unsafe { &mut *rec::<EeGamecppServerTail>(O::C11SvTail, comms) }
+/// The host's server's plain tail (`gCommunications`).
+fn host_tail() -> &'static mut super::session_objs::EeGamecppServerTail {
+    server_tail(super::globals::get!(gCommunications) as P)
 }
 
 /// EE_NETMSG_OP_SELECTION: the communications object's fast-selection state (the server's or the client's).

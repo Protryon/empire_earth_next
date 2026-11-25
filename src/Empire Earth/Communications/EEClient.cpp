@@ -54,7 +54,7 @@ bool EEClient::IgnoreConnectionTimeout()
 // Reports a connection state: 0 could not connect (back to the game list), 1 connecting, 4 connecting with retries
 void EEClient::SetConnectionState(long inState)
 {
-    EESession(this, false, EE_NETMSG_SESS_DO_CONNECTION_STATE, inState);
+    ee_gamecpp_session(this, false, EE_NETMSG_SESS_DO_CONNECTION_STATE, inState, 0, 0, 0, NULL, NULL);
 }
 
 // Creates the local file for an incoming transfer in the directory of its extension (saved game, scenario, campaign)
@@ -70,7 +70,7 @@ FSFile* EEClient::CreateXferFile(const UWideString& inName, unsigned long inSize
 // A player's removal: the host's starts the server migration, ours cancels the game, another's is announced
 void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
 {
-    EESession(this, false, EE_NETMSG_SESS_DO_REMOVE, inPlayer, inWasBooted, inPlayerIsOOS, inGameIsExiting);
+    ee_gamecpp_session(this, false, EE_NETMSG_SESS_DO_REMOVE, inPlayer, inWasBooted, inPlayerIsOOS, inGameIsExiting, NULL, NULL);
 }
 
 // Cancels the game (the callback of the booted message box)
@@ -101,25 +101,25 @@ unsigned char EEClient::GetClientSlot()
 // lag messages execute at once
 void EEClient::HandleMessage(NEMessage* inMessage)
 {
-    EESession(this, false, EE_NETMSG_SESS_DO_CLIENT_MESSAGE, (long long)(uintptr_t)inMessage);
+    ee_gamecpp_session(this, false, EE_NETMSG_SESS_DO_CLIENT_MESSAGE, (long long)(uintptr_t)inMessage, 0, 0, 0, NULL, NULL);
 }
 
 // Stamps the local player's input with the fast-selection number; selection messages take a new one and run at once
 void EEClient::HandleUserInput(NEMessage* inMessage)
 {
-    EESession(this, false, EE_NETMSG_SESS_DO_LOCAL_INPUT, (long long)(uintptr_t)inMessage);
+    ee_gamecpp_session(this, false, EE_NETMSG_SESS_DO_LOCAL_INPUT, (long long)(uintptr_t)inMessage, 0, 0, 0, NULL, NULL);
 }
 
 // The lost server: in a game the server migration, after loading the game cancelled, in the lobby the game list
 void EEClient::HandleConnectionLost()
 {
-    EESession(this, false, EE_NETMSG_SESS_DO_CONNECTION_LOST);
+    ee_gamecpp_session(this, false, EE_NETMSG_SESS_DO_CONNECTION_LOST, 0, 0, 0, 0, NULL, NULL);
 }
 
 // A lobby message: player and slot info, transfer progress, the game start, a connection check, a joined player
 void EEClient::HandleLobbyInput(NEMessage* inMessage)
 {
-    EESession(this, false, EE_NETMSG_SESS_DO_LOBBY_INPUT, (long long)(uintptr_t)inMessage);
+    ee_gamecpp_session(this, false, EE_NETMSG_SESS_DO_LOBBY_INPUT, (long long)(uintptr_t)inMessage, 0, 0, 0, NULL, NULL);
 }
 
 // Clears the fast-selection state (no selection executing, id 0, empty table)
@@ -131,7 +131,7 @@ void EEClient::ResetFastSelection()
 // Starts the game: the graphics, the physics loop, the main game UI; humans without a slot dropped
 unsigned long EEClient::HandleStartGame(unsigned long inParameter)
 {
-    EESession(this, false, EE_NETMSG_SESS_DO_START_GAME);
+    ee_gamecpp_session(this, false, EE_NETMSG_SESS_DO_START_GAME, 0, 0, 0, 0, NULL, NULL);
     return 0;
 }
 

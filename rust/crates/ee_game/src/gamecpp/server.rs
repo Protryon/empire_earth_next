@@ -386,11 +386,12 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
         }
         EE_NETMSG_SESS_MSG_BROADCAST => {
             h(O::SsMsgSetOriginServer, f, &[m]);
-            h(O::SsBroadcast, comms_of(f), &[m])
+            ee_net::net::ffi_server::ee_net_sv_broadcast_message(n(f).server, m as P as *mut c_void);
+            0
         }
         EE_NETMSG_SESS_MSG_SEND_ALL => {
             h(O::SsMsgSetOriginServer, f, &[m]);
-            h(O::SsSendToAll, comms_of(f), &[m]);
+            ee_net::net::ffi_server::ee_net_sv_send_message_to_all(n(f).server, m as P as *mut c_void, false);
             h(O::SsMsgDereference, f, &[m])
         }
         _ => {
@@ -590,66 +591,58 @@ fn xfer_game_file(f: P, load_type: i64, slot: i64) {
 
 fn comms(f: P, v: &[i64; 8]) {
     use ee_net::net::ffi_server as sv;
-    let op = match v[0] {
-        EE_NETMSG_SESS_COMMS_SET_CT => return net::global().set_current_ct(v[1] as u32),
-        EE_NETMSG_SESS_COMMS_SET_CTS_IN_PHYSICS => {
-            return net::global().set(EeNetCommsField::CtsProcessed, v[1] as u32)
-        }
-        EE_NETMSG_SESS_COMMS_INCREMENT_CTS => return net::global().increment_cts(),
+    match v[0] {
+        EE_NETMSG_SESS_COMMS_SET_CT => net::global().set_current_ct(v[1] as u32),
+        EE_NETMSG_SESS_COMMS_SET_CTS_IN_PHYSICS => net::global().set(EeNetCommsField::CtsProcessed, v[1] as u32),
+        EE_NETMSG_SESS_COMMS_INCREMENT_CTS => net::global().increment_cts(),
         EE_NETMSG_SESS_COMMS_SET_MP_SESSION => {
-            return net::global().set(EeNetCommsField::IsMultiplayerSession, (v[1] != 0) as u32);
+            net::global().set(EeNetCommsField::IsMultiplayerSession, (v[1] != 0) as u32);
         }
-        EE_NETMSG_SESS_COMMS_SET_HUMANS => return n(f).set(EeNetCommsField::NumHumanPlayers, v[1] as u8 as u32),
+        EE_NETMSG_SESS_COMMS_SET_HUMANS => n(f).set(EeNetCommsField::NumHumanPlayers, v[1] as u8 as u32),
         EE_NETMSG_SESS_COMMS_SET_PT => {
-            return ee_net::net::ffi_client::ee_net_cl_set_current_physics_tick(n(f).client, v[1] as u32);
+            ee_net::net::ffi_client::ee_net_cl_set_current_physics_tick(n(f).client, v[1] as u32);
         }
-        EE_NETMSG_SESS_COMMS_REGISTER => return sv::ee_net_sv_register_slot(n(f).server, v[1] as u8),
-        EE_NETMSG_SESS_COMMS_UNREGISTER => O::SsUnregisterSlot,
-        EE_NETMSG_SESS_COMMS_SEND_TO_CLEAR => return send_to_clear(),
-        EE_NETMSG_SESS_COMMS_SEND_TO_INSERT => return send_to_insert(v[1] as u8, v[2] as u8),
-        EE_NETMSG_SESS_COMMS_SEND_TO_ERASE => return send_to_erase(v[1] as u8),
-        EE_NETMSG_SESS_COMMS_ABORT_XFER => return sv::ee_net_sv_abort_xfer(n(f).server, v[1] as u32),
+        EE_NETMSG_SESS_COMMS_REGISTER => sv::ee_net_sv_register_slot(n(f).server, v[1] as u8),
+        EE_NETMSG_SESS_COMMS_UNREGISTER => sv::ee_net_sv_unregister_slot(n(f).server, v[1] as u8),
+        EE_NETMSG_SESS_COMMS_SEND_TO_CLEAR => send_to_clear(),
+        EE_NETMSG_SESS_COMMS_SEND_TO_INSERT => send_to_insert(v[1] as u8, v[2] as u8),
+        EE_NETMSG_SESS_COMMS_SEND_TO_ERASE => send_to_erase(v[1] as u8),
+        EE_NETMSG_SESS_COMMS_ABORT_XFER => sv::ee_net_sv_abort_xfer(n(f).server, v[1] as u32),
         EE_NETMSG_SESS_COMMS_REMOVE_IN_PROGRESS => {
-            return sv::ee_net_sv_remove_player_from_game_in_progress(
-                n(f).server,
-                v[1] as u8,
-                v[2] != 0,
-                false,
-                v[3] != 0,
-            );
+            sv::ee_net_sv_remove_player_from_game_in_progress(n(f).server, v[1] as u8, v[2] != 0, false, v[3] != 0);
         }
-        EE_NETMSG_SESS_COMMS_XFER_GAME_FILE => return xfer_game_file(f, v[1], v[2]),
-        EE_NETMSG_SESS_COMMS_START_GAME => return sv::ee_net_sv_set_event(n(f).server, sv::EeNetSvEvent::StartGame),
-        EE_NETMSG_SESS_COMMS_PAUSE_GAME => return sv::ee_net_sv_pause_game(n(f).server, true),
+        EE_NETMSG_SESS_COMMS_XFER_GAME_FILE => xfer_game_file(f, v[1], v[2]),
+        EE_NETMSG_SESS_COMMS_START_GAME => sv::ee_net_sv_set_event(n(f).server, sv::EeNetSvEvent::StartGame),
+        EE_NETMSG_SESS_COMMS_PAUSE_GAME => sv::ee_net_sv_pause_game(n(f).server, true),
         EE_NETMSG_SESS_COMMS_BECOME_CLIENT => {
             // the host removed: the server deleted, a client in its place
-            net::global().sv_set(EeNetSvSet::Ping, 0);
-            h(O::SsCommsResetXfer, f, &[]);
-            h(O::SsUnregisterSlot, comms_of(f), &[SS_SLOT_SERVER]);
+            let host = net::global();
+            host.sv_set(EeNetSvSet::Ping, 0);
+            // ResetXfer: protocol 0's reset of the published server's transfer
+            let (protocol, published) = (sv::ee_net_sv_protocol(host.server), sv::ee_net_sv_server(host.server));
+            // SAFETY: the live server's protocol and published server
+            unsafe { ee_net::net::ffi_protocol::ee_net_pr_reset(protocol.cast(), published, true, 0) };
+            sv::ee_net_sv_unregister_slot(n(f).server, SS_SLOT_SERVER as u8);
             sv::ee_net_sv_register_slot(n(f).server, SS_SLOT_SERVER as u8);
-            if h(O::SsCommsPresent, f, &[]) != 0 {
+            if net::present() {
                 h(O::SsCommsDelete, f, &[]);
                 h(O::SsCommsNewClient, f, &[]);
                 ee_net::net::ffi_client::ee_net_cl_start_threads(net::global().client);
             }
-            return;
         }
         EE_NETMSG_SESS_COMMS_LOWEST_CTS => {
-            return sv::ee_net_sv_set_message_manager_lowest_cts(net::global().server, v[1] as u32);
+            sv::ee_net_sv_set_message_manager_lowest_cts(net::global().server, v[1] as u32);
         }
         EE_NETMSG_SESS_COMMS_DISCONNECT => {
             ee_net::net::ffi_client::ee_net_cl_disconnect(n(f).client);
-            return;
         }
-        EE_NETMSG_SESS_COMMS_LOCAL_OUT => return super::globals::set!(gLocalPlayerOut, v[1] != 0),
-        EE_NETMSG_SESS_COMMS_SLEEP => return ee_base::plat_core::time::PlatSleep(v[1] as u32),
+        EE_NETMSG_SESS_COMMS_LOCAL_OUT => super::globals::set!(gLocalPlayerOut, v[1] != 0),
+        EE_NETMSG_SESS_COMMS_SLEEP => ee_base::plat_core::time::PlatSleep(v[1] as u32),
         _ => {
             // protocol 0 into the frame (the slot info's local address)
             h(O::SsGetProtocol, 0, &[ptr(&mut session_objs::frame(f).protocol)]);
-            return;
         }
-    };
-    h(op, comms_of(f), &[v[1], v[2], v[3]]);
+    }
 }
 
 fn start(f: P, v: &[i64; 8]) {

@@ -450,14 +450,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PvAfterLoad: EEAfterLoadRust((void (*)(uintptr_t))a[0], (uintptr_t)a[1]);
         break;
     case O::PsMajorVersion: return kSaveGameMajorVersion;
-    case O::PsListNew: return P64(new std::vector<FSPersistent*>);
-    case O::PsListDelete: delete &LIST;
-        break;
     case O::PsListPush: LIST.push_back((FSPersistent*)a[0]);
-        break;
-    case O::PsListCount: return (int64_t)LIST.size();
-    case O::PsListAt: return P64(LIST[a[0]]);
-    case O::PsListClear: LIST.clear();
         break;
     case O::PsPersistentTag: return PERSISTENT->GetTagID();
     case O::PsPersistentDelete: delete PERSISTENT;

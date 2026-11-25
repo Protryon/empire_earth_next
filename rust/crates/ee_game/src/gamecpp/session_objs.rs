@@ -94,6 +94,18 @@ pub struct EeGamecppClientTail {
     pub was_booted: bool,
 }
 
+/// A live server's plain tail (no C++ call that changes it while the reference is used).
+pub fn server_tail(server: P) -> &'static mut EeGamecppServerTail {
+    // SAFETY: the live server's members from mVoted on
+    unsafe { &mut *rec::<EeGamecppServerTail>(O::C11SvTail, server) }
+}
+
+/// A live client's plain tail (as server_tail).
+pub fn client_tail(client: P) -> &'static mut EeGamecppClientTail {
+    // SAFETY: the live client's members from mHasLeftGame on
+    unsafe { &mut *rec::<EeGamecppClientTail>(O::C11ClTail, client) }
+}
+
 /// The constructor's members (the votes, the loads, the lag mask, the flags), in the C++'s order.
 pub fn server_members(t: &mut EeGamecppServerTail) {
     t.vote_edict = 0;
@@ -309,10 +321,11 @@ pub fn take_connection_request(server: P, request: P) {
 pub fn send_connection_response(server: P, slot: i64, error: i64, send_to: i64, ui_slot: i64, unregister: bool) {
     let response = hp(O::C11SvNewResponse, server, &[error, send_to, ui_slot]);
     h(O::SsMsgSetOriginServer, 0, &[pa(response)]);
-    h(O::C11SvSendTo, server, &[slot, pa(response)]);
+    let engine = super::net::net(server as *const c_void).server;
+    ee_net::net::ffi_server::ee_net_sv_send_message_to(engine, slot as u8, response as *mut c_void, true);
     h(O::SsMsgDereference, 0, &[pa(response)]);
     if unregister {
-        h(O::C11SvUnregister, server, &[slot]);
+        ee_net::net::ffi_server::ee_net_sv_unregister_slot(engine, slot as u8);
     }
 }
 

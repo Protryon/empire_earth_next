@@ -604,16 +604,8 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11NmPlayerTradePrice: return EEGetTradePrice(NM_P, (long)NM_I[1], (unsigned char)NM_I[2]);
     case O::C11NmWorldNumPlayers: return gWorld.mNumPlayers;
     case O::C11NmWorldCurrentIndex: return gWorld.mCurrentPlayer;
-    case O::C11NmWorldExecutingSelection: return (gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection) || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection);
-    case O::C11NmWorldIsServer: return gCommunications->IsServer();
-    case O::C11NmWorldHasCommunications: return gCommunications != NULL;
-    case O::C11NmWorldLocalSendSlot: return gCommunications->IsClient() == true ? static_cast<EEClient*>(gCommunications)->GetMySendToSlot() : 0xfe;
     case O::C11NmWorldStringLength: return NM_M->mString.GetLength();
-    case O::C11NmWorldPlayback: return (gCommunications->IsClient() == true && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying) || (gCommunications->IsServer() == true && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying);
     case O::C11NmWorldCollisionSphereMode: return gCollisionSphereMode;
-    case O::C11NmWorldLoadedHumans: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers() - static_cast<EEServer*>(gCommunications)->mNumDroppedLoaders;
-    case O::C11NmWorldLoadResponses: return static_cast<EEServer*>(gCommunications)->mNumLoadResponses;
-    case O::C11NmWorldHumans: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers();
     case O::C11NmMapType: gGameOptions.mMapType = NM_M->mString;
         break;
     // the factory (p the received buffer)

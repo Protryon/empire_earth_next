@@ -78,45 +78,45 @@ fn owned(make: O, delete: O) -> Owned {
     Owned::new(make, delete)
 }
 
-fn push(list: P, item: P) {
-    h(O::PsListPush, list, &[pa(item)]);
-}
-
 /// BuildSaveGameChunks: the chunks a save writes, in chunk order (each new; the game objects only borrowed).
-fn build_chunks(list: P) {
+fn build_chunks() -> Vec<P> {
+    let mut list = Vec::new();
     let checksum = hp(O::PsNewChecksumChunk, 0, &[]);
     h(O::PsWorldChecksum, checksum, &[]);
-    push(list, checksum);
-    push(list, hp(O::PsNewSeedChunk, 0, &[]));
+    list.push(checksum);
+    list.push(hp(O::PsNewSeedChunk, 0, &[]));
     let map = hp(O::PsNewMapChunk, 0, &[]);
     h(O::PsMapChunkUnown, map, &[]);
-    push(list, map);
+    list.push(map);
     let mut location = Ge3DPoint::default();
     h(O::CameraGetLocation, 0, &[ptr(&mut location)]);
-    push(list, hp(O::PsNewCameraChunk, 0, &[ptr(&mut location)]));
+    list.push(hp(O::PsNewCameraChunk, 0, &[ptr(&mut location)]));
     let scenario = hp(O::PsNewScenarioChunk, 0, &[]);
     h(O::PsScenarioChunkUnown, scenario, &[]);
-    push(list, scenario);
+    list.push(scenario);
     let effects = hp(O::PsNewEffectsChunk, 0, &[]);
     h(O::PsEffectsChunkUnown, effects, &[]);
-    push(list, effects);
+    list.push(effects);
     let environment = hp(O::PsNewEnvironmentChunk, 0, &[]);
     h(O::PsEnvironmentChunkUnown, environment, &[]);
-    push(list, environment);
-    push(list, hp(O::PsNewPlayerHelper, 0, &[]));
-    push(list, hp(O::PsNewWorldHelper, 0, &[]));
-    push(list, hp(O::PsNewMultiplayerHelper, 0, &[]));
-    push(list, hp(O::PsNewCalamityHelper, 0, &[]));
+    list.push(environment);
+    list.push(hp(O::PsNewPlayerHelper, 0, &[]));
+    list.push(hp(O::PsNewWorldHelper, 0, &[]));
+    list.push(hp(O::PsNewMultiplayerHelper, 0, &[]));
+    list.push(hp(O::PsNewCalamityHelper, 0, &[]));
+    list
 }
 
-/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it too).
+/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it): the chunks into its std::vector.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_ps_build_chunks(list: *mut c_void) {
-    build_chunks(list as P);
+    for item in build_chunks() {
+        h(O::PsListPush, list as P, &[pa(item)]);
+    }
 }
 
 /// FillSaveGameHeader: name, versions, player names, date, chunk tags, scenario media strings and game options.
-fn fill_header(name: P, header: P, list: P) {
+fn fill_header(name: P, header: P, list: &[P]) {
     h(O::PsHdrSetName, header, &[pa(name)]);
     h(O::PsHdrDefaultDescription, header, &[]);
     // SAFETY: the header's mMajorVersion and mMinorVersion
@@ -135,9 +135,8 @@ fn fill_header(name: P, header: P, list: P) {
     }
     h(O::PsHdrSetDate, header, &[]);
     h(O::PsHdrTagsClear, header, &[]);
-    let n = h(O::PsListCount, list, &[]);
-    for i in 0..n {
-        let tag = h(O::PsPersistentTag, hp(O::PsListAt, list, &[i]), &[]);
+    for &item in list {
+        let tag = h(O::PsPersistentTag, item, &[]);
         h(O::PsHdrTagsPush, header, &[tag]);
     }
     if h(O::PsWorldScenario, 0, &[]) != 0 {
@@ -182,14 +181,14 @@ pub extern "C" fn ee_gamecpp_ps_trim_auto_saves(
 
 /// WriteSaveGameChunks: each listed chunk written to a file; on success the chunks deleted and the list emptied; the
 /// first error.
-fn write_chunks(list: P, file: P) -> i64 {
+fn write_chunks(list: &mut Vec<P>, file: P) -> i64 {
     let chunks = owned(O::PsChunksNew, O::PsChunksDelete);
-    let n = h(O::PsListCount, list, &[]);
+    let n = list.len() as i64;
     h(O::PsChunksResize, chunks.0, &[n]);
     let mut r = PF_OK;
     let mut i = 0;
     while i < n && r == PF_OK {
-        r = h(O::PsChunkSavePersistent, chunks.0, &[i, major(), minor(), pa(hp(O::PsListAt, list, &[i]))]);
+        r = h(O::PsChunkSavePersistent, chunks.0, &[i, major(), minor(), pa(list[i as usize])]);
         if r != PF_OK {
             break;
         }
@@ -197,10 +196,9 @@ fn write_chunks(list: P, file: P) -> i64 {
         i += 1;
     }
     if r == PF_OK {
-        for i in 0..n {
-            h(O::PsPersistentDelete, hp(O::PsListAt, list, &[i]), &[]);
+        for item in list.drain(..) {
+            h(O::PsPersistentDelete, item, &[]);
         }
-        h(O::PsListClear, list, &[]);
     }
     h(O::PsChunksClear, chunks.0, &[]);
     r
@@ -209,14 +207,13 @@ fn write_chunks(list: P, file: P) -> i64 {
 /// WriteSaveGame: a whole saved game (the header, then every chunk); the first error.
 fn write_save(name: P, time: c_ulong, file: P, other: P) -> i64 {
     let header = owned(O::PsHeaderNew, O::PsHeaderDelete);
-    let list = owned(O::PsListNew, O::PsListDelete);
-    build_chunks(list.0);
-    fill_header(name, header.0, list.0);
+    let mut list = build_chunks();
+    fill_header(name, header.0, &list);
     // SAFETY: the header's mChecksum
     unsafe { *(hp(O::PsHdrNumbers, header.0, &[]) as *mut c_ulong).add(2) = time };
     let mut r = h(O::PsHeaderSave, header.0, &[major(), minor(), pa(file)]);
     if r == PF_OK {
-        r = write_chunks(list.0, other);
+        r = write_chunks(&mut list, other);
     }
     r
 }

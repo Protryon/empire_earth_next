@@ -64,18 +64,49 @@ fn world_fact(which: i64) -> Option<O> {
     Some(match which {
         EE_NETMSG_WORLD_NUM_PLAYERS => O::C11NmWorldNumPlayers,
         EE_NETMSG_WORLD_CURRENT_INDEX => O::C11NmWorldCurrentIndex,
-        EE_NETMSG_WORLD_EXECUTING_SELECTION => O::C11NmWorldExecutingSelection,
-        EE_NETMSG_WORLD_IS_SERVER => O::C11NmWorldIsServer,
-        EE_NETMSG_WORLD_HAS_COMMUNICATIONS => O::C11NmWorldHasCommunications,
-        EE_NETMSG_WORLD_LOCAL_SEND_SLOT => O::C11NmWorldLocalSendSlot,
         EE_NETMSG_WORLD_STRING_LENGTH => O::C11NmWorldStringLength,
-        EE_NETMSG_WORLD_PLAYBACK => O::C11NmWorldPlayback,
         EE_NETMSG_WORLD_COLLISION_SPHERE_MODE => O::C11NmWorldCollisionSphereMode,
-        EE_NETMSG_WORLD_LOADED_HUMANS => O::C11NmWorldLoadedHumans,
-        EE_NETMSG_WORLD_LOAD_RESPONSES => O::C11NmWorldLoadResponses,
-        EE_NETMSG_WORLD_HUMANS => O::C11NmWorldHumans,
         _ => return None,
     })
+}
+
+/// The world's facts about `gCommunications` (its engine handles and plain tails): None for the others.
+fn net_fact(which: i64) -> Option<i64> {
+    use ee_net::net::{ffi_client as cl, ffi_server as sv};
+    let comms = super::net::global();
+    let object = super::globals::get!(gCommunications) as P;
+    let server = !comms.server.is_null();
+    let playing = 3; // kRecordModePlaying
+    Some(match which {
+        EE_NETMSG_WORLD_EXECUTING_SELECTION => {
+            ((comms.is_client() && super::session_objs::client_tail(object).is_executing_selection)
+                || (server && super::session_objs::server_tail(object).is_executing_selection)) as i64
+        }
+        EE_NETMSG_WORLD_IS_SERVER => server as i64,
+        EE_NETMSG_WORLD_HAS_COMMUNICATIONS => super::net::present() as i64,
+        EE_NETMSG_WORLD_LOCAL_SEND_SLOT => {
+            if comms.is_client() {
+                cl::ee_net_cl_my_send_to_slot(comms.client) as i64
+            } else {
+                0xfe
+            }
+        }
+        EE_NETMSG_WORLD_PLAYBACK => {
+            ((comms.is_client() && cl::ee_net_cl_record_playback_mode(comms.client) == playing)
+                || (server && sv::ee_net_sv_record_playback_mode(comms.server) == playing)) as i64
+        }
+        EE_NETMSG_WORLD_LOADED_HUMANS => {
+            humans(comms) - super::session_objs::server_tail(object).num_dropped_loaders as i64
+        }
+        EE_NETMSG_WORLD_LOAD_RESPONSES => super::session_objs::server_tail(object).num_load_responses as i64,
+        EE_NETMSG_WORLD_HUMANS => humans(comms),
+        _ => return None,
+    })
+}
+
+/// `GetNumHumanPlayers`.
+fn humans(comms: super::net::Net) -> i64 {
+    comms.get(ee_net::net::ffi_comms::EeNetCommsField::NumHumanPlayers) as u8 as i64
 }
 
 /// A fact's answer, 0 for an unknown fact.
@@ -145,7 +176,7 @@ pub unsafe extern "C" fn ee_gamecpp_netmsg_host(op: u32, c: *mut c_void) -> i64 
         }
         EE_NETMSG_OP_UNIT_FACT => fact(unit_fact(i[0]), call),
         EE_NETMSG_OP_PLAYER_FACT => fact(player_fact(i[0]), call),
-        EE_NETMSG_OP_WORLD_FACT => fact(world_fact(i[0]), call),
+        EE_NETMSG_OP_WORLD_FACT => net_fact(i[0]).unwrap_or_else(|| fact(world_fact(i[0]), call)),
         EE_NETMSG_OP_DECISION => {
             ee_netmsg_capture_decision(i[0] as u32, c.i.as_ptr().add(2), i[1] as u32);
             0
@@ -216,7 +247,8 @@ mod tests {
     fn the_facts_map_to_their_ops() {
         assert_eq!(unit_fact(EE_NETMSG_UNIT_IN_SET), Some(O::C11NmUnitInSet));
         assert_eq!(player_fact(EE_NETMSG_PLAYER_TRADE_PRICE), Some(O::C11NmPlayerTradePrice));
-        assert_eq!(world_fact(EE_NETMSG_WORLD_HUMANS), Some(O::C11NmWorldHumans));
+        assert_eq!(world_fact(EE_NETMSG_WORLD_NUM_PLAYERS), Some(O::C11NmWorldNumPlayers));
+        assert_eq!(world_fact(EE_NETMSG_WORLD_HUMANS), None);
         assert_eq!(world_fact(EE_NETMSG_WORLD_OPTIONS_LOCK), None);
         assert_eq!(fact(None, 0), 0);
     }
