@@ -2528,13 +2528,11 @@ enum class EeGameCpp : uint32_t {
   TkEpochCount,
   TkEpochAt,
   TkEpochRef,
-  TkEpochNodes,
   TkUnitId,
   TkGet,
   TkSetRef,
   TkNeedsUnitMedia,
   TkTrigger,
-  TkGetPlayer,
   TkTreePlayer,
   TkEpochReached,
   TkStatReset,
@@ -2588,20 +2586,14 @@ enum class EeGameCpp : uint32_t {
   TkClassCosts,
   TkUpgrade,
   TkInCostSet,
+  TkVariant,
   TkPlayerJit,
   TkClassHasRallyPoint,
-  TkNodeCount,
-  TkNodeAt,
-  TkNodeKeyAt,
+  TkEpochLists,
   TkNodeUnload,
   TkNodeDelete,
-  TkNodesClear,
   TkEpochDeleteData,
   TkPushId,
-  TkLoadedClassesPush,
-  TkLoadedClassesCount,
-  TkLoadedClassAt,
-  TkLoadedClassesClear,
   TkNodeLoadMedia,
   TkNodeUnloadMedia,
   TkEpochCostFactor,
@@ -2926,9 +2918,9 @@ enum class EeGameCpp : uint32_t {
   TbButtonGet,
   TbSwapButton,
   TbGlobalTree,
-  TbEpochInsert,
   TbSetPlayerIndex,
   TbCopyPlayer,
+  TbSetPlayer,
   TbIsHuman,
   TbClassFamily,
   TbNodeIsObsolete,
@@ -3874,7 +3866,7 @@ bool ee_gamecpp_capture_can_cast_enter();
 /// EECalamityCanCastLeave.
 void ee_gamecpp_capture_can_cast_leave();
 
-/// EECalamityCanCastRecord: an outermost CanCastAt's CCAS record (kind 0); the result.
+/// EECalamityCanCastScope::Record: an outermost CanCastAt's CCAS record (kind 0); the result.
 ///
 /// # Safety
 /// `at` is three floats.
@@ -5342,67 +5334,6 @@ void ee_gamecpp_client_timeout_warning(unsigned long remaining);
 int64_t ee_gamecpp_session_host(uint32_t op,
                                 void *call);
 
-/// EETechTree::UpdateInterface: for the local player's tree, the new epoch's name shown and the main game form's
-/// group panel refreshed.
-void ee_gamecpp_tech_update_interface(void *tree,
-                                      bool epoch_changed);
-
-/// The walks' host (ee_sim tech nodes.rs EE_TECH_HOST_*; was EETechTree.cpp's EETechHost): the tree's containers, the
-/// entry points the simulation capture wraps, the world, the events, the interface and the media.
-///
-/// # Safety
-/// `io` is the walk's live record; `tree` an EETechTree.
-int32_t ee_gamecpp_tech_host(void *tree,
-                             int32_t op,
-                             void *io);
-
-/// EETechTree::Load (the tech tree file): every epoch block (the original: exactly 15), the epoch count, and the
-/// epoch range reset to all epochs.
-long ee_gamecpp_tech_load_file(void *tree,
-                               void *file);
-
-/// EETechTree::UnloadAll: every epoch unloaded.
-void ee_gamecpp_tech_unload_all(void *tree);
-
-/// EETechTree::GetNodeIDs (`all`) and GetEpochNodeIDs: the node ids of every epoch, or of one (out of range: none).
-void ee_gamecpp_tech_node_ids(void *tree,
-                              bool all,
-                              long epoch,
-                              void *out);
-
-/// EETechTree::SumCostsUncaptured: the resource costs of a tech and every unresearched prerequisite and upgrade path
-/// to it (ee_sim's sum over the tree's nodes).
-///
-/// # Safety
-/// `costs` holds 7 longs.
-void ee_gamecpp_tech_sum_costs(void *tree,
-                               long id,
-                               long unit_class,
-                               long *costs);
-
-/// EETechTreeNode::GetCostUncaptured: the node's cost in a resource for a unit class (the class's own costs when it
-/// has some), scaled; a unit's by the wonder's epochs, the variant's cost set, the player's upgrade and the
-/// just-in-time manufacturing (ee_sim's `ee_tech_node_cost`).
-long ee_gamecpp_tech_node_cost(void *node,
-                               long resource,
-                               long unit_class,
-                               float scale);
-
-/// EETechTreeEpoch::DeleteNodes (`unload`: Unload, each node unloaded first, then the epoch's data deleted; 0).
-long ee_gamecpp_tech_epoch_delete_nodes(void *epoch,
-                                        bool unload);
-
-/// EETechTreeEpoch::GetNodeIDs: the epoch's node ids appended.
-void ee_gamecpp_tech_epoch_node_ids(void *epoch, void *out);
-
-/// EETechTreeEpoch::LoadMedia: the media of every unit class the epoch's buildings make (kept in its loaded list),
-/// then the epoch's own.
-void ee_gamecpp_tech_epoch_load_media(void *epoch,
-                                      void *player);
-
-/// EETechTreeEpoch::UnloadMedia: the unit class media it loaded, then its own.
-void ee_gamecpp_tech_epoch_unload_media(void *epoch, void *player);
-
 /// EEGetFileChecksum: the checksum over the directory's files matching the pattern, in file name order (one encrypted
 /// name skipped): each file's bytes, or with `use_file_times` its write time's high word plus its size. A file that
 /// cannot be opened is skipped; a read that returns nothing ends that file (the port's fix of two endless loops).
@@ -5690,67 +5621,6 @@ void ee_gamecpp_tech_capture_upgrade(void *record,
 /// player.
 void ee_gamecpp_tech_capture_player(void *record,
                                     void *player);
-
-/// EETechTreeNode::Load: the node's record from the tech tree file, a cost table per unit class scaled by its
-/// factor, its epoch and its button.
-long ee_gamecpp_tech_node_load(void *node,
-                               void *file,
-                               void *tree);
-
-/// EETechTreeEpoch::Load: the epoch's record and its tech nodes from the tech tree file (nodes with epoch ids are
-/// dropped).
-long ee_gamecpp_tech_epoch_load(void *epoch,
-                                void *file,
-                                void *tree);
-
-/// EETechTreeNode::operator=: another node's state, its data (with its class cost tables) shared.
-void *ee_gamecpp_tech_node_assign(void *node, const void *other);
-
-/// EETechTreeEpoch::operator=: another epoch's state, its nodes deep-copied for this epoch's tree (the node data
-/// stays shared).
-void *ee_gamecpp_tech_epoch_assign(void *epoch,
-                                   const void *other);
-
-/// The EETechTree constructor's body: every epoch, the prehistoric one current, the end the last.
-void ee_gamecpp_tech_tree_init(void *tree);
-
-/// EETechTree::operator=: another tree's epochs (deep copies), epoch range and player; the copy is not loaded.
-void *ee_gamecpp_tech_tree_assign(void *tree,
-                                  const void *other);
-
-/// The node's destructor (`destroy`: its unit media unloaded when loaded and its unit classes given their default
-/// buttons back) and ClearClassCosts (the class cost tables freed).
-void ee_gamecpp_tech_node_free(void *node,
-                               bool destroy);
-
-/// EETechTreeNode::Unload: the node's data deleted; 0.
-long ee_gamecpp_tech_node_unload(void *node);
-
-/// EETechTreeNode::SetButton: a new button, swapped into the node's unit classes.
-void ee_gamecpp_tech_node_set_button(void *node, unsigned long button);
-
-/// EETechTreeNode::NeedsUnitMedia (`captured`: TNMT records the answer) and NeedsUnitMediaUncaptured: whether the
-/// node makes a building or mine whose media this game needs (ee_tech tree.rs needs_unit_media).
-bool ee_gamecpp_tech_needs_unit_media(void *node,
-                                      bool captured);
-
-/// EETechTreeEpoch::GetBuildTime: the epoch's research time (computer players need half of it); TNMT records it.
-long ee_gamecpp_tech_epoch_build_time(void *epoch);
-
-/// EETechTree::Load (`load`: the saved research, obsolete and editor-obsoleted ids, the epochs and each epoch's
-/// state) and Save (the same written; the last epoch's write result) of a saved game (ee_tech tree_load, tree_save).
-long ee_gamecpp_tech_tree_save(void *tree,
-                               void *file,
-                               bool load,
-                               unsigned long major,
-                               unsigned long minor);
-
-/// EETechTree::SumCosts: the resource costs of a tech and every unresearched prerequisite and upgrade path to it;
-/// TSUM (TEST ONLY) records the outermost call: player, id, unit class, the seven costs before and after.
-void ee_gamecpp_tech_sum_costs_captured(void *tree,
-                                        long id,
-                                        long unit_class,
-                                        long *costs);
 
 /// EEMessage::ExportMessage: the codec's bytes in a new[] block (the caller deletes it), and their size.
 ///

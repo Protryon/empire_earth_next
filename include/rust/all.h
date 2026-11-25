@@ -37,6 +37,7 @@
 #include "rust/game/screens.h"
 #include "rust/game/sight_capture.h"
 #include "rust/game/sim_driver.h"
+#include "rust/game/tech_tree.h"
 #include "rust/net/msgid.h"
 #include "rust/net/net.h"
 #include "rust/net/net_tcp.h"

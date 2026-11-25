@@ -53,41 +53,13 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 
-static long EETechCapturePlayerIndexImpl(EETechTree* inTree)
-{
-    return inTree != NULL ? inTree->mPlayerIndex : -1;
-}
-
-static void EETechCaptureCostImpl(EETechTreeNode* inNode, long inKind, long inResource, long inUnitClass,
-                                  float inScale, long inCost)
-{
-    ee_tech_capture_cost(inKind, EETechCapturePlayerIndex(inNode->mTree), inNode->mData->mID,
-                         inNode->mTree != NULL ? inNode->mTree->mCurrentEpoch : -1, inResource, inUnitClass, inScale, inCost);
-}
-
-
-// CCAS: an outermost CanCastAt's record (ee_game gamecpp calamity_capture.rs)
-
-static long CanCastRecordImpl(bool inOutermost, EECalamityClass* inClass, EEComplexUnit* inUnit,
-                              const GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
-                              EEUnit* inTargetUnit, long inResult)
-{
-    return ee_gamecpp_capture_can_cast_record(inOutermost, inClass, inUnit, (const float(*)[3])&inLocation.mX, inX, inY,
-                                              inCheck, inTargetUnit, inResult);
-}
-
 // ------------------------------------------------------------------------- round 10, lane B: the records' C++
 
 
 #define P64(x) ((int64_t)(intptr_t)(x))
-int32_t EETechEpochNodes(EETechTreeEpoch* inEpoch, EeTechHostIo* io);   // EETechTree.cpp
 #define TC_UPGRADE ((EEUnitClassUpgrade*)p)
 #define TC_PLAYER ((EEPlayer*)p)
 
-// The game calls these three through the header's hook pointers, set here before main: the game's units name no
-// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EECalamityCanCastRecord = CanCastRecordImpl, EETechCapturePlayerIndex = EETechCapturePlayerIndexImpl,
-                                      EETechCaptureCost = EETechCaptureCostImpl, true);
 
 // ------------------------------------------------------------------------- round 11, lane C: the hooks' C++
 
@@ -163,11 +135,11 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TbSwapButton: ((EEPlayer*)p)->SwapClassButtonMedia((long)a[0], (EEButtonObject*)a[1], (EEButtonObject*)a[2]);
         break;
     case O::TbGlobalTree: return P64(&gTechTree);
-    case O::TbEpochInsert: BEPOCH->mNodes.insert(std::map<long, EETechTreeNode*>::value_type(((EETechTreeNode*)a[0])->mData->mID, (EETechTreeNode*)a[0]));
-        break;
     case O::TbSetPlayerIndex: BTREE->mPlayerIndex = (long)a[0];
         break;
     case O::TbCopyPlayer: BTREE->mPlayer = ((const EETechTree*)a[0])->mPlayer;
+        break;
+    case O::TbSetPlayer: BTREE->mPlayer = (EEPlayer*)a[0];
         break;
     case O::TbIsHuman: return ((EEPlayer*)p)->IsHuman();
     case O::TbClassFamily: return ((EEUnitClass*)p)->mFamily;
@@ -185,27 +157,18 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkNodeTree: return P64(TNODE->mTree);
     case O::TkClassCosts: return P64(TNODE->mData->mClassCosts.count((long)a[0]) != 0 ? TNODE->mData->mClassCosts[(long)a[0]] : NULL);
     case O::TkUpgrade: return P64(static_cast<EEUnitStats*>(((EEPlayer*)p)->mUnitClassUpgrades[a[0]]));
+    case O::TkVariant: return P64(static_cast<EeDataGameVariantFields*>(TVARIANT));
     case O::TkInCostSet: return gUnitSetManager.GetSet(TVARIANT->mCostSet) != NULL && gUnitSetManager.GetSet(TVARIANT->mCostSet)->Contains((long)a[0]);
     case O::TkPlayerJit: return ((EEPlayer*)p)->mJITManufacturing;
     case O::TkClassHasRallyPoint: return gUnitClassTable[a[0]] != NULL && gUnitClassTable[a[0]]->HasRallyPoint();
-    case O::TkNodeCount: return (int64_t)TEPOCH->mNodes.size();
-    case O::TkNodeAt: return P64(std::next(TEPOCH->mNodes.begin(), a[0])->second);
-    case O::TkNodeKeyAt: return std::next(TEPOCH->mNodes.begin(), a[0])->first;
+    case O::TkEpochLists: return P64(TEPOCH->mLists);
     case O::TkNodeUnload: TNODE->Unload();
         break;
     case O::TkNodeDelete: delete TNODE;
         break;
-    case O::TkNodesClear: TEPOCH->mNodes.clear();
-        break;
     case O::TkEpochDeleteData: delete std::exchange(TEPOCH->mData, nullptr);
         break;
     case O::TkPushId: ((std::vector<long>*)a[0])->push_back((long)a[1]);
-        break;
-    case O::TkLoadedClassesPush: TEPOCH->mLoadedUnitClasses.push_back((long)a[0]);
-        break;
-    case O::TkLoadedClassesCount: return (int64_t)TEPOCH->mLoadedUnitClasses.size();
-    case O::TkLoadedClassAt: return TEPOCH->mLoadedUnitClasses[a[0]];
-    case O::TkLoadedClassesClear: TEPOCH->mLoadedUnitClasses.clear();
         break;
     case O::TkNodeLoadMedia: TEPOCH->EETechTreeNode::LoadMedia((EEPlayer*)a[0]);
         break;
@@ -232,7 +195,6 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkEpochAt: return P64(&TREE->mEpochs[(long)a[0]]);
     case O::TkEpochRef: ((EeTechHostIo*)a[1])->node = TREE->mEpochs[(long)a[0]].Ref();
         break;
-    case O::TkEpochNodes: return EETechEpochNodes((EETechTreeEpoch*)p, (EeTechHostIo*)a[0]);
     case O::TkUnitId: return (int64_t)((EEComplexUnit*)p)->mUnitID;
     case O::TkGet: return P64(TREE->Get((long)a[0]));
     case O::TkSetRef: ((EeTechHostIo*)a[0])->node = TNODE->Ref();
@@ -240,7 +202,6 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkNeedsUnitMedia: return TNODE->NeedsUnitMedia();
     case O::TkTrigger: EEEvent::Trigger((long)a[0], TREE->mPlayerIndex, (long)a[1], TREE->mPlayer, (EEComplexUnit*)a[2]);
         break;
-    case O::TkGetPlayer: return P64(TREE->GetPlayer());
     case O::TkTreePlayer: return P64(TREE->mPlayer);
     case O::TkEpochReached: TPL->EpochReached((long)a[0]);
         break;
