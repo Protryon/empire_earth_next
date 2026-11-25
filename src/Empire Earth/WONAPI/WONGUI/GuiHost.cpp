@@ -659,11 +659,6 @@ MultiListHeader::MultiListHeader(MultiListArea* area)
 }
 // Destroys the header: the Rust header goes (its buttons are the container's children)
 MultiListHeader::~MultiListHeader() { ee_won_mhead_free(this->mHead); }
-// Paints the header's children (the linker folds this body into the identical ScrollAreaViewport::Paint at 0x00705e00)
-void MultiListHeader::Paint(Graphics& graphics) { Container::Paint(graphics); }
-// Returns the child under a point (the linker folds this body into the identical RootContainer::FindChildAt
-// at 0x00704710)
-Component* MultiListHeader::FindChildAt(int x,int y) { return Container::FindChildAt(x,y); }
 // Returns the sort arrow a header button should draw, found through its enclosing header (none without one)
 ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
 {
@@ -702,17 +697,6 @@ TreeArea::TreeArea()
 }
 // Destroys the tree: the Rust tree gives its root back (and so every row's)
 TreeArea::~TreeArea() { ee_won_tree_free(this->mTree); }
-// Wraps a text item (the tree's colour and font, an optional icon) in a new row under a parent (not identified in
-// the original exe)
-TreeItem* TreeArea::InsertString(TreeItem* theParent,const GUIString& theStr,Image* theIcon,int thePos)
-{
-    SmartPtr<TextListItem> anItem=new TextListItem;
-    anItem->mText=theStr;
-    anItem->mColor=this->mTextColor;
-    anItem->mFont=this->mFont;
-    anItem->mImage=theIcon;
-    return this->InsertTreeItem(theParent,anItem.get(),thePos);
-}
 }
 
 // ---- the popup menu (menuobj.rs)

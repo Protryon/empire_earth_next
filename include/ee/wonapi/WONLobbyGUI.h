@@ -513,7 +513,6 @@ public:
     bool IsNoActivate() { return (GetButtonFlags() & 0x200) != 0; }
     bool IsDefaultOnFocus() { return (GetButtonFlags() & 0x400) != 0; }
     unsigned long GetButtonFlags() { return (unsigned long)this->BCall(EeWonBtnCall::GetField,(intptr_t)EeWonBtnField::Flags); }
-    int GetMouseDownState() { return (int)this->BCall(EeWonBtnCall::GetField,(intptr_t)EeWonBtnField::MouseDownState); } // 0 up, 1 down outside, 2 down over
     SmartPtr<Sound> mClickSound; // at +0x3c
     EeWonButton* mBtn;
     void CopyAttributes(Button*); //2f3310
@@ -800,7 +799,6 @@ public:
     Button* GetUpArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,0); }
     void SetUpArrow(Button* b) { this->Call(EeWonBarCall::SetPart,0,(intptr_t)static_cast<Component*>(b)); }
     Button* GetDownArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,1); }
-    void SetDownArrow(Button* b) { this->Call(EeWonBarCall::SetPart,1,(intptr_t)static_cast<Component*>(b)); }
     Button* GetScrollRect() { return (Button*)this->Call(EeWonBarCall::GetPart,2); }
     void SetScrollRect(Button* b) { this->Call(EeWonBarCall::SetPart,2,(intptr_t)static_cast<Component*>(b)); }
     Component* GetThumb() { return (Component*)this->Call(EeWonBarCall::GetPart,3); }
@@ -1917,7 +1915,6 @@ public:
     void SetBorderPadding(int l,int t,int r,int b) { int p[4]={l,t,r,b}; this->ACall(EeWonPaneCall::SetBorderPadding,(intptr_t)p); } //305270
     void ScrollTranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollTranslate,(intptr_t)&x,(intptr_t)&y); } //305390
     void ScrollUntranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollUntranslate,(intptr_t)&x,(intptr_t)&y); } //3053d0
-    virtual void HandleComponentEvent(ComponentEvent* e) { Component::HandleComponentEvent(e); } // 0x305180, vtable +0x7c override
     void SetSizeEqualToTotal(int w,int h) { this->ACall(EeWonPaneCall::SetSizeEqualToTotal,w,h); } //305450
     bool IsRectVisible(const WONRectangle& r) { return this->ACall(EeWonPaneCall::IsRectVisible,(intptr_t)&r)!=0; } //3054f0
     ScrollAreaViewport* GetViewport() { return this->mViewport.get(); }
@@ -1937,7 +1934,6 @@ public:
     void SetPads(int l,int t,int r,int b) { this->SetField(EeWonGuiField::LeftPad,l); this->SetField(EeWonGuiField::TopPad,t); this->SetField(EeWonGuiField::RightPad,r); this->SetField(EeWonGuiField::BottomPad,b); } // the fields only (the text area's and list's constructors)
     int GetVertOffset() { return this->GetField(EeWonGuiField::VertOffset); }
     int GetViewWidth() { return this->GetField(EeWonGuiField::ScrollWidth); }
-    int GetViewHeight() { return this->GetField(EeWonGuiField::ScrollHeight); }
     SmartPtr<ScrollAreaViewport> mViewport; // at +0x84
     Background mBackground;
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
@@ -2068,9 +2064,6 @@ public:
     bool IsLastChild() { return this->NCall(NULL,EeWonTNodeCall::IsLastChild)!=0; }
     bool ContainsPoint(int x,int y) { return this->NCall(NULL,EeWonTNodeCall::ContainsPoint,x,y)!=0; }
     bool IsOpen() { return this->NCall(NULL,EeWonTNodeCall::IsOpen)!=0; }
-    ListItem* GetWrappedItem() { return (ListItem*)this->NCall(NULL,EeWonTNodeCall::Item); } // mItem
-    int GetNumChildren() { return (int)this->NCall(NULL,EeWonTNodeCall::NumChildren); }
-    TreeItem* GetParentItem() { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::Parent); } // mParent
     int GetIndex() { return (int)this->NCall(NULL,EeWonTNodeCall::Index); } // mIndex
     EeWonTNode* mNode;
 private:
@@ -2092,12 +2085,10 @@ public:
     virtual void NotifyMouseItemGone() { this->TCall(EeWonTreeCall::NotifyMouseItemGone); }
     virtual bool Sort() { return false; }
     void Sort(TreeItem* i,bool recursive=false) { this->TCall(EeWonTreeCall::SortItem,(intptr_t)i,recursive); } // sorts the visible subtree
-    TreeItem* InsertString(TreeItem*,const GUIString&,Image* =NULL,int=-1);
     void CloseItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::CloseItem,(intptr_t)i,all,send); }
     void SetTreeFlags(int f,bool on) { this->TCall(EeWonTreeCall::SetTreeFlags,f,on); }
     TreeItem* InsertTreeItem(TreeItem* p,ListItem* i,int pos=-1) { return (TreeItem*)this->TCall(EeWonTreeCall::InsertTreeItem,(intptr_t)p,(intptr_t)i,pos); }
     void RemoveTreeItem(TreeItem* i) { this->TCall(EeWonTreeCall::RemoveTreeItem,(intptr_t)i); }
-    void ClearTree(bool=true) { this->TCall(EeWonTreeCall::RemoveAllItems,0); } // 0x3151a0 (the flag unused)
     void RemoveAllItems(TreeItem* p) { this->TCall(EeWonTreeCall::RemoveAllItems,(intptr_t)p); }
     void OpenItem(TreeItem* i,bool send=true) { this->TCall(EeWonTreeCall::OpenItem,(intptr_t)i,send); }
     void ToggleItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::ToggleItem,(intptr_t)i,all,send); }
@@ -2167,7 +2158,6 @@ public:
     void SetColumnWidth(int c,int w,bool fromSize) { this->MCall(EeWonMultiCall::SetColumnWidth,c,w,fromSize); }
     int GetColumnPaintContext() { return (int)this->MCall(EeWonMultiCall::PaintContext); }
     int GetSortColumn() { return (int)this->MCall(EeWonMultiCall::SortColumn); }
-    int GetSortColumnPrev() { return (int)this->MCall(EeWonMultiCall::SortColumnPrev); }
     void SetDynamicSizeColumn(int c) { this->MCall(EeWonMultiCall::SetDynamicSizeColumn,c); }
     void SetSortColumnFunc(int c,SortFunc f) { this->MCall(EeWonMultiCall::SetSortColumnFunc,c,(intptr_t)f); }
     virtual void AdjustPosition(bool b) { this->MCall(EeWonMultiCall::AdjustPosition,b); }
@@ -2218,14 +2208,12 @@ public:
     MultiListHeader(MultiListArea* =NULL);
     virtual ~MultiListHeader();
     virtual void Virtual08() { this->HCall(EeWonMHeadCall::SizeChanged); } // 0x302fb0 SizeChanged
-    virtual void Paint(Graphics&); // 0x305e00 (the container paint)
     virtual void MouseExit() { this->HCall(EeWonMHeadCall::MouseExit); }
     virtual void MouseDown(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseDown,x,y,b); }
     virtual void MouseUp(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseUp,x,y,b); }
     virtual void MouseMove(int x,int y) { this->HCall(EeWonMHeadCall::MouseMove,x,y); }
     virtual void MouseDrag(int x,int y) { this->HCall(EeWonMHeadCall::MouseDrag,x,y); }
     virtual void HandleComponentEvent(ComponentEvent* e) { this->HCall(EeWonMHeadCall::HandleEvent,(intptr_t)e); }
-    virtual Component* FindChildAt(int,int); // 0x304710 (the container hit test)
     void SetColumnItem(int c,Component* i) { this->HCall(EeWonMHeadCall::SetColumnItem,c,(intptr_t)i); }
     void SetMultiListArea(MultiListArea* a) { this->HCall(EeWonMHeadCall::SetMultiListArea,(intptr_t)a); }
     void NotifyColumnChange() { this->HCall(EeWonMHeadCall::NotifyColumnChange); }
