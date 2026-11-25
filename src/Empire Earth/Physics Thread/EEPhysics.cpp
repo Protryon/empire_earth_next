@@ -332,16 +332,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::TeamsClear: gWorld.mTeams.clear();
         break;
-    case O::CameraUnitA: return P64(gWorld.mCameraControl.mUnitA.Get());
-    case O::CameraUnitB: return P64(gWorld.mCameraControl.mUnitB.Get());
-    case O::CameraFollow: gWorld.mCameraControl.Follow((EEUnit*)a[0], gWorld.mCameraControl.mIsFollowingUnitB, 1.0f, gWorld.mCameraControl.mTurnYaw, gWorld.mCameraControl.mTurnPitch);
-        break;
-    case O::CameraClearA: gWorld.mCameraControl.ClearUnitA();
-        break;
-    case O::CameraClearB: gWorld.mCameraControl.ClearUnitB();
-        break;
-    case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
-        break;
     case O::SetWindYaw: gWorld.mWindYaw = f[0];
         break;
     case O::SetWindDirection: gWorld.mWindDirection = GEVector(f[0], f[1], f[2]);

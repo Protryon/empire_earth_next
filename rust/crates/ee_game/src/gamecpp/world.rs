@@ -32,7 +32,7 @@ use crate::app::game_options::EeAppOptionsFields;
 
 use ee_sim::units::{player_body as pb, player_rest as pr};
 
-use super::{cptr, h, hd, hf, hp, pa, rec, O, P};
+use super::{h, hd, hf, hp, pa, rec, O, P};
 
 /// The per-player media the world loads and unloads, in the C++'s order: the foundations 1x1, 2x2, 3x3, 6x6 and
 /// the airport's, the citizen and the female citizen.
@@ -783,19 +783,19 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     *wm::<bool>(O::WTeamsLocked, w) = state_options(st).mLockTeams;
     *wm::<bool>(O::WUnitImprovementsAllowed, w) = *sm::<bool>(O::StUnitImprovementsAllowed, st);
     *wm::<bool>(O::WCheatsEnabled, w) = state_options(st).mCheatCodes;
-    h(O::CameraClearUnitB, 0, &[]);
-    h(O::CameraClearUnitA, 0, &[]);
-    h(O::CameraResetPath, 0, &[]);
-    h(O::CameraResetZoom, 0, &[]);
+    super::camera_io::clear_unit_b();
+    super::camera_io::clear_unit_a();
+    super::camera_io::reset_path();
+    super::camera_io::set_zoom(1.0);
     if moved == true {
         let width = h(O::MapSize, map(w), &[]) as c_long;
         let height = h(O::MapSize, map(w), &[]) as c_long;
         let center = Ge3DPoint::new(width as f32 * 0.5, height as f32 * 0.5, 0.0);
-        h(O::CameraSetLocation, 0, &[cptr(&center), 1, 1]);
+        super::camera_io::set_location(&center, true, true);
     } else {
-        h(O::CameraSetLocation, 0, &[hp(O::StMapCenter, st, &[]) as i64, 0, 1]);
+        super::camera_io::set_location(hp(O::StMapCenter, st, &[]) as *const Ge3DPoint, false, true);
     }
-    h(O::CameraSetChanged, 0, &[]);
+    super::camera_io::set_changed();
     super::state::ee_gamecpp_state_repair_restorables(st as *mut std::ffi::c_void);
     progress(23);
     h(O::SetSightUpdates, 0, &[1]);

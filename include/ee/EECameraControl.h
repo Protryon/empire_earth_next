@@ -20,7 +20,7 @@ class EECameraKey;                          // 0xa4-byte camera keys (provisiona
 // start turns, mStartOffset, mStartFocus, mQ04C, mQ05C the end turns, mEndOffset, mEndFocus, mView, mTargetPoint (x =
 // -10000: none), mFraction, mRate, mZoom, mWait, mWaited, mTurnYaw, mTurnPitch, mMode (3: free), mPathIndex, mChanged,
 // mIsFollowingUnitB, mLocked, mB0FF); the GE values are their Rust mirrors (the same storage). Every body is Rust over
-// the host in EECameraControl.cpp; the key list and the followed units' handles stay here.
+// the host in EECameraControl.cpp; the key list and the followed units' ids are Rust's too (gamecpp camera_io.rs).
 class EECameraControl : public EeAppCameraFields {
 public:
     virtual ~EECameraControl();             // slot 0 (0x12779f)
@@ -72,8 +72,7 @@ public:
     void StartPath();                       // 0x1286fa: plays the key list
 
     // +0x004 the path keys (std::vector<EECameraKey>, 0xa4-byte POD elements): Rust's (gamecpp camera_io.rs KEYS)
-    EEUnitHandle<EEUnit> mUnitA;            // +0x0d0 (referenced; ClearUnitA; MoveTo's inUnitA; provisional name; a handle since R5a.4: read on the graphics and physics threads)
-    EEUnitHandle<EEUnit> mUnitB;            // +0x0d4 (referenced; ClearUnitB; a handle)
+    // +0x0d0, +0x0d4 the followed units (mUnitA, mUnitB: referenced; by id): Rust's (gamecpp camera_io.rs UNITS)
 };
 
 #endif

@@ -219,8 +219,6 @@ enum class EeGameCpp : uint32_t {
   RefDereference,
   UnitSetContains,
   ContinentOfUnit,
-  CameraGetLocation,
-  CameraSetLocation,
   ViewportInverseApply,
   Verify,
   EffUnit,
@@ -287,11 +285,6 @@ enum class EeGameCpp : uint32_t {
   AmbientRestart,
   CalamitiesDestroy,
   CalamitiesRestore,
-  CameraClearUnitA,
-  CameraClearUnitB,
-  CameraResetPath,
-  CameraResetZoom,
-  CameraSetChanged,
   CampaignProgressDelete,
   CampaignProgressNew,
   CampaignRestoreCivilization,
@@ -787,8 +780,6 @@ enum class EeGameCpp : uint32_t {
   ActionDereference,
   BehaviorAt,
   BuildGate,
-  CameraSetZoom,
-  CameraUpdate,
   CanPlace,
   CheatApply,
   CivRequestUpgrades,
@@ -1916,7 +1907,6 @@ enum class EeGameCpp : uint32_t {
   PwTreeGet,
   PwNodeAllowed,
   PwNodeSetAllowed,
-  PwCameraZoom,
   PwWorldGameSpeed,
   PfReadULong,
   PfReadLong,
@@ -2418,7 +2408,6 @@ enum class EeGameCpp : uint32_t {
   GuTargetHeight,
   GuTargetWidth,
   RcPhysicsPresent,
-  RtCameraZoom,
   RtCaptureSetRenderTarget,
   RtCaptureSurface,
   RtCaptureWidth,
@@ -2867,7 +2856,6 @@ enum class EeGameCpp : uint32_t {
   DwVictoryTime,
   DwGameTime,
   DwInCinematic,
-  DkFields,
   DkModelScale,
   DkModelCenter,
   DkModelHeight,
@@ -2882,8 +2870,6 @@ enum class EeGameCpp : uint32_t {
   DkClearB529066,
   DkClearFollowing,
   DkClearB529068,
-  DkUnitASaved,
-  DkUnitBSaved,
   DkFrontClipping,
   DkRearClipping,
   UsgWorldWriteLock,
@@ -2899,8 +2885,6 @@ enum class EeGameCpp : uint32_t {
   UsgFirstFile,
   UsgFileName,
   UsgLoad,
-  UsgCameraChanged,
-  UsgCameraUpdate,
   UsgSave,
   WsStart,
   WsTiles,
@@ -3156,16 +3140,11 @@ enum class EeGameCpp : uint32_t {
   EcLocationOnLine,
   EcOrthographic,
   EcReference,
-  EcResolve,
   EcRightPlane,
   EcScreenLine,
   EcSetFrontClipping,
   EcSetRearClipping,
-  EcSetUnitA,
-  EcSetUnitB,
   EcTileXRaw,
-  EcUnitAGet,
-  EcUnitBGet,
   EcValidPoint,
   EcValidTile,
   EcVelocity,
@@ -5836,6 +5815,13 @@ void ee_gamecpp_ambient_count_tree(EeAppAmbientCounts *counts, void *unit);
 /// `AddTree`: a visible tree counted and, while no forest type is known, the AI forest's at the unit.
 void ee_gamecpp_ambient_add_tree(EeAppAmbientCounts *counts,
                                  void *unit);
+
+/// `EECameraControl()`: the plain members' defaults, no followed unit; the camera is the world's from here on.
+///
+/// # Safety
+/// `camera` is the EECameraControl being constructed and `rec` its record.
+void ee_gamecpp_camera_new(void *camera,
+                           EeAppCameraFields *rec);
 
 /// The camera's host (camera_ffi.rs `EeAppCameraFn`): the context is the camera.
 ///

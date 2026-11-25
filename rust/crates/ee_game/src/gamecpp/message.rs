@@ -272,7 +272,7 @@ fn load_main_screen(m: P) {
         } else {
             h(O::UiSwapToScenarioEditor, 0, &[]);
         }
-        hf(O::CameraUpdate, 0, &[], &[1.0]);
+        super::camera_io::update(1.0);
         h(O::CommSendLoadMainScreenResponse, 0, &[]);
     }
 }
@@ -374,8 +374,8 @@ fn saved_group_select(m: P) {
         if unit != 0 {
             if get_bool(m, 2) {
                 h(O::UnPosition, unit, &[ptr(&mut location)]);
-                h(O::CameraSetChanged, 0, &[]);
-                h(O::CameraSetLocation, 0, &[cptr(&location), 0, 1]);
+                super::camera_io::set_changed();
+                super::camera_io::set_location(&location, false, true);
                 super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
                 h(O::SetCameraFollowing, 0, &[0]);
             }
@@ -580,7 +580,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             *flags = (flags.wrapping_add(1)) % 16;
         }
         EE_NETMSG_WACT_ZOOM => {
-            hf(O::CameraSetZoom, 0, &[], &[f[0]]);
+            super::camera_io::set_zoom(f[0]);
         }
         EE_NETMSG_WACT_RECORD_FRAMES => {
             // slow or normal playback

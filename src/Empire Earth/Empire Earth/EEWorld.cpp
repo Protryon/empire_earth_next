@@ -883,16 +883,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::AiCollectComputerPlayers: gArtificialIntelligence->CollectComputerPlayers();
         break;
-    case O::CameraClearUnitA: gWorld.mCameraControl.ClearUnitA();
-        break;
-    case O::CameraClearUnitB: gWorld.mCameraControl.ClearUnitB();
-        break;
-    case O::CameraResetPath: gWorld.mCameraControl.ResetPath();
-        break;
-    case O::CameraResetZoom: gWorld.mCameraControl.ResetZoom();
-        break;
-    case O::CameraSetChanged: gWorld.mCameraControl.SetChanged();
-        break;
     case O::GraphicsReleaseScene: gGraphics->PostReleaseScene();
         break;
     case O::GraphicsInitialiseScene: gGraphics->PostInitialiseScene();

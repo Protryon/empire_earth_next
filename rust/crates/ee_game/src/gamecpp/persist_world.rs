@@ -124,7 +124,7 @@ pub extern "C" fn ee_gamecpp_pwh_from_world(helper: *mut c_void, world: *mut c_v
     // SAFETY: the helper's and the world's members, each read before the next C++ call
     unsafe {
         (*f).mTimeOfDay = *(hp(O::WTimeOfDay, w, &[]) as *const f32);
-        (*f).mZoom = hd(O::PwCameraZoom, 0, &[], &[]);
+        (*f).mZoom = super::camera_io::zoom();
         (*f).mGameSpeed = hd(O::PwWorldGameSpeed, w, &[], &[]);
         (*f).mPopulationLimit = *(hp(O::PwWorldPopulationLimit, w, &[]) as *const c_long) as c_ulong;
         (*f).mNumberOfWondersToWin = *(hp(O::WWondersToWin, w, &[]) as *const c_ulong);

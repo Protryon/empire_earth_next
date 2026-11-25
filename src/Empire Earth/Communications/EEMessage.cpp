@@ -462,8 +462,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GfxIsPaused: return gGraphics->mIsPaused;
     case O::GfxPostSetFlag5B: gGraphics->PostSetFlag5B(a[0] != 0);
         break;
-    case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
-        break;
     case O::CommSendLoadMainScreenResponse: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadMainScreenResponse, {gWorld.GetCurrentPlayer()->GetSlot(), gWorld.mCurrentPlayer}), kSlotServer);
         break;
     case O::ClientFastLockEnter: CLIENT->mFastSelectionLock->Enter();
@@ -534,8 +532,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::IsMouseBuffered: gISMouse->SetUseBufferedMovement(a[0] != 0);
         break;
     case O::IsMouseRefresh: gISMouse->Refresh();
-        break;
-    case O::CameraSetZoom: gWorld.mCameraControl.SetZoom(f[0]);
         break;
     // (EECore11OpC4) the C++ calls and members of this file's bodies in Rust (gamecpp; EEClient.cpp's EECore11OpC3 default): one
     // statement each

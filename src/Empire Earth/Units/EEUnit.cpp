@@ -224,7 +224,7 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
         return 0;
     case EE_UNITS_EU_SET_RESOURCE_AMOUNT: theUnit->mResourceAmount = (long)inB; return 0;
     case EE_UNITS_EU_SIGHT_ON_HERE: theUnit->SightOn(theUnit->mTileX, theUnit->mTileY); return 0;
-    case EE_UNITS_EU_CAMERA_UNIT_IS_THIS: return (inB == 0 ? gWorld.mCameraControl.mUnitA : gWorld.mCameraControl.mUnitB) == theUnit;
+    case EE_UNITS_EU_CAMERA_UNIT_IS_THIS: return EEUnitHandleResolved<EEUnit>(ee_app_camera_unit((uint32_t)inB)) == theUnit;
     case EE_UNITS_EU_CLEAR_CAMERA_UNIT: gWorld.mCameraControl.ClearUnitA(); return 0;
     case EE_UNITS_EU_CLEAR_CAMERA_UNIT_B: gWorld.mCameraControl.ClearUnitB(); return 0;
     case EE_UNITS_EU_UNIT_TAKEN: theUnit->mPlayer->UnitTaken(theUnit, inB != 0); return 0;

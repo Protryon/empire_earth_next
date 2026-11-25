@@ -672,7 +672,6 @@ double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::PwCameraZoom: return gWorld.mCameraControl.GetZoom();
     case O::PwWorldGameSpeed: return ((EEWorld*)p)->GetGameSpeed();
     // (EECore9OpCF)
     case O::PsMasterVolume: return gSoundManager->GetMasterVolume();

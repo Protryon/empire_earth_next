@@ -93,8 +93,7 @@ fn build_chunks() -> Vec<P> {
     let map = hp(O::PsNewMapChunk, 0, &[]);
     h(O::PsMapChunkUnown, map, &[]);
     list.push(map);
-    let mut location = Ge3DPoint::default();
-    h(O::CameraGetLocation, 0, &[ptr(&mut location)]);
+    let mut location = super::camera_io::location();
     list.push(hp(O::PsNewCameraChunk, 0, &[ptr(&mut location)]));
     let scenario = hp(O::PsNewScenarioChunk, 0, &[]);
     h(O::PsScenarioChunkUnown, scenario, &[]);
