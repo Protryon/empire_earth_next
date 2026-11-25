@@ -143,7 +143,7 @@ static_assert(kGraphicEffectCommandConfirmationMouseClickNoUnit == 0xd1 && kGrap
 
 // the C++ calls and members of lane D's bodies in Rust (gamecpp utilities.rs; EeGameCpp's round 10 lane D section):
 // one statement each; the other files' cases follow (EEEMStorm.cpp, EEEnvironmentManager.cpp, EECheatCodes.cpp,
-// EECivilization.cpp, EEVCWonder.cpp, EECameraControl.cpp)
+// EECivilization.cpp, EECameraControl.cpp)
 int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;

@@ -441,7 +441,6 @@ enum class EeGameCpp : uint32_t {
   StMinorVersion,
   StNumPlayers,
   StNumPlayersMade,
-  StNumTeams,
   StOptions,
   StPlayerAt,
   StPlayerCount,
@@ -451,7 +450,6 @@ enum class EeGameCpp : uint32_t {
   StReadUnlock,
   StRevealMap,
   StScenarioManager,
-  StTeamToRust,
   StTimeOfDay,
   StTownIDCounter,
   StUnitImprovementsAllowed,
@@ -549,7 +547,6 @@ enum class EeGameCpp : uint32_t {
   WStartTime,
   WStatisticsReset,
   WSunDirection,
-  WTeamsClear,
   WTeamsLocked,
   WTimeOfDay,
   WTownIDCounter,
@@ -693,7 +690,6 @@ enum class EeGameCpp : uint32_t {
   EffDestroyedCount,
   HelperUpdate,
   StTail,
-  StTeamsClear,
   StLoadedPlayersClear,
   StChecksumReset,
   StPlayersClear,
@@ -1828,14 +1824,8 @@ enum class EeGameCpp : uint32_t {
   PwhFields,
   PwhScenario,
   PwhSetScenario,
-  PwhTeamsFromWorld,
-  PwhTeamsCount,
-  PwhTeamsResize,
-  PwhTeamLoad,
-  PwhTeamSave,
   PwWorldPopulationLimit,
   PwStSetScenario,
-  PwStTeamsFromHelper,
   PwMainFormLoad,
   PwMainFormSave,
   PwAreaEffectsLoad,
@@ -2211,7 +2201,6 @@ enum class EeGameCpp : uint32_t {
   SsCommsNewClient,
   SsStartTimeFromMsg,
   SsPhysicsRandom,
-  SsNumTeams,
   SsGetProtocol,
   SsProtocolStatus,
   SsGfxPaused,
@@ -2848,8 +2837,6 @@ enum class EeGameCpp : uint32_t {
   DvCanAfford,
   DvDeferredPush,
   DvDeferred,
-  DwTeamCount,
-  DwTeamPlayer,
   DwNeeded,
   DwWonderCount,
   DwWonderTime,
@@ -3349,8 +3336,6 @@ enum class EeGameCpp : uint32_t {
   C12DebugText,
   C12WonNetCffdd,
   C12WonNetCfff2,
-  C12TeamsResize,
-  C12TeamSetPlayers,
   C12PlayerObserver,
   C12PlayerEnemy,
   C13bGhostLockFree,
@@ -5494,20 +5479,15 @@ long ee_gamecpp_civ_reapply(void *civilization,
 long ee_gamecpp_civ_apply_deferred(void *civilization, long player);
 
 /// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).
-bool ee_gamecpp_wonder_enough(void *condition);
+bool ee_gamecpp_wonder_enough(size_t team);
 
 /// `GetWonderCountdown`: the player whose wonder completes the team's count and the seconds left (NULL and 0 when
 /// the team lacks the wonders).
-void *ee_gamecpp_wonder_countdown(void *condition,
+void *ee_gamecpp_wonder_countdown(size_t team,
                                   unsigned long *out);
 
-/// `EEVCWonder::GetVictoryState`: 1 (won) when the team's countdown has run out, outside cinematics.
-long ee_gamecpp_wonder_state(void *condition);
-
-/// `EEVCWonder::Load`: the wonder list of saves before 0.225, read and dropped; the first read error.
-long ee_gamecpp_wonder_load(unsigned long major,
-                            unsigned long minor,
-                            void *file);
+/// `EETeam::GetVictoryState` (`EEVCWonder`'s): 1 (won) when the team's countdown has run out, outside cinematics.
+long ee_gamecpp_wonder_state(size_t team);
 
 /// `EEPlayForLocalPlayer`: the sound played when the player is the local one; the instance, or -1.
 unsigned long ee_gamecpp_play_for_local(void *player, void *sound);
@@ -6105,22 +6085,34 @@ unsigned long ee_gamecpp_menu_width(unsigned long width,
                                     unsigned long height);
 
 /// EEWorld::AddTeam: a team of the players, first merging in every team whose players are allied both ways with them.
-void ee_gamecpp_world_teams_add(void *w,
+void ee_gamecpp_world_teams_add(void *_w,
                                 const unsigned long *players,
                                 size_t n);
 
 /// EEWorld::AddAlliance: two players on one team, merging in every team allied both ways with both.
-void ee_gamecpp_world_teams_ally(void *w, uint32_t a, uint32_t b);
+void ee_gamecpp_world_teams_ally(void *_w, uint32_t a, uint32_t b);
 
 /// EEWorld::BreakAlliance.
-void ee_gamecpp_world_teams_break(void *w, uint32_t a, uint32_t b);
+void ee_gamecpp_world_teams_break(void *_w, uint32_t a, uint32_t b);
 
 /// EEWorld::RemovePlayerFromTeams.
-void ee_gamecpp_world_teams_remove(void *w, uint32_t player);
+void ee_gamecpp_world_teams_remove(void *_w, uint32_t player);
 
 /// EEWorld::RebuildTeams: the teams from the players' mutual alliances, then Gaia at war with every player.
 void ee_gamecpp_world_teams_rebuild(void *w,
                                     uint32_t players);
+
+/// `gWorld.mTeams[team].mVictoryCondition->GetWonderCountdown(*value)`.
+///
+/// # Safety
+/// `value` is writable.
+size_t ee_screenscpp_team_wonder_countdown(uint32_t team, unsigned long *value);
+
+/// `gWorld.GetNumTeams()`.
+int64_t ee_screenscpp_mf_num_teams();
+
+/// `gWorld.mTeams.size() > 0`.
+bool ee_screenscpp_mf_has_teams();
 
 extern int64_t ee_contagion_world(uint32_t op,
                                   uint64_t a,

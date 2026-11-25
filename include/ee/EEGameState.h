@@ -19,7 +19,6 @@
 #include "ee/EEGameOptions.h"
 
 class UWideString;
-class EETeam;
 class EEMap;
 class EEScenarioManager;
 class EEEnvironmentManager;
@@ -35,7 +34,7 @@ public:
     // 0x1306f2: builds the game from inOptions; false with outError set when it fails (EEDataPreLoading::LoadGame)
     bool Create(EEGameOptions& inOptions, UWideString& outError);
     void Reset();                           // 0x1317eb (+0x4c0..+0x4d0 = 0, the vector at +0x480 cleared)
-    void Init();                            // 0x1305fb (the scalars below; mTeams/mLoadedPlayers cleared; mChecksum = ESChecksum(false))
+    void Init();                            // 0x1305fb (the scalars below; the teams and mLoadedPlayers cleared; mChecksum = ESChecksum(false))
     void Clear();                           // 0x1304e4 (deletes +0x4c0..+0x4d0 and zeroes them, clears the vectors)
     // 0x14aa24: deletes the old one (virtual dtor), then stores (EEPWorldHelper::Restore; provisional name)
     void SetScenarioManager(EEScenarioManager* inManager);
@@ -50,7 +49,6 @@ public:
     // inline (refused copies 0x13cfde / 0x13cff7 in EEWorld.cpp's template tail, its first user)
     unsigned long GetNumPlayers() const { return this->mPlayers.size(); }
     EEPlayer* GetPlayer(long inIndex) const { return this->mPlayers[inIndex]; }  // inline (EEWorld::CreateMiniMap 0x53a285: the player is loaded into edx and pushed from the register) (provisional name)
-    unsigned long GetNumTeams() const;      // inline: defined where EETeam is complete (EEWorld.cpp)
     void RepairRestorables();               // 0x1305bf (EEWorld::StartGame after the camera; provisional name)
 
     EEGameOptions mGameOptions;             // +0x008
@@ -60,7 +58,7 @@ public:
     EEPlayer* GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
     std::vector<EEPlayer*> mPlayers;        // +0x480 the players (Create stores new EEHumanPlayer; Clear deletes via slot 0)
     std::vector<EEPlayer*> mLoadedPlayers;  // +0x490 players (EEWorld 0x13a6c8 calls EEPlayer slot +0x20 RepairPointers; loader 0x14a7ab pushes EEPlayer*)
-    std::vector<EETeam> mTeams;             // +0x4a0 (_Buy/_Tidy/erase of vector<EETeam>)
+    // +0x4a0 the loaded game's teams (std::vector<EETeam>): Rust's (ee_game gamecpp teams.rs)
     std::vector<FSRestorable*> mRestorables;  // +0x4b0 restorables: RepairRestorables calls slot +8 RepairPointers
     EEMap* mMap;                            // +0x4c0 (Create: new EEMap 0x11b8d9)
     EEScenarioManager* mScenarioManager;    // +0x4c4 (new, 0x23c bytes)

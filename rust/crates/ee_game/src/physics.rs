@@ -142,7 +142,6 @@ pub enum EePhysCpp {
     ScenarioCanShowDialog,
     ScenarioShowDialog,
     ScenarioReplaceUnit,
-    TeamsClear,
     /// `gWorld.GetGameSpeed()` (float)
     GameSpeed,
     /// `gWorld.mGameSpeed` (float)
@@ -675,7 +674,6 @@ fn end_game(p: P, victory: bool) {
             h0(O::OptionsButtonBlink);
         }
     }
-    h0(O::TeamsClear);
     ee_sim::app::teams_ffi::ee_app_teams_clear();
     if h0(O::IsServer) != 0 {
         h0(O::PauseGame);

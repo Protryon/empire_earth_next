@@ -6025,14 +6025,8 @@ constexpr static const int32_t EE_UNITS_GAME_OVER_SCENARIO = 1;
 /// the rules' `mGameOptions.mDefeatWithoutRecovery`
 constexpr static const int32_t EE_UNITS_GAME_OVER_DEFEAT_RULE = 2;
 
-/// `mTeams.size()`; team a's `GetVictoryState()`; its `mPlayers.size()`; its `mPlayers[b]`
-constexpr static const int32_t EE_UNITS_GAME_OVER_TEAMS = 3;
-
+/// team a's `GetVictoryState()` (the teams themselves: app teams_ffi.rs)
 constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_STATE = 4;
-
-constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_SIZE = 5;
-
-constexpr static const int32_t EE_UNITS_GAME_OVER_TEAM_PLAYER = 6;
 
 /// `mPlayers[a]->IsHuman()`
 constexpr static const int32_t EE_UNITS_GAME_OVER_IS_HUMAN = 7;

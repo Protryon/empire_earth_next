@@ -145,7 +145,6 @@ static_assert(offsetof(EEUIFMGFormCall, mText) == sizeof(EeScreensFormCallObject
 
 // Switches the interface mode, clearing ghosts and ending a wall or gate placement
 
-#include "ee/EETeam.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EECombatGoals.h"
@@ -342,8 +341,6 @@ extern "C" void ee_screenscpp_gate_preview_at_mouse(long* inDirection)
 { EEGhostUnit::PreviewGate(gMouse->mPosition, *inDirection); }
 extern "C" float ee_screenscpp_mf_wall_start_x(uintptr_t inRec) { return static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mBuildWall.mStart.x; }
 extern "C" float ee_screenscpp_mf_wall_start_y(uintptr_t inRec) { return static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mBuildWall.mStart.y; }
-extern "C" uintptr_t ee_screenscpp_team_wonder_countdown(uint32_t inTeam, unsigned long* inValue)
-{ return (uintptr_t)gWorld.mTeams[inTeam].mVictoryCondition->GetWonderCountdown(*inValue); }
 extern "C" void ee_screenscpp_mf_info_set_text(uintptr_t inRec)
 { static_cast<UITLScrolling*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->GetControl(kMainGameDialogMessage))->SetText(static_cast<const EESMDialogMessage*>(R(inRec)->mMessage)->mText); }
 extern "C" uintptr_t ee_screenscpp_mf_control(uintptr_t inRec, uint32_t inControl)
@@ -488,7 +485,6 @@ extern "C" int64_t ee_screenscpp_mf_population()
 { return (int64_t)gWorld.GetCurrentPlayer()->GetTotalPopulation(false, false); }
 extern "C" int64_t ee_screenscpp_mf_population_limit()
 { return (int64_t)gWorld.GetCurrentPlayer()->GetPopulationLimit(false); }
-extern "C" int64_t ee_screenscpp_mf_num_teams() { return (int64_t)gWorld.GetNumTeams(); }
 extern "C" void ee_screenscpp_mf_label_player_color(uintptr_t inRec, int64_t inControl, int64_t inPlayer)
 { static_cast<UITextLabel*>(MF(inRec)->GetControl((unsigned long)inControl))->GetGEText()->SetFgColor(reinterpret_cast<EEPlayer*>(inPlayer)->mColor); }
 extern "C" void ee_screenscpp_mf_wonder_format()
@@ -497,7 +493,6 @@ extern "C" void ee_screenscpp_mf_wonder_print(uintptr_t inRec, int64_t inPlayer,
 { sprintf(R(inRec)->mText, EEScratch<UWideString>(kScratchMFFormat), (const char*)reinterpret_cast<EEPlayer*>(inPlayer)->mName, (unsigned long)inTime); }
 extern "C" void ee_screenscpp_mf_text_time(uintptr_t inRec) { R(inRec)->mText = gPhysics->GetTimeString(); }
 extern "C" bool ee_screenscpp_mf_comms_paused() { return gCommunications->GetIsGamePaused(); }
-extern "C" bool ee_screenscpp_mf_has_teams() { return gWorld.mTeams.size() > 0; }
 extern "C" void ee_screenscpp_mf_pause_text(uintptr_t inRec, int64_t inValue)
 { MF(inRec)->Rust(EE_SCREENS_MF_DO_PAUSE_TEXT, inValue); }
 extern "C" int64_t ee_screenscpp_mf_lag_status() { return (int64_t)gWorld.mLagStatus; }

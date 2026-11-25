@@ -382,7 +382,6 @@ pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
     h(O::AeClearEffects, 0, &[]);
     h(O::WDeleteScenario, w, &[]);
     h(O::WSetScenarioRaw, w, &[0]);
-    h(O::WTeamsClear, w, &[]);
     ee_sim::app::teams_ffi::ee_app_teams_clear();
     h(O::CalamitiesDestroy, 0, &[]);
     let n = num_players(w);
@@ -671,14 +670,9 @@ pub extern "C" fn ee_gamecpp_world_add_computers(w: *mut c_void, st: *mut c_void
     h(O::StrFree, name, &[]);
 }
 
-/// The world's game speed and the teams of the state (StartGame's), or the teams rebuilt.
-fn start_teams(w: P, st: P) {
-    let teams = h(O::StNumTeams, st, &[]);
-    if teams > 0 {
-        for i in 0..teams {
-            h(O::StTeamToRust, st, &[i]);
-        }
-        super::teams::mirror(w);
+/// The teams of the state (StartGame's), or the teams rebuilt.
+fn start_teams(w: P) {
+    if super::teams::state_to_world() > 0 {
         let mut i = num_players(w);
         while i <= 16 {
             if player(w, i) == 0 {
@@ -768,7 +762,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     }
     h(O::AiCollectComputerPlayers, 0, &[]);
     progress(22);
-    start_teams(w, st);
+    start_teams(w);
     *wm::<c_ulong>(O::WWondersToWin, w) = state_options(st).mWondersForVictory;
     *wm::<bool>(O::WVictoryEnabled, w) = state_options(st).mVictory;
     ee_gamecpp_world_set_time_of_day(w as *mut std::ffi::c_void, *sm::<f32>(O::StTimeOfDay, st));

@@ -657,7 +657,6 @@ fn start(f: P, v: &[i64; 8]) {
         let mut protocol: P = 0;
         h(O::SsStartTimeFromMsg, f, &[v[1]]);
         h(O::SsPhysicsRandom, f, &[]);
-        h(O::SsNumTeams, f, &[]);
         h(O::SsGetProtocol, f, &[ptr(&mut protocol)]);
         h(O::SsProtocolStatus, f, &[protocol as i64]);
     } else if v[0] == EE_NETMSG_SESS_START_RESUME {

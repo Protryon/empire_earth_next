@@ -33,7 +33,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPPlacement.h"
 #include "ee/EEUGRust.h"
-#include "ee/EETeam.h"
+#include "rust/game/gamecpp.h"   // the wonder victory (ee_game gamecpp civilization.rs)
 #include "ee/EEAIArea.h"
 #include "ee/EEAIPathArea.h"
 #include "ee/EEUnitVectorItem.h"
@@ -312,18 +312,6 @@ long EETechTreeNode::GetUnitClass(unsigned long inIndex)
     return ee_cp_node_unit_class((uint64_t)(uintptr_t)this, inIndex);
 }
 
-// Returns the number of teams in the world
-unsigned long EEWorld::GetNumTeams()
-{
-    return this->mTeams.size();
-}
-
-// Returns whether the given player is a member of the team
-bool EETeam::ContainsPlayer(unsigned long inPlayerID)
-{
-    return std::find(this->mPlayers.begin(), this->mPlayers.end(), inPlayerID) != this->mPlayers.end();
-}
-
 // port (ee/EECPExperimentTimers.h): the experiments' timers and the resource state, saved from 0.258 and 0.265
 // (ee_sim::cp timers.rs, player_game.rs ee_cp_pl_state_block)
 long EECPSaveExperimentTimers(FSFile& outFile)
@@ -375,12 +363,8 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return 0;
     case EE_CP_PLAYER_BASE_POP_LIMIT:
         return thePlayer->EEPlayer::GetPopulationLimit(0);
-    case EE_CP_PLAYER_NUM_TEAMS:
-        return (int64_t)gWorld.GetNumTeams();
     case EE_CP_PLAYER_TEAM_WONDERS:
-        return gWorld.mTeams[(size_t)v[0]].mVictoryCondition->HasEnoughWonders() ? 1 : 0;
-    case EE_CP_PLAYER_TEAM_CONTAINS:
-        return gWorld.mTeams[(size_t)v[0]].ContainsPlayer((unsigned long)v[1]) ? 1 : 0;
+        return ee_gamecpp_wonder_enough((size_t)v[0]) ? 1 : 0;
     case EE_CP_PLAYER_NUM_PLAYERS:
         return (int64_t)gWorld.mNumPlayers;
     case EE_CP_PLAYER_HUMAN:

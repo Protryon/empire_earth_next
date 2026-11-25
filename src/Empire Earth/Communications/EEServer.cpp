@@ -32,7 +32,6 @@
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEARust.h"
 #include "lle/UResourceFile.h"
-#include "ee/EETeam.h"
 #include "ee/EEClient.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEPhysics.h"
@@ -167,7 +166,7 @@ unsigned char EEServer::GetFreePlayerSlot()
 // Returns true when the world has no teams
 bool EEServer::ServerSlot28()
 {
-    return (gWorld.mTeams.size() > 0) ? false : true;
+    return ee_app_teams_get(SIZE_MAX, NULL, 0) == 0;   // ee_sim app teams_ffi.rs
 }
 
 // Returns whether a server migration is in progress
@@ -528,8 +527,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsStartTimeFromMsg: gStartTime = ((NEMRecord*)a[0])->Get<uint32_t>(0);
         break;
     case O::SsPhysicsRandom: gPhysics->GetRandom(0L, 0x7fffffffL);
-        break;
-    case O::SsNumTeams: gWorld.GetNumTeams();
         break;
     case O::SsGetProtocol: NEProtocol::GetProtocol(0, *(NEProtocol**)a[0]);
         break;

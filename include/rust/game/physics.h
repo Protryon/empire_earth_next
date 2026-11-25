@@ -115,7 +115,6 @@ enum class EePhysCpp : uint32_t {
   ScenarioCanShowDialog,
   ScenarioShowDialog,
   ScenarioReplaceUnit,
-  TeamsClear,
   /// `gWorld.GetGameSpeed()` (float)
   GameSpeed,
   /// `gWorld.mGameSpeed` (float)

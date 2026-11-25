@@ -18,7 +18,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EETeam.h"
 #include "ee/EEGameState.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEDatabaseTables.h"
@@ -90,12 +89,6 @@ EEStartingResources* EEGetResourceLevel(long inIndex)
 }
 
 
-// Destroys the team, deleting its victory condition
-EETeam::~EETeam()
-{
-    delete this->mVictoryCondition;
-}
-
 // Does nothing after a game is loaded (no address: empty, ICF-folded into 0x163d6f; EEGameStateLoader::LoadGame
 // 0x14a5ba calls it with the save's versions: `push hdr.mMinorVersion; mov ecx, [esi] (the EEGameState*); push
 // hdr.mMajorVersion; call 0x163d6f`, a direct thiscall on the state; provisional name)
@@ -121,8 +114,6 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     typedef EeGameCpp O;
     switch (inOp) {
     case O::StTail: return P64(&ST->mMap);
-    case O::StTeamsClear: ST->mTeams.clear();
-        break;
     case O::StLoadedPlayersClear: ST->mLoadedPlayers.clear();
         break;
     case O::StChecksumReset: ST->mChecksum = ESChecksum(false);

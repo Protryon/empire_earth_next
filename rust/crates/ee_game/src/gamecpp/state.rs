@@ -157,7 +157,7 @@ pub extern "C" fn ee_gamecpp_state_init(st: *mut c_void) {
     t.mB501 = false;
     t.mTownIDCounter = 0;
     t.mHerdIDCounter = 0;
-    h(O::StTeamsClear, st, &[]);
+    super::teams::state_clear();
     h(O::StLoadedPlayersClear, st, &[]);
     h(O::StChecksumReset, st, &[]);
 }
