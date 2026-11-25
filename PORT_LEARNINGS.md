@@ -40431,3 +40431,41 @@ compiles unmodified from the `lua-src` crate into the Rust library. docs/progres
 
 - **Behaviour changes**: none in a game. For a script: the list above (5.5's float text, `#` of a table with
   holes, `^`, the locale-dependent classes, frexp/ldexp, the traceback texts, the byte counts).
+
+## The units' lane, round 12: the effect handles and the collision tile in the unit's record; the combat queries', the groups' and the unit utilities' bodies in Rust; the goal context generated, the melee screen, the unit set walks and the handle's casts (ee_sim units u12a_small.rs, goal_calls.rs, ag_host.rs, group_host.rs, uu_ffi.rs; combat screen.rs, cg_query.rs; app unit_sets.rs; branch rust-units12, 2026-11-24)
+
+Numbers: docs/progress/units.md ("Round 12"). The lane's files (perfile.py, 3b7cd6eff -> dd2ded36d) 1,679 -> 1,295
+(**-384**); the whole tree -394 (batch 24's own change left out); classes 672 -> 669; the lane's .cpp files 28 -> 28.
+The target was -1,000.
+
+- **cbindgen's two `include` lists.** `[parse] include` names the crates cbindgen reads; `[export] include` names
+  the items it emits although no exported function uses them. Round 11 added `EeUnitsGoalContext` to the first (it
+  parsed and emitted nothing), so the struct stayed mirrored in C++. In the `[export]` list it is emitted into
+  rust/sim/units.h; EEUGRust.cpp uses it with a size assert. A script that appends to "the include list" must pick
+  the `[export]` one (`include = ["ModelInfo", ...`).
+- **A resumed round: read the forks' own logs.** The stopped forks' prompts were lost, but each fork's
+  `build/u12/` held its check logs (oracle, captures, saveload, the Rust gate) and the commits named their files:
+  that was enough to know what passed. A capture that ends `exit 1` with a large partial file was the stop, not a
+  failure (B's transport run); delete the partial run (about 18 GB for transport) before anything else.
+- **No forks when the session's subagent limit is reached.** Relaunching failed with "Concurrent subagent limit
+  reached" (other lanes held the slots); the lead did the second leg alone, in two build cycles. Plan a resumed
+  round so that the lead can finish it without forks.
+- **A Rust capture record in place of `EECombatCapture`.** The melee screen's CBFS record is written by Rust
+  (app/capture_record.rs `Record`): the five fields of `EeCombatScreenIn` and the answer as an `i32`, the same bytes
+  as the C++ template's `Bytes(&in, sizeof in)` and `Bytes(&out, sizeof out)` (the record has no padding). The
+  captures' digests did not change.
+- **Casting incomplete unit classes.** ee/EEUnitHandle.h cannot see EEUnit or EEComplexUnit; their typed halves were
+  out-of-line overloads for the static_cast. RTSUnit is the first base of both at offset 0 (EEWorldLayoutRegister
+  fails the start otherwise), so a `reinterpret_cast` in the header is the same pointer and the overloads went.
+- **A Rust walk that calls back into C++ holds no lock across the call.** `ee_unit_set_for_each` steps with
+  `ee_unit_set_next` (which takes the sets' read lock for one step) and calls the functor between steps, as the C++
+  loop did.
+- **Scratch statics as arrays.** A host's out-parameter pairs (x, y) and triples (volume, pan, pitch) are one
+  static array each; a static still keeps the address the original's local had to have for the out-parameter.
+- **Call-site edits outside the lane**: EEEffect.h (the handle's comparisons as free functions), EECPEngineHelpers.cpp,
+  EECPResourceCenter.cpp, EEWorld.cpp, EEAirTrafficControl.cpp, EEPhysicsModel.cpp, EEPlayer.cpp,
+  EEUIFMGMainGroup.cpp (bodies now inline in ee/EEUnit.h deleted; fork A), RTSUnit.cpp (the handle's RTSUnit
+  overload), rust/cbindgen.toml, app/unit_sets.rs and combat/screen.rs (new entry points), world/layout.rs and
+  unit_fields.rs (fork A's fields).
+- **Behaviour changes**: none observed (oracle, captures and saveloads identical). EEComplexUnit's layout changed:
+  the collision tile and the effect handles moved into its record.
