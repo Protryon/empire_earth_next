@@ -17,7 +17,7 @@ use ee_sim::tech::civilization::{apply_all, reapply, EE_TECH_CIV_DEFERRED_INDEX}
 use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
 
 use crate::gamecpp::persistent::Pf;
-use crate::gamecpp::{h, hp, pa, ptr, rec, Owned, O, P};
+use crate::gamecpp::{h, hp, pa, rec, Owned, O, P};
 
 /// The upgrade's attribute index bits (ee_sim tech civ.rs `LEVEL_MASK`).
 const CIV_LEVEL_MASK: u32 = 0xffff;

@@ -2715,7 +2715,6 @@ shims! {
     fn aeh_count_in_rect(effect: usize) -> i32 = ee_screenscpp_aeh_count_in_rect;
     fn aeh_count_in_range(effect: usize, x: i32, y: i32, range: f32) -> i32 = ee_screenscpp_aeh_count_in_range;
     // EEAEManager.cpp's (area_effect_manager.rs)
-    fn aem_floor(v: f32) -> i32 = ee_screenscpp_aem_floor;
     fn aem_units_clear() = ee_screenscpp_aem_units_clear;
     fn aem_rect_top(v: i32) = ee_screenscpp_aem_rect_top;
     fn aem_rect_left(v: i32) = ee_screenscpp_aem_rect_left;
@@ -2735,7 +2734,6 @@ shims! {
     fn aem_effects_count(manager: usize) -> usize = ee_screenscpp_aem_effects_count;
     fn aem_effects_at(manager: usize, index: usize) -> usize = ee_screenscpp_aem_effects_at;
     fn aem_is_immunity(effect: usize) -> bool = ee_screens_ae_is_immunity;
-    fn aem_effect_player(effect: usize) -> i64 = ee_screenscpp_aem_effect_player;
     fn aem_affects_player(effect: usize, player: i64, other: u64) -> bool = ee_screens_ae_affects_player;
     fn aem_affects_player_reversed(effect: usize, player: i64, other: u64) -> bool = ee_screens_ae_affects_player_reversed;
     fn aem_in_range(effect: usize, x: f32, y: f32) -> bool = ee_screens_ae_in_range;
@@ -2830,15 +2828,10 @@ shims! {
     fn aes_affecting_count(unit: usize) -> usize = ee_screenscpp_aes_affecting_count;
     fn aes_affecting_at(unit: usize, index: usize) -> usize = ee_screenscpp_aes_affecting_at;
     fn aes_unit_id(unit: usize) -> u64 = ee_screenscpp_aes_unit_id;
-    fn aes_effect_kind(effect: usize) -> i64 = ee_screenscpp_aes_effect_kind;
     fn aes_effect_x(effect: usize) -> f32 = ee_screenscpp_aes_effect_x;
     fn aes_effect_y(effect: usize) -> f32 = ee_screenscpp_aes_effect_y;
-    fn aes_effect_dirty(effect: usize) -> bool = ee_screenscpp_aes_effect_dirty;
-    fn aes_effect_count(effect: usize) -> i64 = ee_screenscpp_aes_effect_count;
     fn aes_set_x(effect: usize, v: f32) = ee_screenscpp_aes_set_x;
     fn aes_set_y(effect: usize, v: f32) = ee_screenscpp_aes_set_y;
-    fn aes_set_dirty(effect: usize, v: bool) = ee_screenscpp_aes_set_dirty;
-    fn aes_set_count(effect: usize, v: i64) = ee_screenscpp_aes_set_count;
     fn aes_world_unit(id: u64) -> usize = ee_screenscpp_aes_world_unit;
     fn aes_affecting_clear(unit: usize) = ee_screenscpp_aes_affecting_clear;
     fn aes_clear_effects() = ee_screenscpp_aes_clear_effects;
@@ -2906,7 +2899,6 @@ shims! {
     fn aem_templates_count(manager: usize) -> usize = ee_screenscpp_aem_templates_count;
     fn aem_template_at(manager: usize, index: usize) -> usize = ee_screenscpp_aem_template_at;
     fn aem_templates_clear(manager: usize) = ee_screenscpp_aem_templates_clear;
-    fn aem_capture_tick(elapsed: f32) = ee_screenscpp_aem_capture_tick;
     fn aem_effect_new(t: usize) -> usize = ee_screenscpp_aem_effect_new;
     fn aem_set_effect_player(effect: usize, unit: usize) = ee_screenscpp_aem_set_effect_player;
     fn ael_list_new() -> usize = ee_screenscpp_ael_list_new;
