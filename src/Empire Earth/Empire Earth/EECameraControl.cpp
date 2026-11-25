@@ -221,9 +221,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DkUnitASaved: return CAM->mUnitA.GetSavedID();
     case O::DkUnitBSaved: return CAM->mUnitB.GetSavedID();
-    case O::DkKeyCount: return (int64_t)CAM->mKeys.size();
-    case O::DkKeyAt: *(EECameraKey*)a[1] = CAM->mKeys[a[0]];
-        break;
     // round 11, lane B: the camera's host (gamecpp camera_io.rs)
     case O::EcUnitAGet: return P64(CAM->mUnitA.Get());
     case O::EcUnitBGet: return P64(CAM->mUnitB.Get());
@@ -246,10 +243,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::EcInCinematic: return gInCinematic;
     case O::EcCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
     case O::EcIsSeen: return EEIsSeen((EEUnit*)p);
-    case O::EcClearKeys: CAM->mKeys.clear();
-        break;
-    case O::EcPushKey: CAM->mKeys.push_back(*(const EECameraKey*)a[0]);
-        break;
     case O::EcFarRearClipping: return gFarRearClipping;
     case O::EcOrthographic: return gOrthographicView;
     case O::EcHasMap: return gWorld.mMap != NULL;

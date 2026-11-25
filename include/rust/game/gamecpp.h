@@ -2884,8 +2884,6 @@ enum class EeGameCpp : uint32_t {
   DkClearB529068,
   DkUnitASaved,
   DkUnitBSaved,
-  DkKeyCount,
-  DkKeyAt,
   DkFrontClipping,
   DkRearClipping,
   UsgWorldWriteLock,
@@ -3141,7 +3139,6 @@ enum class EeGameCpp : uint32_t {
   EoWondersDefault,
   EoWondersMaximum,
   EcBackPlane,
-  EcClearKeys,
   EcContainer,
   EcContainerId,
   EcCurrentPlayer,
@@ -3158,7 +3155,6 @@ enum class EeGameCpp : uint32_t {
   EcLocation,
   EcLocationOnLine,
   EcOrthographic,
-  EcPushKey,
   EcReference,
   EcResolve,
   EcRightPlane,
@@ -5849,6 +5845,9 @@ int32_t ee_gamecpp_camera_host(void *context, int32_t op, EeAppCameraIo *io);
 
 /// `AddKey`: a key appended to the camera's path -> 0, or 5 while a path plays (the camera locked).
 long ee_gamecpp_camera_add_key(void *camera, const void *key);
+
+/// The camera's key count (`mKeys.size()`: the scenario capture's SMCK).
+size_t ee_gamecpp_camera_key_count();
 
 /// The constructor: no song, intensity 0, ten minutes to the next song, the generator seeded with the time, the
 /// seven events, the music thread started at `priority` and waited for, then the conductor's intensity.

@@ -3021,8 +3021,6 @@ pub enum EeGameCpp {
     DkClearB529068,
     DkUnitASaved,
     DkUnitBSaved,
-    DkKeyCount,
-    DkKeyAt,
     DkFrontClipping,
     DkRearClipping,
     //
@@ -3290,7 +3288,6 @@ pub enum EeGameCpp {
     EoWondersMaximum,
     // EECameraControl.cpp (camera_io.rs; the cases in EECore10OpD7)
     EcBackPlane,
-    EcClearKeys,
     EcContainer,
     EcContainerId,
     EcCurrentPlayer,
@@ -3307,7 +3304,6 @@ pub enum EeGameCpp {
     EcLocation,
     EcLocationOnLine,
     EcOrthographic,
-    EcPushKey,
     EcReference,
     EcResolve,
     EcRightPlane,

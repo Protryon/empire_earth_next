@@ -1382,7 +1382,14 @@ pub extern "C" fn ee_gamecpp_world_place_queued(w: *mut c_void) {
         let x = rts(u).mTileX;
         h(O::UcAddToTile, unit_class(u), &[pa(u)]);
         let (tx, ty) = (rts(u).mTileX, rts(u).mTileY);
-        super::minimap::ee_gamecpp_minimap_move_unit(super::globals::get!(gMiniMap), u as *mut c_void, -10000, -10000, tx as c_long, ty as c_long);
+        super::minimap::ee_gamecpp_minimap_move_unit(
+            super::globals::get!(gMiniMap),
+            u as *mut c_void,
+            -10000,
+            -10000,
+            tx as c_long,
+            ty as c_long,
+        );
         if hp(O::UnTileNode, u, &[]) == 0 {
             continue;
         }
