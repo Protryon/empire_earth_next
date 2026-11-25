@@ -102,7 +102,7 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
     case Op::OpSetCompletion: anOp->SetCompletion(new EELobbyTransferCompletion(aTransfer, (EeWonEeXferCall)b)); return 0;
     case Op::OpSetFilePath: static_cast<SocketOp*>(anOp)->SetFilePath(std::string(reinterpret_cast<const char*>(b), (size_t)c)); return 0;
     case Op::OpSetProgress: static_cast<SocketOp*>(anOp)->SetProgressCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnProgress), 10000); return 0;
-    case Op::QueueConnect: aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Connect, NULL, NULL, &aTransfer->mHost), -1); return 0;
+    case Op::QueueConnect: aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Connect, NULL, NULL, aTransfer->mHost.GetValue()), -1); return 0;
     case Op::QueueOpOn: aSocket->QueueOp(static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(b)), -1); return 0;
     }
     return 0;

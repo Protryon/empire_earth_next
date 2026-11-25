@@ -81,7 +81,7 @@ struct World {
         u1->Bind(IPAddr("127.0.0.1", 0), true);
         u2->Bind(IPAddr("127.0.0.1", 0), true);
         IPAddr aTo("127.0.0.1", u2->GetLocalPort());
-        SmartPtr<SocketOp> dgsend = new SocketOp(EeWonCoreSocketOp::SendTo, u1, Bytes("datagram").get(), &aTo);
+        SmartPtr<SocketOp> dgsend = new SocketOp(EeWonCoreSocketOp::SendTo, u1, Bytes("datagram").get(), aTo.GetValue());
         dgsend->RunBlock(5000);
         SocketOp* done = dgsend.get(); // succeeded, then killed without finishing
         done->AddRef();

@@ -97,17 +97,12 @@ static void* CoreNewOp() { return static_cast<RefCount*>(new AsyncOp); }
 static void* CoreNewSocketOp(EeWonCoreSocketOp inKind,void* inSocket,void* inBytes,const EeWonIpAddr* inAddr,
                              uint32_t inSize)
 {
-    IPAddr anAddr=inAddr!=NULL ? IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)) : IPAddr();
-    SocketOp* anOp=new SocketOp(inKind,static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket)),
-                                static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),&anAddr,inSize);
-    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(new SocketOp(inKind,static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket)),
+                                static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),inAddr,inSize)));
 }
 static void* CoreNewQueueSocket(int32_t inType,bool inBlocking)
 { return static_cast<RefCount*>(inBlocking ? new BlockingSocket(inType) : new QueueSocket(inType)); }
-static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr)
-{
-    return static_cast<RefCount*>(inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr))) : new UDPManagerRecvOp);
-}
+static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr) { return static_cast<RefCount*>(new UDPManagerRecvOp(inAddr)); }
 static long CoreUdpCheck(void* inOp,const uint8_t* inData,size_t inLength,bool* outThrew)
 {
     *outThrew=false;

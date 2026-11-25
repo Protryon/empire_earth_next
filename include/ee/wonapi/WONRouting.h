@@ -268,12 +268,13 @@ public:
     // an op on the socket (a reference held): no socket thread, no waits, the event indices -1; queued when run async
     // (the WON SDK's mRunAsyncImmediatelyDef, 565f08, was never set)
     SocketOp(AsyncSocket* inSocket) : mSockOp(ee_won_socketop_new(static_cast<void*>(this),WonCore())) { this->SetSocket(inSocket); }
-    // an op of a class on the socket: the class's bytes (a reference taken), address and length or size
+    // an op of a class on the socket: the class's bytes (a reference taken), address (an IPAddr's value, copied; NULL:
+    // an empty one) and length or size
     SocketOp(EeWonCoreSocketOp inKind, AsyncSocket* inSocket = NULL, const ByteBuffer* inBytes = NULL,
-             const IPAddr* inAddr = NULL, unsigned long inSize = 0)
+             const EeWonIpAddr* inAddr = NULL, unsigned long inSize = 0)
         : mSockOp(ee_won_socketop_new_kind(static_cast<void*>(this), WonCore(), inKind, inSocket,
-                                           const_cast<RefCount*>(static_cast<const RefCount*>(inBytes)),
-                                           inAddr != NULL ? inAddr->GetValue() : NULL, static_cast<uint32_t>(inSize))) {}
+                                           const_cast<RefCount*>(static_cast<const RefCount*>(inBytes)), inAddr,
+                                           static_cast<uint32_t>(inSize))) {}
     virtual ~SocketOp() { ee_won_socketop_free(this->mSockOp); } // the original's was implicit, 29153d
     // +0x04 0x2b6070: started (finished InvalidSocket first without a socket); a pending start goes to the socket
     // thread (async) or is continued and finished (blocking), any other result finishes it
@@ -416,9 +417,8 @@ private:
 // RunHook, CleanupHook, QueueRecv and RecvCallback); the class is a shim the lobby subclasses
 class UDPManagerRecvOp : public AsyncOp {
 public:
-    UDPManagerRecvOp() : mUdp(ee_won_udprecvop_new(static_cast<RefCount*>(this), WonCore(), NULL)) {}
-    UDPManagerRecvOp(const IPAddr& inAddress)
-        : mUdp(ee_won_udprecvop_new(static_cast<RefCount*>(this), WonCore(), inAddress.GetValue())) {}
+    // from an IPAddr's value (copied; NULL: none)
+    explicit UDPManagerRecvOp(const EeWonIpAddr* inAddr = NULL) : mUdp(ee_won_udprecvop_new(static_cast<RefCount*>(this), WonCore(), inAddr)) {}
     virtual ~UDPManagerRecvOp() { ee_won_udprecvop_free(this->mUdp); } // the original's was implicit (2b6930)
     bool HasVerifier() { return ee_won_udprecvop_verifier(this->mUdp) != NULL; }
     void SetUDPManager(UDPManager* theManager) { ee_won_udprecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
