@@ -29,6 +29,9 @@ struct EeWonCompMembers {
   int8_t timer;
   /// `mExtraStuff` (owned by the C++; the Rust tests only whether it is made).
   ptrdiff_t extra;
+  /// `mCt`: the Rust container of a component that is a container, else 0 (R6 WON GUI round 37: Component's
+  /// virtuals that a container overrides run the container's call, `compobj::ee_won_comp_call`).
+  ptrdiff_t ct;
 };
 
 /// A world's own lookup of a component's block (`ee_won_comp_members_resolver`).

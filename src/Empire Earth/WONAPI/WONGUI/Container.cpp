@@ -24,29 +24,12 @@ typedef EeWonCtVirt V;
 
 static Component* Comp(intptr_t a) { return (Component*)a; }
 
-// a component's virtual (or, for the base, Component's own: inBase)
+extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp, intptr_t, intptr_t, intptr_t, intptr_t);
+// a component's virtual (or, for the base, Component's own, the Rust component's: inBase)
 static intptr_t CtVirtCall(Component* c, bool inBase, V v, intptr_t a, intptr_t b)
 {
-    if (inBase) {
-        switch (v) {
-        case V::SizeChanged: c->Component::Virtual08(); return 0;
-        case V::PrePaint: c->Component::PrePaint(*(Graphics*)a); return 0;
-        case V::Paint: c->Component::Paint(*(Graphics*)a); return 0;
-        case V::EnableControlsById: c->Component::EnableControlsById(*(const ControlIdSet*)a, b != 0); return 0;
-        case V::NotifyRootVisibility: c->Component::NotifyRootVisibility(a != 0); return 0;
-        case V::HitTest: return c->Component::HitTest((int)a, (int)b) ? 1 : 0;
-        case V::MouseEnter: c->Component::MouseEnter((int)a, (int)b); return 0;
-        case V::MouseExit: c->Component::MouseExit(); return 0;
-        case V::MouseHover: c->Component::MouseHover((unsigned long)a); return 0;
-        case V::HandleBroadcastEvent: c->Component::HandleBroadcastEvent((ComponentEvent*)a); return 0;
-        case V::AddedToParent: c->Component::AddedToParent(); return 0;
-        case V::MarkInvalid: c->Component::MarkInvalid(); return 0;
-        case V::ClearGrabBG: c->Component::ClearGrabBG(); return 0;
-        case V::GotFocus: c->Component::GotFocus(); return 0;
-        case V::LostFocus: c->Component::LostFocus(); return 0;
-        default: return 0;
-        }
-    }
+    if (inBase)
+        return ee_won_comp_base_call(c, ee_won_guicpp_comp_call, v, a, b);
     switch (v) {
     case V::NeedsPaint: return c->NeedsPaint() ? 1 : 0;
     case V::PrePaint: c->PrePaint(*(Graphics*)a); return 0;
@@ -167,5 +150,5 @@ Container::Container()
 static_assert(ComponentFlag_WantFocus == EE_WON_COMP_FLAG_WANT_FOCUS, "compobj.rs flags");
 // Destroys the container: the Rust container detaches the children, then releases the cursor, the child layout, the
 // timer children and the children
-Container::~Container() { ee_won_ct_free(this->mCt); }
+Container::~Container() { ee_won_ct_free(this->mCt); this->mCt = NULL; }
 }

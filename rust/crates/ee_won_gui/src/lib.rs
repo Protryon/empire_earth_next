@@ -25,6 +25,7 @@ pub mod cursorobj;
 pub mod dialogobj;
 pub mod fontmap;
 pub mod gfxobj;
+pub mod gamewin;
 pub mod gfxplat;
 pub mod grabobj;
 pub mod guicfg;

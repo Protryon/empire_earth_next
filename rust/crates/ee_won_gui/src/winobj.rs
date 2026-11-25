@@ -39,7 +39,8 @@ const EV_GOT_FOCUS: i32 = 11;
 const EV_LOST_FOCUS: i32 = 12;
 const EV_MOUSE_EXIT: i32 = 13;
 
-/// An input event's fields, as the C++ forwarder reads them (`KeyEvent`, `MouseEvent`, `SizeEvent`, `InputEvent`).
+/// An input event's fields: the C++ `InputEvent`'s own record (`mEv`; `KeyEvent`, `MouseEvent` and `SizeEvent` fill
+/// theirs, the other fields 0).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EeWonWinEvent {
@@ -301,6 +302,9 @@ impl EeWonWindow {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) = crate::gamewin::win_op(self.comp as isize, op, a, b, c, d) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object's window; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, d) },
@@ -308,6 +312,10 @@ impl EeWonWindow {
         }
     }
     fn root(&self, call: EeWonWinRoot, b: isize, c: isize, d: isize) -> isize {
+        if let Some(p) = crate::gamewin::parts(self.comp as isize) {
+            // SAFETY: the game's live root (the window holds it while the Rust window lives)
+            return unsafe { game_root(p.root, p.root_obj, call, b, c, d) };
+        }
         self.op(Op::WinRoot, call as isize, b, c, d)
     }
     fn plat(&self, call: EeWonWinPlat, b: isize) {
@@ -842,6 +850,8 @@ pub extern "C" fn ee_won_win_new(window: *mut c_void, host: EeWonGuiHostFn) -> *
 pub unsafe extern "C" fn ee_won_win_free(win: *mut EeWonWindow) {
     if !win.is_null() {
         // SAFETY: the contract
+        crate::gamewin::unbind(unsafe { (*win).comp } as isize);
+        // SAFETY: the contract
         unsafe { drop(Box::from_raw(win)) };
     }
 }
@@ -856,45 +866,7 @@ pub unsafe extern "C" fn ee_won_win_call(win: *const EeWonWindow, call: EeWonWin
     unsafe { (*win).call(call, a, b) }
 }
 
-/// The C++ event class a handler's record is read from (`ee_won_win_event`).
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeWonWinEventShape {
-    /// a `KeyEvent` (the type, the key modifiers, the key).
-    Key = 0,
-    /// a `MouseEvent` (the type, the point, the key modifiers, the button or wheel amount).
-    Mouse,
-    /// an `InputEvent` (the type; a `SizeEvent`'s size for `InputEvent_SizeChange`).
-    Input,
-}
-
 impl EeWonWindow {
-    /// The handlers' record read from the C++ event through the window's host (R6 WON round 32: the original
-    /// forwarders' statements, Window::HandleKeyEvent .. HandleInputEvent).
-    fn event_of(&self, shape: EeWonWinEventShape, e: isize) -> EeWonWinEvent {
-        let get = |op: Op| self.op(op, e, 0, 0, 0) as i32;
-        let mut r = EeWonWinEvent { kind: get(Op::WinEvType), ..EeWonWinEvent::default() };
-        match shape {
-            EeWonWinEventShape::Key => {
-                r.key_mod = get(Op::WinKeyEvKeyMod);
-                r.key = get(Op::WinKeyEvKey);
-            }
-            EeWonWinEventShape::Mouse => {
-                r.x = get(Op::WinMouseEvX);
-                r.y = get(Op::WinMouseEvY);
-                r.key_mod = get(Op::WinMouseEvKeyMod);
-                r.button = get(Op::WinMouseEvButton);
-            }
-            EeWonWinEventShape::Input => {
-                if r.kind == EV_SIZE_CHANGE {
-                    r.width = get(Op::WinSizeEvWidth);
-                    r.height = get(Op::WinSizeEvHeight);
-                }
-            }
-        }
-        r
-    }
-
     /// `Window::GetFont`: the map's font, else the platform's (held by the map; a NULL one is asked again next
     /// time).
     ///
@@ -927,22 +899,62 @@ impl EeWonWindow {
     }
 }
 
-/// A key, mouse or input handler (`call`) over the record read from the C++ event `event` (a `KeyEvent*`,
-/// `MouseEvent*` or `InputEvent*` as an `InputEvent*`).
+/// A key, mouse or input handler (`call`: HandleKeyEvent, HandleMouseEvent, HandleInputEvent) over the C++ event's
+/// record (R6 WON GUI round 37: the input events carry the record the handlers read, `InputEvent::mEv`).
 ///
 /// # Safety
-/// `win` is live; `event` is a live event of the shape.
+/// `win` is live; `event` is a live record.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_win_event(
-    win: *const EeWonWindow,
-    call: EeWonWinCall,
-    shape: EeWonWinEventShape,
-    event: isize,
-) -> isize {
+pub unsafe extern "C" fn ee_won_win_event(win: *const EeWonWindow, call: EeWonWinCall, event: *const EeWonWinEvent) -> isize {
     // SAFETY: live (the contract)
-    let w = unsafe { &*win };
-    let r = w.event_of(shape, event);
-    w.call(call, &r as *const EeWonWinEvent as isize, 0)
+    unsafe { (*win).call(call, event as isize, 0) }
+}
+
+/// The root container's method `call` in the game (the C++ RootContainer's virtuals, which nothing overrides:
+/// its own are the Rust root's, the others Component's and Container's, run by the component's call).
+///
+/// # Safety
+/// `comp` is the live root and `obj` its Rust root.
+pub(crate) unsafe fn game_root(comp: isize, obj: *const crate::rootobj::EeWonRoot, call: EeWonWinRoot, b: isize, c: isize, d: isize) -> isize {
+    use crate::compobj::{ee_won_comp_call, host, EeWonCompCall as K};
+    use crate::ctobj::{ee_won_ct_call, EeWonContainer, EeWonCtCall as T, EeWonCtField};
+    use crate::rootobj::{ee_won_root_call, EeWonRootCall as R};
+    use EeWonWinRoot as W;
+    // SAFETY (the three): the contract; each call re-enters through its object's own entry
+    let rc = |k: R, a: isize, b: isize, c: isize| unsafe { ee_won_root_call(obj, k, a, b, c) };
+    let kc = |k: K, a: isize, b: isize| unsafe { ee_won_comp_call(comp as *mut c_void, host(), k, a, b, 0) };
+    let ct = |k: T, a: isize| unsafe { ee_won_ct_call(crate::compmem::get(comp).ct as *const EeWonContainer, k, a, 0, 0) };
+    let m = crate::compmem::get(comp);
+    match call {
+        W::SetSize => kc(K::SetSize, b, c),
+        W::Invalidate => kc(K::Invalidate, 0, 0),
+        W::MouseExit => rc(R::MouseExit, 0, 0, 0),
+        W::KeyDown => rc(R::KeyDown, b, 0, 0),
+        W::KeyUp => rc(R::KeyUp, b, 0, 0),
+        W::KeyChar => rc(R::KeyChar, b, 0, 0),
+        W::MouseDown => rc(R::MouseDown, b, c, d),
+        W::MouseUp => rc(R::MouseUp, b, c, d),
+        W::MouseMove => rc(R::MouseMove, b, c, 0),
+        W::MouseDrag => rc(R::MouseDrag, b, c, 0),
+        W::MouseEnter => kc(K::MouseEnter, b, c),
+        W::MouseWheel => kc(K::MouseWheel, b, 0),
+        W::GotFocus => kc(K::GotFocus, 0, 0),
+        W::LostFocus => kc(K::LostFocus, 0, 0),
+        W::MouseHover => kc(K::MouseHover, b, 0),
+        W::TimerEvent => kc(K::TimerEvent, b, 0),
+        W::CanClose => (kc(K::CanClose, 0, 0) != 0) as isize,
+        W::AddChild => ct(T::AddChild, b),
+        W::RemoveChild => rc(R::RemoveChild, b, 0, 0),
+        W::EnterModal => ct(T::EnterModal, 0),
+        W::LeaveModal => ct(T::LeaveModal, 0),
+        W::UnionBounds => rc(R::InvalidateRect, &m.bounds as *const _ as isize, 0, 0),
+        W::CurrentCursor => ct(T::GetField, EeWonCtField::CurrentCursor as isize),
+        W::Left => m.bounds.x as isize,
+        W::Top => m.bounds.y as isize,
+        W::Width => m.bounds.width as isize,
+        W::Height => m.bounds.height as isize,
+        W::TimerFlags => m.timer as isize,
+    }
 }
 
 /// `Window::GetFont`'s font (unheld: the C++ wraps it in its SmartPtr).

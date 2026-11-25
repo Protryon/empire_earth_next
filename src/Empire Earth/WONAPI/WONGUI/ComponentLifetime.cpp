@@ -51,7 +51,7 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
 #define EE_COMP_AT(m, f) (offsetof(Component, m) == EE_WON_COMP_MEMBERS_AT + offsetof(EeWonCompMembers, f))
     static_assert(EE_COMP_AT(mParent, parent) && EE_COMP_AT(mBounds, bounds) && EE_COMP_AT(mComponentBits, bits) &&
               EE_COMP_AT(mControlId, control_id) && EE_COMP_AT(mFocusId, focus_id) &&
-              EE_COMP_AT(mInvalidState, invalid) && EE_COMP_AT(mTimerFlags, timer) && EE_COMP_AT(mExtraStuff, extra),
+              EE_COMP_AT(mInvalidState, invalid) && EE_COMP_AT(mTimerFlags, timer) && EE_COMP_AT(mExtraStuff, extra) && EE_COMP_AT(mCt, ct),
               "compmem.rs's block");
 #undef EE_COMP_AT
 #pragma clang diagnostic pop

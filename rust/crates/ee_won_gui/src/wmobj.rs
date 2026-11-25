@@ -89,6 +89,47 @@ pub enum EeWonWmComp {
     HandleComponentEvent,
 }
 
+/// A component call the game's manager makes itself (R6 WON GUI round 37): the members' block, Component's calls
+/// and the container's; None for the virtuals, the references and the event the C++ answers.
+fn game_comp(call: EeWonWmComp, comp: isize, c: isize, d: isize) -> Option<isize> {
+    use crate::compobj::{ee_won_comp_call, host, EeWonCompCall as K};
+    use crate::ctobj::{ee_won_ct_call, EeWonContainer, EeWonCtCall as T};
+    use EeWonWmComp as W;
+    // SAFETY: the game's live component (the manager's call's contract); the calls re-enter through their entries
+    let kc = |k: K, a: isize, b: isize| unsafe { ee_won_comp_call(comp as *mut c_void, host(), k, a, b, 0) };
+    let m = crate::compmem::get(comp);
+    // SAFETY: as `kc`; `comp` is a container (the call's contract)
+    let ct = |k: T| unsafe { ee_won_ct_call(m.ct as *const EeWonContainer, k, 0, 0, 0) };
+    Some(match call {
+        W::SetFlags => kc(K::SetFlags, c, (d != 0) as isize),
+        W::Parent => m.parent,
+        W::EnterModal => ct(T::EnterModal),
+        W::LeaveModal => ct(T::LeaveModal),
+        W::RequestFocus => kc(K::RequestFocus, 0, 0),
+        W::SetPos => kc(K::SetPos, c, d),
+        W::Left => m.bounds.x as isize,
+        W::Top => m.bounds.y as isize,
+        W::Width => m.bounds.width as isize,
+        W::Height => m.bounds.height as isize,
+        W::Root => kc(K::Root, 0, 0),
+        W::OwnScheme => kc(K::OwnColorScheme, 0, 0),
+        W::Scheme => kc(K::ColorScheme, 0, 0),
+        W::SetScheme => kc(K::SetColorScheme, c, 0),
+        W::Bits => m.bits as u32 as isize,
+        W::RootContainer => kc(K::RootContainer, 0, 0),
+        W::AsContainer => {
+            if m.ct != 0 {
+                comp
+            } else {
+                0
+            }
+        }
+        W::FireEndPopup | W::ClickChildAt | W::Hold | W::Release | W::MouseWheel | W::HandleComponentEvent => {
+            return None
+        }
+    })
+}
+
 /// A window's methods the manager calls (`WmWin`'s `a`; `b` the window, `c`, `d` the arguments).
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -434,9 +475,18 @@ impl EeWonWm {
         }
     }
     pub(crate) fn cm(&self, call: EeWonWmComp, comp: isize, c: isize, d: isize) -> isize {
+        if crate::compobj::is_game() {
+            if let Some(r) = game_comp(call, comp, c, d) {
+                return r;
+            }
+        }
         self.op(Op::WmComp, call as isize, comp, c, d)
     }
     pub(crate) fn wn(&self, call: EeWonWmWin, win: isize, c: isize, d: isize) -> isize {
+        // a game window's own Rust parts (R6 WON GUI round 37)
+        if let Some(r) = crate::gamewin::wm_win_op(call, win, c, d) {
+            return r;
+        }
         self.op(Op::WmWin, call as isize, win, c, d)
     }
     fn win_rect(&self, win: isize, client: bool) -> EeWonRect4 {

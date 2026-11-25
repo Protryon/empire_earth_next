@@ -18,44 +18,10 @@
 #include "ee/wonapi/WONLobbyPlatform.h"
 #include "rust/won_gui/platwin.h"
 #include "rust/won_gui/platwm.h"
+#include "rust/won_gui/gamewin.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
-
-static intptr_t RootCall(RootContainer* r, intptr_t call, intptr_t b, intptr_t c, intptr_t d)
-{
-    switch ((EeWonWinRoot)call) {
-    case EeWonWinRoot::SetSize: r->SetSize((int)b, (int)c); return 0;
-    case EeWonWinRoot::Invalidate: r->Invalidate(); return 0;
-    case EeWonWinRoot::MouseExit: r->MouseExit(); return 0;
-    case EeWonWinRoot::KeyDown: r->KeyDown((int)b); return 0;
-    case EeWonWinRoot::KeyUp: r->KeyUp((int)b); return 0;
-    case EeWonWinRoot::KeyChar: r->KeyChar((int)b); return 0;
-    case EeWonWinRoot::MouseDown: r->MouseDown((int)b, (int)c, (int)d); return 0;
-    case EeWonWinRoot::MouseEnter: r->MouseEnter((int)b, (int)c); return 0;
-    case EeWonWinRoot::MouseDrag: r->MouseDrag((int)b, (int)c); return 0;
-    case EeWonWinRoot::MouseMove: r->MouseMove((int)b, (int)c); return 0;
-    case EeWonWinRoot::MouseUp: r->MouseUp((int)b, (int)c, (int)d); return 0;
-    case EeWonWinRoot::MouseWheel: r->MouseWheel((int)b); return 0;
-    case EeWonWinRoot::GotFocus: r->GotFocus(); return 0;
-    case EeWonWinRoot::LostFocus: r->LostFocus(); return 0;
-    case EeWonWinRoot::MouseHover: r->MouseHover((DWORD)b); return 0;
-    case EeWonWinRoot::TimerEvent: r->TimerEvent((DWORD)b); return 0;
-    case EeWonWinRoot::CanClose: return r->CanClose() ? 1 : 0;
-    case EeWonWinRoot::AddChild: r->AddChild((Component*)b); return 0;
-    case EeWonWinRoot::RemoveChild: r->RemoveChild((Component*)b); return 0;
-    case EeWonWinRoot::EnterModal: r->EnterModal(); return 0;
-    case EeWonWinRoot::LeaveModal: r->LeaveModal(); return 0;
-    case EeWonWinRoot::UnionBounds: r->UnionInvalidRect(r->GetBounds()); return 0;
-    case EeWonWinRoot::CurrentCursor: return (intptr_t)r->GetCurrentCursor();
-    case EeWonWinRoot::Left: return r->Left();
-    case EeWonWinRoot::Top: return r->Top();
-    case EeWonWinRoot::Width: return r->Width();
-    case EeWonWinRoot::Height: return r->Height();
-    case EeWonWinRoot::TimerFlags: return (intptr_t)r->mTimerFlags;
-    }
-    return 0;
-}
 
 // the font a run of ops shares (winobj.rs get_font: the original's local SmartPtr)
 static SmartPtr<Font> sHostFont;
@@ -65,21 +31,6 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     Window* t = (Window*)inWin;
     switch (op) {
     case Op::WinTick: return (intptr_t)(uint32_t)WONTickCount();
-    case Op::WinRoot: return RootCall(t->mRoot.get(), a, b, c, d);
-    case Op::WinPlat:
-        switch ((EeWonWinPlat)a) {
-        case EeWonWinPlat::SetTitle: t->PlatformSetTitle(); return 0;
-        case EeWonWinPlat::SetIcon: t->PlatformSetIcon(); return 0;
-        case EeWonWinPlat::SetCursor: t->PlatformSetCursor((Cursor*)b); return 0;
-        case EeWonWinPlat::ShowNativeCursor: t->PlatformShowNativeCursor(b != 0); return 0;
-        case EeWonWinPlat::Show: t->PlatformShow(b != 0); return 0;
-        case EeWonWinPlat::Minimize: t->PlatformMinimize(b != 0); return 0;
-        case EeWonWinPlat::SetFocus: t->PlatformSetFocus(); return 0;
-        }
-        return 0;
-    case Op::WinSetPosSize: t->SetPosSize((int)a, (int)b, (int)c, (int)d); return 0;
-    case Op::WinGetRect: ((Window*)a)->GetRect(*(WONRectangle*)b, c != 0); return 0;
-    case Op::WinIsVisible: return ((Window*)a)->PlatformIsVisible() ? 1 : 0;
     case Op::WinScreenRect: t->mManager->GetScreenRect(*(WONRectangle*)a); return 0;
     case Op::WinAddToManager: t->mManager->AddWindow(t); return 0;
     case Op::WinNewOffscreen: {
@@ -90,20 +41,10 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
         return 0;
     }
     case Op::WinQueueClose: t->QueueEvent(new InputEvent(InputEvent_WindowClose)); return 0;
-    case Op::WinCanClose: return ((Window*)a)->CanClose() ? 1 : 0;
     case Op::WinAllowClose: return 1; // (no window ever had an allow-close function)
     case Op::WinChildSet: ((Window*)a)->WCall(EeWonWinCall::ChildSet, (intptr_t)t, b); return 0;
     case Op::WinStdArrow: return (intptr_t)Cursor::GetStandardCursor(StandardCursor_Arrow);
     case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
-    case Op::WinEvType: return ((InputEvent*)a)->mEventType;
-    case Op::WinKeyEvKeyMod: return static_cast<KeyEvent*>((InputEvent*)a)->mKeyMod;
-    case Op::WinKeyEvKey: return static_cast<KeyEvent*>((InputEvent*)a)->mKey;
-    case Op::WinMouseEvX: return static_cast<MouseEvent*>((InputEvent*)a)->mx;
-    case Op::WinMouseEvY: return static_cast<MouseEvent*>((InputEvent*)a)->my;
-    case Op::WinMouseEvKeyMod: return static_cast<MouseEvent*>((InputEvent*)a)->mKeyMod;
-    case Op::WinMouseEvButton: return static_cast<MouseEvent*>((InputEvent*)a)->mButtonOrAmount;
-    case Op::WinSizeEvWidth: return static_cast<SizeEvent*>((InputEvent*)a)->mWidth;
-    case Op::WinSizeEvHeight: return static_cast<SizeEvent*>((InputEvent*)a)->mHeight;
     case Op::WinPlatformFont: sHostFont = t->PlatformGetFont(*(const FontDescriptor*)a); return 0;
     case Op::WinHostFont: return (intptr_t)sHostFont.get();
     case Op::WinFontHold: ((Font*)a)->AddRef(); return 0;
@@ -127,19 +68,11 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     case Op::HasWm: return m != NULL;
     case Op::Wm: return m->Call((EeWonPlatWmCall)a, b, c);
     case Op::Mouse: return m->GetMousePosition(((int*)a)[0], ((int*)a)[1]);
-    case Op::Fills: return me->FillsSurface();
-    case Op::Frame: return me->HasFrame();
-    case Op::Popup: return me->IsPopup();
-    case Op::Open: return me->GetWindowState() == Window::WindowState_Open;
-    case Op::Style: return me->GetStyle();
     case Op::WindowCreate: me->BaseCreate((int)c, (int)d); return 0;
     case Op::NewContext: me->mDisplayContext = new DisplayContext(NULL); return 0;
     case Op::OffscreenOfRoot: me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height()); return 0;
     case Op::Offscreen: return me->mOffscreenImage.get() != NULL ? (intptr_t)me->mOffscreenImage->mRust : 0;
     case Op::CopyOffscreen: return ee_won_guicpp_win_call(me, EeWonGuiOp::WinNewOffscreen, a, b, 0, 0);
-    case Op::Center: me->Center(a != 0); return 0;
-    case Op::Showing: me->SetIsShowing(a != 0); return 0;
-    case Op::Show: me->PlatformShow(a != 0); return 0;
     case Op::QueueSize: me->QueueEvent(new SizeEvent((int)a, (int)b, (int)c, (int)d)); return 0;
     case Op::QueueExit: me->QueueEvent(new InputEvent(InputEvent_MouseExit)); return 0;
     case Op::QueueMouse: {
@@ -147,23 +80,15 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
         me->QueueEvent(new MouseEvent(p[0], p[1], p[2], p[3], p[4]));
         return 0;
     }
-    case Op::InvalidateRoot: me->InvalidateRoot(); return 0;
-    case Op::MouseIn: return me->IsMouseInClientArea();
-    case Op::RootContains: return me->mRoot->Contains((int)a, (int)b);
-    case Op::RootInvalid: return me->mRoot->mInvalidState != 0;
     case Op::Paint: me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics()); return 0;
     case Op::RootPaint: me->mRoot->Paint(me->mOffscreenImage->GetGraphics()); return 0;
-    case Op::RootInvalidate: me->mRoot->Invalidate(); return 0;
-    case Op::ParentPlat: return me->GetParent() != NULL ? (intptr_t)me->GetParent()->mRust : 0;
-    case Op::WindowClose: me->BasePlatformClose(); return 0;
-    case Op::WindowTimer: me->BaseTimerEvent((DWORD)a); return 0;
     case Op::ApplyCursor: ee_won_cursor_apply(a != 0 ? ((Cursor*)a)->mRust : NULL, (void (*)(int32_t))PlatCursorShow); return 0;
     case Op::PopupWindow: return (intptr_t)m->GetPopupWindow();
     case Op::PopupFlags: return m->GetPopupFlags();
     case Op::CursorShow: PlatCursorShow((int)a); return 0;
     case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
+    default: return 0;
     }
-    return 0;
 }
 }
 
@@ -175,6 +100,8 @@ Window::Window()
 	this->mManager = WONAPI::WindowManager::GetDefaultWindowManager();
 	this->mRoot = new RootContainer(this);
 	this->mRust = ee_won_plat_win_new(this, PlatWinHost);
+	// its Rust parts call each other directly (gamewin.rs; R6 WON GUI round 37)
+	ee_won_win_bind(this, this->mWinObj.p, this->mRust, static_cast<Component*>(this->mRoot.get()), this->mRoot->mRootObj);
 }
 
 // Destroys the window: the platform window, the members, then the Rust window (its child set; mWinObj is the first
@@ -184,6 +111,7 @@ Window::~Window()
 	this->Rust(EeWonPlatWinCall::Destroy);
 	ee_won_plat_win_free(this->mRust);
 	this->mRust = NULL;
+	ee_won_win_bind(this, this->mWinObj.p, NULL, static_cast<Component*>(this->mRoot.get()), this->mRoot->mRootObj);
 }
 
 // Returns the cached font for a descriptor, creating it through the platform on first use (a NULL platform font
@@ -251,24 +179,6 @@ void Window::QueueEvent(WindowEventBase* event) { event->mWindow=this; this->mMa
 Graphics& Window::GetGraphics()
 {
     return this->mOffscreenImage->GetGraphics();
-}
-
-// The handlers over the events' fields, read in Rust (winobj.rs ee_won_win_event; the others are inline)
-void Window::HandleKeyEvent(KeyEvent *e)
-{
-    ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleKeyEvent, EeWonWinEventShape::Key, (intptr_t)static_cast<InputEvent*>(e));
-}
-void Window::HandleMouseDown(MouseEvent *e)
-{
-    ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleMouseDown, EeWonWinEventShape::Mouse, (intptr_t)static_cast<InputEvent*>(e));
-}
-void Window::HandleMouseEvent(MouseEvent *e)
-{
-    ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleMouseEvent, EeWonWinEventShape::Mouse, (intptr_t)static_cast<InputEvent*>(e));
-}
-void Window::HandleInputEvent(InputEvent *e)
-{
-    ee_won_win_event(this->mWinObj.p, EeWonWinCall::HandleInputEvent, EeWonWinEventShape::Input, (intptr_t)e);
 }
 
 namespace WONAPI {

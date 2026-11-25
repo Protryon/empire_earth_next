@@ -171,6 +171,29 @@ pub enum EeWonCompCall {
     RootWindow,
     /// `GetFontMod((Font*)a, b, c)`.
     FontMod,
+    // ---- R6 WON GUI round 37: the virtuals only a container answers (a plain component's empty defaults)
+    /// `MouseDown(a, b, c)`.
+    MouseDown,
+    /// `MouseUp(a, b, c)`.
+    MouseUp,
+    /// `MouseMove(a, b)`.
+    MouseMove,
+    /// `MouseDrag(a, b)`.
+    MouseDrag,
+    /// `MouseWheel(a)` (0).
+    MouseWheel,
+    /// `TimerEvent(a)` (1).
+    TimerEvent,
+    /// `KeyChar(a)` (0).
+    KeyChar,
+    /// `KeyDown(a)` (0).
+    KeyDown,
+    /// `KeyUp(a)` (0).
+    KeyUp,
+    /// `CanClose()` (1).
+    CanClose,
+    /// `GetMouseChild()` (NULL).
+    MouseChild,
 }
 
 /// The host's calls (`EeWonGuiOp::Comp`; `b` the receiver, `c`, `d` the arguments; a component as `Component*`).
@@ -1209,6 +1232,9 @@ impl Comp {
             C::RootContainer => return self.root_container(c),
             C::RootWindow => return self.root_window(c),
             C::FontMod => return self.font_mod(c, a, bi, cc as i32),
+            C::TimerEvent | C::CanClose => return 1,
+            C::MouseDown | C::MouseUp | C::MouseMove | C::MouseDrag | C::MouseWheel => {}
+            C::KeyChar | C::KeyDown | C::KeyUp | C::MouseChild => {}
         }
         0
     }
@@ -1228,7 +1254,92 @@ pub unsafe extern "C" fn ee_won_comp_call(
     b: isize,
     c: isize,
 ) -> isize {
+    // (only the game's components carry the member: a driver's world may lay out fewer)
+    let ct = if is_game() { mem::get(me as isize).ct } else { 0 };
+    if ct != 0 {
+        if let Some(k) = container_call(call) {
+            // (GetMouseChild is the container's field)
+            let a = if call == EeWonCompCall::MouseChild { crate::ctobj::EeWonCtField::MouseChild as isize } else { a };
+            // SAFETY: a live container's own Rust object (Container sets it, its destructor clears it)
+            return unsafe { crate::ctobj::ee_won_ct_call(ct as *const crate::ctobj::EeWonContainer, k, a, b, c) };
+        }
+    }
     Comp::new(host).call(me as isize, call, a, b, c)
+}
+
+/// The container's call for a Component virtual that Container overrides (R6 WON GUI round 37: the C++ Container
+/// no longer repeats them; a component with a Rust container runs its call), None for the others.
+pub fn container_call(k: EeWonCompCall) -> Option<crate::ctobj::EeWonCtCall> {
+    use crate::ctobj::EeWonCtCall as T;
+    use EeWonCompCall as C;
+    Some(match k {
+        C::SizeChanged => T::SizeChanged,
+        C::DesiredSize => T::DesiredSize,
+        C::PrePaint => T::PrePaint,
+        C::Paint => T::Paint,
+        C::HitTest => T::HitTest,
+        C::MouseEnter => T::MouseEnter,
+        C::MouseExit => T::MouseExit,
+        C::MouseDown => T::MouseDown,
+        C::MouseUp => T::MouseUp,
+        C::MouseMove => T::MouseMove,
+        C::MouseDrag => T::MouseDrag,
+        C::MouseWheel => T::MouseWheel,
+        C::MouseHover => T::MouseHover,
+        C::TimerEvent => T::TimerEvent,
+        C::GotFocus => T::GotFocus,
+        C::LostFocus => T::LostFocus,
+        C::KeyChar => T::KeyChar,
+        C::KeyDown => T::KeyDown,
+        C::KeyUp => T::KeyUp,
+        C::CanClose => T::CanClose,
+        C::MarkInvalid => T::MarkInvalid,
+        C::AddedToParent => T::AddedToParent,
+        C::ClearGrabBG => T::ClearGrabBG,
+        C::SetCursor => T::SetCursor,
+        C::HandleBroadcast => T::HandleBroadcastEvent,
+        C::NotifyRootVisibility => T::NotifyRootVisibility,
+        C::TabFocus => T::TabFocus,
+        C::EnableControlsById => T::EnableControlsById,
+        C::MouseChild => T::GetField,
+        _ => return None,
+    })
+}
+
+/// Component's own virtual `v` on the container `me` (the original's `Component::X()` from a Container body: the
+/// container's base call, `CtBase`), not routed to the container.
+///
+/// # Safety
+/// As `ee_won_comp_call`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_comp_base_call(
+    me: *mut c_void,
+    host: EeWonGuiHostFn,
+    v: crate::guihost::EeWonCtVirt,
+    a: isize,
+    b: isize,
+) -> isize {
+    use crate::guihost::EeWonCtVirt as V;
+    use EeWonCompCall as C;
+    let k = match v {
+        V::SizeChanged => C::SizeChanged,
+        V::PrePaint => C::PrePaint,
+        V::Paint => C::Paint,
+        V::EnableControlsById => C::EnableControlsById,
+        V::NotifyRootVisibility => C::NotifyRootVisibility,
+        V::HitTest => C::HitTest,
+        V::MouseEnter => C::MouseEnter,
+        V::MouseExit => C::MouseExit,
+        V::MouseHover => C::MouseHover,
+        V::HandleBroadcastEvent => C::HandleBroadcast,
+        V::AddedToParent => C::AddedToParent,
+        V::MarkInvalid => C::MarkInvalid,
+        V::ClearGrabBG => C::ClearGrabBG,
+        V::GotFocus => C::GotFocus,
+        V::LostFocus => C::LostFocus,
+        _ => return 0,
+    };
+    Comp::new(host).call(me as isize, k, a, b, 0)
 }
 
 #[cfg(test)]
