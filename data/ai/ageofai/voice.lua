@@ -61,6 +61,15 @@ function M.step(view, memory)
             print(string.format("voice: %s", ans))
         end
     end
+    -- the human's chat (llm_ai_talk): answer the next line from the human (player 1, single player)
+    if ai.chat ~= nil and S.llm_ai_talk then
+        local text, player = ai.chat()
+        if text ~= nil and (player or 0) == 1 and text ~= "" then
+            v.talk = (v.talk or 0) + 1
+            ai.llm("The human said: \"" .. tostring(text) .. "\". Answer in one short line.", system_prompt(memory))
+            return
+        end
+    end
     -- a line now and then (not while a decision waits for the model: one request at a time)
     if v.dec ~= nil and next(v.dec) ~= nil then
         return

@@ -50,6 +50,8 @@ M.LINES = {
         betrayal = {"Your promises were worth nothing.", "I should have seen this coming."},
         capitulation = {"We have lost. I lay down my crown.", "You have won. Spare my people."},
         push = {"The army is ready. We march.", "Time to take what is ours."},
+        capture = {"The ground is ours. Hold it.", "Another territory taken."},
+        loss = {"We lost ground today.", "They took a territory from us."},
         greeting = {"Well met. Let us see who builds better.", "A new world. Let us begin."},
     },
     aggressive = {

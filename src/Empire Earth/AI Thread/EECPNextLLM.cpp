@@ -8,9 +8,45 @@
 #include <atomic>
 #include <cstdio>
 #include <cstring>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <thread>
+
+// THE CHAT INBOX: every in-game chat line, for the Lua side to read (ai.chat). Portable (no Windows calls), so a
+// simulation records them too; the engine's voice (ai.say) pushes its own lines as well, and the Lua side skips
+// its own by the player id.
+namespace {
+struct ChatLine {
+    int player;
+    std::string text;
+};
+std::mutex g_chat_lock;
+std::deque<ChatLine> g_chat;
+const size_t kChatCap = 32;
+}  // namespace
+
+extern "C" void EECPNextChatPush(int player, const char* text) {
+    if (text == NULL || *text == 0) return;
+    std::lock_guard<std::mutex> h(g_chat_lock);
+    while (g_chat.size() >= kChatCap) g_chat.pop_front();
+    g_chat.push_back({player, std::string(text)});
+}
+
+extern "C" int EECPNextChatPoll(int* player, char* out, int cap) {
+    std::lock_guard<std::mutex> h(g_chat_lock);
+    if (g_chat.empty()) return 0;
+    ChatLine line = g_chat.front();
+    g_chat.pop_front();
+    if (player != NULL) *player = line.player;
+    if (out != NULL && cap > 0) {
+        int n = (int)line.text.size();
+        if (n > cap - 1) n = cap - 1;
+        memcpy(out, line.text.data(), (size_t)n);
+        out[n] = 0;
+    }
+    return 1;
+}
 
 #ifdef _WIN32
 #include <windows.h>

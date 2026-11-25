@@ -4647,6 +4647,23 @@ static int LuaSay(lua_State* L) {
     return 1;
 }
 
+// the chat inbox (EECPNextLLM.cpp): one captured in-game chat line a call
+extern "C" int EECPNextChatPoll(int* player, char* out, int cap);
+
+// ai.chat: the next in-game chat line since the last call -> text, player; nil when none
+static int LuaChat(lua_State* L) {
+    EECPUnitsCharge(L, kCostCall);
+    static char buf[1024];
+    int player = 0;
+    if (EECPNextChatPoll(&player, buf, sizeof buf)) {
+        lua_pushstring(L, buf);
+        lua_pushinteger(L, player);
+        return 2;
+    }
+    lua_pushnil(L);
+    return 1;
+}
+
 // ai.llm: no argument = the last answer (nil while none or still busy); a table = configure; a string = ask
 static int LuaLlm(lua_State* L) {
     EECPUnitsCharge(L, kCostCall);
@@ -4718,7 +4735,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
-        {"llm", LuaLlm}, {"say", LuaSay},
+        {"llm", LuaLlm}, {"say", LuaSay}, {"chat", LuaChat},
         {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {

@@ -405,6 +405,7 @@ return {
     llm_lines = true,               -- the AI says its personality's lines
     ai_lines = true,                -- the persona's own lines on war, peace, alliance, betrayal, capitulation (voice.lua;
                                     -- upstream's [general] ai_lines)
+    news = true,                    -- a territory gained or lost: a line (news.c's light stand-in: news.lua)
     llm_chat = true,                -- ... and the chat lines
     llm_decide = false,             -- the model decides its moves towards the human
     llm_ai_talk = false,            -- an exchange with the human after an offer

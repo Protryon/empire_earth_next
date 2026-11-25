@@ -408,7 +408,8 @@ route skips:
 | `ai.tribute(player, amounts)`, `ai.trade(resource, buy, n)`, `ai.diplomacy(player, stance)` | PayTribute, ExchangeResources, SetDiplomaticStance | | |
 | `ai.air(...)` | the airport messages | stage L6 or later |
 | `ai.llm(config)` / `ai.llm(prompt[, system])` / `ai.llm()` | the AI's voice: a table configures the LLM transport (`url`, `api_key`, `model`, `timeout`, `enabled`, `think`); a string starts one request on a worker thread and returns its sequence number (nil when disabled or busy); no argument returns the last answer or nil. Windows WinHTTP; inert on POSIX. Never blocks the step (`EECPNextLLM.cpp`). | this port |
-| `ai.say(text)` | a chat line as the computer player (the game's in-game chat); false in the headless simulation. | this port | |
+| `ai.say(text)` | a chat line as the computer player (the game's in-game chat); false in the headless simulation. | this port |
+| `ai.chat()` | the next in-game chat line since the last call: `text, player`, or nil. The inbox keeps the last 32 lines; the AI's own lines are in it too (`voice.lua` skips by the player id). | this port | |
 
 **The ownership calls (§7):**
 - `ai.take(ids)`, `ai.release(ids)`;

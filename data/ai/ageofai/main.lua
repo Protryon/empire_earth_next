@@ -33,6 +33,7 @@ local PL = require("ageofai.plans")       -- [plans.c] the strategy plans (off u
 local RT = require("ageofai.returns")     -- [returns.c] the returns, step 1 of the plans
 local PS = require("ageofai.personas")    -- [persona.c] personas (traits + leanings), the Lua-side stand-in
 local VO = require("ageofai.voice")       -- [voice/llm.c] the optional LLM voice (off unless S.llm_enabled)
+local NW = require("ageofai.news")        -- [news.c] the lines the territories give the AI to say
 local V = require("lib.view")
 local S = require("ageofai.settings")
 
@@ -115,6 +116,8 @@ function M.step(view, memory)
     CL.log(view, memory)
     -- [storms.c] the enemy storms its ships see: out of them, whatever they were doing
     ST.step(view, memory)
+    -- [news.c] a territory gained or lost: the persona's line
+    NW.step(view, memory)
     -- [diplo.c] the diplomacy (ageofai.diplo): every step (the stances and the pending answers), the blocks every
     -- 2 s, the world scan every 10 s, the initiative every 60 s from minute 10; the events for the hits and losses
     DP.step(view, memory, events)
