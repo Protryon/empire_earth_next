@@ -4042,7 +4042,7 @@ void ee_gamecpp_world_remove_player(void *w,
 /// EEWorld::AddComputerPlayers: the empty slots after the state's players filled with computer players in unused
 /// colours and 999,999 of each resource (the scenario editor), their foundation media loaded.
 void ee_gamecpp_world_add_computers(void *w,
-                                    void *st);
+                                    void *_st);
 
 /// EEWorld::StartGame: the world set up from a game state (map, players, teams, local player, camera, sight,
 /// minimap, calamities, music, media), the load progress reported; in multiplayer the local player found by name.
