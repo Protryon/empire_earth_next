@@ -323,28 +323,6 @@ bool EETeam::ContainsPlayer(unsigned long inPlayerID)
     return std::find(this->mPlayers.begin(), this->mPlayers.end(), inPlayerID) != this->mPlayers.end();
 }
 
-// port (ee/EECPExperimentTimers.h): the experiments' timers and the resource state, saved from 0.258 and 0.265
-// (ee_sim::cp timers.rs, player_game.rs ee_cp_pl_state_block)
-long EECPSaveExperimentTimers(FSFile& outFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 0, &EESaveFilePrimitive);
-}
-
-long EECPLoadExperimentTimers(FSFile& inFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 1, &EESaveFilePrimitive);
-}
-
-long EECPSaveResourceState(FSFile& outFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 2, &EESaveFilePrimitive);
-}
-
-long EECPLoadResourceState(FSFile& inFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 3, &EESaveFilePrimitive);
-}
-
 // the after-load fixups of player_game.rs: inCall(inBox) at the loaded game's first tick
 extern "C" void ee_cp_after_load(void (*inCall)(uint64_t), uint64_t inBox)
 {

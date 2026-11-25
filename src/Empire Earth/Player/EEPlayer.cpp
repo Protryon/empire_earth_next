@@ -131,11 +131,6 @@ EEPlayer::~EEPlayer()
     ee_units_player_body(this, EE_UNITS_PLAYER_DO_DESTROY, 0, 0, 0, 0.0f);   // ee_units player_body.rs destroy
 }
 
-// Destroys the civilization (members only)
-EECivilization::~EECivilization()
-{
-}
-
 // a unit as the Rust player's operations take it: its RTSUnit address (0: none)
 static int64_t EEPlayerUnitArg(RTSUnit* inUnit)
 {

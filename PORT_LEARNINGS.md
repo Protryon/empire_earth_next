@@ -40376,3 +40376,37 @@ compiles unmodified from the `lua-src` crate into the Rust library. docs/progres
 
 - **Behaviour changes**: none in a game. For a script: the list above (5.5's float text, `#` of a table with
   holes, `^`, the locale-dependent classes, frexp/ldexp, the traceback texts, the byte counts).
+
+## The player/tech lane, round 1, fork B: the civilization builder's and the CP headers' records as Rust's, their one-statement members inline, the dead declarations (ee_sim tech_consts.rs; ee_game civilization.rs, screens civ_whole_ffi.rs; branch rust-playertech1-b, 2026-11-24)
+
+The civilization builder's folder (the area effects, the manager, the files, the builder's host), ee/EECiv* and
+ee/EECP*: 943 -> 864 logic lines in the lane's scope (pl1_scope.py), 18,740 -> 18,623 in the whole tree, with no
+behaviour change (oracle 6/6 identical, the oracle, units, effects and scenario captures, saveload, the civilization
+builder's editor gate).
+
+- **A header every unit reads must not include a big Rust header.** EECivilization's members forwarded to
+  `ee_gamecpp_civ_*` (gamecpp.h, 6,500 lines, changed by most lanes); ee/EECivilization.h is included by ee/EEPlayer.h,
+  so inlining them there would have recompiled nearly every unit at each gamecpp FFI change (the object cache keys on
+  the header's text). civilization.rs became its own ee_game module instead: cbindgen writes one header per top-level
+  module, and rust/game/civilization.h is 66 lines. The same check kept CanAfford out of the class (it needs
+  `gGameOptions`, a ref to the lobby's options: `gAllowCustomCivs` is the game's, not the same object).
+- **A Rust record as the C++ name**: `struct EECPPlacement : EeCpPlacementObj {};` keeps the forward declaration
+  `struct EECPPlacement;` of ee/EEComputerPlayer.h valid (a typedef would not); the offsetof checks name the Rust
+  fields. Enums and constants: `EEAreaEffectKind` and `EECivUpgrade` with its level bits (tech_consts.rs, in the
+  cbindgen.toml export list). The bits are `u32`, not `c_ulong`: `as u32` on a `c_ulong` is clippy's
+  unnecessary_cast on Windows (32-bit long) and needed on Linux; the C++ constant changed from `unsigned long` to
+  `uint32_t`, the same values in both of its expressions.
+- **A one-line definition** (`X::X(...) { ...; }`) ends on its own line: a cutting script that looks for the next
+  column-0 `}` swallows the following function (it took EEAreaEffect::Dump and Checksum here; restored before the build).
+- **Dead code** found by a whole-tree name count (src, include, rust/crates: a name only in its own header and
+  definition, or only in Rust comments): the manager's UpgradeKey, FindUpgradeKey, GetUpgrades, `kCivKey`,
+  `EECivilizationUpgradeValue`, EECBUIListBox's `sSeparator` and `sCategory`.
+- The area effects' running state's FSFile I/O moved to Rust over gamecpp's `Pf` (the same FSFile overloads the
+  C++ switch called), so `EEAESaveRunningState`/`Load` are one-statement inlines.
+- **The civilization builder gate's flake reproduced** (round 11's, "The civilization builder gate's flake"): one
+  `--civbuilder` run in three failed at step 59 with the box round 12 predicted on top, `EEUIFError` 'Error Creating
+  File' (the overwrite's create-new after its delete, under this machine's load with seven lanes running); the
+  rerun passed. It is the file system's, not this round's code.
+- Edits outside the fork's files: the AI Thread's forwarder bodies deleted (EECPNext.cpp, EECPNextUnits.cpp,
+  EECPTrace.cpp, EEComputerPlayer.cpp), EEPlayer.cpp's empty ~EECivilization, EEWorldLayout.cpp's two offsetof
+  field names, EEVCWonder.cpp's include.

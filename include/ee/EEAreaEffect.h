@@ -16,7 +16,8 @@
 #include <stdio.h>
 #include "rust/game/screens.h"
 
-class EEAreaEffectTemplate;
+#include "ee/EEAreaEffectTemplate.h"   // mTemplate's members (LoadMedia, UnloadMedia, IsInRange)
+
 class EEComplexUnit;
 class EEUnit;
 #include "lle/GE2DPoint.h"              // mLocation by value (every includer already includes it)
@@ -27,7 +28,7 @@ class EEUnit;
 // from buildings' mMax, mCount, mDirty.
 class EEAreaEffect : public UReferenceCounter, public EeAreaEffectFields {
 public:
-    EEAreaEffect(EEAreaEffectTemplate* inTemplate);   // 0x27bf4b (and each kind's ctor)
+    EEAreaEffect(EEAreaEffectTemplate* inTemplate) { ee_screens_ae_construct((uintptr_t)this, (uintptr_t)inTemplate); }   // 0x27bf4b (and each kind's ctor)
     virtual ~EEAreaEffect() { ee_screens_ae_destroy((uintptr_t)this); }
     void AppliedTo(EEComplexUnit* inUnit) { ee_screens_ae_applied_to((uintptr_t)this, (uintptr_t)inUnit); }  // +0x04 (the cloaking 0x27aa51: SetCloakableChain(true))
     // +0x08 0x27bfcd (the cloaking 0x27aa5f, the healing 0x27ad20): whether the effect covers inUnit, for player
@@ -44,7 +45,7 @@ public:
     float GetRadius() { return ee_screens_ae_radius((uintptr_t)this); }                      // +0x1c 0x27c0a0: GetScale() * the template's radius
     bool IsImmunity() { return ee_area_effect_is_immunity(this); }                      // +0x20: the two immunities
     void SetUnit(EEComplexUnit* inUnit) { ee_screens_ae_set_unit((uintptr_t)this, (uintptr_t)inUnit); }    // +0x24 0x27c0cb (referenced)
-    void LoadMedia(bool inIsOnDemand);      // +0x28 0x27c0dc: mTemplate->Load(inArg)
+    void LoadMedia(bool inIsOnDemand) { this->mTemplate->Load(inIsOnDemand); }   // +0x28 0x27c0dc
     // +0x30 (the morale kinds 0x27b2e3 kind 1, the economy 0x27ac2c kind 2, the cloaking 0x27ab3a kind 3): a
     // modifier of inValue for inKind into outValue (+0x2c and +0x34 were false for every kind: no caller)
     bool Modify(long inKind, long inValue, long& outValue)
@@ -53,7 +54,7 @@ public:
     }
     void RemovedFrom(EEComplexUnit* inUnit) { ee_screens_ae_removed_from((uintptr_t)this, (uintptr_t)inUnit); }   // +0x38 (the cloaking 0x27ab53)
     void MarkDirty() { ee_area_effect_mark_dirty(this); }                       // +0x3c (the morale from buildings 0x27b956)
-    void UnloadMedia();                     // +0x40 0x27c0eb: mTemplate->Unload()
+    void UnloadMedia() { this->mTemplate->Unload(); }   // +0x40 0x27c0eb
     void Recount(long inArg) { ee_screens_ae_recount((uintptr_t)this, (float)inArg); }               // +0x44 (the morale from buildings 0x27b95b; inArg unread)
     void Tick(EEComplexUnit* inUnit, float inElapsed)
     {
@@ -62,7 +63,7 @@ public:
     long GetLevel() { return (long)ee_screens_ae_level((uintptr_t)this); }                        // +0x4c of the morale kinds (0x27b2dc, 0x27b949, 0x27bf22)
 
     // 0x27b480 (EEAEManager::FindEffect): the template's range test of inPoint around mLocation
-    bool IsInRange(const GE2DPoint& inPoint);
+    bool IsInRange(const GE2DPoint& inPoint) { return this->mTemplate->IsWithin(inPoint, this->mLocation, this->GetScale(), NULL); }
     float GetScale() { return ee_screens_ae_scale((uintptr_t)this); }                       // 0x27c0b7: the unit's area-effect scale, 1.0 without a unit
 
     // +0x08 (= 0, 0; EEUnitAreaEffectList::MoveAndUpdate assigns it)

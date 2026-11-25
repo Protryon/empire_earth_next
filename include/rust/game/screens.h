@@ -15681,9 +15681,6 @@ struct EeScreensChatEntry {
   char *text;
 };
 
-/// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
-using EeScreensAesIo = long(*)(void *ctx, uint32_t op, void *value);
-
 /// A targeting mode a command starts (`Command`): the main game form's UI state, and for the attack ground and
 /// rally commands the cursor locked to a pointer first. The form then shows its cancel button and refreshes.
 struct EeScreensCommandMode {
@@ -16808,11 +16805,11 @@ void *ee_screens_aem_find(void *manager,
 /// `EEAEManager::Load(file)` on the manager -> its result (`area_effect_running.rs`).
 long ee_screens_aes_load_templates(void *manager, void *file);
 
-/// `EEAESaveRunningState`: written through `call` on the file `ctx`.
-void ee_screens_aes_save(void *ctx, EeScreensAesIo call);
+/// `EEAESaveRunningState`: written to the `FSFile` `file`.
+void ee_screens_aes_save(void *file);
 
-/// `EEAELoadRunningState`: read through `call` on the file `ctx` -> the read's result.
-long ee_screens_aes_load(void *ctx, EeScreensAesIo call);
+/// `EEAELoadRunningState`: read from the `FSFile` `file` -> the read's result.
+long ee_screens_aes_load(void *file);
 
 /// The running state's fix-up after a load (`aes_after_load`'s registered call; `state` the record).
 ///

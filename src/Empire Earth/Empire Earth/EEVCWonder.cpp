@@ -16,7 +16,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EETeam.h"
 #include "ee/EEDatabaseTables.h"
-#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp civilization.rs)
+#include "rust/game/civilization.h"   // round 10, lane D (ee_game civilization.rs)
 
 extern EEWorld gWorld;
 extern EEPhysics* gPhysics;
