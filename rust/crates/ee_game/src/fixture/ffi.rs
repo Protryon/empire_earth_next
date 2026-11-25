@@ -43,12 +43,6 @@ pub unsafe extern "C" fn ee_fixture_sink_id(sink: *mut EeFixtureSink, id: i64) {
     }
 }
 
-/// The marker action ran (the UI thread).
-#[no_mangle]
-pub extern "C" fn ee_fixture_mark() {
-    super::orders::mark();
-}
-
 /// An input message before (`phase` 0) and after (1) it executes (EEPhysics::DrainInput, the world's write lock
 /// held); `local`: the local player sent it.
 #[no_mangle]

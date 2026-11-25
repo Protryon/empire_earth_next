@@ -1043,7 +1043,7 @@ pub fn mark() {
 /// One marker action posted and run by the UI thread -> false when it did not run within 5 s.
 fn ui_round_trip() -> bool {
     let before = MARKS.load(Ordering::SeqCst);
-    Call::new(Op::Mark).go();
+    crate::sim_driver::sed_run::post_call(|_| mark(), 0);
     for _ in 0..100 {
         if MARKS.load(Ordering::SeqCst) != before {
             return true;
