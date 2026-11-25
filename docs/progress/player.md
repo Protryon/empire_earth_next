@@ -13,7 +13,7 @@ folders).
 
 ## Round 1 (branch rust-playertech1, 2026-11-24)
 
-1,223 logic lines at batch 23 (fba26cc96) -> 587 (the whole tree from batch 24: 19,021 -> 18,345 logic, 114,065 ->
+1,223 logic lines at batch 23 (fba26cc96) -> 528 at the batch 25 merge (587 before it: game core 13 made ee/EETechTreeTechID.h Rust's; the whole tree from batch 24: 19,021 -> 18,345 logic, 114,065 ->
 112,106 C++ lines, 369 -> 368 compiled files, 855 -> 845 classes).
 
 - **The player** (lead): EEPlayer's 99 one-statement members (the economy's, the selection's, the diplomacy's, the

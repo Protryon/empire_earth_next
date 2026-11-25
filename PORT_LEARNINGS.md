@@ -40414,7 +40414,7 @@ builder's editor gate).
 ## The player/tech lane, round 1: EEPlayer's and RTSPlayer's forwarders inline, the tech tree's members over ee_game tech_tree, the civilization builder's records as Rust's (ee_game tech_tree, civilization.rs; branch rust-playertech1, 2026-11-24)
 
 The lane's scope (ee/EEPlayer.h, ee/EETech*, ee/EECP*, ee/EECiv*, the Player, Tech Tree and Civilization Builder
-folders): 1,223 -> 587 logic lines; the whole tree 19,021 -> 18,345 logic lines from batch 24 (bbb0654d2; port_metrics.py: C++ lines 114,065 -> 112,106, 369 -> 368 compiled files, 855 -> 845 classes). No behaviour change (the oracle's six seeds identical, the
+folders): 1,223 -> 528 (587 before batch 25, whose game core 13 made ee/EETechTreeTechID.h Rust's) logic lines; the whole tree against the merged batch 25 (04ccdbcf3, port_metrics.py): C++ lines 109,934 -> 107,975, compiled files 354 -> 353, logic 17,218 -> 16,542, classes 810 -> 800. No behaviour change (the oracle's six seeds identical, the
 capture profiles, saveload). Fork B's civilization builder has its own section above; this is the lead's part
 (the player) and fork A's (the tech tree).
 
