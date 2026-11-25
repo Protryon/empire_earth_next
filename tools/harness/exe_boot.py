@@ -131,6 +131,10 @@ def data_tree(kind="open"):
     else:
         tree = OPEN_DATA / "tree"
     stale = False
+    if tree.parent == OPEN_DATA:   # another slot's harness may be rebuilding it (open_data.py build swaps it in)
+        sys.path.insert(0, str(ROOT / "tools"))
+        import open_data
+        open_data.wait_for_build(tree)
     if (tree / "open_data.json").exists() and tree.parent == OPEN_DATA:   # our own trees: rebuilt when stale
         sys.path.insert(0, str(ROOT / "tools"))
         import open_data
