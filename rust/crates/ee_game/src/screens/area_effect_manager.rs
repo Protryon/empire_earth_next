@@ -19,10 +19,8 @@ pub(crate) fn collect_effects<C: Cpp + ?Sized>(
     list: usize,
     unit: usize,
 ) {
-    let bottom = c.aem_floor(y + radius);
-    let right = c.aem_floor(x + radius);
-    let top = c.aem_floor(y - radius);
-    let left = c.aem_floor(x - radius);
+    use ee_base::math::um::floor;
+    let (bottom, right, top, left) = (floor(y + radius), floor(x + radius), floor(y - radius), floor(x - radius));
     c.aem_units_clear();
     c.aem_rect_top(top);
     c.aem_rect_left(left);
@@ -98,7 +96,9 @@ pub(crate) fn find_effect<C: Cpp + ?Sized>(
         if c.aem_effect_kind(effect) != kind {
             continue;
         }
-        let owner_player = c.aem_effect_player(effect);
+        // SAFETY: a live effect's record
+        let owner_player =
+            unsafe { (*(c.ae_fields(effect) as *const ee_sim::tech::area_effect::EeAreaEffectFields)).mPlayer } as i64;
         let affects = if !mode {
             c.aem_affects_player(effect, owner_player, player)
         } else {
@@ -125,7 +125,10 @@ mod tests {
         fake.answer("aem_list_count", &[1]).answer("aem_list_at", &[50]);
         collect_effects(&mut fake, 2.0, 10.5, 20.5, 3, 7, 9);
         let calls = fake.calls();
-        assert!(calls.starts_with("aem_floor(22.5)\naem_floor(12.5)\naem_floor(18.5)\naem_floor(8.5)"));
+        assert!(
+            calls.contains("aem_rect_top(18)\naem_rect_left(8)\naem_rect_bottom(22)\naem_rect_right(12)"),
+            "{calls}"
+        );
         assert!(calls.ends_with("aem_effect_radius(50)\naem_for_each(1, 50, 3, 0.0, 10.5, 20.5)"));
     }
 
@@ -147,7 +150,10 @@ mod tests {
         let mut fake = Fake::default();
         fake.answer("aem_effects_count", &[2]).answer("aem_effects_at", &[50, 51]);
         fake.answer("aem_list_count", &[1, 1]).answer("aem_list_at", &[50, 50]);
-        fake.answer("aem_is_immunity", &[1]).answer("aem_effect_kind", &[4]).answer("aem_effect_player", &[2]);
+        let mut effect = ee_sim::tech::area_effect::EeAreaEffectFields { mPlayer: 2, ..Default::default() };
+        fake.answer("aem_is_immunity", &[1])
+            .answer("aem_effect_kind", &[4])
+            .answer("ae_fields", &[&mut effect as *mut _ as i64]);
         fake.answer("aem_affects_player_reversed", &[1]).answer("aem_in_range", &[1]);
         assert_eq!(find_effect(&mut fake, 1, 4, 3.0, 4.0, 5, true, 8), 51);
         assert!(fake.calls().contains("aem_affects_player_reversed(51, 2, 5)\naem_in_range(51, 3.0, 4.0)"));

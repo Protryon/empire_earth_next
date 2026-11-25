@@ -15,7 +15,6 @@
 
 #include "lle/LowLevelEngine.h"
 
-#include "ee/EETechCapture.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPlayer.h"

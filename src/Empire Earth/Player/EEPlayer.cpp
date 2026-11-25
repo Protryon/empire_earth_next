@@ -100,7 +100,6 @@ static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee
 // TEST ONLY: the player capture (tools/sim_capture.py): PLST, each player's state at every UpdatePlayer (ee_sim app
 // player_capture.rs); PLEC, the economy and improvement decisions (ee_units player_econ.rs)
 #include "ee/EESimCapture.h"
-#include "ee/EETechCapture.h"
 #include "ee/EEStatisticsHistory.h"
 #include "ee/EEStatisticsRecord.h"
 #include <cstring>

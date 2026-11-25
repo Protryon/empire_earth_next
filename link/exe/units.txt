@@ -48,7 +48,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 124ee2 1273d7 Empire Earth/Empire Earth/EEAmbientSoundManager.cpp
 127584 12a54a Empire Earth/Empire Earth/EECameraControl.cpp
 12a54a 12c3eb Empire Earth/Empire Earth/EECheatCodes.cpp
-12c3eb 12cac8 Empire Earth/Empire Earth/EECivilization.cpp
 12cac8 12dba8 Empire Earth/Empire Earth/EECommandLine.cpp
 12dba8 12ed4e Empire Earth/Empire Earth/EEEMStorm.cpp
 12ed4e 12f4b2 Empire Earth/Empire Earth/EEEnvironmentManager.cpp
@@ -105,7 +104,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1c5f73 1ca4ee Empire Earth/Scenario Manager/EESMObject.cpp
 1ca4ee 1cba2f Empire Earth/Scenario Manager/EEEvent.cpp
 1cba2f 1cdf25 Empire Earth/Tech Tree/EETechTree.cpp
-1cedce 1cfeef Empire Earth/Tech Tree/EETechTreeNode.cpp
 1e71cc 1e853a Empire Earth/UI Events/EEUIEScenarioIntroEvents.cpp
 1e9fed 1eafcb Empire Earth/UI Events/EEUIEWonNetArenaGameEvents.cpp
 1eafcb 1eb5e2 Empire Earth/UI Events/EEUIEWonNetArenaRoomEvents.cpp

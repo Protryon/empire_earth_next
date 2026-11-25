@@ -65,6 +65,74 @@ pub struct EeTechNodeDataFields {
     pub mObsoletedByDefault: bool,
     pub mAvailableWithEpoch: bool,
     pub mResearchedWithEpoch: bool,
+    /// the unit classes and their cost tables (an [`EeTechClassTable`], Rust's; 0 before the load makes it)
+    pub mClassTable: usize,
+}
+
+/// A node's unit classes and their cost tables (the original's `mUnitClasses` vector and `mClassCosts` map of the
+/// node data, shared by the nodes the data is shared with).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct EeTechClassTable {
+    /// the unit classes, in the file's order (`GetUnitClass`, `Contains`)
+    pub classes: Vec<c_ulong>,
+    /// per unit class (the map's key, the class as a `long`; an insert of a key already there is dropped) its seven
+    /// costs; a node copy's destructor clears them (the original's `ClearClassCosts` on the shared map)
+    pub costs: Vec<(c_long, [c_long; 7])>,
+}
+
+impl EeTechNodeDataFields {
+    /// The class table (none before the load).
+    pub fn class_table(&self) -> Option<&EeTechClassTable> {
+        // SAFETY: mClassTable is 0 or the table class_table_mut made
+        (self.mClassTable != 0).then(|| unsafe { &*(self.mClassTable as *const EeTechClassTable) })
+    }
+    /// The class table, made when there is none.
+    pub fn class_table_mut(&mut self) -> &mut EeTechClassTable {
+        if self.mClassTable == 0 {
+            self.mClassTable = Box::into_raw(Box::<EeTechClassTable>::default()) as usize;
+        }
+        // SAFETY: the table this record owns
+        unsafe { &mut *(self.mClassTable as *mut EeTechClassTable) }
+    }
+    /// The unit classes (`mUnitClasses`).
+    pub fn unit_classes(&self) -> &[c_ulong] {
+        self.class_table().map_or(&[], |t| &t.classes)
+    }
+    /// The class's cost table (`mClassCosts[class]` when it has one).
+    pub fn class_costs(&self, class: c_long) -> Option<&[c_long; 7]> {
+        self.class_table()?.costs.iter().find(|(k, _)| *k == class).map(|(_, c)| c)
+    }
+}
+
+/// `~RTSTechTreeNodeData`: the class table freed.
+///
+/// # Safety
+/// `d` is a live record whose table no one uses after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_node_classes_free(d: *mut EeTechNodeDataFields) {
+    let d = &mut *d;
+    if d.mClassTable != 0 {
+        drop(Box::from_raw(d.mClassTable as *mut EeTechClassTable));
+        d.mClassTable = 0;
+    }
+}
+
+/// `GetNumUnitClasses`: the node data's unit class count.
+///
+/// # Safety
+/// `d` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_node_classes_count(d: *const EeTechNodeDataFields) -> c_ulong {
+    (*d).unit_classes().len() as c_ulong
+}
+
+/// `Contains`: whether the unit class is one of the node data's (compared as the list's `unsigned long`).
+///
+/// # Safety
+/// `d` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_node_classes_contains(d: *const EeTechNodeDataFields, class: c_long) -> bool {
+    (*d).unit_classes().contains(&(class as c_ulong))
 }
 
 /// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
@@ -121,6 +189,10 @@ pub struct EeTechTreeFields {
     pub mIsLoaded: bool,
     /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
     pub mSaved: *mut EeTechTreeSaved,
+    /// the player's index (`SetPlayerIndex`; the original RTSTechTree's +0x04)
+    pub mPlayerIndex: c_long,
+    /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
+    pub mPlayer: *mut crate::units::obj_fields::EeCxxPlayer,
 }
 
 impl Default for EeTechTreeFields {
@@ -134,6 +206,8 @@ impl Default for EeTechTreeFields {
             mEpochNameID: 0,
             mIsLoaded: false,
             mSaved: ptr::null_mut(),
+            mPlayerIndex: 0,
+            mPlayer: ptr::null_mut(),
         }
     }
 }

@@ -29,7 +29,7 @@
 #include "rust/game/app.h"   // the map records
 #include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"   // round 10, lane D: the storm and cheat sweeps; round 11, lane B: the statistics
-#include "ee/EETechCapture.h"
+#include "ee/EESimCapture.h"
 #include "ee/EEAppCapture.h"
 
 // MAPS, MAPC: Rust (ee_game app map_capture.rs)

@@ -177,14 +177,6 @@ extern "C" void ee_screenscpp_cbh_print_text(EeScreensShimText inText)
 { sprintf(EEScratch<UWideString>(kScratchCBString), EEScratch<UWideString>(kScratchCBFormat), (const char*)EEShimString(inText)); }
 extern "C" void ee_screenscpp_cbh_quote(EeScreensShimText inText, void* inOut)
 { EEShimOutC(inOut, EEDataText::QuoteText(std::string((const char*)inText.ptr, inText.len)).c_str()); }
-extern "C" int32_t ee_screenscpp_cbh_civ_base_cost(uintptr_t inCiv, uint32_t inUpgrade)
-{ return ((EECivilization*)inCiv)->GetBaseCost((EECivUpgrade)inUpgrade); }
-extern "C" int32_t ee_screenscpp_cbh_civ_extra_cost(uintptr_t inCiv, uint32_t inUpgrade)
-{ return ((EECivilization*)inCiv)->GetExtraCost((EECivUpgrade)inUpgrade); }
-extern "C" int32_t ee_screenscpp_cbh_civ_compute(uintptr_t inCiv, int32_t inA, int32_t inB, int32_t inC)
-{ return ((EECivilization*)inCiv)->ComputeCost((long)inA, (long)inB, (long)inC); }
-extern "C" int32_t ee_screenscpp_cbh_civ_count(uintptr_t inCiv, uint32_t inUpgrade)
-{ return ((EECivilization*)inCiv)->CountInCategory((EECivUpgrade)inUpgrade, NULL); }
 extern "C" int32_t ee_screenscpp_cbh_civ_available(uintptr_t inCiv)
 { return ((EECivilization*)inCiv)->GetAvailablePoints(); }
 extern "C" int32_t ee_screenscpp_cbh_civ_unchanged(uintptr_t inCiv) { return ((EECivilization*)inCiv)->GetUnchanged(); }

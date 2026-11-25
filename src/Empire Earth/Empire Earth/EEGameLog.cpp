@@ -387,7 +387,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DvUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
     case O::DvNameNarrow: B_CV->mName = (const char*)*(UString*)a[0];
         break;
-    case O::DvCanAfford: return B_CV->CanAfford((EECivUpgrade)a[0], (unsigned long*)a[1], NULL);
     case O::DvApplyUpgrade: return gCivilizationManager.ApplyUpgrade((EECivUpgrade)a[0], (long)a[1]);
     default: return EECore11OpC2(inOp, p, a, f);
     }

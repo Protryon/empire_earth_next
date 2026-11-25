@@ -40847,3 +40847,54 @@ new (the shell's). PingGameOp is gone too (the tool does not list it).
 
 Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds. The
 branch is on 71c097464, whose tree equals origin/rust fba26cc96's; that merge commit itself is not merged in.
+
+## The player/tech lane, round 2, fork A: the capture headers gone, the node data's containers and the tree's player as Rust's, the civilization's members inline (ee_sim tech nodes.rs EeTechClassTable; ee_game civilization.rs, gamecpp tech_capture.rs, screens civ_*; branch rust-playertech2-a, 2026-11-25)
+
+The tech tree and the civilization builder: C++ lines 107,975 -> 107,363 (-612) and compiled files 353 -> 349 against
+round 1's tip (307f72c10, port_metrics.py), with no behaviour change (the oracle's six seeds identical, the capture
+profiles, saveload, the editor and civilization builder gates).
+
+- **A header of inline forwarders to Rust is dead weight once Rust calls Rust**: ee/EETechCapture.h (152 lines) held
+  inline C++ forwarders the C++ host cases called on Rust's behalf (Rust -> host case -> inline forwarder -> Rust):
+  EEGameOps.cpp's 14 calamity capture cases and EEContagionManager.cpp's two went once calamity*.rs called the
+  capture functions directly. Grep every forwarder's name: most (the node and epoch records, the sweep, the unit
+  step) had no caller left at all, and their Rust bodies and host cases (tech_hooks.rs, the eight C11Tc cases) were
+  dead too. The same for ee/EECalamityCapture.h and its .cpp (hook pointers no unit read) and ee/EECivCapture.h.
+- **"TEST ONLY" units are linked into the game exe** (tools/units.py EXTRA_UNITS): the hook pointers the capture units
+  set before main were set in EE-AOC.exe as well, so a direct Rust call is the same behaviour. EETechCapture.cpp had
+  become the tech tree's host (EECore11OpC7), not a capture: it and EETechTreeNode.cpp's cost factors joined
+  EETechTree.cpp (link/exe/units.txt loses the node's range, as round 1's EETechTreeEpoch.cpp).
+- **A C++ record built only to carry bytes back to Rust**: the civilization capture appended the tech records through
+  a scratch EESimCaptureRecord (new, the record call, its bytes, free: six shims); the records are now Rust byte
+  vectors (tech_capture.rs upgrade_record, player_record, tree_nodes_record), reading the upgrade's block through the
+  world layout's stats_fields and offset_of! rather than four address cases.
+- **One record shim in place of a shim per field**: the civilization host's 36 upgrade and class stat shims and 12
+  player field shims became `civh_upgrade_fields`, `civh_class_fields`, `civc_player_saved`, `civc_player_fields`
+  (static_cast to the Rust record base); the two members with setters (range, speed) keep theirs. A Fake test answers
+  the record shim with the address of a zeroed local record and asserts on the record afterwards.
+- **std containers in a record the world layout reads by offset**: RTSTechTreeNodeData's std::map of class costs and
+  std::vector of unit classes are one Rust table behind a `usize` member of EeTechNodeDataFields (`mClassTable`;
+  usize keeps the record's derives). The map's semantics kept: keyed by the class as a long, the first insert wins,
+  a node copy's destructor clears the shared costs (the original's ClearClassCosts on the shared map), the data's
+  destructor frees the table. `new RTSTechTreeNodeData()` (value-initialized) zeroes the member now that the struct
+  has no constructor of its own. The view (ee_sim tech_view.rs) reads the table; the layout's node_data_fields and
+  node_data_unit_classes went on both sides.
+- **A base's members cannot be initialized in the derived class's mem-initializer list**: moving mPlayerIndex and
+  mPlayer into EeTechTreeFields made `EETechTree() : mPlayerIndex(0), mPlayer(NULL)` an error; the Rust init sets
+  them. mPlayer is `*mut EeCxxPlayer`, which cbindgen writes as `class EEPlayer*`, so the C++ reads stay typed.
+- **CanAfford without gGameOptions in the header**: the lobby's options are already a Rust record reachable through
+  the LobbyOptions op, so CanAfford, CanAffordAll, Reapply and ApplyDeferred are one-statement inlines over
+  civilization.rs (the player passed as a pointer, its id read from its record) and EECivilization.cpp is gone.
+- **A heredoc in the Bash tool failed** ("unexpected EOF while looking for matching `'`") on long Python edit scripts
+  with Rust lifetimes (`'a`) and escaped newlines: writing the script to a file with the Write tool works.
+- Edits outside the lane's files: the calamities' Rust (gamecpp calamity.rs, calamity_capture.rs, calamity_hosts.rs,
+  calamity_io.rs, calamity_objects.rs) and their host cases (EEGameOps.cpp, EEContagionManager.cpp), EEPWorldHelper.cpp
+  (two comments), the include of ee/EETechCapture.h dropped from EECalamityClass.cpp, EECalamityManager.cpp,
+  EEContagionManager.cpp, EEAppCaptureWorld.cpp (which now includes ee/EESimCapture.h itself), EEGameOps.cpp,
+  EEPlayer.cpp, EEEvent.cpp, EEScenarioCapture.cpp, EEComplexUnit.cpp; EEUnit.h (a comment), EEWorldLayout.cpp (two
+  lines), EEGameLog.cpp (DvCanAfford), ee_sim world layout.rs and tech_view.rs, screens civ_host.rs, area_effect_*.rs.
+- Left: the tech host's remaining cases (the tree's Get, Ref and the node walks Rust could make with an extra host
+  call each, which this round did not want on the walks' path), EETechTree's epoch list (a C++ vector of owners), the
+  node's mData/mTree/mButton (C++ members the world layout reads), the area effects' location (a GE2DPoint member),
+  the civilization's vectors and name (EECivilization's C++ members), the dead Rust exports deadfn.py lists
+  (ee_area_effect_*, ee_tech_effect_*, ee_screens_cb_out_*: no caller in C++ or Rust).

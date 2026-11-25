@@ -248,9 +248,10 @@ inline int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io) { return
 // researched), mID (an epoch: its position; else >= 1000), mResearchedEvent, mObsoleteEvent (EEEvent ids), mBuildTime,
 // mPrerequisite1..4 (ids), mUnitClass (what it builds), mRequiredStatisticValue, mNameID, mHotKey, mMakesUnit,
 // mCountsTowardEpoch, mShowInEditor, mObsoletedByDefault, mAvailableWithEpoch, mResearchedWithEpoch
+// The original's +0x00 std::map of a long[7] of costs per unit class and +0x0c std::vector of unit classes are the
+// record's Rust class table (mClassTable: player/tech lane round 2).
 struct RTSTechTreeNodeData : public EeTechNodeDataFields {
-    std::map<long, long*> mClassCosts;      // +0x00 per unit class a new long[7] of costs (the node's operator= shares them)
-    std::vector<unsigned long> mUnitClasses;    // +0x0c (Contains 0x1cf6e5; Load reads each with Read(unsigned long&))
+    ~RTSTechTreeNodeData() { ee_tech_node_classes_free(this); }
     // inline: the cast-calamity goal loads it before the other pushes (0x220b72) (provisional name)
     unsigned long GetCalamity() const { return this->mCalamity; }
 };
@@ -293,7 +294,7 @@ public:
     void GetCostString(UWideString& outString, long inUnitClass, float inScale) { ee_gamecpp_tech_cost_string(this, inUnitClass, inScale, &outString); }
     // 0x1cf370: one 0x10c-byte database record, with a cost table per unit class scaled by its factor
     long Load(FSFile& inFile, EETechTree* inTree) { return ee_gamecpp_tech_node_load(this, &inFile, inTree); }
-    bool Contains(long inUnitClass) { return std::find(this->mData->mUnitClasses.begin(), this->mData->mUnitClasses.end(), inUnitClass) != this->mData->mUnitClasses.end(); }   // 0x1cf6e5
+    bool Contains(long inUnitClass) { return ee_tech_node_classes_contains(this->mData, inUnitClass); }   // 0x1cf6e5
     // whether it makes a building or mine whose media this game needs (TNMT, TEST ONLY)
     bool NeedsUnitMedia() { return ee_gamecpp_tech_needs_unit_media(this, true); }
     bool DependsOn(long inID) { return this->Walk(EeTechNodeOp::DependsOn, inID) != 0; }   // 0x1cf79a (recursive over the prerequisites)
@@ -315,7 +316,7 @@ public:
     long GetUnitClass(unsigned long inIndex);
     // 0x8a42e (a COMDAT first emitted by EECPResearchManager.cpp, every call out of line): mU08->mUnitClasses.size();
     // (provisional name)
-    unsigned long GetNumUnitClasses() { return this->mData->mUnitClasses.size(); }
+    unsigned long GetNumUnitClasses() { return ee_tech_node_classes_count(this->mData); }
     // the node (or the epoch) as the Rust walks take it, and a walk of it (ee_tech_walk_node over the node's tree)
     EeTechNodeRef Ref() { return EeTechNodeRef{this, this, this->mData}; }
     int32_t Walk(EeTechNodeOp inOp, long inA = 0, bool inB = false, EEComplexUnit* inUnit = NULL);
@@ -398,12 +399,13 @@ private:
 // port (R5b.4, round 29): the plain members are the Rust record EeTechTreeFields (ee_tech nodes.rs): mCurrentEpoch
 // (+0x538; EEMusicManager 0x132022 passes it to EEMusicObject's pick), mStartEpoch (+0x53c), mEndEpoch (+0x540, = 14),
 // mEpochsBeforeWonders (+0x544, = 1), mMediaID (+0x548), mEpochNameID (+0x54c: 30145 + the epoch, a string id),
-// mIsLoaded (+0x550); the saved game's research lists (+0x4f4 .. +0x524) are Rust's (mSaved). The bodies are Rust
+// mIsLoaded (+0x550), mPlayerIndex, mPlayer (+0x534: GetPlayer's, else by index); the saved game's research lists
+// (+0x4f4 .. +0x524) are Rust's (mSaved). The bodies are Rust
 // over EETechHost. The original's base RTSTechTree (RTTI, vtable 0x446120: entirely inline, its ??_G 0x1cdeef and
 // SetPlayerIndex 0x1cdee5 close EETechTree.cpp; mPlayerIndex its +0x04) is folded in (player/tech lane round 1).
 class EETechTree : public EeTechTreeFields {
 public:
-    EETechTree() : mPlayerIndex(0), mPlayer(NULL) { ee_gamecpp_tech_tree_init(this); }   // every epoch, the prehistoric one current
+    EETechTree() { ee_gamecpp_tech_tree_init(this); }   // every epoch, the prehistoric one current
     virtual ~EETechTree() { ee_tech_tree_fields_free(this); }   // +0x00 0x1cbd99 (??_G 0x1cbd7d) (the saved game's lists are Rust's)
     void SetPlayerIndex(long inValue) { this->mPlayerIndex = inValue; }   // the player's index (provisional name)
     // inline in the real header (the COMDAT 0x18a4 sits in EEABuild.cpp, its first user; every caller calls it
@@ -460,9 +462,7 @@ public:
     EETechTree& operator=(const EETechTree& inOther) { return *(EETechTree*)ee_gamecpp_tech_tree_assign(this, &inOther); }
 
     // Layout (from the ctor 0x1cbcc2; provisional names)
-    long mPlayerIndex;                      // (RTSTechTree's +0x04)
     EETechTreeEpochList mEpochs;            // +0x008 one per epoch (the original: 15, the ids below 15)
-    EEPlayer* mPlayer;                      // +0x534 (GetPlayer: else gWorld.mPlayers[mU04])
     long GetCurrentEpoch() const { return this->mCurrentEpoch; }
     // a walk of the tree (ee_tech_walk_tree)
     int32_t Walk(EeTechTreeOp inOp, long inA = 0, long inB = 0, EEComplexUnit* inUnit = NULL) { return ee_tech_walk_tree(this, &EETechHost, inOp, this, (int32_t)inA, (int32_t)inB, inUnit); }

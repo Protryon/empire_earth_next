@@ -12,7 +12,6 @@
 #include <typeinfo>
 #include "rust/sim/units.h"
 #include "ee/EEUnitKind.h"
-#include "ee/EETechCapture.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"

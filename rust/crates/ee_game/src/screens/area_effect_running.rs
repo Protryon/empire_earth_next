@@ -12,6 +12,12 @@ use ee_sim::tech::calamity_record::EeCalamityIoFfi;
 
 use crate::screens::game_cpp::{Cpp, EeScreensShimULongOut};
 
+/// The effect's record (`EEAreaEffect`'s `EeAreaEffectFields`), read and written in place.
+fn fields<'a, C: Cpp + ?Sized>(c: &mut C, effect: usize) -> &'a mut ee_sim::tech::area_effect::EeAreaEffectFields {
+    // SAFETY: a live effect's record
+    unsafe { &mut *(c.ae_fields(effect) as *mut ee_sim::tech::area_effect::EeAreaEffectFields) }
+}
+
 /// `EEAEManager::Load(file)` on the manager: the record count, then each record (an empty slot for an id of 0; 3
 /// when a template fails to initialize, as the original, until the next read's result).
 pub(crate) fn load_templates<C: Cpp + ?Sized>(c: &mut C, manager: usize, file: usize) -> i32 {
@@ -93,13 +99,15 @@ pub(crate) fn save<C: Cpp + ?Sized>(c: &mut C, io: EeCalamityIoFfi) {
                 unsafe { ee_area_effect_running_add_unit(state, c.aes_unit_id(u) as c_ulong) };
                 for i in 0..c.aes_own_count(u) {
                     let e = c.aes_own_at(u, i);
-                    let morale = c.aes_effect_kind(e) == EE_AREA_EFFECT_MORALE_FROM_BUILDINGS as i64;
+                    let f = fields(c, e);
+                    let morale = f.mKind == EE_AREA_EFFECT_MORALE_FROM_BUILDINGS as c_long;
+                    let (dirty, count) = (f.mDirty, f.mCount);
                     let own = EeAreaEffectSavedOwn {
                         mX: c.aes_effect_x(e),
                         mY: c.aes_effect_y(e),
                         mIsMorale: morale,
-                        mDirty: morale && c.aes_effect_dirty(e),
-                        mCount: if morale { c.aes_effect_count(e) as c_long } else { 0 },
+                        mDirty: morale && dirty,
+                        mCount: if morale { count } else { 0 },
                     };
                     // SAFETY: the record made above
                     unsafe { ee_area_effect_running_add_own(state, own) };
@@ -169,9 +177,10 @@ pub(crate) unsafe fn restore<C: Cpp + ?Sized>(c: &mut C, s: *const EeAreaEffectR
             let effect = c.aes_own_at(unit, i);
             c.aes_set_x(effect, saved.mX);
             c.aes_set_y(effect, saved.mY);
-            if c.aes_effect_kind(effect) == EE_AREA_EFFECT_MORALE_FROM_BUILDINGS as i64 && saved.mIsMorale {
-                c.aes_set_dirty(effect, saved.mDirty);
-                c.aes_set_count(effect, saved.mCount as i64);
+            let f = fields(c, effect);
+            if f.mKind == EE_AREA_EFFECT_MORALE_FROM_BUILDINGS as c_long && saved.mIsMorale {
+                f.mDirty = saved.mDirty;
+                f.mCount = saved.mCount;
             }
         }
     }
@@ -303,9 +312,16 @@ mod tests {
         let mut fake = Fake::default();
         fake.answer("cbh_num_players", &[2]).answer("aeh_player", &[100]).answer("civh_first_unit", &[10]);
         fake.answer("aes_unit_complex", &[11]).answer("aes_own_count", &[1; 6]).answer("aes_own_at", &[50; 4]);
-        fake.answer("aes_effect_kind", &[EE_AREA_EFFECT_MORALE_FROM_BUILDINGS as i64]);
-        fake.answer("aes_effect_x", &[2]).answer("aes_effect_y", &[3]).answer("aes_effect_dirty", &[1]);
-        fake.answer("aes_effect_count", &[4]).answer("aes_affecting_count", &[1, 1]).answer("aes_affecting_at", &[50]);
+        let mut effect = ee_sim::tech::area_effect::EeAreaEffectFields {
+            mKind: EE_AREA_EFFECT_MORALE_FROM_BUILDINGS as c_long,
+            mCount: 4,
+            mDirty: true,
+            ..Default::default()
+        };
+        let e = &mut effect as *mut _ as i64;
+        fake.answer("ae_fields", &[e]);
+        fake.answer("aes_effect_x", &[2]).answer("aes_effect_y", &[3]);
+        fake.answer("aes_affecting_count", &[1, 1]).answer("aes_affecting_at", &[50]);
         fake.answer("aeh_owner", &[11, 11]).answer("aes_unit_id", &[77; 3]).answer("aem_manager", &[9]);
         fake.answer("aem_effects_count", &[1]).answer("aem_effects_at", &[50]);
         let mut buf = Buf { bytes: Vec::new(), at: 0 };
@@ -321,16 +337,19 @@ mod tests {
         let state = unsafe { ee_area_effect_running_load(io, &mut result) };
         assert_eq!(result, 0);
         fake.answer("aes_world_unit", &[10; 4]).answer("aes_unit_complex", &[11; 4]).answer("aes_own_count", &[1; 3]);
-        fake.answer("aes_own_at", &[50; 3]).answer("aes_effect_kind", &[EE_AREA_EFFECT_MORALE_FROM_BUILDINGS as i64]);
+        let mut loaded = ee_sim::tech::area_effect::EeAreaEffectFields {
+            mKind: EE_AREA_EFFECT_MORALE_FROM_BUILDINGS as c_long,
+            ..Default::default()
+        };
+        fake.answer("aes_own_at", &[50; 3]).answer("ae_fields", &[&mut loaded as *mut _ as i64]);
         // SAFETY: the record just read
         unsafe {
             restore(&mut fake, state);
             ee_area_effect_running_free(state);
         }
         let calls = fake.calls();
-        assert!(calls.contains(
-            "aes_set_x(50, 2.0)\naes_set_y(50, 3.0)\naes_effect_kind(50)\naes_set_dirty(50, true)\naes_set_count(50, 4)"
-        ));
+        assert!(calls.contains("aes_set_x(50, 2.0)\naes_set_y(50, 3.0)\nae_fields(50)"));
+        assert_eq!((loaded.mDirty, loaded.mCount), (true, 4));
         assert!(calls.contains("aes_affecting_clear(11)"));
         assert!(calls.contains("aem_affecting_add(11, 50)"));
         assert!(calls.ends_with("aes_clear_effects()\naes_world_unit(77)\naes_unit_complex(10)\naes_own_count(11)\naes_own_at(11, 0)\naes_add_active(50)"));
