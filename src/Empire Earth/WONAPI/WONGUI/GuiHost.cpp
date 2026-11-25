@@ -17,8 +17,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "ee/wonapi/WONLobbySplitterConfig.h"
-#include "ee/wonapi/WONLobbyComponentListItem.h"
 #include <algorithm>
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/barobj.h"
@@ -40,9 +38,7 @@
 #include "rust/won_gui/treeobj.h"
 #include "rust/won_gui/wrapobj.h"
 #include "ee/wonapi/WONGUIDraw.h"
-#include "ee/wonapi/WONLobbyPopupEvent.h"
 #include "ee/wonapi/WONGUIShell.h"
-#include "ee/wonapi/WONLobbySimpleConfig.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
 using namespace WONAPI;

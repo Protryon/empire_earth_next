@@ -18,8 +18,6 @@
 #include <set>
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/guiwin.h"
-#include "ee/wonapi/WONLobbyPopupEvent.h"
-#include "ee/wonapi/WONLobbyComponentListItem.h"
 #include "ee/wonapi/WONLobbyBackground.h"
 #include <deque>
 using namespace WONAPI;

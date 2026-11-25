@@ -26,13 +26,9 @@
 #include "ee/wonapi/WONLobbyTextAreaConfig.h" // the page view's text area
 #include "ee/wonapi/WONLobbyBackground.h"
 #include "ee/wonapi/WONLobbyControlConfig.h"
-#include "ee/wonapi/WONLobbyLayout.h"
 #include "ee/wonapi/WONLobbyImageButton.h"
-#include "ee/wonapi/WONLobbySimpleConfig.h"
-#include "ee/wonapi/WONLobbySplitterConfig.h"
+#include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
-#include "ee/wonapi/WONLayoutConfigs.h"
-#include "ee/wonapi/WONPercentLayout.h" // the percent layouts WONCfgBody.inl makes
 #include "ee/wonapi/WONLobbyWONSkinConfig.h"
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/guireg.h"

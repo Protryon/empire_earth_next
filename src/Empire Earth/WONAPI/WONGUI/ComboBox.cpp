@@ -19,14 +19,12 @@
 #include "rust/won_gui/guihost.h"
 #include <set>
 #include "rust/won_gui/dialogobj.h"
-#include "ee/wonapi/WONLobbyLayout.h"
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/tabobj.h"
 #include "ee/wonapi/WONGUIDraw.h"
 #include "ee/wonapi/WONGUIShell.h"
 #include "ee/wonapi/WONSkinLayout.h"
 #include <string.h>
-#include "ee/wonapi/WONPercentLayout.h"
 #include "rust/won_gui/layoutobj.h"
 using namespace WONAPI;
 
