@@ -139,6 +139,7 @@
 #include "rust/won_gui/gamewin.h"
 #include "rust/won_gui/gfxobj.h"
 #include "rust/won_gui/gfxplat.h"
+#include "rust/won_gui/gfxrun.h"
 #include "rust/won_gui/grabobj.h"
 #include "rust/won_gui/guicfg.h"
 #include "rust/won_gui/guiconf.h"

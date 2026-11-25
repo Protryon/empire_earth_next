@@ -421,12 +421,16 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
 
 /// The component services every GUI object asks its host for (`ComponentOp`'s and Container's host's), answered
 /// in the game by Component's and the container's own calls (R6 WON GUI round 37); `comp` is the asking object's
-/// component. None in a driver's world and for the others (virtuals, references, the Graphics).
+/// component; the Graphics' plain draws and scheme are gfxrun.rs's (round 38). None in a driver's world and for the
+/// others (virtuals, references).
 pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::compobj::EeWonCompCall as K;
     use crate::guihost::EeWonCtVirt as V;
     use crate::guihost::EeWonGuiField as Fd;
     match op {
+        Op::Draw | Op::CtScheme | Op::CtSetScheme => {
+            return crate::compobj::is_game().then(|| crate::gfxrun::game_op(op, a, b)).flatten()
+        }
         Op::ChildHold | Op::CtCursorHold | Op::RootImageHold => return rf(a, true),
         Op::ChildRelease | Op::CtCursorRelease | Op::RootImageRelease => return rf(a, false),
         _ => {}
@@ -538,6 +542,7 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
             | Op::RootEnsureOnTop
             | Op::ChildSetPos
             | Op::ChildSetVisible
+            | Op::RootDrawImage
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -554,6 +559,7 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
         Op::ChildSetPos => return Some(z(kc(a, K::SetPos, b, c))),
         // (no class overrides SetVisible)
         Op::ChildSetVisible => return Some(z(kc(a, K::SetVisible, on(b), 0))),
+        Op::RootDrawImage => return Some(crate::gfxrun::draw_image_part(a, b, c)),
         _ => {}
     }
     let Some(me) = window_of_root(root) else {
@@ -578,4 +584,59 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
 fn root_obj_of(root: isize) -> Option<*const EeWonRoot> {
     let m = WINDOWS.lock().ok()?;
     m.values().find(|w| w[2] == root).map(|w| w[3] as *const EeWonRoot)
+}
+
+/// MSMessageBox::Msg's statements on the game's window `window` (shell_msgbox.rs's host ops; R6 WON GUI round 38:
+/// GuiShell.cpp's cases went): its parent, title, style, creation, component, modal run and close, and the focus on
+/// the component `window`. None for a window no game binds (the drivers'), and for the box's making and kind op.
+/// (`MSMessageBoxMsg` is reached only by a config's SHOWPARSETIME: WONCfgLoad.inl's ParseTimeBox.)
+pub(crate) fn msgbox_op(op: crate::shell::EeWonShellHostOp, window: isize, b: isize, c: isize) -> Option<isize> {
+    use crate::shell::EeWonShellHostOp as H;
+    if op == H::MsgFocus {
+        if !crate::compobj::is_game() {
+            return None;
+        }
+        // SAFETY: the game's live component
+        let k = crate::compobj::EeWonCompCall::RequestFocus;
+        return Some(z(unsafe {
+            crate::compobj::ee_won_comp_call(window as *mut c_void, crate::compobj::host(), k, 0, 0, 0)
+        }));
+    }
+    if !matches!(
+        op,
+        H::MsgWinParent
+            | H::MsgWinTitle
+            | H::MsgWinStyle
+            | H::MsgWinCreate
+            | H::MsgWinAdd
+            | H::MsgRunDialog
+            | H::MsgWinClose
+    ) {
+        return None;
+    }
+    let me = parts(window)?;
+    Some(match op {
+        H::MsgWinParent => z(win_call(&me, C::SetParent, b)),
+        H::MsgWinTitle => {
+            // SAFETY: `b` a live GUIString (its data's block, guistrobj.rs); the window's live platform window
+            unsafe {
+                let data = *(b as *const *const u8);
+                let buf =
+                    &*(data.add(crate::guistrobj::EE_WON_GSTR_DATA_AT) as *const crate::guistrobj::EeWonGuiStrBuf);
+                crate::platwin::ee_won_plat_win_set_title(me.plat, buf.text, buf.length as usize);
+            }
+            z(win_call(&me, C::TitleChanged, 0))
+        }
+        H::MsgWinStyle => z(win(&me, C::SetField, F::Style as isize, b)),
+        H::MsgWinCreate => {
+            let r = [0i32, 0, b as i32, c as i32];
+            z(plat(&me, P::Create, r.as_ptr() as isize, 0, 0, 0))
+        }
+        H::MsgWinAdd => z(win_call(&me, C::AddComponent, b)),
+        H::MsgRunDialog => wm(EeWonWmCall::DoDialog, window, b)? as i32 as isize,
+        _ => z(win_call(&me, C::Close, 0)),
+    })
+}
+fn win_call(p: &Parts, c: C, a: isize) -> isize {
+    win(p, c, a, 0)
 }

@@ -475,7 +475,7 @@ pub unsafe extern "C" fn ee_won_root_free(root: *mut EeWonRoot) {
     if !root.is_null() {
         // SAFETY: the contract
         unsafe {
-            if !(*root).ct.is_null() && (*(*root).ct).root.get() == root as *const EeWonRoot {
+            if !(*root).ct.is_null() && std::ptr::eq((*(*root).ct).root.get(), root) {
                 (*(*root).ct).root.set(std::ptr::null());
             }
             (*root).destroy();

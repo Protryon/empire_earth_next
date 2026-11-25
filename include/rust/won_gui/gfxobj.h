@@ -34,6 +34,12 @@ enum class EeWonGfxHook {
   ImagePart,
   /// `p` the GUIString: the font's `DrawString(context, text, offset, length, x, y)`
   String,
+  /// `p` the Font: `SetFont(p)` (gfxrun.rs's plans)
+  SetFont,
+  /// `p` the WrappedText: `Paint(g, x, y)`
+  Text,
+  /// `p` the Image: `SetSize(width, height)`
+  ImageSize,
 };
 
 /// The method `ee_won_gfx_call` runs (`a` its ints, `p` its object).

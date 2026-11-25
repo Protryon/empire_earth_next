@@ -42,6 +42,7 @@ unsafe extern "C" fn host(g: *mut c_void, hook: EeWonGfxHook, a: *const i32, p: 
         H::String => {
             format!("string {} {} {} {} {} {}", unsafe { (*w).font.unwrap() }, names(p), a[0], a[1], a[2], a[3])
         }
+        H::SetFont | H::Text | H::ImageSize => format!("plan hook {hook:?}"),
     };
     // SAFETY: the world is live
     unsafe { (*w).log.borrow_mut().push(line) };
