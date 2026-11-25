@@ -115,7 +115,11 @@ extern "C" fn host(op: EeWonImageHost, a: isize, b: isize, c: isize, d: isize) -
         }
         H::NewContext => {
             // SAFETY: the caller's float
-            let rec = EeWonDisplayContextRec { surface: a as *mut EeWonSurface, graphics: 0, pixel_scale: unsafe { *(b as *const f32) } };
+            let rec = EeWonDisplayContextRec {
+                surface: a as *mut EeWonSurface,
+                graphics: 0,
+                pixel_scale: unsafe { *(b as *const f32) },
+            };
             fake_rec(What::Ctx, 1, rec)
         }
         H::NewGraphics => fake(What::Gfx { ctx: a, tx: 0, ty: 0 }, 1),

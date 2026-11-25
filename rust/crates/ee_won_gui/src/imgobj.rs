@@ -97,7 +97,9 @@ const _: () = assert!(
 /// `ctx` is 0 or a live DisplayContext of a host that lays its members out as [`EeWonDisplayContextRec`].
 unsafe fn context_rec<'a>(ctx: isize) -> Option<&'a EeWonDisplayContextRec> {
     // SAFETY: the contract
-    unsafe { ((ctx as usize).wrapping_add(EE_WON_CONTEXT_AT) as *const EeWonDisplayContextRec).as_ref().filter(|_| ctx != 0) }
+    unsafe {
+        ((ctx as usize).wrapping_add(EE_WON_CONTEXT_AT) as *const EeWonDisplayContextRec).as_ref().filter(|_| ctx != 0)
+    }
 }
 
 /// The host: one C++ function for every op.
@@ -284,7 +286,7 @@ fn href(host: EeWonImageHostFn, p: isize, hold: bool) {
 ///
 /// # Safety
 /// `h` is 0 or a live image handle; the object lives while the caller holds a reference to the handle.
-unsafe fn image_of<'a>(h: isize) -> Option<&'a EeWonImage> {
+pub(crate) unsafe fn image_of<'a>(h: isize) -> Option<&'a EeWonImage> {
     if h == 0 {
         return None;
     }

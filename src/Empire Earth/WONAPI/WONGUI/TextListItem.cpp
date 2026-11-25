@@ -22,6 +22,14 @@
 #include <deque>
 using namespace WONAPI;
 typedef EeWonLeafOp Lo;
+// ListItem's members as leafpaint.rs's EeWonListItemRec, read and set in place in the game (R6 WON GUI round 38:
+// the item ops' field cases went; gamewin.rs item_op)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(ListItem, mSelected) == EE_WON_LIST_ITEM_AT && offsetof(ListItem, mSelectable) == EE_WON_LIST_ITEM_AT + 1 &&
+              offsetof(ListItem, mTop) == EE_WON_LIST_ITEM_AT + 4 && offsetof(ListItem, mWidth) == EE_WON_LIST_ITEM_AT + 8 &&
+              offsetof(ListItem, mHeight) == EE_WON_LIST_ITEM_AT + 12, "leafpaint.rs's EeWonListItemRec");
+#pragma clang diagnostic pop
 extern "C" intptr_t ee_won_guicpp_textitem_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
 {
     TextListItem* t = (TextListItem*)inMe;
@@ -36,9 +44,6 @@ extern "C" intptr_t ee_won_guicpp_textitem_call(void* inMe, EeWonLeafOp op, intp
     case Lo::ItemImageHeight: return t->mImage->GetHeight();
     case Lo::ItemTextWidth: return t->mFont->GetStringWidth(t->mText);
     case Lo::ItemFontHeight: return t->mFont->GetHeight();
-    case Lo::ItemWidthAt: return (intptr_t)&t->mWidth;
-    case Lo::ItemHeightAt: return (intptr_t)&t->mHeight;
-    case Lo::ItemSelected: return t->mSelected ? 1 : 0;
     case Lo::ItemListFlag: return l->ListFlagSet((int)b) ? 1 : 0;
     case Lo::ItemListSel: *(EeWonSelColor*)b = WONDrawSelOf(l->GetSelColor()); return 0;
     case Lo::ItemListPaintWidth: return l->GetPaintWidth();
@@ -127,8 +132,6 @@ extern "C" intptr_t ee_won_guicpp_compitem_call(void* inMe, EeWonLeafOp op, intp
     case Lo::CompItemHasComponent: return t->mComponent.get() != NULL ? 1 : 0;
     case Lo::CompItemWidth: return t->mComponent->Width();
     case Lo::CompItemHeight: return t->mComponent->Height();
-    case Lo::ItemWidthAt: return (intptr_t)&t->mWidth;
-    case Lo::ItemHeightAt: return (intptr_t)&t->mHeight;
     case Lo::CompItemSetParent: t->mComponent->mParent = (Container*)a; return 0;
     case Lo::CompItemAdded: t->mComponent->AddedToParent(); return 0;
     case Lo::CompItemBaseSetPos: t->ListItem::SetPos((int)a, (int)b); return 0;

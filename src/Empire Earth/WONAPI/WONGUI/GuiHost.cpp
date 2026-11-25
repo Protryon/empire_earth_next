@@ -422,6 +422,7 @@ namespace WONAPI {
 intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     switch (op) {
+    // (the items' members are gamewin.rs common_op's in the game: R6 WON GUI round 38)
     case Op::Get: return (Fd)a == Fd::Width || (Fd)a == Fd::Height ? ComponentOp(t, op, a, b) : t->GetField((Fd)a);
     case Op::Set: t->SetField((Fd)a, (int)b); return 0;
     case Op::ScrollTranslate: t->ScrollTranslate(*(int*)a, *(int*)b); return 0;
@@ -460,14 +461,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::SortItems: std::sort((ListItem**)a, (ListItem**)a + b, ListArea::LineSortPred(t, t->GetSortFunc(), (int)c)); return 0;
     case Op::LowerBound: return std::lower_bound((ListItem**)a, (ListItem**)a + b, Item(c), ListArea::LineSortPred(t, t->GetSortFunc(), (int)d)) - (ListItem**)a;
     case Op::Less: return ListArea::LineSortPred(t, t->GetSortFunc(), (int)c)(Item(a), Item(b)) ? 1 : 0;
-    case Op::ItemTop: return Item(a)->mTop;
-    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
-    case Op::ItemHeight: return Item(a)->mHeight;
-    case Op::ItemSetHeight: Item(a)->mHeight = (int)b; return 0;
-    case Op::ItemWidth: return Item(a)->mWidth;
-    case Op::ItemSelected: return Item(a)->mSelected ? 1 : 0;
-    case Op::ItemSetSelected: Item(a)->mSelected = b != 0; return 0;
-    case Op::ItemSelectable: return Item(a)->mSelectable ? 1 : 0;
     case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
     case Op::ItemContains: return Item(a)->Contains((int)b, (int)c) ? 1 : 0;
     case Op::ItemCanSelect: return Item(a)->CanSelect(t, (int)b, (int)c) ? 1 : 0;
@@ -485,7 +478,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     // the multi-column list and its rows (multiobj.rs)
     case Op::ItemCompare: return Item(a)->Compare(Item(b), t);
     case Op::CallSortFunc: return ((ListArea::SortFunc)a)(t, Item(b), Item(c));
-    case Op::ItemSetWidth: Item(a)->mWidth = (int)b; return 0;
     case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
     case Op::SelBackground: return (intptr_t)t->GetSelColor().GetBackgroundColor(*(Graphics*)a);
     case Op::NewViewport: return (intptr_t)new ScrollAreaViewport(t);
@@ -498,7 +490,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     // the tree list and its rows (treeobj.rs)
     case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
     case Op::NewTreeItemRaw: return (intptr_t)new TreeItem;
-    case Op::ItemSetSelectable: Item(a)->mSelectable = b != 0; return 0;
     case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
     case Op::EventType: return ((ComponentEvent*)a)->mType;
     case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
@@ -581,10 +572,7 @@ void PopupMenu::AddSeperator()
 extern "C" intptr_t ee_won_guicpp_mrow_call(void* /*inComp*/, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t /*c*/, intptr_t /*d*/)
 {
     switch (op) {
-    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
     case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
-    case Op::ItemHold: Item(a)->AddRef(); return 0;
-    case Op::ItemRelease: Item(a)->Release(); return 0;
     default: return 0;
     }
 }
@@ -660,12 +648,8 @@ extern "C" intptr_t ee_won_guicpp_tnode_call(void* /*inComp*/, EeWonGuiOp op, in
 {
     switch (op) {
     case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
-    case Op::ItemTop: return Item(a)->mTop;
-    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
     case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
     case Op::ItemContains: return Item(a)->Contains((int)b, (int)c) ? 1 : 0;
-    case Op::ItemHold: Item(a)->AddRef(); return 0;
-    case Op::ItemRelease: Item(a)->Release(); return 0;
     default: return 0;
     }
 }

@@ -512,8 +512,6 @@ public:
 private:
     intptr_t BCall(EeWonBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_btn_call(this->mBtn,c,a,b,cc); }
 };
-// the skinned buttons' hosts' shared ops (WONButton, MSButtonBase: the size, the button's and component's state; Button.cpp)
-intptr_t ButtonHostCall(Button* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c);
 
 // WrappedText (R6 WON round 38): the breaks, size, maximum width and the wrap and centre settings are the Rust
 // object's (rust/crates/ee_won_gui/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
@@ -1229,9 +1227,9 @@ class DisplayContext : public RefCount {
 public:
     // The port draws into software surfaces (surface.rs; the backend: WONLobbyPlatform.h): a context is the
     // surface an image owns, which carries the clip. The original held the GDI device context (HDC) here.
-    // R6 WON GUI round 38: these three are imgobj.rs's EeWonDisplayContextRec, read in place (PlatNativeImage.cpp)
     DisplayContext(EeWonSurface* surface=NULL,float scale=1.0f) : mSurface(surface),mGraphics(NULL),mPixelScale(scale) {}
     virtual ~DisplayContext() {}
+    // R6 WON GUI round 38: these three are imgobj.rs's EeWonDisplayContextRec, read in place (PlatNativeImage.cpp)
     EeWonSurface* mSurface; // at +0x08, not owned (the owning image's, imgobj.rs); NULL: nothing to draw into
     Graphics* mGraphics; //0c borrowed
     // port: the surface's pixels per logical pixel (WONLobbyPlatform.h "Pixel scale"): every coordinate the GUI
