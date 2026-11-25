@@ -315,7 +315,11 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
             );
             0
         }
-        EE_NETMSG_SESS_SEND_LOCAL_RESPONSE => h(O::SsSendLocalResponse, comms_of(f), &[v[1], v[2], v[3], v[4]]),
+        EE_NETMSG_SESS_SEND_LOCAL_RESPONSE => {
+            let response = hp(O::C11SvNewResponse, comms_of(f), &[v[1], v[2], v[3]]);
+            n(f).local_input(response as *mut c_void, v[4] as u8);
+            0
+        }
         EE_NETMSG_SESS_SEND_FULL_OPTIONS => h(O::SsSendFullOptions, f, &[v[1]]),
         EE_NETMSG_SESS_SEND_PLAYER_INFO => {
             let info = hp(O::SsNewPlayerInfo, session_objs::register(f, v[1]), &[]);
@@ -581,7 +585,9 @@ fn xfer_game_file(f: P, load_type: i64, slot: i64) {
     if h(O::SsOpenSaveGame, f, &[(load_type == 2) as i64, ptr(&mut file)]) != 0 {
         let header = Owned::new(O::SsNewHeader, O::SsDeleteHeader);
         h(O::SsHeaderSetVersions, f, &[header.0 as i64]);
-        if h(O::SsHeaderLoad, f, &[header.0 as i64, file as i64]) != 0 && h(O::SsMultiplayerGame, f, &[]) == 0 {
+        let loaded =
+            super::persist_parts::ee_gamecpp_hdr_load_from_file(header.0 as *mut c_void, file as *mut c_void) == 0;
+        if loaded && h(O::SsMultiplayerGame, f, &[]) == 0 {
             let mut xfer_id: c_ulong = 0;
             let send_to = ee_gamecpp_server_send_to_slot(slot as u8) as i64;
             h(O::SsXferToClient, comms_of(f), &[file as i64, header.0 as i64, send_to, ptr(&mut xfer_id)]);
@@ -708,7 +714,7 @@ pub extern "C" fn ee_gamecpp_client_xfer_file(name: *const c_void, size: c_ulong
         h(O::ClFileClose, 0, &[file]);
         let header = Owned::new(O::SsNewHeader, O::SsDeleteHeader);
         h(O::SsHeaderSetVersions, 0, &[header.0 as i64]);
-        h(O::ClHeaderLoad, 0, &[file, header.0 as i64]);
+        super::persist_parts::ee_gamecpp_hdr_load_from_file(header.0 as *mut c_void, file as P as *mut c_void);
         if h(O::ClHeaderChecksum, 0, &[header.0 as i64]) as c_ulong == size {
             false
         } else {

@@ -349,7 +349,8 @@ pub fn send_full_player_information(server: P, options: P) {
         to.mSlot
     };
     h(O::C11PlayerNameCopy, player.0, &[pa(options)]);
-    h(O::C11SvSendPlayerInfo, server, &[pa(player.0)]);
+    let info = hp(O::SsNewPlayerInfo, player.0, &[]);
+    super::net::net(server as *const c_void).local_input(info as *mut c_void, SS_SLOT_NONE as u8);
     h(O::SsLobbyUpdatePlayer, 0, &[slot as i64]);
 }
 

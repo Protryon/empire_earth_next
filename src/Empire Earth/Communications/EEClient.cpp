@@ -31,7 +31,6 @@ EEClient::EEClient() : NESynchronousClient(GameHost<EEClient>)
 
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEStringIDs.h"
-extern UString gCampaignExtension;          // 0x530b78 (ee/EECampaignFormManager.h, which needs the UI form headers)
 
 // Destroys the client, stopping its threads and releasing the fast-selection lock
 EEClient::~EEClient()
@@ -145,15 +144,7 @@ void EEClient::HandleStopGame()
 {
 }
 
-// ------------------------------------------------------------------------- round 9, lane D: the client's bodies' C++
-
-
-#define P64(x) ((int64_t)(intptr_t)(x))
-#define FILESPEC ((FSFileSpec*)a[0])
-#define WSTR(k) (*(UWideString*)a[k])
-
-// ------------------------------------------------------------------------- round 11, lane C: the client's bodies' C++
-
+// ------------------------------------------------------------------------- the client's plain tail
 
 // the client's plain tail (gamecpp session_objs.rs EeGamecppClientTail): mHasLeftGame .. mWasBooted
 static_assert(offsetof(EEClient, mUISlotNumber) - offsetof(EEClient, mHasLeftGame) == 1
@@ -161,6 +152,3 @@ static_assert(offsetof(EEClient, mUISlotNumber) - offsetof(EEClient, mHasLeftGam
                   && offsetof(EEClient, mIsExecutingSelection) - offsetof(EEClient, mHasLeftGame) == 20
                   && offsetof(EEClient, mWasBooted) - offsetof(EEClient, mHasLeftGame) == 27,
               "gamecpp session_objs.rs EeGamecppClientTail");
-
-#define CL ((EEClient*)p)
-

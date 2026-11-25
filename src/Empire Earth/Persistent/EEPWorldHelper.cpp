@@ -314,8 +314,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwNodeSetAllowed: ((EETechTreeNode*)p)->mIsAllowed = a[0] != 0;
         break;
     // (EEPMultiplayerOp) The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
-    case O::PmPhysicsLoad: return gPhysics->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
-    case O::PmPhysicsSave: return gPhysics->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
     // (EEPHelpersOp) The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
     case O::PphFields: return P64(&PPH->mLocalPlayerIndex);
     case O::PphPush: PPH->mPlayers.push_back((EEPlayer*)a[0]);
@@ -495,8 +493,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsHeaderNew: return P64(new EEPSaveGameHeader);
     case O::PsHeaderDelete: delete HDR;
         break;
-    case O::PsHeaderSave: return HDR->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
-    case O::PsHeaderLoad: return HDR->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
     case O::PsHdrSetName: HDR->mName = *(const UString*)a[0];
         break;
     case O::PsHdrDefaultDescription: HDR->mDescription = UString("No game description provided.");

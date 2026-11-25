@@ -30,6 +30,7 @@ use super::session_objs::{client_tail, server_tail};
 use super::{cptr, h, hf, hp, pa, ptr, rec, Owned, O, P};
 use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_net::net::ffi_server::EeNetSvSet;
+use ee_sim::netmsg::session::EE_NETMSG_SESS_DO_SLOT_INFO;
 use ee_sim::units::group_host::ee_units_selection;
 use ee_sim::units::player_body::game::ee_units_player_body;
 use ee_sim::units::player_body::{EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, EE_UNITS_PLAYER_DO_UNSELECT_ALL};
@@ -83,27 +84,27 @@ fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     unsafe { &mut *rec(O::UnRts, u) }
 }
 
-fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
+pub(super) fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: as rts
     unsafe { &mut *rec(O::UnFields, u) }
 }
 
-fn cf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
+pub(super) fn cf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: as rts
     unsafe { &mut *rec(O::CxFields, cx) }
 }
 
-fn ucf<'a>(uc: P) -> &'a mut EeUnitsUnitClassFields {
+pub(super) fn ucf<'a>(uc: P) -> &'a mut EeUnitsUnitClassFields {
     // SAFETY: as rts
     unsafe { &mut *rec(O::UcFields, uc) }
 }
 
-fn prts<'a>(pl: P) -> &'a mut EeUnitsRtsPlayerFields {
+pub(super) fn prts<'a>(pl: P) -> &'a mut EeUnitsRtsPlayerFields {
     // SAFETY: a live player's record, as rts
     unsafe { &mut *rec(O::PlRts, pl) }
 }
 
-fn psaved<'a>(pl: P) -> &'a mut EeUnitsPlayerSaved {
+pub(super) fn psaved<'a>(pl: P) -> &'a mut EeUnitsPlayerSaved {
     // SAFETY: as prts
     unsafe { &mut *rec(O::PlSaved, pl) }
 }
@@ -659,7 +660,23 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
         }
         EE_NETMSG_WACT_ALL_LOADED => {
             // every human has loaded: the slots sent, the main screen shown everywhere
-            h(O::ServerSendPlayerSlotInfo, 0, &[]);
+            // EEServer::SendPlayerSlotInfo: the session's member on the host's server
+            let server = super::globals::get!(gCommunications) as *mut c_void;
+            let none = core::ptr::null();
+            // SAFETY: the live server, no join request
+            unsafe {
+                super::session_objs::ee_gamecpp_session(
+                    server,
+                    true,
+                    EE_NETMSG_SESS_DO_SLOT_INFO,
+                    0,
+                    0,
+                    0,
+                    0,
+                    none,
+                    none,
+                )
+            };
             host_tail().load_state = 2;
             let message = hp(O::NewLoadMainScreenRecord, 0, &[]);
             super::net::global().local_input(message as *mut c_void, MSG_SLOT_NONE);

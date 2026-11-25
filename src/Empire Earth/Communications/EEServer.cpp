@@ -290,8 +290,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     // the sends
     case O::C11SvNewResponse: return P64(SV->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]));
-    case O::C11SvSendPlayerInfo: SV->ProcessLocalUserInput(EENewFullPlayerInformation(*(EEGameOptionsPlayer*)a[0]), kSlotNone);
-        break;
     case O::C11SvPingStat: SV->ProcessLocalUserInput(new EEMRecord(kMessageUpdatePingStat, {(unsigned char)a[0], f[0]}), kSlotNone);
         break;
     case O::C11SvXferStatus: SV->ProcessLocalUserInput(new NEMRecord(kNetMessageXferStatus, {(unsigned char)a[0], (unsigned char)a[1], (uint32_t)a[2], (unsigned char)a[3]}), kSlotNone);
@@ -387,8 +385,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsRegNameIcmpPlayer: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)REG0.mName),
                                                     reinterpret_cast<const unsigned char*>((const char*)((EEPlayer*)a[0])->mName)) == 0;
     // the sends
-    case O::SsSendLocalResponse: SS->ProcessLocalUserInput(SS->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]), (unsigned char)a[3]);
-        break;
     case O::SsSendFullOptions: gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), (unsigned char)a[0]);
         break;
     case O::SsNewPlayerInfo: return P64(static_cast<NEMessage*>(EENewFullPlayerInformation(REG0)));
@@ -526,7 +522,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsHeaderSetVersions: ((EEPSaveGameHeader*)a[0])->mMajorVersion = kSaveGameMajorVersion, ((EEPSaveGameHeader*)a[0])->mMinorVersion = kSaveGameMinorVersion;
         break;
-    case O::SsHeaderLoad: return ((EEPSaveGameHeader*)a[0])->LoadFromFile(*(FSFileSpec*)a[1]) == kErrorOK;
     case O::SsXferToClient: SS->XferFileToClient(*(FSFileSpec*)a[0], ((EEPSaveGameHeader*)a[1])->mChecksum, (unsigned char)a[2], *(unsigned long*)a[3], false);
         break;
     case O::SsCommsDelete: delete gCommunications;
@@ -581,8 +576,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::ClFileDeleteOnDisk: FILESPEC->Delete();
         break;
     case O::ClFileCreateWrite: return FILESPEC->Create() == kErrorOK && FILESPEC->Open(kFileAccessWrite) == kErrorOK;
-    case O::ClHeaderLoad: ((EEPSaveGameHeader*)a[1])->LoadFromFile(*FILESPEC);
-        break;
     case O::ClHeaderChecksum: return (long long)((EEPSaveGameHeader*)a[0])->mChecksum;
     case O::ClIdsNotResponding: return IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT;
     case O::ClIdsSeconds: return IDS_SECONDS;

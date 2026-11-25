@@ -22,6 +22,7 @@ use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
 
 use super::persistent::{Pf, PF_FAILED, PF_OK};
 use super::{h, hp, pa, rec, Owned, O, P};
+use crate::physics;
 use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_net::net::ffi_server::{EeNetSvGet, EeNetSvSet};
 
@@ -46,6 +47,11 @@ const PP_NOT_LOADED: i64 = 13;
 fn fields<'a>(helper: P) -> &'a mut EePPlayerHelperFields {
     // SAFETY: the helper's plain members, used before the next C++ call that changes them
     unsafe { &mut *rec(O::PphFields, helper) }
+}
+
+/// `gPhysics`.
+fn physics() -> *mut c_void {
+    super::globals::get!(gPhysics).cast()
 }
 
 fn ver(major: c_ulong, minor: c_ulong) -> [i64; 2] {
@@ -569,7 +575,9 @@ pub extern "C" fn ee_gamecpp_pmh_load(major: c_ulong, minor: c_ulong, file: *mut
     let file = Pf(file as P);
     // the message number, the client's CT and PT, the communications' CT and last tick, the server's last CT, CT, PT
     let mut v: [c_ulong; 8] = [0; 8];
-    let mut r = h(O::PmPhysicsLoad, file.0, &ver(major, minor));
+    // SAFETY: the game's physics and the live file (EEPhysics::Load)
+    let mut r =
+        unsafe { physics::ee_physics_load(physics(), file.0 as *mut c_void, major as u32, minor as u32) } as i64;
     for x in v.iter_mut() {
         if r != PF_OK {
             break;
@@ -609,7 +617,9 @@ pub extern "C" fn ee_gamecpp_pmh_save(major: c_ulong, minor: c_ulong, file: *mut
         v[1] = comms.current_ct() as c_ulong;
         v[2] = ee_net::net::ffi_client::ee_net_cl_current_physics_tick(comms.client) as c_ulong;
     }
-    let mut r = h(O::PmPhysicsSave, file.0, &ver(major, minor));
+    // SAFETY: as Load's (EEPhysics::Save)
+    let mut r =
+        unsafe { physics::ee_physics_save(physics(), file.0 as *mut c_void, major as u32, minor as u32) } as i64;
     for &x in v.iter() {
         if r != PF_OK {
             return r as c_long;

@@ -11,30 +11,19 @@ use ee_sim::netmsg::decisions::ee_netmsg_capture_decision;
 use super::message::*;
 use super::{h, rec, O, P};
 use crate::app::game_options::EeAppOptionsFields;
+use ee_sim::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 
 /// A unit's fact (`EE_NETMSG_UNIT_*`) as its op; None for another.
 fn unit_fact(which: i64) -> Option<O> {
     Some(match which {
-        EE_NETMSG_UNIT_HIT_POINTS => O::C11NmUnitHitPoints,
-        EE_NETMSG_UNIT_TYPE => O::C11NmUnitType,
-        EE_NETMSG_UNIT_CATEGORY => O::C11NmUnitCategory,
-        EE_NETMSG_UNIT_MAX_HIT_POINTS => O::C11NmUnitMaxHitPoints,
-        EE_NETMSG_UNIT_CAN_DISBAND => O::C11NmUnitCanDisband,
-        EE_NETMSG_UNIT_IS_PACKED => O::C11NmUnitIsPacked,
         EE_NETMSG_UNIT_PACKED_CLASS => O::C11NmUnitPackedClass,
-        EE_NETMSG_UNIT_FLIGHT_TIME => O::C11NmUnitFlightTime,
         EE_NETMSG_UNIT_DEATH_SPAWN => O::C11NmUnitDeathSpawn,
-        EE_NETMSG_UNIT_CAN_CHANGE_BEHAVIOR => O::C11NmUnitCanChangeBehavior,
-        EE_NETMSG_UNIT_COMPLEX => O::C11NmUnitComplex,
         EE_NETMSG_UNIT_TILE_NODE => O::C11NmUnitTileNode,
         EE_NETMSG_UNIT_OWNER => O::C11NmUnitOwner,
         EE_NETMSG_UNIT_LAND_BUILDING => O::C11NmUnitLandBuilding,
-        EE_NETMSG_UNIT_PAID_FOR => O::C11NmUnitPaidFor,
-        EE_NETMSG_UNIT_BUILT => O::C11NmUnitBuilt,
         EE_NETMSG_UNIT_CAN_DELETE => O::C11NmUnitCanDelete,
         EE_NETMSG_UNIT_TILE_X => O::C11NmUnitTileX,
         EE_NETMSG_UNIT_TILE_Y => O::C11NmUnitTileY,
-        EE_NETMSG_UNIT_DOMAINS => O::C11NmUnitDomains,
         EE_NETMSG_UNIT_NEXT => O::C11NmUnitNext,
         EE_NETMSG_UNIT_AS_COMPLEX => O::C11NmUnitAsComplex,
         EE_NETMSG_UNIT_IN_SET => O::C11NmUnitInSet,
@@ -45,14 +34,6 @@ fn unit_fact(which: i64) -> Option<O> {
 /// A player's fact (`EE_NETMSG_PLAYER_*`).
 fn player_fact(which: i64) -> Option<O> {
     Some(match which {
-        EE_NETMSG_PLAYER_OBSERVER => O::C11NmPlayerObserver,
-        EE_NETMSG_PLAYER_CIV_CHOSEN => O::C11NmPlayerCivChosen,
-        EE_NETMSG_PLAYER_SLOT => O::C11NmPlayerSlot,
-        EE_NETMSG_PLAYER_CHAT_TYPE => O::C11NmPlayerChatType,
-        EE_NETMSG_PLAYER_ENEMY => O::C11NmPlayerEnemy,
-        EE_NETMSG_PLAYER_SENDS_CHAT => O::C11NmPlayerSendsChat,
-        EE_NETMSG_PLAYER_ID => O::C11NmPlayerId,
-        EE_NETMSG_PLAYER_RESOURCE => O::C11NmPlayerResource,
         EE_NETMSG_PLAYER_FIRST_UNIT => O::C11NmPlayerFirstUnit,
         EE_NETMSG_PLAYER_TRADE_PRICE => O::C11NmPlayerTradePrice,
         _ => return None,
@@ -107,6 +88,47 @@ fn net_fact(which: i64) -> Option<i64> {
 /// `GetNumHumanPlayers`.
 fn humans(comms: super::net::Net) -> i64 {
     comms.get(ee_net::net::ffi_comms::EeNetCommsField::NumHumanPlayers) as u8 as i64
+}
+
+/// A unit's facts its records hold (the unit, its complex unit's and its class's plain members); None for the
+/// others.
+fn unit_record_fact(which: i64, u: P) -> Option<i64> {
+    let class = || ucf(uf(u).mUnitClass as P);
+    Some(match which {
+        EE_NETMSG_UNIT_HIT_POINTS => uf(u).mHitPoints as i64,
+        EE_NETMSG_UNIT_TYPE => class().mUnitType as i64,
+        EE_NETMSG_UNIT_CATEGORY => class().mCategory as i64,
+        EE_NETMSG_UNIT_MAX_HIT_POINTS => {
+            // SAFETY: the unit's upgrade's record (mStats), read before the next C++ call
+            let stats = unsafe { &*rec::<EeUnitsUnitClassUpgradeFields>(O::DcStats, u) };
+            stats.mMaxHitPoints as i64
+        }
+        EE_NETMSG_UNIT_CAN_DISBAND => class().mCanDisband as i64,
+        EE_NETMSG_UNIT_IS_PACKED => cf(u).mIsPacked as i64,
+        EE_NETMSG_UNIT_FLIGHT_TIME => cf(u).mFlightTime as i64,
+        EE_NETMSG_UNIT_CAN_CHANGE_BEHAVIOR => class().mCanChangeBehavior as i64,
+        EE_NETMSG_UNIT_COMPLEX => uf(u).mComplexUnit as P as i64,
+        EE_NETMSG_UNIT_PAID_FOR => cf(u).mIsPaidFor as i64,
+        EE_NETMSG_UNIT_BUILT => cf(u).mIsBuilt as i64,
+        EE_NETMSG_UNIT_DOMAINS => class().mDomains as i64,
+        _ => return None,
+    })
+}
+
+/// A player's facts its records hold (`index` an array member's index); None for the others.
+fn player_record_fact(which: i64, pl: P, index: i64) -> Option<i64> {
+    let i = index as usize;
+    Some(match which {
+        EE_NETMSG_PLAYER_OBSERVER => prts(pl).mObserverMode as i64,
+        EE_NETMSG_PLAYER_CIV_CHOSEN => psaved(pl).mCivilizationChosen as i64,
+        EE_NETMSG_PLAYER_SLOT => prts(pl).mSlot as i64,
+        EE_NETMSG_PLAYER_CHAT_TYPE => psaved(pl).mChatType as i64,
+        EE_NETMSG_PLAYER_ENEMY => psaved(pl).mEnemies[i] as i64,
+        EE_NETMSG_PLAYER_SENDS_CHAT => psaved(pl).mSendChatMessage[i] as i64,
+        EE_NETMSG_PLAYER_ID => prts(pl).mPlayerID as i64,
+        EE_NETMSG_PLAYER_RESOURCE => psaved(pl).mResourceCaps[i] as i64,
+        _ => return None,
+    })
 }
 
 /// A fact's answer, 0 for an unknown fact.
@@ -174,8 +196,10 @@ pub unsafe extern "C" fn ee_gamecpp_netmsg_host(op: u32, c: *mut c_void) -> i64 
             h(O::C11NmKill, call, &[]);
             0
         }
-        EE_NETMSG_OP_UNIT_FACT => fact(unit_fact(i[0]), call),
-        EE_NETMSG_OP_PLAYER_FACT => fact(player_fact(i[0]), call),
+        EE_NETMSG_OP_UNIT_FACT => unit_record_fact(i[0], b as P).unwrap_or_else(|| fact(unit_fact(i[0]), call)),
+        EE_NETMSG_OP_PLAYER_FACT => {
+            player_record_fact(i[0], a as P, i[1]).unwrap_or_else(|| fact(player_fact(i[0]), call))
+        }
         EE_NETMSG_OP_WORLD_FACT => net_fact(i[0]).unwrap_or_else(|| fact(world_fact(i[0]), call)),
         EE_NETMSG_OP_DECISION => {
             ee_netmsg_capture_decision(i[0] as u32, c.i.as_ptr().add(2), i[1] as u32);

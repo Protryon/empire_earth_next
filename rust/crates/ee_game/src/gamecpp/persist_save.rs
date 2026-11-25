@@ -73,6 +73,11 @@ fn minor() -> i64 {
     h(O::SaveMinorVersion, 0, &[])
 }
 
+/// EEPSaveGameHeader::Load: the header read from a file (the versions are the header's own).
+fn header_load(header: P, file: P) -> i64 {
+    super::persist_parts::ee_gamecpp_hdr_load(header as *mut c_void, file as *mut c_void) as i64
+}
+
 /// A C++ object the Rust made for the call (`new`, then `delete` when it goes).
 fn owned(make: O, delete: O) -> Owned {
     Owned::new(make, delete)
@@ -211,7 +216,7 @@ fn write_save(name: P, time: c_ulong, file: P, other: P) -> i64 {
     fill_header(name, header.0, &list);
     // SAFETY: the header's mChecksum
     unsafe { *(hp(O::PsHdrNumbers, header.0, &[]) as *mut c_ulong).add(2) = time };
-    let mut r = h(O::PsHeaderSave, header.0, &[major(), minor(), pa(file)]);
+    let mut r = super::persist_parts::ee_gamecpp_hdr_save(header.0 as *mut c_void, file as *mut c_void) as i64;
     if r == PF_OK {
         r = write_chunks(&mut list, other);
     }
@@ -514,7 +519,7 @@ pub extern "C" fn ee_gamecpp_ps_validate(file: *mut c_void, message: *mut c_void
     h(O::PsSpecClose, file, &[]);
     if h(O::PsSpecOpen, file, &[PS_READ]) == PF_OK {
         if h(O::PsMemFileLoad, memory.0, &[pa(file)]) == PF_OK
-            && h(O::PsHeaderLoad, header.0, &[major(), minor(), pa(memory.0)]) == PF_OK
+            && header_load(header.0, memory.0) == PF_OK
             && check_header(header.0, message, memory.0)
         {
             result = true;
@@ -639,7 +644,7 @@ fn load_game(st: P, header_file: P, file: P) -> bool {
     if h(O::PsInScenarioEditor, 0, &[]) != 0 {
         tail(st).mInScenarioEditor = true;
     }
-    if h(O::PsHeaderLoad, header.0, &[major(), minor(), pa(header_file)]) == PF_OK {
+    if header_load(header.0, header_file) == PF_OK {
         // SAFETY: the header's versions
         let (hmaj, hmin) = unsafe {
             let v = hp(O::PsHdrVersions, header.0, &[]) as *const c_ulong;
@@ -866,7 +871,7 @@ pub extern "C" fn ee_gamecpp_ps_load_persistent(name: *const c_void, tag: c_long
         r = h(O::PsSpecOpenAny, found, &[PS_READ]);
         if r == PF_OK {
             h(O::PsMemFileLoad, memory.0, &[pa(found)]);
-            r = h(O::PsHeaderLoad, header.0, &[major(), minor(), pa(memory.0)]);
+            r = header_load(header.0, memory.0);
             let tags = header_tags(header.0);
             // SAFETY: the header's versions
             let (hmaj, hmin) = unsafe {
