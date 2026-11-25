@@ -38,37 +38,26 @@
 #include <list>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousServer.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EmpireEarth.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EECommunications.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EECPEngine.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESaveGameFiles.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/game/screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
 #include "rust/game/sim_driver.h"   // the driver (ee_game sim_driver)
-#include "rust/game/app.h"   // the mini map's MMSN (world_capture.rs)
 #include "ee/EEMiniMap.h"
-#include "rust/sim/combat.h"
-#include "rust/sim/netmsg.h"   // the decisions' sweep
-#include "rust/sim/units.h"   // the pick and Fill sweeps (ee_sim units/pick_sweep.rs)
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/USingleton.h"
@@ -79,8 +68,6 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
-#include "ee/EECombatFormulas.h"
-#include "ee/EECombatGoals.h"
 #include "ee/EEUnitUtilities.h"     // EESearchTargetAlongList (the end sweep)
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
 #include "ee/EEUGRust.h"
@@ -90,7 +77,6 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIShell.h"
 #include "platform/PlatSim.h"
-#include "platform/PlatTime.h"
 
 // (the per-CT checksum line's fields and the state dump: sim_driver dump.rs, over the Dm cases below; the C
 // library's environment, descriptors and streams, the quit and --rng-trace: sim_driver stdio.rs; the world lock, the

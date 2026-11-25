@@ -3,7 +3,6 @@
 // then the functions). Unit flags: the exe's module set. Global names are provisional unless another unit already
 // bound them.
 #include <windows.h>
-#include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp)
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
@@ -12,17 +11,10 @@
 // TEST ONLY: the UI fixture (EETestFixture.cpp registers its configure step here, at static initialization: this unit
 // names no symbol of the test drivers, so they stay out of its dependencies) and the headless simulation's driver
 // (ee_game fixture and sim_driver, called directly)
-#include "rust/game/fixture.h"
-#include "rust/game/sim_driver.h"
-#include "platform/PlatSim.h"
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
-#include "platform/PlatWindow.h"
-#include "platform/PlatFile.h"
 #include <stdio.h>
 #include <string.h>
-#include "platform/PlatPath.h"
 #include <string>
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
@@ -55,7 +47,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "lle/FSRestorable.h"
 #include "lle/UResourceFile.h"
 #include "lle/TMTimer.h"
-#include "lle/FSPersistent.h"
 #include "lle/FSPersistentList.h"
 #include "ee/EEMap.h"
 #include "ee/EETeam.h"
@@ -72,7 +63,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEMusicManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEComputerPlayer.h"
 #include "ee/EECPEngine.h"
 #include "ee/EECPNextUnits.h"
 
@@ -226,8 +216,6 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
 RTSMouse* RTSGetInputMouse() { return gMouse; }
 
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 
 #include <list>
@@ -322,10 +310,8 @@ void EEReleaseInstanceMutex(bool inShutdown)
 
 extern std::vector<GETexture*> gU4E8EF0; // defined in EERenderObject.cpp
 
-#include "ee/EEMiniMap.h"
 
 #include "ee/EEWonNet.h"
-#include "ee/EEUnitPicker.h"
 
 #include "ee/EEButtonObject.h"
 
@@ -412,7 +398,6 @@ void EELoadSound(const UString& inName, unsigned long inType, unsigned long& out
     ee_gamecpp_startup_load_sound(&inName, inType, &outSample, &outInstance, inFlag);
 }
 
-#include "ee/EEDbObject.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEMedia.h"
 #include "lle/USingleton.h"

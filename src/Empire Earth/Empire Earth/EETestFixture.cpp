@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
@@ -27,9 +26,7 @@
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/Input System.h"
-#include "platform/PlatWindow.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
 #include "lle/UIListBox.h"
@@ -52,8 +49,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
-#include "platform/PlatSim.h"
-#include "platform/PlatTime.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/EEUnit.h"
@@ -69,7 +64,6 @@
 #include "ee/EEUnitPicker.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEUICSelectUnits.h"
-#include "rust/game/screens.h"
 #include "ee/EEScreenEvent.h"
 #include <algorithm>
 #include "rust/game/fixture.h"

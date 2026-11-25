@@ -8,15 +8,10 @@
 #include "lle/LowLevelEngine.h"
 
 #include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 
 #include "ee/EEFormation.h"
-#include "ee/EEUnit.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EESimCapture.h"
 #include "rust/sim/formations.h"
-#include "rust/sim/units.h"
 
 // Creates the formation of a type (0-7; ee/EEFormation.h), NULL for any other type
 EEFormation* EEFormation::Create(long inType)
