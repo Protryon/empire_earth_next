@@ -399,7 +399,16 @@ impl PlayerTickHost for FnHost {
         }
         let (ctx, f) = (self.ctx, self.f);
         // SAFETY (both): the C++ callback's contract
-        let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe { f(ctx, op, index, io) };
+        #[cfg_attr(test, allow(unused_variables))]
+        let player = self.player;
+        let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe {
+            // the player's own Rust bodies and plain reads first (player_native.rs)
+            #[cfg(not(test))]
+            if let Some(r) = crate::units::player_native::tick(op, player, io) {
+                return r;
+            }
+            f(ctx, op, index, io)
+        };
         // the compound operations as the C++'s one-statement ones ([`split`])
         if let Some(r) = split(op, index, io, &mut call) {
             return r;

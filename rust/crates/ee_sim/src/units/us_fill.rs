@@ -178,7 +178,7 @@ pub fn enemy_words<H: UsOps + ?Sized>(h: &mut H, player: u64) -> [u32; EE_UNITS_
 }
 
 #[cfg(not(test))]
-mod game {
+pub(crate) mod game {
     use super::*;
     use crate::units::us_check::game::Game;
 

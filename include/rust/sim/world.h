@@ -812,6 +812,14 @@ struct EeWorldLayout {
   uint64_t player_group_lists;
   /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
   uint64_t player_lists;
+  /// `EEPlayer::mActiveGroup`, `mGroups` (20 `EEGroup*`), `mHumanPlayer`, `mHealedUnitSet`, `mAirTraffic` (4
+  /// `EeUnitsAtc*`), `mLastUnit`
+  uint64_t player_active_group;
+  uint64_t player_groups;
+  uint64_t player_human_player;
+  uint64_t player_healed_unit_set;
+  uint64_t player_air_traffic;
+  uint64_t player_last_unit;
 };
 
 /// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of

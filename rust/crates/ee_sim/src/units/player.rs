@@ -836,6 +836,11 @@ impl PlayerHost for FnHost {
         if let Some(v) = unsafe { crate::units::player_views::answer(self.player as u64, op, io) } {
             return v;
         }
+        // the player's own Rust bodies and the plain reads (player_native.rs); SAFETY: as above
+        #[cfg(not(test))]
+        if let Some(v) = unsafe { crate::units::player_native::player(op, self.player as u64, io) } {
+            return v;
+        }
         let (player, f) = (self.player, self.f);
         // the compound operations' statements: the views' answers first, then the C++ (SAFETY: as above, and the
         // C++ callback's contract)
@@ -843,6 +848,8 @@ impl PlayerHost for FnHost {
             crate::units::player_views::answer(player as u64, op, io)
         } {
             Some(v) => v,
+            #[cfg(not(test))]
+            None if let Some(v) = unsafe { crate::units::player_native::player(op, player as u64, io) } => v,
             // the containers' operations on the players' lists (player_lists.rs)
             None => crate::units::player_lists::answer_player(player as u64, op, &io.i)
                 .unwrap_or_else(|| unsafe { f(player, op, io) }),

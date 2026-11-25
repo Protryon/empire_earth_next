@@ -186,6 +186,12 @@ void EEWorldLayoutRegister()
     theLayout.placement_rust = offsetof(EECPPlacement, rust);
     theLayout.player_group_lists = offsetof(EEPlayer, mGroupLists);   // the groups lane, round 2 (group_obj.rs)
     theLayout.player_lists = offsetof(EEPlayer, mLists);   // (player_body.rs)
+    theLayout.player_active_group = offsetof(EEPlayer, mActiveGroup);   // the player/tech lane, round 2 (player_native.rs)
+    theLayout.player_groups = offsetof(EEPlayer, mGroups);
+    theLayout.player_human_player = offsetof(EEPlayer, mHumanPlayer);
+    theLayout.player_healed_unit_set = offsetof(EEPlayer, mHealedUnitSet);
+    theLayout.player_air_traffic = offsetof(EEPlayer, mAirTraffic);
+    theLayout.player_last_unit = offsetof(EEPlayer, mLastUnit);
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

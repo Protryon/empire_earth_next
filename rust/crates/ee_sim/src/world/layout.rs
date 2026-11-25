@@ -225,6 +225,15 @@ pub struct EeWorldLayout {
     pub player_group_lists: u64,
     /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
     pub player_lists: u64,
+    // ---- the player/tech lane, round 2: the pointer members the player's Rust writes itself (player_native.rs)
+    /// `EEPlayer::mActiveGroup`, `mGroups` (20 `EEGroup*`), `mHumanPlayer`, `mHealedUnitSet`, `mAirTraffic` (4
+    /// `EeUnitsAtc*`), `mLastUnit`
+    pub player_active_group: u64,
+    pub player_groups: u64,
+    pub player_human_player: u64,
+    pub player_healed_unit_set: u64,
+    pub player_air_traffic: u64,
+    pub player_last_unit: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();

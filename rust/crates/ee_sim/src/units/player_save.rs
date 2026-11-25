@@ -886,6 +886,10 @@ fn lists_answer(
     if p == 0 {
         return None;
     }
+    // the player's own Rust calls and plain reads (player_native.rs); SAFETY: a live player's save
+    if let Some(r) = unsafe { crate::units::player_native::save(op, p, index, io) } {
+        return Some(r);
+    }
     let at = |list: u32| player_op(p, list, ListOp::At(index as usize));
     let len = |list: u32| player_op(p, list, ListOp::Len) as i64;
     match op {
