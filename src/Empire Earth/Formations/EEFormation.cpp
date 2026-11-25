@@ -13,10 +13,8 @@
 
 #include "ee/EEFormation.h"
 #include "ee/EEUnit.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EESimCapture.h"
 #include "rust/sim/formations.h"
-#include "rust/sim/units.h"
 
 // Collects the group's units and places them into formation slots
 void EEFormation::Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlots)

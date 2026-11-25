@@ -13,14 +13,11 @@
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPlayer.h"
 #include "ee/RTSGraphics.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEMedia.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEMusicManager.h"
-#include "rust/audio/sound.h"
-#include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp music_io.rs)
 
 // The C++ side of the Rust music manager: the members, the conductor, the songs, the world and the preferences
 static EEMusicManager* Of(void* inContext) { return static_cast<EEMusicManager*>(inContext); }

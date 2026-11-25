@@ -8,19 +8,9 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
-#include "lle/TSScheduler.h"
-#include "lle/URandom.h"
 
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEMedia.h"
-#include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEDbRecords.h"
-#include "rust/render/gfx.h"
-#include "rust/game/preload_media.h"
 
 // The tables (sEffects 0x4e8420, the 0x48 per-kind media vectors 0x4e7f98, the id set 0x4e7f88: the unit's three
 // init chains) and the loads are ee_gfx geffect_table.rs'

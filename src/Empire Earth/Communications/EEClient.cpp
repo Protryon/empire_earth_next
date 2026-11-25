@@ -3,21 +3,14 @@
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
-#include "lle/UResourceFile.h"
 #include "lle/NESynchronousServer.h"
 #include "lle/NESynchronousClient.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUnit.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEARust.h"
-#include "ee/EESMMediaStrings.h"
-#include "ee/EEPSaveGameHeader.h"
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
-#include "rust/sim/netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
-#include "rust/game/gamecpp.h"
 
 // 0x4e6058: default-constructed (its init chain 0xb71b5 opens the unit; use inferred, provisional name)
 UWideString gU4E6058;
@@ -26,8 +19,6 @@ UWideString gU4E6058;
 #include <string>
 #include <mbstring.h>
 
-#include "ee/EESaveGameFiles.h"
-#include "ee/EEStringIDs.h"
 extern UString gCampaignExtension;          // 0x530b78 (ee/EECampaignFormManager.h, which needs the UI form headers)
 
 // Boots this client from the canceled game when the host's slot (0) has become open, else refreshes the slot's line

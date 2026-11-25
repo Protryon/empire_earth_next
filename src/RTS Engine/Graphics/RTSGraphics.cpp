@@ -7,10 +7,8 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/Input System.h"
 #include "lle/UIForm.h"
@@ -19,7 +17,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEMouse.h"
 #include "platform/PlatSim.h"
-#include "rust/game/rts.h"
 
 // The thread: its passes are Rust; the Sleep(1) between them stays here. Win32 Sleep, not PlatSleep: the test
 // harness's time shim caps the frame rate at the Sleep import by the caller's return address (inside

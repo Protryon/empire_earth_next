@@ -10,9 +10,6 @@
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitHandle.h"
-#include "lle/NEMessageID.h"
-#include "rust/game/rts.h"
 
 static_assert(sizeof(RTSUnitBucket) == sizeof(EeRtsUnitBucket), "a bucket");
 

@@ -9,9 +9,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
@@ -21,14 +18,10 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEContagionManager.h"
-#include "rust/game/gamecpp.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEEffectKindIDs.h"
-#include "ee/EEMap.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/RTSWorld.h"

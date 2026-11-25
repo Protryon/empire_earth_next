@@ -6,12 +6,8 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/GESurface.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -35,7 +31,6 @@
 #include "ee/EEROUserInterface.h"
 #include "ee/EERenderSnapshot.h"
 #include "ee/EEMouse.h"
-#include "rust/game/gamecpp.h"
 
 EERenderSnapshot gRenderSnapshot;
 

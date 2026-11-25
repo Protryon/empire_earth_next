@@ -7,16 +7,10 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UIFormManager.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEUIManager.h"
 #include "ee/EECampaignFormManager.h"
-#include "rust/game/campaign.h"
 
 // Creates the campaign selection form's manager at the current difficulty, with no campaign chosen
 EECampaignFormManager::EECampaignFormManager()

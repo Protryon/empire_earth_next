@@ -13,9 +13,6 @@
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/SESoundManager.h"
-#include "lle/SEScore.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/UResourceFile.h"
@@ -28,7 +25,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
@@ -41,10 +37,8 @@
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEMusicManager.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EETechTreeTechID.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEGameVariant.h"
@@ -55,11 +49,9 @@
 #include "ee/EECPEngine.h"
 #include "ee/EEColorTable.h"
 #include "ee/EEStatisticsRecord.h"
-#include "ee/EEStatisticsHistory.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EETeam.h"
-#include "ee/EEVCWonder.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EEUserInterface.h"
@@ -67,12 +59,8 @@
 #include "ee/EECommunications.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EECivilizationManager.h"
-#include "rust/sim/app.h"
-#include "rust/sim/tech.h"
 #include <utility>
-#include "rust/game/gamecpp.h"
 #include "rust/game/game_log.h"
-#include "ee/EEGameLog.h"
 
 extern EEAIContinentManager gContinentManager;
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)

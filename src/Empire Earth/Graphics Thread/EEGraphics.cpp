@@ -3,18 +3,11 @@
 // second's implicit dtor, the members in vtable order, the message posts, RTSMouse's inline member and the second
 // object's ctor; EEMouse.cpp's ctor starts at 0x10a9b0). Unit flags: the exe's module set.
 #include <windows.h>
-#include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp)
 #include <deque>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GEText.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/GESurface.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -24,10 +17,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMouse.h"
-#include "ee/RTSMousePointer.h"
 #include "ee/EEGraphics.h"
-#include "ee/EERenderSnapshot.h"
-#include "rust/render/gfx.h"
 // the two file-scope objects of the chains at 0x50972b and 0x509738 (a bool; three deques and a bool): nothing read
 // them, so the port has neither
 

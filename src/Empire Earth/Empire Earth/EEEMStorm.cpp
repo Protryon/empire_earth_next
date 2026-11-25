@@ -10,12 +10,8 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "lle/LowLevelEngineCore.h"
 
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -23,26 +19,15 @@
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEAIAStarView.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIHill.h"
 #include "ee/EETown.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEAutoPathRequest.h"
 #include "ee/EEPathManager.h"
-#include "ee/EEMedia.h"
-#include "ee/EEGraphicEffect.h"
-#include "rust/sim/app.h"
-#include "rust/sim/astar.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EEStormType.h"
-#include "ee/EEAutoPathRequest.h"
 #include "ee/EECPASGFlags.h"
-#include "ee/EEEffect.h"
-#include "ee/EEEffectManager.h"
-#include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp weather.rs)
 
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)

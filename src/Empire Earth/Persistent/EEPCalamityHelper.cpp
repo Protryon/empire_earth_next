@@ -11,16 +11,8 @@
 #include "lle/FSPersistent.h"
 #include "lle/USingleton.h"
 
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEUnit.h"
-#include "ee/EECalamity.h"
-#include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
-#include "ee/EEContagionManager.h"
 #include "ee/EEPCalamityHelper.h"
-#include "ee/EEPersistentTag.h"
-#include "rust/game/gamecpp.h"
 
 // Deletes the calamity list
 void EEPCalamityHelper::ClearCalamities()

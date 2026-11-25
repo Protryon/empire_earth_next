@@ -14,58 +14,21 @@ UWideString gLoadSaveErrorMessage;
 
 #include <time.h>
 #include <vector>
-#include "ee/EmpireEarth.h"
-#include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <deque>
 #include <map>
-#include "lle/UResourceFile.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/SESoundManager.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/NESynchronousClient.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/EETeam.h"
-#include "ee/EEGameState.h"
-#include "ee/EEEnvironmentManager.h"
-#include "ee/EEScenarioManager.h"
-#include "ee/EEPCalamityHelper.h"
-#include "ee/EEUserInterface.h"
-#include "ee/EEUIManager.h"
-#include "ee/EECommunications.h"
-#include "ee/EEGameSound.h"
-#include "ee/EEUIFMainGame.h"
-#include "ee/EEDataPreLoading.h"
-#include "ee/EEUIFScenarioEditor.h"
-#include "lle/FSChunk.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
 #include <algorithm>
 #include <functional>
-#include "ee/EEPSaveGameHeader.h"
-#include "ee/EEGameStateLoader.h"
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // 0x148362 (EEWorld.cpp's prototype)
-#include "ee/EEPersistentTemplates.h"
-#include "ee/EEPChecksum.h"
-#include "ee/EEPPlayerHelper.h"
-#include "ee/EEPWorldHelper.h"
-#include "ee/EEPMultiplayerHelper.h"
 
 extern unsigned long& gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declaration; the save header's mL4E8)
 
 #include "ee/EEStringIDs.h"
-#include "ee/EEPersistentTag.h"
-#include "rust/game/gamecpp.h"
 class EEGameState;
 extern EEGameState gGameState;
 extern char gEmptyString[];             // 0x4e5b98 (the empty string; EECampaignProgress.cpp's declaration)

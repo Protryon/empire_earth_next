@@ -7,12 +7,9 @@
 #include <windows.h>
 #include <vector>
 
-#include "lle/LowLevelEngine.h"
 
 #include "ee/EEAnimal.h"
 #include "ee/EEMedia.h"
-#include "ee/EEDbRecords.h"
-#include "rust/game/gamecpp.h"
 
 extern std::vector<EEUnitClass*> gUnitClassTable;   // ee/EEUnit.h
 // 0x4e8448: the media table (its init chain is EEGraphicObject.cpp's, guarded: probably a class static of EEMedia;

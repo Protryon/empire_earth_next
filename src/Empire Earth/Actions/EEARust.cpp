@@ -5,12 +5,8 @@
 #include <windows.h>
 #include <list>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GERhombus.h"
 #include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/UITextLabel.h"
 #include "lle/UResourceFile.h"
@@ -32,7 +28,6 @@
 #include "lle/U2DSparseArray.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
-#include "ee/EEUnitUtilities.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEMedia.h"
@@ -44,7 +39,6 @@
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
 #include "ee/EEScreenEvent.h"
-#include "ee/EEStringIDs.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESELoadThread.h"
@@ -53,11 +47,8 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEGameSound.h"
 #include "ee/EESoundObject.h"
-#include "ee/EESEUnit.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEARust.h"
 #include "ee/EECombatGoals.h"
-#include "rust/sim/units.h"
 
 // ------------------------------------------------------------------------------------------------ the host
 // The game's actions' host (ee_screens game_actions.rs: EE_SCREENS_GA_OP_*; ee/EEARust.h). The original units'

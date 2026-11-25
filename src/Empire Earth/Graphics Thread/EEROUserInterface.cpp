@@ -5,25 +5,8 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 
-#include "ee/EmpireEarth.h"
-#include "ee/EEPlayer.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEUIManager.h"
-#include "ee/EEUIFMainGame.h"
-#include "ee/EEGraphics.h"
-#include "ee/EERenderObject.h"
-#include "ee/EEROUserInterface.h"
-#include "rust/game/gamecpp.h"
 
 // the UI's viewport (0x529518) (provisional name)
 GEViewport gUIViewport;

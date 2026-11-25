@@ -16,18 +16,8 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/U2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSFileSpec.h"
-#include "lle/GEQuaternion.h"
 
-#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -35,24 +25,11 @@
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EERules.h"
 #include "ee/EEGraphicObject.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EETileCoordinate.h"
-#include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysicsModel.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EECombatGoals.h"
-#include "ee/EECombatFormulas.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEGlobalConstants.h"
-#include "ee/EEUnitBehavior.h"
-#include "ee/EEUnitStore.h"
-#include "ee/EESimCapture.h"
-#include "rust/sim/combat.h"
-#include "rust/sim/units.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 

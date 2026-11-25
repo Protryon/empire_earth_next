@@ -7,8 +7,6 @@
 #include <utility>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/RTSWorld.h"
@@ -16,9 +14,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEDoppelgangerManager.h"
-#include "ee/EEAIKindIDs.h"
-#include "rust/render/ge.h"
-#include "rust/game/rts.h"
 
 // chain at 0x521c78 (wrapper)
 //   object 0x929840  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ (guard 0x929838 bit 1)

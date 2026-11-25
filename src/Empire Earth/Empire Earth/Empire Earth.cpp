@@ -27,14 +27,11 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include <string>
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GETerrainMesh.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -55,10 +52,8 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EECivilizationManager.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EECivPowersManager.h"
-#include "lle/FSRestorable.h"
 #include "lle/UResourceFile.h"
 #include "lle/TMTimer.h"
-#include "lle/FSPersistent.h"
 #include "lle/FSPersistentList.h"
 #include "ee/EEMap.h"
 #include "ee/EETeam.h"
@@ -75,8 +70,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEMusicManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEComputerPlayer.h"
-#include "ee/EECPEngine.h"
 #include "ee/EECPNextUnits.h"
 
 #include "ee/EEGlobalStorage.h"
@@ -261,8 +254,6 @@ void EELoadNetworkSettings()
 #include "ee/EEMessage.h"
 
 
-#include "GEWindow.h"
-#include "lle/GEFont.h"
 #include "lle/UIFontTable.h"
 #include "ee/EERenderObject.h"
 #include "ee/EERenderLists.h"
@@ -301,8 +292,6 @@ bool EEInitializePart1()
 RTSMouse* RTSGetInputMouse() { return gMouse; }
 
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 
 
@@ -469,7 +458,6 @@ void EEReleaseInstanceMutex(bool inShutdown)
 extern std::vector<GETexture*> gU4E8EF0; // defined in EERenderObject.cpp
 static unsigned long sOriginalVideoMode; // 0x52a1a8: the video mode index found at start-up, restored at shutdown
 
-#include "ee/EEMiniMap.h"
 
 // Releases the particle and complex unit pools and logs the list node pools' statistics
 // (EEDeleteDatabase passes true; the argument is not read)
@@ -487,7 +475,6 @@ void EEReleaseUnitPools()
 }
 
 #include "ee/EEWonNet.h"
-#include "ee/EEUnitPicker.h"
 
 #include "ee/EEButtonObject.h"
 
@@ -586,7 +573,6 @@ void EELoadSound(const UString& inName, unsigned long inType, unsigned long& out
     ee_gamecpp_startup_load_sound(&inName, inType, &outSample, &outInstance, inFlag);
 }
 
-#include "ee/EEDbObject.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEMedia.h"
 #include "lle/USingleton.h"

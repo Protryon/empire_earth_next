@@ -16,26 +16,10 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/SESoundManager.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/U2DSparseArray.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEMap.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
-#include "ee/EEGameSound.h"
-#include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/EEUnitGoal.h"
-#include "ee/EEAIArea.h"
-#include "ee/EEAIForest.h"
-#include "ee/EETown.h"
-#include "ee/EEAIContinentManager.h"
 #include "ee/EEAmbientSound.h"
 #include "ee/EEAmbientSoundManager.h"
-#include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp ambient_io.rs)
 
 // 0x524a88..0x524b34: the original's two EE-level trigonometry caller logs ("UMCos EE-Level", "UMSin EE-Level",
 // ESCallerLog, never called), deleted with the class (LLE lane round 1)

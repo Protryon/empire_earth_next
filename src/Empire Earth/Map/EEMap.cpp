@@ -10,7 +10,6 @@
 #include <utility>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GETextureSet.h"
@@ -18,7 +17,6 @@
 #include "lle/GESurface.h"
 #include "lle/GETexture.h"
 #include "lle/Graphics Engine.h"
-#include "lle/GERenderState.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -33,12 +31,7 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EETerrainColorTable.h"
-#include "ee/EEPersistentTag.h"
 #include "ee/EEAppCapture.h"
-#include "rust/render/gfx.h"
-#include "rust/sim/units.h"
-#include "rust/game/app.h"   // the capture's MAPK, MAPP (ee_game app world_capture.rs)
-#include "rust/game/gamecpp.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)

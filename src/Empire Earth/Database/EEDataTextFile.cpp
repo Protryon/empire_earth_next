@@ -25,12 +25,9 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EETechTreeRecord.h"
-#include "rust/data/tables.h"   // EEUnitClassRecord (ee_data DbUnitClass)
 #include "ee/EERules.h"
 
-#include "EEDataText.h"
 #include "EEDataTextSpecs.h"
-#include "rust/game/gamecpp.h"
 #include <stdio.h>
 #include <string.h>
 #include <utility>
@@ -39,25 +36,18 @@
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "ee/EEDbRecords.h"
-#include "ee/EEMediaUse.h"
-#include "lle/GERenderState.h"
 #include <EEDatabase.h>
-#include "lle/GETerrainMesh.h"
 #include "lle/GETextureSet.h"
 #include "ee/EEUnit.h"
 #include "ee/EEButtonObject.h"
 #include "lle/UIHotKey.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEBitmap.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEAnimal.h"
 #include "ee/EEMedia.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "lle/Graphics Engine.h"
 #include "ee/EETerrainColorTable.h"
 
 // The generated specs against the record structs the loaders read (the rest are checked by eedata.py check (c)

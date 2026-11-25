@@ -10,30 +10,10 @@
 #include <typeinfo>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GEViewport.h"
-#include "lle/GETerrainMesh.h"
-#include "lle/GESurface.h"
-#include "lle/GETexture.h"
-#include "lle/Graphics Engine.h"
 
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEMap.h"
-#include "ee/EEDoppelganger.h"
-#include "ee/EEDatabaseTables.h"
-#include "ee/EEColorTable.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EmpireEarth.h"
 #include "ee/EEMiniMap.h"
-#include "ee/EEGameUI.h"
-#include "lle/GERenderState.h"
-#include "ee/EEAppCapture.h"
-#include "rust/sim/units.h"
-#include "rust/game/gamecpp.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
