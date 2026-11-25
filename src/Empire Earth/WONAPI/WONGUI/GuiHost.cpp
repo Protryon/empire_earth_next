@@ -68,7 +68,6 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
 {
     switch (op) {
     case Op::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
-    case Op::Invalidate: c->Invalidate(); return 0;
     case Op::SetParentCursor: c->mParent->SetCursor(CursorOf(a)); return 0;
     case Op::FireEvent:
         // the type is Rust's map, which the goldens check against the enum (round 23's lists fired ListSelChanged

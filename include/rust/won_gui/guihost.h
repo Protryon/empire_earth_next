@@ -951,55 +951,6 @@ enum class EeWonGuiOp : uint32_t {
   TabNewPoint,
 };
 
-/// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
-/// `CtChild`, `CtParentCall`, `CtVirt`).
-enum class EeWonCtVirt : uint32_t {
-  NeedsPaint = 1,
-  /// `PrePaint(*(Graphics*)arg)`.
-  PrePaint,
-  /// `Paint(*(Graphics*)arg)`.
-  Paint,
-  /// `EnableControlsById(*(const ControlIdSet*)arg1, arg2 != 0)`.
-  EnableControlsById,
-  NotifyRootVisibility,
-  HitTest,
-  MouseEnter,
-  MouseExit,
-  MouseMove,
-  MouseDrag,
-  MouseWheel,
-  MouseHover,
-  /// `HandleBroadcastEvent((ComponentEvent*)arg)`.
-  HandleBroadcastEvent,
-  AddedToParent,
-  Invalidate,
-  MarkInvalid,
-  ClearGrabBG,
-  TabFocus,
-  KeyDown,
-  KeyChar,
-  KeyUp,
-  CanClose,
-  GotFocus,
-  LostFocus,
-  TimerEvent,
-  /// `RequestTimer(arg != 0)` (not virtual).
-  RequestTimer,
-  /// `RequestFocus()` (not virtual).
-  RequestFocus,
-  /// `Virtual08()` (SizeChanged).
-  SizeChanged,
-  SetFocusChild,
-  AddTimerChild,
-  ChildInvalidated,
-  /// `SetCursor((Cursor*)arg)`.
-  SetCursor,
-  FindChildAt,
-  RemoveChild,
-  /// `SetComponentFlags(ComponentFlag_HasFocus, true)` (not virtual).
-  SetHasFocus,
-};
-
 /// The events a component object fires (`FireEvent`).
 enum class EeWonGuiEvent : uint32_t {
   /// `ComponentEvent_InputReturn`.
@@ -1074,6 +1025,55 @@ enum class EeWonGuiCursor : uint32_t {
   EastWest = 4,
   /// `Cursor::GetStandardCursor(StandardCursor_NorthSouth)`.
   NorthSouth = 5,
+};
+
+/// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
+/// `CtChild`, `CtParentCall`, `CtVirt`).
+enum class EeWonCtVirt : uint32_t {
+  NeedsPaint = 1,
+  /// `PrePaint(*(Graphics*)arg)`.
+  PrePaint,
+  /// `Paint(*(Graphics*)arg)`.
+  Paint,
+  /// `EnableControlsById(*(const ControlIdSet*)arg1, arg2 != 0)`.
+  EnableControlsById,
+  NotifyRootVisibility,
+  HitTest,
+  MouseEnter,
+  MouseExit,
+  MouseMove,
+  MouseDrag,
+  MouseWheel,
+  MouseHover,
+  /// `HandleBroadcastEvent((ComponentEvent*)arg)`.
+  HandleBroadcastEvent,
+  AddedToParent,
+  Invalidate,
+  MarkInvalid,
+  ClearGrabBG,
+  TabFocus,
+  KeyDown,
+  KeyChar,
+  KeyUp,
+  CanClose,
+  GotFocus,
+  LostFocus,
+  TimerEvent,
+  /// `RequestTimer(arg != 0)` (not virtual).
+  RequestTimer,
+  /// `RequestFocus()` (not virtual).
+  RequestFocus,
+  /// `Virtual08()` (SizeChanged).
+  SizeChanged,
+  SetFocusChild,
+  AddTimerChild,
+  ChildInvalidated,
+  /// `SetCursor((Cursor*)arg)`.
+  SetCursor,
+  FindChildAt,
+  RemoveChild,
+  /// `SetComponentFlags(ComponentFlag_HasFocus, true)` (not virtual).
+  SetHasFocus,
 };
 
 /// The button's and component's methods a skin button calls (`SkinBtn`).

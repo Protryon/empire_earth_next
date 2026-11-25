@@ -1095,26 +1095,12 @@ class RootContainer : public Container {
 public:
     RootContainer(Window*);
     virtual ~RootContainer();
-    virtual void Virtual08() { this->RCall(EeWonRootCall::SizeChanged); } //304730 SizeChanged
-    virtual void PrePaint(Graphics& g) { this->RCall(EeWonRootCall::PrePaint,(intptr_t)&g); } //304760
-    virtual void Paint(Graphics& g) { this->RCall(EeWonRootCall::Paint,(intptr_t)&g); } //304900
-    virtual void MouseExit() { this->RCall(EeWonRootCall::MouseExit); } //304c60
-    virtual void MouseDown(int x,int y,int b) { this->RCall(EeWonRootCall::MouseDown,x,y,b); } //304bd0
-    virtual void MouseUp(int x,int y,int b) { this->RCall(EeWonRootCall::MouseUp,x,y,b); } //304c90
-    virtual void MouseMove(int x,int y) { this->RCall(EeWonRootCall::MouseMove,x,y); } //304a30
-    virtual void MouseDrag(int x,int y) { this->RCall(EeWonRootCall::MouseDrag,x,y); } //304ac0
-    virtual bool KeyChar(int k) { return this->RCall(EeWonRootCall::KeyChar,k)!=0; } //304a00
-    virtual bool KeyDown(int k) { return this->RCall(EeWonRootCall::KeyDown,k)!=0; } //3049a0
-    virtual bool KeyUp(int k) { return this->RCall(EeWonRootCall::KeyUp,k)!=0; } //3049d0
-    virtual void InvalidateRect(WONRectangle& r) { this->RCall(EeWonRootCall::InvalidateRect,(intptr_t)&r); } //304980
-    virtual void SetCursor(Cursor* c) { this->RCall(EeWonRootCall::SetCursor,(intptr_t)c); } //304cf0
-    virtual void RemoveChild(Component* c) { this->RCall(EeWonRootCall::RemoveChild,(intptr_t)c); } //304cc0
-    void AddBG(BackgroundGrabber* g) { this->RCall(EeWonRootCall::AddBG,(intptr_t)g); } //304510
+    // (its overrides of Component's virtuals and of RemoveChild are the Rust root's calls: Component's and the
+    // container's entries run them through the container's link to it, R6 WON GUI round 38)
+    void AddBG(BackgroundGrabber* g) { ee_won_root_call(this->mRootObj,EeWonRootCall::AddBG,(intptr_t)g,0,0); } //304510
 
     Window* mWindow;
     EeWonRoot* mRootObj;
-private:
-    intptr_t RCall(EeWonRootCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_root_call(this->mRootObj,c,a,b,cc); }
 };
 
 // how a popup is opened (0x2c bytes, on the stack; provisional names)

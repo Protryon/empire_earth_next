@@ -21,8 +21,6 @@ using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
 
-static Component* Comp(intptr_t a) { return (Component*)a; }
-
 extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     RootContainer* t = static_cast<RootContainer*>((Component*)inComp);
@@ -31,12 +29,8 @@ extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_
         // (no cursor: no component; the original's MouseMove read through a NULL current cursor)
         if (a == 0) { *(int*)b = *(int*)c = 0; return 0; }
         return (intptr_t)((Cursor*)a)->GetComponent(*(int*)b, *(int*)c);
-    case Op::RootOneComponentWindow: return t->mWindow->IsOneComponentWindow() ? 1 : 0;
-    case Op::RootWindowMouse: *(int*)a = t->mWindow->GetMouseX(); *(int*)b = t->mWindow->GetMouseY(); return 0;
-    case Op::RootWindowRect: t->mWindow->GetRect(*(WONRectangle*)a, false); return 0;
-    case Op::RootWindowSetPos: t->mWindow->SetPosSize((int)a, (int)b, -1, -1); return 0;
-    case Op::RootMouseChildOf: return (intptr_t)Comp(a)->GetMouseChild();
-    case Op::RootScheme: return (intptr_t)t->GetColorScheme();
+    // (the window's state, rectangle and place, the mouse child, the colour scheme, the cursor component's place,
+    // order and showing are gamewin.rs root_op's in the game: R6 WON GUI round 38)
     case Op::RootGrabberRead: {
         BackgroundGrabber* g = (BackgroundGrabber*)a;
         EeWonRootGrab* q = (EeWonRootGrab*)b;
@@ -52,9 +46,6 @@ extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_
         ((Graphics*)a)->DrawImage((NativeImage*)b, q[0], q[1], q[2], q[3], q[4], q[5]);
         return 0;
     }
-    case Op::RootEnsureOnTop: Comp(a)->EnsureOnTopOf(Comp(b)); return 0;
-    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
-    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
     default: return ContainerHostCall(t, op, a, b, c, d);
     }
 }

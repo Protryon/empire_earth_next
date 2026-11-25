@@ -149,6 +149,9 @@ impl EeWonRoot {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if let Some(r) = crate::gamewin::root_op(self.comp as isize, op, a, b, c) {
+            return r;
+        }
         if let Some(r) = crate::gamewin::common_op(self.comp as isize, op, a, b, c) {
             return r;
         }
@@ -453,7 +456,14 @@ pub unsafe extern "C" fn ee_won_root_new(
     host: EeWonGuiHostFn,
     ct: *const EeWonContainer,
 ) -> *mut EeWonRoot {
-    Box::into_raw(Box::new(EeWonRoot::new(component, host, ct)))
+    let root = Box::into_raw(Box::new(EeWonRoot::new(component, host, ct)));
+    // the game's root: Component's and the container's entries run this object's overrides (compobj.rs
+    // ee_won_comp_call, ctobj.rs ee_won_ct_call) until it is freed; a driver's world calls ee_won_root_call itself
+    if crate::compobj::is_game() && !ct.is_null() {
+        // SAFETY: the live container (the contract)
+        unsafe { (*ct).root.set(root) };
+    }
+    root
 }
 
 /// The destructor's statements (the queued backgrounds' images released), then the object freed.
@@ -465,6 +475,9 @@ pub unsafe extern "C" fn ee_won_root_free(root: *mut EeWonRoot) {
     if !root.is_null() {
         // SAFETY: the contract
         unsafe {
+            if !(*root).ct.is_null() && (*(*root).ct).root.get() == root as *const EeWonRoot {
+                (*(*root).ct).root.set(std::ptr::null());
+            }
             (*root).destroy();
             drop(Box::from_raw(root));
         }
