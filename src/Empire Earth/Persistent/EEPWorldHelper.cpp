@@ -318,7 +318,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwNumPlayers: return (int64_t)gWorld.mNumPlayers;
     case O::PwPlayerFirstUnit: return P64(PL->mFirstUnit);
     case O::PwPlayerGetUnit: return P64(PL->GetUnit((unsigned long)a[0]));
-    case O::PwPlayerSetBucketFirst: PL->mUnitBuckets[a[0]].mFirst = (EEUnit*)a[1];
+    case O::PwPlayerSetBucketFirst: PL->mUnitBuckets[a[0]].first = (size_t)a[1];
         break;
     case O::PwPlayerSetFirstUnit: PL->mFirstUnit = (EEUnit*)a[0];
         break;

@@ -527,13 +527,7 @@ void EEPlayer::AddConstructionSite(EEComplexUnit* inUnit)
 // Does nothing (the base player ignores being targeted by another player)
 // (ICF-kept empty `ret 8`, shared by the slots below; FlareReceived below (slot +0x98) is the same empty body,
 // folded into it: the base player ignores flares)
-void EEPlayer::NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag)
-{
-}
 
-void EEPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
-{
-}
 
 // (slots sharing the empty body: EECPAttackFormation+0x14; EEHumanPlayer+0x58, +0x98; EECalamityClass+0x28;
 // EECCConscription, EECCLineOfSight, EECCSpecialAttack, EECCSpecialLocation +0x28; EEE3DFarm+0x20;
@@ -979,13 +973,6 @@ static void EEApplySavedTowns(EEPlayer* inPlayer)
     ee_units_towns_repair(&theContext, &EETownSaveHost, (uint32_t)inPlayer->mPlayerID, true);
 }
 
-// When a human player reaches a valid epoch, lets every computer player catch up to it
-void EEPlayer::EpochReached(long inEpoch)
-{
-    // port: the original pulled each computer player's epoch timer forward here (EEComputerPlayer::CatchUpEpoch, the
-    // catch-up cheat); the timer went with the C++ classic's decisions (stage 5): a Lua AI reads the epochs itself
-    (void)inEpoch;
-}
 
 #include "lle/FSMemoryFile.h"
 
@@ -1131,25 +1118,10 @@ void EEComplexUnit::SetCloakedChain(bool inValue)
 
 // EETechTreeNode 0x1cf989 / 0x1cfcc9 call these through slots +0x88 / +0xcc; both slots hold the shared empty
 // `ret 4` 0x557269 (ICF), so each has an empty body (this also removes two unresolved virtuals)
-void EEPlayer::EpochMediaLoaded(long inEpoch)
-{
-}
 
-void EEPlayer::EpochMediaUnloaded(long inEpoch)
-{
-}
 
-void EEPlayer::UnitStranded(class EEComplexUnit *)
-{
-}
 
-void EEPlayer::Virtual60()
-{
-}
 
-void EEPlayer::WonderStarted(class EEComplexUnit *)
-{
-}
 
 // The C++ of EEPlayer's Rust bodies (ee_units player_body.rs; EE_UNITS_PLAYER_BODY_*): one statement of the original
 // bodies each, in their order; inA an object or index, inB and inC values, inSwaps UnitsSwapped's vector

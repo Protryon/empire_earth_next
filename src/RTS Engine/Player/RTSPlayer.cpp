@@ -14,14 +14,6 @@
 #include "lle/NEMessageID.h"
 #include "rust/game/rts.h"
 
-static_assert(sizeof(RTSUnitBucket) == sizeof(EeRtsUnitBucket), "a bucket");
-
-// Creates an empty player with no units
-RTSPlayer::RTSPlayer()
-{
-    this->Reset();
-}
-
 // Creates a named player with the given id; every player but player 0 keeps a visibility map
 RTSPlayer::RTSPlayer(const UWideString& inName, unsigned long inPlayerID)
 {
@@ -88,15 +80,12 @@ long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
 }
 
 
-void RTSPlayer::Clear()
-{
-}
 
 
 // The shims units.rs calls (UnitsCpp: the player's side)
 extern "C" {
 EeUnitsRtsPlayerFields* ee_rtspcpp_player_fields(RTSPlayer* inPlayer) { return inPlayer; }
-RTSUnitBucket* ee_rtspcpp_buckets(RTSPlayer* inPlayer) { return inPlayer->mUnitBuckets; }
+EeRtsUnitBucket* ee_rtspcpp_buckets(RTSPlayer* inPlayer) { return inPlayer->mUnitBuckets; }
 EEUnit** ee_rtspcpp_first_slot(RTSPlayer* inPlayer) { return &inPlayer->mFirstUnit; }
 EEUnit** ee_rtspcpp_last_slot(RTSPlayer* inPlayer) { return &inPlayer->mLastUnit; }
 size_t ee_rtspcpp_pending_size(RTSPlayer* inPlayer) { return inPlayer->mPendingUnits.size(); }

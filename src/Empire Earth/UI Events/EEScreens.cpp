@@ -1206,9 +1206,9 @@ extern "C" void ee_screenscpp_pr_series_load(uint32_t inRecord, uint32_t inSerie
 { EEScratch<EEStatisticsSeries>(kScratchPgsSeries) = PGR(inRecord).mStatistics.GetSeries(inSeries); }
 extern "C" uint32_t ee_screenscpp_pr_series_count() { return (uint32_t)EEScratch<EEStatisticsSeries>(kScratchPgsSeries).mPoints.size(); }
 extern "C" uint32_t ee_screenscpp_pr_series_time(uint32_t inIndex)
-{ return (uint32_t)EEScratch<EEStatisticsSeries>(kScratchPgsSeries).mPoints[inIndex].mTime; }
+{ return (uint32_t)EEScratch<EEStatisticsSeries>(kScratchPgsSeries).mPoints[inIndex].time; }
 extern "C" uint32_t ee_screenscpp_pr_series_value(uint32_t inIndex)
-{ return (uint32_t)EEScratch<EEStatisticsSeries>(kScratchPgsSeries).mPoints[inIndex].mValue; }
+{ return (uint32_t)EEScratch<EEStatisticsSeries>(kScratchPgsSeries).mPoints[inIndex].value; }
 extern "C" void ee_screenscpp_pgs_graph_add_series(uintptr_t inForm, uintptr_t inPairs, uint32_t inCount, uint32_t inSeries, uint32_t inRecord)
 { static_cast<UIGraph*>(F(inForm)->GetControl(kPostGameLineGraph))->AddGraphSeries(reinterpret_cast<long*>(inPairs), inCount, inSeries, PGR(inRecord).mColor); }
 extern "C" uint32_t ee_screenscpp_pgs_window_width(uintptr_t inForm)

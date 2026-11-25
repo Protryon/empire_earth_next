@@ -85,8 +85,10 @@ public:
     void AddEvent(const U2DPoint<long>& inTile, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
     void AddPlayerEvent(const U2DPoint<long>& inTile, const U2DPoint<long>& inFrom, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
     bool GetNextEventSource(U2DPoint<long>& outSource);   // the next event's source (EEAPlayerEvent); false without one
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+        { return ee_units_events_file(this->mList, &inFile, &EESaveFilePrimitive, false); }
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+        { return ee_units_events_file(this->mList, &outFile, &EESaveFilePrimitive, true); }
     long RepairEvents(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
     {
         this->Call(inPlayer, EE_UNITS_EVENTS_REPAIR, 0.0f);
@@ -96,7 +98,7 @@ public:
     void ShowEvents(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_SHOW_ALL, 0.0f); }   // around a sight change
     void HideEvents(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_HIDE_ALL, 0.0f); }
     void Clear(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_CLEAR, 0.0f); }   // (NULL: no world call)
-    void Call(EEPlayer* inPlayer, uint32_t inWhat, float inElapsed);
+    void Call(EEPlayer* inPlayer, uint32_t inWhat, float inElapsed) { ee_units_events_call(this->mList, this, inPlayer, &EEPPlayerEventList::Host, inWhat, inElapsed); }
     static int32_t Host(void* inList, void* inPlayer, int32_t inOp, const EeUnitsPlayerEvent* inEvent);
 
     EeUnitsPlayerEvents* mList;             // the events (Rust)
@@ -473,18 +475,10 @@ inline int32_t EETechTreeEpoch::EpochWalk(EeTechEpochOp inOp, long inA, bool inB
     return ee_tech_walk_epoch(this->mTree, &EETechHost, inOp, this->mTree, this->Ref(), (int32_t)inA, inB, inUnit);
 }
 
-// One point of a player's statistics series (8 bytes on Windows; the layout of ee_units' EeUnitsStatPoint, which
-// GetSeries copies into)
-struct EEStatisticsPoint {
-    EEStatisticsPoint() : mValue(0), mTime(0) {}
-    unsigned long mValue;                   // +0x00 (Set's value; the series keeps the maximum)
-    unsigned long mTime;                    // +0x04 (the game time: the post-game graph's x)
-};
-
 // One statistics series of a player, a copy GetSeries makes (the series themselves are Rust's)
 struct EEStatisticsSeries {
-    EEStatisticsSeries() : mPoints(1), mMaxValue(0), mKeepHistory(false) {}
-    std::vector<EEStatisticsPoint> mPoints;  // the points
+    EEStatisticsSeries() : mPoints(1, EeUnitsStatPoint{0, 0}), mMaxValue(0), mKeepHistory(false) {}
+    std::vector<EeUnitsStatPoint> mPoints;  // the points (EEStatisticsPoint: the value, the game time; ee_units player_stats.rs)
     unsigned long mMaxValue;                // the largest value pushed (GetValue)
     bool mKeepHistory;                      // false: Set replaces the last point
 };
@@ -501,7 +495,6 @@ public:
         ee_units_stats_copy(this->mStats, inOther.mStats);
     }
     virtual ~EEPlayerStatistics() { ee_units_stats_free(this->mStats); }
-    static const UString sKey;              // "EEPlayerStatistics-"
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     // the series raised (the hot-key group events: (0x14, true)) or lowered by an amount, or set to a value
@@ -530,22 +523,13 @@ public:
     unsigned long mEndTime;                 // (saved)
 };
 
-// RTSPlayer's unit hash: the units whose id & 0x7f is the bucket's index, chained through RTSUnit::mNext (0x16f433
-// looks a unit up by id; provisional names)
-struct RTSUnitBucket {
-    // inline: RTSPlayer's ctors 0x16f095/0x16f12e zero the 128 buckets with VC6's down-counting array-ctor loop
-    RTSUnitBucket() : mFirst(NULL), mCount(0) {}
-    EEUnit* mFirst;                         // +0x00
-    unsigned long mCount;                   // +0x04
-};
-
 // C:\EEX\RTS Engine\Player\RTSPlayer.h (RECONSTRUCTION; file name inferred; vtable 0x442b5c). Virtual slots
 // from the vtable, named by offset.
 // port (R5b.4, round 29): the plain members mNextUniqueID .. mObserverMode are the Rust record EeUnitsRtsPlayerFields
 // (ee_units rts_player_save.rs; names, types and order kept), Load and Save Rust over it
 class RTSPlayer : public EeUnitsRtsPlayerFields {
 public:
-    RTSPlayer();
+    RTSPlayer() { this->Reset(); }         // an empty player with no units
     RTSPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0x16f12e (EEPlayer's ctor; mSaveVisMap = inPlayerID != 0)
     virtual ~RTSPlayer();                   // +0x00 (??_G 0x16f112, dtor 0x16f1cf)
     // +0x04 0x16f1f3: Virtual28(each mPendingUnits unit, inArg1), then Virtual0C() if inArg2 (both tested as bytes;
@@ -556,7 +540,7 @@ public:
     virtual void GetChecksum(ESChecksum& ioChecksum) { ee_rts_player_checksum(this, &ioChecksum); }   // +0x10 0x16f394 (EEPPlayerHelper)
     virtual bool IsActive() = 0;            // +0x14 (pure in the vtable; RTSWorld::UpdatePlayerPopulationLimit 0x147f0d tests `al == 1`)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x16f539
-    virtual void Clear();                   // +0x1c
+    virtual void Clear() {}                 // +0x1c
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond) { return ee_rts_player_repair_pointers(this, inFirst, inSecond); }   // +0x20 0x16f6d3 (ret 8, returns 0; was Virtual20())
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x16f6f8
     // +0x28 0x16f233: adds a unit (a new id unless inKeepID), then InsertUnit (was Virtual28())
@@ -598,7 +582,9 @@ public:
     std::vector<RTSUnit*> mKilledUnits;     // +0x004
     std::vector<RTSUnit*> mPendingUnits;    // +0x014
     UWideString mName;                      // +0x024 (the chat log compares senders with it)
-    RTSUnitBucket mUnitBuckets[128];        // +0x038
+    // +0x038 the unit hash: the units whose id & 0x7f is the bucket's index, chained through RTSUnit::mNext (the first
+    // unit, the count: ee_game rts units.rs; zeroed as the original's ctors did)
+    EeRtsUnitBucket mUnitBuckets[128] = {};
     const GEColor& GetColor() const { return this->mColor; }
     GEColor mColor;                         // +0x438 (1, 1, 1; saved)
     GEColor mShadeColor;                    // +0x444 (1, 1, 1)
@@ -652,8 +638,8 @@ public:
     // +0x54 0x163a25 (ret 0x18; can the player build inTechnology: EEABuild 0x1760 passes (id, 0x20, 1, 1, 3, 0); +0x14
     // is read as a byte, +0x1c receives the reason through UResourceFile::GetString; provisional names)
     virtual bool CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_PRODUCE, NULL, inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, 0.0f, outReason) != 0; }
-    virtual void NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag);  // +0x58 0x163d6f (EESMEffect 0x1be94e passes (another player, false); 0x55cee tests a byte; ret 8: EEComputerPlayer 0x2dca6 forwards both)
-    virtual void Virtual60();               // +0x60
+    virtual void NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag) {}  // +0x58 0x163d6f (EESMEffect 0x1be94e passes (another player, false); 0x55cee tests a byte; ret 8: EEComputerPlayer 0x2dca6 forwards both)
+    virtual void Virtual60() {}               // +0x60
     virtual void UnitCompleted(EEComplexUnit* inUnit) { EEPlayerUnits(this, 3, inUnit); }  // +0x68 0x164003 (ret 4: EEComputerPlayer 0x2e1e9 forwards it)
     virtual long ScaleCost(long inCost) { return inCost; }  // +0x6c 0xa549a
     // +0x70 0x164bea (ret 0xc): reads inUnit's mStats/mUnitClass and inOther's class, then 0x16542e (provisional name)
@@ -674,16 +660,18 @@ public:
     virtual bool CanAfford(EETechnology* inTechnology, long inUnitType, long inCount) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_AFFORD, inTechnology, inUnitType, inCount, 0, 0, 0, 0.0f, NULL) != 0; }
     // +0x84 0x16569c (ret 0xc; EEComputerPlayer's 0x2f16d passes its unit third)
     virtual void DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_DAMAGE, 0, inPlayer, inAmount, 0.0f); }
-    virtual void EpochMediaLoaded(long inEpoch);  // +0x88 (0x157269 `ret 4`, empty; EETechTreeNode 0x1cf989 passes a node's +0x4c)
+    virtual void EpochMediaLoaded(long inEpoch) {}  // +0x88 (0x157269 `ret 4`, empty; EETechTreeNode 0x1cf989 passes a node's +0x4c)
     virtual void PlayAcknowledgement(EEComplexUnit* inUnit) { ee_units_selection(this, 9, inUnit, 0, NULL, 0, false, false); }  // +0x8c 0x167f10 (a unit of the group the messages act on)
     virtual void RefreshTownGroups() { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_REFRESH_TOWN_GROUPS, 0, 0, 0); }       // +0x90
     virtual void UpdatePlayer();            // +0x94
-    virtual void FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile);  // +0x98 (EEMSendFlare; provisional name)
+    virtual void FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile) {}  // +0x98 (EEMSendFlare; provisional name)
     virtual void UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps);  // +0x9c 0x167f70 (ret 4; EEPhysics 0x1534d1 passes &mSound2Index7)
     virtual long FinishUnitsLoad(long inMajorVersion, long inMinorVersion) { return (long)ee_units_player_rest(this, EE_UNITS_PLAYER_REST_FINISH_UNITS_LOAD, 0, inMajorVersion, inMinorVersion); }  // +0xa0 0x1690a5 (each unit's slot +0x6c; returns 0)
-    virtual void EpochReached(long inEpoch);  // +0xa4 0x1695e7 (ret 4; 0..14 when EnabledChanged(); the tech tree passes it)
+    // port: the original let every computer player catch up to a human's epoch here (EEComputerPlayer::CatchUpEpoch);
+    // the timer went with the C++ classic's decisions: a Lua AI reads the epochs itself
+    virtual void EpochReached(long inEpoch) {}  // +0xa4 0x1695e7 (ret 4; 0..14 when EnabledChanged(); the tech tree passes it)
     virtual void SetCombatState(unsigned long inCombatState) { this->mCombatState = inCombatState; }  // +0xa8 0xa54a7
-    virtual void UnitStranded(EEComplexUnit* inUnit);  // +0xac (ret 4: EEComputerPlayer 0x3ed48 references the unit)
+    virtual void UnitStranded(EEComplexUnit* inUnit) {}  // +0xac (ret 4: EEComputerPlayer 0x3ed48 references the unit)
     virtual void PayImprovement(EEUnitClass* inClass, long inImprovement) { ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_PAY_IMPROVEMENT, inClass, inImprovement, 0, 0, 0, 0, 0.0f, NULL); }  // +0xb0 0x16b3f7 (ret 8; QueueImprovement passes the class)
     // +0xb4 (conscription 0xafe7e) (provisional name)
     virtual void Pay(EETechnology* inTechnology, long inUnitType, float inFraction) { ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_PAY, inTechnology, inUnitType, 0, 0, 0, 0, inFraction, NULL); }
@@ -692,9 +680,9 @@ public:
     virtual void UnitPlaced(EEComplexUnit* inUnit) { EEPlayerUnits(this, 1, inUnit); }  // +0xc0 0x16b88f (ret 4: EEComputerPlayer 0x3ef5d forwards it)
     virtual void UnitTaken(RTSUnit* inUnit, bool inSwapped) { EEPlayerUnits(this, 2, inUnit, inSwapped); }  // +0xc4 (2 arguments: EEUnit::DepleteResource pushes (this, 0); types inferred)
     virtual void UnitGoalDone(EEComplexUnit* inUnit) { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_UNIT_GOAL_DONE, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0); }            // +0xc8
-    virtual void EpochMediaUnloaded(long inEpoch);  // +0xcc (0x157269 `ret 4`, empty; EETechTreeNode 0x1cfcc9 passes a node's +0x4c)
+    virtual void EpochMediaUnloaded(long inEpoch) {}  // +0xcc (0x157269 `ret 4`, empty; EETechTreeNode 0x1cfcc9 passes a node's +0x4c)
     virtual bool AvoidsEnemies(EEComplexUnit* inUnit) { return false; }  // +0xd0 (ret 4, al: EEComputerPlayer 0x3f73e)
-    virtual void WonderStarted(EEComplexUnit* inUnit);  // +0xd4 (ret 4: EEComputerPlayer 0x3f7ba)
+    virtual void WonderStarted(EEComplexUnit* inUnit) {}  // +0xd4 (ret 4: EEComputerPlayer 0x3f7ba)
     virtual bool AdvanceImprovement(unsigned long inUnitType) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_ADVANCE_IMPROVEMENT, NULL, (int32_t)inUnitType, 0, 0, 0, 0, 0.0f, NULL) != 0; }  // +0xd8 0x16964a (ret 4; ComputeLoadDistance passes mQueuedImprovements's key, tests al)
 
     // 0x16ae11: with inUnit and inFlag set, calls slot 0x24 of +0x9ac; the hot-key events call it with (0, true)

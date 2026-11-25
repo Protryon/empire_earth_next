@@ -115,18 +115,3 @@ bool EEPPlayerEventList::GetNextEventSource(EETileLocation& outSource)
     outSource = EETileLocation(theX, theY);
     return theResult;
 }
-
-long EEPPlayerEventList::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_units_events_file(this->mList, &inFile, &EESaveFilePrimitive, false);
-}
-
-long EEPPlayerEventList::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_units_events_file(this->mList, &outFile, &EESaveFilePrimitive, true);
-}
-
-void EEPPlayerEventList::Call(EEPlayer* inPlayer, uint32_t inWhat, float inElapsed)
-{
-    ee_units_events_call(this->mList, this, inPlayer, &EEPPlayerEventList::Host, inWhat, inElapsed);
-}
