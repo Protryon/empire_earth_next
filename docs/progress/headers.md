@@ -63,8 +63,11 @@ Per header (logic before -> after), the biggest: EERulesGen 179 -> 0, EERandomMa
 | tour, `random-game --box-select --orders --seed 7`, editor (slot.py) | PASS, PASS, PASS |
 | `gates.sh` | GATES PASS: tour; ai-game time-cap, units [4, 38, 38], alive_computers [2, 3], engines classic_lua x 2; lan-game |
 
-port_metrics (batch 24 bbb0654d2 -> the tip before the hooks fix): cpp_lines 114,065 -> 110,363 (-3,702),
-cpp_files 369 -> 361, logic 19,021 -> 17,654, classes 855 -> 837.
+All of the above ran on the tip merged with batch 25 (e88c6d339; ai-game units [4, 38, 38], test build 387 inputs).
+
+port_metrics, batch 25 (04ccdbcf3) -> the merged tip: cpp_lines 109,934 -> 106,330 (-3,604), cpp_files 354 -> 346
+(-8), logic 17,218 -> 15,867 (-1,351), classes 810 -> 792 (-18), extern_c +14, rust_hdrs +4, unsafe +34,
+layout -14. The lane's headers after batch 25: 3,078 logic lines (list.py).
 
 The test profile's harness hooks (tools/build.py `HARNESS_HOOKS`) were inlined by the pass and broke only the
 test build: EEWorld::RemovePlayerFromGame, EEPhysics::Tick and ReportStatistics are out of line again.
