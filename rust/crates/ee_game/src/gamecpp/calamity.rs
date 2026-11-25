@@ -1306,7 +1306,13 @@ fn answer(r: &Run, call: &EeCalamityCall, out: &mut EeCalamityReply) -> bool {
                     &[cptr(&at), ptr(&mut vol), ptr(&mut pan), ptr(&mut pitch)],
                     &[volume(sound)],
                 );
-                crate::gamecpp::calamity_capture::ee_gamecpp_capture_start_event(k::CAL_C_START_SOUND as c_long, 0, 0, vol, pan);
+                crate::gamecpp::calamity_capture::ee_gamecpp_capture_start_event(
+                    k::CAL_C_START_SOUND as c_long,
+                    0,
+                    0,
+                    vol,
+                    pan,
+                );
             }
             let node = play_node(sound, vol, pan, pitch);
             keep_sound(c, node, false);

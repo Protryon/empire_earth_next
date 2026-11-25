@@ -71,7 +71,10 @@ fn player_fields<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, player: usize) {
     }
     // SAFETY: the live player's records, copied out
     let (saved, fields) = unsafe {
-        (*(c.civc_player_saved(player) as *const EeUnitsPlayerSaved), *(c.civc_player_fields(player) as *const EeUnitsPlayerFields))
+        (
+            *(c.civc_player_saved(player) as *const EeUnitsPlayerSaved),
+            *(c.civc_player_fields(player) as *const EeUnitsPlayerFields),
+        )
     };
     r.f32(fields.mConversionFactor);
     r.f32(saved.mHighGroundBonus);

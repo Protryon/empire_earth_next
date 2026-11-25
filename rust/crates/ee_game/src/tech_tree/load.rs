@@ -78,7 +78,11 @@ pub(crate) fn fields_of(node: P) -> EeTechNodeFields {
 fn unit_classes(node: P) -> Vec<c_ulong> {
     let d = node_data(node);
     // SAFETY: the node's data record when it has one
-    if d.is_null() { Vec::new() } else { unsafe { (*d).unit_classes().to_vec() } }
+    if d.is_null() {
+        Vec::new()
+    } else {
+        unsafe { (*d).unit_classes().to_vec() }
+    }
 }
 
 /// The record and the unit classes of a node or an epoch, after `mData` is made: the record read, the unit class

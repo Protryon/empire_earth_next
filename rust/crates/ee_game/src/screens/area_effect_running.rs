@@ -348,9 +348,7 @@ mod tests {
             ee_area_effect_running_free(state);
         }
         let calls = fake.calls();
-        assert!(calls.contains(
-            "aes_set_x(50, 2.0)\naes_set_y(50, 3.0)\nae_fields(50)"
-        ));
+        assert!(calls.contains("aes_set_x(50, 2.0)\naes_set_y(50, 3.0)\nae_fields(50)"));
         assert_eq!((loaded.mDirty, loaded.mCount), (true, 4));
         assert!(calls.contains("aes_affecting_clear(11)"));
         assert!(calls.contains("aem_affecting_add(11, 50)"));

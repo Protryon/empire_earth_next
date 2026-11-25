@@ -38,8 +38,8 @@ use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUn
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
-use crate::gamecpp::calamity_capture as cap;
 use super::{cptr, h, hd, hf, hp, pa, ptr, rec, O, P};
+use crate::gamecpp::calamity_capture as cap;
 
 /// `kCalamityVolcano`, `kCalamitySpecialAttack`; the effect kind `kEffectDamaged`; the action `kActionIdle`.
 const CAL_O_VOLCANO: c_long = 9;
@@ -401,7 +401,8 @@ pub extern "C" fn ee_gamecpp_calamity_destroy_all(m: *mut c_void) {
     let n = active(m);
     for i in 0..active(m) {
         let c = active_at(m, i);
-        cap::ee_gamecpp_capture_calamity_start(class_of(c) as *mut c_void, c as *mut c_void, true); // CALT (TEST ONLY): Stop
+        cap::ee_gamecpp_capture_calamity_start(class_of(c) as *mut c_void, c as *mut c_void, true);
+        // CALT (TEST ONLY): Stop
     }
     let deleted = h(O::MgrDeleteCalamities, m, &[]);
     h(O::Verify, 0, &[(deleted as usize == n) as i64, 77]);
@@ -695,7 +696,8 @@ pub extern "C" fn ee_gamecpp_calamity_add(m: *mut c_void, c: *mut c_void) {
     }
     if started {
         h(O::MgrCalamityPush, m, &[pa(c)]);
-        cap::ee_gamecpp_capture_calamity_save(c as *mut c_void, (active(m) as i64 - 1) as c_ulong); // CALK (TEST ONLY): each calamity at its start
+        cap::ee_gamecpp_capture_calamity_save(c as *mut c_void, (active(m) as i64 - 1) as c_ulong);
+    // CALK (TEST ONLY): each calamity at its start
     } else {
         h(O::CalDelete, c, &[]); // releases its caster/target references and the media its ctor loaded
     }
@@ -1212,7 +1214,8 @@ pub extern "C" fn ee_gamecpp_functor_update(fu: *mut c_void, elapsed: f32, c: *m
 }
 
 fn contagion_event(op: i64, a: i64, b: i64) {
-    cap::ee_gamecpp_capture_contagion_event(op as c_long, a as c_long, b as c_long, 0.0, 0.0); // CONT (TEST ONLY)
+    cap::ee_gamecpp_capture_contagion_event(op as c_long, a as c_long, b as c_long, 0.0, 0.0);
+    // CONT (TEST ONLY)
 }
 
 /// `kContagionInfect`, `kContagionCure`, `kContagionDamage` (ee/EETechCapture.h).

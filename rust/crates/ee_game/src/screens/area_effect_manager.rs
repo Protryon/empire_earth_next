@@ -97,7 +97,8 @@ pub(crate) fn find_effect<C: Cpp + ?Sized>(
             continue;
         }
         // SAFETY: a live effect's record
-        let owner_player = unsafe { (*(c.ae_fields(effect) as *const ee_sim::tech::area_effect::EeAreaEffectFields)).mPlayer } as i64;
+        let owner_player =
+            unsafe { (*(c.ae_fields(effect) as *const ee_sim::tech::area_effect::EeAreaEffectFields)).mPlayer } as i64;
         let affects = if !mode {
             c.aem_affects_player(effect, owner_player, player)
         } else {
@@ -124,7 +125,10 @@ mod tests {
         fake.answer("aem_list_count", &[1]).answer("aem_list_at", &[50]);
         collect_effects(&mut fake, 2.0, 10.5, 20.5, 3, 7, 9);
         let calls = fake.calls();
-        assert!(calls.contains("aem_rect_top(18)\naem_rect_left(8)\naem_rect_bottom(22)\naem_rect_right(12)"), "{calls}");
+        assert!(
+            calls.contains("aem_rect_top(18)\naem_rect_left(8)\naem_rect_bottom(22)\naem_rect_right(12)"),
+            "{calls}"
+        );
         assert!(calls.ends_with("aem_effect_radius(50)\naem_for_each(1, 50, 3, 0.0, 10.5, 20.5)"));
     }
 
@@ -147,7 +151,9 @@ mod tests {
         fake.answer("aem_effects_count", &[2]).answer("aem_effects_at", &[50, 51]);
         fake.answer("aem_list_count", &[1, 1]).answer("aem_list_at", &[50, 50]);
         let mut effect = ee_sim::tech::area_effect::EeAreaEffectFields { mPlayer: 2, ..Default::default() };
-        fake.answer("aem_is_immunity", &[1]).answer("aem_effect_kind", &[4]).answer("ae_fields", &[&mut effect as *mut _ as i64]);
+        fake.answer("aem_is_immunity", &[1])
+            .answer("aem_effect_kind", &[4])
+            .answer("ae_fields", &[&mut effect as *mut _ as i64]);
         fake.answer("aem_affects_player_reversed", &[1]).answer("aem_in_range", &[1]);
         assert_eq!(find_effect(&mut fake, 1, 4, 3.0, 4.0, 5, true, 8), 51);
         assert!(fake.calls().contains("aem_affects_player_reversed(51, 2, 5)\naem_in_range(51, 3.0, 4.0)"));

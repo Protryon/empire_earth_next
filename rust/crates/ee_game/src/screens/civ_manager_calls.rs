@@ -20,7 +20,10 @@ fn upgrade_fields<C: Cpp + ?Sized>(c: &mut C, u: usize) -> *mut EeUnitsUnitClass
 }
 
 /// The player's records (`EEPlayer`'s `EeUnitsPlayerSaved` and `EeUnitsPlayerFields`), read and written in place.
-fn player_records<'a, C: Cpp + ?Sized>(c: &mut C, player: i32) -> (&'a mut EeUnitsPlayerSaved, &'a mut EeUnitsPlayerFields) {
+fn player_records<'a, C: Cpp + ?Sized>(
+    c: &mut C,
+    player: i32,
+) -> (&'a mut EeUnitsPlayerSaved, &'a mut EeUnitsPlayerFields) {
     let pl = c.civc_player(player as i64);
     // SAFETY: the live player's records (no other reference to them lives across the caller's use)
     unsafe { (&mut *(c.civc_player_saved(pl) as *mut _), &mut *(c.civc_player_fields(pl) as *mut _)) }
