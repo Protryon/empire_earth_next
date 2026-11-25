@@ -64,10 +64,7 @@ public:
 template <class T> class UIListBox : public UIControl {
 public:
     typedef EeUiListCall UIListBoxCall;
-    intptr_t Call(UIListBoxCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const
-    {
-        return ee_ui_list_call(this->mRust, inCall, a, b, f);
-    }
+    intptr_t Call(UIListBoxCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const { return ee_ui_list_call(this->mRust, inCall, a, b, f); }
     intptr_t CallF(UIListBoxCall inCall, float f0, float f1 = 0.0f, float f2 = 0.0f) const { return ee_ui_list_call(this->mRust, inCall, 0, 0, UIF4(f0, f1, f2)); }
     GEColor Color(UIListBoxCall inCall) const { return UIOut(ee_ui_list_call, this->mRust, inCall, (intptr_t)0, (intptr_t)0).Color(); }
     UIListBox(unsigned long inId, const std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
@@ -127,10 +124,7 @@ public:
     virtual void ButtonDown() { this->Call(UIListBoxCall::ButtonDown); }   // slot 0xa0
     virtual void ButtonUp() { this->FireTriggerEvent(kControlTriggerButtonUp); }
     long DrawScrollBarText() { return (long)this->Call(UIListBoxCall::DrawScrollBarText); }
-    const GERectangle& GetCopyTextRectangle() const
-    {
-        return *reinterpret_cast<const GERectangle*>(this->Call(UIListBoxCall::CopyTextRectangle));
-    }
+    const GERectangle& GetCopyTextRectangle() const { return *reinterpret_cast<const GERectangle*>(this->Call(UIListBoxCall::CopyTextRectangle)); }
     unsigned long GetDrawCount() const { return (unsigned long)this->Call(UIListBoxCall::DrawCount); }
     // the subclasses' reads and writes of the members (R6 ui round 15's census)
     unsigned long GetLineHeight() const { return (unsigned long)this->Call(UIListBoxCall::LineHeight); }
@@ -145,10 +139,7 @@ public:
     {
         this->CallF(UIListBoxCall::SetCopiedFocusedRectColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue());
     }
-    GERhombus* GetCopiedSelectedBackground() const
-    {
-        return reinterpret_cast<GERhombus*>(this->Call(UIListBoxCall::CopiedSelectedBackground));
-    }
+    GERhombus* GetCopiedSelectedBackground() const { return reinterpret_cast<GERhombus*>(this->Call(UIListBoxCall::CopiedSelectedBackground)); }
     virtual unsigned long GetNumLines() const { return this->mData.size(); }  // slot 0xa8
     virtual long MouseLButtonDown() { return (long)this->Call(UIListBoxCall::MouseLButtonDown); }
     virtual long MouseLButtonUp() { return (long)this->Call(UIListBoxCall::MouseLButtonUp); }

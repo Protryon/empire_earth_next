@@ -95,9 +95,7 @@ extern "C" int32_t ee_screenscpp_setsx(uint32_t inOp, void* const* p, int32_t* i
             theForm, (unsigned long)i[0], 0, false));
         return 0;
     case EE_SCREENS_SETSX_SCREEN_EVENT: *theOut = EECreateScreenEvent((uint32_t)i[0]); return 0;
-    case EE_SCREENS_SETSX_SET_TRIGGER:
-        static_cast<UIControl*>(p[0])->SetTriggerEvent((unsigned long)i[0], static_cast<UIEvent*>(p[1]));
-        return 0;
+    case EE_SCREENS_SETSX_SET_TRIGGER: static_cast<UIControl*>(p[0])->SetTriggerEvent((unsigned long)i[0], static_cast<UIEvent*>(p[1])); return 0;
     case EE_SCREENS_SETSX_EVENT_RELEASE: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
     case EE_SCREENS_SETSX_ADD_CONTROL: theForm->AddControl(static_cast<UIControl*>(p[1]), 14); return 0;
     case EE_SCREENS_SETSX_NAMES_CLEAR: sSetsNames.clear(); return 0;
@@ -113,28 +111,18 @@ extern "C" int32_t ee_screenscpp_setsx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT:
         ee_screens_seob_get_names(static_cast<EeScreensSeObject*>(p[1]), &sSetsNames);
         return 0;
-    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_AREA:
-        ee_screens_sear_names(static_cast<EeScreensSeArea*>(p[1]), &sSetsNames);
-        return 0;
+    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_AREA: ee_screens_sear_names(static_cast<EeScreensSeArea*>(p[1]), &sSetsNames); return 0;
     case EE_SCREENS_SETSX_LIST_APPEND_NAMES: static_cast<UILBString*>(p[0])->AppendStringArray(sSetsNames); return 0;
-    case EE_SCREENS_SETSX_EDITOR:
-        *theOut = static_cast<EEUIFScenarioEditor*>(static_cast<UIControl*>(p[0])->GetForm());
-        return 0;
-    case EE_SCREENS_SETSX_CONTROL_BY_ID:
-        *theOut = static_cast<EEUIFScenarioEditor*>(p[0])->GetControlById((unsigned long)i[0]);
-        return 0;
+    case EE_SCREENS_SETSX_EDITOR: *theOut = static_cast<EEUIFScenarioEditor*>(static_cast<UIControl*>(p[0])->GetForm()); return 0;
+    case EE_SCREENS_SETSX_CONTROL_BY_ID: *theOut = static_cast<EEUIFScenarioEditor*>(p[0])->GetControlById((unsigned long)i[0]); return 0;
     case EE_SCREENS_SETSX_SET_DISPLAY: static_cast<UIControl*>(p[0])->SetDisplayMode((unsigned long)i[0]); return 0;
-    case EE_SCREENS_SETSX_SET_GAME_VIEW:
-        static_cast<EEUIFScenarioEditor*>(p[0])->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), false);
-        return 0;
+    case EE_SCREENS_SETSX_SET_GAME_VIEW: static_cast<EEUIFScenarioEditor*>(p[0])->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), false); return 0;
     case EE_SCREENS_SETSX_GAME_VIEW_RECT: EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3])); return 0;
     case EE_SCREENS_SETSX_CHECKED_EVENT:   // (the hide-UI box's event, an EESEERust: its Rust event)
         *theOut = static_cast<EESEERust*>(t->GetTriggerEvent(kControlTriggerChecked))->mEvent;
         return 0;
     case EE_SCREENS_SETSX_SET_CHECKED: static_cast<UICheckBox*>(p[0])->SetChecked(true); return 0;
-    case EE_SCREENS_SETSX_GROUP_ENABLE:
-        static_cast<EEUIFScenarioEditor*>(p[0])->GetEntityGroupById((unsigned long)i[0])->Enable();
-        return 0;
+    case EE_SCREENS_SETSX_GROUP_ENABLE: static_cast<EEUIFScenarioEditor*>(p[0])->GetEntityGroupById((unsigned long)i[0])->Enable(); return 0;
     case EE_SCREENS_SETSX_CLEAR_529066: gB529066 = false; return 0;
     case EE_SCREENS_SETSX_CLEAR_FOLLOWING: gCameraFollowing = false; return 0;
     case EE_SCREENS_SETSX_CLEAR_529068: gB529068 = false; return 0;

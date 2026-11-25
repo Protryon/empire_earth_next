@@ -112,9 +112,7 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, void** ioSlots, uint32_
 #define theControls reinterpret_cast<UIControl**>(ioSlots)
 #define theError static_cast<UITextLabel*>(theControls[0])
     switch (inOp) {
-    case EE_SCREENS_DLG_MESSAGE_SIZE:
-        theError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB));
-        break;
+    case EE_SCREENS_DLG_MESSAGE_SIZE: theError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB)); break;
     case EE_SCREENS_DLG_SWITCH: gUserInterface->SwitchToForm(theBox); break;
     case EE_SCREENS_DLG_PLACE: theControls[inA]->SetRectangle(EEScratch<GERectangle>(kScratchDialogRectangle)); break;
     case EE_SCREENS_DLG_SET_RECT: memcpy(kDialogSides[inA], &inB, 4); break;

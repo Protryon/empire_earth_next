@@ -49,8 +49,7 @@ public:
     U2DPoint<long> AreaRandomPoint() { return EEAIArea::PointOf(ee_astar_area_random_point((uint64_t)(uintptr_t)this)); }
     // +0x28 0xdb7f (ret 4): the tile removed and, on success, the hull rebuilt; whether it was removed (a forest:
     // its own)
-    bool RemoveTile(const U2DPoint<long>& inPoint)
-        { return ee_astar_area_remove_tile_of((uint64_t)(uintptr_t)this, inPoint.mX, inPoint.mY); }
+    bool RemoveTile(const U2DPoint<long>& inPoint) { return ee_astar_area_remove_tile_of((uint64_t)(uintptr_t)this, inPoint.mX, inPoint.mY); }
 
     // inline COMDAT 0xc6fd (emitted at its first user in EECPASGU*'s range): the hull (bounds first), then the tiles
     // Provisional name
@@ -58,8 +57,7 @@ public:
     // 0xd81e: the squared distance of the hulls' closest points (provisional name)
     float GetHullDistanceSquared(EEAIArea* inOther) { return ee_astar_area_hull_distance_squared(this, inOther); }
     // 0xdaae: appends every tile of the hull's scan lines (provisional name)
-    void GetTiles(std::vector<U2DPoint<long> >& outTiles)
-        { ee_astar_area_get_tiles(this, outTiles.size(), &outTiles, EEAIPushPoint); }
+    void GetTiles(std::vector<U2DPoint<long> >& outTiles) { ee_astar_area_get_tiles(this, outTiles.size(), &outTiles, EEAIPushPoint); }
 
     // New (port): the members behind accessors (R5b.1 blocker (b): the AI and the units read an area only
     // through these, so the record can live elsewhere)
@@ -69,8 +67,7 @@ public:
     long GetNumTiles() const { return this->mTiles.Size(); }
     // the hull (the record's; U2DConvexHull<long>'s calls, HULL capture records and all)
     const U2DPoint<long>& GetHullCenter() const { return reinterpret_cast<const U2DPoint<long>&>(this->hull_center); }
-    const U2DRectangle<long>& GetHullBounds() const
-        { return reinterpret_cast<const U2DRectangle<long>&>(this->hull_bounds); }
+    const U2DRectangle<long>& GetHullBounds() const { return reinterpret_cast<const U2DRectangle<long>&>(this->hull_bounds); }
     // BoundedContains: the bounds, then the outline (HULL 6)
     bool HullContains(const U2DPoint<long>& inPoint) { return ee_astar_area_hull_contains(this, EEAIArea::HullPoint(inPoint)); }
     unsigned long GetHullPointCount() const { return (unsigned long)EEAIListView<U2DPoint<long> >(ee_astar_area_hull_points, static_cast<const EeAStarAreaRecord*>(this)).size(); }

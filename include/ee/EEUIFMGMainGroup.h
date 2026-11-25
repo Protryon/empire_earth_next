@@ -32,10 +32,7 @@ public:
     bool WantsRefresh() { return ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_WANTS_REFRESH, NULL, 0) != 0; }
     // 0x268162: the first selected unit with a +0x3c value, else the first selected unit, else the local player's
     // +0x9d4 (does not read `this`)
-    EEUnit* GetSelectedUnit()
-    {
-        return reinterpret_cast<EEUnit*>(ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SELECTED_UNIT, NULL, 0));
-    }
+    EEUnit* GetSelectedUnit() { return reinterpret_cast<EEUnit*>(ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SELECTED_UNIT, NULL, 0)); }
     void Open(EEUIFMainGame* inForm) { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_OPEN, NULL, 0); }       // 0x2681c2 (the main game form's Open; provisional name)
     // Lays out the command and research buttons of the player's selected unit (civ power buttons, the class's
     // commands, its available techs with hot keys, airport timers); hides them all for others (main_group_calls.rs)

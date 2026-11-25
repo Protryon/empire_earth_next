@@ -44,8 +44,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
 {
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(inForm));
     switch (inOp) {
-    case EE_SCREENS_SE_OP_OPEN_CIV_BUILDER:
-        return (uint32_t)gUserInterface->OpenCivilizationBuilder(&theEditor->mC1A0, true);
+    case EE_SCREENS_SE_OP_OPEN_CIV_BUILDER: return (uint32_t)gUserInterface->OpenCivilizationBuilder(&theEditor->mC1A0, true);
     case EE_SCREENS_SE_OP_IN_EDITOR: return gUIManager->GetInScenarioEditor() == true;
     }
     return 0;

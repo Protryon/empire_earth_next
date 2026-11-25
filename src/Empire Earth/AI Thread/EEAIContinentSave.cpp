@@ -52,10 +52,7 @@ extern long& gEEAIRegionSize;
 
 namespace {
 
-template <class T> size_t OffsetOf(const T* inObject, const void* inMember)
-{
-    return (size_t)((const char*)inMember - (const char*)inObject);
-}
+template <class T> size_t OffsetOf(const T* inObject, const void* inMember) { return (size_t)((const char*)inMember - (const char*)inObject); }
 
 
 int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)

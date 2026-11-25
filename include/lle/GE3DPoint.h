@@ -31,8 +31,7 @@ public:
         { outPoint = GE3DPoint(inVector.mX + this->mX, inVector.mY + this->mY, inVector.mZ + this->mZ); }
     void Clear() { *this = GE3DPoint(); }
     float DistanceTo(const GE3DPoint& inPoint) const { return ee_ge_3d_distance(GERust(*this), GERust(inPoint)); }
-    float DistanceToSquared(const GE3DPoint& inPoint) const
-        { return ee_ge_3d_distance_squared(GERust(*this), GERust(inPoint)); }
+    float DistanceToSquared(const GE3DPoint& inPoint) const { return ee_ge_3d_distance_squared(GERust(*this), GERust(inPoint)); }
     void GetChecksum(ESChecksum& ioChecksum) const {}
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }

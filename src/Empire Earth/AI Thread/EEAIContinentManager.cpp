@@ -40,10 +40,7 @@ static long EEAIRegionSize() { return gWorld.mInfluenceTable != NULL ? gWorld.mI
 
 // Marks the manager as clearing, resets it, frees its grids and rebuilds the continents and hills of inMap (Rust:
 // cm_passes.rs)
-void EEAIContinentManager::Clear(EEMap* inMap)
-{
-    ee_astar_cm_clear(&this->mRecord, (uint64_t)(uintptr_t)inMap, EEAIRegionSize());
-}
+void EEAIContinentManager::Clear(EEMap* inMap) { ee_astar_cm_clear(&this->mRecord, (uint64_t)(uintptr_t)inMap, EEAIRegionSize()); }
 
 // Builds the AI regions of inMap after Clear: tile values, path areas and sectors, choke points, the region ids, the
 // scenario manager's areas (scenario::entry::region_inputs) and the six chain kinds; frees the work grids (continent

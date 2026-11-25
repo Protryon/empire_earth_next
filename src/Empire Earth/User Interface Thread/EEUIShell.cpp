@@ -108,9 +108,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_BG_OPACITY: c->SetBgOpacity(f[0]); break;
     case EE_SCREENS_SH_BG_COLOR: c->SetBgColor(GEColor(f[0], f[1], f[2])); break;
     case EE_SCREENS_SH_BG_PLAYER_COLOR: c->SetBgColor(EEGetPlayerColor((unsigned long)a)); break;
-    case EE_SCREENS_SH_SELECTED_COLOR:
-        static_cast<UILBString*>(c)->GetSelectedBackground()->SetColor(GEColor(f[0], f[1], f[2]));
-        break;
+    case EE_SCREENS_SH_SELECTED_COLOR: static_cast<UILBString*>(c)->GetSelectedBackground()->SetColor(GEColor(f[0], f[1], f[2])); break;
     case EE_SCREENS_SH_SELECTED_OPACITY: static_cast<UILBString*>(c)->GetSelectedBackground()->SetOpacity(f[0]); break;
     case EE_SCREENS_SH_SELECTION_INDEX: return (int64_t)(uint32_t)static_cast<EEUIShellCombo*>(c)->Selection();
     case EE_SCREENS_SH_SET_SELECTION: static_cast<UIComboBox*>(c)->SetCurrentSelection((unsigned long)a); break;
@@ -121,21 +119,14 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_FIRE: c->FireTriggerEvent((unsigned long)a); break;
     case EE_SCREENS_SH_SLIDER_VALUE: return (int64_t)(uint32_t)static_cast<UISlider*>(c)->GetCurrentRangeValue();
     case EE_SCREENS_SH_SLIDER_MAX: return static_cast<UISlider*>(c)->GetMaxRange();
-    case EE_SCREENS_SH_LABEL_NUMBER:
-        static_cast<UITextLabel*>(c->GetForm()->GetControlById((unsigned long)a))->SetText((long)b);
-        break;
+    case EE_SCREENS_SH_LABEL_NUMBER: static_cast<UITextLabel*>(c->GetForm()->GetControlById((unsigned long)a))->SetText((long)b); break;
     case EE_SCREENS_SH_BUTTON_TEXT_BYTES:
         static_cast<UIButton*>(c)->SetText(UWideString(reinterpret_cast<const char*>(a)), reinterpret_cast<GEFont*>(b));
         break;
-    case EE_SCREENS_SH_LIST_COUNT:
-        return static_cast<UIListBox<UWideString>*>(c->GetForm()->GetControlById((unsigned long)a))->GetLineCount();
-    case EE_SCREENS_SH_PLAYER_PAGE:
-        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SELECT_PAGE, (uint32_t)a);
-        break;
+    case EE_SCREENS_SH_LIST_COUNT: return static_cast<UIListBox<UWideString>*>(c->GetForm()->GetControlById((unsigned long)a))->GetLineCount();
+    case EE_SCREENS_SH_PLAYER_PAGE: static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SELECT_PAGE, (uint32_t)a); break;
     case EE_SCREENS_SH_FILL_TECH_LISTS: gUIManager->GetScenarioEditorForm()->PlayerCall(EE_SCREENS_SEPL_FILL_TECH_LISTS); break;
-    case EE_SCREENS_SH_SET_PLAYER_COUNT:
-        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)a);
-        break;
+    case EE_SCREENS_SH_SET_PLAYER_COUNT: static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)a); break;
     case EE_SCREENS_SH_BITMAP_SCALE: reinterpret_cast<GEBitmap*>(a)->SetXYScale(f[0], f[1]); break;
     case EE_SCREENS_SH_BITMAP_RELEASE: reinterpret_cast<GEBitmap*>(a)->Dereference(); break;
     case EE_SCREENS_SH_SET_NORMAL: static_cast<UIButton*>(c)->SetNormalBitmap(reinterpret_cast<GEBitmap*>(a)); break;
@@ -144,9 +135,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     // the tech lists' (EESEUITechListBox)
     case EE_SCREENS_SH_LIST_VIEW: return static_cast<EEUIShellList*>(c)->View();
     case EE_SCREENS_SH_LIST_DELETE_ALL: static_cast<UILBString*>(c)->DeleteAllEntries(); break;
-    case EE_SCREENS_SH_LIST_APPEND_BYTES:
-        static_cast<UILBString*>(c)->AppendLine(UWideString(reinterpret_cast<const char*>(a)));
-        break;
+    case EE_SCREENS_SH_LIST_APPEND_BYTES: static_cast<UILBString*>(c)->AppendLine(UWideString(reinterpret_cast<const char*>(a))); break;
     case EE_SCREENS_SH_LIST_LINE_COUNT: return static_cast<UILBString*>(c)->GetLineCount();
     case EE_SCREENS_SH_LIST_START_LINE: static_cast<UILBString*>(c)->SetStartingDisplayLine((unsigned long)a); break;
     case EE_SCREENS_SH_LIST_SELECT_SCROLL: static_cast<UILBString*>(c)->ChangeSelectionIndex((unsigned long)a, false, true); break;
@@ -154,9 +143,7 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_TECH_EPOCH: return EETechTreeEpochOf((long)a);
     case EE_SCREENS_SH_TECH_DATA_ID: return gTechTree.Get((long)a)->mData->mID;
     // the unit tab's (EEUIFSELBUnitList, EEUIFSELBCargoList, EEUIFSEBRotation)
-    case EE_SCREENS_SH_UNIT_SELECT_TYPE:
-        static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT);
-        break;
+    case EE_SCREENS_SH_UNIT_SELECT_TYPE: static_cast<EEUIFScenarioEditor*>(c->GetForm())->UnitCall(EE_SCREENS_SEUN_SELECT); break;
     case EE_SCREENS_SH_ENTER_KEY: return EEUIShellList::EnterKey();
     case EE_SCREENS_SH_DELETE_UNIT: (new EESEARust(EE_SCREENS_SEW_DELETE_UNIT, NULL, (int32_t)a))->Dereference(); break;
     case EE_SCREENS_SH_BITMAP_ROTATION: reinterpret_cast<GEBitmap*>(a)->SetRotation(f[0]); break;
@@ -196,13 +183,9 @@ extern "C" int64_t ee_screenscpp_shell(void* inControl, uint32_t inOp, int64_t a
     case EE_SCREENS_SH_TRIGGER_REFRESH: EEShellTriggers()->TriggerSubSlot((long)a, EE_SCREENS_SETS_SCREEN_REFRESH); break;
     case EE_SCREENS_SH_TRIGGER_REFRESH_SCREEN: EEShellTriggers()->TriggerCall(EE_SCREENS_SETS_REFRESH_SCREEN); break;
     case EE_SCREENS_SH_TRIGGER_JUMP: EESETriggerJump((unsigned long)a, (unsigned long)b); break;
-    case EE_SCREENS_SH_OBJECT_UPDATE_SELECTION:
-        EEShellTriggers()->TriggerSubOp(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SEOB_UPDATE_SELECTION);
-        break;
+    case EE_SCREENS_SH_OBJECT_UPDATE_SELECTION: EEShellTriggers()->TriggerSubOp(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SEOB_UPDATE_SELECTION); break;
     case EE_SCREENS_SH_OBJECT_STORE: EEShellTriggers()->TriggerSubSlot(EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT, EE_SCREENS_SETS_SCREEN_STORE); break;
-    case EE_SCREENS_SH_COPY_FIRST_TO_ALL:
-        static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_COPY_FIRST_TO_ALL);
-        break;
+    case EE_SCREENS_SH_COPY_FIRST_TO_ALL: static_cast<EEUIFScenarioEditor*>(c->GetForm())->PlayerCall(EE_SCREENS_SEPL_COPY_FIRST_TO_ALL); break;
     case EE_SCREENS_SH_BRUSH_SIZE: reinterpret_cast<EEUIFSEBrushGroup*>(a)->mBrushSize = (long)b; break;
     }
     return 0;

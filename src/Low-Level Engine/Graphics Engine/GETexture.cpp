@@ -207,13 +207,7 @@ long GESurface::GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType,
 }
 
 // Loads an image file into the surface by file type (BMP: unsupported, JPG, JPG2, PNG; TGA: no longer read, D9)
-long GESurface::Load(FSFileSpec& inFile, unsigned char inType)
-{
-    return ee_of_surf_load(&GESurfaceHost, this, &inFile, inType);
-}
+long GESurface::Load(FSFileSpec& inFile, unsigned char inType) { return ee_of_surf_load(&GESurfaceHost, this, &inFile, inType); }
 
 // Saves the surface as an image file of the given type (BMP, JPG, JPG2)
-long GESurface::Save(FSFileSpec& inFile, unsigned char inType)
-{
-    return ee_of_surf_save(&GESurfaceHost, this, &inFile, inType);
-}
+long GESurface::Save(FSFileSpec& inFile, unsigned char inType) { return ee_of_surf_save(&GESurfaceHost, this, &inFile, inType); }

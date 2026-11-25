@@ -24,10 +24,7 @@ public:
     virtual ~ESChecksum() { ee_error_checksum_free(this->mRust); }
 
     // a described entry in a verbose set; else the value is added to the one sum
-    void AddChecksum(const UString& inDescription, unsigned long inChecksum)
-    {
-        ee_error_checksum_add(this->mRust, inDescription, inChecksum);
-    }
+    void AddChecksum(const UString& inDescription, unsigned long inChecksum) { ee_error_checksum_add(this->mRust, inDescription, inChecksum); }
     // whether inOther matches entry by entry; one error text per mismatch into outErrors
     bool Compare(const ESChecksum& inOther, std::vector<UString>& outErrors) const
         { return ee_error_checksum_compare(this->mRust, inOther.mRust, PushText, &outErrors); }

@@ -28,9 +28,7 @@ int64_t EEUIRustControl::HostOp(EEUIRustControl* inControl, uint32_t inOp, int64
     case EE_SCREENS_HC_DOUBLE_BASE: return inControl->UIControl::MouseLButtonDoublePressed();
     case EE_SCREENS_HC_UPDATE_MOUSE: return inControl->UpdateMouse(GE2DPoint(ioF[0], ioF[1]));
     case EE_SCREENS_HC_MOUSE_BOUNDS: gMouse->SetBounds(EEHudRect(ioF)); break;
-    case EE_SCREENS_HC_MOUSE_BOUNDS_WINDOW:
-        gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
-        break;
+    case EE_SCREENS_HC_MOUSE_BOUNDS_WINDOW: gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight())); break;
     case EE_SCREENS_HC_VIEW_HAS_MOUSE: return gViewport.GetViewRectangle().Contains(inControl->GetMouseLocation());
     case EE_SCREENS_HC_WINDOW_WIDTH: return gGameWindow->GetWidth();
     default: return inControl->RustOp(inOp, inA, inB, ioF);

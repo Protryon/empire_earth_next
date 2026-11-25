@@ -35,14 +35,8 @@ public:
     // ICF-folded (0x100633b1)
     UITextLabel* GetTextLabel() const { return (UITextLabel*)Call(EeUiButtonCall::TextLabel); }
     virtual unsigned long GetType() const { return kControlTypeTriStateCheckBox; }
-    virtual void SetLocation(const GE2DPoint& inLocation)
-    {
-        Call(EeUiButtonCall::TriSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY());
-    }
-    void SetText(const UWideString& inText, GEFont* inFont)
-    {
-        Call(EeUiButtonCall::TriSetText, (intptr_t)&inText, (intptr_t)inFont);
-    }
+    virtual void SetLocation(const GE2DPoint& inLocation) { Call(EeUiButtonCall::TriSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY()); }
+    void SetText(const UWideString& inText, GEFont* inFont) { Call(EeUiButtonCall::TriSetText, (intptr_t)&inText, (intptr_t)inFont); }
     virtual void ButtonUp() { Call(EeUiButtonCall::TriButtonUp); }   // 0x100805ea: the cycle, then UIButton's
     virtual void TabbedTo() { UIButton::TabbedTo(); }     // ICF-folded (0x1005fcac)
     virtual void TabbedFrom() { UIButton::TabbedFrom(); } // ICF-folded (0x1005fcb1)

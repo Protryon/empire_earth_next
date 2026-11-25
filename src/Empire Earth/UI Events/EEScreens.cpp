@@ -129,10 +129,7 @@ static void EEScreensRestoreDefaultYes(UIForm* inForm) { ee_screens_event(EE_SCR
 // its creation and the save event's end
 
 // the delete question, answered yes: the list's selected file deleted
-static void EEScreensDeleteSelectedFile(UIForm* inList)
-{
-    reinterpret_cast<UIFileListBox*>(inList)->DeleteSelectedFile();
-}
+static void EEScreensDeleteSelectedFile(UIForm* inList) { reinterpret_cast<UIFileListBox*>(inList)->DeleteSelectedFile(); }
 
 // the overwrite question, answered no: the pending save dropped
 static void EEScreensDropSave(UIForm* inObject) { reinterpret_cast<UReferenceCounter*>(inObject)->Dereference(); }
@@ -175,23 +172,17 @@ static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
     case EE_SCREENS_LE_RULE_UNIT_STEP: return (uint32_t)theRules.mUnitLimitStep;
     case EE_SCREENS_LE_RULE_WONDERS_MAXIMUM: return (uint32_t)EERuleLong(theRules.mWondersMaximum);
     case EE_SCREENS_LE_RULE_MAP_SIZES: return (uint32_t)theRules.mMapSizes.size();
-    case EE_SCREENS_LE_RULE_MAP_SIZE_NAME:
-        return inArg < theRules.mMapSizes.size() ? (uint32_t)theRules.mMapSizes[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_MAP_SIZE_NAME: return inArg < theRules.mMapSizes.size() ? (uint32_t)theRules.mMapSizes[inArg].mNameID : 0;
     case EE_SCREENS_LE_RULE_DIFFICULTIES: return (uint32_t)theRules.mDifficulties.size();
-    case EE_SCREENS_LE_RULE_DIFFICULTY_NAME:
-        return inArg < theRules.mDifficulties.size() ? (uint32_t)theRules.mDifficulties[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_DIFFICULTY_NAME: return inArg < theRules.mDifficulties.size() ? (uint32_t)theRules.mDifficulties[inArg].mNameID : 0;
     case EE_SCREENS_LE_RULE_SPEEDS: return (uint32_t)theRules.mSpeeds.size();
-    case EE_SCREENS_LE_RULE_SPEED_NAME:
-        return inArg < theRules.mSpeeds.size() ? (uint32_t)theRules.mSpeeds[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_SPEED_NAME: return inArg < theRules.mSpeeds.size() ? (uint32_t)theRules.mSpeeds[inArg].mNameID : 0;
     case EE_SCREENS_LE_RULE_VARIANTS: return (uint32_t)gGameVariants.size();
-    case EE_SCREENS_LE_RULE_VARIANT_SELECTABLE:
-        return inArg < gGameVariants.size() && gGameVariants[inArg]->mSelectable == true;
-    case EE_SCREENS_LE_RULE_VARIANT_NAME:
-        return inArg < gGameVariants.size() ? (uint32_t)EEGetGameVariantAt(inArg)->mNameID : 0;
+    case EE_SCREENS_LE_RULE_VARIANT_SELECTABLE: return inArg < gGameVariants.size() && gGameVariants[inArg]->mSelectable == true;
+    case EE_SCREENS_LE_RULE_VARIANT_NAME: return inArg < gGameVariants.size() ? (uint32_t)EEGetGameVariantAt(inArg)->mNameID : 0;
     case EE_SCREENS_LE_RULE_RESOURCE_LEVELS: return (uint32_t)EEGetNumberOfResourceLevels();
     case EE_SCREENS_LE_RULE_RESOURCE_LEVEL_NAME: return (uint32_t)EEGetResourceLevel((long)inArg)->GetNameID();
-    case EE_SCREENS_LE_RULE_STARTING_RESOURCES_NAME:
-        return inArg < EEStartingResources::sTable.size() ? (uint32_t)EEStartingResources::Get(inArg)->mNameID : 0;
+    case EE_SCREENS_LE_RULE_STARTING_RESOURCES_NAME: return inArg < EEStartingResources::sTable.size() ? (uint32_t)EEStartingResources::Get(inArg)->mNameID : 0;
     case EE_SCREENS_LE_RULE_EPOCH_TITLE: return (uint32_t)EEEpochTitleID((long)(int32_t)inArg);
     case EE_SCREENS_LE_RULE_GENERATORS: return (uint32_t)EERMGetNumberOfGenerators();
     case EE_SCREENS_LE_RULE_ENGINES: return (uint32_t)EECPEngineChoiceCount();
@@ -202,10 +193,7 @@ static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
 }
 
 
-static UWideString Text(const uint8_t* inText, size_t inLength)
-{
-    return UWideString(std::string((const char*)inText, inLength).c_str());
-}
+static UWideString Text(const uint8_t* inText, size_t inLength) { return UWideString(std::string((const char*)inText, inLength).c_str()); }
 
 // ---- the hot keys' (hot_keys.rs): inForm is the main game form
 

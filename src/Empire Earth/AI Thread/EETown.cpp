@@ -24,10 +24,7 @@
 
 
 // a tile as one word (x high, y low; ee_sim::cp town_world.rs unpack)
-static int64_t EETownPack(const EETileCoordinate& inTile)
-{
-    return (int64_t)(((uint64_t)(uint32_t)inTile.mX << 32) | (uint32_t)inTile.mY);
-}
+static int64_t EETownPack(const EETileCoordinate& inTile) { return (int64_t)(((uint64_t)(uint32_t)inTile.mX << 32) | (uint32_t)inTile.mY); }
 
 extern "C" int64_t ee_cp_town_host(void* inTown, int32_t inOp, uint64_t inA, uint64_t inB, TownIo* io)
 {
@@ -41,8 +38,7 @@ extern "C" int64_t ee_cp_town_host(void* inTown, int32_t inOp, uint64_t inA, uin
     case EE_CP_TOWN_SET_PATROL: EEPGSetPatrolPoints(me->mPatrolGroup, std::vector<U2DPoint<long> >((const U2DPoint<long>*)(uintptr_t)io->v[0], (const U2DPoint<long>*)(uintptr_t)io->v[0] + io->v[1]), me->mPlayer->GetPlayerID());
         return 0;
     case EE_CP_TOWN_FLAGS: return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
-    case EE_CP_TOWN_NODE_KIND:
-        return theUnit->GetTechTreeNode() != NULL ? (int64_t)theUnit->GetTechTreeNode()->mData->mKind : -1;
+    case EE_CP_TOWN_NODE_KIND: return theUnit->GetTechTreeNode() != NULL ? (int64_t)theUnit->GetTechTreeNode()->mData->mKind : -1;
     case EE_CP_TOWN_AREA_TILE: return EETownPack(theUnit->FindAreaTile(true, 1));
     case EE_CP_TOWN_SET_PATROL_GROUP: me->mPatrolGroup = reinterpret_cast<EEPPatrolGroup*>((uintptr_t)inA);
         return 0;

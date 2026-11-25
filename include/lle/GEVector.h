@@ -35,8 +35,7 @@ public:
     void Normalize() { ee_ge_vector_normalize(GERust(*this)); }
     // inline (no import in Default.dll; LLE's exported body 0xc3d4 is this expression; 0xc29f keeps the scale in
     // st0 across the three products, its tail-merged branches load only the scale)
-    void Scale(float inScale, GEVector& outVector) const
-        { outVector = GEVector(inScale * this->mX, inScale * this->mY, inScale * this->mZ); }
+    void Scale(float inScale, GEVector& outVector) const { outVector = GEVector(inScale * this->mX, inScale * this->mY, inScale * this->mZ); }
     void SetX(float inX) { this->mX = inX; }  // inline (exported 0x54ae4 / 0xc56c / 0xc576)
     void SetY(float inY) { this->mY = inY; }
     void SetZ(float inZ) { this->mZ = inZ; }

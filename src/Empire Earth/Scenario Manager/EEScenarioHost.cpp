@@ -33,10 +33,7 @@
 namespace {
 
 // the world's player slot inA (NULL outside the array, as no original index reached)
-EEPlayer* Player(int32_t inA)
-{
-    return inA >= 0 && inA < (int32_t)(sizeof(gWorld.mPlayers) / sizeof(gWorld.mPlayers[0])) ? gWorld.mPlayers[inA] : NULL;
-}
+EEPlayer* Player(int32_t inA) { return inA >= 0 && inA < (int32_t)(sizeof(gWorld.mPlayers) / sizeof(gWorld.mPlayers[0])) ? gWorld.mPlayers[inA] : NULL; }
 
 }   // namespace
 
@@ -52,8 +49,7 @@ extern "C" int64_t ee_scenariocpp_host_read(EESMHostContext* theContext, uint32_
     case EE_SCENARIO_READ_RANDOM: return gPhysics->GetRandom((long)inA, (long)inB);
     case EE_SCENARIO_READ_POPULATION: return thePlayer->GetTotalPopulation(false, false);
     case EE_SCENARIO_READ_POPULATION_LIMIT: return thePlayer->GetPopulationLimit(0);
-    case EE_SCENARIO_READ_COMPUTER_DIFFICULTY:
-        return thePlayer->mComputerPlayer != NULL ? (int64_t)thePlayer->mComputerPlayer->mDifficulty : -1;
+    case EE_SCENARIO_READ_COMPUTER_DIFFICULTY: return thePlayer->mComputerPlayer != NULL ? (int64_t)thePlayer->mComputerPlayer->mDifficulty : -1;
     case EE_SCENARIO_READ_STATISTIC: return thePlayer->mSavedGroups.GetLastValue(inB);
     case EE_SCENARIO_READ_EPOCH_COUNT: return EEEpochCount();
     case EE_SCENARIO_READ_EPOCH: return thePlayer->GetTechTree()->mCurrentEpoch;
@@ -79,9 +75,7 @@ extern "C" void ee_scenariocpp_host_write(EESMHostContext* theContext, uint32_t 
 {
     EEPlayer* thePlayer = Player((int32_t)inPlayer);
     switch (inOp) {
-    case EE_SCENARIO_WRITE_SET_ATTRIBUTE:
-        theContext->mEffect->SetPlayerAttribute(inPlayer, (unsigned long)inB, (long)inC, (long)inD);
-        break;
+    case EE_SCENARIO_WRITE_SET_ATTRIBUTE: theContext->mEffect->SetPlayerAttribute(inPlayer, (unsigned long)inB, (long)inC, (long)inD); break;
     case EE_SCENARIO_WRITE_RESOURCE: thePlayer->mResourceCaps[inB] = (long)inC; break;
     case EE_SCENARIO_WRITE_SHARE_BONUS: thePlayer->mShareBonus = (long)inB; break;
     case EE_SCENARIO_WRITE_DIFFICULTY: thePlayer->mComputerPlayer->mDifficulty = (long)inB; break;

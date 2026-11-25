@@ -32,10 +32,7 @@
 
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
-EESMObject::EESMObject() : EeScenarioObjectFields(ee_scenario_object_defaults())
-{
-    gResource->GetString(IDS_NONE, this->mName);
-}
+EESMObject::EESMObject() : EeScenarioObjectFields(ee_scenario_object_defaults()) { gResource->GetString(IDS_NONE, this->mName); }
 
 namespace {
 
@@ -61,15 +58,12 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
     case EE_SCENARIO_READ_UNIT_CLASS_TYPE: return SMUnit(inA)->mUnitClass->mUnitType;
     case EE_SCENARIO_READ_UNIT_PLAYER: return SMUnit(inA)->mPlayer->GetPlayerID();
     case EE_SCENARIO_READ_UNIT_COMMAND: return SMUnit(inA)->mComplexUnit->GetCommandType();
-    case EE_SCENARIO_READ_UNIT_ATTRIBUTE:
-        return inContext->mObject->GetUnitAttribute((unsigned long)inB, inC != 0, SMUnit(inA), 0, 0);
+    case EE_SCENARIO_READ_UNIT_ATTRIBUTE: return inContext->mObject->GetUnitAttribute((unsigned long)inB, inC != 0, SMUnit(inA), 0, 0);
     case EE_SCENARIO_READ_UNIT_SEEN_BY: return EECombatIsSeenBy(SMUnit(inA), gWorld.mPlayers[inB], false);
     case EE_SCENARIO_READ_MAP_SIZE: return EESMPack((long)gWorld.mMap->mL195610, (long)gWorld.mMap->mL195614);
-    case EE_SCENARIO_READ_AREA_CONTAINS_TILE:
-        return gWorld.mScenarioManager->GetArea((unsigned long)inA)->ContainsTile(U2DPoint<long>(inB, inC));
+    case EE_SCENARIO_READ_AREA_CONTAINS_TILE: return gWorld.mScenarioManager->GetArea((unsigned long)inA)->ContainsTile(U2DPoint<long>(inB, inC));
     case EE_SCENARIO_READ_OBJECT_UNIT_COUNT: return (int64_t)gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->mUnits.size();
-    case EE_SCENARIO_READ_OBJECT_UNIT_AT:
-        return (int64_t)(uint32_t)gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->mUnits[(size_t)inB];
+    case EE_SCENARIO_READ_OBJECT_UNIT_AT: return (int64_t)(uint32_t)gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->mUnits[(size_t)inB];
     case EE_SCENARIO_READ_OBJECT_SELECTED_BY_CHECK: return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inA)->mSelectedByCheck;
     case EE_SCENARIO_READ_UNIT_TILE_OF: return EESMPack(SMUnit(inA)->mTileX, SMUnit(inA)->mTileY);
     case EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT: return EESMBits(SMUnit(inA)->mComplexUnit->GetLineOfSight());
@@ -78,10 +72,8 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
     case EE_SCENARIO_READ_CLASS_TILE_SIZE: return gUnitClassTable[inA]->mTileSize;
     case EE_SCENARIO_READ_BLOCK_TAKES: return ee_units_uu_block_takes(0, inA, inB, inC, inD, inD, 0);
     case EE_SCENARIO_READ_MAP_TILE_EXISTS: return gWorld.mMap->GetTile(inA, inB) != NULL;
-    case EE_SCENARIO_READ_UNIT_CAN_REACH_TILE:
-        return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->CanReachTile(inB, inC);
-    case EE_SCENARIO_READ_UNIT_IN_REACH:
-        return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->IsInReach(SMUnit(inB));
+    case EE_SCENARIO_READ_UNIT_CAN_REACH_TILE: return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->CanReachTile(inB, inC);
+    case EE_SCENARIO_READ_UNIT_IN_REACH: return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->IsInReach(SMUnit(inB));
     }
     return 0;
 }
@@ -158,9 +150,7 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
     std::vector<unsigned long>& theUnits = inContext->mObject->mUnits;
     switch (inOp) {
     case EE_SCENARIO_WRITE_OBJ_CLEAR: theUnits.clear(); break;
-    case EE_SCENARIO_WRITE_OBJ_COPY_PARENT:
-        gWorld.mScenarioManager->GetScenarioObject((unsigned long)inB)->GetUnits(theUnits);
-        break;
+    case EE_SCENARIO_WRITE_OBJ_COPY_PARENT: gWorld.mScenarioManager->GetScenarioObject((unsigned long)inB)->GetUnits(theUnits); break;
     case EE_SCENARIO_WRITE_OBJ_ERASE: theUnits.erase(theUnits.begin() + (size_t)inB); break;
     case EE_SCENARIO_WRITE_OBJ_PUSH: theUnits.push_back((unsigned long)(uint32_t)inB); break;
     case EE_SCENARIO_WRITE_OBJ_SHUFFLE: EEAIRandomShuffle(theUnits.begin(), theUnits.end()); break;

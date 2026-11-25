@@ -40,8 +40,7 @@ public:
                         unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat)
         { return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->GetWidth(), inWindow->GetHeight(), inBackBuffers, inZBuffer, inZBufferFormat); }
     // Takes a free light slot (of 8), sets the light into it and enables it; returns 7 when all slots are in use
-    long AddLight(GELight& inLight, unsigned long inScreen, unsigned long& outIndex)
-        { return ee_dx7r_add_light(this->mDX7, &inLight, inScreen, &outIndex); }
+    long AddLight(GELight& inLight, unsigned long inScreen, unsigned long& outIndex) { return ee_dx7r_add_light(this->mDX7, &inLight, inScreen, &outIndex); }
     // Sets the render target and begins the scene, waiting while the device is still drawing; 9 when the surface is lost
     long BeginScene(GESurface* inTarget, unsigned long inScreen) { return ee_dx7r_begin_scene(this->mDX7, inTarget, inScreen); }
     // Fills a rectangle of the render target with a colour (Clear) or of the Z-buffer with a depth (ClearZBuffer),
@@ -110,8 +109,7 @@ public:
         { return ee_dx7r_draw_water(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic); }
     // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
     long EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
-    long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes)
-        { return ee_dx7r_video_memory(this->mDX7, inScreen, true, &outBytes); }
+    long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes) { return ee_dx7r_video_memory(this->mDX7, inScreen, true, &outBytes); }
     unsigned long GetCaps(unsigned long inCap, unsigned long inScreen) { return 0; }   // 0 for any capability
     // lights the visible terrain and water vertices: ambient plus each active directional light, normalised, times the
     // vertex colour
@@ -136,8 +134,7 @@ public:
     void SetFog(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Fog, inState, inScreen); }
     void SetFogColor(const GEColor& inColor, unsigned long inScreen)
         { ee_dx7r_set_color(this->mDX7, EeDx7RastColor::Fog, reinterpret_cast<const EeGeRastColor*>(&inColor), inScreen); }
-    void SetFogType(unsigned long inType, unsigned long inScreen)
-        { ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogType, (intptr_t)inType); }
+    void SetFogType(unsigned long inType, unsigned long inScreen) { ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogType, (intptr_t)inType); }
     void SetLighting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Lighting, inState, inScreen); }
     void SetProjectionMode(unsigned long inMode, unsigned long inScreen)
         { ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ProjectionMode, (intptr_t)inMode); }
@@ -148,8 +145,7 @@ public:
     void SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_dx7r_set_texture(this->mDX7, inTexture, inScreen); }
     // sets the viewport rectangle and depth range on the device and marks the 2D/3D transforms for refresh
     void SetViewport(const GEViewport& inViewport, unsigned long inScreen) { ee_dx7r_set_viewport(this->mDX7, &inViewport, inScreen); }
-    void SetWaitForVSync(bool inState, unsigned long inScreen)
-        { ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::WaitForVSync, inState); }
+    void SetWaitForVSync(bool inState, unsigned long inScreen) { ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::WaitForVSync, inState); }
     void SetZBuffer(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::ZBuffer, inState, inScreen); }
     void SetZCompare(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::ZCompare, inState, inScreen); }
     // Shows the frame (flip full screen, blit to the window's client area windowed); every 12 frames updates the frame,
@@ -160,30 +156,25 @@ public:
     template <class Mesh> void TransformToCamera(Mesh& inMesh, GEViewport& inViewport, float inScale, bool inWaterOnly, bool inOrthographic)
         { ee_dx7r_transform_to_camera(this->mDX7, inMesh.GetRust(), &inViewport, inScale, inWaterOnly, inOrthographic); }
     // sends a light (point or directional, colour, attenuation, range) to its slot; 9 when the slot is not in use
-    long UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen)
-        { return ee_dx7r_update_light(this->mDX7, inIndex, &inLight, inScreen); }
+    long UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen) { return ee_dx7r_update_light(this->mDX7, inIndex, &inLight, inScreen); }
 
     long Activate() { return (long)ee_ge_rast_activate(this->mRust); }
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
     long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }
-    const GEColor& GetAmbientColor() const
-        { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
+    const GEColor& GetAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
     float GetAmbientIntensity() const { return ee_ge_rast_ambient_intensity(this->mRust); }
     void GetBlending(unsigned long& outSource, unsigned long& outDestination, unsigned long inScreen) const
     {
         outSource = this->GetScreenState(inScreen)->blend_source;
         outDestination = this->GetScreenState(inScreen)->blend_destination;
     }
-    void GetFogAttributes(GERFogAttributes& outAttributes, unsigned long inScreen) const
-        { outAttributes = this->GetScreenState(inScreen)->fog; }
+    void GetFogAttributes(GERFogAttributes& outAttributes, unsigned long inScreen) const { outAttributes = this->GetScreenState(inScreen)->fog; }
     float GetFramesPerSecond(unsigned long inScreen) const { return this->GetScreenState(inScreen)->frames_per_second; }
     bool GetIsActivated() const { return ee_ge_rast_get(this->mRust, EeGeRastVal::IsActivated) != 0; }
-    bool GetIsScreenActivated(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->is_screen_activated; }
+    bool GetIsScreenActivated(unsigned long inScreen) const { return this->GetScreenState(inScreen)->is_screen_activated; }
     unsigned long GetLighting(unsigned long inScreen) const { return this->GetScreenState(inScreen)->lighting; }
-    const UString& GetName() const
-        { return *reinterpret_cast<const UString*>(ee_ge_rast_get(this->mRust, EeGeRastVal::Name)); }
+    const UString& GetName() const { return *reinterpret_cast<const UString*>(ee_ge_rast_get(this->mRust, EeGeRastVal::Name)); }
     // a model's on-screen width in pixels (its scaled bounding diameter projected through the viewport); a placed
     // model's, from its location, frame and scale
     float GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation, float inScale,
@@ -192,18 +183,14 @@ public:
     float GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic)
         { return ee_ge_rast_placed_pixel_size(this->mRust, &inModel, GERust(inViewport), inOrthographic); }
     GESurface* GetPrimarySurface(unsigned long inScreen) const { return static_cast<GESurface*>(this->GetScreenState(inScreen)->primary_surface); }
-    static GERasterizer* GetRasterizer(unsigned long inIndex)
-        { return static_cast<GERasterizer*>(ee_ge_rast_list(3, NULL, inIndex)); }
+    static GERasterizer* GetRasterizer(unsigned long inIndex) { return static_cast<GERasterizer*>(ee_ge_rast_list(3, NULL, inIndex)); }
     static unsigned long GetRasterizerCount() { return (unsigned long)(uintptr_t)ee_ge_rast_list(2, NULL, 0); }
     GESurface* GetRenderTarget(unsigned long inScreen) const { return static_cast<GESurface*>(this->GetScreenState(inScreen)->render_target); }
     GEScreen* GetScreen(unsigned long inScreen) const { return static_cast<GEScreen*>(this->GetScreenState(inScreen)->screen); }
-    unsigned long GetScreenCount() const
-        { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenCount); }
+    unsigned long GetScreenCount() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenCount); }
     unsigned long GetScreenID() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenId); }
-    GESurface* GetSecondarySurface(unsigned long inScreen) const
-        { return static_cast<GESurface*>(this->GetScreenState(inScreen)->secondary_surface); }
-    GETextureManager* GetTextureManager(unsigned long inScreen) const
-        { return this->GetScreen(inScreen)->GetTextureManager(); }
+    GESurface* GetSecondarySurface(unsigned long inScreen) const { return static_cast<GESurface*>(this->GetScreenState(inScreen)->secondary_surface); }
+    GETextureManager* GetTextureManager(unsigned long inScreen) const { return this->GetScreen(inScreen)->GetTextureManager(); }
     GEViewport& GetViewport(unsigned long inScreen) const { return *reinterpret_cast<GEViewport*>(&this->GetScreenState(inScreen)->viewport); }
     GEWindow* GetWindow(unsigned long inScreen) const { return static_cast<GEWindow*>(this->GetScreenState(inScreen)->window); }
     unsigned long GetZBuffer(unsigned long inScreen) const { return this->GetScreenState(inScreen)->z_buffer; }

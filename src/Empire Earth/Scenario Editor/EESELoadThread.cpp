@@ -65,9 +65,7 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
         return 0;
     case EE_SCREENS_SELTX_CREATE_EVENT_QUEUE: ESVERIFY_AT(TSScheduler::CreateEvent(T(p)->mMessageQueueDone) == keseOK, 82);
         return 0;
-    case EE_SCREENS_SELTX_CREATE_THREAD:
-        ESVERIFY_AT(TSScheduler::CreateThread(T(p)->mThread, EESELoadThread::Main, (void*)T(p)) == keseOK, 85);
-        return 0;
+    case EE_SCREENS_SELTX_CREATE_THREAD: ESVERIFY_AT(TSScheduler::CreateThread(T(p)->mThread, EESELoadThread::Main, (void*)T(p)) == keseOK, 85); return 0;
     case EE_SCREENS_SELTX_SET_PRIORITY: ESVERIFY_AT(T(p)->mThread->SetPriority((long)a[0]) == keseOK, 86);
         return 0;
     case EE_SCREENS_SELTX_WAIT_CREATED: T(p)->mThreadCreated->Wait(kTSWaitInfinite);

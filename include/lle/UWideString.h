@@ -27,18 +27,14 @@ public:
     UWideString& operator=(const char* inString) { return this->Do(ee_uwstring_assign_text, inString); }
     // exported ??BUWideString@@QBEPBDXZ = `mov eax,[ecx+4]; ret` (ICF-folded with UString's); TCP 0x2539 strcpy
     operator const char*() const { return this->mState.string; }
-    void CopyString(const UWideString& inString, unsigned long inCount)
-        { ee_uwstring_copy(&this->mState, &inString.mState, inCount); }
-    void CopyString(const char* inString, unsigned long inCount)
-        { ee_uwstring_copy_text(&this->mState, inString, inCount); }
+    void CopyString(const UWideString& inString, unsigned long inCount) { ee_uwstring_copy(&this->mState, &inString.mState, inCount); }
+    void CopyString(const char* inString, unsigned long inCount) { ee_uwstring_copy_text(&this->mState, inString, inCount); }
     char operator[](int inIndex) const { return ee_uwstring_at(&this->mState, inIndex); }
     UWideString& operator+=(const UWideString& inString) { return this->Do(ee_uwstring_append, (const char*)inString); }
     UWideString& operator+=(const char* inString) { return this->Do(ee_uwstring_append, inString); }
     void Export(unsigned char* outData) const { ee_uwstring_export(&this->mState, outData); }
-    unsigned long Find(const UWideString& inString, unsigned long inStart) const
-        { return ee_uwstring_find(&this->mState, &inString.mState, inStart); }
-    unsigned long Find(const char* inString, unsigned long inStart) const
-        { return ee_uwstring_find_text(&this->mState, inString, inStart); }
+    unsigned long Find(const UWideString& inString, unsigned long inStart) const { return ee_uwstring_find(&this->mState, &inString.mState, inStart); }
+    unsigned long Find(const char* inString, unsigned long inStart) const { return ee_uwstring_find_text(&this->mState, inString, inStart); }
     unsigned long GetBytesUsedToSave() const { return ee_uwstring_bytes_to_save(&this->mState); }
     // adds a checksum of the characters (weighted by position, times the length) named after the text (ESChecksum.h)
     void GetChecksum(ESChecksum& ioChecksum);
@@ -48,8 +44,7 @@ public:
     unsigned long Import(unsigned char* inData) { return ee_uwstring_import(&this->mState, inData); }
     void InsertString(const UWideString& inString, unsigned long inPosition, bool inReplace)
         { ee_uwstring_insert(&this->mState, inString, inPosition, inReplace); }
-    void InsertString(const char* inString, unsigned long inPosition, bool inReplace)
-        { ee_uwstring_insert(&this->mState, inString, inPosition, inReplace); }
+    void InsertString(const char* inString, unsigned long inPosition, bool inReplace) { ee_uwstring_insert(&this->mState, inString, inPosition, inReplace); }
     // the byte size and the bytes, both counting the terminator (lle/FSFile.h: on a failed read the string is left
     // empty and the error returned; an old Windows-1252 string is converted, D6)
     long Load(FSFile& inFile) { return ee_uwstring_load_file(&this->mState, &inFile); }
@@ -63,17 +58,13 @@ public:
     unsigned long GetAllocatedLength() const { return this->mState.capacity; }
     void Clear() { ee_uwstring_clear(&this->mState); }
     bool Equals(const UWideString& inString) const { return PlatMbsCmp(Bytes(*this), Bytes(inString)) == 0; }
-    bool Equals(const UWideString& inString, unsigned long inCount) const
-        { return PlatMbsNBCmp(Bytes(*this), Bytes(inString), inCount) == 0; }
+    bool Equals(const UWideString& inString, unsigned long inCount) const { return PlatMbsNBCmp(Bytes(*this), Bytes(inString), inCount) == 0; }
     bool Equals(const char* inString) const { return PlatMbsCmp(Bytes(*this), Bytes(inString)) == 0; }
-    bool Equals(const char* inString, unsigned long inCount) const
-        { return PlatMbsNBCmp(Bytes(*this), Bytes(inString), inCount) == 0; }
+    bool Equals(const char* inString, unsigned long inCount) const { return PlatMbsNBCmp(Bytes(*this), Bytes(inString), inCount) == 0; }
     bool EqualsIgnoreCase(const UWideString& inString) const { return PlatMbsICmp(Bytes(*this), Bytes(inString)) == 0; }
-    bool EqualsIgnoreCase(const UWideString& inString, unsigned long inCount) const
-        { return PlatMbsNBICmp(Bytes(*this), Bytes(inString), inCount) == 0; }
+    bool EqualsIgnoreCase(const UWideString& inString, unsigned long inCount) const { return PlatMbsNBICmp(Bytes(*this), Bytes(inString), inCount) == 0; }
     bool EqualsIgnoreCase(const char* inString) const { return PlatMbsICmp(Bytes(*this), Bytes(inString)) == 0; }
-    bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const
-        { return PlatMbsNBICmp(Bytes(*this), Bytes(inString), inCount) == 0; }
+    bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const { return PlatMbsNBICmp(Bytes(*this), Bytes(inString), inCount) == 0; }
     void ToLower() { PlatMbsLwr(reinterpret_cast<unsigned char*>(this->mState.string)); }
     void ToUpper() { PlatMbsUpr(reinterpret_cast<unsigned char*>(this->mState.string)); }
     // Replaces the buffer with an empty one of inSize + 1 bytes. (The original dropped the fresh buffer and pointed
@@ -115,10 +106,7 @@ inline UWideString operator+(const UWideString& inLeft, const char* inRight)
                        &inLeft.mState, inRight);
 }
 // the comparisons: multibyte order
-inline int UWCompare(const char* inLeft, const char* inRight)
-{
-    return PlatMbsCmp(UWideString::Bytes(inLeft), UWideString::Bytes(inRight));
-}
+inline int UWCompare(const char* inLeft, const char* inRight) { return PlatMbsCmp(UWideString::Bytes(inLeft), UWideString::Bytes(inRight)); }
 inline bool operator==(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) == 0; }
 inline bool operator==(const UWideString& inLeft, const char* inRight) { return UWCompare(inLeft, inRight) == 0; }
 inline bool operator!=(const UWideString& inLeft, const UWideString& inRight) { return UWCompare(inLeft, inRight) != 0; }

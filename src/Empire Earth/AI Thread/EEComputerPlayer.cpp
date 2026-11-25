@@ -52,10 +52,7 @@ void EEComputerPlayer::DetachUnitFromAI(EEComplexUnit* inUnit) { ee_cp_pl_detach
 void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit) { ee_cp_pl_unit_completed(EECP_THIS, EECP_UNIT(inUnit)); }
 
 
-void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
-{
-    ee_cp_pl_damage_taken(EECP_THIS, inPlayer, inAmount, EECP_UNIT(inUnit));
-}
+void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit) { ee_cp_pl_damage_taken(EECP_THIS, inPlayer, inAmount, EECP_UNIT(inUnit)); }
 
 void EEComputerPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
 {
@@ -88,54 +85,30 @@ void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit) { ee_cp_pl_unit_stran
 
 void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit) { ee_cp_pl_unit_placed(EECP_THIS, EECP_UNIT(inUnit)); }
 
-void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
-{
-    ee_cp_pl_unit_taken(EECP_THIS, EECP_UNIT(inUnit), inSwapped);
-}
+void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped) { ee_cp_pl_unit_taken(EECP_THIS, EECP_UNIT(inUnit), inSwapped); }
 
 void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit) { ee_cp_pl_unit_goal_done(EECP_THIS, EECP_UNIT(inUnit)); }
 
-bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit)
-{
-    return ee_cp_pl_avoids_enemies(EECP_THIS, EECP_UNIT(inUnit));
-}
+bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit) { return ee_cp_pl_avoids_enemies(EECP_THIS, EECP_UNIT(inUnit)); }
 
 // Returns the tech node's unit class at the index, or its default unit class past the end (ee_sim::cp player_game.rs)
-long EETechTreeNode::GetUnitClass(unsigned long inIndex)
-{
-    return ee_cp_node_unit_class((uint64_t)(uintptr_t)this, inIndex);
-}
+long EETechTreeNode::GetUnitClass(unsigned long inIndex) { return ee_cp_node_unit_class((uint64_t)(uintptr_t)this, inIndex); }
 
 // Returns the number of teams in the world
 unsigned long EEWorld::GetNumTeams() { return this->mTeams.size(); }
 
 // Returns whether the given player is a member of the team
-bool EETeam::ContainsPlayer(unsigned long inPlayerID)
-{
-    return std::find(this->mPlayers.begin(), this->mPlayers.end(), inPlayerID) != this->mPlayers.end();
-}
+bool EETeam::ContainsPlayer(unsigned long inPlayerID) { return std::find(this->mPlayers.begin(), this->mPlayers.end(), inPlayerID) != this->mPlayers.end(); }
 
 // port (ee/EECPExperimentTimers.h): the experiments' timers and the resource state, saved from 0.258 and 0.265
 // (ee_sim::cp timers.rs, player_game.rs ee_cp_pl_state_block)
-long EECPSaveExperimentTimers(FSFile& outFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 0, &EESaveFilePrimitive);
-}
+long EECPSaveExperimentTimers(FSFile& outFile) { return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 0, &EESaveFilePrimitive); }
 
-long EECPLoadExperimentTimers(FSFile& inFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 1, &EESaveFilePrimitive);
-}
+long EECPLoadExperimentTimers(FSFile& inFile) { return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 1, &EESaveFilePrimitive); }
 
-long EECPSaveResourceState(FSFile& outFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 2, &EESaveFilePrimitive);
-}
+long EECPSaveResourceState(FSFile& outFile) { return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 2, &EESaveFilePrimitive); }
 
-long EECPLoadResourceState(FSFile& inFile)
-{
-    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 3, &EESaveFilePrimitive);
-}
+long EECPLoadResourceState(FSFile& inFile) { return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 3, &EESaveFilePrimitive); }
 
 // the after-load fixups of player_game.rs: inCall(inBox) at the loaded game's first tick
 extern "C" void ee_cp_after_load(void (*inCall)(uint64_t), uint64_t inBox)
@@ -169,17 +142,14 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_TEAM_WONDERS: return gWorld.mTeams[(size_t)v[0]].mVictoryCondition->HasEnoughWonders() ? 1 : 0;
     case EE_CP_PLAYER_TEAM_CONTAINS: return gWorld.mTeams[(size_t)v[0]].ContainsPlayer((unsigned long)v[1]) ? 1 : 0;
     case EE_CP_PLAYER_NUM_PLAYERS: return (int64_t)gWorld.mNumPlayers;
-    case EE_CP_PLAYER_HUMAN:
-        return gWorld.mPlayers[(size_t)v[0]] == NULL ? -1 : gWorld.mPlayers[(size_t)v[0]]->IsHuman() ? 1 : 0;
+    case EE_CP_PLAYER_HUMAN: return gWorld.mPlayers[(size_t)v[0]] == NULL ? -1 : gWorld.mPlayers[(size_t)v[0]]->IsHuman() ? 1 : 0;
     case EE_CP_PLAYER_POPULATION: return gWorld.mPlayers[(size_t)v[0]]->GetTotalPopulation(true, true);
     case EE_CP_PLAYER_HANDLE: return (int64_t)(uintptr_t)gWorld.GetPlayer((unsigned long)v[0]);
     case EE_CP_PLAYER_UNIT_CONTINENT_AT: return (int64_t)(uintptr_t)gContinentManager.GetContinentAt(theUnit);
     case EE_CP_PLAYER_IS_EPOCH: return EEIsEpochID((long)v[0]) ? 1 : 0;
     case EE_CP_PLAYER_UNIT_IS_BUILDING: return theComplex->mUnitClass->IsBuilding() ? 1 : 0;
-    case EE_CP_PLAYER_UNIT_OBSOLETE:
-        return theComplex->GetTechTreeNode() != NULL && theComplex->GetTechTreeNode()->GetIsObsolete() ? 1 : 0;
-    case EE_CP_PLAYER_SEEN_BY:
-        return EECombatIsSeenBy(theComplex, reinterpret_cast<EEPlayer*>((uintptr_t)inB), true) ? 1 : 0;
+    case EE_CP_PLAYER_UNIT_OBSOLETE: return theComplex->GetTechTreeNode() != NULL && theComplex->GetTechTreeNode()->GetIsObsolete() ? 1 : 0;
+    case EE_CP_PLAYER_SEEN_BY: return EECombatIsSeenBy(theComplex, reinterpret_cast<EEPlayer*>((uintptr_t)inB), true) ? 1 : 0;
     case EE_CP_PLAYER_KILL: theComplex->Kill(true, false, false);
         return 0;
     case EE_CP_PLAYER_IS_TRANSPORT: return theUnit->mUnitClass->IsTransport() ? 1 : 0;
@@ -234,10 +204,8 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return 0;
     case EE_CP_PLAYER_EPOCH_SPAN: return gWorld.mGameOptions.mEpochEnd - gWorld.mGameOptions.mEpochStart + 1;
     case EE_CP_PLAYER_RANDOM_RANGE: return gPhysics->GetRandom((long)v[0], (long)v[1]);
-    case EE_CP_PLAYER_BASE_LOAD:
-        return thePlayer->EEPlayer::Load((unsigned long)v[0], (unsigned long)v[1], *reinterpret_cast<FSFile*>((uintptr_t)inA));
-    case EE_CP_PLAYER_BASE_SAVE:
-        return thePlayer->EEPlayer::Save((unsigned long)v[0], (unsigned long)v[1], *reinterpret_cast<FSFile*>((uintptr_t)inA));
+    case EE_CP_PLAYER_BASE_LOAD: return thePlayer->EEPlayer::Load((unsigned long)v[0], (unsigned long)v[1], *reinterpret_cast<FSFile*>((uintptr_t)inA));
+    case EE_CP_PLAYER_BASE_SAVE: return thePlayer->EEPlayer::Save((unsigned long)v[0], (unsigned long)v[1], *reinterpret_cast<FSFile*>((uintptr_t)inA));
     case EE_CP_PLAYER_FILE_OPEN: return reinterpret_cast<FSFile*>((uintptr_t)inA)->GetIsOpen() ? 1 : 0;
     case EE_CP_PLAYER_SAVE_PRIMITIVE: return (int64_t)(uintptr_t)&EESaveFilePrimitive;
     case EE_CP_PLAYER_EPOCH_COUNT: return EEEpochCount();
@@ -249,16 +217,14 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
         return 0;
     case EE_CP_PLAYER_TECH_ID:
         return reinterpret_cast<EETechTreeNode*>((uintptr_t)inA)->mData != NULL ? reinterpret_cast<EETechTreeNode*>((uintptr_t)inA)->mData->mID : -1;
-    case EE_CP_PLAYER_TECH_UNIT_CLASS:
-        return (long)reinterpret_cast<EETechTreeNode*>((uintptr_t)inA)->mData->mUnitClass;
+    case EE_CP_PLAYER_TECH_UNIT_CLASS: return (long)reinterpret_cast<EETechTreeNode*>((uintptr_t)inA)->mData->mUnitClass;
     case EE_CP_PLAYER_CLASS_IS_BUILDING: return reinterpret_cast<EEUnitClass*>((uintptr_t)inA)->IsBuilding() ? 1 : 0;
     case EE_CP_PLAYER_CLASS_IS_TRANSPORT: return reinterpret_cast<EEUnitClass*>((uintptr_t)inA)->IsTransport() ? 1 : 0;
     case EE_CP_PLAYER_CLASS_IS_DROP_SITE: return reinterpret_cast<EEUnitClass*>((uintptr_t)inA)->IsDropSite() ? 1 : 0;
     case EE_CP_PLAYER_CLASS_IS_PRIEST: return reinterpret_cast<EEUnitClass*>((uintptr_t)inA)->IsPriest() ? 1 : 0;
     case EE_CP_PLAYER_CLASS_FLIES_OVER: return reinterpret_cast<EEUnitClass*>((uintptr_t)inA)->FliesOver() ? 1 : 0;
     case EE_CP_PLAYER_BASE_POP_LIMIT_OF: return thePlayer->EEPlayer::GetPopulationLimit((long)v[0]);
-    case EE_CP_PLAYER_BASE_CAN_AFFORD:
-        return thePlayer->EEPlayer::CanAfford(reinterpret_cast<EETechTreeNode*>((uintptr_t)inA), (long)v[0], (long)v[1]) ? 1 : 0;
+    case EE_CP_PLAYER_BASE_CAN_AFFORD: return thePlayer->EEPlayer::CanAfford(reinterpret_cast<EETechTreeNode*>((uintptr_t)inA), (long)v[0], (long)v[1]) ? 1 : 0;
     case EE_CP_PLAYER_GAME_RESOURCES: return gWorld.mGameOptions.mResources;
     case EE_CP_PLAYER_SCENARIO_GAME: return gWorld.mGameOptions.mIsScenarioGame ? 1 : 0;
     case EE_CP_PLAYER_LOAD_TYPE: return gGameOptions.mLoadType;
@@ -277,8 +243,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_UNITS_DELETE: EECPUnitsDelete(thePlayer);
         return 0;
     case EE_CP_PLAYER_GOAL_COUNT: return (int64_t)theComplex->mGoalQueues[0].mGoals.size();
-    case EE_CP_PLAYER_GOAL_STATE_KIND:
-        return theComplex->GetGoalState() != NULL ? (int64_t)theComplex->GetGoalState()->GetKind() : -1;
+    case EE_CP_PLAYER_GOAL_STATE_KIND: return theComplex->GetGoalState() != NULL ? (int64_t)theComplex->GetGoalState()->GetKind() : -1;
     case EE_CP_PLAYER_REPAIRABLE: return theComplex->IsRepairable() ? 1 : 0;
     case EE_CP_PLAYER_CLEAR_GOALS: theComplex->ClearGoalQueue(0);
         return 0;
@@ -295,8 +260,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_LOAD_TILE_Y: return theGoal->GetLoadContainerTile().GetY();
     case EE_CP_PLAYER_UNLOAD_AT: theComplex->UnloadCargoAtTile((long)v[0], (long)v[1], true);
         return 0;
-    case EE_CP_PLAYER_NEW_UNLOAD:
-        return (int64_t)(uintptr_t)EEUGRust::NewUnloadTransport(theComplex, (long)v[0], (long)v[1], true);
+    case EE_CP_PLAYER_NEW_UNLOAD: return (int64_t)(uintptr_t)EEUGRust::NewUnloadTransport(theComplex, (long)v[0], (long)v[1], true);
     case EE_CP_PLAYER_CAN_UNLOAD: return theGoal->CanUnloadAtDestination() ? 1 : 0;
     case EE_CP_PLAYER_QUEUE_GOAL: theComplex->QueueGoal(theGoal, 0);
         return 0;

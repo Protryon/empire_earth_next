@@ -44,22 +44,19 @@ public:
     // +0x00 dtor 0x1f11f (??_G 0x1f103)
     virtual ~EEAIContinentManager() { ee_astar_cm_destroy(&gContinentManager.mRecord, &this->mRecord); }
     // 0x22b62: the continent id of inUnit's tile (GetContinent(its (+0x1c, +0x20), inKind))
-    unsigned short GetContinent(EEUnit* inUnit, long inKind)
-        { return ee_astar_cmq_unit_region_id(&this->mRecord, (uint64_t)(uintptr_t)inUnit, inKind); }
+    unsigned short GetContinent(EEUnit* inUnit, long inKind) { return ee_astar_cmq_unit_region_id(&this->mRecord, (uint64_t)(uintptr_t)inUnit, inKind); }
     long GetLargestContinent(long inKind) { return ee_astar_cmq_largest_continent(&this->mRecord, inKind); }   // 0x22952 (ret 4; EECPExplorationManager 0x7edf7 with 2 and 4) (provisional name)
     unsigned short GetContinentID(EEUnit* inUnit)
         { return ee_astar_cm_unit_continent_id(&this->mRecord, (uint64_t)(uintptr_t)inUnit); }   // 0x22712 (its tile's GetContinentID; EESelectedGroup 0x20924f)
     // 0x22b86: the id of kind inKind (1..4: the region's +0x86/+0x88/+0x8a/+0x84) of tile inTile's region, 0 if none
-    unsigned short GetContinent(const EETileCoordinate& inTile, long inKind)
-        { return ee_astar_cmq_region_id(&this->mRecord, inTile.mX, inTile.mY, inKind); }
+    unsigned short GetContinent(const EETileCoordinate& inTile, long inKind) { return ee_astar_cmq_region_id(&this->mRecord, inTile.mX, inTile.mY, inKind); }
 
     // Inline lookups (first emitted by EECPASGUAirBomber.cpp 0x60b4..0x6132; 78/65/5 call sites, never expanded):
     // 0x60ef: the continent id of tile (inX, inY): 0 off the map; mContinentIDs[inX * mWidth + inY], or the slow
     // FindContinentID while the grid is not built
     unsigned short GetContinentID(long inX, long inY) const { return ee_astar_cm_continent_id_at(&this->mRecord, inX, inY); }
     // 0x60c7: the continent of tile (inX, inY), 0 if none
-    EEAIContinent* GetContinentAt(long inX, long inY) const
-        { return (EEAIContinent*)(uintptr_t)ee_astar_cm_continent_at(&this->mRecord, inX, inY); }
+    EEAIContinent* GetContinentAt(long inX, long inY) const { return (EEAIContinent*)(uintptr_t)ee_astar_cm_continent_at(&this->mRecord, inX, inY); }
     EEAIContinent* GetContinentAt(const EETileCoordinate& inTile) const { return this->GetContinentAt(inTile.mX, inTile.mY); }
 
     // Out-of-line members (EEAIContinentManager.cpp; ret N / argument reads / the value left at ret)
@@ -108,16 +105,13 @@ public:
         { return (EEAIChokePoint*)(uintptr_t)ee_astar_cmq_area_at(&this->mRecord, 0, inTile.mX, inTile.mY); }
     EEAIChokePoint* GetChokePointAt(EEUnit* inUnit)     // 0x221c1: at inUnit's tile (+0x1c, +0x20)
         { return (EEAIChokePoint*)(uintptr_t)ee_astar_cmq_unit_area_at(&this->mRecord, 0, (uint64_t)(uintptr_t)inUnit); }
-    EEAIForest* GetForestAt(const EETileLocation& inTile)
-        { return (EEAIForest*)(uintptr_t)ee_astar_cmq_area_at(&this->mRecord, 1, inTile.mX, inTile.mY); }
+    EEAIForest* GetForestAt(const EETileLocation& inTile) { return (EEAIForest*)(uintptr_t)ee_astar_cmq_area_at(&this->mRecord, 1, inTile.mX, inTile.mY); }
     // the EEUnit overloads build an EETileLocation from the unit's tile (+0x1c, +0x20)
-    EEAIForest* GetForestAt(EEUnit* inUnit)
-        { return (EEAIForest*)(uintptr_t)ee_astar_cmq_unit_area_at(&this->mRecord, 1, (uint64_t)(uintptr_t)inUnit); }
+    EEAIForest* GetForestAt(EEUnit* inUnit) { return (EEAIForest*)(uintptr_t)ee_astar_cmq_unit_area_at(&this->mRecord, 1, (uint64_t)(uintptr_t)inUnit); }
     // inline: the forest id at inTile, 0 if none (COMDAT 0x225272; defined in its only user EEUGGather.cpp, where
     // EEAIForest is complete) (provisional name)
     unsigned short GetForestIDAt(const EETileLocation& inTile);
-    EEAIPathArea* GetPathAreaAt(EEUnit* inUnit)
-        { return (EEAIPathArea*)(uintptr_t)ee_astar_cmq_unit_area_at(&this->mRecord, 3, (uint64_t)(uintptr_t)inUnit); }
+    EEAIPathArea* GetPathAreaAt(EEUnit* inUnit) { return (EEAIPathArea*)(uintptr_t)ee_astar_cmq_unit_area_at(&this->mRecord, 3, (uint64_t)(uintptr_t)inUnit); }
     EEAIPathSubSector* GetPathSubSectorAt(EEUnit* inUnit)
         { return (EEAIPathSubSector*)(uintptr_t)ee_astar_cmq_sub_sector_at(&this->mRecord, (uint64_t)(uintptr_t)inUnit); }
     bool CanGetToUnit(EEUnit* inUnit, EEUnit* inTarget)               // 0x21fe7: CanGetTo(inUnit, inTarget's tile)
@@ -125,8 +119,7 @@ public:
     // 0x22635 (const-shaped: lea; mov): the tiles of continent inID (provisional name)
     void GetContinentTiles(unsigned short inID, std::vector<U2DPoint<long> >& outTiles) const
         { ee_astar_cmq_continent_tiles(&this->mRecord, inID, EEAIHullPoints(outTiles), outTiles.size(), &outTiles, EEAIClearList<std::vector<U2DPoint<long> > >, EEAIPushPoint); }
-    EEAIHill* GetHillAt(const EETileLocation& inTile)
-        { return (EEAIHill*)(uintptr_t)ee_astar_cmq_area_at(&this->mRecord, 2, inTile.mX, inTile.mY); }
+    EEAIHill* GetHillAt(const EETileLocation& inTile) { return (EEAIHill*)(uintptr_t)ee_astar_cmq_area_at(&this->mRecord, 2, inTile.mX, inTile.mY); }
     // 0x273c9 (ret 8): id = 0x273f1(inX, inY); id ? mPathSubSectors[id] : 0 (the 0x60c7 shape over +0x5c)
     EEAIPathSubSector* GetPathSubSectorAt(long inX, long inY)   // 0x273c9 (the grid's id, or the found one)
         { return (EEAIPathSubSector*)(uintptr_t)ee_astar_cm_sub_sector_at(&this->mRecord, inX, inY); }
@@ -151,8 +144,7 @@ public:
     // +0x7c, mHills +0x8c, mChokePoints +0x9c, mRectangleAreas +0xac), the pending sector tiles (mSectorTiles +0x10),
     // the shore lists (+0x1c, +0x2c) and the free ids (+0xbc, +0xcc)
     EeAStarCmRecord mRecord;
-    template <class T> EEAIHandleView<T> Table(EeAStarCmTable inTable) const
-        { return EEAIHandleView<T>(ee_astar_cm_table, &this->mRecord, inTable); }
+    template <class T> EEAIHandleView<T> Table(EeAStarCmTable inTable) const { return EEAIHandleView<T>(ee_astar_cm_table, &this->mRecord, inTable); }
     EEAIHandleView<EEAIContinent> GetContinents() const { return this->Table<EEAIContinent>(EeAStarCmTable::Continents); }
     EEAIHandleView<EEAIForest> GetForests() const { return this->Table<EEAIForest>(EeAStarCmTable::Forests); }
     unsigned long NewSerial() { return ++this->mRecord.last_serial; }   // `++mLastSerial`

@@ -140,10 +140,7 @@ public:
     }
     // 0x266384: starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
     // the chat log (ee_screens main_form.rs, as the other start modes)
-    void BuildUnit(unsigned long inUnitID, long inTechnology)
-    {
-        ee_screens_main_form_build_unit(EEUIFMGFormCall(this).Ptr(), (int64_t)inUnitID, inTechnology);
-    }
+    void BuildUnit(unsigned long inUnitID, long inTechnology) { ee_screens_main_form_build_unit(EEUIFMGFormCall(this).Ptr(), (int64_t)inUnitID, inTechnology); }
     // the start modes (ee_screens main_form.rs): 0x2664b4 a gate for a tech (state 0xb), 0x266594 a wall (state 6),
     // 0x26662d a calamity cast with the first selected unit (state 5; at once for a self-targeted one), 0x26679a the
     // flare (state 0x15), 0x26681d patrol when units are selected (state 0x10)
@@ -152,10 +149,7 @@ public:
     void StartCalamity(long inTechnology) { this->StartMode(2, inTechnology); }
     void StartFlare() { this->StartMode(3, 0); }
     void StartPatrol() { this->StartMode(4, 0); }
-    void StartMode(uint32_t inMode, long inTechnology)
-    {
-        ee_screens_main_form_start(EEUIFMGFormCall(this).Ptr(), inMode, inTechnology);
-    }
+    void StartMode(uint32_t inMode, long inTechnology) { ee_screens_main_form_start(EEUIFMGFormCall(this).Ptr(), inMode, inTechnology); }
     void UpdateCursorKind() { ee_screens_update_cursor_kind(this); }   // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
                                             // 0x26588c GetCommandOnUnit, 0x265a4f EEGetAttackRangeKind, 0x265d7a,
                                             // 0x265e35 GetRepairCommand, 0x265e89 GetTransportCommand)
@@ -163,10 +157,7 @@ public:
     // UpdateBackgroundMedia 0x264b4b, SetPauseText 0x26572f, PauseInformation 0x2662d7,
     // ResumeInformation 0x266367, SetChatTop 0x26676e, HideMessages 0x2669e8,
     // RefreshSavedGroups 0x26716e, UpdateIconBar 0x2671b0, and the overrides above)
-    int64_t Rust(uint32_t inWhich, int64_t inA = 0)
-    {
-        return ee_screens_main_form_member(EEUIFMGFormCall(this).Ptr(), inWhich, inA);
-    }
+    int64_t Rust(uint32_t inWhich, int64_t inA = 0) { return ee_screens_main_form_member(EEUIFMGFormCall(this).Ptr(), inWhich, inA); }
     // a command button's member in Rust (EE_SCREENS_SB_DO_*; ee_screens status_button.rs over the form's host)
     int64_t ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString = NULL)
     {

@@ -97,16 +97,10 @@ UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID)
 
 // Creates the event a form fires when it opens, closes or activates; NULL for other ids (ee_screens factories.rs;
 // WON's server select open is C++)
-UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
-{
-    return reinterpret_cast<UIEvent*>(ee_screens_um_form_event((uint32_t)inID));
-}
+UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID) { return reinterpret_cast<UIEvent*>(ee_screens_um_form_event((uint32_t)inID)); }
 
 // Creates the WON server select form's cancel event; NULL for other ids
-UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
-{
-    return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID));
-}
+UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID) { return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID)); }
 
 
 

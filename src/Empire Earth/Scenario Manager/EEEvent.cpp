@@ -116,9 +116,7 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_NODE_DELAY: return (int64_t)P(EETechTreeNode, 0)->mResearchDelay++;
     case EE_SCENARIO_EV_RESEARCH_NODE: return (int64_t)P(EETechnology, 0)->ResearchNode(NULL);
     case EE_SCENARIO_EV_BUTTON: return R(EEButtonObject::Get((unsigned long)a[0]));
-    case EE_SCENARIO_EV_SET_CLASS_BUTTON:
-        P(EEPlayer, 0)->SetClassButton((unsigned long)a[1], P(EEButtonObject, 2));
-        return 0;
+    case EE_SCENARIO_EV_SET_CLASS_BUTTON: P(EEPlayer, 0)->SetClassButton((unsigned long)a[1], P(EEButtonObject, 2)); return 0;
     case EE_SCENARIO_EV_GROUP_FIRST: return R(P(EEPlayer, 0)->mGroups[a[1]]->GetFirstUnit());
     case EE_SCENARIO_EV_UI_EXISTS: return gUserInterface != NULL;
     case EE_SCENARIO_EV_POST_REFRESH_GROUP: gUserInterface->PostRefreshSavedGroup(a[0]); return 0;
@@ -127,55 +125,32 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_IS_LATEST: return EETechTree::IsLatestEffect(P(EEPlayer, 0)->GetTechTree(), a[1], a[2], a[3]);
     case EE_SCENARIO_EV_MEDIA: return R(static_cast<EEGraphicObject*>(EEMedia::Get(a[0])));
     case EE_SCENARIO_EV_UPGRADE_MODEL: return R(P(EEUnitClassUpgrade, 0)->mModel);
-    case EE_SCENARIO_EV_SET_CLASS_MODEL:
-        P(EEPlayer, 0)->SetClassModel((unsigned long)a[1], P(EEGraphicObject, 2));
-        return 0;
-    case EE_SCENARIO_EV_SWAP_GRAPHIC:
-        P(EEComplexUnit, 0)->SwapGraphic(P(EEGraphicObject, 1), P(EEGraphicObject, 2));
-        return 0;
+    case EE_SCENARIO_EV_SET_CLASS_MODEL: P(EEPlayer, 0)->SetClassModel((unsigned long)a[1], P(EEGraphicObject, 2)); return 0;
+    case EE_SCENARIO_EV_SWAP_GRAPHIC: P(EEComplexUnit, 0)->SwapGraphic(P(EEGraphicObject, 1), P(EEGraphicObject, 2)); return 0;
     case EE_SCENARIO_EV_SOUND: return R(EESoundObject::Get(a[0]));
-    case EE_SCENARIO_EV_SET_ACKNOWLEDGE:
-        P(EEPlayer, 0)->SetClassAcknowledgeSound((unsigned long)a[1], P(EESoundObject, 2), (long)a[3]);
-        return 0;
-    case EE_SCENARIO_EV_SET_CREATION:
-        P(EEPlayer, 0)->SetClassCreationSound((unsigned long)a[1], P(EESoundObject, 2));
-        return 0;
-    case EE_SCENARIO_EV_SET_DEATH:
-        P(EEPlayer, 0)->SetClassDeathSound((unsigned long)a[1], P(EESoundObject, 2));
-        return 0;
-    case EE_SCENARIO_EV_SET_SELECTION:
-        P(EEPlayer, 0)->SetClassSelectionSound((unsigned long)a[1], P(EESoundObject, 2), (long)a[3]);
-        return 0;
+    case EE_SCENARIO_EV_SET_ACKNOWLEDGE: P(EEPlayer, 0)->SetClassAcknowledgeSound((unsigned long)a[1], P(EESoundObject, 2), (long)a[3]); return 0;
+    case EE_SCENARIO_EV_SET_CREATION: P(EEPlayer, 0)->SetClassCreationSound((unsigned long)a[1], P(EESoundObject, 2)); return 0;
+    case EE_SCENARIO_EV_SET_DEATH: P(EEPlayer, 0)->SetClassDeathSound((unsigned long)a[1], P(EESoundObject, 2)); return 0;
+    case EE_SCENARIO_EV_SET_SELECTION: P(EEPlayer, 0)->SetClassSelectionSound((unsigned long)a[1], P(EESoundObject, 2), (long)a[3]); return 0;
     case EE_SCENARIO_EV_PLAY: P(EESoundObject, 0)->Play(); return 0;
     case EE_SCENARIO_EV_MAKE_OBSOLETE: P(EEPlayer, 0)->mTechnologies->MakeObsolete(a[1]); return 0;
     case EE_SCENARIO_EV_SET_PREREQUISITE: P(EEPlayer, 0)->mTechnologies->SetPrerequisite(a[1], a[2]); return 0;
     case EE_SCENARIO_EV_SET_CONTAINS: return gUnitSetManager.GetSet(a[0])->Contains(a[1]);
     case EE_SCENARIO_EV_COPY_LEVELS: P(EEUnitClassUpgrade, 0)->CopyUpgradeLevels(P(EEUnitClassUpgrade, 1)); return 0;
-    case EE_SCENARIO_EV_REPLACE_QUEUED:
-        EEReplaceQueuedTechnology(P(EEPlayer, 0), P(EEUnitClass, 1), (long)a[2]);
-        return 0;
-    case EE_SCENARIO_EV_MOVE_QUEUED:
-        P(EEPlayer, 0)->MoveQueuedImprovements((unsigned long)a[1], (unsigned long)a[2]);
-        return 0;
-    case EE_SCENARIO_EV_REPLACE_UNIT:
-        return R(EEReplaceUnit(static_cast<EEComplexUnit*>(P(EEUnit, 0)), (unsigned long)a[1], P(EEUnitClass, 2)));
-    case EE_SCENARIO_EV_SET_BEHAVIOR:
-        P(EEComplexUnit, 0)->SetBehavior(P(EEComplexUnit, 0)->GetClass()->mBehavior);
-        return 0;
+    case EE_SCENARIO_EV_REPLACE_QUEUED: EEReplaceQueuedTechnology(P(EEPlayer, 0), P(EEUnitClass, 1), (long)a[2]); return 0;
+    case EE_SCENARIO_EV_MOVE_QUEUED: P(EEPlayer, 0)->MoveQueuedImprovements((unsigned long)a[1], (unsigned long)a[2]); return 0;
+    case EE_SCENARIO_EV_REPLACE_UNIT: return R(EEReplaceUnit(static_cast<EEComplexUnit*>(P(EEUnit, 0)), (unsigned long)a[1], P(EEUnitClass, 2)));
+    case EE_SCENARIO_EV_SET_BEHAVIOR: P(EEComplexUnit, 0)->SetBehavior(P(EEComplexUnit, 0)->GetClass()->mBehavior); return 0;
     case EE_SCENARIO_EV_VARIANT_FACTOR: return EESMBits(gGameVariants[gWorld.mGameOptions.GetVariant()]->GetFactor(a[0]));
     case EE_SCENARIO_EV_CLASSES_NEW: return R(new std::vector<EEUnitClass*>);
-    case EE_SCENARIO_EV_CLASSES_IN_SET:
-        EEUnitClass::GetClassesInSet((unsigned long)a[1], *P(std::vector<EEUnitClass*>, 0));
-        return 0;
+    case EE_SCENARIO_EV_CLASSES_IN_SET: EEUnitClass::GetClassesInSet((unsigned long)a[1], *P(std::vector<EEUnitClass*>, 0)); return 0;
     case EE_SCENARIO_EV_CLASSES_SIZE: return (int64_t)P(std::vector<EEUnitClass*>, 0)->size();
     case EE_SCENARIO_EV_CLASSES_AT: return R((*P(std::vector<EEUnitClass*>, 0))[(size_t)a[1]]);
     case EE_SCENARIO_EV_CLASSES_FREE: delete P(std::vector<EEUnitClass*>, 0); return 0;
     case EE_SCENARIO_EV_SET_RANGE: P(EEUnitClassUpgrade, 0)->SetRange(EESMFloat(a[1])); return 0;
     case EE_SCENARIO_EV_SET_MAX_VELOCITY: P(EEUnitClassUpgrade, 0)->SetMaxVelocity(EESMFloat(a[1])); return 0;
     case EE_SCENARIO_EV_UNIT_SET: return R(gUnitSetManager.GetSet(a[0]));
-    case EE_SCENARIO_EV_PATHFINDING:
-        EEUnitSetFunctorModifyPathfindingBehavior(P(EEPlayer, 1), (long)a[2], a[3] != 0).ForEachIn(P(EEUnitSet, 0));
-        return 0;
+    case EE_SCENARIO_EV_PATHFINDING: EEUnitSetFunctorModifyPathfindingBehavior(P(EEPlayer, 1), (long)a[2], a[3] != 0).ForEachIn(P(EEUnitSet, 0)); return 0;
     case EE_SCENARIO_EV_NAME_TEXT: gResource->GetString(UMFloatToLong(EESMFloat(a[0])), sEvText); return 0;
     case EE_SCENARIO_EV_SET_NAME_TEXT: P(EEUnitClassUpgrade, 0)->SetName(sEvText); return 0;
     case EE_SCENARIO_EV_EVENT_COUNT: return (int64_t)EEEvent::sEvents.size();
@@ -193,8 +168,7 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_READ_ID: return P(FSFileSpec, 0)->Read(P(EEEvent, 1)->mID);
     case EE_SCENARIO_EV_READ_COUNT: return P(FSFileSpec, 0)->Read(P(EEEvent, 1)->mNumEffects);
     case EE_SCENARIO_EV_EVENT_ALLOC: return R(P(EEEvent, 0)->mEffects = new int32_t[(size_t)a[1]]);
-    case EE_SCENARIO_EV_READ_EFFECTS:
-        return P(FSFileSpec, 0)->Read(reinterpret_cast<char*>(P(EEEvent, 1)->mEffects), P(EEEvent, 1)->mNumEffects * 4, sEvRead);
+    case EE_SCENARIO_EV_READ_EFFECTS: return P(FSFileSpec, 0)->Read(reinterpret_cast<char*>(P(EEEvent, 1)->mEffects), P(EEEvent, 1)->mNumEffects * 4, sEvRead);
     case EE_SCENARIO_EV_EVENT_NO_EFFECTS: return R(P(EEEvent, 0)->mEffects = NULL);
     }
     return 0;

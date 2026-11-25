@@ -51,14 +51,11 @@ extern "C" void ee_path_after_load(void (*inFixup)())
 static int64_t EEPathManagerHost(void* inContext, int32_t inOp, EePathIo* io)
 {
     switch (inOp) {
-    case EE_PATH_WORLD_UNIT:
-        return (int64_t)(uintptr_t)dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)io->i[0])));
+    case EE_PATH_WORLD_UNIT: return (int64_t)(uintptr_t)dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)io->i[0])));
     case EE_PATH_CLOSEST_TILE:   // ClampTile's (pm_apply.rs): map h1's tile closest to the GE3DPoint at i2, as longs at i0, i1
         reinterpret_cast<EEMap*>(io->h[1])->GetClosestTile(reinterpret_cast<GE3DPoint*>(&io->i[2]), reinterpret_cast<long*>(&io->i[0]), reinterpret_cast<long*>(&io->i[1]));
         return 0;
-    case EE_PATH_UNIT_STRANDED:
-        reinterpret_cast<EEComplexUnit*>(io->h[0])->mPlayer->UnitStranded(reinterpret_cast<EEComplexUnit*>(io->h[0]));
-        return 0;
+    case EE_PATH_UNIT_STRANDED: reinterpret_cast<EEComplexUnit*>(io->h[0])->mPlayer->UnitStranded(reinterpret_cast<EEComplexUnit*>(io->h[0])); return 0;
     }
     return 0;
 }

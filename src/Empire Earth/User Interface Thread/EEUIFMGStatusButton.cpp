@@ -67,10 +67,7 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
 
 // Runs a command button on a right release, or cancels one queued tech (Shift: five, for units only)
 // (ee_screens status_button.rs)
-long EEUIFMGStatusButton::MouseRButtonUp()
-{
-    return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_RIGHT_UP);   // (0)
-}
+long EEUIFMGStatusButton::MouseRButtonUp() { return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_RIGHT_UP); }  // (0)
 
 // the right press's and tab's shims (ee_screens hud_more.rs)
 #define SBM(b) reinterpret_cast<EEUIFMGStatusButton*>(b)
@@ -267,12 +264,6 @@ extern "C" float ee_screenscpp_sbt_texture_height(uintptr_t inTexture)
 extern "C" void ee_screenscpp_sbt_dither_stretch(uintptr_t inButton, uintptr_t inRectangle, float inWidth, float inHeight, uintptr_t inManager)
 { static_cast<GEBitmap*>(SBB(inButton)->mDither)->ComputeStretchedCoordsAndScale(*reinterpret_cast<const GERectangle*>(inRectangle), *reinterpret_cast<const GERectangle*>(inRectangle), GERectangle(0.0f, 0.0f, inWidth, inHeight), SBM(inManager)->GetScreen()); }
 
-void EEUIFMGStatusButton::ButtonUp()
-{
-    static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_UP);
-}
+void EEUIFMGStatusButton::ButtonUp() { static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_UP); }
 
-long EEUIFMGStatusButton::CopyData()
-{
-    return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_COPY_DATA);
-}
+long EEUIFMGStatusButton::CopyData() { return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_COPY_DATA); }

@@ -313,10 +313,7 @@ EEComplexUnit* EEReplaceUnit(EEComplexUnit* inUnit, unsigned long inPlayer, EEUn
 // (0x6450f1, EEClearUnderBuilding: ee_units uu_world.rs clear_under_building)
 
 // Tells whether an enemy the unit may target is within its reach
-bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
-{
-    return ee_units_cgq_is_enemy_within_range(UUHandle(inUnit));   // cg_query.rs (CBQR)
-}
+bool EEIsEnemyWithinRange(EEComplexUnit* inUnit) { return ee_units_cgq_is_enemy_within_range(UUHandle(inUnit)); }  // cg_query.rs (CBQR)
 
 // Finds the nearest free farm of the unit's player, ring by ring (the ring reached goes back)
 EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioRing)
@@ -335,10 +332,7 @@ void EEForEachUnitOf(EEPlayer* inPlayer, EEUUUnitFunctor* inFunctor, bool inCala
 // Tells whether a unit can heal a target (wounded enough, not an enemy, in its heal set)
 // (new: the decision is ee_combat's can_heal over a record of pure reads; the unit set is looked up only for a set
 // in the manager's range, which the original indexed unchecked)
-bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget)
-{
-    return ee_units_lf_can_heal(UUHandle(inUnit), UUHandle(inTarget)) != 0;   // uu_fill.rs
-}
+bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget) { return ee_units_lf_can_heal(UUHandle(inUnit), UUHandle(inTarget)) != 0; }  // uu_fill.rs
 
 // Returns a unit around the given one whose gather goal works on it (searched in a random rotation)
 EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
@@ -368,10 +362,7 @@ bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanc
 
 // Returns a random number in [min, max]
 // (URandomIntegers::Generate's arithmetic: ee_base random.rs)
-long EEGetRandomInt(long inMin, long inMax, URandom& inRandom)
-{
-    return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(&inRandom), inMin, inMax);
-}
+long EEGetRandomInt(long inMin, long inMax, URandom& inRandom) { return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(&inRandom), inMin, inMax); }
 
 // (the U2DPoint<long> twin of 0x64b556 is gone: one tile type)
 
