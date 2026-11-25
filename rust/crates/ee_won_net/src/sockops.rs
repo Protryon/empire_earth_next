@@ -1021,7 +1021,11 @@ pub unsafe extern "C" fn ee_won_socketop_close_file(
 /// # Safety
 /// As `ee_won_socketop_init_send`; `cpp_op` is the object's C++ op.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_socketop_cleanup(o: *const EeWonSocketOp, cpp_op: *mut c_void, status: std::ffi::c_long) {
+pub unsafe extern "C" fn ee_won_socketop_cleanup(
+    o: *const EeWonSocketOp,
+    cpp_op: *mut c_void,
+    status: std::ffi::c_long,
+) {
     if op!(o).in_socket_thread() {
         // SAFETY: the op is live
         unsafe { crate::apicore::ee_won_api_socket_op(cpp_op, false) };

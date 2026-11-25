@@ -130,8 +130,7 @@ fn init_dirs(flags: u32, product_dir: Option<Vec<u16>>, count: i32) -> Members {
     if product_dir.is_some() {
         patch.extend(units("/Patch"));
     }
-    let paths =
-        [units("/TitanServers/Auth"), units("/TitanServers/DBProxy"), units("/TitanServers/Firewall"), patch];
+    let paths = [units("/TitanServers/Auth"), units("/TitanServers/DBProxy"), units("/TitanServers/Firewall"), patch];
     let mut m = Members::default().n(i64::from(count));
     for p in paths.iter().take(count.max(0) as usize) {
         m = m.n(i64::from(flags)).w(p).n(0);

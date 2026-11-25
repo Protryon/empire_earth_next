@@ -102,7 +102,7 @@ static void Show(const char* inStep, TestOp* a, TestOp* b = NULL, TestOp* c = NU
 static SmartPtr<TestOp> NewOp(const char* inName, AsyncOpContainer* inContainer, CompletionBase<AsyncOpPtr>* inDone)
 {
     SmartPtr<TestOp> anOp = new TestOp(inName);
-    SetContainer(&*anOp, inContainer);
+    SetContainer(anOp.get(), inContainer);
     anOp->SetCompletion(inDone);
     return anOp;
 }
@@ -363,7 +363,7 @@ static void OpCases()
         SmartPtr<CountedDone> x = new CountedDone("x"), y = new CountedDone("y");
         SmartPtr<TestOp> a = NewOp("oa", c, x);
         Log("x refs " + std::to_string(x->GetRefCount()) + " container set " +
-            std::to_string(GetContainer(&*a) == c ? 1 : 0));
+            std::to_string(GetContainer(a.get()) == c ? 1 : 0));
         a->SetCompletion(y);
         Log("replaced: x refs " + std::to_string(x->GetRefCount()) + " y refs " + std::to_string(y->GetRefCount()));
         a->SetCompletion(NULL);
@@ -419,7 +419,7 @@ static void OpCases()
         Show("ob completed", b);
         // blocking runs' time left
         SmartPtr<TimedOp> t = new TimedOp("ot", 0);
-        SetContainer(&*t, c);
+        SetContainer(t.get(), c);
         t->SetCompletion(x);
         t->mFinishInRun = true;
         Log("ot block hour -> " + std::to_string(t->Run(OP_MODE_BLOCK, 3600000)));
@@ -527,7 +527,7 @@ static void Trackers()
     {
         // a parent tracking three sub-ops: each sub-op's completion goes to CallbackHook while the parent runs
         SmartPtr<TrackingOp> p = new TrackingOp("p", true);
-        SetContainer(&*p, c);
+        SetContainer(p.get(), c);
         p->SetCompletion(aParentDone);
         SmartPtr<TestOp> s1 = NewOp("s1", c, aDone), s2 = NewOp("s2", c, aDone), s3 = NewOp("s3", c, aDone);
         p->RunAsync(-1);
@@ -549,7 +549,7 @@ static void Trackers()
         Log("p status " + std::to_string(p->GetStatus()));
         // a parent that finishes with sub-ops left: its cleanup kills them, their completions come after it
         SmartPtr<TrackingOp> q = new TrackingOp("q", false);
-        SetContainer(&*q, c);
+        SetContainer(q.get(), c);
         q->SetCompletion(aParentDone);
         SmartPtr<TestOp> s4 = NewOp("s4", c, aDone), s5 = NewOp("s5", c, aDone);
         q->RunAsync(-1);
@@ -566,7 +566,7 @@ static void Trackers()
         Show("q sub-ops delivered", s4, s5);
         // a sub-op that completes after its parent finished: CallbackHook is not called
         SmartPtr<TrackingOp> r = new TrackingOp("r", false);
-        SetContainer(&*r, c);
+        SetContainer(r.get(), c);
         SmartPtr<TestOp> s6 = NewOp("s6", c, aDone);
         r->Track(s6, 4);
         s6->mFinishInRun = true;
@@ -633,7 +633,7 @@ static void SockShow(const char* inStep, ScriptOp* a, ScriptOp* b = NULL, Script
 static SmartPtr<ScriptOp> NewScriptOp(const char* inName, AsyncOpContainer* inContainer, bool inRun)
 {
     SmartPtr<ScriptOp> anOp = new ScriptOp(inName);
-    SetContainer(&*anOp, inContainer);
+    SetContainer(anOp.get(), inContainer);
     if (inRun)
         anOp->RunAsync(-1);   // pending, queued in the container (never pumped before the thread's steps)
     return anOp;

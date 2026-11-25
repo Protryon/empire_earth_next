@@ -499,7 +499,11 @@ pub extern "C" fn ee_won_init_document_bytes(length: usize) -> usize {
 /// # Safety
 /// `path` is a C string; `document` holds `length` bytes (or is NULL for none).
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_init_save_tou(path: *const std::ffi::c_char, document: *const u8, length: usize) -> bool {
+pub unsafe extern "C" fn ee_won_init_save_tou(
+    path: *const std::ffi::c_char,
+    document: *const u8,
+    length: usize,
+) -> bool {
     // SAFETY: the caller's C string
     let name = unsafe { std::ffi::CStr::from_ptr(path) }.to_bytes();
     let mut writer = ee_won_net::file::EeWonFileWriter::new();
