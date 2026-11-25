@@ -13,15 +13,12 @@
 #include "lle/NEMessage.h"
 #include "lle/UResourceFile.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/SESoundManager.h"
 #include "lle/Input System.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/NESynchronousServer.h"
-#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -52,15 +49,12 @@
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEGameSound.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
-#include "rust/sim/netmsg.h"   // ee_netmsg
-#include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"   // the bodies (gamecpp message.rs)
 
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
@@ -116,10 +110,6 @@ long EELoadOrSave(EEMRecord* m)
 {
     return ee_gamecpp_msg_load_or_save(m);
 }
-
-// New (port), TEST ONLY: set by the UI fixture (EETestFixture.cpp, only with EE_TEST_UI) to see each box selection's
-// decoded ids as its message is built on the UI thread; NULL otherwise
-void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
 
 // Creates a box selection: picks the local player's units of the given type in the rectangle and stores them
 // compressed (the count, the blob), the rectangle and the type beside (members 3 and 4, off the wire). The selection
@@ -282,9 +272,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::CivRequestUpgrades: EECBRequestUpgrades((unsigned char)a[0], MSG->mString, *(std::vector<EECivUpgrade>*)a[1]);
         break;
-    case O::VecLongNew: return P64(new std::vector<long>((const int32_t*)a[0], (const int32_t*)a[0] + a[1]));
-    case O::VecLongDelete: delete (std::vector<long>*)p;
-        break;
     case O::VecPlayersAt: return P64((*(std::vector<EEPlayer*>*)p)[a[0]]);
     // the strings and the chat log
     case O::StrNew1K: return P64(new UWideString(0x400));
@@ -330,24 +317,8 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PlSetHackUnitClass: PL->SetHackUnitClass((long)a[0]);
         break;
-    case O::PlSetGameResult: PL->SetGameResult((long)a[0]);
-        break;
     case O::PlCanBuy: return PL->CanBuy((long)a[0], (long)a[1], (UWideString*)a[2]);
     case O::PlQueueImprovement: PL->QueueImprovement((unsigned long)a[0], (unsigned long)a[1], 0, 0);
-        break;
-    case O::PlAddAndRemoveSelectedIds: PL->AddAndRemoveUnitsFromSelectedGroup(*(std::vector<long>*)a[0]);
-        break;
-    case O::PlAddSelectedIds: PL->AddUnitsToSelectedGroup(*(std::vector<long>*)a[0]);
-        break;
-    case O::PlSelectIds: PL->SelectUnits(*(std::vector<long>*)a[0]);
-        break;
-    case O::PlRemoveSelectedId: PL->RemoveUnitFromSelectedGroup(a[0]);
-        break;
-    case O::PlAddSelectedId: PL->AddUnitToSelectedGroup(a[0], true);
-        break;
-    case O::PlSelectId: PL->SelectUnit(a[0], true, true);
-        break;
-    case O::PlUnselectAll: PL->UnselectAllUnits();
         break;
     case O::PlAddResource: PL->AddResource((long)a[0], (long)a[1]);
         break;
@@ -362,8 +333,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PlIncrementEpic: PL->IncrementEpic();
         break;
     case O::PlSavedGroupsSet: PL->mSavedGroups.Set((long)a[0], (long)a[1]);
-        break;
-    case O::PlClearSavedGroup: PL->ClearSavedGroup((unsigned char)a[0]);
         break;
     case O::PlAssignSavedGroup: PL->mGroups[a[0]]->Assign(PL->mActiveGroup);
         break;
@@ -489,50 +458,15 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
         break;
-    case O::CommPresent: return gCommunications != NULL;
-    case O::CommIsClient: return gCommunications->IsClient();
-    case O::CommIsGamePaused: return gCommunications->GetIsGamePaused();
-    case O::CommSetHumans: gCommunications->SetNumHumanPlayers((unsigned char)a[0]);
-        break;
-    case O::CommSetMultiplayer: gCommunications->SetIsMultiplayerSession(a[0] != 0);
-        break;
-    case O::CommProcessLocal: gCommunications->ProcessLocalUserInput((NEMessage*)p, (unsigned char)a[0]);
-        break;
     case O::CommSendLoadMainScreenResponse: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadMainScreenResponse, {gWorld.GetCurrentPlayer()->GetSlot(), gWorld.mCurrentPlayer}), kSlotServer);
-        break;
-    case O::ClientSetMigrating: CLIENT->mIsMigrating = a[0] != 0;
-        break;
-    case O::ClientSetSlowPlayback: static_cast<NESynchronousClient*>(gCommunications)->SetSlowPlayback();
-        break;
-    case O::ClientSetNormalPlayback: static_cast<NESynchronousClient*>(gCommunications)->SetNormalPlayback();
         break;
     case O::ClientFastLockEnter: CLIENT->mFastSelectionLock->Enter();
         break;
     case O::ClientFastLockLeave: CLIENT->mFastSelectionLock->Leave();
         break;
-    case O::ClientFastID: return CLIENT->mFastSelectionID;
-    case O::ClientFastLast: return P64(CLIENT->mFastSelection);
-    case O::ServerSetMigrating: SERVER->mIsMigrating = a[0] != 0;
-        break;
     case O::ServerFastLockEnter: SERVER->mFastSelectionLock->Enter();
         break;
     case O::ServerFastLockLeave: SERVER->mFastSelectionLock->Leave();
-        break;
-    case O::ServerFastID: return SERVER->mFastSelectionID;
-    case O::ServerFastLast: return P64(SERVER->mFastSelection);
-    case O::ServerLogResponse: static_cast<NESynchronousServer*>(gCommunications)->LogResponse(MSG);
-        break;
-    case O::ServerSetLoadState: SERVER->mLoadState = (unsigned char)a[0];
-        break;
-    case O::ServerSetGameState: SERVER->SetGameState((long)a[0]);
-        break;
-    case O::ServerClearSendToSlots: SERVER->ClearSendToSlotArray();
-        break;
-    case O::ServerSetLoadResponses: SERVER->mNumLoadResponses = (unsigned char)a[0];
-        break;
-    case O::ServerSetSendToSlotForPlayer: SERVER->SetSendToSlotForPlayer((unsigned char)a[0], (unsigned char)a[1]);
-        break;
-    case O::ServerSendPlayerSlotInfo: SERVER->SendPlayerSlotInfo();
         break;
     case O::LobbyOptPlayer: return P64(&gGameOptions.mPlayers[a[0]]);
     case O::LobbyReadLock: gGameOptions.mLock->ReadLock();
@@ -617,51 +551,23 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11NmKill: NM_U->Kill(NM_I[0], 0, 0);
         break;
     case O::C11NmClassFact: return NM_I[0] == EE_NETMSG_CLASS_TYPE ? ((EEUnitClass*)(uintptr_t)NC->a)->mUnitType : ((EEUnitClass*)(uintptr_t)NC->a)->mTileSize;
-    case O::C11NmUnitHitPoints: return NM_U->mHitPoints;
-    case O::C11NmUnitType: return NM_U->mUnitClass->mUnitType;
-    case O::C11NmUnitCategory: return NM_U->GetUnitClass()->mCategory;
-    case O::C11NmUnitMaxHitPoints: return NM_U->mStats->mMaxHitPoints;
-    case O::C11NmUnitCanDisband: return NM_U->mUnitClass->mCanDisband;
-    case O::C11NmUnitIsPacked: return NM_U->mIsPacked;
     case O::C11NmUnitPackedClass: return P64(NM_U->mUnitClass->mPackedClass);
-    case O::C11NmUnitFlightTime: return NM_U->mFlightTime;
     case O::C11NmUnitDeathSpawn: return NM_U->mUnitClass->mDeathSpawnClass != NULL;
-    case O::C11NmUnitCanChangeBehavior: return NM_U->mUnitClass->mCanChangeBehavior;
-    case O::C11NmUnitComplex: return P64(NM_U->mComplexUnit);
     case O::C11NmUnitTileNode: return NM_U->mTileNode != NULL;
     case O::C11NmUnitOwner: return P64(NM_U->mPlayer);
     case O::C11NmUnitLandBuilding: return NM_U->mUnitClass->IsLandBuilding();
-    case O::C11NmUnitPaidFor: return NM_U->mIsPaidFor;
-    case O::C11NmUnitBuilt: return NM_U->mIsBuilt;
     case O::C11NmUnitCanDelete: return NM_U->CanDelete();
     case O::C11NmUnitTileX: return NM_U->GetTileX();
     case O::C11NmUnitTileY: return NM_U->GetTileY();
-    case O::C11NmUnitDomains: return NM_U->mUnitClass->mDomains;
     case O::C11NmUnitNext: return P64(NM_U->mNext);
     case O::C11NmUnitAsComplex: return P64(EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(NM_U)));
     case O::C11NmUnitInSet: return gUnitSetManager.GetSet(NM_I[1])->Contains(NM_U->mUnitClass->mUnitType);
-    case O::C11NmPlayerObserver: return NM_P->mObserverMode;
-    case O::C11NmPlayerCivChosen: return NM_P->mCivilizationChosen;
-    case O::C11NmPlayerSlot: return NM_P->mSlot;
-    case O::C11NmPlayerChatType: return NM_P->mChatType;
-    case O::C11NmPlayerEnemy: return NM_P->mEnemies[NM_I[1]];
-    case O::C11NmPlayerSendsChat: return NM_P->mSendChatMessage[NM_I[1]];
-    case O::C11NmPlayerId: return NM_P->mPlayerID;
-    case O::C11NmPlayerResource: return NM_P->mResourceCaps[NM_I[1]];
     case O::C11NmPlayerFirstUnit: return P64(NM_P->mFirstUnit);
     case O::C11NmPlayerTradePrice: return EEGetTradePrice(NM_P, (long)NM_I[1], (unsigned char)NM_I[2]);
     case O::C11NmWorldNumPlayers: return gWorld.mNumPlayers;
     case O::C11NmWorldCurrentIndex: return gWorld.mCurrentPlayer;
-    case O::C11NmWorldExecutingSelection: return (gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection) || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection);
-    case O::C11NmWorldIsServer: return gCommunications->IsServer();
-    case O::C11NmWorldHasCommunications: return gCommunications != NULL;
-    case O::C11NmWorldLocalSendSlot: return gCommunications->IsClient() == true ? static_cast<EEClient*>(gCommunications)->GetMySendToSlot() : 0xfe;
     case O::C11NmWorldStringLength: return NM_M->mString.GetLength();
-    case O::C11NmWorldPlayback: return (gCommunications->IsClient() == true && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying) || (gCommunications->IsServer() == true && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying);
     case O::C11NmWorldCollisionSphereMode: return gCollisionSphereMode;
-    case O::C11NmWorldLoadedHumans: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers() - static_cast<EEServer*>(gCommunications)->mNumDroppedLoaders;
-    case O::C11NmWorldLoadResponses: return static_cast<EEServer*>(gCommunications)->mNumLoadResponses;
-    case O::C11NmWorldHumans: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers();
     case O::C11NmMapType: gGameOptions.mMapType = NM_M->mString;
         break;
     // the factory (p the received buffer)
@@ -685,9 +591,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11MsgListData: return P64(MSG->mList.empty() ? NULL : &MSG->mList[0]);
     case O::C11MsgListSize: return (int64_t)MSG->mList.size();
     case O::C11MsgSetRectangle: MSG->Set<GERectangle>(3, *(const GERectangle*)a[0]);
-        break;
-    case O::C11SelectHookSet: return gEESelectUnitsTestHook != NULL;   // TEST ONLY: the UI fixture's box selection
-    case O::C11SelectHookCall: gEESelectUnitsTestHook(std::vector<long>((const int32_t*)a[0], (const int32_t*)a[0] + a[1]));
         break;
     case O::C11FarmKey: *(EeGamecppFarmKey*)a[0] = EeGamecppFarmKey{CX->mIsBuilt, CX->mIsPaidFor, CX->mTileX, CX->mTileY};
         break;

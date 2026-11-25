@@ -11,18 +11,11 @@
 // inline ctors) follows the ghost-unit pass.
 #include <windows.h>
 
-#include "lle/LowLevelEngine.h"
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
-#include "rust/render/gfx.h"
-#include "rust/sim/units.h"
 #include "dx7/DX7Rasterizer.h"
 #include "lle/GEModelManager.h"
 #include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEMap.h"
@@ -47,12 +40,8 @@
 #include "ee/EEMusicManager.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEMouse.h"
-#include "ee/EEAreaEffectKindIDs.h"
-#include "ee/EERenderCapture.h"     // RFIL (TEST ONLY)
 #include "ee/EEWheel.h"
-#include "ee/EEUnitClassKinds.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "lle/GEPhysicalModel.h"
 #include "rust/game/gamecpp.h"
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
@@ -319,8 +308,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoGhostUnlock: gWorld.mGhostUnitsLock->Leave();
         break;
     case O::RoGhostUnitsChanged: return gGhostUnitsChanged;
-    case O::RoGhostCount: return (int64_t)gWorld.GetNumGhostUnits();
-    case O::RoGhostAt: return RO_P64(gWorld.mGhostUnits[a[0]]);
     case O::RoGhostModel: return RO_P64(RO_GH->GetModel());
     case O::RoGhostFrame: return RO_GH->mFrame;
     case O::RoGhostAnimation: return RO_GH->mAnimation;

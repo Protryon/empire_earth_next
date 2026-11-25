@@ -5,7 +5,6 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "ee/EESMArea.h"
-#include "ee/EEScenarioHost.h"
 
 // Returns the area's centre tile, computing and caching it once: rectangle centre, continent centre, or the hull
 // centre of the town holding the anchor (else the anchor)

@@ -10,19 +10,10 @@
 // 0x1a86ff..0x1a8d3e and EESEAPaintTerrain.cpp 0x1a8d3e..0x1a9112 (their deque and std::sort COMDATs with them).
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
-#include "lle/GELine.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EmpireEarth.h"
@@ -33,7 +24,6 @@
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEAIContinentManager.h"
@@ -43,28 +33,19 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "lle/GEText.h"
-#include "ee/EEUIShell.h"
-#include "lle/UIRadioButton.h"
-#include "rust/game/screens.h"
-#include "lle/GEText.h"
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
-#include "lle/UIComboBox.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEUIShell.h"
 #include "ee/EEGhostUnit.h"
-#include "ee/EESEUnit.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEMouse.h"
-#include "ee/EEAirTrafficControl.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EESEARust.h"
 #include "ee/EESERBUnitTypes.h"   // gMaxPlayers
-#include "lle/UICheckBox.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
-#include "rust/sim/units.h"
 
 // ------------------------------------------------------------------------------------------------ the classes' parts
 // The editor kinds' C++ (ee/EEARust.h): the load text's post from the load thread (the trigger tab's object
@@ -615,7 +596,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_GHOST_COUNT:
         return (intptr_t)gWorld.GetNumGhostUnits();
     case EE_SCREENS_SEAX_GHOST:
-        return (intptr_t)gWorld.mGhostUnits[i[0]];
+        return (intptr_t)gWorld.GetGhostUnit(i[0]);
     case EE_SCREENS_SEAX_BUILD_GATE:
         EEBuildGate(sSeaxTile = EETileCoordinate(i[0], i[1]), i[2], i[3], i[4]);
         return 0;

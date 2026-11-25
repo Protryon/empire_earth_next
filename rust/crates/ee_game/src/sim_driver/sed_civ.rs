@@ -95,7 +95,7 @@ fn quoted(text: &str) -> String {
 /// A control's or form's class: a shell's is the class its kind replaces.
 fn class_of(shell: usize, name: O, object: usize) -> String {
     if shell != 0 {
-        ht(O::ShellKindName, shell, 0)
+        super::sim_ops::ht(super::sim_ops::EeSimDriverSim::ShellKindName, shell, 0)
     } else {
         strip_class(ht(name, object, 0))
     }
@@ -108,14 +108,14 @@ fn form_digest(form: usize, out: &mut Vec<String>) {
         out.push("  no form".into());
         return;
     }
-    let count = h(O::UiFormControlCount, form, &[]) as c_ulong;
+    let count = super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormControlCount, form, &[]) as c_ulong;
     out.push(format!(
         "  form {} {} controls {count}",
-        h(O::UiFormId, form, &[]) as c_ulong,
+        super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormId, form, &[]) as c_ulong,
         class_of(h(O::UiFormShellOf, form, &[]) as usize, O::UiFormTypeName, form)
     ));
     for i in 0..count {
-        let c = h(O::UiFormControl, form, &[i as i64]) as usize;
+        let c = super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormControl, form, &[i as i64]) as usize;
         if c == 0 {
             continue;
         }
@@ -265,7 +265,11 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             let main = h(O::UiFormById, 0, &[11]) as usize; // kFormMainGame
                                                             // kMainGameCivSelectorBuilder, kMainGameLargeCivBuilderAlert
             for k in [5i64, 234] {
-                let button = if main == 0 { 0 } else { h(O::UiFormControl, main, &[k]) as usize };
+                let button = if main == 0 {
+                    0
+                } else {
+                    super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormControl, main, &[k]) as usize
+                };
                 out.push(format!(
                     "  main c{k} {}",
                     if button == 0 { "none".to_string() } else { format!("m={}", x::display_mode(button)) }
@@ -367,7 +371,11 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             let mut stack = "  stack".to_string();
             for i in 0..h(O::UiFormCount, 0, &[]) {
                 let f = h(O::UiFormStacked, 0, &[i]) as usize;
-                stack += &if f == 0 { " null".to_string() } else { format!(" {}", h(O::UiFormId, f, &[]) as c_ulong) };
+                stack += &if f == 0 {
+                    " null".to_string()
+                } else {
+                    format!(" {}", super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormId, f, &[]) as c_ulong)
+                };
             }
             out.push(stack);
             // a message box left on top (none in a passing run's states): its text names why (an error box of
@@ -402,29 +410,34 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             let spec = user_spec(arg(2));
             let mut line = format!("  file {}", arg(2));
             let mut size: c_ulong = 0;
-            if h(O::SpecOpenRead, spec, &[]) != 0 || h(O::SpecGetLength, spec, &[&mut size as *mut c_ulong as i64]) != 0
+            if gc::h(gc::O::FileOpenReadSpec, spec, &[]) != 0
+                || gc::h(gc::O::EntrySpecLength, spec, &[&mut size as *mut c_ulong as i64]) != 0
             {
                 line += " missing";
             } else {
                 let mut bytes = vec![0u8; size as usize + 1];
                 let mut read: c_ulong = 0;
-                h(O::SpecRead, spec, &[bytes.as_mut_ptr() as i64, size as i64, &mut read as *mut c_ulong as i64]);
+                gc::h(
+                    gc::O::FileReadBytes,
+                    spec,
+                    &[bytes.as_mut_ptr() as i64, size as i64, &mut read as *mut c_ulong as i64],
+                );
                 line += &format!(" {read} {}", hexed(&bytes[..read as usize]));
             }
-            h(O::SpecClose, spec, &[]);
-            h(O::SpecFree, spec, &[]);
+            gc::h(gc::O::FileClose, spec, &[]);
+            gc::h(gc::O::DxDelete, spec, &[]);
             out.push(line);
         }
         "rm" => {
             let spec = user_spec(arg(2));
-            h(O::SpecDelete, spec, &[]);
-            h(O::SpecFree, spec, &[]);
+            gc::h(gc::O::UsgDelete, spec, &[]);
+            gc::h(gc::O::DxDelete, spec, &[]);
         }
         "put" => {
             let spec = user_spec(arg(2));
             let bytes = unhex(arg(3));
-            h(O::SpecDelete, spec, &[]);
-            h(O::SpecCreate, spec, &[]);
+            gc::h(gc::O::UsgDelete, spec, &[]);
+            gc::h(gc::O::UsgCreate, spec, &[]);
             let mut written: c_ulong = 0;
             if h(O::SpecOpenWrite, spec, &[]) == 0 {
                 h(
@@ -433,8 +446,8 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                     &[bytes.as_ptr() as i64, bytes.len() as i64, &mut written as *mut c_ulong as i64],
                 );
             }
-            h(O::SpecClose, spec, &[]);
-            h(O::SpecFree, spec, &[]);
+            gc::h(gc::O::FileClose, spec, &[]);
+            gc::h(gc::O::DxDelete, spec, &[]);
         }
         "save" => {
             let result = x::hsa(O::CivSave, 0, &[(number(arg(3)) != 0) as i64], &word(arg(2)));
@@ -464,7 +477,10 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             // cb flag freecam|custom|scenario 0|1: the game's flags the builder reads
             let on = (number(arg(3)) != 0) as i64;
             match arg(2) {
-                "freecam" => h(O::SetFreeCamera, 0, &[on]),
+                "freecam" => {
+                    crate::gamecpp::globals::set!(gFreeCamera, on != 0);
+                    0
+                }
                 "custom" => h(O::SetAllowCustomCivs, 0, &[on]),
                 _ => h(O::SetScenarioGame, 0, &[on]),
             };

@@ -16,16 +16,14 @@
 #include "ee/EESMObject.h"
 #include "ee/EESMArea.h"
 #include "ee/EESMEffect.h"
-#include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEScenarioCapture.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEEnvironmentManager.h"
-#include "rust/sim/scenario.h"
+#include "rust/game/gamecpp.h"   // the camera's keys (camera_io.rs)
 
 namespace {
 
@@ -80,7 +78,7 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_MEDIA_SECTION: return P((const char*)SM(inP)->mMediaStrings.GetSection((unsigned long)inA));
     case EE_SCENARIO_CAP_MESSAGES: return (int64_t)SM(inP)->mMessages.size();
     case EE_SCENARIO_CAP_TIMED: return P(SM(inP)->mTimedEffects);
-    case EE_SCENARIO_CAP_CAMERA_KEYS: return (int64_t)gWorld.mCameraControl.mKeys.size();
+    case EE_SCENARIO_CAP_CAMERA_KEYS: return (int64_t)ee_gamecpp_camera_key_count();
     case EE_SCENARIO_CAP_CAMERA_PATH: return (int64_t)gWorld.mCameraControl.mPathIndex;
     case EE_SCENARIO_CAP_CONDITION_FIELDS: return P(static_cast<EeScenarioConditionFields*>(SC(inP)));
     case EE_SCENARIO_CAP_CONDITION_CHAT: return P((const char*)SC(inP)->mChatText);

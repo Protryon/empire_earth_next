@@ -321,3 +321,18 @@ fn an_editor_script_runs_line_by_line() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_world_constants_are_the_generated_headers() {
+    use super::sim_host::*;
+    let path = format!("{}/../../../include/ee/EEWorldConstants.h", env!("CARGO_MANIFEST_DIR"));
+    let text = std::fs::read_to_string(path).unwrap();
+    let id = |name: &str| -> u32 {
+        let line = text.lines().find(|l| l.trim_start().starts_with(&format!("{name} ="))).unwrap();
+        line.split('=').nth(1).unwrap().split(',').next().unwrap().trim().parse().unwrap()
+    };
+    assert_eq!(id("kWorldConversionFaithCost"), WORLD_CONVERSION_FAITH_COST);
+    assert_eq!(id("kWorldWonderSightRadius"), WORLD_WONDER_SIGHT_RADIUS);
+    assert_eq!(id("kWorldTradeRateStoneIron"), WORLD_TRADE_RATE_STONE_IRON);
+    assert_eq!(id("kWorldTradeRateFoodWood"), WORLD_TRADE_RATE_FOOD_WOOD);
+}

@@ -6,17 +6,10 @@
 // options, the menus and the lobby as the harness drives them, the run on the physics thread's after-tick, the
 // samples, the end of the run, the JSON report, --games' batch; EE-SIM --help; the UI's and the world's reads and the
 // capture's sweeps, the world lock, the save's and the dump's hooks: sim_host.rs). This file is its host: the calls
-// and members the Rust reads (ee_simcpp_sim*: one case each, EeSimDriverSim), EE-SIM's entry and the POSIX fault
-// handler.
+// and members the Rust reads (ee_simcpp_sim*: one case each, EeSimDriverSim) and EE-SIM's entry.
 #ifdef _WIN32
 #include <winsock2.h>
 #include <io.h>
-#else
-#include <execinfo.h>
-#include <sys/stat.h>
-#include <pthread.h>
-#include <signal.h>
-#include <unistd.h>
 #endif
 #include <windows.h>
 #include <stdint.h>
@@ -38,37 +31,26 @@
 #include <list>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousServer.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EmpireEarth.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EECommunications.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EECPEngine.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESaveGameFiles.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/game/screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
 #include "rust/game/sim_driver.h"   // the driver (ee_game sim_driver)
-#include "rust/game/app.h"   // the mini map's MMSN (world_capture.rs)
 #include "ee/EEMiniMap.h"
-#include "rust/sim/combat.h"
-#include "rust/sim/netmsg.h"   // the decisions' sweep
-#include "rust/sim/units.h"   // the pick and Fill sweeps (ee_sim units/pick_sweep.rs)
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/USingleton.h"
@@ -79,8 +61,6 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
-#include "ee/EECombatFormulas.h"
-#include "ee/EECombatGoals.h"
 #include "ee/EEUnitUtilities.h"     // EESearchTargetAlongList (the end sweep)
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
 #include "ee/EEUGRust.h"
@@ -90,7 +70,6 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIShell.h"
 #include "platform/PlatSim.h"
-#include "platform/PlatTime.h"
 
 // (the per-CT checksum line's fields and the state dump: sim_driver dump.rs, over the Dm cases below; the C
 // library's environment, descriptors and streams, the quit and --rng-trace: sim_driver stdio.rs; the world lock, the
@@ -98,43 +77,6 @@
 
 // (EESimPreferences is Empire Earth.cpp's, and EERun starts the driver's thread itself, ee_sim_driver_start: so the
 // game's start-up names no symbol of this driver)
-
-#ifndef _WIN32
-// (Windows: the fault report is sim_driver fault.rs's)
-// a fault in the simulation (POSIX): the signal, the address and the return addresses on stderr, then the signal's
-// default action (the handler is reset). Linux prints the frames as ee-sim(+0xOFFSET): addr2line -f -C -e ee-sim
-// 0xOFFSET names them.
-static void EESimFault(int inSignal, siginfo_t* inInfo, void*)
-{
-    char theText[200];
-    int n = snprintf(theText, sizeof(theText), "EE-SIM FAULT signal %d at %p thread %lu; frames:\n", inSignal,
-                     inInfo ? inInfo->si_addr : NULL, (unsigned long)(uintptr_t)pthread_self());
-    if (n > 0 && write(2, theText, (size_t)n) < 0)
-        n = 0;
-    void* theFrames[48];
-    backtrace_symbols_fd(theFrames, backtrace(theFrames, 48), 2);
-}
-
-static void EESimInstallFaultHandler()
-{
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
-    return;   // the sanitizer's own report is better
-#endif
-#endif
-    void* theFrame[1];
-    backtrace(theFrame, 1);   // loads the unwinder now, not inside the handler
-    struct sigaction theAction;
-    memset(&theAction, 0, sizeof(theAction));
-    theAction.sa_sigaction = EESimFault;
-    theAction.sa_flags = SA_SIGINFO | SA_RESETHAND;
-    sigemptyset(&theAction.sa_mask);
-    for (int theSignal : {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT})
-        sigaction(theSignal, &theAction, NULL);
-}
-#endif
-
-void EESimGameEnded(int inResult);
 
 // EESimMain: EE-SIM.exe's entry (EESimMain.cpp's main): the driver's options and switches (ee_game sim_driver), the
 // debug strings and faults hooked, then the game's own WinMain. On POSIX the game's main calls it for "ee-aoc --sim
@@ -147,18 +89,19 @@ int EESimMain(int argc, char** argv)
         return theCode;
 #ifdef _WIN32
     char theEmpty[1] = {0};
-    EESimGameEnded(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));
+    ee_sim_driver_game_ended(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));   // (does not return)
     return 4;
 #else
-    EESimInstallFaultHandler();
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+#define EE_SIM_SANITIZED   // the sanitizer's own report is better
+#endif
+#endif
+#ifndef EE_SIM_SANITIZED
+    ee_sim_driver_fault_install_posix();   // sim_driver fault.rs
+#endif
     return -1;   // the POSIX main goes on with the game (Empire Earth.cpp: ee-aoc --sim ...)
 #endif
-}
-
-// EESimGameEnded: the game's own start-up returned before the driver ended the run (it was quit, or failed to start)
-void EESimGameEnded(int inResult)
-{
-    ee_sim_driver_game_ended(inResult);
 }
 
 // ------------------------------------------------------------------------------------------------ the Rust's calls
@@ -197,14 +140,7 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::ScreenEventOf: return P64(dynamic_cast<EEScreenEvent*>((UIEvent*)p));
     case O::ScreenEventCode: return ((EEScreenEvent*)p)->mEvent;
-    case O::SpLoadGameFileList: return kSPLoadGameFileListBox;
-    case O::LoadScenarioFileList: return kLoadGameLoadFileListBox;
     // the physics and the world
-    case O::PhysicsTicksDone: return gPhysics->mNumTicksDone;
-    case O::PhysicsTickMs: return gPhysics->mTickTimeMs;
-    case O::PhysicsFlushPlacements: gWorld.FlushQueuedPlacements();
-        break;
-    case O::MapPresent: return gWorld.GetMap() != NULL;
     case O::NumPlayers: return gWorld.GetNumPlayers();
     case O::PlayerSetCivilizationChosen: PL->mCivilizationChosen = a[0] != 0;
         break;
@@ -213,12 +149,10 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::PlayerSetStance: PL->SetDiplomaticStance((EEPlayer*)a[0], 0, gWorld.GetMap());
         break;
     case O::PlayerAllyCount: return PL->mAllies.size();
-    case O::PlayerId: return PL->GetPlayerID();
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(false, true);
         break;
     case O::NodeData: return P64(((EETechTreeNode*)p)->mData);
     case O::NodeCost: return ((EETechTreeNode*)p)->GetCost((long)a[0], (unsigned long)a[1], 1.0f);
-    case O::VolcanoProjectileType: return kUnitTypeVolcanoProjectile;
     case O::RequestSaveNew:   // load, quiet, tick, time, auto-save, the wait id, the name
         return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadOrSaveGame,
             {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, UWideString(s)})));
@@ -227,50 +161,20 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DerefMessage: ((NEMessage*)p)->Dereference();
         break;
     // the platform switches
-    case O::SetSimMode: gPlatSimMode = 1;
-        break;
-    case O::SetSeedSet: gPlatSimSeedSet = (int)a[0];
-        break;
-    case O::SetSeed: gPlatSimSeed = (uint32_t)a[0];
-        break;
-    case O::SetNoHumanDefeat: gPlatSimNoHumanDefeat = (int)a[0];
-        break;
     case O::SetScenarioDialogs: gScenarioSimDialogs = a[0] != 0;
         break;
-    case O::SetPortOffset: gPlatSimPortOffset = (int)a[0];
-        break;
-    case O::AnyPort: return kPlatSimAnyPort;
-    case O::ClearNoHumanDefeatHits: gPlatSimNoHumanDefeatHits = 0;
-        break;
-    case O::NoHumanDefeatHits: return (long)gPlatSimNoHumanDefeatHits;
     // the units
-    case O::UnitHitPoints: return UN->mHitPoints;
-    case O::UnitHasStats: return UN->mStats != NULL;
     case O::UnitIsBuilding: return UN->mUnitClass->IsBuilding();
     case O::UnitType: return UN->mUnitClass->GetUnitType();
-    case O::UnitId: return UN->GetUnitID();
-    case O::UnitTileX: return UN->GetTileX();
-    case O::UnitTileY: return UN->GetTileY();
-    case O::ComplexHitPoints: return CX->mHitPoints;
     case O::ComplexOnMap: return CX->mTileNode != NULL;
-    case O::ComplexTileX: return CX->GetTileX();
-    case O::ComplexTileY: return CX->GetTileY();
-    case O::UnitTileXRaw: return CX->mTileX;
     case O::ComplexIsPriest: return CX->GetUnitClass()->IsPriest();
-    case O::ComplexCategory: return CX->mUnitClass->mCategory;
-    case O::ComplexClass: return P64(CX->mUnitClass);
     case O::ComplexLocation: return P64(&CX->mPhysicalModel.GetLocation());
     case O::ComplexSetLocation: CX->mPhysicalModel.SetLocation(*(const GETransformation*)a[0]);
-        break;
-    case O::ComplexSetLauncherClass: CX->SetLauncherClass((EEUnitClass*)a[0]);
         break;
     case O::ComplexPosition: CX->GetPosition(*(GE3DPoint*)a[0]);
         break;
     case O::ComplexSetGoal: CX->SetGoal((EEUnitGoal*)a[0], false, false);
         break;
-    case O::ComplexFlightTime: return CX->mFlightTime;
-    case O::ComplexHasGoalState: return CX->mGoalState != NULL;
-    case O::ComplexPlayer: return P64(CX->mPlayer);
     case O::IgnoredSave: return P64(new std::deque<EEComplexUnitAttacker>(CX->mIgnoredTargets));
     case O::IgnoredRestore: CX->mIgnoredTargets = *(std::deque<EEComplexUnitAttacker>*)a[0];
         break;
@@ -285,7 +189,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::UpgradeProjectile: return P64(((EEUnitClassUpgrade*)p)->mUnitClass->mProjectileClass);
     // the unit classes
     case O::ClassCount: return gUnitClassTable.size();
-    case O::ClassCategory: return UC->mCategory;
     case O::ClassProjectile: return P64(UC->mProjectileClass);
     case O::ClassCreateUnit: return P64(UC->CreateUnit((long)a[0], (long)a[1], (unsigned long)a[2], false, (EEComplexUnit*)a[3]));
     case O::ClassLaunchProjectile: UC->LaunchProjectile((EEComplexUnit*)a[0], GE3DPoint(f[0], f[1], f[2]));
@@ -294,8 +197,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::ClassWaterImpact: return UC->CheckWaterImpact((EEComplexUnit*)a[0]);
     case O::ClassGroundImpact: return UC->CheckGroundImpact((EEComplexUnit*)a[0]);
-    case O::MissileCategory: return kUnitCategoryMissile;
-    case O::TorpedoCategory: return kUnitCategoryTorpedo;
     // the capture and its sweeps
     case O::PhysicsRandom: return gPhysics != NULL ? P64(&gPhysics->mRandom) : 0;
     case O::GroupCommandSweep: EEGroupCommandSweep();
@@ -303,7 +204,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::MiniMapSnapshot: ee_app_capture_minimap_snapshot(gMiniMap->mRust, gMiniMap->mPixels, gMiniMap->mPixelsPerRow);
         break;
     case O::RegenerationInterval: return EEGetRules().mCombat.mRegenerationInterval;
-    case O::ConversionFaithCost: return gWorldTable.GetLongValue(kWorldConversionFaithCost);
     case O::DialogShowing:
         return gScenarioSimDialogs && gWorld.mScenarioManager != NULL && gWorld.mScenarioManager->mIsShowingDialog;
     case O::ShowDialogMessage: gWorld.mScenarioManager->ShowDialogMessage();
@@ -313,8 +213,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::MapRemoveSight: gWorld.mMap->RemoveSight(PL, f[0], f[1], f[2], a[0] != 0);
         break;
-    case O::MapExploreUnseen: gWorld.mMap->ExploreUnseen(PL);
-        break;
     case O::MapFogSeen: gWorld.mMap->FogSeen(PL);
         break;
     // the state dump (sim_driver dump.rs)
@@ -322,12 +220,8 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmPhysSetLastOos: gPhysics->mLastOutOfSynchChecksum = (unsigned long)a[0];
         break;
     case O::DmPhysOos: return gPhysics->GetOutOfSynchChecksum(false, (unsigned long)a[0]);
-    case O::DmPhysTicksDone: return gPhysics->mNumTicksDone;
-    case O::DmPhysCurrentTick: return gPhysics->mCurrentTick;
     case O::DmPhysSeed: return (uint32_t)gPhysics->mRandom.GetSeed();
     case O::DmPhysInputs: return gPhysics->mInputMessagesProcessed;
-    case O::DmPhysTickRandom: return (long)gPhysics->mTickRandom;
-    case O::DmPhysTicksToProcess: return (long)gPhysics->mTicksToProcess;
     case O::DmWorldFirstUnit: return P64(static_cast<EEUnit*>(gWorld.mUnits.mFirst));
     case O::DmUnitChecksum: return (uint32_t)UN->GetChecksum((long)a[0]);
     case O::DmComplexChecksum: return (uint32_t)CX->GetChecksum((long)a[0]);
@@ -345,31 +239,15 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmTownHullY: return (long)((EETown*)p)->GetHullPoint((unsigned long)a[0]).GetY();
     case O::DmPlPatrolCount: return PL->mPatrolGroups.size();
     case O::DmPlPatrolAt: return P64(PL->mPatrolGroups[a[0]]);
-    case O::DmCxUnitId: return CX->mUnitID;
-    case O::DmCxTileYRaw: return CX->mTileY;
-    case O::DmUnitIdRaw: return UN->mUnitID;
     case O::DmCpDump: EECPOutOfSynchDump((FILE*)a[0]);
         break;
     case O::DmPathDump: gPathManager.DumpSim((FILE*)a[0]);
         break;
     case O::DmUnitTypeRaw: return (long)UN->mUnitClass->mUnitType;
     case O::DmUnitPlayerId: return UN->GetPlayer() ? (long)UN->GetPlayer()->mPlayerID : -1L;
-    case O::DmUnitTileXRaw: return (long)UN->mTileX;
-    case O::DmUnitTileYRaw: return (long)UN->mTileY;
-    case O::DmComplexOf: return P64(dynamic_cast<EEComplexUnit*>(UN));
-    case O::DmCxComplex: return P64(CX->mComplexUnit);
-    case O::DmCxUpdated: return (unsigned long)CX->mTimesUpdated;
     case O::DmCxCommand: return CX->mCommand ? (long)CX->mCommand->mType : -1L;
-    case O::DmCxGroup: return CX->mActiveGroup != NULL;
     case O::DmCxWpCount: return CX->mWaypoints.size();
-    case O::DmCxPathDone: return CX->mIsPathDone ? 1 : 0;
-    case O::DmCxArrived: return CX->mHasArrived ? 1 : 0;
-    case O::DmCxBlockingId: return CX->mBlockingUnit != NULL ? CX->mBlockingUnit->mUnitID : 0UL;
-    case O::DmCxAnim: return (unsigned long)CX->GetAnimation();
     case O::DmCxFrame: return (unsigned long)CX->mPhysicalModel.GetFrame();
-    case O::DmCxAnimTime: return (unsigned long)CX->mAnimationTime;
-    case O::DmCxPaused: return CX->mIsAnimationPaused ? 1 : 0;
-    case O::DmCxReload: return (long)CX->mReloadTimer;
     case O::DmCxQueues: return (long)CX->GetNumGoalQueues();
     case O::DmCxQueueSize: return CX->GetQueueGoals((long)a[0]).size();
     case O::DmCxGoal: return P64(CX->GetQueueGoals((long)a[0])[(size_t)a[1]]);
@@ -380,16 +258,12 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmCxContactHead: return P64(CX->mContacts.mHead);
     case O::DmNodeNext: return P64(((UListNode<EEComplexUnit*>*)p)->mNext);
     case O::DmNodeUnitId: return ((UListNode<EEComplexUnit*>*)p)->mData != NULL ? (unsigned long)((UListNode<EEComplexUnit*>*)p)->mData->GetUnitID() : 0UL;
-    case O::DmCxAttackerId: return CX->mLastAttacker != NULL ? (unsigned long)CX->mLastAttacker->GetUnitID() : 0UL;
-    case O::DmCxOwnerId: return CX->mOwner != NULL ? (unsigned long)CX->mOwner->GetUnitID() : 0UL;
-    case O::DmCxHolderId: return CX->mHolder != NULL ? (unsigned long)CX->mHolder->GetUnitID() : 0UL;
     case O::DmCxAeCount: return CX->mAreaEffects.mItems.size();
     case O::DmCxAffectingCount: return CX->mAffectingAreaEffects.mItems.size();
     case O::DmCxAffectingUnitId: return CX->mAffectingAreaEffects.mItems[a[0]]->mUnit != NULL ? (unsigned long)CX->mAffectingAreaEffects.mItems[a[0]]->mUnit->GetUnitID() : 0UL;
     case O::DmCxSize: return sizeof(EEComplexUnit);
     case O::DmUnitSize: return sizeof(EEUnit);
     case O::DmCalCount: return ((EECalamityManager*)p)->mCalamities.size();
-    case O::DmCalAt: return P64(((EECalamityManager*)p)->mCalamities[a[0]]);
     case O::DmCalClass: return ((EECalamity*)p)->mClass != NULL ? (long)((EECalamity*)p)->mClass->mClassEnum : -1L;
     case O::DmCalOos: return (uint32_t)((EECalamity*)p)->GetOutOfSynchChecksum();
     case O::DmCalTileX: return (unsigned long)((EECalamity*)p)->mTilePlaceHolder1.mX;
@@ -407,11 +281,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmCalHasLocation: return (int)((EECalamity*)p)->mHasTargetLocation;
     case O::DmCalHasUnit: return (int)((EECalamity*)p)->mHasTargetUnit;
     case O::DmMapRegions: return gWorld.mMap != NULL ? P64(gWorld.mMap->mUnitRegions) : 0;
-    case O::DmOpen: return P64(fopen(s, "w"));
-    case O::DmPuts: fputs(s, (FILE*)p);
-        break;
-    case O::DmClose: fclose((FILE*)p);
-        break;
     default: break;
     }
     return 0;
@@ -436,23 +305,14 @@ extern "C" double ee_simcpp_sim_float(EeSimDriverSim inOp, uintptr_t p, const in
 {
     typedef EeSimDriverSim O;
     switch (inOp) {
-    case O::PhysicsTickSeconds: return gPhysics->mTickSeconds;
     case O::ComplexAttack: return CX->mStats->GetAttack();
-    case O::ComplexVelocity: return CX->GetVelocity();
     case O::ClassAcceleration: return UC->GetAcceleration();
-    case O::TradeFoodWood: return gWorldTable.GetFloatValue(kWorldTradeRateFoodWood);
-    case O::TradeFoodWood2: return gWorldTable.GetFloatValue2(kWorldTradeRateFoodWood);
-    case O::TradeStoneIron: return gWorldTable.GetFloatValue(kWorldTradeRateStoneIron);
-    case O::TradeStoneIron2: return gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron);
-    case O::WonderSightRadius: return gWorldTable.GetFloatValue(kWorldWonderSightRadius);
     // the state dump (sim_driver dump.rs)
-    case O::DmPhysClock: return (double)gPhysics->mGameClock;
     case O::DmPlResource: return PL->mResourceCaps[kResourceFood + a[0]];
     case O::DmUnitHp: return UN->mHitPoints;
     case O::DmCxLocX: return CX->mPhysicalModel.GetLocation().GetX();
     case O::DmCxLocY: return CX->mPhysicalModel.GetLocation().GetY();
     case O::DmCxLocZ: return CX->mPhysicalModel.GetLocation().GetZ();
-    case O::DmCxHeight: return CX->mHeight;
     case O::DmCxWpX: return CX->mWaypoints[a[0]].mLocation.GetX();
     case O::DmCxWpY: return CX->mWaypoints[a[0]].mLocation.GetY();
     case O::DmCxWpZ: return CX->mWaypoints[a[0]].mLocation.GetZ();

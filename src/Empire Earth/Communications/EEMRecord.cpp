@@ -9,7 +9,6 @@
 #include "lle/NEMessage.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEMessage.h"
-#include "rust/sim/netmsg.h"
 
 #include "rust/game/gamecpp.h"
 

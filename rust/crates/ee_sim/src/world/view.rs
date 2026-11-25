@@ -1183,24 +1183,13 @@ impl<'t> WorldView<'t> {
     pub fn game_options_handle(&self) -> u64 {
         (self.object + layout().world_game_options as usize) as u64
     }
-    /// `mGhostUnits.size()` and `mGhostUnits[i]` (an `EEGhostUnit*`, 0 past the end); the ghosts' own lock
-    /// (`mGhostUnitsLock`) is the caller's to hold
+    /// The ghost units' count and the ghost `i` (an `EEGhostUnit*`, 0 past the end): the list is Rust's
+    /// (ee_sim app ghosts.rs); the ghosts' own lock (`mGhostUnitsLock`) is the caller's to hold
     pub fn ghost_units_len(&self) -> usize {
-        let (begin, end) = self.ghost_range();
-        (end - begin) / std::mem::size_of::<usize>()
+        crate::app::ghosts::count()
     }
     pub fn ghost_unit_handle(&self, i: usize) -> u64 {
-        if i >= self.ghost_units_len() {
-            return 0;
-        }
-        // SAFETY: an element of the vector
-        unsafe { pointer(self.ghost_range().0, (i * std::mem::size_of::<usize>()) as u64) as u64 }
-    }
-    fn ghost_range(&self) -> (usize, usize) {
-        let at = layout().world_ghost_units;
-        let w = std::mem::size_of::<usize>() as u64;
-        // SAFETY: the world's vector member: begin and end are its first two words (EEWorldLayout.cpp checks it)
-        unsafe { (pointer(self.object, at), pointer(self.object, at + w)) }
+        crate::app::ghosts::at(i) as u64
     }
     pub fn victory_enabled(&self) -> bool {
         self.flag(layout().world_victory_enabled)

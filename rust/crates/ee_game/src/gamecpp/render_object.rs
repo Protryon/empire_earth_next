@@ -1184,8 +1184,8 @@ fn fill_ghost_records() {
     let head = record.0 as *mut EeGfxFillUnit;
     h(O::RoGhostLock, 0, &[]);
     if h(O::RoGhostUnitsChanged, 0, &[]) != 0 {
-        for i in 0..h(O::RoGhostCount, 0, &[]) {
-            let ghost = hp(O::RoGhostAt, 0, &[i]);
+        for i in 0..ee_sim::app::ghosts::count() {
+            let ghost = ee_sim::app::ghosts::at(i);
             let source = hp(O::RoGhostModel, ghost, &[]);
             // SAFETY: the record's unit head
             unsafe { (*head).source = source as u64 };

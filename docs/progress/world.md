@@ -32,6 +32,8 @@ The lane's state. Each round rewrites this file to the current state; the rounds
 
 - Round 14 (game core lane, lead): EEPhysics::UpdateUnits' tick host (`physics.rs` `UnitTick` over ee_sim `units::tick::update_ordered_units`; gCollisionPeriod and gCollisionDetectionUnit are `globals.rs`'s); EEWorld.cpp's unborn and active lists (`world.rs`); EEFormation.cpp's bodies (ee_sim formations `units.rs`). Fork C: the rmap scripts' text read (rmap `object.rs` `read_text`; EERMReadText gone).
 
+- Round 15 (game core lane, lead): EEWorld's resource users (gamecpp `world.rs`), ghost list (ee_sim app `ghosts.rs`) and RTSWorld's placement queue (rts `world.rs`) Rust-owned; EERandomMap's LoadProgress through a callback ee_game registers (rmap `object.rs` `register_load_progress`); the mini map's redraw, refresh and unit moves called by path (`minimap.rs`).
+
 **Stays C++**
 - Physics Thread: EEPhysics.cpp's structure (the after-load fixups, Load/Save's file host, the host switch heads;
   23 logic lines after round 14), the host switch heads and data definitions (~50 in the other four files).
@@ -56,4 +58,4 @@ random graphic (kind-only effects: drawn only); the physics' autosave, OOS dump,
 carrier deck walk, the ATC reroute; the player's SetGameResult chat line, the event list's alert sounds and mini-map
 ping, DumpMedia, ReloadTechTree (the editor's load thread) and the 0.260-era saves' town matching.
 
-**Next**: the player's host prologues and EEPlayer.h's declarations (not reached in round 13); MiniMapRedraw (EEMiniMap::Redraw's body) and the terrain mesh cases; EERandomMap's LoadProgress (ee_sim cannot call ee_game); the media objects' remaining record readers (EEDbReadRecords' lambdas).
+**Next**: the player's host prologues and EEPlayer.h's declarations (not reached in rounds 13-15; host side only, the player/tech lane owns the bodies); the other lanes' mini map cases by path; the terrain mesh cases; the media objects' remaining record readers (EEDbReadRecords' lambdas); EEWorld's last containers (mTeams, mStatistics.mRecords: game-leaves.md "Next").

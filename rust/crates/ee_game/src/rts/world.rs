@@ -30,10 +30,6 @@ ee_base::cpp_shims! {
     fn checksum_add_world(checksum: usize, players: c_ulong) = ee_rtswcpp_checksum_add_world;
     fn update_population_limit(world: usize, recount: bool) = ee_rtswcpp_update_population_limit;
     fn place_queued_units(world: usize) = ee_rtswcpp_place_queued_units;
-    fn queued_size(world: usize) -> usize = ee_rtswcpp_queued_size;
-    fn queued_unit(world: usize, index: usize) -> usize = ee_rtswcpp_queued_unit;
-    fn queued_clear(world: usize) = ee_rtswcpp_queued_clear;
-    fn queued_push(world: usize, unit: usize, after: usize) = ee_rtswcpp_queued_push;
     fn unit_reference(unit: usize) = ee_rtswcpp_unit_reference;
     fn unit_dereference(unit: usize) = ee_rtswcpp_unit_dereference;
 }
@@ -203,25 +199,40 @@ pub unsafe fn unit<C: WorldCpp>(c: &mut C, world: usize, id: c_ulong) -> usize {
     0
 }
 
+/// The placement queue (the C++'s `RTSWorld::mQueuedPlacements`, a `std::vector` at +0x04 that put every later
+/// member's offset at the standard library's mercy): (the unit, the unit to place it after), referenced while queued.
+/// One world (gWorld).
+static QUEUED: std::sync::Mutex<Vec<(usize, usize)>> = std::sync::Mutex::new(Vec::new());
+
+fn queue() -> std::sync::MutexGuard<'static, Vec<(usize, usize)>> {
+    QUEUED.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The queued placements in their order (EEWorld::PlaceQueuedUnits' walk).
+pub fn queued() -> Vec<(usize, usize)> {
+    queue().clone()
+}
+
+/// The queue emptied -> its entries (the caller releases their units).
+pub fn take_queued() -> Vec<(usize, usize)> {
+    std::mem::take(&mut *queue())
+}
+
 /// `RTSWorld::FlushQueuedPlacements`: the queued units placed (a virtual), then released and the queue emptied.
 ///
 /// # Safety
 /// `world` is the live object.
 pub unsafe fn flush_queued_placements<C: WorldCpp>(c: &mut C, world: usize) {
     c.place_queued_units(world);
-    let mut i = 0;
-    while i < c.queued_size(world) {
-        let u = c.queued_unit(world, i);
+    for (u, _) in take_queued() {
         c.unit_dereference(u);
-        i += 1;
     }
-    c.queued_clear(world);
 }
 
 /// `RTSWorld::AddUnitEntry`: the unit referenced and queued for placement after another.
-pub fn add_unit_entry<C: WorldCpp>(c: &mut C, world: usize, unit: usize, after: usize) {
+pub fn add_unit_entry<C: WorldCpp>(c: &mut C, _world: usize, unit: usize, after: usize) {
     c.unit_reference(unit);
-    c.queued_push(world, unit, after);
+    queue().push((unit, after));
 }
 
 /// `RTSWorld::SetPlayer`: the old player deleted unless it is the same one.
@@ -469,14 +480,14 @@ mod tests {
     #[test]
     fn the_queue_is_placed_released_and_emptied() {
         let mut c = ShimFake::default();
-        c.answer("queued_size", &[2, 2, 2]);
-        c.answer("queued_unit", &[5, 6]);
+        add_unit_entry(&mut c, 1, 5, 8);
+        add_unit_entry(&mut c, 1, 6, 5);
+        assert_eq!(queued(), [(5, 8), (6, 5)]);
         unsafe { flush_queued_placements(&mut c, 1) };
         assert_eq!(
             c.calls(),
-            "place_queued_units(1)\nqueued_size(1)\nqueued_unit(1, 0)\nunit_dereference(5)\nqueued_size(1)\nqueued_unit(1, 1)\nunit_dereference(6)\nqueued_size(1)\nqueued_clear(1)"
+            "unit_reference(5)\nunit_reference(6)\nplace_queued_units(1)\nunit_dereference(5)\nunit_dereference(6)"
         );
-        add_unit_entry(&mut c, 1, 7, 8);
-        assert!(c.calls().ends_with("unit_reference(7)\nqueued_push(1, 7, 8)"));
+        assert!(queued().is_empty());
     }
 }

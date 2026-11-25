@@ -138,7 +138,6 @@ struct FakeWorld {
     population_limit: c_long,
     wonders: c_ulong,
     options: [u8; 16],
-    ghosts: [usize; 3],
     flags: [bool; 8],
 }
 
@@ -196,7 +195,6 @@ fn fake_layout() -> EeWorldLayout {
         world_population_limit: offset_of!(FakeWorld, population_limit) as u64,
         world_wonders_to_win: offset_of!(FakeWorld, wonders) as u64,
         world_game_options: offset_of!(FakeWorld, options) as u64,
-        world_ghost_units: offset_of!(FakeWorld, ghosts) as u64,
         world_victory_enabled: offset_of!(FakeWorld, flags) as u64,
         world_game_screen_active: offset_of!(FakeWorld, flags) as u64 + 1,
         world_loading_saved_game: offset_of!(FakeWorld, flags) as u64 + 2,
@@ -371,8 +369,6 @@ fn fixture() -> Fixture {
     f.world.population_limit = 800;
     f.world.wonders = 1;
     f.world.flags = [true, false, false, true, false, false, true, false];
-    let ghosts = Box::leak(Box::new([0x99usize]));
-    f.world.ghosts = [ghosts.as_ptr() as usize, ghosts.as_ptr() as usize + 8, 0];
     f
 }
 
@@ -494,7 +490,6 @@ fn players_world_map_and_tiles() {
     assert!(w.player(0).is_none() && w.player(17).is_none());
     assert_eq!((w.game_speed(), w.population_limit(), w.wonders_to_win()), (1.5, 800, 1));
     assert_eq!(w.game_options_handle(), addr(&f.world.options) as u64);
-    assert_eq!((w.ghost_units_len(), w.ghost_unit_handle(0), w.ghost_unit_handle(1)), (1, 0x99, 0));
     let flags = [
         w.victory_enabled(),
         w.game_screen_active(),

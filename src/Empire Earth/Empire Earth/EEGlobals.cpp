@@ -10,10 +10,8 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EEGameState.h"
 
 long& gNumPlayers = reinterpret_cast<long&>(gWorld.mNumPlayers);   // +0xcc

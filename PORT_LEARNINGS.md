@@ -41287,3 +41287,104 @@ capture profiles, saveload). Fork B's civilization builder has its own section a
 - Edits outside the lane's files: src/RTS Engine/Player/RTSPlayer.cpp (the 14 forwarders moved into the class, the
   bucket shim's type, the shims' casts to EEPlayer), rust/crates/ee_game/src/rts/units.rs (`ee_rts_eeplayer_*`), src/Empire Earth/Persistent/EEPWorldHelper.cpp (one field name), src/Empire Earth/UI
   Events/EEScreens.cpp (two field names), rust/crates/ee_sim/src/units/player_events.rs (`ee_units_events_next`).
+
+## The game core lane, round 15: the civbuilder flake (a half-built data tree), four of gWorld's standard containers Rust-owned, the random map's load progress by callback, the network and save hosts' cases and the session frame, the EE-SIM driver's and fixture's host cases, an include census; the lead and three forks in parallel worktrees (gamecpp world.rs, camera_io.rs, net.rs, session_objs.rs; rts world.rs; ee_sim app ghosts.rs, rmap object.rs; sim_driver fault.rs, sed_run.rs; fixture boxsel.rs; tools open_data.py, sim.py; branch rust-core15, 2026-11-25)
+
+The brief: first the `sim_editor --civbuilder` start-up failures round 14 saw under load; then round 14's leftovers
+(EEWorld's and EEGameState's containers toward EEGlobals.cpp's aliases, EESim.cpp's and EESimEditor's leftovers, the
+session frame and the C++-owned cases of EEPWorldHelper, EEMessage and EEServer, EERandomMap's LoadProgress,
+MiniMapRedraw). Main measure total C++ lines and compiled files (tools/port_metrics.py), target -1,500.
+
+**The civbuilder flake was a tool race, not the game.** Round 14's two failures (EERandomMap.cpp 1652, "at least one
+generator": no `.rmv` read) fell inside a rebuild of the worktree's own `build/open_data/tree`: the harness rebuilds
+a tree whose converter hash changed (`open_data.py build --force`: rmtree, then write in place, open_data.json
+last). The tree's open_data.json says it was made at 20:14:44, its Random Map Scripts were written at 20:22:38, and
+the failing run was at 20:21:20. `sim.py` staged (hard-linked) whatever the half-built tree held and wrote its stage
+marker; the game found no scripts. The reruns passed because the tree was whole by then. The Rust reader (fread over
+PlatFOpen's stream) was innocent: 12 runs in a row under an oracle load all passed.
+- **Reproduced** (build/c15/race.sh: a tree rebuild beside a 10-run civbuilder loop): before the fix 10/10 failed
+  with the same verify; after it 10/10 passed (the run that met the build waited for it).
+- **The fix** (tools only): `open_data.py build` makes the tree beside its place (`TREE.building`) and swaps it in
+  (old tree renamed aside, new renamed in, old removed); `wait_for_build()` waits while a fresh `.building` exists
+  (30 minutes makes it stale); `sim.py` waits, then stages again if the tree's open_data.json changed while it was
+  staged; the harness waits before it checks the tree; `sim_editor.py --civbuilder` defaults to its own stage slot
+  (`sim-editor-cb`: both modes shared `sim-editor`, and a run deletes its stage when it ends).
+- A data tree is shared state between the harness and the sim tools of one worktree, and with the main checkout's
+  tree between every worktree that has none: anything that rewrites one in place races every reader.
+
+**Score** (port_metrics.py; the lane's own commits, the origin/rust merge taken out):
+
+| | cpp_lines | cpp_files | logic | classes |
+|---|---|---|---|---|
+| fork A, the include census (1a1979c6e -> 939bf17f4) | -852 | 0 | 0 | 0 |
+| fork C, the network and save hosts (-> 45e307800) | -289 | 0 | -14 | -2 |
+| fork B, the EE-SIM driver and fixture (-> 3e02ea422, + 7b4697f40) | -296 | 0 | -39 | -1 |
+| the lead (the containers, load progress, mini map, camera keys; two includes back; the merge fixes) | -47 | 0 | -8 | -1 |
+| **the round** (fork A + 9df09dcf8 -> tip) | **-1,484** | **0** | **-61** | **-4** |
+
+Of the -1,484, 852 are `#include` lines (fork A) and 632 ported or removed code. The whole tree at the tip (origin/rust
+batch 26 a78aecdc2 merged): 104,889 C++ lines, 336 compiled files, 15,351 logic lines, 784 classes; extern_c 10,022
+(+5 over the merge), rust_hdrs 357, unsafe +55, layout -4. The -1,500 target was missed by 16 lines; the logic
+measure barely moved (the cases left are one statement each on C++ objects).
+
+**gWorld's containers.** EEGlobals.cpp's 21 aliases stay C++ because their members sit past standard containers whose
+size is the library's. gWorld held six; four are Rust's now: RTSWorld::mQueuedPlacements (+0x04: it moved every
+member of the world), EEWorld::mResourceUsers (a map by unit handle), mGhostUnits, and EECameraControl::mKeys. Left:
+EEStatisticsHistory::mRecords (C++ records with UWideStrings) and EEWorld::mTeams (EETeam holds a vector), then
+EEGameState's four vectors; after them the aliases can be global_objects.rs refs over #[repr(C)] mirrors.
+- **A unit pointer is not its record**: the resource users' first Rust key read `mUnitID` at the EEUnit's address;
+  the RTSUnit's record (`EeUnitsRtsUnitFields`) sits past its UReferenceCounter base, so the key was the reference
+  count's word: oracle seeds 6 and 7 differed at PT 6090 and 9450 (a gather decision). `rts(u)` (the `UnRts` case,
+  the C++'s static_cast) is the only way to a unit's record; the unit tests could not see it (they key by id).
+- One world, one camera: the lists are statics (a Mutex each). The C++'s locks around them (the ghosts' lock) stay
+  the callers'.
+
+**The include census** (fork A): every top-level project `#include` of the lane's .cpp files blanked in turn, kept
+out only if each build variant still compiled to a byte-identical object and reached the same system headers: 852
+lines in 87 files. It is not ported code (reported apart). Two needs came back when origin/rust batch 26 merged
+(GEText.h's colour setters now assign a GEColor; EESEInstructions.cpp names gEmptyString): **an include census
+proves only the tree it ran on**: a concurrent lane's change can add a use an hour later. Its Linux check could
+not build here (alsa-sys's pkg-config for the cross target); the Linux census showed one POSIX-only need
+(Empire Earth.cpp's gPlatSimMode).
+
+- **Forks and turns**: forks B and C again stopped at the 200-turn limit; one SendMessage each ("no new work,
+  commit, gate, hand back") finished them. Fork A (a script doing the work) used 94.
+- **Merge hazards between forks**: fork B's driver called gamecpp's `CommProcessLocal`, which fork C had removed
+  (its net.rs handles replace it); only the merged build saw it. Fork B listed its dependencies on host ops in its
+  report: worth asking every fork for.
+- **TaskStop on a queued locked.sh job** leaves its bash waiting; it later ran beside the fork's next build in the
+  same worktree. Don't stop a queued job.
+- **Python on Windows**: `Path.write_text` writes CRLF; the Rust and tools files are LF (`newline='\n'` or bytes).
+
+- **A fixture op's out-parameter is its answer**: fork B's follow-up mapped the fixture's combo and list selection
+  cases onto EE-SIM's `ComboSelection`/`ListSelection`, which return GetCurrentSelection's bool; the fixture's case
+  had answered with the index it wrote. Builds, clippy and the Rust gate passed; gates.sh's ai-game lobby then timed
+  out waiting for slot 1 = Computer. Fixed by reading the written index; only a harness session sees the fixture.
+- **Gates**: on c2cdd2fda (forks A, B, C and the lead merged, before fork B's follow-up): both builds 0/0 (EE-AOC
+  377 inputs, EE-SIM 378), the test profile 0/0; the oracle seeds 2-7 identical; sim_editor PASS (14,448 lines),
+  `--civbuilder` PASS (4,062); scenario_check 27/27; `eedata.py check` and `cppgate` PASS; captures oracle 598,
+  late 598, space 590, calamity 623, units 510, effects 18, missile 66, app 38, scenario 113, groups 6, placement 4
+  PASS (transport and the plain saveload not run: the owner's reduced lane checks arrived mid-chain); through
+  slot.py the editor RESULT PASS and `random-game --box-select --orders --seed 7` (BOX SELECT PASS; ORDERS PASS:
+  gather, repair, repair-queued, move); gates.sh GATES PASS (tour; ai-game time-cap PT 11858 units [4, 36, 37]
+  alive_computers [2, 3] classic_lua x 2; lan-game PT 2910/2911). On 995bfb253 (+ fork B's follow-up): both builds
+  0/0, the test profile 0/0, the oracle identical, the saveload matrix `saveload expect: PASS`, won_host_coverage
+  PASS, `xbuild.py wontest` ran to its end (its last test exit 0), the Rust gate PASS (headers current, 357), the
+  harness self test ALL PASS, random-game box-select/orders and the editor PASS; gates.sh failed its ai-game (the
+  bug above). On the fix (c7177deca): the test profile 0/0 and gates.sh GATES PASS (tour; ai-game time-cap PT 12234 units
+  [4, 37, 38] alive_computers [2, 3] classic_lua x 2; lan-game PT 2877/2887).
+
+- **Behaviour changes** (none to the simulation): the resource users, the placement queue, the ghost list and the
+  camera keys are Rust statics (one world); a ghost index past the end reads NULL; the camera key read past the end
+  leaves the key unchanged; the network facts and the fixture's sends do nothing without gCommunications (fork C);
+  EE-SIM's POSIX fault report is Rust's; the dump file is opened by Rust's libc fopen (fork B).
+- **What only a live game exercises**: the ghost list (the build gate's placement ghosts, the editor's ghosts: the
+  tour's build check, the editor session), the camera keys (a scenario's camera path: scenario_check's cinematics),
+  the load progress (the tour's loading screen), the mini map calls; fork C's server.rs/session_objs.rs (the LAN
+  game); fork B's fixture marker and sends (`random-game --box-select --orders`).
+- **Edits outside the lane**: include/lle/GEText.h (GEColor.h), include/ee/RTSWorld.h, EECameraControl.h, EEWorld.h,
+  EEServer.h (removed members and declarations); src/RTS Engine/RTS Engine/RTSWorld.cpp (four shims); ee_game
+  rts/world.rs (the queue); Units/EEGhostUnit.cpp, Units/EEWorldLayout.cpp, User Interface Thread/EEUIFMainGame.cpp,
+  EEUIShell.cpp, Scenario Editor Actions/EESEARust.cpp (GetGhostUnit); ee_sim world layout.rs, view.rs (the ghosts);
+  Scenario Editor/EEUIFScenarioEditor.cpp (fork B); screens/mod.rs (fork C, pub(crate)); ee_game Cargo.toml (libc).
+- **Left**: docs/progress/game-leaves.md "Next".
