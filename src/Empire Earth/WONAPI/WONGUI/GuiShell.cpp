@@ -14,7 +14,6 @@
 #include "ee/wonapi/WONGUIShell.h"
 #include "rust/won_gui/shell_msgbox.h"
 #include "ee/wonapi/WONSkinLayout.h"
-#include "ee/wonapi/WONLobbyLayout.h"
 #include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
 #include "ee/wonapi/WONLobbyMSSkinImage.h"
 using namespace WONAPI;

@@ -46,6 +46,7 @@
 #include "rust/won_gui/rootobj.h"
 #include "rust/won_gui/rowobj.h"
 #include "rust/won_gui/scrollerobj.h"
+#include "rust/won_gui/splitobj.h"
 #include "rust/won_gui/surface.h" // EeWonSurface: what a DisplayContext draws into
 #include "rust/won_gui/tabobj.h"
 #include "rust/won_gui/treeobj.h"
@@ -447,6 +448,11 @@ public:
     CenterLayout* Add(Component* component) { this->AddComponent(component); return this; }
     static void Center(Component* inParent, Component* inChild, bool inHorz, bool inVert); // 337690
 };
+// the percentage layout (0x50 bytes in the original, used by ContainerConfig at 0x007885d0; WONPercentLayout.h until
+// R6 WON GUI round 37): PercentLayout(target, PercentLayoutParam(refs[0..3], params[0..7])) (R6 WON GUI round 35: the
+// param's SetBorders, percentages and padding and the layout's numbers are layoutobj.rs's ee_won_layout_init_percent;
+// its Execute is the param's DoCalc, 0x00737430 / 0x00737580)
+inline ChildLayoutInstructionBase* WONNewPercentLayout(Component* target,Component* const* refs,const int* params) { return new ChildLayoutInstructionBase(ee_won_layout_init_percent(target,(void* const*)refs,params)); }
 // 0x2f61d0: the group (a byte), group 0 enabled and run at once before the manager holds it, any other disabled
 inline void Container::AddChildLayout(ChildLayoutInstructionBase* l,int id) { ee_won_ct_layout_call(this->mCt,EeWonLayoutMgrCall::AddChildLayout,(intptr_t)l,(intptr_t)l->mLay,id); }
 // the SDK's AddChildLayout overload for one child placed against a reference (flags, offsets, size)
@@ -507,7 +513,6 @@ public:
     bool IsNoActivate() { return (GetButtonFlags() & 0x200) != 0; }
     bool IsDefaultOnFocus() { return (GetButtonFlags() & 0x400) != 0; }
     unsigned long GetButtonFlags() { return (unsigned long)this->BCall(EeWonBtnCall::GetField,(intptr_t)EeWonBtnField::Flags); }
-    int GetMouseDownState() { return (int)this->BCall(EeWonBtnCall::GetField,(intptr_t)EeWonBtnField::MouseDownState); } // 0 up, 1 down outside, 2 down over
     SmartPtr<Sound> mClickSound; // at +0x3c
     EeWonButton* mBtn;
     void CopyAttributes(Button*); //2f3310
@@ -721,6 +726,16 @@ public:
     SmartPtr<Image> mImage; // at +0x30
     bool mTile,mStretch; // at +0x34, +0x35 (set at 0x394da6/0x394dd8)
 };
+// RectangleComponent (0x38 bytes): solid and outline colours (WONLobbySimpleConfig.h until R6 WON GUI round 37)
+class RectangleComponent : public Component {
+    int mSolidColor; // offset 0x30
+    int mOutlineColor; // offset 0x34
+public:
+    RectangleComponent() : mSolidColor(-1),mOutlineColor(-1) {} // at 0x00706840: no fill, no outline
+    void SetSolidColor(int c) { this->mSolidColor=c; } // at 0x00706870
+    void SetOutlineColor(int c) { this->mOutlineColor=c; } // at 0x00706880
+    virtual void Paint(Graphics&); // 0x706890 (guidraw.rs rectangle_paint; GuiHost.cpp)
+};
 
 // a drop-down list (vtable 0x84d638; its list at +0x90)
 // TabBar and TabCtrl (R6 WON round 27): the bar's buttons, selected tab and overlap and the control's padding, offsets,
@@ -784,7 +799,6 @@ public:
     Button* GetUpArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,0); }
     void SetUpArrow(Button* b) { this->Call(EeWonBarCall::SetPart,0,(intptr_t)static_cast<Component*>(b)); }
     Button* GetDownArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,1); }
-    void SetDownArrow(Button* b) { this->Call(EeWonBarCall::SetPart,1,(intptr_t)static_cast<Component*>(b)); }
     Button* GetScrollRect() { return (Button*)this->Call(EeWonBarCall::GetPart,2); }
     void SetScrollRect(Button* b) { this->Call(EeWonBarCall::SetPart,2,(intptr_t)static_cast<Component*>(b)); }
     Component* GetThumb() { return (Component*)this->Call(EeWonBarCall::GetPart,3); }
@@ -1860,6 +1874,27 @@ public:
     bool mDisabled; // at +0x30 (written at 0x2fcda4, read at 0x2fd018); +0x31..0x33 padding
     SmartPtr<ComponentListener> mListener; // at +0x34
 };
+// ComponentListItem (WONLobbyComponentListItem.h until R6 WON GUI round 37): 0x20 bytes, vtable 0x0084df70: ListItem (0x18) + owned component at +0x18 + sizable flag at +0x1c.
+class ComponentListItem : public ListItem {
+protected:
+    virtual ~ComponentListItem(); // explicit destructor, at 0x006fdaa0
+public:
+    ComponentListItem(Component* component,bool sizable=false,bool selectable=false)
+        :mComponent(component),mIsSizable(sizable) { this->mSelectable=selectable; }
+    virtual void Paint(Graphics&,ListArea*);     // at 0x006fa510
+    virtual void CalcDimensions(ListArea*); // at 0x006fa480
+    virtual void SetViewport(ListArea*,Container*); // at 0x006fa4a0
+    virtual void SetPos(int,int);    // at 0x006fa4c0
+    virtual bool Contains(int,int);  // at 0x006fa4e0
+    virtual void MouseEnter(ListArea*,int,int); // at 0x006fd970
+    virtual void MouseExit(ListArea*); // at 0x006fd9a0
+    virtual void MouseMove(ListArea*,int,int); // at 0x006fd9c0
+    virtual void MouseDrag(ListArea*,int,int); // at 0x006fd9f0
+    virtual void MouseDown(ListArea*,int,int,int); // at 0x006fda20
+    virtual void MouseUp(ListArea*,int,int,int);   // at 0x006fda50
+    SmartPtr<Component> mComponent; //18
+    bool mIsSizable; //1c, natural1d..1f padding
+};
 
 // ScrollArea (R6 WON round 25): its offsets, content, padding, view, scroller (borrowed) and scroll amounts are the
 // Rust ScrollArea (rust/crates/ee_won_gui/src/paneobj.rs); this is the type the lists, text areas, scrollers and configs
@@ -1880,7 +1915,6 @@ public:
     void SetBorderPadding(int l,int t,int r,int b) { int p[4]={l,t,r,b}; this->ACall(EeWonPaneCall::SetBorderPadding,(intptr_t)p); } //305270
     void ScrollTranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollTranslate,(intptr_t)&x,(intptr_t)&y); } //305390
     void ScrollUntranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollUntranslate,(intptr_t)&x,(intptr_t)&y); } //3053d0
-    virtual void HandleComponentEvent(ComponentEvent* e) { Component::HandleComponentEvent(e); } // 0x305180, vtable +0x7c override
     void SetSizeEqualToTotal(int w,int h) { this->ACall(EeWonPaneCall::SetSizeEqualToTotal,w,h); } //305450
     bool IsRectVisible(const WONRectangle& r) { return this->ACall(EeWonPaneCall::IsRectVisible,(intptr_t)&r)!=0; } //3054f0
     ScrollAreaViewport* GetViewport() { return this->mViewport.get(); }
@@ -1900,7 +1934,6 @@ public:
     void SetPads(int l,int t,int r,int b) { this->SetField(EeWonGuiField::LeftPad,l); this->SetField(EeWonGuiField::TopPad,t); this->SetField(EeWonGuiField::RightPad,r); this->SetField(EeWonGuiField::BottomPad,b); } // the fields only (the text area's and list's constructors)
     int GetVertOffset() { return this->GetField(EeWonGuiField::VertOffset); }
     int GetViewWidth() { return this->GetField(EeWonGuiField::ScrollWidth); }
-    int GetViewHeight() { return this->GetField(EeWonGuiField::ScrollHeight); }
     SmartPtr<ScrollAreaViewport> mViewport; // at +0x84
     Background mBackground;
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
@@ -2031,9 +2064,6 @@ public:
     bool IsLastChild() { return this->NCall(NULL,EeWonTNodeCall::IsLastChild)!=0; }
     bool ContainsPoint(int x,int y) { return this->NCall(NULL,EeWonTNodeCall::ContainsPoint,x,y)!=0; }
     bool IsOpen() { return this->NCall(NULL,EeWonTNodeCall::IsOpen)!=0; }
-    ListItem* GetWrappedItem() { return (ListItem*)this->NCall(NULL,EeWonTNodeCall::Item); } // mItem
-    int GetNumChildren() { return (int)this->NCall(NULL,EeWonTNodeCall::NumChildren); }
-    TreeItem* GetParentItem() { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::Parent); } // mParent
     int GetIndex() { return (int)this->NCall(NULL,EeWonTNodeCall::Index); } // mIndex
     EeWonTNode* mNode;
 private:
@@ -2055,12 +2085,10 @@ public:
     virtual void NotifyMouseItemGone() { this->TCall(EeWonTreeCall::NotifyMouseItemGone); }
     virtual bool Sort() { return false; }
     void Sort(TreeItem* i,bool recursive=false) { this->TCall(EeWonTreeCall::SortItem,(intptr_t)i,recursive); } // sorts the visible subtree
-    TreeItem* InsertString(TreeItem*,const GUIString&,Image* =NULL,int=-1);
     void CloseItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::CloseItem,(intptr_t)i,all,send); }
     void SetTreeFlags(int f,bool on) { this->TCall(EeWonTreeCall::SetTreeFlags,f,on); }
     TreeItem* InsertTreeItem(TreeItem* p,ListItem* i,int pos=-1) { return (TreeItem*)this->TCall(EeWonTreeCall::InsertTreeItem,(intptr_t)p,(intptr_t)i,pos); }
     void RemoveTreeItem(TreeItem* i) { this->TCall(EeWonTreeCall::RemoveTreeItem,(intptr_t)i); }
-    void ClearTree(bool=true) { this->TCall(EeWonTreeCall::RemoveAllItems,0); } // 0x3151a0 (the flag unused)
     void RemoveAllItems(TreeItem* p) { this->TCall(EeWonTreeCall::RemoveAllItems,(intptr_t)p); }
     void OpenItem(TreeItem* i,bool send=true) { this->TCall(EeWonTreeCall::OpenItem,(intptr_t)i,send); }
     void ToggleItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::ToggleItem,(intptr_t)i,all,send); }
@@ -2130,7 +2158,6 @@ public:
     void SetColumnWidth(int c,int w,bool fromSize) { this->MCall(EeWonMultiCall::SetColumnWidth,c,w,fromSize); }
     int GetColumnPaintContext() { return (int)this->MCall(EeWonMultiCall::PaintContext); }
     int GetSortColumn() { return (int)this->MCall(EeWonMultiCall::SortColumn); }
-    int GetSortColumnPrev() { return (int)this->MCall(EeWonMultiCall::SortColumnPrev); }
     void SetDynamicSizeColumn(int c) { this->MCall(EeWonMultiCall::SetDynamicSizeColumn,c); }
     void SetSortColumnFunc(int c,SortFunc f) { this->MCall(EeWonMultiCall::SetSortColumnFunc,c,(intptr_t)f); }
     virtual void AdjustPosition(bool b) { this->MCall(EeWonMultiCall::AdjustPosition,b); }
@@ -2181,14 +2208,12 @@ public:
     MultiListHeader(MultiListArea* =NULL);
     virtual ~MultiListHeader();
     virtual void Virtual08() { this->HCall(EeWonMHeadCall::SizeChanged); } // 0x302fb0 SizeChanged
-    virtual void Paint(Graphics&); // 0x305e00 (the container paint)
     virtual void MouseExit() { this->HCall(EeWonMHeadCall::MouseExit); }
     virtual void MouseDown(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseDown,x,y,b); }
     virtual void MouseUp(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseUp,x,y,b); }
     virtual void MouseMove(int x,int y) { this->HCall(EeWonMHeadCall::MouseMove,x,y); }
     virtual void MouseDrag(int x,int y) { this->HCall(EeWonMHeadCall::MouseDrag,x,y); }
     virtual void HandleComponentEvent(ComponentEvent* e) { this->HCall(EeWonMHeadCall::HandleEvent,(intptr_t)e); }
-    virtual Component* FindChildAt(int,int); // 0x304710 (the container hit test)
     void SetColumnItem(int c,Component* i) { this->HCall(EeWonMHeadCall::SetColumnItem,c,(intptr_t)i); }
     void SetMultiListArea(MultiListArea* a) { this->HCall(EeWonMHeadCall::SetMultiListArea,(intptr_t)a); }
     void NotifyColumnChange() { this->HCall(EeWonMHeadCall::NotifyColumnChange); }
@@ -2242,12 +2267,37 @@ private:
     { return ee_won_browser_call(this->mRust,c,a,b,cc,d,e); }
 };
 
-// 0x3c5ff0: the sort/filter handlers of a server-list column
-
-
-// 0x8dec84 / 0x8dec88 / 0x8df4d0 / 0x8d954c: the lobby's object factories
-
-
+// Splitter (R6 WON round 22; WONLobbySplitterConfig.h until R6 WON GUI round 37): its panes, bars, maximise buttons, split, drag and percentages are the Rust Splitter
+// (rust/crates/ee_won_gui/src/splitobj.rs); this is the type the configs build.
+class Splitter : public Container {
+public:
+    Splitter(); // at 0x00707060 in the original
+    enum QuadrantPosition { Position_Left=1,Position_Top=2,Position_Right=4,Position_Bottom=8,
+        Position_TopLeft=3,Position_TopRight=6,Position_BottomLeft=9,Position_BottomRight=12 };
+    enum SplitterType { Splitter_LeftRight=5,Splitter_UpDown=10,Splitter_LeftRight_Top=0x15,
+        Splitter_LeftRight_Bottom=0x25,Splitter_UpDown_Left=0x4a,Splitter_UpDown_Right=0x8a,Splitter_Center=0x10f };
+    bool CheckMaxButton(ComponentEvent* e) { return this->Call(EeWonSplitCall::CheckMaxButton,(intptr_t)e)!=0; }
+    EeWonSplitter* mRust;
+protected:
+    virtual ~Splitter();
+    virtual void Virtual08() { this->Call(EeWonSplitCall::SizeChanged); } // SizeChanged
+    virtual void MouseDown(int x,int y,int b) { this->Call(EeWonSplitCall::MouseDown,x,y,b); }
+    virtual void MouseUp(int x,int y,int b) { this->Call(EeWonSplitCall::MouseUp,x,y,b); }
+    virtual void MouseDrag(int x,int y) { this->Call(EeWonSplitCall::MouseDrag,x,y); }
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonSplitCall::HandleEvent,(intptr_t)e); }
+    friend intptr_t SplitterHostCall(Splitter*,EeWonGuiOp,intptr_t,intptr_t,intptr_t);
+private:
+    intptr_t Call(EeWonSplitCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_split_call(this->mRust,c,a,b,cc); }
+};
+// the event that opens a popup (0x3c bytes; original 0x2fd77e; RTTI 0x44df58; WONLobbyPopupEvent.h until R6 WON GUI
+// round 37): it copies the parameters (borrowed raw pointers)
+class DoPopupEvent : public WindowEventBase {
+protected:
+    PopupParams mParams; //10..3b, full2c POD containing borrowed raw pointers
+public:
+    DoPopupEvent(const PopupParams& params) : mParams(params) {}
+    virtual void Deliver() { this->mWindow->OpenPopup(this->mParams); } //32b650
+};
 }
 
 #endif

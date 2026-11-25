@@ -17,8 +17,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "ee/wonapi/WONLobbySplitterConfig.h"
-#include "ee/wonapi/WONLobbyComponentListItem.h"
 #include <algorithm>
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/won_gui/barobj.h"
@@ -40,9 +38,7 @@
 #include "rust/won_gui/treeobj.h"
 #include "rust/won_gui/wrapobj.h"
 #include "ee/wonapi/WONGUIDraw.h"
-#include "ee/wonapi/WONLobbyPopupEvent.h"
 #include "ee/wonapi/WONGUIShell.h"
-#include "ee/wonapi/WONLobbySimpleConfig.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyStretchImage.h"
 using namespace WONAPI;
@@ -553,12 +549,7 @@ extern "C" intptr_t ee_won_guicpp_list_call(void* inComp, EeWonGuiOp op, intptr_
 
 namespace WONAPI {
 // Creates an unselected, selectable list item with zero position and size
-ListItem::ListItem()
-{
-    this->mTop=this->mWidth=this->mHeight=0;
-    this->mSelected=false;
-    this->mSelectable=true;
-}
+ListItem::ListItem() : mSelected(false), mSelectable(true), mTop(0), mWidth(0), mHeight(0) {}
 // Draws nothing
 void ListItem::Paint(Graphics&,ListArea*) {}
 // Orders two items by their addresses (true when this one comes first in memory)
@@ -663,11 +654,6 @@ MultiListHeader::MultiListHeader(MultiListArea* area)
 }
 // Destroys the header: the Rust header goes (its buttons are the container's children)
 MultiListHeader::~MultiListHeader() { ee_won_mhead_free(this->mHead); }
-// Paints the header's children (the linker folds this body into the identical ScrollAreaViewport::Paint at 0x00705e00)
-void MultiListHeader::Paint(Graphics& graphics) { Container::Paint(graphics); }
-// Returns the child under a point (the linker folds this body into the identical RootContainer::FindChildAt
-// at 0x00704710)
-Component* MultiListHeader::FindChildAt(int x,int y) { return Container::FindChildAt(x,y); }
 // Returns the sort arrow a header button should draw, found through its enclosing header (none without one)
 ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
 {
@@ -706,17 +692,6 @@ TreeArea::TreeArea()
 }
 // Destroys the tree: the Rust tree gives its root back (and so every row's)
 TreeArea::~TreeArea() { ee_won_tree_free(this->mTree); }
-// Wraps a text item (the tree's colour and font, an optional icon) in a new row under a parent (not identified in
-// the original exe)
-TreeItem* TreeArea::InsertString(TreeItem* theParent,const GUIString& theStr,Image* theIcon,int thePos)
-{
-    SmartPtr<TextListItem> anItem=new TextListItem;
-    anItem->mText=theStr;
-    anItem->mColor=this->mTextColor;
-    anItem->mFont=this->mFont;
-    anItem->mImage=theIcon;
-    return this->InsertTreeItem(theParent,anItem.get(),thePos);
-}
 }
 
 // ---- the popup menu (menuobj.rs)
@@ -774,14 +749,9 @@ void RectangleComponent::Paint(Graphics &g)
         return ee_won_gui_draw_rectangle(this->mSolidColor,this->mOutlineColor,this->Width(),this->Height(),o,n); }),WONDrawSlots());
 }
 // Creates a raised or sunken 3D frame of the given thickness in the scheme's highlight and shadow, unfilled
-RectangleComponent3D::RectangleComponent3D(bool up, int theThickness)
-{
-    this->mUp = up;
-    this->mThickness = theThickness;
-    this->mLightColor = ColorScheme::GetColorRef(StandardColor_3DHilight);
-    this->mDarkColor = ColorScheme::GetColorRef(StandardColor_3DShadow);
-    this->mSolidColor = -1;
-}
+RectangleComponent3D::RectangleComponent3D(bool up, int theThickness) : mSolidColor(-1),
+    mLightColor(ColorScheme::GetColorRef(StandardColor_3DHilight)), mDarkColor(ColorScheme::GetColorRef(StandardColor_3DShadow)),
+    mThickness(theThickness), mUp(up) {}
 // Draws a raised or sunken 3D frame of the given thickness over an optional solid fill
 void RectangleComponent3D::Paint(Graphics &g)
 {
