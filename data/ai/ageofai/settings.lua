@@ -137,7 +137,8 @@ return {
     rescue_citizens = true,         -- NOT PORTED (the stranded citizens' transport home): kept for the record
     -- towns: the parts as bits (resource_towns 1, settlement 2, forward_production 4, forward_base 8, spread 16,
     -- scout 32, grow 64, fort 128, take_mines 256, mine_raids 512); upstream "resource_towns, spread"
-    towns = 17,
+    towns = 17,                     -- the parts as bits (+1024 THE PARTY, ported but off: upstream ships 1041
+                                    -- "resource_towns, spread, party"; the port keeps its measured 17)
     towns_max = 3,                  -- resource towns at most (not with spread)
     towns_citizens = 6,             -- citizens that found a town (a forward base: + 2; 12 at most)
     towers_per_town = 2,            -- towers by a resource town (spread: 2 + one per 4 mines)
@@ -373,7 +374,10 @@ return {
     sea_fleet = 300,                -- the fleet's size from a warship per this many tiles of its sea territories (0 off)
     harbours = true,                -- a dock and a tower on every sea territory along the AI's land
     fleet_station = true,           -- the fleet's guard point on the sea with the longest shore along its land
-    sea_squadrons = true,           -- the warships as squadrons instead of one fleet (squadrons.c: not ported yet)
+    sea_squadrons = true,           -- the warships as squadrons instead of one fleet (squadrons.c: ported, off until
+                                    -- measured - the gate is squadrons.lua's M.PORTED)
+    missile_subs = true,            -- the strike groups' missile subs trained from 6 warships of the other roles
+    sea_shore_fire = true,          -- the squadrons' quiet moves and the decided shore shelling
     stash_by_territory = true,      -- the fortress reserve by territory (bunker.c)
     stash_let_out_few = true,       -- a fortress lets out as many as are wanted, one at a time
     -- the newer engines' switches, as upstream ships them
@@ -397,8 +401,9 @@ return {
     ferry_safety = true,            -- the crossing's safety check (crossing.c: not ported yet)
     ferry_reach = true,             -- a pick-up both the passengers and the transport reach (ferry.c)
     ferry_time_by_way = true,       -- the ferry's time limits by the way (ferry.c)
-    expand_across = true,           -- the pushes across the water (stations.c: not ported yet)
-    push_across = true,             -- ... and their waves
+    expand_across = false,          -- the pushes across the water (stations.c ACROSS; upstream ON, measured worse
+                                    -- than the landings - OFF in the port until measured)
+    push_across = false,            -- ... and their waves (needs expand_across, ferry_service and stations)
     transport_lifeboat = true,      -- a sinking transport runs for the nearest beach (convoy.c: not ported yet)
     transport_escort = true,        -- the ferry's escort ahead (convoy.c)
     transport_park = true,          -- transports held at a park

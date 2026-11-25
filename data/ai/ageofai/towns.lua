@@ -45,12 +45,30 @@
 -- most expand_max, the nearest to what it holds). 64 FORWARD: an outpost nearer the enemy's known buildings than
 -- home gets a barracks and two more towers while the AI holds the sea.
 --
+-- THE PARTY (towns.c 1024, the shipped ini's "resource_towns, spread, party" = 1041; here settings.towns bit 1024): a
+-- town founded as the player does it - its citizens and TN_ESCORT 3 land soldiers, a tower where the way from the
+-- nearest town or the base crosses into the site's territory (TK_ARRIVE; none when the site lies in the territory it
+-- comes from, or within TN_ARRIVE_NEAR tiles of the crossing), the site looked at free (its own eyes within 15 tiles, or
+-- TN_SITE_WAIT), then a tower at the site, the drop site and the town as before. No tower of theirs up and 2+ enemy
+-- soldiers by the party winning (the local fight under 1): the party goes home, the unbuilt foundations removed, the
+-- spot marked as a town lost. The escort is released when the town stands (or is lost).
+--
+-- FRONT GUARDS (expand.c, settings.front_guards, on upstream): an island the AI holds whose territory is a FRONT
+-- (territories.lua's role front, its own land) and that stands short of its guard wanted by more than a quarter
+-- (tv_front_guard: a third of its citizens there, 3..12, 8 with enemies seen) gets a boat of soldiers as an outpost
+-- does - the outpost's own ferry (ex_ferry_ship with guard_only, held_trip), no other boat while one is under way, 2
+-- minutes apart, none while a new outpost is in the making. A backland island gets none. The soldiers land free (held by
+-- nobody: they stand and fight what comes) and the force leaves them alone (M.leave_front_guards, expand_front_guard).
+--
 -- Not ported (UPSTREAM says so): towns.c 4 FORWARD PRODUCTION, 32 SCOUT, 64 GROW, 128 FORT, 256 TAKE MINES and
--- 512 MINE RAIDS (armies.c's), the sites' memory and the crew; expand.c 16 EXTRA (the citizens' goal), 256 FORT,
--- 512 GUNS, the empty transport's scouting trip (phase 4: here an island's mines are known only once explored),
--- the stranded citizens' rescue and citizens_useful, the islands log.
+-- 512 MINE RAIDS (armies.c's), the sites' memory and the crew; expand.c 16 EXTRA (the citizens' goal), 188 FORT,
+-- 256 FORT and 512 GUNS, 1024 THE LANDING AS THE PLAYER DOES IT (the beachhead, its phases 5-7 and the tower at the
+-- unload tile: towns.lua's outpost keeps phases 1-4), the empty transport's scouting trip (phase 4: here an island's
+-- mines are known only once explored), THE LANDING'S AIR TRANSPORT (a transport helicopter: no API), the FIRST COME
+-- turn-backs (the outpost's own ferry only), the stranded citizens' rescue and citizens_useful, the islands log.
 local V = require("lib.view")
 local N = require("lib.navy")
+local T = require("ageofai.territories")   -- [territories.c] the front's guard, the territory a site is in
 local S = require("ageofai.settings")
 local M = {}
 
@@ -68,8 +86,14 @@ local TN_HOUSES = 5
 local TN_CARE_TRIES = 24
 local TN_CARE_SOLDIERS = 20
 local TN_CARE_PAUSE = 300000
-local TK_DROP, TK_TOWER, TK_PROD, TK_HOUSE = 1, 2, 3, 4
-local K_NAME = {"drop site", "tower", "production building", "house"}
+local TN_ESCORT = 3            -- THE PARTY: land soldiers with its citizens (TN_ESCORT)
+local TN_ARRIVE_NEAR = 10      -- ... no arrival tower within this many tiles of the site (TN_ARRIVE_NEAR)
+local TN_SITE_WAIT = 240000    -- ... the site looked at this long after the founding at most (TN_SITE_WAIT)
+local TN_ESCORT_T = 20000      -- ... its escort looked for this often (tn_escort_run's gar_t)
+local TN_PARTY_LOOKED = 15     -- ... its own eyes this near the site (intel_looked_ago's stand-in)
+local TN_FRONT_T = 120000      -- FRONT GUARDS: a boat an island this often at most (ex_front_trip's trip_t)
+local TK_DROP, TK_TOWER, TK_PROD, TK_HOUSE, TK_ARRIVE = 1, 2, 3, 4, 5
+local K_NAME = {"drop site", "tower", "production building", "house", "arrival tower"}
 local EX_PROJ = 8
 local XK_TOWER, XK_DROP, XK_BARRACKS = 1, 2, 3
 local XK_NAME = {"tower", "drop site", "barracks"}
@@ -233,6 +257,85 @@ end
 -- in the enemy's reach it knows, or where it lost a fight (stage.c stage_danger)
 local function stage_danger(x, y)
     return (ai.danger(x, y) or 0) > 0 or (ai.danger(x, y, "lost") or 0) > 0
+end
+
+-- THE LOCAL FIGHT at a place (cover.c cv_local, honest): its own land fighters by it against the enemy soldiers it sees
+-- or remembers there, as percent (above 100 it is the stronger; 1000000: nothing to fight). Upstream's st_ratio reads
+-- the damage tables this engine does not expose, so hit points x attack is the measure throughout the port
+local function local_ratio(x, y, r)
+    local own, foe = 0, 0
+    for _, cat in ipairs({"soldier", "siege", "hero"}) do
+        local ids = ai.units{category = cat, near = {x, y, r}, limit = 48}
+        if #ids > 0 then
+            local cols = ai.get(ids, {"hp", "attack"})
+            for k = 1, #ids do
+                own = own + (cols.hp[k] or 0) * (cols.attack[k] or 0)
+            end
+        end
+    end
+    local seen = ai.seen{enemy = true, armed = true, near = {x, y, r}}
+    if #seen > 0 then
+        local cols = ai.get(seen, {"hp", "attack", "category"})
+        for k = 1, #seen do
+            local cat = cols.category[k]
+            if cat == "soldier" or cat == "siege" or cat == "hero" then
+                foe = foe + (cols.hp[k] or 0) * (cols.attack[k] or 0)
+            end
+        end
+    end
+    for _, m in ipairs(ai.memory{near = {x, y, r}, limit = 48}) do
+        if not m.building then
+            local c = ai.class(m.type)
+            if c ~= nil and (c.attack or 0) > 0 then
+                foe = foe + m.hp * c.attack
+            end
+        end
+    end
+    return foe <= 0 and 1000000 or own * 100 // foe
+end
+
+-- THE PARTY: a town founded as the player does it (towns bit 1024)
+local function party_on()
+    return has(S.towns, 1024)
+end
+
+-- THE PARTY's arrival point (tn_arrive_point): where the way from the nearest standing town (else the base) crosses into
+-- the site's territory, a few tiles in; nil when the site lies in that territory already, or when the crossing is within
+-- TN_ARRIVE_NEAR tiles of the site (a tower there would only stand in the town's way)
+local function tn_arrive_point(mem, view, cx, cy)
+    local TT = T
+    local fx, fy = view.town_x, view.town_y
+    if fx < 0 then
+        return nil
+    end
+    local bd = d2(fx, fy, cx, cy)
+    for _, t in ipairs(mem.towns) do
+        if t.state == 2 then
+            local d = d2(t.x, t.y, cx, cy)
+            if d < bd then
+                bd, fx, fy = d, t.x, t.y
+            end
+        end
+    end
+    local tc = TT.terr_at(cx, cy)
+    if tc == nil or TT.terr_at(fx, fy) == tc then
+        return nil
+    end
+    local dx, dy = cx - fx, cy - fy
+    local len = isqrt(d2(fx, fy, cx, cy))
+    if len < 2 then
+        return nil
+    end
+    for i = 1, len - 1 do
+        if TT.terr_at(fx + dx * i // len, fy + dy * i // len) == tc then
+            local ax, ay = fx + dx * (i + 3) // len, fy + dy * (i + 3) // len
+            if d2(ax, ay, cx, cy) < TN_ARRIVE_NEAR * TN_ARRIVE_NEAR then
+                return nil
+            end
+            return ax, ay
+        end
+    end
+    return nil
 end
 
 local function say(fmt, ...)
@@ -620,7 +723,7 @@ local function kind_type(view, kind, want)
     if kind == TK_PROD then
         return can_pay(view, want or "") and want or nil
     end
-    if kind == TK_TOWER then
+    if kind == TK_TOWER or kind == TK_ARRIVE then   -- THE PARTY's arrival tower is the newest tower too
         local tc = tower_class(view)
         return tc ~= nil and can_pay(view, tc) and tc or nil
     end
@@ -703,11 +806,20 @@ local function release_cits(t)
     t.mine = {}
 end
 
+-- THE PARTY's escort back to the game (tn_gar_release): the town stands or is gone
+local function release_escort(t)
+    if t.esc ~= nil and #t.esc > 0 then
+        ai.release(t.esc)
+    end
+    t.esc = {}
+end
+
 local function tn_lost(mem, t, now)
     local n = mark_bad(mem, t.x, t.y, now, true, now + 480000)
     mem.lost = (mem.lost or 0) + 1
     mem.lost_t = now
     release_cits(t)
+    release_escort(t)
     say("lost at=%d,%d times=%d", t.x, t.y, n)
     t.state = 0
 end
@@ -792,7 +904,8 @@ local function tn_found(mem, memory, view, cx, cy, nmines, w, now, forward, fx, 
         return nil
     end
     local t = {x = cx, y = cy, tx = cx, ty = cy, state = 1, forward = forward, wall_tries = 0, wall_t = 0, proj = {},
-               cit = {}, mine = {}, t = now, plan_t = 0, hurt_t = 0, nmines = nmines}
+               cit = {}, mine = {}, t = now, plan_t = 0, hurt_t = 0, nmines = nmines,
+               party = false, arrive_x = -1, arrive_y = -1, site_ok = false, site_t = 0, esc = {}, esc_t = 0}
     local _, f = nearest(w.foe, cx, cy)
     if f ~= nil then
         t.tx, t.ty = f[1], f[2]
@@ -812,6 +925,15 @@ local function tn_found(mem, memory, view, cx, cy, nmines, w, now, forward, fx, 
         proj(TK_TOWER)
     else
         proj(TK_DROP)
+        -- THE PARTY: a tower where the party arrives, laid before everything (tn_run's order)
+        if party_on() then
+            t.party = true
+            local ax, ay = tn_arrive_point(mem, view, cx, cy)
+            if ax ~= nil then
+                t.arrive_x, t.arrive_y = ax, ay
+                proj(TK_ARRIVE)
+            end
+        end
         -- SPREAD: 2 towers and 1 more for every 4 mines of its group, and 5 houses
         local towers = has(S.towns, 16) and 2 + nmines // 4 or S.towers_per_town
         towers = math.max(towers, S.towers_per_town)
@@ -839,6 +961,119 @@ local function tn_found(mem, memory, view, cx, cy, nmines, w, now, forward, fx, 
     say("%s at=%d,%d mines=%d dist=%d citizens=%d", forward and "forward_base" or "resource_town", cx, cy, nmines,
         dist(cx, cy, view.town_x, view.town_y), #t.cit)
     return t
+end
+
+-- THE PARTY's escort (tn_escort_run): TN_ESCORT land soldiers with its citizens - to where they arrive until that tower
+-- is laid, then on to the site (their eyes are what "looked at" means); what comes they fight on their own. Taken as
+-- FORT's garrison is (no soldier of two towns, none while the base is threatened), a quarter of the land army at most
+local function tn_escort_run(mem, memory, view, t, now)
+    local hc = land_near(t.x, t.y)
+    local live = ai.get(t.esc, {"x", "y", "hp"})
+    local keep = {}
+    for k, id in ipairs(t.esc) do
+        if live.x[k] ~= nil and (live.hp[k] or 0) > 0 then
+            keep[#keep + 1] = id
+        end
+    end
+    t.esc = keep
+    if #t.esc < TN_ESCORT and (t.esc_t == 0 or now - t.esc_t >= TN_ESCORT_T) and (view.threat_strength or 0) <= 0 then
+        t.esc_t = now > 0 and now or 1
+        local held, kept = {}, 0
+        for _, o in ipairs(mem.towns) do
+            if o.state ~= 0 and o.esc ~= nil then
+                for _, id in ipairs(o.esc) do
+                    held[id] = true
+                    kept = kept + 1
+                end
+            end
+        end
+        local bx, by = t.x, t.y
+        if #t.cit > 0 then
+            local c = ai.unit(t.cit[1])
+            if c ~= nil then
+                bx, by = c.x, c.y
+            end
+        end
+        local ids = ai.units{category = "soldier", near = {bx, by, 300}, limit = 64}
+        local cols = ai.get(ids, {"x", "y", "inside", "action", "held"})
+        local cand, all = {}, 0
+        for k, id in ipairs(ids) do
+            if cols.x[k] ~= nil and cols.inside[k] == nil then
+                local tile = ai.tile(cols.x[k], cols.y[k])
+                if tile ~= nil and (tile.continent or 0) == hc then
+                    all = all + 1
+                    if cols.action[k] ~= "attack" and not held[id]
+                            and ai.reach(t.x, t.y, cols.x[k], cols.y[k]) then
+                        -- the free ones first, then the force's (armies.c ar_take: soldiers at home, never those out)
+                        cand[#cand + 1] = {id = id, d = d2(cols.x[k], cols.y[k], bx, by),
+                                           held = cols.held[k] ~= "engine"}
+                    end
+                end
+            end
+        end
+        table.sort(cand, function(a, b)
+            if a.held ~= b.held then
+                return not a.held
+            end
+            if a.d ~= b.d then
+                return a.d < b.d
+            end
+            return a.id < b.id
+        end)
+        local take = TN_ESCORT - #t.esc
+        local share = all // 4 - kept   -- a quarter of its land army in escorts at most
+        if take > share then
+            take = share
+        end
+        local took, from_force = {}, {}
+        for k = 1, math.min(take, #cand) do
+            t.esc[#t.esc + 1] = cand[k].id
+            took[#took + 1] = cand[k].id
+            if cand[k].held then
+                from_force[cand[k].id] = true
+            end
+        end
+        if #took > 0 then
+            if next(from_force) ~= nil then   -- the force gives them up (army.lua's list)
+                local force = require("lib.groups").role(memory, "force")
+                local am = memory.army or {}
+                if force ~= nil and not am.out then
+                    local rest = {}
+                    for _, id in ipairs(force.units) do
+                        if not from_force[id] then
+                            rest[#rest + 1] = id
+                        end
+                    end
+                    force.units = rest
+                end
+            end
+            ai.take(took)
+            mem.guards = (mem.guards or 0) + #took
+            say("escort town=%d,%d soldiers=%d", t.x, t.y, #t.esc)
+        end
+    end
+    -- where: the arrival point until its tower is laid (or there is none), then the site
+    local laid = true
+    for _, p in ipairs(t.proj) do
+        if p.kind == TK_ARRIVE and p.state == 0 then
+            laid = false
+        end
+    end
+    local tx, ty = t.x, t.y
+    if not laid then
+        tx, ty = t.arrive_x, t.arrive_y
+    end
+    if raiders_near(tx, ty, 15) > 0 then
+        t.foe_t = now > 0 and now or 1
+        return
+    end
+    for _, id in ipairs(t.esc) do
+        local u = ai.unit(id)
+        if u ~= nil and u.inside == nil and u.action ~= "move" and d2(u.x, u.y, tx, ty) > 6 * 6 then
+            ai.move(id, tx, ty)
+            mem.orders = (mem.orders or 0) + 1
+        end
+    end
 end
 
 -- a town (tn_run, every 2 s): its buildings (laid in order, laid again when destroyed), its builders, its citizens
@@ -916,6 +1151,44 @@ local function tn_run(mem, memory, view, t, now)
         tn_lost(mem, t, now)
         return
     end
+    -- THE PARTY: no tower of theirs up and 2 or more enemy soldiers by the party winning (the local fight under 1) - home,
+    -- the unbuilt foundations removed, the spot as a town lost is (towns.c THE PARTY)
+    if t.party and t.state == 1 and not t.forward and #t.cit > 0 and #alive > 0 then
+        local up = 0
+        for _, p in ipairs(t.proj) do
+            if p.state == 2 and (p.kind == TK_TOWER or p.kind == TK_ARRIVE) then
+                up = up + 1
+            end
+        end
+        local sx, sy = 0, 0
+        for _, c in ipairs(alive) do
+            sx, sy = sx + c.x, sy + c.y
+        end
+        local pcx, pcy = sx // #alive, sy // #alive
+        local foes = up > 0 and 0 or raiders_near(pcx, pcy, 12)
+        local ratio = 1000000
+        if foes >= 2 then
+            ratio = local_ratio(pcx, pcy, 12)
+        end
+        if ratio < 100 then
+            local removed = 0
+            for _, p in ipairs(t.proj) do
+                if p.state == 1 then
+                    ai.delete(p.id)
+                    p.id, p.state, removed = 0, 3, removed + 1
+                end
+            end
+            mem.gaveup = (mem.gaveup or 0) + 1
+            say("party_back at=%d,%d from=%d,%d foes=%d ratio=%d removed=%d citizens=%d", t.x, t.y, pcx, pcy, foes,
+                ratio, removed, #t.cit)
+            if view.town_x >= 0 then
+                ai.move(t.cit, view.town_x, view.town_y)
+            end
+            release_cits(t)
+            tn_lost(mem, t, now)
+            return
+        end
+    end
     -- towns_care parts 8 and 16 (off upstream: TN_CARE): hold under attack, give up a town going up that they hurt
     local care = S.towns_care and 1 or 0
     local hot = has(care, 8) and not t.forward and raiders_near(t.x, t.y, 12) > 0
@@ -931,16 +1204,23 @@ local function tn_run(mem, memory, view, t, now)
         tn_lost(mem, t, now)
         return
     end
-    -- its first drop site not paid in 3 minutes: given up, not lost (that spot not again for 5 minutes)
-    if t.proj[1].state == 0 and t.proj[1].tries == 0 and now - t.t > 180000 then
+    -- its first drop site not paid in 3 minutes: given up, not lost (that spot not again for 5 minutes). THE PARTY: of
+    -- the site found free (its clock then)
+    if t.proj[1].state == 0 and t.proj[1].tries == 0 and now - t.t > 180000
+            and not (t.party and (not t.site_ok or now - t.site_t <= 180000)) then
         mem.unpaid = (mem.unpaid or 0) + 1
         say("given_up at=%d,%d why=unpaid", t.x, t.y)
         mark_bad(mem, t.x, t.y, now, false, now + 300000)
         release_cits(t)
+        release_escort(t)
         t.state = 0
         return
     end
     tn_wall(mem, view, t, now)
+    -- THE PARTY's escort (FORT's garrison from the drop site on, which this port has not)
+    if t.party and t.state == 1 and not t.forward then
+        tn_escort_run(mem, memory, view, t, now)
+    end
     if t.state == 1 and t.forward and standing + dropped == #t.proj then
         release_cits(t)   -- its citizens back to the game
     end
@@ -948,6 +1228,9 @@ local function tn_run(mem, memory, view, t, now)
         t.state = 2
         mem.held = (mem.held or 0) + 1
         say("stands at=%d,%d buildings=%d citizens=%d", t.x, t.y, standing, #t.cit)
+        if t.party then
+            release_escort(t)   -- the town stands: its escort the game's again
+        end
     end
     if hot then
         return
@@ -980,15 +1263,69 @@ local function tn_run(mem, memory, view, t, now)
                 going = going + 1
             end
         end
-        for j, p in ipairs(t.proj) do
+        -- THE PARTY: the arrival's tower, the site's first tower, the drop site, the rest (upstream's ord[])
+        local ord, no, tower1, arrive_open = nil, 0, nil, false
+        if t.party then
+            ord, no = {}, 0
+            for j, p in ipairs(t.proj) do
+                if p.kind == TK_ARRIVE then
+                    no = no + 1
+                    ord[no] = j
+                    if p.state < 2 then
+                        arrive_open = true
+                    end
+                end
+            end
+            for j, p in ipairs(t.proj) do
+                if tower1 == nil and p.kind == TK_TOWER then
+                    tower1 = j
+                    no = no + 1
+                    ord[no] = j
+                end
+            end
+            for j, p in ipairs(t.proj) do
+                if p.kind ~= TK_ARRIVE and j ~= tower1 then
+                    no = no + 1
+                    ord[no] = j
+                end
+            end
+        end
+        for oi = 1, (t.party and no or #t.proj) do
+            local j = t.party and ord[oi] or oi
+            local p = t.proj[j]
             if going >= 2 then
                 break
             end
             if p.state == 0 then
-                if p.kind ~= TK_DROP and not drop_ok and t.proj[1].state == 0 then
+                if t.party and p.kind ~= TK_ARRIVE and arrive_open then
+                    break   -- the arrival's tower alone first
+                end
+                if t.party and p.kind ~= TK_ARRIVE and not t.site_ok then
+                    -- then the site, once it is looked at and nobody is there (its own eyes; upstream's
+                    -- intel_looked_ago has no API here, so a party member within TN_PARTY_LOOKED or TN_SITE_WAIT)
+                    local looked = false
+                    for _, c in ipairs(alive) do
+                        if d2(c.x, c.y, t.x, t.y) <= TN_PARTY_LOOKED * TN_PARTY_LOOKED then
+                            looked = true
+                        end
+                    end
+                    t.site_ok = raiders_near(t.x, t.y, 14) == 0 and (looked or now - t.t >= TN_SITE_WAIT)
+                    if not t.site_ok then
+                        break
+                    end
+                    t.site_t = now > 0 and now or 1
+                    say("site_free at=%d,%d tower=%s citizens=%d escort=%d", t.x, t.y, tostring(tower1 ~= nil),
+                        #t.cit, #t.esc)
+                end
+                if p.kind ~= TK_DROP and not drop_ok and t.proj[1].state == 0
+                        and not (t.party and (p.kind == TK_ARRIVE or j == tower1)) then
                     break
                 end
                 local ty = kind_type(view, p.kind, p.want)
+                if ty == nil and t.party and p.kind == TK_TOWER and t.proj[1].state == 0 then
+                    -- THE PARTY: a tower it can't pay yet doesn't hold up the drop site (expand.c: 5-7 minutes lost)
+                    goto continue
+                end
                 if ty == nil then
                     if p.kind ~= TK_DROP then
                         p.waits = p.waits + 1
@@ -1000,6 +1337,9 @@ local function tn_run(mem, memory, view, t, now)
                     break
                 end
                 local cx, cy = t.x, t.y
+                if p.kind == TK_ARRIVE then
+                    cx, cy = t.arrive_x, t.arrive_y
+                end
                 if p.kind == TK_PROD and not t.forward and t.proj[1].state ~= 0 then
                     cx, cy = t.proj[1].x, t.proj[1].y
                 end
@@ -1023,9 +1363,11 @@ local function tn_run(mem, memory, view, t, now)
                     cx, cy = tower_spot(t, d0x, d0y, nth)
                 end
                 local ax, ay = tn_spot(view, ty, cx, cy)
-                -- the builders: all its free citizens for the drop site, else 3 (4 at a forward base) of them
+                -- the builders: all its free citizens for the drop site, else 3 (4 at a forward base) of them; THE
+                -- PARTY: all of them on its arrival tower, and on anything while its drop site is not laid
                 local builders = {}
-                local most = p.kind == TK_DROP and 64 or (t.forward and 4 or 3)
+                local most = (p.kind == TK_DROP or (t.party and (p.kind == TK_ARRIVE or t.proj[1].state == 0)))
+                        and 64 or (t.forward and 4 or 3)
                 for _, c in ipairs(free) do
                     if #builders < most and c.inside == nil then
                         builders[#builders + 1] = c.id
@@ -1075,12 +1417,20 @@ local function tn_run(mem, memory, view, t, now)
                     break
                 end
             end
+            ::continue::
         end
     end
     -- builders: all on the drop site again it stands, then 3 on each other going up; the rest gather by the town
     for j, p in ipairs(t.proj) do
         if p.state == 1 then
-            local want = p.kind == TK_DROP and (drop_ok and 3 or 64) or (t.forward and 4 or 3)
+            local want
+            if p.kind == TK_DROP then
+                want = drop_ok and 3 or 64
+            elseif t.party and t.proj[1].state == 0 then
+                want = 64   -- THE PARTY: everything on what goes up before the drop site
+            else
+                want = t.forward and 4 or 3
+            end
             local have = on[j] ~= nil and #on[j] or 0
             local send = {}
             local rest = {}
@@ -1105,6 +1455,18 @@ local function tn_run(mem, memory, view, t, now)
         end
     end
     local mines, mine_k = nil, 0
+    -- THE PARTY: while the site is not found free they wait where they arrive; one of them on as the eyes at the site
+    -- when the arrival tower stands and there is no escort
+    local arr_up = true
+    for _, p in ipairs(t.proj) do
+        if p.kind == TK_ARRIVE and p.state < 2 then
+            arr_up = false
+        end
+    end
+    local eyes = nil
+    if t.party and t.arrive_x >= 0 and not t.site_ok and arr_up and #t.esc == 0 and #free > 0 then
+        eyes = free[1]
+    end
     for _, c in ipairs(free) do
         if t.forward then   -- to the base while nothing is laid; once it stands the game's again
             if t.state == 1 and not any then
@@ -1112,7 +1474,11 @@ local function tn_run(mem, memory, view, t, now)
             end
         elseif not drop_ok then   -- no drop site yet and nothing to build: to the town
             if t.proj[1].state == 0 then
-                walk_to(c, t.x, t.y)
+                if t.party and t.arrive_x >= 0 and not t.site_ok and c ~= eyes then
+                    walk_to(c, t.arrive_x, t.arrive_y)
+                else
+                    walk_to(c, t.x, t.y)
+                end
             end
         elseif not t.mine[c.id] or c.action == "idle" then
             -- the town's mines: the free mines within 14 tiles of its middle, nearest first (one list a pass, the
@@ -1361,7 +1727,21 @@ local function towns_reserve(mem, view, now, reserve)
     for _, t in ipairs(mem.towns) do
         if t.state == 1 and not t.forward then
             local first = t.proj[1]
-            if first.state == 0 and first.tries == 0 and now - t.t <= 180000 then
+            -- THE PARTY: its first drop site's clock runs from the site found free
+            local since = t.party and (t.site_ok and t.site_t or now) or t.t
+            if first.state == 0 and first.tries == 0 and now - since <= 180000 then
+                if t.party then   -- ... the arrival's tower while it isn't laid, and the site's
+                    local n = 1
+                    for _, p in ipairs(t.proj) do
+                        if p.kind == TK_ARRIVE and p.state == 0 then
+                            n = n + 1
+                        end
+                    end
+                    local c = cost_of(view, tower_class(view) or "b_guard_tower_middle")
+                    for _, r in ipairs(V.resources) do
+                        reserve[r] = reserve[r] + n * c[r]
+                    end
+                end
                 local ty = (now - t.t < 90000 and not has(S.towns, 2) and V.cost(view, "b_town_center") ~= nil) and "b_town_center" or "b_settlement"
                 local c = cost_of(view, ty)
                 for _, r in ipairs(V.resources) do
@@ -1574,6 +1954,7 @@ local function ex_ferry_end(mem, view, now, why)
         say("ferry_end why=%s island=%d", why, x.cont)
     end
     x.guard_only = false
+    x.held_trip, x.hwant = false, 0
     x.fphase, x.pass, x.ship = 0, {}, 0
 end
 
@@ -1664,7 +2045,8 @@ local function ex_ferry_ship(mem, memory, view, order, budget, now)
     end
     x.ship = best.id
     x.scouted = x.scouted or {}
-    if not x.scouted[x.cont] then   -- an island it has hardly looked at: scouted first, empty
+    if not x.scouted[x.cont] and not x.held_trip then   -- an island it has hardly looked at: scouted first, empty (a
+                                                        -- front guard's boat never scouts: it carries soldiers)
         local conts = ex_scan(mem, view)
         local c = conts[x.cont]
         if c == nil or c.mn < 2 or ai.unexplored(x.mines_x, x.mines_y, {land = x.cont, grid = 4}) ~= nil then
@@ -1687,7 +2069,9 @@ local function ex_ferry_ship(mem, memory, view, order, budget, now)
     local set = taken_set(mem)
     local cap = best.cap
     local guard = x.guard_trip and math.max(ex_guard() - x.nsold, 0) or 0
-    if has(bits, 256) then
+    if x.held_trip then   -- FRONT GUARDS: a held island's guard wanted, less those standing there (ex_guard_want)
+        guard = x.guard_trip and math.max((x.hwant or 0) - x.nsold, 0) or 0
+    elseif has(bits, 256) then
         local want = ex_guard()
         if x.ncit // 3 > want then
             want = x.ncit // 3
@@ -1735,7 +2119,9 @@ local function ex_ferry_ship(mem, memory, view, order, budget, now)
                     and ai.reach(x.home_x, x.home_y, sc.x[k], sc.y[k]) then
                 x.pass[#x.pass + 1] = sids[k]
                 n = n + 1
-                x.guard[#x.guard + 1] = sids[k]   -- the outpost's own guard from now on
+                if #x.guard < 8 then
+                    x.guard[#x.guard + 1] = sids[k]   -- the outpost's own guard from now on
+                end
             end
         end
         -- the free ones first, then the force's (armies.c ar_take: soldiers at home, never those out on a push)
@@ -1758,7 +2144,9 @@ local function ex_ferry_ship(mem, memory, view, order, budget, now)
             local taken = {}
             for k = 1, math.min(guard - n, #cand) do
                 x.pass[#x.pass + 1] = cand[k].id
-                x.guard[#x.guard + 1] = cand[k].id
+                if #x.guard < 8 then
+                    x.guard[#x.guard + 1] = cand[k].id
+                end
                 taken[cand[k].id] = true
             end
             local keep = {}
@@ -2005,6 +2393,7 @@ local function ex_ferry_sail(mem, view, now)
         ai.release(x.ship)
         x.last = x.ship
         x.fphase, x.pass, x.ship, x.trip_t, x.guard_only = 0, {}, 0, now, false
+        x.held_trip, x.hwant = false, 0
         x.plan_t = now   -- the first building 8 s on: a foundation whose builders are still landing is cancelled
         say("ashore island=%d landed=%d", x.cont, ashore)
         return
@@ -2530,6 +2919,76 @@ local function held_tick(mem, view, now)
     end
 end
 
+-- the home shore a ferry boards at (ex_home_shore): near the base, towards the island's unload tile, on the sea and
+-- free of the AI's buildings; into x.home_x/y and x.home_wx/y - true when one was found
+local function ex_home_shore(x, hc, bx, by, ux, uy, sea)
+    local best = nil
+    local len = math.max(dist(bx, by, ux, uy), 1)
+    local hx, hy, hwx, hwy = nil, nil, nil, nil
+    for _, d in ipairs({0, 10, 20, 30}) do
+        local px, py = bx + (ux - bx) * d // len, by + (uy - by) * d // len
+        local sx, sy = ai.shore(px, py, {sea = sea, land = hc, max = 40})
+        if sx ~= nil and d2(sx, sy, bx, by) <= 40 * 40 then
+            local wx, wy = water_by(sx, sy, sea)
+            if wx ~= nil then
+                local sc = dist(sx, sy, bx, by) * 2 + dist(sx, sy, ux, uy)
+                if best == nil or sc < best then
+                    best, hx, hy, hwx, hwy = sc, sx, sy, wx, wy
+                end
+            end
+        end
+    end
+    if best == nil then
+        return false
+    end
+    x.home_x, x.home_y, x.home_wx, x.home_wy = hx, hy, hwx, hwy
+    return true
+end
+
+-- the sea its docks stand on (ex_dock_ocean: its sea)
+local function ex_dock_ocean()
+    local sea = N.dock_sea()
+    return sea or 0
+end
+
+-- FRONT GUARDS (ex_front_trip): a boat of soldiers for a held island whose territory is a front and which stands short of
+-- its guard by more than a quarter - no new outpost in the making, 2 minutes after the last boat. The outpost's own
+-- ferry carries them (guard_only: soldiers only), ex_guard_want then asks x.hwant - x.nsold. 1: under way
+local function ex_front_trip(mem, view, hc, bx, by, now)
+    local x = mem.ex
+    if S.front_guards ~= true or x.active or #x.held == 0
+            or ((x.trip_t or 0) ~= 0 and now - x.trip_t < TN_FRONT_T) then
+        return 0
+    end
+    local sea = ex_dock_ocean()
+    if sea == 0 then
+        return 0
+    end
+    for _, h in ipairs(x.held) do
+        local have, want = T.front_guard(h.x, h.y)
+        if have ~= nil and not (have * 4 >= want * 3) then   -- short by more than a quarter (a boat for 1 of 8 sailed twice)
+            local ux, uy = ai.shore(h.x, h.y, {sea = sea, land = h.cont, max = 30})
+            local uwx, uwy = nil, nil
+            if ux ~= nil then
+                uwx, uwy = water_by(ux, uy, sea)
+            end
+            if ux ~= nil and uwx ~= nil and ex_home_shore(x, hc, bx, by, ux, uy, sea) then
+                x.cont, x.sea, x.mines_x, x.mines_y = h.cont, sea, h.x, h.y
+                x.unload_x, x.unload_y, x.unload_wx, x.unload_wy = ux, uy, uwx, uwy
+                x.held_trip, x.hwant, x.nsold, x.ncit = true, want, have, 0
+                x.ever_ashore = true   -- no outpost's first landing: not scouted, not called off for a rival seen there
+                x.guard_trip, x.guard_only = true, true
+                x.fphase, x.fsince, x.ftrain_t = 1, now, 0
+                x.fguards = (x.fguards or 0) + 1
+                say("front_guard island=%d have=%d want=%d board=%d,%d unload=%d,%d", h.cont, have, want, x.home_x,
+                    x.home_y, ux, uy)
+                return 1
+            end
+        end
+    end
+    return 0
+end
+
 -- a new outpost (phase 0, every 30 s) or more citizens for it (ex_plan)
 local function ex_plan(mem, memory, view, order, now)
     local x = mem.ex
@@ -2555,6 +3014,10 @@ local function ex_plan(mem, memory, view, order, now)
         return
     end
     if view.town_x < 0 or hc == 0 then
+        return
+    end
+    -- FRONT GUARDS: a held island short of its guard gets its boat before anything else is planned
+    if ex_front_trip(mem, view, hc, view.town_x, view.town_y, now) ~= 0 then
         return
     end
     local conts = nil
@@ -2631,23 +3094,7 @@ local function ex_plan(mem, memory, view, order, now)
     end
     local hx, hy, hwx, hwy = nil, nil, nil, nil
     if why == nil then   -- the home shore: near the base, towards the island
-        local bx, by = view.town_x, view.town_y
-        local best = nil
-        local len = math.max(dist(bx, by, ux, uy), 1)
-        for _, d in ipairs({0, 10, 20, 30}) do
-            local px, py = bx + (ux - bx) * d // len, by + (uy - by) * d // len
-            local sx, sy = ai.shore(px, py, {sea = sea, land = hc, max = 40})
-            if sx ~= nil and d2(sx, sy, bx, by) <= 40 * 40 then
-                local wx, wy = water_by(sx, sy, sea)
-                if wx ~= nil then
-                    local sc = dist(sx, sy, bx, by) * 2 + dist(sx, sy, ux, uy)
-                    if best == nil or sc < best then
-                        best, hx, hy, hwx, hwy = sc, sx, sy, wx, wy
-                    end
-                end
-            end
-        end
-        if best == nil then
+        if not ex_home_shore(x, hc, view.town_x, view.town_y, ux, uy, sea) then
             why = "no_shore_of_its_sea_at_home"
         end
     end
@@ -2667,9 +3114,9 @@ local function ex_plan(mem, memory, view, order, now)
     x.why = nil
     x.active, x.cont, x.sea, x.mines_x, x.mines_y = true, cont, sea, mx, my
     x.unload_x, x.unload_y, x.unload_wx, x.unload_wy = ux, uy, uwx, uwy
-    x.home_x, x.home_y, x.home_wx, x.home_wy = hx, hy, hwx, hwy
     x.ever_ashore, x.trips, x.drop_ok, x.empty_t, x.base_t, x.plan_t, x.ncit, x.nsold = false, 1, false, 0, 0, 0, 0, 0
     x.guard, x.forward, x.fwd_added, x.sea_no, x.guard_only, x.foe_t = {}, false, false, 0, false, 0
+    x.held_trip, x.hwant = false, 0
     x.slots = c.mn * mine_cap(view)
     x.proj = {}
     local plan = {XK_DROP, XK_TOWER, XK_TOWER}
@@ -2685,7 +3132,7 @@ local function ex_plan(mem, memory, view, order, now)
     x.guard_trip = true
     x.fphase, x.fsince, x.ftrain_t, x.res_t = 1, now, 0, now
     x.plans = (x.plans or 0) + 1
-    say("plans_outpost island=%d mines=%d enemy_buildings=%d at=%d,%d unload=%d,%d board=%d,%d", cont, c.mn, c.eseen, mx, my, ux, uy, hx, hy)
+    say("plans_outpost island=%d mines=%d enemy_buildings=%d at=%d,%d unload=%d,%d board=%d,%d", cont, c.mn, c.eseen, mx, my, ux, uy, x.home_x, x.home_y)
 end
 
 -- the drop site and a tower an outpost waits for, and its transport (expand_hold): held back from the unit orders
@@ -2854,6 +3301,51 @@ function M.step(view, memory, orders, budget)
             mem.rebuilt or 0, mem.walls or 0, tostring(x.active), x.cont, x.fphase, x.ncit, x.nsold, x.plans or 0, x.sails or 0,
             x.ashore or 0, x.drops or 0, x.lost or 0, #x.held)
     end
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- FRONT GUARDS (expand.c expand_front_guard): the soldiers standing in a front territory off the base's land are that
+-- front's guard - held by nobody, they stand and fight what comes - and the force leaves them alone (armies.c ar_take
+-- asks this before it takes a free soldier; army.lua's free list is filtered with leave_front_guards)
+
+-- the tile is in a front territory on another land than the base's
+local function front_here(home, x, y)
+    local land = land_near(x, y)
+    if land == 0 or land == home then
+        return false
+    end
+    return T.front_guard(x, y) ~= nil
+end
+
+-- one tile's answer (for a caller that has the soldier's tile)
+function M.front_guard_at(view, x, y)
+    if S.front_guards ~= true or x == nil or y == nil or view.town_x < 0 then
+        return false
+    end
+    return front_here(land_near(view.town_x, view.town_y), x, y)
+end
+
+-- the ids that are not a front guard's (army.lua: `local free = TW.leave_front_guards(view, memory, free)`)
+function M.leave_front_guards(view, memory, ids)
+    if S.front_guards ~= true or ids == nil or #ids == 0 then
+        return ids or {}
+    end
+    if view.town_x < 0 then
+        return ids
+    end
+    local home = land_near(view.town_x, view.town_y)
+    if home == 0 then
+        return ids
+    end
+    local out = {}
+    local cols = ai.get(ids, {"x", "y"})
+    for k, id in ipairs(ids) do
+        local x, y = cols.x[k], cols.y[k]
+        if x == nil or not front_here(home, x, y) then
+            out[#out + 1] = id
+        end
+    end
+    return out
 end
 
 return M

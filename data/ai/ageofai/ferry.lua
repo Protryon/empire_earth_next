@@ -47,6 +47,17 @@
 --  - The parked transports' "one on its way to a dock" is not counted (a transport with any order is left alone), so
 --    the shares are the idle ones only; the log line is the port's (upstream's "# ferry:" lines).
 --
+-- ACROSS THE WATER (stations.c's pushes, upstream ON, measured worse than the landings - it runs only when
+-- settings.push_across AND settings.expand_across are true): a push's soldiers go over first, as one wave a time
+-- (ONE WAVE AT A TIME) - none while a wave of it is on its way, GATHERED FIRST for FY_GATHER at most (room for three
+-- quarters of it, the first wave for all), THE TRANSPORTS HELD meanwhile (no other trip takes a free one),
+-- BOARD TOGETHER (the wave sails when all of it is aboard, FY_TOGETHER at most) after THE LAST WORD (stations.lua's
+-- judgement of what is aboard against the beach and the target, its losses planned for; called off: unloaded at home and
+-- the push over), TOGETHER at the meeting point off the beach. The first wave takes THE BRIDGEHEAD's citizens along (2 a
+-- transport, 6 at most) and puts them off for the stations' bridgehead; every soldier put off is the stations' again
+-- (SN.ferried). THE SQUADRON AHEAD (squadrons.c) is not ported: the meeting point waits for the wave's transports alone.
+-- A WAVE'S ORDERS (settings.push_transport_orders, off): no more than that many transports trained for one wave.
+--
 -- WIRING (the integrator's; this module edits nothing else): main.lua's step calls FY.step(view, memory, orders) BEFORE
 -- towns.lua's (TW.step), so the service's hulls are its own before an outpost's ferry looks for one. towns.lua's
 -- ex_ferry_ship takes any idle empty transport, held by a script or not, so with the service on keep [ai_base]
@@ -58,6 +69,7 @@
 local CX = require("ageofai.crossing")
 local CL = require("ageofai.claims")
 local TV = require("ageofai.territories")
+local SN = require("ageofai.stations")   -- [stations.c] the pushes across the water this ferry carries
 local S = require("ageofai.settings")
 local M = {}
 
@@ -80,6 +92,12 @@ local FY_HOLD_MAX = 480000   -- FY_HOLD_MAX: a trip held at the pick-up for the 
 local FY_WAY_T = 180000      -- FY_WAY_T: a way held for the risk is worth the fleet's while this long
 local FY_TRIPS = 4           -- FY_TRIPS 16 upstream: the trips on at once (the port's memory and step budget)
 local FY_PASS_MAX = 16       -- a trip's passengers (upstream's ee_unit *pass[16])
+local FY_GATHER = 180000     -- FY_GATHER: a push waits this long at most for transports enough
+local FY_MEET = 75000        -- FY_MEET: at the meeting point this long at most for the push's other transports
+local FY_MEET_SAIL = 150000  -- ... a transport at sea this long counts as there
+local FY_TOGETHER = 90000    -- FY_TOGETHER: a push's loaded transport waits this long at most for the wave's others
+local FY_BH_TRIP = 2         -- THE BRIDGEHEAD: a push's citizens a transport of its first wave takes at most
+local SN_CITS = 6            -- ... and a first wave in all (stations.c SN_CITS)
 
 local DROPS = {"b_town_center", "b_capitol", "b_settlement"}
 local MINERALS = {stone = true, gold = true, iron = true}
@@ -135,7 +153,7 @@ local function new_trip()
             drop_x = -1, drop_y = -1, drop_wx = -1, drop_wy = -1, dest_x = -1, dest_y = -1,
             app_ms = FY_APPROACH, sea_ms = FY_SEA, since = 0, load_t = 0, there_t = 0, reissue = 0,
             rate_t = 0, risk = 0, via_x = 0, via_y = 0, has_via = false, via_done = false, held_t = 0,
-            meet_t = 0, mv_t = 0, unl_t = 0, x = -1, y = -1}
+            meet_t = 0, ready_t = 0, push = -1, nsold = 0, mv_t = 0, unl_t = 0, x = -1, y = -1}
 end
 
 local function state(memory)
@@ -144,7 +162,8 @@ local function state(memory)
         f = {look_t = 0, trips = {}, n = 0, last_kind = 0, risky = {}, order_t = {}, lands = nil, order = {},
              lands_t = 0, asks = {}, want_t = 0, trips_n = 0, soldiers = 0, citizens = 0, failed = 0, sunk = 0,
              trained = 0, no_ship = 0, no_shore = 0, no_dock = 0, small = 0, parked = 0, held = 0, held_load = 0,
-             gone_high = 0, waited = 0, sailed = 0, way = nil, way_t = 0, log_t = 0, said = {}, park_t = 0}
+             gone_high = 0, waited = 0, sailed = 0, way = nil, way_t = 0, log_t = 0, said = {}, park_t = 0,
+             wave_t = {}, pord = {}, waves = 0, pushed = 0, off = 0, transit = {}}
         for k = 1, FY_TRIPS do
             f.trips[k] = new_trip()
         end
@@ -506,12 +525,54 @@ local function end_trip(view, memory, f, t, now, why)
     t.phase, t.npass, t.pass, t.ship = 0, 0, {}, 0
 end
 
--- a trip of kind (1 soldiers, 2 citizens, 4 scouts) of n from land a to land b, wanted at (dx, dy), as trip t:
--- 1 when it set out, 0 nobody to take, -1 no free transport on a sea between the two, -2 not now for the risk
-local function start(view, memory, f, kind, imp, a, b, n, dx, dy, now, orders, t, one)
+-- the citizens a trip may take from land a nearest (dx, dy): the idle ones first, then the wood cutters (work.c's own
+-- order; the bridgehead's citizens too, as many as the trip wants)
+local function pick_cits(view, memory, a, dx, dy, n)
+    local ids = ai.units{category = "citizen", held = "engine", near = {dx, dy, 2000}, limit = 32}
+    local cand = {}
+    if #ids > 0 then
+        local cols = ai.get(ids, {"x", "y", "inside", "action", "gathers"})
+        for k, id in ipairs(ids) do
+            if cols.x[k] ~= nil and cols.inside[k] == nil then
+                local pref = nil
+                if cols.action[k] == "idle" then
+                    pref = 0
+                elseif cols.action[k] == "gather" and cols.gathers[k] == "wood" then
+                    pref = 1
+                end
+                if pref ~= nil then
+                    local tile = ai.tile(cols.x[k], cols.y[k])
+                    if tile ~= nil and tile.continent == a
+                            and CL.may(view, memory, id, CL.PRIO.carry, CL.WHO.ferry) then
+                        cand[#cand + 1] = {id = id, p = pref, d = d2(cols.x[k], cols.y[k], dx, dy)}
+                    end
+                end
+            end
+        end
+    end
+    table.sort(cand, function(x, y)
+        if x.p ~= y.p then
+            return x.p < y.p
+        end
+        if x.d ~= y.d then
+            return x.d < y.d
+        end
+        return x.id < y.id
+    end)
+    local out = {}
+    for k = 1, math.min(n, #cand, FY_PASS_MAX) do
+        out[k] = cand[k].id
+    end
+    return out
+end
+
+-- a trip of kind (1 soldiers, 2 citizens, 3 a push's soldiers, 4 scouts) of n from land a to land b, wanted at (dx, dy),
+-- as trip t: 1 when it set out, 0 nobody to take, -1 no free transport on a sea between the two, -2 not now for the risk
+local function start(view, memory, f, kind, imp, a, b, n, dx, dy, now, orders, t, one, push)
     -- the passengers: soldiers (the nearest the destination; the free ones - no manager holds them), citizens (the idle
-    -- ones first, then the wood cutters), a scout
+    -- ones first, then the wood cutters), a scout, a push's soldiers (stations.lua's) with its bridgehead's citizens
     local pass = {}
+    local cits = 0
     if kind == 1 then
         local ids = ai.units{category = "soldier", held = "engine", near = {dx, dy, 2000}, limit = 32}
         if #ids > 0 then
@@ -531,39 +592,21 @@ local function start(view, memory, f, kind, imp, a, b, n, dx, dy, now, orders, t
             end
         end
     elseif kind == 2 then
-        local ids = ai.units{category = "citizen", held = "engine", near = {dx, dy, 2000}, limit = 32}
-        local cand = {}
-        if #ids > 0 then
-            local cols = ai.get(ids, {"x", "y", "inside", "action", "gathers"})
-            for k, id in ipairs(ids) do
-                if cols.x[k] ~= nil and cols.inside[k] == nil then
-                    local pref = nil
-                    if cols.action[k] == "idle" then
-                        pref = 0
-                    elseif cols.action[k] == "gather" and cols.gathers[k] == "wood" then
-                        pref = 1
-                    end
-                    if pref ~= nil then
-                        local tile = ai.tile(cols.x[k], cols.y[k])
-                        if tile ~= nil and tile.continent == a
-                                and CL.may(view, memory, id, CL.PRIO.carry, CL.WHO.ferry) then
-                            cand[#cand + 1] = {id = id, p = pref, d = d2(cols.x[k], cols.y[k], dx, dy)}
-                        end
-                    end
-                end
+        pass = pick_cits(view, memory, a, dx, dy, n)
+    elseif kind == 3 then
+        pass = SN.push_pick(view, memory, push, dx, dy, n)
+        -- THE BRIDGEHEAD: its first wave's citizens first, FY_BH_TRIP a transport
+        local want = SN.bh_want(memory, push)
+        local list = want > 0 and pick_cits(view, memory, a, dx, dy, math.min(want, FY_BH_TRIP)) or {}
+        if #list > 0 then
+            while #pass > FY_PASS_MAX - #list do
+                pass[#pass] = nil
             end
-        end
-        table.sort(cand, function(x, y)
-            if x.p ~= y.p then
-                return x.p < y.p
+            local merged = list
+            for _, id in ipairs(pass) do
+                merged[#merged + 1] = id
             end
-            if x.d ~= y.d then
-                return x.d < y.d
-            end
-            return x.id < y.id
-        end)
-        for k = 1, math.min(n, #cand, FY_PASS_MAX) do
-            pass[k] = cand[k].id
+            pass, cits = merged, #list
         end
     else
         if one ~= nil and ai.unit(one) ~= nil then
@@ -668,6 +711,7 @@ local function start(view, memory, f, kind, imp, a, b, n, dx, dy, now, orders, t
     f.risky[kind] = 0
     -- the trip
     t.phase, t.kind, t.imp, t.npass, t.pass = 1, kind, imp, #pass, pass
+    t.push, t.nsold = push or -1, #pass - cits
     t.ship, t.stype, t.from, t.to, t.ocean = best.id, best.type, a, b, bsea
     t.pick_x, t.pick_y, t.pick_wx, t.pick_wy = bslot.pick_x, bslot.pick_y, bslot.pick_wx, bslot.pick_wy
     t.drop_x, t.drop_y, t.drop_wx, t.drop_wy = bslot.drop_x, bslot.drop_y, bslot.drop_wx, bslot.drop_wy
@@ -683,11 +727,13 @@ local function start(view, memory, f, kind, imp, a, b, n, dx, dy, now, orders, t
         end
         t.sea_ms = way_ms(best.speed, across, FY_SEA)
     end
-    -- TOGETHER: a reinforcement to a hot land meets the earlier one's way (crossing.c cx_meet; upstream's meeting
-    -- point is the pushes' - stations.c, not ported)
-    if kind == 1 and imp then
+    -- TOGETHER: the trip meets an earlier one's way off the line - a reinforcement to a hot land (crossing.c cx_meet),
+    -- and a push's wave at its meeting point off the beach (one for all its transports)
+    if (kind == 1 and imp) or kind == 3 then
+        local same = kind == 1 and imp
         for _, o in ipairs(f.trips) do
-            if o ~= t and o.phase ~= 0 and o.kind == 1 and o.imp and o.to == b and o.has_via then
+            if o ~= t and o.phase ~= 0 and o.has_via
+                    and (same and o.kind == 1 and o.imp and o.to == b or kind == 3 and o.kind == 3 and o.push == t.push) then
                 t.via_x, t.via_y, t.has_via, t.via_done = o.via_x, o.via_y, true, false
                 break
             end
@@ -698,7 +744,9 @@ local function start(view, memory, f, kind, imp, a, b, n, dx, dy, now, orders, t
                 t.via_x, t.via_y, t.has_via, t.via_done = mx, my, true, false
             end
         end
-        t.meet_t = t.has_via and (now > 0) and now or 0
+        if kind == 1 then
+            t.meet_t = t.has_via and (now > 0) and now or 0
+        end
     end
     t.since, t.load_t, t.there_t, t.reissue, t.rate_t, t.held_t, t.mv_t, t.unl_t = (now > 0) and now or 1, 0, 0, 0,
         (now > 0) and now or 1, 0, 0, 0
@@ -718,6 +766,39 @@ local function start(view, memory, f, kind, imp, a, b, n, dx, dy, now, orders, t
     log(f, view, "start", string.format("%d %s from land %d to land %d - the transport at %d,%d, boarding at %d,%d, off at %d,%d; risk %d",
         #pass, kind == 1 and "soldiers" or "citizens", a, b, best.x, best.y, t.pick_x, t.pick_y, t.drop_x, t.drop_y, risk))
     return 1
+end
+
+-- THE LAST WORD (stations.c sn_last_word): a push's first wave aboard, its soldiers - judged at once against the beach and
+-- the target, its losses planned for; called off: every transport of the wave unloads where it boarded, the push over:
+-- 1 go, 0 wait, -1 called off
+local function last_word(view, memory, f, t, now)
+    local ids = {}
+    for _, o in ipairs(f.trips) do
+        if o.phase == 2 and o.kind == 3 and o.push == t.push then
+            local cols = ai.get(o.pass, {"inside", "category"})
+            for k, id in ipairs(o.pass) do
+                if cols.inside[k] ~= nil and cols.category[k] ~= "citizen" then
+                    ids[#ids + 1] = id
+                end
+            end
+        end
+    end
+    local r = SN.last_word(view, memory, t.push, ids, now)
+    if r >= 0 then
+        return r
+    end
+    for _, o in ipairs(f.trips) do
+        if o.phase ~= 0 and o.phase < 3 and o.kind == 3 and o.push == t.push then
+            local ship = ai.unit(o.ship)
+            if ship ~= nil and (ship.cargo or 0) > 0 then
+                ai.unload(o.ship, o.pick_x, o.pick_y)
+            end
+            end_trip(view, memory, f, o, now, "called off - a beach too strong, unloaded at home")
+        end
+    end
+    SN.push_off(memory, t.push, now)
+    f.off = (f.off or 0) + 1
+    return -1
 end
 
 -- one trip's step (fy_trip_act)
@@ -822,6 +903,34 @@ local function trip_act(view, memory, f, t, now)
         end
         -- boarding: all aboard, or some aboard for FY_LOAD: off with those
         local ready = (t.npass > 0 and aboard == t.npass) or (aboard > 0 and now - t.load_t >= FY_LOAD)
+        if ready and t.kind == 3 then
+            -- BOARD TOGETHER (as a landing's): a push's wave sails when all of it is aboard, FY_TOGETHER at most
+            if t.ready_t == 0 then
+                t.ready_t = (now > 0) and now or 1
+            end
+            local wait, first = false, t.ready_t
+            for _, o in ipairs(f.trips) do
+                if o ~= t and o.phase ~= 0 and o.phase < 3 and o.kind == 3 and o.push == t.push then
+                    if o.ready_t == 0 then
+                        wait = true
+                    elseif o.ready_t < first then
+                        first = o.ready_t
+                    end
+                end
+            end
+            if wait and now - first < FY_TOGETHER then
+                ready = false
+            end
+            if ready then   -- THE LAST WORD: judged against the beach and the target, its losses planned for
+                local r = last_word(view, memory, f, t, now)
+                if r < 0 then
+                    return
+                end
+                if r == 0 then
+                    ready = false
+                end
+            end
+        end
         if ready then
             local left = {}
             local cols = ai.get(t.pass, {"inside"})
@@ -863,28 +972,40 @@ local function trip_act(view, memory, f, t, now)
     end
     -- phase 3: across
     if (ship.cargo or 0) <= 0 then
-        local cols = ai.get(t.pass, {"x", "inside"})
-        local off = 0
+        local cols = ai.get(t.pass, {"x", "inside", "category"})
+        local off, offc = 0, 0
         for k, id in ipairs(t.pass) do
             if cols.inside[k] == nil and cols.x[k] ~= nil then
                 off = off + 1
+                if cols.category[k] == "citizen" then
+                    offc = offc + 1
+                end
             end
         end
         if t.kind == 2 then
             f.citizens = f.citizens + off
         else
-            f.soldiers = f.soldiers + off
+            f.soldiers = f.soldiers + off - offc
+            f.citizens = f.citizens + offc
         end
         if t.kind ~= 2 then   -- on to where they are wanted (a citizen's work is work.c's)
             for k, id in ipairs(t.pass) do
                 if cols.inside[k] == nil and cols.x[k] ~= nil then
-                    ai.move(id, t.dest_x, t.dest_y)
+                    if t.kind == 3 and cols.category[k] == "citizen" then
+                        SN.bh_land(memory, t.push, id)   -- THE BRIDGEHEAD: its citizens, the stations'
+                        ai.move(id, t.dest_x, t.dest_y)
+                    else
+                        ai.move(id, t.dest_x, t.dest_y)
+                        if t.kind == 3 then
+                            SN.ferried(memory, id, t.from)   -- ACROSS: the push's soldier, its station again
+                        end
+                    end
                 end
             end
         end
-        print(string.format("ferry P%d at %.1f min: trip %d (risk %d): %d %s put off on land %d at %d,%d",
+        print(string.format("ferry P%d at %.1f min: trip %d (risk %d): %d %s put off on land %d at %d,%d%s",
             view.player or 0, view.time / 60000.0, t.no, t.risk, off, t.kind == 2 and "citizens" or "soldiers",
-            t.to, t.drop_x, t.drop_y))
+            t.to, t.drop_x, t.drop_y, offc > 0 and " - the bridgehead's citizens among them" or ""))
         end_trip(view, memory, f, t, now, nil)
         return
     end
@@ -892,6 +1013,33 @@ local function trip_act(view, memory, f, t, now)
         f.failed = f.failed + 1
         end_trip(view, memory, f, t, now, "not across in time - put off where it is")
         return
+    end
+    -- TOGETHER: a push's transports meet off the beach and run in at once (THE SQUADRON AHEAD is not ported)
+    if t.kind == 3 and t.has_via and not t.via_done and (d2(ship.x, ship.y, t.via_x, t.via_y) <= 36
+            or now - t.since >= FY_MEET_SAIL) then
+        if t.meet_t == 0 then
+            t.meet_t = (now > 0) and now or 1
+        end
+        local all, first = true, t.meet_t
+        for _, o in ipairs(f.trips) do
+            if o.phase == 3 and o.kind == 3 and o.push == t.push then
+                if o.meet_t == 0 then
+                    all = false
+                elseif o.meet_t < first then
+                    first = o.meet_t
+                end
+            end
+        end
+        if all or now - first >= FY_MEET then
+            for _, o in ipairs(f.trips) do
+                if o.phase == 3 and o.kind == 3 and o.push == t.push and o.meet_t > 0 then
+                    o.via_done = true
+                end
+            end
+        end
+        if not t.via_done then
+            return
+        end
     end
     if t.has_via and not t.via_done then   -- THE CROSSING: the way off the line - its point first
         if d2(ship.x, ship.y, t.via_x, t.via_y) <= 36 then
@@ -1071,6 +1219,103 @@ local function park(view, memory, f, now)
     end
 end
 
+-- ACROSS (stations.c push_across, ferry.c ONE WAVE AT A TIME): a push's soldiers first - every free transport at once,
+-- important ones (the transports may be lost once they are over); those taken leave the push's count of soldiers still
+-- to cross. ONE WAVE AT A TIME: none while a wave of it is on its way, its free transports taking three quarters of it
+-- (the first wave all of it) first - GATHERED FIRST - and THE TRANSPORTS HELD meanwhile (no other trip takes a free
+-- one). Returns held (nothing else may take a transport this look), the trips that found none, and what was pushed.
+local function push_waves(view, memory, f, now, orders)
+    local out = {held = false, want_n = 0, wants = {}}
+    if S.push_across ~= true or S.expand_across ~= true then
+        return out
+    end
+    local pushes = SN.across(memory)
+    if #pushes == 0 then
+        return out
+    end
+    f.wave_t = f.wave_t or {}
+    local frees = free_transports(view, memory, f)
+    local room, cap = 0, 10
+    for _, tr in ipairs(frees) do
+        room = room + tr.cap
+        if tr.cap > cap then
+            cap = tr.cap
+        end
+    end
+    for _, q in ipairs(pushes) do
+        local k = q.k
+        local transit = 0
+        for _, t in ipairs(f.trips) do
+            if t.phase ~= 0 and t.kind == 3 and t.push == k then
+                transit = transit + t.nsold
+            end
+        end
+        local left0 = q.left - transit
+        local wave_t = f.wave_t[k] or 0
+        if left0 <= 0 or transit > 0 then
+            f.wave_t[k] = 0
+        elseif q.waves > 0 and left0 < (cap + 1) // 2 then
+            f.wave_t[k] = 0   -- a later wave: half a transport at least
+        else
+            if wave_t == 0 then
+                wave_t = (now > 0) and now or 1
+                f.wave_t[k] = wave_t
+            end
+            -- THE BRIDGEHEAD: 2 citizens a transport of the first wave, SN_CITS at most
+            if q.waves == 0 and SN.bh_want(memory, k) == 0 then
+                local cw = 2 * ((left0 + cap - 1) // cap)
+                SN.bh_want_set(memory, k, cw < SN_CITS and cw or SN_CITS)
+            end
+            local places = #SN.push_pick(view, memory, k, q.beach_x, q.beach_y, 128)
+            local need = (places > left0 and places or left0) + (q.waves > 0 and 0 or SN.bh_want(memory, k))
+            -- THE WHOLE PUSH FIRST: its first wave waits for room for all of it, a later one for three quarters
+            local share = q.waves > 0 and 3 or 4
+            if room * 4 < need * share and now - wave_t < FY_GATHER then
+                out.held = true
+                local want = (need * share // 4 - room + cap - 1) // cap
+                if #out.wants < 4 then
+                    out.wants[#out.wants + 1] = {a = q.from_land, b = q.to_land, from_x = q.x, from_y = q.y,
+                                                 to_x = q.beach_x, to_y = q.beach_y}
+                end
+                out.want_n = out.want_n + (want > 0 and want or 1)
+            else
+                local left, set, ships = left0, 0, 0
+                while left > 0 do
+                    local t = free_trip_slot(f)
+                    if t == nil then
+                        break
+                    end
+                    local r = start(view, memory, f, 3, true, q.from_land, q.to_land, left, q.beach_x, q.beach_y,
+                        now, orders, t, nil, k)
+                    if r == -1 then
+                        out.want_n = out.want_n + 1
+                        if #out.wants < 4 then
+                            out.wants[#out.wants + 1] = {a = q.from_land, b = q.to_land, from_x = q.x, from_y = q.y,
+                                                         to_x = q.beach_x, to_y = q.beach_y}
+                        end
+                    end
+                    if r <= 0 then
+                        break
+                    end
+                    local took = t.nsold
+                    local tr = cls(t.stype)
+                    room = math.max(room - (tr.transport or cap), 0)
+                    left = left - took
+                    set, ships = set + took, ships + 1
+                end
+                if ships > 0 then
+                    f.waves, f.pushed = (f.waves or 0) + 1, (f.pushed or 0) + ships
+                    SN.push_wave(memory, k)
+                    f.wave_t[k] = 0
+                    log(f, view, "wave", string.format("a push's wave %d: %d soldiers set out on %d transports",
+                        q.waves + 1, set, ships))
+                end
+            end
+        end
+    end
+    return out
+end
+
 -- ---------------------------------------------------------------------------------------------------------------
 -- The look (fy_look): the lands' gaps, the trips, the scouts, the transports to order
 
@@ -1084,7 +1329,20 @@ local function look(view, memory, f, orders, now)
             wt[nwt] = {a = a, b = b, from_x = fx, from_y = fy, to_x = tx, to_y = ty}
         end
     end
+    local pw = push_waves(view, memory, f, now, orders)
+    if pw.want_n > 0 then
+        unserved = unserved + pw.want_n
+        for _, w in ipairs(pw.wants) do
+            if nwt < 8 then
+                nwt = nwt + 1
+                wt[nwt] = w
+            end
+        end
+    end
     for _ = 1, FY_TRIPS do
+        if pw.held then
+            break
+        end
         local t = free_trip_slot(f)
         if t == nil then
             break
@@ -1204,6 +1462,10 @@ local function minute(view, memory, f)
         print(string.format("ferry sea_first: a way held for the risk at %d,%d to %d,%d (risk %d) - the squadrons are not ported: the trips wait for the risk to fall",
             f.way.a_x or 0, f.way.a_y or 0, f.way.b_x or 0, f.way.b_y or 0, f.way.risk or 0))
     end
+    if (f.waves or 0) > 0 or (f.off or 0) > 0 then
+        print(string.format("ferry across: %d push waves set out (%d transports), %d pushes called off at the beach",
+            f.waves or 0, f.pushed or 0, f.off or 0))
+    end
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -1242,6 +1504,18 @@ function M.step(view, memory, orders)
         if t.phase ~= 0 then
             trip_act(view, memory, f, t, now)
         end
+    end
+    -- ACROSS: the soldiers of each push with a trip (walking to its shore, aboard) - the stations count them as still to
+    -- cross, or a push whose every soldier was with the ferry was "nobody left"
+    if S.push_across == true and S.expand_across == true then
+        local counts = {}
+        for k = 1, FY_TRIPS do
+            local t = f.trips[k]
+            if t.phase ~= 0 and t.kind == 3 and t.push >= 0 then
+                counts[t.push] = (counts[t.push] or 0) + t.nsold
+            end
+        end
+        SN.transit(memory, counts)
     end
     if f.look_t > 0 and now >= f.look_t and now - f.look_t < FY_LOOK then
         return f.n

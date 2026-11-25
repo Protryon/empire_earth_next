@@ -237,7 +237,10 @@ local function scan_improvements(view, rs)
                     local cost, sum = costmap({food = ic.food, wood = ic.wood, stone = ic.stone, gold = ic.gold,
                                                iron = ic.iron})
                     if sum > 0 then   -- the price above 0: the "+" button the player is offered
+                        -- [research.c] a frigate's speed with its range while the squadrons lead (squadrons.c)
                         local first = what == "range"
+                                or (what == "speed" and S.sea_squadrons == true
+                                    and (string.find(t, "frigate") ~= nil or string.find(t, "warrington") ~= nil))
                         out[#out + 1] = {kind = "improve", t = t, what = what, cost = cost, sum = sum,
                                          level = ic.level, max = ic.max, first = first,
                                          rank = first and LINE or REST,

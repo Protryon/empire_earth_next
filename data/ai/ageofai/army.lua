@@ -39,6 +39,7 @@ local MT = require("ageofai.metal")    -- [metal.c] the soldier that does most p
 local SV = require("ageofai.savings")  -- [savings.c] SAVING FIRST: a type the budget refuses is saved for
 local FR = require("ageofai.fronts")   -- [fronts.c] the front station
 local TV = require("ageofai.territories")   -- [territories.c] the front's station (AR_FRONT_TER)
+local TW = require("ageofai.towns")     -- [expand.c expand_front_guard] a front island's soldiers are its guard's
 local M = {}
 
 local SG_FOE = 20                   -- tiles round the target the enemy there is counted in
@@ -525,6 +526,9 @@ local function force_step(view, memory, mem, order)
     mem.home_x, mem.home_y = hx, hy
     local force = G.role(memory, "force")
     local free = G.free_soldiers(tx, ty)
+    if S.front_guards == true then
+        free = TW.leave_front_guards(view, memory, free)
+    end
     -- every land soldier (but the scouts) is the force's
     if #free > 0 then
         if force == nil then

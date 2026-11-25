@@ -273,14 +273,30 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 territory share; the judgement has no damage tables; the first building of a push is the one nearest
                 the station's place, the next ones the nearest to the soldiers' middle; the station's place is the
                 first finished own building in the territory; claims.lua holds each soldier at CLP_ROUTINE/
-                CLW_STATION. Missing/ENGINE: ACROSS, THE BRIDGEHEAD, A BASE OVER THERE, COAST BATTERIES, ANTI-AIR,
-                THE SIEGE'S ESCORT AT A BREACH, SIEGE AT THE GATES, RAMS AT THE TOWERS, THE WAY/A BREACH, THE CALL,
-                THE RESERVE/THE LOADS, QUARANTINE, AN ESCORT (holy.c), A STANDING FORMATION, THE CLEARED GROUND,
-                A SCENARIO'S TOGGLES/TARGETS, THROUGH THE TERRITORY. Default off.
+                CLW_STATION. ACROSS THE WATER (push_across AND expand_across AND ferry_service; OFF: upstream ON,
+                measured worse than the landings): a held quiet territory whose land neighbours have no enemy
+                buildings it knows takes the land across the water with the most of them that a unit of its stood in
+                lately (LOOKED AT FIRST), its beach the target land's shore on the sea both lands touch nearest the
+                aim out of the enemy's reach it knows, the push judged PLANNED FOR LOSSES against beach and target,
+                its soldiers over on the ferry one wave at a time, those taken counted as still to cross and a push
+                with none over given up. THE BRIDGEHEAD (citizens with the first wave, the beach's buildings: tower,
+                production, Hospital, Temple, town, tower - one going up, one laid every so often, dropped after
+                unpaid, every citizen on it; a soldier trained at its production joins), A BASE OVER THERE.
+                Missing/ENGINE: COAST BATTERIES, ANTI-AIR, THE SIEGE'S ESCORT AT A BREACH, SIEGE AT THE GATES, RAMS AT
+                THE TOWERS, THE WAY/A BREACH, THE CALL, THE RESERVE/THE LOADS, QUARANTINE, AN ESCORT (holy.c), A
+                STANDING FORMATION, THE CLEARED GROUND, SCOUTS ACROSS (explore.lua not wired), THE SQUADRON AHEAD
+                (squadrons.c), A WAVE'S ORDERS, A SCENARIO'S TOGGLES/TARGETS, THROUGH THE TERRITORY. Default off.
   army_view.c   NOT STARTED -> nothing to port yet (port forward 7a17182): a summary of the force for the deciding
                 parts to read as one army; the port's lib.groups sums the members on demand.
-  crossing.c    NOT STARTED -> crossing.lua (port forward 7a17182). What a crossing risks and the way it takes (the
-                safety by the enemy's density and by what the delivery is worth, the meeting point).
+  crossing.c    PORTED -> crossing.lua (port forward 7a17182; ferry_safety, off until measured). Ported: THE THREATS
+                (the enemy ships/submarines/aircraft seen, the defences and coast guns remembered, the remembered
+                ships with drift, the storms, the places its transports were sunk, a ship in a fight with its fleet
+                counting a quarter), THE RATING (the way sampled every 2 tiles at the transport's speed, the
+                standing and moving exposure, the damage expected before the load is off, the time in the score),
+                THE WAY, THE MEETING POINT, the decision's limits, the sunk places, M.cleared. ENGINE/DEVIATIONS:
+                ld_factor -> fleet.lua's role table and ai.can_hurt (ai.damage is not built); fl_water -> a ring of
+                ai.tile; a unit's own upgraded stats -> the class data's; remembered ships live ai.memory's 3
+                minutes; the list is a module local (not saved).
   convoy.c      NOT STARTED -> convoy.lua (port forward 7a17182). The convoys: the lifeboat unload at the nearest
                 beach, the escort ahead of the transport.
   stage.c       PORTED -> army.lua: the staging point (the last point of the way out of the enemy's reach).
@@ -436,9 +452,14 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 landing_waves; the sea held: no more waves). Missing: the switch to another beach at the sail
                 check, the staging at sea for 3+ transports (the lib sails in formation), landing_bombard (off
                 upstream), the raid targets ashore by kind (lib.groups' attack priorities stand in).
-  ferry.c       NOT STARTED -> ferry.lua (port forward 7a17182). The ferry service: the citizens and soldiers across
-                the water, the lands' free places, the pick-up and the meeting point, the trips and their time limits
-                by the way, the transports gathered and held, the scouts across.
+  ferry.c       PARTLY -> ferry.lua (port forward 7a17182; ferry_service, off until measured). The ferry service: the
+                citizens and soldiers across the water, the lands' free places, the pick-up and the meeting point,
+                the trips and their time limits by the way, the transports gathered and held, the scouts across
+                (M.scout_ask; explore.lua not wired). ACROSS: stations.c's pushes - one wave a time, GATHERED FIRST,
+                THE TRANSPORTS HELD, BOARD TOGETHER, THE LAST WORD (stations.lua's judgement against the beach and
+                the target; called off: unloaded at home and the push over), TOGETHER at the meeting point, the
+                bridgehead's citizens aboard and every soldier put off handed back. Missing/ENGINE: THE SQUADRON
+                AHEAD, A WAVE'S ORDERS, A PICK-UP BOTH REACH (the plain pick-up), THE SEA FIRST's squadrons.
   expand.c      PARTLY -> towns.lua (the outpost). Ported: ex_plan (from the Copper Age and expand_minute, the home
                 mines half worked or minute 15, 25 workers, the army not outmatched, the dock's sea), ex_pick (the
                 island with the most explored mines: 10 a mine, a quarter a tile, 15 an enemy building known; no
@@ -459,7 +480,12 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 with a mine seen and land not looked at is scouted first by the empty transport - here it sails
                 from one unexplored grid point of the island's shore to the next, ai.unexplored, then 10 s by the
                 mines as upstream, 4 minutes at most; upstream knew every mine from the zones, the port knows the
-                explored ones). Missing: EXTRA (the citizens' goal), FORT, FORT'S GUNS, the stranded citizens'
+                explored ones). FRONT GUARDS (front_guards, upstream ON): a held island whose territory is a FRONT and
+                that is short of its guard wanted by more than a quarter (a third of its citizens, 3..12, 8 with
+                enemies seen) gets a boat of soldiers on the outpost's own ferry - no new outpost in the making, 2
+                minutes apart; a backland island none. The soldiers land free and the force leaves them alone
+                (M.leave_front_guards, armies.c expand_front_guard; army.lua filters its free list). Missing: EXTRA
+                (the citizens' goal), FORT, FORT'S GUNS, the stranded citizens'
                 rescue (rs_look / rs_act), citizens_useful, the islands log (autotest). The sea risk is the enemy
                 warships known near the way against the own warships' strength (upstream's ld_sea_risk models the
                 crossing); the guard comes from the free soldiers, then the force at home (ar_take).
@@ -482,7 +508,14 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 is left; unpaid after 3 minutes: that spot 5 minutes off), tn_lost (the spot 8 minutes off, 3
                 losses never), tn_army_spot and the staging point (FORWARD BASE, bit 8), tn_wall (11 tiles across
                 3 tiles before the two front towers, 8 directions, 3 tries 3 minutes apart, 11 x the wall's cost
-                in stock; a SPREAD town 60+ tiles out too; ai.wall), towns_reserve, towns_remove_unbuilt. Missing:
+                in stock; a SPREAD town 60+ tiles out too; ai.wall), towns_reserve, towns_remove_unbuilt. THE PARTY
+                (bit 1024; settings.towns, off in the port's 17): a new town founded as a player does it - the
+                nearest standing town (else the base), the territory of the site, the point where the way crosses
+                into it (a tower there first, none when the site lies in the territory it comes from or within 10
+                tiles of the crossing), 3 land soldiers as an escort, the site looked free (its own eyes within 15
+                tiles, or after 4 minutes), then the site's tower, the drop site (reserve: both towers) and the town;
+                no tower of theirs up and 2+ enemy soldiers by them winning: home, the foundations removed, the spot
+                as a town lost; the escort released when the town stands. Missing:
                 4 FORWARD PRODUCTION (towns_production: econ.lua's production builds near home), 32 SCOUT, 64 GROW,
                 128 FORT (defence.c's square and sf_walls, the garrison), 256 TAKE MINES and 512 MINE RAIDS (the
                 force's part in armies.c, the sites' memory, the crew), towns_care parts 2-16 are in but off as
@@ -763,11 +796,12 @@ lines here:
             Checked with headless Age of AI games (up to 5 players, 40 minutes, no script error and the engine's
             memory validator clean).
   stage 2: the force by territory (stations.c, army_view.c: the shares, the pushes, the scouts and patrols, the
-            demolition, the bridgehead) and its consumers still standing in fronts.lua - defence.c's town guards and
-            anti-air rows, expand.c's front guards, navy.c's fleet station and harbours, towns.c's party; the ferry
-            and the crossings (ferry.c, crossing.c, convoy.c); the squadrons (squadrons.c); the holy (holy.c); the
-            plans and the returns (plans.c, returns.c); creep.c, news.c, scen_targets.c; and the modified files'
-            lines brought up to 7a17182.
+            demolition, the bridgehead) and its consumers: defence.c's town guards, anti-air row and builders under
+            cover, expand.c's front guards, navy.c's fleet station and harbours, towns.c's party, the ferry and the
+            crossings (ferry.c, crossing.c), the plan and the returns (plans.c, returns.c), garrison.c's newer rules,
+            news.c - all in, with the push across the water, the party and the squadrons off until measured. Still
+            open: convoy.c, scen_targets.c, army_view.c, creep.c's consumers, holy's consumers, and the modified
+            files' lines brought up to 7a17182.
 A decision this engine cannot express (no territory split of the retail game, no stance-claimed orders, no
 personality leanings, no unit-improvement data) is a gap named in the file's line, not a silent omission.
 
@@ -785,9 +819,10 @@ AIs is still unanswered - this engine gives the script no door into another AI's
 Still not ported of the files modified since 0ac6495 (their lines above describe the port at 0ac6495 unless they
 name a newer piece): defence.c's anti-air record (airguard.lua builds and counts the AA itself) and aa_strong's
 blocks, bunker.c's stash_by_territory, let-out-few and territory reserve, airstrike.c's bomber harassment,
-expand.c's FRONT GUARDS and THE LANDING AS THE PLAYER DOES IT, towns.c's THE PARTY, packing.c's NO SHUT-IN PLACES
-(the engine's placement), and the newer parts of intel.c, cover.c, sites.c, stage.c, forces.c, stats.c, metal.c,
-diplo.c and skirmish.c, which are engine-level or named in the module that carries the decision.
+expand.c's THE LANDING AS THE PLAYER DOES IT, fleet.c's busy-dock bookkeeping and its kill/loss counters,
+convoy.c, scen_targets.c, packing.c's NO SHUT-IN PLACES (the engine's placement), and the newer parts of intel.c,
+cover.c, sites.c, stage.c, forces.c, stats.c, metal.c, diplo.c and skirmish.c, which are engine-level or named in
+the module that carries the decision.
 
 Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at the commit in UPSTREAM, with the
 deviations noted there (each marked why: an engine difference, or a measured call of the owner's). The keys of the

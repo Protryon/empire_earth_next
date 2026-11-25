@@ -68,14 +68,32 @@
 -- wall-family goal lookup crashed on a gate. The orders table and the budget of M.step are not touched: the soldiers
 -- are ordered through the per-unit interface, as army.lua's are.
 --
--- NOT HERE (gaps against upstream stations.c, deliberate): ACROSS (the pushes and the scouts over the water, the
--- ferry, ferry.c), THE BRIDGEHEAD and A BASE OVER THERE, COAST BATTERIES, ANTI-AIR (its share and posts), THE SIEGE'S
--- ESCORT and SIEGE AT THE GATES, RAMS AT THE TOWERS / RAMS WITH THE SOLDIERS, THE WAY and A BREACH (the route search
--- ar_route over armies.c's cells), THE CALL, THE RESERVE and THE LOADS (Fortress stashes, bunker.c), QUARANTINE (the
--- plague, a Hospital/Temple cure), AN ESCORT (holy.c's prophet), A STANDING FORMATION (the patches' formation move),
--- THE CLEARED GROUND (holding a cleared territory until a building of its claims it; the push ends and the shares
--- say where the soldiers stand), A SCENARIO'S TOGGLES and TARGETS (scen_targets.c, player_ai_toggle: the port has no
--- trigger API), THROUGH THE TERRITORY (explore.c's goals inside a scout's territory) and the anti-air pool.
+-- NOT HERE (gaps against upstream stations.c, deliberate): ACROSS THE WATER (THE PUSHES ACROSS: a territory beside a
+-- territory with enemy buildings across the water sends its soldiers over on the ferry, one wave at a time), THE
+-- BRIDGEHEAD and A BASE OVER THERE (they are in, behind settings.push_across; see below), COAST BATTERIES, ANTI-AIR (its
+-- share and posts), THE SIEGE'S ESCORT and SIEGE AT THE GATES, RAMS AT THE TOWERS / RAMS WITH THE SOLDIERS, THE WAY and
+-- A BREACH (the route search ar_route over armies.c's cells), THE CALL, THE RESERVE and THE LOADS (Fortress stashes,
+-- bunker.c), QUARANTINE (the plague, a Hospital/Temple cure), AN ESCORT (holy.c's prophet), A STANDING FORMATION (the
+-- patches' formation move), THE CLEARED GROUND (holding a cleared territory until a building of its claims it; the push
+-- ends and the shares say where the soldiers stand), A SCENARIO'S TOGGLES and TARGETS (scen_targets.c, player_ai_toggle:
+-- the port has no trigger API), THROUGH THE TERRITORY (explore.c's goals inside a scout's territory), the anti-air pool
+-- and THE SQUADRON AHEAD (squadrons.c: not ported; the ferry's waves log it).
+--
+-- ACROSS THE WATER (ACROSS: upstream's push_across, measured worse than the landings - OFF in the port; it runs only when
+-- settings.push_across AND settings.expand_across are true, both false here): a held quiet territory with SN_PUSH_MIN of
+-- the force stationed whose neighbours over land have no enemy buildings it knows looks for one across the water - a
+-- land territory beside it through a sea, with enemy buildings it knows and a unit of its stood in lately (LOOKED AT
+-- FIRST: mem.look within SN_RESCOUT) - takes the one with the most of them. The push is judged PLANNED FOR LOSSES (one
+-- transport's worth of soldiers gone, two from four transports on) and against its beach as well as its target, the
+-- weaker of the two; its beach is the target land's shore on the sea both lands touch, nearest the aim, out of the
+-- enemy defences it knows (ai.danger). THE FERRY (ferry.lua) carries its soldiers over ONE WAVE AT A TIME (GATHERED
+-- FIRST: a wave waits FY_GATHER for room for three quarters of the push, the first wave for all of it; BOARD TOGETHER;
+-- the meeting point off the beach; THE LAST WORD judged against the beach and the target), takes THE BRIDGEHEAD's
+-- citizens along (2 a transport, SN_CITS at most) and hands every soldier back to this module (M.ferried) so the push
+-- still knows it. THE BRIDGEHEAD (sn_bridgehead, A BASE OVER THERE): its citizens build by the beach, one going up at a
+-- time - a tower, a production building, a Hospital, a tower, a Temple, a production building, a town building, a tower -
+-- one laid every SN_BH_EVERY when it can pay it, dropped after SN_BH_PAY; a soldier new within SN_BH_JOIN of a standing
+-- production building joins the push. All done or the push over: the citizens the game's again.
 --
 -- Cost: one look every SN_EVERY (a scan of the own units, one ai.get over the soldiers, two ai.seen of the enemy's,
 -- the memory's buildings, a few ai.memory reads round a push's target), the steps in between are none; a look tracks
@@ -105,6 +123,7 @@ local T = require("ageofai.territories")
 local W = require("ageofai.watch")
 local CL = require("ageofai.claims")
 local G = require("lib.groups")
+local V = require("lib.view")
 
 local M = {}
 
@@ -140,6 +159,24 @@ local SN_EB = 8                     -- enemy buildings remembered a territory (t
 local SN_FOE_R = 20                 -- tiles round a target the enemy there is judged in (army.lua's SG_FOE)
 local SN_PUSH_THERE = 15            -- a soldier this near its station's place is "there" for a push
 
+-- ACROSS (PUSH_ACROSS; off in the port): the beach, the crossing's time, the bridgehead, the losses planned for, THE LAST
+-- WORD, and the news the ferry sends back
+local SN_BEACH_R = 40               -- the beach: the target land's shore nearest the aim, this far searched (SN_BEACH_R)
+local SN_CROSS_T = 480000           -- a push with none of it over in this long is given up (SN_CROSS_T)
+local SN_CITS = 6                   -- THE BRIDGEHEAD: citizens a push across takes along at most (SN_CITS)
+local SN_BH = 8                     -- ... the buildings it lays by the beach (SN_BH)
+local SN_BH_JOIN = 12               -- ... a soldier new this near a production building of it joins the push (SN_BH_JOIN)
+local SN_BH_EVERY = 10000           -- ... one laid this often at most (SN_BH_EVERY)
+local SN_BH_PAY = 180000            -- ... one it can't build or pay this long: dropped (SN_BH_PAY)
+local SN_LAST = 100                 -- THE LAST WORD: what is aboard, its losses planned for, judged at least this against
+                                    -- the beach and the target (percent: upstream's SN_LAST 1.0)
+local SN_LAST_WEAK = 20000          -- ... judged less this long: called off (SN_LAST_WEAK)
+local SN_CALLED_OFF = 600000        -- ... then no push from that territory this long (SN_CALLED_OFF)
+local SN_JOIN_T = 120000            -- the ferry's news about a passenger is fresh this long (sn_ferried's window)
+local SN_TR_CAP = 10                -- the transports' places (looked up each look: the newest it has, 10 with none)
+-- THE BRIDGEHEAD's plan, in order: 0 a tower, 1 a Hospital, 2 a Temple, 3 a production building, 4 a town building
+local BH_PLAN = {0, 3, 1, 0, 2, 3, 4, 0}
+
 -- the share's weight (produce.c's SHARES, computed from the territory's facts: see the header)
 local SN_W_HELD = 10
 local SN_W_FOE = 10
@@ -168,6 +205,12 @@ local function s(k, d)
     return v ~= nil and v or d
 end
 
+-- ACROSS's switch (upstream ON, measured worse than the landings: the port ships it OFF; every key must say on, and the
+-- ferry service carries it)
+local function across_on()
+    return S.push_across == true and S.expand_across == true and S.ferry_service == true
+end
+
 local function rnd(v)
     return math.floor((v or 0) + 0.5)
 end
@@ -192,9 +235,11 @@ local function new_state()
         -- by territory: the share in soldiers, the stationed, when a unit of its last stood there, no push before then
         tc = {}, ac = {}, seen = {}, look = {}, calm = {},
         push = {},
+        -- ACROSS: the ferry's news (a passenger put off takes its station again), its passengers still to cross
+        join = {}, transit = {},
         log_t = 0, scout_off = 0,
         moved = 0, orders = 0, groups = 0, grouped = 0, pushes = 0, won = 0, lost = 0, scouted = 0, demos = 0,
-        stale = 0, took = 0, gave_back = 0,
+        stale = 0, took = 0, gave_back = 0, ferried = 0, lost_across = 0,
     }
 end
 
@@ -276,6 +321,29 @@ end
 -- every own unit marks the territory it stands in (A LOOK AGAIN: a unit of its stands there), the buildings give the
 -- station's place; the land soldiers and siege weapons become the stations' entries (upstream's loop over
 -- player_get_units, SN_UNITS at most)
+-- A BASE OVER THERE (sn_bh_recruit): a soldier new to the stations by a standing production building of a push's
+-- bridgehead is that push's (the game trains at the building it picks; over there already, no crossing)
+local function sn_bh_recruit(mem, e)
+    if across_on() ~= true then
+        return
+    end
+    local ql = T.area_of(T.terr_at(e.x, e.y) or 0)
+    for k = 1, SN_PUSHES do
+        local p = mem.push[k]
+        if p ~= nil and p.on ~= 0 and p.across ~= 0 and ql ~= 0 and ql == p.to_land then
+            for j = 1, p.nbh or 0 do
+                local h = p.bh[j]
+                if h.state == 2 and h.kind == 3 and d2(e.x, e.y, h.x, h.y) <= SN_BH_JOIN * SN_BH_JOIN then
+                    e.ter = p.from
+                    p.recruits = (p.recruits or 0) + 1
+                    mem.ferried = (mem.ferried or 0) + 1
+                    return
+                end
+            end
+        end
+    end
+end
+
 local function own_units(c, mem, now)
     local old = mem.byid or {}
     local ids = ai.units({})
@@ -320,8 +388,10 @@ local function own_units(c, mem, now)
         local x, y, hp = b.x[k], b.y[k], b.hp[k]
         if x ~= nil and y ~= nil and x >= 0 and hp ~= nil and hp > 0 and b.inside[k] == nil then
             local e = old[id]
+            local fresh = false
             if e == nil then
                 e = entry_new(id)
+                fresh = true
             end
             local ty = b.type[k] or ""
             e.x, e.y = x, y
@@ -336,6 +406,21 @@ local function own_units(c, mem, now)
             end
             if e.scout == SC_TER and (e.ter < 1 or e.ter > c.n or c.land[e.ter] ~= 1) then
                 e.ter = r   -- where it stands, when it is new (upstream's sn_rejoin's default)
+            end
+            if fresh then
+                -- ACROSS: the ferry's news - a passenger put off takes its station again (sn_ferried; the look has not
+                -- seen it since the ferry put it off). Applied after the tile's own, as upstream's sn_rejoin does
+                local j = mem.join ~= nil and mem.join[id] or nil
+                if j ~= nil then
+                    if j.t <= 0 or now - j.t > SN_JOIN_T then
+                        mem.join[id] = nil
+                    elseif j.ter >= 1 and j.ter <= c.n then
+                        e.ter = j.ter
+                        mem.join[id] = nil
+                    end
+                elseif e.pool ~= SNP_SIEGE then
+                    sn_bh_recruit(mem, e)
+                end
             end
             byid[id] = e
             list[#list + 1] = e
@@ -637,6 +722,44 @@ local function judge(c, cls, x, y, own)
     return own * 100 // foe, foe
 end
 
+-- the newest transport's places (10 with none of its yet: sn_loss's load)
+local function transport_cap()
+    local ids = ai.units{category = "transport", limit = 4}
+    if #ids > 0 then
+        local u = ai.unit(ids[1])
+        local k = u ~= nil and ai.class(u.type) or nil
+        if k ~= nil and (k.transport or 0) > 0 then
+            return k.transport
+        end
+    end
+    return 10
+end
+
+-- PLANNED FOR LOSSES (sn_loss): a push over the water is judged without the soldiers of its lost transports - one, two
+-- from four transports on, a full load each (the transport type's capacity; 10 with none of its yet)
+local function sn_loss(n, cap)
+    local ships = (n + cap - 1) // cap
+    local lost = (ships > 3 and 2 or 1) * cap
+    return lost < n and lost or n
+end
+
+-- ACROSS: the judgement with the losses planned for and against its beach as well as its target (the weaker of the two)
+local function judge_across(cls, n, own_all, aim_x, aim_y, beach_x, beach_y)
+    local skip = sn_loss(n, SN_TR_CAP)
+    if skip >= n then
+        return 0, 0
+    end
+    local own = own_all * (n - skip) // n
+    local r, foe = judge(nil, cls, aim_x, aim_y, own)
+    if d2(aim_x, aim_y, beach_x, beach_y) > SN_FOE_R * SN_FOE_R then
+        local rb = judge(nil, cls, beach_x, beach_y, own)
+        if rb < r then
+            r = rb
+        end
+    end
+    return r, foe
+end
+
 local function push_end(mem, p, now, why)
     p.on = 0
     p.end_t = now
@@ -649,31 +772,247 @@ local function push_end(mem, p, now, why)
             e.order_t = 0
         end
     end
+    if p.cits ~= nil and #p.cits > 0 then   -- THE BRIDGEHEAD's citizens, work.c's again
+        ai.release(p.cits)
+        p.cits, p.ncits = {}, 0
+    end
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- THE BRIDGEHEAD (ACROSS): the citizens a push over the water took along build by its beach
+
+local TOWER_CLASSES = {"b_guard_tower_paleo", "b_guard_tower_copper", "b_guard_tower_bronze", "b_guard_tower_middle",
+                       "b_guard_tower_imperial", "b_guard_tower_ww1", "b_guard_tower_digital", "b_guard_tower_space"}
+
+-- the newest tower class the player can make (territories.lua's list)
+local function tower_class(view)
+    for k = #TOWER_CLASSES, 1, -1 do
+        if V.cost(view, TOWER_CLASSES[k]) ~= nil then
+            return TOWER_CLASSES[k]
+        end
+    end
+    return nil
+end
+
+-- it can build and pay the type now (bd_pays' stand-in: the cost and the stock)
+local function pays(view, ty)
+    local c = V.cost(view, ty)
+    if c == nil then
+        return false
+    end
+    for _, r in ipairs(V.resources) do
+        if view.stock[r] < c.cost[r] then
+            return false
+        end
+    end
+    return true
+end
+
+-- THE BRIDGEHEAD's type of a kind (sn_bh_type): the newest tower, a Hospital, a Temple, a production building (the first
+-- it hasn't got there: its Barracks, else the army's own producer), a Town Center or a Settlement
+local function bh_type(view, p, kind, memory)
+    if kind == 0 then
+        local ty = tower_class(view)
+        return ty ~= nil and pays(view, ty) and ty or nil
+    elseif kind == 1 then
+        return pays(view, "b_hospital") and "b_hospital" or nil
+    elseif kind == 2 then
+        return pays(view, "b_temple") and "b_temple" or nil
+    elseif kind == 3 then
+        local had = {}
+        for j = 1, p.nbh do
+            local h = p.bh[j]
+            if (h.state == 1 or h.state == 2) and h.type ~= nil and h.type ~= "" then
+                had[h.type] = true
+            end
+        end
+        local a = memory.army or {}
+        local pr = a.plan ~= nil and a.plan.producer or a.last_producer
+        for _, ty in ipairs({"b_barracks", pr}) do
+            if ty ~= nil and not had[ty] and pays(view, ty) then
+                return ty
+            end
+        end
+        return nil
+    end
+    if pays(view, "b_town_center") then
+        return "b_town_center"
+    end
+    return pays(view, "b_settlement") and "b_settlement" or nil
+end
+
+-- where a bridgehead building goes: the spot nearest the citizens' middle on the push's land, out of the enemy's reach it
+-- knows, 3 tiles from the others (sn_bh_spot)
+local function bh_spot(p, ty, cx, cy)
+    local x, y = ai.find_site(ty, cx, cy, {min = 2, max = 12, safe = true})
+    if x == nil then
+        x, y = ai.find_site(ty, cx, cy, {min = 2, max = 12})
+    end
+    if x == nil or T.area_of(T.terr_at(x, y) or 0) ~= p.to_land then
+        return nil
+    end
+    if (ai.danger(x, y) or 0) > 0 then
+        return nil
+    end
+    for j = 1, p.nbh do
+        local h = p.bh[j]
+        if (h.state == 1 or h.state == 2) and math.abs(h.x - x) < 4 and math.abs(h.y - y) < 4 then
+            return nil
+        end
+    end
+    return x, y
+end
+
+-- the bridgehead's step (sn_bridgehead), every look while the push is on: its citizens alive and its own again (the ferry
+-- put them off), one building going up at a time in BH_PLAN's order, one laid every SN_BH_EVERY, every citizen on it; all
+-- done: its citizens the game's again
+local function bridgehead(mem, p, view, memory, now)
+    p.cits = p.cits or {}
+    p.nbh = p.nbh or 0
+    p.bh = p.bh or {}
+    local cols = ai.get(p.cits, {"x", "y", "held"})
+    local keep, sx, sy, n = {}, 0, 0, 0
+    for k, id in ipairs(p.cits) do
+        if cols.x[k] ~= nil then
+            keep[#keep + 1] = id
+            if cols.held[k] ~= "lua" then
+                ai.take(id)   -- the ferry released it: the bridgehead's again
+            end
+            sx, sy, n = sx + cols.x[k], sy + cols.y[k], n + 1
+        end
+    end
+    p.cits, p.ncits = keep, #keep
+    if n == 0 then
+        return
+    end
+    if p.nbh == 0 then
+        p.bh, p.nbh = {}, SN_BH
+        for j = 1, SN_BH do
+            p.bh[j] = {kind = BH_PLAN[j], type = "", state = 0, id = 0, x = 0, y = 0, t = 0}
+        end
+    end
+    local cx, cy = sx // n, sy // n
+    local going = -1
+    for j = 1, p.nbh do
+        local h = p.bh[j]
+        if h.state == 1 then
+            local u = ai.unit(h.id)
+            if u == nil then
+                h.state = 3
+            elseif u.built then
+                h.state = 2
+                mem.bh_built = (mem.bh_built or 0) + 1
+            else
+                going = j
+            end
+        end
+    end
+    if going < 0 and (p.bh_t == 0 or now - p.bh_t >= SN_BH_EVERY) then
+        for j = 1, p.nbh do
+            local h = p.bh[j]
+            if h.state == 0 then
+                if h.t == 0 then
+                    h.t = now_of(now)
+                end
+                local ty = bh_type(view, p, h.kind, memory)
+                if ty == nil or not pays(view, ty) then
+                    if now - h.t >= SN_BH_PAY then
+                        h.state = 3
+                        mem.bh_drop = (mem.bh_drop or 0) + 1
+                    end
+                else
+                    local ax, ay = bh_spot(p, ty, cx, cy)
+                    local id = nil
+                    if ax ~= nil and #keep > 0 then
+                        local code, reason, nn, bid = ai.build(keep, ty, ax, ay)
+                        if code == "ok" and bid ~= nil then
+                            id = bid
+                        end
+                    end
+                    p.bh_t = now_of(now)
+                    if id == nil then
+                        h.state = 3
+                        mem.bh_drop = (mem.bh_drop or 0) + 1
+                    else
+                        h.type, h.id, h.x, h.y, h.state = ty, id, ax, ay, 1
+                        mem.bh_laid = (mem.bh_laid or 0) + 1
+                        going = j
+                    end
+                end
+                break   -- one at a time
+            end
+        end
+    end
+    local left = 0
+    for j = 1, p.nbh do
+        if p.bh[j].state < 2 then
+            left = left + 1
+        end
+    end
+    if left == 0 then
+        ai.release(keep)   -- the bridgehead done: its citizens where they stand, the game's again
+        p.cits, p.ncits = {}, 0
+        mem.bh_done = (mem.bh_done or 0) + 1
+        return
+    end
+    if going < 0 then
+        return
+    end
+    ai.repair(keep, p.bh[going].id)   -- all of them on the one going up
+    mem.orders = mem.orders + 1
 end
 
 -- the pushes that are on: judged, the next building or the end
-local function pushes_on(c, mem, now)
+local function pushes_on(c, mem, view, memory, now)
     local cls = {}
     for k = 1, SN_PUSHES do
         local p = mem.push[k]
         if p ~= nil and p.on ~= 0 then
-            local n, mn, sx, sy, msx, msy = 0, 0, 0, 0, 0, 0
+            if p.across ~= 0 and (p.ncits or 0) > 0 then
+                bridgehead(mem, p, view, memory, now)   -- THE BRIDGEHEAD
+            end
+            -- ACROSS: those over on the land it pushes into are the push's (their middle, their strength); those still on
+            -- the land it left and the ferry's passengers are still to cross - without, a push whose every soldier was
+            -- with the ferry was "nobody left"
+            local n, mn, sx, sy, msx, msy, own, home_n = 0, 0, 0, 0, 0, 0, 0, 0
             for _, e in ipairs(mem.u) do
-                if e.ter == p.from and e.scout == SC_TER then
-                    n = n + 1
-                    sx, sy = sx + e.x, sy + e.y
-                    if e.pool == SNP_MAIN then
-                        mn = mn + 1
-                        msx, msy = msx + e.x, msy + e.y
+                if e.ter == p.from and e.scout == SC_TER and e.pool ~= SNP_AA then
+                    if p.across ~= 0 and T.area_of(T.terr_at(e.x, e.y) or 0) ~= p.to_land then
+                        home_n = home_n + 1
+                    else
+                        n = n + 1
+                        sx, sy = sx + e.x, sy + e.y
+                        if e.pool == SNP_MAIN then
+                            mn = mn + 1
+                            msx, msy = msx + e.x, msy + e.y
+                        end
+                        own = own + e.hp * e.atk
                     end
                 end
+            end
+            if p.across ~= 0 then
+                p.over, p.left = n, home_n + (mem.transit[k] or 0)
             end
             local mx, my = p.at_x, p.at_y
             if mn > 0 then
                 mx, my = msx // mn, msy // mn   -- THE SIEGE'S ESCORT: where its soldiers are
             end
             p.n, p.mn, p.mx, p.my = n, mn, mx, my
-            if n == 0 then
+            -- ACROSS: the ferry still at it - the beach held meanwhile; none over in SN_CROSS_T: given up
+            local crossing, why = false, nil
+            if p.across ~= 0 and p.left > 0 and (p.over == 0 or p.left * 4 > p.left + p.over) then
+                if now - p.start_t < SN_CROSS_T then
+                    crossing = true
+                elseif p.over == 0 then
+                    why = "not carried over in time"
+                    mem.lost_across = (mem.lost_across or 0) + 1
+                end
+            end
+            if crossing then
+                -- nothing to judge: they are on their way
+            elseif why ~= nil then
+                push_end(mem, p, now, why)
+            elseif n == 0 and (p.left or 0) == 0 then
                 push_end(mem, p, now, "nobody left")
             elseif mn < SN_SIEGE_ESCORT then
                 push_end(mem, p, now, "too few soldiers left for its siege")
@@ -684,13 +1023,12 @@ local function pushes_on(c, mem, now)
                     mem.won = mem.won + 1
                     push_end(mem, p, now, "no enemy building left there it knows")
                 else
-                    local own = 0
-                    for _, e in ipairs(mem.u) do
-                        if e.ter == p.from and e.scout == SC_TER then
-                            own = own + e.hp * e.atk
-                        end
+                    local ratio
+                    if p.across ~= 0 then
+                        ratio = judge_across(cls, n, own, bx, by, p.beach_x, p.beach_y)
+                    else
+                        ratio = judge(c, cls, bx, by, own)
                     end
-                    local ratio = judge(c, cls, bx, by, own)
                     if ratio < s("sn_back", SN_BACK) then
                         mem.lost = mem.lost + 1
                         push_end(mem, p, now, "losing")
@@ -701,6 +1039,54 @@ local function pushes_on(c, mem, now)
             end
         end
     end
+end
+
+-- ACROSS: the territory across the water a push from r goes into - the land on the other side of a sea beside it, one a
+-- unit of its stood in lately (LOOKED AT FIRST), the one with the most enemy buildings it knows
+local function across_target(c, mem, r, now)
+    local into, best = -1, 0
+    local rescout = s("sn_rescout", SN_RESCOUT)
+    for _, nb in ipairs(T.neighbours(r)) do
+        local s_ = nb.o
+        if s_ >= 1 and s_ <= c.n and c.land[s_] ~= 1 then   -- a sea beside it
+            for _, q in ipairs(T.neighbours(s_)) do
+                local o = q.o
+                if o ~= r and o >= 1 and o <= c.n and c.land[o] == 1 and c.ebld[o] > best
+                        and (mem.seen[o] or 0) ~= 0 and mem.look[o] ~= nil and now - mem.look[o] < rescout then
+                    into, best = o, c.ebld[o]
+                end
+            end
+        end
+    end
+    return into
+end
+
+-- ACROSS: the beach - the target land's shore on the sea both lands touch, nearest the aim, out of the enemy's reach it
+-- knows (sn_beach, SN_BEACH_R)
+local function across_beach(c, r, into, ax, ay)
+    local land = T.area_of(into)
+    if land == 0 then
+        return nil
+    end
+    for _, nb in ipairs(T.neighbours(r)) do
+        local s_ = nb.o
+        if s_ >= 1 and s_ <= c.n and c.land[s_] ~= 1 then
+            local sea = T.area_of(s_)
+            local touch = false
+            for _, q in ipairs(T.neighbours(s_)) do
+                if q.o == into then
+                    touch = true
+                end
+            end
+            if touch and sea ~= 0 then
+                local sx, sy = ai.shore(ax, ay, {sea = sea, land = land, max = SN_BEACH_R})
+                if sx ~= nil and (ai.danger(sx, sy) or 0) == 0 then
+                    return sx, sy, sea
+                end
+            end
+        end
+    end
+    return nil
 end
 
 -- a new push: a held, quiet territory with SN_PUSH_MIN stationed, three quarters of them there, beside a territory
@@ -716,6 +1102,11 @@ local function pushes_new(c, mem, ac, now)
                 if o >= 1 and o <= c.n and c.land[o] == 1 and c.ebld[o] > best then
                     into, best = o, c.ebld[o]
                 end
+            end
+            local across = 0
+            if into < 0 and across_on() then   -- ACROSS: no enemy beside it over land - one across the water
+                into = across_target(c, mem, r, now)
+                across = into > 0 and 1 or 0
             end
             if into > 0 then
                 local cn, nthere = 0, 0
@@ -736,14 +1127,26 @@ local function pushes_new(c, mem, ac, now)
                                 own = own + e.hp * e.atk
                             end
                         end
-                        local ratio = judge(c, cls, bx, by, own)
+                        local ratio, beach_x, beach_y, beach_sea = 0, bx, by, 0
+                        if across ~= 0 then   -- PLANNED FOR LOSSES, and against the beach as well as the target
+                            beach_x, beach_y, beach_sea = across_beach(c, r, into, bx, by)
+                            if beach_x ~= nil then
+                                ratio = judge_across(cls, cn, own, bx, by, beach_x, beach_y)
+                            end
+                        else
+                            ratio = judge(c, cls, bx, by, own)
+                        end
                         if ratio >= s("sn_push", SN_PUSH) then
                             local slot = -1
                             for k = 1, SN_PUSHES do
                                 local p = mem.push[k]
                                 if p == nil then
                                     p = {on = 0, from = -1, into = -1, at_x = -1, at_y = -1, mx = -1, my = -1,
-                                         n = 0, mn = 0, start_t = 0, end_t = 0, wait = 0, ratio = 0, why = ""}
+                                         n = 0, mn = 0, start_t = 0, end_t = 0, wait = 0, ratio = 0, why = "",
+                                         across = 0, from_land = 0, to_land = 0, beach_x = -1, beach_y = -1,
+                                         left = 0, over = 0, waves = 0, wave_t = 0,
+                                         cits = {}, ncits = 0, cits_want = 0, bh = {}, nbh = 0, bh_t = 0,
+                                         judge_t = 0, judge_r = 0, weak_t = 0, recruits = 0}
                                     mem.push[k] = p
                                     slot = k
                                     break
@@ -757,6 +1160,12 @@ local function pushes_new(c, mem, ac, now)
                                 p.at_x, p.at_y = bx, by
                                 p.mx, p.my, p.n, p.mn = -1, -1, cn, cn
                                 p.start_t, p.end_t, p.wait, p.ratio, p.why = now, 0, 0, ratio, ""
+                                p.across, p.from_land, p.to_land = across, T.area_of(r), T.area_of(into)
+                                p.beach_x, p.beach_y = beach_x, beach_y
+                                p.left, p.over, p.waves, p.wave_t = cn, 0, 0, 0
+                                p.cits, p.ncits, p.cits_want = {}, 0, 0
+                                p.bh, p.nbh, p.bh_t = {}, 0, 0
+                                p.judge_t, p.judge_r, p.weak_t, p.recruits = 0, ratio, 0, 0
                                 mem.pushes = mem.pushes + 1
                                 for _, e in ipairs(mem.u) do
                                     if e.ter == r then
@@ -1122,6 +1531,18 @@ local function log(mem, c, now)
         .. "orders taken for dead %d | territory:stationed/share:%s", mem.n, c.main, c.siege, c.scouts, on,
         mem.pushes, mem.won, mem.lost, mem.moved, mem.orders, mem.groups, mem.grouped, mem.scouted, mem.demos,
         mem.stale, table.concat(parts)))
+    local ac_on = 0
+    for k = 1, SN_PUSHES do
+        local p = mem.push[k]
+        if p ~= nil and p.on ~= 0 and p.across ~= 0 then
+            ac_on = ac_on + 1
+        end
+    end
+    if ac_on > 0 or (mem.ferried or 0) > 0 or (mem.bh_laid or 0) > 0 then
+        print(string.format("stations across: pushes on %d, soldiers ferried %d, bridgehead %d laid, %d standing, "
+            .. "%d dropped, %d done, %d given up over the water", ac_on, mem.ferried or 0, mem.bh_laid or 0,
+            mem.bh_built or 0, mem.bh_drop or 0, mem.bh_done or 0, mem.lost_across or 0))
+    end
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -1144,6 +1565,10 @@ local function look(view, memory, mem, now)
     end
     local c = ctx_new(n)
     facts(c)
+    mem.join, mem.transit = mem.join or {}, mem.transit or {}
+    if across_on() then   -- ACROSS: the transports' places, the losses planned for
+        SN_TR_CAP = transport_cap()
+    end
     own_units(c, mem, now)
     if mem.n == 0 then
         mem.ac = count_stationed(c, mem, nil)
@@ -1184,8 +1609,8 @@ local function look(view, memory, mem, now)
         give(c, mem, tcs, count_stationed(c, mem, SNP_SIEGE), SNP_SIEGE, left, now)
     end
     mem.ac = count_stationed(c, mem, nil)
-    -- A PUSH
-    pushes_on(c, mem, now)
+    -- A PUSH (and ACROSS: the ferry's waves, the bridgehead)
+    pushes_on(c, mem, view, memory, now)
     pushes_new(c, mem, mem.ac, now)
     -- SCOUTS and PATROLS
     scouts(c, mem, view, memory, now)
@@ -1319,6 +1744,194 @@ function M.counts(memory)
     end
     return {n = mem.n, moved = mem.moved, orders = mem.orders, pushes = mem.pushes, won = mem.won, lost = mem.lost,
             scouted = mem.scouted, demos = mem.demos, stale = mem.stale, took = mem.took}
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- ACROSS: what the ferry asks (ferry.lua's waves; nothing here runs while the switch is off)
+
+-- the pushes over the water that are on, for the ferry's waves: {{k, from, from_land, to_land, beach_x, beach_y,
+-- left, over, waves, cits, at_x, at_y, x, y}, ...} (ferry.c fy_look)
+function M.across(memory)
+    local out = {}
+    local mem = memory.stations
+    if mem == nil or not across_on() then
+        return out
+    end
+    for k = 1, SN_PUSHES do
+        local p = mem.push[k]
+        if p ~= nil and p.on ~= 0 and p.across ~= 0 then
+            local t = T.info(p.from)
+            out[#out + 1] = {k = k, from = p.from, from_land = p.from_land, to_land = p.to_land,
+                             beach_x = p.beach_x, beach_y = p.beach_y, left = p.left or 0, over = p.over or 0,
+                             waves = p.waves or 0, cits = (p.cits_want or 0) - (p.ncits or 0),
+                             at_x = p.at_x, at_y = p.at_y, x = t ~= nil and t.x or 0, y = t ~= nil and t.y or 0}
+        end
+    end
+    return out
+end
+
+-- push k's soldiers still on the land it left, nearest (x, y) first, at most max (sn_push_pick): the ferry takes them
+function M.push_pick(view, memory, k, x, y, max)
+    local out = {}
+    local mem = memory.stations
+    if mem == nil or k == nil or not across_on() then
+        return out
+    end
+    local p = mem.push[k]
+    if p == nil or p.on == 0 or p.across == 0 then
+        return out
+    end
+    local cand = {}
+    for _, e in ipairs(mem.u) do
+        if e.ter == p.from and e.scout == SC_TER and e.pool ~= SNP_AA and e.hp > 0
+                and T.area_of(T.terr_at(e.x, e.y) or 0) ~= p.to_land then
+            cand[#cand + 1] = {id = e.id, d = d2(e.x, e.y, x, y), cat = e.cat}
+        end
+    end
+    table.sort(cand, function(a, b)
+        if a.d ~= b.d then
+            return a.d < b.d
+        end
+        return a.id < b.id
+    end)
+    local want = max or 16
+    for i = 1, #cand do
+        if #out >= want then
+            break
+        end
+        -- ORDERS BY PRIORITY: not one another manager took (the ferry's own already aboard are hidden from the look)
+        if CL.may(view, memory, cand[i].id, CL.PRIO.carry, CL.WHO.ferry, {category = cand[i].cat}) then
+            out[#out + 1] = cand[i].id
+        end
+    end
+    return out
+end
+
+-- the ferry put a unit off (ferry.c's sn_ferried): it takes its station (ter) again - push k's soldier, a scout; kept
+-- SN_JOIN_T for the look that has not seen it yet
+function M.ferried(memory, id, ter, scout)
+    local mem = memory.stations
+    if mem == nil or id == nil then
+        return
+    end
+    mem.join = mem.join or {}
+    mem.join[id] = {ter = ter or -1, scout = scout and 1 or 0, t = ai.time()}
+    mem.ferried = (mem.ferried or 0) + 1
+end
+
+-- a citizen of push k put off by its beach (sn_bh_land): the bridgehead's from now on
+function M.bh_land(memory, k, id)
+    local mem = memory.stations
+    if mem == nil or id == nil then
+        return
+    end
+    local p = mem.push[k]
+    if p == nil or p.on == 0 or (p.ncits or 0) >= SN_CITS then
+        return
+    end
+    p.cits[#p.cits + 1] = id
+    p.ncits = (p.ncits or 0) + 1
+    ai.take(id)
+end
+
+-- THE BRIDGEHEAD: how many citizens push k's first wave still wants, and the ferry's count of them (ferry.c cits_want)
+function M.bh_want(memory, k)
+    local mem = memory.stations
+    local p = mem ~= nil and k ~= nil and mem.push[k] or nil
+    if p == nil or p.on == 0 or p.across == 0 or (p.waves or 0) > 0 then
+        return 0
+    end
+    local w = (p.cits_want or 0) - (p.ncits or 0)
+    return w > 0 and w or 0
+end
+
+function M.bh_want_set(memory, k, n)
+    local mem = memory.stations
+    local p = mem ~= nil and k ~= nil and mem.push[k] or nil
+    if p == nil then
+        return
+    end
+    p.cits_want = n or 0
+end
+
+-- a push's wave is under way (ONE WAVE AT A TIME): counted for THE LAST WORD and the bridgehead's first wave
+function M.push_wave(memory, k)
+    local mem = memory.stations
+    local p = mem ~= nil and k ~= nil and mem.push[k] or nil
+    if p == nil or p.on == 0 then
+        return
+    end
+    p.waves = (p.waves or 0) + 1
+    p.wave_t = 0
+end
+
+-- THE LAST WORD (sn_last_word): push k's first wave aboard, the soldiers ids - judged at once against the beach and the
+-- target, its losses planned for: 1 go, 0 wait, -1 called off (under SN_LAST for SN_LAST_WEAK)
+function M.last_word(view, memory, k, ids, now)
+    local mem = memory.stations
+    local p = mem ~= nil and k ~= nil and mem.push[k] or nil
+    if p == nil or p.on == 0 or p.across == 0 then
+        return 1
+    end
+    if (p.over or 0) ~= 0 or (p.waves or 0) > 1 then
+        return 1   -- a later wave goes to those over
+    end
+    local n = ids ~= nil and #ids or 0
+    if n == 0 then
+        return 1
+    end
+    if p.judge_t == 0 or now - p.judge_t >= 2000 then
+        p.judge_t = now_of(now)
+        local cols = ai.get(ids, {"hp", "attack"})
+        local own = 0
+        for i = 1, n do
+            own = own + rnd(cols.hp[i]) * rnd(cols.attack[i])
+        end
+        p.judge_r = judge_across({}, n, own, p.at_x, p.at_y, p.beach_x, p.beach_y)
+    end
+    if p.judge_r >= SN_LAST then
+        p.weak_t = 0
+        return 1
+    end
+    if p.weak_t == 0 then
+        p.weak_t = now_of(now)
+    end
+    if now - p.weak_t < SN_LAST_WEAK then
+        return 0
+    end
+    return -1
+end
+
+-- the ferry could not carry the push (THE LAST WORD called it off, the sea held): over, SN_CALLED_OFF before the next
+function M.push_off(memory, k, now)
+    local mem = memory.stations
+    local p = mem ~= nil and k ~= nil and mem.push[k] or nil
+    if p == nil or p.on == 0 then
+        return
+    end
+    if p.cits ~= nil and #p.cits > 0 then
+        ai.release(p.cits)
+        p.cits = {}
+    end
+    p.on, p.end_t, p.wait, p.ncits = 0, now_of(now), SN_CALLED_OFF, 0
+    if p.from >= 1 then
+        mem.calm[p.from] = p.end_t + SN_CALLED_OFF
+    end
+    for _, e in ipairs(mem.u) do
+        if e.ter == p.from then
+            e.order_t = 0
+        end
+    end
+    mem.lost_across = (mem.lost_across or 0) + 1
+end
+
+-- the ferry's passengers still to cross, by push (fy_push_transit): counted as still to cross by the next look
+function M.transit(memory, counts)
+    local mem = memory.stations
+    if mem == nil then
+        return
+    end
+    mem.transit = counts or {}
 end
 
 return M
