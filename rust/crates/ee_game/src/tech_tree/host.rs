@@ -12,7 +12,7 @@ use std::ffi::{c_long, c_void};
 use ee_sim::tech::ffi::{ee_tech_node_cost, ee_tech_sum_costs, EeTechSumCostsCallbacks, EeTechSumNode};
 use ee_sim::tech::node_media::{EE_TECH_HOST_MEDIA, EE_TECH_HOST_MEDIA_EFFECT};
 use ee_sim::tech::nodes::{
-    EeTechHostIo, EeTechNodeDataFields, EeTechNodeRef, EeTechNodeFields, EeTechTreeFields, EE_TECH_HOST_ASSERT,
+    EeTechHostIo, EeTechNodeDataFields, EeTechNodeFields, EeTechNodeRef, EeTechTreeFields, EE_TECH_HOST_ASSERT,
     EE_TECH_HOST_CLASS_TYPE, EE_TECH_HOST_EFFECT, EE_TECH_HOST_EFFECT_COUNT, EE_TECH_HOST_EPOCH, EE_TECH_HOST_EPOCHS,
     EE_TECH_HOST_EPOCH_NODES, EE_TECH_HOST_EVENTS_ENABLED, EE_TECH_HOST_IS_LOCAL, EE_TECH_HOST_NEEDS_UNIT_MEDIA,
     EE_TECH_HOST_NODE, EE_TECH_HOST_ON_RESEARCHED, EE_TECH_HOST_SHOW_EPOCH_NAME, EE_TECH_HOST_STATISTIC,
@@ -174,7 +174,8 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
             // the epoch's nodes in its map's order into the walk's buffer (at most its count); their count
             let all = epoch_nodes(node);
             for (k, &at) in all.iter().take(count as usize).enumerate() {
-                let r = EeTechNodeRef { obj: at as *mut c_void, node: load::node_fields(at), data: load::node_data(at) };
+                let r =
+                    EeTechNodeRef { obj: at as *mut c_void, node: load::node_fields(at), data: load::node_data(at) };
                 // SAFETY: the walk's buffer of `count` refs
                 unsafe { *nodes.add(k) = r };
             }
