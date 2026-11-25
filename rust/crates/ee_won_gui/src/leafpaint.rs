@@ -47,6 +47,8 @@ pub enum EeWonLeafCall {
     ComponentItemViewport,
     /// `ComponentListItem::SetPos(a, b)`.
     ComponentItemSetPos,
+    /// `ComponentListItem::Paint(*(Graphics*)a, (ListArea*)b)`.
+    ComponentItemPaint,
 }
 
 /// The host's calls (`t` the C++ object: an ImageButton for the `Btn` ops, a TextListItem for the `Item` ops, a
@@ -159,6 +161,16 @@ pub enum EeWonLeafOp {
     CompItemBaseSetPos,
     /// `t->mComponent->SetPos(a, b)`.
     CompItemSetPos,
+    /// `t->mIsSizable` (0 or 1).
+    CompItemSizable,
+    /// `((ListArea*)a)->GetPaintWidth()`.
+    CompItemListPaintWidth,
+    /// `t->mComponent->SetSize(a, b)`.
+    CompItemSetSize,
+    /// `t->mComponent->MarkInvalid()`.
+    CompItemMarkInvalid,
+    /// `t->mComponent->Paint(*(Graphics*)a)`.
+    CompItemPaint,
 }
 
 /// The host: `me` the C++ object, `op`, two arguments.
@@ -380,6 +392,21 @@ impl EeWonLeaf {
         self.op(EeWonLeafOp::CompItemSetPos, x, y);
     }
 
+    /// `ComponentListItem::Paint`: the item's component drawn, first stretched to the list's paint width when the item
+    /// is sizable; nothing without a component.
+    pub fn component_item_paint(&self, g: isize, list: isize) {
+        use EeWonLeafOp::*;
+        if !self.yes(CompItemHasComponent, 0) {
+            return;
+        }
+        if self.yes(CompItemSizable, 0) {
+            let width = self.get(CompItemListPaintWidth, list);
+            self.op(CompItemSetSize, width as isize, self.get(CompItemHeight, 0) as isize);
+        }
+        self.op(CompItemMarkInvalid, 0, 0);
+        self.op(CompItemPaint, g, 0);
+    }
+
     fn call(&self, c: EeWonLeafCall, a: isize, b: isize) {
         match c {
             EeWonLeafCall::ImageButtonSize => {
@@ -398,6 +425,7 @@ impl EeWonLeaf {
             EeWonLeafCall::ComponentItemMeasure => self.component_item_measure(),
             EeWonLeafCall::ComponentItemViewport => self.component_item_viewport(b),
             EeWonLeafCall::ComponentItemSetPos => self.component_item_set_pos(a, b),
+            EeWonLeafCall::ComponentItemPaint => self.component_item_paint(a, b),
         }
     }
 }

@@ -75,7 +75,7 @@ void Graphics::Attach(DisplayContext *theContext)
     this->Detach();
     this->mDisplayContext = theContext;
     this->mDisplayContext->mGraphics = this;
-    this->mPlat = ee_won_gfx_plat_of(theContext->mSurface != NULL ? theContext->mSurface->GetRust() : NULL, theContext->mPixelScale);
+    this->mPlat = ee_won_gfx_plat_of(theContext->mSurface, theContext->mPixelScale);
     this->mColor = 0;
 }
 // Selects a font into the display context when it differs from the current one

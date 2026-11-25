@@ -9,8 +9,11 @@
 
 use std::ffi::c_void;
 
+use ee_base::plat_core::string::WChar;
+
 use crate::guidraw::{wrapped_text, EeWonDrawOp, EeWonLineBreak, EeWonTextMeasure};
 use crate::guiwrap::{max_width_change, wrap};
+use crate::platfont::{ee_won_plat_font_char_width, ee_won_plat_font_metric, ee_won_plat_font_width, EeWonPlatFont};
 
 /// The Rust WrappedText (the original's members but the text and font).
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -222,6 +225,87 @@ pub unsafe extern "C" fn ee_won_wrap_paint(
         }
     }
     ops.len()
+}
+
+/// A text in a font: what the measure of `CalcWrap` and `Paint` reads (the C++ WONDrawMeasure until R6 WON GUI
+/// round 36: `Font::GetStringWidth` over the text's units, the offset and the length as the original's unsigned
+/// shorts and 0 for no units; `GetCharacterWidth` of one unit, or of 'M' for a negative index).
+struct FontText {
+    font: *const EeWonPlatFont,
+    text: *const WChar,
+}
+
+unsafe extern "C" fn font_string_width(ctx: *mut c_void, offset: i32, length: i32) -> i32 {
+    // SAFETY: `measure_of`'s record, live for the call
+    let ft = unsafe { &*(ctx as *const FontText) };
+    let (o, n) = (offset as u16, length as u16);
+    if n == 0 || ft.font.is_null() {
+        return 0;
+    }
+    // SAFETY: a live font; the caller's text holds the units asked for
+    unsafe { ee_won_plat_font_width(ft.font, ft.text.add(o as usize) as *const c_void, n) }
+}
+
+unsafe extern "C" fn font_char_width(ctx: *mut c_void, index: i32) -> i32 {
+    // SAFETY: `measure_of`'s record, live for the call
+    let ft = unsafe { &*(ctx as *const FontText) };
+    if ft.font.is_null() {
+        return 0;
+    }
+    // SAFETY: a live font; the caller's text holds the unit asked for
+    unsafe {
+        ee_won_plat_font_char_width(ft.font, if index < 0 { 'M' as i32 } else { *ft.text.add(index as usize) as i32 })
+    }
+}
+
+fn measure_of(ft: &FontText) -> EeWonTextMeasure {
+    EeWonTextMeasure {
+        ctx: ft as *const FontText as *mut c_void,
+        string_width: Some(font_string_width),
+        char_width: Some(font_char_width),
+    }
+}
+
+/// `WrappedText::CalcWrap()` whole: the `len` units at `text` wrapped for the font `font` (null: none) by its
+/// widths and height.
+///
+/// # Safety
+/// `o` is live; `font` null or a live font; `text` holds `len` units (or is NULL with 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wrap_calc_font(
+    o: *mut EeWonWrapText,
+    font: *const EeWonPlatFont,
+    text: *const c_void,
+    len: i32,
+) {
+    let ft = FontText { font, text: text as *const WChar };
+    // SAFETY: a live font
+    let height = if font.is_null() { 0 } else { unsafe { ee_won_plat_font_metric(font, 0) } };
+    // SAFETY: the contract; the measure lives for the call
+    unsafe {
+        ee_won_wrap_calc(o, !font.is_null(), text, len, std::mem::size_of::<WChar>() as u32, &measure_of(&ft), height)
+    }
+}
+
+/// `WrappedText::Paint`'s plan for the `length` units at `text` in the font `font` at (`x`, `y`): the first `cap`
+/// operations into `out`, their count returned.
+///
+/// # Safety
+/// `o` and `font` are live; `text` holds `length` units; `out` has room for `cap` operations (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wrap_paint_font(
+    o: *const EeWonWrapText,
+    font: *const EeWonPlatFont,
+    text: *const c_void,
+    length: i32,
+    x: i32,
+    y: i32,
+    out: *mut EeWonDrawOp,
+    cap: usize,
+) -> usize {
+    let ft = FontText { font, text: text as *const WChar };
+    // SAFETY: the contract; the measure lives for the call
+    unsafe { ee_won_wrap_paint(o, length, ee_won_plat_font_metric(font, 0), x, y, &measure_of(&ft), out, cap) }
 }
 
 #[cfg(test)]

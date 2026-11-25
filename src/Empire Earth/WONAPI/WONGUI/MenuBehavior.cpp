@@ -41,4 +41,30 @@ void MenuItem::Paint(Graphics& g,ListArea* area)
 {
     ee_won_leaf_call(static_cast<TextListItem*>(this), MenuItemCall, EeWonLeafCall::MenuItemPaint, (intptr_t)&g, (intptr_t)area);
 }
+// ---- the menu item's constructor and the popup menu's AddItem overloads (MenuItemLifetime.cpp and MenuAddItem.cpp
+// until R6 WON GUI round 36)
+// Creates an enabled menu item with the given text and listener and menu id 0
+MenuItem::MenuItem(const GUIString& text,ComponentListener* listener)
+    :TextListItem(text),mMenuId(0),mDisabled(false),mListener(listener) {}
+// Adds a text item with a menu id and no listener (this overload is 0x006fd440; the listener overload
+// below is 0x006fd460)
+MenuItem* PopupMenu::AddItem(const GUIString& text,int id)
+{
+    return this->AddItem(text,static_cast<ComponentListener*>(NULL),id);
+}
+// Adds a text item with a listener and menu id and no icon (0x006fd460)
+MenuItem* PopupMenu::AddItem(const GUIString& text,ComponentListener* listener,int id)
+{
+    return this->AddItem(text,static_cast<NativeImage*>(NULL),listener,id);
+}
+// Adds a menu item with text, icon, listener and menu id, resizes the menu to fit and returns the item
+MenuItem* PopupMenu::AddItem(const GUIString& text,NativeImage* icon,ComponentListener* listener,int id)
+{
+    SmartPtr<MenuItem> item=new MenuItem(text,listener);
+    item->mMenuId=id;
+    item->mImage=icon;
+    this->InsertItem(item.get());
+    this->SetSizeEqualToTotal(-1,-1);
+    return item.get();
+}
 }

@@ -67,6 +67,7 @@ def main():
         between(ci, "void ComponentListItem::CalcDimensions", "\n"),
         between(ci, "void ComponentListItem::SetViewport", "\n}\n"),
         between(ci, "void ComponentListItem::SetPos", "\n"),
+        between(ci, "void ComponentListItem::Paint", "\n"),
     ]).replace("ee_won_guicpp_compitem_call", "MutCompItem").replace("t->ListItem::SetPos", "t->PaintItem::SetPos")
     paints += "\n" + ci_part
     paints = re.sub(r"\bListArea\b", "PaintList", re.sub(r"\bGraphics\b", "PaintGraphics", paints))

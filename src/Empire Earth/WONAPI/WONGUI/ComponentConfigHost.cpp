@@ -32,19 +32,10 @@ SmartPtr<ResourceConfigTable> ComponentConfig::mResourceConfigTable;
 #include "ee/wonapi/WONCfgLoad.inl" // ReadConfig_Unsafe (R6 WON round 34: cfgload.rs)
 
 // The init record (type 2) that hands the configuration to InitComponent
-ComponentConfigInit::ComponentConfigInit(ComponentConfig* theConfig)
-{
-    this->mType = 2;
-    this->mConfig = theConfig;
-}
+ComponentConfigInit::ComponentConfigInit(ComponentConfig* theConfig) : ComponentInit{2}, mConfig(theConfig) {}
 
 // A container configuration of a container kind with no layout reference and layout id 0
-ContainerConfig::ContainerConfig(EeWonCfgKind inKind) : ComponentConfig(inKind)
-{
-    this->mContainer=NULL;
-    this->mLayoutRef=NULL;
-    this->mCurLayoutId=0;
-}
+ContainerConfig::ContainerConfig(EeWonCfgKind inKind) : ComponentConfig(inKind), mContainer(NULL), mLayoutRef(NULL), mCurLayoutId(0) {}
 // The component as the container (the original's ScreenContainerConfig bound the component's base alone: no container)
 void ContainerConfig::SetComponent(Component* component)
 {

@@ -99,3 +99,38 @@ fn without_texts_it_is_the_dialog_alone() {
     unsafe { ee_won_shell_free(s) };
     assert!(take().is_empty());
 }
+
+/// MSMessageBox::Msg as GuiShell.cpp's MSMessageBoxMsg had it at 2d31b7328: `SmartPtr<Component> aBox =
+/// WONShellNew(MsMessageBox, texts); SmartPtr<Window> aWindow = CreateNativeWindow(); aWindow->SetParent(inParent);
+/// aWindow->SetTitle(inTitle); aWindow->SetStyle(0x59); aWindow->Create(WONRectangle(0, 0, aBox->Width(),
+/// aBox->Height())); aWindow->AddComponent(aBox.get()); ((Component*)WONShell::Op(aBox.get(), GetButton1))->
+/// RequestFocus(); int aResult = aWindow->RunDialog(aBox.get()); aWindow->Close(); return aResult;` (the two
+/// SmartPtrs released last, the window's first)
+#[test]
+fn the_message_box_runs_in_its_own_window() {
+    let _w = crate::compmem::filled_world(|_| crate::compmem::block(0, 0, 40, 20));
+    take();
+    let t = EeWonMsgBoxTexts { title: 0x71, message: 0x72, buttons: [0x73, 0x74, 0x75], ok: 0x76 };
+    let tp = &t as *const EeWonMsgBoxTexts;
+    // SAFETY: the texts live through the call; the recording host
+    let r = unsafe { crate::shell_msgbox::ee_won_msgbox_run(Some(host), 0x99, tp) };
+    assert_eq!(r, 7);
+    let expect = [
+        format!("MsgBoxNew {} 0 0 0", tp as isize),
+        "Ref 7 1 0 0".into(),
+        "MsgWinNew 0 0 0 0".into(),
+        "RefObj 7 1 0 0".into(),
+        "MsgWinParent 7 153 0 0".into(),
+        "MsgWinTitle 7 113 0 0".into(),
+        "MsgWinStyle 7 89 0 0".into(),
+        "MsgWinCreate 7 40 20 0".into(),
+        "MsgWinAdd 7 7 0 0".into(),
+        format!("MsgShellOp 7 {} 0 0", EeWonShellOp::GetButton1 as isize),
+        "MsgFocus 7 0 0 0".into(),
+        "MsgRunDialog 7 7 0 0".into(),
+        "MsgWinClose 7 0 0 0".into(),
+        "RefObj 7 0 0 0".into(),
+        "Ref 7 0 0 0".to_string(),
+    ];
+    assert_eq!(take(), expect);
+}

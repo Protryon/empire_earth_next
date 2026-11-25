@@ -43,10 +43,7 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::CtChild: if ((V)b == V::RequestFocus) Comp(a)->RequestFocus(); return 0; // (the next radio's)
     case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
     case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
-    case Op::CtContainerOf: {
-        Container* aContainer = dynamic_cast<Container*>(Comp(a));
-        return aContainer != NULL ? (intptr_t)aContainer->mCt : 0;
-    }
+    case Op::CtContainerOf: return Container::ObjectOf(Comp(a));
     case Op::BtnOf: {
         Button* aButton = dynamic_cast<Button*>(Comp(a));
         return aButton != NULL ? (intptr_t)aButton->mBtn : 0;
@@ -69,11 +66,37 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
 }
 
 namespace WONAPI {
+// The skinned buttons' shared ops: the size, and the button's and component's state (EeWonSkinBtn; `b` the container
+// or component asked about); 0 for any other op
+intptr_t ButtonHostCall(Button* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c)
+{
+    switch (op) {
+    case Op::Get: return (EeWonGuiField)a == EeWonGuiField::Width ? t->Width() : (EeWonGuiField)a == EeWonGuiField::Height ? t->Height() : 0;
+    case Op::SetSize: t->SetSize((int)a,(int)b); return 0;
+    case Op::SkinBtn: break;
+    default: return 0;
+    }
+    switch ((EeWonSkinBtn)a) {
+    case EeWonSkinBtn::IsDisabled: return t->IsDisabled() ? 1 : 0;
+    case EeWonSkinBtn::HasFocus: return t->HasFocus() ? 1 : 0;
+    case EeWonSkinBtn::Parent: return (intptr_t)t->mParent;
+    case EeWonSkinBtn::UsedDialogKeys: return ((Container*)b)->HasUsedDialogKeys() ? 1 : 0;
+    case EeWonSkinBtn::IsPressed: return t->IsPressed() ? 1 : 0;
+    case EeWonSkinBtn::IsChecked: return t->IsChecked() ? 1 : 0;
+    case EeWonSkinBtn::ButtonFlags: return (intptr_t)(uint32_t)t->GetButtonFlags();
+    case EeWonSkinBtn::IsDefaultButton: return t->IsDefaultButton() ? 1 : 0;
+    case EeWonSkinBtn::FlagSet: return ((Component*)b)->ComponentFlagSet((int)c) ? 1 : 0;
+    case EeWonSkinBtn::SetFlag: t->SetComponentFlags((int)b,true); return 0;
+    case EeWonSkinBtn::SetGrabBG: t->SetComponentFlags(ComponentFlag_GrabBG,true); return 0;
+    case EeWonSkinBtn::SetWantFocus: t->SetComponentFlags(ComponentFlag_WantFocus,b!=0); return 0;
+    case EeWonSkinBtn::SetButtonFlags: t->SetButtonFlags((unsigned long)b,c!=0); return 0;
+    default: return 0;
+    }
+}
 // Creates a button that takes focus (the Rust button: no flags, not pressed)
 Button::Button()
 {
-    this->mBtn=ee_won_btn_new(static_cast<Component*>(this),ee_won_guicpp_btn_call);
-    this->SetComponentFlags(ComponentFlag_WantTabFocus,true);
+    this->mBtn=ee_won_btn_make(static_cast<Component*>(this),ee_won_guicpp_btn_call);
 }
 // Destroys the button (the Rust button; the click sound is a member)
 Button::~Button() { ee_won_btn_free(this->mBtn); }
@@ -82,26 +105,6 @@ Button::~Button() { ee_won_btn_free(this->mBtn); }
 bool Button::HandleActivate() { return true; }
 
 void Button::SetTextHook(const GUIString&) {}
-// Makes a button the dialog's default button and the current default
-void Button::SetDialogDefaultButton(Button* b)
-{
-    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::SetDialogDefault,(intptr_t)static_cast<Component*>(b));
-}
-// Clears the dialog's default button if it is this one, and drops it as the current default
-void Button::UnSetDialogDefaultButton(Button* b)
-{
-    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDialogDefault,(intptr_t)static_cast<Component*>(b));
-}
-// Makes a button the current default (the one Enter presses), repainting the old and the new one
-void Button::SetDefaultButton(Button* b)
-{
-    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::SetDefault,(intptr_t)static_cast<Component*>(b));
-}
-// Falls back to the dialog's default button as the current default (the original ignores the argument)
-void Button::UnSetDefaultButton(Button* b)
-{
-    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDefault,(intptr_t)static_cast<Component*>(b));
-}
 // Copies another button's flags and click sound
 void Button::CopyAttributes(Button* from)
 {

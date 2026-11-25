@@ -69,11 +69,11 @@ static intptr_t RegHost(EeWonGuiReg inEntry, bool inConfig)
     case E::MSTabCtrl: return inConfig ? (intptr_t)NewConfigOf<K::MsTabCtrl> : (intptr_t)NewShellOf<S::MsTabCtrl>;
     case E::MSListCtrl: return inConfig ? (intptr_t)NewConfigOf<K::MsListCtrl> : (intptr_t)NewShellOf<S::MsListCtrl>;
     case E::MSHeaderControl: return inConfig ? (intptr_t)NewConfigOf<K::MsHeaderControl> : (intptr_t)NewShellOf<S::MsHeaderControl>;
-    case E::Image: return inConfig ? (intptr_t)NewConfigOf<ImageConfig> : (intptr_t)NoComponent;
-    case E::StretchImage: return inConfig ? (intptr_t)NewConfigOf<StretchImageConfig> : (intptr_t)NoComponent;
-    case E::StretchCenterImage: return inConfig ? (intptr_t)NewConfigOf<StretchCenterImageConfig> : (intptr_t)NoComponent;
-    case E::ImageFilter: return inConfig ? (intptr_t)NewConfigOf<ImageFilterConfig> : (intptr_t)NoComponent;
-    case E::Font: return inConfig ? (intptr_t)NewConfigOf<FontConfig> : (intptr_t)NoComponent;
+    case E::Image: return inConfig ? (intptr_t)NewConfigOf<K::Image> : (intptr_t)NoComponent;
+    case E::StretchImage: return inConfig ? (intptr_t)NewConfigOf<K::StretchImage> : (intptr_t)NoComponent;
+    case E::StretchCenterImage: return inConfig ? (intptr_t)NewConfigOf<K::StretchCenterImage> : (intptr_t)NoComponent;
+    case E::ImageFilter: return inConfig ? (intptr_t)NewConfigOf<K::ImageFilter> : (intptr_t)NoComponent;
+    case E::Font: return inConfig ? (intptr_t)NewConfigOf<K::Font> : (intptr_t)NoComponent;
     case E::WONSkin: return inConfig ? (intptr_t)NewConfigOf<K::WonSkin> : (intptr_t)NewComponentOf<Component>;
     case E::WONButtonSkin: return inConfig ? (intptr_t)NewConfigOf<K::WonButton> : (intptr_t)NewComponentOf<WONButton>;
     case E::WONScrollbarSkin: return inConfig ? (intptr_t)NewConfigOf<K::WonScrollbar> : (intptr_t)NewShellOf<S::WonScrollbar,1>;

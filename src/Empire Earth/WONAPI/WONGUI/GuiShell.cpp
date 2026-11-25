@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONGUIDraw.h"
 #include "ee/wonapi/WONGUIShell.h"
+#include "rust/won_gui/shell_msgbox.h"
 #include "ee/wonapi/WONSkinLayout.h"
 #include "ee/wonapi/WONLobbyLayout.h"
 #include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
@@ -126,6 +127,18 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
         return (intptr_t)f;
     }
     case H::RefObj: if (b > 0) ((RefCount*)a)->AddRef(); else ((RefCount*)a)->Release(); return 0;
+    // MSMessageBox::Msg's statements (shell_msgbox.rs ee_won_msgbox_run)
+    case H::MsgBoxNew: return (intptr_t)WONShellNew(EeWonShellKind::MsMessageBox, a);
+    case H::MsgWinNew: return (intptr_t)CreateNativeWindow();
+    case H::MsgWinParent: ((Window*)a)->SetParent((Window*)b); return 0;
+    case H::MsgWinTitle: ((Window*)a)->SetTitle(*(const GUIString*)b); return 0;
+    case H::MsgWinStyle: ((Window*)a)->SetStyle((int)b); return 0;
+    case H::MsgWinCreate: ((Window*)a)->Create(WONRectangle(0, 0, (int)b, (int)c)); return 0;
+    case H::MsgWinAdd: ((Window*)a)->AddComponent((Component*)b); return 0;
+    case H::MsgShellOp: return WONShell::Op((Component*)a, (EeWonShellOp)b);
+    case H::MsgFocus: ((Component*)a)->RequestFocus(); return 0;
+    case H::MsgRunDialog: return ((Window*)a)->RunDialog((Component*)b);
+    case H::MsgWinClose: ((Window*)a)->Close(); return 0;
     default: return 0; // the component's, button's and other widgets' calls: their Rust objects (shell.rs Sh)
     }
 }
@@ -149,22 +162,12 @@ Component* WONAPI::WONShellNew(EeWonShellKind k, intptr_t a, intptr_t b, intptr_
 }
 
 // MSMessageBox::Msg, PrepareWindow and DoDialog: the box in a dialog window (style 0x59) titled and sized for it, its
-// first button focused, run modally, the window closed
+// first button focused, run modally, the window closed (shell_msgbox.rs ee_won_msgbox_run since R6 WON GUI round 36)
 int WONAPI::MSMessageBoxMsg(Window* inParent, const GUIString& inTitle, const GUIString& inMessage,
                             const GUIString& inButton1, const GUIString& inButton2, const GUIString& inButton3)
 {
     static const GUIString kOk("Ok");
     // the texts (shell_msgbox.rs EeWonMsgBoxTexts): the title, the message, the three buttons, the "Ok" for none
     intptr_t aTexts[6] = {(intptr_t)&inTitle, (intptr_t)&inMessage, (intptr_t)&inButton1, (intptr_t)&inButton2, (intptr_t)&inButton3, (intptr_t)&kOk};
-    SmartPtr<Component> aBox = WONShellNew(EeWonShellKind::MsMessageBox, (intptr_t)aTexts);
-    SmartPtr<Window> aWindow = CreateNativeWindow();
-    aWindow->SetParent(inParent);
-    aWindow->SetTitle(inTitle);
-    aWindow->SetStyle(0x59);
-    aWindow->Create(WONRectangle(0, 0, aBox->Width(), aBox->Height()));
-    aWindow->AddComponent(aBox.get());
-    ((Component*)WONShell::Op(aBox.get(), EeWonShellOp::GetButton1))->RequestFocus();
-    int aResult = aWindow->RunDialog(aBox.get());
-    aWindow->Close();
-    return aResult;
+    return ee_won_msgbox_run(ee_won_guicpp_shell_call, (intptr_t)inParent, (const EeWonMsgBoxTexts*)aTexts);
 }

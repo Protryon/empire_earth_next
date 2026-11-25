@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/won_gui/guihost.h"
 
 /// A line's vertical metrics (`TextLine`'s height, baseline and descent).
 struct EeWonTextLineM {
@@ -55,6 +56,37 @@ struct EeWonFormatOp {
   int32_t kind;
   int32_t a;
   int32_t b;
+};
+
+/// What `LobbyAppendFormattedText` asks of its text area (TextFormat.cpp's four statements): a segment of text
+/// units in a colour and font, a line break, one of the caller's strings as a segment, one of its segments.
+struct EeWonFormatSink {
+  /// `area->AddSegment(GUIString(units, len), color, font, line_break)`.
+  void (*add_text)(void *area,
+                   const void *units,
+                   size_t len,
+                   int32_t color,
+                   void *font,
+                   bool line_break);
+  /// `area->LineBreak(0)`.
+  void (*line_break)(void *area);
+  /// `area->AddSegment(*string, color, font, false)`.
+  void (*add_string)(void *area, const void *string, int32_t color, void *font);
+  /// `area->AddSegment(segment)`.
+  void (*add_segment)(void *area, void *segment);
+};
+
+/// What a format's `<sN>`, `<cN>`, `<fN>` and `<lN>` name: the caller's strings (`GUIString*`), colours, fonts
+/// (`Font*`) and segments (`TextSegmentBase*`), any pointer NULL for none.
+struct EeWonFormatArgs {
+  const void *const *strings;
+  int32_t num_strings;
+  const int32_t *colors;
+  int32_t num_colors;
+  void *const *fonts;
+  int32_t num_fonts;
+  void *const *segments;
+  int32_t num_segments;
 };
 
 extern "C" {
@@ -254,6 +286,19 @@ size_t ee_won_gui_text_split(const void *text,
                              EeWonTextPart *out,
                              size_t room);
 
+/// TextArea::AddFormatedText (GuiHost.cpp's loop until R6 WON GUI round 36): each line of `split_lines` added as a
+/// segment of the text `text` (its `len` units at `units`) through the host's `TextAddPart`.
+///
+/// # Safety
+/// `units` holds `len` units of `wchar_size` bytes (or is NULL with 0); `host` is the text area's.
+void ee_won_gui_add_formatted(void *component,
+                              EeWonGuiHostFn host,
+                              const void *text,
+                              const void *units,
+                              uint16_t len,
+                              uint32_t wchar_size,
+                              bool line_break);
+
 /// `format_ops` over a `GUIString`'s units: the first `room` steps into `out` (`2 * len + 2` is enough), their
 /// count.
 ///
@@ -269,6 +314,21 @@ size_t ee_won_gui_text_format(const void *text,
                               bool line_break,
                               EeWonFormatOp *out,
                               size_t room);
+
+/// `LobbyAppendFormattedText` whole (R6 WON GUI round 36): the format's steps run on the area through `sink`, the
+/// pending text, the colour (first `color`) and the font (first `font`) kept here. The format's units are
+/// `wchar_t`s.
+///
+/// # Safety
+/// `format` holds `len` units (or is NULL with 0); `args`' arrays hold their counts; `sink`'s functions take `area`.
+void ee_won_gui_text_append_formatted(void *area,
+                                      const EeWonFormatSink *sink,
+                                      const void *format,
+                                      uint16_t len,
+                                      const EeWonFormatArgs *args,
+                                      bool line_break,
+                                      int32_t color,
+                                      void *font);
 
 }  // extern "C"
 
