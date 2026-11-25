@@ -164,7 +164,7 @@ pub fn digest(label: &str, out: &mut Vec<String>) {
     }
     let e = x::editor();
     let ids: String =
-        (0..h(O::SelectedCount, e, &[])).map(|i| format!(" {}", h(O::SelectedUnitId, e, &[i]) as c_ulong)).collect();
+        (0..x::selected_count(e)).map(|i| format!(" {}", h(O::SelectedUnitId, e, &[i]) as c_ulong)).collect();
     out.push(format!("  selection{ids}"));
     out.push(format!("  paint area {}", rect_text(x::rect(h(O::BrushRect, x::brush_group(), &[]) as usize))));
     save_digest(out);
@@ -1040,7 +1040,7 @@ pub fn form_state(out: &mut Vec<String>) {
     sync_load_thread();
     let e = x::editor();
     let mut units = String::new();
-    for i in 0..h(O::SelectedCount, e, &[]) {
+    for i in 0..x::selected_count(e) {
         let u = h(O::SelectedUnit, e, &[i]) as usize;
         units += if i == 0 { "" } else { "," };
         if u == 0 {
@@ -1123,7 +1123,7 @@ pub fn trigger_report(setup: bool, out: &mut Vec<String>) {
             effect_fields(effects[2]).mTaskArea = 3;
         }
     }
-    out.push(format!("  result {}", h(O::SaveTriggersOnly, x::editor(), &[]) as c_long));
+    out.push(format!("  result {}", crate::screens::editor_form_ffi::save_triggers()));
     let path = ht(O::StartupPath, 0, 0) + "ScenarioTriggers.txt";
     let Ok(bytes) = std::fs::read(&path) else {
         out.push("  no report".into());

@@ -4,6 +4,7 @@
 //! the editor's Rust objects (ee_screens) called directly.
 
 use crate::gamecpp as gc;
+use crate::screens::editor_form_ffi::{self as sefm, EeScreensSeForm};
 use std::ffi::{c_long, c_ulong, c_void, CStr, CString};
 
 /// The host operations (`p` the object, `a` and `f` the integer and float arguments, `s` a text). A pointer is
@@ -12,24 +13,16 @@ use std::ffi::{c_long, c_ulong, c_void, CStr, CString};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeSimDriverSed {
     // the editor form
-    FormSlot = 1,
+    /// `mRust`
+    FormRust = 1,
     ControlById,
     FormControl,
     FormControlCount,
     FormGroupCount,
     FormGroup,
-    SelectedCount,
     SelectedUnit,
     SelectedUnitId,
     FormSetLoadText,
-    FormDeselectFirst,
-    FormClearSelection,
-    FormSelectUnit,
-    FormDeselectUnit,
-    FormRefreshGroup,
-    FormResumeGroup,
-    FormSetGameView,
-    SaveTriggersOnly,
     TriggerStoring,
     GroupIsEnabled,
     GroupEntityCount,
@@ -427,9 +420,7 @@ pub enum EeSimDriverSed {
     SetScenarioGame,
     // the steps' action and end (sed_run.rs)
     C12ActionNew,
-    C12ActionPost,
     C12DoneNew,
-    C12DonePost,
     C12Dereference,
 }
 
@@ -609,9 +600,29 @@ pub fn editor() -> usize {
     gc::h(gc::O::UiEditorForm, 0, &[]) as usize
 }
 
+/// The editor form `e`'s Rust record (`mRust`).
+fn form(e: usize) -> *const EeScreensSeForm {
+    h(O::FormRust, e, &[]) as usize as *const EeScreensSeForm
+}
+
 /// One of the form's slots (`GetSlot`; editor_form.rs EE_SCREENS_SEFM_*).
 pub fn slot(s: u32) -> usize {
-    h(O::FormSlot, editor(), &[s as i64]) as usize
+    // SAFETY: the editor form's record (or NULL)
+    unsafe { sefm::ee_screens_sefm_get(form(editor()), s) }
+}
+
+/// The form `e`'s selected unit count (`GetSelectedUnitCount`).
+pub fn selected_count(e: usize) -> i64 {
+    // SAFETY: as slot
+    i64::from(unsafe { sefm::ee_screens_sefm_selected(form(e), -1) })
+}
+
+/// The form `e`'s call `what` (`EEUIFScenarioEditor::Call`: editor_form.rs EE_SCREENS_SEFM_*) with `a`, the object
+/// `p` and the rectangle `r` (left, top, right, bottom).
+pub fn form_call(e: usize, what: u32, a: i32, p: usize, r: Option<&[f32; 4]>) -> i32 {
+    let r = r.map_or(std::ptr::null(), |r| r.as_ptr());
+    // SAFETY: as slot; the rectangle lives through the call
+    unsafe { sefm::ee_screens_sefm_call(form(e), what, a, p as *mut c_void, r) }
 }
 
 /// A tab group (`GetTabGroup`: kSlotGroup + the group).

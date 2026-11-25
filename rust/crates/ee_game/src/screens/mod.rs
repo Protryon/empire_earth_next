@@ -207,7 +207,7 @@ mod editor_elevation_ffi;
 pub mod editor_events;
 pub mod editor_form;
 #[cfg(not(test))]
-mod editor_form_ffi;
+pub(crate) mod editor_form_ffi;
 pub mod editor_groups;
 #[cfg(not(test))]
 mod editor_groups_ffi;

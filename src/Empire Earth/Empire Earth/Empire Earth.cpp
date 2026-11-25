@@ -381,7 +381,6 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
 // The POSIX entry point: EE-SIM's run (ee-aoc --sim ..., or an ee-sim executable), else the game. The arguments'
 // test, the command line, the data root's check and entry and --smoke-test are ee_game gamecpp posix_main.rs's.
 int EESimMain(int argc, char** argv);   // EESim.cpp (TEST ONLY): the headless simulation, "ee-aoc --sim ..."
-void EESimGameEnded(int inResult);
 
 int main(int argc, char** argv)
 {
@@ -398,7 +397,7 @@ int main(int argc, char** argv)
         return theCode;
     int theResult = EERun(NULL, theCommandLine);
     if (gPlatSimMode)
-        EESimGameEnded(theResult);   // (does not return)
+        ee_sim_driver_game_ended(theResult);   // (does not return)
     return theResult;
 }
 #endif

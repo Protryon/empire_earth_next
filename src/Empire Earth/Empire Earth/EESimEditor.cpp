@@ -73,7 +73,6 @@
 
 // the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
 extern std::map<const void*, unsigned long> gSeetAlignments;
-long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TEST ONLY)
 // EESaveLoad.cpp: the save's chunks (the map, the scenario, the players, the world, ...), in their order
 void BuildSaveGameChunks(std::vector<FSPersistent*>& outList);
 
@@ -156,32 +155,16 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
 {
     typedef EeSimDriverSed O;
     switch (inOp) {
-    case O::FormSlot: return (int64_t)ED->GetSlot((uint32_t)a[0]);
+    case O::FormRust: return P64(ED->mRust);
     case O::ControlById: return P64(ED->GetControlById((unsigned long)a[0]));
     case O::FormControl: return P64(ED->GetControl((unsigned long)a[0]));
     case O::FormControlCount: return ED->GetControlCount();
     case O::FormGroupCount: return ED->GetControlGroupCount();
     case O::FormGroup: return P64(ED->GetEntityGroup((unsigned long)a[0]));
-    case O::SelectedCount: return ED->GetSelectedUnitCount();
     case O::SelectedUnit: return P64(ED->GetSelectedUnit((unsigned long)a[0]));
     case O::SelectedUnitId: return ED->GetSelectedUnit((unsigned long)a[0])->GetUnitID();
     case O::FormSetLoadText: ED->SetLoadText(UWideString(s));
         break;
-    case O::FormDeselectFirst: ED->DeselectFirstUnit();
-        break;
-    case O::FormClearSelection: ED->ClearSelection();
-        break;
-    case O::FormSelectUnit: ED->SelectUnit((EEUnit*)a[0]);
-        break;
-    case O::FormDeselectUnit: ED->DeselectUnit((EEUnit*)a[0]);
-        break;
-    case O::FormRefreshGroup: ED->RefreshCurrentGroup();
-        break;
-    case O::FormResumeGroup: ED->ResumeCurrentGroup();
-        break;
-    case O::FormSetGameView: ED->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), a[0] != 0);
-        break;
-    case O::SaveTriggersOnly: return EESETestSaveTriggersOnly(static_cast<UIForm*>(ED));
     case O::TriggerStoring: return gB4C3220;
     case O::GroupIsEnabled: return ((UIEntityGroup*)p)->GetIsEnabled();
     case O::GroupEntityCount: return ((UIEntityGroup*)p)->GetEntityCount();
@@ -305,11 +288,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     // the actions and messages
     case O::C12ActionNew: return P64(static_cast<EEAction*>(new EESimEditorAction((void*)p)));
-    case O::C12ActionPost: gUserInterface->PostAction((EEAction*)p);
-        break;
     case O::C12DoneNew: return P64(static_cast<UIEvent*>(new EESimEditorDone((void*)p)));
-    case O::C12DonePost: gUserInterface->PostEvent((UIEvent*)p, NULL);
-        break;
     case O::C12Dereference: a[0] ? ((UIEvent*)p)->Dereference() : ((EEAction*)p)->Dereference();
         break;
     case O::SeaNew:

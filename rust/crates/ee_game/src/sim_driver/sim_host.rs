@@ -10,6 +10,9 @@ use crate::gamecpp as gc;
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::GeTransformation;
+use ee_sim::unit_ids::{EEUnitCategory, EEUnitTypeID};
+
+use crate::screens::ui_ids::{EELoadGameControl, EESinglePlayerLoadGameControl};
 
 use super::host::*;
 use super::sim_ops::{h, hd, hf, hs, ht, EeSimDriverSim as O, UiLock};
@@ -158,8 +161,8 @@ fn screen_list(which: i32) -> usize {
     let form = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
     let forms = [FORM_LOAD, FORM_LOAD_SCENARIO, FORM_CAMPAIGN_SELECT];
     let controls = [
-        h(O::SpLoadGameFileList, 0, &[]) as c_ulong,
-        h(O::LoadScenarioFileList, 0, &[]) as c_ulong,
+        EESinglePlayerLoadGameControl::kSPLoadGameFileListBox as c_ulong,
+        EELoadGameControl::kLoadGameLoadFileListBox as c_ulong,
         CAMPAIGN_SCENARIO_LIST,
     ];
     if form == 0 || !(0..=2).contains(&which) {
@@ -227,7 +230,7 @@ pub fn physics() -> EeSimDriverPhysics {
     p.timer_running = gc::h(gc::O::SsTimerRunning, 0, &[]) != 0;
     p.game_over = gc::h(gc::O::FwGameOver, 0, &[]) != 0;
     p.game_ms = gc::h(gc::O::DwGameTime, 0, &[]) as c_long;
-    p.pt = h(O::PhysicsTicksDone, 0, &[]) as c_ulong;
+    p.pt = h(O::DmPhysTicksDone, 0, &[]) as c_ulong;
     p
 }
 
@@ -275,21 +278,23 @@ pub fn request_save(name: &str) {
 /// it; that server then was not published and its first input crashed (NERecordPlayback::Process on its NULL
 /// recorder).
 pub fn set_switches(s: &EeSimDriverSwitches) {
-    h(O::SetSimMode, 0, &[]);
-    h(O::SetSeedSet, 0, &[s.seed_set as i64]); // a loaded game: the file's seed, as the game loads it
-    h(O::SetSeed, 0, &[s.seed as i64]);
-    h(O::SetNoHumanDefeat, 0, &[s.no_human_defeat as i64]);
+    use ee_base::plat_core::sim as plat;
+    plat::gPlatSimMode.set(1);
+    plat::gPlatSimSeedSet.set(s.seed_set); // a loaded game: the file's seed, as the game loads it
+    plat::gPlatSimSeed.set(s.seed);
+    plat::gPlatSimNoHumanDefeat.set(s.no_human_defeat);
     h(O::SetScenarioDialogs, 0, &[s.scenario_dialogs as i64]);
-    let offset = if s.port_offset >= 0 { s.port_offset as i64 } else { h(O::AnyPort, 0, &[]) };
-    h(O::SetPortOffset, 0, &[offset]);
+    // kPlatSimAnyPort (-1): every port the protocol binds 0
+    plat::gPlatSimPortOffset.set(if s.port_offset >= 0 { s.port_offset } else { -1 });
 }
 
 /// `gPlatSimNoHumanDefeatHits`; a negative argument reads, 0 clears.
 pub fn no_human_defeat_hits(op: c_long) -> c_long {
+    use ee_base::plat_core::sim::gPlatSimNoHumanDefeatHits as hits;
     if op == 0 {
-        h(O::ClearNoHumanDefeatHits, 0, &[]);
+        hits.set(0);
     }
-    h(O::NoHumanDefeatHits, 0, &[]) as c_long
+    hits.get()
 }
 
 /// The player's first living building (0: none).
@@ -341,7 +346,7 @@ pub fn volcano(player: c_ulong) -> EeSimDriverSpot {
 
 /// The volcano's boulders on the map (every player's volcano projectiles' ids).
 pub fn volcano_boulders() -> Vec<c_ulong> {
-    let boulder = h(O::VolcanoProjectileType, 0, &[]);
+    let boulder = EEUnitTypeID::kUnitTypeVolcanoProjectile as i64;
     let mut out = Vec::new();
     for i in 0..h(O::NumPlayers, 0, &[]) {
         let p = gc::h(gc::O::TbWorldPlayer, 0, &[i]) as usize;
@@ -511,7 +516,7 @@ fn combat_capture_sweep() {
 /// A player's living, armed units on the map in its list order (`priests`: priests kept; `missiles`: missiles and
 /// torpedoes kept).
 fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
-    let (missile, torpedo) = (h(O::MissileCategory, 0, &[]), h(O::TorpedoCategory, 0, &[]));
+    let (missile, torpedo) = (EEUnitCategory::kUnitCategoryMissile as i64, EEUnitCategory::kUnitCategoryTorpedo as i64);
     let mut all = Vec::new();
     let mut u = if player != 0 { gc::h(gc::O::PlFirstUnit, player, &[]) as usize } else { 0 };
     while u != 0 {
@@ -520,7 +525,7 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
             && h(O::UnitHitPoints, u, &[]) as c_long > 0
             && h(O::UnitHasStats, u, &[]) != 0
             && h(O::ComplexOnMap, c, &[]) != 0
-            && h(O::ComplexTileX, c, &[]) as c_long != -10000
+            && h(O::UnitTileX, c, &[]) as c_long != -10000
             && hd(O::ComplexAttack, c, &[], &[]) > 0.0
             && (priests || h(O::ComplexIsPriest, c, &[]) == 0)
             && (missiles || (h(O::ComplexCategory, c, &[]) != missile && h(O::ComplexCategory, c, &[]) != torpedo))
@@ -550,10 +555,10 @@ fn list_search_sweep() {
         let first = all.len().saturating_sub(64);
         for &a in &all[first..] {
             let ignored = h(O::IgnoredSave, a, &[]) as usize;
-            let (x, y) = (h(O::ComplexTileX, a, &[]), h(O::ComplexTileY, a, &[]));
+            let (x, y) = (h(O::UnitTileX, a, &[]), h(O::UnitTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x, y], &[1.0]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
-            let (x, y) = (h(O::ComplexTileX, a, &[]), h(O::ComplexTileY, a, &[]));
+            let (x, y) = (h(O::UnitTileX, a, &[]), h(O::UnitTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x + 2, y - 2], &[1.5]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
             h(O::IgnoredFree, ignored, &[]);
@@ -577,7 +582,7 @@ fn list_search_sweep() {
 fn missile_sweep() {
     capture_only_list(&[tag(b"CBMA"), tag(b"CBMH"), tag(b"CBGI"), tag(b"CBWI")]);
     cap::ee_app_capture_exclusive(true);
-    let (missile, torpedo) = (h(O::MissileCategory, 0, &[]), h(O::TorpedoCategory, 0, &[]));
+    let (missile, torpedo) = (EEUnitCategory::kUnitCategoryMissile as i64, EEUnitCategory::kUnitCategoryTorpedo as i64);
     let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| gc::h(gc::O::UcAt, 0, &[k]) as usize).collect();
     let mut classes = Vec::new();
     let mut launchers = Vec::new();
@@ -608,8 +613,8 @@ fn missile_sweep() {
         let first = units.len().saturating_sub(4);
         for (i, &a) in units.iter().enumerate().skip(first) {
             for (k, &class) in classes.iter().enumerate() {
-                if h(O::ComplexHitPoints, target, &[]) as c_long <= 0
-                    || h(O::ComplexTileX, target, &[]) as c_long == -10000
+                if h(O::UnitHitPoints, target, &[]) as c_long <= 0
+                    || h(O::UnitTileX, target, &[]) as c_long == -10000
                 {
                     break;
                 }
@@ -617,7 +622,7 @@ fn missile_sweep() {
                 let created = h(
                     O::ClassCreateUnit,
                     class,
-                    &[h(O::ComplexTileX, a, &[]), h(O::ComplexTileY, a, &[]), h(O::PlayerId, owner, &[]), a as i64],
+                    &[h(O::UnitTileX, a, &[]), h(O::UnitTileY, a, &[]), h(O::PlayerId, owner, &[]), a as i64],
                 ) as usize;
                 let m = if created != 0 { gc::h(gc::O::UnGetComplex, created, &[]) as usize } else { 0 };
                 if m == 0 {
@@ -651,7 +656,7 @@ fn missile_sweep() {
                 h(O::PlayerAddPendingUnits, owner, &[]);
                 let mut t = 0;
                 while t < 120
-                    && h(O::UnitTileXRaw, m, &[]) as c_long != -10000
+                    && h(O::UnitTileX, m, &[]) as c_long != -10000
                     && h(O::ComplexHasGoalState, m, &[]) != 0
                 {
                     h(O::ClassStep, class, &[m as i64]);

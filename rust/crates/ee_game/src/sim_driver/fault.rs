@@ -1,7 +1,8 @@
 //! TEST ONLY: the fault report of EE-SIM and of the game under the UI fixture (was EESim.cpp's EESimFault and
 //! EETestFixture.cpp's FixtureFault): a fault prints its code, place and return addresses (exe addresses: the
-//! exe's .map) on stderr, once, and goes on to the next handler. Windows only (a vectored exception handler); the
-//! POSIX signal handler stays EESim.cpp's.
+//! exe's .map) on stderr, once, and goes on to the next handler (Windows: a vectored exception handler). EE-SIM on
+//! POSIX (was EESim.cpp's EESimFault): the signal, the address and the return addresses on stderr, then the signal's
+//! default action.
 
 use std::fmt::Write as _;
 
@@ -108,6 +109,66 @@ pub unsafe extern "C" fn ee_sim_driver_fault_install(prefix: *const std::ffi::c_
     let _prefix = unsafe { std::ffi::CStr::from_ptr(prefix) }.to_string_lossy().into_owned();
     #[cfg(windows)]
     win::install(&_prefix);
+}
+
+/// EE-SIM's POSIX fault report: a fault signal (SEGV, BUS, ILL, FPE, ABRT) prints "EE-SIM FAULT signal <n> at
+/// <address> thread <id>; frames:" and the return addresses (backtrace_symbols_fd: Linux names them ee-sim(+0xOFFSET),
+/// which `addr2line -f -C -e ee-sim 0xOFFSET` resolves) on stderr, then the signal's default action (the handler is
+/// reset). Not under a sanitizer (EESim.cpp: its own report is better).
+#[cfg(unix)]
+mod posix {
+    use std::ffi::{c_int, c_void};
+    use std::fmt::Write as _;
+
+    use super::Line;
+
+    extern "C" {
+        // glibc's and macOS's execinfo
+        fn backtrace(buffer: *mut *mut c_void, size: c_int) -> c_int;
+        fn backtrace_symbols_fd(buffer: *const *mut c_void, size: c_int, fd: c_int);
+    }
+
+    extern "C" fn fault(signal: c_int, info: *mut libc::siginfo_t, _: *mut c_void) {
+        // SAFETY: the kernel's siginfo (or none)
+        #[cfg(target_os = "linux")]
+        let at = if info.is_null() { std::ptr::null_mut() } else { unsafe { (*info).si_addr() } };
+        #[cfg(not(target_os = "linux"))]
+        let at = if info.is_null() { std::ptr::null_mut() } else { unsafe { (*info).si_addr } };
+        let mut line = Line { bytes: [0; 2048], len: 0 };
+        // SAFETY: pthread_self has no precondition
+        let thread = unsafe { libc::pthread_self() } as usize;
+        let _ = write!(line, "EE-SIM FAULT signal {signal} at {at:p} thread {thread}; frames:
+");
+        let mut frames = [std::ptr::null_mut::<c_void>(); 48];
+        // SAFETY: stderr and buffers of the sizes given
+        unsafe {
+            libc::write(2, line.bytes.as_ptr().cast(), line.len);
+            let n = backtrace(frames.as_mut_ptr(), frames.len() as c_int);
+            backtrace_symbols_fd(frames.as_ptr(), n, 2);
+        }
+    }
+
+    pub fn install() {
+        let mut frame = [std::ptr::null_mut::<c_void>(); 1];
+        // SAFETY: loads the unwinder now, not inside the handler; then a handler that lives as long as the process
+        unsafe {
+            backtrace(frame.as_mut_ptr(), 1);
+            let mut action: libc::sigaction = std::mem::zeroed();
+            action.sa_sigaction = fault as usize;
+            action.sa_flags = libc::SA_SIGINFO | libc::SA_RESETHAND;
+            libc::sigemptyset(&mut action.sa_mask);
+            for signal in [libc::SIGSEGV, libc::SIGBUS, libc::SIGILL, libc::SIGFPE, libc::SIGABRT] {
+                libc::sigaction(signal, &action, std::ptr::null_mut());
+            }
+        }
+    }
+}
+
+/// EE-SIM's POSIX fault report (EESimMain, when the game goes on; nothing on Windows: ee_sim_driver_fault_install's).
+#[no_mangle]
+pub extern "C" fn ee_sim_driver_fault_install_posix() {
+    #[cfg(unix)]
+    posix::install();
 }
 
 #[cfg(test)]

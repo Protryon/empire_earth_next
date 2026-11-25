@@ -6,17 +6,10 @@
 // options, the menus and the lobby as the harness drives them, the run on the physics thread's after-tick, the
 // samples, the end of the run, the JSON report, --games' batch; EE-SIM --help; the UI's and the world's reads and the
 // capture's sweeps, the world lock, the save's and the dump's hooks: sim_host.rs). This file is its host: the calls
-// and members the Rust reads (ee_simcpp_sim*: one case each, EeSimDriverSim), EE-SIM's entry and the POSIX fault
-// handler.
+// and members the Rust reads (ee_simcpp_sim*: one case each, EeSimDriverSim) and EE-SIM's entry.
 #ifdef _WIN32
 #include <winsock2.h>
 #include <io.h>
-#else
-#include <execinfo.h>
-#include <sys/stat.h>
-#include <pthread.h>
-#include <signal.h>
-#include <unistd.h>
 #endif
 #include <windows.h>
 #include <stdint.h>
@@ -99,43 +92,6 @@
 // (EESimPreferences is Empire Earth.cpp's, and EERun starts the driver's thread itself, ee_sim_driver_start: so the
 // game's start-up names no symbol of this driver)
 
-#ifndef _WIN32
-// (Windows: the fault report is sim_driver fault.rs's)
-// a fault in the simulation (POSIX): the signal, the address and the return addresses on stderr, then the signal's
-// default action (the handler is reset). Linux prints the frames as ee-sim(+0xOFFSET): addr2line -f -C -e ee-sim
-// 0xOFFSET names them.
-static void EESimFault(int inSignal, siginfo_t* inInfo, void*)
-{
-    char theText[200];
-    int n = snprintf(theText, sizeof(theText), "EE-SIM FAULT signal %d at %p thread %lu; frames:\n", inSignal,
-                     inInfo ? inInfo->si_addr : NULL, (unsigned long)(uintptr_t)pthread_self());
-    if (n > 0 && write(2, theText, (size_t)n) < 0)
-        n = 0;
-    void* theFrames[48];
-    backtrace_symbols_fd(theFrames, backtrace(theFrames, 48), 2);
-}
-
-static void EESimInstallFaultHandler()
-{
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
-    return;   // the sanitizer's own report is better
-#endif
-#endif
-    void* theFrame[1];
-    backtrace(theFrame, 1);   // loads the unwinder now, not inside the handler
-    struct sigaction theAction;
-    memset(&theAction, 0, sizeof(theAction));
-    theAction.sa_sigaction = EESimFault;
-    theAction.sa_flags = SA_SIGINFO | SA_RESETHAND;
-    sigemptyset(&theAction.sa_mask);
-    for (int theSignal : {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT})
-        sigaction(theSignal, &theAction, NULL);
-}
-#endif
-
-void EESimGameEnded(int inResult);
-
 // EESimMain: EE-SIM.exe's entry (EESimMain.cpp's main): the driver's options and switches (ee_game sim_driver), the
 // debug strings and faults hooked, then the game's own WinMain. On POSIX the game's main calls it for "ee-aoc --sim
 // ..." and goes on with the game when it returns -1.
@@ -147,18 +103,19 @@ int EESimMain(int argc, char** argv)
         return theCode;
 #ifdef _WIN32
     char theEmpty[1] = {0};
-    EESimGameEnded(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));
+    ee_sim_driver_game_ended(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));   // (does not return)
     return 4;
 #else
-    EESimInstallFaultHandler();
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+#define EE_SIM_SANITIZED   // the sanitizer's own report is better
+#endif
+#endif
+#ifndef EE_SIM_SANITIZED
+    ee_sim_driver_fault_install_posix();   // sim_driver fault.rs
+#endif
     return -1;   // the POSIX main goes on with the game (Empire Earth.cpp: ee-aoc --sim ...)
 #endif
-}
-
-// EESimGameEnded: the game's own start-up returned before the driver ended the run (it was quit, or failed to start)
-void EESimGameEnded(int inResult)
-{
-    ee_sim_driver_game_ended(inResult);
 }
 
 // ------------------------------------------------------------------------------------------------ the Rust's calls
@@ -197,10 +154,7 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::ScreenEventOf: return P64(dynamic_cast<EEScreenEvent*>((UIEvent*)p));
     case O::ScreenEventCode: return ((EEScreenEvent*)p)->mEvent;
-    case O::SpLoadGameFileList: return kSPLoadGameFileListBox;
-    case O::LoadScenarioFileList: return kLoadGameLoadFileListBox;
     // the physics and the world
-    case O::PhysicsTicksDone: return gPhysics->mNumTicksDone;
     case O::PhysicsTickMs: return gPhysics->mTickTimeMs;
     case O::PhysicsFlushPlacements: gWorld.FlushQueuedPlacements();
         break;
@@ -218,7 +172,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::NodeData: return P64(((EETechTreeNode*)p)->mData);
     case O::NodeCost: return ((EETechTreeNode*)p)->GetCost((long)a[0], (unsigned long)a[1], 1.0f);
-    case O::VolcanoProjectileType: return kUnitTypeVolcanoProjectile;
     case O::RequestSaveNew:   // load, quiet, tick, time, auto-save, the wait id, the name
         return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadOrSaveGame,
             {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, UWideString(s)})));
@@ -227,22 +180,8 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DerefMessage: ((NEMessage*)p)->Dereference();
         break;
     // the platform switches
-    case O::SetSimMode: gPlatSimMode = 1;
-        break;
-    case O::SetSeedSet: gPlatSimSeedSet = (int)a[0];
-        break;
-    case O::SetSeed: gPlatSimSeed = (uint32_t)a[0];
-        break;
-    case O::SetNoHumanDefeat: gPlatSimNoHumanDefeat = (int)a[0];
-        break;
     case O::SetScenarioDialogs: gScenarioSimDialogs = a[0] != 0;
         break;
-    case O::SetPortOffset: gPlatSimPortOffset = (int)a[0];
-        break;
-    case O::AnyPort: return kPlatSimAnyPort;
-    case O::ClearNoHumanDefeatHits: gPlatSimNoHumanDefeatHits = 0;
-        break;
-    case O::NoHumanDefeatHits: return (long)gPlatSimNoHumanDefeatHits;
     // the units
     case O::UnitHitPoints: return UN->mHitPoints;
     case O::UnitHasStats: return UN->mStats != NULL;
@@ -251,18 +190,12 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::UnitId: return UN->GetUnitID();
     case O::UnitTileX: return UN->GetTileX();
     case O::UnitTileY: return UN->GetTileY();
-    case O::ComplexHitPoints: return CX->mHitPoints;
     case O::ComplexOnMap: return CX->mTileNode != NULL;
-    case O::ComplexTileX: return CX->GetTileX();
-    case O::ComplexTileY: return CX->GetTileY();
-    case O::UnitTileXRaw: return CX->mTileX;
     case O::ComplexIsPriest: return CX->GetUnitClass()->IsPriest();
     case O::ComplexCategory: return CX->mUnitClass->mCategory;
     case O::ComplexClass: return P64(CX->mUnitClass);
     case O::ComplexLocation: return P64(&CX->mPhysicalModel.GetLocation());
     case O::ComplexSetLocation: CX->mPhysicalModel.SetLocation(*(const GETransformation*)a[0]);
-        break;
-    case O::ComplexSetLauncherClass: CX->SetLauncherClass((EEUnitClass*)a[0]);
         break;
     case O::ComplexPosition: CX->GetPosition(*(GE3DPoint*)a[0]);
         break;
@@ -294,8 +227,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::ClassWaterImpact: return UC->CheckWaterImpact((EEComplexUnit*)a[0]);
     case O::ClassGroundImpact: return UC->CheckGroundImpact((EEComplexUnit*)a[0]);
-    case O::MissileCategory: return kUnitCategoryMissile;
-    case O::TorpedoCategory: return kUnitCategoryTorpedo;
     // the capture and its sweeps
     case O::PhysicsRandom: return gPhysics != NULL ? P64(&gPhysics->mRandom) : 0;
     case O::GroupCommandSweep: EEGroupCommandSweep();
@@ -345,17 +276,12 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmTownHullY: return (long)((EETown*)p)->GetHullPoint((unsigned long)a[0]).GetY();
     case O::DmPlPatrolCount: return PL->mPatrolGroups.size();
     case O::DmPlPatrolAt: return P64(PL->mPatrolGroups[a[0]]);
-    case O::DmCxUnitId: return CX->mUnitID;
-    case O::DmCxTileYRaw: return CX->mTileY;
-    case O::DmUnitIdRaw: return UN->mUnitID;
     case O::DmCpDump: EECPOutOfSynchDump((FILE*)a[0]);
         break;
     case O::DmPathDump: gPathManager.DumpSim((FILE*)a[0]);
         break;
     case O::DmUnitTypeRaw: return (long)UN->mUnitClass->mUnitType;
     case O::DmUnitPlayerId: return UN->GetPlayer() ? (long)UN->GetPlayer()->mPlayerID : -1L;
-    case O::DmUnitTileXRaw: return (long)UN->mTileX;
-    case O::DmUnitTileYRaw: return (long)UN->mTileY;
     case O::DmComplexOf: return P64(dynamic_cast<EEComplexUnit*>(UN));
     case O::DmCxComplex: return P64(CX->mComplexUnit);
     case O::DmCxUpdated: return (unsigned long)CX->mTimesUpdated;
@@ -407,11 +333,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmCalHasLocation: return (int)((EECalamity*)p)->mHasTargetLocation;
     case O::DmCalHasUnit: return (int)((EECalamity*)p)->mHasTargetUnit;
     case O::DmMapRegions: return gWorld.mMap != NULL ? P64(gWorld.mMap->mUnitRegions) : 0;
-    case O::DmOpen: return P64(fopen(s, "w"));
-    case O::DmPuts: fputs(s, (FILE*)p);
-        break;
-    case O::DmClose: fclose((FILE*)p);
-        break;
     default: break;
     }
     return 0;

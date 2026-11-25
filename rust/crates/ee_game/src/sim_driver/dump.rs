@@ -4,7 +4,7 @@
 //! `Dm*` operations of EESim.cpp's `ee_simcpp_sim` and `ee_simcpp_sim_float`). The C runtime's `%a`, `%lu` (a 32-bit
 //! `unsigned long`), `%ld` and `%08lx` are written as the C++ wrote them ([`hexf`], [`lu`], [`ld`], [`x8`]).
 
-use super::sim_ops::{h, hdd, hs, EeSimDriverSim as O};
+use super::sim_ops::{h, hdd, EeSimDriverSim as O};
 use crate::gamecpp as gc;
 use ee_sim::units::patrol_group as pg;
 
@@ -131,7 +131,9 @@ struct Out {
 impl Out {
     fn flush(&mut self) {
         if !self.text.is_empty() {
-            hs(O::DmPuts, self.file, &std::mem::take(&mut self.text));
+            let text = std::ffi::CString::new(std::mem::take(&mut self.text)).unwrap_or_default();
+            // SAFETY: the stream dump_state opened, a NUL-ended text
+            unsafe { libc::fputs(text.as_ptr(), self.file as *mut libc::FILE) };
         }
     }
     fn push(&mut self, s: &str) {
@@ -165,7 +167,9 @@ fn f(op: O, p: usize, a: &[i64]) -> String {
 /// --dump-at / --dump-load (TEST ONLY, the save/load fidelity hunt): the state the checksum line sums, item by item.
 /// Reads only (the goals' own out-of-synch checksums are read, as the checksum's flag 0x20 would).
 pub fn dump_state(path: &str) {
-    let file = hs(O::DmOpen, 0, path) as usize;
+    let Ok(c_path) = std::ffi::CString::new(path) else { return };
+    // SAFETY: NUL-ended path and mode; the C library's text mode, as the C++'s fopen (the C++ dumps write into it)
+    let file = unsafe { libc::fopen(c_path.as_ptr(), c"w".as_ptr()) } as usize;
     if file == 0 {
         return;
     }
@@ -202,7 +206,8 @@ pub fn dump_state(path: &str) {
     dump_calamities(&mut o);
     dump_regions(&mut o);
     o.flush();
-    h(O::DmClose, file, &[]);
+    // SAFETY: the stream opened above
+    unsafe { libc::fclose(file as *mut libc::FILE) };
 }
 
 fn dump_players(o: &mut Out) {
@@ -262,9 +267,9 @@ fn dump_players(o: &mut Out) {
                 if point != 0 {
                     s.push_str(&format!(
                         "{}@{},{} ",
-                        lu(h(O::DmCxUnitId, point, &[])),
-                        ld(h(O::UnitTileXRaw, point, &[])),
-                        ld(h(O::DmCxTileYRaw, point, &[]))
+                        lu(h(O::UnitId, point, &[])),
+                        ld(h(O::UnitTileX, point, &[])),
+                        ld(h(O::UnitTileY, point, &[]))
                     ));
                 }
             }
@@ -281,7 +286,7 @@ fn dump_players(o: &mut Out) {
         let mut s = format!("PLAYERUNITS {i}:");
         let mut u = gc::h(gc::O::PlFirstUnit, p, &[]) as usize;
         while u != 0 {
-            s.push_str(&format!(" {}", lu(h(O::DmUnitIdRaw, u, &[]))));
+            s.push_str(&format!(" {}", lu(h(O::UnitId, u, &[]))));
             u = gc::h(gc::O::UnNext, u, &[]) as usize;
         }
         s.push('\n');
@@ -297,8 +302,8 @@ fn dump_unit(o: &mut Out, u: usize) {
         ld(h(O::DmUnitTypeRaw, u, &[])),
         ld(player),
         f(O::DmUnitHp, u, &[]),
-        ld(h(O::DmUnitTileXRaw, u, &[])),
-        ld(h(O::DmUnitTileYRaw, u, &[]))
+        ld(h(O::UnitTileX, u, &[])),
+        ld(h(O::UnitTileY, u, &[]))
     );
     let c = h(O::DmComplexOf, u, &[]) as usize;
     let x = if c != 0 { h(O::DmCxComplex, c, &[]) as usize } else { 0 };

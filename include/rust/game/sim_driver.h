@@ -117,24 +117,16 @@ constexpr static const long VISIBLE_SLOTS = 8;
 /// The host operations (`p` the object, `a` and `f` the integer and float arguments, `s` a text). A pointer is
 /// answered as an integer (a control as its `UIControl*`, an action as its `EEAction*`).
 enum class EeSimDriverSed : uint32_t {
-  FormSlot = 1,
+  /// `mRust`
+  FormRust = 1,
   ControlById,
   FormControl,
   FormControlCount,
   FormGroupCount,
   FormGroup,
-  SelectedCount,
   SelectedUnit,
   SelectedUnitId,
   FormSetLoadText,
-  FormDeselectFirst,
-  FormClearSelection,
-  FormSelectUnit,
-  FormDeselectUnit,
-  FormRefreshGroup,
-  FormResumeGroup,
-  FormSetGameView,
-  SaveTriggersOnly,
   TriggerStoring,
   GroupIsEnabled,
   GroupEntityCount,
@@ -524,9 +516,7 @@ enum class EeSimDriverSed : uint32_t {
   SetAllowCustomCivs,
   SetScenarioGame,
   C12ActionNew,
-  C12ActionPost,
   C12DoneNew,
-  C12DonePost,
   C12Dereference,
 };
 
@@ -553,9 +543,6 @@ enum class EeSimDriverSim : uint32_t {
   ListChangeSelection,
   ScreenEventOf,
   ScreenEventCode,
-  SpLoadGameFileList,
-  LoadScenarioFileList,
-  PhysicsTicksDone,
   PhysicsTickMs,
   PhysicsTickSeconds,
   PhysicsFlushPlacements,
@@ -569,19 +556,10 @@ enum class EeSimDriverSim : uint32_t {
   PlayerAddPendingUnits,
   NodeData,
   NodeCost,
-  VolcanoProjectileType,
   RequestSaveNew,
   SendToAllAndWait,
   DerefMessage,
-  SetSimMode,
-  SetSeedSet,
-  SetSeed,
-  SetNoHumanDefeat,
   SetScenarioDialogs,
-  SetPortOffset,
-  AnyPort,
-  ClearNoHumanDefeatHits,
-  NoHumanDefeatHits,
   UnitHitPoints,
   UnitHasStats,
   UnitIsBuilding,
@@ -590,23 +568,18 @@ enum class EeSimDriverSim : uint32_t {
   UnitTileX,
   UnitTileY,
   ComplexOnMap,
-  ComplexTileX,
-  ComplexTileY,
   ComplexAttack,
   ComplexIsPriest,
   ComplexCategory,
   ComplexClass,
   ComplexLocation,
   ComplexSetLocation,
-  ComplexSetLauncherClass,
   ComplexPosition,
   ComplexSetGoal,
   ComplexVelocity,
   ComplexFlightTime,
   ComplexHasGoalState,
   ComplexPlayer,
-  ComplexHitPoints,
-  UnitTileXRaw,
   IgnoredSave,
   IgnoredRestore,
   IgnoredFree,
@@ -624,8 +597,6 @@ enum class EeSimDriverSim : uint32_t {
   ClassStep,
   ClassWaterImpact,
   ClassGroundImpact,
-  MissileCategory,
-  TorpedoCategory,
   PhysicsRandom,
   GroupCommandSweep,
   MiniMapSnapshot,
@@ -668,15 +639,10 @@ enum class EeSimDriverSim : uint32_t {
   DmTownHullY,
   DmPlPatrolCount,
   DmPlPatrolAt,
-  DmCxUnitId,
-  DmCxTileYRaw,
-  DmUnitIdRaw,
   DmCpDump,
   DmPathDump,
   DmUnitTypeRaw,
   DmUnitPlayerId,
-  DmUnitTileXRaw,
-  DmUnitTileYRaw,
   DmComplexOf,
   DmCxComplex,
   DmCxUpdated,
@@ -727,9 +693,6 @@ enum class EeSimDriverSim : uint32_t {
   DmCalHasLocation,
   DmCalHasUnit,
   DmMapRegions,
-  DmOpen,
-  DmPuts,
-  DmClose,
   DmPhysClock,
   DmPlResource,
   DmUnitHp,
@@ -785,7 +748,14 @@ void ee_sim_driver_combat_sweep(const EeSimDriverCombatSweep *input);
 /// `prefix` is a NUL-ended text.
 void ee_sim_driver_fault_install(const char *prefix);
 
+/// EE-SIM's POSIX fault report (EESimMain, when the game goes on; nothing on Windows: ee_sim_driver_fault_install's).
+void ee_sim_driver_fault_install_posix();
+
 extern int32_t _write(int32_t fd, const void *buffer, uint32_t count);
+
+extern int backtrace(void **buffer, int size);
+
+extern void backtrace_symbols_fd(void *const *buffer, int size, int fd);
 
 /// EE-SIM's entry: the command line parsed, the driver made over the host, the output files opened, the switches
 /// and the environment set -> [`EE_SIM_DRIVER_CONTINUE`], or the exit code (0 after --help, 64 a bad command

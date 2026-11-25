@@ -17,6 +17,10 @@ use super::editor::Step;
 use super::options::c_atol;
 use super::sed_digest::{self as d, g, head_of, rect_text};
 use super::sed_host::{self as x, h, hf, hs, ht, sel, EeSimDriverSed as O};
+use crate::screens::editor_form::{
+    EE_SCREENS_SEFM_CLEAR_SELECTION, EE_SCREENS_SEFM_DESELECT_FIRST, EE_SCREENS_SEFM_DESELECT_UNIT,
+    EE_SCREENS_SEFM_RESUME_GROUP, EE_SCREENS_SEFM_SELECT_UNIT, EE_SCREENS_SEFM_SET_GAME_VIEW, EE_SCREENS_SEFM_STORE_GROUP,
+};
 use crate::screens::editor_tscreen::EE_SCREENS_SETS_SCREEN_REFRESH;
 use crate::screens::shells::EE_SCREENS_SKOP_SET_SELECTED_PLAYER;
 
@@ -390,7 +394,7 @@ pub fn step(w: &[String]) -> Step {
         }),
         "selection" => Box::new(|out: &mut Vec<String>| {
             let e = x::editor();
-            let ids: String = (0..h(O::SelectedCount, e, &[]))
+            let ids: String = (0..x::selected_count(e))
                 .map(|i| format!(" {}", h(O::SelectedUnitId, e, &[i]) as c_ulong))
                 .collect();
             out.push(format!("  selection{ids}"));
@@ -929,29 +933,30 @@ pub fn step(w: &[String]) -> Step {
             let e = x::editor();
             match w1 {
                 "first" => {
-                    h(O::FormDeselectFirst, e, &[]);
+                    x::form_call(e, EE_SCREENS_SEFM_DESELECT_FIRST, 0, 0, None);
                 }
                 "clear" => {
-                    h(O::FormClearSelection, e, &[]);
+                    x::form_call(e, EE_SCREENS_SEFM_CLEAR_SELECTION, 0, 0, None);
                 }
                 _ => {
                     let u = gc::h(gc::O::EcResolve, 0, &[unit_ref(w.get(2).map_or("", |s| s.as_str())) as u32 as i64])
                         as usize;
                     if u != 0 && w1 == "add" {
-                        h(O::FormSelectUnit, e, &[u as i64]);
+                        x::form_call(e, EE_SCREENS_SEFM_SELECT_UNIT, 0, u, None);
                     } else if u != 0 {
-                        h(O::FormDeselectUnit, e, &[u as i64]);
+                        x::form_call(e, EE_SCREENS_SEFM_DESELECT_UNIT, 0, u, None);
                     }
                 }
             }
         }),
         "formcall" => Box::new(|_: &mut Vec<String>| {
             // formcall store|resume: the form's RefreshCurrentGroup / ResumeCurrentGroup
-            h(if w1 == "store" { O::FormRefreshGroup } else { O::FormResumeGroup }, x::editor(), &[]);
+            let what = if w1 == "store" { EE_SCREENS_SEFM_STORE_GROUP } else { EE_SCREENS_SEFM_RESUME_GROUP };
+            x::form_call(x::editor(), what, 0, 0, None);
         }),
         "gameview" => Box::new(|_: &mut Vec<String>| {
             // gameview L T R B HIDDEN: the form's SetGameView
-            hf(O::FormSetGameView, x::editor(), &[(l(5) != 0) as i64], &[f(1), f(2), f(3), f(4)]);
+            x::form_call(x::editor(), EE_SCREENS_SEFM_SET_GAME_VIEW, i32::from(l(5) != 0), 0, Some(&[f(1), f(2), f(3), f(4)]));
         }),
         "trigreport" => Box::new(|out: &mut Vec<String>| d::trigger_report(w1 == "setup", out)),
         "terrainstate" => Box::new(|out: &mut Vec<String>| d::terrain_digest(out)),
