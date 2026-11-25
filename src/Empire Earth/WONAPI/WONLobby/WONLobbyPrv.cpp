@@ -51,6 +51,7 @@ template <EeWonLobbyCtlKind K> static Component* CtlFactory() { return new Lobby
 template <EeWonLobbyCtlKind K> static Component* DlgCtlFactory() { return new LobbyRustDialogCtrl(K); }
 template <bool Lan> static Component* ScreenFactory() { return new RootScreen(Lan); }
 typedef EeWonLobbyCtlKind Ck;
+typedef EeWonLobbyPrvField PF;
 
 namespace WONAPI {
 
@@ -84,7 +85,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::ParseTopLevel: return WON_GUARDED(p->mConfig->ParseTopLevel(*sPrvParser, NULL));
     case Op::ErrorParseHead: p->mInitError = GUIString(LobbyConfig::mDefaultFileName + " error: "); return 0;
     case Op::ErrorParseReason: p->mInitError.append(GUIString(sPrvParser->GetAbortReason())); return 0;
-    case Op::LobbyPortFromConfig: p->mLobbyPort = p->mConfig->mLobbyPort; return 0;
+    case Op::ConfigLobbyPort: return p->mConfig->mLobbyPort;
     case Op::ComponentConfigNew: sPrvComponentConfig = new ContainerConfig; return 0;
     case Op::LobbyContainerNew: p->mLobbyContainer = new LobbyContainer; return 0;
     case Op::SetResourceFolder: ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + p->mConfig->mResourceDirectory); return 0;
@@ -99,10 +100,9 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::CrcNew: sPrvCrc = CRC16(); return 0;
     case Op::CrcPutProductName: sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length()); return 0;
     case Op::CrcPutVersion: sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length()); return 0;
-    case Op::ProductIdFromCrc: p->mProductId = sPrvCrc.Get(); return 0;
+    case Op::CrcGet: return sPrvCrc.Get();
     case Op::CrcReset: sPrvCrc.Reset(); return 0;
     case Op::CrcPutLanVersion: sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length()); return 0;
-    case Op::LanProductIdFromCrc: p->mLanProductId = sPrvCrc.Get(); return 0;
     case Op::ChatParserInitCommands: p->mChatCommandParser->InitCommands(); return 0;
     case Op::ResDone: sPrvTable = NULL; return 0;
     case Op::ComponentConfigDone: sPrvComponentConfig = NULL; return 0;
@@ -123,16 +123,10 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::CdKeySetProduct: p->mCDKey.SetProductString(p->mConfig->mProductName); return 0;
     case Op::CdKeyLoad: p->mCDKey.LoadFromRegistry(); return 0;
     case Op::AuthSetCdKey: p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey); return 0;
-    case Op::LobbyPort8888: p->mLobbyPort = 8888; return 0;
-    case Op::TouTimesClear: p->mSysTOUTime = p->mGameTOUTime = 0; return 0;
-    case Op::BehindFirewallClear: p->mBehindFirewall = false; return 0;
-    case Op::FirewallTestDoneClear: p->mFirewallTestDone = false; return 0;
     case Op::SuspendedClear: p->mSuspended = false; return 0;
     case Op::CurGameTypeClear: p->mCurGameType = (LobbyGameType)0; return 0;
     case Op::LobbyStatusClear: p->mLobbyStatus = (LobbyStatus)0; return 0;
     case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
-    case Op::ProductIdClear: p->mProductId = 0; return 0;
-    case Op::LanProductIdClear: p->mLanProductId = 0; return 0;
     case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
     case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
     case Op::ConfigNew: p->mConfig = LobbyConfig::mAllocator(); return 0;
@@ -145,7 +139,6 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::RoomDirServersNew: p->mRoomDirServers = new ServerContext; return 0;
     case Op::FirewallServersNew: p->mFirewallDetectServers = new ServerContext; return 0;
     case Op::PatchServersNew: p->mPatchServers = new ServerContext; return 0;
-    case Op::VersionStatusNone: p->mVersionStatus = WS_None; return 0;
     case Op::AuthContextNew: p->mAuthContext = new AuthContext; return 0;
     case Op::AuthSetServers: p->mAuthContext->SetServerContext(p->mAuthServers.get()); return 0;
     case Op::AccountLogicNew: p->mAccountLogic = new RustLogic(EeWonLogicShellKind::Account, AccountLogicMake); return 0;
@@ -295,69 +288,32 @@ ServerContext* LobbyGetFirewallDetectServers() { return gLobbyData.get()!=NULL?g
 ServerContext* LobbyGetPatchServers() { return gLobbyData.get()!=NULL?gLobbyData->mPatchServers:SmartPtr<ServerContext>(); }
 // Makes the room listing use the main directory servers again
 void LobbyResetRoomDirServers() { if(gLobbyData.get()!=NULL) gLobbyData->mRoomDirServers=gLobbyData->mDirServers; }
+// the plain members are lobbyprv.rs's since R6 WON lobby and network round 38 (each answers as without a lobby when
+// there is none: the version status 100004, the rest 0 and false; a set then does nothing)
 // Records the result of the game version check
-void LobbySetVersionStatus(WONStatus status) { if(gLobbyData.get()!=NULL) gLobbyData->mVersionStatus=status; }
-// Returns the result of the game version check; status 100004 without a lobby
-WONStatus LobbyGetVersionStatus() { return gLobbyData.get()!=NULL?gLobbyData->mVersionStatus:100004; }
+void LobbySetVersionStatus(WONStatus status) { ee_won_lobbyprv_set(PF::VersionStatus, status); }
+// Returns the result of the game version check
+WONStatus LobbyGetVersionStatus() { return (WONStatus)ee_won_lobbyprv_get(PF::VersionStatus); }
 // Records the times of the system and game terms of use
-void LobbySetTOUTimes(long systemTime,long gameTime)
-{
-    if(gLobbyData.get()!=NULL) {
-        gLobbyData->mSysTOUTime=systemTime;
-        gLobbyData->mGameTOUTime=gameTime;
-    }
-}
+void LobbySetTOUTimes(long systemTime,long gameTime) { ee_won_lobbyprv_set_tou(systemTime, gameTime); }
 // Returns whether the recorded system or game terms of use are newer than the given times
-bool LobbyIsTOUNewer(long systemTime,long gameTime)
-{
-    if(gLobbyData.get()!=NULL)
-        return gLobbyData->mSysTOUTime>systemTime || gLobbyData->mGameTOUTime>gameTime;
-    return false;
-}
-// Returns the lobby's configured network port, or 0 without a lobby
-unsigned short LobbyGetLobbyPort() { return gLobbyData.get()!=NULL?gLobbyData->mLobbyPort:0; }
+bool LobbyIsTOUNewer(long systemTime,long gameTime) { return ee_won_lobbyprv_tou_newer(systemTime, gameTime); }
+// Returns the lobby's network port
+unsigned short LobbyGetLobbyPort() { return (unsigned short)ee_won_lobbyprv_get(PF::LobbyPort); }
 
 // ---- LobbyNetworkState.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Lobby address state: firewall test result, the public address seen from outside, and the address to give peers
 // Forgets the firewall test result and the public address
-void LobbyResetFirewallTest()
-{
-    if(gLobbyData.get()==NULL) return;
-    gLobbyData->mFirewallTestDone=false;
-    gLobbyData->mPublicAddr=IPAddr();
-}
+void LobbyResetFirewallTest() { ee_won_lobbyprv_reset_firewall(); }
 // Records the public address seen from outside
-void LobbySetPublicAddress(const IPAddr& address)
-{
-    if(gLobbyData.get()==NULL) return;
-    gLobbyData->mPublicAddr=address;
-}
+void LobbySetPublicAddress(const IPAddr& address) { ee_won_lobbyprv_set_public_addr(address.GetValue()); }
 // Records whether the player is behind a firewall and marks the test done
-void LobbySetBehindFirewall(bool behindFirewall)
-{
-    if(gLobbyData.get()==NULL) return;
-    gLobbyData->mBehindFirewall=behindFirewall;
-    gLobbyData->mFirewallTestDone=true;
-}
+void LobbySetBehindFirewall(bool behindFirewall) { ee_won_lobbyprv_set(PF::BehindFirewall, behindFirewall); }
 // Returns the address to give peers on the lobby port: public unless room spec 1 or UseLocalIP, else local
 IPAddr LobbyGetMyAddress(int roomSpec)
-{
-    IPAddr address;
-    if(gLobbyData.get()!=NULL) {
-        if(roomSpec!=1 && gLobbyData->mPublicAddr.IsValid() && !gLobbyData->mConfig->mUseLocalIP)
-            address=gLobbyData->mPublicAddr;
-        else
-            address=IPAddr::GetLocalAddr();
-        address.SetPort(gLobbyData->mLobbyPort);
-    }
-    return address;
-}
+{ return IPAddr::FromValue(ee_won_lobbyprv_my_address(roomSpec, gLobbyData.get()!=NULL && gLobbyData->mConfig->mUseLocalIP)); }
 // Returns the public address seen from outside, or an empty address
-IPAddr LobbyGetPublicAddress()
-{
-    if(gLobbyData.get()!=NULL) return gLobbyData->mPublicAddr;
-    return IPAddr();
-}
+IPAddr LobbyGetPublicAddress() { return IPAddr::FromValue(ee_won_lobbyprv_public_addr()); }
 
 // ---- LobbyUDPManager.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Binds the lobby's UDP port (pings and friend searches)
@@ -630,8 +586,8 @@ void LobbyCompletionEvent::Deliver()
 // The implicit destructor (0x757ea0) releases mOp, then mCompletion, then the WindowEventBase part
 
 // ---- WONLobbyPrvLifetime.cpp (merged into this unit, R6 WON lobby and network round 38)
-// Destroys the lobby's private state (members only)
-WONLobbyPrv::~WONLobbyPrv() {}
+// Destroys the lobby's private state: its members, the plain ones the Rust's
+WONLobbyPrv::~WONLobbyPrv() { ee_won_lobbyprv_drop(this); }
 
 // ---- LobbyErrorScreen.cpp (merged into this unit, R6 WON lobby and network round 38)
 // The lobby's top container, or the "Lobby Error" dialog shown when the lobby failed to start

@@ -57,7 +57,9 @@ class RustLogic; class PingLogic; class WindowEventBase;
 class ChatCommandParser;
 enum LobbyStatus : int; enum LobbyRunMode : int; // (values only by number); LobbyGameType: WONLobbyGUI.h
 // the lobby's private state (0x118 bytes; constructor 0x7628c0, destructor 0x7630a0; created by 0x761fb0).
-// This revision has no BigFileList after mInitError (later SDKs add one).
+// This revision has no BigFileList after mInitError (later SDKs add one). R6 WON lobby and network round 38: the
+// plain members (the version status, the terms-of-use times, the product ids, the lobby port, the firewall flags,
+// the public address) are lobbyprv.rs's (EeWonLobbyPrvField); the never-read mLastTimerTick is gone.
 class WONLobbyPrv : public RefCount {
 public:
     WONLobbyPrv();
@@ -79,7 +81,6 @@ public:
     LobbyLogicMgr mLogicMgr; // 0x34..0x40
     SmartPtr<UDPManager> mUDPManager; // 0x40
     SmartPtr<WindowEventBase> mTimerEvent; // 0x44
-    DWORD mLastTimerTick; // 0x48 (the constructor leaves it unset)
     LobbyStatus mLobbyStatus; // 0x4c
     LobbyRunMode mRunMode; // 0x50
     bool mSuspended; // 0x54
@@ -89,20 +90,13 @@ public:
     SmartPtr<ServerContext> mRoomDirServers; // 0x64
     SmartPtr<ServerContext> mFirewallDetectServers; // 0x68
     SmartPtr<ServerContext> mPatchServers; // 0x6c
-    WONStatus mVersionStatus; // 0x70
     SmartPtr<AuthContext> mAuthContext; // 0x74
     CDKey mCDKey; // 0x78..0x94 (0x1c bytes)
     std::wstring mLoginCommunity; // 0x94..0xa4
     bool mHasSetHashFileList; // 0xa4
     typedef std::list<std::string> HashFileList;
     HashFileList mHashFileList; // 0xa8..0xb4
-    unsigned short mProductId; // 0xb4
-    unsigned short mLanProductId; // 0xb6
-    unsigned short mLobbyPort; // 0xb8
-    time_t mSysTOUTime,mGameTOUTime; // 0xbc, 0xc0
-    bool mBehindFirewall,mFirewallTestDone; // 0xc4, 0xc5
     std::string mSysTOUPath,mGameTOUPath; // 0xc8, 0xd8
-    IPAddr mPublicAddr; // 0xe8..0x110 (0x28 bytes)
     SmartPtr<ChatCommandParser> mChatCommandParser; // 0x110
     LobbyGameType mCurGameType; // 0x114..0x118
 };
