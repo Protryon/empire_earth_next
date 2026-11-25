@@ -464,9 +464,12 @@ public:
 // compiler-emitted inline support. Implicit destructor2abad0 has no own-vptr store.
 class SendBytesOp : public SocketOp {
 public:
+    // SendMsgOp passes a null buffer and attaches the message in Start(). Calling
+    // data() on that pointer is undefined, so clang drops ByteBuffer's null check.
     SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL)
         : SocketOp(inSocket),
-          mReadBuffer(inData->data(), inData->length()),
+          mReadBuffer(inData != NULL ? inData->data() : NULL,
+                      inData != NULL ? inData->length() : 0),
           mBuffer(inData)
     { this->mWaitForEvent[1] = true; }
     virtual WONStatus Start();     //2b5e50
