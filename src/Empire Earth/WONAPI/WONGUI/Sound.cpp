@@ -73,3 +73,10 @@ void Sound::Rewind()
 	this->RewindHook();
 }
 }
+
+// the sound decoder base (SoundDecoder.cpp until R6 WON GUI round 37): decodes a descriptor through the virtual Decode
+namespace WONAPI {
+SoundDecoder::SoundDecoder() {}
+SoundDecoder::~SoundDecoder() {} // (emitted at 0x00728590)
+SoundPtr SoundDecoder::DecodeDescriptor(const SoundDescriptor& inDescriptor) { return this->Decode(inDescriptor); }
+}
