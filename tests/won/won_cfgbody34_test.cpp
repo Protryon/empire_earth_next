@@ -22,6 +22,7 @@
 #include <exception>
 #include "rust/won_gui/guiconf.h"
 #include "rust/won_gui/cfgbody.h"
+#include "rust/won_gui/cfgkind.h" // the configs' kinds (WONCfgBody.inl makes them by kind)
 
 // what the bodies meet (both sides alike)
 struct BodyScript {

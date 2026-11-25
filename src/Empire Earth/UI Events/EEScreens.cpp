@@ -1402,8 +1402,20 @@ extern "C" void ee_screenscpp_tp_ce_lines_append(uintptr_t inForm, uint32_t inCo
 { static_cast<UIListBox<UWideString>*>(F(inForm)->GetControl(inControl))->AppendStringArray(EEScratch<std::vector<UWideString>>(kScratchCELines)); }
 extern "C" bool ee_screenscpp_tp_ce_bg_equals(uintptr_t inForm, uint32_t inIndex, EeScreensShimText inText)
 { return static_cast<UIFileComboBox*>(F(inForm)->GetControl(kCampaignEditorBackgroundImageComboBox))->GetListBox()->GetData(inIndex).EqualsIgnoreCase(EEShimText(inText)); }
-extern "C" void ee_screenscpp_tp_ce_translate(EeScreensShimText inText)
-{ EETranslateString(EEShimText(inText), EEScratch<UWideString>(kScratchCampaignEditorTranslated)); }
+// the free UI helpers' (ui_helpers.rs): EETranslateString's end, the scenario intro's and the F9 shots' calls
+extern "C" void ee_screenscpp_uh_translate(EeScreensShimText inText, uint32_t inID, bool inReference)
+{ if (!inReference || gResource->GetString(inID, EEScratch<UWideString>(kScratchCampaignEditorTranslated)) != kErrorOK) EEScratch<UWideString>(kScratchCampaignEditorTranslated) = EEShimText(inText); }
+extern "C" uintptr_t ee_screenscpp_uh_form(uint32_t inID) { return (uintptr_t)gUIManager->GetFormByID(inID); }
+extern "C" bool ee_screenscpp_uh_comms_started() { return gCommunications->GetNumberOfCTsProcessedInPhysics() > 0; }
+extern "C" bool ee_screenscpp_uh_comms_multiplayer() { return gCommunications->GetIsMultiplayerSession(); }
+extern "C" bool ee_screenscpp_uh_has_scenario() { return ::gWorld.mScenarioManager != NULL; }
+extern "C" bool ee_screenscpp_uh_is_campaign() { return ::gWorld.mGameOptions.mCampaignName.GetLength() > 0 && ::gWorld.mGameOptions.mCampaignChecksum > 0; }
+extern "C" void ee_screenscpp_uh_intro_media_prefix() { EEScreensMedia::Prefix(EEUISCIFormManager::Get()->mMediaStrings); }
+extern "C" bool ee_screenscpp_uh_intro_has_media() { return EEUISCIFormManager::Get()->HasMedia(); }
+extern "C" void ee_screenscpp_uh_intro_set_loading_from_game(bool inValue) { EEUISCIFormManager::Get()->mIsLoadingFromGame = inValue; }
+extern "C" void ee_screenscpp_uh_intro_set_in_game(bool inValue) { EEUISCIFormManager::Get()->mIsInGame = inValue; }
+extern "C" void ee_screenscpp_uh_switch_to_form(uintptr_t inForm) { gUserInterface->SwitchToForm(reinterpret_cast<UIForm*>(inForm)); }
+extern "C" void ee_screenscpp_uh_post_screen_shot(int32_t inSize, bool inPlain) { gUserInterface->PostScreenShot(inSize, inPlain, false); }
 extern "C" uint32_t ee_screenscpp_tt_pdcs_civ_name_id(uint32_t inIndex) { return (uint32_t)EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs)[inIndex].mNameID; }
 extern "C" void ee_screenscpp_tt_pdcs_civ_file(uint32_t inIndex, void* inOut)
 { EEShimOut(inOut, UWideString(EEScratch<std::vector<EECivilizationEntry>>(kScratchPdcsCivs)[inIndex].GetFileName())); }
@@ -1500,7 +1512,6 @@ extern "C" uint32_t ee_screenscpp_rc_le_rule(uint32_t inWhich, uint32_t inArg)
 { return EEScreensLobbyRule(inWhich, inArg); }
 extern "C" void ee_screenscpp_rc_go_request_pause()
 { gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientRequestPause), kSlotNone); }
-extern "C" void ee_screenscpp_rc_go_briefing() { EEDisplayScenarioIntro(); }
 extern "C" void ee_screenscpp_rc_go_exit() { EEExitGame(); }
 
 // TEST ONLY: the world lock, for the SGVW trace's note of the reading thread's holds (ee_game screens/sgvw.rs)

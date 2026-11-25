@@ -29,15 +29,13 @@ extern const uint8_t EE_UNIT_CLASS_BODIES[EE_UNITS_BODY_COUNT][256];  // each vi
 // a class's kind bits (its category's entry: its own kind's EE_CLASS_KIND_* bit and its ancestors')
 template <class C> inline uint64_t EEUnitClassKinds(const C* inClass)
 {
-    unsigned long theCategory = inClass->mCategory;
-    return theCategory < 256 ? EE_UNIT_CLASS_KINDS[theCategory] : 0;
+    return (unsigned long)inClass->mCategory < 256 ? EE_UNIT_CLASS_KINDS[inClass->mCategory] : 0;
 }
 
 // the body EEUnitClass's virtual inVirtual (an EE_UNITS_BODY_* row) runs for inClass: 0 the default, n its n-th
 template <class C> inline unsigned EEClassBody(const C* inClass, size_t inVirtual)
 {
-    unsigned long theCategory = inClass->mCategory;
-    return theCategory < 256 ? EE_UNIT_CLASS_BODIES[inVirtual][theCategory] : 0;
+    return (unsigned long)inClass->mCategory < 256 ? EE_UNIT_CLASS_BODIES[inVirtual][inClass->mCategory] : 0;
 }
 
 // whether inClass (not NULL) is of kind B (an EE_CLASS_KIND_* bit): what dynamic_cast<EEUC*> tested

@@ -191,6 +191,28 @@ enum class EeWonShellHostOp : uint32_t {
   GetNamedFont,
   /// `((RefCount*)a)->AddRef()` when `b` > 0, else its `Release()` (an image or a font).
   RefObj,
+  /// `WONShellNew(EeWonShellKind::MsMessageBox, a)` (not held).
+  MsgBoxNew,
+  /// `CreateNativeWindow()` (not held).
+  MsgWinNew,
+  /// `((Window*)a)->SetParent((Window*)b)`.
+  MsgWinParent,
+  /// `((Window*)a)->SetTitle(*(const GUIString*)b)`.
+  MsgWinTitle,
+  /// `((Window*)a)->SetStyle(b)`.
+  MsgWinStyle,
+  /// `((Window*)a)->Create(WONRectangle(0, 0, b, c))`.
+  MsgWinCreate,
+  /// `((Window*)a)->AddComponent((Component*)b)`.
+  MsgWinAdd,
+  /// `WONShell::Op((Component*)a, (EeWonShellOp)b)`.
+  MsgShellOp,
+  /// `((Component*)a)->RequestFocus()`.
+  MsgFocus,
+  /// `((Window*)a)->RunDialog((Component*)b)`.
+  MsgRunDialog,
+  /// `((Window*)a)->Close()`.
+  MsgWinClose,
 };
 
 /// A virtual a shell overrides (its bit in the kind's mask). The arguments are the C++ ones as `isize` (a pointer

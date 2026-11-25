@@ -17,54 +17,13 @@
 
 using namespace WONAPI;
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-// Resets the background to no colour, no border, tiled image with offsets, no grab
-void Background::Init()
-{
-	this->mColor = -1;
-	this->mBorderColor = -1;
-	this->mUseOffsets = true;
-	this->mStretchImage = false;
-	this->mWantGrabBG = false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-Background::Background()
-{
-	this->Init();
-	this->mColor = (int)0x8000000d;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-// Creates a background that tiles an image
-Background::Background(Image *theImage)
-{
-	this->Init();
-	this->mImage = theImage;
-}
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-Background::Background(int theColor, int theBorderColor)
-{
-	this->Init();
-	this->mColor = theColor;
-	this->mBorderColor = theBorderColor;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-// Creates a background drawn by a component
-Background::Background(Component *theComponent)
-{
-	this->Init();
-	this->mComponent = theComponent;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+// The constructors over WONLobbyBackground.h's defaults (Init, 0x335cb0, is its member initialisers since R6 WON GUI
+// round 36): the standard colour 13, a background that tiles an image, a fill and border colour, one drawn by a
+// component (the out-of-line bodies keep the SmartPtr members' types incomplete in the header)
+Background::Background() : mColor((int)0x8000000d) {}
+Background::Background(Image* theImage) : mImage(theImage) {}
+Background::Background(int theColor, int theBorderColor) : mColor(theColor), mBorderColor(theBorderColor) {}
+Background::Background(Component* theComponent) : mComponent(theComponent) {}
 // Sets the fill colour (-1 for none)
 void Background::SetColor(int theColor)
 {

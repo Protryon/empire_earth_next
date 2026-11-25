@@ -6,6 +6,7 @@
 // Requires lle/LowLevelEngine.h.
 #ifndef LLE_SESAMPLE_H
 #define LLE_SESAMPLE_H
+#include "lle/LLEForward.h"
 
 #include "lle/SEMixer.h"
 
@@ -15,7 +16,7 @@ inline unsigned long EeSoundWide(uint32_t inValue)
     return inValue >= 0xfffffffeu ? (unsigned long)(long)(int32_t)inValue : (unsigned long)inValue;
 }
 
-class LLE_API SESample {
+class LLE_API SESample : URustView {
 public:
     // a copy of the sample's state without its wave data and channel
     static SESample* Duplicate(const SESample& inSample) { return reinterpret_cast<SESample*>(ee_sound_sample_duplicate(reinterpret_cast<const EeSoundSample*>(&inSample))); }
@@ -45,10 +46,7 @@ public:
     void SetThePan(float inPan) { ee_sound_sample_set_the_pan(Rec(), inPan); }
     void SetThePitch(float inPitch) { ee_sound_sample_set_the_pitch(Rec(), inPitch); }
     void SetTheVolume(float inVolume) { ee_sound_sample_set_the_volume(Rec(), inVolume); }
-private:
     EeSoundSample* Rec() const { return reinterpret_cast<EeSoundSample*>(const_cast<SESample*>(this)); }
-    SESample() = delete;
-    ~SESample() = delete;
 };
 
 #endif

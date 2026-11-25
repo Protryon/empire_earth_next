@@ -276,36 +276,32 @@ impl HostArgs {
     }
 }
 
-/// A host that answers the moved ops (`$call`, `fn(&mut impl Cpp, &HostArgs) -> Option<isize>`) and passes the
-/// others to the class's tables (`lle_hosts.rs`: the C++ cases' one-statement shims). Declared for C++ in
-/// `lle/UIShims.h`.
-macro_rules! lle_host {
-    ($(#[$m:meta])* $name:ident => $call:path, [$($t:path),*]) => {
-        $(#[$m])*
-        ///
-        /// # Safety
-        /// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
-        #[cfg(not(any(test, feature = "no_cpp")))]
-        #[no_mangle]
-        pub unsafe extern "C" fn $name(
-            obj: *mut core::ffi::c_void,
-            op: crate::obj::EeUiOp,
-            a: isize,
-            b: isize,
-            c: isize,
-            d: isize,
-            f: *mut f32,
-        ) -> isize {
-            let args = crate::lle_cpp::HostArgs { obj: obj as usize, op, a, b, c, d, f };
-            match $call(&mut crate::lle_cpp::Ffi, &args) {
-                Some(r) => r,
-                // SAFETY: the host contract, the arguments as given
-                None => unsafe { crate::lle_hosts::chain(&[$($t),*], obj, op, a, b, c, d, f) },
-            }
-        }
-    };
+/// A host's call (`ee_ui_*_host`, declared for C++ by their modules' generated headers): the moved ops are `call`'s
+/// (`fn(&mut impl Cpp, &HostArgs) -> Option<isize>`), the others the class's tables' (`lle_hosts.rs`: the C++ cases'
+/// one-statement shims).
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[allow(clippy::too_many_arguments)]
+pub(crate) unsafe fn host(
+    call: fn(&mut Ffi, &HostArgs) -> Option<isize>,
+    tables: &[crate::lle_hosts::Table],
+    obj: *mut c_void,
+    op: EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    let args = HostArgs { obj: obj as usize, op, a, b, c, d, f };
+    match call(&mut Ffi, &args) {
+        Some(r) => r,
+        // SAFETY: the host contract, the arguments as given
+        None => unsafe { crate::lle_hosts::chain(tables, obj, op, a, b, c, d, f) },
+    }
 }
-pub(crate) use lle_host;
 
 /// The FFI implementation of [`Cpp`]: the shims themselves.
 #[cfg(not(any(test, feature = "no_cpp")))]

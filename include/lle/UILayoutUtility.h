@@ -13,11 +13,9 @@
 #include "rust/ui/ids.h"
 
 // GERectangle: the pinned record every UI seam passes
-static_assert(sizeof(GERectangle) == sizeof(EeUiRect), "ee_ui/src/rect.rs");
-static_assert(offsetof(GERectangle, mBottom) == offsetof(EeUiRect, bottom), "ee_ui/src/rect.rs");
-static_assert(offsetof(GERectangle, mLeft) == offsetof(EeUiRect, left), "ee_ui/src/rect.rs");
-static_assert(offsetof(GERectangle, mRight) == offsetof(EeUiRect, right), "ee_ui/src/rect.rs");
-static_assert(offsetof(GERectangle, mTop) == offsetof(EeUiRect, top), "ee_ui/src/rect.rs");
+static_assert(sizeof(GERectangle) == sizeof(EeUiRect) && offsetof(GERectangle, mBottom) == offsetof(EeUiRect, bottom) &&
+              offsetof(GERectangle, mLeft) == offsetof(EeUiRect, left) && offsetof(GERectangle, mRight) == offsetof(EeUiRect, right) &&
+              offsetof(GERectangle, mTop) == offsetof(EeUiRect, top), "ee_ui/src/rect.rs");
 
 class LLE_API UILayoutUtility : public EeUiLayout {
 public:   // the record is Rust's (layout.rs; UI round 13)

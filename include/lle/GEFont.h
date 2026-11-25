@@ -5,6 +5,7 @@
 // the name, the bitmap and the platform font.
 #ifndef LLE_GEFONT_H
 #define LLE_GEFONT_H
+#include "lle/LLEForward.h"
 #include "rust/render/gestate.h"
 
 #include "lle/GEFontBitmap.h"   // rust/ee_ge.h
@@ -18,8 +19,6 @@ public:
     GEFont(const UString& inName, unsigned long inSize, unsigned long inStyle, unsigned long inQuality)
         : mRust(ee_ge_game_font_new(this, &inName, inSize, inStyle, inQuality)) {}
     virtual ~GEFont() { ee_ge_font_destroy(this->mRust); }
-    GEFont(const GEFont&) = delete;
-    GEFont& operator=(const GEFont&) = delete;
     bool CompareFont(const UString& inName, unsigned long inStyle, unsigned long inQuality, unsigned long inSize)
         { return ee_ge_font_compare(this->mRust, &inName, inStyle, inQuality, inSize); }
     void SetFontBitmap(GEFontBitmap* inBitmap) { ee_ge_font_set_bitmap(this->mRust, inBitmap); }
@@ -31,8 +30,7 @@ public:
     long GetHeight() const { return ee_ge_font_value(this->mRust, EeGeFontValue::Height); }
     PlatFont* GetOSFont() const { return static_cast<PlatFont*>(ee_ge_font_os(this->mRust)); }
     EeGeFont* GetRust() const { return this->mRust; }
-private:
-    EeGeFont* mRust;                        // the font (ee_ge smallobj.rs)
+    URust<EeGeFont> mRust;                        // the font (ee_ge smallobj.rs)
 };
 
 #endif

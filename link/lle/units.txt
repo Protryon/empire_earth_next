@@ -9,7 +9,6 @@
 45c00 47301 Network Engine/NESynchronousClient.cpp
 47301 47400 Network Engine/NESynchronousCommunications.cpp
 47400 4b04f Network Engine/NESynchronousServer.cpp
-4b190 4b275 Network Engine/Network Engine.cpp
 532d9 53675 Sound Engine/Sound Engine.cpp
 58d38 5c34a User Interface/UIBackground.cpp
 5c34a 5c84e User Interface/UIBackgroundTable.cpp

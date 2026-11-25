@@ -23,7 +23,7 @@
 #include <iterator>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
-#include "ee/wonapi/WONSurface.h"
+#include "won_surface_shell.h"
 #include "platform/PlatFont.h"
 #include "platform/PlatString.h"
 #include "rust/won_gui/platfont.h"

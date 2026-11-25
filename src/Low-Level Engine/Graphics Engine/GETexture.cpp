@@ -125,9 +125,7 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
 // ---- GETextureManager (GETextureManager.cpp, folded here in R4.3 part 16)
 
 // the Rust mirrors of the descriptions (texobj.rs), field for field
-static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "GETextureDescription");
-static_assert(offsetof(EeGeTextureDescription, num_mip_levels_to_drop) == offsetof(GETextureDescription, mNumMipLevelsToDrop), "");
-static_assert(offsetof(EeGeTextureDescription, use_texture_pack) == offsetof(GETextureDescription, mUseTexturePack), "");
+static_assert(sizeof(EeGeTextureDescription) == sizeof(GETextureDescription), "GETextureDescription is its record");
 
 
 // The calls the manager makes on other objects (EeGeManOp), in the original's statements

@@ -4,7 +4,7 @@
 
 #include "lle/GERust.h"
 
-class FSFile;
+#include "lle/LLEForward.h"
 
 class GEColor {                     // sizeof 0xc: red, green, blue (GetRed +0, GetGreen +4, GetBlue +8)
 public:

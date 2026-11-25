@@ -6,6 +6,7 @@
 // A connection (NEConnection*) and a published server (NEServer*) are the plug-in's own handles (round 5).
 #ifndef LLE_NEPROTOCOL_H
 #define LLE_NEPROTOCOL_H
+#include "lle/LLEForward.h"
 
 #include <string.h>
 #include <string>
@@ -15,10 +16,12 @@
 class NEConnection;                         // the plug-in's connection handle (ee_net_tcp's Connection), never defined
 class NEServer;                             // the plug-in's server handle (ee_net_tcp's Server), never defined
 
-LLE_API long NEInitialize(FSFileSpec& inDirectory);
-void NEShutdown(bool inForced);   // Network Engine.cpp's shutdown hook (frees the protocols)
+// Registers the network protocol, TCP/IP (the original loaded every 'ntwk' plug-in in the directory; the one there
+// was is linked in, Rust: ee_net net_tcp) after the shutdown hook that frees the protocols; fails if its plug-in is
+// not usable (ee_net ffi_protocol.rs)
+inline long NEInitialize(FSFileSpec&) { return ee_net_initialize(); }
 
-class LLE_API NEProtocol {
+class LLE_API NEProtocol : URustView {
 public:
     static unsigned long GetCount() { return ee_net_pr_count(); }
     // the registered protocol at an index, or a beyond-end error
@@ -58,9 +61,6 @@ public:
     }
     EeNetProtocol* Rust() const { return reinterpret_cast<EeNetProtocol*>(const_cast<NEProtocol*>(this)); }
 
-private:
-    NEProtocol() = delete;
-    ~NEProtocol() = delete;
 };
 
 #endif

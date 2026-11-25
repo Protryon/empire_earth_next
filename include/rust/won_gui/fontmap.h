@@ -21,6 +21,14 @@ EeWonFontMap *ee_won_fontmap_new();
 /// `m` is a map from `ee_won_fontmap_new` (or NULL), not used after.
 void ee_won_fontmap_free(EeWonFontMap *m);
 
+/// Window::FontMap's destructor (its C++ loop until R6 WON GUI round 36): every font popped in the map's order and
+/// each one not NULL given back through `release`, then the map freed.
+///
+/// # Safety
+/// `m` is a map from `ee_won_fontmap_new` (or NULL), not used after; `release` takes the fonts the map holds.
+void ee_won_fontmap_free_releasing(EeWonFontMap *m,
+                                   void (*release)(ptrdiff_t));
+
 /// `GetFont`'s lookup of the descriptor (`face` its `n` bytes): its font, or 0 (the entry is made).
 ///
 /// # Safety

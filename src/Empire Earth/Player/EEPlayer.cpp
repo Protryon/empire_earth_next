@@ -978,18 +978,6 @@ void EEPlayer::UpdatePlayer()
     ee_units_player_update(&theContext, &EEPlayerTickOperation, static_cast<EeUnitsPlayerSaved*>(this), this);
 }
 
-// Sets whether the unit and its following parts can cloak; turning it off also uncloaks them
-void EEComplexUnit::SetCloakableChain(bool inValue)
-{
-    ee_units_cloak_chain((uint64_t)EEPlayerUnitArg(this), 0, inValue);   // ee_units player_rest.rs
-}
-
-// Cloaks or uncloaks the unit and its following parts
-void EEComplexUnit::SetCloakedChain(bool inValue)
-{
-    ee_units_cloak_chain((uint64_t)EEPlayerUnitArg(this), 1, inValue);
-}
-
 // EETechTreeNode 0x1cf989 / 0x1cfcc9 call these through slots +0x88 / +0xcc; both slots hold the shared empty
 // `ret 4` 0x557269 (ICF), so each has an empty body (this also removes two unresolved virtuals)
 

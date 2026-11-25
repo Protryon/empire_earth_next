@@ -1638,6 +1638,50 @@ pub(crate) fn collect_units(rect: uu_reads::TileRect, keep: impl FnMut(u64) -> b
     uu_reads::units_in_rectangle(regions, rect, collector_unit, keep, out)
 }
 
+/// `EEGetUnitsInRectangle(rect, units, predicate, unique)` (ee/EEUnitCollector.h's template): the units of the map's
+/// unit regions under the tile rectangle whose tile is in it and that `keep(context, unit)` holds for, appended to
+/// `io`; sorted by id and made unique when `unique` and one was bigger than a tile. Their number.
+///
+/// # Safety
+/// `io` a live `std::vector` of unit pointers; `keep` callable with `context` and a unit's handle, changing no unit
+/// region.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_units_uu_collect_units(
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+    keep: unsafe extern "C" fn(*const c_void, u64) -> u8,
+    context: *const c_void,
+    io: *mut c_void,
+    unique: bool,
+) -> i32 {
+    // SAFETY: the caller's contract
+    unsafe {
+        let mut units = units_of(io);
+        let count = {
+            let t = WorldRead::begin();
+            match crate::world::WorldView::global(&t).and_then(|w| w.map()).and_then(|m| m.unit_regions().as_ref()) {
+                // (not unique: no unit counts as bigger than a tile, so nothing is sorted)
+                Some(regions) => uu_reads::units_in_rectangle(
+                    regions,
+                    (left, top, right, bottom),
+                    |u| {
+                        let (tile, id, size) = collector_unit(u);
+                        (tile, id, if unique { size } else { 1 })
+                    },
+                    |u| keep(context, u) != 0,
+                    &mut units,
+                ),
+                None => units.len() as i32,
+            }
+        };
+        set_units(io, &units);
+        count
+    }
+}
+
 /// `EEGetUnitsNear` (the units within `radius` of `center`).
 pub(crate) fn units_near(center: [f32; 3], radius: f32) -> Vec<u64> {
     let mut out = Vec::new();

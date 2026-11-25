@@ -4,13 +4,7 @@
 #define LLE_GESCREEN_H
 #include "rust/render/dx7.h"
 
-class UString;
-class GE2DPoint;
-class GERectangle;
-class GESurface;
-class GETextureManager;
-class GEWindow;
-struct GESurfaceDescription;
+#include "lle/LLEForward.h"
 // A display mode (DX7HRDisplay: DX7Screen::EnumVideoModeCallback 0x1000dc67 fills it from a DDSURFACEDESC2, SetMode
 // 0x1000de5d and the ctor read it back; vector element stride 0x14). Names are provisional.
 typedef EeDx7VideoMode GEVideoMode;          // the record is Rust's (ee_render dx7 screen.rs)

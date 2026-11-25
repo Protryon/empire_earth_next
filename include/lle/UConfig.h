@@ -16,13 +16,8 @@ public:
     long GetValue(const char* inBlock, const char* inKey, long& outValue) { return ee_uconfig_get_long(inBlock, inKey, &outValue); }
     // a string of at most 1023 bytes
     long GetValue(const char* inBlock, const char* inKey, UWideString& outValue)
-    {
-        char theData[1024];
-        if (!PlatConfigGetString(inBlock, inKey, theData, sizeof(theData)))
-            return kErrorNotFound;
-        outValue = theData;
-        return kErrorOK;
-    }
+        { return ee_uconfig_get_text(inBlock, inKey, UConfig::Assign, &outValue); }
+    static void Assign(void* inString, const char* inText) { *static_cast<UWideString*>(inString) = inText; }
     long SetValue(const char* inBlock, const char* inKey, long inValue)
         { return PlatConfigSetInt(inBlock, inKey, (int32_t)inValue) ? kErrorOK : kErrorNotFound; }
     long SetValue(const char* inBlock, const char* inKey, const UWideString& inValue)

@@ -3,8 +3,7 @@
 #define LLE_GE3DLINE_H
 #include "lle/GERust.h"
 
-class FSFile;
-class GE3DPlane;
+#include "lle/LLEForward.h"
 
 class GE3DLine : public EeGe3DLine {   // the Rust record (mStart, mDirection; rust/base/math.h)
 public:

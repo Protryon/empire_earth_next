@@ -229,15 +229,6 @@ void EEWorld::RestartUnits()
     ee_gamecpp_world_sight_all(this, true);
 }
 
-// Resets the unit's collision state, collision tile and collision resolution count
-// (an EEComplexUnit member defined here: ReplacePlayer and the unit change call it; provisional name)
-void EEComplexUnit::ClearCollisionState()
-{
-    this->mCollisionState = 0;
-    this->mCollisionTile.mY = this->mCollisionTile.mX = -10000;
-    this->mCollisionResolutionCount = 0.0f;
-}
-
 // Counts one gatherer fewer on a resource unit (an untracked unit is ignored)
 void EEWorld::ReleaseResourceUser(EEUnit* inUnit)
 {

@@ -507,10 +507,11 @@ struct ImageConfig : ComponentConfig { V24; KIND(Image); SmartPtr<Image> mImage 
 static int sNextStretch;
 struct StretchImageConfig : ImageConfig {
     V24; KIND(StretchImage); StretchImage* mStretchImage;
-    StretchImageConfig() { mStretchImage = new StretchImage(sNextStretch++); mImage = mStretchImage; }
+    explicit StretchImageConfig(EeWonCfgKind = EeWonCfgKind::StretchImage) { mStretchImage = new StretchImage(sNextStretch++); mImage = mStretchImage; }
 };
 struct ImageFilterConfig : ImageConfig {
     V24; KIND(ImageFilter); SmartPtr<RawImage> mRawImage = new RawImage(99, 40, 20); bool mImageIsRawImage = false;
+    explicit ImageFilterConfig(EeWonCfgKind = EeWonCfgKind::ImageFilter) {}
     SmartPtr<RawImage> HandleFilter();
     // (a filter that made no image leaves an empty one here: the original's next use of it would crash)
     void SetRawImage(RawImage* r)

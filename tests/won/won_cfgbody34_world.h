@@ -177,7 +177,7 @@ public:
 };
 class PercentLayoutConfig : public ComponentConfig {
 public:
-    PercentLayoutConfig() : ComponentConfig("pctcfg") { for (int i = 0; i < 4; ++i) this->refs[i] = NULL; for (int i = 0; i < 8; ++i) this->params[i] = -1; }
+    explicit PercentLayoutConfig(EeWonCfgKind = EeWonCfgKind::PercentLayout) : ComponentConfig("pctcfg") { for (int i = 0; i < 4; ++i) this->refs[i] = NULL; for (int i = 0; i < 8; ++i) this->params[i] = -1; }
     virtual bool PreParse(ConfigParser*);
     Component* target = NULL;
     Component* refs[4];
@@ -185,7 +185,7 @@ public:
 };
 class ColorSchemeConfig : public ComponentConfig {
 public:
-    ColorSchemeConfig() : ComponentConfig("schemecfg") { this->mColorScheme = new ColorScheme(0); }
+    explicit ColorSchemeConfig(EeWonCfgKind = EeWonCfgKind::ColorScheme) : ComponentConfig("schemecfg") { this->mColorScheme = new ColorScheme(0); }
     virtual bool PreParse(ConfigParser*);
     Component* target = NULL;
     SmartPtr<ColorScheme> mColorScheme;

@@ -66,12 +66,6 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
     return ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_OP, inClass, inUnit, EEObj(inoutAirport), inOperation, inA, NULL);   // uca_air.rs
 }
 
-// Sets the unit's initial contact location
-void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
-{
-    if (this->mInitialContactLocation != inPoint)
-        this->mInitialContactLocation = inPoint;
-}
 
 // Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
 // Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
@@ -199,8 +193,7 @@ template <class T> static T* EEUcaObject(uint64_t inHandle)
 }
 
 // GetGroundHeight's closest tile (its x and y are not read)
-static long sUcaX;
-static long sUcaY;
+static long sUcaTile[2];   // x, y
 
 // the carrier's fighters, best first (EE_UNITS_UCA_FIGHTER_*)
 static const long kUcaFighters[3] = {kTechInf15Watchman, kTechInf14Guardian, kTechInf13Sentinel};
@@ -243,7 +236,7 @@ extern "C" int64_t ee_units_uca_host(int32_t inOp, void* inClass, void* inUnit, 
     case EE_UNITS_UCA_CRUISE: f[0] = theClass->GetCruiseAltitude(); return 0;
     case EE_UNITS_UCA_LANDING_POINT: EEFindLandingPoint(theUnit, &p); return 0;
     case EE_UNITS_UCA_GET_TILE: return EEObj(::gWorld.mMap->GetTile((long)inB, (long)inC));
-    case EE_UNITS_UCA_CLOSEST_TILE: return EEObj(::gWorld.mMap->GetClosestTile(&p, &sUcaX, &sUcaY));
+    case EE_UNITS_UCA_CLOSEST_TILE: return EEObj(::gWorld.mMap->GetClosestTile(&p, &sUcaTile[0], &sUcaTile[1]));
     case EE_UNITS_UCA_TILE_HEIGHT_OF: f[0] = EEUcaObject<EEMapTile>(inA)->GetHeight(); return 0;
     case EE_UNITS_UCA_APPROACH_CARRIER: theClass->ApproachCarrier(theUnit, inB != 0); return 0;
     case EE_UNITS_UCA_ATC: return EEObj(theUnit->mPlayer->mAirTraffic[theUnit->mUnitClass->mAirTrafficType - 1]);

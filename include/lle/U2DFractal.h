@@ -7,6 +7,7 @@
 // uninitialised).
 #ifndef LLE_U2DFRACTAL_H
 #define LLE_U2DFRACTAL_H
+#include "lle/LLEForward.h"
 
 #include "rust/base/util.h"
 
@@ -21,8 +22,6 @@ public:
         this->ComputeFractal(inCornerValue, inRange, inSeed);
     }
     ~U2DFractal() { ee_util_fractal_free(this->mFractal); }
-    U2DFractal(const U2DFractal&) = delete;
-    U2DFractal& operator=(const U2DFractal&) = delete;
 
     // diamond-square subdivision wrapping at the edges, the random range shrinking with the step; each value the
     // average plus a random offset within the scaled range, clamped to 0..1
@@ -30,8 +29,7 @@ public:
         { ee_util_fractal_compute(this->mFractal, inCornerValue, inRange, inSeed); }
     float GetValue(unsigned long inX, unsigned long inY) { return ee_util_fractal_value(this->mFractal, inX, inY); }
 
-private:
-    EeUtilFractal* mFractal;
+    URust<EeUtilFractal> mFractal;
 };
 
 #endif

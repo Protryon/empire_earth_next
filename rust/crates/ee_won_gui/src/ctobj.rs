@@ -1416,6 +1416,67 @@ pub unsafe extern "C" fn ee_won_ct_layout_new(ct: *const EeWonContainer, host: E
     unsafe { (*ct).make_layout(host) }
 }
 
+/// `Container::Container` whole (R6 WON GUI round 36): the Rust container, its child layout manager (`layout_host`
+/// the layout objects' host) and the component's want-focus flag.
+///
+/// # Safety
+/// `component` is the C++ component being constructed (its members laid out as compmem's block).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_ct_make(
+    component: *mut c_void,
+    host: EeWonGuiHostFn,
+    layout_host: EeWonGuiHostFn,
+    wheel_to_focus: bool,
+) -> *mut EeWonContainer {
+    let made = ee_won_ct_new(component, host, wheel_to_focus);
+    // SAFETY: just made
+    unsafe { (*made).make_layout(layout_host) };
+    crate::compobj::comp().set_flags(component as isize, crate::compobj::EE_WON_COMP_FLAG_WANT_FOCUS, true);
+    made
+}
+
+/// `ScreenContainer::ShowScreen` (0x306ab0): the current screen (at `cur`) hidden and `screen` shown, focused when
+/// `take_focus`, the container `me` invalidated; nothing when `screen` is the current one. As the original, `screen`
+/// is shown before it is tested for NULL.
+///
+/// # Safety
+/// `me` and `screen` are live components; `cur` is the container's current-screen member.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_ct_show_screen(
+    me: *mut c_void,
+    cur: *mut *mut c_void,
+    screen: *mut c_void,
+    take_focus: bool,
+) {
+    // SAFETY: the contract
+    unsafe { show_screen(crate::compobj::comp(), me, cur, screen, take_focus) }
+}
+
+/// `ee_won_ct_show_screen` over the component host `k`.
+unsafe fn show_screen(
+    k: crate::compobj::Comp,
+    me: *mut c_void,
+    cur: *mut *mut c_void,
+    screen: *mut c_void,
+    take_focus: bool,
+) {
+    // SAFETY: the contract
+    let old = unsafe { *cur };
+    if screen == old {
+        return;
+    }
+    if !old.is_null() {
+        k.v_set_visible(old as isize, false);
+    }
+    k.v_set_visible(screen as isize, true);
+    // SAFETY: the contract
+    unsafe { *cur = screen };
+    if !screen.is_null() && take_focus {
+        k.request_focus(screen as isize);
+    }
+    k.v_invalidate(me as isize);
+}
+
 /// One of the container's layout methods (`EeWonContainer::layout_call`).
 ///
 /// # Safety

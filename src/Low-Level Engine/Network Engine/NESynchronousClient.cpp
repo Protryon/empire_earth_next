@@ -11,18 +11,6 @@
 #include "lle/NESynchronousClient.h"
 #include "rust/net/net.h"
 
-NESynchronousClient::NESynchronousClient(EeNetClHostFn inHost)
-{
-    // the client calls the protocol itself (ee_net ffi_protocol.rs)
-    this->mClient = ee_net_cl_new(this, inHost, NESynchronousClient::QueueHost, this->mComms, true);
-}
-
-NESynchronousClient::~NESynchronousClient()
-{
-    ee_net_cl_free(this->mClient);
-}
-
-
 // The client's calls out, each the statement NESynchronousClient.cpp made (the protocol ops are the Rust's own:
 // ee_net ffi_protocol.rs)
 ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, size_t b, size_t c, size_t d)

@@ -90,7 +90,7 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::CropFilter: return (intptr_t)new SmartPtr<RawImage>(ImageCrop(EE_CFG(ImageFilterConfig)->mRawImage.get(),(int)x,0,(int)y,EE_CFG(ImageFilterConfig)->mRawImage->GetHeight()));
     case O::HeldRaw: return (intptr_t)((SmartPtr<RawImage>*)x)->get();
     case O::RawFree: delete (SmartPtr<RawImage>*)x; return 0;
-    case O::StretchNew: return (intptr_t)new StretchImageConfig;
+    case O::StretchNew: return (intptr_t)new StretchImageConfig(EeWonCfgKind::StretchImage);
     case O::StretchCopy: ((StretchImageConfig*)x)->mStretchImage->CopyAttributes(EE_CFG(StretchImageConfig)->mStretchImage); return 0;
     case O::StretchHold: return (intptr_t)new SmartPtr<StretchImageConfig>((StretchImageConfig*)x);
     case O::StretchFree: delete (SmartPtr<StretchImageConfig>*)x; return 0;
@@ -100,7 +100,7 @@ static intptr_t CfgTabOp(void* p,EeWonCfgTabOp op,intptr_t x,intptr_t y,intptr_t
     case O::FrameChild: return (intptr_t)a.child.get();
     case O::FrameRaw: return (intptr_t)a.raw.get();
     case O::SetFrameChild: a.child=(StretchImageConfig*)x; return 0;
-    case O::FilterNew: return (intptr_t)new SmartPtr<ImageFilterConfig>(new ImageFilterConfig);
+    case O::FilterNew: return (intptr_t)new SmartPtr<ImageFilterConfig>(new ImageFilterConfig(EeWonCfgKind::ImageFilter));
     case O::FilterSetRaw: (*(SmartPtr<ImageFilterConfig>*)x)->SetRawImage((RawImage*)y); return 0;
     case O::FilterToParent: return CFG_GV(static_cast<ComponentConfig*>(a.mConfig->GetParentObject())->AddChildToConfigMap(GUIString(std::string((const char*)x,(size_t)y)),((SmartPtr<ImageFilterConfig>*)z)->get()));
     case O::FilterToParentS0: return CFG_GV(static_cast<ComponentConfig*>(a.mConfig->GetParentObject())->AddChildToConfigMap(a.s[0],((SmartPtr<ImageFilterConfig>*)z)->get()));
@@ -145,11 +145,16 @@ static void CfgTabClear(void* p)
     CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
     a.ni=a.ns=a.nf=a.nm=a.nc=a.nrs=0; a.f[0]=NULL; a.m[0]=NULL; a.lay=NULL; a.raw=NULL;
 }
-static bool CfgTabRead(void* p,EeWonCfgRead inKind)
+// a host call's statements over the frame: false with the exception kept in the frame
+template<class F> static bool CfgTabTry(void* p, F f)
 {
     CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
-    ComponentConfig* cfg=a.mConfig;
-    try {
+    try { return f(a); } catch(...) { a.mError=std::current_exception(); return false; }
+}
+static bool CfgTabRead(void* p,EeWonCfgRead inKind)
+{
+    return CfgTabTry(p,[inKind](CfgTabFrame& a) {
+        ComponentConfig* cfg=a.mConfig;
         switch(inKind) {
         case EeWonCfgRead::Int: a.i[a.ni++]=cfg->ReadInt(); break;
         case EeWonCfgRead::Bool: a.i[a.ni++]=cfg->ReadBool(); break;
@@ -180,13 +185,9 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
         case EeWonCfgRead::RawStr: a.rs[a.nrs++]=cfg->ReadRawString(false); break;
         }
         return true;
-    } catch(...) { a.mError=std::current_exception(); return false; }
+    });
 }
-static bool CfgTabComma(void* p)
-{
-    CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
-    try { a.mConfig->EnsureComma(); return true; } catch(...) { a.mError=std::current_exception(); return false; }
-}
+static bool CfgTabComma(void* p) { return CfgTabTry(p,[](CfgTabFrame& a) { a.mConfig->EnsureComma(); return true; }); }
 static bool CfgTabEnd(void* p) { return static_cast<CfgTabFrame*>(p)->mConfig->EndOfString(); }
 static const void* CfgTabText(void* p,int32_t inSlot,uint16_t* outLen,uint32_t* outUnit)
 {
@@ -396,11 +397,7 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
 #undef EE_CFG_KEY
 #undef EE_CFG
 #undef EE_C
-static bool CfgTabApply(void* p,int32_t inSetter)
-{
-    CfgTabFrame& a=*static_cast<CfgTabFrame*>(p);
-    try { CfgTabSet(a,inSetter); return true; } catch(...) { a.mError=std::current_exception(); return false; }
-}
+static bool CfgTabApply(void* p,int32_t inSetter) { return CfgTabTry(p,[inSetter](CfgTabFrame& a) { CfgTabSet(a,inSetter); return true; }); }
 // The handler of inTable for inKey: true when the table holds the key (and the key was handled), false to ask the
 // base; a read's or setter's exception is rethrown here.
 bool ComponentConfig::RunTable(int inTable,const std::string& inKey)

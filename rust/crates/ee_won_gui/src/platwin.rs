@@ -17,6 +17,7 @@
 use std::ffi::c_void;
 
 use crate::platwm::{EeWonPlatWinInfo, EeWonPlatWmCall};
+use ee_base::plat_core::string::WChar;
 
 /// What the window asks of its C++ shell (`me`).
 #[repr(i32)]
@@ -38,7 +39,7 @@ pub enum EeWonPlatWinOp {
     Open = 6,
     /// `GetStyle()`.
     Style = 7,
-    /// `Window::Create(WONRectangle(a..d))`, the display context and the offscreen image of the root's size.
+    /// `BaseCreate(c, d)`: Window::Create's statements on the client rectangle `a..d` (the size `c, d`).
     WindowCreate = 8,
     /// `Center(a)`.
     Center = 9,
@@ -58,22 +59,39 @@ pub enum EeWonPlatWinOp {
     MouseIn = 16,
     /// `mRoot->Contains(a, b)`.
     RootContains = 17,
-    /// The root repainted into the offscreen image when it is invalid and there is one -> whether it was.
+    /// `mRoot->PrePaint(mOffscreenImage->GetGraphics())`.
     Paint = 18,
-    /// The parent when it is a PlatGUIWindow and visible, else 0.
-    ParentVisible = 19,
+    /// The parent's platform window (`GetParent()->mRust`), 0 without a parent.
+    ParentPlat = 19,
     /// `Window::PlatformClose()`.
     WindowClose = 20,
     /// `Window::TimerEvent(a)`.
     WindowTimer = 21,
     /// The cursor `a` when it is a PlatCursor: the system pointer shown and the cursor applied.
     ApplyCursor = 22,
-    /// Whether the manager's popup window does not want the mouse and is the window `a`.
-    PopupHit = 23,
+    /// The manager's `GetPopupWindow()`.
+    PopupWindow = 23,
     /// `PlatCursorShow(a)`.
     CursorShow = 24,
     /// `PlatWindowMinimize((PlatWindow*)a)`.
     PlatMinimize = 25,
+    // ---- R6 WON GUI round 36: Window::Create's, OnPaint's and FollowPixelScale's statements
+    /// `mDisplayContext = new DisplayContext(NULL)`.
+    NewContext = 26,
+    /// `mOffscreenImage = CreateImage(mRoot->Width(), mRoot->Height())`.
+    OffscreenOfRoot = 27,
+    /// The offscreen image's Rust image (`mOffscreenImage->mRust`), 0 for none.
+    Offscreen = 28,
+    /// `mRoot->mInvalidState != 0`.
+    RootInvalid = 29,
+    /// `mRoot->Paint(mOffscreenImage->GetGraphics())`.
+    RootPaint = 30,
+    /// A new offscreen image of `a` x `b` with the old one drawn into it at 0, 0 (the window's WinNewOffscreen).
+    CopyOffscreen = 31,
+    /// `mRoot->Invalidate()`.
+    RootInvalidate = 32,
+    /// The manager's `GetPopupFlags()`.
+    PopupFlags = 33,
 }
 
 pub type EeWonPlatWinHost =
@@ -125,12 +143,16 @@ pub enum EeWonPlatWinCall {
     /// `QueueMouse(a, b[0], b[1], b[2], b[3])`: the event type `a` and the four ints at `b` (the surface's x and y,
     /// the modifiers, the button or amount), as the manager hands them.
     QueueMouseAt = 22,
+    /// FollowPixelScale: `a` the manager's new pixel scale's bits.
+    FollowPixelScale = 23,
 }
 
 /// The window's own state.
 pub struct EeWonPlatWin {
     me: *mut c_void,
     host: EeWonPlatWinHost,
+    /// Window::mTitle (the C++ member until R6 WON GUI round 36): "Sierra App" from the constructor.
+    title: Vec<WChar>,
     x: i32,
     y: i32,
     width: i32,
@@ -216,6 +238,8 @@ fn create(w: W, r: [i32; 4]) {
     }
     let c = client(w);
     host(w, Op::WindowCreate, c[0] as isize, c[1] as isize, c[2] as isize, c[3] as isize);
+    host(w, Op::NewContext, 0, 0, 0, 0);
+    host(w, Op::OffscreenOfRoot, 0, 0, 0, 0);
     if mgr {
         wm(w, EeWonPlatWmCall::Add, st(w).me as isize, 0);
     }
@@ -301,7 +325,9 @@ fn show(w: W, on: bool) {
             wm(w, EeWonPlatWmCall::SetFocus, me, 0);
         }
     } else if wm(w, EeWonPlatWmCall::Focus, 0, 0) == me {
-        let next = host(w, Op::ParentVisible, 0, 0, 0, 0);
+        // the parent when it is visible (R6 WON GUI round 36: the parent's own platform window read here)
+        let p = host(w, Op::ParentPlat, 0, 0, 0, 0) as W;
+        let next = if p.is_null() || !st(p).visible { 0 } else { st(p).me as isize };
         wm(w, EeWonPlatWmCall::SetFocus, next, 0);
     }
 }
@@ -321,10 +347,36 @@ fn timer(w: W, elapsed: isize) {
     if hit == me && host(w, Op::RootContains, (p[0] - c[0]) as isize, (p[1] - c[1]) as isize, 0, 0) != 0 {
         return;
     }
-    if hit != me && host(w, Op::PopupHit, hit, 0, 0, 0) != 0 {
-        return;
+    // the manager's popup window that does not want the mouse
+    if hit != me {
+        let popup = host(w, Op::PopupWindow, 0, 0, 0, 0);
+        if popup != 0 && host(w, Op::PopupFlags, 0, 0, 0, 0) & POPUP_DONT_WANT_MOUSE != 0 && popup == hit {
+            return;
+        }
     }
     host(w, Op::QueueExit, 0, 0, 0, 0);
+}
+
+/// `PopupFlag_DontWantMouse`.
+const POPUP_DONT_WANT_MOUSE: isize = crate::guienum::EeWonGuiPopupFlags::PopupFlag_DontWantMouse as isize;
+
+/// FollowPixelScale (Window.cpp until R6 WON GUI round 36): an open window's offscreen image made again at the
+/// manager's new pixel scale `k` with the old one drawn into it, the root invalidated and the manager dirty.
+fn follow_pixel_scale(w: W, k: f32) {
+    let img = host(w, Op::Offscreen, 0, 0, 0, 0) as *const crate::imgobj::EeWonImage;
+    if !ask(w, Op::HasWm) || img.is_null() || !ask(w, Op::Open) {
+        return;
+    }
+    use crate::imgobj::{ee_won_image_get, EeWonImageField as F};
+    // SAFETY: the window's live offscreen image (no call out between)
+    let (scale, width, height) =
+        unsafe { (ee_won_image_get(img, F::Scale), ee_won_image_get(img, F::Width), ee_won_image_get(img, F::Height)) };
+    if f32::from_bits(scale as u32) == k {
+        return;
+    }
+    host(w, Op::CopyOffscreen, width as u16 as isize, height as u16 as isize, 0, 0);
+    host(w, Op::RootInvalidate, 0, 0, 0, 0);
+    wm(w, EeWonPlatWmCall::SetDirty, 0, 0);
 }
 
 /// One call.
@@ -401,10 +453,14 @@ fn call(w: W, c: EeWonPlatWinCall, a: isize, b: isize, cc: isize, d: isize) -> i
         C::IsVisible => return isize::from(st(w).visible),
         C::Timer => timer(w, a),
         C::Paint => {
-            if ask(w, Op::Paint) {
+            // OnPaint: the root repainted into the offscreen image when it is invalid and there is one
+            if ask(w, Op::RootInvalid) && ask(w, Op::Offscreen) {
+                host(w, Op::Paint, 0, 0, 0, 0);
+                host(w, Op::RootPaint, 0, 0, 0, 0);
                 dirty(w);
             }
         }
+        C::FollowPixelScale => follow_pixel_scale(w, f32::from_bits(a as u32)),
         C::QueueMouse => {
             let p = ints(a, 5);
             let (t, sx, sy, m, n) = (p[0], p[1], p[2], p[3], p[4]);
@@ -435,6 +491,7 @@ pub extern "C" fn ee_won_plat_win_new(me: *mut c_void, host: EeWonPlatWinHost) -
     Box::into_raw(Box::new(EeWonPlatWin {
         me,
         host,
+        title: "Sierra App".encode_utf16().map(|c| c as WChar).collect(),
         x: 0,
         y: 0,
         width: 0,
@@ -445,6 +502,30 @@ pub extern "C" fn ee_won_plat_win_new(me: *mut c_void, host: EeWonPlatWinHost) -
         minimize_on_alt_tab: false,
         forward_keys: false,
     }))
+}
+
+/// Window::SetTitle's member assignment: the `n` units (`wchar_t`) at `units`.
+///
+/// # Safety
+/// `w` is a live window; `units` holds `n` units (or `n` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_plat_win_set_title(w: *mut EeWonPlatWin, units: *const c_void, n: usize) {
+    // SAFETY: the contract
+    let t = if n == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(units as *const WChar, n) } };
+    st(w).title = t.to_vec();
+}
+
+/// The title's units (`n` gets their count); valid until the next SetTitle.
+///
+/// # Safety
+/// `w` is a live window, `n` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_plat_win_title(w: *const EeWonPlatWin, n: *mut i32) -> *const c_void {
+    // SAFETY: the contract
+    let t = unsafe { &(*w).title };
+    // SAFETY: the contract
+    unsafe { *n = t.len() as i32 };
+    t.as_ptr() as *const c_void
 }
 
 /// # Safety

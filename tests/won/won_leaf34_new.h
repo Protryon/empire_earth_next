@@ -267,6 +267,11 @@ static intptr_t HostCompItem(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
     case Lo::CompItemAdded: t->mComponent->AddedToParent(); return 0;
     case Lo::CompItemBaseSetPos: t->PaintItem::SetPos((int)a, (int)b); return 0;
     case Lo::CompItemSetPos: t->mComponent->SetPos((int)a, (int)b); return 0;
+    case Lo::CompItemSizable: return t->mIsSizable ? 1 : 0;
+    case Lo::CompItemListPaintWidth: return ((PaintList*)a)->GetPaintWidth();
+    case Lo::CompItemSetSize: t->mComponent->SetSize((int)a, (int)b); return 0;
+    case Lo::CompItemMarkInvalid: t->mComponent->MarkInvalid(); return 0;
+    case Lo::CompItemPaint: t->mComponent->Paint(*(PaintGraphics*)a); return 0;
     default: return 0;
     }
 }
@@ -279,5 +284,7 @@ void ComponentListItem::SetViewport(PaintList*,Container* viewport)
 }
 
 void ComponentListItem::SetPos(int x,int y) { ee_won_leaf_call(static_cast<ListItem*>(this), MutCompItem, EeWonLeafCall::ComponentItemSetPos, x, y); }
+
+void ComponentListItem::Paint(PaintGraphics& g,PaintList* area) { ee_won_leaf_call(static_cast<ListItem*>(this), MutCompItem, EeWonLeafCall::ComponentItemPaint, (intptr_t)&g, (intptr_t)area); }
 
 } // namespace LfNew

@@ -15,7 +15,6 @@ mod sys {
         pub fn ee_screenscpp_um_engine_count() -> i64;
         pub fn ee_screenscpp_um_music(call: *mut c_void);
         pub fn ee_screenscpp_um_citizens() -> i64;
-        pub fn ee_screenscpp_um_post_f9();
         pub fn ee_screenscpp_um_base_keyboard(call: *mut c_void) -> i64;
         pub fn ee_screenscpp_um_base_mouse(call: *mut c_void) -> i64;
     }
@@ -45,7 +44,7 @@ impl UiHost for ManagerHost {
                 }
                 ui_manager::EE_SCREENS_UM_OP_CITIZENS => sys::ee_screenscpp_um_citizens(),
                 ui_manager::EE_SCREENS_UM_OP_POST_F9 => {
-                    sys::ee_screenscpp_um_post_f9();
+                    crate::screens::ui_helpers::post_f9(&mut crate::screens::game_cpp::Ffi);
                     0
                 }
                 ui_manager::EE_SCREENS_UM_OP_BASE_KEYBOARD => sys::ee_screenscpp_um_base_keyboard(self.0),

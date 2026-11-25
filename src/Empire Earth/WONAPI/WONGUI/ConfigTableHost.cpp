@@ -42,10 +42,13 @@ void CfgSkinClickSound(ComponentConfig*); // below
 // since R6 WONLobby round 26 the bindings, predefined children and named values of the deleted config classes are their
 // kinds' (ee_won_gui cfgkind.rs, WONCompCfg.inl).
 namespace WONAPI {
-// A config of a kind: a ContainerConfig for the container kinds (the original classes' constructors)
+// A config of a kind: a ContainerConfig for the container kinds, a MediaConfig for the media kinds (the original
+// classes' constructors)
 ComponentConfig* CfgNewOfKind(EeWonCfgKind inKind)
 {
-    if(ee_won_cfg_kind_is(inKind,EeWonCfgKind::Container)) return new ContainerConfig(inKind);
+    typedef EeWonCfgKind K;
+    if(ee_won_cfg_kind_is(inKind,K::Container)) return new ContainerConfig(inKind);
+    if(ee_won_cfg_kind_is(inKind,K::Image) || inKind==K::Font || inKind==K::PercentLayout || inKind==K::ColorScheme) return new MediaConfig(inKind);
     return new ComponentConfig(inKind);
 }
 // Grows the button to fit the largest of a comma-separated list of texts, keeping its current text (cfgbody.rs)
@@ -57,4 +60,52 @@ void CfgSkinClickSound(ComponentConfig* inConfig)
     SmartPtr<Sound> sound=inConfig->ReadSound();
     ee_won_skin_click_sound(WONSkinGlobal(),sound.get());
 }
+}
+namespace WONAPI {
+// Reads a PERCENTLAYOUT group into a percent layout (relative to the component if no reference is given) or a
+// COLORSCHEME group into the container's colour scheme; other instructions go to the base config (cfgbody.rs)
+bool ContainerConfig::HandleInstruction(ConfigParser* p, const std::string& t) { return CfgBodyCall(this, EeWonCfgBody::ContainerInstruction, (intptr_t)p, (intptr_t)t.data(), (intptr_t)t.size()) != 0; }
+// ---- the media configs (R6 WON GUI round 36: the original's image, font, percent layout and colour scheme config
+// classes as kinds; their bodies cfgbody.rs's; ComponentLayoutConfigs.cpp, FontConfig.cpp and ImageConfig.cpp held
+// nothing else)
+// A config of a media kind: the image kinds and the font make no child components; a stretch image config makes its
+// empty image (0x38b4e0, 0x38bf90), a scheme config its own colour scheme (0x788260); a percent layout config has no
+// references and every parameter unset (0x787fb0); a font config needs its font looked up (0x38a1c0)
+MediaConfig::MediaConfig(EeWonCfgKind inKind) : ComponentConfig(inKind), mStretchImage(NULL), mStretchCenterImage(NULL),
+    mImageIsRawImage(false), mNeedRecalcFont(true), target(NULL), refs(), params{-1,-1,-1,-1,-1,-1,-1,-1}
+{
+    this->mHaveInitedComponents=inKind!=EeWonCfgKind::PercentLayout && inKind!=EeWonCfgKind::ColorScheme;
+    if(inKind==EeWonCfgKind::StretchImage) this->mImage=this->mStretchImage=new StretchImage(NULL,0,0,0,0);
+    if(inKind==EeWonCfgKind::StretchCenterImage) this->mImage=this->mStretchCenterImage=new StretchCenterImage;
+    if(inKind==EeWonCfgKind::ColorScheme) this->mColorScheme=new ColorScheme;
+}
+// The percent layout finds the component it is named after in the parent config (an error if it is missing); the
+// scheme starts from the colours of the nearest parent component with its own scheme, else the window manager's
+bool MediaConfig::PreParse(ConfigParser* p)
+{
+    if(this->mKind==EeWonCfgKind::PercentLayout) return CfgBodyCall(this, EeWonCfgBody::PercentPreParse, (intptr_t)p) != 0;
+    if(this->mKind==EeWonCfgKind::ColorScheme) return CfgBodyCall(this, EeWonCfgBody::SchemePreParse, (intptr_t)p) != 0;
+    return ComponentConfig::PreParse(p);
+}
+// The font's SIZE or HEIGHT (false without a font), the image's WIDTH or HEIGHT; false for other names
+bool MediaConfig::GetNamedValue(const std::string& n, int& v)
+{
+    if(this->mKind==EeWonCfgKind::Font) return CfgBodyCall(this, EeWonCfgBody::FontNamed, (intptr_t)n.data(), (intptr_t)n.size(), (intptr_t)&v) != 0;
+    if(this->Is(EeWonCfgKind::Image)) return CfgBodyCall(this, EeWonCfgBody::ImageNamed, (intptr_t)n.data(), (intptr_t)n.size(), (intptr_t)&v) != 0;
+    return ComponentConfig::GetNamedValue(n, v);
+}
+// The configured font, first fetched from the default window when the descriptor changed and no matching font is
+// held (cfgbody.rs)
+Font* MediaConfig::GetFont() { return (Font*)CfgBodyCall(this, EeWonCfgBody::FontGet); }
+// Sets the font directly, taking its descriptor, so no lookup is needed
+void MediaConfig::SetFont(Font* f) { CfgBodyCall(this, EeWonCfgBody::FontSet, (intptr_t)f); }
+// The filter's raw image (also as the current image), its native image not yet built
+void MediaConfig::SetRawImage(RawImage* inImage)
+{
+    this->mRawImage=inImage;
+    this->mImage=inImage;
+    this->mImageIsRawImage=true;
+}
+// The image; the filter's first converts a pending raw image to a native one on the default window (cfgbody.rs)
+Image* MediaConfig::GetImage() { return this->mKind==EeWonCfgKind::ImageFilter ? (Image*)CfgBodyCall(this, EeWonCfgBody::FilterImage) : this->mImage.get(); }
 }

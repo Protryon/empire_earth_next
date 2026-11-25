@@ -20,23 +20,6 @@ using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
 
-// the button's and component's methods (EeWonSkinBtn)
-static intptr_t SkinBtnOp(MSButtonBase* t, intptr_t which, intptr_t b, intptr_t c)
-{
-    switch ((EeWonSkinBtn)which) {
-    case EeWonSkinBtn::IsDisabled: return t->IsDisabled() ? 1 : 0;
-    case EeWonSkinBtn::HasFocus: return t->HasFocus() ? 1 : 0;
-    case EeWonSkinBtn::Parent: return (intptr_t)t->mParent;
-    case EeWonSkinBtn::UsedDialogKeys: return ((Container*)b)->HasUsedDialogKeys() ? 1 : 0;
-    case EeWonSkinBtn::IsPressed: return t->IsPressed() ? 1 : 0;
-    case EeWonSkinBtn::IsChecked: return t->IsChecked() ? 1 : 0;
-    case EeWonSkinBtn::SetGrabBG: t->SetComponentFlags(ComponentFlag_GrabBG,true); return 0;
-    case EeWonSkinBtn::SetWantFocus: t->SetComponentFlags(ComponentFlag_WantFocus,b!=0); return 0;
-    case EeWonSkinBtn::SetButtonFlags: t->SetButtonFlags((unsigned long)b,c!=0); return 0;
-    default: return 0;
-    }
-}
-
 // the Rust's check box colour is StandardColor_Text (msbtnobj.rs SYS_TEXT)
 static_assert(StandardColor_Text==14,"msbtnobj.rs SYS_TEXT");
 
@@ -45,27 +28,15 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
     (void)d;
     MSButtonBase* t = (MSButtonBase*)inComp;
     switch (op) {
-    case Op::Get:
-        if ((EeWonGuiField)a == EeWonGuiField::Width) return t->Width();
-        if ((EeWonGuiField)a == EeWonGuiField::Height) return t->Height();
-        return 0;
-    case Op::SetSize: t->SetSize((int)a,(int)b); return 0;
     case Op::WrapSetMaxWidth: t->mText->SetMaxWidth((int)a); return 0;
     case Op::WrapSetCentered: t->mText->SetCentered(a != 0); return 0;
     case Op::WrapWidth: return t->mText->GetWidth();
     case Op::WrapHeight: return t->mText->GetHeight();
-    case Op::SkinBtn: return SkinBtnOp(t,a,b,c);
     case Op::SkinBoxPainter: // the check box's or radio button's default painter function (never replaced), 13 x 13
         WONMsPaint(*(Graphics*)a,WONMsPaintOf((EeWonMsBox)b == EeWonMsBox::Checkbox ? EeWonMsPaintKind::Check : EeWonMsPaintKind::Radio,13,13,(t->IsPressed()?EE_WON_MSPAINT_PRESSED:0)|(t->IsChecked()?EE_WON_MSPAINT_CHECKED:0)));
         return 0;
-    case Op::Draw: {
-        WONDrawSlots aSlots;
-        aSlots.mText = t->mText.get();
-        WONDrawNoCall aNoCall;
-        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
-        return 0;
-    }
-    default: return 0;
+    case Op::Draw: WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, NULL, t->mText.get()), WONDrawNoCall()); return 0;
+    default: return ButtonHostCall(t, op, a, b, c); // the size, the button's state
     }
 }
 

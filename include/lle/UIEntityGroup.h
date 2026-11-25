@@ -5,6 +5,7 @@
 // object mRust; every method forwards there (UIForm.cpp holds HostOp, the calls out on an entity).
 #ifndef LLE_UIENTITYGROUP_H
 #define LLE_UIENTITYGROUP_H
+#include "lle/LLEForward.h"
 
 #include "rust/ui/groupobj.h"
 #include "rust/ui/lle_hosts.h"
@@ -15,8 +16,6 @@
 class LLE_API UIEntityGroup {
 public:
     UIEntityGroup() : mRust(ee_ui_entity_group_new(this, ee_ui_group_host)) {}
-    UIEntityGroup(const UIEntityGroup&) = delete;
-    UIEntityGroup& operator=(const UIEntityGroup&) = delete;
     ~UIEntityGroup() { ee_ui_entity_group_free(this->mRust); }
     void Disable() { this->Call(EeUiEntityGroupCall::Disable); }
     void Enable() { this->Call(EeUiEntityGroupCall::Enable); }
@@ -27,7 +26,7 @@ public:
     long RemoveEntity(UIEntity* inEntity) { return (long)this->Call(EeUiEntityGroupCall::Remove, (intptr_t)inEntity); }
     intptr_t Call(EeUiEntityGroupCall inCall, intptr_t a = 0) { return ee_ui_entity_group_call(this->mRust, inCall, a); }
 
-    EeUiEntityGroup* mRust;                 // the entities and the disable count (groupobj.rs)
+    URust<EeUiEntityGroup> mRust;                 // the entities and the disable count (groupobj.rs)
 };
 
 #endif

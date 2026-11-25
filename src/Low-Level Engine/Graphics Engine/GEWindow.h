@@ -9,21 +9,14 @@
 #include <stdbool.h>
 
 struct PlatWindow;
-struct EeGeWin;
-struct EeGe2DPoint;
-class GE2DPoint;
-extern "C" const EeGe2DPoint* ee_ge_win_origin(EeGeWin* p);
-extern "C" unsigned long ee_ge_win_size(const EeGeWin* p, bool height);
-extern "C" void* ee_ge_win_os(const EeGeWin* p);
-extern "C" void ee_ge_win_resize(EeGeWin* p, unsigned long width, unsigned long height);
+#include "lle/LLEForward.h"
+#include "rust/render/ge.h"   // the window (ee_ge_win_*)
 
 class LLE_API GEWindow {
 public:
     GEWindow(PlatWindow* inWindow, unsigned long inWidth, unsigned long inHeight, unsigned long inDepth,
              bool inIsFullScreen);
-    ~GEWindow();   // destroys the platform window only in full-screen mode
-    GEWindow(const GEWindow&) = delete;
-    GEWindow& operator=(const GEWindow&) = delete;
+    ~GEWindow() { ee_ge_win_destroy(this->mRust); }   // destroys the platform window only in full-screen mode
     // the screen position of the client area
     const GE2DPoint& GetClientOrigin() { return *reinterpret_cast<const GE2DPoint*>(ee_ge_win_origin(this->mRust)); }
     unsigned long GetHeight() const { return ee_ge_win_size(this->mRust, true); }
@@ -32,8 +25,7 @@ public:
     // the client area (the platform sizes it)
     void Resize(unsigned long inWidth, unsigned long inHeight) { ee_ge_win_resize(this->mRust, inWidth, inHeight); }
 
-private:
-    EeGeWin* mRust;                         // the window (ee_ge smallobj.rs)
+    URust<EeGeWin> mRust;                         // the window (ee_ge smallobj.rs)
 };
 
 #endif

@@ -61,7 +61,6 @@ public:
     long SetTag(const UWideString& inName, const UWideString& inValue)
         { return ee_fs_archive_set_tag(this->mTable, (const char*)inName, (const char*)inValue); }
 
-private:
     static void AssignTag(void* inValue, const char* inText) { *static_cast<UWideString*>(inValue) = inText; }
     // a listed name into the set; null clears it (ee_fs_archive_list_files)
     static void ListName(void* inFiles, const char* inName)
