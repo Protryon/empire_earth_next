@@ -1,6 +1,6 @@
-// WONAuth: what AuthContext and CDKey (ee/wonapi/WONAuthContext.h, header-only since net round 26) need the platform
-// layer and the lobby's directory for: the auth context's files in the WON directory, the exe's path for the hash
-// file, the CD key's registry (config.yaml: RegKey) and file storage
+// WONAuth: what AuthContext and CDKey (ee/wonapi/WONAuthContext.h, header-only since net round 26) need here: the
+// context's certificate op maker and server list (the rest of Init and the exe's hash file are Rust's since R6 WON
+// lobby and network round 37: authcpp.rs, authlogin.rs), the CD key's registry path
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <stdio.h>
@@ -15,8 +15,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
-#include "platform/PlatFile.h"
-#include "platform/PlatPath.h"
 #include "rust/won_net/authcpp.h"
 #include "rust/won_net/cdkeystore.h"
 namespace WONAPI {
@@ -25,25 +23,12 @@ static void* NewCertOp(void* inContext)
 {
     return static_cast<RefCount*>(static_cast<AsyncOp*>(RustServerOp::NewGetCert(static_cast<AuthContext*>(static_cast<RefCount*>(inContext)))));
 }
-// The context's Rust object (its calls over the core table: ee_won authcpp.rs) with the login secrets in the WON
-// directory, a new server list and the directory's verifier key
+// The context's Rust object (its calls over the core table: ee_won authcpp.rs ee_won_authctx_new_default: the login
+// secrets in the WON directory, the new server list, the directory's verifier key)
 void AuthContext::Init()
 {
-    std::string aFile = WONAPICore::GetDefaultFileDirectory() + "_wonlogin.ks";
-    this->mCore = ee_won_authctx_new_core(static_cast<RefCount*>(this), WonCore(), NewCertOp, WonBytes(aFile),
-                                          aFile.size());
-    ee_won_authctx_set_server_context(this->mCore, static_cast<RefCount*>(new ServerContext));
-    const std::string& aDir = WONAPICore::GetDefaultFileDirectory();
-    ee_won_auth_verifier_init(WonBytes(aDir), aDir.size());
-}
-// The community's hash file: the running exe in the data root
-bool AuthContext::SetHashFile(const std::wstring& inCommunity)
-{
-    char directory[PLAT_MAX_PATH];
-    char name[PLAT_MAX_PATH];
-    if (PlatPathGetDataRoot(directory, PLAT_MAX_PATH) > 0 && PlatPathGetExecutableName(name, PLAT_MAX_PATH) > 0)
-        return this->SetHashFile(inCommunity, std::string(directory) + name);
-    return false;
+    this->mCore = ee_won_authctx_new_default(static_cast<RefCount*>(this), WonCore(), NewCertOp,
+                                             static_cast<RefCount*>(new ServerContext));
 }
 
 // WON SDK default registry path (no original address identified)

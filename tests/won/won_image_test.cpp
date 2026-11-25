@@ -22,6 +22,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "won_file37_orig.h" // FileReader, FileWriter
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 using namespace WONAPI;
 

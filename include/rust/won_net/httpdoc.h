@@ -42,10 +42,27 @@ constexpr static const int32_t EE_WON_HTTPDOC_PATH = 8;
 /// `GetDocument(owner)`: the cache file's bytes as of now, NUL-ended (a MOTD without its flag character)
 constexpr static const int32_t EE_WON_HTTPDOC_DOCUMENT = 9;
 
+/// The SDK's `HTTPDocType` for the C++ readers (the enumerators keep their C++ names; R6 WON lobby and network
+/// round 37): the numbers of `EE_WON_HTTPDOC_MOTD`, `_TOU` and `_ADV` below.
+enum EeWonHttpDocType {
+  HTTPDocType_MOTD = 0,
+  HTTPDocType_TOU = 1,
+  HTTPDocType_ADV = 2,
+  HTTPDocType_Count = 3,
+};
+
+/// The SDK's `HTTPDocOwner`: the WON system's document or the game's (an op's per-owner members' index).
+enum EeWonHttpDocOwner {
+  HTTPDocOwner_Sys = 0,
+  HTTPDocOwner_Game = 1,
+  HTTPDocOwner_Count = 2,
+};
+
 extern "C" {
 
 /// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
-/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
+/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`); a null `dir` is the library's default
+/// file directory (`WONAPICore::GetDefaultFileDirectory()`, what the one C++ maker passed).
 ///
 /// # Safety
 /// The texts hold their lengths' bytes.

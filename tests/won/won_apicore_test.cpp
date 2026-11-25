@@ -25,6 +25,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
+#include "won_net37_orig.h" // the pieces only the drivers use
 #include "won_thread_orig.h" // the C++ thread shims as they were (the game's socket thread is Rust's)
 #include "platform/PlatFile.h"
 #include "platform/PlatPath.h"

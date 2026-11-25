@@ -5,6 +5,7 @@
 #ifndef EE_TESTS_WON_CFGPARSER_ORIG_H
 #define EE_TESTS_WON_CFGPARSER_ORIG_H
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "won_file37_orig.h" // FileReader
 namespace WONAPI {
 class OrigConfigParser {
 private:

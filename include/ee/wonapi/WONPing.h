@@ -17,14 +17,5 @@ namespace WONAPI {
 // dirlist.rs, R6 WON round 34; the elements hold no entity object)
 inline void MultiPingAddServers(RustServerOp* inOp, const DirList& inDir, const wchar_t* inNameFilter = NULL)
 { ee_won_multiping_add_servers(inOp->GetRustOp(), inDir.get(), inNameFilter, inNameFilter != NULL ? wcslen(inNameFilter) : 0, sizeof(wchar_t)); }
-
-// GetServerContext: the finished servers in order (the unanswered too unless discarded), not shuffled (Rust's:
-// multiping.rs, R6 WON round 34)
-inline SmartPtr<ServerContext> MultiPingServerContext(RustServerOp* inOp, bool discardNonResponsiveServers = true)
-{
-    SmartPtr<ServerContext> aContext = new ServerContext;
-    ee_won_multiping_fill_context(inOp->GetRustOp(), aContext->GetListObject(), discardNonResponsiveServers);
-    return aContext;
-}
 }
 #endif

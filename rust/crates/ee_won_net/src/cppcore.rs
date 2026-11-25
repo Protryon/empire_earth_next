@@ -933,7 +933,23 @@ pub(crate) unsafe extern "C" fn n_bytes_adopt(b: *mut EeWonByteBuffer) -> *mut c
     ref_add(o);
     o
 }
-pass!(n_transform, transform, (s: *mut c_void, m: *mut *mut c_void, send: bool) -> c_long, WS_NONE as c_long);
+/// The socket's transform chain on the message in `*m` (a reference held; the result's replaces it). `m` is the
+/// chain's `ByteBufferPtr*` as it is: one pointer holding one reference (AsyncOp.cpp's CoreTransform made a second
+/// smart pointer of it and gave its reference back, until R6 WON lobby and network round 37). A table that still
+/// has the C++ call (the drivers') is asked instead.
+pub(crate) unsafe extern "C" fn n_transform(s: *mut c_void, m: *mut *mut c_void, send: bool) -> c_long {
+    if let Some(h) = core().and_then(|c| c.transform) {
+        // SAFETY: the table's contract
+        return unsafe { h(s, m, send) };
+    }
+    match socket(s) {
+        // SAFETY: the live socket; the caller's message slot
+        Some(k) if send => unsafe { k.transform_send(m as *mut c_void) as c_long },
+        // SAFETY: as above
+        Some(k) => unsafe { k.transform_recv(m as *mut c_void) as c_long },
+        None => WS_NONE as c_long,
+    }
+}
 // a receive op's target file (the deleted CoreFileOpen / Write / Close / SetTime of AsyncOp.cpp)
 unsafe extern "C" fn n_file_open(p: *const u8, n: usize, binary: bool, append: bool) -> *mut c_void {
     let mode = match (binary, append) {

@@ -1043,6 +1043,9 @@ WON_TESTS["won_ping36_test"] = WON_TESTS["won_ops_test"]
 # EEAWonNet whole in Rust (R6 WON lobby and network round 37, fork A: ee_won_lobby wonaction.rs) against the class as
 # it was (tests/won/won_action37a_orig.h) over a stand-in UI with real lists and labels, every host op skipped in turn
 WON_TESTS["won_action37a_test"] = []
+# the network library's moves of R6 WON lobby and network round 37 that no other driver covers (InitLogic's SaveTOU:
+# ee_won_lobby flow.rs) against the original statements over real files
+WON_TESTS["won_net37_test"] = []
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes

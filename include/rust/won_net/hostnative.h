@@ -10,6 +10,10 @@
 
 extern "C" {
 
+/// [`crt_srand_and_rand`] for the C++ `ServerContext::CopyAddresses` (its own static until R6 WON lobby and network
+/// round 37).
+int32_t ee_won_crt_rand(bool seed);
+
 /// `WONAPICoreEx::SetDefaultFileDirectory` (a separator appended when missing), or the core's directory cleared
 /// (a new or deleted core: NULL).
 ///

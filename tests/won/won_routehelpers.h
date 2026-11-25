@@ -6,6 +6,7 @@
 #ifndef EE_TESTS_WON_ROUTEHELPERS_H
 #define EE_TESTS_WON_ROUTEHELPERS_H
 #include "ee/wonapi/WONRouting.h"
+#include "won_net37_orig.h" // RoutingBadUserListType
 namespace WONAPI {
 class RoutingRequests {
 public:

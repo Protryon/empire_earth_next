@@ -34,6 +34,16 @@ void ee_won_udpmanager_free(EeWonUdpManager *m);
 /// `m` is a live manager object (so for every call below).
 long ee_won_udpmanager_bind(const EeWonUdpManager *m, int32_t port, bool broadcast);
 
+/// `LobbyBindUDPPort`'s binds (LobbyUDPManager.cpp until R6 WON lobby and network round 37): the manager bound to
+/// `port` with broadcast; when that fails, `srand(time(NULL))` and a bind without broadcast to
+/// `rand() % 10000 + 10000` (the CRT's); automatic receives on when a bind worked. Returns the port last tried
+/// (`port` itself without a manager).
+///
+/// # Safety
+/// `m` is NULL or as `ee_won_udpmanager_bind`.
+uint16_t ee_won_udpmanager_bind_lobby(const EeWonUdpManager *m,
+                                      uint16_t port);
+
 /// `Close`.
 ///
 /// # Safety

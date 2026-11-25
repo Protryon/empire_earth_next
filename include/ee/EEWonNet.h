@@ -113,6 +113,8 @@ private:
 class RefCount {
 public:
     RefCount() : mRefCount(0) {}
+    RefCount(const RefCount&) = delete; // no counted object is copied (each subclass said so itself before R6 WON round 37)
+    RefCount& operator=(const RefCount&) = delete;
     virtual ~RefCount() {}
     void AddRef() { PlatAtomicIncrement(&mRefCount); }
     const RefCount* CreateRef() const { PlatAtomicIncrement(&mRefCount); return this; } //actual SDK const retain API, same native+4

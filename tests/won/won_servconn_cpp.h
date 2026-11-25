@@ -11,8 +11,15 @@ namespace WONAPI {
 namespace ServerConnectionCpp {
 inline RefCount* Ref(void* inObject) { return static_cast<RefCount*>(inObject); }
 inline ServerConnection* Conn(void* inConn) { return static_cast<ServerConnection*>(inConn); }
+// a driver's own peer authentication op maker (NULL: the real RustServerOp::NewPeerAuth); RustServerOp is
+// header-only since R6 WON lobby and network round 37, so a stand-in is a class of its own
+typedef AsyncOp* (*PeerAuthMaker)(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket);
+inline PeerAuthMaker gPeerAuthMaker = NULL;
 inline void* HookNewPeerAuth(void* inConn,const void* inAddr,void* inContext,int32_t inAuthType)
 {
+    if (gPeerAuthMaker != NULL)
+        return static_cast<RefCount*>(gPeerAuthMaker(*static_cast<const IPAddr*>(inAddr), static_cast<AuthContext*>(Ref(inContext)),
+                                                     static_cast<AuthType>(inAuthType), Conn(inConn)));
     return static_cast<RefCount*>(RustServerOp::NewPeerAuth(*static_cast<const IPAddr*>(inAddr),static_cast<AuthContext*>(Ref(inContext)),
                                                             static_cast<AuthType>(inAuthType),Conn(inConn),true));
 }
