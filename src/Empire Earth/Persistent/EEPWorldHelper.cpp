@@ -47,9 +47,6 @@
 
 #include "rust/game/gamecpp.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousServer.h"
-#include "lle/NESynchronousClient.h"
-#include "ee/EECommunications.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPMultiplayerHelper.h"
 #include "ee/EEHumanPlayer.h"
@@ -177,9 +174,6 @@ void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad
 #define FOREST ((EEAIForest*)p)
 #define POINTS (*(std::vector<U2DPoint<long> >*)p)
 
-#define SERVER dynamic_cast<NESynchronousServer*>(gCommunications)
-#define CLIENT dynamic_cast<NESynchronousClient*>(gCommunications)
-#define COMMS dynamic_cast<NESynchronousCommunications*>(gCommunications)
 #define PPH ((EEPPlayerHelper*)p)
 #define CP ((EEComputerPlayer*)p)
 #define STR (*(std::string*)p)
@@ -324,18 +318,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     // (EEPMultiplayerOp) The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
     case O::PmPhysicsLoad: return gPhysics->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
     case O::PmPhysicsSave: return gPhysics->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
-    case O::PmServerSetPhysicsTick: SERVER->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
-        break;
-    case O::PmClientSetPhysicsTick: CLIENT->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
-        break;
-    case O::PmCommCtsProcessed: return COMMS->GetNumberOfCTsProcessedInPhysics();
-    case O::PmCommLastTick: return COMMS->GetLastTickReceived();
-    case O::PmServerLastCt: return SERVER->GetLastCTMessageID();
-    case O::PmServerCt: return SERVER->GetCurrentCommunicationsTick();
-    case O::PmServerPt: return SERVER->GetCurrentPhysicsTick();
-    case O::PmServerMessageNumber: return SERVER->GetMessageManagerCurrentMessageNumber();
-    case O::PmClientCt: return CLIENT->GetCurrentCommunicationsTick();
-    case O::PmClientPt: return CLIENT->GetCurrentPhysicsTick();
     // (EEPHelpersOp) The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
     case O::PphFields: return P64(&PPH->mLocalPlayerIndex);
     case O::PphPush: PPH->mPlayers.push_back((EEPlayer*)a[0]);
@@ -632,7 +614,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSetMusicVolume: gConductor->GetConductor().SetVolume(f[0]);
         break;
-    case O::PsCommPresent: return gCommunications != NULL;
     case O::PsShowSplash: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
         break;
     case O::PsShowSelectionAreas: gWorld.GetCurrentPlayer()->mActiveGroup->ShowSelectionAreas();

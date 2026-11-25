@@ -163,7 +163,7 @@ pub extern "C" fn ee_gamecpp_server_init(server: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_server_drop(server: *mut c_void) {
     let s = server as P;
-    h(O::C11SvStopThreads, s, &[]);
+    ee_net::net::ffi_server::ee_net_sv_stop_threads(super::net::net(server).server);
     h(O::C11SvDestroySearchLock, s, &[]);
     h(O::C11SvDestroyFastLock, s, &[]);
     h(O::C11SvDestroyAttemptLock, s, &[]);
@@ -187,7 +187,7 @@ pub extern "C" fn ee_gamecpp_client_init(client: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_client_drop(client: *mut c_void) {
     let c = client as P;
-    h(O::C11ClStopThreads, c, &[]);
+    ee_net::net::ffi_client::ee_net_cl_stop_threads(super::net::net(client).client);
     h(O::C11ClDestroyLock, c, &[]);
 }
 
@@ -337,7 +337,7 @@ pub fn send_ping_stat(server: P, player: i64, ping: f32) {
 /// EEServer::GetFreePlayerSlot: the first world player index below the maximum that holds no player, else 0xff.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_server_free_player_slot(server: *mut c_void) -> u8 {
-    let max = h(O::C11SvMaxPlayers, server as P, &[]) as u8;
+    let max = super::net::net(server).sv_get(ee_net::net::ffi_server::EeNetSvGet::MaxPlayers) as u8;
     free_player_slot(max, |i| hp(O::SsWorldPlayer, 0, &[i as i64]) != 0)
 }
 

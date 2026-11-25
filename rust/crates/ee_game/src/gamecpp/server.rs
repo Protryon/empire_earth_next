@@ -10,105 +10,102 @@ use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::netmsg::session::*;
 
-use super::session_objs::{ee_gamecpp_server_send_to_slot, send_to_clear, send_to_erase, send_to_insert};
-use super::{h, hp, ptr, session_objs, Owned, O, P};
+use super::session_objs::{
+    ee_gamecpp_server_send_to_slot, send_to_clear, send_to_erase, send_to_insert, EeGamecppClientTail,
+    EeGamecppServerTail,
+};
+use super::{h, hp, net, ptr, session_objs, Owned, O, P};
+use ee_net::net::ffi_comms::EeNetCommsField;
+use ee_net::net::ffi_server::{EeNetSvGet, EeNetSvSet};
+
+/// The network engine's handles of the session's communications object (the frame's).
+fn n(f: P) -> net::Net {
+    net::net(session_objs::frame_server(f) as *const c_void)
+}
 use crate::app::game_options::EeAppOptionsPlayerFields;
 
 /// `kSlotServer`, `kSlotNone` (NEMessageID.h).
 pub const SS_SLOT_SERVER: i64 = 0xfe;
 pub const SS_SLOT_NONE: i64 = 0xff;
 
-/// A member of a C++ object, by the address its op answers, as the type it has.
-#[derive(Clone, Copy)]
-enum Member {
-    Bool(O),
-    Byte(O),
-    Short(O),
-}
-
-/// Reads a member (the integer it holds) and, when `set`, writes `v` first (as the member's type, truncated).
-fn member_rw(f: P, m: Member, set: bool, v: i64) -> i64 {
-    match m {
-        Member::Bool(op) => {
-            let at = hp(op, f, &[]) as *mut bool;
-            // SAFETY: the address of the server's or client's bool member
-            unsafe {
-                if set {
-                    *at = v != 0;
-                }
-                *at as i64
-            }
-        }
-        Member::Byte(op) => {
-            let at = hp(op, f, &[]) as *mut u8;
-            // SAFETY: an unsigned char member
-            unsafe {
-                if set {
-                    *at = v as u8;
-                }
-                *at as i64
-            }
-        }
-        Member::Short(op) => {
-            let at = hp(op, f, &[]) as *mut u16;
-            // SAFETY: an unsigned short member
-            unsafe {
-                if set {
-                    *at = v as u16;
-                }
-                *at as i64
-            }
-        }
+fn rw_bool(at: &mut bool, set: bool, v: i64) -> i64 {
+    if set {
+        *at = v != 0;
     }
+    *at as i64
 }
 
-/// The member of a session member id (the server's or the client's where both have it).
-fn member_of(server: bool, which: i64) -> Member {
-    use Member::*;
+fn rw_u8(at: &mut u8, set: bool, v: i64) -> i64 {
+    if set {
+        *at = v as u8;
+    }
+    *at as i64
+}
+
+fn rw_u16(at: &mut u16, set: bool, v: i64) -> i64 {
+    if set {
+        *at = v as u16;
+    }
+    *at as i64
+}
+
+/// Whether member `which` is the server's: the four both classes have are the frame's object's, the votes, loads
+/// and lag mask the server's, the rest the client's.
+fn server_member(which: i64, frame_server: impl FnOnce() -> bool) -> bool {
     match which {
-        EE_NETMSG_SESS_SELF_HAS_LEFT => Bool(if server { O::SsSHasLeft } else { O::SsCHasLeft }),
-        EE_NETMSG_SESS_SELF_MIGRATING => Bool(if server { O::SsSMigrating } else { O::SsCMigrating }),
-        EE_NETMSG_SESS_SELF_FAST_ID => Byte(if server { O::SsSFastId } else { O::SsCFastId }),
-        EE_NETMSG_SESS_SELF_EXECUTING => Bool(if server { O::SsSExecuting } else { O::SsCExecuting }),
-        EE_NETMSG_SESS_SELF_LOAD_STATE => Byte(O::SsLoadState),
-        EE_NETMSG_SESS_SELF_DROPPED_LOADERS => Byte(O::SsDroppedLoaders),
-        EE_NETMSG_SESS_SELF_VOTE_EDICT => Short(O::SsVoteEdict),
-        EE_NETMSG_SESS_SELF_YES_VOTES => Short(O::SsYesVotes),
-        EE_NETMSG_SESS_SELF_NO_VOTES => Short(O::SsNoVotes),
-        EE_NETMSG_SESS_SELF_NUM_VOTES => Byte(O::SsNumVotes),
-        EE_NETMSG_SESS_SELF_LAG_MASK => Short(O::SsLagMask),
-        EE_NETMSG_SESS_SELF_UI_SLOT => Byte(O::SsUiSlot),
-        EE_NETMSG_SESS_SELF_ALLOW_MIGRATION => Bool(O::SsAllowMigration),
-        EE_NETMSG_SESS_SELF_IGNORE_TIMEOUT => Bool(O::SsIgnoreTimeout),
-        EE_NETMSG_SESS_SELF_SERVER_LOST => Bool(O::SsServerLost),
-        EE_NETMSG_SESS_SELF_HAS_LOADED => Bool(O::SsHasLoaded),
-        EE_NETMSG_SESS_SELF_LOST_AFTER_LOADING => Bool(O::SsLostAfterLoading),
-        _ => Bool(O::SsWasBooted),
+        EE_NETMSG_SESS_SELF_HAS_LEFT
+        | EE_NETMSG_SESS_SELF_MIGRATING
+        | EE_NETMSG_SESS_SELF_FAST_ID
+        | EE_NETMSG_SESS_SELF_EXECUTING => frame_server(),
+        _ => which < EE_NETMSG_SESS_SELF_UI_SLOT,
     }
 }
 
-/// The server's and client's members (EESessionMember): the voted flags by index (a negative index set clears all
-/// 256), the others by id.
+/// The server's and client's members (EESessionMember) in their plain tails (session_objs.rs): the voted flags by
+/// index (a negative index set clears all 256), the others by id; the four both classes have are the frame's
+/// object's, the others the server's or the client's.
 fn member(f: P, which: i64, index: i64, set: bool, v: i64) -> i64 {
-    if which == EE_NETMSG_SESS_SELF_VOTED {
-        let voted = hp(O::SsVoted, f, &[]) as *mut bool;
-        // SAFETY: the server's bool mVoted[256]
-        unsafe {
-            if set && index < 0 {
-                for k in 0..256 {
-                    *voted.add(k) = false;
+    let comms = session_objs::frame_server(f);
+    if server_member(which, || h(O::SsFrameServer, f, &[]) != 0) {
+        // SAFETY: the server's plain tail, no C++ call while used
+        let t = unsafe { &mut *super::rec::<EeGamecppServerTail>(O::C11SvTail, comms) };
+        match which {
+            EE_NETMSG_SESS_SELF_VOTED => {
+                if set && index < 0 {
+                    t.voted = [false; 256];
+                    return 0;
                 }
-                return 0;
+                rw_bool(&mut t.voted[(index & 0xff) as usize], set, v)
             }
-            let at = voted.add((index & 0xff) as usize);
-            if set {
-                *at = v != 0;
-            }
-            return *at as i64;
+            EE_NETMSG_SESS_SELF_HAS_LEFT => rw_bool(&mut t.has_left_game, set, v),
+            EE_NETMSG_SESS_SELF_MIGRATING => rw_bool(&mut t.is_migrating, set, v),
+            EE_NETMSG_SESS_SELF_FAST_ID => rw_u8(&mut t.fast_selection_id, set, v),
+            EE_NETMSG_SESS_SELF_EXECUTING => rw_bool(&mut t.is_executing_selection, set, v),
+            EE_NETMSG_SESS_SELF_LOAD_STATE => rw_u8(&mut t.load_state, set, v),
+            EE_NETMSG_SESS_SELF_DROPPED_LOADERS => rw_u8(&mut t.num_dropped_loaders, set, v),
+            EE_NETMSG_SESS_SELF_VOTE_EDICT => rw_u16(&mut t.vote_edict, set, v),
+            EE_NETMSG_SESS_SELF_YES_VOTES => rw_u16(&mut t.yes_votes, set, v),
+            EE_NETMSG_SESS_SELF_NO_VOTES => rw_u16(&mut t.no_votes, set, v),
+            EE_NETMSG_SESS_SELF_NUM_VOTES => rw_u8(&mut t.num_votes, set, v),
+            _ => rw_u16(&mut t.lag_mask, set, v),
+        }
+    } else {
+        // SAFETY: the client's plain tail, no C++ call while used
+        let t = unsafe { &mut *super::rec::<EeGamecppClientTail>(O::C11ClTail, comms) };
+        match which {
+            EE_NETMSG_SESS_SELF_HAS_LEFT => rw_bool(&mut t.has_left_game, set, v),
+            EE_NETMSG_SESS_SELF_MIGRATING => rw_bool(&mut t.is_migrating, set, v),
+            EE_NETMSG_SESS_SELF_FAST_ID => rw_u8(&mut t.fast_selection_id, set, v),
+            EE_NETMSG_SESS_SELF_EXECUTING => rw_bool(&mut t.is_executing_selection, set, v),
+            EE_NETMSG_SESS_SELF_UI_SLOT => rw_u8(&mut t.ui_slot_number, set, v),
+            EE_NETMSG_SESS_SELF_ALLOW_MIGRATION => rw_bool(&mut t.allow_server_migration, set, v),
+            EE_NETMSG_SESS_SELF_IGNORE_TIMEOUT => rw_bool(&mut t.ignore_connection_timeout, set, v),
+            EE_NETMSG_SESS_SELF_SERVER_LOST => rw_bool(&mut t.is_server_lost, set, v),
+            EE_NETMSG_SESS_SELF_HAS_LOADED => rw_bool(&mut t.has_loaded, set, v),
+            EE_NETMSG_SESS_SELF_LOST_AFTER_LOADING => rw_bool(&mut t.server_lost_after_loading, set, v),
+            _ => rw_bool(&mut t.was_booted, set, v),
         }
     }
-    let server = h(O::SsFrameServer, f, &[]) != 0;
-    member_rw(f, member_of(server, which), set, v)
 }
 
 /// A lobby slot player's plain member (EESessionPlayerField): read, or written then read (the ping as its float's bits).
@@ -193,7 +190,12 @@ fn lock(f: P, v: &[i64; 8]) -> i64 {
     let on = v[1] != 0;
     let section = match v[0] {
         EE_NETMSG_SESS_LOCK_CT => {
-            h(if on { O::SsLockCt } else { O::SsUnlockCt }, f, &[]);
+            let server = n(f).server;
+            if on {
+                ee_net::net::ffi_server::ee_net_sv_lock_send_communications_tick(server);
+            } else {
+                ee_net::net::ffi_server::ee_net_sv_unlock_send_communications_tick(server);
+            }
             return 0;
         }
         EE_NETMSG_SESS_LOCK_OPTIONS_WRITE => {
@@ -205,7 +207,7 @@ fn lock(f: P, v: &[i64; 8]) -> i64 {
             return 0;
         }
         EE_NETMSG_SESS_LOCK_PING => {
-            h(if on { O::SsStopPing } else { O::SsStartPing }, f, &[]);
+            n(f).sv_set(EeNetSvSet::Ping, !on as u32);
             return 0;
         }
         EE_NETMSG_SESS_LOCK_SEARCH => hp(O::SsSearchLock, f, &[]),
@@ -231,19 +233,23 @@ fn fact(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_FACT_MULTIPLAYER_GAME => O::SsMultiplayerGame,
         EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER => O::SsOptionsMultiplayer,
         EE_NETMSG_SESS_FACT_LOAD_TYPE => O::SsLoadType,
-        EE_NETMSG_SESS_FACT_GAME_STATE => O::SsGameState,
+        EE_NETMSG_SESS_FACT_GAME_STATE => return n(f).sv_get(EeNetSvGet::GameState) as u8 as i64,
         EE_NETMSG_SESS_FACT_DEFAULT_COLOR => return super::globals::get!(gDefaultPlayerColors)[v[1] as usize] as i64,
         EE_NETMSG_SESS_FACT_CITIZENS_DEFAULT => O::SsCitizensDefault,
         EE_NETMSG_SESS_FACT_VERSION_MATCH => O::SsVersionMatch,
         EE_NETMSG_SESS_FACT_BINARY_CHECKSUM => O::SsBinaryChecksum,
-        EE_NETMSG_SESS_FACT_CURRENT_CT => O::SsCurrentCt,
-        EE_NETMSG_SESS_FACT_CTS_IN_PHYSICS => O::SsCtsInPhysics,
-        EE_NETMSG_SESS_FACT_HUMANS => O::SsHumans,
-        EE_NETMSG_SESS_FACT_MP_SESSION => O::SsMpSession,
-        EE_NETMSG_SESS_FACT_PLAYER_NUMBER => O::SsPlayerNumber,
-        EE_NETMSG_SESS_FACT_CURRENT_PT => O::SsCurrentPt,
-        EE_NETMSG_SESS_FACT_MY_SEND_TO_SLOT => O::SsMySendToSlot,
-        EE_NETMSG_SESS_FACT_NUM_PLAYERS => O::SsNumPlayers,
+        EE_NETMSG_SESS_FACT_CURRENT_CT => return n(f).current_ct() as i64,
+        EE_NETMSG_SESS_FACT_CTS_IN_PHYSICS => return net::global().get(EeNetCommsField::CtsProcessed) as i64,
+        EE_NETMSG_SESS_FACT_HUMANS => return net::global().get(EeNetCommsField::NumHumanPlayers) as u8 as i64,
+        EE_NETMSG_SESS_FACT_MP_SESSION => return (n(f).get(EeNetCommsField::IsMultiplayerSession) != 0) as i64,
+        EE_NETMSG_SESS_FACT_PLAYER_NUMBER => return n(f).get(EeNetCommsField::PlayerNumber) as i64,
+        EE_NETMSG_SESS_FACT_CURRENT_PT => {
+            return ee_net::net::ffi_client::ee_net_cl_current_physics_tick(n(f).client) as i64;
+        }
+        EE_NETMSG_SESS_FACT_MY_SEND_TO_SLOT => {
+            return ee_net::net::ffi_client::ee_net_cl_my_send_to_slot(n(f).client) as i64;
+        }
+        EE_NETMSG_SESS_FACT_NUM_PLAYERS => return n(f).sv_get(EeNetSvGet::NumberOfPlayers) as u8 as i64,
         EE_NETMSG_SESS_FACT_WORLD_PLAYERS => O::SsWorldPlayers,
         EE_NETMSG_SESS_FACT_TIME => O::SsTime,
         EE_NETMSG_SESS_FACT_WON => O::SsWon,
@@ -310,7 +316,7 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
             if v[3] != 0 {
                 h(O::SsMsgSetOriginServer, f, &[info as i64]);
             }
-            h(O::SsLocalInput, f, &[info as i64, v[2]]);
+            n(f).local_input(info as *mut c_void, v[2] as u8);
             0
         }
         EE_NETMSG_SESS_SEND_NEW_RECORD => match v[2] {
@@ -336,7 +342,7 @@ fn send(f: P, v: &[i64; 8]) -> i64 {
                 }
                 hp(O::SsSlotInfoRecord, f, &[index, slot, address.0 as i64])
             };
-            h(O::SsCommsLocalInput, f, &[message as i64, SS_SLOT_NONE]);
+            net::global().local_input(message as *mut c_void, SS_SLOT_NONE as u8);
             0
         }
         EE_NETMSG_SESS_SEND_PHYSICS_TICK => h(O::SsNewPhysicsTick, f, &[v[1], v[2], v[3], v[4], v[5]]),
@@ -364,8 +370,14 @@ fn message(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_MSG_SET_FAST_ID => h(O::SsMsgSetFastId, f, &[m, v[2]]),
         EE_NETMSG_SESS_MSG_IS_GAME => h(O::SsMsgIsGame, f, &[m]),
         EE_NETMSG_SESS_MSG_QUEUE => h(O::SsMsgQueue, f, &[m]),
-        EE_NETMSG_SESS_MSG_LOG_RESPONSE => h(O::SsMsgLogResponse, f, &[m]),
-        EE_NETMSG_SESS_MSG_LOCAL => h(O::SsLocalInput, f, &[m, v[2]]),
+        EE_NETMSG_SESS_MSG_LOG_RESPONSE => {
+            ee_net::net::ffi_server::ee_net_sv_log_response(n(f).server, m as P as *mut c_void);
+            0
+        }
+        EE_NETMSG_SESS_MSG_LOCAL => {
+            n(f).local_input(m as P as *mut c_void, v[2] as u8);
+            0
+        }
         EE_NETMSG_SESS_MSG_BROADCAST => {
             h(O::SsMsgSetOriginServer, f, &[m]);
             h(O::SsBroadcast, f, &[m])
@@ -487,7 +499,7 @@ fn ui(f: P, v: &[i64; 8]) -> i64 {
                 let shown = if versions { text.0 } else { format.0 };
                 h(O::SsDisplayMessage, f, &[shown as i64, 0, 1]);
             }
-            h(O::SsDisconnect, f, &[]);
+            ee_net::net::ffi_client::ee_net_cl_disconnect(n(f).client);
         }
         _ => {
             let player = hp(O::SsReg, f, &[v[2]]) as *const EeAppOptionsPlayerFields;
@@ -570,42 +582,50 @@ fn xfer_game_file(f: P, load_type: i64, slot: i64) {
 }
 
 fn comms(f: P, v: &[i64; 8]) {
+    use ee_net::net::ffi_server as sv;
     let op = match v[0] {
-        EE_NETMSG_SESS_COMMS_SET_CT => O::SsSetCt,
-        EE_NETMSG_SESS_COMMS_SET_CTS_IN_PHYSICS => O::SsSetCtsInPhysics,
-        EE_NETMSG_SESS_COMMS_INCREMENT_CTS => O::SsIncrementCts,
-        EE_NETMSG_SESS_COMMS_SET_MP_SESSION => O::SsSetMpSession,
-        EE_NETMSG_SESS_COMMS_SET_HUMANS => O::SsSetHumans,
-        EE_NETMSG_SESS_COMMS_SET_PT => {
-            let mut tick = v[1] as c_ulong;
-            h(O::SsSetPt, f, &[ptr(&mut tick)]);
-            return;
+        EE_NETMSG_SESS_COMMS_SET_CT => return net::global().set_current_ct(v[1] as u32),
+        EE_NETMSG_SESS_COMMS_SET_CTS_IN_PHYSICS => return net::global().set(EeNetCommsField::CtsProcessed, v[1] as u32),
+        EE_NETMSG_SESS_COMMS_INCREMENT_CTS => return net::global().increment_cts(),
+        EE_NETMSG_SESS_COMMS_SET_MP_SESSION => {
+            return net::global().set(EeNetCommsField::IsMultiplayerSession, (v[1] != 0) as u32);
         }
-        EE_NETMSG_SESS_COMMS_REGISTER => O::SsRegisterSlot,
+        EE_NETMSG_SESS_COMMS_SET_HUMANS => return n(f).set(EeNetCommsField::NumHumanPlayers, v[1] as u8 as u32),
+        EE_NETMSG_SESS_COMMS_SET_PT => {
+            return ee_net::net::ffi_client::ee_net_cl_set_current_physics_tick(n(f).client, v[1] as u32);
+        }
+        EE_NETMSG_SESS_COMMS_REGISTER => return sv::ee_net_sv_register_slot(n(f).server, v[1] as u8),
         EE_NETMSG_SESS_COMMS_UNREGISTER => O::SsUnregisterSlot,
         EE_NETMSG_SESS_COMMS_SEND_TO_CLEAR => return send_to_clear(),
         EE_NETMSG_SESS_COMMS_SEND_TO_INSERT => return send_to_insert(v[1] as u8, v[2] as u8),
         EE_NETMSG_SESS_COMMS_SEND_TO_ERASE => return send_to_erase(v[1] as u8),
-        EE_NETMSG_SESS_COMMS_ABORT_XFER => O::SsAbortXfer,
-        EE_NETMSG_SESS_COMMS_REMOVE_IN_PROGRESS => O::SsRemoveInProgress,
+        EE_NETMSG_SESS_COMMS_ABORT_XFER => return sv::ee_net_sv_abort_xfer(n(f).server, v[1] as u32),
+        EE_NETMSG_SESS_COMMS_REMOVE_IN_PROGRESS => {
+            return sv::ee_net_sv_remove_player_from_game_in_progress(n(f).server, v[1] as u8, v[2] != 0, false, v[3] != 0);
+        }
         EE_NETMSG_SESS_COMMS_XFER_GAME_FILE => return xfer_game_file(f, v[1], v[2]),
-        EE_NETMSG_SESS_COMMS_START_GAME => O::SsStartGame,
-        EE_NETMSG_SESS_COMMS_PAUSE_GAME => O::SsPauseGame,
+        EE_NETMSG_SESS_COMMS_START_GAME => return sv::ee_net_sv_set_event(n(f).server, sv::EeNetSvEvent::StartGame),
+        EE_NETMSG_SESS_COMMS_PAUSE_GAME => return sv::ee_net_sv_pause_game(n(f).server, true),
         EE_NETMSG_SESS_COMMS_BECOME_CLIENT => {
             // the host removed: the server deleted, a client in its place
-            h(O::SsCommsStopPing, f, &[]);
+            net::global().sv_set(EeNetSvSet::Ping, 0);
             h(O::SsCommsResetXfer, f, &[]);
             h(O::SsUnregisterSlot, f, &[SS_SLOT_SERVER]);
-            h(O::SsRegisterSlot, f, &[SS_SLOT_SERVER]);
+            sv::ee_net_sv_register_slot(n(f).server, SS_SLOT_SERVER as u8);
             if h(O::SsCommsPresent, f, &[]) != 0 {
                 h(O::SsCommsDelete, f, &[]);
                 h(O::SsCommsNewClient, f, &[]);
-                h(O::SsClientStartThreads, f, &[]);
+                ee_net::net::ffi_client::ee_net_cl_start_threads(net::global().client);
             }
             return;
         }
-        EE_NETMSG_SESS_COMMS_LOWEST_CTS => O::SsLowestCts,
-        EE_NETMSG_SESS_COMMS_DISCONNECT => O::SsDisconnect,
+        EE_NETMSG_SESS_COMMS_LOWEST_CTS => {
+            return sv::ee_net_sv_set_message_manager_lowest_cts(net::global().server, v[1] as u32);
+        }
+        EE_NETMSG_SESS_COMMS_DISCONNECT => {
+            ee_net::net::ffi_client::ee_net_cl_disconnect(n(f).client);
+            return;
+        }
         EE_NETMSG_SESS_COMMS_LOCAL_OUT => return super::globals::set!(gLocalPlayerOut, v[1] != 0),
         EE_NETMSG_SESS_COMMS_SLEEP => return ee_base::plat_core::time::PlatSleep(v[1] as u32),
         _ => O::SsFrameProtocol,
@@ -771,10 +791,22 @@ mod tests {
 
     #[test]
     fn the_members_pick_the_server_or_the_client() {
-        assert!(matches!(member_of(true, EE_NETMSG_SESS_SELF_HAS_LEFT), Member::Bool(O::SsSHasLeft)));
-        assert!(matches!(member_of(false, EE_NETMSG_SESS_SELF_HAS_LEFT), Member::Bool(O::SsCHasLeft)));
-        assert!(matches!(member_of(false, EE_NETMSG_SESS_SELF_FAST_ID), Member::Byte(O::SsCFastId)));
-        assert!(matches!(member_of(true, EE_NETMSG_SESS_SELF_LAG_MASK), Member::Short(O::SsLagMask)));
-        assert!(matches!(member_of(true, 1000), Member::Bool(O::SsWasBooted)));
+        assert!(server_member(EE_NETMSG_SESS_SELF_HAS_LEFT, || true));
+        assert!(!server_member(EE_NETMSG_SESS_SELF_HAS_LEFT, || false));
+        assert!(!server_member(EE_NETMSG_SESS_SELF_FAST_ID, || false));
+        assert!(server_member(EE_NETMSG_SESS_SELF_LAG_MASK, || false));
+        assert!(server_member(EE_NETMSG_SESS_SELF_VOTED, || false));
+        assert!(!server_member(EE_NETMSG_SESS_SELF_UI_SLOT, || true));
+        assert!(!server_member(1000, || true));
+    }
+
+    #[test]
+    fn the_members_read_and_write_as_their_types() {
+        let (mut b, mut c, mut s) = (false, 0u8, 0u16);
+        assert_eq!(rw_bool(&mut b, true, 5), 1);
+        assert_eq!(rw_bool(&mut b, false, 0), 1);
+        assert_eq!(rw_u8(&mut c, true, 0x1ff), 0xff);
+        assert_eq!(rw_u16(&mut s, true, 0x1_0002), 2);
+        assert_eq!(rw_u16(&mut s, false, 9), 2);
     }
 }

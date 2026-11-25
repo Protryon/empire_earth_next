@@ -336,7 +336,7 @@ fn mute(loading: bool, quiet: bool) -> i64 {
     hf(O::PsSetMasterVolume, 0, &[], &[0.0]);
     hf(O::PsSetMusicVolume, 0, &[], &[0.0]);
     ee_base::plat_core::time::PlatSleep(0x282);
-    if quiet || h(O::PsCommPresent, 0, &[]) == 0 || h(O::CommIsServer, 0, &[]) == 0 || loading != true {
+    if quiet || !super::net::present() || h(O::CommIsServer, 0, &[]) == 0 || loading != true {
         return 0;
     }
     h(O::UiLockForCopy, 0, &[]);
@@ -840,7 +840,7 @@ fn restore_players(st: P, helper: P) -> i64 {
         }
     }
     // only with the players read: a failed read left the list empty and the local index unset
-    if r == PF_OK && h(O::PsCommPresent, 0, &[]) != 0 && h(O::CommIsServer, 0, &[]) != 0 {
+    if r == PF_OK && super::net::present() && h(O::CommIsServer, 0, &[]) != 0 {
         if players.len() > 1 {
             prts(players[1]).mSlot = PS_SLOT_NONE;
         }

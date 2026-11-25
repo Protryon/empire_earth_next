@@ -638,7 +638,7 @@ pub extern "C" fn ee_gamecpp_startup_clear_game() {
     h(O::GfxPostReleaseScene, 0, &[]);
     h(O::GfxPostMessage50AAndWait, 0, &[]);
     h(O::PreloadWaitForQueue, 0, &[]);
-    if h(O::CommPresent, 0, &[]) != 0 {
+    if super::net::present() {
         h(O::CommDeleteDetached, 0, &[]);
     }
     let w = hp(O::WorldAddr, 0, &[]);

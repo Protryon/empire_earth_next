@@ -22,6 +22,8 @@ use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
 
 use super::persistent::{Pf, PF_FAILED, PF_OK};
 use super::{h, hp, pa, rec, Owned, O, P};
+use ee_net::net::ffi_comms::EeNetCommsField;
+use ee_net::net::ffi_server::{EeNetSvGet, EeNetSvSet};
 
 /// `EEPPlayerHelper`'s members from `mLocalPlayerIndex` (+0x18) to `mLoaded` (+0x21).
 #[repr(C)]
@@ -574,11 +576,12 @@ pub extern "C" fn ee_gamecpp_pmh_load(major: c_ulong, minor: c_ulong, file: *mut
         }
         r = file.read_ulong(x);
     }
-    if r == PF_OK && h(O::PsCommPresent, 0, &[]) != 0 {
-        if h(O::CommIsServer, 0, &[]) != 0 {
-            h(O::PmServerSetPhysicsTick, 0, &[&mut v[7] as *mut c_ulong as usize as i64]);
+    if r == PF_OK && super::net::present() {
+        let comms = super::net::global();
+        if !comms.server.is_null() {
+            comms.sv_set(EeNetSvSet::CurrentPhysicsTick, v[7] as u32);
         } else {
-            h(O::PmClientSetPhysicsTick, 0, &[&mut v[2] as *mut c_ulong as usize as i64]);
+            ee_net::net::ffi_client::ee_net_cl_set_current_physics_tick(comms.client, v[2] as u32);
         }
     }
     r as c_long
@@ -593,16 +596,18 @@ pub extern "C" fn ee_gamecpp_pmh_save(major: c_ulong, minor: c_ulong, file: *mut
         return PF_OK as c_long;
     }
     let mut v: [c_ulong; 8] = [0; 8];
-    v[3] = h(O::PmCommCtsProcessed, 0, &[]) as c_ulong;
-    v[4] = h(O::PmCommLastTick, 0, &[]) as c_ulong;
-    if h(O::CommIsServer, 0, &[]) != 0 {
-        v[5] = h(O::PmServerLastCt, 0, &[]) as c_ulong;
-        v[6] = h(O::PmServerCt, 0, &[]) as c_ulong;
-        v[7] = h(O::PmServerPt, 0, &[]) as c_ulong;
-        v[0] = h(O::PmServerMessageNumber, 0, &[]) as c_ulong;
+    let comms = super::net::global();
+    v[3] = comms.get(EeNetCommsField::CtsProcessed) as c_ulong;
+    // GetLastTickReceived: the field's `long` (-2 before the connection, -1 none) as an unsigned long
+    v[4] = comms.get(EeNetCommsField::LastTickReceived) as i32 as c_long as c_ulong;
+    if !comms.server.is_null() {
+        v[5] = comms.sv_get(EeNetSvGet::LastCtMessageId) as c_ulong;
+        v[6] = comms.current_ct() as c_ulong;
+        v[7] = comms.sv_get(EeNetSvGet::CurrentPhysicsTick) as c_ulong;
+        v[0] = ee_net::net::ffi_server::ee_net_sv_message_manager_current_number(comms.server) as c_ulong;
     } else {
-        v[1] = h(O::PmClientCt, 0, &[]) as c_ulong;
-        v[2] = h(O::PmClientPt, 0, &[]) as c_ulong;
+        v[1] = comms.current_ct() as c_ulong;
+        v[2] = ee_net::net::ffi_client::ee_net_cl_current_physics_tick(comms.client) as c_ulong;
     }
     let mut r = h(O::PmPhysicsSave, file.0, &ver(major, minor));
     for &x in v.iter() {
