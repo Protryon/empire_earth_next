@@ -638,23 +638,6 @@ void EEPlayer::RestartTowns()
 // towns are made from their saved areas instead. The save, the load, the pending towns and the matching are Rust
 // (ee_units town_save.rs) over EETownSaveHost.
 
-// the counters a town's units summed as they came and went (the rebuild counts them once each, where the running
-// game counted a farm at its placement and again at its completion)
-static long* EETownCounter(EETown* inTown, int64_t inIndex)
-{
-    switch (inIndex) {
-    case 0: return (long*)&inTown->mValue;
-    case 1: return &inTown->mNumWalls;
-    case 2: return &inTown->mL80;
-    case 3: return &inTown->mNumWonders;
-    case 4: return &inTown->mNumDocks;
-    case 5: return &inTown->mNumAirports;
-    case 6: return &inTown->mNumUnits;
-    case 7: return &inTown->mReach;
-    }
-    return NULL;
-}
-
 struct EETownSaveContext {
     FSFile* mFile;                      // the save's and the load's
     EEPlayer* mPlayer;                  // RepairPointers' player
@@ -938,7 +921,6 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
         return 0;
     // the world lane, round 2 (player_rest.rs)
     case EE_UNITS_PLAYER_BODY_CONTINENT_ID: return gContinentManager.GetContinentID(inB, inC);
-    case EE_UNITS_PLAYER_BODY_TOWN_CONTINENT: return EEPlayerTownAt(inA)->mContinent;
     case EE_UNITS_PLAYER_BODY_TOWN_CLOSEST: return EEPlayerPackPoint(EEPlayerTownAt(inA)->GetClosestPoint(U2DPoint<long>((long)inB, (long)inC)));
     case EE_UNITS_PLAYER_BODY_RTS_CHECKSUM: ee_rts_player_checksum(thePlayer, reinterpret_cast<ESChecksum*>(static_cast<uintptr_t>(inA)));
         return 0;
@@ -1065,20 +1047,6 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_DUMP_TEXT: fprintf(*EEPlayerPtr<FSFileSpec>(inA), "%s", EEPlayerPtr<const char>(inB));
         return 0;
     // the towns' save host's (town_split.rs)
-    case EE_UNITS_PLAYER_BODY_TOWN_ID: return EEPlayerTownAt(inA)->mTownID;
-    case EE_UNITS_PLAYER_BODY_TOWN_SET_ID: EEPlayerTownAt(inA)->mTownID = (long)inB;
-        return 0;
-    case EE_UNITS_PLAYER_BODY_TOWN_COUNTER: return *EETownCounter(EEPlayerTownAt(inA), inB);
-    case EE_UNITS_PLAYER_BODY_TOWN_SET_COUNTER: *EETownCounter(EEPlayerTownAt(inA), inB) = (long)inC;
-        return 0;
-    case EE_UNITS_PLAYER_BODY_TOWN_NEAR_WATER: return EEPlayerTownAt(inA)->mNearWater;
-    case EE_UNITS_PLAYER_BODY_TOWN_SET_NEAR_WATER: EEPlayerTownAt(inA)->mNearWater = inB != 0;
-        return 0;
-    case EE_UNITS_PLAYER_BODY_TOWN_NEAR_EDGE: return EEPlayerTownAt(inA)->mNearMapEdge;
-    case EE_UNITS_PLAYER_BODY_TOWN_SET_NEAR_EDGE: EEPlayerTownAt(inA)->mNearMapEdge = inB != 0;
-        return 0;
-    case EE_UNITS_PLAYER_BODY_TOWN_SET_CONTINENT: EEPlayerTownAt(inA)->mContinent = (unsigned short)inB;
-        return 0;
     case EE_UNITS_PLAYER_BODY_TOWN_NEW: return (int64_t)(uintptr_t)new EETown(thePlayer, (long)inB);
     case EE_UNITS_PLAYER_BODY_TOWN_DELETE: delete EEPlayerTownAt(inA);
         return 0;

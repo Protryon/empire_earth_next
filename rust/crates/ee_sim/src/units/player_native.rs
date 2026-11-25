@@ -8,6 +8,13 @@ use crate::units::player_body::*;
 use crate::units::player_rest::{
     EE_UNITS_PLAYER_BODY_ATC_UPDATE, EE_UNITS_PLAYER_BODY_CLOAKED, EE_UNITS_PLAYER_BODY_DETACHED,
     EE_UNITS_PLAYER_BODY_GAME_TIME, EE_UNITS_PLAYER_BODY_SET_CLOAKED, EE_UNITS_PLAYER_BODY_SET_DETACHED,
+    EE_UNITS_PLAYER_BODY_TOWN_CONTINENT,
+};
+use crate::units::town_split::{
+    EE_UNITS_PLAYER_BODY_TOWN_COUNTER, EE_UNITS_PLAYER_BODY_TOWN_ID, EE_UNITS_PLAYER_BODY_TOWN_NEAR_EDGE,
+    EE_UNITS_PLAYER_BODY_TOWN_NEAR_WATER, EE_UNITS_PLAYER_BODY_TOWN_SET_CONTINENT,
+    EE_UNITS_PLAYER_BODY_TOWN_SET_COUNTER, EE_UNITS_PLAYER_BODY_TOWN_SET_ID, EE_UNITS_PLAYER_BODY_TOWN_SET_NEAR_EDGE,
+    EE_UNITS_PLAYER_BODY_TOWN_SET_NEAR_WATER,
 };
 use crate::world::layout::layout;
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved};
@@ -30,6 +37,31 @@ fn fields(p: u64) -> *mut EeUnitsPlayerFields {
 /// Complex unit `u`'s record (`u` an `RTSUnit*` address: the complex unit's own).
 fn complex(u: u64) -> *mut crate::world::unit_fields::EeUnitsComplexUnitFields {
     (u as usize + layout().complex_unit_fields as usize) as *mut _
+}
+
+/// Town `t`'s record (an `EETown*`).
+fn town(t: u64) -> *mut crate::cp::town::EeTownFields {
+    (t as usize + layout().town_fields as usize) as *mut _
+}
+
+/// Town `t`'s counter `i` (the towns' save's order: the value (a `long`), the walls, the buildings, the wonders, the
+/// docks, the airports, the units, the reach; the original `EETownCounter`).
+///
+/// # Safety
+/// `t` is a live town; `i` is 0..8.
+unsafe fn town_counter(t: u64, i: i64) -> *mut c_long {
+    // SAFETY: the caller's contract
+    let f = unsafe { &mut *town(t) };
+    match i {
+        0 => &mut f.mValue as *mut _ as *mut c_long,
+        1 => &mut f.mNumWalls,
+        2 => &mut f.mL80,
+        3 => &mut f.mNumWonders,
+        4 => &mut f.mNumDocks,
+        5 => &mut f.mNumAirports,
+        6 => &mut f.mNumUnits,
+        _ => &mut f.mReach,
+    }
 }
 
 /// Tech tree node `n`'s record (an `EETechTreeNode*`).
@@ -95,6 +127,16 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
             EE_UNITS_PLAYER_BODY_DAMAGE_ADD => (*fields(p)).mDamageFrom[b as usize] += c as c_long,
             EE_UNITS_PLAYER_BODY_SET_COMBAT => (*saved(p)).mCombatState = b as _,
             EE_UNITS_PLAYER_BODY_CAPITOLS => return Some((*saved(p)).mNumCapitols as i64),
+            EE_UNITS_PLAYER_BODY_TOWN_ID => return Some((*town(a)).mTownID as i64),
+            EE_UNITS_PLAYER_BODY_TOWN_SET_ID => (*town(a)).mTownID = b as _,
+            EE_UNITS_PLAYER_BODY_TOWN_COUNTER => return Some(*town_counter(a, b) as i64),
+            EE_UNITS_PLAYER_BODY_TOWN_SET_COUNTER => *town_counter(a, b) = c as _,
+            EE_UNITS_PLAYER_BODY_TOWN_NEAR_WATER => return Some(i64::from((*town(a)).mNearWater)),
+            EE_UNITS_PLAYER_BODY_TOWN_SET_NEAR_WATER => (*town(a)).mNearWater = b != 0,
+            EE_UNITS_PLAYER_BODY_TOWN_NEAR_EDGE => return Some(i64::from((*town(a)).mNearMapEdge)),
+            EE_UNITS_PLAYER_BODY_TOWN_SET_NEAR_EDGE => (*town(a)).mNearMapEdge = b != 0,
+            EE_UNITS_PLAYER_BODY_TOWN_CONTINENT => return Some(i64::from((*town(a)).mContinent)),
+            EE_UNITS_PLAYER_BODY_TOWN_SET_CONTINENT => (*town(a)).mContinent = b as u16,
             EE_UNITS_PLAYER_BODY_DETACHED => return Some(i64::from((*complex(a)).mIsDetachedFromAI)),
             EE_UNITS_PLAYER_BODY_SET_DETACHED => (*complex(a)).mIsDetachedFromAI = b != 0,
             EE_UNITS_PLAYER_BODY_DISABLED => return Some(i64::from((*complex(a)).mIsDisabled)),

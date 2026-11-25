@@ -34,6 +34,7 @@
 #include "lle/U2DPolygon.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
+#include "ee/EETown.h"
 #include "ee/EECPPlacement.h"
 #include "rust/sim/world.h"
 
@@ -192,6 +193,7 @@ void EEWorldLayoutRegister()
     theLayout.player_healed_unit_set = offsetof(EEPlayer, mHealedUnitSet);
     theLayout.player_air_traffic = offsetof(EEPlayer, mAirTraffic);
     theLayout.player_last_unit = offsetof(EEPlayer, mLastUnit);
+    theLayout.town_fields = BaseOffset<EETown, EeTownFields>();
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

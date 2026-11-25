@@ -234,6 +234,8 @@ pub struct EeWorldLayout {
     pub player_healed_unit_set: u64,
     pub player_air_traffic: u64,
     pub player_last_unit: u64,
+    /// `EeTownFields` in `EETown` (player_native.rs: the towns' save's counters and flags)
+    pub town_fields: u64,
 }
 
 static LAYOUT: OnceLock<EeWorldLayout> = OnceLock::new();
