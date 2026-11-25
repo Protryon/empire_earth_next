@@ -1430,7 +1430,6 @@ public:
     bool CheckDoubleClick(MouseButton b) { return this->WCall(EeWonWinCall::CheckDoubleClick,(intptr_t)b)!=0; }
     void HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); } //32b120
     // HandleKeyEvent (0x32b170), HandleMouseEvent (0x32b260) and HandleInputEvent (0x32b390) over the event's record
-    inline void HandleEvent(EeWonWinCall c, InputEvent* e);
 
     Window();
     virtual ~Window();                     // 0x32a020, out of line
@@ -1551,11 +1550,12 @@ void LobbyNotifyStagingChange();
 
 class WindowEventBase : public RefCount {
 public:
-    WindowEventBase(long inType = 0) : mEventType(inType), mWindow(NULL) {}
-    virtual void Deliver() = 0;             // +0x04: original vtable 0x44df64 -> _purecall
-
-    long mEventType;                        // +0x08
-    Window* mWindow;                        // +0x0c
+    WindowEventBase(long inType = 0, EeWonWinCall inHandler = (EeWonWinCall)0) : mRec{{(int32_t)inType}, 0, (uint32_t)inHandler} {}
+    virtual void Deliver() {}               // +0x04 (pure in the original); an input event's is Rust's (guisplit.rs wm_op)
+    Window* GetWindow() const { return (Window*)this->mRec.window; }
+    // the type (+0x08), an input event's fields and handler and the window (+0x0c): wmobj.rs's record, which the
+    // Rust manager reads and sets in place (R6 WON GUI round 38)
+    EeWonWmEventRec mRec;
 };
 
 // an event that calls a function with one argument when it is delivered
@@ -1570,15 +1570,13 @@ public:
     int mParam;                             // +0x14
 };
 
-// the window's input events (R6 WON GUI round 37): one class over the record the Rust window's handlers read
-// (winobj.rs EeWonWinEvent) and the handler its original class picked; MouseEvent, KeyEvent and SizeEvent fill it
+// the window's input events (R6 WON GUI rounds 37 and 38): the base's record filled with the fields the Rust window's
+// handlers read (winobj.rs EeWonWinEvent) and the handler its original class's Deliver ran (0x32b520, 0x32b630,
+// 0x32b640: guisplit.rs runs it on the window's Rust window); MouseEvent, KeyEvent and SizeEvent fill it
 class InputEvent : public WindowEventBase {
 public:
     InputEvent(int t, EeWonWinCall h = EeWonWinCall::HandleInputEvent, int x = 0, int y = 0, int m = 0, int b = 0, int k = 0, int w = 0, int ht = 0)
-      : WindowEventBase(t), mHandler(h), mEv{t, x, y, m, b, k, w, ht} {}
-    virtual void Deliver() { this->mWindow->HandleEvent(this->mHandler, this); } // 0x32b520, 0x32b630, 0x32b640
-    EeWonWinCall mHandler;
-    EeWonWinEvent mEv;
+      : WindowEventBase(t, h) { this->mRec.ev = EeWonWinEvent{t, x, y, m, b, k, w, ht}; }
 };
 struct MouseEvent : InputEvent { MouseEvent(int t, int x, int y, int m, int b = 0) : InputEvent(t, EeWonWinCall::HandleMouseEvent, x, y, m, b) {} };
 struct KeyEvent : InputEvent { KeyEvent(int t, int k, int m) : InputEvent(t, EeWonWinCall::HandleKeyEvent, 0, 0, m, 0, k) {} };
@@ -1591,7 +1589,7 @@ public:
     ComponentEvent(Component* c, int t) : mComponentRef(c), mType(t), mComponent(c) { this->mBroadcast = false; }
     // broadcast through the window manager, or bubbled up from the component
     virtual void Deliver()
-    { if (this->mBroadcast) this->mWindow->mManager->BroadcastEvent(this); else this->mComponent->BubbleEvent(this); }
+    { if (this->mBroadcast) this->GetWindow()->mManager->BroadcastEvent(this); else this->mComponent->BubbleEvent(this); }
     void SetComponent(Component* c) { this->mComponent = c; this->mComponentRef = c; } // retargets the event
     int GetControlId() const { return this->mComponent->mControlId; }
     SmartPtr<Component> mComponentRef;      // +0x10
@@ -1671,7 +1669,6 @@ inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned sho
                              c->mGraphics != NULL ? c->mGraphics->State() : NULL, c->mGraphics != NULL ? &c->mGraphics->mPlat : NULL,
                              s.mData->mText + o, n, x, y);
 }
-inline void Window::HandleEvent(EeWonWinCall c, InputEvent* e) { ee_won_win_event(this->mWinObj.p, c, &e->mEv); }
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
 // FontConfig (0x98 bytes, the factory 0x38a160, constructor 0x38a1c0) is a kind of the media config
@@ -2229,7 +2226,7 @@ protected:
     PopupParams mParams; //10..3b, full2c POD containing borrowed raw pointers
 public:
     DoPopupEvent(const PopupParams& params) : mParams(params) {}
-    virtual void Deliver() { this->mWindow->OpenPopup(this->mParams); } //32b650
+    virtual void Deliver() { this->GetWindow()->OpenPopup(this->mParams); } //32b650
 };
 }
 

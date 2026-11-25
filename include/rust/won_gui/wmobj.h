@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "rust/won_gui/guictl.h"
 #include "rust/won_gui/guihost.h"
+#include "rust/won_gui/winobj.h"
 
 /// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
 constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
@@ -309,6 +310,15 @@ struct EeWonWmMouse {
   int32_t x;
   int32_t y;
   int32_t button;
+};
+
+/// A window event's record (the C++ `WindowEventBase::mRec`, R6 WON GUI round 38): the input record first (its kind
+/// the event's type; the rest an input event's), the window the event is for, and an input event's handler (the
+/// `EeWonWinCall` its original class's `Deliver` ran on the window; 0 for any other event, whose `Deliver` is C++).
+struct EeWonWmEventRec {
+  EeWonWinEvent ev;
+  ptrdiff_t window;
+  uint32_t handler;
 };
 
 /// `PopupParams`.

@@ -977,7 +977,7 @@ pub enum EeWonGuiOp {
     ViewportAddChild,
     /// `new TreeItem` (unheld).
     NewTreeItemRaw,
-    // the window's (winobj.rs ee_won_win_event, ee_won_win_get_font, ee_won_win_create)
+    // the window's (winobj.rs ee_won_win_get_font, ee_won_win_create)
     // (900..908, the input events' fields, went: the events carry winobj.rs's record, R6 WON GUI round 37)
     /// `sHostFont = PlatformGetFont(*(const FontDescriptor*)a)` (the original's local SmartPtr).
     WinPlatformFont = 909,
@@ -1081,8 +1081,9 @@ pub enum EeWonGuiOp {
     /// `t->AddSegment(((const GUIString*)a)->substr(b, c), d != 0)` (AddFormatedText's line, guitext.rs).
     TextAddPart = 3400,
     // ---- R6 WON GUI round 37, the host side's share (values 3800..3999)
-    /// `&static_cast<InputEvent*>((WindowEventBase*)a)->mEv`: an input event's record (winobj.rs `EeWonWinEvent`),
-    /// which guisplit.rs reads and sets for the manager's `WmEvent` mouse, size, button and key cases.
+    /// `&((WindowEventBase*)a)->mRec`: an event's record (wmobj.rs `EeWonWmEventRec`: the input record, winobj.rs
+    /// `EeWonWinEvent`, first), which guisplit.rs reads and sets for the manager's `WmEvent` type, window, mouse,
+    /// size, button and key cases and runs an input event's handler from.
     WmInputRec = 3800,
     // ---- R6 WON GUI round 35, the configs' and containers' share (values 3200..3399)
     /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).

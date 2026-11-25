@@ -938,8 +938,9 @@ enum class EeWonGuiOp : uint32_t {
   WmScreenResSet,
   /// `t->AddSegment(((const GUIString*)a)->substr(b, c), d != 0)` (AddFormatedText's line, guitext.rs).
   TextAddPart = 3400,
-  /// `&static_cast<InputEvent*>((WindowEventBase*)a)->mEv`: an input event's record (winobj.rs `EeWonWinEvent`),
-  /// which guisplit.rs reads and sets for the manager's `WmEvent` mouse, size, button and key cases.
+  /// `&((WindowEventBase*)a)->mRec`: an event's record (wmobj.rs `EeWonWmEventRec`: the input record, winobj.rs
+  /// `EeWonWinEvent`, first), which guisplit.rs reads and sets for the manager's `WmEvent` type, window, mouse,
+  /// size, button and key cases and runs an input event's handler from.
   WmInputRec = 3800,
   /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
   TabNewContainer = 3200,
