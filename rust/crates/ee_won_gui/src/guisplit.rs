@@ -59,7 +59,15 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
         std::mem::transmute::<usize, unsafe extern "C" fn(*mut c_void, Op, isize, isize, isize, isize) -> isize>(f)
     };
     // SAFETY: the C++ host of this component
-    let out = |op: Op, a: isize, b: isize, c: isize, d: isize| unsafe { host(comp, op, a, b, c, d) };
+    let out = |op: Op, a: isize, b: isize, c: isize, d: isize| {
+        if which == EeWonGuiSplitHost::Wm {
+            if let Some(r) = crate::gamewin::wm_ref_op(comp as isize, op, a, b, c) {
+                return r;
+            }
+        }
+        // SAFETY: as above
+        unsafe { host(comp, op, a, b, c, d) }
+    };
     let answer = match which {
         EeWonGuiSplitHost::Text => text_op(op, a, b, c, &out),
         EeWonGuiSplitHost::Input => input_op(op, a, b, c, &out),

@@ -1096,8 +1096,6 @@ public:
     virtual void SetCursor(Cursor* c) { this->RCall(EeWonRootCall::SetCursor,(intptr_t)c); } //304cf0
     virtual void RemoveChild(Component* c) { this->RCall(EeWonRootCall::RemoveChild,(intptr_t)c); } //304cc0
     void AddBG(BackgroundGrabber* g) { this->RCall(EeWonRootCall::AddBG,(intptr_t)g); } //304510
-    // Window::InvalidateRoot's union of the whole root into the invalid rectangle
-    void UnionInvalidRect(const WONRectangle& r) { this->RCall(EeWonRootCall::InvalidateRect,(intptr_t)&r); }
 
     Window* mWindow;
     EeWonRoot* mRootObj;
@@ -1166,8 +1164,6 @@ public:
     void SetSysColor(int i) { this->GCall(EeWonGfxCall::SetSysColor, i); }
     void SetFont(Font*);
     void Translate(int dx, int dy) { this->GCall(EeWonGfxCall::Translate, dx, dy); }
-    void DoTranslate(int&, int&);
-    DWORD GetPixel(int x, int y) { return ee_won_plat_gfx(this->mPlat.surface, this->mPlat.scale, this->mColor, EeWonPlatGfx::GetPixel, x, y, 0, 0, 0, 0); }
     void SetPixel(int x, int y, DWORD c) { this->GCall(EeWonGfxCall::SetPixel, x, y, (int)c); }
     void DrawImage(Image* i, int x, int y) { this->GCall(EeWonGfxCall::DrawImage, x, y, 0, 0, 0, 0, 0, i); }
     void DrawImage(Image* i, int x, int y, int l, int t, int w, int h) { this->GCall(EeWonGfxCall::DrawImagePart, x, y, l, t, w, h, 0, i); }
@@ -1176,12 +1172,10 @@ public:
     void FillRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillRect, x, y, w, h); }
     void FillRectBlend(int x, int y, int w, int h, int n) { this->GCall(EeWonGfxCall::FillRectBlend, x, y, w, h, n); }
     void DrawDottedRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawDottedRect, x, y, w, h); }
-    void DrawEllipse(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawEllipse, x, y, w, h); }
     void FillEllipse(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillEllipse, x, y, w, h); }
     void DrawArc(int x, int y, int w, int h, int s, int a) { this->GCall(EeWonGfxCall::DrawArc, x, y, w, h, s, a); }
     void DrawString(const GUIString& s, int x, int y) { this->GCall(EeWonGfxCall::DrawString, x, y, s.length(), 0, 0, 0, 0, &s); }
     void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { this->GCall(EeWonGfxCall::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
-    void PerformClip() { this->GCall(EeWonGfxCall::PerformClip); }
     void PushClipRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::PushClip, x, y, w, h); }
     void PopClipRect() { this->GCall(EeWonGfxCall::PopClip); }
     SmartPtr<DisplayContext> mDisplayContext; //04
@@ -1291,7 +1285,6 @@ public:
     void SetFocusWindow(Window* w) { this->Call(EeWonPlatWmCall::SetFocus, (intptr_t)w); }
     void SetCaptureWindow(Window* w) { this->Call(EeWonPlatWmCall::SetCapture, (intptr_t)w); }
     Window* GetCaptureWindow() { return (Window*)this->Call(EeWonPlatWmCall::Capture); }
-    Window* GetPlatFocusWindow() { return (Window*)this->Call(EeWonPlatWmCall::Focus); }
     Window* WindowFromPoint(int x, int y) { return (Window*)this->Call(EeWonPlatWmCall::WindowFromPoint, x, y); }
     bool GetMousePosition(int& x, int& y) { return ee_won_plat_wm_mouse(this->mRust, &x, &y); }
     void SetDirty() { this->Call(EeWonPlatWmCall::SetDirty); }
@@ -1459,7 +1452,6 @@ public:
     { return this->mRust != NULL ? ee_won_plat_win(this->mRust, c, a, b, cc, d) : 0; }
     void Show(bool s) { this->WCall(EeWonWinCall::Show, s ? 1 : 0); }
     void Minimize(bool m) { this->WCall(EeWonWinCall::Minimize, m ? 1 : 0); }
-    DisplayContext* GetDisplayContext() { return this->mDisplayContext.get(); } // inline, at +0x28
     void PlatformSetMouseCapture(bool c) { this->Rust(EeWonPlatWinCall::SetCapture, c); }
     void QueueEvent(WindowEventBase*);
     bool PlatformIsVisible() { return this->Rust(EeWonPlatWinCall::IsVisible) != 0; }

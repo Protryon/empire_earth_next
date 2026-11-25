@@ -19,6 +19,10 @@
 #include "rust/won_gui/platwin.h"
 #include "rust/won_gui/platwm.h"
 #include "rust/won_gui/gamewin.h"
+#include <stdlib.h>
+#include "rust/won_gui/clipobj.h"
+#include "platform/PlatWindow.h"
+#include "platform/PlatString.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
@@ -44,7 +48,6 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
     case Op::WinPlatformFont: sHostFont = t->PlatformGetFont(*(const FontDescriptor*)a); return 0;
     case Op::WinHostFont: return (intptr_t)sHostFont.get();
-    case Op::WinFontHold: ((Font*)a)->AddRef(); return 0;
     case Op::WinHostFontClear: sHostFont = SmartPtr<Font>(); return 0;
     default: return 0;
     }
@@ -178,3 +181,19 @@ SmartPtr<Font> Window::PlatformGetFont(const FontDescriptor& inDescriptor)
 }
 
 }
+
+// The GUI's clipboard on the platform layer (PlatClipboard.cpp folded in, R6 WON GUI round 37): UTF-8 text
+// through PlatClipboardGetText/SetText (decision D6)
+namespace WONAPI {
+
+// R6 WON GUI round 35: both methods are clipobj.rs's (the conversions between the platform's UTF-8 text and the
+// GUI's wide text); these are the platform's calls it makes
+static const EeWonClipFns kClipFns = {PlatClipboardGetText, PlatClipboardSetText, free};
+
+// Returns the clipboard's text; empty when it holds none
+GUIString Clipboard::Get() { return GUIString(std::wstring((const wchar_t*)ee_won_clip_get(&kClipFns))); }
+
+// Replaces the clipboard's contents with the string
+void Clipboard::Set(const GUIString& theStr) { ee_won_clip_set(&kClipFns, theStr.mData->mText, theStr.length()); }
+
+} // namespace WONAPI

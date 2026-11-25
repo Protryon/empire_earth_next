@@ -59,6 +59,44 @@ pub unsafe extern "C" fn ee_won_win_bind(
     }
 }
 
+// the game's reference count calls (RefCount::AddRef / Release on any of its objects, ComponentLifetime.cpp)
+static REF: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// The game's reference function: `f(object, 1)` takes a reference to a `RefCount` object, `f(object, 0)` gives one
+/// back (the object deleted with its last).
+#[no_mangle]
+pub extern "C" fn ee_won_gui_ref_register(f: Option<unsafe extern "C" fn(object: *mut c_void, hold: i32)>) {
+    REF.store(f.map_or(0, |f| f as usize), std::sync::atomic::Ordering::Release);
+}
+
+/// A reference taken (`hold`) or given back in the game (R6 WON GUI round 37: the hosts' Hold and Release cases,
+/// one statement each, went); None in a driver's world, whose host answers.
+pub(crate) fn rf(object: isize, hold: bool) -> Option<isize> {
+    let f = REF.load(std::sync::atomic::Ordering::Acquire);
+    if f == 0 {
+        return None;
+    }
+    // SAFETY: a value ee_won_gui_ref_register stored from the game's function
+    let f = unsafe { std::mem::transmute::<usize, unsafe extern "C" fn(*mut c_void, i32)>(f) };
+    // SAFETY: a live RefCount object (the op's contract)
+    unsafe { f(object as *mut c_void, i32::from(hold)) };
+    Some(0)
+}
+
+/// The window manager's host's reference ops (its own, its fonts', images' and events'), for guisplit.rs's game host.
+pub(crate) fn wm_ref_op(manager: isize, op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
+    match op {
+        Op::WmFontHold | Op::WmRawHold | Op::WmImageHold => rf(a, true),
+        Op::WmFontRelease | Op::WmRawRelease | Op::WmImageRelease => rf(a, false),
+        Op::WmSelfHold => rf(manager, true),
+        Op::WmSelfRelease => rf(manager, false),
+        Op::WmRef => rf(b, c != 0),
+        Op::WmEvent if a == crate::wmobj::EeWonWmEvent::Hold as isize => rf(b, true),
+        Op::WmEvent if a == crate::wmobj::EeWonWmEvent::Release as isize => rf(b, false),
+        _ => None,
+    }
+}
+
 // the game's window manager (the default one): its C++ object, its Rust manager and its platform manager
 static MANAGER: Mutex<[isize; 3]> = Mutex::new([0; 3]);
 
@@ -145,6 +183,7 @@ pub(crate) fn win_op(window: isize, op: Op, a: isize, b: isize, c: isize, d: isi
         }
         // (no window has an icon, and the manager has no default one)
         Op::WinHasIcon | Op::WinIconDefault => return parts(window).map(|_| 0),
+        Op::WinFontHold => return rf(a, true),
         Op::WinChildSet => return parts(a).map(|p| z(win(&p, C::ChildSet, window, b))),
         _ => {}
     }
@@ -242,8 +281,11 @@ pub(crate) fn wm_win_op(call: EeWonWmWin, window: isize, c: isize, d: isize) -> 
     use crate::ctobj::{ee_won_ct_call, EeWonContainer, EeWonCtCall as T};
     use crate::rootobj::{ee_won_root_call, EeWonRootCall as R};
     use EeWonWmWin as W;
-    if matches!(call, W::Hold | W::Release | W::HandleMouse | W::HandleKey | W::HandleInput | W::CloseEvent) {
-        return None;
+    match call {
+        W::Hold => return rf(window, true),
+        W::Release => return rf(window, false),
+        W::HandleMouse | W::HandleKey | W::HandleInput | W::CloseEvent => return None,
+        _ => {}
     }
     let me = parts(window)?;
     Some(match call {
@@ -289,8 +331,11 @@ pub(crate) fn wm_win_op(call: EeWonWmWin, window: isize, c: isize, d: isize) -> 
 /// The platform manager's op on the window `window` (platwm.rs's calls out) when the game binds it.
 pub(crate) fn plat_wm_op(op: EeWonPlatWmOp, window: isize, b: isize, c: isize) -> Option<isize> {
     use EeWonPlatWmOp as O;
-    if op == O::NotModal {
-        return parts(window).and_then(|_| wm(EeWonWmCall::NotModalWindow, window, 0));
+    match op {
+        O::NotModal => return parts(window).and_then(|_| wm(EeWonWmCall::NotModalWindow, window, 0)),
+        O::Hold => return rf(window, true),
+        O::Release => return rf(window, false),
+        _ => {}
     }
     if !matches!(
         op,
@@ -331,6 +376,8 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
     use crate::compobj::EeWonComp as K;
     use crate::ctobj::{ee_won_ct_call, EeWonContainer, EeWonCtCall as T, EeWonCtField};
     match k {
+        K::RefHold | K::EvHold => rf(b, true),
+        K::RefDrop | K::EvRelease => rf(b, false),
         K::PNextChild | K::PIsModal | K::PEnsureOnTopOf => {
             if !crate::compobj::is_game() {
                 return None;
@@ -378,6 +425,11 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
 pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::compobj::EeWonCompCall as K;
     use crate::guihost::EeWonGuiField as Fd;
+    match op {
+        Op::ChildHold | Op::CtCursorHold | Op::RootImageHold => return rf(a, true),
+        Op::ChildRelease | Op::CtCursorRelease | Op::RootImageRelease => return rf(a, false),
+        _ => {}
+    }
     if !matches!(
         op,
         Op::Get

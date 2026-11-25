@@ -15,14 +15,12 @@
 2faaf0 3035e4 WONGUI/ListControlAdapters.cpp
 2fb7b0 2fbac8 WONGUI/ListAreaToolTip.cpp
 2fcee0 2fdc3d WONGUI/MenuBehavior.cpp
-2fdcd0 2fe6d1 WONGUI/MSGraphicsUtil.cpp
 2fe6e0 2febe6 WONGUI/MSButtonBase.cpp
 3040d0 304ded WONGUI/RootContainer.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
 311560 311677 WONGUI/TextLinkState.cpp
 318060 319193 WONGUI/WONButton.cpp
 319a70 31a05b WONGUI/SkinnedContainers.cpp
-326540 3d0343 WONGUI/Cursor.cpp
 326ad0 32742b WONGUI/Graphics.cpp
 328450 3284f9 WONGUI/GUIStringSingleton.cpp
 328540 32b0f0 WONGUI/PopupValueAdapters.cpp

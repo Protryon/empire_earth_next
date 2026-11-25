@@ -17,6 +17,7 @@
 #include "rust/won_gui/compobj.h"
 #include "rust/won_gui/guihost.h"
 #include "rust/won_gui/guilayout.h"
+#include "rust/won_gui/gamewin.h"
 namespace WONAPI {
 static_assert(ComponentFlag_Invisible == EE_WON_COMP_FLAG_INVISIBLE && ComponentFlag_HasFocus == EE_WON_COMP_FLAG_HAS_FOCUS &&
               ComponentFlag_Disabled == EE_WON_COMP_FLAG_DISABLED && ComponentFlag_GrabBG == EE_WON_COMP_FLAG_GRAB_BG &&
@@ -65,8 +66,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
         return 0;
     switch ((K)k) {
     // (AllocExtra, Extra and SetExtra are a driver world's: the game's extra data is compobj.rs's own)
-    case K::RefHold: ((RefCount*)b)->AddRef(); return 0;
-    case K::RefDrop: ((RefCount*)b)->Release(); return 0;
     case K::GNew: return (intptr_t)new BackgroundGrabber;
     case K::GDelete: delete g; return 0;
     case K::VPositionChanged: t->PositionChanged(); return 0;
@@ -106,8 +105,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
         if (((const int*)d)[1] != 0) descriptor.mSize = ((const int*)d)[1];
         return (intptr_t)w->GetFont(descriptor).get();
     }
-    case K::EvHold: e->AddRef(); return 0;
-    case K::EvRelease: e->Release(); return 0;
     case K::EvBroadcast: return e->mBroadcast;
     case K::EvSetBroadcast: e->mBroadcast = c != 0; return 0;
     case K::EvComp: return (intptr_t)e->mComponent;
@@ -129,4 +126,7 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
 }
 // the one component host every Rust object calls a component through (compobj.rs comp())
 [[maybe_unused]] static const bool sCompHost = (ee_won_comp_host_register(ee_won_guicpp_comp_call), true);
+// the Rust objects' references to the game's RefCount objects (gamewin.rs rf: every host's Hold and Release)
+static void RefOf(void* p, int32_t hold) { if (hold) ((RefCount*)p)->AddRef(); else ((RefCount*)p)->Release(); }
+[[maybe_unused]] static const bool sRefHost = (ee_won_gui_ref_register(RefOf), true);
 }

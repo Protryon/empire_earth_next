@@ -24,6 +24,10 @@ void ee_won_win_bind(void *window,
                      void *root,
                      const EeWonRoot *root_obj);
 
+/// The game's reference function: `f(object, 1)` takes a reference to a `RefCount` object, `f(object, 0)` gives one
+/// back (the object deleted with its last).
+void ee_won_gui_ref_register(void (*f)(void *object, int32_t hold));
+
 /// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone).
 ///
 /// # Safety

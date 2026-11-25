@@ -18,7 +18,6 @@
 #include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/wmcache.h"
 #include "rust/won_gui/wmobj.h"
-#include "ee/wonapi/WONLobbyPlatform.h"
 #include "platform/PlatTime.h"
 #include "rust/won_gui/platimg.h"
 #include "rust/won_gui/platwin.h"
@@ -54,8 +53,6 @@ static intptr_t WmCompCall(Component* t, intptr_t call, intptr_t c, intptr_t d)
     switch ((EeWonWmComp)call) {
     case EeWonWmComp::FireEndPopup: t->Fn2F5380(ComponentEvent_EndPopup, 0); return 0;
     case EeWonWmComp::ClickChildAt: return (intptr_t)static_cast<Container*>(t)->FindClickChildAt((int)c, (int)d);
-    case EeWonWmComp::Hold: t->AddRef(); return 0;
-    case EeWonWmComp::Release: t->Release(); return 0;
     case EeWonWmComp::MouseWheel: t->MouseWheel((int)c); return 0;
     case EeWonWmComp::HandleComponentEvent: t->HandleComponentEvent((ComponentEvent*)c); return 0;
     default: return 0;
@@ -66,8 +63,6 @@ static intptr_t WmWinCall(Window* t, intptr_t call, intptr_t c, intptr_t d)
 {
     // (the window's and its root's own calls are gamewin.rs's: R6 WON GUI round 37)
     switch ((EeWonWmWin)call) {
-    case EeWonWmWin::Hold: t->AddRef(); return 0;
-    case EeWonWmWin::Release: t->Release(); return 0;
     case EeWonWmWin::HandleMouse: t->HandleEvent(EeWonWinCall::HandleMouseEvent, (InputEvent*)c); return 0;
     case EeWonWmWin::HandleKey: t->HandleEvent(EeWonWinCall::HandleKeyEvent, (InputEvent*)c); return 0;
     case EeWonWmWin::HandleInput: t->HandleEvent(EeWonWinCall::HandleInputEvent, (InputEvent*)c); return 0;
@@ -85,8 +80,6 @@ static intptr_t WmEventCall(WindowEventBase* t, intptr_t call, intptr_t c)
     case EeWonWmEvent::SetWindow: t->mWindow = (Window*)c; return 0;
     // Mouse, SetMouse, Button, Key, Size and SetSize are guisplit.rs's over the input event's record (WmInputRec)
     case EeWonWmEvent::Deliver: t->Deliver(); return 0;
-    case EeWonWmEvent::Hold: t->AddRef(); return 0;
-    case EeWonWmEvent::Release: t->Release(); return 0;
     }
     return 0;
 }
@@ -99,18 +92,7 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     case Op::WmComp: return WmCompCall((Component*)b, a, c, d);
     case Op::WmWin: return WmWinCall((Window*)b, a, c, d);
     case Op::WmScreenRect: t->GetScreenRect(*(WONRectangle*)a); return 0;
-    case Op::WmRef:
-        switch ((EeWonWmRefKind)a) {
-        case EeWonWmRefKind::NativeImage: if (c) ((NativeImage*)b)->AddRef(); else ((NativeImage*)b)->Release(); return 0;
-        }
-        return 0;
     case Op::WmInputRec: return (intptr_t)&static_cast<InputEvent*>((WindowEventBase*)a)->mEv;
-    case Op::WmFontHold: ((Font*)a)->AddRef(); return 0;
-    case Op::WmFontRelease: ((Font*)a)->Release(); return 0;
-    case Op::WmRawHold: ((RawImage*)a)->AddRef(); return 0;
-    case Op::WmRawRelease: ((RawImage*)a)->Release(); return 0;
-    case Op::WmImageHold: ((Image*)a)->AddRef(); return 0;
-    case Op::WmImageRelease: ((Image*)a)->Release(); return 0;
     case Op::WmDecodeKeep: sHostImage = t->mImageDecoder.Decode((DisplayContext*)a, std::string((const char*)b, (size_t)c).c_str()); return 0;
     case Op::WmHostImage: return (intptr_t)sHostImage.get();
     case Op::WmHostImageClear: sHostImage = SmartPtr<NativeImage>(); return 0;
@@ -121,8 +103,6 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     case Op::WmNewDelayImage: return (intptr_t)new Image(ee_won_image_new_delay(WONImageHost, (const uint8_t*)a, (size_t)b, sHostAttr.mWidth, sHostAttr.mHeight));
     case Op::WmSetStandardColor: t->mColorScheme->SetStandardColor((int)a, (DWORD)(uint32_t)b); return 0;
     case Op::WmNextEvent: t->GetNextEvent(); return 0;
-    case Op::WmSelfHold: t->AddRef(); return 0;
-    case Op::WmSelfRelease: t->Release(); return 0;
     case Op::WmEvent: return WmEventCall((WindowEventBase*)b, a, c);
     case Op::WmSignal: t->Signal(); return 0;
     // the statements of the new popup window, the default window font, the resolution and the size events
@@ -156,8 +136,6 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     case Op::IsUiThread: return PlatCurrentThreadId() == WindowManager::GetThreadId();
     case Op::QueueInput: w->QueueEvent(new InputEvent((int)b)); return 0;
     case Op::QueueKey: w->QueueEvent(new KeyEvent((int)b, (int)c, (int)d)); return 0;
-    case Op::Hold: w->AddRef(); return 0;
-    case Op::Release: w->Release(); return 0;
     case Op::ClosePopup: w->ClosePopup(NULL); return 0;
     case Op::Offscreen: return w->mOffscreenImage.get() != NULL ? (intptr_t)w->mOffscreenImage->GetSurface() : 0;
     case Op::Modifiers: return (intptr_t)PlatModifiers();
@@ -243,3 +221,18 @@ DWORD WindowManager::mThreadId = 0;
 // the platform's calls of an event pass (platloop.rs ee_won_plat_wm_next_event)
 const EeWonPlatLoopFns WindowManager::kLoopFns = {(int32_t (*)(void*, uint32_t))PlatWindowWaitEvent, PlatTimeMilliseconds64,
                                                  PlatSleep};
+
+// R6 WON GUI round 35: the cursors are cursorobj.rs's (the kinds, the standard cursors' table); this is what they ask
+// of the C++: the references a cursor keeps (a CursorRef's cursor, a ComponentCursor's component), another cursor's
+// answers, and the handles
+intptr_t WONAPI::WONCursorHost(EeWonCursorOp op, intptr_t a, intptr_t b, intptr_t c)
+{
+    typedef EeWonCursorOp Op;
+    switch (op) {
+    case Op::Native: return (intptr_t)((Cursor*)a)->GetNative();
+    case Op::Component: return (intptr_t)((Cursor*)a)->GetComponent(*(int*)b, *(int*)c);
+    case Op::Wrap: return (intptr_t)new Cursor((EeWonCursor*)a);
+    case Op::RustOf: return (intptr_t)((Cursor*)a)->mRust;
+    }
+    return 0;
+}

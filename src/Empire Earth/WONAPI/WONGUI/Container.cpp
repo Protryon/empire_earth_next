@@ -96,15 +96,11 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
         return CtOwnCall(t->mParent, (V)a, (intptr_t)static_cast<Component*>(t), 0);
     case Op::CtVirt: return CtOwnCall(t, (V)a, b, c);
     case Op::CtDetach: Comp(a)->mParent->RemoveChild(Comp(a)); return 0;
-    case Op::CtCursorHold: ((Cursor*)a)->AddRef(); return 0;
-    case Op::CtCursorRelease: ((Cursor*)a)->Release(); return 0;
     case Op::CtSetScheme: ((Graphics*)a)->mColorScheme = (ColorScheme*)b; return 0;
     case Op::CtScheme: return (intptr_t)((Graphics*)a)->mColorScheme;
     // (a viewport whose area was never set: no area, not visible; the forwarder would read its object through NULL)
     case Op::VpAreaRectVisible:
         return a != 0 && static_cast<ScrollArea*>(Comp(a))->IsRectVisible(*(WONRectangle*)b) ? 1 : 0;
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
     case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
     case Op::Invalidate: t->Invalidate(); return 0;
     case Op::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;

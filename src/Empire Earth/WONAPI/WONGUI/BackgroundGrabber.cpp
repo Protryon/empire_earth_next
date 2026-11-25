@@ -75,7 +75,6 @@ extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t 
     case Gb::RawWidth: return raw->GetWidth();
     case Gb::RawHeight: return raw->GetHeight();
     case Gb::DrawRaw: g->DrawImage(raw, 0, 0); return 0;
-    case Gb::RawRelease: raw->Release(); return 0;
     default: return 0;
     }
 }

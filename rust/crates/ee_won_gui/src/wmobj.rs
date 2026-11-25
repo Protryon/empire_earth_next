@@ -124,9 +124,9 @@ fn game_comp(call: EeWonWmComp, comp: isize, c: isize, d: isize) -> Option<isize
                 0
             }
         }
-        W::FireEndPopup | W::ClickChildAt | W::Hold | W::Release | W::MouseWheel | W::HandleComponentEvent => {
-            return None
-        }
+        W::Hold => return crate::gamewin::rf(comp, true),
+        W::Release => return crate::gamewin::rf(comp, false),
+        W::FireEndPopup | W::ClickChildAt | W::MouseWheel | W::HandleComponentEvent => return None,
     })
 }
 
