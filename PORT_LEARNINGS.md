@@ -40376,3 +40376,39 @@ compiles unmodified from the `lua-src` crate into the Rust library. docs/progres
 
 - **Behaviour changes**: none in a game. For a script: the list above (5.5's float text, `#` of a table with
   holes, `^`, the locale-dependent classes, frexp/ldexp, the traceback texts, the byte counts).
+
+## The game headers lane, round 1: the ids and eedata's generated headers as Rust's, one-statement members inline in their declarations, emptied units deleted (ee_sim rmap_ids.rs, game_ids.rs, combat/captured.rs; ee_data rules_gen.rs, world_constants.rs; branch rust-headers1, 2026-11-24)
+
+- **What counts in a header**: logic_lines counts every declaration line as logic and a one-statement body as
+  zero. So `void Reset();` in the header plus `void X::Reset() { ee_x_reset(this); }` in the .cpp costs one logic
+  line and four or five code lines; `void Reset() { ee_x_reset(this); }` in the header costs nothing, and its .cpp
+  goes. About 600 such members moved (a tool, `build/hd1/tools-a/inl.py`: scan, apply with a log, revert by key,
+  finalize). A .cpp left with nothing but includes is deleted with its `link/exe/units.txt` line (8 units).
+- **Incomplete types**: an inline body in a header may only touch types that are complete there. `vector<T>`
+  members are the trap: `size()`, a ctor or a dtor of a class holding `vector<EETeam>` instantiates the vector's
+  members, and a header that forward-declares EETeam then fails in every includer that never includes
+  EETeam.h (EEGameState, EEWorld, EECameraControl's `vector<EECameraKey>`, EETeam's EEVCWonder). Those stay out of
+  line; the inline pass keeps a deny list.
+- **Harness hooks must stay out of line**: tools/build.py `HARNESS_HOOKS` marks some functions
+  `__declspec(noinline)` in the test profile by matching their .cpp definition line (EEWorld::RemovePlayerFromGame,
+  EEPhysics::Tick and ReportStatistics, EEPlayer::SetGameResult, ...), and the harness breaks on their symbols
+  (tools/harness/no_human_defeat.py). Inlining one breaks only the test-profile build ("overlay EEWorld.cpp: ...
+  matches 0 times"); `build.py --sim` still links. Check the list before inlining, and build both profiles.
+- **Ids as Rust enums**: units round 9's method (`#[repr(C)]`, `/// cbindgen:enum-class=false`, the name in
+  cbindgen.toml's include list) for the random map, effect, sound, improvement, save tag, area effect, resource,
+  storm, AI kind, terrain, calamity and damage form ids. Their readers move too: `tools/eedata/rules.py` and the
+  Rust `cpp_consts` tests parsed `NAME = value` lines of the old C++ headers and now read the generated ones.
+- **eedata's generated C++**: EERulesGen.h and the dbworld constants are Rust (ee_data rules_gen.rs,
+  world_constants.rs) through cbindgen; `eedata.py cppgen` / `check` check the Rust side. The dbcalamity record is
+  Rust's EeCalamityData; `tools/eedata/overlay.py` STRUCT_SOURCES / RUST_STRUCTS name the Rust struct as a record's
+  source, with a size assert for specgen.
+- **Generated code and rustfmt**: a new Rust module written by a script must pass `cargo fmt --check`
+  (rust_build.py gate's last step); both forks met it on combat/captured.rs.
+
+| Measure | batch 24 (bbb0654d2) | tip | change |
+|---|---|---|---|
+| C++ lines (port_metrics cpp_lines) | 114,065 | 110,363 (before the hooks fix) | -3,702 |
+| compiled C/C++ files | 369 | 361 | -8 |
+| logic lines | 19,021 | 17,654 | -1,367 |
+| classes | 855 | 837 | -18 |
+| the lane's headers (list.py logic) | 4,647 | 3,265 | -1,382 |
