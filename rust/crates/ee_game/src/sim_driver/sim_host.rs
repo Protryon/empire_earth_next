@@ -230,7 +230,7 @@ pub fn physics() -> EeSimDriverPhysics {
     p.timer_running = gc::h(gc::O::SsTimerRunning, 0, &[]) != 0;
     p.game_over = gc::h(gc::O::FwGameOver, 0, &[]) != 0;
     p.game_ms = gc::h(gc::O::DwGameTime, 0, &[]) as c_long;
-    p.pt = h(O::DmPhysTicksDone, 0, &[]) as c_ulong;
+    p.pt = physics_record().mNumTicksDone;
     p
 }
 
@@ -238,7 +238,7 @@ pub fn physics() -> EeSimDriverPhysics {
 pub fn editor_up() -> bool {
     let _lock = UiLock::hold();
     let editor = h(O::EditorForm, 0, &[]);
-    editor != 0 && gc::h(gc::O::SsCurrentForm, 0, &[]) == editor && h(O::MapPresent, 0, &[]) != 0
+    editor != 0 && gc::h(gc::O::SsCurrentForm, 0, &[]) == editor && gc::h(gc::O::EcHasMap, 0, &[]) != 0
 }
 
 /// The idle human as the harness's civilization pre-empt leaves it (ai_game.py: the civilization builder opened and
@@ -311,6 +311,20 @@ fn unit_fields(u: usize) -> *const ee_sim::world::unit_fields::EeUnitsUnitFields
 /// The complex unit's Rust record (`static_cast<EeUnitsComplexUnitFields*>`).
 fn cx_fields(c: usize) -> *const ee_sim::world::unit_fields::EeUnitsComplexUnitFields {
     gc::h(gc::O::CxFields, c, &[]) as usize as *const _
+}
+
+/// gPhysics' saved block (EE-SIM's reads while the physics lives).
+pub(super) fn physics_record() -> ee_sim::units::physics_save::EeUnitsPhysicsSaved {
+    let physics = crate::gamecpp::globals::get!(gPhysics) as usize;
+    // SAFETY: the live physics' record, copied now
+    unsafe { *crate::physics::rec(physics) }
+}
+
+/// The complex unit's class category (`mUnitClass->mCategory`).
+fn category_of(c: usize) -> i64 {
+    // SAFETY: the live unit's record
+    let class = unsafe { (*unit_fields(c)).mUnitClass } as usize;
+    gc::h(gc::O::RoClassCategory, class, &[])
 }
 
 /// `gWorldTable`'s row `id`.
@@ -523,8 +537,8 @@ unsafe extern "C" fn combat_host(_ctx: *mut c_void, op: u32, a: u64, b: u64, out
 /// The combat formulas' sweep of the simulation capture (combat_sweep.rs, over the world views).
 fn combat_capture_sweep() {
     let sweep = super::combat_sweep::EeSimDriverCombatSweep {
-        tick_ms: h(O::PhysicsTickMs, 0, &[]) as i32,
-        tick_seconds: hd(O::PhysicsTickSeconds, 0, &[], &[]),
+        tick_ms: physics_record().mTickTimeMs as i32,
+        tick_seconds: physics_record().mTickSeconds,
         regeneration_interval: h(O::RegenerationInterval, 0, &[]) as i32,
         conversion_faith_cost: world(WORLD_CONVERSION_FAITH_COST).mLongValue,
         ctx: std::ptr::null_mut(),
@@ -549,7 +563,7 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
             && gc::h(gc::O::DkTileX, c, &[]) as c_long != -10000
             && hd(O::ComplexAttack, c, &[], &[]) > 0.0
             && (priests || h(O::ComplexIsPriest, c, &[]) == 0)
-            && (missiles || (h(O::ComplexCategory, c, &[]) != missile && h(O::ComplexCategory, c, &[]) != torpedo))
+            && (missiles || ![missile, torpedo].contains(&category_of(c)))
         {
             all.push(c);
         }
@@ -639,7 +653,7 @@ fn missile_sweep() {
                 {
                     break;
                 }
-                let owner = h(O::ComplexPlayer, a, &[]) as usize;
+                let owner = gc::h(gc::O::UnPlayer, a, &[]) as usize;
                 let created = h(
                     O::ClassCreateUnit,
                     class,
@@ -683,7 +697,7 @@ fn missile_sweep() {
                     && !unsafe { (*cx_fields(m)).mGoalState }.is_null()
                 {
                     h(O::ClassStep, class, &[m as i64]);
-                    let tick = h(O::PhysicsTickMs, 0, &[]) as c_long;
+                    let tick = physics_record().mTickTimeMs;
                     let elapsed = if tick != 0 { tick } else { 1 };
                     let flight = unsafe { (*cx_fields(m)).mFlightTime };
                     if flight != 0 {
@@ -706,7 +720,7 @@ fn missile_sweep() {
 
 /// TSGT, MAPS, MAPK: the app profile's end sweep of EEMap's sight and out-of-synch checksum (ee/EESightCapture.h).
 pub fn sight_capture_sweep() {
-    if !cap::ee_app_capture_active() || h(O::MapPresent, 0, &[]) == 0 {
+    if !cap::ee_app_capture_active() || gc::h(gc::O::EcHasMap, 0, &[]) == 0 {
         return;
     }
     let radius = world(WORLD_WONDER_SIGHT_RADIUS).mFloatValue;

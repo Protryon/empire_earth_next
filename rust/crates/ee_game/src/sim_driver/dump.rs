@@ -107,10 +107,11 @@ pub fn checksum_text() -> String {
         count = count.wrapping_add(1);
         u = gc::h(gc::O::UnTileNext, u as usize, &[]);
     }
+    let physics = super::sim_host::physics_record();
     format!(
         "pt={} tick={} ms={} rng={} oos={} units={}/{} ai={} inputs={}\n",
-        lu(h(O::DmPhysTicksDone, 0, &[])),
-        lu(h(O::DmPhysCurrentTick, 0, &[])),
+        physics.mNumTicksDone as u32,
+        physics.mCurrentTick as u32,
         ld(gc::h(gc::O::DwGameTime, 0, &[])),
         x8(h(O::DmPhysSeed, 0, &[])),
         x8(checksum),
@@ -177,11 +178,12 @@ pub fn dump_state(path: &str) {
     let mut o = Out { file, text: String::new() };
     o.push("STATE ");
     o.push(&checksum_text());
+    let physics = super::sim_host::physics_record();
     o.push(&format!(
         "physics clock={} tickrandom={} tickstoprocess={}\n",
-        f(O::DmPhysClock, 0, &[]),
-        ld(h(O::DmPhysTickRandom, 0, &[])),
-        ld(h(O::DmPhysTicksToProcess, 0, &[]))
+        hexf(f64::from(physics.mGameClock)),
+        physics.mTickRandom as i32,
+        physics.mTicksToProcess as i32
     ));
     // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order) (ee_sim app active.rs)
     for (l, name) in ["UPDATE", "ACTIVATE", "DEACTIVATE"].iter().enumerate() {

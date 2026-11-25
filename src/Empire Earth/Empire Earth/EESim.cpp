@@ -155,8 +155,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::ScreenEventOf: return P64(dynamic_cast<EEScreenEvent*>((UIEvent*)p));
     case O::ScreenEventCode: return ((EEScreenEvent*)p)->mEvent;
     // the physics and the world
-    case O::PhysicsTickMs: return gPhysics->mTickTimeMs;
-    case O::MapPresent: return gWorld.GetMap() != NULL;
     case O::NumPlayers: return gWorld.GetNumPlayers();
     case O::PlayerSetCivilizationChosen: PL->mCivilizationChosen = a[0] != 0;
         break;
@@ -184,7 +182,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::UnitType: return UN->mUnitClass->GetUnitType();
     case O::ComplexOnMap: return CX->mTileNode != NULL;
     case O::ComplexIsPriest: return CX->GetUnitClass()->IsPriest();
-    case O::ComplexCategory: return CX->mUnitClass->mCategory;
     case O::ComplexLocation: return P64(&CX->mPhysicalModel.GetLocation());
     case O::ComplexSetLocation: CX->mPhysicalModel.SetLocation(*(const GETransformation*)a[0]);
         break;
@@ -192,7 +189,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::ComplexSetGoal: CX->SetGoal((EEUnitGoal*)a[0], false, false);
         break;
-    case O::ComplexPlayer: return P64(CX->mPlayer);
     case O::IgnoredSave: return P64(new std::deque<EEComplexUnitAttacker>(CX->mIgnoredTargets));
     case O::IgnoredRestore: CX->mIgnoredTargets = *(std::deque<EEComplexUnitAttacker>*)a[0];
         break;
@@ -238,12 +234,8 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmPhysSetLastOos: gPhysics->mLastOutOfSynchChecksum = (unsigned long)a[0];
         break;
     case O::DmPhysOos: return gPhysics->GetOutOfSynchChecksum(false, (unsigned long)a[0]);
-    case O::DmPhysTicksDone: return gPhysics->mNumTicksDone;
-    case O::DmPhysCurrentTick: return gPhysics->mCurrentTick;
     case O::DmPhysSeed: return (uint32_t)gPhysics->mRandom.GetSeed();
     case O::DmPhysInputs: return gPhysics->mInputMessagesProcessed;
-    case O::DmPhysTickRandom: return (long)gPhysics->mTickRandom;
-    case O::DmPhysTicksToProcess: return (long)gPhysics->mTicksToProcess;
     case O::DmWorldFirstUnit: return P64(static_cast<EEUnit*>(gWorld.mUnits.mFirst));
     case O::DmUnitChecksum: return (uint32_t)UN->GetChecksum((long)a[0]);
     case O::DmComplexChecksum: return (uint32_t)CX->GetChecksum((long)a[0]);
@@ -327,11 +319,9 @@ extern "C" double ee_simcpp_sim_float(EeSimDriverSim inOp, uintptr_t p, const in
 {
     typedef EeSimDriverSim O;
     switch (inOp) {
-    case O::PhysicsTickSeconds: return gPhysics->mTickSeconds;
     case O::ComplexAttack: return CX->mStats->GetAttack();
     case O::ClassAcceleration: return UC->GetAcceleration();
     // the state dump (sim_driver dump.rs)
-    case O::DmPhysClock: return (double)gPhysics->mGameClock;
     case O::DmPlResource: return PL->mResourceCaps[kResourceFood + a[0]];
     case O::DmUnitHp: return UN->mHitPoints;
     case O::DmCxLocX: return CX->mPhysicalModel.GetLocation().GetX();
