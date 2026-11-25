@@ -930,8 +930,6 @@ pub enum EeGameCpp {
     MsgStartLoading,
     MsgString,
     NewChatAction,
-    NewLoadMainScreenRecord,
-    NewLoadSaveResponse,
     NewLocationGoal2D,
     NewStartGameRecord,
     NewTimerExpiredEvent,
@@ -2214,9 +2212,6 @@ pub enum EeGameCpp {
     SsNewPlayerInfo,
     SsMsgSetOriginServer,
     SsNewRecord0,
-    SsNewRecord2,
-    SsNewRecord3,
-    SsNewRecord4,
     SsNewString,
     SsDeleteString,
     SsClientAddress,
@@ -2472,7 +2467,6 @@ pub enum EeGameCpp {
     EntryServerStopPing,
     EntryServerLoadState,
     EntryNotInEditor,
-    EntryStartLoadingInput,
     //
     // ---- round 10, lane A (EECore10OpA's cases)
     // EEGraphics.cpp (render_to.rs), EEROUnits.cpp (ro_units.rs), EERenderSnapshot.cpp and EEMouse.cpp (ro_views.rs)
@@ -2909,7 +2903,6 @@ pub enum EeGameCpp {
     DcApplyImprovement,
     DcEraseQueued,
     DcExplore,
-    DcNewMakeVisible,
     DcSetOriginatingSlot,
     DcProcessInput,
     DcCurrentEpoch,
@@ -3363,7 +3356,6 @@ pub enum EeGameCpp {
     C11UlongsAt,
     C11PickUnits,
     C11CurrentPlayerId,
-    C11NewSelectRecord,
     C11MsgListAssign,
     C11MsgListData,
     C11MsgListSize,

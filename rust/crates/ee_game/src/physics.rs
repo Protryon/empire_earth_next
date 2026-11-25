@@ -103,7 +103,6 @@ pub enum EePhysCpp {
     /// `ExecuteRemovePlayer` with the record's player, out of synch, exiting and booted
     RemovePlayer,
     NewChecksumResponse,
-    NewLoadSaveResponse,
     NewReportStatistics,
     NewExitShiftMode,
     NewCivTimerExpired,
@@ -1428,7 +1427,10 @@ fn serve_load_save_requests(p: P) {
                 i += 1;
             }
             h(O::LoadSaveClear, p, &[]);
-            let response = hp(O::NewLoadSaveResponse, 0, &[result]);
+            let response = crate::gamecpp::mrecord::new_record(
+                ee_sim::message_ids::EEMessageID::kMessageLoadOrSaveGameResponse as u8,
+                &[crate::gamecpp::mrecord::EeGamecppMrValue::integer(result as std::ffi::c_long as i64)],
+            );
             h(O::MsgSetOriginatingSlot, response, &[h(O::PlayerGetSlot, hp(O::CurrentPlayer, 0, &[]), &[])]);
             if h0(O::IsServer) != 0 {
                 h(O::LogResponse, response, &[]);

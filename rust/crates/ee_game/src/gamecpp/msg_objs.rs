@@ -73,7 +73,10 @@ pub unsafe extern "C" fn ee_gamecpp_msg_select_units(
     let owner = h(O::C11CurrentPlayerId, 0, &[]) as u32;
     let mut buffer = [0u8; 0x100];
     let size = ee_netmsg_compress_units(ids.as_ptr(), ids.len(), owner, buffer.as_mut_ptr());
-    let message = hp(O::C11NewSelectRecord, 0, &[kind as i64, size as i64, unit_type as i64]);
+    // the list's size, 0, 0, the unit type (the C++'s `(unsigned char)`, `(long)`)
+    let values = [size as u8 as i64, 0, 0, unit_type as std::ffi::c_long as i64]
+        .map(super::mrecord::EeGamecppMrValue::integer);
+    let message = super::mrecord::new_record(kind as u8, &values);
     h(O::C11MsgListAssign, message, &[cptr(&buffer), size as i64]);
     h(O::C11MsgSetRectangle, message, &[pa(rectangle as P)]);
     if crate::fixture::boxsel::LASSO_ON.load(std::sync::atomic::Ordering::SeqCst) {

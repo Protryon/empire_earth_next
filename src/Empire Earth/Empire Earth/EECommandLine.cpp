@@ -114,8 +114,6 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
         break;
     case O::EntryNotInEditor: gUIManager->mInScenarioEditor = false;
         break;
-    case O::EntryStartLoadingInput: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
-        break;
     // "update_saved_games" (gamecpp saved_games.rs)
     case O::UsgWorldWriteLock: gWorld.mLock->WriteLock();
         break;

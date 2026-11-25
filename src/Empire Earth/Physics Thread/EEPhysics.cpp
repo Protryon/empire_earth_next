@@ -230,7 +230,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::RemovePlayer: gCommunications->ExecuteRemovePlayer(REC->Get<unsigned char>(0), REC->Get<bool>(3), REC->Get<bool>(1), REC->Get<bool>(2));
         break;
     case O::NewChecksumResponse: return P64(new NEMRecord(kNetMessageWorldDatabaseChecksumResponse, {(unsigned long)a[0], (unsigned long)a[1]}));
-    case O::NewLoadSaveResponse: return P64(new EEMRecord(kMessageLoadOrSaveGameResponse, {(long)a[0]}));
     case O::NewReportStatistics: return P64(new EEMRecord(kMessageReportStatistics, {(unsigned long)a[0], (unsigned long)a[1]}));
     case O::NewExitShiftMode: return P64(new EEMRecord(kMessageExitShiftMode, {(long)a[0]}));
     case O::NewCivTimerExpired: return P64(new EEMRecord(kMessageCivTimerExpired, {(unsigned char)a[0]}));

@@ -79,7 +79,6 @@ enum class EePhysCpp : uint32_t {
   /// `ExecuteRemovePlayer` with the record's player, out of synch, exiting and booted
   RemovePlayer,
   NewChecksumResponse,
-  NewLoadSaveResponse,
   NewReportStatistics,
   NewExitShiftMode,
   NewCivTimerExpired,

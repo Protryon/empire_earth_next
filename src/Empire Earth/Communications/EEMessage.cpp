@@ -262,9 +262,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MsgSaveGame: return SaveGame(UString(MSG->mString), (unsigned long)a[0], a[1] != 0, UString("data\\Saved Games\\"));
     case O::TrimAutoSaves: TrimAutoSaves(UString("AutoSave") + UString("*") + gSavedGameExtension, UString("data\\") + UString("Saved Games\\"), gAutoSaveCount);
         break;
-    case O::NewLoadSaveResponse: return P64(new EEMRecord(kMessageLoadOrSaveGameResponse, {(int32_t)a[0]}));
     case O::NewStartGameRecord: return P64(static_cast<NEMessage*>(new NEMRecord(kNetMessageStartGame, {(unsigned long)a[0]})));
-    case O::NewLoadMainScreenRecord: return P64(static_cast<NEMessage*>(new EEMRecord(kMessageLoadMainScreen, {0})));
     case O::NewChatAction: return P64(static_cast<EEAction*>(new EEAAddChatMessage(MSG->mString, a[0] != 0)));
     case O::NewTimerExpiredEvent: return P64(static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_TIMER_EXPIRED)));
     case O::VecCivUpgradesOfMsg: return P64(new std::vector<EECivUpgrade>(MSG->GetList<EECivUpgrade>()));
@@ -581,7 +579,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11PickUnits: gUnitPicker.PickUnits(*(const GERectangle*)a[0], gWorld.GetCurrentPlayer(), (long)a[1], *(std::vector<unsigned long>*)p);
         break;
     case O::C11CurrentPlayerId: return (int64_t)(uint32_t)gWorld.GetCurrentPlayer()->mPlayerID;
-    case O::C11NewSelectRecord: return P64((new EEMRecord((unsigned char)a[0], {(unsigned char)a[1], 0, 0, (long)a[2]})));
     case O::C11MsgListAssign: MSG->mList.assign((const unsigned char*)a[0], (const unsigned char*)a[0] + a[1]);
         break;
     case O::C11MsgListData: return P64(MSG->mList.empty() ? NULL : &MSG->mList[0]);
