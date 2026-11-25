@@ -141,8 +141,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 27a37e 27aa0b Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp
 27bf4b 27c0f3 Empire Earth/Civilization Builder/EEAreaEffect.cpp
-27c0f3 27c8b9 Empire Earth/Civilization Builder/EEAreaEffectTemplate.cpp
-27cfdb 27efca Empire Earth/Civilization Builder/EECBUIListBox.cpp
 27efca 27fdfe Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
 27fdfe 2813f4 Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp
 2813f4 2830d0 Empire Earth/Civilization Builder/EECivilizationManager.cpp
