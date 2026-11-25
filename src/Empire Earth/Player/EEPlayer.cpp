@@ -431,6 +431,14 @@ void EEPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
     ee_units_player_units_swapped(this, reinterpret_cast<void* const (*)[2]>(ioSwaps.data()), ioSwaps.size(), &ioSwaps);   // player_body.rs
 }
 
+// Sets the player's game result; a new victory or defeat of another player is announced in the chat log
+// (the chat log's line of a player's victory or defeat: player_rest.rs announce_result). Out of line: the harness
+// hooks its entry (tools/build.py HARNESS_HOOKS, tools/harness/no_human_defeat.py)
+void EEPlayer::SetGameResult(long inState)
+{
+    ee_units_player_rest(this, EE_UNITS_PLAYER_REST_SET_GAME_RESULT, 0, inState, 0);   // player_rest.rs
+}
+
 // the unit bookkeeping and the wonders (ee_units player_units.rs ee_units_player_units)
 long EEPlayerUnits(const EEPlayer* inPlayer, uint32_t inWhat, void* inUnit, bool inFlag, bool inFlag2)
 {

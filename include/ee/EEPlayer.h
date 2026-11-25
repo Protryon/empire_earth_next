@@ -724,7 +724,8 @@ public:
     long CountQueuedImprovements(unsigned long inUnitType, long inArg) const { return (long)ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_COUNT_QUEUED, NULL, (int32_t)inUnitType, inArg, 0, 0, 0, 0.0f, NULL); }  // 0x164f4a (EEMRemoveImprovement; const: the const vector reads and the dead const-operator[] lea; provisional name)
     void RemoveQueuedImprovement(long inUnitType, long inImprovement, bool inFlag) { ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_REMOVE_QUEUED, NULL, inUnitType, inImprovement, inFlag, 0, 0, 0.0f, NULL); }  // 0x16870e (EEMRemoveImprovement)
     void SetHackUnitClass(long inUnitClass) { this->mHackUnitClass = inUnitClass; }  // 0x16ae52 (EEMLoadUnitData; provisional name)
-    void SetGameResult(long inState) { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_SET_GAME_RESULT, 0, inState, 0); }       // 0x16af5c (EEMResign passes 2; provisional name)
+    // 0x16af5c (EEMResign passes 2; provisional name); out of line: the harness hooks it (tools/build.py HARNESS_HOOKS)
+    void SetGameResult(long inState);
     // 0x16384d (EEMImproveUnit). QueueImprovement passes 0, so the original takes a UWideString*; kept a reference until
     // EEMessage.cpp's caller passes &theText
     bool CanBuy(long inUnitType, long inImprovement, UWideString* outText) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_BUY, NULL, inUnitType, inImprovement, 0, 0, 0, 0.0f, outText) != 0; }     // (QueueImprovement passes 0: a pointer)
