@@ -40408,11 +40408,12 @@ Hand-written Rust replaced by crates where every golden stays as it was: 3,943 R
   screen while the Host Game dialog still showed (210,803 pixels "differ"); a second base run was identical to the
   round's but for the slot digit in the game's name and the create dialog's caret. Rerun the base before reading a
   whole-screen lobby difference as a change.
-- **Gates** (the merged tip dc319617b; origin/rust bbb0654d2 had the same tree as the base):
+- **Gates** (run twice: on dc319617b, then on d93bf63a3, the round merged with origin/rust 04ccdbcf3, batch 25; the
+  figures are the second run's, the first was the same but for the inputs and the LAN base noted):
 
 | Gate | Result |
 |---|---|
-| `build.py -j 10 --sim`, `--test-profile windowed-software` | EE-AOC 410 inputs, EE-SIM 411, test image 410: 0 unresolved, 0 duplicates; headers current |
+| `build.py -j 10 --sim`, `--test-profile windowed-software` | EE-AOC 395 inputs, EE-SIM 396, test image 395: 0 unresolved, 0 duplicates; headers current |
 | `rust_build.py gate` | PASS |
 | oracle, seeds 2-7 | identical to the main checkout's `ref` (oracle: PASS) |
 | the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal |
@@ -40421,9 +40422,9 @@ Hand-written Rust replaced by crates where every golden stays as it was: 3,943 R
 | `eedata.py check`, `cppgate` | PASS, PASS |
 | `eemodel.py cppgate` (store and decoder gates) | PASS |
 | `won_host_coverage.py`; `xbuild.py wontest` | PASS; exit 0 |
-| LAN game; `lan_capture_compare.py` against the base build's second run | PASS; every lobby capture identical but the slot digit in the game's name and the create dialog's caret |
+| LAN game; `lan_capture_compare.py` against the base build's (04ccdbcf3, built for it) | PASS; every lobby capture identical but the staging screen's caret (15 pixels at x 121..122) |
 | editor; `random-game --box-select --orders --seed 7` | RESULT PASS; BOX SELECT PASS, ORDERS PASS, RESULT PASS |
-| `gates.sh` (the main checkout's tree) | GATES PASS: tour; ai-game time-cap, units [4, 36, 37], alive_computers [2, 3], engines classic_lua x 2; lan-game |
+| `gates.sh` (the main checkout's tree) | GATES PASS: tour; ai-game time-cap, PT 12142, units [4, 36, 37], alive_computers [2, 3], engines classic_lua x 2; lan-game |
 | `port_metrics.py` bef67ccde..HEAD | rust_lines -3,943; unsafe +2; extern_c, C++ lines, logic, classes unchanged |
 
 - **Behaviour changes**: none in a game or on the shipped data. Damaged inputs: a PNG with corrupt image data is
