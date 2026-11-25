@@ -334,7 +334,8 @@ pub fn volcano(player: c_ulong) -> EeSimDriverSpot {
     let x = h(O::UnitTileX, spot, &[]) as c_long + 6;
     let y = h(O::UnitTileY, spot, &[]) as c_long + 6;
     let manager = gc::hp(gc::O::CalamityManager, 0, &[]);
-    let cast = gc::calamity_objects::ee_gamecpp_calamity_create(manager as *mut c_void, 1, 9, 0xffff_ffff, 0, x, y, player);
+    let cast =
+        gc::calamity_objects::ee_gamecpp_calamity_create(manager as *mut c_void, 1, 9, 0xffff_ffff, 0, x, y, player);
     EeSimDriverSpot { found: true, x, y, count: if cast { 1 } else { 0 } }
 }
 

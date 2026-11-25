@@ -548,7 +548,8 @@ pub fn input(kind: i64, code: i64) {
 /// wheel's notches (was the C++ host's Input).
 pub fn input_event(kind: i64, code: i64, wheel: f32) {
     use ee_base::plat_ui::event::*;
-    let types = [PLAT_EVENT_KEY_DOWN, PLAT_EVENT_KEY_UP, PLAT_EVENT_MOUSE_DOWN, PLAT_EVENT_MOUSE_UP, PLAT_EVENT_MOUSE_WHEEL];
+    let types =
+        [PLAT_EVENT_KEY_DOWN, PLAT_EVENT_KEY_UP, PLAT_EVENT_MOUSE_DOWN, PLAT_EVENT_MOUSE_UP, PLAT_EVENT_MOUSE_WHEEL];
     let (scan, button, wheel) = match kind {
         0 | 1 => (code as u32, 0, 0.0),
         2 | 3 => (0, code as u32, 0.0),

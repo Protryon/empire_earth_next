@@ -7,12 +7,8 @@ use crate::screens::single_player;
 /// byte (`operator[]`, ee_base ustring wide.rs `ee_uwstring_at`; the loop was EEARust.cpp's).
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_valid_name(text: *const core::ffi::c_char, length: core::ffi::c_ulong) -> bool {
-    let name = ee_base::ustring::EeUWideString {
-        string: text as *mut core::ffi::c_char,
-        byte_length: 0,
-        length,
-        capacity: 0,
-    };
+    let name =
+        ee_base::ustring::EeUWideString { string: text as *mut core::ffi::c_char, byte_length: 0, length, capacity: 0 };
     let chars: Vec<u8> = (0..length as i32).map(|i| ee_base::ustring::ee_uwstring_at(&name, i) as u8).collect();
     single_player::valid_name(&chars)
 }

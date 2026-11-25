@@ -303,8 +303,12 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             } else {
                 // 0 read, 1 read unlock, 2 write, 3 write unlock
                 use crate::sim_driver::host::*;
-                let ops =
-                    [EE_SIM_DRIVER_READ_LOCK, EE_SIM_DRIVER_READ_UNLOCK, EE_SIM_DRIVER_WRITE_LOCK, EE_SIM_DRIVER_WRITE_UNLOCK];
+                let ops = [
+                    EE_SIM_DRIVER_READ_LOCK,
+                    EE_SIM_DRIVER_READ_UNLOCK,
+                    EE_SIM_DRIVER_WRITE_LOCK,
+                    EE_SIM_DRIVER_WRITE_UNLOCK,
+                ];
                 crate::sim_driver::sim_host::world_lock(ops[i[0].clamp(0, 3) as usize]);
                 1
             }

@@ -110,8 +110,11 @@ unsafe fn place_into(
     let Some(slots) = place(kind, min_radius, frame, &radii, &|j, k| units[j] == units[k]) else { return };
     debug_assert!(slots.len() == units.len(), "a Place fills one slot per unit");
     for (i, slot) in slots.iter().enumerate() {
-        let value =
-            EeFormationUnitSlot { position: slot.position, unit: units[slot.unit as usize] as *mut c_void, heading: slot.heading };
+        let value = EeFormationUnitSlot {
+            position: slot.position,
+            unit: units[slot.unit as usize] as *mut c_void,
+            heading: slot.heading,
+        };
         // SAFETY: `out` holds one slot per unit (the caller's contract)
         unsafe { out.add(i).write(value) };
     }

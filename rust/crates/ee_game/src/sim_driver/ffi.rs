@@ -59,8 +59,15 @@ pub unsafe extern "C" fn ee_sim_driver_main(argc: c_int, argv: *const *const c_c
     let d = match driver::install(Box::new(game), events, o, p, games, start) {
         Ok(d) => d,
         Err(e) => {
-            CppGame.write(2, format!("EE-SIM: {e}
-").as_bytes(), true);
+            CppGame.write(
+                2,
+                format!(
+                    "EE-SIM: {e}
+"
+                )
+                .as_bytes(),
+                true,
+            );
             return 66;
         }
     };

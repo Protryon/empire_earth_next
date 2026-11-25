@@ -1018,7 +1018,11 @@ fn update_units() -> u32 {
     crate::gamecpp::globals::set!(gPhysicsSteppingUnit, std::ptr::null_mut());
     // TEST ONLY: the step leaves' records (USTM, USST; ee_sim units/notes.rs)
     let physics = crate::gamecpp::globals::get!(gPhysics) as P;
-    ee_sim::units::notes::ee_units_note_step_commit(if physics != 0 { get!(rec(physics), mNumTicksDone) as u32 } else { 0 });
+    ee_sim::units::notes::ee_units_note_step_commit(if physics != 0 {
+        get!(rec(physics), mNumTicksDone) as u32
+    } else {
+        0
+    });
     count
 }
 

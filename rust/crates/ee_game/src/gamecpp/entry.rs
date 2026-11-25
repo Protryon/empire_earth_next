@@ -516,8 +516,8 @@ unsafe extern "C" fn panic_line(line: *const c_char) {
 pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, command_line: *const c_char) -> i32 {
     // SAFETY: panic_line is callable from any thread for the process' life
     unsafe { crate::ee_rust_init(panic_line) }; // first: a panic anywhere after this reaches a log
-    // TEST ONLY: the fixture's configure step, which EETestFixture.cpp registers at static initialization (nothing
-    // unless EE_TEST_UI is set)
+                                                // TEST ONLY: the fixture's configure step, which EETestFixture.cpp registers at static initialization (nothing
+                                                // unless EE_TEST_UI is set)
     let configure = crate::gamecpp::globals::get!(gEETestFixtureConfigure);
     if !configure.is_null() {
         // SAFETY: a `void (*)()` the C++ stored
