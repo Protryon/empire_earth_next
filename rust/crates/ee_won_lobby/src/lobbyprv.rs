@@ -782,8 +782,10 @@ mod tests {
     fn the_plain_members_answer_as_without_a_lobby_until_one_is_made() {
         use EeWonLobbyPrvField as F;
         let _turn = LOBBY.lock().unwrap_or_else(|e| e.into_inner());
-        let (me, other) = (0x10 as *mut core::ffi::c_void, 0x20 as *mut core::ffi::c_void);
-        ee_won_lobbyprv_drop(1 as *mut core::ffi::c_void);
+        let (mut x, mut y) = (0u8, 0u8);
+        let (me, other) = (&mut x as *mut u8 as *mut core::ffi::c_void, &mut y as *mut u8 as *mut core::ffi::c_void);
+        // the other test's lobby (prv 1), if it is still there
+        ee_won_lobbyprv_drop(std::ptr::without_provenance_mut(1));
         ee_won_lobbyprv_drop(me);
         assert_eq!((ee_won_lobbyprv_get(F::VersionStatus), ee_won_lobbyprv_get(F::LobbyPort)), (100004, 0));
         ee_won_lobbyprv_set(F::LobbyPort, 9);
