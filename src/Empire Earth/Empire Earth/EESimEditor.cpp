@@ -267,24 +267,8 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::LoadThreadClearDone: ((EESELoadThread*)p)->mMessageQueueDone->Clear();
         break;
-    case O::UnitWallStart: SU->mBuildWall.mStart = {f[0], f[1]};
-        break;
-    case O::UnitWallEnd: SU->mBuildWall.mEnd = {f[0], f[1]};
-        break;
-    case O::UnitWallBuild: ee_screens_wall_build(&SU->mBuildWall);
-        break;
-    case O::UnitWallCancel: ee_screens_wall_cancel(&SU->mBuildWall);
-        break;
-    case O::UnitGateTileX: SU->mBuildGate.mTileX = (long)a[0];
-        break;
-    case O::UnitGateTileY: SU->mBuildGate.mTileY = (long)a[0];
-        break;
-    case O::UnitGateDirection: SU->mBuildGate.mDirection = (long)a[0];
-        break;
-    case O::UnitGateBuild: ee_screens_gate_build(&SU->mBuildGate, f[0], f[1], (int32_t)a[0]);
-        break;
-    case O::UnitGateCancel: ee_screens_gate_cancel(&SU->mBuildGate);
-        break;
+    case O::UnitBuildWall: return P64(&SU->mBuildWall);
+    case O::UnitBuildGate: return P64(&SU->mBuildGate);
     // the actions and messages
     case O::C12ActionNew: return P64(static_cast<EEAction*>(new EESimEditorAction((void*)p)));
     case O::C12DoneNew: return P64(static_cast<UIEvent*>(new EESimEditorDone((void*)p)));
@@ -580,8 +564,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::UpgradesFree: delete UPG;
         break;
     case O::NarrowNew: return P64(new UString(s));
-    case O::SetFreeCamera: gFreeCamera = a[0] != 0;
-        break;
     case O::SetAllowCustomCivs: gAllowCustomCivs = a[0] != 0;
         break;
     case O::SetScenarioGame: gIsScenarioGame = a[0] != 0;
@@ -643,7 +625,6 @@ extern "C" double ee_simcpp_sed_float(EeSimDriverSed inOp, uintptr_t p, const in
     case O::ControlBgOpacity: return CTL->GetBgOpacity();
     case O::PlayerAvailablePoints: return (double)PL->mCivilization.mAvailablePoints;
     case O::ComputerCitizens: return CP->mCitizenPercentage;
-    case O::MeshZ: return gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]);
     default: break;
     }
     return 0.0;

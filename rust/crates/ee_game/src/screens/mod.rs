@@ -342,7 +342,7 @@ pub mod ping;
 mod dialog_inputs_ffi;
 // the wall and gate placements' start and end, absent from a test binary
 #[cfg(not(test))]
-mod placement_ffi;
+pub(crate) mod placement_ffi;
 // the screens' question answers (the C++ question shims' callbacks), absent from a test binary
 pub mod portrait;
 #[cfg(not(test))]

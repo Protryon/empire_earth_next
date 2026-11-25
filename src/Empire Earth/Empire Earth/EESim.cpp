@@ -156,8 +156,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::ScreenEventCode: return ((EEScreenEvent*)p)->mEvent;
     // the physics and the world
     case O::PhysicsTickMs: return gPhysics->mTickTimeMs;
-    case O::PhysicsFlushPlacements: gWorld.FlushQueuedPlacements();
-        break;
     case O::MapPresent: return gWorld.GetMap() != NULL;
     case O::NumPlayers: return gWorld.GetNumPlayers();
     case O::PlayerSetCivilizationChosen: PL->mCivilizationChosen = a[0] != 0;
@@ -182,13 +180,11 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::SetScenarioDialogs: gScenarioSimDialogs = a[0] != 0;
         break;
     // the units
-    case O::UnitHasStats: return UN->mStats != NULL;
     case O::UnitIsBuilding: return UN->mUnitClass->IsBuilding();
     case O::UnitType: return UN->mUnitClass->GetUnitType();
     case O::ComplexOnMap: return CX->mTileNode != NULL;
     case O::ComplexIsPriest: return CX->GetUnitClass()->IsPriest();
     case O::ComplexCategory: return CX->mUnitClass->mCategory;
-    case O::ComplexClass: return P64(CX->mUnitClass);
     case O::ComplexLocation: return P64(&CX->mPhysicalModel.GetLocation());
     case O::ComplexSetLocation: CX->mPhysicalModel.SetLocation(*(const GETransformation*)a[0]);
         break;
@@ -196,8 +192,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::ComplexSetGoal: CX->SetGoal((EEUnitGoal*)a[0], false, false);
         break;
-    case O::ComplexFlightTime: return CX->mFlightTime;
-    case O::ComplexHasGoalState: return CX->mGoalState != NULL;
     case O::ComplexPlayer: return P64(CX->mPlayer);
     case O::IgnoredSave: return P64(new std::deque<EEComplexUnitAttacker>(CX->mIgnoredTargets));
     case O::IgnoredRestore: CX->mIgnoredTargets = *(std::deque<EEComplexUnitAttacker>*)a[0];
@@ -228,7 +222,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::MiniMapSnapshot: ee_app_capture_minimap_snapshot(gMiniMap->mRust, gMiniMap->mPixels, gMiniMap->mPixelsPerRow);
         break;
     case O::RegenerationInterval: return EEGetRules().mCombat.mRegenerationInterval;
-    case O::ConversionFaithCost: return gWorldTable.GetLongValue(kWorldConversionFaithCost);
     case O::DialogShowing:
         return gScenarioSimDialogs && gWorld.mScenarioManager != NULL && gWorld.mScenarioManager->mIsShowingDialog;
     case O::ShowDialogMessage: gWorld.mScenarioManager->ShowDialogMessage();
@@ -274,19 +267,9 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::DmUnitTypeRaw: return (long)UN->mUnitClass->mUnitType;
     case O::DmUnitPlayerId: return UN->GetPlayer() ? (long)UN->GetPlayer()->mPlayerID : -1L;
-    case O::DmCxComplex: return P64(CX->mComplexUnit);
-    case O::DmCxUpdated: return (unsigned long)CX->mTimesUpdated;
     case O::DmCxCommand: return CX->mCommand ? (long)CX->mCommand->mType : -1L;
-    case O::DmCxGroup: return CX->mActiveGroup != NULL;
     case O::DmCxWpCount: return CX->mWaypoints.size();
-    case O::DmCxPathDone: return CX->mIsPathDone ? 1 : 0;
-    case O::DmCxArrived: return CX->mHasArrived ? 1 : 0;
-    case O::DmCxBlockingId: return CX->mBlockingUnit != NULL ? CX->mBlockingUnit->mUnitID : 0UL;
-    case O::DmCxAnim: return (unsigned long)CX->GetAnimation();
     case O::DmCxFrame: return (unsigned long)CX->mPhysicalModel.GetFrame();
-    case O::DmCxAnimTime: return (unsigned long)CX->mAnimationTime;
-    case O::DmCxPaused: return CX->mIsAnimationPaused ? 1 : 0;
-    case O::DmCxReload: return (long)CX->mReloadTimer;
     case O::DmCxQueues: return (long)CX->GetNumGoalQueues();
     case O::DmCxQueueSize: return CX->GetQueueGoals((long)a[0]).size();
     case O::DmCxGoal: return P64(CX->GetQueueGoals((long)a[0])[(size_t)a[1]]);
@@ -297,9 +280,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmCxContactHead: return P64(CX->mContacts.mHead);
     case O::DmNodeNext: return P64(((UListNode<EEComplexUnit*>*)p)->mNext);
     case O::DmNodeUnitId: return ((UListNode<EEComplexUnit*>*)p)->mData != NULL ? (unsigned long)((UListNode<EEComplexUnit*>*)p)->mData->GetUnitID() : 0UL;
-    case O::DmCxAttackerId: return CX->mLastAttacker != NULL ? (unsigned long)CX->mLastAttacker->GetUnitID() : 0UL;
-    case O::DmCxOwnerId: return CX->mOwner != NULL ? (unsigned long)CX->mOwner->GetUnitID() : 0UL;
-    case O::DmCxHolderId: return CX->mHolder != NULL ? (unsigned long)CX->mHolder->GetUnitID() : 0UL;
     case O::DmCxAeCount: return CX->mAreaEffects.mItems.size();
     case O::DmCxAffectingCount: return CX->mAffectingAreaEffects.mItems.size();
     case O::DmCxAffectingUnitId: return CX->mAffectingAreaEffects.mItems[a[0]]->mUnit != NULL ? (unsigned long)CX->mAffectingAreaEffects.mItems[a[0]]->mUnit->GetUnitID() : 0UL;
@@ -350,11 +330,6 @@ extern "C" double ee_simcpp_sim_float(EeSimDriverSim inOp, uintptr_t p, const in
     case O::PhysicsTickSeconds: return gPhysics->mTickSeconds;
     case O::ComplexAttack: return CX->mStats->GetAttack();
     case O::ClassAcceleration: return UC->GetAcceleration();
-    case O::TradeFoodWood: return gWorldTable.GetFloatValue(kWorldTradeRateFoodWood);
-    case O::TradeFoodWood2: return gWorldTable.GetFloatValue2(kWorldTradeRateFoodWood);
-    case O::TradeStoneIron: return gWorldTable.GetFloatValue(kWorldTradeRateStoneIron);
-    case O::TradeStoneIron2: return gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron);
-    case O::WonderSightRadius: return gWorldTable.GetFloatValue(kWorldWonderSightRadius);
     // the state dump (sim_driver dump.rs)
     case O::DmPhysClock: return (double)gPhysics->mGameClock;
     case O::DmPlResource: return PL->mResourceCaps[kResourceFood + a[0]];
@@ -362,7 +337,6 @@ extern "C" double ee_simcpp_sim_float(EeSimDriverSim inOp, uintptr_t p, const in
     case O::DmCxLocX: return CX->mPhysicalModel.GetLocation().GetX();
     case O::DmCxLocY: return CX->mPhysicalModel.GetLocation().GetY();
     case O::DmCxLocZ: return CX->mPhysicalModel.GetLocation().GetZ();
-    case O::DmCxHeight: return CX->mHeight;
     case O::DmCxWpX: return CX->mWaypoints[a[0]].mLocation.GetX();
     case O::DmCxWpY: return CX->mWaypoints[a[0]].mLocation.GetY();
     case O::DmCxWpZ: return CX->mWaypoints[a[0]].mLocation.GetZ();

@@ -22,6 +22,9 @@ use crate::screens::editor_form::{
     EE_SCREENS_SEFM_RESUME_GROUP, EE_SCREENS_SEFM_SELECT_UNIT, EE_SCREENS_SEFM_SET_GAME_VIEW, EE_SCREENS_SEFM_STORE_GROUP,
 };
 use crate::screens::editor_tscreen::EE_SCREENS_SETS_SCREEN_REFRESH;
+use crate::screens::hud_ctl::EeScreensPoint;
+use crate::screens::mouse_modes::{EeScreensBuildGateFields, EeScreensBuildWallFields};
+use crate::screens::placement_ffi as placement;
 use crate::screens::shells::EE_SCREENS_SKOP_SET_SELECTED_PLAYER;
 
 // the editor's long-lived actions (the tabs keep one of each and post it again)
@@ -176,7 +179,9 @@ fn put_ghosts(tx: c_long, ty: c_long) {
         let py = gy as f32 + half;
         let mut pz = 0.0f32;
         if h(O::MapGetTile, 0, &[gx as i64, gy as i64]) != 0 {
-            pz = x::hdf(O::MeshZ, 0, &[], &[px, py]) as f32;
+            let mesh = h(O::MapMesh, 0, &[]) as usize as *const ee_render::ge::tmobj::EeGeTerrainMesh;
+            // SAFETY: the map's live mesh; the tile under the point exists
+            pz = unsafe { ee_render::ge::tmobj::ee_ge_tm_mesh_z(mesh, px, py) };
             if pz < 0.0 {
                 pz = 0.0;
             }
@@ -808,25 +813,28 @@ pub fn step(w: &[String]) -> Step {
             let s = unsafe { x::ee_screens_segr_parts(x::tab_group(3)) };
             let flags = unsafe { x::ee_screens_seun_get(x::unit_tab(), SEUN_GET_FLAGS) };
             match w1 {
-                "wall" => {
-                    hf(O::UnitWallStart, s, &[], &[f(2), f(3)]);
-                    hf(O::UnitWallEnd, s, &[], &[f(4), f(5)]);
-                    h(O::UnitWallBuild, s, &[]); // PlaceWall
-                }
-                "gate" => {
-                    h(O::UnitGateTileX, s, &[l(2) as i64]);
-                    h(O::UnitGateTileY, s, &[l(3) as i64]);
-                    h(O::UnitGateDirection, s, &[l(4) as i64]);
-                    hf(O::UnitGateBuild, s, &[l(4) as i64], &[f(2), f(3)]); // PlaceGate
-                }
-                _ => {
+                // SAFETY (these): the EESEUnit's wall and gate placements, live while the tab is
+                "wall" => unsafe {
+                    let wall = h(O::UnitBuildWall, s, &[]) as usize as *mut EeScreensBuildWallFields;
+                    (*wall).start = EeScreensPoint { x: f(2), y: f(3) };
+                    (*wall).end = EeScreensPoint { x: f(4), y: f(5) };
+                    placement::ee_screens_wall_build(wall); // PlaceWall
+                },
+                "gate" => unsafe {
+                    let gate = h(O::UnitBuildGate, s, &[]) as usize as *mut EeScreensBuildGateFields;
+                    (*gate).tile_x = l(2) as i32;
+                    (*gate).tile_y = l(3) as i32;
+                    (*gate).direction = l(4) as i32;
+                    placement::ee_screens_gate_build(gate, f(2), f(3), l(4) as i32); // PlaceGate
+                },
+                _ => unsafe {
                     if flags & 2 != 0 {
-                        h(O::UnitWallCancel, s, &[]); // EndWall
+                        placement::ee_screens_wall_cancel(h(O::UnitBuildWall, s, &[]) as usize as *mut _); // EndWall
                     }
-                    if unsafe { x::ee_screens_seun_get(x::unit_tab(), SEUN_GET_FLAGS) } & 4 != 0 {
-                        h(O::UnitGateCancel, s, &[]); // EndGate
+                    if x::ee_screens_seun_get(x::unit_tab(), SEUN_GET_FLAGS) & 4 != 0 {
+                        placement::ee_screens_gate_cancel(h(O::UnitBuildGate, s, &[]) as usize as *mut _); // EndGate
                     }
-                }
+                },
             }
         }),
         "epoch" => Box::new(|out: &mut Vec<String>| {

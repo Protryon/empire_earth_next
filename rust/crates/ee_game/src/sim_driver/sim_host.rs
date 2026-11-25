@@ -297,6 +297,27 @@ pub fn no_human_defeat_hits(op: c_long) -> c_long {
     hits.get()
 }
 
+// the world constants the sweeps read (include/ee/EEWorldConstants.h: kWorldConversionFaithCost, ...)
+pub(super) const WORLD_CONVERSION_FAITH_COST: u32 = 46;
+pub(super) const WORLD_WONDER_SIGHT_RADIUS: u32 = 74;
+pub(super) const WORLD_TRADE_RATE_STONE_IRON: u32 = 91;
+pub(super) const WORLD_TRADE_RATE_FOOD_WOOD: u32 = 92;
+
+/// The unit's Rust record (`static_cast<EeUnitsUnitFields*>`; the live unit's, read on the thread that owns it).
+fn unit_fields(u: usize) -> *const ee_sim::world::unit_fields::EeUnitsUnitFields {
+    gc::h(gc::O::UnFields, u, &[]) as usize as *const _
+}
+
+/// The complex unit's Rust record (`static_cast<EeUnitsComplexUnitFields*>`).
+fn cx_fields(c: usize) -> *const ee_sim::world::unit_fields::EeUnitsComplexUnitFields {
+    gc::h(gc::O::CxFields, c, &[]) as usize as *const _
+}
+
+/// `gWorldTable`'s row `id`.
+fn world(id: u32) -> ee_data::tables::EeDataWorldEntry {
+    ee_data::tables::ee_data_world_entry(id)
+}
+
 /// The player's first living building (0: none).
 fn first_building(player: c_ulong) -> usize {
     let p = gc::h(gc::O::TbWorldPlayer, 0, &[player as i64]) as usize;
@@ -505,7 +526,7 @@ fn combat_capture_sweep() {
         tick_ms: h(O::PhysicsTickMs, 0, &[]) as i32,
         tick_seconds: hd(O::PhysicsTickSeconds, 0, &[], &[]),
         regeneration_interval: h(O::RegenerationInterval, 0, &[]) as i32,
-        conversion_faith_cost: h(O::ConversionFaithCost, 0, &[]) as i32,
+        conversion_faith_cost: world(WORLD_CONVERSION_FAITH_COST).mLongValue,
         ctx: std::ptr::null_mut(),
         host: combat_host,
     };
@@ -523,7 +544,7 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
         let c = gc::h(gc::O::UnComplex, u, &[]) as usize;
         if c != 0
             && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
-            && h(O::UnitHasStats, u, &[]) != 0
+            && !unsafe { (*unit_fields(u)).mStats }.is_null()
             && h(O::ComplexOnMap, c, &[]) != 0
             && gc::h(gc::O::DkTileX, c, &[]) as c_long != -10000
             && hd(O::ComplexAttack, c, &[], &[]) > 0.0
@@ -635,7 +656,7 @@ fn missile_sweep() {
                 gc::h(
                     gc::O::CxSetLauncherClass,
                     m,
-                    &[if launchers[k] != 0 { launchers[k] } else { h(O::ComplexClass, a, &[]) as usize } as i64],
+                    &[if launchers[k] != 0 { launchers[k] } else { (unsafe { (*unit_fields(a)).mUnitClass }) as usize } as i64],
                 );
                 gc::h(gc::O::CxSetOwner, m, &[a as i64]);
                 let mut at = [0f32; 3];
@@ -648,21 +669,23 @@ fn missile_sweep() {
                 h(O::ComplexSetGoal, m, &[goal]);
                 gc::hf(gc::O::CxSetVelocity, m, &[], &[gc::hd(gc::O::EcVelocity, a, &[], &[])]);
                 hf(O::ClassLaunchProjectile, class, &[m as i64], &at);
-                if h(O::ComplexFlightTime, m, &[]) as c_long == 0 {
+                if unsafe { (*cx_fields(m)).mFlightTime } == 0 {
                     gc::h(gc::O::CxSetFlightTime, m, &[300]);
                 }
                 // onto the map, as the next tick's EEPhysics::FlushWorld puts a launched shot
-                h(O::PhysicsFlushPlacements, 0, &[]);
+                let world = core::ptr::addr_of_mut!(crate::gamecpp::global_objects::gWorld);
+                // SAFETY: the live world, under the world lock
+                unsafe { crate::rts::world::ffi::ee_rts_world_flush_queued_placements(world.cast()) };
                 h(O::PlayerAddPendingUnits, owner, &[]);
                 let mut t = 0;
                 while t < 120
                     && gc::h(gc::O::DkTileX, m, &[]) as c_long != -10000
-                    && h(O::ComplexHasGoalState, m, &[]) != 0
+                    && !unsafe { (*cx_fields(m)).mGoalState }.is_null()
                 {
                     h(O::ClassStep, class, &[m as i64]);
                     let tick = h(O::PhysicsTickMs, 0, &[]) as c_long;
                     let elapsed = if tick != 0 { tick } else { 1 };
-                    let flight = h(O::ComplexFlightTime, m, &[]) as c_long;
+                    let flight = unsafe { (*cx_fields(m)).mFlightTime };
                     if flight != 0 {
                         gc::h(gc::O::CxSetFlightTime, m, &[if flight > elapsed { flight - elapsed } else { 0 } as i64]);
                     }
@@ -686,7 +709,7 @@ pub fn sight_capture_sweep() {
     if !cap::ee_app_capture_active() || h(O::MapPresent, 0, &[]) == 0 {
         return;
     }
-    let radius = hd(O::WonderSightRadius, 0, &[], &[]);
+    let radius = world(WORLD_WONDER_SIGHT_RADIUS).mFloatValue;
     let map_size = gc::h(gc::O::TeMapSize, 0, &[]) as c_long;
     let size = map_size as f32;
     let points = [[size * 0.5, size * 0.5], [5.5, 7.5], [size - 3.25, size * 0.3]];
@@ -730,11 +753,11 @@ pub fn sweep(kind: i32, arg: c_long) {
             let rates = [
                 1.0f32,
                 1.0,
-                hd(O::TradeFoodWood, 0, &[], &[]),
-                hd(O::TradeFoodWood2, 0, &[], &[]),
-                hd(O::TradeStoneIron, 0, &[], &[]),
+                world(WORLD_TRADE_RATE_FOOD_WOOD).mFloatValue,
+                world(WORLD_TRADE_RATE_FOOD_WOOD).mFloatValue2,
+                world(WORLD_TRADE_RATE_STONE_IRON).mFloatValue,
                 1.0,
-                hd(O::TradeStoneIron2, 0, &[], &[]),
+                world(WORLD_TRADE_RATE_STONE_IRON).mFloatValue2,
             ];
             // SAFETY: the seven rates; the sweeps over the world views
             unsafe {

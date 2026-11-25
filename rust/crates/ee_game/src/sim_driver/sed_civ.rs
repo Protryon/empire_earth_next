@@ -464,7 +464,10 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             // cb flag freecam|custom|scenario 0|1: the game's flags the builder reads
             let on = (number(arg(3)) != 0) as i64;
             match arg(2) {
-                "freecam" => h(O::SetFreeCamera, 0, &[on]),
+                "freecam" => {
+                    crate::gamecpp::globals::set!(gFreeCamera, on != 0);
+                    0
+                }
                 "custom" => h(O::SetAllowCustomCivs, 0, &[on]),
                 _ => h(O::SetScenarioGame, 0, &[on]),
             };

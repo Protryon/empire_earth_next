@@ -5,6 +5,7 @@
 //! `unsigned long`), `%ld` and `%08lx` are written as the C++ wrote them ([`hexf`], [`lu`], [`ld`], [`x8`]).
 
 use super::sim_ops::{h, hdd, EeSimDriverSim as O};
+use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsUnitFields};
 use crate::gamecpp as gc;
 use ee_sim::units::patrol_group as pg;
 
@@ -294,6 +295,25 @@ fn dump_players(o: &mut Out) {
     }
 }
 
+/// The unit's Rust record (`static_cast<EeUnitsUnitFields*>`).
+fn unit_fields(u: usize) -> *const EeUnitsUnitFields {
+    gc::h(gc::O::UnFields, u, &[]) as usize as *const EeUnitsUnitFields
+}
+
+/// The complex unit's Rust record (`static_cast<EeUnitsComplexUnitFields*>`).
+fn cx_fields(c: usize) -> *const EeUnitsComplexUnitFields {
+    gc::h(gc::O::CxFields, c, &[]) as usize as *const EeUnitsComplexUnitFields
+}
+
+/// A unit's id (0: none).
+fn unit_id(u: usize) -> u32 {
+    if u == 0 {
+        0
+    } else {
+        gc::h(gc::O::RoUnitId, u, &[]) as u32
+    }
+}
+
 fn dump_unit(o: &mut Out, u: usize) {
     let player = h(O::DmUnitPlayerId, u, &[]);
     let mut s = format!(
@@ -306,7 +326,8 @@ fn dump_unit(o: &mut Out, u: usize) {
         ld(gc::h(gc::O::DkTileY, u, &[]))
     );
     let c = gc::h(gc::O::FxDynComplex, u, &[]) as usize;
-    let x = if c != 0 { h(O::DmCxComplex, c, &[]) as usize } else { 0 };
+    // SAFETY (the unit records here): the live unit's (complex unit's) Rust record, read under the world lock
+    let x = if c != 0 { (unsafe { (*unit_fields(c)).mComplexUnit }) as usize } else { 0 };
     if x == 0 {
         s.push_str("\n  rawu "); // a simple unit's bytes (layout.json "EEUnit")
         s.push_str(&raw(u, h(O::DmUnitSize, 0, &[]) as usize));
@@ -314,31 +335,32 @@ fn dump_unit(o: &mut Out, u: usize) {
         o.push(&s);
         return;
     }
+    let r = cx_fields(x);
     let waypoints = h(O::DmCxWpCount, x, &[]);
     s.push_str(&format!(
         " upd={} cmd={} grp={} loc={},{},{} h={} c1={} c2={} wp={} pathdone={} arrived={} vel={} blocked={}",
-        lu(h(O::DmCxUpdated, x, &[])),
+        unsafe { (*r).mTimesUpdated } as u32,
         ld(h(O::DmCxCommand, x, &[])),
-        h(O::DmCxGroup, x, &[]),
+        i64::from(!unsafe { (*r).mActiveGroup }.is_null()),
         f(O::DmCxLocX, x, &[]),
         f(O::DmCxLocY, x, &[]),
         f(O::DmCxLocZ, x, &[]),
-        f(O::DmCxHeight, x, &[]),
+        hexf(f64::from(unsafe { (*r).mHeight })),
         x8(h(O::DmComplexChecksum, c, &[1])),
         x8(h(O::DmComplexChecksum, c, &[2])),
         waypoints as u64,
-        h(O::DmCxPathDone, x, &[]),
-        h(O::DmCxArrived, x, &[]),
+        i64::from(unsafe { (*r).mIsPathDone }),
+        i64::from(unsafe { (*r).mHasArrived }),
         hexf(f64::from(gc::hd(gc::O::EcVelocity, x, &[], &[]))),
-        lu(h(O::DmCxBlockingId, x, &[]))
+        unit_id(unsafe { (*r).mBlockingUnit } as usize)
     ));
     s.push_str(&format!(
         " anim={}/{}/{}/{} reload={}",
-        lu(h(O::DmCxAnim, x, &[])),
+        unsafe { (*r).mAnimation } as u32,
         lu(h(O::DmCxFrame, x, &[])),
-        lu(h(O::DmCxAnimTime, x, &[])),
-        h(O::DmCxPaused, x, &[]),
-        ld(h(O::DmCxReload, x, &[]))
+        unsafe { (*r).mAnimationTime } as u32,
+        i64::from(unsafe { (*r).mIsAnimationPaused }),
+        unsafe { (*r).mReloadTimer } as i32
     ));
     s.push_str(" wps="); // the path's points (location, distance, start distance)
     for w in 0..waypoints {
@@ -369,9 +391,9 @@ fn dump_unit(o: &mut Out, u: usize) {
     let affecting = h(O::DmCxAffectingCount, x, &[]);
     s.push_str(&format!(
         " attacker={} owner={} holder={} ae={}/{}",
-        lu(h(O::DmCxAttackerId, x, &[])),
-        lu(h(O::DmCxOwnerId, x, &[])),
-        lu(h(O::DmCxHolderId, x, &[])),
+        unit_id(unsafe { (*r).mLastAttacker } as usize),
+        unit_id(unsafe { (*r).mOwner } as usize),
+        unit_id(unsafe { (*r).mHolder } as usize),
         ae as u64,
         affecting as u64
     ));
