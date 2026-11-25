@@ -38,15 +38,8 @@ static TextListItem* Item(intptr_t a) { return (TextListItem*)a; }
 static intptr_t CtlOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     switch (op) {
-    case Op::ChildRight: return Comp(a)->Right();
-    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
-    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::ChildSetPosSize: Container::Place(Comp(a), *(const EeWonRect4*)b); return 0;
+    // (a child's place, size, visibility, control id and references are gamewin.rs common_op's in the game)
     case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
-    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
-    case Op::ChildSetControlId: Comp(a)->mControlId = (int)b; return 0;
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
     case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
     case Op::ButtonSetCheck: static_cast<Button*>(Comp(a))->SetCheck(b != 0, false); return 0;
     case Op::DlgClick: static_cast<Button*>(Comp(a))->Fn2F3440(); return 0;

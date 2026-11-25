@@ -370,8 +370,6 @@ public:
 
     // the Rust container of a component that is a container, else 0 (the hosts' CtContainerOf)
     static intptr_t ObjectOf(Component* c) { return c != NULL ? (intptr_t)c->mCt : 0; }
-    // a child placed at a rectangle Rust made (the hosts' ChildSetPosSize)
-    static void Place(Component* c, const EeWonRect4& r) { c->SetPosSize(r.x, r.y, r.w, r.h); }
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
     intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }

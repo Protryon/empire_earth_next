@@ -273,8 +273,7 @@ static Button* Btn(intptr_t a) { return (Button*)a; }
 static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (op) {
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    // (the children's references, size and parent are gamewin.rs common_op's in the game: R6 WON GUI round 38)
     case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
     case Op::AddChild: t->AddChild(Comp(a)); return 0;
     case Op::EventType: return ((ComponentEvent*)a)->mType;
@@ -282,8 +281,6 @@ static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_
     case Op::NewComponent: return (intptr_t)new Component;
     case Op::ChildLayoutDrag: ((Container*)Comp(a))->Fn2F6140(Comp(b), 3, (Container*)Comp(a), 0, 0, 0, 0, 0); return 0;
     case Op::ChildAddEx: ((Container*)Comp(a))->AddChildEx(Comp(b), 0); return 0;
-    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::ParentOf: return (intptr_t)Comp(a)->mParent;
     case Op::AsHeader: return (intptr_t)dynamic_cast<MultiListHeader*>((Container*)a);
     case Op::HeaderDrawsArrow: return ((MultiListHeader*)a)->DrawSortArrow() ? 1 : 0;
     case Op::HeaderSortTypeOf: return ((MultiListHeader*)a)->GetSortType(((MultiListHeader*)a)->GetColumnIndex(Comp(b)));

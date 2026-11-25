@@ -175,8 +175,8 @@ CHECKS = [
                for fn in ("text_op", "input_op", "label_op", "split_op", "list_op", "wm_op")] +
               # R6 WON GUI round 37: a game window's and the manager's own Rust parts (gamewin.rs)
               [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("win_op", "wm_ref_op")] +
-              # R6 WON GUI round 38: the list and text areas' scroll-pane and Component statements in the game
-              [(RS / "ee_won_gui" / "src" / "gamewin.rs", "list_host_op")],
+              # R6 WON GUI round 38: the list and text areas' scroll-pane and Component statements, the children's, in the game
+              [(RS / "ee_won_gui" / "src" / "gamewin.rs", fn) for fn in ("list_host_op", "child_op")],
          allowed={}),
     # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
     dict(enum="EeWonFrontOp", header="won_lobby/wonfront.h",

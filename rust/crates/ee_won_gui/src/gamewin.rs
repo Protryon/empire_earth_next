@@ -470,6 +470,13 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             | Op::ItemSetSelected
             | Op::ItemSelectable
             | Op::ItemSetSelectable
+            | Op::ChildRight
+            | Op::ChildSetPos
+            | Op::ChildSetSize
+            | Op::ChildSetPosSize
+            | Op::ChildSetVisible
+            | Op::ChildSetControlId
+            | Op::ParentOf
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -479,6 +486,9 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
         crate::compobj::ee_won_comp_call(x as *mut c_void, crate::compobj::host(), k, p, q, 0)
     };
     if let Some(r) = item_op(op, a, b) {
+        return Some(r);
+    }
+    if let Some(r) = child_op(op, a, b, c) {
         return Some(r);
     }
     Some(match op {
@@ -610,6 +620,37 @@ pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize) -> Option<isize> {
         }
         _ => None,
     }
+}
+
+/// A container's or layout's statements on a child component `a` (R6 WON GUI round 38): its members in place and
+/// Component's non-virtual calls (no class overrides SetVisible).
+fn child_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
+    use crate::compobj::EeWonCompCall as K;
+    // SAFETY: the game's live child (the ops' contracts); the call re-enters through Component's entry
+    let kc = |k: K, p: isize, q: isize, r: isize| unsafe {
+        crate::compobj::ee_won_comp_call(a as *mut c_void, crate::compobj::host(), k, p, q, r)
+    };
+    Some(match op {
+        Op::ChildRight => {
+            let r = crate::compmem::bounds(a);
+            r.x.wrapping_add(r.width) as isize
+        }
+        Op::ChildSetPos => z(kc(K::SetPos, b as i32 as isize, c as i32 as isize, 0)),
+        Op::ChildSetSize => z(kc(K::SetSize, b as i32 as isize, c as i32 as isize, 0)),
+        Op::ChildSetPosSize => {
+            // SAFETY: `b` is the EeWonRect4 (the op's contract)
+            let r = unsafe { *(b as *const crate::guictl::EeWonRect4) };
+            let wh = [r.w, r.h];
+            z(kc(K::SetPosSize, r.x as isize, r.y as isize, wh.as_ptr() as isize))
+        }
+        Op::ChildSetVisible => z(kc(K::SetVisible, on(b), 0, 0)),
+        Op::ChildSetControlId => {
+            crate::compmem::edit(a, |m| m.control_id = b as i32);
+            0
+        }
+        Op::ParentOf => crate::compmem::parent(a),
+        _ => return None,
+    })
 }
 
 /// A list item's members (`a` a `ListItem*`) read and set in place (leafpaint.rs's record; R6 WON GUI round 38).
