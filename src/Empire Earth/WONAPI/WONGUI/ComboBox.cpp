@@ -33,6 +33,34 @@ typedef EeWonGuiOp Op;
 static Component* Comp(intptr_t a) { return (Component*)a; }
 static TextListItem* Item(intptr_t a) { return (TextListItem*)a; }
 
+// the ops on a child component or an event (`a`) that the combo box's, the dialog's, the tab controls' and the layouts'
+// hosts share, and their own base's; any other the container's (none for a layout, `t` NULL)
+static intptr_t CtlOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    switch (op) {
+    case Op::ChildRight: return Comp(a)->Right();
+    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
+    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
+    case Op::ChildSetPosSize: Container::Place(Comp(a), *(const EeWonRect4*)b); return 0;
+    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
+    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
+    case Op::ChildSetControlId: Comp(a)->mControlId = (int)b; return 0;
+    case Op::ChildHold: Comp(a)->AddRef(); return 0;
+    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
+    case Op::ButtonSetCheck: static_cast<Button*>(Comp(a))->SetCheck(b != 0, false); return 0;
+    case Op::DlgClick: static_cast<Button*>(Comp(a))->Fn2F3440(); return 0;
+    case Op::EventType: return ((ComponentEvent*)a)->mType;
+    case Op::EventControlId: return ((ComponentEvent*)a)->GetControlId();
+    case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
+    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
+    case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
+    // the type is Rust's map, which the goldens check against the enum
+    case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
+    default: return t != NULL ? ContainerHostCall(t, op, a, b, c, d) : 0;
+    }
+}
+
 extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     ComboBox* t = static_cast<ComboBox*>((Component*)inComp);
@@ -94,17 +122,7 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
     case Op::ComboUnlisten: t->mListBox->AddListener(NULL); return 0;
     case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
     case Op::ListenTo: Comp(a)->AddListener(new ComponentListenerComp(t)); return 0;
-    case Op::DlgClick: static_cast<Button*>(Comp(a))->Fn2F3440(); return 0;
-    case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
-    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
-    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
-    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::EventType: return ((ComponentEvent*)a)->mType;
-    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
-    case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
-    // the type is Rust's map, which the golden checks against the enum
-    case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
-    default: return ContainerHostCall(t, op, a, b, c, d);
+    default: return CtlOp(t, op, a, b, c, d);
     }
 }
 
@@ -141,15 +159,10 @@ extern "C" intptr_t ee_won_guicpp_dlg_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::DlgBringToTop: if (t->mParent != NULL) t->mParent->BringToTop(t); return 0;
     case Op::DlgInvalidateRect: t->InvalidateRect(*(WONRectangle*)a); return 0;
     case Op::DlgEndDialog: t->GetRoot()->EndDialog((int)a, (Component*)b); return 0;
-    case Op::DlgClick: ((Button*)(Component*)a)->Fn2F3440(); return 0;
     case Op::DlgIsModal: return t->GetRoot()->mManager->GetModalComponent() == t ? 1 : 0;
     case Op::DlgIsDefault: return ((Button*)(Component*)a)->IsDefaultButton() ? 1 : 0;
     case Op::DlgEventButtonFlags: return static_cast<Button*>(((ComponentEvent*)a)->mComponent)->GetButtonFlags();
-    case Op::ChildSetPos: ((Component*)a)->SetPos((int)b, (int)c); return 0;
-    case Op::EventType: return ((ComponentEvent*)a)->mType;
-    case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
-    case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
-    default: return ContainerHostCall(t, op, a, b, c, d);
+    default: return CtlOp(t, op, a, b, c, d);
     }
 }
 
@@ -176,28 +189,13 @@ extern "C" intptr_t ee_won_guicpp_tab_call(void* inComp, EeWonGuiOp op, intptr_t
 {
     Container* t = static_cast<Container*>((Component*)inComp);
     switch (op) {
-    case Op::ChildRight: return Comp(a)->Right();
-    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
-    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::ChildSetPosSize: Container::Place(Comp(a), *(const EeWonRect4*)b); return 0;
-    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
-    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
-    case Op::ChildSetControlId: Comp(a)->mControlId = (int)b; return 0;
-    case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
-    case Op::ButtonSetCheck: static_cast<Button*>(Comp(a))->SetCheck(b != 0, false); return 0;
     case Op::TabTextIs: return static_cast<Button*>(Comp(a))->GetText() == *(const GUIString*)b ? 1 : 0;
     case Op::TabAddLayoutPoint: t->AddLayoutPoint(static_cast<LayoutPoint*>(Comp(a))); return 0;
-    case Op::EventType: return ((ComponentEvent*)a)->mType;
-    case Op::EventControlId: return ((ComponentEvent*)a)->GetControlId();
-    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
-    case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
-    // the type is Rust's map, which the golden checks against the enum
-    case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
     case Op::TabNewContainer: return (intptr_t)static_cast<Component*>(new Container);
     case Op::TabNewBar: return (intptr_t)static_cast<Component*>(new TabBar((EeWonTabCtrl*)a));
     case Op::TabBarOf: return (intptr_t)static_cast<TabBar*>(Comp(a))->mBar;
     case Op::TabNewPoint: return (intptr_t)static_cast<Component*>((static_cast<TabCtrl*>(t)->mContainerLayout = new LayoutPoint, static_cast<TabCtrl*>(t)->mContainerLayout.get()));
-    default: return ContainerHostCall(t, op, a, b, c, d);
+    default: return CtlOp(t, op, a, b, c, d);
     }
 }
 
@@ -282,15 +280,10 @@ extern "C" intptr_t ee_won_guicpp_skin_call(void* inMe, EeWonGuiOp op, intptr_t 
 extern "C" intptr_t ee_won_guicpp_layout_call(void*, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t)
 {
     switch (op) {
-    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
-    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::ChildSetPosSize: Container::Place(Comp(a), *(const EeWonRect4*)b); return 0;
     case Op::LaySetSizeAtLeast: Comp(a)->SetSizeAtLeast((int)b, (int)c); return 0;
     case Op::LayHold: ((ChildLayoutInstructionBase*)a)->AddRef(); return 0;
     case Op::LayRelease: ((ChildLayoutInstructionBase*)a)->Release(); return 0;
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
-    default: return 0;
+    default: return CtlOp(NULL, op, a, b, c, 0);
     }
 }
 
