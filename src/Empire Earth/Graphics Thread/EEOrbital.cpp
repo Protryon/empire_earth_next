@@ -19,13 +19,6 @@
 // The name tests, the speed and the update are ee_gfx effect_orbit.rs' (the prefixes "orbital_cw_" and "orbital_ccw_",
 // any case; the degrees between the prefix and the name's last '_')
 
-// Attaches the orbiting part to a model, speed from the name in degrees per second (orbital_cw_<deg>_... clockwise,
-// orbital_ccw_ counterclockwise)
-void EEOrbital::Init(GEModel* inModel)
-{
-    ee_gamecpp_ov_orbital_init(this, inModel);   // gamecpp ro_misc.rs
-}
-
 // Advances the orbiting part's angle by its speed over the tick, wrapped to -pi..pi
 void EEOrbital::Update()
 {

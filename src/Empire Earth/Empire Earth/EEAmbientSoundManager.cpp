@@ -40,19 +40,6 @@
 // 0x524a88..0x524b34: the original's two EE-level trigonometry caller logs ("UMCos EE-Level", "UMSin EE-Level",
 // ESCallerLog, never called), deleted with the class (LLE lane round 1)
 
-// Creates a silent ambient sound with no sound object, full probability and normal pitch
-EEAmbientSound::EEAmbientSound() : mSound(NULL), mInstance(NULL)
-{
-    ee_app_ambient_sound_default(this);
-}
-
-// Destroys the ambient sound, unloading its sound object's media
-EEAmbientSound::~EEAmbientSound()
-{
-    if (this->mSound != NULL)
-        this->mSound->UnloadMedia();
-}
-
 // Counts a visible unit for the ambient sounds: citizens, farms, goats, eagles, attackers, and enemy bombers over
 // the local player's towns (from the atomic epochs on)
 void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit) { ee_gamecpp_ambient_count_unit(this, inUnit); }

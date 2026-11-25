@@ -40,25 +40,6 @@
 #include "ee/EESEARust.h"
 #include "ee/EEScenarioManager.h"
 #include "rust/game/screens.h"
-EESELoadThread::EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPriority)
-{
-    ee_screens_selt_construct(this, inEditor, inThreadPriority);
-}
-
-EESELoadThread::~EESELoadThread()
-{
-    ee_screens_selt_destroy(this);
-}
-
-unsigned long EESELoadThread::Main(void* inThis)
-{
-    return ee_screens_selt_main(inThis);
-}
-
-void EESELoadThread::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-{
-    ee_screens_selt_message(this, inMessage, inParameter1, inParameter2);
-}
 
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)

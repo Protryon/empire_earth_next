@@ -34,68 +34,6 @@
 
 std::vector<EESoundObject*> gSoundObjects;
 
-// Creates an empty, unloaded sound with no sample
-EESoundObject::EESoundObject() : EeDataSoundFields(), EeDataMediaUse()
-{
-    this->mSampleID = 0;
-}
-
-// Destroys the sound, unloading its sample if it is loaded
-EESoundObject::~EESoundObject()
-{
-    ee_preload_sound_free(this);   // (preload_media.rs)
-}
-
-// Reads the sound table (each record after its sample's name; the record and its copy are ee_data tables.rs':
-// instance limit, category, looping, volume percent); returns the last read result
-long EESoundObject::LoadTable(FSFile* inFile)
-{
-    return ee_preload_load_sounds(inFile);   // (preload_media.rs)
-}
-
-// Deletes every sound of the table and empties it
-void EESoundObject::UnloadTable()
-{
-    ee_preload_unload_sounds();
-}
-
-// Writes to the file each sound still loaded, with its use count (preload_media.rs)
-void EESoundObject::Dump(FSFileSpec& inFile)
-{
-    ee_preload_dump_sounds(&inFile);
-}
-
-// Loads the sound's sample on first use (later uses wait for the load: ee/EEMediaUse.h); returns 9 on failure
-long EESoundObject::LoadMedia()
-{
-    return ee_preload_sound_load_media(this);   // (preload_media.rs)
-}
-
-// Sets the sound's volume (folded with EEContagionHelper::SetFunctor in the original: the store to +0x14; a float
-// argument and a pointer argument are passed in different registers on x64)
-void EESoundObject::SetVolume(float inVolume)
-{
-    this->mVolume = inVolume;
-}
-
-// Plays the sound once at full volume, centred, normal pitch
-void EESoundObject::Play()
-{
-    this->Play(1.0f, 0.0f, 1.0f);
-}
-
-// Loads the sample and plays it once as a one-shot at the given volume, pan and pitch; returns 9 on failure
-long EESoundObject::Play(float inVolume, float inPan, float inPitch)
-{
-    return ee_preload_play_sound(this, inVolume, inPan, inPitch);
-}
-
-// Counts one use down; on the last use unloads the sample. Returns 0
-long EESoundObject::UnloadMedia()
-{
-    return ee_preload_sound_unload_media(this);   // (preload_media.rs; 0)
-}
-
 // A text into the Rust side's sink
 static void EEPreloadMediaText(int64_t inSink, const char* inText)
 {

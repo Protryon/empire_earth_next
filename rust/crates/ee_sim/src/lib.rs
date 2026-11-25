@@ -17,12 +17,16 @@ pub mod combat;
 pub mod cp;
 /// The crate ee_formations before the restructure.
 pub mod formations;
+/// The game's named constants (effect kinds, table indices, improvements, save tags, resources, storms, AI kinds, terrain types, calamities) for the C++ headers.
+pub mod game_ids;
 /// The game network message type ids for the C++ headers.
 pub mod message_ids;
 /// The crate ee_netmsg before the restructure.
 pub mod netmsg;
 /// The crate ee_rmap before the restructure.
 pub mod rmap;
+/// The random map's named constants (script tokens, object kinds, map characteristics) for the C++ headers.
+pub mod rmap_ids;
 /// The save versions' predicates (EESaveHas*), under their C++ names.
 pub mod save_versions;
 /// The crate ee_scenario before the restructure.

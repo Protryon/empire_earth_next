@@ -22,10 +22,6 @@
 // the layers' clear colour
 static GEColor sBlack(0.0f, 0.0f, 0.0f);
 
-RTSMiniMap::RTSMiniMap(RTSPlayer* inPlayer, GEScreen* inScreen) { ee_rts_minimap_construct(this, inPlayer, inScreen); }
-RTSMiniMap::~RTSMiniMap() { ee_rts_minimap_destruct(this); }
-void RTSMiniMap::Ping(const GE2DPoint& inPoint) { ee_rts_minimap_ping(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint)); }
-
 // The shims minimap.rs calls (MiniMapCpp)
 extern "C" {
 void ee_rtsmmcpp_set_viewing_player(RTSMiniMap* inMap, RTSPlayer* inPlayer) { inMap->mViewingPlayer = inPlayer; }

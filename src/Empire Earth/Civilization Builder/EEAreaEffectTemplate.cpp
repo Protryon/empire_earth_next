@@ -18,12 +18,6 @@
 
 // UReferenceContainer<T>::Contains (its COMDAT 0x27c820 closes this unit) is defined in ee/UReferenceContainer.h
 
-// Loads the template's graphic effects and sound media
-void EEAreaEffectTemplate::Load(bool inIsOnDemand)
-{
-    ee_screens_ael_template_load(this, inIsOnDemand);
-}
-
 // The template's media and the list members' logic: area_effect_lists.rs over the one-statement shims below (UI lane
 // round 11)
 #define AEL_L(l) ((EEUnitAreaEffectList*)(l))

@@ -119,49 +119,18 @@ EEPhysics::~EEPhysics()
     TSScheduler::DestroyCriticalSection(this->mSaveGameLock);
 }
 
-// The methods' bodies are Rust (ee_game physics.rs, world lane round 1); each C++ call they make is a case of
-// ee_physcpp below
-void EEPhysics::AutoSave() { ee_physics_auto_save(this); }
-void EEPhysics::ClearServerMessages() { ee_physics_clear_server_messages(this); }
-void EEPhysics::FlushWorld() { ee_physics_flush_world(this); }
-void EEPhysics::RunOwedTicks() { ee_physics_run_owed_ticks(this); }
-void EEPhysics::EndGame(bool inIsVictory) { ee_physics_end_game(this, inIsVictory); }
-unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlags)
-    { return ee_physics_out_of_synch_checksum(this, inDump, inFlags); }
-void EEPhysics::GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime)
-    { ee_physics_minutes_and_seconds(this, outMinutes, outSeconds, inTime); }
-long EEPhysics::GetUnitSwapKind(EEComplexUnit* inUnit) { return ee_physics_unit_swap_kind(this, inUnit); }
-void EEPhysics::Init() { ee_physics_init(this); }
 void EEPhysics::Lock() { gWorld.mLock->WriteLock(); }
-void EEPhysics::QueueServerMessage(NEMessage* inMessage) { this->mServerMessages.push_back(inMessage); }
-void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-    { ee_physics_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
-void EEPhysics::Idle() { ee_physics_idle(this); }
+void EEPhysics::Unlock() { gWorld.mLock->WriteUnlock(); }
 // its own lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
 void EEPhysics::Tick()
 {
     ee_physics_tick(this);
 }
-void EEPhysics::QueueMessage(NEMessage* inMessage) { ee_physics_queue_message(this, inMessage); }
-void EEPhysics::SwapUnit(EEUnit* inOld, EEUnit* inNew) { ee_physics_swap_unit(inOld, inNew); }
-void EEPhysics::ProcessUnitSwaps() { ee_physics_process_unit_swaps(this); }
-void EEPhysics::DrainInput() { ee_physics_drain_input(this); }
 // its own lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
 void EEPhysics::ReportStatistics()
 {
     ee_physics_report_statistics(this);
 }
-long EEPhysics::PostAutoSave() { return ee_physics_post(this, 0x50a); }
-long EEPhysics::PostShowDialogMessage() { return ee_physics_post(this, 0x508); }
-long EEPhysics::PostInit() { return ee_physics_post(this, 0x509); }
-void EEPhysics::UpdateTiming() { ee_physics_update_timing(this); }
-void EEPhysics::QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew) { ee_physics_queue_unit_swap(this, inOld, inNew); }
-void EEPhysics::Unlock() { gWorld.mLock->WriteUnlock(); }
-void EEPhysics::UpdateAreaEffectsClock() { ee_physics_update_area_effects_clock(this); }
-void EEPhysics::UpdateCivTimer() { ee_physics_update_civ_timer(this); }
-void EEPhysics::ServeLoadSaveRequests() { ee_physics_serve_load_save_requests(this); }
-void EEPhysics::CheckShiftMode() { ee_physics_check_shift_mode(this); }
-void EEPhysics::UpdateWeather() { ee_physics_update_weather(this); }
 
 // Returns the game speed and elapsed game time as text ("<speed> hh:mm:ss")
 UWideString EEPhysics::GetTimeString()
@@ -183,22 +152,6 @@ void EEAfterLoad(std::function<void()> inFixup)
 void EEAfterLoadLast(std::function<void()> inFixup)
 {
     ee_physics_after_load(true, new std::function<void()>(inFixup));
-}
-
-// Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
-// flag after version 0.0xce, the resource timer from 0xfa); returns the first read error. The original's two era
-// bodies are Rust (ee_units physics_save.rs, over the record this class derives from; physics.rs: the base's part,
-// the file's primitives, the loaded seed back at the first tick)
-long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_physics_load(this, &inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-}
-
-// Writes the physics clocks, tick counters, timing averages, civ timer state, game-over flag and resource timer
-// to the saved game; returns the first write error
-long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_physics_save(this, &outFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // TEST ONLY: the UI fixture's view of each executed input (EETestFixtureOrders.cpp: the orders' verdicts), called

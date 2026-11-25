@@ -17,8 +17,9 @@ class TSThread;
 class RTSMousePointer {
 public:
     // 0x11b54e: creates the events, starts the thread (Main) at inThreadPriority, waits for it
-    RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inThreadPriority);
-    virtual ~RTSMousePointer();             // +0x00 (??_G 0x11b628; dtor 0x11b644)
+    RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inThreadPriority) : mWindow(inWindow) { ee_rts_mouse_pointer_construct(this, inMouse, inThreadPriority); }
+    // +0x00 (??_G 0x11b628; dtor 0x11b644)
+    virtual ~RTSMousePointer() { ee_rts_mouse_pointer_destruct(this); }
 
     // 0x11b66d (the thread function)
     static unsigned long Main(void* inPointer) { return ee_rts_mouse_pointer_main(inPointer); }

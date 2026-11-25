@@ -30,37 +30,3 @@ GEViewport gUIViewport;
 
 // the panel corners of the z-buffer clears (.rdata 0x441c00..) and the unit panel's flag (0x5297a0): gamecpp ro_views.rs,
 // ro_units.rs
-
-// Creates the UI's render object for a UI manager
-EEROUserInterface::EEROUserInterface(UIManager* inManager)
-{
-    this->mUIManager = inManager;
-}
-
-// Destroys the UI's render object
-EEROUserInterface::~EEROUserInterface()
-{
-}
-
-// The frame's data and the unit panel's flag, the z-buffer clears under the panels and the UI's polygons: gamecpp
-// ro_views.rs
-void EEROUserInterface::FrameStarting()
-{
-    ee_gamecpp_gu_frame_starting(this);
-}
-
-void EEROUserInterface::SceneStarting()
-{
-    ee_gamecpp_gu_scene_starting();
-}
-
-void EEROUserInterface::RenderScene()
-{
-    ee_gamecpp_gu_render_scene(this);
-}
-
-// Draws the UI's text
-void EEROUserInterface::FrameDone()
-{
-    this->mUIManager->DrawTextA();
-}

@@ -11,6 +11,7 @@
 
 #include "lle/U2DPoint.h"
 #include "rust/sim/tech.h"   // EeCalamityFields (ee_tech calamity_record.rs)
+#include "rust/game/gamecpp.h"
 class EECalamityClass;
 class EEUnit;
 class SESMInstanceNode;
@@ -19,29 +20,41 @@ class SESMInstanceNode;
 // the checksum, Load and Save); the members below stay C++
 class EECalamity : public FSRestorable, public EeCalamityFields {
 public:
-    EECalamity();
-    EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit);
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0xad618
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0xad85e
-    virtual ~EECalamity();                  // +0x10 0xad218
-    virtual void DumpOutOfSynch(FILE* inFile);   // +0x14 0xad377 (provisional name)
-    virtual void Virtual18(unsigned long);  // +0x18 (empty: ICF-folded 0x157269)
-    virtual long GetOutOfSynchChecksum();   // +0x1c 0xad50f: the sum of the dumped fields (provisional name)
-    virtual void PlaySound();               // +0x20 0xadaa3: mClass->Virtual2C(this)
+    EECalamity() : mEffectGeneration(6), mTilePlaceHolder1(0, 0) { ee_gamecpp_calamity_construct(this, NULL, NULL, false); }
+    EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit) : mEffectGeneration(6), mTilePlaceHolder1(0, 0) { ee_gamecpp_calamity_construct(this, inClass, inCasterUnit, true); }
+    // +0x04 0xad618
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_calamity_io(this, &inFile, true); }
+    // +0x0c 0xad85e
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_calamity_io(this, &outFile, false); }
+    // +0x10 0xad218
+    virtual ~EECalamity() { ee_gamecpp_calamity_destruct(this); }
+    // +0x14 0xad377 (provisional name)
+    virtual void DumpOutOfSynch(FILE* inFile) { ee_gamecpp_calamity_dump(this, inFile); }
+    // +0x18 (empty: ICF-folded 0x157269)
+    virtual void Virtual18(unsigned long) {  }
+    // +0x1c 0xad50f: the sum of the dumped fields (provisional name)
+    virtual long GetOutOfSynchChecksum() { return ee_gamecpp_calamity_checksum(this); }
+    // +0x20 0xadaa3: mClass->Virtual2C(this)
+    virtual void PlaySound() { ee_gamecpp_calamity_play_sound(this); }
 
-    void StopSound();                       // 0xad267: stops mSound (provisional name)
-    void ReleaseSound();
-    void ReleaseSecondarySound();
-    void Reset();
+    // 0xad267: stops mSound (provisional name)
+    void StopSound() { ee_gamecpp_calamity_stop_sound(this, false); }
+    void ReleaseSound() { ee_gamecpp_calamity_release_sound(this, false); }
+    void ReleaseSecondarySound() { ee_gamecpp_calamity_release_sound(this, true); }
+    void Reset() { ee_gamecpp_calamity_reset(this); }
     // 0xad5bb: the whole discrete updates in mTimeElapsedSinceLastUpdate (keeps the remainder) (provisional name)
-    unsigned long GetDiscreteUpdates();
-    bool GetTargetUnit(EEUnit*& outUnit);   // 0xad5fc: mTargetUnit (0 and false if none)
-    void SetCasterUnit(EEUnit* inUnit);     // 0xadab3 (keeps a reference) (provisional name)
-    void SetSound(SESMInstanceNode* inSound);    // 0xadae7: stops the old one, keeps a reference (provisional name)
-    void SetSecondarySound(SESMInstanceNode* inSound);
-    void SetTargetUnit(EEUnit* inUnit);     // 0xadb1b (keeps a reference) (provisional name)
+    unsigned long GetDiscreteUpdates() { return ee_gamecpp_calamity_discrete_updates(this); }
+    // 0xad5fc: mTargetUnit (0 and false if none)
+    bool GetTargetUnit(EEUnit*& outUnit) { return (outUnit = this->mTargetUnit) != NULL; }
+    // 0xadab3 (keeps a reference) (provisional name)
+    void SetCasterUnit(EEUnit* inUnit) { ee_gamecpp_calamity_set_unit(this, inUnit, false); }
+    // 0xadae7: stops the old one, keeps a reference (provisional name)
+    void SetSound(SESMInstanceNode* inSound) { ee_gamecpp_calamity_set_sound(this, inSound, false); }
+    void SetSecondarySound(SESMInstanceNode* inSound) { ee_gamecpp_calamity_set_sound(this, inSound, true); }
+    // 0xadb1b (keeps a reference) (provisional name)
+    void SetTargetUnit(EEUnit* inUnit) { ee_gamecpp_calamity_set_unit(this, inUnit, true); }
     // out of line in another unit (0xdfd80; EECalamity.cpp calls it): stops mSecondarySound (provisional name)
-    void StopSecondarySound();
+    void StopSecondarySound() { ee_gamecpp_calamity_stop_sound(this, true); }
     void SetEffectHandle(const EEEffectHandle& inHandle) { this->mEffectHandle = inHandle; }
     float GetTimeAlive() const { return this->mTimeAlive; }  // inline (compared as an FP value, not a memory operand)
     unsigned long GetPlayerNumber() const { return this->mPlayerNumber; }  // inline (provisional name; Update 0xb0a60: with IsCarried, theUnits[i] op+ refused as in the original, 57 -> 68)

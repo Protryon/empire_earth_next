@@ -223,8 +223,8 @@ attributes:
 def civpowers(ids, spec):
     t = _consts('../rust/sim/tech_tree_ids.h', 'kTech')
     ut = _consts('../rust/sim/unit_ids.h', 'kUnitType')
-    snd = _consts('EESoundObject.h', 'kSound')
-    gfx = _consts('EEGraphicEffect.h', 'kGraphicEffect')
+    snd = _consts('../rust/sim/game_ids.h', 'kSound')
+    gfx = _consts('../rust/sim/game_ids.h', 'kGraphicEffect')
     out = [HEAD.format(name='civpowers', format=spec['format'],
                        what='What granting a civ power does, after its mTechnology is researched.')]
     out.append("""# effects: C++ primitives. research_if_researched (if_researched, tech), load_sound (sound), load_effect (effect),

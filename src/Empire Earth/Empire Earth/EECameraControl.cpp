@@ -37,8 +37,6 @@ static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformatio
                   sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GEQuaternion) == sizeof(EeGeQuaternion) &&
                   sizeof(EECameraKey) == sizeof(EeAppCameraKey) && offsetof(EECameraKey, mChanged) == offsetof(EeAppCameraKey, mChanged),
               "GE mirrors");
-template <class R, class T> static inline const R* EECameraRust(const T& inValue) { return reinterpret_cast<const R*>(&inValue); }
-template <class R, class T> static inline R* EECameraRust(T& inValue) { return reinterpret_cast<R*>(&inValue); }
 
 // Constructs the game version string "2002.8.17.v1.00" and registers its destructor to run at exit
 UWideString gGameVersion("2002.8.17.v1.00");
@@ -55,13 +53,6 @@ float gCameraMaxZoom = 2.0f;
 // Initialises the camera's field of view (30 degrees)
 static float sCameraFieldOfView = 0.017453292f * 30.0f;
 
-// The camera's host (ee_app camera_ffi.rs): ee_game gamecpp camera_io.rs (its cases: EECore10OpD7 below); the
-// context is the camera
-static uint32_t EECameraID(EEUnit* inUnit)
-{
-    return inUnit != NULL ? EEUnitHandleID(inUnit) : (uint32_t)EE_APP_CAMERA_NO_UNIT;
-}
-#define EE_CAMERA_HOST this, this, ee_gamecpp_camera_host
 
 // Creates the camera controller with no followed unit or target point, mode 0, zoom 0.5 and no path
 EECameraControl::EECameraControl()
@@ -74,63 +65,10 @@ EECameraControl::~EECameraControl()
 {
 }
 
-void EECameraControl::ResetPath() { ee_app_camera_reset_path(EE_CAMERA_HOST); }
-
-// Appends a key to the camera path; returns 0, or 5 while a path plays (camera locked)
-long EECameraControl::AddKey(const EECameraKey& inKey) { return ee_gamecpp_camera_add_key(this, &inKey); }
-
-// (the original's EECameraRayDistance 0x527c09 built each ray twice; the Rust builds it once and measures it twice)
-void EECameraControl::SetClippingDistances() { ee_app_camera_set_clipping_distances(EE_CAMERA_HOST); }
-
-void EECameraControl::GetOffset(float inStep, GE3DPoint& outPoint) { ee_app_camera_point(this, 0, inStep, EECameraRust<EeGe3DPoint>(outPoint)); }
-
-void EECameraControl::GetViewTurn(float inStep, GETransformation& outTransformation)
-{
-    ee_app_camera_turn(this, 0, inStep, EECameraRust<EeGeTransformation>(outTransformation));
-}
-
-void EECameraControl::GetOffsetTurn(float inStep, GETransformation& outTransformation)
-{
-    ee_app_camera_turn(this, 1, inStep, EECameraRust<EeGeTransformation>(outTransformation));
-}
-
-void EECameraControl::GetLocation(float inStep, GE3DPoint& outLocation)
-{
-    ee_app_camera_point(this, 1, inStep, EECameraRust<EeGe3DPoint>(outLocation));
-}
-
-void EECameraControl::GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint)
-{
-    ee_app_camera_ground_point(EE_CAMERA_HOST, EECameraRust<EeGe3DLine>(inLine), EECameraRust<EeGe3DPoint>(outPoint));
-}
-
-// Returns the point the camera focuses on for a unit: its model centre at camera-focus height, else its tile centre
-// (the host's EE_APP_CAMERA_OP_UNIT_POINT; ee_game gamecpp camera_host.rs)
-void EECameraControl::GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint)
-{
-    ee_gamecpp_camera_unit_point(inUnit, &outPoint);
-}
-
-void EECameraControl::GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation)
-{
-    ee_app_camera_unit_turn(EE_CAMERA_HOST, EECameraID(inUnit), EECameraRust<EeGeTransformation>(outTransformation));
-}
-
 float EECameraControl::GetPitch(float inZoom, long inMode)
 {
     return ee_gfx_camera_pitch(inZoom, (int32_t)inMode, EECameraRust<EeGeTransformation>(gWorld.mTransformation));
 }
-
-void EECameraControl::StartPath() { ee_app_camera_start_path(EE_CAMERA_HOST); }
-
-void EECameraControl::Revolve(const GE3DPoint& inAngles) { ee_app_camera_revolve(EE_CAMERA_HOST, inAngles.GetX(), inAngles.GetY()); }
-
-// Creates a camera key (members only)
-EECameraKey::EECameraKey()
-{
-}
-
-void EECameraControl::Rotate(const GE3DPoint& inAngles) { ee_app_camera_rotate(EE_CAMERA_HOST, inAngles.GetX(), inAngles.GetY()); }
 
 void EECameraControl::MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlagA, float inDuration,
                                EEUnit* inUnitB, GE3DPoint inLocationB, bool inFlagB, float inZoom, float inTurnYaw,
@@ -141,53 +79,6 @@ void EECameraControl::MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlag
                                inTurnPitch};
     ee_app_camera_move_to(EE_CAMERA_HOST, &theMove);
 }
-
-void EECameraControl::Scroll(float inDX, float inDY) { ee_app_camera_scroll(EE_CAMERA_HOST, inDX, inDY); }
-
-void EECameraControl::ResetZoom() { this->SetZoom(1.0f); }
-
-void EECameraControl::SetOffset(const GE3DPoint& inPoint, bool inFlag)
-{
-    ee_app_camera_set_offset(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inPoint), inFlag);
-}
-
-void EECameraControl::SetViewTurn(const GETransformation& inTransformation, bool inFlag)
-{
-    ee_app_camera_set_view_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag);
-}
-
-void EECameraControl::SetOffsetTurn(const GETransformation& inTransformation, bool inFlag)
-{
-    ee_app_camera_set_offset_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag);
-}
-
-void EECameraControl::SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain)
-{
-    ee_app_camera_set_location(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inLocation), inIsImmediate, inFollowTerrain);
-}
-
-void EECameraControl::SetMode(long inMode) { ee_app_camera_set_mode(EE_CAMERA_HOST, inMode); }
-
-void EECameraControl::SetChanged() { ee_app_camera_set_changed(this); }
-
-void EECameraControl::ClearUnitA() { ee_app_camera_clear_unit_a(EE_CAMERA_HOST); }
-
-void EECameraControl::ClearUnitB() { ee_app_camera_clear_unit_b(EE_CAMERA_HOST); }
-
-// Advances the camera each frame (ee_app camera.rs update), then applies the view, the orthographic size, the
-// clipping distances and the field of view to the viewport and refreshes the mini map's view; CAMU at its start and
-// end (TEST ONLY) (ee_game gamecpp camera_host.rs)
-void EECameraControl::Update(float inElapsedTime)
-{
-    ee_gamecpp_camera_update(this, inElapsedTime);
-}
-
-void EECameraControl::Follow(EEUnit* inUnit, bool inFlag, float inDuration, float inTurnYaw, float inTurnPitch)
-{
-    ee_app_camera_follow(EE_CAMERA_HOST, EECameraID(inUnit), inFlag, inDuration, inTurnYaw, inTurnPitch);
-}
-
-void EECameraControl::SetZoom(float inZoom) { ee_app_camera_set_zoom(EE_CAMERA_HOST, inZoom); }
 
 // Returns whether the local player can see a unit
 bool EEIsSeen(EEUnit* inUnit)

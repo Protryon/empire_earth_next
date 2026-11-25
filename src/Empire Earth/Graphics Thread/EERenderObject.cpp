@@ -34,7 +34,6 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EERenderLists.h"
 #include "ee/EERenderObject.h"
-#include "ee/EEEffectMesh.h"        // the table's store_mesh
 #include "ee/EERenderSnapshot.h"     // gRenderSnapshot (the Rust draws' camera)
 #include "ee/EEUnitPicker.h"
 #include "ee/EEGhostUnit.h"
@@ -105,21 +104,12 @@ bool gB529066;
 bool gCameraFollowing;
 bool gB529068;
 
-// Creates a game render object
-EERenderObject::EERenderObject()
-{
-}
-
 // Destroys a render object (RTSRenderObject's inline destructor)
 RTSRenderObject::~RTSRenderObject()
 {
 }
 
 // The scene, the frame's lists, the lighting and the posts: gamecpp render_object.rs (EECore9OpA's cases below)
-void EERenderObject::QueueEffects() { ee_gamecpp_ro_queue_effects(this); }
-void EERenderObject::Fn10C036() { ee_gamecpp_ro_fn10c036(this); }
-void EERenderObject::Fn10E8D1() { ee_gamecpp_ro_fn10e8d1(this); }
-void EERenderObject::FillRenderLists() { ee_gamecpp_ro_fill_render_lists(this); }
 void SetSceneFog() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::SceneFog); }
 void SetLightingOff() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Off); }
 void SetTerrainLighting() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Terrain); }

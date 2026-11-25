@@ -268,8 +268,8 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEFMX_INDEX_GET: return (int32_t)(uint32_t)sSefxIndex;
     case EE_SCREENS_SEFMX_NEW_BRUSH_GROUP: return EESEOut(i, new EEUIFSEBrushGroup(sSefxIndex, GE2DPoint(f[0], f[1]), theForm, gU531930));
-    case EE_SCREENS_SEFMX_NEW_UNDO_ACTION: return EESEOut(i, static_cast<EEAction*>(new EEARust(kEEAEditorUndo)));
-    case EE_SCREENS_SEFMX_NEW_REDO_ACTION: return EESEOut(i, static_cast<EEAction*>(new EEARust(kEEAEditorRedo)));
+    case EE_SCREENS_SEFMX_NEW_UNDO_ACTION: return EESEOut(i, static_cast<EEAction*>(new EEARust(EE_SCREENS_GA_EDITOR_UNDO)));
+    case EE_SCREENS_SEFMX_NEW_REDO_ACTION: return EESEOut(i, static_cast<EEAction*>(new EEARust(EE_SCREENS_GA_EDITOR_REDO)));
     case EE_SCREENS_SEFMX_NEW_ACTION_BUTTON: return EESEOut(i, static_cast<UIControl*>(new EEUIShellButton(EE_SCREENS_SK_ACTION_BUTTON, {(int64_t)p[0]}, i[0], NULL, NULL, NULL, GERectangle(GE2DPoint(f[0], f[1]), 65.0f, 25.0f), theForm, (unsigned long)i[1], 0)));
     case EE_SCREENS_SEFMX_BASE_COPY_DATA: return (int32_t)theForm->UIForm::CopyData();
     case EE_SCREENS_SEFMX_BASE_UPDATE_KEYBOARD: return (int32_t)theForm->UIForm::UpdateKeyboard();

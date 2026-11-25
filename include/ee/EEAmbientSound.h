@@ -35,8 +35,10 @@ static_assert(sizeof(EEAmbientSoundRecord) == 152, "on-disk record: 152 bytes on
 // mNextTime, mIsLooping), the base; the fades, the play and the stop are Rust (EEAmbientSoundManager.cpp's host).
 class EEAmbientSound : public EeAppAmbientSoundFields {
 public:
-    EEAmbientSound();
-    virtual ~EEAmbientSound();
+    // Creates a silent ambient sound with no sound object, full probability and normal pitch
+    EEAmbientSound() : mSound(NULL), mInstance(NULL) { ee_app_ambient_sound_default(this); }
+    // Destroys the ambient sound, unloading its sound object's media
+    virtual ~EEAmbientSound() { if (this->mSound != NULL) this->mSound->UnloadMedia(); }
     // (Init: ee_game gamecpp ambient_io.rs, the manager's Load)
     // inline (COMDATs 0x1272c6.. in EEAmbientSoundManager.cpp)
     void ReleaseInstance()

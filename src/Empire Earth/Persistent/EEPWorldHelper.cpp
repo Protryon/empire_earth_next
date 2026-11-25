@@ -112,12 +112,6 @@ EEPWorldHelper::EEPWorldHelper(EEWorld& inWorld)
     ee_gamecpp_pwh_from_world(this, &inWorld);
 }
 
-// Creates an empty saved-world chunk (persistent factory)
-FSPersistent* EEPWorldHelper::CreateDefault() const
-{
-    return new EEPWorldHelper;
-}
-
 // port (save version 0.262): the dead attackers (and from 0.272/0.275 the units the goals hold out of the world). A
 // unit's mLastAttacker holds a reference, so the running game keeps an attacker that died since as a unit out of the
 // world, and reads it (the triggers, the AI, a predator's strike back); the save wrote its id and the load found no
@@ -131,31 +125,6 @@ EEComplexUnit* EEFindLoadedGhost(unsigned long inID)
 EEUnit* EEFindLoadedGhostUnit(unsigned long inID)
 {
     return static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID));
-}
-
-// Reads the teams, world settings and id counters (Carbon flag from version 0.239 on), the running state (from 0.254:
-// world_save.rs), then the chat log and the main game form; returns only the main game form's error
-long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_pwh_load(this, inMajorVersion, inMinorVersion, &inFile);
-}
-
-// Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
-void EEPWorldHelper::Restore(EEGameState& ioState)
-{
-    ee_gamecpp_pwh_restore(this, &ioState);
-}
-
-// Writes the teams, world settings, id counters and Carbon flag, the running state (from 0.254: world_save.rs),
-// then the chat log and the main game form; returns only the main game form's error
-long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_gamecpp_pwh_save(this, inMajorVersion, inMinorVersion, &outFile);
-}
-
-// Adds nothing to the checksum (empty: folded into a shared empty function)
-void EEPWorldHelper::GetChecksum(ESChecksum& ioChecksum) const
-{
 }
 
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)

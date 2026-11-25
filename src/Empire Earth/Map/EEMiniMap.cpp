@@ -61,109 +61,11 @@ EEMiniMap::EEMiniMap(GEScreen* inScreen, EEMap* inMap, EEPlayer* inPlayer)
     ee_gamecpp_minimap_construct(this, inMap);
 }
 
-// Destroys the mini map (the base class frees its surfaces)
-EEMiniMap::~EEMiniMap()
-{
-    ee_app_minimap_free(this->mRust);
-}
-
-// Adds a building's remembered image as a dot in its mini map cell; a wall also adds its next three segments
-void EEMiniMap::AddDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall)
-{
-    ee_gamecpp_minimap_doppelganger(this, inDoppelganger, inX, inY, inIsWall, true);
-}
-
 // Redraws the camera's view outline when a map is attached
 void EEMiniMap::RefreshView()
 {
     if (this->mL12174)
         this->Refresh();
-}
-
-// Copies the 64 x 64 unit layer into the world texture and relocks it for drawing
-void EEMiniMap::UpdateWorldTexture()
-{
-    ee_gamecpp_minimap_update_world_texture(this);
-}
-
-// New (port): locks the unit layer and hands its pixels to the Rust half
-void EEMiniMap::LockUnitLayer()
-{
-    ee_gamecpp_minimap_lock_unit_layer(this);
-}
-
-// Counts one sight source off the mini map cell holding a tile and redraws the cell
-void EEMiniMap::CountCellOff(long inX, long inY)
-{
-    ee_gamecpp_minimap_count_cell(this, inX, inY, false);
-}
-
-// Counts one sight source onto the mini map cell holding a tile (an unexplored cell starts at 2), redraws it
-void EEMiniMap::CountCellOn(long inX, long inY)
-{
-    ee_gamecpp_minimap_count_cell(this, inX, inY, true);
-}
-
-// Removes a building image's dot from its mini map cell (and a wall's next three segments)
-void EEMiniMap::RemoveDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall)
-{
-    ee_gamecpp_minimap_doppelganger(this, inDoppelganger, inX, inY, inIsWall, false);
-}
-
-// Attaches a map: builds the map/pixel and map/cell transformations (rotated 45 degrees, centred) and the
-// map size of one pixel, then redraws the mini map
-// (the transformations: ee_gfx minimap.rs; its translation adds are written `-x + m03` / `m13 - y`, as here)
-void EEMiniMap::SetMap(EEMap* inMap)
-{
-    ee_gamecpp_minimap_set_map(this, inMap);
-}
-
-// Clears the unit layer and all dots, then re-reads every tile's sight and contents diagonal by diagonal (the walk:
-// ee_app minimap.rs)
-void EEMiniMap::Redraw()
-{
-    ee_gamecpp_minimap_redraw(this);
-}
-
-// Recolours every player's dots after a colour change (units in player colour, buildings in shade)
-void EEMiniMap::Recolor()
-{
-    ee_gamecpp_minimap_recolor(this);
-}
-
-// Recomputes the camera's view trapezoid on the mini map (camera tilted 30 degrees, at least height 5),
-// shortening its sides to the width of its near edge (at least 32)
-// (the trapezoid: ee_gfx minimap.rs)
-void EEMiniMap::Refresh()
-{
-    ee_gamecpp_minimap_refresh(this);
-}
-
-// Recomputes every terrain pixel of the mini map and flags the terrain texture changed
-void EEMiniMap::RedrawAll()
-{
-    ee_gamecpp_minimap_redraw_all(this);
-}
-
-// Recomputes the terrain pixels covering a map rectangle and flags the terrain texture changed (the pixel
-// rectangle: ee_app minimap.rs)
-void EEMiniMap::RedrawRect(long inLeft, long inRight, long inBottom, long inTop)
-{
-    ee_gamecpp_minimap_redraw_rect(this, inLeft, inRight, inBottom, inTop);
-}
-
-// Recomputes the terrain colour of each pixel in a texture rectangle (the lit average of the map vertices under it:
-// ee_app minimap.rs)
-void EEMiniMap::RedrawPixels(long inLeft, long inRight, long inBottom, long inTop)
-{
-    ee_gamecpp_minimap_redraw_pixels(this, inLeft, inRight, inBottom, inTop);
-}
-
-// Moves a unit's dot between mini map cells (or just updates its position within a cell); -10000 means
-// not on the map. Classes without a mini map colour and other players' foundations get no dot
-void EEMiniMap::MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, long inY)
-{
-    ee_gamecpp_minimap_move_unit(this, inUnit, inOldX, inOldY, inX, inY);
 }
 
 // ------------------------------------------------------------------------- round 9, lane B: the mini map's bodies' C++ (their

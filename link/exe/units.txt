@@ -8,7 +8,6 @@ a1910 a543d Empire Earth/AI Thread/EEHerd.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
 acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
-adcd9 adf97 Empire Earth/Calamities/EECalamityClass.cpp
 adf97 aebb7 Empire Earth/Calamities/EECalamityManager.cpp
 b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 0b71b5 0b8cda Empire Earth/Communications/EEClient.cpp
@@ -17,7 +16,6 @@ b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 0cd4ee d3ff4 Empire Earth/Communications/EEWonNet.cpp
 d3ff4 d47a1 Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp
 d490f d5405 Empire Earth/Database/EEAnimal.cpp
-d5405 d5d08 Empire Earth/Database/EEButtonObject.cpp
 d6bed d72c1 Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp
 d72c1 d9b2b Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp
 d9b2b da3be Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp
@@ -29,7 +27,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 10972b 10a9b0 Empire Earth/Graphics Thread/EEGraphics.cpp
 10a9b0 10aa88 Empire Earth/Graphics Thread/EEMouse.cpp
 10aa88 111d3d Empire Earth/Graphics Thread/EERenderObject.cpp
-111d3d 111dae Empire Earth/Graphics Thread/EEROEffects.cpp
 111dae 11251f Empire Earth/Graphics Thread/EEROGroundShadows.cpp
 11251f 114296 Empire Earth/Graphics Thread/EEROTerrain.cpp
 114296 118741 Empire Earth/Graphics Thread/EEROUnits.cpp
@@ -47,7 +44,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1248f6 124a88 RTS Engine/Map/RTSVisibleMap.cpp
 124ee2 1273d7 Empire Earth/Empire Earth/EEAmbientSoundManager.cpp
 127584 12a54a Empire Earth/Empire Earth/EECameraControl.cpp
-12a54a 12c3eb Empire Earth/Empire Earth/EECheatCodes.cpp
 12c3eb 12cac8 Empire Earth/Empire Earth/EECivilization.cpp
 12cac8 12dba8 Empire Earth/Empire Earth/EECommandLine.cpp
 12dba8 12ed4e Empire Earth/Empire Earth/EEEMStorm.cpp
@@ -56,7 +52,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1304e4 131b7c Empire Earth/Empire Earth/EEGameState.cpp
 131b7c 13242b Empire Earth/Empire Earth/EEMusicManager.cpp
 13242b 136b6d Empire Earth/Empire Earth/EEPreferences.cpp
-1372a6 137b3f Empire Earth/Empire Earth/EEVCWonder.cpp
 137ba3 13e967 Empire Earth/Empire Earth/EEWorld.cpp
 13e967 13e967 Empire Earth/Empire Earth/EEGlobals.cpp   # the globals of Empire Earth.cpp (data only; same init order)
 13e967 147dfd Empire Earth/Empire Earth/Empire Earth.cpp
@@ -65,7 +60,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1497f4 149c3c Empire Earth/Persistent/EEPCalamityHelper.cpp
 149c3c 14a009 Empire Earth/Persistent/EEPChecksum.cpp
 14a009 14ac35 Empire Earth/Persistent/EEGameStateLoader.cpp
-14ac35 14b22d Empire Earth/Persistent/EEPMultiplayerHelper.cpp
 14b22d 14b7a5 Empire Earth/Persistent/EEPPlayerHelper.cpp
 14b7a5 14bd64 Empire Earth/Persistent/EEPSaveGameHeader.cpp
 14bd64 14c6b1 Empire Earth/Persistent/EEPWorldHelper.cpp
@@ -99,9 +93,7 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1af2a9 1afa90 Empire Earth/Scenario Editor/EEUIFSETRBPaintType.cpp
 1afa90 1ba02f Empire Earth/Scenario Manager/EEScenarioManager.cpp
 1ba02f 1ba89f Empire Earth/Scenario Manager/EESMArea.cpp
-1ba89f 1bb5a5 Empire Earth/Scenario Manager/EESMCondition.cpp
 1bb5a5 1c5783 Empire Earth/Scenario Manager/EESMEffect.cpp
-1c5783 1c5f73 Empire Earth/Scenario Manager/EESMMediaStrings.cpp
 1c5f73 1ca4ee Empire Earth/Scenario Manager/EESMObject.cpp
 1ca4ee 1cba2f Empire Earth/Scenario Manager/EEEvent.cpp
 1cba2f 1cdf25 Empire Earth/Tech Tree/EETechTree.cpp

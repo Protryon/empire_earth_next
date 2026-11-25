@@ -3,14 +3,7 @@
 #ifndef EE_EESTORMTYPE_H
 #define EE_EESTORMTYPE_H
 
-// EEEMStorm::mType: EEEMStorm::GetTypeName names each type (names from its strings; setrilo environment_manager.h
-// StormType agrees for 0..4).
-enum EEStormType {
-    kStormUnknown = 0,     // EEEMStorm::GetTypeName case 0: "Unknown"
-    kStormRain = 1,        // EEEMStorm::GetTypeName case 1: "Rain"
-    kStormSnow = 2,        // EEEMStorm::GetTypeName case 2: "Snow"
-    kStormHurricane = 3,   // EEEMStorm::GetTypeName case 3: "Hurricane"
-    kStormBlizzard = 4,    // EEEMStorm::GetTypeName case 4: "Blizzard"
-};
+// The storm types (EEStormType): Rust's enums (ee_sim game_ids.rs), emitted back as plain C++ enums with their evidence comments.
+#include "rust/sim/game_ids.h"
 
 #endif // EE_EESTORMTYPE_H

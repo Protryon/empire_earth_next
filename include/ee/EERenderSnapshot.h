@@ -17,7 +17,7 @@
 class GETerrainMesh;
 
 struct EERenderSnapshot {
-    EERenderSnapshot();
+    EERenderSnapshot() : mCameraYaw(0.0f), mCameraPitch(0.0f), mInCinematic(false), mTerrainMesh(NULL), mIsSpaceMap(false), mBrushHighlightShown(false) {  }
 
     // the camera (RTSWorld::mTransformation, mCameraYaw, mCameraPitch): the effects' billboards and sprites
     GETransformation mCamera;
