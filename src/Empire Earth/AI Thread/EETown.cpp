@@ -35,30 +35,22 @@ extern "C" int64_t ee_cp_town_host(void* inTown, int32_t inOp, uint64_t inA, uin
     EEUnit* theUnit = reinterpret_cast<EEUnit*>((uintptr_t)inA);
     (void)inB;
     switch (inOp) {
-    case EE_CP_TOWN_IS_TOWN_UNIT:
-        return EETown::IsTownUnit(theUnit) ? 1 : 0;
-    case EE_CP_TOWN_PLAYER:
-        return (int64_t)(uintptr_t)me->mPlayer;
-    case EE_CP_TOWN_HAS_PATROL:
-        return me->mPatrolGroup != NULL ? 1 : 0;
+    case EE_CP_TOWN_IS_TOWN_UNIT: return EETown::IsTownUnit(theUnit) ? 1 : 0;
+    case EE_CP_TOWN_PLAYER: return (int64_t)(uintptr_t)me->mPlayer;
+    case EE_CP_TOWN_HAS_PATROL: return me->mPatrolGroup != NULL ? 1 : 0;
     case EE_CP_TOWN_SET_PATROL: EEPGSetPatrolPoints(me->mPatrolGroup, std::vector<U2DPoint<long> >((const U2DPoint<long>*)(uintptr_t)io->v[0], (const U2DPoint<long>*)(uintptr_t)io->v[0] + io->v[1]), me->mPlayer->GetPlayerID());
         return 0;
-    case EE_CP_TOWN_FLAGS:
-        return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
+    case EE_CP_TOWN_FLAGS: return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
     case EE_CP_TOWN_NODE_KIND:
         return theUnit->GetTechTreeNode() != NULL ? (int64_t)theUnit->GetTechTreeNode()->mData->mKind : -1;
-    case EE_CP_TOWN_AREA_TILE:
-        return EETownPack(theUnit->FindAreaTile(true, 1));
+    case EE_CP_TOWN_AREA_TILE: return EETownPack(theUnit->FindAreaTile(true, 1));
     case EE_CP_TOWN_SET_PATROL_GROUP: me->mPatrolGroup = reinterpret_cast<EEPPatrolGroup*>((uintptr_t)inA);
         return 0;
     case EE_CP_TOWN_ADD_PATROL_GROUP: me->mPlayer->AddPatrolGroup(me->mPatrolGroup);
         return 0;
-    case EE_CP_TOWN_PATROL_GROUP:
-        return (int64_t)(uintptr_t)me->mPatrolGroup;
-    case EE_CP_TOWN_HUMAN_OWNER:
-        return theUnit->mPlayer->mHumanPlayer != NULL ? 1 : 0;
-    case EE_CP_TOWN_MAP_SIZE:
-        return (int64_t)(((uint64_t)(uint32_t)gMapHeight << 32) | (uint32_t)gMapWidth);
+    case EE_CP_TOWN_PATROL_GROUP: return (int64_t)(uintptr_t)me->mPatrolGroup;
+    case EE_CP_TOWN_HUMAN_OWNER: return theUnit->mPlayer->mHumanPlayer != NULL ? 1 : 0;
+    case EE_CP_TOWN_MAP_SIZE: return (int64_t)(((uint64_t)(uint32_t)gMapHeight << 32) | (uint32_t)gMapWidth);
     }
     return 0;
 }

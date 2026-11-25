@@ -85,10 +85,7 @@ GEFont* SeplFont(uint32_t inFont)
 
 
 // a text's colour by the record's flags: yellow, white, red (transparent), or none (editor_seunx.rs sepl_color)
-void SeplColor(GEText* inText, uint32_t inFlags)
-{
-    ee_screens_sepl_color(inText->GetRust(), inFlags);
-}
+void SeplColor(GEText* inText, uint32_t inFlags) { ee_screens_sepl_color(inText->GetRust(), inFlags); }
 
 std::vector<UWideString> sSeplLines;   // EE_SCREENS_SEPL_OP_LINE_PUSH's lines, for the next combo box
 
@@ -101,10 +98,7 @@ std::vector<UWideString> sSepxLines;   // EE_SCREENS_SEPX_LINES_PUSH's lines
 }   // namespace
 
 // a line for the next combo box made with pending lines (the map tab's host, EEUIFSEMap.cpp)
-void SeplLinePush(const UWideString& inLine)
-{
-    sSeplLines.push_back(inLine);
-}
+void SeplLinePush(const UWideString& inLine) { sSeplLines.push_back(inLine); }
 
 // The ops (editor_players.rs; p: three handles, i: four integers, f: four floats). The plain world reads (the
 // player count, a player's presence, computer player, enemies and id) are Rust's (ee_game editor_world.rs).

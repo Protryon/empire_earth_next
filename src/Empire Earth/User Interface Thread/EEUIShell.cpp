@@ -91,10 +91,7 @@ UIComboBox* EEUIShellNewFileCombo(FSPath* inPath, const UString& inPattern, unsi
                               inFont, GERectangle(inLocation, (float)inWidth, 20.0f), 400, inForm, inIndex, 0, 2);
 }
 
-static EEUIFScenarioEditor* EEShellTriggers()
-{
-    return gUIManager->GetScenarioEditorForm();
-}
+static EEUIFScenarioEditor* EEShellTriggers() { return gUIManager->GetScenarioEditorForm(); }
 
 // a shell's base class virtual (a form shell's: its host object is the UIForm*) and a form shell's own virtual
 extern "C" int64_t ee_screenscpp_shell_base(void* inControl, uint32_t inVirtual, int64_t a, int64_t b, float* f)

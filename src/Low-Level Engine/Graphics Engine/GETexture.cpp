@@ -111,8 +111,7 @@ intptr_t GETexture::Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a,
     case EeGeTexOp::RasterDestroy:
         ((GERasterizer*)a)->DestroyTextureHandle(((GETexture*)inObj));
         return 0;
-    default:
-        return 0;
+    default: return 0;
     }
 }
 
@@ -158,8 +157,7 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
         return (intptr_t)new GETexture(((GETextureManager*)inOwner));
     case EeGeManOp::TexNewFromSurface:
         return (intptr_t)new GETexture((GESurface*)inObj, ((GETextureManager*)inOwner));
-    default:
-        return 0;
+    default: return 0;
     }
 }
 

@@ -180,8 +180,7 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
     case EeGeManOp::ModelFreeFile:
         ee_ge_cem_free((EeGeCemModel*)inObj);
         return 0;
-    default:
-        return 0;
+    default: return 0;
     }
 }
 

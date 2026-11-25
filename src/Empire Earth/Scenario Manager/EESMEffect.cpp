@@ -217,34 +217,18 @@ extern "C" int64_t ee_scenariocpp_world_class(void*, uint32_t inOp, const int64_
         return 0;
     case EE_SCENARIO_WK_EFFECT_NEW: return SMEPtr(new EESMEffect);
     case EE_SCENARIO_WK_EFFECT_FIELDS: return SMEPtr(static_cast<EeScenarioEffectFields*>((EESMEffect*)(intptr_t)a[0]));
-    case EE_SCENARIO_WK_EFFECT_ADD:
-        gWorld.mScenarioManager->AddV134Effect(*(EESMEffect*)(intptr_t)a[0]);
-        return 0;
-    case EE_SCENARIO_WK_EFFECT_FREE:
-        delete (EESMEffect*)(intptr_t)a[0];
-        return 0;
-    case EE_SCENARIO_WK_SET_RANGE:
-        SMEUpgradeOf(a[0])->SetRange(EESMFloat(a[1]));
-        return 0;
-    case EE_SCENARIO_WK_SET_VELOCITY:
-        SMEUpgradeOf(a[0])->SetMaxVelocity(EESMFloat(a[1]));
-        return 0;
+    case EE_SCENARIO_WK_EFFECT_ADD: gWorld.mScenarioManager->AddV134Effect(*(EESMEffect*)(intptr_t)a[0]); return 0;
+    case EE_SCENARIO_WK_EFFECT_FREE: delete (EESMEffect*)(intptr_t)a[0]; return 0;
+    case EE_SCENARIO_WK_SET_RANGE: SMEUpgradeOf(a[0])->SetRange(EESMFloat(a[1])); return 0;
+    case EE_SCENARIO_WK_SET_VELOCITY: SMEUpgradeOf(a[0])->SetMaxVelocity(EESMFloat(a[1])); return 0;
     case EE_SCENARIO_WK_FIRST_UNIT: return SMEPtr(SMEPlayerOf(a[0])->mFirstUnit);
     case EE_SCENARIO_WK_NEXT_UNIT: return SMEPtr(SMEUnitOf(a[0])->mNext);
     case EE_SCENARIO_WK_UNIT_COMPLEX: return SMEUnitOf(a[0])->mComplexUnit != NULL;
     case EE_SCENARIO_WK_UNIT_CLASS: return SMEPtr(SMEUnitOf(a[0])->mUnitClass);
-    case EE_SCENARIO_WK_SIGHT_OFF:
-        SMEUnitOf(a[0])->mComplexUnit->SightOffHere();
-        return 0;
-    case EE_SCENARIO_WK_SIGHT_ON:
-        SMEUnitOf(a[0])->SightOnHere();
-        return 0;
-    case EE_SCENARIO_WK_HERDS_CLEAR:
-        sSMEHerds.clear();
-        return 0;
-    case EE_SCENARIO_WK_HERDS:
-        SMEPlayerOf(a[0])->GetHerdsOfType(sSMEHerds, (long)a[1]);
-        return 0;
+    case EE_SCENARIO_WK_SIGHT_OFF: SMEUnitOf(a[0])->mComplexUnit->SightOffHere(); return 0;
+    case EE_SCENARIO_WK_SIGHT_ON: SMEUnitOf(a[0])->SightOnHere(); return 0;
+    case EE_SCENARIO_WK_HERDS_CLEAR: sSMEHerds.clear(); return 0;
+    case EE_SCENARIO_WK_HERDS: SMEPlayerOf(a[0])->GetHerdsOfType(sSMEHerds, (long)a[1]); return 0;
     case EE_SCENARIO_WK_HERD_COUNT: return (int64_t)sSMEHerds.size();
     case EE_SCENARIO_WK_HERD_AT: return SMEPtr(sSMEHerds[(size_t)a[0]]);
     case EE_SCENARIO_WK_HERD_ACTIVE: return ((EEHerd*)(intptr_t)a[0])->mIsActive = a[1] != 0;
@@ -842,15 +826,11 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
 {
     switch (inOp) {
     case EE_SCENARIO_WORLD_RUN_NEW: return SMEPtr(new EESMEffectRun((EESMEffect*)(intptr_t)a[0]));
-    case EE_SCENARIO_WORLD_RUN_FREE:
-        delete inRun;
-        return 0;
+    case EE_SCENARIO_WORLD_RUN_FREE: delete inRun; return 0;
     case EE_SCENARIO_WORLD_RUN_OBJECT:
         return SMEPtr(inRun->mObject = gWorld.mScenarioManager->GetScenarioObject(inRun->mEffect->mObject));
     case EE_SCENARIO_WORLD_RUN_CREATED: return (int64_t)inRun->mCreatedUnits.size();
-    case EE_SCENARIO_WORLD_RUN_SET_UNITS:
-        inRun->mObject->SetUnits(inRun->mCreatedUnits);
-        return 0;
+    case EE_SCENARIO_WORLD_RUN_SET_UNITS: inRun->mObject->SetUnits(inRun->mCreatedUnits); return 0;
     // (the AI military effects' calls went with the C++ attack groups in main's stage 5: ee_scenario effect_ai.rs)
     case EE_SCENARIO_WORLD_GROUP_ADD: inRun->mGroup->AddMember(SMEUnit(a[0])->mComplexUnit, true); return 0;
     case EE_SCENARIO_WORLD_GROUP_COUNT: return (int64_t)inRun->mGroup->GetNumUnits();

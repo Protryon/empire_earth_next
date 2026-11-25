@@ -118,16 +118,10 @@ EEUIFMainGame* gSavedMainGameForm;          // 0x563144 (.bss among the UI event
 
 
 // the custom campaign form's no-campaigns message, closed
-static void EEScreensNoCustomCampaigns(UIForm* inForm)
-{
-    ee_screens_event(EE_SCREENS_CC_NONE_FOUND, inForm, NULL);
-}
+static void EEScreensNoCustomCampaigns(UIForm* inForm) { ee_screens_event(EE_SCREENS_CC_NONE_FOUND, inForm, NULL); }
 
 // the settings form's Restore Default question, answered yes
-static void EEScreensRestoreDefaultYes(UIForm* inForm)
-{
-    ee_screens_event(EE_SCREENS_GS_RESTORE_YES, inForm, NULL);
-}
+static void EEScreensRestoreDefaultYes(UIForm* inForm) { ee_screens_event(EE_SCREENS_GS_RESTORE_YES, inForm, NULL); }
 
 // ---- the load and save screens' (save_load.rs): the questions' callbacks get the list or the pending save object
 
@@ -141,10 +135,7 @@ static void EEScreensDeleteSelectedFile(UIForm* inList)
 }
 
 // the overwrite question, answered no: the pending save dropped
-static void EEScreensDropSave(UIForm* inObject)
-{
-    reinterpret_cast<UReferenceCounter*>(inObject)->Dereference();
-}
+static void EEScreensDropSave(UIForm* inObject) { reinterpret_cast<UReferenceCounter*>(inObject)->Dereference(); }
 
 // ---- the campaign scenario select and scenario intro forms' (scenario_screens.rs)
 
@@ -162,10 +153,7 @@ struct EEScreensMedia {
 };
 
 // the campaign's open-error message, closed
-static void EEScreensCloseCampaign(UIForm* inForm)
-{
-    ee_screens_event(EE_SCREENS_CS_CLOSE_CALLBACK, inForm, NULL);
-}
+static void EEScreensCloseCampaign(UIForm* inForm) { ee_screens_event(EE_SCREENS_CS_CLOSE_CALLBACK, inForm, NULL); }
 
 // ---- the lobby's and its load screens' (lobby_form.rs)
 

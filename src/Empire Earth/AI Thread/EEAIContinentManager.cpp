@@ -36,10 +36,7 @@ EEAIContinentManager::EEAIContinentManager()
 
 
 // The influence table's region size (the areas' bounds), 0 without the table
-static long EEAIRegionSize()
-{
-    return gWorld.mInfluenceTable != NULL ? gWorld.mInfluenceTable->mRegionSize : 0;
-}
+static long EEAIRegionSize() { return gWorld.mInfluenceTable != NULL ? gWorld.mInfluenceTable->mRegionSize : 0; }
 
 // Marks the manager as clearing, resets it, frees its grids and rebuilds the continents and hills of inMap (Rust:
 // cm_passes.rs)

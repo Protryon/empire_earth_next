@@ -149,7 +149,4 @@ static UString gName("Direct3D Hardware TnL");
 static GERasterizer gTnLRasterizer(gName, true);   // the T&L flavour (rastobj.rs)
 
 // The game's rasterizer (GEInitialize adds it when it finds a screen)
-GERasterizer* DX7TnLRasterizer()
-{
-    return &gTnLRasterizer;
-}
+GERasterizer* DX7TnLRasterizer() { return &gTnLRasterizer; }

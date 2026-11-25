@@ -69,53 +69,31 @@ extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i
         *static_cast<UIEvent**>(p[0]) = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_OPERATOR);
         return 0;
     case EE_SCREENS_SETR_OP_RELEASE_EVENT: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
-    case EE_SCREENS_SETRX_SET_NAME:
-        t->SetName(SetrBytes(p[1], i[0]));
-        return 0;
-    case EE_SCREENS_SETRX_SET_TEXT:
-        t->SetText(SetrBytes(p[1], i[0]));
-        return 0;
+    case EE_SCREENS_SETRX_SET_NAME: t->SetName(SetrBytes(p[1], i[0])); return 0;
+    case EE_SCREENS_SETRX_SET_TEXT: t->SetText(SetrBytes(p[1], i[0])); return 0;
     case EE_SCREENS_SETRX_NAME: return EESEWrite(p[2], i[3], t->mName);
     case EE_SCREENS_SETRX_TEXT: return EESEWrite(p[2], i[3], t->mText);
-    case EE_SCREENS_SETRX_CONDITION:
-        *theOut = t->GetCondition((unsigned long)i[0]);
-        return 0;
+    case EE_SCREENS_SETRX_CONDITION: *theOut = t->GetCondition((unsigned long)i[0]); return 0;
     case EE_SCREENS_SETRX_CONDITION_NOT: return static_cast<EESMTConditionWrapper*>(p[0])->mIsNot;
     case EE_SCREENS_SETRX_CONDITION_VALUE: return (int32_t) static_cast<EESMTConditionWrapper*>(p[0])->mValue;
     case EE_SCREENS_SETRX_CONDITION_OPERATOR: return (int32_t) static_cast<EESMTConditionWrapper*>(p[0])->mOperator;
-    case EE_SCREENS_SETRX_EFFECT:
-        *theOut = t->GetEffect((unsigned long)i[0]);
-        return 0;
+    case EE_SCREENS_SETRX_EFFECT: *theOut = t->GetEffect((unsigned long)i[0]); return 0;
     case EE_SCREENS_SETRX_EFFECT_DELAY: return (int32_t) static_cast<EESMTEffectWrapper*>(p[0])->mDelay;
     case EE_SCREENS_SETRX_EFFECT_INDEX: return (int32_t) static_cast<EESMTEffectWrapper*>(p[0])->mEffectIndex;
     case EE_SCREENS_SETRX_EFFECT_OPERATOR: return (int32_t) static_cast<EESMTEffectWrapper*>(p[0])->mOperator;
-    case EE_SCREENS_SETRX_SET_CONDITION_OPERATOR:
-        t->SetConditionOperator((unsigned long)i[0], (long)i[1]);
-        return 0;
-    case EE_SCREENS_SETRX_SET_EFFECT_OPERATOR:
-        t->SetEffectOperator((unsigned long)i[0], (long)i[1]);
-        return 0;
-    case EE_SCREENS_SETRX_DELETE_CONDITION:
-        t->DeleteCondition((unsigned long)i[0]);
-        return 0;
-    case EE_SCREENS_SETRX_DELETE_EFFECT:
-        t->DeleteEffect((unsigned long)i[0]);
-        return 0;
+    case EE_SCREENS_SETRX_SET_CONDITION_OPERATOR: t->SetConditionOperator((unsigned long)i[0], (long)i[1]); return 0;
+    case EE_SCREENS_SETRX_SET_EFFECT_OPERATOR: t->SetEffectOperator((unsigned long)i[0], (long)i[1]); return 0;
+    case EE_SCREENS_SETRX_DELETE_CONDITION: t->DeleteCondition((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SETRX_DELETE_EFFECT: t->DeleteEffect((unsigned long)i[0]); return 0;
     case EE_SCREENS_SETRX_FORMAT_REMOVE:
         sprintf(sSetrText, "%s %s", (const char*)SetrBytes(p[1], i[0]), (const char*)static_cast<UITextLabel*>(p[0])->GetText(0));
         return 0;
-    case EE_SCREENS_SETRX_BUTTON_KEPT_TEXT:
-        static_cast<UIButton*>(p[0])->SetText(sSetrText, gU531934);
-        return 0;
+    case EE_SCREENS_SETRX_BUTTON_KEPT_TEXT: static_cast<UIButton*>(p[0])->SetText(sSetrText, gU531934); return 0;
     case EE_SCREENS_SETRX_CONDITION_IS_OBJECT:
         return gWorld.mScenarioManager->GetCondition((unsigned long)(uint32_t)i[0])->GetType() == EE_SCENARIO_SM_CONDITION_OBJECT;
     case EE_SCREENS_SETRX_CONDITION_COUNT: return (int32_t)gWorld.mScenarioManager->mConditions.size();
-    case EE_SCREENS_SETRX_TRIGGER_TAB:
-        *theOut = gUIManager->GetScenarioEditorForm()->GetTriggerTab();
-        return 0;
-    case EE_SCREENS_SETRX_RADIO_CHECK:
-        static_cast<UIRadioButton*>(p[0])->Check();
-        return 0;
+    case EE_SCREENS_SETRX_TRIGGER_TAB: *theOut = gUIManager->GetScenarioEditorForm()->GetTriggerTab(); return 0;
+    case EE_SCREENS_SETRX_RADIO_CHECK: static_cast<UIRadioButton*>(p[0])->Check(); return 0;
     case EE_SCREENS_SETRX_COMBO_LABEL_TEXT:
         static_cast<UITextLabel*>(static_cast<UIComboBox*>(p[0])->GetTextLabel())->SetText(SetrBytes(p[1], i[0]));
         return 0;
@@ -125,24 +103,14 @@ extern "C" int32_t ee_screenscpp_setrx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETRX_GET + EE_SCREENS_SETR_V_CINEMATIC: return t->mIsInCinematic;
     case EE_SCREENS_SETRX_GET + EE_SCREENS_SETR_V_CONDITIONS: return (int32_t)t->GetConditionCount();
     case EE_SCREENS_SETRX_GET + EE_SCREENS_SETR_V_EFFECTS: return (int32_t)t->GetEffectCount();
-    case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_ON:
-        t->SetIsOn(i[0] != 0);
-        return 0;
+    case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_ON: t->SetIsOn(i[0] != 0); return 0;
     case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_DURATION:
         t->SetConditionDuration((unsigned long)(long)i[0]);
         return 0;
-    case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_LOOPING:
-        t->SetIsLooping(i[0] != 0);
-        return 0;
-    case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_CINEMATIC:
-        t->SetIsInCinematic(i[0] != 0);
-        return 0;
-    case EE_SCREENS_SETRX_SET_CONDITION:
-        t->SetCondition((unsigned long)i[0], i[1] != 0, (unsigned long)i[2]);
-        return 0;
-    case EE_SCREENS_SETRX_SET_EFFECT:
-        t->SetEffect((unsigned long)i[0], (long)i[1], (unsigned long)i[2]);
-        return 0;
+    case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_LOOPING: t->SetIsLooping(i[0] != 0); return 0;
+    case EE_SCREENS_SETRX_SET + EE_SCREENS_SETR_V_CINEMATIC: t->SetIsInCinematic(i[0] != 0); return 0;
+    case EE_SCREENS_SETRX_SET_CONDITION: t->SetCondition((unsigned long)i[0], i[1] != 0, (unsigned long)i[2]); return 0;
+    case EE_SCREENS_SETRX_SET_EFFECT: t->SetEffect((unsigned long)i[0], (long)i[1], (unsigned long)i[2]); return 0;
     }
     return 0;
 }

@@ -89,10 +89,7 @@ UWideString SeetBytes(const void* inBytes, int32_t inLength)
     return UWideString(std::string(static_cast<const char*>(inBytes), (size_t)(inLength > 0 ? inLength : 0)).c_str());
 }
 
-GEFont* SeetFont(int32_t inFont)
-{
-    return inFont == EE_SCREENS_SEPL_FONT_538 ? gU531938 : gU531934;
-}
+GEFont* SeetFont(int32_t inFont) { return inFont == EE_SCREENS_SEPL_FONT_538 ? gU531938 : gU531934; }
 
 UIControl* SeetControl(const int32_t* i)
 {
@@ -145,9 +142,7 @@ int32_t SeetOp(uint32_t inOp, const SeetC& c, void* const* p, int32_t* i, float*
     case EE_SCREENS_SEET_OP_SCEN_MODE:
         EEUIShell::Op(c.At(EE_SCREENS_SEET_A_SCEN, k), EE_SCREENS_SKOP_SET_MODE, i[2]);
         return 0;
-    case EE_SCREENS_SEET_OP_LIST_INSERT:
-        c.List(k)->InsertLine(SeetBytes(p[2], i[2]), (unsigned long)i[3]);
-        return 0;
+    case EE_SCREENS_SEET_OP_LIST_INSERT: c.List(k)->InsertLine(SeetBytes(p[2], i[2]), (unsigned long)i[3]); return 0;
     case EE_SCREENS_SEET_OP_LIST_DELETE: c.List(k)->DeleteLine((unsigned long)i[2]); return 0;
     case EE_SCREENS_SEET_OP_FORM_DISPLAY:
         c.At(EE_SCREENS_SEET_A_TEXT, 0)->GetForm()->GetControlById((unsigned long)i[2])->SetDisplayMode((unsigned long)i[3]);
@@ -217,65 +212,39 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
 {
     void** theOut = static_cast<void**>(p[2]);
     switch (inOp) {
-    case EE_SCREENS_SEETX_ALIGN:
-        static_cast<UITextLabel*>(p[0])->SetAlignment((unsigned long)i[0]);
-        return 0;
-    case EE_SCREENS_SEETX_ALIGN_NOTE:
-        gSeetAlignments[p[0]] = (unsigned long)i[0];
-        return 0;
+    case EE_SCREENS_SEETX_ALIGN: static_cast<UITextLabel*>(p[0])->SetAlignment((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEETX_ALIGN_NOTE: gSeetAlignments[p[0]] = (unsigned long)i[0]; return 0;
     case EE_SCREENS_SEETX_RADIO_TEXT:
         static_cast<UIRadioButton*>(p[0])->SetText(SeetBytes(p[1], i[0]), SeetFont(i[1]));
         return 0;
     case EE_SCREENS_SEETX_CHECK_TEXT:
         static_cast<UICheckBox*>(p[0])->SetText(SeetBytes(p[1], i[0]), SeetFont(i[1]));
         return 0;
-    case EE_SCREENS_SEETX_CHECK_GETEXT:
-        *theOut = static_cast<UICheckBox*>(p[0])->GetTextLabel()->GetGEText();
-        return 0;
+    case EE_SCREENS_SEETX_CHECK_GETEXT: *theOut = static_cast<UICheckBox*>(p[0])->GetTextLabel()->GetGEText(); return 0;
     case EE_SCREENS_SEETX_RADIO_GETEXT:
         *theOut = static_cast<UIRadioButton*>(p[0])->GetTextLabel()->GetGEText();
         return 0;
-    case EE_SCREENS_SEETX_LIST_GETEXT:
-        *theOut = static_cast<UILBString*>(p[0])->GetGEText();
-        return 0;
+    case EE_SCREENS_SEETX_LIST_GETEXT: *theOut = static_cast<UILBString*>(p[0])->GetGEText(); return 0;
     case EE_SCREENS_SEETX_YELLOW:
         static_cast<GEText*>(p[0])->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
         return 0;
-    case EE_SCREENS_SEETX_TRANSPARENT:
-        static_cast<GEText*>(p[0])->SetIsTransparent(true);
-        return 0;
-    case EE_SCREENS_SEETX_EDIT_FONT_530:
-        static_cast<UIEditBox*>(p[0])->GetGEText()->SetFont(gU531930);
-        return 0;
-    case EE_SCREENS_SEETX_COMBO_FONT_530:
-        static_cast<UIComboBox*>(p[0])->GetGEText()->SetFont(gU531930);
-        return 0;
+    case EE_SCREENS_SEETX_TRANSPARENT: static_cast<GEText*>(p[0])->SetIsTransparent(true); return 0;
+    case EE_SCREENS_SEETX_EDIT_FONT_530: static_cast<UIEditBox*>(p[0])->GetGEText()->SetFont(gU531930); return 0;
+    case EE_SCREENS_SEETX_COMBO_FONT_530: static_cast<UIComboBox*>(p[0])->GetGEText()->SetFont(gU531930); return 0;
     case EE_SCREENS_SEETX_COMBO_LIST_FONT_530:
         static_cast<UIComboBox*>(p[0])->GetListBox()->GetGEText()->SetFont(gU531930);
         return 0;
-    case EE_SCREENS_SEETX_NAMES_CLEAR:
-        sSeetNames[i[0]].clear();
-        return 0;
-    case EE_SCREENS_SEETX_NAMES_GET:
-        gWorld.mScenarioManager->GetNames((unsigned long)i[1], sSeetNames[i[0]]);
-        return 0;
+    case EE_SCREENS_SEETX_NAMES_CLEAR: sSeetNames[i[0]].clear(); return 0;
+    case EE_SCREENS_SEETX_NAMES_GET: gWorld.mScenarioManager->GetNames((unsigned long)i[1], sSeetNames[i[0]]); return 0;
     case EE_SCREENS_SEETX_NAMES_COUNT: return (int32_t)sSeetNames[i[0]].size();
     case EE_SCREENS_SEETX_NAMES_AT: return EESEWrite(p[2], i[3], sSeetNames[i[0]][(size_t)i[1]]);
     case EE_SCREENS_SEETX_COMBO_APPEND_NAMES:
         static_cast<UIComboBox*>(p[0])->AppendStringArray(sSeetNames[i[0]]);
         return 0;
-    case EE_SCREENS_SEETX_LIST_BG_OPACITY:
-        static_cast<UILBString*>(p[0])->SetBgOpacity(f[0]);
-        return 0;
-    case EE_SCREENS_SEETX_LIST_SCROLL_OPACITY:
-        static_cast<UILBString*>(p[0])->SetScrollBarBgOpacity(f[0]);
-        return 0;
-    case EE_SCREENS_SEETX_EV_SCREEN:
-        *theOut = EECreateScreenEvent((uint32_t)i[0]);
-        return 0;
-    case EE_SCREENS_SEETX_EV_SEE:
-        *theOut = static_cast<UIEvent*>(new EESEERust((uint32_t)i[0]));
-        return 0;
+    case EE_SCREENS_SEETX_LIST_BG_OPACITY: static_cast<UILBString*>(p[0])->SetBgOpacity(f[0]); return 0;
+    case EE_SCREENS_SEETX_LIST_SCROLL_OPACITY: static_cast<UILBString*>(p[0])->SetScrollBarBgOpacity(f[0]); return 0;
+    case EE_SCREENS_SEETX_EV_SCREEN: *theOut = EECreateScreenEvent((uint32_t)i[0]); return 0;
+    case EE_SCREENS_SEETX_EV_SEE: *theOut = static_cast<UIEvent*>(new EESEERust((uint32_t)i[0])); return 0;
     case EE_SCREENS_SEETX_EV_SLIDER:
         *theOut = static_cast<UIEvent*>(new UIESliderChange(static_cast<UITextLabel*>(p[0]), f[0], (long)i[0]));
         return 0;
@@ -295,9 +264,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_FORMAT_NUMBER:
         sprintf(sSeetText, SeetBytes(p[1], i[0]), (unsigned long)(uint32_t)i[1]);
         return 0;
-    case EE_SCREENS_SEETX_FORMAT_FLOAT:
-        sprintf(sSeetText, static_cast<const char*>(p[0]), (double)f[0]);
-        return 0;
+    case EE_SCREENS_SEETX_FORMAT_FLOAT: sprintf(sSeetText, static_cast<const char*>(p[0]), (double)f[0]); return 0;
     case EE_SCREENS_SEETX_KEPT_TEXT: return EESEWrite(p[2], i[3], sSeetText);
     case EE_SCREENS_SEETX_OBJECT:
         *theOut = gWorld.mScenarioManager->GetScenarioObject((unsigned long)(uint32_t)i[0]);
@@ -312,9 +279,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
         return 0;
     case EE_SCREENS_SEETX_CALAMITY_ID: return (int32_t)static_cast<EECalamityClass*>(p[0])->mID;
     case EE_SCREENS_SEETX_CALAMITY_NAME: return (int32_t)static_cast<EECalamityClass*>(p[0])->mNameID;
-    case EE_SCREENS_SEETX_GRAPHIC:
-        *theOut = EEGraphicEffect::Get((unsigned long)i[0]);
-        return 0;
+    case EE_SCREENS_SEETX_GRAPHIC: *theOut = EEGraphicEffect::Get((unsigned long)i[0]); return 0;
     case EE_SCREENS_SEETX_GRAPHIC_LISTED: return static_cast<EEGraphicEffect*>(p[0])->mIsScenarioListed == true;
     case EE_SCREENS_SEETX_GRAPHIC_ID: return (int32_t)static_cast<EEGraphicEffect*>(p[0])->mID;
     case EE_SCREENS_SEETX_GRAPHIC_NAME: return (int32_t)static_cast<EEGraphicEffect*>(p[0])->mNameStringId;
@@ -332,37 +297,23 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_CLASS_SELECTABLE: return static_cast<EEUnitClass*>(p[0])->mIsScenarioSelectable == true;
     case EE_SCREENS_SEETX_CLASS_TYPE: return (int32_t)static_cast<EEUnitClass*>(p[0])->mUnitType;
     case EE_SCREENS_SEETX_CLASS_DOMAINS: return (int32_t)static_cast<EEUnitClass*>(p[0])->mDomains;
-    case EE_SCREENS_SEETX_TECHS_CLEAR:
-        sSeetTechs.clear();
-        return 0;
-    case EE_SCREENS_SEETX_TECHS_NODE_IDS:
-        gTechTree.GetNodeIDs(sSeetTechs);
-        return 0;
+    case EE_SCREENS_SEETX_TECHS_CLEAR: sSeetTechs.clear(); return 0;
+    case EE_SCREENS_SEETX_TECHS_NODE_IDS: gTechTree.GetNodeIDs(sSeetTechs); return 0;
     case EE_SCREENS_SEETX_EPOCH_COUNT: return (int32_t)EEEpochCount();
-    case EE_SCREENS_SEETX_TECHS_PUSH:
-        sSeetTechs.push_back((long)(unsigned long)(uint32_t)i[0]);
-        return 0;
+    case EE_SCREENS_SEETX_TECHS_PUSH: sSeetTechs.push_back((long)(unsigned long)(uint32_t)i[0]); return 0;
     case EE_SCREENS_SEETX_TECHS_COUNT: return (int32_t)sSeetTechs.size();
     case EE_SCREENS_SEETX_TECHS_AT: return (int32_t)sSeetTechs[(size_t)i[0]];
     case EE_SCREENS_SEETX_TECH_SHOWN: return gTechTree.Get(i[0])->mData->mShowInEditor == true;
     case EE_SCREENS_SEETX_TECH_NO_UNIT: return gTechTree.Get(i[0])->mData->mMakesUnit == false;
-    case EE_SCREENS_SEETX_TECHS_ERASE:
-        sSeetTechs.erase(sSeetTechs.begin() + i[0]);
-        return 0;
-    case EE_SCREENS_SEETX_TECHS_SORT:
-        std::sort(sSeetTechs.begin(), sSeetTechs.end(), SeetTechNameLess());
-        return 0;
-    case EE_SCREENS_SEETX_TECH_NODE:
-        *theOut = gTechTree.Get(i[0]);
-        return 0;
+    case EE_SCREENS_SEETX_TECHS_ERASE: sSeetTechs.erase(sSeetTechs.begin() + i[0]); return 0;
+    case EE_SCREENS_SEETX_TECHS_SORT: std::sort(sSeetTechs.begin(), sSeetTechs.end(), SeetTechNameLess()); return 0;
+    case EE_SCREENS_SEETX_TECH_NODE: *theOut = gTechTree.Get(i[0]); return 0;
     case EE_SCREENS_SEETX_NODE_UNIT_CLASS: return (int32_t)static_cast<EETechTreeNode*>(p[0])->mData->mUnitClass;
     case EE_SCREENS_SEETX_NODE_NAME_ID: return (int32_t)static_cast<EETechTreeNode*>(p[0])->mData->mNameID;
     case EE_SCREENS_SEETX_NODE_ID: return (int32_t)static_cast<EETechTreeNode*>(p[0])->mData->mID;
     case EE_SCREENS_SEETX_CLASS_EXISTS: return gUnitClassTable[i[0]] != NULL;
     case EE_SCREENS_SEETX_CLASS_NAME_ID: return (int32_t)gUnitClassTable[i[0]]->mNameStringID;
-    case EE_SCREENS_SEETX_TRIGGER_CALL:
-        gUIManager->GetScenarioEditorForm()->TriggerCall((uint32_t)i[0]);
-        return 0;
+    case EE_SCREENS_SEETX_TRIGGER_CALL: gUIManager->GetScenarioEditorForm()->TriggerCall((uint32_t)i[0]); return 0;
     case EE_SCREENS_SEETX_TRIGGER_BOX:
         *theOut = gUIManager->GetScenarioEditorForm()->GetTriggerBox(i[0] != 0);
         return 0;
@@ -396,12 +347,8 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_SET_EFFECT_TEXT + 3:
         static_cast<EESMEffect*>(p[0])->mDescription = SeetBytes(p[1], i[0]);
         return 0;
-    case EE_SCREENS_SEETX_SET_EFFECT_TEXT + 4:
-        static_cast<EESMEffect*>(p[0])->mText = SeetBytes(p[1], i[0]);
-        return 0;
-    case EE_SCREENS_SEETX_SET_EFFECT_TEXT + 5:
-        static_cast<EESMEffect*>(p[0])->mName = SeetBytes(p[1], i[0]);
-        return 0;
+    case EE_SCREENS_SEETX_SET_EFFECT_TEXT + 4: static_cast<EESMEffect*>(p[0])->mText = SeetBytes(p[1], i[0]); return 0;
+    case EE_SCREENS_SEETX_SET_EFFECT_TEXT + 5: static_cast<EESMEffect*>(p[0])->mName = SeetBytes(p[1], i[0]); return 0;
     case EE_SCREENS_SEETX_CONDITION_TEXT + 0: return EESEWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mChatText);
     case EE_SCREENS_SEETX_CONDITION_TEXT + 1: return EESEWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mText);
     case EE_SCREENS_SEETX_CONDITION_TEXT + 2: return EESEWrite(p[2], i[3], static_cast<EESMCondition*>(p[0])->mName);
@@ -417,9 +364,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_SET_OBJECTS:
         static_cast<EESMEffect*>(p[0])->mObjects.assign(static_cast<const uint32_t*>(p[1]), static_cast<const uint32_t*>(p[1]) + i[0]);
         return 0;
-    case EE_SCREENS_SEETX_SM_SORT:
-        gWorld.mScenarioManager->SortList((unsigned long)i[0]);
-        return 0;
+    case EE_SCREENS_SEETX_SM_SORT: gWorld.mScenarioManager->SortList((unsigned long)i[0]); return 0;
     case EE_SCREENS_SEETX_SM_MOVE:
         gWorld.mScenarioManager->MoveEntry((unsigned long)i[0], (unsigned long)(uint32_t)i[1], i[2] != 0);
         return 0;
@@ -429,9 +374,7 @@ extern "C" int32_t ee_screenscpp_seetx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEETX_SM_DUPLICATE:
         gWorld.mScenarioManager->DuplicateEntry((unsigned long)i[0], (unsigned long)(uint32_t)i[1]);
         return 0;
-    case EE_SCREENS_SEETX_SM_NEW:
-        gWorld.mScenarioManager->NewEntry((unsigned long)i[0]);
-        return 0;
+    case EE_SCREENS_SEETX_SM_NEW: gWorld.mScenarioManager->NewEntry((unsigned long)i[0]); return 0;
     case EE_SCREENS_SEETX_SHELL_OP: return (int32_t)EEUIShell::Op(static_cast<UIControl*>(p[0]), (uint32_t)i[0], (uint32_t)i[1]);
     case EE_SCREENS_SEETX_CLASS_CATEGORY: return (int32_t)gUnitClassTable[i[0]]->mCategory;
     case EE_SCREENS_SEETX_CLASS_SELECTABLE_AT: return gUnitClassTable[i[0]]->mIsScenarioSelectable == true;

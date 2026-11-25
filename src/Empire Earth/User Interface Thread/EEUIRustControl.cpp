@@ -17,10 +17,7 @@ extern "C" int64_t ee_screenscpp_hud_ctl(void* inControl, uint32_t inOp, int64_t
 }
 
 // a rectangle from the op's floats (left, top, right, bottom)
-static GERectangle EEHudRect(const float* inF)
-{
-    return GERectangle(inF[0], inF[1], inF[2], inF[3]);
-}
+static GERectangle EEHudRect(const float* inF) { return GERectangle(inF[0], inF[1], inF[2], inF[3]); }
 
 int64_t EEUIRustControl::HostOp(EEUIRustControl* inControl, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {

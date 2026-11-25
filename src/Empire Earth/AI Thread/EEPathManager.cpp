@@ -69,7 +69,4 @@ EEPathManager::EEPathManager() : mRust(ee_path_manager_new(EEPathManagerHost, th
 }
 
 // Destroys the path manager (Clear, then the Rust manager freed)
-EEPathManager::~EEPathManager()
-{
-    this->mRust = ee_path_manager_destroy(this->mRust);
-}
+EEPathManager::~EEPathManager() { this->mRust = ee_path_manager_destroy(this->mRust); }

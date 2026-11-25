@@ -192,7 +192,6 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
         return (intptr_t)((GEScreen*)inObj)->GetTextureManager()->MakeTexture((GESurface*)a);
     case EeGeFbOp::VerifySurface: ESVerify(__FILE__, 228, "theResult == keseOK"); return 0;
     case EeGeFbOp::VerifyTexture: ESVerify(__FILE__, 235, "((GETexture*)inObj) != NULL"); return 0;
-    default:
-        return 0;
+    default: return 0;
     }
 }

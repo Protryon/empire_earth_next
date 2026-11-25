@@ -33,10 +33,7 @@ public:
         { return ee_error_checksum_compare(this->mRust, inOther.mRust, PushText, &outErrors); }
     EeErrorChecksum* GetRust() const { return this->mRust; }
     bool GetIsVerboseMode() const { return ee_error_checksum_verbose(this->mRust); }
-    unsigned long GetTotalChecksum() const   // the entries' 32-bit sum
-    {
-        return ee_error_checksum_total(this->mRust);
-    }
+    unsigned long GetTotalChecksum() const { return ee_error_checksum_total(this->mRust); }  // the entries' 32-bit sum
 
     void AddChecksum(unsigned long inChecksum)   // added to the last entry (one anonymous entry when not verbose)
     {

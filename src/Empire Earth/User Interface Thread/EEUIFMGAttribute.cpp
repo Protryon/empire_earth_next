@@ -13,10 +13,7 @@
 
 
 // Destroys the attribute button and its level text
-EEUIFMGAttribute::~EEUIFMGAttribute()
-{
-    delete static_cast<GEText*>(this->mLevelText);
-}
+EEUIFMGAttribute::~EEUIFMGAttribute() { delete static_cast<GEText*>(this->mLevelText); }
 
 // the Rust bodies' shims (ee_screens hud_more.rs: the constructor's level text, CopyData, DrawTextA)
 #define ATT(a) reinterpret_cast<EEUIFMGAttribute*>(a)

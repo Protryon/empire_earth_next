@@ -61,8 +61,7 @@ template <class T> size_t OffsetOf(const T* inObject, const void* inMember)
 int64_t EEAIContinentHost(void*, int32_t inOp, EeAStarCmIo* io)
 {
     switch (inOp) {
-    case EE_ASTAR_CM_TOWN_ID:
-        return ((EETown*)(uintptr_t)io->h[0])->mTownID;
+    case EE_ASTAR_CM_TOWN_ID: return ((EETown*)(uintptr_t)io->h[0])->mTownID;
     case EE_ASTAR_CM_CLEAR_MAP: gContinentManager.Clear(gWorld.mMap);
         return 0;
     case EE_ASTAR_CM_BUILD_MAP: gContinentManager.BuildRegions(gWorld.mMap);
@@ -137,27 +136,12 @@ bool EEReadAreaBytes(const std::vector<unsigned char>& inBytes, EEAIArea& outAre
 }
 
 // the block's file part and the block a load keeps are Rust's (ee_sim::astar cm_file.rs)
-long EESaveContinentRegions(FSFile& outFile)
-{
-    return ee_astar_cm_save_regions(&gContinentManager.mRecord, &outFile);
-}
+long EESaveContinentRegions(FSFile& outFile) { return ee_astar_cm_save_regions(&gContinentManager.mRecord, &outFile); }
 
-long EELoadContinentRegions(FSFile& inFile)
-{
-    return ee_astar_cm_load_regions(&inFile);
-}
+long EELoadContinentRegions(FSFile& inFile) { return ee_astar_cm_load_regions(&inFile); }
 
-bool EEContinentRegionsPending()
-{
-    return ee_astar_cm_regions_pending();
-}
+bool EEContinentRegionsPending() { return ee_astar_cm_regions_pending(); }
 
-bool EERestoreContinentRegions()
-{
-    return ee_astar_cm_restore_loaded(&gContinentManager.mRecord);
-}
+bool EERestoreContinentRegions() { return ee_astar_cm_restore_loaded(&gContinentManager.mRecord); }
 
-unsigned long EEContinentRegionsDigest()
-{
-    return ee_astar_cm_regions_digest(&gContinentManager.mRecord);
-}
+unsigned long EEContinentRegionsDigest() { return ee_astar_cm_regions_digest(&gContinentManager.mRecord); }

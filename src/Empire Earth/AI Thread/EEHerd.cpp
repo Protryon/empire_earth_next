@@ -65,15 +65,9 @@ void EEHerd::GetUnits(std::vector<EEComplexUnit*>& outUnits)
 // goals, formations or media; one statement each (the unit's record, the formations, CanStandOn, the goals, the birth
 // and the units in a rectangle are Rust's: herd_world.rs)
 
-static EEComplexUnit* EEHerdUnit(uint64_t inHandle)
-{
-    return reinterpret_cast<EEComplexUnit*>((uintptr_t)inHandle);
-}
+static EEComplexUnit* EEHerdUnit(uint64_t inHandle) { return reinterpret_cast<EEComplexUnit*>((uintptr_t)inHandle); }
 
-static uint64_t EEHerdHandle(const void* inObject)
-{
-    return (uint64_t)(uintptr_t)inObject;
-}
+static uint64_t EEHerdHandle(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
 
 // a point as one word (x high, y low; ee_sim::cp town_world.rs unpack)
 static int64_t EEHerdPack(const U2DPoint<long>& inPoint)
@@ -95,10 +89,8 @@ extern "C" int64_t ee_cp_area_host(void* inArea, int32_t inOp, EeHerdIo* io)
     EEAIArea* me = static_cast<EEAIArea*>(inArea);
     const int64_t* v = io->v;
     switch (inOp) {
-    case EE_CP_HERD_RANDOM_LONG:
-        return gPhysics->GetRandom((long)v[0], (long)v[1]);
-    case EE_CP_HERD_BASE_POINT:
-        return EEHerdPack(me->AreaRandomPoint());
+    case EE_CP_HERD_RANDOM_LONG: return gPhysics->GetRandom((long)v[0], (long)v[1]);
+    case EE_CP_HERD_BASE_POINT: return EEHerdPack(me->AreaRandomPoint());
     case EE_CP_HERD_MAP_TILE_AT:
         return gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)v[0], (long)v[1])) != NULL ? 1 : 0;
     }
@@ -132,16 +124,12 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         return 0;
     case EE_CP_HERD_GENERATE: io->f[0] = gPhysics->mRandom.Generate();
         return 0;
-    case EE_CP_HERD_AREA_POINT:
-        return EEHerdPack(reinterpret_cast<EEAIArea*>((uintptr_t)inA)->GetRandomPoint());
+    case EE_CP_HERD_AREA_POINT: return EEHerdPack(reinterpret_cast<EEAIArea*>((uintptr_t)inA)->GetRandomPoint());
     case EE_CP_HERD_MAP_EDGE:
         return (int64_t)EEHerdHandle(gContinentManager.GetRandomContinent(kContinentCategoryMapEdge, gPhysics->mRandom));
-    case EE_CP_HERD_UNIT_WAYPOINTS:
-        return (int64_t)theUnit->mWaypoints.size();
-    case EE_CP_HERD_UNIT_MODEL:
-        return (int64_t)EEHerdHandle((EEMedia*)theUnit->mStats->mModel);
-    case EE_CP_HERD_FORM_NEW:
-        return (int64_t)EEHerdHandle(EEFormation::Create(6));
+    case EE_CP_HERD_UNIT_WAYPOINTS: return (int64_t)theUnit->mWaypoints.size();
+    case EE_CP_HERD_UNIT_MODEL: return (int64_t)EEHerdHandle((EEMedia*)theUnit->mStats->mModel);
+    case EE_CP_HERD_FORM_NEW: return (int64_t)EEHerdHandle(EEFormation::Create(6));
     case EE_CP_HERD_FORM_CENTER: theFormation->mCenter = GE3DPoint(io->f[0], io->f[1], io->f[2]);
         return 0;
     case EE_CP_HERD_FORM_SET_CENTER: theFormation->SetCenter(GE3DPoint(io->f[0], io->f[1], io->f[2]));
@@ -165,10 +153,8 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     }
     case EE_CP_HERD_FORM_DEREF: theFormation->Dereference();
         return 0;
-    case EE_CP_HERD_PASSABLE_BY:
-        return reinterpret_cast<EEUnit*>((uintptr_t)inB)->IsPassableBy(theUnit) ? 1 : 0;
-    case EE_CP_HERD_CAN_MOVE_ON:
-        return theUnit->GetUnitClass()->CanMoveOnTerrain(theUnit, (long)v[0]) ? 1 : 0;
+    case EE_CP_HERD_PASSABLE_BY: return reinterpret_cast<EEUnit*>((uintptr_t)inB)->IsPassableBy(theUnit) ? 1 : 0;
+    case EE_CP_HERD_CAN_MOVE_ON: return theUnit->GetUnitClass()->CanMoveOnTerrain(theUnit, (long)v[0]) ? 1 : 0;
     case EE_CP_HERD_TILE_AT:
         return (int64_t)EEHerdHandle(gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)v[0], (long)v[1])));
     case EE_CP_HERD_ATTACKER_NULL: theUnit->mLastAttacker = NULL;
@@ -177,10 +163,8 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         return 0;
     case EE_CP_HERD_HOLDER_NULL: theUnit->mHolder = NULL;
         return 0;
-    case EE_CP_HERD_GOAL_AT:
-        return (int64_t)EEHerdHandle(theUnit->mGoalQueues[0].mGoals[(size_t)v[0]]);
-    case EE_CP_HERD_GOAL_IS_LOCATION:
-        return EELocationGoalCast(theGoal) != NULL ? 1 : 0;
+    case EE_CP_HERD_GOAL_AT: return (int64_t)EEHerdHandle(theUnit->mGoalQueues[0].mGoals[(size_t)v[0]]);
+    case EE_CP_HERD_GOAL_IS_LOCATION: return EELocationGoalCast(theGoal) != NULL ? 1 : 0;
     case EE_CP_HERD_GOAL_POINT: *reinterpret_cast<GE3DPoint*>(io->f) = theGoal->GetLocation();
         return 0;
     case EE_CP_HERD_NEW_LOCATION:
@@ -213,18 +197,15 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
         return 0;
     case EE_CP_HERD_MEDIA_UNLOAD: reinterpret_cast<EEMedia*>((uintptr_t)inA)->UnloadMedia();
         return 0;
-    case EE_CP_HERD_ANIMAL:
-        return (int64_t)EEHerdHandle(EEAnimal::Get((long)v[0]));
+    case EE_CP_HERD_ANIMAL: return (int64_t)EEHerdHandle(EEAnimal::Get((long)v[0]));
     case EE_CP_HERD_ANIMAL_FIELDS:
         return (int64_t)EEHerdHandle(static_cast<EeDataAnimalFields*>(reinterpret_cast<EEAnimal*>((uintptr_t)inA)));
-    case EE_CP_HERD_ANIMAL_MEDIA:
-        return (int64_t)EEHerdHandle(reinterpret_cast<EEAnimal*>((uintptr_t)inA)->mMedia);
+    case EE_CP_HERD_ANIMAL_MEDIA: return (int64_t)EEHerdHandle(reinterpret_cast<EEAnimal*>((uintptr_t)inA)->mMedia);
     case EE_CP_HERD_FLEE: theUnit->mUnitClass->Flee(theUnit);
         return 0;
     case EE_CP_HERD_DAMAGE_FACTOR: io->f[0] = EEDamageFactor((long)v[0], (long)v[1]);
         return 0;
-    case EE_CP_HERD_HELD:
-        return (int64_t)EEHerdHandle(theUnit->mHeldUnits[(size_t)v[0]]);
+    case EE_CP_HERD_HELD: return (int64_t)EEHerdHandle(theUnit->mHeldUnits[(size_t)v[0]]);
     case EE_CP_HERD_WAYPOINT: memcpy(io->f, &theUnit->mWaypoints[(size_t)v[0]].mLocation.mX, 3 * sizeof(float));
         return 0;
     case EE_CP_HERD_POSITION: theUnit->GetPosition(*reinterpret_cast<GE3DPoint*>(io->f));
@@ -241,19 +222,15 @@ extern "C" int64_t ee_cp_herd_host(void* inHerd, int32_t inOp, uint64_t inA, uin
     }
     case EE_CP_HERD_FIELDS_OF:
         return (int64_t)EEHerdHandle(static_cast<EeHerdFields*>(reinterpret_cast<EEHerd*>((uintptr_t)inA)));
-    case EE_CP_HERD_GOALS:
-        return (int64_t)theUnit->mGoalQueues[0].mGoals.size();
-    case EE_CP_HERD_FLAGS:
-        return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
-    case EE_CP_HERD_PLAYER:
-        return (int64_t)EEHerdHandle(gWorld.GetPlayer((unsigned long)v[0]));
+    case EE_CP_HERD_GOALS: return (int64_t)theUnit->mGoalQueues[0].mGoals.size();
+    case EE_CP_HERD_FLAGS: return (gLoadingSavedGame ? 1 : 0) | (gWorldClearing ? 2 : 0);
+    case EE_CP_HERD_PLAYER: return (int64_t)EEHerdHandle(gWorld.GetPlayer((unsigned long)v[0]));
     case EE_CP_HERD_UNIT_BY_ID:
         return (int64_t)EEHerdHandle(dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)v[0]))));
     case EE_CP_HERD_SAVE_FLAGS:
         return (EESaveHasLiveState((unsigned long)v[0], (unsigned long)v[1]) ? 1 : 0)
             | (EESaveHasContinentRegions((unsigned long)v[0], (unsigned long)v[1]) ? 2 : 0);
-    case EE_CP_HERD_ANIMAL_ON_MAP:
-        return EEHerd::IsAnimalOnMap(theUnit) ? 1 : 0;
+    case EE_CP_HERD_ANIMAL_ON_MAP: return EEHerd::IsAnimalOnMap(theUnit) ? 1 : 0;
     }
     return ee_cp_area_host(static_cast<EEAIArea*>(me), inOp, io);
 }

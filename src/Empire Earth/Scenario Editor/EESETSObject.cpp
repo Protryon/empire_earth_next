@@ -124,12 +124,8 @@ extern "C" int32_t ee_screenscpp_seobx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEOB_OP_START_SELECTION:
         static_cast<EESEUICTriggerSelectUnits*>(p[0])->StartSelection(GE2DPoint(f[0], f[1]));
         return 0;
-    case EE_SCREENS_SEOBX_NEW_CLICK:
-        *theOut = new EESETSAMouseClick;
-        return 0;
-    case EE_SCREENS_SEOBX_NEW_LASSO:
-        *theOut = new EESETSALasso;
-        return 0;
+    case EE_SCREENS_SEOBX_NEW_CLICK: *theOut = new EESETSAMouseClick; return 0;
+    case EE_SCREENS_SEOBX_NEW_LASSO: *theOut = new EESETSALasso; return 0;
     case EE_SCREENS_SEOBX_NEW_SELECT:
         *theOut = new EESEUICTriggerSelectUnits(static_cast<UIForm*>(p[0]), EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS, (unsigned long)i[0],
                                                 static_cast<EESETSAMouseClick*>(p[1]), static_cast<EESETSALasso*>(*theOut));
@@ -137,18 +133,10 @@ extern "C" int32_t ee_screenscpp_seobx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEOBX_ADD_CONTROL:
         static_cast<UIForm*>(p[0])->AddControl(static_cast<EESEUICTriggerSelectUnits*>(p[1]), 0);
         return 0;
-    case EE_SCREENS_SEOBX_LASSO_RELEASE:
-        static_cast<EESETSALasso*>(p[0])->Dereference();
-        return 0;
-    case EE_SCREENS_SEOBX_CLICK_RELEASE:
-        static_cast<EESETSAMouseClick*>(p[0])->Dereference();
-        return 0;
-    case EE_SCREENS_SEOBX_TYPES_CLEAR:
-        sSeobTypes.clear();
-        return 0;
-    case EE_SCREENS_SEOBX_TYPES_PUSH:
-        sSeobTypes.push_back((unsigned long)i[0]);
-        return 0;
+    case EE_SCREENS_SEOBX_LASSO_RELEASE: static_cast<EESETSALasso*>(p[0])->Dereference(); return 0;
+    case EE_SCREENS_SEOBX_CLICK_RELEASE: static_cast<EESETSAMouseClick*>(p[0])->Dereference(); return 0;
+    case EE_SCREENS_SEOBX_TYPES_CLEAR: sSeobTypes.clear(); return 0;
+    case EE_SCREENS_SEOBX_TYPES_PUSH: sSeobTypes.push_back((unsigned long)i[0]); return 0;
     case EE_SCREENS_SEOBX_TYPES_SORT:
         std::sort(sSeobTypes.begin(), sSeobTypes.end(), EESETSOUnitTypeNameLess());
         return 0;
@@ -156,32 +144,22 @@ extern "C" int32_t ee_screenscpp_seobx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEOBX_TYPES_AT: return (int32_t)sSeobTypes[(size_t)i[0]];
     case EE_SCREENS_SEOBX_FLAG: return *SeobFlag(o, i[0]);
     case EE_SCREENS_SEOBX_FIELD: return (int32_t)*SeobField(o, i[0]);
-    case EE_SCREENS_SEOBX_SET_FLAG:
-        *SeobFlag(o, i[0]) = i[1] != 0;
-        return 0;
-    case EE_SCREENS_SEOBX_SET_PARENT:
-        o->SetParent((long)i[1]);
-        return 0;
+    case EE_SCREENS_SEOBX_SET_FLAG: *SeobFlag(o, i[0]) = i[1] != 0; return 0;
+    case EE_SCREENS_SEOBX_SET_PARENT: o->SetParent((long)i[1]); return 0;
     case EE_SCREENS_SEOBX_SET_FIELD:   // (a none selection is all ones, as the original's unsigned long)
         *SeobField(o, i[0]) = (unsigned long)(long)i[1];
         return 0;
-    case EE_SCREENS_SEOBX_SET_NAME:
-        o->SetName(SeobBytes(p[1], i[0]));
-        return 0;
+    case EE_SCREENS_SEOBX_SET_NAME: o->SetName(SeobBytes(p[1], i[0])); return 0;
     case EE_SCREENS_SEOBX_SET_UNITS:
         o->SetUnits(std::vector<unsigned long>(static_cast<const uint32_t*>(p[1]), static_cast<const uint32_t*>(p[1]) + i[0]));
         return 0;
-    case EE_SCREENS_SEOBX_UNITS_GET:
-        o->GetUnits(sSeobUnits);
-        return 0;
+    case EE_SCREENS_SEOBX_UNITS_GET: o->GetUnits(sSeobUnits); return 0;
     case EE_SCREENS_SEOBX_UNITS_COUNT: return (int32_t)sSeobUnits.size();
     case EE_SCREENS_SEOBX_UNITS_AT: return (int32_t)sSeobUnits[(size_t)i[0]];
     case EE_SCREENS_SEOBX_WORLD_UNIT:
         *theOut = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)(uint32_t)i[0]));
         return 0;
-    case EE_SCREENS_SEOBX_SELECT_UNIT:
-        SeobEditor(p[0])->SelectUnit(static_cast<EEUnit*>(p[1]));
-        return 0;
+    case EE_SCREENS_SEOBX_SELECT_UNIT: SeobEditor(p[0])->SelectUnit(static_cast<EEUnit*>(p[1])); return 0;
     case EE_SCREENS_SEOBX_SELECTED_COUNT:
         return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnitCount();
     case EE_SCREENS_SEOBX_SELECTED_NAME_ID:

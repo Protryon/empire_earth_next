@@ -40,10 +40,7 @@ EESMObject::EESMObject() : EeScenarioObjectFields(ee_scenario_object_defaults())
 namespace {
 
 // a unit id handed over as 32 bits (ee_scenario objeval.rs), as the list holds it
-EEUnit* SMUnit(int32_t inID)
-{
-    return gWorld.GetUnit((unsigned long)(uint32_t)inID);
-}
+EEUnit* SMUnit(int32_t inID) { return gWorld.GetUnit((unsigned long)(uint32_t)inID); }
 
 // a chain unit for objeval.rs: its id low, its class's type high; -1 at the end
 int64_t SMChainUnit(EEUnit* inUnit)

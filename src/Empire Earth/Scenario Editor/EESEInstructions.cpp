@@ -67,18 +67,12 @@ int32_t EESEInstructionsHost::Statement(uint32_t inOp, void* const* p, int32_t* 
     void** theOut = static_cast<void**>(p[2]);
     switch (inOp) {
     case EE_SCREENS_SEIN_OP_FILE_ENTRIES: EEUIFileComboEntries(static_cast<UIControl*>(p[0])); return 0;
-    case EE_SCREENS_SEINX_DIR_RESET:
-        sSeinDirectories[i[0]] = FSFileSpec();
-        return 0;
-    case EE_SCREENS_SEINX_DIR_VOLUME:
-        sSeinDirectories[i[0]].SetVolume(gStartupVolume);
-        return 0;
+    case EE_SCREENS_SEINX_DIR_RESET: sSeinDirectories[i[0]] = FSFileSpec(); return 0;
+    case EE_SCREENS_SEINX_DIR_VOLUME: sSeinDirectories[i[0]].SetVolume(gStartupVolume); return 0;
     case EE_SCREENS_SEINX_DIR_DIRECTORY:
         sSeinDirectories[i[0]].SetDirectory(gStartupDirectory + "data\\" + kSeinDirectories[i[0]]);
         return 0;
-    case EE_SCREENS_SEINX_NEW_PATH:
-        *theOut = new FSPath;
-        return 0;
+    case EE_SCREENS_SEINX_NEW_PATH: *theOut = new FSPath; return 0;
     case EE_SCREENS_SEINX_ADD_DIRECTORY:
         static_cast<FSPath*>(p[0])->AddDirectory(sSeinDirectories[i[0]], true);
         return 0;
@@ -86,25 +80,19 @@ int32_t EESEInstructionsHost::Statement(uint32_t inOp, void* const* p, int32_t* 
     case EE_SCREENS_SEINX_CREATE_DIRECTORY:
         ESVERIFY_AT(sSeinDirectories[i[0]].CreateDirectory() == keseOK, 536 + 3 * i[0]);
         return 0;
-    case EE_SCREENS_SEINX_PATH_RELEASE:
-        static_cast<FSPath*>(p[0])->Dereference();
-        return 0;
+    case EE_SCREENS_SEINX_PATH_RELEASE: static_cast<FSPath*>(p[0])->Dereference(); return 0;
     case EE_SCREENS_SEINX_NEW_FILE_COMBO:
         *theOut = EEUIShellNewFileCombo(static_cast<FSPath*>(p[0]), SeinPattern(i[0]), kSeinFileIDs[i[0]], gSeplScreenFont,
                                         GE2DPoint(f[0], f[1]), 150, static_cast<UIForm*>(p[1]), (unsigned long)i[1]);
         return 0;
-    case EE_SCREENS_SEINX_COMBO_GETEXT:
-        *theOut = static_cast<UIComboBox*>(p[0])->GetGEText();
-        return 0;
+    case EE_SCREENS_SEINX_COMBO_GETEXT: *theOut = static_cast<UIComboBox*>(p[0])->GetGEText(); return 0;
     case EE_SCREENS_SEINX_YELLOW:
         static_cast<GEText*>(p[0])->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
         return 0;
     case EE_SCREENS_SEINX_LIST_BLUE:
         static_cast<UIComboBox*>(p[0])->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
         return 0;
-    case EE_SCREENS_SEINX_BOX_OPACITY:
-        static_cast<UIComboBox*>(p[0])->SetTextBoxBgOpacity(0.4f);
-        return 0;
+    case EE_SCREENS_SEINX_BOX_OPACITY: static_cast<UIComboBox*>(p[0])->SetTextBoxBgOpacity(0.4f); return 0;
     case EE_SCREENS_SEINX_ADD_CONTROL:
         static_cast<UIForm*>(p[0])->AddControl(static_cast<UIComboBox*>(p[1]), 7);
         return 0;
@@ -117,57 +105,29 @@ int32_t EESEInstructionsHost::Statement(uint32_t inOp, void* const* p, int32_t* 
     case EE_SCREENS_SEINX_SET_BUTTON_UP:
         static_cast<UIControl*>(p[0])->SetTriggerEvent(kControlTriggerButtonUp, static_cast<UIEvent*>(p[1]));
         return 0;
-    case EE_SCREENS_SEINX_EVENT_RELEASE:
-        static_cast<UIEvent*>(p[0])->Dereference();
-        return 0;
-    case EE_SCREENS_SEINX_TEXT_MEDIA:
-        sSeinText = Media(i[0]);
-        return 0;
-    case EE_SCREENS_SEINX_TEXT_EXPORT:
-        sSeinText = ::gWorld.mScenarioManager->mExportFileName;
-        return 0;
+    case EE_SCREENS_SEINX_EVENT_RELEASE: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
+    case EE_SCREENS_SEINX_TEXT_MEDIA: sSeinText = Media(i[0]); return 0;
+    case EE_SCREENS_SEINX_TEXT_EXPORT: sSeinText = ::gWorld.mScenarioManager->mExportFileName; return 0;
     case EE_SCREENS_SEINX_FILE_SELECT: return EEUIFileComboSelect(static_cast<UIComboBox*>(p[0]), sSeinText);
     case EE_SCREENS_SEINX_TEXT_LENGTH: return (int32_t)sSeinText.GetLength();
-    case EE_SCREENS_SEINX_LABEL_TEXT:
-        static_cast<UIComboBox*>(p[0])->GetTextLabel()->SetText(sSeinText);
-        return 0;
-    case EE_SCREENS_SEINX_EDIT_MEDIA:
-        static_cast<UIEditBox*>(p[0])->SetText(Media(i[0]));
-        return 0;
-    case EE_SCREENS_SEINX_EDIT_ALL_TEXT:
-        static_cast<UIEditBox*>(p[0])->GetAllText(sSeinText);
-        return 0;
-    case EE_SCREENS_SEINX_SET_MEDIA:
-        Media(i[0]) = sSeinText;
-        return 0;
+    case EE_SCREENS_SEINX_LABEL_TEXT: static_cast<UIComboBox*>(p[0])->GetTextLabel()->SetText(sSeinText); return 0;
+    case EE_SCREENS_SEINX_EDIT_MEDIA: static_cast<UIEditBox*>(p[0])->SetText(Media(i[0])); return 0;
+    case EE_SCREENS_SEINX_EDIT_ALL_TEXT: static_cast<UIEditBox*>(p[0])->GetAllText(sSeinText); return 0;
+    case EE_SCREENS_SEINX_SET_MEDIA: Media(i[0]) = sSeinText; return 0;
     case EE_SCREENS_SEINX_SET_MEDIA_LABEL:
         Media(i[0]) = static_cast<UIComboBox*>(p[0])->GetTextLabel()->GetText(0);
         return 0;
-    case EE_SCREENS_SEINX_FILE_RESET:
-        sSeinFile = FSFileSpec();
-        return 0;
-    case EE_SCREENS_SEINX_FILE_VOLUME:
-        sSeinFile.SetVolume(gStartupVolume);
-        return 0;
+    case EE_SCREENS_SEINX_FILE_RESET: sSeinFile = FSFileSpec(); return 0;
+    case EE_SCREENS_SEINX_FILE_VOLUME: sSeinFile.SetVolume(gStartupVolume); return 0;
     case EE_SCREENS_SEINX_FILE_DIRECTORY:
         sSeinFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
         return 0;
-    case EE_SCREENS_SEINX_FILE_NAME:
-        sSeinFile.SetFile((const char*)sSeinText);
-        return 0;
+    case EE_SCREENS_SEINX_FILE_NAME: sSeinFile.SetFile((const char*)sSeinText); return 0;
     case EE_SCREENS_SEINX_FILE_OPEN: return sSeinFile.FOpen("r") == 0;
-    case EE_SCREENS_SEINX_FILE_CLOSE:
-        sSeinFile.Close();
-        return 0;
-    case EE_SCREENS_SEINX_NAME_STEM:
-        sSeinName.CopyString(sSeinText, sSeinText.GetLength() - 4);
-        return 0;
-    case EE_SCREENS_SEINX_EDIT_STEM:
-        static_cast<UIEditBox*>(p[0])->SetText(sSeinName);
-        return 0;
-    case EE_SCREENS_SEINX_EDIT_EMPTY:
-        static_cast<UIEditBox*>(p[0])->SetText(gEmptyString);
-        return 0;
+    case EE_SCREENS_SEINX_FILE_CLOSE: sSeinFile.Close(); return 0;
+    case EE_SCREENS_SEINX_NAME_STEM: sSeinName.CopyString(sSeinText, sSeinText.GetLength() - 4); return 0;
+    case EE_SCREENS_SEINX_EDIT_STEM: static_cast<UIEditBox*>(p[0])->SetText(sSeinName); return 0;
+    case EE_SCREENS_SEINX_EDIT_EMPTY: static_cast<UIEditBox*>(p[0])->SetText(gEmptyString); return 0;
     }
     return 0;
 }

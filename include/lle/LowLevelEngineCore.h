@@ -152,10 +152,7 @@ template <class T> inline uint32_t USavedID(T* inField)
 // long)-1 or 0xffffffff). On LP64 a value set to -1 in memory has 64 bits set while one read from a file or message
 // (4 bytes) has 32, so the test looks at the low 32 bits; both are "none" on every data model (on Windows this is
 // `inValue == 0xffffffff`).
-inline bool UIsNone32(unsigned long inValue)
-{
-    return static_cast<uint32_t>(inValue) == 0xffffffffu;
-}
+inline bool UIsNone32(unsigned long inValue) { return static_cast<uint32_t>(inValue) == 0xffffffffu; }
 // lrintf: the float rounded in the current rounding mode. On x86-64 a value well inside 32 bits is rounded by
 // cvtss2si, which rounds in MXCSR's mode, where the CRT's lrintf rounds too (_controlfp sets it; same result), but
 // without the UCRT's floating-point environment calls around it (12% of a late headless game). Other values and other
@@ -169,18 +166,12 @@ inline long UMRint(float inValue)
     return lrintf(inValue);
 }
 // Provisional name. Rounds in the current rounding mode (to nearest), as the VC6 build's fld/fistp did.
-inline long UMFloatToLong(float inValue)
-{
-    return UMRint(inValue);
-}
+inline long UMFloatToLong(float inValue) { return UMRint(inValue); }
 // Provisional name (not exported: a free inline). Default.dll 0xc29f: `fld r; fld st0; fmul st1` (the
 // argument loaded once and squared), where `r * r` would give `fld r; fmul r`.
 // Provisional name (not exported). Default.dll 0x41ca: `fcom [0.0]; jae; fchs` with no fabs call, re-evaluated
 // whole inside max().
-inline float UMAbs(float inValue)
-{
-    return inValue < 0.0f ? -inValue : inValue;
-}
+inline float UMAbs(float inValue) { return inValue < 0.0f ? -inValue : inValue; }
 // Provisional name. Default.dll (EEClumps 0x7ff1): the same fld/fistp, then `fild r; fcomp v; jbe; dec r`:
 // rounds down when the rounded value is above the input (floor under round-to-nearest).
 // Provisional name. Default.dll units 11/12 (0x15970, 0x16035, 0x16461, ...): the same floor, but the rounded

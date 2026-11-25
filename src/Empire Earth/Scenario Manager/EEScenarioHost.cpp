@@ -158,12 +158,8 @@ extern "C" int64_t ee_scenariocpp_world_read(EESMHostContext* inContext, uint32_
     case EE_SCENARIO_RX_OBJECT_ATTRIBUTE_PERCENT: return SMReadOf<EESMObject>(a[0])->GetIsAttributePercent();
     case EE_SCENARIO_RX_OBJECT_UNIT_ATTRIBUTE:
         return SMReadOf<EESMObject>(a[0])->GetUnitAttribute((unsigned long)a[1], a[2] != 0, SMReadOf<EEUnit>(a[3]), 0, 0);
-    case EE_SCENARIO_RX_OBJECT_GET_UNITS:
-        SMReadOf<EESMObject>(a[0])->GetUnits(sSMReadIDs);
-        return 0;
-    case EE_SCENARIO_RX_IDS_CLEAR:
-        sSMReadIDs.clear();
-        return 0;
+    case EE_SCENARIO_RX_OBJECT_GET_UNITS: SMReadOf<EESMObject>(a[0])->GetUnits(sSMReadIDs); return 0;
+    case EE_SCENARIO_RX_IDS_CLEAR: sSMReadIDs.clear(); return 0;
     case EE_SCENARIO_RX_IDS_COUNT: return (int64_t)sSMReadIDs.size();
     case EE_SCENARIO_RX_IDS_AT: return (int64_t)sSMReadIDs[(size_t)a[0]];
     case EE_SCENARIO_RX_UNIT: return SMReadPtr(gWorld.GetUnit((unsigned long)a[0]));
@@ -179,9 +175,7 @@ extern "C" int64_t ee_scenariocpp_world_read(EESMHostContext* inContext, uint32_
     case EE_SCENARIO_RX_CONDITION_TYPE: return (int64_t)SMReadOf<EESMCondition>(a[0])->mType;
     case EE_SCENARIO_RX_CONDITION_PLAYER: return (int64_t)SMReadOf<EESMCondition>(a[0])->mPlayer;
     case EE_SCENARIO_RX_CONDITION_ATTRIBUTE: return (int64_t)SMReadOf<EESMCondition>(a[0])->mAttribute;
-    case EE_SCENARIO_RX_EFFECT_COPY:
-        SMReadOf<EESMEffect>(a[0])->Copy(*inContext->mEffect);
-        return 0;
+    case EE_SCENARIO_RX_EFFECT_COPY: SMReadOf<EESMEffect>(a[0])->Copy(*inContext->mEffect); return 0;
     }
     return 0;
 }

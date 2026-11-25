@@ -11,12 +11,6 @@
 #include "ee/EEUIManager.h"
 // the questions' answers (the callbacks DisplayQuestion takes): the export of the spec, the import of the info
 // (ee_screens editor_selt.rs; the actions and the buttons' events are EESEARust and EESEERust kinds since round 6)
-void EESEExportTextAnswer(UIForm* inFile)
-{
-    ee_screens_seia_answer(inFile, false);
-}
+void EESEExportTextAnswer(UIForm* inFile) { ee_screens_seia_answer(inFile, false); }
 
-void EESEImportTextAnswer(UIForm* inInfo)
-{
-    ee_screens_seia_answer(inInfo, true);
-}
+void EESEImportTextAnswer(UIForm* inInfo) { ee_screens_seia_answer(inInfo, true); }
