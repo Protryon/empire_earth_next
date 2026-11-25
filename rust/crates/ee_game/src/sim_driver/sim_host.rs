@@ -333,7 +333,9 @@ pub fn volcano(player: c_ulong) -> EeSimDriverSpot {
     }
     let x = h(O::UnitTileX, spot, &[]) as c_long + 6;
     let y = h(O::UnitTileY, spot, &[]) as c_long + 6;
-    let cast = h(O::CastLocationCalamity, 0, &[x as i64, y as i64, player as i64]) != 0;
+    let manager = gc::hp(gc::O::CalamityManager, 0, &[]);
+    let cast =
+        gc::calamity_objects::ee_gamecpp_calamity_create(manager as *mut c_void, 1, 9, 0xffff_ffff, 0, x, y, player);
     EeSimDriverSpot { found: true, x, y, count: if cast { 1 } else { 0 } }
 }
 
@@ -354,19 +356,80 @@ pub fn volcano_boulders() -> Vec<c_ulong> {
     out
 }
 
-/// `EERulesAddOverride`: Ok, else the problem.
+/// A rules override (EE-SIM --set; was EERulesAddOverride): Ok, else the problem.
 pub fn rules_add(text: &str) -> Result<(), String> {
-    if hs(O::RulesAdd, 0, text) != 0 {
-        Ok(())
-    } else {
-        Err(ht(O::RulesError, 0, 0))
+    ee_data::rules::add_override(text.as_bytes()).map_err(|e| String::from_utf8_lossy(&e).into_owned())
+}
+
+/// The overrides that changed nothing, each with the reason (was EERulesOverrideProblems).
+pub fn rules_problems() -> Vec<String> {
+    ee_data::rules::override_problems().iter().map(|p| String::from_utf8_lossy(p).into_owned()).collect()
+}
+
+/// The world's map and read-write lock (`gWorld.mMap`, `gWorld.mLock`; 0 and null before the world is made, and in a
+/// unit test).
+pub fn world_map_and_lock() -> (usize, *const ee_base::ts::EeTsLock) {
+    #[cfg(not(test))]
+    {
+        use crate::rts::world::WorldCpp;
+        let world = core::ptr::addr_of_mut!(crate::gamecpp::global_objects::gWorld) as usize;
+        let mut c = ee_base::shim::ShimFfi;
+        // SAFETY: the game's world object's members
+        unsafe { (*c.map_slot(world), *c.lock_slot(world) as *const ee_base::ts::EeTsLock) }
+    }
+    #[cfg(test)]
+    (0, core::ptr::null())
+}
+
+/// `gWorld.mLock`'s `EE_SIM_DRIVER_*_LOCK` (was EESim.cpp's HostLock): the world's read-write lock, which the world's
+/// constructor made.
+pub fn world_lock(op: i32) {
+    use ee_base::ts::{ee_ts_lock_read, ee_ts_lock_read_unlock, ee_ts_lock_write, ee_ts_lock_write_unlock};
+    let lock = world_map_and_lock().1;
+    if lock.is_null() {
+        return;
+    }
+    // SAFETY: the world's live lock
+    unsafe {
+        match op {
+            EE_SIM_DRIVER_WRITE_LOCK => ee_ts_lock_write(lock),
+            EE_SIM_DRIVER_WRITE_UNLOCK => ee_ts_lock_write_unlock(lock),
+            EE_SIM_DRIVER_READ_LOCK => ee_ts_lock_read(lock),
+            _ => ee_ts_lock_read_unlock(lock),
+        }
     }
 }
 
-/// `EERulesOverrideProblems`.
-pub fn rules_problems() -> Vec<String> {
-    h(O::RulesProblemsLoad, 0, &[]);
-    (0..h(O::RulesProblemCount, 0, &[])).map(|k| ht(O::RulesProblem, 0, k)).collect()
+/// --dump-load: the state dump of `path` at the loaded game's first tick, after the load's own fix-ups (was
+/// EESim.cpp's HostDumpAfterLoad: `EEAfterLoad`).
+pub fn dump_after_load(path: &str) {
+    extern "C" fn run(data: usize) {
+        // SAFETY: the box made below, handed over once
+        let path = unsafe { Box::from_raw(data as *mut String) };
+        super::dump::dump_state(&path);
+    }
+    gc::persistent::after_load(run, Box::into_raw(Box::new(path.to_string())) as usize);
+}
+
+/// The saved game's (0) or the scenario's (1) file extension (`gSavedGameExtension`, `gScenarioExtension`: constants
+/// Empire Earth.cpp constructs).
+pub fn extension(which: i32) -> &'static str {
+    if which == 0 {
+        ".ees"
+    } else {
+        ".scn"
+    }
+}
+
+/// `gUserInterface->PostCancelGame()` (0x412).
+pub fn cancel_game() {
+    #[cfg(not(test))]
+    crate::screens::post_if_ui(0x412);
+}
+
+/// The player's wonder count (`GetNumWonderUnits`).
+pub fn wonders(player: u64) -> c_long {
+    gc::h(gc::O::DwWonderCount, player as usize, &[]) as c_long
 }
 
 /// The AI manifest's ids.
@@ -653,7 +716,8 @@ pub fn sweep(kind: i32, arg: c_long) {
     match kind {
         EE_SIM_DRIVER_SWEEP_FIVE_MINUTES => {
             // every five game minutes of a captured game
-            h(O::FormationSweep, 0, &[]); // (ee/EEFormation.h)
+            // SAFETY: the simulation thread holds the world
+            unsafe { ee_sim::formations::units::capture_sweep() };
             combat_capture_sweep();
             tech_capture::ee_gamecpp_tech_capture_sweep(); // the tech trees' sweep (ee/EETechCapture.h)
             calamity_capture::ee_gamecpp_capture_calamity_sweep(); // CanCastAt over every calamity class (ee/EETechCapture.h)

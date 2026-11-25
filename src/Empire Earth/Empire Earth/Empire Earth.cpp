@@ -14,10 +14,7 @@
 // (ee_game fixture and sim_driver, called directly)
 #include "rust/game/fixture.h"
 #include "rust/game/sim_driver.h"
-extern void (*gEETestFixtureConfigure)();   // EEGlobals.cpp: the harness clock, seed and no-defeat switches
 #include "platform/PlatSim.h"
-unsigned long EEMenuWidth();    // port: the menus' resolution (below)
-unsigned long EEMenuHeight();
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
 #include "platform/PlatWindow.h"
 #include "platform/PlatFile.h"
@@ -81,22 +78,10 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 
 #include "ee/EEGlobalStorage.h"
 
-class GEFont;
 class FSPath;
 // The ones no header this unit includes declares:
-extern GEFont *gFontArial8, *gFontArial9, *gU531930, *gU531934, *gU531938, *gFontArial16, *gFontArial18,
-    *gFontArial20, *gFontArial24, *gFontArial36, *gFontArial48, *gFontArial72, *gFontArialBold8, *gFontArialBold9,
-    *gFontArialBold10, *gFontArialBold12, *gFontArialBold14, *gFontArialBold16, *gFontTimesNewRoman9,
-    *gFontTimesNewRoman10, *gFontTimesNewRoman12, *gFontTimesNewRoman14, *gFontCourier8, *gFontCourier10,
-    *gFontCourier12, *gFontCourier14, *gFontTahoma8, *gU531994, *gFontTahoma10, *gFontTahoma12, *gFontTahoma14,
-    *gFontTahoma16, *gFontTahoma18, *gFontTahoma20, *gFontTahoma24, *gFontTahoma36, *gFontTahoma48, *gFontTahoma72;
-extern UString gU530BE0, gExecutableName, gSavedGameExtension, gScenarioExtension, gU530B88, gCampaignExtension,
-    gPhysicsThreadName, gGraphicsThreadName, gDataPreLoadingThreadName, gMousePointerThreadName,
-    gScenarioEditorThreadName, gUserInterfaceThreadName, gCommSendThreadName, gCommRecvThreadName,
-    gCommMainThreadName, gCommLagLossThreadName, gCommRecPlayThreadName, gSoundScavengerThreadName,
-    gCDAudioThreadName;
-extern UWideString gU530BC8, gCampaignAOCRoman, gCampaignAOCPacific, gCampaignAOCAsian, gCampaignEEDemo,
-    gCampaignEELearning, gU52A280;
+extern UString gU530B88, gCampaignExtension, gPhysicsThreadName, gGraphicsThreadName, gMousePointerThreadName,
+    gScenarioEditorThreadName;
 extern EEEvent gEvent;
 extern EEToHitTable gToHitTable;
 extern EEAIUnitTargetingTable gAIUnitTargetingTable;
@@ -106,15 +91,11 @@ extern EETerrainTypeTable gTerrainTypeTable;
 extern EEComputerPlayerBehaviorTable gComputerPlayerBehaviorTable;
 
 // The game's globals (gWorld, gPhysics, gUIManager, the subsystem pointers, the save version, ...) are Rust's
-// storage (ee_game gamecpp global_objects.rs and globals.rs; ee/EEGlobalStorage.h). The 48 global objects are
+// storage (ee_game gamecpp global_objects.rs and globals.rs; ee/EEGlobalStorage.h). The 38 global objects are
 // constructed here, where their definitions were, in the order of the original's init chains (0x53e967..0x53f27c),
 // each registering its destructor with atexit as its definition did.
-// chain at 0x53e967 (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gU530BE0, ("B7B226DDB7B226DDBCD9344624C93DE6C4A90DD4B7B20375"));
 // chain at 0x53e999 (wrapper)
 EE_CONSTRUCT_GLOBAL(UWideString, gU530BC8, );
-// chain at 0x53e9c5 (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gExecutableName, ("Empire Earth.exe"));
 // chain at 0x53e9f7 (wrapper)
 EE_CONSTRUCT_GLOBAL(UString, gSavedGameExtension, (".ees"));
 // chain at 0x53ea29 (wrapper)
@@ -189,50 +170,16 @@ EE_CONSTRUCT_GLOBAL(UString, gDataPreLoadingThreadName, ("DataPreLd"));
 EE_CONSTRUCT_GLOBAL(UString, gMousePointerThreadName, ("MousePtr"));
 // chain at 0x53f0ec (wrapper)
 EE_CONSTRUCT_GLOBAL(UString, gScenarioEditorThreadName, ("ScenEdit"));
-// chain at 0x53f11e (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gUserInterfaceThreadName, ("UserIntfc"));
-// chain at 0x53f150 (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gCommSendThreadName, ("CommSend"));
-// chain at 0x53f182 (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gCommRecvThreadName, ("CommRecv"));
-// chain at 0x53f1b4 (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gCommMainThreadName, ("CommMain"));
-// chain at 0x53f1e6 (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gCommLagLossThreadName, ("CommLagLoss"));
-// chain at 0x53f218 (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gCommRecPlayThreadName, ("CommRecPlay"));
-// chain at 0x53f24a (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gSoundScavengerThreadName, ("SoundScavngr"));
-// chain at 0x53f27c (wrapper)
-EE_CONSTRUCT_GLOBAL(UString, gCDAudioThreadName, ("CDAudio"));
-extern FSPath* gDataPath;
 extern FSPath* gCivilizationDataPath;
 
-static TMTimer* sTimer;                     // 0x5319ec (EECreateGameTimer's assert names it; the timer's new is ee_gamecpp's O::NewGameTimer)
-extern HINSTANCE gInstance;                 // 0x5319d8 (WinMain's instance, set by 0x540d73)
+HINSTANCE gInstance;                        // 0x5319d8 (WinMain's instance, set by 0x540d73)
 
-void EESetThreadFloatingPoint(const char* inThreadName);
-
-// (the loading splash screen, EEStartScreen: ee_game gamecpp start_screen.rs)
-
-// Puts the calling thread's FPU into 53-bit precision and round-to-nearest mode (the thread name is unused)
-// (every game thread calls it first, passing its name)
-void EESetThreadFloatingPoint(const char* inThreadName)
-{
-    ee_gamecpp_startup_thread_fp();
-}
-
-// Makes every computer player at war with the given player attack it; with the flag set, the others (its allies
-// and its own computer player) defend it
-void EEAttackPlayers(long inPlayer, unsigned char inFlag)
-{
-    ee_gamecpp_startup_attack_players(inPlayer, inFlag);
-}
+// (the loading splash screen, EEStartScreen: ee_game gamecpp start_screen.rs; the start-up and shutdown bodies, the
+// game timer sTimer 0x5319ec and the start-up video mode 0x52a1a8: startup.rs, which calls them by path)
 
 // Sums a checksum over the directory's files matching the pattern (name order, one encrypted name skipped): file
 // bytes, or write time and size when asked
 #include <algorithm>
-#include "lle/UEncryption.h"
 #include "ee/EEStringIDs.h"
 // The original's sort helpers (0x547719..) call FSFileSpec's GetFile (vtable +0x1c), then UString's operator<;
 // the comparison object is empty (one byte)
@@ -248,18 +195,11 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
     return ee_gamecpp_entry_file_checksum(&inDirectory, &inPattern, inUseFileTimes);
 }
 
-// Reads the five campaign checksums from string resources 0x32..0x34, 0x37, 0x36; a missing string keeps the value
-void EELoadNetworkSettings()
-{
-    ee_gamecpp_startup_network_settings();
-}
-
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "lle/NEProtocol.h"
 #include "lle/NEMessage.h"
 #include "ee/EEMessage.h"
-
 
 #include "GEWindow.h"
 #include "lle/GEFont.h"
@@ -272,24 +212,9 @@ void EELoadNetworkSettings()
 #include "ee/EEROWater.h"
 #include "ee/EEROEffects.h"
 
-void EESetVideoMode(unsigned long, unsigned long, unsigned long, bool);
 // the game view and water ripple constants (.rdata 0x442090..0x4420a8, read from memory by both graphics initializers)
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
-
-void EEReleaseInstanceMutex(bool inShutdown); // a shutdown routine; the argument is unused
-bool EEInitializeDisplay();
-void EEInitializeGraphics();
-bool EEInitializeSounds(); // 0x543557; EEInitializePart1 tests its result in AL
-void EEInitializeDatabase();
-void EEInitializeGameObjects();
-
-// Starts the engine (input, threads, timers), opens the display and initializes graphics, sound, network, the
-// database, game objects and the user interface; returns false (after a message box) when sound fails
-bool EEInitializePart1()
-{
-    return ee_gamecpp_startup_part1();
-}
 
 #include "lle/GERhombus.h"
 #include "ee/EEMouse.h"
@@ -305,29 +230,12 @@ RTSMouse* RTSGetInputMouse() { return gMouse; }
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 
-
 #include <list>
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EECommunications.h"
 
 #include <typeinfo>
 #include "ee/EEUnit.h"
-
-// Creates the texture and model managers, activates the screen at 640x480, sets the default render states,
-// creates the render objects and every UI font, and registers the graphics shutdown
-void EEInitializeGraphics()
-{
-    ee_gamecpp_startup_graphics();
-}
-
-// Registers the saved game's persistent sections (checksum, map, scenario, players, world, effects, ...)
-// (called from the start-up 0x540d73)
-void EERegisterPersistents()
-{
-    ee_gamecpp_startup_persistents();
-}
-
-
 
 // Builds the data search path and the civilization path, replacing the previous ones. The data is the game's own
 // Data folder (the data root's: the executable's directory), holding the content of both retail archives and the
@@ -361,20 +269,6 @@ void EESetGameViewRectangle(const GERectangle& inRectangle)
     ee_gamecpp_startup_game_view(reinterpret_cast<const EeGeRectangle*>(&inRectangle));
 }
 
-
-// Creates the music manager, mouse pointer, graphics, data preloading and physics threads; registers their shutdown
-void EEInitializeThreads()
-{
-    ee_gamecpp_startup_threads();
-}
-
-// Switches the screen to the mode of that size and depth (optionally the lowest refresh above 60 Hz), resizes
-// the window and clears both surfaces; does nothing when the mode is already active
-void EESetVideoMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount, bool inPreferRefresh)
-{
-    ee_gamecpp_startup_video_mode(inWidth, inHeight, inBitCount, inPreferRefresh);
-}
-
 // Stops the music, ambient sounds (disabling them) and every one-shot sound
 // (EEWorld::Clear and the main game form call it)
 void EEStopAllSounds()
@@ -382,41 +276,11 @@ void EEStopAllSounds()
     ee_gamecpp_startup_stop_sounds();
 }
 
-
-// Releases the status box icons, mini map, effect, unit, sky and ground shadow media
-void EEUnloadGameMedia()
-{
-    ee_gamecpp_startup_unload_media();
-}
-
 // Points the texture, model and sound managers at the data search path
 void EESetDataPaths()
 {
-    gTextureManager->SetTexturePath(gDataPath);
-    gModelManager->SetModelPath(gDataPath);
-    gSoundManager->SetPath(gDataPath);
+    ee_gamecpp_startup_set_data_paths();
 }
-
-
-// Ends the current game: pauses graphics and physics, releases the scene, deletes the communications, and
-// clears the world and game state under the world lock
-void EEClearGame()
-{
-    ee_gamecpp_startup_clear_game();
-}
-
-// Creates the game threads and registers the saved game's persistent sections
-void EEInitializePart2()
-{
-    ee_gamecpp_startup_part2();
-}
-
-// Sizes the memory pools for tile unit lists, sounds, doppelgangers and 2D/3D particles
-void EEInitGamePools()
-{
-    ee_gamecpp_startup_game_pools();
-}
-
 
 #ifdef _WIN32
 static HANDLE sInstanceMutex;
@@ -442,15 +306,6 @@ bool EECreateInstanceMutex()
 #endif
 }
 
-void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFullScreen); // defined below
-
-// Switches to the menus' screen after start-up. The original played the Sierra, Mad Doc and Empire Earth intro movies
-// here first (unless the command line hosted or joined a game); the port has no movie player and plays none.
-void EEStartMenuScreen()
-{
-    ee_gamecpp_startup_menu_screen();
-}
-
 // Closes the single-instance mutex and saves the preferences
 // (no direct caller: registered as a shutdown routine)
 void EEReleaseInstanceMutex(bool inShutdown)
@@ -463,38 +318,18 @@ void EEReleaseInstanceMutex(bool inShutdown)
 
 // Database shutdown is defined with the startup family below.
 
-
 #include "ee/EEDisplayDevices.h"
 
 extern std::vector<GETexture*> gU4E8EF0; // defined in EERenderObject.cpp
-static unsigned long sOriginalVideoMode; // 0x52a1a8: the video mode index found at start-up, restored at shutdown
 
 #include "ee/EEMiniMap.h"
-
-// Releases the particle and complex unit pools and logs the list node pools' statistics
-// (EEDeleteDatabase passes true; the argument is not read)
-void EEReleaseGamePools(bool inShutdown)
-{
-    EEComplexUnit::ReleasePool();
-    UList<EEComplexUnit*>::sNodePool.DumpStats(false);
-}
-
-// Releases the tile unit list and doppelganger pools (the attack target pool went with the attack sub groups, stage 5)
-void EEReleaseUnitPools()
-{
-    EETile::ReleaseUnitListPool();
-    gDoppelgangerManager.Release();
-}
 
 #include "ee/EEWonNet.h"
 #include "ee/EEUnitPicker.h"
 
 #include "ee/EEButtonObject.h"
 
-extern bool sIconsLoaded; // the status box's icons-loaded flag (defined in EEUIFMGStatusBox's unit)
 
-// Re-creates the display at the new size (full screen or not): reactivates the rasterizer, resets render states
-// and the camera, reloads mouse, textures, buttons and icons and restarts the mouse pointer thread
 // port: the menus' resolution. Their controls are laid out for 1024x768 (pixel sizes; the forms anchor to their
 // edges), so they keep its height of 768 and take the game resolution's aspect ratio: the frame scales to the window
 // without the 4:3 stretch, and each control keeps its designed proportions. A game resolution under 768 lines is used
@@ -509,13 +344,7 @@ unsigned long EEMenuWidth()
     return ee_gamecpp_menu_width(gGameWindowWidth, gGameWindowHeight);   // (gamecpp posix_main.rs)
 }
 
-void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFullScreen)
-{
-    ee_gamecpp_startup_change_screen(inWidth, inHeight, inFullScreen);
-}
-
 #include "lle/Graphics Engine.h"
-
 
 // Starts the graphics engine, picks the preferred rasterizer, validates screen, depths and resolution (falling
 // back to 800x600x16), creates and captures the game window; returns true
@@ -528,14 +357,12 @@ bool EEInitializeDisplay()
 #include <objbase.h>
 #endif
 
-HINSTANCE gInstance;
 #pragma optimize("g", off)   // rule 4, owner 2026-11-01: WinMain is no-/Og (memory locals, constant push 1/pop eax test)
 // Runs the game: single-instance check, start-up, splash and intro, the user interface loop, then shutdown;
 // returns 1 when the original Empire Earth install is missing, else 0
 // (the previous instance and show command arguments are unused)
 // (EESimPreferences, the window's event pump and the native message hook: gamecpp entry.rs, window_pump.rs)
 
-void EERustInit();   // EERust.cpp
 
 // The game's run (ee_game gamecpp entry.rs): the Rust library's start first, the window system, the engine, the
 // start-up under the splash screen, the menus, the command line and the user interface's run, then the shutdown
@@ -577,7 +404,6 @@ int main(int argc, char** argv)
 #endif
 #pragma optimize("g", on)   // ??_GUResourceFile 0x54494d (no-/Og in the original) is emitted under WinMain's state
 
-
 // Loads and starts a .wav or .mp3 sound (a bare name tries .wav, then .mp3), registering it as a one-shot when
 // asked; returns the sample and instance, -1 on failure
 void EELoadSound(const UString& inName, unsigned long inType, unsigned long& outSample,
@@ -608,29 +434,12 @@ void EELoadSound(const UString& inName, unsigned long inType, unsigned long& out
 
 #include "lle/User Interface.h"
 
-long EEFn0FCA98(); // 0x4fca98: a post-load check that returns 0
-
 // Starts the sound engine and music conductor from the preferences and creates the sound manager; returns false
 // if the sound engine fails, else true
 bool EEInitializeSounds()
 {
     return ee_gamecpp_startup_sounds();
 }
-
-// Loads every database table in start-up order, creates the user folders (campaigns, saved games, scenarios,
-// users), loads the ambient sounds, sizes the game pools and registers the database shutdown
-void EEInitializeDatabase()
-{
-    ee_gamecpp_startup_database();
-}
-
-// Sets up random maps, game options, physics models and sight rings, creates the mouse, unit classes, UI
-// manager, AI, cheat codes and game timer, and registers their shutdown
-void EEInitializeGameObjects()
-{
-    ee_gamecpp_startup_game_objects();
-}
-
 
 // Cleanup routines defined in other units
 void EEReportLeakingUnits();
@@ -645,16 +454,6 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
 static_assert(IDS_ARIAL == 1 && IDS_TIMES_NEW_ROMAN == 2 && IDS_COURIER_NEW == 3 && IDS_TAHOMA == 4 && IDS_CIVILIZATIONS == 29783 && IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_SOUND == 5865 && IDS_ERROR_CANT_RUN_16EA == 5866 && kSoundHotKeyAlarm == 0x3c2 && kPixelFormatZPrefer16 == 12, "gamecpp startup.rs");
 static_assert(sizeof(GEVideoMode) == 5 * sizeof(unsigned long) && sizeof(GE2DPoint) == 2 * sizeof(float) && sizeof(GERectangle) == sizeof(EeGeRectangle), "gamecpp startup.rs");
 
-// the game's fonts in creation order (startup.rs FONTS, index for index)
-static GEFont** const kFonts[38] = {
-    &gFontArial8, &gFontArial9, &gU531930, &gU531934, &gU531938, &gFontArial16, &gFontArial18, &gFontArial20,
-    &gFontArial24, &gFontArial36, &gFontArial48, &gFontArial72, &gFontArialBold8, &gFontArialBold9, &gFontArialBold10,
-    &gFontArialBold12, &gFontArialBold14, &gFontArialBold16, &gFontTimesNewRoman9, &gFontTimesNewRoman10,
-    &gFontTimesNewRoman12, &gFontTimesNewRoman14, &gFontCourier8, &gFontCourier10, &gFontCourier12, &gFontCourier14,
-    &gFontTahoma8, &gU531994, &gFontTahoma10, &gFontTahoma12, &gFontTahoma14, &gFontTahoma16, &gFontTahoma18,
-    &gFontTahoma20, &gFontTahoma24, &gFontTahoma36, &gFontTahoma48, &gFontTahoma72};
-// the campaign checksums EELoadNetworkSettings reads (string resources 0x32..0x34, 0x37, 0x36)
-static long* const kCampaignChecksums[5] = {&gAOCRomanChecksum, &gAOCPacificChecksum, &gAOCAsianChecksum, &gEEDemoChecksum, &gEELearningChecksum};
 // the start-up directory as a file spec (the engines' initialisations take one)
 static FSFileSpec& EEStartupDirectorySpec()
 {
@@ -662,17 +461,15 @@ static FSFileSpec& EEStartupDirectorySpec()
     theDirectory.SetDirectory(gStartupDirectory);
     return theDirectory;
 }
-// the start-up's user folders (startup.rs FileSpecSetDirStartupSub): data, its campaigns, saved games and scenarios,
-// Users and its default
-static const char* const kStartupFolders[6] = {"data\\", "data\\Campaigns\\", "data\\Saved Games\\", "data\\Scenarios\\", "Users\\", "Users\\default\\"};
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define WSTR (*(UWideString*)p)
 #define USTR (*(UString*)p)
 #define SPEC ((FSFileSpec*)p)
+#define SPECS ((std::vector<FSFileSpec>*)p)
 #define SETTINGS gGamePreferences.mSettings
 #define SCREEN_ID gGamePreferences.mSettings.GetScreenID()
-static GEColor sStartupBlack(0.0f, 0.0f, 0.0f);   // the surfaces' clear colour
+static GEColor sStartupBlack(0.0f, 0.0f, 0.0f);   // the surfaces' clear colour (GESurface::Clear takes a reference)
 
 // The start-up's C++ calls and members (EeGameCpp's start-up section; EEMessage.cpp's EEMessageOp default): one
 // statement each
@@ -692,12 +489,16 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::NewUserInterface: gUserInterface = new EEUserInterface;
         break;
-    case O::SetCampaignChecksum: *kCampaignChecksums[a[0]] = strtoul(WSTR, NULL, 10);
-        break;
     // the graphics: the managers, the window, the render objects, the fonts
     case O::NewTextureManager: gTextureManager = new GETextureManager(gDataPath);
         break;
     case O::NewModelManager: gModelManager = new GEModelManager(gDataPath);
+        break;
+    case O::TexturesSetPath: gTextureManager->SetTexturePath(gDataPath);
+        break;
+    case O::ModelsSetPath: gModelManager->SetModelPath(gDataPath);
+        break;
+    case O::SoundSetPath: gSoundManager->SetPath(gDataPath);
         break;
     case O::PrefScreenID: return SCREEN_ID;
     case O::PrefScreenIDRaw: return SETTINGS.mScreenID;
@@ -822,10 +623,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::ScreenCapture: return gRasterizer->GetScreen(SCREEN_ID)->Capture(gGameWindow, SETTINGS.GetFullScreen());
     case O::ScreenReleaseWindow: gRasterizer->GetScreen(SCREEN_ID)->Release(gGameWindow);
         break;
-    case O::ScreenRestoreOriginalMode: gRasterizer->GetScreen(SCREEN_ID)->SetMode(sOriginalVideoMode);
-        break;
-    case O::SaveOriginalVideoMode: sOriginalVideoMode = gRasterizer->GetScreen(SCREEN_ID)->GetCurrentModeIndex();
-        break;
+    case O::ScreenCurrentModeIndex: return gRasterizer->GetScreen(SCREEN_ID)->GetCurrentModeIndex();
     case O::ScreenDesktopRect: *(GERectangle*)a[0] = gRasterizer->GetScreen(SCREEN_ID)->GetDesktopRectangle();
         break;
     case O::Screen32BitDevice: return gRasterizer->GetScreen(SCREEN_ID)->Get32BitDeviceSupport();
@@ -873,10 +671,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::UStrFromW: USTR = (const char*)*(UWideString*)a[0];
         break;
-    case O::FontCreate: *kFonts[a[0]] = UIFontTable::FindOrCreateFont(USTR, (unsigned long)a[1], 2, (unsigned long)a[2]);
-        break;
-    case O::FontAt: return P64(*kFonts[a[0]]);
-    case O::FontDereference: (*kFonts[a[0]])->Dereference();
+    case O::FontCreate: return P64(UIFontTable::FindOrCreateFont(USTR, (unsigned long)a[0], 2, (unsigned long)a[1]));
+    case O::FontDereference: ((GEFont*)p)->Dereference();
         break;
     case O::PersistChecksum: FSPersistentList::RegisterPersistent(new EEPChecksum(true));
         break;
@@ -911,7 +707,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::UiMiniMapUnloadMedia: gEEGameUI.mMiniMapUnloadMedia();
         break;
-    case O::IconsLoaded: return sIconsLoaded == true;
     case O::RoUnitsLoadMedia: EEROUnits::LoadMedia();
         break;
     // the data paths and folders
@@ -919,8 +714,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::FsPathAddArchive: ((FSPath*)p)->AddArchive(*(FSArchive*)a[0], true);
         break;
     case O::FsPathAddDirectory: ((FSPath*)p)->AddDirectory(*(FSFileSpec*)a[0], true);
-        break;
-    case O::FileSpecSetDirStartupSub: SPEC->SetDirectory(gStartupDirectory + kStartupFolders[a[0]]);
         break;
     case O::FileSpecSetArchiveName: SPEC->SetFile("data" + gU530B88);
         break;
@@ -978,7 +771,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PreloadWaitForQueue: gDataPreLoading->WaitForMessageQueue();
         break;
-    case O::NewPhysics: gPhysics = new EEPhysics(gGraphics, sTimer);
+    case O::NewPhysics: gPhysics = new EEPhysics(gGraphics, (TMTimer*)p);
         break;
     case O::PhysShutdown: ee_gamecpp_startup_quit_thread(gPhysics->mThread, gPhysics->mThreadDone);
         break;
@@ -1194,10 +987,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DeleteCheatCodes: delete std::exchange(gCheatCodes, nullptr);
         break;
-    case O::NewGameTimer: sTimer = new TMTimer(0, 0, true);
-        break;
-    case O::GameTimerPresent: return sTimer != NULL;
-    case O::DeleteGameTimer: delete std::exchange(sTimer, nullptr);
+    case O::NewGameTimer: return P64(new TMTimer(0, 0, true));
+    case O::DeleteGameTimer: delete (TMTimer*)p;
         break;
     case O::ContinentsShutdown: EEAIContinentManager::Shutdown();
         break;
@@ -1205,41 +996,10 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::CpOnAttackPlayer: EECPUnitsOnAttackPlayer((EEComputerPlayer*)p, (long)a[0], a[1] != 0);
         break;
-    default: return EEGraphicsOp(inOp, p, a, f);
-    }
-    return 0;
-}
-
-double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::PrefMaxSounds: return gGamePreferences.mSettings.GetMaxNumberOfSounds();
-    default: return EECore9OpAF(inOp, p, a, f);
-    }
-}
-
-// ------------------------------------------------------------------------- round 9, lane E: this file's bodies' C++
-
-// EEInitializeNetwork's checksum folders under the start-up directory (gamecpp entry.rs NET_EXE..NET_MODELS)
-static const char* const kNetworkFolders[4] = {"", "Data\\Db\\", "Data\\Unit AI Scripts\\", "Data\\Models\\"};
-
-#define SPECS ((std::vector<FSFileSpec>*)p)
-
-int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECommandLine.cpp
-
-// the C++ calls and members of this file's bodies in Rust (gamecpp entry.rs; EeGameCpp's lane E section): one
-// statement each
-int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
+    // the entry's bodies (gamecpp entry.rs)
     case O::EntrySpecFirstFile: return SPEC->GetFirstFile(*(const UString*)a[0], *(FSFileSpec*)a[1]);
     case O::EntrySpecNextFile: return SPEC->GetNextFile(*(FSFileSpec*)a[0]);
-    case O::EntryDecryptExcluded: UEDecryptUString(gU530BE0, USTR);
-        break;
-    case O::EntrySpecFileIsNot: return PlatStrICmp(SPEC->GetFile(), *(const UString*)a[0]) != 0;
+    case O::EntrySpecFileIsNot: return PlatStrICmp(SPEC->GetFile(), (const char*)a[0]) != 0;
     case O::EntrySpecVecNew: return P64(new std::vector<FSFileSpec>);
     case O::EntrySpecVecDelete: delete SPECS;
         break;
@@ -1260,8 +1020,6 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::EntryUStrData: return P64((const char*)USTR);
     case O::EntryUStrSet: USTR = (const char*)a[0];
         break;
-    case O::EntrySetNetworkFolder: SPEC->SetDirectory(gStartupDirectory + kNetworkFolders[a[0]]);
-        break;
     case O::EntryNeInitialize: return NEInitialize(*SPEC);
     case O::EntryRegisterNeMessages: NEMessage::RegisterKnownMessages();
         break;
@@ -1273,10 +1031,6 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::EntryVersionTrim: gGameVersion = gGameVersion.GetIndexedSubstring(gGameVersion.Find("v", 0), gGameVersion.GetLength() - 1);
         break;
     case O::EntryVersionAppend: gGameVersion += (const char*)a[0];
-        break;
-    case O::RunRustInit: EERustInit();
-        break;
-    case O::RunFixtureConfigure: gEETestFixtureConfigure != NULL ? gEETestFixtureConfigure() : (void)0;
         break;
     case O::RunInstanceMutex: return EECreateInstanceMutex();
     // round 12, fork D (gamecpp window_pump.rs)
@@ -1310,11 +1064,10 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RunReleaseCivilizationPath: gCivilizationDataPath->Dereference();
         break;
-    default: return EECommandLineOp(inOp, p, a, f);
+    default: return EEGraphicsOp(inOp, p, a, f);
     }
     return 0;
 }
-
 
 // The deferred COMDATs at the end of the unit (0x14494d..0x14622a: the inline-class deleting dtors and every template
 // instantiation) are compiled without /Og, while every user function is -O1: the file ends with an unmatched
@@ -1322,25 +1075,3 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
 // state in force there; probe build/scratch_exe-core/probes/p2.cpp). Evidence: with it vector<EEUnitSet*>::_Buy
 // 0x54541f goes 17.65 -> exact and nothing else changes.
 #pragma optimize("g", off)
-
-long EEFn0FCA98()
-{
-    return 0;
-}
-
-// ------------------------------------------------------------------------- round 10, lane E: the entry, the start screen, the test drivers (the end of the chain)
-
-// the C++ calls and members of lane E's bodies in Rust (gamecpp; EeGameCpp's round 10 lane E section): one
-// statement each
-int64_t EECore10OpE2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECommandLine.cpp
-
-int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::RunSplashFullScreen: return gGamePreferences.mSettings.GetFullScreen() == true;
-    default: return EECore10OpE2(inOp, p, a, f);
-    }
-}
-
-

@@ -435,10 +435,10 @@ pub fn scenario_text_step(w: &[String], out: &mut Vec<String>) {
     if op == "export" {
         // sm export: ExportText's result and the file's lines
         let spec = x::text_spec(9);
-        let result = if h(O::SpecFOpenWrite, spec, &[]) == 0 { h(O::SmExportText, m, &[spec as i64]) } else { -1 };
+        let result = if x::hs(O::SpecFOpen, spec, "w") == 0 { h(O::SmExportText, m, &[spec as i64]) } else { -1 };
         h(O::SpecClose, spec, &[]);
         out.push(format!("  export {result}"));
-        if h(O::SpecFOpenRead, spec, &[]) == 0 {
+        if x::hs(O::SpecFOpen, spec, "r") == 0 {
             while let Some(mut line) = x::spec_gets(spec, 0x400) {
                 while matches!(line.last(), Some(b'\n' | b'\r')) {
                     line.pop();
@@ -453,13 +453,13 @@ pub fn scenario_text_step(w: &[String], out: &mut Vec<String>) {
     // sm import FILE KIND VALIDATE: ImportTriggerText over file FILE; its result, the errors, the texts
     let index = super::options::c_atol(&w[2]) as c_ulong;
     let spec = x::text_spec(index as i64);
-    if h(O::SpecFOpenWrite, spec, &[]) == 0 {
+    if x::hs(O::SpecFOpen, spec, "w") == 0 {
         x::spec_puts(spec, &text_file_content(index as u64));
         h(O::SpecClose, spec, &[]);
     }
     h(O::SmClearImportErrors, m, &[]);
     let mut result = -1;
-    if h(O::SpecFOpenRead, spec, &[]) == 0 {
+    if x::hs(O::SpecFOpen, spec, "r") == 0 {
         let kind = super::options::c_atol(&w[3]) as c_ulong;
         let validate = super::options::c_atol(&w[4]) != 0;
         result = h(O::SmImportText, m, &[spec as i64, kind as i64, validate as i64]);

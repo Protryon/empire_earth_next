@@ -15,8 +15,6 @@
 #include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp civilization.rs)
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
-extern EECivilizationManager gCivilizationManager;
-extern EEGameOptions& gGameOptions;
 
 // the six key statics' guarded chains 0x52c3eb..0x52c57d (guard byte 0x529a88)
 

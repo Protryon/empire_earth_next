@@ -34,12 +34,10 @@ extern "C" fn model_draw(model: EeGfxModel, opacity: f32) -> i32 {
     hf(O::RrModelDraw, model as P, &[], &[opacity]) as i32
 }
 extern "C" fn camera() -> GeTransformation {
-    let mut t = GeTransformation::IDENTITY;
-    h(O::RrCamera, 0, &[ptr(&mut t)]);
-    t
+    super::ro_views::snapshot().camera
 }
 extern "C" fn camera_yaw() -> f32 {
-    hd(O::RrCameraYaw, 0, &[], &[])
+    super::ro_views::snapshot().camera_yaw
 }
 extern "C" fn screen_point(point: *const Ge3DPoint, x: *mut f32, y: *mut f32) {
     // SAFETY: the caller's point and outputs
@@ -105,7 +103,7 @@ extern "C" fn camera_inverse() -> GeTransformation {
     unsafe { *(hp(O::PkMainCameraInverse, 0, &[]) as *const GeTransformation) }
 }
 extern "C" fn camera_pitch() -> f32 {
-    hd(O::RrCameraPitch, 0, &[], &[])
+    super::ro_views::snapshot().camera_pitch
 }
 extern "C" fn batch_quad(which: u32, quad: *const EeGfxEffectQuad, index: u32) {
     ee_gamecpp_fx_batch_quad(which, quad, index);

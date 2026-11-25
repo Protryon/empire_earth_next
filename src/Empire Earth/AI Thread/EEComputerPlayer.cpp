@@ -44,6 +44,7 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECombatGoals.h"
 #include "rust/sim/cp.h"
+#include "rust/data/ffi.h"   // ee_data_rules_ai_level
 
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
@@ -519,7 +520,7 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_BEHAVIORS:
         return (int64_t)(uintptr_t)gCPBehaviors;
     case EE_CP_PLAYER_AI_LEVEL:
-        return EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty);
+        return ee_data_rules_ai_level(EEGetRules().RustRules(), gWorld.mLobbyOptions.mDifficulty);   // ee_data ffi.rs
     case EE_CP_PLAYER_NEXT_DELETE: EECPNextDeleteState(thePlayer);
         return 0;
     case EE_CP_PLAYER_UNITS_DELETE: EECPUnitsDelete(thePlayer);

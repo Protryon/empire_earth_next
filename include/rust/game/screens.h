@@ -17941,11 +17941,12 @@ long ee_screens_frame_draw(void *background,
                            uint32_t flags,
                            const void *clip);
 
-/// The constructor's members (the record value-initialised, its kind set).
+/// The constructor's members (the record value-initialised): its kind set, then the kind's defaults.
 ///
 /// # Safety
 /// `r` is the action's record.
-void ee_screens_ga_init(EeScreensGaFields *r);
+void ee_screens_ga_init(EeScreensGaFields *r,
+                        uint32_t kind);
 
 /// The destructor's releases.
 ///
@@ -18052,11 +18053,16 @@ bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
                                   int32_t right,
                                   int32_t bottom);
 
-/// The improvement's constructor: the unit (an `EEUnit*`) referenced and held, the action posted.
+/// The improvement's constructor: the improvement, raise (else lower) and in-game (else the scenario editor's)
+/// flags set, the unit (an `EEUnit*`) referenced and held, the action posted.
 ///
 /// # Safety
 /// As `ee_screens_ga_init`.
-void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
+void ee_screens_ga_upgrade_begin(EeScreensGaFields *r,
+                                 void *unit,
+                                 int32_t improvement,
+                                 bool raise,
+                                 bool in_game);
 
 /// `EEUIBGenericBackground`'s constructor's body (`color` the `GEColor*`).
 void ee_screens_gb_construct(size_t bg,
@@ -18656,8 +18662,14 @@ void ee_screens_shell_free(EeScreensShell *s);
 /// `sUnitTypeMode` (the unit tab's host).
 int32_t ee_screens_shell_unit_type_mode();
 
-/// `EEIsValidName` over the name's `count` characters (each one's first byte).
-bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+/// `EEIsValidName`: the UWideString's text and `GetLength()` (its characters); the rule reads each character's first
+/// byte (`operator[]`, ee_base ustring wide.rs `ee_uwstring_at`; the loop was EEARust.cpp's).
+bool ee_screens_valid_name(const char *text,
+                           unsigned long length);
+
+/// EEAJoinOrHostAGameRestartClient: the join's message box callback (a `void (*)(UIForm*)`; the form is unused; was
+/// EEARust.cpp's): the communications object replaced with a freshly started client.
+void ee_screens_join_restart_client(void *_form);
 
 /// `EEUIFMGStatusBox::Fill` (`unit`: the call's unit is set).
 void ee_screens_status_box_fill(void *call, bool unit);

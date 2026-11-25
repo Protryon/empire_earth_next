@@ -22,11 +22,7 @@ constexpr static const int64_t SS_SLOT_NONE = 255;
 /// A storage holds this many times its `EE_GAME_SIZE_*` bytes (ee/EEGlobalStorage.h's static_assert reads it).
 constexpr static const size_t EE_GAME_STORAGE_FACTOR = 2;
 
-constexpr static const size_t EE_GAME_SIZE_gU530BE0 = 24;
-
 constexpr static const size_t EE_GAME_SIZE_gU530BC8 = 32;
-
-constexpr static const size_t EE_GAME_SIZE_gExecutableName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gSavedGameExtension = 24;
 
@@ -101,22 +97,6 @@ constexpr static const size_t EE_GAME_SIZE_gDataPreLoadingThreadName = 24;
 constexpr static const size_t EE_GAME_SIZE_gMousePointerThreadName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gScenarioEditorThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gUserInterfaceThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommSendThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommRecvThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommMainThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommLagLossThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommRecPlayThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gSoundScavengerThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCDAudioThreadName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gMultiplayerString = 24;
 
@@ -299,10 +279,8 @@ enum class EeGameCpp : uint32_t {
   CapStartEvent,
   CapStartPoint,
   CapContagion,
-  CxIsWarpColor,
-  CxSetWarpColor,
-  CxSetBlackColor,
-  ActiveClear,
+  CxIsColor,
+  CxSetColor,
   AeClearEffects,
   AiCollectComputerPlayers,
   AmbientEnable,
@@ -447,7 +425,6 @@ enum class EeGameCpp : uint32_t {
   ServerPause,
   ServerUnpause,
   SetCameraFollowing,
-  SetCollisionDetectionUnit,
   SetDeferComputerRestore,
   SetHerdUnreadValue,
   SetLocalPlayerOut,
@@ -504,7 +481,6 @@ enum class EeGameCpp : uint32_t {
   UiEditorClearSelection,
   UiEditorForm,
   UiInScenarioEditor,
-  UiLoadProgress,
   UiManagerPresent,
   UiPostPauseInformation,
   UiPostUpdateBackground,
@@ -519,11 +495,6 @@ enum class EeGameCpp : uint32_t {
   UnTileNext,
   UnTilePrev,
   UnUnlink,
-  UnbornAt,
-  UnbornClear,
-  UnbornContains,
-  UnbornCount,
-  UnbornPush,
   UnitClassCount,
   UpdateLandContinents,
   UpgradeHitPoints,
@@ -787,7 +758,6 @@ enum class EeGameCpp : uint32_t {
   ArchiveSet,
   DataPathAddArchive,
   DataPathFindFile,
-  SetDataPaths,
   UiSetLoadingText,
   UiRandomSeed,
   FileSpecNew,
@@ -905,7 +875,6 @@ enum class EeGameCpp : uint32_t {
   MainFormSetUiState,
   MainFormUpdateHelp,
   MainGroupReset,
-  MapGroundPoint,
   MouseGetPosition,
   MouseSetPointer,
   MouseSetPosition,
@@ -1013,7 +982,6 @@ enum class EeGameCpp : uint32_t {
   UiPostEvent,
   UiPostLobbyUpdateGameOptions,
   UiPostLobbyUpdatePlayer,
-  UiPostStartLoading,
   UiSetLagStatus,
   UiSetLoadPercent,
   UiShowLoadSaveError,
@@ -1055,7 +1023,6 @@ enum class EeGameCpp : uint32_t {
   RastSetWaterRipple,
   PhysTimerRunning,
   CpOnAttackPlayer,
-  SetCampaignChecksum,
   RegisterShutdownMutex,
   IsInitialize,
   WindowHide,
@@ -1075,7 +1042,6 @@ enum class EeGameCpp : uint32_t {
   NewRoEffects,
   UStrFromW,
   FontCreate,
-  FontAt,
   PersistChecksum,
   PersistGeneric2,
   PersistMap,
@@ -1094,7 +1060,6 @@ enum class EeGameCpp : uint32_t {
   UiUnloadIcons,
   UiMiniMapUnloadMedia,
   NewFsPath,
-  FileSpecSetDirStartupSub,
   FileSpecSetArchiveName,
   DataArchivePresent,
   FsPathAddArchive,
@@ -1152,7 +1117,6 @@ enum class EeGameCpp : uint32_t {
   EffectTextureCount,
   EffectTextureDereference,
   TexturesRemoveAll,
-  ScreenRestoreOriginalMode,
   ScreenReleaseWindow,
   FontDereference,
   DisplayRasterizersClear,
@@ -1188,7 +1152,6 @@ enum class EeGameCpp : uint32_t {
   MouseSetWindowBounds,
   MouseLoad,
   TexturesRefreshAll,
-  IconsLoaded,
   UiReloadIcons,
   MousePointerPostSurface,
   GeInitialize,
@@ -1216,7 +1179,7 @@ enum class EeGameCpp : uint32_t {
   CreateGameWindow,
   WindowSetFixedSize,
   WindowTextInputStart,
-  SaveOriginalVideoMode,
+  ScreenCurrentModeIndex,
   SeInitialize,
   MixerGet,
   MixerUse,
@@ -1292,7 +1255,6 @@ enum class EeGameCpp : uint32_t {
   NewArtificialIntelligence,
   NewCheatCodes,
   NewGameTimer,
-  GameTimerPresent,
   DeleteGameTimer,
   ContinentsShutdown,
   DeleteCheatCodes,
@@ -1340,7 +1302,6 @@ enum class EeGameCpp : uint32_t {
   UiLockForCopy,
   WorldReadLock,
   WorldWriteLock,
-  SceneFlags6668Clear,
   RtsGfxFrameStarting,
   WorldReadUnlock,
   UiUnlockForCopy,
@@ -1411,9 +1372,7 @@ enum class EeGameCpp : uint32_t {
   RoAmbientFrameCountIncrement,
   RoAmbientUpdate,
   RoAmbientUpdateDue,
-  RoAreaEffectTextureReference,
   RoBitmapDereference,
-  RoCameraFollowing,
   RoCivilizationUnchanged,
   RoClassCategory,
   RoClassF170,
@@ -1429,7 +1388,6 @@ enum class EeGameCpp : uint32_t {
   RoComplexInView,
   RoComplexIsFoundation,
   RoComplexLocation,
-  RoCopyViewport,
   RoDoppelAnimation,
   RoDoppelFrame,
   RoDoppelHitPoints,
@@ -1448,9 +1406,6 @@ enum class EeGameCpp : uint32_t {
   RoEditorSelectUnits,
   RoEnvironmentWind,
   RoFindWaypoint,
-  RoFlag529065,
-  RoFlag529066,
-  RoFlag529068,
   RoFogColor,
   RoGeLineDelete,
   RoGeLineDraw,
@@ -1482,13 +1437,11 @@ enum class EeGameCpp : uint32_t {
   RoGobjModel,
   RoGobjShadowTexture,
   RoGobjTexture,
-  RoGridPhase,
   RoGroupContains,
   RoHiddenUnitsMode,
   RoHideAllBackgrounds,
   RoLabelCivilizationName,
   RoLabelPlayerName,
-  RoLetterboxZoom,
   RoLightAttenuation0,
   RoLightAttenuation1,
   RoLightAttenuation2,
@@ -1508,9 +1461,6 @@ enum class EeGameCpp : uint32_t {
   RoLoadTexture,
   RoMainGameDrawText,
   RoMainSelectUnits,
-  RoMainViewportDepthRange,
-  RoMainViewportRearClipping,
-  RoMainViewportSetRearClipping,
   RoMeshSetCliffTextures,
   RoMeshWaterTile,
   RoModelInView,
@@ -1536,12 +1486,7 @@ enum class EeGameCpp : uint32_t {
   RoPostClearRenderObjects,
   RoPostPushRenderObject,
   RoRastAddLight,
-  RoRastLightMesh,
-  RoRastSetMainViewport,
-  RoRastSetViewport,
   RoRastUpdateLight,
-  RoRastViewRectangle,
-  RoRastViewport,
   RoRenderObject,
   RoRenderUnit,
   RoScaffoldingModel,
@@ -1564,7 +1509,6 @@ enum class EeGameCpp : uint32_t {
   RoTileDoppelgangerCount,
   RoTileFirstNode,
   RoTileSeenBy,
-  RoTransformToCamera,
   RoTriggerSelectUnits,
   RoTriggerSelectionIsDrawn,
   RoTurretPartCount,
@@ -1600,9 +1544,6 @@ enum class EeGameCpp : uint32_t {
   RoUnitTurretsResize,
   RoUnitWheelSet,
   RoUnitWheelsResize,
-  RoUpdateVisibleTerrain,
-  RoViewportRearClipping,
-  RoViewportSetCamera,
   RoWaypointLocation,
   RoWheelCount,
   RoWindDirection,
@@ -1723,7 +1664,6 @@ enum class EeGameCpp : uint32_t {
   MpTileSize,
   MpRtsTile,
   MpGetTile,
-  MpGroundPoint,
   MpRtsCreate,
   MpSightEnabled,
   MpTileVecNew,
@@ -1825,10 +1765,6 @@ enum class EeGameCpp : uint32_t {
   MmTerrainMemory,
   MmTerrainBytesPerRow,
   MmUiUpdate,
-  MmLight,
-  MmLightSet,
-  MmLightNormalize,
-  MmViewport,
   MmNumPlayers,
   MmDoppUnit,
   MmDoppPlayer,
@@ -2171,7 +2107,6 @@ enum class EeGameCpp : uint32_t {
   PsUStrNew,
   PsUStrDelete,
   PsSaveTextName,
-  PsDeleteTextTwin,
   PsReportSaved,
   PsReportSaveError,
   PsMessageString,
@@ -2180,7 +2115,6 @@ enum class EeGameCpp : uint32_t {
   PsResourceStringVerify,
   PsGameState,
   PsValidateIntoMessage,
-  PsUiResumeGraphics,
   PsMapApplyVertexColors,
   PsSetMasterVolume,
   PsSetMusicVolume,
@@ -2236,7 +2170,6 @@ enum class EeGameCpp : uint32_t {
   PsSprintfNumber,
   PsSprintfText,
   PsSprintfTwoNumbers,
-  PsLoadProgress,
   PsMasterVolume,
   PsMusicVolume,
   SsLockCt,
@@ -2260,7 +2193,6 @@ enum class EeGameCpp : uint32_t {
   SsOptionsMultiplayer,
   SsLoadType,
   SsGameState,
-  SsDefaultColor,
   SsCitizensDefault,
   SsVersionMatch,
   SsBinaryChecksum,
@@ -2424,7 +2356,6 @@ enum class EeGameCpp : uint32_t {
   SsClientStartThreads,
   SsLowestCts,
   SsDisconnect,
-  SsLocalOut,
   SsFrameProtocol,
   SsStartTimeFromMsg,
   SsPhysicsRandom,
@@ -2546,8 +2477,6 @@ enum class EeGameCpp : uint32_t {
   TkCostSetFactor,
   TkStatsCostScale,
   TkJitFactor,
-  RunRustInit,
-  RunFixtureConfigure,
   RunInstanceMutex,
   RunComInit,
   RunComUninit,
@@ -2561,7 +2490,6 @@ enum class EeGameCpp : uint32_t {
   RunReleaseCivilizationPath,
   EntrySpecFirstFile,
   EntrySpecNextFile,
-  EntryDecryptExcluded,
   EntrySpecFileIsNot,
   EntrySpecVecNew,
   EntrySpecVecDelete,
@@ -2576,7 +2504,6 @@ enum class EeGameCpp : uint32_t {
   EntrySpecFullPath,
   EntryUStrData,
   EntryUStrSet,
-  EntrySetNetworkFolder,
   EntryNeInitialize,
   EntryRegisterNeMessages,
   EntryRegisterEeMessages,
@@ -2616,7 +2543,6 @@ enum class EeGameCpp : uint32_t {
   GsDrawGroundShadows,
   GsShadowModel,
   GsShadowTexture,
-  GsTileWater,
   GtMainViewport,
   GtPost,
   GtQueueDoneCreate,
@@ -2628,14 +2554,8 @@ enum class EeGameCpp : uint32_t {
   GuGroupFirstUnit,
   GuMainUiState,
   GuSelectedGroup,
-  GuSetUiViewport,
   GuTargetHeight,
   GuTargetWidth,
-  GuUiViewportSetRectangle,
-  MoLoadPointer,
-  MoReleaseExtra,
-  MoRtsLoad,
-  MoRtsRelease,
   RcPhysicsPresent,
   RtCameraZoom,
   RtCaptureSetRenderTarget,
@@ -2662,7 +2582,6 @@ enum class EeGameCpp : uint32_t {
   RuBarPresent,
   RuBarSetColors,
   RuBarSetRect,
-  RuCinematic,
   RuCollisionSpheres,
   RuInterpolateFrames,
   RuLineColor,
@@ -2675,7 +2594,6 @@ enum class EeGameCpp : uint32_t {
   RuLinesDelete,
   RuLinesDraw,
   RuLinesNew,
-  RuMainViewRectangle,
   RuMainViewport,
   RuModelDetail,
   RuTextFont12,
@@ -2686,46 +2604,18 @@ enum class EeGameCpp : uint32_t {
   RuWindowWidth,
   SnBrushHighlightShown,
   SnBrushRectangle,
-  SnBrushShown,
-  SnCamera,
   SnCameraPitch,
-  SnCameraYaw,
-  SnCinematic,
-  SnColoredClear,
-  SnColoredCount,
-  SnColoredPush,
   SnEditorPresent,
-  SnIsSpaceMap,
-  SnMap,
   SnMapColoredCount,
   SnMapColoredErase,
   SnMapColoredLock,
-  SnMapColoredOpacity,
   SnMapColoredUnlock,
-  SnMeshOf,
-  SnSetBrushShown,
-  SnSetBrushTiles,
-  SnSetMesh,
-  SnSetSpaceMap,
-  TeCopyGridRuns,
   TeDraw3DLine,
-  TeDrawBrush,
   TeDrawClouds,
-  TeDrawColored,
-  TeDrawGrid,
-  TeDrawGridLines,
-  TeDrawMesh,
   TeGridMode,
-  TeGridRunCount,
-  TeMapIsSpace,
   TeMapSize,
-  TeMeshIsSpace,
   TeMipLevelsToDrop,
-  TeSetAreaTexture,
-  TeSetCircleTexture,
   TeTrilinear,
-  TeUpdateFogOfWar,
-  WaDrawWater,
   DtTerrainFields,
   DtTerrainUse,
   DtTerrainLock,
@@ -3032,7 +2922,6 @@ enum class EeGameCpp : uint32_t {
   DsMove,
   DsTileCount,
   DsSetIntensity,
-  DsGameSpeed,
   DsResetColor,
   DsPathAt,
   DsCenter,
@@ -3138,7 +3027,6 @@ enum class EeGameCpp : uint32_t {
   DkKeyAt,
   DkFrontClipping,
   DkRearClipping,
-  RunSplashFullScreen,
   UsgWorldWriteLock,
   UsgWorldWriteUnlock,
   UsgSetDirectory,
@@ -3332,7 +3220,6 @@ enum class EeGameCpp : uint32_t {
   PzSetOrthographic,
   PzSetShowHidden,
   RrModelDraw,
-  RrCamera,
   RrCreateModel,
   RrCreateSubModel,
   RrDrawSky,
@@ -3343,8 +3230,6 @@ enum class EeGameCpp : uint32_t {
   RrModelCenter,
   RrPhysicalFrame,
   RrCinematic,
-  RrCameraYaw,
-  RrCameraPitch,
   RrModelRadius,
   RrPhysicalScale,
   RrBarDraw,
@@ -3353,7 +3238,6 @@ enum class EeGameCpp : uint32_t {
   OvSetModel,
   OvModelName,
   EpAssignLastOptions,
-  EpCameraMaxZoom,
   EpDefaultSettings,
   EpDeleteSettings,
   EpNarrowCopy,
@@ -3370,7 +3254,6 @@ enum class EeGameCpp : uint32_t {
   EpWideGet,
   EpWideLength,
   EpWideSet,
-  EpWindowSizeDefaulted,
   EoAssign,
   EoDifficulties,
   EoDifficultyLevel,
@@ -3675,6 +3558,13 @@ enum class EeGameCpp : uint32_t {
   C12PlayerEnemy,
   C13bGhostLockFree,
   C13bGhostAt,
+  TexturesSetPath,
+  ModelsSetPath,
+  SoundSetPath,
+  /// `&map->mColoredRectangles[a0]` (an RTSColoredRectangle)
+  SnMapColoredAt,
+  /// `*a0 = gWorld.mMap->mU1955DC.data()` -> its size (the grid runs, four longs each)
+  TeMapGridRuns,
 };
 
 /// A `U2DRectangle<long>` as the C++ stores it: bottom, left, right, top.
@@ -4196,6 +4086,9 @@ void ee_gamecpp_startup_load_media();
 /// EEUnloadGameMedia: the same released.
 void ee_gamecpp_startup_unload_media();
 
+/// EESetDataPaths: the texture, model and sound managers pointed at the data search path.
+void ee_gamecpp_startup_set_data_paths();
+
 /// EEShowSinglePlayerScreen: the data search path (the game's Data folder, behind a Data\data.ssa when one is
 /// present) and the civilization path made, replacing the previous ones.
 void ee_gamecpp_startup_data_paths();
@@ -4400,6 +4293,10 @@ long ee_gamecpp_world_pause(bool pause);
 
 /// EEWorld::ActivateUnit: queued for activation unless NULL, without an id, a path point or already queued.
 void ee_gamecpp_world_activate(void *cx);
+
+/// EEWorld::UpdateActiveUnits: the queued unit activations and deactivations applied to the list of units stepped
+/// every tick.
+void ee_gamecpp_world_update_active();
 
 /// EEWorld::DeactivateUnit: queued for deactivation unless a path point or already queued; a unit without an id
 /// waits by pointer (as the original's queue held it).
@@ -4797,6 +4694,11 @@ void ee_gamecpp_fx_place_impact_decal(void *cx,
 /// The unit class's blood-stain decal under the unit if ambient effects and blood are on (moved forward along the
 /// heading for giraffes and horses).
 void ee_gamecpp_fx_place_track_decal(void *cx);
+
+/// `EEMap::GetGroundPoint(point, out)` for the C++ (`mesh` the map's `mTerrainMesh.GetRust()`; `out` may be `point`).
+void ee_gamecpp_map_ground_point(const void *mesh,
+                                 const EeGe3DPoint *point,
+                                 EeGe3DPoint *out);
 
 /// EEMap::~EEMap: the region tables, tiles and visibility words freed, the terrain textures unloaded.
 void ee_gamecpp_map_destroy(void *map);
@@ -5431,10 +5333,12 @@ void ee_gamecpp_sn_take();
 /// opacity erases the element; the others are kept in that order) and the editor's brush highlight.
 void ee_gamecpp_sn_take_terrain();
 
-/// EEMouse::Load: the 14 extra pointer images, then the engine's pointers; the first load error.
-long ee_gamecpp_mo_load(void *mouse, void *screen);
+/// EEMouse::Load: the 14 extra pointer images into the frame's slots 10..23 (RTSMouse::LoadPointer), then the
+/// engine's pointers (RTSMouse::Load); the first load error.
+long ee_gamecpp_mo_load(void *mouse,
+                        void *screen);
 
-/// EEMouse::Release: the extra pointer images, then the engine's; the engine's result.
+/// EEMouse::Release: the extra pointer images (the frame's op 5), then the engine's (RTSMouse::Release: op 6); 0.
 long ee_gamecpp_mo_release(void *mouse);
 
 /// EEEffect::Move (the weather storms'): every tile one step towards its place around the new centre, the storm

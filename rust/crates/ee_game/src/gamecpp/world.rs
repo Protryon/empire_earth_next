@@ -226,7 +226,7 @@ fn remove_from_teams(w: P, id: c_ulong) {
 }
 
 fn progress(step: usize) {
-    hf(O::UiLoadProgress, 0, &[], &[PROGRESS[step - 16]]);
+    crate::screens::ui_objects::ui_set_load_progress(PROGRESS[step - 16]);
 }
 
 fn load_foundations(pl: P) {
@@ -416,9 +416,9 @@ pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
     h(O::MiniMapSetNull, 0, &[]);
     h(O::PathReset, 0, &[]);
     h(O::SetLocalPlayerOut, 0, &[0]);
-    h(O::ActiveClear, 0, &[]);
+    active_clear();
     ee_sim::units::patrol_group::ee_units_pg_reset_ids();
-    h(O::SetCollisionDetectionUnit, 0, &[2000]);
+    super::globals::set!(gCollisionDetectionUnit, 2000);
     h(O::WDeleteCalamityHelper, w, &[]);
     h(O::WSetCalamityHelperRaw, w, &[0]);
     h(O::WDeleteInfluence, w, &[]);
@@ -708,7 +708,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     }
     h(O::WStatisticsReset, w, &[]);
     h(O::StReadLock, st, &[]);
-    hf(O::UiLoadProgress, 0, &[], &[0.5]);
+    crate::screens::ui_objects::ui_set_load_progress(0.5);
     h(O::WCopyGameOptions, w, &[]);
     h(O::SetSightUpdates, 0, &[0]);
     h(O::UiSetRandomSeed, 0, &[*sm::<c_long>(O::StRandomSeed, st) as i64]);
@@ -1130,6 +1130,38 @@ pub extern "C" fn ee_gamecpp_world_activate(cx: *mut c_void) {
     }
 }
 
+/// The deactivations queued before the unit had an id (`EEWorld::DeactivateUnit`), each holding a reference, in
+/// call order (was EEWorld.cpp's `sUnbornDeactivations`).
+static UNBORN: std::sync::Mutex<Vec<P>> = std::sync::Mutex::new(Vec::new());
+
+/// The active lists' reference changes (ee_sim app active.rs), applied to the unit of the id as each is made.
+fn active_refs(id: u32, delta: i32) {
+    let cx = hp(O::PwComplexOfSavedId, 0, &[i64::from(id)]);
+    for _ in 0..delta.max(0) {
+        h(O::RefUnitReference, cx, &[]);
+    }
+    for _ in delta.min(0)..0 {
+        h(O::RefUnitDereference, cx, &[]);
+    }
+}
+
+/// The active lists emptied with their references; the waiting deactivations' references go after the queues'.
+fn active_clear() {
+    ee_sim::app::active::Lists::world().clear(&mut active_refs, &mut || {
+        for cx in std::mem::take(&mut *UNBORN.lock().unwrap_or_else(|e| e.into_inner())) {
+            h(O::RefUnitDereference, cx, &[]);
+        }
+    });
+}
+
+/// EEWorld::UpdateActiveUnits: the queued unit activations and deactivations applied to the list of units stepped
+/// every tick.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_world_update_active() {
+    ee_gamecpp_world_queue_born();
+    ee_sim::app::active::Lists::world().update(&mut active_refs);
+}
+
 /// EEWorld::DeactivateUnit: queued for deactivation unless a path point or already queued; a unit without an id
 /// waits by pointer (as the original's queue held it).
 #[no_mangle]
@@ -1138,11 +1170,12 @@ pub extern "C" fn ee_gamecpp_world_deactivate(cx: *mut c_void) {
     if ucf(unit_class(cx)).mUnitType == UNIT_TYPE_PATH_POINT {
         return;
     }
-    if h(O::UnbornContains, cx, &[]) != 0 {
+    let mut unborn = UNBORN.lock().unwrap_or_else(|e| e.into_inner());
+    if unborn.contains(&cx) {
         return;
     }
     if rts(cx).mUnitID as u32 == u32::MAX {
-        h(O::UnbornPush, cx, &[]);
+        unborn.push(cx);
         h(O::RefUnitReference, cx, &[]);
         return;
     }
@@ -1155,12 +1188,7 @@ pub extern "C" fn ee_gamecpp_world_deactivate(cx: *mut c_void) {
 /// still without one is dropped.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_world_queue_born() {
-    let n = h(O::UnbornCount, 0, &[]);
-    if n == 0 {
-        return;
-    }
-    let waiting: Vec<P> = (0..n).map(|i| hp(O::UnbornAt, 0, &[i])).collect();
-    h(O::UnbornClear, 0, &[]);
+    let waiting = std::mem::take(&mut *UNBORN.lock().unwrap_or_else(|e| e.into_inner()));
     for cx in waiting {
         if rts(cx).mUnitID as u32 == u32::MAX
             || !ee_sim::app::active_ffi::ee_app_active_deactivate(rts(cx).mUnitID as u32)
@@ -1175,7 +1203,7 @@ pub extern "C" fn ee_gamecpp_world_queue_born() {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_world_rebuild_active(w: *mut c_void) {
     let _ = w;
-    h(O::ActiveClear, 0, &[]);
+    active_clear();
     let mut u = hp(O::WFirstUnit, hp(O::WorldAddr, 0, &[]), &[]);
     while u != 0 {
         let cx = complex(u);

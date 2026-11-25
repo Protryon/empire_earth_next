@@ -43,11 +43,6 @@ pub enum EePreloadCpp {
     DeleteOptions,
     NewError,
     DeleteError,
-    LoadProgress,
-    TextLoadingGlobalMedia,
-    TextPopulatingWorld,
-    TextLoadingComplete,
-    TextWaitingForPlayers,
     LoadType,
     SetLoadingSavedGame,
     GameStateCreate,
@@ -57,7 +52,6 @@ pub enum EePreloadCpp {
     WorldWriteUnlock,
     WorldClear,
     StartGame,
-    ResumeGraphics,
     IsMultiplayer,
     IsClient,
     NewLoadedResponseClient,
@@ -83,6 +77,13 @@ pub enum EePreloadCpp {
 }
 
 use EePreloadCpp as O;
+
+/// The load's texts (ee/EEStringIDs.h): IDS_LOADING_GLOBAL_MEDIA, IDS_POPULATING_WORLD, IDS_LOADING_COMPLETE,
+/// IDS_WAITING_FOR_PLAYERS.
+const IDS_LOADING_GLOBAL_MEDIA: c_long = 30291;
+const IDS_POPULATING_WORLD: c_long = 30294;
+const IDS_LOADING_COMPLETE: c_long = 30296;
+const IDS_WAITING_FOR_PLAYERS: c_long = 30606;
 
 /// cbindgen:ignore
 #[cfg(not(test))]
@@ -201,8 +202,8 @@ fn load_game(p: P, skip_game_media: bool, clear_world: bool) {
     let error = h0(O::NewError);
     let priority = h(O::ThreadPriority, p, &[]);
     h(O::SetThreadPriority, p, &[PRIORITY_ABOVE_NORMAL]);
-    hf(O::LoadProgress, 0, &[], &[0.0]);
-    h0(O::TextLoadingGlobalMedia);
+    crate::screens::ui_objects::ui_set_load_progress(0.0);
+    crate::screens::ui_objects::ui_set_loading_text(IDS_LOADING_GLOBAL_MEDIA);
     if !skip_game_media {
         crate::gamecpp::startup::ee_gamecpp_startup_load_media();
     }
@@ -223,10 +224,10 @@ fn load_game(p: P, skip_game_media: bool, clear_world: bool) {
             crate::physics::ee_physics_clear_server_messages(unsafe { globals::gPhysics });
             h0(O::WorldWriteUnlock);
         }
-        hf(O::LoadProgress, 0, &[], &[0.6]);
-        h0(O::TextPopulatingWorld);
+        crate::screens::ui_objects::ui_set_load_progress(0.6);
+        crate::screens::ui_objects::ui_set_loading_text(IDS_POPULATING_WORLD);
         h0(O::StartGame);
-        h0(O::ResumeGraphics);
+        crate::screens::ui_objects::ui_resume_graphics();
     }
     h0(O::GameStateReset);
     if saved {
@@ -234,11 +235,11 @@ fn load_game(p: P, skip_game_media: bool, clear_world: bool) {
     }
     if created {
         if h0(O::IsMultiplayer) == 0 {
-            h0(O::TextLoadingComplete);
+            crate::screens::ui_objects::ui_set_loading_text(IDS_LOADING_COMPLETE);
         } else {
-            h0(O::TextWaitingForPlayers);
+            crate::screens::ui_objects::ui_set_loading_text(IDS_WAITING_FOR_PLAYERS);
         }
-        hf(O::LoadProgress, 0, &[], &[1.0]);
+        crate::screens::ui_objects::ui_set_load_progress(1.0);
         let response =
             if h0(O::IsClient) != 0 { h0(O::NewLoadedResponseClient) } else { h0(O::NewLoadedResponseServer) };
         h(O::ProcessLocalInput, response as P, &[]);
@@ -405,6 +406,15 @@ pub extern "C" fn ee_preload_wait_for_queue(p: *mut c_void) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_load_texts_are_the_resource_strings() {
+        let text = |id: c_long| ee_base::util::strings::resource_string(id as u16).unwrap();
+        assert!(text(IDS_LOADING_GLOBAL_MEDIA).starts_with("Loading Global Media"));
+        assert!(text(IDS_POPULATING_WORLD).starts_with("Populating World"));
+        assert!(text(IDS_LOADING_COMPLETE).starts_with("Loading Complete"));
+        assert!(text(IDS_WAITING_FOR_PLAYERS).starts_with("Waiting for players"));
+    }
 
     /// One test: the state is the process's (tests run in parallel).
     #[test]

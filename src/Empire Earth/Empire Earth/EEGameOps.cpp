@@ -58,20 +58,8 @@
 #include "lle/FSMemoryFile.h"
 #include "rust/game/gamecpp.h"
 
-// a memory file's position (GetPosition's out value)
-static long ee_gamecpp_mem_position(FSMemoryFile* inFile)
-{
-    long thePosition = 0;
-    inFile->GetPosition(thePosition);
-    return thePosition;
-}
-
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
-
-// The warped unit's tint, blinking while it is away (EECCTimeWarp's two .bss colours 0x4e5fb8/0x4e5fc8)
-static GEColor sWarpColor(0.484375f, 0.0f, 0.734375f);
-static GEColor sBlackColor(0.0f, 0.0f, 0.0f);
 
 // the world bodies' cases (EEWorld.cpp)
 int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
@@ -322,10 +310,8 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::CapContagion: EECalamityCaptureContagion((EEContagionHelper*)p, f[0]);   // CONT (TEST ONLY)
         break;
-    case O::CxIsWarpColor: return CX->mColor == sWarpColor;
-    case O::CxSetWarpColor: CX->SetColor(sWarpColor);
-        break;
-    case O::CxSetBlackColor: CX->SetColor(sBlackColor);
+    case O::CxIsColor: return CX->mColor == GEColor(f[0], f[1], f[2]);
+    case O::CxSetColor: CX->SetColor(GEColor(f[0], f[1], f[2]));
         break;
     // the calamity objects (calamity_objects.rs)
     case O::CalNew: return P64(new EECalamity(KL, (EEUnit*)a[0]));
@@ -481,7 +467,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     // the calamity capture's (calamity_capture.rs, TEST ONLY)
     case O::SoundObjectIndex: return std::find(gSoundObjects.begin(), gSoundObjects.end(), (EESoundObject*)p) - gSoundObjects.begin();
     case O::CalamityManager: return P64(EECalamityManager::GetInstance());
-    case O::MemFilePosition: return ee_gamecpp_mem_position((FSMemoryFile*)p);
+    case O::MemFilePosition: return ((FSMemoryFile*)p)->GetPosition(*(long*)a[0]);
     case O::MemFileData: return P64(((FSMemoryFile*)p)->GetData());
     case O::MemFileNewDefault: return P64(new FSMemoryFile);
     case O::SaveMinorVersion: return kSaveGameMinorVersion;

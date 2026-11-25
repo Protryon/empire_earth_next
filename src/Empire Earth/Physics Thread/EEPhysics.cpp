@@ -93,18 +93,15 @@
 #include "ee/EEGameLog.h"
 #include "rust/sim/ai.h"   // ee_ai_name_copy
 #include "rust/game/physics.h"
-#include "rust/game/gamecpp.h"   // EeGameCpp (EECore11OpE: the end of the chain)
 #include "rust/sim/app.h"
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-UString gPhysicsDataKey("EEPhysics Data");
 
 extern UString gCampaignUser;              // 0x531cd0 (defined at the end of this unit; provisional name)
 unsigned long EEGetCivTimerLimit();         // 0x27ffae (cdecl: 300000; the civ timer limits, EEUIFMainGame.cpp's range)
 unsigned long EEGetCivTimerSecondWarning();  // 0x27ffba (270000) (provisional names)
 unsigned long EEGetCivTimerFirstWarning();  // 0x27ffb4 (240000)
 extern unsigned long& gContinentManagerChecksum;  // 0x530d10 (the continent manager's checksum; provisional name)
-extern unsigned long gCollisionPeriod;      // 0x4c237c (.data = 1 after gCollisionDetectionUnit; provisional name)
 
 // Creates the physics simulation: makes its save-game lock, resets its clocks and starts the thread's main loop
 EEPhysics::EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer)
@@ -213,7 +210,11 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ThreadPost: return PH->mThread != NULL ? PH->mThread->Post((unsigned long)a[0], NULL, NULL, true) : 0;
     case O::RtsHandleMessage: PH->RTSPhysics::HandleMessage((unsigned long)a[0], (void*)a[1], (void*)a[2]);
         break;
-    case O::UpdateUnits: return PH->UpdateUnits();
+    case O::UnitOfId: return P64((EEComplexUnit*)EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0]));
+    case O::UnitStep: CX->Step();
+        break;
+    case O::PlayerUpdate: PL->UpdatePlayer();
+        break;
     case O::FixupRun: (*(std::function<void()>*)p)();
         break;
     case O::FixupDelete: delete (std::function<void()>*)p;
@@ -311,8 +312,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::NumPlayers: return gWorld.mNumPlayers;
     case O::Player: return P64(gWorld.mPlayers[a[0]]);
     case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
-    case O::UpdateActiveUnits: gWorld.UpdateActiveUnits();
-        break;
     case O::InCinematic: return gWorld.mInCinematic;
     case O::ScenarioResult: return gWorld.mScenarioManager->mGameResult;
     case O::SetScenarioResult: gWorld.mScenarioManager->mGameResult = (long)a[0];
@@ -399,7 +398,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::UnitId: return ((EEUnit*)p)->mUnitID;
     // the other systems
-    case O::FreeCamera: return gFreeCamera == true;
     case O::PathManagerUpdate: gPathManager.Update();
         break;
     case O::PathManagerDump: gPathManager.DumpOutOfSynch(FP(0));
@@ -484,46 +482,7 @@ extern "C" double ee_physcpp_f(EePhysCpp inOp, uintptr_t p, const int64_t* a, co
 #undef FP
 #undef SERVER
 
-// Sets the collision period (the active units spread over gCollisionDetectionUnit ticks, at least 1), updates
-// every player, then steps each active unit (last first); returns the unit count
-// New (R5b.4 leaf 6): the loop is Rust over the stepped units' list (ee_units tick.rs update_units: the period, the
-// players' updates and each unit's Step from the last to the first, host calls); the list equals the deque in order
-// (USCK checks it), and while the capture runs each step checks the list's id against the deque's
-static void TickSetCollisionPeriod(void* inContext, uint32_t inValue)
-{
-    gCollisionPeriod = inValue;
-}
-
-static void TickUpdatePlayer(void* inContext, uint32_t inIndex)
-{
-    if (gWorld.mPlayers[inIndex] != NULL)
-        gWorld.mPlayers[inIndex]->UpdatePlayer();
-}
-
-static void TickStep(void* inContext, uint32_t inIndex, uint32_t inID)
-{
-    EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);   // the stepped list's inIndex-th
-    gPhysicsSteppingUnit = theUnit;   // TEST ONLY: named by EE-SIM's random-draw trace
-    theUnit->Step();
-    ee_units_note_update_commit(inID);   // TEST ONLY (USST kind 12)
-}
-
-unsigned long EEPhysics::UpdateUnits()
-{
-    EeUnitsTickHost theHost;
-    theHost.ctx = NULL;
-    theHost.num_players = (uint32_t)gWorld.mNumPlayers;
-    theHost.detection_unit = (uint32_t)gCollisionDetectionUnit;
-    theHost.set_collision_period = TickSetCollisionPeriod;
-    theHost.update_player = TickUpdatePlayer;
-    theHost.step = TickStep;
-    unsigned long theCount = ee_units_update_units(&theHost);
-    gPhysicsSteppingUnit = NULL;
-    // TEST ONLY: the step leaves' records (USTM, USST; ee_sim units/notes.rs)
-    ee_units_note_step_commit(gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0);
-    return theCount;
-}
-
+// (UpdateUnits, the unit loop's host: ee_game physics.rs update_units)
 // (gPhysicsSteppingUnit and gPhysicsAfterTickHook, TEST ONLY, are EEGlobals.cpp's)
 
 // the unit's last global (0x531cd0, "default" 0x4b5210): its init chain follows the template COMDATs
@@ -536,27 +495,4 @@ void EEEnvironmentManager::Tick(unsigned long inTime)
 {
     if (this->mNextStep <= inTime && this->mIsEnabled == true)
         this->Step(inTime);
-}
-
-// ------------------------------------------------------------------------- round 11, lane E; round 12, fork B: the world lane's leftovers (the end of the chain)
-
-// the C++ calls and members of fork B's bodies in Rust (gamecpp; EeGameCpp's round 12 fork B section): one
-// statement each
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    // round 13, fork B: the world's dtor (gamecpp world.rs ee_gamecpp_world_destroy; p the world)
-    case O::C13bGhostLockFree: TSScheduler::DestroyCriticalSection(((EEWorld*)p)->mGhostUnitsLock);
-        break;
-    case O::C13bGhostAt: return P64(((EEWorld*)p)->mGhostUnits[(size_t)a[0]]);
-    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
-    }
-    return 0;
-}
-
-double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
-    return 0.0;
 }

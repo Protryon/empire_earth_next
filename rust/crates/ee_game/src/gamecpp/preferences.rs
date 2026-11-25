@@ -21,7 +21,7 @@ use crate::app::settings::{
 use crate::app::settings_ffi::PlatConfig;
 
 use super::global_objects as gobj;
-use super::{h, hf, hp, pa, Owned, O, P};
+use super::{h, hp, pa, Owned, O, P};
 
 /// The resources' and the system's Korean language id.
 const KOREAN: i64 = 0x412;
@@ -127,12 +127,6 @@ fn write_settings(s: P, game_options: bool) -> c_long {
     settings::write(&mut PlatConfig, &mut Members { s, d: s }, records(s), game_options) as c_long
 }
 
-fn config_int(block: &CStr, key: &CStr) -> Option<i32> {
-    let mut v = 0;
-    // SAFETY: NUL-ended strings and a live out value
-    (unsafe { ee_base::plat_core::config::PlatConfigGetInt(block.as_ptr(), key.as_ptr(), &mut v) } != 0).then_some(v)
-}
-
 /// `IsNotKorean`: neither the game resources' language nor the system's is Korean.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_is_not_korean() -> bool {
@@ -162,7 +156,7 @@ pub extern "C" fn ee_gamecpp_prefs_texture_resolution(resolution: c_long) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_apply_port(settings: *mut c_void) {
     let s = *fields(settings as P);
-    hf(O::EpCameraMaxZoom, 0, &[], &[s.mMaximumZoomOut as f32 / 100.0f32]);
+    crate::gamecpp::globals::set!(gCameraMaxZoom, s.mMaximumZoomOut as f32 / 100.0f32);
     sys::render_percent(s.mRenderResolution as _);
     sys::frame_limit(s.mFrameRateLimit);
     sys::texture_filtering(s.mTextureFiltering as _);
@@ -178,8 +172,6 @@ pub extern "C" fn ee_gamecpp_prefs_apply_port(settings: *mut c_void) {
 pub extern "C" fn ee_gamecpp_prefs_load(prefs: *mut c_void) -> c_long {
     let s = prefs as P + gobj::PREFS_SETTINGS;
     let defaults = hp(O::EpDefaultSettings, 0, &[]);
-    // port: no saved game size: a full screen game takes the display's size (EEInitializeVideo)
-    h(O::EpWindowSizeDefaulted, 0, &[config_int(c"display.resolution", c"width").is_none() as i64]);
     read_settings(s, false);
     let korean = !ee_gamecpp_prefs_is_not_korean();
     let d = *fields(defaults);

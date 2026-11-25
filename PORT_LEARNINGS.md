@@ -41112,3 +41112,87 @@ Hand-written Rust replaced by crates where every golden stays as it was: 3,943 R
 | logic lines | 19,021 | 17,654 | -1,367 |
 | classes | 855 | 837 | -18 |
 | the lane's headers (list.py logic) | 4,647 | 3,265 | -1,382 |
+
+## The game core lane, round 14: EEFormation.cpp's bodies, the world's active lists and EEPhysics::UpdateUnits' tick host, EE-SIM's host table, the fixture's cases and comms, the rules overrides, the entry's tables and statics, EERust.cpp, the render snapshot, the private draws and viewports, the mouse loads and UI posts in Rust; the lead and three forks in parallel worktrees (ee_sim formations units.rs; ee_game physics.rs, gamecpp startup.rs, entry.rs, ro_views.rs, rast.rs; fixture comms.rs; ee_data rules ffi; branch rust-core14, 2026-11-24)
+
+The brief: round 13's leftovers (the tick host, the cases on C++-owned objects, the cases behind private exports,
+the small ones), score C++ logic lines, target -1,000. Mid-round the coordinator made **total C++ lines and
+compiled C/C++ files the main measure** (tools/port_metrics.py), logic lines second.
+
+**Score** (port_metrics.py; the lane's own commits, the origin/rust merges taken out):
+
+| | cpp_lines | cpp_files | logic | shim | classes |
+|---|---|---|---|---|---|
+| batch 1 (40914da0d -> dff08c824) | -208 | 0 | -130 | -16 | 0 |
+| forks A, B, C and the lead (98ac700d7 -> 5f2af7b47) | -940 | -2 | -318 | -226 | -2 |
+| **the round** | **-1,148** | **-2** | **-448** | **-242** | **-2** |
+
+The whole tree at the tip 9c8926211 (origin/rust batch 25 merged): 108,786 C++ lines, 352 files, 16,770 logic
+lines, 808 classes; origin/rust 04ccdbcf3 has 109,934 / 354 / 17,218 / 810. The logic target was missed again
+(the cases left in the lane's files are mostly one statement each on a C++-owned object: zero in that metric).
+
+| Commit | What |
+|---|---|
+| 1a4865340 (lead) | EEFormation.cpp's Place, Arrange, the capture record and sweep in ee_sim formations units.rs (Create and the two vector-resizing wrappers stay) |
+| dff08c824 (lead) | the world's unborn and active lists (world.rs; EEWorld.cpp's statics gone), EEPhysics::UpdateUnits' tick host (physics.rs UnitTick over ee_sim `update_ordered_units`), gCollisionPeriod and gCollisionDetectionUnit in globals.rs, the EECore11OpE/EF link gone |
+| fork A (2bd089669 .. 118af3ffb) | EE-SIM's host table in sim_host.rs (EeSimDriverHost gone); the --set overrides and their problems straight to ee_data::rules; EEDifficultyAILevel and EERules::Epoch's clamp as ee_data exports; nine fixture cases, gEETestComms/EETestCommsRefresh (fixture comms.rs, same names and layout), the fault install and the lobby work called from Rust; the editor driver's ghost clear and open modes |
+| fork B (0ffb6b161 .. f64af8268) | Empire Earth.cpp's fonts, campaign checksums, folders, timer, start-up video mode and gU530BE0's decryption in startup.rs/entry.rs; 20 unused wrappers and 10 unused strings gone; EECore9OpE+EECore10OpE -> EEStartupOp, EECore10OpE2 -> EECommandLineOp, EEStartupOpF -> EEGameStateOpF; EERust.cpp deleted; EEIsValidName's loop, the restart client, EEARust's and EEAUpgradeImprovement's constructors in screens |
+| fork C (c6c60a60f .. e93f45e4f) | EERenderSnapshot (class, header, .cpp) as ro_views.rs's Snapshot; `ee_render::dx7::draw_ffi` pub: the terrain, water, highlight and grid draws, the light mesh, the viewport setters from Rust; gUIViewport and four render globals Rust's, eight more plain globals in globals.rs; EEMap::GetGroundPoint, DeleteSaveTextTwin, the mouse loads, the rmap scripts' text read in Rust; LoadProgress, ResumeGraphics, PostStartLoading, SetLoadingText through screens wrappers; about 75 variants gone |
+| 841c0d6fb, 9be6663dc, 5f2af7b47 (lead) | clippy and rustfmt over the round; EECore10OpE3(F)'s statistics cases in EEWorldOp(F) |
+
+- **Forks and the turn limit**: the three forks each stopped at their 200-turn limit mid-work (fork C with nothing
+  committed after 3,600 tool-seconds); a SendMessage ("commit, gate, hand back, no new work") resumed each with
+  its context and all three finished. Tell a fork to commit after every building step, and size its scope to
+  well under 200 turns: a gate chain alone is 20-40 turns of waiting.
+- **One FIFO lock for four worktrees** (build/c14/locked.sh) kept the machine usable, but a fork's whole gate chain
+  holds it for an hour: the lead's one-minute clippy check waited 75 minutes behind it. Queue short checks
+  separately from gate chains, or give the lead its own lane.
+- **A symbol-count test is a merge hazard**: globals.rs's `NAMES.len()` assert was changed by all three forks
+  (85 + 3, 85 + 8, and the lead's batch 1's +2 that had left it stale): the merged count is the base plus every
+  fork's additions (96), not any fork's number.
+- **Unused after a fork's removal**: fork B removed the only caller of preferences.rs's `config_int`; only the
+  merged tree's clippy saw it. Run clippy after every fork merge, not only per fork.
+- **The tests' scenario tree**: scenario_check's default data is the worktree's own build/open_data/tree, which a
+  worktree that never built one lacks; pass `--data <main checkout>/build/open_data/tree`.
+- **A civbuilder flake**: `sim_editor.py --civbuilder` failed twice at start-up with the rmap's "at least one
+  generator" verify (EERandomMap.cpp 1652: no `.rmv` script read) while the capture runs and the harness gates ran
+  beside it, then passed twice alone, and the plain editor script, the oracle and the scenario runs (the same
+  generator list) never failed. Fork C's change reads the scripts with Rust's fread over PlatFOpen's stream; if it
+  recurs, look there first.
+- **Gates** (on 9c8926211, origin/rust batch 25 04ccdbcf3 in): both builds 0/0 (EE-AOC 393 inputs, EE-SIM 394) and
+  the test profile 0/0 (393), headers current (355); the oracle seeds 2-7 identical; the 12 capture profiles PASS
+  (oracle 598 digests, late 598, space 590, calamity 623, units 510, effects 18, missile 66, app 38, scenario 113,
+  groups 6, placement 4, transport 185); saveload plain 18/18 identical and the matrix (`--settings all --seeds 2-3
+  --at 1000,1900 --expect`) `saveload expect: PASS`; scenario_check 27/27 (`--data` the main checkout's tree);
+  sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062) on the reruns (see the flake above); `eedata.py
+  check` and `cppgate` PASS; the Rust gate's tests and clippy PASS, its rustfmt step failed on ee_data ffi.rs (fork
+  A's new exports), fixed by the next commit (`cargo fmt --all -- --check` clean); through slot.py: `random-game
+  --box-select --orders --seed 7` RESULT PASS (BOX SELECT PASS; ORDERS PASS: gather, repair, repair-queued, move),
+  the editor RESULT PASS; `bash tools/gates.sh` `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 11324`
+  units [4, 32, 36] alive_computers [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2784
+  joiner=2785`, GATES PASS.
+- **Behaviour changes** (none to the simulation): the world lock and the fixture's lock step do nothing without a
+  world lock (the C++ crashed); the fixture's stderr is fwrite+fflush; the POSIX fault handler is installed after
+  the setenv calls; the save and scenario extensions are constants; the campaign checksums are parsed by a Rust
+  strtoul with the C library's rules; the panic line goes through Rust's stderr; the timer and the start-up video
+  mode are Rust atomics; MemFilePosition returns GetPosition's status (Rust reads the out value); the snapshot is
+  a Rust Mutex (draws copy out first); gUIViewport is constructed at first use; the UI wrappers do nothing without
+  a registered UI object; the rmap scripts are read through PlatFOpen("r") from Rust.
+- **What only a live game exercises**: the tour: the fonts' creation and release, the video mode restore, the data
+  paths, the camera's field of view and maximum zoom, every fork C draw (terrain, water, highlights, grid lines,
+  the UI viewport, the light and transform), the mouse pointer loads, the loading progress and texts, the
+  ResumeGraphics posts, the mini map's light, the fixture's input, state, clock and exit; the editor: the brush
+  highlight; the LAN game: PostStartLoading, gLocalPlayerOut, the default colours, EEIsValidName, the restart
+  client, the lobby's UserEvent; the legacy gates: gEETestComms through presentation_bridge.c.
+- **Edits outside the lane**: ee_render dx7/mod.rs (`draw_ffi` pub); ee_game rts/mouse.rs (`ffi` pub(crate)),
+  screens/mod.rs (`post_if_ui` re-export), screens ui_objects.rs (four wrappers), single_player_ffi.rs,
+  game_actions_ffi.rs; ee_sim units/tick.rs (`update_ordered_units`), formations/mod.rs, rmap object.rs; ee_data
+  ffi.rs (two exports); AI Thread/EEComputerPlayer.cpp (the AI level's call), Persistent/EEPWorldHelper.cpp (its
+  default link), Tech Tree/EETechCapture.cpp and Calamities/EEContagionManager.cpp (the chains' ends);
+  include/ee EEFormation.h, EEPhysics.h, EERules.h, EmpireEarth.h, EERenderLists.h, EEROTerrain.h (removed
+  declarations), EERenderSnapshot.h (deleted); tools/units.py (EERust.cpp, EERenderSnapshot.cpp).
+- **Left** (game-leaves.md and world.md "Next"): EEGlobals.cpp's 21 reference aliases (EEWorld and EEGameState
+  themselves must move first); EESim.cpp's POSIX fault handler, RequestSaveNew, the fixture's EEAction subclass and
+  LassoHook; EESimEditor's action and event classes; the session frame and the other C++-owned cases of
+  EEPWorldHelper, EEMessage and EEServer; EERandomMap's LoadProgress; MiniMapRedraw's body; the player's host
+  prologues (not reached); the civ builder cases (player/tech lane).

@@ -2,7 +2,7 @@
 //! checksum of a directory's files (EEGetFileChecksum), the network's start and the game version's checksum suffix
 //! (EEInitializeNetwork), and the command line's commands (EEParseCommandLine: hostgame, joinbyip, update_saved_games,
 //! loadgame, balancer; the client and the main menu without one). Each C++ call or member is a case of Empire
-//! Earth.cpp's `EECore9OpE` ([`super::EeGameCpp`]); the C++ functions forward here.
+//! Earth.cpp's `EEStartupOp` ([`super::EeGameCpp`]); the C++ functions forward here.
 //!
 //! The checksum runs at every start (EE-SIM too: the oracle starts the network); the command line's no-command path
 //! at every game's start (the tour, gates.sh); its commands only from a command line no gate passes.
@@ -20,11 +20,40 @@ use super::{h, hp, pa, ptr, Owned, O, P};
 const ENTRY_OK: i64 = 0;
 /// The checksum's read size.
 const ENTRY_CHUNK: usize = 0x800;
-/// EEInitializeNetwork's checksum directories under the start-up directory (Empire Earth.cpp `kNetworkFolders`).
-const NET_EXE: i64 = 0;
-const NET_DB: i64 = 1;
-const NET_TAI: i64 = 2;
-const NET_MODELS: i64 = 3;
+/// EEInitializeNetwork's checksum directories under the start-up directory (were Empire Earth.cpp's
+/// `kNetworkFolders`).
+const NET_EXE: &CStr = c"";
+const NET_DB: &CStr = c"Data\\Db\\";
+const NET_TAI: &CStr = c"Data\\Unit AI Scripts\\";
+const NET_MODELS: &CStr = c"Data\\Models\\";
+/// The file name the checksum skips, encrypted (was Empire Earth.cpp's `gU530BE0`, 0x530be0).
+const ENTRY_EXCLUDED: &[u8] = b"B7B226DDB7B226DDBCD9344624C93DE6C4A90DD4B7B20375";
+
+/// `spec->SetDirectory(gStartupDirectory + folder)`.
+fn set_network_folder(spec: P, folder: &CStr) {
+    h(O::UsgSetDirectory, spec, &[pa(folder.as_ptr() as P)]);
+}
+
+/// `UEDecryptUString(gU530BE0, name)`: the skipped file's name (the text up to its first NUL, as the UString sink
+/// kept it).
+pub fn entry_excluded_name() -> CString {
+    unsafe extern "C" fn sink(context: *mut std::ffi::c_void, bytes: *const u8, length: usize) {
+        // SAFETY: the decryption's output, valid for the call; the context is the Vec below
+        unsafe { (*(context as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(bytes, length)) };
+    }
+    let mut text = Vec::new();
+    // SAFETY: a constant input; the sink appends to `text`
+    unsafe {
+        ee_base::codec::ffi::ee_ue_decrypt_ustring(
+            ENTRY_EXCLUDED.as_ptr(),
+            ENTRY_EXCLUDED.len(),
+            sink,
+            &mut text as *mut Vec<u8> as *mut std::ffi::c_void,
+        )
+    };
+    let end = text.iter().position(|&b| b == 0).unwrap_or(text.len());
+    CString::new(&text[..end]).unwrap_or_default()
+}
 /// The join-or-host action's kinds (EEAJoinOrHostAGame).
 const ENTRY_HOST: i64 = 0;
 const ENTRY_JOIN_BY_IP: i64 = 2;
@@ -57,11 +86,10 @@ pub unsafe extern "C" fn ee_gamecpp_entry_file_checksum(
     if h(O::EntrySpecFirstFile, directory, &[pa(pattern as P), pa(file.0)]) != ENTRY_OK {
         return checksum;
     }
-    let excluded = Owned::new(O::UStrNew, O::UStrFree);
-    h(O::EntryDecryptExcluded, excluded.0, &[]);
+    let excluded = entry_excluded_name();
     let files = Owned::new(O::EntrySpecVecNew, O::EntrySpecVecDelete);
     loop {
-        if h(O::EntrySpecFileIsNot, file.0, &[pa(excluded.0)]) != 0 {
+        if h(O::EntrySpecFileIsNot, file.0, &[pa(excluded.as_ptr() as P)]) != 0 {
             h(O::EntrySpecVecPush, files.0, &[pa(file.0)]);
         }
         if h(O::EntrySpecNextFile, directory, &[pa(file.0)]) != ENTRY_OK {
@@ -180,8 +208,8 @@ pub fn entry_version_suffix(checksum: u32) -> String {
 }
 
 /// The checksum of the start-up directory's files of a pattern (one EEGetFileChecksum).
-fn folder_checksum(file: P, folder: i64, pattern: &[u8]) -> u32 {
-    h(O::EntrySetNetworkFolder, file, &[folder]);
+fn folder_checksum(file: P, folder: &CStr, pattern: &[u8]) -> u32 {
+    set_network_folder(file, folder);
     let pattern = cstr(pattern);
     let text = Owned::new(O::UStrNew, O::UStrFree);
     h(O::EntryUStrSet, text.0, &[pa(pattern.as_ptr() as P)]);
@@ -196,7 +224,7 @@ fn folder_checksum(file: P, folder: i64, pattern: &[u8]) -> u32 {
 pub extern "C" fn ee_gamecpp_entry_initialize_network() {
     let file = Owned::new(O::FileSpecNew, O::FileSpecDelete);
     let directory = Owned::new(O::FileSpecNew, O::FileSpecDelete);
-    h(O::EntrySetNetworkFolder, directory.0, &[NET_EXE]);
+    set_network_folder(directory.0, NET_EXE);
     let result = h(O::EntryNeInitialize, directory.0, &[]);
     h(O::Verify, 0, &[(result == ENTRY_OK) as i64, 1578]);
     h(O::EntryRegisterNeMessages, 0, &[]);
@@ -455,6 +483,28 @@ const ENTRY_S_FALSE: i64 = 1;
 /// EEEmptyShutdown: the network's shutdown routine does nothing.
 extern "C" fn empty_shutdown(_shutdown: bool) {}
 
+/// A Rust panic's line (was EERust.cpp's EERustPanicLine): a panic aborts the process and a GUI exe has no stderr,
+/// so the line goes to the debugger's output (the harness logs it), stderr, and the game log when a game is running.
+///
+/// # Safety
+/// `line` is a terminated C string.
+unsafe extern "C" fn panic_line(line: *const c_char) {
+    use std::io::Write;
+    // SAFETY: the caller's contract
+    let mut text = unsafe { CStr::from_ptr(line) }.to_bytes().to_vec();
+    text.push(b'\n');
+    let text = CString::new(text).unwrap_or_default();
+    // SAFETY: a terminated string of this call
+    unsafe { ee_base::plat_core::message::PlatDebugOutput(text.as_ptr()) };
+    let mut stderr = std::io::stderr();
+    let _ = stderr.write_all(text.as_bytes());
+    let _ = stderr.flush();
+    if crate::game_log::ee_game_log_on() {
+        // SAFETY: as above
+        unsafe { crate::game_log::ee_game_log_line(text.as_ptr()) };
+    }
+}
+
 /// EERun: the game's run from its entry point (WinMain, main): the Rust library's start, the fixture's switches, the
 /// single instance, the window system, the engine's initialisation, the splash screen around the start-up, the menus,
 /// the threads, the command line and the user interface's run, then the shutdown. 1 when the window system cannot
@@ -464,8 +514,15 @@ extern "C" fn empty_shutdown(_shutdown: bool) {}
 /// `command_line` is a terminated C string; `instance` the module's.
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, command_line: *const c_char) -> i32 {
-    h(O::RunRustInit, 0, &[]); // first: a panic anywhere after this reaches a log
-    h(O::RunFixtureConfigure, 0, &[]); // TEST ONLY: nothing unless EE_TEST_UI is set
+    // SAFETY: panic_line is callable from any thread for the process' life
+    unsafe { crate::ee_rust_init(panic_line) }; // first: a panic anywhere after this reaches a log
+                                                // TEST ONLY: the fixture's configure step, which EETestFixture.cpp registers at static initialization (nothing
+                                                // unless EE_TEST_UI is set)
+    let configure = crate::gamecpp::globals::get!(gEETestFixtureConfigure);
+    if !configure.is_null() {
+        // SAFETY: a `void (*)()` the C++ stored
+        unsafe { core::mem::transmute::<*mut core::ffi::c_void, extern "C" fn()>(configure)() };
+    }
     let mut splash = super::start_screen::StartScreen::new(instance as usize);
     let sim = ee_base::plat_core::sim::gPlatSimMode.get() != 0;
     // the simulation: any number of copies at once
@@ -543,6 +600,18 @@ mod tests {
     fn the_byte_sum_wraps_as_an_unsigned_long() {
         assert_eq!(entry_byte_sum(0, &[1, 2, 255]), 258);
         assert_eq!(entry_byte_sum(c_ulong::MAX, &[2]), 1);
+    }
+
+    #[test]
+    fn the_excluded_name_and_the_network_folders() {
+        // the original's encrypted constant decrypts to a file name: text without a NUL, no path
+        let name = entry_excluded_name();
+        assert!(!name.as_bytes().is_empty());
+        assert!(!name.as_bytes().contains(&b'\\'));
+        assert_eq!(NET_EXE.to_bytes(), b"");
+        assert_eq!(NET_DB.to_bytes(), b"Data\\Db\\");
+        assert_eq!(NET_TAI.to_bytes(), b"Data\\Unit AI Scripts\\");
+        assert_eq!(NET_MODELS.to_bytes(), b"Data\\Models\\");
     }
 
     #[test]

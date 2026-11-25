@@ -30,9 +30,11 @@ The lane's state. Each round rewrites this file to the current state; the rounds
 - Round 12 (game core lane, fork B): the media tables' loads and the sounds' and songs' media uses (`preload_media.rs`), EEDataPreLoading's ctor and dtor, the graphic object's and sound's dtors; EEPhysics' Load, Save, ctor body, the loaded game's fixup lists, the campaign win, the shift-key test and the JIT chat line (`physics.rs`); the generator list (rmap `object.rs`: EERMGenerator and sRandomMapGenerators gone); EECampaignFormManager::Get; EEPlayerStatistics' clears and the result chat line (`player_stats.rs`, `player_rest.rs`).
 - Round 13 (game core lane, fork B): EEWorld's destructor (`world.rs` `ee_gamecpp_world_destroy`, the C++'s deletion order), 27 forwarding members and 18 world host cases; the physics host's 15 pass-through cases (the tick host calls the Rust directly; &gWorld asked of the host once); 15 more of the world, physics, campaign, random map and map hosts. Fork C: the pre-loading thread's ten forwarding cases.
 
+- Round 14 (game core lane, lead): EEPhysics::UpdateUnits' tick host (`physics.rs` `UnitTick` over ee_sim `units::tick::update_ordered_units`; gCollisionPeriod and gCollisionDetectionUnit are `globals.rs`'s); EEWorld.cpp's unborn and active lists (`world.rs`); EEFormation.cpp's bodies (ee_sim formations `units.rs`). Fork C: the rmap scripts' text read (rmap `object.rs` `read_text`; EERMReadText gone).
+
 **Stays C++**
-- Physics Thread: EEPhysics.cpp's structure (UpdateUnits' tick host, the after-load fixups, Load/Save's file host;
-  99 logic lines), the host switch heads and data definitions (~50 in the other four files).
+- Physics Thread: EEPhysics.cpp's structure (the after-load fixups, Load/Save's file host, the host switch heads;
+  23 logic lines after round 14), the host switch heads and data definitions (~50 in the other four files).
 - Campaign: the class layouts, the ctors, the host switch (one-statement cases), the
   scenario list's stripped push (`EECampaignPushStripped`) and the built-in campaign tables.
 - Data Pre-Loading Thread: the classes' object lifetimes (the table loads' remaining record readers
@@ -54,4 +56,4 @@ random graphic (kind-only effects: drawn only); the physics' autosave, OOS dump,
 carrier deck walk, the ATC reroute; the player's SetGameResult chat line, the event list's alert sounds and mini-map
 ping, DumpMedia, ReloadTechTree (the editor's load thread) and the 0.260-era saves' town matching.
 
-**Next**: EEPhysics.cpp's tick host (UpdateUnits: a real port, once the units lane's moves settle); the player's host prologues and EEPlayer.h's declarations (not reached in round 13); MiniMapRedraw and the terrain mesh cases; the media objects' remaining record readers (EEDbReadRecords' lambdas).
+**Next**: the player's host prologues and EEPlayer.h's declarations (not reached in round 13); MiniMapRedraw (EEMiniMap::Redraw's body) and the terrain mesh cases; EERandomMap's LoadProgress (ee_sim cannot call ee_game); the media objects' remaining record readers (EEDbReadRecords' lambdas).

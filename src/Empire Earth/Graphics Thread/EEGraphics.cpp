@@ -21,12 +21,12 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
+#include "ee/EEUnit.h"
 #include "ee/EEUIManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMouse.h"
 #include "ee/RTSMousePointer.h"
 #include "ee/EEGraphics.h"
-#include "ee/EERenderSnapshot.h"
 #include "rust/render/gfx.h"
 // the two file-scope objects of the chains at 0x50972b and 0x509738 (a bool; three deques and a bool): nothing read
 // them, so the port has neither
@@ -85,8 +85,6 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
         break;
-    case O::SceneFlags6668Clear: gB529066 = false, gB529068 = false;
-        break;
     case O::MouseBeginFrame: gMouse->BeginFrame();
         break;
     case O::MouseLoadScreenIndex: gMouse->Load(gRasterizer->GetScreen(gScreenIndex));
@@ -143,11 +141,11 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     return 0;
 }
 
-// ------------------------------------------------------------------------- round 10, lane A: the Graphics Thread (EEGraphics.cpp, the EERO* units, EEMouse, EERenderSnapshot, EEUnitPicker)
+// ------------------------------------------------------------------------- round 10, lane A: the Graphics Thread (EEGraphics.cpp, the EERO* units, EEMouse, EEUnitPicker)
 
 // the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 10 lane A section): one
 // statement each
-double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameUtilities.cpp
 double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -155,6 +153,8 @@ double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::RtCameraZoom: return gWorld.mCameraControl.mZoom;
     case O::RtViewportYClipping: return gViewport.GetYClippingPlane();
     case O::RuTextHeight: return RU_TEXT->GetTextExtent().GetHeight();
-    default: return EERoViewsOpF(inOp, p, a, f);
+    case O::GsClassScale: return gUnitClassTable[a[0]]->GetScale();
+    case O::SnCameraPitch: return gWorld.GetCameraPitch();
+    default: return EECore10OpDF(inOp, p, a, f);
     }
 }

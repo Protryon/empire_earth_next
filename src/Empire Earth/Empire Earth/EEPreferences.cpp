@@ -31,7 +31,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 // 0x529b90 (init chain 0x13242b: ctor 0x132435, atexit 0x13243f, guarded dtor 0x13244b)
 EEGameSettings EEGamePreferences::sDefaultSettings;
 
-bool gGameWindowSizeDefaulted;   // port: no saved game window size (EEPreferences Load)
 
 // port: the texture packs (docs/DATA_FORMATS.md "Texture packs"; ee_game gamecpp preferences.rs)
 void EESetTextureResolution(long inResolution) { ee_gamecpp_prefs_texture_resolution(inResolution); }

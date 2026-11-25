@@ -191,26 +191,6 @@ void EEWorld::ApplyShareBonus()
 }
 
 
-// port: the deactivations queued before the unit had an id (EEWorld::DeactivateUnit), Reference()d, in call order
-static std::vector<EEComplexUnit*> sUnbornDeactivations;
-
-static void EEDropUnbornDeactivations()
-{
-    for (size_t i = 0; i < sUnbornDeactivations.size(); i++)
-        sUnbornDeactivations[i]->Dereference();
-    sUnbornDeactivations.clear();
-}
-
-// the active lists' reference changes (ee_sim app active.rs), applied as each is made
-static void EEActiveRefs(uint32_t inID, int32_t inDelta)
-{
-    EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);
-    for (; inDelta > 0; inDelta--)
-        theUnit->Reference();
-    for (; inDelta < 0; inDelta++)
-        theUnit->Dereference();
-}
-
 // Adds the world's state and the game's random seed to a sync checksum
 void EEWorld::GetChecksum(ESChecksum& ioChecksum)
 {
@@ -280,8 +260,7 @@ EEStatisticsRecord::EEStatisticsRecord()
 // Applies the queued unit activations and deactivations to the list of units updated every tick
 void EEWorld::UpdateActiveUnits()
 {
-    ee_gamecpp_world_queue_born();   // QueueBornDeactivations
-    ee_app_active_update(EEActiveRefs);
+    ee_gamecpp_world_update_active();   // (gamecpp world.rs: QueueBornDeactivations, then the lists' update)
 }
 
 // Undoes the wonder power 4 population share bonus ApplyShareBonus gave or took for every player
@@ -362,6 +341,9 @@ EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define W ((EEWorld*)p)
+#define REC (W->mStatistics.mRecords[(size_t)a[0]])
+#define PL0 (W->mPlayers[a[0]])
+#define PL1 (W->mPlayers[a[1]])
 #define ST ((EEGameState*)p)
 #define PL ((EEPlayer*)p)
 #define UN ((EEUnit*)p)
@@ -451,6 +433,9 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::WGhostUnlock: W->mGhostUnitsLock->Leave();
         break;
     case O::WGhostCount: return (int64_t)W->mGhostUnits.size();
+    case O::C13bGhostLockFree: TSScheduler::DestroyCriticalSection(W->mGhostUnitsLock);   // the world's dtor (world.rs ee_gamecpp_world_destroy)
+        break;
+    case O::C13bGhostAt: return P64(W->mGhostUnits[(size_t)a[0]]);
     case O::WGhostBack: return P64(W->mGhostUnits.back());
     case O::WGhostPop: W->mGhostUnits.pop_back();
         break;
@@ -686,15 +671,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::LogAfterGone: fprintf(stderr, "EE-UNITLIST: placement after a unit no longer in the list (id %08lx), from the head\n", ((RTSUnit*)p)->mUnitID);
         break;
-    case O::UnbornContains: return std::find(sUnbornDeactivations.begin(), sUnbornDeactivations.end(), CX) != sUnbornDeactivations.end();
-    case O::UnbornPush: sUnbornDeactivations.push_back(CX);
-        break;
-    case O::UnbornCount: return (int64_t)sUnbornDeactivations.size();
-    case O::UnbornAt: return P64(sUnbornDeactivations[a[0]]);
-    case O::UnbornClear: sUnbornDeactivations.clear();
-        break;
-    case O::ActiveClear: ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);   // the lists and their references (ee_sim app active.rs)
-        break;
     // the map, the managers and the globals
     case O::MapSize: return ((EEMap*)p)->mSize;
     case O::MapPlayerCount: return ((EEMap*)p)->mU19561C;
@@ -741,8 +717,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::UiSetRandomSeed: gUserInterface->mRandomSeed = (long)a[0];
         break;
-    case O::UiLoadProgress: gUserInterface->SetLoadProgress(f[0]);
-        break;
     case O::DisplayWeatherEffects: return gDisplayWeatherEffects;
     case O::EnvSetEnabled: ((EEEnvironmentManager*)p)->SetEnabled(a[0] != 0);
         break;
@@ -764,8 +738,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::NewCalamityHelper: return P64(static_cast<FSPersistent*>(new EEPCalamityHelper));
     case O::SetLocalPlayerOut: gLocalPlayerOut = a[0] != 0;
-        break;
-    case O::SetCollisionDetectionUnit: gCollisionDetectionUnit = (unsigned long)a[0];
         break;
     case O::SetSightUpdates: gSightUpdatesEnabled = a[0] != 0;
         break;
@@ -886,40 +858,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::DumpLeakTitle: fprintf(FILE_SPEC, "REFERENCE COUNTED MEMORY LEAKS\n\n");   // the reference-leak report: its title (nothing tracks references)
         break;
-    default: return EEGameStateOp(inOp, p, a, f);   // the game state bodies' (EEGameState.cpp)
-    }
-    return 0;
-}
-
-double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::VariantFactor: return EEGameVariant::GetGameVariant(W->mGameOptions.GetVariant())->GetFactor((long)a[0]);
-    case O::ViewportHalfWidth: return gViewport.GetHalfWidth();
-    case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
-    case O::ViewportXCenter: return gViewport.GetXCenter();
-    case O::ViewportYCenter: return gViewport.GetYCenter();
-    default: return EEGameStateOpF(inOp, p, a, f);
-    }
-    return 0.0;
-}
-
-// ------------------------------------------------------------------------- round 10, lane E: world_stats.rs's C++
-
-#define W ((EEWorld*)p)
-#define REC (W->mStatistics.mRecords[(size_t)a[0]])
-#define PL0 (W->mPlayers[a[0]])
-#define PL1 (W->mPlayers[a[1]])
-
-// RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world): one statement each; the end of the
-// chain
-
-int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
-int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
+    // RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world)
     case O::WsStart: W->mStatistics.mStartTime = W->mStartTime;
         break;
     case O::WsTiles: W->mStatistics.mTileCount = W->mMap->GetTileCount();
@@ -984,18 +923,22 @@ int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::WsRecPlayTime: REC.mStatistics.Set(0x18, (long)a[1]);
         break;
-    default: return EECore11OpB(inOp, p, a, f);
+    default: return EEGameStateOp(inOp, p, a, f);   // the game state bodies' (EEGameState.cpp)
     }
     return 0;
 }
 
-double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
-double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
+    case O::VariantFactor: return EEGameVariant::GetGameVariant(W->mGameOptions.GetVariant())->GetFactor((long)a[0]);
+    case O::ViewportHalfWidth: return gViewport.GetHalfWidth();
+    case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
+    case O::ViewportXCenter: return gViewport.GetXCenter();
+    case O::ViewportYCenter: return gViewport.GetYCenter();
     case O::WsRandom: return gPhysics->GetRandom(f[0], f[1]);
-    default: return EECore11OpBF(inOp, p, a, f);
+    default: return EEGameStateOpF(inOp, p, a, f);
     }
     return 0.0;
 }

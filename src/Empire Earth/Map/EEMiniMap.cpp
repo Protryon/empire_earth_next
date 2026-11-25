@@ -42,10 +42,7 @@
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern bool& gOrthographicView;              // 0x5308e2 (orthographic camera; EEGraphics)
 
-// chain at 0x51e36e (wrapper)
-//   object 0x9297d0  ctor (GEVector's three fldz) 0x11e378
-// The terrain light (EEMiniMap's ctor points it at (0, 1.5, 1), normalized) (provisional name)
-GEVector gMiniMapLight;
+// the terrain light gMiniMapLight (0x9297d0; EEMiniMap's ctor points it at (0, 1.5, 1), normalized): gamecpp minimap.rs
 
 // SetMap's transformations, Refresh's view trapezoid and ProjectToGround are ee_gfx minimap.rs (RUST_PLAN R4.4; its
 // constants, .rdata 0x441d38..0x441d60, are there); the GE value classes pass as their #[repr(C)] mirrors. The

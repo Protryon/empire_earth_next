@@ -34,7 +34,9 @@ enum class EePhysCpp : uint32_t {
   /// `mThread != NULL ? mThread->Post(a0, NULL, NULL, true) : 0`
   ThreadPost,
   RtsHandleMessage,
-  UpdateUnits,
+  UnitOfId,
+  UnitStep,
+  PlayerUpdate,
   /// `(*(std::function<void()>*)p)()` (a loaded game's fixup: EEAfterLoad, EEAfterLoadLast)
   FixupRun,
   /// `delete (std::function<void()>*)p`
@@ -105,7 +107,6 @@ enum class EePhysCpp : uint32_t {
   NumPlayers,
   Player,
   CurrentPlayer,
-  UpdateActiveUnits,
   InCinematic,
   ScenarioResult,
   SetScenarioResult,
@@ -174,7 +175,6 @@ enum class EePhysCpp : uint32_t {
   UnitReference,
   UnitDereference,
   UnitId,
-  FreeCamera,
   PathManagerUpdate,
   PathManagerDump,
   AreaEffectsTick,
