@@ -27,38 +27,6 @@ static intptr_t FrontMbs(const std::wstring& inName, intptr_t inSink)
 }
 
 
-static UIEvent* FrontNewEvent(EeWonFrontEvent inEvent)
-{
-    typedef EeWonFrontEvent E;
-    switch (inEvent) {
-    case E::AgActivateForm: return new EEUIEWNAGActivateForm;
-    case E::AgBack: return new EEUIEWNAGBack;
-    case E::AgCheckPassword: return new EEUIEWNAGCheckPassword;
-    case E::AgClickGameFilter: return new EEUIEWNAGClickGameFilter;
-    case E::AgCloseForm: return new EEUIEWNAGCloseForm;
-    case E::AgDeactivateForm: return new EEUIEWNAGDeactivateForm;
-    case E::AgDoubleclickUser: return new EEUIEWNAGDoubleclickUser;
-    case E::AgHostOrJoinGame: return new EEUIEWNAGHostOrJoinGame;
-    case E::AgSendChat: return new EEUIEWNAGSendChat;
-    case E::AgToggleHostScreen: return new EEUIEWNAGToggleHostScreen;
-    case E::AgToggleJoinScreen: return new EEUIEWNAGToggleJoinScreen;
-    case E::AgUpdateForm: return new EEUIEWNAGUpdateForm;
-    case E::ArActivateForm: return new EEUIEWNARActivateForm;
-    case E::ArBack: return new EEUIEWNARBack;
-    case E::ArClickUpdateAccount: return new EEUIEWNARClickUpdateAccount;
-    case E::ArDeactivateForm: return new EEUIEWNARDeactivateForm;
-    case E::ArDoubleClickRoom: return new EEUIEWNARDoubleClickRoom;
-    case E::ArJoinRoom: return new EEUIEWNARJoinRoom;
-    case E::ArUpdateForm: return new EEUIEWNARUpdateForm;
-    case E::MuaCancel: return new EEUIEWNMUACancel;
-    case E::MuaOpenScreen: return new EEUIEWNMUAOpenScreen;
-    case E::MuaSubmit: return new EEUIEWNMUASubmit;
-    case E::SsCancel: return new EEUIEWNSSCancel;
-    case E::SsOk: return new EEUIEWNSSOk;
-    default: return NULL;
-    }
-}
-
 // the list lines' numbers and flags (EeWonFrontField)
 static intptr_t FrontGamesField(const EEUICWNGBLine& inLine, intptr_t inField)
 {
@@ -152,9 +120,8 @@ static intptr_t WonFrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t
     case Op::TextLength: return (intptr_t)UWideString((const char*)a).GetLength();
     case Op::IsValidName: return EEIsValidName(UWideString((const char*)a));
     // events
-    case Op::EventNew: return (intptr_t)FrontNewEvent((EeWonFrontEvent)a);
+    case Op::EventNew: return (intptr_t)static_cast<UIEvent*>(new EEUIEWonNetEvent((EeWonFrontCall)a));
     case Op::EventDeref: ((UIEvent*)a)->Dereference(); return 0;
-    case Op::SetTrigger: EEUIEWNSetTriggerEvent((UIEvent*)a, (UIControl*)b, (unsigned long)c); return 0;
     case Op::ControlSetTriggerEvent: ((UIControl*)a)->SetTriggerEvent((unsigned long)b, (UIEvent*)c); return 0;
     // controls
     case Op::ControlSetDisplayMode: ((UIControl*)a)->SetDisplayMode(b != 0 ? kDisplayModeShown : kDisplayModeHidden); return 0;
@@ -186,23 +153,23 @@ static intptr_t WonFrontHost(EeWonFrontOp inOp, intptr_t a, intptr_t b, intptr_t
     case Op::PollIsRunning: return ((TMPoll*)a)->GetIsRunning();
     case Op::PollStart: ((TMPoll*)a)->Start(); return 0;
     case Op::PollStop: ((TMPoll*)a)->Stop(); return 0;
-    // gWonNet
+    // gWonNet (R6 WON lobby and network round 37: the Rust object's calls, where EEWonNet's forwards were)
     case Op::WonNetExists: return gWonNet != NULL;
-    case Op::GameListPort: return gWonNet->GetGameListPort();
-    case Op::RefreshGameList: gWonNet->RefreshGameList((UIControl*)a); return 0;
-    case Op::UpdateGameList: gWonNet->UpdateGameList(); return 0;
+    case Op::GameListPort: return (unsigned short)ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::GameListPort, 0, 0, 0);
+    case Op::RefreshGameList: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::RefreshGameList, a, 0, 0); return 0;
+    case Op::UpdateGameList: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::UpdateGameList, 0, 0, 0); return 0;
     case Op::LeaveRoom: gWonNet->LeaveRoom(); return 0;
-    case Op::HostGame: gWonNet->HostGame((const char*)a, (const char*)b); return 0;
-    case Op::JoinGame: gWonNet->JoinGame((const char*)a, (const char*)b); return 0;
-    case Op::SendChat: gWonNet->SendChat(UWideString((const char*)a)); return 0;
+    case Op::HostGame: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::HostGame, a, b, 0); return 0;
+    case Op::JoinGame: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::JoinGame, a, b, 0); return 0;
+    case Op::SendChat: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::SendChat, a, 0, 0); return 0;
     case Op::UserName: return FrontBytes(WONAPI::WStringToString(WonNetUser()->GetName()).c_str(), c);
     case Op::RoomName: return FrontBytes(WONAPI::WStringToString(gWonNet->GetRoomName()).c_str(), c);
-    case Op::RoomListChanged: return gWonNet->GetRoomListChanged();
-    case Op::UpdateRoomList: gWonNet->UpdateRoomList(dynamic_cast<R*>((UIControl*)a), dynamic_cast<UITextLabel*>((UIControl*)b), dynamic_cast<UITextLabel*>((UIControl*)c)); return 0;
-    case Op::JoinRoom: gWonNet->JoinRoom((const char*)a, NULL); return 0;
-    case Op::OpenUpdateAccount: gWonNet->OpenUpdateAccount(); return 0;
-    case Op::ConnectToLobby: gWonNet->ConnectToLobby(); return 0;
-    case Op::UpdateAccount: gWonNet->UpdateAccount(UWideString((const char*)a), UWideString((const char*)b), c != 0); return 0;
+    case Op::RoomListChanged: return ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::RoomListChanged, 0, 0, 0) != 0;
+    case Op::UpdateRoomList: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::UpdateRoomList, (intptr_t)dynamic_cast<R*>((UIControl*)a), (intptr_t)dynamic_cast<UITextLabel*>((UIControl*)b), (intptr_t)dynamic_cast<UITextLabel*>((UIControl*)c)); return 0;
+    case Op::JoinRoom: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::JoinRoom, a, 0, 0); return 0;
+    case Op::OpenUpdateAccount: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::OpenUpdateAccount, 0, 0, 0); return 0;
+    case Op::ConnectToLobby: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::ConnectToLobby, 0, 0, 0); return 0;
+    case Op::UpdateAccount: ee_won_wonnet_call(gWonNet->mRust, EeWonNetCall::UpdateAccount, a, b, c != 0); return 0;
     case Op::ServerCount: return (intptr_t)WonNetServers().size();
     case Op::ServerDisplayNameSize: return (intptr_t)WonNetServers().DisplayName(a).size();
     case Op::ServerDisplayName: return FrontMbs(WonNetServers().DisplayName(a), c);

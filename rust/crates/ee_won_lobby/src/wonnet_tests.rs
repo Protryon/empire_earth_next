@@ -21,6 +21,11 @@ unsafe extern "C" fn host(_cpp: *mut c_void, op: EeWonNetOp, a: isize, b: isize,
         Op::OpNum => m.group as isize,
         Op::FormById => 100 + a,
         Op::CurrentForm => m.current_form,
+        Op::NewWonAction => {
+            // the shell takes the action
+            drop(Box::from_raw(a as *mut EeWonAction));
+            0
+        }
         Op::TextLoad => {
             let t = format!("T{}", a);
             ee_won_wonnet_sink(b as *mut c_void, t.as_ptr() as *const c_void, t.len(), 1);
@@ -173,7 +178,7 @@ fn the_game_list_filters_its_rows() {
         assert!(!n.games_changed.get());
     });
     // the checkboxes answer 0: only the open game without a password shows between the markers
-    let rows = ops.iter().filter(|o| o.0 == Op::NewWonGame).count();
+    let rows = ops.iter().filter(|o| o.0 == Op::NewWonAction).count();
     assert_eq!(rows, 3);
     assert_eq!(ops.iter().filter(|o| o.0 == Op::PostAction).count(), 3);
 }
