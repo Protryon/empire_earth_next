@@ -65,12 +65,7 @@ public:
     void GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)   // +0x08 (the base: told to the group)
         { ee_units_goal_point(EE_UNITS_GOAL_DESTINATION, this->Base(), H(inUnit), (float(*)[3])&outLocation.mX, true); }
     // +0x0c (the gather goal reports 5000 while not active)
-    bool IsActive(unsigned long* outValue)
-    {
-        if (this->mKind == kGoalGatherKind && !this->mIsActive)
-            *outValue = 5000;
-        return this->mIsActive;
-    }
+    bool IsActive(unsigned long* outValue) { return ee_units_goal_is_active(this->Base(), outValue); }   // goal_calls.rs
     EEUnitGoal* Clone()                                        // +0x10
     {
         return reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(this->Call(EE_UNITS_GOAL_CLONE, 0, this->mB1C)));
@@ -150,7 +145,6 @@ public:
     }
     EeUnitsLocationGoal Location() const { return ee_units_location_goal_of(H(this)); }
     EeCombatAttackGoal Attack() const { return ee_combat_attack_of(H(this)); }
-    enum { kGoalGatherKind = 6 };
 
     // the copies pass it through a byte temporary, the other bools straight (provisional name)
     bool GetB1C() const { return this->mB1C; }
@@ -305,11 +299,7 @@ public:
     unsigned long GetNumLoadUnits() { return (unsigned long)this->Call(EE_UNITS_GOAL_LOAD_UNIT_COUNT); }
     bool HasLoadUnit(EEComplexUnit* inUnit) { return this->Call(EE_UNITS_GOAL_LOAD_HAS_UNIT, H(inUnit)) != 0; }
     void AddLoadUnit(EEComplexUnit* inUnit) { this->Call(EE_UNITS_GOAL_LOAD_ADD_UNIT, H(inUnit)); }
-    void AddLoadUnits(const std::vector<EEComplexUnit*>& inUnits)
-    {
-        for (size_t i = 0; i < inUnits.size(); i++)
-            this->AddLoadUnit(inUnits[i]);
-    }
+    void AddLoadUnits(const std::vector<EEComplexUnit*>& inUnits) { ee_units_goal_add_load_units(this->Base(), &inUnits); }   // goal_calls.rs
 
     // a build/repair goal (kGoalBuildRepair): the player's goal on the building's first part, referenced
     // (EEUGBuildRepair(inPlayer, inTarget, inArg)); or the load's empty goal (EEUGBuildRepair(inArg))

@@ -113,8 +113,6 @@ pub const EE_UNITS_GROUP_OP_PATH_AREA_AT: i32 = 17;
 // (23 was path_done: Rust since the paths lane's round 2)
 // (24 was path_id: Rust since the paths lane's round 2)
 // (25 was path_tiles: Rust since the paths lane's round 2)
-/// unit `a`'s `SetGroupPathGoals` of the `len` points at `list`
-pub const EE_UNITS_GROUP_OP_SET_GROUP_PATH: i32 = 26;
 /// unit `a`'s `ClearBuildTargets()`
 pub const EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: i32 = 27;
 /// `TMGetTime()`
@@ -125,7 +123,8 @@ pub const EE_UNITS_GROUP_OP_POST_SELECTION: i32 = 29;
 pub const EE_UNITS_GROUP_OP_PLAYER_GROUP: i32 = 31;
 /// `gWorld.mMap->ClearU1955DC()`
 pub const EE_UNITS_GROUP_OP_CLEAR_AREAS: i32 = 34;
-/// `gWorld.mMap->BuildAreaOutlines`: the `len` areas (left, right, top, bottom) at `list`, the continents at `list2`
+/// `gWorld.mMap->BuildAreaOutlines`: the `len` areas at `list` (each a `U2DRectangle<long>`: bottom, left, right,
+/// top), the continents at `list2`
 pub const EE_UNITS_GROUP_OP_AREA_OUTLINES: i32 = 35;
 /// `gAEManager.mTemplates[c]->mRadius` into `io.f`
 pub const EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS: i32 = 36;
@@ -403,8 +402,11 @@ impl GroupHost for GameGroups {
         unsafe { request::get(path) }.path.iter().map(|t| (i64::from(t[0]), i64::from(t[1]))).collect()
     }
     fn set_group_path(&mut self, unit: u64, points: &[[f32; 3]]) {
-        let mut io = EeUnitsGroupIo { list: points.as_ptr().cast(), len: points.len(), ..Default::default() };
-        self.io(EE_UNITS_GROUP_OP_SET_GROUP_PATH, unit, 0, 0, 0, &mut io);
+        // `unit->SetGroupPathGoals(points)` (waypoints.rs)
+        // SAFETY: a live complex unit of the body's world
+        unsafe {
+            crate::units::waypoints::ee_units_waypoints_group_path_goals(unit, points.as_ptr().cast(), points.len())
+        }
     }
     fn clear_build_targets(&mut self, unit: u64) {
         self.op(EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS, unit, 0, 0, 0);
@@ -486,6 +488,9 @@ impl GroupHost for GameGroups {
         self.op(EE_UNITS_GROUP_OP_CLEAR_AREAS, 0, 0, 0, 0);
     }
     fn area_outlines(&mut self, areas: &[[i64; 4]], continents: &[u16]) {
+        // (left, right, top, bottom) as `U2DRectangle<long>` holds them: bottom, left, right, top
+        let areas: Vec<[c_long; 4]> =
+            areas.iter().map(|a| [a[3] as c_long, a[0] as c_long, a[1] as c_long, a[2] as c_long]).collect();
         let mut io = EeUnitsGroupIo {
             list: areas.as_ptr().cast(),
             len: areas.len(),

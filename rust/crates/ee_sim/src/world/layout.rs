@@ -284,6 +284,14 @@ pub fn derive_record_members(l: &mut EeWorldLayout) {
     fill(&mut l.complex_mine, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mMine));
     fill(&mut l.complex_herd, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mHerd));
     fill(&mut l.complex_behavior, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mBehavior));
+    // units round 12: the collision tile and two effect handles are record fields
+    fill(&mut l.complex_collision_tile, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mCollisionTile));
+    fill(
+        &mut l.complex_conversion_effect,
+        l.complex_unit_fields,
+        offset_of!(EeUnitsComplexUnitFields, mConversionEffect),
+    );
+    fill(&mut l.complex_heal_effect, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mHealEffect));
     {
         use crate::world::stats_fields::EeUnitsUnitClassUpgradeLinks as S;
         use crate::world::unit_class_fields::EeUnitsUnitClassLinks as C;

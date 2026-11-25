@@ -15,6 +15,9 @@ public:
     virtual bool Execute(long inUnitType) = 0;
 };
 
+// The Rust walks' visit (app/unit_sets.rs ee_unit_set_for_each): the functor's Execute
+inline bool EEUnitSetVisit(void* inFunctor, uint32_t inUnitType) { return static_cast<EEUnitSetFunctor*>(inFunctor)->Execute((long)inUnitType); }
+
 // One unit set (provisional name; the original: RTTI, vtable 0x441fcc, sizeof 0x3c)
 class EEUnitSet {
 public:
@@ -22,13 +25,7 @@ public:
     // set: the listed types; then the included set's; never the excluded set's; an empty set holds every type)
     bool Contains(unsigned long inUnitType) const { return ee_unit_set_contains(this->Rust(), (uint32_t)inUnitType); }
     // 0x136e3a: every unit type 1..EEUnitClassCount() - 1 in the set, until the functor returns false
-    void ForEach(EEUnitSetFunctor* inFunctor) const
-    {
-        for (uint32_t t = ee_unit_set_next(this->Rust(), 0); t != 0; t = ee_unit_set_next(this->Rust(), t)) {
-            if (!inFunctor->Execute((long)t))
-                break;
-        }
-    }
+    void ForEach(EEUnitSetFunctor* inFunctor) const { ee_unit_set_for_each(this->Rust(), inFunctor, EEUnitSetVisit); }
     bool IsEmpty() const { return ee_unit_set_is_empty(this->Rust()); }   // inline (COMDAT 0x2bae4)
     const char* GetName() const { return ee_unit_set_name(this->Rust()); }   // the record's name (provisional name)
     bool ShowInEditor() const { return ee_unit_set_show_in_editor(this->Rust()); }
@@ -60,13 +57,8 @@ public:
     // 0xacb52: whether set inSet (false if there is none) holds unit type inUnitType
     bool Contains(long inUnitType, unsigned long inSet) const
         { return ee_unit_sets_contains((size_t)inSet, (uint32_t)inUnitType); }
-    // inline (COMDAT 0x2830ae): set inSet's ForEach when it exists
-    bool ForEach(unsigned long inSet, EEUnitSetFunctor* inFunctor) const
-    {
-        if (EEUnitSet* theSet = this->GetSet(inSet))
-            theSet->ForEach(inFunctor);
-        return true;
-    }
+    // inline (COMDAT 0x2830ae): set inSet's ForEach when it exists; true
+    bool ForEach(unsigned long inSet, EEUnitSetFunctor* inFunctor) const { return ee_unit_sets_for_each((size_t)inSet, inFunctor, EEUnitSetVisit); }
 };
 
 extern EEUnitSetManager gUnitSetManager;

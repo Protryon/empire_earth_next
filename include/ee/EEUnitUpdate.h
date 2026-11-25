@@ -4,12 +4,16 @@
 #ifndef EE_EEUNITUPDATE_H
 #define EE_EEUNITUPDATE_H
 
+#include <stdint.h>
+#include "rust/sim/units.h"              // upd_entry.rs
+
 class EEUnitClass;
 class EEComplexUnit;
 
-void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
-// a class's ActionChanged as a Rust decision (rust/crates/ee_sim/src/units/actions.rs; inKind: EE_UNITS_ACTION_*)
-void EEUnitClassActionChanged(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
+inline void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_class_update(inKind, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inUnit); }
+// a class's ActionChanged as a Rust decision (rust/crates/ee_sim/src/units/actions.rs; inKind: EE_UNITS_ACTION_*), its
+// USST notes (kind 13) around the sequence
+inline void EEUnitClassActionChanged(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_class_action_changed(inKind, (uint64_t)(uintptr_t)inClass, (uint64_t)(uintptr_t)inUnit); }
 
 // the fourteenth round's ActionChanged operations that are more than a call, kept beside their classes (their files'
 // helpers and constants): each the original's statements of its branch, called by the host (EEUnitUpdate.cpp)

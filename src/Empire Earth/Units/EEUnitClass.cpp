@@ -205,8 +205,7 @@ struct EEUnitClassNameLess {
 // Releases the class table's entry for a unit type and clears it
 // Removes a unit from the tile it stands on, if any
 // the closest tile's x and y (not read), the carrier's tag transformation, the area cloak's modifier
-static long sMvX;
-static long sMvY;
+static long sMvTile[2];   // x, y
 static GETransformation sMvTransformation;
 static long sMvInput;
 static long sMvRadius;
@@ -220,7 +219,7 @@ int64_t EEUnitClassMoveOp(int32_t inOp, EEComplexUnit* inUnit, uint64_t inB, int
     EEComplexUnit* theOther = (EEComplexUnit*)(uintptr_t)inB;
     GE3DPoint& p = *reinterpret_cast<GE3DPoint*>(io->p);
     switch (inOp) {
-    case EE_UNITS_CLS_MV_CLOSEST_TILE: return EEObj(::gWorld.mMap->GetClosestTile(&p, &sMvX, &sMvY));
+    case EE_UNITS_CLS_MV_CLOSEST_TILE: return EEObj(::gWorld.mMap->GetClosestTile(&p, &sMvTile[0], &sMvTile[1]));
     case EE_UNITS_CLS_MV_PURSUER: return EEObj(EEGetPursuerOf(inUnit));
     case EE_UNITS_CLS_MV_MAX_VELOCITY: io->p[0] = inC != 0 ? inUnit->GetMaxAngularVelocity() : inUnit->GetMaxVelocity(); return 0;
     case EE_UNITS_CLS_MV_GOAL: return EEObj(inUnit->mGoalState);
@@ -347,36 +346,16 @@ EEFOFindNewTargetInMeleeRange::EEFOFindNewTargetInMeleeRange(EEComplexUnit* inUn
     this->mRange = EECombatHitDistanceSquared(inUnit, inTarget, -10000.0f, -10000.0f);
 }
 
-// Returns whether a candidate is alive and closer to the attacker than its current target (new: ee_combat's screen)
-// the melee screen's candidate distance (asked by ee_combat's screen for a living candidate only)
-struct EEMeleeScreenContext {
-    EEComplexUnit* mUnit;
-    EEComplexUnit* mCandidate;
-};
-
-static float EEMeleeScreenDistance(void* inContext)
-{
-    EEMeleeScreenContext* theContext = (EEMeleeScreenContext*)inContext;
-    return EECombatHitDistanceSquared(theContext->mUnit, theContext->mCandidate, -10000.0f, -10000.0f);
-}
-
-static bool EEMeleeScreen(EEFOFindNewTargetInMeleeRange* inScreen, EEComplexUnit* inUnit)
-{
-    EEMeleeScreenContext theContext = {inScreen->mUnit, inUnit};
-    EeCombatScreenIn in = {EE_COMBAT_SCREEN_KIND_MELEE, (int32_t)inUnit->mHitPoints, inScreen->mRange, 0, 0.0f};
-    int32_t theResult = ee_combat_screen(&in, &theContext, EEMeleeScreenDistance);
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theResult);
-    return theResult != 0;
-}
-
+// Returns whether a candidate is alive and closer to the attacker than its current target (units round 12: Rust,
+// combat/screen.rs ee_units_melee_screen, with its CBFS capture record)
 bool EEFOFindNewTargetInMeleeRange::Virtual04(EEComplexUnit* inUnit)
 {
-    return EEMeleeScreen(this, inUnit);
+    return ee_units_melee_screen(EECombatObj(this->mUnit), EECombatObj(inUnit), (int32_t)inUnit->mHitPoints, this->mRange);
 }
 
 bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
 {
-    return EEMeleeScreen(this, inUnit);
+    return ee_units_melee_screen(EECombatObj(this->mUnit), EECombatObj(inUnit), (int32_t)inUnit->mHitPoints, this->mRange);
 }
 
 // Turns an attacked unit on its attacker (or to its location when unseen) and calls idle nearby soldiers to help
@@ -439,8 +418,7 @@ static EEEffectHandle sUcHandle;
 // the creations' and launches' scratch (uc_create.rs, uc_anim.rs): the launch chain, the closest tile,
 // the turret part, the three formulas' outputs (each read right after its statement)
 static std::vector<float> sUcChain;
-static long sUcTileX;
-static long sUcTileY;
+static long sUcTile[2];   // x, y
 static unsigned long sUcPart;
 static EeCombatTimerOut sUcTimer;
 static EeCombatHealOut sUcHeal;
@@ -887,10 +865,10 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
         return 0;
     case EE_UNITS_UC_GET_TILE: return EEObj(::gWorld.mMap->GetTile((long)inB, (long)inC));
     case EE_UNITS_UC_CLOSEST_TILE:
-        ::gWorld.mMap->GetClosestTile(reinterpret_cast<GE3DPoint*>(f), &(sUcTileX = (long)inB), &(sUcTileY = (long)inC));
+        ::gWorld.mMap->GetClosestTile(reinterpret_cast<GE3DPoint*>(f), &(sUcTile[0] = (long)inB), &(sUcTile[1] = (long)inC));
         return 0;
-    case EE_UNITS_UC_TILE_OUT_X: return sUcTileX;
-    case EE_UNITS_UC_TILE_OUT_Y: return sUcTileY;
+    case EE_UNITS_UC_TILE_OUT_X: return sUcTile[0];
+    case EE_UNITS_UC_TILE_OUT_Y: return sUcTile[1];
     case EE_UNITS_UC_FLAMING_CLASS: return EEObj(gUnitClassTable[gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mUnitType]);
     case EE_UNITS_UC_CAN_ATTACK_CLASS: return theUnit->CanAttackClass(EEUcObject<EEUnit>(inA)->GetUnitClass());
     case EE_UNITS_UC_START_ACTION_SELF: theUnit->StartAction((long)inB); return 0;
@@ -924,7 +902,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_HEIGHT_FIELD: f[0] = theUnit->mHeight; return 0;
     case EE_UNITS_UC_TILE_HEIGHT: f[0] = theUnit->mTile->mHeight; return 0;
     case EE_UNITS_UC_WORLD_FLOAT: f[0] = gWorldTable.GetFloatValue((EEWorldConstant)inB); return 0;
-    case EE_UNITS_UC_UPDATE_UNIT_TILE: EEUpdateUnitTile(EEUcObject<GETransformation>(inA), theUnit, &sUcTileX, &sUcTileY); return 0;
+    case EE_UNITS_UC_UPDATE_UNIT_TILE: EEUpdateUnitTile(EEUcObject<GETransformation>(inA), theUnit, &sUcTile[0], &sUcTile[1]); return 0;
     case EE_UNITS_UC_SET_HEAL_SEARCH_TIMER: theUnit->SetHealSearchTimer(theClass->mHealDelay); return 0;
     case EE_UNITS_UC_SET_FULL_HIT_POINTS: theUnit->SetHitPoints(theUnit->mStats->mMaxHitPoints); return 0;
     case EE_UNITS_UC_SET_FULL_LAST_HIT_POINTS: theUnit->SetLastHitPoints(theUnit->mStats->mMaxHitPoints); return 0;

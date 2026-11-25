@@ -421,9 +421,64 @@ pub extern "C" fn ee_units_goal_create(kind: u8) -> *mut EeUnitsGoalBase {
     goal
 }
 
+/// `EEUnitGoal::IsActive(out)` (+0x0c; units round 12, was ee/EEUnitGoal.h's body): the gather goal reports
+/// `kActionIdle` (5000) into `out` while not active; the answer is `mIsActive`.
+pub fn is_active(goal: &EeUnitsGoalBase, out: &mut core::ffi::c_ulong) -> bool {
+    if goal.kind == crate::units::gather::GOAL_GATHER && !goal.is_active {
+        *out = 5000;
+    }
+    goal.is_active
+}
+
+/// `EEUnitGoal::IsActive(out)`.
+///
+/// # Safety
+/// `goal` a live goal, `out` writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_goal_is_active(goal: *const EeUnitsGoalBase, out: *mut core::ffi::c_ulong) -> bool {
+    // SAFETY: the caller's contract
+    unsafe { is_active(&*goal, &mut *out) }
+}
+
+/// `EEUnitGoal::AddLoadUnits(units)` (units round 12, was ee/EEUnitGoal.h's loop): `AddLoadUnit` of each unit of the
+/// `std::vector<EEComplexUnit*>` in order.
+///
+/// # Safety
+/// `goal` a live load goal, `units` a live vector of live units.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_goal_add_load_units(goal: *const EeUnitsGoalBase, units: *const core::ffi::c_void) {
+    // SAFETY: the caller's contract
+    for unit in unsafe { vector_pointers(units) } {
+        unsafe {
+            ee_units_goal_call(
+                crate::units::rust_goal::EE_UNITS_GOAL_LOAD_ADD_UNIT,
+                goal,
+                unit,
+                0,
+                core::ptr::null_mut(),
+            )
+        };
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_an_inactive_gather_goal_reports_idle() {
+        let mut out = 7;
+        let mut g = EeUnitsGoalBase { kind: crate::units::gather::GOAL_GATHER, ..Default::default() };
+        assert!(!is_active(&g, &mut out));
+        assert_eq!(out, 5000);
+        out = 7;
+        g.is_active = true;
+        assert!(is_active(&g, &mut out));
+        g.is_active = false;
+        g.kind = 1;
+        assert!(!is_active(&g, &mut out));
+        assert_eq!(out, 7);
+    }
 
     #[test]
     fn create_goal_makes_each_kind_s_empty_goal_by_its_new_function() {

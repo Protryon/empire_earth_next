@@ -132,7 +132,6 @@
 // EEContagionHelper.cpp's collector over complex units (its only instantiation was EECPPlacement.cpp's)
 template long EEGetUnitsInRectangle<EEAnyUnit, std::vector<EEComplexUnit*> >(const U2DRectangle<long>&, std::vector<EEComplexUnit*>&,
                                                                            const EEAnyUnit&, bool);
-extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern EEToHitTable gToHitTable;           // 0x5318e8 (as EECPAttackSubGroupUnit.cpp declares it)
 
 // (the unit's named float constants, .rdata 0x449b54..0x449bc0: the Rust bodies' (ee_units uu_world.rs, uu_body.rs))
@@ -145,23 +144,8 @@ static EEUnit* UUUnit(uint64_t inUnit) { return (EEUnit*)(uintptr_t)inUnit; }
 static EETile* UUTile(uint64_t inTile) { return (EETile*)(uintptr_t)inTile; }
 // a float's bits and back (uu_body.rs passes floats as their bits)
 template <class T> static T* UbObj(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
-// a tile list from Rust's pairs
-static std::vector<U2DPoint<long> > UUTiles(const int32_t (*inTiles)[2], uint32_t inCount)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    for (uint32_t i = 0; i < inCount; i++)
-        theTiles.push_back(U2DPoint<long>(inTiles[i][0], inTiles[i][1]));
-    return theTiles;
-}
-// the first inCapacity tiles of a list into outTiles; their number
-static uint32_t UUPairs(const std::vector<U2DPoint<long> >& inTiles, int32_t (*outTiles)[2], uint32_t inCapacity)
-{
-    for (uint32_t i = 0; i < inTiles.size() && i < inCapacity; i++) {
-        outTiles[i][0] = (int32_t)inTiles[i].mX;
-        outTiles[i][1] = (int32_t)inTiles[i].mY;
-    }
-    return (uint32_t)inTiles.size();
-}
+// a tile list from Rust: its long pairs are U2DPoint<long>s (uu_host.rs long_pairs)
+static const U2DPoint<long>* UUPoints(const long (*inTiles)[2]) { return reinterpret_cast<const U2DPoint<long>*>(inTiles); }
 
 // TEST ONLY: the unit utilities' record (UUTL) is Rust's (ee_units uu_note.rs); the host's writes note their events
 static long UUId(const EEUnit* inUnit) { return inUnit != NULL ? (long)((const RTSUnit*)inUnit)->mUnitID : -2; }
@@ -169,20 +153,7 @@ static void UUEvent(long inA, long inB = 0, long inC = 0) { ee_units_uu_note_eve
 // the record's tick (the capture's state and the UUTL record itself are Rust's: uu_note.rs)
 extern "C" uint32_t ee_units_uu_host_ticks() { return gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0; }
 
-// Units by id: EEUUUnitIDLess / EEUUUnitIDEqual are declared in ee/EEUnitCollector.h (its EEGetUnitsInRectangle
-// sorts with them too; EEAIArea.cpp's family 0xe3d7.. calls these bodies)
-
-// Orders units by ascending unit id
-bool EEUUUnitIDLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
-{
-    return inFirst->mUnitID < inSecond->mUnitID;
-}
-
-// Tells whether two units have the same unit id
-bool EEUUUnitIDEqual::operator()(EEUnit* inFirst, EEUnit* inSecond) const
-{
-    return inFirst->mUnitID == inSecond->mUnitID;
-}
+// (Units by id: EEUUUnitIDLess / EEUUUnitIDEqual are inline in ee/EEUnitCollector.h)
 
 // (the TU's own sort-and-unique keys, highest unit id first: ee_units uu.rs sort_unique_by_id_descending)
 
@@ -287,12 +258,8 @@ void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFact
 static EEUnit* EESrUnit(uint64_t inHandle) { return (EEUnit*)(uintptr_t)inHandle; }
 static EEComplexUnit* EESrComplex(uint64_t inHandle) { return (EEComplexUnit*)(uintptr_t)inHandle; }
 
-// EEIsLineToUnitBlocked's outputs for a search (ee_sim units uu_search.rs EeUnitsSrLine)
-struct EESrLine {
-    EEUnit* mBlocker;
-    long mX;
-    long mY;
-};
+// (EEIsLineToUnitBlocked's outputs for a search: ee_sim units uu_search.rs EeUnitsSrLine, the blocker's handle its
+// EEUnit*)
 
 extern "C" int64_t ee_units_sr_host(int32_t inOp, uint64_t inUnit, uint64_t inA, int64_t inC, float (*ioF)[4])
 {
@@ -328,7 +295,7 @@ extern "C" int64_t ee_units_sr_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     case EE_UNITS_SR_DUMMY_HEAD: return RTSDummyHead(EESrUnit(inA)) != NULL;
     case EE_UNITS_SR_HIT_DISTANCE: (*ioF)[0] = EECombatHitDistanceSquared(EESrComplex(inUnit), EESrUnit(inA), (*ioF)[0], (*ioF)[1]); return 0;
     case EE_UNITS_SR_ATTACK_FACTOR: (*ioF)[0] = gToHitTable.GetAttackFactor(EESrComplex(inUnit)->GetUnitClass()->mAmmoType, EESrUnit(inA)->GetUnitClass(), EESrComplex(inUnit)->mPlayer->GetPlayerID(), EESrUnit(inA)->mPlayer->GetPlayerID()); return 0;
-    case EE_UNITS_SR_LINE_BLOCKED: return EEIsLineToUnitBlocked(EESrComplex(inUnit), EESrUnit(inA), &UbObj<EESrLine>(inC)->mBlocker, &UbObj<EESrLine>(inC)->mX, &UbObj<EESrLine>(inC)->mY);
+    case EE_UNITS_SR_LINE_BLOCKED: return EEIsLineToUnitBlocked(EESrComplex(inUnit), EESrUnit(inA), reinterpret_cast<EEUnit**>(&UbObj<EeUnitsSrLine>(inC)->blocker), &UbObj<EeUnitsSrLine>(inC)->x, &UbObj<EeUnitsSrLine>(inC)->y);
     case EE_UNITS_SR_REACHABLE: return EEIsAttackReachable(EESrComplex(inUnit), EESrComplex(inA), UbObj<U2DPoint<long> >(inC));
     case EE_UNITS_SR_IGNORE: EESrComplex(inUnit)->IgnoreTarget(EESrComplex(inA)); return 0;
     case EE_UNITS_SR_FOOTPRINT_TILE: EESrComplex(inUnit)->GetNearestFootprintTile(EESrUnit(inA), UbObj<long>(inC), UbObj<long>(inC) + 1); return 0;
@@ -647,27 +614,14 @@ extern "C" int32_t ee_units_uu_host_passable_flags(uint64_t inClass, uint64_t in
 {
     return (int32_t)((EEUnitClass*)(uintptr_t)inClass)->GetPassableFlags(UUUnit(inUnit));
 }
-extern "C" uint32_t ee_units_uu_host_surrounding_tiles(uint64_t inTarget, uint8_t inVirtual, int32_t (*outTiles)[2], uint32_t inCapacity)
-{
-    std::vector<EETileCoordinate> theTiles;
-    if (inVirtual)
-        static_cast<EEComplexUnit*>(UUUnit(inTarget))->mUnitClass->GetSurroundingTiles(static_cast<EEComplexUnit*>(UUUnit(inTarget)), theTiles, 1, false);
-    else
-        static_cast<EEComplexUnit*>(UUUnit(inTarget))->mUnitClass->BaseGetSurroundingTiles(static_cast<EEComplexUnit*>(UUUnit(inTarget)), theTiles, 1, false);
-    return UUPairs(theTiles, outTiles, inCapacity);
-}
+// (the surrounding tiles: uu_host.rs over ucn_noted.rs and uc_rest.rs, into a list of these)
+extern "C" void* ee_units_uu_host_tiles_new() { return new std::vector<U2DPoint<long> >; }
+extern "C" void ee_units_uu_host_tiles_delete(void* inTiles) { delete static_cast<std::vector<U2DPoint<long> >*>(inTiles); }
 extern "C" uint64_t ee_units_uu_host_container_continent(uint64_t inContainer, uint64_t inUnit)
 {
     return UUHandle(UUUnit(inContainer)->mUnitClass->GetContainerContinent(UUUnit(inContainer)->GetComplexUnit(), static_cast<EEComplexUnit*>(UUUnit(inUnit))));
 }
-// (one call: the line's CBTL record is written once, as the C++ callers' was; the room is the line's most)
-extern "C" uint32_t ee_units_uu_host_tile_line(int32_t inX1, int32_t inY1, int32_t inX2, int32_t inY2, uint8_t inEnds, uint8_t inThin,
-                                               int32_t (*outTiles)[2], uint32_t inCapacity)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    EEGetTileLine(inX1, inY1, inX2, inY2, &theTiles, inEnds != 0, inThin != 0);
-    return UUPairs(theTiles, outTiles, inCapacity);
-}
+// (the tile line: uu_host.rs over uu_line.rs)
 extern "C" uint8_t ee_units_uu_host_reserved(uint64_t inGroup, const float* inPoint)
 {
     return ((EEActiveGroup*)(uintptr_t)inGroup)->IsReserved(GE3DPoint(inPoint[0], inPoint[1], inPoint[2]));
@@ -722,9 +676,9 @@ extern "C" void ee_units_uu_host_center_offset(uint64_t inComplex, float* ioPoin
     static_cast<EEComplexUnit*>(UUUnit(inComplex))->AddCenterOffset(ioPoint[0], ioPoint[1]);
 }
 // a tile list's questions: all in one area of the kind (inWhich 0), any shore tile
-extern "C" uint8_t ee_units_uu_host_tiles_test(int32_t inWhich, const int32_t (*inTiles)[2], uint32_t inCount, int32_t inKind)
+extern "C" uint8_t ee_units_uu_host_tiles_test(int32_t inWhich, const long (*inTiles)[2], uint32_t inCount, int32_t inKind)
 {
-    return inWhich == 0 ? gContinentManager.InSameArea(UUTiles(inTiles, inCount), inKind) : gContinentManager.HasShoreTile(UUTiles(inTiles, inCount));
+    return inWhich == 0 ? gContinentManager.InSameArea(std::vector<U2DPoint<long> >(UUPoints(inTiles), UUPoints(inTiles) + inCount), inKind) : gContinentManager.HasShoreTile(std::vector<U2DPoint<long> >(UUPoints(inTiles), UUPoints(inTiles) + inCount));
 }
 
 // the spot searches' questions (ee_units uu_spots.rs): where a unit dropped onto inUnit stands (0), whether a piece is
@@ -743,6 +697,7 @@ extern "C" int32_t ee_units_uu_host_spot(int32_t inWhich, uint64_t inUnit, int32
     case 10: UUUnit(inUnit)->GetPosition(*(GE3DPoint*)outPoint); return 0;
     case 12: return ((EEAIPathArea*)(uintptr_t)inUnit)->GetID();
     case 13: EEUnitClassOfKind<EE_CLASS_KIND_GATE>(UUUnit(inUnit)->mUnitClass)->GetLastLinkedCarrier(static_cast<EEComplexUnit*>(UUUnit(inUnit))->GetOutermostCarrier())->GetPosition(*(GE3DPoint*)outPoint); return 0;
+    case 13030: *(GE3DPoint*)outPoint = UUUnit(inUnit)->GetModel()->mModels[UUUnit(inUnit)->mComplexUnit->GetAnimation()]->GetBoundingBox(UUUnit(inUnit)->mComplexUnit->mPhysicalModel.GetFrame()).GetTopRightBack(); return 0;   // a wall's model box top at its frame (EEIsTileTopAbove's wall rise)
     case 14: EEUnitClassOfKind<EE_CLASS_KIND_GATE>(UUUnit(inUnit)->mUnitClass)->GetLastLinked(static_cast<EEComplexUnit*>(UUUnit(inUnit))->GetOutermostCarrier())->GetPosition(*(GE3DPoint*)outPoint); return 0;
     }
     return 0;
@@ -831,21 +786,12 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     return 0;
 }
 
-// a wall's model box top at its frame through its location (EEIsTileTopAbove's wall rise)
-static GE3DPoint UUBoxTop(EEUnit* inUnit)
-{
-    GE3DPoint thePoint;
-    inUnit->mComplexUnit->mPhysicalModel.GetLocation().Apply(inUnit->GetModel()->mModels[inUnit->mComplexUnit->GetAnimation()]->GetBoundingBox(inUnit->mComplexUnit->mPhysicalModel.GetFrame()).GetTopRightBack(), thePoint);
-    return thePoint;
-}
-
 extern "C" float ee_units_uu_host_world_f(int32_t inWhich, uint64_t inA, uint64_t inB, float inF)
 {
     switch (inWhich) {
     case 1: return ee_units_cgq_in_gather_reach(inF, inA, inB) ? 1.0f : 0.0f;   // EEIsInGatherReach (cg_query.rs)
     // (EEIsTileTopAbove's wall rise: ee_sim units uu_world_ops.rs wall_rise over the cases from 5)
     case 4: return ::gWorld.GetGameVariant()->mDepositFactor;
-    case 5: return UUBoxTop(UUUnit(inA)).GetZ();
     case 6: return UUUnit(inA)->mStats->GetScale();
     case 7: return (float)UUUnit(inA)->mComplexUnit->mHitPoints;
     case 8: return (float)UUUnit(inA)->mComplexUnit->mStats->mMaxHitPoints;
@@ -856,14 +802,10 @@ extern "C" float ee_units_uu_host_world_f(int32_t inWhich, uint64_t inA, uint64_
 
 
 
-extern "C" uint32_t ee_units_uu_host_tiles_len(const void* inTiles) { return (uint32_t)((const std::vector<U2DPoint<long> >*)inTiles)->size(); }
-extern "C" void ee_units_uu_host_tiles_get(const void* inTiles, int32_t (*outTiles)[2])
+// (a tile vector's reads: uu_host.rs tiles_of, in place)
+extern "C" void ee_units_uu_host_tiles_set(void* outTiles, const long (*inTiles)[2], uint32_t inCount)
 {
-    UUPairs(*(const std::vector<U2DPoint<long> >*)inTiles, outTiles, UINT32_MAX);
-}
-extern "C" void ee_units_uu_host_tiles_set(void* outTiles, const int32_t (*inTiles)[2], uint32_t inCount)
-{
-    *(std::vector<U2DPoint<long> >*)outTiles = UUTiles(inTiles, inCount);
+    static_cast<std::vector<U2DPoint<long> >*>(outTiles)->assign(UUPoints(inTiles), UUPoints(inTiles) + inCount);
 }
 extern "C" uint32_t ee_units_uu_host_units_len(const void* inUnits) { return (uint32_t)((const std::vector<EEUnit*>*)inUnits)->size(); }
 // (a handle is its unit's address: the vector's pointers are the handles' words)
@@ -913,20 +855,14 @@ static GE3DPoint sUbPoint;
 static U2DRectangle<long> sUbArea;
 
 // EEMovePassengers' place for the unloaded cargo (off the map)
-static GETransformation UbOffMap()
-{
-    GETransformation theTransformation;
-    theTransformation.SetPosition(-10000.0f, -10000.0f, 0.0f);
-    return theTransformation;
-}
-static const GETransformation sUbOffMap = UbOffMap();
+static const float kUbOffMap[4][4] = {{1.0f, 0.0f, 0.0f, -10000.0f}, {0.0f, 1.0f, 0.0f, -10000.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}};
 
-// EEFindNewTargetNearOld's search near the old target (its screen and tile are the original's locals)
+// EEFindNewTargetNearOld's search near the old target: EEFindNewTarget (uu_search.rs) with the original's local screen,
+// here a temporary that lives through the call
+static uint64_t UbScreen(const EEFOFindNewTargetScreenBase& inScreen) { return UUHandle(&inScreen); }
 static bool UbFindNewTarget(EEComplexUnit* inTarget, EEComplexUnit* inUnit, long inX, long inY, long inRadius)
 {
-    EETileCoordinate theTile(inX, inY);
-    EEFOFindNewTargetNearOldTarget theScreen(inTarget, 25.0f);
-    return EEFindNewTarget(&theScreen, inUnit->GetLoadGoal(), inUnit, &theTile, inRadius, true, 0);
+    return ee_units_sr_find_new_target(UbScreen(EEFOFindNewTargetNearOldTarget(inTarget, 25.0f)), UUHandle(inUnit->GetLoadGoal()), UUHandle(inUnit), inX, inY, inRadius, true, 0) != 0;
 }
 
 extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, int64_t inE, float (*ioF)[4])
@@ -957,10 +893,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_CURRENT_PLAYER: return UUHandle(::gWorld.GetCurrentPlayer());
     case EE_UNITS_UB_ADAPTATION_FORMAT: gResource->GetString(IDS_ACQUIRED_THROUGH_ADAPTATION, sUbStrings.mFormat); return 0;
     case EE_UNITS_UB_ADAPTATION_MESSAGE: sprintf(sUbStrings.mMessage, sUbStrings.mFormat, (const char*)sUbStrings.mName); return 0;
-    case EE_UNITS_UB_ADAPTATION_CHAT:
-        gUserInterface->AddChatLogEntry(UUUnit(inA)->GetPlayer()->mColor, UUUnit(inA)->GetPlayer()->mName, sUbStrings.mMessage,
-                                        gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-        return 0;
+    case EE_UNITS_UB_ADAPTATION_CHAT: gUserInterface->AddChatLogEntry(UUUnit(inA)->GetPlayer()->mColor, UUUnit(inA)->GetPlayer()->mName, sUbStrings.mMessage, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0); return 0;
     case EE_UNITS_UB_CLASS_OF_TYPE: return UUHandle(gUnitClassTable[inC]);
     case EE_UNITS_UB_IS_CRUSADER: return UbObj<EEUnitClass>(inA)->IsCrusader();
     case EE_UNITS_UB_HIT_FRACTION: return (int64_t)UFloatBits((float)UUUnit(inA)->GetHitPoints() / (float)UUUnit(inA)->mStats->mMaxHitPoints);
@@ -1019,10 +952,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_DROP_UNSUITED_GOALS: UbObj<EEComplexUnit>(inA)->DropUnsuitedGoals(0); return 0;
     case EE_UNITS_UB_TECH_AVAILABLE: return UbObj<EEPlayer>(inA)->mTechnologies->Get((long)inC)->GetIsAvailable();
     case EE_UNITS_UB_NEXT_PART: return UUHandle(UbObj<EEComplexUnit>(inA)->mNextPart);
-    case EE_UNITS_UB_ENERGY_WALL:
-        gWorld.GetEffectManager()->CreateUnitEffect(UbObj<EEComplexUnit>(inA), EEGraphicEffect::Get(inC != 0 ? kGraphicEffectSpaceGateEnergyWall : kGraphicEffectSpaceWallEnergyWall),
-                                                    &UbObj<EEComplexUnit>(inA)->mFireEffect, 0, 0, 0);
-        return 0;
+    case EE_UNITS_UB_ENERGY_WALL: gWorld.GetEffectManager()->CreateUnitEffect(UbObj<EEComplexUnit>(inA), EEGraphicEffect::Get(inC != 0 ? kGraphicEffectSpaceGateEnergyWall : kGraphicEffectSpaceWallEnergyWall), &UbObj<EEComplexUnit>(inA)->mFireEffect, 0, 0, 0); return 0;
     case EE_UNITS_UB_HIT_POINTS: return UUUnit(inA)->mHitPoints;
     case EE_UNITS_UB_TILE_VISIBILITY: return UUUnit(inA)->mTile->GetVisibility(UbObj<EEPlayer>(inB)->GetPlayerID());
     case EE_UNITS_UB_ADD_FOR_UNSEEN: gDoppelgangerManager.AddForUnseenUnit(UbObj<EEComplexUnit>(inA)); return 0;
@@ -1117,7 +1047,7 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_NUM_PLAYERS: return ::gWorld.mNumPlayers;
     // EEMovePassengers', EETakeOverLoad's, EEGetPlayerClassGraphic's
     case EE_UNITS_UB_NUM_CARGO: return UbObj<EEComplexUnit>(inA)->GetNumCargoUnits();
-    case EE_UNITS_UB_UNLOAD_CARGO_AT: return UUHandle(UbObj<EEComplexUnit>(inA)->UnloadCargoAt((unsigned long)inC, sUbOffMap));
+    case EE_UNITS_UB_UNLOAD_CARGO_AT: return UUHandle(UbObj<EEComplexUnit>(inA)->UnloadCargoAt((unsigned long)inC, GETransformation(kUbOffMap)));
     case EE_UNITS_UB_LOAD_CARGO: UbObj<EEComplexUnit>(inA)->LoadCargo(UbObj<EEComplexUnit>(inB), false, inC != 0); return 0;
     case EE_UNITS_UB_TAKE_GARRISON:
         UbObj<EEComplexUnit>(inA)->AddGarrison(UbObj<EEComplexUnit>(inB)->mGarrisonCount - UbObj<EEComplexUnit>(inA)->mUnitClass->mInitialGarrisonCount, UbObj<EEComplexUnit>(inB)->mGarrisonPopulation);

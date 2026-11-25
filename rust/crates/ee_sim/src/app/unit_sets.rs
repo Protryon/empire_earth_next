@@ -287,6 +287,45 @@ pub unsafe extern "C" fn ee_unit_set_next(set: *const EeUnitSet, after: u32) -> 
     (after + 1..count).find(|&u| contains(&t.sets, i, u, &family_of)).unwrap_or(0)
 }
 
+/// A unit-type callback (`EEUnitSetFunctor::Execute` through its C++ trampoline): false stops the walk.
+pub type EeUnitSetVisit = unsafe extern "C" fn(functor: *mut std::ffi::c_void, unit_type: u32) -> bool;
+
+/// `EEUnitSet::ForEach(functor)` (units round 12; was the C++ loop): each unit type of `set` in order (as
+/// `ee_unit_set_next` gives them, the table's lock not held across a call) until `visit` returns false.
+///
+/// # Safety
+/// `set` is a live set of the table; `visit` is called with `functor`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_unit_set_for_each(
+    set: *const EeUnitSet,
+    functor: *mut std::ffi::c_void,
+    visit: EeUnitSetVisit,
+) {
+    // SAFETY: the caller's contract
+    let mut t = unsafe { ee_unit_set_next(set, 0) };
+    while t != 0 && unsafe { visit(functor, t) } {
+        t = unsafe { ee_unit_set_next(set, t) };
+    }
+}
+
+/// `EEUnitSetManager::ForEach(index, functor)`: set `index`'s walk when it exists; true (the original's answer).
+///
+/// # Safety
+/// As `ee_unit_set_for_each`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_unit_sets_for_each(
+    index: usize,
+    functor: *mut std::ffi::c_void,
+    visit: EeUnitSetVisit,
+) -> bool {
+    let set = ee_unit_sets_get(index);
+    if !set.is_null() {
+        // SAFETY: a set of the table; the caller's contract
+        unsafe { ee_unit_set_for_each(set, functor, visit) };
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -350,6 +389,21 @@ mod tests {
             assert_eq!(ee_unit_set_next(s, 12), 14);
             assert_eq!(ee_unit_set_next(s, 14), 0);
             assert_eq!(std::ffi::CStr::from_ptr(ee_unit_set_name(s)).to_bytes(), b"set");
+            // the walks: every type until the visit says stop; an unused slot visits nothing
+            unsafe extern "C" fn visit(seen: *mut std::ffi::c_void, t: u32) -> bool {
+                let seen = unsafe { &mut *(seen as *mut Vec<u32>) };
+                seen.push(t);
+                seen.len() < 2
+            }
+            let mut seen: Vec<u32> = Vec::new();
+            ee_unit_set_for_each(s, &mut seen as *mut Vec<u32> as *mut std::ffi::c_void, visit);
+            assert_eq!(seen, [12, 14]);
+            seen.clear();
+            seen.push(0);
+            assert!(ee_unit_sets_for_each(0, &mut seen as *mut Vec<u32> as *mut std::ffi::c_void, visit));
+            assert_eq!(seen, [0, 12], "stopped after the first");
+            assert!(ee_unit_sets_for_each(1, &mut seen as *mut Vec<u32> as *mut std::ffi::c_void, visit));
+            assert_eq!(seen, [0, 12]);
         }
         assert!(!ee_unit_sets_contains(1, 12), "an unused slot holds nothing");
         assert_eq!(ee_unit_sets_record_size(), 184);

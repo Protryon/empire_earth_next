@@ -111,24 +111,6 @@ unsigned short EECountTilesAround(long inX, long inY, bool inAny)
     return (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_COUNT_TILES_AROUND, inAny, 0, inX, inY);   // uu_cloak.rs
 }
 
-// Attaches the cloaking graphic effect (0x11c) to the unit and keeps its handle in the complex unit's mCloaked
-void EEAddCloakEffect(EEUnit* inUnit)
-{
-    ee_units_ck_body(EE_UNITS_CK_DO_ADD_CLOAK_EFFECT, (uint64_t)(uintptr_t)inUnit, 0, 0, 0);   // uu_cloak.rs
-}
-
-// Destroys the unit's cloaking effect, if it has one, and clears its handle
-void EERemoveCloakEffect(EEUnit* inUnit)
-{
-    ee_units_ck_body(EE_UNITS_CK_DO_REMOVE_CLOAK_EFFECT, (uint64_t)(uintptr_t)inUnit, 0, 0, 0);   // uu_cloak.rs
-}
-
-// Returns the planet (land continent) under a unit or nearest it within 6 tiles; 1 on a non-space map, 0 when none
-unsigned short EEGetLandContinentOf(EEComplexUnit* inUnit)
-{
-    return (unsigned short)ee_units_ck_body(EE_UNITS_CK_DO_LAND_CONTINENT_OF, (uint64_t)(uintptr_t)inUnit, 0, 0, 0);   // uu_cloak.rs
-}
-
 // Sets the planet of every complex air unit, space dock, space turret and orbital space station on the map
 // (cdecl; called by EEWorld.cpp and EEUserInterface.cpp)
 void EEUpdateLandContinents()

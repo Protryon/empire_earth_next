@@ -93,6 +93,46 @@ pub unsafe extern "C" fn ee_combat_screen(
     accepted as i32
 }
 
+/// The melee screen's test record (`EEFOFindNewTargetInMeleeRange::Virtual04`/`Virtual08`, one body): a living
+/// candidate's distance asked of `distance`, the CBFS record filled as the screen read it; the answer.
+pub fn melee_screen(hit_points: i32, range: f32, distance: impl FnOnce() -> f32) -> (EeCombatScreenIn, bool) {
+    let (accepted, read) = screen_accepts(hit_points, range, distance);
+    let record = EeCombatScreenIn {
+        kind: EE_COMBAT_SCREEN_KIND_MELEE,
+        hit_points,
+        range,
+        read: read.is_some() as i32,
+        distance: read.unwrap_or(0.0),
+    };
+    (record, accepted)
+}
+
+/// `EEFOFindNewTargetInMeleeRange::Virtual04`/`Virtual08` (units round 12; was EEUnitClass.cpp's EEMeleeScreen): the
+/// candidate (`hit_points`) is alive and nearer to the screen's unit than `range` (`EEGetHitDistanceSquared` of the
+/// unit and the candidate, measured from the unit); TEST ONLY: the CBFS capture record (the record, then the answer
+/// as an `int32_t`, as `EECombatCapture` wrote it).
+///
+/// # Safety
+/// `unit` and `candidate` are live complex units.
+#[cfg(not(test))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_melee_screen(unit: u64, candidate: u64, hit_points: i32, range: f32) -> bool {
+    let (record, accepted) = melee_screen(hit_points, range, || unsafe {
+        crate::combat::cg_query::ee_units_cgq_hit_distance_squared(unit, candidate, -10000.0, -10000.0)
+    });
+    if crate::app::capture_record::active() {
+        let mut r = crate::app::capture_record::Record::new(u32::from_le_bytes(*b"CBFS"));
+        r.i32(record.kind);
+        r.i32(record.hit_points);
+        r.f32(record.range);
+        r.i32(record.read);
+        r.f32(record.distance);
+        r.i32(accepted as i32);
+        r.commit();
+    }
+    accepted
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,6 +187,23 @@ mod tests {
         i.hit_points = 0;
         assert_eq!(unsafe { ee_combat_screen(&mut i, std::ptr::null_mut(), Some(three)) }, 0);
         assert_eq!((i.read, i.distance), (0, 0.0));
+    }
+
+    #[test]
+    fn the_melee_screen_reads_the_distance_of_the_living_only() {
+        let mut asked = 0;
+        let (r, ok) = melee_screen(0, 9.0, || {
+            asked += 1;
+            1.0
+        });
+        assert_eq!((r.read, r.distance, ok, asked), (0, 0.0, false, 0));
+        let (r, ok) = melee_screen(4, 9.0, || 8.5);
+        assert_eq!(
+            r,
+            EeCombatScreenIn { kind: EE_COMBAT_SCREEN_KIND_MELEE, hit_points: 4, range: 9.0, read: 1, distance: 8.5 }
+        );
+        assert!(ok);
+        assert!(!melee_screen(4, 9.0, || 9.0).1);
     }
 
     #[test]
