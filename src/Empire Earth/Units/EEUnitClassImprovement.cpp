@@ -26,17 +26,6 @@
 // (R5b.4, round 28: the class's and the upgrade's fields are read and written in place, ee_units improve.rs over the
 // records; the step factors are the class's improvement table's, read there)
 
-// Creates the improvement levels with every improvement at level 1 and no points spent
-EEUnitClassImprovement::EEUnitClassImprovement()
-{
-    ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_RESET, this->mLevels, &this->mTotalCost, NULL, &EEImprovementHost, 0, 0);
-}
-
-// Destroys the improvement levels (nothing to release)
-EEUnitClassImprovement::~EEUnitClassImprovement()
-{
-}
-
 // Returns whether an improvement applies to a unit class: its upgrade flag, or a base stat above 0 (range above 1)
 bool EEUnitClassImprovement::CanUpgrade(EEUnitClass* inUnitClass, long inImprovement)
 {
@@ -48,12 +37,6 @@ void EEUnitClassImprovement::CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitC
 {
     ee_units_improvement(EE_UNITS_IMPROVEMENT_DO_COPY_LEVELS, this->mLevels, &this->mTotalCost,
                          EEImprovementContext{inTarget, inUpgrade->mUnitClass, inUpgrade, NULL}, &EEImprovementHost, 0, 0);
-}
-
-// Returns the level of an improvement
-long EEUnitClassImprovement::GetLevel(long inIndex)
-{
-    return this->mLevels[inIndex];
 }
 
 // Builds the upgrade button's " + n" help text: the stat gain of the improvement's step to level inLevel + 1
@@ -77,12 +60,6 @@ void EEUnitClassImprovement::GetName(EEUnitClass* inUnitClass, long inImprovemen
         gResource->GetString(kNames[inImprovement], outName);
     else
         outName = "";
-}
-
-// Returns the improvement points one level costs: 1 for the armour kinds (2..7), else 2
-long EEUnitClassImprovement::GetCost(long inImprovement)
-{
-    return ee_units_improve_cost((int32_t)inImprovement);
 }
 
 // Raises (inDelta > 0) or lowers an improvement's level and points spent and moves the upgrade's stat as many steps

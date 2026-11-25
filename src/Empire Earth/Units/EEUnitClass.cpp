@@ -69,7 +69,6 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
 
-
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
 static const float kSoundDistanceFactor = 4.0f;  // 0x447ac4 (Virtual2C)
@@ -85,22 +84,7 @@ EE_CONSTRUCT_GLOBAL_AS(std::vector<EEUnitClass*>, gUnitClassTable, gUnitClassTab
 // table, guarded dtor bit 1 of 0x563698: a class static).
 EE_CONSTRUCT_GLOBAL_AS(std::vector<unsigned long>, EEUnitClassUnitTypes, EEUnitClass::sUnitTypes, );
 
-// Creates a unit class from its dbunits record: stats, sounds and effects (referenced), terrain table, movement
-// domains and kind flags. Port (R5b.4 round 27): the plain stores are ee_units unit_class_fields.rs's fill of the
-// class's record base from the row, given the lookups it reads (the tech tree's epoch and calamity technology, the
-// animal id, the AI script); the media, effects and the improvement table stay here, in the original's order.
-EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysicsModel* inPhysicsModel)
-{
-    ee_units_uc_class(EE_UNITS_UC_DO_CONSTRUCT, this, inRecord, inIsComplex, inPhysicsModel);   // uc_class.rs
-}
-
 // (the effects are contiguous, GetEffects' array: EeUnitsUnitClassLinks, its Rust test)
-
-// Destroys the unit class, releasing its graphic effects and its projectile, scaffolding, death and remains classes
-EEUnitClass::~EEUnitClass()
-{
-    ee_units_uc_call(EE_UNITS_UC_DO_DESTROY, this, NULL, 0, 0, 0, NULL, NULL);   // uc_media.rs
-}
 
 // (0x630c55 ApplyAreaDamage, 0x630fd2 ApplyHit and the damage of one hit: ee_combat damage.rs since the tenth
 // round, over the world host in EECombatGoals.cpp)
@@ -146,16 +130,6 @@ void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool 
 // Returns whether the unit (or its turrets) faces a point within its firing arc or the fixed tolerance; broadside
 // ships also count the opposite side
 // (FacesPoint and its CBQR record: ucn_noted.rs, inline in ee/EEUnit.h)
-
-// Starts a unit's death: spawns the death class, plays the death effect and sound (not for ICBMs), the dying animation,
-// and makes it uncommandable
-// Sends a computer player's unit to an escape point, when one is found
-// Plays the class's creation effect on the unit
-void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
-{
-    if (this->mCreationEffect != NULL)
-        gEffectManager->CreateUnitEffect(inUnit, this->mCreationEffect, NULL, 0, 0, 0);
-}
 
 // Launches a projectile (or carried cargo) from the unit's weapon tag point toward the target or ground point (new:
 // the launch transform, its tile and the special attack's choices are ee_combat's launch_shot)
@@ -390,8 +364,6 @@ extern bool& gOrthographicView;
 
 // Runs the default handling of the unit's new AI-script action (animation, goals, herd, flight, healing, death,
 // rotting), then restarts the current goal's timer
-
-
 
 // ProduceUnit's tile line (EE_UNITS_UC_LINE_RESET, EE_UNITS_UC_TILE_LINE and its reads)
 static std::vector<EETileCoordinate> sUcLine;

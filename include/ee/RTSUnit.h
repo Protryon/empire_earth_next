@@ -15,6 +15,9 @@ class EEMap;
 class FSFile;
 class RTSTile;
 class RTSUnit;
+// a unit's Load (inLoad) or Save over its parts' records (inDepth 0: RTSUnit's, 1: with EEUnit's, 2: with
+// EEComplexUnit's; EEComplexDoppelganger.cpp)
+long EEUnitFile(bool inLoad, RTSUnit* inUnit, int inDepth, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& ioFile);
 
 // What RTSUnit+0x08 points to: the unit's links in a second list whose head can be an RTSDummyUnit
 // (0x23dae5/0x23dbda dynamic_cast the previous element to it). new'd by 0x23da54 (8 bytes, both zeroed inline).
@@ -52,17 +55,17 @@ public:
     virtual void Invalidate() { ee_rts_unit_invalidate(this); }
     // +0x08 (the shared empty `ret 4` 0x157269): copies from inUnit (EEUnit::CopyFrom 0x228ef5 calls it last with
     // its argument; provisional name)
-    virtual void CopyFrom(RTSUnit* inUnit);
+    virtual void CopyFrom(RTSUnit*) {}
     virtual void SightOnHere() = 0;         // +0x0c
-    virtual void Describe(UWideString& ioString);   // +0x10 0x23d9a8 ("uid %d, at %d,%d:")
-    virtual void DescribeLong(UWideString& ioString);  // +0x14 0x23d9f6 ("UnitID:%d\nTile:(%d,%d)\n")
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x23db4f
+    virtual void Describe(UWideString& ioString) { ioString += ee_rts_unit_describe(this, false); }  // +0x10 0x23d9a8 ("uid %d, at %d,%d:")
+    virtual void DescribeLong(UWideString& ioString) { ioString += ee_rts_unit_describe(this, true); }  // +0x14 0x23d9f6 ("UnitID:%d\nTile:(%d,%d)\n")
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return EEUnitFile(true, this, 0, inMajorVersion, inMinorVersion, inFile); }  // +0x1c 0x23db4f
     // +0x20 0x23dd46 (Reset, mIsValid = false)
     virtual void Clear() { ee_rts_unit_clear(this); }
     virtual void SightOffHere() = 0;        // +0x24
     // +0x28
     virtual long RepairPointers(unsigned long, unsigned long) { return 0; }
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x2c 0x23dc3a
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return EEUnitFile(false, this, 0, inMajorVersion, inMinorVersion, outFile); }  // +0x2c 0x23dc3a
     // +0x30 0x23d977 (asserts !mIsValid; deletes the link)
     virtual void FreeNode() { ee_rts_unit_free_node(this); }
     // +0x34 0x23db49 (RTSUnit::Dereference calls it at the last reference)
@@ -70,7 +73,7 @@ public:
 
     // 0x23d8cc (out of line): the count = 1 (UReferenceCounter's inline ctor), the vptr, Reset(), then +0x2b = 0,
     // +0x2a = 1
-    RTSUnit();
+    RTSUnit() { ee_rts_unit_construct(this); }
     // 0x23da54: Reset, mIsValid, a new RTSUnitLink unless inLinked == 0
     void Initialize(long inLinked) { ee_rts_unit_initialize(this, inLinked); }
     // 0x23da8e: +0x24 = -1, +0x1c/+0x20 = -10000, the rest 0 (provisional name)
@@ -86,7 +89,6 @@ public:
     // 0x23dcf3: mL14 = the map's tile at (mTileX, mTileY)
     void UpdateTile(EEMap* inMap) { ee_rts_unit_update_tile(this, inMap); }
     unsigned long GetUnitID() const { return this->mUnitID; }  // (EEWUnitsOffMapInfo::Save 0x161d22 reads an RTSUnit's id through it)
-
 
     // Members (moved here from EEUnit, RTSUnit's Reset sets them; provisional names)
     RTSUnitLink* mTileNode;                 // +0x08 (0: not a valid target; the unit calamities' Virtual4C)
@@ -114,8 +116,5 @@ struct EEUnitSaveContext {
     EEUnitVectorItem* mGoals;
 };
 int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsUnitSaveIo* io);
-// a unit's Load (inLoad) or Save over its parts' records (inDepth 0: RTSUnit's, 1: with EEUnit's, 2: with
-// EEComplexUnit's; EEComplexDoppelganger.cpp)
-long EEUnitFile(bool inLoad, RTSUnit* inUnit, int inDepth, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& ioFile);
 
 #endif

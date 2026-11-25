@@ -56,11 +56,6 @@ extern "C" int64_t ee_units_script_host(int32_t inOp, uint64_t inA, int64_t inB)
     }
 }
 
-void* EEUnitAction::GetScript(const UString& inName)
-{
-    return reinterpret_cast<void*>(static_cast<uintptr_t>(ee_units_script_get((const uint8_t*)(const char*)inName, inName.GetLength())));   // script.rs
-}
-
 // IsActive's action (the gather test's local)
 static unsigned long sAIAction;
 

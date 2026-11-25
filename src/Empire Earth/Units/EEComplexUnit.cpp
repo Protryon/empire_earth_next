@@ -86,8 +86,6 @@
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
 
-
-
 // The genuine existing free predicate at 0x2414d2 (defined in EEFOFindNewTargetNearOldTarget.cpp).
 
 // chain at 0x5f57d3 (wrapper)
@@ -99,7 +97,6 @@
 const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 
 // 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
-
 
 // chain at 0x5f5954 (wrapper)
 //   object 0x963198  ctor ??0?$UMemoryPool@VEEComplexUnit@@@@QAE@XZ  dtor ?Release@?$UMemoryPool@VEEComplexUnit@@@@QAE_NXZ
@@ -125,10 +122,6 @@ extern char gEmptyString[];
 // Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
 // (cu_body.rs; the thresholds there: 0x4c76f0)
 
-
-
-
-
 // Clears every used pool unit's reference count. The original also built a "!Leaking Unit" line per unit and walked
 // the reference-counter buckets, but its report was compiled away: neither had an effect (provisional name, from
 // Empire Earth.cpp)
@@ -150,10 +143,6 @@ static void EEDumpWrite(void* inFile, const char* inText, size_t inLength)
 {
     fwrite(inText, 1, inLength, static_cast<FILE*>(inFile));
 }
-
-
-
-
 
 // Adjusts a value by the unit's morale: positive morale takes a share off, negative morale adds one (combat.yaml
 // morale: 80% and 60% in the original)
@@ -211,17 +200,6 @@ extern "C" int64_t ee_units_sight_host(int32_t inOp, uint8_t inOn, uint64_t inA,
     return 0;
 }
 
-
-// Returns true if the class uses air traffic control and is not a building
-bool EEUnitClass::IsAircraft()
-{
-    return this->mAirTrafficType != 0 && !this->IsLandBuilding() && this->mCategory != kUnitCategoryNavalBuilding && this->mCategory != kUnitCategorySpaceBuilding;
-}
-
-
-
-
-
 // FleeAfterCalamity's point ahead is the body's first two floats
 static_assert(sizeof(GE2DPoint) == 2 * sizeof(float), "a GE2DPoint is two floats");
 
@@ -271,7 +249,6 @@ static GE2DPoint sCuLocation;
 static EEEffectHandle sCuHandle;
 static EEUnit* sCuBlocker;
 static long sCuBlockTile[2];   // x, y
-
 
 // cu_life.rs's scratch values: SwapGraphic's new angles, orbitals and wheels, StepAside's tiles, IsNextToTile's
 // points, Init's copy of the placement (the originals' locals)
@@ -1333,7 +1310,6 @@ extern "C" int64_t ee_units_wp_host(int32_t inOp, uint64_t inUnit, uint64_t inAr
     }
     return 0;
 }
-
 
 // ---- EEWheel.cpp's bodies (0x23c83a..0x23ceca: the wheels' update and some cdecl unit helpers; units round 11:
 // the file is gone)

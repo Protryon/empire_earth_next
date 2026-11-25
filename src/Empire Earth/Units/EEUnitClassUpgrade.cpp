@@ -92,12 +92,6 @@ extern "C" long ee_units_upgrade_host(int32_t inOp, void* inUpgrade, void* inObj
     return 0;
 }
 
-// Destroys the copy, unloading its sounds and model while its media is loaded
-EEUnitClassUpgrade::~EEUnitClassUpgrade()
-{
-    this->Media(EE_UNITS_UPGRADE_MEDIA_DESTROY, 0, NULL, NULL);
-}
-
 // Raises another copy's improvements by this copy's levels above 1, moving its stats
 
 // Writes the class name and media count to the dump file when the copy's media is still loaded

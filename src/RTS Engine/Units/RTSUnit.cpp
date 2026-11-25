@@ -39,8 +39,6 @@ uint32_t EEUnitHandleID(const RTSUnit* inUnit) { return ee_rts_unit_handle_id(in
 
 void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere) { ee_rts_unit_check_list(inHead, inWhere); }
 
-RTSUnit::RTSUnit() { ee_rts_unit_construct(this); }
-
 // Destroys the unit and its tile node (asserts it was invalidated)
 RTSUnit::~RTSUnit()
 {
@@ -49,35 +47,6 @@ RTSUnit::~RTSUnit()
     EEUnitStoreRemove(this);   // New (R5b.4, round 26): the store reads this object's records; none outlives it
     delete this->mTileNode;
 }
-
-
-// Appends the unit's id and tile to a debug description
-void RTSUnit::Describe(UWideString& ioString) { ioString += ee_rts_unit_describe(this, false); }
-
-// Appends the unit's id and tile to a multi-line debug description
-void RTSUnit::DescribeLong(UWideString& ioString) { ioString += ee_rts_unit_describe(this, true); }
-
-
-
-// Reads the unit's tile, id and flags (the editor selection is cleared); returns the first read error. port (R5b.4,
-// round 26): the body is Rust (ee_units unit_load.rs rts_load)
-long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return EEUnitFile(true, this, 0, inMajorVersion, inMinorVersion, inFile);
-}
-
-
-// Writes the unit's tile, id and flags (editor selection as false; versions up to 0.6 write id and tile
-// only); returns the first write error. port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs rts_save)
-long RTSUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return EEUnitFile(false, this, 0, inMajorVersion, inMinorVersion, outFile);
-}
-
-void RTSUnit::CopyFrom(class RTSUnit *)
-{
-}
-
 
 // The shims units.rs calls (UnitsCpp: the unit's side)
 extern "C" {

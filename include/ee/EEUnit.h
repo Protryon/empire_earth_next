@@ -53,6 +53,7 @@ class EESoundObject;
 #include "rust/sim/units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
 #include "rust/sim/cp.h"                 // ee_cp_distance_squared_to_unit (DistanceSquaredToUnit)
 #include "rust/sim/astar.h"              // ee_astar_cm_footprint_continent (GetFootprintContinent)
+#include "rust/sim/combat.h"             // EE_COMBAT_SHOT_* (the shots' steps)
 
 // What +0x34 of a unit points to: the owner's RTTI EEUnitClassUpgrade for the unit's class (vtable 0x449ad8, sizeof
 // 0x16c, ctor 0x23b6ae(EEUnitClass*); EEPlayer's Reset news one per gUnitClassTable entry into its vector at +0x884).
@@ -69,7 +70,7 @@ class FSFileSpec;
 class EEUnitClassUpgrade : public EeUnitsUnitClassUpgradeLinks, public EeUnitsUnitClassUpgradeFields {
 public:
     EEUnitClassUpgrade(EEUnitClass* inUnitClass);   // 0x23b6ae (then Init)
-    virtual ~EEUnitClassUpgrade();          // +0x00 dtor 0x23b729 (??_G 0x23b70d)
+    virtual ~EEUnitClassUpgrade() { this->Media(EE_UNITS_UPGRADE_MEDIA_DESTROY, 0, NULL, NULL); }  // +0x00 dtor 0x23b729 (??_G 0x23b70d)
     virtual void CopyUpgradeLevels(EEUnitClassUpgrade* inOther) { this->mImprovement.CopyLevelsTo(inOther, inOther->GetImprovement()); }  // +0x04 0x23b7a4 (forwards to mImprovement)
 
     // the media bodies (ee_units upgrade_media.rs) over the eight media members (mButton .. mSelectionSounds[1],
@@ -810,12 +811,6 @@ const unsigned long kAnyUnitType = 0xffffffffUL;
 extern EEPhysicsModel* gPhysicsModels[12];
 // Unit action names use the real UString value in EEUnitAction::sActionNames (0x563668).
 
-
-
-
-
-
-
 // 0x22c7e0 (cdecl): the key map of a unit class's +0x08 name (EEUnitClass ctor: mAIScript) (provisional name)
 // 0x563a6c is gUnitClassTable[0xf0] (inside the table, not after it): the wall class the ghost of unit type 0x42 adds
 // three of (EEGhostUnit::Create); there is no separate gWallUnitClass extern (the readers index the table)
@@ -825,14 +820,11 @@ bool EEIsLineBlocked(long inX1, long inY1, long inX2, long inY2, EEUnit** outArg
 // 0x12a52e (cdecl): whether inUnit is seen by the current player (the land priest's sounds) (provisional name)
 bool EEIsSeen(EEUnit* inUnit);
 
-
-
 // 0x20b687 (cdecl): whether tile (inX, inY) takes a unit (special location; first argument 0) (provisional name)
 bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);   // inUnit: the unload goal passes its transport
 
 // 0x20ccb8 (cdecl; the conscription calamity's second call with 0x138d) (provisional name)
 void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect);
-
 
 // EEActiveGroup (the group object at EEComplexUnit +0x1c8) is defined in ee/EEPlayer.h after its base EEGroup
 // (RTTI EEActiveGroup > EEGroup, ctor 0x1ebc86)
@@ -842,13 +834,14 @@ void EEUpdateUnitTile(GETransformation* inTransformation, EEComplexUnit* inUnit,
 
 // A unit type (RTTI EEUnitClass > UReferenceCounter; vtable 0x447b10; EEUnitClass.cpp around 0x2358b1). Names
 // are provisional.
+// a shot's ActionChanged or Update (inUpdate; inFunc its CBSO record): ee_combat shots.rs over EEUnitClassShots.cpp's host
+void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit);
 struct EEUnitClassRecord;                   // a dbunits.dat record (the ctor copies it field by field; +0x374 a count)
 
 // The class's improvement table (EEUnitClass::mImprovements) is the upgrade table's Rust record EeDataUpgradeFields
 // (rust/data/tables.h; EEUCUpgradeTable's base): per improvement attribute a factor (mScale the cost factor, mOffset
 // the step factor; attribute 12 has no cost) and the maximum level (units round 11: the C++ views of it,
 // EEUnitClassImprovementTable and its entry, are gone).
-
 
 // The plain members (mAirTrafficType, mCommands and the block mCruiseAltitude +0x11c .. mIsParatrooperBomber +0x326:
 // numbers, flags and their arrays, names and types kept) are the Rust record EeUnitsUnitClassFields (ee_units
@@ -858,14 +851,14 @@ public:
     // an object's handle for the Rust calls of the inline members (its address)
     static uint64_t H(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
     // 0x22f317 (out of line; every EEUC* ctor calls it with 1, its record and its class's global) (provisional names)
-    EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysicsModel* inPhysicsModel);
+    EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysicsModel* inPhysicsModel) { ee_units_uc_class(EE_UNITS_UC_DO_CONSTRUCT, this, inRecord, inIsComplex, inPhysicsModel); }
     // 0x2364c0: the value for inKey in the map at +0x60 (0 when there is no map or no entry); the bombers ask for
     // 0x7e0 (provisional name)
     EEUnitAction* FindAction(long inKey) { return reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>( ee_units_script_find(reinterpret_cast<uintptr_t>(this->mAIScript), (int32_t)inKey))); }
     void UnitRemoved() { ee_units_uc_rest(EE_UNITS_UC_DO_R_UNIT_REMOVED, this, NULL, 0, 0, 0, NULL); }  // 0x236a83 (EEUnit::Remove, first) (provisional name)
     void LoadClassMedia() { ee_units_uc_call(EE_UNITS_UC_DO_LOAD_CLASS_MEDIA, this, NULL, 0, 0, 0, NULL, NULL); }  // 0x2354ae (EEPlayer::LoadAllClassMedia, per class with loaded media; provisional name)
     void UnloadClassMedia() { ee_units_uc_call(EE_UNITS_UC_DO_UNLOAD_CLASS_MEDIA, this, NULL, 0, 0, 0, NULL, NULL); }  // 0x2382fd (EEPlayer::UnloadAllClassMedia, per mSoundLoadedClasses class; provisional name)
-    virtual ~EEUnitClass();                 // +0x00 0x2305ee (dereferences the effects and classes)
+    virtual ~EEUnitClass() { ee_units_uc_call(EE_UNITS_UC_DO_DESTROY, this, NULL, 0, 0, 0, NULL, NULL); }  // +0x00 0x2305ee (dereferences the effects and classes)
     void GroundLocation(GE3DPoint& ioLocation) { ee_units_uck_dispatch(EE_UNITS_BODY_GROUND_LOCATION, this, NULL, 0, 0, 0, &ioLocation.mX); }  // +0x04 (the time warp's return, flag 4)
     // +0x08 (base 0x2907a3: empty): the tile under inLocation along the camera line (EEUCNavalCitizen 0x218490)
     void LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_uck_dispatch(EE_UNITS_BODY_LOCATION_TO_TILE, this, NULL, H(&inLocation), (int64_t)H(&outX), (int64_t)H(&outY), NULL); }
@@ -927,7 +920,7 @@ public:
     bool IsAirBase() { return ee_units_uc_is(H(this), EE_UNITS_UC_IS_AIR_BASE); }                       // 0x4229 (+0x28 set and +0x1b8 2, 0x15 or 0x20: the icon bar's aircraft carrier test) (provisional name)
     // 0x1fdf06 (inline in the real header? its COMDAT follows EEComplexUnit::StartProduction; EEUnitClass 0x231b55
     // calls it too): mAirTrafficType set, not WriteDetailsHook, category not 0x15/0x20 (provisional name)
-    bool IsAircraft();
+    bool IsAircraft() { return this->mAirTrafficType != 0 && !this->IsLandBuilding() && this->mCategory != kUnitCategoryNavalBuilding && this->mCategory != kUnitCategorySpaceBuilding; }
     // inline (COMDAT 0x221b9, first emitted by EEAIContinentManager.cpp; every caller passes it to an EEDebugTrace
     // and calls it out of line) (provisional name)
     const UString& GetName() { return this->mName; }
@@ -1096,11 +1089,11 @@ public:
     bool IsAwayFromGoal(EEComplexUnit* inUnit) { return ee_units_ucn_away_from_goal(H(this), H(inUnit)); }
     EEUnit* MiningBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
     EEUnit* MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucb_call(EE_UNITS_UCB_DO_MINING_CREATE_UNIT_AT, this, NULL, H(inCreator), inPlayer, inIsFoundation, &inTransformation.mMatrix); }
-    void MissileActionChanged(EEComplexUnit* inUnit);
+    void MissileActionChanged(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_MISSILE, false, EE_COMBAT_SO_MISSILE_ACTION, this, inUnit); }
     void MissileUnitCreated(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_CREATED, this, inUnit, 0, NULL); }
     long MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
     bool MissileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { return ee_units_ucs_call(EE_UNITS_UCS_DO_MISSILE_LAUNCH, this, inUnit, 0, NULL) != 0; }
-    void MissileUpdate(EEComplexUnit* inUnit);
+    void MissileUpdate(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_MISSILE, true, EE_COMBAT_SO_MISSILE_UPDATE, this, inUnit); }
     bool MissileCheckGroundImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_GROUND, this, inUnit); }
     bool MissileCheckWaterImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_MISSILE_WATER, this, inUnit); }
     void NavalUnitCreated(EEComplexUnit* inUnit) { ee_units_ucg_call(EE_UNITS_UCG_DO_NAVAL_CREATED, this, inUnit, 0, 0.0f); }
@@ -1110,10 +1103,10 @@ public:
     void NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY) { ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_LOCATION_TO_TILE, this, NULL, H(&outX), (int64_t)H(&outY), 0, const_cast<float*>(&inLocation.mX)); }
     EEUnit* NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_CITIZEN_CREATE_UNIT, this, NULL, H(inCreator), (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32), (int64_t)inPlayer * 2 + inIsFoundation, NULL); }
     EEUnit* NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_NAVAL_PRIEST_CREATE_UNIT_AT, this, NULL, H(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]); }
-    void ProjectileActionChanged(EEComplexUnit* inUnit);
+    void ProjectileActionChanged(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, false, EE_COMBAT_SO_PROJECTILE_ACTION, this, inUnit); }
     void ProjectileUnitCreated(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_CREATED, this, inUnit, 0, NULL); }
     bool ProjectileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation) { return ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_LAUNCH, this, inUnit, 0, (const float(*)[3])&inLocation.mX) != 0; }
-    void ProjectileUpdate(EEComplexUnit* inUnit);
+    void ProjectileUpdate(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, true, EE_COMBAT_SO_PROJECTILE_UPDATE, this, inUnit); }
     void ProjectileUpdateEffects(EEComplexUnit* inUnit) { ee_units_ucs_call(EE_UNITS_UCS_DO_PROJECTILE_EFFECTS, this, inUnit, 0, NULL); }
     bool ProjectileCheckGroundImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_GROUND, this, inUnit); }
     bool ProjectileCheckWaterImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_PROJECTILE_WATER, this, inUnit); }
@@ -1137,7 +1130,7 @@ public:
     EEUnit* SubmergedNavalCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator) { return (EEUnit*)(uintptr_t)ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_CREATE_UNIT_AT, this, NULL, H(inCreator), (int64_t)inPlayer * 2 + inIsFoundation, 0, &inTransformation.mMatrix[0][0]); }
     void SubmergedNavalAddToTile(EEUnit* inUnit) { ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_ADD_TO_TILE, this, NULL, H(inUnit), 0, 0, NULL); }
     bool SubmergedNavalHasArrived(EEComplexUnit* inUnit, float inValue) { return ee_units_ucg_sea(EE_UNITS_UCG_DO_SUBMERGED_HAS_ARRIVED, this, inUnit, 0, 0, 0, &inValue) != 0; }
-    void TorpedoUpdate(EEComplexUnit* inUnit);
+    void TorpedoUpdate(EEComplexUnit* inUnit) { EECombatShotStep(EE_COMBAT_SHOT_TORPEDO, true, EE_COMBAT_SO_TORPEDO_UPDATE, this, inUnit); }
     bool TorpedoCheckGroundImpact(EEComplexUnit* inUnit) { return ee_units_ucs_impact(EE_UNITS_UCS_DO_TORPEDO_GROUND, this, inUnit); }
     void TransportUnitCreated(EEComplexUnit* inUnit) { ee_units_ucx_call(EE_UNITS_UCX_DO_TRANSPORT_CREATED, this, inUnit, 0, 0, 0); }
     bool CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit) { return ee_units_ucn_can_load(H(this), H(inTransport), H(inUnit)); }
@@ -1175,7 +1168,7 @@ public:
     // chain) (provisional name)
     bool HasRallyPoint() { return (this->IsLandBuilding() && this->mCanSetRallyPoint) || ((this->mCategory == kUnitCategoryNavalBuilding || this->mCategory == kUnitCategorySpaceBuilding) && this->mAirTrafficType != 0) || this->mUnitType == kUnitTypeCpMissileBase; }
     // 0x234084: plays the class's +0x94 effect on inUnit (the meteor storm's new meteor) (provisional name)
-    void PlayCreationEffect(EEUnit* inUnit);
+    void PlayCreationEffect(EEUnit* inUnit) { if (this->mCreationEffect != NULL) gEffectManager->CreateUnitEffect(inUnit, this->mCreationEffect, NULL, 0, 0, 0); }
     // 0x211747: the last unit of inUnit's +0x1d0 chain; 0x211723: that unit's +0x1cc (the logic bomb; ecx unused)
     // (provisional names)
     EEComplexUnit* GetLastLinked(EEComplexUnit* inUnit) { return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_LAST_LINKED, this, NULL, H(inUnit), 0, 0, NULL); }

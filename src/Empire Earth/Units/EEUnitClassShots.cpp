@@ -46,27 +46,6 @@
 // 0x241a6a (cdecl): the launch angle from inOwner at inLocation for the ammunition (provisional name)
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);
 
-static void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit);
-
-// Returns whether a projectile hit the ground (bombs, low launches, after 1 s of flight): attacks the ground there
-// unless it came down on its target building or wall, and leaves a shell hole on land
-// Returns whether a bomb, or a projectile after 1 s of flight, hit water it cannot cross; if so, it attacks the ground
-// Handles the projectile's new action: on a hit plays its effects and sound, drops a parachute's cargo or fires, may
-// set a target on fire (flaming arrows), dies and leaves remains; retargets a dead target's tile or its container
-void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, false, EE_COMBAT_SO_PROJECTILE_ACTION, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
-
-// Sets up a new projectile: records its start point, sets it to full speed and starts it advancing
-// Launches the projectile toward a location at the ballistic pitch for its launcher's stats; returns whether one exists
-// Updates a living projectile's trail (when moving) and ripples when the effect detail allows them
-// Steps the projectile's physics, effects and sound, counts down rotting, fades it below z 0 in space, adds flight time
-void EEUnitClass::ProjectileUpdate(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_PROJECTILE, true, EE_COMBAT_SO_PROJECTILE_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
-
 // New (port): the host of ee_combat shots.rs's plans (EEUCProjectile/EEUCMissile::ActionChanged and Update,
 // EEUCTorpedo::Update): each read the original's expression, each operation its statement, on the unit and its
 // class (the original's `this`, cast as the original's member function saw it: virtual calls dispatch as they did).
@@ -79,7 +58,6 @@ struct EEShotContext {
     EEUnitClass* mClass;
     int32_t mKind;                          // EE_COMBAT_SHOT_*
 };
-
 
 EEUGRust* EEShotAttack(EEComplexUnit* inUnit)
 {
@@ -261,7 +239,7 @@ int64_t EEShotOp64(void* inContext, int32_t inOp, uint64_t inA, int64_t inB, flo
 
 // A shot's ActionChanged or Update (inUpdate) within its host-read scope and its CBSO record (inFunc): ee_combat
 // shots.rs over this file's host
-static void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit)
+void EECombatShotStep(int32_t inKind, bool inUpdate, uint32_t inFunc, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
     EEShotContext theContext = {inUnit, inClass, inKind};
     EeCombatShotHost theHost = {&theContext, EEShotOp, EEShotOp64};
@@ -298,14 +276,6 @@ bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget)
 
 // Returns whether the missile hit water (z 0 or below on terrain it cannot cross); if so, it attacks the ground there
 
-
-// Handles the missile's new action: on a hit plays the splash or death effect and sound, fires its shot and dies
-// (attack-unit goals, ICBM ground strikes); switches to attack ground; on retarget follows the target's container
-void EEUnitClass::MissileActionChanged(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_MISSILE, false, EE_COMBAT_SO_MISSILE_ACTION, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
-
 // Sets up a new missile: records its start point and stops it; all but the ICBM start the flight animation and advance
 // Launches the missile: tilts it to its launcher's launch pitch and starts the launch delay and a 300 s lifetime; true
 // Answers the missile triggers: hit unit (attacks it; also true when its lifetime ran out), ground and water impact,
@@ -316,23 +286,9 @@ long EEUnitClass::MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long 
     return EECombatCondition(EE_COMBAT_GOAL_MISSILE, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
 }
 
-// Steps the missile's physics, effects and sound, and counts down its rotting time, launch delay and lifetime
-void EEUnitClass::MissileUpdate(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_MISSILE, true, EE_COMBAT_SO_MISSILE_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
-
 // ---- EEUCTorpedo.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The torpedo's unit class:
 // 0x21b163..0x21b27a (after EEUCSubmergedNaval.cpp; EEUCTransport.cpp follows). Unit flags: the exe's module set.
 // Its ctor is inline; +0xe4 is ICF-folded (0x29059d: false).
-
-// When the torpedo has reached ground at or above sea level, gives it an attack-ground goal there and returns
-// true
-// Flies the torpedo as a missile and keeps it from rising above the water plane (height 0)
-void EEUnitClass::TorpedoUpdate(EEComplexUnit* inUnit)
-{
-    EECombatShotStep(EE_COMBAT_SHOT_TORPEDO, true, EE_COMBAT_SO_TORPEDO_UPDATE, this, inUnit);   // ee_combat shots.rs (CBSO)
-}
 
 // BombUpdate's blink colour (its function static until round 7)
 static GEColor sBombBlinkColor(0.9f, 0.0f, 0.2f);
