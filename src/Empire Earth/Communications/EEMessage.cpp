@@ -123,10 +123,6 @@ long EELoadOrSave(EEMRecord* m)
     return ee_gamecpp_msg_load_or_save(m);
 }
 
-// New (port), TEST ONLY: set by the UI fixture (EETestFixture.cpp, only with EE_TEST_UI) to see each box selection's
-// decoded ids as its message is built on the UI thread; NULL otherwise
-void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
-
 // Creates a box selection: picks the local player's units of the given type in the rectangle and stores them
 // compressed (the count, the blob), the rectangle and the type beside (members 3 and 4, off the wire). The selection
 // on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1
@@ -691,9 +687,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11MsgListData: return P64(MSG->mList.empty() ? NULL : &MSG->mList[0]);
     case O::C11MsgListSize: return (int64_t)MSG->mList.size();
     case O::C11MsgSetRectangle: MSG->Set<GERectangle>(3, *(const GERectangle*)a[0]);
-        break;
-    case O::C11SelectHookSet: return gEESelectUnitsTestHook != NULL;   // TEST ONLY: the UI fixture's box selection
-    case O::C11SelectHookCall: gEESelectUnitsTestHook(std::vector<long>((const int32_t*)a[0], (const int32_t*)a[0] + a[1]));
         break;
     case O::C11FarmKey: *(EeGamecppFarmKey*)a[0] = EeGamecppFarmKey{CX->mIsBuilt, CX->mIsPaidFor, CX->mTileX, CX->mTileY};
         break;

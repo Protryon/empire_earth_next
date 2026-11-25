@@ -152,7 +152,6 @@ enum class EeFixtureOp : uint32_t {
   LobbySnapshot,
   /// control i0 of form h: an edit box's text set to the number i1 (`SetText(unsigned long)`) -> 1, 0 not an edit box
   EditNumber,
-  FxInstallLasso,
   FxMessageType,
   FxMessageLocal,
   FxUiLockOn,
@@ -384,12 +383,6 @@ void ee_fixture_sink_id(EeFixtureSink *sink, int64_t id);
 
 /// The marker action ran (the UI thread).
 void ee_fixture_mark();
-
-/// A box selection message's ids (EEMSelectUnits' ctor, the UI thread).
-///
-/// # Safety
-/// `ids` holds `n` ids.
-void ee_fixture_lasso(const int64_t *ids, size_t n);
 
 /// An input message before (`phase` 0) and after (1) it executes (EEPhysics::DrainInput, the world's write lock
 /// held); `local`: the local player sent it.

@@ -76,7 +76,6 @@
 #include "ee/EECombatGoals.h"
 
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open
-extern void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs);   // EEMessage.cpp: each box selection's ids
 
 // (the WON lobby (TEST ONLY): its walk, commands and snapshot are the Rust fixture's (lobby.rs), run on the lobby's
 // own message loop by a UserEvent: ee_fixture_lobby_work)
@@ -111,12 +110,6 @@ void PostAction(NEMessage* inMessage)
     FixtureAction* theAction = new FixtureAction(inMessage);
     gUserInterface->PostAction(theAction);
     theAction->Dereference();
-}
-
-void LassoHook(const std::vector<long>& inUnitIDs)
-{
-    std::vector<int64_t> theIDs(inUnitIDs.begin(), inUnitIDs.end());
-    ee_fixture_lasso(theIDs.data(), theIDs.size());
 }
 
 // (the executed messages' hook and the debug output to stderr: ee_game fixture compound.rs)
@@ -183,8 +176,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::CalamityCount: return CALAMITIES != NULL ? (int64_t)CALAMITIES->GetCalamityClassCount() : 0;
     // ---- the compound operations' finer ones (compound.rs)
-    case EeFixtureOp::FxInstallLasso: gEESelectUnitsTestHook = LassoHook;   // each box selection's ids (the boxselect command)
-        return 0;
     case EeFixtureOp::FxMessageType: return As<NEMessage>(c->h)->GetType();
     case EeFixtureOp::FxMessageLocal: return gWorld.GetCurrentPlayer() != NULL && gWorld.GetPlayerBySlot(As<NEMessage>(c->h)->GetOriginatingSlot()) == gWorld.GetCurrentPlayer();
     case EeFixtureOp::FxUiLockOn: gUIManager->LockUIForCopyData();

@@ -3482,8 +3482,6 @@ enum class EeGameCpp : uint32_t {
   C11MsgListData,
   C11MsgListSize,
   C11MsgSetRectangle,
-  C11SelectHookSet,
-  C11SelectHookCall,
   C11LongsAssign,
   C11CalHostNew,
   C11CalHostDelete,

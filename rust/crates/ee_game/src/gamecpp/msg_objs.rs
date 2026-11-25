@@ -76,10 +76,10 @@ pub unsafe extern "C" fn ee_gamecpp_msg_select_units(
     let message = hp(O::C11NewSelectRecord, 0, &[kind as i64, size as i64, unit_type as i64]);
     h(O::C11MsgListAssign, message, &[cptr(&buffer), size as i64]);
     h(O::C11MsgSetRectangle, message, &[pa(rectangle as P)]);
-    if h(O::C11SelectHookSet, 0, &[]) != 0 {
+    if crate::fixture::boxsel::LASSO_ON.load(std::sync::atomic::Ordering::SeqCst) {
         // TEST ONLY: the UI fixture's box selection (the message's list, as EESelectUnitsIDs decodes it)
-        let ids = select_ids(buffer.as_ptr(), size as usize);
-        h(O::C11SelectHookCall, 0, &[pa(ids.as_ptr() as P), ids.len() as i64]);
+        let ids: Vec<i64> = select_ids(buffer.as_ptr(), size as usize).into_iter().map(i64::from).collect();
+        crate::fixture::boxsel::lasso(&ids);
     }
     message as *mut c_void
 }

@@ -49,17 +49,6 @@ pub extern "C" fn ee_fixture_mark() {
     super::orders::mark();
 }
 
-/// A box selection message's ids (EEMSelectUnits' ctor, the UI thread).
-///
-/// # Safety
-/// `ids` holds `n` ids.
-#[no_mangle]
-pub unsafe extern "C" fn ee_fixture_lasso(ids: *const i64, n: usize) {
-    // SAFETY: the contract
-    let ids = if ids.is_null() || n == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(ids, n) } };
-    super::boxsel::lasso(ids);
-}
-
 /// An input message before (`phase` 0) and after (1) it executes (EEPhysics::DrainInput, the world's write lock
 /// held); `local`: the local player sent it.
 #[no_mangle]
