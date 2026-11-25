@@ -35,9 +35,9 @@ public:
 class RTSGraphics : public EeRtsGraphicsFields {
 public:
     // 0x11a1cc: creates the events, starts the thread (Main) at inThreadPriority, waits for it
-    RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse, UIManager* inUIManager,
-                bool inIsFullScreen, long inThreadPriority);
-    virtual ~RTSGraphics();                 // +0x00 (??_G 0x11a34c; dtor 0x11a368)
+    RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse, UIManager* inUIManager, bool inIsFullScreen, long inThreadPriority) { ee_rts_graphics_construct(this, inRasterizer, inScreen, inMouse, inUIManager, inIsFullScreen, inThreadPriority); }
+    // +0x00 (??_G 0x11a34c; dtor 0x11a368)
+    virtual ~RTSGraphics() { ee_rts_graphics_destruct(this); }
     // +0x04 0x11a703: the screen's RestoreAllSurfaces
     virtual long RestoreSurfaces();
     // +0x08 0x11a4e1: the thread's messages 0x401..0x40f (posted by the members below)

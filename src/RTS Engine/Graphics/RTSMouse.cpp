@@ -54,7 +54,6 @@ GESurface** RTSMouseSlot(RTSMouse* inMouse, unsigned long inIndex)
     return reinterpret_cast<GESurface**>(ee_gfx_mouse_frame_slot(inMouse->mFrame, (uint32_t)inIndex));
 }
 
-RTSMouse::RTSMouse() : mFrame(ee_gfx_mouse_frame_new()) { ee_rts_mouse_construct(this); }
 // the locks (Rust), then the frame
 RTSMouse::~RTSMouse()
 {

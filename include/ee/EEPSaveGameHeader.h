@@ -6,18 +6,22 @@
 #ifndef EE_EEPSAVEGAMEHEADER_H
 #define EE_EEPSAVEGAMEHEADER_H
 
+#include "rust/game/gamecpp.h"
 class EEPSaveGameHeader : public FSRestorable {
 public:
     EEPSaveGameHeader();
-    virtual void GetChecksum(ESChecksum& ioChecksum) const;                     // +0x00 (empty: ICF-folded 0x157269)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x14b993
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x14bb9a
+    // Adds nothing to the checksum (empty: folded into a shared empty function)
+    // +0x00 (empty: ICF-folded 0x157269)
+    virtual void GetChecksum(ESChecksum& ioChecksum) const {  }
+    // Reads the header's name/version part, then its body; returns the first read error
+    // +0x04 0x14b993
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_hdr_load(this, &inFile); }
+    // Writes the header's name/version part, then its body; returns the first write error
+    // +0x0c 0x14bb9a
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_hdr_save(this, &outFile); }
 
-    long LoadHeader(FSFile& inFile);
-    long LoadBody(FSFile& inFile);
-    long LoadFromFile(FSFile& inFile);
-    long SaveHeader(FSFile& outFile);
-    long SaveBody(FSFile& outFile);
+    // Opens a save file, copies it into memory and reads its header from there; returns the first error
+    long LoadFromFile(FSFile& inFile) { return ee_gamecpp_hdr_load_from_file(this, &inFile); }
 
 
     // inline accessors (the SCL load event's inline budget needs these five expansions; provisional names)

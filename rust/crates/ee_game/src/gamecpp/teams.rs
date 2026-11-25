@@ -166,7 +166,7 @@ fn load_team(players: &mut Vec<u32>, major: c_ulong, minor: c_ulong, file: Pf) -
             return r;
         }
     }
-    super::civilization::wonder_load(major, minor, file)
+    crate::civilization::wonder_load(major, minor, file)
 }
 
 /// SaveTeams: the team count and each team (`EETeam::Save`: its count and players); the first write error.
@@ -195,7 +195,7 @@ pub fn helper_save(h: P, file: Pf) -> i64 {
 /// `value` is writable.
 #[no_mangle]
 pub unsafe extern "C" fn ee_screenscpp_team_wonder_countdown(team: u32, value: *mut c_ulong) -> usize {
-    super::civilization::ee_gamecpp_wonder_countdown(team as usize, value) as usize
+    crate::civilization::ee_gamecpp_wonder_countdown(team as usize, value) as usize
 }
 
 /// `gWorld.GetNumTeams()`.

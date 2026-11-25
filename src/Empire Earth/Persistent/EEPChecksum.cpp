@@ -12,18 +12,6 @@
 #include "rust/game/gamecpp.h"
 
 
-// Creates an empty saved checksum chunk, verbose or not
-EEPChecksum::EEPChecksum(bool inVerbose)
-    : ESChecksum(inVerbose), FSPersistent(kPersistentChecksum)
-{
-}
-
-// Creates an empty verbose saved checksum chunk (persistent factory)
-FSPersistent* EEPChecksum::CreateDefault() const
-{
-    return new EEPChecksum(true);
-}
-
 // Adds the chunk's total checksum to a running checksum as "EEPChecksum"
 void EEPChecksum::GetChecksum(ESChecksum& ioChecksum) const
 {
@@ -33,18 +21,6 @@ void EEPChecksum::GetChecksum(ESChecksum& ioChecksum) const
 
 // Load and Save are ee_game gamecpp persist_parts.rs (game core lane, round 9); their C++ calls and members are
 // EEPChecksumOp's cases below.
-
-// Reads the verbose flag and the described checksum entries from a saved game; returns the first read error
-long EEPChecksum::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_pc_load(static_cast<FSPersistent*>(this), &inFile);
-}
-
-// Writes the verbose flag and the described checksum entries to a save; returns the first write error
-long EEPChecksum::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_gamecpp_pc_save(static_cast<FSPersistent*>(this), &outFile);
-}
 
 // ------------------------------------------------------------------------- the checksum's C++ (gamecpp persist_parts.rs)
 

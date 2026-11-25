@@ -19,14 +19,6 @@
 #include "ee/EEMouse.h"
 #include "platform/PlatSim.h"
 
-RTSGraphics::RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse,
-                         UIManager* inUIManager, bool inIsFullScreen, long inThreadPriority)
-{
-    ee_rts_graphics_construct(this, inRasterizer, inScreen, inMouse, inUIManager, inIsFullScreen, inThreadPriority);
-}
-
-RTSGraphics::~RTSGraphics() { ee_rts_graphics_destruct(this); }
-
 // The thread: its passes are Rust; the Sleep(1) between them stays here. Win32 Sleep, not PlatSleep: the test
 // harness's time shim caps the frame rate at the Sleep import by the caller's return address (inside
 // RTSGraphics::Main; tools/harness/timeshim.c), which a wrapper would hide

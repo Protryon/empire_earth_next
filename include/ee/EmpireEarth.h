@@ -92,7 +92,6 @@ bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit);
 // 0x27a7f5 (cdecl): message 0x41b for the keyboard's modifier state in the game / scenario editor forms (0x27518a)
 // (provisional name)
 class EEUIFMainGame;
-extern EEUIFMainGame* gSavedMainGameForm;  // 0x563144 (LoadScenario stores gUIManager->GetMainGameForm(); provisional name)
 extern UString gMultiplayerString;         // 0x562fd8 (EEGlobals.cpp; constructed by UI Events/EEScreens.cpp, ""; provisional name)
 bool EEIsMultiplayerGame(bool inFlag);     // 0x2989a9 (inFlag ? byte 0x531664 : true; provisional name)
 void EEStartExternalLobby();               // 0x297276 (the main screen's MultiPlayer when the check passes; provisional name)
@@ -136,9 +135,7 @@ void EESetGameViewRectangle(const GERectangle& inRectangle);
 extern bool& gLoadingSavedGame;
 extern bool& gWorldClearing;                // 0x5318d9 (EETown 0xac573 tests it after gLoadingSavedGame; provisional name)
 extern unsigned long& gEffectDetail;        // 0x53089c (compared with an effect's +0x84 before it plays: a detail level? EEUCProjectile::UpdateEffects; provisional name)
-extern bool& gLoadingPlayerMedia;           // 0x5318e3 (EECPCombatManager 0x475047 tests it after gLoadingSavedGame; provisional name)
 extern bool& gGameScreenActive;             // 0x5318d7 (24 users; the save/load events test it with gUIManager->mInScenarioEditor)
-extern bool& gContinentManagerClearing;     // 0x530d3c (EECPPersonnel::DraftUnit: draft through the attack commander when clear) (provisional name)
 // 0x13fcda (cdecl): loads a ".wav"/".mp3" sound file (SIE SoundOver: (name, 0x31, theSample, sSoundID, 0), then
 // RegisterOneShotSound(theSample, sSoundID)) (provisional name and parameter names)
 void EELoadSound(const UString& inName, unsigned long inType, unsigned long& outSample, unsigned long& outInstance,

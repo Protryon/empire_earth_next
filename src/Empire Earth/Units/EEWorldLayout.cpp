@@ -35,7 +35,6 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EETechRust.h"   // EETechHost: the tree view's lookups (tech_view.rs)
 #include "rust/sim/world.h"
 
 // the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
@@ -188,8 +187,8 @@ void EEWorldLayoutRegister()
     theLayout.active_group_fields = offsetof(EEActiveGroup, mFields);   // the group objects (group_obj.rs)
     theLayout.active_group_goal = offsetof(EEActiveGroup, mGoal);
     theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - BaseOffset<EEComputerPlayer, EEPlayer>();
-    theLayout.placement_town = offsetof(EECPPlacement, mTownCenterTile);
-    theLayout.placement_rust = offsetof(EECPPlacement, mRust);
+    theLayout.placement_town = offsetof(EECPPlacement, town);
+    theLayout.placement_rust = offsetof(EECPPlacement, rust);
     theLayout.player_group_lists = offsetof(EEPlayer, mGroupLists);   // the groups lane, round 2 (group_obj.rs)
     theLayout.player_lists = offsetof(EEPlayer, mLists);   // (player_body.rs)
     if (!ee_world_set_layout(&theLayout))

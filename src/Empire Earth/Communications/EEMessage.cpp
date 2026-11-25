@@ -76,12 +76,6 @@ void EEMessage::ExecuteMessage()
     EENetMsgExecute(static_cast<EEMRecord*>(this), 2);
 }
 
-// Creates the game message object for a received buffer from its type byte (NULL and an assert for an unknown type)
-NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
-{
-    return (NEMessage*)ee_gamecpp_msg_build(inMemory);   // gamecpp msg_objs.rs (its asserts: EECore11OpC4's cases)
-}
-
 // Orders farms for EEMBuildUnit::Execute: built ones first, then paid-for ones, then the nearer to the tile. Inline
 // (header-declared); its COMDAT 0x4c995c lands among this unit's sort COMDATs after its first user, the sort
 // in EEMBuildUnit::Execute

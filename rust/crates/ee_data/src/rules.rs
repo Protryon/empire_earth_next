@@ -54,7 +54,8 @@ impl RuleNumber {
 }
 
 // ------------------------------------------------------------------------------------------------ the C++ mirror
-// The C++ structs of ee/EERulesGen.h are written by Rust in place (`mirror`, rules_gen.rs): the same layout, the lists
+// The C++ structs (rules_gen.rs's `#[repr(C)]` records, emitted by cbindgen: rust/data/generated.h) are written by
+// Rust in place (`mirror`, rules_gen.rs), the lists
 // and texts views into a `MirrorStore` the rules own until the next mirror.
 
 /// `EERuleNumber` (ee/EERules.h): float, long, long, int.
@@ -90,6 +91,22 @@ pub struct RuleListC<T> {
 pub struct RuleTextC {
     pub data: *const u8,
     pub size: usize,
+}
+
+impl<T> RuleListC<T> {
+    /// A list of nothing.
+    pub const fn empty() -> RuleListC<T> {
+        RuleListC { data: std::ptr::null(), size: 0 }
+    }
+}
+
+/// The media of an epoch the rules do not hold (the C++ `EERules::Epoch` over no epochs): the defaults, no songs
+/// and no removal effects.
+pub fn epoch_none() -> EEEpochMedia {
+    let mut media = EpochMedia::default().mirror(&mut MirrorStore::default());
+    media.mMusic = RuleListC::empty();
+    media.mRemovalEffects = RuleListC::empty();
+    media
 }
 
 /// The storage the C++ mirror's lists and texts point into.
@@ -901,8 +918,8 @@ impl Rules {
         }
     }
 
-    /// The C++ `EERulesData` (ee/EERulesGen.h) of these rules, its lists and texts in `store`.
-    pub fn mirror(&self, store: &mut MirrorStore) -> RulesDataC {
+    /// The C++ `EERulesData` of these rules, its lists and texts in `store`.
+    pub fn mirror(&self, store: &mut MirrorStore) -> EERulesData {
         mirror_top(self, store)
     }
 
@@ -1441,25 +1458,34 @@ mod tests {
         let r = Rules::default();
         let mut s = MirrorStore::default();
         let m = r.mirror(&mut s);
-        assert_eq!(m.combat.minimum_damage, r.combat.minimum_damage as c_long);
-        assert_eq!(m.combat.fanatic_factor, RuleNumberC::of(&r.combat.fanatic_factor));
-        assert_eq!(m.epochs.size, r.epochs.len());
-        let e = unsafe { &*m.epochs.data.add(m.epochs.size - 1) };
-        assert_eq!(e.high_tech_tools, r.epochs.last().unwrap().high_tech_tools);
-        assert_eq!(e.removal_effects.size, r.epochs.last().unwrap().removal_effects.len());
-        let g = &m.game_options;
-        assert_eq!(g.map_sizes.size, r.game_options.map_sizes.len());
-        let first = unsafe { &*g.map_sizes.data };
-        let id = unsafe { std::slice::from_raw_parts(first.id.data, first.id.size + 1) };
-        assert_eq!(&id[..first.id.size], &r.game_options.map_sizes[0].id[..]);
-        assert_eq!(id[first.id.size], 0);
-        assert_eq!(first.tiles, r.game_options.map_sizes[0].tiles as c_long);
-        let p = &m.ai_personalities;
-        assert_eq!(p.personalities.size, r.ai_personalities.personalities.len());
-        let p0 = unsafe { &*p.personalities.data };
-        assert_eq!(p0.floor, r.ai_personalities.personalities[0].floor);
-        assert_eq!(m.civ_builder.powers_id.size, r.civ_builder.powers_id.len());
-        assert_eq!(mirror_sizes().len(), 16);
+        assert_eq!(m.mCombat.mMinimumDamage, r.combat.minimum_damage as c_long);
+        assert_eq!(m.mCombat.mFanaticFactor, RuleNumberC::of(&r.combat.fanatic_factor));
+        assert_eq!(m.mEpochs.size, r.epochs.len());
+        let e = unsafe { &*m.mEpochs.data.add(m.mEpochs.size - 1) };
+        assert_eq!(e.mHighTechTools, r.epochs.last().unwrap().high_tech_tools);
+        assert_eq!(e.mRemovalEffects.size, r.epochs.last().unwrap().removal_effects.len());
+        let g = &m.mGameOptions;
+        assert_eq!(g.mMapSizes.size, r.game_options.map_sizes.len());
+        let first = unsafe { &*g.mMapSizes.data };
+        let id = unsafe { std::slice::from_raw_parts(first.mID.data, first.mID.size + 1) };
+        assert_eq!(&id[..first.mID.size], &r.game_options.map_sizes[0].id[..]);
+        assert_eq!(id[first.mID.size], 0);
+        assert_eq!(first.mTiles, r.game_options.map_sizes[0].tiles as c_long);
+        let p = &m.mAIPersonalities;
+        assert_eq!(p.mPersonalities.size, r.ai_personalities.personalities.len());
+        let p0 = unsafe { &*p.mPersonalities.data };
+        assert_eq!(p0.mFloor, r.ai_personalities.personalities[0].floor);
+        assert_eq!(m.mCivBuilder.mPowersID.size, r.civ_builder.powers_id.len());
+        // the C++ enums are the name tables' positions
+        assert_eq!(EECivStat::kCivStatCount as usize, STAT_NAMES.len());
+        assert_eq!(EECivMode::kCivModeCount as usize, MODE_NAMES.len());
+        assert_eq!(EECivPowerAction::kPowerActionCount as usize, ACTION_NAMES.len());
+        assert_eq!(EEAICheat::kAICheatAll as usize, (1 << AI_CHEAT_NAMES.len()) - 1);
+        // an epoch the rules do not hold: the defaults without lists
+        let none = epoch_none();
+        assert_eq!((none.mMusic.size, none.mRemovalEffects.size), (0, 0));
+        assert_eq!((none.mRemovalSound, none.mRemovalThunder, none.mRemovalThunderEvery), (374, 442, 0));
+        assert!(!none.mHighTechTools && none.mRemovalPitchOffset == 0.0);
     }
 
     #[test]

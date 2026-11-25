@@ -1449,6 +1449,17 @@ struct EeTownFields {
   bool mNearMapEdge;
 };
 
+/// `EECPPlacement` (ee/EECPPlacement.h, a view of this record; the original's build manager, of which only the town
+/// centre tile, the player and the Rust placement are left): made by `Init`, freed by the destructor.
+struct EeCpPlacementObj {
+  /// `mTownCenterTile` (-10000, -10000: none)
+  long town[2];
+  /// `mPlayer` (the `EEComputerPlayer*`)
+  void *player;
+  /// `mRust`: the site tiles and the classes seen (place_game.rs)
+  EeCpPlacement *rust;
+};
+
 extern "C" {
 
 /// Steps over a retail file's combat manager block (`EECPCombatManager::Load` at 0.228-0.250).

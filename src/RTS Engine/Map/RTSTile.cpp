@@ -22,17 +22,6 @@ RTSTile::RTSTile(float inHeight)
     this->mAIValue = false;
 }
 
-RTSTile::~RTSTile() {}
-void RTSTile::FreeUnitNode(RTSTileUnitNode* inNode) { delete inNode; }
-long RTSTile::GetChecksum(unsigned long inPlayerCount) const { return ee_rts_tile_checksum(this, inPlayerCount); }
-long RTSTile::Load(unsigned long, unsigned long, FSFile& inFile, unsigned long inPlayerCount) { return ee_rts_tile_load(this, &inFile, inPlayerCount); }
-void RTSTile::Dump(FILE* inFile, unsigned long inPlayerCount) const { ee_rts_tile_dump(this, inFile, inPlayerCount); }
-void RTSTile::RemoveAllUnits() { ee_rts_tile_remove_all_units(this); }
-void RTSTile::RemoveUnit(EEUnit* inUnit) { ee_rts_tile_remove_unit(this, inUnit); }
-long RTSTile::Save(FSFile& outFile, unsigned long inPlayerCount) { return ee_rts_tile_save(this, &outFile, inPlayerCount); }
-bool RTSTile::HasUnit(EEUnit* inUnit) { return ee_rts_tile_has_unit(this, inUnit); }
-void RTSTile::SetTerrainType(long inValue, const EETileLocation&, RTSMap*) { this->mTerrainType = inValue; }
-
 // The shims tile.rs calls (TileCpp)
 extern "C" {
 long ee_rtstcpp_terrain_type(const RTSTile* inTile) { return inTile->mTerrainType; }

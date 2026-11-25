@@ -26,18 +26,6 @@
 // chain at 0x521cfe (wrapper)
 //   object 0x929818  (guard 0x929838 bit 4)
 
-// Creates an empty map with the given scale value (also copied to gMapTileSize) and its colored-rectangle lock
-RTSMap::RTSMap(float inF1955F4) { ee_rts_map_construct(this, inF1955F4); }
-
-// Adds nothing to the sync checksum (the engine map's empty override)
-// (vtable 0x841d94 slot 0: an out-of-line empty override; EEMap::GetChecksum 0x51c531 calls it)
-void RTSMap::GetChecksum(ESChecksum& ioChecksum) const
-{
-}
-
-// Destroys the map, freeing its tile table and its colored-rectangle lock
-RTSMap::~RTSMap() { ee_rts_map_destruct(this); }
-
 // The terrain edits (Raise, its spreads and smoothing, the tiles' upkeep, GetNumRaisedCorners, IsTileFlat) are ee_ge
 // map_raise.rs' over the mesh's Rust object; the map's tiles and water are asked here
 namespace {
@@ -79,21 +67,6 @@ void EEMap::PrepareSave()
         gDoppelgangerManager.UnregisterPlayer(::gWorld.mPlayers[i]);
 }
 
-// Empties the map's area-outline tile runs
-void RTSMap::ClearU1955DC()
-{
-    this->mU1955DC.clear();
-}
-
-// NEAR: only the load of inPlayerCount is scheduled differently (the original loads it with inWidth).
-// Sets up a diamond-shaped map of the given width and height for the player count, optionally creating its
-// tiles, and builds a flat terrain mesh
-void RTSMap::Create(long inWidth, long inHeight, unsigned long inPlayerCount, bool inCreateTiles) { ee_rts_map_create(this, inWidth, inHeight, inPlayerCount, inCreateTiles); }
-
-// NEAR: inline budget: the original refuses every _Ptrit::operator+ except the innermost mIndices site.
-// Paints the queued vertex-color rectangles onto the terrain mesh (newest first) and empties the queue
-void RTSMap::ApplyVertexColors() { ee_rts_map_apply_vertex_colors(this); }
-
 // Returns the tile closest to a point and stores its coordinates
 EEMapTile* EEMap::GetClosestTile(GE3DPoint* inPoint, long* ioX, long* ioY)
 {
@@ -130,13 +103,6 @@ EEMapTile* RTSMap::GetLocationOnLine(const GE3DLine& inLine, GE3DPoint& outLocat
                                                               inHitWaterSurface));
 }
 
-// Returns the color of one of a tile's four corner vertices
-const GEColor& RTSMap::GetVertexColor(long inX, long inY, long inCorner)
-{
-    // corner 0 (x, y + 1), 1 (x + 1, y + 1), 2 (x, y), 3 (x + 1, y)
-    return this->mTerrainMesh.GetVertexColor(inX + (inCorner == 1 || inCorner == 3), inY + (inCorner == 0 || inCorner == 1));
-}
-
 // Reads the map's size and player count, recreates the map and loads its tiles and terrain mesh; returns the
 // first read error (tiles get x = row start + column, which only old saves' terrain lookup uses)
 long RTSMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -152,12 +118,6 @@ void RTSMap::Raise(long* ioLeft, long* ioRight, long* ioTop, long* ioBottom, flo
 {
     ee_ge_map_raise_bounds(EEMapRaiseOps::Ptr(EEMapRaiseOps::Of(this)), this, ioLeft, ioRight, ioTop, ioBottom, inHeight,
                            inSlope, inEdgeHeight, inEdgeSlope, inRaise);
-}
-
-// Frees the map's tile pointer table (not the tiles)
-void RTSMap::DeleteTiles()
-{
-    delete[] this->mTiles;
 }
 
 // Fogs every tile the player has seen or explored: it becomes explored but not in sight

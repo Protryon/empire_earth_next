@@ -20,24 +20,6 @@
 
 std::vector<EETerrainColorTable*> EETerrainColorTable::sTable;
 
-// Creates an empty terrain colour entry
-EETerrainColorTable::EETerrainColorTable()
-{
-}
-
-// Loads the terrain colours from the pixels of textures\ColorPalette.png (16 per row; each component / 255); returns
-// the texture load status
-long EETerrainColorTable::Load()
-{
-    return ee_gamecpp_db_colors_load();
-}
-
-// Destroys every terrain colour and empties the table
-void EETerrainColorTable::Unload()
-{
-    ee_gamecpp_db_colors_unload();
-}
-
 // ------------------------------------------------------------------------- round 10, lane B: the colours' C++
 
 

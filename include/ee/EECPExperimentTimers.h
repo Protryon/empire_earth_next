@@ -3,11 +3,14 @@
 // from a save started them at 0 where the saved game had them running (seed 2's 2100 s save: the loaded game queued a
 // settlement at its first AI update that the saved game queued 20 s later). From save version 0.258 they are saved
 // (EEPWorldHelper, ee/EESaveGameFiles.h EESaveHasExperimentTimers). Zero at program start, as the statics were.
-// Requires lle/FSFile.h for the save functions.
 #ifndef EE_EECPEXPERIMENTTIMERS_H
 #define EE_EECPEXPERIMENTTIMERS_H
 
+#include <stdint.h>
+#include "rust/sim/cp.h"   // ee_cp_pl_state_block (ee_sim::cp player_game.rs)
+
 class FSFile;
+int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);   // EEPlayer.cpp
 
 // port (lane B of the AI Thread): the timers themselves are Rust's (ee_sim::cp::timers, in this order: the boats
 // counted and their hold time ("boatrush2"), the last patch settlement, guard check, militia call and naval flee,
@@ -16,14 +19,26 @@ class FSFile;
 
 // the arrays, each as its length (64) and its values; Load reads into a copy and keeps the running
 // timers when the file is short
-long EECPSaveExperimentTimers(FSFile& outFile);
-long EECPLoadExperimentTimers(FSFile& inFile);
+inline long EECPSaveExperimentTimers(FSFile& outFile)
+{
+    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 0, &EESaveFilePrimitive);
+}
+inline long EECPLoadExperimentTimers(FSFile& inFile)
+{
+    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 1, &EESaveFilePrimitive);
+}
 
 // port (save 0.265, ee/EESaveGameFiles.h EESaveHasResourceState): the state FindResourceTarget reads outside the saved
 // objects: the claim ranges above and each computer player's danger zones (EECPResourceManager::mDangerZones). A load
 // started them empty: a loaded player's claim range was the first one and its first pass took other mines (seed 4's
 // 2100 s save). Load puts them in place at the loaded game's first tick
-long EECPSaveResourceState(FSFile& outFile);
-long EECPLoadResourceState(FSFile& inFile);
+inline long EECPSaveResourceState(FSFile& outFile)
+{
+    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 2, &EESaveFilePrimitive);
+}
+inline long EECPLoadResourceState(FSFile& inFile)
+{
+    return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 3, &EESaveFilePrimitive);
+}
 
 #endif

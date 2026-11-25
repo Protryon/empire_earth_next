@@ -317,10 +317,10 @@ extern "C" int32_t ee_screenscpp_setnx(uint32_t inOp, void* const* p, int32_t* i
         EEUIShell::Op(static_cast<UIControl*>(p[1]), EE_SCREENS_SKOP_PAINT_SET_CENTERED, i[0] != 0);
         return 0;
     case EE_SCREENS_SETNX_PAINT_TERRAIN:
-        EESEOutSlot(p) = static_cast<EESEAPaint*>(new EESEAPaintRust(kSEAPaintTerrain, i[0], i[1]));
+        EESEOutSlot(p) = static_cast<EESEAPaint*>(new EESEAPaintRust(EE_SCREENS_SEA_PAINT_TERRAIN, i[0], i[1]));
         return 0;
     case EE_SCREENS_SETNX_PAINT_BULLDOZER:
-        EESEOutSlot(p) = static_cast<EESEAPaint*>(new EESEAPaintRust(kSEAPaintBulldozer));
+        EESEOutSlot(p) = static_cast<EESEAPaint*>(new EESEAPaintRust(EE_SCREENS_SEA_PAINT_BULLDOZER));
         return 0;
     // the list boxes (p1 the list, as its own class passed it)
     case EE_SCREENS_SETNX_C_BASE_COPY: return (int32_t)SetlbColors(p[1])->UIListBox<std::vector<GEColor> >::CopyData();

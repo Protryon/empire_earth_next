@@ -87,21 +87,12 @@ static EeGfxSceneFade sSceneFade = {1.0f, 1.0f, 0, 0.0f, 0.0f, 1, 1.0f, 0.0f, 0.
 // the letterbox's zoom gF4BE374 (0x4be374) and the unit's other .bss globals gB529065, gB529066, gCameraFollowing,
 // gB529068 (declared in ee/EEGraphics.h, ee/EmpireEarth.h): gamecpp globals.rs
 
-// Creates a game render object
-EERenderObject::EERenderObject()
-{
-}
-
 // Destroys a render object (RTSRenderObject's inline destructor)
 RTSRenderObject::~RTSRenderObject()
 {
 }
 
 // The scene, the frame's lists, the lighting and the posts: gamecpp render_object.rs (EECore9OpA's cases below)
-void EERenderObject::QueueEffects() { ee_gamecpp_ro_queue_effects(this); }
-void EERenderObject::Fn10C036() { ee_gamecpp_ro_fn10c036(this); }
-void EERenderObject::Fn10E8D1() { ee_gamecpp_ro_fn10e8d1(this); }
-void EERenderObject::FillRenderLists() { ee_gamecpp_ro_fill_render_lists(this); }
 void SetSceneFog() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::SceneFog); }
 void SetLightingOff() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Off); }
 void SetTerrainLighting() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Terrain); }

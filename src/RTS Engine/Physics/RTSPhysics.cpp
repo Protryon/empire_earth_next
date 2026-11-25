@@ -19,22 +19,6 @@
 
 UString gRTSPhysicsDataKey("RTSPhysics Data");
 
-RTSPhysics::RTSPhysics(RTSGraphics* inGraphics, TMTimer* inTimer, long inDefaultTicksPerSecond, long inThreadPriority)
-    : mRandom(1)
-{
-    ee_rts_physics_construct(this, inGraphics, inTimer, inDefaultTicksPerSecond, inThreadPriority);
-}
-
-RTSPhysics::~RTSPhysics() { ee_rts_physics_destruct(this); }
-float RTSPhysics::GetRandom() { return this->mRandom.Generate(); }
-float RTSPhysics::GetRandom(float inMinimum, float inMaximum) { return this->mRandom.Generate() * (inMaximum - inMinimum) + inMinimum; }
-long RTSPhysics::GetRandom(long inMinimum, long inMaximum) { return ee_rts_physics_random_range(this, inMinimum, inMaximum); }
-long RTSPhysics::Load(unsigned long, unsigned long, FSFile& inFile) { return ee_rts_physics_load(this, &inFile); }
-unsigned long RTSPhysics::Main(void* inPointer) { return ee_rts_physics_main(inPointer); }
-void RTSPhysics::HandleMessage(unsigned long inMessage, void*, void*) { ee_rts_physics_handle_message(this, inMessage); }
-long RTSPhysics::Save(unsigned long, unsigned long, FSFile& outFile) { return ee_rts_physics_save(this, &outFile); }
-void RTSPhysics::SetSpeed(float inSpeed) { ee_rts_physics_set_speed(this, inSpeed); }
-
 // The shims physics.rs calls (PhysicsCpp)
 extern "C" {
 EeRtsPhysicsFields* ee_rtsphyscpp_fields(RTSPhysics* inPhysics) { return inPhysics; }

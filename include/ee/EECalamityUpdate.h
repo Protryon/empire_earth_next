@@ -13,7 +13,6 @@
 
 class EECalamity;
 class EECalamityClass;
-class EEComplexUnit;
 class EESoundObject;
 class EEUnit;
 

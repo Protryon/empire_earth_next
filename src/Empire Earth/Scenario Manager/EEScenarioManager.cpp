@@ -48,50 +48,6 @@ EEScenarioManager::EEScenarioManager()
     this->Reset();
 }
 
-// Empties the scenario back to its defaults (an Always True condition, a Do Nothing effect, a None object, the
-// Off Map and Previous Location areas); zeroes the clocks and ID counters, clears the timed and pending effects
-// (ee_scenario entry.rs: the numbers and the timed effects, manager.rs reset; the lists and their built-ins, lists.rs
-// reset)
-void EEScenarioManager::Reset()
-{
-    ee_scenario_en_manager(this, EE_SCENARIO_MN_RESET);
-}
-
-// Destroys the scenario: unloads the unit class media Prepare loaded and deletes every trigger, condition, effect,
-// object, area and pending effect
-EEScenarioManager::~EEScenarioManager()
-{
-    ee_scenario_en_round(this, EE_SCENARIO_MN_DESTROY, NULL, 0, 0);   // ee_scenario manager_compose.rs destroy
-}
-
-// Records a copy of an applied effect whose change a saved game must replay on load (ignored until
-// ApplyPendingEffects has run)
-void EEScenarioManager::AddV134Effect(const EESMEffect& inEffect)
-{
-    ee_scenario_en_round(this, EE_SCENARIO_MN_ADD_PENDING, &inEffect, 0, 0);   // ee_scenario manager_compose.rs add_pending
-}
-
-// Schedules an effect (by index) to run at the given scenario time, keeping the timed effects sorted by time
-void EEScenarioManager::AddTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic)
-{
-    ee_scenario_timed_add(this->mTimedEffects, inEffect, inTime, inIsInCinematic);
-}
-
-// Creates a new, default scenario manager (the persistent object factory)
-FSPersistent* EEScenarioManager::CreateDefault() const
-{
-    return new EEScenarioManager;
-}
-
-// Ends a cinematic: delays the other timed effects and trigger timers by its length + 3 s, drops its unrun effects
-// and dialog messages, delays the wonder timers and restores the camera saved by StartCinematic
-// Called by EEMEndCinematic::Execute 0xbdf7d
-// NEAR: the two discarded expressions per pending entry (a compiled-out trace) and the inline budget of begin()
-void EEScenarioManager::EndCinematic()
-{
-    ee_scenario_en_round(this, EE_SCENARIO_MN_END_CINEMATIC, NULL, 0, 0);   // cinematic.rs end_cinematic
-}
-
 static GE3DPoint sRoundStart;   // MoveCameraToStart's point (the original's local; manager_compose.rs)
 
 // Update's world (ee_scenario round.rs): each operation the original's statement at its place
@@ -249,43 +205,6 @@ extern "C" int64_t ee_scenariocpp_round_op(EEScenarioManager* theManager, uint32
     return 0;
 }
 
-// Runs a scenario tick (EEPhysics 0x153265): shows queued dialog, advances the clocks (tick / game speed in a
-// cinematic); while a human plays, every 500 ms evaluates the triggers and runs the due timed effects (ee_scenario
-// round.rs update)
-void EEScenarioManager::Update()
-{
-    ee_scenario_en_manager(this, EE_SCENARIO_MN_UPDATE);
-}
-
-// Replays every pending effect of a loaded game, makes the triggers evaluate on the next tick and starts recording
-// new pending effects
-void EEScenarioManager::ApplyPendingEffects()
-{
-    ee_scenario_en_round(this, EE_SCENARIO_MN_APPLY_PENDING, NULL, 0, 0);   // cinematic.rs apply_pending
-}
-
-// Unloads the unit class media loaded before, then preloads the media of each unit class a Create Object effect
-// makes for one fixed player (objects not selected on the map; which: ee_scenario lists.rs prepare_media)
-void EEScenarioManager::Prepare()
-{
-    ee_scenario_en_manager(this, EE_SCENARIO_MN_PREPARE);   // cinematic.rs unload_media, lists.rs prepare_media
-}
-
-// Replaces a unit ID with another in every scenario object
-void EEScenarioManager::ReplaceUnit(long inOldUnit, long inNewUnit)
-{
-    ee_scenario_en_round(this, EE_SCENARIO_MN_REPLACE_UNIT, NULL, inOldUnit, inNewUnit);   // cinematic.rs replace_unit
-}
-
-// Resets, then reads triggers, conditions, effects, objects, areas, timed and pending effects (dropped when loading
-// a scenario), ID counters, clocks, media strings, start camera and dialog messages; returns the first error
-// (after Reset, ee_scenario manager.rs load over the stream, the elements created and kept here: EEScenarioHost.cpp's
-// stream callback; entry.rs adds the simulation capture's SMSV record)
-long EEScenarioManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_scenario_en_manager_load(this, &inFile, inMajorVersion, inMinorVersion);
-}
-
 namespace {
 
 template<class T> int32_t EESMListIO(EESMStream* inStream, std::vector<T*>& ioList, uint32_t inOp, uint32_t inKind,
@@ -341,37 +260,6 @@ int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsi
         return EESMListIO(inStream, theManager->mPendingEffects, inOp, inSlot, inIndex, ioValue);
     }
     return 0;
-}
-
-// Shows the next queued dialog message (in a cinematic the next cinematic one), stopping one-shot sounds for a
-// voiced one and moving the camera to its unit; none left: hides the messages; nothing while paused (ee_scenario
-// round.rs show_dialog)
-void EEScenarioManager::ShowDialogMessage()
-{
-    ee_scenario_en_manager(this, EE_SCENARIO_MN_SHOW_DIALOG);
-}
-
-// Writes triggers, conditions, effects, objects and areas (not the built-ins), timed and pending effects, ID
-// counters, clocks, media strings, start camera and dialog messages; returns the first write error (ee_scenario
-// manager.rs save over the stream)
-long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_scenario_en_manager_save(this, &outFile, inMajorVersion, inMinorVersion);
-}
-
-// Creates an empty dialog message: no unit or duration, no camera move (scroll speed -1), not for a cinematic
-EESMDialogMessage::EESMDialogMessage() : EeScenarioMessageFields(ee_scenario_message_defaults()) {}
-
-// a dialog message's Load and Save (ee_scenario save.rs message_io): the text, unit type, sound, duration, unit,
-// scroll speed, and (a save, or a load from version 0.200 on) the cinematic flag; the first error
-long EESMDialogMessage::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_scenario_en_message_io(this, &inFile, inMajorVersion, inMinorVersion, false);
-}
-
-long EESMDialogMessage::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_scenario_en_message_io(this, &outFile, inMajorVersion, inMinorVersion, true);
 }
 
 // ------------------------------------------------------------------------------------------------ the lists
@@ -451,56 +339,6 @@ extern "C" void* ee_scenariocpp_list_op(EeScenarioListContext* inContext, uint32
 }
 
 
-// The editor's Sort, New, MoveUp/MoveDown, Delete and Duplicate of a list (EE_SCENARIO_LIST_*: 0x1b00c1..0x1b0674,
-// 0x1b074c..0x1b0b65, 0x1b0beb..0x1b0e71 and 0x1b3e75..0x1b4017, 0x1b0ec6..0x1b10ed, 0x1b120d..0x1b1978), the name
-// lists, the id searches and EESMObject's changes (ee_scenario entry.rs over lists.rs)
-void EEScenarioManager::SortList(unsigned long inList)
-{
-    ee_scenario_en_list(this, EE_SCENARIO_LS_SORT, inList, 0, 0, NULL);
-}
-void* EEScenarioManager::NewEntry(unsigned long inList)
-{
-    return (void*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_NEW, inList, 0, 0, NULL);
-}
-void EEScenarioManager::MoveEntry(unsigned long inList, unsigned long inIndex, bool inUp)
-{
-    ee_scenario_en_list(this, EE_SCENARIO_LS_MOVE, inList, inIndex, inUp, NULL);
-}
-bool EEScenarioManager::DeleteEntry(unsigned long inList, unsigned long inIndex)
-{
-    return ee_scenario_en_list(this, EE_SCENARIO_LS_DELETE, inList, inIndex, 0, NULL) != 0;
-}
-void* EEScenarioManager::DuplicateEntry(unsigned long inList, unsigned long inIndex)
-{
-    return (void*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_DUPLICATE, inList, inIndex, 0, NULL);
-}
-
-// The name list of one kind (the editor's lists)
-void EEScenarioManager::GetNames(unsigned long inWhich, std::vector<UWideString>& outNames)
-{
-    ee_scenario_en_list(this, EE_SCENARIO_LS_NAMES, inWhich, 0, 0, &outNames);
-}
-
-EESMCondition* EEScenarioManager::FindConditionByID(long inID)
-{
-    return (EESMCondition*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_FIND, EE_SCENARIO_LIST_CONDITIONS, inID, 0, NULL);
-}
-
-EESMEffect* EEScenarioManager::FindEffectByID(long inID)
-{
-    return (EESMEffect*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_FIND, EE_SCENARIO_LIST_EFFECTS, inID, 0, NULL);
-}
-
-EESMObject* EEScenarioManager::FindObjectByID(long inID)
-{
-    return (EESMObject*)(intptr_t)ee_scenario_en_list(this, EE_SCENARIO_LS_FIND, EE_SCENARIO_LIST_OBJECTS, inID, 0, NULL);
-}
-
-long EEScenarioManager::GetObjectIndex(EESMObject* inObject)
-{
-    return (long)ee_scenario_en_list(this, EE_SCENARIO_LS_INDEX_OF, EE_SCENARIO_LIST_OBJECTS, 0, 0, inObject);
-}
-
 // ------------------------------------------------------------------------------------------------ the text file
 // The trigger text file of the instructions tab (EESEIAExport, EESEIAImport) is ee_scenario text.rs: ExportText
 // 0x1b23dc, ImportTriggerText 0x1b3ae9 with ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers
@@ -561,17 +399,3 @@ extern "C" void* ee_scenariocpp_text_op(EeScenarioTextContext* inContext, uint32
     return NULL;
 }
 
-
-// Writes the trigger text file (EESEIAExport): the media strings, then the effect, condition and player name
-// entries; 9 on a write error
-long EEScenarioManager::ExportText(FSFileSpec& inFile)
-{
-    return ee_scenario_en_text(this, &inFile, true, 0, false);
-}
-
-// Reads a trigger text file (EESEIAImport) of "{id_Kind:name}" lines, each followed by its text; with inValidate
-// lists the bad entries first (mImportErrors), then applies them; 9 on a bad entry
-long EEScenarioManager::ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate)
-{
-    return ee_scenario_en_text(this, &inFile, false, inKind, inValidate);
-}

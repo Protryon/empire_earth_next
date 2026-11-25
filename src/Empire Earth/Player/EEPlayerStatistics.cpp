@@ -19,17 +19,13 @@
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 
-// the class key
-const UString EEPlayerStatistics::sKey("EEPlayerStatistics-");
-
 // Set's gate (a shutdown, a saved game loading, the scenario editor outside the game screen) and the game time, then
 // the series' op (ee_units player_stats.rs: 0 Set, 1 raised, 2 lowered)
 void EEPlayerStatistics::Record(uint32_t inOp, long inSeries, long inValue)
 {
-    uint32_t theFlags = UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN
-                        : gLoadingSavedGame ? EE_UNITS_STATS_LOADING
-                        : gUIManager->mInScenarioEditor && !gGameScreenActive ? EE_UNITS_STATS_EDITOR : 0;
-    ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0, theFlags);
+    ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0,
+                       UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gLoadingSavedGame ? EE_UNITS_STATS_LOADING
+                       : gUIManager->mInScenarioEditor && !gGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
 }
 
 EEStatisticsSeries EEPlayerStatistics::GetSeries(unsigned long inSeries)
@@ -37,7 +33,7 @@ EEStatisticsSeries EEPlayerStatistics::GetSeries(unsigned long inSeries)
     EEStatisticsSeries theSeries;
     theSeries.mPoints.resize(ee_units_stats_value(this->mStats, inSeries, 3));
     if (!theSeries.mPoints.empty())
-        ee_units_stats_points(this->mStats, inSeries, reinterpret_cast<EeUnitsStatPoint*>(&theSeries.mPoints[0]),
+        ee_units_stats_points(this->mStats, inSeries, theSeries.mPoints.data(),
                               theSeries.mPoints.size());
     theSeries.mMaxValue = ee_units_stats_value(this->mStats, inSeries, 0);
     theSeries.mKeepHistory = ee_units_stats_value(this->mStats, inSeries, 4) != 0;

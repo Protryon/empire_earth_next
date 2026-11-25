@@ -41207,3 +41207,184 @@ not build here (alsa-sys's pkg-config for the cross target); the Linux census sh
   EEUIShell.cpp, Scenario Editor Actions/EESEARust.cpp (GetGhostUnit); ee_sim world layout.rs, view.rs (the ghosts);
   Scenario Editor/EEUIFScenarioEditor.cpp (fork B); screens/mod.rs (fork C, pub(crate)); ee_game Cargo.toml (libc).
 - **Left**: docs/progress/game-leaves.md "Next".
+
+## The dependencies lane, round 1: glTF, JSON, PNG, TrueType parsing, the WON crypto and UTF-8 over established crates (ee_render openformats document.rs, json.rs; ee_base png.rs, plat_ui/ttf.rs, plat_core/utf8.rs; ee_won_net md5.rs, blowfish.rs, crc16.rs, bigint.rs; branch rust-deps1, 2026-11-24)
+
+Hand-written Rust replaced by crates where every golden stays as it was: 3,943 Rust lines removed (+1,775 /
+-5,718), `Cargo.lock` 230 -> 258 packages. docs/progress/deps.md has the table per package and the deferred list.
+
+- **Prove a swap old against new before deleting the old code.** Every swap kept a test-only copy of the old module
+  and compared the two over the real inputs and their damaged forms (2,705 PNGs and 13,525 damaged variants; 12
+  fonts, 30,631 glyphs, 609,740 bitmaps; 80,000 bigint operand triples; every UTF-8 sequence up to four bytes),
+  then deleted the copy. The goldens alone cover the shipped data, not the error paths.
+- **Error texts are output.** The first PNG version gave the crate's `outofdata` for a truncated file where stb
+  said `ID`; the model decoder gate's `t1400_truncated` variant caught it. `scan_png` walks the chunks as stb did,
+  so a short file gets stb's message. The same thing stopped the AI manifest swap: serde_json's error texts (and
+  its nesting limit, `5.`, duplicate keys) moved the `ai::golden::manifest_and_seats` golden, so `ai/json.rs` stays.
+- **A crate's convenience accessor may not be the table's value.** ttf-parser's `Face::ascender` can switch to
+  OS/2's typo metrics; the old reader took hhea. Read hhea and hmtx directly when the pixels must stay.
+- **Keep a walk the crate does differently.** stb scales a scaled compound-glyph component twice; ttf-parser does
+  not. Compound glyphs keep stb's walk, simple ones come from ttf-parser (its contour walk and exact-half midpoints
+  match stb's `>> 1` after `floor`).
+- **The C structs that embed a state by value fix its size.** The C++ embeds the MD5 and Blowfish states: `Md5`
+  keeps `Md5Core` in storage of its size; Blowfish's embedded state is the 64-byte key now (was 4,232 bytes with
+  the schedule) and each Encrypt/Decrypt runs the key schedule. The generated headers changed size accordingly.
+- **serde_json's `PartialEq` impls make `x == 1.0`-style test comparisons ambiguous** once it is a dependency of
+  the crate (`gx/modes.rs` needed a type annotation).
+- **Not swappable while the C interface and the harness stay** (deferred): the thread wrappers (the handles are the
+  Win32 handles, the harness patches the wait imports, `PlatMutex` is a critical section the harness casts to),
+  the sockets (no raw socket call outside `PlatSocket`; socket2 would only re-wrap the Winsock calls) and
+  `util/pool.rs` (the allocation order is observable through the units' and lists' orders).
+- **A lobby capture taken before the repaint.** The base build's LAN run under load captured the host's staging
+  screen while the Host Game dialog still showed (210,803 pixels "differ"); a second base run was identical to the
+  round's but for the slot digit in the game's name and the create dialog's caret. Rerun the base before reading a
+  whole-screen lobby difference as a change.
+- **Gates** (run twice: on dc319617b, then on d93bf63a3, the round merged with origin/rust 04ccdbcf3, batch 25; the
+  figures are the second run's, the first was the same but for the inputs and the LAN base noted):
+
+| Gate | Result |
+|---|---|
+| `build.py -j 10 --sim`, `--test-profile windowed-software` | EE-AOC 395 inputs, EE-SIM 396, test image 395: 0 unresolved, 0 duplicates; headers current |
+| `rust_build.py gate` | PASS |
+| oracle, seeds 2-7 | identical to the main checkout's `ref` (oracle: PASS) |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal |
+| saveload plain (seeds 2-7), matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) | exit 0; expect PASS |
+| `scenario_check.py`; `sim_editor.py`, `--civbuilder` | 27/27; PASS (14,448 lines), PASS (4,062 lines) |
+| `eedata.py check`, `cppgate` | PASS, PASS |
+| `eemodel.py cppgate` (store and decoder gates) | PASS |
+| `won_host_coverage.py`; `xbuild.py wontest` | PASS; exit 0 |
+| LAN game; `lan_capture_compare.py` against the base build's (04ccdbcf3, built for it) | PASS; every lobby capture identical but the staging screen's caret (15 pixels at x 121..122) |
+| editor; `random-game --box-select --orders --seed 7` | RESULT PASS; BOX SELECT PASS, ORDERS PASS, RESULT PASS |
+| `gates.sh` (the main checkout's tree) | GATES PASS: tour; ai-game time-cap, PT 12142, units [4, 36, 37], alive_computers [2, 3], engines classic_lua x 2; lan-game |
+| `port_metrics.py` bef67ccde..HEAD | rust_lines -3,943; unsafe +2; extern_c, C++ lines, logic, classes unchanged |
+
+- **Behaviour changes**: none in a game or on the shipped data. Damaged inputs: a PNG with corrupt image data is
+  refused with the png crate's inflate text (3 the old decoder refused decode now); a glTF document without
+  `asset`, or with a non-UTF-8 name or URI, is refused.
+
+## The game headers lane, round 1: the ids and eedata's generated headers as Rust's, one-statement members inline in their declarations, emptied units deleted (ee_sim rmap_ids.rs, game_ids.rs, combat/captured.rs; ee_data rules_gen.rs, world_constants.rs; branch rust-headers1, 2026-11-24)
+
+- **What counts in a header**: logic_lines counts every declaration line as logic and a one-statement body as
+  zero. So `void Reset();` in the header plus `void X::Reset() { ee_x_reset(this); }` in the .cpp costs one logic
+  line and four or five code lines; `void Reset() { ee_x_reset(this); }` in the header costs nothing, and its .cpp
+  goes. About 600 such members moved (a tool, `build/hd1/tools-a/inl.py`: scan, apply with a log, revert by key,
+  finalize). A .cpp left with nothing but includes is deleted with its `link/exe/units.txt` line (8 units).
+- **Incomplete types**: an inline body in a header may only touch types that are complete there. `vector<T>`
+  members are the trap: `size()`, a ctor or a dtor of a class holding `vector<EETeam>` instantiates the vector's
+  members, and a header that forward-declares EETeam then fails in every includer that never includes
+  EETeam.h (EEGameState, EEWorld, EECameraControl's `vector<EECameraKey>`, EETeam's EEVCWonder). Those stay out of
+  line; the inline pass keeps a deny list.
+- **Harness hooks must stay out of line**: tools/build.py `HARNESS_HOOKS` marks some functions
+  `__declspec(noinline)` in the test profile by matching their .cpp definition line (EEWorld::RemovePlayerFromGame,
+  EEPhysics::Tick and ReportStatistics, EEPlayer::SetGameResult, ...), and the harness breaks on their symbols
+  (tools/harness/no_human_defeat.py). Inlining one breaks only the test-profile build ("overlay EEWorld.cpp: ...
+  matches 0 times"); `build.py --sim` still links. Check the list before inlining, and build both profiles.
+- **Ids as Rust enums**: units round 9's method (`#[repr(C)]`, `/// cbindgen:enum-class=false`, the name in
+  cbindgen.toml's include list) for the random map, effect, sound, improvement, save tag, area effect, resource,
+  storm, AI kind, terrain, calamity and damage form ids. Their readers move too: `tools/eedata/rules.py` and the
+  Rust `cpp_consts` tests parsed `NAME = value` lines of the old C++ headers and now read the generated ones.
+- **eedata's generated C++**: EERulesGen.h and the dbworld constants are Rust (ee_data rules_gen.rs,
+  world_constants.rs) through cbindgen; `eedata.py cppgen` / `check` check the Rust side. The dbcalamity record is
+  Rust's EeCalamityData; `tools/eedata/overlay.py` STRUCT_SOURCES / RUST_STRUCTS name the Rust struct as a record's
+  source, with a size assert for specgen.
+- **Generated code and rustfmt**: a new Rust module written by a script must pass `cargo fmt --check`
+  (rust_build.py gate's last step); both forks met it on combat/captured.rs.
+
+| Measure | batch 24 (bbb0654d2) | tip | change |
+|---|---|---|---|
+| C++ lines (port_metrics cpp_lines) | 114,065 | 110,363 (before the hooks fix) | -3,702 |
+| compiled C/C++ files | 369 | 361 | -8 |
+| logic lines | 19,021 | 17,654 | -1,367 |
+| classes | 855 | 837 | -18 |
+| the lane's headers (list.py logic) | 4,647 | 3,265 | -1,382 |
+
+## The player/tech lane, round 1, fork B: the civilization builder's and the CP headers' records as Rust's, their one-statement members inline, the dead declarations (ee_sim tech_consts.rs; ee_game civilization.rs, screens civ_whole_ffi.rs; branch rust-playertech1-b, 2026-11-24)
+
+The civilization builder's folder (the area effects, the manager, the files, the builder's host), ee/EECiv* and
+ee/EECP*: 943 -> 864 logic lines in the lane's scope (pl1_scope.py), 18,740 -> 18,623 in the whole tree, with no
+behaviour change (oracle 6/6 identical, the oracle, units, effects and scenario captures, saveload, the civilization
+builder's editor gate).
+
+- **A header every unit reads must not include a big Rust header.** EECivilization's members forwarded to
+  `ee_gamecpp_civ_*` (gamecpp.h, 6,500 lines, changed by most lanes); ee/EECivilization.h is included by ee/EEPlayer.h,
+  so inlining them there would have recompiled nearly every unit at each gamecpp FFI change (the object cache keys on
+  the header's text). civilization.rs became its own ee_game module instead: cbindgen writes one header per top-level
+  module, and rust/game/civilization.h is 66 lines. The same check kept CanAfford out of the class (it needs
+  `gGameOptions`, a ref to the lobby's options: `gAllowCustomCivs` is the game's, not the same object).
+- **A Rust record as the C++ name**: `struct EECPPlacement : EeCpPlacementObj {};` keeps the forward declaration
+  `struct EECPPlacement;` of ee/EEComputerPlayer.h valid (a typedef would not); the offsetof checks name the Rust
+  fields. Enums and constants: `EEAreaEffectKind` and `EECivUpgrade` with its level bits (tech_consts.rs, in the
+  cbindgen.toml export list). The bits are `u32`, not `c_ulong`: `as u32` on a `c_ulong` is clippy's
+  unnecessary_cast on Windows (32-bit long) and needed on Linux; the C++ constant changed from `unsigned long` to
+  `uint32_t`, the same values in both of its expressions.
+- **A one-line definition** (`X::X(...) { ...; }`) ends on its own line: a cutting script that looks for the next
+  column-0 `}` swallows the following function (it took EEAreaEffect::Dump and Checksum here; restored before the build).
+- **Dead code** found by a whole-tree name count (src, include, rust/crates: a name only in its own header and
+  definition, or only in Rust comments): the manager's UpgradeKey, FindUpgradeKey, GetUpgrades, `kCivKey`,
+  `EECivilizationUpgradeValue`, EECBUIListBox's `sSeparator` and `sCategory`.
+- The area effects' running state's FSFile I/O moved to Rust over gamecpp's `Pf` (the same FSFile overloads the
+  C++ switch called), so `EEAESaveRunningState`/`Load` are one-statement inlines.
+- **The civilization builder gate's flake reproduced** (round 11's, "The civilization builder gate's flake"): one
+  `--civbuilder` run in three failed at step 59 with the box round 12 predicted on top, `EEUIFError` 'Error Creating
+  File' (the overwrite's create-new after its delete, under this machine's load with seven lanes running); the
+  rerun passed. It is the file system's, not this round's code.
+- Edits outside the fork's files: the AI Thread's forwarder bodies deleted (EECPNext.cpp, EECPNextUnits.cpp,
+  EECPTrace.cpp, EEComputerPlayer.cpp), EEPlayer.cpp's empty ~EECivilization, EEWorldLayout.cpp's two offsetof
+  field names, EEVCWonder.cpp's include.
+
+## The player/tech lane, round 1: EEPlayer's and RTSPlayer's forwarders inline, the tech tree's members over ee_game tech_tree, the civilization builder's records as Rust's (ee_game tech_tree, civilization.rs; branch rust-playertech1, 2026-11-24)
+
+The lane's scope (ee/EEPlayer.h, ee/EETech*, ee/EECP*, ee/EECiv*, the Player, Tech Tree and Civilization Builder
+folders): 1,223 -> 528 (587 before batch 25, whose game core 13 made ee/EETechTreeTechID.h Rust's) logic lines; the whole tree against the merged batch 25 (04ccdbcf3, port_metrics.py): C++ lines 109,934 -> 107,975, compiled files 354 -> 353, logic 17,218 -> 16,542, classes 810 -> 800. No behaviour change (the oracle's six seeds identical, the
+capture profiles, saveload). Fork B's civilization builder has its own section above; this is the lead's part
+(the player) and fork A's (the tech tree).
+
+- **An inline member's body is compiled in the header's context**: a free function it calls must be declared before
+  the class (in-class bodies see the whole class, but namespace names only from before the definition), and every type
+  it converts must be complete there. EEPlayer.h could take 99 of EEPlayer.cpp's one-statement members once
+  `EEPlayerRefs` (the struct the Rust player's view is built by; its constructor stays in EEPlayer.cpp beside the
+  static host) and `EEPlayerUnits` (now taking a `void*` unit) were declared before EEPlayer. What could not move:
+  `UnitsSwapped` (`ioSwaps.data()` on a vector of the incomplete `EEPUnitSwap`: one error, in 66 units, from the
+  vector's arithmetic), `GetNearestArea` (an `EETown*` to `EEAIArea*` conversion), `GetNumWonderUnits`
+  (`UReferenceContainer`), `GetPopulationLimit` (gWorld), the class media setters (EEUnitStats).
+- **A unit pointer as the Rust's integer without the class**: `EEPlayerUnitArg(inUnit)` converted an `EEComplexUnit*`
+  to `RTSUnit*` first (a complete type); the inline bodies cast through `void*` instead. It is the same address only
+  because RTSUnit is the first base of EEUnit and EEUnit the first of EEComplexUnit, all with a vtable at offset 0;
+  the active group's `H(this)` already relied on it.
+- **A context made in the call's argument**: `EEPlayerSaveContext{...}.Self()` lives until the end of the full
+  expression, so the Rust call that passes the pointer back to the host may use (and write) it; Load, Save,
+  LoadUnit and SaveUnit became one statement and the units' context (the same four fields and the unit) merged into
+  the save's.
+- **A Rust record in place of a C++ struct with a zeroing constructor**: `EeRtsUnitBucket mUnitBuckets[128] = {};`
+  zeroes as RTSUnitBucket's constructor did (the original's VC6 array-ctor loop); EEPWorldHelper's one write names
+  the Rust field. `EEStatisticsSeries::mPoints` holds `EeUnitsStatPoint`, so GetSeries passes `data()` with no cast.
+- `GetNextEventSource` writes the Rust's answer straight into the tile; `ee_units_events_next` now writes (0, 0)
+  without an event, the C++ caller's old start values.
+- The metric counts a declaration line, so 'shims allowed' here means a
+  forwarder in the class rather than a declaration plus an out-of-line body; EEPlayer.cpp lost 600 lines of text
+  and EEPlayer.h's logic 393 -> ~200.
+- **A harness hook stays out of line**: tools/build.py's HARNESS_HOOKS give the test profile an overlay that marks
+  each hooked function `__declspec(noinline)` by its definition's text, and the debugger harness finds it by its
+  mangled name (no_human_defeat.py: `EEPlayer::SetGameResult`). Inlining SetGameResult failed only the test
+  profile's build ("overlay EEPlayer.cpp: ... matches 0 times"); it is back in EEPlayer.cpp. Check HARNESS_HOOKS and
+  `git grep '@Class@@' tools` before inlining a member.
+- **TaskStop of a background chain does not stop its children**: a stopped `bash chain.sh` kept running its python
+  children (a build, then the oracle) beside the restarted chain in the same worktree, and their log writes left NULs
+  in chain.log. Kill the process tree (Win32_Process by ParentProcessId) before restarting.
+- **A pure virtual nothing calls through the base**: RTSPlayer's seven (RecountPopulation, IsActive, UnitRemoved,
+  LoadUnit, RemovalsDone, RemovingUnit, SaveUnit) were only called by RTSPlayer.cpp's shims for ee_game rts
+  units.rs and its save host; EEPlayer is the only player kind, so the shims cast to it and the base lost them (the
+  vtable's slot order changes: nothing reads it by offset).
+- EEPlayer's AddPendingUnits/ReleasePendingUnits (the groups' op, then RTSPlayer's) and the event list's destructor
+  (free, then the sounds) are one Rust function each (`ee_rts_eeplayer_*`, `ee_units_events_destroy`).
+- **The tech tree (fork A)**: a new top-level ee_game module gets its own small cbindgen header
+  (rust/game/tech_tree.h): that is what let EEPlayer.h inline the tree's forwarders without including gamecpp.h
+  (6,500 lines, changed by most lanes). The epoch's node map and loaded classes are one Rust record
+  (`EeTechEpochLists`): the node walks read the list in map order with no C++ call per node (O(n) instead of a
+  `std::next` call each step). The original's inline bases RTSTechTreeNode and RTSTechTree folded into
+  EETechTreeNode/EETechTree (SetPlayerIndex no longer virtual; EEWorldLayout's offsets are offsetof/BaseOffset, so
+  they hold). The node data's containers stay C++: ee_sim's world layout reads `mUnitClasses` as a std::vector by
+  offset. Clippy's unnecessary_cast on the moved modules: the same allow as gamecpp.
+- Edits outside the lane's files: src/RTS Engine/Player/RTSPlayer.cpp (the 14 forwarders moved into the class, the
+  bucket shim's type, the shims' casts to EEPlayer), rust/crates/ee_game/src/rts/units.rs (`ee_rts_eeplayer_*`), src/Empire Earth/Persistent/EEPWorldHelper.cpp (one field name), src/Empire Earth/UI
+  Events/EEScreens.cpp (two field names), rust/crates/ee_sim/src/units/player_events.rs (`ee_units_events_next`).

@@ -18,20 +18,44 @@ typedef EeScenarioTEffectWrapper EESMTEffectWrapper;
 // the numbers (mConditionDuration .. mIsInCinematic) are EeScenarioTriggerFields (ee_scenario fields.rs)
 class EESMTrigger : public EeScenarioTriggerFields {
 public:
-    EESMTrigger();
-    ~EESMTrigger();
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1c9d56
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x14 0x1ca0b3
-    void Copy(const EESMTrigger& inTrigger);
-    void DeleteCondition(unsigned long inIndex);
-    void DeleteEffect(unsigned long inIndex);
-    EESMTConditionWrapper* GetCondition(unsigned long inIndex);  // 0x1c9d0e (0 past the end)
-    EESMTEffectWrapper* GetEffect(unsigned long inIndex);        // 0x1c9d32 (0 past the end)
-    void Evaluate(float inTime);            // 0x1c9ab5 (runs the effects when the conditions hold; provisional name)
-    void SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition);
-    void SetConditionOperator(unsigned long inIndex, long inOperator);  // 0x1ca2c3 (appends a wrapper after the last)
-    void SetEffect(unsigned long inIndex, long inDelay, unsigned long inEffect);
-    void SetEffectOperator(unsigned long inIndex, long inType);  // 0x1ca3c1 (appends a wrapper after the last)
+    // Creates an enabled, non-looping trigger with one empty condition entry and one empty effect entry
+    EESMTrigger() { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_CONSTRUCT, 0, 0, 0, 0); }
+    // Destroys the trigger, deleting all its condition and effect entries
+    ~EESMTrigger() { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DESTROY, 0, 0, 0, 0); }
+    // Reads the trigger's settings, condition entries and effect entries (id -1 becomes 0); returns the first error
+    // (ee_scenario save.rs trigger_load)
+    // +0x00 0x1c9d56
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_scenario_en_trigger_io(this, &inFile, false); }
+    // Writes the trigger's settings, condition entries and effect entries; returns the first error
+    // (ee_scenario save.rs trigger_save)
+    // +0x14 0x1ca0b3
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_scenario_en_trigger_io(this, &outFile, true); }
+    // Copies a trigger: texts, entries, the flags, the condition duration and the id
+    void Copy(const EESMTrigger& inTrigger) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_COPY, 0, (int64_t)(intptr_t)&inTrigger, 0, 0); }
+    // Deletes a condition entry; the new last one ends the chain
+    void DeleteCondition(unsigned long inIndex) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DELETE, 0, (int64_t)inIndex, 0, 0); }
+    // Deletes an effect entry; the new last one ends the chain
+    void DeleteEffect(unsigned long inIndex) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DELETE, 1, (int64_t)inIndex, 0, 0); }
+    // Returns condition entry inIndex, or NULL past the end
+    // 0x1c9d0e (0 past the end)
+    EESMTConditionWrapper* GetCondition(unsigned long inIndex) { return (EESMTConditionWrapper*)(intptr_t)ee_scenario_trigger_member(this, EE_SCENARIO_TRM_GET, 0, (int64_t)inIndex, 0, 0); }
+    // Returns effect entry inIndex, or NULL past the end
+    // 0x1c9d32 (0 past the end)
+    EESMTEffectWrapper* GetEffect(unsigned long inIndex) { return (EESMTEffectWrapper*)(intptr_t)ee_scenario_trigger_member(this, EE_SCENARIO_TRM_GET, 1, (int64_t)inIndex, 0, 0); }
+    // Fires the trigger when its AND/OR condition chain has held for the set duration: queues all effects, or one random
+    // OR-separated group, at their delays, and turns a non-looping trigger off
+    // (EEScenarioManager::Update 0x1b20e6)
+    // (trigger.rs evaluate over the entries, trigger_members.rs; entry.rs adds the simulation capture's SMTE record)
+    // 0x1c9ab5 (runs the effects when the conditions hold; provisional name)
+    void Evaluate(float inTime) { ee_scenario_en_trigger_evaluate(this, inTime); }
+    void SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET, 0, (int64_t)inIndex, inNot, (int64_t)inCondition); }
+    // Sets condition entry inIndex's operator (appending an entry after the last when it gets one)
+    // 0x1ca2c3 (appends a wrapper after the last)
+    void SetConditionOperator(unsigned long inIndex, long inOperator) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET_OPERATOR, 0, (int64_t)inIndex, inOperator, 0); }
+    void SetEffect(unsigned long inIndex, long inDelay, unsigned long inEffect) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET, 1, (int64_t)inIndex, (int64_t)(unsigned long)inDelay, (int64_t)inEffect); }
+    // Sets effect entry inIndex's operator (appending an entry after the last when it gets one)
+    // 0x1ca3c1 (appends a wrapper after the last)
+    void SetEffectOperator(unsigned long inIndex, long inType) { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET_OPERATOR, 1, (int64_t)inIndex, inType, 0); }
     // inline (COMDAT 0x196dff after its first user, EESETSTrigger.cpp; the effect count is ICF-folded into 0x88ce9)
     // (provisional names)
     unsigned long GetConditionCount() { return this->mConditions.size(); }

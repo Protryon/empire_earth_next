@@ -47,7 +47,6 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEEffectMesh.h"
 #include "ee/EEDoppelganger.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEUGRust.h"
@@ -55,6 +54,38 @@
 #include "ee/EEAEManager.h"
 #include "ee/EESaveGameFiles.h"
 #include "rust/game/gamecpp.h"
+
+// The effects' meshes built in Rust (rust/crates/ee_render/src/gfx mesh.rs: the farm's, the volcano's) are stored
+// into a model's vertex and polygon arrays. Each record says which values its builder set; only those are stored
+// (the builders' later writes to a slot already won in Rust, as they did in the arrays): the raster table's store_mesh
+// into inModel's first vertex and polygon arrays.
+static void EEStoreMesh(GEModel* inModel, const EeGfxMeshVertex* inVertices, size_t inVertexCount,
+                        const EeGfxMeshTriangle* inTriangles, size_t inTriangleCount)
+{
+    GEVertexArray* theVertices = inModel->GetVertexArray(0);
+    for (unsigned long i = 0; i < inVertexCount; i++) {
+        const EeGfxMeshVertex& v = inVertices[i];
+        if (v.set & EE_GFX_MESH_POINT)
+            theVertices->SetPoint(GE3DPoint(v.point.mX, v.point.mY, v.point.mZ), i);
+        if (v.set & EE_GFX_MESH_NORMAL)
+            theVertices->SetNormal(GEVector(v.normal.mX, v.normal.mY, v.normal.mZ), i);
+        if (v.set & EE_GFX_MESH_COORD)
+            theVertices->SetTextureCoordinate(GETextureCoordinate(v.coord.u, v.coord.v), i);
+        if (v.set & EE_GFX_MESH_COLOR)
+            theVertices->SetColor(GEColor(v.color.red, v.color.green, v.color.blue), i);
+        if (v.set & EE_GFX_MESH_OPACITY)
+            theVertices->SetOpacity(v.opacity, i);
+    }
+    GEPolygonArray* thePolygons = inModel->GetPolygonArray(0);
+    for (unsigned long i = 0; i < inTriangleCount; i++) {
+        const EeGfxMeshTriangle& t = inTriangles[i];
+        if (t.set) {
+            thePolygons->SetVertexIndex1(i, t.v[0]);
+            thePolygons->SetVertexIndex2(i, t.v[1]);
+            thePolygons->SetVertexIndex3(i, t.v[2]);
+        }
+    }
+}
 
 class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)
@@ -78,27 +109,12 @@ const bool kRegistered = (EEGfxObjectLayoutRegister(), true);
 
 // the effects' file, the manager's Load, Save and entry points, an effect's local flag: gamecpp fx_world.rs
 EeGfxEffectFile EEEffectFile(FSFile& inFile) { return ee_gamecpp_fw_file(&inFile); }
-long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_fw_load(this->mRust, &inFile, inMajorVersion, inMinorVersion); }
-long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_fw_save(this->mRust, &outFile, inMajorVersion, inMinorVersion); }
-long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, bool inKeepsUnit, long inTagPoint, long inGoalIndex) { return ee_gamecpp_fw_unit_effect(this->mRust, inUnit, inEffect, reinterpret_cast<uint32_t*>(outHandle), inKeepsUnit, inTagPoint, inGoalIndex); }
-long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_between_units(this->mRust, inFrom, inTo, inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-long EEEffectManager::CreateEffect(EEUnit* inUnit, const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, long inGoalIndex) { return ee_gamecpp_fw_unit_to_point(this->mRust, inUnit, reinterpret_cast<const EeGe3DPoint*>(&inLocation), inEffect, reinterpret_cast<uint32_t*>(outHandle), inGoalIndex); }
-long EEEffectManager::CreatePlacedEffect(const GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_placed(this->mRust, reinterpret_cast<const EeGe3DPoint*>(&inLocation), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-long EEEffectManager::CreateTransformationEffect(const GETransformation& inTransformation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_transformation(this->mRust, reinterpret_cast<const EeGeTransformation*>(&inTransformation), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-long EEEffectManager::CreateEffectBetween(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_between(this->mRust, reinterpret_cast<const EeGe3DPoint*>(&inFrom), reinterpret_cast<const EeGe3DPoint*>(&inTo), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect, EEEffectHandle* outHandle) { return ee_gamecpp_fw_weather(this->mRust, reinterpret_cast<const long*>(inTiles.data()), inTiles.size(), inEffect, reinterpret_cast<uint32_t*>(outHandle)); }
-void EEEffect::SetLocalTo(long inPlayer) { ee_gamecpp_fw_set_local(this->mRecord, inPlayer); }
 
 // the weather storms' (EEEMStorm's): every tile one step towards its place around the new centre, the storm
 // recentred on the terrain there; the tiles' bounds (gamecpp ro_views.rs over ee_gfx effect_storm.rs)
 void EEEffect::Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds)
 {
     ee_gamecpp_fx_storm_move(this, inCenter.mX, inCenter.mY, reinterpret_cast<EeGameCppTileBounds*>(&outBounds));
-}
-
-void EEEffect::GetBounds(U2DRectangle<long>& outBounds)
-{
-    ee_gamecpp_fx_storm_bounds(this->mRecord, reinterpret_cast<EeGameCppTileBounds*>(&outBounds));
 }
 
 U2DPoint<long> EEEffect::GetCenterPoint() const

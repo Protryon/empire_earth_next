@@ -17,6 +17,7 @@
 #include "lle/GE3DPoint.h"
 #include "TSLockable.h"
 #include "ee/EEGameOptions.h"
+#include "rust/game/gamecpp.h"
 
 class UWideString;
 class EEMap;
@@ -31,20 +32,32 @@ public:
     virtual ~EEGameState();                 // 0x1401da (Clear, then the members; ??_G 0x140ccf)
     // 0x1306f2: builds the game from inOptions; false with outError set when it fails (EEDataPreLoading::LoadGame)
     bool Create(EEGameOptions& inOptions, UWideString& outError);
-    void Reset();                           // 0x1317eb (+0x4c0..+0x4d0 = 0, the vector at +0x480 cleared)
-    void Init();                            // 0x1305fb (the scalars below; the teams and mLoadedPlayers cleared; mChecksum = ESChecksum(false))
-    void Clear();                           // 0x1304e4 (deletes +0x4c0..+0x4d0 and zeroes them, clears the vectors)
+    // 0x1317eb (+0x4c0..+0x4d0 = 0, the vector at +0x480 cleared)
+    void Reset() { ee_gamecpp_state_reset(this); }
+    // 0x1305fb (the scalars below; the teams and mLoadedPlayers cleared; mChecksum = ESChecksum(false))
+    void Init() { ee_gamecpp_state_init(this); }
+    // The bodies are Rust (ee_game gamecpp state.rs) over the cases below (EEGameStateOp)
+    // 0x1304e4 (deletes +0x4c0..+0x4d0 and zeroes them, clears the vectors)
+    void Clear() { ee_gamecpp_state_clear(this); }
     // 0x14aa24: deletes the old one (virtual dtor), then stores (EEPWorldHelper::Restore; provisional name)
     void SetScenarioManager(EEScenarioManager* inManager);
     // the loader unit's (Persistent/EEGameStateLoader.cpp 0x14a9ac..0x14aa24; provisional names)
-    void SetDefaultMapCenter();             // 0x14a9ac: mMapCenter = the map's (height + width) * 0.5 + 0.5 in x and y, z 0
+    // Centres the camera on the middle of the map, if there is one
+    // 0x14a9ac: mMapCenter = the map's (height + width) * 0.5 + 0.5 in x and y, z 0
+    void SetDefaultMapCenter() { ee_gamecpp_st_default_map_center(this); }
     void SetEffectManager(EEEffectManager* inManager);   // 0x14a9e8 (deletes the old one)
     void SetMap(EEMap* inMap);              // 0x14aa06 (deletes the old one)
     // empty (ret 8), ICF-folded at 0x163d6f; the loader 0x14a5ba calls it with the save's versions (provisional name)
-    void FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion);
-    void SetCalamityHelper(EEPCalamityHelper* inHelper);   // 0x13181d (Reset and delete the old one; provisional name)
-    void SetEnvironmentManager(EEEnvironmentManager* inManager);   // 0x131854 (deletes the old one; provisional name)
-    void RepairRestorables();               // 0x1305bf (EEWorld::StartGame after the camera; provisional name)
+    // Does nothing after a game is loaded (no address: empty, ICF-folded into 0x163d6f; EEGameStateLoader::LoadGame
+    // 0x14a5ba calls it with the save's versions: `push hdr.mMinorVersion; mov ecx, [esi] (the EEGameState*); push
+    // hdr.mMajorVersion; call 0x163d6f`, a direct thiscall on the state; provisional name)
+    void FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion) {  }
+    // 0x13181d (Reset and delete the old one; provisional name)
+    void SetCalamityHelper(EEPCalamityHelper* inHelper) { ee_gamecpp_state_set_calamity_helper(this, inHelper); }
+    // 0x131854 (deletes the old one; provisional name)
+    void SetEnvironmentManager(EEEnvironmentManager* inManager) { ee_gamecpp_state_set_environment(this, inManager); }
+    // 0x1305bf (EEWorld::StartGame after the camera; provisional name)
+    void RepairRestorables() { ee_gamecpp_state_repair_restorables(this); }
 
     EEGameOptions mGameOptions;             // +0x008
     GE3DPoint mMapCenter;                   // +0x414 (Create: the map's size * 0.5, z 0)

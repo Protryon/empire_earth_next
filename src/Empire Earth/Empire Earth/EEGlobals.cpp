@@ -31,6 +31,5 @@ bool& gWorldClearing = gWorld.mClearing;   // +0xb99
 bool& gUnitImprovementsAllowed = gWorld.mUnitImprovementsAllowed;   // +0xb9b
 bool& gShowCollisionSpheres = gWorld.mShowCollisionSpheres;   // +0xb9c
 bool& gInCinematic = gWorld.mInCinematic;   // +0xba0
-bool& gLoadingPlayerMedia = gWorld.mLoadingPlayerMedia;   // +0xba3
 bool& gUsingCarbon = gWorld.mUsingCarbon;   // +0xba4
 float& gGameStateGameSpeed = gGameState.mGameSpeed;   // +0x4dc

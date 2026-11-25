@@ -20519,6 +20519,15 @@ void ee_units_events_sounds(void *list,
                             EeUnitsEventsFn f,
                             bool load);
 
+/// `EEPPlayerEventList`'s destructor: the events freed, then the alert sounds unloaded and the one playing released
+/// (`ee_units_events_sounds(list, f, false)`).
+///
+/// # Safety
+/// As [`ee_units_events_free`] and [`ee_units_events_sounds`].
+void ee_units_events_destroy(EeUnitsPlayerEvents *events,
+                             void *list,
+                             EeUnitsEventsFn f);
+
 /// A new, empty list.
 EeUnitsPlayerEvents *ee_units_events_new();
 
@@ -20553,11 +20562,14 @@ void ee_units_events_call(EeUnitsPlayerEvents *events,
                           uint32_t what,
                           float elapsed);
 
-/// `GetNextEvent`'s source into `out_x`/`out_y`; false without an event.
+/// `GetNextEvent`'s source into `out_x`/`out_y` (0, 0 without one, as the C++ caller's start values were); false
+/// without an event.
 ///
 /// # Safety
 /// `events`, `out_x` and `out_y` are live.
-bool ee_units_events_next(EeUnitsPlayerEvents *events, long *out_x, long *out_y);
+bool ee_units_events_next(EeUnitsPlayerEvents *events,
+                          long *out_x,
+                          long *out_y);
 
 /// `Load` (`save` false) or `Save` (true) of the list through the save's primitives `f` on `ctx`.
 ///

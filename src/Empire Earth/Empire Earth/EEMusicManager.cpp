@@ -21,19 +21,6 @@
 #include "ee/EEMusicManager.h"
 #include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp music_io.rs)
 
-// Creates the music manager and starts its music thread at the given priority, waiting until the thread runs
-EEMusicManager::EEMusicManager(SEConductor* inConductor, long inThreadPriority)
-    : mConductor(inConductor)
-{
-    ee_gamecpp_music_init(this, inThreadPriority);
-}
-
-// Destroys the music manager: tells the thread to exit, waits for it and frees the events and the thread
-EEMusicManager::~EEMusicManager()
-{
-    ee_gamecpp_music_destroy(this);
-}
-
 // The C++ side of the Rust music manager: the members, the conductor, the songs, the world and the preferences
 static EEMusicManager* Of(void* inContext) { return static_cast<EEMusicManager*>(inContext); }
 
@@ -81,33 +68,9 @@ void ee_musiccpp_global_set_intensity(uint32_t inIntensity, bool inImmediate)
 
 // (the music thread, MusicManagerMain: ee_game gamecpp music_io.rs ee_gamecpp_music_main)
 
-// Asks the music thread to pause the music
-void EEMusicManager::Pause()
-{
-    this->mPause->Set();
-}
-
 // Requests a new music intensity, delaying a drop by five seconds; the music thread applies it
 void EEMusicManager::SetIntensity(unsigned long inIntensity)
 {
     ee_music_request_intensity(this, (uint32_t)inIntensity);
     this->mSetIntensity->Set();
-}
-
-// Asks the music thread to start the music
-void EEMusicManager::Start()
-{
-    this->mStart->Set();
-}
-
-// Asks the music thread to stop the music
-void EEMusicManager::Stop()
-{
-    this->mStop->Set();
-}
-
-// Counts down the time to the next song, switching songs when it runs out
-void EEMusicManager::Update(unsigned long inElapsedTime)
-{
-    ee_music_update(this, (uint32_t)inElapsedTime);
 }

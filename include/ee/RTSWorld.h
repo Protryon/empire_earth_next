@@ -21,7 +21,7 @@ class TSReadWriteLock;
 
 class RTSWorld {
 public:
-    RTSWorld();
+    RTSWorld() { ee_rts_world_construct(this); }
     // RTSWorld.cpp's non-virtual members (provisional names unless stated)
     // 0x148024: index in mPlayers[0..mNumPlayers), -1 if none
     long GetPlayerIndex(EEPlayer* inPlayer) { return ee_rts_world_player_index(this, inPlayer); }
@@ -36,7 +36,8 @@ public:
         { ee_rts_world_add_unit_entry(this, inUnit, inInsertAfter); }
     // 0x1481c9: deletes the old player unless it is the same
     void SetPlayer(long inIndex, EEPlayer* inPlayer) { ee_rts_world_set_player(this, inIndex, inPlayer); }
-    virtual ~RTSWorld();                    // +0x00 (??_G 0x147e9a; dtor 0x147eb6)
+    // +0x00 (??_G 0x147e9a; dtor 0x147eb6)
+    virtual ~RTSWorld() { ee_rts_world_destruct(this); }
     // +0x04 0x147eee (EEWorld inherits it; the per-player limit mPlayerPopulationLimit)
     virtual void UpdatePlayerPopulationLimit(bool inRecount) { ee_rts_world_update_population_limit(this, inRecount); }
     // +0x08 0x147f71 (deletes the players and the map)

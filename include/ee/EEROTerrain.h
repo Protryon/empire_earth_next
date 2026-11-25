@@ -5,22 +5,37 @@
 #ifndef EE_EEROTERRAIN_H
 #define EE_EEROTERRAIN_H
 
+#include "rust/game/gamecpp.h"
+#include "rust/render/gfx.h"
 class GEModel;
 class GETexture;
 
 class EEROTerrain : public EERenderObject {
 public:
-    EEROTerrain();
-    virtual ~EEROTerrain();                 // +0x10 dtor 0x11262d (??_G 0x112611)
-    virtual void FrameStarting();           // +0x00 0x112638
-    virtual void SceneStarting();           // +0x04 0xe123d trivial: ret (ICF)
-    virtual void RenderScene();             // +0x08 0x1131a4
-    virtual void FrameDone();               // +0x0c 0xe123d trivial: ret (ICF)
+    // Creates the terrain's render object with the terrain grid off
+    EEROTerrain() { this->mGridMode = 0; }
+    // Destroys the terrain's render object
+    // +0x10 dtor 0x11262d (??_G 0x112611)
+    virtual ~EEROTerrain() {  }
+    // The frame (the sky colours, the clouds, the fog of war, the grid runs, the terrain's snapshot), the sky media and
+    // the scene's draws: gamecpp ro_views.rs (ee_gfx ro_terrain.rs)
+    // +0x00 0x112638
+    virtual void FrameStarting() { ee_gamecpp_te_frame_starting(this); }
+    // +0x04 0xe123d trivial: ret (ICF)
+    virtual void SceneStarting() {  }
+    // +0x08 0x1131a4
+    virtual void RenderScene() { ee_gamecpp_te_render_scene(this); }
+    // +0x0c 0xe123d trivial: ret (ICF)
+    virtual void FrameDone() {  }
 
-    void StepGridMode(bool inBackwards);    // 0x1138a6: mGridMode cycles 0..0x11 (provisional name)
+    // Steps the terrain grid mode forwards or backwards through 0..17, wrapping around
+    // 0x1138a6: mGridMode cycles 0..0x11 (provisional name)
+    void StepGridMode(bool inBackwards) { this->mGridMode = ee_gfx_terrain_grid_mode_step((int32_t)this->mGridMode, inBackwards); }
 
-    static void CreateSkyModel();           // 0x112e7f (the sky, clouds, stars and the area-effect textures)
-    static void ReleaseSkyModels();
+    // 0x112e7f (the sky, clouds, stars and the area-effect textures)
+    static void CreateSkyModel() { ee_gamecpp_te_create_sky_model(); }
+    // Releases the sky, cloud and star models and textures and the two area-effect textures (ee_gfx ro_terrain.rs)
+    static void ReleaseSkyModels() { ee_gamecpp_te_release_sky_models(); }
 
     long mGridMode;                         // +0x04 (= 0 in the ctor; non-zero: Virtual08 draws the terrain grid) (provisional name)
 };

@@ -57,7 +57,6 @@ pub mod persistent;
 
 // ---- round 9, lane D: the session, the civilization builder and the tech tree (Communications, Civ Builder, Tech Tree)
 pub mod server;
-pub mod tech;
 //
 //
 
@@ -77,7 +76,6 @@ pub mod db_media;
 pub mod db_text;
 pub mod persist_more;
 pub mod tech_capture;
-pub mod tech_load;
 //
 //
 
@@ -90,7 +88,6 @@ pub mod msg_capture;
 // ---- round 10, lane D: the Empire Earth directory's managers and utilities
 pub mod camera_host;
 pub mod cheats;
-pub mod civilization;
 pub mod utilities;
 pub mod weather;
 //
@@ -2331,7 +2328,7 @@ pub enum EeGameCpp {
     ClIdsSeconds,
     ClTimeoutFormat,
     ClSprintfSeconds,
-    // the tech tree's host (tech.rs; EETechTree.cpp's EECore9OpD6, EETechTreeNode.cpp's EECore9OpD7)
+    // the tech tree's host (tech_tree host.rs; EETechTree.cpp's EECore9OpD6, EETechTreeNode.cpp's EECore9OpD7)
     TkTreeFields,
     TkCurrentPlayer,
     TkPlayerIndex,
@@ -2342,13 +2339,11 @@ pub enum EeGameCpp {
     TkEpochCount,
     TkEpochAt,
     TkEpochRef,
-    TkEpochNodes,
     TkUnitId,
     TkGet,
     TkSetRef,
     TkNeedsUnitMedia,
     TkTrigger,
-    TkGetPlayer,
     TkTreePlayer,
     TkEpochReached,
     TkStatReset,
@@ -2402,20 +2397,14 @@ pub enum EeGameCpp {
     TkClassCosts,
     TkUpgrade,
     TkInCostSet,
+    TkVariant,
     TkPlayerJit,
     TkClassHasRallyPoint,
-    TkNodeCount,
-    TkNodeAt,
-    TkNodeKeyAt,
+    TkEpochLists,
     TkNodeUnload,
     TkNodeDelete,
-    TkNodesClear,
     TkEpochDeleteData,
     TkPushId,
-    TkLoadedClassesPush,
-    TkLoadedClassesCount,
-    TkLoadedClassAt,
-    TkLoadedClassesClear,
     TkNodeLoadMedia,
     TkNodeUnloadMedia,
     TkEpochCostFactor,
@@ -2685,9 +2674,9 @@ pub enum EeGameCpp {
     TbButtonGet,
     TbSwapButton,
     TbGlobalTree,
-    TbEpochInsert,
     TbSetPlayerIndex,
     TbCopyPlayer,
+    TbSetPlayer,
     TbIsHuman,
     TbClassFamily,
     TbNodeIsObsolete,

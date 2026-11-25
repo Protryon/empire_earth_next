@@ -29,13 +29,6 @@ EEGameOptionsPlayer::EEGameOptionsPlayer()
     this->mName = gEmptyString;
 }
 
-// Creates default game options (random epochs, normal speed and map size, unit limit 50, three wonders to win)
-// with sixteen empty player slots (ee_game gamecpp options.rs; the limits, the strings and the slots)
-EEGameOptions::EEGameOptions() { ee_gamecpp_options_init(this); }
-
-// Creates a copy of other game options, with its own lock (the copy keeps the defaults' mB407: operator= leaves it)
-EEGameOptions::EEGameOptions(const EEGameOptions& inOther) { ee_gamecpp_options_copy(this, &inOther); }
-
 // Destroys the game options, releasing their lock
 EEGameOptions::~EEGameOptions()
 {
@@ -50,31 +43,6 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
     ee_gamecpp_options_assign(this, &inOther);
     return *this;
 }
-
-// Returns the map's width and height in tiles for the map size setting (0 x 0 for an unknown size)
-// (gameoptions.yaml map_sizes: 42, 58, 75, 105, 160, 220 in the original)
-void EEGameOptions::GetMapDimensions(long& outWidth, long& outHeight) { ee_gamecpp_options_map_dimensions(this, &outWidth, &outHeight); }
-
-// Returns the campaign scenario's map name when the options name a campaign with a checksum and a map, else ""
-bool EEGameOptions::GetCampaignMapName(UWideString& outName) { return ee_gamecpp_options_campaign_map_name(this, &outName); }
-
-// Returns whether civilizations may be bought: not in the scenario editor and not in a scenario game
-bool EEGameOptions::CanBuyCivilization() { return ee_gamecpp_options_can_buy_civilization(this); }
-
-// Resets the options to the lobby's defaults (all resources, random epochs, first map type, cheats on, victory off,
-// the preferred difficulty) with sixteen empty player slots
-void EEGameOptions::SetDefaults() { ee_gamecpp_options_set_defaults(this); }
-
-// Reads the game options and the sixteen slots from a saved game (ee_app game_options.rs load); returns the first
-// read error
-long EEGameOptions::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_options_load(this, inMajorVersion, inMinorVersion, &inFile);
-}
-
-// Writes the sixteen player slots and the game options to a saved game (ee_app game_options.rs save); returns the
-// first write error
-long EEGameOptions::Save(FSFile& outFile) { return ee_gamecpp_options_save(this, &outFile); }
 
 // Returns the number of game variants
 unsigned long EEGetNumberOfGameVariants()

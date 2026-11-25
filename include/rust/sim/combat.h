@@ -1873,47 +1873,27 @@ struct EeCombatConditionOut {
   int32_t action;
 };
 
-/// One hit's damage arguments (`ComputeDamage`'s after the units).
-struct EeCombatDamageCall {
-  /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
-  int32_t form;
-  float attack;
-  /// the attack's ammunition kind (the to-hit table's column) and weapon (the armour's index)
-  int32_t ammo;
-  int32_t weapon;
-  /// splash on the own player's units
-  float friendly_factor;
-  /// out: the damage when the call answers true
-  int32_t amount;
-};
-
-/// The C++ host of the reads (see [`QueryHost`]; `ctx` is the C++'s context: the call's unit and goal).
-struct EeCombatQueryHost {
-  void *ctx;
-  uint32_t (*read)(void *ctx, int32_t code, uint64_t object, int32_t arg);
-  uint64_t (*handle)(void *ctx, int32_t code, uint64_t object, int32_t arg);
-  void (*act)(void *ctx, int32_t code, uint64_t object, int32_t arg);
-  /// the location's `mMatrix` row by row into `out`
-  void (*location)(void *ctx, uint64_t object, float (*out)[16]);
-  /// `line`: start x, y, z, direction x, y, z
-  int32_t (*intersects)(void *ctx,
-                        uint64_t candidate,
-                        const float (*line)[6],
-                        int32_t segment,
-                        uint32_t lod,
-                        float scale);
-  void (*footprint_tile)(void *ctx, uint64_t object, int32_t (*out)[2]);
-};
-
-/// The argument block of an operation.
-using EeCombatWorldArgs = int64_t[12];
-
-/// The C++ host of the bodies here: the reads' table and the operations (`ctx`: the reads' context).
-struct EeCombatWorldHost {
-  EeCombatQueryHost query;
-  uint64_t (*op)(void *ctx, int32_t code, uint64_t object, uint64_t other, EeCombatWorldArgs *args);
-  /// the call's class (`EEUnitClass*`: Attacked's or FireShot's, else the unit's)
-  uint64_t class_;
+/// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
+/// point's model first, then each parent) are passed beside it.
+struct EeCombatWeaponIn {
+  /// `WEAPON_KIND_*`
+  int32_t kind;
+  /// the animation's tag point list exists (else the height stays the location's z)
+  int32_t list_present;
+  /// the shooter's location (`mMatrix`, row by row)
+  float location[16];
+  /// its physical model's scale
+  float scale;
+  /// the point's model is a turret part (`FindTurretPart` found it): `yaw` is its turret angle
+  int32_t turret;
+  float yaw;
+  /// the tag point at the frame, in its model's space
+  float point[3];
+  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`), the model's default point
+  /// (`EE_COMBAT_WEAPON_KIND_DEFAULT`)
+  float top[3];
+  /// the number of model chain transforms
+  int32_t chain;
 };
 
 /// `EEToHitTable::GetAttackFactor`'s inputs.
@@ -1932,44 +1912,6 @@ struct EeCombatAttackFactorIn {
   /// that rule's scales (0 without one)
   float scale_human_target;
   float scale_human_attacker;
-};
-
-/// `EEUnitClass::ComputeDamage`'s inputs.
-struct EeCombatDamageIn {
-  /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
-  int32_t form;
-  float attack;
-  /// `EEToHitTable::GetAttackFactor` (0, unread, for a direct hit without attack)
-  float attack_factor;
-  /// `gWeaponToHitFactors[the target class's weapon][the attack's weapon]`
-  float weapon_factor;
-  /// the target's armour of the attack's weapon
-  float armor;
-  /// `GetElevationFactor` (1 unless the C++ filled it: not a trample, a positive hit factor)
-  float elevation;
-  /// a direct hit by a cloaked attacker (or owner)
-  int32_t fanatic;
-  int32_t same_player;
-  /// the attacker's player is not an enemy of the target's
-  int32_t allied;
-  /// the attacker is a herd animal
-  int32_t herd;
-  /// splash on the own player's units
-  float friendly_factor;
-  /// combat.yaml
-  int32_t minimum_damage;
-  float fanatic_factor;
-  float elevation_step;
-  float ally_factor;
-  float herd_ally_factor;
-  int32_t trample_damage;
-  float trample_threshold;
-};
-
-struct EeCombatDamageOut {
-  /// the hit does damage
-  int32_t hit;
-  int32_t amount;
 };
 
 /// `EEUnitClass::GetElevationFactor`'s inputs.
@@ -2067,17 +2009,6 @@ struct EeCombatHealIn {
   int32_t max_hit_points;
 };
 
-struct EeCombatHealStepOut {
-  uint32_t elapsed;
-  int32_t due;
-};
-
-/// `EEUGHealUnit::Work`'s clock.
-struct EeCombatHealStepIn {
-  uint32_t elapsed;
-  int32_t tick_ms;
-};
-
 /// `EEGetConversionCost`'s inputs.
 struct EeCombatConversionCostIn {
   /// dbworld conversion_faith_cost
@@ -2109,6 +2040,98 @@ struct EeCombatConversionIn {
   float rate;
   /// the target player's conversion factor
   float factor;
+};
+
+/// One hit's damage arguments (`ComputeDamage`'s after the units).
+struct EeCombatDamageCall {
+  /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
+  int32_t form;
+  float attack;
+  /// the attack's ammunition kind (the to-hit table's column) and weapon (the armour's index)
+  int32_t ammo;
+  int32_t weapon;
+  /// splash on the own player's units
+  float friendly_factor;
+  /// out: the damage when the call answers true
+  int32_t amount;
+};
+
+/// The C++ host of the reads (see [`QueryHost`]; `ctx` is the C++'s context: the call's unit and goal).
+struct EeCombatQueryHost {
+  void *ctx;
+  uint32_t (*read)(void *ctx, int32_t code, uint64_t object, int32_t arg);
+  uint64_t (*handle)(void *ctx, int32_t code, uint64_t object, int32_t arg);
+  void (*act)(void *ctx, int32_t code, uint64_t object, int32_t arg);
+  /// the location's `mMatrix` row by row into `out`
+  void (*location)(void *ctx, uint64_t object, float (*out)[16]);
+  /// `line`: start x, y, z, direction x, y, z
+  int32_t (*intersects)(void *ctx,
+                        uint64_t candidate,
+                        const float (*line)[6],
+                        int32_t segment,
+                        uint32_t lod,
+                        float scale);
+  void (*footprint_tile)(void *ctx, uint64_t object, int32_t (*out)[2]);
+};
+
+/// The argument block of an operation.
+using EeCombatWorldArgs = int64_t[12];
+
+/// The C++ host of the bodies here: the reads' table and the operations (`ctx`: the reads' context).
+struct EeCombatWorldHost {
+  EeCombatQueryHost query;
+  uint64_t (*op)(void *ctx, int32_t code, uint64_t object, uint64_t other, EeCombatWorldArgs *args);
+  /// the call's class (`EEUnitClass*`: Attacked's or FireShot's, else the unit's)
+  uint64_t class_;
+};
+
+/// `EEUnitClass::ComputeDamage`'s inputs.
+struct EeCombatDamageIn {
+  /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
+  int32_t form;
+  float attack;
+  /// `EEToHitTable::GetAttackFactor` (0, unread, for a direct hit without attack)
+  float attack_factor;
+  /// `gWeaponToHitFactors[the target class's weapon][the attack's weapon]`
+  float weapon_factor;
+  /// the target's armour of the attack's weapon
+  float armor;
+  /// `GetElevationFactor` (1 unless the C++ filled it: not a trample, a positive hit factor)
+  float elevation;
+  /// a direct hit by a cloaked attacker (or owner)
+  int32_t fanatic;
+  int32_t same_player;
+  /// the attacker's player is not an enemy of the target's
+  int32_t allied;
+  /// the attacker is a herd animal
+  int32_t herd;
+  /// splash on the own player's units
+  float friendly_factor;
+  /// combat.yaml
+  int32_t minimum_damage;
+  float fanatic_factor;
+  float elevation_step;
+  float ally_factor;
+  float herd_ally_factor;
+  int32_t trample_damage;
+  float trample_threshold;
+};
+
+struct EeCombatDamageOut {
+  /// the hit does damage
+  int32_t hit;
+  int32_t amount;
+};
+
+struct EeCombatHealStepOut {
+  uint32_t elapsed;
+  int32_t due;
+};
+
+/// `EEUGHealUnit::Work`'s clock.
+struct EeCombatHealStepIn {
+  uint32_t elapsed;
+  int32_t tick_ms;
 };
 
 struct EeCombatBallisticOut {
@@ -2232,29 +2255,6 @@ struct EeCombatFlightIn {
   /// the ground point was read (Step2: only at or below height 0) and its height
   int32_t ground_read;
   float ground_z;
-};
-
-/// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
-/// point's model first, then each parent) are passed beside it.
-struct EeCombatWeaponIn {
-  /// `WEAPON_KIND_*`
-  int32_t kind;
-  /// the animation's tag point list exists (else the height stays the location's z)
-  int32_t list_present;
-  /// the shooter's location (`mMatrix`, row by row)
-  float location[16];
-  /// its physical model's scale
-  float scale;
-  /// the point's model is a turret part (`FindTurretPart` found it): `yaw` is its turret angle
-  int32_t turret;
-  float yaw;
-  /// the tag point at the frame, in its model's space
-  float point[3];
-  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`), the model's default point
-  /// (`EE_COMBAT_WEAPON_KIND_DEFAULT`)
-  float top[3];
-  /// the number of model chain transforms
-  int32_t chain;
 };
 
 /// An attack-unit goal's own state (the original's members).
@@ -2712,6 +2712,100 @@ void ee_combat_capture_read(uint32_t which,
                             uint64_t target,
                             int32_t result,
                             const uint32_t (*extra)[3]);
+
+/// `EECombatCapture(tag, input, output)`: one record of two plain values, when the capture is on.
+///
+/// # Safety
+/// `input` points to `input_size` bytes and `output` to `output_size` bytes.
+void ee_combat_capture(uint32_t tag,
+                       const uint8_t *input,
+                       size_t input_size,
+                       const uint8_t *output,
+                       size_t output_size);
+
+/// `EECombatChainCapture(tag, input, chain, output)`: the same with `chain_floats` floats between the two.
+///
+/// # Safety
+/// `input` points to `input_size` bytes, `chain` to `chain_floats` floats (or the count is 0) and `output` to
+/// `output_size` bytes.
+void ee_combat_chain_capture(uint32_t tag,
+                             const uint8_t *input,
+                             size_t input_size,
+                             const float *chain,
+                             size_t chain_floats,
+                             const uint8_t *output,
+                             size_t output_size);
+
+/// `EECombatEffectWeaponPoint`'s end: the weapon point of `input` over `chain` into `out` (three floats), and its
+/// CBEW record (the site, the input, the chain, the point).
+///
+/// # Safety
+/// `input` must point to a valid record, `chain` to `input.chain` matrices (or be NULL when it is 0) and `out` to
+/// three floats.
+void ee_combat_effect_weapon_point(int32_t site,
+                                   const EeCombatWeaponIn *input,
+                                   const float (*chain)[16],
+                                   float *out);
+
+/// EEToHitTable::GetAttackFactor, with its CBAF record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_attack_factor_captured(const EeCombatAttackFactorIn *input);
+
+/// EEUnitClass::GetElevationFactor, with its CBEL record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_elevation_captured(const EeCombatElevationIn *input);
+
+/// EEComplexUnit::ApplyMorale, with its CBMO record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_morale_captured(const EeCombatMoraleIn *input);
+
+/// EEUnit::TakeHit's hit points, with its CBTH record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHitPointsOut ee_combat_hit_points_captured(const EeCombatHitPointsIn *input);
+
+/// EEUnit::TakeHit's damage effect test, with its CBDE record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_damage_effect_captured(const EeCombatDamageEffectIn *input);
+
+/// EEUnitClass::Regenerate, with its CBRG record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatRegenerateOut ee_combat_regenerate_captured(const EeCombatRegenerateIn *input);
+
+/// EEUnitClass::HealGarrison's timer, with its CBTM record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatTimerOut ee_combat_timer_captured(const EeCombatTimerIn *input);
+
+/// a heal, with its CBHL record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHealOut ee_combat_heal_captured(const EeCombatHealIn *input);
+
+/// EEGetConversionCost, with its CBCC record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_conversion_cost_captured(const EeCombatConversionCostIn *input);
+
+/// UpdateConversion's clock and chance, with its CBCV record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatConversionOut ee_combat_conversion_captured(const EeCombatConversionIn *input);
 
 extern int64_t ee_units_cg_host(int32_t op,
                                 uint64_t unit,

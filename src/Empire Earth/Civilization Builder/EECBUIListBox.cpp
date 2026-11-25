@@ -20,10 +20,8 @@
 #include "rust/game/screens.h"   // ee_screens_cbl_*: the list's logic (civ_list.rs); EE_SCREENS_CBW_L_*
 #include "ee/EEScreensShims.h"
 
-// the scroll bar's opacity (a unit-local float ahead of the statics' strings in .rdata: 0x4cfa64)
-
-const UWideString EECBUIListBox::sSeparator("/");
-const UWideString EECBUIListBox::sCategory("Category");
+// the scroll bar's opacity (a unit-local float ahead of the statics' strings in .rdata: 0x4cfa64; the statics, the
+// separator "/" and the category "Category", had no reader)
 
 // Creates a civilization builder list box (upgrade lines only selectable, points shown, sorted lines)
 EECBUIListBox::EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::vector<UWideString>& inData,

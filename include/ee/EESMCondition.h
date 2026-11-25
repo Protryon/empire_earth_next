@@ -14,14 +14,28 @@
 // the numbers (mType .. mUsesPlayerAttribute) are EeScenarioConditionFields (ee_scenario fields.rs)
 class EESMCondition : public EeScenarioConditionFields {
 public:
-    EESMCondition();
-    ~EESMCondition();
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1bb154
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x14 0x1bb3b6
+    // Creates a player-attribute condition with default players, attribute and operator, and no trigger or time tests
+    // (the numbers: ee_scenario fields.rs condition_defaults; the strings empty)
+    EESMCondition() : EeScenarioConditionFields(ee_scenario_condition_defaults()) {  }
+    // Destroys the condition (members only)
+    ~EESMCondition() {  }
+    // Reads the condition (diplomacy above 1 becomes 1); returns the first error, ignoring the chat text's
+    // (ee_scenario save.rs condition_load)
+    // +0x00 0x1bb154
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_scenario_en_condition_io(this, &inFile, false); }
+    // Writes the condition; returns the first error (ee_scenario save.rs condition_save)
+    // +0x14 0x1bb3b6
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_scenario_en_condition_io(this, &outFile, true); }
     // 0x1ba998: inValue against inTarget by the operator index (mOperator: <, <=, ==, >=, >) (provisional name)
-    bool Compare(unsigned long inValue, unsigned long inOperator, unsigned long inTarget);
-    bool Evaluate();
-    void Copy(const EESMCondition& inCondition);    // 0x1ba9e7 (EEScenarioManager 0x1b14c1; provisional name)
+    // Returns whether the value compares to the target under the operator (<, <=, ==, >=, >); false for any other
+    bool Compare(unsigned long inValue, unsigned long inOperator, unsigned long inTarget) { return ee_scenario_compare((uint32_t)inValue, (uint32_t)inOperator, (uint32_t)inTarget); }
+    // Returns whether the condition holds: object exists, player attribute/technology/diplomacy for any or all chosen
+    // players, trigger on/fired, elapsed time/hour/difficulty, or the last chat text containing a phrase (ee_scenario
+    // condition.rs over the host's reads; entry.rs adds the simulation capture's SMCE record)
+    bool Evaluate() { return ee_scenario_en_condition_evaluate(this); }
+    // Copies every setting of another condition, including its name, texts and ID (ee_scenario entry.rs)
+    // 0x1ba9e7 (EEScenarioManager 0x1b14c1; provisional name)
+    void Copy(const EESMCondition& inCondition) { ee_scenario_en_condition_copy(this, (void*)&inCondition); }
     // inline accessors (the condition screen's Virtual24/Virtual2C: their inline cost decides which
     // GetTriggerScreen sites VC6 refuses)
     const UWideString& GetName() const { return this->mName; }

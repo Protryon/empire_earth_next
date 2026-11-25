@@ -36,9 +36,9 @@ pub struct EePPlayerHelperFields {
     pub mLoaded: bool,
 }
 
-/// `kEECPEngineClassic`, `kEECPEngineNext` (ee/EECPEngine.h).
-const PP_ENGINE_CLASSIC: u8 = 0;
-const PP_ENGINE_NEXT: u8 = 1;
+/// `kEECPEngineClassic`, `kEECPEngineNext` (cp_engine.rs).
+const PP_ENGINE_CLASSIC: u8 = crate::cp_engine::EECPEngineKind::kEECPEngineClassic as u8;
+const PP_ENGINE_NEXT: u8 = crate::cp_engine::EECPEngineKind::kEECPEngineNext as u8;
 /// The bytes a saved script state may hold (64 MB).
 const PP_STATE_LIMIT: c_ulong = 64 << 20;
 /// The error of a helper not loaded (GetLocalPlayerIndex, GetPlayers).

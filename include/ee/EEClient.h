@@ -5,29 +5,50 @@
 #ifndef EE_EECLIENT_H
 #define EE_EECLIENT_H
 
+#include "rust/game/app.h"
+#include "rust/game/gamecpp.h"
 class EEGameOptionsPlayer;
 
 class EEClient : public NESynchronousClient {
 public:
-    EEClient();
-    virtual ~EEClient();                    // +0x00 0xb7278 (??_G 0xb725c)
+    // Creates the game client: no lobby slot yet, server migration allowed, fast selection reset, its lock created
+    EEClient() : NESynchronousClient(GameHost<EEClient>) { ee_gamecpp_client_init(this); }
+    // Destroys the client, stopping its threads and releasing the fast-selection lock
+    // +0x00 0xb7278 (??_G 0xb725c)
+    virtual ~EEClient() { ee_gamecpp_client_drop(this); }
     // the engine's pure callbacks, implemented by the game (vtable 0x43d054; bodies in EEClient.cpp, names by base
     // slot; declared so that EEAJoinOrHostAGame.cpp can `new EEClient`)
     virtual void ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting);   // +0x04 0xb7722
-    virtual FSFile* CreateXferFile(const UWideString& inName, unsigned long inSize);  // +0x24 0xb743b
-    virtual bool IsPlaybackRecordingSession();   // +0x28 0xb799d
+    // Creates the local file for an incoming transfer in the directory of its extension (saved game, scenario, campaign)
+    // Returns NULL for a short name, an unknown extension or a file of the same size already there
+    // NEAR: SetFile takes the implicit UString from (const char*)inName, built in place; the original calls
+    // theFile->GetFile() at every exit and drops the result (a compiled-away trace; EE_LOST_TRACE does not make it
+    // exact, so it is not used); on the short-name exit theFile is NULL there, so the original crashes; exit tails differ
+    // +0x24 0xb743b
+    virtual FSFile* CreateXferFile(const UWideString& inName, unsigned long inSize) { return (FSFile*)ee_gamecpp_client_xfer_file(&inName, inSize); }
+    // Returns whether a server migration is in progress
+    // +0x28 0xb799d
+    virtual bool IsPlaybackRecordingSession() { return this->mIsMigrating; }
     virtual unsigned long GetConnectTimeout();   // +0x2c 0xb79a4
-    virtual unsigned char GetClientSlot();  // +0x30 0xb79aa
-    virtual bool IgnoreConnectionTimeout();  // +0x3c 0xb7300
+    // Returns the client's lobby slot (0xff until the server accepts it)
+    // +0x30 0xb79aa
+    virtual unsigned char GetClientSlot() { return this->mUISlotNumber; }
+    // Returns whether connection timeouts are ignored (set once this client is booted)
+    // +0x3c 0xb7300
+    virtual bool IgnoreConnectionTimeout() { return this->mIgnoreConnectionTimeout; }
     virtual void SetConnectionState(long inState);   // +0x40 0xb7307
     virtual void HandleMessage(NEMessage* inMessage);   // +0x44 0xb79b1
     virtual void HandleUserInput(NEMessage* inMessage);   // +0x48 0xb7ed4
     virtual void HandleConnectionLost();    // +0x4c 0xb7fa5
     virtual unsigned long HandleStartGame(unsigned long inParameter);   // +0x50 0xb843b
-    virtual void HandleStopGame();          // +0x54 0xe123d
-    virtual void HandleConnectionTimeoutWarning(unsigned long inRemaining);  // +0x58 0xb8599
+    // +0x54 0xe123d
+    virtual void HandleStopGame() {  }
+    // Shows the server migration's countdown in the chat log (host not responding, %d seconds)
+    // +0x58 0xb8599
+    virtual void HandleConnectionTimeoutWarning(unsigned long inRemaining) { ee_gamecpp_client_timeout_warning(inRemaining); }
     // 0xb8418: clears the fast-selection state (as EEServer::ResetFastSelection 0xcc9ce)
-    void ResetFastSelection();
+    // Clears the fast-selection state (no selection executing, id 0, empty table)
+    void ResetFastSelection() { ee_gamecpp_client_reset_fast(this); }
     // 0xb729e: a lobby slot changed (the host's closed slot posts EEABootClientFromCanceledGame; provisional name)
     void HandleSlotUpdate(unsigned char inSlot, EEGameOptionsPlayer& inPlayer);
     void HandleLobbyInput(NEMessage* inMessage);  // 0xb80ef (HandleMessage's lobby messages; provisional name)

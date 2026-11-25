@@ -2,7 +2,9 @@
 //! EEVCWonder.cpp's bodies): the civilization's defaults, its save and load (save 0.268's chunk, unchanged), its
 //! purchases and the order a loaded civilization's upgrades apply in (ee_sim tech civilization.rs's), and the team's
 //! wonder count and countdown. Each C++ call or member is a one-statement case of EECivilization.cpp's
-//! `EECore10OpD5` or EEVCWonder.cpp's `EECore10OpD6` ([`super::EeGameCpp`]'s `Dv`, `Dw` ops).
+//! `EECore10OpD5` or EEVCWonder.cpp's `EECore10OpD6` ([`crate::gamecpp::EeGameCpp`]'s `Dv`, `Dw` ops). Its own
+//! module since the player/tech lane's round 1: ee/EECivilization.h, which every includer of ee/EEPlayer.h reads,
+//! includes its small header (rust/game/civilization.h), not gamecpp.h.
 //!
 //! Simulation and save code (RUST_PLAN 2.1): the reads and writes are the C++'s overloads in its order; the points
 //! are `unsigned long` and wrap as the C++'s did; the countdown is the C++'s unsigned arithmetic.
@@ -13,8 +15,8 @@ use std::ffi::{c_long, c_ulong, c_void};
 use ee_sim::app::teams_ffi;
 use ee_sim::tech::civilization::{apply_all, reapply, EE_TECH_CIV_DEFERRED_INDEX};
 
-use super::persistent::Pf;
-use super::{h, hp, pa, ptr, rec, Owned, O, P};
+use crate::gamecpp::persistent::Pf;
+use crate::gamecpp::{h, hp, pa, ptr, rec, Owned, O, P};
 
 /// The upgrade's attribute index bits (ee_sim tech civ.rs `LEVEL_MASK`).
 const CIV_LEVEL_MASK: u32 = 0xffff;

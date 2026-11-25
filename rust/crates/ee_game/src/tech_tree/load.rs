@@ -23,9 +23,12 @@ use ee_sim::tech::nodes::{
 use ee_sim::tech::nodes_capture::ee_tech_capture_node_walk;
 use ee_sim::tech::tech_ids::{ee_tech_epoch_count, ee_tech_epoch_of, ee_tech_register_node, ee_tech_set_epoch_title};
 
-use super::persistent::Pf;
-use super::tech::{ee_gamecpp_tech_epoch_delete_nodes, ee_gamecpp_tech_host, ee_gamecpp_tech_sum_costs};
-use super::{h, hp, pa, rec, O, P};
+use super::host::{
+    ee_gamecpp_tech_epoch_delete_nodes, ee_gamecpp_tech_host, ee_gamecpp_tech_sum_costs, epoch_insert, epoch_nodes,
+    tree_player,
+};
+use crate::gamecpp::persistent::Pf;
+use crate::gamecpp::{h, hp, pa, rec, O, P};
 
 /// `kErrorOK`.
 const TB_OK: i64 = 0;
@@ -34,27 +37,27 @@ const TB_FIRST_NODE_ID: c_long = 1000;
 /// `IDS_PREHISTORIC_AGE`: a new tree's epoch title.
 const TB_PREHISTORIC_AGE: c_long = 30145;
 
-pub(super) fn tree_fields(tree: P) -> *mut EeTechTreeFields {
+pub(crate) fn tree_fields(tree: P) -> *mut EeTechTreeFields {
     // SAFETY: the tree's record (EETechTree's second base; NULL for a NULL tree)
     unsafe { rec::<EeTechTreeFields>(O::TkTreeFields, tree) }
 }
 
-pub(super) fn node_fields(node: P) -> *mut EeTechNodeFields {
+pub(crate) fn node_fields(node: P) -> *mut EeTechNodeFields {
     // SAFETY: the node's record (RTSTechTreeNode's base)
     unsafe { rec::<EeTechNodeFields>(O::TkNodeFields, node) }
 }
 
-pub(super) fn node_data(node: P) -> *mut EeTechNodeDataFields {
+pub(crate) fn node_data(node: P) -> *mut EeTechNodeDataFields {
     // SAFETY: the node's data record (RTSTechTreeNodeData's base; NULL without data)
     unsafe { rec::<EeTechNodeDataFields>(O::TkNodeData, node) }
 }
 
-pub(super) fn data_of(node: P) -> EeTechNodeDataFields {
+pub(crate) fn data_of(node: P) -> EeTechNodeDataFields {
     // SAFETY: a node with data: its record, copied out
     unsafe { *node_data(node) }
 }
 
-pub(super) fn fields_of(node: P) -> EeTechNodeFields {
+pub(crate) fn fields_of(node: P) -> EeTechNodeFields {
     // SAFETY: the node's record, copied out
     unsafe { *node_fields(node) }
 }
@@ -150,7 +153,7 @@ pub extern "C" fn ee_gamecpp_tech_epoch_load(epoch: *mut c_void, file: *mut c_vo
                 // SAFETY: the node's record
                 unsafe { (*node_fields(node)).mEpoch = data.mID };
                 ee_tech_register_node(id as i32, data.mID as i32);
-                h(O::TbEpochInsert, epoch, &[node as i64]);
+                epoch_insert(epoch, node);
             } else {
                 h(O::TkNodeUnload, node, &[]);
                 h(O::TkNodeDelete, node, &[]);
@@ -185,12 +188,11 @@ pub extern "C" fn ee_gamecpp_tech_epoch_assign(epoch: *mut c_void, other: *const
     // SAFETY: the two epochs' records (the record's fields, counting off: ee_tech nodes.rs assign)
     unsafe { ee_tech_node_assign(node_fields(e), node_fields(o), true) };
     ee_gamecpp_tech_epoch_delete_nodes(epoch, false);
-    let count = h(O::TkNodeCount, o, &[]);
-    for i in 0..count {
+    for node in epoch_nodes(o) {
         let copy = hp(O::TbNewNode, 0, &[]);
-        ee_gamecpp_tech_node_assign(copy as *mut c_void, hp(O::TkNodeAt, o, &[i]) as *const c_void);
+        ee_gamecpp_tech_node_assign(copy as *mut c_void, node as *const c_void);
         h(O::TbSetTree, copy, &[h(O::TkNodeTree, e, &[])]);
-        h(O::TbEpochInsert, e, &[copy as i64]);
+        epoch_insert(e, copy);
     }
     epoch
 }
@@ -239,6 +241,15 @@ pub extern "C" fn ee_gamecpp_tech_tree_assign(tree: *mut c_void, other: *const c
     tree
 }
 
+/// EETechTree::SetPlayer: the tree's player and, for a player, its index.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_tech_set_player(tree: *mut c_void, player: *mut c_void) {
+    h(O::TbSetPlayer, tree as P, &[player as i64]);
+    if !player.is_null() {
+        h(O::TbSetPlayerIndex, tree as P, &[h(O::TkPlId, player as P, &[])]);
+    }
+}
+
 /// The node's destructor (`destroy`: its unit media unloaded when loaded and its unit classes given their default
 /// buttons back) and ClearClassCosts (the class cost tables freed).
 #[no_mangle]
@@ -247,14 +258,14 @@ pub extern "C" fn ee_gamecpp_tech_node_free(node: *mut c_void, destroy: bool) {
     if destroy {
         let tree = hp(O::TkNodeTree, n, &[]);
         if fields_of(n).mIsUnitMediaLoaded {
-            let player = hp(O::TkGetPlayer, tree, &[]);
+            let player = tree_player(tree);
             if player != 0 {
                 h(O::TkUnloadClassMedia, player, &[data_of(n).mUnitClass as i64]);
             }
         }
         if !node_data(n).is_null() {
             for class in unit_classes(n) {
-                let player = hp(O::TkGetPlayer, tree, &[]);
+                let player = tree_player(tree);
                 if player != 0 {
                     h(O::TbSwapButton, player, &[class as i64, h(O::TbButton, n, &[]), 0]);
                 }
@@ -285,7 +296,7 @@ pub extern "C" fn ee_gamecpp_tech_node_unload(node: *mut c_void) -> c_long {
 pub extern "C" fn ee_gamecpp_tech_node_set_button(node: *mut c_void, button: c_ulong) {
     let n = node as P;
     for class in unit_classes(n) {
-        let player = hp(O::TkGetPlayer, hp(O::TkNodeTree, n, &[]), &[]);
+        let player = tree_player(hp(O::TkNodeTree, n, &[]));
         let new = hp(O::TbButtonGet, 0, &[button as i64]);
         h(O::TbSwapButton, player, &[class as i64, h(O::TbButton, n, &[]), new as i64]);
     }
@@ -341,7 +352,7 @@ pub extern "C" fn ee_gamecpp_tech_needs_unit_media(node: *mut c_void, captured: 
 pub extern "C" fn ee_gamecpp_tech_epoch_build_time(epoch: *mut c_void) -> c_long {
     let e = epoch as P;
     // (TNWK, TEST ONLY: asked once, as the test did)
-    let human = h(O::TbIsHuman, hp(O::TkGetPlayer, hp(O::TkNodeTree, e, &[]), &[]), &[]) as i32;
+    let human = h(O::TbIsHuman, tree_player(hp(O::TkNodeTree, e, &[])), &[]) as i32;
     let build_time = data_of(e).mBuildTime as i32;
     let result = ee_tech_epoch_build_time(human, build_time);
     ee_tech_capture_walk_begin(); // TNMT (TEST ONLY)
@@ -427,19 +438,19 @@ pub extern "C" fn ee_gamecpp_tech_tree_save(
 
 /// A capture record (EESimCaptureRecord): the payload's bytes, committed whole.
 #[derive(Default)]
-pub(super) struct TbRecord(pub(super) Vec<u8>);
+pub(crate) struct TbRecord(pub(crate) Vec<u8>);
 
 impl TbRecord {
-    pub(super) fn i32(&mut self, v: i32) {
+    pub(crate) fn i32(&mut self, v: i32) {
         self.0.extend_from_slice(&v.to_le_bytes());
     }
-    pub(super) fn u32(&mut self, v: u32) {
+    pub(crate) fn u32(&mut self, v: u32) {
         self.0.extend_from_slice(&v.to_le_bytes());
     }
-    pub(super) fn bytes(&mut self, v: &[u8]) {
+    pub(crate) fn bytes(&mut self, v: &[u8]) {
         self.0.extend_from_slice(v);
     }
-    pub(super) fn commit(self, tag: &[u8; 4]) {
+    pub(crate) fn commit(self, tag: &[u8; 4]) {
         // SAFETY: our payload
         unsafe { ee_sim::app::capture::ee_app_capture_commit(u32::from_le_bytes(*tag), self.0.as_ptr(), self.0.len()) };
     }

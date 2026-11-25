@@ -5,15 +5,16 @@
 //! loaders before D9 (the .cem / .sst bytes and their readers, retired), and each case loaded or refused as the
 //! Python converter decides.
 //!
-//! The readers are hand ports, not the `gltf` and `png` crates: cgltf's and stb_image's acceptance rules decide which
-//! edited files load, and the gate compares them case by case. `cgltf.rs`, `jsmn.rs` and `png.rs` follow those
-//! libraries (including a file's walk order and its failure points); `import.rs` and `json.rs` follow GEOpenFormats.cpp.
+//! The files are read by crates (docs/progress/deps.md): the glTF document by `gltf` (its GLB container and its
+//! serde structures) and `serde_json`, a PNG by `png` (ee_base png.rs). What the game needs past them is ours:
+//! `document.rs` (the references checked, the buffers, the accessors read with every bound checked: a loader of edited
+//! files must refuse, never panic), and the pixels as stb_image gave them (16-bit, palette, tRNS). `import.rs`
+//! follows GEOpenFormats.cpp. The refusals of the gate's edited models are import.rs's and unchanged.
 
-mod cgltf;
+mod document;
 mod ffi;
 pub mod find;
 mod import;
-mod jsmn;
 mod json;
 pub mod surface_file;
 

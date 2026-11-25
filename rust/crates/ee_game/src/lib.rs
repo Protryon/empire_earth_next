@@ -461,6 +461,13 @@ pub mod cp_engine;
 pub mod sight_capture;
 // the game's own bodies over one-statement C++ cases (EEGameOps.cpp): the calamity classes' world steps, ...
 pub mod gamecpp;
+// the tech tree classes' bodies (EEPlayer.h's EETechTree, EETechTreeEpoch and EETechTreeNode call them inline:
+// rust/game/tech_tree.h; were gamecpp tech.rs and tech_load.rs)
+pub mod tech_tree;
+
+// a player's civilization (EECivilization's bodies) and the wonder victory's countdown (game core round 10, lane D;
+// out of gamecpp since the player/tech lane round 1)
+pub mod civilization;
 
 // the physics thread's bodies (EEPhysics.cpp's methods; world lane round 1)
 pub mod physics;

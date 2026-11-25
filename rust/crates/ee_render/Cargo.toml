@@ -16,6 +16,12 @@ path = "src/bin/eemodel_gate.rs"
 ee_base = { path = "../ee_base" }
 ee_data = { path = "../ee_data" }
 ee_sim = { path = "../ee_sim" }
+# the models' glTF files (openformats/document.rs): the GLB container and the document's serde structures; none of
+# its importer (files, images), the game resolves buffers and textures itself
+gltf = { version = "1.4.1", default-features = false, features = ["extras", "extensions", "names"] }
+# a model's EE_model extension and material extras (openformats/json.rs); `float_roundtrip`: every number is the
+# nearest double of its text, in the glTF document too (the vertices' and transforms' floats)
+serde_json = { version = "1.0.143", features = ["float_roundtrip"] }
 # the Graphics Engine's JPG and JPG2 surface files are written with it (libjpeg left the tree, 2026-11-17)
 jpeg-encoder = "0.7.1"
 log = "0.4"

@@ -29,12 +29,6 @@ void EEMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned long& 
     ee_gamecpp_msg_export(static_cast<NEMessage*>(this), outPayloadPointer, &outMessageSize);
 }
 
-// a class of fixed members its constant, else the size of these members
-unsigned long EEMessage::ExportSize()
-{
-    return ee_gamecpp_msg_export_size(static_cast<NEMessage*>(this));
-}
-
 void EEMessage::ImportMessage(unsigned char* inPayloadPointer)
 {
     ee_gamecpp_msg_import(static_cast<NEMessage*>(this), inPayloadPointer);
@@ -54,55 +48,11 @@ EEMRecordValue::EEMRecordValue(const GEVector& inVector) : mInteger(0), mIsFloat
     this->mFloats[2] = inVector.GetZ();
 }
 
-// the import constructor: EEMessage's defaults (no send flag), as the old classes' import constructors; the record
-// zeroed, then the import
-EEMRecord::EEMRecord(unsigned char* inData) : EEMessage(inData[1])
-{
-    ee_gamecpp_mrecord_import(static_cast<NEMessage*>(this), inData, true);
-}
-
 // a sender's: the members in wire order, then the ones off the wire (fewer leave the rest 0)
 EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue> inValues)
     : EEMessage(inType, (ee_netmsg_record_flags(inType) & EE_NETMSG_RECORD_WHEN_OUT) != 0)
 {
     ee_gamecpp_mrecord_init(static_cast<NEMessage*>(this), reinterpret_cast<const EeGamecppMrValue*>(inValues.begin()), inValues.size());
-}
-
-// member inIndex's place in the record (its kind and size verified)
-unsigned char* EEMRecord::Field(uint32_t inIndex, size_t inSize) const
-{
-    return ee_gamecpp_mrecord_field(static_cast<const NEMessage*>(this), inIndex, inSize);
-}
-
-bool EEMRecord::GetCanSendWhilePaused() const
-{
-    return (ee_netmsg_record_flags(this->mType) & EE_NETMSG_RECORD_PAUSED) != 0;
-}
-
-char* EEMRecord::GetMessageLabel() const
-{
-    return const_cast<char*>(ee_netmsg_record_label(this->mType));
-}
-
-bool EEMRecord::GetSendToAllAndWaitMessageID(unsigned long& outID) const
-{
-    return ee_gamecpp_mrecord_wait_id(static_cast<const NEMessage*>(this), &outID);
-}
-
-void EEMRecord::SetSendToAllAndWaitMessageID(unsigned long inID)
-{
-    ee_gamecpp_mrecord_set_wait_id(static_cast<NEMessage*>(this), inID);
-}
-
-// Whether a message is this one's response, by the type's rule (Load or Save: the response for its tick)
-bool EEMRecord::IsResponse(NEMessage* inMessage)
-{
-    return ee_gamecpp_mrecord_is_response(static_cast<NEMessage*>(this), inMessage);
-}
-
-size_t EEMRecord::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    return ee_gamecpp_mrecord_slots(static_cast<NEMessage*>(this), outSlots, &outClass);
 }
 
 // the codec over the slots, then the string member's text from where the codec found it (UWideString::Import), the

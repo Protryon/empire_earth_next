@@ -10,13 +10,13 @@
 #include <deque>
 #include "rust/sim/units.h"             // EeUnitsPhysicsSaved (EEPhysics' saved block)
 #include "rust/game/rts.h"              // EeRtsPhysicsFields (RTSPhysics' plain members)
+#include "rust/game/physics.h"
 
 class FSFile;
 class RTSGraphics;
 class EEGraphics;
 class EEUnit;
 class EEComplexUnit;
-class EEPlayer;
 class NEMessage;
 class TMTimer;
 class TSCriticalSection;
@@ -36,16 +36,20 @@ struct EEPUnitSwap {
 class RTSPhysics : public EeRtsPhysicsFields {   // RTSPhysics.cpp, ctor 0x161041 (asserts lines 0x31..0x52)
 public:
     // 0x161041 (EEPhysics passes its graphics and timer, then 1, 0xf; argument names are provisional)
-    RTSPhysics(RTSGraphics* inGraphics, TMTimer* inTimer, long inDefaultTicksPerSecond, long inArg4);
+    RTSPhysics(RTSGraphics* inGraphics, TMTimer* inTimer, long inDefaultTicksPerSecond, long inThreadPriority) : mRandom(1) { ee_rts_physics_construct(this, inGraphics, inTimer, inDefaultTicksPerSecond, inThreadPriority); }
     // the saved physics state (EEPMultiplayerHelper's Load/Save pass their arguments on)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);    // +0x00 0x16130d
+    // +0x00 0x16130d
+    virtual long Load(unsigned long, unsigned long, FSFile& inFile) { return ee_rts_physics_load(this, &inFile); }
     virtual void QueueServerMessage(NEMessage* inMessage) = 0;  // +0x04 (EEPhysics queues it in mU04)
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x08 0x1616a4
+    // +0x08 0x1616a4
+    virtual long Save(unsigned long, unsigned long, FSFile& outFile) { return ee_rts_physics_save(this, &outFile); }
     virtual void UpdateTiming() = 0;        // +0x0c
-    virtual ~RTSPhysics();                  // +0x10 (??_G 0x161204)
+    // +0x10 (??_G 0x161204)
+    virtual ~RTSPhysics() { ee_rts_physics_destruct(this); }
     virtual void Lock() = 0;                // +0x14
     // the thread's messages (Main passes Receive's three results; both overrides return nothing: `ret 0xc`)
-    virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);  // +0x18 0x161609
+    // +0x18 0x161609
+    virtual void HandleMessage(unsigned long inMessage, void*, void*) { ee_rts_physics_handle_message(this, inMessage); }
     virtual void Idle() = 0;                // +0x1c
     virtual void Tick() = 0;                // +0x20
     virtual void Unlock() = 0;              // +0x28
@@ -54,12 +58,12 @@ public:
     // of an identical AI-unit function), even the 0x10a-byte earthquake ShakeCamera; the inline-looking draws are
     // `gPhysics->mRandom.Generate()` written directly (the meteor storm's Update keeps it in a local: exact; Leprosy's
     // ShowEffects has one of each). Its own body belongs to RTSPhysics.cpp. Names are provisional
-    float GetRandom();
+    float GetRandom() { return this->mRandom.Generate(); }
     // 0x1612b9: inMinimum + (inMaximum - inMinimum) * a draw. Not inline: it sits in RTSPhysics.cpp although its first
     // caller is 0x66ff (an inline COMDAT would follow its first user); the meteor storm calls it
-    float GetRandom(float inMinimum, float inMaximum);
+    float GetRandom(float inMinimum, float inMaximum) { return this->mRandom.Generate() * (inMaximum - inMinimum) + inMinimum; }
     // 0x1612d3: an integer in [inMinimum, inMaximum] from the same draw (the group messages pick a unit)
-    long GetRandom(long inMinimum, long inMaximum);
+    long GetRandom(long inMinimum, long inMaximum) { return ee_rts_physics_random_range(this, inMinimum, inMaximum); }
     // 0x82d66 (ret 4): a random index into inValues, GetRandom(0, size - 1). A member template: each TU emits its own
     // COMDAT (the kept copy is EECPIntelligence's 0x82d66, ICF-folding the EEComplexUnit*/long/EEPlayer*
     // instantiations; callers EECPCivilizationManager 0x711ac, EECPDefenseCommander 0x78148, EEHerd) (provisional name)
@@ -67,10 +71,12 @@ public:
     // template COMDAT 0xa52eb (EEHerd.cpp's range, ret 4): GetRandom(0, size - 1) of a vector of EEFormationSlot
     // (GetRandomElementIndex's twin for 0x14-byte elements) (provisional name)
     template <class V> long GetRandomIndex(V& inValues) { return this->GetRandom(0L, (long)inValues.size() - 1); }
-    void SetSpeed(float inSpeed);           // 0x161774 (EEMRecordFrames passes mF50; provisional name)
+    // 0x161774 (EEMRecordFrames passes mF50; provisional name)
+    void SetSpeed(float inSpeed) { ee_rts_physics_set_speed(this, inSpeed); }
     // inline: EEMRecordFrames stores +0x69 after it has pushed mF50 from the same `this` (provisional name)
     void SetSlowPlayback(bool inValue) { this->mSlowPlayback = inValue; this->SetSpeed(this->mSpeed); }
-    static unsigned long Main(void* inPointer);   // 0x16140c (the thread; named by the ctor's CreateThread assert)
+    // 0x16140c (the thread; named by the ctor's CreateThread assert)
+    static unsigned long Main(void* inPointer) { return ee_rts_physics_main(inPointer); }
 
     // +0x04 (EEPhysics::QueueServerMessage pushes, ClearServerMessages pops and dereferences; push_back 0xa96fd, pop_back 0xa96d4, back()
     // through the out-of-line iterator operator* 0x3f7cc with the 1024-element blocks: a deque, whose _Mysize is the
@@ -94,52 +100,71 @@ public:
 class EEPhysics : public RTSPhysics, public EeUnitsPhysicsSaved {       // sizeof 0xfc; EEPhysics.cpp (__FILE__ 0x151cb4), ctor 0x151c5a
 public:
     EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer);   // 0x151c5a (new 0xfc at 0x14392b)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);    // +0x00 0x152a4d
-    virtual void QueueServerMessage(NEMessage* inMessage);  // +0x04 0x152f35 (mU04.push_back)
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x08 0x153950
-    virtual void UpdateTiming();            // +0x0c 0x153bd8
+    // +0x00 0x152a4d
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_physics_load(this, &inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion); }
+    // +0x04 0x152f35 (mU04.push_back)
+    virtual void QueueServerMessage(NEMessage* inMessage) { this->mServerMessages.push_back(inMessage); }
+    // +0x08 0x153950
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_physics_save(this, &outFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion); }
+    // +0x0c 0x153bd8
+    virtual void UpdateTiming() { ee_physics_update_timing(this); }
     virtual ~EEPhysics();                   // +0x10 (??_G 0x151cd4)
     virtual void Lock();                    // +0x14 0x152f29
-    virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);  // +0x18 0x152f45
-    virtual void Idle();                    // +0x1c 0x15305a
-    virtual void Tick();                    // +0x20 0x153082
+    // +0x18 0x152f45
+    virtual void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2) { ee_physics_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
+    // +0x1c 0x15305a
+    virtual void Idle() { ee_physics_idle(this); }
+    // +0x20 0x153082
+    virtual void Tick();                    // +0x20 0x153082 (out of line: the test profile's harness hook)
     virtual void Unlock();                  // +0x28 0x153c4d
-    void ClearServerMessages();             // 0x151e4d (EEDataPreLoading::LoadGame, under gWorld's lock; provisional name)
-    void AutoSave();                        // 0x151d1f (Virtual18's message 0x50a: an EEMLoadOrSaveGame of "AutoSave <date>"; provisional name)
+    // 0x151e4d (EEDataPreLoading::LoadGame, under gWorld's lock; provisional name)
+    void ClearServerMessages() { ee_physics_clear_server_messages(this); }
+    // 0x151d1f (Virtual18's message 0x50a: an EEMLoadOrSaveGame of "AutoSave <date>"; provisional name)
+    void AutoSave() { ee_physics_auto_save(this); }
     // 0x151f3a: the game is over (every player's result, the campaign progress, the main game form's blinking
     // button, the teams); the cheat codes 0x12bb7b/0x12bbad and Virtual20 call it (provisional name)
-    void EndGame(bool inIsVictory);
+    void EndGame(bool inIsVictory) { ee_physics_end_game(this, inIsVictory); }
 
-    void FlushWorld();                      // 0x151e9f (after EEMReplantFarms; provisional name)
+    // 0x151e9f (after EEMReplantFarms; provisional name)
+    void FlushWorld() { ee_physics_flush_world(this); }
     // (provisional names)
-    void RunOwedTicks();                    // 0x151efe (runs Virtual20 while mUB8 is set; DrainInput first)
+    // 0x151efe (runs Virtual20 while mUB8 is set; DrainInput first)
+    void RunOwedTicks() { ee_physics_run_owed_ticks(this); }
     // 0x15268d: inTime (0: mLD0) as whole minutes and the seconds left over
-    void GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime);
-    void Init();                            // 0x152909 (the ctor and message 0x509: the counters, the queues)
-    void QueueMessage(NEMessage* inMessage);   // 0x153403 (under mSaveGameLock; referenced)
-    void QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew);   // 0x153c23 (both referenced; processed by 0x1534d1)
-    void UpdateAreaEffectsClock();          // 0x153c59 (mF9C += mF98; every 2000: gAEManager)
-    void DrainInput();
-    void CheckShiftMode();                  // 0x153f47 (Virtual20's; provisional name)
-    void ReportStatistics();                // 0x153836 (Virtual20's; provisional name)
-    void ProcessUnitSwaps();                // 0x1534d1 (the queued unit swaps: every player's Virtual9C, then each swap)
+    void GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime) { ee_physics_minutes_and_seconds(this, outMinutes, outSeconds, inTime); }
+    // 0x152909 (the ctor and message 0x509: the counters, the queues)
+    void Init() { ee_physics_init(this); }
+    // 0x153403 (under mSaveGameLock; referenced)
+    void QueueMessage(NEMessage* inMessage) { ee_physics_queue_message(this, inMessage); }
+    // 0x153c23 (both referenced; processed by 0x1534d1)
+    void QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew) { ee_physics_queue_unit_swap(this, inOld, inNew); }
+    // 0x153c59 (mF9C += mF98; every 2000: gAEManager)
+    void UpdateAreaEffectsClock() { ee_physics_update_area_effects_clock(this); }
+    void DrainInput() { ee_physics_drain_input(this); }
+    // 0x153f47 (Virtual20's; provisional name)
+    void CheckShiftMode() { ee_physics_check_shift_mode(this); }
+    // 0x153836 (Virtual20's; provisional name)
+    void ReportStatistics();                // 0x153836 (out of line: the test profile's harness hook)
+    // 0x1534d1 (the queued unit swaps: every player's Virtual9C, then each swap)
+    void ProcessUnitSwaps() { ee_physics_process_unit_swaps(this); }
     // the thread messages (provisional names)
-    long PostAutoSave();
-    long PostShowDialogMessage();
-    long PostInit();
+    long PostAutoSave() { return ee_physics_post(this, 0x50a); }
+    long PostShowDialogMessage() { return ee_physics_post(this, 0x508); }
+    long PostInit() { return ee_physics_post(this, 0x509); }
     // inline (COMDAT 0x761b5, first emitted by EECPCombatManager.cpp): the queued unit swaps (mSound2Index7.size())
     // (provisional name)
-    long GetUnitSwapKind(EEComplexUnit* inUnit);  // 0x1526d2 (ret 4): the unit's queued swap kind (0: none; 1, 5, 7) (provisional name)
+    // 0x1526d2 (ret 4): the unit's queued swap kind (0: none; 1, 5, 7) (provisional name)
+    long GetUnitSwapKind(EEComplexUnit* inUnit) { return ee_physics_unit_swap_kind(this, inUnit); }
     // (provisional names): 0x1520cf the out-of-synch checksum (inDump: also the "OOS <date>.log" dump)
     // 0x15253e the elapsed game time as text; 0x153430 one queued swap (camera, contagion, scenario, effects);
     // 0x153ca1 the civ timers; 0x153dff the queued load/save messages; 0x15401e the collision period (returns the
     // count of gWorld's +0xadc deque); 0x1540fb the day/night and wind
-    unsigned long GetOutOfSynchChecksum(bool inDump, unsigned long inFlags);
+    unsigned long GetOutOfSynchChecksum(bool inDump, unsigned long inFlags) { return ee_physics_out_of_synch_checksum(this, inDump, inFlags); }
     UWideString GetTimeString();
-    void SwapUnit(EEUnit* inOld, EEUnit* inNew);
-    void UpdateCivTimer();
-    void ServeLoadSaveRequests();
-    void UpdateWeather();
+    void SwapUnit(EEUnit* inOld, EEUnit* inNew) { ee_physics_swap_unit(inOld, inNew); }
+    void UpdateCivTimer() { ee_physics_update_civ_timer(this); }
+    void ServeLoadSaveRequests() { ee_physics_serve_load_save_requests(this); }
+    void UpdateWeather() { ee_physics_update_weather(this); }
 
     std::vector<NEMessage*> mLoadSaveRequests;  // +0x06c (queued under mSaveGameLock, referenced; Init dereferences them)
     TSCriticalSection* mSaveGameLock;       // +0x07c
