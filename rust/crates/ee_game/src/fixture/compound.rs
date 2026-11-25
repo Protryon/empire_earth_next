@@ -24,7 +24,7 @@ fn go(op: Op, h: u64, i: &[i64]) -> i64 {
 /// A game message as local input (`gCommunications->ProcessLocalUserInput(message, kSlotNone)`; it takes the
 /// message's reference).
 fn send_local(message: usize) {
-    crate::gamecpp::h(crate::gamecpp::O::CommProcessLocal, message, &[255]);
+    crate::gamecpp::net::global().local_input(message as *mut core::ffi::c_void, 255);
 }
 
 /// A fine operation's float answer (its f0).
