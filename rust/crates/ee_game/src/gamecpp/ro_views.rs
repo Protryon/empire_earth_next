@@ -540,6 +540,7 @@ const MO_POINTER_FILES: [&CStr; 14] = [
 /// EEMouse::Load: the 14 extra pointer images into the frame's slots 10..23 (RTSMouse::LoadPointer), then the
 /// engine's pointers (RTSMouse::Load); the first load error.
 #[cfg(not(test))]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_mo_load(mouse: *mut c_void, screen: *mut c_void) -> c_long {
     use crate::rts::mouse::{load_pointer, MouseCpp};

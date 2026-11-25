@@ -209,6 +209,7 @@ mod sys {
         panic!("no C++ in the tests ({op:?})")
     }
     /// The test binary's open: the file as binary (the test scripts have LF line ends).
+    #[allow(non_snake_case)]
     pub unsafe fn PlatFOpen(path: *const core::ffi::c_char, _: *const core::ffi::c_char) -> *mut core::ffi::c_void {
         unsafe { libc::fopen(path, c"rb".as_ptr()).cast() }
     }

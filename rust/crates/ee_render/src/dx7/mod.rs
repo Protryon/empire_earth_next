@@ -21,7 +21,6 @@ pub mod surfobj;
 pub use crate::ge::vertarr as vertex;
 
 #[cfg(not(test))]
-#[allow(clippy::missing_safety_doc)]
 pub mod draw_ffi;
 #[cfg(not(test))]
 pub mod gx;
