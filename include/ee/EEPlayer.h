@@ -541,90 +541,36 @@ public:
     unsigned long mEndTime;                 // (saved)
 };
 
-// C:\EEX\RTS Engine\Player\RTSPlayer.h (RECONSTRUCTION; file name inferred; vtable 0x442b5c). Virtual slots
-// from the vtable, named by offset.
-// port (R5b.4, round 29): the plain members mNextUniqueID .. mObserverMode are the Rust record EeUnitsRtsPlayerFields
-// (ee_units rts_player_save.rs; names, types and order kept), Load and Save Rust over it
-class RTSPlayer : public EeUnitsRtsPlayerFields {
-public:
-    RTSPlayer() { this->Reset(); }         // an empty player with no units
-    // 0x16f12e (EEPlayer's ctor): every player but player 0 keeps a visibility map
-    RTSPlayer(const UWideString& inName, unsigned long inPlayerID) : RTSPlayer() { this->mName = inName; this->mPlayerID = inPlayerID; this->mSaveVisMap = inPlayerID != 0; }
-    // +0x00 (??_G 0x16f112, dtor 0x16f1cf): its list's records leave the unit store (ee/EEUnitStore.h)
-    virtual ~RTSPlayer() { ee_units_store_clear_player_object((uint64_t)(uintptr_t)this); }
-    // +0x04 0x16f1f3: Virtual28(each mPendingUnits unit, inArg1), then Virtual0C() if inArg2 (both tested as bytes;
-    // EESELoadThread passes 0, 0; was (long, long))
-    virtual void AddPendingUnits(bool inKeepID, bool inRelease) { ee_rts_player_add_pending_units(this, inKeepID, inRelease); }
-    // (+0x08 RecountPopulation, +0x14 IsActive and +0x2c..+0x3c UnitRemoved, LoadUnit, RemovalsDone, RemovingUnit,
-    // SaveUnit: pure in the vtable; EEPlayer's, the only player kind, and the shims below call them on an EEPlayer)
-    virtual void ReleasePendingUnits() { ee_rts_player_release_pending_units(this); }     // +0x0c
-    virtual void GetChecksum(ESChecksum& ioChecksum) { ee_rts_player_checksum(this, &ioChecksum); }   // +0x10 0x16f394 (EEPPlayerHelper)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x16f539
-    virtual void Clear() {}                 // +0x1c
-    virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond) { return ee_rts_player_repair_pointers(this, inFirst, inSecond); }   // +0x20 0x16f6d3 (ret 8, returns 0; was Virtual20())
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x16f6f8
-    // +0x28 0x16f233: adds a unit (a new id unless inKeepID), then InsertUnit (was Virtual28())
-    virtual void AddUnit(RTSUnit* inUnit, bool inKeepID) { ee_rts_player_add_unit(this, inUnit, inKeepID); }
-
-    RTSUnit* GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_player_unit(this, inUnitID)); }   // 0x16f433: by id through the buckets (RTSWorld::GetUnit 0x14804f)
-    // inline: EEMLoadMainScreen passes it through a byte temporary, like NEMessage::GetOriginatingSlot
-    unsigned char GetSlot() const { return this->mSlot; }
-    void RemoveKilledUnits() { ee_rts_player_remove_killed_units(this); }               // 0x16f27f: walks mU004, fixes mFirstUnit/mLastUnit, the buckets (provisional name)
-    bool GetObserverMode() const { return this->mObserverMode; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)
-    unsigned long GetPlayerID() { return this->mPlayerID; }  // inline (EEDataPreLoading::LoadGame pushes the whole dword)
-    // RTSPlayer.cpp's other non-virtual members (provisional names)
-    RTSUnit* GetPendingUnit(unsigned long inIndex) { return static_cast<RTSUnit*>(ee_rts_player_pending_unit(this, inIndex)); }  // 0x16f40f (0 past the end)
-    // inline (refused: out of line through the ICF-folded COMDAT 0x138e4b; EEWorld::ReplacePlayer; provisional name)
-    unsigned long GetNumPendingUnits() const { return this->mPendingUnits.size(); }
-    // inline (COMDAT 0x131872 in EEGameState.cpp, its first user Create; EEWorld 0x139264 calls the same copy;
-    // the 0.6f constant is loaded once, then three fmul st(1))
-    void SetColor(const GEColor& inColor)   // (the color and its shade at 0.6: ee_units player_rest.rs)
-    {
-        ee_units_player_set_color(reinterpret_cast<float(*)[3]>(&this->mColor), reinterpret_cast<float(*)[3]>(&this->mShadeColor), reinterpret_cast<const float(*)[3]>(&inColor));
-    }
-    void Reset() { ee_rts_player_reset(this); }                           // 0x16f464 (the ctors call it)
-    void InsertUnit(RTSUnit* inUnit) { ee_rts_player_insert_unit(this, inUnit); }       // 0x16f49e (the unit list and the id buckets; Virtual28's)
-    void KillUnit(RTSUnit* inUnit, bool inForce) { ee_rts_player_kill_unit(this, inUnit, inForce); }  // 0x16f6ae (marks inUnit->mB28, pushes it)
-    long SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_rts_player_save_units(this, inMajorVersion, inMinorVersion, &outFile); }   // 0x16f7b1 (Save's)
-
-
-    // Layout (no gaps; sizeof 0x468): the ctor 0x16f12e (vectors, the name, the bucket loop of 0x80, two GEColors
-    // of 1.0), its Reset 0x16f464 and Load/Save. Names are provisional unless stated.
-    // units (0x16f27f/0x16f35e Dereference the elements, KillUnit pushes an RTSUnit*; were vector<long>; the
-    // _Buy/_Tidy/clear calls are ICF-folded vector<long>/<EECalamity*> copies)
-    std::vector<RTSUnit*> mKilledUnits;     // +0x004
-    std::vector<RTSUnit*> mPendingUnits;    // +0x014
-    UWideString mName;                      // +0x024 (the chat log compares senders with it)
-    // +0x038 the unit hash: the units whose id & 0x7f is the bucket's index, chained through RTSUnit::mNext (the first
-    // unit, the count: ee_game rts units.rs; zeroed as the original's ctors did)
-    EeRtsUnitBucket mUnitBuckets[128] = {};
-    const GEColor& GetColor() const { return this->mColor; }
-    GEColor mColor;                         // +0x438 (1, 1, 1; saved)
-    GEColor mShadeColor;                    // +0x444 (1, 1, 1)
-    EEUnit* mFirstUnit;                     // +0x450 its units, linked through EEUnit::mNext
-    EEUnit* mLastUnit;                      // +0x454 (provisional name; the unit-removal code 0x16f27f fixes both ends)
-    // the record (EeUnitsRtsPlayerFields): mNextUniqueID (+0x458, saved), mPlayerID (+0x45c: the index into another
-    // player's mEnemies; saved), mUnitCount (+0x460, saved), mSlot (+0x464, = 0xff; EEWorld::GetPlayerBySlot compares
-    // it), mSeesAll (+0x465: toggled by EEMMakeWorldVisible), mSaveVisMap (+0x466: saved; checked when a unit is
-    // removed), mObserverMode (+0x467: chat everybody / observer)
-    bool GetSeesAll() const { return this->mSeesAll; }
-};
-
 // port (R5b.4): the saved numbers (mScenarioVariables, mEnemies, mTributes, mResourceCaps, mPopLimit, ... the 24
 // fields EEPlayer::Load and Save read and write as plain values) are the Rust record EeUnitsPlayerSaved
 // (ee_units player_save.rs) this class derives from, with their C++ names and types; the offsets below omit them.
 // port (the player lane, round 1): the other plain members (mHackUnitClass .. mJITManufacturing, mNumTeleporters) are
 // the Rust record EeUnitsPlayerFields (ee_units player.rs; their names and types kept), with the queued improvements
 // (mQueued, Rust's); the economy's and the improvements' bodies are Rust over EEPlayer.cpp's host
-class EEPlayer : public RTSPlayer, public EeUnitsPlayerSaved, public EeUnitsPlayerFields {
+// The player lane, round 2: the original's base RTSPlayer (C:\EEX\RTS Engine\Player\RTSPlayer.h, vtable 0x442b5c; its
+// plain members the Rust record EeUnitsRtsPlayerFields, its unit list's bodies ee_game rts units.rs) is folded in:
+// EEPlayer is the only player kind. RTSPlayer names it for the engine's files.
+class EEPlayer : public EeUnitsRtsPlayerFields, public EeUnitsPlayerSaved, public EeUnitsPlayerFields {
 public:
-    // (EEHumanPlayer's ctors call them; its ??_G calls the dtor): all state reset, the tech tree bound to a named
-    // player, the wonder and construction-site lists made (ee_units player_body.rs construct); the destructor clears and
-    // releases the groups, media, tech tree, air traffic, upgrades, towns, herds, off-map records, patrol groups and lists
-    EEPlayer() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 0, 0, 0.0f); }
-    // 0x161da5 (RTSPlayer(inName, inPlayerID) 0x16f12e first)
-    EEPlayer(const UWideString& inName, unsigned long inPlayerID) : RTSPlayer(inName, inPlayerID) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 1, (int64_t)inPlayerID, 0.0f); }
-    virtual ~EEPlayer() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_DESTROY, 0, 0, 0, 0.0f); }   // +0x00 0x162297
+    // (EEHumanPlayer's ctors call them; its ??_G calls the dtor): the base player's reset (0x16f464; named: every
+    // player but player 0 keeps a visibility map), then all state reset, the tech tree bound to a named player, the
+    // wonder and construction-site lists made (ee_units player_body.rs construct); the destructor clears and releases
+    // the groups, media, tech tree, air traffic, upgrades, towns, herds, off-map records, patrol groups and lists, then
+    // its list's records leave the unit store (ee/EEUnitStore.h)
+    EEPlayer() { ee_rts_player_reset(this); ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 0, 0, 0.0f); }
+    EEPlayer(const UWideString& inName, unsigned long inPlayerID)   // 0x161da5 (0x16f12e first)
+    {
+        ee_rts_player_reset(this);
+        this->mName = inName;
+        this->mPlayerID = inPlayerID;
+        this->mSaveVisMap = inPlayerID != 0;
+        ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 1, (int64_t)inPlayerID, 0.0f);
+    }
+    virtual ~EEPlayer()   // +0x00 0x162297
+    {
+        ee_units_player_body(this, EE_UNITS_PLAYER_DO_DESTROY, 0, 0, 0, 0.0f);
+        ee_units_store_clear_player_object((uint64_t)(uintptr_t)this);
+    }
     // the FSRestorable-style slots EEPlayer overrides (EEHumanPlayer's wrappers call them)
     virtual void Clear() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CLEAR, 0, 0, 0, 0.0f); }                   // +0x1c 0x16828c (same RTSPlayer slot)
     virtual long LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);    // +0x30 0x167ca4
@@ -841,6 +787,45 @@ public:
     void SetClassButton(unsigned long inUnitClass, EEButtonObject* inButton);  // 0x163e4d (the unit class's button; EEEvent SetEventButton)
     void SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex);
 
+    RTSUnit* GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_player_unit(this, inUnitID)); }   // 0x16f433: by id through the buckets (RTSWorld::GetUnit 0x14804f)
+    // inline: EEMLoadMainScreen passes it through a byte temporary, like NEMessage::GetOriginatingSlot
+    unsigned char GetSlot() const { return this->mSlot; }
+    void RemoveKilledUnits() { ee_rts_player_remove_killed_units(this); }               // 0x16f27f: walks mU004, fixes mFirstUnit/mLastUnit, the buckets (provisional name)
+    bool GetObserverMode() const { return this->mObserverMode; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)
+    unsigned long GetPlayerID() { return this->mPlayerID; }  // inline (EEDataPreLoading::LoadGame pushes the whole dword)
+    RTSUnit* GetPendingUnit(unsigned long inIndex) { return static_cast<RTSUnit*>(ee_rts_player_pending_unit(this, inIndex)); }  // 0x16f40f (0 past the end)
+    // inline (refused: out of line through the ICF-folded COMDAT 0x138e4b; EEWorld::ReplacePlayer; provisional name)
+    unsigned long GetNumPendingUnits() const { return this->mPendingUnits.size(); }
+    // inline (COMDAT 0x131872 in EEGameState.cpp, its first user Create; EEWorld 0x139264 calls the same copy;
+    // the 0.6f constant is loaded once, then three fmul st(1))
+    void SetColor(const GEColor& inColor)   // (the color and its shade at 0.6: ee_units player_rest.rs)
+    {
+        ee_units_player_set_color(reinterpret_cast<float(*)[3]>(&this->mColor), reinterpret_cast<float(*)[3]>(&this->mShadeColor), reinterpret_cast<const float(*)[3]>(&inColor));
+    }
+    void InsertUnit(RTSUnit* inUnit) { ee_rts_player_insert_unit(this, inUnit); }       // 0x16f49e (the unit list and the id buckets; Virtual28's)
+    void KillUnit(RTSUnit* inUnit, bool inForce) { ee_rts_player_kill_unit(this, inUnit, inForce); }  // 0x16f6ae (marks inUnit->mB28, pushes it)
+    long SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_rts_player_save_units(this, inMajorVersion, inMinorVersion, &outFile); }   // 0x16f7b1 (Save's)
+    // Layout (no gaps; sizeof 0x468): the ctor 0x16f12e (vectors, the name, the bucket loop of 0x80, two GEColors
+    // of 1.0), its Reset 0x16f464 and Load/Save. Names are provisional unless stated.
+    // units (0x16f27f/0x16f35e Dereference the elements, KillUnit pushes an RTSUnit*; were vector<long>; the
+    // _Buy/_Tidy/clear calls are ICF-folded vector<long>/<EECalamity*> copies)
+    std::vector<RTSUnit*> mKilledUnits;     // +0x004
+    std::vector<RTSUnit*> mPendingUnits;    // +0x014
+    UWideString mName;                      // +0x024 (the chat log compares senders with it)
+    // +0x038 the unit hash: the units whose id & 0x7f is the bucket's index, chained through RTSUnit::mNext (the first
+    // unit, the count: ee_game rts units.rs; zeroed as the original's ctors did)
+    EeRtsUnitBucket mUnitBuckets[128] = {};
+    const GEColor& GetColor() const { return this->mColor; }
+    GEColor mColor;                         // +0x438 (1, 1, 1; saved)
+    GEColor mShadeColor;                    // +0x444 (1, 1, 1)
+    EEUnit* mFirstUnit;                     // +0x450 its units, linked through EEUnit::mNext
+    EEUnit* mLastUnit;                      // +0x454 (provisional name; the unit-removal code 0x16f27f fixes both ends)
+    // the record (EeUnitsRtsPlayerFields): mNextUniqueID (+0x458, saved), mPlayerID (+0x45c: the index into another
+    // player's mEnemies; saved), mUnitCount (+0x460, saved), mSlot (+0x464, = 0xff; EEWorld::GetPlayerBySlot compares
+    // it), mSeesAll (+0x465: toggled by EEMMakeWorldVisible), mSaveVisMap (+0x466: saved; checked when a unit is
+    // removed), mObserverMode (+0x467: chat everybody / observer)
+    bool GetSeesAll() const { return this->mSeesAll; }
+
     // Layout (no gaps; sizeof 0xb80: EEHumanPlayer adds a UWideString at +0xb80, sizeof 0xb94):
     // the ctor 0x161da5 (member ctors), its Reset 0x165813 (the array loops: 20, 4, 17, 10, 10, 17, 17 elements) and
     // Load/Save. Container element types and every unnamed member are provisional.
@@ -883,6 +868,7 @@ public:
     RTSUnit* mViewedUnit;                   // +0x9d0 (Reset dereferences it)
     RTSUnit* mSelectedViewedUnit;           // +0x9d4 (a referenced unit: SetSelectedViewedUnit swaps it)
 };
+typedef EEPlayer RTSPlayer;
 
 
 // EEWorld::ApplyShareBonus (false) and RemoveShareBonus (true): the share bonus of every player by its wonder powers and

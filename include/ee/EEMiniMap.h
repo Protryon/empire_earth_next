@@ -8,7 +8,8 @@
 #include "lle/UList.h"
 
 class GEScreen;
-class RTSPlayer;
+class EEPlayer;
+typedef EEPlayer RTSPlayer;
 class GESurface;
 class GE2DPoint;
 class GETexture;

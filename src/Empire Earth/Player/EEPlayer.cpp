@@ -176,7 +176,7 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         return 0;
     // the unit bookkeeping and the wonders (ee_units player_units.rs): the units as RTSUnit addresses
     case EE_UNITS_PLAYER_STATE: return (gLoadingSavedGame ? 1 : 0) | (gGameScreenActive ? 2 : 0) | (gWorldClearing ? 4 : 0) | (UShutdownInProgress() ? 8 : 0) | (gWorld.mVictoryEnabled ? 16 : 0) | (gUserInterface != NULL ? 32 : 0);
-    case EE_UNITS_PLAYER_RTS_ADD_UNIT: thePlayer->RTSPlayer::AddUnit(theUnit, a[1] != 0);
+    case EE_UNITS_PLAYER_RTS_ADD_UNIT: ee_rts_player_add_unit(thePlayer, theUnit, a[1] != 0);
         return 0;
     case EE_UNITS_PLAYER_ACTIVATE: gWorld.ActivateUnit(theComplex);
         return 0;
@@ -442,6 +442,7 @@ struct EEPlayerSaveContext {
 };
 
 static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
+static int32_t RTSPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t, EeUnitsPlayerSaveIo* io);
 
 // Loads the player's state from a saved game (the mirror of Save); returns the read status, some reads' errors ignored.
 // port (R5b.4): the body is Rust (ee_units player_save.rs `load`: the original's four bodies, one per saved-game era,
@@ -502,7 +503,7 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
     // the load
     case EE_UNITS_PLAYER_SAVE_X_DUMMY_DELETE: delete theContext.mDummyUpgrade;
         return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_RTS_LOAD: thePlayer->RTSPlayer::Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_RTS_LOAD: ee_units_rts_player_load(&theContext, &RTSPlayerSaveOperation, thePlayer, (uint32_t)theMajor, (uint32_t)theMinor);
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_X_TECH_DELETE: delete thePlayer->mTechnologies;
         return kErrorOK;
@@ -530,7 +531,7 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return thePlayer->mUnitClassUpgrades[inIndex] != NULL;
     case EE_UNITS_PLAYER_SAVE_UPGRADE_SAVE:
         return thePlayer->mUnitClassUpgrades[inIndex]->Save(theMajor, theMinor, theFile);
-    case EE_UNITS_PLAYER_SAVE_RTS_SAVE: thePlayer->RTSPlayer::Save(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_RTS_SAVE: ee_units_rts_player_save(&theContext, &RTSPlayerSaveOperation, thePlayer);
         return kErrorOK;
     case EE_UNITS_PLAYER_SAVE_PATROL_SAVE:
         return ee_units_pg_save(reinterpret_cast<EEPPatrolGroup*>(io->i), (uint32_t)theMajor, (uint32_t)theMinor, &theFile);
@@ -853,11 +854,9 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
         return 0;
     case EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD: theMedia->UnloadMedia();
         return 0;
-    case EE_UNITS_PLAYER_BODY_RTS_CLEAR: thePlayer->RTSPlayer::Clear();
-        return 0;
     case EE_UNITS_PLAYER_BODY_CIV_REAPPLY: thePlayer->mCivilization.Reapply(thePlayer, (unsigned long)inB, (unsigned long)inC);
         return 0;
-    case EE_UNITS_PLAYER_BODY_RTS_REPAIR: thePlayer->RTSPlayer::RepairPointers((unsigned long)inB, (unsigned long)inC);
+    case EE_UNITS_PLAYER_BODY_RTS_REPAIR: ee_rts_player_repair_pointers(thePlayer, (unsigned long)inB, (unsigned long)inC);
         return 0;
     case EE_UNITS_PLAYER_BODY_MAKE_SAVED_TOWNS: return EEMakeSavedTowns(thePlayer);
     case EE_UNITS_PLAYER_BODY_LIVE_STATE: return EESaveHasLiveState((unsigned long)inB, (unsigned long)inC);
@@ -941,7 +940,7 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_CONTINENT_ID: return gContinentManager.GetContinentID(inB, inC);
     case EE_UNITS_PLAYER_BODY_TOWN_CONTINENT: return EEPlayerTownAt(inA)->mContinent;
     case EE_UNITS_PLAYER_BODY_TOWN_CLOSEST: return EEPlayerPackPoint(EEPlayerTownAt(inA)->GetClosestPoint(U2DPoint<long>((long)inB, (long)inC)));
-    case EE_UNITS_PLAYER_BODY_RTS_CHECKSUM: thePlayer->RTSPlayer::GetChecksum(*reinterpret_cast<ESChecksum*>(static_cast<uintptr_t>(inA)));
+    case EE_UNITS_PLAYER_BODY_RTS_CHECKSUM: ee_rts_player_checksum(thePlayer, reinterpret_cast<ESChecksum*>(static_cast<uintptr_t>(inA)));
         return 0;
     case EE_UNITS_PLAYER_BODY_TECH_CHECKSUM: thePlayer->mTechnologies->GetChecksum(*reinterpret_cast<ESChecksum*>(static_cast<uintptr_t>(inA)));
         return 0;
@@ -1088,23 +1087,13 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     return 0;
 }
 
-// ---- RTSPlayer (C:\EEX\RTS Engine\Player\RTSPlayer.cpp, vtable 0x442b5c; its unit list's bodies are Rust:
-// ee_game rts units.rs)
-// Reads the player's vision flags, ids, color (deriving the shade color), name, units and observer mode;
-// returns the first read error.
-// port (R5b.4, round 29): the body is Rust (ee_units rts_player_save.rs `load`) over the record this class derives
-// from (EeUnitsRtsPlayerFields) and RTSPlayerSaveOperation's parts
-struct RTSPlayerSaveContext {
-    RTSPlayer* mPlayer;
-    FSFile* mFile;
-    unsigned long mMajorVersion;
-    unsigned long mMinorVersion;
-};
-
+// ---- the base player's (RTSPlayer's, folded into EEPlayer) save: its vision flags, ids, color (deriving the shade
+// color), name, units and observer mode (ee_units rts_player_save.rs over EeUnitsRtsPlayerFields and these parts);
+// units.rs's shims
 static int32_t RTSPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t, EeUnitsPlayerSaveIo* io)
 {
-    RTSPlayerSaveContext& theContext = *static_cast<RTSPlayerSaveContext*>(inContext);
-    RTSPlayer* thePlayer = theContext.mPlayer;
+    EEPlayerSaveContext& theContext = *static_cast<EEPlayerSaveContext*>(inContext);
+    EEPlayer* thePlayer = theContext.mPlayer;
     FSFile& theFile = *theContext.mFile;
     switch (inOp) {
     case EE_UNITS_RTS_PLAYER_SAVE_COLOR_LOAD: return thePlayer->mColor.Load(theFile);
@@ -1115,7 +1104,7 @@ static int32_t RTSPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t, E
         return 0;
     case EE_UNITS_RTS_PLAYER_SAVE_NAME_LOAD: return thePlayer->mName.Load(theFile);
     case EE_UNITS_RTS_PLAYER_SAVE_LOAD_UNIT:
-        return static_cast<EEPlayer*>(thePlayer)->LoadUnit(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+        return thePlayer->LoadUnit(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
     case EE_UNITS_RTS_PLAYER_SAVE_ADD_PENDING: thePlayer->AddPendingUnits(true, false); return 0;
     case EE_UNITS_RTS_PLAYER_SAVE_COLOR_SAVE: return thePlayer->mColor.Save(theFile);
     case EE_UNITS_RTS_PLAYER_SAVE_NAME_SAVE: return thePlayer->mName.Save(theFile);
@@ -1123,19 +1112,6 @@ static int32_t RTSPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t, E
         return thePlayer->SaveUnits(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
     }
     return EESavePrimitive(theFile, inOp, io);
-}
-
-long RTSPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    RTSPlayerSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion};
-    return ee_units_rts_player_load(&theContext, &RTSPlayerSaveOperation, this, (uint32_t)inMajorVersion,
-                                    (uint32_t)inMinorVersion);
-}
-
-long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    RTSPlayerSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};
-    return ee_units_rts_player_save(&theContext, &RTSPlayerSaveOperation, this);
 }
 
 // The shims units.rs calls (UnitsCpp: the player's side)
@@ -1153,10 +1129,10 @@ void ee_rtspcpp_killed_clear(RTSPlayer* inPlayer) { inPlayer->mKilledUnits.clear
 void ee_rtspcpp_killed_push(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->mKilledUnits.push_back(inUnit); }
 void ee_rtspcpp_add_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, bool inKeepID) { inPlayer->AddUnit(inUnit, inKeepID); }
 void ee_rtspcpp_release_pending(RTSPlayer* inPlayer) { inPlayer->ReleasePendingUnits(); }
-void ee_rtspcpp_removing_unit(RTSPlayer* inPlayer, RTSUnit* inUnit) { static_cast<EEPlayer*>(inPlayer)->RemovingUnit(inUnit); }
-void ee_rtspcpp_unit_removed(RTSPlayer* inPlayer, RTSUnit* inUnit) { static_cast<EEPlayer*>(inPlayer)->UnitRemoved(inUnit); }
-void ee_rtspcpp_removals_done(RTSPlayer* inPlayer) { static_cast<EEPlayer*>(inPlayer)->RemovalsDone(); }
-long ee_rtspcpp_save_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, unsigned long inMajor, unsigned long inMinor, FSFile* inFile) { return static_cast<EEPlayer*>(inPlayer)->SaveUnit(inUnit, inMajor, inMinor, *inFile); }
+void ee_rtspcpp_removing_unit(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->RemovingUnit(inUnit); }
+void ee_rtspcpp_unit_removed(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->UnitRemoved(inUnit); }
+void ee_rtspcpp_removals_done(RTSPlayer* inPlayer) { inPlayer->RemovalsDone(); }
+long ee_rtspcpp_save_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, unsigned long inMajor, unsigned long inMinor, FSFile* inFile) { return inPlayer->SaveUnit(inUnit, inMajor, inMinor, *inFile); }
 void ee_rtspcpp_name_checksum(RTSPlayer* inPlayer, ESChecksum* ioChecksum) { inPlayer->mName.GetChecksum(*ioChecksum); }
 void ee_rtspcpp_checksum_add(ESChecksum* ioChecksum, const char* inName, unsigned long inValue) { ioChecksum->AddChecksum(inName, inValue); }
 void ee_rtsucpp_store_insert(RTSUnit* inUnit, unsigned long inOwner, RTSPlayer* inPlayer) { EEUnitStoreInsert(inUnit, inOwner, inPlayer); }
