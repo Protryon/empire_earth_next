@@ -13,7 +13,6 @@
 #include "rust/won_gui/platfont.h"
 #include "rust/won_gui/platgfx.h"
 #include "rust/won_gui/gfxplat.h"
-#include "ee/wonapi/WONSurface.h"
 namespace WONAPI {
 class DisplayContext;
 class NativeImage;

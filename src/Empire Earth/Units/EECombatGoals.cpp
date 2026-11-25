@@ -120,6 +120,10 @@ extern "C" int64_t ee_units_cg_host(int32_t inOp, uint64_t inUnit, uint64_t inA,
     case EE_UNITS_CG_SEARCH_TIMER: EECgObject<EEComplexUnit>((int64_t)inUnit)->SetTargetSearchTimer((long)inB); return 0;
     case EE_UNITS_CG_PATH_ATTEMPTS: EECgObject<EEUGRust>((int64_t)inA)->SetPathAttempts((long)inB); return 0;
     case EE_UNITS_CG_FIRING_HIGH: return EECgObject<EEComplexUnit>((int64_t)inUnit)->mIsFiringHigh;
+    // FacesPoint's turret part inC of the unit's model (ee_sim combat cg_query.rs faces_point)
+    case EE_UNITS_CG_TURRET_POSITION: memcpy(EECgObject<float>(inB), &(*(EECgObject<EEComplexUnit>((int64_t)inUnit)->GetModel()->mTurretParts.begin() + inC))->mPosition, 3 * sizeof(float)); return 0;
+    case EE_UNITS_CG_TURRET_TRANSFORMATION: memcpy(EECgObject<float>(inB), EECgObject<EEComplexUnit>((int64_t)inUnit)->GetModel()->GetTurretPartTransformation((long)inC).mMatrix, 16 * sizeof(float)); return 0;
+    case EE_UNITS_CG_TURRET_ANGLE: (*ioF)[0] = EECgObject<EEComplexUnit>((int64_t)inUnit)->mTurretAngles[inC]; return 0;
     }
     return 0;
 }
@@ -167,6 +171,15 @@ uint64_t EEQueryHandleOf(const EEUnit* inUnit)
     return (uint64_t)(uintptr_t)inUnit;
 }
 
+// the tag points of a unit's model at its animation (NULL: none)
+EETagPointList* EEQueryTags(EEComplexUnit* inUnit) { return inUnit->GetModel()->mTagPoints[inUnit->mAnimation]; }
+
+// what the class of FireShot has: a projectile class, ammunition, a muzzle flash, a shot effect
+uint32_t EEQueryShotClass(EEUnitClass* inClass)
+{
+    return (inClass->mProjectileClass != NULL ? EE_COMBAT_SHOT_CLASS_PROJECTILE : 0) | (inClass->mUsesAmmunition ? EE_COMBAT_SHOT_CLASS_AMMUNITION : 0) | (inClass->mMuzzleFlashEffect != NULL ? EE_COMBAT_SHOT_CLASS_MUZZLE_FLASH : 0) | (inClass->mShotEffect != NULL ? EE_COMBAT_SHOT_CLASS_SHOT_EFFECT : 0);
+}
+
 // (the plain member reads are Rust's: ee_combat query_views.rs)
 uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t inArg)
 {
@@ -196,17 +209,12 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EECombatIsSeenBy(EEQueryComplex(inObject), EEQueryContextOf(inContext)->mUnit->GetPlayer(), true);
     case EE_COMBAT_Q_DUMMY_HEAD:
         return EEQueryUnit(inObject) == NULL || RTSDummyHead(EEQueryUnit(inObject)) != NULL;
-    case EE_COMBAT_Q_PROJECTILE_CATEGORY: {
-        EEUnitClass* theProjectile = EEQueryUnit(inObject)->GetUnitClass()->mProjectileClass;
-        return theProjectile != NULL ? (uint32_t)theProjectile->mCategory : EE_COMBAT_Q_NONE;
-    }
+    case EE_COMBAT_Q_PROJECTILE_CATEGORY:
+        return EEQueryUnit(inObject)->GetUnitClass()->mProjectileClass != NULL ? (uint32_t)EEQueryUnit(inObject)->GetUnitClass()->mProjectileClass->mCategory : EE_COMBAT_Q_NONE;
     case EE_COMBAT_Q_HIT_DISTANCE_SQUARED:
         return UFloatBits(EECombatHitDistanceSquared(EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject), -10000.0f, -10000.0f));
-    case EE_COMBAT_Q_TAG_COUNT: {
-        EEComplexUnit* theComplex = EEQueryComplex(inObject);
-        EETagPointList* theTags = theComplex->GetModel()->mTagPoints[theComplex->mAnimation];
-        return theTags != NULL ? (uint32_t)theTags->GetNumTagPoints() : 0;
-    }
+    case EE_COMBAT_Q_TAG_COUNT:
+        return EEQueryTags(EEQueryComplex(inObject)) != NULL ? (uint32_t)EEQueryTags(EEQueryComplex(inObject))->GetNumTagPoints() : 0;
     case EE_COMBAT_Q_IN_RANGE_TO_HIT:
         return EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject)) != 0;
     case EE_COMBAT_Q_BALLISTIC_HIT:
@@ -224,13 +232,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_TARGETS_ENEMIES: return EEQueryComplex(inObject)->mBehavior->mCanTargetEnemies;
     case EE_COMBAT_Q_MOVES_FREELY: return EEQueryComplex(inObject)->mBehavior->CanMoveFreely(EEQueryComplex(inObject));
     case EE_COMBAT_Q_GOAL_B1C: return EEQueryComplex(inObject)->mGoalState->GetB1C();
-    case EE_COMBAT_Q_SHOT_CLASS: {
-        EEUnitClass* theClass = EEQueryContextOf(inContext)->mClass;
-        return (theClass->mProjectileClass != NULL ? EE_COMBAT_SHOT_CLASS_PROJECTILE : 0)
-            | (theClass->mUsesAmmunition ? EE_COMBAT_SHOT_CLASS_AMMUNITION : 0)
-            | (theClass->mMuzzleFlashEffect != NULL ? EE_COMBAT_SHOT_CLASS_MUZZLE_FLASH : 0)
-            | (theClass->mShotEffect != NULL ? EE_COMBAT_SHOT_CLASS_SHOT_EFFECT : 0);
-    }
+    case EE_COMBAT_Q_SHOT_CLASS: return EEQueryShotClass(EEQueryContextOf(inContext)->mClass);
     case EE_COMBAT_Q_TURRET_PARTS: return (uint32_t)EEQueryComplex(inObject)->GetModel()->mTurretParts.size();
     case EE_COMBAT_Q_HIGH_TECH_TOOLS:
         return EEGetRules().Epoch(EEQueryUnit(inObject)->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;   // epochs.yaml
@@ -287,28 +289,13 @@ void EEQueryLocation(void* inContext, uint64_t inObject, float (*outRows)[16])
 int32_t EEQueryIntersects(void* inContext, uint64_t inCandidate, const float (*inLine)[6], int32_t inSegment,
                           uint32_t inLOD, float inScale)
 {
-    EEComplexUnit* theUnit = EEQueryContextOf(inContext)->mUnit;
-    GE3DLine theLine;
-    if (inSegment) {
-        theLine.SetStart(GE3DPoint((*inLine)[0], (*inLine)[1], (*inLine)[2]));
-        theLine.SetDirection(GEVector((*inLine)[3], (*inLine)[4], (*inLine)[5]));
-    }
-    return theUnit->mPhysicalModel.Intersects(&EEQueryComplex(inCandidate)->mPhysicalModel, theLine, inSegment != 0,
-                                              inLOD, 1.0f, 1.0f, inScale);
+    return EEQueryContextOf(inContext)->mUnit->mPhysicalModel.Intersects(&EEQueryComplex(inCandidate)->mPhysicalModel, inSegment ? GE3DLine(GE3DPoint((*inLine)[0], (*inLine)[1], (*inLine)[2]), GEVector((*inLine)[3], (*inLine)[4], (*inLine)[5])) : GE3DLine(), inSegment != 0, inLOD, 1.0f, 1.0f, inScale);
 }
 
-void EEQueryFootprintTile(void* inContext, uint64_t inObject, int32_t (*outTile)[2])
-{
-    long theX;
-    long theY;
-    EEQueryContextOf(inContext)->mUnit->GetNearestFootprintTile(EEQueryUnit(inObject), &theX, &theY);
-    (*outTile)[0] = (int32_t)theX;
-    (*outTile)[1] = (int32_t)theY;
-}
-
+// (the footprint tile: ee_sim combat cg_query.rs ee_units_cgq_footprint_tile, which reads the context's first member)
 EeCombatQueryHost EEQueryHostOf(EEQueryContext* inContext)
 {
-    return {inContext, EEQueryRead, EEQueryHandle, EEQueryAct, EEQueryLocation, EEQueryIntersects, EEQueryFootprintTile};
+    return {inContext, EEQueryRead, EEQueryHandle, EEQueryAct, EEQueryLocation, EEQueryIntersects, ee_units_cgq_footprint_tile};
 }
 
 // ---- the operations of ee_combat world.rs (R5b.2, eighth round): each the original's statement on the handles
@@ -414,26 +401,12 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
 
 }   // namespace
 
-// FacesPoint's turret part inIndex of the unit's model (ee_sim combat cg_query.rs faces_point)
-extern "C" void ee_units_cg_facing_turret(uint64_t inUnit, int32_t inIndex, EeCombatTurret* outTurret)
-{
-    EEComplexUnit* theUnit = EEQueryComplex(inUnit);
-    EEGraphicObject* theModel = theUnit->GetModel();
-    EETurretPart* thePart = *(theModel->mTurretParts.begin() + inIndex);
-    outTurret->position[0] = thePart->mPosition.GetX();
-    outTurret->position[1] = thePart->mPosition.GetY();
-    outTurret->position[2] = thePart->mPosition.GetZ();
-    memcpy(outTurret->transformation, theModel->GetTurretPartTransformation(inIndex).mMatrix, sizeof(outTurret->transformation));
-    outTurret->angle = theUnit->mTurretAngles[inIndex];
-}
-
 // The query entry points: ee_sim combat cg_query.rs (the marshalling and the CBQR records) over one C++ context and
 // host per call, made here
 extern "C" void ee_units_cg_query(uint64_t inUnit, uint64_t inGoal, uint64_t inClass, void* inData,
                                   void (*inBody)(void*, const EeCombatWorldHost*))
 {
-    EEQueryContext theContext = {EEQueryComplex(inUnit), EECgObject<EEUGRust>((int64_t)inGoal)};
-    theContext.mClass = EECgObject<EEUnitClass>((int64_t)inClass);
+    EEQueryContext theContext = {EEQueryComplex(inUnit), EECgObject<EEUGRust>((int64_t)inGoal), EECgObject<EEUnitClass>((int64_t)inClass)};
     EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp, inClass};
     inBody(inData, &theHost);
 }

@@ -364,6 +364,23 @@ pub unsafe extern "C" fn ee_won_dlg_new(
     made
 }
 
+/// `Dialog::Dialog` whole (R6 WON GUI round 36): the Rust dialog and the component's flags 0x118 (grab the
+/// background, has focus, want focus).
+///
+/// # Safety
+/// As `ee_won_dlg_new`; `component` is the C++ component being constructed.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_dlg_make(
+    component: *mut c_void,
+    host: EeWonGuiHostFn,
+    ct: *const EeWonContainer,
+) -> *mut EeWonDialog {
+    // SAFETY: the contract
+    let made = unsafe { ee_won_dlg_new(component, host, ct) };
+    crate::compobj::comp().set_flags(component as isize, 0x118, true);
+    made
+}
+
 /// The destructor's statement (the default button released), then the object freed.
 ///
 /// # Safety

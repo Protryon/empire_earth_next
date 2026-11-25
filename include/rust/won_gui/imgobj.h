@@ -22,7 +22,7 @@ enum class EeWonImageHost : int32_t {
   CtxGraphics = 4,
   /// The `EeWonSurface*` of `((DisplayContext*)a)->mSurface` (0 for none or a NULL context).
   CtxSurface = 5,
-  /// `((DisplayContext*)a)->mPixelScale`'s bits.
+  /// `((DisplayContext*)a)->mPixelScale` into `*(float*)b`.
   CtxScale = 6,
   /// `((Graphics*)a)`'s translation into `((int*)b)[0..2]`.
   GfxTrans = 7,
@@ -33,11 +33,8 @@ enum class EeWonImageHost : int32_t {
   GfxRun = 9,
   /// `((Graphics*)a)->DrawImage((Image*)b, ((int*)c)[0], ((int*)c)[1])`.
   GfxDrawImage = 10,
-  /// A new black 32-bit surface of `a` x `b` pixels (negative sizes 0): its `SurfaceBase*` with one reference.
-  NewSurface = 11,
-  /// `((SurfaceBase*)a)->GetRust()`.
-  SurfaceRust = 12,
-  /// `new DisplayContext((SurfaceBase*)a)` with `mPixelScale` the bits `b`: one reference.
+  /// `new DisplayContext((EeWonSurface*)a, *(const float*)b)` (its pixel scale): one reference. (11 and 12 made the
+  /// C++ SurfaceBase and read its surface; a native image's surface is its own since R6 WON GUI round 36.)
   NewContext = 13,
   /// `new PlatGraphics` attached to `(DisplayContext*)a`: owned by the image.
   NewGraphics = 14,
@@ -68,7 +65,7 @@ enum class EeWonImageField : int32_t {
   PixelHeight = 8,
   /// A native image's pixel scale's bits.
   Scale = 9,
-  /// A native image's `SurfaceBase*`.
+  /// A native image's `EeWonSurface*`.
   Surface = 10,
   /// A native image's display context.
   Context = 11,

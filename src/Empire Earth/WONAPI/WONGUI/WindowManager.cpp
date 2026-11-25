@@ -114,7 +114,7 @@ static intptr_t WmWinCall(Window* t, intptr_t call, intptr_t c, intptr_t d)
     case EeWonWmWin::HandleKey: t->HandleKeyEvent((KeyEvent*)c); return 0;
     case EeWonWmWin::HandleInput: t->HandleInputEvent((InputEvent*)c); return 0;
     case EeWonWmWin::PlatformClose: t->PlatformClose(); return 0;
-    case EeWonWmWin::CloseEvent: return (intptr_t)t->mCloseEvent.get();
+    case EeWonWmWin::CloseEvent: return 0; // (no window ever had a close event)
     case EeWonWmWin::TimerEvent: t->TimerEvent((DWORD)c); return 0;
     case EeWonWmWin::IdleUpdate: t->IdleUpdate(); return 0;
     }
@@ -203,10 +203,6 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
 namespace WONAPI {
 static_assert(sizeof(PlatInputEvent) == sizeof(EeWonPlatEvent), "platwm.rs reads PlatInputEvent as EeWonPlatEvent");
 
-static const int kInputTypes[] = {InputEvent_GotFocus, InputEvent_LostFocus, InputEvent_MouseExit};
-static const int kKeyTypes[] = {InputEvent_KeyDown, InputEvent_KeyUp, InputEvent_KeyChar};
-static const int kMouseTypes[] = {InputEvent_MouseMove, InputEvent_MouseDown, InputEvent_MouseDoubleClick,
-                                  InputEvent_MouseUp, InputEvent_MouseWheel};
 
 // The Rust manager's calls on the windows and the platform (EeWonPlatWmOp), each the original's statement
 static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
@@ -219,10 +215,10 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     case Op::Info: w->GetInfo(*(EeWonPlatWinInfo*)b); return 0;
     case Op::SetRegistered: w->Rust(EeWonPlatWinCall::SetRegistered, b != 0); return 0;
     case Op::FollowSurface: w->FollowSurface(); return 0;
-    case Op::FollowPixelScale: w->FollowPixelScale(); return 0;
-    case Op::QueueInput: w->QueueEvent(new InputEvent(kInputTypes[b])); return 0;
-    case Op::QueueKey: w->QueueEvent(new KeyEvent(kKeyTypes[b], (int)c, (int)d)); return 0;
-    case Op::QueueMouse: w->Rust(EeWonPlatWinCall::QueueMouseAt, kMouseTypes[b], c); return 0;
+    case Op::FollowPixelScale: w->Rust(EeWonPlatWinCall::FollowPixelScale, b); return 0;
+    case Op::QueueInput: w->QueueEvent(new InputEvent((int)b)); return 0;
+    case Op::QueueKey: w->QueueEvent(new KeyEvent((int)b, (int)c, (int)d)); return 0;
+    case Op::QueueMouse: w->Rust(EeWonPlatWinCall::QueueMouseAt, b, c); return 0;
     case Op::Parent: return (intptr_t)w->GetParent();
     case Op::Hold: w->AddRef(); return 0;
     case Op::Release: w->Release(); return 0;
@@ -232,16 +228,8 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     case Op::SetFocus: w->PlatformSetFocus(); return 0;
     case Op::SetPosSize: w->SetPosSize((int)b, (int)c, -1, -1); return 0;
     case Op::Paint: w->OnPaint(); return 0;
-    case Op::Title: {
-        static std::wstring theTitle;
-        theTitle = w->mTitle;
-        *(int32_t*)b = (int32_t)theTitle.size();
-        return (intptr_t)theTitle.c_str();
-    }
-    case Op::Offscreen: {
-        NativeImage* theImage = w->mOffscreenImage.get();
-        return theImage != NULL ? (intptr_t)theImage->GetSurface()->GetRust() : 0;
-    }
+    case Op::Title: return (intptr_t)ee_won_plat_win_title(w->mRust, (int32_t*)b);
+    case Op::Offscreen: return w->mOffscreenImage.get() != NULL ? (intptr_t)w->mOffscreenImage->GetSurface() : 0;
     case Op::Modifiers: return (intptr_t)PlatModifiers();
     case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;
     case Op::Minimize: PlatWindowMinimize((PlatWindow*)a); return 0;

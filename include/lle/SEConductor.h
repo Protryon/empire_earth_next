@@ -11,9 +11,9 @@
 
 #include "rust/audio/sound.h"
 
-class SEScore;
+#include "lle/LLEForward.h"
 
-class LLE_API SEConductor {
+class LLE_API SEConductor : URustView {
 public:
     unsigned long GetConductorState() const { return ee_sound_conductor_fields(Rust()).state; }
     float GetVolume() const { return ee_sound_conductor_fields(Rust()).volume; }
@@ -61,9 +61,6 @@ public:
         return ee_sound_conductor_transition_to(Rust(), (int32_t)inID, (uint32_t)inCommand);
     }
     long UnloadScore(long inID) { return ee_sound_conductor_unload_score(Rust(), (int32_t)inID); }
-private:
-    SEConductor() = delete;
-    ~SEConductor() = delete;
     const EeSoundConductor* Rust() const { return reinterpret_cast<const EeSoundConductor*>(this); }
 };
 

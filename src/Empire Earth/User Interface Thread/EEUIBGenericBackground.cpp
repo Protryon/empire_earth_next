@@ -31,7 +31,6 @@
 #include "ee/EEUIBMapBackground.h"
 #include "rust/game/screens.h"   // ee_screens_frame_draw (ee_screens frame.rs)
 
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // the frame's cells in its 64x64 texture (provisional names)
 static GERectangle sEdgeCell(57.0f, 0.0f, 64.0f, 64.0f);           // 0x564558 (the edges)

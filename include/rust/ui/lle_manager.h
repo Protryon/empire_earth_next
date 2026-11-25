@@ -7,8 +7,33 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/ui/managerobj.h"
+#include "rust/ui/obj.h"
 
 extern "C" {
+
+/// The UI manager's host: [`manager_call`], then `UIManager::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_manager_host(void *obj,
+                             EeUiOp op,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             ptrdiff_t d,
+                             float *f);
+
+/// The events' host: [`event_call`], then `UIEvent::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_event_host(void *obj,
+                           EeUiOp op,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c,
+                           ptrdiff_t d,
+                           float *f);
 
 /// `UIManager::LoadDatabase` (the C++ member's body).
 ///

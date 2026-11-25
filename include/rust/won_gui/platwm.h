@@ -20,14 +20,14 @@ enum class EeWonPlatWmOp : uint32_t {
   SetRegistered,
   /// `a->FollowSurface()`.
   FollowSurface,
-  /// `a->FollowPixelScale()`.
+  /// `a`'s FollowPixelScale (platwin.rs), `b` the new pixel scale's bits.
   FollowPixelScale,
-  /// `a->QueueEvent(new InputEvent(t))`, `t` GotFocus (b 0), LostFocus (1), MouseExit (2).
+  /// `a->QueueEvent(new InputEvent(b))`, `b` GotFocus, LostFocus or MouseExit (`INPUT_TYPES`).
   QueueInput,
-  /// `a->QueueEvent(new KeyEvent(t, c, d))`, `t` KeyDown (b 0), KeyUp (1), KeyChar (2).
+  /// `a->QueueEvent(new KeyEvent(b, c, d))`, `b` KeyDown, KeyUp or KeyChar (`KEY_TYPES`).
   QueueKey,
-  /// `a->QueueMouse(t, p[0], p[1], p[2], p[3])` with `p` the four ints at `c`, `t` MouseMove (b 0), MouseDown (1),
-  /// MouseDoubleClick (2), MouseUp (3), MouseWheel (4).
+  /// `a->QueueMouse(b, p[0], p[1], p[2], p[3])` with `p` the four ints at `c`, `b` MouseMove, MouseDown,
+  /// MouseDoubleClick, MouseUp or MouseWheel (`MOUSE_TYPES`).
   QueueMouse,
   /// `dynamic_cast<PlatGUIWindow*>(a->GetParent())`.
   Parent,

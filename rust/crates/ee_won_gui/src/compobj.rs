@@ -26,6 +26,7 @@ use crate::guilayout::{intersects, set_size, size_at_least, EeWonRect};
 
 /// `ComponentFlag_*` (WONComponentFlags.h; the C++ asserts them).
 pub const EE_WON_COMP_FLAG_INVISIBLE: i32 = 0x1;
+pub const EE_WON_COMP_FLAG_WANT_FOCUS: i32 = 0x8;
 pub const EE_WON_COMP_FLAG_HAS_FOCUS: i32 = 0x10;
 pub const EE_WON_COMP_FLAG_DISABLED: i32 = 0x80;
 pub const EE_WON_COMP_FLAG_GRAB_BG: i32 = 0x100;
@@ -302,6 +303,15 @@ pub enum EeWonComp {
     VSetVisible,
     /// `GetMouseChild()`.
     VMouseChild,
+    // ---- what the game's extra data (EeWonCompExtraData) asks: R6 WON GUI round 36
+    /// `((RefCount*)b)->AddRef()`: a listener, cursor or colour scheme the extra data takes.
+    RefHold,
+    /// `((RefCount*)b)->Release()`: one it gives back.
+    RefDrop,
+    /// `new BackgroundGrabber`.
+    GNew,
+    /// `delete (BackgroundGrabber*)b`.
+    GDelete,
 }
 
 /// A member of a component's extra data (`EeWonComp::Extra` / `SetExtra`).
@@ -323,6 +333,44 @@ pub enum EeWonCompExtra {
 }
 
 use EeWonComp as K;
+
+/// A component's extra data in the game (the C++ ComponentExtra until R6 WON GUI round 36; `mExtraStuff` points at
+/// it, made on first use, freed by the component's destructor): the members in the original's order. The
+/// listener, the cursor and the colour scheme are held as the SmartPtr members held them, the background grabber is
+/// owned; no code ever set the tool tip. A world's host (the drivers and the crate's tests) still answers
+/// `AllocExtra`, `Extra` and `SetExtra` with its own.
+#[derive(Default)]
+pub struct EeWonCompExtraData {
+    scheme: isize,
+    listener: isize,
+    cursor: isize,
+    grab: isize,
+    tool_tip: isize,
+    dont_do_tip: bool,
+}
+
+/// `delete mExtraStuff` (Component's destructor): the grabber deleted (~ComponentExtra's body), then the members
+/// given back last to first.
+///
+/// # Safety
+/// `x` is NULL or a component's extra data, not freed before; the game's host is registered.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_comp_extra_free(x: *mut EeWonCompExtraData) {
+    if x.is_null() {
+        return;
+    }
+    // SAFETY: the contract
+    let x = unsafe { Box::from_raw(x) };
+    let k = comp();
+    if x.grab != 0 {
+        k.h(K::GDelete, x.grab, 0, 0);
+    }
+    for p in [x.tool_tip, x.cursor, x.listener, x.scheme] {
+        if p != 0 {
+            k.h(K::RefDrop, p, 0, 0);
+        }
+    }
+}
 
 /// The game's component host (`ee_won_guicpp_comp_call`, registered by ComponentLifetime.cpp at start).
 static GAME_HOST: AtomicUsize = AtomicUsize::new(0);
@@ -359,6 +407,12 @@ pub fn is_game() -> bool {
 thread_local! {
     /// The crate's tests: the game's paths with a world's host on this thread.
     pub(crate) static FORCE_GAME: Cell<bool> = const { Cell::new(false) };
+}
+
+#[cfg(test)]
+thread_local! {
+    /// The crate's tests: the game's own extra data with a world's host on this thread.
+    pub(crate) static OWN_EXTRA: Cell<bool> = const { Cell::new(false) };
 }
 
 /// The component host: this thread's world's, else the game's.
@@ -446,14 +500,82 @@ impl Comp {
     fn has_extra(&self, c: isize) -> bool {
         mem::has_extra(c)
     }
+    /// Whether the extra data is Rust's own: the host is the game's (a world keeps its own).
+    fn owns_extra(&self) -> bool {
+        #[cfg(test)]
+        if OWN_EXTRA.with(|f| f.get()) {
+            return true;
+        }
+        let game = GAME_HOST.load(Ordering::Acquire);
+        game != 0 && self.host.map_or(0, |f| f as usize) == game
+    }
     fn extra(&self, c: isize, e: EeWonCompExtra) -> isize {
-        self.h(K::Extra, c, e as isize, 0)
+        if !self.owns_extra() {
+            return self.h(K::Extra, c, e as isize, 0);
+        }
+        let x = mem::get(c).extra as *const EeWonCompExtraData;
+        if x.is_null() {
+            return 0;
+        }
+        // SAFETY: the component's live extra data (no reference is kept)
+        let x = unsafe { &*x };
+        match e {
+            EeWonCompExtra::Listener => x.listener,
+            EeWonCompExtra::Cursor => x.cursor,
+            EeWonCompExtra::Scheme => x.scheme,
+            EeWonCompExtra::GrabBG => x.grab,
+            EeWonCompExtra::ToolTip => x.tool_tip,
+            EeWonCompExtra::DontDoTip => x.dont_do_tip as isize,
+        }
     }
     fn set_extra(&self, c: isize, e: EeWonCompExtra, v: isize) {
-        self.h(K::SetExtra, c, e as isize, v);
+        if !self.owns_extra() {
+            self.h(K::SetExtra, c, e as isize, v);
+            return;
+        }
+        let x = mem::get(c).extra as *mut EeWonCompExtraData;
+        // SAFETY (each access below): the component's live extra data (`alloc_extra` came first, as the C++ had
+        // it); no reference lives across a call out
+        let slot = |x: *mut EeWonCompExtraData| unsafe {
+            match e {
+                EeWonCompExtra::Listener => std::ptr::addr_of_mut!((*x).listener),
+                EeWonCompExtra::Cursor => std::ptr::addr_of_mut!((*x).cursor),
+                _ => std::ptr::addr_of_mut!((*x).scheme),
+            }
+        };
+        match e {
+            // a SmartPtr member's assignment: nothing for the same object, else the old one released, the new held
+            EeWonCompExtra::Listener | EeWonCompExtra::Cursor | EeWonCompExtra::Scheme => {
+                // SAFETY: as above
+                let old = unsafe { *slot(x) };
+                if old != v {
+                    if old != 0 {
+                        self.h(K::RefDrop, old, 0, 0);
+                    }
+                    if v != 0 {
+                        self.h(K::RefHold, v, 0, 0);
+                    }
+                    // SAFETY: as above
+                    unsafe { *slot(x) = v };
+                }
+            }
+            EeWonCompExtra::GrabBG => {
+                let g = self.h(K::GNew, 0, 0, 0);
+                // SAFETY: as above
+                unsafe { (*x).grab = g };
+            }
+            // SAFETY: as above
+            EeWonCompExtra::DontDoTip => unsafe { (*x).dont_do_tip = v != 0 },
+            EeWonCompExtra::ToolTip => {}
+        }
     }
     fn alloc_extra(&self, c: isize) {
-        self.h(K::AllocExtra, c, 0, 0);
+        if !self.owns_extra() {
+            self.h(K::AllocExtra, c, 0, 0);
+        } else if !mem::has_extra(c) {
+            let x = Box::into_raw(Box::<EeWonCompExtraData>::default());
+            mem::edit(c, |m| m.extra = x as isize);
+        }
     }
 
     // ---- the methods

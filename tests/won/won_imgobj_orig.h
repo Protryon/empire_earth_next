@@ -264,7 +264,7 @@ struct PlatNativeImage : NativeImage {
         this->mSurface = NewSurface(PlatGUIPixels(inWidth, this->mScale), PlatGUIPixels(inHeight, this->mScale));
         this->mWidth = (unsigned short)inWidth;
         this->mHeight = (unsigned short)inHeight;
-        this->mDisplayContext = new DisplayContext(this->mSurface.get());
+        this->mDisplayContext = new DisplayContext(this->mSurface->GetRust());
         this->mDisplayContext->mPixelScale = this->mScale;
     }
     virtual ~PlatNativeImage()
@@ -279,7 +279,7 @@ struct PlatNativeImage : NativeImage {
             return;
         PlatNativeMask* theMask = static_cast<PlatNativeMask*>(this->mTransparentMask.get());
         EeWonPlatMask theBits = theMask != NULL ? theMask->Rust() : EeWonPlatMask();
-        ee_won_plat_img_draw(inContext->mSurface->GetRust(), inContext->mPixelScale, this->mSurface->GetRust(), this->mScale,
+        ee_won_plat_img_draw(inContext->mSurface, inContext->mPixelScale, this->mSurface->GetRust(), this->mScale,
                              (int)this->GetWidth(), (int)this->GetHeight(), theMask != NULL ? &theBits : NULL, x, y, left, top,
                              width, height);
     }

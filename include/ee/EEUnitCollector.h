@@ -10,56 +10,26 @@
 #include <stdint.h>
 #include "lle/U2DRectangle.h"
 #include "rust/sim/combat.h"             // the map's unit regions (ee_combat regions.rs)
+#include "rust/sim/units.h"              // the collector (ee_sim units uu_ffi.rs)
 
-class EEUnit;
+// (Units by id, the collector's sort-and-unique (0x23dd96 / 0x23ddab, 0xe0b9 / 0xe104) and the walk of the map's unit
+// regions: ee_sim units uu_reads.rs units_in_rectangle)
 
-// Units by id: the collector's sort-and-unique compares mUnitID (0x23dd96 / 0x23ddab, out of line in
-// EEFOFindNewTargetNearOldTarget.cpp, the TU's first functions; they take the pointers by value) (provisional names)
-struct EEUUUnitIDLess {
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const;
-};
-struct EEUUUnitIDEqual {
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const;
-};
-
-// The sort-and-unique of the collector (cdecl templates 0xe0b9 and 0xe104, emitted in EEAIArea.cpp's range)
-// (provisional name)
-template <class V, class L, class E>
-void EESortUnique(V& ioValues, L inLess, E inEqual)
+// the collector's predicate as the Rust walk calls it (inPredicate: the caller's Pred)
+template <class Pred> uint8_t EECollectorKeep(const void* inPredicate, uint64_t inUnit)
 {
-    std::sort(ioValues.begin(), ioValues.end(), inLess);
-    ioValues.erase(std::unique(ioValues.begin(), ioValues.end(), inEqual), ioValues.end());
+    return (*static_cast<const Pred*>(inPredicate))(reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inUnit)));
 }
 
 // cdecl template 0xa509a (EEAIArea.cpp's 0xdcbe/0xde7f with another predicate): the units on the map's unit regions
-// under inRectangle that inPredicate holds for; sorted and made unique when inUnique and a region held a unit of a
-// class bigger than one region (+0x28c > 1). Returns their number. Provisional name (shared with EEAIArea.cpp: move to
-// a header once both use it)
-// The units of the regions under inRectangle (tiles) in the walk's order: column by column, each region from its
-// last unit (ee_combat regions.rs walk; RTSRegionTable's inline walk)
-inline std::vector<EEComplexUnit*> EEUnitsUnderRegions(const EeCombatUnitRegions* inTable, const U2DRectangle<long>& inRectangle)
-{
-    std::vector<EEComplexUnit*> theUnits(ee_combat_regions_walk(inTable, (int32_t)inRectangle.mLeft, (int32_t)inRectangle.mTop,
-                                                                (int32_t)inRectangle.mRight, (int32_t)inRectangle.mBottom, NULL, 0));
-    ee_combat_regions_walk(inTable, (int32_t)inRectangle.mLeft, (int32_t)inRectangle.mTop, (int32_t)inRectangle.mRight,
-                           (int32_t)inRectangle.mBottom, (uint64_t*)theUnits.data(), theUnits.size());
-    return theUnits;
-}
-
+// under inRectangle that inPredicate holds for, appended to outUnits (a std::vector of unit pointers); sorted and made
+// unique when inUnique and a region held a unit of a class bigger than one region (+0x28c > 1). Returns their number.
+// The walk (column by column, each region from its last unit), the test of the unit's tile and the sort are
+// uu_ffi.rs ee_units_uu_collect_units
 template <class Pred, class V>
 long EEGetUnitsInRectangle(const U2DRectangle<long>& inRectangle, V& outUnits, const Pred& inPredicate, bool inUnique)
 {
-    bool theMultiple = false;
-    for (EEComplexUnit* theUnit : EEUnitsUnderRegions(gWorld.mMap->mUnitRegions, inRectangle)) {
-        if (inRectangle.Contains(theUnit->GetTileX(), theUnit->GetTileY()) && inPredicate(theUnit)) {
-            if (theUnit->GetUnitClass()->GetTileSize() > 1)
-                theMultiple = true;
-            outUnits.push_back(theUnit);
-        }
-    }
-    if (inUnique && theMultiple)
-        EESortUnique(outUnits, EEUUUnitIDLess(), EEUUUnitIDEqual());
-    return outUnits.size();
+    return ee_units_uu_collect_units((int32_t)inRectangle.mLeft, (int32_t)inRectangle.mTop, (int32_t)inRectangle.mRight, (int32_t)inRectangle.mBottom, &EECollectorKeep<Pred>, &inPredicate, &outUnits, inUnique);
 }
 
 #endif

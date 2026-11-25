@@ -6,9 +6,22 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/ui/obj.h"
 #include "rust/ui/rect.h"
 
 extern "C" {
+
+/// The combo box's host: [`combo_call`], then `UIComboBox::Rust::Op`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_combo_host(void *obj,
+                           EeUiOp op,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c,
+                           ptrdiff_t d,
+                           float *f);
 
 /// `UIComboBox::UIComboBox`'s body ([`construct`]).
 ///

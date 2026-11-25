@@ -239,11 +239,12 @@ pub unsafe extern "C" fn ee_sound_mixers_initialize(start: *mut EeSoundMixerStar
 /// `SEInitialize`: [`ee_sound_shutdown`] registered with the engine's shutdown list (ee_util), then the mixers.
 ///
 /// # Safety
-/// As `ee_sound_mixers_initialize`.
+/// `directory` (the C++ FSFileSpec, unread) and `window` (the C++ GEWindow) as the game passes them.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_initialize(start: *mut EeSoundMixerStart) -> i32 {
+pub unsafe extern "C" fn ee_sound_initialize(directory: *const c_void, window: *mut c_void) -> i32 {
     crate::sound::sys::ee_util_register_shutdown(ee_sound_shutdown);
-    ee_sound_mixers_initialize(start)
+    let mut start = EeSoundMixerStart { directory, window, module: std::ptr::null_mut() };
+    ee_sound_mixers_initialize(&mut start)
 }
 
 /// `SEShutdown` (a shutdown-list function): every mixer deleted.

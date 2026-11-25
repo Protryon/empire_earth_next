@@ -111,6 +111,7 @@ struct Component : RefCount {
     }
     Window* GetRoot() { return mRoot; }
     void Invalidate() { Log(Id(this) + " Invalidate"); }
+    void MarkInvalid() { Log(Id(this) + " MarkInvalid"); }
     void SetComponentFlags(int f, bool on) { Log(Id(this) + " SetComponentFlags " + N(f) + " " + N(on)); }
     void SetBackground(const Background& b) { Log(Id(this) + " SetBackground " + N(b.mColor) + " " + N(b.mBorderColor)); }
     void SetPos(int x, int y) { Log(Id(this) + " SetPos " + N(x) + " " + N(y)); }

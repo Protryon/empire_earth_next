@@ -5,6 +5,7 @@
 // The original's sizeof was 0x1a0 (??_E stride 0x10059e1c); its members are the Rust form's now (see the class).
 #ifndef LLE_UIFORM_H
 #define LLE_UIFORM_H
+#include "lle/LLEForward.h"
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
@@ -47,8 +48,6 @@ public:
     // Creates a form from its UI database record: counts, layout, tool-tip settings, music file (lower-cased), tabbing
     UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIForText)
         : mRust(ee_ui_form_new_db(this, ee_ui_form_host, inManager, &inData, inUseGDIForText)) {}
-    UIForm(const UIForm&) = delete;         // holds a Rust object; nothing copied a form
-    UIForm& operator=(const UIForm&) = delete;
     // Destroys the form, releasing its events, hot keys, groups, backgrounds, database-created controls and draw lock
     virtual ~UIForm() { ee_ui_form_free(this->mRust); }
     // Starts the form's music (or stops the music for "none"), restores the tab stop and fires the activate event
@@ -139,7 +138,7 @@ public:
     UIEntityGroup* GetEntityGroup(unsigned long inIndex) const { return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroup, (intptr_t)inIndex)); }
     // Returns the group holding the control with the given ID; falls back to group 0 when no group holds it
     UIEntityGroup* GetEntityGroupById(unsigned long inId) const { return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroupById, (intptr_t)inId)); }
-    float GetFadeOpacity() { return UIOut(ee_ui_form_call, this->mRust, EeUiFormCall::FadeOpacity, (intptr_t)0, (intptr_t)0).f[0]; }
+    float GetFadeOpacity() { return UIOut(ee_ui_form_call, this->mRust.mObject, EeUiFormCall::FadeOpacity, (intptr_t)0, (intptr_t)0).f[0]; }
     unsigned long GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
     UIFormManager* GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
     UIEvent* GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
@@ -218,7 +217,7 @@ public:
     intptr_t Call(EeUiFormCall inCall, intptr_t inA = 0, intptr_t inB = 0, float* ioF = NULL) const { return ee_ui_form_call(this->mRust, inCall, inA, inB, ioF); }
     intptr_t CallRect(EeUiFormCall inCall, intptr_t inA, intptr_t inB, const GERectangle& inRectangle) const { return this->Call(inCall, inA, inB, UIF4(inRectangle)); }
 
-    EeUiForm* mRust;                        // the state (formobj.rs)
+    URust<EeUiForm> mRust;                        // the state (formobj.rs)
 };
 
 // the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)

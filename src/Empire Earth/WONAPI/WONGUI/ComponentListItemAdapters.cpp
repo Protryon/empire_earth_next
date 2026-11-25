@@ -29,6 +29,11 @@ extern "C" intptr_t ee_won_guicpp_compitem_call(void* inMe, EeWonLeafOp op, intp
     case Lo::CompItemAdded: t->mComponent->AddedToParent(); return 0;
     case Lo::CompItemBaseSetPos: t->ListItem::SetPos((int)a, (int)b); return 0;
     case Lo::CompItemSetPos: t->mComponent->SetPos((int)a, (int)b); return 0;
+    case Lo::CompItemSizable: return t->mIsSizable ? 1 : 0;
+    case Lo::CompItemListPaintWidth: return ((ListArea*)a)->GetPaintWidth();
+    case Lo::CompItemSetSize: t->mComponent->SetSize((int)a, (int)b); return 0;
+    case Lo::CompItemMarkInvalid: t->mComponent->MarkInvalid(); return 0;
+    case Lo::CompItemPaint: t->mComponent->Paint(*(Graphics*)a); return 0;
     default: return 0;
     }
 }
@@ -42,6 +47,9 @@ void ComponentListItem::SetViewport(ListArea*,Container* viewport)
 }
 // Moves the item and its component
 void ComponentListItem::SetPos(int x,int y) { ee_won_leaf_call(static_cast<ListItem*>(this), ee_won_guicpp_compitem_call, EeWonLeafCall::ComponentItemSetPos, x, y); }
+// Draws the item's component, first stretching it to the list's paint width when the item is sizable (leafpaint.rs,
+// R6 WON GUI round 36)
+void ComponentListItem::Paint(Graphics& g,ListArea* area) { ee_won_leaf_call(static_cast<ListItem*>(this), ee_won_guicpp_compitem_call, EeWonLeafCall::ComponentItemPaint, (intptr_t)&g, (intptr_t)area); }
 // Tests the point against the component
 bool ComponentListItem::Contains(int x,int y) { return this->mComponent->Contains(x,y); }
 // Forwards mouse enter to the component

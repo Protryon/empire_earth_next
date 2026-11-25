@@ -6,7 +6,7 @@
 
 #include <vector>
 
-class GEFont;
+#include "lle/LLEForward.h"
 
 LLE_API long UIInitialize();
 

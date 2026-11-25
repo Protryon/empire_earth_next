@@ -59,7 +59,7 @@ LLE_API void FSInitialize(const UString& inPath);     // proven ?FSInitialize@@Y
 #ifndef LOWLEVELENGINE_EXPORTS
 #include "lle/SESample.h"
 #endif
-class GEWindow;
+#include "lle/LLEForward.h"
 LLE_API long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow);   // Sound Engine.cpp
 
 // ---- Network engine (NE)

@@ -179,12 +179,9 @@ void EEWorldLayoutRegister()
     theLayout.complex_contacts_count = offsetof(EEComplexUnit, mContacts) + offsetof(UList<EEComplexUnit*>, mCount);
     theLayout.contact_node_data = offsetof(UListNode<EEComplexUnit*>, mData);
     theLayout.contact_node_next = offsetof(UListNode<EEComplexUnit*>, mNext);
-    theLayout.complex_collision_tile = offsetof(EEComplexUnit, mCollisionTile);
     theLayout.complex_contact_location = offsetof(EEComplexUnit, mInitialContactLocation);
     theLayout.complex_scale = theModelAt + GEPhysicalModel::ScaleOffset();
     theLayout.complex_frame = theModelAt + GEPhysicalModel::FrameOffset();
-    theLayout.complex_conversion_effect = offsetof(EEComplexUnit, mConversionEffect);
-    theLayout.complex_heal_effect = offsetof(EEComplexUnit, mHealEffect);
     theLayout.complex_angular_velocity = offsetof(EEComplexUnit, mAngularVelocity);
     theLayout.complex_orientation = offsetof(EEComplexUnit, mOrientation);
     theLayout.herd_id = offsetof(EEHerd, mID);

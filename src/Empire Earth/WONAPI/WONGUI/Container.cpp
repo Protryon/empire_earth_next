@@ -128,10 +128,7 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     case Op::CtOwnScheme: return (intptr_t)Comp(a)->GetOwnColorScheme();
     case Op::CtScheme: return (intptr_t)((Graphics*)a)->mColorScheme;
     case Op::CtRoot: return (intptr_t)static_cast<Component*>(t->GetRootContainer());
-    case Op::CtRootFocused: {
-        Window* aWindow = t->GetRoot(); // GetWindow in the SDK
-        return aWindow->mManager->GetFocusWindow() == aWindow ? 1 : 0;
-    }
+    case Op::CtRootFocused: return t->GetRoot()->mManager->GetFocusWindow() == t->GetRoot() ? 1 : 0; // (GetWindow in the SDK)
     case Op::CtMouseInClient: return t->GetRoot()->IsMouseInClientArea() ? 1 : 0;
     case Op::CtDefaultCursor: return (intptr_t)t->GetDefaultCursor();
     case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
@@ -139,10 +136,7 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     // (a viewport whose area was never set: no area, not visible; the forwarder would read its object through NULL)
     case Op::VpAreaRectVisible:
         return a != 0 && static_cast<ScrollArea*>(Comp(a))->IsRectVisible(*(WONRectangle*)b) ? 1 : 0;
-    case Op::CtContainerOf: {
-        Container* aContainer = dynamic_cast<Container*>(Comp(a));
-        return aContainer != NULL ? (intptr_t)aContainer->mCt : 0;
-    }
+    case Op::CtContainerOf: return Container::ObjectOf(Comp(a));
     case Op::ChildHold: Comp(a)->AddRef(); return 0;
     case Op::ChildRelease: Comp(a)->Release(); return 0;
     case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
@@ -169,11 +163,8 @@ bool Container::mMouseWheelGoesToFocusChildDef=false;
 // Creates an empty, focusable container (the Rust container: no child, no mouse or focus child, no cursor, no modal
 // state) with an empty child layout
 Container::Container()
-{
-    this->mCt=ee_won_ct_new(static_cast<Component*>(this),ee_won_guicpp_ct_call,Container::mMouseWheelGoesToFocusChildDef);
-    ee_won_ct_layout_new(this->mCt,ee_won_guicpp_layout_call);
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
-}
+{ this->mCt=ee_won_ct_make(static_cast<Component*>(this),ee_won_guicpp_ct_call,ee_won_guicpp_layout_call,Container::mMouseWheelGoesToFocusChildDef); }
+static_assert(ComponentFlag_WantFocus == EE_WON_COMP_FLAG_WANT_FOCUS, "compobj.rs flags");
 // Destroys the container: the Rust container detaches the children, then releases the cursor, the child layout, the
 // timer children and the children
 Container::~Container() { ee_won_ct_free(this->mCt); }

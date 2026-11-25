@@ -41,6 +41,7 @@ public:
     void CalcDimensions(PaintList*);
     void SetViewport(PaintList*, Container*);
     void SetPos(int, int);
+    void Paint(PaintGraphics&, PaintList*);
     SmartPtr<Component> mComponent;
     bool mIsSizable = false;
 };

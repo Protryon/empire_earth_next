@@ -4,6 +4,7 @@
 // are top left, top right, bottom left, bottom right; the corners are ee_ge bitmap.rs's.
 #ifndef LLE_GERHOMBUS_H
 #define LLE_GERHOMBUS_H
+#include "lle/LLEForward.h"
 
 #include "lle/GELine.h"   // ee_ge prim.rs
 
@@ -11,7 +12,6 @@ class LLE_API GERhombus {
 public:
     GERhombus() : mRust(ee_ge_game_prim_new(this, EeGePrimKind::Rhombus)) {}
     ~GERhombus() { ee_ge_prim_destroy(this->mRust); }
-    GERhombus(const GERhombus&) = delete;
     const GERectangle& GetRectangle() const { return *(const GERectangle*)ee_ge_prim_rectangle(this->mRust); }
     GEVertexArray* GetVertexArray() { return (GEVertexArray*)ee_ge_prim_vertices(this->mRust); }
     GERhombus& operator=(const GERhombus& inRhombus) { ee_ge_prim_assign(this->mRust, inRhombus.mRust); return *this; }
@@ -32,8 +32,7 @@ public:
     void SetZ(float inZ) { this->SetZPerVertex(inZ, inZ, inZ, inZ); }
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
         { ee_ge_prim_set_z(this->mRust, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
-private:
-    EeGePrim* mRust;                        // the rhombus (ee_ge prim.rs)
+    URust<EeGePrim> mRust;                        // the rhombus (ee_ge prim.rs)
 };
 
 #endif

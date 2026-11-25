@@ -23,14 +23,7 @@ static_assert(ComponentFlag_Invisible == EE_WON_COMP_FLAG_INVISIBLE && Component
               ComponentFlag_Translucent == EE_WON_COMP_FLAG_TRANSLUCENT && ComponentFlag_NoInput == EE_WON_COMP_FLAG_NO_INPUT &&
               ComponentFlag_WantTabFocus == EE_WON_COMP_FLAG_WANT_TAB_FOCUS, "compobj.rs flags");
 static_assert(sizeof(WONRectangle) == sizeof(EeWonRect), "compobj.rs rectangles");
-// Creates the extra component state with no background grabber and tooltips allowed
-ComponentExtra::ComponentExtra()
-{
-    this->mGrabBG=NULL;
-    this->mDontDoTip=false;
-}
-// Destroys the extra state, deleting its background grabber before the other members (emitted at 0x006f48d0)
-ComponentExtra::~ComponentExtra() { delete this->mGrabBG; }
+// (the extra component state, ComponentExtra, is compobj.rs's EeWonCompExtraData: R6 WON GUI round 36)
 // Creates a component with no parent, no flags, no control id and no extra data
 Component::Component()
 {
@@ -43,12 +36,7 @@ Component::Component()
     this->mExtraStuff=NULL;
 }
 // Destroys the component, deleting its extra state (emitted at 0x006f4a70)
-Component::~Component() { delete this->mExtraStuff; }
-// Allocates the extra component state on first use
-void Component::AllocateExtraStuff()
-{
-    if(this->mExtraStuff==NULL) this->mExtraStuff=new ComponentExtra;
-}
+Component::~Component() { ee_won_comp_extra_free(this->mExtraStuff); }
 SmartPtr<Font> Component::GetFont(const FontDescriptor& descriptor) { return this->GetRoot()->GetFont(descriptor); }
 Font* Component::GetDefaultFont() { return this->GetRoot()->mManager->GetDefaultFont(); }
 Font* Component::GetNamedFont(const std::string& name) { return this->GetRoot()->GetWindowManager()->GetNamedFont(name); }
@@ -68,7 +56,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
 #undef EE_COMP_AT
 #pragma clang diagnostic pop
     typedef EeWonComp K;
-    typedef EeWonCompExtra X;
     Component* t = (Component*)b;
     Container* p = static_cast<Container*>(t);
     Window* w = (Window*)b;
@@ -77,20 +64,11 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     if (op != EeWonGuiOp::Comp)
         return 0;
     switch ((K)k) {
-    case K::AllocExtra: t->AllocateExtraStuff(); return 0;
-    case K::Extra: case K::SetExtra: {
-        ComponentExtra* x = t->mExtraStuff;
-        bool set = (K)k == K::SetExtra;
-        switch ((X)c) {
-        case X::Listener: if (set) x->mListener = (ComponentListener*)d; return (intptr_t)x->mListener.get();
-        case X::Cursor: if (set) x->mDefaultCursor = (Cursor*)d; return (intptr_t)x->mDefaultCursor.get();
-        case X::Scheme: if (set) x->mColorScheme = (ColorScheme*)d; return (intptr_t)x->mColorScheme.get();
-        case X::GrabBG: if (set) x->mGrabBG = new BackgroundGrabber; return (intptr_t)x->mGrabBG;
-        case X::ToolTip: return (intptr_t)x->mToolTip.get();
-        case X::DontDoTip: if (set) x->mDontDoTip = d != 0; return x->mDontDoTip;
-        default: return 0;
-        }
-    }
+    // (AllocExtra, Extra and SetExtra are a driver world's: the game's extra data is compobj.rs's own)
+    case K::RefHold: ((RefCount*)b)->AddRef(); return 0;
+    case K::RefDrop: ((RefCount*)b)->Release(); return 0;
+    case K::GNew: return (intptr_t)new BackgroundGrabber;
+    case K::GDelete: delete g; return 0;
     case K::VPositionChanged: t->PositionChanged(); return 0;
     case K::VSizeChanged: t->Virtual08(); return 0;
     case K::VDesiredSize: t->GetDesiredSize(((int*)c)[0], ((int*)c)[1]); return 0;

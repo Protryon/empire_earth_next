@@ -3,7 +3,7 @@
 #define LLE_GE3DPLANE_H
 #include "lle/GERust.h"
 
-class FSFile;
+#include "lle/LLEForward.h"
 
 class GE3DPlane : public EeGe3DPlane {   // the Rust record (mPoint, mNormal; rust/base/math.h)
 public:

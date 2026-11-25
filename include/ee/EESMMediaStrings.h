@@ -33,7 +33,6 @@ private:
     friend class EEUISCIFormManager;        // reads the strings (OpenMap/OpenSound, the Get* copies; 0x1e72cf..)
     friend class EESMEffect;                // Execute 0x1be3eb..0x1be4e6 appends to / clears mW14, mHistory, mInstructions
     friend struct EESEInstructionsHost;     // the editor's instructions tab: Virtual1C 0x171f8b writes mAftermath..mMapFile, Virtual14 0x171ce3 reads them
-    friend void EEDisplayScenarioIntro();   // 0x27a470 prefixes mSoundFile/mMapFile likewise
     UWideString mAftermath;                // +0x00
     UWideString mHints;                     // +0x14
     UWideString mHistory;                   // +0x28

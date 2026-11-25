@@ -97,6 +97,38 @@ The totals are in PORT_LEARNINGS.md "The UI lane, round 14".
 
 The totals are in PORT_LEARNINGS.md "The UI lane, round 15".
 
+## Round 17 (the LLE and UI floor lane `lu1`, branch `rust-lleui1`, forks `rust-lleui1-a` (LLE), `rust-lleui1-b` (UI), 2026-11-24)
+
+One lane for the floor of both: include/lle, src/Low-Level Engine, src/Platform/Common, the UI thread, include/ee/EEUI*,
+the UI events, src/RTS Engine/Graphics. Lane logic (build/lu1/perfile.py, logic_lines.py's count over those files)
+2,162 at fba26cc96 -> 1,572 (-590; target -1,000): the UI half 945 -> 708 (-237), the LLE half 1,217 -> 864 (-353;
+docs/progress/lle-shims.md "Round 14"). The story is PORT_LEARNINGS.md "The LLE and UI floor lane, round 1".
+
+| Commit | What | Lane logic |
+|---|---|---|
+| 23bc3f1b1 | lle/LLEForward.h: one forward list for the LLE and UI headers (168 scattered declarations); no access sections or class friends; `URust<T>` (the owned Rust object) and `URustView` (a view) instead of each class's deleted copy/ctor/dtor | 2,162 -> 1,920 |
+| 91047865e (b) | the WON screens' 29 event classes one template by their front-end call; four headers and three units gone | -29 |
+| 4c7e1c68a (b) | the game's free UI helpers in Rust (ee_game screens ui_helpers.rs): the string reference, EETranslateString, EEDisplayScenarioIntro, EEPostF9Key | -53 |
+| d18522a61 (b) | the toolkit's eight hosts declared by their Rust modules' headers (explicit exports, not `lle_host!`'s macro-made ones cbindgen cannot see) | -8 |
+| fcae35047 (b) | the UI units' declarations: two shared globals declared once (ee/EmpireEarth.h), the rectangle's layout one assert, initializer lists, the games box's unread tail | -31 |
+| 764602bc0 | the WON events one class holding its call (`EEWonFrontEvent`), made from the event by `ee_won_front_event_call`: the 26 typedefs and FrontNewEvent's switch gone | 1,622 -> 1,596 |
+| 0658720d8 | the three WON list boxes' members inline; EEUICWonNetGamesBox.cpp, RoomsBox.cpp, StatBox.cpp deleted | -16 |
+| e786ba628 | EEUIFMGStatusBox's five calls inline with their call record in the header | -5 |
+| e25c2b9a2 | EEUIManager's keyboard, mouse and editor start inline with `EEUIManagerCall` in the header | -3 |
+
+The LLE half's commits (3f7593ca5, b97ed3c87) are in lle-shims.md. The two forks' pass-1 work was merged on
+1400c5d29 with origin/rust bbb0654d2 (batch 24); pass 2 was the lead's alone (no fork could be started: the session's
+agent limit).
+
+## What is left after round 17 (the UI half, 708)
+
+EEFOFindNewTargetNearOldTarget.cpp 135 (the units lane's file in this directory); EEUIShell.h 42 and EEUIShell.cpp 10
+(as round 16); EEUIFScenarioEditor.h 42 (the editor form's members and the scenario editor's shared externs, read by
+37 units of the editor lane); EEUIFMainGame.h 24 and .cpp 12 (`mStrings`, `EEUIFMGFormCall`); the three WON list
+boxes' line structs and members (UIListBox<T> templates over C++ strings: a Rust record cannot hold a UWideString's
+destructor); EEUIFSETerrain.h 17, UIListBox.h 16, UIObjHost.h 16 (UIF4), EEScreens.cpp 14; the status button's four
+members (they need EEUIFMainGame complete: ButtonCall), the main group's constructor (it news the status box).
+
 ## Round 16 (branches `rust-ui16a` toolkit then civilization builder and UI thread, `rust-ui16b` game UI then HUD, two passes each, merged on `rust-ui16`, 2026-11-23)
 
 The collapse phase: classes deleted, not only bodies moved. Lane classes 115 -> 96 (+2 outside the lane).

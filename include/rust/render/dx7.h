@@ -555,6 +555,25 @@ long ee_dx7r_draw_text_clipped(EeDx7Handle text,
 /// `DX7Rasterizer(inName)`: `base` is the `GERasterizer`'s object.
 EeDx7Rasterizer *ee_dx7r_new(EeDx7RastHostFn host, void *owner, EeGeRasterizer *base, bool tnl);
 
+/// `GERasterizer(name, tnl)`'s DX7 half: the DX7 rasterizer on `base`, which the 2D draw list then draws on for
+/// `owner` (the C++ rasterizer).
+///
+/// # Safety
+/// As [`ee_dx7r_new`].
+EeDx7Rasterizer *ee_dx7r_new_direct(EeDx7RastHostFn host,
+                                    void *owner,
+                                    EeGeRasterizer *base,
+                                    bool tnl);
+
+/// `~GERasterizer()` whole: with a DX7 rasterizer the 2D draw list forgets `owner` and the DX7 records go; then the
+/// base (its debug font and text, the drawing lock).
+///
+/// # Safety
+/// `base` is live, `dx7` live or null; neither is used again.
+void ee_dx7r_destroy_all(void *owner,
+                         EeGeRasterizer *base,
+                         EeDx7Rasterizer *dx7);
+
 void ee_dx7r_destroy(EeDx7Rasterizer *p);
 
 int32_t ee_dx7r_activate_rasterizer(EeDx7Rasterizer *p);

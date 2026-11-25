@@ -159,3 +159,112 @@ fn the_height_counts_the_lines() {
     assert!(o.set_max_width(9));
     assert!(!o.set_max_width(9));
 }
+
+// ---- the font's own measure (R6 WON GUI round 36): the C++ WONDrawMeasure's statements, kept here, against
+// `ee_won_wrap_calc_font` / `ee_won_wrap_paint_font` over a real font
+
+struct OldMeasure {
+    font: *const EeWonPlatFont,
+    text: Vec<WChar>,
+}
+unsafe extern "C" fn old_string_width(ctx: *mut c_void, offset: i32, length: i32) -> i32 {
+    // SAFETY: the test's record
+    let m = unsafe { &*(ctx as *const OldMeasure) };
+    // Font::GetStringWidth(text, (unsigned short)offset, (unsigned short)length)
+    let (o, n) = (offset as u16 as usize, length as u16);
+    if n == 0 {
+        0
+    } else {
+        // SAFETY: a live font, the units inside the text
+        unsafe { ee_won_plat_font_width(m.font, m.text[o..].as_ptr() as *const c_void, n) }
+    }
+}
+unsafe extern "C" fn old_char_width(ctx: *mut c_void, index: i32) -> i32 {
+    // SAFETY: the test's record
+    let m = unsafe { &*(ctx as *const OldMeasure) };
+    // Font::GetCharacterWidth(index < 0 ? 'M' : text[index])
+    // SAFETY: a live font
+    unsafe { ee_won_plat_font_char_width(m.font, if index < 0 { 'M' as i32 } else { m.text[index as usize] as i32 }) }
+}
+
+#[test]
+fn the_fonts_measure_is_the_old_cpp_measure() {
+    const FONT: &[u8] = include_bytes!("../../ee_base/src/plat_ui/golden_font.ttf");
+    // SAFETY: a static face's data
+    unsafe {
+        ee_base::plat_ui::font::PlatFontRegister(
+            c"Synth".as_ptr(),
+            0,
+            0,
+            FONT.as_ptr() as *const c_void,
+            FONT.len() as u32,
+        )
+    };
+    let texts = [
+        "",
+        "a",
+        "The quick brown fox jumps over the lazy dog",
+        "one\ntwo  three\n\nfour five six seven eight nine ten",
+        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        "a b c d e f g h i j k l m n o p q r s t u v w x y z",
+        "  leading and trailing  ",
+    ];
+    let mut checks = 0;
+    for size in [8, 12, 20] {
+        // SAFETY: a face name
+        let font = unsafe { crate::platfont::ee_won_plat_font_new(c"Synth".as_ptr(), size, 0) };
+        // SAFETY: the live font
+        let height = unsafe { ee_won_plat_font_metric(font, 0) };
+        assert!(height > 0);
+        for t in texts {
+            let text: Vec<WChar> = t.encode_utf16().map(|c| c as WChar).collect();
+            let old = OldMeasure { font, text: text.clone() };
+            let m = EeWonTextMeasure {
+                ctx: &old as *const OldMeasure as *mut c_void,
+                string_width: Some(old_string_width),
+                char_width: Some(old_char_width),
+            };
+            for max_width in [0, 1, 17, 40, 90, 250, 1000] {
+                for (wrap, centered) in [(true, false), (true, true), (false, false)] {
+                    let (a, b) = (ee_won_wrap_new(), ee_won_wrap_new());
+                    // SAFETY: live objects, the text's units, a live font
+                    unsafe {
+                        for o in [a, b] {
+                            ee_won_wrap_set_wrap(o, wrap);
+                            ee_won_wrap_set_max_width(o, max_width);
+                            ee_won_wrap_set_centered(o, centered);
+                        }
+                        let p = text.as_ptr() as *const c_void;
+                        let n = text.len() as i32;
+                        ee_won_wrap_calc(a, true, p, n, std::mem::size_of::<WChar>() as u32, &m, height);
+                        ee_won_wrap_calc_font(b, font, p, n);
+                        assert_eq!(*a, *b, "{t:?} size {size} width {max_width}");
+                        let (mut oa, mut ob) = (vec![EeWonDrawOp::default(); 256], vec![EeWonDrawOp::default(); 256]);
+                        let na = ee_won_wrap_paint(a, n, height, 3, 5, &m, oa.as_mut_ptr(), oa.len());
+                        let nb = ee_won_wrap_paint_font(b, font, p, n, 3, 5, ob.as_mut_ptr(), ob.len());
+                        assert_eq!(na, nb);
+                        assert!(na <= 256);
+                        assert_eq!(ops_text(&oa[..na]), ops_text(&ob[..nb]), "{t:?} size {size} width {max_width}");
+                        // no font: nothing changes and nothing is measured
+                        let before = (*b).clone();
+                        ee_won_wrap_calc_font(b, std::ptr::null(), p, n);
+                        let c = ee_won_wrap_new();
+                        ee_won_wrap_set_wrap(c, wrap);
+                        ee_won_wrap_set_max_width(c, max_width);
+                        ee_won_wrap_set_centered(c, centered);
+                        ee_won_wrap_calc(c, true, p, n, std::mem::size_of::<WChar>() as u32, &m, height);
+                        ee_won_wrap_calc(c, false, p, n, std::mem::size_of::<WChar>() as u32, &m, 0);
+                        assert_eq!(*b, *c, "no font after {before:?}");
+                        ee_won_wrap_free(a);
+                        ee_won_wrap_free(b);
+                        ee_won_wrap_free(c);
+                    }
+                    checks += 1;
+                }
+            }
+        }
+        // SAFETY: the font made above
+        unsafe { crate::platfont::ee_won_plat_font_free(font) };
+    }
+    assert_eq!(checks, 3 * 7 * 7 * 3);
+}

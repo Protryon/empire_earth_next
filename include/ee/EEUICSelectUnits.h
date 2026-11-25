@@ -34,7 +34,6 @@ public:
     // New (port), TEST ONLY readers for the UI fixture's box selection (EETestFixture.cpp)
     bool GetIsDragging() const { return this->mDragging; }
     const GE2DPoint& GetDragEnd() const { return *reinterpret_cast<const GE2DPoint*>(&this->mDragEnd); }
-protected:
     virtual long MouseLButtonUp() { return this->Rust(EE_SCREENS_SU_DO_MOUSE_L_UP); }
     virtual long MouseLButtonDoublePressed() { return this->Rust(EE_SCREENS_SU_DO_DOUBLE_CLICK); }
     virtual long MouseMove(const GE2DPoint& inLocation) { return this->Rust(EE_SCREENS_SU_DO_MOUSE_MOVE, &inLocation); }
@@ -45,7 +44,6 @@ protected:
         return (long)ee_screens_select_units(this, this->Host(), inWhich, inLocation ? inLocation->GetX() : 0.0f, inLocation ? inLocation->GetY() : 0.0f);
     }
 
-public:   // (the constructor's and destructor's shims: EEUICSelectUnits.cpp)
 };
 
 #endif

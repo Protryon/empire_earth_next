@@ -759,6 +759,24 @@ fn ops() -> Vec<(EeGeRastOp, isize, isize)> {
 }
 
 #[test]
+fn the_whole_constructor_and_destructor_without_a_device_are_the_plain_ones() {
+    let _lock = STATICS.lock().unwrap_or_else(|e| e.into_inner());
+    // SAFETY: the mock host answers every operation
+    unsafe {
+        let p = ee_ge_rast_new_drawing(log_host, 0x10 as *mut c_void, 0x20 as *const c_void, None, None);
+        assert!(!crate::ge::list2d::ready(), "no executor given: the draw list stays the tests'");
+        let made: Vec<EeGeRastOp> = ops().into_iter().map(|o| o.0).collect();
+        assert_eq!(made.first(), Some(&EeGeRastOp::NameNew));
+        assert_eq!(made.len(), 11);
+        // ee_dx7r_destroy_all with no DX7 rasterizer is this call (the dx7 module is not in the tests)
+        ee_ge_rast_destroy(p);
+        let gone: Vec<EeGeRastOp> = ops().into_iter().map(|o| o.0).collect();
+        use EeGeRastOp::*;
+        assert_eq!(gone, [FontDereference, TextDelete, LockDestroy, NameDelete]);
+    }
+}
+
+#[test]
 fn the_constructor_makes_the_debug_text_and_the_destructor_releases_it_in_order() {
     let _lock = STATICS.lock().unwrap_or_else(|e| e.into_inner());
     // SAFETY: the mock host answers every operation

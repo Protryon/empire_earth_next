@@ -41,16 +41,7 @@ void ISHandleEvent(const PlatInputEvent& inEvent)
 long ISInitialize(HINSTANCE inInstance, GEWindow* inWindow, UResourceFile* inResources, unsigned long inFirstStringID,
                   unsigned long inDoublePressTimeDelta)
 {
-    unsigned long theCount = ee_input_keyboard_key_count();
-    std::vector<UWideString> theNames(inResources ? theCount : 0);
-    std::vector<const char*> theNamePointers(theNames.size());
-    UWideString theName;
-    for (unsigned long i = 0; i < theNames.size(); i++) {
-        inResources->GetString(i + inFirstStringID, theName);
-        theNames[i] = theName;
-        theNamePointers[i] = theNames[i];
-    }
-    return ee_input_initialize(inWindow->GetOSRepresentation(), inResources ? theNamePointers.data() : NULL,
-                               inDoublePressTimeDelta, (const EeInputKeyboard**)&gISKeyboard,
-                               (const EeInputMouse**)&gISMouse);
+    return ee_input_initialize_strings(inWindow->GetOSRepresentation(), inResources != NULL, inFirstStringID,
+                                       inDoublePressTimeDelta, (const EeInputKeyboard**)&gISKeyboard,
+                                       (const EeInputMouse**)&gISMouse);
 }

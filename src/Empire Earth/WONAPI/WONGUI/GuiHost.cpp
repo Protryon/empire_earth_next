@@ -50,17 +50,8 @@ using namespace WONAPI;
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;
 
-static Cursor* CursorOf(intptr_t inCursor)
-{
-    switch ((EeWonGuiCursor)inCursor) {
-    case EeWonGuiCursor::Hand: return Cursor::GetStandardCursor(StandardCursor_Hand);
-    case EeWonGuiCursor::IBeam: return Cursor::GetStandardCursor(StandardCursor_IBeam);
-    case EeWonGuiCursor::NorthSouthEastWest: return Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest);
-    case EeWonGuiCursor::EastWest: return Cursor::GetStandardCursor(StandardCursor_EastWest);
-    case EeWonGuiCursor::NorthSouth: return Cursor::GetStandardCursor(StandardCursor_NorthSouth);
-    default: return NULL;
-    }
-}
+// the standard cursor a host op names (guihost.rs over cursorobj.rs's table; NULL for none)
+static Cursor* CursorOf(intptr_t inCursor) { return (Cursor*)ee_won_gui_cursor(inCursor); }
 
 // a text the Rust object hands out (u32 units)
 static GUIString UnitsText(intptr_t inUnits, intptr_t inCount)
@@ -115,7 +106,6 @@ static FontDescriptor Underlined(FontDescriptor inDescriptor)
 
 extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
-    (void)d;
     TextArea* t = (TextArea*)inComp;
     switch (op) {
     case Op::Get: return (Fd)a == Fd::Width || (Fd)a == Fd::Height ? ComponentOp(t, op, a, b) : t->GetField((Fd)a);
@@ -160,6 +150,7 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::SegSetFont: Seg(a)->mFont=(Font*)b; return 0;
     case Op::SegSetLineBreak: Seg(a)->mLineBreak=b!=0; return 0;
     case Op::AddSegmentOf: t->AddSegment(Seg(a)); return 0;
+    case Op::TextAddPart: t->AddSegment(((const GUIString*)a)->substr((unsigned short)b, (unsigned short)c), d != 0); return 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
@@ -193,19 +184,16 @@ void TextArea::AddSegment(const GUIString& text,int color,Font* font,bool lineBr
 
 // Appends text split at CR, LF and CRLF into one line-broken segment per line; the last line breaks
 // only when lineBreak is set
-void TextArea::AddFormatedText(const GUIString& text,bool lineBreak) {
-    std::vector<EeWonTextPart> aParts(text.length()+1);
-    size_t aCount=ee_won_gui_text_split(text.mData->mText,text.length(),sizeof(wchar_t),lineBreak,&aParts[0],aParts.size());
-    for(size_t i=0;i<aCount && i<aParts.size();i++)
-        this->AddSegment(text.substr((unsigned short)aParts[i].start,(unsigned short)aParts[i].len),aParts[i].line_break);
+void TextArea::AddFormatedText(const GUIString& text,bool lineBreak)
+{
+    ee_won_gui_add_formatted(this,ee_won_guicpp_text_call,&text,text.mData->mText,text.length(),sizeof(wchar_t),lineBreak);
 }
 }
 
 // ---- the input box
 
-extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     InputBox* t = (InputBox*)inComp;
     switch (op) {
     case Op::FontHeight: return t->mFont->GetHeight();
@@ -260,9 +248,8 @@ InputBox::~InputBox() { ee_won_input_free(this->mRust); }
 
 // ---- the label
 
-extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     Label* t = (Label*)inComp;
     switch (op) {
     case Op::WrapSetMaxWidth: t->mWrappedText->SetMaxWidth((int)a); return 0;
@@ -343,17 +330,15 @@ Splitter::Splitter()
 Splitter::~Splitter() { ee_won_split_free(this->mRust); }
 }
 
-extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     return SplitterHostCall((Splitter*)inComp, op, a, b, c);
 }
 
 // ---- the scroll bar
 
-extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     Scrollbar* t = (Scrollbar*)inComp;
     switch (op) {
     case Op::NewButton: return (intptr_t)static_cast<Component*>(new Button);
@@ -372,9 +357,8 @@ Scrollbar::~Scrollbar() { ee_won_bar_free(this->mRust); }
 
 // ---- the scroller (`a` the scroll area or a bar)
 
-extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     Scroller* t = (Scroller*)inComp;
     ScrollArea* area = static_cast<ScrollArea*>(Comp(a));
     switch (op) {
@@ -404,9 +388,8 @@ Scroller::~Scroller() { ee_won_scroller_free(this->mRust); }
 
 // ---- the scroll area
 
-extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     ScrollArea* t = (ScrollArea*)inComp;
     switch (op) {
     case Op::ContainerPaint: t->Container::Paint(*(Graphics*)a); return 0;
@@ -612,9 +595,8 @@ void PopupMenu::AddSeperator()
 // ---- the multi-column list, its rows and header (multiobj.rs)
 
 // a row's own calls out (its SetPos and its cells' references)
-extern "C" intptr_t ee_won_guicpp_mrow_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_mrow_call(void* /*inComp*/, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t /*c*/, intptr_t /*d*/)
 {
-    (void)inComp; (void)c; (void)d;
     switch (op) {
     case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
     case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
@@ -624,9 +606,8 @@ extern "C" intptr_t ee_won_guicpp_mrow_call(void* inComp, EeWonGuiOp op, intptr_
     }
 }
 
-extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)d;
     MultiListHeader* t = (MultiListHeader*)inComp;
     switch (op) {
     case Op::MultiOf: return (intptr_t)((MultiListArea*)a)->mMulti;
@@ -697,9 +678,8 @@ ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
 // ---- the tree list and its rows (treeobj.rs)
 
 // a row's own calls out (its SetPos, its walks' other rows, its references)
-extern "C" intptr_t ee_won_guicpp_tnode_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+extern "C" intptr_t ee_won_guicpp_tnode_call(void* /*inComp*/, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t /*d*/)
 {
-    (void)inComp; (void)d;
     switch (op) {
     case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
     case Op::ItemTop: return Item(a)->mTop;
@@ -754,30 +734,23 @@ PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }
 }
 
 // WrappedText (R6 WON round 38): the Rust object (wrapobj.rs) wraps the text it is handed with the font's measure
+// (the measure is wrapobj.rs's too, over platfont.rs: R6 WON GUI round 36)
 namespace WONAPI {
 WrappedText::WrappedText() : mObj(ee_won_wrap_new()) {}
 WrappedText::WrappedText(const GUIString& theText) : mText(theText), mObj(ee_won_wrap_new()) {}
 // Recomputes the line breaks and the text's width and height for the font and maximum width
 void WrappedText::CalcWrap()
 {
-    WONDrawMeasure aMeasure = { this->mFont.get(), &this->mText };
-    EeWonTextMeasure m = aMeasure.Get();
-    ee_won_wrap_calc(this->mObj, this->mFont.get() != NULL, this->mText.mData->mText, this->mText.length(), sizeof(wchar_t), &m,
-                     this->mFont.get() != NULL ? this->mFont->GetHeight() : 0);
+    ee_won_wrap_calc_font(this->mObj, this->mFont.get() != NULL ? this->mFont->mRust : NULL, this->mText.mData->mText, this->mText.length());
 }
 // Draws each wrapped line (centred if set) from the given top-left point (wrapobj.rs over guidraw.rs wrapped_text)
 void WrappedText::Paint(Graphics& g, int x, int y)
 {
     if (this->mFont.get() == NULL)
         return;
-    WONDrawMeasure aMeasure = { this->mFont.get(), &this->mText };
-    EeWonTextMeasure m = aMeasure.Get();
-    int aFontHeight = this->mFont->GetHeight();
-    WONDrawSlots aSlots;
-    aSlots.mFont = this->mFont.get();
-    aSlots.mString = &this->mText;
     WONDrawRun(g, WONDrawOps([&](EeWonDrawOp* o, size_t n) {
-        return ee_won_wrap_paint(this->mObj, this->mText.length(), aFontHeight, x, y, &m, o, n); }), aSlots);
+        return ee_won_wrap_paint_font(this->mObj, this->mFont->mRust, this->mText.mData->mText, this->mText.length(), x, y, o, n); }),
+        WONDrawSlots(this->mFont.get(), &this->mText));
 }
 }
 

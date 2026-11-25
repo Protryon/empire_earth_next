@@ -286,6 +286,8 @@ static void ClearStatics()
 }
 #define CC_ADD_ALWAYS(n, c) this->AddChildToConfigMap(n, c, true)
 #include "won_compcfg_run.h"
+// the game's media configs are one class by kind (WONLobbyConfigImages.h); these stand-ins are classes
+template<class T> static bool WONCfgIs(ConfigObject* o, EeWonCfgKind) { return dynamic_cast<T*>(o) != NULL; }
 #include "ee/wonapi/WONCompCfg.inl"
 }
 

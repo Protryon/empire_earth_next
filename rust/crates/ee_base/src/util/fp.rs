@@ -75,6 +75,18 @@ pub extern "C" fn ee_util_fp_set_rounding(mode: c_ulong) {
     imp::set_rounding(mode as u32);
 }
 
+/// The engines' check before a tick (the network's FpuCheck, the sound manager's): 53-bit precision and
+/// round-to-nearest, each set only when it is not the current one.
+#[no_mangle]
+pub extern "C" fn ee_util_fp_check() {
+    if ee_util_fp_precision() != PC_53 {
+        ee_util_fp_set_precision(PC_53);
+    }
+    if ee_util_fp_rounding() != 0 {
+        ee_util_fp_set_rounding(0);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

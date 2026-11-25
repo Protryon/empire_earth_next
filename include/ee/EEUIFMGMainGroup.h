@@ -9,7 +9,7 @@
 class EEUnit;
 class EEUIFMainGame;
 class EEUIFMGStatusBox;
-class GEFont;
+#include "lle/LLEForward.h"
 
 extern GEFont* gU531930;                    // 0x531930 (a UI font; Empire Earth.cpp's globals; the queue timers' text)
 
