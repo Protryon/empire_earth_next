@@ -78,11 +78,9 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Scenario Manager/EEScenarioCapture.cpp",
                        # the scenario logic's host: the world's reads for ee_scenario (ee/EEScenarioHost.h; RUST_PLAN R5b.5)
                        "Empire Earth/Scenario Manager/EEScenarioHost.cpp",
-                       # TEST ONLY: the calamity lane's capture records (ee/EECalamityCapture.h: CALI, CALK)
-                       "Empire Earth/Calamities/EECalamityCapture.cpp",
                        # TEST ONLY: the area effects' capture records (AETP, AEFX)
                        "Empire Earth/Civilization Builder/EEAECapture.cpp",
-                       # TEST ONLY: the civilization builder lane's capture records (ee/EECivCapture.h: CVMG, CVAP, CVLD, CVAF)
+                       # TEST ONLY: the civilization builder lane's capture records (screens civ_capture.rs: CVMG, CVAP, CVLD, CVAF)
                        "Empire Earth/Civilization Builder/EECivCapture.cpp",
                        # the game messages' class: EEMessage's codec, EEMRecord (split from EEMessage.cpp)
                        "Empire Earth/Communications/EEMRecord.cpp",

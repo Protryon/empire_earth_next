@@ -128,7 +128,6 @@ pub mod msg_host;
 pub mod msg_objs;
 pub mod persist_text;
 pub mod session_objs;
-pub mod tech_hooks;
 //
 //
 
@@ -357,10 +356,6 @@ pub enum EeGameCpp {
     VecTilesClear,
     VecUnitsClear,
     SortTilesNear,
-    CapEvent,
-    CapStartEvent,
-    CapStartPoint,
-    CapContagion,
     CxIsWarpColor,
     CxSetWarpColor,
     CxSetBlackColor,
@@ -694,16 +689,6 @@ pub enum EeGameCpp {
     CalSetSecondaryRaw,
     CalSetSoundRaw,
     CalSetTargetRaw,
-    CanCastScopeDelete,
-    CanCastScopeNew,
-    CanCastScopeRecord,
-    CapAged,
-    CapCast,
-    CapContagionEvent,
-    CapSave,
-    CapStart,
-    CapStop,
-    CapUpdate,
     ContinentOfTile,
     CxFireEffect,
     CxSetFireEffect,
@@ -1952,7 +1937,6 @@ pub enum EeGameCpp {
     CgUnitsCount,
     CgUnitsAt,
     CgUnitsInArea,
-    CgCaptureContagion,
     CgCalamityIndex,
     CgWriteClassId,
     CgFileReadLong,
@@ -2971,7 +2955,6 @@ pub enum EeGameCpp {
     DcCount,
     DcAt,
     DcSet,
-    TcBytes,
     TcUpgradeFirst,
     TcUpgradeEnd,
     TcUpgradeMediaCount,
@@ -3640,14 +3623,6 @@ pub enum EeGameCpp {
     //
     // ---- round 11, lane C (EECore11OpC's cases)
     C11ScenarioExtension,
-    C11TcUnitComplex,
-    C11TcUnitId,
-    C11TcUnitType,
-    C11TcUnitHitPoints,
-    C11TcUnitTileNode,
-    C11TcComplexBuilt,
-    C11TcComplexPrevious,
-    C11TcComplexFlightTime,
     C11NmSender,
     C11NmPlayer,
     C11NmCurrent,
@@ -3750,7 +3725,6 @@ pub enum EeGameCpp {
     C11CgFunctor,
     C11CgDump,
     C11CgText,
-    C11CgCapture,
     C11CgUnknown,
     C11CgRandom,
     C11CgDistance,

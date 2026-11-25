@@ -24,7 +24,6 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EETechCapture.h"
 #include "ee/EEGameVariant.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"

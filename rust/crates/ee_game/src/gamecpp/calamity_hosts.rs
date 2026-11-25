@@ -82,7 +82,7 @@ pub extern "C" fn ee_gamecpp_contagion_immune(unit: u64) -> i64 {
     }
     // SAFETY: the unit's record
     let id = unsafe { (*rec::<EeUnitsRtsUnitFields>(O::UnRts, unit as P)).mUnitID };
-    h(O::CgCaptureContagion, 0, &[CG_CONTAGION_NEW, id as c_long as i64, 2]); // CONT (TEST ONLY)
+    crate::gamecpp::calamity_capture::ee_gamecpp_capture_contagion_event(CG_CONTAGION_NEW as c_long, id as c_long, 2, 0.0, 0.0); // CONT (TEST ONLY)
     if effect != 0 {
         h(O::EffUnit, cx, &[effect as i64, 0, 0, 0, 0]);
     }

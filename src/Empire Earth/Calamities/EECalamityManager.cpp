@@ -24,8 +24,6 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EETechCapture.h"
-#include "ee/EECalamityCapture.h"
 // Creates the calamity manager with no classes or active calamities
 EECalamityManager::EECalamityManager()
 {

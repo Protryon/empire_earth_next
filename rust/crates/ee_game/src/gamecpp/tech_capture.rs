@@ -3,8 +3,7 @@
 //! and checksum, and per node its availability, obsolescence, costs at three scales, SumCosts and its prerequisite
 //! closure (DependsOn over every id). Reads the world, writes nothing to it. The node's and tree's bytes are ee_sim
 //! tech's (capture_rec.rs); each C++ call is a case of EETechTreeEpoch.cpp's `EECore10OpB7` or of round 9's tech host.
-//! Also the upgrade's and the player's parts of EVAT (EETechCaptureUpgrade, EETechCapturePlayer: EETechCapture.cpp's
-//! `EECore10OpB6` appends them to the C++ record).
+//! Also the tree's, the upgrade's and the player's records of the civilization capture (screens civ_capture.rs).
 
 #![allow(clippy::not_unsafe_ptr_arg_deref, clippy::missing_safety_doc)]
 
@@ -174,21 +173,20 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
     }
 }
 
-/// Appends bytes to a C++ record (EESimCaptureRecord::Bytes).
-fn append(record: P, bytes: &[u8]) {
-    h(O::TcBytes, record, &[bytes.as_ptr() as usize as i64, bytes.len() as i64]);
+/// The tree's record (the civilization capture's CVAP): its player index and epochs.
+pub(crate) fn tree_record(tree: P) -> Vec<u8> {
+    let mut r = TbRecord::default();
+    tree_bytes(&mut r, tree);
+    r.0
 }
 
-/// EETechCaptureUpgrade: the upgrade's numeric block (mAreaEffectScale .. the conversion flags; no pointers), its
+/// The upgrade's record (EVAT, CVAP): its numeric block (mAreaEffectScale .. the conversion flags; no pointers), its
 /// size first; 0 for no upgrade. mMediaCount and mButtonLoadCount count the presentation's media loads
 /// (EEPlayer::LoadUnitClassMedia, SwapClassButtonMedia), which run when the loader gets to them: written as 0, so the
 /// record carries simulation state only.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_capture_upgrade(record: *mut c_void, upgrade: *mut c_void) {
-    let (record, u) = (record as P, upgrade as P);
+pub(crate) fn upgrade_record(u: P) -> Vec<u8> {
     if u == 0 {
-        append(record, &0u32.to_le_bytes());
-        return;
+        return 0u32.to_le_bytes().to_vec();
     }
     let first = hp(O::TcUpgradeFirst, u, &[]);
     let end = hp(O::TcUpgradeEnd, u, &[]);
@@ -200,14 +198,12 @@ pub extern "C" fn ee_gamecpp_tech_capture_upgrade(record: *mut c_void, upgrade: 
     }
     let mut out = (bytes.len() as u32).to_le_bytes().to_vec();
     out.extend_from_slice(&bytes);
-    append(record, &out);
+    out
 }
 
-/// EETechCapturePlayer: the player's fields the effects change (population bonus, tribute fee, mBB44); -1 for no
+/// The player's record (EVAT, CVAP): the fields the effects change (population bonus, tribute fee, mBB44); -1 for no
 /// player.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_tech_capture_player(record: *mut c_void, player: *mut c_void) {
-    let (record, pl) = (record as P, player as P);
+pub(crate) fn player_record(pl: P) -> Vec<u8> {
     let mut r = TbRecord::default();
     if pl == 0 {
         r.i32(-1);
@@ -218,7 +214,7 @@ pub extern "C" fn ee_gamecpp_tech_capture_player(record: *mut c_void, player: *m
         r.bytes(&unsafe { *(hp(O::TcPlayerTributeFee, pl, &[]) as *const f32) }.to_le_bytes());
         r.u32((h(O::TcPlayerBB44, pl, &[]) != 0) as u32);
     }
-    append(record, &r.0);
+    r.0
 }
 
 #[cfg(test)]

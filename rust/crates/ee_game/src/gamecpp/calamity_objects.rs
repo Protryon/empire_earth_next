@@ -38,6 +38,7 @@ use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUn
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
+use crate::gamecpp::calamity_capture as cap;
 use super::{cptr, h, hd, hf, hp, pa, ptr, rec, O, P};
 
 /// `kCalamityVolcano`, `kCalamitySpecialAttack`; the effect kind `kEffectDamaged`; the action `kActionIdle`.
@@ -400,7 +401,7 @@ pub extern "C" fn ee_gamecpp_calamity_destroy_all(m: *mut c_void) {
     let n = active(m);
     for i in 0..active(m) {
         let c = active_at(m, i);
-        h(O::CapStop, class_of(c), &[pa(c)]); // CALT (TEST ONLY): Stop
+        cap::ee_gamecpp_capture_calamity_start(class_of(c) as *mut c_void, c as *mut c_void, true); // CALT (TEST ONLY): Stop
     }
     let deleted = h(O::MgrDeleteCalamities, m, &[]);
     h(O::Verify, 0, &[(deleted as usize == n) as i64, 77]);
@@ -480,19 +481,15 @@ fn capture_cast(
 ) {
     if capture_active() {
         // TEST ONLY (ee/EETechCapture.h)
-        h(
-            O::CapCast,
-            0,
-            &[
-                kind,
-                class_enum as i64,
-                caster_id as i64,
-                target_id as i64,
-                x as i64,
-                y as i64,
-                player as i64,
-                ok as i64,
-            ],
+        ee_sim::tech::capture_rec::ee_tech_capture_calamity(
+            kind as c_long,
+            class_enum as c_ulong,
+            caster_id as c_ulong,
+            target_id as c_ulong,
+            x as c_long,
+            y as c_long,
+            player as c_ulong,
+            ok,
         );
     }
 }
@@ -686,7 +683,7 @@ pub extern "C" fn ee_gamecpp_calamity_restore(m: *mut c_void, major: c_ulong, mi
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_calamity_add(m: *mut c_void, c: *mut c_void) {
     let (m, c) = (m as P, c as P);
-    let started = h(O::CapStart, class_of(c), &[pa(c)]) != 0; // CALT (TEST ONLY): Start
+    let started = cap::ee_gamecpp_capture_calamity_start(class_of(c) as *mut c_void, c as *mut c_void, false); // CALT (TEST ONLY): Start
     if capture_active() {
         // TEST ONLY (ee/EETechCapture.h)
         Record::new(b"CALS")
@@ -698,7 +695,7 @@ pub extern "C" fn ee_gamecpp_calamity_add(m: *mut c_void, c: *mut c_void) {
     }
     if started {
         h(O::MgrCalamityPush, m, &[pa(c)]);
-        h(O::CapSave, c, &[active(m) as i64 - 1]); // CALK (TEST ONLY): each calamity at its start
+        cap::ee_gamecpp_capture_calamity_save(c as *mut c_void, (active(m) as i64 - 1) as c_ulong); // CALK (TEST ONLY): each calamity at its start
     } else {
         h(O::CalDelete, c, &[]); // releases its caster/target references and the media its ctor loaded
     }
@@ -731,7 +728,7 @@ pub extern "C" fn ee_gamecpp_calamity_update_all(m: *mut c_void, elapsed: f32) {
     while i < active(m) {
         let c = active_at(m, i);
         let before = cal(c).mTimeAlive;
-        let update = hf(O::CapUpdate, class_of(c), &[pa(c)], &[elapsed]) as c_long; // CALW (TEST ONLY)
+        let update = cap::ee_gamecpp_capture_calamity_update(class_of(c) as *mut c_void, c as *mut c_void, elapsed); // CALW (TEST ONLY)
         if capture_active() {
             // TEST ONLY (ee/EETechCapture.h)
             Record::new(b"CALU")
@@ -744,10 +741,10 @@ pub extern "C" fn ee_gamecpp_calamity_update_all(m: *mut c_void, elapsed: f32) {
                 .i32(update as i32)
                 .commit();
         }
-        hf(O::CapAged, c, &[i as i64], &[before]); // CALK (TEST ONLY)
+        cap::ee_gamecpp_capture_calamity_aged(c as *mut c_void, i as c_ulong, before); // CALK (TEST ONLY)
         if update == 7 {
             let c = active_at(m, i);
-            h(O::CapStop, class_of(c), &[pa(c)]); // CALT (TEST ONLY): Stop
+            cap::ee_gamecpp_capture_calamity_start(class_of(c) as *mut c_void, c as *mut c_void, true); // CALT (TEST ONLY): Stop
             h(O::CalDelete, c, &[]);
             h(O::MgrCalamityErase, m, &[i as i64]);
         } else {
@@ -1081,15 +1078,15 @@ pub unsafe extern "C" fn ee_gamecpp_calamity_class_can_cast(
     } else {
         EeCalamityCastMode::Unit
     };
-    let scope = hp(O::CanCastScopeNew, 0, &[]); // CCAS (TEST ONLY)
+    // CCAS (TEST ONLY): an outermost call's result recorded (the scope counts the nesting of the overrides' calls)
+    let outermost = cap::ee_gamecpp_capture_can_cast_enter();
     let result = can_cast_at(kl, mode, cx as P, x, y, check, target_unit as P);
-    let recorded = h(
-        O::CanCastScopeRecord,
-        scope,
-        &[pa(kl), cx as i64, at as i64, x as i64, y as i64, check as i64, target_unit as i64, result as i64],
-    );
-    h(O::CanCastScopeDelete, scope, &[]);
-    recorded as c_long
+    // SAFETY: the caller's location
+    let recorded = unsafe {
+        cap::ee_gamecpp_capture_can_cast_record(outermost, kl as *mut c_void, cx, at, x, y, check, target_unit, result)
+    };
+    cap::ee_gamecpp_capture_can_cast_leave();
+    recorded
 }
 
 /// `IsValidLocation` of a location class: the shared rule over the class's radius, water flag, map area, space
@@ -1215,7 +1212,7 @@ pub extern "C" fn ee_gamecpp_functor_update(fu: *mut c_void, elapsed: f32, c: *m
 }
 
 fn contagion_event(op: i64, a: i64, b: i64) {
-    hf(O::CapContagionEvent, 0, &[op, a, b], &[0.0, 0.0]); // CONT (TEST ONLY)
+    cap::ee_gamecpp_capture_contagion_event(op as c_long, a as c_long, b as c_long, 0.0, 0.0); // CONT (TEST ONLY)
 }
 
 /// `kContagionInfect`, `kContagionCure`, `kContagionDamage` (ee/EETechCapture.h).

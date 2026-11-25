@@ -2976,12 +2976,6 @@ shims! {
     fn aec_mem_free(file: usize) = ee_screenscpp_aec_mem_free;
     fn aec_active() -> bool = ee_app_capture_active;
     // the civilization capture (civ_capture.rs)
-    fn civc_rec_new() -> usize = ee_screenscpp_civc_rec_new;
-    fn civc_rec_bytes(rec: usize, out: EeScreensShimOut) = ee_screenscpp_civc_rec_bytes;
-    fn civc_rec_free(rec: usize) = ee_screenscpp_civc_rec_free;
-    fn civc_rec_player(rec: usize, player: usize) = ee_screenscpp_civc_rec_player;
-    fn civc_rec_upgrade(rec: usize, upgrade: usize) = ee_screenscpp_civc_rec_upgrade;
-    fn civc_rec_tree(rec: usize, tree: usize) = ee_screenscpp_civc_rec_tree;
     fn civc_player(index: i64) -> usize = ee_screenscpp_civc_player;
     fn civc_conversion(player: usize) -> f32 = ee_screenscpp_civc_conversion;
     fn civc_high_ground(player: usize) -> f32 = ee_screenscpp_civc_high_ground;
@@ -3111,8 +3105,6 @@ shims! {
     fn cbb_copy_show_points(list: usize) = ee_screenscpp_cbb_copy_show_points;
     fn cbb_set_sort_lines(list: usize, value: bool) = ee_screenscpp_cbb_set_sort_lines;
     // the civilization manager's bodies (civ_manager_obj.rs, UI lane round 12)
-    fn civm_capture_begin(upgrade: u32, player: i64) -> usize = ee_screenscpp_civm_capture_begin;
-    fn civm_capture_end(state: usize, result: bool) = ee_screenscpp_civm_capture_end;
     fn civm_file_open(file: usize) -> i32 = ee_screenscpp_civm_file_open;
     fn civm_read_chunk(file: usize) -> i32 = ee_screenscpp_civm_read_chunk;
     fn civm_chunk_bytes(out: EeScreensShimOut) = ee_screenscpp_civm_chunk_bytes;

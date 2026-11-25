@@ -18,8 +18,6 @@
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EETechCapture.h"
-#include "ee/EECalamityCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EEMap.h"
 #include "ee/EEContagionManager.h"
@@ -84,18 +82,8 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::C11TcUnitComplex: return P64(TCU->mComplexUnit);
-    case O::C11TcUnitId: return (int64_t)TCU->mUnitID;
-    case O::C11TcUnitType: return (int64_t)TCU->mUnitClass->mUnitType;
-    case O::C11TcUnitHitPoints: return (long)TCU->GetHitPoints();
-    case O::C11TcUnitTileNode: return TCU->mTileNode != NULL;
-    case O::C11TcComplexBuilt: return TCX->mIsBuilt;
-    case O::C11TcComplexPrevious: return TCX->mPreviousPart != NULL;
-    case O::C11TcComplexFlightTime: return (long)TCX->mFlightTime;
     // (EECore10OpB6) the upgrade's and the player's record fields (gamecpp tech_capture.rs; p the record, the upgrade or the player): one
     // statement each
-    case O::TcBytes: ((EESimCaptureRecord*)p)->Bytes((const void*)a[0], (unsigned int)a[1]);
-        break;
     case O::TcUpgradeFirst: return P64(&TC_UPGRADE->mAreaEffectScale);
     case O::TcUpgradeEnd: return P64(&TC_UPGRADE->mIsInitialized);   // (the bools before it included)
     case O::TcUpgradeMediaCount: return P64(&TC_UPGRADE->mMediaCount);

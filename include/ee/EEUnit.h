@@ -540,7 +540,7 @@ public:
                + (this->mPhysicalModel.GetLocation().GetY() - inPoint.GetY()) * (this->mPhysicalModel.GetLocation().GetY() - inPoint.GetY());
     }
     void QueueResearch(long inTechnology, bool inFront) { ee_units_cu_more(EE_UNITS_CUM_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0, 0.0f, 0.0f, 0.0f, NULL, NULL); }  // 0x1f5f97 (EEMResearchTechnology; provisional name)
-    void QueueResearchUncaptured(long inTechnology, bool inFront) { ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0); }  // its body (ee/EETechCapture.h's TQRS)
+    void QueueResearchUncaptured(long inTechnology, bool inFront) { ee_units_cu_body(EE_UNITS_CU_DO_QUEUE_RESEARCH, this, inTechnology, inFront, 0); }  // its body (TQRS records the capture's)
     // inline (out-of-line COMDAT 0x940eb, 26 callers)
     unsigned long GetBuildQueueSize() { return this->mBuildQueue.size(); }
     // inline (the per-class EnabledChanged/B8 switches and EEUCGate::IsPartLeftOut read the current command through it;

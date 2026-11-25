@@ -30,7 +30,6 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EERulesWorld.h"
-#include "ee/EECivCapture.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGraphicEffect.h"
@@ -166,12 +165,8 @@ extern "C" bool ee_screenscpp_cbl_tabable(uintptr_t inList) { return ((EECBUILis
 
 // ------------------------------------------------------------------------------------------------ the powers
 
-// the db files' reads, the premade copies, ApplyUpgrade's capture halves and the powers' test: civ_manager_obj.rs over
+// the db files' reads, the premade copies and the powers' test: civ_manager_obj.rs over
 // these (UI lane round 12)
-extern "C" uintptr_t ee_screenscpp_civm_capture_begin(uint32_t inUpgrade, int64_t inPlayer)
-{ return (uintptr_t)EECivCaptureApplyBegin(inUpgrade, (long)inPlayer); }
-extern "C" void ee_screenscpp_civm_capture_end(uintptr_t inState, bool inResult)
-{ EECivCaptureApplyEnd((EECivCaptureApply*)inState, inResult); }
 extern "C" int32_t ee_screenscpp_civm_file_open(uintptr_t inFile) { return ((FSFile*)inFile)->Open(kFileAccessRead); }
 extern "C" int32_t ee_screenscpp_civm_read_chunk(uintptr_t inFile)
 { return ((FSFile*)inFile)->Read(EEScratch<unsigned char[0x1000]>(kScratchCivmChunk), sizeof(EEScratch<unsigned char[0x1000]>(kScratchCivmChunk)), EEScratch<unsigned long>(kScratchCivmRead)); }

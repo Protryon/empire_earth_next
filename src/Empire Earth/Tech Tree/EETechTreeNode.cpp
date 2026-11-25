@@ -25,7 +25,6 @@
 #include "ee/EEAEManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EETechCapture.h"
 #include "rust/game/gamecpp.h"
 
 // ------------------------------------------------------------------------- round 9, lane D: the nodes' and epochs' C++

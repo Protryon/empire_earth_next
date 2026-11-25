@@ -16,7 +16,6 @@
 #include "ee/EESMObject.h"
 #include "ee/EESMArea.h"
 #include "ee/EESMEffect.h"
-#include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEUnit.h"

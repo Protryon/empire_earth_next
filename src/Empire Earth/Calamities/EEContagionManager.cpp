@@ -33,7 +33,6 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
 
 
@@ -155,8 +154,6 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::CgUnitsAt: return P64((*(std::vector<EEComplexUnit*>*)p)[a[0]]);
     case O::CgUnitsInArea: EEGetUnitsInRectangle(*(const EETileArea*)a[0], *(std::vector<EEComplexUnit*>*)p, EEAnyUnit(), true);
         break;
-    case O::CgCaptureContagion: EECalamityCaptureContagionEvent((long)a[0], (long)a[1], (long)a[2]);   // CONT (TEST ONLY)
-        break;
     case O::CgCalamityIndex: return EECalamityManager::GetInstance()->GetCalamityIndex((EECalamity*)p, *(long*)a[0]);
     case O::CgWriteClassId: return ((FSFile*)a[0])->Write((unsigned long)((EECalamity*)p)->mClass->mID);
     case O::CgFileReadLong: return ((FSFile*)p)->Read(*(long*)a[0]);
@@ -195,8 +192,6 @@ int64_t EECore9OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11CgDump: CAL->DumpOutOfSynch((FILE*)a[0]);
         break;
     case O::C11CgText: fputs((const char*)a[0], (FILE*)p);
-        break;
-    case O::C11CgCapture: EECalamityCaptureContagionEvent((long)a[0], (long)a[1], (long)a[2], f[0], f[1]);   // CONT (TEST ONLY)
         break;
     case O::C11CgUnknown: ESVERIFY_AT(false, 1);
         break;

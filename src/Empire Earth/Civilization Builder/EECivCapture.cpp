@@ -1,8 +1,7 @@
-// New (port), TEST ONLY: the civilization builder lane's capture records (ee/EECivCapture.h; tools/sim_capture.py).
+// New (port), TEST ONLY: the civilization builder lane's capture records (tools/sim_capture.py).
 // Reads the manager, the powers, the players and their class upgrades; changes nothing but the capture file (CVMG
 // loads the premade civilizations' files through EELoadCivilization, as the game's choice form does). UI lane round
-// 12: the records are Rust's (ee_game screens civ_capture.rs) over the one-statement shims below; the hooks are set to
-// its entries here.
+// 12: the records are Rust's (ee_game screens civ_capture.rs) over the one-statement shims below.
 #include <windows.h>
 #include <algorithm>
 #include <string.h>
@@ -16,13 +15,10 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECivPowersManager.h"
-#include "ee/EETechCapture.h"
-#include "ee/EECivCapture.h"
 #include "ee/EEScreensShims.h"
 #include "rust/sim/units.h"   // ee_units_lists_len
 #include "rust/game/screens.h"   // ee_screens_civc_* (civ_capture.rs)
 
-#define CR(r) ((EESimCaptureRecord*)(r))
 #define CP(p) ((EEPlayer*)(p))
 #define CN(n) ((EETechTreeNode*)(n))
 #define CV(c) ((EECivilization*)(c))
@@ -33,16 +29,6 @@ public:
 };
 // a temporary's address for the full expression (the set walker's functor argument)
 template <class T> static T* EECivcTemp(T&& inValue) { return &inValue; }
-extern "C" uintptr_t ee_screenscpp_civc_rec_new() { return (uintptr_t)new EESimCaptureRecord(0); }
-extern "C" void ee_screenscpp_civc_rec_bytes(uintptr_t inRec, void* inOut)
-{ ee_screens_shim_out(inOut, CR(inRec)->Data().data(), CR(inRec)->Data().size()); }
-extern "C" void ee_screenscpp_civc_rec_free(uintptr_t inRec) { delete CR(inRec); }
-extern "C" void ee_screenscpp_civc_rec_player(uintptr_t inRec, uintptr_t inPlayer)
-{ EETechCapturePlayer(*CR(inRec), CP(inPlayer)); }
-extern "C" void ee_screenscpp_civc_rec_upgrade(uintptr_t inRec, uintptr_t inUpgrade)
-{ EETechCaptureUpgrade(*CR(inRec), (EEUnitClassUpgrade*)inUpgrade); }
-extern "C" void ee_screenscpp_civc_rec_tree(uintptr_t inRec, uintptr_t inTree)
-{ EETechCaptureTree(*CR(inRec), (EETechTree*)inTree); }
 extern "C" uintptr_t ee_screenscpp_civc_player(int64_t inIndex) { return (uintptr_t)::gWorld.mPlayers[inIndex]; }
 extern "C" float ee_screenscpp_civc_conversion(uintptr_t inPlayer) { return CP(inPlayer)->mConversionFactor; }
 extern "C" float ee_screenscpp_civc_high_ground(uintptr_t inPlayer) { return CP(inPlayer)->mHighGroundBonus; }
@@ -101,24 +87,3 @@ extern "C" bool ee_screenscpp_civc_civ_no_points(uintptr_t inCiv) { return CV(in
 extern "C" bool ee_screenscpp_civc_civ_unchanged(uintptr_t inCiv) { return CV(inCiv)->mUnchanged; }
 extern "C" bool ee_screenscpp_civc_civ_purchased_flag(uintptr_t inPlayer)
 { return CP(inPlayer)->mCivUpgradesPurchased; }
-
-static EECivCaptureApply* EECivcBegin(EECivUpgrade inUpgrade, long inPlayer)
-{
-    return (EECivCaptureApply*)ee_screens_civc_apply_begin(inUpgrade, inPlayer);
-}
-static void EECivcEnd(EECivCaptureApply* inCapture, bool inResult) { ee_screens_civc_apply_end((void*)inCapture, inResult); }
-static void EECivcLoad(const UString& inName, const UString& inDirectory, long inResult, const UWideString& inCivName,
-                       const std::vector<EECivUpgrade>& inUpgrades)
-{
-    ee_screens_civc_load((const char*)inName, (const char*)inDirectory, inResult, (const char*)inCivName, inUpgrades.data(),
-                         inUpgrades.size());
-}
-static void EECivcApplyFile(const UString& inName, EEPlayer* inPlayer, long inResult)
-{
-    ee_screens_civc_apply_file((const char*)inName, (uintptr_t)inPlayer, inResult);
-}
-
-// The game calls these through the header's hook pointers, set here before main: the game's units name no
-// symbol of this TEST ONLY unit (tools/cpp_deps.py cuts; PORT_LEARNINGS "Cycle cuts")
-static const bool sCaptureHooksSet = (EECivCaptureApplyBegin = EECivcBegin, EECivCaptureApplyEnd = EECivcEnd,
-                                      EECivCaptureLoad = EECivcLoad, EECivCaptureApplyFile = EECivcApplyFile, true);

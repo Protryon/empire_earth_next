@@ -10,15 +10,18 @@
 //!   CVLD  after one `EELoadCivilization`: the name, the directory (1 for the user's), the result, the name read,
 //!         the upgrades
 //!   CVAF  after one `EEApplyCivilizationFile`: the name, the player's fields, the result, its civilization after
-//! The tech tree's own records (`EETechCapturePlayer`, `EETechCaptureUpgrade`, `EETechCaptureTree`) are the tech
-//! capture's hooks, run on a scratch C++ record whose bytes are appended here.
+//! The tech tree's own records (the player's, an upgrade's, a tree's) are gamecpp tech_capture.rs'.
 
 use core::ffi::{c_char, c_long};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use ee_sim::tech::civ::EeTechCivEntry;
 
+use crate::gamecpp::tech_capture as tc;
 use crate::screens::game_cpp::{Cpp, EeScreensShimOut, EeScreensShimText};
+
+/// Whether CVMG (the manager's record, once) is written.
+pub(crate) static MANAGER: AtomicBool = AtomicBool::new(false);
 
 fn tag(name: &[u8; 4]) -> u32 {
     u32::from_le_bytes(*name)
@@ -61,12 +64,7 @@ impl Record {
 /// The player's fields the levels and powers change (the tech capture's player record first; none past it for no
 /// player).
 fn player_fields<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, player: usize) {
-    let scratch = c.civc_rec_new();
-    c.civc_rec_player(scratch, player);
-    let mut bytes = Vec::new();
-    c.civc_rec_bytes(scratch, EeScreensShimOut::of(&mut bytes));
-    c.civc_rec_free(scratch);
-    r.0.extend_from_slice(&bytes);
+    r.0.extend_from_slice(&tc::player_record(player));
     if player == 0 {
         return;
     }
@@ -79,12 +77,7 @@ fn player_fields<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, player: usize) {
 /// A class's upgrade record (none when the class does not exist).
 fn class_upgrade<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, player: usize, kind: i64) {
     let upgrade = if c.civc_class_exists(kind) { c.civc_class_upgrade(player, kind) } else { 0 };
-    let scratch = c.civc_rec_new();
-    c.civc_rec_upgrade(scratch, upgrade);
-    let mut bytes = Vec::new();
-    c.civc_rec_bytes(scratch, EeScreensShimOut::of(&mut bytes));
-    c.civc_rec_free(scratch);
-    r.0.extend_from_slice(&bytes);
+    r.0.extend_from_slice(&tc::upgrade_record(upgrade));
 }
 
 /// The player of index `index` (0 for none: outside 0..17).
@@ -228,12 +221,7 @@ pub(crate) fn apply_end<C: Cpp + ?Sized>(c: &mut C, mut a: Apply, result: bool, 
         }
         let tree = c.civc_tree(p);
         if tree != 0 {
-            let scratch = c.civc_rec_new();
-            c.civc_rec_tree(scratch, tree);
-            let mut bytes = Vec::new();
-            c.civc_rec_bytes(scratch, EeScreensShimOut::of(&mut bytes));
-            c.civc_rec_free(scratch);
-            a.record.0.extend_from_slice(&bytes);
+            a.record.0.extend_from_slice(&tc::tree_record(tree));
             c.civc_ids_clear();
             c.civc_ids_fill(tree);
             let ids: Vec<i64> = (0..c.civc_ids_count()).map(|i| c.civc_id_at(i)).collect();
@@ -349,14 +337,11 @@ mod tests {
     #[test]
     fn a_file_without_a_player_has_its_hook_record_only() {
         let mut fake = Fake::default();
-        fake.answer("aec_active", &[1]).answer("civc_rec_new", &[60]).text("civc_rec_bytes", b"PP");
+        fake.answer("aec_active", &[1]);
         let mut records = Vec::new();
         apply_file(&mut fake, b"x", 0, -2, &mut |t, p: &[u8]| records.push((t, p.to_vec())));
-        assert_eq!(records, [(tag(b"CVAF"), vec![1, 0, 0, 0, b'x', b'P', b'P', 0xfe, 0xff, 0xff, 0xff])]);
-        assert_eq!(
-            fake.calls(),
-            "aec_active()\ncivc_rec_new()\ncivc_rec_player(60, 0)\ncivc_rec_bytes(60, out)\ncivc_rec_free(60)"
-        );
+        assert_eq!(records, [(tag(b"CVAF"), vec![1, 0, 0, 0, b'x', 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff])]);
+        assert_eq!(fake.calls(), "aec_active()");
     }
 
     #[test]
@@ -368,7 +353,10 @@ mod tests {
         let mut records = Vec::new();
         apply_end(&mut fake, *a, true, &mut |t, p: &[u8]| records.push((t, p.to_vec())));
         assert_eq!(records[0].0, tag(b"CVAP"));
-        assert_eq!(records[0].1, [2, 0, 1, 0, 20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]);
+        assert_eq!(
+            records[0].1,
+            [2, 0, 1, 0, 20, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255]
+        );
         assert!(!fake.calls().contains("civc_player("));
     }
 }

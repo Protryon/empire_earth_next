@@ -18783,12 +18783,6 @@ void ee_screens_ael_keep_strongest(size_t list);
 /// TEST ONLY: the capture's record after a tick (`EEAECaptureTick`'s target).
 void ee_screens_ae_capture_tick(float elapsed);
 
-/// CVAP's first half: its state (null when the capture is off).
-void *ee_screens_civc_apply_begin(uint32_t upgrade, long player);
-
-/// CVAP's second half (nothing for a null state).
-void ee_screens_civc_apply_end(void *state, bool result);
-
 /// CVLD (the C strings and the upgrades live for the call).
 void ee_screens_civc_load(const char *name,
                           const char *directory,
