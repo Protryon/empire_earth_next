@@ -19,9 +19,6 @@
 #include "rust/sim/netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
 #include "rust/game/gamecpp.h"
 
-// 0x4e6058: default-constructed (its init chain 0xb71b5 opens the unit; use inferred, provisional name)
-UWideString gU4E6058;
-
 // Creates the game client: no lobby slot yet, server migration allowed, fast selection reset, its lock created
 EEClient::EEClient() : NESynchronousClient(GameHost<EEClient>)
 {
