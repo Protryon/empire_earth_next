@@ -429,7 +429,7 @@ impl Sh {
             EeWonShellHostOp::Draw if crate::compobj::is_game() => {
                 crate::gfxrun::game_op(crate::guihost::EeWonGuiOp::Draw, a, b)
             }
-            _ => None,
+            _ => crate::gamewin::msgbox_op(op, a, b, c),
         };
         if let Some(r) = r {
             return r;
