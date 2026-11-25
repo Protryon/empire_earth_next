@@ -26,7 +26,6 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEROWater.h"
 #include "ee/EEUnitPicker.h"
-#include "ee/EERenderSnapshot.h"
 #include "rust/base/math.h"   // ee_gfx pick.rs (RUST_PLAN R4.4)
 #include "rust/render/ge.h"
 #include "rust/render/gfx.h"

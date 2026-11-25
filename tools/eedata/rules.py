@@ -164,7 +164,7 @@ CIV_ATTRIBUTES = [   # the original's switch (EECivilizationManager::ApplyUpgrad
 
 def attribute_ids():
     """{level: attribute id} of the vanilla attributes (the export names dbcivilization's levels by them)."""
-    pw = _consts('EECivPowerIDs.h', 'kCivPower')
+    pw = _consts('../rust/sim/tech_consts.h', 'kCivPower')
     out = {lv: aid for aid, lv, _ in CIV_ATTRIBUTES}
     out.update({pw['kCivPowerFlamingArrows'] + k: n for k, n in enumerate(POWER_IDS)})
     return out
@@ -190,7 +190,7 @@ POWER_IDS = ['flaming_arrows', 'slavery', 'priest_tower', 'crusaders', 'fanatici
 
 
 def civbuilder(ids, spec):
-    pw = _consts('EECivPowerIDs.h', 'kCivPower')
+    pw = _consts('../rust/sim/tech_consts.h', 'kCivPower')
     s = _consts('EEStringIDs.h', 'IDS_')
     out = [HEAD.format(name='civbuilder', format=spec['format'],
                        what='What each civilization builder attribute raises.')]
@@ -223,8 +223,8 @@ attributes:
 def civpowers(ids, spec):
     t = _consts('../rust/sim/tech_tree_ids.h', 'kTech')
     ut = _consts('../rust/sim/unit_ids.h', 'kUnitType')
-    snd = _consts('EESoundObject.h', 'kSound')
-    gfx = _consts('EEGraphicEffect.h', 'kGraphicEffect')
+    snd = _consts('../rust/sim/game_ids.h', 'kSound')
+    gfx = _consts('../rust/sim/game_ids.h', 'kGraphicEffect')
     out = [HEAD.format(name='civpowers', format=spec['format'],
                        what='What granting a civ power does, after its mTechnology is researched.')]
     out.append("""# effects: C++ primitives. research_if_researched (if_researched, tech), load_sound (sound), load_effect (effect),

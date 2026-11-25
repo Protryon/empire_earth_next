@@ -1,7 +1,8 @@
-//! What EE-SIM's driver asks of the game (TEST ONLY): one table of C++ functions (Empire Earth/EESim.cpp fills it)
-//! and the trait the driver calls, so the driver's logic runs over a fake game in the unit tests.
+//! What EE-SIM's driver asks of the game (TEST ONLY): the trait the driver calls, so the driver's logic runs over a
+//! fake game in the unit tests, and the game's own answers ([`CppGame`]: sim_host.rs and the other modules; the C++
+//! table EESim.cpp filled, its world lock, after-load dump, extensions, cancel and wonder count, is Rust's).
 
-use std::ffi::{c_void, CStr, CString};
+use std::ffi::{c_void, CString};
 use std::os::raw::{c_char, c_long, c_ulong};
 
 /// A sink for lines: `push(sink, text)` per line.
@@ -68,24 +69,6 @@ pub const EE_SIM_DRIVER_WRITE_UNLOCK: i32 = 1;
 pub const EE_SIM_DRIVER_READ_LOCK: i32 = 2;
 pub const EE_SIM_DRIVER_READ_UNLOCK: i32 = 3;
 
-/// The C++ side (EESim.cpp). Every function is called with the documented locks; texts are NUL ended, buffers are
-/// written NUL ended within `cap` and return the full length.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeSimDriverHost {
-    /// `EE_SIM_DRIVER_*_LOCK` on `gWorld.mLock`
-    pub lock: unsafe extern "C" fn(i32),
-    /// `EEAfterLoad`: the state dump of the file at the loaded game's first tick
-    pub dump_after_load: unsafe extern "C" fn(*const c_char),
-    /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
-    pub extension: unsafe extern "C" fn(i32, *mut c_char, usize) -> usize,
-    /// `gUserInterface->PostCancelGame()`
-    pub cancel_game: unsafe extern "C" fn(),
-    /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
-    /// node of `technology`, the class's unit type), every resource summed
-    pub wonders: unsafe extern "C" fn(u64) -> c_long,
-}
-
 /// The game as the driver sees it.
 pub trait Game: Send + Sync {
     fn top_form(&self) -> u32;
@@ -135,27 +118,9 @@ fn c(text: &str) -> CString {
     CString::new(text.replace('\0', "")).expect("no NUL")
 }
 
-fn text_of(f: impl Fn(*mut c_char, usize) -> usize) -> String {
-    let mut buffer = vec![0 as c_char; 512];
-    let n = f(buffer.as_mut_ptr(), buffer.len());
-    if n >= buffer.len() {
-        buffer = vec![0 as c_char; n + 1];
-        f(buffer.as_mut_ptr(), buffer.len());
-    }
-    // SAFETY: the host wrote a NUL-ended text within the buffer
-    unsafe { CStr::from_ptr(buffer.as_ptr()) }.to_string_lossy().into_owned()
-}
+/// The game as a [`Game`] (each call takes the locks it needs).
+pub struct CppGame;
 
-/// The C++ host's table as a [`Game`].
-pub struct CppGame(pub EeSimDriverHost);
-
-// SAFETY: the C++ functions are callable from any thread (each takes the locks it needs)
-unsafe impl Send for CppGame {}
-// SAFETY: as above
-unsafe impl Sync for CppGame {}
-
-// SAFETY (every call below): the C++ table's functions with live, NUL-ended texts, live out values and sinks of
-// the type push_line takes
 impl Game for CppGame {
     fn top_form(&self) -> u32 {
         super::sim_host::top_form()
@@ -188,13 +153,13 @@ impl Game for CppGame {
         super::sim_host::editor_up()
     }
     fn lock(&self, op: i32) {
-        unsafe { (self.0.lock)(op) }
+        super::sim_host::world_lock(op)
     }
     fn prepare_human(&self, human_out: bool) {
         super::sim_host::prepare_human(human_out)
     }
     fn dump_after_load(&self, path: &str) {
-        unsafe { (self.0.dump_after_load)(c(path).as_ptr()) }
+        super::sim_host::dump_after_load(path)
     }
     fn checksum_fields(&self) -> String {
         super::dump::checksum_text()
@@ -206,7 +171,7 @@ impl Game for CppGame {
         super::sim_host::request_save(name)
     }
     fn extension(&self, which: i32) -> String {
-        text_of(|b, n| unsafe { (self.0.extension)(which, b, n) })
+        super::sim_host::extension(which).to_string()
     }
     fn set_run(&self, run: bool) {
         #[cfg(not(test))]
@@ -232,7 +197,7 @@ impl Game for CppGame {
         super::sim_host::no_human_defeat_hits(op)
     }
     fn cancel_game(&self) {
-        unsafe { (self.0.cancel_game)() }
+        super::sim_host::cancel_game()
     }
     fn editor_step(&self, words: &[String]) -> super::editor::Step {
         super::sed_steps::step(words)
@@ -293,7 +258,7 @@ impl Game for CppGame {
         super::stdio::quit(code)
     }
     fn wonders(&self, player: u64) -> c_long {
-        unsafe { (self.0.wonders)(player) }
+        super::sim_host::wonders(player)
     }
     fn unit_value(&self, player: u64, technology: c_long, unit_type: c_ulong) -> c_long {
         super::sim_host::unit_value(player, technology, unit_type)

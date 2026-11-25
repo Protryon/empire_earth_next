@@ -1177,47 +1177,87 @@ struct EeCalamityClassMedia {
   float quake_damage_factor;
 };
 
-/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`,
-/// `ee/EECalamityClass.h`; 236 bytes on every target).
+/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`, the C++
+/// name of this record; 236 bytes on every target). Gap-free, from the file itself (36 records of 0xec bytes): the
+/// name, then floats, ids and flags. Field names are provisional unless a reader names them.
 struct EeCalamityData {
+  /// +0x00 ("Undefined", "Global Warming", ... "Special Location")
   uint8_t mLabel[100];
+  /// +0x64 (line of sight: the bonus)
   float mFloatParam1;
+  /// +0x68 (plague: functor argument)
   float mFloatParam2;
+  /// +0x6c (earthquake Initialize 0xb0765)
   float mQuakeMinimumStrength;
+  /// +0x70 (earthquake Initialize)
   float mQuakeStrength;
+  /// +0x74 (0 in every record)
   float mUnused1;
+  /// +0x78 -> EECalamityClass +0x1c (rounded)
   float mRange;
+  /// +0x7c (128..: the record's id)
   int32_t mUnusedDatabaseID;
+  /// +0x80 -> +0x18 (an enum, as the class member it fills)
   int32_t mID;
+  /// +0x84 -> +0x08
   int32_t mClassEnum;
+  /// +0x88
   int32_t mUnusedTargetKind;
+  /// +0x8c -> +0x04 (as float)
   int32_t mLifeTime;
+  /// +0x90 (1 in every record)
   int32_t mUnused2;
+  /// +0x94 EEGraphicEffect table index (area effects: +0x28)
   int32_t mGraphicEffectID1;
+  /// +0x98 (area effects: +0x2c)
   int32_t mGraphicEffectID2;
+  /// +0x9c (mind control: +0x30)
   int32_t mGraphicEffectID3;
+  /// +0xa0 (time warp: +0x34)
   int32_t mGraphicEffectID4;
+  /// +0xa4 (0 in every record)
   int32_t mUnused3;
+  /// +0xa8 (0)
   int32_t mUnused4;
+  /// +0xac (0)
   int32_t mUnused5;
+  /// +0xb0 (drop object: the unit class to drop)
   int32_t mUnitClassIndex;
+  /// +0xb4 (area effects: +0x44)
   int32_t mIntParam1;
+  /// +0xb8 (area effects: +0x3c)
   int32_t mIntParam2;
+  /// +0xbc (area effects: functor argument)
   int32_t mIntParam3;
+  /// +0xc0 (fire: functor argument)
   int32_t mIntParam4;
+  /// +0xc4 (earthquake Initialize)
   int32_t mIntParam5;
+  /// +0xc8 (hurricane: the map area its location needs)
   int32_t mIntParam6;
+  /// +0xcc (1 in 31 of 36 records)
   bool mUnused6;
+  /// +0xcd (extra damage: functor argument)
   bool mBoolParam1;
+  /// +0xce (0 in every record)
   bool mUnused7;
+  /// +0xcf (0)
   bool mUnused8;
+  /// +0xd0 -> +0x26
   bool mIsCastByAllSelected;
+  /// +0xd1 -> +0x25
   bool mIsBlockedByImmunity;
+  /// +0xd4 EESoundObject table index (area effects: +0x34)
   int32_t mSoundID;
+  /// +0xd8 (plague: its second sound)
   int32_t mSecondarySoundID;
+  /// +0xdc -> +0x20
   int32_t mCost;
+  /// +0xe0 -> +0x10
   uint32_t mUnitSet;
+  /// +0xe4 -> +0x14
   int32_t mNameID;
+  /// +0xe8 -> +0x24
   bool mUnusedClassFlag;
 };
 
@@ -1626,14 +1666,19 @@ struct EeTechCivLevel {
 
 /// A category row of dbcivilization (`EECivilizationCategoryEntry`, 600 bytes).
 struct EeTechCivCategory {
+  /// +00, loader preserves/increments
   int32_t mDatabaseID;
+  /// +04, loader preserves/increments
   int32_t mIndex;
   /// the category name (the game never reads it)
   char mLabel[100];
+  /// +6c, actual name reader281c92
   int32_t mNameID;
   /// the extra cost per pick of the category
   int32_t mCost;
+  /// +74, actual loader writes102
   int32_t mUnitSet;
+  /// +78, actual1..<61 float-pair enumeration
   EeTechCivLevel mLevels[60];
 };
 
@@ -1642,32 +1687,49 @@ using EeTechCivUpgrade = uint32_t;
 
 /// A premade civilization (`EECivilizationEntry`, 120 bytes).
 struct EeTechCivEntry {
+  /// +0x00
   int32_t mUnusedDatabaseID;
+  /// +0x04
   int32_t mIndex;
   /// the civilization's file (NUL-terminated)
   char mFileName[100];
   /// the file's checksum: its name's characters, its legacy upgrade ids and their count
   int32_t mChecksum;
+  /// +0x70 string id of the name (gResource->GetString)
   int32_t mNameID;
+  /// +0x74
   int32_t mEraNameID;
 };
 
 /// A civilization power (`EECivPower`, 152 bytes).
 struct EeTechCivPower {
+  /// +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming Arrows" .. "Just In Time Manufacturing"; only copied whole)
   char mLabel[100];
+  /// +0x64
   int32_t mUnusedDatabaseID;
+  /// +0x68
   int32_t mID;
   /// the powers' category's level bonus
   float mBonus;
+  /// +0x70
   int32_t mUnitSet;
+  /// +0x74 (EEMResearchTechnology compares it with the node's +0x5c)
   int32_t mTechnology;
+  /// +0x78
   int32_t mMiningLimit;
+  /// +0x7c
   int32_t mChance;
+  /// +0x80
   int32_t mUnused1;
+  /// +0x84
   float mAmount;
+  /// +0x88
   int32_t mUnused2;
+  /// +0x8c
   int32_t mUnused3;
+  /// +0x90
   int32_t mUnused4;
+  /// +0x94
   int32_t mUnitType;
 };
 
@@ -1938,60 +2000,99 @@ using EeTechCostFn = int32_t(*)(void*, int32_t, int32_t, float);
 struct EeTechTreeRecord {
   /// +0x00 (not read: the name?)
   uint8_t mLabel[104];
+  /// +0x68 -> mU08->mU4C
   int32_t mID;
+  /// +0x6c -> the epoch's mL14
   int32_t mEpoch;
+  /// +0x70 -> mL18
   int32_t mObsoleteEpoch;
+  /// +0x74 -> mU08->mResearchedEvent
   int32_t mResearchedEvent;
+  /// +0x78 -> mU08->mObsoleteEvent
   int32_t mObsoleteEvent;
   /// +0x7c the cost of resource 3 (wood)
   int32_t mCost3;
   /// +0x80 stone
   int32_t mCost4;
+  /// +0x84
   int32_t mUnused1;
   /// +0x88 gold
   int32_t mCost5;
+  /// +0x8c
   int32_t mUnused2;
   /// +0x90 iron
   int32_t mCost6;
   /// +0x94 food
   int32_t mCost2;
+  /// +0x98 -> mU08->mU58
   int32_t mBuildTime;
+  /// +0x9c -> mU08->mU5C
   int32_t mPrerequisite1;
+  /// +0xa0 -> mU08->mU60
   int32_t mPrerequisite2;
+  /// +0xa4 -> mU08->mU64
   int32_t mPrerequisite3;
+  /// +0xa8 -> mU08->mSelectedObjects
   int32_t mPrerequisite4;
+  /// +0xac -> mU08->mUnitClass
   int32_t mUnitClass;
   /// +0xb0 `EEButtonObject::Get` -> the node's `mButton`
   int32_t mButton;
+  /// +0xb4 -> mU08->mB7C
   uint8_t mMakesUnit;
+  /// +0xb5 -> mU08->mB7D
   uint8_t mCountsTowardEpoch;
+  /// +0xb6
   uint8_t mUnused3;
+  /// +0xb7
   uint8_t mUnused4;
+  /// +0xb8 -> mU08->mU74
   int32_t mNameID;
+  /// +0xbc -> mU08->mU48
   int32_t mKind;
+  /// +0xc0 -> mU08->mU38
   int32_t mCostResource;
+  /// +0xc4 -> mU08->mU3C
   int32_t mRequiredStatistic;
+  /// +0xc8 -> mU08->mRequiredStatisticValue
   int32_t mRequiredStatisticValue;
+  /// +0xcc -> mU08->mFirstNodeID
   int32_t mCalamity;
+  /// +0xd0 -> mU08->mHotKey
   int32_t mHotKey;
   /// +0xd4 an epoch's title string (0: 30145 + the epoch)
   int32_t mTitleID;
+  /// +0xd8
   int32_t mUnused6;
+  /// +0xdc
   int32_t mUnused7;
+  /// +0xe0
   int32_t mUnused8;
   /// +0xe4 the node's cost factors of its second .. fifth unit class (the others 1.0f)
   float mFactor1;
+  /// +0xe8 (third)
   float mFactor2;
+  /// +0xec (fourth)
   float mFactor3;
+  /// +0xf0 (fifth; the others: 1.0f)
   float mFactor4;
+  /// +0xf4 -> mU08->mB7E
   uint8_t mShowInEditor;
+  /// +0xf5 -> mU08->mB7F
   uint8_t mObsoletedByDefault;
+  /// +0xf6 -> mU08->mHasParentalVengeance
   uint8_t mAvailableWithEpoch;
+  /// +0xf7 -> mU08->mHasGroupAttack
   uint8_t mResearchedWithEpoch;
+  /// +0xf8
   int32_t mUnused9;
+  /// +0xfc -> the epoch's mU4C
   int32_t mNextEpoch;
+  /// +0x100 -> the epoch's mU40
   int32_t mRequiredSOL;
+  /// +0x104 -> the epoch's mFirstNodeID
   int32_t mFirstNodeID;
+  /// +0x108 -> mU08->mU40
   int32_t mDefaultUnitClass;
 };
 

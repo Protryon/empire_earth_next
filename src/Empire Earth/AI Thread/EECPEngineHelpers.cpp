@@ -32,12 +32,6 @@ bool EETile::IsSeenBy(EEPlayer* inPlayer)
     return this->GetVisibility(inPlayer->mPlayerID) > 1 || inPlayer->mSeesAll;
 }
 
-// Returns the map tile at a tile location
-EETile* EEMap::GetTileAtLocation(const EETileLocation& inLocation)
-{
-    return this->GetTile(inLocation.GetX(), inLocation.GetY());
-}
-
 // Returns the squared tile distance from the stored centre tile to a given tile
 long EETileDistanceLess::DistanceSquared(const EETileCoordinate& inTile) const
 {
@@ -60,10 +54,4 @@ bool RTSMapTileRun::operator==(const RTSMapTileRun& inOther) const
 {
     return inOther.mStart.mX == this->mStart.mX && inOther.mStart.mY == this->mStart.mY && inOther.mEnd.mX == this->mEnd.mX &&
         inOther.mEnd.mY == this->mEnd.mY;
-}
-
-// Creates a tile run from inStart to inEnd
-RTSMapTileRun::RTSMapTileRun(const U2DPoint<long>& inStart, const U2DPoint<long>& inEnd)
-    : mStart(inStart), mEnd(inEnd)
-{
 }

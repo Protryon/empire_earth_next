@@ -16,9 +16,11 @@ public:
     EEAWonNet(long inType, const UWideString& inText, long inHumans, long inPlayers, bool inHasPassword, bool inIsPrivate, bool inIsInProgress);
     // 0x5523 (EEWonNet 0xd05ca/0xd0c6b: types 6/7, a chat line)
     EEAWonNet(long inType, UITextLabel* inChat, const UWideString& inPrefix, const UWideString& inText, bool inIsFromMe);
-    virtual ~EEAWonNet();
+    // Destroys the WON lobby action
+    virtual ~EEAWonNet() {  }
     virtual void Virtual4();
-    virtual void Virtual8();                // +0x08 (the shared empty slot 0x1720c6)
+    // +0x08 (the shared empty slot 0x1720c6)
+    virtual void Virtual8() {  }
 
     UIListBox<UWideString>* mList;          // +0x0c (type 4)
     UITextLabel* mChat;                     // +0x10 (types 6/7)

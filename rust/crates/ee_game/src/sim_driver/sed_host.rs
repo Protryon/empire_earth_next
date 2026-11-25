@@ -204,7 +204,6 @@ pub enum EeSimDriverSed {
     UnitIsEditorSelected,
     // the ghosts
     GhostsChanged,
-    GhostsClear,
     GhostCount,
     GhostAt,
     GhostCreate,
@@ -339,8 +338,8 @@ pub enum EeSimDriverSed {
     SpecCreate,
     SpecOpenRead,
     SpecOpenWrite,
-    SpecFOpenRead,
-    SpecFOpenWrite,
+    /// the spec's FOpen(s): its open mode ("r", "w") -> 0 opened
+    SpecFOpen,
     SpecClose,
     SpecWrite,
     SpecGets,

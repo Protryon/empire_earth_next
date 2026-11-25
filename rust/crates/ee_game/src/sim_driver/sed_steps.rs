@@ -209,7 +209,10 @@ fn ghost_text() -> String {
 /// The ghosts cleared (the move's and the placement's end).
 fn clear_ghosts() {
     gc::h(gc::O::RoGhostLock, 0, &[]);
-    h(O::GhostsClear, 0, &[]);
+    #[cfg(not(test))]
+    crate::gamecpp::world::ee_gamecpp_world_clear_ghosts(
+        core::ptr::addr_of_mut!(crate::gamecpp::global_objects::gWorld).cast(),
+    );
     gc::h(gc::O::RoGhostUnlock, 0, &[]);
 }
 

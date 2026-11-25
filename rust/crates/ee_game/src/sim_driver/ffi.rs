@@ -6,7 +6,7 @@ use std::os::raw::{c_char, c_int, c_long};
 use std::time::Instant;
 
 use super::driver::{self, EeSimDriverEvents};
-use super::host::{CppGame, EeSimDriverHost, Game};
+use super::host::{CppGame, Game};
 use super::options::{self, Command, Options, Process};
 
 /// The driver's answer to [`ee_sim_driver_main`] when the game goes on (the game's own entry next).
@@ -17,16 +17,11 @@ pub const EE_SIM_DRIVER_CONTINUE: c_int = -1;
 /// line, 66 a file that cannot be opened).
 ///
 /// # Safety
-/// `argv` holds `argc` NUL-ended texts; `host` points to a filled table (copied).
+/// `argv` holds `argc` NUL-ended texts.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sim_driver_main(
-    argc: c_int,
-    argv: *const *const c_char,
-    host: *const EeSimDriverHost,
-) -> c_int {
+pub unsafe extern "C" fn ee_sim_driver_main(argc: c_int, argv: *const *const c_char) -> c_int {
     let start = Instant::now();
-    // SAFETY: the caller's contract
-    let (game, events) = unsafe { (CppGame(*host), EeSimDriverEvents::game()) };
+    let (game, events) = (CppGame, EeSimDriverEvents::game());
     let args: Vec<String> = (1..argc.max(1) as usize)
         // SAFETY: argv's entries are NUL-ended texts
         .map(|i| unsafe { CStr::from_ptr(*argv.add(i)) }.to_string_lossy().into_owned())
@@ -64,13 +59,37 @@ pub unsafe extern "C" fn ee_sim_driver_main(
     let d = match driver::install(Box::new(game), events, o, p, games, start) {
         Ok(d) => d,
         Err(e) => {
-            // (the host's copy the driver did not keep)
-            // SAFETY: the caller's contract
-            unsafe { CppGame(*host) }.write(2, format!("EE-SIM: {e}\n").as_bytes(), true);
+            CppGame.write(
+                2,
+                format!(
+                    "EE-SIM: {e}
+"
+                )
+                .as_bytes(),
+                true,
+            );
             return 66;
         }
     };
     d.start_process(&data, &config, ai_trace, &games_name);
+    // the game's debug strings to the driver; on Windows the fault report (POSIX: EESim.cpp's signal handler)
+    ee_base::plat_core::sim::PlatDebugSetHandler(Some(ee_sim_driver_debug));
+    #[cfg(windows)]
+    // SAFETY: a NUL-ended text
+    unsafe {
+        super::fault::ee_sim_driver_fault_install(c"EE-SIM".as_ptr())
+    };
+    // Linux, where a bench machine has no display: SDL's dummy video driver (the hidden window needs none, and
+    // nothing is presented; macOS keeps Cocoa: its windows are Metal windows, which the dummy driver refuses). The
+    // GPU device the renderer still creates is any Vulkan adapter, on a machine without a GPU Mesa's lavapipe, kept
+    // to one rasterizer thread (it starts one per core, and a bench runs one simulation per core). The environment
+    // wins over both.
+    #[cfg(all(unix, not(target_os = "macos")))]
+    for (name, value) in [("SDL_VIDEO_DRIVER", "dummy"), ("LP_NUM_THREADS", "1")] {
+        if std::env::var_os(name).is_none() {
+            super::stdio::set_env(name, value);
+        }
+    }
     EE_SIM_DRIVER_CONTINUE
 }
 

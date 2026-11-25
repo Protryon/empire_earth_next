@@ -80,12 +80,13 @@ unsafe fn with<R>(r: *mut EeScreensGaFields, code: impl FnOnce(&mut Ga<'_, Host>
     code(&mut ga)
 }
 
-/// The constructor's members (the record value-initialised, its kind set).
+/// The constructor's members (the record value-initialised): its kind set, then the kind's defaults.
 ///
 /// # Safety
 /// `r` is the action's record.
 #[no_mangle]
-pub unsafe extern "C" fn ee_screens_ga_init(r: *mut EeScreensGaFields) {
+pub unsafe extern "C" fn ee_screens_ga_init(r: *mut EeScreensGaFields, kind: u32) {
+    unsafe { (*r).mKind = kind };
     unsafe { with(r, |g| g.init()) }
 }
 
@@ -246,11 +247,23 @@ pub unsafe extern "C" fn ee_screens_ga_paint_set_area(
     unsafe { with(r, |g| g.paint_set_area([left, top, right, bottom])) }
 }
 
-/// The improvement's constructor: the unit (an `EEUnit*`) referenced and held, the action posted.
+/// The improvement's constructor: the improvement, raise (else lower) and in-game (else the scenario editor's)
+/// flags set, the unit (an `EEUnit*`) referenced and held, the action posted.
 ///
 /// # Safety
 /// As `ee_screens_ga_init`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_screens_ga_upgrade_begin(r: *mut EeScreensGaFields, unit: *mut c_void) {
+pub unsafe extern "C" fn ee_screens_ga_upgrade_begin(
+    r: *mut EeScreensGaFields,
+    unit: *mut c_void,
+    improvement: i32,
+    raise: bool,
+    in_game: bool,
+) {
+    unsafe {
+        (*r).mImprovement = improvement;
+        (*r).mRaise = raise;
+        (*r).mIsInGame = in_game;
+    }
     unsafe { with(r, |g| g.upgrade_begin(unit as usize)) }
 }

@@ -112,12 +112,6 @@ EEPWorldHelper::EEPWorldHelper(EEWorld& inWorld)
     ee_gamecpp_pwh_from_world(this, &inWorld);
 }
 
-// Creates an empty saved-world chunk (persistent factory)
-FSPersistent* EEPWorldHelper::CreateDefault() const
-{
-    return new EEPWorldHelper;
-}
-
 // port (save version 0.262): the dead attackers (and from 0.272/0.275 the units the goals hold out of the world). A
 // unit's mLastAttacker holds a reference, so the running game keeps an attacker that died since as a unit out of the
 // world, and reads it (the triggers, the AI, a predator's strike back); the save wrote its id and the load found no
@@ -133,40 +127,14 @@ EEUnit* EEFindLoadedGhostUnit(unsigned long inID)
     return static_cast<EEUnit*>(ee_gamecpp_find_loaded_ghost_unit(inID));
 }
 
-// Reads the teams, world settings and id counters (Carbon flag from version 0.239 on), the running state (from 0.254:
-// world_save.rs), then the chat log and the main game form; returns only the main game form's error
-long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_pwh_load(this, inMajorVersion, inMinorVersion, &inFile);
-}
-
-// Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
-void EEPWorldHelper::Restore(EEGameState& ioState)
-{
-    ee_gamecpp_pwh_restore(this, &ioState);
-}
-
-// Writes the teams, world settings, id counters and Carbon flag, the running state (from 0.254: world_save.rs),
-// then the chat log and the main game form; returns only the main game form's error
-long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_gamecpp_pwh_save(this, inMajorVersion, inMinorVersion, &outFile);
-}
-
-// Adds nothing to the checksum (empty: folded into a shared empty function)
-void EEPWorldHelper::GetChecksum(ESChecksum& ioChecksum) const
-{
-}
-
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
 
-int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECommandLine.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // EEWorld.cpp
 extern bool sLoadingScenario;                                     // EEGameStateLoader.cpp
 std::vector<EECalamity*>* EEActiveCalamities();                   // EEPCalamityHelper.cpp
-void DeleteSaveTextTwin(FSFileSpec& inFile);                      // EESaveLoad.cpp
 void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad.cpp
 #define PWH ((EEPWorldHelper*)p)
 #define FILE_ (*(FSFile*)p)
@@ -278,7 +246,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwNumPlayers: return (int64_t)gWorld.mNumPlayers;
     case O::PwPlayerFirstUnit: return P64(PL->mFirstUnit);
     case O::PwPlayerGetUnit: return P64(PL->GetUnit((unsigned long)a[0]));
-    case O::PwPlayerSetBucketFirst: PL->mUnitBuckets[a[0]].mFirst = (EEUnit*)a[1];
+    case O::PwPlayerSetBucketFirst: PL->mUnitBuckets[a[0]].first = (size_t)a[1];
         break;
     case O::PwPlayerSetFirstUnit: PL->mFirstUnit = (EEUnit*)a[0];
         break;
@@ -613,8 +581,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSaveTextName: *(UString*)a[0] = GetSaveTextName(SPEC->GetFile(), a[1] != 0);
         break;
-    case O::PsDeleteTextTwin: DeleteSaveTextTwin(*SPEC);
-        break;
     case O::PsReportSaved: EEReportLoadFailure(UString("Game saved.  "), false, NULL);
         break;
     case O::PsReportSaveError: EEReportLoadFailure(UString("Error saving game.  Please report this bug."), false, NULL);
@@ -629,8 +595,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsGameState: return P64(&gGameState);
     case O::PsValidateIntoMessage: return EEValidateSaveGameFile(FILE_, gLoadSaveErrorMessage);
-    case O::PsUiResumeGraphics: gUserInterface->ResumeGraphics();
-        break;
     case O::PsMapApplyVertexColors: gWorld.GetMap()->ApplyVertexColors();
         break;
     case O::PsSetMasterVolume: gSoundManager->SetMasterVolume(f[0]);
@@ -725,9 +689,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSprintfTwoNumbers: sprintf(WSTR, *(UWideString*)a[0], (size_t)a[1], (unsigned long)a[2]);
         break;
-    case O::PsLoadProgress: gUserInterface->SetLoadProgress(f[0]);
-        break;
-    default: return EECore9OpE(inOp, p, a, f);
+    default: return EECommandLineOp(inOp, p, a, f);
     }
     return 0;
 }

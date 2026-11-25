@@ -124,11 +124,6 @@ EEAWonNet::EEAWonNet(long inType, UITextLabel* inChat, const UWideString& inPref
     this->mIsPrivate = false;
 }
 
-// Destroys the WON lobby action
-EEAWonNet::~EEAWonNet()
-{
-}
-
 // NEAR: the original refuses more inlines (UIListBox<UWideString>::GetDisplayLine via the import, the games box's
 // GetDisplayLine 0x5d2d and _Ptrit::operator+ 0x28a137 out of line), so theGames lives at [ebp-8] and the frame is 8
 // bytes larger; source shape otherwise follows the original's block order.
@@ -251,8 +246,4 @@ void EEAWonNet::Virtual4()
         }
         break;
     }
-}
-
-void EEAWonNet::Virtual8()
-{
 }

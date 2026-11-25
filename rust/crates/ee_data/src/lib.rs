@@ -20,6 +20,8 @@ pub mod tables;
 #[allow(clippy::needless_range_loop)]
 pub mod text;
 pub mod textrow;
+/// The dbworld constants' ids (generated: tools/eedata/cppgen.py; `eedata.py check` keeps it current).
+pub mod world_constants;
 
 /// Generated code (tools/eedata/rustgen.py, rulesgen.py): never hand-edited; `eedata.py check` keeps it current.
 #[rustfmt::skip]

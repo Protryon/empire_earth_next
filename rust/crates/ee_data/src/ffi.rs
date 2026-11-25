@@ -363,24 +363,25 @@ pub unsafe extern "C" fn ee_data_rules_load(
     }
 }
 
-/// Writes the C++ `EERulesData` (ee/EERulesGen.h) of the rules in place: its lists and texts point into storage the
-/// rules own until the next call. `sizes` are the C++ structs' sizes (`kEERulesMirrorSizes`); a layout that differs
-/// from the Rust mirror's stops the game.
+/// Writes the C++ `EEEpochMedia` of an epoch the rules do not hold (`rules::epoch_none`: the defaults, no lists).
 ///
 /// # Safety
-/// `rules` live, `out` an `EERulesData` (no list or text of it read across the call), `sizes` readable for `count`.
+/// `out` an `EEEpochMedia`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_data_rules_mirror(
-    rules: *mut EeDataRules,
-    out: *mut c_void,
-    sizes: *const usize,
-    count: usize,
-) {
-    let theirs = std::slice::from_raw_parts(sizes, count);
-    assert_eq!(theirs, &rules_gen::mirror_sizes()[..], "ee/EERulesGen.h's layout is not rules_gen.rs's");
+pub unsafe extern "C" fn ee_data_rules_epoch_none(out: *mut c_void) {
+    std::ptr::write(out as *mut rules_gen::EEEpochMedia, rules::epoch_none());
+}
+
+/// Writes the C++ `EERulesData` (rules_gen.rs's record, which cbindgen emits: the one layout) of the rules in place:
+/// its lists and texts point into storage the rules own until the next call.
+///
+/// # Safety
+/// `rules` live, `out` an `EERulesData` (no list or text of it read across the call).
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_rules_mirror(rules: *mut EeDataRules, out: *mut c_void) {
     let mut store = rules::MirrorStore::default();
     let data = (*rules).rules.mirror(&mut store);
-    std::ptr::write(out as *mut rules_gen::RulesDataC, data);
+    std::ptr::write(out as *mut rules_gen::EERulesData, data);
     (*rules).mirror = store;
 }
 
@@ -406,6 +407,31 @@ pub unsafe extern "C" fn ee_data_rules_set_music_from_flags(
 ) {
     let f: &[bool] = if flags.is_null() { &[] } else { std::slice::from_raw_parts(flags, count) };
     (*rules).rules.set_music_from_flags(song, f);
+}
+
+/// The computer players' level (0 easy .. 2 hard: their records' values) of a game option difficulty; past the
+/// list, the difficulty itself (was EERules.cpp's EEDifficultyAILevel).
+///
+/// # Safety
+/// `rules` live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_data_rules_ai_level(
+    rules: *const EeDataRules,
+    difficulty: std::ffi::c_ulong,
+) -> std::ffi::c_long {
+    let r = &*rules;
+    match r.rules.game_options.difficulties.get(difficulty as usize) {
+        Some(d) => d.ai_level as std::ffi::c_long,
+        None => difficulty as std::ffi::c_long,
+    }
+}
+
+/// `EERules::Epoch`'s entry: an epoch position's index in a list of `count` epochs (before the list the first, past
+/// it the last; `count` > 0).
+#[no_mangle]
+pub extern "C" fn ee_data_rules_epoch_index(epoch: std::ffi::c_long, count: usize) -> usize {
+    let k = if epoch < 0 { 0 } else { epoch as usize };
+    k.min(count.saturating_sub(1))
 }
 
 /// The binary load's songs: every row of a dbmusic.dat file's per-epoch flags (the gate's and tools' path).
@@ -466,8 +492,7 @@ pub unsafe extern "C" fn ee_data_rules_override_problems(out: *mut EeDataBytes) 
     *out = EeDataBytes::from_vec(text);
 }
 
-/// The names of the unit categories, for C++: `kEERuleCategoryNames[]` is generated (EERulesGen.h); this is its count
-/// source of truth for a consistency check in tests.
+/// The number of unit category names (rules_gen.rs `UNIT_CATEGORY_NAMES`), for a consistency check in tests.
 #[no_mangle]
 pub extern "C" fn ee_data_rule_category_count() -> usize {
     crate::generated::rules_gen::UNIT_CATEGORY_NAMES.len()
@@ -638,10 +663,12 @@ mod tests {
             let mut out = EeDataBytes::empty();
             ee_data_rules_dump(r, &mut out);
             assert!(take(&mut out).starts_with(b"\"rules.combat\":{\"minimum_damage\":2,"));
-            let sizes = rules_gen::mirror_sizes();
-            let mut data = std::mem::MaybeUninit::<rules_gen::RulesDataC>::uninit();
-            ee_data_rules_mirror(r, data.as_mut_ptr() as *mut c_void, sizes.as_ptr(), sizes.len());
-            assert_eq!(data.assume_init().combat.minimum_damage, 2);
+            let mut data = std::mem::MaybeUninit::<rules_gen::EERulesData>::uninit();
+            ee_data_rules_mirror(r, data.as_mut_ptr() as *mut c_void);
+            assert_eq!(data.assume_init().mCombat.mMinimumDamage, 2);
+            let mut none = std::mem::MaybeUninit::<rules_gen::EEEpochMedia>::uninit();
+            ee_data_rules_epoch_none(none.as_mut_ptr() as *mut c_void);
+            assert_eq!(none.assume_init().mRemovalSound, 374);
             let flags = [true; 14];
             ee_data_rules_set_music_from_flags(r, 3, flags.as_ptr(), flags.len());
             ee_data_rules_free(r);
@@ -660,6 +687,24 @@ mod tests {
             let epochs = &(*r).rules.epochs;
             assert_eq!(epochs[0].music, vec![0]);
             assert!(!ee_data_rules_music_from_dbmusic(r, d.as_ptr(), 3));
+            ee_data_rules_free(r);
+        }
+    }
+
+    #[test]
+    fn an_epoch_position_is_clamped_to_the_list() {
+        assert_eq!([-3, 0, 4, 14, 15, 99].map(|e| ee_data_rules_epoch_index(e, 15)), [0, 0, 4, 14, 14, 14]);
+        assert_eq!(ee_data_rules_epoch_index(2, 1), 0);
+    }
+
+    #[test]
+    fn a_difficulty_s_ai_level_or_the_difficulty_past_the_list() {
+        unsafe {
+            let r = ee_data_rules_new();
+            assert_eq!((0..3).map(|k| ee_data_rules_ai_level(r, k)).collect::<Vec<_>>(), vec![0, 1, 2]);
+            (&mut *r).rules.game_options.difficulties[1].ai_level = 7;
+            assert_eq!(ee_data_rules_ai_level(r, 1), 7);
+            assert_eq!(ee_data_rules_ai_level(r, 5), 5);
             ee_data_rules_free(r);
         }
     }

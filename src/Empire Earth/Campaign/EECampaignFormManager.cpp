@@ -28,27 +28,3 @@ EECampaignFormManager::EECampaignFormManager()
     this->mFirstScenario = "";
     this->mChecksum = 0;
 }
-
-// Destroys the campaign selection form's manager
-EECampaignFormManager::~EECampaignFormManager()
-{
-}
-
-// Returns the campaign scenario selection form's manager, creating and attaching it on first use
-EECampaignFormManager* EECampaignFormManager::Get()
-{
-    return static_cast<EECampaignFormManager*>(static_cast<UIFormManager*>(ee_campaign_form_manager()));   // (campaign.rs)
-}
-
-// Returns the expected checksum of a built-in campaign (the three AoC campaigns, the demo and the tutorial), else 0
-// (ee_game campaign.rs built_in_campaign)
-unsigned long EECampaignFormManager::GetBuiltInCampaign(const UWideString& inName)
-{
-    return ee_campaign_built_in((const char*)inName);
-}
-
-// Recomputes the checksum of the chosen campaign's file (0 when it is not found; ee_game campaign.rs)
-void EECampaignFormManager::UpdateChecksum()
-{
-    ee_campaign_update_checksum(this);
-}

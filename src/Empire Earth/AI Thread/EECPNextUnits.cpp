@@ -114,11 +114,6 @@ void EECPUnitsSave(const EEComputerPlayer* inPlayer, std::string& outBytes)
     ee_ai_units_save(const_cast<EEComputerPlayer*>(inPlayer), EECPUnitsRust(inPlayer), &outBytes);
 }
 
-bool EECPUnitsLoad(EEComputerPlayer* inPlayer, const std::string& inBytes)
-{
-    return ee_ai_units_load(inPlayer, (const uint8_t*)inBytes.data(), inBytes.size());
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The host of the Rust bindings (ee_ai units_bind.rs EE_AI_UNITS_HOST_*): what the world views do not hold
 

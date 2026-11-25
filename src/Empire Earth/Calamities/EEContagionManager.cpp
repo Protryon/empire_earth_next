@@ -131,8 +131,6 @@ static_assert(sizeof(EETileArea) == 4 * sizeof(long), "gamecpp calamity_hosts.rs
 
 // ------------------------------------------------------------------------- round 11, lane C: the calamities' C++
 
-double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
 #define CAL ((EECalamity*)p)
 #define FNC ((EEContagionFunctor*)p)
 #define FSF (*(FSFile*)a[0])
@@ -212,6 +210,7 @@ double EECore11OpC5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     switch (inOp) {
     case O::C11CgRandom: return gPhysics->mRandom.Generate();
     case O::C11CgDistance: return ((EEComplexUnit*)p)->mPhysicalModel.GetLocation().DistanceSquaredTo(((EEComplexUnit*)a[0])->mPhysicalModel.GetLocation());
-    default: return EECore11OpEF(inOp, p, a, f);
+    default: ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);   // the end of the chain
     }
+    return 0.0;
 }

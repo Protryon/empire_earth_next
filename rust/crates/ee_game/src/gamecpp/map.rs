@@ -16,6 +16,7 @@ use std::os::raw::{c_long, c_ulong};
 use ee_base::math::ffi::ee_ge_um_arccos;
 use ee_base::math::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeTransformation, GeVector};
 use ee_base::math::um;
+use ee_render::ge::tmobj::{ee_ge_tm_is_valid, ee_ge_tm_mesh_z, EeGeTerrainMesh};
 use ee_render::gfx::effect_obj::ee_gfx_effect_regions_new;
 use ee_sim::app::map::{tile_count, EeAppMapDims};
 use ee_sim::combat::regions::ee_combat_regions_new;
@@ -77,11 +78,40 @@ fn apply_vector(t: &GeTransformation, v: GeVector) -> GeVector {
     }
 }
 
+/// `EEMap::GetGroundPoint` over the map's mesh: x and y kept, z the mesh's height there on a valid tile (the tile
+/// under the point's floor), the point's own z off the map.
+pub(crate) fn mesh_ground_point(mesh: *const EeGeTerrainMesh, at: &Ge3DPoint) -> Ge3DPoint {
+    let (x, y) = (um::floor_unsigned(at.x) as c_ulong, um::floor_unsigned(at.y) as c_ulong);
+    // SAFETY: a live map's mesh
+    let z = unsafe {
+        if ee_ge_tm_is_valid(mesh, x, y, true) {
+            ee_ge_tm_mesh_z(mesh, at.x, at.y)
+        } else {
+            at.z
+        }
+    };
+    Ge3DPoint { x: at.x, y: at.y, z }
+}
+
+/// `EEMap::GetGroundPoint(point, out)` for the C++ (`mesh` the map's `mTerrainMesh.GetRust()`; `out` may be `point`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_gamecpp_map_ground_point(
+    mesh: *const c_void,
+    point: *const Ge3DPoint,
+    out: *mut Ge3DPoint,
+) {
+    // SAFETY: the caller's mesh and points
+    unsafe { *out = mesh_ground_point(mesh.cast(), &*point) }
+}
+
 /// The map's ground point under `at`.
-fn ground_point(m: P, at: &Ge3DPoint) -> Ge3DPoint {
-    let mut g = Ge3DPoint::default();
-    h(O::MpGroundPoint, m, &[cptr(at), ptr(&mut g)]);
-    g
+pub(crate) fn ground_point(m: P, at: &Ge3DPoint) -> Ge3DPoint {
+    mesh_ground_point(super::rast::mesh_of(m), at)
+}
+
+/// The world's map's ground point under `at` (`gWorld.mMap->GetGroundPoint`).
+pub(crate) fn world_ground_point(at: &Ge3DPoint) -> Ge3DPoint {
+    ground_point(hp(O::MpWorldMap, 0, &[]), at)
 }
 
 /// The unit and effect region tables made again for the map's size.

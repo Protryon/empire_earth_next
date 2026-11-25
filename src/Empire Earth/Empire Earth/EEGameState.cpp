@@ -41,46 +41,16 @@
 #include "ee/EEStartingResources.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEEffectManager.h"
+#include "ee/EEGamePreferences.h"
 #include "ee/EERules.h"
 #include "rust/game/gamecpp.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern long gDefaultTerrain;                // EETerrainTable.cpp
 
-// The bodies are Rust (ee_game gamecpp state.rs) over the cases below (EEGameStateOp)
-void EEGameState::Clear()
-{
-    ee_gamecpp_state_clear(this);
-}
-
-void EEGameState::RepairRestorables()
-{
-    ee_gamecpp_state_repair_restorables(this);
-}
-
-void EEGameState::Init()
-{
-    ee_gamecpp_state_init(this);
-}
-
 bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
 {
     return ee_gamecpp_state_create(this, &inOptions, &outErrorMessage);
-}
-
-void EEGameState::Reset()
-{
-    ee_gamecpp_state_reset(this);
-}
-
-void EEGameState::SetCalamityHelper(EEPCalamityHelper* inHelper)
-{
-    ee_gamecpp_state_set_calamity_helper(this, inHelper);
-}
-
-void EEGameState::SetEnvironmentManager(EEEnvironmentManager* inManager)
-{
-    ee_gamecpp_state_set_environment(this, inManager);
 }
 
 // Returns the colour of a player colour index (the default colour past the table's end)
@@ -100,13 +70,6 @@ EEStartingResources* EEGetResourceLevel(long inIndex)
 EETeam::~EETeam()
 {
     delete this->mVictoryCondition;
-}
-
-// Does nothing after a game is loaded (no address: empty, ICF-folded into 0x163d6f; EEGameStateLoader::LoadGame
-// 0x14a5ba calls it with the save's versions: `push hdr.mMinorVersion; mov ecx, [esi] (the EEGameState*); push
-// hdr.mMajorVersion; call 0x163d6f`, a direct thiscall on the state; provisional name)
-void EEGameState::FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
 }
 
 // ------------------------------------------------------------------------- the state bodies' C++ (gamecpp state.rs)
@@ -204,8 +167,6 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     case O::DataPathAddArchive: gDataPath->AddArchive(*(FSArchive*)p, true);
         break;
     case O::DataPathFindFile: return gDataPath->FindFile(UString(WSTR(0)), *(FSFileSpec**)a[1]);
-    case O::SetDataPaths: EESetDataPaths();
-        break;
     case O::UiSetLoadingText: gUserInterface->SetLoadingText((long)a[0]);
         break;
     case O::UiRandomSeed: return gUserInterface->mRandomSeed;
@@ -272,12 +233,13 @@ int64_t EEGameStateOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float
     return 0;
 }
 
-double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // Empire Earth.cpp
+double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EERenderObject.cpp
 double EEGameStateOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
     case O::RulesSpeedFactor: return EERuleFloat(EEGetRules().mGameOptions.mSpeeds[a[0]].mFactor);
-    default: return EEStartupOpF(inOp, p, a, f);
+    case O::PrefMaxSounds: return gGamePreferences.mSettings.GetMaxNumberOfSounds();
+    default: return EECore9OpAF(inOp, p, a, f);
     }
 }

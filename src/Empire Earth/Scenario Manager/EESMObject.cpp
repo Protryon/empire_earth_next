@@ -40,27 +40,6 @@ EESMObject::EESMObject() : EeScenarioObjectFields(ee_scenario_object_defaults())
     gResource->GetString(IDS_NONE, this->mName);
 }
 
-// Destroys the object (members only)
-EESMObject::~EESMObject()
-{
-}
-
-// Copies another object's name and filter settings, and its unit list when it picks units on the map (ee_scenario
-// entry.rs)
-void EESMObject::Copy(const EESMObject& inObject)
-{
-    ee_scenario_en_object_copy(this, (void*)&inObject);
-}
-
-// Rebuilds a dynamic object's units (parent or owners), keeps those passing the state/attribute/selected/visible/area/
-// near filters, shuffles and caps them; returns whether any pass (visibility uses the selected-by player)
-// (ee_scenario objeval.rs over the object's list and the world: EESMObjectRead / EESMObjectWrite below; entry.rs adds
-// the simulation capture's SMOB record)
-bool EESMObject::Evaluate(bool inIncludeDead)
-{
-    return ee_scenario_en_object_evaluate(this, inIncludeDead);
-}
-
 namespace {
 
 // a unit id handed over as 32 bits (ee_scenario objeval.rs), as the list holds it
@@ -195,55 +174,6 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
     }
 }
 
-// Picks the unit type to create for the object: the parent's first unit's type, the object's class, or a random
-// class matching its epoch/family/AI kind/unit set filter; -1 if none
-long EESMObject::PickUnitType()
-{
-    return ee_scenario_en_object_pick_unit_type(this);   // ee_scenario object.rs pick_unit_type
-}
-
-// Finds a free spot for a new unit of the type that meets the object's area and nearness filters (random tries for
-// 'not in/near' filters, then one retry without them); returns whether one was found (ee_scenario placement.rs over
-// the area's record; entry.rs adds the simulation capture's SMFP record)
-bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
-{
-    return ee_scenario_en_find_placement(this, inUnitType, &outLocation.mX, &outLocation.mY, inTryRandom);
-}
-
-// Returns a unit's attribute for an object filter: current values, upgrade bonuses over the class, or totals,
-// optionally as a percentage of the class or upgrade value; 0 for a NULL unit
-long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEUnit* inUnit,
-    long inArg4, long inArg5)
-{
-    return ee_scenario_en_unit_attribute(inAttribute, inPercent, inUnit);   // ee_scenario attribute.rs unit_attribute
-}
-
-
-// Copies the object's unit ids out
-void EESMObject::GetUnits(std::vector<unsigned long>& outUnits) const
-{
-    outUnits = this->mUnits;
-}
-
-// Reads the object's units (appended) and filter settings (files before 0.0xcd: attribute ids above Construction
-// Complete move up by 3); returns the first error (ee_scenario save.rs object_load)
-long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_scenario_en_object_io(this, &inFile, inMajorVersion, inMinorVersion, false);
-}
-
-// Replaces every occurrence of a unit id in the object's unit list by a new id
-void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
-{
-    ee_scenario_en_object_replace_unit(this, inOldUnit, inNewUnit);
-}
-
-// Writes the object's units and filter settings (the parent only for minor version >= 0x2a); returns the first error
-// (ee_scenario save.rs object_save)
-long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_scenario_en_object_io(this, &outFile, inMajorVersion, inMinorVersion, true);
-}
 
 // Adds to, subtracts from or sets one unit's attribute (hit points, cargo, flight time, garrison, ammo, scale, power,
 // rot time, built state, variables) by a fixed, random or percentage amount
@@ -256,110 +186,8 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
     ee_scenario_en_change_unit(inAttribute, inPercentage, inUnit, inMinimum, inMaximum, inRandom, inMode);
 }
 
-// Renames the object and renames its object conditions to "<name> Exists" (ee_scenario lists.rs)
-void EESMObject::SetName(const UWideString& inName)
-{
-    ee_scenario_en_object_set_name(this, &inName);
-}
-
-// Sets the parent object; a parent chain that loops back to this object resets the parent to 0 (ee_scenario
-// lists.rs set_parent)
-void EESMObject::SetParent(long inParent)
-{
-    ee_scenario_en_object_set_parent(this, inParent);
-}
-
-// Replaces the object's unit list
-void EESMObject::SetUnits(const std::vector<unsigned long>& inUnits)
-{
-    this->mUnits = inUnits;
-}
-
 // ---- the trigger's members (ee_scenario trigger_members.rs: each a forward; the vectors and strings stay here, reached
 // by ee_scenariocpp_trigger's single statements)
-
-// Creates an enabled, non-looping trigger with one empty condition entry and one empty effect entry
-EESMTrigger::EESMTrigger() { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_CONSTRUCT, 0, 0, 0, 0); }
-
-// Destroys the trigger, deleting all its condition and effect entries
-EESMTrigger::~EESMTrigger() { ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DESTROY, 0, 0, 0, 0); }
-
-// Copies a trigger: texts, entries, the flags, the condition duration and the id
-void EESMTrigger::Copy(const EESMTrigger& inTrigger)
-{
-    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_COPY, 0, (int64_t)(intptr_t)&inTrigger, 0, 0);
-}
-
-// Deletes a condition entry; the new last one ends the chain
-void EESMTrigger::DeleteCondition(unsigned long inIndex)
-{
-    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DELETE, 0, (int64_t)inIndex, 0, 0);
-}
-
-// Deletes an effect entry; the new last one ends the chain
-void EESMTrigger::DeleteEffect(unsigned long inIndex)
-{
-    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_DELETE, 1, (int64_t)inIndex, 0, 0);
-}
-
-// Fires the trigger when its AND/OR condition chain has held for the set duration: queues all effects, or one random
-// OR-separated group, at their delays, and turns a non-looping trigger off
-// (EEScenarioManager::Update 0x1b20e6)
-// (trigger.rs evaluate over the entries, trigger_members.rs; entry.rs adds the simulation capture's SMTE record)
-void EESMTrigger::Evaluate(float inTime)
-{
-    ee_scenario_en_trigger_evaluate(this, inTime);
-}
-
-// Returns condition entry inIndex, or NULL past the end
-EESMTConditionWrapper* EESMTrigger::GetCondition(unsigned long inIndex)
-{
-    return (EESMTConditionWrapper*)(intptr_t)ee_scenario_trigger_member(this, EE_SCENARIO_TRM_GET, 0, (int64_t)inIndex, 0, 0);
-}
-
-// Returns effect entry inIndex, or NULL past the end
-EESMTEffectWrapper* EESMTrigger::GetEffect(unsigned long inIndex)
-{
-    return (EESMTEffectWrapper*)(intptr_t)ee_scenario_trigger_member(this, EE_SCENARIO_TRM_GET, 1, (int64_t)inIndex, 0, 0);
-}
-
-// Reads the trigger's settings, condition entries and effect entries (id -1 becomes 0); returns the first error
-// (ee_scenario save.rs trigger_load)
-long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_scenario_en_trigger_io(this, &inFile, false);
-}
-
-// Writes the trigger's settings, condition entries and effect entries; returns the first error
-// (ee_scenario save.rs trigger_save)
-long EESMTrigger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_scenario_en_trigger_io(this, &outFile, true);
-}
-
-// Sets condition entry inIndex
-void EESMTrigger::SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition)
-{
-    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET, 0, (int64_t)inIndex, inNot, (int64_t)inCondition);
-}
-
-// Sets condition entry inIndex's operator (appending an entry after the last when it gets one)
-void EESMTrigger::SetConditionOperator(unsigned long inIndex, long inOperator)
-{
-    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET_OPERATOR, 0, (int64_t)inIndex, inOperator, 0);
-}
-
-// Sets effect entry inIndex
-void EESMTrigger::SetEffect(unsigned long inIndex, long inDelay, unsigned long inEffect)
-{
-    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET, 1, (int64_t)inIndex, (int64_t)(unsigned long)inDelay, (int64_t)inEffect);
-}
-
-// Sets effect entry inIndex's operator (appending an entry after the last when it gets one)
-void EESMTrigger::SetEffectOperator(unsigned long inIndex, long inType)
-{
-    ee_scenario_trigger_member(this, EE_SCENARIO_TRM_SET_OPERATOR, 1, (int64_t)inIndex, inType, 0);
-}
 
 // the trigger members' single statements (trigger_members.rs EE_SCENARIO_TR_*): on trigger inTrigger, entry i, value v
 extern "C" int64_t ee_scenariocpp_trigger(uint32_t inOp, EESMTrigger* t, int64_t i, int64_t v)

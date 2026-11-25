@@ -7,6 +7,7 @@
 
 #include "rust/data/tables.h"
 #include "rust/data/media.h"
+#include "rust/game/preload_media.h"
 
 class FSFile;
 
@@ -15,14 +16,19 @@ class FSFile;
 class EEMusicObject : public UReferenceCounter, public EEMedia, public EeDataMusicFields, public EeDataMediaUse {
 public:
     EEMusicObject(const unsigned char* inRecord);   // a dbmusic record
-    virtual ~EEMusicObject();                       // ??_G 0xd9f1c (EEMedia's thunk 0xda3a6), dtor 0xd9f38
-    virtual long LoadMedia();                       // EEMedia +0x04 0xda3ae
-    virtual long UnloadMedia();                     // EEMedia +0x08 0xda3b6
-    static long LoadTable(FSFile* inFile);
+    // ??_G 0xd9f1c (EEMedia's thunk 0xda3a6), dtor 0xd9f38
+    virtual ~EEMusicObject() {  }
+    // EEMedia +0x04 0xda3ae
+    virtual long LoadMedia() { return this->LoadScore(); }
+    // EEMedia +0x08 0xda3b6
+    virtual long UnloadMedia() { return this->UnloadScore(); }
+    static long LoadTable(FSFile* inFile) { return ee_preload_load_music(inFile); }
     static void ClearAll();
     static EEMusicObject* GetRandom(long inEpoch);  // 0xda116 (a random song of the epoch's list)
-    long LoadScore();                       // 0xda251 (loads the score into gConductor once)
-    long UnloadScore();                     // 0xda315 (5: try again)
+    // 0xda251 (loads the score into gConductor once)
+    long LoadScore() { return ee_preload_music_load_score(this); }
+    // 0xda315 (5: try again)
+    long UnloadScore() { return ee_preload_music_unload_score(this); }
     float GetReverbGain() const { return this->mReverbGain; }
     float GetReverbHighFreqRTRatio() const { return this->mReverbHighFreqRTRatio; }
     float GetReverbMix() const { return this->mReverbMix; }

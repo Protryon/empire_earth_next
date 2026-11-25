@@ -1189,60 +1189,99 @@ pub fn tree_apply_saved_state<H: TechHost + ?Sized>(h: &mut H, t: Tree, apply_ob
 pub struct EeTechTreeRecord {
     /// +0x00 (not read: the name?)
     pub mLabel: [u8; 0x68],
+    /// +0x68 -> mU08->mU4C
     pub mID: i32,
+    /// +0x6c -> the epoch's mL14
     pub mEpoch: i32,
+    /// +0x70 -> mL18
     pub mObsoleteEpoch: i32,
+    /// +0x74 -> mU08->mResearchedEvent
     pub mResearchedEvent: i32,
+    /// +0x78 -> mU08->mObsoleteEvent
     pub mObsoleteEvent: i32,
     /// +0x7c the cost of resource 3 (wood)
     pub mCost3: i32,
     /// +0x80 stone
     pub mCost4: i32,
+    /// +0x84
     pub mUnused1: i32,
     /// +0x88 gold
     pub mCost5: i32,
+    /// +0x8c
     pub mUnused2: i32,
     /// +0x90 iron
     pub mCost6: i32,
     /// +0x94 food
     pub mCost2: i32,
+    /// +0x98 -> mU08->mU58
     pub mBuildTime: i32,
+    /// +0x9c -> mU08->mU5C
     pub mPrerequisite1: i32,
+    /// +0xa0 -> mU08->mU60
     pub mPrerequisite2: i32,
+    /// +0xa4 -> mU08->mU64
     pub mPrerequisite3: i32,
+    /// +0xa8 -> mU08->mSelectedObjects
     pub mPrerequisite4: i32,
+    /// +0xac -> mU08->mUnitClass
     pub mUnitClass: i32,
     /// +0xb0 `EEButtonObject::Get` -> the node's `mButton`
     pub mButton: i32,
+    /// +0xb4 -> mU08->mB7C
     pub mMakesUnit: u8,
+    /// +0xb5 -> mU08->mB7D
     pub mCountsTowardEpoch: u8,
+    /// +0xb6
     pub mUnused3: u8,
+    /// +0xb7
     pub mUnused4: u8,
+    /// +0xb8 -> mU08->mU74
     pub mNameID: i32,
+    /// +0xbc -> mU08->mU48
     pub mKind: i32,
+    /// +0xc0 -> mU08->mU38
     pub mCostResource: i32,
+    /// +0xc4 -> mU08->mU3C
     pub mRequiredStatistic: i32,
+    /// +0xc8 -> mU08->mRequiredStatisticValue
     pub mRequiredStatisticValue: i32,
+    /// +0xcc -> mU08->mFirstNodeID
     pub mCalamity: i32,
+    /// +0xd0 -> mU08->mHotKey
     pub mHotKey: i32,
     /// +0xd4 an epoch's title string (0: 30145 + the epoch)
     pub mTitleID: i32,
+    /// +0xd8
     pub mUnused6: i32,
+    /// +0xdc
     pub mUnused7: i32,
+    /// +0xe0
     pub mUnused8: i32,
     /// +0xe4 the node's cost factors of its second .. fifth unit class (the others 1.0f)
     pub mFactor1: f32,
+    /// +0xe8 (third)
     pub mFactor2: f32,
+    /// +0xec (fourth)
     pub mFactor3: f32,
+    /// +0xf0 (fifth; the others: 1.0f)
     pub mFactor4: f32,
+    /// +0xf4 -> mU08->mB7E
     pub mShowInEditor: u8,
+    /// +0xf5 -> mU08->mB7F
     pub mObsoletedByDefault: u8,
+    /// +0xf6 -> mU08->mHasParentalVengeance
     pub mAvailableWithEpoch: u8,
+    /// +0xf7 -> mU08->mHasGroupAttack
     pub mResearchedWithEpoch: u8,
+    /// +0xf8
     pub mUnused9: i32,
+    /// +0xfc -> the epoch's mU4C
     pub mNextEpoch: i32,
+    /// +0x100 -> the epoch's mU40
     pub mRequiredSOL: i32,
+    /// +0x104 -> the epoch's mFirstNodeID
     pub mFirstNodeID: i32,
+    /// +0x108 -> mU08->mU40
     pub mDefaultUnitClass: i32,
 }
 

@@ -7,10 +7,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/// A keyed cipher. `#[repr(C)]` plain data: the C++ `Blowfish` embeds it by value and copies it with the class.
+/// A cipher's key. `#[repr(C)]` plain data: the C++ `Blowfish` embeds it by value and copies it with the class.
 struct EeWonBlowfish {
-  uint32_t s[1024];
-  uint32_t p[18];
   uint8_t key[56];
   uint32_t key_len;
   uint32_t valid;

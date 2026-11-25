@@ -123,8 +123,6 @@ extern RTSRenderObject* gU56534C;           // 0x56534c (the user interface's)
 // 0x23cee2 (cdecl): a complex unit's own translucency (ioOpacity) (provisional name; EERenderObject::GetUnitOpacity)
 class EEComplexUnit;
 bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity);
-// the area effect texture (0x5293f4; EEROTerrain.cpp, also declared in ee/EEROTerrain.h; EERenderObject's circles)
-extern GETexture* gAreaEffectTexture;
 
 
 #endif
