@@ -40654,6 +40654,14 @@ also lost time: the usage limit stopped them mid-round, and the machine was shar
 | LAN game and lan_capture_compare (base exe from 2d31b7328) | PASS; every lobby capture identical but the staging caret (15 pixels at x 121..122 y 329..344, host-staging-ready and joiner-staging-joiner) |
 | `bash tools/gates.sh` | GATES PASS (tour; ai-game time-cap, units [4, 38, 39], alive_computers [2, 3], engines classic_lua x2; lan-game) |
 
+Then origin/rust batch 25 (04ccdbcf3: game core 13, units 11, WON GUI 35, WON lobby and network 36) merged clean but
+PORT_LEARNINGS.md (3926af70c). On that tip: both builds 0/0, rust_build header (356) and gate PASS (6,761 tests),
+won_host_coverage PASS, oracle 2-7 identical, eedata check and cppgate PASS, gates.sh GATES PASS (ai-game units
+[4, 36, 37]), wontest 181 of 182 exit 0 with won_ping36_test (batch 25's, real UDP timing on 127.0.0.1) one mismatch
+under load, exit 0 twice alone. The LAN game PASS; against w36lanA the staging screens and the LAN list differ in
+the game's name only (lantest0 against lantest2: the base ran in harness slot 0, this run in slot 2) besides the
+caret. The captures, saveload and scenario gates were not rerun after batch 25.
+
 ## The game core lane, round 13: the shim collapse starts (the EeGameCpp chain's pass-through links, the global objects' storage, EEWorld's destructor, the hosts' forwarding cases of the entry, world, physics, EE-SIM, graphics, pre-loading, persistent, message, server, tech and db files; the message and tech ids, the save versions' predicates, the send-to slots and the db file names in Rust), four forks in parallel worktrees (ee_game gamecpp global_objects.rs, rast.rs; ee_sim message_ids.rs, tech_tree_ids.rs, save_versions.rs; branch rust-core13, 2026-11-24)
 
 The brief: start the shim collapse (Rust calling Rust where the data is already Rust's, the C++ case, its EeGameCpp
