@@ -3,40 +3,19 @@
 // EESEACreateBlankMap.cpp (0x1a5529). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/NEMessage.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
-#include "lle/UResourceFile.h"
 #include "lle/UICheckBox.h"
 
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "lle/USingleton.h"
-#include "ee/EEMessage.h"
-#include "ee/EEARust.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIBUpgrade.h"
 #include "ee/EEUIFMGAttribute.h"
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUICPortrait.h"
-#include "ee/EEStringIDs.h"
 // the shared empty byte string (the original references it at 0x1a4eb4; no other string has its contents)
-#include "rust/game/screens.h"
 
 // The panel whole in Rust (ee_screens editor_tabsx.rs SeupPanel: the status box and its controls as handles; once
 // EEUIFSEUpgradePanel, a class of those pointers with its ctor, dtor and ShowUnit): its single statements here

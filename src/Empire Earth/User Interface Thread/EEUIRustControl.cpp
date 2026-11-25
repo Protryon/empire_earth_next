@@ -2,14 +2,10 @@
 // any control's ops here, the class's own in its RustOp.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "GEWindow.h"
 #include "lle/GEViewport.h"
 #include "lle/GERhombus.h"
-#include "lle/Input System.h"
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEMouse.h"

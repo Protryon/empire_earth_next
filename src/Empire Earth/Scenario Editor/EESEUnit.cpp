@@ -6,48 +6,26 @@
 // flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/Input System.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/NEMessage.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
 #include "lle/UResourceFile.h"
-#include "lle/UICheckBox.h"
 
-#include "lle/UIRadioButton.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "lle/USingleton.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "lle/GETerrainMesh.h"
 #include "ee/EEMouse.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEUnit.h"
-#include "ee/EEMessage.h"
-#include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEGhostUnit.h"
@@ -57,7 +35,6 @@
 #include "ee/EESEUICCommandUnits.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EEMiniMap.h"
-#include "rust/game/screens.h"
 #include "ee/EEUIShell.h"
 
 
@@ -68,7 +45,6 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x21
 
 // The upgrade panel is a real 0x60-byte class (new at 0x59b976 in the tab's ctor); both its ctor counters
 // are mutable
-#include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
 
 

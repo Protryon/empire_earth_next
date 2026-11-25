@@ -10,12 +10,6 @@
 #include <float.h>
 
 #include "dx7/DX7Rasterizer.h"
-#include "lle/GESurface.h"
-#include "lle/GEScreen.h"
-#include "rust/render/dx7.h"
-#include "rust/render/ge.h"
-#include "platform/PlatFont.h"
-#include "lle/GEBitmap.h"
 #include "lle/GEPoint.h"
 #include "lle/GERhombus.h"
 
@@ -78,12 +72,10 @@ static_assert(sizeof(std::pair<U2DPoint<long>, U2DPoint<long> >) == 4 * sizeof(l
 // ---- the screens, surfaces and movies (DX7Trampolines.cpp, folded here in R4.3 part 17): their objects' hosts and
 // constructors, and the layouts Rust fills
 
-#include "lle/LowLevelEngine.h"
 #include <stddef.h>
 extern "C" void ee_dx7cpp_record_native_error(long inError) { ESRecordNativeError((unsigned long)inError); }
 
 // --- GEScreen and GESurface (DX7Screen, DX7Surface): whole in Rust (ee_dx7 scrobj.rs, surfobj.rs); the calls they make on C++ objects ------
-#include "platform/PlatWindow.h"
 #include "platform/PlatSim.h"
 static_assert(offsetof(GERectangle, mBottom) == 0 && offsetof(GERectangle, mLeft) == 4 && offsetof(GERectangle, mRight) == 8 &&
               offsetof(GERectangle, mTop) == 12 && sizeof(GEColor) == 12, "ee_dx7/src/surfobj.rs ge_rect");

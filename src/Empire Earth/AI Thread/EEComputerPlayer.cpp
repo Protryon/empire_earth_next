@@ -14,12 +14,8 @@
 #include <math.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DSparseArray.h"
 
-#include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
@@ -31,19 +27,13 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPPlacement.h"
 #include "ee/EEUGRust.h"
 #include "ee/EETeam.h"
-#include "ee/EEAIArea.h"
-#include "ee/EEAIPathArea.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEUnitUtilities.h"
 #include "ee/EECombatGoals.h"
-#include "rust/sim/cp.h"
 
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);

@@ -30,11 +30,7 @@
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "rust/base/png.h"
-#include "rust/render/ge.h"
-#include "rust/render/openformats.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>

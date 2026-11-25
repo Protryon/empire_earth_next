@@ -9,26 +9,15 @@
 #include <math.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEInfluenceTable.h"
-#include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 
-#include "ee/EEAIForest.h"
-#include "ee/EEPathManager.h"
-#include "ee/EEScenarioManager.h"
-#include "ee/EESMArea.h"
 #include "ee/EEDebugTrace.h"
-#include "rust/sim/units.h"
 
 // The continent manager's passes, queries and objects are Rust (ee_sim::astar cm_passes.rs, cm_queries.rs,
 // objects.rs; the inline members of ee/EEAIContinentManager.h); here: the members that read the units' classes or the

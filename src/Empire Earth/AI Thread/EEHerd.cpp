@@ -11,14 +11,11 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
@@ -28,10 +25,8 @@
 #include "ee/EEMedia.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEPathManager.h"
 #include "ee/EEFormation.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEHerd.h"
 #include "ee/EESaveGameFiles.h"
 

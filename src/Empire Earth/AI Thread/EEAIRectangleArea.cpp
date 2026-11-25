@@ -9,20 +9,12 @@
 #include <math.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEMap.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEInfluenceTable.h"
 #include "ee/EEAIArea.h"
-#include "ee/EEAIContinentManager.h"
 
 #include "ee/EEAIRectangleArea.h"
-#include "ee/EEAIRandom.h"
 #include "ee/EETown.h"
 #include "ee/EEHerd.h"
 

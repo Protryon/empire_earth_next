@@ -11,21 +11,14 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEMap.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEAIContinent.h"
-#include "ee/EEAIContinentManager.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EETown.h"
 

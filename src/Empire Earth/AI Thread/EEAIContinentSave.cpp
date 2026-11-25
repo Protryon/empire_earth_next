@@ -30,14 +30,9 @@
 #include <math.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
-#include "lle/FSMemoryFile.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIContinent.h"
@@ -50,10 +45,8 @@
 #include "ee/EEAIHill.h"
 #include "ee/EEAIChokePoint.h"
 #include "ee/EETown.h"
-#include "ee/EEHerd.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUnit.h"
-#include "ee/EEPathManager.h"
 
 extern long& gEEAIRegionSize;
 

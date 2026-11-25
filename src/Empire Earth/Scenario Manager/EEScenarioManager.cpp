@@ -23,7 +23,6 @@
 #include "ee/EEDebugTrace.h"
 #include "lle/SESoundManager.h"
 #include "GEWindow.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEMouse.h"
 #include "ee/EEUserInterface.h"
 #include "lle/UIForm.h"
@@ -33,9 +32,6 @@
 #include "ee/EEGameSound.h"
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EECommunications.h"
-#include "ee/EEStringIDs.h"
-#include "ee/EEPersistentTag.h"
-#include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
 bool gScenarioSimDialogs = false;

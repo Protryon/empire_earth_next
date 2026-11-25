@@ -26,8 +26,6 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
-#include "ee/EESMMediaStrings.h"
-#include "ee/EESMDialogMessage.h"
 #include "ee/EESaveGameFiles.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"

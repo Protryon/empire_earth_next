@@ -11,26 +11,14 @@
 #include <windows.h>
 #include <string>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "GEWindow.h"
-#include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/TMPoll.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
-#include "lle/UICheckBox.h"
 #include "lle/UIListBox.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
@@ -42,10 +30,7 @@
 #include "ee/EEMouse.h"
 #include "ee/EEARust.h"
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EESEARust.h"
 #include "ee/EESMArea.h"
-#include "rust/game/screens.h"
-#include "rust/sim/scenario.h"
 
 
 // Sets the map rectangle the editor highlights

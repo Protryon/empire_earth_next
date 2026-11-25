@@ -9,33 +9,10 @@
 // ButtonUp and SetDirty, the thumb bitmap, the manager's drag bar).
 #include <windows.h>
 
-#include "rust/ui/obj.h"
-#include "rust/ui/sliderobj.h"
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
-#include "lle/GERasterizer.h"
-#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/UIEntity.h"
-#include "lle/UIEntityGroup.h"
 #include "lle/UIControl.h"
-#include "lle/UIFormManager.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UISlider.h"
-#include "lle/UIObjHost.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_hosts.h"
 
 #define s static_cast<UISlider*>(inObj)
 #define theManager (s->GetForm()->GetManager())

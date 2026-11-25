@@ -11,23 +11,13 @@
 #include <string>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
 #include "lle/GERhombus.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
 #include "lle/UIFileComboBox.h"
-#include "lle/UResourceFile.h"
 
-#include "lle/UICheckBox.h"
 #include "lle/UITriStateCheckBox.h"
 
 #include "ee/EmpireEarth.h"
@@ -38,15 +28,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEARust.h"
-#include "ee/EEUIShell.h"
-#include "ee/EEStringIDs.h"
-#include "ee/EEScreenEvent.h"
-#include "rust/game/screens.h"
-#include "rust/sim/scenario.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EESaveGameFiles.h"
-#include "ee/EESEUnit.h"
-#include "ee/EESEARust.h"
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSEffect.cpp
 
 // ---- the host of the editor's events (ee_screens scenario_editor.rs): inForm is the scenario editor's form,

@@ -5,33 +5,16 @@
 // editor_groups_ffi.rs, holds the object), and this unit is its host (ee_screenscpp_sepl). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETexture.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/NEMessage.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
-#include "lle/UResourceFile.h"
-#include "lle/UICheckBox.h"
 
-#include "lle/UIRadioButton.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
@@ -39,8 +22,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnit.h"
-#include "ee/EEMessage.h"
-#include "ee/EEARust.h"
 #include "ee/EESERBUnitTypes.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EESEARust.h"
@@ -59,10 +40,7 @@ static GEBitmap* sSeplDiplomacy[3][2];
 
 #include "ee/EECivilizationManager.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EEGlobalConstants.h"
-#include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/game/screens.h"
 extern FSPath* gCivilizationDataPath;
 UString gSECivilizationExtension(".civ");   // (once EESESCComboBox.cpp's unit global)
 // the player tab's techs by kind (once EESEPSSetPlayers' four class statics: units, buildings, heroes, technologies)

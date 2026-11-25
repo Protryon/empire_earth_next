@@ -22,16 +22,12 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysics.h"
 #include "lle/SESoundManager.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEUserInterface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEEffectKindIDs.h"
-#include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
 #include "lle/U2DSparseArray.h"
@@ -79,14 +75,9 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEPPatrolGroup.h"
 
 #include "ee/EEHerd.h"
 
-#include "ee/EEAirTrafficControl.h"
-#include "ee/EEWUnitsOffMapInfo.h"
-#include "ee/EEUnitVectorItem.h"
-#include "rust/sim/units.h"
 
 // what one effect's run keeps between its world calls (entry.rs makes and frees it: EE_SCENARIO_WORLD_RUN_*) (ee_scenario effect.rs, effect_ai.rs, task.rs): the
 // calamity point and class, the units a calamity found in an area, the graphic effect, the expanded message, the
