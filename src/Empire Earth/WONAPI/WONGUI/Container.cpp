@@ -24,29 +24,12 @@ typedef EeWonCtVirt V;
 
 static Component* Comp(intptr_t a) { return (Component*)a; }
 
-// a component's virtual (or, for the base, Component's own: inBase)
+extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp, intptr_t, intptr_t, intptr_t, intptr_t);
+// a component's virtual (or, for the base, Component's own, the Rust component's: inBase)
 static intptr_t CtVirtCall(Component* c, bool inBase, V v, intptr_t a, intptr_t b)
 {
-    if (inBase) {
-        switch (v) {
-        case V::SizeChanged: c->Component::Virtual08(); return 0;
-        case V::PrePaint: c->Component::PrePaint(*(Graphics*)a); return 0;
-        case V::Paint: c->Component::Paint(*(Graphics*)a); return 0;
-        case V::EnableControlsById: c->Component::EnableControlsById(*(const ControlIdSet*)a, b != 0); return 0;
-        case V::NotifyRootVisibility: c->Component::NotifyRootVisibility(a != 0); return 0;
-        case V::HitTest: return c->Component::HitTest((int)a, (int)b) ? 1 : 0;
-        case V::MouseEnter: c->Component::MouseEnter((int)a, (int)b); return 0;
-        case V::MouseExit: c->Component::MouseExit(); return 0;
-        case V::MouseHover: c->Component::MouseHover((unsigned long)a); return 0;
-        case V::HandleBroadcastEvent: c->Component::HandleBroadcastEvent((ComponentEvent*)a); return 0;
-        case V::AddedToParent: c->Component::AddedToParent(); return 0;
-        case V::MarkInvalid: c->Component::MarkInvalid(); return 0;
-        case V::ClearGrabBG: c->Component::ClearGrabBG(); return 0;
-        case V::GotFocus: c->Component::GotFocus(); return 0;
-        case V::LostFocus: c->Component::LostFocus(); return 0;
-        default: return 0;
-        }
-    }
+    if (inBase)
+        return ee_won_comp_base_call(c, ee_won_guicpp_comp_call, v, a, b);
     switch (v) {
     case V::NeedsPaint: return c->NeedsPaint() ? 1 : 0;
     case V::PrePaint: c->PrePaint(*(Graphics*)a); return 0;
@@ -99,7 +82,8 @@ static intptr_t CtOwnCall(Container* t, V v, intptr_t a, intptr_t b)
 }
 
 namespace WONAPI {
-// every container op, for the Rust Container
+// every container op, for the Rust Container (Component's and the container's own calls are gamewin.rs
+// common_op's in the game: R6 WON GUI round 37)
 intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     switch (op) {
@@ -112,39 +96,13 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
         return CtOwnCall(t->mParent, (V)a, (intptr_t)static_cast<Component*>(t), 0);
     case Op::CtVirt: return CtOwnCall(t, (V)a, b, c);
     case Op::CtDetach: Comp(a)->mParent->RemoveChild(Comp(a)); return 0;
-    case Op::CtAddBG: {
-        // A container not yet under a root (the lobby's tab control is laid out, and brings its page to the top, before
-        // the lobby screen joins the root) has no root container. The original called AddBG on that NULL root, which
-        // returned before reading itself when the grabber had nothing to draw; the Rust RootContainer's forwarder reads
-        // its object first, so a NULL root is skipped here (round 30: the LAN gate's crash on the MultiPlayer click).
-        RootContainer* aRoot = t->GetRootContainer();
-        if (aRoot != NULL) aRoot->AddBG((BackgroundGrabber*)a);
-        return 0;
-    }
-    case Op::CtCursorHold: ((Cursor*)a)->AddRef(); return 0;
-    case Op::CtCursorRelease: ((Cursor*)a)->Release(); return 0;
     case Op::CtSetScheme: ((Graphics*)a)->mColorScheme = (ColorScheme*)b; return 0;
-    case Op::CtGrabBG: return (intptr_t)Comp(a)->GetGrabBG();
-    case Op::CtOwnScheme: return (intptr_t)Comp(a)->GetOwnColorScheme();
     case Op::CtScheme: return (intptr_t)((Graphics*)a)->mColorScheme;
-    case Op::CtRoot: return (intptr_t)static_cast<Component*>(t->GetRootContainer());
-    case Op::CtRootFocused: return t->GetRoot()->mManager->GetFocusWindow() == t->GetRoot() ? 1 : 0; // (GetWindow in the SDK)
-    case Op::CtMouseInClient: return t->GetRoot()->IsMouseInClientArea() ? 1 : 0;
-    case Op::CtDefaultCursor: return (intptr_t)t->GetDefaultCursor();
-    case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
-    case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
     // (a viewport whose area was never set: no area, not visible; the forwarder would read its object through NULL)
     case Op::VpAreaRectVisible:
         return a != 0 && static_cast<ScrollArea*>(Comp(a))->IsRectVisible(*(WONRectangle*)b) ? 1 : 0;
-    case Op::CtContainerOf: return Container::ObjectOf(Comp(a));
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
     case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
-    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
     case Op::Invalidate: t->Invalidate(); return 0;
-    case Op::RequestFocus: t->RequestFocus(); return 0;
-    case Op::GetMousePos: t->GetMousePos(*(int*)a, *(int*)b); return 0;
-    case Op::KeyMod: return t->GetKeyMod();
     case Op::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
     default: return 0;
     }
@@ -167,5 +125,5 @@ Container::Container()
 static_assert(ComponentFlag_WantFocus == EE_WON_COMP_FLAG_WANT_FOCUS, "compobj.rs flags");
 // Destroys the container: the Rust container detaches the children, then releases the cursor, the child layout, the
 // timer children and the children
-Container::~Container() { ee_won_ct_free(this->mCt); }
+Container::~Container() { ee_won_ct_free(this->mCt); this->mCt = NULL; }
 }

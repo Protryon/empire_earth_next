@@ -419,6 +419,17 @@ impl Sh {
     }
     /// One host op.
     pub fn host(&self, op: EeWonShellHostOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+        use crate::guihost::EeWonWbImage as I;
+        let r = match op {
+            EeWonShellHostOp::Ref | EeWonShellHostOp::RefObj => crate::gamewin::rf(a, b > 0),
+            EeWonShellHostOp::Img if a == I::Hold as isize || a == I::Release as isize => {
+                crate::gamewin::rf(b, a == I::Hold as isize)
+            }
+            _ => None,
+        };
+        if let Some(r) = r {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this shell; the kinds hold no borrow across a call
             Some(h) => unsafe { h(self.me, op, a, b, c, d) },

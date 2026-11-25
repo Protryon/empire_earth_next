@@ -41388,3 +41388,100 @@ not build here (alsa-sys's pkg-config for the cross target); the Linux census sh
   EEUIShell.cpp, Scenario Editor Actions/EESEARust.cpp (GetGhostUnit); ee_sim world layout.rs, view.rs (the ghosts);
   Scenario Editor/EEUIFScenarioEditor.cpp (fork B); screens/mod.rs (fork C, pub(crate)); ee_game Cargo.toml (libc).
 - **Left**: docs/progress/game-leaves.md "Next".
+
+## R6 WON GUI, round 37: Container's overrides folded into Component's dispatch, one input event over a Rust record, the game's windows and manager bound to their Rust parts, one reference function; 20 units merged (ee_won_gui gamewin.rs, compmem.rs mCt, winobj.rs EeWonWinEvent; branch rust-wongui37, 2026-11-25)
+
+The round started from rust-wongui36 (496a38acc, batch 25 in). The base for lan_capture_compare was build/w36lanC, the LAN
+run on 3926af70c (the same code as 496a38acc), so no base exe was built. Two forks in hand-made worktrees split the scope
+by side as in round 36: host (Component, Container, Window, WindowManager, Graphics, events, images, cursor; EeWonGuiOp
+3800..3999 after the 3400 block) and controls (buttons, combo, layouts, configs, lists; 4000..4199 at the enum's end).
+Fork A stopped once at its turn limit with its third commit uncommitted; resumed, it committed and finished. Both forks
+merged --no-ff (one conflict: link/won/units.txt, where both sides removed neighbouring lines; the union of the
+removals), then origin/rust batch 26 (a78aecdc2) merged clean.
+
+### What moved (`port_metrics.py` cpp_lines; from 496a38acc)
+
+| Part | What | cpp_lines |
+|---|---|---|
+| host 4f3b2f49e | Container's 29 forwarding overrides gone: Component carries the container's Rust object (`mCt` in compmem.rs's block) and its forwarders run the container's call when there is one (Container.cpp's base calls through `ee_won_comp_base_call`); one InputEvent over winobj.rs's EeWonWinEvent record (MouseEvent, KeyEvent and SizeEvent only fill it; the Win*Ev, WmMouseEv* and WmSizeEv* ops and the Handle*Event bodies gone; WmInputRec 3800); gamewin.rs binds a game Window's Rust window, platform window and root so they call each other directly (RootCall, WinPlat and WindowManager.cpp's window and component cases gone) | -223 |
+| host 0ac93490c | the game's manager bound the same way: the manager and screen calls, Component's parent, window and default-window calls and the common component and container ops answered in Rust in the game (gamewin.rs common_op) | -51 |
+| host 46622a998 | every host's Hold/Release/Ref/Unref through one game-registered function (`ee_won_gui_ref_register`, ComponentLifetime.cpp's RefOf); Cursor.cpp, PlatClipboard.cpp and MSGraphicsUtil.cpp merged into their neighbours; **dead code**: 11 uncalled methods (GetPixel, DrawEllipse, PerformClip, DoTranslate, GetPlatFocusWindow, GetDisplayContext, UnionInvalidRect, GetPlatManager, BaseTimerEvent, BasePlatformClose, GetMinimizeOnResolutionRestore) | -81 |
+| controls 24a5cf9dd, 247db5c67 | **no move**: 17 near-empty units merged into their neighbours (the buttons' hosts in Button.cpp, the configs' in ComponentConfigHost.cpp, the containers' controls' in ComboBox.cpp, the leaves' in TextListItem.cpp) | -221 |
+| controls c7b292aa0 | **no move**: seven small GUI headers folded into WONLobbyGUI.h and WONLobbyConfigImages.h | -69 |
+| controls 9eb277723 | **no move**: the combo, dialog, tab and layout hosts share one CtlOp | -7 |
+| controls 3ca015811 | **dead code**: nine uncalled forwarders, three overrides that only called their base | -28 |
+| controls b2eac7683 | **no move**: constant-assigning constructors as member initialisers (RectangleComponent3D, ListItem, SoundDescriptor, Sound, Button, ImageButton, ComboBox, Dialog, TabBar) | -35 |
+
+`port_metrics.py` from 496a38acc to the forks' merge 3f3514223: cpp_lines 109,271 -> 108,556 (**-715**: host -355,
+controls -360), cpp_files 345 -> 325 (**-20**), logic 16,850 -> 16,781 (-69), classes 800 -> 797, extern_c +6,
+rust_hdrs +1 (gamewin.h), unsafe +36, layout 0, rust_lines +752. Against origin/rust batch 26 after the merge
+(a78aecdc2 -> c6033fe6b): cpp_lines 107,521 -> 106,806 (-715), cpp_files 338 -> 318 (-20). About -360 of the round is
+no move (unit merges, header folds, initialisers) or dead code. Short of the -1,500 target (below).
+
+### Why not -1,500
+
+The controls side's real moves each cost a few to twenty lines and several driver worlds redone: the buttons reading
+their state through compmem, ListItem's fields read in place (about 21 cases over seven worlds), the combo box's parts
+in Rust (golden_comboobj regenerated), CfgTabRead's scalar reads. The large remainder is the config object model
+(WONCfgTable.inl, WONCompCfg.inl, WONCfgLoad.inl, WONCfgBody.inl, ComponentConfigHost.cpp: about 1,000 lines), held by
+the lobby lane's config classes deriving from ComponentConfig, and the class heads of WONLobbyGUI.h the lobby lane
+derives from. The host side's binding (gamewin.rs) is what opened its cuts; more of it (Graphics, RootContainer, the
+message box, DisplayContext) is the next round's.
+
+### Proof
+
+- LAN-reached: the container dispatch, the input events, the window and manager binding, the reference function, the
+  merged units. The LAN game PASS (fork A three times, fork B once, both merged tips) and lan_capture_compare against
+  build/w36lanC: every lobby capture identical but the game's name (lantestN by harness slot: 35 pixels at x 200..220 on
+  the staging screens, 19 at x 250..257 on the LAN list) and the caret.
+- Drivers: they bind nothing and register no reference function, so their worlds answer every old op and their goldens
+  are unchanged; won_guisplit33 updated (32 of 32 mutations), winobj, wmobj, platwin, platwm, win35, ctobj, compobj,
+  cfgtab, leaf34 (its generator reads the merged units), msbtnobj, wonbtnobj, comboobj, tabobj, dlg34 (19 of 19
+  mutations), layoutobj, skinlay; the full wontest in the chain.
+
+### Lessons
+
+- **Binding a game object's Rust parts to each other, and one game-registered reference function, lets the Rust objects
+  call each other directly in the game while the drivers, which bind nothing, keep their worlds and goldens**
+  (gamewin.rs).
+- **The container's Rust object belongs on Component itself**: otherwise a C++ `Container::X()` base call routed back
+  through the component dispatch loops into the container.
+- **A unit merge keeps includes that sit inside a namespace where they are** (ConfigTableHost included its .inl files
+  inside `namespace WONAPI`), and **generators name units**: tests/won/won_leaf34_gen.py and xbuild.py's driver unit
+  lists (GUIStringSingleton.cpp; GUIEmptyWideString stays its own data unit for the cycle cut).
+- **Two branches removing neighbouring lines of link/won/units.txt conflict**: resolve to the union of the removals,
+  then check every listed unit exists.
+
+### Behaviour changes
+
+- Every component is 8 bytes larger (`mCt`); a window's platform calls through gamewin answer 0 after its platform part
+  is freed (as the original's `Rust()` did).
+- The shared CtlOp hosts answer a few child, button and event ops they ignored (no Rust object sends them); the
+  converted constructors initialise in declaration order (nothing reads the members in between).
+
+### Left
+
+- Button.cpp's copies of the container ops are unreached in the game (the component dispatch answers them): delete.
+- The Graphics fold (the colour scheme into the state block: CtSetScheme, CtScheme, GfxTrans, the grabber's Clip; draw
+  plans run without WONDrawOne); RootContainer's overrides routed like Container's; the message box ops through gamewin
+  (reached only by SHOWPARSETIME: a driver); DisplayContext and the image fields as Rust records; WmEventCall's Type,
+  Window and Deliver; NativeImage and RawImage into Image.
+- Controls: the buttons' state through compmem, ListItem in place, the combo box's parts, CfgTabRead's reads and the
+  config guards; the config object model together with the lobby lane.
+
+### Gates
+
+| Gate | 3f3514223 (both forks; build/w37/chain.log) | c6033fe6b (batch 26 merged; build/w37/chain_m.log) |
+|---|---|---|
+| `build.py -j 8 --sim` / `--test-profile windowed-software` | 0/0 / 0/0 | 0/0 / 0/0 |
+| `rust_build.py header` / `gate` | 357 current / PASS | 358 current / PASS |
+| won_host_coverage | PASS | PASS |
+| oracle seeds 2-7 | identical | identical |
+| LAN game, lan_capture_compare (base build/w36lanC) | PASS; known diffs only (game name by slot) | PASS; known diffs only: the game name by slot, the caret (staging x 121, create dialog x 575..576), the pointer in host-lobby-open |
+| eedata `check` / `cppgate` | PASS / PASS | (not rerun: the lane does not touch them) |
+| editor; random-game `--box-select --orders --seed 7`; sim_editor, `--civbuilder` | PASS; PASS; PASS, PASS | (not rerun) |
+| scenario_check | 26/27 (operationwatchtower timed out waiting for form 4 under load) | 27/27 |
+| `bash tools/gates.sh` | GATES PASS (ai-game units [4, 34, 36], alive_computers [2, 3], classic_lua x2) | GATES PASS (ai-game units [4, 36, 37], alive_computers [2, 3], classic_lua x2) |
+| 12 capture profiles | PASS | (not rerun) |
+| saveload plain / matrix | 18 identical / PASS | (not rerun) |
+| `xbuild.py wontest` | all exit 0 but won_ping36_test (UDP timing under load); alone: exit 0, 0 mismatches | exit 0 (every program) |
