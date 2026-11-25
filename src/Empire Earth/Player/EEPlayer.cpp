@@ -175,13 +175,8 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io);
 
 // the Rust player's view of a player (ee_units player.rs)
 EEPlayerRefs::EEPlayerRefs(const EEPlayer* inPlayer)
+    : EeUnitsPlayerRefs{const_cast<EEPlayer*>(inPlayer), &EEPlayerHost, const_cast<EEPlayer*>(inPlayer), const_cast<EEPlayer*>(inPlayer), inPlayer->mSavedGroups.mStats}
 {
-    EEPlayer* thePlayer = const_cast<EEPlayer*>(inPlayer);
-    this->player = thePlayer;
-    this->host = &EEPlayerHost;
-    this->saved = thePlayer;
-    this->fields = thePlayer;
-    this->stats = thePlayer->mSavedGroups.mStats;
 }
 
 // port (the player lane, round 1): the economy and the improvements are Rust (ee_units player.rs) over this host; the
@@ -623,13 +618,16 @@ void EEPlayer::Reset()
     ee_units_player_body(this, EE_UNITS_PLAYER_DO_RESET, 0, 0, 0, 0.0f);   // ee_units player_body.rs reset
 }
 
-// The context of EEPlayer::Load and Save's operations (EEPlayerSaveOperation)
+// The context of EEPlayer::Load and Save's operations (EEPlayerSaveOperation) and of LoadUnit's and SaveUnit's
+// (EEPlayerUnitOperation), made in the call's argument (Self: the address the Rust passes back)
 struct EEPlayerSaveContext {
     EEPlayer* mPlayer;
     FSFile* mFile;
     unsigned long mMajorVersion;
     unsigned long mMinorVersion;
+    RTSUnit* mUnit;                         // SaveUnit's unit
     EEUnitClassUpgrade* mDummyUpgrade;      // the load's stand-in upgrade (UPGRADE_DUMMY_NEW .. DELETE)
+    void* Self() { return this; }
 };
 
 static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
@@ -640,8 +638,7 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
 // (EeUnitsPlayerSaved) and EEPlayer::SaveOperation's parts
 long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EEPlayerSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
-    return ee_units_player_load(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this), this->mQueued,
+    return ee_units_player_load(EEPlayerSaveContext{this, &inFile, inMajorVersion, inMinorVersion, NULL, NULL}.Self(), &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this), this->mQueued,
                                 (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
@@ -828,17 +825,10 @@ void EEPlayer::SetUnitClassMedia(long inUnitClass, long inMediaFlags)
 
 // LoadUnit's and SaveUnit's C++ parts (ee_units player_save.rs load_unit, save_unit): the file's primitives, the
 // class's fit, the loads, the saved unit's kind and its Save
-struct EEPlayerUnitContext {
-    EEPlayer* mPlayer;
-    FSFile* mFile;
-    RTSUnit* mUnit;
-    unsigned long mMajorVersion;
-    unsigned long mMinorVersion;
-};
 
 static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
 {
-    EEPlayerUnitContext& c = *static_cast<EEPlayerUnitContext*>(inContext);
+    EEPlayerSaveContext& c = *static_cast<EEPlayerSaveContext*>(inContext);
     if (EESaveIsPrimitive(inOp))
         return EESavePrimitive(*c.mFile, inOp, io);
     EEUnitClass* theClass = (uint64_t)io->i < gUnitClassTable.size() ? gUnitClassTable[(size_t)io->i] : NULL;
@@ -877,8 +867,7 @@ static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inI
 // Reads one unit from a saved game and creates it on the player (ee_units player_save.rs load_unit)
 long EEPlayer::LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EEPlayerUnitContext theContext = {this, &inFile, NULL, inMajorVersion, inMinorVersion};
-    return ee_units_player_unit(&theContext, &EEPlayerUnitOperation, false, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+    return ee_units_player_unit(EEPlayerSaveContext{this, &inFile, inMajorVersion, inMinorVersion, NULL, NULL}.Self(), &EEPlayerUnitOperation, false, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // Makes every town of the player recheck whether it is near water
@@ -981,8 +970,7 @@ static void EEApplySavedTowns(EEPlayer* inPlayer)
 // EEPlayerSaveOperation's parts
 long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    EEPlayerSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
-    return ee_units_player_save(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this), this->mQueued,
+    return ee_units_player_save(EEPlayerSaveContext{this, &outFile, inMajorVersion, inMinorVersion, NULL, NULL}.Self(), &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this), this->mQueued,
                                 (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
@@ -990,8 +978,7 @@ long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
 // from 0.254)
 long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    EEPlayerUnitContext theContext = {this, &outFile, inUnit, inMajorVersion, inMinorVersion};
-    return ee_units_player_unit(&theContext, &EEPlayerUnitOperation, true, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+    return ee_units_player_unit(EEPlayerSaveContext{this, &outFile, inMajorVersion, inMinorVersion, inUnit, NULL}.Self(), &EEPlayerUnitOperation, true, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // Sets the player's game result; a new victory or defeat of another player is announced in the chat log
