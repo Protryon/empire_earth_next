@@ -164,7 +164,6 @@ static void* CoreRouteVirtual(void* inConn,int32_t inWhich,void* inOp,uint8_t in
     anOp->AddRef();
     return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp.get()));
 }
-bool SocketOp::mRunAsyncImmediatelyDef; // a zero byte at 565f08 in the original
 static long CoreSocketOpContinue(void* inOp)
 {
     return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Continue();

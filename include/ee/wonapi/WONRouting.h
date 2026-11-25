@@ -238,7 +238,6 @@ public:
     WONStatus Recv(void* outData, int inLength, int* outReceived)
     { return ee_won_asyncsocket_recv(this->mSock, outData, inLength, outReceived); }
 
-    typedef void (*CloseCallback)(AsyncSocket*);
     // the socket's lock (the original's mDataCrit, a recursive mutex the Rust object owns), which the subclasses
     // (QueueSocket, the routing and server connections) take around their own state too: AutoCrit takes it
     PlatMutex* GetDataLock() const { return static_cast<PlatMutex*>(ee_won_asyncsocket_mutex(this->mSock)); }
@@ -263,23 +262,18 @@ private:
 // own (the lobby's SendFileOp) has no kind and its virtual Continue.
 class SocketOp : public AsyncOp {
 public:
-    static bool mRunAsyncImmediatelyDef; //WON SDK bool static at 565f08, zero-initialized
     // the op's socket (a reference held)
     AsyncSocket* GetSocket() { return static_cast<AsyncSocket*>(ee_won_socketop_socket(this->mSockOp)); }
     void SetSocket(AsyncSocket* theSocket) { ee_won_socketop_set_socket(this->mSockOp,theSocket); }
-    // an op on the socket (a reference held): no socket thread, no waits, the event indices -1
-    SocketOp(AsyncSocket* inSocket) : mSockOp(ee_won_socketop_new(static_cast<void*>(this),WonCore()))
-    {
-        this->SetSocket(inSocket);
-        this->SetRunAsyncImmediately(SocketOp::mRunAsyncImmediatelyDef);
-    }
+    // an op on the socket (a reference held): no socket thread, no waits, the event indices -1; queued when run async
+    // (the WON SDK's mRunAsyncImmediatelyDef, 565f08, was never set)
+    SocketOp(AsyncSocket* inSocket) : mSockOp(ee_won_socketop_new(static_cast<void*>(this),WonCore())) { this->SetSocket(inSocket); }
     // an op of a class on the socket: the class's bytes (a reference taken), address and length or size
     SocketOp(EeWonCoreSocketOp inKind, AsyncSocket* inSocket = NULL, const ByteBuffer* inBytes = NULL,
              const IPAddr* inAddr = NULL, unsigned long inSize = 0)
         : mSockOp(ee_won_socketop_new_kind(static_cast<void*>(this), WonCore(), inKind, inSocket,
                                            const_cast<RefCount*>(static_cast<const RefCount*>(inBytes)),
-                                           inAddr != NULL ? inAddr->GetValue() : NULL, static_cast<uint32_t>(inSize)))
-    { this->SetRunAsyncImmediately(inKind != EeWonCoreSocketOp::QueueClose && SocketOp::mRunAsyncImmediatelyDef); }
+                                           inAddr != NULL ? inAddr->GetValue() : NULL, static_cast<uint32_t>(inSize))) {}
     virtual ~SocketOp() { ee_won_socketop_free(this->mSockOp); } // the original's was implicit, 29153d
     // +0x04 0x2b6070: started (finished InvalidSocket first without a socket); a pending start goes to the socket
     // thread (async) or is continued and finished (blocking), any other result finishes it
@@ -1006,11 +1000,8 @@ public:
     // 2ba630: the op (its completion resolved) waits for its replies
     void AddOp(RoutingOp* inOp) { ee_won_routeconn_add_op(this->mRoute, static_cast<RefCount*>(inOp)); }
     // 2ba050 (allocation 1c0 at 3eddd4): 2-byte length fields; every derived-server message unsolicited
-    RoutingConnection() : mAllDerivedOpsAreUnsolicited(true)
-    {
-        this->SetLengthFieldSize(2);
-        this->mRoute = ee_won_routeconn_new_core(static_cast<RefCount*>(this), WonCore(), static_cast<void*>(this->GetDataLock()));
-    }
+    RoutingConnection() : mRoute(ee_won_routeconn_new_core(static_cast<RefCount*>(this), WonCore(), static_cast<void*>(this->GetDataLock())))
+    { this->SetLengthFieldSize(2); }
     // the completion an op of a type (RoutingOpType, below 61) gets when it has none, and the default one
     void SetOpCompletion(int inType, RouteCompletion* inCompletion)
     { ee_won_routeconn_set_completion(this->mRoute, inType, static_cast<RefCount*>(inCompletion)); }
@@ -1026,12 +1017,11 @@ public:
     { ee_won_routeconn_msg_callback(this->mRoute, reinterpret_cast<const uint8_t*>(inData->data()), inData->length()); }
     // (the record factories GetNewClientInfo 2ba100, GetNewMemberInfo 2ba230 and GetNewGroupInfo 2ba300 are gone:
     // the ops' records are Rust's since net round 18)
-    // 2bc6c0: a new derived-server op when every derived message is unsolicited, else NULL
-    virtual SmartPtr<RoutingOp> GetUnsolicitedDerivedOp(unsigned char)
-    { return this->mAllDerivedOpsAreUnsolicited ? new RoutingOp(this, 60) : NULL; } // RoutingOp_DerivedServerOp
+    // 2bc6c0: a new derived-server op (RoutingOp_DerivedServerOp; the original's mAllDerivedOpsAreUnsolicited, +0xc4,
+    // was never cleared: every derived message is unsolicited), NULL for none
+    virtual SmartPtr<RoutingOp> GetUnsolicitedDerivedOp(unsigned char) { return new RoutingOp(this, 60); }
     virtual void RoutingOpCompleteHook(RoutingOp*) {} //inline RoutingOpCompleteHook (WON SDK), shared 30a800 ret4
     EeWonRouteConn* GetRouteObject() const { return this->mRoute; }
-    bool mAllDerivedOpsAreUnsolicited; //c4 (GetUnsolicitedDerivedOp reads it)
 protected:
     virtual ~RoutingConnection() { ee_won_routeconn_free(this->mRoute); } //2ba4b0
 private:
