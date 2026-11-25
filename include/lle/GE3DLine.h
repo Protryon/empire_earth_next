@@ -15,12 +15,6 @@ public:
     void Define(const GE3DPoint& inStart, const GE3DPoint& inEnd) { *this = GE3DLine(inStart, inEnd); }
     void Define(const GE3DPoint& inStart, const GEVector& inDirection) { *this = GE3DLine(inStart, inDirection); }
     const GEVector& GetDirection() const { return GECpp(this->mDirection); }
-    // component by component (each reads only its own)
-    void GetPointAt(float inT, GE3DPoint& outPoint) const
-    {
-        outPoint = GE3DPoint(this->mDirection.mX * inT + this->mStart.mX, this->mDirection.mY * inT + this->mStart.mY,
-                             this->mDirection.mZ * inT + this->mStart.mZ);
-    }
     const GE3DPoint& GetStart() const { return GECpp(this->mStart); }
     // within inTolerance of a point (outT: the nearer of the two crossing parameters); two lines meeting (within 0.05
     // in the third axis; the parameters on each); a plane (false when parallel)

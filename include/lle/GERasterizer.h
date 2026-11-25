@@ -48,8 +48,6 @@ public:
     // waiting while the device is still drawing
     long Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen)
         { return ee_dx7r_clear(this->mDX7, reinterpret_cast<const float(*)[4]>(&inRectangle), reinterpret_cast<const EeGeRastColor*>(&inColor), 0.0f, inScreen); }
-    long ClearZBuffer(float inZ, const GERectangle& inRectangle, unsigned long inScreen)
-        { return ee_dx7r_clear(this->mDX7, reinterpret_cast<const float(*)[4]>(&inRectangle), NULL, inZ, inScreen); }
     // (the original's two CreateMovie slots: no movie player since 2026-11-17)
     // A polygon array of the given size (16-bit indices: the renderer's DX7PolygonArray, now GEPolygonArray's); a
     // vertex array of type 0 (standard: DX7StandardVertexArray) or 1 (coloured: DX7StdColorVertexArray), else null
@@ -115,12 +113,9 @@ public:
     long GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes)
         { return ee_dx7r_video_memory(this->mDX7, inScreen, true, &outBytes); }
     unsigned long GetCaps(unsigned long inCap, unsigned long inScreen) { return 0; }   // 0 for any capability
-    // whether the screen's card supports dirty-rectangle updates
-    bool GetDirtyRectangleSupport(unsigned long inScreen) { return ee_dx7r_card_flag(this->mDX7, inScreen, true); }
     // lights the visible terrain and water vertices: ambient plus each active directional light, normalised, times the
     // vertex colour
     template <class Mesh> void Light(Mesh& inMesh, unsigned long inScreen) { ee_dx7r_light_terrain(this->mDX7, inScreen, inMesh.GetRust()); }
-    long RemoveAllLights(unsigned long inScreen) { return ee_dx7r_remove_all_lights(this->mDX7, inScreen); }
     // The render state setters (0x1000b22b..0x1000c910): each sends the state when it changes and records it in the
     // screen's state (GetScreenState); the fog type, projection mode and v-sync only record it
     void SetAlphaTesting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::AlphaTesting, inState, inScreen); }
@@ -141,15 +136,12 @@ public:
     void SetFog(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Fog, inState, inScreen); }
     void SetFogColor(const GEColor& inColor, unsigned long inScreen)
         { ee_dx7r_set_color(this->mDX7, EeDx7RastColor::Fog, reinterpret_cast<const EeGeRastColor*>(&inColor), inScreen); }
-    void SetFogRange(float inStart, float inEnd, unsigned long inScreen) { ee_dx7r_set_fog_range(this->mDX7, inStart, inEnd, inScreen); }
     void SetFogType(unsigned long inType, unsigned long inScreen)
         { ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogType, (intptr_t)inType); }
     void SetLighting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Lighting, inState, inScreen); }
     void SetProjectionMode(unsigned long inMode, unsigned long inScreen)
         { ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ProjectionMode, (intptr_t)inMode); }
     void SetShading(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Shading, inState, inScreen); }
-    void SetShadingColorSource(unsigned long inSource, unsigned long inScreen)
-        { ee_dx7r_set(this->mDX7, EeDx7RastSet::ShadingColorSource, inSource, inScreen); }
     void SetSpecular(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Specular, inState, inScreen); }
     // binds a texture to stage 0 with its colour and alpha operations, addressing, filters and mip bias, sending only
     // what changed; null disables texturing; stage 1 is always disabled
@@ -175,8 +167,6 @@ public:
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
     long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }
-    float GetAlphaTestingRefValue(unsigned long inScreen) const
-        { return this->GetScreenState(inScreen)->alpha_testing_ref_value; }
     const GEColor& GetAmbientColor() const
         { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
     float GetAmbientIntensity() const { return ee_ge_rast_ambient_intensity(this->mRust); }
@@ -185,7 +175,6 @@ public:
         outSource = this->GetScreenState(inScreen)->blend_source;
         outDestination = this->GetScreenState(inScreen)->blend_destination;
     }
-    unsigned long GetFog(unsigned long inScreen) const { return this->GetScreenState(inScreen)->fog_state; }
     void GetFogAttributes(GERFogAttributes& outAttributes, unsigned long inScreen) const
         { outAttributes = this->GetScreenState(inScreen)->fog; }
     float GetFramesPerSecond(unsigned long inScreen) const { return this->GetScreenState(inScreen)->frames_per_second; }

@@ -36,7 +36,6 @@ public:
         { return ee_dx7sf_copy_to(this->mDX7, inTarget, reinterpret_cast<const float*>(&inSource), reinterpret_cast<const float*>(&inDestination), inTransparent); }
     long CopyWithFilter(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination)
         { return ee_dx7sf_copy_with_filter(this->mDX7, inTarget, reinterpret_cast<const float*>(&inSource), reinterpret_cast<const float*>(&inDestination)); }
-    long DetachSurface(unsigned long inIndex) { return ee_dx7sf_detach(this->mDX7, inIndex); }
     long Flip(bool inWait) { return ee_dx7sf_flip(this->mDX7, inWait); }
     unsigned long GetAllocatedSize() { return ee_dx7sf_allocated_size(this->mDX7); }
     GESurface* GetAttachedSurface(unsigned long inIndex) { return static_cast<GESurface*>(ee_dx7sf_attached(this->mDX7, inIndex)); }
@@ -44,7 +43,6 @@ public:
     unsigned long GetBytesPerRow() const { return ee_dx7sf_bytes_per_row(this->mDX7); }
     unsigned long GetHeight() const { return ee_dx7sf_logical_size(this->mDX7, this->mLogicalHeight, this->mLogicalShift, true); }
     bool GetIs3DRenderable() const { return this->GetSurfaceDescription().mIs3DRenderable; }
-    bool GetIsTextLocked() const { return ee_dx7sf_text_locked(this->mDX7); }
     bool GetIsTransparencyEnabled() const { return this->GetSurfaceDescription().mIsTransparencyEnabled; }
     unsigned char* GetMemoryAddress() const { return ee_dx7sf_memory(this->mDX7); }
     GEScreen* GetParentScreen() const { return static_cast<GEScreen*>(ee_dx7sf_parent(this->mDX7)); }
@@ -53,13 +51,10 @@ public:
     unsigned long GetSurfaceVolatility() const { return this->GetSurfaceDescription().mSurfaceVolatility; }
     const GESurfaceDescription& GetSurfaceDescription() const
         { return *reinterpret_cast<const GESurfaceDescription*>(ee_dx7sf_description(this->mDX7)); }
-    const GEColor& GetTransparencyColor() const { return *reinterpret_cast<const GEColor*>(ee_dx7sf_transparency(this->mDX7)); }
     unsigned long GetType() const { return this->GetSurfaceDescription().mType; }
     unsigned long GetWidth() const { return ee_dx7sf_logical_size(this->mDX7, this->mLogicalWidth, this->mLogicalShift, false); }
     long Lock() { return ee_dx7sf_lock(this->mDX7); }
-    long RestoreSurface() { return ee_dx7sf_restore(this->mDX7); }
     void SetTransparencyColor(GEColor& inColor) { ee_dx7sf_set_transparency_color(this->mDX7, reinterpret_cast<const float*>(&inColor)); }
-    long TextLock() { return ee_dx7sf_text_lock(this->mDX7, true); }
     long TextUnlock() { return ee_dx7sf_text_lock(this->mDX7, false); }
     long Unlock() { return ee_dx7sf_unlock(this->mDX7); }
     // port: the pixels the GPU copy of a scaled back buffer holds per logical pixel (the render scale: the GX

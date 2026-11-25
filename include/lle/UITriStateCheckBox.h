@@ -35,7 +35,6 @@ public:
     // ICF-folded (0x100633b1)
     UITextLabel* GetTextLabel() const { return (UITextLabel*)Call(EeUiButtonCall::TextLabel); }
     virtual unsigned long GetType() const { return kControlTypeTriStateCheckBox; }
-    void SetCheckState(unsigned long inState) { Call(EeUiButtonCall::TriSetCheckState, (intptr_t)inState); }
     virtual void SetLocation(const GE2DPoint& inLocation)
     {
         Call(EeUiButtonCall::TriSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY());

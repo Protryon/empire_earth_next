@@ -33,7 +33,6 @@ public:
     float DistanceTo(const GE3DPoint& inPoint) const { return ee_ge_3d_distance(GERust(*this), GERust(inPoint)); }
     float DistanceToSquared(const GE3DPoint& inPoint) const
         { return ee_ge_3d_distance_squared(GERust(*this), GERust(inPoint)); }
-    GE2DPoint Get2DPoint() const { return GE2DPoint(this->mX, this->mY); }  // inline (InterpolateTo 0xc80e)
     void GetChecksum(ESChecksum& ioChecksum) const {}
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }

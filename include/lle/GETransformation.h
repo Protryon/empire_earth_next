@@ -72,9 +72,6 @@ public:                                                // column 3; rust/base/ma
     // the sixteen elements from (to) a file, stopping at the first error
     template <class F> long Load(F& inFile) { return ee_ge_t_load(GERust(*this), GERustFile(inFile)); }
     void MakeIdentity() { ee_ge_t_identity(GERust(*this)); }
-    // the inverse of a rigid transformation (transposed rotation, negated rotated position), element by element as
-    // the C++ stored them (an output equal to this transposes through its own stores)
-    void MakeInverse(GETransformation& outInverse) const { ee_ge_t_make_inverse(GERust(*this), GERust(outInverse)); }
     void Normalize() { ee_ge_t_normalize(GERust(*this)); }   // the three rotation columns to unit length
     // Revolve: yaw, pitch and roll applied after it (about its own axes); Rotate: before it (the parent axes)
     void Revolve(const GEOrientation& inOrientation)
@@ -88,9 +85,6 @@ public:                                                // column 3; rust/base/ma
     // exported copy 0x1000d848)
     void Scale(float inScale) { this->Scale(inScale, inScale, inScale); }
     void Scale(float inX, float inY, float inZ) { ee_ge_t_scale(GERust(*this), inX, inY, inZ); }   // applied before it
-    // inline: exported COMDAT in GE3DPoint.cpp's GETransformation block (0x1000d868)
-    void SetElement(unsigned long inRow, unsigned long inColumn, float inValue)
-        { this->mMatrix[inRow][inColumn] = inValue; }
     // the rotation from yaw, pitch and roll applied in the order the name gives (the position kept)
     void SetOrientationPRY(const GEOrientation& inO) { this->SetOrientationPRY(inO.GetYaw(), inO.GetPitch(), inO.GetRoll()); }
     void SetOrientationPRY(float inYaw, float inPitch, float inRoll) { this->SetOrientation(0, inYaw, inPitch, inRoll); }

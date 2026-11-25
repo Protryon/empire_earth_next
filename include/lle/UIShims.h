@@ -39,11 +39,7 @@ extern "C" void ee_uicpp_file_close(void* inFile);
 #define EE_UI_CASE(name) extern "C" intptr_t ee_uicpp_##name(void* inObj, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
 #define EE_UI_VOID(name) extern "C" void ee_uicpp_##name(void* inObj, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
 
-// the text as a string (the bytes up to the first 0)
-inline UWideString UIShimText(EeUiShimText inText) { return UWideString(std::string((const char*)inText.ptr, inText.len).c_str()); }
 inline UString UIShimString(EeUiShimText inText) { return UString(std::string((const char*)inText.ptr, inText.len).c_str()); }
 inline std::string UIShimStd(EeUiShimText inText) { return std::string((const char*)inText.ptr, inText.len); }
-// a string's bytes appended to an out text
-inline void UIShimOut(void* inOut, const UWideString& inText) { ee_ui_shim_out(inOut, (const uint8_t*)(const char*)inText, inText.GetTCHARLength()); }
 
 #endif

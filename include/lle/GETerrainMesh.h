@@ -46,8 +46,6 @@ public:
         { ee_ge_tm_closest_tile_line(this->mRust, GERust(inLine), &outX, &outY); }
     void GetClosestTile(const GE3DPoint& inPoint, long& outX, long& outY) const
         { ee_ge_tm_closest_tile_point(this->mRust, GERust(inPoint), &outX, &outY); }
-    unsigned char GetColorTableIndex(unsigned long inX, unsigned long inY) const
-        { return ee_ge_tm_point(this->mRust, inX, inY)->color_table_index; }
     const GE3DPlane& GetFrontPlane() const
         { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 0)); }
     unsigned long GetGlobalWaterSetID() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::GlobalWaterSetId); }
@@ -79,8 +77,6 @@ public:
         { return *reinterpret_cast<const GEColor*>(ee_ge_tm_vertex_color(this->mRust, inX, inY)); }
     GEVector* GetVertexNormal(unsigned long inX, unsigned long inY) const
         { return (GEVector*)ee_ge_tm_point(this->mRust, inX, inY)->normal; }
-    void GetVisibleTileRow(unsigned long inIndex, long& outY, long& outStartX, long& outEndX) const
-        { ee_ge_tm_visible_row_parts(this->mRust, inIndex, &outY, &outStartX, &outEndX); }
     float GetVisibleSpaceTilePercentage() const
         { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleSpacePercentage); }
     float GetVisibleWaterTilePercentage() const
@@ -108,7 +104,6 @@ public:
         { ee_ge_tm_tile_edit(this->mRust, inX, inY, 6, inIsSpace); }
     void SetIsWater(unsigned long inX, unsigned long inY, bool inIsWater)
         { ee_ge_tm_tile_edit(this->mRust, inX, inY, 5, inIsWater); }
-    unsigned int NumSpaceCliffTextures() { return ee_ge_tm_get(this->mRust, EeGeTmVal::SpaceCliffTextureCount); }
     void SetSpaceCliffTextures(std::vector<GETexture*>& inTextures)
         { ee_ge_tm_set_space_cliff_textures(this->mRust, (void* const*)inTextures.data(), inTextures.size()); }
     void SetTextureSet(unsigned long inX, unsigned long inY, unsigned long inTextureSetID)
