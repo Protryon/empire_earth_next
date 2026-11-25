@@ -142,13 +142,6 @@ pub enum EePhysCpp {
     ScenarioCanShowDialog,
     ScenarioShowDialog,
     ScenarioReplaceUnit,
-    TeamsClear,
-    CameraUnitA,
-    CameraUnitB,
-    CameraFollow,
-    CameraClearA,
-    CameraClearB,
-    CameraUpdate,
     /// `gWorld.GetGameSpeed()` (float)
     GameSpeed,
     /// `gWorld.mGameSpeed` (float)
@@ -681,7 +674,6 @@ fn end_game(p: P, victory: bool) {
             h0(O::OptionsButtonBlink);
         }
     }
-    h0(O::TeamsClear);
     ee_sim::app::teams_ffi::ee_app_teams_clear();
     if h0(O::IsServer) != 0 {
         h0(O::PauseGame);
@@ -1048,8 +1040,12 @@ fn tick(p: P) {
         drain_input(p);
         serve_load_save_requests(p);
     }
-    if get!(r, mTicksToProcess) != 0 || h0(O::IsPaused) != 0 || get!(r, mGameOver) || h0(O::CameraUnitA) == 0 {
-        hf(O::CameraUpdate, 0, &[], &[hd(O::Speed, p, &[])]);
+    if get!(r, mTicksToProcess) != 0
+        || h0(O::IsPaused) != 0
+        || get!(r, mGameOver)
+        || crate::gamecpp::camera_io::unit(0) == 0
+    {
+        crate::gamecpp::camera_io::update(hd(O::Speed, p, &[]));
     }
     if !(get!(r, mTicksToProcess) > 0) {
         return;
@@ -1311,15 +1307,15 @@ fn queue_message(p: P, message: P) {
 /// `SwapUnit`: the camera follows the new unit (or drops the old one); the contagions, the scenario and the effects
 /// switch to it.
 fn swap_unit(old: P, new: P) {
-    let unit_a = h0(O::CameraUnitA) as P;
-    if h0(O::CameraUnitB) as P == old && unit_a == old {
-        h(O::CameraFollow, 0, &[new as i64]);
+    let unit_a = crate::gamecpp::camera_io::unit(0);
+    if crate::gamecpp::camera_io::unit(1) == old && unit_a == old {
+        crate::gamecpp::camera_io::follow_swapped(new);
     } else {
         if unit_a == old {
-            h0(O::CameraClearA);
+            crate::gamecpp::camera_io::clear_unit_a();
         }
-        if h0(O::CameraUnitB) as P == old {
-            h0(O::CameraClearB);
+        if crate::gamecpp::camera_io::unit(1) == old {
+            crate::gamecpp::camera_io::clear_unit_b();
         }
     }
     h(O::ContagionSwapUnit, 0, &[old as i64, new as i64]);

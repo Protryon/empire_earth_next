@@ -52,7 +52,6 @@
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EETeam.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
 #include "ee/EEUserInterface.h"
@@ -102,7 +101,6 @@ void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount)
 #define B_EM ((EEEnvironmentManager*)p)
 #define B_CV ((EECivilization*)p)
 #define B_LIST ((std::vector<EECivUpgrade>*)p)
-#define B_VC ((EEVictoryCondition*)p)
 #define B_TEXT(x) snprintf((char*)a[0], (size_t)a[1], "%s", (x))
 
 // the C++ calls and members of lane B's bodies in Rust (gamecpp; EeGameCpp's round 11 lane B section): one
@@ -292,8 +290,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DeColorSave: return ((GEColor*)p)->Save(*(FSFile*)a[0]);
     case O::EbEnvF40: return P64(&B_EM->mF40);
     case O::EbEnvF44: return P64(&B_EM->mF44);
-    case O::DwTeamCount: return B_VC->mTeam->GetNumPlayers();
-    case O::DwTeamPlayer: return B_VC->mTeam->mPlayers[a[0]];
     case O::DwNeeded: return gWorld.mNumberOfWondersToWin;
     case O::DwWonderCount: return ((EEPlayer*)p)->GetNumWonderUnits();
     case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);

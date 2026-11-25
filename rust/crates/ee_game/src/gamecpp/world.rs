@@ -32,7 +32,7 @@ use crate::app::game_options::EeAppOptionsFields;
 
 use ee_sim::units::{player_body as pb, player_rest as pr};
 
-use super::{cptr, h, hd, hf, hp, pa, rec, O, P};
+use super::{h, hd, hf, hp, pa, rec, O, P};
 
 /// The per-player media the world loads and unloads, in the C++'s order: the foundations 1x1, 2x2, 3x3, 6x6 and
 /// the airport's, the citizen and the female citizen.
@@ -382,7 +382,6 @@ pub extern "C" fn ee_gamecpp_world_clear(w: *mut c_void) {
     h(O::AeClearEffects, 0, &[]);
     h(O::WDeleteScenario, w, &[]);
     h(O::WSetScenarioRaw, w, &[0]);
-    h(O::WTeamsClear, w, &[]);
     ee_sim::app::teams_ffi::ee_app_teams_clear();
     h(O::CalamitiesDestroy, 0, &[]);
     let n = num_players(w);
@@ -629,12 +628,12 @@ pub extern "C" fn ee_gamecpp_world_remove_player(w: *mut c_void, won: bool, id: 
 /// EEWorld::AddComputerPlayers: the empty slots after the state's players filled with computer players in unused
 /// colours and 999,999 of each resource (the scenario editor), their foundation media loaded.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_world_add_computers(w: *mut c_void, st: *mut c_void) {
-    let (w, st) = (w as P, st as P);
+pub extern "C" fn ee_gamecpp_world_add_computers(w: *mut c_void, _st: *mut c_void) {
+    let w = w as P;
     let name = hp(O::StrNew, 0, &[]);
     let mut used = [false; 17];
     let mut i: c_ulong = 0;
-    while (i as i64) < h(O::StNumPlayers, st, &[]) {
+    while (i as usize) < super::state::players_len() {
         for c in 0..=16usize {
             if h(O::PlColorIsPlayerColor, player(w, i), &[c as i64]) != 0 {
                 used[c] = true;
@@ -643,7 +642,7 @@ pub extern "C" fn ee_gamecpp_world_add_computers(w: *mut c_void, st: *mut c_void
         }
         i += 1;
     }
-    let mut i = h(O::StNumPlayers, st, &[]) as c_ulong;
+    let mut i = super::state::players_len() as c_ulong;
     while i <= 16 {
         if player(w, i) != 0 {
             i += 1;
@@ -671,14 +670,9 @@ pub extern "C" fn ee_gamecpp_world_add_computers(w: *mut c_void, st: *mut c_void
     h(O::StrFree, name, &[]);
 }
 
-/// The world's game speed and the teams of the state (StartGame's), or the teams rebuilt.
-fn start_teams(w: P, st: P) {
-    let teams = h(O::StNumTeams, st, &[]);
-    if teams > 0 {
-        for i in 0..teams {
-            h(O::StTeamToRust, st, &[i]);
-        }
-        super::teams::mirror(w);
+/// The teams of the state (StartGame's), or the teams rebuilt.
+fn start_teams(w: P) {
+    if super::teams::state_to_world() > 0 {
         let mut i = num_players(w);
         while i <= 16 {
             if player(w, i) == 0 {
@@ -715,7 +709,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     if *sm::<bool>(O::StInScenarioEditor, st) == true {
         ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, 17);
     } else {
-        ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, h(O::StNumPlayers, st, &[]) as c_ulong);
+        ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, super::state::players_len() as c_ulong);
     }
     progress(16);
     *wm::<bool>(O::WInCinematic, w) = false;
@@ -729,8 +723,8 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     if h(O::CommNumHumanPlayers, 0, &[]) > 1 {
         let won = h(O::WonNetPresent, 0, &[]) != 0;
         let mut i: c_ulong = 0;
-        while (i as i64) < h(O::StNumPlayers, st, &[]) {
-            if h(O::StPlayerIsLocalName, st, &[i as i64, won as i64]) == 0 {
+        while (i as usize) < super::state::players_len() {
+            if h(O::StPlayerIsLocalName, super::state::player(i as usize), &[won as i64]) == 0 {
                 i += 1;
                 continue;
             }
@@ -761,14 +755,14 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     if *sm::<bool>(O::StInScenarioEditor, st) == true {
         ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, 17);
     } else {
-        ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, h(O::StNumPlayers, st, &[]) as c_ulong);
+        ee_gamecpp_world_set_count(w as *mut std::ffi::c_void, false, super::state::players_len() as c_ulong);
     }
     for i in 0..num_players(w) {
         h(O::PlCivApplyDeferred, player(w, i), &[pa(st)]);
     }
     h(O::AiCollectComputerPlayers, 0, &[]);
     progress(22);
-    start_teams(w, st);
+    start_teams(w);
     *wm::<c_ulong>(O::WWondersToWin, w) = state_options(st).mWondersForVictory;
     *wm::<bool>(O::WVictoryEnabled, w) = state_options(st).mVictory;
     ee_gamecpp_world_set_time_of_day(w as *mut std::ffi::c_void, *sm::<f32>(O::StTimeOfDay, st));
@@ -783,19 +777,19 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     *wm::<bool>(O::WTeamsLocked, w) = state_options(st).mLockTeams;
     *wm::<bool>(O::WUnitImprovementsAllowed, w) = *sm::<bool>(O::StUnitImprovementsAllowed, st);
     *wm::<bool>(O::WCheatsEnabled, w) = state_options(st).mCheatCodes;
-    h(O::CameraClearUnitB, 0, &[]);
-    h(O::CameraClearUnitA, 0, &[]);
-    h(O::CameraResetPath, 0, &[]);
-    h(O::CameraResetZoom, 0, &[]);
+    super::camera_io::clear_unit_b();
+    super::camera_io::clear_unit_a();
+    super::camera_io::reset_path();
+    super::camera_io::set_zoom(1.0);
     if moved == true {
         let width = h(O::MapSize, map(w), &[]) as c_long;
         let height = h(O::MapSize, map(w), &[]) as c_long;
         let center = Ge3DPoint::new(width as f32 * 0.5, height as f32 * 0.5, 0.0);
-        h(O::CameraSetLocation, 0, &[cptr(&center), 1, 1]);
+        super::camera_io::set_location(&center, true, true);
     } else {
-        h(O::CameraSetLocation, 0, &[hp(O::StMapCenter, st, &[]) as i64, 0, 1]);
+        super::camera_io::set_location(hp(O::StMapCenter, st, &[]) as *const Ge3DPoint, false, true);
     }
-    h(O::CameraSetChanged, 0, &[]);
+    super::camera_io::set_changed();
     super::state::ee_gamecpp_state_repair_restorables(st as *mut std::ffi::c_void);
     progress(23);
     h(O::SetSightUpdates, 0, &[1]);
@@ -957,8 +951,8 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
     let major = *sm::<c_long>(O::StMajorVersion, st) as i64;
     let minor = *sm::<c_ulong>(O::StMinorVersion, st) as i64;
     let mut i: i64 = 0;
-    while i < h(O::StPlayerCount, st, &[]) {
-        let pl = hp(O::StPlayerAt, st, &[i]);
+    while (i as usize) < super::state::players_len() {
+        let pl = super::state::player(i as usize);
         h(O::WSetPlayer, w, &[i, pa(pl)]);
         let tree = hp(O::PlTechTree, pl, &[]);
         h(O::TechSetPlayer, tree, &[pa(pl)]);
@@ -1014,15 +1008,15 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         // EEComputerPlayer::RestoreManagers), unless a computer player is replaced on load (the original order then)
         let mut defer = h(O::SaveHasTowns, 0, &[major, minor]) != 0;
         let mut i: i64 = 0;
-        while i < h(O::StNumPlayers, st, &[]) && defer {
-            let cp = hp(O::PlComputerPlayer, hp(O::StPlayerAt, st, &[i]), &[]);
+        while (i as usize) < super::state::players_len() && defer {
+            let cp = hp(O::PlComputerPlayer, super::state::player(i as usize), &[]);
             defer = cp == 0 || h(O::CpReplaceOnLoad, cp, &[]) == 0;
             i += 1;
         }
         h(O::SetDeferComputerRestore, 0, &[defer as i64]);
         let mut i: i64 = 0;
-        while i < h(O::StNumPlayers, st, &[]) {
-            let pl = hp(O::StPlayerAt, st, &[i]);
+        while (i as usize) < super::state::players_len() {
+            let pl = super::state::player(i as usize);
             h(O::PlRepairPointers, pl, &[major, minor]);
             let cp = hp(O::PlComputerPlayer, pl, &[]);
             if cp != 0 && h(O::CpReplaceOnLoad, cp, &[]) == 1 {
@@ -1045,10 +1039,10 @@ pub extern "C" fn ee_gamecpp_world_create_players(w: *mut c_void, st: *mut c_voi
         ee_gamecpp_world_add_computers(w as *mut c_void, st as *mut c_void);
     }
     let mut i: i64 = 0;
-    while i < h(O::StLoadedPlayerCount, st, &[]) {
-        let pl = hp(O::StLoadedPlayerAt, st, &[i]);
+    while (i as usize) < super::state::loaded_len() {
+        let pl = super::state::loaded(i as usize);
         h(O::PlRepairPointers, pl, &[major, minor]);
-        h(O::PlDelete, hp(O::StLoadedPlayerAt, st, &[i]), &[]);
+        h(O::PlDelete, super::state::loaded(i as usize), &[]);
         i += 1;
     }
 }

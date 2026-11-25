@@ -18,6 +18,72 @@ use crate::app::game_options::{EeAppOptionsFields, EeAppOptionsPlayerFields};
 
 use super::{h, hd, hp, pa, ptr, rec, Owned, O, P};
 
+/// The game state's three pointer lists (were `EEGameState::mPlayers`, `mLoadedPlayers` and `mRestorables`, standard
+/// vectors; game core round 16). One game state (gGameState), so one set.
+#[derive(Default)]
+struct Lists {
+    /// the players by id (Create, the loaded game's; NULL slots between)
+    players: Vec<P>,
+    /// a loaded game's players past the slots (deleted by StartGame)
+    loaded: Vec<P>,
+    /// the loaded objects whose pointers StartGame repairs (`FSRestorable*`, each its base pointer)
+    restorables: Vec<P>,
+}
+
+static LISTS: std::sync::Mutex<Lists> =
+    std::sync::Mutex::new(Lists { players: Vec::new(), loaded: Vec::new(), restorables: Vec::new() });
+
+fn lists<R>(f: impl FnOnce(&mut Lists) -> R) -> R {
+    f(&mut LISTS.lock().unwrap_or_else(|e| e.into_inner()))
+}
+
+/// `mPlayers.size()` (`GetNumPlayers`).
+pub fn players_len() -> usize {
+    lists(|l| l.players.len())
+}
+
+/// `mPlayers[i]` (NULL past the end).
+pub fn player(i: usize) -> P {
+    lists(|l| l.players.get(i).copied().unwrap_or(0))
+}
+
+/// `mPlayers.resize(n)` (new slots NULL).
+pub fn players_resize(n: usize) {
+    lists(|l| l.players.resize(n, 0));
+}
+
+/// `mPlayers[i] = pl`.
+pub fn player_set(i: usize, pl: P) {
+    lists(|l| l.players[i] = pl);
+}
+
+/// `mLoadedPlayers.push_back(pl)`.
+pub fn loaded_push(pl: P) {
+    lists(|l| l.loaded.push(pl));
+}
+
+/// `mLoadedPlayers.size()`.
+pub fn loaded_len() -> usize {
+    lists(|l| l.loaded.len())
+}
+
+/// `mLoadedPlayers[i]` (NULL past the end).
+pub fn loaded(i: usize) -> P {
+    lists(|l| l.loaded.get(i).copied().unwrap_or(0))
+}
+
+/// `mRestorables.push_back(r)` (`r` an `FSRestorable*`).
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_state_restorable_push(restorable: *mut c_void) {
+    lists(|l| l.restorables.push(restorable as P));
+}
+
+/// `gGameState.GetPlayer(i)` (CreateMiniMap's local player).
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_state_player(i: c_long) -> *mut c_void {
+    player(i as usize) as *mut c_void
+}
+
 /// `EEGameState`'s members from `mMap` (+0x4c0) to `mRevealMap` (+0x502), in the class's order.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -100,12 +166,12 @@ fn copy_slot(dst: P, src: P) {
     h(O::OptPlayerAssign, dst, &[pa(src)]);
 }
 
-fn player_at(st: P, i: c_ulong) -> P {
-    h(O::StPlayerAt, st, &[i as i64]) as P
+fn player_at(_st: P, i: c_ulong) -> P {
+    player(i as usize)
 }
 
-fn player_count(st: P) -> c_ulong {
-    h(O::StPlayerCount, st, &[]) as c_ulong
+fn player_count(_st: P) -> c_ulong {
+    players_len() as c_ulong
 }
 
 /// The state's `mMapCenter`.
@@ -157,8 +223,8 @@ pub extern "C" fn ee_gamecpp_state_init(st: *mut c_void) {
     t.mB501 = false;
     t.mTownIDCounter = 0;
     t.mHerdIDCounter = 0;
-    h(O::StTeamsClear, st, &[]);
-    h(O::StLoadedPlayersClear, st, &[]);
+    super::teams::state_clear();
+    lists(|l| l.loaded.clear());
     h(O::StChecksumReset, st, &[]);
 }
 
@@ -171,7 +237,7 @@ pub extern "C" fn ee_gamecpp_state_reset(st: *mut c_void) {
     t.mScenarioManager = 0;
     t.mEnvironmentManager = 0;
     t.mEffectManager = 0;
-    h(O::StPlayersClear, st, &[]);
+    lists(|l| l.players.clear());
     tail(st).mCalamityHelper = 0;
 }
 
@@ -190,13 +256,13 @@ pub extern "C" fn ee_gamecpp_state_clear(st: *mut c_void) {
     tail(st).mCalamityHelper = 0;
     h(O::StDeleteEnvironment, st, &[]);
     tail(st).mEnvironmentManager = 0;
-    h(O::StRestorablesClear, st, &[]);
+    lists(|l| l.restorables.clear());
     let mut i: c_ulong = 0;
     while i < player_count(st) {
         h(O::PlDelete, player_at(st, i), &[]);
         i += 1;
     }
-    h(O::StPlayersClear, st, &[]);
+    lists(|l| l.players.clear());
     ee_gamecpp_state_init(st as *mut c_void);
     ee_gamecpp_state_reset(st as *mut c_void);
 }
@@ -205,11 +271,11 @@ pub extern "C" fn ee_gamecpp_state_clear(st: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_state_repair_restorables(st: *mut c_void) {
     let st = st as P;
-    let mut i: c_ulong = 0;
-    while (i as i64) < h(O::StRestorableCount, st, &[]) {
+    let mut i = 0;
+    while let Some(r) = lists(|l| l.restorables.get(i).copied()) {
         let t = tail(st);
         let (major, minor) = (t.mMajorVersion, t.mMinorVersion);
-        h(O::StRestorableRepair, st, &[i as i64, major as i64, minor as i64]);
+        h(O::StRestorableRepair, r, &[major as i64, minor as i64]);
         i += 1;
     }
 }
@@ -359,9 +425,9 @@ fn create_new(st: P, opt: P, l: &Locals) {
             }
         }
     }
-    h(O::StPlayersResize, st, &[1]);
+    players_resize(1);
     tail(st).mNumPlayersMade = 1;
-    h(O::StPlayerSet, st, &[0, pa(hp(O::NewWorldPlayer, 0, &[]))]);
+    player_set(0, hp(O::NewWorldPlayer, 0, &[]));
     let mut player_id: c_ulong = 1;
     let mut color: c_ulong = 0;
     let mut engines = [-1 as c_long; 16];
@@ -414,9 +480,9 @@ fn create_new(st: P, opt: P, l: &Locals) {
             let amount = h(O::ResourceLevelAmount, 0, &[opts(opt).mResources as i64, j - 1]);
             psaved(pl).mResourceCaps[(j + 1) as usize] = amount as c_long;
         }
-        h(O::StPlayersResize, st, &[player_id as i64 + 1]);
+        players_resize(player_id as usize + 1);
         tail(st).mNumPlayersMade = (player_id + 1) as c_long;
-        h(O::StPlayerSet, st, &[player_id as i64, pa(pl)]);
+        player_set(player_id as usize, pl);
         player_id += 1;
     }
     let mut player_id: c_ulong = 1;

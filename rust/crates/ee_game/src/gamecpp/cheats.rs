@@ -198,11 +198,10 @@ fn action(action: CheatAction, player: c_ulong) {
 
 /// The camera's location moved to (x, y) at once, following the terrain.
 fn camera_to(x: f32, y: f32) {
-    let mut location = Ge3DPoint::default();
-    h(O::CameraGetLocation, 0, &[ptr(&mut location)]);
+    let mut location = super::camera_io::location();
     location.x = x;
     location.y = y;
-    h(O::CameraSetLocation, 0, &[ptr(&mut location), 1, 1]);
+    super::camera_io::set_location(&location, true, true);
 }
 
 /// The host: each C++ fact one case.
@@ -321,8 +320,7 @@ unsafe extern "C" fn sweep_levels(_: *mut c_void, player: u64, index: u32, out: 
 }
 
 unsafe extern "C" fn sweep_camera(_: *mut c_void, out: *mut f32) {
-    let mut location = Ge3DPoint::default();
-    h(O::CameraGetLocation, 0, &[ptr(&mut location)]);
+    let location = super::camera_io::location();
     // SAFETY: the sweep's three floats
     unsafe { std::ptr::copy_nonoverlapping([location.x, location.y, location.z].as_ptr(), out, 3) };
 }

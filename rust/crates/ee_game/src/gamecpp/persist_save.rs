@@ -93,8 +93,7 @@ fn build_chunks() -> Vec<P> {
     let map = hp(O::PsNewMapChunk, 0, &[]);
     h(O::PsMapChunkUnown, map, &[]);
     list.push(map);
-    let mut location = Ge3DPoint::default();
-    h(O::CameraGetLocation, 0, &[ptr(&mut location)]);
+    let mut location = super::camera_io::location();
     list.push(hp(O::PsNewCameraChunk, 0, &[ptr(&mut location)]));
     let scenario = hp(O::PsNewScenarioChunk, 0, &[]);
     h(O::PsScenarioChunkUnown, scenario, &[]);
@@ -719,7 +718,9 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
                 c => {
                     let manager = hp(O::PsEffectsChunkObject, c, &[]);
                     h(O::PsStSetEffectManager, st, &[pa(manager)]);
-                    h(O::PsStRestorablePushEffects, st, &[pa(manager)]);
+                    super::state::ee_gamecpp_state_restorable_push(
+                        hp(O::PsRestorableOfEffects, manager, &[]) as *mut c_void
+                    );
                     h(O::PsEffectsChunkUnown, c, &[]);
                 }
             },
@@ -765,7 +766,9 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
                 0 => r = 3,
                 c => {
                     super::state::ee_gamecpp_state_set_calamity_helper(st as *mut c_void, c as *mut c_void);
-                    h(O::PsStRestorablePushCalamities, st, &[pa(c)]);
+                    super::state::ee_gamecpp_state_restorable_push(
+                        hp(O::PsRestorableOfCalamities, c, &[]) as *mut c_void
+                    );
                     item = 0;
                 }
             },
@@ -774,7 +777,9 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
                 c => {
                     let manager = hp(O::PsEnvironmentChunkObject, c, &[]);
                     h(O::PsStSetEnvironmentManager, st, &[pa(manager)]);
-                    h(O::PsStRestorablePushEnvironment, st, &[pa(manager)]);
+                    super::state::ee_gamecpp_state_restorable_push(
+                        hp(O::PsRestorableOfEnvironment, manager, &[]) as *mut c_void
+                    );
                     h(O::PsEnvironmentChunkUnown, c, &[]);
                 }
             },
@@ -814,19 +819,18 @@ fn restore_players(st: P, helper: P) -> i64 {
         let n = h(O::PsPphPlayerCount, helper, &[]);
         players = (0..n).map(|i| hp(O::PsPphPlayerAt, helper, &[i])).collect();
         if tail(st).mInScenarioEditor == true {
-            h(O::StPlayersResize, st, &[players.len() as i64]);
+            super::state::players_resize(players.len());
             tail(st).mNumPlayersMade = max as c_long;
         } else {
-            h(O::StPlayersResize, st, &[max as i64]);
+            super::state::players_resize(max as usize);
             tail(st).mNumPlayersMade = max as c_long;
         }
         if r == PF_OK {
             for (i, &pl) in players.iter().enumerate() {
                 if tail(st).mInScenarioEditor == false && i as c_ulong >= max {
-                    h(O::PsStLoadedPlayerPush, st, &[pa(pl)]);
-                    let n = h(O::StNumPlayers, st, &[]);
-                    for j in 0..n {
-                        h(O::PsPlayerRemoveAlly, hp(O::StPlayerAt, st, &[j]), &[pa(pl)]);
+                    super::state::loaded_push(pl);
+                    for j in 0..super::state::players_len() {
+                        h(O::PsPlayerRemoveAlly, super::state::player(j), &[pa(pl)]);
                     }
                     let options = hp(O::StOptionsPtr, st, &[]);
                     // SAFETY: the slot's plain members (the original copies the slot, sets the type, copies it back)
@@ -838,7 +842,7 @@ fn restore_players(st: P, helper: P) -> i64 {
                         .mType = 4
                     };
                 } else {
-                    h(O::StPlayerSet, st, &[i as i64, pa(pl)]);
+                    super::state::player_set(i, pl);
                 }
             }
         }

@@ -225,10 +225,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::UnitSetContains: return gUnitSetManager.Contains((long)a[0], (unsigned long)a[1]);
     case O::ContinentOfUnit: return gContinentManager.GetContinent(UN, kAIPathNonSpace);
-    case O::CameraGetLocation: ::gWorld.mCameraControl.GetLocation(::gWorld.mCameraControl.mFraction, PT(0));
-        break;
-    case O::CameraSetLocation: ::gWorld.mCameraControl.SetLocation(PT(0), a[1] != 0, a[2] != 0);
-        break;
     case O::ViewportInverseApply: gViewport.GetCameraInverse().Apply(PT(0), PT(1));
         break;
     case O::Verify: ESVERIFY_AT(a[0] != 0, a[1]);

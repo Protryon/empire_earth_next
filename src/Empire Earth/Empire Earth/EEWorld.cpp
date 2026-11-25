@@ -43,7 +43,6 @@
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EETeam.h"
 #include "ee/EEGameState.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EEDatabaseTables.h"
@@ -101,13 +100,6 @@ void EEDumpLeakedUnits(FSFileSpec& inFile);
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);
 void EEUpdateLandContinents();
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);
-
-// EEGameState's team count: inline (its refused copy 0x13cff7 sits in this unit's template tail); defined here where
-// EETeam is complete
-inline unsigned long EEGameState::GetNumTeams() const
-{
-    return this->mTeams.size();
-}
 
 // Creates the game world with default settings (time of day 0.35, cheats and unit improvements allowed), no managers
 // and empty statistics
@@ -266,7 +258,7 @@ void EEWorld::CreateInfluenceTable(EEMap* inMap)
 void EEWorld::CreateMiniMap(EEGameState* inState)
 {
     delete gMiniMap;
-    gMiniMap = new EEMiniMap(GERasterizer::GetActiveRasterizer()->GetScreen(gScreenIndex), 0, inState->GetPlayer(inState->mLocalPlayer));
+    gMiniMap = new EEMiniMap(GERasterizer::GetActiveRasterizer()->GetScreen(gScreenIndex), 0, static_cast<EEPlayer*>(ee_gamecpp_state_player(inState->mLocalPlayer)));
     gMiniMap->SetMap(this->mMap);
     gEEGameUI.mMiniMapUpdate(gMiniMap);   // EEUIMiniMap::Update (ee/EEGameUI.h)
 }
@@ -411,10 +403,7 @@ extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t in
     switch (inOp) {
     case EE_UNITS_GAME_OVER_SCENARIO: return gWorld.mGameOptions.mIsScenarioGame;
     case EE_UNITS_GAME_OVER_DEFEAT_RULE: return EEGetRules().mGameOptions.mDefeatWithoutRecovery;
-    case EE_UNITS_GAME_OVER_TEAMS: return (int64_t)gWorld.mTeams.size();
-    case EE_UNITS_GAME_OVER_TEAM_STATE: return gWorld.mTeams[(size_t)inA].GetVictoryState();
-    case EE_UNITS_GAME_OVER_TEAM_SIZE: return (int64_t)gWorld.mTeams[(size_t)inA].mPlayers.size();
-    case EE_UNITS_GAME_OVER_TEAM_PLAYER: return (int64_t)gWorld.mTeams[(size_t)inA].mPlayers[(size_t)inB];
+    case EE_UNITS_GAME_OVER_TEAM_STATE: return ee_gamecpp_wonder_state((size_t)inA);
     case EE_UNITS_GAME_OVER_IS_HUMAN: return gWorld.mPlayers[inA]->IsHuman();
     case EE_UNITS_GAME_OVER_REMOVE: gWorld.RemovePlayerFromGame(inB != 0, (unsigned long)inA); return 0;
     case EE_UNITS_GAME_OVER_SET_RESULT: gWorld.mPlayers[inA]->SetGameResult((long)inB); return 0;
@@ -432,13 +421,6 @@ extern "C" int64_t ee_units_game_over_host(int32_t inOp, int64_t inA, int64_t in
 void EEWorld::GameSpeedChanged()
 {
     gPhysics->UpdateTiming();
-}
-
-// EETeam's ctors: COMDATs here after their first users (each news the team's EEVCWonder)
-// Creates an empty team with a wonder victory condition
-EETeam::EETeam()
-{
-    this->mVictoryCondition = new EEVCWonder(this);
 }
 
 void EEWorld::CameraChanged(class GETransformation const &)
@@ -557,12 +539,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::GhostDelete: delete (EEGhostUnit*)p;
         break;
-    case O::WTeamsClear: W->mTeams.clear();
-        break;
-    case O::C12TeamsResize: W->mTeams.resize((size_t)a[0]);   // round 12, fork D (gamecpp teams.rs)
-        break;
-    case O::C12TeamSetPlayers: W->mTeams[(size_t)a[0]].mPlayers.assign((const uint32_t*)a[1], (const uint32_t*)a[1] + a[2]);
-        break;
     case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
     case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
     case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
@@ -632,19 +608,12 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::StScenarioManager: return P64(ST->mScenarioManager);
     case O::StEnvironmentManager: return P64(ST->mEnvironmentManager);
     case O::StCalamityHelper: return P64(ST->mCalamityHelper);
-    case O::StNumPlayers: return ST->GetNumPlayers();
-    case O::StPlayerCount: return (int64_t)ST->mPlayers.size();
-    case O::StPlayerAt: return P64(ST->mPlayers[a[0]]);
-    case O::StLoadedPlayerCount: return (int64_t)ST->mLoadedPlayers.size();
-    case O::StLoadedPlayerAt: return P64(ST->mLoadedPlayers[a[0]]);
-    case O::StNumTeams: return ST->GetNumTeams();
-    case O::StTeamToRust: ee_app_teams_set(ee_app_teams_get(SIZE_MAX, NULL, 0), std::vector<uint32_t>(ST->mTeams[a[0]].mPlayers.begin(), ST->mTeams[a[0]].mPlayers.end()).data(), ST->mTeams[a[0]].mPlayers.size());
         break;
     case O::StReadLock: ST->ReadLock();
         break;
     case O::StReadUnlock: ST->ReadUnlock();
         break;
-    case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)ST->mPlayers[a[0]]->mName), reinterpret_cast<const unsigned char*>((const char*)(a[1] ? gWonPlayerName : gPlayerName))) == 0;
+    case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)PL->mName), reinterpret_cast<const unsigned char*>((const char*)(a[0] ? gWonPlayerName : gPlayerName))) == 0;
     case O::ReportGameLoaded: EEReportLoadFailure(UString("Game loaded."), false, &ST->mChecksum);
         break;
     // the players
@@ -882,16 +851,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::UpdateLandContinents: EEUpdateLandContinents();
         break;
     case O::AiCollectComputerPlayers: gArtificialIntelligence->CollectComputerPlayers();
-        break;
-    case O::CameraClearUnitA: gWorld.mCameraControl.ClearUnitA();
-        break;
-    case O::CameraClearUnitB: gWorld.mCameraControl.ClearUnitB();
-        break;
-    case O::CameraResetPath: gWorld.mCameraControl.ResetPath();
-        break;
-    case O::CameraResetZoom: gWorld.mCameraControl.ResetZoom();
-        break;
-    case O::CameraSetChanged: gWorld.mCameraControl.SetChanged();
         break;
     case O::GraphicsReleaseScene: gGraphics->PostReleaseScene();
         break;

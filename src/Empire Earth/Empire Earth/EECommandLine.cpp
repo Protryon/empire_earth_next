@@ -139,10 +139,6 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     case O::UsgFirstFile: return SPEC->GetFirstFile((const char*)a[0], *(FSFileSpec*)a[1]);
     case O::UsgFileName: return P64((const char*)SPEC->GetFile());
     case O::UsgLoad: return EELoadSavedGameFile((const char*)a[0], true, false, (const char*)a[1], 0);
-    case O::UsgCameraChanged: gWorld.mCameraControl.SetChanged();
-        break;
-    case O::UsgCameraUpdate: gWorld.mCameraControl.Update(f[0]);
-        break;
     case O::UsgSave: return SaveGame((const char*)a[0], (unsigned long)a[1], false, (const char*)a[2]);
     default: return EERoUnitsOp(inOp, p, a, f);
     }

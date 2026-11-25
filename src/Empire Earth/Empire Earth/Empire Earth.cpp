@@ -50,7 +50,6 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "lle/TMTimer.h"
 #include "lle/FSPersistentList.h"
 #include "ee/EEMap.h"
-#include "ee/EETeam.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEPChecksum.h"

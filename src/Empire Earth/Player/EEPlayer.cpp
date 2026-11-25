@@ -58,7 +58,6 @@
 #include "ee/EEHerd.h"
 #include "ee/EEVectorIO.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EETeam.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEGameVariant.h"           // the wonder powers' hit point factors (EEPlayerHost)
 #include "ee/EEUnitUtilities.h"
@@ -1943,8 +1942,8 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_SITE_AT: return EEPlayerUnitArg(thePlayer->mConstructionSites->mItems[(size_t)inB]);
     case EE_UNITS_PLAYER_BODY_CLASS_STATS: return (int64_t)(uintptr_t)EEPlayerClassStats(thePlayer, (unsigned long)inB);
     case EE_UNITS_PLAYER_BODY_TERRAIN_MASK: return reinterpret_cast<EEUnitStats*>(static_cast<uintptr_t>(inA))->mTerrainMask;
-    case EE_UNITS_PLAYER_BODY_TEAM_COUNT: return (int64_t)gWorld.GetNumTeams();
-    case EE_UNITS_PLAYER_BODY_TEAM_HAS: return gWorld.mTeams[inB].ContainsPlayer((unsigned long)inC);
+    case EE_UNITS_PLAYER_BODY_TEAM_COUNT: return (int64_t)ee_app_teams_get(SIZE_MAX, NULL, 0);
+    case EE_UNITS_PLAYER_BODY_TEAM_HAS: return ee_app_teams_contains((size_t)inB, (uint32_t)inC);
     case EE_UNITS_PLAYER_BODY_BUTTON_LOADS: return reinterpret_cast<EEUnitStats*>(static_cast<uintptr_t>(inA))->mButtonLoadCount;
     case EE_UNITS_PLAYER_BODY_IS_HUMAN: return thePlayer->IsHuman() == true;
     case EE_UNITS_PLAYER_BODY_BUTTON_RELEASE: reinterpret_cast<EEButtonObject*>(static_cast<uintptr_t>(inA))->Release();

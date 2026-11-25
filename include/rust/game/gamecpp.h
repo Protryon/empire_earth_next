@@ -219,8 +219,6 @@ enum class EeGameCpp : uint32_t {
   RefDereference,
   UnitSetContains,
   ContinentOfUnit,
-  CameraGetLocation,
-  CameraSetLocation,
   ViewportInverseApply,
   Verify,
   EffUnit,
@@ -287,11 +285,6 @@ enum class EeGameCpp : uint32_t {
   AmbientRestart,
   CalamitiesDestroy,
   CalamitiesRestore,
-  CameraClearUnitA,
-  CameraClearUnitB,
-  CameraResetPath,
-  CameraResetZoom,
-  CameraSetChanged,
   CampaignProgressDelete,
   CampaignProgressNew,
   CampaignRestoreCivilization,
@@ -439,26 +432,19 @@ enum class EeGameCpp : uint32_t {
   StHerdIDCounter,
   StInScenarioEditor,
   StIsLoadedGame,
-  StLoadedPlayerAt,
-  StLoadedPlayerCount,
   StLocalPlayer,
   StMajorVersion,
   StMap,
   StMapCenter,
   StMinorVersion,
-  StNumPlayers,
   StNumPlayersMade,
-  StNumTeams,
   StOptions,
-  StPlayerAt,
-  StPlayerCount,
   StPlayerIsLocalName,
   StRandomSeed,
   StReadLock,
   StReadUnlock,
   StRevealMap,
   StScenarioManager,
-  StTeamToRust,
   StTimeOfDay,
   StTownIDCounter,
   StUnitImprovementsAllowed,
@@ -556,7 +542,6 @@ enum class EeGameCpp : uint32_t {
   WStartTime,
   WStatisticsReset,
   WSunDirection,
-  WTeamsClear,
   WTeamsLocked,
   WTimeOfDay,
   WTownIDCounter,
@@ -700,21 +685,14 @@ enum class EeGameCpp : uint32_t {
   EffDestroyedCount,
   HelperUpdate,
   StTail,
-  StTeamsClear,
-  StLoadedPlayersClear,
   StChecksumReset,
-  StPlayersClear,
   StDeleteMap,
   StDeleteScenario,
   StDeleteEffects,
   StDeleteCalamity,
   StDeleteEnvironment,
-  StRestorablesClear,
-  StRestorableCount,
   StRestorableRepair,
   StOptionsPtr,
-  StPlayersResize,
-  StPlayerSet,
   StNewMap,
   StNewScenarioManager,
   StNewEffectManager,
@@ -787,8 +765,6 @@ enum class EeGameCpp : uint32_t {
   ActionDereference,
   BehaviorAt,
   BuildGate,
-  CameraSetZoom,
-  CameraUpdate,
   CanPlace,
   CheatApply,
   CivRequestUpgrades,
@@ -1837,14 +1813,8 @@ enum class EeGameCpp : uint32_t {
   PwhFields,
   PwhScenario,
   PwhSetScenario,
-  PwhTeamsFromWorld,
-  PwhTeamsCount,
-  PwhTeamsResize,
-  PwhTeamLoad,
-  PwhTeamSave,
   PwWorldPopulationLimit,
   PwStSetScenario,
-  PwStTeamsFromHelper,
   PwMainFormLoad,
   PwMainFormSave,
   PwAreaEffectsLoad,
@@ -1916,7 +1886,6 @@ enum class EeGameCpp : uint32_t {
   PwTreeGet,
   PwNodeAllowed,
   PwNodeSetAllowed,
-  PwCameraZoom,
   PwWorldGameSpeed,
   PfReadULong,
   PfReadLong,
@@ -2061,10 +2030,9 @@ enum class EeGameCpp : uint32_t {
   PsStSetEffectManager,
   PsStSetMap,
   PsStSetEnvironmentManager,
-  PsStRestorablePushEffects,
-  PsStRestorablePushCalamities,
-  PsStRestorablePushEnvironment,
-  PsStLoadedPlayerPush,
+  PsRestorableOfEffects,
+  PsRestorableOfCalamities,
+  PsRestorableOfEnvironment,
   PsPlayerRemoveAlly,
   PsEditorFormPresent,
   PsEditorClearSelection,
@@ -2221,7 +2189,6 @@ enum class EeGameCpp : uint32_t {
   SsCommsNewClient,
   SsStartTimeFromMsg,
   SsPhysicsRandom,
-  SsNumTeams,
   SsGetProtocol,
   SsProtocolStatus,
   SsGfxPaused,
@@ -2418,7 +2385,6 @@ enum class EeGameCpp : uint32_t {
   GuTargetHeight,
   GuTargetWidth,
   RcPhysicsPresent,
-  RtCameraZoom,
   RtCaptureSetRenderTarget,
   RtCaptureSurface,
   RtCaptureWidth,
@@ -2859,15 +2825,12 @@ enum class EeGameCpp : uint32_t {
   DvCanAfford,
   DvDeferredPush,
   DvDeferred,
-  DwTeamCount,
-  DwTeamPlayer,
   DwNeeded,
   DwWonderCount,
   DwWonderTime,
   DwVictoryTime,
   DwGameTime,
   DwInCinematic,
-  DkFields,
   DkModelScale,
   DkModelCenter,
   DkModelHeight,
@@ -2882,8 +2845,6 @@ enum class EeGameCpp : uint32_t {
   DkClearB529066,
   DkClearFollowing,
   DkClearB529068,
-  DkUnitASaved,
-  DkUnitBSaved,
   DkFrontClipping,
   DkRearClipping,
   UsgWorldWriteLock,
@@ -2899,8 +2860,6 @@ enum class EeGameCpp : uint32_t {
   UsgFirstFile,
   UsgFileName,
   UsgLoad,
-  UsgCameraChanged,
-  UsgCameraUpdate,
   UsgSave,
   WsStart,
   WsTiles,
@@ -3156,16 +3115,11 @@ enum class EeGameCpp : uint32_t {
   EcLocationOnLine,
   EcOrthographic,
   EcReference,
-  EcResolve,
   EcRightPlane,
   EcScreenLine,
   EcSetFrontClipping,
   EcSetRearClipping,
-  EcSetUnitA,
-  EcSetUnitB,
   EcTileXRaw,
-  EcUnitAGet,
-  EcUnitBGet,
   EcValidPoint,
   EcValidTile,
   EcVelocity,
@@ -3370,8 +3324,6 @@ enum class EeGameCpp : uint32_t {
   C12DebugText,
   C12WonNetCffdd,
   C12WonNetCfff2,
-  C12TeamsResize,
-  C12TeamSetPlayers,
   C12PlayerObserver,
   C12PlayerEnemy,
   C13bGhostLockFree,
@@ -4006,6 +3958,12 @@ void ee_gamecpp_startup_load_sound(const void *name,
                                    unsigned long *instance,
                                    unsigned long flag);
 
+/// `mRestorables.push_back(r)` (`r` an `FSRestorable*`).
+void ee_gamecpp_state_restorable_push(void *restorable);
+
+/// `gGameState.GetPlayer(i)` (CreateMiniMap's local player).
+void *ee_gamecpp_state_player(long i);
+
 /// EEGameState::Init: the settings' defaults (normal speed and zoom, no map, managers, teams or loaded players, a
 /// fresh checksum).
 void ee_gamecpp_state_init(void *st);
@@ -4084,7 +4042,7 @@ void ee_gamecpp_world_remove_player(void *w,
 /// EEWorld::AddComputerPlayers: the empty slots after the state's players filled with computer players in unused
 /// colours and 999,999 of each resource (the scenario editor), their foundation media loaded.
 void ee_gamecpp_world_add_computers(void *w,
-                                    void *st);
+                                    void *_st);
 
 /// EEWorld::StartGame: the world set up from a game state (map, players, teams, local player, camera, sight,
 /// minimap, calamities, music, media), the load progress reported; in multiplayer the local player found by name.
@@ -5515,20 +5473,15 @@ long ee_gamecpp_civ_reapply(void *civilization,
 long ee_gamecpp_civ_apply_deferred(void *civilization, long player);
 
 /// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).
-bool ee_gamecpp_wonder_enough(void *condition);
+bool ee_gamecpp_wonder_enough(size_t team);
 
 /// `GetWonderCountdown`: the player whose wonder completes the team's count and the seconds left (NULL and 0 when
 /// the team lacks the wonders).
-void *ee_gamecpp_wonder_countdown(void *condition,
+void *ee_gamecpp_wonder_countdown(size_t team,
                                   unsigned long *out);
 
-/// `EEVCWonder::GetVictoryState`: 1 (won) when the team's countdown has run out, outside cinematics.
-long ee_gamecpp_wonder_state(void *condition);
-
-/// `EEVCWonder::Load`: the wonder list of saves before 0.225, read and dropped; the first read error.
-long ee_gamecpp_wonder_load(unsigned long major,
-                            unsigned long minor,
-                            void *file);
+/// `EETeam::GetVictoryState` (`EEVCWonder`'s): 1 (won) when the team's countdown has run out, outside cinematics.
+long ee_gamecpp_wonder_state(size_t team);
 
 /// `EEPlayForLocalPlayer`: the sound played when the player is the local one; the instance, or -1.
 unsigned long ee_gamecpp_play_for_local(void *player, void *sound);
@@ -5837,6 +5790,13 @@ void ee_gamecpp_ambient_count_tree(EeAppAmbientCounts *counts, void *unit);
 void ee_gamecpp_ambient_add_tree(EeAppAmbientCounts *counts,
                                  void *unit);
 
+/// `EECameraControl()`: the plain members' defaults, no followed unit; the camera is the world's from here on.
+///
+/// # Safety
+/// `camera` is the EECameraControl being constructed and `rec` its record.
+void ee_gamecpp_camera_new(void *camera,
+                           EeAppCameraFields *rec);
+
 /// The camera's host (camera_ffi.rs `EeAppCameraFn`): the context is the camera.
 ///
 /// # Safety
@@ -6119,22 +6079,34 @@ unsigned long ee_gamecpp_menu_width(unsigned long width,
                                     unsigned long height);
 
 /// EEWorld::AddTeam: a team of the players, first merging in every team whose players are allied both ways with them.
-void ee_gamecpp_world_teams_add(void *w,
+void ee_gamecpp_world_teams_add(void *_w,
                                 const unsigned long *players,
                                 size_t n);
 
 /// EEWorld::AddAlliance: two players on one team, merging in every team allied both ways with both.
-void ee_gamecpp_world_teams_ally(void *w, uint32_t a, uint32_t b);
+void ee_gamecpp_world_teams_ally(void *_w, uint32_t a, uint32_t b);
 
 /// EEWorld::BreakAlliance.
-void ee_gamecpp_world_teams_break(void *w, uint32_t a, uint32_t b);
+void ee_gamecpp_world_teams_break(void *_w, uint32_t a, uint32_t b);
 
 /// EEWorld::RemovePlayerFromTeams.
-void ee_gamecpp_world_teams_remove(void *w, uint32_t player);
+void ee_gamecpp_world_teams_remove(void *_w, uint32_t player);
 
 /// EEWorld::RebuildTeams: the teams from the players' mutual alliances, then Gaia at war with every player.
 void ee_gamecpp_world_teams_rebuild(void *w,
                                     uint32_t players);
+
+/// `gWorld.mTeams[team].mVictoryCondition->GetWonderCountdown(*value)`.
+///
+/// # Safety
+/// `value` is writable.
+size_t ee_screenscpp_team_wonder_countdown(uint32_t team, unsigned long *value);
+
+/// `gWorld.GetNumTeams()`.
+int64_t ee_screenscpp_mf_num_teams();
+
+/// `gWorld.mTeams.size() > 0`.
+bool ee_screenscpp_mf_has_teams();
 
 extern int64_t ee_contagion_world(uint32_t op,
                                   uint64_t a,
