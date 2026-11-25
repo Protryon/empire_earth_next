@@ -191,7 +191,7 @@ bool EEIsSeen(EEUnit* inUnit)
 
 // ------------------------------------------------------------------------- round 10, lane D: the camera
 
-int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
+int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define CAM ((EECameraControl*)p)
@@ -277,12 +277,12 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::EcSetRearClipping: gViewport.SetRearClippingDistance(f[0]);
         break;
-    default: return EECore10OpE3(inOp, p, a, f);
+    default: return EECore11OpB(inOp, p, a, f);
     }
     return 0;
 }
 
-double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
+double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
 double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -301,6 +301,6 @@ double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::EcViewportCameraX: return gViewport.GetCamera().GetX();
     case O::EcViewportCameraY: return gViewport.GetCamera().GetY();
     case O::EcViewportCameraZ: return gViewport.GetCamera().GetZ();
-    default: return EECore10OpE3F(inOp, p, a, f);
+    default: return EECore11OpBF(inOp, p, a, f);
     }
 }

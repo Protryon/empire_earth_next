@@ -517,6 +517,9 @@ EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define W ((EEWorld*)p)
+#define REC (W->mStatistics.mRecords[(size_t)a[0]])
+#define PL0 (W->mPlayers[a[0]])
+#define PL1 (W->mPlayers[a[1]])
 #define ST ((EEGameState*)p)
 #define PL ((EEPlayer*)p)
 #define UN ((EEUnit*)p)
@@ -1033,40 +1036,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::DumpLeakTitle: fprintf(FILE_SPEC, "REFERENCE COUNTED MEMORY LEAKS\n\n");   // the reference-leak report: its title (nothing tracks references)
         break;
-    default: return EEGameStateOp(inOp, p, a, f);   // the game state bodies' (EEGameState.cpp)
-    }
-    return 0;
-}
-
-double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::VariantFactor: return EEGameVariant::GetGameVariant(W->mGameOptions.GetVariant())->GetFactor((long)a[0]);
-    case O::ViewportHalfWidth: return gViewport.GetHalfWidth();
-    case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
-    case O::ViewportXCenter: return gViewport.GetXCenter();
-    case O::ViewportYCenter: return gViewport.GetYCenter();
-    default: return EEGameStateOpF(inOp, p, a, f);
-    }
-    return 0.0;
-}
-
-// ------------------------------------------------------------------------- round 10, lane E: world_stats.rs's C++
-
-#define W ((EEWorld*)p)
-#define REC (W->mStatistics.mRecords[(size_t)a[0]])
-#define PL0 (W->mPlayers[a[0]])
-#define PL1 (W->mPlayers[a[1]])
-
-// RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world): one statement each; the end of the
-// chain
-
-int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
-int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
+    // RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world)
     case O::WsStart: W->mStatistics.mStartTime = W->mStartTime;
         break;
     case O::WsTiles: W->mStatistics.mTileCount = W->mMap->GetTileCount();
@@ -1131,18 +1101,22 @@ int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::WsRecPlayTime: REC.mStatistics.Set(0x18, (long)a[1]);
         break;
-    default: return EECore11OpB(inOp, p, a, f);
+    default: return EEGameStateOp(inOp, p, a, f);   // the game state bodies' (EEGameState.cpp)
     }
     return 0;
 }
 
-double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
-double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
+    case O::VariantFactor: return EEGameVariant::GetGameVariant(W->mGameOptions.GetVariant())->GetFactor((long)a[0]);
+    case O::ViewportHalfWidth: return gViewport.GetHalfWidth();
+    case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
+    case O::ViewportXCenter: return gViewport.GetXCenter();
+    case O::ViewportYCenter: return gViewport.GetYCenter();
     case O::WsRandom: return gPhysics->GetRandom(f[0], f[1]);
-    default: return EECore11OpBF(inOp, p, a, f);
+    default: return EEGameStateOpF(inOp, p, a, f);
     }
     return 0.0;
 }
