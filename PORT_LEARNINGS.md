@@ -41217,3 +41217,46 @@ compiled behaviour), through build/lu1/chain.sh:
   (348).
 - Not run: the POSIX builds, `gates.sh --legacy`, nettest and the WON drivers (the WON changes are the events' class
   and the boxes' inline members: reached by the LAN game).
+
+## The player/tech lane, round 2: EEPlayer's hosts answered by Rust first, RTSPlayer folded into EEPlayer, the player's and the civilization builder's small units merged (ee_sim units player_native.rs; branch rust-playertech2, 2026-11-25)
+
+The round's measure was total C++ lines (tools/port_metrics.py), target -1,500: -1,257 (fork A -612, fork B -167,
+the lead -478), compiled files -11, classes -4, logic -70 (the lane's scope 528 -> 496), with no behaviour change
+(the oracle's six seeds identical after every step, the capture profiles, saveload). The forks' sections are above;
+this is the lead's part and the round's.
+
+- **A host's plain cases need no C++ at all**: most of EEPlayer.cpp's remaining one-statement cases wrote a pointer
+  member of the player, a field of a Rust record (the player's two, a complex unit's, a unit's, a tech node's, a
+  town's), read a unit, unit class, stats object or the physics, or called another Rust export. player_native.rs
+  answers them before the C++ in the game's hosts (player_body.rs `body_host`, player.rs `FnHost`, player_tick.rs,
+  player_save.rs `lists_answer`, town_split.rs `GameTowns`); the generic bodies and their test hosts are untouched,
+  so the tests still check every operation. The pointer members it writes come from the world layout (six new
+  fields, plus the town record's base); the reads use the world views (`UnitView`, `ClassView`, `StatsView`,
+  `WorldView::game_time`). The same shape as fork B's lists, one module for the lot.
+- **What stays**: a case on a C++ object's method (the tech tree's Get and walks, the herd's and town's methods, the
+  UI, the sounds, UWideString), a container the C++ owns (mUnitClassUpgrades), and a virtual a subclass overrides
+  (EEComputerPlayer overrides TakeResource, ScaleCost, GetExtraPopulation, GetPopulationLimit, CanAfford, UnitPlaced,
+  GetHeroCount: check the subclasses before taking a virtual's case).
+- **Folding a base class that other files name**: `typedef EEPlayer RTSPlayer;` after the class, and the two forward
+  declarations (`class RTSPlayer;` in ee/EEMiniMap.h and ee/EEUnitStore.h) became `class EEPlayer; typedef EEPlayer
+  RTSPlayer;` (a repeated typedef of the same type is legal), so the engine's files compile unchanged. The explicit
+  base calls (`thePlayer->RTSPlayer::AddUnit`, `RepairPointers`, `GetChecksum`) became the Rust bodies they
+  forwarded to; the base's save reuses EEPlayerSaveContext; the empty `Clear` case went (the host's default answers
+  0). The base's constructor work moved into EEPlayer's constructors, and the unit store's clear to the end of
+  ~EEPlayer's body (before the members' destructors now, which touch no unit record).
+- **Merging units for the file count**: a unit whose code is a host or shims joins its neighbour (a script that keeps
+  the section's comment and merges the include blocks: build/pl2/mergeunits.py); link/exe/units.txt and
+  tools/units.py's EXTRA_UNITS lose the entries. Seven files this way (three player units into EEPlayer.cpp, four
+  civilization builder units into two).
+- **One-concern commits from one working file**: when two changes share EEPlayer.cpp, commit the first by
+  rebuilding the file from HEAD with only its edits (the case-removal script is deterministic:
+  build/pl2/rmcases.py), then restore the full file for the second.
+- **Never start a build while an oracle runs from the same worktree**: a second chain relinked (and its test-profile
+  cargo step rebuilt the Rust library with a newer layout record) under a running oracle: every seed stopped at
+  `EE-WORLD-LAYOUT: Rust refused the layout`. And a Rust edit made while a chain's header step runs leaves
+  "the gate's header check still finds a header stale": edit only between chains. The stray chain was stopped by its
+  own process tree (its bash PID checked by command line first).
+- Edits outside the lane's files: EEWorldLayout.cpp (seven layout lines, the town include), ee/EEMiniMap.h and
+  ee/EEUnitStore.h (the typedef), ee/EEUnit.h (EEAddDeadUnitStatistic inline), ee/EEStatisticsRecord.h and
+  ee/EEStatisticsHistory.h (the empty destructors), link/exe/units.txt, tools/units.py; ee_sim world layout.rs,
+  units us_fill.rs (`game` pub(crate)), player.rs, player_body.rs, player_tick.rs, player_save.rs, town_split.rs.
