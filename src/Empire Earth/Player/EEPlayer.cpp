@@ -110,26 +110,6 @@ static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee
 // the decisions' record measures a reason text (ee_units player_econ.rs)
 extern "C" uint32_t ee_units_player_wide_length(const void* inText) { return static_cast<const UWideString*>(inText)->GetLength(); }
 
-// Creates a player with a name and ID: resets all state, binds its tech tree to it and creates
-// its wonder and construction-site lists
-EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
-    : RTSPlayer(inName, inPlayerID)
-{
-    ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 1, (int64_t)inPlayerID, 0.0f);   // ee_units player_body.rs construct
-}
-
-// Creates an unnamed player: resets all state and creates its wonder and construction-site lists
-EEPlayer::EEPlayer()
-{
-    ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 0, 0, 0.0f);   // ee_units player_body.rs construct
-}
-
-// Destroys the player: clears and releases every unit group, its media, tech tree, air traffic, upgrades,
-// towns, herds, off-map records, patrol groups and wonder/construction-site lists
-EEPlayer::~EEPlayer()
-{
-    ee_units_player_body(this, EE_UNITS_PLAYER_DO_DESTROY, 0, 0, 0, 0.0f);   // ee_units player_body.rs destroy
-}
 
 // a unit as the Rust player's operations take it: its RTSUnit address (0: none)
 static int64_t EEPlayerUnitArg(RTSUnit* inUnit)
@@ -601,12 +581,6 @@ unsigned long EEPlayer::GetNumWonderUnits() const
 }
 
 
-// Resets the player to its starting state: new selection and control groups, upgrades, tech tree and
-// air traffic, zeroed counters and default settings, then loads the player effects
-void EEPlayer::Reset()
-{
-    ee_units_player_body(this, EE_UNITS_PLAYER_DO_RESET, 0, 0, 0, 0.0f);   // ee_units player_body.rs reset
-}
 
 // The context of EEPlayer::Load and Save's operations (EEPlayerSaveOperation) and of LoadUnit's and SaveUnit's
 // (EEPlayerUnitOperation), made in the call's argument (Self: the address the Rust passes back)

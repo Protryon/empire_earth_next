@@ -606,10 +606,13 @@ public:
 // (mQueued, Rust's); the economy's and the improvements' bodies are Rust over EEPlayer.cpp's host
 class EEPlayer : public RTSPlayer, public EeUnitsPlayerSaved, public EeUnitsPlayerFields {
 public:
-    // out of line in EEPlayer.cpp (EEHumanPlayer's ctors call them; its ??_G calls the dtor)
-    EEPlayer();
-    EEPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0x161da5 (RTSPlayer(inName, inPlayerID) 0x16f12e first)
-    virtual ~EEPlayer();                    // +0x00 0x162297
+    // (EEHumanPlayer's ctors call them; its ??_G calls the dtor): all state reset, the tech tree bound to a named
+    // player, the wonder and construction-site lists made (ee_units player_body.rs construct); the destructor clears and
+    // releases the groups, media, tech tree, air traffic, upgrades, towns, herds, off-map records, patrol groups and lists
+    EEPlayer() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 0, 0, 0.0f); }
+    // 0x161da5 (RTSPlayer(inName, inPlayerID) 0x16f12e first)
+    EEPlayer(const UWideString& inName, unsigned long inPlayerID) : RTSPlayer(inName, inPlayerID) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CONSTRUCT, 0, 1, (int64_t)inPlayerID, 0.0f); }
+    virtual ~EEPlayer() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_DESTROY, 0, 0, 0, 0.0f); }   // +0x00 0x162297
     // the FSRestorable-style slots EEPlayer overrides (EEHumanPlayer's wrappers call them)
     virtual void Clear() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CLEAR, 0, 0, 0, 0.0f); }                   // +0x1c 0x16828c (same RTSPlayer slot)
     virtual long LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);    // +0x30 0x167ca4
@@ -626,7 +629,6 @@ public:
     virtual void AddUnit(RTSUnit* inUnit, bool inKeepID) { EEPlayerUnits(this, 0, inUnit, inKeepID); }
     virtual void UnitRemoved(RTSUnit* inUnit) { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_UNIT_REMOVED, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0); }  // +0x2c 0x164241 (a complex unit leaves: ClearGoalQueue per mGoalQueues item) (clears mPendingGroups, then RTSPlayer's)
     virtual void RemovingUnit(RTSUnit* inUnit) { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_REMOVING_UNIT, (uint64_t)(int64_t)(uintptr_t)(void*)inUnit, 0, 0); }  // +0x38 0x168deb (an EEUnit leaves its tile; out of its region and the influence table while linked)
-public:
     // +0x44 (EEMDisband: the unit's technology, its type, 0.75 of its hit-point fraction: a refund) (provisional name)
     virtual void RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction) { ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_REFUND_TECHNOLOGY, inTechnology, inUnitType, 0, 0, 0, 0, inFraction, NULL); }
     // +0x48..+0xa8: inline in the real header (their bodies 0xa5486/0xa549a/0xa54a1/0xa54a7 sit in
@@ -735,7 +737,9 @@ public:
     bool CanBuy(long inUnitType, long inImprovement, UWideString* outText) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_BUY, NULL, inUnitType, inImprovement, 0, 0, 0, 0.0f, outText) != 0; }     // (QueueImprovement passes 0: a pointer)
     void QueueImprovement(unsigned long inUnitType, unsigned long inImprovement, bool inFront, bool inAlreadyPaid) { ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_QUEUE_IMPROVEMENT, NULL, (int32_t)inUnitType, (int32_t)inImprovement, inFront, inAlreadyPaid, 0, 0.0f, NULL); }  // 0x162694 (EEMImproveUnit; args 3/4 tested as bytes)
     bool CanImprove(long inUnitType, long inImprovement, UWideString* outReason) { return ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_CAN_IMPROVE, NULL, inUnitType, inImprovement, 0, 0, 0, 0.0f, outReason) != 0; }
-    void Reset();                           // 0x165813 (both ctors call it after the vptr store; the arrays and groups; hides RTSPlayer::Reset)
+    // 0x165813 (both ctors call it after the vptr store; hides RTSPlayer::Reset): new selection and control groups,
+    // upgrades, tech tree and air traffic, zeroed counters and default settings, then the player effects
+    void Reset() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_RESET, 0, 0, 0, 0.0f); }
     const UWideString& GetName() { return this->mName; }           // 0x167eda (&mName, out of line; Reset's; provisional name)
     void UpdateFreeUnitPower() { EEPlayerUnits(this, 12); } // original Player unit-class update, no arguments
     void PulseSight(bool inByID, float inSight, long inID) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_PULSE_SIGHT, (uint64_t)(int64_t)inID, inByID, 0, inSight); } // original169b26, three arguments/ret12 // 0x163138 (ret 4; RepairPointers: each unit's complex unit; provisional name)
