@@ -88,8 +88,6 @@ public:
     EEGameVariant* GetGameVariant() { return gGameVariants[this->mGameOptions.mVariant]; }
     long UnpauseGame();                     // 0x13c964 (returns 0)
     void StartGame(EEGameState* inState, bool inArg);  // 0x139749 (EEDataPreLoading::LoadGame; provisional name)
-    // the owning setters: delete the old object (through its vtable), then store
-    void SetEffectManager(EEEffectManager* inManager);           // 0x13a219 (+0xb1c)
     // the ghost units (EEGhostUnit::Create; both take mGhostUnitsLock; provisional names)
     void ClearGhostUnits();                 // 0x1390e8 (the list at +0x9c0)
     // inline (out-of-line COMDAT 0xe4510 at the end of EEE2DMarchingIcons.cpp, after the unit's template COMDATs; 12
@@ -98,45 +96,24 @@ public:
     void AddGhostUnit(EEGhostUnit* inGhost);
     void ActivateUnit(EEComplexUnit* inUnit);  // 0x13b8e8 (EEUnit::SetHitPoints: a dead unit of a +0x312 class) (provisional name)
     void DeactivateUnit(EEComplexUnit* inUnit);  // 0x13b965 (EEUnit::Remove) (provisional name)
-    // port: the deactivations of units that had no id yet join the queue once their player has given them one
-    // (EEPhysics::FlushWorld, UpdateActiveUnits; EEWorld.cpp)
-    void QueueBornDeactivations();
-    // 0x13c5ad (thiscall, ret 0x14: the 5th argument is unused; the body names gWorld; EEUIEMGEnterScenarioEditor)
-    // (provisional name)
-    void MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused);
     unsigned long GetResourceUsers(EEUnit* inUnit); // 0x139532 (EEUGBuildRepair::FindNextWork: below 1, a gather goal) (provisional name)
     void SetScenarioManager(EEScenarioManager* inManager);       // 0x13a237 (+0xb24; 0x1a594e: a new 0x23c-byte one)
     void SetEnvironmentManager(EEEnvironmentManager* inManager); // 0x13c1e3 (+0xb28; 0x1a596d: a new 0x5c-byte one)
-    void SetInfluenceTable(EEInfluenceTable* inTable);           // 0x13c201 (+0xb20; deleted through slot 0)
     void UpdateActiveUnits();               // 0x13b6bc (EEPhysics::Tick, every tick) (provisional name)
-    long CheckGameOver();                   // 0x13c9b4 (EEPhysics::Tick: the game result, kept in the scenario manager's +0x200) (provisional name)
-    void SetCalamityHelper(FSPersistent* inObject);  // 0x13c1ad (+0xb2c; skips the delete when it is the same object)
     void CreateInfluenceTable(EEMap* inMap);    // 0x13a255: SetInfluenceTable(new EEInfluenceTable(inMap, mNumPlayers))
     unsigned long GetNumTeams();            // 0x3f81e (mTeams.size(); EECPIntelligence 0x8120b calls it) (provisional name)
     // EEWorld.cpp's other members (provisional names)
-    void AddTeam(const std::vector<unsigned long>& inPlayers);   // 0x137f7b (merges the teams none of inPlayers is at war with)
-    void AddAlliance(long inPlayer1, long inPlayer2);
     void ApplyShareBonus();                 // 0x138304 (the +0xb20 population bonus of the players)
-    void ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion, unsigned long inMinorVersion, EEMap* inMap);   // 0x138919 (a human player through an FSMemoryFile)
-    void RebuildTeams();
-    void RemoveAllUnits();
     void DumpMedia(FSFileSpec& inFile, bool inLeaks);
-    void AddComputerPlayers(EEGameState* inState);   // 0x139264 (fills the free slots up to 17)
-    void SetCamera(const GETransformation& inTransformation, bool inForce);   // 0x1394b2 (Virtual18's)
     void SetMap(EEMap* inMap);              // 0x13a1fb (deletes the old map through its vtable)
     void CreateMiniMap(EEGameState* inState);
-    void CreatePlayers(EEGameState* inState);
-    void LoadMedia();                       // 0x13a719 (the shared effects and sounds; mMediaLoaded)
     void RecordStatistics();                // 0x13a845 (the end-of-game scores into mStatistics)
-    void ClearContinents();                 // 0x13b6ab (gContinentManager.Clear(mMap))
+    void RemoveShareBonus();
+    // the three members other lanes' C++ still calls (the scenario editor's host, EEScreens.cpp): one-line forwarders
     void RebuildActiveUnits();
     void RefreshUnits();
-    void RemovePlayerFromTeams(unsigned long inPlayer);  // 0x13bc81 (inPlayer leaves its teams)
-    void RemoveShareBonus();
-    void BreakAlliance(long inPlayer1, long inPlayer2);
-    void NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x13c0cb (each player's VirtualA0)
-    void MarkPlayerOut(unsigned long inPlayer);  // 0x13c2a2 (marks the player out: mObserverMode, its options slot type 2)
-    void UnloadMedia();                     // 0x13c772 (LoadMedia's twin)
+    // 0x13c5ad (thiscall, ret 0x14: the 5th argument is unused; the body names gWorld; EEUIEMGEnterScenarioEditor)
+    void MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused);
 
     EEStatisticsHistory mStatistics;        // +0x0d8 (provisional name; Reset() again at the end of the ctor)
     EEGameOptions& GetGameOptions() { return this->mGameOptions; }

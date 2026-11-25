@@ -69,7 +69,7 @@ long RTSMouseFrameCall(RTSMouse* inMouse, uint32_t inOp, GESurface* inSurface, c
 #define RV_COLORED(k) (gRenderSnapshot.mColoredRectangles[k])
 
 // the C++ calls and members of gamecpp ro_views.rs (EEROUnits.cpp's EERoUnitsOp default): one statement each
-int64_t EECore10OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEDataTextFile.cpp
 int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -83,17 +83,6 @@ int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::RuMainViewRectangle: *(GERectangle*)a[0] = gU4E8F08.GetViewRectangle();
         break;
     case O::GuMainUiState: return gUIManager->GetMainGameForm()->mUIState;
-    case O::GuClearZ: gRasterizer->ClearZBuffer(f[0], *(const GERectangle*)a[0], gScreenIndex);
-        break;
-    case O::GuGetFog: return gRasterizer->GetFog(gScreenIndex);
-    case O::GuSetAlphaRef: gRasterizer->SetAlphaTestingRefValue(f[0], gScreenIndex);
-        break;
-    case O::GuShadingColorSource: gRasterizer->SetShadingColorSource((unsigned long)a[0], gScreenIndex);
-        break;
-    case O::GuZBufferDisabled: gRasterizer->SetZBuffer(kZBufferDisabled, gScreenIndex);
-        break;
-    case O::GuCullNone: gRasterizer->SetCulling(kCullNone);
-        break;
     case O::GuTargetWidth: return gRasterizer->GetRenderTarget(gScreenIndex)->GetWidth();
     case O::GuTargetHeight: return gRasterizer->GetRenderTarget(gScreenIndex)->GetHeight();
     case O::GuUiViewportSetRectangle: gUIViewport.SetViewRectangle(*(const GERectangle*)a[0]);
@@ -103,12 +92,6 @@ int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::GuDrawPolygons: ((EEROUserInterface*)p)->mUIManager->DrawPolygons();
         break;
     // the water
-    case O::WaBlending: gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, gScreenIndex);
-        break;
-    case O::WaZTestOnly: gRasterizer->SetZBuffer(kZBufferTestOnly, gScreenIndex);
-        break;
-    case O::WaZCompareLessEqual: gRasterizer->SetZCompare(kCompareLessEqual, gScreenIndex);
-        break;
     case O::WaDrawWater: gRasterizer->DrawWater(RV_MESH, gScreenIndex, gOrthographicView);
         break;
     // the ground shadows
@@ -188,19 +171,18 @@ int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MoRtsLoad: return MO_MOUSE->RTSMouse::Load((GEScreen*)a[0]);
     case O::MoReleaseExtra: return RTSMouseFrameCall(MO_MOUSE, 5, NULL, NULL, false);
     case O::MoRtsRelease: return MO_MOUSE->RTSMouse::Release();
-    default: return EECore10OpB(inOp, p, a, f);
+    default: return EECore10OpB5(inOp, p, a, f);
     }
     return 0;
 }
 
-double EECore10OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameUtilities.cpp
 double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
-    case O::GuGetAlphaRef: return gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
     case O::GsClassScale: return gUnitClassTable[a[0]]->GetScale();
     case O::SnMapColoredOpacity: return RV_MAP->mColoredRectangles[a[0]].mOpacity;
-    default: return EECore10OpBF(inOp, p, a, f);
+    default: return EECore10OpDF(inOp, p, a, f);
     }
 }

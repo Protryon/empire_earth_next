@@ -88,3 +88,52 @@ fn an_ms_paint_runs_its_plan_and_its_text_call() {
     // SAFETY: NULL is no text
     assert_eq!(unsafe { gui_string_len(0) }, 0);
 }
+
+/// SafeConfigGetSkinPart's table as it was in WONGUIShell.h at 71c097464 (name, kind, the derived kind), against
+/// `skin_part_fits` over every kind and name, an unknown name and a component that is no shell.
+#[test]
+fn a_skin_part_fits_as_the_originals_table_said() {
+    use EeWonShellKind as K;
+    let table: [(&[u8], K, K); 9] = [
+        (b"WONSimpleButton", K::WonSimpleButton, K::WonScrollThumb),
+        (b"WONHeaderButton", K::WonHeaderButton, K::WonHeaderButton),
+        (b"WONScrollbar", K::WonScrollbar, K::WonScrollbar),
+        (b"WONScrollContainer", K::WonScrollContainer, K::WonListCtrl),
+        (b"WONListCtrl", K::WonListCtrl, K::WonListCtrl),
+        (b"WONTabCtrl", K::WonTabCtrl, K::WonTabCtrl),
+        (b"WONComboBox", K::WonComboBox, K::WonComboBox),
+        (b"WONPopupBack", K::WonFrameComponent, K::WonFrameComponent),
+        (b"WONDialogBack", K::WonFrameComponent, K::WonFrameComponent),
+    ];
+    let kinds = [
+        K::MsCheckbox,
+        K::MsTabCtrl,
+        K::MsMessageBox,
+        K::WonSimpleButton,
+        K::WonScrollThumb,
+        K::WonHeaderButton,
+        K::WonInputBox,
+        K::WonScrollbar,
+        K::WonComboBox,
+        K::WonScrollContainer,
+        K::WonListCtrl,
+        K::WonHeaderControl,
+        K::WonTabCtrl,
+        K::WonFrameComponent,
+        K::WonButton,
+    ];
+    let mut fits = 0;
+    for &(name, k1, k2) in &table {
+        assert!(!skin_part_fits(None, name));
+        for &kind in &kinds {
+            let original = kind == k1 || kind == k2;
+            assert_eq!(skin_part_fits(Some(kind), name), original, "{kind:?} {}", String::from_utf8_lossy(name));
+            fits += usize::from(original);
+        }
+    }
+    assert_eq!(fits, 11);
+    for &kind in &kinds {
+        assert!(!skin_part_fits(Some(kind), b"WONSimpleButto"));
+        assert!(!skin_part_fits(Some(kind), b""));
+    }
+}

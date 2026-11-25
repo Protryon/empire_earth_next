@@ -9,6 +9,7 @@
 #include <set>
 
 class EEGameOptionsPlayer;
+extern "C" uint8_t ee_gamecpp_server_send_to_slot(uint8_t lobby);   // gamecpp session_objs.rs
 
 class EEServer : public NESynchronousServer {
 public:
@@ -55,8 +56,9 @@ public:
     // reset (0xcc9ce), a slot's full player information (0xcd144) and a ping statistic (0xcd1dc) are gamecpp
     // session_objs.rs
     NEMessage* NewConnectionResponse(long inError, unsigned char inSendToSlot, unsigned char inUISlot);
-    unsigned char GetSendToSlot(unsigned char inPlayer);  // 0xcbc02 (mU214's value for inPlayer, 0xff if none)
-    unsigned char GetLobbySlot(unsigned char inValue);  // 0xcbc35 (the key whose mU214 value is inValue, 0 if none)
+    // 0xcbc02: a lobby slot's network slot, 0xff if none (the map at +0x214 and GetLobbySlot 0xcbc35, the key of a
+    // value, are Rust's: gamecpp session_objs.rs SEND_TO_SLOTS)
+    unsigned char GetSendToSlot(unsigned char inPlayer) { return ee_gamecpp_server_send_to_slot(inPlayer); }
     void HandleLobbyInput(NEMessage* inMessage);  // 0xcc34e (ProcessSystemMessage)
     bool StartVote(unsigned short inCount);  // 0xcc937 (FilterPlayerInput)
     void SendPlayerSlotInfo();              // 0xcccc8 (EEMStartLoadingResponse: everybody has loaded)
@@ -68,8 +70,6 @@ public:
     TSCriticalSection* mAttemptToRemovePlayerLock;   // +0x208
     TSCriticalSection* mSearchForSlotLock;  // +0x20c
     TSCriticalSection* mFastSelectionLock;  // +0x210 (EEMessage's selection executes hold it)
-    std::map<unsigned char, unsigned char> mSendToSlots;  // +0x214 (GetSendToSlot reads the mapped byte +0xd; cleared by
-                                            // ProcessConnectionRequest; provisional name)
     std::map<unsigned char, bool> mBehindFirewall;  // +0x220 (FilterPlayerInput: each client slot's NEMClientConnectionRequest
                                             //  firewall flag; its own _Tree COMDATs: a second map type)
     bool mVoted[256];                       // +0x22c (CastVote: who voted, by index; zeroed by one `rep stosd` of 0x40)

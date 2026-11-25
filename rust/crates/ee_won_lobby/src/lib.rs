@@ -72,3 +72,5 @@ pub mod errscreen;
 pub mod lobbyids;
 pub mod logicmgr;
 pub mod logicsplit;
+// R6 WON lobby and network round 36 (the logic fork)
+pub mod logicshell;

@@ -99,7 +99,7 @@ fn folder(log: P, search: P, file: P, directory: &CStr, pattern: &CStr) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_update_saved_games() {
     h(O::UsgWorldWriteLock, 0, &[]);
-    h(O::CreatePlaneModels, 0, &[]);
+    super::startup::create_plane_models();
     h(O::EntryDeleteCommunicationsKeep, 0, &[]);
     h(O::EntryNewServer, 0, &[]);
     h(O::EntryServerStartThreads, 0, &[]);

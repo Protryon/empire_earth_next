@@ -6,8 +6,9 @@
 
 #![allow(clippy::unnecessary_cast, clippy::if_same_then_else)]
 
-use std::ffi::{c_long, c_void, CString};
+use std::ffi::{c_long, c_ulong, c_void, CString};
 
+use super::rast::rast;
 use super::{h, hp, pa, Owned, O, P};
 
 /// `kErrorAlreadyExists`.
@@ -27,7 +28,7 @@ pub extern "C" fn ee_gamecpp_gfx_frame_starting(g: *mut c_void) {
     if h(O::UiManagerPresent, 0, &[]) != 0 && h(O::UiCurrentFormPresent, 0, &[]) != 0 {
         if h(O::AntiAliasing, 0, &[]) != 0 {
             h(O::UiRedrawAll, 0, &[]);
-        } else if h(O::RastDirtyRectangleSupport, 0, &[]) == 0 {
+        } else if !rast().dirty_rectangle_support() {
             h(O::UiRedrawAll, 0, &[]);
         }
     }
@@ -71,19 +72,19 @@ pub extern "C" fn ee_gamecpp_gfx_handle_message(g: *mut c_void, message: u32, p1
     let (g, p1, p2) = (g as P, p1 as P, p2 as P);
     match message {
         0x506 => {
-            h(O::LightFadeIn, 0, &[p1 as i64]);
+            super::render_object::ee_gamecpp_ro_light_fade(false, p1 as c_ulong);
         }
         0x507 => {
-            h(O::LightFadeOut, 0, &[p1 as i64]);
+            super::render_object::ee_gamecpp_ro_light_fade(true, p1 as c_ulong);
         }
         0x508 => {
-            h(O::LetterboxIn, 0, &[p1 as i64]);
+            super::render_object::ee_gamecpp_ro_letterbox(false, p1 as c_ulong);
         }
         0x509 => {
-            h(O::LetterboxOut, 0, &[p1 as i64]);
+            super::render_object::ee_gamecpp_ro_letterbox(true, p1 as c_ulong);
         }
         0x503 => {
-            h(O::InitialiseScene, 0, &[]);
+            super::render_object::ee_gamecpp_ro_initialise_scene();
         }
         0x504 => {
             super::render_object::ee_gamecpp_ro_release_scene();
@@ -120,10 +121,10 @@ pub extern "C" fn ee_gamecpp_gfx_restore_surfaces(g: *mut c_void) -> c_long {
     if result == 0 {
         h(O::MousePointerPost, 0, &[0x402]);
         while h(O::MousePointerShown, 0, &[]) != 0 {
-            h(O::Sleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
         }
         while h(O::MousePointerShown, 0, &[]) != 0 {
-            h(O::Sleep, 0, &[1]);
+            ee_base::plat_core::time::PlatSleep(1);
         }
         h(O::WorldWriteLock, 0, &[]);
         h(O::UiRedrawAll, 0, &[]);
@@ -146,8 +147,9 @@ pub extern "C" fn ee_gamecpp_gfx_restore_surfaces(g: *mut c_void) -> c_long {
 pub extern "C" fn ee_gamecpp_gfx_screenshot(g: *mut c_void, capture: *mut c_void) {
     let (g, capture) = (g as P, capture as P);
     let file = Owned::new(O::FileSpecNew, O::FileSpecDelete);
-    let mut now = [0 as std::ffi::c_ulong; 6];
-    h(O::TimeOfDay, 0, &[super::ptr(&mut now)]);
+    let mut now = [0 as c_ulong; 6];
+    // SAFETY: a TMTime is six unsigned longs
+    unsafe { ee_base::time::ee_time_of_day(now.as_mut_ptr().cast()) };
     let post_game = h(O::CaptureIsPostGame, capture, &[]) != 0;
     let jpg = h(O::TakeJpgScreenshots, 0, &[]) != 0 || post_game;
     let extension = if jpg { "jpg" } else { "bmp" };
@@ -166,7 +168,7 @@ pub extern "C" fn ee_gamecpp_gfx_screenshot(g: *mut c_void, capture: *mut c_void
             break;
         }
     }
-    h(O::GfxRenderTo, g, &[pa(capture)]);
+    super::render_to::ee_gamecpp_gfx_render_to(g as *mut c_void, capture as *mut c_void);
     let jpg = h(O::TakeJpgScreenshots, 0, &[]) != 0 || h(O::CaptureIsPostGame, capture, &[]) != 0;
     // kImageFileJPG, kImageFileBMP
     h(O::CaptureSave, capture, &[pa(file.0), if jpg { 2 } else { 1 }]);

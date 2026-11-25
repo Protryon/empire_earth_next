@@ -80,19 +80,6 @@ struct EEShotContext {
     int32_t mKind;                          // EE_COMBAT_SHOT_*
 };
 
-uint32_t EEShotFloat(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
-float EEShotArg(int32_t inBits)
-{
-    float theValue;
-    memcpy(&theValue, &inBits, 4);
-    return theValue;
-}
 
 EEUGRust* EEShotAttack(EEComplexUnit* inUnit)
 {
@@ -109,7 +96,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_R_CLASS_ROTTING_TIME:
         return (int32_t)theClass->mRottingTime;
     case EE_COMBAT_SHOT_R_TILE_HEIGHT:
-        return (int32_t)EEShotFloat(theUnit->mTile->GetHeight());
+        return (int32_t)UFloatBits(theUnit->mTile->GetHeight());
     case EE_COMBAT_SHOT_R_SPLASH_EFFECT:
         return theClass->mSplashEffect != NULL;
     case EE_COMBAT_SHOT_R_DEATH_EFFECT:
@@ -119,13 +106,13 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_R_CARGO:
         return (int32_t)theUnit->GetNumCargoUnits();
     case EE_COMBAT_SHOT_R_LINE_OF_SIGHT:
-        return (int32_t)EEShotFloat(theUnit->GetLineOfSight());
+        return (int32_t)UFloatBits(theUnit->GetLineOfSight());
     case EE_COMBAT_SHOT_R_COMPLEX_GOAL_KIND:
         return (int32_t)theUnit->mComplexUnit->mGoalState->mKind;
     case EE_COMBAT_SHOT_R_RANDOM:
-        return (int32_t)EEShotFloat(gPhysics->mRandom.Generate());
+        return (int32_t)UFloatBits(gPhysics->mRandom.Generate());
     case EE_COMBAT_SHOT_R_FLAMING_CHANCE:
-        return (int32_t)EEShotFloat((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
+        return (int32_t)UFloatBits((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
     case EE_COMBAT_SHOT_R_REMAINS:
         return theClass->mRemainsClass != NULL;
     case EE_COMBAT_SHOT_R_IS_PROJECTILE:
@@ -162,7 +149,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
         theUnit->DropPath();
         break;
     case EE_COMBAT_SHOT_UNLOAD_CARGO:
-        theUnit->UnloadCargoAtTile((long)EEShotArg(inArg), (long)EEShotArg(inArg1), false);
+        theUnit->UnloadCargoAtTile((long)UBitsFloat(inArg), (long)UBitsFloat(inArg1), false);
         break;
     case EE_COMBAT_SHOT_KILL_CARGO:
         theUnit->KillCargo();
@@ -215,7 +202,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
         theClass->RefreshSound(theUnit);
         break;
     case EE_COMBAT_SHOT_SET_OPACITY:
-        theUnit->SetOpacityChain(EEShotArg(inArg));
+        theUnit->SetOpacityChain(UBitsFloat(inArg));
         break;
     case EE_COMBAT_SHOT_SET_FLIGHT_TIME:
         theUnit->SetFlightTime(inArg);

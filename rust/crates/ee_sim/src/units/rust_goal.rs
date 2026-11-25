@@ -137,6 +137,16 @@ impl Default for EeUnitsGoalIo {
     }
 }
 
+/// Where a goal body's file calls and text go (EEUGRust.cpp's `Goal` hands it as its table's `context`): the
+/// C++ `FSFile*` of a Load or Save (Rust reads and writes it: goal_obj.rs), the `UWideString*` of a debug line and
+/// the `FILE*` of an out-of-synch dump (the C++ appends to those).
+#[repr(C)]
+pub struct EeUnitsGoalContext {
+    pub file: *mut c_void,
+    pub text: *mut c_void,
+    pub dump: *mut c_void,
+}
+
 /// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
 #[repr(C)]
 pub struct EeUnitsGoalHost {

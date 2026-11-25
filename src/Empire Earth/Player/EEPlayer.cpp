@@ -378,11 +378,11 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_X_CLASS_TYPE: return (int64_t)EEPlayerPtr<EEUnitClass>(a[0])->mUnitType;
     case EE_UNITS_PLAYER_X_CLASS_AI_KIND: return (int64_t)EEPlayerPtr<EEUnitClass>(a[0])->mAIKind;
     case EE_UNITS_PLAYER_X_CLASS_IMPROVEMENTS: return (int64_t)(uintptr_t)EEPlayerPtr<EEUnitClass>(a[0])->mImprovements;
-    case EE_UNITS_PLAYER_X_TABLE_STEP: io->f[0] = EEPlayerPtr<EEUnitClassImprovementTable>(a[0])->mEntries[a[1]].mStepFactor;
+    case EE_UNITS_PLAYER_X_TABLE_STEP: io->f[0] = EEPlayerPtr<EeDataUpgradeFields>(a[0])->mFactors[a[1]].mOffset;
         return 0;
-    case EE_UNITS_PLAYER_X_TABLE_COST_FACTOR: io->f[0] = EEPlayerPtr<EEUnitClassImprovementTable>(a[0])->mEntries[a[1]].mCostFactor;
+    case EE_UNITS_PLAYER_X_TABLE_COST_FACTOR: io->f[0] = EEPlayerPtr<EeDataUpgradeFields>(a[0])->mFactors[a[1]].mScale;
         return 0;
-    case EE_UNITS_PLAYER_X_TABLE_MAX_LEVEL: return EEPlayerPtr<EEUnitClassImprovementTable>(a[0])->GetMaxLevel();
+    case EE_UNITS_PLAYER_X_TABLE_MAX_LEVEL: return EEPlayerPtr<EeDataUpgradeFields>(a[0])->mMaxLevel;
     case EE_UNITS_PLAYER_X_UP_CAN_UPGRADE: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mImprovement.CanUpgrade(EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mUnitClass, (long)a[1]) == true;
     case EE_UNITS_PLAYER_X_UP_COST: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mImprovement.GetCost((long)a[1]);
     case EE_UNITS_PLAYER_X_UP_TOTAL: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mImprovement.mTotalCost;

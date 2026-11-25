@@ -139,7 +139,7 @@ fn action(action: CheatAction, player: c_ulong) {
         }
         CheatAction::ResearchAll => research_all(pl),
         CheatAction::AdvanceEpoch(epoch) => {
-            if epoch < h(O::DcEpochCount, 0, &[]) as c_long
+            if epoch < ee_sim::tech::tech_ids::ee_tech_epoch_count() as c_long
                 && epoch > EPOCH_PREHISTORIC
                 && epoch > h(O::DcCurrentEpoch, pl, &[]) as c_long
             {
@@ -330,7 +330,7 @@ unsafe extern "C" fn sweep_camera(_: *mut c_void, out: *mut f32) {
 /// EE-SIM --app-sweep's cheats (TEST ONLY: CHET, CHEF), when there are cheat codes.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_capture_cheat_sweep() {
-    if !ee_sim::app::capture::ee_app_capture_active() || h(O::DcHaveCheats, 0, &[]) == 0 {
+    if !ee_sim::app::capture::ee_app_capture_active() || !crate::gamecpp::globals::have!(gCheatCodes) {
         return;
     }
     let host = EeAppCheatSweepHost {

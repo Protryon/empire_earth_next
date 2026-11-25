@@ -175,8 +175,7 @@ private:
 
 class LobbyPersistentData;
 class LobbyContainer;
-class AccountLogic; class DialogLogic; class InitLogic; class RoutingLogic;
-class StagingLogic; class LanLogic; class PingLogic; class WindowEventBase;
+class RustLogic; class PingLogic; class WindowEventBase;
 class ChatCommandParser;
 enum LobbyStatus : int; enum LobbyRunMode : int; // (values only by number); LobbyGameType: WONLobbyGUI.h
 // the lobby's private state (0x118 bytes; constructor 0x7628c0, destructor 0x7630a0; created by 0x761fb0).
@@ -192,12 +191,12 @@ public:
     SmartPtr<LobbyConfig> mConfig; // 0x0c
     SmartPtr<LobbyContainer> mLobbyContainer; // 0x10
     GUIString mInitError; // 0x14
-    SmartPtr<AccountLogic> mAccountLogic; // 0x18
-    SmartPtr<DialogLogic> mDialogLogic; // 0x1c
-    SmartPtr<InitLogic> mInitLogic; // 0x20
-    SmartPtr<RoutingLogic> mRoutingLogic; // 0x24
-    SmartPtr<StagingLogic> mStagingLogic; // 0x28
-    SmartPtr<LanLogic> mLanLogic; // 0x2c
+    SmartPtr<RustLogic> mAccountLogic; // 0x18
+    SmartPtr<RustLogic> mDialogLogic; // 0x1c
+    SmartPtr<RustLogic> mInitLogic; // 0x20
+    SmartPtr<RustLogic> mRoutingLogic; // 0x24
+    SmartPtr<RustLogic> mStagingLogic; // 0x28
+    SmartPtr<RustLogic> mLanLogic; // 0x2c
     SmartPtr<PingLogic> mPingLogic; // 0x30
     LobbyLogicMgr mLogicMgr; // 0x34..0x40
     SmartPtr<UDPManager> mUDPManager; // 0x40

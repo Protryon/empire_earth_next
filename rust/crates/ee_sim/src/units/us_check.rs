@@ -30,8 +30,6 @@ pub const EE_UNITS_US_CHAIN_NEXT: i32 = 9;
 pub const EE_UNITS_US_UNIT_ID: i32 = 10;
 /// unit `a`'s `GetChecksum(b)`
 pub const EE_UNITS_US_CHECKSUM: i32 = 11;
-/// `PlayerWords(` player `a, out)` (its 17 stances)
-pub const EE_UNITS_US_PLAYER_WORDS: i32 = 12;
 /// `gWorld.GetNumUpdateUnits()`
 pub const EE_UNITS_US_ORDER_COUNT: i32 = 13;
 /// `gWorld.GetUpdateUnitID(b)`
@@ -164,9 +162,7 @@ pub fn check<H: UsHost + ?Sized>(h: &mut H, at: u64) -> u64 {
         }
         player_objects.push(h.us(EE_UNITS_US_PLAYER_RTS, player, 0, 0, null) as u64);
         player_ids.push(h.us(EE_UNITS_US_PLAYER_ID, player, 0, 0, null) as u32);
-        let mut words = [0u32; 17];
-        h.us(EE_UNITS_US_PLAYER_WORDS, player, 0, 0, words.as_mut_ptr().cast());
-        enemies.extend_from_slice(&words);
+        enemies.extend_from_slice(&crate::units::us_fill::enemy_words(h, player));
     }
     let differ = h.player_check(&player_objects, &player_ids, &enemies);
     if differ != 0 {

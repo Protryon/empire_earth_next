@@ -624,6 +624,67 @@ pub enum EeWonLobbyOp {
     GameCreateHeld,
     /// `((LobbyGame*)a)->CopyFrom((LobbyGame*)b)`.
     GameCopyFrom,
+    // ---- the statements of the cases lobbyops.rs composes (R6 WON lobby and network round 36)
+    /// `new LobbyClientSetIterator(((LobbyGame*)a)->GetClients().get())`.
+    GameClientsIterNew = 900,
+    /// `((LobbyClientSetIterator*)a)->HasMore()`.
+    ClientsIterHasMore,
+    /// `((LobbyClientSetIterator*)a)->Next((LobbyClient**)b)`: the player.
+    ClientsIterNext,
+    /// `delete (LobbyClientSetIterator*)a`.
+    ClientsIterFree,
+    /// `((LobbyPlayer*)a)->SetReady(c)`.
+    PlayerSetReady,
+    /// `((LobbyGame*)a)->GetJoinReply(*(ReadBuffer*)b, (LobbyClient*)d)`: held, 0, or Threw.
+    GameJoinReplyHeld,
+    /// the staging logic's `SendToClient((LobbyClient*)b, (const ByteBuffer*)a)`.
+    StSendToClientBuf,
+    /// `LobbyPlayer::CreatePlayer()`: held.
+    PlayerCreateHeld,
+    /// `((LobbyPlayer*)a)->ReadFromBuffer(*(ReadBuffer*)b)`, or Threw.
+    PlayerReadFrom,
+    /// `((LobbyClient*)a)->SetPlayer((LobbyPlayer*)b)`.
+    ClientSetPlayer,
+    /// `new WriteBuffer(0, true)`.
+    WbufNew,
+    /// `((WriteBuffer*)a)->AppendBytes(the bytes c, their length d)`.
+    WbufAppend,
+    /// `((LobbyClient*)a)->GetPlayer()->WriteToBuffer(*(WriteBuffer*)b)`.
+    ClientWritePlayer,
+    /// the staging logic's `BroadcastToGame(((WriteBuffer*)a)->ToByteBuffer(true).get())`.
+    StBroadcastWbuf,
+    /// `delete (WriteBuffer*)a`.
+    WbufFree,
+    /// `LobbyRunOpWithStatus((AsyncOp*)a, the rows c's title and details, the mode d, 500)`.
+    RunOpWithStatusMode,
+    /// `((AsyncOp*)a)->IsKilled()`.
+    OpIsKilled,
+    /// the third and fourth bytes of `((LobbyLanSocket*)a)->GetDestAddr()`'s six-byte form (the fourth times 256).
+    LanPeerSubnet,
+    /// the same of `IPAddr::GetLocalAddr()`.
+    LanLocalSubnet,
+    /// `LobbyHandleStagingReadBuffer(a ReadBuffer over the bytes c, length d, (LobbyClient*)b)`.
+    LanStagingBytes,
+    /// `((LobbyGame*)a)->WriteSummary(*(WriteBuffer*)b)`.
+    GameWriteSummary,
+    /// the `WriteBuffer` `a`'s bytes appended to the sink `b`.
+    WbufSink,
+    /// `((LobbyGame*)b)->ReadSummary(a ReadBuffer over the bytes c, length d)`, or Threw.
+    LanGameReadSummary,
+    /// `mDirectConnectDialog->LCall(Reset)`.
+    LanDirectReset,
+    /// `LobbyDoDialog(mDirectConnectDialog)`.
+    LanDirectDo,
+    /// `((LobbyConfig*)a)->mLobbyPort + LobbyTestPortOffset()`.
+    ConfigLobbyPortTest,
+    /// `LobbyGetLobbyPort()`.
+    LobbyPort,
+    /// the direct-connect dialog's host text (`InputText(1)` as a narrow string) appended to the sink `b`.
+    LanDirectHostTake,
+    /// `NewDnsTestOp(mDirectConnectDialog->InputText(1))`: held.
+    LanDirectDnsHeld,
+    /// `*(EeWonIpAddr*)a = ((RustServerOp*)b)->AddrOf(EE_WON_DNSTEST_ADDR)`.
+    DnsOpAddrAssign,
 }
 
 /// A Rust lobby object's way out: the host and the C++ object it belongs to.

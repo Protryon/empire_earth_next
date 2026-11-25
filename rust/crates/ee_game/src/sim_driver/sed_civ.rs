@@ -30,6 +30,7 @@
 //!   cb close                        the form on top popped
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
+use crate::gamecpp as gc;
 use std::ffi::{c_long, c_ulong};
 
 use ee_render::gx::cformat::strtoul_0;
@@ -352,7 +353,7 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             }
         }
         "answer" => {
-            let top = h(O::UiFormCurrent, 0, &[]) as usize;
+            let top = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
             let b = if top == 0 { 0 } else { h(O::UiFormControlById, top, &[number(arg(2)) as i64]) as usize };
             if b == 0 || h(O::IsButton, b, &[]) == 0 {
                 out.push("  answer: no button".into());
@@ -361,7 +362,7 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             }
         }
         "form" => form_digest(form(arg(2)), out),
-        "top" => form_digest(h(O::UiFormCurrent, 0, &[]) as usize, out),
+        "top" => form_digest(gc::h(gc::O::SsCurrentForm, 0, &[]) as usize, out),
         "state" => {
             let mut stack = "  stack".to_string();
             for i in 0..h(O::UiFormCount, 0, &[]) {
@@ -371,7 +372,7 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             out.push(stack);
             // a message box left on top (none in a passing run's states): its text names why (an error box of
             // the builder's file writes, a question not yet closed)
-            let top = h(O::UiFormCurrent, 0, &[]) as usize;
+            let top = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
             if top != 0 && class_of(h(O::UiFormShellOf, top, &[]) as usize, O::UiFormTypeName, top) == "EEUIFError" {
                 out.push("  a message box on top:".into());
                 form_digest(top, out);
@@ -381,7 +382,7 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                 "editor",
                 if editor != 0 { h(O::EditorCivilization, editor, &[]) as usize } else { 0 },
             ));
-            let player = h(O::WorldCurrentPlayer, 0, &[]) as usize;
+            let player = gc::h(gc::O::C11NmCurrent, 0, &[]) as usize;
             out.push(civ_digest(
                 "player",
                 if player != 0 { h(O::PlayerCivilization, player, &[]) as usize } else { 0 },
@@ -450,14 +451,14 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
                 upgrades(&upgrade_list(O::UpgradesCount, O::UpgradesAt, list))
             ));
             h(O::UpgradesFree, list, &[]);
-            h(O::WideFree, name, &[]);
+            gc::h(gc::O::SsDeleteString, name, &[]);
         }
         "apply" => {
-            let player = h(O::WorldPlayersAt, 0, &[number(arg(2)) as i64]) as usize;
+            let player = gc::h(gc::O::SsWorldPlayer, 0, &[number(arg(2)) as i64]) as usize;
             let name = hs(O::NarrowNew, 0, &word(arg(3))) as usize;
             out.push(format!("  apply -> {}", h(O::CivApply, player, &[name as i64]) as c_long));
             out.push(civ_digest("applied", h(O::PlayerCivilization, player, &[]) as usize));
-            h(O::NarrowFree, name, &[]);
+            gc::h(gc::O::UStrFree, name, &[]);
         }
         "flag" => {
             // cb flag freecam|custom|scenario 0|1: the game's flags the builder reads

@@ -18,22 +18,7 @@ pub const EE_UNITS_GOAL_HOST_X_FIND_COMPLEX: i32 = 601;
 pub const EE_UNITS_GOAL_HOST_X_FIND_PLAIN: i32 = 602;
 /// `a->mActiveGroup->TellGroup(a, f[0..3])`
 pub const EE_UNITS_GOAL_HOST_X_TELL_GROUP: i32 = 603;
-/// the file's `Write((uint32_t)i[1])`
-pub const EE_UNITS_GOAL_HOST_X_WRITE_U32: i32 = 604;
-/// the file's `Write((int32_t)i[1])`
-pub const EE_UNITS_GOAL_HOST_X_WRITE_I32: i32 = 605;
-/// the file's `Write(float of the bits i[1])`
-pub const EE_UNITS_GOAL_HOST_X_WRITE_F32: i32 = 606;
-/// the file's `Write(i[1] != 0)`
-pub const EE_UNITS_GOAL_HOST_X_WRITE_BOOL: i32 = 607;
-/// the file's `Read` of a `uint32_t` from and into `i[1]`
-pub const EE_UNITS_GOAL_HOST_X_READ_U32: i32 = 608;
-/// the file's `Read` of an `int32_t`
-pub const EE_UNITS_GOAL_HOST_X_READ_I32: i32 = 609;
-/// the file's `Read` of a float (its bits)
-pub const EE_UNITS_GOAL_HOST_X_READ_F32: i32 = 610;
-/// the file's `Read` of a `bool`
-pub const EE_UNITS_GOAL_HOST_X_READ_BOOL: i32 = 611;
+/// (604..611: the typed file calls, Rust's: goal_obj.rs file_call)
 /// the context's `mText != NULL`
 pub const EE_UNITS_GOAL_HOST_X_HAS_TEXT: i32 = 612;
 /// `*mText += text`
@@ -335,24 +320,6 @@ pub fn split<H: GoalSplitHost + ?Sized>(h: &mut H, op: i32, a: u64, b: u64, io: 
                 h.raw(EE_UNITS_GOAL_HOST_X_TELL_GROUP, a, b, io);
             }
             0
-        }
-        EE_UNITS_GOAL_HOST_WRITE => {
-            let op = match io.i[0] {
-                0 => EE_UNITS_GOAL_HOST_X_WRITE_U32,
-                1 => EE_UNITS_GOAL_HOST_X_WRITE_I32,
-                3 => EE_UNITS_GOAL_HOST_X_WRITE_F32,
-                _ => EE_UNITS_GOAL_HOST_X_WRITE_BOOL,
-            };
-            h.raw(op, a, b, io)
-        }
-        EE_UNITS_GOAL_HOST_READ => {
-            let op = match io.i[0] {
-                0 => EE_UNITS_GOAL_HOST_X_READ_U32,
-                1 => EE_UNITS_GOAL_HOST_X_READ_I32,
-                3 => EE_UNITS_GOAL_HOST_X_READ_F32,
-                _ => EE_UNITS_GOAL_HOST_X_READ_BOOL,
-            };
-            h.raw(op, a, b, io)
         }
         EE_UNITS_GOAL_HOST_APPEND => {
             let op = if op0(h, EE_UNITS_GOAL_HOST_X_HAS_TEXT, 0, 0) != 0 {

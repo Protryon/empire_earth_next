@@ -6,6 +6,8 @@
 //! `c` values.
 
 use crate::units::dop_repair::DopHost;
+use crate::units::obj_fields::EeUnitsComplexDopFields;
+use std::os::raw::{c_long, c_ulong};
 
 // ---- the statements (`op`; the answer)
 /// `EEDoppelganger::Load(b, c, *(FSFile*)a)`
@@ -101,6 +103,14 @@ pub const EE_UNITS_DOP_CONTACTS_UNIT: i32 = 343;
 /// the scratch contacts' entry `b`'s unit's `AddContact((EEComplexUnit*)a)`
 pub const EE_UNITS_DOP_CONTACTS_ADD: i32 = 344;
 
+// the game's statements under the fields' reads, writes and copies (units round 11: those are Rust over the record)
+/// the doppelganger's `EeUnitsComplexDopFields` base
+pub const EE_UNITS_DOP_FIELDS: i32 = 10000;
+/// `dynamic_cast<EEComplexDoppelganger*>(a)`'s `EeUnitsComplexDopFields` base
+pub const EE_UNITS_DOP_OTHER_FIELDS: i32 = 10001;
+/// `mTransformation = dynamic_cast<EEComplexDoppelganger*>(a)->mTransformation`
+pub const EE_UNITS_DOP_COPY_TRANSFORMATION: i32 = 10002;
+
 /// the members the loads, saves and copies name (`EE_UNITS_DOP_READ_FIELD`'s and the others' `b`)
 pub const EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: i64 = 0;
 pub const EE_UNITS_DOP_FIELD_FRAME: i64 = 1;
@@ -128,6 +138,81 @@ fn float(b: i64) -> f32 {
 
 fn bits(v: f32) -> i64 {
     i64::from(v.to_bits())
+}
+
+/// The typed calls of a C++ `FSFile` the fields make ([`ee_base::fs::cppfile::CppFile`]; a byte file in the tests):
+/// `Read`/`Write` of a `long` (an `int32_t` in the file), an `unsigned long` (a `uint32_t`), a `float` and a `bool`
+/// (one byte).
+pub trait DopFile {
+    fn read_i32(&mut self, v: &mut i32) -> i32;
+    fn read_u32(&mut self, v: &mut u32) -> i32;
+    fn read_f32(&mut self, v: &mut f32) -> i32;
+    fn read_u8(&mut self, v: &mut u8) -> i32;
+    fn write_i32(&mut self, v: i32) -> i32;
+    fn write_u32(&mut self, v: u32) -> i32;
+    fn write_f32(&mut self, v: f32) -> i32;
+    fn write_u8(&mut self, v: u8) -> i32;
+}
+
+/// `file.Read(the member field)` (`EE_UNITS_DOP_FIELD_*`; was EEDopReadField): the read starts from the member's
+/// value and stores what the file's call left, whatever the status.
+#[allow(clippy::unnecessary_cast)] // (c_long/c_ulong: 32 bits on Windows, 64 on LP64)
+pub fn read_field<F: DopFile + ?Sized>(f: &mut F, r: &mut EeUnitsComplexDopFields, field: i64) -> i32 {
+    fn long<F: DopFile + ?Sized>(f: &mut F, m: &mut c_long) -> i32 {
+        let mut v = *m as i32;
+        let status = f.read_i32(&mut v);
+        *m = v as c_long;
+        status
+    }
+    fn ulong<F: DopFile + ?Sized>(f: &mut F, m: &mut c_ulong) -> i32 {
+        let mut v = *m as u32;
+        let status = f.read_u32(&mut v);
+        *m = v as c_ulong;
+        status
+    }
+    match field {
+        EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS => long(f, &mut r.mPackedHitPoints),
+        EE_UNITS_DOP_FIELD_FRAME => ulong(f, &mut r.mFrame),
+        EE_UNITS_DOP_FIELD_ANIMATION => ulong(f, &mut r.mAnimation),
+        EE_UNITS_DOP_FIELD_SCALE => f.read_f32(&mut r.mScale),
+        EE_UNITS_DOP_FIELD_TILE_X => long(f, &mut r.mTileX),
+        EE_UNITS_DOP_FIELD_TILE_Y => long(f, &mut r.mTileY),
+        _ => {
+            let mut v = u8::from(r.mIsFoundation);
+            let status = f.read_u8(&mut v);
+            r.mIsFoundation = v != 0;
+            status
+        }
+    }
+}
+
+/// `file.Write(the member field)` (was EEDopWriteField).
+#[allow(clippy::unnecessary_cast)]
+pub fn write_field<F: DopFile + ?Sized>(f: &mut F, r: &EeUnitsComplexDopFields, field: i64) -> i32 {
+    match field {
+        EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS => f.write_i32(r.mPackedHitPoints as i32),
+        EE_UNITS_DOP_FIELD_FRAME => f.write_u32(r.mFrame as u32),
+        EE_UNITS_DOP_FIELD_ANIMATION => f.write_u32(r.mAnimation as u32),
+        EE_UNITS_DOP_FIELD_SCALE => f.write_f32(r.mScale),
+        EE_UNITS_DOP_FIELD_TILE_X => f.write_i32(r.mTileX as i32),
+        EE_UNITS_DOP_FIELD_TILE_Y => f.write_i32(r.mTileY as i32),
+        _ => f.write_u8(u8::from(r.mIsFoundation)),
+    }
+}
+
+/// The member `field` of the record copied from another's (was EEDopCopyField; the transformation is not a record
+/// member: `EE_UNITS_DOP_COPY_TRANSFORMATION`).
+pub fn copy_field(r: &mut EeUnitsComplexDopFields, other: &EeUnitsComplexDopFields, field: i64) {
+    match field {
+        EE_UNITS_DOP_FIELD_MODEL => r.mModel = other.mModel,
+        EE_UNITS_DOP_FIELD_FRAME => r.mFrame = other.mFrame,
+        EE_UNITS_DOP_FIELD_ANIMATION => r.mAnimation = other.mAnimation,
+        EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS => r.mPackedHitPoints = other.mPackedHitPoints,
+        EE_UNITS_DOP_FIELD_SCALE => r.mScale = other.mScale,
+        EE_UNITS_DOP_FIELD_TILE_X => r.mTileX = other.mTileX,
+        EE_UNITS_DOP_FIELD_TILE_Y => r.mTileY = other.mTileY,
+        _ => r.mIsFoundation = other.mIsFoundation,
+    }
 }
 
 /// `Load(major, minor, file)`: the base data, the transformation, the model's index (kept as the pointer for
@@ -275,8 +360,63 @@ pub fn restore_loaded_contacts<H: DopHost + ?Sized>(h: &mut H) {
 #[cfg(not(test))]
 mod game {
     use super::*;
-    use crate::units::dop_repair::game::Game;
+    use crate::units::dop_repair::game::Game as World;
+    use ee_base::fs::{CppFile, FsFile, FsWrite};
     use std::os::raw::c_void;
+
+    impl DopFile for CppFile {
+        fn read_i32(&mut self, v: &mut i32) -> i32 {
+            CppFile::read_i32(self, v)
+        }
+        fn read_u32(&mut self, v: &mut u32) -> i32 {
+            FsFile::read_u32(self, v)
+        }
+        fn read_f32(&mut self, v: &mut f32) -> i32 {
+            CppFile::read_f32(self, v)
+        }
+        // (a `bool` is one byte in the file, read and written as the byte: `Read(unsigned char&)`)
+        fn read_u8(&mut self, v: &mut u8) -> i32 {
+            CppFile::read_u8(self, v)
+        }
+        fn write_i32(&mut self, v: i32) -> i32 {
+            CppFile::write_i32(self, v)
+        }
+        fn write_u32(&mut self, v: u32) -> i32 {
+            FsWrite::write_u32(self, v)
+        }
+        fn write_f32(&mut self, v: f32) -> i32 {
+            CppFile::write_f32(self, v)
+        }
+        fn write_u8(&mut self, v: u8) -> i32 {
+            CppFile::write_u8(self, v)
+        }
+    }
+
+    /// The game's host: the fields' reads, writes and copies on the doppelganger's record here, the rest the C++'s.
+    struct Game;
+
+    impl DopHost for Game {
+        fn dop(&mut self, op: i32, dop: u64, a: u64, b: i64, c: i64) -> i64 {
+            let record = || World.dop(EE_UNITS_DOP_FIELDS, dop, 0, 0, 0) as usize as *mut EeUnitsComplexDopFields;
+            let file = || CppFile(a as usize as *mut c_void);
+            // SAFETY (the three blocks): the body runs inside the live doppelganger's member; `a` is its open file or
+            // the other live complex doppelganger, as the C++ members were handed them
+            match op {
+                EE_UNITS_DOP_READ_FIELD => i64::from(read_field(&mut file(), unsafe { &mut *record() }, b)),
+                EE_UNITS_DOP_WRITE_FIELD => i64::from(write_field(&mut file(), unsafe { &*record() }, b)),
+                EE_UNITS_DOP_COPY_FIELD if b == EE_UNITS_DOP_FIELD_TRANSFORMATION => {
+                    World.dop(EE_UNITS_DOP_COPY_TRANSFORMATION, dop, a, 0, 0)
+                }
+                EE_UNITS_DOP_COPY_FIELD => {
+                    let other =
+                        World.dop(EE_UNITS_DOP_OTHER_FIELDS, dop, a, 0, 0) as usize as *const EeUnitsComplexDopFields;
+                    unsafe { copy_field(&mut *record(), &*other, b) };
+                    0
+                }
+                _ => World.dop(op, dop, a, b, c),
+            }
+        }
+    }
 
     /// `EEComplexDoppelganger`'s body `what` (`EE_UNITS_DOP_DO_*`) on `dop` (`a` the file or the unit or other
     /// doppelganger, `b`, `c` the version or the player and tile).

@@ -29,11 +29,7 @@ impl UsHost for Mock {
             }
             EE_UNITS_US_UNIT_ID => a as i64,
             EE_UNITS_US_CHECKSUM => 3,
-            EE_UNITS_US_PLAYER_WORDS => {
-                // SAFETY: the check's 17 words
-                unsafe { *out.cast::<u32>() = 9 };
-                0
-            }
+            crate::units::us_fill::EE_UNITS_US_B_ENEMY => 9 * i64::from(b == 0),
             EE_UNITS_US_ORDER_COUNT => 2,
             EE_UNITS_US_ORDER_ID => 11 + b,
             _ => 0,

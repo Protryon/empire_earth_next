@@ -136,18 +136,19 @@ void RustServerOp::RunHook()
     IPAddr anAddr = sPeerAddr[this];
     this->Finish(StandinConnect(sPeerMembers[this].mSocket.get(), anAddr, 5000));
 }
-void RustServerOp::CleanupHook() { AsyncOpWithTracker::CleanupHook(); }
-bool RustServerOp::CallbackHook(AsyncOp* inOp, int inParam) { return AsyncOpWithTracker::CallbackHook(inOp, inParam); }
-PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
-                       bool)
-    : RustServerOp(NULL)
+void RustServerOp::CleanupHook() { this->mTracker.KillAll(); }
+bool RustServerOp::CallbackHook(AsyncOp*, int) { return false; }
+RustServerOp* RustServerOp::NewPeerAuth(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
+                                        bool)
 {
+    RustServerOp* that = new RustServerOp(static_cast<EeWonHostOp*>(NULL));
     PlatMutexLock(sLinesLock);
-    sPeerMembers[this].mSocket = inSocket;
-    sPeerMembers[this].mAuthContext = inContext;
-    sPeerMembers[this].mAuthType = inType;
-    sPeerAddr[this] = inAddr;
+    sPeerMembers[that].mSocket = inSocket;
+    sPeerMembers[that].mAuthContext = inContext;
+    sPeerMembers[that].mAuthType = inType;
+    sPeerAddr[that] = inAddr;
     PlatMutexUnlock(sLinesLock);
+    return that;
 }
 }
 
@@ -1379,6 +1380,59 @@ static void ParseGroupBody()
         Log(aLines[i]);
 }
 
+// The firewall check that listens (R6 WON lobby and network round 36, recorded over the C++ RoutingDetectFirewallOp
+// before its listening socket moved into the Rust op): the op listens on its port while it waits (a connect to
+// the port succeeds) and closes the socket when it completes (a connect is refused); on a port another socket
+// listens on, it finishes with the bind's error and sends nothing.
+static const unsigned short kFirewallPort = 15617;
+static std::string CanConnect(unsigned short inPort)
+{
+    SmartPtr<BlockingSocket> aSocket = new BlockingSocket(AsyncSocket::TCP);
+    WONStatus aStatus = StandinConnect(aSocket.get(), IPAddr("127.0.0.1", inPort), 3000);
+    aSocket->Close();
+    return aStatus == WS_Success ? "yes" : "no";
+}
+// a completion that keeps its op: the op outlives its clean-up, so the probe after it sees the clean-up's close and
+// not the destructor's
+class KeepDone : public RouteDone {
+public:
+    KeepDone(const char* inName) : RouteDone(inName) {}
+    virtual void Complete(AsyncOpPtr inOp)
+    {
+        this->mOp = inOp;
+        RouteDone::Complete(inOp);
+    }
+    AsyncOpPtr mOp;
+};
+static void FirewallListen(RoutingConnection* c)
+{
+    Log("== firewall listen");
+    Log("listening before " + CanConnect(kFirewallPort));
+    {
+        SmartPtr<KeepDone> aDone = new KeepDone("firewall listen");
+        RoutingRequests(c).DetectFirewall(kFirewallPort, 5, true, aDone.get());
+        sServer.Expect("firewall listen");
+        Log("listening " + CanConnect(kFirewallPort));
+        sServer.Send("firewall listen", Status(0));
+        sServer.Send("firewall listen", Msg(19).S(0).S(4321));
+        PumpRoute(aDone.get(), 1);
+        PumpFor(50);
+        Log("listening after " + CanConnect(kFirewallPort));
+    }
+    Log("== firewall listen busy");
+    {
+        SmartPtr<BlockingSocket> aBusy = new BlockingSocket(AsyncSocket::TCP);
+        WONStatus aBound = aBusy->Fn2B0D90(kFirewallPort, 0);
+        Log("busy bind " + St(aBound) + " listen " + St(aBusy->Listen(5)));
+        SmartPtr<RouteDone> aDone = new RouteDone("firewall listen busy");
+        RoutingRequests(c).DetectFirewall(kFirewallPort, 5, true, aDone.get());
+        PumpRoute(aDone.get(), 1);
+        aBusy->Close();
+        PumpFor(50);
+        Log("listening after busy " + CanConnect(kFirewallPort));
+    }
+}
+
 static void Scenario()
 {
     sServer.Open();
@@ -1390,6 +1444,7 @@ static void Scenario()
     sServer.Accept();
     Requests(c);
     Notifications();
+    FirewallListen(c);
     c->Close();
     sServer.Peer()->Close();
     sServer.mListener->Close();

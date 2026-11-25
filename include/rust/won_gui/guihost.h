@@ -978,6 +978,14 @@ enum class EeWonGuiOp : uint32_t {
   WmSizeEvSetW,
   /// `((SizeEvent*)a)->mHeight = b`.
   WmSizeEvSetH,
+  /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
+  TabNewContainer = 3200,
+  /// TabCtrl's constructor: `new TabBar((EeWonTabCtrl*)a)` (unheld, as a `Component*`).
+  TabNewBar,
+  /// `static_cast<TabBar*>((Component*)a)->mBar`.
+  TabBarOf,
+  /// TabCtrl's constructor: `mContainerLayout = new LayoutPoint` (the member holds it), as a `Component*`.
+  TabNewPoint,
 };
 
 /// The events a component object fires (`FireEvent`).

@@ -45,23 +45,7 @@ inline uint64_t EEObj(const void* inObject) { return (uint64_t)(uintptr_t)inObje
 // and approaches; the gate and building helpers) folds its kind, inputs and outputs (units as ids, classes as unit
 // types, floats as bits, tile lists and paths whole) into the physics tick's FNV-1a 64; the record (the tick, the
 // calls, the digest) is written when a later tick's first call comes. Nothing is noted unless the capture runs.
-// Its golden came from the C++ bodies before they moved (tools/sim_capture.py).
-class EEUCNote {
-public:
-    explicit EEUCNote(unsigned int inKind);
-    ~EEUCNote();
-    EEUCNote& I(long inValue) { if (this->mOn) this->mWords.push_back((unsigned int)inValue); return *this; }
-    EEUCNote& F(float inValue);
-    EEUCNote& U(const EEUnit* inUnit);
-    EEUCNote& C(const EEUnitClass* inClass);
-    EEUCNote& P(const GE3DPoint& inPoint) { return this->F(inPoint.mX).F(inPoint.mY).F(inPoint.mZ); }
-    EEUCNote& T(const U2DPoint<long>& inTile) { return this->I(inTile.mX).I(inTile.mY); }
-    // a unit's path and goal: its waypoints, its location, its goal's kind and (a location goal) point
-    EEUCNote& S(EEComplexUnit* inUnit);
-    template <class V> V R(V inValue) { this->I((long)inValue); return inValue; }
-    float RF(float inValue) { this->F(inValue); return inValue; }
-    bool mOn;
-    std::vector<unsigned int> mWords;
-};
+// Its golden came from the C++ bodies before they moved (tools/sim_capture.py). The notes are Rust's (ee_sim units
+// ucn_noted.rs, ucbd_note.rs's Note; the C++ EEUCNote went in units round 11).
 
 #endif

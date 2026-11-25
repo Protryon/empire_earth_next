@@ -105,8 +105,8 @@ extern EETerrainColorTable gTerrainColorTable;
 extern EETerrainTypeTable gTerrainTypeTable;
 extern EEComputerPlayerBehaviorTable gComputerPlayerBehaviorTable;
 
-// The game's globals (gWorld, gPhysics, gUIManager, the subsystem pointers, the save version, ...) are
-// EEGlobals.cpp's, a data-only unit: there the 48 global objects are only storage (ee/EEGlobalStorage.h). They are
+// The game's globals (gWorld, gPhysics, gUIManager, the subsystem pointers, the save version, ...) are Rust's
+// storage (ee_game gamecpp global_objects.rs and globals.rs; ee/EEGlobalStorage.h). The 48 global objects are
 // constructed here, where their definitions were, in the order of the original's init chains (0x53e967..0x53f27c),
 // each registering its destructor with atexit as its definition did.
 // chain at 0x53e967 (wrapper)
@@ -260,7 +260,6 @@ void EELoadNetworkSettings()
 #include "lle/NEMessage.h"
 #include "ee/EEMessage.h"
 
-void EEEmptyShutdown(bool inShutdown);
 
 #include "GEWindow.h"
 #include "lle/GEFont.h"
@@ -274,7 +273,6 @@ void EEEmptyShutdown(bool inShutdown);
 #include "ee/EEROEffects.h"
 
 void EESetVideoMode(unsigned long, unsigned long, unsigned long, bool);
-void EEGraphicsShutdown(bool inShutdown); // registered as a shutdown routine (0x543ece)
 // the game view and water ripple constants (.rdata 0x442090..0x4420a8, read from memory by both graphics initializers)
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
@@ -283,7 +281,6 @@ void EEReleaseInstanceMutex(bool inShutdown); // a shutdown routine; the argumen
 bool EEInitializeDisplay();
 void EEInitializeGraphics();
 bool EEInitializeSounds(); // 0x543557; EEInitializePart1 tests its result in AL
-void EEInitializeNetwork();
 void EEInitializeDatabase();
 void EEInitializeGameObjects();
 
@@ -303,31 +300,11 @@ bool EEInitializePart1()
 // New (R5a.6): the RTS layer's way to the input mouse (ee/RTSMouse.h), without the game's mouse header
 RTSMouse* RTSGetInputMouse() { return gMouse; }
 
-// The three threads' stop members (declared in their headers; their COMDATs 0x140999, 0x144488, 0x1444ac are this
-// unit's; the same body as RTSGraphics::Shutdown)
-inline void RTSMousePointer::Shutdown()
-{
-    this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-    this->mThreadDone->Wait(kTSWaitInfinite);
-}
-
-inline void RTSPhysics::Shutdown()
-{
-    this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-    this->mThreadDone->Wait(kTSWaitInfinite);
-}
-
-inline void EEDataPreLoading::Shutdown()
-{
-    this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-    this->mThreadDone->Wait(kTSWaitInfinite);
-}
 #include "lle/UIControl.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 
-void EEShutdownThreads(bool inShutdown); // registered as a shutdown routine (0x544324)
 
 #include <list>
 #include "lle/NESynchronousCommunications.h"
@@ -343,13 +320,6 @@ void EEInitializeGraphics()
     ee_gamecpp_startup_graphics();
 }
 
-// Starts the network engine, registers the message types and checksums the engine DLLs, databases, AI scripts,
-// models and archive timestamps; appends the checksum's low 13 bits to the game version
-void EEInitializeNetwork()
-{
-    ee_gamecpp_entry_initialize_network();
-}
-
 // Registers the saved game's persistent sections (checksum, map, scenario, players, world, effects, ...)
 // (called from the start-up 0x540d73)
 void EERegisterPersistents()
@@ -362,15 +332,6 @@ void EECreateGameTimer()
 {
     sTimer = new TMTimer(0, 0, true);
     ESVERIFY_AT(sTimer != NULL, 1876);
-}
-
-
-void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
-
-// Loads the status box icons, mini map, effect, unit, sky and ground shadow media
-void EELoadGameMedia()
-{
-    ee_gamecpp_startup_load_media();
 }
 
 
@@ -428,7 +389,6 @@ void EEStopAllSounds()
     ee_gamecpp_startup_stop_sounds();
 }
 
-void ReleasePlaneModels(); // effect media cleanup, defined in EEEffect.cpp
 
 // Releases the status box icons, mini map, effect, unit, sky and ground shadow media
 void EEUnloadGameMedia()
@@ -514,15 +474,7 @@ void EEReleaseInstanceMutex(bool inShutdown)
 #include "ee/EEDisplayDevices.h"
 
 extern std::vector<GETexture*> gU4E8EF0; // defined in EERenderObject.cpp
-void DeleteEffectBatchBuffers(); // effect-render cleanup, defined in EEEffect.cpp
 static unsigned long sOriginalVideoMode; // 0x52a1a8: the video mode index found at start-up, restored at shutdown
-
-// Releases models, textures and fonts, restores the start-up video mode, destroys the game window and deletes
-// the render objects and the texture and model managers
-void EEGraphicsShutdown(bool inShutdown)
-{
-    ee_gamecpp_startup_graphics_shutdown();
-}
 
 #include "ee/EEMiniMap.h"
 
@@ -541,31 +493,11 @@ void EEReleaseUnitPools()
     gDoppelgangerManager.Release();
 }
 
-// Does nothing (the network start-up registers it as its shutdown routine)
-void EEEmptyShutdown(bool inShutdown)
-{
-}
-
-// Deletes the sound manager, logs its memory pool and frees the pool and its locks
-// (no direct caller: registered as a shutdown routine)
-void EEDeleteSoundManager(bool inShutdown)
-{
-    ee_gamecpp_startup_delete_sound_manager();
-}
-
 #include "ee/EEWonNet.h"
 #include "ee/EEUnitPicker.h"
 
-// Stops physics, deletes the communications and WON connection, then shuts down and deletes the physics, data
-// preloading, graphics and mouse pointer threads, the music manager and the user interface
-void EEShutdownThreads(bool inShutdown)
-{
-    ee_gamecpp_startup_shutdown_threads();
-}
-
 #include "ee/EEButtonObject.h"
 
-void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
 extern bool sIconsLoaded; // the status box's icons-loaded flag (defined in EEUIFMGStatusBox's unit)
 
 // Re-creates the display at the new size (full screen or not): reactivates the rasterizer, resets render states
@@ -591,8 +523,6 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
 
 #include "lle/Graphics Engine.h"
 
-void EEEnumerateDisplayDevices();
-void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
 
 // Starts the graphics engine, picks the preferred rasterizer, validates screen, depths and resolution (falling
 // back to 800x600x16), creates and captures the game window; returns true
@@ -685,10 +615,7 @@ void EELoadSound(const UString& inName, unsigned long inType, unsigned long& out
 
 #include "lle/User Interface.h"
 
-void EEDeleteDatabase(bool inShutdown); // Original registered callback 0x143d0c.
-void EEDeleteGameObjects(bool inShutdown);
 long EEFn0FCA98(); // 0x4fca98: a post-load check that returns 0
-long EEClearRandomMapGenerators(); // clears the random-map generator list; returns 0
 
 // Starts the sound engine and music conductor from the preferences and creates the sound manager; returns false
 // if the sound engine fails, else true
@@ -711,30 +638,15 @@ void EEInitializeGameObjects()
     ee_gamecpp_startup_game_objects();
 }
 
-// Deletes the game timer, AI, cheat codes, UI manager, mouse and mini map and clears the world and game state
-void EEDeleteGameObjects(bool inShutdown)
-{
-    ee_gamecpp_startup_delete_game_objects();
-}
-
 
 // Cleanup routines defined in other units
 void EEReportLeakingUnits();
-void EEDeleteMediaTable();
-
-// Unloads every database table and its media, deletes the calamity manager and language resources, frees the pools
-void EEDeleteDatabase(bool inShutdown)
-{
-    ee_gamecpp_startup_delete_database(inShutdown);
-}
 
 // ------------------------------------------------------------------------- the start-up's C++ (gamecpp startup.rs)
 
 #include <utility>
 
 int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EEStartupOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEStartupOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the constants startup.rs passes
 static_assert(IDS_ARIAL == 1 && IDS_TIMES_NEW_ROMAN == 2 && IDS_COURIER_NEW == 3 && IDS_TAHOMA == 4 && IDS_CIVILIZATIONS == 29783 && IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_SOUND == 5865 && IDS_ERROR_CANT_RUN_16EA == 5866 && kSoundHotKeyAlarm == 0x3c2 && kPixelFormatZPrefer16 == 12, "gamecpp startup.rs");
@@ -750,13 +662,6 @@ static GEFont** const kFonts[38] = {
     &gFontTahoma20, &gFontTahoma24, &gFontTahoma36, &gFontTahoma48, &gFontTahoma72};
 // the campaign checksums EELoadNetworkSettings reads (string resources 0x32..0x34, 0x37, 0x36)
 static long* const kCampaignChecksums[5] = {&gAOCRomanChecksum, &gAOCPacificChecksum, &gAOCAsianChecksum, &gEEDemoChecksum, &gEELearningChecksum};
-// the db tables' names in start-up order (startup.rs TABLES_1..3)
-static const UString* const kDbTableNames[26] = {
-    &kDbStartingResourcesFile, &kDbUnitBehaviorFile, &kDbSoundsFile, &kDbGraphicsFile, &kDbGfxEffectsFile,
-    &kDbMusicFile, &kDbWorldFile, &kDbFamilyFile, &kDbButtonsFile, &kDbTechTreeFile, &kDbAnimalsFile,
-    &kDbColorTableFile, &kDbAIUnitTargetingFile, &kDbTerrainFile, &kDbTerrainTypeFile, &kDbCliffTerrainFile,
-    &kDbCivPowersFile, &kDbCivilizationFile, &kDbWeaponToHitFile, &kDbCalamityFile, &kDbUnitSetFile,
-    &kDbAreaEffectFile, &kDbUpgradeFile, &kDbCPBehaviorFile, &kDbGameVariantFile, &kDbPremadeCivsFile};
 // the start-up directory as a file spec (the engines' initialisations take one)
 static FSFileSpec& EEStartupDirectorySpec()
 {
@@ -783,29 +688,11 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     typedef EeGameCpp O;
     switch (inOp) {
     // the floating point, the engines
-    case O::FpPrecision: return UMGetFloatingPointPrecision();
-    case O::FpPrecision53: return kFPPrecision53;
-    case O::FpSetPrecision53: UMSetFloatingPointPrecision(kFPPrecision53);
-        break;
-    case O::FpSetPrecision: UMSetFloatingPointPrecision((unsigned long)a[0]);
-        break;
-    case O::FpRounding: return UMGetFloatingPointRoundingMode();
-    case O::FpSetRoundingNearest: UMSetFloatingPointRoundingMode(0);
-        break;
-    case O::TsInitialize: return TSInitialize();
-    case O::TmInitialize: return TMInitialize();
     case O::IsInitialize: return ISInitialize(gInstance, gGameWindow, gResource, 100, 250);
     case O::GeInitialize: return GEInitialize(EEStartupDirectorySpec(), gInstance);
     case O::SeInitialize: return SEInitialize(EEStartupDirectorySpec(), gGameWindow);
-    case O::InitializeNetwork: EEInitializeNetwork();
-        break;
     case O::RegisterShutdownMutex: return URegisterShutdown(EEReleaseInstanceMutex);
-    case O::RegisterShutdownGraphics: return URegisterShutdown(EEGraphicsShutdown);
     case O::RegisterShutdownPersistents: return URegisterShutdown(FSPersistentList::Shutdown);
-    case O::RegisterShutdownThreads: return URegisterShutdown(EEShutdownThreads);
-    case O::RegisterShutdownSound: return URegisterShutdown(EEDeleteSoundManager);
-    case O::RegisterShutdownDatabase: return URegisterShutdown(EEDeleteDatabase);
-    case O::RegisterShutdownGameObjects: return URegisterShutdown(EEDeleteGameObjects);
     case O::WindowHide: PlatWindowShow(gGameWindow->GetOSRepresentation(), 0);
         break;
     case O::MessageShowError: PlatMessageShow(WSTR, *(UWideString*)a[0], PLAT_MESSAGE_ERROR | PLAT_MESSAGE_SYSTEM_MODAL | PLAT_MESSAGE_FOREGROUND);
@@ -817,10 +704,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the graphics: the managers, the window, the render objects, the fonts
     case O::NewTextureManager: gTextureManager = new GETextureManager(gDataPath);
         break;
-    case O::TextureManagerPresent: return gTextureManager != NULL;
     case O::NewModelManager: gModelManager = new GEModelManager(gDataPath);
         break;
-    case O::ModelManagerPresent: return gModelManager != NULL;
     case O::PrefScreenID: return SCREEN_ID;
     case O::PrefScreenIDRaw: return SETTINGS.mScreenID;
     case O::PrefGameBitDepth: return SETTINGS.mGameBitDepth;
@@ -862,14 +747,11 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::MenuWidth: return EEMenuWidth();
     case O::MenuHeight: return EEMenuHeight();
-    case O::FreeCamera: return gFreeCamera;
     case O::RectRoundToNearest: ((GERectangle*)a[0])->RoundToNearest();
         break;
     case O::ViewportSetViewRectangle: gViewport.SetViewRectangle(*(GERectangle*)a[0]);
         break;
     case O::SceneFlagsClear: gB529066 = false, gCameraFollowing = false, gB529068 = false;
-        break;
-    case O::EnumerateDisplayDevices: EEEnumerateDisplayDevices();
         break;
     case O::DisplayRasterizersClear: gDisplayRasterizers.clear();
         break;
@@ -959,10 +841,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::DebugVideoModeChanged: ESDebugOut("!::EESetVideoMode: Video mode changed to %ldx%ldx%ld at %ldHz.\n", ((GEVideoMode*)a[0])->mWidth, ((GEVideoMode*)a[0])->mHeight, ((GEVideoMode*)a[0])->mBitCount, ((GEVideoMode*)a[0])->mRefreshRate);
         break;
-    case O::CreateEffectBatchBuffers: CreateEffectBatchBuffers();
-        break;
-    case O::DeleteEffectBatchBuffers: DeleteEffectBatchBuffers();
-        break;
     case O::NewRoTerrain: gU56535C = new EEROTerrain;
         break;
     case O::NewRoGroundShadows: gU565358 = new EEROGroundShadows;
@@ -1041,23 +919,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::UiMiniMapUnloadMedia: gEEGameUI.mMiniMapUnloadMedia();
         break;
     case O::IconsLoaded: return sIconsLoaded == true;
-    case O::CreatePlaneModels: CreatePlaneModels();
-        break;
-    case O::ReleasePlaneModels: ReleasePlaneModels();
-        break;
     case O::RoUnitsLoadMedia: EEROUnits::LoadMedia();
-        break;
-    case O::RoUnitsReleaseMedia: EEROUnits::ReleaseMedia();
-        break;
-    case O::RoSkyCreate: EEROTerrain::CreateSkyModel();
-        break;
-    case O::RoSkyRelease: EEROTerrain::ReleaseSkyModels();
-        break;
-    case O::RoShadowCreate: EEROGroundShadows::CreateShadowModel();
-        break;
-    case O::RoShadowRelease: EEROGroundShadows::ReleaseShadowModel();
-        break;
-    case O::ButtonsReload: EEButtonObject::Reload();
         break;
     // the data paths and folders
     case O::NewFsPath: return P64(new FSPath);
@@ -1077,10 +939,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::FileSpecCreateDirectory: SPEC->CreateDirectory();
         break;
     case O::DataArchivePresent: return PlatPathGetAttributes(gStartupVolume + gStartupDirectory + "data\\data" + gU530B88) != PLAT_ATTR_INVALID;
-    case O::DataPathPresent: return gDataPath != NULL;
     case O::DataPathDereference: gDataPath->Dereference();
         break;
-    case O::CivPathPresent: return gCivilizationDataPath != NULL;
     case O::CivPathDereference: gCivilizationDataPath->Dereference();
         break;
     case O::SetDataPath: gDataPath = (FSPath*)p;
@@ -1090,18 +950,16 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the threads
     case O::NewMusicManager: gMusicManager = new EEMusicManager(&gConductor->GetConductor(), 0);
         break;
-    case O::MusicManagerPresent: return gMusicManager != NULL;
     case O::MusicManagerDelete: delete std::exchange(gMusicManager, nullptr);
         break;
     case O::MusicStop: gMusicManager->Stop();
         break;
     case O::NewMousePointer: gMousePointer = new RTSMousePointer(gMouse, gGameWindow, 0);
         break;
-    case O::MousePointerPresent: return gMousePointer != NULL;
     case O::MousePointerPost: gMousePointer->mThread->Post((unsigned long)a[0], NULL, NULL, true);
         break;
     case O::MousePointerShown: return gMousePointer->mIsShown;
-    case O::MousePointerShutdown: gMousePointer->Shutdown();
+    case O::MousePointerShutdown: ee_gamecpp_startup_quit_thread(gMousePointer->mThread, gMousePointer->mThreadDone);
         break;
     case O::MousePointerDelete: delete std::exchange(gMousePointer, nullptr);
         break;
@@ -1109,7 +967,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::NewGraphics: gGraphics = new EEGraphics(gRasterizer, SCREEN_ID, gMouse, gUIManager, 0);
         break;
-    case O::GraphicsPresent: return gGraphics != NULL;
     case O::GfxShutdown: gGraphics->Shutdown();
         break;
     case O::GfxDelete: delete std::exchange(gGraphics, nullptr);
@@ -1122,8 +979,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::NewDataPreLoading: gDataPreLoading = new EEDataPreLoading(0);
         break;
-    case O::DataPreLoadingPresent: return gDataPreLoading != NULL;
-    case O::PreloadShutdown: gDataPreLoading->Shutdown();
+    case O::PreloadShutdown: ee_gamecpp_startup_quit_thread(gDataPreLoading->mThread, gDataPreLoading->mThreadDone);
         break;
     case O::PreloadDelete: delete std::exchange(gDataPreLoading, nullptr);
         break;
@@ -1131,7 +987,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::NewPhysics: gPhysics = new EEPhysics(gGraphics, sTimer);
         break;
-    case O::PhysShutdown: gPhysics->Shutdown();
+    case O::PhysShutdown: ee_gamecpp_startup_quit_thread(gPhysics->mThread, gPhysics->mThreadDone);
         break;
     case O::PhysDelete: delete std::exchange(gPhysics, nullptr);
         break;
@@ -1193,8 +1049,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::SoundPoolDump: SESoundManager::DumpMemoryPoolInfo();
         break;
-    case O::SoundPoolCleanup: SESoundManager::CleanupMemoryPoolAndDestroyCriticalSections();
-        break;
     case O::SoundsPoolInit: SESoundManager::InitializeSoundsPool((unsigned long)a[0], (unsigned long)a[1], (unsigned long)a[2]);
         break;
     case O::SoundLoad: return gSoundManager->Load(USTR, (unsigned long)a[0], 1);
@@ -1215,13 +1069,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     // the database
     case O::LoadRules: EELoadRules(gDataPath);
         break;
-    case O::DumpRules: EEDumpRules();
-        break;
-    case O::DbFindTable: return EEDbFindFile(gDataPath, *kDbTableNames[a[0]], *(FSFileSpec**)a[1]);
-    case O::DbFindEvents: return EEDbFindFile(gDataPath, kDbEventsFile, *(FSFileSpec**)a[0]);
-    case O::DbFindEffects: return EEDbFindFile(gDataPath, kDbEffectsFile, *(FSFileSpec**)a[0]);
-    case O::DbFindAmbientSounds: return EEDbFindFile(gDataPath, kDbAmbientSoundsFile, *(FSFileSpec**)a[0]);
-    case O::LoadEvents: return EEEvent::LoadEvents(*SPEC, *(FSFileSpec*)a[0]);
     case O::TerrainColorsLoad: return EETerrainColorTable::Load();
     case O::DbLoadStartingResources: return EEStartingResources::Load(SPEC);
     case O::DbLoadUnitBehavior: return EEUnitBehavior::Load(SPEC);
@@ -1266,13 +1113,9 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ReportLeakingUnits: EEReportLeakingUnits();
         break;
-    case O::UnitActionDeleteScripts: EEUnitAction::DeleteScripts();
-        break;
     case O::ReleaseUnitClasses: EEUnitClass::ReleaseUnitClasses();
         break;
     case O::AnimalsUnload: EEAnimal::Unload();
-        break;
-    case O::DamageTablesClear: EETerrainTypeTable::ClearDamageTables();
         break;
     case O::CalamityClassesDestroy: EECalamityManager::GetInstance()->DestroyCalamityClasses(a[0] != 0);
         break;
@@ -1280,13 +1123,7 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ButtonsUnload: EEButtonObject::Unload();
         break;
-    case O::GfxEffectsUnloadTable: EEGraphicEffect::UnloadTable();
-        break;
-    case O::DeleteMediaTable: EEDeleteMediaTable();
-        break;
     case O::MusicObjectsClear: EEMusicObject::ClearAll();
-        break;
-    case O::SoundObjectsUnloadTable: EESoundObject::UnloadTable();
         break;
     case O::ColorTableUnload: EEColorTable::Unload();
         break;
@@ -1331,11 +1168,8 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::FreePhysicsModels: EEFreePhysicsModels();
         break;
-    case O::ClearRandomMapGenerators: EEClearRandomMapGenerators();
-        break;
     case O::NewMouse: gMouse = new EEMouse;
         break;
-    case O::MousePresent: return gMouse != NULL;
     case O::MouseLoad: return gMouse->Load(gRasterizer->GetScreen(SCREEN_ID));
     case O::MouseRelease: gMouse->Release();
         break;
@@ -1361,12 +1195,10 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::NewArtificialIntelligence: gArtificialIntelligence = new EEArtificialIntelligence;
         break;
-    case O::ArtificialIntelligencePresent: return gArtificialIntelligence != NULL;
     case O::DeleteArtificialIntelligence: delete std::exchange(gArtificialIntelligence, nullptr);
         break;
     case O::NewCheatCodes: gCheatCodes = new EECheatCodes;
         break;
-    case O::CheatCodesPresent: return gCheatCodes != NULL;
     case O::DeleteCheatCodes: delete std::exchange(gCheatCodes, nullptr);
         break;
     case O::NewGameTimer: sTimer = new TMTimer(0, 0, true);
@@ -1376,35 +1208,23 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ContinentsShutdown: EEAIContinentManager::Shutdown();
         break;
-    case O::MiniMapPresent: return gMiniMap != NULL;
     case O::AeManagerClear: gAEManager.Clear();
         break;
     case O::CpOnAttackPlayer: EECPUnitsOnAttackPlayer((EEComputerPlayer*)p, (long)a[0], a[1] != 0);
         break;
-    default: return EEStartupOpNext(inOp, p, a, f);
+    default: return EEGraphicsOp(inOp, p, a, f);
     }
     return 0;
 }
 
+double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
     case O::PrefMaxSounds: return gGamePreferences.mSettings.GetMaxNumberOfSounds();
-    default: return EEStartupOpNextF(inOp, p, a, f);
+    default: return EECore9OpAF(inOp, p, a, f);
     }
-}
-
-// the graphics bodies' (EEGraphics.cpp)
-int64_t EEStartupOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEGraphicsOp(inOp, p, a, f);
-}
-
-double EECore9OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEStartupOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpAF(inOp, p, a, f);
 }
 
 // ------------------------------------------------------------------------- round 9, lane E: this file's bodies' C++
@@ -1454,12 +1274,9 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::EntryRegisterEeMessages: EEMessage::RegisterKnownMessages();
         break;
-    case O::EntryRegisterEmptyShutdown: return URegisterShutdown(EEEmptyShutdown);
     case O::EntryArchiveCount: return gDataPath->GetArchiveCount();
     case O::EntryArchiveTimestamp: return gDataPath->GetArchive((unsigned long)a[0]).GetTag(UWideString("Timestamp"), WSTR) == kErrorOK;
     case O::EntryStrData: return P64((const char*)WSTR);
-    case O::EntrySetBinaryChecksum: gBinaryChecksum = (uint32_t)a[0];
-        break;
     case O::EntryVersionTrim: gGameVersion = gGameVersion.GetIndexedSubstring(gGameVersion.Find("v", 0), gGameVersion.GetLength() - 1);
         break;
     case O::EntryVersionAppend: gGameVersion += (const char*)a[0];
@@ -1469,8 +1286,6 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RunFixtureConfigure: gEETestFixtureConfigure != NULL ? gEETestFixtureConfigure() : (void)0;
         break;
     case O::RunInstanceMutex: return EECreateInstanceMutex();
-    case O::RunSetEventPump: TSThread::SetEventPump((bool (*)())a[0], PlatCurrentThreadId());   // gamecpp window_pump.rs
-        break;
     // round 12, fork D (gamecpp window_pump.rs)
     case O::C12GameWindowSize: return gGameWindow == NULL ? 0 : a[0] == 0 ? gGameWindow->GetWidth() : gGameWindow->GetHeight();
     case O::C12DebugText: ESDebugOut("%s", (const char*)a[0]);
@@ -1489,23 +1304,15 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         CoUninitialize();
 #endif
         break;
-    case O::RunFloatingPoint: UMSetFloatingPointPrecision(kFPPrecision53);
-        break;
     case O::RunSqrtTable: UMFastMath::BuildSqrtTable();
         break;
     case O::RunSetInstance: gInstance = (HINSTANCE)a[0];
         break;
-    case O::RunEsInitialize: ESInitialize((HINSTANCE)a[0]);
-        break;
     case O::RunFsInitialize: FSInitialize("");
         break;
     case O::RunNewResource: return (gResource = new UResourceFile((HINSTANCE)a[0])) != NULL;   // the language resources are linked into the exe
-    case O::RunDefaultSettings: EEInitializeDefaultSettings();
-        break;
     case O::RunPreferencesLoad: return gGamePreferences.Load();
     case O::RunUserInterface: return gUserInterface->Run((void*)&(const UString&)UString((const char*)a[0]));
-    case O::RunUShutdown: UShutdown(a[0] != 0, false);
-        break;
     case O::RunReleaseDataPath: gDataPath->Dereference();
         break;
     case O::RunReleaseCivilizationPath: gCivilizationDataPath->Dereference();
@@ -1515,12 +1322,6 @@ int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     return 0;
 }
 
-double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // round 10 (EEGraphics.cpp)
-
-double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore10OpAF(inOp, p, a, f);
-}
 
 // The deferred COMDATs at the end of the unit (0x14494d..0x14622a: the inline-class deleting dtors and every template
 // instantiation) are compiled without /Og, while every user function is -O1: the file ends with an unmatched
@@ -1549,9 +1350,4 @@ int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     }
 }
 
-double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
 
-double EECore10OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore10OpE3F(inOp, p, a, f);
-}

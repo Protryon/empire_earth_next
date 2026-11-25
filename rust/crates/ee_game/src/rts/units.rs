@@ -653,7 +653,7 @@ pub fn save_units<C: UnitsCpp>(c: &mut C, player: usize, major: c_ulong, minor: 
 }
 
 #[cfg(not(test))]
-mod ffi {
+pub(crate) mod ffi {
     use super::*;
     use core::ffi::c_void;
     use ee_base::shim::ShimFfi as Ffi;

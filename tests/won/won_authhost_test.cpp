@@ -257,7 +257,7 @@ int main(int argc, char** argv)
         SmartPtr<AuthContext> aCtx = new AuthContext; // loads _wonkver.pub, once per process
         AuthContext* ctx = aCtx.get();
         void* C = static_cast<RefCount*>(ctx);
-        SmartPtr<GetCertOp> aCertOp = new GetCertOp(ctx);
+        SmartPtr<RustServerOp> aCertOp = RustServerOp::NewGetCert(ctx);
         sOp = aCertOp.get();
         Log("start " + Peer(ctx));
         Verifier(C);

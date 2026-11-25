@@ -357,3 +357,59 @@ fn the_constructors_records_are_the_originals() {
         (EeWonLayoutKind::SpaceEvenly, [7, 0, 0, 0, 0], [4, 5, 0, 0, 0, 0, 0, 0], true, false)
     );
 }
+
+/// `PercentLayoutParam::SetBorders` as the original wrote it (tests/won/won_guilayout_test.cpp OrigSetBorders),
+/// over the anchors' pointers.
+fn orig_set_borders(g: [isize; 4]) -> [isize; 4] {
+    let (mut left, mut top, mut right, mut bottom) = (g[0], g[1], g[2], g[3]);
+    let mut last = 0;
+    if g[0] == 0 {
+        left = g[2];
+    } else {
+        last = g[0];
+    }
+    if g[2] == 0 {
+        right = left;
+    } else {
+        last = g[2];
+    }
+    if g[1] == 0 {
+        top = g[3];
+    } else {
+        last = g[1];
+    }
+    if g[3] == 0 {
+        bottom = top;
+    } else {
+        last = g[3];
+    }
+    if left == 0 {
+        left = last;
+    }
+    if right == 0 {
+        right = last;
+    }
+    if top == 0 {
+        top = last;
+    }
+    if bottom == 0 {
+        bottom = last;
+    }
+    [left, top, right, bottom]
+}
+
+#[test]
+fn the_percent_record_takes_the_params_borders() {
+    for mask in 0..16u32 {
+        let g: [isize; 4] = std::array::from_fn(|i| if mask & (1 << i) != 0 { 0x100 + i as isize } else { 0 });
+        assert_eq!(percent_anchors(g), orig_set_borders(g), "mask {mask}");
+        let given: [*mut std::ffi::c_void; 4] = g.map(|v| v as *mut std::ffi::c_void);
+        let ints = [1, 2, 3, 4, 5, 6, 7, 8];
+        // SAFETY: four pointers, eight ints
+        let r = unsafe { ee_won_layout_init_percent(0x50 as *mut _, given.as_ptr(), ints.as_ptr()) };
+        let a = orig_set_borders(g);
+        assert_eq!((r.kind, r.refs, r.ints), (EeWonLayoutKind::Percent, [0x50, a[0], a[1], a[2], a[3]], ints));
+    }
+    let r = ee_won_layout_init_child(3, 10 as *mut _, 20 as *mut _, 1, 2, 3, 4);
+    assert_eq!((r.kind, r.refs, r.ints), (EeWonLayoutKind::Child, [10, 20, 0, 0, 0], [3, 1, 2, 3, 4, 0, 0, 0]));
+}
