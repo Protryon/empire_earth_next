@@ -17,6 +17,7 @@ use ee_base::error::checksum::{
     ee_error_checksum_set_verbose, ee_error_checksum_verbose, EeErrorChecksum,
 };
 use ee_sim::tech::calamity_record::EeCalamityFields;
+use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_ALLIES};
 use ee_sim::world::player_fields::EeUnitsPlayerSaved;
 use ee_sim::world::unit_fields::EeUnitsRtsUnitFields;
 
@@ -196,7 +197,7 @@ pub extern "C" fn ee_gamecpp_pph_load(
                 && h(O::PphIsAllied, pj, &[pa(pi)]) != 0
                 && unsafe { (*rec::<EeUnitsPlayerSaved>(O::PlSaved, pj)).mSharedLOS }
             {
-                h(O::PphAddAlly, pj, &[pa(pi)]);
+                player_op(pj as u64, EE_UNITS_LISTS_ALLIES, ListOp::Add(pi as u64));
             }
         }
     }

@@ -13,9 +13,12 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::tech::civilization::{apply_all, reapply, EE_TECH_CIV_DEFERRED_INDEX};
+use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_WONDERS};
+
+use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
 
 use crate::gamecpp::persistent::Pf;
-use crate::gamecpp::{h, hp, pa, ptr, rec, Owned, O, P};
+use crate::gamecpp::{h, hp, pa, rec, Owned, O, P};
 
 /// The upgrade's attribute index bits (ee_sim tech civ.rs `LEVEL_MASK`).
 const CIV_LEVEL_MASK: u32 = 0xffff;
@@ -165,12 +168,66 @@ pub extern "C" fn ee_gamecpp_civ_save(civilization: *mut c_void, file: *mut c_vo
     r as c_long
 }
 
+/// A player's index (`mPlayerID`).
+fn player_id(player: *mut c_void) -> c_long {
+    // SAFETY: a live player's record
+    unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, player as P)).mPlayerID as c_long }
+}
+
+/// `gGameOptions.mAllowCustomCivs` (the lobby's options: off, every upgrade is affordable).
+fn allow_custom() -> bool {
+    // SAFETY: the lobby's options record
+    unsafe { (*rec::<crate::app::game_options::EeAppOptionsFields>(O::LobbyOptions, 0)).mAllowCustomCivs }
+}
+
+/// `CanAfford`: whether the upgrade is affordable (always, with custom civilizations off) and its cost into
+/// `out_cost` (when not null), counted against `list` (null: the purchased upgrades): ee_sim tech civilization.rs.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_civ_can_afford(
+    civilization: *mut c_void,
+    upgrade: u32,
+    out_cost: *mut c_ulong,
+    list: *mut c_void,
+) -> bool {
+    let cv = civilization as P;
+    let list = upgrades(if list.is_null() { purchased(cv) } else { list as P });
+    // SAFETY: the copied list; the caller's cost or null
+    unsafe {
+        ee_sim::tech::civilization::ee_tech_civ_can_afford(
+            upgrade,
+            list.as_ptr(),
+            list.len(),
+            *available(cv),
+            allow_custom(),
+            out_cost,
+        )
+    }
+}
+
+/// `CanAffordAll`: every upgrade of the list affordable in turn.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_civ_can_afford_all(civilization: *mut c_void, list: *mut c_void) -> bool {
+    let cv = civilization as P;
+    let (bought, list) = (upgrades(purchased(cv)), upgrades(list as P));
+    // SAFETY: the copied lists
+    unsafe {
+        ee_sim::tech::civilization::ee_tech_civ_can_afford_all(
+            bought.as_ptr(),
+            bought.len(),
+            list.as_ptr(),
+            list.len(),
+            *available(cv),
+            allow_custom(),
+        )
+    }
+}
+
 /// `Buy`: an upgrade applied to a player, first paid for and recorded when buying; whether it applied.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_civ_buy(civilization: *mut c_void, upgrade: u32, player: c_long, purchase: bool) -> bool {
     let cv = civilization as P;
     let mut cost: c_ulong = 0;
-    if purchase && h(O::DvCanAfford, cv, &[upgrade as i64, ptr(&mut cost)]) == 0 {
+    if purchase && !ee_gamecpp_civ_can_afford(civilization, upgrade, &mut cost, std::ptr::null_mut()) {
         return false;
     }
     if purchase {
@@ -212,8 +269,8 @@ pub extern "C" fn ee_gamecpp_civ_apply_level21(civilization: *mut c_void) {
 /// `Reapply`: after a load the purchased upgrades applied to the player but those of the deferred kind, which wait;
 /// 13 when one fails.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_civ_reapply(civilization: *mut c_void, player: c_long) -> c_long {
-    let cv = civilization as P;
+pub extern "C" fn ee_gamecpp_civ_reapply(civilization: *mut c_void, player: *mut c_void) -> c_long {
+    let (cv, player) = (civilization as P, player_id(player));
     let (applied, deferred) = reapply(&upgrades(purchased(cv)), |u| apply(u, player));
     for u in deferred {
         h(O::DvDeferredPush, cv, &[u as i64]);
@@ -227,8 +284,8 @@ pub extern "C" fn ee_gamecpp_civ_reapply(civilization: *mut c_void, player: c_lo
 
 /// `ApplyDeferred`: the deferred upgrades applied to the player and forgotten; 13 when one fails.
 #[no_mangle]
-pub extern "C" fn ee_gamecpp_civ_apply_deferred(civilization: *mut c_void, player: c_long) -> c_long {
-    let cv = civilization as P;
+pub extern "C" fn ee_gamecpp_civ_apply_deferred(civilization: *mut c_void, player: *mut c_void) -> c_long {
+    let (cv, player) = (civilization as P, player_id(player));
     if !apply_all(&upgrades(hp(O::DvDeferred, cv, &[])), |u| apply(u, player)) {
         return CIV_FAILED;
     }
@@ -253,9 +310,14 @@ pub extern "C" fn ee_gamecpp_wonder_enough(condition: *mut c_void) -> bool {
     }
     let mut count: c_ulong = 0;
     for id in team_players(vc) {
-        count = count.wrapping_add(h(O::DwWonderCount, hp(O::WorldPlayer, 0, &[id as i64]), &[]) as c_ulong);
+        count = count.wrapping_add(wonder_count(hp(O::WorldPlayer, 0, &[id as i64])));
     }
     count >= needed
+}
+
+/// The player's `GetNumWonderUnits()` (its wonders' list: ee_sim player_lists.rs).
+fn wonder_count(pl: P) -> c_ulong {
+    player_op(pl as u64, EE_UNITS_LISTS_WONDERS, ListOp::Len) as c_ulong
 }
 
 /// The countdown's winning entry: the standing wonders (time, player) sorted, the one completing the count.
@@ -286,7 +348,7 @@ pub extern "C" fn ee_gamecpp_wonder_countdown(condition: *mut c_void, out: *mut 
         for id in team_players(vc) {
             let pl = hp(O::WorldPlayer, 0, &[id as i64]);
             let mut j: c_ulong = 0;
-            while j < h(O::DwWonderCount, pl, &[]) as c_ulong && j < needed {
+            while j < wonder_count(pl) && j < needed {
                 entries.push((h(O::DwWonderTime, pl, &[j as i64]) as c_long as c_ulong, id));
                 j += 1;
             }

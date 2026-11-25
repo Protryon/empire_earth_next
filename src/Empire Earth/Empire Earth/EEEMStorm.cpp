@@ -113,8 +113,7 @@ int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DsSetName: S->mName = EEEMStorm::GetTypeName((long)a[0]);
         break;
     case O::DsRandomPlayer: return P64(gWorld.mPlayers[gPhysics->GetRandom(1L, gWorld.mNumPlayers - 1)]);
-    case O::DsTownCount: return (int64_t)PL->mTowns.size();
-    case O::DsRandomTown: return P64(static_cast<EEAIArea*>(PL->mTowns[gPhysics->GetRandom(0L, (long)PL->mTowns.size() - 1)]));
+    case O::DsRandomTown: return P64(static_cast<EEAIArea*>(PL->GetTown(gPhysics->GetRandom(0L, (long)PL->GetNumTowns() - 1))));
     case O::DsLargestLand: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand)]));
     case O::DsLargestAny: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)]));
     case O::DsLargestWater: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater)]));

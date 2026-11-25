@@ -272,7 +272,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::CivRequestUpgrades: EECBRequestUpgrades((unsigned char)a[0], MSG->mString, *(std::vector<EECivUpgrade>*)a[1]);
         break;
-    case O::VecPlayersAt: return P64((*(std::vector<EEPlayer*>*)p)[a[0]]);
+
     // the strings and the chat log
     case O::StrNew1K: return P64(new UWideString(0x400));
     case O::StrAssignMsg: WSTR = ((EEMRecord*)a[0])->mString;
@@ -307,8 +307,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PlActiveGroup: return P64(PL->mActiveGroup);
     case O::PlSelectedGroup: return P64(PL->mSelectedGroup);
     case O::PlSavedGroupAt: return P64(PL->mGroups[a[0]]);
-    case O::PlCopyAllies: *(std::vector<EEPlayer*>*)a[0] = PL->mAllies;
-        break;
     case O::PlAddEvent: PL->mEvents.AddEvent(U2DPoint<long>((long)a[0], (long)a[1]), (long)a[2], (EEPlayer*)a[3], (long)a[4], a[5] != 0);
         break;
     case O::PlFlareReceived: PL->FlareReceived((EEPlayer*)a[0], U2DPoint<long>((long)a[1], (long)a[2]));

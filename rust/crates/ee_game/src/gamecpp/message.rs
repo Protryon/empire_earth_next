@@ -22,6 +22,7 @@ use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::Ge3DPoint;
 use ee_sim::netmsg::bodies::*;
+use ee_sim::units::player_lists::{player_list, EE_UNITS_LISTS_ALLIES};
 use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
@@ -389,12 +390,11 @@ fn saved_group_select(m: P) {
 /// A flare shown at the tile to the sender and each ally, and each ally told it received one.
 fn send_flare(m: P) {
     let pl = sender(m);
-    let allies = Owned::new(O::VecPlayersNew, O::VecPlayersDelete);
-    h(O::PlCopyAllies, pl, &[pa(allies.0)]);
+    let allies = player_list(pl as u64, EE_UNITS_LISTS_ALLIES);
     let (x, y) = (get::<i32>(m, 1) as i64, get::<i32>(m, 2) as i64);
     h(O::PlAddEvent, pl, &[x, y, 3, pa(pl), -1, 1]);
-    for k in 0..h(O::VecPlayersSize, allies.0, &[]) {
-        let ally = hp(O::VecPlayersAt, allies.0, &[k]);
+    for ally in allies {
+        let ally = ally as P;
         h(O::PlAddEvent, ally, &[x, y, 3, pa(ally), -1, 1]);
         h(O::PlFlareReceived, ally, &[pa(pl), x, y]);
     }

@@ -30,6 +30,7 @@ use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields,
 
 use crate::app::game_options::EeAppOptionsFields;
 
+use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_ALLIES};
 use ee_sim::units::{player_body as pb, player_rest as pr};
 
 use super::{cptr, h, hd, hf, hp, pa, rec, O, P};
@@ -120,6 +121,11 @@ fn sm<'a, T>(op: O, st: P) -> &'a mut T {
 
 fn num_players(w: P) -> c_ulong {
     *wm::<c_ulong>(O::WNumPlayers, w)
+}
+
+/// One operation on player `pl`'s allies (`mAllies`: ee_sim player_lists.rs).
+fn allies(pl: P, op: ListOp) -> u64 {
+    player_op(pl as u64, EE_UNITS_LISTS_ALLIES, op)
 }
 
 fn player(w: P, i: c_ulong) -> P {
@@ -463,21 +469,21 @@ pub extern "C" fn ee_gamecpp_world_replace_player(
     drop_queued();
     for i in 0..num_players(w) {
         if old != player(w, i) {
-            let mut j: i64 = 0;
-            while j < h(O::PlAlliesCount, player(w, i), &[]) {
-                if hp(O::PlAllyAt, player(w, i), &[j]) != old {
+            let mut j = 0;
+            while j < allies(player(w, i), ListOp::Len) {
+                if allies(player(w, i), ListOp::At(j as usize)) as P != old {
                     j += 1;
                     continue;
                 }
                 player_rest(player(w, i), pr::EE_UNITS_PLAYER_REST_REMOVE_ALLY, old as u64, 0, 0);
-                h(O::PlAlliesPush, player(w, i), &[pa(new)]);
+                allies(player(w, i), ListOp::Add(new as u64));
                 j += 1;
             }
         } else {
-            let mut j: i64 = 0;
-            while j < h(O::PlAlliesCount, player(w, i), &[]) {
-                let ally = hp(O::PlAllyAt, old, &[j]);
-                h(O::PlAlliesPush, new, &[pa(ally)]);
+            let mut j = 0;
+            while j < allies(player(w, i), ListOp::Len) {
+                let ally = allies(old, ListOp::At(j as usize));
+                allies(new, ListOp::Add(ally));
                 j += 1;
             }
         }

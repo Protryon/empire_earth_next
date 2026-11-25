@@ -21,8 +21,8 @@ public:
     ~EECivilization() {}
     // 0x12c5e9 (ret 0xc): the cost of inUpgrade (inList, else mPurchasedUpgrades, for the category count) into outCost; true when
     // affordable (or gGameOptions.mAllowCustomCivs is clear)
-    bool CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList);
-    bool CanAffordAll(std::vector<EECivUpgrade>& inUpgrades);  // 0x12c648: every one affordable in turn
+    bool CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList) { return ee_gamecpp_civ_can_afford(this, inUpgrade, outCost, inList); }
+    bool CanAffordAll(std::vector<EECivUpgrade>& inUpgrades) { return ee_gamecpp_civ_can_afford_all(this, &inUpgrades); }  // 0x12c648: every one affordable in turn
     // 0x12c847 (ret 0xc): inPurchase pays and records it; then applies it for inPlayer
     bool Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase) { return ee_gamecpp_civ_buy(this, inUpgrade, inPlayer, inPurchase); }
     void SetPoints(long inPoints) { this->mAvailablePoints = inPoints; }   // 0x12ca99
@@ -60,8 +60,11 @@ public:
     }
     long Save(FSFile& outFile) { return ee_gamecpp_civ_save(this, &outFile); }   // 0x12c9ee (EEPlayer::Save; provisional name)
     bool GetNoPointsAdded() { return this->mNoPointsAdded; }   // 0x12c6fa (mB3C; EEPlayer::RepairPointers; provisional name)
-    long Reapply(class EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion);    // 0x12c916 (EEPlayer::RepairPointers)
-    long ApplyDeferred(class EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x12c9a1 (EEWorld::Fn139749; provisional name)
+    // 0x12c916 (EEPlayer::RepairPointers): the purchased upgrades applied again, the deferred kind kept for later; 13
+    // when one fails
+    long Reapply(class EEPlayer* inPlayer, unsigned long, unsigned long) { return ee_gamecpp_civ_reapply(this, inPlayer); }
+    // 0x12c9a1 (EEWorld::Fn139749; provisional name): the deferred upgrades applied and forgotten; 13 when one fails
+    long ApplyDeferred(class EEPlayer* inPlayer, unsigned long, unsigned long) { return ee_gamecpp_civ_apply_deferred(this, inPlayer); }
     void ApplyLevel21ToWorld() { ee_gamecpp_civ_apply_level21(this); }   // 0x12c8ce (EEWorld::SetPopulationLimit; provisional name)
     bool GetUnchanged() { return this->mUnchanged; }
     long GetAvailablePoints() { return this->mAvailablePoints; }   // the points left to spend

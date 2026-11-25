@@ -41650,3 +41650,150 @@ message box, DisplayContext) is the next round's.
 | 12 capture profiles | PASS | (not rerun) |
 | saveload plain / matrix | 18 identical / PASS | (not rerun) |
 | `xbuild.py wontest` | all exit 0 but won_ping36_test (UDP timing under load); alone: exit 0, 0 mismatches | exit 0 (every program) |
+
+## The player/tech lane, round 2, fork A: the capture headers gone, the node data's containers and the tree's player as Rust's, the civilization's members inline (ee_sim tech nodes.rs EeTechClassTable; ee_game civilization.rs, gamecpp tech_capture.rs, screens civ_*; branch rust-playertech2-a, 2026-11-25)
+
+The tech tree and the civilization builder: C++ lines 107,975 -> 107,363 (-612) and compiled files 353 -> 349 against
+round 1's tip (307f72c10, port_metrics.py), with no behaviour change (the oracle's six seeds identical, the capture
+profiles, saveload, the editor and civilization builder gates).
+
+- **A header of inline forwarders to Rust is dead weight once Rust calls Rust**: ee/EETechCapture.h (152 lines) held
+  inline C++ forwarders the C++ host cases called on Rust's behalf (Rust -> host case -> inline forwarder -> Rust):
+  EEGameOps.cpp's 14 calamity capture cases and EEContagionManager.cpp's two went once calamity*.rs called the
+  capture functions directly. Grep every forwarder's name: most (the node and epoch records, the sweep, the unit
+  step) had no caller left at all, and their Rust bodies and host cases (tech_hooks.rs, the eight C11Tc cases) were
+  dead too. The same for ee/EECalamityCapture.h and its .cpp (hook pointers no unit read) and ee/EECivCapture.h.
+- **"TEST ONLY" units are linked into the game exe** (tools/units.py EXTRA_UNITS): the hook pointers the capture units
+  set before main were set in EE-AOC.exe as well, so a direct Rust call is the same behaviour. EETechCapture.cpp had
+  become the tech tree's host (EECore11OpC7), not a capture: it and EETechTreeNode.cpp's cost factors joined
+  EETechTree.cpp (link/exe/units.txt loses the node's range, as round 1's EETechTreeEpoch.cpp).
+- **A C++ record built only to carry bytes back to Rust**: the civilization capture appended the tech records through
+  a scratch EESimCaptureRecord (new, the record call, its bytes, free: six shims); the records are now Rust byte
+  vectors (tech_capture.rs upgrade_record, player_record, tree_nodes_record), reading the upgrade's block through the
+  world layout's stats_fields and offset_of! rather than four address cases.
+- **One record shim in place of a shim per field**: the civilization host's 36 upgrade and class stat shims and 12
+  player field shims became `civh_upgrade_fields`, `civh_class_fields`, `civc_player_saved`, `civc_player_fields`
+  (static_cast to the Rust record base); the two members with setters (range, speed) keep theirs. A Fake test answers
+  the record shim with the address of a zeroed local record and asserts on the record afterwards.
+- **std containers in a record the world layout reads by offset**: RTSTechTreeNodeData's std::map of class costs and
+  std::vector of unit classes are one Rust table behind a `usize` member of EeTechNodeDataFields (`mClassTable`;
+  usize keeps the record's derives). The map's semantics kept: keyed by the class as a long, the first insert wins,
+  a node copy's destructor clears the shared costs (the original's ClearClassCosts on the shared map), the data's
+  destructor frees the table. `new RTSTechTreeNodeData()` (value-initialized) zeroes the member now that the struct
+  has no constructor of its own. The view (ee_sim tech_view.rs) reads the table; the layout's node_data_fields and
+  node_data_unit_classes went on both sides.
+- **A base's members cannot be initialized in the derived class's mem-initializer list**: moving mPlayerIndex and
+  mPlayer into EeTechTreeFields made `EETechTree() : mPlayerIndex(0), mPlayer(NULL)` an error; the Rust init sets
+  them. mPlayer is `*mut EeCxxPlayer`, which cbindgen writes as `class EEPlayer*`, so the C++ reads stay typed.
+- **CanAfford without gGameOptions in the header**: the lobby's options are already a Rust record reachable through
+  the LobbyOptions op, so CanAfford, CanAffordAll, Reapply and ApplyDeferred are one-statement inlines over
+  civilization.rs (the player passed as a pointer, its id read from its record) and EECivilization.cpp is gone.
+- **A heredoc in the Bash tool failed** ("unexpected EOF while looking for matching `'`") on long Python edit scripts
+  with Rust lifetimes (`'a`) and escaped newlines: writing the script to a file with the Write tool works.
+- Edits outside the lane's files: the calamities' Rust (gamecpp calamity.rs, calamity_capture.rs, calamity_hosts.rs,
+  calamity_io.rs, calamity_objects.rs) and their host cases (EEGameOps.cpp, EEContagionManager.cpp), EEPWorldHelper.cpp
+  (two comments), the include of ee/EETechCapture.h dropped from EECalamityClass.cpp, EECalamityManager.cpp,
+  EEContagionManager.cpp, EEAppCaptureWorld.cpp (which now includes ee/EESimCapture.h itself), EEGameOps.cpp,
+  EEPlayer.cpp, EEEvent.cpp, EEScenarioCapture.cpp, EEComplexUnit.cpp; EEUnit.h (a comment), EEWorldLayout.cpp (two
+  lines), EEGameLog.cpp (DvCanAfford), ee_sim world layout.rs and tech_view.rs, screens civ_host.rs, area_effect_*.rs.
+- Left: the tech host's remaining cases (the tree's Get, Ref and the node walks Rust could make with an extra host
+  call each, which this round did not want on the walks' path), EETechTree's epoch list (a C++ vector of owners), the
+  node's mData/mTree/mButton (C++ members the world layout reads), the area effects' location (a GE2DPoint member),
+  the civilization's vectors and name (EECivilization's C++ members), the dead Rust exports deadfn.py lists
+  (ee_area_effect_*, ee_tech_effect_*, ee_screens_cb_out_*: no caller in C++ or Rust).
+
+## The player/tech lane, round 2, fork B: EEPlayer's containers as the player's Rust lists (ee_units player_lists.rs; branch rust-playertech2-b, 2026-11-25)
+
+EEPlayer's last C++ containers (`mTowns`, `mHerds`, `mAllies`, `mSightSharers`, `mPatrolGroups`, `mMediaWarnings` and
+the two `UReferenceContainer<EEComplexUnit*>*`, `mConstructionSites` and `mWonders`) are lists of the player's Rust
+object (`mLists`, `EE_UNITS_LISTS_TOWNS` .. `EE_UNITS_LISTS_WONDERS`, the warnings a `Vec<CString>`). The elements
+(EETown, EEHerd, the patrol groups) stay what they were. C++ lines 107,975 -> 107,808 (-167; logic -18, classes -1:
+the dereferencer functor), no behaviour change (oracle 6/6 identical, the captures, saveload).
+
+- **One operation enum over the lists** (`ListOp`: Len, At, Add, Has, Remove, EraseAt, Replace, Clear(release), Set,
+  Resize; `EeUnitsPlayerLists::apply`): each container's semantics is its list's kind, so the callers name only the
+  operation. Add references for the referenced lists (the units' `Reference` for the stranded, repatrol, sites and
+  wonders lists, `ee_units_pg_reference` for the patrol groups, answered in Rust beside the C++ host's unit
+  counts); the stranded and repatrol lists keep their add-once. Remove releases the reference after the erase
+  (`UReferenceContainer::Remove`), EraseAt never does (`RemovePatrolGroup` dereferences on its own, found or not).
+  Clear(true) releases from the first (`UReferenceContainer::Clear`, `EEPDereferencer`) except the repatrol list
+  (from the last, as before). `delete mWonders` is Clear(true); the empty containers the constructor newed are gone.
+- **Where the containers' cases went**, by the host's shape:
+  - the hosts whose generic code has a trait with test fakes (`PlayerBodyHost`, `RestHost`, `TownSplitHost`) got one
+    `list_op` method (the old `list_len`/`list_at`/`list_clear`/`towns()`/`herds()`/`allies()` are provided methods
+    over it), the game's impl `player_lists::player_op`; the fakes run the same `apply` on their vectors
+    (`player_lists::apply_vec`, `FakeLists`), so their tests check real list semantics;
+  - the hosts that are an op-code callback with split compound operations (the player host's `EE_UNITS_PLAYER_X_*`,
+    the save's `EE_UNITS_PLAYER_SAVE_*`, the tick's herd count) keep their op codes: the game's host answers them
+    from the lists before the C++ callback (`answer_player` in player.rs's `FnHost`, `lists_answer` in
+    player_save.rs's `FfiHost`, player_tick.rs's `FnHost`), so the split code and its tests are unchanged. The
+    hosts find the player from the record they are handed (`rec - layout().player_saved`, `fields -
+    layout().player_fields`): no C++ signature changed;
+  - an element's C++ operation that indexed a container (a herd's load, save, repair and tick, a patrol group's
+    save, a town's refresh) now takes the element: the Rust reads it from the list first (into `io.i`, or `a`), or
+    the C++ case reads it once through `ee_units_lists_at` (the tick's `theHerd`);
+  - the C++ readers outside the player that only forwarded a count or an entry (EESim's dump, EEWorld's and
+    EEPWorldHelper's allies, EEMessage's flare copy, EEGameLog's wonder and town counts, EEEMStorm's town count) are
+    gone: their ee_game callers read `player_lists::player_list`/`player_op`; the ones that act on an element keep
+    their case over the inline `GetTown(i)`/`GetNumTowns()`.
+- **PlayerView reads the lists** (world view.rs `list`): the allies, sight sharers, towns and herds were read from
+  `std::vector`s by layout offset; the four layout fields are gone (`player_lists` already was one).
+- **A C++ case's ESVERIFY on an unknown op**: EEPlayerSaveOperation ends in `ESVERIFY_AT(false, inOp)`, so a Rust
+  answer layer must take an operation before the callback, never after it.
+- **Grep every file for a name before deleting its op**: `VecPlayersNew`/`Delete`/`Size` looked like the flare copy's
+  alone, but the game state's player list uses them too (state.rs, which the grep had filtered out); the build's
+  Rust step caught it, at the cost of a rebuild.
+- **cbindgen header after every Rust FFI change, before the C++ build**: `rust_build.py header` rewrote
+  rust/sim/units.h (the lists' constants) and rust/sim/world.h (the layout record); EEPlayer.h's inline accessors
+  need the constants.
+- Edits outside the fork's files: EEWorldLayout.cpp (four offsetof lines), EEEMStorm.cpp, EEGameLog.cpp, EESim.cpp,
+  EEWorld.cpp, EEPWorldHelper.cpp, EEMessage.cpp (cases deleted), EESMObject.cpp, EEScenarioHost.cpp,
+  EEScenarioCapture.cpp, EEComplexUnit.cpp (an accessor for the vector); ee_game gamecpp civilization.rs,
+  ambient_io.rs, message.rs, persist_parts.rs, state.rs, weather.rs, world.rs, mod.rs (the variants), sim_driver
+  dump.rs, sim_host.rs, sim_ops.rs; ee_sim world view.rs, layout.rs, town_split.rs, group_obj_tests.rs.
+- Left: the lists' lifecycle cases (`LISTS_NEW`/`FREE`, beside the queue's and the wonder state's: the lead's
+  pass-through set), `AddOffMapUnit` (gPhysics' time), the unit save's loaded-id push (its host has no player), the
+  element objects' own field reads and writes (EETown's patrol, ids, counters, hull; EEHerd's).
+
+## The player/tech lane, round 2: EEPlayer's hosts answered by Rust first, RTSPlayer folded into EEPlayer, the player's and the civilization builder's small units merged (ee_sim units player_native.rs; branch rust-playertech2, 2026-11-25)
+
+The round's measure was total C++ lines (tools/port_metrics.py), target -1,500: -1,257 (fork A -612, fork B -167,
+the lead -478), compiled files -11, classes -4, logic -70 (the lane's scope 528 -> 496), with no behaviour change
+(the oracle's six seeds identical after every step, the capture profiles, saveload). The forks' sections are above;
+this is the lead's part and the round's.
+
+- **A host's plain cases need no C++ at all**: most of EEPlayer.cpp's remaining one-statement cases wrote a pointer
+  member of the player, a field of a Rust record (the player's two, a complex unit's, a unit's, a tech node's, a
+  town's), read a unit, unit class, stats object or the physics, or called another Rust export. player_native.rs
+  answers them before the C++ in the game's hosts (player_body.rs `body_host`, player.rs `FnHost`, player_tick.rs,
+  player_save.rs `lists_answer`, town_split.rs `GameTowns`); the generic bodies and their test hosts are untouched,
+  so the tests still check every operation. The pointer members it writes come from the world layout (six new
+  fields, plus the town record's base); the reads use the world views (`UnitView`, `ClassView`, `StatsView`,
+  `WorldView::game_time`). The same shape as fork B's lists, one module for the lot.
+- **What stays**: a case on a C++ object's method (the tech tree's Get and walks, the herd's and town's methods, the
+  UI, the sounds, UWideString), a container the C++ owns (mUnitClassUpgrades), and a virtual a subclass overrides
+  (EEComputerPlayer overrides TakeResource, ScaleCost, GetExtraPopulation, GetPopulationLimit, CanAfford, UnitPlaced,
+  GetHeroCount: check the subclasses before taking a virtual's case).
+- **Folding a base class that other files name**: `typedef EEPlayer RTSPlayer;` after the class, and the two forward
+  declarations (`class RTSPlayer;` in ee/EEMiniMap.h and ee/EEUnitStore.h) became `class EEPlayer; typedef EEPlayer
+  RTSPlayer;` (a repeated typedef of the same type is legal), so the engine's files compile unchanged. The explicit
+  base calls (`thePlayer->RTSPlayer::AddUnit`, `RepairPointers`, `GetChecksum`) became the Rust bodies they
+  forwarded to; the base's save reuses EEPlayerSaveContext; the empty `Clear` case went (the host's default answers
+  0). The base's constructor work moved into EEPlayer's constructors, and the unit store's clear to the end of
+  ~EEPlayer's body (before the members' destructors now, which touch no unit record).
+- **Merging units for the file count**: a unit whose code is a host or shims joins its neighbour (a script that keeps
+  the section's comment and merges the include blocks: build/pl2/mergeunits.py); link/exe/units.txt and
+  tools/units.py's EXTRA_UNITS lose the entries. Seven files this way (three player units into EEPlayer.cpp, four
+  civilization builder units into two).
+- **One-concern commits from one working file**: when two changes share EEPlayer.cpp, commit the first by
+  rebuilding the file from HEAD with only its edits (the case-removal script is deterministic:
+  build/pl2/rmcases.py), then restore the full file for the second.
+- **Never start a build while an oracle runs from the same worktree**: a second chain relinked (and its test-profile
+  cargo step rebuilt the Rust library with a newer layout record) under a running oracle: every seed stopped at
+  `EE-WORLD-LAYOUT: Rust refused the layout`. And a Rust edit made while a chain's header step runs leaves
+  "the gate's header check still finds a header stale": edit only between chains. The stray chain was stopped by its
+  own process tree (its bash PID checked by command line first).
+- Edits outside the lane's files: EEWorldLayout.cpp (seven layout lines, the town include), ee/EEMiniMap.h and
+  ee/EEUnitStore.h (the typedef), ee/EEUnit.h (EEAddDeadUnitStatistic inline), ee/EEStatisticsRecord.h and
+  ee/EEStatisticsHistory.h (the empty destructors), link/exe/units.txt, tools/units.py; ee_sim world layout.rs,
+  units us_fill.rs (`game` pub(crate)), player.rs, player_body.rs, player_tick.rs, player_save.rs, town_split.rs.

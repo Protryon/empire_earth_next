@@ -7,8 +7,9 @@
 
 use crate::units::group_obj::{self as go, EE_UNITS_GROUP_KIND_SAVED, EE_UNITS_GROUP_KIND_SELECTED, G};
 use crate::units::player_lists::{
-    EE_UNITS_LISTS_LOADED_IDS, EE_UNITS_LISTS_MEDIA, EE_UNITS_LISTS_REPATROL, EE_UNITS_LISTS_SITE_IDS,
-    EE_UNITS_LISTS_STRANDED, EE_UNITS_LISTS_WONDER_IDS,
+    ListOp, EE_UNITS_LISTS_HERDS, EE_UNITS_LISTS_LOADED_IDS, EE_UNITS_LISTS_MEDIA, EE_UNITS_LISTS_PATROLS,
+    EE_UNITS_LISTS_REPATROL, EE_UNITS_LISTS_SITES, EE_UNITS_LISTS_SITE_IDS, EE_UNITS_LISTS_STRANDED,
+    EE_UNITS_LISTS_TOWNS, EE_UNITS_LISTS_WONDERS, EE_UNITS_LISTS_WONDER_IDS,
 };
 use crate::units::selection::{self as sel, SelectionHost};
 use std::os::raw::c_long;
@@ -42,16 +43,10 @@ pub const EE_UNITS_PLAYER_BODY_REPLACE_UNITS: i32 = 12;
 pub const EE_UNITS_PLAYER_BODY_ATC_REPLACE: i32 = 13;
 /// unit `a` is an unbuilt wall (`mUnitClass->mIsWall && !mIsBuilt`)
 pub const EE_UNITS_PLAYER_BODY_UNBUILT_WALL: i32 = 14;
-/// `AddConstructionSite(a)`
-pub const EE_UNITS_PLAYER_BODY_ADD_SITE: i32 = 15;
-/// `mWonders->Replace(a, b)` (nothing when `a` is not there: the original's `Contains` first)
-pub const EE_UNITS_PLAYER_BODY_WONDER_REPLACE: i32 = 16;
 /// `gDoppelgangerManager.UnregisterPlayer(this)`
 pub const EE_UNITS_PLAYER_BODY_DOPPELGANGERS: i32 = 17;
 /// `mEvents.Clear(b ? this : NULL)`
 pub const EE_UNITS_PLAYER_BODY_EVENTS_CLEAR: i32 = 18;
-/// `mConstructionSites->Clear()`
-pub const EE_UNITS_PLAYER_BODY_SITES_CLEAR: i32 = 19;
 /// `mSavedGroups.Clear()` (the statistics)
 pub const EE_UNITS_PLAYER_BODY_STATS_CLEAR: i32 = 20;
 /// `mSavedGroups.SetName(GetName())`
@@ -90,12 +85,6 @@ pub const EE_UNITS_PLAYER_BODY_EFFECT: i32 = 36;
 pub const EE_UNITS_PLAYER_BODY_MEDIA_LOAD: i32 = 37;
 /// media `a`'s `UnloadMedia()`
 pub const EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD: i32 = 38;
-/// `ee_units_off_map(mLists, b, 0, 0, 0, 0)` (2 cleared, 3 repaired)
-pub const EE_UNITS_PLAYER_BODY_OFF_MAP: i32 = 40;
-/// `std::for_each(mPatrolGroups, EEPDereferencer())`
-pub const EE_UNITS_PLAYER_BODY_PATROLS_RELEASE: i32 = 41;
-/// `delete mWonders`
-pub const EE_UNITS_PLAYER_BODY_WONDERS_DELETE: i32 = 42;
 /// `ee_units_queued_free(mQueued)`
 pub const EE_UNITS_PLAYER_BODY_QUEUED_FREE: i32 = 43;
 /// `RTSPlayer::Clear()`
@@ -104,10 +93,6 @@ pub const EE_UNITS_PLAYER_BODY_RTS_CLEAR: i32 = 44;
 pub const EE_UNITS_PLAYER_BODY_CIV_REAPPLY: i32 = 45;
 /// `RTSPlayer::RepairPointers(b, c)`
 pub const EE_UNITS_PLAYER_BODY_RTS_REPAIR: i32 = 46;
-/// `mPatrolGroups.size()`
-pub const EE_UNITS_PLAYER_BODY_PATROL_COUNT: i32 = 47;
-/// `ee_units_pg_repair(mPatrolGroups[b])`
-pub const EE_UNITS_PLAYER_BODY_PATROL_REPAIR: i32 = 48;
 /// `EEMakeSavedTowns(this)`
 pub const EE_UNITS_PLAYER_BODY_MAKE_SAVED_TOWNS: i32 = 49;
 /// `mFirstUnit` (a 0) or unit `a`'s `mNext`
@@ -120,13 +105,9 @@ pub const EE_UNITS_PLAYER_BODY_ADD_TO_TOWN: i32 = 52;
 pub const EE_UNITS_PLAYER_BODY_CIV_POINTS: i32 = 53;
 /// `EESetCivBuilderButtonBlinking(true)`
 pub const EE_UNITS_PLAYER_BODY_CIV_BLINK: i32 = 54;
-/// `mConstructionSites` (b 0) or `mWonders` (1)`->Add(a)`
-pub const EE_UNITS_PLAYER_BODY_CONTAINER_ADD: i32 = 55;
 /// `RecountPopulation()`
 pub const EE_UNITS_PLAYER_BODY_RECOUNT_POPULATION: i32 = 56;
-/// `mHerds.size()`
-pub const EE_UNITS_PLAYER_BODY_HERD_COUNT: i32 = 57;
-/// `mHerds[a]->RepairPointers(b, c)`
+/// herd `a`'s `RepairPointers(b, c)`
 pub const EE_UNITS_PLAYER_BODY_HERD_REPAIR: i32 = 58;
 /// `RegisterHerds()`
 pub const EE_UNITS_PLAYER_BODY_REGISTER_HERDS: i32 = 59;
@@ -142,13 +123,7 @@ pub const EE_UNITS_PLAYER_BODY_TECH_OBSOLETE: i32 = 63;
 pub const EE_UNITS_PLAYER_BODY_TECH_ALLOW: i32 = 64;
 /// `EEApplySavedTowns(this)`
 pub const EE_UNITS_PLAYER_BODY_APPLY_SAVED_TOWNS: i32 = 65;
-/// `mTowns.size()`
-pub const EE_UNITS_PLAYER_BODY_TOWN_COUNT: i32 = 66;
-/// town `b` is there without a patrol group
-pub const EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED: i32 = 67;
-/// `AdoptTownPatrol(mTowns[b])`
-pub const EE_UNITS_PLAYER_BODY_TOWN_ADOPT: i32 = 68;
-/// `mTowns[b]->RefreshPatrolGroup()`
+/// town `a`'s `RefreshPatrolGroup()`
 pub const EE_UNITS_PLAYER_BODY_TOWN_REFRESH: i32 = 69;
 /// unit `a`'s `GetTileX()`
 pub const EE_UNITS_PLAYER_BODY_TILE_X: i32 = 70;
@@ -156,14 +131,8 @@ pub const EE_UNITS_PLAYER_BODY_TILE_X: i32 = 70;
 pub const EE_UNITS_PLAYER_BODY_ADD_OFF_MAP: i32 = 71;
 /// `RecountHeroesAndTeleporters()`
 pub const EE_UNITS_PLAYER_BODY_RECOUNT_HEROES: i32 = 72;
-/// `AddLoadedMedia(a)`
-pub const EE_UNITS_PLAYER_BODY_ADD_MEDIA: i32 = 73;
-/// `RemoveLoadedMedia(a)`
-pub const EE_UNITS_PLAYER_BODY_REMOVE_MEDIA: i32 = 74;
 /// `UnloadAllMedia()` (virtual)
 pub const EE_UNITS_PLAYER_BODY_UNLOAD_ALL_MEDIA: i32 = 75;
-/// `ClearUnitsToRepatrol()`
-pub const EE_UNITS_PLAYER_BODY_CLEAR_REPATROL: i32 = 76;
 /// complex unit `a`'s `mIsDisabled`
 pub const EE_UNITS_PLAYER_BODY_DISABLED: i32 = 77;
 /// complex unit `a`'s `FindNearestTown()` (an `EETown*`)
@@ -182,16 +151,10 @@ pub const EE_UNITS_PLAYER_BODY_PLAN: i32 = 83;
 pub const EE_UNITS_PLAYER_BODY_KILL: i32 = 84;
 /// town `a`'s `mPatrolGroup`
 pub const EE_UNITS_PLAYER_BODY_TOWN_PATROL: i32 = 85;
-/// `mConstructionSites->mItems.clear()`
-pub const EE_UNITS_PLAYER_BODY_SITES_ITEMS_CLEAR: i32 = 86;
 /// `*mTechnologies = gTechTree`
 pub const EE_UNITS_PLAYER_BODY_TECH_COPY: i32 = 87;
 /// `mTechnologies = NULL`
 pub const EE_UNITS_PLAYER_BODY_TECH_NULL: i32 = 88;
-/// `mPatrolGroups.clear()`
-pub const EE_UNITS_PLAYER_BODY_PATROLS_CLEAR: i32 = 90;
-/// `delete mConstructionSites`
-pub const EE_UNITS_PLAYER_BODY_SITES_DELETE: i32 = 91;
 /// `ee_units_wonders_free(mWonderState)`
 pub const EE_UNITS_PLAYER_BODY_WONDER_STATE_FREE: i32 = 92;
 /// `ee_units_lists_free(mLists)`
@@ -239,10 +202,6 @@ pub const EE_UNITS_PLAYER_BODY_CLOAKED_OFF: i32 = 116;
 pub const EE_UNITS_PLAYER_BODY_CLEAR_U32C: i32 = 117;
 /// unit `a`'s `GetTileY()`
 pub const EE_UNITS_PLAYER_BODY_TILE_Y: i32 = 118;
-/// `mConstructionSites->mItems.size()`
-pub const EE_UNITS_PLAYER_BODY_SITE_COUNT: i32 = 119;
-/// `mConstructionSites->mItems[b]`
-pub const EE_UNITS_PLAYER_BODY_SITE_AT: i32 = 120;
 /// the upgrade of unit class `b` (`EEPlayerClassStats`: NULL past the classes)
 pub const EE_UNITS_PLAYER_BODY_CLASS_STATS: i32 = 121;
 /// upgrade `a`'s `mTerrainMask`
@@ -265,8 +224,6 @@ pub const EE_UNITS_PLAYER_BODY_MAP_SIZE: i32 = 129;
 pub const EE_UNITS_PLAYER_BODY_TILE_PRESENT: i32 = 130;
 /// tile (b, c)'s visibility for the player into the terrain mesh
 pub const EE_UNITS_PLAYER_BODY_TILE_VISIBILITY: i32 = 131;
-/// `mPatrolGroups[b]`
-pub const EE_UNITS_PLAYER_BODY_PATROL_AT: i32 = 132;
 /// `mDamageFrom[b] += c`
 pub const EE_UNITS_PLAYER_BODY_DAMAGE_ADD: i32 = 133;
 /// `gWorld.mPlayers[b] == this`
@@ -301,10 +258,6 @@ pub const EE_UNITS_PLAYER_BODY_GROUP_LISTS_NEW: i32 = 147;
 pub const EE_UNITS_PLAYER_BODY_COMPUTER_CLEAR: i32 = 148;
 /// `mHumanPlayer = NULL`
 pub const EE_UNITS_PLAYER_BODY_HUMAN_CLEAR: i32 = 149;
-/// `mWonders = new UReferenceContainer<EEComplexUnit*>`
-pub const EE_UNITS_PLAYER_BODY_WONDERS_NEW: i32 = 150;
-/// `mConstructionSites = new UReferenceContainer<EEComplexUnit*>`
-pub const EE_UNITS_PLAYER_BODY_SITES_NEW: i32 = 151;
 
 /// `kActionMoveToNextPatrolPoint`
 const ACTION_MOVE_TO_NEXT_PATROL_POINT: c_long = 8013;
@@ -332,12 +285,24 @@ pub trait PlayerBodyHost: SelectionHost {
     fn reset_record(&mut self, player: u64, part: u32);
     /// `ee_units_player_fields_reset(fields, citizens, mining)` (player.rs)
     fn reset_fields(&mut self, player: u64, starting_citizens: c_long, mining_limit: c_long);
-    /// the player's private lists (player_lists.rs): length, entry, cleared (released)
-    fn list_len(&mut self, player: u64, list: u32) -> usize;
-    fn list_at(&mut self, player: u64, list: u32, i: usize) -> u64;
-    fn list_clear(&mut self, player: u64, list: u32, release: bool);
-    /// `ee_units_pg_id(group)` (patrol_group.rs)
+    /// the player's lists (player_lists.rs): one operation; length, entry, cleared (released)
+    fn list_op(&mut self, player: u64, list: u32, op: ListOp) -> u64;
+    fn list_len(&mut self, player: u64, list: u32) -> usize {
+        self.list_op(player, list, ListOp::Len) as usize
+    }
+    fn list_at(&mut self, player: u64, list: u32, i: usize) -> u64 {
+        self.list_op(player, list, ListOp::At(i))
+    }
+    fn list_clear(&mut self, player: u64, list: u32, release: bool) {
+        self.list_op(player, list, ListOp::Clear(release));
+    }
+    /// `ee_units_pg_id(group)`, `ee_units_pg_repair(group)` (patrol_group.rs)
     fn patrol_id(&mut self, group: u64) -> u64;
+    fn patrol_repair(&mut self, group: u64);
+    /// the off-map records (player_lists.rs `ee_units_off_map`): `what` 2 deleted, 3 repaired
+    fn off_map(&mut self, player: u64, what: u32);
+    /// `AdoptTownPatrol(town)` (player_rest.rs): whether it took a patrol
+    fn adopt_town_patrol(&mut self, player: u64, town: u64) -> bool;
 }
 
 fn op<H: PlayerBodyHost>(h: &mut H, op: i32, p: u64, a: u64, b: i64, c: i64) -> i64 {
@@ -435,9 +400,16 @@ pub fn units_swapped<H: PlayerBodyHost>(h: &mut H, p: u64, swaps: &[(u64, u64)],
             h.post_selection();
         }
         if op(h, EE_UNITS_PLAYER_BODY_UNBUILT_WALL, p, new, 0, 0) != 0 {
-            op(h, EE_UNITS_PLAYER_BODY_ADD_SITE, p, new, 0, 0);
+            add_construction_site(h, p, new);
         }
-        op(h, EE_UNITS_PLAYER_BODY_WONDER_REPLACE, p, old, new as i64, 0);
+        h.list_op(p, EE_UNITS_LISTS_WONDERS, ListOp::Replace(old, new));
+    }
+}
+
+/// `AddConstructionSite(unit)`: into the construction sites (referenced) unless they hold it.
+pub fn add_construction_site<H: PlayerBodyHost>(h: &mut H, p: u64, unit: u64) {
+    if h.list_op(p, EE_UNITS_LISTS_SITES, ListOp::Has(unit)) == 0 {
+        h.list_op(p, EE_UNITS_LISTS_SITES, ListOp::Add(unit));
     }
 }
 
@@ -465,7 +437,7 @@ pub fn load_player_effects<H: PlayerBodyHost>(h: &mut H, p: u64) {
             continue;
         }
         op(h, EE_UNITS_PLAYER_BODY_MEDIA_LOAD, p, media, 0, 0);
-        op(h, EE_UNITS_PLAYER_BODY_ADD_MEDIA, p, media, 0, 0);
+        h.list_op(p, EE_UNITS_LISTS_MEDIA, ListOp::Add(media));
     }
 }
 
@@ -476,7 +448,7 @@ pub fn unload_player_effects<H: PlayerBodyHost>(h: &mut H, p: u64) {
         if media == 0 {
             continue;
         }
-        if op(h, EE_UNITS_PLAYER_BODY_REMOVE_MEDIA, p, media, 0, 0) != 0 {
+        if h.list_op(p, EE_UNITS_LISTS_MEDIA, ListOp::Remove(media)) != 0 {
             op(h, EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD, p, media, 0, 0);
         }
     }
@@ -546,7 +518,7 @@ pub fn restore_patrols<H: PlayerBodyHost>(h: &mut H, p: u64) {
         }
         op(h, EE_UNITS_PLAYER_BODY_PLAN, p, g as u64, 0, 0);
     }
-    op(h, EE_UNITS_PLAYER_BODY_CLEAR_REPATROL, p, 0, 0, 0);
+    h.list_clear(p, EE_UNITS_LISTS_REPATROL, true);
 }
 
 /// `Reset()`: new selections and hot-key groups, the running groups released, the record reset, the statistics
@@ -588,21 +560,35 @@ pub fn reset<H: PlayerBodyHost>(h: &mut H, p: u64) {
     load_player_effects(h, p);
 }
 
+/// The towns' (`towns`) or the herds' `EEDeletePointers`: each area deleted in order, then the list cleared.
+fn delete_areas<H: PlayerBodyHost>(h: &mut H, p: u64, towns: bool) {
+    use crate::units::player_rest::EE_UNITS_PLAYER_BODY_HERD_DELETE;
+    use crate::units::town_split::EE_UNITS_PLAYER_BODY_TOWN_DELETE;
+    let (list, delete) = if towns {
+        (EE_UNITS_LISTS_TOWNS, EE_UNITS_PLAYER_BODY_TOWN_DELETE)
+    } else {
+        (EE_UNITS_LISTS_HERDS, EE_UNITS_PLAYER_BODY_HERD_DELETE)
+    };
+    for i in 0..h.list_len(p, list) {
+        let area = h.list_at(p, list, i);
+        op(h, delete, p, area, 0, 0);
+    }
+    h.list_clear(p, list, false);
+}
+
 /// The private lists, the towns, the herds, the off-map records and the patrols dropped (the destructor's and
 /// `Clear`'s middle; `destroying`: the destructor's order, the repatrol list after the towns).
 fn drop_areas<H: PlayerBodyHost>(h: &mut H, p: u64, destroying: bool) {
-    use crate::units::player_rest::delete_areas;
-    delete_areas(&mut |o, a, b| op(h, o, p, a, b, 0), true);
+    delete_areas(h, p, true);
     if destroying {
-        op(h, EE_UNITS_PLAYER_BODY_CLEAR_REPATROL, p, 0, 0, 0);
-        delete_areas(&mut |o, a, b| op(h, o, p, a, b, 0), false);
+        h.list_clear(p, EE_UNITS_LISTS_REPATROL, true);
+        delete_areas(h, p, false);
     } else {
-        delete_areas(&mut |o, a, b| op(h, o, p, a, b, 0), false);
-        op(h, EE_UNITS_PLAYER_BODY_CLEAR_REPATROL, p, 0, 0, 0);
+        delete_areas(h, p, false);
+        h.list_clear(p, EE_UNITS_LISTS_REPATROL, true);
     }
-    op(h, EE_UNITS_PLAYER_BODY_OFF_MAP, p, 0, 2, 0);
-    op(h, EE_UNITS_PLAYER_BODY_PATROLS_RELEASE, p, 0, 0, 0);
-    op(h, EE_UNITS_PLAYER_BODY_PATROLS_CLEAR, p, 0, 0, 0);
+    h.off_map(p, 2);
+    h.list_clear(p, EE_UNITS_LISTS_PATROLS, true);
 }
 
 /// `~EEPlayer()`: the groups, the construction sites, the viewed units, the doppelgangers, the media, the tech tree,
@@ -611,8 +597,7 @@ pub fn destroy<H: PlayerBodyHost>(h: &mut H, p: u64) {
     go::release_running(h, p);
     op(h, EE_UNITS_PLAYER_BODY_EVENTS_CLEAR, p, 0, 0, 0);
     go::release_others(h, p);
-    op(h, EE_UNITS_PLAYER_BODY_SITES_CLEAR, p, 0, 0, 0);
-    op(h, EE_UNITS_PLAYER_BODY_SITES_ITEMS_CLEAR, p, 0, 0, 0);
+    h.list_clear(p, EE_UNITS_LISTS_SITES, true);
     drop_viewed(h, p);
     let sv = op(h, EE_UNITS_PLAYER_BODY_SELECTED_VIEWED, p, 0, 0, 0) as u64;
     if sv != 0 {
@@ -632,8 +617,8 @@ pub fn destroy<H: PlayerBodyHost>(h: &mut H, p: u64) {
     }
     op(h, EE_UNITS_PLAYER_BODY_UPGRADES_CLEAR, p, 0, 0, 0);
     drop_areas(h, p, true);
-    op(h, EE_UNITS_PLAYER_BODY_WONDERS_DELETE, p, 0, 0, 0);
-    op(h, EE_UNITS_PLAYER_BODY_SITES_DELETE, p, 0, 0, 0);
+    h.list_clear(p, EE_UNITS_LISTS_WONDERS, true);
+    h.list_clear(p, EE_UNITS_LISTS_SITES, true);
     unload_player_effects(h, p);
     for o in [
         EE_UNITS_PLAYER_BODY_QUEUED_FREE,
@@ -676,8 +661,9 @@ pub fn repair_pointers<H: PlayerBodyHost>(h: &mut H, p: u64, first: c_long, seco
     op(h, EE_UNITS_PLAYER_BODY_CIV_REAPPLY, p, 0, b, c);
     op(h, EE_UNITS_PLAYER_BODY_RTS_REPAIR, p, 0, b, c);
     let mut i = 0;
-    while i < op(h, EE_UNITS_PLAYER_BODY_PATROL_COUNT, p, 0, 0, 0) {
-        op(h, EE_UNITS_PLAYER_BODY_PATROL_REPAIR, p, 0, i, 0);
+    while i < h.list_len(p, EE_UNITS_LISTS_PATROLS) {
+        let g = h.list_at(p, EE_UNITS_LISTS_PATROLS, i);
+        h.patrol_repair(g);
         i += 1;
     }
     for a in 0..4 {
@@ -696,14 +682,16 @@ pub fn repair_pointers<H: PlayerBodyHost>(h: &mut H, p: u64, first: c_long, seco
     if op(h, EE_UNITS_PLAYER_BODY_CIV_POINTS, p, 0, 0, 0) != 0 {
         result = op(h, EE_UNITS_PLAYER_BODY_CIV_BLINK, p, 0, 0, 0) as c_long;
     }
-    for (list, container) in [(EE_UNITS_LISTS_SITE_IDS, 0), (EE_UNITS_LISTS_WONDER_IDS, 1)] {
+    for (list, container) in
+        [(EE_UNITS_LISTS_SITE_IDS, EE_UNITS_LISTS_SITES), (EE_UNITS_LISTS_WONDER_IDS, EE_UNITS_LISTS_WONDERS)]
+    {
         let mut j = 0;
         while j < h.list_len(p, list) {
             let id = h.list_at(p, list, j);
             let unit = h.world_unit(id as c_long as i64);
             if unit != 0 && h.unit(unit).has_tile_node {
                 let complex = h.unit(unit).complex;
-                op(h, EE_UNITS_PLAYER_BODY_CONTAINER_ADD, p, complex, container, 0);
+                h.list_op(p, container, ListOp::Add(complex));
             }
             j += 1;
         }
@@ -721,8 +709,9 @@ pub fn repair_pointers<H: PlayerBodyHost>(h: &mut H, p: u64, first: c_long, seco
         unsafe { go::repair_pointers(h, g) };
     }
     let mut i = 0;
-    while i < op(h, EE_UNITS_PLAYER_BODY_HERD_COUNT, p, 0, 0, 0) {
-        op(h, EE_UNITS_PLAYER_BODY_HERD_REPAIR, p, i as u64, b, c);
+    while i < h.list_len(p, EE_UNITS_LISTS_HERDS) {
+        let herd = h.list_at(p, EE_UNITS_LISTS_HERDS, i);
+        op(h, EE_UNITS_PLAYER_BODY_HERD_REPAIR, p, herd, b, c);
         i += 1;
     }
     op(h, EE_UNITS_PLAYER_BODY_REGISTER_HERDS, p, 0, 0, 0);
@@ -743,11 +732,13 @@ pub fn repair_pointers<H: PlayerBodyHost>(h: &mut H, p: u64, first: c_long, seco
     }
     op(h, EE_UNITS_PLAYER_BODY_APPLY_SAVED_TOWNS, p, 0, 0, 0);
     let live = op(h, EE_UNITS_PLAYER_BODY_LIVE_STATE, p, 0, b, c) != 0;
-    for t in (0..op(h, EE_UNITS_PLAYER_BODY_TOWN_COUNT, p, 0, 0, 0)).rev() {
-        if op(h, EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED, p, 0, t, 0) != 0
-            && !(live && op(h, EE_UNITS_PLAYER_BODY_TOWN_ADOPT, p, 0, t, 0) != 0)
+    for t in (0..h.list_len(p, EE_UNITS_LISTS_TOWNS)).rev() {
+        let town = h.list_at(p, EE_UNITS_LISTS_TOWNS, t);
+        if town != 0
+            && op(h, EE_UNITS_PLAYER_BODY_TOWN_PATROL, p, town, 0, 0) == 0
+            && !(live && h.adopt_town_patrol(p, town))
         {
-            op(h, EE_UNITS_PLAYER_BODY_TOWN_REFRESH, p, 0, t, 0);
+            op(h, EE_UNITS_PLAYER_BODY_TOWN_REFRESH, p, town, 0, 0);
         }
     }
     if first == 0 && (second as u32) < 0xd7 {
@@ -757,7 +748,7 @@ pub fn repair_pointers<H: PlayerBodyHost>(h: &mut H, p: u64, first: c_long, seco
             }
         });
     } else {
-        op(h, EE_UNITS_PLAYER_BODY_OFF_MAP, p, 0, 3, 0);
+        h.off_map(p, 3);
     }
     op(h, EE_UNITS_PLAYER_BODY_RECOUNT_HEROES, p, 0, 0, 0);
     result
@@ -886,8 +877,8 @@ pub fn nearest_construction_site<H: PlayerBodyHost>(h: &mut H, p: u64, unit: u64
     let mut result = 0;
     let mut best: c_long = 100;
     let center = tile(h, p, unit);
-    for i in 0..op(h, EE_UNITS_PLAYER_BODY_SITE_COUNT, p, 0, 0, 0) {
-        let site = op(h, EE_UNITS_PLAYER_BODY_SITE_AT, p, 0, i, 0) as u64;
+    for i in 0..h.list_len(p, EE_UNITS_LISTS_SITES) {
+        let site = h.list_at(p, EE_UNITS_LISTS_SITES, i);
         let d = distance_squared(center, tile(h, p, site));
         if d < best {
             result = site;
@@ -963,8 +954,8 @@ pub fn refresh_terrain_visibility<H: PlayerBodyHost>(h: &mut H, p: u64) {
 /// `GetPatrolGroup(id)`: the first patrol group of the id (0 none).
 pub fn patrol_group<H: PlayerBodyHost>(h: &mut H, p: u64, id: u64) -> u64 {
     let mut i = 0;
-    while i < op(h, EE_UNITS_PLAYER_BODY_PATROL_COUNT, p, 0, 0, 0) {
-        let g = op(h, EE_UNITS_PLAYER_BODY_PATROL_AT, p, 0, i, 0) as u64;
+    while i < h.list_len(p, EE_UNITS_LISTS_PATROLS) {
+        let g = h.list_at(p, EE_UNITS_LISTS_PATROLS, i);
         if h.patrol_id(g) == id {
             return g;
         }
@@ -1035,14 +1026,8 @@ pub fn construct<H: PlayerBodyHost>(h: &mut H, p: u64, named: bool, id: i64) {
         op(h, EE_UNITS_PLAYER_BODY_TECH_SET_INDEX, p, 0, id, 0);
         op(h, EE_UNITS_PLAYER_BODY_TECH_SET_PLAYER, p, 0, 0, 0);
     }
-    for o in [
-        EE_UNITS_PLAYER_BODY_COMPUTER_CLEAR,
-        EE_UNITS_PLAYER_BODY_HUMAN_CLEAR,
-        EE_UNITS_PLAYER_BODY_WONDERS_NEW,
-        EE_UNITS_PLAYER_BODY_SITES_NEW,
-    ] {
-        op(h, o, p, 0, 0, 0);
-    }
+    op(h, EE_UNITS_PLAYER_BODY_COMPUTER_CLEAR, p, 0, 0, 0);
+    op(h, EE_UNITS_PLAYER_BODY_HUMAN_CLEAR, p, 0, 0, 0);
 }
 
 // ---- the entry point
@@ -1125,8 +1110,13 @@ pub fn run<H: PlayerBodyHost>(h: &mut H, player: u64, what: u32, a: u64, b: i64,
 /// town_split.rs): one statement of the player's C++ on player `player`.
 #[cfg(not(test))]
 pub(crate) fn body_host(op: i32, player: u64, a: u64, b: i64, c: i64) -> i64 {
-    // SAFETY: the C++ switch over a live player and the objects the bodies hand it
-    unsafe { game::ee_units_player_body_host(op, player as *mut std::ffi::c_void, a, b, c, std::ptr::null_mut()) }
+    // SAFETY: the player's own operations (player_native.rs), else the C++ switch over a live player and the objects
+    // the bodies hand it
+    unsafe {
+        crate::units::player_native::body(op, player, a, b, c).unwrap_or_else(|| {
+            game::ee_units_player_body_host(op, player as *mut std::ffi::c_void, a, b, c, std::ptr::null_mut())
+        })
+    }
 }
 
 #[cfg(not(test))]
@@ -1134,7 +1124,6 @@ pub mod game {
     use super::*;
     use crate::units::group_host::GameGroups;
     use crate::units::group_obj::GroupHost;
-    use crate::units::player_lists::{ee_units_lists_at, ee_units_lists_clear, ee_units_lists_len, EeUnitsPlayerLists};
     use crate::world::layout::layout;
     use std::ffi::c_void;
 
@@ -1149,16 +1138,9 @@ pub mod game {
         ) -> i64;
     }
 
-    /// The player's private lists (its `mLists`, the layout's offset).
-    fn lists(player: u64) -> *mut EeUnitsPlayerLists {
-        // SAFETY: a live player's member, made by its constructor
-        unsafe { *((player as usize + layout().player_lists as usize) as *const *mut EeUnitsPlayerLists) }
-    }
-
     impl PlayerBodyHost for GameGroups {
         fn body(&mut self, op: i32, player: u64, a: u64, b: i64, c: i64) -> i64 {
-            // SAFETY: the C++ switch over the live player and the objects the bodies hand it
-            unsafe { ee_units_player_body_host(op, player as *mut c_void, a, b, c, std::ptr::null_mut()) }
+            body_host(op, player, a, b, c)
         }
         fn body_swaps(&mut self, op: i32, player: u64, a: u64, b: i64, swaps: u64) {
             // SAFETY: as above; `swaps` the caller's vector
@@ -1177,21 +1159,28 @@ pub mod game {
             // SAFETY: the live player's record
             unsafe { crate::units::player::ee_units_player_fields_reset(rec, starting_citizens, mining_limit) }
         }
-        fn list_len(&mut self, player: u64, list: u32) -> usize {
-            // SAFETY: the live player's lists
-            unsafe { ee_units_lists_len(lists(player), list) }
-        }
-        fn list_at(&mut self, player: u64, list: u32, i: usize) -> u64 {
-            // SAFETY: as above
-            unsafe { ee_units_lists_at(lists(player), list, i) }
-        }
-        fn list_clear(&mut self, player: u64, list: u32, release: bool) {
-            // SAFETY: as above
-            unsafe { ee_units_lists_clear(lists(player), list, release) }
+        fn list_op(&mut self, player: u64, list: u32, op: ListOp) -> u64 {
+            crate::units::player_lists::player_op(player, list, op)
         }
         fn patrol_id(&mut self, group: u64) -> u64 {
             // SAFETY: the player's live patrol group
             unsafe { crate::units::patrol_group::ee_units_pg_id(group as *mut _) as u64 }
+        }
+        fn off_map(&mut self, player: u64, what: u32) {
+            let lists = crate::units::player_lists::player_lists(player);
+            // SAFETY: the live player's lists
+            unsafe { crate::units::player_lists::ee_units_off_map(lists, what, 0, 0, 0, 0) };
+        }
+        fn patrol_repair(&mut self, group: u64) {
+            // SAFETY: as above
+            unsafe { crate::units::patrol_group::ee_units_pg_repair(group as *mut _) };
+        }
+        fn adopt_town_patrol(&mut self, player: u64, town: u64) -> bool {
+            use crate::units::player_rest::{game::ee_units_player_rest, EE_UNITS_PLAYER_REST_ADOPT_TOWN_PATROL};
+            // SAFETY: the live player and its town
+            unsafe {
+                ee_units_player_rest(player as *mut c_void, EE_UNITS_PLAYER_REST_ADOPT_TOWN_PATROL, town, 0, 0) != 0
+            }
         }
     }
 

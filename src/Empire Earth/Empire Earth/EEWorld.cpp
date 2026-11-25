@@ -488,10 +488,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlNumPending: return PL->GetNumPendingUnits();
     case O::PlPendingAt: return P64(PL->GetPendingUnit((unsigned long)a[0]));
-    case O::PlAlliesCount: return (int64_t)PL->mAllies.size();
-    case O::PlAllyAt: return P64(PL->mAllies[a[0]]);
-    case O::PlAlliesPush: PL->mAllies.push_back((EEPlayer*)a[0]);
-        break;
     case O::PlSaveTo: PL->EEPlayer::Save((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
         break;
     case O::PlLoadFrom: PL->EEPlayer::Load((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);

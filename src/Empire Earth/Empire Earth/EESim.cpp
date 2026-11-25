@@ -148,7 +148,7 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::PlayerSetStance: PL->SetDiplomaticStance((EEPlayer*)a[0], 0, gWorld.GetMap());
         break;
-    case O::PlayerAllyCount: return PL->mAllies.size();
+
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(false, true);
         break;
     case O::NodeData: return P64(((EETechTreeNode*)p)->mData);
@@ -229,16 +229,13 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmPlPop: return (long)PL->mPopulationCount;
     case O::DmPlEog: return (long)PL->mEndOfGameCount;
     case O::DmPlEpoch: return PL->mTechnologies ? (long)PL->mTechnologies->mCurrentEpoch : -1L;
-    case O::DmPlTownCount: return PL->mTowns.size();
-    case O::DmPlTownAt: return P64(PL->mTowns[a[0]]);
     case O::DmTownId: return (long)((EETown*)p)->mTownID;
     case O::DmTownUnits: return (long)((EETown*)p)->mNumUnits;
     case O::DmTownPatrol: return P64(((EETown*)p)->mPatrolGroup);
     case O::DmTownHullCount: return ((EETown*)p)->GetHullPointCount();
     case O::DmTownHullX: return (long)((EETown*)p)->GetHullPoint((unsigned long)a[0]).GetX();
     case O::DmTownHullY: return (long)((EETown*)p)->GetHullPoint((unsigned long)a[0]).GetY();
-    case O::DmPlPatrolCount: return PL->mPatrolGroups.size();
-    case O::DmPlPatrolAt: return P64(PL->mPatrolGroups[a[0]]);
+
     case O::DmCpDump: EECPOutOfSynchDump((FILE*)a[0]);
         break;
     case O::DmPathDump: gPathManager.DumpSim((FILE*)a[0]);

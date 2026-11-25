@@ -17,7 +17,6 @@
 #include "lle/GEViewport.h"
 
 #include "ee/EEEffect.h"
-#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -41,7 +40,6 @@
 #include "ee/EEAIKindIDs.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEGraphics.h"
-#include "ee/EECalamityCapture.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEMouse.h"
@@ -293,14 +291,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::SortTilesNear: std::sort(((std::vector<EETileCoordinate>*)p)->begin(), ((std::vector<EETileCoordinate>*)p)->end(), EETileDistanceLess((long)a[0], (long)a[1]));
         break;
-    case O::CapEvent: EECalamityCaptureEvent((long)a[0], (long)a[1], (long)a[2], f[0], f[1]);   // CALW (TEST ONLY)
-        break;
-    case O::CapStartEvent: EECalamityCaptureStartEvent((long)a[0], (long)a[1], (long)a[2], f[0], f[1]);   // CALT (TEST ONLY)
-        break;
-    case O::CapStartPoint: EECalamityCaptureStartPoint((long)a[0], f[0], f[1], f[2]);   // CALT (TEST ONLY)
-        break;
-    case O::CapContagion: EECalamityCaptureContagion((EEContagionHelper*)p, f[0]);   // CONT (TEST ONLY)
-        break;
     case O::CxIsColor: return CX->mColor == GEColor(f[0], f[1], f[2]);
     case O::CxSetColor: CX->SetColor(GEColor(f[0], f[1], f[2]));
         break;
@@ -364,22 +354,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::VecUnitsCount: return (int64_t)((std::vector<EEUnit*>*)p)->size();
     case O::VecUnitsAt: return P64((*(std::vector<EEUnit*>*)p)[a[0]]);
-    case O::CapStart: return EECalamityCaptureStart(KL, (EECalamity*)a[0]);   // CALT (TEST ONLY): Start
-    case O::CapStop: EECalamityCaptureStop(KL, (EECalamity*)a[0]);   // CALT (TEST ONLY): Stop
-        break;
-    case O::CapUpdate: return EECalamityCaptureUpdate(KL, (EECalamity*)a[0], f[0]);   // CALW (TEST ONLY)
-    case O::CapSave: EECalamityCaptureSave(CL, (unsigned long)a[0]);   // CALK (TEST ONLY)
-        break;
-    case O::CapAged: EECalamityCaptureAged(CL, (unsigned long)a[0], f[0]);   // CALK (TEST ONLY)
-        break;
-    case O::CapCast: EECalamityCapture((long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3], (long)a[4], (long)a[5], (unsigned long)a[6], a[7] != 0);   // CALC (TEST ONLY)
-        break;
-    case O::CapContagionEvent: EECalamityCaptureContagionEvent((long)a[0], (long)a[1], (long)a[2], f[0], f[1]);   // CONT (TEST ONLY)
-        break;
-    case O::CanCastScopeNew: return P64(new EECalamityCanCastScope);   // CCAS (TEST ONLY)
-    case O::CanCastScopeRecord: return ((EECalamityCanCastScope*)p)->Record((EECalamityClass*)a[0], (EEComplexUnit*)a[1], *(const GE3DPoint*)a[2], (unsigned long)a[3], (unsigned long)a[4], a[5] != 0, (EEUnit*)a[6], (long)a[7]);
-    case O::CanCastScopeDelete: delete (EECalamityCanCastScope*)p;
-        break;
     case O::FnNew: return P64(new EEContagionFunctor(KL, (uint32_t)a[0]));
     case O::FnFields: return P64(static_cast<EeContagionFunctorFields*>((EEContagionFunctor*)p));
     case O::FnEffect1: return P64(((EEContagionFunctor*)p)->mEffect);
