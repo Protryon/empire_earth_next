@@ -113,7 +113,6 @@
 #include "lle/UIStatusBar.h"
 #include "lle/UEncryption.h"
 #include "ee/EEPGSFormManager.h"
-#include "ee/EEStatisticsRecord.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitUtilities.h"
@@ -1159,58 +1158,14 @@ extern "C" void ee_screenscpp_gt_player_name_of(uintptr_t inPlayer, void* inOut)
 { EEShimOut(inOut, UWideString(reinterpret_cast<EEPlayer*>(inPlayer)->GetName())); }
 extern "C" void ee_screenscpp_gt_player_civilization(uintptr_t inPlayer, void* inOut)
 { EEShimOut(inOut, UWideString(reinterpret_cast<EEPlayer*>(inPlayer)->mCivilization.mName)); }
-extern "C" void ee_screenscpp_gt_world_campaign_name(void* inOut)
-{ EEShimOut(inOut, UWideString(gWorld.mStatistics.mCampaignName)); }
-extern "C" uint32_t ee_screenscpp_gt_record_count() { return (uint32_t)gWorld.mStatistics.GetRecords().size(); }
-extern "C" void ee_screenscpp_gt_record_name(uint32_t inIndex, void* inOut)
-{ EEShimOut(inOut, UWideString(gWorld.mStatistics.GetRecords()[inIndex].GetName())); }
 extern "C" void ee_screenscpp_gt_map_type(uintptr_t inOptions, void* inOut)
 { EEShimOut(inOut, UWideString(GOPT(inOptions)->mMapType)); }
 
-// ---- the post-game summary's records and series (post_game_calls.rs; each one statement)
-#define PGR(inRecord) gWorld.mStatistics.mRecords[inRecord]
-extern "C" uint32_t ee_screenscpp_pgs_records() { return (uint32_t)gWorld.mStatistics.GetRecords().size(); }
-extern "C" int32_t ee_screenscpp_pgs_start_time() { return (int32_t)gWorld.mStatistics.mStartTime; }
-extern "C" int32_t ee_screenscpp_pgs_end_time() { return (int32_t)gWorld.mStatistics.mEndTime; }
-extern "C" int32_t ee_screenscpp_pgs_current_record() { return (int32_t)gWorld.mStatistics.mCurrentRecordIndex; }
-extern "C" int32_t ee_screenscpp_pgs_tile_count() { return (int32_t)gWorld.mStatistics.mTileCount; }
-extern "C" bool ee_screenscpp_pgs_victory_enabled() { return gWorld.mStatistics.mVictoryEnabled; }
-extern "C" bool ee_screenscpp_pgs_is_scenario() { return gWorld.mStatistics.mIsScenario; }
-extern "C" bool ee_screenscpp_pgs_is_campaign() { return gWorld.mStatistics.mIsCampaign; }
-extern "C" uint8_t ee_screenscpp_pgs_current_slot() { return (uint8_t)gWorld.mStatistics.GetCurrentRecord().mSlot; }
+// ---- the post-game summary (post_game_calls.rs; each one statement; the records and series: gamecpp stats_history.rs)
 extern "C" uint32_t ee_screenscpp_pgs_level(uint32_t inIndex)
 { return (uint32_t)EEGetResourceLevel(gGameResources)->mAmounts[inIndex]; }
-extern "C" float ee_screenscpp_pr_red(uint32_t inRecord) { return PGR(inRecord).mColor.mRed; }
-extern "C" float ee_screenscpp_pr_green(uint32_t inRecord) { return PGR(inRecord).mColor.mGreen; }
-extern "C" float ee_screenscpp_pr_blue(uint32_t inRecord) { return PGR(inRecord).mColor.mBlue; }
-extern "C" int32_t ee_screenscpp_pr_result(uint32_t inRecord) { return (int32_t)PGR(inRecord).mResult; }
-extern "C" uint32_t ee_screenscpp_pr_team(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mTeam; }
-extern "C" uint32_t ee_screenscpp_pr_end_time(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mEndTime; }
-extern "C" uint32_t ee_screenscpp_pr_resource(uint32_t inRecord, uint32_t inIndex)
-{ return (uint32_t)PGR(inRecord).mResources[inIndex]; }
-extern "C" uint32_t ee_screenscpp_pr_score(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mScore; }
-extern "C" uint32_t ee_screenscpp_pr_economy_score(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mEconomyScore; }
-extern "C" uint32_t ee_screenscpp_pr_epoch_score(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mEpochScore; }
-extern "C" uint32_t ee_screenscpp_pr_military_score(uint32_t inRecord)
-{ return (uint32_t)PGR(inRecord).mMilitaryScore; }
-extern "C" uint32_t ee_screenscpp_pr_tech_score(uint32_t inRecord) { return (uint32_t)PGR(inRecord).mTechScore; }
-extern "C" uint8_t ee_screenscpp_pr_slot(uint32_t inRecord) { return (uint8_t)PGR(inRecord).mSlot; }
-extern "C" bool ee_screenscpp_pr_human(uint32_t inRecord) { return PGR(inRecord).mIsHuman; }
-extern "C" uint32_t ee_screenscpp_pr_value(uint32_t inRecord, uint32_t inSeries)
-{ return (uint32_t)PGR(inRecord).mStatistics.GetValue(inSeries); }
-extern "C" uint32_t ee_screenscpp_pr_last_value(uint32_t inRecord, uint32_t inSeries)
-{ return (uint32_t)PGR(inRecord).mStatistics.GetLastValue(inSeries); }
-extern "C" uint32_t ee_screenscpp_pr_increases(uint32_t inRecord, uint32_t inSeries)
-{ return (uint32_t)PGR(inRecord).mStatistics.CountIncreases(inSeries); }
-extern "C" void ee_screenscpp_pr_series_load(uint32_t inRecord, uint32_t inSeries)
-{ EEScratch<EEStatisticsSeries>(kScratchPgsSeries) = PGR(inRecord).mStatistics.GetSeries(inSeries); }
-extern "C" uint32_t ee_screenscpp_pr_series_count() { return (uint32_t)EEScratch<EEStatisticsSeries>(kScratchPgsSeries).mPoints.size(); }
-extern "C" uint32_t ee_screenscpp_pr_series_time(uint32_t inIndex)
-{ return (uint32_t)EEScratch<EEStatisticsSeries>(kScratchPgsSeries).mPoints[inIndex].mTime; }
-extern "C" uint32_t ee_screenscpp_pr_series_value(uint32_t inIndex)
-{ return (uint32_t)EEScratch<EEStatisticsSeries>(kScratchPgsSeries).mPoints[inIndex].mValue; }
 extern "C" void ee_screenscpp_pgs_graph_add_series(uintptr_t inForm, uintptr_t inPairs, uint32_t inCount, uint32_t inSeries, uint32_t inRecord)
-{ static_cast<UIGraph*>(F(inForm)->GetControl(kPostGameLineGraph))->AddGraphSeries(reinterpret_cast<long*>(inPairs), inCount, inSeries, PGR(inRecord).mColor); }
+{ static_cast<UIGraph*>(F(inForm)->GetControl(kPostGameLineGraph))->AddGraphSeries(reinterpret_cast<long*>(inPairs), inCount, inSeries, GEColor(ee_screenscpp_pr_red(inRecord), ee_screenscpp_pr_green(inRecord), ee_screenscpp_pr_blue(inRecord))); }
 extern "C" uint32_t ee_screenscpp_pgs_window_width(uintptr_t inForm)
 { return (uint32_t)F(inForm)->GetManager()->GetRasterizer()->GetWindow(F(inForm)->GetManager()->GetScreen())->GetWidth(); }
 extern "C" uint32_t ee_screenscpp_pgs_window_height(uintptr_t inForm)

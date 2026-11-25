@@ -122,6 +122,7 @@ pub mod music_io;
 pub mod options;
 pub mod preferences;
 pub mod stats_capture;
+pub mod stats_history;
 //
 //
 
@@ -642,7 +643,6 @@ pub enum EeGameCpp {
     WSetScenarioRaw,
     WShowCollisionSpheres,
     WStartTime,
-    WStatisticsReset,
     WSunDirection,
     WTeamsClear,
     WTeamsLocked,
@@ -3044,16 +3044,7 @@ pub enum EeGameCpp {
     UsgCameraUpdate,
     UsgSave,
     // EEWorld::RecordStatistics (world_stats.rs; EEWorld.cpp's EECore10OpE3)
-    WsStart,
     WsTiles,
-    WsVictory,
-    WsTeamsLocked,
-    WsScenarioGame,
-    WsCampaignOptions,
-    WsSetScenario,
-    WsSetCampaign,
-    WsEndTime,
-    WsCampaignName,
     WsNumPlayers,
     WsPlayer,
     WsCurrent,
@@ -3063,24 +3054,6 @@ pub enum EeGameCpp {
     WsStatsSet,
     WsStatsCap,
     WsStatsSetCap,
-    WsRecordsAssign,
-    WsRecScore,
-    WsRecEconomy,
-    WsRecEpoch,
-    WsRecMilitary,
-    WsRecTech,
-    WsRecColor,
-    WsRecName,
-    WsRecStatistics,
-    WsRecSlot,
-    WsRecResult,
-    WsRecEndTime,
-    WsRecTeam,
-    WsRecResource,
-    WsRecLocal,
-    WsRecHuman,
-    WsSetCurrentRecord,
-    WsRecPlayTime,
     //
     // ---- round 11, lane A (EECore11OpA's cases)
     FwLayGobjFields,
@@ -3391,22 +3364,11 @@ pub enum EeGameCpp {
     EbEnvF40,
     EbEnvF44,
     // EEAppCaptureWorld.cpp (stats_capture.rs)
-    EwCampaignName,
-    EwColorSize,
-    EwHistory,
-    EwHistoryTail,
     EwNumPlayers,
     EwPhysicsSeed,
     EwPlayerAt,
     EwPlayerStatistics,
-    EwRecordAt,
-    EwRecordColor,
-    EwRecordCount,
-    EwRecordName,
     EwRecordStatistics,
-    EwRecordStatisticsOf,
-    EwRecordSuffix,
-    EwRecordTail,
     EwStatsEndTime,
     EwStatsSeries,
     //

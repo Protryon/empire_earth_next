@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Player\EEPlayerStatistics.cpp (file name inferred: no __FILE__; RTTI class EEPlayerStatistics,
 // vtable 0x442080). 0x16d346..0x16e1a2: the class static's init chain, the point and series operator=, the player
-// statistics in definition order, the free function EEAddDeadUnitStatistic, EEStatisticsRecord::Clear/dtor, EEStatisticsHistory's
-// Reset/dtor, then the vector<EEStatisticsPoint> template tail. EEPlayer.cpp ends at 0x16d346, EEPPlayerEvent.cpp starts
+// statistics in definition order, the free function EEAddDeadUnitStatistic (the end-of-game records and
+// the history: ee_game gamecpp stats_history.rs), then the vector<EEStatisticsPoint> template tail. EEPlayer.cpp ends at 0x16d346, EEPPlayerEvent.cpp starts
 // at 0x16e1a2. Unit flags: the exe's module set.
 #include <windows.h>
 #include <vector>
@@ -18,9 +18,6 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEStatisticsRecord.h"
-
-extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // the class key
 const UString EEPlayerStatistics::sKey("EEPlayerStatistics-");
@@ -65,35 +62,4 @@ long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMino
 long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
 {
     return ee_units_dead_unit_statistic((uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit));   // ee_units player_rest.rs
-}
-
-// Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources (the plain
-// members from mColor to mIsHuman: ee_units player_stats.rs)
-static_assert(offsetof(EEStatisticsRecord, mResources) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, resources) && offsetof(EEStatisticsRecord, mSlot) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, slot) && offsetof(EEStatisticsRecord, mIsHuman) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, is_human), "EeUnitsStatsRecordTail");
-void EEStatisticsRecord::Clear()
-{
-    this->mName = gEmptyString;
-    this->mNameSuffix = gEmptyString;
-    this->mStatistics.Clear();
-    ee_units_stats_record_clear(reinterpret_cast<EeUnitsStatsRecordTail*>(&this->mColor));
-}
-
-// Destroys the end-of-game record
-EEStatisticsRecord::~EEStatisticsRecord()
-{
-}
-
-// Clears the game history: times, map size, flags (the plain members from mStartTime to mIsCampaign: ee_units
-// player_stats.rs), campaign name and every record
-static_assert(offsetof(EEStatisticsHistory, mTeamsLocked) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, teams_locked) && offsetof(EEStatisticsHistory, mIsCampaign) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, is_campaign), "EeUnitsStatsHistoryTail");
-void EEStatisticsHistory::Reset()
-{
-    ee_units_stats_history_clear(reinterpret_cast<EeUnitsStatsHistoryTail*>(&this->mStartTime));
-    this->mCampaignName.Clear();
-    this->mRecords.clear();
-}
-
-// Destroys the game history
-EEStatisticsHistory::~EEStatisticsHistory()
-{
 }
