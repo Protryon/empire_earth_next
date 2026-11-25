@@ -40,7 +40,6 @@ pub enum EeSimDriverSim {
     PlayerAddPendingUnits,
     NodeData,
     NodeCost,
-    RequestSaveNew,
     SendToAllAndWait,
     DerefMessage,
     // the platform switches

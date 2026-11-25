@@ -2014,7 +2014,6 @@ pub enum EeGameCpp {
     PvLongsAt,
     PvAfterLoad,
     PsMajorVersion,
-    PsListPush,
     PsPersistentTag,
     PsPersistentDelete,
     PsNewChecksumChunk,

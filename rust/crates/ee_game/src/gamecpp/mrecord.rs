@@ -197,6 +197,34 @@ pub unsafe extern "C" fn ee_gamecpp_mrecord_init(message: *mut c_void, values: *
     }
 }
 
+impl EeGamecppMrValue {
+    /// An integer value (`EEMRecordValue(T)` of an integral or enum `T`).
+    pub fn integer(integer: i64) -> Self {
+        EeGamecppMrValue {
+            integer,
+            floats: [0.0; 3],
+            is_float: false,
+            string: std::ptr::null(),
+            list: std::ptr::null(),
+            list_count: 0,
+            list_element: 0,
+        }
+    }
+
+    /// A string member's value (`EEMRecordValue(const UWideString&)`: `string` a UWideString alive for the call).
+    pub fn string(string: P) -> Self {
+        EeGamecppMrValue { string: string as *const c_void, ..Self::integer(0) }
+    }
+}
+
+/// `new EEMRecord(kind, {values})` from Rust: the bare record (`EEMRecord(kind)`), then its members in wire order.
+pub fn new_record(kind: u8, values: &[EeGamecppMrValue]) -> P {
+    let m = hp(O::SsNewRecord0, 0, &[i64::from(kind)]);
+    // SAFETY: the new record; the values and their strings alive for the call
+    unsafe { ee_gamecpp_mrecord_init(m as *mut c_void, values.as_ptr(), values.len()) };
+    m
+}
+
 /// EEMRecord::GetCodecSlots: the header's four slots, the fast selection id, then each wire member (the string's
 /// text, the list's records, the blob's bytes, the record's members).
 ///
@@ -332,6 +360,15 @@ mod tests {
             list_count: 0,
             list_element: 0,
         }
+    }
+
+    #[test]
+    fn the_value_constructors() {
+        let v = EeGamecppMrValue::integer(7);
+        assert_eq!(value_forms(&v), (7, 7.0, true));
+        assert!(v.string.is_null() && v.list.is_null());
+        let w = EeGamecppMrValue::string(0x1000);
+        assert_eq!((w.string as usize, w.integer, w.is_float), (0x1000, 0, false));
     }
 
     #[test]

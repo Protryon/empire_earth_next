@@ -84,7 +84,7 @@ fn owned(make: O, delete: O) -> Owned {
 }
 
 /// BuildSaveGameChunks: the chunks a save writes, in chunk order (each new; the game objects only borrowed).
-fn build_chunks() -> Vec<P> {
+pub fn build_chunks() -> Vec<P> {
     let mut list = Vec::new();
     let checksum = hp(O::PsNewChecksumChunk, 0, &[]);
     h(O::PsWorldChecksum, checksum, &[]);
@@ -109,14 +109,6 @@ fn build_chunks() -> Vec<P> {
     list.push(hp(O::PsNewMultiplayerHelper, 0, &[]));
     list.push(hp(O::PsNewCalamityHelper, 0, &[]));
     list
-}
-
-/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it): the chunks into its std::vector.
-#[no_mangle]
-pub extern "C" fn ee_gamecpp_ps_build_chunks(list: *mut c_void) {
-    for item in build_chunks() {
-        h(O::PsListPush, list as P, &[pa(item)]);
-    }
 }
 
 /// FillSaveGameHeader: name, versions, player names, date, chunk tags, scenario media strings and game options.

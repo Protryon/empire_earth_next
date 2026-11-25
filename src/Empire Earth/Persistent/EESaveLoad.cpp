@@ -66,12 +66,6 @@ void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData)
     EEAfterLoad([inRun, inData]() { inRun(inData); });
 }
 
-// Builds the list of chunks a save writes, in chunk order (each chunk new; the game objects are only borrowed)
-void BuildSaveGameChunks(std::vector<FSPersistent*>& outList)
-{
-    ee_gamecpp_ps_build_chunks(&outList);
-}
-
 // Deletes the files matching a pattern in a directory, lowest (FSFileSpec order) first, until at most a given number
 // remain
 long TrimAutoSaves(const UString& inPattern, const UString& inDirectory, unsigned long inMax)

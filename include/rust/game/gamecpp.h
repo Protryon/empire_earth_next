@@ -1908,7 +1908,6 @@ enum class EeGameCpp : uint32_t {
   PvLongsAt,
   PvAfterLoad,
   PsMajorVersion,
-  PsListPush,
   PsPersistentTag,
   PsPersistentDelete,
   PsNewChecksumChunk,
@@ -4737,9 +4736,6 @@ long ee_gamecpp_pc_load(void *chunk, void *file);
 
 /// `EEPChecksum::Save`: the verbose flag and the described checksum entries; the first write error.
 long ee_gamecpp_pc_save(void *chunk, void *file);
-
-/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it): the chunks into its std::vector.
-void ee_gamecpp_ps_build_chunks(void *list);
 
 /// `TrimAutoSaves`: the files matching a pattern in a directory deleted, lowest (FSFileSpec order) first, until at
 /// most `max` remain.

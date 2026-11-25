@@ -15,7 +15,7 @@ use ee_sim::unit_ids::{EEUnitCategory, EEUnitTypeID};
 use crate::screens::ui_ids::{EELoadGameControl, EESinglePlayerLoadGameControl};
 
 use super::host::*;
-use super::sim_ops::{h, hd, hf, hs, ht, EeSimDriverSim as O, UiLock};
+use super::sim_ops::{h, hd, hf, ht, EeSimDriverSim as O, UiLock};
 
 /// cbindgen:ignore
 mod sys {
@@ -268,7 +268,14 @@ pub fn prepare_human(human_out: bool) {
 /// preferences are not written). It runs at the start of the next communications tick that carries it (EEPhysics::
 /// Tick: DrainInput executes it, ServeLoadSaveRequests saves), between two communications ticks.
 pub fn request_save(name: &str) {
-    let message = hs(O::RequestSaveNew, 0, name) as usize;
+    use crate::gamecpp::mrecord::{new_record, EeGamecppMrValue as V};
+    let text = gc::Owned::new(gc::O::StrNew, gc::O::StrFree);
+    crate::gamecpp::preferences::set_text(text.0, true, name.as_bytes());
+    let tick = gc::h(gc::O::CommCTsProcessed, 0, &[]);
+    let time = i64::from(ee_base::time::ee_time_get());
+    // load, quiet, tick, time, auto-save, the wait id, the name
+    let values = [V::integer(0), V::integer(1), V::integer(tick), V::integer(time), V::integer(0), V::integer(0), V::string(text.0)];
+    let message = new_record(ee_sim::message_ids::EEMessageID::kMessageLoadOrSaveGame as u8, &values) as usize;
     h(O::SendToAllAndWait, message, &[]);
     h(O::DerefMessage, message, &[]);
 }
