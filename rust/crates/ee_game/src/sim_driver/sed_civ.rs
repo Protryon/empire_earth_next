@@ -265,7 +265,11 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             let main = h(O::UiFormById, 0, &[11]) as usize; // kFormMainGame
                                                             // kMainGameCivSelectorBuilder, kMainGameLargeCivBuilderAlert
             for k in [5i64, 234] {
-                let button = if main == 0 { 0 } else { super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormControl, main, &[k]) as usize };
+                let button = if main == 0 {
+                    0
+                } else {
+                    super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormControl, main, &[k]) as usize
+                };
                 out.push(format!(
                     "  main c{k} {}",
                     if button == 0 { "none".to_string() } else { format!("m={}", x::display_mode(button)) }
@@ -367,7 +371,11 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             let mut stack = "  stack".to_string();
             for i in 0..h(O::UiFormCount, 0, &[]) {
                 let f = h(O::UiFormStacked, 0, &[i]) as usize;
-                stack += &if f == 0 { " null".to_string() } else { format!(" {}", super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormId, f, &[]) as c_ulong) };
+                stack += &if f == 0 {
+                    " null".to_string()
+                } else {
+                    format!(" {}", super::sim_ops::h(super::sim_ops::EeSimDriverSim::FormId, f, &[]) as c_ulong)
+                };
             }
             out.push(stack);
             // a message box left on top (none in a passing run's states): its text names why (an error box of
@@ -402,13 +410,18 @@ pub fn step(w: &[String], out: &mut Vec<String>) -> bool {
             let spec = user_spec(arg(2));
             let mut line = format!("  file {}", arg(2));
             let mut size: c_ulong = 0;
-            if gc::h(gc::O::FileOpenReadSpec, spec, &[]) != 0 || gc::h(gc::O::EntrySpecLength, spec, &[&mut size as *mut c_ulong as i64]) != 0
+            if gc::h(gc::O::FileOpenReadSpec, spec, &[]) != 0
+                || gc::h(gc::O::EntrySpecLength, spec, &[&mut size as *mut c_ulong as i64]) != 0
             {
                 line += " missing";
             } else {
                 let mut bytes = vec![0u8; size as usize + 1];
                 let mut read: c_ulong = 0;
-                gc::h(gc::O::FileReadBytes, spec, &[bytes.as_mut_ptr() as i64, size as i64, &mut read as *mut c_ulong as i64]);
+                gc::h(
+                    gc::O::FileReadBytes,
+                    spec,
+                    &[bytes.as_mut_ptr() as i64, size as i64, &mut read as *mut c_ulong as i64],
+                );
                 line += &format!(" {read} {}", hexed(&bytes[..read as usize]));
             }
             gc::h(gc::O::FileClose, spec, &[]);

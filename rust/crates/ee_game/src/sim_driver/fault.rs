@@ -137,8 +137,11 @@ mod posix {
         let mut line = Line { bytes: [0; 2048], len: 0 };
         // SAFETY: pthread_self has no precondition
         let thread = unsafe { libc::pthread_self() } as usize;
-        let _ = write!(line, "EE-SIM FAULT signal {signal} at {at:p} thread {thread}; frames:
-");
+        let _ = write!(
+            line,
+            "EE-SIM FAULT signal {signal} at {at:p} thread {thread}; frames:
+"
+        );
         let mut frames = [std::ptr::null_mut::<c_void>(); 48];
         // SAFETY: stderr and buffers of the sizes given
         unsafe {

@@ -81,7 +81,7 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
                 unsafe { crate::sim_driver::fault::ee_sim_driver_fault_install(c"EE-AOC".as_ptr()) };
             } else {
                 super::boxsel::LASSO_ON.store(true, std::sync::atomic::Ordering::SeqCst); // each box selection's ids
-                // each executed input's view (gEEMessageExecutedTestHook, gamecpp globals.rs)
+                                                                                          // each executed input's view (gEEMessageExecutedTestHook, gamecpp globals.rs)
                 let hook: unsafe extern "C" fn(*mut std::ffi::c_void, i32) = message_hook;
                 // SAFETY: the physics' hook pointer, set before a game runs
                 unsafe {

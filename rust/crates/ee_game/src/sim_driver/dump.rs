@@ -5,9 +5,9 @@
 //! `unsigned long`), `%ld` and `%08lx` are written as the C++ wrote them ([`hexf`], [`lu`], [`ld`], [`x8`]).
 
 use super::sim_ops::{h, hdd, EeSimDriverSim as O};
-use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsUnitFields};
 use crate::gamecpp as gc;
 use ee_sim::units::patrol_group as pg;
+use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsUnitFields};
 
 /// cbindgen:ignore
 mod sys {

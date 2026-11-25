@@ -1123,7 +1123,10 @@ pub fn trigger_report(setup: bool, out: &mut Vec<String>) {
             effect_fields(effects[2]).mTaskArea = 3;
         }
     }
-    out.push(format!("  result {}", x::form_call(x::editor(), crate::screens::editor_form::EE_SCREENS_SEFM_SAVE_TRIGGERS, 0, 0, None)));
+    out.push(format!(
+        "  result {}",
+        x::form_call(x::editor(), crate::screens::editor_form::EE_SCREENS_SEFM_SAVE_TRIGGERS, 0, 0, None)
+    ));
     let path = ht(O::StartupPath, 0, 0) + "ScenarioTriggers.txt";
     let Ok(bytes) = std::fs::read(&path) else {
         out.push("  no report".into());

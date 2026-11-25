@@ -657,7 +657,12 @@ fn missile_sweep() {
                 let created = h(
                     O::ClassCreateUnit,
                     class,
-                    &[gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]), gc::h(gc::O::RoPlayerId, owner, &[]), a as i64],
+                    &[
+                        gc::h(gc::O::DkTileX, a, &[]),
+                        gc::h(gc::O::DkTileY, a, &[]),
+                        gc::h(gc::O::RoPlayerId, owner, &[]),
+                        a as i64,
+                    ],
                 ) as usize;
                 let m = if created != 0 { gc::h(gc::O::UnGetComplex, created, &[]) as usize } else { 0 };
                 if m == 0 {
@@ -670,7 +675,13 @@ fn missile_sweep() {
                 gc::h(
                     gc::O::CxSetLauncherClass,
                     m,
-                    &[if launchers[k] != 0 { launchers[k] } else { (unsafe { (*unit_fields(a)).mUnitClass }) as usize } as i64],
+                    &[
+                        if launchers[k] != 0 {
+                            launchers[k]
+                        } else {
+                            (unsafe { (*unit_fields(a)).mUnitClass }) as usize
+                        } as i64,
+                    ],
                 );
                 gc::h(gc::O::CxSetOwner, m, &[a as i64]);
                 let mut at = [0f32; 3];

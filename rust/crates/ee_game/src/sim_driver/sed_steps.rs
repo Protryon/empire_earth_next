@@ -19,7 +19,8 @@ use super::sed_digest::{self as d, g, head_of, rect_text};
 use super::sed_host::{self as x, h, hf, hs, ht, sel, EeSimDriverSed as O};
 use crate::screens::editor_form::{
     EE_SCREENS_SEFM_CLEAR_SELECTION, EE_SCREENS_SEFM_DESELECT_FIRST, EE_SCREENS_SEFM_DESELECT_UNIT,
-    EE_SCREENS_SEFM_RESUME_GROUP, EE_SCREENS_SEFM_SELECT_UNIT, EE_SCREENS_SEFM_SET_GAME_VIEW, EE_SCREENS_SEFM_STORE_GROUP,
+    EE_SCREENS_SEFM_RESUME_GROUP, EE_SCREENS_SEFM_SELECT_UNIT, EE_SCREENS_SEFM_SET_GAME_VIEW,
+    EE_SCREENS_SEFM_STORE_GROUP,
 };
 use crate::screens::editor_tscreen::EE_SCREENS_SETS_SCREEN_REFRESH;
 use crate::screens::hud_ctl::EeScreensPoint;
@@ -398,9 +399,8 @@ pub fn step(w: &[String]) -> Step {
         }),
         "selection" => Box::new(|out: &mut Vec<String>| {
             let e = x::editor();
-            let ids: String = (0..x::selected_count(e))
-                .map(|i| format!(" {}", h(O::SelectedUnitId, e, &[i]) as c_ulong))
-                .collect();
+            let ids: String =
+                (0..x::selected_count(e)).map(|i| format!(" {}", h(O::SelectedUnitId, e, &[i]) as c_ulong)).collect();
             out.push(format!("  selection{ids}"));
         }),
         "rotate" => Box::new(|_: &mut Vec<String>| {
@@ -828,10 +828,12 @@ pub fn step(w: &[String]) -> Step {
                 },
                 _ => unsafe {
                     if flags & 2 != 0 {
-                        x::ee_screens_wall_cancel(h(O::UnitBuildWall, s, &[]) as usize as *mut _); // EndWall
+                        x::ee_screens_wall_cancel(h(O::UnitBuildWall, s, &[]) as usize as *mut _);
+                        // EndWall
                     }
                     if x::ee_screens_seun_get(x::unit_tab(), SEUN_GET_FLAGS) & 4 != 0 {
-                        x::ee_screens_gate_cancel(h(O::UnitBuildGate, s, &[]) as usize as *mut _); // EndGate
+                        x::ee_screens_gate_cancel(h(O::UnitBuildGate, s, &[]) as usize as *mut _);
+                        // EndGate
                     }
                 },
             }
@@ -963,7 +965,13 @@ pub fn step(w: &[String]) -> Step {
         }),
         "gameview" => Box::new(|_: &mut Vec<String>| {
             // gameview L T R B HIDDEN: the form's SetGameView
-            x::form_call(x::editor(), EE_SCREENS_SEFM_SET_GAME_VIEW, i32::from(l(5) != 0), 0, Some(&[f(1), f(2), f(3), f(4)]));
+            x::form_call(
+                x::editor(),
+                EE_SCREENS_SEFM_SET_GAME_VIEW,
+                i32::from(l(5) != 0),
+                0,
+                Some(&[f(1), f(2), f(3), f(4)]),
+            );
         }),
         "trigreport" => Box::new(|out: &mut Vec<String>| d::trigger_report(w1 == "setup", out)),
         "terrainstate" => Box::new(|out: &mut Vec<String>| d::terrain_digest(out)),
