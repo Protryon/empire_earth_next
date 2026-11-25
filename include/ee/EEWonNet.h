@@ -22,8 +22,8 @@ class UITextLabel;
 
 struct EeWonAuthCtx; // rust/ee_won.h (authobj.rs: AuthContext)
 struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
-struct EeWonDirList; // rust/won_net/dirlist.h (a directory listing)
 #include "rust/won_net/ipobj.h" // IPAddr's value (ipobj.rs) and EeWonAddr (servctx.rs)
+#include "rust/won_net/dirlist.h"
 #include "ee/wonapi/WONStringCompare.h" // WStringToString and the other string utilities
 namespace WONAPI {
 
@@ -245,20 +245,20 @@ class CDKey; // ee/wonapi/WONAuthContext.h
 
 // A directory listing (R6 WON round 34): DirEntity (0x7c bytes: ctor 2f0190, dtor 2f0290, GetNetAddrAsIP 2f0400), its
 // data objects and ACLs and the DirEntityList of SmartPtrs are Rust's (rust/crates/ee_won_net/src/dirlist.rs); this
-// owns one Rust list (moved, never copied) and reads its entities by index (WONDir/DirEntityReplyParser.cpp).
+// owns one Rust list (moved, never copied) and reads its entities by index (the texts: WONRouting.h).
 class DirList {
 public:
-    explicit DirList(EeWonDirList* inList = NULL); // takes the list; NULL: a new empty one
+    explicit DirList(EeWonDirList* inList = NULL) : mList(inList != NULL ? inList : ee_won_dirlist_new()) {} // NULL: a new one
     DirList(DirList&& inOther) : mList(inOther.mList) { inOther.mList = NULL; }
     DirList& operator=(DirList&& inOther) { std::swap(this->mList, inOther.mList); return *this; }
-    ~DirList();
-    size_t size() const;
+    ~DirList() { ee_won_dirlist_free(this->mList); }
+    size_t size() const { return ee_won_dirlist_len(this->mList); }
     bool empty() const { return this->size() == 0; }
-    void clear();
-    void Keep(const DirList& inFrom, size_t inIndex); // push_back(inFrom's entity)
+    void clear() { ee_won_dirlist_clear(this->mList); }
+    void Keep(const DirList& inFrom, size_t inIndex) { ee_won_dirlist_keep(this->mList, inFrom.mList, inIndex); } // push_back
     std::wstring Name(size_t inIndex) const; // mName
     std::wstring DisplayName(size_t inIndex) const; // mDisplayName
-    IPAddr Addr(size_t inIndex) const; // GetNetAddrAsIP()
+    IPAddr Addr(size_t inIndex) const { return IPAddr::FromValue(ee_won_dirlist_addr(this->mList, inIndex)); } // GetNetAddrAsIP()
     EeWonDirList* get() const { return this->mList; }
 private:
     DirList(const DirList&);

@@ -1,6 +1,6 @@
 // ee/wonapi/WONAuthContext.h: WONAPI's CDKey and AuthContext, moved from ee/EEWonNet.h (which declares them only) in
 // net round 26 and made shims over ee_won whose forwarders are here; included at the end of WONRouting.h. What needs
-// the platform layer (the registry and file storage, the WON directory) is WONAuth/AuthContext.cpp's.
+// the classes below it (Init: the certificate op and the server list) is WONRouting.h's, after them.
 #ifndef EE_WONAPI_WONAUTHCONTEXT_H
 #define EE_WONAPI_WONAUTHCONTEXT_H
 #include "platform/PlatMessage.h" // PlatSystemMachineId
@@ -19,7 +19,7 @@ inline const uint8_t* WonBytes(const std::string& inText) { return reinterpret_c
 // uses the new encryption method and the old method's notice did nothing.)
 class CDKey {
 protected:
-    static const char* mCDKeyPath; // genuine SDK static default registry path, no instance layout
+    static constexpr const char* mCDKeyPath = "SOFTWARE\Sierra\CDKeys"; // the WON SDK's default registry path
 public:
     CDKey() : mKey(ee_won_cdkey_obj_new(NULL, 0)) {} //2e3090: an empty, invalid key
     CDKey(const std::string& inProduct) : mKey(ee_won_cdkey_obj_new(WonBytes(inProduct), inProduct.size())) {}
@@ -65,7 +65,10 @@ private:
 // reference to it; every method forwards. The flow's calls back are Rust's since net round 26 (authcpp.rs, over the
 // core table: AuthContextFlow is gone).
 class AuthContext : public RefCount {
-    void Init(); //2ddb70 original private SDK initializer (AuthContext.cpp: the WON directory's files)
+    // 2ddb70: the Rust object (authcpp.rs ee_won_authctx_new_default: the login secrets in the WON directory, a new
+    // server list, the directory's verifier key) with the certificate op maker (WONRouting.h)
+    void Init();
+    static void* NewCertOp(void* inContext);
 public:
 protected:
     virtual ~AuthContext() { ee_won_authctx_free(this->mCore); } //2de370, scalar2ddf90/30; genuine SDK protected access

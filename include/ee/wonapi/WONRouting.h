@@ -59,6 +59,11 @@ enum AsyncRunMode { OP_MODE_ASYNC=1, OP_MODE_BLOCK=2 }; //32-bit enum (WON SDK)
 typedef long RoutingOpType;
 enum AuthType { AUTH_TYPE_NONE=0, AUTH_TYPE_SESSION=1, AUTH_TYPE_PERSISTENT=2, AUTH_TYPE_PERSISTENT_NOCRYPT=3 };
 
+inline std::wstring DirList::Name(size_t inIndex) const
+{ std::wstring s; ee_won_dirlist_text(this->mList, inIndex, EeWonDirText::Name, WonWideSink, &s); return s; }
+inline std::wstring DirList::DisplayName(size_t inIndex) const
+{ std::wstring s; ee_won_dirlist_text(this->mList, inIndex, EeWonDirText::DisplayName, WonWideSink, &s); return s; }
+
 // the status text (ee_won's status table; WONStatus.cpp, 0x29deb0, is deleted): a WS_ name, or a number valid until
 // this thread's next unnamed status
 inline const char* WONStatusToString(WONStatus inStatus) { return ee_won_status_text(inStatus); }
@@ -707,6 +712,7 @@ private:
 #include "rust/won_net/httpget.h"
 #include "rust/won_net/reqhost.h"
 #include "rust/won_net/reqmake.h"
+#include "rust/won_net/authcpp.h"
 namespace WONAPI {
 // An op of the Rust op base (rust/crates/ee_won_net/src/hostop.rs): its members and steps are the Rust op's
 // (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url;
@@ -815,6 +821,10 @@ private:
     EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
+inline void* AuthContext::NewCertOp(void* inContext) // the certificate op the auth flow makes (authcpp.rs)
+{ return static_cast<RefCount*>(static_cast<AsyncOp*>(RustServerOp::NewGetCert(static_cast<AuthContext*>(static_cast<RefCount*>(inContext))))); }
+inline void AuthContext::Init()
+{ this->mCore = ee_won_authctx_new_default(static_cast<RefCount*>(this), WonCore(), NewCertOp, static_cast<RefCount*>(new ServerContext)); }
 // HTTPSession's calls (2d27b0, 2d28f0: an HTTP get op on its host's connection, made at the first use; 2d2bc0: every
 // connection's requests killed); a connection's are the Rust's own (httpcpp.rs)
 inline HTTPSession* HttpSessionNew() { return new WonRustRef(EeWonCoreObject::HttpSession); }

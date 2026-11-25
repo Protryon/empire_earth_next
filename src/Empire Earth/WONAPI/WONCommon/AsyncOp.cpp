@@ -177,5 +177,9 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreAddToSocketThread,CoreBytesAdopt,NULL /* the transform: cppcore.rs n_transform */,
                                         CoreSocketDuplicate,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
+// the Rust objects' maker of a Rust op's C++ op (cppcore.rs new_host_op: the peer auth and HTTP get ops a Rust op
+// makes, GameSpySupport's service lookup; ServerOp.cpp's until R6 WON lobby and network round 38)
+static void* NewHostOp(EeWonHostOp* inOp) { return static_cast<RefCount*>(static_cast<AsyncOp*>(new RustServerOp(inOp))); }
+[[maybe_unused]] static const bool sHostOpMaker = (ee_won_core_set_new_host_op(NewHostOp), true);
 
 }
