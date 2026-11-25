@@ -414,7 +414,10 @@ pub unsafe extern "C" fn ee_data_rules_set_music_from_flags(
 /// # Safety
 /// `rules` live.
 #[no_mangle]
-pub unsafe extern "C" fn ee_data_rules_ai_level(rules: *const EeDataRules, difficulty: std::ffi::c_ulong) -> std::ffi::c_long {
+pub unsafe extern "C" fn ee_data_rules_ai_level(
+    rules: *const EeDataRules,
+    difficulty: std::ffi::c_ulong,
+) -> std::ffi::c_long {
     let r = &*rules;
     match r.rules.game_options.difficulties.get(difficulty as usize) {
         Some(d) => d.ai_level as std::ffi::c_long,
