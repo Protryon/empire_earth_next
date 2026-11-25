@@ -59,7 +59,7 @@
 #include "ee/EEMapDimensions.h"
 #include "rust/sim/units.h"
 
-static_assert(sizeof(GERectangle) == 4 * sizeof(float), "GetBounds hands Rust the rectangle's four floats");
+static_assert(sizeof(GERectangle) == 4 * sizeof(float) && offsetof(U2DRectangle<long>, mBottom) == 0 && offsetof(U2DRectangle<long>, mTop) == 3 * sizeof(long), "GetBounds hands Rust the rectangle's four floats; AREA_OUTLINES reads rectangles as bottom, left, right, top");
 
 // EEAIContinentManager::GetPathAreaIDAt (inline, its out-of-line COMDAT 0x208334 follows this unit's template
 // block): the path area's id at inTile, 0 if none. The ternary is unsigned short on both arms.
@@ -151,14 +151,7 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_GROUP_OP_PATH_AREA_AT: return gContinentManager.GetPathAreaIDAt((long)inC, (long)inD);
     // the path requests (their request, cancel, references, fields, save, load and the loaded ones' waits) and
     // the terrain flags: Rust (group_host.rs over ee_sim::astar request.rs)
-    case EE_UNITS_GROUP_OP_SET_GROUP_PATH: {
-        const float* thePoints = static_cast<const float*>(io->list);
-        std::vector<GE3DPoint> thePoints3;
-        for (size_t i = 0; i < io->len; i++)
-            thePoints3.push_back(GE3DPoint(thePoints[3 * i], thePoints[3 * i + 1], thePoints[3 * i + 2]));
-        theUnit->SetGroupPathGoals(thePoints3);
-        return 0;
-    }
+    // (SetGroupPathGoals: group_host.rs over waypoints.rs)
     case EE_UNITS_GROUP_OP_CLEAR_BUILD_TARGETS: theUnit->ClearBuildTargets();
         return 0;
     case EE_UNITS_GROUP_OP_TIME: return (int64_t)(long)TMGetTime();
@@ -194,30 +187,16 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_GROUP_OP_CLEAR_AREAS: gWorld.mMap->ClearU1955DC();
         return 0;
     case EE_UNITS_GROUP_OP_AREA_OUTLINES: {
-        const int64_t* theAreas = static_cast<const int64_t*>(io->list);
-        const unsigned short* theContinentIDs = static_cast<const unsigned short*>(io->list2);
-        std::vector<U2DRectangle<long> > theRectangles;
-        std::vector<unsigned short> theContinents;
-        for (size_t i = 0; i < io->len; i++) {
-            U2DRectangle<long> theArea;
-            theArea.mLeft = (long)theAreas[4 * i];
-            theArea.mRight = (long)theAreas[4 * i + 1];
-            theArea.mTop = (long)theAreas[4 * i + 2];
-            theArea.mBottom = (long)theAreas[4 * i + 3];
-            theRectangles.push_back(theArea);
-            theContinents.push_back(theContinentIDs[i]);
-        }
+        std::vector<U2DRectangle<long> > theRectangles(static_cast<const U2DRectangle<long>*>(io->list), static_cast<const U2DRectangle<long>*>(io->list) + io->len);
+        std::vector<unsigned short> theContinents(static_cast<const unsigned short*>(io->list2), static_cast<const unsigned short*>(io->list2) + io->len);
         gWorld.mMap->BuildAreaOutlines(theRectangles, theContinents);
         return 0;
     }
     case EE_UNITS_GROUP_OP_AREA_EFFECT_RADIUS: io->f = gAEManager.mTemplates[inC]->mRadius;
         return 0;
-    case EE_UNITS_GROUP_OP_AFTER_LOAD: {
-        // at the first tick (the units are back), before the graph searches are resolved (EEAfterLoadLast)
-        void* theSaved = reinterpret_cast<void*>(static_cast<uintptr_t>(inA));
-        EEAfterLoad([theSaved]() { ee_units_group_restore_saved(theSaved); });
+    // at the first tick (the units are back), before the graph searches are resolved (EEAfterLoadLast)
+    case EE_UNITS_GROUP_OP_AFTER_LOAD: EEAfterLoad([inA]() { ee_units_group_restore_saved(reinterpret_cast<void*>(static_cast<uintptr_t>(inA))); });
         return 0;
-    }
     }
     return 0;
 }

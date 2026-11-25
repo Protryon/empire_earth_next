@@ -6,10 +6,11 @@
 // A NULL entity (a scan code without a key) reads as released.
 #ifndef LLE_ISENTITY_H
 #define LLE_ISENTITY_H
+#include "lle/LLEForward.h"
 
 #include "rust/base/input.h"
 
-class ISEntity {
+class ISEntity : URustView {
 public:
     long GetValue() const { return ee_input_entity_value(Rust()); }                     // 1 held; an axis its motion
     long GetNormalizedValue() const { return ee_input_entity_normalized_value(Rust()); } // 0x7fff held; wheel notches
@@ -18,9 +19,6 @@ public:
     bool JustDoublePressed() const { return ee_input_entity_just_double_pressed(Rust()); }
     unsigned long GetIndex() const { return ee_input_entity_index(Rust()); }             // a key's scan code
     const char* GetName() const { return ee_input_entity_name(Rust()); }                 // UTF-8 ("A key")
-private:
-    ISEntity() = delete;
-    ~ISEntity() = delete;
     const EeInputEntity* Rust() const { return reinterpret_cast<const EeInputEntity*>(this); }
 };
 

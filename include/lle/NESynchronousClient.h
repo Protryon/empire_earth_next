@@ -14,8 +14,10 @@
 
 class LLE_API NESynchronousClient : public NESynchronousCommunications {
 public:
-    explicit NESynchronousClient(EeNetClHostFn inHost);   // the subclass's GameHost<Game> (below)
-    virtual ~NESynchronousClient();
+    // the subclass's GameHost<Game> (below); the client calls the protocol itself (ee_net ffi_protocol.rs)
+    explicit NESynchronousClient(EeNetClHostFn inHost)
+        { this->mClient = ee_net_cl_new(this, inHost, NESynchronousClient::QueueHost, this->mComms, true); }
+    virtual ~NESynchronousClient() { ee_net_cl_free(this->mClient); }
 
     NEConnection* GetConnection() const { return static_cast<NEConnection*>(ee_net_cl_connection(this->mClient)); }
     unsigned long GetCurrentPhysicsTick() const { return ee_net_cl_current_physics_tick(this->mClient); }
@@ -38,13 +40,7 @@ public:
     void SetMySendToSlot(unsigned char inSlot) { ee_net_cl_set_my_send_to_slot(this->mClient, inSlot); }
 
     long Connect(const UString& inName, const UString& inHost, const UWideString& inAddress)
-    {
-        const char* theAddress = inAddress;
-        EeNetClStrings theStrings = {reinterpret_cast<const uint8_t*>(static_cast<const char*>(inName)), inName.GetLength(),
-                                     reinterpret_cast<const uint8_t*>(static_cast<const char*>(inHost)), inHost.GetLength(),
-                                     reinterpret_cast<const uint8_t*>(theAddress), strlen(theAddress)};
-        return ee_net_cl_connect(this->mClient, &theStrings);
-    }
+        { return ee_net_cl_connect_text(this->mClient, inName, inHost, inAddress); }
     long Disconnect() { return ee_net_cl_disconnect(this->mClient); }
     long GetDetectedGame(unsigned long inIndex, UString& outName, UString& outHost, UWideString& outAddress)
     {
@@ -57,7 +53,6 @@ public:
     void StartThreads() { ee_net_cl_start_threads(this->mClient); }
     void StopThreads() { ee_net_cl_stop_threads(this->mClient); }
 
-protected:
     // The client's calls out to the game (the original's pure virtuals, slots +0x24..+0x58; LLE round 13: the
     // subclass's members by name), then the engine's (Host): the subclass passes GameHost<itself> to the constructor
     template <class Game> static Game* As(void* inClient) { return static_cast<Game*>(static_cast<NESynchronousClient*>(inClient)); }
@@ -82,7 +77,6 @@ protected:
     // the client's calls out to the engine (ee_net's EeNetClOp): the protocol, the messages, the base class's fields
     static ptrdiff_t Host(void* inClient, EeNetClOp inOp, size_t a, size_t b, size_t c, size_t d);
 
-private:
     // the lag simulator's and the recorder's common calls out (ee_net's EeNetQOp)
     static ptrdiff_t QueueHost(void* inClient, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
         { return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d); }

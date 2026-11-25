@@ -7,8 +7,7 @@
 #define EE_EEUIFMGSTATUSBAR_H
 #include "rust/game/screens.h"
 
-class UITextLabel;
-class UILayoutUtility;
+#include "lle/LLEForward.h"
 
 class EEUIFMGStatusBar : public EEUIBUpgrade, public EeScreensStatusBarFields {
 public:

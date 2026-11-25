@@ -12,31 +12,6 @@
 #include "rust/net/net.h"
 #include "platform/PlatSim.h"
 
-// Creates the game server on protocol 0 and publishes it as "EEService"; on failure stops with no threads/events
-NESynchronousServer::NESynchronousServer(EeNetSvHostFn inHost, EeNetMmHostFn inMessageManagerHost, unsigned char inMaxPlayers, unsigned long inDefaultSendInterval, unsigned char inPTsPerCT,
-                                         unsigned long inMaxPhysicsTicksPerSecond, unsigned long inMinPhysicsTicksPerSecond, float inPhysicsTickCostFactor, unsigned long inMaxSendInterval,
-                                         unsigned long inSendIntervalIncrement, unsigned long inSendIntervalDecrement,
-                                         unsigned long inCurrentCommunicationsTick,
-                                         unsigned long inCurrentPhysicsTick, UWideString& inName, bool inAllowNewConnections,
-                                         bool inAnnounce, unsigned long inNetworkAdapter)
-    : NESynchronousCommunications(inCurrentCommunicationsTick)
-{
-    // the server calls the protocol itself (ee_net ffi_protocol.rs): Publish's name, announcement and adapter
-    this->mServer = ee_net_sv_new_game(this, inHost, inMessageManagerHost,
-                                     NESynchronousServer::QueueHost, this->mComms, inMaxPlayers, inDefaultSendInterval,
-                                     inPTsPerCT, inMaxPhysicsTicksPerSecond, inMinPhysicsTicksPerSecond,
-                                     inPhysicsTickCostFactor, inMaxSendInterval, inSendIntervalIncrement,
-                                     inSendIntervalDecrement, inCurrentCommunicationsTick, inCurrentPhysicsTick,
-                                     static_cast<const char*>(inName), inAllowNewConnections, inAnnounce,
-                                     inNetworkAdapter);
-}
-
-// Destroys the server: frees events, threads, locks and the recorder, then closes the published server
-NESynchronousServer::~NESynchronousServer()
-{
-    ee_net_sv_free(this->mServer);
-}
-
 // ---- the calls out
 
 // The message manager's calls out that reach the C++ (ee_net msgmgr.rs; the server's own fields, the forced tick and

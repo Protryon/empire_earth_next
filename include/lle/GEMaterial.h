@@ -8,7 +8,7 @@
 
 #include "rust/render/ge.h"   // the material (ee_ge smallobj.rs)
 
-class GETexture;
+#include "lle/LLEForward.h"
 
 class LLE_API GEMaterial : public UReferenceCounter {
 public:
@@ -37,17 +37,11 @@ public:
         return ee_ge_mat_size_of(this->mRust, sizeof(Layout), sizeof(UString), sizeof(GETexture*), sizeof(unsigned long));
     }
     EeGeMat* GetRust() const { return this->mRust; }
-protected:
     virtual ~GEMaterial() { ee_ge_mat_destroy(this->mRust); }
-private:
-    friend class GEModel;                   // AllocateInternalData news materials
-    friend struct GEStoreDigest;            // tools/eemodel/storegate
     GEMaterial(unsigned long inScreenCount = 1, unsigned long inLODCount = 1)
         : mRust(ee_ge_game_mat_new(this, inScreenCount, inLODCount)) {}
-    GEMaterial(const GEMaterial&) = delete;
-    GEMaterial& operator=(const GEMaterial&) = delete;
 
-    EeGeMat* mRust;                         // the material (ee_ge smallobj.rs)
+    URust<EeGeMat> mRust;                         // the material (ee_ge smallobj.rs)
 };
 
 #endif

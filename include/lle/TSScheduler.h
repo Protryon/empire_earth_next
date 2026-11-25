@@ -7,9 +7,7 @@
 
 #include "lle/TSCriticalSection.h"
 
-class TSEvent;
-class TSReadWriteLock;
-class TSThread;
+#include "lle/LLEForward.h"
 
 // Starts the thread system: registers its shutdown (destroys the calling thread's object), then the calling (main)
 // thread as a thread object (Thread System.cpp in the original)

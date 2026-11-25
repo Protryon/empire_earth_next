@@ -1830,7 +1830,6 @@ shims! {
     fn tp_ce_lines_add(text: EeScreensShimText) = ee_screenscpp_tp_ce_lines_add;
     fn tp_ce_lines_append(form: usize, control: u32) = ee_screenscpp_tp_ce_lines_append;
     fn tp_ce_bg_equals(form: usize, index: u32, text: EeScreensShimText) -> bool = ee_screenscpp_tp_ce_bg_equals;
-    fn tp_ce_translate(text: EeScreensShimText) = ee_screenscpp_tp_ce_translate;
     fn tt_pdcs_civ_name_id(index: u32) -> u32 = ee_screenscpp_tt_pdcs_civ_name_id;
     fn tt_pdcs_civ_file(index: u32, out: EeScreensShimOut) = ee_screenscpp_tt_pdcs_civ_file;
     fn tt_spec_installed_directory(spec: usize) = ee_screenscpp_tt_spec_installed_directory;
@@ -1906,7 +1905,6 @@ shims! {
     fn rc_le_start_ping() = ee_screenscpp_rc_le_start_ping;
     fn rc_le_rule(which: u32, arg: u32) -> u32 = ee_screenscpp_rc_le_rule;
     fn rc_go_request_pause() = ee_screenscpp_rc_go_request_pause;
-    fn rc_go_briefing() = ee_screenscpp_rc_go_briefing;
     fn rc_go_exit() = ee_screenscpp_rc_go_exit;
     // EEUIFMainGame.cpp's host whole (main_form_calls.rs)
     fn mf_gate_direction(rec: usize) -> i64 = ee_screenscpp_mf_gate_direction;
@@ -3190,4 +3188,19 @@ shims! {
     fn mff_error_set(form: usize, index: u32, text: usize) = ee_screenscpp_mff_error_set;
     fn mff_strings_changed(form: usize) = ee_screenscpp_mff_strings_changed;
     fn mff_error_leave(form: usize) = ee_screenscpp_mff_error_leave;
+    // the free UI helpers' (ui_helpers.rs; EEScreens.cpp, EEUIManager.cpp)
+    fn uh_translate(text: EeScreensShimText, id: u32, reference: bool) = ee_screenscpp_uh_translate;
+    fn uh_form(id: u32) -> usize = ee_screenscpp_uh_form;
+    fn uh_comms_started() -> bool = ee_screenscpp_uh_comms_started;
+    fn uh_comms_multiplayer() -> bool = ee_screenscpp_uh_comms_multiplayer;
+    fn uh_has_scenario() -> bool = ee_screenscpp_uh_has_scenario;
+    fn uh_is_campaign() -> bool = ee_screenscpp_uh_is_campaign;
+    fn uh_intro_media_copy() = ee_screenscpp_uh_intro_media_copy;
+    fn uh_intro_media_prefix() = ee_screenscpp_uh_intro_media_prefix;
+    fn uh_intro_has_media() -> bool = ee_screenscpp_uh_intro_has_media;
+    fn uh_intro_set_loading_from_game(value: bool) = ee_screenscpp_uh_intro_set_loading_from_game;
+    fn uh_intro_set_in_game(value: bool) = ee_screenscpp_uh_intro_set_in_game;
+    fn uh_switch_to_form(form: usize) = ee_screenscpp_uh_switch_to_form;
+    fn uh_in_game_form() -> bool = ee_screenscpp_uh_in_game_form;
+    fn uh_post_screen_shot(size: i32, plain: bool) = ee_screenscpp_uh_post_screen_shot;
 }

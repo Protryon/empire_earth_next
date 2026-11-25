@@ -6,6 +6,7 @@
 // members are the Rust manager's now (see the class). Requires lle/UIForm.h (CreateForm).
 #ifndef LLE_UIMANAGER_H
 #define LLE_UIMANAGER_H
+#include "lle/LLEForward.h"
 
 #include <stdint.h>
 
@@ -44,8 +45,6 @@ public:
     {
         ee_ui_manager_start(this->mRust);
     }
-    UIManager(const UIManager&) = delete;   // holds a Rust object; nothing copied a manager
-    UIManager& operator=(const UIManager&) = delete;
     // Destroys the UI manager: stops the music, frees the locks, texture, bitmaps, forms, hot keys, IME window and database
     virtual ~UIManager() { ee_ui_manager_destroy(this->mRust); }
     // Marks a rectangle dirty: on the top form directly, else on that form and every visible form above that overlaps it
@@ -185,7 +184,7 @@ public:
     intptr_t CallRect(EeUiManagerCall inCall, intptr_t inA, const GERectangle& inRectangle) const { return this->Call(inCall, inA, 0, 0, UIF4(inRectangle)); }
     intptr_t CallPoint(EeUiManagerCall inCall, float inX, float inY) const { return this->Call(inCall, 0, 0, 0, UIF4(inX, inY)); }
 
-    EeUiManager* mRust;                     // the state (managerobj.rs)
+    URust<EeUiManager> mRust;                     // the state (managerobj.rs)
     // (the original's sMouseLeftHanded is Rust's: ee_ui lle_manager.rs, ee_ui_mouse_left_handed)
 };
 

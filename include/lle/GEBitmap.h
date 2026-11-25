@@ -14,9 +14,7 @@
 #include "rust/base/math.h"   // the bitmap (ee_ge bmpobj.rs), its host's EeGeBmpOp
 #include "rust/render/ge.h"
 
-class GETexture;
-class GEVertexArray;
-class GETextureCoordinate;
+#include "lle/LLEForward.h"
 
 class LLE_API GEBitmap : public UReferenceCounter {   // sizeof 0x30 (vector deleting dtor 0xf923)
 public:
@@ -66,15 +64,12 @@ public:
     void SetZ(float inZ) { this->SetZPerVertex(inZ, inZ, inZ, inZ); }
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
         { ee_ge_bmp_set_values(this->mRust, true, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
-    GEBitmap(const GEBitmap&) = delete;
-    GEBitmap& operator=(const GEBitmap&) = delete;
     EeGeBitmap* GetRust() const { return this->mRust; }
-private:
     virtual ~GEBitmap() { ee_ge_bmp_destroy(this->mRust); }   // the vertex array deleted, every screen's texture released
     static const EeGeRectangle* R(const GERectangle& inRectangle) { return reinterpret_cast<const EeGeRectangle*>(&inRectangle); }
     // (ComputeRotation 0x1000fbb9 is the Rust object's; the calls on other objects are GEVertexHost's, lle/GELine.h)
 
-    EeGeBitmap* mRust;                      // the bitmap (ee_ge bmpobj.rs)
+    URust<EeGeBitmap> mRust;                      // the bitmap (ee_ge bmpobj.rs)
 };
 
 #endif

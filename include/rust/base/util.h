@@ -88,6 +88,16 @@ long ee_uconfig_get_flag(const char *block,
                          const char *key,
                          bool *out);
 
+/// `UConfig::GetValue(block, key, UWideString&)`: the key's text (at most 1023 bytes) handed to `assign` (the C++
+/// string's assignment) and kErrorOK, or kErrorNotFound (the string left) when the key holds none.
+///
+/// # Safety
+/// As `PlatConfigGetString`; `assign` takes `target` and a NUL-terminated text.
+long ee_uconfig_get_text(const char *block,
+                         const char *key,
+                         void (*assign)(void*, const char*),
+                         void *target);
+
 /// `UMGetFloatingPointPrecision`: `_PC_53`.
 unsigned long ee_util_fp_precision();
 
@@ -99,6 +109,10 @@ unsigned long ee_util_fp_rounding();
 
 /// `UMSetFloatingPointRoundingMode`.
 void ee_util_fp_set_rounding(unsigned long mode);
+
+/// The engines' check before a tick (the network's FpuCheck, the sound manager's): 53-bit precision and
+/// round-to-nearest, each set only when it is not the current one.
+void ee_util_fp_check();
 
 extern uint32_t _controlfp(uint32_t new_, uint32_t mask);
 

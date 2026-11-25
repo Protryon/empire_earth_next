@@ -39,12 +39,6 @@ template <class T> static T* EECPRCObject(uint64_t inHandle)
     return reinterpret_cast<T*>((uintptr_t)inHandle);
 }
 
-// the squared distance to another unit (0x8bdb4; ee_sim::cp place_world.rs distance_squared_to_unit)
-float EEComplexUnit::DistanceSquaredToUnit(EEUnit* inOther)
-{
-    return ee_cp_distance_squared_to_unit(EECPRCHandle(static_cast<EEUnit*>(this)), EECPRCHandle(inOther));
-}
-
 // The centres' world (ee_sim::cp::place_game's EE_CP_CENTER_* operations; `inA`, `inB` units): the references, the
 // area effects
 extern "C" int64_t ee_cp_center_host(const EeCpPlaceCtx* inContext, int32_t inOp, uint64_t inA, uint64_t inB,

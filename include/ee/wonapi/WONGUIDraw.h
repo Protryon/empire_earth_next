@@ -118,39 +118,9 @@ inline void WONMsPaint(Graphics& g, const EeWonMsPaint& p, MSButtonBase* text = 
                [&](const EeWonDrawOp& o) { if (text != NULL && o.a == EE_WON_MSPAINT_CALL_TEXT) text->DrawButtonText(g, o.b, o.c); });
 }
 
-// the font measures a plan asks for (Font::GetStringWidth over a text, GetCharacterWidth of one of its units or
-// of 'M')
-struct WONDrawMeasure {
-    Font* mFont;
-    const GUIString* mText;
-    static int32_t StringWidth(void* ctx, int32_t offset, int32_t length)
-    {
-        WONDrawMeasure* m = (WONDrawMeasure*)ctx;
-        return m->mFont->GetStringWidth(*m->mText, (unsigned short)offset, (unsigned short)length);
-    }
-    static int32_t CharWidth(void* ctx, int32_t index)
-    {
-        WONDrawMeasure* m = (WONDrawMeasure*)ctx;
-        return m->mFont->GetCharacterWidth(index < 0 ? 'M' : (*m->mText)[index]);
-    }
-    EeWonTextMeasure Get()
-    {
-        EeWonTextMeasure r;
-        r.ctx = this;
-        r.string_width = &WONDrawMeasure::StringWidth;
-        r.char_width = &WONDrawMeasure::CharWidth;
-        return r;
-    }
-};
+// (the font measures a wrapped text's plan asks for are wrapobj.rs's, over platfont.rs: R6 WON GUI round 36)
 
-inline EeWonSelColor WONDrawSelOf(const SelectionColor& s)
-{
-    EeWonSelColor r;
-    r.background = (uint32_t)s.mBackgroundColor;
-    r.foreground = (uint32_t)s.mForegroundColor;
-    r.mode = (int32_t)s.mMode;
-    return r;
-}
+inline EeWonSelColor WONDrawSelOf(const SelectionColor& s) { return s; } // (the Rust record itself)
 
 }
 #endif

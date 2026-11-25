@@ -4,7 +4,7 @@
 
 #include "lle/GERust.h"
 
-class FSFileSpec;
+#include "lle/LLEForward.h"
 
 class GETextureCoordinate {         // sizeof 8: u, v
 public:

@@ -12,7 +12,7 @@
 #include <string.h>
 #include <ctype.h>
 
-class FSFile;
+#include "lle/LLEForward.h"
 
 // port (decision D6): game text is UTF-8. A string a file gives UString::Load or UWideString::Load is converted from
 // Windows-1252 when it is not well-formed UTF-8, or always while a file written before the switch loads (a save of
@@ -85,10 +85,6 @@ public:
     bool NestedTokenize(const UString& inSeparators, const UString& inBrackets,
                         std::vector<UString>& outTokens) const
         { return ee_ustring_tokens(&this->mState, &inSeparators.mState, &inBrackets.mState, &outTokens, PushToken); }
-private:
-    friend UString operator+(const UString& inLeft, const UString& inRight);
-    friend UString operator+(const UString& inLeft, const char* inRight);
-    template <class... A> friend long sprintf(UString& outString, const char* inFormat, A... inArguments);   // sets mLength
 
     enum Unset { kUnset };                  // a result the Rust side initialises
     explicit UString(Unset) {}

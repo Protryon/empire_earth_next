@@ -168,6 +168,7 @@ pub mod tile_sight_host;
 pub mod town_save;
 pub mod town_split;
 pub mod turret;
+pub mod u12a_small;
 pub mod uai_cond;
 pub mod uc_anim;
 pub mod uc_body;

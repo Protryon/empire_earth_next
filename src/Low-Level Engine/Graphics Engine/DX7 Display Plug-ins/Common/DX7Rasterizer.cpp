@@ -68,50 +68,12 @@ intptr_t DX7RasterizerHost(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_
 }
 
 
-// The members of GERasterizer that need a complete GE type (the rest are inline in lle/GERasterizer.h)
-long GERasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
-                                  unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat)
-{
-    return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->GetWidth(), inWindow->GetHeight(), inBackBuffers,
-                                   inZBuffer, inZBufferFormat);
-}
-
-GEPolygonArray* GERasterizer::CreatePolygonArray(unsigned long inCount) { return new GEPolygonArray(inCount); }
-
-GEVertexArray* GERasterizer::CreateVertexArray(unsigned long inType, unsigned long inCount)
-{
-    return inType <= 1 ? new GEVertexArray(inType, inCount) : NULL;
-}
-
-long GERasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen) { return ee_dx7r_draw_bitmap(this->mDX7, inScreen, inBitmap->GetRust()); }
-
 // the primitives are their Rust objects (one pointer each: the draws walk the C++ arrays, ee_dx7 draw_ffi.rs)
 static_assert(sizeof(GELine) == sizeof(void*) && sizeof(GEPoint) == sizeof(void*) && sizeof(GERhombus) == sizeof(void*),
               "ee_ge prim.rs");
 
-long GERasterizer::Draw(GEText* inText, GESurface* inTarget) { return ee_dx7r_draw_text(inText, NULL, *inTarget); }
-
-long GERasterizer::Draw(GEText* inText, const GERectangle& inRectangle, GESurface* inTarget)
-{
-    return inText->GetFont()->GetFontBitmap() != NULL
-               ? inText->GetFont()->GetFontBitmap()->Draw(inText, inRectangle, this, 0)
-               : ee_dx7r_draw_text_clipped(inText, reinterpret_cast<const float(*)[4]>(&inRectangle), *inTarget);
-}
-
-long GERasterizer::Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVertexArray& inVertices,
-                        unsigned long inVertexCount, GETexture* inTexture, unsigned long inScreen, bool inSorted)
-{
-    return ee_dx7r_draw_polygon_array(this->mDX7, inScreen, inPolygons.GetIndices(), inCount, inVertices.GetType(),
-                                      inVertices.GetVertices(), inVertexCount, inTexture);
-}
-
 static_assert(sizeof(std::pair<GE3DPoint, float>) == 16, "ee_dx7/src/draw_model.rs draw_3d_line: (x, y, z, advance)");
 static_assert(sizeof(std::pair<U2DPoint<long>, U2DPoint<long> >) == 4 * sizeof(long), "ee_dx7 draw_terrain grid lines");
-
-long GERasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
-{
-    return ee_dx7r_draw_terrain(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic);
-}
 
 // ---- the screens, surfaces and movies (DX7Trampolines.cpp, folded here in R4.3 part 17): their objects' hosts and
 // constructors, and the layouts Rust fills

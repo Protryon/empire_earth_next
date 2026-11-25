@@ -55,19 +55,6 @@
 #include "ee/EEUnitHandle.h"
 #include "rust/sim/units.h"
 
-// New (R5a.4/R5a.6): the typed halves of EEUnitHandle (ee/EEUnitHandle.h), which need the complete classes; the
-// registry and the RTSUnit halves are in RTSUnit.cpp
-uint32_t EEUnitHandleID(const EEUnit* inUnit) { return EEUnitHandleID(static_cast<const RTSUnit*>(inUnit)); }
-uint32_t EEUnitHandleID(const EEComplexUnit* inUnit) { return EEUnitHandleID(static_cast<const RTSUnit*>(inUnit)); }
-void EEUnitHandleResolve(uint32_t inUnitID, EEUnit*& outUnit)
-{
-    outUnit = static_cast<EEUnit*>(RTSResolveUnitID(inUnitID));
-}
-void EEUnitHandleResolve(uint32_t inUnitID, EEComplexUnit*& outUnit)
-{
-    outUnit = static_cast<EEComplexUnit*>(static_cast<EEUnit*>(RTSResolveUnitID(inUnitID)));
-}
-
 // Creates a simple unit of inClass for inPlayer at tile (inX, inY)
 EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
 {
@@ -79,9 +66,7 @@ EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPla
 // Returns the centre of the unit's tile at ground height
 void EEUnit::GetPosition(GE3DPoint& outPosition)
 {
-    outPosition.SetX(this->mTileX + 0.5f);
-    outPosition.SetY(this->mTileY + 0.5f);
-    outPosition.SetZ(this->mTile->mHeight);
+    outPosition = GE3DPoint(this->mTileX + 0.5f, this->mTileY + 0.5f, this->mTile->mHeight);
 }
 
 // Turns the loaded health fraction into hit points (at least 1 if the fraction was not 0; port, R5b.4 round 27:
@@ -99,9 +84,7 @@ static long sHitAreaDamage;
 static long sHitDamage;
 static EeCombatHitPointsOut sHitOut;
 // Kill's death sound parameters (its locals)
-static float sDeathVolume;
-static float sDeathPan;
-static float sDeathPitch;
+static float sDeathSound[3];   // volume, pan, pitch
 // Describe's and DescribeLong's text (their theString)
 static UWideString sEuText;
 
@@ -234,10 +217,10 @@ extern "C" int64_t ee_units_eu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_EU_DEATH_EFFECT: gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mDeathEffect, NULL, 0, 0, 0); return 0;
     case EE_UNITS_EU_HAS_DEATH_SOUND: return theUnit->mStats->mDeathSound != NULL;
     case EE_UNITS_EU_DEATH_SOUND_PARAMETERS:
-        theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &sDeathVolume, &sDeathPan, &sDeathPitch);
+        theUnit->mUnitClass->GetSoundParameters(theUnit, theUnit->mStats->mDeathSound, &sDeathSound[0], &sDeathSound[1], &sDeathSound[2]);
         return 0;
     case EE_UNITS_EU_DEATH_SOUND_PLAY:
-        gSoundManager->Play(theUnit->mStats->mDeathSound->mSampleID, sDeathVolume, sDeathPan, sDeathPitch, theUnit->mStats->mDeathSound->mLooping, NULL);
+        gSoundManager->Play(theUnit->mStats->mDeathSound->mSampleID, sDeathSound[0], sDeathSound[1], sDeathSound[2], theUnit->mStats->mDeathSound->mLooping, NULL);
         return 0;
     case EE_UNITS_EU_SET_RESOURCE_AMOUNT: theUnit->mResourceAmount = (long)inB; return 0;
     case EE_UNITS_EU_SIGHT_ON_HERE: theUnit->SightOn(theUnit->mTileX, theUnit->mTileY); return 0;

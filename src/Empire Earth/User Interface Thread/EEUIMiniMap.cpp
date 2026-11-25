@@ -41,7 +41,6 @@
 #include "rust/game/screens.h"
 #include "rust/render/gfx.h"
 
-extern unsigned long& gTexturePixelDepth;
 
 // (EEMSendFlare's inline ctor: ee/EEMessage.h)
 

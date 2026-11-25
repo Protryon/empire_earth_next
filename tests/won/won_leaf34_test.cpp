@@ -89,14 +89,16 @@ static bool IsLeafBool(EeWonLeafOp o)
 {
     return o == Lo::BtnHasImage || (o >= Lo::BtnDisabled && o <= Lo::BtnStretch) || o == Lo::ItemHasFont ||
            o == Lo::ItemHasImage || o == Lo::ItemSelected || o == Lo::ItemListFlag || o == Lo::MenuDisabled ||
-           o == Lo::MenuHasSubMenu || (o >= Lo::BgHasImage && o <= Lo::BgHasComponent) || o == Lo::CompItemHasComponent;
+           o == Lo::MenuHasSubMenu || (o >= Lo::BgHasImage && o <= Lo::BgHasComponent) || o == Lo::CompItemHasComponent ||
+           o == Lo::CompItemSizable;
 }
 static bool IsLeafNumber(EeWonLeafOp o)
 {
     return o == Lo::BtnImageWidth || o == Lo::BtnImageHeight || o == Lo::BtnWidth || o == Lo::BtnHeight ||
            o == Lo::ItemColor || o == Lo::ItemImageWidth || o == Lo::ItemImageHeight || o == Lo::ItemTextWidth ||
            o == Lo::ItemFontHeight || o == Lo::ItemListPaintWidth || o == Lo::MenuListViewWidth ||
-           (o >= Lo::BgImageWidth && o <= Lo::BgBorderColor) || o == Lo::CompItemWidth || o == Lo::CompItemHeight;
+           (o >= Lo::BgImageWidth && o <= Lo::BgBorderColor) || o == Lo::CompItemWidth || o == Lo::CompItemHeight ||
+           o == Lo::CompItemListPaintWidth;
 }
 static intptr_t MutLeaf(intptr_t (*inHost)(void*, EeWonLeafOp, intptr_t, intptr_t), void* me, EeWonLeafOp op, intptr_t a, intptr_t b)
 {
@@ -355,7 +357,7 @@ template <class B, class T, class M, class G, class C> static std::vector<std::s
         item->mText = GUIString(Pick(2) ? L"Some item" : L"x");
         menu->mText = GUIString(L"Menu &entry");
         for (int i = 0; i < inCalls; i++) {
-            const int k = Pick(18);
+            const int k = Pick(19);
             switch (k) {
             case 0: { int w = -1, h = -1; b->GetDesiredSize(w, h); Log("size " + N(w) + " " + N(h)); break; }
             case 1: case 2: Log("call button Paint"); b->Paint(g); break;
@@ -413,6 +415,16 @@ template <class B, class T, class M, class G, class C> static std::vector<std::s
                 const int x = Pick(100) - 20, y = Pick(100) - 20;
                 Log("call component item SetPos " + N(x) + " " + N(y));
                 citem->SetPos(x, y);
+                break;
+            }
+            case 18: {
+                // (R6 WON GUI round 36) the item's paint: with and without a component, sizable or not
+                citem->mComponent = Pick(4) ? comp.get() : NULL;
+                citem->mIsSizable = Pick(2) != 0;
+                comp->mHeight = Pick(30);
+                list->mPaintWidth = Pick(200);
+                Log("call component item Paint");
+                citem->Paint(g, list.get());
                 break;
             }
             case 7:
@@ -542,7 +554,7 @@ int main()
     std::vector<int> ops;
     for (int o = (int)EeWonBrowserOp::NewView; o <= (int)EeWonBrowserOp::Invalidate; o++) ops.push_back(o);
     for (int o = (int)EeWonTipOp::BasePaint; o <= (int)EeWonTipOp::ClosePopup; o++) ops.push_back(o + 100);
-    for (int o = (int)EeWonLeafOp::BtnHasImage; o <= (int)EeWonLeafOp::CompItemSetPos; o++) ops.push_back(o + 300);
+    for (int o = (int)EeWonLeafOp::BtnHasImage; o <= (int)EeWonLeafOp::CompItemPaint; o++) ops.push_back(o + 300);
     ops.push_back(200);
     ops.push_back(201);
     int missed = 0, caught = 0;

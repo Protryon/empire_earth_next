@@ -11,7 +11,7 @@
 //    window with a parent is placed in the surface, with a classic frame and caption unless its style has 0x20
 //    (WS_POPUP: popups and borderless dialogs). Mouse coordinates are client pixels of the game window scaled to the
 //    surface (client size vs surface size).
-//  - Drawing: Graphics, images and fonts draw into software surfaces (WONSurface.h, 32-bit 0x00RRGGBB, B G R x in
+//  - Drawing: Graphics, images and fonts draw into software surfaces (surface.rs, 32-bit 0x00RRGGBB, B G R x in
 //    memory) with GDI's rules (end points, rectangle edges, text cell, mask blits); text through platform/PlatFont.h
 //    (Windows-1252: other characters show as '?').
 //  - Pixel scale: the surface is LOGICAL (the 1024x768 the lobby is laid out for: every window rectangle, event,
@@ -37,7 +37,7 @@
 #include "platform/PlatWindow.h"
 #include "platform/PlatThread.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "ee/wonapi/WONSurface.h"
+#include "rust/won_gui/surface.h"
 #include "rust/won_gui/platcursor.h"
 #include "rust/won_gui/platfont.h"
 #include "rust/won_gui/platimg.h"

@@ -21,7 +21,6 @@ public:
     // registers a prototype under its tag; for a tag already taken deletes it and returns kErrorAlreadyExists
     static long RegisterPersistent(FSPersistent* inPersistent) { return ee_fs_persistent_register_object(inPersistent); }
 
-private:
     FSPersistentList() = delete;
 };
 

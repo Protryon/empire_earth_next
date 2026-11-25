@@ -9,8 +9,8 @@
 use core::ffi::c_long;
 
 use crate::lle_cpp::{
-    lle_host, Cpp, EeUiShimF32Out as F32Out, EeUiShimPtrOut as PtrOut, EeUiShimText as Text,
-    EeUiShimULongOut as ULongOut, HostArgs,
+    Cpp, EeUiShimF32Out as F32Out, EeUiShimPtrOut as PtrOut, EeUiShimText as Text, EeUiShimULongOut as ULongOut,
+    HostArgs,
 };
 use crate::obj::EeUiOp as Op;
 
@@ -144,10 +144,24 @@ pub(crate) fn new_lock<C: Cpp + ?Sized>(c: &mut C, line: u32) -> usize {
     lock
 }
 
-lle_host!(
-    /// The UI manager's host: [`manager_call`], then `UIManager::HostOp`.
-    ee_ui_manager_host => manager_call, [crate::lle_hosts::manager]
-);
+/// The UI manager's host: [`manager_call`], then `UIManager::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_manager_host(
+    obj: *mut core::ffi::c_void,
+    op: crate::obj::EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the host contract, the arguments as given
+    unsafe { crate::lle_cpp::host(manager_call, &[crate::lle_hosts::manager], obj, op, a, b, c, d, f) }
+}
 
 /// The events' host's moved cases (`UIEvent::HostOp`: the events file's count, the owner, the event added).
 pub(crate) fn event_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isize> {
@@ -177,10 +191,24 @@ pub(crate) fn event_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isi
     })
 }
 
-lle_host!(
-    /// The events' host: [`event_call`], then `UIEvent::HostOp`.
-    ee_ui_event_host => event_call, [crate::lle_hosts::event]
-);
+/// The events' host: [`event_call`], then `UIEvent::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_event_host(
+    obj: *mut core::ffi::c_void,
+    op: crate::obj::EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the host contract, the arguments as given
+    unsafe { crate::lle_cpp::host(event_call, &[crate::lle_hosts::event], obj, op, a, b, c, d, f) }
+}
 
 /// The database's tables in load order: (their file, the find's two assert lines, the create's).
 const DB_TABLES: [(u32, u32, u32); 7] = [

@@ -46,7 +46,6 @@ EeUnitsAtc* EEATCNew()
 }
 
 // Returns the squared distance in tiles between the two units (atc.rs tile_distance_squared)
-float EEUnit::GetTileDistanceSquared(EEUnit* inOther) { return ee_units_atc_tile_distance_squared(this, inOther); }
 
 // The file's primitives for Load and Save (EESavePrimitive) and a unit's id for Save
 static int32_t EEATCFile(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)

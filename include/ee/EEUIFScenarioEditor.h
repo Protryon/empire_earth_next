@@ -15,33 +15,22 @@
 #include "ee/EEUnitHandle.h"
 #include "rust/game/screens.h"
 
-class UIButton;
+#include "lle/LLEForward.h"
 class EEAScroll;
 class EESELoadThread;
-class GEBitmap;
 class EEUIFSEBrushGroup;
-class UIRadioButton;
 class EEUnit;
 class EEUICSelectUnits;
-class UIEditBox;
-class GETexture;
-struct EeScreensSeForm;
-class UIComboBox;
 
 // the form's trigger tab: the jump to a combo box's right-clicked entry (EESETSTrigger.cpp; inKind the combo's screen)
 // and the writing-back flag (0x4c3220, = true; set while an entry is written back; provisional name)
 // the globals the editor's C++ shares (Empire Earth.cpp's fonts and render objects, EEGlobals.cpp's screen font)
 class RTSRenderObject;
-class GEViewport;
-class GE2DPoint;
-class GEFont;
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls
-extern char gEmptyString[];       // 0x4e5b98 (pooled "")
 extern UWideString gSefxText;     // EE_SCREENS_SEFMX_STRING's (the other editor statement hosts' texts too)
 extern GEFont* gU531930;          // 0x531930 .. 0x531938 (Empire Earth.cpp's fonts)
 extern GEFont* gU531934;
 extern GEFont* gU531938;
-extern unsigned long& gTexturePixelDepth;
 extern RTSRenderObject* gU56534C;   // the game's base render object (EERenderObject.cpp)
 extern RTSRenderObject* gU56535C;   // the terrain render object
 extern GEViewport gViewport;

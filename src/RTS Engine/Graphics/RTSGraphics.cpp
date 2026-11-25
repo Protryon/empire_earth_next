@@ -11,7 +11,6 @@
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEPixelPack.h"
 #include "lle/Input System.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -121,7 +120,6 @@ unsigned char* ee_rtsgcpp_surf_memory(GESurface* inSurface) { return inSurface->
 unsigned long ee_rtsgcpp_surf_bytes_per_row(GESurface* inSurface) { return inSurface->GetBytesPerRow(); }
 void ee_rtsgcpp_surf_dereference(GESurface* inSurface) { inSurface->Dereference(); }
 long ee_rtsgcpp_surf_copy(GESurface* inFrom, GESurface* inTo, float* inSource, float* inDestination) { return inFrom->CopyTo(inTo, *reinterpret_cast<GERectangle*>(inSource), *reinterpret_cast<GERectangle*>(inDestination), false); }
-void ee_rtsgcpp_pack_row(const unsigned char* inSource, unsigned char* outRow, unsigned long inWidth, unsigned long inFormat) { GEPackBGRXRow(inSource, outRow, inWidth, inFormat); }
 void ee_rtsgcpp_lobby_surface_size(int* outWidth, int* outHeight) { EELobbyGetSurfaceSize(*outWidth, *outHeight); }
 void ee_rtsgcpp_lobby_set_presentation(float inScale, float inLeft, float inTop, float inWidth, float inHeight) { EELobbySetPresentation(inScale, inLeft, inTop, inWidth, inHeight); }
 bool ee_rtsgcpp_lobby_lock_frame(EeRtsLobbyFrame* outFrame) { return EELobbyLockFrame(outFrame->pixels, outFrame->width, outFrame->height, outFrame->pitch, outFrame->logical_width, outFrame->logical_height, outFrame->serial); }

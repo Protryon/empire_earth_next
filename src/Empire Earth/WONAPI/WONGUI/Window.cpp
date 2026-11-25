@@ -91,7 +91,7 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     }
     case Op::WinQueueClose: t->QueueEvent(new InputEvent(InputEvent_WindowClose)); return 0;
     case Op::WinCanClose: return ((Window*)a)->CanClose() ? 1 : 0;
-    case Op::WinAllowClose: return (t->mAllowCloseFunc != NULL && !t->mAllowCloseFunc(t)) ? 0 : 1;
+    case Op::WinAllowClose: return 1; // (no window ever had an allow-close function)
     case Op::WinChildSet: ((Window*)a)->WCall(EeWonWinCall::ChildSet, (intptr_t)t, b); return 0;
     case Op::WinStdArrow: return (intptr_t)Cursor::GetStandardCursor(StandardCursor_Arrow);
     case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
@@ -132,11 +132,11 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     case Op::Popup: return me->IsPopup();
     case Op::Open: return me->GetWindowState() == Window::WindowState_Open;
     case Op::Style: return me->GetStyle();
-    case Op::WindowCreate:
-        me->BaseCreate((int)c, (int)d);
-        me->mDisplayContext = new DisplayContext(NULL);
-        me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height());
-        return 0;
+    case Op::WindowCreate: me->BaseCreate((int)c, (int)d); return 0;
+    case Op::NewContext: me->mDisplayContext = new DisplayContext(NULL); return 0;
+    case Op::OffscreenOfRoot: me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height()); return 0;
+    case Op::Offscreen: return me->mOffscreenImage.get() != NULL ? (intptr_t)me->mOffscreenImage->mRust : 0;
+    case Op::CopyOffscreen: return ee_won_guicpp_win_call(me, EeWonGuiOp::WinNewOffscreen, a, b, 0, 0);
     case Op::Center: me->Center(a != 0); return 0;
     case Op::Showing: me->SetIsShowing(a != 0); return 0;
     case Op::Show: me->PlatformShow(a != 0); return 0;
@@ -150,23 +150,16 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     case Op::InvalidateRoot: me->InvalidateRoot(); return 0;
     case Op::MouseIn: return me->IsMouseInClientArea();
     case Op::RootContains: return me->mRoot->Contains((int)a, (int)b);
-    case Op::Paint:
-        if (me->mRoot->mInvalidState == 0 || me->mOffscreenImage.get() == NULL)
-            return 0;
-        me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics());
-        me->mRoot->Paint(me->mOffscreenImage->GetGraphics());
-        return 1;
-    case Op::ParentVisible: {
-        Window* theParent = me->GetParent();
-        return theParent != NULL && theParent->Rust(EeWonPlatWinCall::IsVisible) ? (intptr_t)theParent : 0;
-    }
+    case Op::RootInvalid: return me->mRoot->mInvalidState != 0;
+    case Op::Paint: me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics()); return 0;
+    case Op::RootPaint: me->mRoot->Paint(me->mOffscreenImage->GetGraphics()); return 0;
+    case Op::RootInvalidate: me->mRoot->Invalidate(); return 0;
+    case Op::ParentPlat: return me->GetParent() != NULL ? (intptr_t)me->GetParent()->mRust : 0;
     case Op::WindowClose: me->BasePlatformClose(); return 0;
     case Op::WindowTimer: me->BaseTimerEvent((DWORD)a); return 0;
     case Op::ApplyCursor: ee_won_cursor_apply(a != 0 ? ((Cursor*)a)->mRust : NULL, (void (*)(int32_t))PlatCursorShow); return 0;
-    case Op::PopupHit: {
-        Window* thePopup = m->GetPopupWindow();
-        return thePopup != NULL && (m->GetPopupFlags() & PopupFlag_DontWantMouse) && thePopup == (Window*)a;
-    }
+    case Op::PopupWindow: return (intptr_t)m->GetPopupWindow();
+    case Op::PopupFlags: return m->GetPopupFlags();
     case Op::CursorShow: PlatCursorShow((int)a); return 0;
     case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
     }
@@ -181,8 +174,6 @@ Window::Window()
 	this->mWinObj.p = ee_won_win_new(this, ee_won_guicpp_win_call);
 	this->mManager = WONAPI::WindowManager::GetDefaultWindowManager();
 	this->mRoot = new RootContainer(this);
-	this->mAllowCloseFunc = NULL;
-	this->mTitle = "Sierra App";
 	this->mRust = ee_won_plat_win_new(this, PlatWinHost);
 }
 
@@ -201,17 +192,15 @@ SmartPtr<Font> Window::GetFont(const FontDescriptor &theDescriptor)
 {
 	return (Font*)ee_won_win_get_font(this->mWinObj.p, this->mFontMap.p, (intptr_t)&theDescriptor, (const uint8_t*)theDescriptor.mFace.data(), theDescriptor.mFace.size(), theDescriptor.mStyle, theDescriptor.mSize);
 }
-Window::FontMap::~FontMap()
-{
-	for(intptr_t aFont; (aFont = ee_won_fontmap_pop(this->p)) >= 0; )
-		if(aFont!=0) ((Font*)aFont)->Release();
-	ee_won_fontmap_free(this->p);
-}
+// the map's reference to a font given back
+static void ReleaseFont(intptr_t inFont) { ((Font*)inFont)->Release(); }
+// Gives each cached font's reference back and frees the map (fontmap.rs)
+Window::FontMap::~FontMap() { ee_won_fontmap_free_releasing(this->p, ReleaseFont); }
 
 // Sets the window title, updating the platform window when open
 void Window::SetTitle(const GUIString &theTitle)
 {
-	this->mTitle = theTitle;
+	ee_won_plat_win_set_title(this->mRust, theTitle.mData->mText, theTitle.length());
 	this->WCall(EeWonWinCall::TitleChanged);
 }
 
@@ -290,19 +279,4 @@ SmartPtr<Font> Window::PlatformGetFont(const FontDescriptor& inDescriptor)
     return new Font(this->mDisplayContext.get(), inDescriptor);
 }
 
-// The manager's pixel scale changed: a new offscreen image at it (the old one drawn in until the repaint, as
-// Window::CheckResize does) and the whole root repainted
-void Window::FollowPixelScale()
-{
-    WindowManager* theManager = this->GetPlatManager();
-    NativeImage* theOld = this->mOffscreenImage.get();
-    if (theManager == NULL || theOld == NULL || this->GetWindowState() != WindowState_Open ||
-        theOld->GetScale() == theManager->GetPixelScale())
-        return;
-    SmartPtr<NativeImage> theImage = this->CreateImage(theOld->GetWidth(), theOld->GetHeight());
-    theImage->GetGraphics().DrawImage(theOld, 0, 0);
-    this->mOffscreenImage = theImage;
-    this->mRoot->Invalidate();
-    theManager->SetDirty();
-}
 }

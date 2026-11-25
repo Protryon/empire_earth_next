@@ -1,4 +1,4 @@
-# LLE: bodies over one-statement shims (rounds 8-13)
+# LLE: bodies over one-statement shims (rounds 8-14)
 
 The lane's state after LLE round 13 (branch `rust-lle13`, 2026-11-22). The rounds' stories are PORT_LEARNINGS.md
 "LLE round 8" to "LLE round 13". Earlier state: [lle-rest.md](lle-rest.md) (rounds 1-2),
@@ -19,6 +19,31 @@ function of one statement per shim (a member's slot, a virtual call, a `new`/`de
 Plain members a body reads and writes become a `#[repr(C)]` record the C++ class derives from (as the units' and
 the players' records before): `EeRtsPhysicsFields`, `EeRtsGraphicsFields`, `EeRtsMouseFields`. The Thread System,
 Time Manager, Input System and sound samples are Rust objects already: the bodies call them directly.
+
+## Round 14 (the LLE and UI floor lane `lu1`, branch `rust-lleui1`; fork `rust-lleui1-a`, 2026-11-24)
+
+Combined with UI round 17 (docs/progress/ui-cluster.md "Round 17": the lane, its measure and the UI half). The LLE
+half (include/lle but UI*, src/Low-Level Engine but User Interface, src/Platform/Common, src/RTS Engine/Graphics):
+1,217 -> 864 logic lines (-353), most of it the shared header pass and fork a's floor commit.
+
+| Commit | What | Lane logic |
+|---|---|---|
+| 23bc3f1b1 | lle/LLEForward.h, no access sections or friends, `URust`/`URustView` (both halves) | 2,162 -> 1,920 |
+| 3f7593ca5 (a) | the members declared out of line inline over their Rust calls (GERasterizer's draws, pixel sizes, screen activation; the pixel packers; NEMRecord's and the NE classes' constructors; TSLockable; GEWindow's destructor); NEInitialize is `ee_net_initialize` (Network Engine.cpp deleted); SEInitialize passes its directory and window (SEMixerStart, SEInitializeMixers, SEMixerPlugInIsValid gone); ISInitialize's key names from the resource strings in Rust; the FP check `ee_util_fp_check`; GEPackBGRXRow `ee_ge_pack_bgrx_row` (lle/GEPixelPack.h deleted); GETextureDescription derives from the Rust record; dead declarations | 1,920 -> 1,757 |
+| b97ed3c87 (a) | GERasterizer's two constructors and destructor and GETerrainMesh's destructor composed in Rust (`ee_ge_rast_new_drawing`, `ee_dx7r_new_direct`, `ee_dx7r_destroy_all`), inline in their headers | -14 |
+
+## What is left after round 14 (the LLE half, 864)
+
+- PlatFontData.c 51: the built-in fonts' `#embed` arrays and their registration. In Rust they would be
+  `include_bytes!` with a build script finding toolchain/fonts (tools/ee.py's lookup, the main checkout's from a
+  worktree); CI runs the Rust gate before it fetches the fonts, and xbuild.py, verify.py and tools/gx_test compile the
+  file: a cross-platform tooling change this round did not risk without a POSIX machine.
+- LowLevelEngineCore.h 46: the UM rounding inlines (hot paths: a call into Rust per conversion would cost what the
+  cvtss2si path saved), `UFormat` (C varargs), the error-code aliases.
+- The host switches (DX7Rasterizer.cpp 34, GERasterizer.cpp 17, GEBitmap.cpp 16), NESynchronousServer.cpp 27,
+  NEMessage.h 24 (real polymorphism), RTSMouse.cpp 18, GESurface.h/GEScreen.h (the out-of-line members call static
+  hosts: registering the hosts once in Rust would let them go inline), GETransformation.h's Apply bodies.
+- LLEForward.h 78: each name is used; the list shrinks only with the classes.
 
 ## Round 13 (branch `rust-lle13`; forks `rust-lle13-a` (the NE), `rust-lle13-b` (the File System, the U* utilities))
 

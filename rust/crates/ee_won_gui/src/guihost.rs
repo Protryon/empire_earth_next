@@ -82,6 +82,27 @@ pub enum EeWonGuiCursor {
     NorthSouth = 5,
 }
 
+/// The `Cursor*` a host op's cursor names (GuiHost.cpp's CursorOf until R6 WON GUI round 36): the standard
+/// table's cursor of its kind (cursorobj.rs), NULL for `None`, an unknown value or a kind never set.
+#[no_mangle]
+pub extern "C" fn ee_won_gui_cursor(cursor: isize) -> isize {
+    standard_cursor_kind(cursor).map_or(0, |kind| crate::cursorobj::ee_won_cursor_standard(kind))
+}
+
+/// The StandardCursor a host op's cursor is (None for `None` and unknown values).
+fn standard_cursor_kind(cursor: isize) -> Option<i32> {
+    use crate::guienum::EeWonGuiStandardCursor as S;
+    let kind = match cursor {
+        x if x == EeWonGuiCursor::Hand as isize => S::StandardCursor_Hand,
+        x if x == EeWonGuiCursor::IBeam as isize => S::StandardCursor_IBeam,
+        x if x == EeWonGuiCursor::NorthSouthEastWest as isize => S::StandardCursor_NorthSouthEastWest,
+        x if x == EeWonGuiCursor::EastWest as isize => S::StandardCursor_EastWest,
+        x if x == EeWonGuiCursor::NorthSouth as isize => S::StandardCursor_NorthSouth,
+        _ => return None,
+    };
+    Some(kind as i32)
+}
+
 /// The op codes. `a`..`d` are integers or pointers as each says.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1096,6 +1117,9 @@ pub enum EeWonGuiOp {
     WmSizeEvSetW,
     /// `((SizeEvent*)a)->mHeight = b`.
     WmSizeEvSetH,
+    // ---- R6 WON GUI round 36, the hosts' share (values 3400..3599)
+    /// `t->AddSegment(((const GUIString*)a)->substr(b, c), d != 0)` (AddFormatedText's line, guitext.rs).
+    TextAddPart = 3400,
     // ---- R6 WON GUI round 35, the configs' and containers' share (values 3200..3399)
     /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
     TabNewContainer = 3200,
@@ -1313,6 +1337,22 @@ pub unsafe extern "C" fn ee_won_gui_sink_units(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_host_ops_cursor_is_the_standard_cursor_cursorof_named() {
+        use super::{ee_won_gui_cursor, standard_cursor_kind, EeWonGuiCursor as C};
+        // GuiHost.cpp's CursorOf: Hand, IBeam, NorthSouthEastWest, EastWest, NorthSouth by name (the SDK's
+        // StandardCursor values 1, 2, 5, 3, 4), NULL otherwise
+        assert_eq!(standard_cursor_kind(C::Hand as isize), Some(1));
+        assert_eq!(standard_cursor_kind(C::IBeam as isize), Some(2));
+        assert_eq!(standard_cursor_kind(C::NorthSouthEastWest as isize), Some(5));
+        assert_eq!(standard_cursor_kind(C::EastWest as isize), Some(3));
+        assert_eq!(standard_cursor_kind(C::NorthSouth as isize), Some(4));
+        for other in [C::None as isize, -1, 6, 99] {
+            assert_eq!(standard_cursor_kind(other), None);
+            assert_eq!(ee_won_gui_cursor(other), 0);
+        }
+    }
+
     use super::*;
 
     #[test]
