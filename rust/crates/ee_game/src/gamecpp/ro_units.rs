@@ -107,7 +107,7 @@ pub unsafe extern "C" fn ee_gamecpp_ru_label(
     let text = unsafe { CStr::from_ptr(text as *const std::ffi::c_char) };
     h(O::RoTextSetText, label.0, &[text.as_ptr() as usize as i64]);
     hf(O::RoTextSetLocation, label.0, &[], &[x, y]);
-    let free_camera = h(O::FreeCamera, 0, &[]) != 0;
+    let free_camera = crate::gamecpp::globals::get!(gFreeCamera);
     let height = if free_camera { 0.0 } else { hd(O::RuTextHeight, label.0, &[], &[]) };
     let targets = ee_gfx_units_label_targets(y, height, bottom, free_camera);
     if targets & 1 != 0 {
@@ -141,7 +141,7 @@ pub extern "C" fn ee_gamecpp_ru_draw(labels: bool) {
         collision_spheres: h(O::RuCollisionSpheres, 0, &[]) != 0,
         interpolate_frames: h(O::RuInterpolateFrames, 0, &[]) != 0,
         model_detail: h(O::RuModelDetail, 0, &[]) as i32,
-        free_camera: h(O::FreeCamera, 0, &[]) != 0,
+        free_camera: crate::gamecpp::globals::get!(gFreeCamera),
         panel_active: RU_UNIT_PANEL_ACTIVE.load(Ordering::Relaxed),
         grid_phase,
         camera_yaw: super::render_object::camera_yaw(),

@@ -144,7 +144,6 @@ pub enum EeRmapCpp {
     LoadProgress,
     /// `ESDebugOut("%s", a0)`
     DebugOut,
-    Time,
     // ---- the script search (p: the EERMFind)
     FindNew,
     FindDelete,
@@ -1087,9 +1086,9 @@ impl RandomMap {
         if !self.players_connected(world) {
             return false;
         }
-        let start = h(O::Time, 0, &[]) as u32;
+        let start = ee_base::time::ee_time_get();
         self.pass(world, |g, host| g.paint_tiles(host));
-        let elapsed = (h(O::Time, 0, &[]) as u32).wrapping_sub(start) as f32 * 0.001f32;
+        let elapsed = (ee_base::time::ee_time_get()).wrapping_sub(start) as f32 * 0.001f32;
         debug_out(&format!("EERandomMap::PaintTiles Processing completed in {:6.2} s\n", elapsed as f64));
         h(O::MapUpdateCliffs, c, &[]);
         self.pass(world, |g, host| g.mark_features(host));
@@ -1107,7 +1106,7 @@ impl RandomMap {
     /// centre for 0).
     pub fn create(&mut self, world: World, player: u32, script: &[u8], seed: u32) -> [f32; 3] {
         let c = world.context;
-        let start = h(O::Time, 0, &[]) as u32;
+        let start = ee_base::time::ee_time_get();
         self.set_up(world, script, seed);
         self.generate(world);
         let location = if player > 0 {
@@ -1125,7 +1124,7 @@ impl RandomMap {
             let tile = h(O::MapTile, c, &[(size / 2) as i64, (size / 2) as i64]);
             [middle, middle, hd(O::TileHeight, tile as usize, &[])]
         };
-        let elapsed = (h(O::Time, 0, &[]) as u32).wrapping_sub(start) as f32 * 0.001f32;
+        let elapsed = (ee_base::time::ee_time_get()).wrapping_sub(start) as f32 * 0.001f32;
         debug_out(&format!("EERandomMap::CreateRandomMap processing completed in {:6.2} s\n", elapsed as f64));
         location
     }

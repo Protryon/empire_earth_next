@@ -249,7 +249,7 @@ pub unsafe fn set_num_players<C: WorldCpp>(c: &mut C, world: usize, n: c_ulong) 
 }
 
 #[cfg(not(test))]
-mod ffi {
+pub(crate) mod ffi {
     use super::*;
     use ee_base::shim::ShimFfi as Ffi;
 

@@ -322,8 +322,7 @@ pub const EE_UNITS_UB_GATHER_RESOURCE: i32 = 152;
 pub const EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS: i32 = 153;
 /// upgrade `a`'s `GetMaxHitPoints()`
 pub const EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS: i32 = 154;
-/// the hit point functor = `EEHitPointUpgrader(c, the float of the bits d)`; its address
-pub const EE_UNITS_UB_MAKE_UPGRADER: i32 = 155;
+// (155: the C++ EEHitPointUpgrader's construction; the functor is Rust's `hit_point_apply` now)
 /// upgrade `a`'s `mMaxHitPoints = c`
 pub const EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS: i32 = 156;
 /// `gLoadingSavedGame`
@@ -342,10 +341,7 @@ pub const EE_UNITS_UB_NUM_PENDING: i32 = 162;
 pub const EE_UNITS_UB_PENDING_UNIT: i32 = 163;
 /// `gWorld.mNumPlayers`
 pub const EE_UNITS_UB_NUM_PLAYERS: i32 = 164;
-/// functor `a`'s (an `EEHitPointUpgrader`) `mUnitType`
-pub const EE_UNITS_UB_UPGRADER_TYPE: i32 = 165;
-/// the bits of functor `a`'s (an `EEHitPointUpgrader`) `mRatio`
-pub const EE_UNITS_UB_UPGRADER_RATIO: i32 = 166;
+// (165, 166: the C++ EEHitPointUpgrader's type and ratio)
 /// complex unit `a`'s `GetNumCargoUnits()`
 pub const EE_UNITS_UB_NUM_CARGO: i32 = 167;
 /// complex unit `a`'s `UnloadCargoAt(c, the off-map transformation)`
@@ -451,7 +447,6 @@ pub const EE_UNITS_UB_DO_HELICOPTER_PRIEST_DESTINATION: i32 = 10;
 pub const EE_UNITS_UB_DO_UPDATE_UNIT_TILE: i32 = 11;
 pub const EE_UNITS_UB_DO_WAITING_GATHERER: i32 = 12;
 pub const EE_UNITS_UB_DO_UPGRADE_HIT_POINTS: i32 = 13;
-pub const EE_UNITS_UB_DO_HIT_POINT_APPLY: i32 = 14;
 pub const EE_UNITS_UB_DO_FOR_EACH_UNIT_OF: i32 = 15;
 pub const EE_UNITS_UB_DO_FOR_EACH_PLAYERS_UNIT: i32 = 16;
 pub const EE_UNITS_UB_DO_MOVE_PASSENGERS: i32 = 17;
@@ -1172,7 +1167,6 @@ pub fn upgrade_hit_points<H: UbHost + ?Sized>(h: &mut H, upgrade: u64, unit_type
     let max = sa(h, EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS, upgrade) as i32;
     let max2 = sa(h, EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS, upgrade) as i32;
     let ratio = (base as f32 * factor + max as f32) / max2 as f32;
-    let functor = h.ub(EE_UNITS_UB_MAKE_UPGRADER, 0, 0, unit_type, bits(ratio), 0, &mut [0.0; 4]) as u64;
     let bonus = sa(h, EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS, upgrade) as i32;
     if bonus <= 0 {
         return;
@@ -1182,14 +1176,19 @@ pub fn upgrade_hit_points<H: UbHost + ?Sized>(h: &mut H, upgrade: u64, unit_type
     let hit_points = ee_base::math::um::lrintf(max as f32 + factor).max(1);
     sac(h, EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS, upgrade, i64::from(hit_points.max(1)));
     if !yes(s(h, EE_UNITS_UB_LOADING_SAVED_GAME)) {
-        for_each_unit_of(h, player, functor, true);
+        // EEForEachUnitOf with the EEHitPointUpgrader functor (its ApplyToUnit does nothing)
+        each_unit_of(h, player, true, &mut |h, unit, complex| {
+            if complex {
+                hit_point_apply(h, unit_type as u32, ratio, unit);
+            }
+        });
     }
 }
 
 /// `EEHitPointUpgrader::Apply(unit)`: a living, finished unit of the upgraded type scaled by the ratio (at least 1).
-pub fn hit_point_apply<H: UbHost + ?Sized>(h: &mut H, functor: u64, unit: u64) {
+pub fn hit_point_apply<H: UbHost + ?Sized>(h: &mut H, unit_type: u32, ratio: f32, unit: u64) {
     let class = obj(h, EE_UNITS_UB_UNIT_CLASS, unit);
-    if sa(h, EE_UNITS_UB_CLASS_TYPE, class) as u32 != sa(h, EE_UNITS_UB_UPGRADER_TYPE, functor) as u32 {
+    if sa(h, EE_UNITS_UB_CLASS_TYPE, class) as u32 != unit_type {
         return;
     }
     if sa(h, EE_UNITS_UB_HIT_POINTS, unit) as i32 <= 0 || yes(sa(h, EE_UNITS_UB_IS_FOUNDATION, unit)) {
@@ -1197,7 +1196,6 @@ pub fn hit_point_apply<H: UbHost + ?Sized>(h: &mut H, functor: u64, unit: u64) {
     }
     let hit_points = sa(h, EE_UNITS_UB_HIT_POINTS, unit) as i32;
     if hit_points > 0 {
-        let ratio = flt(sa(h, EE_UNITS_UB_UPGRADER_RATIO, functor));
         let scaled = ee_base::math::um::lrintf(hit_points as f32 * ratio).max(1);
         sac(h, EE_UNITS_UB_SET_HIT_POINTS, unit, i64::from(scaled));
     }
@@ -1206,15 +1204,23 @@ pub fn hit_point_apply<H: UbHost + ?Sized>(h: &mut H, functor: u64, unit: u64) {
 /// `EEForEachUnitOf(player, functor, pending)`: the functor over the player's units (each unit, then its complex
 /// unit) and, when asked, its pending units.
 pub fn for_each_unit_of<H: UbHost + ?Sized>(h: &mut H, player: u64, functor: u64, pending: bool) {
+    each_unit_of(h, player, pending, &mut |h, unit, complex| {
+        sab(h, if complex { EE_UNITS_UB_APPLY } else { EE_UNITS_UB_APPLY_TO_UNIT }, functor, unit);
+    });
+}
+
+/// `EEForEachUnitOf`'s walk: `apply(h, unit, false)` for each of the player's units (the functor's `ApplyToUnit`),
+/// then `apply(h, its complex unit, true)` when it has one (`Apply`); the pending units likewise when asked.
+fn each_unit_of<H: UbHost + ?Sized>(h: &mut H, player: u64, pending: bool, apply: &mut dyn FnMut(&mut H, u64, bool)) {
     if player == 0 {
         return;
     }
     let mut unit = obj(h, EE_UNITS_UB_FIRST_UNIT, player);
     while unit != 0 {
-        sab(h, EE_UNITS_UB_APPLY_TO_UNIT, functor, unit);
+        apply(h, unit, false);
         let complex = obj(h, EE_UNITS_UB_COMPLEX_OF, unit);
         if complex != 0 {
-            sab(h, EE_UNITS_UB_APPLY, functor, complex);
+            apply(h, complex, true);
         }
         unit = obj(h, EE_UNITS_UB_NEXT_UNIT, unit);
     }
@@ -1224,11 +1230,11 @@ pub fn for_each_unit_of<H: UbHost + ?Sized>(h: &mut H, player: u64, functor: u64
     let mut i = 0u32;
     while i < sa(h, EE_UNITS_UB_NUM_PENDING, player) as u32 {
         let u = obj_ac(h, EE_UNITS_UB_PENDING_UNIT, player, i64::from(i));
-        sab(h, EE_UNITS_UB_APPLY_TO_UNIT, functor, u);
+        apply(h, u, false);
         let u = obj_ac(h, EE_UNITS_UB_PENDING_UNIT, player, i64::from(i));
         let complex = obj(h, EE_UNITS_UB_COMPLEX_OF, u);
         if complex != 0 {
-            sab(h, EE_UNITS_UB_APPLY, functor, complex);
+            apply(h, complex, true);
         }
         i += 1;
     }
@@ -1420,10 +1426,6 @@ pub fn run<H: UbHost + ?Sized>(h: &mut H, what: i32, a: u64, b: u64, c: i64, d: 
         EE_UNITS_UB_DO_WAITING_GATHERER => waiting_gatherer(h, a) as i64,
         EE_UNITS_UB_DO_UPGRADE_HIT_POINTS => {
             upgrade_hit_points(h, a, c, flt(d), b);
-            0
-        }
-        EE_UNITS_UB_DO_HIT_POINT_APPLY => {
-            hit_point_apply(h, a, b);
             0
         }
         EE_UNITS_UB_DO_FOR_EACH_UNIT_OF => {

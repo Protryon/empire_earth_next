@@ -28,6 +28,10 @@ use ee_render::gfx::scene::{self, EeGfxSceneClocks, EeGfxSceneFade};
 use ee_render::gfx::walk::EeGfxDrawnHost;
 use ee_sim::world::{UnitView, WorldRead};
 
+use super::rast::{
+    mesh_cliff_textures, mesh_visible_row, mesh_visible_rows, rast, tex_mip_bias, tex_reference, tex_stage, world_mesh,
+    TexStage,
+};
 use super::{cptr, h, hd, hf, hp, pa, ptr, set_position, O, P};
 
 /// `kUnitTypeRoboticFarm`, `kUnitTypeSpaceTurret`, `kUnitTypeOrbitalSpaceStation` (static_asserted by the C++).
@@ -129,7 +133,7 @@ struct TextureDescription {
 }
 
 fn now() -> c_ulong {
-    h(O::TimeNow, 0, &[]) as c_ulong
+    ee_base::time::ee_time_get() as c_ulong
 }
 
 fn world() -> P {
@@ -405,7 +409,7 @@ pub extern "C" fn ee_gamecpp_ro_fn10c036(_ro: *mut c_void) {
     let bars = scene::letterbox(step.zoom, height);
     let clear = |top: f32, bottom: f32| {
         let r = GeRectangle { bottom, left: 0.0, right: width, top };
-        h(O::RoRastClearBlack, 0, &[cptr(&r)]);
+        rast().clear_black(&r);
     };
     if step.clear_bars {
         clear(0.0, bars.top_bar_end);
@@ -504,7 +508,7 @@ pub extern "C" fn ee_gamecpp_ro_fn10e8d1(ro: *mut c_void) {
     let elapsed = now.wrapping_sub(last);
     if !flag(O::RoCameraFollowing) {
         ee_gamecpp_ro_fn10c036(ro);
-        if h(O::MeshIsSpaceMap, 0, &[]) != 0 && h(O::RoMeshCliffTextureCount, 0, &[]) < 1 {
+        if h(O::MeshIsSpaceMap, 0, &[]) != 0 && mesh_cliff_textures(world_mesh()) < 1 {
             if h(O::RoCliffTexturesCount, 0, &[]) == 0 {
                 load_cliff_textures();
             }
@@ -536,9 +540,9 @@ fn load_cliff_textures() {
     };
     for name in RO_CLIFF_TEXTURES {
         let texture = hp(O::RoLoadTexture, 0, &[name.as_ptr() as usize as i64, cptr(&description)]);
-        h(O::RoTexAlphaMode, texture, &[RO_STAGE_MODULATE]);
-        h(O::RoTexColorMode, texture, &[RO_STAGE_MODULATE]);
-        h(O::RoTexReference, texture, &[]);
+        tex_stage(texture, TexStage::AlphaMode, RO_STAGE_MODULATE);
+        tex_stage(texture, TexStage::ColorMode, RO_STAGE_MODULATE);
+        tex_reference(texture);
         h(O::RoCliffTexturesPush, texture, &[]);
     }
 }
@@ -564,37 +568,31 @@ pub unsafe extern "C" fn ee_gamecpp_ro_load_texture(name: *const u8, load: *cons
     };
     let texture = hp(O::RoLoadTexture, 0, &[name as usize as i64, cptr(&description)]);
     if l.reference {
-        h(O::RoTexReference, texture, &[]);
+        tex_reference(texture);
     }
-    h(O::RoTexAlphaMode, texture, &[l.alpha_mode as i64]);
-    h(O::RoTexColorMode, texture, &[l.color_mode as i64]);
-    h(O::RoTexMinFilter, texture, &[l.min_filter as i64]);
-    h(O::RoTexMagFilter, texture, &[l.mag_filter as i64]);
-    h(O::RoTexMipFilter, texture, &[l.mip_filter as i64]);
-    hf(O::RoTexMipBias, texture, &[], &[l.mip_bias]);
-    h(O::RoTexAddressing, texture, &[l.addressing as i64]);
+    tex_stage(texture, TexStage::AlphaMode, l.alpha_mode as i64);
+    tex_stage(texture, TexStage::ColorMode, l.color_mode as i64);
+    tex_stage(texture, TexStage::MinFilterMode, l.min_filter as i64);
+    tex_stage(texture, TexStage::MagFilterMode, l.mag_filter as i64);
+    tex_stage(texture, TexStage::MipFilterMode, l.mip_filter as i64);
+    tex_mip_bias(texture, l.mip_bias);
+    tex_stage(texture, TexStage::TextureAddressingMode, l.addressing as i64);
     texture as *mut c_void
 }
 
 /// EERenderObject::QueueEffects: the effect render queues rebuilt over the visible tile rows (ee_gfx effect_obj.rs).
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_ro_queue_effects(_ro: *mut c_void) {
-    let count = h(O::RoVisibleRowCount, 0, &[]) as usize;
+    let mesh = world_mesh();
+    let count = mesh_visible_rows(mesh);
     let mut rows = vec![0i64; count * 3];
     for j in 0..count {
-        let row = visible_row(j);
+        let row = mesh_visible_row(mesh, j);
         rows[j * 3..j * 3 + 3].copy_from_slice(&[row[0] as i64, row[1] as i64, row[2] as i64]);
     }
     let p = if rows.is_empty() { std::ptr::null() } else { rows.as_ptr() };
     // SAFETY: `count` rows of three
     unsafe { ee_render::gfx::effect_obj::ee_gfx_effect_queues_fill(p, count) };
-}
-
-/// A visible tile row: its y, first and last x.
-fn visible_row(j: usize) -> [c_long; 3] {
-    let mut row: [c_long; 3] = [0; 3];
-    h(O::RoVisibleRow, 0, &[j as i64, ptr(&mut row)]);
-    row
 }
 
 // ---------------------------------------------------------------------------------------------- the lighting
@@ -648,22 +646,23 @@ fn apply_lighting(kind: EeGfxLighting) {
         }
     };
     let ops = lighting(kind, &input);
+    let r = rast();
     for op in ops.as_slice() {
-        let (v, f) = (op.value as i64, &op.f[..]);
+        let (v, f) = (op.value, &op.f[..]);
         match op.kind {
-            EeGfxRasterOpKind::Fog => h(O::RoRastFog, 0, &[v]),
-            EeGfxRasterOpKind::FogColor => hf(O::RoRastFogColor, 0, &[], f),
-            EeGfxRasterOpKind::FogRange => hf(O::RoRastFogRange, 0, &[], f),
-            EeGfxRasterOpKind::FogType => h(O::RoRastFogType, 0, &[v]),
-            EeGfxRasterOpKind::AmbientColor => hf(O::RoRastAmbientColor, 0, &[], f),
-            EeGfxRasterOpKind::AmbientIntensity => hf(O::RoRastAmbientIntensity, 0, &[], f),
-            EeGfxRasterOpKind::RemoveLights => h(O::RoRastRemoveLights, 0, &[]),
-            EeGfxRasterOpKind::Lighting => h(O::RoRastLighting, 0, &[v]),
-            EeGfxRasterOpKind::LightColor => hf(O::RoLightColor, 0, &[], f),
-            EeGfxRasterOpKind::LightIntensity => hf(O::RoLightIntensity, 0, &[], f),
-            EeGfxRasterOpKind::LightDirection => hf(O::RoLightDirection, 0, &[], f),
-            EeGfxRasterOpKind::AddLight => h(O::RoRastAddLight, 0, &[]),
-            EeGfxRasterOpKind::UpdateLight => h(O::RoRastUpdateLight, 0, &[]),
+            EeGfxRasterOpKind::Fog => r.set_fog(v),
+            EeGfxRasterOpKind::FogColor => r.set_fog_color(f),
+            EeGfxRasterOpKind::FogRange => r.set_fog_range(f[0], f[1]),
+            EeGfxRasterOpKind::FogType => r.set_fog_type(v),
+            EeGfxRasterOpKind::AmbientColor => r.set_ambient_color(f),
+            EeGfxRasterOpKind::AmbientIntensity => r.set_ambient_intensity(f[0]),
+            EeGfxRasterOpKind::RemoveLights => r.remove_all_lights(),
+            EeGfxRasterOpKind::Lighting => r.set_lighting(v),
+            EeGfxRasterOpKind::LightColor => drop(hf(O::RoLightColor, 0, &[], f)),
+            EeGfxRasterOpKind::LightIntensity => drop(hf(O::RoLightIntensity, 0, &[], f)),
+            EeGfxRasterOpKind::LightDirection => drop(hf(O::RoLightDirection, 0, &[], f)),
+            EeGfxRasterOpKind::AddLight => drop(h(O::RoRastAddLight, 0, &[])),
+            EeGfxRasterOpKind::UpdateLight => drop(h(O::RoRastUpdateLight, 0, &[])),
         };
     }
 }
@@ -718,7 +717,7 @@ pub unsafe extern "C" fn ee_gamecpp_ro_draw_text(x: f32, y: f32, text: *const u8
     h(O::RoTextSetCentred, t, &[]);
     h(O::RoTextSetText, t, &[text as usize as i64]);
     hf(O::RoTextSetLocation, t, &[], &[x, y]);
-    if h(O::FreeCamera, 0, &[]) == 0 {
+    if !crate::gamecpp::globals::get!(gFreeCamera) {
         h(O::RoMainGameDrawText, t, &[cptr(&rect)]);
     } else {
         h(O::RoEditorDrawText, t, &[cptr(&rect)]);
@@ -896,7 +895,7 @@ fn fill_frame(info: &FrameInfo) -> EeGfxFillFrame {
     let sea_level = unsafe { (*env()).sea_level };
     EeGfxFillFrame {
         yaw: info.yaw,
-        free_camera: h(O::FreeCamera, 0, &[]) != 0,
+        free_camera: crate::gamecpp::globals::get!(gFreeCamera),
         sway_clock: SWAY_CLOCK.load(Relaxed),
         player: h(O::WorldCurrentPlayer, 0, &[]) as u64,
         map: h(O::WMap, world(), &[]) as u64,
@@ -1306,7 +1305,7 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
     clear_lists();
     unload_ghost_records();
     h(O::RoSetLabelUnit, 0, &[]);
-    let free_camera = h(O::FreeCamera, 0, &[]) != 0;
+    let free_camera = crate::gamecpp::globals::get!(gFreeCamera);
     if !free_camera {
         if h(O::RoSelectionIsDrawn, selection, &[]) != 0 {
             h(O::RoPickUnits, selection, &[pa(player)]);
@@ -1347,9 +1346,9 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
     h(O::PickerLock, 0, &[]);
     h(O::PickerReset, 0, &[]);
     let (units, objects) = (unit_count(), object_count());
-    let rows = h(O::RoVisibleRowCount, 0, &[]) as usize;
-    for row in 0..rows {
-        let [y, first, last] = visible_row(row);
+    let mesh = world_mesh();
+    for row in 0..mesh_visible_rows(mesh) {
+        let [y, first, last] = mesh_visible_row(mesh, row);
         for x in first..=last {
             let tile = hp(O::MapTile, 0, &[x as i64, y as i64]);
             if h(O::TileVisibleTo, tile, &[pa(player)]) == 0 && !free_camera {
@@ -1511,8 +1510,9 @@ pub extern "C" fn ee_gamecpp_ro_world_key() -> u64 {
     key.add(h(O::RoPlayerId, player, &[]) as u32);
     key.add(h(O::RoViewedUnitId, player, &[]) as u32);
     key.add(h(O::RoSelectedViewedUnitId, player, &[]) as u32);
-    for row in 0..h(O::RoVisibleRowCount, 0, &[]) as usize {
-        let [y, first, last] = visible_row(row);
+    let mesh = world_mesh();
+    for row in 0..mesh_visible_rows(mesh) {
+        let [y, first, last] = mesh_visible_row(mesh, row);
         for x in first..=last {
             let tile = hp(O::MapTile, 0, &[x as i64, y as i64]);
             key.add(x as u32);

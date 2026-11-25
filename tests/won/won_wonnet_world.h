@@ -466,11 +466,16 @@ struct ServerContext : RefCount {
 };
 struct RustServerOp : AsyncOp {
     // (the ops' lifetimes: the front end's members and slots hold them; R6 WON lobby and network round 35)
-    ~RustServerOp() { Log("server op deleted"); }
+    // a certificate op (RustServerOp::NewGetCert since round 36) logs as the original's GetCertOp stand-in
+    bool mCert = false;
+    // (a peer authentication op is a RustServerOp since round 36: the host reads its socket as one)
+    RefCount* GetSocket() const { return mK.mSocketIsRouting ? sRoutingNow() : &sOtherSocket; }
+    ~RustServerOp() { Log(mCert ? "cert op deleted" : "server op deleted"); }
+    static RustServerOp* NewGetCert(AuthContext*) { Log("cert op new"); RustServerOp* o = new RustServerOp; o->mCert = true; return o; }
     static RustServerOp* NewGetDir(ServerContext* c, const wchar_t* d, long f) { Log("dir op new " + N(c != NULL) + " " + WS(d) + " " + N(f)); return new RustServerOp; }
     static RustServerOp* NewUpdateAccount(ServerContext*, AuthContext*, const std::wstring& n, const std::string& p) { Log("update op new " + WS(n) + " " + p); return new RustServerOp; }
     static RustServerOp* NewGetAccount(ServerContext*, AuthContext*) { Log("account op new"); return new RustServerOp; }
-    void SetNum(int f, long long v) { Log("op num " + N(f) + " " + N(v)); }
+    void SetNum(int f, long long v) { Log(mCert ? "cert op create " + N(v != 0) : "op num " + N(f) + " " + N(v)); }
     long long GetNum(int, long long) const { return mK.mNewsletter; }
     std::string GetBytes(int) const { return mK.mEmail; }
     DirEntityList GetEntities(int) const

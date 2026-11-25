@@ -122,18 +122,12 @@ void EEContagionHelperUpdate(EEContagionHelper* inHelper, float inElapsedTime)
 // ------------------------------------------------------------------------- round 9, lane B: the hosts' compound cases' C++
 
 int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 static_assert(kContagionNew == 4, "gamecpp calamity_hosts.rs");
 static_assert(sizeof(EETileArea) == 4 * sizeof(long), "gamecpp calamity_hosts.rs: the area by address");
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 
-
-double EECore9OpB5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEPWorldOpF(inOp, p, a, f);
-}
 
 // ------------------------------------------------------------------------- round 11, lane C: the calamities' C++
 

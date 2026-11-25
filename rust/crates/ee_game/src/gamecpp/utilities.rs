@@ -104,7 +104,7 @@ pub extern "C" fn ee_gamecpp_report_load_failure(message: *const c_char, lock: b
         }
         h(O::DuChecksumDelete, state, &[]);
     }
-    if h(O::DuHaveUi, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gUIManager) {
         let text = c_string(&text);
         h(O::DuSetErrorString, 0, &[text.as_ptr() as usize as i64]);
     }

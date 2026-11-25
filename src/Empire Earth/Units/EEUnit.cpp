@@ -84,15 +84,6 @@ void EEUnit::GetPosition(GE3DPoint& outPosition)
     outPosition.SetZ(this->mTile->mHeight);
 }
 
-// Reads the unit from a saved game (resource type, health fraction held in mHitPoints until FinishLoad, amount);
-// returns the first read error. port (R5b.4, round 26): the body is Rust (ee_units unit_load.rs unit_load)
-long EEUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    EEUnitSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
-    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
-    return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, this, NULL, &theIn);
-}
-
 // Turns the loaded health fraction into hit points (at least 1 if the fraction was not 0; port, R5b.4 round 27:
 // ee_units unit_load.rs finish_hit_points over the record); returns 0
 long EEUnit::FinishLoad(long, long)
@@ -100,15 +91,6 @@ long EEUnit::FinishLoad(long, long)
     if (this->mUnitClass != NULL)
         ee_units_unit_finish_hit_points(this, this->mStats->mMaxHitPoints);
     return 0;
-}
-
-// Writes the unit to the saved game (base unit part, resource type, health fraction, amount, a zero); returns the
-// first write error. port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs unit_save)
-long EEUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    EEUnitSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
-    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
-    return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, this, NULL, &theIn);
 }
 
 // TakeHit's locals (the modifiers' input, the area damage, the damage) and the hit formula's answer

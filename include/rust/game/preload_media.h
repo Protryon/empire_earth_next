@@ -109,8 +109,6 @@ enum class EePreloadMediaCpp : uint32_t {
   /// `((TSCriticalSection*)p)->Enter()`
   LockEnter,
   LockLeave,
-  /// `PlatSleep(1)`
-  Sleep1,
   /// `gMediaTable.resize(a0, NULL)`
   MediaTableResize,
   /// `gMediaTable[a0] = a1`

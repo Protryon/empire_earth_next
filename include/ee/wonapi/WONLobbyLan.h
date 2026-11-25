@@ -6,7 +6,6 @@
 #include "rust/won_lobby/lanobj.h"
 #include "rust/won_net/qsock.h"
 namespace WONAPI {
-class LobbyRustDialog;
 class LobbyLanSocket;
 
 // RTTI 0x8559d8; 0x30 bytes (allocated at 0x7e0ada and 0x7e37f6); LobbyClient is 0x2c bytes.
@@ -39,52 +38,9 @@ private:
 // A Rust object since round 20 (rust/crates/ee_won_lobby/src/lanobj.rs): its methods and state are Rust's (since WONLobby
 // round 11 also the members the shell held: the client list, the LAN and direct-connect games, this player's
 // client, the sockets and their set, the timers, the discovery address, the join password: lanown.rs), its calls out
-// the host's ops (WONLobby/LanLogicHost.cpp); this shell keeps the dialogs, the virtual slots and completions.
-class LanLogic : public NetLogic {
-public:
-    LanLogic();
-    int GetRoomSpec() const { return 8; }
-    virtual ~LanLogic();
-    virtual void InitComponent(ComponentConfig* inConfig);
-    virtual void HandleControlEvent(int inControlId);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);
-    virtual bool HostGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::HostGame, inGame) != 0; }
-    virtual bool JoinGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::JoinGame, inGame) != 0; }
-    virtual LobbyClient* GetMyClient() { return reinterpret_cast<LobbyClient*>(this->Call(EeWonLanCall::MyClient)); }
-    virtual void SendToCaptain(const ByteBuffer* inBuffer)
-    { this->CallMessage(EeWonLanCall::SendToCaptain, inBuffer, NULL); }
-    virtual void BroadcastToGame(const ByteBuffer* inBuffer)
-    { this->CallMessage(EeWonLanCall::BroadcastToGame, inBuffer, NULL); }
-    virtual void SendToClient(LobbyClient* inClient, const ByteBuffer* inBuffer)
-    { this->CallMessage(EeWonLanCall::SendToClient, inBuffer, inClient); }
-    virtual void AdvertiseGame(LobbyGame* inGame) { this->Call(EeWonLanCall::AdvertiseGame, inGame); }
-    virtual void RemoveGameAdvertisement(LobbyGame* inGame)
-    { this->Call(EeWonLanCall::RemoveGameAdvertisement, inGame); }
-    virtual void KickClient(LobbyClient* inClient, bool) { this->Call(EeWonLanCall::KickClient, NULL, inClient); }
-    virtual void SetGameInProgress(bool) {} // empty: the shared one-argument stub at 0x6fa500
-    virtual void LeaveGame(LobbyGame*) { this->Call(EeWonLanCall::LeaveGame); }
-    virtual void Suspend() {} // empty: the shared no-argument stub at 0x8142a0
-    virtual void Resume();
-    virtual void Logout() { this->Call(EeWonLanCall::Logout); }
-    LobbyClientList* GetClientList() { return reinterpret_cast<LobbyClientList*>(this->Call(EeWonLanCall::ClientList)); }
-    intptr_t Call(EeWonLanCall inCall, void* inA = NULL, void* inB = NULL, intptr_t inC = 0)
-    { return ee_won_lan_call(this->mRust, inCall, inA, inB, inC, 0); }
-    void CallMessage(EeWonLanCall inCall, const ByteBuffer* inMessage, LobbyClient* inClient);
-    // the completions (Rust's)
-    void HandleSocketClosed(AsyncOp* inOp) { this->Call(EeWonLanCall::SocketClosed, inOp); }
-    void HandleNetworkTimer(AsyncOp* inOp) { this->Call(EeWonLanCall::NetworkTimer, inOp); }
-    void HandleRecvMsg(AsyncOp* inOp) { this->Call(EeWonLanCall::RecvMsg, inOp); }
-    void HandleDiscoveryTimer(AsyncOp* inOp) { this->Call(EeWonLanCall::DiscoveryTimer, inOp); }
-    void HandleDiscoveryRecv(AsyncOp* inOp) { this->Call(EeWonLanCall::DiscoveryRecv, inOp); }
-    void HandleAccept(AsyncOp* inOp) { this->Call(EeWonLanCall::Accept, inOp); }
-    void HandlePeerAuthDone(AsyncOp* inOp); // the certificate's check (C++), then the Rust's AddPending
-
-    SmartPtr<LobbyRustDialog> mDirectConnectDialog; // 0x40
-    SmartPtr<LobbyRustDialog> mLanNameDialog; // 0x44
-    SmartPtr<LobbyRustDialog> mLanPortDialog; // 0x48
-    SmartPtr<LobbyRustDialog> mPasswordDialog; // 0x4c
-private:
-    EeWonLan* mRust;
-};
+// the host's ops (WONLobby/LanLogicHost.cpp). Since R6 WON round 36 it is the RustLogic of kind Lan
+// (ee/wonapi/WONLobbyLogic.h): its methods are the shell's NetLogic calls and Call(EeWonLanCall, ..), its dialogs
+// the shell's slots, named here. (Its room spec, GetRoomSpec(), was 8.)
+enum { kLanDirectConnect, kLanName, kLanPort, kLanPassword }; // mDialog: 0x40 .. 0x4c
 }
 #endif

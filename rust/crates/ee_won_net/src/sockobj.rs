@@ -295,6 +295,12 @@ impl EeWonAsyncSocket {
         self.core().listen(backlog)
     }
 
+    /// `f` under the socket's lock (`AutoCrit aCrit(GetDataLock())`).
+    pub(crate) fn with_lock<R>(&self, f: impl FnOnce() -> R) -> R {
+        let _held = Held::new(self.lock);
+        f()
+    }
+
     /// `Accept`'s system part (the caller duplicates the socket and [`adopt`](Self::adopt)s the handle into it).
     pub fn accept(&self) -> Result<(PlatSocket, Addr), Status> {
         let _held = Held::new(self.lock);

@@ -16,7 +16,6 @@ class TSThread;
 
 class RTSMousePointer {
 public:
-    void Shutdown();                        // COMDAT 0x140999: mThread->Post(0x401), mThreadDone->Wait (inline: defined in Empire Earth.cpp, its only user)
     // 0x11b54e: creates the events, starts the thread (Main) at inThreadPriority, waits for it
     RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inThreadPriority);
     virtual ~RTSMousePointer();             // +0x00 (??_G 0x11b628; dtor 0x11b644)

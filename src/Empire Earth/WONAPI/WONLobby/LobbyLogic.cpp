@@ -12,6 +12,8 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyLogic.h"
+#include "ee/wonapi/WONLobbyDialogs.h"
+#include "ee/wonapi/WONLobbyCore.h"
 
 namespace WONAPI {
 // Defined in another unit; returns void
@@ -64,5 +66,22 @@ bool LobbyLogic::RemoveTrackedOp(AsyncOp* inOp)
     return this->mTracker.RemoveOp(inOp);
 }
 
-// NetLogic's five-byte destructor (0x7dfe00) stores no vtable of its own: probably an implicit destructor
+// ---- RustLogic: the shell of the six logics that are Rust objects (logicshell.rs routes its calls)
+
+// a dialog of the kind's InitComponent into its slot (SafeGetDialog throws for a missing one: kept for the entry)
+static intptr_t ShellFindDialog(void* inLogic, void* inConfig, int32_t inSlot, EeWonLobbyDlgKind inKind, const char* inName,
+                                const char* inFile, int32_t inLine)
+{
+    return WON_GUARDED_V(SafeGetDialog(static_cast<ComponentConfig*>(inConfig), static_cast<RustLogic*>(inLogic)->mDialog[inSlot], inKind, inName, inFile, inLine));
+}
+RustLogic::RustLogic(EeWonLogicShellKind inKind, Maker inMake) : mKind(inKind), mRust(inMake(this)) {}
+// Frees the Rust object first (it gives back what it holds), then the slots
+RustLogic::~RustLogic() { ee_won_logicshell_free(this->mKind, this->mRust); }
+void RustLogic::HandleComponentEvent(ComponentEvent* inEvent) { this->V(EeWonLogicShellV::HandleComponentEvent, (intptr_t)inEvent, inEvent->mType); }
+// LanLogic's Resume left the current game when the lobby resumes (the others' are their Rust objects')
+void RustLogic::Resume() { if (this->V(EeWonLogicShellV::Resume) != 0) LobbyLeaveGame(0); }
+intptr_t RustLogic::V(EeWonLogicShellV inVirtual, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    return ee_won_logicshell_virtual(this->mKind, this->mRust, inVirtual, a, b, c, d, this, ShellFindDialog);
+}
 }

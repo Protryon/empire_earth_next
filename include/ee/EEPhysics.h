@@ -35,7 +35,6 @@ struct EEPUnitSwap {
 // mStopThread, mSlowPlayback; the Rust loop reads the volatile ones with volatile accesses).
 class RTSPhysics : public EeRtsPhysicsFields {   // RTSPhysics.cpp, ctor 0x161041 (asserts lines 0x31..0x52)
 public:
-    void Shutdown();                        // COMDAT 0x144488: mThread->Post(0x401), mThreadDone->Wait (inline: defined in Empire Earth.cpp, its only user)
     // 0x161041 (EEPhysics passes its graphics and timer, then 1, 0xf; argument names are provisional)
     RTSPhysics(RTSGraphics* inGraphics, TMTimer* inTimer, long inDefaultTicksPerSecond, long inArg4);
     // the saved physics state (EEPMultiplayerHelper's Load/Save pass their arguments on)

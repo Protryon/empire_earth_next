@@ -219,7 +219,7 @@ static bool Connect(Pair& p, WONAPICore& inCore)
 static SmartPtr<AuthContext> NewContext(long long inUser)
 {
     SmartPtr<AuthContext> aCtx = new AuthContext;
-    SmartPtr<GetCertOp> aCertOp = new GetCertOp(aCtx.get());
+    SmartPtr<RustServerOp> aCertOp = RustServerOp::NewGetCert(aCtx.get());
     sOp = aCertOp.get();
     void* c1 = Call(EE_WON_HOST_CERT_NEW, NULL, NULL, 1, 0, Cert1(2, inUser)).mCall.out_obj;
     void* c2 = Call(EE_WON_HOST_CERT_NEW, NULL, NULL, 2, 0, Cert2(2, inUser)).mCall.out_obj;
@@ -254,17 +254,17 @@ static SmartPtr<AuthContext> NewContext(long long inUser)
 // a client and a server peer authentication of a type over a new pair; the ops are kept for their sessions
 struct Auth {
     Pair mPair;
-    SmartPtr<PeerAuthOp> mClientOp;
-    SmartPtr<PeerAuthServerOp> mServerOp;
+    SmartPtr<RustServerOp> mClientOp;
+    SmartPtr<RustServerOp> mServerOp;
 };
 static void Authenticate(Auth& a, AuthType inType, AuthContext* inClient, AuthContext* inServer, WONAPICore& inCore)
 {
     a.mPair.mClient = new BlockingSocket(0);
-    a.mClientOp = new PeerAuthOp(sListenAddr, inClient, inType, a.mPair.mClient.get(), true);
+    a.mClientOp = RustServerOp::NewPeerAuth(sListenAddr, inClient, inType, a.mPair.mClient.get(), true);
     a.mClientOp->RunAsync(10000);
     Log("accept " + N(Accept(a.mPair, inCore)));
     if (a.mPair.mServer.get() == NULL) return;
-    a.mServerOp = new PeerAuthServerOp(inServer, a.mPair.Server());
+    a.mServerOp = RustServerOp::NewPeerAuthServer(inServer, a.mPair.Server());
     a.mServerOp->RunAsync(10000);
     for (int i = 0; i < 500 && (a.mClientOp->GetStatus() == WS_Pending || a.mServerOp->GetStatus() == WS_Pending); i++)
         inCore.Pump(10);
@@ -482,7 +482,7 @@ int main(int argc, char** argv)
         p.mServerOp = NULL;
         aCore.Pump(20);
         if (a.mPair.mServer.get() != NULL) {
-            SmartPtr<GetCertOp> aPlain = new GetCertOp(aClientCtx.get());
+            SmartPtr<RustServerOp> aPlain = RustServerOp::NewGetCert(aClientCtx.get());
             sOp = aPlain.get();
             Send("client after release", a.mPair.mClient.get(), "after the op");
             Recv("server after release", a.mPair.Server());
@@ -491,7 +491,7 @@ int main(int argc, char** argv)
             sOp = NULL;
         }
         // an op without a session
-        SmartPtr<PeerAuthOp> aNone = new PeerAuthOp(sListenAddr, aClientCtx.get(), AUTH_TYPE_SESSION, NULL, true);
+        SmartPtr<RustServerOp> aNone = RustServerOp::NewPeerAuth(sListenAddr, aClientCtx.get(), AUTH_TYPE_SESSION, NULL, true);
         sOp = aNone.get();
         Session("unrun op", aNone.get());
         Log("unrun key " + Hex(Key(aNone.get())));

@@ -53,7 +53,6 @@
 // The obstacle wait time scale at 0x4c2374 (a long, 4000; EvaluateCondition reads it at 0x22eca0). Its owning unit
 // is not recoverable, so it is only declared here (provisional name).
 extern long gUnitAIWaitScale;
-bool EEIsLocationGoalQueued(EEComplexUnit* inUnit);
 
 
 // 0x24485b: the enemy unit near (inX, inY) within inRange that inUnit can attack (EEUCLandable.cpp; provisional name)

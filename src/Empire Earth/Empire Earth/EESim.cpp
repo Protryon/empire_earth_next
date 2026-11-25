@@ -50,7 +50,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMessage.h"
-#include "ee/EEMessageCapture.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUserInterface.h"
@@ -78,7 +77,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEFormation.h"
 #include "ee/EECPTrace.h"
-#include "ee/EEAppCapture.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEMap.h"
 #include "ee/EEAreaUtilities.h"
@@ -88,9 +86,7 @@
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitUtilities.h"     // EESearchTargetAlongList (the end sweep)
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
-void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffectManager.h)
 #include "ee/EEUGRust.h"
-#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -145,19 +141,9 @@ void HostCancelGame()
     gUserInterface->PostCancelGame();
 }
 
-long HostEngineChoice(const char* inName)
-{
-    return EECPChoiceByName(inName);
-}
-
 long HostWonders(uint64_t inPlayer)
 {
     return (long)reinterpret_cast<EEPlayer*>((uintptr_t)inPlayer)->GetNumWonderUnits();
-}
-
-void DebugTrampoline(const char* inText)
-{
-    ee_sim_driver_debug(inText);
 }
 
 }   // namespace
@@ -208,11 +194,11 @@ void EESimGameEnded(int inResult);
 int EESimMain(int argc, char** argv)
 {
     static const EeSimDriverHost kHost = {
-        HostLock, HostDumpAfterLoad, HostExtension, HostCancelGame, HostEngineChoice, HostWonders};
+        HostLock, HostDumpAfterLoad, HostExtension, HostCancelGame, HostWonders};
     int theCode = ee_sim_driver_main(argc, argv, &kHost);   // (the screens' events: sim_driver driver.rs)
     if (theCode != EE_SIM_DRIVER_CONTINUE)
         return theCode;
-    PlatDebugSetHandler(DebugTrampoline);
+    PlatDebugSetHandler(ee_sim_driver_debug);
 #ifdef _WIN32
     ee_sim_driver_fault_install("EE-SIM");
 #else
@@ -261,12 +247,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     typedef EeSimDriverSim O;
     switch (inOp) {
     // the user interface
-    case O::UiPresent: return gUIManager != NULL;
-    case O::UiLock: gUIManager->LockUIForCopyData();
-        break;
-    case O::UiUnlock: gUIManager->UnlockUIForCopyData();
-        break;
-    case O::CurrentForm: return P64(gUIManager->GetCurrentForm());
     case O::EditorForm: return P64(static_cast<UIForm*>(gUIManager->GetScenarioEditorForm()));
     case O::FormId: return UF->GetFormID();
     case O::FormShellOf: return P64(EEUIShell::Of(UF));
@@ -290,36 +270,22 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::SpLoadGameFileList: return kSPLoadGameFileListBox;
     case O::LoadScenarioFileList: return kLoadGameLoadFileListBox;
     // the physics and the world
-    case O::PhysicsPresent: return gPhysics != NULL;
-    case O::PhysicsTimerRunning: return gPhysics->mTimerRunning;
-    case O::PhysicsGameOver: return gPhysics->mGameOver;
-    case O::PhysicsGameTime: return gPhysics->mGameTime;
     case O::PhysicsTicksDone: return gPhysics->mNumTicksDone;
     case O::PhysicsTickMs: return gPhysics->mTickTimeMs;
     case O::PhysicsFlushPlacements: gWorld.FlushQueuedPlacements();
         break;
     case O::MapPresent: return gWorld.GetMap() != NULL;
-    case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
     case O::NumPlayers: return gWorld.GetNumPlayers();
-    case O::GetPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
-    case O::WorldNumPlayers: return gWorld.mNumPlayers;
-    case O::WorldPlayersAt: return P64(gWorld.mPlayers[a[0]]);
     case O::PlayerSetCivilizationChosen: PL->mCivilizationChosen = a[0] != 0;
         break;
     case O::PlayerSetCivilizationLocked: PL->mCivilizationLocked = a[0] != 0;
         break;
     case O::PlayerSetStance: PL->SetDiplomaticStance((EEPlayer*)a[0], 0, gWorld.GetMap());
         break;
-    case O::PlayerFirstUnit: return P64(PL->mFirstUnit);
     case O::PlayerAllyCount: return PL->mAllies.size();
-    case O::PlayerAllyAt: return P64(PL->mAllies[a[0]]);
-    case O::PlayerFlareReceived: PL->FlareReceived((EEPlayer*)a[0], U2DPoint<long>((long)a[1], (long)a[2]));
-        break;
-    case O::PlayerTechnologies: return P64(PL->mTechnologies);
     case O::PlayerId: return PL->GetPlayerID();
     case O::PlayerAddPendingUnits: PL->AddPendingUnits(false, true);
         break;
-    case O::TreeGet: return P64(((EETechTree*)p)->Get((long)a[0]));
     case O::NodeData: return P64(((EETechTreeNode*)p)->mData);
     case O::NodeCost: return ((EETechTreeNode*)p)->GetCost((long)a[0], (unsigned long)a[1], 1.0f);
     case O::CastLocationCalamity:
@@ -356,10 +322,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::RulesProblemCount: return sProblems.size();
     // the units
-    case O::UnitNext: return P64(static_cast<EEUnit*>(UN->mNext));
-    case O::UnitComplex: return P64(UN->mComplexUnit);
-    case O::ComplexOf: return P64(UN->mComplexUnit);
-    case O::UnitGetComplex: return P64(UN->GetComplexUnit());
     case O::UnitHitPoints: return UN->mHitPoints;
     case O::UnitHasStats: return UN->mStats != NULL;
     case O::UnitIsBuilding: return UN->mUnitClass->IsBuilding();
@@ -380,17 +342,11 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
         break;
     case O::ComplexSetLauncherClass: CX->SetLauncherClass((EEUnitClass*)a[0]);
         break;
-    case O::ComplexSetOwner: CX->SetOwner((EEComplexUnit*)a[0]);
-        break;
     case O::ComplexPosition: CX->GetPosition(*(GE3DPoint*)a[0]);
         break;
     case O::ComplexSetGoal: CX->SetGoal((EEUnitGoal*)a[0], false, false);
         break;
-    case O::ComplexSetVelocity: CX->SetVelocity(f[0]);
-        break;
     case O::ComplexFlightTime: return CX->mFlightTime;
-    case O::ComplexSetFlightTime: CX->SetFlightTime((long)a[0]);
-        break;
     case O::ComplexHasGoalState: return CX->mGoalState != NULL;
     case O::ComplexPlayer: return P64(CX->mPlayer);
     case O::IgnoredSave: return P64(new std::deque<EEComplexUnitAttacker>(CX->mIgnoredTargets));
@@ -407,7 +363,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::UpgradeProjectile: return P64(((EEUnitClassUpgrade*)p)->mUnitClass->mProjectileClass);
     // the unit classes
     case O::ClassCount: return gUnitClassTable.size();
-    case O::ClassAt: return P64(gUnitClassTable[a[0]]);
     case O::ClassCategory: return UC->mCategory;
     case O::ClassProjectile: return P64(UC->mProjectileClass);
     case O::ClassCreateUnit: return P64(UC->CreateUnit((long)a[0], (long)a[1], (unsigned long)a[2], false, (EEComplexUnit*)a[3]));
@@ -420,46 +375,12 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::MissileCategory: return kUnitCategoryMissile;
     case O::TorpedoCategory: return kUnitCategoryTorpedo;
     // the capture and its sweeps
-    case O::CaptureActive: return EESimCaptureRecord::Active();
-    case O::CaptureFlush: EESimCaptureRecord::Flush();
-        break;
     case O::PhysicsRandom: return gPhysics != NULL ? P64(&gPhysics->mRandom) : 0;
-    case O::CaptureOnly: EESimCaptureRecord::Only((unsigned int)a[0]);
-        break;
-    case O::CaptureOnlyList: EESimCaptureRecord::Only((const unsigned int*)a[0], (size_t)a[1]);
-        break;
-    case O::CaptureExclusive: EESimCaptureRecord::Exclusive(a[0] != 0);
-        break;
-    case O::CaptureHold: EESimCaptureRecord::Hold(a[0] != 0);
-        break;
-    case O::CaptureClose: EESimCaptureRecord::Close();
-        break;
-    case O::CombatFlush: EECombatCaptureFlush();
-        break;
     case O::FormationSweep: EEFormationCaptureSweep();
-        break;
-    case O::TechSweep: EETechCaptureSweep();
-        break;
-    case O::CalamitySweep: EECalamityCaptureSweep();
         break;
     case O::GroupCommandSweep: EEGroupCommandSweep();
         break;
-    case O::MessageSweep: EEMessageCaptureSweep();
-        break;
-    case O::CastCalamities: EETechCaptureCastCalamities((long)a[0]);
-        break;
-    case O::MiniMapPresent: return gMiniMap != NULL;
     case O::MiniMapSnapshot: ee_app_capture_minimap_snapshot(gMiniMap->mRust, gMiniMap->mPixels, gMiniMap->mPixelsPerRow);
-        break;
-    case O::SightSnapshot: EESightCaptureSnapshot();
-        break;
-    case O::CheatSweep: EEAppCaptureCheatSweep();
-        break;
-    case O::StormSweep: EEAppCaptureStormSweep();
-        break;
-    case O::EffectSweep: EEEffectCaptureSweep();
-        break;
-    case O::StatisticsSweep: EEAppCaptureStatisticsSweep();
         break;
     case O::RegenerationInterval: return EEGetRules().mCombat.mRegenerationInterval;
     case O::ConversionFaithCost: return gWorldTable.GetLongValue(kWorldConversionFaithCost);
@@ -468,7 +389,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::ShowDialogMessage: gWorld.mScenarioManager->ShowDialogMessage();
         break;
     // the map's sight
-    case O::MapSize: return gWorld.mMap->mSize;
     case O::MapAddSight: gWorld.mMap->AddSight(PL, f[0], f[1], f[2], a[0] != 0);
         break;
     case O::MapRemoveSight: gWorld.mMap->RemoveSight(PL, f[0], f[1], f[2], a[0] != 0);
@@ -476,8 +396,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::MapExploreUnseen: gWorld.mMap->ExploreUnseen(PL);
         break;
     case O::MapFogSeen: gWorld.mMap->FogSeen(PL);
-        break;
-    case O::MapComputeChecksum: gWorld.mMap->ComputeChecksum();
         break;
     // the state dump (sim_driver dump.rs)
     case O::DmPhysLastOos: return gPhysics->mLastOutOfSynchChecksum;
@@ -490,9 +408,7 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmPhysInputs: return gPhysics->mInputMessagesProcessed;
     case O::DmPhysTickRandom: return (long)gPhysics->mTickRandom;
     case O::DmPhysTicksToProcess: return (long)gPhysics->mTicksToProcess;
-    case O::DmCpOos: return (uint32_t)EECPOutOfSynchChecksum();
     case O::DmWorldFirstUnit: return P64(static_cast<EEUnit*>(gWorld.mUnits.mFirst));
-    case O::DmWorldNextUnit: return P64(static_cast<EEUnit*>(UN->mTileNode->mNext));
     case O::DmUnitChecksum: return (uint32_t)UN->GetChecksum((long)a[0]);
     case O::DmComplexChecksum: return (uint32_t)CX->GetChecksum((long)a[0]);
     case O::DmActiveUnitId: return EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0])->mUnitID;
@@ -509,11 +425,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmTownHullY: return (long)((EETown*)p)->GetHullPoint((unsigned long)a[0]).GetY();
     case O::DmPlPatrolCount: return PL->mPatrolGroups.size();
     case O::DmPlPatrolAt: return P64(PL->mPatrolGroups[a[0]]);
-    case O::DmPgId: return (unsigned long)ee_units_pg_id((EEPPatrolGroup*)p);
-    case O::DmPgTown: return ee_units_pg_is_town_patrol((EEPPatrolGroup*)p) ? 1 : 0;
-    case O::DmPgLoop: return ee_units_pg_is_loop((EEPPatrolGroup*)p) ? 1 : 0;
-    case O::DmPgCount: return ee_units_pg_point_count((EEPPatrolGroup*)p);
-    case O::DmPgPoint: return P64(static_cast<EEComplexUnit*>(ee_units_pg_point((EEPPatrolGroup*)p, (size_t)a[0])));
     case O::DmCxUnitId: return CX->mUnitID;
     case O::DmCxTileYRaw: return CX->mTileY;
     case O::DmUnitIdRaw: return UN->mUnitID;
@@ -557,7 +468,6 @@ extern "C" int64_t ee_simcpp_sim(EeSimDriverSim inOp, uintptr_t p, const int64_t
     case O::DmCxAffectingUnitId: return CX->mAffectingAreaEffects.mItems[a[0]]->mUnit != NULL ? (unsigned long)CX->mAffectingAreaEffects.mItems[a[0]]->mUnit->GetUnitID() : 0UL;
     case O::DmCxSize: return sizeof(EEComplexUnit);
     case O::DmUnitSize: return sizeof(EEUnit);
-    case O::DmCalManager: return P64(EECalamityManager::GetInstance());
     case O::DmCalCount: return ((EECalamityManager*)p)->mCalamities.size();
     case O::DmCalAt: return P64(((EECalamityManager*)p)->mCalamities[a[0]]);
     case O::DmCalClass: return ((EECalamity*)p)->mClass != NULL ? (long)((EECalamity*)p)->mClass->mClassEnum : -1L;
@@ -598,7 +508,6 @@ extern "C" const char* ee_simcpp_sim_text(EeSimDriverSim inOp, uintptr_t p, int6
     case O::ListData: return (sText = (const char*)((UILBString*)p)->GetData((unsigned long)a)).c_str();
     case O::RulesProblem: return (sText = sProblems[a]).c_str();
     case O::RulesError: return sRulesError.c_str();
-    case O::EngineId: return (sText = EECPAIID(ee_cp_engine_ai_at((size_t)a))).c_str();
     default: break;
     }
     return NULL;

@@ -4,6 +4,8 @@
 //! driver did. The functions are the C library's own (UCRT's `_putenv_s`, `_dup`, `_dup2`, `_fileno`, `_write`;
 //! POSIX `setenv`, `dup`, `dup2`, `fileno`, `write`).
 
+#[cfg(not(test))]
+use crate::gamecpp as gc;
 use std::ffi::{c_long, CString};
 #[cfg(not(test))]
 use std::io::Write as _;
@@ -186,7 +188,7 @@ pub fn quit(code: i32) -> ! {
     #[cfg(not(test))]
     // SAFETY: the C library's flush and exit; TerminateProcess on this process
     unsafe {
-        super::sim_ops::h(super::sim_ops::EeSimDriverSim::CaptureFlush, 0, &[]);
+        ee_sim::app::capture::ee_app_capture_flush();
         crt::fflush(std::ptr::null_mut());
         #[cfg(windows)]
         windows_sys_059::Win32::System::Threading::TerminateProcess(
@@ -293,7 +295,7 @@ unsafe extern "C" fn rng_draw(r: *mut ee_base::random::EeURandom) {
     if physics_random == 0 || physics_random != r as usize {
         return;
     }
-    let ms = h(O::PhysicsGameTime, 0, &[]) as c_long;
+    let ms = gc::h(gc::O::DwGameTime, 0, &[]) as c_long;
     let mut guard = RNG.lock().unwrap_or_else(|e| e.into_inner());
     let Some(trace) = guard.as_mut() else { return };
     if ms <= trace.after_ms {
