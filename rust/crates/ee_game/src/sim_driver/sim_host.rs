@@ -10,6 +10,9 @@ use crate::gamecpp as gc;
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::GeTransformation;
+use ee_sim::unit_ids::{EEUnitCategory, EEUnitTypeID};
+
+use crate::screens::ui_ids::{EELoadGameControl, EESinglePlayerLoadGameControl};
 
 use super::host::*;
 use super::sim_ops::{h, hd, hf, hs, ht, EeSimDriverSim as O, UiLock};
@@ -158,8 +161,8 @@ fn screen_list(which: i32) -> usize {
     let form = gc::h(gc::O::SsCurrentForm, 0, &[]) as usize;
     let forms = [FORM_LOAD, FORM_LOAD_SCENARIO, FORM_CAMPAIGN_SELECT];
     let controls = [
-        h(O::SpLoadGameFileList, 0, &[]) as c_ulong,
-        h(O::LoadScenarioFileList, 0, &[]) as c_ulong,
+        EESinglePlayerLoadGameControl::kSPLoadGameFileListBox as c_ulong,
+        EELoadGameControl::kLoadGameLoadFileListBox as c_ulong,
         CAMPAIGN_SCENARIO_LIST,
     ];
     if form == 0 || !(0..=2).contains(&which) {
@@ -227,7 +230,7 @@ pub fn physics() -> EeSimDriverPhysics {
     p.timer_running = gc::h(gc::O::SsTimerRunning, 0, &[]) != 0;
     p.game_over = gc::h(gc::O::FwGameOver, 0, &[]) != 0;
     p.game_ms = gc::h(gc::O::DwGameTime, 0, &[]) as c_long;
-    p.pt = h(O::PhysicsTicksDone, 0, &[]) as c_ulong;
+    p.pt = physics_record().mNumTicksDone;
     p
 }
 
@@ -235,7 +238,7 @@ pub fn physics() -> EeSimDriverPhysics {
 pub fn editor_up() -> bool {
     let _lock = UiLock::hold();
     let editor = h(O::EditorForm, 0, &[]);
-    editor != 0 && gc::h(gc::O::SsCurrentForm, 0, &[]) == editor && h(O::MapPresent, 0, &[]) != 0
+    editor != 0 && gc::h(gc::O::SsCurrentForm, 0, &[]) == editor && gc::h(gc::O::EcHasMap, 0, &[]) != 0
 }
 
 /// The idle human as the harness's civilization pre-empt leaves it (ai_game.py: the civilization builder opened and
@@ -275,21 +278,58 @@ pub fn request_save(name: &str) {
 /// it; that server then was not published and its first input crashed (NERecordPlayback::Process on its NULL
 /// recorder).
 pub fn set_switches(s: &EeSimDriverSwitches) {
-    h(O::SetSimMode, 0, &[]);
-    h(O::SetSeedSet, 0, &[s.seed_set as i64]); // a loaded game: the file's seed, as the game loads it
-    h(O::SetSeed, 0, &[s.seed as i64]);
-    h(O::SetNoHumanDefeat, 0, &[s.no_human_defeat as i64]);
+    use ee_base::plat_core::sim as plat;
+    plat::gPlatSimMode.set(1);
+    plat::gPlatSimSeedSet.set(s.seed_set); // a loaded game: the file's seed, as the game loads it
+    plat::gPlatSimSeed.set(s.seed);
+    plat::gPlatSimNoHumanDefeat.set(s.no_human_defeat);
     h(O::SetScenarioDialogs, 0, &[s.scenario_dialogs as i64]);
-    let offset = if s.port_offset >= 0 { s.port_offset as i64 } else { h(O::AnyPort, 0, &[]) };
-    h(O::SetPortOffset, 0, &[offset]);
+    // kPlatSimAnyPort (-1): every port the protocol binds 0
+    plat::gPlatSimPortOffset.set(if s.port_offset >= 0 { s.port_offset } else { -1 });
 }
 
 /// `gPlatSimNoHumanDefeatHits`; a negative argument reads, 0 clears.
 pub fn no_human_defeat_hits(op: c_long) -> c_long {
+    use ee_base::plat_core::sim::gPlatSimNoHumanDefeatHits as hits;
     if op == 0 {
-        h(O::ClearNoHumanDefeatHits, 0, &[]);
+        hits.set(0);
     }
-    h(O::NoHumanDefeatHits, 0, &[]) as c_long
+    hits.get()
+}
+
+// the world constants the sweeps read (include/ee/EEWorldConstants.h: kWorldConversionFaithCost, ...)
+pub(super) const WORLD_CONVERSION_FAITH_COST: u32 = 46;
+pub(super) const WORLD_WONDER_SIGHT_RADIUS: u32 = 74;
+pub(super) const WORLD_TRADE_RATE_STONE_IRON: u32 = 91;
+pub(super) const WORLD_TRADE_RATE_FOOD_WOOD: u32 = 92;
+
+/// The unit's Rust record (`static_cast<EeUnitsUnitFields*>`; the live unit's, read on the thread that owns it).
+fn unit_fields(u: usize) -> *const ee_sim::world::unit_fields::EeUnitsUnitFields {
+    gc::h(gc::O::UnFields, u, &[]) as usize as *const _
+}
+
+/// The complex unit's Rust record (`static_cast<EeUnitsComplexUnitFields*>`).
+fn cx_fields(c: usize) -> *const ee_sim::world::unit_fields::EeUnitsComplexUnitFields {
+    gc::h(gc::O::CxFields, c, &[]) as usize as *const _
+}
+
+/// gPhysics' saved block (EE-SIM's reads while the physics lives).
+pub(super) fn physics_record() -> ee_sim::units::physics_save::EeUnitsPhysicsSaved {
+    let physics = crate::gamecpp::globals::get!(gPhysics) as usize;
+    // SAFETY: the live physics' record, copied now
+    unsafe { *crate::physics::rec(physics) }
+}
+
+/// The complex unit's class category (`mUnitClass->mCategory`).
+fn category_of(c: usize) -> i64 {
+    // SAFETY: the live unit's record
+    let class = unsafe { (*unit_fields(c)).mUnitClass } as usize;
+    gc::h(gc::O::RoClassCategory, class, &[])
+}
+
+/// `gWorldTable`'s row `id`.
+fn world(id: u32) -> ee_data::tables::EeDataWorldEntry {
+    ee_data::tables::ee_data_world_entry(id)
 }
 
 /// The player's first living building (0: none).
@@ -298,7 +338,7 @@ fn first_building(player: c_ulong) -> usize {
     let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
     while u != 0 {
         if gc::h(gc::O::UnComplex, u, &[]) != 0
-            && h(O::UnitHitPoints, u, &[]) as c_long > 0
+            && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
             && h(O::UnitIsBuilding, u, &[]) != 0
         {
             return u;
@@ -316,7 +356,7 @@ pub fn flare(player: c_ulong) -> EeSimDriverSpot {
     if human == 0 || spot == 0 {
         return EeSimDriverSpot::default();
     }
-    let (x, y) = (h(O::UnitTileX, spot, &[]) as c_long, h(O::UnitTileY, spot, &[]) as c_long);
+    let (x, y) = (gc::h(gc::O::DkTileX, spot, &[]) as c_long, gc::h(gc::O::DkTileY, spot, &[]) as c_long);
     let allies: Vec<usize> =
         (0..h(O::PlayerAllyCount, human, &[])).map(|k| gc::h(gc::O::PlAllyAt, human, &[k]) as usize).collect();
     for &a in &allies {
@@ -331,8 +371,8 @@ pub fn volcano(player: c_ulong) -> EeSimDriverSpot {
     if spot == 0 {
         return EeSimDriverSpot::default();
     }
-    let x = h(O::UnitTileX, spot, &[]) as c_long + 6;
-    let y = h(O::UnitTileY, spot, &[]) as c_long + 6;
+    let x = gc::h(gc::O::DkTileX, spot, &[]) as c_long + 6;
+    let y = gc::h(gc::O::DkTileY, spot, &[]) as c_long + 6;
     let manager = gc::hp(gc::O::CalamityManager, 0, &[]);
     let cast =
         gc::calamity_objects::ee_gamecpp_calamity_create(manager as *mut c_void, 1, 9, 0xffff_ffff, 0, x, y, player);
@@ -341,14 +381,14 @@ pub fn volcano(player: c_ulong) -> EeSimDriverSpot {
 
 /// The volcano's boulders on the map (every player's volcano projectiles' ids).
 pub fn volcano_boulders() -> Vec<c_ulong> {
-    let boulder = h(O::VolcanoProjectileType, 0, &[]);
+    let boulder = EEUnitTypeID::kUnitTypeVolcanoProjectile as i64;
     let mut out = Vec::new();
     for i in 0..h(O::NumPlayers, 0, &[]) {
         let p = gc::h(gc::O::TbWorldPlayer, 0, &[i]) as usize;
         let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
         while u != 0 {
             if h(O::UnitType, u, &[]) == boulder {
-                out.push(h(O::UnitId, u, &[]) as c_ulong);
+                out.push(gc::h(gc::O::RoUnitId, u, &[]) as c_ulong);
             }
             u = gc::h(gc::O::UnNext, u, &[]) as usize;
         }
@@ -497,10 +537,10 @@ unsafe extern "C" fn combat_host(_ctx: *mut c_void, op: u32, a: u64, b: u64, out
 /// The combat formulas' sweep of the simulation capture (combat_sweep.rs, over the world views).
 fn combat_capture_sweep() {
     let sweep = super::combat_sweep::EeSimDriverCombatSweep {
-        tick_ms: h(O::PhysicsTickMs, 0, &[]) as i32,
-        tick_seconds: hd(O::PhysicsTickSeconds, 0, &[], &[]),
+        tick_ms: physics_record().mTickTimeMs as i32,
+        tick_seconds: physics_record().mTickSeconds,
         regeneration_interval: h(O::RegenerationInterval, 0, &[]) as i32,
-        conversion_faith_cost: h(O::ConversionFaithCost, 0, &[]) as i32,
+        conversion_faith_cost: world(WORLD_CONVERSION_FAITH_COST).mLongValue,
         ctx: std::ptr::null_mut(),
         host: combat_host,
     };
@@ -511,19 +551,19 @@ fn combat_capture_sweep() {
 /// A player's living, armed units on the map in its list order (`priests`: priests kept; `missiles`: missiles and
 /// torpedoes kept).
 fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
-    let (missile, torpedo) = (h(O::MissileCategory, 0, &[]), h(O::TorpedoCategory, 0, &[]));
+    let (missile, torpedo) = (EEUnitCategory::kUnitCategoryMissile as i64, EEUnitCategory::kUnitCategoryTorpedo as i64);
     let mut all = Vec::new();
     let mut u = if player != 0 { gc::h(gc::O::PlFirstUnit, player, &[]) as usize } else { 0 };
     while u != 0 {
         let c = gc::h(gc::O::UnComplex, u, &[]) as usize;
         if c != 0
-            && h(O::UnitHitPoints, u, &[]) as c_long > 0
-            && h(O::UnitHasStats, u, &[]) != 0
+            && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
+            && !unsafe { (*unit_fields(u)).mStats }.is_null()
             && h(O::ComplexOnMap, c, &[]) != 0
-            && h(O::ComplexTileX, c, &[]) as c_long != -10000
+            && gc::h(gc::O::DkTileX, c, &[]) as c_long != -10000
             && hd(O::ComplexAttack, c, &[], &[]) > 0.0
             && (priests || h(O::ComplexIsPriest, c, &[]) == 0)
-            && (missiles || (h(O::ComplexCategory, c, &[]) != missile && h(O::ComplexCategory, c, &[]) != torpedo))
+            && (missiles || ![missile, torpedo].contains(&category_of(c)))
         {
             all.push(c);
         }
@@ -550,10 +590,10 @@ fn list_search_sweep() {
         let first = all.len().saturating_sub(64);
         for &a in &all[first..] {
             let ignored = h(O::IgnoredSave, a, &[]) as usize;
-            let (x, y) = (h(O::ComplexTileX, a, &[]), h(O::ComplexTileY, a, &[]));
+            let (x, y) = (gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x, y], &[1.0]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
-            let (x, y) = (h(O::ComplexTileX, a, &[]), h(O::ComplexTileY, a, &[]));
+            let (x, y) = (gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x + 2, y - 2], &[1.5]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
             h(O::IgnoredFree, ignored, &[]);
@@ -577,7 +617,7 @@ fn list_search_sweep() {
 fn missile_sweep() {
     capture_only_list(&[tag(b"CBMA"), tag(b"CBMH"), tag(b"CBGI"), tag(b"CBWI")]);
     cap::ee_app_capture_exclusive(true);
-    let (missile, torpedo) = (h(O::MissileCategory, 0, &[]), h(O::TorpedoCategory, 0, &[]));
+    let (missile, torpedo) = (EEUnitCategory::kUnitCategoryMissile as i64, EEUnitCategory::kUnitCategoryTorpedo as i64);
     let table: Vec<usize> = (0..h(O::ClassCount, 0, &[])).map(|k| gc::h(gc::O::UcAt, 0, &[k]) as usize).collect();
     let mut classes = Vec::new();
     let mut launchers = Vec::new();
@@ -585,7 +625,7 @@ fn missile_sweep() {
         if class == 0 {
             continue;
         }
-        let category = h(O::ClassCategory, class, &[]);
+        let category = gc::h(gc::O::RoClassCategory, class, &[]);
         if category != missile && category != torpedo {
             continue;
         }
@@ -608,16 +648,21 @@ fn missile_sweep() {
         let first = units.len().saturating_sub(4);
         for (i, &a) in units.iter().enumerate().skip(first) {
             for (k, &class) in classes.iter().enumerate() {
-                if h(O::ComplexHitPoints, target, &[]) as c_long <= 0
-                    || h(O::ComplexTileX, target, &[]) as c_long == -10000
+                if gc::h(gc::O::EcHitPoints, target, &[]) as c_long <= 0
+                    || gc::h(gc::O::DkTileX, target, &[]) as c_long == -10000
                 {
                     break;
                 }
-                let owner = h(O::ComplexPlayer, a, &[]) as usize;
+                let owner = gc::h(gc::O::UnPlayer, a, &[]) as usize;
                 let created = h(
                     O::ClassCreateUnit,
                     class,
-                    &[h(O::ComplexTileX, a, &[]), h(O::ComplexTileY, a, &[]), h(O::PlayerId, owner, &[]), a as i64],
+                    &[
+                        gc::h(gc::O::DkTileX, a, &[]),
+                        gc::h(gc::O::DkTileY, a, &[]),
+                        gc::h(gc::O::RoPlayerId, owner, &[]),
+                        a as i64,
+                    ],
                 ) as usize;
                 let m = if created != 0 { gc::h(gc::O::UnGetComplex, created, &[]) as usize } else { 0 };
                 if m == 0 {
@@ -630,7 +675,13 @@ fn missile_sweep() {
                 gc::h(
                     gc::O::CxSetLauncherClass,
                     m,
-                    &[if launchers[k] != 0 { launchers[k] } else { h(O::ComplexClass, a, &[]) as usize } as i64],
+                    &[
+                        if launchers[k] != 0 {
+                            launchers[k]
+                        } else {
+                            (unsafe { (*unit_fields(a)).mUnitClass }) as usize
+                        } as i64,
+                    ],
                 );
                 gc::h(gc::O::CxSetOwner, m, &[a as i64]);
                 let mut at = [0f32; 3];
@@ -641,23 +692,25 @@ fn missile_sweep() {
                     hf(O::NewAttackGround, 0, &[], &at)
                 };
                 h(O::ComplexSetGoal, m, &[goal]);
-                gc::hf(gc::O::CxSetVelocity, m, &[], &[hd(O::ComplexVelocity, a, &[], &[])]);
+                gc::hf(gc::O::CxSetVelocity, m, &[], &[gc::hd(gc::O::EcVelocity, a, &[], &[])]);
                 hf(O::ClassLaunchProjectile, class, &[m as i64], &at);
-                if h(O::ComplexFlightTime, m, &[]) as c_long == 0 {
+                if unsafe { (*cx_fields(m)).mFlightTime } == 0 {
                     gc::h(gc::O::CxSetFlightTime, m, &[300]);
                 }
                 // onto the map, as the next tick's EEPhysics::FlushWorld puts a launched shot
-                h(O::PhysicsFlushPlacements, 0, &[]);
+                let world = core::ptr::addr_of_mut!(crate::gamecpp::global_objects::gWorld);
+                // SAFETY: the live world, under the world lock
+                unsafe { super::sed_host::ee_rts_world_flush_queued_placements(world.cast()) };
                 h(O::PlayerAddPendingUnits, owner, &[]);
                 let mut t = 0;
                 while t < 120
-                    && h(O::UnitTileXRaw, m, &[]) as c_long != -10000
-                    && h(O::ComplexHasGoalState, m, &[]) != 0
+                    && gc::h(gc::O::DkTileX, m, &[]) as c_long != -10000
+                    && !unsafe { (*cx_fields(m)).mGoalState }.is_null()
                 {
                     h(O::ClassStep, class, &[m as i64]);
-                    let tick = h(O::PhysicsTickMs, 0, &[]) as c_long;
+                    let tick = physics_record().mTickTimeMs;
                     let elapsed = if tick != 0 { tick } else { 1 };
-                    let flight = h(O::ComplexFlightTime, m, &[]) as c_long;
+                    let flight = unsafe { (*cx_fields(m)).mFlightTime };
                     if flight != 0 {
                         gc::h(gc::O::CxSetFlightTime, m, &[if flight > elapsed { flight - elapsed } else { 0 } as i64]);
                     }
@@ -678,10 +731,10 @@ fn missile_sweep() {
 
 /// TSGT, MAPS, MAPK: the app profile's end sweep of EEMap's sight and out-of-synch checksum (ee/EESightCapture.h).
 pub fn sight_capture_sweep() {
-    if !cap::ee_app_capture_active() || h(O::MapPresent, 0, &[]) == 0 {
+    if !cap::ee_app_capture_active() || gc::h(gc::O::EcHasMap, 0, &[]) == 0 {
         return;
     }
-    let radius = hd(O::WonderSightRadius, 0, &[], &[]);
+    let radius = world(WORLD_WONDER_SIGHT_RADIUS).mFloatValue;
     let map_size = gc::h(gc::O::TeMapSize, 0, &[]) as c_long;
     let size = map_size as f32;
     let points = [[size * 0.5, size * 0.5], [5.5, 7.5], [size - 3.25, size * 0.3]];
@@ -700,7 +753,7 @@ pub fn sight_capture_sweep() {
     }
     if n > 1 {
         let last = gc::h(gc::O::SsWorldPlayer, 0, &[(n - 1) as i64]) as usize;
-        h(O::MapExploreUnseen, last, &[]);
+        gc::h(gc::O::DcExplore, last, &[]);
         h(O::MapFogSeen, last, &[]);
     }
     // two full cycles of the checksum's 64 x 64 windows
@@ -725,11 +778,11 @@ pub fn sweep(kind: i32, arg: c_long) {
             let rates = [
                 1.0f32,
                 1.0,
-                hd(O::TradeFoodWood, 0, &[], &[]),
-                hd(O::TradeFoodWood2, 0, &[], &[]),
-                hd(O::TradeStoneIron, 0, &[], &[]),
+                world(WORLD_TRADE_RATE_FOOD_WOOD).mFloatValue,
+                world(WORLD_TRADE_RATE_FOOD_WOOD).mFloatValue2,
+                world(WORLD_TRADE_RATE_STONE_IRON).mFloatValue,
                 1.0,
-                hd(O::TradeStoneIron2, 0, &[], &[]),
+                world(WORLD_TRADE_RATE_STONE_IRON).mFloatValue2,
             ];
             // SAFETY: the seven rates; the sweeps over the world views
             unsafe {

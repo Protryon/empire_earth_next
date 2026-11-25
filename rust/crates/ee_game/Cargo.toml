@@ -20,6 +20,8 @@ ee_ui = { path = "../ee_ui" }
 ee_won_gui = { path = "../ee_won_gui" }
 ee_won_lobby = { path = "../ee_won_lobby" }
 ee_won_net = { path = "../ee_won_net" }
+# the C library's streams (sim_driver dump.rs) and POSIX signals (sim_driver fault.rs)
+libc = "0.2"
 
 # the start screen's splash window (gamecpp start_screen.rs)
 [target.'cfg(windows)'.dependencies]

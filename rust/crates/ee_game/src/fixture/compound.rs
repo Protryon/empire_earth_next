@@ -21,6 +21,12 @@ fn go(op: Op, h: u64, i: &[i64]) -> i64 {
     on(op, h).i(i).go()
 }
 
+/// A game message as local input (`gCommunications->ProcessLocalUserInput(message, kSlotNone)`; it takes the
+/// message's reference).
+fn send_local(message: usize) {
+    crate::gamecpp::h(crate::gamecpp::O::CommProcessLocal, message, &[255]);
+}
+
 /// A fine operation's float answer (its f0).
 fn fl(op: Op, h: u64, i: &[i64]) -> f32 {
     on(op, h).i(i).run().f(0)
@@ -74,8 +80,8 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
                 // SAFETY: a NUL-ended text
                 unsafe { crate::sim_driver::fault::ee_sim_driver_fault_install(c"EE-AOC".as_ptr()) };
             } else {
-                go(Op::FxInstallLasso, 0, &[]);
-                // each executed input's view (gEEMessageExecutedTestHook, gamecpp globals.rs)
+                super::boxsel::LASSO_ON.store(true, std::sync::atomic::Ordering::SeqCst); // each box selection's ids
+                                                                                          // each executed input's view (gEEMessageExecutedTestHook, gamecpp globals.rs)
                 let hook: unsafe extern "C" fn(*mut std::ffi::c_void, i32) = message_hook;
                 // SAFETY: the physics' hook pointer, set before a game runs
                 unsafe {
@@ -258,10 +264,10 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
         }
         Op::Post => {
             let post = match i[0] {
-                0 => Op::FxPostSelect,
-                1 => Op::FxPostKill,
-                2 => Op::FxPostPath,
-                _ => Op::FxPostStop,
+                0 => Op::FxMsgSelect,
+                1 => Op::FxMsgKill,
+                2 => Op::FxMsgPath,
+                _ => Op::FxMsgStop,
             };
             let ids = if c.ids.is_null() || c.n == 0 {
                 Vec::new()
@@ -269,7 +275,9 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
                 // SAFETY: the caller's ids, live through the call
                 unsafe { std::slice::from_raw_parts(c.ids, c.n) }.to_vec()
             };
-            Call::new(post).f(&[c.f[0], c.f[1]]).ids(&ids).go();
+            let message = Call::new(post).f(&[c.f[0], c.f[1]]).ids(&ids).go() as usize;
+            // a UI action sends it as local input, as the UI's own buttons do (on the UI thread)
+            crate::sim_driver::sed_run::post_call(send_local, message);
             0
         }
         Op::CenterCamera => {

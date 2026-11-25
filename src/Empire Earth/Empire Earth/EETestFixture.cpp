@@ -70,48 +70,10 @@
 #include "ee/EECombatGoals.h"
 
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open
-extern void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs);   // EEMessage.cpp: each box selection's ids
 
 // (the WON lobby (TEST ONLY): its walk, commands and snapshot are the Rust fixture's (lobby.rs), run on the lobby's
 // own message loop by a UserEvent: ee_fixture_lobby_work)
 namespace {
-
-// ---- the actions and hooks
-
-// A UI action that sends one game message as local input (as the UI's own buttons do, on the UI thread), or with no
-// message counts a run for the fixture (its UI round trip: ee_fixture_mark)
-class FixtureAction : public EEAction {
-public:
-    explicit FixtureAction(NEMessage* inMessage) : mMessage(inMessage) {}
-    virtual ~FixtureAction()
-    {
-        if (this->mMessage)
-            this->mMessage->Dereference();
-    }
-    virtual void Virtual4()
-    {
-        if (this->mMessage == NULL)
-            ee_fixture_mark();
-        else
-            gCommunications->ProcessLocalUserInput(this->mMessage, kSlotNone);
-        this->mMessage = NULL;
-    }
-    virtual void Virtual8() {}
-    NEMessage* mMessage;
-};
-
-void PostAction(NEMessage* inMessage)
-{
-    FixtureAction* theAction = new FixtureAction(inMessage);
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-}
-
-void LassoHook(const std::vector<long>& inUnitIDs)
-{
-    std::vector<int64_t> theIDs(inUnitIDs.begin(), inUnitIDs.end());
-    ee_fixture_lasso(theIDs.data(), theIDs.size());
-}
 
 // (the executed messages' hook and the debug output to stderr: ee_game fixture compound.rs)
 
@@ -161,8 +123,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::SelectControl:
         return Handle(kMainGameSelectUnits < FORM->GetControlCount() ? dynamic_cast<EEUICSelectUnits*>(FORM->GetControl(kMainGameSelectUnits)) : NULL);
-    case EeFixtureOp::Mark: PostAction(NULL);
-        return 0;
     case EeFixtureOp::UnitById: return Handle(gWorld.GetUnit((unsigned long)i[0]));
     case EeFixtureOp::PlayerUnit: return Handle(As<EEPlayer>(c->h)->GetUnit((unsigned long)i[0]));
     case EeFixtureOp::CanDelete: return u->CanDelete() ? 1 : 0;
@@ -177,8 +137,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::CalamityCount: return CALAMITIES != NULL ? (int64_t)CALAMITIES->GetCalamityClassCount() : 0;
     // ---- the compound operations' finer ones (compound.rs)
-    case EeFixtureOp::FxInstallLasso: gEESelectUnitsTestHook = LassoHook;   // each box selection's ids (the boxselect command)
-        return 0;
     case EeFixtureOp::FxMessageType: return As<NEMessage>(c->h)->GetType();
     case EeFixtureOp::FxMessageLocal: return gWorld.GetCurrentPlayer() != NULL && gWorld.GetPlayerBySlot(As<NEMessage>(c->h)->GetOriginatingSlot()) == gWorld.GetCurrentPlayer();
     case EeFixtureOp::FxUiLockOn: gUIManager->LockUIForCopyData();
@@ -246,14 +204,10 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::FxViewSide: c->f[0] = i[0] == 0 ? gViewport.GetViewRectangle().GetLeft() : i[0] == 1 ? gViewport.GetViewRectangle().GetTop() : i[0] == 2 ? gViewport.GetViewRectangle().GetRight() : gViewport.GetViewRectangle().GetBottom();
         return 0;
-    case EeFixtureOp::FxPostSelect: PostAction(new EEMRecord(kMessageSelectTheseUnits, {std::vector<long>(c->ids, c->ids + c->n)}));
-        return 0;
-    case EeFixtureOp::FxPostKill: PostAction(new EEMRecord(kMessageKillUnit, {(unsigned char)0}));   // the first selected unit
-        return 0;
-    case EeFixtureOp::FxPostPath: PostAction(new EEMRecord(kMessagePathTo, {0.0f, c->f[0], c->f[1], false, true, false, false}));
-        return 0;
-    case EeFixtureOp::FxPostStop: PostAction(new EEMRecord(kMessageStopActiveGroup));
-        return 0;
+    case EeFixtureOp::FxMsgSelect: return Handle(static_cast<NEMessage*>(new EEMRecord(kMessageSelectTheseUnits, {std::vector<long>(c->ids, c->ids + c->n)})));
+    case EeFixtureOp::FxMsgKill: return Handle(static_cast<NEMessage*>(new EEMRecord(kMessageKillUnit, {(unsigned char)0})));   // the first selected unit
+    case EeFixtureOp::FxMsgPath: return Handle(static_cast<NEMessage*>(new EEMRecord(kMessagePathTo, {0.0f, c->f[0], c->f[1], false, true, false, false})));
+    case EeFixtureOp::FxMsgStop: return Handle(static_cast<NEMessage*>(new EEMRecord(kMessageStopActiveGroup)));
     case EeFixtureOp::FxNewCenterCamera: return Handle(new EEACenterCamera);
     case EeFixtureOp::FxCenterCameraAt: As<EEACenterCamera>(c->h)->SetLocation(i[0], i[1]);
         return 0;

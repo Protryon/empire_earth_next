@@ -63,12 +63,6 @@
 #include "ee/EEUIShell.h"
 extern bool gSightUpdatesEnabled;
 
-// TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
-long EESETestSaveTriggersOnly(UIForm* inForm)
-{
-    return ee_screens_sefm_call(static_cast<EEUIFScenarioEditor*>(inForm)->mRust, EE_SCREENS_SEFM_SAVE_TRIGGERS, 0, NULL, NULL);
-}
-
 // Creates the editor form (id 1000, 15 control groups): button texture, edge scroll, mini map, player combo box,
 // labels, tab groups, tool bar, hide-UI check box, camera and trigger save/load and debug hot keys; map tab on
 // (editor_form.rs)

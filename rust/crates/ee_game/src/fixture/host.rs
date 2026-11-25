@@ -61,8 +61,6 @@ pub enum EeFixtureOp {
     /// a game message sent as local input (a UI action): i0 0 EEMSelectTheseUnits(ids), 1 EEMKillUnit(0),
     /// 2 EEMPathTo(f0, f1), 3 EEMStopActiveGroup
     Post,
-    /// a UI action that calls ee_fixture_mark when it runs
-    Mark,
     /// EEACenterCamera on tile (i0, i1)
     CenterCamera,
     /// the visible status button of the form on top for button object i0 -> 1 and its centre (f0, f1), 0 none
@@ -127,7 +125,6 @@ pub enum EeFixtureOp {
     EditNumber,
     // ---- the compound operations' finer ones (compound.rs; one C++ statement each: EETestFixture.cpp names each
     // one's call)
-    FxInstallLasso,
     FxMessageType,
     FxMessageLocal,
     FxUiLockOn,
@@ -176,10 +173,11 @@ pub enum EeFixtureOp {
     FxSelectDragX,
     FxSelectDragY,
     FxViewSide,
-    FxPostSelect,
-    FxPostKill,
-    FxPostPath,
-    FxPostStop,
+    /// the messages Post sends (a new EEMRecord each)
+    FxMsgSelect,
+    FxMsgKill,
+    FxMsgPath,
+    FxMsgStop,
     FxNewCenterCamera,
     FxCenterCameraAt,
     FxActionDereference,

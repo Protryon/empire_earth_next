@@ -325,6 +325,7 @@ dependencies = [
  "ee_won_gui",
  "ee_won_lobby",
  "ee_won_net",
+ "libc",
  "windows-sys 0.59.0",
 ]
 
