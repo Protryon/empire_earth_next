@@ -470,9 +470,10 @@ pub fn cancel_game() {
     crate::screens::post_if_ui(0x412);
 }
 
-/// The player's wonder count (`GetNumWonderUnits`).
+/// The player's wonder count (`GetNumWonderUnits`: its wonders' list, ee_sim player_lists.rs).
 pub fn wonders(player: u64) -> c_long {
-    gc::h(gc::O::DwWonderCount, player as usize, &[]) as c_long
+    use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_WONDERS};
+    player_op(player, EE_UNITS_LISTS_WONDERS, ListOp::Len) as c_long
 }
 
 /// The AI manifest's ids.
