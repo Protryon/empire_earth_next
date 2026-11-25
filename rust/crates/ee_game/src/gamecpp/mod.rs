@@ -3170,7 +3170,6 @@ pub enum EeGameCpp {
     DvNameNarrow,
     DvNameLoad,
     DvNameSave,
-    DvCanAfford,
     DvDeferredPush,
     DvDeferred,
     // EEVCWonder.cpp (civilization.rs)

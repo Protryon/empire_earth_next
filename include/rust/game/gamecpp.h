@@ -3060,7 +3060,6 @@ enum class EeGameCpp : uint32_t {
   DvNameNarrow,
   DvNameLoad,
   DvNameSave,
-  DvCanAfford,
   DvDeferredPush,
   DvDeferred,
   DwTeamCount,
