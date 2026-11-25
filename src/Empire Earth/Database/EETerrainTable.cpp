@@ -16,13 +16,9 @@
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEDbRecords.h"
-#include "ee/EEMediaUse.h"
-#include "lle/GERenderState.h"
 #include "rust/game/gamecpp.h"
 
 std::vector<EETerrainTable*> EETerrainTable::sTable;
@@ -68,10 +64,7 @@ void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
     ee_gamecpp_db_terrain_dump(&inFile);
 }
 
-#include "lle/GETerrainMesh.h"
-#include "lle/GETextureSet.h"
 #include "ee/EEUnit.h"
-#include "ee/EEButtonObject.h"
 
 // Adds a reference to the terrain's textures; the first one loads them and attaches them (columns mirrored) to the
 // mesh's texture set, later callers wait for that load

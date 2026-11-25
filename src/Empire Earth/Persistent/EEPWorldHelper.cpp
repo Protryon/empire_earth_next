@@ -5,8 +5,6 @@
 #include <deque>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
 #include "lle/UIForm.h"
@@ -16,11 +14,9 @@
 #include "ee/EEWorld.h"
 #include "ee/EEGameState.h"
 #include "ee/EETeam.h"
-#include "rust/sim/app.h"
 #include "ee/EEPWorldHelper.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEPersistentTag.h"
 #include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
@@ -29,20 +25,15 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIForest.h"
-#include "ee/EEArtificialIntelligence.h"
-#include "ee/EEPathManager.h"
 #include "ee/EEAEManager.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
-#include "ee/EECPExperimentTimers.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
 #include <algorithm>
 #include <memory>
 #include <vector>
-#include "rust/sim/combat.h"
-#include "rust/sim/units.h"
 
 
 #include "rust/game/gamecpp.h"
@@ -58,11 +49,9 @@
 #include "ee/EECPEngine.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEPChecksum.h"
-#include "rust/base/error.h"
 #include <time.h>
 #include "ee/EmpireEarth.h"
 #include "ee/EESaveLoad.h"
@@ -76,7 +65,6 @@
 #include "ee/EEPCalamityHelper.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEDataPreLoading.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "lle/FSChunk.h"
 #include "lle/FSArchive.h"
@@ -84,11 +72,9 @@
 #include <functional>
 #include "ee/EEGameStateLoader.h"
 #include "ee/EEPersistentTemplates.h"
-#include "ee/EEStringIDs.h"
 #include <utility>
 #include "lle/USingleton.h"
 #include "ee/EECalamity.h"
-#include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionManager.h"
 
