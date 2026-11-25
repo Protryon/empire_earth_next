@@ -697,7 +697,7 @@ mod tests {
         unsafe {
             let r = ee_data_rules_new();
             assert_eq!((0..3).map(|k| ee_data_rules_ai_level(r, k)).collect::<Vec<_>>(), vec![0, 1, 2]);
-            (*r).rules.game_options.difficulties[1].ai_level = 7;
+            (&mut *r).rules.game_options.difficulties[1].ai_level = 7;
             assert_eq!(ee_data_rules_ai_level(r, 1), 7);
             assert_eq!(ee_data_rules_ai_level(r, 5), 5);
             ee_data_rules_free(r);
