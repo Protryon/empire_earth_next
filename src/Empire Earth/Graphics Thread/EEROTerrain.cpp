@@ -10,23 +10,14 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 
-#include "ee/EmpireEarth.h"
-#include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEGraphics.h"
 #include "ee/EERenderObject.h"
-#include "ee/EERenderLists.h"
 #include "ee/EEROTerrain.h"
-#include "rust/render/gfx.h"
 #include "rust/game/gamecpp.h"
 
 // the brush highlight colour (0x5293e8), the grid runs of the frame (0x5290a0) and the area-effect textures

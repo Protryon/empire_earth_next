@@ -8,7 +8,6 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
@@ -22,17 +21,10 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEGraphicObject.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEROWater.h"
 #include "ee/EEUnitPicker.h"
-#include "rust/base/math.h"   // ee_gfx pick.rs (RUST_PLAN R4.4)
-#include "rust/render/ge.h"
-#include "rust/render/gfx.h"
 #include "rust/game/gamecpp.h"
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
-#include "rust/render/gfx.h"
 
 // The picker's decisions are ee_gfx pick.rs (RUST_PLAN R4.4): the ray, the tolerances, the pick scales and the large
 // test, the hits' ranking, GetUnitPickPriority, AddUnit's admission, the frustum's sphere and vertex tests (its named

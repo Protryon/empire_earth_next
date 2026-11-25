@@ -7,14 +7,12 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/RTSUnit.h"
-#include "rust/game/rts.h"
 
 RTSWorld::RTSWorld() { ee_rts_world_construct(this); }
 RTSWorld::~RTSWorld() { ee_rts_world_destruct(this); }

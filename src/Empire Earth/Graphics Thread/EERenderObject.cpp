@@ -11,18 +11,11 @@
 // inline ctors) follows the ghost-unit pass.
 #include <windows.h>
 
-#include "lle/LowLevelEngine.h"
-#include "rust/base/math.h"
-#include "rust/render/ge.h"
-#include "rust/render/gfx.h"
-#include "rust/sim/units.h"
 #include "dx7/DX7Rasterizer.h"
 #include "lle/GEModelManager.h"
 #include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEMap.h"
@@ -34,7 +27,6 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EERenderLists.h"
 #include "ee/EERenderObject.h"
-#include "ee/EEEffectMesh.h"        // the table's store_mesh
 #include "ee/EEUnitPicker.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDoppelganger.h"
@@ -48,12 +40,8 @@
 #include "ee/EEMusicManager.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEMouse.h"
-#include "ee/EEAreaEffectKindIDs.h"
-#include "ee/EERenderCapture.h"     // RFIL (TEST ONLY)
 #include "ee/EEWheel.h"
-#include "ee/EEUnitClassKinds.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "lle/GEPhysicalModel.h"
 #include "rust/game/gamecpp.h"
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)

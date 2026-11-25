@@ -41,7 +41,6 @@
 #include "ee/EECombatFormulas.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEDoppelgangerManager.h"
-#include "ee/EEUnitUtilities.h"
 #include "ee/EEGamePreferences.h"
 #include "lle/GEPolygonArray.h"
 #include "lle/GEModelManager.h"
@@ -50,15 +49,11 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEEffectMesh.h"
 #include "ee/EEDoppelganger.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAEManager.h"
 #include "ee/EESaveGameFiles.h"
-#include "rust/base/math.h"
-#include "rust/render/gfx.h"
-#include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"
 
 class EEComplexUnit;
