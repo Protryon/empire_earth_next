@@ -28,41 +28,21 @@
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
-typedef EeWonCtVirt V;
 
 static Component* Comp(intptr_t a) { return (Component*)a; }
 
 // t is NULL for the static functions' ops (those on a)
 extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
-    (void)d;
+    (void)c; (void)d;
     Button* t = static_cast<Button*>((Component*)inComp);
     switch (op) {
-    case Op::CtBase:
-        switch ((V)a) {
-        case V::AddedToParent: t->Component::AddedToParent(); return 0;
-        case V::MouseEnter: t->Component::MouseEnter((int)b, (int)c); return 0;
-        case V::MouseExit: t->Component::MouseExit(); return 0;
-        case V::GotFocus: t->Component::GotFocus(); return 0;
-        case V::LostFocus: t->Component::LostFocus(); return 0;
-        case V::MouseHover: t->Component::MouseHover((unsigned long)b); return 0;
-        default: return 0;
-        }
-    case Op::CtChild: if ((V)b == V::RequestFocus) Comp(a)->RequestFocus(); return 0; // (the next radio's)
-    case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
-    case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
-    case Op::CtContainerOf: return Container::ObjectOf(Comp(a));
+    // (Component's own virtuals, the references, the siblings, the flags, the repaints, the focus and the timer are
+    // gamewin.rs common_op's in the game: R6 WON GUI round 38)
     case Op::BtnOf: {
         Button* aButton = dynamic_cast<Button*>(Comp(a));
         return aButton != NULL ? (intptr_t)aButton->mBtn : 0;
     }
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
-    case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
-    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
-    case Op::Invalidate: t->Invalidate(); return 0;
-    case Op::RequestFocus: t->RequestFocus(); return 0;
-    case Op::RequestTimer: t->RequestTimer(a != 0); return 0;
     case Op::BtnHandleActivate: return t->HandleActivate() ? 1 : 0;
     case Op::BtnSetTextHook: t->SetTextHook(*(const GUIString*)a); return 0;
     case Op::BtnHasClickSound: return t->mClickSound.get() != NULL ? 1 : 0;

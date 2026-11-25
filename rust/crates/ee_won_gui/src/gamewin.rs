@@ -424,6 +424,7 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
 /// component. None in a driver's world and for the others (virtuals, references, the Graphics).
 pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::compobj::EeWonCompCall as K;
+    use crate::guihost::EeWonCtVirt as V;
     use crate::guihost::EeWonGuiField as Fd;
     match op {
         Op::ChildHold | Op::CtCursorHold | Op::RootImageHold => return rf(a, true),
@@ -451,6 +452,10 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             | Op::CtNextSibling
             | Op::CtContainerOf
             | Op::CtAddBG
+            | Op::Invalidate
+            | Op::ChildInvalidate
+            | Op::CtChild
+            | Op::CtBase
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -463,6 +468,15 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
         Op::Get if a == Fd::Width as isize => crate::compmem::get(comp).bounds.width as isize,
         Op::Get if a == Fd::Height as isize => crate::compmem::get(comp).bounds.height as isize,
         Op::Get => return None,
+        Op::CtBase => crate::compobj::base_call(comp, a, b, c),
+        // (no class overrides Invalidate: Component's own)
+        Op::Invalidate => z(kc(comp, K::Invalidate, 0, 0)),
+        Op::ChildInvalidate => z(kc(a, K::Invalidate, 0, 0)),
+        // a child's Invalidate, RequestTimer and RequestFocus (Component's own); its other virtuals are the host's
+        Op::CtChild if b == V::Invalidate as isize => z(kc(a, K::Invalidate, 0, 0)),
+        Op::CtChild if b == V::RequestTimer as isize => z(kc(a, K::RequestTimer, on(c), 0)),
+        Op::CtChild if b == V::RequestFocus as isize => z(kc(a, K::RequestFocus, 0, 0)),
+        Op::CtChild => return None,
         Op::RequestTimer => z(kc(comp, K::RequestTimer, on(a), 0)),
         Op::RequestFocus => z(kc(comp, K::RequestFocus, 0, 0)),
         Op::GetMousePos => z(kc(comp, K::MousePos, a, b)),
@@ -499,6 +513,64 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             }
             0
         }
+    })
+}
+
+/// The parts of the game window whose root container is `root`.
+fn window_of_root(root: isize) -> Option<Parts> {
+    let w = WINDOWS.lock().ok()?.values().find(|w| w[2] == root).copied()?;
+    Some(Parts { win: w[0] as _, plat: w[1] as _, root: w[2], root_obj: w[3] as _ })
+}
+
+/// The game's root container `root`'s own op `op` (rootobj.rs's calls out; R6 WON GUI round 38): its window's
+/// state, rectangle and place (nothing while no window binds it), Component's calls on a child. None in a driver's
+/// world and for the others (the cursor's component, the grabbers, the images).
+pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
+    use crate::compobj::EeWonCompCall as K;
+    if !matches!(
+        op,
+        Op::RootOneComponentWindow
+            | Op::RootWindowMouse
+            | Op::RootWindowRect
+            | Op::RootWindowSetPos
+            | Op::RootMouseChildOf
+            | Op::RootScheme
+            | Op::RootEnsureOnTop
+            | Op::ChildSetPos
+            | Op::ChildSetVisible
+    ) || !crate::compobj::is_game()
+    {
+        return None;
+    }
+    // SAFETY: the game's live components (the ops' contracts); each call re-enters through Component's entry
+    let kc = |x: isize, k: K, p: isize, q: isize| unsafe {
+        crate::compobj::ee_won_comp_call(x as *mut c_void, crate::compobj::host(), k, p, q, 0)
+    };
+    match op {
+        // (no class but Container overrides GetMouseChild)
+        Op::RootMouseChildOf => return Some(kc(a, K::MouseChild, 0, 0)),
+        Op::RootScheme => return Some(kc(root, K::ColorScheme, 0, 0)),
+        Op::RootEnsureOnTop => return Some(z(kc(a, K::EnsureOnTopOf, b, 0))),
+        Op::ChildSetPos => return Some(z(kc(a, K::SetPos, b, c))),
+        // (no class overrides SetVisible)
+        Op::ChildSetVisible => return Some(z(kc(a, K::SetVisible, on(b), 0))),
+        _ => {}
+    }
+    let Some(me) = window_of_root(root) else {
+        return Some(0);
+    };
+    Some(match op {
+        Op::RootOneComponentWindow => on(field(&me, F::OneComponent)),
+        Op::RootWindowMouse => {
+            // SAFETY: `a` and `b` are the two ints (the op's contract)
+            unsafe {
+                *(a as *mut i32) = field(&me, F::MouseX) as i32;
+                *(b as *mut i32) = field(&me, F::MouseY) as i32;
+            }
+            0
+        }
+        Op::RootWindowRect => z(plat(&me, P::GetRect, a, 0, 0, 0)),
+        _ => z(plat(&me, P::SetPosSize, a, b, -1, -1)),
     })
 }
 
