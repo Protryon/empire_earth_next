@@ -365,8 +365,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
         break;
     case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
-    case O::PphAddAlly: PL->mAllies.push_back((EEPlayer*)a[0]);
-        break;
     case O::PphStrNew: return P64(new std::string);
     case O::PphStrDelete: delete &STR;
         break;

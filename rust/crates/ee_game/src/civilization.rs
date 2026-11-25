@@ -13,6 +13,7 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::tech::civilization::{apply_all, reapply, EE_TECH_CIV_DEFERRED_INDEX};
+use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_WONDERS};
 
 use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
 
@@ -309,9 +310,14 @@ pub extern "C" fn ee_gamecpp_wonder_enough(condition: *mut c_void) -> bool {
     }
     let mut count: c_ulong = 0;
     for id in team_players(vc) {
-        count = count.wrapping_add(h(O::DwWonderCount, hp(O::WorldPlayer, 0, &[id as i64]), &[]) as c_ulong);
+        count = count.wrapping_add(wonder_count(hp(O::WorldPlayer, 0, &[id as i64])));
     }
     count >= needed
+}
+
+/// The player's `GetNumWonderUnits()` (its wonders' list: ee_sim player_lists.rs).
+fn wonder_count(pl: P) -> c_ulong {
+    player_op(pl as u64, EE_UNITS_LISTS_WONDERS, ListOp::Len) as c_ulong
 }
 
 /// The countdown's winning entry: the standing wonders (time, player) sorted, the one completing the count.
@@ -342,7 +348,7 @@ pub extern "C" fn ee_gamecpp_wonder_countdown(condition: *mut c_void, out: *mut 
         for id in team_players(vc) {
             let pl = hp(O::WorldPlayer, 0, &[id as i64]);
             let mut j: c_ulong = 0;
-            while j < h(O::DwWonderCount, pl, &[]) as c_ulong && j < needed {
+            while j < wonder_count(pl) && j < needed {
                 entries.push((h(O::DwWonderTime, pl, &[j as i64]) as c_long as c_ulong, id));
                 j += 1;
             }

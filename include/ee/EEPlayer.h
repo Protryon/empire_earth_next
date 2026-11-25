@@ -67,7 +67,6 @@ class EEMedia;
 class EEGraphicObject;
 class EEHerd;                               // ee/EEHerd.h (mHerds's elements)
 class EEUnitSet;                            // ee/EEUnitSetManager.h (mHealedUnitSet)
-template <class T> class UReferenceContainer;
 class EEButtonObject;
 class EEMap;
 class UIHotKey;
@@ -699,7 +698,8 @@ public:
     void EnableCamouflagePower() { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CAMOUFLAGE, 0, 1, 0, 0.0f); }           // 0x16c548 (the civilization manager's civ power)
     // 0x164e22: the last town of the vector at +0x7cc whose area holds inUnit's tile, or 0 (the prophet analyzers'
     // 0xaa8b; provisional name)
-    unsigned long GetNumTowns() const { return this->mTowns.size(); }   // inline COMDAT 0x4098f0 (emitted after its first out-of-line user, EECPASGUProphet.cpp 0x409831); /Os post-check undoes it where size() expands inside, it stays where size() is refused (provisional name)
+    unsigned long GetNumTowns() const { return (unsigned long)ee_units_lists_len(this->mLists, EE_UNITS_LISTS_TOWNS); }   // inline COMDAT 0x4098f0 (mTowns.size(); provisional name)
+    EETown* GetTown(unsigned long inIndex) const { return reinterpret_cast<EETown*>(static_cast<uintptr_t>(ee_units_lists_at(this->mLists, EE_UNITS_LISTS_TOWNS, inIndex))); }   // mTowns[inIndex]
     void LoadUnitClassButtons(long inUnitClass);            // 0x167c5a (the hurricane's Virtual28)
     void UnloadUnitClassButtons(long inUnitClass);          // 0x16b5f9 (the hurricane's Virtual34)
     void ApplyImprovement(long inUnitType, long inImprovement, bool inFlag) { ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_APPLY_IMPROVEMENT, NULL, inUnitType, inImprovement, inFlag, 0, 0, 0.0f, NULL); }  // 0x16b65a (ret 0xc; arg 3 read as a byte)
@@ -720,7 +720,7 @@ public:
     void ClearSavedGroup(long inGroup) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, (uint64_t)inGroup, 0, 0, 0.0f); }     // 0x163f95 (EEMSavedGroupClear)
     void AddAndRemoveUnitsFromSelectedGroup(std::vector<long>& inUnitIDs) { ee_units_selection(this, 5, NULL, 0, inUnitIDs.data(), inUnitIDs.size(), false, false); }
     EEPPatrolGroup* GetPatrolGroup(unsigned long inID) { return reinterpret_cast<EEPPatrolGroup*>(static_cast<uintptr_t>(ee_units_player_body(this, EE_UNITS_PLAYER_DO_PATROL_GROUP, inID, 0, 0, 0.0f))); }   // 0x16519e (mPatrolGroups's group with that id; EEUGPatrol::RepairPointers)
-    void AddPatrolGroup(EEPPatrolGroup* inGroup);   // 0x16279f: referenced, pushed into mPatrolGroups (provisional name)
+    void AddPatrolGroup(EEPPatrolGroup* inGroup) { ee_units_lists_add(this->mLists, EE_UNITS_LISTS_PATROLS, (uint64_t)(uintptr_t)inGroup); }   // 0x16279f: referenced, pushed into mPatrolGroups (provisional name)
     long CountQueuedImprovements(unsigned long inUnitType, long inArg) const { return (long)ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_COUNT_QUEUED, NULL, (int32_t)inUnitType, inArg, 0, 0, 0, 0.0f, NULL); }  // 0x164f4a (EEMRemoveImprovement; const: the const vector reads and the dead const-operator[] lea; provisional name)
     void RemoveQueuedImprovement(long inUnitType, long inImprovement, bool inFlag) { ee_units_player_econ(EEPlayerRefs(this), EE_UNITS_ECON_REMOVE_QUEUED, NULL, inUnitType, inImprovement, inFlag, 0, 0, 0.0f, NULL); }  // 0x16870e (EEMRemoveImprovement)
     void SetHackUnitClass(long inUnitClass) { this->mHackUnitClass = inUnitClass; }  // 0x16ae52 (EEMLoadUnitData; provisional name)
@@ -777,7 +777,11 @@ public:
     void AddOffMapUnit(RTSUnit* inUnit);    // 0x162dab (a new EEWUnitsOffMapInfo for inUnit into mUnitsOffMap)
     void AddStrandedUnit(EEUnit* inUnit) { ee_units_lists_add(this->mLists, EE_UNITS_LISTS_STRANDED, (int64_t)(uintptr_t)(void*)inUnit); }   // 0x163043 (into mStrandedUnits once, referenced)
     bool TrySelectUnit(EEUnit* inUnit, bool inFlag) { return ee_units_selection(this, 1, inUnit, 0, NULL, 0, inFlag, false); }  // 0x1630ac (selects inUnit; false when another player's unit meets a selection)
-    void AddConstructionSite(EEComplexUnit* inUnit);  // 0x16368f (into mConstructionSites unless it has it)
+    void AddConstructionSite(EEComplexUnit* inUnit)   // 0x16368f (into mConstructionSites unless it has it)
+    {
+        if (!ee_units_lists_has(this->mLists, EE_UNITS_LISTS_SITES, (uint64_t)(uintptr_t)(void*)inUnit))
+            ee_units_lists_add(this->mLists, EE_UNITS_LISTS_SITES, (uint64_t)(uintptr_t)(void*)inUnit);
+    }
     void AddSharedSight(EETile* inTile, long inX, long inY);  // 0x168120 (AddOwnSight, then the allies sharing the line of sight)
     void AddOwnSight(EETile* inTile, long inX, long inY);  // 0x16820e (counts this player in at the tile)
     void AddOwnSightAt(const EETileLocation& inLocation);
@@ -806,7 +810,7 @@ public:
     void AddLoadedMedia(EEMedia* inMedia) { ee_units_lists_add(this->mLists, EE_UNITS_LISTS_MEDIA, (uint64_t)(uintptr_t)inMedia); }  // 0x162740 (pushes into mLoadedMedia unless 0; provisional name)
     void DelayWonderTimers(long inAmount) { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_DELAY_WONDER_TIMERS, 0, inAmount, 0); }  // 0x162b08 (adds to every unit's mCloaked in mWonders; provisional name)
     long GetWonderTime(long inIndex) const { return (long)ee_units_player_rest(const_cast<EEPlayer*>(this), EE_UNITS_PLAYER_REST_WONDER_TIME, 0, inIndex, 0); }  // 0x165644 (mWonders's unit inIndex's mCloaked; provisional name)
-    unsigned long GetNumWonderUnits() const;   // 0x16565f: mWonders->GetSize() (provisional name)
+    unsigned long GetNumWonderUnits() const { return (unsigned long)ee_units_lists_len(this->mLists, EE_UNITS_LISTS_WONDERS); }   // 0x16565f: mWonders->GetSize() (provisional name)
     // per unit class (mUnitClassUpgrades[inUnitClass] when inUnitClass < EEUnitClassCount(); provisional names)
     EEUnitClassUpgrade* GetUpgrade(long inUnitClass) { return this->mUnitClassUpgrades[inUnitClass]; }  // inline COMDAT 0x1bcae9
     void SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond) { ee_units_player_body(this, EE_UNITS_PLAYER_DO_SWAP_BUTTONS, (uint64_t)(uintptr_t)inFirst, (int64_t)inUnitClass, (int64_t)(uintptr_t)inSecond, 0.0f); }
@@ -823,15 +827,13 @@ public:
     EECivilization mCivilization;           // +0x468 (ctor 0x12c57d; provisional name)
     EEPlayerStatistics mSavedGroups;        // +0x4a8 (the player's statistics; provisional name)
     UString mCivilizationFile;              // +0x7ac (saved)
-    std::vector<EETown*> mTowns;            // +0x7cc (the player's towns: EECPILocation::Update 0x80a57 walks them)
-    std::vector<EEHerd*> mHerds;            // +0x7dc
     // port (the game core lane, round 5): the private lists (the stranded units, the units to repatrol, the loaded
     // and saved ids, the media-loaded classes, the loaded media, the off-map records) are a Rust object
     // (ee_units player_lists.rs; made by the constructors, freed by the destructor). The towns by id (written,
-    // never read) and the third selected group (made, never used) are gone
+    // never read) and the third selected group (made, never used) are gone. The player/tech lane, round 2: the
+    // other containers too (mTowns +0x7cc, mHerds +0x7dc, mMediaWarnings +0x824, mSightSharers +0x834,
+    // mPatrolGroups +0x874, mAllies +0x894, mConstructionSites +0x8b4, mWonders +0x8f8: EE_UNITS_LISTS_*)
     EeUnitsPlayerLists* mLists;
-    std::vector<UString> mMediaWarnings;    // +0x824 (the ctor's _Buy 0x88ba6 / the dtor's _Tidy 0x665e4 are vector<UString>'s)
-    std::vector<EEPlayer*> mSightSharers;   // +0x834 (0x1627b9 push_backs `this`: vector<EEPlayer*>'s push_back 0x44e8f)
     // port (the groups lane, round 2): the running (+0x844: AddPendingUnits copies the pending ones into it), pending
     // (+0x854: the command messages push their new EEActiveGroups) and finished groups (+0x864: EEActiveGroup::Finish
     // pushes itself) are a Rust object (ee_units group_obj.rs EeUnitsPlayerGroups; made by the constructors, freed by
@@ -841,13 +843,8 @@ public:
     EEGroup* GetRunningGroup(unsigned long inIndex) { return static_cast<EEGroup*>(ee_units_player_groups_at(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_RUNNING, inIndex)); }
     unsigned long GetNumPendingGroups() { return ee_units_player_groups_len(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_PENDING); }
     void AddPendingGroup(EEGroup* inGroup) { ee_units_player_groups_push(this->mGroupLists, EE_UNITS_PLAYER_GROUPS_PENDING, inGroup); }
-    std::vector<EEPPatrolGroup*> mPatrolGroups;  // +0x874 (AddPatrolGroup: push_back 0x16c986)
     std::vector<EEUnitClassUpgrade*> mUnitClassUpgrades; // +0x884 (resized to EEUnitClassCount() by Reset: one per unit class; the forwarders
                                             // 0x163db9.. index it
-    std::vector<EEPlayer*> mAllies;         // +0x894 (EEPPlayerHelper push_backs into it; EEMSendFlare copies it with
-                                            // vector<EEPlayer*>::operator= 0x1119ec and flares each)
-    UReferenceContainer<EEComplexUnit*>* mConstructionSites;  // +0x8b4 (0x16368f: Contains 0x27c820, then its +4 vector)
-    UReferenceContainer<EEComplexUnit*>* mWonders;       // +0x8f8 (Reset news one: vtable 0x4429d8)
     EEPPlayerEventList mEvents;             // +0x918 (RTTI EEPPlayerEventList, ctor 0x16e5b9; provisional name)
     EEGroup* mGroups[20];                   // +0x954 the saved (hot-key) groups, indexed by a byte (EEMSavedGroupClear
                                             // 0xc5117); Reset calls each one's slot +0x24

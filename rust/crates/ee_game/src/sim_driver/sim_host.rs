@@ -318,7 +318,10 @@ pub fn flare(player: c_ulong) -> EeSimDriverSpot {
     }
     let (x, y) = (h(O::UnitTileX, spot, &[]) as c_long, h(O::UnitTileY, spot, &[]) as c_long);
     let allies: Vec<usize> =
-        (0..h(O::PlayerAllyCount, human, &[])).map(|k| gc::h(gc::O::PlAllyAt, human, &[k]) as usize).collect();
+        ee_sim::units::player_lists::player_list(human as u64, ee_sim::units::player_lists::EE_UNITS_LISTS_ALLIES)
+            .into_iter()
+            .map(|a| a as usize)
+            .collect();
     for &a in &allies {
         gc::h(gc::O::PlFlareReceived, a, &[human as i64, x as i64, y as i64]);
     }

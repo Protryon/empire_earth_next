@@ -362,6 +362,9 @@ pub fn reset(r: &mut EeUnitsPlayerSaved, player_id: u32, part: u32) {
 struct FnHost {
     ctx: *mut c_void,
     f: EeUnitsPlayerTickFn,
+    /// the player: its herds' count and a herd's kill answered here (player_lists.rs, player_rest.rs)
+    #[cfg_attr(test, allow(dead_code))]
+    player: u64,
 }
 
 impl PlayerTickHost for FnHost {
@@ -374,6 +377,24 @@ impl PlayerTickHost for FnHost {
             if let Some(u) = unsafe { crate::world::UnitView::of(&t, io.i as u64) } {
                 let v = if index == 0 { u.hit_points() } else { u.stats().map_or(0, |s| s.max_hit_points()) };
                 return v as i32;
+            }
+        }
+        #[cfg(not(test))]
+        {
+            use crate::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_HERDS};
+            use crate::units::player_rest::{game::ee_units_player_rest, EE_UNITS_PLAYER_REST_KILL_HERD_UNITS};
+            match op {
+                EE_UNITS_PLAYER_TICK_HERD_COUNT => {
+                    return player_op(self.player, EE_UNITS_LISTS_HERDS, ListOp::Len) as i32
+                }
+                EE_UNITS_PLAYER_TICK_HERD_KILL => {
+                    let herd = player_op(self.player, EE_UNITS_LISTS_HERDS, ListOp::At(index as usize));
+                    let player = self.player as usize as *mut c_void;
+                    // SAFETY: the live player and its herd
+                    unsafe { ee_units_player_rest(player, EE_UNITS_PLAYER_REST_KILL_HERD_UNITS, herd, 0, 0) };
+                    return 0;
+                }
+                _ => {}
             }
         }
         let (ctx, f) = (self.ctx, self.f);
@@ -398,8 +419,9 @@ pub unsafe extern "C" fn ee_units_player_update(
     rec: *mut EeUnitsPlayerSaved,
     fields: *mut EeUnitsPlayerFields,
 ) {
+    let player = (fields as usize).wrapping_sub(crate::world::layout::layout().player_fields as usize) as u64;
     // SAFETY: the caller's contract
-    unsafe { update_player(&mut FnHost { ctx, f }, rec, fields) };
+    unsafe { update_player(&mut FnHost { ctx, f, player }, rec, fields) };
 }
 
 /// `EEPlayer::Reset`'s fields of the record (see [`reset`]).

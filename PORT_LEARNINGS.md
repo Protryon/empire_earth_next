@@ -40898,3 +40898,56 @@ profiles, saveload, the editor and civilization builder gates).
   node's mData/mTree/mButton (C++ members the world layout reads), the area effects' location (a GE2DPoint member),
   the civilization's vectors and name (EECivilization's C++ members), the dead Rust exports deadfn.py lists
   (ee_area_effect_*, ee_tech_effect_*, ee_screens_cb_out_*: no caller in C++ or Rust).
+
+## The player/tech lane, round 2, fork B: EEPlayer's containers as the player's Rust lists (ee_units player_lists.rs; branch rust-playertech2-b, 2026-11-25)
+
+EEPlayer's last C++ containers (`mTowns`, `mHerds`, `mAllies`, `mSightSharers`, `mPatrolGroups`, `mMediaWarnings` and
+the two `UReferenceContainer<EEComplexUnit*>*`, `mConstructionSites` and `mWonders`) are lists of the player's Rust
+object (`mLists`, `EE_UNITS_LISTS_TOWNS` .. `EE_UNITS_LISTS_WONDERS`, the warnings a `Vec<CString>`). The elements
+(EETown, EEHerd, the patrol groups) stay what they were. C++ lines 107,975 -> 107,808 (-167; logic -18, classes -1:
+the dereferencer functor), no behaviour change (oracle 6/6 identical, the captures, saveload).
+
+- **One operation enum over the lists** (`ListOp`: Len, At, Add, Has, Remove, EraseAt, Replace, Clear(release), Set,
+  Resize; `EeUnitsPlayerLists::apply`): each container's semantics is its list's kind, so the callers name only the
+  operation. Add references for the referenced lists (the units' `Reference` for the stranded, repatrol, sites and
+  wonders lists, `ee_units_pg_reference` for the patrol groups, answered in Rust beside the C++ host's unit
+  counts); the stranded and repatrol lists keep their add-once. Remove releases the reference after the erase
+  (`UReferenceContainer::Remove`), EraseAt never does (`RemovePatrolGroup` dereferences on its own, found or not).
+  Clear(true) releases from the first (`UReferenceContainer::Clear`, `EEPDereferencer`) except the repatrol list
+  (from the last, as before). `delete mWonders` is Clear(true); the empty containers the constructor newed are gone.
+- **Where the containers' cases went**, by the host's shape:
+  - the hosts whose generic code has a trait with test fakes (`PlayerBodyHost`, `RestHost`, `TownSplitHost`) got one
+    `list_op` method (the old `list_len`/`list_at`/`list_clear`/`towns()`/`herds()`/`allies()` are provided methods
+    over it), the game's impl `player_lists::player_op`; the fakes run the same `apply` on their vectors
+    (`player_lists::apply_vec`, `FakeLists`), so their tests check real list semantics;
+  - the hosts that are an op-code callback with split compound operations (the player host's `EE_UNITS_PLAYER_X_*`,
+    the save's `EE_UNITS_PLAYER_SAVE_*`, the tick's herd count) keep their op codes: the game's host answers them
+    from the lists before the C++ callback (`answer_player` in player.rs's `FnHost`, `lists_answer` in
+    player_save.rs's `FfiHost`, player_tick.rs's `FnHost`), so the split code and its tests are unchanged. The
+    hosts find the player from the record they are handed (`rec - layout().player_saved`, `fields -
+    layout().player_fields`): no C++ signature changed;
+  - an element's C++ operation that indexed a container (a herd's load, save, repair and tick, a patrol group's
+    save, a town's refresh) now takes the element: the Rust reads it from the list first (into `io.i`, or `a`), or
+    the C++ case reads it once through `ee_units_lists_at` (the tick's `theHerd`);
+  - the C++ readers outside the player that only forwarded a count or an entry (EESim's dump, EEWorld's and
+    EEPWorldHelper's allies, EEMessage's flare copy, EEGameLog's wonder and town counts, EEEMStorm's town count) are
+    gone: their ee_game callers read `player_lists::player_list`/`player_op`; the ones that act on an element keep
+    their case over the inline `GetTown(i)`/`GetNumTowns()`.
+- **PlayerView reads the lists** (world view.rs `list`): the allies, sight sharers, towns and herds were read from
+  `std::vector`s by layout offset; the four layout fields are gone (`player_lists` already was one).
+- **A C++ case's ESVERIFY on an unknown op**: EEPlayerSaveOperation ends in `ESVERIFY_AT(false, inOp)`, so a Rust
+  answer layer must take an operation before the callback, never after it.
+- **Grep every file for a name before deleting its op**: `VecPlayersNew`/`Delete`/`Size` looked like the flare copy's
+  alone, but the game state's player list uses them too (state.rs, which the grep had filtered out); the build's
+  Rust step caught it, at the cost of a rebuild.
+- **cbindgen header after every Rust FFI change, before the C++ build**: `rust_build.py header` rewrote
+  rust/sim/units.h (the lists' constants) and rust/sim/world.h (the layout record); EEPlayer.h's inline accessors
+  need the constants.
+- Edits outside the fork's files: EEWorldLayout.cpp (four offsetof lines), EEEMStorm.cpp, EEGameLog.cpp, EESim.cpp,
+  EEWorld.cpp, EEPWorldHelper.cpp, EEMessage.cpp (cases deleted), EESMObject.cpp, EEScenarioHost.cpp,
+  EEScenarioCapture.cpp, EEComplexUnit.cpp (an accessor for the vector); ee_game gamecpp civilization.rs,
+  ambient_io.rs, message.rs, persist_parts.rs, state.rs, weather.rs, world.rs, mod.rs (the variants), sim_driver
+  dump.rs, sim_host.rs, sim_ops.rs; ee_sim world view.rs, layout.rs, town_split.rs, group_obj_tests.rs.
+- Left: the lists' lifecycle cases (`LISTS_NEW`/`FREE`, beside the queue's and the wonder state's: the lead's
+  pass-through set), `AddOffMapUnit` (gPhysics' time), the unit save's loaded-id push (its host has no player), the
+  element objects' own field reads and writes (EETown's patrol, ids, counters, hull; EEHerd's).

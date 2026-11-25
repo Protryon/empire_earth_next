@@ -69,27 +69,21 @@ impl TownSplitHost for &mut World {
         self.log.push((op, a, b, c));
         assert_eq!(p, 0x100);
         match op {
-            EE_UNITS_PLAYER_BODY_TOWN_SLOTS => self.towns.len() as i64,
-            EE_UNITS_PLAYER_BODY_TOWN_SLOT => self.towns[b as usize] as i64,
             EE_UNITS_PLAYER_BODY_TOWN_NEW => {
                 self.next += 1;
                 self.next as i64
             }
             EE_UNITS_PLAYER_BODY_TOWN_READ_AREA => i64::from(self.readable),
-            EE_UNITS_PLAYER_BODY_TOWNS_CLEAR => {
-                self.towns.clear();
-                0
-            }
-            EE_UNITS_PLAYER_BODY_TOWNS_PUSH => {
-                self.towns.push(a);
-                0
-            }
             EE_UNITS_PLAYER_BODY_HULL_POINT => (5 << 32) | 6,
             _ => *self.fields.get(&(a, op, b)).unwrap_or(&0),
         }
     }
     fn file(&mut self) -> Box<dyn FilePrims + '_> {
         Box::new(NoFile)
+    }
+    fn towns(&mut self, p: u64, op: ListOp) -> u64 {
+        assert_eq!(p, 0x100);
+        crate::units::player_lists::apply_vec(&mut self.towns, crate::units::player_lists::EE_UNITS_LISTS_TOWNS, op)
     }
 }
 

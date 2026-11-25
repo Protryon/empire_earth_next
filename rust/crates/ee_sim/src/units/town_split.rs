@@ -7,6 +7,7 @@
 
 use std::os::raw::c_long;
 
+use crate::units::player_lists::ListOp;
 use crate::units::player_rest::{
     EE_UNITS_PLAYER_BODY_HULL_COUNT, EE_UNITS_PLAYER_BODY_HULL_POINT, EE_UNITS_PLAYER_BODY_TOWN_ADD_AREA,
     EE_UNITS_PLAYER_BODY_TOWN_CONTINENT, EE_UNITS_PLAYER_BODY_TOWN_SERIAL,
@@ -34,9 +35,6 @@ pub const EE_UNITS_TOWN_X_AREA_WRITE: i32 = 325;
 pub const EE_UNITS_TOWN_X_FILE: i32 = 326;
 
 // ---- the player's body host's town operations (player_rest.rs's numbering; `a` the town)
-/// `mTowns.size()`, `mTowns[b]`
-pub const EE_UNITS_PLAYER_BODY_TOWN_SLOTS: i32 = 244;
-pub const EE_UNITS_PLAYER_BODY_TOWN_SLOT: i32 = 245;
 /// town `a`'s `mTownID` and its store (`b`)
 pub const EE_UNITS_PLAYER_BODY_TOWN_ID: i32 = 246;
 pub const EE_UNITS_PLAYER_BODY_TOWN_SET_ID: i32 = 247;
@@ -54,9 +52,6 @@ pub const EE_UNITS_PLAYER_BODY_TOWN_SET_CONTINENT: i32 = 254;
 /// `new EETown(this, b)`, `delete` town `a`
 pub const EE_UNITS_PLAYER_BODY_TOWN_NEW: i32 = 255;
 pub const EE_UNITS_PLAYER_BODY_TOWN_DELETE: i32 = 256;
-/// `mTowns.push_back(a)`, `mTowns.clear()`
-pub const EE_UNITS_PLAYER_BODY_TOWNS_PUSH: i32 = 257;
-pub const EE_UNITS_PLAYER_BODY_TOWNS_CLEAR: i32 = 258;
 /// `EEReadAreaBytes(the b bytes at c, *town a)` (b and c: an address and a length)
 pub const EE_UNITS_PLAYER_BODY_TOWN_READ_AREA: i32 = 259;
 
@@ -65,6 +60,8 @@ pub trait TownSplitHost {
     fn town(&mut self, op: i32, player: u32, index: u32, io: &mut EeUnitsTownIo) -> i32;
     fn body(&mut self, op: i32, player: u64, a: u64, b: i64, c: i64) -> i64;
     fn file(&mut self) -> Box<dyn FilePrims + '_>;
+    /// one operation on the player's towns (`mTowns`: player_lists.rs)
+    fn towns(&mut self, player: u64, op: ListOp) -> u64;
 }
 
 /// The made towns (`EE_UNITS_TOWN_MAKE` .. `COMMIT`) and the host.
@@ -102,8 +99,8 @@ impl<H: TownSplitHost> TownSplit<H> {
     }
     /// the player's town in slot `index` (0 for none)
     fn town(&mut self, p: u64, index: u32) -> u64 {
-        if p != 0 && (index as i64) < self.h.body(EE_UNITS_PLAYER_BODY_TOWN_SLOTS, p, 0, 0, 0) {
-            self.h.body(EE_UNITS_PLAYER_BODY_TOWN_SLOT, p, 0, index as i64, 0) as u64
+        if p != 0 && u64::from(index) < self.h.towns(p, ListOp::Len) {
+            self.h.towns(p, ListOp::At(index as usize))
         } else {
             0
         }
@@ -127,7 +124,7 @@ impl<H: TownSplitHost> TownHost for TownSplit<H> {
             EE_UNITS_TOWN_SLOTS => {
                 let p = self.player(player);
                 if p != 0 {
-                    self.h.body(EE_UNITS_PLAYER_BODY_TOWN_SLOTS, p, 0, 0, 0) as i32
+                    self.h.towns(p, ListOp::Len) as i32
                 } else {
                     0
                 }
@@ -203,7 +200,7 @@ impl<H: TownSplitHost> TownHost for TownSplit<H> {
                 for town in std::mem::take(&mut self.made) {
                     self.h.body(EE_UNITS_PLAYER_BODY_TOWN_SERIAL, p, town, 0, 0);
                     self.h.body(EE_UNITS_PLAYER_BODY_TOWN_ADD_AREA, p, town, 0, 0);
-                    self.h.body(EE_UNITS_PLAYER_BODY_TOWNS_PUSH, p, town, 0, 0);
+                    self.h.towns(p, ListOp::Add(town));
                 }
                 0
             }
@@ -224,11 +221,10 @@ impl<H: TownSplitHost> TownHost for TownSplit<H> {
                     // SAFETY: the walk's `len` slots at `bytes`
                     unsafe { std::slice::from_raw_parts(io.bytes as *const i32, io.len) }.to_vec()
                 };
-                let order: Vec<i64> =
-                    slots.iter().map(|&s| self.h.body(EE_UNITS_PLAYER_BODY_TOWN_SLOT, p, 0, s as i64, 0)).collect();
-                self.h.body(EE_UNITS_PLAYER_BODY_TOWNS_CLEAR, p, 0, 0, 0);
+                let order: Vec<u64> = slots.iter().map(|&s| self.h.towns(p, ListOp::At(s as usize))).collect();
+                self.h.towns(p, ListOp::Clear(false));
                 for town in order {
-                    self.h.body(EE_UNITS_PLAYER_BODY_TOWNS_PUSH, p, town as u64, 0, 0);
+                    self.h.towns(p, ListOp::Add(town));
                 }
                 0
             }
@@ -261,6 +257,9 @@ pub mod game {
             let mut io = EeUnitsTownIo::default();
             self.town(EE_UNITS_TOWN_X_FILE, 0, 0, &mut io);
             Box::new(crate::units::save_prim::game::GameFile(io.prim.i as usize as *mut c_void))
+        }
+        fn towns(&mut self, player: u64, op: ListOp) -> u64 {
+            crate::units::player_lists::player_op(player, crate::units::player_lists::EE_UNITS_LISTS_TOWNS, op)
         }
     }
 

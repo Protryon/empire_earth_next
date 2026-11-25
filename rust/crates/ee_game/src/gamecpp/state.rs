@@ -12,6 +12,7 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::Ge3DPoint;
+use ee_sim::units::player_lists::{player_list, EE_UNITS_LISTS_ALLIES};
 use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 
 use crate::app::game_options::{EeAppOptionsFields, EeAppOptionsPlayerFields};
@@ -450,13 +451,10 @@ fn create_new(st: P, opt: P, l: &Locals) {
     while i < player_count(st) {
         let pl = player_at(st, i);
         psaved(pl).mChatType = 0;
-        let allies = h(O::PlAlliesCount, pl, &[]);
-        if allies > 0 {
-            for j in 0..allies {
-                if h(O::PlIsHuman, hp(O::PlAllyAt, pl, &[j]), &[]) != 0 {
-                    psaved(pl).mChatType = 1;
-                    break;
-                }
+        for ally in player_list(pl as u64, EE_UNITS_LISTS_ALLIES) {
+            if h(O::PlIsHuman, ally as P, &[]) != 0 {
+                psaved(pl).mChatType = 1;
+                break;
             }
         }
         i += 1;
