@@ -5,6 +5,7 @@
 // posted messages (the original's Win32 thread messages) under a lock of their own.
 #ifndef LLE_TSTHREAD_H
 #define LLE_TSTHREAD_H
+#include "lle/LLEForward.h"
 
 #include "rust/base/ts.h"
 
@@ -13,8 +14,7 @@
 #undef Yield
 #endif
 
-class LLE_API TSThread {
-    friend class TSScheduler;
+class LLE_API TSThread : URustView {
 public:
     unsigned long GetExitCode() { return ee_ts_thread_exit_code(this->Rust()); }
     long GetPriority() { return ee_ts_thread_priority(this->Rust()); }
@@ -52,9 +52,6 @@ public:
     // Dispatches the window events waiting now (on the event thread; elsewhere nothing): what Win32 sent a new window
     // during its creation (activation, focus) is handled before the game knows the window, as it was
     static void DispatchWindowEvents() { ee_ts_dispatch_window_events(); }
-private:
-    TSThread() = delete;
-    ~TSThread() = delete;
     const EeTsThread* Rust() const { return reinterpret_cast<const EeTsThread*>(this); }
 };
 

@@ -6,7 +6,8 @@
 #ifndef EE_EEUIEWONNETARENAGAMEEVENTS_H
 #define EE_EEUIEWONNETARENAGAMEEVENTS_H
 
-class UIControl;
+#include "lle/LLEForward.h"
+#include "rust/won_lobby/wonfront.h"
 
 // 0x1eadd6: sets inEvent as inControl's trigger event and drops the creator's reference. Name is provisional. A static
 // (non-inline) function of this header: every WON screen's OpenScreen calls it out of line, and WNAG's copy sits right
@@ -19,82 +20,22 @@ static void EEUIEWNSetTriggerEvent(UIEvent* inEvent, UIControl* inControl, unsig
     inEvent->Dereference();
 }
 
-class EEUIEWNAGActivateForm : public UIEvent {          // vtable 0x446b58; form 0x20's activate event
-public:
-    virtual ~EEUIEWNAGActivateForm() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
+// The WON screens' events (the game room form 0x20's EEUIEWNAG*, the room list's EEUIEWNAR*, the update-account form
+// 0x25's EEUIEWNMUA*, the server list's EEUIEWNSS*, the statistics form's EEUIEWNS*): each was a class whose
+// ProcessEvent made its one call of the Rust front end (ee_won_lobby wonfront.rs); they are one class holding the call.
+// Back and the two Cancels pop the manager's form (the original's three identical bodies, ICF-folded).
+struct EEWonFrontEvent : UIEvent {
+    explicit EEWonFrontEvent(EeWonFrontCall inCall) : mCall(inCall) {}
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return (long)ee_won_front_call(mCall, inForm, (intptr_t)inEntity); }
+    EeWonFrontCall mCall;
 };
-
-class EEUIEWNAGBack : public UIEvent {                  // vtable 0x446be4; button 18
-public:
-    virtual ~EEUIEWNAGBack() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
+struct EEUIEWNPop : UIEvent {
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity) { return inForm->GetManager()->Pop(); }
 };
-
-class EEUIEWNAGCheckPassword : public UIEvent {         // vtable 0x446b80; check box 28 (game password)
-public:
-    virtual ~EEUIEWNAGCheckPassword() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGClickGameFilter : public UIEvent {       // vtable 0x446b6c; check boxes 32..34
-public:
-    virtual ~EEUIEWNAGClickGameFilter() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGCloseForm : public UIEvent {             // vtable 0x446b30
-public:
-    virtual ~EEUIEWNAGCloseForm() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGDeactivateForm : public UIEvent {        // vtable 0x446b44
-public:
-    virtual ~EEUIEWNAGDeactivateForm() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGDoubleclickUser : public UIEvent {       // vtable 0x446b94; the users list (control 8)
-public:
-    virtual ~EEUIEWNAGDoubleclickUser() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGHostOrJoinGame : public UIEvent {        // vtable 0x446ba8; button 17, edit box 24, games box 13
-public:
-    virtual ~EEUIEWNAGHostOrJoinGame() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGOpenScreen : public UIEvent {            // vtable 0x43e4d0; created by the UI's event factory
-public:
-    virtual ~EEUIEWNAGOpenScreen() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGSendChat : public UIEvent {              // vtable 0x446b1c; edit box 16
-public:
-    virtual ~EEUIEWNAGSendChat() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGToggleHostScreen : public UIEvent {      // vtable 0x446bd0; radio button 6
-public:
-    virtual ~EEUIEWNAGToggleHostScreen() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGToggleJoinScreen : public UIEvent {      // vtable 0x446bbc; radio button 5
-public:
-    virtual ~EEUIEWNAGToggleJoinScreen() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEWNAGUpdateForm : public UIEvent {            // vtable 0x446b08; form 0x20's update event
-public:
-    virtual ~EEUIEWNAGUpdateForm() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
+// FrontNewEvent's event (ee_won_front_event_call: the event's call, or -1 for a pop)
+inline UIEvent* EEWonFrontNewEvent(int32_t inCall)
+{
+    return inCall < 0 ? static_cast<UIEvent*>(new EEUIEWNPop) : new EEWonFrontEvent((EeWonFrontCall)inCall);
+}
 
 #endif

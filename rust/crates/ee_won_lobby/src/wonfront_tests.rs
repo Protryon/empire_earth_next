@@ -225,3 +225,15 @@ fn the_server_list_selects_a_lone_server() {
     assert!(o.contains(&Op::ServerName) && !o.contains(&Op::ServerDisplayName));
     assert_eq!(o.last(), Some(&Op::ListSelectIndex));
 }
+
+#[test]
+fn each_event_makes_its_own_call_or_pops_the_form() {
+    use EeWonFrontEvent as E;
+    assert_eq!(ee_won_front_event_call(E::AgActivateForm), EeWonFrontCall::AgActivateForm as i32);
+    assert_eq!(ee_won_front_event_call(E::AgUpdateForm), EeWonFrontCall::AgUpdateForm as i32);
+    assert_eq!(ee_won_front_event_call(E::ArJoinRoom), EeWonFrontCall::ArJoinRoom as i32);
+    assert_eq!(ee_won_front_event_call(E::SsOk), EeWonFrontCall::SsOk as i32);
+    for e in [E::ArBack, E::MuaCancel, E::SsCancel] {
+        assert_eq!(ee_won_front_event_call(e), -1);
+    }
+}

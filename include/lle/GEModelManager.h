@@ -8,9 +8,7 @@
 #include "rust/render/ge.h"   // the manager (ee_ge manobj.rs), its host's EeGeManOp
 #include "lle/UString.h"
 
-class FSFileSpec;
-class FSPath;
-class GEModel;
+#include "lle/LLEForward.h"
 
 class LLE_API GEModelManager {              // sizeof 0x18 in the original (mModels, mPath, mCriticalSection,
                                             // mMemoryFootprint: now the Rust object's)
@@ -19,8 +17,6 @@ public:
     GEModelManager(FSPath* inPath) { this->mRust = ee_ge_modman_new(&GEModelManager::Host, this, inPath); }
     // removes every unreferenced model, releases the path and the lock
     ~GEModelManager() { ee_ge_modman_free(this->mRust); }
-    GEModelManager(const GEModelManager&) = delete;   // port: one Rust object per manager
-    GEModelManager& operator=(const GEModelManager&) = delete;
     // a new model registered under a numbered name ("GEModelManager::CreateModel(name_N)")
     GEModel* CreateModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount, unsigned long inTagPointCount,
                          unsigned long inFrameCount, unsigned long inSubModelCount, const UString& inName, unsigned long inFlags)
@@ -46,11 +42,10 @@ public:
     long RemoveModel(GEModel* inModel) { return ee_ge_modman_remove(this->mRust, inModel); }
     // Replaces the model search path, keeping a reference to the new one
     void SetModelPath(FSPath* inPath) { ee_ge_modman_set_path(this->mRust, inPath); }
-private:
     // the calls the Rust object makes on other objects (GEModel.cpp)
     static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
-    EeGeModelManager* mRust;                // the cache (name -> model), the path, the lock and the footprint
+    URust<EeGeModelManager> mRust;                // the cache (name -> model), the path, the lock and the footprint
 };
 
 #endif

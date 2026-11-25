@@ -7,25 +7,15 @@
 #define LLE_SEMIXER_H
 
 #include "lle/SEConductor.h"
+#include "rust/audio/mixer.h"
 
 struct IDirectSound;
-class FSFileSpec;
-class GEWindow;
+#include "lle/LLEForward.h"
 
-long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow);   // Sound Engine.cpp; (provisional names)
-// port: the start's state while SEInitializeMixers walks the plug-in table (rust/crates/ee_audio/src/sound mixerobj.rs
-// EeSoundMixerStart has its layout)
-struct SEMixerStart {
-    const FSFileSpec* mDirectory;
-    GEWindow* mWindow;
-    void* mModule;                          // the plug-in being walked (Mixer.cpp's entry table)
-};
-
-// the mixer plug-in's name and validity test (PIMGetName, PIMIsValid; Mixer.cpp)
+// the mixer plug-in's name (PIMGetName; Mixer.cpp)
 const UString& SEMixerPlugInName();
-bool SEMixerPlugInIsValid();
 
-class LLE_API SEMixer {
+class LLE_API SEMixer : URustView {
 public:
     static SEMixer* GetActiveMixer() { return reinterpret_cast<SEMixer*>(ee_sound_mixer_active()); }
     SEConductor& GetConductor() { return *reinterpret_cast<SEConductor*>(ee_sound_mixer_conductor(Rust())); }
@@ -36,7 +26,7 @@ public:
         return ee_sound_mixer_get((uint32_t)inIndex, reinterpret_cast<EeSoundMixer**>(&outMixer));
     }
     const UString& GetName() { return SEMixerPlugInName(); }
-    bool IsValid() { return SEMixerPlugInIsValid(); }
+    bool IsValid() { return ee_mixer_plugin_is_valid(); }   // (PIMIsValid)
     bool ProcessMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
     {
         return ee_sound_mixer_process_message(Rust(), inMessage, inParameter1, inParameter2);
@@ -45,18 +35,12 @@ public:
     static long UseMixer(SEMixer* inMixer) { return ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(inMixer)); }
     // this port's addition: the mixer's output rate
     unsigned long GetOutputRate() const { return ee_sound_mixer_output_rate(Rust()); }
-private:
     EeSoundMixer* Rust() const { return reinterpret_cast<EeSoundMixer*>(const_cast<SEMixer*>(this)); }
-    SEMixer() = delete;
-    ~SEMixer() = delete;
 };
 
 // port: the audio settings, in the mixer plug-in (Mixer.cpp; EEApplyAudioSettings): the master volume (0..1) over
 // effects and music, the mute while the game is in the background, the output device by name (empty: the system's
 // default; taken when the mixer opens) and the names of the devices there are (-> their count)
-extern "C" void SPIMSetMasterVolume(float inVolume);
-extern "C" void SPIMSetMuted(bool inMuted);
-extern "C" void SPIMSetOutputDevice(const char* inName);
-extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);
+// (SPIMSetMasterVolume, SPIMSetMuted, SPIMSetOutputDevice, SPIMGetOutputDevices: rust/audio/mixer.h)
 
 #endif

@@ -41,10 +41,9 @@
 
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
-    : EeScreensMainGroupFields(), mOwner(inOwner)
+    : EeScreensMainGroupFields(), mOwner(inOwner), mStatusBox(new EEUIFMGStatusBox(inOwner))
 {
     ee_screens_main_group_fields(this, static_cast<EeScreensMainGroupFields*>(this));   // (the record zeroed)
-    this->mStatusBox = new EEUIFMGStatusBox(inOwner);
 }
 
 // Destroys the main panel group and its status box

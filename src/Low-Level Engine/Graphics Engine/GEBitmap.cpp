@@ -151,7 +151,6 @@ extern "C" intptr_t GEObjectHost(void*, EeGeObjOp inOp, void* inObj, intptr_t a,
 GEWindow::GEWindow(PlatWindow* inWindow, unsigned long inWidth, unsigned long inHeight, unsigned long inDepth,
                    bool inIsFullScreen)
     : mRust(ee_ge_win_new(&GEObjectHost, this, inWindow, inWidth, inHeight, inDepth, inIsFullScreen)) {}
-GEWindow::~GEWindow() { ee_ge_win_destroy(this->mRust); }
 // ---- end of the object host
 
 // (GEBitmap's members forward to its Rust object inline: lle/GEBitmap.h)

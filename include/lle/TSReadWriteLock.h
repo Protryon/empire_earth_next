@@ -5,21 +5,18 @@
 // made, and every member forwards.
 #ifndef LLE_TSREADWRITELOCK_H
 #define LLE_TSREADWRITELOCK_H
+#include "lle/LLEForward.h"
 
 #include "platform/PlatThread.h"
 #include "rust/base/ts.h"
 
-class LLE_API TSReadWriteLock {
-    friend class TSScheduler;
+class LLE_API TSReadWriteLock : URustView {
 public:
     long GetReadLockCount() const { return ee_ts_lock_read_count(this->Rust()); }
     void ReadLock() { ee_ts_lock_read(this->Rust()); }
     void ReadUnlock() { ee_ts_lock_read_unlock(this->Rust()); }
     void WriteLock() { ee_ts_lock_write(this->Rust()); }
     void WriteUnlock() { ee_ts_lock_write_unlock(this->Rust()); }
-private:
-    TSReadWriteLock() = delete;
-    ~TSReadWriteLock() = delete;
     const EeTsLock* Rust() const { return reinterpret_cast<const EeTsLock*>(this); }
 };
 

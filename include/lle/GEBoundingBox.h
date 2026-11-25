@@ -4,7 +4,7 @@
 #define LLE_GEBOUNDINGBOX_H
 #include "lle/GERust.h"
 
-class FSFileSpec;
+#include "lle/LLEForward.h"
 
 class GEBoundingBox : public EeGeBoundingBox {   // the Rust record (mBottomLeftFront, mTopRightBack, mWidth (x),
 public:                                          // mHeight (z), mDepth (y); rust/base/math.h)
@@ -33,7 +33,6 @@ public:                                          // mHeight (z), mDepth (y); rus
     // the axis-aligned box around the eight transformed corners
     void Transform(const GETransformation& inTransformation, GEBoundingBox& outBox) const
         { ee_ge_bbox_transform(GERust(*this), GERust(inTransformation), GERust(outBox)); }
-private:
     // LineToPlaneIntersection and TransformPoint, Intersects(line)'s and Transform's helpers, are Rust (ee_ge bbox.rs)
     // each axis ordered (the first corner the minimum), then the width (x), height (z) and depth (y)
     void ComputeDimensions() { ee_ge_bbox_compute_dimensions(GERust(*this)); }

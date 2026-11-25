@@ -13,7 +13,6 @@
 static UString gMixerName("Mixer");
 
 const UString& SEMixerPlugInName() { return gMixerName; }
-bool SEMixerPlugInIsValid() { return ee_mixer_plugin_is_valid(); }
 
 extern "C" {
 void* ee_mixercpp_memory_file(FSFileSpec* inSpec) { return dynamic_cast<FSMemoryFile*>(inSpec); }

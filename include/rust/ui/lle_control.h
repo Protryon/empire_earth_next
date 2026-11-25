@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/ui/controlobj.h"
+#include "rust/ui/obj.h"
 #include "rust/ui/rect.h"
 
 /// The shared UI keys and mouse buttons (UI lane round 13: once `UIControl`'s 24 key statics, `UIForm`'s Tab and
@@ -63,6 +64,18 @@ enum class EeUiKeyPress : uint32_t {
 };
 
 extern "C" {
+
+/// The control's host: [`control_call`], then `UIControl::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_control_host(void *obj,
+                             EeUiOp op,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             ptrdiff_t d,
+                             float *f);
 
 /// `key`'s slot: the C++ `ISEntity*&` (`UIControl::Key`; `GetEntity`'s out reference).
 void **ee_ui_key_slot(EeUiKey key);

@@ -8,7 +8,7 @@
 #define EE_EEUISCIFORMMANAGER_H
 #include "rust/game/screens.h"
 
-class FSFileSpec;
+#include "lle/LLEForward.h"
 
 class EEUISCIFormManager : public UIFormManager, public EeScreensSciFormFields {
 public:

@@ -34,7 +34,6 @@ public:
     virtual ~EESEUITerrainColorLB() {}      // +0x00 (??_G 0x1ac32e: its own vptr first)
     virtual long CopyData();                // +0x14 0x1ac31d (inline COMDAT): the base's, the copied focus set
     virtual long DrawPolygons();            // +0x18 0x1aaad4 (each line's colours as rhombi)
-    friend int32_t(::ee_screenscpp_setnx)(uint32_t inOp, void* const* p, int32_t* i, float* f);
 };
 
 // the terrain type list (RTTI EESEUITerrainTypeLB > UIListBox<EESEUITTData>; vtable 0x445c2c, sizeof 0x144)
@@ -44,20 +43,14 @@ public:
     EESEUITerrainTypeLB(unsigned long inId, GEFont* inFont, std::vector<EESEUITTData>& inData,
                         const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                         unsigned long inBorderThickness)
-        : UIListBox<EESEUITTData>(inId, inData, 0x10, false, inRectangle, inForm, inIndex, inBorderThickness)
-    {
-        this->mBitmap = new GEBitmap;
-        this->mText = new GEText(inFont);
-        this->mCopyText = new GEText(inFont);
-        this->mIsSelectionFramed = false;
-    }
+        : UIListBox<EESEUITTData>(inId, inData, 0x10, false, inRectangle, inForm, inIndex, inBorderThickness),
+          mText(new GEText(inFont)), mCopyText(new GEText(inFont)), mBitmap(new GEBitmap), mIsSelectionFramed(false) {}
     // inline (COMDAT 0x1ac40d; ??_G 0x1ac3f1): the copied lines' textures released, the bitmap, the texts
     // (editor_setnx.rs type_free)
     virtual ~EESEUITerrainTypeLB() { ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_FREE, this); }
     virtual long CopyData();                // +0x14 0x1aacf2
     virtual long DrawPolygons();            // +0x18 0x1aade1 (each line's texture)
     virtual long DrawTextA();               // +0x1c 0x1ab1a2 (the names)
-    friend int32_t(::ee_screenscpp_setnx)(uint32_t inOp, void* const* p, int32_t* i, float* f);
 
     GEText* mText;                          // +0x134
     GEText* mCopyText;                      // +0x138

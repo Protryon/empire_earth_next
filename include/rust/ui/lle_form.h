@@ -6,11 +6,24 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/ui/obj.h"
 
 /// `sizeof(UIDbDataForms)`: the forms file's record.
 constexpr static const size_t EE_UI_FORM_RECORD_SIZE = 268;
 
 extern "C" {
+
+/// The form's host: [`form_call`], then `UIForm::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_form_host(void *obj,
+                          EeUiOp op,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t c,
+                          ptrdiff_t d,
+                          float *f);
 
 /// `UIForm::Create` (the C++ member's body).
 ///

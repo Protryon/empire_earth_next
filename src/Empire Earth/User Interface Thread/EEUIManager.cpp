@@ -47,7 +47,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEScreenEvent.h"
-#include "ee/EEUIEWonNetStatsEvents.h"
+#include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIBGenericBackground.h"
@@ -76,15 +76,6 @@
 #include "rust/ui/graphobj.h"
 #include "ee/EEScreensShims.h"
 #include "ee/EEGameState.h"   // gGameState
-// The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
-// UpdateMouse's location)
-struct EEUIManagerCall : public EeScreensManagerCallObjects {   // the pointers: the Rust record (hud_fields.rs)
-    explicit EEUIManagerCall(EEUIManager* inManager, const GE2DPoint* inMouse = NULL)
-        : EeScreensManagerCallObjects{inManager, inMouse} {}
-    UWideString mNames[2];
-    // the record of a call (a temporary's, for the full expression)
-    EEUIManagerCall* Ptr() { return this; }
-};
 
 // Creates the game's UI manager: registers the control and form event factories (the game settings one
 // twice), loads the UI database and finds the main game form
@@ -131,19 +122,8 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
     return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID));
 }
 
-// Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
-// (ee_screens ui_manager.rs)
-void EEUIManager::StartScenarioEditor() { ee_screens_ui_manager_start_editor(EEUIManagerCall(this).Ptr()); }
 
-// Handles F9 screenshots outside text entry; then the keys (ee_screens ui_manager.rs; the original first stopped a
-// playing movie on Escape, Return or Space)
-long EEUIManager::UpdateKeyboard() { return (long)ee_screens_ui_manager_update_keyboard(EEUIManagerCall(this).Ptr()); }
 
-// Handles the mouse (ee_screens ui_manager.rs; the original first stopped a playing movie on a click)
-long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
-{
-    return (long)ee_screens_ui_manager_update_mouse(EEUIManagerCall(this, &inMouseLocation).Ptr());
-}
 
 // (the ids' agreement with ee_screens ui_manager.rs' is ui_ids.rs' test)
 
@@ -153,7 +133,6 @@ extern "C" int64_t ee_screenscpp_um_engine_count() { return EECPEngineChoiceCoun
 extern "C" void ee_screenscpp_um_music(void* inCall)
 { static_cast<EEUIManager*>(static_cast<EEUIManagerCall*>(inCall)->mManager)->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume); }
 extern "C" int64_t ee_screenscpp_um_citizens() { return gWorldTable.GetLongValue(kWorldStartingCitizensDefault); }
-extern "C" void ee_screenscpp_um_post_f9() { EEPostF9Key(); }
 extern "C" int64_t ee_screenscpp_um_base_keyboard(void* inCall)
 { return EEUIManager::BaseKeyboard(static_cast<EEUIManager*>(static_cast<EEUIManagerCall*>(inCall)->mManager)); }
 extern "C" int64_t ee_screenscpp_um_base_mouse(void* inCall)
@@ -239,11 +218,13 @@ extern "C" uintptr_t ee_screenscpp_um_new_cancel(uintptr_t inForm)
 { return (uintptr_t)static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_CANCEL, inForm)); }
 extern "C" uintptr_t ee_screenscpp_um_new_load_unit() { return (uintptr_t)static_cast<UIEvent*>(new EEScreenEvent(EE_SCREENS_EV_LOAD_UNIT)); }
 // the events' bodies (cpp_events.rs)
+extern "C" bool ee_screenscpp_uh_in_game_form()
+{ return dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL || dynamic_cast<EEUIFScenarioEditor*>(gUIManager->GetCurrentForm()) != NULL; }
 extern "C" long ee_screenscpp_ev_open_form(uintptr_t inForm) { return gUserInterface->OpenForm(reinterpret_cast<UIForm*>(inForm)); }
 extern "C" void ee_screenscpp_ev_load_unit(uintptr_t inForm)
 { static_cast<EEUIFMGUnitHack*>(reinterpret_cast<EEUIFMainGame*>(inForm)->mUnitHack)->LoadUnitData(); }
-extern "C" uintptr_t ee_screenscpp_um_new_wns_open() { return (uintptr_t)static_cast<UIEvent*>(new EEUIEWNSOpen); }
-extern "C" uintptr_t ee_screenscpp_um_new_wns_cancel() { return (uintptr_t)static_cast<UIEvent*>(new EEUIEWNSCancel); }
+extern "C" uintptr_t ee_screenscpp_um_new_wns_open() { return (uintptr_t)static_cast<UIEvent*>(new EEWonFrontEvent(EeWonFrontCall::StatsOpen)); }
+extern "C" uintptr_t ee_screenscpp_um_new_wns_cancel() { return (uintptr_t)static_cast<UIEvent*>(new EEWonFrontEvent(EeWonFrontCall::StatsCancel)); }
 extern "C" void ee_screenscpp_um_new_editor(uintptr_t inManager)
 { UMG(inManager)->mScenarioEditorForm = new EEUIFScenarioEditor(UMG(inManager)); }
 extern "C" void ee_screenscpp_um_delete_editor(uintptr_t inManager) { delete UMG(inManager)->GetScenarioEditorForm(); }

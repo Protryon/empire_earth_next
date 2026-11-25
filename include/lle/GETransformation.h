@@ -7,9 +7,7 @@
 
 #include "lle/GERust.h"
 
-class FSFile;
-class GE3DLine;
-class GE3DPlane;
+#include "lle/LLEForward.h"
 
 class GETransformation : public EeGeTransformation {   // the Rust record (mMatrix: row-major 4x4, the translation in
 public:                                                // column 3; rust/base/math.h)

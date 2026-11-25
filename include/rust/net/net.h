@@ -703,6 +703,15 @@ void ee_net_cl_send_end_connect_message(const EeNetClient *c);
 int32_t ee_net_cl_connect(const EeNetClient *c,
                           const void *strings);
 
+/// `Connect(name, host, address)` from the three NUL-terminated texts (the C++ strings): their bytes measured here.
+///
+/// # Safety
+/// The three are NUL-terminated strings.
+int32_t ee_net_cl_connect_text(const EeNetClient *c,
+                               const char *name,
+                               const char *host,
+                               const char *address);
+
 int32_t ee_net_cl_connect_for_xfer(const EeNetClient *c);
 
 int32_t ee_net_cl_disconnect(const EeNetClient *c);
@@ -793,6 +802,10 @@ void ee_net_pr_free(EeNetProtocol *p);
 /// `NEInitialize`'s protocols (after its shutdown hook): TCP/IP, freed again when its plug-in is not usable ->
 /// kErrorOK, or kErrorNotFound for no protocol.
 int32_t ee_net_pr_initialize();
+
+/// `NEInitialize`: the shutdown hook (`NEShutdown`) on the engine's shutdown list, then the protocols; the list's
+/// error if it refuses.
+int32_t ee_net_initialize();
 
 /// `NEShutdown`: every registered protocol freed.
 void ee_net_pr_shutdown();

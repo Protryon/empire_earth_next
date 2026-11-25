@@ -5,17 +5,15 @@
 // the conductor; the member is an inline forwarder.
 #ifndef LLE_SESCORE_H
 #define LLE_SESCORE_H
+#include "lle/LLEForward.h"
 
 #include "rust/audio/sound.h"
 
-class LLE_API SEScore {
+class LLE_API SEScore : URustView {
 public:
     // how many times the score repeats (the game loops a score with a large count)
     void SetRepeatCount(unsigned long inCount) { ee_sound_score_set_repeat_count(Rust(), (uint32_t)inCount); }
-private:
     const EeSoundScore* Rust() const { return reinterpret_cast<const EeSoundScore*>(this); }
-    SEScore() = delete;
-    ~SEScore() = delete;
 };
 
 #endif
