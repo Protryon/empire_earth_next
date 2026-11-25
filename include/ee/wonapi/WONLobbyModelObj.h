@@ -44,7 +44,9 @@ template <class T> SmartPtr<T> LobbyModelHeld(intptr_t inObj)
 // RTTI LobbyPlayer; vtable 0x852c54, four slots; size 0x0c.
 class LobbyPlayer : public LobbyModelObject {
 public:
-    LobbyPlayer() : LobbyModelObject(EeWonModelKind::Player) {}
+    // the game's player (EELobbyPlayer, folded in R6 WON lobby and network round 38) is the kind EePlayer: its slot,
+    // read and written after the ready flag and deciding IsSameTeam, is the Rust object's (modelobj.rs)
+    explicit LobbyPlayer(EeWonModelKind inKind = EeWonModelKind::Player) : LobbyModelObject(inKind) {}
     virtual bool ReadData(ReadBuffer& inBuffer) { return true; } // returns true (shared body at 0x387ff0)
     virtual void WriteData(WriteBuffer& outBuffer) {} // empty (shared body at 0x30a800)
     virtual bool IsTeammate(LobbyPlayer* inOther) { return false; } // 0x3a90d0: the base player has no teams
