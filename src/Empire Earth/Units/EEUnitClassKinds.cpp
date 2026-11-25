@@ -20,12 +20,8 @@
 #include "ee/EEPlayer.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEUnitUpdate.h"
-#include "ee/EEPhysics.h"
-#include "ee/EEUGRust.h"
 
 // the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
-
 
 template <class T> static T* EEUckObject(uint64_t inHandle)
 {

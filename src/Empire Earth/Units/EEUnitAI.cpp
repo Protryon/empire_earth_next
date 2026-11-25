@@ -5,34 +5,15 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DPoint.h"
 #include "lle/U2DRectangle.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEUnitUpdate.h"
-#include "rust/sim/units.h"
-#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEPathManager.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPhysics.h"
 #include "ee/EmpireEarth.h"
@@ -45,15 +26,12 @@
 #include "ee/EEAnimal.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEAirTrafficControl.h"
 #include "ee/EECombatGoals.h"
-#include "lle/GEBoundingBox.h"
 #include "lle/GEModel.h"
 
 // The obstacle wait time scale at 0x4c2374 (a long, 4000; EvaluateCondition reads it at 0x22eca0). Its owning unit
 // is not recoverable, so it is only declared here (provisional name).
 extern long gUnitAIWaitScale;
-
 
 // 0x24485b: the enemy unit near (inX, inY) within inRange that inUnit can attack (EEUCLandable.cpp; provisional name)
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRange);

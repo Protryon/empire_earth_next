@@ -7,8 +7,6 @@
 #include <typeinfo>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEPlayer.h"
@@ -16,18 +14,12 @@
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEGraphicObject.h"
-#include "ee/EEAirTrafficControl.h"
-#include "ee/EEAIContinentManager.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EETechTreeTechID.h"
-#include "lle/GEModel.h"
-#include "rust/sim/units.h"
 
 // ---- EEUCLandable.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The unit class of the
@@ -42,7 +34,6 @@
 
 // 0x447038..0x447050: the unit's named float constants (one .rdata block per unit): uca_air.rs's now
 
-
 // cdecl helpers (EEUCHelicopter.cpp declares the first the same way) (provisional names)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
@@ -52,7 +43,6 @@ void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 // ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control
 // Drops the path and adds a waypoint at the home carrier's take-off point (its tag point 2; its centre without tags)
 // Gets the sound parameters, giving a moving plane's sound a Doppler pitch shift against the camera
-
 
 // Paths a plane from a point to its goal's location (move, patrol, explore, attack ground, unload, attack unit)
 // at cruising height; an explore goal without a target picks a new area first
@@ -65,7 +55,6 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
 {
     return ee_units_uca_call(EE_UNITS_UCA_DO_LANDABLE_OP, inClass, inUnit, EEObj(inoutAirport), inOperation, inA, NULL);   // uca_air.rs
 }
-
 
 // Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
 // Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
@@ -87,7 +76,6 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
 // ctor is inline (EEUnitClass.cpp's factory). Order: Virtual74 with EEAirTrafficControl::GetNumSlots's COMDAT after
 // it, EEIsTileFree, EECreateCarrierAircraft (the carrier's aircraft), FlyOffMap (off the map edge), VirtualBC, VirtualB8.
 // Virtual74 is EEUCPlanetSpaceship's twin (0x218e34).
-
 
 // New (R5b.4, the fourteenth round): EEUCAirplane::ActionChanged's operations that are more than a call (the original's
 // statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): circling's side (on space maps
@@ -125,10 +113,8 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer)
 // airport, used by Virtual74) comes first, then the slots +0x24, +0x2c, +0x74, +0x78, +0x88, +0xa0, (+0xc0 folded)
 // +0xb8 in source order. Bodies are the EEUCLandable twins' (0x213ed2.., same sizes) with the animal's states.
 
-
 // Lands the animal like a plane: two waypoints ahead (on the ground, then at 3/4 of cruise altitude) and a flight there
 // Gets the base sound parameters, then Doppler-shifts the pitch of a moving animal by its speed toward the camera
-
 
 // New (R5b.4, the fourteenth round): EEUCAirAnimal::ActionChanged's operations that are more than a call (the
 // original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): the path to the goal
@@ -147,7 +133,6 @@ void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit)
 // ---- EEUCPlanetSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The planet
 // spaceship's unit class: 0x218e34..0x219143 (after EEUCNavalTransport.cpp; EEUCProjectile.cpp's +0xe0 0x219143
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); one own slot, +0x74.
-
 
 // New (R5b.4, the fourteenth round): EEUCPlanetSpaceship::ActionChanged's holding pattern over its home airport (dies
 // without one; the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HOLDING_PATTERN 1 calls it)

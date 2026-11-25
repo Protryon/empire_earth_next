@@ -19,8 +19,6 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEAEManager.h"
 #include "EEDatabase.h"
-#include "platform/PlatTime.h"
-#include "rust/sim/units.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Winvalid-offsetof"

@@ -11,28 +11,12 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
 
 #include "ee/EEPlayer.h"
-#include "ee/EEPhysics.h"
 #include "ee/EEUnit.h"
-#include "ee/EEGraphicObject.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGRust.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/EESaveGameFiles.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEUnitUtilities.h"
-#include "ee/EEUnitKind.h"
-#include "rust/sim/combat.h"
-#include "rust/sim/units.h"
 
 namespace {
 
@@ -45,7 +29,6 @@ EEUnitGoal* UnitGoalOf(uint64_t inHandle)
 {
     return reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(inHandle));
 }
-
 
 }  // namespace
 

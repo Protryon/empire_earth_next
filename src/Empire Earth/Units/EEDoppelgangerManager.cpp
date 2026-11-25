@@ -9,28 +9,18 @@
 #include <typeinfo>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/FSRestorable.h"
 
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEDoppelganger.h"
 #include "ee/EEComplexDoppelganger.h"
 #include "ee/EEDoppelgangerManager.h"
-#include "rust/sim/units.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGameState.h"
 #include "ee/EEMiniMap.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EECombatGoals.h"
 
 // Creates the manager with empty simple and complex doppelganger pools

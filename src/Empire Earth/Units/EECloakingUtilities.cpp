@@ -6,29 +6,17 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEEffect.h"
-#include "ee/EEEffectManager.h"
-#include "ee/EETileCoordinate.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEAIKindIDs.h"
 
 // 0x2035ef (EEGhostUnit.cpp's spelling): the terrain kind blocks a wall piece's ground
 bool EEIsLandTerrain(long inTerrainType);

@@ -5,34 +5,22 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/ESChecksum.h"
-#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEWheel.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEUnitClassKinds.h"
 #include "lle/GEViewport.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
-#include "rust/sim/units.h"
 bool gGhostUnitsChanged;                    // 0x563240 (.bss after EEComplexUnit's, before EEGoalQueueContainer's; ee/EEGhostUnit.h)
 
 long EETurnGatePart(GETransformation&, long, long);
@@ -45,7 +33,6 @@ template <class T> static T* EEGhostObject(uint64_t inHandle)
 {
     return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
 }
-
 
 // Replaces the placement ghosts with one wall ghost per planned tile, shaped by its corner and set on the ground
 // (free function; whether it was static is not known) (provisional name)

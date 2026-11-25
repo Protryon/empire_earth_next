@@ -9,13 +9,9 @@
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DSparseArray.h"
 #include "lle/SESoundManager.h"
 
-#include "rust/sim/units.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -24,8 +20,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEAIRandom.h"
-#include "ee/EEAIArea.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
@@ -33,13 +27,10 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
-#include "ee/EEUnitUtilities.h"
-#include "ee/EECombatGoals.h"
 
 // ---- EEUCBasicCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The citizens'
 // unit class: gathering (resource and storage searches), building and repairing. 0x20bcf7..0x20d571 (after
@@ -113,7 +104,6 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
 // alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); VirtualB8,
 // then EEComplexUnit::ContinueProduction after its first user.
 
-
 // ---- EEUCNavalCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval citizen's
 // unit class (a fishing boat): 0x218490..0x21880c (after EEUCNavalBuilding.cpp; EEUCNavalPriest.cpp's out-of-line
 // ctor 0x21880c follows). Every slot of ee/EEUCNavalCitizen.h in that range is here: +0x08 (ICF-shared with
@@ -128,8 +118,6 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
 // Virtual78, the can-convert test (static), VirtualA8, VirtualA0, VirtualB4, VirtualB8, then EEComplexUnit's
 // helpers that VirtualB8 calls (COMDATs after their first user: inline in the real header? written out of line
 // here), ShowConversionEffects, HideConversionEffects.
-
-
 
 static const float kBasicPriestSoundFactor = 4.0f;     // 0x446fe4 (the conversion sound's distance factor)
 

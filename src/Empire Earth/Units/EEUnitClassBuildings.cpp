@@ -8,31 +8,23 @@
 #include <functional>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/USingleton.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/GEModel.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEPhysicsModel.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EEAirTrafficControl.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUnitUtilities.h"
-#include "rust/sim/units.h"
 
 // C:\EEX\Empire Earth\Units\EEUCBuilding.cpp (__FILE__ 0x4c8f28: the volcano assert, line 261). The buildings' unit
 // class: 0x20e58d..0x21005e (after EEUCBomb.cpp; EEUCBuildingPriest.cpp follows). Unit flags: the exe's module set.
@@ -122,7 +114,6 @@ static GEColor sGateNormal(1.0f, 1.0f, 1.0f);
 
 // 0x447004..0x447018: the unit's named float constants (one .rdata block per unit) (provisional names)
 // 0x447004/0x447008 (1.0 open, 0.0 closed) are ee_units cls_condition.rs GATE_OPEN, GATE_CLOSED
-
 
 long EETurnGatePart(GETransformation& ioTransformation, long inDirection, long inIndex);
 

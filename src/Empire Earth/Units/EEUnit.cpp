@@ -7,18 +7,9 @@
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnitStore.h"
-#include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -26,24 +17,18 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEDoppelgangerManager.h"
-#include "ee/EEEffectManager.h"
 #include "lle/SESoundManager.h"
 #include "ee/EEGameSound.h"
-#include "ee/EECameraControl.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EESoundObject.h"
-#include "ee/RTSRegionTable.h"
-#include "ee/EEUnitRegions.h"
 #include "ee/EEInfluenceTable.h"
 #include <math.h>
 #include <algorithm>
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEMapDimensions.h"
@@ -51,9 +36,6 @@
 #include "ee/EECPNextUnits.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIForest.h"
-#include "ee/EEEffectKindIDs.h"
-#include "ee/EEUnitHandle.h"
-#include "rust/sim/units.h"
 
 // Creates a simple unit of inClass for inPlayer at tile (inX, inY)
 EEUnit* EEUnit::Create(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)

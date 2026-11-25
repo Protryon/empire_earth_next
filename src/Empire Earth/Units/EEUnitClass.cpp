@@ -7,12 +7,9 @@
 #include <stdio.h>
 #include <cstddef>
 #include <string.h>
-#include "ee/EEUnitUpdate.h"
 #include "lle/LowLevelEngine.h"
 #include "ee/EEUCUpgradeTable.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GEModel.h"   // the tag points' model chain (EECombatTagPointChain)
 #include "lle/USingleton.h"
@@ -21,18 +18,15 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEGlobalStorage.h"
-#include "ee/EEUnitVectorItem.h"
 #include "lle/FSPersistent.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEAirTrafficControl.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EEGhostUnit.h"
 #include "ee/EEWheel.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEUnitSetManager.h"
@@ -41,7 +35,6 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEAIContinentManager.h"
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EECPASGFlags.h"
 #include "ee/EEDatabaseTables.h"
@@ -56,12 +49,10 @@
 #include "ee/EEAnimal.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUnitBehavior.h"
-#include "rust/data/tables.h"   // EEUnitClassRecord (ee_data DbUnitClass)
 #include "ee/EEDbObject.h"
 #include "ee/EEDatabase.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEFOFindNewTargetInMeleeRange.h"
-#include "ee/EEMathInline.h"
 #include <algorithm>
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -169,9 +160,6 @@ struct EEUnitClassNameLess {
 // Turns each turret of a living unit back toward straight ahead by at most its turn rate for this tick
 // port (R5b.4): the turn is Rust (ee_units turret.rs), as TurnTurrets'
 // Sends a goalless unit to the centre of its tile; with a goal, faces the unit to the centre and places it there
-#include "ee/EEPathManager.h"
-#include "rust/sim/astar.h"   // the path goals' modifiers (modifier_obj.rs)
-#include "rust/sim/units.h"
 // Counts one unit of the class gone and records the time when the last one goes
 // Adds a unit class to the class table under its unit type and to the list of unit types, keeping a reference
 // Removes a placed unit (not a path marker) from the map's unit region that holds its tile

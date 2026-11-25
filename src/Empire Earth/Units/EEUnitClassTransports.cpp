@@ -8,10 +8,7 @@
 #include <set>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DPolygon.h"
 #include "lle/U2DSparseArray.h"
 
 #include "ee/EEPlayer.h"
@@ -22,10 +19,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUnitUtilities.h"
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEAirTrafficControl.h"
-#include "rust/sim/units.h"
 
 // ---- EEUCTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The transports' base
 // unit class: 0x21b27a..0x21c9e1 (after EEUCTorpedo.cpp). Unit flags: the exe's module set. Its ctor is out of line in
@@ -132,7 +125,6 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory; vtable 0x448718); its
 // slots +0x04, +0xe8, +0xf8, +0xfc, +0x88, +0x104, +0xb8 in source order (Virtual08/0C/30/34/A0/E4/F4 are other
 // units' copies by ICF).
-
 
 // ---- EEUCSpaceTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The space
 // transport's unit class: 0x21a6e0..0x21ab66 (after EEUCSpaceship.cpp; EEUCSubmergedNaval.cpp's +0x04 0x21ab66

@@ -17,11 +17,8 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUnit.h"
 #include "ee/EEStringIDs.h"
-#include "ee/EEImprovementIDs.h"
 #include "ee/EEPlayer.h"            // EESavePrimitive
-#include "lle/FSFile.h"
 #include <string>
-#include "rust/sim/units.h"
 
 // (R5b.4, round 28: the class's and the upgrade's fields are read and written in place, ee_units improve.rs over the
 // records; the step factors are the class's improvement table's, read there)

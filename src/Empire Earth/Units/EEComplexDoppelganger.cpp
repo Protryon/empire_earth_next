@@ -7,22 +7,9 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GEModel.h"
-#include "lle/FSFile.h"
-#include "lle/FSRestorable.h"
 
-#include "ee/EEUnitKind.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -30,26 +17,19 @@
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
-#include "ee/EEDoppelganger.h"
 #include "ee/EEComplexDoppelganger.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEDataPreLoading.h"
 #include <string.h>
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEUnitAction.h"
-#include "ee/EEPPatrolGroup.h"
 #include <math.h>
 #include <algorithm>
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEUGRust.h"
-#include "rust/sim/units.h"
 
 // port (save version 0.256): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
 // makes its own contacts while it places the units, and EEPhysicsModel reads the list before it rebuilds it (a unit

@@ -7,8 +7,6 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/RTSUnit.h"
@@ -18,9 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "rust/sim/units.h"   // the unit registry (rust/crates/ee_sim/src/units)
-#include "rust/game/rts.h"
 
 // New (R5a.4): the unit registry behind EEUnitHandle (ee/EEUnitHandle.h) is Rust (ee_units): a lock-free radix
 // tree over the id's bits, so any thread may resolve a handle while another thread inserts a unit or runs its

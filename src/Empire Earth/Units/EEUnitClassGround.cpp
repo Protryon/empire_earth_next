@@ -6,21 +6,16 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEWheel.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitClassKinds.h"   // EEObj (the host)
-#include "rust/sim/units.h"
 
 // ---- EEUCAmbient.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The ambient object's
 // unit class: 0x20b9fc..0x20bcf7 (after EEUCAirplane.cpp; EEUCBasicCitizen.cpp follows). Unit flags: the exe's module
@@ -61,7 +56,6 @@
 // and +0xb8 of ee/EEUCNaval.h plus the helper UpdateResourceUnit. The ctor is inline (EEUnitClass.cpp's factory). Unit flags:
 // the exe's module set.
 // Virtual0C 0x217c6d forwards (inUnit, ioPath, inArg) to the cdecl 0x23df77 (declared here).
-
 
 // Sets up a new ship at sea level (z 0), with the class's resource type and amount
 // Returns whether the ship may stop: already sinking, a slow request, or at the path's end tile with its speed reached
