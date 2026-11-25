@@ -41287,3 +41287,22 @@ capture profiles, saveload). Fork B's civilization builder has its own section a
 - Edits outside the lane's files: src/RTS Engine/Player/RTSPlayer.cpp (the 14 forwarders moved into the class, the
   bucket shim's type, the shims' casts to EEPlayer), rust/crates/ee_game/src/rts/units.rs (`ee_rts_eeplayer_*`), src/Empire Earth/Persistent/EEPWorldHelper.cpp (one field name), src/Empire Earth/UI
   Events/EEScreens.cpp (two field names), rust/crates/ee_sim/src/units/player_events.rs (`ee_units_events_next`).
+
+## The scenario intro's briefing after Start: a closed form's label (EE-SIM fault in ee_screenscpp_label_delete_array; branch rust-scnfix2, 2026-11-25)
+
+- Symptom: `tools/scenario_check.py` on a loaded machine failed once on the Learning Campaign's scenario 6 with
+  `EE-SIM FAULT c0000005` at `UITextLabel::DeleteArray`'s `mov rcx, [rcx+0xa0]` (a NULL label), from
+  `EE_SCREENS_TEXT_LABEL_LINES` <- `scenario_screens::page` <- `EE_SCREENS_SI_BRIEFING` on the UI thread. Alone it
+  always passed.
+- Cause: the intro's open runs a chain of posted UI events (SI_OPEN -> SI_MOVIE -> SI_SOUND_OVER -> SI_BRIEFING).
+  EE-SIM's driver clicks Start 1 s after the form is on top; when the UI thread is slow the chain is still queued,
+  Start begins the game, the intro form closes, and `UIForm::Close` deletes the controls made from the database
+  (their slots become 0). The late briefing then writes its page into a form without controls: every toolkit write
+  is NULL-tolerant (Rust's direct calls answer 0 for an unknown object), but the label lines' C++ shim called
+  `DeleteArray` on the NULL label. Pre-existing (the original faulted the same way; a human never clicks that fast),
+  not a batch 27 regression.
+- Proof: with a 3 s sleep before SI_SOUND_OVER posts the briefing (and the driver's sleep removed) the fault came
+  every run at the same instruction; with the fix the same run plays to the time cap.
+- Fix: `EE_SCREENS_TEXT_LABEL_LINES` writes nothing when the form's control is NULL (game_texts.rs, with a test).
+- Lesson: an event posted by a form's own handlers can outlive the form's open; a handler reached through a C++
+  shim must tolerate the form's closed state like the Rust toolkit calls do.
