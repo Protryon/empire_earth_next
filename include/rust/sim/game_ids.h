@@ -302,27 +302,6 @@ enum EEPersistentTag {
   kPersistentEnvironment = 12,
 };
 
-/// EEAreaEffectTemplate::mKind: EEAEManager::CreateAreaEffect creates the area-effect class by kind; names from the RTTI
-/// class (EEAE prefix dropped).
-enum EEAreaEffectKind {
-  /// RTTI EEAEHealing: EEAEManager::CreateAreaEffect case 1
-  kAreaEffectHealing = 1,
-  /// RTTI EEAEMorale: EEAEManager::CreateAreaEffect case 2
-  kAreaEffectMorale = 2,
-  /// RTTI EEAECalamityImmunity: EEAEManager::CreateAreaEffect case 3
-  kAreaEffectCalamityImmunity = 3,
-  /// RTTI EEAEConversionImmunity: EEAEManager::CreateAreaEffect case 4
-  kAreaEffectConversionImmunity = 4,
-  /// RTTI EEAEMoraleFromBuildings: EEAEManager::CreateAreaEffect case 5
-  kAreaEffectMoraleFromBuildings = 5,
-  /// RTTI EEAEMoraleFromMilitaryHeroes: EEAEManager::CreateAreaEffect case 6
-  kAreaEffectMoraleFromMilitaryHeroes = 6,
-  /// RTTI EEAEEconomyFromUnits: EEAEManager::CreateAreaEffect case 7
-  kAreaEffectEconomyFromUnits = 7,
-  /// RTTI EEAECloaking: EEAEManager::CreateAreaEffect case 8
-  kAreaEffectCloaking = 8,
-};
-
 /// EEUnit/EEUnitClass mResourceType (also the player's resource index, EEPlayer::AddResource).
 enum EEResourceType {
   /// EEUnit::Init/ResetEEUnit store 0; `!= 0` tests 'is a resource' (EEUCResource::SimpleUnitCreated sets the amount only then) (provisional name)

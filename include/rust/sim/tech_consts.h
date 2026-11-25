@@ -13,6 +13,27 @@ constexpr static const uint32_t kCivUpgradeLevelBits = 16;
 /// The level of an [`EECivUpgrade`].
 constexpr static const uint32_t kCivUpgradeLevelMask = 65535;
 
+/// `EEAreaEffectTemplate::mKind`: EEAEManager::CreateAreaEffect creates the area-effect class by kind; names from the
+/// RTTI class (EEAE prefix dropped).
+enum EEAreaEffectKind {
+  /// RTTI EEAEHealing: EEAEManager::CreateAreaEffect case 1
+  kAreaEffectHealing = 1,
+  /// RTTI EEAEMorale: case 2
+  kAreaEffectMorale = 2,
+  /// RTTI EEAECalamityImmunity: case 3
+  kAreaEffectCalamityImmunity = 3,
+  /// RTTI EEAEConversionImmunity: case 4
+  kAreaEffectConversionImmunity = 4,
+  /// RTTI EEAEMoraleFromBuildings: case 5
+  kAreaEffectMoraleFromBuildings = 5,
+  /// RTTI EEAEMoraleFromMilitaryHeroes: case 6
+  kAreaEffectMoraleFromMilitaryHeroes = 6,
+  /// RTTI EEAEEconomyFromUnits: case 7
+  kAreaEffectEconomyFromUnits = 7,
+  /// RTTI EEAECloaking: case 8
+  kAreaEffectCloaking = 8,
+};
+
 /// Civilization power ids (`EECivPower::mID`, dbcivpowers.dat record +0x68; `EECivPowersManager::GetPower` 0x6831d0 /
 /// GetPowerRecord index the records by id - 0x26; HasPower tests the civilization attribute index); names from the
 /// record names (+0x00).
@@ -109,27 +130,6 @@ enum EEContagionCaptureOp {
   kContagionCure = 9,
   /// the functor's Update (its update count)
   kContagionFunctorUpdate = 10,
-};
-
-/// `EEAreaEffectTemplate::mKind`: EEAEManager::CreateAreaEffect creates the area-effect class by kind; names from the
-/// RTTI class (EEAE prefix dropped).
-enum EEAreaEffectKind {
-  /// RTTI EEAEHealing: EEAEManager::CreateAreaEffect case 1
-  kAreaEffectHealing = 1,
-  /// RTTI EEAEMorale: case 2
-  kAreaEffectMorale = 2,
-  /// RTTI EEAECalamityImmunity: case 3
-  kAreaEffectCalamityImmunity = 3,
-  /// RTTI EEAEConversionImmunity: case 4
-  kAreaEffectConversionImmunity = 4,
-  /// RTTI EEAEMoraleFromBuildings: case 5
-  kAreaEffectMoraleFromBuildings = 5,
-  /// RTTI EEAEMoraleFromMilitaryHeroes: case 6
-  kAreaEffectMoraleFromMilitaryHeroes = 6,
-  /// RTTI EEAEEconomyFromUnits: case 7
-  kAreaEffectEconomyFromUnits = 7,
-  /// RTTI EEAECloaking: case 8
-  kAreaEffectCloaking = 8,
 };
 
 /// A civilization builder upgrade id, a category and a level: (category << 16) | level. The original packed them in
