@@ -11,28 +11,12 @@
 #include <map>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
 
-#include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUnitClassIDs.h"
-#include "ee/EEUnitGoal.h"
-#include "ee/EEUnitAction.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
-#include "ee/EESimCapture.h"
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEUnitGoal.h"
-#include "ee/EEUnitStore.h"
-#include "rust/sim/units.h"
 
 // the holders' owners from their offsets: the unit classes derive singly (RTSUnit -> EEUnit -> EEComplexUnit), so an
 // offsetof is the member's place in every object of the class
@@ -41,10 +25,7 @@
 #endif
 
 template <class C>
-static C* OwnerOf(const void* inMember, size_t inOffset)
-{
-    return reinterpret_cast<C*>(const_cast<char*>(static_cast<const char*>(inMember)) - inOffset);
-}
+static C* OwnerOf(const void* inMember, size_t inOffset) { return reinterpret_cast<C*>(const_cast<char*>(static_cast<const char*>(inMember)) - inOffset); }
 
 void EEUnitStoreMoved(const void* inModel)
 {
@@ -58,10 +39,7 @@ void EEUnitStoreMoved(const void* inModel)
 
 // in the world's unit chain (gWorld.mUnits: x-sorted, through mTileNode; RTSUnit::Link puts the previous link, the
 // chain's head or a unit, in mPrev, RTSUnit::Unlink clears it)
-static bool OnMap(RTSUnit* inUnit)
-{
-    return inUnit->mTileNode != NULL && inUnit->mTileNode->mPrev != NULL;
-}
+static bool OnMap(RTSUnit* inUnit) { return inUnit->mTileNode != NULL && inUnit->mTileNode->mPrev != NULL; }
 
 // (EEUnitStoreLinked, Insert, InsertUnlisted, Remove, ClearPlayer, PlayerTable, EEUnitOrderReset and Fill: Rust,
 // inline in ee/EEUnitStore.h; ee_sim units us_fill.rs over this file's host)

@@ -12,52 +12,28 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DLine.h"
-#include "lle/GEViewport.h"
-#include "lle/GETransformation.h"
-#include "lle/GEPhysicalModel.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/GERectangle.h"
-#include "lle/FSFile.h"
 
-#include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEFormation.h"
-#include "ee/EEAreaUtilities.h"
-#include "ee/EECPASGFlags.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EETileCoordinate.h"
-#include "ee/EEPathManager.h"
-#include "ee/EEAutoPathRequest.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEMap.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "ee/EEAIKindIDs.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEMedia.h"
-#include "ee/EESoundObject.h"
 #include <math.h>
 #include "lle/U2DSparseArray.h"
-#include "lle/U2DPolygon.h"
-#include "ee/AStarGraphableObjectBase.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIPathSubSector.h"
 #include "ee/EEMapDimensions.h"
-#include "rust/sim/units.h"
 
 static_assert(sizeof(GERectangle) == 4 * sizeof(float) && offsetof(U2DRectangle<long>, mBottom) == 0 && offsetof(U2DRectangle<long>, mTop) == 3 * sizeof(long), "GetBounds hands Rust the rectangle's four floats; AREA_OUTLINES reads rectangles as bottom, left, right, top");
 
@@ -71,10 +47,7 @@ unsigned short EEAIContinentManager::GetPathAreaIDAt(const EETileLocation& inTil
 }
 
 // The (x, y) overload (the group path's step: UMFloor values)
-inline unsigned short EEAIContinentManager::GetPathAreaIDAt(long inX, long inY)
-{
-    return this->GetPathAreaIDAt(EETileLocation(inX, inY));
-}
+inline unsigned short EEAIContinentManager::GetPathAreaIDAt(long inX, long inY) { return this->GetPathAreaIDAt(EETileLocation(inX, inY)); }
 
 // Returns the terrain flags every unit in the group shares (ee_units group_obj.rs flags)
 EECPASGFlags EEGroup::GetFlags()
@@ -85,15 +58,9 @@ EECPASGFlags EEGroup::GetFlags()
 }
 
 // The active groups in a saved game (save 0.279, EESaveHasActiveGroups; ee_units group_obj.rs save_all, load_all)
-void EESaveActiveGroups(FSFile& outFile)
-{
-    ee_units_groups_save_active(&outFile, &EESaveFilePrimitive);
-}
+void EESaveActiveGroups(FSFile& outFile) { ee_units_groups_save_active(&outFile, &EESaveFilePrimitive); }
 
-long EELoadActiveGroups(FSFile& inFile)
-{
-    return ee_units_groups_load_active(&inFile, &EESaveFilePrimitive);
-}
+long EELoadActiveGroups(FSFile& inFile) { return ee_units_groups_load_active(&inFile, &EESaveFilePrimitive); }
 
 // The groups' host (ee_units group_host.rs; EE_UNITS_GROUP_OP_*): each operation one C++ statement of the original
 // bodies
@@ -160,8 +127,7 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
     case EE_UNITS_GROUP_OP_PLAYER_GROUP: return inC >= 0 && inC < 20 ? (int64_t)(uintptr_t)thePlayer->mGroups[inC] : 0;
     // the selection's (selection.rs)
     case EE_UNITS_GROUP_OP_PLAYER_UNIT: return (int64_t)(uintptr_t)thePlayer->GetUnit((long)inC);
-    case EE_UNITS_GROUP_OP_SELECTABLE:
-        return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB))->mUnitClass->IsSelectable(reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB)));
+    case EE_UNITS_GROUP_OP_SELECTABLE: return reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB))->mUnitClass->IsSelectable(reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inB)));
     case EE_UNITS_GROUP_OP_DOPPELGANGER: return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theTarget->mTile), theTarget, thePlayer->GetPlayerID());
     case EE_UNITS_GROUP_OP_LOCAL_SELECTION: return gWorld.mExecutingLocalSelection;
     case EE_UNITS_GROUP_OP_PLAY_SOUND: EEPlayForLocalPlayer(thePlayer, inC == 0 ? theTarget->mStats->GetSelectionSound(-1) : theTarget->mStats->GetAcknowledgeSound(-1));
@@ -182,8 +148,7 @@ extern "C" int64_t ee_units_group_host(int32_t inOp, uint64_t inA, uint64_t inB,
         return 0;
     case EE_UNITS_GROUP_OP_CIVILIZATION_UPGRADES: thePlayer->mCivilization.AddUpgrades(thePlayer->mCivilization.GetPurchasedUpgrades(), thePlayer->GetPlayerID(), false);
         return 0;
-    case EE_UNITS_GROUP_OP_PLAYER_SELECTION:
-        return (int64_t)(uintptr_t)(inC == 0 ? thePlayer->mActiveGroup : thePlayer->mSelectedGroup);
+    case EE_UNITS_GROUP_OP_PLAYER_SELECTION: return (int64_t)(uintptr_t)(inC == 0 ? thePlayer->mActiveGroup : thePlayer->mSelectedGroup);
     case EE_UNITS_GROUP_OP_CLEAR_AREAS: gWorld.mMap->ClearU1955DC();
         return 0;
     case EE_UNITS_GROUP_OP_AREA_OUTLINES: {
