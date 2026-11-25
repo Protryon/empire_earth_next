@@ -134,9 +134,7 @@ fn tile_under(x: f32, y: f32) -> P {
 
 /// `gWorld.mMap->GetGroundPoint(at, out)`.
 fn ground_point(at: &Ge3DPoint) -> Ge3DPoint {
-    let mut g = Ge3DPoint::default();
-    h(O::MapGroundPoint, 0, &[cptr(at), ptr(&mut g)]);
-    g
+    super::map::world_ground_point(at)
 }
 
 /// `PlayAnimationSound(at, object, 0, sound, frame, start)`: a referenced node.
@@ -507,9 +505,8 @@ pub extern "C" fn ee_gamecpp_fx_farm_opacity(ask: *mut c_void, opacity: f32) -> 
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_fx_ground_point(_: *mut c_void, point: *const Ge3DPoint) -> Ge3DPoint {
     // SAFETY: the caller's point
-    let mut g = unsafe { *point };
-    h(O::MapGroundPoint, 0, &[ptr(&mut g), ptr(&mut g)]);
-    g
+    let g = unsafe { *point };
+    super::map::world_ground_point(&g)
 }
 
 /// The rain's sounds (EEE3DRain::StartSounds, 0xf8195): the loop at the start or after a load, the thunder `rumble`

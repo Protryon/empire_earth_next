@@ -1,7 +1,7 @@
 //! The game's plain global pointers and scalars, stored by Rust (were EEGlobals.cpp's definitions; the C++ headers
 //! keep declaring them `extern`, so every C++ user reads the same symbol as before): the subsystem, manager, font
 //! and render object pointers, the TEST ONLY hooks, the campaigns' network checksums, the install checksum, the
-//! space units' heights, the collision period and its unit (were EEPhysicsModel.cpp's), gFreeCamera, sIconsLoaded and gEmptyString. Each is exported under the C++ symbol: MSVC's
+//! space units' heights, the collision period and its unit (were EEPhysicsModel.cpp's), gFreeCamera, sIconsLoaded, gEmptyString, gLocalPlayerOut (was EEMessage.cpp's), the default player colours (EEServer.cpp's) and the render flags, the grid phase and the letterbox zoom (were EERenderObject.cpp's). Each is exported under the C++ symbol: MSVC's
 //! mangled name on Windows (from the link map), the plain name elsewhere (Itanium does not mangle a global's name).
 //! Rust reads and writes them through `get!`, `have!` and `set!` where a host case only did that, and passes a
 //! few pointers on to a Rust export (gDataPath, gGraphics, gPhysics, gDataPreLoading: reads on the thread that
@@ -116,6 +116,15 @@ ee_globals! {
     val gFreeCamera: bool = false => "?gFreeCamera@@3_NA";
     val sIconsLoaded: bool = false => "?sIconsLoaded@@3_NA";
     val gEmptyString: [c_char; 4] = [0; 4] => "?gEmptyString@@3PADA";
+    val gLocalPlayerOut: bool = false => "?gLocalPlayerOut@@3_NA";
+    val gB529065: bool = false => "?gB529065@@3_NA";
+    val gB529066: bool = false => "?gB529066@@3_NA";
+    val gB529068: bool = false => "?gB529068@@3_NA";
+    val gCameraFollowing: bool = false => "?gCameraFollowing@@3_NA";
+    val gU4E9330: f32 = 0.0 => "?gU4E9330@@3MA";
+    val gF4BE374: f32 = 1.0 => "?gF4BE374@@3MA";
+    val gDefaultPlayerColors: [c_long; 16] = [0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15]
+        => "?gDefaultPlayerColors@@3PAJA";
 }
 
 /// `gGraphics->PostResume()` (rts graphics.rs; its FFI is absent from a test binary).

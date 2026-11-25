@@ -271,7 +271,7 @@ pub extern "C" fn ee_gamecpp_ps_load_from_directory(
         r = PF_FAILED;
     }
     if resume {
-        h(O::PsUiResumeGraphics, 0, &[]);
+        crate::screens::ui_objects::ui_resume_graphics();
     }
     r as c_long
 }
@@ -378,7 +378,7 @@ fn save_to_file(file: P, time: c_ulong) -> i64 {
     let memory = owned(O::PsMemFileNew, O::PsMemFileDelete);
     let text_name = owned(O::PsUStrNew, O::PsUStrDelete);
     h(O::PsSaveTextName, file, &[pa(text_name.0), 1]);
-    h(O::PsDeleteTextTwin, file, &[]);
+    delete_text_twin(file);
     let mut r = write_save(text_name.0, time, memory.0, memory.0);
     if r == PF_OK {
         r = h(O::PsMemFileSave, memory.0, &[pa(file)]);
@@ -691,7 +691,7 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
     let n = tags.len();
     let mut i = 0;
     while i < n && r == PF_OK {
-        hf(O::PsLoadProgress, 0, &[], &[i as f32 / n as f32 * 0.4 + 0.1]);
+        crate::screens::ui_objects::ui_set_load_progress(i as f32 / n as f32 * 0.4 + 0.1);
         let mut item: P = 0;
         r = read_persistent(file, &mut item);
         if r != PF_OK {
@@ -895,9 +895,70 @@ pub extern "C" fn ee_gamecpp_ps_load_persistent(name: *const c_void, tag: c_long
     r as c_long
 }
 
+/// The platform layer's file calls (src/Platform).
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod plat {
+    use std::ffi::{c_char, c_int};
+    extern "C" {
+        pub fn PlatDeleteFile(path: *const c_char) -> c_int;
+        pub fn PlatGetLastError() -> u32;
+    }
+}
+
+/// `PLAT_MAX_PATH`.
+const PS_MAX_PATH: usize = 260;
+
+/// The text twin's path of a save (its volume, directory and `GetSaveTextName(file, false)`), or None when it is
+/// longer than `PLAT_MAX_PATH`.
+fn text_twin_path(volume: &[u8], directory: &[u8], file: &[u8]) -> Option<Vec<u8>> {
+    let name = super::persist_text::save_text_name(file, file.len() as c_ulong, false);
+    let name = name.split(|&c| c == 0).next().unwrap_or(&[]);
+    if volume.len() + directory.len() + name.len() > PS_MAX_PATH {
+        return None;
+    }
+    Some([volume, directory, name, &[0]].concat())
+}
+
+/// DeleteSaveTextTwin: the old text twin (".txt") of a save deleted, as the original's unused debug file's Delete did
+/// (FSBasicFile::Delete: a path longer than PLAT_MAX_PATH is left alone, a failure records the native error).
+fn delete_text_twin(file: P) {
+    // SAFETY: an FSFileSpec is its Rust record from the vtable on; its strings are live
+    let path = unsafe {
+        let s = &*(file as *const ee_base::fs::spec::EeFsSpec);
+        let text = |t: &ee_base::fs::spec::EeFsString| {
+            if t.string.is_null() {
+                &[][..]
+            } else {
+                std::slice::from_raw_parts(t.string as *const u8, t.length as usize)
+            }
+        };
+        text_twin_path(text(&s.volume), text(&s.directory), text(&s.file))
+    };
+    #[cfg(not(test))]
+    if let Some(path) = path {
+        // SAFETY: a NUL-terminated path
+        unsafe {
+            if plat::PlatDeleteFile(path.as_ptr().cast()) == 0 {
+                ee_base::error::ee_error_record_native(plat::PlatGetLastError() as c_ulong);
+            }
+        }
+    }
+    #[cfg(test)]
+    let _ = path;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_text_twin_is_the_save_with_a_txt_extension() {
+        assert_eq!(text_twin_path(b"C:", b"\\Saved\\", b"game.ees").unwrap(), b"C:\\Saved\\game.txt\0");
+        // 200 + 52 + 8 = PLAT_MAX_PATH: still deleted; one more is left alone
+        assert!(text_twin_path(&[b'x'; 200], &[b'y'; 52], b"long.ees").is_some());
+        assert!(text_twin_path(&[b'x'; 200], &[b'y'; 53], b"long.ees").is_none());
+    }
 
     #[test]
     fn the_tags_a_save_needs_once() {

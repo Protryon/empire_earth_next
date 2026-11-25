@@ -6,11 +6,16 @@
 //!
 //! Only a game with a window runs the draws (the tour, gates.sh); RFIL's fill runs under its capture only.
 
-use std::ffi::{c_long, c_void, CStr};
-use std::sync::atomic::Ordering;
+use std::ffi::{c_long, c_ulong, c_void, CStr};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use ee_base::math::types::{GeRectangle, GeTransformation};
 use ee_base::math::um::floor;
+use ee_render::ge::tmobj::{
+    ee_ge_tm_get, ee_ge_tm_is_valid, ee_ge_tm_tile, ee_ge_tm_update_fog_of_war, EeGeTerrainMesh, EeGeTmVal,
+};
+use ee_render::geval::viewport::GeViewport;
 use ee_render::gfx::effect_obj::{ee_gfx_effect_queues_draw, ee_gfx_effect_storm_move, EeGfxEffectHead};
 use ee_render::gfx::effect_state::EeGfxEffectRecord;
 use ee_render::gfx::effects::EeGfxColor;
@@ -24,12 +29,16 @@ use ee_render::gfx::ro_terrain::{
 };
 use ee_render::gfx::shadows::{ee_gfx_ground_shadows_render, EeGfxShadow, EeGfxShadowScene, EeGfxUnitShadow};
 
+use ee_sim::world::player_fields::EeUnitsRtsPlayerFields;
+
+use super::globals;
 use super::rast::{
-    rast, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, COMPARE_LESS_EQUAL, CULL_NONE, Z_BUFFER_DISABLED, Z_BUFFER_TEST_ONLY,
+    frame_viewport, mesh_of, rast, view_rectangle, world_mesh, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA,
+    COMPARE_LESS_EQUAL, CULL_NONE, Z_BUFFER_DISABLED, Z_BUFFER_TEST_ONLY,
 };
 use super::render_object::ee_gamecpp_ro_lighting;
 use super::ro_units::{lists_view, raster, RU_UNIT_PANEL_ACTIVE};
-use super::{cptr, h, hd, hf, hp, pa, ptr, O, P};
+use super::{h, hd, hp, ptr, rec, O, P};
 
 /// The panel corners of the UI's z-buffer clears (.rdata 0x441c00..: the unit panel's right, the panels' top, the
 /// right panel's left, as fractions of the game window).
@@ -69,8 +78,7 @@ pub extern "C" fn ee_gamecpp_gu_frame_starting(ro: *mut c_void) {
 /// it is shown, so the world draws behind them (not with the free camera or in UI state 0x11).
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_gu_scene_starting() {
-    let mut zero = GeRectangle::default();
-    h(O::RuMainViewRectangle, 0, &[ptr(&mut zero)]);
+    let zero = view_rectangle(frame_viewport());
     if crate::gamecpp::globals::get!(gFreeCamera) || h(O::GuMainUiState, 0, &[]) == GU_STATE_NO_PANELS {
         return;
     }
@@ -112,11 +120,24 @@ pub extern "C" fn ee_gamecpp_gu_render_scene(ro: *mut c_void) {
         right: h(O::GuTargetWidth, 0, &[]) as u32 as f32,
         bottom: h(O::GuTargetHeight, 0, &[]) as u32 as f32,
     };
-    h(O::GuUiViewportSetRectangle, 0, &[cptr(&rectangle)]);
-    h(O::GuSetUiViewport, 0, &[]);
+    let viewport = ui_viewport();
+    // SAFETY: the UI's viewport (graphics thread only); the rectangle outlives the call
+    unsafe { ee_render::geval::viewport_ffi::ee_ge_viewport_set_view_rectangle(viewport, &rectangle) };
+    r.set_viewport(viewport);
     h(O::GuDrawPolygons, ro as P, &[]);
     r.set_fog(fog);
     r.set_alpha_ref(alpha_ref);
+}
+
+/// `gUIViewport` (0x529518): the UI's viewport, default-made at its first use (graphics thread only).
+fn ui_viewport() -> *mut GeViewport {
+    static VIEWPORT: OnceLock<usize> = OnceLock::new();
+    *VIEWPORT.get_or_init(|| {
+        let v = Box::into_raw(Box::new(std::mem::MaybeUninit::<GeViewport>::uninit())).cast::<GeViewport>();
+        // SAFETY: room for a viewport, made as GEViewport's default constructor makes it
+        unsafe { ee_render::geval::viewport_ffi::ee_ge_viewport_default(v) };
+        v as usize
+    }) as *mut GeViewport
 }
 
 // ---- EEROWater
@@ -135,7 +156,8 @@ pub extern "C" fn ee_gamecpp_wa_render_scene() {
     r.set_culling(CULL_NONE);
     ee_gamecpp_ro_lighting(EeGfxLighting::Off as u32);
     ee_gamecpp_ro_lighting(EeGfxLighting::SceneFog as u32);
-    h(O::WaDrawWater, 0, &[]);
+    let mesh = snapshot().mesh();
+    r.draw_water(mesh, orthographic());
     // SAFETY: the graphics thread's frame
     unsafe { ee_gfx_effect_queues_draw(6) };
     r.set_alpha_ref(alpha_ref);
@@ -143,8 +165,16 @@ pub extern "C" fn ee_gamecpp_wa_render_scene() {
 
 // ---- EEROGroundShadows
 
+/// The snapshot mesh's water information at a tile (-1 off the map).
 extern "C" fn gs_tile_water(_: *mut c_void, x: u32, y: u32) -> i32 {
-    h(O::GsTileWater, 0, &[x as i64, y as i64]) as i32
+    let mesh = snapshot().mesh();
+    // SAFETY: the frame's mesh
+    unsafe {
+        if !ee_ge_tm_is_valid(mesh, x as c_ulong, y as c_ulong, true) {
+            return -1;
+        }
+        (*ee_ge_tm_tile(mesh, x as c_ulong, y as c_ulong)).water_info as i32
+    }
 }
 
 extern "C" fn gs_effects(_: *mut c_void) {
@@ -201,7 +231,7 @@ pub extern "C" fn ee_gamecpp_gs_render_scene() {
         units: if units.is_empty() { std::ptr::null() } else { units.as_ptr() },
         unit_count: units.len(),
         draw_shadows: draw,
-        space_map: h(O::SnIsSpaceMap, 0, &[]) != 0,
+        space_map: snapshot().space_map,
         tile_water: gs_tile_water,
         draw_effects: gs_effects,
     };
@@ -229,7 +259,7 @@ pub extern "C" fn ee_gamecpp_te_frame_starting(ro: *mut c_void) {
         time_of_day,
         size: h(O::TeMapSize, 0, &[]) as i32,
         width: h(O::RtMapL195614, 0, &[]) as i32,
-        space_map: h(O::TeMapIsSpace, 0, &[]) != 0,
+        space_map: mesh_is_space(world_mesh()),
         cloud_offset,
         media: te_media(),
     };
@@ -239,8 +269,23 @@ pub extern "C" fn ee_gamecpp_te_frame_starting(ro: *mut c_void) {
     unsafe { *(hp(O::RoFogColor, 0, &[]) as *mut EeGfxColor) = out.fog };
     super::render_object::set_cloud_offset(out.cloud_offset);
     super::render_object::ee_gamecpp_ro_fn10e8d1(ro);
-    h(O::TeUpdateFogOfWar, 0, &[]);
-    h(O::TeCopyGridRuns, 0, &[]);
+    // the fog of war: all seen for see-all or the free camera
+    let current = hp(O::WorldCurrentPlayer, 0, &[]);
+    // SAFETY: the current player's record
+    let sees_all = unsafe { (*rec::<EeUnitsRtsPlayerFields>(O::PlRts, current)).mSeesAll };
+    let all_seen = sees_all || globals::get!(gFreeCamera);
+    // SAFETY: the world's map's mesh
+    unsafe { ee_ge_tm_update_fog_of_war(world_mesh().cast_mut(), all_seen) };
+    // the map's tile runs as of this frame, drawn as grid lines (gGridRuns 0x5290a0)
+    let mut runs: *const [c_long; 4] = std::ptr::null();
+    let count = h(O::TeMapGridRuns, 0, &[ptr(&mut runs)]) as usize;
+    let runs = if count == 0 {
+        Vec::new()
+    } else {
+        // SAFETY: the map's vector of runs (four longs each), copied under the world's lock
+        unsafe { std::slice::from_raw_parts(runs, count) }.to_vec()
+    };
+    snapshot().grid_runs = runs;
     ee_gamecpp_sn_take_terrain();
 }
 
@@ -251,8 +296,8 @@ pub extern "C" fn ee_gamecpp_te_create_sky_model() {
     let media = te_media();
     // SAFETY: the raster table and the media live through the call
     let textures = unsafe { ee_gfx_ro_terrain_create(raster(), &media) };
-    h(O::TeSetAreaTexture, 0, &[pa(textures.area_effect as P)]);
-    h(O::TeSetCircleTexture, 0, &[pa(textures.circle_area_effect as P)]);
+    AREA_EFFECT_TEXTURE.store(textures.area_effect as usize, Ordering::Relaxed);
+    CIRCLE_AREA_EFFECT_TEXTURE.store(textures.circle_area_effect as usize, Ordering::Relaxed);
 }
 
 /// EEROTerrain::ReleaseSkyModels: the sky, cloud and star models and textures, and the area-effect textures.
@@ -260,30 +305,58 @@ pub extern "C" fn ee_gamecpp_te_create_sky_model() {
 pub extern "C" fn ee_gamecpp_te_release_sky_models() {
     // SAFETY: the raster table
     unsafe { ee_gfx_ro_terrain_release(raster()) };
-    h(O::TeSetAreaTexture, 0, &[0]);
-    h(O::TeSetCircleTexture, 0, &[0]);
+    AREA_EFFECT_TEXTURE.store(0, Ordering::Relaxed);
+    CIRCLE_AREA_EFFECT_TEXTURE.store(0, Ordering::Relaxed);
 }
 
+/// `gAreaEffectTexture` (0x5293f4): the area effects' ring texture (the ground circles' 3D lines, the grid lines).
+static AREA_EFFECT_TEXTURE: AtomicUsize = AtomicUsize::new(0);
+/// `gCircleAreaEffectTexture` (0x5293f8).
+static CIRCLE_AREA_EFFECT_TEXTURE: AtomicUsize = AtomicUsize::new(0);
+
+/// `gAreaEffectTexture`.
+pub(crate) fn area_effect_texture() -> usize {
+    AREA_EFFECT_TEXTURE.load(Ordering::Relaxed)
+}
+
+/// The brush highlight's colour (`gBrushHighlightColor` 0x5293e8: GEColor's default white).
+const TE_BRUSH_COLOR: [f32; 3] = [1.0, 1.0, 1.0];
+
 extern "C" fn te_draw(_: *mut c_void) {
-    h(O::TeDrawMesh, 0, &[]);
+    let mesh = snapshot().mesh();
+    rast().draw_terrain(mesh, orthographic());
 }
 
 /// The editor's brush highlight and the map's coloured rectangles (the snapshot's).
 extern "C" fn te_highlights(_: *mut c_void, opacity: f32) {
-    if h(O::SnBrushShown, 0, &[]) != 0 {
-        hf(O::TeDrawBrush, 0, &[], &[opacity]);
+    let (r, ortho) = (rast(), orthographic());
+    // (copied out: the draws run without the snapshot's lock)
+    let (mesh, brush, colored) = {
+        let s = snapshot();
+        (s.mesh(), s.brush_shown.then_some(s.brush_tiles), s.colored.clone())
+    };
+    if let Some(tiles) = brush {
+        r.draw_terrain_highlight(mesh, &tiles, &TE_BRUSH_COLOR, opacity, ortho);
     }
-    for i in 0..h(O::SnColoredCount, 0, &[]) {
-        h(O::TeDrawColored, 0, &[i]);
+    for c in &colored {
+        r.draw_terrain_highlight(mesh, &c.rect, &c.color, c.opacity, ortho);
     }
 }
 
 extern "C" fn te_grid(_: *mut c_void) {
-    h(O::TeDrawGrid, 0, &[]);
+    let mesh = snapshot().mesh();
+    rast().draw_terrain_grid(mesh, orthographic());
 }
 
 extern "C" fn te_grid_lines(_: *mut c_void) {
-    h(O::TeDrawGridLines, 0, &[]);
+    // gU4E9330: the grid's phase, the lines' width
+    let width = globals::get!(gU4E9330);
+    let (r, ortho) = (rast(), orthographic());
+    let (mesh, runs) = {
+        let s = snapshot();
+        (s.mesh(), s.grid_runs.clone())
+    };
+    r.draw_grid_lines(mesh, &runs, area_effect_texture(), width, ortho);
 }
 
 /// The frame's textured 3D lines (`gU529050`).
@@ -302,13 +375,17 @@ extern "C" fn te_effects(_: *mut c_void) {
 /// ro_terrain.rs), from the frame's snapshot.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_te_render_scene(ro: *mut c_void) {
+    let (space_map, grid_runs) = {
+        let s = snapshot();
+        (s.space_map, s.grid_runs.len())
+    };
     let scene = EeGfxTerrainScene {
         context: std::ptr::null_mut(),
-        space_map: h(O::SnIsSpaceMap, 0, &[]) != 0,
+        space_map,
         draw_clouds: h(O::TeDrawClouds, 0, &[]) != 0,
-        orthographic: h(O::RoOrthographic, 0, &[]) != 0,
+        orthographic: orthographic(),
         grid: h(O::TeGridMode, ro as P, &[]) != 0,
-        grid_runs: h(O::TeGridRunCount, 0, &[]) as usize,
+        grid_runs,
         draw_terrain: te_draw,
         draw_highlights: te_highlights,
         draw_grid: te_grid,
@@ -320,50 +397,123 @@ pub extern "C" fn ee_gamecpp_te_render_scene(ro: *mut c_void) {
     unsafe { ee_gfx_ro_terrain_render(raster(), &scene) };
 }
 
-// ---- the render snapshot (ee/EERenderSnapshot.h)
+// ---- the render snapshot (was ee/EERenderSnapshot.h's EERenderSnapshot)
+
+/// `RTSColoredRectangle` (ee/EEMap.h): a tile rectangle (a `U2DRectangle<long>`'s bottom, left, right, top), its
+/// colour and opacity (0: erase) and a long.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct ColoredRectangle {
+    rect: [c_long; 4],
+    color: [f32; 3],
+    opacity: f32,
+    l20: c_long,
+}
+
+/// The render phase's view of the world: plain data taken under the world's lock at the start of every frame (the
+/// world-wide part by `ee_gamecpp_sn_take` in EEGraphics::FrameStarting, the terrain's in EEROTerrain's
+/// FrameStarting) and read after the lock is released, while the physics tick runs.
+#[derive(Default)]
+pub(crate) struct Snapshot {
+    /// the camera (`RTSWorld::mTransformation`, `mCameraYaw`, `mCameraPitch`): the effects' billboards and sprites
+    pub(crate) camera: GeTransformation,
+    pub(crate) camera_yaw: f32,
+    pub(crate) camera_pitch: f32,
+    /// `EEWorld::mInCinematic`: no rings, bars or labels
+    pub(crate) in_cinematic: bool,
+    /// the terrain mesh's Rust object (`gWorld.mMap`'s; 0 outside a game): drawn, not copied (its render buffers are
+    /// the graphics thread's own)
+    mesh: usize,
+    pub(crate) space_map: bool,
+    /// the map's coloured rectangles with an opacity, back to front
+    colored: Vec<ColoredRectangle>,
+    /// the scenario editor's brush highlight, in whole tiles (bottom, left, right, top)
+    brush_shown: bool,
+    brush_tiles: [c_long; 4],
+    /// the map's tile runs as of the frame (four longs each)
+    grid_runs: Vec<[c_long; 4]>,
+}
+
+impl Snapshot {
+    fn mesh(&self) -> *const EeGeTerrainMesh {
+        self.mesh as *const EeGeTerrainMesh
+    }
+}
+
+/// The frame's snapshot (graphics thread only).
+pub(crate) fn snapshot() -> MutexGuard<'static, Snapshot> {
+    static SNAPSHOT: OnceLock<Mutex<Snapshot>> = OnceLock::new();
+    SNAPSHOT
+        .get_or_init(|| Mutex::new(Snapshot { camera: GeTransformation::IDENTITY, ..Default::default() }))
+        .lock()
+        .unwrap()
+}
+
+/// `gOrthographicView`.
+fn orthographic() -> bool {
+    h(O::RoOrthographic, 0, &[]) != 0
+}
+
+/// `GetIsSpaceMap()`: a mesh with space tiles.
+fn mesh_is_space(mesh: *const EeGeTerrainMesh) -> bool {
+    // SAFETY: a live map's mesh
+    unsafe { ee_ge_tm_get(mesh, EeGeTmVal::SpaceTileCount) > 0 }
+}
 
 /// EETakeRenderSnapshot: the camera, its yaw and pitch, the cinematic, the terrain mesh and the space map, as the
 /// render phase reads them after the world's lock is released.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_sn_take() {
-    h(O::SnCamera, 0, &[]);
-    h(O::SnCameraYaw, 0, &[]);
-    h(O::SnCameraPitch, 0, &[]);
-    h(O::SnCinematic, 0, &[]);
-    let map = hp(O::SnMap, 0, &[]);
-    let mesh = if map != 0 { hp(O::SnMeshOf, map, &[]) } else { 0 };
-    h(O::SnSetMesh, 0, &[pa(mesh)]);
-    let space = map != 0 && h(O::TeMeshIsSpace, mesh, &[]) != 0;
-    h(O::SnSetSpaceMap, 0, &[space as i64]);
+    // SAFETY: the world's camera (a GETransformation), read under the world's lock
+    let camera = unsafe { *(hp(O::RoWorldTransformation, 0, &[]) as *const GeTransformation) };
+    let yaw = hd(O::EcWorldCameraYaw, 0, &[], &[]);
+    let pitch = hd(O::SnCameraPitch, 0, &[], &[]);
+    let cinematic = h(O::RrCinematic, 0, &[]) != 0;
+    let map = hp(O::MpWorldMap, 0, &[]);
+    let mesh = if map != 0 { mesh_of(map) } else { std::ptr::null() };
+    let mut s = snapshot();
+    s.camera = camera;
+    s.camera_yaw = yaw;
+    s.camera_pitch = pitch;
+    s.in_cinematic = cinematic;
+    s.mesh = mesh as usize;
+    s.space_map = map != 0 && mesh_is_space(mesh);
 }
 
 /// EETakeTerrainSnapshot (EEROTerrain's frame): the map's coloured rectangles back to front under their lock (a zero
 /// opacity erases the element; the others are kept in that order) and the editor's brush highlight.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_sn_take_terrain() {
-    let map = hp(O::SnMap, 0, &[]);
-    h(O::SnColoredClear, 0, &[]);
+    let map = hp(O::MpWorldMap, 0, &[]);
+    let mut colored = Vec::new();
     let count = h(O::SnMapColoredCount, map, &[]);
     if count > 0 {
         h(O::SnMapColoredLock, map, &[]);
         for i in (0..count).rev() {
-            if hd(O::SnMapColoredOpacity, map, &[i], &[]) != 0.0 {
-                h(O::SnColoredPush, map, &[i]);
+            // SAFETY: the map's element i (an RTSColoredRectangle), under its lock
+            let c = unsafe { *(hp(O::SnMapColoredAt, map, &[i]) as *const ColoredRectangle) };
+            if c.opacity != 0.0 {
+                colored.push(c);
             } else {
                 h(O::SnMapColoredErase, map, &[i]);
             }
         }
         h(O::SnMapColoredUnlock, map, &[]);
     }
-    h(O::SnSetBrushShown, 0, &[0]);
+    let mut brush = None;
     if h(O::SnEditorPresent, 0, &[]) != 0 {
         let mut r = GeRectangle::default();
         h(O::SnBrushRectangle, 0, &[ptr(&mut r)]);
         if h(O::SnBrushHighlightShown, 0, &[]) != 0 {
-            h(O::SnSetBrushShown, 0, &[1]);
-            let tiles = [floor(r.left), floor(r.top), floor(r.right), floor(r.bottom)];
-            h(O::SnSetBrushTiles, 0, &[tiles[0] as i64, tiles[1] as i64, tiles[2] as i64, tiles[3] as i64]);
+            // the rectangle's left, top, right, bottom in whole tiles, stored as a U2DRectangle (bottom first)
+            brush = Some([floor(r.bottom), floor(r.left), floor(r.right), floor(r.top)].map(|v| v as c_long));
         }
+    }
+    let mut s = snapshot();
+    s.colored = colored;
+    s.brush_shown = brush.is_some();
+    if let Some(tiles) = brush {
+        s.brush_tiles = tiles;
     }
 }
 
@@ -387,27 +537,38 @@ const MO_POINTER_FILES: [&CStr; 14] = [
     c"Textures\\Attack Ground Pointer.png",
 ];
 
-/// EEMouse::Load: the 14 extra pointer images, then the engine's pointers; the first load error.
+/// EEMouse::Load: the 14 extra pointer images into the frame's slots 10..23 (RTSMouse::LoadPointer), then the
+/// engine's pointers (RTSMouse::Load); the first load error.
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_mo_load(mouse: *mut c_void, screen: *mut c_void) -> c_long {
+    use crate::rts::mouse::{load_pointer, MouseCpp};
+    use ee_base::shim::ShimFfi;
     let mut result: c_long = 0;
     for (i, name) in MO_POINTER_FILES.iter().enumerate() {
         if result != 0 {
             break;
         }
-        result = h(O::MoLoadPointer, mouse as P, &[name.as_ptr() as usize as i64, pa(screen as P), i as i64]) as c_long;
+        let slot = ShimFfi.slot(mouse as usize, 10 + i as c_ulong);
+        // SAFETY: the live mouse's pointer slot and the game screen
+        result = unsafe { load_pointer(&mut ShimFfi, name, screen as usize, slot) };
     }
     if result == 0 {
-        result = h(O::MoRtsLoad, mouse as P, &[pa(screen as P)]) as c_long;
+        // SAFETY: the live mouse and the game screen
+        result = unsafe { crate::rts::mouse::ffi::ee_rts_mouse_load(mouse, screen) };
     }
     result
 }
 
-/// EEMouse::Release: the extra pointer images, then the engine's; the engine's result.
+/// EEMouse::Release: the extra pointer images (the frame's op 5), then the engine's (RTSMouse::Release: op 6); 0.
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_mo_release(mouse: *mut c_void) -> c_long {
-    h(O::MoReleaseExtra, mouse as P, &[]);
-    h(O::MoRtsRelease, mouse as P, &[]) as c_long
+    use crate::rts::mouse::MouseCpp;
+    use ee_base::shim::ShimFfi;
+    ShimFfi.frame_call(mouse as usize, 5, 0, std::ptr::null(), false);
+    ShimFfi.frame_call(mouse as usize, 6, 0, std::ptr::null(), false);
+    0
 }
 
 // ---- RFIL (TEST ONLY: ee/EERenderCapture.h)

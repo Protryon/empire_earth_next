@@ -19,7 +19,6 @@
 #include "ee/EERenderObject.h"
 #include "ee/EERenderLists.h"
 #include "ee/EEROGroundShadows.h"
-#include "ee/EERenderSnapshot.h"
 #include "rust/base/math.h"
 #include "rust/render/gfx.h"
 #include "rust/game/gamecpp.h"

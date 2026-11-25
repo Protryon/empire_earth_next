@@ -159,16 +159,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::NewError: return P64(new UWideString());
     case O::DeleteError: delete (UWideString*)p;
         break;
-    case O::LoadProgress: gUserInterface->SetLoadProgress(f[0]);
-        break;
-    case O::TextLoadingGlobalMedia: gUserInterface->SetLoadingText(IDS_LOADING_GLOBAL_MEDIA);
-        break;
-    case O::TextPopulatingWorld: gUserInterface->SetLoadingText(IDS_POPULATING_WORLD);
-        break;
-    case O::TextLoadingComplete: gUserInterface->SetLoadingText(IDS_LOADING_COMPLETE);
-        break;
-    case O::TextWaitingForPlayers: gUserInterface->SetLoadingText(IDS_WAITING_FOR_PLAYERS);
-        break;
     case O::LoadType: return gGameOptions.mLoadType;
     case O::SetLoadingSavedGame: gLoadingSavedGame = a[0] != 0;
         break;
@@ -184,8 +174,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::WorldClear: gWorld.Clear();
         break;
     case O::StartGame: gWorld.StartGame(&gGameState, false);
-        break;
-    case O::ResumeGraphics: gUserInterface->ResumeGraphics();
         break;
     case O::IsMultiplayer: return gCommunications->GetIsMultiplayerSession();
     case O::IsClient: return gCommunications->IsClient();
