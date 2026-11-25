@@ -9,10 +9,6 @@ class FSFile;
 #include <vector>
 #include "ee/EEAreaEffect.h"               // mEffects by value (UReferenceContainer<EEAreaEffect*>)
 
-class EEAreaEffectTemplate;
-class EEComplexUnit;
-class GE2DPoint;
-
 class EEAEManager {
 public:
     // Returns the effect of the kind that covers a tile and affects the player, or NULL
@@ -106,7 +102,7 @@ extern EEAEManager gAEManager;
 
 // port (save version 0.256, EEPWorldHelper): the units' own area effects' locations, the effects acting on each unit
 // and the active list (EEAEManager.cpp), which the original rebuilt only at the next area-effect tick
-void EEAESaveRunningState(FSFile& outFile);
-long EEAELoadRunningState(FSFile& inFile);
+inline void EEAESaveRunningState(FSFile& outFile) { ee_screens_aes_save(&outFile); }
+inline long EEAELoadRunningState(FSFile& inFile) { return ee_screens_aes_load(&inFile); }
 
 #endif

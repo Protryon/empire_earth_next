@@ -17,7 +17,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitClassKinds.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
@@ -52,20 +51,6 @@ static long EERMResourceString(int64_t inSink, unsigned long inID)
     long theResult = gResource->GetString(inID, theText);
     ee_rmap_script_bytes_push((EeRmapScriptBytes*)inSink, (const uint8_t*)(const char*)theText, theText.GetTCHARLength());
     return theResult;
-}
-
-// A file's whole text as the C runtime's text mode reads it (fgets in the original script reader) -> false when missing
-static bool EERMReadText(const char* inPath, EeRmapScriptBytes* ioSink)
-{
-    FILE* theStream = PlatFOpen(inPath, "r");
-    if (!theStream)
-        return false;
-    char theBuffer[0x1000];
-    size_t theCount;
-    while ((theCount = fread(theBuffer, 1, sizeof(theBuffer), theStream)) != 0)
-        ee_rmap_script_bytes_push(ioSink, (const uint8_t*)theBuffer, theCount);
-    fclose(theStream);
-    return true;
 }
 
 #define P64(x) ((int64_t)(intptr_t)(x))
@@ -163,10 +148,7 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
     case O::CxAnimation: return CX->GetAnimation();
     case O::ScriptDirectory: EERMText(a[0], gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\");
         break;
-    case O::ReadText: return EERMReadText((const char*)a[0], (EeRmapScriptBytes*)a[1]);
     case O::SetUsingCarbon: gUsingCarbon = a[0] != 0;
-        break;
-    case O::LoadProgress: gUserInterface->SetLoadProgress(f[0]);
         break;
     case O::DebugOut: ESDebugOut("%s", (const char*)a[0]);
         break;
@@ -177,7 +159,8 @@ extern "C" int64_t ee_rmap_cpp(EeRmapCpp inOp, uintptr_t p, const int64_t* a, co
     case O::FindNext: return ((EERMFind*)p)->mDirectory.GetNextFile(((EERMFind*)p)->mFile);
     case O::FindName: EERMText(a[0], ((EERMFind*)p)->mFile.GetFile());
         break;
-    case O::FindText: return EERMReadText((const char*)(((EERMFind*)p)->mFile.GetVolume() + ((EERMFind*)p)->mFile.GetDirectory() + ((EERMFind*)p)->mFile.GetFile()), (EeRmapScriptBytes*)a[0]);
+    case O::FindPath: EERMText(a[0], ((EERMFind*)p)->mFile.GetVolume() + ((EERMFind*)p)->mFile.GetDirectory() + ((EERMFind*)p)->mFile.GetFile());
+        break;
     case O::ResourceString: return EERMResourceString(a[0], (unsigned long)a[1]);
     case O::Verify: ESVERIFY_AT(a[0] != 0, (long)a[1]);
         break;

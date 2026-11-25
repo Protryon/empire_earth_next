@@ -28,7 +28,6 @@
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEMouse.h"
-#include "ee/EEARust.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESMArea.h"
 

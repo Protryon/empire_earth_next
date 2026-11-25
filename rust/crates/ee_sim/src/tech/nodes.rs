@@ -65,6 +65,74 @@ pub struct EeTechNodeDataFields {
     pub mObsoletedByDefault: bool,
     pub mAvailableWithEpoch: bool,
     pub mResearchedWithEpoch: bool,
+    /// the unit classes and their cost tables (an [`EeTechClassTable`], Rust's; 0 before the load makes it)
+    pub mClassTable: usize,
+}
+
+/// A node's unit classes and their cost tables (the original's `mUnitClasses` vector and `mClassCosts` map of the
+/// node data, shared by the nodes the data is shared with).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct EeTechClassTable {
+    /// the unit classes, in the file's order (`GetUnitClass`, `Contains`)
+    pub classes: Vec<c_ulong>,
+    /// per unit class (the map's key, the class as a `long`; an insert of a key already there is dropped) its seven
+    /// costs; a node copy's destructor clears them (the original's `ClearClassCosts` on the shared map)
+    pub costs: Vec<(c_long, [c_long; 7])>,
+}
+
+impl EeTechNodeDataFields {
+    /// The class table (none before the load).
+    pub fn class_table(&self) -> Option<&EeTechClassTable> {
+        // SAFETY: mClassTable is 0 or the table class_table_mut made
+        (self.mClassTable != 0).then(|| unsafe { &*(self.mClassTable as *const EeTechClassTable) })
+    }
+    /// The class table, made when there is none.
+    pub fn class_table_mut(&mut self) -> &mut EeTechClassTable {
+        if self.mClassTable == 0 {
+            self.mClassTable = Box::into_raw(Box::<EeTechClassTable>::default()) as usize;
+        }
+        // SAFETY: the table this record owns
+        unsafe { &mut *(self.mClassTable as *mut EeTechClassTable) }
+    }
+    /// The unit classes (`mUnitClasses`).
+    pub fn unit_classes(&self) -> &[c_ulong] {
+        self.class_table().map_or(&[], |t| &t.classes)
+    }
+    /// The class's cost table (`mClassCosts[class]` when it has one).
+    pub fn class_costs(&self, class: c_long) -> Option<&[c_long; 7]> {
+        self.class_table()?.costs.iter().find(|(k, _)| *k == class).map(|(_, c)| c)
+    }
+}
+
+/// `~RTSTechTreeNodeData`: the class table freed.
+///
+/// # Safety
+/// `d` is a live record whose table no one uses after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_node_classes_free(d: *mut EeTechNodeDataFields) {
+    let d = &mut *d;
+    if d.mClassTable != 0 {
+        drop(Box::from_raw(d.mClassTable as *mut EeTechClassTable));
+        d.mClassTable = 0;
+    }
+}
+
+/// `GetNumUnitClasses`: the node data's unit class count.
+///
+/// # Safety
+/// `d` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_node_classes_count(d: *const EeTechNodeDataFields) -> c_ulong {
+    (*d).unit_classes().len() as c_ulong
+}
+
+/// `Contains`: whether the unit class is one of the node data's (compared as the list's `unsigned long`).
+///
+/// # Safety
+/// `d` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_node_classes_contains(d: *const EeTechNodeDataFields, class: c_long) -> bool {
+    (*d).unit_classes().contains(&(class as c_ulong))
 }
 
 /// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
@@ -121,6 +189,10 @@ pub struct EeTechTreeFields {
     pub mIsLoaded: bool,
     /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
     pub mSaved: *mut EeTechTreeSaved,
+    /// the player's index (`SetPlayerIndex`; the original RTSTechTree's +0x04)
+    pub mPlayerIndex: c_long,
+    /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
+    pub mPlayer: *mut crate::units::obj_fields::EeCxxPlayer,
 }
 
 impl Default for EeTechTreeFields {
@@ -134,6 +206,8 @@ impl Default for EeTechTreeFields {
             mEpochNameID: 0,
             mIsLoaded: false,
             mSaved: ptr::null_mut(),
+            mPlayerIndex: 0,
+            mPlayer: ptr::null_mut(),
         }
     }
 }
@@ -1189,60 +1263,99 @@ pub fn tree_apply_saved_state<H: TechHost + ?Sized>(h: &mut H, t: Tree, apply_ob
 pub struct EeTechTreeRecord {
     /// +0x00 (not read: the name?)
     pub mLabel: [u8; 0x68],
+    /// +0x68 -> mU08->mU4C
     pub mID: i32,
+    /// +0x6c -> the epoch's mL14
     pub mEpoch: i32,
+    /// +0x70 -> mL18
     pub mObsoleteEpoch: i32,
+    /// +0x74 -> mU08->mResearchedEvent
     pub mResearchedEvent: i32,
+    /// +0x78 -> mU08->mObsoleteEvent
     pub mObsoleteEvent: i32,
     /// +0x7c the cost of resource 3 (wood)
     pub mCost3: i32,
     /// +0x80 stone
     pub mCost4: i32,
+    /// +0x84
     pub mUnused1: i32,
     /// +0x88 gold
     pub mCost5: i32,
+    /// +0x8c
     pub mUnused2: i32,
     /// +0x90 iron
     pub mCost6: i32,
     /// +0x94 food
     pub mCost2: i32,
+    /// +0x98 -> mU08->mU58
     pub mBuildTime: i32,
+    /// +0x9c -> mU08->mU5C
     pub mPrerequisite1: i32,
+    /// +0xa0 -> mU08->mU60
     pub mPrerequisite2: i32,
+    /// +0xa4 -> mU08->mU64
     pub mPrerequisite3: i32,
+    /// +0xa8 -> mU08->mSelectedObjects
     pub mPrerequisite4: i32,
+    /// +0xac -> mU08->mUnitClass
     pub mUnitClass: i32,
     /// +0xb0 `EEButtonObject::Get` -> the node's `mButton`
     pub mButton: i32,
+    /// +0xb4 -> mU08->mB7C
     pub mMakesUnit: u8,
+    /// +0xb5 -> mU08->mB7D
     pub mCountsTowardEpoch: u8,
+    /// +0xb6
     pub mUnused3: u8,
+    /// +0xb7
     pub mUnused4: u8,
+    /// +0xb8 -> mU08->mU74
     pub mNameID: i32,
+    /// +0xbc -> mU08->mU48
     pub mKind: i32,
+    /// +0xc0 -> mU08->mU38
     pub mCostResource: i32,
+    /// +0xc4 -> mU08->mU3C
     pub mRequiredStatistic: i32,
+    /// +0xc8 -> mU08->mRequiredStatisticValue
     pub mRequiredStatisticValue: i32,
+    /// +0xcc -> mU08->mFirstNodeID
     pub mCalamity: i32,
+    /// +0xd0 -> mU08->mHotKey
     pub mHotKey: i32,
     /// +0xd4 an epoch's title string (0: 30145 + the epoch)
     pub mTitleID: i32,
+    /// +0xd8
     pub mUnused6: i32,
+    /// +0xdc
     pub mUnused7: i32,
+    /// +0xe0
     pub mUnused8: i32,
     /// +0xe4 the node's cost factors of its second .. fifth unit class (the others 1.0f)
     pub mFactor1: f32,
+    /// +0xe8 (third)
     pub mFactor2: f32,
+    /// +0xec (fourth)
     pub mFactor3: f32,
+    /// +0xf0 (fifth; the others: 1.0f)
     pub mFactor4: f32,
+    /// +0xf4 -> mU08->mB7E
     pub mShowInEditor: u8,
+    /// +0xf5 -> mU08->mB7F
     pub mObsoletedByDefault: u8,
+    /// +0xf6 -> mU08->mHasParentalVengeance
     pub mAvailableWithEpoch: u8,
+    /// +0xf7 -> mU08->mHasGroupAttack
     pub mResearchedWithEpoch: u8,
+    /// +0xf8
     pub mUnused9: i32,
+    /// +0xfc -> the epoch's mU4C
     pub mNextEpoch: i32,
+    /// +0x100 -> the epoch's mU40
     pub mRequiredSOL: i32,
+    /// +0x104 -> the epoch's mFirstNodeID
     pub mFirstNodeID: i32,
+    /// +0x108 -> mU08->mU40
     pub mDefaultUnitClass: i32,
 }
 

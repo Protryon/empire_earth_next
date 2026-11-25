@@ -57,7 +57,9 @@ pub enum EePhysCpp {
     /// `mThread != NULL ? mThread->Post(a0, NULL, NULL, true) : 0`
     ThreadPost,
     RtsHandleMessage,
-    UpdateUnits,
+    UnitOfId,
+    UnitStep,
+    PlayerUpdate,
     /// `(*(std::function<void()>*)p)()` (a loaded game's fixup: EEAfterLoad, EEAfterLoadLast)
     FixupRun,
     /// `delete (std::function<void()>*)p`
@@ -132,7 +134,6 @@ pub enum EePhysCpp {
     NumPlayers,
     Player,
     CurrentPlayer,
-    UpdateActiveUnits,
     InCinematic,
     ScenarioResult,
     SetScenarioResult,
@@ -205,7 +206,6 @@ pub enum EePhysCpp {
     UnitDereference,
     UnitId,
     // ---- the other systems
-    FreeCamera,
     PathManagerUpdate,
     PathManagerDump,
     AreaEffectsTick,
@@ -349,7 +349,7 @@ fn sa(bytes: &[u8]) -> i64 {
 }
 
 /// The physics' saved block. Each use reads or writes one field; none is held across a C++ call.
-fn rec(p: P) -> *mut EeUnitsPhysicsSaved {
+pub(crate) fn rec(p: P) -> *mut EeUnitsPhysicsSaved {
     hp(O::Rec, p, &[]) as *mut EeUnitsPhysicsSaved
 }
 
@@ -979,13 +979,51 @@ fn handle_message(p: P, message: u32, parameter1: usize, parameter2: usize) {
 
 /// `Idle`: with the free camera on, drains the input queue and flushes the world under the world's lock.
 fn idle(p: P) {
-    if h0(O::FreeCamera) == 0 {
+    if !crate::gamecpp::globals::get!(gFreeCamera) {
         return;
     }
     h0(O::WorldWriteLock);
     drain_input(p);
     flush_world(p);
     h0(O::WorldWriteUnlock);
+}
+
+/// The unit loop's calls (ee_sim units tick.rs; was EEPhysics.cpp's tick host).
+struct UnitTick;
+
+impl ee_sim::units::tick::TickHost for UnitTick {
+    fn set_collision_period(&mut self, value: u32) {
+        crate::gamecpp::globals::set!(gCollisionPeriod, value as c_ulong);
+    }
+    fn update_player(&mut self, index: u32) {
+        let player = hp(O::Player, 0, &[i64::from(index)]);
+        if player != 0 {
+            h(O::PlayerUpdate, player, &[]);
+        }
+    }
+    fn step(&mut self, _index: u32, id: u32) {
+        let unit = hp(O::UnitOfId, 0, &[i64::from(id)]); // the stepped list's unit
+        crate::gamecpp::globals::set!(gPhysicsSteppingUnit, unit as *mut c_void); // TEST ONLY: named by EE-SIM's random-draw trace
+        h(O::UnitStep, unit, &[]);
+        ee_sim::units::notes::ee_units_note_update_commit(id); // TEST ONLY (USST kind 12)
+    }
+}
+
+/// `UpdateUnits`: the collision period set (the active units spread over `gCollisionDetectionUnit` ticks, at least
+/// 1), every player updated, then each stepped unit stepped (last first); the stepped units' count.
+fn update_units() -> u32 {
+    let players = h0(O::NumPlayers) as u32;
+    let detection_unit = crate::gamecpp::globals::get!(gCollisionDetectionUnit) as u32;
+    let count = ee_sim::units::tick::update_ordered_units(&mut UnitTick, players, detection_unit);
+    crate::gamecpp::globals::set!(gPhysicsSteppingUnit, std::ptr::null_mut());
+    // TEST ONLY: the step leaves' records (USTM, USST; ee_sim units/notes.rs)
+    let physics = crate::gamecpp::globals::get!(gPhysics) as P;
+    ee_sim::units::notes::ee_units_note_step_commit(if physics != 0 {
+        get!(rec(physics), mNumTicksDone) as u32
+    } else {
+        0
+    });
+    count
 }
 
 /// `Tick`: one physics tick (the game clock, the civilization and resource timers, the weather, the paths, the area
@@ -1025,7 +1063,7 @@ fn tick(p: P) {
     if get!(r, mGameOver) {
         return;
     }
-    h0(O::UpdateActiveUnits);
+    crate::gamecpp::world::ee_gamecpp_world_update_active();
     if get!(r, mCivTimerRuns) {
         update_civ_timer(p);
     }
@@ -1042,7 +1080,7 @@ fn tick(p: P) {
     h0(O::PathManagerUpdate);
     update_area_effects_clock(p);
     check_shift_mode(p);
-    h(O::UpdateUnits, p, &[]);
+    update_units();
     h0(O::EffectManagerUpdate);
     hf(O::CalamityUpdate, 0, &[], &[get!(r, mTickTime)]);
     h0(O::AiUpdate);

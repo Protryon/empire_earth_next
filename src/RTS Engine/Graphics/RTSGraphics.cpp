@@ -6,7 +6,6 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GERasterizer.h"

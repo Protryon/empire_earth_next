@@ -71,13 +71,8 @@ protected:
     virtual ~AuthContext() { ee_won_authctx_free(this->mCore); } //2de370, scalar2ddf90/30; genuine SDK protected access
 public:
     AuthContext() { this->Init(); } //2dddf0
-    AuthContext(const std::wstring& inUserName, const std::wstring& inCommunity, const std::wstring& inPassword)
-    {
-        this->Init();
-        this->SetUserName(inUserName);
-        this->SetPassword(inPassword);
-        this->AddCommunity(inCommunity);
-    }
+    // (the SDK's AuthContext(user, community, password), Init then the three setters, had no caller and went in R6
+    // WON lobby and network round 37)
     bool AddAddress(const IPAddr& inAddr) { return this->GetServerContext()->AddAddress(inAddr); }
     bool AddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter = NULL)
     { return this->GetServerContext()->AddAddressesFromDir(inDir, inNameFilter); }
@@ -134,7 +129,11 @@ public:
     {
         this->LoginSet(EE_WON_AUTH_LOGIN_CDKEY, inCommunity, inKey.KeyBytes(), (inKey.HasKey() ? 1 : 0) | (inKey.IsValid() ? 2 : 0));
     }
-    bool SetHashFile(const std::wstring&); //2e06d0: the exe's path (AuthContext.cpp)
+    bool SetHashFile(const std::wstring& inCommunity) //2e06d0: the running exe in the data root (authlogin.rs)
+    {
+        return ee_won_auth_login_hash_exe(ee_won_authctx_login(this->mCore), inCommunity.data(), sizeof(wchar_t),
+                                          inCommunity.size());
+    }
     bool SetHashFile(const std::wstring& inCommunity, const std::string& inFile) //2e07f0
     { return this->SetHashFileList(inCommunity, std::list<std::string>(1, inFile)); }
     bool SetHashFileList(const std::wstring& inCommunity, const std::list<std::string>& inFiles) //2e08e0

@@ -38,7 +38,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEScreenEvent.h"
-#include "ee/EEUIEWonNetArenaGameEvents.h"
+#include "ee/EEUIEWonNetEvent.h"
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIBGenericBackground.h"
@@ -203,8 +203,8 @@ extern "C" bool ee_screenscpp_uh_in_game_form()
 extern "C" long ee_screenscpp_ev_open_form(uintptr_t inForm) { return gUserInterface->OpenForm(reinterpret_cast<UIForm*>(inForm)); }
 extern "C" void ee_screenscpp_ev_load_unit(uintptr_t inForm)
 { static_cast<EEUIFMGUnitHack*>(reinterpret_cast<EEUIFMainGame*>(inForm)->mUnitHack)->LoadUnitData(); }
-extern "C" uintptr_t ee_screenscpp_um_new_wns_open() { return (uintptr_t)static_cast<UIEvent*>(new EEWonFrontEvent(EeWonFrontCall::StatsOpen)); }
-extern "C" uintptr_t ee_screenscpp_um_new_wns_cancel() { return (uintptr_t)static_cast<UIEvent*>(new EEWonFrontEvent(EeWonFrontCall::StatsCancel)); }
+extern "C" uintptr_t ee_screenscpp_um_new_wns_open() { return (uintptr_t)static_cast<UIEvent*>(new EEUIEWonNetEvent(EeWonFrontCall::StatsOpen)); }
+extern "C" uintptr_t ee_screenscpp_um_new_wns_cancel() { return (uintptr_t)static_cast<UIEvent*>(new EEUIEWonNetEvent(EeWonFrontCall::StatsCancel)); }
 extern "C" void ee_screenscpp_um_new_editor(uintptr_t inManager)
 { UMG(inManager)->mScenarioEditorForm = new EEUIFScenarioEditor(UMG(inManager)); }
 extern "C" void ee_screenscpp_um_delete_editor(uintptr_t inManager) { delete UMG(inManager)->GetScenarioEditorForm(); }

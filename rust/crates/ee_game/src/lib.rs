@@ -296,6 +296,9 @@ pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_c
     // the simulation's effects on the renderer's effect manager (ee_sim world/effects.rs, ee_render sim_effects.rs)
     #[cfg(not(test))]
     ee_sim::world::effects::register(&ee_render::gfx::sim_effects::RENDER_EFFECTS);
+    // the random map's loading progress on the loading screen (ee_sim rmap object.rs)
+    #[cfg(not(test))]
+    ee_sim::rmap::object::register_load_progress(screens::ui_objects::ui_set_load_progress);
 }
 
 /// A game message's unit order (ee_netmsg bodies.rs) by the units lane's body for it (ee_units ffi.rs): the sender (or
@@ -458,6 +461,13 @@ pub mod cp_engine;
 pub mod sight_capture;
 // the game's own bodies over one-statement C++ cases (EEGameOps.cpp): the calamity classes' world steps, ...
 pub mod gamecpp;
+// the tech tree classes' bodies (EEPlayer.h's EETechTree, EETechTreeEpoch and EETechTreeNode call them inline:
+// rust/game/tech_tree.h; were gamecpp tech.rs and tech_load.rs)
+pub mod tech_tree;
+
+// a player's civilization (EECivilization's bodies) and the wonder victory's countdown (game core round 10, lane D;
+// out of gamecpp since the player/tech lane round 1)
+pub mod civilization;
 
 // the physics thread's bodies (EEPhysics.cpp's methods; world lane round 1)
 pub mod physics;

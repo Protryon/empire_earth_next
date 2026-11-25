@@ -60,15 +60,10 @@
 #include "ee/EECheatCodes.h"
 #include "ee/EECivilizationManager.h"
 #include <utility>
-#include "rust/game/game_log.h"
 
-extern EEAIContinentManager gContinentManager;
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
-extern bool gGameWindowSizeDefaulted;        // EEPreferences.cpp
-extern float gCameraMaxZoom;                 // EECameraControl.cpp
 extern bool& gInCinematic;
 extern char gEmptyString[];                  // 0x4e5b98 (pooled "")
-extern EECivilizationManager gCivilizationManager;
 
 // the members the Rust reads in place (gamecpp music_io.rs EeGamecppMusicMembers, stats_capture.rs' tails)
 static_assert(offsetof(EEMusicManager, mRequestedIntensity) - offsetof(EEMusicManager, mRandom) == 16 + 10 * sizeof(void*) + 5 * sizeof(long) &&
@@ -119,11 +114,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EpNewSettings: return P64(new EEGameSettings());
     case O::EpDeleteSettings: delete B_SET;
         break;
-    case O::EpWindowSizeDefaulted: gGameWindowSizeDefaulted = a[0] != 0;
-        break;
     case O::EpResourceLanguage: return gResource->GetLanguage();
-    case O::EpCameraMaxZoom: gCameraMaxZoom = f[0];
-        break;
     case O::EpWideLength: return (int64_t)strlen((const char*)*B_W);
     case O::EpWideGet: B_TEXT((const char*)*B_W);
         break;
@@ -216,8 +207,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EaGoalState: return P64(B_CX->mGoalState);
     case O::EaGoalKind: return ((EEUnitGoal*)p)->mKind;
     case O::EaPlayerEpoch: return B_PL->mTechnologies->mCurrentEpoch;
-    case O::EaTownCount: return (int64_t)B_PL->mTowns.size();
-    case O::EaTownHullContains: return B_PL->mTowns[a[0]]->HullContains(U2DPoint<long>((long)a[1], (long)a[2]));
+    case O::EaTownHullContains: return B_PL->GetTown((unsigned long)a[0])->HullContains(U2DPoint<long>((long)a[1], (long)a[2]));
     case O::EaForestAt: return P64(gContinentManager.GetForestAt((EEUnit*)a[0]));
     case O::EaForestKind: return ((EEAIForest*)p)->GetResourceKind();
     // the music manager (music_io.rs)
@@ -301,7 +291,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DwTeamCount: return B_VC->mTeam->GetNumPlayers();
     case O::DwTeamPlayer: return B_VC->mTeam->mPlayers[a[0]];
     case O::DwNeeded: return gWorld.mNumberOfWondersToWin;
-    case O::DwWonderCount: return ((EEPlayer*)p)->GetNumWonderUnits();
     case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);
     case O::DwVictoryTime: return gWorldTable.GetLongValue(kWorldWonderVictoryTime);
     case O::DwGameTime: return gPhysics->mGameTime;
@@ -375,7 +364,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DvUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
     case O::DvNameNarrow: B_CV->mName = (const char*)*(UString*)a[0];
         break;
-    case O::DvCanAfford: return B_CV->CanAfford((EECivUpgrade)a[0], (unsigned long*)a[1], NULL);
     case O::DvApplyUpgrade: return gCivilizationManager.ApplyUpgrade((EECivUpgrade)a[0], (long)a[1]);
     default: return EECore11OpC2(inOp, p, a, f);
     }

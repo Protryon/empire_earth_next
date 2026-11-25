@@ -10,15 +10,19 @@
 //!   CVLD  after one `EELoadCivilization`: the name, the directory (1 for the user's), the result, the name read,
 //!         the upgrades
 //!   CVAF  after one `EEApplyCivilizationFile`: the name, the player's fields, the result, its civilization after
-//! The tech tree's own records (`EETechCapturePlayer`, `EETechCaptureUpgrade`, `EETechCaptureTree`) are the tech
-//! capture's hooks, run on a scratch C++ record whose bytes are appended here.
+//! The tech tree's own records (the player's, an upgrade's, a tree's) are gamecpp tech_capture.rs'.
 
 use core::ffi::{c_char, c_long};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use ee_sim::tech::civ::EeTechCivEntry;
+use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved};
 
+use crate::gamecpp::tech_capture as tc;
 use crate::screens::game_cpp::{Cpp, EeScreensShimOut, EeScreensShimText};
+
+/// Whether CVMG (the manager's record, once) is written.
+pub(crate) static MANAGER: AtomicBool = AtomicBool::new(false);
 
 fn tag(name: &[u8; 4]) -> u32 {
     u32::from_le_bytes(*name)
@@ -61,30 +65,27 @@ impl Record {
 /// The player's fields the levels and powers change (the tech capture's player record first; none past it for no
 /// player).
 fn player_fields<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, player: usize) {
-    let scratch = c.civc_rec_new();
-    c.civc_rec_player(scratch, player);
-    let mut bytes = Vec::new();
-    c.civc_rec_bytes(scratch, EeScreensShimOut::of(&mut bytes));
-    c.civc_rec_free(scratch);
-    r.0.extend_from_slice(&bytes);
+    r.0.extend_from_slice(&tc::player_record(player));
     if player == 0 {
         return;
     }
-    r.f32(c.civc_conversion(player));
-    r.f32(c.civc_high_ground(player));
-    r.i32(c.civc_share(player));
-    r.i32(c.civc_mining(player));
+    // SAFETY: the live player's records, copied out
+    let (saved, fields) = unsafe {
+        (
+            *(c.civc_player_saved(player) as *const EeUnitsPlayerSaved),
+            *(c.civc_player_fields(player) as *const EeUnitsPlayerFields),
+        )
+    };
+    r.f32(fields.mConversionFactor);
+    r.f32(saved.mHighGroundBonus);
+    r.i32(fields.mShareBonus as i64);
+    r.i32(fields.mMiningLimit as i64);
 }
 
 /// A class's upgrade record (none when the class does not exist).
 fn class_upgrade<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, player: usize, kind: i64) {
-    let upgrade = if c.civc_class_exists(kind) { c.civc_class_upgrade(player, kind) } else { 0 };
-    let scratch = c.civc_rec_new();
-    c.civc_rec_upgrade(scratch, upgrade);
-    let mut bytes = Vec::new();
-    c.civc_rec_bytes(scratch, EeScreensShimOut::of(&mut bytes));
-    c.civc_rec_free(scratch);
-    r.0.extend_from_slice(&bytes);
+    let upgrade = if c.civh_class_listed(kind) { c.civc_class_upgrade(player, kind) } else { 0 };
+    r.0.extend_from_slice(&tc::upgrade_record(upgrade));
 }
 
 /// The player of index `index` (0 for none: outside 0..17).
@@ -192,7 +193,7 @@ pub(crate) fn apply_begin<C: Cpp + ?Sized>(
         // SAFETY: a category in place, read before any C++ call
         let set = if category.is_null() { None } else { Some(unsafe { (*category).mUnitSet }) };
         if let Some(set) = set {
-            if c.civc_set_exists(set as i64) {
+            if c.civh_set_exists(set as i64) {
                 c.civc_types_clear();
                 c.civc_collect(set as i64);
                 a.types = (0..c.civc_types_count()).map(|i| c.civc_type_at(i)).collect();
@@ -220,40 +221,13 @@ pub(crate) fn apply_end<C: Cpp + ?Sized>(c: &mut C, mut a: Apply, result: bool, 
     let level = a.upgrade & LEVEL_MASK;
     if p != 0 && ee_sim::tech::civ::ee_tech_civ_is_power_level(level) {
         a.record.u32(c.civc_media_count(p) as u32);
-        let data = c.civc_purchased_data(p) as *const u32;
-        let count = c.civc_purchased_count(p);
+        let data = c.civm_purchased_data(p) as *const u32;
+        let count = c.civm_purchased_count(p);
         for id in POWER_FIRST..=POWER_JIT + 2 {
             // SAFETY: the player's purchased upgrades, unchanged across the loop
             a.record.u32(unsafe { ee_sim::tech::civ::ee_tech_civ_has_power(data, count, id) } as u32);
         }
-        let tree = c.civc_tree(p);
-        if tree != 0 {
-            let scratch = c.civc_rec_new();
-            c.civc_rec_tree(scratch, tree);
-            let mut bytes = Vec::new();
-            c.civc_rec_bytes(scratch, EeScreensShimOut::of(&mut bytes));
-            c.civc_rec_free(scratch);
-            a.record.0.extend_from_slice(&bytes);
-            c.civc_ids_clear();
-            c.civc_ids_fill(tree);
-            let ids: Vec<i64> = (0..c.civc_ids_count()).map(|i| c.civc_id_at(i)).collect();
-            a.record.u32(ids.len() as u32);
-            for id in ids {
-                let node = c.civc_node(tree, id);
-                a.record.i32(id);
-                if node != 0 {
-                    a.record.u32(
-                        c.civc_node_researched(node) as u32
-                            | (c.civc_node_obsolete(node) as u32) << 1
-                            | (c.civc_node_available(node) as u32) << 2
-                            | (c.civc_node_allowed(node) as u32) << 3
-                            | 16,
-                    );
-                } else {
-                    a.record.u32(0);
-                }
-            }
-        }
+        a.record.0.extend_from_slice(&tc::tree_nodes_record(p));
     }
     commit(tag(b"CVAP"), &a.record.0);
 }
@@ -311,7 +285,8 @@ pub(crate) fn apply_file<C: Cpp + ?Sized>(
         r.u32(c.civc_civ_available(civ));
         r.u32(c.civc_civ_max(civ));
         r.u32(c.civc_civ_no_points(civ) as u32 | (c.civc_civ_unchanged(civ) as u32) << 1);
-        r.u32(c.civc_civ_purchased_flag(player) as u32);
+        // SAFETY: the live player's record
+        r.u32(unsafe { (*(c.civc_player_saved(player) as *const EeUnitsPlayerSaved)).mCivUpgradesPurchased } as u32);
     }
     commit(tag(b"CVAF"), &r.0);
 }
@@ -349,14 +324,11 @@ mod tests {
     #[test]
     fn a_file_without_a_player_has_its_hook_record_only() {
         let mut fake = Fake::default();
-        fake.answer("aec_active", &[1]).answer("civc_rec_new", &[60]).text("civc_rec_bytes", b"PP");
+        fake.answer("aec_active", &[1]);
         let mut records = Vec::new();
         apply_file(&mut fake, b"x", 0, -2, &mut |t, p: &[u8]| records.push((t, p.to_vec())));
-        assert_eq!(records, [(tag(b"CVAF"), vec![1, 0, 0, 0, b'x', b'P', b'P', 0xfe, 0xff, 0xff, 0xff])]);
-        assert_eq!(
-            fake.calls(),
-            "aec_active()\ncivc_rec_new()\ncivc_rec_player(60, 0)\ncivc_rec_bytes(60, out)\ncivc_rec_free(60)"
-        );
+        assert_eq!(records, [(tag(b"CVAF"), vec![1, 0, 0, 0, b'x', 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff])]);
+        assert_eq!(fake.calls(), "aec_active()");
     }
 
     #[test]
@@ -368,7 +340,10 @@ mod tests {
         let mut records = Vec::new();
         apply_end(&mut fake, *a, true, &mut |t, p: &[u8]| records.push((t, p.to_vec())));
         assert_eq!(records[0].0, tag(b"CVAP"));
-        assert_eq!(records[0].1, [2, 0, 1, 0, 20, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]);
+        assert_eq!(
+            records[0].1,
+            [2, 0, 1, 0, 20, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255]
+        );
         assert!(!fake.calls().contains("civc_player("));
     }
 }

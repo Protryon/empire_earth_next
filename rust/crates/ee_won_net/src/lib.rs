@@ -21,7 +21,6 @@ pub mod authlogin;
 pub mod authobj;
 pub mod bigint;
 pub mod blowfish;
-mod blowfish_tables;
 pub mod buffer;
 pub mod cachemap;
 pub mod cdkey;

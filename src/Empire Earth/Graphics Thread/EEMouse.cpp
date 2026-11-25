@@ -19,4 +19,4 @@ EEMouse::EEMouse()
     ee_gfx_input_mouse_set(&theView);
 }
 
-// (the mouse's C++ calls: EERenderSnapshot.cpp's EERoViewsOp)
+// (the pointer loads and the frame's calls are Rust's: ee_game rts mouse.rs)

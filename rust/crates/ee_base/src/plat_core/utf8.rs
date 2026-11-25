@@ -32,34 +32,12 @@ pub fn decode(s: &[u8]) -> (u32, usize) {
     if n == 1 {
         return (b0 as u32, 1);
     }
-    if n == 0 || s.len() < n {
-        return (STRAY_BASE + b0 as u32, 1);
+    // the lead's whole sequence, and nothing else, is one character exactly when std takes those bytes as text (no
+    // overlong form, no surrogate, nothing past U+10FFFF: Unicode table 3-7)
+    match s.get(..n).filter(|_| n != 0).map(std::str::from_utf8) {
+        Some(Ok(text)) => (text.chars().next().map_or(0, |c| c as u32), n),
+        _ => (STRAY_BASE + b0 as u32, 1),
     }
-    let b1 = s[1];
-    // the second byte's range depends on the lead (Unicode table 3-7): no overlongs, no surrogates, nothing past U+10FFFF
-    let ok1 = match b0 {
-        0xE0 => (0xA0..=0xBF).contains(&b1),
-        0xED => (0x80..=0x9F).contains(&b1),
-        0xF0 => (0x90..=0xBF).contains(&b1),
-        0xF4 => (0x80..=0x8F).contains(&b1),
-        _ => (0x80..=0xBF).contains(&b1),
-    };
-    if !ok1 {
-        return (STRAY_BASE + b0 as u32, 1);
-    }
-    let mut cp = match n {
-        2 => (b0 & 0x1F) as u32,
-        3 => (b0 & 0x0F) as u32,
-        _ => (b0 & 0x07) as u32,
-    };
-    cp = (cp << 6) | (b1 & 0x3F) as u32;
-    for &bi in &s[2..n] {
-        if bi & 0xC0 != 0x80 {
-            return (STRAY_BASE + b0 as u32, 1);
-        }
-        cp = (cp << 6) | (bi & 0x3F) as u32;
-    }
-    (cp, n)
 }
 
 /// The bytes of a character: a stray byte's character gives that byte back, any other surrogate or a value past
@@ -69,26 +47,7 @@ pub fn encode(cp: u32, out: &mut [u8; 4]) -> usize {
         out[0] = (cp - STRAY_BASE) as u8;
         return 1;
     }
-    let cp = if (0xD800..=0xDFFF).contains(&cp) || cp > 0x10FFFF { REPLACEMENT } else { cp };
-    if cp < 0x80 {
-        out[0] = cp as u8;
-        1
-    } else if cp < 0x800 {
-        out[0] = 0xC0 | (cp >> 6) as u8;
-        out[1] = 0x80 | (cp & 0x3F) as u8;
-        2
-    } else if cp < 0x10000 {
-        out[0] = 0xE0 | (cp >> 12) as u8;
-        out[1] = 0x80 | ((cp >> 6) & 0x3F) as u8;
-        out[2] = 0x80 | (cp & 0x3F) as u8;
-        3
-    } else {
-        out[0] = 0xF0 | (cp >> 18) as u8;
-        out[1] = 0x80 | ((cp >> 12) & 0x3F) as u8;
-        out[2] = 0x80 | ((cp >> 6) & 0x3F) as u8;
-        out[3] = 0x80 | (cp & 0x3F) as u8;
-        4
-    }
+    char::from_u32(cp).unwrap_or(char::REPLACEMENT_CHARACTER).encode_utf8(out).len()
 }
 
 /// Appends a character's bytes.
@@ -361,35 +320,18 @@ pub fn to_cp1252(s: &[u8]) -> Vec<u8> {
 pub fn to_utf16(s: &[u8]) -> Vec<u16> {
     let mut out = Vec::with_capacity(s.len());
     for (_, cp, _) in chars(s) {
-        let cp = if (0xD800..=0xDFFF).contains(&cp) { REPLACEMENT } else { cp };
-        if cp >= 0x10000 {
-            let v = cp - 0x10000;
-            out.push(0xD800 + (v >> 10) as u16);
-            out.push(0xDC00 + (v & 0x3FF) as u16);
-        } else {
-            out.push(cp as u16);
-        }
+        let c = char::from_u32(cp).unwrap_or(char::REPLACEMENT_CHARACTER);
+        out.extend_from_slice(c.encode_utf16(&mut [0; 2]));
     }
     out
 }
 
-/// The UTF-8 bytes of UTF-16 units: a surrogate pair is one character, a lone surrogate U+FFFD.
+/// The UTF-8 bytes of UTF-16 units: a surrogate pair is one character, a lone surrogate U+FFFD (but one of
+/// U+DC80..U+DCFF, a stray byte's character, gives that byte back, as `encode`).
 pub fn from_utf16(units: &[u16]) -> Vec<u8> {
     let mut out = Vec::with_capacity(units.len());
-    let mut i = 0;
-    while i < units.len() {
-        let u = units[i] as u32;
-        let cp = if (0xD800..0xDC00).contains(&u)
-            && i + 1 < units.len()
-            && (0xDC00..0xE000).contains(&(units[i + 1] as u32))
-        {
-            i += 1;
-            0x10000 + ((u - 0xD800) << 10) + (units[i] as u32 - 0xDC00)
-        } else {
-            u
-        };
-        push(&mut out, cp);
-        i += 1;
+    for unit in char::decode_utf16(units.iter().copied()) {
+        push(&mut out, unit.map_or_else(|lone| lone.unpaired_surrogate() as u32, |c| c as u32));
     }
     out
 }

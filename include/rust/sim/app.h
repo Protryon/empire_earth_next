@@ -384,6 +384,18 @@ void ee_app_cheats_apply(const EeAppCheats *p,
                          long player,
                          long parameter);
 
+/// `mGhostUnits.size()`.
+size_t ee_app_ghost_count();
+
+/// `mGhostUnits[i]`; NULL past the end.
+void *ee_app_ghost_at(size_t i);
+
+/// `mGhostUnits.push_back(ghost)` (EEWorld::AddGhostUnit).
+void ee_app_ghost_push(void *ghost);
+
+/// `mGhostUnits.back()` then `pop_back()`: the last ghost taken off the list (NULL when there is none).
+void *ee_app_ghost_pop();
+
 /// PLST for the player `player` (an `EEPlayer*`): `game_time` the physics' game time (0 without physics), `stats`
 /// and `end_time` its statistics (`mSavedGroups`), `events` its event list's Rust object.
 ///

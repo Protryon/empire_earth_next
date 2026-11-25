@@ -1,9 +1,9 @@
-// ee/EEAreaEffectKindIDs.h (RECONSTRUCTION). Named integer constants; each comment gives the evidence for its name;
-// (provisional name) marks an inferred one.
+// ee/EEAreaEffectKindIDs.h (RECONSTRUCTION). The area-effect kinds.
 #ifndef EE_EEAREAEFFECTKINDIDS_H
 #define EE_EEAREAEFFECTKINDIDS_H
 
-// The area effect kinds (EEAreaEffectKind): Rust's enums (ee_sim game_ids.rs), emitted back as plain C++ enums with their evidence comments.
-#include "rust/sim/game_ids.h"
+// EEAreaEffectTemplate::mKind (EEAreaEffectKind): Rust's enum (ee_sim tech_consts.rs), emitted back as a plain C++
+// enum with its evidence comments.
+#include "rust/sim/tech_consts.h"
 
 #endif // EE_EEAREAEFFECTKINDIDS_H

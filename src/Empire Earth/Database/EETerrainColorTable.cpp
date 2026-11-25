@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/Graphics Engine.h"
 #include "lle/GESurface.h"
 
 #include "ee/EETerrainColorTable.h"

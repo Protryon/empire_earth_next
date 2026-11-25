@@ -12,7 +12,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 
 
 #include "ee/EEUIManager.h"

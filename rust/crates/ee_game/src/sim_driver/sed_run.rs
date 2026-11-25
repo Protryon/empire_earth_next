@@ -28,6 +28,8 @@ pub enum Act {
     Marker { left: i64, rounds: i64 },
     /// the step's end (an event on the UI thread's message queue)
     Done { rounds: i64 },
+    /// a call on the UI thread (the UI fixture's marker and sends)
+    Call { code: fn(usize), arg: usize },
 }
 
 /// The driver's wait: the step finished.
@@ -96,8 +98,19 @@ pub unsafe extern "C" fn ee_sim_driver_sed_action(action: *mut c_void, state: *m
             drop(unsafe { Box::from_raw(act) });
             post(Act::Done { rounds });
         }
+        Act::Call { code, arg } => {
+            let (code, arg) = (*code, *arg);
+            // SAFETY: the act's only run
+            drop(unsafe { Box::from_raw(act) });
+            code(arg);
+        }
         Act::Done { .. } => {}
     }
+}
+
+/// `code(arg)` run by the UI thread as an action of its own (the UI fixture's: was EETestFixture.cpp's FixtureAction).
+pub fn post_call(code: fn(usize), arg: usize) {
+    post(Act::Call { code, arg });
 }
 
 /// The end's run (UIEvent::ProcessEvent of the C++ event class): another round, or the clock let run and the driver

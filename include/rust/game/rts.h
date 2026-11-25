@@ -466,6 +466,22 @@ void ee_rts_player_add_pending_units(void *player, bool keep_id, bool release);
 /// `RTSPlayer::ReleasePendingUnits`.
 void ee_rts_player_release_pending_units(void *player);
 
+/// `EEPlayer::AddPendingUnits`: the pending groups appended to the running ones (`groups`, the player's
+/// `mGroupLists`: ee_sim group_obj.rs), then `RTSPlayer`'s.
+///
+/// # Safety
+/// `groups` is the player's live group lists.
+void ee_rts_eeplayer_add_pending_units(void *player,
+                                       void *groups,
+                                       bool keep_id,
+                                       bool release);
+
+/// `EEPlayer::ReleasePendingUnits`: the pending groups cleared, then `RTSPlayer`'s.
+///
+/// # Safety
+/// As [`ee_rts_eeplayer_add_pending_units`].
+void ee_rts_eeplayer_release_pending_units(void *player, void *groups);
+
 /// `RTSPlayer::AddUnit`.
 void ee_rts_player_add_unit(void *player, void *unit, bool keep_id);
 

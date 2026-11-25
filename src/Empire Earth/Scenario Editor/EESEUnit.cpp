@@ -18,7 +18,6 @@
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEUIFScenarioEditor.h"

@@ -15,7 +15,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
-#include "ee/EETechCapture.h"
+#include "ee/EESimCapture.h"
 #include "ee/EEAppCapture.h"
 
 // MAPS, MAPC: Rust (ee_game app map_capture.rs)

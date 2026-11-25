@@ -11,13 +11,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEMap.h"
 
-
-// the brush highlight colour (0x5293e8; its init chain 0x51251f: GEColor's default white) (provisional name)
-GEColor gBrushHighlightColor;
-// the map's tile runs as of the last frame, drawn as grid lines (0x5290a0) (provisional name)
-std::vector<RTSMapTileRun> gGridRuns;
-
-GETexture* gAreaEffectTexture;
-GETexture* gCircleAreaEffectTexture;
+// the brush highlight colour (0x5293e8), the grid runs of the frame (0x5290a0) and the area-effect textures
+// (gAreaEffectTexture 0x5293f4, gCircleAreaEffectTexture 0x5293f8): gamecpp ro_views.rs

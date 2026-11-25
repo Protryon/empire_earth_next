@@ -166,7 +166,7 @@ mod tests {
                     d.pixels = (n(3) != -1).then(|| (n(3), n(4)));
                     cases += 1;
                 }
-                Some("auto") => assert_eq!(auto_ui_scale(&d), f[1].parse().unwrap(), "{line}"),
+                Some("auto") => assert_eq!(auto_ui_scale(&d), f[1].parse::<u32>().unwrap(), "{line}"),
                 Some("game") => {
                     let percent: u32 = f[1].parse().unwrap();
                     let windowed = f[2] == "1";

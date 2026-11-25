@@ -163,6 +163,28 @@ enum class EeWonCompCall : uint32_t {
   RootWindow,
   /// `GetFontMod((Font*)a, b, c)`.
   FontMod,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `MouseWheel(a)` (0).
+  MouseWheel,
+  /// `TimerEvent(a)` (1).
+  TimerEvent,
+  /// `KeyChar(a)` (0).
+  KeyChar,
+  /// `KeyDown(a)` (0).
+  KeyDown,
+  /// `KeyUp(a)` (0).
+  KeyUp,
+  /// `CanClose()` (1).
+  CanClose,
+  /// `GetMouseChild()` (NULL).
+  MouseChild,
 };
 
 /// The host's calls (`EeWonGuiOp::Comp`; `b` the receiver, `c`, `d` the arguments; a component as `Component*`).
@@ -347,6 +369,17 @@ ptrdiff_t ee_won_comp_call(void *me,
                            ptrdiff_t a,
                            ptrdiff_t b,
                            ptrdiff_t c);
+
+/// Component's own virtual `v` on the container `me` (the original's `Component::X()` from a Container body: the
+/// container's base call, `CtBase`), not routed to the container.
+///
+/// # Safety
+/// As `ee_won_comp_call`.
+ptrdiff_t ee_won_comp_base_call(void *me,
+                                EeWonGuiHostFn host,
+                                EeWonCtVirt v,
+                                ptrdiff_t a,
+                                ptrdiff_t b);
 
 }  // extern "C"
 

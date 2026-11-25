@@ -4,10 +4,6 @@
 
 #include "lle/LowLevelEngine.h"
 
-// two keys of EEASaveGame's save format that nothing here uses (only their chains reference them; provisional names)
-const UString kEEASaveGameChecksumKey("EEASaveGame-Checksum");
-const UString kEEASaveGameMapSeedKey("EEASaveGame-MapSeed");
-
 // the last save/load error message (0x531c70; EESaveLoad's functions pass it as their error out-parameter, and the
 // game and the scenario editor read it; provisional name)
 UWideString gLoadSaveErrorMessage;
@@ -51,18 +47,7 @@ UString GetDateText()
     return UString(ee_gamecpp_date_text());   // gamecpp persist_text.rs
 }
 
-// The old text twin (".txt") of a save deleted, as the original's unused debug file's Delete did (FSBasicFile::Delete:
-// a path longer than PLAT_MAX_PATH is left alone, a failure records the native error)
-void DeleteSaveTextTwin(FSFileSpec& inFile)
-{
-    UString theName = GetSaveTextName(inFile.GetFile(), false);
-    if (inFile.GetVolume().GetLength() + inFile.GetDirectory().GetLength() + theName.GetLength() <= PLAT_MAX_PATH) {
-        UString theTextPath(PLAT_MAX_PATH);
-        theTextPath = inFile.GetVolume() + inFile.GetDirectory() + theName;
-        if (!PlatDeleteFile(theTextPath))
-            ESRecordNativeError(PlatGetLastError());
-    }
-}
+// (a save's old text twin is deleted by gamecpp persist_save.rs: delete_text_twin)
 
 // A Rust callback run at the loaded game's first tick (gamecpp persistent.rs after_load)
 void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData)

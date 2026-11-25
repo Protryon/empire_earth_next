@@ -8,8 +8,6 @@
 #include "lle/GEViewport.h"
 
 
-// the UI's viewport (0x529518) (provisional name)
-GEViewport gUIViewport;
-
+// the UI's viewport (0x529518): gamecpp ro_views.rs
 // the panel corners of the z-buffer clears (.rdata 0x441c00..) and the unit panel's flag (0x5297a0): gamecpp ro_views.rs,
 // ro_units.rs

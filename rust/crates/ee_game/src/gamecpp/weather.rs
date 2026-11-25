@@ -21,6 +21,8 @@ use ee_sim::astar::modifier_obj::{
 use ee_sim::astar::request::{ee_path_request_dereference, ee_path_request_done, ee_path_request_tiles};
 use ee_sim::astar::storage::AStarRect;
 
+use ee_sim::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_TOWNS};
+
 use super::persistent::Pf;
 use super::{h, hd, hf, hp, pa, ptr, rec, Owned, O, P};
 
@@ -137,7 +139,7 @@ pub extern "C" fn ee_gamecpp_storm_begin(storm: *mut c_void) {
     let s = storm as P;
     let pl = hp(O::DsRandomPlayer, 0, &[]);
     let mut a: P = 0;
-    let town = pl != 0 && h(O::DsTownCount, pl, &[]) != 0 && {
+    let town = pl != 0 && player_op(pl as u64, EE_UNITS_LISTS_TOWNS, ListOp::Len) != 0 && {
         a = hp(O::DsRandomTown, pl, &[]);
         a != 0
     };
@@ -396,7 +398,7 @@ impl StormHost for Host {
         }
     }
     fn game_speed(&mut self) -> f32 {
-        hd(O::DsGameSpeed, 0, &[], &[])
+        hd(O::EcGameSpeed, 0, &[], &[])
     }
     fn random_range(&mut self, min: f32, max: f32) -> f32 {
         hd(O::PhysRandomRange, 0, &[], &[min, max])
@@ -547,7 +549,7 @@ pub extern "C" fn ee_gamecpp_env_step(manager: *mut c_void, time: c_ulong) {
         *state = 0;
     }
     let interval = *em::<c_long>(O::DeInterval, m);
-    let next = um::lrintf(hd(O::DsGameSpeed, 0, &[], &[]) * interval as f32) as c_long;
+    let next = um::lrintf(hd(O::EcGameSpeed, 0, &[], &[]) * interval as f32) as c_long;
     *em::<c_ulong>(O::DeNextStep, m) = (next as c_ulong).wrapping_add(time);
 }
 

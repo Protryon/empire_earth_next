@@ -19,6 +19,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "won_net37_orig.h" // the pieces only the drivers use
 #include "ee/wonapi/WONBuffer.h"
 #include "won_routemsg_glue.h"
 #include "rust/won_net/routemsg.h"

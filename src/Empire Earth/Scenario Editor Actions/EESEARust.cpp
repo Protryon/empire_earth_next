@@ -31,7 +31,6 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIShell.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEUnitClassKinds.h"
@@ -331,13 +330,23 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_PLAN_WALL:
         ee_units_uu_plan_wall(f[0], f[1], f[2], f[3], (uint64_t)(uintptr_t)gUnitClassTable[gWorld.mPlayers[i[0]]->mTechnologies->GetData(i[1])->mUnitClass], (uint64_t)(uintptr_t)gWorld.mPlayers[i[0]], 0, 1, &sSeaxWalls);
         return 0;
-    case EE_SCREENS_SEAX_GHOST_ENTER: gWorld.mGhostUnitsLock->Enter(); return 0;
-    case EE_SCREENS_SEAX_GHOST_LEAVE: gWorld.mGhostUnitsLock->Leave(); return 0;
-    case EE_SCREENS_SEAX_GHOST_COUNT: return (intptr_t)gWorld.GetNumGhostUnits();
-    case EE_SCREENS_SEAX_GHOST: return (intptr_t)gWorld.mGhostUnits[i[0]];
-    case EE_SCREENS_SEAX_BUILD_GATE: EEBuildGate(sSeaxTile = EETileCoordinate(i[0], i[1]), i[2], i[3], i[4]); return 0;
-    case EE_SCREENS_SEAX_UNIT_BY_ID: return (intptr_t)gWorld.GetUnit((unsigned long)(uint32_t)i[0]);
-    case EE_SCREENS_SEAX_RTS_UNIT_PLAYER_ID: return (int32_t)static_cast<RTSUnit*>(p)->mPlayer->mPlayerID;
+    case EE_SCREENS_SEAX_GHOST_ENTER:
+        gWorld.mGhostUnitsLock->Enter();
+        return 0;
+    case EE_SCREENS_SEAX_GHOST_LEAVE:
+        gWorld.mGhostUnitsLock->Leave();
+        return 0;
+    case EE_SCREENS_SEAX_GHOST_COUNT:
+        return (intptr_t)gWorld.GetNumGhostUnits();
+    case EE_SCREENS_SEAX_GHOST:
+        return (intptr_t)gWorld.GetGhostUnit(i[0]);
+    case EE_SCREENS_SEAX_BUILD_GATE:
+        EEBuildGate(sSeaxTile = EETileCoordinate(i[0], i[1]), i[2], i[3], i[4]);
+        return 0;
+    case EE_SCREENS_SEAX_UNIT_BY_ID:
+        return (intptr_t)gWorld.GetUnit((unsigned long)(uint32_t)i[0]);
+    case EE_SCREENS_SEAX_RTS_UNIT_PLAYER_ID:
+        return (int32_t)static_cast<RTSUnit*>(p)->mPlayer->mPlayerID;
     case EE_SCREENS_SEAX_ELEVATION_SELECTION:
         static_cast<UIComboBox*>(gUIManager->GetScenarioEditorForm()->GetControlById(EE_SCREENS_SE_MAP_ELEVATION_FILE))->GetCurrentSelection(sSeaxSelection);
         return 0;

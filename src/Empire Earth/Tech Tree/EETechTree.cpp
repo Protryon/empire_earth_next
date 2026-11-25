@@ -2,40 +2,45 @@
 // 0x446120). A player's tech tree: 0x1cba2f..0x1cdf25 (the eight key chains and sUnitClassInfo's chain, the ctor ..
 // EEEvent::GetEffect's COMDAT; EETechTreeEpoch.cpp's key chain 0x1cdf25 opens the next unit). Classes in
 // ee/EEPlayer.h. Unit flags: the exe's module set.
-// port (R5b.4, round 29): the tree's walks, its saved game, its checksum and the media table (sUnitClassInfo) are Rust
-// (ee_tech nodes.rs) over the records the classes derive from and EETechHost below.
-
+// port (R5b.4, round 29; player/tech lane rounds 1 and 2): the tree's, epochs' and nodes' bodies are Rust (ee_sim tech
+// nodes.rs, ee_game tech_tree) over the records the classes derive from; the classes call them inline
+// (EETechTreeEpoch.cpp, EETechTreeNode.cpp 0x1cedce..0x1cfeef and the capture unit EETechCapture.cpp are gone). What is
+// left: the members that need a complete class the header does not have, and the one-statement host cases of the
+// tree's and the calamities' Rust.
 #include <windows.h>
-#include <algorithm>
+#include <utility>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
+#include "lle/USingleton.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEEvent.h"
-#include "ee/EEUserInterface.h"
-#include "ee/EEUIManager.h"
-#include "ee/EEUIFMainGame.h"
-#include "ee/EmpireEarth.h"
-#include "ee/EEStringIDs.h"
-#include "ee/EETechCapture.h"
-#include "ee/EETechRust.h"
+#include "ee/EECalamityManager.h"
+#include "ee/EECalamityClass.h"
+#include "ee/EECalamity.h"
+#include "ee/EEContagionManager.h"
+#include "ee/EECalamityUpdate.h"
+#include "ee/EEGameVariant.h"
 #include "ee/EEButtonObject.h"
+#include "ee/EEStringIDs.h"
+#include "ee/EEUnitSetManager.h"
+#include "ee/EEDatabaseTables.h"
+#include "ee/EEEvent.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEAEManager.h"
+#include "ee/EmpireEarth.h"
+#include "ee/EEUserInterface.h"
+#include "ee/EEUIManager.h"
+#include "ee/EEUIFMainGame.h"
 #include "rust/game/gamecpp.h"
 
-// The walks' host (ee_tech nodes.rs EE_TECH_HOST_*): the tree's containers, the entry points the simulation capture
-// wraps (called here so their records keep their order), the world and the capture's walk records
-int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io)
-{
-    return (int32_t)ee_gamecpp_tech_host(inTree, inOp, io);
-}
+static_assert(kTechEpochPrehistoric == 0 && kTechNone == 100000 && kTechFirstNodeID == 1000 &&
+              IDS_PREHISTORIC_AGE == 30145, "ee_game tech_tree load.rs");
 
 // Returns the owner's tech tree node of the technology that makes the unit's class (was EECPEngineHelpers.cpp's:
 // it reaches EETechTreeEpochOf and EETechTreeEpoch::Get through the inline EETechTree::Get)
@@ -44,190 +49,192 @@ EETechTreeNode* EEUnit::GetTechTreeNode()
     return this->GetPlayer()->GetTechTree()->Get(this->GetUnitClass()->GetTechnology());
 }
 
-// Creates an empty tech tree spanning every epoch
-EETechTree::EETechTree()
-    : mPlayer(NULL)
-{
-    ee_gamecpp_tech_tree_init(this);   // (gamecpp tech_load.rs)
-}
-
-// Destroys the tech tree and its epochs (and the saved game's lists, Rust's)
-EETechTree::~EETechTree()
-{
-    ee_tech_tree_fields_free(this);
-}
-
-// Reads every epoch block of the tech tree file (the original: exactly 15), sets the epoch count, and resets the
-// epoch range to all epochs
-long EETechTree::Load(FSFileSpec& inFile)
-{
-    return ee_gamecpp_tech_load_file(this, &inFile);
-}
-
-// Indexes, per unit type, the techs whose research event changes its model or sounds or upgrades it into
-// another class (the shared table the media-mask queries read; ee_tech nodes.rs build_unit_class_info)
-void EETechTree::BuildUnitClassInfo()
-{
-    EETechTreeWalk(&gTechTree, EeTechTreeOp::BuildUnitClassInfo);
-}
-
-// Unloads every epoch's media
-void EETechTree::UnloadAll()
-{
-    ee_gamecpp_tech_unload_all(this);
-}
-
-// Collects the ids of every node of every epoch
-void EETechTree::GetNodeIDs(std::vector<long>& outIDs)
-{
-    ee_gamecpp_tech_node_ids(this, true, 0, &outIDs);
-}
-
-// Collects the node ids of one epoch
-void EETechTree::GetEpochNodeIDs(long inEpoch, std::vector<long>& outIDs)
-{
-    ee_gamecpp_tech_node_ids(this, false, inEpoch, &outIDs);
-}
-
 // Adds a sync checksum of every tech's and epoch's researched/obsolete state, weighted by position (ee_tech
 // tree_checksum)
 void EETechTree::GetChecksum(ESChecksum& ioChecksum)
 {
-    ioChecksum.AddChecksum("EETechTree", (unsigned long)(uint32_t)EETechTreeWalk(this, EeTechTreeOp::Checksum));
-}
-
-// Adds up the resource costs (kinds 2..6) of a tech and every unresearched prerequisite and upgrade path to it
-void EETechTree::SumCosts(long inID, long inUnitClass, long* ioCosts)
-{
-    ee_gamecpp_tech_sum_costs_captured(this, inID, inUnitClass, ioCosts);   // (TSUM, TEST ONLY: gamecpp tech_load.rs)
-}
-
-void EETechTree::SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts)
-{
-    ee_gamecpp_tech_sum_costs(this, inID, inUnitClass, ioCosts);
-}
-
-// Tells whether a tech's model or sound effect for a unit class is the latest one the tree still uses (ee_tech
-// is_latest_effect over the media table)
-bool EETechTree::IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind)
-{
-    return ee_tech_is_latest_effect(inTree, &EETechHost, inTree, (int32_t)inID, (int32_t)inUnitClass, (int32_t)inKind);
-}
-
-// Returns the tree's player (by index when no player pointer is set)
-EEPlayer* EETechTree::GetPlayer()
-{
-    if (this->mPlayer != NULL)
-        return this->mPlayer;
-    return gWorld.mPlayers[this->mPlayerIndex];
-}
-
-// Advances to the next epoch unless the end epoch is reached
-void EETechTree::AdvanceEpoch()
-{
-    EETechTreeWalk(this, EeTechTreeOp::AdvanceEpoch);
-}
-
-// Reapplies a loaded tree's state: editor-obsoleted techs, the epoch range, research, each epoch's counters,
-// then refreshes the interface
-void EETechTree::ApplySavedState(bool inApplyObsoleted, bool inApplyResearch)
-{
-    EETechTreeWalk(this, EeTechTreeOp::ApplySavedState, inApplyObsoleted ? 1 : 0, inApplyResearch ? 1 : 0);
-}
-
-// Reads the saved research, obsolete and editor-obsoleted tech ids, the current/start/end epochs and each epoch's
-// state (14 epochs before version 0.0xea); marks every epoch up to the current one researched (ee_tech tree_load)
-long EETechTree::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_tech_tree_save(this, &inFile, true, inMajorVersion, inMinorVersion);   // (gamecpp tech_load.rs)
-}
-
-// Makes a tech or epoch obsolete in its epoch
-void EETechTree::MakeObsolete(long inID)
-{
-    EETechTreeWalk(this, EeTechTreeOp::MakeObsolete, inID);
-}
-
-// Sets a prerequisite of a tech in its epoch
-void EETechTree::SetPrerequisite(long inID, long inPrerequisite)
-{
-    EETechTreeWalk(this, EeTechTreeOp::SetPrerequisite, inID, inPrerequisite);
-}
-
-// Researches a tech or epoch; a researched tech that counts toward the next epoch adds to its count, an epoch
-// updates statistics series 0xc
-void EETechTree::Research(long inID, EEComplexUnit* inUnit)
-{
-    EETechTreeWalk(this, EeTechTreeOp::Research, inID, 0, inUnit);   // (TTRS, TEST ONLY: ee_sim tech nodes_capture.rs)
-}
-
-// Writes the tree to the saved game: the ids of researched, obsolete or editor-obsoleted techs with their flags,
-// the epochs, then each epoch's state; returns the last epoch's write result (ee_tech tree_save)
-long EETechTree::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_gamecpp_tech_tree_save(this, &outFile, false, 0, 0);   // (gamecpp tech_load.rs)
-}
-
-// Moves the tree forward to an epoch (never back), recording it in statistics series 0xc and researching up to it
-void EETechTree::SetEpoch(long inEpoch)
-{
-    EETechTreeWalk(this, EeTechTreeOp::SetEpoch, inEpoch);
-}
-
-// Sets the start and end epochs and researches up to the start
-void EETechTree::SetEpochRange(long inStart, long inEnd)
-{
-    EETechTreeWalk(this, EeTechTreeOp::SetEpochRange, inStart, inEnd);
-}
-
-// Sets the epoch range and the current epoch to its start, without researching
-void EETechTree::ResetEpochRange(long inStart, long inEnd)
-{
-    EETechTreeWalk(this, EeTechTreeOp::ResetEpochRange, inStart, inEnd);
-}
-
-// Makes a node available or unavailable unless it has a research delay
-void EETechTree::SetNodeAvailable(long inID, bool inValue)
-{
-    EETechTreeWalk(this, EeTechTreeOp::SetNodeAvailable, inID, inValue ? 1 : 0);
-}
-
-// Sets the tree's player and player index
-void EETechTree::SetPlayer(EEPlayer* inPlayer)
-{
-    this->mPlayer = inPlayer;
-    if (inPlayer != NULL)
-        this->SetPlayerIndex(inPlayer->mPlayerID);
-}
-
-// For the local player's tree, shows the new epoch's name and refreshes the main game form's group panel
-void EETechTree::UpdateInterface(bool inEpochChanged)
-{
-    ee_gamecpp_tech_update_interface(this, inEpochChanged);
-}
-
-// Copies another tree's epochs, epoch range and player; the copy is not marked loaded
-EETechTree& EETechTree::operator=(const EETechTree& inOther)
-{
-    return *(EETechTree*)ee_gamecpp_tech_tree_assign(this, &inOther);
-}
-
-// ------------------------------------------------------------------------- round 9, lane D: the tech tree's host
-
-
-// an epoch's nodes into the walk's buffer (at most its count); the epoch's node count
-int32_t EETechEpochNodes(EETechTreeEpoch* inEpoch, EeTechHostIo* io)
-{
-    uint32_t k = 0;
-    for (std::map<long, EETechTreeNode*>::iterator it = inEpoch->mNodes.begin(); it != inEpoch->mNodes.end() && k < io->count; ++it)
-        io->nodes[k++] = EETechRef(it->second);
-    return (int32_t)inEpoch->mNodes.size();
+    ioChecksum.AddChecksum("EETechTree", (unsigned long)(uint32_t)this->Walk(EeTechTreeOp::Checksum));
 }
 
 #define P64(x) ((int64_t)(intptr_t)(x))
-#define TREE ((EETechTree*)p)
+#define BNODE ((EETechTreeNode*)p)
+#define BTREE ((EETechTree*)p)
 #define TNODE ((EETechTreeNode*)p)
+#define TEPOCH ((EETechTreeEpoch*)p)
+#define TVARIANT EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)
+#define TREE ((EETechTree*)p)
 #define TPL ((EEPlayer*)p)
 #define TFILE ((FSFileSpec*)p)
 #define TEFFECT ((EEEventEffect*)p)
 
+// the cost factors (host.rs; EEPWorldHelper.cpp's default)
+double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGraphics.cpp
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    case O::TkEpochCostFactor: return gWorldTable.GetFloatValue(kWorldUnitEpochCostFactor);
+    case O::TkCostSetFactor: return TVARIANT->GetCostSetFactor();
+    case O::TkStatsCostScale: return ((EEUnitStats*)p)->GetCostScale();
+    case O::TkJitFactor: return gWorld.mGameOptions.mResources == 4 ? gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactorDeathmatch) : gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactor);
+    default: return EECore10OpAF(inOp, p, a, f);
+    }
+}
+
+// the tech tree's and the calamity host's C++ calls and members for Rust (EEServer.cpp's EECore11OpC6 default): one
+// statement each
+int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+{
+    typedef EeGameCpp O;
+    switch (inOp) {
+    // (EECore10OpB7) the tech tree's loads, copies, costs and sweep (gamecpp tech_load.rs, tech_capture.rs; p the node, the epoch, the
+    // tree or the player): one statement each
+    case O::TbNewData: return P64(BNODE->mData = new RTSTechTreeNodeData());
+    case O::TbDeleteData: delete std::exchange(BNODE->mData, nullptr);
+        break;
+    case O::TbShareData: BNODE->mData = ((const EETechTreeNode*)a[0])->mData;
+        break;
+    case O::TbSetTree: BNODE->mTree = (EETechTree*)a[0];
+        break;
+    case O::TbNewNode: return P64(new EETechTreeNode);
+    case O::TbButton: return P64(BNODE->mButton);
+    case O::TbCopyButton: BNODE->mButton = ((const EETechTreeNode*)a[0])->mButton;
+        break;
+    case O::TbSetButton: BNODE->mButton = EEButtonObject::Get((unsigned long)a[0]);
+        break;
+    case O::TbButtonGet: return P64(EEButtonObject::Get((unsigned long)a[0]));
+    case O::TbSwapButton: ((EEPlayer*)p)->SwapClassButtonMedia((long)a[0], (EEButtonObject*)a[1], (EEButtonObject*)a[2]);
+        break;
+    case O::TbGlobalTree: return P64(&gTechTree);
+    case O::TbIsHuman: return ((EEPlayer*)p)->IsHuman();
+    case O::TbClassFamily: return ((EEUnitClass*)p)->mFamily;
+    case O::TbNodeIsObsolete: return BNODE->GetIsObsolete();
+    case O::TbNodeDependsOn: return BNODE->DependsOn((long)a[0]);
+    case O::TbNodeGetCost: return BNODE->GetCost((long)a[0], (long)a[1], f[0]);
+    case O::TbTreeChecksum: return (int64_t)(uint32_t)BTREE->Walk(EeTechTreeOp::Checksum);
+    case O::TbWorldPlayers: return (int64_t)gWorld.GetNumPlayers();
+    case O::TbWorldPlayer: return P64(gWorld.GetPlayer((unsigned long)a[0]));
+    case O::TbPlayerTree: return P64(((EEPlayer*)p)->GetTechTree());
+    // (EECore9OpD7) the C++ calls and members of the nodes' and epochs' bodies in Rust (gamecpp tech.rs; p the node or the epoch, the
+    // player for the Pl ops): one statement each
+    case O::TkNodeFields: return P64(static_cast<EeTechNodeFields*>(TNODE));
+    case O::TkNodeData: return P64(static_cast<EeTechNodeDataFields*>(TNODE->mData));
+    case O::TkNodeTree: return P64(TNODE->mTree);
+    case O::TkUpgrade: return P64(static_cast<EEUnitStats*>(((EEPlayer*)p)->mUnitClassUpgrades[a[0]]));
+    case O::TkVariant: return P64(static_cast<EeDataGameVariantFields*>(TVARIANT));
+    case O::TkInCostSet: return gUnitSetManager.GetSet(TVARIANT->mCostSet) != NULL && gUnitSetManager.GetSet(TVARIANT->mCostSet)->Contains((long)a[0]);
+    case O::TkPlayerJit: return ((EEPlayer*)p)->mJITManufacturing;
+    case O::TkClassHasRallyPoint: return gUnitClassTable[a[0]] != NULL && gUnitClassTable[a[0]]->HasRallyPoint();
+    case O::TkEpochLists: return P64(TEPOCH->mLists);
+    case O::TkNodeUnload: TNODE->Unload();
+        break;
+    case O::TkNodeDelete: delete TNODE;
+        break;
+    case O::TkEpochDeleteData: delete std::exchange(TEPOCH->mData, nullptr);
+        break;
+    case O::TkPushId: ((std::vector<long>*)a[0])->push_back((long)a[1]);
+        break;
+    case O::TkNodeLoadMedia: TEPOCH->EETechTreeNode::LoadMedia((EEPlayer*)a[0]);
+        break;
+    case O::TkNodeUnloadMedia: TEPOCH->EETechTreeNode::UnloadMedia((EEPlayer*)a[0]);
+        break;
+    // (EECore11OpC6) a class's run (gamecpp calamity_io.rs class_run): its host made and deleted around it (EEContagionManager.cpp's
+    // EECore11OpC5 default); p the class, a0 the calamity, a1 and a2 the sounds
+    case O::C11CalHostNew: return P64((new EECalamityUpdateHost{(EECalamityClass*)p, (EECalamity*)a[0], {(EESoundObject*)a[1], (EESoundObject*)a[2]}, {}, NULL, {}, {}}));
+    case O::C11CalHostDelete: delete (EECalamityUpdateHost*)p;
+        break;
+    // (EECore9OpD6) the C++ calls and members of the tech tree's host in Rust (gamecpp tech.rs; p the tree unless noted): one statement
+    // each
+    case O::TkTreeFields: return P64(static_cast<EeTechTreeFields*>(TREE));
+    case O::TkCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
+    case O::TkPlId: return (int64_t)TPL->mPlayerID;
+    case O::TkPostShowEpochName: gUserInterface->PostShowEpochName();
+        break;
+    case O::TkMainGameForm: return P64(gUIManager->GetMainGameForm());
+    case O::TkRefreshGroup: gUIManager->GetMainGameForm()->mRefreshGroup = true;
+        break;
+    case O::TkEpochCount: return TREE->mEpochs.size();
+    case O::TkEpochAt: return P64(&TREE->mEpochs[(long)a[0]]);
+    case O::TkEpochRef: ((EeTechHostIo*)a[1])->node = TREE->mEpochs[(long)a[0]].Ref();
+        break;
+    case O::TkUnitId: return (int64_t)((EEComplexUnit*)p)->mUnitID;
+    case O::TkGet: return P64(TREE->Get((long)a[0]));
+    case O::TkSetRef: ((EeTechHostIo*)a[0])->node = TNODE->Ref();
+        break;
+    case O::TkNeedsUnitMedia: return TNODE->NeedsUnitMedia();
+    case O::TkTrigger: EEEvent::Trigger((long)a[0], TREE->mPlayerIndex, (long)a[1], TREE->mPlayer, (EEComplexUnit*)a[2]);
+        break;
+    case O::TkEpochReached: TPL->EpochReached((long)a[0]);
+        break;
+    case O::TkStatReset: TPL->mSavedGroups.Reset((long)a[0], 1);
+        break;
+    case O::TkStatSet: TPL->mSavedGroups.Set((long)a[0], (long)a[1]);
+        break;
+    case O::TkUnloadClassMedia: TPL->UnloadUnitClassMedia((long)a[0]);
+        break;
+    case O::TkClassMedia: TPL->SetUnitClassMedia((long)a[0], 0x7f);
+        break;
+    case O::TkClassButtonsLoad: TPL->LoadUnitClassButtons((long)a[0]);
+        break;
+    case O::TkClassButtonsUnload: TPL->UnloadUnitClassButtons((long)a[0]);
+        break;
+    case O::TkEpochMediaLoaded: TPL->EpochMediaLoaded((long)a[0]);
+        break;
+    case O::TkEpochMediaUnloaded: TPL->EpochMediaUnloaded((long)a[0]);
+        break;
+    case O::TkEventsEnabled: gEventsEnabled = a[0] != 0;
+        break;
+    case O::TkIsLocal: return gWorld.mPlayers[TREE->mPlayerIndex] == gWorld.GetCurrentPlayer();
+    case O::TkAssert: ESVERIFY_AT(false, a[0]);
+        break;
+    case O::TkEvent: return P64(EEEvent::Get(TNODE->mData->mResearchedEvent));
+    case O::TkEventEffects: return (int64_t)((EEEvent*)p)->GetNumEffects();
+    case O::TkEventEffect: return P64(EEEvent::GetEventEffect(((EEEvent*)p)->GetEffect((long)a[0])));
+    case O::TkEffKind: return TEFFECT->mKind;
+    case O::TkEffUnitClass: return TEFFECT->mUnitClass;
+    case O::TkEffTechnology: return TEFFECT->mTechnology;
+    case O::TkEffButton: return TEFFECT->mButton;
+    case O::TkEffAreaEffect: return TEFFECT->mAreaEffect;
+    case O::TkEffMediaIndex: return TEFFECT->mMediaIndex;
+    case O::TkEffNewUnitClass: return TEFFECT->mNewUnitClass;
+    case O::TkEffSoundId: return TEFFECT->mSoundID;
+    case O::TkEffAttribute: return TEFFECT->mAttribute;
+    case O::TkButtonAcquire: EEButtonObject::Get(a[0])->Acquire();
+        break;
+    case O::TkButtonRelease: EEButtonObject::Get(a[0])->Release();
+        break;
+    case O::TkItemLoad: EEMedia::Get(a[0])->LoadMedia();
+        break;
+    case O::TkItemUnload: EEMedia::Get(a[0])->UnloadMedia();
+        break;
+    case O::TkAeTemplateLoad: gAEManager.LoadTemplateMedia((unsigned long)a[0]);
+        break;
+    case O::TkAeTemplateUnload: gAEManager.UnloadTemplateMedia((unsigned long)a[0]);
+        break;
+    case O::TkSoundLoad: EESoundObject::Get(a[0])->LoadMedia();
+        break;
+    case O::TkSoundUnload: EESoundObject::Get(a[0])->UnloadMedia();
+        break;
+    case O::TkClassCount: return (int64_t)EEUnitClassCount();
+    case O::TkClassAt: return P64(gUnitClassTable[a[0]]);
+    case O::TkClassType: return (int64_t)((EEUnitClass*)p)->mUnitType;
+    case O::TkClassTechnology: return gUnitClassTable[a[0]] != NULL ? gUnitClassTable[a[0]]->mTechnology : 100000;
+    case O::TkFileOpenRead: TFILE->Open(kFileAccessRead);
+        break;
+    case O::TkFileLength: TFILE->GetLength(*(unsigned long*)a[0]);
+        break;
+    case O::TkFilePosition: return TFILE->GetPosition(*(long*)a[0]);
+    case O::TkFileClose: TFILE->Close();
+        break;
+    case O::TkEpochsResize: TREE->mEpochs.Resize((long)a[0]);
+        break;
+    case O::TkEpochLoad: return TREE->mEpochs[(long)a[0]].Load(*(FSFileSpec*)a[1], TREE);
+    case O::TkEpochUnload: TREE->mEpochs[(long)a[0]].Unload();
+        break;
+    case O::TkNodeUnitClass0: return TNODE->GetUnitClass(0);
+    case O::TkNodeIsAvailable: return TNODE->GetIsAvailable();
+    case O::TkNodeGetCost: return TNODE->GetCost((long)a[0], (long)a[1], 1.0f);
+    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);   // the end of the chain
+    }
+    return 0;
+}

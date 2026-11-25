@@ -84,7 +84,6 @@ static_assert(sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GE2DPoint) == siz
 #define MPPT(i) (*(GE3DPoint*)a[i])
 #define M ((EEMap*)p)
 #define MM ((EEMiniMap*)p)
-extern GEVector gMiniMapLight;              // EEMiniMap.cpp (the terrain light)
 
 // round 11, lane A: gamecpp map_more.rs' constants and the save's context
 
@@ -129,8 +128,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MpTileSize: return sizeof(EETile);
     case O::MpRtsTile: return P64(M->mTiles[a[0]]);
     case O::MpGetTile: return P64(M->GetTile((unsigned long)a[0], (unsigned long)a[1]));
-    case O::MpGroundPoint: M->GetGroundPoint(MPPT(0), MPPT(1));
-        break;
     case O::MpRtsCreate: M->Create((long)a[0], (long)a[1], (unsigned long)a[2], true);
         break;
     case O::MpSightEnabled: return gSightUpdatesEnabled == true;
@@ -302,13 +299,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MmTerrainBytesPerRow: return MM->mTerrainTexture->GetSurface()->GetBytesPerRow();
     case O::MmUiUpdate: gEEGameUI.mMiniMapUpdate(MM);   // EEUIMiniMap::Update (ee/EEGameUI.h)
         break;
-    case O::MmLight: *(GEVector*)a[0] = gMiniMapLight;
-        break;
-    case O::MmLightSet: gMiniMapLight = GEVector(0.0f, 1.5f, 1.0f);
-        break;
-    case O::MmLightNormalize: gMiniMapLight.Normalize();
-        break;
-    case O::MmViewport: return P64(&gViewport);
     case O::MmNumPlayers: return gWorld.mNumPlayers;
     case O::MmDoppUnit: return P64(((EEDoppelganger*)p)->mUnit);
     case O::MmDoppPlayer: return P64(((EEDoppelganger*)p)->GetPlayer());

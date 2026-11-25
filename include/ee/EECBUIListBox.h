@@ -14,10 +14,6 @@
 
 class EECBUIListBox : public UILBString {
 public:
-    // the two class statics (a line's separator; a category header's last token)
-    static const UWideString sSeparator;    // "/"
-    static const UWideString sCategory;     // "Category"
-
     // 0x27d187 (UIControlsTable's user-defined control factory passes itself first)
     EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::vector<UWideString>& inData, GEFont* inFont,
                   const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,

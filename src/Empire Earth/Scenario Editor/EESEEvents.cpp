@@ -16,7 +16,6 @@
 #include "lle/UIListBox.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
 
 #include "lle/UITriStateCheckBox.h"
 
@@ -27,7 +26,6 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEARust.h"
 #include "ee/EEUserInterface.h"
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSEffect.cpp
 

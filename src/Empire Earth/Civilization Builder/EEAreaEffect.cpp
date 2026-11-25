@@ -39,6 +39,10 @@
 #include "rust/sim/units.h"
 #include "rust/game/screens.h"   // the host (area_effect_host.rs)
 #include "ee/EEScreensShims.h"
+#include <algorithm>
+#include <string.h>
+#include "ee/EEAEManager.h"
+#include "lle/FSMemoryFile.h"
 
 
 namespace {
@@ -54,12 +58,8 @@ struct EEAEMFBBuildingInRectangle {
     }
     bool Overlaps(EEComplexUnit* inUnit) const
     {
-        long theX = inUnit->mTileX;
-        long theY = inUnit->mTileY;
-        long theSize = inUnit->mUnitClass->mTileSize;
-        long theRight = theX + theSize - 1;
-        long theBottom = theY + theSize - 1;
-        return this->mRect.mLeft <= theRight && this->mRect.mRight >= theX && this->mRect.mTop <= theBottom && this->mRect.mBottom >= theY;
+        return this->mRect.mLeft <= inUnit->mTileX + inUnit->mUnitClass->mTileSize - 1 && this->mRect.mRight >= inUnit->mTileX &&
+               this->mRect.mTop <= inUnit->mTileY + inUnit->mUnitClass->mTileSize - 1 && this->mRect.mBottom >= inUnit->mTileY;
     }
 
     U2DRectangle<long> mRect;
@@ -77,8 +77,7 @@ struct EEAEMFBBuildingInRange {
     }
     bool InRange(EEComplexUnit* inUnit) const
     {
-        U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
-        return this->mCenter.DistanceToSquaredF(theTile) <= this->mRangeSquared;
+        return this->mCenter.DistanceToSquaredF(U2DPoint<long>(inUnit->mTileX, inUnit->mTileY)) <= this->mRangeSquared;
     }
 
     U2DPoint<long> mCenter;
@@ -182,10 +181,6 @@ extern "C" void ee_screenscpp_ae_graphic_effect_dereference(uintptr_t inEffect)
 { ((EEGraphicEffect*)inEffect)->Dereference(); }
 extern "C" uintptr_t ee_screenscpp_ae_media_get(int32_t inId) { return (uintptr_t)EEMedia::Get(inId); }
 
-// The effect's and the template's members: Rust's (area_effect_obj.rs; UI lane round 12), each one forward; the
-// world calls the simulation asks are area_effect_host.rs' over the shims above
-EEAreaEffect::EEAreaEffect(EEAreaEffectTemplate* inTemplate) { ee_screens_ae_construct((uintptr_t)this, (uintptr_t)inTemplate); }
-
 // Writes the effect's location, owning unit and player to the out-of-synch dump
 void EEAreaEffect::Dump(FILE* inFile)
 {
@@ -200,12 +195,72 @@ long EEAreaEffect::Checksum()
     return ee_area_effect_checksum(this, this->mLocation.mX, this->mLocation.mY, this->mUnit != NULL ? (long)this->mUnit->mUnitID : 0);
 }
 
-void EEAreaEffect::LoadMedia(bool inIsOnDemand)
-{
-    this->mTemplate->Load(inIsOnDemand);
-}
+// C:\EEX\Empire Earth\Civilization Builder\EEAreaEffectTemplate.cpp (name from RTTI EEAreaEffectTemplate; folder
+// inferred: no __FILE__). 0x27c0f3..0x27c8b9: the area-effect template (vtable 0x44be78; EEAEManager::Load 0x27b079
+// makes one per record of the area-effect file): ctor, ??_G, dtor, the player-relation and range tests, Init (port:
+// in EEAreaEffect.cpp, over its host), Load/Unload; then a unit's area-effect list (EEUnitAreaEffectList) members and the UReferenceContainer<EEAreaEffect*>
+// template COMDATs they instantiate (Remove 0x27c7f2, Contains 0x27c820 (ICF-shared with <EEComplexUnit*>), 0x27c873
+// (its end()), Erase 0x27c87f). EECBCivilizationCreator.cpp starts at 0x27c8b9. Unit flags: the exe's module set.
+// UReferenceContainer<T>::Contains (its COMDAT 0x27c820 closes this unit) is defined in ee/UReferenceContainer.h
 
-void EEAreaEffect::UnloadMedia()
-{
-    this->mTemplate->Unload();
-}
+// The template's media and the list members' logic: area_effect_lists.rs over the one-statement shims below (UI lane
+// round 11)
+#define AEL_L(l) ((EEUnitAreaEffectList*)(l))
+#define AEL_E(e) ((EEAreaEffect*)(e))
+#define AEL_T(t) ((EEAreaEffectTemplate*)(t))
+extern "C" uintptr_t ee_screenscpp_ael_count(uintptr_t inList) { return AEL_L(inList)->mItems.size(); }
+extern "C" uintptr_t ee_screenscpp_ael_at(uintptr_t inList, uintptr_t inIndex)
+{ return (uintptr_t)AEL_L(inList)->mItems[inIndex]; }
+extern "C" void ee_screenscpp_ael_remove(uintptr_t inList, uintptr_t inEffect)
+{ AEL_L(inList)->UReferenceContainer<EEAreaEffect*>::Remove(AEL_E(inEffect)); }
+extern "C" void ee_screenscpp_ael_add(uintptr_t inList, uintptr_t inEffect)
+{ AEL_L(inList)->UReferenceContainer<EEAreaEffect*>::Add(AEL_E(inEffect)); }
+extern "C" void ee_screenscpp_ael_set_location(uintptr_t inEffect, float inX, float inY)
+{ AEL_E(inEffect)->mLocation = GE2DPoint(inX, inY); }
+extern "C" uintptr_t ee_screenscpp_ael_t_effect(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mGraphicEffect; }
+extern "C" uintptr_t ee_screenscpp_ael_t_effect18(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mGraphicEffect18; }
+extern "C" uintptr_t ee_screenscpp_ael_t_media(uintptr_t inT) { return (uintptr_t)AEL_T(inT)->mMedia; }
+extern "C" void ee_screenscpp_ael_effect_load(uintptr_t inEffect, bool inOnDemand)
+{ ((EEGraphicEffect*)inEffect)->Load(inOnDemand); }
+extern "C" void ee_screenscpp_ael_effect_unload(uintptr_t inEffect) { ((EEGraphicEffect*)inEffect)->Unload(); }
+extern "C" void ee_screenscpp_ael_media_load(uintptr_t inMedia) { ((EEMedia*)inMedia)->LoadMedia(); }
+extern "C" void ee_screenscpp_ael_media_unload(uintptr_t inMedia) { ((EEMedia*)inMedia)->UnloadMedia(); }
+extern "C" uintptr_t ee_screenscpp_ael_list_new() { return (uintptr_t)new EEUnitAreaEffectList; }
+extern "C" void ee_screenscpp_ael_list_assign(uintptr_t inList, uintptr_t inOther) { *AEL_L(inList) = *AEL_L(inOther); }
+extern "C" void ee_screenscpp_ael_list_free(uintptr_t inList) { delete AEL_L(inList); }
+
+// New (port), TEST ONLY: the area effects' records of the simulation capture (tools/sim_capture.py,
+// every profile). Reads the world; writes nothing to it. UI lane round 12: the records are Rust's (ee_game screens
+// area_effect_capture.rs) over the one-statement shims below; EEAEManager's tick calls ee_screens_ae_capture_tick.
+//   AETP  every area-effect template as Init left it (once, at the first area-effect tick): index, the numbers, the
+//         graphic effects and media by table index
+//   AEFX  the area effects after each EEAEManager::Tick: the elapsed time; per unit (players in order, each list in
+//         order) that owns or is affected by an effect: its id, hit points and cloakable flag, each own effect's kind,
+//         player, location, checksum, strength, radius, scale, immunity, the three modifiers of a probe value, the
+//         morale count, and its Covers of its own unit; each affecting effect as its owner and index; then the active
+//         list the same way and the running state's save bytes (EEAESaveRunningState)
+extern "C" uint64_t ee_screenscpp_aec_num_players() { return (uint64_t)::gWorld.mNumPlayers; }
+extern "C" uintptr_t ee_screenscpp_aec_player(uint64_t inIndex) { return (uintptr_t)::gWorld.mPlayers[inIndex]; }
+extern "C" uintptr_t ee_screenscpp_aec_first_unit(uintptr_t inPlayer)
+{ return (uintptr_t)static_cast<EEUnit*>(((EEPlayer*)inPlayer)->mFirstUnit); }
+extern "C" uintptr_t ee_screenscpp_aec_next_unit(uintptr_t inUnit)
+{ return (uintptr_t)static_cast<EEUnit*>(((EEUnit*)inUnit)->mNext); }
+extern "C" bool ee_screenscpp_aec_cloakable(uintptr_t inUnit) { return ((EEComplexUnit*)inUnit)->mIsCloakable; }
+extern "C" bool ee_screenscpp_aec_cloaked(uintptr_t inUnit) { return ((EEComplexUnit*)inUnit)->mIsCloaked; }
+extern "C" int64_t ee_screenscpp_aec_checksum(uintptr_t inEffect)
+{ return (int64_t)((EEAreaEffect*)inEffect)->Checksum(); }
+extern "C" uintptr_t ee_screenscpp_aec_template_count() { return gAEManager.mTemplates.size(); }
+extern "C" uintptr_t ee_screenscpp_aec_template_at(uintptr_t inIndex)
+{ return (uintptr_t)gAEManager.mTemplates[inIndex]; }
+extern "C" int32_t ee_screenscpp_aec_effect_index(uintptr_t inEffect)
+{ return (int32_t)EEGraphicEffect::IndexOf((EEGraphicEffect*)inEffect); }
+extern "C" uint64_t ee_screenscpp_aec_media_count() { return (uint64_t)EEMedia::GetCount(); }
+extern "C" uintptr_t ee_screenscpp_aec_media_at(uint64_t inIndex)
+{ return (uintptr_t)EEMedia::Get((unsigned long)inIndex); }
+extern "C" uintptr_t ee_screenscpp_aec_mem_new() { return (uintptr_t)new FSMemoryFile; }
+extern "C" void ee_screenscpp_aec_mem_save(uintptr_t inFile) { EEAESaveRunningState(*(FSMemoryFile*)inFile); }
+extern "C" void ee_screenscpp_aec_mem_position(uintptr_t inFile, long* inOut)
+{ ((FSMemoryFile*)inFile)->GetPosition(*inOut); }
+extern "C" void ee_screenscpp_aec_mem_bytes(uintptr_t inFile, void* inOut, uintptr_t inLength)
+{ ee_screens_shim_out(inOut, ((FSMemoryFile*)inFile)->GetData(), inLength); }
+extern "C" void ee_screenscpp_aec_mem_free(uintptr_t inFile) { delete (FSMemoryFile*)inFile; }

@@ -10,7 +10,6 @@
 // ee_screenscpp_sefmx).
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
@@ -62,12 +61,6 @@ static_assert(sizeof(EEUIFSEBrushGroup) == sizeof(EeScreensSeBrushGroup) &&
                   offsetof(EEUIFSEBrushGroup, mIsCentered) == offsetof(EeScreensSeBrushGroup, centered),
               "editor_seplx.rs's brush group");
 extern bool gSightUpdatesEnabled;
-
-// TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
-long EESETestSaveTriggersOnly(UIForm* inForm)
-{
-    return ee_screens_sefm_call(static_cast<EEUIFScenarioEditor*>(inForm)->mRust, EE_SCREENS_SEFM_SAVE_TRIGGERS, 0, NULL, NULL);
-}
 
 // Draws the full-view background or the bottom panel, then the current tab group; returns the full view's result
 long EEUIFScenarioEditor::DrawBackground(const GERectangle& inRectangle)

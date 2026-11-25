@@ -24,7 +24,6 @@
 
 
 
-#include "lle/UITextLabel.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "lle/UIListBox.h"

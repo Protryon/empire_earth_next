@@ -21,6 +21,7 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEEnvironmentManager.h"
+#include "rust/game/gamecpp.h"   // the camera's keys (camera_io.rs)
 
 namespace {
 
@@ -75,7 +76,7 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_MEDIA_SECTION: return P((const char*)SM(inP)->mMediaStrings.GetSection((unsigned long)inA));
     case EE_SCENARIO_CAP_MESSAGES: return (int64_t)SM(inP)->mMessages.size();
     case EE_SCENARIO_CAP_TIMED: return P(SM(inP)->mTimedEffects);
-    case EE_SCENARIO_CAP_CAMERA_KEYS: return (int64_t)gWorld.mCameraControl.mKeys.size();
+    case EE_SCENARIO_CAP_CAMERA_KEYS: return (int64_t)ee_gamecpp_camera_key_count();
     case EE_SCENARIO_CAP_CAMERA_PATH: return (int64_t)gWorld.mCameraControl.mPathIndex;
     case EE_SCENARIO_CAP_CONDITION_FIELDS: return P(static_cast<EeScenarioConditionFields*>(SC(inP)));
     case EE_SCENARIO_CAP_CONDITION_CHAT: return P((const char*)SC(inP)->mChatText);
@@ -107,7 +108,7 @@ extern "C" int64_t ee_scenariocpp_capture(uint32_t inOp, const void* inP, int64_
     case EE_SCENARIO_CAP_PLAYER_ENEMY: return (int64_t)SP(inP)->mEnemies[(size_t)inA];
     case EE_SCENARIO_CAP_PLAYER_PENDING_GROUPS: return (int64_t)SP(inP)->GetNumPendingGroups();
     case EE_SCENARIO_CAP_PLAYER_RUNNING_GROUPS: return (int64_t)SP(inP)->GetNumRunningGroups();
-    case EE_SCENARIO_CAP_PLAYER_PATROL_GROUPS: return (int64_t)SP(inP)->mPatrolGroups.size();
+    case EE_SCENARIO_CAP_PLAYER_PATROL_GROUPS: return (int64_t)ee_units_lists_len(SP(inP)->mLists, EE_UNITS_LISTS_PATROLS);
     case EE_SCENARIO_CAP_PLAYER_CIV_AVAILABLE: return (int64_t)SP(inP)->mCivilization.mAvailablePoints;
     case EE_SCENARIO_CAP_PLAYER_CIV_MAX: return (int64_t)SP(inP)->mCivilization.mMaxPoints;
     case EE_SCENARIO_CAP_PLAYER_COMPUTER: return P(SP(inP)->mComputerPlayer);

@@ -22,7 +22,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEARust.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDatabaseTables.h"

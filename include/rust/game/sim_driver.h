@@ -117,31 +117,22 @@ constexpr static const long VISIBLE_SLOTS = 8;
 /// The host operations (`p` the object, `a` and `f` the integer and float arguments, `s` a text). A pointer is
 /// answered as an integer (a control as its `UIControl*`, an action as its `EEAction*`).
 enum class EeSimDriverSed : uint32_t {
-  FormSlot = 1,
+  /// `mRust`
+  FormRust = 1,
   ControlById,
   FormControl,
   FormControlCount,
   FormGroupCount,
   FormGroup,
-  SelectedCount,
   SelectedUnit,
   SelectedUnitId,
   FormSetLoadText,
-  FormDeselectFirst,
-  FormClearSelection,
-  FormSelectUnit,
-  FormDeselectUnit,
-  FormRefreshGroup,
-  FormResumeGroup,
-  FormSetGameView,
-  SaveTriggersOnly,
   TriggerStoring,
   GroupIsEnabled,
   GroupEntityCount,
   GroupEntity,
   ShellOp,
   ShellOf,
-  ShellKindName,
   ControlTypeName,
   EventTypeName,
   DisplayMode,
@@ -153,7 +144,6 @@ enum class EeSimDriverSed : uint32_t {
   ControlBgOpacity,
   ControlBorder,
   ControlStringTableId,
-  TriggerEvent,
   ProcessEvent,
   IsRadio,
   IsCheck,
@@ -227,21 +217,14 @@ enum class EeSimDriverSed : uint32_t {
   LoadThreadPostDone,
   LoadThreadWaitDone,
   LoadThreadClearDone,
-  UnitWallStart,
-  UnitWallEnd,
-  UnitWallBuild,
-  UnitWallCancel,
-  UnitGateTileX,
-  UnitGateTileY,
-  UnitGateDirection,
-  UnitGateBuild,
-  UnitGateCancel,
+  /// `&mBuildWall`, `&mBuildGate` (an EESEUnit)
+  UnitBuildWall,
+  UnitBuildGate,
   SeaNew,
   SeaAction,
   PaintNew,
   PaintSetArea,
   PostAction,
-  DerefAction,
   ClickNew,
   TsClickNew,
   ClickSetMessage,
@@ -256,11 +239,8 @@ enum class EeSimDriverSed : uint32_t {
   MapMesh,
   MapTile,
   MapGetTile,
-  MeshZ,
-  TileHeight,
   TerrainColorType,
   ViewportRect,
-  WorldGetNumPlayers,
   WorldMaxPlayers,
   WorldPopulationLimit,
   WorldWondersToWin,
@@ -277,12 +257,10 @@ enum class EeSimDriverSed : uint32_t {
   OptionsPlayerColor,
   OptionsPlayerB36,
   PlayerName,
-  PlayerId,
   PlayerColor,
   PlayerCivilizationFile,
   PlayerResourceCap,
   PlayerEnemy,
-  PlayerSharedLos,
   PlayerPurchasedUpgrades,
   PlayerAvailablePoints,
   TreeCurrentEpoch,
@@ -297,15 +275,9 @@ enum class EeSimDriverSed : uint32_t {
   ComputerIgnoreOthers,
   ComputerCanGather,
   ComputerCitizens,
-  UnitId,
-  UnitType,
-  UnitTileX,
-  UnitTileY,
   NodeUnitPlayer,
-  NodeUnitId,
   UnitIsEditorSelected,
   GhostsChanged,
-  GhostsClear,
   GhostCount,
   GhostAt,
   GhostCreate,
@@ -320,7 +292,6 @@ enum class EeSimDriverSed : uint32_t {
   GhostSetTransformation,
   GhostFillSquare,
   GhostLocationToTile,
-  GhostCanPlace,
   GhostSetCanPlace,
   SmTriggerCount,
   SmTriggerAt,
@@ -430,17 +401,11 @@ enum class EeSimDriverSed : uint32_t {
   SaveTextName,
   EditorSaveName,
   SpecNew,
-  SpecFree,
-  SpecSetVolumeStartup,
   SpecSetDirectoryStartup,
   SpecSetFile,
-  SpecCreateDirectory,
-  SpecCreate,
-  SpecOpenRead,
   SpecOpenWrite,
-  SpecFOpenRead,
-  SpecFOpenWrite,
-  SpecClose,
+  /// the spec's FOpen(s): its open mode ("r", "w") -> 0 opened
+  SpecFOpen,
   SpecWrite,
   SpecGets,
   SpecPuts,
@@ -448,8 +413,6 @@ enum class EeSimDriverSed : uint32_t {
   MemFree,
   MemLoad,
   MemLength,
-  MemPosition,
-  MemData,
   HeaderNew,
   HeaderLoad,
   ChunksNew,
@@ -466,9 +429,6 @@ enum class EeSimDriverSed : uint32_t {
   ChunkLoadFromFile,
   UiFormById,
   UiFormControlById,
-  UiFormControlCount,
-  UiFormControl,
-  UiFormId,
   UiFormShellOf,
   UiFormTypeName,
   UiFormCount,
@@ -508,9 +468,6 @@ enum class EeSimDriverSed : uint32_t {
   PlayerCivilization,
   PlayerCivilizationChosen,
   PlayerCivilizationLocked,
-  SpecGetLength,
-  SpecRead,
-  SpecDelete,
   CivSave,
   CivLoad,
   CivApply,
@@ -521,13 +478,10 @@ enum class EeSimDriverSed : uint32_t {
   UpgradesAt,
   UpgradesFree,
   NarrowNew,
-  SetFreeCamera,
   SetAllowCustomCivs,
   SetScenarioGame,
   C12ActionNew,
-  C12ActionPost,
   C12DoneNew,
-  C12DonePost,
   C12Dereference,
 };
 
@@ -554,66 +508,26 @@ enum class EeSimDriverSim : uint32_t {
   ListChangeSelection,
   ScreenEventOf,
   ScreenEventCode,
-  SpLoadGameFileList,
-  LoadScenarioFileList,
-  PhysicsTicksDone,
-  PhysicsTickMs,
-  PhysicsTickSeconds,
-  PhysicsFlushPlacements,
-  MapPresent,
   NumPlayers,
   PlayerSetCivilizationChosen,
   PlayerSetCivilizationLocked,
   PlayerSetStance,
-  PlayerAllyCount,
-  PlayerId,
   PlayerAddPendingUnits,
   NodeData,
   NodeCost,
-  CastLocationCalamity,
-  VolcanoProjectileType,
   RequestSaveNew,
   SendToAllAndWait,
   DerefMessage,
-  SetSimMode,
-  SetSeedSet,
-  SetSeed,
-  SetNoHumanDefeat,
   SetScenarioDialogs,
-  SetPortOffset,
-  AnyPort,
-  ClearNoHumanDefeatHits,
-  NoHumanDefeatHits,
-  RulesAdd,
-  RulesError,
-  RulesProblemsLoad,
-  RulesProblemCount,
-  RulesProblem,
-  UnitHitPoints,
-  UnitHasStats,
   UnitIsBuilding,
   UnitType,
-  UnitId,
-  UnitTileX,
-  UnitTileY,
   ComplexOnMap,
-  ComplexTileX,
-  ComplexTileY,
   ComplexAttack,
   ComplexIsPriest,
-  ComplexCategory,
-  ComplexClass,
   ComplexLocation,
   ComplexSetLocation,
-  ComplexSetLauncherClass,
   ComplexPosition,
   ComplexSetGoal,
-  ComplexVelocity,
-  ComplexFlightTime,
-  ComplexHasGoalState,
-  ComplexPlayer,
-  ComplexHitPoints,
-  UnitTileXRaw,
   IgnoredSave,
   IgnoredRestore,
   IgnoredFree,
@@ -623,7 +537,6 @@ enum class EeSimDriverSim : uint32_t {
   CanHeal,
   UpgradeProjectile,
   ClassCount,
-  ClassCategory,
   ClassProjectile,
   ClassAcceleration,
   ClassCreateUnit,
@@ -631,34 +544,20 @@ enum class EeSimDriverSim : uint32_t {
   ClassStep,
   ClassWaterImpact,
   ClassGroundImpact,
-  MissileCategory,
-  TorpedoCategory,
   PhysicsRandom,
-  FormationSweep,
   GroupCommandSweep,
   MiniMapSnapshot,
-  TradeFoodWood,
-  TradeFoodWood2,
-  TradeStoneIron,
-  TradeStoneIron2,
   RegenerationInterval,
-  ConversionFaithCost,
   DialogShowing,
   ShowDialogMessage,
-  WonderSightRadius,
   MapAddSight,
   MapRemoveSight,
-  MapExploreUnseen,
   MapFogSeen,
   DmPhysLastOos,
   DmPhysSetLastOos,
   DmPhysOos,
-  DmPhysTicksDone,
-  DmPhysCurrentTick,
   DmPhysSeed,
   DmPhysInputs,
-  DmPhysTickRandom,
-  DmPhysTicksToProcess,
   DmWorldFirstUnit,
   DmUnitChecksum,
   DmComplexChecksum,
@@ -666,39 +565,19 @@ enum class EeSimDriverSim : uint32_t {
   DmPlPop,
   DmPlEog,
   DmPlEpoch,
-  DmPlTownCount,
-  DmPlTownAt,
   DmTownId,
   DmTownUnits,
   DmTownPatrol,
   DmTownHullCount,
   DmTownHullX,
   DmTownHullY,
-  DmPlPatrolCount,
-  DmPlPatrolAt,
-  DmCxUnitId,
-  DmCxTileYRaw,
-  DmUnitIdRaw,
   DmCpDump,
   DmPathDump,
   DmUnitTypeRaw,
   DmUnitPlayerId,
-  DmUnitTileXRaw,
-  DmUnitTileYRaw,
-  DmComplexOf,
-  DmCxComplex,
-  DmCxUpdated,
   DmCxCommand,
-  DmCxGroup,
   DmCxWpCount,
-  DmCxPathDone,
-  DmCxArrived,
-  DmCxBlockingId,
-  DmCxAnim,
   DmCxFrame,
-  DmCxAnimTime,
-  DmCxPaused,
-  DmCxReload,
   DmCxQueues,
   DmCxQueueSize,
   DmCxGoal,
@@ -708,16 +587,12 @@ enum class EeSimDriverSim : uint32_t {
   DmCxContactHead,
   DmNodeNext,
   DmNodeUnitId,
-  DmCxAttackerId,
-  DmCxOwnerId,
-  DmCxHolderId,
   DmCxAeCount,
   DmCxAffectingCount,
   DmCxAffectingUnitId,
   DmCxSize,
   DmUnitSize,
   DmCalCount,
-  DmCalAt,
   DmCalClass,
   DmCalOos,
   DmCalTileX,
@@ -735,16 +610,11 @@ enum class EeSimDriverSim : uint32_t {
   DmCalHasLocation,
   DmCalHasUnit,
   DmMapRegions,
-  DmOpen,
-  DmPuts,
-  DmClose,
-  DmPhysClock,
   DmPlResource,
   DmUnitHp,
   DmCxLocX,
   DmCxLocY,
   DmCxLocZ,
-  DmCxHeight,
   DmCxWpX,
   DmCxWpY,
   DmCxWpZ,
@@ -779,22 +649,6 @@ struct EeSimDriverCombatSweep {
   int32_t (*host)(void *ctx, uint32_t op, uint64_t a, uint64_t b, float *out);
 };
 
-/// The C++ side (EESim.cpp). Every function is called with the documented locks; texts are NUL ended, buffers are
-/// written NUL ended within `cap` and return the full length.
-struct EeSimDriverHost {
-  /// `EE_SIM_DRIVER_*_LOCK` on `gWorld.mLock`
-  void (*lock)(int32_t);
-  /// `EEAfterLoad`: the state dump of the file at the loaded game's first tick
-  void (*dump_after_load)(const char*);
-  /// `gSavedGameExtension` (0) or `gScenarioExtension` (1)
-  size_t (*extension)(int32_t, char*, size_t);
-  /// `gUserInterface->PostCancelGame()`
-  void (*cancel_game)();
-  /// the world's sample reads the views cannot make: the player's wonder count and a unit class's cost (the tech
-  /// node of `technology`, the class's unit type), every resource summed
-  long (*wonders)(uint64_t);
-};
-
 extern "C" {
 
 /// The sweep (EE-SIM's capture, every five game minutes, under the world).
@@ -803,29 +657,29 @@ extern "C" {
 /// `input` points to a valid record whose host answers for the world the caller holds.
 void ee_sim_driver_combat_sweep(const EeSimDriverCombatSweep *input);
 
-/// The state dump into the file (EESim.cpp's dump after a load, at the loaded game's first tick).
-///
-/// # Safety
-/// `path` is a NUL-ended text.
-void ee_sim_driver_dump_state(const char *path);
-
 /// Installs the fault report (first in the handler chain) with the exe's name as its prefix (`EE-SIM`, `EE-AOC`).
 ///
 /// # Safety
 /// `prefix` is a NUL-ended text.
 void ee_sim_driver_fault_install(const char *prefix);
 
+/// EE-SIM's POSIX fault report (EESimMain, when the game goes on; nothing on Windows: ee_sim_driver_fault_install's).
+void ee_sim_driver_fault_install_posix();
+
 extern int32_t _write(int32_t fd, const void *buffer, uint32_t count);
+
+extern int backtrace(void **buffer, int size);
+
+extern void backtrace_symbols_fd(void *const *buffer, int size, int fd);
 
 /// EE-SIM's entry: the command line parsed, the driver made over the host, the output files opened, the switches
 /// and the environment set -> [`EE_SIM_DRIVER_CONTINUE`], or the exit code (0 after --help, 64 a bad command
 /// line, 66 a file that cannot be opened).
 ///
 /// # Safety
-/// `argv` holds `argc` NUL-ended texts; `host` points to a filled table (copied).
+/// `argv` holds `argc` NUL-ended texts.
 int ee_sim_driver_main(int argc,
-                       const char *const *argv,
-                       const EeSimDriverHost *host);
+                       const char *const *argv);
 
 /// The driver's thread started (EERun, after the engine and the threads are up, before the UI loop).
 void ee_sim_driver_start();

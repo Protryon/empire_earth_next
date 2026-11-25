@@ -73,50 +73,55 @@ fn minor() -> i64 {
     h(O::SaveMinorVersion, 0, &[])
 }
 
+/// EEPSaveGameHeader::Load: the header read from a file (the versions are the header's own).
+fn header_load(header: P, file: P) -> i64 {
+    super::persist_parts::ee_gamecpp_hdr_load(header as *mut c_void, file as *mut c_void) as i64
+}
+
 /// A C++ object the Rust made for the call (`new`, then `delete` when it goes).
 fn owned(make: O, delete: O) -> Owned {
     Owned::new(make, delete)
 }
 
-fn push(list: P, item: P) {
-    h(O::PsListPush, list, &[pa(item)]);
-}
-
 /// BuildSaveGameChunks: the chunks a save writes, in chunk order (each new; the game objects only borrowed).
-fn build_chunks(list: P) {
+fn build_chunks() -> Vec<P> {
+    let mut list = Vec::new();
     let checksum = hp(O::PsNewChecksumChunk, 0, &[]);
     h(O::PsWorldChecksum, checksum, &[]);
-    push(list, checksum);
-    push(list, hp(O::PsNewSeedChunk, 0, &[]));
+    list.push(checksum);
+    list.push(hp(O::PsNewSeedChunk, 0, &[]));
     let map = hp(O::PsNewMapChunk, 0, &[]);
     h(O::PsMapChunkUnown, map, &[]);
-    push(list, map);
+    list.push(map);
     let mut location = Ge3DPoint::default();
     h(O::CameraGetLocation, 0, &[ptr(&mut location)]);
-    push(list, hp(O::PsNewCameraChunk, 0, &[ptr(&mut location)]));
+    list.push(hp(O::PsNewCameraChunk, 0, &[ptr(&mut location)]));
     let scenario = hp(O::PsNewScenarioChunk, 0, &[]);
     h(O::PsScenarioChunkUnown, scenario, &[]);
-    push(list, scenario);
+    list.push(scenario);
     let effects = hp(O::PsNewEffectsChunk, 0, &[]);
     h(O::PsEffectsChunkUnown, effects, &[]);
-    push(list, effects);
+    list.push(effects);
     let environment = hp(O::PsNewEnvironmentChunk, 0, &[]);
     h(O::PsEnvironmentChunkUnown, environment, &[]);
-    push(list, environment);
-    push(list, hp(O::PsNewPlayerHelper, 0, &[]));
-    push(list, hp(O::PsNewWorldHelper, 0, &[]));
-    push(list, hp(O::PsNewMultiplayerHelper, 0, &[]));
-    push(list, hp(O::PsNewCalamityHelper, 0, &[]));
+    list.push(environment);
+    list.push(hp(O::PsNewPlayerHelper, 0, &[]));
+    list.push(hp(O::PsNewWorldHelper, 0, &[]));
+    list.push(hp(O::PsNewMultiplayerHelper, 0, &[]));
+    list.push(hp(O::PsNewCalamityHelper, 0, &[]));
+    list
 }
 
-/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it too).
+/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it): the chunks into its std::vector.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_ps_build_chunks(list: *mut c_void) {
-    build_chunks(list as P);
+    for item in build_chunks() {
+        h(O::PsListPush, list as P, &[pa(item)]);
+    }
 }
 
 /// FillSaveGameHeader: name, versions, player names, date, chunk tags, scenario media strings and game options.
-fn fill_header(name: P, header: P, list: P) {
+fn fill_header(name: P, header: P, list: &[P]) {
     h(O::PsHdrSetName, header, &[pa(name)]);
     h(O::PsHdrDefaultDescription, header, &[]);
     // SAFETY: the header's mMajorVersion and mMinorVersion
@@ -135,9 +140,8 @@ fn fill_header(name: P, header: P, list: P) {
     }
     h(O::PsHdrSetDate, header, &[]);
     h(O::PsHdrTagsClear, header, &[]);
-    let n = h(O::PsListCount, list, &[]);
-    for i in 0..n {
-        let tag = h(O::PsPersistentTag, hp(O::PsListAt, list, &[i]), &[]);
+    for &item in list {
+        let tag = h(O::PsPersistentTag, item, &[]);
         h(O::PsHdrTagsPush, header, &[tag]);
     }
     if h(O::PsWorldScenario, 0, &[]) != 0 {
@@ -182,14 +186,14 @@ pub extern "C" fn ee_gamecpp_ps_trim_auto_saves(
 
 /// WriteSaveGameChunks: each listed chunk written to a file; on success the chunks deleted and the list emptied; the
 /// first error.
-fn write_chunks(list: P, file: P) -> i64 {
+fn write_chunks(list: &mut Vec<P>, file: P) -> i64 {
     let chunks = owned(O::PsChunksNew, O::PsChunksDelete);
-    let n = h(O::PsListCount, list, &[]);
+    let n = list.len() as i64;
     h(O::PsChunksResize, chunks.0, &[n]);
     let mut r = PF_OK;
     let mut i = 0;
     while i < n && r == PF_OK {
-        r = h(O::PsChunkSavePersistent, chunks.0, &[i, major(), minor(), pa(hp(O::PsListAt, list, &[i]))]);
+        r = h(O::PsChunkSavePersistent, chunks.0, &[i, major(), minor(), pa(list[i as usize])]);
         if r != PF_OK {
             break;
         }
@@ -197,10 +201,9 @@ fn write_chunks(list: P, file: P) -> i64 {
         i += 1;
     }
     if r == PF_OK {
-        for i in 0..n {
-            h(O::PsPersistentDelete, hp(O::PsListAt, list, &[i]), &[]);
+        for item in list.drain(..) {
+            h(O::PsPersistentDelete, item, &[]);
         }
-        h(O::PsListClear, list, &[]);
     }
     h(O::PsChunksClear, chunks.0, &[]);
     r
@@ -209,14 +212,13 @@ fn write_chunks(list: P, file: P) -> i64 {
 /// WriteSaveGame: a whole saved game (the header, then every chunk); the first error.
 fn write_save(name: P, time: c_ulong, file: P, other: P) -> i64 {
     let header = owned(O::PsHeaderNew, O::PsHeaderDelete);
-    let list = owned(O::PsListNew, O::PsListDelete);
-    build_chunks(list.0);
-    fill_header(name, header.0, list.0);
+    let mut list = build_chunks();
+    fill_header(name, header.0, &list);
     // SAFETY: the header's mChecksum
     unsafe { *(hp(O::PsHdrNumbers, header.0, &[]) as *mut c_ulong).add(2) = time };
-    let mut r = h(O::PsHeaderSave, header.0, &[major(), minor(), pa(file)]);
+    let mut r = super::persist_parts::ee_gamecpp_hdr_save(header.0 as *mut c_void, file as *mut c_void) as i64;
     if r == PF_OK {
-        r = write_chunks(list.0, other);
+        r = write_chunks(&mut list, other);
     }
     r
 }
@@ -271,7 +273,7 @@ pub extern "C" fn ee_gamecpp_ps_load_from_directory(
         r = PF_FAILED;
     }
     if resume {
-        h(O::PsUiResumeGraphics, 0, &[]);
+        crate::screens::ui_objects::ui_resume_graphics();
     }
     r as c_long
 }
@@ -336,7 +338,7 @@ fn mute(loading: bool, quiet: bool) -> i64 {
     hf(O::PsSetMasterVolume, 0, &[], &[0.0]);
     hf(O::PsSetMusicVolume, 0, &[], &[0.0]);
     ee_base::plat_core::time::PlatSleep(0x282);
-    if quiet || h(O::PsCommPresent, 0, &[]) == 0 || h(O::CommIsServer, 0, &[]) == 0 || loading != true {
+    if quiet || !super::net::present() || h(O::CommIsServer, 0, &[]) == 0 || loading != true {
         return 0;
     }
     h(O::UiLockForCopy, 0, &[]);
@@ -378,7 +380,7 @@ fn save_to_file(file: P, time: c_ulong) -> i64 {
     let memory = owned(O::PsMemFileNew, O::PsMemFileDelete);
     let text_name = owned(O::PsUStrNew, O::PsUStrDelete);
     h(O::PsSaveTextName, file, &[pa(text_name.0), 1]);
-    h(O::PsDeleteTextTwin, file, &[]);
+    delete_text_twin(file);
     let mut r = write_save(text_name.0, time, memory.0, memory.0);
     if r == PF_OK {
         r = h(O::PsMemFileSave, memory.0, &[pa(file)]);
@@ -388,11 +390,9 @@ fn save_to_file(file: P, time: c_ulong) -> i64 {
     } else {
         h(O::PsMessageString, 0, &[PS_IDS_ERROR_SAVING_FILE]);
     }
-    if r == PF_OK {
-        h(O::PsReportSaved, 0, &[]);
-    } else {
-        h(O::PsReportSaveError, 0, &[]);
-    }
+    let report: &std::ffi::CStr =
+        if r == PF_OK { c"Game saved.  " } else { c"Error saving game.  Please report this bug." };
+    super::utilities::ee_gamecpp_report_load_failure(report.as_ptr(), false, std::ptr::null_mut());
     r
 }
 
@@ -418,7 +418,7 @@ fn reload_saved_game(file: P) -> i64 {
         // SAFETY: the game's preloading thread object
         crate::preload::ee_preload_wait_for_queue(unsafe { *std::ptr::addr_of!(super::globals::gDataPreLoading) });
         h(O::PsWorldClear, 0, &[]);
-        h(O::PsWorldStartGame, 0, &[pa(st)]);
+        super::world::ee_gamecpp_world_start_game(hp(O::WorldAddr, 0, &[]) as *mut c_void, st as *mut c_void, true);
         h(O::PsStReset, st, &[]);
     }
     r
@@ -519,7 +519,7 @@ pub extern "C" fn ee_gamecpp_ps_validate(file: *mut c_void, message: *mut c_void
     h(O::PsSpecClose, file, &[]);
     if h(O::PsSpecOpen, file, &[PS_READ]) == PF_OK {
         if h(O::PsMemFileLoad, memory.0, &[pa(file)]) == PF_OK
-            && h(O::PsHeaderLoad, header.0, &[major(), minor(), pa(memory.0)]) == PF_OK
+            && header_load(header.0, memory.0) == PF_OK
             && check_header(header.0, message, memory.0)
         {
             result = true;
@@ -644,7 +644,7 @@ fn load_game(st: P, header_file: P, file: P) -> bool {
     if h(O::PsInScenarioEditor, 0, &[]) != 0 {
         tail(st).mInScenarioEditor = true;
     }
-    if h(O::PsHeaderLoad, header.0, &[major(), minor(), pa(header_file)]) == PF_OK {
+    if header_load(header.0, header_file) == PF_OK {
         // SAFETY: the header's versions
         let (hmaj, hmin) = unsafe {
             let v = hp(O::PsHdrVersions, header.0, &[]) as *const c_ulong;
@@ -663,7 +663,11 @@ fn load_game(st: P, header_file: P, file: P) -> bool {
         ee_base::ustring::ee_ustring_set_legacy_text_load(false);
     }
     if !result {
-        h(O::PsReportCorrupt, 0, &[]);
+        super::utilities::ee_gamecpp_report_load_failure(
+            c"Load game file is corrupt.".as_ptr(),
+            false,
+            std::ptr::null_mut(),
+        );
         h(O::PsStClear, st, &[]);
         // port: the failed load's teardown done (EE-SIM ends its wait for the game with it: a clean failure)
         h(O::PsDebugCorrupt, 0, &[]);
@@ -691,7 +695,7 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
     let n = tags.len();
     let mut i = 0;
     while i < n && r == PF_OK {
-        hf(O::PsLoadProgress, 0, &[], &[i as f32 / n as f32 * 0.4 + 0.1]);
+        crate::screens::ui_objects::ui_set_load_progress(i as f32 / n as f32 * 0.4 + 0.1);
         let mut item: P = 0;
         r = read_persistent(file, &mut item);
         if r != PF_OK {
@@ -760,7 +764,7 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
             PS_TAG_CALAMITIES => match cast(O::PsCastCalamities) {
                 0 => r = 3,
                 c => {
-                    h(O::PsStSetCalamityHelper, st, &[pa(c)]);
+                    super::state::ee_gamecpp_state_set_calamity_helper(st as *mut c_void, c as *mut c_void);
                     h(O::PsStRestorablePushCalamities, st, &[pa(c)]);
                     item = 0;
                 }
@@ -840,7 +844,7 @@ fn restore_players(st: P, helper: P) -> i64 {
         }
     }
     // only with the players read: a failed read left the list empty and the local index unset
-    if r == PF_OK && h(O::PsCommPresent, 0, &[]) != 0 && h(O::CommIsServer, 0, &[]) != 0 {
+    if r == PF_OK && super::net::present() && h(O::CommIsServer, 0, &[]) != 0 {
         if players.len() > 1 {
             prts(players[1]).mSlot = PS_SLOT_NONE;
         }
@@ -867,7 +871,7 @@ pub extern "C" fn ee_gamecpp_ps_load_persistent(name: *const c_void, tag: c_long
         r = h(O::PsSpecOpenAny, found, &[PS_READ]);
         if r == PF_OK {
             h(O::PsMemFileLoad, memory.0, &[pa(found)]);
-            r = h(O::PsHeaderLoad, header.0, &[major(), minor(), pa(memory.0)]);
+            r = header_load(header.0, memory.0);
             let tags = header_tags(header.0);
             // SAFETY: the header's versions
             let (hmaj, hmin) = unsafe {
@@ -895,9 +899,70 @@ pub extern "C" fn ee_gamecpp_ps_load_persistent(name: *const c_void, tag: c_long
     r as c_long
 }
 
+/// The platform layer's file calls (src/Platform).
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod plat {
+    use std::ffi::{c_char, c_int};
+    extern "C" {
+        pub fn PlatDeleteFile(path: *const c_char) -> c_int;
+        pub fn PlatGetLastError() -> u32;
+    }
+}
+
+/// `PLAT_MAX_PATH`.
+const PS_MAX_PATH: usize = 260;
+
+/// The text twin's path of a save (its volume, directory and `GetSaveTextName(file, false)`), or None when it is
+/// longer than `PLAT_MAX_PATH`.
+fn text_twin_path(volume: &[u8], directory: &[u8], file: &[u8]) -> Option<Vec<u8>> {
+    let name = super::persist_text::save_text_name(file, file.len() as c_ulong, false);
+    let name = name.split(|&c| c == 0).next().unwrap_or(&[]);
+    if volume.len() + directory.len() + name.len() > PS_MAX_PATH {
+        return None;
+    }
+    Some([volume, directory, name, &[0]].concat())
+}
+
+/// DeleteSaveTextTwin: the old text twin (".txt") of a save deleted, as the original's unused debug file's Delete did
+/// (FSBasicFile::Delete: a path longer than PLAT_MAX_PATH is left alone, a failure records the native error).
+fn delete_text_twin(file: P) {
+    // SAFETY: an FSFileSpec is its Rust record from the vtable on; its strings are live
+    let path = unsafe {
+        let s = &*(file as *const ee_base::fs::spec::EeFsSpec);
+        let text = |t: &ee_base::fs::spec::EeFsString| {
+            if t.string.is_null() {
+                &[][..]
+            } else {
+                std::slice::from_raw_parts(t.string as *const u8, t.length as usize)
+            }
+        };
+        text_twin_path(text(&s.volume), text(&s.directory), text(&s.file))
+    };
+    #[cfg(not(test))]
+    if let Some(path) = path {
+        // SAFETY: a NUL-terminated path
+        unsafe {
+            if plat::PlatDeleteFile(path.as_ptr().cast()) == 0 {
+                ee_base::error::ee_error_record_native(plat::PlatGetLastError() as c_ulong);
+            }
+        }
+    }
+    #[cfg(test)]
+    let _ = path;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_text_twin_is_the_save_with_a_txt_extension() {
+        assert_eq!(text_twin_path(b"C:", b"\\Saved\\", b"game.ees").unwrap(), b"C:\\Saved\\game.txt\0");
+        // 200 + 52 + 8 = PLAT_MAX_PATH: still deleted; one more is left alone
+        assert!(text_twin_path(&[b'x'; 200], &[b'y'; 52], b"long.ees").is_some());
+        assert!(text_twin_path(&[b'x'; 200], &[b'y'; 53], b"long.ees").is_none());
+    }
 
     #[test]
     fn the_tags_a_save_needs_once() {

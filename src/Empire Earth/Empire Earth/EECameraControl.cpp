@@ -37,14 +37,8 @@ UWideString gGameVersion("2002.8.17.v1.00");
 extern bool& gFarRearClipping;               // 0x5308d2 (set: the far rear clipping distance; provisional name)
 extern bool& gInCinematic;                   // 0x5318e0 (set: scrolling keeps the free camera mode; provisional name)
 
-// port: the farthest zoom (1.0 in the original; the camera's distance grows linearly past it, its pitch stays at the
-// farthest), from config.yaml's camera: maximum_zoom_out (EEPreferences)
-float gCameraMaxZoom = 2.0f;
-
 // The limits (0x441e48..0x441eb8), the pitch limits, the clipping distances and the move speeds are Rust's (ee_app
 // camera.rs, ee_gfx camera.rs).
-// Initialises the camera's field of view (30 degrees)
-static float sCameraFieldOfView = 0.017453292f * 30.0f;
 
 
 // Creates the camera controller with no followed unit or target point, mode 0, zoom 0.5 and no path
@@ -81,7 +75,7 @@ bool EEIsSeen(EEUnit* inUnit)
 
 // ------------------------------------------------------------------------- round 10, lane D: the camera
 
-int64_t EECore10OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define CAM ((EECameraControl*)p)
@@ -104,7 +98,7 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DkSetWorldCamera: gWorld.SetCameraTransformation(*EECameraRust<GETransformation>(CAM->mView));
         break;
-    case O::DkSetFieldOfView: gViewport.SetFieldOfView(sCameraFieldOfView);
+    case O::DkSetFieldOfView: gViewport.SetFieldOfView(f[0]);
         break;
     case O::DkMiniMapRefresh: gMiniMap->RefreshView();
         break;
@@ -116,9 +110,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DkUnitASaved: return CAM->mUnitA.GetSavedID();
     case O::DkUnitBSaved: return CAM->mUnitB.GetSavedID();
-    case O::DkKeyCount: return (int64_t)CAM->mKeys.size();
-    case O::DkKeyAt: *(EECameraKey*)a[1] = CAM->mKeys[a[0]];
-        break;
     // round 11, lane B: the camera's host (gamecpp camera_io.rs)
     case O::EcUnitAGet: return P64(CAM->mUnitA.Get());
     case O::EcUnitBGet: return P64(CAM->mUnitB.Get());
@@ -141,10 +132,6 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::EcInCinematic: return gInCinematic;
     case O::EcCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
     case O::EcIsSeen: return EEIsSeen((EEUnit*)p);
-    case O::EcClearKeys: CAM->mKeys.clear();
-        break;
-    case O::EcPushKey: CAM->mKeys.push_back(*(const EECameraKey*)a[0]);
-        break;
     case O::EcFarRearClipping: return gFarRearClipping;
     case O::EcOrthographic: return gOrthographicView;
     case O::EcHasMap: return gWorld.mMap != NULL;
@@ -167,12 +154,12 @@ int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::EcSetRearClipping: gViewport.SetRearClippingDistance(f[0]);
         break;
-    default: return EECore10OpE(inOp, p, a, f);
+    default: return EECore11OpB(inOp, p, a, f);
     }
     return 0;
 }
 
-double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEWorld.cpp
+double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
 double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -191,6 +178,6 @@ double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::EcViewportCameraX: return gViewport.GetCamera().GetX();
     case O::EcViewportCameraY: return gViewport.GetCamera().GetY();
     case O::EcViewportCameraZ: return gViewport.GetCamera().GetZ();
-    default: return EECore10OpE3F(inOp, p, a, f);
+    default: return EECore11OpBF(inOp, p, a, f);
     }
 }

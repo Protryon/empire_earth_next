@@ -9,9 +9,7 @@ use crate::world::layout::{with_test_layout, EeWorldLayout};
 
 #[repr(C)]
 struct FakeData {
-    map: [usize; 3],
     fields: EeTechNodeDataFields,
-    classes: [usize; 3],
 }
 
 #[repr(C)]
@@ -44,8 +42,6 @@ fn layout_for(host: usize) -> EeWorldLayout {
         tech_tree_fields: offset_of!(FakeTree, fields) as u64,
         node_fields: offset_of!(FakeNode, fields) as u64,
         node_data: offset_of!(FakeNode, data) as u64,
-        node_data_fields: offset_of!(FakeData, fields) as u64,
-        node_data_unit_classes: offset_of!(FakeData, classes) as u64,
         tech_host: host as u64,
         ..Default::default()
     }
@@ -88,14 +84,11 @@ unsafe extern "C" fn fake_host(tree: *mut c_void, op: i32, io: *mut EeTechHostIo
 }
 
 fn node(id: c_long, epoch: c_long, classes: &[c_ulong]) -> (Box<FakeNode>, Box<FakeData>, Vec<c_ulong>) {
-    let mut v = classes.to_vec();
-    let begin = v.as_mut_ptr() as usize;
-    let end = begin + v.len() * std::mem::size_of::<c_ulong>();
+    let v = classes.to_vec();
     let mut d = Box::new(FakeData {
-        map: [0; 3],
         fields: EeTechNodeDataFields { mID: id, mDefaultUnitClass: 0x20, mKind: 4, ..Default::default() },
-        classes: [begin, end, end],
     });
+    d.fields.class_table_mut().classes = v.clone();
     d.fields.mCosts[2] = 150;
     let mut f = EeTechNodeFields { mEpoch: epoch, mObsoleteEpoch: 14, mIsResearched: id == 1001, ..Default::default() };
     f.mRequiredSOL = 7;

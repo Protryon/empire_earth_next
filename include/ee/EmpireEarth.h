@@ -42,7 +42,6 @@ bool EECanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX
 class EEPlayer;
 class EESoundObject;
 unsigned long EEPlayForLocalPlayer(EEPlayer* inPlayer, EESoundObject* inSound);  // 0x14831c (cdecl; returns -1 or Play's result; EEMSavedGroupSelect; plays inSound for the current player)
-void EEAttackPlayers(long inPlayer, unsigned char inFlag);   // 0x13f5e9 (Empire Earth.cpp; EEMAttackPlayers)
 extern unsigned long gCollisionDetectionUnit;   // 0x4c2378 (unsigned: EEPhysics 0x15401e's fidiv) (initialised .data; EEMToggleCollisionDetection sets it)
 class UWideString;
 // 0x280a05 (Civilization Builder; EEMCivUpgradesRequested): requires <vector>

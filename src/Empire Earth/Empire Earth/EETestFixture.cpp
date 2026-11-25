@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/U2DSparseArray.h"
@@ -45,7 +44,6 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
-#include "platform/PlatSim.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/EEUnit.h"
@@ -63,57 +61,13 @@
 #include "ee/EEScreenEvent.h"
 #include <algorithm>
 #include "rust/game/fixture.h"
-#include "rust/game/sim_driver.h"   // the fault report (fault.rs)
 #include "ee/EECombatGoals.h"
 
 bool EEIsLobbyOpen();                        // EELobbyInterface.cpp: the external (WON) lobby is open
-extern void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs);   // EEMessage.cpp: each box selection's ids
 
-// ---- the WON lobby (TEST ONLY): its walk, commands and snapshot are the Rust fixture's (lobby.rs), run on the
-// lobby's own message loop by a UserEvent (this trampoline)
+// (the WON lobby (TEST ONLY): its walk, commands and snapshot are the Rust fixture's (lobby.rs), run on the lobby's
+// own message loop by a UserEvent: ee_fixture_lobby_work)
 namespace {
-
-void LobbyWork(int)
-{
-    ee_fixture_lobby_work();
-}
-
-// ---- the actions and hooks
-
-// A UI action that sends one game message as local input (as the UI's own buttons do, on the UI thread), or with no
-// message counts a run for the fixture (its UI round trip: ee_fixture_mark)
-class FixtureAction : public EEAction {
-public:
-    explicit FixtureAction(NEMessage* inMessage) : mMessage(inMessage) {}
-    virtual ~FixtureAction()
-    {
-        if (this->mMessage)
-            this->mMessage->Dereference();
-    }
-    virtual void Virtual4()
-    {
-        if (this->mMessage == NULL)
-            ee_fixture_mark();
-        else
-            gCommunications->ProcessLocalUserInput(this->mMessage, kSlotNone);
-        this->mMessage = NULL;
-    }
-    virtual void Virtual8() {}
-    NEMessage* mMessage;
-};
-
-void PostAction(NEMessage* inMessage)
-{
-    FixtureAction* theAction = new FixtureAction(inMessage);
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-}
-
-void LassoHook(const std::vector<long>& inUnitIDs)
-{
-    std::vector<int64_t> theIDs(inUnitIDs.begin(), inUnitIDs.end());
-    ee_fixture_lasso(theIDs.data(), theIDs.size());
-}
 
 // (the executed messages' hook and the debug output to stderr: ee_game fixture compound.rs)
 
@@ -134,7 +88,6 @@ int64_t Handle(const void* inObject)
 
 #define FORM As<UIForm>(c->h)
 #define CONTROL As<UIControl>(c->h)
-#define COMBO As<UIComboBox>(c->h)
 #define LIST As<UILBString>(c->h)
 #define GOAL static_cast<EEUGRust*>(As<EEUnitGoal>(c->h))
 #define BUTTON As<EEUIFMGStatusButton>(c->h)
@@ -152,13 +105,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     const int64_t* i = c->i;
     EEComplexUnit* u = As<EEComplexUnit>(c->h);
     switch (c->op) {
-    case EeFixtureOp::Stderr:
-        fputs(c->s, stderr);
-        fflush(stderr);
-        return 0;
-    case EeFixtureOp::Exit:
-        exit((int)i[0]);
-    case EeFixtureOp::SetTimeFactor: return PlatSimSetTimeFactor((uint32_t)i[0], (uint32_t)i[1]) ? 1 : 0;
     case EeFixtureOp::ScreenEvent:   // as a dialog's answer posts it (the editor exercise's "exit without saving")
         ee_screens_event((uint32_t)i[0], As<UIForm>(c->h), NULL);
         return 0;
@@ -168,30 +114,8 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::UiUpdate: gUIManager->ForceUIUpdate();
         return 0;
-    case EeFixtureOp::Input: {
-        static const uint32_t kTypes[] = {PLAT_EVENT_KEY_DOWN, PLAT_EVENT_KEY_UP, PLAT_EVENT_MOUSE_DOWN,
-                                          PLAT_EVENT_MOUSE_UP, PLAT_EVENT_MOUSE_WHEEL};
-        PlatInputEvent theEvent;
-        memset(&theEvent, 0, sizeof(theEvent));
-        theEvent.mType = kTypes[i[0]];
-        if (i[0] <= 1)
-            theEvent.mKey.mScanCode = (uint32_t)i[1];
-        else if (i[0] <= 3)
-            theEvent.mMouse.mButton = (uint32_t)i[1];
-        else
-            theEvent.mMouse.mWheel = c->f[0];
-        ISHandleEvent(theEvent);
-        return 0;
-    }
-    case EeFixtureOp::State:
-        return (gPhysics != NULL ? 1 : 0) | (gWorld.mMap != NULL ? 2 : 0) | (gWorld.mLock != NULL ? 4 : 0)
-            | (gMouse != NULL ? 8 : 0) | (gISKeyboard != NULL ? 16 : 0) | (gUserInterface != NULL ? 32 : 0)
-            | (EEIsLobbyOpen() ? 64 : 0) | (gUIManager != NULL ? 128 : 0);
     case EeFixtureOp::SelectControl:
         return Handle(kMainGameSelectUnits < FORM->GetControlCount() ? dynamic_cast<EEUICSelectUnits*>(FORM->GetControl(kMainGameSelectUnits)) : NULL);
-    case EeFixtureOp::Mark: PostAction(NULL);
-        return 0;
-    case EeFixtureOp::UnitById: return Handle(gWorld.GetUnit((unsigned long)i[0]));
     case EeFixtureOp::PlayerUnit: return Handle(As<EEPlayer>(c->h)->GetUnit((unsigned long)i[0]));
     case EeFixtureOp::CanDelete: return u->CanDelete() ? 1 : 0;
     case EeFixtureOp::Distance: c->f[0] = u->DistanceSquared3D(GE3DPoint(c->f[0], c->f[1], c->f[2]));
@@ -205,55 +129,22 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::CalamityCount: return CALAMITIES != NULL ? (int64_t)CALAMITIES->GetCalamityClassCount() : 0;
     // ---- the compound operations' finer ones (compound.rs)
-    case EeFixtureOp::FxInstallFault: ee_sim_driver_fault_install("EE-AOC");
-        return 0;
-    case EeFixtureOp::FxInstallLasso: gEESelectUnitsTestHook = LassoHook;   // each box selection's ids (the boxselect command)
-        return 0;
     case EeFixtureOp::FxMessageType: return As<NEMessage>(c->h)->GetType();
     case EeFixtureOp::FxMessageLocal: return gWorld.GetCurrentPlayer() != NULL && gWorld.GetPlayerBySlot(As<NEMessage>(c->h)->GetOriginatingSlot()) == gWorld.GetCurrentPlayer();
-    case EeFixtureOp::FxUiLockOn: gUIManager->LockUIForCopyData();
-        return 0;
-    case EeFixtureOp::FxUiLockOff: gUIManager->UnlockUIForCopyData();
-        return 0;
     case EeFixtureOp::FxCurrentForm: return Handle(gUIManager->GetCurrentForm());
     case EeFixtureOp::FxFormMouseOver: return Handle(FORM->GetMouseOverControl());
-    case EeFixtureOp::FxFormId: return FORM->GetFormID();
-    case EeFixtureOp::FxFormControlCount: return FORM->GetControlCount();
-    case EeFixtureOp::FxFormControl: return Handle(FORM->GetControl((unsigned long)i[0]));
     case EeFixtureOp::FxControlIndex: return (long)CONTROL->GetIndex();
-    case EeFixtureOp::FxFormCount: return gUIManager->GetFormCount();
-    case EeFixtureOp::FxStackedForm: return Handle(gUIManager->GetStackedForm((unsigned long)i[0]));
     case EeFixtureOp::FxUiScreen: return gUIManager->GetScreen();
     case EeFixtureOp::FxScreenCount: return gUIManager->GetRasterizer()->GetScreenCount();
     case EeFixtureOp::FxWindowAt: return Handle(gUIManager->GetRasterizer()->GetWindow((unsigned long)i[0]));
     case EeFixtureOp::FxWindowWidth: return As<GEWindow>(c->h)->GetWidth();   // the game's (logical) pixels: the pointer's
     case EeFixtureOp::FxWindowHeight: return As<GEWindow>(c->h)->GetHeight();
-    case EeFixtureOp::FxHasTrigger: return CONTROL->GetTriggerEvent(kTriggerEvent) != NULL;
-    case EeFixtureOp::FxAsCombo: return Handle(dynamic_cast<UIComboBox*>(CONTROL));
     case EeFixtureOp::FxAsCheck: return Handle(dynamic_cast<UICheckBox*>(CONTROL));
-    case EeFixtureOp::FxAsListString: return Handle(dynamic_cast<UILBString*>(CONTROL));
     case EeFixtureOp::FxAsRadio: return Handle(dynamic_cast<UIRadioButton*>(CONTROL));
     case EeFixtureOp::FxAsStatusButton: return Handle(dynamic_cast<EEUIFMGStatusButton*>(CONTROL));
-    case EeFixtureOp::FxComboSelection: return COMBO->GetCurrentSelection(*(unsigned long*)&c->i[0]);
-    case EeFixtureOp::FxComboListBox: return Handle(COMBO->GetListBox());
-    case EeFixtureOp::FxComboSetSelection: COMBO->SetCurrentSelection((unsigned long)i[0]);
-        return 0;
-    case EeFixtureOp::FxListSelection: return LIST->GetCurrentSelection(*(unsigned long*)&c->i[0]);
-    case EeFixtureOp::FxListLineCount: return LIST->GetLineCount();
     case EeFixtureOp::FxListLine: ee_fixture_sink_text(c->sink, (const char*)LIST->GetData((unsigned long)i[0]));
         return 0;
-    case EeFixtureOp::FxListChangeSelection: LIST->ChangeSelectionIndex((unsigned long)i[0], true, false);
-        return 0;
-    case EeFixtureOp::FxCheckIsChecked: return As<UICheckBox>(c->h)->GetIsChecked() ? 1 : 0;
-    case EeFixtureOp::FxCheckSet: As<UICheckBox>(c->h)->SetChecked(i[0] != 0);
-        return 0;
     case EeFixtureOp::FxAsEdit: return Handle(dynamic_cast<UIEditBox*>(CONTROL));
-    case EeFixtureOp::FxEditSetNumber: As<UIEditBox>(c->h)->SetText((unsigned long)i[0]);
-        return 0;
-    case EeFixtureOp::FxRadioCheck: As<UIRadioButton>(c->h)->Check();
-        return 0;
-    case EeFixtureOp::FxFireTrigger: CONTROL->FireTriggerEvent(kTriggerEvent);
-        return 0;
     case EeFixtureOp::FxScreenEventOf: return dynamic_cast<EEScreenEvent*>(CONTROL->GetTriggerEvent(kTriggerEvent)) != NULL ? (int64_t)dynamic_cast<EEScreenEvent*>(CONTROL->GetTriggerEvent(kTriggerEvent))->mEvent : -1;
     case EeFixtureOp::FxMousePresent: return gMouse != NULL;
     case EeFixtureOp::FxMouseLock: gMouse->mInputLock->Enter();
@@ -263,8 +154,6 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxMouseX: c->f[0] = gMouse->mPosition.GetX();
         return 0;
     case EeFixtureOp::FxMouseY: c->f[0] = gMouse->mPosition.GetY();
-        return 0;
-    case EeFixtureOp::FxMouseSetPosition: gMouse->SetPosition(GE2DPoint(c->f[0], c->f[1]));
         return 0;
     case EeFixtureOp::FxModifierState: return gISKeyboard->GetModifierState() & (kModifierShift | kModifierControl);
     case EeFixtureOp::FxShiftModifier: return kModifierShift;
@@ -276,14 +165,10 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::FxViewSide: c->f[0] = i[0] == 0 ? gViewport.GetViewRectangle().GetLeft() : i[0] == 1 ? gViewport.GetViewRectangle().GetTop() : i[0] == 2 ? gViewport.GetViewRectangle().GetRight() : gViewport.GetViewRectangle().GetBottom();
         return 0;
-    case EeFixtureOp::FxPostSelect: PostAction(new EEMRecord(kMessageSelectTheseUnits, {std::vector<long>(c->ids, c->ids + c->n)}));
-        return 0;
-    case EeFixtureOp::FxPostKill: PostAction(new EEMRecord(kMessageKillUnit, {(unsigned char)0}));   // the first selected unit
-        return 0;
-    case EeFixtureOp::FxPostPath: PostAction(new EEMRecord(kMessagePathTo, {0.0f, c->f[0], c->f[1], false, true, false, false}));
-        return 0;
-    case EeFixtureOp::FxPostStop: PostAction(new EEMRecord(kMessageStopActiveGroup));
-        return 0;
+    case EeFixtureOp::FxMsgSelect: return Handle(static_cast<NEMessage*>(new EEMRecord(kMessageSelectTheseUnits, {std::vector<long>(c->ids, c->ids + c->n)})));
+    case EeFixtureOp::FxMsgKill: return Handle(static_cast<NEMessage*>(new EEMRecord(kMessageKillUnit, {(unsigned char)0})));   // the first selected unit
+    case EeFixtureOp::FxMsgPath: return Handle(static_cast<NEMessage*>(new EEMRecord(kMessagePathTo, {0.0f, c->f[0], c->f[1], false, true, false, false})));
+    case EeFixtureOp::FxMsgStop: return Handle(static_cast<NEMessage*>(new EEMRecord(kMessageStopActiveGroup)));
     case EeFixtureOp::FxNewCenterCamera: return Handle(new EEACenterCamera);
     case EeFixtureOp::FxCenterCameraAt: As<EEACenterCamera>(c->h)->SetLocation(i[0], i[1]);
         return 0;
@@ -292,14 +177,9 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxStatusButtonShows: return BUTTON->mIsCommand && BUTTON->mButton == (unsigned long)i[0] && BUTTON->GetDisplayMode() == kDisplayModeShown;
     case EeFixtureOp::FxStatusButtonCenter: c->f[0] = i[0] == 0 ? (BUTTON->GetRectangle().GetLeft() + BUTTON->GetRectangle().GetRight()) * 0.5f : (BUTTON->GetRectangle().GetTop() + BUTTON->GetRectangle().GetBottom()) * 0.5f;
         return 0;
-    case EeFixtureOp::FxWorldHasLock: return gWorld.mLock != NULL;
-    case EeFixtureOp::FxWorldLockStep: i[0] == 0 ? gWorld.mLock->ReadLock() : i[0] == 1 ? gWorld.mLock->ReadUnlock() : i[0] == 2 ? gWorld.mLock->WriteLock() : gWorld.mLock->WriteUnlock();
-        return 0;
-    case EeFixtureOp::FxPhysicsPresent: return gPhysics != NULL;
     case EeFixtureOp::FxPhysicsValue: return i[0] == 0 ? (int64_t)(long)gPhysics->mGameTime : i[0] == 1 ? (int64_t)(unsigned long)gPhysics->mNumTicksDone : (gPhysics->mGameOver ? 1 : 0);
     case EeFixtureOp::FxCommsPresent: return gCommunications != NULL;
     case EeFixtureOp::FxCommsValue: return i[0] == 0 ? (int64_t)gCommunications->GetNumberOfCTsProcessedInPhysics() : i[0] == 1 ? (int64_t)(long)gCommunications->GetLastTickReceived() : i[0] == 2 ? (gCommunications->GetIsGamePaused() ? 1 : 0) : (gCommunications->GetIsMultiplayerSession() ? 1 : 0);
-    case EeFixtureOp::FxMapPresent: return gWorld.GetMap() != NULL;
     case EeFixtureOp::FxCameraFocus: CAMERA.GetLocation(CAMERA.mFraction, *(GE3DPoint*)&c->f[0]);
         return 0;
     case EeFixtureOp::FxCameraEndFocus: *(GE3DPoint*)&c->f[0] = CAMERA.GetEndFocus();
@@ -308,18 +188,14 @@ int64_t EEFixtureHost(EeFixtureCall* c)
         return 0;
     case EeFixtureOp::FxCameraMode: return (long)CAMERA.mMode;
     case EeFixtureOp::FxMapSize: return (long)gWorld.GetMap()->GetSize();
-    case EeFixtureOp::FxMeshValidPoint: return gWorld.GetMap()->mTerrainMesh.GetIsValidPoint(UMFloorUnsigned(c->f[0]), UMFloorUnsigned(c->f[1]));
     case EeFixtureOp::FxActiveGroup: return gWorld.GetCurrentPlayer() != NULL ? Handle(gWorld.GetCurrentPlayer()->mActiveGroup) : 0;
     case EeFixtureOp::FxGroupUnitCount: return As<EEGroup>(c->h)->GetNumUnits();
     case EeFixtureOp::FxGroupUnit: return Handle(As<EEGroup>(c->h)->GetUnit((unsigned long)i[0]));
     case EeFixtureOp::FxPickUnit: return Handle(gUnitPicker.PickUnitUnreferenced(GE2DPoint(c->f[0], c->f[1]), (long)i[0]));
-    case EeFixtureOp::FxUnitId: return (int64_t)As<EEUnit>(c->h)->mUnitID;
     case EeFixtureOp::FxPointUnitOrTile: return EEPointUnitOrTile(GE2DPoint(c->f[0], c->f[1]), *(EETile**)&c->h2, *(GE3DPoint*)&c->f[2], true);
     case EeFixtureOp::FxTileSeenByLocal: return As<EETile>(c->h)->IsSeenBy(gWorld.GetCurrentPlayer());
     case EeFixtureOp::FxNearestTown: return Handle(u->FindNearestTown());
     case EeFixtureOp::FxTownPatrolGroup: return Handle(As<EETown>(c->h)->mPatrolGroup);
-    case EeFixtureOp::FxUnitTileX: return u->GetTileX();
-    case EeFixtureOp::FxUnitTileY: return u->GetTileY();
     case EeFixtureOp::FxUnitPatrolGroup: return Handle(u->mPatrolGroup);
     case EeFixtureOp::FxGoalKind: return As<EEUnitGoal>(c->h)->mKind;
     case EeFixtureOp::FxGoalGatherResource: return Handle(GOAL->GetGatherResource());
@@ -349,7 +225,7 @@ int64_t EEFixtureHost(EeFixtureCall* c)
     case EeFixtureOp::FxLobbyOpen: return EEIsLobbyOpen() ? 1 : 0;
     case EeFixtureOp::FxLobbyManager: return Handle(WONAPI::GetLobbyWindow());
     case EeFixtureOp::FxLobbyRootWindow: return Handle(WONAPI::LobbyGetRootWindow());
-    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(new WONAPI::UserEvent(LobbyWork, 0));
+    case EeFixtureOp::FxLobbyPostWork: As<WONAPI::WindowManager>(c->h)->PostEvent(new WONAPI::UserEvent(ee_fixture_lobby_work, 0));
         return 0;
     case EeFixtureOp::FxWindowRoot: return Handle(As<WONAPI::Window>(c->h)->mRoot.get());
     case EeFixtureOp::FxManagerModal: return Handle(As<WONAPI::WindowManager>(c->h)->GetModalComponent());
@@ -416,41 +292,8 @@ static void EETestFixtureConfigure()
 extern void (*gEETestFixtureConfigure)();   // EEGlobals.cpp
 static const bool sEETestFixtureRegistered = (gEETestFixtureConfigure = EETestFixtureConfigure, true);
 
-// TEST ONLY: the legacy debugger harness (tools/harness/game_state_probe.py) reads the communications' numbers from
-// this mirror, by its map name: their state is Rust's (ee_net), at no offset of the C++ object. The presentation
-// bridge (tools/harness/presentation_bridge.c) refreshes it before each present through EETestCommsRefresh.
-extern "C" {
-struct EETestComms {
-    int32_t mLastTickReceived;
-    uint32_t mCTsProcessed;
-    uint8_t mPaused;
-    uint8_t mMultiplayer;
-    uint8_t mValid;   // 0: no communications object
-};
-EETestComms gEETestComms;
-// The render thread calls it, so it reads gCommunications only under the UI copy lock, taken without waiting (as the
-// bridge's ui_test takes it: a UI event can hold the lock while it waits for the render thread): the UI thread's
-// actions and events replace the communications object under that lock (EEAJoinOrHostAGame's delete and new when a
-// game is set up), and a read between the delete and the new (the legacy tour's crash in this function) used a
-// freed object. When the lock is busy the mirror keeps its last values until the next present.
-void EETestCommsRefresh()
-{
-    TSCriticalSection* theLock = gUIManager ? gUIManager->GetUILock() : NULL;
-    if (!theLock || !theLock->TryEnter())
-        return;
-    NESynchronousCommunications* theCommunications = gCommunications;
-    if (!theCommunications) {
-        gEETestComms.mValid = 0;
-    } else {
-        gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
-        gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
-        gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
-        gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
-        gEETestComms.mValid = 1;
-    }
-    theLock->Leave();
-}
-}
+// TEST ONLY: the legacy debugger harness's communications mirror and its refresh are Rust's (fixture comms.rs),
+// kept in the link by name (the probe and the presentation bridge find them in the map)
 #if defined(_MSC_VER)
 #pragma comment(linker, "/include:EETestCommsRefresh")
 #pragma comment(linker, "/include:gEETestComms")

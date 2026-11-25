@@ -39,9 +39,9 @@ pub fn configure() {
     if let Some(factor) = var("EE_TEST_TIME_FACTOR") {
         let parsed = text::time_factor(&factor);
         let (num, den) = parsed.unwrap_or((0, 1));
-        if parsed.is_none() || Call::new(Op::SetTimeFactor).i(&[num as i64, den as i64]).go() == 0 {
+        if parsed.is_none() || ee_base::plat_core::time::PlatSimSetTimeFactor(num, den) == 0 {
             host::stderr(&format!("TEST UI EE_TEST_TIME_FACTOR={factor} is not a factor in 1/1000..4096\n"));
-            Call::new(Op::Exit).i(&[3]).go();
+            host::exit(3);
         }
         host::stderr(&format!("TEST UI clock factor {num}/{den}\n"));
     }
@@ -49,7 +49,7 @@ pub fn configure() {
         let (value, whole) = text::strtoull0(&seed);
         if seed.is_empty() || !whole || value > 0xffff_ffff {
             host::stderr(&format!("TEST UI EE_TEST_SEED={seed} is not a 32-bit number\n"));
-            Call::new(Op::Exit).i(&[3]).go();
+            host::exit(3);
         }
         Call::new(Op::SetSwitch).i(&[0, value as i64]).go();
         host::stderr(&format!("TEST UI seed {}\n", value as u32));
@@ -63,7 +63,7 @@ pub fn configure() {
         let (value, whole) = text::strtol10(&offset);
         if offset.is_empty() || !whole || !(0..=4095).contains(&value) {
             host::stderr(&format!("TEST UI EE_TEST_PORT_OFFSET={offset} is not a port offset in 0..4095\n"));
-            Call::new(Op::Exit).i(&[3]).go();
+            host::exit(3);
         }
         Call::new(Op::SetSwitch).i(&[2, value]).go();
         host::stderr(&format!(
@@ -393,7 +393,7 @@ fn execute(dir: &str, form: u64, form_id: u64, count: u64, last: &mut u64) {
         let notch = if b == 0 { 1.0f32 } else { -1.0 };
         std::thread::spawn(move || {
             for _ in 0..c {
-                Call::new(Op::Input).i(&[host::EE_FIXTURE_MOUSE_WHEEL, 0]).f(&[notch]).go();
+                host::input_event(host::EE_FIXTURE_MOUSE_WHEEL, 0, notch);
                 host::sleep_ms(100);
             }
         });

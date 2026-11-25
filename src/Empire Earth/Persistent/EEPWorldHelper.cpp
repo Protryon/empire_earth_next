@@ -5,8 +5,6 @@
 #include <deque>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
 #include "lle/UIForm.h"
@@ -16,11 +14,9 @@
 #include "ee/EEWorld.h"
 #include "ee/EEGameState.h"
 #include "ee/EETeam.h"
-#include "rust/sim/app.h"
 #include "ee/EEPWorldHelper.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEPersistentTag.h"
 #include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
@@ -29,27 +25,19 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIForest.h"
-#include "ee/EEArtificialIntelligence.h"
-#include "ee/EEPathManager.h"
 #include "ee/EEAEManager.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
-#include "ee/EECPExperimentTimers.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
 #include <algorithm>
 #include <memory>
 #include <vector>
-#include "rust/sim/combat.h"
-#include "rust/sim/units.h"
 
 
 #include "rust/game/gamecpp.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousServer.h"
-#include "lle/NESynchronousClient.h"
-#include "ee/EECommunications.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPMultiplayerHelper.h"
 #include "ee/EEHumanPlayer.h"
@@ -58,11 +46,9 @@
 #include "ee/EECPEngine.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEPChecksum.h"
-#include "rust/base/error.h"
 #include <time.h>
 #include "ee/EmpireEarth.h"
 #include "ee/EESaveLoad.h"
@@ -76,7 +62,6 @@
 #include "ee/EEPCalamityHelper.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEDataPreLoading.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "lle/FSChunk.h"
 #include "lle/FSArchive.h"
@@ -84,11 +69,9 @@
 #include <functional>
 #include "ee/EEGameStateLoader.h"
 #include "ee/EEPersistentTemplates.h"
-#include "ee/EEStringIDs.h"
 #include <utility>
 #include "lle/USingleton.h"
 #include "ee/EECalamity.h"
-#include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEContagionManager.h"
 
@@ -129,13 +112,12 @@ EEUnit* EEFindLoadedGhostUnit(unsigned long inID)
 
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
 
-int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECommandLine.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // EEWorld.cpp
 extern bool sLoadingScenario;                                     // EEGameStateLoader.cpp
 std::vector<EECalamity*>* EEActiveCalamities();                   // EEPCalamityHelper.cpp
-void DeleteSaveTextTwin(FSFileSpec& inFile);                      // EESaveLoad.cpp
 void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad.cpp
 #define PWH ((EEPWorldHelper*)p)
 #define FILE_ (*(FSFile*)p)
@@ -147,9 +129,6 @@ void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad
 #define FOREST ((EEAIForest*)p)
 #define POINTS (*(std::vector<U2DPoint<long> >*)p)
 
-#define SERVER dynamic_cast<NESynchronousServer*>(gCommunications)
-#define CLIENT dynamic_cast<NESynchronousClient*>(gCommunications)
-#define COMMS dynamic_cast<NESynchronousCommunications*>(gCommunications)
 #define PPH ((EEPPlayerHelper*)p)
 #define CP ((EEComputerPlayer*)p)
 #define STR (*(std::string*)p)
@@ -194,8 +173,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwStTeamsFromHelper: ((EEGameState*)p)->mTeams = ((EEPWorldHelper*)a[0])->mTeams;
         break;
-    case O::PwChatLogLoad: return ee_screens_chat_log_load(&FILE_);
-    case O::PwChatLogSave: return ee_screens_chat_log_save(&FILE_);
     case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
     case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
     case O::PwAreaEffectsLoad: return EEAELoadRunningState(FILE_);
@@ -247,7 +224,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwNumPlayers: return (int64_t)gWorld.mNumPlayers;
     case O::PwPlayerFirstUnit: return P64(PL->mFirstUnit);
     case O::PwPlayerGetUnit: return P64(PL->GetUnit((unsigned long)a[0]));
-    case O::PwPlayerSetBucketFirst: PL->mUnitBuckets[a[0]].mFirst = (EEUnit*)a[1];
+    case O::PwPlayerSetBucketFirst: PL->mUnitBuckets[a[0]].first = (size_t)a[1];
         break;
     case O::PwPlayerSetFirstUnit: PL->mFirstUnit = (EEUnit*)a[0];
         break;
@@ -292,20 +269,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwNodeSetAllowed: ((EETechTreeNode*)p)->mIsAllowed = a[0] != 0;
         break;
     // (EEPMultiplayerOp) The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
-    case O::PmPhysicsLoad: return gPhysics->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
-    case O::PmPhysicsSave: return gPhysics->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
-    case O::PmServerSetPhysicsTick: SERVER->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
-        break;
-    case O::PmClientSetPhysicsTick: CLIENT->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
-        break;
-    case O::PmCommCtsProcessed: return COMMS->GetNumberOfCTsProcessedInPhysics();
-    case O::PmCommLastTick: return COMMS->GetLastTickReceived();
-    case O::PmServerLastCt: return SERVER->GetLastCTMessageID();
-    case O::PmServerCt: return SERVER->GetCurrentCommunicationsTick();
-    case O::PmServerPt: return SERVER->GetCurrentPhysicsTick();
-    case O::PmServerMessageNumber: return SERVER->GetMessageManagerCurrentMessageNumber();
-    case O::PmClientCt: return CLIENT->GetCurrentCommunicationsTick();
-    case O::PmClientPt: return CLIENT->GetCurrentPhysicsTick();
     // (EEPHelpersOp) The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
     case O::PphFields: return P64(&PPH->mLocalPlayerIndex);
     case O::PphPush: PPH->mPlayers.push_back((EEPlayer*)a[0]);
@@ -334,8 +297,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
         break;
     case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
-    case O::PphAddAlly: PL->mAllies.push_back((EEPlayer*)a[0]);
-        break;
     case O::PphStrNew: return P64(new std::string);
     case O::PphStrDelete: delete &STR;
         break;
@@ -368,7 +329,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PcUStrLoad: return ((UString*)p)->Load(*(FSFile*)a[0]);
     case O::PcUStrText: return P64((const char*)*(UString*)p);
     case O::PcSaveText: return UString((const char*)a[0]).Save(*(FSFile*)p);
-    // (EECore11OpC8) the scenario extension's text (gamecpp persist_text.rs; EETechCapture.cpp's EECore11OpC7 default)
+    // (EECore11OpC8) the scenario extension's text (gamecpp persist_text.rs; EETechTree.cpp's EECore11OpC7 default)
     case O::C11ScenarioExtension: return (int64_t)(intptr_t)(const char*)gScenarioExtension;
     // (EEPLoaderOp) The loader's C++ (EEPWorldHelper.cpp's EEPWorldOp default): one statement each
     case O::PsSetLoadingScenario: sLoadingScenario = EEIsScenarioFile(((FSFile*)p)->GetFile());
@@ -400,8 +361,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PchContagionLoad: return PCH->mContagionManager->Load((unsigned long)a[0], (unsigned long)a[1], CAFILE);
     case O::PchCount: return (int64_t)PCH->mCalamities->size();
     case O::PchAt: return P64((*PCH->mCalamities)[a[0]]);
-    case O::PchSetCaster: CL->SetCasterUnit((EEUnit*)a[0]);
-        break;
     case O::PchPlaySound: CL->PlaySound();
         break;
     case O::PchDeleteAt: delete std::exchange((*PCH->mCalamities)[a[0]], nullptr);
@@ -442,14 +401,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PvAfterLoad: EEAfterLoadRust((void (*)(uintptr_t))a[0], (uintptr_t)a[1]);
         break;
     case O::PsMajorVersion: return kSaveGameMajorVersion;
-    case O::PsListNew: return P64(new std::vector<FSPersistent*>);
-    case O::PsListDelete: delete &LIST;
-        break;
     case O::PsListPush: LIST.push_back((FSPersistent*)a[0]);
-        break;
-    case O::PsListCount: return (int64_t)LIST.size();
-    case O::PsListAt: return P64(LIST[a[0]]);
-    case O::PsListClear: LIST.clear();
         break;
     case O::PsPersistentTag: return PERSISTENT->GetTagID();
     case O::PsPersistentDelete: delete PERSISTENT;
@@ -494,8 +446,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsHeaderNew: return P64(new EEPSaveGameHeader);
     case O::PsHeaderDelete: delete HDR;
         break;
-    case O::PsHeaderSave: return HDR->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
-    case O::PsHeaderLoad: return HDR->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
     case O::PsHdrSetName: HDR->mName = *(const UString*)a[0];
         break;
     case O::PsHdrDefaultDescription: HDR->mDescription = UString("No game description provided.");
@@ -582,12 +532,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSaveTextName: *(UString*)a[0] = GetSaveTextName(SPEC->GetFile(), a[1] != 0);
         break;
-    case O::PsDeleteTextTwin: DeleteSaveTextTwin(*SPEC);
-        break;
-    case O::PsReportSaved: EEReportLoadFailure(UString("Game saved.  "), false, NULL);
-        break;
-    case O::PsReportSaveError: EEReportLoadFailure(UString("Error saving game.  Please report this bug."), false, NULL);
-        break;
     case O::PsMessageString: gResource->GetString((long)a[0], gLoadSaveErrorMessage);
         break;
     case O::PsMessageStringVerify: ESVERIFY_AT(::gResource->GetString((long)a[0], ::gLoadSaveErrorMessage) == keseOK, 669);
@@ -598,15 +542,12 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsGameState: return P64(&gGameState);
     case O::PsValidateIntoMessage: return EEValidateSaveGameFile(FILE_, gLoadSaveErrorMessage);
-    case O::PsUiResumeGraphics: gUserInterface->ResumeGraphics();
-        break;
     case O::PsMapApplyVertexColors: gWorld.GetMap()->ApplyVertexColors();
         break;
     case O::PsSetMasterVolume: gSoundManager->SetMasterVolume(f[0]);
         break;
     case O::PsSetMusicVolume: gConductor->GetConductor().SetVolume(f[0]);
         break;
-    case O::PsCommPresent: return gCommunications != NULL;
     case O::PsShowSplash: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
         break;
     case O::PsShowSelectionAreas: gWorld.GetCurrentPlayer()->mActiveGroup->ShowSelectionAreas();
@@ -637,8 +578,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsStSetMap: ST->SetMap((EEMap*)a[0]);
         break;
-    case O::PsStSetCalamityHelper: ST->SetCalamityHelper((EEPCalamityHelper*)a[0]);
-        break;
     case O::PsStSetEnvironmentManager: ST->SetEnvironmentManager((EEEnvironmentManager*)a[0]);
         break;
     case O::PsStRestorablePushEffects: ST->mRestorables.push_back((EEEffectManager*)a[0]);
@@ -656,11 +595,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsWorldClear: gWorld.Clear();
         break;
-    case O::PsWorldStartGame: gWorld.StartGame((EEGameState*)a[0], true);
-        break;
     case O::PsInScenarioEditor: return gUIManager->mInScenarioEditor;
-    case O::PsReportCorrupt: EEReportLoadFailure("Load game file is corrupt.", false, NULL);
-        break;
     case O::PsDebugCorrupt: ESDebugOut("EE load failure: Load game file is corrupt.\n");
         break;
     case O::PsDataPathFind: return gDataPath->FindFile(*(const UString*)a[0], *(FSFileSpec**)a[1]);
@@ -694,14 +629,12 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSprintfTwoNumbers: sprintf(WSTR, *(UWideString*)a[0], (size_t)a[1], (unsigned long)a[2]);
         break;
-    case O::PsLoadProgress: gUserInterface->SetLoadProgress(f[0]);
-        break;
-    default: return EECore9OpE(inOp, p, a, f);
+    default: return EECommandLineOp(inOp, p, a, f);
     }
     return 0;
 }
 
-double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTree.cpp
 double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;

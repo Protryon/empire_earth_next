@@ -4,7 +4,6 @@
 // EESEATestScenario.cpp, before EEUIFSETRBPaintType.cpp.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"

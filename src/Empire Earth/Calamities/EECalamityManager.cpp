@@ -14,6 +14,7 @@
 #include "ee/EECalamity.h"
 
 
+
 // Creates a unit of the class at the transformation for the player (-1: the calamity's player); NULL if the class
 // does not exist
 // cdecl; the hurricane and volcano calamities call it (provisional name). It sits after the unit's template COMDATs

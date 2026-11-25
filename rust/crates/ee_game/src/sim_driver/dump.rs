@@ -4,9 +4,11 @@
 //! `Dm*` operations of EESim.cpp's `ee_simcpp_sim` and `ee_simcpp_sim_float`). The C runtime's `%a`, `%lu` (a 32-bit
 //! `unsigned long`), `%ld` and `%08lx` are written as the C++ wrote them ([`hexf`], [`lu`], [`ld`], [`x8`]).
 
-use super::sim_ops::{h, hdd, hs, EeSimDriverSim as O};
+use super::sim_ops::{h, hdd, EeSimDriverSim as O};
 use crate::gamecpp as gc;
 use ee_sim::units::patrol_group as pg;
+use ee_sim::units::player_lists::{player_list, EE_UNITS_LISTS_PATROLS, EE_UNITS_LISTS_TOWNS};
+use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsUnitFields};
 
 /// cbindgen:ignore
 mod sys {
@@ -106,10 +108,11 @@ pub fn checksum_text() -> String {
         count = count.wrapping_add(1);
         u = gc::h(gc::O::UnTileNext, u as usize, &[]);
     }
+    let physics = super::sim_host::physics_record();
     format!(
         "pt={} tick={} ms={} rng={} oos={} units={}/{} ai={} inputs={}\n",
-        lu(h(O::DmPhysTicksDone, 0, &[])),
-        lu(h(O::DmPhysCurrentTick, 0, &[])),
+        lu(physics.mNumTicksDone as i64),
+        lu(physics.mCurrentTick as i64),
         ld(gc::h(gc::O::DwGameTime, 0, &[])),
         x8(h(O::DmPhysSeed, 0, &[])),
         x8(checksum),
@@ -131,7 +134,9 @@ struct Out {
 impl Out {
     fn flush(&mut self) {
         if !self.text.is_empty() {
-            hs(O::DmPuts, self.file, &std::mem::take(&mut self.text));
+            let text = std::ffi::CString::new(std::mem::take(&mut self.text)).unwrap_or_default();
+            // SAFETY: the stream dump_state opened, a NUL-ended text
+            unsafe { libc::fputs(text.as_ptr(), self.file as *mut libc::FILE) };
         }
     }
     fn push(&mut self, s: &str) {
@@ -165,18 +170,21 @@ fn f(op: O, p: usize, a: &[i64]) -> String {
 /// --dump-at / --dump-load (TEST ONLY, the save/load fidelity hunt): the state the checksum line sums, item by item.
 /// Reads only (the goals' own out-of-synch checksums are read, as the checksum's flag 0x20 would).
 pub fn dump_state(path: &str) {
-    let file = hs(O::DmOpen, 0, path) as usize;
+    let Ok(c_path) = std::ffi::CString::new(path) else { return };
+    // SAFETY: NUL-ended path and mode; the C library's text mode, as the C++'s fopen (the C++ dumps write into it)
+    let file = unsafe { libc::fopen(c_path.as_ptr(), c"w".as_ptr()) } as usize;
     if file == 0 {
         return;
     }
     let mut o = Out { file, text: String::new() };
     o.push("STATE ");
     o.push(&checksum_text());
+    let physics = super::sim_host::physics_record();
     o.push(&format!(
         "physics clock={} tickrandom={} tickstoprocess={}\n",
-        f(O::DmPhysClock, 0, &[]),
-        ld(h(O::DmPhysTickRandom, 0, &[])),
-        ld(h(O::DmPhysTicksToProcess, 0, &[]))
+        hexf(f64::from(physics.mGameClock)),
+        ld(i64::from(physics.mTickRandom)),
+        physics.mTicksToProcess as i32
     ));
     // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order) (ee_sim app active.rs)
     for (l, name) in ["UPDATE", "ACTIVATE", "DEACTIVATE"].iter().enumerate() {
@@ -202,7 +210,8 @@ pub fn dump_state(path: &str) {
     dump_calamities(&mut o);
     dump_regions(&mut o);
     o.flush();
-    h(O::DmClose, file, &[]);
+    // SAFETY: the stream opened above
+    unsafe { libc::fclose(file as *mut libc::FILE) };
 }
 
 fn dump_players(o: &mut Out) {
@@ -226,8 +235,8 @@ fn dump_players(o: &mut Out) {
         }
         s.push('\n');
         // the towns (hull, patrol group) and the patrol groups (their points as unit@tile)
-        for t in 0..h(O::DmPlTownCount, p, &[]) {
-            let town = h(O::DmPlTownAt, p, &[t]) as usize;
+        for town in player_list(p as u64, EE_UNITS_LISTS_TOWNS) {
+            let town = town as usize;
             if town == 0 {
                 continue;
             }
@@ -247,8 +256,8 @@ fn dump_players(o: &mut Out) {
             }
             s.push('\n');
         }
-        for g in 0..h(O::DmPlPatrolCount, p, &[]) {
-            let group = h(O::DmPlPatrolAt, p, &[g]) as usize;
+        for group in player_list(p as u64, EE_UNITS_LISTS_PATROLS) {
+            let group = group as usize;
             if group == 0 {
                 continue;
             }
@@ -262,9 +271,9 @@ fn dump_players(o: &mut Out) {
                 if point != 0 {
                     s.push_str(&format!(
                         "{}@{},{} ",
-                        lu(h(O::DmCxUnitId, point, &[])),
-                        ld(h(O::UnitTileXRaw, point, &[])),
-                        ld(h(O::DmCxTileYRaw, point, &[]))
+                        lu(gc::h(gc::O::RoUnitId, point, &[])),
+                        ld(gc::h(gc::O::DkTileX, point, &[])),
+                        ld(gc::h(gc::O::DkTileY, point, &[]))
                     ));
                 }
             }
@@ -281,7 +290,7 @@ fn dump_players(o: &mut Out) {
         let mut s = format!("PLAYERUNITS {i}:");
         let mut u = gc::h(gc::O::PlFirstUnit, p, &[]) as usize;
         while u != 0 {
-            s.push_str(&format!(" {}", lu(h(O::DmUnitIdRaw, u, &[]))));
+            s.push_str(&format!(" {}", lu(gc::h(gc::O::RoUnitId, u, &[]))));
             u = gc::h(gc::O::UnNext, u, &[]) as usize;
         }
         s.push('\n');
@@ -289,19 +298,39 @@ fn dump_players(o: &mut Out) {
     }
 }
 
+/// The unit's Rust record (`static_cast<EeUnitsUnitFields*>`).
+fn unit_fields(u: usize) -> *const EeUnitsUnitFields {
+    gc::h(gc::O::UnFields, u, &[]) as usize as *const EeUnitsUnitFields
+}
+
+/// The complex unit's Rust record (`static_cast<EeUnitsComplexUnitFields*>`).
+fn cx_fields(c: usize) -> *const EeUnitsComplexUnitFields {
+    gc::h(gc::O::CxFields, c, &[]) as usize as *const EeUnitsComplexUnitFields
+}
+
+/// A unit's id (0: none).
+fn unit_id(u: usize) -> u32 {
+    if u == 0 {
+        0
+    } else {
+        gc::h(gc::O::RoUnitId, u, &[]) as u32
+    }
+}
+
 fn dump_unit(o: &mut Out, u: usize) {
     let player = h(O::DmUnitPlayerId, u, &[]);
     let mut s = format!(
         "U {} type={} player={} hp={} tile={},{}",
-        lu(h(O::UnitId, u, &[])),
+        lu(gc::h(gc::O::RoUnitId, u, &[])),
         ld(h(O::DmUnitTypeRaw, u, &[])),
         ld(player),
         f(O::DmUnitHp, u, &[]),
-        ld(h(O::DmUnitTileXRaw, u, &[])),
-        ld(h(O::DmUnitTileYRaw, u, &[]))
+        ld(gc::h(gc::O::DkTileX, u, &[])),
+        ld(gc::h(gc::O::DkTileY, u, &[]))
     );
-    let c = h(O::DmComplexOf, u, &[]) as usize;
-    let x = if c != 0 { h(O::DmCxComplex, c, &[]) as usize } else { 0 };
+    let c = gc::h(gc::O::FxDynComplex, u, &[]) as usize;
+    // SAFETY (the unit records here): the live unit's (complex unit's) Rust record, read under the world lock
+    let x = if c != 0 { (unsafe { (*unit_fields(c)).mComplexUnit }) as usize } else { 0 };
     if x == 0 {
         s.push_str("\n  rawu "); // a simple unit's bytes (layout.json "EEUnit")
         s.push_str(&raw(u, h(O::DmUnitSize, 0, &[]) as usize));
@@ -309,31 +338,32 @@ fn dump_unit(o: &mut Out, u: usize) {
         o.push(&s);
         return;
     }
+    let r = cx_fields(x);
     let waypoints = h(O::DmCxWpCount, x, &[]);
     s.push_str(&format!(
         " upd={} cmd={} grp={} loc={},{},{} h={} c1={} c2={} wp={} pathdone={} arrived={} vel={} blocked={}",
-        lu(h(O::DmCxUpdated, x, &[])),
+        lu(unsafe { (*r).mTimesUpdated } as i64),
         ld(h(O::DmCxCommand, x, &[])),
-        h(O::DmCxGroup, x, &[]),
+        i64::from(!unsafe { (*r).mActiveGroup }.is_null()),
         f(O::DmCxLocX, x, &[]),
         f(O::DmCxLocY, x, &[]),
         f(O::DmCxLocZ, x, &[]),
-        f(O::DmCxHeight, x, &[]),
+        hexf(f64::from(unsafe { (*r).mHeight })),
         x8(h(O::DmComplexChecksum, c, &[1])),
         x8(h(O::DmComplexChecksum, c, &[2])),
         waypoints as u64,
-        h(O::DmCxPathDone, x, &[]),
-        h(O::DmCxArrived, x, &[]),
-        hexf(hdd(O::ComplexVelocity, x, &[])),
-        lu(h(O::DmCxBlockingId, x, &[]))
+        i64::from(unsafe { (*r).mIsPathDone }),
+        i64::from(unsafe { (*r).mHasArrived }),
+        hexf(f64::from(gc::hd(gc::O::EcVelocity, x, &[], &[]))),
+        unit_id(unsafe { (*r).mBlockingUnit } as usize)
     ));
     s.push_str(&format!(
         " anim={}/{}/{}/{} reload={}",
-        lu(h(O::DmCxAnim, x, &[])),
+        lu(unsafe { (*r).mAnimation } as i64),
         lu(h(O::DmCxFrame, x, &[])),
-        lu(h(O::DmCxAnimTime, x, &[])),
-        h(O::DmCxPaused, x, &[]),
-        ld(h(O::DmCxReload, x, &[]))
+        lu(unsafe { (*r).mAnimationTime } as i64),
+        i64::from(unsafe { (*r).mIsAnimationPaused }),
+        ld(i64::from(unsafe { (*r).mReloadTimer }))
     ));
     s.push_str(" wps="); // the path's points (location, distance, start distance)
     for w in 0..waypoints {
@@ -364,9 +394,9 @@ fn dump_unit(o: &mut Out, u: usize) {
     let affecting = h(O::DmCxAffectingCount, x, &[]);
     s.push_str(&format!(
         " attacker={} owner={} holder={} ae={}/{}",
-        lu(h(O::DmCxAttackerId, x, &[])),
-        lu(h(O::DmCxOwnerId, x, &[])),
-        lu(h(O::DmCxHolderId, x, &[])),
+        unit_id(unsafe { (*r).mLastAttacker } as usize),
+        unit_id(unsafe { (*r).mOwner } as usize),
+        unit_id(unsafe { (*r).mHolder } as usize),
         ae as u64,
         affecting as u64
     ));
@@ -379,7 +409,7 @@ fn dump_unit(o: &mut Out, u: usize) {
     s.push_str("\n  raw "); // the unit's bytes (pointers differ by run; build/clang/layout.json names offsets)
     s.push_str(&raw(c, h(O::DmCxSize, 0, &[]) as usize));
     s.push('\n');
-    let id = lu(h(O::UnitId, u, &[]));
+    let id = lu(gc::h(gc::O::RoUnitId, u, &[]));
     o.push(&s);
     for q in 0..i64::from(queues) {
         // each goal's own out-of-synch dump
@@ -398,7 +428,7 @@ fn dump_calamities(o: &mut Out) {
         return;
     }
     for i in 0..h(O::DmCalCount, manager, &[]) {
-        let k = h(O::DmCalAt, manager, &[i]) as usize;
+        let k = gc::h(gc::O::MgrCalamityAt, manager, &[i]) as usize;
         if k == 0 {
             continue;
         }
@@ -461,17 +491,6 @@ fn dump_regions(o: &mut Out) {
         o.push(&s);
         k += 2 + count;
     }
-}
-
-/// The state dump into the file (EESim.cpp's dump after a load, at the loaded game's first tick).
-///
-/// # Safety
-/// `path` is a NUL-ended text.
-#[no_mangle]
-pub unsafe extern "C" fn ee_sim_driver_dump_state(path: *const std::ffi::c_char) {
-    // SAFETY: as the caller promises
-    let path = unsafe { std::ffi::CStr::from_ptr(path) }.to_string_lossy().into_owned();
-    dump_state(&path);
 }
 
 #[cfg(test)]

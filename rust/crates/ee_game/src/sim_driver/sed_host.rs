@@ -12,24 +12,16 @@ use std::ffi::{c_long, c_ulong, c_void, CStr, CString};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeSimDriverSed {
     // the editor form
-    FormSlot = 1,
+    /// `mRust`
+    FormRust = 1,
     ControlById,
     FormControl,
     FormControlCount,
     FormGroupCount,
     FormGroup,
-    SelectedCount,
     SelectedUnit,
     SelectedUnitId,
     FormSetLoadText,
-    FormDeselectFirst,
-    FormClearSelection,
-    FormSelectUnit,
-    FormDeselectUnit,
-    FormRefreshGroup,
-    FormResumeGroup,
-    FormSetGameView,
-    SaveTriggersOnly,
     TriggerStoring,
     GroupIsEnabled,
     GroupEntityCount,
@@ -37,7 +29,6 @@ pub enum EeSimDriverSed {
     // the controls
     ShellOp,
     ShellOf,
-    ShellKindName,
     ControlTypeName,
     EventTypeName,
     DisplayMode,
@@ -49,7 +40,6 @@ pub enum EeSimDriverSed {
     ControlBgOpacity,
     ControlBorder,
     ControlStringTableId,
-    TriggerEvent,
     ProcessEvent,
     IsRadio,
     IsCheck,
@@ -123,22 +113,15 @@ pub enum EeSimDriverSed {
     LoadThreadPostDone,
     LoadThreadWaitDone,
     LoadThreadClearDone,
-    UnitWallStart,
-    UnitWallEnd,
-    UnitWallBuild,
-    UnitWallCancel,
-    UnitGateTileX,
-    UnitGateTileY,
-    UnitGateDirection,
-    UnitGateBuild,
-    UnitGateCancel,
+    /// `&mBuildWall`, `&mBuildGate` (an EESEUnit)
+    UnitBuildWall,
+    UnitBuildGate,
     // the actions and messages
     SeaNew,
     SeaAction,
     PaintNew,
     PaintSetArea,
     PostAction,
-    DerefAction,
     ClickNew,
     TsClickNew,
     ClickSetMessage,
@@ -154,11 +137,8 @@ pub enum EeSimDriverSed {
     MapMesh,
     MapTile,
     MapGetTile,
-    MeshZ,
-    TileHeight,
     TerrainColorType,
     ViewportRect,
-    WorldGetNumPlayers,
     WorldMaxPlayers,
     WorldPopulationLimit,
     WorldWondersToWin,
@@ -175,12 +155,10 @@ pub enum EeSimDriverSed {
     OptionsPlayerColor,
     OptionsPlayerB36,
     PlayerName,
-    PlayerId,
     PlayerColor,
     PlayerCivilizationFile,
     PlayerResourceCap,
     PlayerEnemy,
-    PlayerSharedLos,
     PlayerPurchasedUpgrades,
     PlayerAvailablePoints,
     TreeCurrentEpoch,
@@ -195,16 +173,10 @@ pub enum EeSimDriverSed {
     ComputerIgnoreOthers,
     ComputerCanGather,
     ComputerCitizens,
-    UnitId,
-    UnitType,
-    UnitTileX,
-    UnitTileY,
     NodeUnitPlayer,
-    NodeUnitId,
     UnitIsEditorSelected,
     // the ghosts
     GhostsChanged,
-    GhostsClear,
     GhostCount,
     GhostAt,
     GhostCreate,
@@ -219,7 +191,6 @@ pub enum EeSimDriverSed {
     GhostSetTransformation,
     GhostFillSquare,
     GhostLocationToTile,
-    GhostCanPlace,
     GhostSetCanPlace,
     // the scenario manager
     SmTriggerCount,
@@ -331,17 +302,11 @@ pub enum EeSimDriverSed {
     SaveTextName,
     EditorSaveName,
     SpecNew,
-    SpecFree,
-    SpecSetVolumeStartup,
     SpecSetDirectoryStartup,
     SpecSetFile,
-    SpecCreateDirectory,
-    SpecCreate,
-    SpecOpenRead,
     SpecOpenWrite,
-    SpecFOpenRead,
-    SpecFOpenWrite,
-    SpecClose,
+    /// the spec's FOpen(s): its open mode ("r", "w") -> 0 opened
+    SpecFOpen,
     SpecWrite,
     SpecGets,
     SpecPuts,
@@ -349,8 +314,6 @@ pub enum EeSimDriverSed {
     MemFree,
     MemLoad,
     MemLength,
-    MemPosition,
-    MemData,
     HeaderNew,
     HeaderLoad,
     ChunksNew,
@@ -368,9 +331,6 @@ pub enum EeSimDriverSed {
     // the civilization builder (sed_civ.rs)
     UiFormById,
     UiFormControlById,
-    UiFormControlCount,
-    UiFormControl,
-    UiFormId,
     UiFormShellOf,
     UiFormTypeName,
     UiFormCount,
@@ -410,9 +370,6 @@ pub enum EeSimDriverSed {
     PlayerCivilization,
     PlayerCivilizationChosen,
     PlayerCivilizationLocked,
-    SpecGetLength,
-    SpecRead,
-    SpecDelete,
     CivSave,
     CivLoad,
     CivApply,
@@ -423,14 +380,11 @@ pub enum EeSimDriverSed {
     UpgradesAt,
     UpgradesFree,
     NarrowNew,
-    SetFreeCamera,
     SetAllowCustomCivs,
     SetScenarioGame,
     // the steps' action and end (sed_run.rs)
     C12ActionNew,
-    C12ActionPost,
     C12DoneNew,
-    C12DonePost,
     C12Dereference,
 }
 
@@ -491,6 +445,28 @@ mod screens_sys {
         pub fn ee_screens_cb_civilization_query(what: u32, index: u32) -> i64;
         pub fn ee_screens_cb_civilization_name(out: *mut u8, capacity: usize) -> usize;
         pub fn ee_screens_cb_last_file(out: *mut u8, capacity: usize) -> usize;
+        // the editor form's record (screens editor_form_ffi.rs)
+        pub fn ee_screens_sefm_get(form: *const core::ffi::c_void, slot: u32) -> usize;
+        pub fn ee_screens_sefm_selected(form: *const core::ffi::c_void, index: isize) -> u32;
+        pub fn ee_screens_sefm_call(
+            form: *const core::ffi::c_void,
+            what: u32,
+            a: i32,
+            p: *mut core::ffi::c_void,
+            r: *const f32,
+        ) -> i32;
+        // the wall and gate placements (screens placement_ffi.rs)
+        pub fn ee_screens_wall_build(wall: *mut crate::screens::mouse_modes::EeScreensBuildWallFields);
+        pub fn ee_screens_wall_cancel(wall: *mut crate::screens::mouse_modes::EeScreensBuildWallFields);
+        pub fn ee_screens_gate_build(
+            gate: *mut crate::screens::mouse_modes::EeScreensBuildGateFields,
+            x: f32,
+            y: f32,
+            direction: i32,
+        );
+        pub fn ee_screens_gate_cancel(gate: *mut crate::screens::mouse_modes::EeScreensBuildGateFields);
+        // RTSWorld::FlushQueuedPlacements (rts world.rs)
+        pub fn ee_rts_world_flush_queued_placements(world: *mut core::ffi::c_void);
     }
 }
 
@@ -610,9 +586,29 @@ pub fn editor() -> usize {
     gc::h(gc::O::UiEditorForm, 0, &[]) as usize
 }
 
+/// The editor form `e`'s Rust record (`mRust`).
+fn form(e: usize) -> *const c_void {
+    h(O::FormRust, e, &[]) as usize as *const c_void
+}
+
 /// One of the form's slots (`GetSlot`; editor_form.rs EE_SCREENS_SEFM_*).
 pub fn slot(s: u32) -> usize {
-    h(O::FormSlot, editor(), &[s as i64]) as usize
+    // SAFETY: the editor form's record (or NULL)
+    unsafe { ee_screens_sefm_get(form(editor()), s) }
+}
+
+/// The form `e`'s selected unit count (`GetSelectedUnitCount`).
+pub fn selected_count(e: usize) -> i64 {
+    // SAFETY: as slot
+    i64::from(unsafe { ee_screens_sefm_selected(form(e), -1) })
+}
+
+/// The form `e`'s call `what` (`EEUIFScenarioEditor::Call`: editor_form.rs EE_SCREENS_SEFM_*) with `a`, the object
+/// `p` and the rectangle `r` (left, top, right, bottom).
+pub fn form_call(e: usize, what: u32, a: i32, p: usize, r: Option<&[f32; 4]>) -> i32 {
+    let r = r.map_or(std::ptr::null(), |r| r.as_ptr());
+    // SAFETY: as slot; the rectangle lives through the call
+    unsafe { ee_screens_sefm_call(form(e), what, a, p as *mut c_void, r) }
 }
 
 /// A tab group (`GetTabGroup`: kSlotGroup + the group).
@@ -703,7 +699,7 @@ pub fn line_count(list: usize) -> c_ulong {
 
 /// A control's trigger event (0: none).
 pub fn trigger_event(control: usize, trigger: c_ulong) -> usize {
-    h(O::TriggerEvent, control, &[trigger as i64]) as usize
+    super::sim_ops::h(super::sim_ops::EeSimDriverSim::ControlTriggerEvent, control, &[trigger as i64]) as usize
 }
 
 /// An event processed by the editor form for `control`.
@@ -778,7 +774,7 @@ pub fn post_action(action: usize) {
 
 /// An action's `Dereference`.
 pub fn deref(action: usize) {
-    h(O::DerefAction, action, &[]);
+    gc::h(gc::O::EntryDereferenceAction, action, &[]);
 }
 
 /// `new EEMRecord(kind, {id})` (or without a value).
@@ -810,7 +806,7 @@ pub fn sm_names(which: i64) -> Vec<String> {
 /// A file spec in the startup directory's `dir` (its volume and directory set).
 pub fn spec_in(dir: &str) -> usize {
     let spec = h(O::SpecNew, 0, &[]) as usize;
-    h(O::SpecSetVolumeStartup, spec, &[]);
+    gc::h(gc::O::FileSpecSetVolumeStartup, spec, &[]);
     hs(O::SpecSetDirectoryStartup, spec, dir);
     spec
 }
@@ -853,13 +849,13 @@ pub fn mem_length(file: usize) -> c_ulong {
 /// A memory file's position.
 pub fn mem_position(file: usize) -> c_long {
     let mut n: c_long = 0;
-    h(O::MemPosition, file, &[&mut n as *mut c_long as i64]);
+    gc::h(gc::O::MemFilePosition, file, &[&mut n as *mut c_long as i64]);
     n
 }
 
 /// `length` bytes of a memory file's data from `start`.
 pub fn mem_bytes(file: usize, start: usize, length: c_ulong) -> Vec<u8> {
-    let data = h(O::MemData, file, &[]) as usize;
+    let data = gc::h(gc::O::MemFileData, file, &[]) as usize;
     if data == 0 || length == 0 {
         return Vec::new();
     }

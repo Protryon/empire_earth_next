@@ -9,7 +9,6 @@
 #include "lle/GERhombus.h"
 #include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"

@@ -60,8 +60,26 @@ pub extern "C" fn ee_screens_aem_find(
         as *mut c_void
 }
 
-/// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
-pub type EeScreensAesIo = Option<unsafe extern "C" fn(ctx: *mut c_void, op: u32, value: *mut c_void) -> c_long>;
+/// The area effects' running state's I/O ops (ee_sim calamity_record.rs `EE_CALAMITY_IO_*`'s numbers) on the
+/// `FSFile` `ctx`: the overloads the C++ called (was EEAEManager.cpp's `EEAEIoCall`); 1 for another op.
+unsafe extern "C" fn aes_io_call(ctx: *mut c_void, op: u32, value: *mut c_void) -> c_long {
+    use ee_sim::tech::calamity_record::*;
+    let f = crate::gamecpp::persistent::Pf(ctx as usize);
+    // SAFETY: the record's op hands a value of the op's type
+    (unsafe {
+        match op {
+            EE_CALAMITY_IO_READ_ULONG => f.read_ulong(value as *mut c_ulong),
+            EE_CALAMITY_IO_READ_LONG => f.read_long(value as *mut c_long),
+            EE_CALAMITY_IO_READ_FLOAT => f.read_f32(value as *mut f32),
+            EE_CALAMITY_IO_READ_BOOL => f.read_bool(value as *mut bool),
+            EE_CALAMITY_IO_WRITE_ULONG => f.write_ulong(*(value as *const c_ulong)),
+            EE_CALAMITY_IO_WRITE_LONG => f.write_long(*(value as *const c_long)),
+            EE_CALAMITY_IO_WRITE_FLOAT => f.write_f32(*(value as *const f32)),
+            EE_CALAMITY_IO_WRITE_BOOL => f.write_bool(*(value as *const bool)),
+            _ => 1,
+        }
+    }) as c_long
+}
 
 /// `EEAEManager::Load(file)` on the manager -> its result (`area_effect_running.rs`).
 #[no_mangle]
@@ -70,17 +88,17 @@ pub extern "C" fn ee_screens_aes_load_templates(manager: *mut c_void, file: *mut
     crate::screens::area_effect_running::load_templates(ffi, manager as usize, file as usize) as c_long
 }
 
-/// `EEAESaveRunningState`: written through `call` on the file `ctx`.
+/// `EEAESaveRunningState`: written to the `FSFile` `file`.
 #[no_mangle]
-pub extern "C" fn ee_screens_aes_save(ctx: *mut c_void, call: EeScreensAesIo) {
-    let io = ee_sim::tech::calamity_record::EeCalamityIoFfi { ctx, call };
+pub extern "C" fn ee_screens_aes_save(file: *mut c_void) {
+    let io = ee_sim::tech::calamity_record::EeCalamityIoFfi { ctx: file, call: Some(aes_io_call) };
     crate::screens::area_effect_running::save(&mut crate::screens::game_cpp::Ffi, io)
 }
 
-/// `EEAELoadRunningState`: read through `call` on the file `ctx` -> the read's result.
+/// `EEAELoadRunningState`: read from the `FSFile` `file` -> the read's result.
 #[no_mangle]
-pub extern "C" fn ee_screens_aes_load(ctx: *mut c_void, call: EeScreensAesIo) -> c_long {
-    let io = ee_sim::tech::calamity_record::EeCalamityIoFfi { ctx, call };
+pub extern "C" fn ee_screens_aes_load(file: *mut c_void) -> c_long {
+    let io = ee_sim::tech::calamity_record::EeCalamityIoFfi { ctx: file, call: Some(aes_io_call) };
     crate::screens::area_effect_running::load(&mut crate::screens::game_cpp::Ffi, io)
 }
 

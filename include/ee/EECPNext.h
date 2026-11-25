@@ -13,17 +13,19 @@
 #include <string>
 #include <vector>
 
+#include "rust/sim/ai.h"   // ee_ai_next_* (next_state.rs, next_game.rs, next_save.rs)
+
 class EEComputerPlayer;
-class EEComplexUnit;
-class EEUnit;
-class EETechTreeNode;
 
 
 // (the script's results, the gather safety's tests and limits, the event kinds, the placement searches: ee_ai
 // names.rs, next_game.rs, next_value.rs)
 
 // the unit id of the threat at a tile (0: none) and its kind; inNow: only soldiers in sight now, no towers
-long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind);
+inline long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind)
+{
+    return ee_ai_next_site_threat(inPlayer, inX, inY, inNow, outKind);
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // The per-player state (EEComputerPlayer::mNextState: an opaque Rust record, ee_ai next_state.rs; created on its first
@@ -33,12 +35,21 @@ struct EECPNextState;                                                 // (Rust's
 EECPNextState* EECPNextGetState(EEComputerPlayer* inPlayer);        // created when missing
 void EECPNextDeleteState(EEComputerPlayer* inPlayer);
 std::string EECPNextAI(const EEComputerPlayer* inPlayer);           // the AI's id ("" none or no state)
-void EECPNextAppend(void* outBytes, const std::string& inText);   // to a Rust Vec<u8> (ee_ai_next_append)
-void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI);
+inline void EECPNextAppend(void* outBytes, const std::string& inText)   // to a Rust Vec<u8>
+{
+    ee_ai_next_append(outBytes, (const uint8_t*)inText.data(), inText.size());
+}
+inline void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI)
+{
+    ee_ai_next_state_set_ai(EECPNextGetState(inPlayer), (const uint8_t*)inAI.data(), inAI.size());
+}
 
 // the save (EEPPlayerHelper, from version 0.252): the state that must survive as bytes, and back. Load creates the
 // state; a Lua script gets its memory back at the first step (LoadPersonality, RestoreMemory, never init)
 bool EECPNextSaveState(EEComputerPlayer* inPlayer, std::string& outBytes);
-bool EECPNextLoadState(EEComputerPlayer* inPlayer, const std::string& inBytes);
+inline bool EECPNextLoadState(EEComputerPlayer* inPlayer, const std::string& inBytes)
+{
+    return ee_ai_next_load(inPlayer, (const uint8_t*)inBytes.data(), inBytes.size());
+}
 
 #endif

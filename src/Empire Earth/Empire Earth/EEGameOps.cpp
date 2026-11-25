@@ -15,7 +15,6 @@
 #include "lle/GEModel.h"
 #include "lle/GEViewport.h"
 
-#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -37,27 +36,14 @@
 #include "ee/EEWorld.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEGraphics.h"
-#include "ee/EECalamityCapture.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EESaveGameFiles.h"
 
-// a memory file's position (GetPosition's out value)
-static long ee_gamecpp_mem_position(FSMemoryFile* inFile)
-{
-    long thePosition = 0;
-    inFile->GetPosition(thePosition);
-    return thePosition;
-}
-
 // the constants the Rust passes (ee_game gamecpp calamity.rs `k`, `cap`)
 static_assert(kActionAttackEnemyUnit == 2001 && kActionCalamityPreCast == 2030 && kActionSpecialLocation == 2032 && kActionIdle == 5000 && kActionOpen == 15000 && kMovementAir == 1 && kMovementSea == 4 && kUnitTypeCapitol == 0x29 && kUnitCategoryGate == 0x19 && kGoalCastCalamity == 11 && kTechConscriptionSpell == 1920 && kEffect2DLightning == 0x8 && kEffect3DDisease == 0x23 && kEffect3DTracerBeam == 0x40 && kCalamityStartSound == 2, "gamecpp calamity.rs");
-
-// The warped unit's tint, blinking while it is away (EECCTimeWarp's two .bss colours 0x4e5fb8/0x4e5fc8)
-static GEColor sWarpColor(0.484375f, 0.0f, 0.734375f);
-static GEColor sBlackColor(0.0f, 0.0f, 0.0f);
 
 // the world bodies' cases (EEWorld.cpp)
 int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
@@ -300,18 +286,8 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::SortTilesNear: std::sort(((std::vector<EETileCoordinate>*)p)->begin(), ((std::vector<EETileCoordinate>*)p)->end(), EETileDistanceLess((long)a[0], (long)a[1]));
         break;
-    case O::CapEvent: EECalamityCaptureEvent((long)a[0], (long)a[1], (long)a[2], f[0], f[1]);   // CALW (TEST ONLY)
-        break;
-    case O::CapStartEvent: EECalamityCaptureStartEvent((long)a[0], (long)a[1], (long)a[2], f[0], f[1]);   // CALT (TEST ONLY)
-        break;
-    case O::CapStartPoint: EECalamityCaptureStartPoint((long)a[0], f[0], f[1], f[2]);   // CALT (TEST ONLY)
-        break;
-    case O::CapContagion: EECalamityCaptureContagion((EEContagionHelper*)p, f[0]);   // CONT (TEST ONLY)
-        break;
-    case O::CxIsWarpColor: return CX->mColor == sWarpColor;
-    case O::CxSetWarpColor: CX->SetColor(sWarpColor);
-        break;
-    case O::CxSetBlackColor: CX->SetColor(sBlackColor);
+    case O::CxIsColor: return CX->mColor == GEColor(f[0], f[1], f[2]);
+    case O::CxSetColor: CX->SetColor(GEColor(f[0], f[1], f[2]));
         break;
     // the calamity objects (calamity_objects.rs)
     case O::CalNew: return P64(new EECalamity(KL, (EEUnit*)a[0]));
@@ -373,22 +349,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::VecUnitsCount: return (int64_t)((std::vector<EEUnit*>*)p)->size();
     case O::VecUnitsAt: return P64((*(std::vector<EEUnit*>*)p)[a[0]]);
-    case O::CapStart: return EECalamityCaptureStart(KL, (EECalamity*)a[0]);   // CALT (TEST ONLY): Start
-    case O::CapStop: EECalamityCaptureStop(KL, (EECalamity*)a[0]);   // CALT (TEST ONLY): Stop
-        break;
-    case O::CapUpdate: return EECalamityCaptureUpdate(KL, (EECalamity*)a[0], f[0]);   // CALW (TEST ONLY)
-    case O::CapSave: EECalamityCaptureSave(CL, (unsigned long)a[0]);   // CALK (TEST ONLY)
-        break;
-    case O::CapAged: EECalamityCaptureAged(CL, (unsigned long)a[0], f[0]);   // CALK (TEST ONLY)
-        break;
-    case O::CapCast: EECalamityCapture((long)a[0], (unsigned long)a[1], (unsigned long)a[2], (unsigned long)a[3], (long)a[4], (long)a[5], (unsigned long)a[6], a[7] != 0);   // CALC (TEST ONLY)
-        break;
-    case O::CapContagionEvent: EECalamityCaptureContagionEvent((long)a[0], (long)a[1], (long)a[2], f[0], f[1]);   // CONT (TEST ONLY)
-        break;
-    case O::CanCastScopeNew: return P64(new EECalamityCanCastScope);   // CCAS (TEST ONLY)
-    case O::CanCastScopeRecord: return ((EECalamityCanCastScope*)p)->Record((EECalamityClass*)a[0], (EEComplexUnit*)a[1], *(const GE3DPoint*)a[2], (unsigned long)a[3], (unsigned long)a[4], a[5] != 0, (EEUnit*)a[6], (long)a[7]);
-    case O::CanCastScopeDelete: delete (EECalamityCanCastScope*)p;
-        break;
     case O::FnNew: return P64(new EEContagionFunctor(KL, (uint32_t)a[0]));
     case O::FnFields: return P64(static_cast<EeContagionFunctorFields*>((EEContagionFunctor*)p));
     case O::FnEffect1: return P64(((EEContagionFunctor*)p)->mEffect);
@@ -467,7 +427,7 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     // the calamity capture's (calamity_capture.rs, TEST ONLY)
     case O::SoundObjectIndex: return std::find(gSoundObjects.begin(), gSoundObjects.end(), (EESoundObject*)p) - gSoundObjects.begin();
     case O::CalamityManager: return P64(EECalamityManager::GetInstance());
-    case O::MemFilePosition: return ee_gamecpp_mem_position((FSMemoryFile*)p);
+    case O::MemFilePosition: return ((FSMemoryFile*)p)->GetPosition(*(long*)a[0]);
     case O::MemFileData: return P64(((FSMemoryFile*)p)->GetData());
     case O::MemFileNewDefault: return P64(new FSMemoryFile);
     case O::SaveMinorVersion: return kSaveGameMinorVersion;

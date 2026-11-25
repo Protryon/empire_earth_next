@@ -1,6 +1,6 @@
 //! The game's named integer constants (the effect kinds of ee/EEEffectKindIDs.h, the graphic effect and sound table
 //! indices of ee/EEGraphicEffect.h and ee/EESoundObject.h, ee/EEImprovementIDs.h, ee/EEPersistentTag.h,
-//! ee/EEAreaEffectKindIDs.h, ee/EEResourceType.h, ee/EEStormType.h, ee/EEAIKindIDs.h, the terrain types of ee/EEMap.h,
+//! ee/EEResourceType.h, ee/EEStormType.h, ee/EEAIKindIDs.h, the terrain types of ee/EEMap.h,
 //! the calamities of ee/EECalamityManager.h and the damage forms of ee/EERules.h), as plain (unscoped) C enums for the
 //! C++ headers; each comment gives the evidence for its name, "(provisional name)" marks an inferred one.
 #![allow(non_camel_case_types, clippy::enum_variant_names, clippy::upper_case_acronyms)]
@@ -315,30 +315,6 @@ pub enum EEPersistentTag {
     kPersistentEnvironment = 12,
 }
 
-/// EEAreaEffectTemplate::mKind: EEAEManager::CreateAreaEffect creates the area-effect class by kind; names from the RTTI
-/// class (EEAE prefix dropped).
-/// cbindgen:enum-class=false
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EEAreaEffectKind {
-    /// RTTI EEAEHealing: EEAEManager::CreateAreaEffect case 1
-    kAreaEffectHealing = 1,
-    /// RTTI EEAEMorale: EEAEManager::CreateAreaEffect case 2
-    kAreaEffectMorale = 2,
-    /// RTTI EEAECalamityImmunity: EEAEManager::CreateAreaEffect case 3
-    kAreaEffectCalamityImmunity = 3,
-    /// RTTI EEAEConversionImmunity: EEAEManager::CreateAreaEffect case 4
-    kAreaEffectConversionImmunity = 4,
-    /// RTTI EEAEMoraleFromBuildings: EEAEManager::CreateAreaEffect case 5
-    kAreaEffectMoraleFromBuildings = 5,
-    /// RTTI EEAEMoraleFromMilitaryHeroes: EEAEManager::CreateAreaEffect case 6
-    kAreaEffectMoraleFromMilitaryHeroes = 6,
-    /// RTTI EEAEEconomyFromUnits: EEAEManager::CreateAreaEffect case 7
-    kAreaEffectEconomyFromUnits = 7,
-    /// RTTI EEAECloaking: EEAEManager::CreateAreaEffect case 8
-    kAreaEffectCloaking = 8,
-}
-
 /// EEUnit/EEUnitClass mResourceType (also the player's resource index, EEPlayer::AddResource).
 /// cbindgen:enum-class=false
 #[repr(C)]
@@ -506,7 +482,6 @@ mod tests {
         assert_eq!(EESoundID::kSoundSlavery as i32, 1058);
         assert_eq!(EEImprovementKind::kImprovementTransport as i32, 15);
         assert_eq!(EEPersistentTag::kPersistentEnvironment as i32, 12);
-        assert_eq!(EEAreaEffectKind::kAreaEffectCloaking as i32, 8);
         assert_eq!(EEResourceType::kResourceIron as i32, 6);
         assert_eq!(EEStormType::kStormBlizzard as i32, 4);
         assert_eq!(EEAIAreaKind::kAIAreaHerd as i32, 9);

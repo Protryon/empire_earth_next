@@ -173,7 +173,14 @@ mod world {
             EE_CONTAGION_WORLD_FILE => contagion_file(Pf(b as P), a, io),
             EE_CONTAGION_WORLD_CAPTURE => {
                 // CONT (TEST ONLY)
-                hf(O::C11CgCapture, 0, &[a as i32 as i64, b as i32 as i64, c as i32 as i64], &[x, *(io as *const f32)])
+                crate::gamecpp::calamity_capture::ee_gamecpp_capture_contagion_event(
+                    a as i32 as c_long,
+                    b as i32 as c_long,
+                    c as i32 as c_long,
+                    x,
+                    *(io as *const f32),
+                );
+                0
             }
             _ => h(O::C11CgUnknown, 0, &[]),
         }

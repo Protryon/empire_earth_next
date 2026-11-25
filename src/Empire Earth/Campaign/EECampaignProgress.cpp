@@ -12,7 +12,6 @@
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIControl.h"
 #include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
 

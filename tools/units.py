@@ -45,8 +45,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Persistent/EEOpenSaveGameFile.cpp",
                        # the continent manager's regions in a saved game (save version 0.263; ee/EESaveGameFiles.h)
                        "Empire Earth/AI Thread/EEAIContinentSave.cpp",
-                       # the start of the Rust library (ee_rust_init)
-                       "Empire Earth/Empire Earth/EERust.cpp",
                        # its per-unit Lua queries and human-level commands (docs/AI_LUA_UNITS.md)
                        "Empire Earth/AI Thread/EECPNextUnits.cpp",
                        # the game log: every game, human and computer players (ee/EEGameLog.h)
@@ -70,20 +68,12 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Empire Earth/EEAppCapture.cpp",
                        # TEST ONLY: its map, mini map, cheat and storm records and the --app-sweep (MAPS ... STRM)
                        "Empire Earth/Empire Earth/EEAppCaptureWorld.cpp",
-                       # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
-                       "Empire Earth/Tech Tree/EETechCapture.cpp",
                        # TEST ONLY: the units sweep of EE-SIM --unit-sweep (the capture's units profile)
                        "Empire Earth/Physics Thread/EEPhysicsSweep.cpp",
                        # TEST ONLY: the scenario manager's capture records (ee/EEScenarioCapture.h; RUST_PLAN R5b.5)
                        "Empire Earth/Scenario Manager/EEScenarioCapture.cpp",
                        # the scenario logic's host: the world's reads for ee_scenario (ee/EEScenarioHost.h; RUST_PLAN R5b.5)
                        "Empire Earth/Scenario Manager/EEScenarioHost.cpp",
-                       # TEST ONLY: the calamity lane's capture records (ee/EECalamityCapture.h: CALI, CALK)
-                       "Empire Earth/Calamities/EECalamityCapture.cpp",
-                       # TEST ONLY: the area effects' capture records (ee/EEAECapture.h: AETP, AEFX)
-                       "Empire Earth/Civilization Builder/EEAECapture.cpp",
-                       # TEST ONLY: the civilization builder lane's capture records (ee/EECivCapture.h: CVMG, CVAP, CVLD, CVAF)
-                       "Empire Earth/Civilization Builder/EECivCapture.cpp",
                        # the game messages' class: EEMessage's codec, EEMRecord (split from EEMessage.cpp)
                        "Empire Earth/Communications/EEMRecord.cpp",
                        # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)
@@ -118,8 +108,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Empire Earth/EETestFixture.cpp",
                        # the C++ calls and members of the game's bodies in Rust (ee_game gamecpp; game core round 7)
                        "Empire Earth/Empire Earth/EEGameOps.cpp",
-                       # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
-                       "Empire Earth/Graphics Thread/EERenderSnapshot.cpp",
                        # TEST ONLY: RFIL, the render fill's capture (EE_RENDER_CAPTURE; ee/EERenderCapture.h, tools/rfil.py)
                        "Empire Earth/Graphics Thread/EERenderCapture.cpp",
                        # the host of the screens that are Rust's whole: their event class and toolkit and game calls

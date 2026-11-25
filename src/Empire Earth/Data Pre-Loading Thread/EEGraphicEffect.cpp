@@ -9,7 +9,6 @@
 
 #include "lle/LowLevelEngine.h"
 
-#include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 
 // The tables (sEffects 0x4e8420, the 0x48 per-kind media vectors 0x4e7f98, the id set 0x4e7f88: the unit's three

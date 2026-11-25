@@ -257,13 +257,13 @@ extern "C" void ee_screenscpp_player_add_event(int64_t inX, int64_t inY, int32_t
 { gWorld.GetCurrentPlayer()->mEvents.AddEvent(U2DPoint<long>((long)inX, (long)inY), 2, gWorld.GetCurrentPlayer(), inKind, false); }
 extern "C" uint32_t ee_screenscpp_ghost_count() { return (uint32_t)gWorld.GetNumGhostUnits(); }
 extern "C" bool ee_screenscpp_ghost_can_place(uint32_t inGhost)
-{ return static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inGhost])->mCanPlace; }
+{ return static_cast<EEGhostUnit*>(gWorld.GetGhostUnit(inGhost))->mCanPlace; }
 extern "C" uint32_t ee_screenscpp_ghost_type(uint32_t inGhost)
-{ return (uint32_t)static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inGhost])->mUnitClass->mUnitType; }
+{ return (uint32_t)static_cast<EEGhostUnit*>(gWorld.GetGhostUnit(inGhost))->mUnitClass->mUnitType; }
 extern "C" int64_t ee_screenscpp_ghost_tile_x(uint32_t inGhost)
-{ return (int64_t)static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inGhost])->mTileX; }
+{ return (int64_t)static_cast<EEGhostUnit*>(gWorld.GetGhostUnit(inGhost))->mTileX; }
 extern "C" int64_t ee_screenscpp_ghost_tile_y(uint32_t inGhost)
-{ return (int64_t)static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inGhost])->mTileY; }
+{ return (int64_t)static_cast<EEGhostUnit*>(gWorld.GetGhostUnit(inGhost))->mTileY; }
 extern "C" void ee_screenscpp_build_set_queued(uintptr_t inRec, bool inQueued)
 { static_cast<EEABuild*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mBuild)->mIsQueued = inQueued; }
 extern "C" void ee_screenscpp_build_at(uintptr_t inRec, float inX, float inY)

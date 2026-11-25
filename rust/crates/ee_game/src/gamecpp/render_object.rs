@@ -28,9 +28,15 @@ use ee_render::gfx::scene::{self, EeGfxSceneClocks, EeGfxSceneFade};
 use ee_render::gfx::walk::EeGfxDrawnHost;
 use ee_sim::world::{UnitView, WorldRead};
 
+use ee_render::ge::tmobj::ee_ge_tm_update_visible_terrain;
+use ee_render::geval::values::ee_ge_viewport_copy;
+use ee_render::geval::viewport_ffi::{
+    ee_ge_viewport_set_camera, ee_ge_viewport_set_depth_range, ee_ge_viewport_set_rear,
+};
+
 use super::rast::{
-    mesh_cliff_textures, mesh_visible_row, mesh_visible_rows, rast, tex_mip_bias, tex_reference, tex_stage, world_mesh,
-    TexStage,
+    frame_viewport, game_viewport, mesh_cliff_textures, mesh_visible_row, mesh_visible_rows, rast, rear_clipping,
+    tex_mip_bias, tex_reference, tex_stage, view_rectangle, world_mesh, TexStage,
 };
 use super::{cptr, h, hd, hf, hp, pa, ptr, set_position, O, P};
 
@@ -193,19 +199,9 @@ pub fn set_cloud_offset(offset: f32) {
 }
 
 /// A C++ bool global by its address op.
-fn flag(op: O) -> bool {
-    // SAFETY: the op answers a bool global's address
-    unsafe { *(hp(op, 0, &[]) as *const bool) }
-}
-
-fn set_flag(op: O, v: bool) {
-    // SAFETY: as flag
-    unsafe { *(hp(op, 0, &[]) as *mut bool) = v };
-}
-
-/// A C++ float global by its address op.
-fn float_at(op: O) -> *mut f32 {
-    hp(op, 0, &[]) as *mut f32
+/// `gOrthographicView`.
+fn orthographic() -> bool {
+    h(O::RoOrthographic, 0, &[]) != 0
 }
 
 /// The render pools' counts (`mRenderUnitCount`, `mRenderShadowCount`).
@@ -271,11 +267,11 @@ pub extern "C" fn ee_gamecpp_ro_initialise_scene() {
     // the key frames and the fill lights: ee_gfx scene.rs
     // SAFETY: the C++'s fade state, not otherwise borrowed during the call
     unsafe { scene::reset(&mut *(hp(O::RoSceneFade, 0, &[]) as *mut EeGfxSceneFade)) };
-    set_flag(O::RoFlag529066, false);
-    set_flag(O::RoCameraFollowing, false);
-    set_flag(O::RoFlag529068, false);
+    super::globals::set!(gB529066, false);
+    super::globals::set!(gCameraFollowing, false);
+    super::globals::set!(gB529068, false);
     // SAFETY: gF4BE374
-    unsafe { *float_at(O::RoLetterboxZoom) = 1.0 };
+    unsafe { *std::ptr::addr_of_mut!(super::globals::gF4BE374) = 1.0 };
     // SAFETY: the effects' render queues (ee_gfx effect_obj.rs)
     unsafe { ee_render::gfx::effect_obj::ee_gfx_effect_queues_clear(false) };
     for j in 0..RO_UNIT_POOL {
@@ -365,7 +361,7 @@ fn unload_ghost_records() {
 pub extern "C" fn ee_gamecpp_ro_letterbox(out: bool, frames: c_ulong) {
     // SAFETY: the fade state and gF4BE374
     unsafe {
-        let zoom = *float_at(O::RoLetterboxZoom);
+        let zoom = *std::ptr::addr_of_mut!(super::globals::gF4BE374);
         scene::start_letterbox(&mut *(hp(O::RoSceneFade, 0, &[]) as *mut EeGfxSceneFade), out, frames as u32, zoom)
     }
 }
@@ -383,7 +379,7 @@ pub extern "C" fn ee_gamecpp_ro_fn10c036(_ro: *mut c_void) {
         let mut s = SCENE_LAST.lock().unwrap();
         *s.get_or_insert_with(now)
     };
-    if flag(O::RoFlag529066) {
+    if super::globals::get!(gB529066) {
         return;
     }
     let now = now();
@@ -392,7 +388,7 @@ pub extern "C" fn ee_gamecpp_ro_fn10c036(_ro: *mut c_void) {
     let e = env();
     // the clocks, the fade and the letterbox: ee_gfx scene.rs
     let wind = hd(O::RoEnvironmentWind, 0, &[], &[]);
-    let grid = float_at(O::RoGridPhase);
+    let grid = std::ptr::addr_of_mut!(super::globals::gU4E9330);
     // SAFETY: gRenderEnvironment, gU4E9330 (no C++ call between the reads and the writes)
     let step = unsafe {
         (*e).wind_speed = wind;
@@ -402,7 +398,11 @@ pub extern "C" fn ee_gamecpp_ro_fn10c036(_ro: *mut c_void) {
         *grid = clocks.grid_phase;
         (*e).water_phase = clocks.water_phase;
         (*e).cloud_offset = clocks.cloud_offset;
-        scene::step(&mut *(hp(O::RoSceneFade, 0, &[]) as *mut EeGfxSceneFade), elapsed, *float_at(O::RoLetterboxZoom))
+        scene::step(
+            &mut *(hp(O::RoSceneFade, 0, &[]) as *mut EeGfxSceneFade),
+            elapsed,
+            *std::ptr::addr_of_mut!(super::globals::gF4BE374),
+        )
     };
     let height = h(O::GameWindowHeight, 0, &[]) as c_long as f32;
     let width = h(O::GameWindowWidth, 0, &[]) as c_long as f32;
@@ -432,10 +432,14 @@ pub extern "C" fn ee_gamecpp_ro_fn10c036(_ro: *mut c_void) {
         }
     }
     // SAFETY: gF4BE374
-    unsafe { *float_at(O::RoLetterboxZoom) = step.zoom };
-    h(O::RoViewportSetCamera, 0, &[]);
-    h(O::RoRastSetViewport, 0, &[]);
-    h(O::RoCopyViewport, 0, &[]);
+    unsafe { *std::ptr::addr_of_mut!(super::globals::gF4BE374) = step.zoom };
+    let (game, r) = (game_viewport(), rast());
+    // SAFETY: the game's viewport and its frame copy (graphics thread), the world's camera
+    unsafe {
+        ee_ge_viewport_set_camera(game, hp(O::RoWorldTransformation, 0, &[]) as *const GeTransformation);
+        r.set_viewport(game);
+        ee_ge_viewport_copy(frame_viewport(), game);
+    }
     let direction = camera_direction();
     // SAFETY: the world's wind direction (a GEVector)
     let wind_direction = unsafe { *(hp(O::RoWindDirection, 0, &[]) as *const [f32; 3]) };
@@ -485,14 +489,14 @@ pub extern "C" fn ee_gamecpp_ro_fn10c036(_ro: *mut c_void) {
         // SAFETY: gRenderEnvironment
         unsafe { (*e).time_of_day_changed = false };
     }
-    if (changed || step.fade_changed) && flag(O::RoCameraFollowing) {
+    if (changed || step.fade_changed) && super::globals::get!(gCameraFollowing) {
         apply_lighting(EeGfxLighting::Terrain);
-        h(O::RoRastLightMesh, 0, &[]);
+        rast().light_terrain(world_mesh());
     }
     let hidden = h(O::RoHiddenUnitsMode, 0, &[]) as c_long;
     // SAFETY: gRenderEnvironment
     unsafe { (*e).show_hidden_units = hidden };
-    set_flag(O::RoFlag529066, true);
+    super::globals::set!(gB529066, true);
 }
 
 /// EERenderObject::Fn10E8D1: the terrain pass's set-up: the frame's scene state, the space-cliff textures, the
@@ -503,10 +507,10 @@ pub extern "C" fn ee_gamecpp_ro_fn10e8d1(ro: *mut c_void) {
         let mut s = TERRAIN_LAST.lock().unwrap();
         *s.get_or_insert_with(now)
     };
-    let viewport = hp(O::RoRastViewport, 0, &[]);
+    let viewport = rast().viewport();
     let now = now();
     let elapsed = now.wrapping_sub(last);
-    if !flag(O::RoCameraFollowing) {
+    if !super::globals::get!(gCameraFollowing) {
         ee_gamecpp_ro_fn10c036(ro);
         if h(O::MeshIsSpaceMap, 0, &[]) != 0 && mesh_cliff_textures(world_mesh()) < 1 {
             if h(O::RoCliffTexturesCount, 0, &[]) == 0 {
@@ -514,15 +518,17 @@ pub extern "C" fn ee_gamecpp_ro_fn10e8d1(ro: *mut c_void) {
             }
             h(O::RoMeshSetCliffTextures, 0, &[]);
         }
-        h(O::RoUpdateVisibleTerrain, viewport, &[]);
+        // SAFETY: the world's map's mesh and the rasterizer's viewport
+        unsafe { ee_ge_tm_update_visible_terrain(world_mesh().cast_mut(), viewport, orthographic()) };
         apply_lighting(EeGfxLighting::Terrain);
-        h(O::RoRastLightMesh, 0, &[]);
+        rast().light_terrain(world_mesh());
     }
-    if !flag(O::RoCameraFollowing) || elapsed >= 100 {
-        hf(O::RoTransformToCamera, viewport, &[], &[elapsed as f32 / 1000.0]);
+    if !super::globals::get!(gCameraFollowing) || elapsed >= 100 {
+        let following = super::globals::get!(gCameraFollowing);
+        rast().transform_to_camera(world_mesh(), viewport, elapsed as f32 / 1000.0, following, orthographic());
         *TERRAIN_LAST.lock().unwrap() = Some(now);
     }
-    set_flag(O::RoCameraFollowing, true);
+    super::globals::set!(gCameraFollowing, true);
 }
 
 /// LoadCliffTextures: the space-cliff and cliff-edge textures loaded into gU4E8EF0 (modulated, referenced).
@@ -629,7 +635,7 @@ fn apply_lighting(kind: EeGfxLighting) {
             fog_color: color(fog),
             orthographic: h(O::RoOrthographic, 0, &[]) != 0,
             unit_lighting: h(O::RoUnitLighting, 0, &[]) != 0,
-            rear_clipping: hd(O::RoViewportRearClipping, 0, &[], &[]),
+            rear_clipping: rear_clipping(game_viewport()),
             zoom_lock: hd(O::RoZoomLock, 0, &[], &[]),
             prelit: color((*e).prelit_color),
             dim_prelit: color((*e).dim_prelit_color),
@@ -683,8 +689,10 @@ pub unsafe extern "C" fn ee_gamecpp_ro_fog_factor(location: *const f32, fog: u32
 /// The raster table's depth_range: the main viewport's depth range, then the viewport set on the rasterizer.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_ro_depth_range(near_z: f32, far_z: f32) {
-    hf(O::RoMainViewportDepthRange, 0, &[], &[near_z, far_z]);
-    h(O::RoRastSetMainViewport, 0, &[]);
+    let viewport = frame_viewport();
+    // SAFETY: the frame's viewport (graphics thread)
+    unsafe { ee_ge_viewport_set_depth_range(viewport, near_z, far_z) };
+    rast().set_viewport(viewport);
 }
 
 /// The raster table's screen_point: EEROUnits.cpp's GetScreenPoint.
@@ -709,8 +717,7 @@ pub unsafe extern "C" fn ee_gamecpp_ro_screen_point(point: *const f32, x: *mut f
 /// `text` is NUL-terminated.
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_ro_draw_text(x: f32, y: f32, text: *const u8, red: f32, green: f32, blue: f32) {
-    let mut rect = GeRectangle::default();
-    h(O::RoRastViewRectangle, 0, &[ptr(&mut rect)]);
+    let rect = view_rectangle(rast().viewport());
     let t = hp(O::RoTextNew, 0, &[]);
     h(O::RoTextSetTransparent, t, &[]);
     hf(O::RoTextSetColor, t, &[], &[red, green, blue]);
@@ -739,8 +746,10 @@ pub extern "C" fn ee_gamecpp_ro_screen_line(x0: f32, y0: f32, x1: f32, y1: f32, 
 /// The raster table's rear_clipping: the main viewport's rear clipping distance set, the old one answered.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_ro_rear_clipping(distance: f32) -> f32 {
-    let old = hd(O::RoMainViewportRearClipping, 0, &[], &[]);
-    hf(O::RoMainViewportSetRearClipping, 0, &[], &[distance]);
+    let viewport = frame_viewport();
+    let old = rear_clipping(viewport);
+    // SAFETY: the frame's viewport (graphics thread)
+    unsafe { ee_ge_viewport_set_rear(viewport, distance) };
     old
 }
 
@@ -882,9 +891,7 @@ impl FillHost for GameFill {
 /// `theMap->GetGroundPoint(point)`'s z.
 fn ground_z(point: [f32; 3]) -> f32 {
     let p = Ge3DPoint::new(point[0], point[1], point[2]);
-    let mut ground = Ge3DPoint::default();
-    h(O::MapGroundPoint, 0, &[cptr(&p), ptr(&mut ground)]);
-    ground.z
+    super::map::world_ground_point(&p).z
 }
 
 /// The fill's frame (EEFillFrame): the frame state and the render globals.
@@ -1177,8 +1184,8 @@ fn fill_ghost_records() {
     let head = record.0 as *mut EeGfxFillUnit;
     h(O::RoGhostLock, 0, &[]);
     if h(O::RoGhostUnitsChanged, 0, &[]) != 0 {
-        for i in 0..h(O::RoGhostCount, 0, &[]) {
-            let ghost = hp(O::RoGhostAt, 0, &[i]);
+        for i in 0..ee_sim::app::ghosts::count() {
+            let ghost = ee_sim::app::ghosts::at(i);
             let source = hp(O::RoGhostModel, ghost, &[]);
             // SAFETY: the record's unit head
             unsafe { (*head).source = source as u64 };
@@ -1286,7 +1293,7 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
     let mut info = FrameInfo { picked_unit: 0, yaw: 0.0, fighting: 0.0, frame: 0, ambient: false };
     let mut count = 0.0f32;
     let time = now();
-    if flag(O::RoFlag529068) {
+    if super::globals::get!(gB529068) {
         return;
     }
     {
@@ -1333,7 +1340,7 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
     let direction = camera_direction();
     info.yaw = um::um_arctan2(-direction.x, direction.y) - RO_YAW_OFFSET;
     {
-        let ticks = if flag(O::RoFlag529065) { None } else { Some(h(O::RoPhysicsTicks, 0, &[]) as c_ulong) };
+        let ticks = if super::globals::get!(gB529065) { None } else { Some(h(O::RoPhysicsTicks, 0, &[]) as c_ulong) };
         let mut counter = FRAME_COUNTER.lock().unwrap();
         *counter = ticks.unwrap_or(*counter).wrapping_add(1);
         info.frame = *counter;
@@ -1454,7 +1461,7 @@ pub extern "C" fn ee_gamecpp_ro_fill_render_lists(ro: *mut c_void) {
         SWAY_CLOCK.load(Relaxed),
         count,
     );
-    set_flag(O::RoFlag529068, true);
+    super::globals::set!(gB529068, true);
     let music_due = {
         let last = *MUSIC_LAST.lock().unwrap();
         h(O::RoMusicFollowsBattle, 0, &[]) != 0 && time.wrapping_sub(last) >= RO_MUSIC_PERIOD
@@ -1478,8 +1485,9 @@ fn draw_ground_circle(location: &GeTransformation, radius: f32, mode: c_long) {
     h(O::RoLinesPushBack, 0, &[]);
     let line = hp(O::RoLinesBack, 0, &[]);
     h(O::RoLineSetWidth, line, &[]);
-    h(O::RoLineSetTexture, line, &[]);
-    h(O::RoAreaEffectTextureReference, 0, &[]);
+    let texture = super::ro_views::area_effect_texture();
+    h(O::RoLineSetTexture, line, &[pa(texture)]);
+    super::rast::tex_reference(texture);
     // the 50 points on the ground and the first again, the strip's width: ee_gfx capture.rs
     let mut points = [Ge3DPoint::default(); RO_RING_POINTS];
     let ground = ee_render::gfx::effect_obj::ee_gfx_particle_ground();

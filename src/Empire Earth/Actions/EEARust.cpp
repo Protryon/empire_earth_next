@@ -272,7 +272,7 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GAH_N_WON_REJOIN: gWonNet->RejoinRoom(false); return 0;
     case GA_K(NET, N_POP): gUIManager->Pop(); return 0;
     case EE_SCREENS_GAH_N_STRING: gResource->GetString(i[1], sMessage); return 0;
-    case EE_SCREENS_GAH_N_SHOW: gUIManager->DisplayMessage(sMessage, true, NULL, i[2] ? EEAJoinOrHostAGameRestartClient : NULL, true); return 0;
+    case EE_SCREENS_GAH_N_SHOW: gUIManager->DisplayMessage(sMessage, true, NULL, i[2] ? (void (*)(UIForm*))ee_screens_join_restart_client : NULL, true); return 0;
     case GA_K(NET, N_IS_SERVER): return gCommunications->IsServer() == true;
     case GA_K(NET, N_BOOT_PLAYER): static_cast<EEServer*>(gCommunications)->BootPlayer(GA_A->mPlayer, GA_A->mB0D, GA_A->mIsExiting); return 0;
     case GA_K(NET, N_CTS_PROCESSED): return gCommunications->GetNumberOfCTsProcessedInPhysics() > 0;
@@ -440,26 +440,10 @@ extern "C" void* ee_screenscpp_ga_record(uint32_t inKind, const EeScreensGaValue
 // ------------------------------------------------------------------------------------------------ the originals' COMDATs
 // (out of line in these units after their first users)
 
-// Message box callback: replaces the communications object with a freshly started client
-void EEAJoinOrHostAGameRestartClient(UIForm* inForm)
-{
-    if (gCommunications) {
-        delete gCommunications;
-        gCommunications = NULL;
-    }
-    gCommunications = new EEClient;
-    static_cast<EEClient*>(gCommunications)->StartThreads();
-}
-
 // Returns whether a player name is non-empty and free of control, quote, backslash and @ characters
 bool EEIsValidName(const UWideString& inName)
 {
-    // the rule is Rust's (ee_screens single_player.rs valid_name), over each character's first byte
-    unsigned long theLength = inName.GetLength();
-    std::vector<unsigned char> theChars(theLength);
-    for (unsigned long i = 0; i < theLength; i++)
-        theChars[i] = (unsigned char)inName[(int)i];
-    return ee_screens_valid_name(theChars.data(), theLength);
+    return ee_screens_valid_name(inName, inName.GetLength());   // (ee_screens single_player.rs valid_name)
 }
 
 // Returns whether the tile is visible to a player (or the player sees everything)

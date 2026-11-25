@@ -134,11 +134,11 @@ extern "C" int64_t ee_scenariocpp_world_object(EESMHostContext* inContext, uint3
     case EE_SCENARIO_WZ_TILE_Y: return sWZTiles[(size_t)a[0]].mY;
     case EE_SCENARIO_WZ_CONTINENT_CENTER: gContinentManager.GetContinentCenter((unsigned short)a[0], sWZPoint);
         return 0;
-    case EE_SCENARIO_WZ_TOWN_CENTER: sWZPoint = gWorld.GetPlayer((unsigned long)a[0])->mTowns[(size_t)a[1]]->GetHullCenter();
+    case EE_SCENARIO_WZ_TOWN_CENTER: sWZPoint = gWorld.GetPlayer((unsigned long)a[0])->GetTown((unsigned long)a[1])->GetHullCenter();
         return 0;
     case EE_SCENARIO_WZ_TILES_CONTINENT: gContinentManager.GetContinentTiles((unsigned short)a[0], sWZTiles);
         return 0;
-    case EE_SCENARIO_WZ_TILES_TOWN: gWorld.GetPlayer((unsigned long)a[0])->mTowns[(size_t)a[1]]->GetTiles(sWZTiles);
+    case EE_SCENARIO_WZ_TILES_TOWN: gWorld.GetPlayer((unsigned long)a[0])->GetTown((unsigned long)a[1])->GetTiles(sWZTiles);
         return 0;
     }
     return 0;

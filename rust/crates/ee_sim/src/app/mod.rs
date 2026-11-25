@@ -12,6 +12,7 @@ pub mod cheats;
 pub mod cheats_ffi;
 #[cfg(test)]
 mod cheats_tests;
+pub mod ghosts;
 pub mod map;
 #[cfg(test)]
 mod map_tests;

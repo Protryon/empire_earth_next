@@ -15,7 +15,6 @@
 
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -37,17 +36,12 @@ UString EEEMStorm::sStormData("Storm-Data");
 UString EEEMStorm::sEnvironmentData("Environment-Data");
 // Constructs the black storm colour at startup and registers its destructor
 GEColor gStormColor;                        // (read by Step: the environment manager's colour when a rain storm ends)
-// Constructs the light storm colour at startup and registers its destructor
-GEColor gStormColorLight(0.679f, 0.726f, 0.8f);
-// Constructs the dark storm colour at startup and registers its destructor
-GEColor gStormColorDark(0.273f, 0.343f, 0.457f);
 
 // (the storms' route planners and shaper, EEStormModifiers.h before: ee_sim::astar modifier_obj.rs)
 
 // ------------------------------------------------------------------------- round 10, lane D: the storm
 
 int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECameraControl.cpp (the environment manager's, the cheats', the civilization's and the wonder's: EEGameLog.cpp)
-double EECore10OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 static_assert(sizeof(EEEffectHandle) == 4 && kStormRain == 1 && kStormSnow == 2 && kStormHurricane == 3 && kStormBlizzard == 4
                   && kGraphicEffectRain == 0x54 && kGraphicEffectSnow == 0xac
@@ -75,8 +69,7 @@ int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::DsSetName: S->mName = EEEMStorm::GetTypeName((long)a[0]);
         break;
     case O::DsRandomPlayer: return P64(gWorld.mPlayers[gPhysics->GetRandom(1L, gWorld.mNumPlayers - 1)]);
-    case O::DsTownCount: return (int64_t)PL->mTowns.size();
-    case O::DsRandomTown: return P64(static_cast<EEAIArea*>(PL->mTowns[gPhysics->GetRandom(0L, (long)PL->mTowns.size() - 1)]));
+    case O::DsRandomTown: return P64(static_cast<EEAIArea*>(PL->GetTown(gPhysics->GetRandom(0L, (long)PL->GetNumTowns() - 1))));
     case O::DsLargestLand: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand)]));
     case O::DsLargestAny: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone)]));
     case O::DsLargestWater: return P64(static_cast<EEAIArea*>(gContinentManager.GetContinents()[(unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryWater)]));
@@ -140,11 +133,3 @@ int64_t EECore10OpD2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     return 0;
 }
 
-double EECore10OpD2F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::DsGameSpeed: return gWorld.GetGameSpeed();
-    default: return EECore10OpD7F(inOp, p, a, f);
-    }
-}

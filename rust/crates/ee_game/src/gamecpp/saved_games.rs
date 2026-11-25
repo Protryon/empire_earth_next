@@ -1,6 +1,6 @@
 //! "update_saved_games" (EECommandLine.cpp's EEUpdateSavedGames and EEConvertGameFile, game core round 10): every
 //! saved game and scenario loaded and saved again as "UPDATED <name>", a log written beside the exe, each original
-//! deleted once its conversion succeeded. The C++ calls are EECommandLine.cpp's EECore10OpE2 cases.
+//! deleted once its conversion succeeded. The C++ calls are EECommandLine.cpp's EECommandLineOp cases.
 
 use std::ffi::{c_char, CStr, CString};
 

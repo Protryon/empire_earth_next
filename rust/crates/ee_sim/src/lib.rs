@@ -33,6 +33,8 @@ pub mod save_versions;
 pub mod scenario;
 /// The crate ee_tech before the restructure.
 pub mod tech;
+/// The civilization power ids and the calamity capture event ids for the C++ headers.
+pub mod tech_consts;
 /// The tech tree's named ids (epochs, techs, prerequisite bits) for the C++ headers.
 pub mod tech_tree_ids;
 /// The units' named constants (unit types, categories, families, class flags, action and trigger ids) for the C++ headers.

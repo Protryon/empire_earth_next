@@ -12,11 +12,12 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::Ge3DPoint;
+use ee_sim::units::player_lists::{player_list, EE_UNITS_LISTS_ALLIES};
 use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUnitsRtsPlayerFields};
 
 use crate::app::game_options::{EeAppOptionsFields, EeAppOptionsPlayerFields};
 
-use super::{h, hd, hf, hp, pa, ptr, rec, Owned, O, P};
+use super::{h, hd, hp, pa, ptr, rec, Owned, O, P};
 
 /// `EEGameState`'s members from `mMap` (+0x4c0) to `mRevealMap` (+0x502), in the class's order.
 #[repr(C)]
@@ -124,7 +125,7 @@ fn couldnt_open(err: P, file: P) {
 fn add_archive(archive: P, file: P) {
     h(O::ArchiveSet, archive, &[pa(file)]);
     h(O::DataPathAddArchive, archive, &[]);
-    h(O::SetDataPaths, 0, &[]);
+    super::startup::ee_gamecpp_startup_set_data_paths();
 }
 
 /// EEGameState::Init: the settings' defaults (normal speed and zoom, no map, managers, teams or loaded players, a
@@ -239,7 +240,7 @@ pub extern "C" fn ee_gamecpp_state_set_environment(st: *mut c_void, manager: *mu
 
 /// The saved game, scenario or campaign scenario of the options loaded (`inOptions.mLoadType` 1, 2, 4).
 fn create_loaded(st: P, opt: P, err: P, file: &mut P, l: &Locals) -> bool {
-    hf(O::UiLoadProgress, 0, &[], &[0.1]);
+    crate::screens::ui_objects::ui_set_load_progress(0.1);
     h(O::UiSetLoadingText, 0, &[IDS_LOADING_GAME]);
     h(O::FileSpecSetVolumeStartup, *file, &[]);
     if opts(opt).mLoadType == 2 {
@@ -348,7 +349,7 @@ fn create_loaded(st: P, opt: P, err: P, file: &mut P, l: &Locals) -> bool {
 
 /// A new game's players, teams, managers and (for a random map) map made from the options (`mLoadType` 0, 3).
 fn create_new(st: P, opt: P, l: &Locals) {
-    hf(O::UiLoadProgress, 0, &[], &[0.1]);
+    crate::screens::ui_objects::ui_set_load_progress(0.1);
     h(O::UiSetLoadingText, 0, &[IDS_CREATING_WORLD]);
     let mut used = [false; 16];
     for i in 0..16 as c_ulong {
@@ -450,13 +451,10 @@ fn create_new(st: P, opt: P, l: &Locals) {
     while i < player_count(st) {
         let pl = player_at(st, i);
         psaved(pl).mChatType = 0;
-        let allies = h(O::PlAlliesCount, pl, &[]);
-        if allies > 0 {
-            for j in 0..allies {
-                if h(O::PlIsHuman, hp(O::PlAllyAt, pl, &[j]), &[]) != 0 {
-                    psaved(pl).mChatType = 1;
-                    break;
-                }
+        for ally in player_list(pl as u64, EE_UNITS_LISTS_ALLIES) {
+            if h(O::PlIsHuman, ally as P, &[]) != 0 {
+                psaved(pl).mChatType = 1;
+                break;
             }
         }
         i += 1;

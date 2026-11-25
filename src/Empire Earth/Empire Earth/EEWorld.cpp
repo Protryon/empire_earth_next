@@ -13,74 +13,39 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GERectangle.h"
 #include "lle/NEMessage.h"
-#include "lle/U2DPoint.h"
-#include "lle/UIEvent.h"
 #include "lle/UResourceFile.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
 #include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
 #include "lle/GEModelManager.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSFile.h"
-#include "lle/FSMemoryFile.h"
-#include "lle/ESChecksum.h"
-#include "lle/TSScheduler.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/U2DRectangle.h"
 #include "lle/USingleton.h"
 #include "lle/SESoundManager.h"
 #include "lle/UIControl.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/UIFormManager.h"
-#include "lle/GELine.h"
 #include "lle/FSRestorable.h"
-#include "lle/FSPersistent.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/NESynchronousServer.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUnitStore.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
-#include "ee/EERules.h"
-#include "ee/EEUnitClassIDs.h"
-#include "ee/EETechTreeTechID.h"
 #include "ee/EEUnit.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEHumanPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EECPASGFlags.h"
 #include "ee/EETeam.h"
-#include "ee/EEVictoryCondition.h"
-#include "ee/EEVCWonder.h"
 #include "ee/EEGameState.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EEStatisticsRecord.h"
-#include "ee/EEDatabase.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEMiniMap.h"
@@ -94,39 +59,28 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EEEffectManager.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEPCalamityHelper.h"
 #include "ee/EEPathManager.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEArtificialIntelligence.h"
-#include "ee/EEPPatrolGroup.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEGameSound.h"
-#include "ee/RTSGraphics.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEMusicManager.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EECampaignProgress.h"
 #include "ee/EECivilizationBuilder.h"
-#include "ee/EECivilization.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEColorTable.h"
 #include "ee/EEStartingResources.h"
-#include "ee/EERenderLists.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUIEChatLogEvents.h"
-#include "ee/EEUIMiniMap.h"
-#include "ee/EEGameUI.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEWorldLayout.h"
-#include "rust/sim/app.h"   // EeAppStats* (ee_sim app statistics.rs)
 #include "rust/game/gamecpp.h"   // the bodies (ee_game gamecpp world.rs)
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
@@ -190,26 +144,6 @@ void EEWorld::ApplyShareBonus()
     EEPlayerShareBonus(false);   // (ee_units player_units.rs: the player lane, round 2)
 }
 
-
-// port: the deactivations queued before the unit had an id (EEWorld::DeactivateUnit), Reference()d, in call order
-static std::vector<EEComplexUnit*> sUnbornDeactivations;
-
-static void EEDropUnbornDeactivations()
-{
-    for (size_t i = 0; i < sUnbornDeactivations.size(); i++)
-        sUnbornDeactivations[i]->Dereference();
-    sUnbornDeactivations.clear();
-}
-
-// the active lists' reference changes (ee_sim app active.rs), applied as each is made
-static void EEActiveRefs(uint32_t inID, int32_t inDelta)
-{
-    EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);
-    for (; inDelta > 0; inDelta--)
-        theUnit->Reference();
-    for (; inDelta < 0; inDelta++)
-        theUnit->Dereference();
-}
 
 // Adds the world's state and the game's random seed to a sync checksum
 void EEWorld::GetChecksum(ESChecksum& ioChecksum)
@@ -280,8 +214,7 @@ EEStatisticsRecord::EEStatisticsRecord()
 // Applies the queued unit activations and deactivations to the list of units updated every tick
 void EEWorld::UpdateActiveUnits()
 {
-    ee_gamecpp_world_queue_born();   // QueueBornDeactivations
-    ee_app_active_update(EEActiveRefs);
+    ee_gamecpp_world_update_active();   // (gamecpp world.rs: QueueBornDeactivations, then the lists' update)
 }
 
 // Undoes the wonder power 4 population share bonus ApplyShareBonus gave or took for every player
@@ -362,6 +295,9 @@ EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define W ((EEWorld*)p)
+#define REC (W->mStatistics.mRecords[(size_t)a[0]])
+#define PL0 (W->mPlayers[a[0]])
+#define PL1 (W->mPlayers[a[1]])
 #define ST ((EEGameState*)p)
 #define PL ((EEPlayer*)p)
 #define UN ((EEUnit*)p)
@@ -450,9 +386,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WGhostUnlock: W->mGhostUnitsLock->Leave();
         break;
-    case O::WGhostCount: return (int64_t)W->mGhostUnits.size();
-    case O::WGhostBack: return P64(W->mGhostUnits.back());
-    case O::WGhostPop: W->mGhostUnits.pop_back();
+    case O::C13bGhostLockFree: TSScheduler::DestroyCriticalSection(W->mGhostUnitsLock);   // the world's dtor (world.rs ee_gamecpp_world_destroy)
         break;
     case O::GhostDelete: delete (EEGhostUnit*)p;
         break;
@@ -464,11 +398,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
     case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
-    case O::WQueuedCount: return (int64_t)W->mQueuedPlacements.size();
-    case O::WQueuedUnit: return P64(W->mQueuedPlacements[a[0]].mUnit);
-    case O::WQueuedAfter: return P64(W->mQueuedPlacements[a[0]].mInsertAfter);
-    case O::WQueuedClear: W->mQueuedPlacements.clear();
-        break;
     case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
         break;
     case O::WWriteLock: W->mLock->WriteLock();
@@ -500,10 +429,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::WOptionsPlayerGet: *(EEGameOptionsPlayer*)a[1] = W->mGameOptions.mPlayers[a[0]];
         break;
     case O::WOptionsPlayerSet: W->mGameOptions.mPlayers[a[0]] = *(EEGameOptionsPlayer*)a[1];
-        break;
-    case O::WResourceUserHas: return W->mResourceUsers.count((EEUnit*)a[0]);
-    case O::WResourceUserGet: return (int64_t)W->mResourceUsers.find((EEUnit*)a[0])->second;
-    case O::WResourceUserSet: W->mResourceUsers[(EEUnit*)a[0]] = (unsigned long)a[1];
         break;
     case O::RtsClear: W->RTSWorld::Clear();
         break;
@@ -563,10 +488,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::PlNumPending: return PL->GetNumPendingUnits();
     case O::PlPendingAt: return P64(PL->GetPendingUnit((unsigned long)a[0]));
-    case O::PlAlliesCount: return (int64_t)PL->mAllies.size();
-    case O::PlAllyAt: return P64(PL->mAllies[a[0]]);
-    case O::PlAlliesPush: PL->mAllies.push_back((EEPlayer*)a[0]);
-        break;
     case O::PlSaveTo: PL->EEPlayer::Save((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
         break;
     case O::PlLoadFrom: PL->EEPlayer::Load((unsigned long)a[0], (unsigned long)a[1], *(FSMemoryFile*)a[2]);
@@ -686,15 +607,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::LogAfterGone: fprintf(stderr, "EE-UNITLIST: placement after a unit no longer in the list (id %08lx), from the head\n", ((RTSUnit*)p)->mUnitID);
         break;
-    case O::UnbornContains: return std::find(sUnbornDeactivations.begin(), sUnbornDeactivations.end(), CX) != sUnbornDeactivations.end();
-    case O::UnbornPush: sUnbornDeactivations.push_back(CX);
-        break;
-    case O::UnbornCount: return (int64_t)sUnbornDeactivations.size();
-    case O::UnbornAt: return P64(sUnbornDeactivations[a[0]]);
-    case O::UnbornClear: sUnbornDeactivations.clear();
-        break;
-    case O::ActiveClear: ee_app_active_clear(EEActiveRefs, EEDropUnbornDeactivations);   // the lists and their references (ee_sim app active.rs)
-        break;
     // the map, the managers and the globals
     case O::MapSize: return ((EEMap*)p)->mSize;
     case O::MapPlayerCount: return ((EEMap*)p)->mU19561C;
@@ -711,17 +623,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::MiniMapDelete: delete gMiniMap;
         break;
-    case O::MiniMapSetNull: gMiniMap = NULL;
-        break;
-    case O::MiniMapRedraw: gMiniMap->Redraw();
-        break;
-    case O::MiniMapRedrawAll: gMiniMap->RedrawAll();
-        break;
-    case O::MiniMapRefresh: gMiniMap->Refresh();
-        break;
     case O::MiniMapSetViewer: gMiniMap->mViewingPlayer = (EEPlayer*)a[0];
-        break;
-    case O::MiniMapMoveUnit: gMiniMap->MoveUnit(UN, (long)a[0], (long)a[1], (long)a[2], (long)a[3]);
         break;
     case O::PickerLock: gUnitPicker.GetLock()->Enter();
         break;
@@ -740,8 +642,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::UiPostPauseInformation: gUserInterface->PostPauseInformation(a[0] != 0);
         break;
     case O::UiSetRandomSeed: gUserInterface->mRandomSeed = (long)a[0];
-        break;
-    case O::UiLoadProgress: gUserInterface->SetLoadProgress(f[0]);
         break;
     case O::DisplayWeatherEffects: return gDisplayWeatherEffects;
     case O::EnvSetEnabled: ((EEEnvironmentManager*)p)->SetEnabled(a[0] != 0);
@@ -764,8 +664,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::NewCalamityHelper: return P64(static_cast<FSPersistent*>(new EEPCalamityHelper));
     case O::SetLocalPlayerOut: gLocalPlayerOut = a[0] != 0;
-        break;
-    case O::SetCollisionDetectionUnit: gCollisionDetectionUnit = (unsigned long)a[0];
         break;
     case O::SetSightUpdates: gSightUpdatesEnabled = a[0] != 0;
         break;
@@ -886,40 +784,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::DumpLeakTitle: fprintf(FILE_SPEC, "REFERENCE COUNTED MEMORY LEAKS\n\n");   // the reference-leak report: its title (nothing tracks references)
         break;
-    default: return EEGameStateOp(inOp, p, a, f);   // the game state bodies' (EEGameState.cpp)
-    }
-    return 0;
-}
-
-double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    case O::VariantFactor: return EEGameVariant::GetGameVariant(W->mGameOptions.GetVariant())->GetFactor((long)a[0]);
-    case O::ViewportHalfWidth: return gViewport.GetHalfWidth();
-    case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
-    case O::ViewportXCenter: return gViewport.GetXCenter();
-    case O::ViewportYCenter: return gViewport.GetYCenter();
-    default: return EEGameStateOpF(inOp, p, a, f);
-    }
-    return 0.0;
-}
-
-// ------------------------------------------------------------------------- round 10, lane E: world_stats.rs's C++
-
-#define W ((EEWorld*)p)
-#define REC (W->mStatistics.mRecords[(size_t)a[0]])
-#define PL0 (W->mPlayers[a[0]])
-#define PL1 (W->mPlayers[a[1]])
-
-// RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world): one statement each; the end of the
-// chain
-
-int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
-int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
+    // RecordStatistics' C++ calls and members (gamecpp world_stats.rs; p the world)
     case O::WsStart: W->mStatistics.mStartTime = W->mStartTime;
         break;
     case O::WsTiles: W->mStatistics.mTileCount = W->mMap->GetTileCount();
@@ -984,18 +849,22 @@ int64_t EECore10OpE3(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::WsRecPlayTime: REC.mStatistics.Set(0x18, (long)a[1]);
         break;
-    default: return EECore11OpB(inOp, p, a, f);
+    default: return EEGameStateOp(inOp, p, a, f);   // the game state bodies' (EEGameState.cpp)
     }
     return 0;
 }
 
-double EECore11OpBF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameLog.cpp
-double EECore10OpE3F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
+double EEWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
+    case O::VariantFactor: return EEGameVariant::GetGameVariant(W->mGameOptions.GetVariant())->GetFactor((long)a[0]);
+    case O::ViewportHalfWidth: return gViewport.GetHalfWidth();
+    case O::ViewportOrthoWidth: return gViewport.GetOrthographicRectangle().GetWidth();
+    case O::ViewportXCenter: return gViewport.GetXCenter();
+    case O::ViewportYCenter: return gViewport.GetYCenter();
     case O::WsRandom: return gPhysics->GetRandom(f[0], f[1]);
-    default: return EECore11OpBF(inOp, p, a, f);
+    default: return EEGameStateOpF(inOp, p, a, f);
     }
     return 0.0;
 }

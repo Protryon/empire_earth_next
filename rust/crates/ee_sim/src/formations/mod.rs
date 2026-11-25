@@ -10,6 +10,7 @@
 
 pub mod capture;
 pub mod ffi;
+pub mod units;
 
 use crate::rmap::math::{um_arctan2, um_cos, um_sin};
 

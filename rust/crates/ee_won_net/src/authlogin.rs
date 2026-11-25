@@ -515,6 +515,38 @@ pub unsafe extern "C" fn ee_won_auth_login_hash_files(
     unsafe { login(l) }.hash_files(&c, list, open_c)
 }
 
+/// `AuthContext::SetHashFile(community)` (2e06d0; AuthContext.cpp until R6 WON lobby and network round 37): the
+/// community's one hash file is the running executable in the data root; false without either name.
+///
+/// # Safety
+/// `l` is a login; `community` holds `count` characters of `wchar_size` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_auth_login_hash_exe(
+    l: *const EeWonAuthLogin,
+    community: *const c_void,
+    wchar_size: u32,
+    count: usize,
+) -> bool {
+    // PLAT_MAX_PATH, the C++ buffers'
+    let mut directory = [0u8; 260];
+    let mut name = [0u8; 260];
+    // SAFETY: the buffers and their sizes
+    let found = unsafe {
+        ee_base::plat_core::path::PlatPathGetDataRoot(directory.as_mut_ptr().cast(), directory.len() as u32) > 0
+            && ee_base::plat_core::path::PlatPathGetExecutableName(name.as_mut_ptr().cast(), name.len() as u32) > 0
+    };
+    if !found {
+        return false;
+    }
+    let c_str = |b: &[u8]| b[..b.iter().position(|&x| x == 0).unwrap_or(b.len())].to_vec();
+    let mut file = c_str(&directory);
+    file.extend(c_str(&name));
+    // SAFETY: the caller's text
+    let c = unsafe { crate::ffi::wide_units(community, wchar_size, count) };
+    // SAFETY: the caller's login
+    unsafe { login(l) }.hash_files(&c, &[file], open_c)
+}
+
 /// The members, one line (`Login::describe`, the drivers' form).
 ///
 /// # Safety

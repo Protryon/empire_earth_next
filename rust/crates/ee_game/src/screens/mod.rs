@@ -151,7 +151,7 @@ mod chat_ffi;
 pub mod chat_line;
 pub mod chat_log;
 #[cfg(not(test))]
-mod chat_log_ffi;
+pub(crate) mod chat_log_ffi;
 pub mod civ_builder;
 #[cfg(not(test))]
 mod civ_builder_ffi;
@@ -459,6 +459,8 @@ pub(crate) mod ui_message_calls;
 pub mod ui_objects;
 #[cfg(not(test))]
 mod ui_objects_ffi;
+#[cfg(not(test))]
+pub(crate) use ui_objects_ffi::post_if_ui;
 pub mod ui_thread;
 #[cfg(not(test))]
 mod ui_thread_ffi;

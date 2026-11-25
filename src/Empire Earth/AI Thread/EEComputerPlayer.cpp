@@ -34,6 +34,7 @@
 #include "ee/EECPNext.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECombatGoals.h"
+#include "rust/data/ffi.h"   // ee_data_rules_ai_level
 
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
@@ -99,16 +100,6 @@ unsigned long EEWorld::GetNumTeams() { return this->mTeams.size(); }
 
 // Returns whether the given player is a member of the team
 bool EETeam::ContainsPlayer(unsigned long inPlayerID) { return std::find(this->mPlayers.begin(), this->mPlayers.end(), inPlayerID) != this->mPlayers.end(); }
-
-// port (ee/EECPExperimentTimers.h): the experiments' timers and the resource state, saved from 0.258 and 0.265
-// (ee_sim::cp timers.rs, player_game.rs ee_cp_pl_state_block)
-long EECPSaveExperimentTimers(FSFile& outFile) { return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 0, &EESaveFilePrimitive); }
-
-long EECPLoadExperimentTimers(FSFile& inFile) { return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 1, &EESaveFilePrimitive); }
-
-long EECPSaveResourceState(FSFile& outFile) { return ee_cp_pl_state_block((uint64_t)(uintptr_t)&outFile, 2, &EESaveFilePrimitive); }
-
-long EECPLoadResourceState(FSFile& inFile) { return ee_cp_pl_state_block((uint64_t)(uintptr_t)&inFile, 3, &EESaveFilePrimitive); }
 
 // the after-load fixups of player_game.rs: inCall(inBox) at the loaded game's first tick
 extern "C" void ee_cp_after_load(void (*inCall)(uint64_t), uint64_t inBox)
@@ -236,8 +227,10 @@ extern "C" int64_t ee_cp_player_host(const EeCpPlaceCtx* inContext, int32_t inOp
     case EE_CP_PLAYER_ENGINE_FILLS_GARRISON: return EECPEngineFillsGarrison(thePlayer) ? 1 : 0;
     case EE_CP_PLAYER_SET_SELF: thePlayer->mComputerPlayer = thePlayer;
         return 0;
-    case EE_CP_PLAYER_BEHAVIORS: return (int64_t)(uintptr_t)gCPBehaviors;
-    case EE_CP_PLAYER_AI_LEVEL: return EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty);
+    case EE_CP_PLAYER_BEHAVIORS:
+        return (int64_t)(uintptr_t)gCPBehaviors;
+    case EE_CP_PLAYER_AI_LEVEL:
+        return ee_data_rules_ai_level(EEGetRules().RustRules(), gWorld.mLobbyOptions.mDifficulty);   // ee_data ffi.rs
     case EE_CP_PLAYER_NEXT_DELETE: EECPNextDeleteState(thePlayer);
         return 0;
     case EE_CP_PLAYER_UNITS_DELETE: EECPUnitsDelete(thePlayer);

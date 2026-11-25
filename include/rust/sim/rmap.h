@@ -316,10 +316,7 @@ enum class EeRmapCpp : uint32_t {
   CxAnimation,
   /// `gStartupVolume + gStartupDirectory + "Data\\Random Map Scripts\\"` into the sink a0
   ScriptDirectory,
-  /// `PlatFOpen(a0, "r")`'s whole text into the sink a1 -> false when missing
-  ReadText,
   SetUsingCarbon,
-  LoadProgress,
   /// `ESDebugOut("%s", a0)`
   DebugOut,
   FindNew,
@@ -329,8 +326,8 @@ enum class EeRmapCpp : uint32_t {
   FindNext,
   /// the found file's name into the sink a0
   FindName,
-  /// the found file's text into the sink a0 -> false when it does not open
-  FindText,
+  /// the found file's volume, directory and name into the sink a0
+  FindPath,
   /// `gResource->GetString(a1, display)` into the sink a0 -> its result
   ResourceString,
   /// `ESVERIFY_AT(a0 != 0, a1)`

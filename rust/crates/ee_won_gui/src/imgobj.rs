@@ -223,7 +223,7 @@ impl Ref {
     /// A new reference.
     fn hold(host: EeWonImageHostFn, p: isize) -> Ref {
         if p != 0 {
-            host(EeWonImageHost::Ref, p, 0, 0, 0);
+            href(host, p, true);
         }
         Ref { host, p }
     }
@@ -242,8 +242,15 @@ impl Ref {
 impl Drop for Ref {
     fn drop(&mut self) {
         if self.p != 0 {
-            (self.host)(EeWonImageHost::Unref, self.p, 0, 0, 0);
+            href(self.host, self.p, false);
         }
+    }
+}
+
+/// A handle's reference taken or given back: the game's reference function, else the host's Ref / Unref.
+fn href(host: EeWonImageHostFn, p: isize, hold: bool) {
+    if crate::gamewin::rf(p, hold).is_none() {
+        host(if hold { EeWonImageHost::Ref } else { EeWonImageHost::Unref }, p, 0, 0, 0);
     }
 }
 
@@ -298,11 +305,11 @@ impl EeWonImage {
     /// `held = p` (the SmartPtr assignment: the new reference first).
     fn set_held(&self, held: &Held, p: isize) {
         if p != 0 {
-            self.h(EeWonImageHost::Ref, p, 0, 0, 0);
+            href(self.host, p, true);
         }
         let old = held.0.replace(p);
         if old != 0 {
-            self.h(EeWonImageHost::Unref, old, 0, 0, 0);
+            href(self.host, old, false);
         }
     }
 
@@ -998,7 +1005,7 @@ impl Drop for EeWonImage {
         let host = self.host;
         let rel = |p: isize| {
             if p != 0 {
-                host(EeWonImageHost::Unref, p, 0, 0, 0);
+                href(host, p, false);
             }
         };
         match &self.kind {

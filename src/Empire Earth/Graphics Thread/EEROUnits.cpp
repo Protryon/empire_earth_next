@@ -22,7 +22,15 @@
 #include "ee/EEGraphics.h"
 #include "ee/EERenderLists.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EERenderSnapshot.h"
+#include "lle/GESurface.h"
+#include "ee/EEUnit.h"
+#include "ee/RTSWorld.h"
+#include "ee/EEWorld.h"
+#include "ee/EEPhysics.h"
+#include "ee/EEGraphicObject.h"
+#include "ee/EEUIFSEBrushGroup.h"
+#include "ee/EEROTerrain.h"
+#include "ee/EEROUserInterface.h"
 #include <utility>
 
 extern bool& gShowCollisionSpheres;          // 0x5318dc (the units' collision spheres are drawn; provisional name)
@@ -54,22 +62,26 @@ void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
 
 // ------------------------------------------------------------------------- round 10, lane A: this file's C++ (gamecpp ro_units.rs)
 
-int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEDataTextFile.cpp
+extern unsigned long& gTextureMipLevelsToDrop;
+extern bool& gDrawClouds;                    // 0x5308d3
+extern bool& gTrilinearFilter;               // 0x5308da
+static_assert(sizeof(RTSColoredRectangle) == 5 * sizeof(long) + 4 * sizeof(float) && sizeof(RTSMapTileRun) == 4 * sizeof(long), "ro_views.rs ColoredRectangle, grid runs");
 
 #define RU_P64(x) ((int64_t)(intptr_t)(x))
 #define RU_TEXT ((GEText*)p)
+#define RU_MAP ((EEMap*)p)
 #define RU_COLOR(k) (*reinterpret_cast<const GEColor*>(&((const EeGfxColor*)a[1])[k]))
 
 static_assert(offsetof(EERenderUnitRecord, mUnit) == 0, "rfil.rs reads a record's unit first");
 
-// the C++ calls and members of gamecpp ro_units.rs and ro_lists.rs (EECommandLine.cpp's EECommandLineOp default): one statement each
+// the C++ calls and members of gamecpp ro_units.rs, ro_lists.rs and ro_views.rs (EECommandLine.cpp's EECommandLineOp default): one statement each
 int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
     switch (inOp) {
     case O::RrBarDraw: return gRasterizer->Draw(sBars[a[0]], gScreenIndex);
     case O::RuMainViewport: return RU_P64(&gU4E8F08);
-    case O::RuCinematic: return gRenderSnapshot.mInCinematic;
     case O::RuCollisionSpheres: return gShowCollisionSpheres;
     case O::RuInterpolateFrames: return gInterpolateFrames;
     case O::RuModelDetail: return gModelDetail;
@@ -136,7 +148,47 @@ int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::RlGhosts: return RU_P64(EERenderLists::sInstance.mGhostRecords.data());
     case O::RlLines: return RU_P64(gU529050.data());
     case O::RlLinesCount: return (int64_t)gU529050.size();
-    default: return EERoViewsOp(inOp, p, a, f);
+    // the other render objects (gamecpp ro_views.rs)
+    // the UI's render object
+    case O::GuCopyData: ((EEROUserInterface*)p)->mUIManager->CopyData();
+        break;
+    case O::GuSelectedGroup: return RU_P64(((EEPlayer*)p)->mSelectedGroup);
+    case O::GuGroupFirstUnit: return RU_P64(((EESelectedGroup*)p)->GetFirstUnit());
+    case O::GuCurrentViewedUnit: return RU_P64(gWorld.GetCurrentPlayer()->mSelectedViewedUnit);
+    case O::GuMainUiState: return gUIManager->GetMainGameForm()->mUIState;
+    case O::GuTargetWidth: return gRasterizer->GetRenderTarget(gScreenIndex)->GetWidth();
+    case O::GuTargetHeight: return gRasterizer->GetRenderTarget(gScreenIndex)->GetHeight();
+    case O::GuDrawPolygons: ((EEROUserInterface*)p)->mUIManager->DrawPolygons();
+        break;
+    // the ground shadows
+    case O::GsDrawGroundShadows: return gDrawGroundShadows;
+    case O::GsShadowModel: return RU_P64(((EEGraphicObject*)p)->mShadowModel);
+    case O::GsShadowTexture: return RU_P64(((EEGraphicObject*)p)->mShadowTexture);
+    // the terrain
+    case O::TeMipLevelsToDrop: return gTextureMipLevelsToDrop;
+    case O::TeTrilinear: return gTrilinearFilter;
+    case O::TeDrawClouds: return gDrawClouds;
+    case O::TeMapSize: return gWorld.mMap->mSize;
+    case O::TeMapGridRuns: return (*(const RTSMapTileRun**)a[0] = gWorld.mMap->mU1955DC.data(), (int64_t)gWorld.mMap->mU1955DC.size());
+    case O::TeGridMode: return ((EEROTerrain*)p)->mGridMode;
+    case O::TeDraw3DLine: gRasterizer->Draw3DLine(gU529050[a[0]].mPoints, gU529050[a[0]].mTexture, gU529050[a[0]].mWidth, gScreenIndex, false);
+        break;
+    // the snapshot
+    case O::SnMapColoredCount: return (int64_t)RU_MAP->mColoredRectangles.size();
+    case O::SnMapColoredAt: return RU_P64(&RU_MAP->mColoredRectangles[a[0]]);
+    case O::SnMapColoredLock: RU_MAP->mCriticalSectionForColoredRectangles->Enter();
+        break;
+    case O::SnMapColoredUnlock: RU_MAP->mCriticalSectionForColoredRectangles->Leave();
+        break;
+    case O::SnMapColoredErase: RU_MAP->GetColoredRectangles().erase(RU_MAP->GetColoredRectangles().begin() + a[0]);
+        break;
+    case O::SnEditorPresent: return gUIManager->GetScenarioEditorForm() != NULL;
+    case O::SnBrushRectangle: *(GERectangle*)a[0] = gUIManager->GetScenarioEditorForm()->GetBrushGroup()->mRectangle;
+        break;
+    case O::SnBrushHighlightShown: return gUIManager->GetScenarioEditorForm()->GetBrushGroup()->mIsHighlightShown;
+    // RFIL
+    case O::RcPhysicsPresent: return gPhysics != NULL;
+    default: return EECore10OpB5(inOp, p, a, f);
     }
     return 0;
 }

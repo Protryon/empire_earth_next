@@ -3,11 +3,9 @@
 // and the ??_G of its events, with the functions of EEABuild.cpp folded in. Unit flags: the exe module set.
 #include <windows.h>
 #include <string>
-#include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "ee/EmpireEarth.h"
 #include "ee/EEUIShell.h"
 #include "ee/EESEARust.h"
 #include "ee/EEScenarioManager.h"
@@ -15,6 +13,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
+#include "ee/EmpireEarth.h"   // gEmptyString
 
 // ---- the tab's host (editor_instructions.rs: the ops from 700; editor_trigx.rs composes the sequences over the
 // single statements below, EE_SCREENS_SEINX_*)

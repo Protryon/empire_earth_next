@@ -105,7 +105,7 @@ extern "C" int64_t ee_units_ghost_host(int32_t inOp, void* inGhost, uint64_t inA
     case EE_UNITS_GHOST_VIEW_CONTAINS: return gViewport.GetViewRectangle().Contains(*theLocation);
     case EE_UNITS_GHOST_NUM_GHOSTS: return (int64_t)gWorld.GetNumGhostUnits();
     case EE_UNITS_GHOST_SET_CHANGED: gGhostUnitsChanged = inB != 0; return 0;
-    case EE_UNITS_GHOST_GHOST_AT: return (uint64_t)(uintptr_t)gWorld.mGhostUnits[(size_t)inB];
+    case EE_UNITS_GHOST_GHOST_AT: return (uint64_t)(uintptr_t)gWorld.GetGhostUnit((size_t)inB);
     case EE_UNITS_GHOST_POINT_UNIT_OR_TILE: return EEPointUnitOrTile(*theLocation, sGhostTile, sGhostPosition, true);
     case EE_UNITS_GHOST_POSITION: return UFloatBits(EEGhostPart(sGhostPosition, inB));
     case EE_UNITS_GHOST_SET_POSITION_PART: EEGhostPart(sGhostPosition, inB) = UBitsFloat((uint32_t)(inC)); return 0;

@@ -376,12 +376,12 @@ extern "C" uint32_t ee_screenscpp_sh_ghost_count() { return (uint32_t)gWorld.Get
 extern "C" void ee_screenscpp_sh_ghosts_enter() { gWorld.mGhostUnitsLock->Enter(); }
 extern "C" void ee_screenscpp_sh_ghosts_leave() { gWorld.mGhostUnitsLock->Leave(); }
 extern "C" bool ee_screenscpp_sh_ghost_turns(uint32_t inIndex)
-{ return gUnitClassTable[static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mUnitClass->mUnitType]->mAngularAcceleration > 0.0f; }
+{ return gUnitClassTable[static_cast<EEGhostUnit*>(gWorld.GetGhostUnit(inIndex))->mUnitClass->mUnitType]->mAngularAcceleration > 0.0f; }
 extern "C" void ee_screenscpp_sh_tr_from_ghost(uint32_t inIndex)
-{ EEScratch<GETransformation>(kScratchShTransformation) = static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mTransformation; }
+{ EEScratch<GETransformation>(kScratchShTransformation) = static_cast<EEGhostUnit*>(gWorld.GetGhostUnit(inIndex))->mTransformation; }
 extern "C" void ee_screenscpp_sh_tr_orient(float inAngle) { EEScratch<GETransformation>(kScratchShTransformation).SetOrientationYPR(inAngle, 0.0f, 0.0f); }
 extern "C" void ee_screenscpp_sh_tr_to_ghost(uint32_t inIndex)
-{ static_cast<EEGhostUnit*>(gWorld.mGhostUnits[inIndex])->mTransformation = EEScratch<GETransformation>(kScratchShTransformation); }
+{ static_cast<EEGhostUnit*>(gWorld.GetGhostUnit(inIndex))->mTransformation = EEScratch<GETransformation>(kScratchShTransformation); }
 extern "C" uint32_t ee_screenscpp_sh_editor_selected_count(uintptr_t inControl)
 { return (uint32_t)static_cast<EEUIFScenarioEditor*>(C(inControl)->GetForm())->GetSelectedUnitCount(); }
 extern "C" uintptr_t ee_screenscpp_sh_editor_selected(uintptr_t inControl, uint32_t inIndex)

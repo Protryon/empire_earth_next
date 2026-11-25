@@ -23,8 +23,8 @@
 #include "lle/U2DSparseArray.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
+#include "ee/EETown.h"
 #include "ee/EECPPlacement.h"
-#include "ee/EETechRust.h"   // EETechHost: the tree view's lookups (tech_view.rs)
 
 // the classes are not standard-layout; offsetof of a non-virtual base's member is the member's place in every object
 #if defined(__clang__)
@@ -107,11 +107,7 @@ void EEWorldLayoutRegister()
     theLayout.player_first_unit = offsetof(EEPlayer, mFirstUnit);
     theLayout.player_selected_group = offsetof(EEPlayer, mSelectedGroup);
     theLayout.player_computer_player = offsetof(EEPlayer, mComputerPlayer);
-    theLayout.player_allies = offsetof(EEPlayer, mAllies);   // lane P
-    theLayout.player_sight_sharers = offsetof(EEPlayer, mSightSharers);
     theLayout.player_pending_units = offsetof(EEPlayer, mPendingUnits);
-    theLayout.player_towns = offsetof(EEPlayer, mTowns);
-    theLayout.player_herds = offsetof(EEPlayer, mHerds);
     theLayout.world_players = offsetof(EEWorld, mPlayers);
     theLayout.world_map = offsetof(EEWorld, mMap);
     theLayout.world_num_players = offsetof(EEWorld, mNumPlayers);
@@ -120,7 +116,6 @@ void EEWorldLayoutRegister()
     theLayout.world_population_limit = offsetof(EEWorld, mPopulationLimit);
     theLayout.world_wonders_to_win = offsetof(EEWorld, mNumberOfWondersToWin);
     theLayout.world_game_options = offsetof(EEWorld, mGameOptions);
-    theLayout.world_ghost_units = offsetof(EEWorld, mGhostUnits);
     theLayout.world_victory_enabled = offsetof(EEWorld, mVictoryEnabled);
     theLayout.world_game_screen_active = offsetof(EEWorld, mGameScreenActive);
     theLayout.world_loading_saved_game = offsetof(EEWorld, mLoadingSavedGame);
@@ -149,8 +144,6 @@ void EEWorldLayoutRegister()
     theLayout.tech_tree_fields = BaseOffset<EETechTree, EeTechTreeFields>();
     theLayout.node_fields = BaseOffset<EETechTreeNode, EeTechNodeFields>();
     theLayout.node_data = offsetof(EETechTreeNode, mData);
-    theLayout.node_data_fields = BaseOffset<RTSTechTreeNodeData, EeTechNodeDataFields>();
-    theLayout.node_data_unit_classes = offsetof(RTSTechTreeNodeData, mUnitClasses);
     theLayout.tech_host = (uint64_t)(uintptr_t)&EETechHost;
     theLayout.cp_fields = BaseOffset<EEComputerPlayer, EeCpFields>();
     theLayout.stats_links = BaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeLinks>();
@@ -177,10 +170,17 @@ void EEWorldLayoutRegister()
     theLayout.active_group_fields = offsetof(EEActiveGroup, mFields);   // the group objects (group_obj.rs)
     theLayout.active_group_goal = offsetof(EEActiveGroup, mGoal);
     theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - BaseOffset<EEComputerPlayer, EEPlayer>();
-    theLayout.placement_town = offsetof(EECPPlacement, mTownCenterTile);
-    theLayout.placement_rust = offsetof(EECPPlacement, mRust);
+    theLayout.placement_town = offsetof(EECPPlacement, town);
+    theLayout.placement_rust = offsetof(EECPPlacement, rust);
     theLayout.player_group_lists = offsetof(EEPlayer, mGroupLists);   // the groups lane, round 2 (group_obj.rs)
     theLayout.player_lists = offsetof(EEPlayer, mLists);   // (player_body.rs)
+    theLayout.player_active_group = offsetof(EEPlayer, mActiveGroup);   // the player/tech lane, round 2 (player_native.rs)
+    theLayout.player_groups = offsetof(EEPlayer, mGroups);
+    theLayout.player_human_player = offsetof(EEPlayer, mHumanPlayer);
+    theLayout.player_healed_unit_set = offsetof(EEPlayer, mHealedUnitSet);
+    theLayout.player_air_traffic = offsetof(EEPlayer, mAirTraffic);
+    theLayout.player_last_unit = offsetof(EEPlayer, mLastUnit);
+    theLayout.town_fields = BaseOffset<EETown, EeTownFields>();
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

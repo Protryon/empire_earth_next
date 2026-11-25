@@ -164,7 +164,6 @@ public:
     void SwapUnit(EEUnit* inOld, EEUnit* inNew) { ee_physics_swap_unit(inOld, inNew); }
     void UpdateCivTimer() { ee_physics_update_civ_timer(this); }
     void ServeLoadSaveRequests() { ee_physics_serve_load_save_requests(this); }
-    unsigned long UpdateUnits();
     void UpdateWeather() { ee_physics_update_weather(this); }
 
     std::vector<NEMessage*> mLoadSaveRequests;  // +0x06c (queued under mSaveGameLock, referenced; Init dereferences them)

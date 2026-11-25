@@ -22,11 +22,7 @@ constexpr static const int64_t SS_SLOT_NONE = 255;
 /// A storage holds this many times its `EE_GAME_SIZE_*` bytes (ee/EEGlobalStorage.h's static_assert reads it).
 constexpr static const size_t EE_GAME_STORAGE_FACTOR = 2;
 
-constexpr static const size_t EE_GAME_SIZE_gU530BE0 = 24;
-
 constexpr static const size_t EE_GAME_SIZE_gU530BC8 = 32;
-
-constexpr static const size_t EE_GAME_SIZE_gExecutableName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gSavedGameExtension = 24;
 
@@ -101,22 +97,6 @@ constexpr static const size_t EE_GAME_SIZE_gDataPreLoadingThreadName = 24;
 constexpr static const size_t EE_GAME_SIZE_gMousePointerThreadName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gScenarioEditorThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gUserInterfaceThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommSendThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommRecvThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommMainThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommLagLossThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommRecPlayThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gSoundScavengerThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCDAudioThreadName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gMultiplayerString = 24;
 
@@ -295,14 +275,8 @@ enum class EeGameCpp : uint32_t {
   VecTilesClear,
   VecUnitsClear,
   SortTilesNear,
-  CapEvent,
-  CapStartEvent,
-  CapStartPoint,
-  CapContagion,
-  CxIsWarpColor,
-  CxSetWarpColor,
-  CxSetBlackColor,
-  ActiveClear,
+  CxIsColor,
+  CxSetColor,
   AeClearEffects,
   AiCollectComputerPlayers,
   AmbientEnable,
@@ -373,11 +347,6 @@ enum class EeGameCpp : uint32_t {
   MeshDereferenceTile,
   MeshReferenceTile,
   MiniMapDelete,
-  MiniMapMoveUnit,
-  MiniMapRedraw,
-  MiniMapRedrawAll,
-  MiniMapRefresh,
-  MiniMapSetNull,
   MiniMapSetViewer,
   MusicSetIntensity,
   MusicStart,
@@ -397,9 +366,6 @@ enum class EeGameCpp : uint32_t {
   PickerUnlock,
   PlAddOwnSight,
   PlAddPendingUnits,
-  PlAlliesCount,
-  PlAlliesPush,
-  PlAllyAt,
   PlCivApplyDeferred,
   PlCivApplyLevel21,
   PlCivSetName,
@@ -447,7 +413,6 @@ enum class EeGameCpp : uint32_t {
   ServerPause,
   ServerUnpause,
   SetCameraFollowing,
-  SetCollisionDetectionUnit,
   SetDeferComputerRestore,
   SetHerdUnreadValue,
   SetLocalPlayerOut,
@@ -504,7 +469,6 @@ enum class EeGameCpp : uint32_t {
   UiEditorClearSelection,
   UiEditorForm,
   UiInScenarioEditor,
-  UiLoadProgress,
   UiManagerPresent,
   UiPostPauseInformation,
   UiPostUpdateBackground,
@@ -519,11 +483,6 @@ enum class EeGameCpp : uint32_t {
   UnTileNext,
   UnTilePrev,
   UnUnlink,
-  UnbornAt,
-  UnbornClear,
-  UnbornContains,
-  UnbornCount,
-  UnbornPush,
   UnitClassCount,
   UpdateLandContinents,
   UpgradeHitPoints,
@@ -556,10 +515,7 @@ enum class EeGameCpp : uint32_t {
   WExecutingLocalSelection,
   WFirstUnit,
   WGameScreenActive,
-  WGhostBack,
-  WGhostCount,
   WGhostLock,
-  WGhostPop,
   WGhostUnlock,
   WHerdIDCounter,
   WInCinematic,
@@ -577,13 +533,6 @@ enum class EeGameCpp : uint32_t {
   WOptionsPlayerGet,
   WOptionsPlayerSet,
   WPlayer,
-  WQueuedAfter,
-  WQueuedClear,
-  WQueuedCount,
-  WQueuedUnit,
-  WResourceUserGet,
-  WResourceUserHas,
-  WResourceUserSet,
   WSavedGameSpeed,
   WSetCalamityHelper,
   WSetCalamityHelperRaw,
@@ -628,16 +577,6 @@ enum class EeGameCpp : uint32_t {
   CalSetSecondaryRaw,
   CalSetSoundRaw,
   CalSetTargetRaw,
-  CanCastScopeDelete,
-  CanCastScopeNew,
-  CanCastScopeRecord,
-  CapAged,
-  CapCast,
-  CapContagionEvent,
-  CapSave,
-  CapStart,
-  CapStop,
-  CapUpdate,
   ContinentOfTile,
   CxFireEffect,
   CxSetFireEffect,
@@ -787,7 +726,6 @@ enum class EeGameCpp : uint32_t {
   ArchiveSet,
   DataPathAddArchive,
   DataPathFindFile,
-  SetDataPaths,
   UiSetLoadingText,
   UiRandomSeed,
   FileSpecNew,
@@ -837,20 +775,9 @@ enum class EeGameCpp : uint32_t {
   CanPlace,
   CheatApply,
   CivRequestUpgrades,
-  ClientFastID,
-  ClientFastLast,
   ClientFastLockEnter,
   ClientFastLockLeave,
-  ClientSetMigrating,
-  ClientSetNormalPlayback,
-  ClientSetSlowPlayback,
-  CommIsClient,
-  CommIsGamePaused,
-  CommPresent,
-  CommProcessLocal,
   CommSendLoadMainScreenResponse,
-  CommSetHumans,
-  CommSetMultiplayer,
   CxBehavior,
   CxClearAllGoalQueues,
   CxGoFanatic,
@@ -905,7 +832,6 @@ enum class EeGameCpp : uint32_t {
   MainFormSetUiState,
   MainFormUpdateHelp,
   MainGroupReset,
-  MapGroundPoint,
   MouseGetPosition,
   MouseSetPointer,
   MouseSetPosition,
@@ -931,17 +857,12 @@ enum class EeGameCpp : uint32_t {
   PhysSetSeed,
   PhysSetSlowPlayback,
   PlActiveGroup,
-  PlAddAndRemoveSelectedIds,
   PlAddEvent,
   PlAddResource,
-  PlAddSelectedId,
-  PlAddSelectedIds,
   PlAddTribute,
   PlAssignSavedGroup,
   PlCanBuy,
   PlCivAddUpgrades,
-  PlClearSavedGroup,
-  PlCopyAllies,
   PlCountQueuedImprovements,
   PlFlareReceived,
   PlGetSlot,
@@ -952,18 +873,13 @@ enum class EeGameCpp : uint32_t {
   PlRefundDelete,
   PlRefundTechnology,
   PlRemoveQueuedImprovement,
-  PlRemoveSelectedId,
   PlSavedGroupAt,
   PlSavedGroupsSet,
-  PlSelectId,
-  PlSelectIds,
   PlSelectedCopyActive,
   PlSelectedGroup,
-  PlSetGameResult,
   PlSetHackUnitClass,
   PlSetSelectedViewedUnit,
   PlTakeResource,
-  PlUnselectAll,
   PlaceUnit,
   PlayForLocalSelectionSound,
   PreloadLoadClass,
@@ -975,18 +891,8 @@ enum class EeGameCpp : uint32_t {
   SelGroupSavedGroup,
   SelGroupSelectSaved,
   SelGroupSetFormation,
-  ServerClearSendToSlots,
-  ServerFastID,
-  ServerFastLast,
   ServerFastLockEnter,
   ServerFastLockLeave,
-  ServerLogResponse,
-  ServerSendPlayerSlotInfo,
-  ServerSetGameState,
-  ServerSetLoadResponses,
-  ServerSetLoadState,
-  ServerSetMigrating,
-  ServerSetSendToSlotForPlayer,
   SimSeed,
   SimSeedSet,
   SoundObjectPlay,
@@ -1013,7 +919,6 @@ enum class EeGameCpp : uint32_t {
   UiPostEvent,
   UiPostLobbyUpdateGameOptions,
   UiPostLobbyUpdatePlayer,
-  UiPostStartLoading,
   UiSetLagStatus,
   UiSetLoadPercent,
   UiShowLoadSaveError,
@@ -1025,9 +930,6 @@ enum class EeGameCpp : uint32_t {
   UnloadGoalTransport,
   VecCivUpgradesDelete,
   VecCivUpgradesOfMsg,
-  VecLongDelete,
-  VecLongNew,
-  VecPlayersAt,
   VotingPropose,
   WCanBuyCivilization,
   WRemovePlayerFromGame,
@@ -1055,7 +957,6 @@ enum class EeGameCpp : uint32_t {
   RastSetWaterRipple,
   PhysTimerRunning,
   CpOnAttackPlayer,
-  SetCampaignChecksum,
   RegisterShutdownMutex,
   IsInitialize,
   WindowHide,
@@ -1075,7 +976,6 @@ enum class EeGameCpp : uint32_t {
   NewRoEffects,
   UStrFromW,
   FontCreate,
-  FontAt,
   PersistChecksum,
   PersistGeneric2,
   PersistMap,
@@ -1094,7 +994,6 @@ enum class EeGameCpp : uint32_t {
   UiUnloadIcons,
   UiMiniMapUnloadMedia,
   NewFsPath,
-  FileSpecSetDirStartupSub,
   FileSpecSetArchiveName,
   DataArchivePresent,
   FsPathAddArchive,
@@ -1152,7 +1051,6 @@ enum class EeGameCpp : uint32_t {
   EffectTextureCount,
   EffectTextureDereference,
   TexturesRemoveAll,
-  ScreenRestoreOriginalMode,
   ScreenReleaseWindow,
   FontDereference,
   DisplayRasterizersClear,
@@ -1188,7 +1086,6 @@ enum class EeGameCpp : uint32_t {
   MouseSetWindowBounds,
   MouseLoad,
   TexturesRefreshAll,
-  IconsLoaded,
   UiReloadIcons,
   MousePointerPostSurface,
   GeInitialize,
@@ -1216,7 +1113,7 @@ enum class EeGameCpp : uint32_t {
   CreateGameWindow,
   WindowSetFixedSize,
   WindowTextInputStart,
-  SaveOriginalVideoMode,
+  ScreenCurrentModeIndex,
   SeInitialize,
   MixerGet,
   MixerUse,
@@ -1292,7 +1189,6 @@ enum class EeGameCpp : uint32_t {
   NewArtificialIntelligence,
   NewCheatCodes,
   NewGameTimer,
-  GameTimerPresent,
   DeleteGameTimer,
   ContinentsShutdown,
   DeleteCheatCodes,
@@ -1340,7 +1236,6 @@ enum class EeGameCpp : uint32_t {
   UiLockForCopy,
   WorldReadLock,
   WorldWriteLock,
-  SceneFlags6668Clear,
   RtsGfxFrameStarting,
   WorldReadUnlock,
   UiUnlockForCopy,
@@ -1411,9 +1306,7 @@ enum class EeGameCpp : uint32_t {
   RoAmbientFrameCountIncrement,
   RoAmbientUpdate,
   RoAmbientUpdateDue,
-  RoAreaEffectTextureReference,
   RoBitmapDereference,
-  RoCameraFollowing,
   RoCivilizationUnchanged,
   RoClassCategory,
   RoClassF170,
@@ -1429,7 +1322,6 @@ enum class EeGameCpp : uint32_t {
   RoComplexInView,
   RoComplexIsFoundation,
   RoComplexLocation,
-  RoCopyViewport,
   RoDoppelAnimation,
   RoDoppelFrame,
   RoDoppelHitPoints,
@@ -1448,9 +1340,6 @@ enum class EeGameCpp : uint32_t {
   RoEditorSelectUnits,
   RoEnvironmentWind,
   RoFindWaypoint,
-  RoFlag529065,
-  RoFlag529066,
-  RoFlag529068,
   RoFogColor,
   RoGeLineDelete,
   RoGeLineDraw,
@@ -1459,10 +1348,8 @@ enum class EeGameCpp : uint32_t {
   RoGeLineOpacity,
   RoGeLineStart,
   RoGhostAnimation,
-  RoGhostAt,
   RoGhostCanPlace,
   RoGhostClass,
-  RoGhostCount,
   RoGhostFrame,
   RoGhostLock,
   RoGhostModel,
@@ -1482,13 +1369,11 @@ enum class EeGameCpp : uint32_t {
   RoGobjModel,
   RoGobjShadowTexture,
   RoGobjTexture,
-  RoGridPhase,
   RoGroupContains,
   RoHiddenUnitsMode,
   RoHideAllBackgrounds,
   RoLabelCivilizationName,
   RoLabelPlayerName,
-  RoLetterboxZoom,
   RoLightAttenuation0,
   RoLightAttenuation1,
   RoLightAttenuation2,
@@ -1508,9 +1393,6 @@ enum class EeGameCpp : uint32_t {
   RoLoadTexture,
   RoMainGameDrawText,
   RoMainSelectUnits,
-  RoMainViewportDepthRange,
-  RoMainViewportRearClipping,
-  RoMainViewportSetRearClipping,
   RoMeshSetCliffTextures,
   RoMeshWaterTile,
   RoModelInView,
@@ -1536,12 +1418,7 @@ enum class EeGameCpp : uint32_t {
   RoPostClearRenderObjects,
   RoPostPushRenderObject,
   RoRastAddLight,
-  RoRastLightMesh,
-  RoRastSetMainViewport,
-  RoRastSetViewport,
   RoRastUpdateLight,
-  RoRastViewRectangle,
-  RoRastViewport,
   RoRenderObject,
   RoRenderUnit,
   RoScaffoldingModel,
@@ -1564,7 +1441,6 @@ enum class EeGameCpp : uint32_t {
   RoTileDoppelgangerCount,
   RoTileFirstNode,
   RoTileSeenBy,
-  RoTransformToCamera,
   RoTriggerSelectUnits,
   RoTriggerSelectionIsDrawn,
   RoTurretPartCount,
@@ -1600,9 +1476,6 @@ enum class EeGameCpp : uint32_t {
   RoUnitTurretsResize,
   RoUnitWheelSet,
   RoUnitWheelsResize,
-  RoUpdateVisibleTerrain,
-  RoViewportRearClipping,
-  RoViewportSetCamera,
   RoWaypointLocation,
   RoWheelCount,
   RoWindDirection,
@@ -1723,7 +1596,6 @@ enum class EeGameCpp : uint32_t {
   MpTileSize,
   MpRtsTile,
   MpGetTile,
-  MpGroundPoint,
   MpRtsCreate,
   MpSightEnabled,
   MpTileVecNew,
@@ -1825,10 +1697,6 @@ enum class EeGameCpp : uint32_t {
   MmTerrainMemory,
   MmTerrainBytesPerRow,
   MmUiUpdate,
-  MmLight,
-  MmLightSet,
-  MmLightNormalize,
-  MmViewport,
   MmNumPlayers,
   MmDoppUnit,
   MmDoppPlayer,
@@ -1872,7 +1740,6 @@ enum class EeGameCpp : uint32_t {
   CgUnitsCount,
   CgUnitsAt,
   CgUnitsInArea,
-  CgCaptureContagion,
   CgCalamityIndex,
   CgWriteClassId,
   CgFileReadLong,
@@ -1893,7 +1760,6 @@ enum class EeGameCpp : uint32_t {
   PchContagionLoad,
   PchCount,
   PchAt,
-  PchSetCaster,
   PchPlaySound,
   PchDeleteAt,
   PchRestoreContagions,
@@ -1909,18 +1775,6 @@ enum class EeGameCpp : uint32_t {
   PcUStrLoad,
   PcUStrText,
   PcSaveText,
-  PmPhysicsLoad,
-  PmPhysicsSave,
-  PmServerSetPhysicsTick,
-  PmClientSetPhysicsTick,
-  PmCommCtsProcessed,
-  PmCommLastTick,
-  PmServerLastCt,
-  PmServerCt,
-  PmServerPt,
-  PmServerMessageNumber,
-  PmClientCt,
-  PmClientPt,
   PphFields,
   PphPush,
   PphCopyPlayers,
@@ -1939,7 +1793,6 @@ enum class EeGameCpp : uint32_t {
   PphLogUnknownAi,
   PphCpSetAi,
   PphIsAllied,
-  PphAddAlly,
   PphStrNew,
   PphStrDelete,
   PphStrSize,
@@ -1971,8 +1824,6 @@ enum class EeGameCpp : uint32_t {
   PwWorldPopulationLimit,
   PwStSetScenario,
   PwStTeamsFromHelper,
-  PwChatLogLoad,
-  PwChatLogSave,
   PwMainFormLoad,
   PwMainFormSave,
   PwAreaEffectsLoad,
@@ -2068,12 +1919,7 @@ enum class EeGameCpp : uint32_t {
   PvLongsAt,
   PvAfterLoad,
   PsMajorVersion,
-  PsListNew,
-  PsListDelete,
   PsListPush,
-  PsListCount,
-  PsListAt,
-  PsListClear,
   PsPersistentTag,
   PsPersistentDelete,
   PsNewChecksumChunk,
@@ -2110,8 +1956,6 @@ enum class EeGameCpp : uint32_t {
   PsCastEnvironment,
   PsHeaderNew,
   PsHeaderDelete,
-  PsHeaderSave,
-  PsHeaderLoad,
   PsHdrSetName,
   PsHdrDefaultDescription,
   PsHdrVersions,
@@ -2171,20 +2015,15 @@ enum class EeGameCpp : uint32_t {
   PsUStrNew,
   PsUStrDelete,
   PsSaveTextName,
-  PsDeleteTextTwin,
-  PsReportSaved,
-  PsReportSaveError,
   PsMessageString,
   PsMessageStringVerify,
   PsResourceString,
   PsResourceStringVerify,
   PsGameState,
   PsValidateIntoMessage,
-  PsUiResumeGraphics,
   PsMapApplyVertexColors,
   PsSetMasterVolume,
   PsSetMusicVolume,
-  PsCommPresent,
   PsShowSplash,
   PsShowSelectionAreas,
   PsOpenMainGameForm,
@@ -2200,7 +2039,6 @@ enum class EeGameCpp : uint32_t {
   PsStSetChecksum,
   PsStSetEffectManager,
   PsStSetMap,
-  PsStSetCalamityHelper,
   PsStSetEnvironmentManager,
   PsStRestorablePushEffects,
   PsStRestorablePushCalamities,
@@ -2210,9 +2048,7 @@ enum class EeGameCpp : uint32_t {
   PsEditorFormPresent,
   PsEditorClearSelection,
   PsWorldClear,
-  PsWorldStartGame,
   PsInScenarioEditor,
-  PsReportCorrupt,
   PsDebugCorrupt,
   PsDataPathFind,
   PsMapL195610,
@@ -2236,17 +2072,12 @@ enum class EeGameCpp : uint32_t {
   PsSprintfNumber,
   PsSprintfText,
   PsSprintfTwoNumbers,
-  PsLoadProgress,
   PsMasterVolume,
   PsMusicVolume,
-  SsLockCt,
-  SsUnlockCt,
   SsOptionsWriteLock,
   SsOptionsWriteUnlock,
   SsWorldWriteLock,
   SsWorldWriteUnlock,
-  SsStopPing,
-  SsStartPing,
   SsSearchLock,
   SsAttemptLock,
   SsServerFastLock,
@@ -2255,23 +2086,12 @@ enum class EeGameCpp : uint32_t {
   SsSectionLeave,
   SsPhysicsQueueEnter,
   SsPhysicsQueueLeave,
-  SsFrameServer,
   SsMultiplayerGame,
   SsOptionsMultiplayer,
   SsLoadType,
-  SsGameState,
-  SsDefaultColor,
   SsCitizensDefault,
   SsVersionMatch,
   SsBinaryChecksum,
-  SsCurrentCt,
-  SsCtsInPhysics,
-  SsHumans,
-  SsMpSession,
-  SsPlayerNumber,
-  SsCurrentPt,
-  SsMySendToSlot,
-  SsNumPlayers,
   SsWorldPlayers,
   SsTime,
   SsWon,
@@ -2282,28 +2102,7 @@ enum class EeGameCpp : uint32_t {
   SsPlayerSendToSlot,
   SsSHasLeft,
   SsCHasLeft,
-  SsSMigrating,
-  SsCMigrating,
-  SsSFastId,
   SsCFastId,
-  SsSExecuting,
-  SsCExecuting,
-  SsLoadState,
-  SsDroppedLoaders,
-  SsVoteEdict,
-  SsYesVotes,
-  SsNoVotes,
-  SsNumVotes,
-  SsVoted,
-  SsLagMask,
-  SsUiSlot,
-  SsAllowMigration,
-  SsIgnoreTimeout,
-  SsServerLost,
-  SsHasLoaded,
-  SsLostAfterLoading,
-  SsWasBooted,
-  SsReg,
   SsRegLoadOptions,
   SsRegLoadLobby,
   SsRegLoadReg,
@@ -2315,12 +2114,9 @@ enum class EeGameCpp : uint32_t {
   SsRegNameEq,
   SsRegNameFromMsg,
   SsRegNameIcmpPlayer,
-  SsSendLocalResponse,
   SsSendFullOptions,
   SsNewPlayerInfo,
   SsMsgSetOriginServer,
-  SsLocalInput,
-  SsCommsLocalInput,
   SsNewRecord0,
   SsNewRecord2,
   SsNewRecord3,
@@ -2345,9 +2141,6 @@ enum class EeGameCpp : uint32_t {
   SsMsgSetFastId,
   SsMsgIsGame,
   SsMsgQueue,
-  SsMsgLogResponse,
-  SsBroadcast,
-  SsSendToAll,
   SsLobbyUpdatePlayer,
   SsNewRemovePlayer,
   SsNewBootClient,
@@ -2398,34 +2191,13 @@ enum class EeGameCpp : uint32_t {
   SsWorldReconnect,
   SsWorldRemove,
   SsExecuteSelection,
-  SsSetCt,
-  SsSetCtsInPhysics,
-  SsIncrementCts,
-  SsSetMpSession,
-  SsSetHumans,
-  SsSetPt,
-  SsRegisterSlot,
-  SsUnregisterSlot,
-  SsAbortXfer,
-  SsRemoveInProgress,
   SsOpenSaveGame,
   SsNewHeader,
   SsDeleteHeader,
   SsHeaderSetVersions,
-  SsHeaderLoad,
   SsXferToClient,
-  SsStartGame,
-  SsPauseGame,
-  SsCommsStopPing,
-  SsCommsResetXfer,
-  SsCommsPresent,
   SsCommsDelete,
   SsCommsNewClient,
-  SsClientStartThreads,
-  SsLowestCts,
-  SsDisconnect,
-  SsLocalOut,
-  SsFrameProtocol,
   SsStartTimeFromMsg,
   SsPhysicsRandom,
   SsNumTeams,
@@ -2450,7 +2222,6 @@ enum class EeGameCpp : uint32_t {
   ClFileClose,
   ClFileDeleteOnDisk,
   ClFileCreateWrite,
-  ClHeaderLoad,
   ClHeaderChecksum,
   ClIdsNotResponding,
   ClIdsSeconds,
@@ -2458,7 +2229,6 @@ enum class EeGameCpp : uint32_t {
   ClSprintfSeconds,
   TkTreeFields,
   TkCurrentPlayer,
-  TkPlayerIndex,
   TkPlId,
   TkPostShowEpochName,
   TkMainGameForm,
@@ -2466,14 +2236,11 @@ enum class EeGameCpp : uint32_t {
   TkEpochCount,
   TkEpochAt,
   TkEpochRef,
-  TkEpochNodes,
   TkUnitId,
   TkGet,
   TkSetRef,
   TkNeedsUnitMedia,
   TkTrigger,
-  TkGetPlayer,
-  TkTreePlayer,
   TkEpochReached,
   TkStatReset,
   TkStatSet,
@@ -2523,31 +2290,22 @@ enum class EeGameCpp : uint32_t {
   TkNodeFields,
   TkNodeData,
   TkNodeTree,
-  TkClassCosts,
   TkUpgrade,
   TkInCostSet,
+  TkVariant,
   TkPlayerJit,
   TkClassHasRallyPoint,
-  TkNodeCount,
-  TkNodeAt,
-  TkNodeKeyAt,
+  TkEpochLists,
   TkNodeUnload,
   TkNodeDelete,
-  TkNodesClear,
   TkEpochDeleteData,
   TkPushId,
-  TkLoadedClassesPush,
-  TkLoadedClassesCount,
-  TkLoadedClassAt,
-  TkLoadedClassesClear,
   TkNodeLoadMedia,
   TkNodeUnloadMedia,
   TkEpochCostFactor,
   TkCostSetFactor,
   TkStatsCostScale,
   TkJitFactor,
-  RunRustInit,
-  RunFixtureConfigure,
   RunInstanceMutex,
   RunComInit,
   RunComUninit,
@@ -2561,7 +2319,6 @@ enum class EeGameCpp : uint32_t {
   RunReleaseCivilizationPath,
   EntrySpecFirstFile,
   EntrySpecNextFile,
-  EntryDecryptExcluded,
   EntrySpecFileIsNot,
   EntrySpecVecNew,
   EntrySpecVecDelete,
@@ -2576,7 +2333,6 @@ enum class EeGameCpp : uint32_t {
   EntrySpecFullPath,
   EntryUStrData,
   EntryUStrSet,
-  EntrySetNetworkFolder,
   EntryNeInitialize,
   EntryRegisterNeMessages,
   EntryRegisterEeMessages,
@@ -2616,7 +2372,6 @@ enum class EeGameCpp : uint32_t {
   GsDrawGroundShadows,
   GsShadowModel,
   GsShadowTexture,
-  GsTileWater,
   GtMainViewport,
   GtPost,
   GtQueueDoneCreate,
@@ -2628,14 +2383,8 @@ enum class EeGameCpp : uint32_t {
   GuGroupFirstUnit,
   GuMainUiState,
   GuSelectedGroup,
-  GuSetUiViewport,
   GuTargetHeight,
   GuTargetWidth,
-  GuUiViewportSetRectangle,
-  MoLoadPointer,
-  MoReleaseExtra,
-  MoRtsLoad,
-  MoRtsRelease,
   RcPhysicsPresent,
   RtCameraZoom,
   RtCaptureSetRenderTarget,
@@ -2662,7 +2411,6 @@ enum class EeGameCpp : uint32_t {
   RuBarPresent,
   RuBarSetColors,
   RuBarSetRect,
-  RuCinematic,
   RuCollisionSpheres,
   RuInterpolateFrames,
   RuLineColor,
@@ -2675,7 +2423,6 @@ enum class EeGameCpp : uint32_t {
   RuLinesDelete,
   RuLinesDraw,
   RuLinesNew,
-  RuMainViewRectangle,
   RuMainViewport,
   RuModelDetail,
   RuTextFont12,
@@ -2686,46 +2433,18 @@ enum class EeGameCpp : uint32_t {
   RuWindowWidth,
   SnBrushHighlightShown,
   SnBrushRectangle,
-  SnBrushShown,
-  SnCamera,
   SnCameraPitch,
-  SnCameraYaw,
-  SnCinematic,
-  SnColoredClear,
-  SnColoredCount,
-  SnColoredPush,
   SnEditorPresent,
-  SnIsSpaceMap,
-  SnMap,
   SnMapColoredCount,
   SnMapColoredErase,
   SnMapColoredLock,
-  SnMapColoredOpacity,
   SnMapColoredUnlock,
-  SnMeshOf,
-  SnSetBrushShown,
-  SnSetBrushTiles,
-  SnSetMesh,
-  SnSetSpaceMap,
-  TeCopyGridRuns,
   TeDraw3DLine,
-  TeDrawBrush,
   TeDrawClouds,
-  TeDrawColored,
-  TeDrawGrid,
-  TeDrawGridLines,
-  TeDrawMesh,
   TeGridMode,
-  TeGridRunCount,
-  TeMapIsSpace,
   TeMapSize,
-  TeMeshIsSpace,
   TeMipLevelsToDrop,
-  TeSetAreaTexture,
-  TeSetCircleTexture,
   TeTrilinear,
-  TeUpdateFogOfWar,
-  WaDrawWater,
   DtTerrainFields,
   DtTerrainUse,
   DtTerrainLock,
@@ -2830,23 +2549,12 @@ enum class EeGameCpp : uint32_t {
   TbShareData,
   TbSetTree,
   TbNewNode,
-  TbClassesResize,
-  TbClassRead,
-  TbClassCount,
-  TbClassAt,
-  TbCostsInsert,
-  TbCostsCount,
-  TbCostsDelete,
-  TbCostsClear,
   TbButton,
   TbCopyButton,
   TbSetButton,
   TbButtonGet,
   TbSwapButton,
   TbGlobalTree,
-  TbEpochInsert,
-  TbSetPlayerIndex,
-  TbCopyPlayer,
   TbIsHuman,
   TbClassFamily,
   TbNodeIsObsolete,
@@ -2879,15 +2587,6 @@ enum class EeGameCpp : uint32_t {
   DcCount,
   DcAt,
   DcSet,
-  TcBytes,
-  TcUpgradeFirst,
-  TcUpgradeEnd,
-  TcUpgradeMediaCount,
-  TcUpgradeButtonCount,
-  TcPlayerId,
-  TcPlayerPopulationBonus,
-  TcPlayerTributeFee,
-  TcPlayerBB44,
   LcWideText,
   LcLongVecNew,
   LcLongVecDelete,
@@ -2992,7 +2691,6 @@ enum class EeGameCpp : uint32_t {
   DsArea,
   DsSetName,
   DsRandomPlayer,
-  DsTownCount,
   DsRandomTown,
   DsLargestLand,
   DsLargestAny,
@@ -3032,7 +2730,6 @@ enum class EeGameCpp : uint32_t {
   DsMove,
   DsTileCount,
   DsSetIntensity,
-  DsGameSpeed,
   DsResetColor,
   DsPathAt,
   DsCenter,
@@ -3106,13 +2803,11 @@ enum class EeGameCpp : uint32_t {
   DvNameNarrow,
   DvNameLoad,
   DvNameSave,
-  DvCanAfford,
   DvDeferredPush,
   DvDeferred,
   DwTeamCount,
   DwTeamPlayer,
   DwNeeded,
-  DwWonderCount,
   DwWonderTime,
   DwVictoryTime,
   DwGameTime,
@@ -3134,11 +2829,8 @@ enum class EeGameCpp : uint32_t {
   DkClearB529068,
   DkUnitASaved,
   DkUnitBSaved,
-  DkKeyCount,
-  DkKeyAt,
   DkFrontClipping,
   DkRearClipping,
-  RunSplashFullScreen,
   UsgWorldWriteLock,
   UsgWorldWriteUnlock,
   UsgSetDirectory,
@@ -3332,7 +3024,6 @@ enum class EeGameCpp : uint32_t {
   PzSetOrthographic,
   PzSetShowHidden,
   RrModelDraw,
-  RrCamera,
   RrCreateModel,
   RrCreateSubModel,
   RrDrawSky,
@@ -3343,8 +3034,6 @@ enum class EeGameCpp : uint32_t {
   RrModelCenter,
   RrPhysicalFrame,
   RrCinematic,
-  RrCameraYaw,
-  RrCameraPitch,
   RrModelRadius,
   RrPhysicalScale,
   RrBarDraw,
@@ -3353,7 +3042,6 @@ enum class EeGameCpp : uint32_t {
   OvSetModel,
   OvModelName,
   EpAssignLastOptions,
-  EpCameraMaxZoom,
   EpDefaultSettings,
   EpDeleteSettings,
   EpNarrowCopy,
@@ -3370,7 +3058,6 @@ enum class EeGameCpp : uint32_t {
   EpWideGet,
   EpWideLength,
   EpWideSet,
-  EpWindowSizeDefaulted,
   EoAssign,
   EoDifficulties,
   EoDifficultyLevel,
@@ -3397,7 +3084,6 @@ enum class EeGameCpp : uint32_t {
   EoWondersDefault,
   EoWondersMaximum,
   EcBackPlane,
-  EcClearKeys,
   EcContainer,
   EcContainerId,
   EcCurrentPlayer,
@@ -3414,7 +3100,6 @@ enum class EeGameCpp : uint32_t {
   EcLocation,
   EcLocationOnLine,
   EcOrthographic,
-  EcPushKey,
   EcReference,
   EcResolve,
   EcRightPlane,
@@ -3464,7 +3149,6 @@ enum class EeGameCpp : uint32_t {
   EaStart,
   EaStop,
   EaTimeOfDay,
-  EaTownCount,
   EaTownHullContains,
   EaUnloadMedia,
   EaVisibleSpace,
@@ -3516,14 +3200,6 @@ enum class EeGameCpp : uint32_t {
   EwStatsEndTime,
   EwStatsSeries,
   C11ScenarioExtension,
-  C11TcUnitComplex,
-  C11TcUnitId,
-  C11TcUnitType,
-  C11TcUnitHitPoints,
-  C11TcUnitTileNode,
-  C11TcComplexBuilt,
-  C11TcComplexPrevious,
-  C11TcComplexFlightTime,
   C11NmSender,
   C11NmPlayer,
   C11NmCurrent,
@@ -3538,51 +3214,23 @@ enum class EeGameCpp : uint32_t {
   C11NmUnit,
   C11NmKill,
   C11NmClassFact,
-  C11NmUnitHitPoints,
-  C11NmUnitType,
-  C11NmUnitCategory,
-  C11NmUnitMaxHitPoints,
-  C11NmUnitCanDisband,
-  C11NmUnitIsPacked,
   C11NmUnitPackedClass,
-  C11NmUnitFlightTime,
   C11NmUnitDeathSpawn,
-  C11NmUnitCanChangeBehavior,
-  C11NmUnitComplex,
   C11NmUnitTileNode,
   C11NmUnitOwner,
   C11NmUnitLandBuilding,
-  C11NmUnitPaidFor,
-  C11NmUnitBuilt,
   C11NmUnitCanDelete,
   C11NmUnitTileX,
   C11NmUnitTileY,
-  C11NmUnitDomains,
   C11NmUnitNext,
   C11NmUnitAsComplex,
   C11NmUnitInSet,
-  C11NmPlayerObserver,
-  C11NmPlayerCivChosen,
-  C11NmPlayerSlot,
-  C11NmPlayerChatType,
-  C11NmPlayerEnemy,
-  C11NmPlayerSendsChat,
-  C11NmPlayerId,
-  C11NmPlayerResource,
   C11NmPlayerFirstUnit,
   C11NmPlayerTradePrice,
   C11NmWorldNumPlayers,
   C11NmWorldCurrentIndex,
-  C11NmWorldExecutingSelection,
-  C11NmWorldIsServer,
-  C11NmWorldHasCommunications,
-  C11NmWorldLocalSendSlot,
   C11NmWorldStringLength,
-  C11NmWorldPlayback,
   C11NmWorldCollisionSphereMode,
-  C11NmWorldLoadedHumans,
-  C11NmWorldLoadResponses,
-  C11NmWorldHumans,
   C11NmMapType,
   C11FarmKey,
   C11MsgBuildVerify,
@@ -3599,8 +3247,6 @@ enum class EeGameCpp : uint32_t {
   C11MsgListData,
   C11MsgListSize,
   C11MsgSetRectangle,
-  C11SelectHookSet,
-  C11SelectHookCall,
   C11LongsAssign,
   C11CalHostNew,
   C11CalHostDelete,
@@ -3626,30 +3272,20 @@ enum class EeGameCpp : uint32_t {
   C11CgFunctor,
   C11CgDump,
   C11CgText,
-  C11CgCapture,
   C11CgUnknown,
   C11CgRandom,
   C11CgDistance,
   C11ClTail,
   C11ClCreateLock,
-  C11ClStopThreads,
   C11ClDestroyLock,
-  C11FrameNew,
-  C11FrameDelete,
-  C11FrameComms,
   C11SvTail,
   C11SvCreateSearchLock,
   C11SvCreateFastLock,
   C11SvCreateAttemptLock,
-  C11SvStopThreads,
   C11SvDestroySearchLock,
   C11SvDestroyFastLock,
   C11SvDestroyAttemptLock,
-  C11SvMaxPlayers,
-  C11SvUnregister,
   C11SvNewResponse,
-  C11SvSendTo,
-  C11SvSendPlayerInfo,
   C11SvPingStat,
   C11SvXferStatus,
   C11RequestFirewall,
@@ -3674,7 +3310,13 @@ enum class EeGameCpp : uint32_t {
   C12PlayerObserver,
   C12PlayerEnemy,
   C13bGhostLockFree,
-  C13bGhostAt,
+  TexturesSetPath,
+  ModelsSetPath,
+  SoundSetPath,
+  /// `&map->mColoredRectangles[a0]` (an RTSColoredRectangle)
+  SnMapColoredAt,
+  /// `*a0 = gWorld.mMap->mU1955DC.data()` -> its size (the grid runs, four longs each)
+  TeMapGridRuns,
 };
 
 /// A `U2DRectangle<long>` as the C++ stores it: bottom, left, right, top.
@@ -3756,7 +3398,7 @@ bool ee_gamecpp_capture_can_cast_enter();
 /// EECalamityCanCastLeave.
 void ee_gamecpp_capture_can_cast_leave();
 
-/// EECalamityCanCastRecord: an outermost CanCastAt's CCAS record (kind 0); the result.
+/// EECalamityCanCastScope::Record: an outermost CanCastAt's CCAS record (kind 0); the result.
 ///
 /// # Safety
 /// `at` is three floats.
@@ -4196,6 +3838,9 @@ void ee_gamecpp_startup_load_media();
 /// EEUnloadGameMedia: the same released.
 void ee_gamecpp_startup_unload_media();
 
+/// EESetDataPaths: the texture, model and sound managers pointed at the data search path.
+void ee_gamecpp_startup_set_data_paths();
+
 /// EEShowSinglePlayerScreen: the data search path (the game's Data folder, behind a Data\data.ssa when one is
 /// present) and the civilization path made, replacing the previous ones.
 void ee_gamecpp_startup_data_paths();
@@ -4401,6 +4046,10 @@ long ee_gamecpp_world_pause(bool pause);
 /// EEWorld::ActivateUnit: queued for activation unless NULL, without an id, a path point or already queued.
 void ee_gamecpp_world_activate(void *cx);
 
+/// EEWorld::UpdateActiveUnits: the queued unit activations and deactivations applied to the list of units stepped
+/// every tick.
+void ee_gamecpp_world_update_active();
+
 /// EEWorld::DeactivateUnit: queued for deactivation unless a path point or already queued; a unit without an id
 /// waits by pointer (as the original's queue held it).
 void ee_gamecpp_world_deactivate(void *cx);
@@ -4465,7 +4114,7 @@ void ee_gamecpp_world_screen_to_world(const float (*point)[2],
 
 /// EEWorld::ReleaseResourceUser (`delta` -1), AddResourceUser (1), GetResourceUsers (0): a resource unit's gatherer
 /// count (an untracked unit starts at 0 when read, 1 when added, and is left alone when released).
-unsigned long ee_gamecpp_world_resource_users(void *w,
+unsigned long ee_gamecpp_world_resource_users(void *_w,
                                               void *u,
                                               int32_t delta);
 
@@ -4798,6 +4447,11 @@ void ee_gamecpp_fx_place_impact_decal(void *cx,
 /// heading for giraffes and horses).
 void ee_gamecpp_fx_place_track_decal(void *cx);
 
+/// `EEMap::GetGroundPoint(point, out)` for the C++ (`mesh` the map's `mTerrainMesh.GetRust()`; `out` may be `point`).
+void ee_gamecpp_map_ground_point(const void *mesh,
+                                 const EeGe3DPoint *point,
+                                 EeGe3DPoint *out);
+
 /// EEMap::~EEMap: the region tables, tiles and visibility words freed, the terrain textures unloaded.
 void ee_gamecpp_map_destroy(void *map);
 
@@ -5108,7 +4762,7 @@ long ee_gamecpp_pc_load(void *chunk, void *file);
 /// `EEPChecksum::Save`: the verbose flag and the described checksum entries; the first write error.
 long ee_gamecpp_pc_save(void *chunk, void *file);
 
-/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it too).
+/// `BuildSaveGameChunks`'s C++ entry (the EE-SIM editor's chunk digest calls it): the chunks into its std::vector.
 void ee_gamecpp_ps_build_chunks(void *list);
 
 /// `TrimAutoSaves`: the files matching a pattern in a directory deleted, lowest (FSFileSpec order) first, until at
@@ -5235,67 +4889,6 @@ void ee_gamecpp_client_timeout_warning(unsigned long remaining);
 /// `call` is the session's live call record; its frame is EEServer.cpp's `EESessionFrame`.
 int64_t ee_gamecpp_session_host(uint32_t op,
                                 void *call);
-
-/// EETechTree::UpdateInterface: for the local player's tree, the new epoch's name shown and the main game form's
-/// group panel refreshed.
-void ee_gamecpp_tech_update_interface(void *tree,
-                                      bool epoch_changed);
-
-/// The walks' host (ee_sim tech nodes.rs EE_TECH_HOST_*; was EETechTree.cpp's EETechHost): the tree's containers, the
-/// entry points the simulation capture wraps, the world, the events, the interface and the media.
-///
-/// # Safety
-/// `io` is the walk's live record; `tree` an EETechTree.
-int32_t ee_gamecpp_tech_host(void *tree,
-                             int32_t op,
-                             void *io);
-
-/// EETechTree::Load (the tech tree file): every epoch block (the original: exactly 15), the epoch count, and the
-/// epoch range reset to all epochs.
-long ee_gamecpp_tech_load_file(void *tree,
-                               void *file);
-
-/// EETechTree::UnloadAll: every epoch unloaded.
-void ee_gamecpp_tech_unload_all(void *tree);
-
-/// EETechTree::GetNodeIDs (`all`) and GetEpochNodeIDs: the node ids of every epoch, or of one (out of range: none).
-void ee_gamecpp_tech_node_ids(void *tree,
-                              bool all,
-                              long epoch,
-                              void *out);
-
-/// EETechTree::SumCostsUncaptured: the resource costs of a tech and every unresearched prerequisite and upgrade path
-/// to it (ee_sim's sum over the tree's nodes).
-///
-/// # Safety
-/// `costs` holds 7 longs.
-void ee_gamecpp_tech_sum_costs(void *tree,
-                               long id,
-                               long unit_class,
-                               long *costs);
-
-/// EETechTreeNode::GetCostUncaptured: the node's cost in a resource for a unit class (the class's own costs when it
-/// has some), scaled; a unit's by the wonder's epochs, the variant's cost set, the player's upgrade and the
-/// just-in-time manufacturing (ee_sim's `ee_tech_node_cost`).
-long ee_gamecpp_tech_node_cost(void *node,
-                               long resource,
-                               long unit_class,
-                               float scale);
-
-/// EETechTreeEpoch::DeleteNodes (`unload`: Unload, each node unloaded first, then the epoch's data deleted; 0).
-long ee_gamecpp_tech_epoch_delete_nodes(void *epoch,
-                                        bool unload);
-
-/// EETechTreeEpoch::GetNodeIDs: the epoch's node ids appended.
-void ee_gamecpp_tech_epoch_node_ids(void *epoch, void *out);
-
-/// EETechTreeEpoch::LoadMedia: the media of every unit class the epoch's buildings make (kept in its loaded list),
-/// then the epoch's own.
-void ee_gamecpp_tech_epoch_load_media(void *epoch,
-                                      void *player);
-
-/// EETechTreeEpoch::UnloadMedia: the unit class media it loaded, then its own.
-void ee_gamecpp_tech_epoch_unload_media(void *epoch, void *player);
 
 /// EEGetFileChecksum: the checksum over the directory's files matching the pattern, in file name order (one encrypted
 /// name skipped): each file's bytes, or with `use_file_times` its write time's high word plus its size. A file that
@@ -5431,10 +5024,12 @@ void ee_gamecpp_sn_take();
 /// opacity erases the element; the others are kept in that order) and the editor's brush highlight.
 void ee_gamecpp_sn_take_terrain();
 
-/// EEMouse::Load: the 14 extra pointer images, then the engine's pointers; the first load error.
-long ee_gamecpp_mo_load(void *mouse, void *screen);
+/// EEMouse::Load: the 14 extra pointer images into the frame's slots 10..23 (RTSMouse::LoadPointer), then the
+/// engine's pointers (RTSMouse::Load); the first load error.
+long ee_gamecpp_mo_load(void *mouse,
+                        void *screen);
 
-/// EEMouse::Release: the extra pointer images, then the engine's; the engine's result.
+/// EEMouse::Release: the extra pointer images (the frame's op 5), then the engine's (RTSMouse::Release: op 6); 0.
 long ee_gamecpp_mo_release(void *mouse);
 
 /// EEEffect::Move (the weather storms'): every tile one step towards its place around the new centre, the storm
@@ -5573,79 +5168,6 @@ void *ee_gamecpp_pch_assign(void *helper,
 /// TSWP (EETechCaptureSweep): per player (1 on) its tree's head record, then one record per node and epoch.
 void ee_gamecpp_tech_capture_sweep();
 
-/// EETechCaptureUpgrade: the upgrade's numeric block (mAreaEffectScale .. the conversion flags; no pointers), its
-/// size first; 0 for no upgrade. mMediaCount and mButtonLoadCount count the presentation's media loads
-/// (EEPlayer::LoadUnitClassMedia, SwapClassButtonMedia), which run when the loader gets to them: written as 0, so the
-/// record carries simulation state only.
-void ee_gamecpp_tech_capture_upgrade(void *record,
-                                     void *upgrade);
-
-/// EETechCapturePlayer: the player's fields the effects change (population bonus, tribute fee, mBB44); -1 for no
-/// player.
-void ee_gamecpp_tech_capture_player(void *record,
-                                    void *player);
-
-/// EETechTreeNode::Load: the node's record from the tech tree file, a cost table per unit class scaled by its
-/// factor, its epoch and its button.
-long ee_gamecpp_tech_node_load(void *node,
-                               void *file,
-                               void *tree);
-
-/// EETechTreeEpoch::Load: the epoch's record and its tech nodes from the tech tree file (nodes with epoch ids are
-/// dropped).
-long ee_gamecpp_tech_epoch_load(void *epoch,
-                                void *file,
-                                void *tree);
-
-/// EETechTreeNode::operator=: another node's state, its data (with its class cost tables) shared.
-void *ee_gamecpp_tech_node_assign(void *node, const void *other);
-
-/// EETechTreeEpoch::operator=: another epoch's state, its nodes deep-copied for this epoch's tree (the node data
-/// stays shared).
-void *ee_gamecpp_tech_epoch_assign(void *epoch,
-                                   const void *other);
-
-/// The EETechTree constructor's body: every epoch, the prehistoric one current, the end the last.
-void ee_gamecpp_tech_tree_init(void *tree);
-
-/// EETechTree::operator=: another tree's epochs (deep copies), epoch range and player; the copy is not loaded.
-void *ee_gamecpp_tech_tree_assign(void *tree,
-                                  const void *other);
-
-/// The node's destructor (`destroy`: its unit media unloaded when loaded and its unit classes given their default
-/// buttons back) and ClearClassCosts (the class cost tables freed).
-void ee_gamecpp_tech_node_free(void *node,
-                               bool destroy);
-
-/// EETechTreeNode::Unload: the node's data deleted; 0.
-long ee_gamecpp_tech_node_unload(void *node);
-
-/// EETechTreeNode::SetButton: a new button, swapped into the node's unit classes.
-void ee_gamecpp_tech_node_set_button(void *node, unsigned long button);
-
-/// EETechTreeNode::NeedsUnitMedia (`captured`: TNMT records the answer) and NeedsUnitMediaUncaptured: whether the
-/// node makes a building or mine whose media this game needs (ee_tech tree.rs needs_unit_media).
-bool ee_gamecpp_tech_needs_unit_media(void *node,
-                                      bool captured);
-
-/// EETechTreeEpoch::GetBuildTime: the epoch's research time (computer players need half of it); TNMT records it.
-long ee_gamecpp_tech_epoch_build_time(void *epoch);
-
-/// EETechTree::Load (`load`: the saved research, obsolete and editor-obsoleted ids, the epochs and each epoch's
-/// state) and Save (the same written; the last epoch's write result) of a saved game (ee_tech tree_load, tree_save).
-long ee_gamecpp_tech_tree_save(void *tree,
-                               void *file,
-                               bool load,
-                               unsigned long major,
-                               unsigned long minor);
-
-/// EETechTree::SumCosts: the resource costs of a tech and every unresearched prerequisite and upgrade path to it;
-/// TSUM (TEST ONLY) records the outermost call: player, id, unit class, the seven costs before and after.
-void ee_gamecpp_tech_sum_costs_captured(void *tree,
-                                        long id,
-                                        long unit_class,
-                                        long *costs);
-
 /// EEMessage::ExportMessage: the codec's bytes in a new[] block (the caller deletes it), and their size.
 ///
 /// # Safety
@@ -5756,58 +5278,6 @@ void ee_gamecpp_cheats_parse(const EeAppCheats *cheats,
 
 /// EE-SIM --app-sweep's cheats (TEST ONLY: CHET, CHEF), when there are cheat codes.
 void ee_gamecpp_capture_cheat_sweep();
-
-/// `EECivilization()`: unnamed, no points or upgrades, unchanged.
-void ee_gamecpp_civ_init(void *civilization);
-
-/// `AddPoints`: to both the available and the maximum points.
-void ee_gamecpp_civ_add_points(void *civilization, long amount);
-
-/// `Load`: the purchased upgrades, the points, the flags and the name (before 0.216 a narrow one); the first read
-/// error.
-long ee_gamecpp_civ_load(void *civilization,
-                         unsigned long major,
-                         unsigned long minor,
-                         void *file);
-
-/// `Save`: as `Load`, stopping at the first failed upgrade write; the first write error.
-long ee_gamecpp_civ_save(void *civilization, void *file);
-
-/// `Buy`: an upgrade applied to a player, first paid for and recorded when buying; whether it applied.
-bool ee_gamecpp_civ_buy(void *civilization,
-                        uint32_t upgrade,
-                        long player,
-                        bool purchase);
-
-/// `AddUpgrades`: a list's upgrades bought in turn for a player, stopping at the first that fails.
-void ee_gamecpp_civ_add_upgrades(void *civilization, void *list, long player, bool purchase);
-
-/// `ApplyLevel21ToWorld`: the purchased upgrades of the deferred kind applied to player 0.
-void ee_gamecpp_civ_apply_level21(void *civilization);
-
-/// `Reapply`: after a load the purchased upgrades applied to the player but those of the deferred kind, which wait;
-/// 13 when one fails.
-long ee_gamecpp_civ_reapply(void *civilization,
-                            long player);
-
-/// `ApplyDeferred`: the deferred upgrades applied to the player and forgotten; 13 when one fails.
-long ee_gamecpp_civ_apply_deferred(void *civilization, long player);
-
-/// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).
-bool ee_gamecpp_wonder_enough(void *condition);
-
-/// `GetWonderCountdown`: the player whose wonder completes the team's count and the seconds left (NULL and 0 when
-/// the team lacks the wonders).
-void *ee_gamecpp_wonder_countdown(void *condition,
-                                  unsigned long *out);
-
-/// `EEVCWonder::GetVictoryState`: 1 (won) when the team's countdown has run out, outside cinematics.
-long ee_gamecpp_wonder_state(void *condition);
-
-/// `EEVCWonder::Load`: the wonder list of saves before 0.225, read and dropped; the first read error.
-long ee_gamecpp_wonder_load(unsigned long major,
-                            unsigned long minor,
-                            void *file);
 
 /// `EEPlayForLocalPlayer`: the sound played when the player is the local one; the instance, or -1.
 unsigned long ee_gamecpp_play_for_local(void *player, void *sound);
@@ -6125,6 +5595,9 @@ int32_t ee_gamecpp_camera_host(void *context, int32_t op, EeAppCameraIo *io);
 /// `AddKey`: a key appended to the camera's path -> 0, or 5 while a path plays (the camera locked).
 long ee_gamecpp_camera_add_key(void *camera, const void *key);
 
+/// The camera's key count (`mKeys.size()`: the scenario capture's SMCK).
+size_t ee_gamecpp_camera_key_count();
+
 /// The constructor: no song, intensity 0, ten minutes to the next song, the generator seeded with the time, the
 /// seven events, the music thread started at `priority` and waited for, then the conductor's intensity.
 void ee_gamecpp_music_init(void *manager,
@@ -6348,31 +5821,6 @@ void ee_gamecpp_server_xfer_status(void *server,
 
 /// EEServer::ServerSlot48: message 0x12 posted to the UI thread (two zero parameters).
 void ee_gamecpp_server_post_12();
-
-/// A node's state record (TNRS, TNPR, ...: id, epochs, flags, delay, prerequisites, the tree's epochs).
-///
-/// # Safety
-/// `record` is the live capture record, `node` a live node.
-void ee_gamecpp_tech_capture_node_rec(void *record,
-                                      void *node);
-
-/// An epoch's state record: its node's, then its SOL counters.
-///
-/// # Safety
-/// As [`ee_gamecpp_tech_capture_node_rec`] (`epoch` a live epoch).
-void ee_gamecpp_tech_capture_epoch_rec(void *record, void *epoch);
-
-/// A tree's state record (its epochs, the player).
-///
-/// # Safety
-/// `record` is the live capture record, `tree` a live tree.
-void ee_gamecpp_tech_capture_tree_rec(void *record, void *tree);
-
-/// EVUN: one unit an effect walks (its id, type, hit points, flags, flight time), when capturing.
-///
-/// # Safety
-/// `unit` is a live unit.
-void ee_gamecpp_tech_capture_unit_step(void *unit, bool applies, long value);
 
 /// The POSIX `main`'s start after EE-SIM's turn: -1 and the command line in `out_line` to run the game (EERun);
 /// else the exit code (the smoke test's, 3 for no game data, 1 when the data root cannot be entered).

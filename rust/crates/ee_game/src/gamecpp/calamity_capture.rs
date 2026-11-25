@@ -24,7 +24,7 @@ use ee_sim::tech::contagion_functor::EeContagionFunctorFields;
 use ee_sim::tech::contagion_save::EeContagionHelperFields;
 use ee_sim::tech::contagion_store_ffi as cs;
 
-use super::{cptr, h, hd, hf, hp, pa, rec, O, P};
+use super::{cptr, h, hd, hf, hp, pa, ptr, rec, O, P};
 
 /// A record (EESimCaptureRecord): the payload's bytes, committed whole.
 #[derive(Default)]
@@ -314,7 +314,8 @@ pub extern "C" fn ee_gamecpp_capture_calamity_classes() {
 
 /// The file's bytes so far: their length and the bytes.
 fn file_bytes(r: &mut Record, file: P) {
-    let length = h(O::MemFilePosition, file, &[]) as c_long;
+    let mut length: c_long = 0; // GetPosition's out value
+    h(O::MemFilePosition, file, &[ptr(&mut length)]);
     r.u32(length as u32);
     if length > 0 {
         let data = hp(O::MemFileData, file, &[]) as *const u8;
@@ -471,7 +472,7 @@ pub extern "C" fn ee_gamecpp_capture_calamity_saves() {
     }
     let m = hp(O::CalamityManager, 0, &[]);
     for i in 0..h(O::MgrCalamityCount, m, &[]) {
-        h(O::CapSave, hp(O::MgrCalamityAt, m, &[i]), &[i]);
+        ee_gamecpp_capture_calamity_save(hp(O::MgrCalamityAt, m, &[i]) as *mut c_void, i as c_ulong);
     }
     ee_gamecpp_capture_contagion_save();
 }
@@ -484,7 +485,7 @@ pub extern "C" fn ee_gamecpp_capture_calamity_aged(k: *mut c_void, index: c_ulon
     if !active() || (before / 5000.0) as c_long == (alive / 5000.0) as c_long {
         return;
     }
-    h(O::CapSave, k as P, &[index as i64]);
+    ee_gamecpp_capture_calamity_save(k, index);
     ee_gamecpp_capture_contagion_save();
 }
 
@@ -655,7 +656,7 @@ fn can_cast_record(
     r.commit(b"CCAS");
 }
 
-/// EECalamityCanCastRecord: an outermost CanCastAt's CCAS record (kind 0); the result.
+/// EECalamityCanCastScope::Record: an outermost CanCastAt's CCAS record (kind 0); the result.
 ///
 /// # Safety
 /// `at` is three floats.

@@ -144,6 +144,9 @@ impl EeWonComboBox {
         {
             return r;
         }
+        if let Some(r) = crate::gamewin::common_op(self.comp as isize, op, a, b, c) {
+            return r;
+        }
         match self.host {
             // SAFETY: the host was given with this object's component; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, d) },

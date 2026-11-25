@@ -1,7 +1,9 @@
 //! The game's plain global pointers and scalars, stored by Rust (were EEGlobals.cpp's definitions; the C++ headers
 //! keep declaring them `extern`, so every C++ user reads the same symbol as before): the subsystem, manager, font
 //! and render object pointers, the TEST ONLY hooks, the campaigns' network checksums, the install checksum, the
-//! space units' heights, gFreeCamera, sIconsLoaded and gEmptyString. Each is exported under the C++ symbol: MSVC's
+//! space units' heights, the collision period and its unit (were EEPhysicsModel.cpp's), gFreeCamera, sIconsLoaded, gEmptyString, gLocalPlayerOut (was EEMessage.cpp's), the default player colours (EEServer.cpp's) and the render flags, the grid phase and the letterbox zoom (were EERenderObject.cpp's),
+//! and the game's UI table (gEEGameUI: ee/EEGameUI.h; its members are function
+//! pointers, so the storage is the C++ struct's on every platform; the UI's units fill it at static initialization). Each is exported under the C++ symbol: MSVC's
 //! mangled name on Windows (from the link map), the plain name elsewhere (Itanium does not mangle a global's name).
 //! Rust reads and writes them through `get!`, `have!` and `set!` where a host case only did that, and passes a
 //! few pointers on to a Rust export (gDataPath, gGraphics, gPhysics, gDataPreLoading: reads on the thread that
@@ -9,7 +11,7 @@
 //! pointer has the same size and alignment), `long` is `c_long` (32 bits on Windows, 64 on LP64), `bool` is `bool`.
 #![allow(non_upper_case_globals)]
 
-use core::ffi::{c_char, c_long, c_void};
+use core::ffi::{c_char, c_long, c_ulong, c_void};
 
 /// A pointer global's storage: `*mut c_void` is not Sync, so the statics are `static mut` (C++ writes them).
 macro_rules! ee_globals {
@@ -111,9 +113,24 @@ ee_globals! {
     val gBinaryChecksum: u32 = 0 => "?gBinaryChecksum@@3IA";
     val gSpaceTurretHeight: f32 = 0.7 => "?gSpaceTurretHeight@@3MA";
     val gSpaceStationHeight: f32 = 1.5 => "?gSpaceStationHeight@@3MA";
+    val gCollisionDetectionUnit: c_ulong = 2000 => "?gCollisionDetectionUnit@@3KA";
+    val gCollisionPeriod: c_ulong = 1 => "?gCollisionPeriod@@3KA";
     val gFreeCamera: bool = false => "?gFreeCamera@@3_NA";
     val sIconsLoaded: bool = false => "?sIconsLoaded@@3_NA";
     val gEmptyString: [c_char; 4] = [0; 4] => "?gEmptyString@@3PADA";
+    // port: the farthest zoom (1.0 in the original; the camera's distance grows linearly past it, its pitch stays at
+    // the farthest), from config.yaml's camera: maximum_zoom_out (EEPreferences; was EECameraControl.cpp's)
+    val gCameraMaxZoom: f32 = 2.0 => "?gCameraMaxZoom@@3MA";
+    val gEEGameUI: [*mut c_void; 9] = [core::ptr::null_mut(); 9] => "?gEEGameUI@@3UEEGameUI@@A";
+    val gLocalPlayerOut: bool = false => "?gLocalPlayerOut@@3_NA";
+    val gB529065: bool = false => "?gB529065@@3_NA";
+    val gB529066: bool = false => "?gB529066@@3_NA";
+    val gB529068: bool = false => "?gB529068@@3_NA";
+    val gCameraFollowing: bool = false => "?gCameraFollowing@@3_NA";
+    val gU4E9330: f32 = 0.0 => "?gU4E9330@@3MA";
+    val gF4BE374: f32 = 1.0 => "?gF4BE374@@3MA";
+    val gDefaultPlayerColors: [c_long; 16] = [0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15]
+        => "?gDefaultPlayerColors@@3PAJA";
 }
 
 /// `gGraphics->PostResume()` (rts graphics.rs; its FFI is absent from a test binary).
@@ -187,6 +204,10 @@ mod tests {
             assert_eq!(*addr_of!(gSpaceStationHeight), 1.5f32);
             assert!(!*addr_of!(gFreeCamera));
             assert_eq!(*addr_of!(gEmptyString), [0; 4]);
+            assert_eq!(*addr_of!(gF4BE374), 1.0f32);
+            let colors = *addr_of!(gDefaultPlayerColors);
+            assert_eq!(colors[..6], [0, 1, 4, 9, 2, 15]);
+            assert!(!*addr_of!(gCameraFollowing) && !*addr_of!(gLocalPlayerOut));
             assert!((*addr_of!(gPhysics)).is_null());
             assert!((*addr_of!(gFontTahoma72)).is_null());
         }
@@ -194,7 +215,7 @@ mod tests {
 
     #[test]
     fn symbols_are_msvc_names() {
-        assert_eq!(NAMES.len(), 83);
+        assert_eq!(NAMES.len(), 95);
         for (name, msvc) in NAMES {
             assert!(msvc.starts_with(&format!("?{name}@@3")), "{name}: {msvc}");
         }

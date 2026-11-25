@@ -13,3 +13,9 @@ c_locale = []
 
 [dependencies]
 ee_base = { path = "../ee_base" }
+# WONCrypt's primitives (docs/progress/deps.md): md5.rs compresses with md-5, blowfish.rs keys and runs RustCrypto's
+# cipher, crc16.rs is crc's CRC-16/UMTS table, bigint.rs keeps its magnitudes in num-bigint
+md-5 = { version = "0.10.6", default-features = false }
+blowfish = "0.9.1"
+crc = "3.2.1"
+num-bigint = { version = "0.4.6", default-features = false }

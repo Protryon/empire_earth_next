@@ -34,6 +34,7 @@
 #include "won_surface_shell.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "won_file37_orig.h" // FileReader, FileWriter
 #include "ee/wonapi/WONStringCompare.h"
 #include "rust/won_gui/guidraw.h"
 #include "rust/won_gui/imgdec.h"

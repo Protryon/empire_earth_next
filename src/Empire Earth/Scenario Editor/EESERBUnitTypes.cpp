@@ -11,7 +11,6 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 
 
 #include "ee/EmpireEarth.h"

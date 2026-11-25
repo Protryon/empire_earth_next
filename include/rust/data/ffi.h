@@ -165,6 +165,19 @@ void ee_data_rules_set_music_from_flags(EeDataRules *rules,
                                         const bool *flags,
                                         size_t count);
 
+/// The computer players' level (0 easy .. 2 hard: their records' values) of a game option difficulty; past the
+/// list, the difficulty itself (was EERules.cpp's EEDifficultyAILevel).
+///
+/// # Safety
+/// `rules` live.
+long ee_data_rules_ai_level(const EeDataRules *rules,
+                            unsigned long difficulty);
+
+/// `EERules::Epoch`'s entry: an epoch position's index in a list of `count` epochs (before the list the first, past
+/// it the last; `count` > 0).
+size_t ee_data_rules_epoch_index(long epoch,
+                                 size_t count);
+
 /// The binary load's songs: every row of a dbmusic.dat file's per-epoch flags (the gate's and tools' path).
 ///
 /// # Safety
