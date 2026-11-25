@@ -601,7 +601,7 @@ extern "C" intptr_t ee_screenscpp_seax(uint32_t inOp, void* p, void* q, float* t
     case EE_SCREENS_SEAX_GHOST_COUNT:
         return (intptr_t)gWorld.GetNumGhostUnits();
     case EE_SCREENS_SEAX_GHOST:
-        return (intptr_t)gWorld.mGhostUnits[i[0]];
+        return (intptr_t)gWorld.GetGhostUnit(i[0]);
     case EE_SCREENS_SEAX_BUILD_GATE:
         EEBuildGate(sSeaxTile = EETileCoordinate(i[0], i[1]), i[2], i[3], i[4]);
         return 0;

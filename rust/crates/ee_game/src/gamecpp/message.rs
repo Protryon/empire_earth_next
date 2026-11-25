@@ -376,7 +376,7 @@ fn saved_group_select(m: P) {
                 h(O::UnPosition, unit, &[ptr(&mut location)]);
                 h(O::CameraSetChanged, 0, &[]);
                 h(O::CameraSetLocation, 0, &[cptr(&location), 0, 1]);
-                h(O::MiniMapRefresh, 0, &[]);
+                super::minimap::ee_gamecpp_minimap_refresh(super::globals::get!(gMiniMap));
                 h(O::SetCameraFollowing, 0, &[0]);
             }
             if *wm::<bool>(O::WExecutingLocalSelection) {
@@ -986,7 +986,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
         EE_NETMSG_PACT_SEES_ALL => {
             prts(pl).mSeesAll = !prts(pl).mSeesAll;
             if pl == current() {
-                h(O::MiniMapRedraw, 0, &[]);
+                super::minimap::ee_gamecpp_minimap_redraw(super::globals::get!(gMiniMap));
             }
         }
         EE_NETMSG_PACT_INCREMENT_EPIC => {

@@ -18,12 +18,6 @@ class EEPlayer;
 class RTSUnit;
 class TSReadWriteLock;
 
-// An element of RTSWorld::mQueuedPlacements (8 bytes: a referenced unit and a value; 0x1480ad adds one, 0x148072
-// dereferences them all). Name and second member are provisional.
-struct RTSWorldUnitEntry {
-    RTSUnit* mUnit;                         // +0x00
-    RTSUnit* mInsertAfter;                      // +0x04
-};
 
 class RTSWorld {
 public:
@@ -64,8 +58,8 @@ public:
     virtual void PlaceQueuedUnits() = 0;    // +0x28
     virtual void GameSpeedChanged() = 0;    // +0x2c
 
-    std::vector<RTSWorldUnitEntry> mQueuedPlacements;  // +0x04 (8-byte elements: 0x148072 dereferences [_First + i*8]; the
-                                            // `_Buy` 0x14823b is ICF-folded with vector<EETileCoordinate>'s)
+    // +0x04 the placement queue (std::vector<RTSWorldUnitEntry>, 8-byte unit/insert-after pairs): Rust's (ee_game
+    // rts world.rs QUEUED)
     RTSDummyUnit mUnits;                    // +0x14 (provisional name)
     GETransformation mTransformation;       // +0x1c
     // inline: EEPWorldHelper's world ctor copies it through the FPU (fld/fstp)

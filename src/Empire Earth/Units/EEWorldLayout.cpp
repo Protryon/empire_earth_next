@@ -132,7 +132,6 @@ void EEWorldLayoutRegister()
     theLayout.world_population_limit = offsetof(EEWorld, mPopulationLimit);
     theLayout.world_wonders_to_win = offsetof(EEWorld, mNumberOfWondersToWin);
     theLayout.world_game_options = offsetof(EEWorld, mGameOptions);
-    theLayout.world_ghost_units = offsetof(EEWorld, mGhostUnits);
     theLayout.world_victory_enabled = offsetof(EEWorld, mVictoryEnabled);
     theLayout.world_game_screen_active = offsetof(EEWorld, mGameScreenActive);
     theLayout.world_loading_saved_game = offsetof(EEWorld, mLoadingSavedGame);

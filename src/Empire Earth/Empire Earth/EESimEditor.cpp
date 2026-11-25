@@ -382,7 +382,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::GhostsChanged: gGhostUnitsChanged = true;
         break;
     case O::GhostCount: return gWorld.GetNumGhostUnits();
-    case O::GhostAt: return P64(gWorld.mGhostUnits[a[0]]);
+    case O::GhostAt: return P64(gWorld.GetGhostUnit(a[0]));
     case O::GhostCreate: EEGhostUnit::Create(GE2DPoint(f[0], f[1]), (long)a[0], gWorld.mPlayers[a[1]], f[2], false);
         break;
     case O::GhostSetTileX: GH->mTileX = (long)a[0];

@@ -317,8 +317,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoGhostUnlock: gWorld.mGhostUnitsLock->Leave();
         break;
     case O::RoGhostUnitsChanged: return gGhostUnitsChanged;
-    case O::RoGhostCount: return (int64_t)gWorld.GetNumGhostUnits();
-    case O::RoGhostAt: return RO_P64(gWorld.mGhostUnits[a[0]]);
     case O::RoGhostModel: return RO_P64(RO_GH->GetModel());
     case O::RoGhostFrame: return RO_GH->mFrame;
     case O::RoGhostAnimation: return RO_GH->mAnimation;

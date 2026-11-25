@@ -1147,7 +1147,7 @@ pub extern "C" fn ee_gamecpp_startup_delete_game_objects() {
     h(O::WorldClear, 0, &[]);
     if crate::gamecpp::globals::have!(gMiniMap) {
         h(O::MiniMapDelete, 0, &[]);
-        h(O::MiniMapSetNull, 0, &[]);
+        super::globals::set!(gMiniMap, core::ptr::null_mut());
     }
     h(O::AeManagerClear, 0, &[]);
     h(O::GameStateClear, 0, &[]);

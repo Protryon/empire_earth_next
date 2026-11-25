@@ -95,12 +95,11 @@ pub struct EeWorldLayout {
     pub world_num_players: u64,
     pub world_current_player: u64,
     /// `RTSWorld::mGameSpeed` (a float), `mPopulationLimit` (a `long`); `EEWorld::mNumberOfWondersToWin` (an
-    /// `unsigned long`), `mGameOptions` (its address: an `EEGameOptions`), `mGhostUnits` (a vector of pointers)
+    /// `unsigned long`), `mGameOptions` (its address: an `EEGameOptions`)
     pub world_game_speed: u64,
     pub world_population_limit: u64,
     pub world_wonders_to_win: u64,
     pub world_game_options: u64,
-    pub world_ghost_units: u64,
     /// `EEWorld`'s flags (bools): `mVictoryEnabled`, `mGameScreenActive`, `mLoadingSavedGame`, `mCheatsEnabled`,
     /// `mInCinematic`, `mUserPaused`, `mUsingCarbon`
     pub world_victory_enabled: u64,

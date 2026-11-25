@@ -92,7 +92,8 @@ public:
     void ClearGhostUnits();                 // 0x1390e8 (the list at +0x9c0)
     // inline (out-of-line COMDAT 0xe4510 at the end of EEE2DMarchingIcons.cpp, after the unit's template COMDATs; 12
     // callers call it) (provisional name)
-    unsigned long GetNumGhostUnits() { return this->mGhostUnits.size(); }
+    unsigned long GetNumGhostUnits() { return ee_app_ghost_count(); }
+    EEGhostUnit* GetGhostUnit(size_t inIndex) { return (EEGhostUnit*)ee_app_ghost_at(inIndex); }   // NULL past the end
     void AddGhostUnit(EEGhostUnit* inGhost);
     void ActivateUnit(EEComplexUnit* inUnit);  // 0x13b8e8 (EEUnit::SetHitPoints: a dead unit of a +0x312 class) (provisional name)
     void DeactivateUnit(EEComplexUnit* inUnit);  // 0x13b965 (EEUnit::Remove) (provisional name)
@@ -128,13 +129,10 @@ public:
     GEVector mMoonDirection;                // +0x980
     GEVector mSunDirection;                 // +0x98c
     GEVector mWindDirection;                // +0x998 (10 readers each of +0x998/+0x99c/+0x9a0)
-    // +0x9a4 (unsigned: ReleaseResourceUser's `jbe`, GetResourceUsers's return) (keyed by the unit:
-    // ReleaseResourceUser/GetResourceUsers/AddResourceUser; dtor 0x13ce79). Keyed by handles since R5a.4: looked up only,
-    // never iterated, so its order (by id now, by address before) is not observable; an entry of a freed unit stays
-    // unmatched (the address could be reused by another unit)
-    std::map<EEUnitHandle<EEUnit>, unsigned long, EEUnitHandleLess<EEUnit> > mResourceUsers;
+    // +0x9a4 the resource users (a std::map by unit handle: ReleaseResourceUser/GetResourceUsers/AddResourceUser):
+    // Rust's (ee_game gamecpp world.rs RESOURCE_USERS)
     std::vector<EETeam> mTeams;             // +0x9b0 ("TheTeams"; dtor 0x13dc94, element dtor 0x131b02)
-    std::vector<EEGhostUnit*> mGhostUnits;  // +0x9c0 the ghost units (EERenderObject 0x10c952; vector<long>'s _Buy/_Tidy are the ICF twins)
+    // +0x9c0 the ghost units (std::vector<EEGhostUnit*>): Rust's (ee_sim app ghosts.rs; GetGhostUnit)
     EECameraControl mCameraControl;         // +0x9d0 (0x531710; wheel zoom, hot-key selection)
     // +0xad0 .. +0xb17 (mActiveUnits, mUpdateUnits, mActivateQueue, mDeactivateQueue): the active unit lists are one
     // Rust object (ee_sim app active.rs; rust/sim/app.h ee_app_active_*): the stepped units' ids in their order, the

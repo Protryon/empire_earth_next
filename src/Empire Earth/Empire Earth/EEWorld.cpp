@@ -132,7 +132,7 @@ EEWorld::~EEWorld()
 // Appends a ghost unit to the world's ghost list
 void EEWorld::AddGhostUnit(EEGhostUnit* inGhost)
 {
-    this->mGhostUnits.push_back(inGhost);
+    ee_app_ghost_push(inGhost);   // (the list: ee_sim app ghosts.rs)
 }
 
 // Grants each player the wonder power 4 population share bonus when they hold it with no enemy holder or only allies
@@ -553,12 +553,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::WGhostUnlock: W->mGhostUnitsLock->Leave();
         break;
-    case O::WGhostCount: return (int64_t)W->mGhostUnits.size();
     case O::C13bGhostLockFree: TSScheduler::DestroyCriticalSection(W->mGhostUnitsLock);   // the world's dtor (world.rs ee_gamecpp_world_destroy)
-        break;
-    case O::C13bGhostAt: return P64(W->mGhostUnits[(size_t)a[0]]);
-    case O::WGhostBack: return P64(W->mGhostUnits.back());
-    case O::WGhostPop: W->mGhostUnits.pop_back();
         break;
     case O::GhostDelete: delete (EEGhostUnit*)p;
         break;
@@ -570,11 +565,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::C12PlayerObserver: return ((EEPlayer*)p)->mObserverMode;
     case O::C12PlayerEnemy: return ((EEPlayer*)p)->mEnemies[a[0]] != 0;
-    case O::WQueuedCount: return (int64_t)W->mQueuedPlacements.size();
-    case O::WQueuedUnit: return P64(W->mQueuedPlacements[a[0]].mUnit);
-    case O::WQueuedAfter: return P64(W->mQueuedPlacements[a[0]].mInsertAfter);
-    case O::WQueuedClear: W->mQueuedPlacements.clear();
-        break;
     case O::WSetPlayer: W->SetPlayer((long)a[0], (EEPlayer*)a[1]);
         break;
     case O::WWriteLock: W->mLock->WriteLock();
@@ -606,10 +596,6 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::WOptionsPlayerGet: *(EEGameOptionsPlayer*)a[1] = W->mGameOptions.mPlayers[a[0]];
         break;
     case O::WOptionsPlayerSet: W->mGameOptions.mPlayers[a[0]] = *(EEGameOptionsPlayer*)a[1];
-        break;
-    case O::WResourceUserHas: return W->mResourceUsers.count((EEUnit*)a[0]);
-    case O::WResourceUserGet: return (int64_t)W->mResourceUsers.find((EEUnit*)a[0])->second;
-    case O::WResourceUserSet: W->mResourceUsers[(EEUnit*)a[0]] = (unsigned long)a[1];
         break;
     case O::RtsClear: W->RTSWorld::Clear();
         break;
@@ -808,17 +794,7 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
         break;
     case O::MiniMapDelete: delete gMiniMap;
         break;
-    case O::MiniMapSetNull: gMiniMap = NULL;
-        break;
-    case O::MiniMapRedraw: gMiniMap->Redraw();
-        break;
-    case O::MiniMapRedrawAll: gMiniMap->RedrawAll();
-        break;
-    case O::MiniMapRefresh: gMiniMap->Refresh();
-        break;
     case O::MiniMapSetViewer: gMiniMap->mViewingPlayer = (EEPlayer*)a[0];
-        break;
-    case O::MiniMapMoveUnit: gMiniMap->MoveUnit(UN, (long)a[0], (long)a[1], (long)a[2], (long)a[3]);
         break;
     case O::PickerLock: gUnitPicker.GetLock()->Enter();
         break;

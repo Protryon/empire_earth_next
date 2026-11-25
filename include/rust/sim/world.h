@@ -692,12 +692,11 @@ struct EeWorldLayout {
   uint64_t world_num_players;
   uint64_t world_current_player;
   /// `RTSWorld::mGameSpeed` (a float), `mPopulationLimit` (a `long`); `EEWorld::mNumberOfWondersToWin` (an
-  /// `unsigned long`), `mGameOptions` (its address: an `EEGameOptions`), `mGhostUnits` (a vector of pointers)
+  /// `unsigned long`), `mGameOptions` (its address: an `EEGameOptions`)
   uint64_t world_game_speed;
   uint64_t world_population_limit;
   uint64_t world_wonders_to_win;
   uint64_t world_game_options;
-  uint64_t world_ghost_units;
   /// `EEWorld`'s flags (bools): `mVictoryEnabled`, `mGameScreenActive`, `mLoadingSavedGame`, `mCheatsEnabled`,
   /// `mInCinematic`, `mUserPaused`, `mUsingCarbon`
   uint64_t world_victory_enabled;
