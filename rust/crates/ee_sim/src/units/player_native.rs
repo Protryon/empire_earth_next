@@ -7,7 +7,7 @@
 use crate::units::player_body::*;
 use crate::units::player_rest::{
     EE_UNITS_PLAYER_BODY_ATC_UPDATE, EE_UNITS_PLAYER_BODY_CLOAKED, EE_UNITS_PLAYER_BODY_DETACHED,
-    EE_UNITS_PLAYER_BODY_SET_CLOAKED, EE_UNITS_PLAYER_BODY_SET_DETACHED,
+    EE_UNITS_PLAYER_BODY_GAME_TIME, EE_UNITS_PLAYER_BODY_SET_CLOAKED, EE_UNITS_PLAYER_BODY_SET_DETACHED,
 };
 use crate::world::layout::layout;
 use crate::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved};
@@ -108,6 +108,7 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
             | EE_UNITS_PLAYER_BODY_TILE_Y
             | EE_UNITS_PLAYER_BODY_SIGHT_ZERO
             | EE_UNITS_PLAYER_BODY_IS_LOCAL
+            | EE_UNITS_PLAYER_BODY_GAME_TIME
             | EE_UNITS_PLAYER_BODY_CLASS_COUNT => {
                 let t = crate::world::WorldRead::begin();
                 let unit = || crate::world::UnitView::of(&t, a);
@@ -124,6 +125,7 @@ pub unsafe fn body(op: i32, p: u64, a: u64, b: i64, c: i64) -> Option<i64> {
                         (*complex(unit()?.complex_unit_handle())).mSight = 0.0;
                         0
                     }
+                    EE_UNITS_PLAYER_BODY_GAME_TIME => crate::world::WorldView::global(&t)?.game_time(),
                     EE_UNITS_PLAYER_BODY_IS_LOCAL => {
                         let w = crate::world::WorldView::global(&t)?;
                         i64::from(w.current_player().is_some_and(|c| c.handle() == p))
@@ -211,6 +213,28 @@ pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlay
                 (*node(a0 as u64)).mIsAllowed = io.i[1] != 0;
                 return Some(0);
             }
+            EE_UNITS_PLAYER_X_RESOURCE_CLEAR => {
+                (*((a0 as usize + layout().unit_fields as usize)
+                    as *mut crate::world::unit_fields::EeUnitsUnitFields))
+                    .mResourceAmount = 0;
+                return Some(0);
+            }
+            EE_UNITS_PLAYER_X_CLOAKED_NOW => {
+                let t = WorldRead::begin();
+                (*complex(a0 as u64)).mCloaked = WorldView::global(&t)?.game_time() as _;
+                return Some(0);
+            }
+            EE_UNITS_PLAYER_X_TABLE_STEP | EE_UNITS_PLAYER_X_TABLE_COST_FACTOR | EE_UNITS_PLAYER_X_TABLE_MAX_LEVEL => {
+                let table = &*(a0 as usize as *const ee_data::tables::EeDataUpgradeFields);
+                return Some(match op {
+                    EE_UNITS_PLAYER_X_TABLE_MAX_LEVEL => table.mMaxLevel as i64,
+                    _ => {
+                        let f = table.mFactors[io.i[1] as usize];
+                        io.f[0] = if op == EE_UNITS_PLAYER_X_TABLE_STEP { f.mOffset } else { f.mScale };
+                        0
+                    }
+                });
+            }
             EE_UNITS_PLAYER_CLEAR_FOOTPRINT => {
                 ee_units_player_rest(pv, EE_UNITS_PLAYER_REST_CLEAR_FOOTPRINT, a0 as u64, 0, 0);
                 return Some(0);
@@ -222,6 +246,7 @@ pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlay
     let t = unsafe { WorldRead::begin() };
     let unit = || unsafe { UnitView::of(&t, a0 as u64) };
     let class = || unsafe { ClassView::of(&t, a0 as u64) };
+    let stats = || unsafe { crate::world::StatsView::of(&t, a0 as u64) };
     Some(match op {
         EE_UNITS_PLAYER_X_FIRST_UNIT => {
             let other = if a0 != 0 { a0 as u64 } else { p };
@@ -235,6 +260,17 @@ pub unsafe fn player(op: i32, p: u64, io: &mut crate::units::player::EeUnitsPlay
         EE_UNITS_PLAYER_X_TILE_X => unit()?.tile_xy().0,
         EE_UNITS_PLAYER_X_TILE_Y => unit()?.tile_xy().1,
         EE_UNITS_PLAYER_X_RESOURCE => unit()?.resource_amount(),
+        EE_UNITS_PLAYER_X_LAND_BUILDING => i64::from(unit()?.class()?.land_building()),
+        EE_UNITS_PLAYER_X_UPGRADE_UNIT_TYPE => stats()?.class()?.unit_type() as i64,
+        EE_UNITS_PLAYER_X_UP_MAX_HIT_POINTS => stats()?.max_hit_points(),
+        EE_UNITS_PLAYER_X_UP_FLIGHT_TIME => {
+            let v: c_long = crate::world_field!(stats()?.fields(), mFlightTime);
+            v as i64
+        }
+        EE_UNITS_PLAYER_X_UP_POWER => {
+            let v: c_long = crate::world_field!(stats()?.fields(), mPower);
+            v as i64
+        }
         EE_UNITS_PLAYER_X_COMPLEX => unit()?.complex_unit_handle() as i64,
         EE_UNITS_PLAYER_X_CLASS_COUNT => ClassView::count(&t) as i64,
         EE_UNITS_PLAYER_X_CLASS_AT => ClassView::by_index(&t, a0 as usize).map_or(0, |c| c.handle() as i64),
@@ -274,6 +310,11 @@ pub unsafe fn tick(op: i32, p: u64, io: &mut crate::units::player_save::EeUnitsP
             }
             EE_UNITS_PLAYER_TICK_X_AIR => {
                 ee_units_player_rest(pv, EE_UNITS_PLAYER_REST_UPDATE_AIR_TRAFFIC, 0, 0, 0);
+            }
+            EE_UNITS_PLAYER_TICK_GAME_TIME | EE_UNITS_PLAYER_TICK_TICK_MS => {
+                let t = WorldRead::begin();
+                let w = crate::world::WorldView::global(&t)?;
+                io.i = if op == EE_UNITS_PLAYER_TICK_GAME_TIME { w.game_time() } else { w.tick_ms() };
             }
             EE_UNITS_PLAYER_TICK_X_EPOCH | EE_UNITS_PLAYER_TICK_X_NEXT_UNIT => {
                 let t = WorldRead::begin();

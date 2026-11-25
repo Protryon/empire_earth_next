@@ -258,25 +258,19 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     case EE_UNITS_PLAYER_X_MINIMAP: return gMiniMap != NULL;
     case EE_UNITS_PLAYER_X_MINIMAP_REDRAW: gMiniMap->Redraw();
         return 0;
-    case EE_UNITS_PLAYER_X_CLOAKED_NOW: theComplex->mCloaked = gPhysics->mGameTime;
-        return 0;
     case EE_UNITS_PLAYER_X_STATS_LOWER: thePlayer->mSavedGroups.Lower((long)a[0], (long)a[1]);
         return 0;
-    case EE_UNITS_PLAYER_X_LAND_BUILDING: return theUnit->mUnitClass->IsLandBuilding();
     case EE_UNITS_PLAYER_X_SIGHT_ON: theUnit->SightOnHere();
         return 0;
     case EE_UNITS_PLAYER_X_SIGHT_OFF: theUnit->SightOffHere();
         return 0;
     case EE_UNITS_PLAYER_X_WONDER_STARTED: gWorld.mPlayers[a[0]]->WonderStarted(EEPlayerUnitAt(a[1]));
         return 0;
-    case EE_UNITS_PLAYER_X_RESOURCE_CLEAR: theUnit->mResourceAmount = 0;
-        return 0;
     case EE_UNITS_PLAYER_X_FOREST_REMOVE: gContinentManager.RemoveForestTile(theUnit);
         return 0;
     case EE_UNITS_PLAYER_X_NODE: return (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mTechnologies->Get((long)a[0]));
     case EE_UNITS_PLAYER_X_UPGRADE_SLOTS: return (int64_t)thePlayer->mUnitClassUpgrades.size();
     case EE_UNITS_PLAYER_X_UPGRADE_AT: return (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mUnitClassUpgrades[(size_t)a[0]]);
-    case EE_UNITS_PLAYER_X_UPGRADE_UNIT_TYPE: return (int64_t)reinterpret_cast<EEUnitClassUpgrade*>(a[0])->mUnitClass->GetUnitType();
     case EE_UNITS_PLAYER_X_STRING: gResource->GetString((long)a[0], *reinterpret_cast<UWideString*>(a[1]));
         return 0;
     case EE_UNITS_PLAYER_X_IMPROVEMENT_TIME2: return (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(a[0]));
@@ -296,11 +290,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     // the world lane, round 2: the compound operations' statements (ee_units player_split_more.rs)
     case EE_UNITS_PLAYER_X_CLASS_POPULATION: return EEPlayerPtr<EEUnitClass>(a[0])->GetPopulationCost();
     case EE_UNITS_PLAYER_X_CLASS_IMPROVEMENTS: return (int64_t)(uintptr_t)EEPlayerPtr<EEUnitClass>(a[0])->mImprovements;
-    case EE_UNITS_PLAYER_X_TABLE_STEP: io->f[0] = EEPlayerPtr<EeDataUpgradeFields>(a[0])->mFactors[a[1]].mOffset;
-        return 0;
-    case EE_UNITS_PLAYER_X_TABLE_COST_FACTOR: io->f[0] = EEPlayerPtr<EeDataUpgradeFields>(a[0])->mFactors[a[1]].mScale;
-        return 0;
-    case EE_UNITS_PLAYER_X_TABLE_MAX_LEVEL: return EEPlayerPtr<EeDataUpgradeFields>(a[0])->mMaxLevel;
     case EE_UNITS_PLAYER_X_UP_CAN_UPGRADE: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mImprovement.CanUpgrade(EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mUnitClass, (long)a[1]) == true;
     case EE_UNITS_PLAYER_X_UP_COST: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mImprovement.GetCost((long)a[1]);
     case EE_UNITS_PLAYER_X_UP_TOTAL: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mImprovement.mTotalCost;
@@ -314,9 +303,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
         return 0;
     case EE_UNITS_PLAYER_X_WONDER_HIT_POINT_BONUS: io->f[0] = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
         return 0;
-    case EE_UNITS_PLAYER_X_UP_FLIGHT_TIME: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mFlightTime;
-    case EE_UNITS_PLAYER_X_UP_POWER: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mPower;
-    case EE_UNITS_PLAYER_X_UP_MAX_HIT_POINTS: return EEPlayerPtr<EEUnitClassUpgrade>(a[0])->mMaxHitPoints;
     case EE_UNITS_PLAYER_X_TOWN_NEW: return (int64_t)(uintptr_t)new EETown(thePlayer, ++gWorld.mTownIDCounter);
     case EE_UNITS_PLAYER_X_HERD_NEW: return (int64_t)(uintptr_t)new EEHerd(thePlayer, theComplex->mUnitClass->mAnimalID, ++gWorld.mHerdIDCounter);
     case EE_UNITS_PLAYER_X_TOWN_SERIAL: EEPlayerTownAt(a[0])->SetSerial(gContinentManager.NewSerial());
@@ -766,9 +752,7 @@ static int32_t EETownSaveHost(void* inContext, int32_t inOp, uint32_t inPlayer, 
     switch (inOp) {
     case EE_UNITS_TOWN_COUNTER: io->prim.i = gWorld.mTownIDCounter; return 0;
     case EE_UNITS_TOWN_SET_COUNTER: gWorld.mTownIDCounter = (long)io->prim.i; return 0;
-    case EE_UNITS_TOWN_PLAYERS: io->prim.i = gWorld.mNumPlayers; return 0;
     case EE_UNITS_TOWN_X_CONTEXT_PLAYER: io->prim.i = (int64_t)(uintptr_t)theContext.mPlayer; return 0;
-    case EE_UNITS_TOWN_X_WORLD_PLAYER: io->prim.i = (int64_t)(uintptr_t)gWorld.mPlayers[io->prim.i]; return 0;
     case EE_UNITS_TOWN_X_AREA_CLEAR: theContext.mArea.clear(); return 0;
     case EE_UNITS_TOWN_X_AREA_WRITE: EEWriteAreaBytes(*EEPlayerTownAt(io->prim.i), theContext.mArea); return 0;
     case EE_UNITS_TOWN_X_AREA_DATA: io->prim.i = (int64_t)(uintptr_t)theContext.mArea.data(); return 0;
@@ -877,8 +861,6 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
     EEUnit* theUnit = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(io->i));
     EEHerd* theHerd = EEPlayerHerdAt(ee_units_lists_at(thePlayer->mLists, EE_UNITS_LISTS_HERDS, inIndex));   // herd inIndex's
     switch (inOp) {
-    case EE_UNITS_PLAYER_TICK_GAME_TIME: io->i = (int64_t)gPhysics->mGameTime;
-        return 0;
     case EE_UNITS_PLAYER_TICK_HERD_DUE:
         io->i = (int64_t)theHerd->mNextUpdateTime;
         io->b = theHerd->mIsActive ? 1 : 0;
@@ -893,8 +875,6 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
         return 0;
     case EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE:
         return thePlayer->AdvanceImprovement((unsigned long)io->i) ? 1 : 0;
-    case EE_UNITS_PLAYER_TICK_TICK_MS: io->i = (int64_t)gPhysics->mTickTimeMs;
-        return 0;
     case EE_UNITS_PLAYER_TICK_UNIT_SET_HIT_POINTS: theUnit->SetHitPoints((long)(int32_t)inIndex);
         return 0;
     // the compound operations' statements (ee_units player_tick.rs split)
@@ -1106,7 +1086,6 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_ACTIVE_GROUP: return (int64_t)(uintptr_t)static_cast<EeUnitsGroup*>(theComplex->mActiveGroup);
     case EE_UNITS_PLAYER_BODY_GROUP_REMOVE: theGroup->RemoveUnit(EEPlayerUnitAt(inB));
         return 0;
-    case EE_UNITS_PLAYER_BODY_GAME_TIME: return (int64_t)gPhysics->mGameTime;
     case EE_UNITS_PLAYER_BODY_REMOVE_FROM_TILE: static_cast<EEUnit*>(theUnit)->mUnitClass->RemoveFromTile(static_cast<EEUnit*>(theUnit));
         return 0;
     case EE_UNITS_PLAYER_BODY_REMOVE_FROM_REGION: static_cast<EEUnit*>(theUnit)->mUnitClass->RemoveFromRegion(static_cast<EEUnit*>(theUnit));

@@ -247,6 +247,19 @@ pub mod game {
 
     impl TownSplitHost for GameTowns {
         fn town(&mut self, op: i32, player: u32, index: u32, io: &mut EeUnitsTownIo) -> i32 {
+            use crate::world::{WorldRead, WorldView};
+            if op == EE_UNITS_TOWN_PLAYERS || op == EE_UNITS_TOWN_X_WORLD_PLAYER {
+                // the world's players through the views; SAFETY: the towns' save runs with the world held
+                let t = unsafe { WorldRead::begin() };
+                if let Some(w) = WorldView::global(&t) {
+                    io.prim.i = if op == EE_UNITS_TOWN_PLAYERS {
+                        w.num_players() as i64
+                    } else {
+                        w.player(io.prim.i as usize).map_or(0, |p| p.handle() as i64)
+                    };
+                    return 0;
+                }
+            }
             // SAFETY: the C++ host's contract (ee_units_towns_*)
             unsafe { (self.f)(self.ctx, op, player, index, io) }
         }
