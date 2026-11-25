@@ -818,7 +818,7 @@ WON_TESTS = {
     # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won_net/src/golden_authlogin.txt)
     "won_auth_test": [],
     # the directory server's entity replies (golden: rust/crates/ee_won_net/src/golden_dir.txt)
-    "won_dir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"],
+    "won_dir_test": [],
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
     "won_dirops_test": [],
@@ -860,8 +860,7 @@ WON_TESTS = {
     # WONDir's list, multi-list, alias, find and get-service ops and WONDB's get and update account ops as whole ops
     # (requests, replies, Reset, the results), the original's statements against the Rust ops (ee_won reqdir.rs)
     # through their C ABI (golden: rust/crates/ee_won_net/src/golden_reqdir.txt)
-    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
-                        ROOT / "tests" / "won" / "won_profiledata.cpp"],
+    "won_reqdir_test": [ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONDB's create account op and WONRouting's group list request op as whole ops (requests, replies, Reset, the
     # keys, the group map read again), the original's statements against the Rust ops (ee_won reqlast.rs) through
     # their C ABI (golden: rust/crates/ee_won_net/src/golden_reqlast.txt)
@@ -869,7 +868,7 @@ WON_TESTS = {
     # WONMisc's GetVersionOp and FindPatchOp as whole ops (the directory request, the versions and patches read from
     # its listing, the version checks and patch lists), the original's statements against the Rust ops (ee_won
     # verop.rs) through their C ABI (golden: rust/crates/ee_won_net/src/golden_verop.txt)
-    "won_verop_test": [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"],
+    "won_verop_test": [],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
     # (golden: rust/crates/ee_won_net/src/golden_hostop.txt)
@@ -964,12 +963,9 @@ WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"]]
 WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 # RustServerOp's host calls that need no C++ object (the clock, the CRT's random numbers, an address, the op's file,
 # the files it measures, the web proxy file) through the op's own call path (golden:
-# rust/crates/ee_won_net/src/golden_serverop.txt, recorded over ServerOp.cpp's HostCall); its units (won_ops_test's,
-# ServerOp.cpp and what it names) are set here
-WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
-                                  WON_SRC / "WONServer" / "ServerOp.cpp",
-                                  WON_SRC / "WONDir" / "DirEntityReplyParser.cpp",
-                                  WON_SRC / "WONAuth" / "AuthContext.cpp"]
+# rust/crates/ee_won_net/src/golden_serverop.txt, recorded over ServerOp.cpp's HostCall); its units are
+# won_ops_test's (the maker of the Rust ops' C++ op is AsyncOp.cpp's since R6 WON round 38)
+WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"]]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
 # real certificates (golden: rust/crates/ee_won_net/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
 # AuthContext.cpp); the same units as won_serverop_test
@@ -1013,7 +1009,7 @@ WON_TESTS["won_cdkeystore_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_net33_test"] = WON_TESTS["won_serverop_test"]
 # R6 WON round 34: the directory's entities whole in Rust (dirlist.rs, dirread.rs, the C++ DirList) against
 # DirEntity and its readers as they were (won_direntity_orig.h and the driver's copies)
-WON_TESTS["won_dir34_test"] = [WON_SRC / "WONDir" / "DirEntityReplyParser.cpp"]
+WON_TESTS["won_dir34_test"] = []
 # R6 WON round 34 (net, second batch): DNSTestOp whole in Rust (dnstest.rs) against the classes as they were; the
 # op machinery and the core: won_serverop_test's units
 WON_TESTS["won_net34_test"] = WON_TESTS["won_serverop_test"]
@@ -1071,7 +1067,9 @@ def build_won_test(t, name, units, folder="won", first_inc=None):
     # the original units' copies (tests/net/orig_*) include the Rust headers by the names they had before the crate
     # restructure: forwarding headers to the module headers, after the include path
     inc.append(ROOT / "tests" / "net" / "rust_names")
-    defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
+    # the WON classes' members only the drivers use (ee/wonapi/WONDriver.h: EE_WON_DRV)
+    inc.append(ROOT / "tests" / "won" / "drv")
+    defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS", "EE_WON_DRIVER"]
     # an engine unit gets the engine's module define (tools/ee.py MODULE_FLAGS "lle"), as tcptest's do
     lle = ROOT / "src" / "Low-Level Engine"
     unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if lle in pathlib.Path(src).parents else [])]

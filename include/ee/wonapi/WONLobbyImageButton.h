@@ -1,6 +1,7 @@
 #ifndef EE_WONLOBBYIMAGEBUTTON_H
 #define EE_WONLOBBYIMAGEBUTTON_H
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "platform/PlatWindow.h" // PlatOpenURL
 namespace WONAPI {
 enum ImageButtonType { ImageButtonType_Normal, ImageButtonType_Over, ImageButtonType_Down,
     ImageButtonType_Disabled, ImageButtonType_Checked, ImageButtonType_None };
@@ -17,6 +18,8 @@ public:
     virtual void Paint(Graphics&); //2f7ed0
 };
 
-bool Browse(const std::string&); // MiscUtil, at 0x006a30e0
+// MiscUtil 0x006a30e0 (its pre-browse callback was never set): the system's handler opens the URL, not the
+// registry's .html command; whether it was opened
+inline bool Browse(const std::string& inURL) { return PlatOpenURL(inURL.c_str()) != 0; }
 }
 #endif

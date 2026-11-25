@@ -1,8 +1,4 @@
 29ef80 29f729 WONCommon/AsyncOp.cpp
-2a30e0 2a37eb WONCommon/MiscUtil.cpp
-2acc10 2acf01 WONServer/ServerOp.cpp
-2ddb70 2e1b5f WONAuth/AuthContext.cpp
-2f04f0 2f0d9a WONDir/DirEntityReplyParser.cpp
 2f3070 2f3962 WONGUI/Button.cpp
 2f3a50 2f4888 WONGUI/ComboBox.cpp
 2f4890 2f4aeb WONGUI/ComponentLifetime.cpp
@@ -35,7 +31,6 @@
 34a100 34a1b4 WONGUI/StringLocalizeCalls.cpp
 34a1c0 34a521 WONGUI/TextFormat.cpp
 34a530 34a560 WONGUI/SoundDecoder.cpp
-357d70 357e7f WONLobby/LobbyCompletion.cpp
 357f30 358de2 WONLobby/LobbyConfig.cpp
 358df0 358e46 WONLobby/LobbyPopupSupport.cpp
 358e50 35b9be WONLobby/LobbyServiceSupport.cpp
@@ -46,7 +41,6 @@
 35b730 361201 WONLobby/LobbyScreenAccess.cpp
 35b7b0 35b8e6 WONLobby/LobbyClientFlags.cpp
 35b9c0 35b9ff WONLobby/LobbyNetworkAdapter.cpp
-35ba00 35ba94 WONLobby/LobbyUDPManager.cpp
 35baa0 360e91 WONLobby/LobbyPersistentData.cpp
 3610b0 3628c0 WONLobby/LobbyScreenQueries.cpp
 361260 361ee7 WONLobby/LobbyStagingSupport.cpp
