@@ -21,6 +21,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
+#include "ee/EEUnit.h"
 #include "ee/EEUIManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMouse.h"
