@@ -62,10 +62,11 @@ pub(crate) fn fields_of(node: P) -> EeTechNodeFields {
     unsafe { *node_fields(node) }
 }
 
-/// The node's unit classes (its data's `mUnitClasses`).
+/// The node's unit classes (its data's class table's; none without data).
 fn unit_classes(node: P) -> Vec<c_ulong> {
-    let count = h(O::TbClassCount, node, &[]);
-    (0..count).map(|i| h(O::TbClassAt, node, &[i]) as c_ulong).collect()
+    let d = node_data(node);
+    // SAFETY: the node's data record when it has one
+    if d.is_null() { Vec::new() } else { unsafe { (*d).unit_classes().to_vec() } }
 }
 
 /// The record and the unit classes of a node or an epoch, after `mData` is made: the record read, the unit class
@@ -77,10 +78,13 @@ fn read_record(node: P, file: P, epoch: bool) -> (EeTechTreeRecord, i64) {
     f.read_chars(&mut record as *mut EeTechTreeRecord as *mut u8, std::mem::size_of::<EeTechTreeRecord>() as c_ulong);
     let mut count: c_ulong = 0;
     let result = f.read_ulong(&mut count);
-    h(O::TbClassesResize, node, &[count as i64]);
-    for j in 0..count {
-        h(O::TbClassRead, node, &[pa(file), j as i64]);
+    // each class read in place (its read's result ignored, as the original's)
+    let mut classes: Vec<c_ulong> = vec![0; count as usize];
+    for class in classes.iter_mut() {
+        f.read_ulong(class);
     }
+    // SAFETY: the node's new data record
+    unsafe { (*node_data(node)).class_table_mut().classes = classes };
     // SAFETY: the node's records and the read record are live
     unsafe { ee_tech_fill_from_record(node_fields(node), node_data(node), &record, epoch) };
     (record, result)
@@ -96,19 +100,20 @@ pub extern "C" fn ee_gamecpp_tech_node_load(node: *mut c_void, file: *mut c_void
     h(O::TbSetTree, node, &[tree as i64]);
     let (record, result) = read_record(node, file, false);
     let data = data_of(node);
-    let classes = h(O::TbClassCount, node, &[]);
-    for k in 0..classes {
+    let classes = unit_classes(node);
+    for (k, &class) in classes.iter().enumerate() {
         // the k-th class's table: every cost times the record's factor of that class (ee_tech class_costs)
         let base: [i32; 7] = std::array::from_fn(|r| data.mCosts[r] as i32);
         let factors = [record.mFactor1, record.mFactor2, record.mFactor3, record.mFactor4];
         let mut table = [0i32; 7];
         // SAFETY: seven costs, four factors, seven out
         unsafe { ee_tech_class_costs(base.as_ptr(), k as u32, factors.as_ptr(), table.as_mut_ptr()) };
-        let mut a = [k; 8];
-        for r in 0..7 {
-            a[r + 1] = table[r] as i64;
+        // the map's insert: keyed by the class as a long, a key already there kept
+        // SAFETY: the node's data record
+        let costs = unsafe { &mut (*node_data(node)).class_table_mut().costs };
+        if !costs.iter().any(|&(key, _)| key == class as c_long) {
+            costs.push((class as c_long, table.map(|c| c as c_long)));
         }
-        h(O::TbCostsInsert, node, &a);
     }
     // a node's epoch: set by its epoch's Load (the block holding it)
     let epoch = ee_tech_epoch_of(data.mID as i32) as c_long;
@@ -275,11 +280,8 @@ pub extern "C" fn ee_gamecpp_tech_node_free(node: *mut c_void, destroy: bool) {
     if node_data(n).is_null() {
         return;
     }
-    let count = h(O::TbCostsCount, n, &[]);
-    for i in 0..count {
-        h(O::TbCostsDelete, n, &[i]);
-    }
-    h(O::TbCostsClear, n, &[]);
+    // SAFETY: the node's (maybe shared) data record
+    unsafe { (*node_data(n)).class_table_mut().costs.clear() };
 }
 
 /// EETechTreeNode::Unload: the node's data deleted; 0.

@@ -94,7 +94,7 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TcPlayerBB44: return TC_PLAYER->mBB44;
     // (EECore10OpB7) the tech tree's loads, copies, costs and sweep (gamecpp tech_load.rs, tech_capture.rs; p the node, the epoch, the
     // tree or the player): one statement each
-    case O::TbNewData: return P64(BNODE->mData = new RTSTechTreeNodeData);
+    case O::TbNewData: return P64(BNODE->mData = new RTSTechTreeNodeData());
     case O::TbDeleteData: delete std::exchange(BNODE->mData, nullptr);
         break;
     case O::TbShareData: BNODE->mData = ((const EETechTreeNode*)a[0])->mData;
@@ -102,18 +102,6 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TbSetTree: BNODE->mTree = (EETechTree*)a[0];
         break;
     case O::TbNewNode: return P64(new EETechTreeNode);
-    case O::TbClassesResize: BNODE->mData->mUnitClasses.resize((unsigned long)a[0], 0);
-        break;
-    case O::TbClassRead: return ((FSFile*)a[0])->Read(BNODE->mData->mUnitClasses[a[1]]);
-    case O::TbClassCount: return (int64_t)BNODE->mData->mUnitClasses.size();
-    case O::TbClassAt: return (int64_t)BNODE->mData->mUnitClasses[a[0]];
-    case O::TbCostsInsert: BNODE->mData->mClassCosts.insert(std::map<long, long*>::value_type((long)BNODE->mData->mUnitClasses[a[0]], new long[7]{(long)a[1], (long)a[2], (long)a[3], (long)a[4], (long)a[5], (long)a[6], (long)a[7]}));
-        break;
-    case O::TbCostsCount: return (int64_t)BNODE->mData->mClassCosts.size();
-    case O::TbCostsDelete: delete[] std::next(BNODE->mData->mClassCosts.begin(), a[0])->second;
-        break;
-    case O::TbCostsClear: BNODE->mData->mClassCosts.clear();
-        break;
     case O::TbButton: return P64(BNODE->mButton);
     case O::TbCopyButton: BNODE->mButton = ((const EETechTreeNode*)a[0])->mButton;
         break;
@@ -143,7 +131,6 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkNodeFields: return P64(static_cast<EeTechNodeFields*>(TNODE));
     case O::TkNodeData: return P64(static_cast<EeTechNodeDataFields*>(TNODE->mData));
     case O::TkNodeTree: return P64(TNODE->mTree);
-    case O::TkClassCosts: return P64(TNODE->mData->mClassCosts.count((long)a[0]) != 0 ? TNODE->mData->mClassCosts[(long)a[0]] : NULL);
     case O::TkUpgrade: return P64(static_cast<EEUnitStats*>(((EEPlayer*)p)->mUnitClassUpgrades[a[0]]));
     case O::TkVariant: return P64(static_cast<EeDataGameVariantFields*>(TVARIANT));
     case O::TkInCostSet: return gUnitSetManager.GetSet(TVARIANT->mCostSet) != NULL && gUnitSetManager.GetSet(TVARIANT->mCostSet)->Contains((long)a[0]);

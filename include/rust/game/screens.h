@@ -14966,8 +14966,6 @@ enum EeScreensScratch : uint32_t {
   kScratchCivlGot,
   /// EECivCapture `std::vector<long>` (sCivcTypes): a unit set's types (the original's collector's)
   kScratchCivcTypes,
-  /// EECivCapture `std::vector<long>` (sCivcIDs): a tech tree's node ids
-  kScratchCivcIDs,
   /// EECivCapture `UWideString` (sCivcName): a premade file's name and upgrades as loaded
   kScratchCivcName,
   /// EECivCapture `std::vector<EECivUpgrade>` (sCivcLoaded)

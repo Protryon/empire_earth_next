@@ -148,11 +148,8 @@ pub struct EeWorldLayout {
     /// `EeTechTreeFields` in `EETechTree`, `EeTechNodeFields` in `EETechTreeNode`
     pub tech_tree_fields: u64,
     pub node_fields: u64,
-    /// `RTSTechTreeNode::mData` (an `RTSTechTreeNodeData*`), `EeTechNodeDataFields` in `RTSTechTreeNodeData`, its
-    /// `mUnitClasses` (a `std::vector<unsigned long>`)
+    /// `EETechTreeNode::mData` (an `RTSTechTreeNodeData*`: the record `EeTechNodeDataFields` itself)
     pub node_data: u64,
-    pub node_data_fields: u64,
-    pub node_data_unit_classes: u64,
     /// `&EETechHost` (an address: the tree walks' host, whose lookups the tree view makes)
     pub tech_host: u64,
     /// `EeCpFields` in `EEComputerPlayer`

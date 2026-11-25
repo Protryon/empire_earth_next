@@ -398,14 +398,9 @@ pub extern "C" fn ee_gamecpp_tech_node_cost(
     let tree = hp(O::TkNodeTree, node, &[]);
     let player = tree_player(tree);
     let d = node_data(node);
-    let class_costs = hp(O::TkClassCosts, node, &[unit_class as i64]) as *const c_long;
     let mut input = EeTechCostInput {
-        // SAFETY: the class's long[7] (Load made it) when there is one
-        cost: if class_costs.is_null() {
-            d.mCosts[resource as usize]
-        } else {
-            unsafe { *class_costs.add(resource as usize) }
-        } as i32,
+        // the class's own costs (Load made them) when it has some
+        cost: d.class_costs(unit_class as c_long).map_or(d.mCosts[resource as usize], |c| c[resource as usize]) as i32,
         scale,
         makes_unit: d.mMakesUnit,
         ..EeTechCostInput::default()

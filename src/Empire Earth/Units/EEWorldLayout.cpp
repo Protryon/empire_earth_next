@@ -160,8 +160,6 @@ void EEWorldLayoutRegister()
     theLayout.tech_tree_fields = BaseOffset<EETechTree, EeTechTreeFields>();
     theLayout.node_fields = BaseOffset<EETechTreeNode, EeTechNodeFields>();
     theLayout.node_data = offsetof(EETechTreeNode, mData);
-    theLayout.node_data_fields = BaseOffset<RTSTechTreeNodeData, EeTechNodeDataFields>();
-    theLayout.node_data_unit_classes = offsetof(RTSTechTreeNodeData, mUnitClasses);
     theLayout.tech_host = (uint64_t)(uintptr_t)&EETechHost;
     theLayout.cp_fields = BaseOffset<EEComputerPlayer, EeCpFields>();
     theLayout.stats_links = BaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeLinks>();
