@@ -102,10 +102,7 @@ intptr_t ButtonHostCall(Button* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr
     }
 }
 // Creates a button that takes focus (the Rust button: no flags, not pressed)
-Button::Button()
-{
-    this->mBtn=ee_won_btn_make(static_cast<Component*>(this),ee_won_guicpp_btn_call);
-}
+Button::Button() : mBtn(ee_won_btn_make(static_cast<Component*>(this),ee_won_guicpp_btn_call)) {}
 // Destroys the button (the Rust button; the click sound is a member)
 Button::~Button() { ee_won_btn_free(this->mBtn); }
 
@@ -126,10 +123,7 @@ void Button::SetClickSound(Sound* sound) { this->mClickSound=sound; }
 // ---- ImageButton.cpp until R6 WON GUI round 37
 using namespace WONAPI;
 // Creates an image button that takes focus but not tab focus, with stretching off
-ImageButton::ImageButton() {
-    ee_won_btn_image_init(this->mBtn,static_cast<Component*>(this));
-    this->mStretch=false;
-}
+ImageButton::ImageButton() : mStretch(false) { ee_won_btn_image_init(this->mBtn,static_cast<Component*>(this)); }
 // Destroys the image button (members only)
 ImageButton::~ImageButton() {}
 typedef EeWonLeafOp Lo;

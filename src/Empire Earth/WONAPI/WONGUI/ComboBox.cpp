@@ -129,10 +129,7 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
 namespace WONAPI {
 // Creates a combo box that takes focus and passes input to its children (the Rust combo box: the list hidden, a
 // 200 x 150 list box)
-ComboBox::ComboBox()
-{
-    this->mCombo=ee_won_combo_make(static_cast<Component*>(this),ee_won_guicpp_combo_call,this->mCt);
-}
+ComboBox::ComboBox() : mCombo(ee_won_combo_make(static_cast<Component*>(this),ee_won_guicpp_combo_call,this->mCt)) {}
 // Destroys the combo box, first detaching it from its list box's listeners (the Rust combo box)
 ComboBox::~ComboBox() { ee_won_combo_free(this->mCombo); }
 // Sets the popup list box and attaches the list area to it if it is not already its scroll area
@@ -169,10 +166,7 @@ extern "C" intptr_t ee_won_guicpp_dlg_call(void* inComp, EeWonGuiOp op, intptr_t
 namespace WONAPI {
 // Creates a focusable, draggable dialog that grabs its background, stays inside the root window and ignores Escape
 // (the Rust dialog: no drag, drag allowed and kept in the root, the Escape result -1, no default button)
-Dialog::Dialog()
-{
-    this->mDlg=ee_won_dlg_make(static_cast<Component*>(this),ee_won_guicpp_dlg_call,this->mCt);
-}
+Dialog::Dialog() : mDlg(ee_won_dlg_make(static_cast<Component*>(this),ee_won_guicpp_dlg_call,this->mCt)) {}
 // Destroys the dialog: the Rust dialog gives the default button back (the implicit destructor in the original)
 Dialog::~Dialog() { ee_won_dlg_free(this->mDlg); }
 // Sets the button that Enter activates (held by reference)
@@ -201,10 +195,7 @@ extern "C" intptr_t ee_won_guicpp_tab_call(void* inComp, EeWonGuiOp op, intptr_t
 
 namespace WONAPI {
 // Creates a tab bar for its tab control (the Rust bar: no tab, none selected, a 4-pixel overlap)
-TabBar::TabBar(EeWonTabCtrl* inCtrl)
-{
-    this->mBar=ee_won_tabbar_new(static_cast<Component*>(this),ee_won_guicpp_tab_call,this->mCt,inCtrl);
-}
+TabBar::TabBar(EeWonTabCtrl* inCtrl) : mBar(ee_won_tabbar_new(static_cast<Component*>(this),ee_won_guicpp_tab_call,this->mCt,inCtrl)) {}
 // Destroys the tab bar: the Rust bar gives the buttons back
 TabBar::~TabBar() { ee_won_tabbar_free(this->mBar); }
 // Creates a tab control with 5-pixel padding and no tabs: the Rust control makes its tab bars and their containers

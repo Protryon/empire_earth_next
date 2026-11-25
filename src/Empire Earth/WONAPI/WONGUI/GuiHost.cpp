@@ -549,12 +549,7 @@ extern "C" intptr_t ee_won_guicpp_list_call(void* inComp, EeWonGuiOp op, intptr_
 
 namespace WONAPI {
 // Creates an unselected, selectable list item with zero position and size
-ListItem::ListItem()
-{
-    this->mTop=this->mWidth=this->mHeight=0;
-    this->mSelected=false;
-    this->mSelectable=true;
-}
+ListItem::ListItem() : mSelected(false), mSelectable(true), mTop(0), mWidth(0), mHeight(0) {}
 // Draws nothing
 void ListItem::Paint(Graphics&,ListArea*) {}
 // Orders two items by their addresses (true when this one comes first in memory)
@@ -754,14 +749,9 @@ void RectangleComponent::Paint(Graphics &g)
         return ee_won_gui_draw_rectangle(this->mSolidColor,this->mOutlineColor,this->Width(),this->Height(),o,n); }),WONDrawSlots());
 }
 // Creates a raised or sunken 3D frame of the given thickness in the scheme's highlight and shadow, unfilled
-RectangleComponent3D::RectangleComponent3D(bool up, int theThickness)
-{
-    this->mUp = up;
-    this->mThickness = theThickness;
-    this->mLightColor = ColorScheme::GetColorRef(StandardColor_3DHilight);
-    this->mDarkColor = ColorScheme::GetColorRef(StandardColor_3DShadow);
-    this->mSolidColor = -1;
-}
+RectangleComponent3D::RectangleComponent3D(bool up, int theThickness) : mSolidColor(-1),
+    mLightColor(ColorScheme::GetColorRef(StandardColor_3DHilight)), mDarkColor(ColorScheme::GetColorRef(StandardColor_3DShadow)),
+    mThickness(theThickness), mUp(up) {}
 // Draws a raised or sunken 3D frame of the given thickness over an optional solid fill
 void RectangleComponent3D::Paint(Graphics &g)
 {
