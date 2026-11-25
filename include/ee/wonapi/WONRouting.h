@@ -139,15 +139,6 @@ private:
 };
 typedef SmartPtr<AsyncOp> AsyncOpPtr;
 
-// AsyncOpContainer (a Rust object, ee_won thread.rs EeWonOpContainer, since net round 25; Event, its signal, too) had
-// no user but the drivers left: its shim, with AsyncOp's SetContainer and GetContainer, is tests/won/won_net37_orig.h
-// since R6 WON lobby and network round 37 (WONAPICore's queue is the Rust core's own container).
-
-// (MsgTransform, 2ad880, and its one class, CryptTransform, are Rust's since net round 29: ee_won cppcore.rs)
-
-// WON SDK NetStats (static functions only) is Rust's (rust/crates/ee_won_net/src/netstats.rs, ee_won_netstats_add /
-// _get / _enable); its C++ shim had no caller and went in R6 WON round 34.
-
 // AsyncSocket.cpp's original addresses: the constructor 2b0340, Duplicate 2b0420, the destructor 2b04a0, the length
 // field 2b0600 / 2b0610, AddMsgTransform 2b0620, the transforms 2b0730 / 2b07e0, GetLastSocketError 2b0890, IsValid
 // 2b08c0, IsConnected 2b08d0, GetDestAddr 2b08e0, GetLocalPort 2b08f0, Start/StopWinsock 2b0940 / 2b0980,
@@ -304,12 +295,6 @@ template <class T> class CompletionBase : public RefCount {
 public:
     virtual void Complete(T theParam) = 0;  // +0x04
 };
-// LightGetCertOp (0x48 bytes: AsyncOp plus the peer data at 0x44; PeerAuthOp::AsyncRefreshCert 2e74a0) is a plain
-// AsyncOp for its run and ee_won's EeWonLightCert for its member (authflow.rs: the peer data GetCertCallback sets)
-
-// ParamCompletion<AsyncOpPtr,SmartPtr<RefCount>> (0x10 bytes, vtable 44ca3c) has no C++ user since net round 25 (its
-// completions are Rust's, cppcore.rs): the drivers' is tests/won/won_net37_orig.h
-
 // QueueSocket.cpp's original addresses: the constructor 2b3930, Duplicate 2b39d0, the setters 2b3bf0 / 2b3ca0, the
 // close timer 2b3d50 / 2b3ed0 / 2b4010, OpCallback 2b4220, SetRepeatOp 2b4500, RunRepeatOp 2b45b0, QueueOp 2b4740,
 // RunQueueOp 2b48b0, QueueClose 2b4a70, the hooks 2b4c00 / 2b4c10 / 2b4d40. The unit is deleted (net round 25): the
@@ -343,10 +328,7 @@ private:
     EeWonQueueSocket* mQueue;
 };
 
-// a queue socket the WON ops make and hold. Its blocking calls (Connect 2b1c10, SendBytes 2b1d00, SendMsg 2b1e30,
-// RecvMsg 2b1f10, RecvCRMsg 2b2040, the SDK's SendBytesTo, RecvBytesFrom, RecvBytes: a socket op run blocking) are
-// the op base's (ee_won hostsock.rs) since net round 23; no caller was left, and they went in round 24 (the test
-// drivers keep the statements: tests/won/won_blocking.h)
+// a queue socket the WON ops make and hold (its blocking calls are the op base's: ee_won hostsock.rs)
 class BlockingSocket : public QueueSocket {
 public:
     BlockingSocket(int inType) : QueueSocket(inType) {} //2b1bd0: stream or datagram
@@ -524,11 +506,6 @@ typedef WonRustRef HTTPSession; // of the kind EeWonCoreObject::HttpSession (Htt
 
 class RoutingConnection;
 
-// (the routing server's records, RoutingClientInfo .. RoutingBadUser, are the Rust ops' since net round 18 and
-// are read in Rust since R6 WONLobby round 12: ee_won_lobby modelobj.rs, EEWonNet.cpp and the lobby's bad user list
-// over ee_won_routeop_records; the drivers keep the C++ records, tests/won/won_routerecords.h;
-// RoutingBadUserListType, 1 banned and 2 muted, is the drivers' too: tests/won/won_net37_orig.h)
-
 // Every routing op, request or notification, is one Rust object since net round 18 (rust/crates/ee_won_net/src//
 // routeop.rs EeWonRouteOp: the op's members by field number EE_WON_RTF_* and text EE_WON_RTT_*, its data type,
 // data and recipients, the records its replies build, SendRequest's message and HandleReply's read, and
@@ -581,23 +558,14 @@ protected:
 };
 #define EE_WON_ROUTE_OPS_RUST 1 // the ops are Rust objects (won_routeops_test reads them so)
 
-// RoutingGetUserStatusOp (ctor 2c6630, RunHook 2c6970, CheckResponse 2c6ab0) is a UDPManagerSendRecvOp with a Rust
-// body since R6 WON lobby and network round 36 (ee_won userstatus.rs: the friend status map, the request datagram,
-// the reply's read, 3 retransmits and a 1 s wait): new UDPManagerSendRecvOp(ee_won_userstatus_body(), addr, manager);
-// its map (AddWONUserId: ee_won_userstatus_add) is UserStatusOf(op)
+// RoutingGetUserStatusOp (ctor 2c6630) is a UDPManagerSendRecvOp with a Rust body (ee_won userstatus.rs): new
+// UDPManagerSendRecvOp(ee_won_userstatus_body(), addr, manager); its map (AddWONUserId: ee_won_userstatus_add)
 inline EeWonUserStatus* UserStatusOf(AsyncOp* inOp)
 { return static_cast<EeWonUserStatus*>(ee_won_udp_body_of(static_cast<RefCount*>(inOp), EE_WON_UDP_BODY_USER_STATUS)); }
 #define EE_WON_USER_STATUS_RUST 1 // the map is a Rust object (won_userstatus_test sets it so)
 
-
-// the WON server list the account ops use (??_G 0xceaec, dtor 0xceb08; sizeof 0x3c).: layout from
-// the dtor and the base game's out-of-line ctor (base exe 0x4c772a; AoC's WONAPI inlines it: 0x2ddb70, 0x3628c0);
-// (provisional member names)
-// A shim over ee_won's server list (rust/crates/ee_won_net/src/servctx.rs: the addresses, their order, the one-time
-// shuffle and the lock); the original's 0x3c-byte layout is gone
-// a shim over ee_won's server list (servctx.rs: the addresses, their order, the one-time shuffle and the lock);
-// header-only since net round 27 (ServerContext.cpp deleted): it converts IPAddr values; the directory's entities are
-// walked in Rust (dirlist.rs, R6 WON round 34: the path-map overloads had no caller and went with DirEntityMap)
+// the WON server list the account ops use (??_G 0xceaec, dtor 0xceb08; sizeof 0x3c): a shim over ee_won's
+// (servctx.rs: the addresses, their order, the one-time shuffle and the lock) converting IPAddr values
 class ServerContext : public RefCount {
 public:
     EeWonServerList* GetListObject() const { return this->mList; }
@@ -645,10 +613,6 @@ private:
     EeWonOpTracker* mTracker;               // owned
 };
 
-// AsyncOpWithTracker (an op tracking sub-ops, Track 2a0100, CleanupHook 2a0290) and ServerOp (0x94 bytes, ctor 2acc10)
-// are folded into RustServerOp, their only subclass (R6 WON lobby and network round 36): the tracker is its member,
-// the tracking the Rust op's (opobj.rs EeWonAsyncOp::track), ServerOp's members the Rust op's since net round 24
-// (hostbase.rs). The drivers' tracking op has the old class in tests/won/won_tracker_orig.h.
 }
 // CDKey and AuthContext (their forwarders need the classes above; the ops' makers below need them)
 #include "ee/wonapi/WONAuthContext.h"
@@ -770,66 +734,15 @@ inline void HttpSessionAddOp(HTTPSession* inSession, RustServerOp* inOp)
 { ee_won_http_session_add_op(HttpSessionOf(inSession), static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
 inline void HttpSessionKillAll(HTTPSession* inSession) { ee_won_http_session_kill_all(HttpSessionOf(inSession)); }
 
-// AuthSession (0x10cc bytes in the original) is an ee_won handle (hostauth.rs over peerauth.rs's session, round 22):
-// the peer auth op that makes it, the auth context's session cache and the sockets' transforms hold it.
-
-
-// The directory server's entity replies: the reading and the lists of what it read are ee_won's (dir.rs, dirlist.rs:
-// DirEntityReplyParser::TakeEntity is gone with DirEntity, R6 WON round 34). GetEntityRequest, GetDirOp,
-// GetMultiDirOp, GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs).
-
-// PeerAuthOp (0x2244 bytes, ctor 2e6a10) and PeerAuthServerOp (0x2240, ctor 2e8950) are Rust ops on the base (ee_won
-// peerop.rs over peerobj.rs): RustServerOp::NewPeerAuth and NewPeerAuthServer.
-
-// HTTPCache and HTTPCacheEntry (cache 0x34 bytes, entry 0x68) are Rust's whole (rust/crates/ee_won_net/src/httpcache.rs):
-// the HTTP get op's cache and entry are Rust handles; the global cache is ee_won_http_cache_global
-// HTTPGetOp is a Rust op on the base (rust/crates/ee_won_net/src/httpget.rs): RustServerOp::NewHttpGet, its members by
-// EE_WON_HTTPGET_* number
-
-// ThreadBase / Thread (0x14 / 0x1c), WONDebug, SocketThread (0x38) and SocketThreadSimple (0x44) had no C++ user but
-// the library's socket thread: since R6 WON lobby and network round 35 that is wholly Rust (ee_won sockthread.rs
-// EeWonApiSocketThread over thread.rs EeWonThread, the core's table ee_won_api_socket_hooks). The drivers that build
-// the old classes have them in tests/won/won_thread_orig.h.
-// DNSTestOp (0x7c bytes; ctor 2d95a0, dtor 2d9740, RunHook 2d97f0) and DNSTestThread (ThreadFunc 2d9920) are a Rust op
-// (rust/crates/ee_won_net/src/dnstest.rs, R6 WON round 34): its run starts a thread holding the op, which resolves
-// the host (SetWithDefaultPort, port 0) and finishes the op; GetHostAddr is AddrOf(EE_WON_DNSTEST_ADDR)
+// The WON SDK's other classes have no C++ left (ee_won_net): AuthSession (hostauth.rs), the directory parsers and ops
+// (dir.rs, dirlist.rs, reqdir.rs), PeerAuthOp and PeerAuthServerOp (peerop.rs), HTTPCache (httpcache.rs), HTTPGetOp
+// (httpget.rs), the threads (sockthread.rs, thread.rs), GetHTTPDocumentOp and its enums (httpdoc.rs), GetCertOp
+// (certhost.rs), DBProxyOp (reqop.rs), the patch records (patch.rs, verop.rs), CheckValidVersionOp and
+// GetUserIdFromNameOp (reqops.rs), DetectFirewallOp (fwhost.rs), the e-mail ops (adminop.rs), the account ops
+// (reqdir.rs, reqlast.rs); the ops on the base are made by RustServerOp's New* makers.
+// DNSTestOp (ctor 2d95a0; dnstest.rs): resolves the host on a thread; GetHostAddr is AddrOf(EE_WON_DNSTEST_ADDR)
 inline RustServerOp* NewDnsTestOp(const std::string& inHost) { return new RustServerOp(ee_won_dnstest_new(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size())); }
 
-
-// WONAPI's HTTP document request (sizeof 0xdc; implicit dtor 0x4cff46; ctor out of line in the base game,
-// base exe 0x6cc4d0; provisional member names)
-// HTTPDocType (HTTPDocType_MOTD, _TOU, _ADV) and HTTPDocOwner (HTTPDocOwner_Sys, _Game) are ee_won's enums since R6
-// WON lobby and network round 37 (httpdoc.rs EeWonHttpDocType, EeWonHttpDocOwner: plain C enums with these names)
-
-// GetHTTPDocumentOp (and GetMOTDOp, its MOTD) is a Rust op on the base (rust/crates/ee_won_net/src/httpdoc.rs):
-// RustServerOp::NewHttpDocument, its members by EE_WON_HTTPDOC_* number and owner, GetHttpDocument
-
-// WONAPI's CD key (dead in AoC; from the base game's Login: ctor base exe 0x68ab90, an 0x1c-byte local;
-// implicit dtor 0x4cff2a: the SmartPtr at +0x14, the string at +4; provisional names)
-// The full CDKey declaration comes earlier (EEWonNet), before AuthContext's mapped value.
-// Storage, methods and inline virtual bodies live there; no duplicate class definition.
-
-
-// AoC GetCertOp (0x11fc bytes in the original; RTTI GetCertOp > ServerRequestOp > ...) is a Rust op on the base
-// (ee_won certhost.rs over getcert.rs): RustServerOp::NewGetCert.
-
-// DBProxyOp is a Rust op base (rust/crates/ee_won_net/src/reqop.rs DbProxy)
-// The patch server's records (VersionData 0x48, PatchData 0xa4; constructors 2d83a0/2d86f0) are Rust's: their wire
-// forms are ee_won patch.rs, the ops that read them verop.rs; no game code made the C++ classes, deleted in WON
-// Internet round 21 (their statements are tests/won/won_patch_msg.h, over the drivers' stand-ins)
-// CheckValidVersionOp is a Rust op (rust/crates/ee_won_net/src/reqops.rs)
-// DetectFirewallOp (2cf600) is a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step):
-// RustServerOp::NewFirewall, its setters and public address by EE_WON_FWOP_* number (its C++ class went in R6 WON
-// lobby and network round 35)
-
-// RequestPasswordEmailOp and RequestAccountInfoEmailOp are Rust ops (rust/crates/ee_won_net/src/adminop.rs)
-
-// GetUserIdFromNameOp is a Rust op (rust/crates/ee_won_net/src/reqops.rs)
-
-
-// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs), CreateAccountOp and
-// RoutingGetGroupListReqOp too (reqlast.rs: RustServerOp::NewCreateAccount, NewGroupListReq), and no C++ op derives
-// from ServerRequestOp any more (its exchange is reqhost.rs's)
 
 // The +20 EEWonNet member is WONAPICore (WONAPICore.h); +24 is a separate window interface.
 class WONLobbyWindow {
@@ -842,12 +755,6 @@ public:
 
     bool mClosed;                           // +0x04 (the base dtor waits for it after Close)
 };
-
-// the connection to a routing server (sizeof 0x258; ctor 0x2bfb00)
-// Names follow the WON SDK headers. All bases at 0; sizes as in the original.
-// BlockingSocket (0xa0) and the AuthContext/PeerAuthOp pointees must be declared before use.
-// Socket virtual04/08/0c are void(), factory10 returns AsyncSocket* (LAN owner).
-
 
 // A Rust object since net round 16 (rust/crates/ee_won_net/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
 // type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
@@ -1004,9 +911,6 @@ protected:
 private:
     void SetSmart(EeWonSmartNumber inWhich, bool inOn) { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Set, (intptr_t)inWhich, inOn, 0, 0); }
 };
-
-// No class here duplicates the old flattened RoutingConnection (0x258).
-// No zero-valued gap fields or placement/partial object lifetime is introduced.
 
 #include EE_WON_DRV(Routing_ns) // the drivers' functions
 }
