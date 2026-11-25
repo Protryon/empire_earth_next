@@ -30,7 +30,6 @@ pub enum EeSimDriverSed {
     // the controls
     ShellOp,
     ShellOf,
-    ShellKindName,
     ControlTypeName,
     EventTypeName,
     DisplayMode,
@@ -42,7 +41,6 @@ pub enum EeSimDriverSed {
     ControlBgOpacity,
     ControlBorder,
     ControlStringTableId,
-    TriggerEvent,
     ProcessEvent,
     IsRadio,
     IsCheck,
@@ -131,7 +129,6 @@ pub enum EeSimDriverSed {
     PaintNew,
     PaintSetArea,
     PostAction,
-    DerefAction,
     ClickNew,
     TsClickNew,
     ClickSetMessage,
@@ -148,10 +145,8 @@ pub enum EeSimDriverSed {
     MapTile,
     MapGetTile,
     MeshZ,
-    TileHeight,
     TerrainColorType,
     ViewportRect,
-    WorldGetNumPlayers,
     WorldMaxPlayers,
     WorldPopulationLimit,
     WorldWondersToWin,
@@ -168,12 +163,10 @@ pub enum EeSimDriverSed {
     OptionsPlayerColor,
     OptionsPlayerB36,
     PlayerName,
-    PlayerId,
     PlayerColor,
     PlayerCivilizationFile,
     PlayerResourceCap,
     PlayerEnemy,
-    PlayerSharedLos,
     PlayerPurchasedUpgrades,
     PlayerAvailablePoints,
     TreeCurrentEpoch,
@@ -188,12 +181,7 @@ pub enum EeSimDriverSed {
     ComputerIgnoreOthers,
     ComputerCanGather,
     ComputerCitizens,
-    UnitId,
-    UnitType,
-    UnitTileX,
-    UnitTileY,
     NodeUnitPlayer,
-    NodeUnitId,
     UnitIsEditorSelected,
     // the ghosts
     GhostsChanged,
@@ -211,7 +199,6 @@ pub enum EeSimDriverSed {
     GhostSetTransformation,
     GhostFillSquare,
     GhostLocationToTile,
-    GhostCanPlace,
     GhostSetCanPlace,
     // the scenario manager
     SmTriggerCount,
@@ -323,17 +310,11 @@ pub enum EeSimDriverSed {
     SaveTextName,
     EditorSaveName,
     SpecNew,
-    SpecFree,
-    SpecSetVolumeStartup,
     SpecSetDirectoryStartup,
     SpecSetFile,
-    SpecCreateDirectory,
-    SpecCreate,
-    SpecOpenRead,
     SpecOpenWrite,
     /// the spec's FOpen(s): its open mode ("r", "w") -> 0 opened
     SpecFOpen,
-    SpecClose,
     SpecWrite,
     SpecGets,
     SpecPuts,
@@ -341,8 +322,6 @@ pub enum EeSimDriverSed {
     MemFree,
     MemLoad,
     MemLength,
-    MemPosition,
-    MemData,
     HeaderNew,
     HeaderLoad,
     ChunksNew,
@@ -360,9 +339,6 @@ pub enum EeSimDriverSed {
     // the civilization builder (sed_civ.rs)
     UiFormById,
     UiFormControlById,
-    UiFormControlCount,
-    UiFormControl,
-    UiFormId,
     UiFormShellOf,
     UiFormTypeName,
     UiFormCount,
@@ -402,9 +378,6 @@ pub enum EeSimDriverSed {
     PlayerCivilization,
     PlayerCivilizationChosen,
     PlayerCivilizationLocked,
-    SpecGetLength,
-    SpecRead,
-    SpecDelete,
     CivSave,
     CivLoad,
     CivApply,
@@ -713,7 +686,7 @@ pub fn line_count(list: usize) -> c_ulong {
 
 /// A control's trigger event (0: none).
 pub fn trigger_event(control: usize, trigger: c_ulong) -> usize {
-    h(O::TriggerEvent, control, &[trigger as i64]) as usize
+    super::sim_ops::h(super::sim_ops::EeSimDriverSim::ControlTriggerEvent, control, &[trigger as i64]) as usize
 }
 
 /// An event processed by the editor form for `control`.
@@ -788,7 +761,7 @@ pub fn post_action(action: usize) {
 
 /// An action's `Dereference`.
 pub fn deref(action: usize) {
-    h(O::DerefAction, action, &[]);
+    gc::h(gc::O::EntryDereferenceAction, action, &[]);
 }
 
 /// `new EEMRecord(kind, {id})` (or without a value).
@@ -820,7 +793,7 @@ pub fn sm_names(which: i64) -> Vec<String> {
 /// A file spec in the startup directory's `dir` (its volume and directory set).
 pub fn spec_in(dir: &str) -> usize {
     let spec = h(O::SpecNew, 0, &[]) as usize;
-    h(O::SpecSetVolumeStartup, spec, &[]);
+    gc::h(gc::O::FileSpecSetVolumeStartup, spec, &[]);
     hs(O::SpecSetDirectoryStartup, spec, dir);
     spec
 }
@@ -863,13 +836,13 @@ pub fn mem_length(file: usize) -> c_ulong {
 /// A memory file's position.
 pub fn mem_position(file: usize) -> c_long {
     let mut n: c_long = 0;
-    h(O::MemPosition, file, &[&mut n as *mut c_long as i64]);
+    gc::h(gc::O::MemFilePosition, file, &[&mut n as *mut c_long as i64]);
     n
 }
 
 /// `length` bytes of a memory file's data from `start`.
 pub fn mem_bytes(file: usize, start: usize, length: c_ulong) -> Vec<u8> {
-    let data = h(O::MemData, file, &[]) as usize;
+    let data = gc::h(gc::O::MemFileData, file, &[]) as usize;
     if data == 0 || length == 0 {
         return Vec::new();
     }

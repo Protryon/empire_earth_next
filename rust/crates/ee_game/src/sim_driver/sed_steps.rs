@@ -97,7 +97,7 @@ fn placed(yaw: f32, x: f32, y: f32, z: f32) -> GeTransformation {
 fn tile_height(tx: c_long, ty: c_long) -> f32 {
     let tile = h(O::MapTile, 0, &[tx as i64, ty as i64]) as usize;
     if tile != 0 {
-        x::hd(O::TileHeight, tile, 0) as f32
+        gc::hd(gc::O::TileHeight, tile, &[], &[])
     } else {
         0.0
     }
@@ -145,8 +145,8 @@ pub fn unit_ref(word: &str) -> c_ulong {
         let u = gc::h(gc::O::MmNodeUnit, n, &[]) as usize;
         if u != 0 {
             let p = h(O::NodeUnitPlayer, u, &[]) as usize;
-            if p != 0 && h(O::PlayerId, p, &[]) != 0 {
-                id = h(O::NodeUnitId, u, &[]) as c_ulong;
+            if p != 0 && gc::h(gc::O::TcPlayerId, p, &[]) != 0 {
+                id = gc::h(gc::O::RoUnitId, u, &[]) as c_ulong;
             }
         }
         n = gc::h(gc::O::MmNodeNext, n, &[]) as usize;
@@ -203,7 +203,7 @@ fn ghost_text() -> String {
             h(O::GhostUnitType, ghost, &[]) as c_long,
             h(O::GhostTileX, ghost, &[]) as c_long,
             h(O::GhostTileY, ghost, &[]) as c_long,
-            if h(O::GhostCanPlace, ghost, &[]) != 0 { "+" } else { "-" }
+            if gc::h(gc::O::RoGhostCanPlace, ghost, &[]) != 0 { "+" } else { "-" }
         );
     }
     gc::h(gc::O::RoGhostUnlock, 0, &[]);
@@ -236,20 +236,20 @@ pub fn elevation_heights(width: c_long, height: c_long) -> Vec<i16> {
 fn write_elevation_file(name: &str, width: c_long, height: c_long) {
     const DIRECTORY: &str = "data\\Scenarios\\Elevation Maps\\";
     let dir = x::spec_in(DIRECTORY);
-    h(O::SpecCreateDirectory, dir, &[]);
-    h(O::SpecFree, dir, &[]);
+    gc::h(gc::O::FileSpecCreateDirectory, dir, &[]);
+    gc::h(gc::O::DxDelete, dir, &[]);
     let data: Vec<u8> = elevation_heights(width, height).iter().flat_map(|v| v.to_le_bytes()).collect();
     let info = format!("{width} {height}\n");
     for (extension, bytes) in [(".dat", data.as_slice()), (".txt", info.as_bytes())] {
         let file = x::spec_in(DIRECTORY);
         hs(O::SpecSetFile, file, &format!("{name}{extension}"));
-        h(O::SpecCreate, file, &[]);
+        gc::h(gc::O::UsgCreate, file, &[]);
         let mut written: c_ulong = 0;
         if h(O::SpecOpenWrite, file, &[]) == 0 {
             h(O::SpecWrite, file, &[bytes.as_ptr() as i64, bytes.len() as i64, &mut written as *mut c_ulong as i64]);
-            h(O::SpecClose, file, &[]);
+            gc::h(gc::O::FileClose, file, &[]);
         }
-        h(O::SpecFree, file, &[]);
+        gc::h(gc::O::DxDelete, file, &[]);
     }
 }
 
@@ -383,10 +383,10 @@ pub fn step(w: &[String]) -> Step {
                 while u != 0 {
                     out.push(format!(
                         "  unit {} type={} player={i} tile={},{}",
-                        h(O::UnitId, u, &[]) as c_ulong,
-                        h(O::UnitType, u, &[]) as c_long,
-                        h(O::UnitTileX, u, &[]) as c_long,
-                        h(O::UnitTileY, u, &[]) as c_long
+                        gc::h(gc::O::RoUnitId, u, &[]) as c_ulong,
+                        super::sim_ops::h(super::sim_ops::EeSimDriverSim::DmUnitTypeRaw, u, &[]) as c_long,
+                        gc::h(gc::O::DkTileX, u, &[]) as c_long,
+                        gc::h(gc::O::DkTileY, u, &[]) as c_long
                     ));
                     u = gc::h(gc::O::UnNext, u, &[]) as usize;
                 }

@@ -181,7 +181,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::ControlBorder: return CTL->GetBorderThickness();
     case O::ControlStringTableId: return CTL->GetStringTableID();
-    case O::TriggerEvent: return P64(CTL->GetTriggerEvent((unsigned long)a[0]));
     case O::ProcessEvent: return ((UIEvent*)p)->ProcessEvent(gUIManager->GetScenarioEditorForm(), (UIControl*)a[0]);
     case O::IsRadio: return dynamic_cast<UIRadioButton*>(CTL) != NULL;
     case O::IsCheck: return dynamic_cast<UICheckBox*>(CTL) != NULL;
@@ -299,8 +298,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::PaintSetArea: return static_cast<EESEAPaint*>(ACT)->SetArea((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
     case O::PostAction: gUserInterface->PostAction(ACT);
         break;
-    case O::DerefAction: ACT->Dereference();
-        break;
     case O::ClickNew: return P64(static_cast<EEAction*>(new EESEAMouseClick));
     case O::TsClickNew: return P64(static_cast<EEAction*>(new EESETSAMouseClick));
     case O::ClickSetMessage: RUST->SetMessage((EEMessage*)a[0]);
@@ -322,11 +319,8 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::MapTile: return P64(gWorld.mMap->RTSMap::GetTile((long)a[0], (long)a[1]));
     case O::MapGetTile: return P64(gWorld.GetMap()->GetTile((long)a[0], (long)a[1]));
     case O::NodeUnitPlayer: return P64(UN->GetPlayer());
-    case O::NodeUnitId: return UN->GetUnitID();
-    case O::PlayerId: return PL->mPlayerID;
     case O::TerrainColorType: return EETerrainTable::Get((long)a[0])->mColorType;
     case O::ViewportRect: return P64(&gViewport.GetViewRectangle());
-    case O::WorldGetNumPlayers: return gWorld.GetNumPlayers();
     case O::WorldMaxPlayers: return gMaxPlayers;
     case O::WorldPopulationLimit: return gWorld.mPopulationLimit;
     case O::WorldWondersToWin: return gWorld.mNumberOfWondersToWin;
@@ -345,7 +339,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::PlayerColor: return P64(&PL->mColor);
     case O::PlayerResourceCap: return PL->mResourceCaps[a[0]];
     case O::PlayerEnemy: return (long)PL->mEnemies[a[0]];
-    case O::PlayerSharedLos: return PL->mSharedLOS;
     case O::PlayerPurchasedUpgrades: return PL->mCivilization.mPurchasedUpgrades.size();
     case O::TreeCurrentEpoch: return (long)((EETechTree*)p)->mCurrentEpoch;
     case O::TreeStartEpoch: return (long)((EETechTree*)p)->mStartEpoch;
@@ -358,10 +351,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::ComputerCanExplore: return CP->mCanExplore;
     case O::ComputerIgnoreOthers: return CP->mIgnoreOthers;
     case O::ComputerCanGather: return CP->mCanGather;
-    case O::UnitId: return UN->GetUnitID();
-    case O::UnitType: return (long)UN->mUnitClass->mUnitType;
-    case O::UnitTileX: return (long)UN->mTileX;
-    case O::UnitTileY: return (long)UN->mTileY;
     case O::UnitIsEditorSelected: return UN->mIsEditorSelected;
     // the ghosts
     case O::GhostsChanged: gGhostUnitsChanged = true;
@@ -388,7 +377,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::GhostLocationToTile: GH->mUnitClass->LocationToTile(GE3DPoint(f[0], f[1], f[2]), GH->mTileX, GH->mTileY);
         break;
-    case O::GhostCanPlace: return GH->mCanPlace;
     case O::GhostSetCanPlace: GH->mCanPlace = a[0] != 0;
         break;
     // the scenario manager
@@ -503,23 +491,12 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     // the files and the save
     case O::SpecNew: return P64(new FSFileSpec());
-    case O::SpecFree: delete SP;
-        break;
-    case O::SpecSetVolumeStartup: SP->SetVolume(gStartupVolume);
-        break;
     case O::SpecSetDirectoryStartup: SP->SetDirectory(gStartupDirectory + s);
         break;
     case O::SpecSetFile: SP->SetFile(UString(s));
         break;
-    case O::SpecCreateDirectory: SP->CreateDirectory();
-        break;
-    case O::SpecCreate: SP->Create();
-        break;
-    case O::SpecOpenRead: return SP->Open(kFileAccessRead);
     case O::SpecOpenWrite: return SP->Open(kFileAccessWrite);
     case O::SpecFOpen: return SP->FOpen(const_cast<char*>(s));
-    case O::SpecClose: SP->Close();
-        break;
     case O::SpecWrite: return SP->Write((const unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
     case O::SpecGets: return P64(fgets((char*)a[0], (int)a[1], (FILE*)*SP));
     case O::SpecPuts: fputs(s, (FILE*)*SP);
@@ -529,8 +506,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::MemLoad: return MF->Load(*(FSFileSpec*)a[0]);
     case O::MemLength: return MF->GetLength(*(unsigned long*)a[0]);
-    case O::MemPosition: return MF->GetPosition(*(long*)a[0]);
-    case O::MemData: return P64(MF->GetData());
     case O::HeaderNew: return P64(new EEPSaveGameHeader());
     case O::HeaderLoad: return ((EEPSaveGameHeader*)p)->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, *(FSMemoryFile*)a[0]);
     case O::ChunksNew: return P64(new std::vector<FSPersistent*>());
@@ -553,9 +528,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     // the civilization builder (sed_civ.rs)
     case O::UiFormById: return P64(gUIManager->GetFormByID((unsigned long)a[0]));
     case O::UiFormControlById: return P64(UF->GetControlById((unsigned long)a[0]));
-    case O::UiFormControlCount: return UF->GetControlCount();
-    case O::UiFormControl: return P64(UF->GetControl((unsigned long)a[0]));
-    case O::UiFormId: return UF->GetFormID();
     case O::UiFormShellOf: return P64(EEUIShell::Of(UF));
     case O::UiFormCount: return gUIManager->GetFormCount();
     case O::UiFormStacked: return P64(gUIManager->GetStackedForm((unsigned long)a[0]));
@@ -596,10 +568,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     case O::PlayerCivilization: return P64(&PL->mCivilization);
     case O::PlayerCivilizationChosen: return PL->mCivilizationChosen;
     case O::PlayerCivilizationLocked: return PL->mCivilizationLocked;
-    case O::SpecGetLength: return SP->GetLength(*(unsigned long*)a[0]);
-    case O::SpecRead: return SP->Read((unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);
-    case O::SpecDelete: SP->Delete();
-        break;
     case O::CivSave: return CivBuilderSaveCivilization(UString(s), a[0] != 0);
     case O::CivLoad:
         return EELoadCivilization(UString(s), EEGetCivilizationDirectory(true), *(UWideString*)a[0],
@@ -628,7 +596,6 @@ extern "C" const char* ee_simcpp_sed_text(EeSimDriverSed inOp, uintptr_t p, int6
 {
     typedef EeSimDriverSed O;
     switch (inOp) {
-    case O::ShellKindName: return (sText = ((EEUIShell*)p)->KindName()).c_str();
     case O::ControlTypeName: return (sText = typeid(*CTL).name()).c_str();
     case O::EventTypeName: return (sText = typeid(*(UIEvent*)p).name()).c_str();
     case O::ListData: return (sText = (const char*)LBS->GetData((unsigned long)a)).c_str();
@@ -677,7 +644,6 @@ extern "C" double ee_simcpp_sed_float(EeSimDriverSed inOp, uintptr_t p, const in
     case O::PlayerAvailablePoints: return (double)PL->mCivilization.mAvailablePoints;
     case O::ComputerCitizens: return CP->mCitizenPercentage;
     case O::MeshZ: return gWorld.GetMap()->mTerrainMesh.GetMeshZ(f[0], f[1]);
-    case O::TileHeight: return ((EEMapTile*)p)->mHeight;
     default: break;
     }
     return 0.0;

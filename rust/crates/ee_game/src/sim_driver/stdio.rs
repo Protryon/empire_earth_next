@@ -318,7 +318,7 @@ unsafe extern "C" fn rng_draw(r: *mut ee_base::random::EeURandom) {
     }
     // SAFETY: the physics' stepping unit pointer (gamecpp globals.rs), written by this thread
     let stepping = unsafe { *core::ptr::addr_of!(crate::gamecpp::globals::gPhysicsSteppingUnit) } as usize;
-    let unit = if stepping != 0 { h(O::UnitId, stepping, &[]) as u64 } else { 0 };
+    let unit = if stepping != 0 { gc::h(gc::O::RoUnitId, stepping, &[]) as u64 } else { 0 };
     let mut line = rng_line(trace.lines, rng_hook::seed(r), ms, unit, &callers());
     if cfg!(windows) {
         line.insert(line.len() - 1, char::from(13u8)); // the C++'s text-mode FILE wrote CR LF

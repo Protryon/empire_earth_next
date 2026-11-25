@@ -267,9 +267,9 @@ fn dump_players(o: &mut Out) {
                 if point != 0 {
                     s.push_str(&format!(
                         "{}@{},{} ",
-                        lu(h(O::UnitId, point, &[])),
-                        ld(h(O::UnitTileX, point, &[])),
-                        ld(h(O::UnitTileY, point, &[]))
+                        lu(gc::h(gc::O::RoUnitId, point, &[])),
+                        ld(gc::h(gc::O::DkTileX, point, &[])),
+                        ld(gc::h(gc::O::DkTileY, point, &[]))
                     ));
                 }
             }
@@ -286,7 +286,7 @@ fn dump_players(o: &mut Out) {
         let mut s = format!("PLAYERUNITS {i}:");
         let mut u = gc::h(gc::O::PlFirstUnit, p, &[]) as usize;
         while u != 0 {
-            s.push_str(&format!(" {}", lu(h(O::UnitId, u, &[]))));
+            s.push_str(&format!(" {}", lu(gc::h(gc::O::RoUnitId, u, &[]))));
             u = gc::h(gc::O::UnNext, u, &[]) as usize;
         }
         s.push('\n');
@@ -298,14 +298,14 @@ fn dump_unit(o: &mut Out, u: usize) {
     let player = h(O::DmUnitPlayerId, u, &[]);
     let mut s = format!(
         "U {} type={} player={} hp={} tile={},{}",
-        lu(h(O::UnitId, u, &[])),
+        lu(gc::h(gc::O::RoUnitId, u, &[])),
         ld(h(O::DmUnitTypeRaw, u, &[])),
         ld(player),
         f(O::DmUnitHp, u, &[]),
-        ld(h(O::UnitTileX, u, &[])),
-        ld(h(O::UnitTileY, u, &[]))
+        ld(gc::h(gc::O::DkTileX, u, &[])),
+        ld(gc::h(gc::O::DkTileY, u, &[]))
     );
-    let c = h(O::DmComplexOf, u, &[]) as usize;
+    let c = gc::h(gc::O::FxDynComplex, u, &[]) as usize;
     let x = if c != 0 { h(O::DmCxComplex, c, &[]) as usize } else { 0 };
     if x == 0 {
         s.push_str("\n  rawu "); // a simple unit's bytes (layout.json "EEUnit")
@@ -329,7 +329,7 @@ fn dump_unit(o: &mut Out, u: usize) {
         waypoints as u64,
         h(O::DmCxPathDone, x, &[]),
         h(O::DmCxArrived, x, &[]),
-        hexf(hdd(O::ComplexVelocity, x, &[])),
+        hexf(f64::from(gc::hd(gc::O::EcVelocity, x, &[], &[]))),
         lu(h(O::DmCxBlockingId, x, &[]))
     ));
     s.push_str(&format!(
@@ -384,7 +384,7 @@ fn dump_unit(o: &mut Out, u: usize) {
     s.push_str("\n  raw "); // the unit's bytes (pointers differ by run; build/clang/layout.json names offsets)
     s.push_str(&raw(c, h(O::DmCxSize, 0, &[]) as usize));
     s.push('\n');
-    let id = lu(h(O::UnitId, u, &[]));
+    let id = lu(gc::h(gc::O::RoUnitId, u, &[]));
     o.push(&s);
     for q in 0..i64::from(queues) {
         // each goal's own out-of-synch dump
@@ -403,7 +403,7 @@ fn dump_calamities(o: &mut Out) {
         return;
     }
     for i in 0..h(O::DmCalCount, manager, &[]) {
-        let k = h(O::DmCalAt, manager, &[i]) as usize;
+        let k = gc::h(gc::O::MgrCalamityAt, manager, &[i]) as usize;
         if k == 0 {
             continue;
         }

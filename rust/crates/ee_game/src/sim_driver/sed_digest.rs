@@ -118,20 +118,20 @@ pub fn save_digest(out: &mut Vec<String>) {
 /// the save's list).
 pub fn file_digest(name: &str, out: &mut Vec<String>) {
     let spec = x::scenario_spec(name);
-    if h(O::SpecOpenRead, spec, &[]) != 0 {
+    if gc::h(gc::O::FileOpenReadSpec, spec, &[]) != 0 {
         out.push("  missing".into());
-        h(O::SpecFree, spec, &[]);
+        gc::h(gc::O::DxDelete, spec, &[]);
         return;
     }
     let memory = h(O::MemNew, 0, &[1000, 1, 1]) as usize;
     let header = h(O::HeaderNew, 0, &[]) as usize;
     let result = h(O::MemLoad, memory, &[spec as i64]);
-    h(O::SpecClose, spec, &[]);
+    gc::h(gc::O::FileClose, spec, &[]);
     let done = |out: &mut Vec<String>, line: &str| {
         out.push(line.into());
         gc::h(gc::O::SsDeleteHeader, header, &[]);
         h(O::MemFree, memory, &[]);
-        h(O::SpecFree, spec, &[]);
+        gc::h(gc::O::DxDelete, spec, &[]);
     };
     if result != 0 || h(O::HeaderLoad, header, &[memory as i64]) != 0 {
         done(out, "  unreadable");
@@ -436,7 +436,7 @@ pub fn scenario_text_step(w: &[String], out: &mut Vec<String>) {
         // sm export: ExportText's result and the file's lines
         let spec = x::text_spec(9);
         let result = if x::hs(O::SpecFOpen, spec, "w") == 0 { h(O::SmExportText, m, &[spec as i64]) } else { -1 };
-        h(O::SpecClose, spec, &[]);
+        gc::h(gc::O::FileClose, spec, &[]);
         out.push(format!("  export {result}"));
         if x::hs(O::SpecFOpen, spec, "r") == 0 {
             while let Some(mut line) = x::spec_gets(spec, 0x400) {
@@ -445,9 +445,9 @@ pub fn scenario_text_step(w: &[String], out: &mut Vec<String>) {
                 }
                 out.push(format!("  | {}", String::from_utf8_lossy(&line)));
             }
-            h(O::SpecClose, spec, &[]);
+            gc::h(gc::O::FileClose, spec, &[]);
         }
-        h(O::SpecFree, spec, &[]);
+        gc::h(gc::O::DxDelete, spec, &[]);
         return;
     }
     // sm import FILE KIND VALIDATE: ImportTriggerText over file FILE; its result, the errors, the texts
@@ -455,7 +455,7 @@ pub fn scenario_text_step(w: &[String], out: &mut Vec<String>) {
     let spec = x::text_spec(index as i64);
     if x::hs(O::SpecFOpen, spec, "w") == 0 {
         x::spec_puts(spec, &text_file_content(index as u64));
-        h(O::SpecClose, spec, &[]);
+        gc::h(gc::O::FileClose, spec, &[]);
     }
     h(O::SmClearImportErrors, m, &[]);
     let mut result = -1;
@@ -464,8 +464,8 @@ pub fn scenario_text_step(w: &[String], out: &mut Vec<String>) {
         let validate = super::options::c_atol(&w[4]) != 0;
         result = h(O::SmImportText, m, &[spec as i64, kind as i64, validate as i64]);
     }
-    h(O::SpecClose, spec, &[]);
-    h(O::SpecFree, spec, &[]);
+    gc::h(gc::O::FileClose, spec, &[]);
+    gc::h(gc::O::DxDelete, spec, &[]);
     out.push(format!("  import {} {} {} result {result}", w[2], w[3], w[4]));
     for k in 0..h(O::SmImportErrorCount, m, &[]) {
         out.push(format!("  error {}", ht(O::SmImportError, m, k)));
@@ -673,7 +673,7 @@ pub fn controls_digest(condition: bool, out: &mut Vec<String>) {
 pub fn type_name(control: usize) -> String {
     let shell = h(O::ShellOf, control, &[]) as usize;
     if shell != 0 {
-        return ht(O::ShellKindName, shell, 0);
+        return super::sim_ops::ht(super::sim_ops::EeSimDriverSim::ShellKindName, shell, 0);
     }
     strip_class(ht(O::ControlTypeName, control, 0))
 }
@@ -834,7 +834,7 @@ pub fn form_digest(first: c_ulong, last: c_ulong, group: c_long, out: &mut Vec<S
 /// The players as the player tab writes them: names, colours, civilizations, epochs, resource caps, shared line of
 /// sight, game options, the computer players' settings, stances; the world's game options.
 pub fn players_digest(out: &mut Vec<String>) {
-    let n = h(O::WorldGetNumPlayers, 0, &[]) as c_ulong;
+    let n = super::sim_ops::h(super::sim_ops::EeSimDriverSim::NumPlayers, 0, &[]) as c_ulong;
     for p in 0..n {
         let q = gc::h(gc::O::TbWorldPlayer, 0, &[p as i64]) as usize;
         if q == 0 {
@@ -853,7 +853,7 @@ pub fn players_digest(out: &mut Vec<String>) {
             h(O::TreeStartEpoch, t, &[]) as c_long,
             h(O::TreeEndEpoch, t, &[]) as c_long,
             caps.join(","),
-            h(O::PlayerSharedLos, q, &[]),
+            gc::h(gc::O::MpPlSharedLos, q, &[]),
             h(O::PlayerPurchasedUpgrades, q, &[]) as u64,
             format_g(x::hd(O::PlayerAvailablePoints, q, 0))
         );
@@ -1046,7 +1046,7 @@ pub fn form_state(out: &mut Vec<String>) {
         if u == 0 {
             units += "null";
         } else {
-            units += &(h(O::UnitId, u, &[]) as c_ulong).to_string();
+            units += &(gc::h(gc::O::RoUnitId, u, &[]) as c_ulong).to_string();
             units += if h(O::UnitIsEditorSelected, u, &[]) != 0 { "" } else { "!" };
         }
     }

@@ -303,7 +303,7 @@ fn first_building(player: c_ulong) -> usize {
     let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
     while u != 0 {
         if gc::h(gc::O::UnComplex, u, &[]) != 0
-            && h(O::UnitHitPoints, u, &[]) as c_long > 0
+            && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
             && h(O::UnitIsBuilding, u, &[]) != 0
         {
             return u;
@@ -321,7 +321,7 @@ pub fn flare(player: c_ulong) -> EeSimDriverSpot {
     if human == 0 || spot == 0 {
         return EeSimDriverSpot::default();
     }
-    let (x, y) = (h(O::UnitTileX, spot, &[]) as c_long, h(O::UnitTileY, spot, &[]) as c_long);
+    let (x, y) = (gc::h(gc::O::DkTileX, spot, &[]) as c_long, gc::h(gc::O::DkTileY, spot, &[]) as c_long);
     let allies: Vec<usize> =
         (0..h(O::PlayerAllyCount, human, &[])).map(|k| gc::h(gc::O::PlAllyAt, human, &[k]) as usize).collect();
     for &a in &allies {
@@ -336,8 +336,8 @@ pub fn volcano(player: c_ulong) -> EeSimDriverSpot {
     if spot == 0 {
         return EeSimDriverSpot::default();
     }
-    let x = h(O::UnitTileX, spot, &[]) as c_long + 6;
-    let y = h(O::UnitTileY, spot, &[]) as c_long + 6;
+    let x = gc::h(gc::O::DkTileX, spot, &[]) as c_long + 6;
+    let y = gc::h(gc::O::DkTileY, spot, &[]) as c_long + 6;
     let manager = gc::hp(gc::O::CalamityManager, 0, &[]);
     let cast =
         gc::calamity_objects::ee_gamecpp_calamity_create(manager as *mut c_void, 1, 9, 0xffff_ffff, 0, x, y, player);
@@ -353,7 +353,7 @@ pub fn volcano_boulders() -> Vec<c_ulong> {
         let mut u = if p != 0 { gc::h(gc::O::PlFirstUnit, p, &[]) as usize } else { 0 };
         while u != 0 {
             if h(O::UnitType, u, &[]) == boulder {
-                out.push(h(O::UnitId, u, &[]) as c_ulong);
+                out.push(gc::h(gc::O::RoUnitId, u, &[]) as c_ulong);
             }
             u = gc::h(gc::O::UnNext, u, &[]) as usize;
         }
@@ -522,10 +522,10 @@ fn armed_units(player: usize, priests: bool, missiles: bool) -> Vec<usize> {
     while u != 0 {
         let c = gc::h(gc::O::UnComplex, u, &[]) as usize;
         if c != 0
-            && h(O::UnitHitPoints, u, &[]) as c_long > 0
+            && gc::h(gc::O::EcHitPoints, u, &[]) as c_long > 0
             && h(O::UnitHasStats, u, &[]) != 0
             && h(O::ComplexOnMap, c, &[]) != 0
-            && h(O::UnitTileX, c, &[]) as c_long != -10000
+            && gc::h(gc::O::DkTileX, c, &[]) as c_long != -10000
             && hd(O::ComplexAttack, c, &[], &[]) > 0.0
             && (priests || h(O::ComplexIsPriest, c, &[]) == 0)
             && (missiles || (h(O::ComplexCategory, c, &[]) != missile && h(O::ComplexCategory, c, &[]) != torpedo))
@@ -555,10 +555,10 @@ fn list_search_sweep() {
         let first = all.len().saturating_sub(64);
         for &a in &all[first..] {
             let ignored = h(O::IgnoredSave, a, &[]) as usize;
-            let (x, y) = (h(O::UnitTileX, a, &[]), h(O::UnitTileY, a, &[]));
+            let (x, y) = (gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x, y], &[1.0]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
-            let (x, y) = (h(O::UnitTileX, a, &[]), h(O::UnitTileY, a, &[]));
+            let (x, y) = (gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]));
             hf(O::SearchAlongList, a, &[x + 2, y - 2], &[1.5]);
             h(O::IgnoredRestore, a, &[ignored as i64]);
             h(O::IgnoredFree, ignored, &[]);
@@ -590,7 +590,7 @@ fn missile_sweep() {
         if class == 0 {
             continue;
         }
-        let category = h(O::ClassCategory, class, &[]);
+        let category = gc::h(gc::O::RoClassCategory, class, &[]);
         if category != missile && category != torpedo {
             continue;
         }
@@ -613,8 +613,8 @@ fn missile_sweep() {
         let first = units.len().saturating_sub(4);
         for (i, &a) in units.iter().enumerate().skip(first) {
             for (k, &class) in classes.iter().enumerate() {
-                if h(O::UnitHitPoints, target, &[]) as c_long <= 0
-                    || h(O::UnitTileX, target, &[]) as c_long == -10000
+                if gc::h(gc::O::EcHitPoints, target, &[]) as c_long <= 0
+                    || gc::h(gc::O::DkTileX, target, &[]) as c_long == -10000
                 {
                     break;
                 }
@@ -622,7 +622,7 @@ fn missile_sweep() {
                 let created = h(
                     O::ClassCreateUnit,
                     class,
-                    &[h(O::UnitTileX, a, &[]), h(O::UnitTileY, a, &[]), h(O::PlayerId, owner, &[]), a as i64],
+                    &[gc::h(gc::O::DkTileX, a, &[]), gc::h(gc::O::DkTileY, a, &[]), gc::h(gc::O::RoPlayerId, owner, &[]), a as i64],
                 ) as usize;
                 let m = if created != 0 { gc::h(gc::O::UnGetComplex, created, &[]) as usize } else { 0 };
                 if m == 0 {
@@ -646,7 +646,7 @@ fn missile_sweep() {
                     hf(O::NewAttackGround, 0, &[], &at)
                 };
                 h(O::ComplexSetGoal, m, &[goal]);
-                gc::hf(gc::O::CxSetVelocity, m, &[], &[hd(O::ComplexVelocity, a, &[], &[])]);
+                gc::hf(gc::O::CxSetVelocity, m, &[], &[gc::hd(gc::O::EcVelocity, a, &[], &[])]);
                 hf(O::ClassLaunchProjectile, class, &[m as i64], &at);
                 if h(O::ComplexFlightTime, m, &[]) as c_long == 0 {
                     gc::h(gc::O::CxSetFlightTime, m, &[300]);
@@ -656,7 +656,7 @@ fn missile_sweep() {
                 h(O::PlayerAddPendingUnits, owner, &[]);
                 let mut t = 0;
                 while t < 120
-                    && h(O::UnitTileX, m, &[]) as c_long != -10000
+                    && gc::h(gc::O::DkTileX, m, &[]) as c_long != -10000
                     && h(O::ComplexHasGoalState, m, &[]) != 0
                 {
                     h(O::ClassStep, class, &[m as i64]);
@@ -705,7 +705,7 @@ pub fn sight_capture_sweep() {
     }
     if n > 1 {
         let last = gc::h(gc::O::SsWorldPlayer, 0, &[(n - 1) as i64]) as usize;
-        h(O::MapExploreUnseen, last, &[]);
+        gc::h(gc::O::DcExplore, last, &[]);
         h(O::MapFogSeen, last, &[]);
     }
     // two full cycles of the checksum's 64 x 64 windows
