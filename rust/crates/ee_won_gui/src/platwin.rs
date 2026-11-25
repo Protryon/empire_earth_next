@@ -122,6 +122,9 @@ pub enum EeWonPlatWinCall {
     SetMinimizeOnAltTab = 20,
     /// `SetForwardKeyMsgToParent(a)`.
     SetForwardKeys = 21,
+    /// `QueueMouse(a, b[0], b[1], b[2], b[3])`: the event type `a` and the four ints at `b` (the surface's x and y,
+    /// the modifiers, the button or amount), as the manager hands them.
+    QueueMouseAt = 22,
 }
 
 /// The window's own state.
@@ -408,6 +411,11 @@ fn call(w: W, c: EeWonPlatWinCall, a: isize, b: isize, cc: isize, d: isize) -> i
             let c = client(w);
             let q = [t, sx - c[0], sy - c[1], m, n];
             host(w, Op::QueueMouse, q.as_ptr() as isize, 0, 0, 0);
+        }
+        C::QueueMouseAt => {
+            let p = ints(b, 4);
+            let q = [a as i32, p[0], p[1], p[2], p[3]];
+            return call(w, C::QueueMouse, q.as_ptr() as isize, 0, 0, 0);
         }
         C::Info => {
             let i = info(w);

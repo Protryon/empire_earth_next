@@ -135,12 +135,12 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::VersionStatusNone: p->mVersionStatus = WS_None; return 0;
     case Op::AuthContextNew: p->mAuthContext = new AuthContext; return 0;
     case Op::AuthSetServers: p->mAuthContext->SetServerContext(p->mAuthServers.get()); return 0;
-    case Op::AccountLogicNew: p->mAccountLogic = new AccountLogic; return 0;
-    case Op::DialogLogicNew: p->mDialogLogic = new DialogLogic; return 0;
-    case Op::InitLogicNew: p->mInitLogic = new InitLogic; return 0;
-    case Op::RoutingLogicNew: p->mRoutingLogic = new RoutingLogic; return 0;
-    case Op::StagingLogicNew: p->mStagingLogic = new StagingLogic; return 0;
-    case Op::LanLogicNew: p->mLanLogic = new LanLogic; return 0;
+    case Op::AccountLogicNew: p->mAccountLogic = new RustLogic(EeWonLogicShellKind::Account, AccountLogicMake); return 0;
+    case Op::DialogLogicNew: p->mDialogLogic = new RustLogic(EeWonLogicShellKind::Dialog, DialogLogicMake); return 0;
+    case Op::InitLogicNew: p->mInitLogic = new RustLogic(EeWonLogicShellKind::Init, InitLogicMake); return 0;
+    case Op::RoutingLogicNew: p->mRoutingLogic = new RustLogic(EeWonLogicShellKind::Routing, RoutingLogicMake); return 0;
+    case Op::StagingLogicNew: p->mStagingLogic = new RustLogic(EeWonLogicShellKind::Staging, StagingLogicMake); return 0;
+    case Op::LanLogicNew: p->mLanLogic = new RustLogic(EeWonLogicShellKind::Lan, LanLogicMake); return 0;
     case Op::PingLogicNew: p->mPingLogic = new PingLogic; return 0;
     case Op::AddAccountLogic: p->mLogicMgr.AddLogic(p->mAccountLogic.get()); return 0;
     case Op::AddDialogLogic: p->mLogicMgr.AddLogic(p->mDialogLogic.get()); return 0;

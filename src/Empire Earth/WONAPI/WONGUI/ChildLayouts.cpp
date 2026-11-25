@@ -1,6 +1,6 @@
 // The child layouts (R6 WON round 31): the Rust layout manager's and instructions' calls out
-// (rust/crates/ee_won_gui/src/layoutobj.rs, EeWonGuiOp's layout ops), the shells' constructors and destructors, the
-// manager's AddInstruction and Container::AddChildLayout's statements, and CenterLayout::Center. The original's
+// (rust/crates/ee_won_gui/src/layoutobj.rs, EeWonGuiOp's layout ops), the instruction shell's Make and destructor, and
+// CenterLayout::Center (R6 WON GUI round 35: the manager is the Rust container's, the instruction classes one shell). The original's
 // ChildLayouts.cpp, ChildLayoutsAdvanced.cpp's Execute bodies and DoCalc, and CenterLayoutExecute.cpp are the Rust
 // objects.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
@@ -46,23 +46,6 @@ extern "C" intptr_t ee_won_guicpp_layout_call(void*, EeWonGuiOp op, intptr_t a, 
 }
 
 namespace WONAPI {
-// Creates an empty layout manager (the Rust manager: no instruction, no layout point)
-ChildLayoutManager::ChildLayoutManager() { this->mMgr = ee_won_lmgr_new(this, ee_won_guicpp_layout_call); }
-// Destroys the manager: the Rust manager releases the layout points, then the instructions
-ChildLayoutManager::~ChildLayoutManager() { ee_won_lmgr_free(this->mMgr); }
-// Appends a layout instruction to the manager's list (held)
-void ChildLayoutManager::AddInstruction(ChildLayoutInstructionBase* instruction)
-{
-    this->MCall(EeWonLayoutMgrCall::AddInstruction, (intptr_t)instruction, (intptr_t)instruction->mLay);
-}
-// Container::AddChildLayout's statements: the group (a byte), group 0 enabled and run at once on the container
-// before the manager holds it, any other group disabled
-void ChildLayoutManager::AddChildLayout(ChildLayoutInstructionBase* instr, int id, Component* container)
-{
-    ee_won_lmgr_call(this->mMgr, EeWonLayoutMgrCall::AddChildLayout, (intptr_t)instr, (intptr_t)instr->mLay, id,
-                     (intptr_t)container);
-}
-
 // Destroys an instruction: its Rust instruction (the list borrows its components)
 ChildLayoutInstructionBase::~ChildLayoutInstructionBase() { ee_won_layout_free(this->mLay); }
 // the record's numbers are layoutobj.rs's (R6 WON round 33)
@@ -74,19 +57,6 @@ void ChildLayoutInstructionBase::Make(EeWonLayoutKind k, Component* r0, Componen
 void ChildLayoutInstructionBase::Make(const EeWonLayoutInit& init)
 {
     this->mLay = ee_won_layout_new(this, ee_won_guicpp_layout_call, &init);
-}
-
-// Fn2F6140's instruction (its fields were set one by one after `new`)
-ChildLayoutInstruction::ChildLayoutInstruction(int flags, Component* child, Component* reference, int x, int y,
-                                               int width, int height)
-{
-    this->mLay = ee_won_layout_new_child(this, ee_won_guicpp_layout_call, flags, child, reference, x, y, width, height);
-}
-
-// the target, the param's anchors (after SetBorders), percentages and padding
-PercentLayout::PercentLayout(Component* target, const PercentLayoutParam& param)
-{
-    this->mLay = ee_won_layout_new_percent(this, ee_won_guicpp_layout_call, target, (void* const*)&param.left, &param.px);
 }
 
 // Centres a child in its parent once, horizontally and/or vertically (the original's temporary centre layout is the

@@ -395,6 +395,9 @@ struct CtrlState {
     bottom_ct: isize,
     top_ct: isize,
     layout: isize,
+    /// The control made its four containers itself and holds them (`make_parts`; R6 WON GUI round 35: they were
+    /// the C++ control's SmartPtr members).
+    owns_parts: bool,
 }
 
 /// The Rust TabCtrl.
@@ -429,6 +432,7 @@ impl EeWonTabCtrl {
                 bottom_ct: 0,
                 top_ct: 0,
                 layout: 0,
+                owns_parts: false,
             }),
         }
     }
@@ -470,6 +474,26 @@ impl EeWonTabCtrl {
         if let Some(t) = self.o.ct_of(self.top_bar()) {
             t.set_field(EeWonCtField::HasUsedDialogKeys as i32, 1);
         }
+    }
+
+    /// `TabCtrl::TabCtrl`'s members, made in its order and held as its SmartPtrs held them (the bottom bar's
+    /// container, the top bar's container, the bottom bar, the top bar; the page area's layout point stays the C++
+    /// control's member), then the constructor's statements (`init`).
+    pub fn make_parts(&self) {
+        let o = &self.o;
+        let held = |op: Op, a: isize| {
+            let c = o.op(op, a, 0, 0, 0);
+            o.op(Op::ChildHold, c, 0, 0, 0);
+            c
+        };
+        let bottom_bar_container = held(Op::TabNewContainer, 0);
+        let top_bar_container = held(Op::TabNewContainer, 0);
+        let bottom_bar = held(Op::TabNewBar, self as *const EeWonTabCtrl as isize);
+        let top_bar = held(Op::TabNewContainer, 0);
+        let layout = o.op(Op::TabNewPoint, 0, 0, 0, 0);
+        let bar = o.op(Op::TabBarOf, bottom_bar, 0, 0, 0) as *const EeWonTabBar;
+        self.st.borrow_mut().owns_parts = true;
+        self.init(&EeWonTabParts { bar, bottom_bar, top_bar, bottom_bar_container, top_bar_container, layout });
     }
 
     /// The constructor's statements after its members were made: the bars' and containers' flags, the bars in their
@@ -964,8 +988,18 @@ impl EeWonTabCtrl {
         }
         let bar = self.st.borrow().bar;
         if !bar.is_null() {
-            // SAFETY: the bar is still held by the C++ control's member (its members go after this body)
+            // SAFETY: the bar is still held (by the C++ control's member, whose members go after this body, or
+            // by this object until the releases below)
             unsafe { (*bar).ctrl.set(std::ptr::null()) };
+        }
+        // the members the control made, released as the original's went: in reverse order of declaration
+        let parts = {
+            let mut s = self.st.borrow_mut();
+            let owned = std::mem::take(&mut s.owns_parts);
+            owned.then(|| [s.top_ct, s.bottom_ct, s.top_bar, s.bottom_bar])
+        };
+        for c in parts.into_iter().flatten() {
+            self.o.op(Op::ChildRelease, c, 0, 0, 0);
         }
     }
 
@@ -1062,6 +1096,30 @@ pub unsafe extern "C" fn ee_won_tab_new(
     let made = Box::into_raw(Box::new(EeWonTabCtrl::new(component, host, ct)));
     crate::registry::register(component, crate::registry::EeWonGuiKind::Tab, made as *const c_void);
     made
+}
+
+/// `TabCtrl::TabCtrl` whole (R6 WON GUI round 35): the Rust control, its members made through the host
+/// (`EeWonTabCtrl::make_parts`) and the constructor's statements.
+///
+/// The control is stored in `*out` (the C++ control's `mTab`) before its members are made, as the original's
+/// constructor had it set before their statements ran (a host call that reaches the control's virtuals finds it).
+///
+/// # Safety
+/// As `ee_won_tab_new`'s; `out` is writable; the host answers the `TabNew*` ops with live components.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_tab_make(
+    component: *mut c_void,
+    host: EeWonGuiHostFn,
+    ct: *const EeWonContainer,
+    out: *mut *mut EeWonTabCtrl,
+) {
+    // SAFETY: the contract
+    let made = unsafe { ee_won_tab_new(component, host, ct) };
+    // SAFETY: the contract; just made
+    unsafe {
+        *out = made;
+        (*made).make_parts();
+    }
 }
 
 /// The constructor's statements over its made members (`parts`).

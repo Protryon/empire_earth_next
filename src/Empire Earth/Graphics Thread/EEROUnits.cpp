@@ -120,7 +120,7 @@ int64_t EERoViewsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
 
 static_assert(offsetof(EERenderUnitRecord, mUnit) == 0, "rfil.rs reads a record's unit first");
 
-// the C++ calls and members of gamecpp ro_units.rs and ro_lists.rs (EECore10OpA's default): one statement each
+// the C++ calls and members of gamecpp ro_units.rs and ro_lists.rs (EECommandLine.cpp's EECommandLineOp default): one statement each
 int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;

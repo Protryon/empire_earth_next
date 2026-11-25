@@ -860,6 +860,30 @@ pub unsafe extern "C" fn ee_won_input_call(
     unsafe { (*input).call(call, a, b, c) }
 }
 
+/// `InputBox::NumericFilter`'s verdict: digits only, with a leading minus sign allowed while the box's selection
+/// starts at 0 (the original read `theStr[0]`, the terminator of an empty text, and the UCRT's `isdigit`, which
+/// in the C locale knows `0`..`9` alone).
+pub(crate) fn numeric_filter(text: &[u32], sel_start: i32) -> bool {
+    let mut at = 0;
+    if text.first() == Some(&u32::from(b'-')) {
+        if sel_start > 0 {
+            return false;
+        }
+        at = 1;
+    }
+    text[at..].iter().all(|&u| (u32::from(b'0')..=u32::from(b'9')).contains(&u))
+}
+
+/// `InputBox::NumericFilter(box, text)` over the text's `wchar_t`s and the box's selection start.
+///
+/// # Safety
+/// `text` holds `len` `wchar_t`s, or `len` is 0.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_input_numeric_filter(text: *const c_void, len: usize, sel_start: i32) -> bool {
+    // SAFETY: the contract
+    numeric_filter(&unsafe { units_in(text as isize, len as isize) }, sel_start)
+}
+
 #[cfg(test)]
 #[path = "inputobj_tests.rs"]
 mod tests;

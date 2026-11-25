@@ -127,7 +127,8 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
 
 namespace {
 
-// where a body's file calls and text go
+// where a body's file calls and text go (rust_goal.rs EeUnitsGoalContext: the file calls are Rust's, goal_obj.rs
+// file_call)
 struct EEGoalContext {
     FSFile* mFile;
     UWideString* mText;
@@ -148,24 +149,6 @@ template <class T> T* ObjectOf(uint64_t inHandle)
 void PointOut(EeUnitsGoalIo* ioArgs, const GE3DPoint& inPoint)
 {
     memcpy(ioArgs->f, &inPoint, 3 * sizeof(float));
-}
-
-// a goal body's float argument from its bits
-// FSFile::Read of a T into an argument (its bits for a float)
-template <class T> long ReadInto(FSFile* inFile, int64_t& ioValue)
-{
-    T theValue = (T)ioValue;
-    long theResult = inFile->Read(theValue);
-    ioValue = (int64_t)theValue;
-    return theResult;
-}
-
-long ReadFloatInto(FSFile* inFile, int64_t& ioValue)
-{
-    float theValue = UBitsFloat(ioValue);
-    long theResult = inFile->Read(theValue);
-    ioValue = UFloatBits(theValue);
-    return theResult;
 }
 
 // the tiles a split operation hands in place (goal_split.rs: `io.text` names its buffer of U2DPoint<long>)
@@ -228,16 +211,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_DROP_PATH:
         ObjectOf<EEComplexUnit>(inA)->DropPath();
         return 0;
-    case EE_UNITS_GOAL_HOST_FILE_OPEN:
-        return static_cast<EEGoalContext*>(inContext)->mFile->GetIsOpen() ? 1 : 0;
-    case EE_UNITS_GOAL_HOST_X_WRITE_U32: return static_cast<EEGoalContext*>(inContext)->mFile->Write((uint32_t)ioArgs->i[1]);
-    case EE_UNITS_GOAL_HOST_X_WRITE_I32: return static_cast<EEGoalContext*>(inContext)->mFile->Write((int32_t)ioArgs->i[1]);
-    case EE_UNITS_GOAL_HOST_X_WRITE_F32: return static_cast<EEGoalContext*>(inContext)->mFile->Write(UBitsFloat(ioArgs->i[1]));
-    case EE_UNITS_GOAL_HOST_X_WRITE_BOOL: return static_cast<EEGoalContext*>(inContext)->mFile->Write(ioArgs->i[1] != 0);
-    case EE_UNITS_GOAL_HOST_X_READ_U32: return ReadInto<uint32_t>(static_cast<EEGoalContext*>(inContext)->mFile, ioArgs->i[1]);
-    case EE_UNITS_GOAL_HOST_X_READ_I32: return ReadInto<int32_t>(static_cast<EEGoalContext*>(inContext)->mFile, ioArgs->i[1]);
-    case EE_UNITS_GOAL_HOST_X_READ_F32: return ReadFloatInto(static_cast<EEGoalContext*>(inContext)->mFile, ioArgs->i[1]);
-    case EE_UNITS_GOAL_HOST_X_READ_BOOL: return ReadInto<bool>(static_cast<EEGoalContext*>(inContext)->mFile, ioArgs->i[1]);
+    // (the file calls: Rust's, goal_obj.rs file_call)
     case EE_UNITS_GOAL_HOST_X_HAS_TEXT: return static_cast<EEGoalContext*>(inContext)->mText != NULL;
     case EE_UNITS_GOAL_HOST_X_APPEND_TEXT:
         *static_cast<EEGoalContext*>(inContext)->mText += std::string((const char*)ioArgs->text, ioArgs->len).c_str();
@@ -532,15 +506,7 @@ int64_t Goal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t
 }  // namespace
 
 // the goal's members are the Rust object's head (ee_units goal_obj.rs)
-static_assert(sizeof(EEUnitGoal) == sizeof(EeUnitsGoalBase) && offsetof(EEUnitGoal, mKind) == offsetof(EeUnitsGoalBase, kind)
-                  && offsetof(EEUnitGoal, mAction) == offsetof(EeUnitsGoalBase, action)
-                  && offsetof(EEUnitGoal, mStartTime) == offsetof(EeUnitsGoalBase, start_time)
-                  && offsetof(EEUnitGoal, mCreationTime) == offsetof(EeUnitsGoalBase, creation_time)
-                  && offsetof(EEUnitGoal, mID) == offsetof(EeUnitsGoalBase, id)
-                  && offsetof(EEUnitGoal, mPathAttempts) == offsetof(EeUnitsGoalBase, path_attempts)
-                  && offsetof(EEUnitGoal, mB1C) == offsetof(EeUnitsGoalBase, b1c)
-                  && offsetof(EEUnitGoal, mB1D) == offsetof(EeUnitsGoalBase, b1d),
-              "EEUnitGoal is EeUnitsGoalBase");
+static_assert(sizeof(EEUnitGoal) == sizeof(EeUnitsGoalBase), "EEUnitGoal is EeUnitsGoalBase");
 
 // the world host of the goals' context-free calls (EEUnitGoal::Call)
 static const int sGoalHostRegistered = (ee_units_goal_register_host(GoalOp), 0);

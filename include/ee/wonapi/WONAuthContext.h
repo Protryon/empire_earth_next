@@ -160,10 +160,10 @@ public:
     void RefreshAsync(AsyncOp* inOp = NULL, EeWonLightCert* inCert = NULL, DWORD inTimeout = INFINITE)
     { ee_won_authctx_refresh_async(this->mCore, inOp != NULL ? static_cast<RefCount*>(inOp) : NULL, inCert, inTimeout); }
     long RefreshBlock(DWORD inTimeout = INFINITE) { return ee_won_authctx_refresh_block(this->mCore, inTimeout); } //2dedf0
-    void GetCertCallback(GetCertOp* inOp) //2de5f0
-    { ee_won_authctx_get_cert_callback(this->mCore, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
+    void GetCertCallback(AsyncOp* inOp) //2de5f0
+    { ee_won_authctx_get_cert_callback(this->mCore, static_cast<RefCount*>(inOp)); }
     static void StaticGetCertCallback(SmartPtr<AsyncOp> inOp, SmartPtr<RefCount> inContext) //2de560
-    { static_cast<AuthContext*>(inContext.get())->GetCertCallback(static_cast<GetCertOp*>(inOp.get())); }
+    { static_cast<AuthContext*>(inContext.get())->GetCertCallback(inOp.get()); }
     // the Rust object (the certificate ops' host calls answer on it: ee_won hostauth.rs)
     const EeWonAuthCtx* Core() const { return this->mCore; }
 private:

@@ -18,6 +18,7 @@ use std::sync::{Condvar, Mutex};
 use std::time::Duration;
 
 use super::sed_host::{h, EeSimDriverSed as O};
+use crate::gamecpp as gc;
 
 /// What an action or the end does when the UI thread runs it.
 pub enum Act {
@@ -40,7 +41,7 @@ fn post(act: Act) {
     let done = matches!(act, Act::Done { .. });
     let state = Box::into_raw(Box::new(act)) as usize;
     let item = h(if done { O::C12DoneNew } else { O::C12ActionNew }, state, &[]) as usize;
-    h(if done { O::C12DonePost } else { O::C12ActionPost }, item, &[]);
+    gc::h(if done { gc::O::UiPostEvent } else { gc::O::UiPostAction }, item, &[]);
     h(O::C12Dereference, item, &[i64::from(done)]);
 }
 
@@ -87,7 +88,7 @@ pub unsafe extern "C" fn ee_sim_driver_sed_action(action: *mut c_void, state: *m
         }
         Act::Marker { left, rounds } => {
             if marker_step(left) {
-                h(O::C12ActionPost, action as usize, &[]);
+                gc::h(gc::O::UiPostAction, action as usize, &[]);
                 return;
             }
             let rounds = *rounds;

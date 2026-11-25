@@ -13,6 +13,8 @@ use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use ee_audio::sound::managerobj::ee_sound_manager_node_set_parameters;
+use ee_audio::sound::objects::EeSoundNode;
 use ee_base::math::types::{Ge3DPoint, GeTransformation, GeVector};
 use ee_base::math::um;
 use ee_render::dx7::api::SurfaceDescription;
@@ -36,6 +38,7 @@ use ee_render::gfx::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex};
 use ee_sim::app::capture::{
     ee_app_capture_active, ee_app_capture_commit, ee_app_capture_exclusive, ee_app_capture_keeps, ee_app_capture_only,
 };
+use ee_sim::units::uu_adapt::ee_units_uu_next_tile;
 use ee_sim::units::uu_ffi::{
     ee_units_uu_can_stand_on, ee_units_uu_farm_drop_sites, ee_units_uu_tile_direction, ee_units_uu_units_on_tile,
 };
@@ -182,7 +185,16 @@ fn rain_sound_level(e: EffectPtr, sound: u64, volume: f32) {
     if unsafe { (*head(e).record).storm.elapsed } < EE_GFX_RAIN_FADE_TIME {
         v = EE_GFX_RAIN_FADE_SHARE * v;
     }
-    hf(O::FxSetSoundParameters, sound as P, &[], &[v, pan, pitch]);
+    // SAFETY: gSoundManager (the Rust manager itself) and the effect's live sound node
+    unsafe {
+        ee_sound_manager_node_set_parameters(
+            super::globals::gSoundManager.cast(),
+            sound as *mut EeSoundNode,
+            v,
+            pan,
+            pitch,
+        )
+    };
 }
 
 // ---- the weather storms' map (EeGfxStormHost)
@@ -201,10 +213,11 @@ pub extern "C" fn ee_gamecpp_fx_storm_is_water(_: *mut c_void, x: i32, y: i32) -
 /// `EEGetNextTile(from, EEGetTileDirection(from, to), 1)` into `out`.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_fx_storm_step_toward(_: *mut c_void, fx: i32, fy: i32, tx: i32, ty: i32, out: *mut i32) {
-    let from: [c_long; 2] = [fx as c_long, fy as c_long];
     let mut tile: [c_long; 2] = [0, 0];
     let direction = ee_units_uu_tile_direction(fx, fy, tx, ty);
-    h(O::FxNextTile, 0, &[cptr(&from), ptr(&mut tile), direction as i64]);
+    let [x, y] = &mut tile;
+    // SAFETY: the two outputs
+    unsafe { ee_units_uu_next_tile(fx as c_long, fy as c_long, direction as c_long, 1, x, y) };
     // SAFETY: out holds two int32_t
     unsafe {
         *out = tile[0] as i32;

@@ -1,6 +1,7 @@
 // C:\EEX\Empire Earth\Units\EEDoppelgangerManager.cpp (file name inferred: no __FILE__; the class name). The pools of
 // doppelgangers (what a player still sees of units he lost sight of) and their tiles: 0x201fd9..0x20360e (after
-// EEDoppelganger.cpp; EEGhostUnit.cpp follows). Unit flags: the exe's module set. vtable 0x446ed8; the pools'
+// EEDoppelganger.cpp; EEGhostUnit.cpp follows; units round 11: the manager's and EEDoppelganger's one-call bodies
+// are inline in their headers, EEDoppelganger.cpp is gone). Unit flags: the exe's module set. vtable 0x446ed8; the pools'
 // template members, EEDoppelganger's/EEComplexDoppelganger's ??_E (from the chunks' new[]) and the chunk ctors
 // close the unit in first-reference order.
 #include <windows.h>
@@ -42,106 +43,32 @@ EEDoppelgangerManager::~EEDoppelgangerManager()
 {
 }
 
-// Logs the stats of both doppelganger pools and frees them
-void EEDoppelgangerManager::Release()
-{
-    ee_units_dm_dop(EE_UNITS_DM_DG_DO_MANAGER_RELEASE, NULL, NULL, NULL, NULL);   // dm_dop.rs
-}
-
-// Reads one doppelganger from the saved game into a new pooled one and queues it for pointer repair;
-// skips an old-format record (minor version < 0xbd), returning NULL
-EEDoppelganger* EEDoppelgangerManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return reinterpret_cast<EEDoppelganger*>(static_cast<uintptr_t>(ee_units_dm_body(EE_UNITS_DM_DO_LOAD, &inFile, inMajorVersion, inMinorVersion, 0)));   // dm_body.rs
-}
-
-// Clears a doppelganger and returns it to its pool
-void EEDoppelgangerManager::Free(EEDoppelganger* inDoppelganger)
-{
-    ee_units_dm_body(EE_UNITS_DM_DO_FREE, inDoppelganger, 0, 0, 0);   // dm_body.rs
-}
-
-// Returns whether a tile holds the given player's doppelganger of a unit
-bool EEDoppelgangerManager::HasDoppelganger(const EETile* inTile, EEUnit* inUnit, long inPlayer)
-{
-    return ee_units_dm_body(EE_UNITS_DM_DO_HAS_OF_PLAYER, const_cast<EETile*>(inTile), (int64_t)(uintptr_t)inUnit, inPlayer, 0) != 0;   // dm_body.rs
-}
-
-// Returns whether a tile holds any player's doppelganger of a unit
-bool EEDoppelgangerManager::HasDoppelganger(const EETile* inTile, EEUnit* inUnit)
-{
-    return ee_units_dm_body(EE_UNITS_DM_DO_HAS, const_cast<EETile*>(inTile), (int64_t)(uintptr_t)inUnit, 0, 0) != 0;   // dm_body.rs
-}
-
-// Returns the given player's doppelganger of a unit on a tile, or NULL
-EEDoppelganger* EEDoppelgangerManager::GetDoppelganger(const EETile* inTile, EEUnit* inUnit, long inPlayer)
-{
-    return reinterpret_cast<EEDoppelganger*>(static_cast<uintptr_t>(ee_units_dm_body(EE_UNITS_DM_DO_GET, const_cast<EETile*>(inTile), (int64_t)(uintptr_t)inUnit, inPlayer, 0)));   // dm_body.rs
-}
-
-// Puts a doppelganger on every tile of its unit's square, for an airport also on the 3 runway squares ahead
-void EEDoppelgangerManager::AddToTiles(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIncludeRunways)
-{
-    ee_units_dm_body(EE_UNITS_DM_DO_ADD_TO_TILES, inDoppelganger, inX, inY, inIncludeRunways);   // dm_body.rs
-}
-
-// As a tile drops out of a player's sight, leaves him doppelgangers of the resources, ambients, fish and
-// built land buildings there (foundations only his own) that are wholly out of sight; all parts of a complex one
-void EEDoppelgangerManager::TileHidden(RTSTile* inTile, EEPlayer* inPlayer)
-{
-    ee_units_dm_body(EE_UNITS_DM_DO_TILE_HIDDEN, inTile, (int64_t)(uintptr_t)inPlayer, 0, 0);   // dm_body.rs
-}
-
-// Returns whether every tile under the unit (all parts of a complex one) is out of the player's sight;
-// false for a cloaked unit or one whose tech tree node is of kind 4
-bool EEDoppelgangerManager::IsOutOfSight(EEUnit* inUnit, EEPlayer* inPlayer)
-{
-    return ee_units_dm_body(EE_UNITS_DM_DO_IS_OUT_OF_SIGHT, inUnit, (int64_t)(uintptr_t)inPlayer, 0, 0) != 0;   // dm_body.rs
-}
-
-// Remembers a resource, ambient, fish or building its own player cannot see (when he keeps a visibility
-// map): clears his doppelgangers on its tile and adds a new one there and on the minimap
-void EEDoppelgangerManager::AddForUnseenUnit(EEComplexUnit* inUnit)
-{
-    ee_units_dm_body(EE_UNITS_DM_DO_ADD_FOR_UNSEEN, inUnit, 0, 0, 0);   // dm_body.rs
-}
-
 // Takes a new doppelganger from the complex or the simple pool
 EEDoppelganger* EEDoppelgangerManager::NewDoppelganger(bool inComplex)
 {
-    if (inComplex == false)
-        return this->mPool.New();
-    return this->mComplexPool.New();
+    return inComplex ? static_cast<EEDoppelganger*>(this->mComplexPool.New()) : this->mPool.New();
 }
 
-// As a tile comes into a player's sight, removes his doppelgangers on it from the map and minimap and frees them
-void EEDoppelgangerManager::TileShown(EETile* inTile, long inX, long inY, EEPlayer* inPlayer)
+// EEDoppelganger's bodies that read its unit, the unit's class or its owner (EEDoppelganger.cpp's; the others are
+// inline in ee/EEDoppelganger.h)
+EEModel* EEDoppelganger::GetModel()
 {
-    ee_units_dm_body(EE_UNITS_DM_DO_TILE_SHOWN, inTile, inX, inY, (int64_t)(uintptr_t)inPlayer);   // dm_body.rs
+    return this->GetPlayer()->mUnitClassUpgrades[this->mUnit->mUnitClass->mUnitType]->mModel;   // the owner's model of the class
 }
 
-// Removes and frees every doppelganger a player sees or owns the unit of, over the whole map
-void EEDoppelgangerManager::UnregisterPlayer(EEPlayer* inPlayer)
+float EEDoppelganger::GetScale()
 {
-    ee_units_dm_body(EE_UNITS_DM_DO_UNREGISTER_PLAYER, inPlayer, 0, 0, 0);   // dm_body.rs
+    return this->mUnit->mUnitClass->mScale;
 }
 
-// Takes a doppelganger off every tile of its unit's square, for an airport also off the 3 runway squares
-void EEDoppelgangerManager::RemoveFromTiles(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIncludeRunways)
+bool EEDoppelganger::GetIsValid()
 {
-    ee_units_dm_body(EE_UNITS_DM_DO_REMOVE_FROM_TILES, inDoppelganger, inX, inY, inIncludeRunways);   // dm_body.rs
+    return this->mUnit->mIsValid;
 }
 
-// Sets the simple doppelganger pool's chunk size and chunk limit; returns whether it succeeded
-bool EEDoppelgangerManager::SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
+EEPlayer* EEDoppelganger::GetPlayer()
 {
-    return this->mPool.SetSize(inChunkSize, inMaxChunks, 1);
-}
-
-// Sets the complex doppelganger pool's chunk size and chunk limit; returns whether it succeeded
-bool EEDoppelgangerManager::SetComplexPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
-{
-    return this->mComplexPool.SetSize(inChunkSize, inMaxChunks, 1);
+    return this->mUnit->mPlayer;
 }
 
 // Returns whether a terrain kind is land (not deep or shallow water, cliff or space)

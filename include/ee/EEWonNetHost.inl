@@ -1,4 +1,5 @@
 #include "rust/won_lobby/wonnet.h"
+#include "rust/won_net/certhost.h"
 #include "rust/won_net/reqdir.h"
 #include "rust/won_net/routeop.h"
 #include "rust/won_net/smartroute.h"
@@ -14,7 +15,7 @@
 static RefCount* Ref(void* inSlot) { return static_cast<RefCount*>(inSlot); }
 static SmartRoutingConnection* Routing(EeWonNetObjects* o) { return static_cast<SmartRoutingConnection*>(Ref(o->routing)); }
 static ServerContext* DirServers(EeWonNetObjects* o) { return static_cast<ServerContext*>(Ref(o->dir_servers)); }
-static GetCertOp* LoginOp(EeWonNetObjects* o) { return static_cast<GetCertOp*>(Ref(o->login_op)); }
+static RustServerOp* LoginOp(EeWonNetObjects* o) { return static_cast<RustServerOp*>(Ref(o->login_op)); }
 static RustServerOp* DirOp(EeWonNetObjects* o) { return static_cast<RustServerOp*>(Ref(o->dir_op)); }
 static RustServerOp* AccountOp(EeWonNetObjects* o) { return static_cast<RustServerOp*>(Ref(o->account_op)); }
 static DirList* Servers(EeWonNetObjects* o) { return static_cast<DirList*>(o->servers); }
@@ -69,7 +70,7 @@ static intptr_t WonNetHostCall(EEWonNet* w, EeWonNetOp inOp, intptr_t a, intptr_
     case Op::OpData: return DataOut(((RoutingOp*)(AsyncOp*)a)->GetData(), b);
     case Op::OpRecords: ee_won_routeop_records(((RoutingOp*)(AsyncOp*)a)->mRust, (int)b, ee_won_wonnet_record, (void*)c); return 0;
     case Op::OpSocketIsRouting: return ((SocketOp*)(AsyncOp*)a)->GetSocket() == Routing(o);
-    case Op::OpPeerSocketIsRouting: return ((PeerAuthOp*)(AsyncOp*)a)->GetSocket() == Routing(o);
+    case Op::OpPeerSocketIsRouting: return ((RustServerOp*)(AsyncOp*)a)->GetSocket() == Routing(o);
     case Op::OpOnRouting: return ((RoutingOp*)(AsyncOp*)a)->mConnection.get() == Routing(o);
     case Op::UserName: return WideOut(User(o)->GetName(), a);
     case Op::TextLoad: return TextOut((long)a, b);
@@ -136,9 +137,9 @@ static intptr_t WonNetHostCall(EEWonNet* w, EeWonNetOp inOp, intptr_t a, intptr_
     case Op::ReqSendChatTo: WonRequests(Routing(o)).SendChatTo((const wchar_t*)a, 4, std::list<unsigned short>((const unsigned short*)b, (const unsigned short*)b + c), NULL); return 0;
     case Op::KeyValid: return KeyValid();
     case Op::KeySave: CDKey(kWonProductName).SaveToRegistry(); return 0;
-    case Op::LoginOpNew: return (intptr_t)static_cast<RefCount*>(new GetCertOp(User(o)));
+    case Op::LoginOpNew: return (intptr_t)static_cast<RefCount*>(RustServerOp::NewGetCert(User(o)));
     case Op::LoginOpSetCompletion: LoginOp(o)->SetCompletion(Completion(a, false)); return 0;
-    case Op::LoginOpNoCreate: LoginOp(o)->SetCreateAccount(false); return 0;
+    case Op::LoginOpNoCreate: LoginOp(o)->SetNum(EE_WON_GETCERT_CREATE_ACCOUNT, false); return 0;
     case Op::LoginOpRun: LoginOp(o)->RunAsync(15000); return 0;
     case Op::LoginOpIs: return (AsyncOp*)a == (AsyncOp*)LoginOp(o);
     case Op::DirOpNew: return (intptr_t)static_cast<RefCount*>(RustServerOp::NewGetDir(DirServers(o), kWonProductDirectory, 0x703003a));

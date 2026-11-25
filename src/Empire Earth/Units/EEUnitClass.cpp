@@ -69,11 +69,8 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
 
-void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
-                              float& outPitch, float inFactor);
 
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
-static int64_t EEUcBits(float inValue);
 
 static const float kSoundDistanceFactor = 4.0f;  // 0x447ac4 (Virtual2C)
 static const float kMaxLineOfSight = 32.0f;      // 0x447ac8 (the ctor: the largest line of sight)
@@ -97,10 +94,7 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     ee_units_uc_class(EE_UNITS_UC_DO_CONSTRUCT, this, inRecord, inIsComplex, inPhysicsModel);   // uc_class.rs
 }
 
-// the class's effects as GetEffects' array (the members are contiguous: 29 pointers from mAttachedEffect)
-static const long kUnitClassEffectCount = 29;
-static_assert(offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect)
-                  == (kUnitClassEffectCount - 1) * sizeof(EEGraphicEffect*), "the class's effects are one array");
+// (the effects are contiguous, GetEffects' array: EeUnitsUnitClassLinks, its Rust test)
 
 // Destroys the unit class, releasing its graphic effects and its projectile, scaffolding, death and remains classes
 EEUnitClass::~EEUnitClass()
@@ -117,13 +111,7 @@ EEUnitClass::~EEUnitClass()
 // (EEIsLineToUnitBlocked: a friendly blocker only flashes, an enemy one takes the hit, open ground gets a puff); a
 // projectile class launches by its turret parts; the capital ships' special attack (0x2da/0x33c) fires from the last
 // tag point
-void EEUnitClass::FireShot(EEComplexUnit* inUnit)
-{
-    // ee_combat world.rs fire_shot: the plan's operations on the world host (EECombatGoals.cpp: the drop point, the
-    // line, the hit, the launch and the effects stay C++ behind them); CBXA records the outcome
-    EECombatWorld(EE_COMBAT_WORLD_FIRE_SHOT, inUnit, NULL, this);
-    EECombatCaptureXAction(EE_COMBAT_XA_FIRE_SHOT, inUnit, EECombatShotTarget(inUnit), 0);
-}
+// (FireShot and its CBXA record: ee_sim units ucn_noted.rs, inline in ee/EEUnit.h)
 
 // Returns the high-ground damage factor of a land attacker (or a projectile's launcher) on a land unit or building
 // Fills the AI's per-tile-kind passability flags for the unit or class (an air unit passes everything)
@@ -139,10 +127,6 @@ void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 // queues it in the player's pending units
 // Creates a unit of the class for a player at a map point with a heading, grounded when a map is given, and queues it
 // in the player's pending units
-EEUnit* EEUnitClass::CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY, EEMap* inMap, float inHeading)
-{
-    return (EEUnit*)ee_units_uc_create_at(this, inPlayer, inX, inY, UMFloorUnsigned(inX), UMFloorUnsigned(inY), inMap, inHeading);   // uc_create.rs
-}
 
 // Creates a unit of the class at a transformation for a player and adds it to the world (an airport gets its runways)
 // Creates a unit of the class at a tile for a player (yaw pi) and adds it to the world (an airport gets its runways)
@@ -156,38 +140,12 @@ void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool 
 // Releases every unit class in the class table
 // Returns the unit a projectile hits: its attack target first, then the units of its region in storage order (walls,
 // enemies); a hit on a non-target wall makes the launcher fire high
-EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
-{
-    EECombatHostReadScope theScope;
-    // ee_combat reads.rs impact_unit over the C++ host (EECombatGoals.cpp); CBQR records the outcome
-    EEUnit* theFound = EECombatFindImpactUnit(inUnit);
-    if (theScope.mOuter) {
-        EEUGRust* theGoal = EEAttackUnitCast(inUnit->mGoalState);
-        EECombatCaptureHostRead(EE_COMBAT_HR_IMPACT_UNIT, inUnit, theGoal != NULL ? theGoal->GetAttackTarget() : NULL, theFound != NULL,
-                                theFound != NULL ? (uint32_t)theFound->mUnitID : 0,
-                                inUnit->mOwner != NULL ? (uint32_t)inUnit->mOwner->mIsFiringHigh : 0xffffffffu);
-    }
-    return theFound;
-}
+// (FindImpactUnit and its CBQR record: ee_sim units ucn_noted.rs, inline in ee/EEUnit.h)
 
 // Returns whether the unit faces the target unit (or its tile's centre)
 // Returns whether the unit (or its turrets) faces a point within its firing arc or the fixed tolerance; broadside
 // ships also count the opposite side
-bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
-{
-    EECombatHostReadScope theScope;
-    // ee_combat reads.rs faces_point (with TurretsFacePoint) over the plain reads; CBQR records the outcome
-    bool theFaces = EECombatFacesPoint(this, inUnit, inLocation, inUseTolerance);
-    if (theScope.mOuter) {
-        float theX = inLocation.GetX();
-        float theY = inLocation.GetY();
-        uint32_t theBits[2];
-        memcpy(&theBits[0], &theX, 4);
-        memcpy(&theBits[1], &theY, 4);
-        EECombatCaptureHostRead(EE_COMBAT_HR_FACES_POINT, inUnit, NULL, theFaces, theBits[0], theBits[1], inUseTolerance);
-    }
-    return theFaces;
-}
+// (FacesPoint and its CBQR record: ucn_noted.rs, inline in ee/EEUnit.h)
 
 // Starts a unit's death: spawns the death class, plays the death effect and sound (not for ICBMs), the dying animation,
 // and makes it uncommandable
@@ -204,10 +162,6 @@ void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
 // Plays the class's ripple effect at the model's ripple tag points that are under water, when the player sees the unit
 // Lists the ring of tiles around the unit's footprint (optionally with corners, appending or replacing)
 // Finds a unit within range (default: line of sight) that the unit can heal and reach; returns whether one was found
-bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** outTarget)
-{
-    return ee_units_uc_rest(EE_UNITS_UC_DO_R_FIND_TARGET_NEAR, this, inUnit, 0, EEUcBits(inRange), (int64_t)EEObj(outTarget), NULL) != 0;   // uc_rest.rs
-}
 
 // Returns a land continent beside the unit (the target's, when given); with no match, the last continent examined
 // Lists every unit class whose unit type is in a unit set
@@ -426,13 +380,7 @@ bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
 }
 
 // Turns an attacked unit on its attacker (or to its location when unseen) and calls idle nearby soldiers to help
-void EEUnitClass::Attacked(EEComplexUnit* inUnit)
-{
-    uint32_t theBefore = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;   // TEST ONLY
-    // ee_combat world.rs attacked: the plan's operations on the world host (EECombatGoals.cpp); CBXA records the outcome
-    EECombatWorld(EE_COMBAT_WORLD_ATTACKED, inUnit, NULL, this);
-    EECombatCaptureXAction(EE_COMBAT_XA_ATTACKED, inUnit, NULL, theBefore);
-}
+// (Attacked and its CBXA record: ucn_noted.rs, inline in ee/EEUnit.h)
 
 // Creates the class's remains unit for the dead unit's player at a free spot near where it died
 // Spawns the class's death unit where the unit (or its container) was and launches it at that ground point
@@ -449,63 +397,28 @@ void EEUnitClass::Attacked(EEComplexUnit* inUnit)
 // Advances a unit's animation by this tick, plays the frame sounds and returns the number of frames stepped
 // Counts down a unit's trail timer and creates the class's trail effect each time it runs out
 // Creates ripples behind a unit on water at a rate that grows with its speed
-// Returns one over the unit's top speed, its active group's when it moves in one
-float EEComplexUnit::GetInverseMaxVelocity()
-{
-    return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_INVERSE_MAX_VELOCITY, NULL, this, 0, 0.0f, 0.0f, 0.0f);   // uc_rest.rs
-}
-
 // Ticks a building: finishes its production countdown (a unit, retried in 5 seconds when it cannot be placed,
 // or a technology), then its orbitals, camouflage, effects, rotting, production queue and garrison healing
 // EEUCBuilding::Update; production is instant under the player's mInstantBuild
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
 // Ticks an animal: physics, effects, timers and animation; fires on attack frames and lets its carcass rot
-// Sets or clears the unit's camouflaged flag (the top bit of its camouflage timer)
-void EEComplexUnit::SetCamouflaged(bool inValue)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_SET_CAMOUFLAGED, NULL, this, 0, inValue, 0, NULL);   // uc_rest.rs
-}
-
 extern GEViewport gViewport;
 extern bool& gOrthographicView;
 
 // Updates the volume, pan and pitch of a unit's animation sound every third tick (off-screen every 21st)
 // Heals the living units garrisoned in a living unit by its healing points each second
-void EEUnitClass::UpdateDone(class EEComplexUnit *)
-{
-}
 
 // Runs the default handling of the unit's new AI-script action (animation, goals, herd, flight, healing, death,
 // rotting), then restarts the current goal's timer
-void EEUnitClass::HandleActionChanged(EEComplexUnit* inUnit)
-{
-    EEUnitClassActionChanged(EE_UNITS_ACTION_BASE, this, inUnit);
-}
 
-void EEUnitClass::Virtual50(unsigned long)
-{
-}
 
-// a location's X, Y and Z into a body's floats
-static void EEUcLocationOut(const GETransformation& inLocation, float* outFloats)
-{
-    outFloats[0] = inLocation.GetX();
-    outFloats[1] = inLocation.GetY();
-    outFloats[2] = inLocation.GetZ();
-}
 
 // ProduceUnit's tile line (EE_UNITS_UC_LINE_RESET, EE_UNITS_UC_TILE_LINE and its reads)
 static std::vector<EETileCoordinate> sUcLine;
 static std::vector<EETileCoordinate> sUcTiles9;   // GetContainerContinent's tiles (a local of the original)
 
 // a float's bits as a uc_produce.rs answer
-static int64_t EEUcBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, sizeof(theBits));
-    return theBits;
-}
 
 // ProduceUnit's ship and flier: outAdjusted = the unit's location at the placement's yaw (no pitch or roll), set
 static void EEUcAlignYaw(EEComplexUnit* inUnit, GETransformation& inPlacement, GETransformation& outAdjusted)
@@ -533,8 +446,9 @@ static EeCombatTimerOut sUcTimer;
 static EeCombatHealOut sUcHeal;
 static EeCombatRegenerateOut sUcRegen;
 // the related classes by uc_media.rs's index (the dtor's order)
-static EEUnitClass* EEUnitClass::* const kUcRelated[6] = {&EEUnitClass::mProjectileClass, &EEUnitClass::mScaffoldingClass,
-    &EEUnitClass::mDeathClass, &EEUnitClass::mDeathSpawnClass, &EEUnitClass::mPackedClass, &EEUnitClass::mRemainsClass};
+// (the related classes' and effects' members and the record's ids in the constructor's order: Rust's,
+// ee_sim world unit_class_fields.rs effect_slot, related_slot, record_effect, record_related)
+#define UC_LINKS(inClass) static_cast<EeUnitsUnitClassLinks*>(inClass)
 
 template <class T> static T* EEUcObject(uint64_t inHandle)
 {
@@ -542,28 +456,6 @@ template <class T> static T* EEUcObject(uint64_t inHandle)
 }
 
 // the constructor's effects: the record's ids and the class's members, in the original's order (uc_class.rs)
-static int32_t EEUnitClassRecord::* const kUcEffectIds[29] = {&EEUnitClassRecord::mDeathEffect, &EEUnitClassRecord::mDamageEffect,
-    &EEUnitClassRecord::mHealEffect, &EEUnitClassRecord::mUnusedFireTrailEffect, &EEUnitClassRecord::mTrailEffect,
-    &EEUnitClassRecord::mMuzzleFlashEffect, &EEUnitClassRecord::mRippleEffect, &EEUnitClassRecord::mSplashEffect,
-    &EEUnitClassRecord::mImpactSparksEffect, &EEUnitClassRecord::mImpactBloodEffect, &EEUnitClassRecord::mAttachedEffect,
-    &EEUnitClassRecord::mUnusedEffect1, &EEUnitClassRecord::mCreationEffect, &EEUnitClassRecord::mUnusedEffect2,
-    &EEUnitClassRecord::mUnusedEffect3, &EEUnitClassRecord::mUnusedEffect4, &EEUnitClassRecord::mUnusedEffect5,
-    &EEUnitClassRecord::mUnusedEffect6, &EEUnitClassRecord::mSpecialAttackEffect, &EEUnitClassRecord::mUnusedEffect7,
-    &EEUnitClassRecord::mShotEffect, &EEUnitClassRecord::mLeprosyEffect, &EEUnitClassRecord::mPlagueEffect,
-    &EEUnitClassRecord::mPulseCannonEffect, &EEUnitClassRecord::mMoraleEffect, &EEUnitClassRecord::mBattleCryEffect,
-    &EEUnitClassRecord::mShellHoleEffect, &EEUnitClassRecord::mUnusedEffect8, &EEUnitClassRecord::mBloodStainEffect};
-static EEGraphicEffect* EEUnitClass::* const kUcEffects[29] = {&EEUnitClass::mDeathEffect, &EEUnitClass::mDamageEffect,
-    &EEUnitClass::mHealEffect, &EEUnitClass::mFireTrailEffect, &EEUnitClass::mTrailEffect, &EEUnitClass::mMuzzleFlashEffect,
-    &EEUnitClass::mRippleEffect, &EEUnitClass::mSplashEffect, &EEUnitClass::mImpactSparksEffect, &EEUnitClass::mImpactBloodEffect,
-    &EEUnitClass::mAttachedEffect, &EEUnitClass::mEffect090, &EEUnitClass::mCreationEffect, &EEUnitClass::mEffect098,
-    &EEUnitClass::mEffect09C, &EEUnitClass::mEffect0A0, &EEUnitClass::mEffect0A4, &EEUnitClass::mEffect0A8,
-    &EEUnitClass::mSpecialAttackEffect, &EEUnitClass::mEffect0B0, &EEUnitClass::mShotEffect, &EEUnitClass::mLeprosyEffect,
-    &EEUnitClass::mPlagueEffect, &EEUnitClass::mPulseCannonEffect, &EEUnitClass::mMoraleEffect, &EEUnitClass::mBattleCryEffect,
-    &EEUnitClass::mShellHoleEffect, &EEUnitClass::mEffect0D0, &EEUnitClass::mBloodStainEffect};
-// the record's related types (kUcRelated's order)
-static int32_t EEUnitClassRecord::* const kUcRelatedTypes[6] = {&EEUnitClassRecord::mProjectileType,
-    &EEUnitClassRecord::mScaffoldingType, &EEUnitClassRecord::mDeathType, &EEUnitClassRecord::mDeathSpawnType,
-    &EEUnitClassRecord::mPackedType, &EEUnitClassRecord::mRemainsType};
 // CreateUnitClasses' dbobjects file
 static FSFileSpec* sUcDbFile;
 
@@ -610,11 +502,11 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_NUM_RESEARCH: return theClass->GetNumResearchTechnologies();
     case EE_UNITS_UC_RESEARCH_TECH_NODE: return EEObj(gTechTree.Get(theClass->mResearchTechnologies[(size_t)inB]));
     case EE_UNITS_UC_SET_IMPROVEMENTS:
-        theClass->mImprovements = reinterpret_cast<EEUnitClassImprovementTable*>(EEUCUpgradeTable::sTable[static_cast<EEUnitClassRecord*>(inUnit)->mUpgradeTableIndex]);
+        theClass->mImprovements = EEUCUpgradeTable::sTable[static_cast<EEUnitClassRecord*>(inUnit)->mUpgradeTableIndex];
         return 0;
-    case EE_UNITS_UC_RECORD_EFFECT: return EEObj(EEGraphicEffect::Get(static_cast<EEUnitClassRecord*>(inUnit)->*kUcEffectIds[inB]));
+    case EE_UNITS_UC_RECORD_EFFECT: return EEObj(EEGraphicEffect::Get(ee_units_uc_record_effect(static_cast<EEUnitClassRecord*>(inUnit), (int32_t)inB)));
     case EE_UNITS_UC_EFFECT_REFERENCE: EEUcObject<EEGraphicEffect>(inA)->Reference(); return 0;
-    case EE_UNITS_UC_SET_EFFECT: theClass->*kUcEffects[inB] = EEUcObject<EEGraphicEffect>(inA); return 0;
+    case EE_UNITS_UC_SET_EFFECT: *ee_units_uc_effect_slot(UC_LINKS(theClass), (int32_t)inB) = EEUcObject<EEGraphicEffect>(inA); return 0;
     case EE_UNITS_UC_SCRIPT_NAME_LENGTH: return theClass->mAIScriptName.GetLength();
     case EE_UNITS_UC_SET_AI_SCRIPT: theClass->mAIScript = EEUnitAction::GetScript(theClass->mAIScriptName); return 0;
     case EE_UNITS_UC_AI_SCRIPT: return EEObj(theClass->mAIScript);
@@ -634,9 +526,9 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_TABLE_ASSIGN: gUnitClassTable.assign((size_t)inB, NULL); return 0;
     case EE_UNITS_UC_NEW_CLASS: return EEObj(new EEUnitClass(inB >= 0, EEUcObject<EEUnitClassRecord>(inA), inB >= 0 ? gPhysicsModels[inB] : NULL));
     case EE_UNITS_UC_REGISTER_CLASS: EEUnitClass::RegisterUnitClass(EEUcObject<EEUnitClass>(inA)); return 0;
-    case EE_UNITS_UC_RECORD_RELATED: return EEUcObject<EEUnitClassRecord>(inA)->*kUcRelatedTypes[inB];
-    case EE_UNITS_UC_SET_RELATED: EEUcObject<EEUnitClass>(inA)->*kUcRelated[inB] = gUnitClassTable[(size_t)inC]; return 0;
-    case EE_UNITS_UC_REFERENCE_RELATED: (EEUcObject<EEUnitClass>(inA)->*kUcRelated[inB])->Reference(); return 0;
+    case EE_UNITS_UC_RECORD_RELATED: return ee_units_uc_record_related(EEUcObject<EEUnitClassRecord>(inA), (int32_t)inB);
+    case EE_UNITS_UC_SET_RELATED: *ee_units_uc_related_slot(UC_LINKS(EEUcObject<EEUnitClass>(inA)), (int32_t)inB) = gUnitClassTable[(size_t)inC]; return 0;
+    case EE_UNITS_UC_REFERENCE_RELATED: (*ee_units_uc_related_slot(UC_LINKS(EEUcObject<EEUnitClass>(inA)), (int32_t)inB))->Reference(); return 0;
     case EE_UNITS_UC_SET_IS_WALL: EEUcObject<EEUnitClass>(inA)->mIsWall = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 9); return 0;
     case EE_UNITS_UC_SET_IS_CYBER: EEUcObject<EEUnitClass>(inA)->mIsCyber = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x38); return 0;
     case EE_UNITS_UC_SET_IS_HORSE: EEUcObject<EEUnitClass>(inA)->mIsHorse = gUnitSetManager.Contains(EEUcObject<EEUnitClass>(inA)->mUnitType, 0x6e); return 0;
@@ -695,7 +587,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_R_LINE_OF_SIGHT: f[0] = theUnit->GetLineOfSight(); return 0;
     case EE_UNITS_UC_R_GATHER_RESOURCE: return EEObj(static_cast<EEUGRust*>(EEUcObject<EEUnitGoal>(inA))->GetGatherResource());
     case EE_UNITS_UC_R_CAN_GET_TO_UNIT: return gContinentManager.CanGetToUnit(EEUcObject<EEUnit>(inA), theUnit);
-    case EE_UNITS_UC_R_FIND_RESOURCE_OF_KIND: return EEObj(theClass->FindResourceOfKind(theUnit, EEUcObject<EEUnit>(inA), EEUcObject<EEUnit>((uint64_t)inB), (long)(int32_t)EEUcBits(f[0]), (unsigned long)EEUcBits(f[1]), EEUcObject<std::vector<EEUnit*> >((uint64_t)inC), true));
+    case EE_UNITS_UC_R_FIND_RESOURCE_OF_KIND: return EEObj(theClass->FindResourceOfKind(theUnit, EEUcObject<EEUnit>(inA), EEUcObject<EEUnit>((uint64_t)inB), (long)(int32_t)UFloatBits(f[0]), (unsigned long)UFloatBits(f[1]), EEUcObject<std::vector<EEUnit*> >((uint64_t)inC), true));
     case EE_UNITS_UC_R_FIND_DROP_LOCATION: EECombatFindDropLocation(theUnit, NULL, *reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UC_R_GOAL_DESTINATION: EEUcObject<EEUnitGoal>(inA)->GetDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
     case EE_UNITS_UC_R_PRIEST_DESTINATION: EEGetHelicopterPriestDestination(theUnit, *reinterpret_cast<GE3DPoint*>(f)); return 0;
@@ -815,7 +707,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_LINE_LEN: return (long)sUcLine.size();
     case EE_UNITS_UC_LINE_X: return sUcLine[(size_t)inB].mX;
     case EE_UNITS_UC_LINE_Y: return sUcLine[(size_t)inB].mY;
-    case EE_UNITS_UC_OUTER_SPHERE: return EEUcBits(theOther->GetUnitClass()->mOuterCollisionSphere);
+    case EE_UNITS_UC_OUTER_SPHERE: return UFloatBits(theOther->GetUnitClass()->mOuterCollisionSphere);
     case EE_UNITS_UC_UNIT_CATEGORY: return theOther->GetUnitClass()->GetCategory();
     case EE_UNITS_UC_CAN_GATHER:
         return theOther->CanGather(EEUcObject<EEUnit>((uint64_t)inB), EEUcObject<EEUnit>((uint64_t)inB)->GetTileX(),
@@ -885,7 +777,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_DEATH_SPAWN_CLASS: return (uint64_t)(uintptr_t)theClass->mDeathSpawnClass;
     case EE_UNITS_UC_CONTAINER: return (uint64_t)(uintptr_t)theUnit->mContainer;
     case EE_UNITS_UC_LOCATION:
-        EEUcLocationOut(theOther->mPhysicalModel.GetLocation(), f);
+        *reinterpret_cast<GE3DPoint*>(f) = GE3DPoint(theOther->mPhysicalModel.GetLocation().GetX(), theOther->mPhysicalModel.GetLocation().GetY(), theOther->mPhysicalModel.GetLocation().GetZ());
         return 0;
     case EE_UNITS_UC_UNIT_TILE_X: return theOther->GetTileX();
     case EE_UNITS_UC_UNIT_TILE_Y: return theOther->GetTileY();
@@ -1188,7 +1080,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_UNLOAD_CLASS_MEDIA: EEUcObject<EEPlayer>(inA)->UnloadUnitClassMedia((long)inB); return 0;
     case EE_UNITS_UC_EFFECT_LOAD_ID: EEGraphicEffect::Get((long)inB)->Load(false); return 0;
     case EE_UNITS_UC_EFFECT_UNLOAD_ID: EEGraphicEffect::Get((long)inB)->Unload(); return 0;
-    case EE_UNITS_UC_RELATED_CLASS: return EEObj(theClass->*kUcRelated[inB]);
+    case EE_UNITS_UC_RELATED_CLASS: return EEObj(*ee_units_uc_related_slot(UC_LINKS(theClass), (int32_t)inB));
     case EE_UNITS_UC_CLASS_TYPE_FIELD: return EEUcObject<EEUnitClass>(inA)->mUnitType;
     case EE_UNITS_UC_EFFECT_AT: return EEObj(theClass->GetEffects()[inB]);
     case EE_UNITS_UC_EFFECT_LOAD: EEUcObject<EEGraphicEffect>(inA)->Load(false); return 0;
@@ -1197,7 +1089,7 @@ extern "C" int64_t ee_units_uc_host(int32_t inOp, void* inClass, void* inUnit, u
     case EE_UNITS_UC_SET_MEDIA_LOADED: theClass->mIsMediaLoaded = inB != 0; return 0;
     case EE_UNITS_UC_CLEAR_AI_SCRIPT: theClass->mAIScript = NULL; return 0;
     case EE_UNITS_UC_CLASS_DEREFERENCE: EEUcObject<EEUnitClass>(inA)->Dereference(); return 0;
-    case EE_UNITS_UC_CLEAR_RELATED: theClass->*kUcRelated[inB] = NULL; return 0;
+    case EE_UNITS_UC_CLEAR_RELATED: *ee_units_uc_related_slot(UC_LINKS(theClass), (int32_t)inB) = NULL; return 0;
     }
     return 0;
 }

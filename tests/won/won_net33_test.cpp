@@ -494,14 +494,14 @@ static void ServerOpPhase(int inCases)
                     ee_won_hostop_base(op->GetRustOp(), EE_WON_HOSTBASE_AUTH_TYPE, type, NULL);
                     ee_won_hostop_base(op->GetRustOp(), EE_WON_HOSTBASE_AUTH_CONTEXT, 0, static_cast<RefCount*>(auth));
                     if (!Mutate(9)) op->SetSocket(nullContext ? NULL : s.mSocket);
-                } else op = new PeerAuthOp(anAddr, auth, type, nullContext ? NULL : s.mSocket, useKey);
+                } else op = RustServerOp::NewPeerAuth(anAddr, auth, type, nullContext ? NULL : s.mSocket, useKey);
                 break;
             case 7: // PeerAuthServerOp's constructor
                 if (orig) {
                     op = new RustServerOp(ee_won_hostop_peerauth_server());
                     op->SetAuthType(AUTH_TYPE_NONE, auth);
                     op->SetSocket(nullContext ? NULL : s.mSocket);
-                } else op = new PeerAuthServerOp(auth, nullContext ? NULL : s.mSocket);
+                } else op = RustServerOp::NewPeerAuthServer(auth, nullContext ? NULL : s.mSocket);
                 break;
             case 8: // DetectFirewallOp's constructor (R6 WON lobby and network round 35: RustServerOp::NewFirewall)
                 if (orig) {
@@ -514,7 +514,7 @@ static void ServerOpPhase(int inCases)
                     op = new RustServerOp(ee_won_hostop_getcert());
                     op->Set(EE_WON_REQHOST_CONTEXT, Mutate(10) ? static_cast<RefCount*>(s.mContext) : s.mAuth->GetServerContext().get());
                     op->Set(EE_WON_GETCERT_AUTH_CONTEXT, s.mAuth);
-                } else op = new GetCertOp(s.mAuth);
+                } else op = RustServerOp::NewGetCert(s.mAuth);
                 break;
             }
             op->AddRef();
@@ -590,7 +590,7 @@ static void RoutingPhase(int inCases)
                 u->SetUDPManager(aManager);
                 u->SetNumRetransmits(Mutate(12) ? 2 : 3);
                 u->SetMsgTimeout(1000);
-            } else u = new RoutingGetUserStatusOp(anAddr, aManager);
+            } else u = new UDPManagerSendRecvOp(ee_won_userstatus_body(), anAddr, aManager);
             u->AddRef();
             st += " status " + u->GetDestAddr().GetHostAndPortString() + " " + N(u->GetNumRetransmits()) + " " +
                   N(u->GetMsgTimeout()) + " " + N(ee_won_udpsendrecvop_manager(u->GetUdpObject()) == static_cast<RefCount*>(aManager));
