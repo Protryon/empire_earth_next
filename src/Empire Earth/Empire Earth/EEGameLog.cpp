@@ -60,6 +60,7 @@
 #include "ee/EECheatCodes.h"
 #include "ee/EECivilizationManager.h"
 #include <utility>
+#include "ee/EEGameLog.h"
 
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
 extern bool& gInCinematic;

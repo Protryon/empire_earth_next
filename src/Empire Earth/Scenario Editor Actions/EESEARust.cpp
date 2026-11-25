@@ -41,6 +41,7 @@
 #include "ee/EESERBUnitTypes.h"   // gMaxPlayers
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
+#include "ee/EEUIShell.h"
 
 // ------------------------------------------------------------------------------------------------ the classes' parts
 // The editor kinds' C++ (ee/EEARust.h): the load text's post from the load thread (the trigger tab's object

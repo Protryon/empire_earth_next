@@ -7,14 +7,13 @@
 #include <stdlib.h>
 #include <set>
 #include <algorithm>
-
 #include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
+#include "lle/UITextLabel.h"
 #include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
-
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECampaignFormManager.h"
@@ -22,7 +21,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EECivilizationBuilder.h"
-
 #include <memory>
 #include "ee/EEStringIDs.h"
 #include "lle/FSRestorable.h"
@@ -31,6 +29,9 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMEffect.h"
 #include "ee/EEPersistentTemplates.h"
+
+
+
 
 // UString globals used before their definitions (gU5656B8/gU5656C8 are defined at the end of this file, gU530B88 in
 // Empire Earth.cpp); no class/static/const owner is claimed (provisional names)

@@ -4,13 +4,10 @@
 #include <windows.h>
 #include <vector>
 #include <stdlib.h>
-
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/Input System.h"
-#include "lle/GEScreen.h"
 #include "lle/GERhombus.h"
-
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -30,6 +27,7 @@
 #include "ee/EEUIFMainGame.h"
 #include "lle/USingleton.h"
 #include "lle/UResourceFile.h"
+#include "lle/GETerrainMesh.h"
 #include "lle/NESynchronousClient.h"
 #include "ee/EEClient.h"
 #include "ee/EECalamityManager.h"
@@ -44,6 +42,8 @@
 #include "ee/EEMessageCapture.h"
 #include <functional>
 #include "ee/EEGameLog.h"
+
+
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 

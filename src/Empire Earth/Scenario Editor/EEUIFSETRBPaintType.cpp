@@ -34,6 +34,7 @@
 
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
+#include "lle/UICheckBox.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
 // moved to EEUIFSETerrain.cpp (one translation unit; its UIListBox<vector<GEColor> > /
 // UIListBox<EESEUITTData> COMDATs are what that file compiles).

@@ -27,6 +27,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EESaveGameFiles.h"
+#include "ee/EEPlayer.h"
 
 
 // Destroys the functor, releasing the fire's burning effect

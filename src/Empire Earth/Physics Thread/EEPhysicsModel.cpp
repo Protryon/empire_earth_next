@@ -29,6 +29,7 @@
 #include "ee/EEPhysicsModel.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEGraphicEffect.h"
+#include "ee/EEUnitClassKinds.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 

@@ -27,6 +27,7 @@
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EECPASGFlags.h"
+#include "ee/EEEffectManager.h"
 
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)

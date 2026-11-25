@@ -8,7 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
 #include "lle/UIEntityGroup.h"
-#include "lle/UIForm.h"
+#include "lle/UITextLabel.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"

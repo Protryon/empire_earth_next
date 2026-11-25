@@ -10,9 +10,7 @@
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/UIForm.h"
-
-
+#include "lle/UITextLabel.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
@@ -32,14 +30,16 @@
 #include "ee/EESELoadThread.h"
 #include "lle/UITriStateCheckBox.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EECivilizationManager.h"
+#include "ee/EEComputerPlayer.h"
+#include "ee/EEScreenEvent.h"
+
+
 
 // the diplomacy buttons' shared bitmaps (once EESEUIBDiplomacy's statics 0x531fc0/0x531fc8/0x531fd0): normal,
 // focused, pressed, each for allies (0) and enemies (1)
 static GEBitmap* sSeplDiplomacy[3][2];
 
-#include "ee/EECivilizationManager.h"
-#include "ee/EEComputerPlayer.h"
-#include "ee/EEScreenEvent.h"
 extern FSPath* gCivilizationDataPath;
 UString gSECivilizationExtension(".civ");   // (once EESESCComboBox.cpp's unit global)
 // the player tab's techs by kind (once EESEPSSetPlayers' four class statics: units, buildings, heroes, technologies)

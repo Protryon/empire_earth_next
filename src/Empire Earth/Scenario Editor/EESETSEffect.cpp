@@ -11,9 +11,7 @@
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
-#include "lle/UIForm.h"
-
-
+#include "lle/UITextLabel.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
@@ -36,6 +34,8 @@
 #include "ee/EEUnit.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EEScreenEvent.h"
+
+
 // The screen is whole in Rust (ee_screens editor_subscreens.rs) with its seven effect types (editor_effects.rs): the
 // constructor (0x582629), the destructor (0x5829a4), ChangeEffectAction (0x582a3b), ChangeEffectType (0x582a69),
 // Sort, MoveDown, MoveUp, Delete, Duplicate, Activate (0x582b22), Store (0x582b96), GetNames, Load (0x582c55), New,

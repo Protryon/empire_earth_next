@@ -6,10 +6,11 @@
 #include <windows.h>
 #include <stdio.h>
 #include <vector>
-
 #include "lle/LowLevelEngine.h"
-
+#include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
+
+
 
 // The tables (sEffects 0x4e8420, the 0x48 per-kind media vectors 0x4e7f98, the id set 0x4e7f88: the unit's three
 // init chains) and the loads are ee_gfx geffect_table.rs'

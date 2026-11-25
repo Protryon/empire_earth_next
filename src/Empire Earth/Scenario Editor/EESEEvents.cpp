@@ -12,10 +12,6 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GERhombus.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
 
 #include "lle/UITriStateCheckBox.h"
 
@@ -27,6 +23,8 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUserInterface.h"
+#include "ee/EEUIShell.h"
+#include "ee/EESEARust.h"
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSEffect.cpp
 
 // ---- the host of the editor's events (ee_screens scenario_editor.rs): inForm is the scenario editor's form,

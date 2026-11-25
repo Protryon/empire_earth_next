@@ -3,6 +3,7 @@
 // and the ??_G of its events, with the functions of EEABuild.cpp folded in. Unit flags: the exe module set.
 #include <windows.h>
 #include <string>
+#include "ee/EEARust.h"
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"

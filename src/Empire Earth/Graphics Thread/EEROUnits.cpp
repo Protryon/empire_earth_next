@@ -6,24 +6,23 @@
 // colour constants are ee_gfx ro_units.rs's (RUST_PLAN R4.4): the C++ hands the frame's render lists over as records
 // and keeps the bar rhombi and the line batch (LoadMedia 0x516a97's asserts carry their original __LINE__ 1823/1824).
 #include <windows.h>
-
 #include <vector>
-
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GERasterizer.h"
 #include "lle/UIForm.h"
-
+#include "lle/UIManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMap.h"
+#include "ee/EEPlayer.h"
 #include "ee/EEGraphics.h"
+#include "ee/EERenderObject.h"
 #include "ee/EERenderLists.h"
+#include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "lle/GESurface.h"
-#include "ee/EEUnit.h"
+#include "ee/EEUIFScenarioEditor.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
@@ -32,6 +31,9 @@
 #include "ee/EEROTerrain.h"
 #include "ee/EEROUserInterface.h"
 #include <utility>
+
+
+
 
 extern bool& gShowCollisionSpheres;          // 0x5318dc (the units' collision spheres are drawn; provisional name)
 extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpolated; provisional name)

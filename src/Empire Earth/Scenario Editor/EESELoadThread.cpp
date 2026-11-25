@@ -26,6 +26,7 @@
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEScenarioManager.h"
+#include "ee/EESEARust.h"
 
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)

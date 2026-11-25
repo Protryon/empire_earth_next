@@ -45,6 +45,7 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x21
 // The upgrade panel is a real 0x60-byte class (new at 0x59b976 in the tab's ctor); both its ctor counters
 // are mutable
 #include "ee/EEStringIDs.h"
+#include "ee/EEGraphics.h"
 
 
 

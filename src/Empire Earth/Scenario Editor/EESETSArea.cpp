@@ -30,6 +30,7 @@
 #include "ee/EEMouse.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESMArea.h"
+#include "ee/EESEARust.h"
 
 
 // Sets the map rectangle the editor highlights

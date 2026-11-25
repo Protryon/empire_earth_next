@@ -8,8 +8,7 @@
 // Unit flags: the exe's module set.
 #include <windows.h>
 
-#include "lle/LowLevelEngine.h"
-#include "lle/GETerrainMesh.h"
+#include "lle/GEColor.h"
 
 
 // the brush highlight colour (0x5293e8), the grid runs of the frame (0x5290a0) and the area-effect textures
