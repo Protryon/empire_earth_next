@@ -220,10 +220,42 @@ pub unsafe extern "C" fn ee_gamecpp_session(
     player: *const c_void,
     version: *const c_void,
 ) -> i64 {
-    let frame = hp(O::C11FrameNew, 0, &[comms as i64, server as i64, player as i64, version as i64]);
-    let r = ee_netmsg_session(session_host, frame as *mut c_void, server, what, a, b, c, d);
-    h(O::C11FrameDelete, frame, &[]);
+    let registers = [hp(O::C11PlayerNew, 0, &[]), hp(O::C11PlayerNew, 0, &[])];
+    let mut frame =
+        Frame { comms: comms as P, server, registers, player: player as P, version: version as P, protocol: 0 };
+    let r = ee_netmsg_session(session_host, &mut frame as *mut Frame as *mut c_void, server, what, a, b, c, d);
+    for register in registers {
+        h(O::C11PlayerDelete, register, &[]);
+    }
     r
+}
+
+/// The session host's frame (was EEServer.cpp's EESessionFrame), one per EESession call: the communications object
+/// and whether it is the server, the bodies' two lobby slot registers (EEGameOptionsPlayers), a join request's player
+/// and version, protocol 0 for the slot info.
+pub struct Frame {
+    pub comms: P,
+    pub server: bool,
+    pub registers: [P; 2],
+    pub player: P,
+    pub version: P,
+    pub protocol: P,
+}
+
+/// The frame the session host was handed.
+pub fn frame(f: P) -> &'static mut Frame {
+    // SAFETY: the live frame of the current ee_gamecpp_session call (the host's context)
+    unsafe { &mut *(f as *mut Frame) }
+}
+
+/// A frame's register: 0, 1, or the join request's player (EE_NETMSG_SESS_R_IN).
+pub fn register(f: P, r: i64) -> P {
+    let frame = frame(f);
+    if r == ee_sim::netmsg::session::EE_NETMSG_SESS_R_IN {
+        frame.player
+    } else {
+        frame.registers[r as usize]
+    }
 }
 
 /// A lobby slot player's plain members.
@@ -367,9 +399,9 @@ pub extern "C" fn ee_gamecpp_server_post_12() {
     h(O::C11UiPost12, 0, &[ptr(&mut first), ptr(&mut second)]);
 }
 
-/// The server of a session frame.
-pub fn frame_server(frame: P) -> P {
-    hp(O::C11FrameComms, frame, &[])
+/// The communications object (the server or the client) of a session frame.
+pub fn frame_server(f: P) -> P {
+    frame(f).comms
 }
 
 #[cfg(test)]

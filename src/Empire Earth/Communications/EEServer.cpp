@@ -233,17 +233,6 @@ void EEServer::BeforeRemovingPlayers()
 
 // ---- the host of ee_netmsg session.rs: ee_game gamecpp server.rs (ee_gamecpp_session_host) over the cases below ----
 
-// the forwarder's frame: the communications object, the bodies' two lobby slot registers and a join request's
-// player and version, protocol 0 for the slot info
-struct EESessionFrame {
-    NESynchronousCommunications* mComms;
-    bool mServer;
-    EEGameOptionsPlayer mRegisters[2];
-    const EEGameOptionsPlayer* mIn;
-    const UWideString* mVersion;
-    NEProtocol* mProtocol;
-};
-
 // the engine's protected members the host calls (a friend of EEServer reaches them through the server)
 class EESessionAccess {
 public:
@@ -252,11 +241,6 @@ public:
     static void SendToAll(EEServer* s, NEMessage* m) { s->SendMessageToAll(m, false); }
     static void SendTo(EEServer* s, unsigned char inSlot, NEMessage* m) { s->SendMessageTo(inSlot, m, true); }
 };
-
-static EEGameOptionsPlayer& EESessionRegister(EESessionFrame* f, long long inRegister)
-{
-    return inRegister == EE_NETMSG_SESS_R_IN ? const_cast<EEGameOptionsPlayer&>(*f->mIn) : f->mRegisters[inRegister];
-}
 
 // the server's or client's member inWhat (EE_NETMSG_SESS_DO_*) over the host
 long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_t inWhat, long long a, long long b,
@@ -271,10 +255,10 @@ long long EESession(NESynchronousCommunications* inComms, bool inServer, uint32_
 static_assert(kSlotServer == 0xfe && kSlotNone == 0xff, "gamecpp server.rs SLOT_SERVER, SLOT_NONE");
 
 #define P64(x) ((int64_t)(intptr_t)(x))
-#define SF ((EESessionFrame*)p)
-#define SS static_cast<EEServer*>(SF->mComms)
-#define SC static_cast<EEClient*>(SF->mComms)
-#define REG(k) EESessionRegister(SF, a[k])
+#define SS static_cast<EEServer*>((NESynchronousCommunications*)p)
+#define SC static_cast<EEClient*>((NESynchronousCommunications*)p)
+#define REG0 (*(EEGameOptionsPlayer*)p)
+#define REG1 (*(EEGameOptionsPlayer*)a[0])
 #define MSG ((NEMessage*)a[0])
 #define WSTR(k) (*(UWideString*)a[k])
 
@@ -307,10 +291,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     typedef EeGameCpp O;
     switch (inOp) {
     // the session's frame (a0 the communications, a1 the server flag, a2 a join request's player, a3 its version)
-    case O::C11FrameNew: return P64((new EESessionFrame{(NESynchronousCommunications*)a[0], a[1] != 0, {}, (const EEGameOptionsPlayer*)a[2], (const UWideString*)a[3], NULL}));
-    case O::C11FrameDelete: delete SF;
-        break;
-    case O::C11FrameComms: return P64(SF->mComms);
     // the server's members and locks
     case O::C11SvTail: return P64(&SV->mVoted[0]);
     case O::C11SvCreateSearchLock: ESVERIFY_AT(TSScheduler::CreateCriticalSection(SV->mSearchForSlotLock) == keseOK, 103);
@@ -363,7 +343,8 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::C11UiPost12: gUserInterface->GetThread()->Post(0x12, (void*)a[0], (void*)a[1], true);
         break;
     // (EECore9OpD) the C++ calls and members of the session host's body in Rust (gamecpp server.rs; EeGameCpp's lane D section):
-    // p the session's frame (EESessionFrame) unless noted, one statement each
+    // p the session's communications object (the server or client), a register (an EEGameOptionsPlayer) for the
+    // SsReg ops, or unused, one statement each
     // the locks
     case O::SsOptionsWriteLock: gGameOptions.mLock->WriteLock();
         break;
@@ -385,13 +366,12 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsPhysicsQueueLeave: gPhysics->mServerMessageQueueLock->Leave();
         break;
-    case O::SsFrameServer: return SF->mServer;
     // the facts
     case O::SsMultiplayerGame: return EEIsMultiplayerGame(true);
     case O::SsOptionsMultiplayer: return gGameOptions.mIsMultiplayer;
     case O::SsLoadType: return gGameOptions.mLoadType;
     case O::SsCitizensDefault: return (long long)gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-    case O::SsVersionMatch: return !(*SF->mVersion != gGameVersion);
+    case O::SsVersionMatch: return !(*(const UWideString*)p != gGameVersion);
     case O::SsBinaryChecksum: return gBinaryChecksum;
     case O::SsWorldPlayers: return (long long)gWorld.mNumPlayers;
     case O::SsTime: return (long long)TMGetTime();
@@ -405,35 +385,34 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsSHasLeft: return P64(&SS->mHasLeftGame);
     case O::SsCHasLeft: return P64(&SC->mHasLeftGame);
     case O::SsCFastId: return P64(&SC->mFastSelectionID);
-    // the lobby slot registers (a0 the register)
-    case O::SsReg: return P64(static_cast<EeAppOptionsPlayerFields*>(&REG(0)));
-    case O::SsRegLoadOptions: REG(0) = gGameOptions.mPlayers[a[1]];
+    // the lobby slot registers (p the register, a0 the other register or the argument)
+    case O::SsRegLoadOptions: REG0 = gGameOptions.mPlayers[a[0]];
         break;
-    case O::SsRegLoadLobby: REG(0) = gWorld.GetLobbyOptions().mPlayers[a[1]];
+    case O::SsRegLoadLobby: REG0 = gWorld.GetLobbyOptions().mPlayers[a[0]];
         break;
-    case O::SsRegLoadReg: REG(0) = REG(1);
+    case O::SsRegLoadReg: REG0 = REG1;
         break;
-    case O::SsRegStoreOptions: gGameOptions.mPlayers[a[1]] = REG(0);
+    case O::SsRegStoreOptions: gGameOptions.mPlayers[a[0]] = REG0;
         break;
-    case O::SsRegStoreLobby: gWorld.GetLobbyOptions().mPlayers[a[1]] = REG(0);
+    case O::SsRegStoreLobby: gWorld.GetLobbyOptions().mPlayers[a[0]] = REG0;
         break;
-    case O::SsRegNameClear: REG(0).mName = "";
+    case O::SsRegNameClear: REG0.mName = "";
         break;
-    case O::SsRegNameCopy: REG(0).mName = REG(1).mName;
+    case O::SsRegNameCopy: REG0.mName = REG1.mName;
         break;
-    case O::SsRegNameIcmp: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)REG(0).mName),
-                                              reinterpret_cast<const unsigned char*>((const char*)REG(1).mName)) == 0;
-    case O::SsRegNameEq: return REG(0).mName == REG(1).mName;
-    case O::SsRegNameFromMsg: REG(0).mName = ((EEMRecord*)a[1])->mString;
+    case O::SsRegNameIcmp: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)REG0.mName),
+                                              reinterpret_cast<const unsigned char*>((const char*)REG1.mName)) == 0;
+    case O::SsRegNameEq: return REG0.mName == REG1.mName;
+    case O::SsRegNameFromMsg: REG0.mName = ((EEMRecord*)a[0])->mString;
         break;
-    case O::SsRegNameIcmpPlayer: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)REG(0).mName),
-                                                    reinterpret_cast<const unsigned char*>((const char*)((EEPlayer*)a[1])->mName)) == 0;
+    case O::SsRegNameIcmpPlayer: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)REG0.mName),
+                                                    reinterpret_cast<const unsigned char*>((const char*)((EEPlayer*)a[0])->mName)) == 0;
     // the sends
     case O::SsSendLocalResponse: SS->ProcessLocalUserInput(SS->NewConnectionResponse((long)a[0], (unsigned char)a[1], (unsigned char)a[2]), (unsigned char)a[3]);
         break;
     case O::SsSendFullOptions: gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), (unsigned char)a[0]);
         break;
-    case O::SsNewPlayerInfo: return P64(static_cast<NEMessage*>(EENewFullPlayerInformation(REG(0))));
+    case O::SsNewPlayerInfo: return P64(static_cast<NEMessage*>(EENewFullPlayerInformation(REG0)));
     case O::SsMsgSetOriginServer: MSG->SetOriginatingSlot(kSlotServer);
         break;
     case O::SsNewRecord0: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char)a[0])));
@@ -445,10 +424,10 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SsClientAddress: SS->GetClientAddress((unsigned char)a[0], WSTR(1));
         break;
-    case O::SsSlotInfoServer: return P64(static_cast<NEMessage*>(new EEMRecord(kMessagePlayerSlotInfo, {(unsigned char)a[0], kSlotServer, SS->mBehindFirewall[kSlotServer], EEGetLocalAddress(SF->mProtocol, gGamePreferences.mSettings.GetNetworkAdapter())})));
+    case O::SsSlotInfoServer: return P64(static_cast<NEMessage*>(new EEMRecord(kMessagePlayerSlotInfo, {(unsigned char)a[0], kSlotServer, SS->mBehindFirewall[kSlotServer], EEGetLocalAddress((NEProtocol*)a[1], gGamePreferences.mSettings.GetNetworkAdapter())})));
     case O::SsSlotInfoRecord: return P64(static_cast<NEMessage*>(new EEMRecord(kMessagePlayerSlotInfo, {(unsigned char)a[0], (unsigned char)a[1], SS->mBehindFirewall[(unsigned char)a[1]], WSTR(2)})));
     case O::SsNewPhysicsTick: return P64(static_cast<NEMessage*>(new NEMRecord(kNetMessagePhysicsTick, {(long long)a[0], (long long)a[1], (long long)a[2], (long long)a[3], (long long)a[4]})));
-    case O::SsConnectionCheckResponse: SF->mComms->ProcessLocalUserInput(new NEMRecord(kNetMessagePlayerConnectionCheckResponse, {(uint32_t)a[0]}), kSlotNone);
+    case O::SsConnectionCheckResponse: ((NESynchronousCommunications*)p)->ProcessLocalUserInput(new NEMRecord(kNetMessagePlayerConnectionCheckResponse, {(uint32_t)a[0]}), kSlotNone);
         break;
     // the messages (a0)
     case O::SsMsgType: return MSG->GetType();
@@ -583,8 +562,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsCommsDelete: delete gCommunications;
         break;
     case O::SsCommsNewClient: gCommunications = new EEClient;
-        break;
-    case O::SsFrameProtocol: NEProtocol::GetProtocol(0, SF->mProtocol);
         break;
     // the game start
     case O::SsStartTimeFromMsg: gStartTime = ((NEMRecord*)a[0])->Get<uint32_t>(0);
