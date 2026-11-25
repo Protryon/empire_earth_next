@@ -276,8 +276,7 @@ public:
     EEWaypointList& operator=(const EEWaypointList& inOther) { ee_units_waypoints_assign(this->mList, inOther.mList); return *this; }
     size_t size() const { return ee_units_waypoints_len(this->mList); }
     bool empty() const { return this->size() == 0; }
-    const EEComplexUnitWaypoint& operator[](size_t inIndex) const
-        { return *reinterpret_cast<const EEComplexUnitWaypoint*>(ee_units_waypoints_at(this->mList, inIndex)); }
+    const EEComplexUnitWaypoint& operator[](size_t inIndex) const { return *reinterpret_cast<const EEComplexUnitWaypoint*>(ee_units_waypoints_at(this->mList, inIndex)); }
     const EEComplexUnitWaypoint& back() const { return (*this)[this->size() - 1]; }
     void push_back(const EEComplexUnitWaypoint& inWaypoint) { ee_units_waypoints_push(this->mList, reinterpret_cast<const EeUnitsWaypoint*>(&inWaypoint)); }
     void clear() { ee_units_waypoints_clear(this->mList); }
@@ -360,10 +359,7 @@ public:
 
     void StartAction(long inAction) { ee_units_cu_body(EE_UNITS_CU_DO_START_ACTION, this, inAction, 0, 0); }
     // the goal at the queue's front (the front kept or dropped with its auto waypoints); ee_units goals.rs set_goal
-    void SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inArg3)
-    {
-        ee_units_unit_set_goal((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inGoal, inKeepCurrent, (int32_t)inArg3);
-    }
+    void SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inArg3) { ee_units_unit_set_goal((uint64_t)(uintptr_t)this, (uint64_t)(uintptr_t)inGoal, inKeepCurrent, (int32_t)inArg3); }
     void PlayEffect(long inTechnology) { ee_units_cu_body(EE_UNITS_CU_DO_PLAY_EFFECT, this, inTechnology, 0, 0); }         // 0x1fea99 (the conscription calamity passes 0x138d) (provisional name)
     void ClearGoals(long inIndex) { ee_units_cu_body(EE_UNITS_CU_DO_CLEAR_GOALS, this, inIndex, 0, 0); }            // 0x1f88fe (before a calamity hands out a new goal) (provisional name)
     void ToggleJITManufacturing() { ee_units_cu_body(EE_UNITS_CU_DO_TOGGLE_JIT, this, 0, 0, 0); }          // 0x1fd8f3 (EEMJITManufacturing, then UpdateJITManufacturing; provisional name)

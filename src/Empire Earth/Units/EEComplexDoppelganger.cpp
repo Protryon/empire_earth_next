@@ -38,15 +38,9 @@
 // contacts' lists, so a unit-by-unit rebuild would undo its neighbours'.
 static std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vector<unsigned long> > > sLoadedContacts;
 
-static EEComplexUnit* LoadedComplexUnit(unsigned long inID)
-{
-    return EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(gWorld.GetUnit(inID)));
-}
+static EEComplexUnit* LoadedComplexUnit(unsigned long inID) { return EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(gWorld.GetUnit(inID))); }
 
-static void RestoreLoadedContacts()
-{
-    ee_units_dop_body(EE_UNITS_DOP_DO_RESTORE_CONTACTS, NULL, NULL, 0, 0);   // dop_file.rs
-}
+static void RestoreLoadedContacts() { ee_units_dop_body(EE_UNITS_DOP_DO_RESTORE_CONTACTS, NULL, NULL, 0, 0); }  // dop_file.rs
 
 // the load's scratch values: the build queue entry's second, the slot of the next held unit or unit variable
 static unsigned long sLoadSecond;
@@ -73,10 +67,7 @@ static std::vector<EEComplexUnit*> sRepairCargo;
 static std::vector<EEProductionEntry> sRepairResearch;
 static float* sRepairTurrets;
 
-template <class T> static T* EEDopObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEDopObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // an ignored target of dop_load.rs's six values (tile x, y, from x, y, unit id, time)
 static EEComplexUnitAttacker EEDopAttacker(const int64_t* inValues)
@@ -84,10 +75,7 @@ static EEComplexUnitAttacker EEDopAttacker(const int64_t* inValues)
     return EEComplexUnitAttacker{(long)inValues[0], (long)inValues[1], (long)inValues[2], (long)inValues[3], (unsigned long)inValues[4], (unsigned long)inValues[5]};
 }
 
-template <class T> static uint64_t EEDopHandle(T* inObject)
-{
-    return (uint64_t)(uintptr_t)inObject;
-}
+template <class T> static uint64_t EEDopHandle(T* inObject) { return (uint64_t)(uintptr_t)inObject; }
 
 // dop_file.rs's scratch values: the loaded model id, the contacts being restored (the originals' locals)
 static long sDopModelID;
@@ -138,9 +126,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_SET_ATTACKER: static_cast<EEUGRust*>(theGoal)->SetAttacker(theUnit); return 0;
     case EE_UNITS_DOP_GOAL_QUEUE_CLEAR: theUnit->mGoalQueues[(size_t)inB].Clear(); return 0;
     case EE_UNITS_DOP_CITIZEN_COUNT: return (int64_t)theUnit->mCitizenBuildQueue.size();
-    case EE_UNITS_DOP_CITIZEN_RESOLVE:
-        theUnit->mCitizenBuildQueue[(size_t)inB] = static_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mCitizenBuildQueue[(size_t)inB])));
-        return 0;
+    case EE_UNITS_DOP_CITIZEN_RESOLVE: theUnit->mCitizenBuildQueue[(size_t)inB] = static_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mCitizenBuildQueue[(size_t)inB]))); return 0;
     case EE_UNITS_DOP_CITIZEN_REFERENCE: theUnit->mCitizenBuildQueue[(size_t)inB]->Reference(); return 0;
     case EE_UNITS_DOP_CARGO_COUNT: return (int64_t)theUnit->mCargo.size();
     case EE_UNITS_DOP_CARGO_ID: return USavedID(theUnit->mCargo[(size_t)inB]);
@@ -171,8 +157,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_SET_PRODUCTION_TIME: theUnit->mProductionTime = (long)inB; return 0;
     case EE_UNITS_DOP_TECH_NODE: return EEDopHandle(theUnit->mPlayer->mTechnologies->Get((long)inB));
     case EE_UNITS_DOP_IS_LAND_BUILDING: return theUnit->GetUnitClass()->IsLandBuilding();
-    case EE_UNITS_DOP_NODE_CLASS_MISSING:
-        return theNode->mData->mUnitClass < 0 || gUnitClassTable[theNode->mData->mUnitClass] == NULL;
+    case EE_UNITS_DOP_NODE_CLASS_MISSING: return theNode->mData->mUnitClass < 0 || gUnitClassTable[theNode->mData->mUnitClass] == NULL;
     case EE_UNITS_DOP_NODE_DISALLOW: theNode->mIsAllowed = false; return 0;
     case EE_UNITS_DOP_BUILD_QUEUE_COUNT: return (int64_t)theUnit->mBuildQueue.size();
     case EE_UNITS_DOP_BUILD_QUEUE_TECH: return theUnit->mBuildQueue[(size_t)inB].mTechnology;
@@ -180,8 +165,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_SCRATCH_RESEARCH_PUSH: sRepairResearch.push_back(theUnit->mBuildQueue[(size_t)inB]); return 0;
     case EE_UNITS_DOP_BUILD_QUEUE_ASSIGN: theUnit->mBuildQueue = sRepairResearch; return 0;
     case EE_UNITS_DOP_GATHERED_LINK: return EEDopHandle(dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit->mGatheredResource))));
-    case EE_UNITS_DOP_LINK_USABLE:
-        return EEDopObject<EEUnit>(inA)->GetUnitID() != 0 || EEDopObject<EEUnit>(inA)->mResourceType != kResourceNone;
+    case EE_UNITS_DOP_LINK_USABLE: return EEDopObject<EEUnit>(inA)->GetUnitID() != 0 || EEDopObject<EEUnit>(inA)->mResourceType != kResourceNone;
     case EE_UNITS_DOP_SET_GATHERED_RESOURCE: theUnit->SetGatheredResource(EEDopObject<EEUnit>(inA)); return 0;
     case EE_UNITS_DOP_LAST_ATTACKER_ID: return USavedID(theUnit->mLastAttacker);
     case EE_UNITS_DOP_HAS_GHOSTS: return EESaveHasGhosts((unsigned long)inB, (unsigned long)inC);
@@ -197,20 +181,15 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_SCRATCH_TURRET_SET: sRepairTurrets[(size_t)inB] = UBitsFloat((uint32_t)(inC)); return 0;
     case EE_UNITS_DOP_TURRETS_DELETE: delete[] theUnit->mTurretAngles; return 0;
     case EE_UNITS_DOP_TURRETS_ASSIGN: theUnit->mTurretAngles = sRepairTurrets; return 0;
-    case EE_UNITS_DOP_PAST_LAST_FRAME:
-        return theUnit->GetStats()->mModel->mLastFrames[theUnit->mAnimation] <= theUnit->mPhysicalModel.GetFrame();
-    case EE_UNITS_DOP_RESTART_ANIMATION:
-        theUnit->SetAnimationFrame(theUnit->mStats->mModel->mStartFrames[theUnit->mAnimation]);
-        return 0;
+    case EE_UNITS_DOP_PAST_LAST_FRAME: return theUnit->GetStats()->mModel->mLastFrames[theUnit->mAnimation] <= theUnit->mPhysicalModel.GetFrame();
+    case EE_UNITS_DOP_RESTART_ANIMATION: theUnit->SetAnimationFrame(theUnit->mStats->mModel->mStartFrames[theUnit->mAnimation]); return 0;
     case EE_UNITS_DOP_POST_LOAD_TECHNOLOGY: gDataPreLoading->PostLoadTechnology(theUnit->GetPlayer()->mPlayerID, (long)inB); return 0;
     case EE_UNITS_DOP_OWN_TECH_NODE: return EEDopHandle(theUnit->GetTechTreeNode());
     case EE_UNITS_DOP_NODE_KIND: return theNode->mData->mKind;
     case EE_UNITS_DOP_HIT_POINTS: return theUnit->GetHitPoints();
     case EE_UNITS_DOP_IS_BUILT: return theUnit->mIsBuilt == true;
     case EE_UNITS_DOP_ADD_WONDER: theUnit->GetPlayer()->AddWonder(theUnit, inB != 0); return 0;
-    case EE_UNITS_DOP_HELD_RESOLVE:
-        theUnit->mHeldUnits[(size_t)inB] = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(theUnit->mHeldUnits[(size_t)inB])));
-        return 0;
+    case EE_UNITS_DOP_HELD_RESOLVE: theUnit->mHeldUnits[(size_t)inB] = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(theUnit->mHeldUnits[(size_t)inB]))); return 0;
     case EE_UNITS_DOP_HELD_AT: return EEDopHandle(theUnit->mHeldUnits[(size_t)inB]);
     case EE_UNITS_DOP_HELD_ERASE: theUnit->mHeldUnits.erase(theUnit->mHeldUnits.begin() + (size_t)inB); return 0;
     case EE_UNITS_DOP_HOLDER_IS_UNSET: return theUnit->mHolder == (EEComplexUnit*)-1;
@@ -236,8 +215,7 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_REFRESH_GOALS: theUnit->RefreshGoals(); return 0;
     case EE_UNITS_DOP_REFRESH_ACTIVE_GOAL: theUnit->RefreshActiveGoal(); return 0;
     case EE_UNITS_DOP_FIRST_QUEUE_BACK: return EEDopHandle(theUnit->mGoalQueues[0].mGoals.back());
-    case EE_UNITS_DOP_IS_AUTO_WAYPOINT_GOAL:
-        return EELocationGoalCast(theGoal) != NULL && EELocationGoalCast(theGoal)->GetIsAutoWaypoint();
+    case EE_UNITS_DOP_IS_AUTO_WAYPOINT_GOAL: return EELocationGoalCast(theGoal) != NULL && EELocationGoalCast(theGoal)->GetIsAutoWaypoint();
     case EE_UNITS_DOP_FIRST_QUEUE_POP_BACK: theUnit->mGoalQueues[0].PopBack(); return 0;
     case EE_UNITS_DOP_CLASS_ROTTING_TIME: return theUnit->GetUnitClass()->mRottingTime;
     case EE_UNITS_DOP_ROTTING_AWAY_TIME: return theUnit->mRottingAwayTime;
@@ -256,17 +234,13 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_BASE_SAVE: return theDop->EEDoppelganger::Save((unsigned long)inB, (unsigned long)inC, *theFile);
     case EE_UNITS_DOP_SAVE_TRANSFORMATION: theDop->mTransformation.Save(*theFile); return 0;
     case EE_UNITS_DOP_WRITE_MODEL_ID: return theFile->Write((long)theDop->mModel->mMediaIndex);
-    case EE_UNITS_DOP_BASE_INITIALIZE:
-        theDop->EEDoppelganger::Initialize(theSeen, EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC));
-        return 0;
+    case EE_UNITS_DOP_BASE_INITIALIZE: theDop->EEDoppelganger::Initialize(theSeen, EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC)); return 0;
     case EE_UNITS_DOP_SEEN_IS_RESOURCE: return theSeen->mUnitClass->mCategory == kUnitCategoryResource;
     case EE_UNITS_DOP_PACK_RESOURCE: theDop->mPackedHitPoints = theSeen->mResourceAmount | 0x80000000; return 0;
     case EE_UNITS_DOP_PACK_HIT_POINTS: theDop->mPackedHitPoints = theSeen->mHitPoints; return 0;
     case EE_UNITS_DOP_SEEN_COMPLEX: return EEDopHandle(theSeen->mComplexUnit);
     case EE_UNITS_DOP_SEEN_IS_FOUNDATION: return theOther->IsFoundation() == true;
-    case EE_UNITS_DOP_MODEL_FOUNDATION:
-        theDop->mModel = EEGetPlayerClassGraphic(theOther->GetPlayer(), EEDopObject<EEUnit>((uint64_t)inB)->mUnitClass);
-        return 0;
+    case EE_UNITS_DOP_MODEL_FOUNDATION: theDop->mModel = EEGetPlayerClassGraphic(theOther->GetPlayer(), EEDopObject<EEUnit>((uint64_t)inB)->mUnitClass); return 0;
     case EE_UNITS_DOP_MODEL_OF: theDop->mModel = theSeen->GetModel(); return 0;
     case EE_UNITS_DOP_FRAME_OF: theDop->mFrame = theOther->mPhysicalModel.GetFrame(); return 0;
     case EE_UNITS_DOP_ANIMATION_OF: theDop->mAnimation = theOther->mAnimation; return 0;
@@ -283,22 +257,17 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_HALF_SIZE: return UFloatBits(theSeen->mUnitClass->mTileSize * 0.5f);
     case EE_UNITS_DOP_SEEN_TILE: return inB == 0 ? theSeen->mTileX : theSeen->mTileY;
     case EE_UNITS_DOP_MESH_Z: return UFloatBits(::gWorld.mMap->mTerrainMesh.GetMeshZ(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC))));
-    case EE_UNITS_DOP_SET_POSITION:
-        theDop->mTransformation.SetPosition(GE3DPoint(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC)), UBitsFloat((uint32_t)((int64_t)inA))));
-        return 0;
+    case EE_UNITS_DOP_SET_POSITION: theDop->mTransformation.SetPosition(GE3DPoint(UBitsFloat((uint32_t)(inB)), UBitsFloat((uint32_t)(inC)), UBitsFloat((uint32_t)((int64_t)inA)))); return 0;
     case EE_UNITS_DOP_SET_TILE_X: theDop->mTileX = (long)inB; return 0;
     case EE_UNITS_DOP_SET_TILE_Y: theDop->mTileY = (long)inB; return 0;
     case EE_UNITS_DOP_LOAD_MEDIA: theDop->mModel->LoadMedia(); return 0;
-    case EE_UNITS_DOP_BASE_INITIALIZE_COPY:
-        theDop->EEDoppelganger::Initialize(EEDopObject<EEDoppelganger>(inA), EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC));
-        return 0;
+    case EE_UNITS_DOP_BASE_INITIALIZE_COPY: theDop->EEDoppelganger::Initialize(EEDopObject<EEDoppelganger>(inA), EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC)); return 0;
     case EE_UNITS_DOP_FIELDS: return (int64_t)EEDopHandle(static_cast<EeUnitsComplexDopFields*>(theDop));
     case EE_UNITS_DOP_OTHER_FIELDS: return (int64_t)EEDopHandle(static_cast<EeUnitsComplexDopFields*>(dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA))));
     case EE_UNITS_DOP_COPY_TRANSFORMATION: theDop->mTransformation = dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA))->mTransformation; return 0;
     case EE_UNITS_DOP_CONTACTS_TAKE: sDopContacts.clear(); sDopContacts.swap(sLoadedContacts); return 0;
     case EE_UNITS_DOP_CONTACTS_COUNT: return (int64_t)sDopContacts.size();
-    case EE_UNITS_DOP_CONTACTS_VALID:
-        return static_cast<RTSUnit*>(sDopContacts[(size_t)inB].first.first) == gWorld.GetUnit(sDopContacts[(size_t)inB].first.second);
+    case EE_UNITS_DOP_CONTACTS_VALID: return static_cast<RTSUnit*>(sDopContacts[(size_t)inB].first.first) == gWorld.GetUnit(sDopContacts[(size_t)inB].first.second);
     case EE_UNITS_DOP_CONTACTS_CLEAR: sDopContacts[(size_t)inB].first.first->ClearContacts(); return 0;
     case EE_UNITS_DOP_CONTACTS_ID_COUNT: return (int64_t)sDopContacts[(size_t)inB].second.size();
     case EE_UNITS_DOP_CONTACTS_UNIT: return EEDopHandle(LoadedComplexUnit(sDopContacts[(size_t)inB].second[(size_t)inC]));
@@ -436,8 +405,7 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
     case EE_UNITS_DOPS_READ_CONVERSION_EFFECT: return inFile.Read(theComplex->mConversionEffect.mValue);
     case EE_UNITS_DOPS_READ_HEAL_EFFECT: return inFile.Read(theComplex->mHealEffect.mValue);
     // ---- the loads (ee_units unit_load.rs)
-    case EE_UNITS_UNIT_LOAD_TURRET_ANGLE:
-        return inFile.Read(theComplex->mTurretAngles[inIndex]);
+    case EE_UNITS_UNIT_LOAD_TURRET_ANGLE: return inFile.Read(theComplex->mTurretAngles[inIndex]);
     case EE_UNITS_UNIT_LOAD_PART:
         switch (inIndex) {
         case EE_UNITS_UNIT_LOAD_PART_PROJECTILE_START: return theComplex->mProjectileStart.Load(inFile);
@@ -483,7 +451,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
         case EE_UNITS_UNIT_LOAD_GET_CONTACTS_EMPTY: io->i = sLoadedContacts.empty(); return 0;
         default: return 0;
         }
-    default:
-        return 0;
+    default: return 0;
     }
 }

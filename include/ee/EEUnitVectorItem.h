@@ -55,10 +55,7 @@ public:
         return *this;
     }
     void Clear() { ee_units_gq_clear(this->mGoals.mQueue); }   // 0x2057a7: every goal deleted, the timer stopped
-    EEComplexUnit* GetUnit() const   // mUnit (+0x18: the goals' owner)
-    {
-        return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_gq_unit(this->mGoals.mQueue)));
-    }
+    EEComplexUnit* GetUnit() const { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(ee_units_gq_unit(this->mGoals.mQueue))); }  // mUnit (+0x18: the goals' owner)
     // 0x205807: the game time left on the timer (0 when it is not running)
     unsigned long GetTimeLeft() { return ee_units_gq_timer(this->mGoals.mQueue, 0, 0); }
     // 0x205821: starts the timer at the game time the first time, then adds inTime (EEMIncrementRallyTimer 60000,
@@ -75,10 +72,7 @@ public:
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_units_gq_load_file(this->mGoals.mQueue, &inFile, inMajorVersion, inMinorVersion); }
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_units_gq_save_file(this->mGoals.mQueue, &outFile, inMajorVersion, inMinorVersion); }
 
-    void GoalOp(int32_t inOp, unsigned long inIndex, EEUnitGoal* inGoal)
-    {
-        ee_units_gq_goal_op(this->mGoals.mQueue, inOp, inIndex, EEGoalDeque::H(inGoal));
-    }
+    void GoalOp(int32_t inOp, unsigned long inIndex, EEUnitGoal* inGoal) { ee_units_gq_goal_op(this->mGoals.mQueue, inOp, inIndex, EEGoalDeque::H(inGoal)); }
 
     EEGoalDeque mGoals;                     // the Rust queue (+0x04 of the original: its goals' deque)
 };

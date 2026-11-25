@@ -29,10 +29,7 @@
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
-uint32_t EECombatCommandOf(const EEComplexUnit* inUnit)
-{
-    return inUnit->mCommand != NULL ? (uint32_t)inUnit->mCommand->mType : 0;
-}
+uint32_t EECombatCommandOf(const EEComplexUnit* inUnit) { return inUnit->mCommand != NULL ? (uint32_t)inUnit->mCommand->mType : 0; }
 
 // ---- the hosts of ee_combat's trigger tests and steps
 
@@ -40,10 +37,7 @@ uint32_t EECombatCommandOf(const EEComplexUnit* inUnit)
 // records, lazy reads, heal facing fallback and CBGS record are ee_sim combat cg_goal.rs over ee_combat's goals.rs;
 // each C++ statement they ask is one case here
 
-template <class T> static T* EECgObject(int64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EECgObject(int64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 extern "C" int64_t ee_units_cg_host(int32_t inOp, uint64_t inUnit, uint64_t inA, int64_t inB, int64_t inC, float (*ioF)[4])
 {
@@ -121,28 +115,16 @@ struct EEQueryContext {
     EEGraphicEffect* mEffect = NULL;        // ApplyHit's unit effect (GetEffect(3))
 };
 
-template <class T> T* EEObjectOf(int64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> T* EEObjectOf(int64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 EEQueryContext* EEQueryContextOf(void* inContext) { return (EEQueryContext*)inContext; }
 
-EEUnit* EEQueryUnit(uint64_t inHandle)
-{
-    return (EEUnit*)(uintptr_t)inHandle;
-}
+EEUnit* EEQueryUnit(uint64_t inHandle) { return (EEUnit*)(uintptr_t)inHandle; }
 
 // a handle whose complex members are read (every one the original reads them of is a complex unit)
-EEComplexUnit* EEQueryComplex(uint64_t inHandle)
-{
-    return static_cast<EEComplexUnit*>(EEQueryUnit(inHandle));
-}
+EEComplexUnit* EEQueryComplex(uint64_t inHandle) { return static_cast<EEComplexUnit*>(EEQueryUnit(inHandle)); }
 
-uint64_t EEQueryHandleOf(const EEUnit* inUnit)
-{
-    return (uint64_t)(uintptr_t)inUnit;
-}
+uint64_t EEQueryHandleOf(const EEUnit* inUnit) { return (uint64_t)(uintptr_t)inUnit; }
 
 // the tag points of a unit's model at its animation (NULL: none)
 EETagPointList* EEQueryTags(EEComplexUnit* inUnit) { return inUnit->GetModel()->mTagPoints[inUnit->mAnimation]; }
@@ -157,49 +139,30 @@ uint32_t EEQueryShotClass(EEUnitClass* inClass)
 uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t inArg)
 {
     switch (inCode) {
-    case EE_COMBAT_Q_MODEL:
-        return EEQueryComplex(inObject)->mPhysicalModel.GetModel() != NULL;
-    case EE_COMBAT_Q_TARGETABLE:
-        return ee_units_uu_targetable((uint64_t)(uintptr_t)(inArg ? EEQueryContextOf(inContext)->mUnit : NULL), (uint64_t)(uintptr_t)EEQueryUnit(inObject)->mUnitClass, 0);
-    case EE_COMBAT_Q_PASSABLE:
-        return EEQueryComplex(inObject)->IsPassableBy(EEQueryContextOf(inContext)->mUnit);
-    case EE_COMBAT_Q_UNIT_SET:
-        return gUnitSetManager.Contains(EEQueryUnit(inObject)->mUnitClass->GetUnitType(), (unsigned long)inArg);
-    case EE_COMBAT_Q_SCALE:
-        return UFloatBits(EEQueryComplex(inObject)->mPhysicalModel.GetScale());
-    case EE_COMBAT_Q_SIDE_PART:
-        return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(EEQueryUnit(inObject)->GetUnitClass())->IsSidePart(EEQueryUnit(inObject)->mComplexUnit);
-    case EE_COMBAT_Q_PATH_ATTEMPTS:
-        return (uint32_t)EEQueryContextOf(inContext)->mGoal->mPathAttempts;
-    case EE_COMBAT_Q_CAN_REACH_UNIT:
-        return EEQueryContextOf(inContext)->mUnit->CanReachUnit(EEQueryUnit(inObject));
+    case EE_COMBAT_Q_MODEL: return EEQueryComplex(inObject)->mPhysicalModel.GetModel() != NULL;
+    case EE_COMBAT_Q_TARGETABLE: return ee_units_uu_targetable((uint64_t)(uintptr_t)(inArg ? EEQueryContextOf(inContext)->mUnit : NULL), (uint64_t)(uintptr_t)EEQueryUnit(inObject)->mUnitClass, 0);
+    case EE_COMBAT_Q_PASSABLE: return EEQueryComplex(inObject)->IsPassableBy(EEQueryContextOf(inContext)->mUnit);
+    case EE_COMBAT_Q_UNIT_SET: return gUnitSetManager.Contains(EEQueryUnit(inObject)->mUnitClass->GetUnitType(), (unsigned long)inArg);
+    case EE_COMBAT_Q_SCALE: return UFloatBits(EEQueryComplex(inObject)->mPhysicalModel.GetScale());
+    case EE_COMBAT_Q_SIDE_PART: return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(EEQueryUnit(inObject)->GetUnitClass())->IsSidePart(EEQueryUnit(inObject)->mComplexUnit);
+    case EE_COMBAT_Q_PATH_ATTEMPTS: return (uint32_t)EEQueryContextOf(inContext)->mGoal->mPathAttempts;
+    case EE_COMBAT_Q_CAN_REACH_UNIT: return EEQueryContextOf(inContext)->mUnit->CanReachUnit(EEQueryUnit(inObject));
     case EE_COMBAT_Q_ATTACK_REACHABLE: return ee_units_cgq_attack_reachable_from_zero(EEQueryHandleOf(EEQueryContextOf(inContext)->mUnit), inObject);
-    case EE_COMBAT_Q_IGNORED:
-        return EEQueryContextOf(inContext)->mUnit->IsTargetIgnored(EEQueryComplex(inObject), true);
-    case EE_COMBAT_Q_LINE_OF_SIGHT:
-        return UFloatBits(EEQueryComplex(inObject)->GetLineOfSight());
-    case EE_COMBAT_Q_SEEN:
-        return EECombatIsSeenBy(EEQueryComplex(inObject), EEQueryContextOf(inContext)->mUnit->GetPlayer(), true);
-    case EE_COMBAT_Q_DUMMY_HEAD:
-        return EEQueryUnit(inObject) == NULL || RTSDummyHead(EEQueryUnit(inObject)) != NULL;
+    case EE_COMBAT_Q_IGNORED: return EEQueryContextOf(inContext)->mUnit->IsTargetIgnored(EEQueryComplex(inObject), true);
+    case EE_COMBAT_Q_LINE_OF_SIGHT: return UFloatBits(EEQueryComplex(inObject)->GetLineOfSight());
+    case EE_COMBAT_Q_SEEN: return EECombatIsSeenBy(EEQueryComplex(inObject), EEQueryContextOf(inContext)->mUnit->GetPlayer(), true);
+    case EE_COMBAT_Q_DUMMY_HEAD: return EEQueryUnit(inObject) == NULL || RTSDummyHead(EEQueryUnit(inObject)) != NULL;
     case EE_COMBAT_Q_PROJECTILE_CATEGORY:
         return EEQueryUnit(inObject)->GetUnitClass()->mProjectileClass != NULL ? (uint32_t)EEQueryUnit(inObject)->GetUnitClass()->mProjectileClass->mCategory : EE_COMBAT_Q_NONE;
-    case EE_COMBAT_Q_HIT_DISTANCE_SQUARED:
-        return UFloatBits(EECombatHitDistanceSquared(EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject), -10000.0f, -10000.0f));
-    case EE_COMBAT_Q_TAG_COUNT:
-        return EEQueryTags(EEQueryComplex(inObject)) != NULL ? (uint32_t)EEQueryTags(EEQueryComplex(inObject))->GetNumTagPoints() : 0;
-    case EE_COMBAT_Q_IN_RANGE_TO_HIT:
-        return EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject)) != 0;
-    case EE_COMBAT_Q_BALLISTIC_HIT:
-        return EECanBallisticHit(EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject));
+    case EE_COMBAT_Q_HIT_DISTANCE_SQUARED: return UFloatBits(EECombatHitDistanceSquared(EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject), -10000.0f, -10000.0f));
+    case EE_COMBAT_Q_TAG_COUNT: return EEQueryTags(EEQueryComplex(inObject)) != NULL ? (uint32_t)EEQueryTags(EEQueryComplex(inObject))->GetNumTagPoints() : 0;
+    case EE_COMBAT_Q_IN_RANGE_TO_HIT: return EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject)) != 0;
+    case EE_COMBAT_Q_BALLISTIC_HIT: return EECanBallisticHit(EEQueryContextOf(inContext)->mUnit, EEQueryUnit(inObject));
     case EE_COMBAT_Q_CONTACT_RANGE: return ee_units_cgq_in_contact_range_bits(EEQueryHandleOf(EEQueryContextOf(inContext)->mUnit), inObject, inArg);
     // (EE_COMBAT_Q_REGION_COUNT and the region's units: ee_combat reads.rs region_units over the Rust table)
-    case EE_COMBAT_Q_CONTACT_X:
-        return UFloatBits(EEQueryComplex(inObject)->mInitialContactLocation.GetX());
-    case EE_COMBAT_Q_CONTACT_Y:
-        return UFloatBits(EEQueryComplex(inObject)->mInitialContactLocation.GetY());
-    case EE_COMBAT_Q_CONTACT_Z:
-        return UFloatBits(EEQueryComplex(inObject)->mInitialContactLocation.GetZ());
+    case EE_COMBAT_Q_CONTACT_X: return UFloatBits(EEQueryComplex(inObject)->mInitialContactLocation.GetX());
+    case EE_COMBAT_Q_CONTACT_Y: return UFloatBits(EEQueryComplex(inObject)->mInitialContactLocation.GetY());
+    case EE_COMBAT_Q_CONTACT_Z: return UFloatBits(EEQueryComplex(inObject)->mInitialContactLocation.GetZ());
     case EE_COMBAT_Q_IGNORED_COUNT: return (uint32_t)EEQueryComplex(inObject)->mIgnoredTargets.size();
     case EE_COMBAT_Q_DISTANCE_SQUARED: return UFloatBits(EEQueryContextOf(inContext)->mUnit->DistanceSquaredTo(EEQueryComplex(inObject)));
     case EE_COMBAT_Q_TARGETS_ENEMIES: return EEQueryComplex(inObject)->mBehavior->mCanTargetEnemies;
@@ -220,21 +183,14 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
 uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32_t inArg)
 {
     switch (inCode) {
-    case EE_COMBAT_H_COMPLEX:
-        return EEQueryUnit(inObject) != NULL ? EEQueryHandleOf(EEQueryUnit(inObject)->GetComplexUnit()) : 0;
-    case EE_COMBAT_H_PREVIOUS_PART:
-        return EEQueryHandleOf(EEQueryComplex(inObject)->mPreviousPart);
-    case EE_COMBAT_H_OWNER:
-        return EEQueryHandleOf(EEQueryComplex(inObject)->mOwner);
+    case EE_COMBAT_H_COMPLEX: return EEQueryUnit(inObject) != NULL ? EEQueryHandleOf(EEQueryUnit(inObject)->GetComplexUnit()) : 0;
+    case EE_COMBAT_H_PREVIOUS_PART: return EEQueryHandleOf(EEQueryComplex(inObject)->mPreviousPart);
+    case EE_COMBAT_H_OWNER: return EEQueryHandleOf(EEQueryComplex(inObject)->mOwner);
     case EE_COMBAT_H_GOAL_TARGET: return ee_units_cgq_shot_target(inObject);   // its attack-unit goal's target (cg_query.rs)
-    case EE_COMBAT_H_TILE_PREV:
-        return EEQueryHandleOf(static_cast<EEUnit*>(EEQueryUnit(inObject)->mTileNode->mPrev));
-    case EE_COMBAT_H_TILE_NEXT:
-        return EEQueryHandleOf(static_cast<EEUnit*>(EEQueryUnit(inObject)->mTileNode->mNext));
-    case EE_COMBAT_H_TARGET:
-        return EEQueryHandleOf(EEQueryContextOf(inContext)->mGoal->GetAttackTarget());
-    case EE_COMBAT_H_ACTIVE_GOAL_TARGET:
-        return EEQueryHandleOf(static_cast<EEUGRust*>(EEQueryComplex(inObject)->mActiveGoal)->GetAttackTarget());
+    case EE_COMBAT_H_TILE_PREV: return EEQueryHandleOf(static_cast<EEUnit*>(EEQueryUnit(inObject)->mTileNode->mPrev));
+    case EE_COMBAT_H_TILE_NEXT: return EEQueryHandleOf(static_cast<EEUnit*>(EEQueryUnit(inObject)->mTileNode->mNext));
+    case EE_COMBAT_H_TARGET: return EEQueryHandleOf(EEQueryContextOf(inContext)->mGoal->GetAttackTarget());
+    case EE_COMBAT_H_ACTIVE_GOAL_TARGET: return EEQueryHandleOf(static_cast<EEUGRust*>(EEQueryComplex(inObject)->mActiveGoal)->GetAttackTarget());
     }
     return 0;
 }
@@ -242,22 +198,13 @@ uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32
 void EEQueryAct(void* inContext, int32_t inCode, uint64_t inObject, int32_t inArg)
 {
     switch (inCode) {
-    case EE_COMBAT_A_FIRING_HIGH:
-        EEQueryComplex(inObject)->mIsFiringHigh = true;
-        break;
-    case EE_COMBAT_A_WEAPON_TAG:
-        EEQueryComplex(inObject)->mWeaponTagPoint = (unsigned long)(uint32_t)inArg;
-        break;
-    case EE_COMBAT_A_IGNORE:
-        EEQueryContextOf(inContext)->mUnit->IgnoreTarget(EEQueryComplex(inObject));
-        break;
+    case EE_COMBAT_A_FIRING_HIGH: EEQueryComplex(inObject)->mIsFiringHigh = true; break;
+    case EE_COMBAT_A_WEAPON_TAG: EEQueryComplex(inObject)->mWeaponTagPoint = (unsigned long)(uint32_t)inArg; break;
+    case EE_COMBAT_A_IGNORE: EEQueryContextOf(inContext)->mUnit->IgnoreTarget(EEQueryComplex(inObject)); break;
     }
 }
 
-void EEQueryLocation(void* inContext, uint64_t inObject, float (*outRows)[16])
-{
-    memcpy(*outRows, EEQueryComplex(inObject)->mPhysicalModel.GetLocation().mMatrix, sizeof(*outRows));
-}
+void EEQueryLocation(void* inContext, uint64_t inObject, float (*outRows)[16]) { memcpy(*outRows, EEQueryComplex(inObject)->mPhysicalModel.GetLocation().mMatrix, sizeof(*outRows)); }
 
 int32_t EEQueryIntersects(void* inContext, uint64_t inCandidate, const float (*inLine)[6], int32_t inSegment,
                           uint32_t inLOD, float inScale)

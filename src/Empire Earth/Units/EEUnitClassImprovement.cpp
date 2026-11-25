@@ -24,10 +24,7 @@
 // records; the step factors are the class's improvement table's, read there)
 
 // Returns whether an improvement applies to a unit class: its upgrade flag, or a base stat above 0 (range above 1)
-bool EEUnitClassImprovement::CanUpgrade(EEUnitClass* inUnitClass, long inImprovement)
-{
-    return ee_units_improve_can_upgrade_class(inUnitClass, (int32_t)inImprovement);
-}
+bool EEUnitClassImprovement::CanUpgrade(EEUnitClass* inUnitClass, long inImprovement) { return ee_units_improve_can_upgrade_class(inUnitClass, (int32_t)inImprovement); }
 
 // Raises another record's improvements by this record's levels above 1, one level at a time, moving its upgrade's stats
 void EEUnitClassImprovement::CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitClassImprovement* inTarget)

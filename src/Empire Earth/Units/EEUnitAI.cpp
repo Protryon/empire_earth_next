@@ -57,10 +57,7 @@ static GE3DPoint sCondSunkPosition;
 static GETransformation sCondSunkTransformation(false);
 static GEBoundingBox sCondSunkBox;
 
-static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint)
-{
-    memcpy(ioIo->p, &inPoint.mX, sizeof(ioIo->p));   // (a GE3DPoint is its three floats)
-}
+static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint) { memcpy(ioIo->p, &inPoint.mX, sizeof(ioIo->p)); }  // (a GE3DPoint is its three floats)
 
 extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsCondIo* ioIo)
 {
@@ -87,15 +84,11 @@ extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t i
     case EE_UNITS_COND_SUNK_LOCATE:
         theUnit->mPhysicalModel.GetLocation().Apply(theUnit->mPhysicalModel.GetModel()->GetInternalTransform(theUnit->mPhysicalModel.GetFrame()), sCondSunkTransformation = GETransformation(false));
         return 0;
-    case EE_UNITS_COND_SUNK_SCALE:
-        sCondSunkTransformation.Scale(theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale());
-        return 0;
+    case EE_UNITS_COND_SUNK_SCALE: sCondSunkTransformation.Scale(theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale(), theUnit->mPhysicalModel.GetScale()); return 0;
     case EE_UNITS_COND_SUNK_SET_X: sCondSunkTransformation.SetX(sCondSunkPosition.GetX()); return 0;
     case EE_UNITS_COND_SUNK_SET_Y: sCondSunkTransformation.SetY(sCondSunkPosition.GetY()); return 0;
     case EE_UNITS_COND_SUNK_SET_Z: sCondSunkTransformation.SetZ(sCondSunkPosition.GetZ()); return 0;
-    case EE_UNITS_COND_SUNK_BOX:
-        theUnit->mPhysicalModel.GetModel()->GetBoundingBox(theUnit->mPhysicalModel.GetFrame()).Transform(sCondSunkTransformation, sCondSunkBox);
-        return 0;
+    case EE_UNITS_COND_SUNK_BOX: theUnit->mPhysicalModel.GetModel()->GetBoundingBox(theUnit->mPhysicalModel.GetFrame()).Transform(sCondSunkTransformation, sCondSunkBox); return 0;
     case EE_UNITS_COND_SUNK_TOP_Z: ioIo->f = sCondSunkBox.GetTopRightBack().GetZ(); return 0;
     // ---- uai_cond.rs's statements (the compound answers and AttackNearby)
     case EE_UNITS_UAI_GOAL_KIND: return CondGoal(inB)->mKind;

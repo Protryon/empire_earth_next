@@ -20,15 +20,9 @@
 
 namespace {
 
-EEComplexUnit* UnitOf(uint64_t inHandle)
-{
-    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inHandle));
-}
+EEComplexUnit* UnitOf(uint64_t inHandle) { return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inHandle)); }
 
-EEUnitGoal* UnitGoalOf(uint64_t inHandle)
-{
-    return reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(inHandle));
-}
+EEUnitGoal* UnitGoalOf(uint64_t inHandle) { return reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(inHandle)); }
 
 }  // namespace
 
@@ -37,8 +31,7 @@ EEUnitGoal* UnitGoalOf(uint64_t inHandle)
 int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnitsGoalIo* ioArgs)
 {
     switch (inCode) {
-    case EE_COMBAT_G_CAN_REACH_TILE:
-        return UnitOf(inUnit)->CanReachTile((long)(ioArgs->i)[0], (long)(ioArgs->i)[1]);
+    case EE_COMBAT_G_CAN_REACH_TILE: return UnitOf(inUnit)->CanReachTile((long)(ioArgs->i)[0], (long)(ioArgs->i)[1]);
     case EE_COMBAT_G_TELL_GROUP:
         if (UnitOf(inUnit)->mActiveGroup == NULL)
             return 0;
@@ -52,9 +45,7 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
     }
     // (EE_COMBAT_G_POSITION, EE_COMBAT_G_EVALUATE: ee_sim combat goal_objects.rs common_op)
     // the dispatch's (ee_combat goal_dispatch.rs; the projectile test and the TEST ONLY records: goal_objects.rs)
-    case EE_COMBAT_G_STEP:
-        EECombatStep((int32_t)(ioArgs->i)[0], UnitOf(inUnit), UnitGoalOf((uint64_t)(ioArgs->i)[2]), reinterpret_cast<EEUnit*>(UnitOf((uint64_t)(ioArgs->i)[1])));
-        return 0;
+    case EE_COMBAT_G_STEP: EECombatStep((int32_t)(ioArgs->i)[0], UnitOf(inUnit), UnitGoalOf((uint64_t)(ioArgs->i)[2]), reinterpret_cast<EEUnit*>(UnitOf((uint64_t)(ioArgs->i)[1]))); return 0;
     case EE_COMBAT_G_PATH_ATTEMPTS: return UnitGoalOf(inUnit)->mPathAttempts;
     case EE_COMBAT_G_CLASS_NAME: return UnitOf(inUnit)->mUnitClass != NULL ? (int64_t)(uintptr_t)(const char*)UnitOf(inUnit)->mUnitClass->mName : 0;
     // the heal goal's (ee_combat goal_heal.rs)

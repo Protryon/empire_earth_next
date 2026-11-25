@@ -48,37 +48,22 @@
 // Creates a building on a tile's centre (docks and navy yards at water level, off-map tiles at the -10000 sentinel)
 // Returns the map quarter facing the most space terrain within 6 tiles of a tile (half weight to the neighbouring
 // sides; its terrain run 0x60ea01 and the side tables 0x4c8ef8/0x4c8f08: ee_units cls_building.rs, R5b.4 round 33)
-long EEGetDockFacing(unsigned long inX, unsigned long inY)
-{
-    return ee_units_ucn_facing(0, (int32_t)inX, (int32_t)inY);
-}
+long EEGetDockFacing(unsigned long inX, unsigned long inY) { return ee_units_ucn_facing(0, (int32_t)inX, (int32_t)inY); }
 
 // Returns a navy yard's facing at a tile: its map quarter if 5 deep-water tiles follow that way, else the next side
 // that has them, else the side with the longest run (cls_building.rs)
-static long GetNavyYardFacing(unsigned long inX, unsigned long inY)
-{
-    return ee_units_ucn_facing(1, (int32_t)inX, (int32_t)inY);
-}
+static long GetNavyYardFacing(unsigned long inX, unsigned long inY) { return ee_units_ucn_facing(1, (int32_t)inX, (int32_t)inY); }
 
 // Returns the map quarter (0..3) a tile faces from the middle of its continent (space maps) or of the map
 // (cls_building.rs)
-long EEGetFacingQuarter(long inX, long inY)
-{
-    return ee_units_ucn_facing(2, (int32_t)inX, (int32_t)inY);
-}
+long EEGetFacingQuarter(long inX, long inY) { return ee_units_ucn_facing(2, (int32_t)inX, (int32_t)inY); }
 
 // Returns the map quarter the unit's tile faces
-long EEGetUnitFacingQuarter(EEComplexUnit* inUnit)
-{
-    return EEGetFacingQuarter(inUnit->GetTileX(), inUnit->GetTileY());
-}
+long EEGetUnitFacingQuarter(EEComplexUnit* inUnit) { return EEGetFacingQuarter(inUnit->GetTileX(), inUnit->GetTileY()); }
 
 // Returns the model part for a wall piece kind (0..8); outFlag is set for the corner kinds 0, 2, 6 and 8
 // (inferred meaning)
-long EEGetWallPiecePart(long inIndex, bool* outFlag)
-{
-    return ee_units_ucb_wall_piece_part((int32_t)inIndex, outFlag);   // ucb_release.rs
-}
+long EEGetWallPiecePart(long inIndex, bool* outFlag) { return ee_units_ucb_wall_piece_part((int32_t)inIndex, outFlag); }  // ucb_release.rs
 
 // Returns the first living targetable building found in rings 1..19 around a unit's tile
 // Lists the tiles around a building; an airport's include its runway (four times its size toward its facing)
@@ -163,10 +148,7 @@ bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigne
 }
 
 // Returns the first piece of a unit's linked chain (+0x1cc)
-EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit)
-{
-    return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FIRST_PART, NULL, NULL, EEObj(inUnit), 0, 0, NULL);   // uc_rest.rs
-}
+EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit) { return (EEComplexUnit*)(uintptr_t)ee_units_uc_rest(EE_UNITS_UC_DO_R_FIRST_PART, NULL, NULL, EEObj(inUnit), 0, 0, NULL); }  // uc_rest.rs
 
 // Returns the middle unit of a list (the lower of the two middles for an even count)
 
@@ -204,25 +186,16 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection)
 // Returns gate piece 3 (two pieces before the end of the chain); NULL when the chain is too short (a gate created
 // as a single piece, e.g. by a scenario effect)
 // Restores the normal colour of a player's walls of a type and clears their gate direction (after gate placement)
-void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
-{
-    ee_units_ucb_gate(EE_UNITS_UCB_DO_CLEAR_GATE_HIGHLIGHTS, NULL, NULL, EEObj(inPlayer), inUnitType, 0, 0.0f);   // ucb_gate.rs
-}
+void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType) { ee_units_ucb_gate(EE_UNITS_UCB_DO_CLEAR_GATE_HIGHLIGHTS, NULL, NULL, EEObj(inPlayer), inUnitType, 0, 0.0f); }  // ucb_gate.rs
 
 // Sets up a new gate piece the building's way; the chain's first piece starts closed
 // Highlights the middle wall of a gate line through each of a player's walls of a type when one or three of the
 // four directions fit (an XOR of the four tests); the first fitting direction is used
-void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
-{
-    ee_units_ucb_gate(EE_UNITS_UCB_DO_HIGHLIGHT_GATE_WALLS, NULL, NULL, EEObj(inPlayer), inUnitType, 0, 0.0f);   // ucb_gate.rs
-}
+void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType) { ee_units_ucb_gate(EE_UNITS_UCB_DO_HIGHLIGHT_GATE_WALLS, NULL, NULL, EEObj(inPlayer), inUnitType, 0, 0.0f); }  // ucb_gate.rs
 
 // Returns whether all tiles are on the map, flat or ramps (0 or 2 raised corners), and differ in height by at most
 // 0.6 (0x447014; cls_building.rs) (EECPWallManager.cpp declares it the same way)
-bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
-{
-    return ee_units_ucn_tiles_level(EEObj(&inTiles));
-}
+bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles) { return ee_units_ucn_tiles_level(EEObj(&inTiles)); }
 
 // ---- EEUCMiningBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The mining
 // building's unit class (a mine built on a resource unit): 0x217085..0x217337 (after EEUCLandTransport.cpp;
@@ -248,10 +221,7 @@ bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 // Creates a space building on a tile, at the cruise altitude
 // Sets up a new space building as a building, already built
 // Returns whether the space building may stop: already sinking, a slow request, or at its next waypoint's tile
-template <class T> static T* EEUcbObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEUcbObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // the gate bodies' vectors (ucb_gate.rs: one per local of the originals) and EEFindGateWall's direction
 static std::vector<EEUnit*> sUcbUnits[8];

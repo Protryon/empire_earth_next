@@ -59,10 +59,7 @@ static_assert(kSoundLightning == 0x176 && kSoundThunder2 == 0x1ba && kGraphicEff
 // (EETechTree::Research for inUnit)
 static const float kUnitEffectSoundFalloff = 4.0f;  // 0x446fd8 (EEComputeSoundParameters's last argument)
 
-void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect)
-{
-    ee_units_ucp_call(EE_UNITS_UCP_DO_PLAY_UNIT_EFFECT, NULL, inUnit, 0, inEffect);   // ucp_people.rs
-}
+void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect) { ee_units_ucp_call(EE_UNITS_UCP_DO_PLAY_UNIT_EFFECT, NULL, inUnit, 0, inEffect); }  // ucp_people.rs
 
 // Runs the work timer (working the gather or repair goal when it expires), then finishes a due unit research
 // (instant build: at once); a kind-3 tech tied to the Bundeswehr power goes through EEPlayUnitEffect
@@ -76,24 +73,14 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
     EEUnit* theUnit = (EEUnit*)(uintptr_t)inA;
     const int64_t* v = io->v;
     switch (inOp) {
-    case EE_UNITS_CZ_MAP_SIZE:
-        io->v[0] = gMapWidth;
-        io->v[1] = gMapHeight;
-        return 0;
-    case EE_UNITS_CZ_TILE_CONTINENT:
-        return gContinentManager.GetContinent(EETileCoordinate((long)v[0], (long)v[1]), kAIPathLandMass);
-    case EE_UNITS_CZ_UNIT_CONTINENT:
-        return gContinentManager.GetContinent(theUnit, kAIPathLandMass);
-    case EE_UNITS_CZ_BLOCK_TAKES:
-        return ee_units_uu_unit_block_takes((uint64_t)(uintptr_t)theUnit, (int32_t)v[0], (int32_t)v[1], (int32_t)v[2], (int32_t)v[3], (int32_t)v[3], 0) != 0;
-    case EE_UNITS_CZ_CAN_GATHER:
-        return ((EEComplexUnit*)theUnit)->CanGather((EEUnit*)(uintptr_t)inB, (long)v[0], (long)v[1], false, false);
-    case EE_UNITS_CZ_CAN_GET_TO_UNIT:
-        return gContinentManager.CanGetToUnit(theUnit, (EEUnit*)(uintptr_t)inB);
-    case EE_UNITS_CZ_PATH_AREA:
-        return gContinentManager.GetPathAreaIDAt(EETileLocation((long)v[0], (long)v[1]));
-    case EE_UNITS_CZ_CAN_TAKE:
-        return ((EEComplexUnit*)theUnit)->CanTake((EEComplexUnit*)(uintptr_t)inB, (unsigned long)v[0]);
+    case EE_UNITS_CZ_MAP_SIZE: io->v[0] = gMapWidth; io->v[1] = gMapHeight; return 0;
+    case EE_UNITS_CZ_TILE_CONTINENT: return gContinentManager.GetContinent(EETileCoordinate((long)v[0], (long)v[1]), kAIPathLandMass);
+    case EE_UNITS_CZ_UNIT_CONTINENT: return gContinentManager.GetContinent(theUnit, kAIPathLandMass);
+    case EE_UNITS_CZ_BLOCK_TAKES: return ee_units_uu_unit_block_takes((uint64_t)(uintptr_t)theUnit, (int32_t)v[0], (int32_t)v[1], (int32_t)v[2], (int32_t)v[3], (int32_t)v[3], 0) != 0;
+    case EE_UNITS_CZ_CAN_GATHER: return ((EEComplexUnit*)theUnit)->CanGather((EEUnit*)(uintptr_t)inB, (long)v[0], (long)v[1], false, false);
+    case EE_UNITS_CZ_CAN_GET_TO_UNIT: return gContinentManager.CanGetToUnit(theUnit, (EEUnit*)(uintptr_t)inB);
+    case EE_UNITS_CZ_PATH_AREA: return gContinentManager.GetPathAreaIDAt(EETileLocation((long)v[0], (long)v[1]));
+    case EE_UNITS_CZ_CAN_TAKE: return ((EEComplexUnit*)theUnit)->CanTake((EEComplexUnit*)(uintptr_t)inB, (unsigned long)v[0]);
     }
     return 0;
 }
@@ -136,10 +123,7 @@ long EEGetConversionCost(EEComplexUnit* inUnit)
 // temple's range); outFlag is set when the target is shielded
 // (new: the decision is ee_combat's can_convert over a record of pure reads, gathered here; the damage table is
 // read only for a valid ammo column, the shield and the building priest's distance always: none has side effects)
-bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFlag)
-{
-    return ee_units_ucp_can_convert(inPriest, inTarget, &outFlag);   // ucp_people.rs
-}
+bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFlag) { return ee_units_ucp_can_convert(inPriest, inTarget, &outFlag); }  // ucp_people.rs
 
 // Loads the conversion indicator effect and the class's media
 // Unloads the conversion indicator effect and the class's media
@@ -187,10 +171,7 @@ void EEComplexUnit::UpdateTurrets()
 // Gets the sound parameters with a Doppler pitch; silent while the helicopter is on the map but not seen
 // New (R5b.4, the fourteenth round): EEUCHelicopterPriest::ActionChanged's path to the goal when preparing to move
 // (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
-void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    ee_units_uc_rest(EE_UNITS_UC_DO_R_HELICOPTER_PRIEST_PATH, inClass, inUnit, 0, 0, 0, NULL);   // uc_rest.rs
-}
+void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit) { ee_units_uc_rest(EE_UNITS_UC_DO_R_HELICOPTER_PRIEST_PATH, inClass, inUnit, 0, 0, 0, NULL); }  // uc_rest.rs
 
 // Sets up a new priest helicopter as a priest, then lifts it to its flying height
 // the people's scratch (ucp_people.rs): the effect handle, the Bundeswehr power, the area conversion's units
@@ -198,10 +179,7 @@ static EEEffectHandle sUcpHandle;
 static EECivPower sUcpPower;
 static std::vector<EEUnit*> sUcpUnits;
 
-template <class T> static T* EEUcpObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEUcpObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // EECanConvert's reads of the priest and the target (ucp_people.rs EE_UNITS_UCP_CC_*; floats in ioF[0])
 static int64_t EEUcpCanConvertRead(EEComplexUnit* inPriest, EEComplexUnit* inTarget, int64_t inWhich, float* ioF)

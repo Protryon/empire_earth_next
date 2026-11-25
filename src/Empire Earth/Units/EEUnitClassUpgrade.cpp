@@ -125,18 +125,12 @@ void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
 // Replaces the model; while media is loaded, unloads the old model and loads the new one
 // Sets the top speed and scales acceleration and turn rates (turret too) by its ratio to the class's; updates the
 // inverses
-void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
-{
-    ee_units_upgrade_set_max_velocity(this, this->mUnitClass, inValue);   // New (R5b.4, round 28): ee_units stats.rs
-}
+void EEUnitClassUpgrade::SetMaxVelocity(float inValue) { ee_units_upgrade_set_max_velocity(this, this->mUnitClass, inValue); }  // New (R5b.4, round 28): ee_units stats.rs
 
 // Replaces the button; while media is loaded, releases the old button and acquires the new one
 // Sets the range and the projectile's launch speed to reach it at 45 degrees (a bomb: its top speed; a Roman
 // Legionnaire aims for its heal range; no projectile: 0)
-void EEUnitClassUpgrade::SetRange(float inValue)
-{
-    ee_units_upgrade_set_range(this, this->mUnitClass, this->mUnitClass->mProjectileClass, inValue);   // New (R5b.4, round 28): ee_units improve.rs
-}
+void EEUnitClassUpgrade::SetRange(float inValue) { ee_units_upgrade_set_range(this, this->mUnitClass, this->mUnitClass->mProjectileClass, inValue); }  // New (R5b.4, round 28): ee_units improve.rs
 
 // Replaces selection sound inIndex; while media is loaded, unloads the old sound and loads the new one
 // Drops one button request; the last one unloads the class's buttons

@@ -60,16 +60,10 @@ long gSpaceUnloadSoundID = 498;             // 0x4c8fa8 (.data = 0x1f2; the tele
 // ---- the build/repair goal's world work (EEUGBuildRepair.cpp's helpers; the goal itself is build.rs)
 
 // Orders units farthest from the reference tile first, so a sort leaves the nearest unit last
-inline long EETileDistanceLess::DistanceSquared(EEUnit* inUnit) const
-{
-    return this->DistanceSquared(EETileCoordinate(inUnit->mTileX, inUnit->mTileY));
-}
+inline long EETileDistanceLess::DistanceSquared(EEUnit* inUnit) const { return this->DistanceSquared(EETileCoordinate(inUnit->mTileX, inUnit->mTileY)); }
 
 // (the two distances are pure reads: their order does not matter)
-bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
-{
-    return this->DistanceSquared(inFirst) > this->DistanceSquared(inSecond);
-}
+bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const { return this->DistanceSquared(inFirst) > this->DistanceSquared(inSecond); }
 
 // ---- the gather goal's world work (EEUGGather.cpp's helpers; the goal itself is gather.rs)
 
@@ -99,33 +93,18 @@ namespace {
 // file_call; the text is a UWideString*, the dump a FILE*)
 static_assert(sizeof(EeUnitsGoalContext) == 3 * sizeof(void*), "EeUnitsGoalContext: file, text, dump");
 
-UWideString& TextOf(void* inContext)
-{
-    return *static_cast<UWideString*>(static_cast<EeUnitsGoalContext*>(inContext)->text);
-}
+UWideString& TextOf(void* inContext) { return *static_cast<UWideString*>(static_cast<EeUnitsGoalContext*>(inContext)->text); }
 
-uint64_t Handle(const void* inObject)
-{
-    return reinterpret_cast<uintptr_t>(inObject);
-}
+uint64_t Handle(const void* inObject) { return reinterpret_cast<uintptr_t>(inObject); }
 
-template <class T> T* ObjectOf(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> T* ObjectOf(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // (a GE3DPoint is its three floats)
-void PointOut(EeUnitsGoalIo* ioArgs, const GE3DPoint& inPoint)
-{
-    memcpy(ioArgs->f, &inPoint, 3 * sizeof(float));
-}
+void PointOut(EeUnitsGoalIo* ioArgs, const GE3DPoint& inPoint) { memcpy(ioArgs->f, &inPoint, 3 * sizeof(float)); }
 
 // the tiles a split operation hands in place (goal_split.rs: `io.text` names its buffer of U2DPoint<long>)
 static_assert(sizeof(U2DPoint<long>) == 2 * sizeof(long), "a tile is two longs (goal_split.rs's c_long pairs)");
-U2DPoint<long>* TilesAt(EeUnitsGoalIo* ioArgs)
-{
-    return reinterpret_cast<U2DPoint<long>*>(const_cast<uint8_t*>(ioArgs->text));
-}
+U2DPoint<long>* TilesAt(EeUnitsGoalIo* ioArgs) { return reinterpret_cast<U2DPoint<long>*>(const_cast<uint8_t*>(ioArgs->text)); }
 
 // the statements' shared locals (goal_more.rs: each cleared or set where the original declared its local)
 static GE3DPoint sGoalPoint;
@@ -165,44 +144,26 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_REFERENCE:   // (a patrol group's: rust_goal.rs, a Rust object)
         ObjectOf<EEUnit>(inA)->Reference();
         return 0;
-    case EE_UNITS_GOAL_HOST_DEREFERENCE:
-        ObjectOf<EEUnit>(inA)->Dereference();
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_START_ACTION:
-        ObjectOf<EEComplexUnit>(inA)->StartAction((unsigned long)ioArgs->i[0]);
-        return 0;
+    case EE_UNITS_GOAL_HOST_DEREFERENCE: ObjectOf<EEUnit>(inA)->Dereference(); return 0;
+    case EE_UNITS_GOAL_HOST_X_START_ACTION: ObjectOf<EEComplexUnit>(inA)->StartAction((unsigned long)ioArgs->i[0]); return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_COMPLEX: return Handle(EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((unsigned long)inA)));
     case EE_UNITS_GOAL_HOST_X_FIND_PLAIN: return Handle(static_cast<EEUnit*>(::gWorld.GetUnit((unsigned long)inA)));
-    case EE_UNITS_GOAL_HOST_X_TELL_GROUP:
-        ObjectOf<EEComplexUnit>(inA)->mActiveGroup->TellGroup(ObjectOf<EEComplexUnit>(inA), thePoint);
-        return 0;
-    case EE_UNITS_GOAL_HOST_DROP_PATH:
-        ObjectOf<EEComplexUnit>(inA)->DropPath();
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_TELL_GROUP: ObjectOf<EEComplexUnit>(inA)->mActiveGroup->TellGroup(ObjectOf<EEComplexUnit>(inA), thePoint); return 0;
+    case EE_UNITS_GOAL_HOST_DROP_PATH: ObjectOf<EEComplexUnit>(inA)->DropPath(); return 0;
     // (the file calls: Rust's, goal_obj.rs file_call)
     case EE_UNITS_GOAL_HOST_X_HAS_TEXT: return static_cast<EeUnitsGoalContext*>(inContext)->text != NULL;
-    case EE_UNITS_GOAL_HOST_X_APPEND_TEXT:
-        TextOf(inContext) += std::string((const char*)ioArgs->text, ioArgs->len).c_str();
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_APPEND_DUMP:
-        fputs(std::string((const char*)ioArgs->text, ioArgs->len).c_str(), static_cast<FILE*>(static_cast<EeUnitsGoalContext*>(inContext)->dump));
-        return 0;
-    case EE_UNITS_GOAL_HOST_APPEND_CLASS_NAME:
-        TextOf(inContext) += (const char*)ObjectOf<EEUnit>(inA)->mUnitClass->mName;
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_APPEND_TEXT: TextOf(inContext) += std::string((const char*)ioArgs->text, ioArgs->len).c_str(); return 0;
+    case EE_UNITS_GOAL_HOST_X_APPEND_DUMP: fputs(std::string((const char*)ioArgs->text, ioArgs->len).c_str(), static_cast<FILE*>(static_cast<EeUnitsGoalContext*>(inContext)->dump)); return 0;
+    case EE_UNITS_GOAL_HOST_APPEND_CLASS_NAME: TextOf(inContext) += (const char*)ObjectOf<EEUnit>(inA)->mUnitClass->mName; return 0;
 
     // the patrol's (the groups' own calls are Rust's: rust_goal.rs)
-    case EE_UNITS_GOAL_HOST_PLAYER_GROUP:
-        return Handle(ObjectOf<EEComplexUnit>(inA)->GetPlayer()->GetPatrolGroup((unsigned long)inB));
+    case EE_UNITS_GOAL_HOST_PLAYER_GROUP: return Handle(ObjectOf<EEComplexUnit>(inA)->GetPlayer()->GetPatrolGroup((unsigned long)inB));
 
     // the cast calamity's
     case EE_UNITS_GOAL_HOST_X_PLAYER_TECH: return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer->mTechnologies->Get((long)ioArgs->i[0]));
     case EE_UNITS_GOAL_HOST_X_NODE_CALAMITY: return ObjectOf<EETechTreeNode>(inA)->mData->mCalamity;
-    case EE_UNITS_GOAL_HOST_X_CALAMITY_CLASS_OF:
-        return Handle(EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)ioArgs->i[0]));
-    case EE_UNITS_GOAL_HOST_CALAMITY_PLACE:
-        ObjectOf<EECalamityClass>(inA)->Place(ObjectOf<EEComplexUnit>(inB), (unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1]);
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_CALAMITY_CLASS_OF: return Handle(EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)ioArgs->i[0]));
+    case EE_UNITS_GOAL_HOST_CALAMITY_PLACE: ObjectOf<EECalamityClass>(inA)->Place(ObjectOf<EEComplexUnit>(inB), (unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1]); return 0;
     case EE_UNITS_GOAL_HOST_X_CALAMITY_TARGET_KIND: return ObjectOf<EECalamityClass>(inA)->GetTargetKind();
     case EE_UNITS_GOAL_HOST_X_CALAMITY_COST: return ObjectOf<EECalamityClass>(inA)->GetCost();
     case EE_UNITS_GOAL_HOST_X_CALAMITY_RANGE: return ObjectOf<EECalamityClass>(inA)->mRange;
@@ -210,14 +171,10 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_X_CREATE_UNIT_CALAMITY: return EECalamityManager::GetInstance()->CreateUnitCalamity((unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1], (unsigned long)ioArgs->i[2], (unsigned long)ioArgs->i[3]);
     case EE_UNITS_GOAL_HOST_X_CREATE_LOCATION_CALAMITY: return EECalamityManager::GetInstance()->CreateLocationCalamity((unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1], (long)ioArgs->i[2], (long)ioArgs->i[3], (unsigned long)ioArgs->i[4]);
     case EE_UNITS_GOAL_HOST_X_CREATE_GLOBAL_CALAMITY: return EECalamityManager::GetInstance()->CreateGlobalCalamity((unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1], (unsigned long)ioArgs->i[3]);
-    case EE_UNITS_GOAL_HOST_RESET_SAVED_GROUP:
-        ObjectOf<EEComplexUnit>(inA)->mPlayer->mSavedGroups.Reset(6, 1);
-        return 0;
+    case EE_UNITS_GOAL_HOST_RESET_SAVED_GROUP: ObjectOf<EEComplexUnit>(inA)->mPlayer->mSavedGroups.Reset(6, 1); return 0;
     case EE_UNITS_GOAL_HOST_CAN_CAST_AT: return ObjectOf<EECalamityClass>(inA)->EECalamityClass::CanCastAt(ObjectOf<EEComplexUnit>(inB), sGoalCastLocation, (unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1], true, NULL) == 0;
-    case EE_UNITS_GOAL_HOST_FACES_TARGET:
-        return ObjectOf<EEComplexUnit>(inA)->GetUnitClass()->FacesTarget(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), false);
-    case EE_UNITS_GOAL_HOST_FACES_POINT:
-        return ObjectOf<EEComplexUnit>(inA)->GetUnitClass()->FacesPoint(ObjectOf<EEComplexUnit>(inA), thePoint, false);
+    case EE_UNITS_GOAL_HOST_FACES_TARGET: return ObjectOf<EEComplexUnit>(inA)->GetUnitClass()->FacesTarget(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), false);
+    case EE_UNITS_GOAL_HOST_FACES_POINT: return ObjectOf<EEComplexUnit>(inA)->GetUnitClass()->FacesPoint(ObjectOf<EEComplexUnit>(inA), thePoint, false);
     case EE_UNITS_GOAL_HOST_X_IN_CONTACT_RANGE: return EEIsInContactRange(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), ioArgs->f[0]);
     // the explore goal's
     case EE_UNITS_GOAL_HOST_X_PATH_AREA_AT: return Handle(gContinentManager.GetPathAreaAt(ObjectOf<EEComplexUnit>(inA)));
@@ -238,36 +195,25 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_X_CLASS_UNIT_TYPE: return ObjectOf<EEComplexUnit>(inA)->mUnitClass->mUnitType;
     case EE_UNITS_GOAL_HOST_X_CONTINENT_AT: return Handle(static_cast<EEAIArea*>(gContinentManager.GetContinentAt(ObjectOf<EEComplexUnit>(inA))));
     case EE_UNITS_GOAL_HOST_X_RANDOM_CONTINENT: return Handle(static_cast<EEAIArea*>(static_cast<EEAIContinent*>(gContinentManager.GetRandomContinent(kContinentCategoryNone, gPhysics->mRandom))));
-    case EE_UNITS_GOAL_HOST_X_AREA_RANDOM_POINT:
-        LongPairOut(ioArgs, ObjectOf<EEAIArea>(inA)->GetRandomPoint());
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_AREA_RANDOM_POINT: LongPairOut(ioArgs, ObjectOf<EEAIArea>(inA)->GetRandomPoint()); return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_NEARBY_TARGET: return Handle(EEFindNearbyTarget(ObjectOf<EEComplexUnit>(inA)));
-    case EE_UNITS_GOAL_HOST_X_NOTICE_FOREIGN_UNIT:
-        ObjectOf<EEComplexUnit>(inA)->mPlayer->NoticeForeignUnit(ObjectOf<EEUnit>(inB));
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_NOTICE_FOREIGN_UNIT: ObjectOf<EEComplexUnit>(inA)->mPlayer->NoticeForeignUnit(ObjectOf<EEUnit>(inB)); return 0;
     // the unload transport's
-    case EE_UNITS_GOAL_HOST_X_IS_TRANSPORT:
-        return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass()) != NULL;
+    case EE_UNITS_GOAL_HOST_X_IS_TRANSPORT: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass()) != NULL;
     case EE_UNITS_GOAL_HOST_X_TRANSPORT_CAN_UNLOAD_AT: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->CanUnloadAt(ObjectOf<EEComplexUnit>(inA), (long)ioArgs->i[0], (long)ioArgs->i[1]);
     case EE_UNITS_GOAL_HOST_X_TILE_FREE: return EEIsTileFree(ObjectOf<EEComplexUnit>(inA), (long)ioArgs->i[0], (long)ioArgs->i[1]);
     case EE_UNITS_GOAL_HOST_X_TRANSPORT_UNLOAD_TILES: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->FindUnloadTiles(ObjectOf<EEComplexUnit>(inA), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1], &TilesAt(ioArgs)[2], &TilesAt(ioArgs)[3]); return 0;
     case EE_UNITS_GOAL_HOST_X_AIRPLANE_UNLOAD_TILES: EEUnitClassOfKind<EE_CLASS_KIND_AIRPLANE>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->FindUnloadTiles(ObjectOf<EEComplexUnit>(inA), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1], &TilesAt(ioArgs)[2], &TilesAt(ioArgs)[3]); return 0;
     case EE_UNITS_GOAL_HOST_X_CAN_UNLOAD_NEAR: return EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->CanUnloadNear(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inA)->GetCargo(0), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1], &TilesAt(ioArgs)[2]);
-    case EE_UNITS_GOAL_HOST_FIRE_CARGO:
-        ObjectOf<EEComplexUnit>(inA)->mUnitClass->FireShot(ObjectOf<EEComplexUnit>(inA));
-        return 0;
+    case EE_UNITS_GOAL_HOST_FIRE_CARGO: ObjectOf<EEComplexUnit>(inA)->mUnitClass->FireShot(ObjectOf<EEComplexUnit>(inA)); return 0;
     case EE_UNITS_GOAL_HOST_UNLOAD_AT: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->UnloadAt(ObjectOf<EEComplexUnit>(inA), (long)ioArgs->i[0], (long)ioArgs->i[1]); return 0;
     case EE_UNITS_GOAL_HOST_X_SPACE_UNLOAD_SOUND: return gSpaceUnloadSoundID;
     case EE_UNITS_GOAL_HOST_X_SOUND_GET: return Handle(EESoundObject::Get((long)ioArgs->i[0]));
     case EE_UNITS_GOAL_HOST_X_SOUND_PARAMETERS:
         ObjectOf<EEComplexUnit>(inA)->mUnitClass->GetSoundParameters(ObjectOf<EEComplexUnit>(inA), ObjectOf<EESoundObject>(inB), &ioArgs->f[0], &ioArgs->f[1], &ioArgs->f[2]);
         return 0;
-    case EE_UNITS_GOAL_HOST_X_SOUND_PLAY:
-        ObjectOf<EESoundObject>(inA)->Play(ioArgs->f[0], ioArgs->f[1], ioArgs->f[2]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_SOUND_PLAY_PLAIN:
-        ObjectOf<EESoundObject>(inA)->Play();
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_SOUND_PLAY: ObjectOf<EESoundObject>(inA)->Play(ioArgs->f[0], ioArgs->f[1], ioArgs->f[2]); return 0;
+    case EE_UNITS_GOAL_HOST_X_SOUND_PLAY_PLAIN: ObjectOf<EESoundObject>(inA)->Play(); return 0;
 
     // the load goals' (the unit and class reads give zeros for no unit; the class's are Rust's views)
     case EE_UNITS_GOAL_HOST_X_NO_WAYPOINTS: return ObjectOf<EEComplexUnit>(inA)->mWaypoints.empty();
@@ -293,167 +239,89 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_X_RESET_EFFECT: sGoalEffect = EEEffectHandle(); return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_RENDEZVOUS: EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->FindRendezvousTiles(&sGoalComplexes, ObjectOf<EEComplexUnit>(inA), &TilesAt(ioArgs)[0], &TilesAt(ioArgs)[1]); return 0;
     case EE_UNITS_GOAL_HOST_X_TECH_TREE_GET: return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer->GetTechTree()->Get((long)ioArgs->i[0]));
-    case EE_UNITS_GOAL_HOST_X_NODE_NEW_CLASS:
-        return EEEvent::GetEventEffect(EEEvent::Get(ObjectOf<EETechTreeNode>(inA)->mData->mResearchedEvent)->GetEffect(0))->mNewUnitClass;
+    case EE_UNITS_GOAL_HOST_X_NODE_NEW_CLASS: return EEEvent::GetEventEffect(EEEvent::Get(ObjectOf<EETechTreeNode>(inA)->mData->mResearchedEvent)->GetEffect(0))->mNewUnitClass;
     case EE_UNITS_GOAL_HOST_X_CLASS_TABLE: return Handle(gUnitClassTable[(long)ioArgs->i[0]]);
     case EE_UNITS_GOAL_HOST_X_CLASS_TECHNOLOGY: return ObjectOf<EEUnitClass>(inA)->GetTechnology();
     case EE_UNITS_GOAL_HOST_X_NODE_AVAILABLE: return ObjectOf<EETechTreeNode>(inA)->GetIsAvailable();
-    case EE_UNITS_GOAL_HOST_CLEAR_GOALS:
-        ObjectOf<EEComplexUnit>(inA)->ClearGoals((long)inB);
-        return 0;
+    case EE_UNITS_GOAL_HOST_CLEAR_GOALS: ObjectOf<EEComplexUnit>(inA)->ClearGoals((long)inB); return 0;
     case EE_UNITS_GOAL_HOST_X_CAN_TAKE: return ObjectOf<EEComplexUnit>(inB)->CanTake(ObjectOf<EEComplexUnit>(inA), (unsigned long)ioArgs->i[0]);
-    case EE_UNITS_GOAL_HOST_GARRISON_UNIT:
-        return ObjectOf<EEComplexUnit>(inA)->GarrisonUnit(ObjectOf<EEComplexUnit>(inB));
-    case EE_UNITS_GOAL_HOST_LOAD_CARGO:
-        return ObjectOf<EEComplexUnit>(inA)->LoadCargo(ObjectOf<EEComplexUnit>(inB), 0, 0);
-    case EE_UNITS_GOAL_HOST_HAS_CARGO:
-        return ObjectOf<EEComplexUnit>(inA)->HasCargo(ObjectOf<EEComplexUnit>(inB));
-    case EE_UNITS_GOAL_HOST_X_REPLACE_UNIT:
-        EEReplaceUnit(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inA)->mPlayer->mPlayerID, ObjectOf<EEUnitClass>(inB));
-        return 0;
-    case EE_UNITS_GOAL_HOST_GENERATE:
-        ioArgs->f[0] = gPhysics->mRandom.Generate();
-        return 0;
+    case EE_UNITS_GOAL_HOST_GARRISON_UNIT: return ObjectOf<EEComplexUnit>(inA)->GarrisonUnit(ObjectOf<EEComplexUnit>(inB));
+    case EE_UNITS_GOAL_HOST_LOAD_CARGO: return ObjectOf<EEComplexUnit>(inA)->LoadCargo(ObjectOf<EEComplexUnit>(inB), 0, 0);
+    case EE_UNITS_GOAL_HOST_HAS_CARGO: return ObjectOf<EEComplexUnit>(inA)->HasCargo(ObjectOf<EEComplexUnit>(inB));
+    case EE_UNITS_GOAL_HOST_X_REPLACE_UNIT: EEReplaceUnit(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inA)->mPlayer->mPlayerID, ObjectOf<EEUnitClass>(inB)); return 0;
+    case EE_UNITS_GOAL_HOST_GENERATE: ioArgs->f[0] = gPhysics->mRandom.Generate(); return 0;
     // the build/repair goal's
     // (EE_UNITS_GOAL_HOST_BUILD_UNIT's reads are Rust's views: rust_goal.rs build_unit_fields)
     case EE_UNITS_GOAL_HOST_X_NODE_ID: return ObjectOf<EETechTreeNode>(inA)->mData->mID;
     case EE_UNITS_GOAL_HOST_X_NODE_KIND: return ObjectOf<EETechTreeNode>(inA)->mData->mKind;
     case EE_UNITS_GOAL_HOST_X_NODE_BUILD_TIME: return ObjectOf<EETechTreeNode>(inA)->GetBuildTime();
-    case EE_UNITS_GOAL_HOST_IN_WORK_REACH:
-        return EEIsInWorkReach(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inB));
+    case EE_UNITS_GOAL_HOST_IN_WORK_REACH: return EEIsInWorkReach(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEComplexUnit>(inB));
     case EE_UNITS_GOAL_HOST_X_UNIT_PLAYER: return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer);
     case EE_UNITS_GOAL_HOST_X_PLAYER_HAS_TECH: return ObjectOf<EEPlayer>(inA)->mTechnologies != NULL;
-    case EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS:
-        ObjectOf<EEPlayer>(inA)->mTechnologies->Research(ObjectOf<EEComplexUnit>(inB)->mUnitClass->GetTechnology(), NULL);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_CHECK_BUTTONS:
-        ObjectOf<EEPlayer>(inA)->CheckButtonsPreloaded((long)ioArgs->i[0]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_SET_BUILT:
-        ObjectOf<EEComplexUnit>(inA)->SetBuilt(1, 1, 1);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE:
-        return ObjectOf<EEPlayer>(inA)->mTechnologies->Get((long)ioArgs->i[0])->GetIsAvailable();
-    case EE_UNITS_GOAL_HOST_X_SPACE_WALL:
-        EECreateSpaceWallEnergyWall(ObjectOf<EEComplexUnit>(inA));
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_RESEARCH_CLASS: ObjectOf<EEPlayer>(inA)->mTechnologies->Research(ObjectOf<EEComplexUnit>(inB)->mUnitClass->GetTechnology(), NULL); return 0;
+    case EE_UNITS_GOAL_HOST_X_CHECK_BUTTONS: ObjectOf<EEPlayer>(inA)->CheckButtonsPreloaded((long)ioArgs->i[0]); return 0;
+    case EE_UNITS_GOAL_HOST_X_SET_BUILT: ObjectOf<EEComplexUnit>(inA)->SetBuilt(1, 1, 1); return 0;
+    case EE_UNITS_GOAL_HOST_X_PLAYER_TECH_AVAILABLE: return ObjectOf<EEPlayer>(inA)->mTechnologies->Get((long)ioArgs->i[0])->GetIsAvailable();
+    case EE_UNITS_GOAL_HOST_X_SPACE_WALL: EECreateSpaceWallEnergyWall(ObjectOf<EEComplexUnit>(inA)); return 0;
     case EE_UNITS_GOAL_HOST_X_CURRENT_PLAYER: return Handle(::gWorld.GetCurrentPlayer());
     case EE_UNITS_GOAL_HOST_X_CREATION_SOUND: return Handle(ObjectOf<EEComplexUnit>(inA)->mStats->mCreationSound);
-    case EE_UNITS_GOAL_HOST_X_PLAY_SAMPLE:
-        gSoundManager->Play(ObjectOf<EESoundObject>(inA)->mSampleID, ObjectOf<EESoundObject>(inA)->mVolume, 0.0f, 1.0f, false, NULL);
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_PLAY_SAMPLE: gSoundManager->Play(ObjectOf<EESoundObject>(inA)->mSampleID, ObjectOf<EESoundObject>(inA)->mVolume, 0.0f, 1.0f, false, NULL); return 0;
     case EE_UNITS_GOAL_HOST_X_MAIN_GAME_FORM: return Handle(gUIManager->GetMainGameForm());
-    case EE_UNITS_GOAL_HOST_X_REFRESH_GROUP:
-        gUIManager->GetMainGameForm()->mRefreshGroup = true;
-        return 0;
-    case EE_UNITS_GOAL_HOST_PLAY_EFFECT:
-        ObjectOf<EEComplexUnit>(inA)->PlayEffect((long)ioArgs->i[0]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_FACE_TARGET:
-        ObjectOf<EEComplexUnit>(inA)->FaceTarget(ObjectOf<EEUnit>(inB));
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_REFRESH_GROUP: gUIManager->GetMainGameForm()->mRefreshGroup = true; return 0;
+    case EE_UNITS_GOAL_HOST_PLAY_EFFECT: ObjectOf<EEComplexUnit>(inA)->PlayEffect((long)ioArgs->i[0]); return 0;
+    case EE_UNITS_GOAL_HOST_FACE_TARGET: ObjectOf<EEComplexUnit>(inA)->FaceTarget(ObjectOf<EEUnit>(inB)); return 0;
     case EE_UNITS_GOAL_HOST_X_NEXT_PART: return Handle(ObjectOf<EEComplexUnit>(inA)->mNextPart);
-    case EE_UNITS_GOAL_HOST_X_FULL_HIT_POINTS:
-        ObjectOf<EEComplexUnit>(inA)->SetHitPoints(ObjectOf<EEComplexUnit>(inA)->mStats->mMaxHitPoints);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_KILL:
-        ObjectOf<EEComplexUnit>(inA)->Kill(0, 0, 0);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_SCALED_COST:
-        return ObjectOf<EEComplexUnit>(inA)->GetPlayer()->ScaleCost(ObjectOf<EETechTreeNode>(inB)->GetCost((unsigned long)ioArgs->i[0], 0x20, 1.0f));
-    case EE_UNITS_GOAL_HOST_X_ADD_RESOURCE:
-        ObjectOf<EEComplexUnit>(inA)->GetPlayer()->AddResource((unsigned long)ioArgs->i[0], (long)ioArgs->i[1]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_GATE_SIDE_PART:
-        return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(ObjectOf<EEComplexUnit>(inA)->mUnitClass)->IsSidePart(ObjectOf<EEComplexUnit>(inA));
+    case EE_UNITS_GOAL_HOST_X_FULL_HIT_POINTS: ObjectOf<EEComplexUnit>(inA)->SetHitPoints(ObjectOf<EEComplexUnit>(inA)->mStats->mMaxHitPoints); return 0;
+    case EE_UNITS_GOAL_HOST_X_KILL: ObjectOf<EEComplexUnit>(inA)->Kill(0, 0, 0); return 0;
+    case EE_UNITS_GOAL_HOST_X_SCALED_COST: return ObjectOf<EEComplexUnit>(inA)->GetPlayer()->ScaleCost(ObjectOf<EETechTreeNode>(inB)->GetCost((unsigned long)ioArgs->i[0], 0x20, 1.0f));
+    case EE_UNITS_GOAL_HOST_X_ADD_RESOURCE: ObjectOf<EEComplexUnit>(inA)->GetPlayer()->AddResource((unsigned long)ioArgs->i[0], (long)ioArgs->i[1]); return 0;
+    case EE_UNITS_GOAL_HOST_GATE_SIDE_PART: return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(ObjectOf<EEComplexUnit>(inA)->mUnitClass)->IsSidePart(ObjectOf<EEComplexUnit>(inA));
     case EE_UNITS_GOAL_HOST_X_ADD_EVENT: ObjectOf<EEPlayer>(inA)->mEvents.AddEvent(U2DPoint<long>(ObjectOf<EEUnit>(inB)->mTileX, ObjectOf<EEUnit>(inB)->mTileY), 2, ObjectOf<EEPlayer>(inA), (long)ioArgs->i[0], false); return 0;
-    case EE_UNITS_GOAL_HOST_NEAREST_SITE:
-        return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer->GetNearestConstructionSite(ObjectOf<EEComplexUnit>(inA)));
-    case EE_UNITS_GOAL_HOST_CAN_PRODUCE:
-        return ObjectOf<EEUnit>(inA)->mPlayer->CanProduce(ObjectOf<EEUnit>(inB)->mUnitClass->GetTechnology(), 0x20, 1, true, 3, NULL);
-    case EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR:
-        return ObjectOf<EEComplexUnit>(inA)->mPlayer->CanAffordRepair(ObjectOf<EEUnit>(inB), ObjectOf<EEComplexUnit>(inA), (unsigned long)ioArgs->i[0]);
-    case EE_UNITS_GOAL_HOST_PAY:
-        ObjectOf<EEPlayer>(inA)->Pay(ObjectOf<EETechTreeNode>(inB), 0x20, ioArgs->f[0]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_SET_HIT_POINTS:
-        ObjectOf<EEComplexUnit>(inA)->SetHitPoints((long)ioArgs->i[0]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_WONDER_CHAT:
-        WonderStartedChat(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB));
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_LOAD_CLASS_MEDIA:
-        ObjectOf<EEComplexUnit>(inA)->mPlayer->LoadUnitClassMedia(ObjectOf<EEUnit>(inB)->mUnitClass->GetUnitType());
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_LOAD_MEDIA:
-        ObjectOf<EEComplexUnit>(inA)->LoadMedia(false);
-        return 0;
+    case EE_UNITS_GOAL_HOST_NEAREST_SITE: return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer->GetNearestConstructionSite(ObjectOf<EEComplexUnit>(inA)));
+    case EE_UNITS_GOAL_HOST_CAN_PRODUCE: return ObjectOf<EEUnit>(inA)->mPlayer->CanProduce(ObjectOf<EEUnit>(inB)->mUnitClass->GetTechnology(), 0x20, 1, true, 3, NULL);
+    case EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR: return ObjectOf<EEComplexUnit>(inA)->mPlayer->CanAffordRepair(ObjectOf<EEUnit>(inB), ObjectOf<EEComplexUnit>(inA), (unsigned long)ioArgs->i[0]);
+    case EE_UNITS_GOAL_HOST_PAY: ObjectOf<EEPlayer>(inA)->Pay(ObjectOf<EETechTreeNode>(inB), 0x20, ioArgs->f[0]); return 0;
+    case EE_UNITS_GOAL_HOST_SET_HIT_POINTS: ObjectOf<EEComplexUnit>(inA)->SetHitPoints((long)ioArgs->i[0]); return 0;
+    case EE_UNITS_GOAL_HOST_X_WONDER_CHAT: WonderStartedChat(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB)); return 0;
+    case EE_UNITS_GOAL_HOST_X_LOAD_CLASS_MEDIA: ObjectOf<EEComplexUnit>(inA)->mPlayer->LoadUnitClassMedia(ObjectOf<EEUnit>(inB)->mUnitClass->GetUnitType()); return 0;
+    case EE_UNITS_GOAL_HOST_X_LOAD_MEDIA: ObjectOf<EEComplexUnit>(inA)->LoadMedia(false); return 0;
     case EE_UNITS_GOAL_HOST_X_POST_UNLOAD_CLASS:
         gDataPreLoading->PostUnloadUnitClass(ObjectOf<EEComplexUnit>(inA)->mPlayer->mPlayerID, ObjectOf<EEComplexUnit>(inA)->mUnitClass->GetUnitType());
         return 0;
-    case EE_UNITS_GOAL_HOST_X_PART_FINISHED:
-        ObjectOf<EEComplexUnit>(inA)->PartFinished();
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_PART_FINISHED: ObjectOf<EEComplexUnit>(inA)->PartFinished(); return 0;
     // the gather goal's
-    case EE_UNITS_GOAL_HOST_FIND_STORAGE:
-        return Handle(ObjectOf<EEComplexUnit>(inA)->mUnitClass->FindStorage(ObjectOf<EEComplexUnit>(inA), ioArgs->i[0] != 0));
+    case EE_UNITS_GOAL_HOST_FIND_STORAGE: return Handle(ObjectOf<EEComplexUnit>(inA)->mUnitClass->FindStorage(ObjectOf<EEComplexUnit>(inA), ioArgs->i[0] != 0));
     case EE_UNITS_GOAL_HOST_X_IS_HUMAN: return ObjectOf<EEComplexUnit>(inA)->mPlayer->IsHuman();
     case EE_UNITS_GOAL_HOST_X_COMPUTER_PLAYER: return Handle(ObjectOf<EEComplexUnit>(inA)->mPlayer->mComputerPlayer);
     case EE_UNITS_GOAL_HOST_X_CP_ACTIVE_GROUP: return Handle(ObjectOf<EEComputerPlayer>(inA)->mActiveGroup);
     case EE_UNITS_GOAL_HOST_X_GROUP_NUM_UNITS: return ObjectOf<EESelectedGroup>(inA)->GetNumUnits();
-    case EE_UNITS_GOAL_HOST_X_GROUP_CLEAR:
-        ObjectOf<EESelectedGroup>(inA)->Clear();
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_GROUP_CLEAR: ObjectOf<EESelectedGroup>(inA)->Clear(); return 0;
     case EE_UNITS_GOAL_HOST_X_CITIZEN_FIND_STORAGE:
         return Handle(EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(ObjectOf<EEComplexUnit>(inA)->GetUnitClass())->FindStorage(ObjectOf<EEComplexUnit>(inA), ioArgs->i[0] != 0));
-    case EE_UNITS_GOAL_HOST_NEXT_TREE:
-        return Handle(EEGatherNextTree(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB)));
+    case EE_UNITS_GOAL_HOST_NEXT_TREE: return Handle(EEGatherNextTree(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB)));
     case EE_UNITS_GOAL_HOST_X_FIND_ACTION: return Handle(ObjectOf<EEComplexUnit>(inA)->mUnitClass->FindAction((long)ioArgs->i[0]));
     case EE_UNITS_GOAL_HOST_X_SET_ATTACK_GOAL:
         ObjectOf<EEComplexUnit>(inA)->SetGoal(EEUGRust::NewAttackUnit(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), ioArgs->i[0] != 0, false), 1, 0);
         return 0;
-    case EE_UNITS_GOAL_HOST_SET_GATHERED:
-        ObjectOf<EEComplexUnit>(inA)->SetGatheredResource(ObjectOf<EEUnit>(inB));
-        return 0;
-    case EE_UNITS_GOAL_HOST_LAST_WAYPOINT:
-        PointOut(ioArgs, GE3DPoint(ObjectOf<EEComplexUnit>(inA)->mWaypoints.back().mLocation));
-        return 0;
+    case EE_UNITS_GOAL_HOST_SET_GATHERED: ObjectOf<EEComplexUnit>(inA)->SetGatheredResource(ObjectOf<EEUnit>(inB)); return 0;
+    case EE_UNITS_GOAL_HOST_LAST_WAYPOINT: PointOut(ioArgs, GE3DPoint(ObjectOf<EEComplexUnit>(inA)->mWaypoints.back().mLocation)); return 0;
     case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST: return Handle(EEFindLoadedGhost((unsigned long)inA));
     case EE_UNITS_GOAL_HOST_X_FIND_LOADED_GHOST_UNIT: return Handle(EEFindLoadedGhostUnit((unsigned long)inA));
     case EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: return EEIsLineToUnitBlocked(ObjectOf<EEComplexUnit>(inA), ObjectOf<EEUnit>(inB), &sGoalBlocker, &sGoalBlockTile[0], &sGoalBlockTile[1]);
     // the gathering's (world.rs: BeginGathering, Work, SearchNavalResource)
-    case EE_UNITS_GOAL_HOST_TAKE_HIT:
-        ObjectOf<EEUnit>(inA)->TakeHit(ObjectOf<EEComplexUnit>(inB), UMFloatToLong(ObjectOf<EEComplexUnit>(inB)->mStats->mAttack), 0, 1);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_DEPLETE_ONE:
-        ObjectOf<EEUnit>(inA)->DepleteResource(1);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_ADD_RESOURCE_AMOUNT:
-        ObjectOf<EEComplexUnit>(inA)->AddResourceAmount(1);
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_SET_LAST_RESOURCE:
-        ObjectOf<EEComplexUnit>(inA)->SetLastResource(ObjectOf<EEUnit>(inB));
-        return 0;
-    case EE_UNITS_GOAL_HOST_REGROW:
-        ObjectOf<EEUnit>(inA)->RegrowForest(ObjectOf<EEComplexUnit>(inB));
-        return 0;
+    case EE_UNITS_GOAL_HOST_TAKE_HIT: ObjectOf<EEUnit>(inA)->TakeHit(ObjectOf<EEComplexUnit>(inB), UMFloatToLong(ObjectOf<EEComplexUnit>(inB)->mStats->mAttack), 0, 1); return 0;
+    case EE_UNITS_GOAL_HOST_X_DEPLETE_ONE: ObjectOf<EEUnit>(inA)->DepleteResource(1); return 0;
+    case EE_UNITS_GOAL_HOST_X_ADD_RESOURCE_AMOUNT: ObjectOf<EEComplexUnit>(inA)->AddResourceAmount(1); return 0;
+    case EE_UNITS_GOAL_HOST_X_SET_LAST_RESOURCE: ObjectOf<EEComplexUnit>(inA)->SetLastResource(ObjectOf<EEUnit>(inB)); return 0;
+    case EE_UNITS_GOAL_HOST_REGROW: ObjectOf<EEUnit>(inA)->RegrowForest(ObjectOf<EEComplexUnit>(inB)); return 0;
     case EE_UNITS_GOAL_HOST_X_GATHER_TIME: return ObjectOf<EEComplexUnit>(inA)->mStats->mGatherTimes[ioArgs->i[0]];
-    case EE_UNITS_GOAL_HOST_X_WORK_TIME_FACTOR:
-        ioArgs->f[0] = EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->mWorkTimeFactor;
-        return 0;
-    case EE_UNITS_GOAL_HOST_X_SET_WORK_TIMER:
-        ObjectOf<EEComplexUnit>(inA)->SetWorkTimer((long)ioArgs->i[0]);
-        return 0;
-    case EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS:
-        return EEGetRules().Epoch(ObjectOf<EEComplexUnit>(inA)->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;
-    case EE_UNITS_GOAL_HOST_RELEASE_FIRE:
-        ObjectOf<EEComplexUnit>(inA)->ReleaseFireEffect();
-        return 0;
+    case EE_UNITS_GOAL_HOST_X_WORK_TIME_FACTOR: ioArgs->f[0] = EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->mWorkTimeFactor; return 0;
+    case EE_UNITS_GOAL_HOST_X_SET_WORK_TIMER: ObjectOf<EEComplexUnit>(inA)->SetWorkTimer((long)ioArgs->i[0]); return 0;
+    case EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS: return EEGetRules().Epoch(ObjectOf<EEComplexUnit>(inA)->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;
+    case EE_UNITS_GOAL_HOST_RELEASE_FIRE: ObjectOf<EEComplexUnit>(inA)->ReleaseFireEffect(); return 0;
     // the location goal's
     // the world searches' queries (world.rs): unit lists into the sink, tiles as ee_units_goal_push_tile
-    case EE_UNITS_GOAL_HOST_ACTION_CHANGED:
-        ObjectOf<EEComplexUnit>(inA)->mUnitClass->ActionChanged(ObjectOf<EEComplexUnit>(inA));
-        return 0;
+    case EE_UNITS_GOAL_HOST_ACTION_CHANGED: ObjectOf<EEComplexUnit>(inA)->mUnitClass->ActionChanged(ObjectOf<EEComplexUnit>(inA)); return 0;
     default:   // the combat goals' operations (EEUGRustCombat.cpp)
         return EECombatGoalHostOp(inOp, inA, inB, ioArgs);
     }
@@ -492,15 +360,9 @@ EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, st
     return reinterpret_cast<EEUGRust*>(ee_units_goal_new_load(inKind, inArg, Handle(inContainer), &inUnits));   // goal_calls.rs
 }
 
-void EEUGRust::DumpOutOfSynch(FILE* inFile)
-{
-    Goal(EE_UNITS_GOAL_DUMP, this, 0, 0, NULL, NULL, NULL, inFile);
-}
+void EEUGRust::DumpOutOfSynch(FILE* inFile) { Goal(EE_UNITS_GOAL_DUMP, this, 0, 0, NULL, NULL, NULL, inFile); }
 
-void EEUGRust::GetDebugLine(UWideString& ioText)
-{
-    Goal(EE_UNITS_GOAL_DEBUG_LINE, this, 0, 0, NULL, NULL, &ioText);
-}
+void EEUGRust::GetDebugLine(UWideString& ioText) { Goal(EE_UNITS_GOAL_DEBUG_LINE, this, 0, 0, NULL, NULL, &ioText); }
 
 long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -508,10 +370,7 @@ long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     return (long)Goal(EE_UNITS_GOAL_LOAD, this, inMajorVersion, inMinorVersion, NULL, &inFile);
 }
 
-long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile);
-}
+long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile); }
 
 // ---- the C++ of EEGatherNextTree's Rust body (ee_units uu_gather_tree.rs; EE_UNITS_GT_*): one statement each
 
@@ -549,8 +408,7 @@ extern "C" int64_t ee_units_gt_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_GT_NODE_UNIT: return (int64_t)(uintptr_t)GtObj<RTSTileUnitNode>(inA)->mUnit;
     case EE_UNITS_GT_NEXT_NODE: return (int64_t)(uintptr_t)GtObj<RTSTileUnitNode>(inA)->mNext;
     case EE_UNITS_GT_CAN_GATHER: return GtObj<EEComplexUnit>(inA)->CanGather(GtObj<EEUnit>(inB), (long)inC, (long)inD, false, false);
-    case EE_UNITS_GT_HAS_GATHER_POINT:
-        return EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(GtObj<EEComplexUnit>(inA)->GetUnitClass())->HasGatherPoint(GtObj<EEComplexUnit>(inA), GtObj<EEUnit>(inB));
+    case EE_UNITS_GT_HAS_GATHER_POINT: return EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(GtObj<EEComplexUnit>(inA)->GetUnitClass())->HasGatherPoint(GtObj<EEComplexUnit>(inA), GtObj<EEUnit>(inB));
     case EE_UNITS_GT_SET_GATHERED: GtObj<EEComplexUnit>(inA)->SetGatheredResource(GtObj<EEUnit>(inB)); return 0;
     case EE_UNITS_GT_FAMILY: return GtObj<EEUnit>(inA)->GetUnitClass()->mFamily;
     }

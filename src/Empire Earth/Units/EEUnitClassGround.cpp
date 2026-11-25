@@ -79,10 +79,7 @@
 // class: 0x219d67..0x219fe3 (after EEUCResource.cpp; EEUCSpaceBuilding.cpp follows). Unit flags: the exe's module
 // set. Its ctor is inline. Data (.rdata, in order): the four named depth constants 0x447340..0x44734c (ucg_sea.rs).
 
-template <class T> static T* EEUcgObject(uint64_t inHandle)
-{
-    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
-}
+template <class T> static T* EEUcgObject(uint64_t inHandle) { return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle)); }
 
 // The C++ of the ground classes' Rust bodies (ee_units ucg_ground.rs; EE_UNITS_UCG_*): one statement of the original
 // bodies each, in their order; the class host's statements (EE_UNITS_UC_*) pass through to EEUnitClass.cpp's
