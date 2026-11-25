@@ -566,7 +566,9 @@ short EELobbyGame::HandleJoinGameRequestHook(ReadBuffer& inBuffer, LobbyClient* 
     inBuffer.ReadWString(theText, 2);
     if (theVersion != GUIString(theText))
         return 10001;
-    if (inBuffer.ReadLong() != theChecksum)
+    // ReadLong is a signed 32-bit value. Compared with an unsigned long it is sign-extended,
+    // so a checksum at or above 0x80000000 never matches the host (status 10002).
+    if (static_cast<uint32_t>(inBuffer.ReadLong()) != static_cast<uint32_t>(theChecksum))
         return 10002;
     bool theSaved = this->HasGameFile();
     int i;
