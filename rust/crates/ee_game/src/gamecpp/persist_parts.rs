@@ -667,7 +667,7 @@ pub extern "C" fn ee_gamecpp_pch_repair(helper: *mut c_void) -> c_long {
         }
         let caster_id = cal(calamity).mOriginatingUnitID;
         let caster = hp(O::WorldUnit, 0, &[caster_id as i64]);
-        h(O::PchSetCaster, calamity, &[pa(caster)]);
+        super::calamity_objects::ee_gamecpp_calamity_set_unit(calamity as *mut c_void, caster as *mut c_void, false);
         if caster == 0 {
             if caster_id as u32 == u32::MAX {
                 h(O::KlLoadMedia, class, &[pa(hp(O::WorldPlayer, 0, &[0])), 0]);

@@ -288,9 +288,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::CivRequestUpgrades: EECBRequestUpgrades((unsigned char)a[0], MSG->mString, *(std::vector<EECivUpgrade>*)a[1]);
         break;
-    case O::VecLongNew: return P64(new std::vector<long>((const int32_t*)a[0], (const int32_t*)a[0] + a[1]));
-    case O::VecLongDelete: delete (std::vector<long>*)p;
-        break;
     case O::VecPlayersAt: return P64((*(std::vector<EEPlayer*>*)p)[a[0]]);
     // the strings and the chat log
     case O::StrNew1K: return P64(new UWideString(0x400));
@@ -336,24 +333,8 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PlSetHackUnitClass: PL->SetHackUnitClass((long)a[0]);
         break;
-    case O::PlSetGameResult: PL->SetGameResult((long)a[0]);
-        break;
     case O::PlCanBuy: return PL->CanBuy((long)a[0], (long)a[1], (UWideString*)a[2]);
     case O::PlQueueImprovement: PL->QueueImprovement((unsigned long)a[0], (unsigned long)a[1], 0, 0);
-        break;
-    case O::PlAddAndRemoveSelectedIds: PL->AddAndRemoveUnitsFromSelectedGroup(*(std::vector<long>*)a[0]);
-        break;
-    case O::PlAddSelectedIds: PL->AddUnitsToSelectedGroup(*(std::vector<long>*)a[0]);
-        break;
-    case O::PlSelectIds: PL->SelectUnits(*(std::vector<long>*)a[0]);
-        break;
-    case O::PlRemoveSelectedId: PL->RemoveUnitFromSelectedGroup(a[0]);
-        break;
-    case O::PlAddSelectedId: PL->AddUnitToSelectedGroup(a[0], true);
-        break;
-    case O::PlSelectId: PL->SelectUnit(a[0], true, true);
-        break;
-    case O::PlUnselectAll: PL->UnselectAllUnits();
         break;
     case O::PlAddResource: PL->AddResource((long)a[0], (long)a[1]);
         break;
@@ -368,8 +349,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PlIncrementEpic: PL->IncrementEpic();
         break;
     case O::PlSavedGroupsSet: PL->mSavedGroups.Set((long)a[0], (long)a[1]);
-        break;
-    case O::PlClearSavedGroup: PL->ClearSavedGroup((unsigned char)a[0]);
         break;
     case O::PlAssignSavedGroup: PL->mGroups[a[0]]->Assign(PL->mActiveGroup);
         break;

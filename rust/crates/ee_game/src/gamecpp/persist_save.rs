@@ -388,11 +388,9 @@ fn save_to_file(file: P, time: c_ulong) -> i64 {
     } else {
         h(O::PsMessageString, 0, &[PS_IDS_ERROR_SAVING_FILE]);
     }
-    if r == PF_OK {
-        h(O::PsReportSaved, 0, &[]);
-    } else {
-        h(O::PsReportSaveError, 0, &[]);
-    }
+    let report: &std::ffi::CStr =
+        if r == PF_OK { c"Game saved.  " } else { c"Error saving game.  Please report this bug." };
+    super::utilities::ee_gamecpp_report_load_failure(report.as_ptr(), false, std::ptr::null_mut());
     r
 }
 
@@ -418,7 +416,7 @@ fn reload_saved_game(file: P) -> i64 {
         // SAFETY: the game's preloading thread object
         crate::preload::ee_preload_wait_for_queue(unsafe { *std::ptr::addr_of!(super::globals::gDataPreLoading) });
         h(O::PsWorldClear, 0, &[]);
-        h(O::PsWorldStartGame, 0, &[pa(st)]);
+        super::world::ee_gamecpp_world_start_game(hp(O::WorldAddr, 0, &[]) as *mut c_void, st as *mut c_void, true);
         h(O::PsStReset, st, &[]);
     }
     r
@@ -663,7 +661,11 @@ fn load_game(st: P, header_file: P, file: P) -> bool {
         ee_base::ustring::ee_ustring_set_legacy_text_load(false);
     }
     if !result {
-        h(O::PsReportCorrupt, 0, &[]);
+        super::utilities::ee_gamecpp_report_load_failure(
+            c"Load game file is corrupt.".as_ptr(),
+            false,
+            std::ptr::null_mut(),
+        );
         h(O::PsStClear, st, &[]);
         // port: the failed load's teardown done (EE-SIM ends its wait for the game with it: a clean failure)
         h(O::PsDebugCorrupt, 0, &[]);
@@ -760,7 +762,7 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
             PS_TAG_CALAMITIES => match cast(O::PsCastCalamities) {
                 0 => r = 3,
                 c => {
-                    h(O::PsStSetCalamityHelper, st, &[pa(c)]);
+                    super::state::ee_gamecpp_state_set_calamity_helper(st as *mut c_void, c as *mut c_void);
                     h(O::PsStRestorablePushCalamities, st, &[pa(c)]);
                     item = 0;
                 }

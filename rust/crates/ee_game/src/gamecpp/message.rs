@@ -26,10 +26,15 @@ use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUn
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
+use super::session_objs::{EeGamecppClientTail, EeGamecppServerTail};
 use super::{cptr, h, hf, hp, pa, ptr, rec, Owned, O, P};
 use ee_net::net::ffi_comms::EeNetCommsField;
 use ee_net::net::ffi_server::EeNetSvSet;
-use super::session_objs::{EeGamecppClientTail, EeGamecppServerTail};
+use ee_sim::units::group_host::ee_units_selection;
+use ee_sim::units::player_body::game::ee_units_player_body;
+use ee_sim::units::player_body::{EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, EE_UNITS_PLAYER_DO_UNSELECT_ALL};
+use ee_sim::units::player_rest::game::ee_units_player_rest;
+use ee_sim::units::player_rest::EE_UNITS_PLAYER_REST_SET_GAME_RESULT;
 
 // ---- the constants the bodies pass (EEMessage.cpp static_asserts them)
 /// `kGraphicEffectCommandConfirmationMove`, `...Attack`, `...GatherOther`, `kGraphicEffectDisbandUnitEmitter`.
@@ -335,7 +340,7 @@ fn migration_slot_info(m: P) {
         }
         if !prts(world_player(index)).mObserverMode {
             h(O::WRemovePlayerFromGame, world(), &[0, index]);
-            h(O::PlSetGameResult, world_player(index), &[2]);
+            set_game_result(world_player(index), 2);
         }
     }
     prts(world_player(index)).mSlot = get::<u8>(m, 2);
@@ -750,25 +755,59 @@ pub extern "C" fn ee_gamecpp_msg_sound(index: i64) {
 /// `ids` points to `count` ids.
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_msg_select_list(pl: *mut c_void, how: i64, ids: *const i32, count: i64) {
-    let list = Owned(hp(O::VecLongNew, 0, &[ids as usize as i64, count]), O::VecLongDelete);
+    // the ids as the player's std::vector<long> held them
+    // SAFETY: the caller's `count` ids
+    let list: Vec<c_long> =
+        unsafe { std::slice::from_raw_parts(ids, count as usize) }.iter().map(|&id| id as c_long).collect();
+    // AddAndRemoveUnitsFromSelectedGroup, AddUnitsToSelectedGroup, SelectUnits
     let op = match how {
-        0 => O::PlAddAndRemoveSelectedIds,
-        1 => O::PlAddSelectedIds,
-        _ => O::PlSelectIds,
+        0 => 5,
+        1 => 4,
+        _ => 6,
     };
-    h(op, pl as P, &[pa(list.0)]);
+    // SAFETY: the live player and the list
+    unsafe { ee_units_selection(pl, op, core::ptr::null_mut(), 0, list.as_ptr(), list.len(), false, false) };
 }
 
 /// EE_NETMSG_OP_SELECT: one unit removed from (0), added to (1) or made (2) the selection, or none selected.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_msg_select(pl: *mut c_void, how: i64, id: i64) {
     let pl = pl as P;
+    // RemoveUnitFromSelectedGroup's long id, AddUnitToSelectedGroup's and SelectUnit's unsigned long
     match how {
-        0 => h(O::PlRemoveSelectedId, pl, &[id]),
-        1 => h(O::PlAddSelectedId, pl, &[id]),
-        2 => h(O::PlSelectId, pl, &[id]),
-        _ => h(O::PlUnselectAll, pl, &[]),
+        0 => select(pl, 8, id as c_long as i64, false, false),
+        1 => select(pl, 3, id as c_ulong as i64, true, false),
+        2 => select(pl, 2, id as c_ulong as i64, true, true),
+        _ => unselect_all(pl),
+    }
+}
+
+/// EEPlayer's one-unit selection members by id (ee_sim group_host.rs `ee_units_selection`).
+fn select(pl: P, op: i32, id: i64, flag: bool, flag2: bool) {
+    // SAFETY: the live player, no unit, no list
+    unsafe { ee_units_selection(pl as *mut c_void, op, core::ptr::null_mut(), id, core::ptr::null(), 0, flag, flag2) };
+}
+
+/// EEPlayer::SetGameResult.
+fn set_game_result(pl: P, state: i64) {
+    // SAFETY: the live player
+    unsafe {
+        ee_units_player_rest(pl as *mut c_void, EE_UNITS_PLAYER_REST_SET_GAME_RESULT, 0, state as c_long as i64, 0)
     };
+}
+
+/// The player's member `what` with one argument (EEPlayer's one-call members over ee_sim player_body.rs).
+///
+/// # Safety
+/// `pl` is a live player.
+unsafe fn player_body(pl: P, what: u32, a: u64) {
+    unsafe { ee_units_player_body(pl as *mut c_void, what, a, 0, 0, 0.0) };
+}
+
+/// EEPlayer::UnselectAllUnits.
+fn unselect_all(pl: P) {
+    // SAFETY: the live player
+    unsafe { player_body(pl, EE_UNITS_PLAYER_DO_UNSELECT_ALL, 0) };
 }
 
 /// EE_NETMSG_OP_RESOURCE: a resource added (0), taken (1), traded (2) or a tribute recorded.
@@ -957,7 +996,8 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
             h(O::PlSavedGroupsSet, pl, &[0x15, i[2]]);
         }
         EE_NETMSG_PACT_CLEAR_SAVED => {
-            h(O::PlClearSavedGroup, pl, &[i[1] as u8 as i64]);
+            // SAFETY: the live player (EEPlayer::ClearSavedGroup)
+            unsafe { player_body(pl, EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, i[1] as u8 as u64) };
         }
         EE_NETMSG_PACT_ASSIGN_SAVED => {
             h(O::PlAssignSavedGroup, pl, &[i[1]]);
@@ -968,7 +1008,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
         EE_NETMSG_PACT_LOCK_CIV => psaved(pl).mCivilizationLocked = true,
         EE_NETMSG_PACT_REMOVE => {
             h(O::WRemovePlayerFromGame, world(), &[0, prts(pl).mPlayerID as i64]);
-            h(O::PlSetGameResult, pl, &[2]);
+            set_game_result(pl, 2);
         }
         EE_NETMSG_PACT_REMOVE_IMPROVEMENT => {
             let queued = h(O::PlCountQueuedImprovements, pl, &[i[1], i[2]]) != 0;
@@ -1050,7 +1090,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_selection(i: *const i64, pl: *mut c_void
             h(O::PlSetSelectedViewedUnit, pl, &[]);
         }
         EE_NETMSG_SEL_RESET => {
-            h(O::PlUnselectAll, pl, &[]);
+            unselect_all(pl);
             h(O::PlSelectedCopyActive, pl, &[]);
         }
         EE_NETMSG_SEL_JIT_OFF => {

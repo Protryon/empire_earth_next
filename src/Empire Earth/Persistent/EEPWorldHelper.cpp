@@ -218,8 +218,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwStTeamsFromHelper: ((EEGameState*)p)->mTeams = ((EEPWorldHelper*)a[0])->mTeams;
         break;
-    case O::PwChatLogLoad: return ee_screens_chat_log_load(&FILE_);
-    case O::PwChatLogSave: return ee_screens_chat_log_save(&FILE_);
     case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
     case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
     case O::PwAreaEffectsLoad: return EEAELoadRunningState(FILE_);
@@ -412,8 +410,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PchContagionLoad: return PCH->mContagionManager->Load((unsigned long)a[0], (unsigned long)a[1], CAFILE);
     case O::PchCount: return (int64_t)PCH->mCalamities->size();
     case O::PchAt: return P64((*PCH->mCalamities)[a[0]]);
-    case O::PchSetCaster: CL->SetCasterUnit((EEUnit*)a[0]);
-        break;
     case O::PchPlaySound: CL->PlaySound();
         break;
     case O::PchDeleteAt: delete std::exchange((*PCH->mCalamities)[a[0]], nullptr);
@@ -594,10 +590,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSaveTextName: *(UString*)a[0] = GetSaveTextName(SPEC->GetFile(), a[1] != 0);
         break;
-    case O::PsReportSaved: EEReportLoadFailure(UString("Game saved.  "), false, NULL);
-        break;
-    case O::PsReportSaveError: EEReportLoadFailure(UString("Error saving game.  Please report this bug."), false, NULL);
-        break;
     case O::PsMessageString: gResource->GetString((long)a[0], gLoadSaveErrorMessage);
         break;
     case O::PsMessageStringVerify: ESVERIFY_AT(::gResource->GetString((long)a[0], ::gLoadSaveErrorMessage) == keseOK, 669);
@@ -644,8 +636,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsStSetMap: ST->SetMap((EEMap*)a[0]);
         break;
-    case O::PsStSetCalamityHelper: ST->SetCalamityHelper((EEPCalamityHelper*)a[0]);
-        break;
     case O::PsStSetEnvironmentManager: ST->SetEnvironmentManager((EEEnvironmentManager*)a[0]);
         break;
     case O::PsStRestorablePushEffects: ST->mRestorables.push_back((EEEffectManager*)a[0]);
@@ -663,11 +653,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsWorldClear: gWorld.Clear();
         break;
-    case O::PsWorldStartGame: gWorld.StartGame((EEGameState*)a[0], true);
-        break;
     case O::PsInScenarioEditor: return gUIManager->mInScenarioEditor;
-    case O::PsReportCorrupt: EEReportLoadFailure("Load game file is corrupt.", false, NULL);
-        break;
     case O::PsDebugCorrupt: ESDebugOut("EE load failure: Load game file is corrupt.\n");
         break;
     case O::PsDataPathFind: return gDataPath->FindFile(*(const UString*)a[0], *(FSFileSpec**)a[1]);

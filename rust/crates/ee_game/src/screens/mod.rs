@@ -151,7 +151,7 @@ mod chat_ffi;
 pub mod chat_line;
 pub mod chat_log;
 #[cfg(not(test))]
-mod chat_log_ffi;
+pub(crate) mod chat_log_ffi;
 pub mod civ_builder;
 #[cfg(not(test))]
 mod civ_builder_ffi;
