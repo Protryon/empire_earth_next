@@ -495,8 +495,17 @@ public:
         ee_units_stats_copy(this->mStats, inOther.mStats);
     }
     virtual ~EEPlayerStatistics() { ee_units_stats_free(this->mStats); }
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    // the name, then Rust's (the end time, each series' maximum and points)
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+    {
+        long theResult = this->mName.Load(inFile);
+        return theResult != 0 ? theResult : ee_units_stats_load(this->mStats, &inFile, &EESaveFilePrimitive, &this->mEndTime);
+    }
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+    {
+        long theResult = this->mName.Save(outFile);
+        return theResult != 0 ? theResult : ee_units_stats_save(this->mStats, &outFile, &EESaveFilePrimitive, this->mEndTime);
+    }
     // the series raised (the hot-key group events: (0x14, true)) or lowered by an amount, or set to a value
     void Reset(long inSeries, long inAmount) { this->Record(1, inSeries, inAmount); }
     void Lower(long inSeries, long inAmount) { this->Record(2, inSeries, inAmount); }
@@ -515,7 +524,16 @@ public:
     }
     void CompactEpochHistory() { ee_units_stats_compact(this->mStats); }   // EEWorld::RecordStatistics
     void SetName(UWideString inName) { this->mName = inName; }
-    EEStatisticsSeries GetSeries(unsigned long inSeries);   // a copy (the post-game summary, the scores)
+    EEStatisticsSeries GetSeries(unsigned long inSeries)   // a copy (the post-game summary, the scores)
+    {
+        EEStatisticsSeries theSeries;
+        theSeries.mPoints.resize(ee_units_stats_value(this->mStats, inSeries, 3));
+        if (!theSeries.mPoints.empty())
+            ee_units_stats_points(this->mStats, inSeries, theSeries.mPoints.data(), theSeries.mPoints.size());
+        theSeries.mMaxValue = ee_units_stats_value(this->mStats, inSeries, 0);
+        theSeries.mKeepHistory = ee_units_stats_value(this->mStats, inSeries, 4) != 0;
+        return theSeries;
+    }
     void Record(uint32_t inOp, long inSeries, long inValue);   // Set's gate and the game time, then Rust's op
 
     UWideString mName;                      // (saved)
@@ -530,8 +548,10 @@ public:
 class RTSPlayer : public EeUnitsRtsPlayerFields {
 public:
     RTSPlayer() { this->Reset(); }         // an empty player with no units
-    RTSPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0x16f12e (EEPlayer's ctor; mSaveVisMap = inPlayerID != 0)
-    virtual ~RTSPlayer();                   // +0x00 (??_G 0x16f112, dtor 0x16f1cf)
+    // 0x16f12e (EEPlayer's ctor): every player but player 0 keeps a visibility map
+    RTSPlayer(const UWideString& inName, unsigned long inPlayerID) : RTSPlayer() { this->mName = inName; this->mPlayerID = inPlayerID; this->mSaveVisMap = inPlayerID != 0; }
+    // +0x00 (??_G 0x16f112, dtor 0x16f1cf): its list's records leave the unit store (ee/EEUnitStore.h)
+    virtual ~RTSPlayer() { ee_units_store_clear_player_object((uint64_t)(uintptr_t)this); }
     // +0x04 0x16f1f3: Virtual28(each mPendingUnits unit, inArg1), then Virtual0C() if inArg2 (both tested as bytes;
     // EESELoadThread passes 0, 0; was (long, long))
     virtual void AddPendingUnits(bool inKeepID, bool inRelease) { ee_rts_player_add_pending_units(this, inKeepID, inRelease); }

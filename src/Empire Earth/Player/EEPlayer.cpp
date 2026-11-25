@@ -96,6 +96,7 @@ static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee
 #include "ee/EESimCapture.h"
 #include "ee/EEStatisticsHistory.h"
 #include "ee/EEStatisticsRecord.h"
+#include "ee/EEUnitStore.h"
 #include <cstring>
 
 // (a float's bits: UFloatBits and UBitsFloat, lle/LowLevelEngineCore.h)
@@ -1216,4 +1217,190 @@ extern "C" int64_t ee_units_player_body_host(int32_t inOp, void* inPlayer, uint6
     case EE_UNITS_PLAYER_BODY_TOWN_READ_AREA: return EEReadAreaBytes(std::vector<unsigned char>(EEPlayerPtr<unsigned char>(inB), EEPlayerPtr<unsigned char>(inB) + inC), *EEPlayerTownAt(inA));
     }
     return 0;
+}
+
+// ---- RTSPlayer (C:\EEX\RTS Engine\Player\RTSPlayer.cpp, vtable 0x442b5c; its unit list's bodies are Rust:
+// ee_game rts units.rs)
+// Reads the player's vision flags, ids, color (deriving the shade color), name, units and observer mode;
+// returns the first read error.
+// port (R5b.4, round 29): the body is Rust (ee_units rts_player_save.rs `load`) over the record this class derives
+// from (EeUnitsRtsPlayerFields) and RTSPlayerSaveOperation's parts
+struct RTSPlayerSaveContext {
+    RTSPlayer* mPlayer;
+    FSFile* mFile;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+};
+
+static int32_t RTSPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t, EeUnitsPlayerSaveIo* io)
+{
+    RTSPlayerSaveContext& theContext = *static_cast<RTSPlayerSaveContext*>(inContext);
+    RTSPlayer* thePlayer = theContext.mPlayer;
+    FSFile& theFile = *theContext.mFile;
+    switch (inOp) {
+    case EE_UNITS_RTS_PLAYER_SAVE_COLOR_LOAD: return thePlayer->mColor.Load(theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_SHADE:
+        thePlayer->mShadeColor.SetRed(thePlayer->mColor.GetRed() * 0.6f);
+        thePlayer->mShadeColor.SetGreen(thePlayer->mColor.GetGreen() * 0.6f);
+        thePlayer->mShadeColor.SetBlue(thePlayer->mColor.GetBlue() * 0.6f);
+        return 0;
+    case EE_UNITS_RTS_PLAYER_SAVE_NAME_LOAD: return thePlayer->mName.Load(theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_LOAD_UNIT:
+        return static_cast<EEPlayer*>(thePlayer)->LoadUnit(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_ADD_PENDING: thePlayer->AddPendingUnits(true, false); return 0;
+    case EE_UNITS_RTS_PLAYER_SAVE_COLOR_SAVE: return thePlayer->mColor.Save(theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_NAME_SAVE: return thePlayer->mName.Save(theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_SAVE_UNITS:
+        return thePlayer->SaveUnits(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+    }
+    return EESavePrimitive(theFile, inOp, io);
+}
+
+long RTSPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    RTSPlayerSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion};
+    return ee_units_rts_player_load(&theContext, &RTSPlayerSaveOperation, this, (uint32_t)inMajorVersion,
+                                    (uint32_t)inMinorVersion);
+}
+
+long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+{
+    RTSPlayerSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};
+    return ee_units_rts_player_save(&theContext, &RTSPlayerSaveOperation, this);
+}
+
+// The shims units.rs calls (UnitsCpp: the player's side)
+extern "C" {
+EeUnitsRtsPlayerFields* ee_rtspcpp_player_fields(RTSPlayer* inPlayer) { return inPlayer; }
+EeRtsUnitBucket* ee_rtspcpp_buckets(RTSPlayer* inPlayer) { return inPlayer->mUnitBuckets; }
+EEUnit** ee_rtspcpp_first_slot(RTSPlayer* inPlayer) { return &inPlayer->mFirstUnit; }
+EEUnit** ee_rtspcpp_last_slot(RTSPlayer* inPlayer) { return &inPlayer->mLastUnit; }
+size_t ee_rtspcpp_pending_size(RTSPlayer* inPlayer) { return inPlayer->mPendingUnits.size(); }
+RTSUnit* ee_rtspcpp_pending_at(RTSPlayer* inPlayer, size_t inIndex) { return inPlayer->mPendingUnits[inIndex]; }
+void ee_rtspcpp_pending_clear(RTSPlayer* inPlayer) { inPlayer->mPendingUnits.clear(); }
+size_t ee_rtspcpp_killed_size(RTSPlayer* inPlayer) { return inPlayer->mKilledUnits.size(); }
+RTSUnit* ee_rtspcpp_killed_at(RTSPlayer* inPlayer, size_t inIndex) { return inPlayer->mKilledUnits[inIndex]; }
+void ee_rtspcpp_killed_clear(RTSPlayer* inPlayer) { inPlayer->mKilledUnits.clear(); }
+void ee_rtspcpp_killed_push(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->mKilledUnits.push_back(inUnit); }
+void ee_rtspcpp_add_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, bool inKeepID) { inPlayer->AddUnit(inUnit, inKeepID); }
+void ee_rtspcpp_release_pending(RTSPlayer* inPlayer) { inPlayer->ReleasePendingUnits(); }
+void ee_rtspcpp_removing_unit(RTSPlayer* inPlayer, RTSUnit* inUnit) { static_cast<EEPlayer*>(inPlayer)->RemovingUnit(inUnit); }
+void ee_rtspcpp_unit_removed(RTSPlayer* inPlayer, RTSUnit* inUnit) { static_cast<EEPlayer*>(inPlayer)->UnitRemoved(inUnit); }
+void ee_rtspcpp_removals_done(RTSPlayer* inPlayer) { static_cast<EEPlayer*>(inPlayer)->RemovalsDone(); }
+long ee_rtspcpp_save_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, unsigned long inMajor, unsigned long inMinor, FSFile* inFile) { return static_cast<EEPlayer*>(inPlayer)->SaveUnit(inUnit, inMajor, inMinor, *inFile); }
+void ee_rtspcpp_name_checksum(RTSPlayer* inPlayer, ESChecksum* ioChecksum) { inPlayer->mName.GetChecksum(*ioChecksum); }
+void ee_rtspcpp_checksum_add(ESChecksum* ioChecksum, const char* inName, unsigned long inValue) { ioChecksum->AddChecksum(inName, inValue); }
+void ee_rtsucpp_store_insert(RTSUnit* inUnit, unsigned long inOwner, RTSPlayer* inPlayer) { EEUnitStoreInsert(inUnit, inOwner, inPlayer); }
+}
+
+// ---- EEPPlayerEventList (EEPPlayerEventList.cpp, vtable 0x442b54)
+// port (the player lane, round 1): the events and every decision on them are Rust (ee_units player_events.rs, mList);
+// this is their world: the sight at an event's location and the local view of it, the local player, the alert sounds
+// (loaded with the list), the mini-map ping and the chat text
+
+// the alert sounds (the event's kind - 1)
+static const unsigned long kEEPlayerEventSounds[5] = {kSoundUnderAttack, kSoundGarrison, kSoundFlare, 0x7d0, 0x7d0};
+
+// the list's world, one statement an operation (the compound ones are Rust: player_events_split.rs)
+int32_t EEPPlayerEventList::Host(void* inList, void* inPlayer, int32_t inOp, const EeUnitsPlayerEvent* inEvent)
+{
+    EEPPlayerEventList* theList = static_cast<EEPPlayerEventList*>(inList);
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    switch (inOp) {
+    case EE_UNITS_EVENTS_IS_LOCAL: return thePlayer == gWorld.GetCurrentPlayer();
+    case EE_UNITS_EVENTS_PLAYING: return theList->mSound != NULL && gSoundManager->GetIsPlaying(theList->mSound);
+    case EE_UNITS_EVENTS_TEXT:
+        if (inEvent->text != -1) {
+            UWideString theText;
+            gResource->GetString(inEvent->text, theText);
+            gUserInterface->AddChatLogEntry(theText, 0);
+        }
+        return 0;
+    case EE_UNITS_EVENTS_STOP_PING: gMiniMap->mB12185 = false;
+        return 0;
+    case EE_UNITS_EVENTS_X_SIGHT_ON: thePlayer->AddSharedSightAt(EETileLocation(inEvent->x, inEvent->y));
+        return 0;
+    case EE_UNITS_EVENTS_X_SIGHT_OFF: thePlayer->RemoveSharedSightAt(EETileLocation(inEvent->x, inEvent->y));
+        return 0;
+    case EE_UNITS_EVENTS_X_CELL_ON: gMiniMap->CountCellOn(inEvent->x, inEvent->y);
+        return 0;
+    case EE_UNITS_EVENTS_X_CELL_OFF: gMiniMap->CountCellOff(inEvent->x, inEvent->y);
+        return 0;
+    case EE_UNITS_EVENTS_X_TILE_ON: gWorld.mMap->mTerrainMesh.ReferenceTile(inEvent->x, inEvent->y);
+        return 0;
+    case EE_UNITS_EVENTS_X_TILE_OFF: gWorld.mMap->mTerrainMesh.DereferenceTile(inEvent->x, inEvent->y);
+        return 0;
+    case EE_UNITS_EVENTS_X_HAS_SOUND: return theList->mSounds[inEvent->kind - 1] != NULL;
+    case EE_UNITS_EVENTS_X_PLAY: theList->mPlayed = gSoundManager->PlayAndReturnReferencedNode(theList->mSounds[inEvent->kind - 1]->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+        return 0;
+    case EE_UNITS_EVENTS_X_HAS_CURRENT: return theList->mSound != NULL;
+    case EE_UNITS_EVENTS_X_CURRENT_RELEASE: theList->mSound->Dereference();
+        return 0;
+    case EE_UNITS_EVENTS_X_CURRENT_SET: theList->mSound = theList->mPlayed;
+        return 0;
+    case EE_UNITS_EVENTS_X_HAS_PLAYED: return theList->mPlayed != NULL;
+    case EE_UNITS_EVENTS_X_PLAYED_REFERENCE: theList->mPlayed->Reference();
+        return 0;
+    case EE_UNITS_EVENTS_X_PING_X: gMiniMap->mU1216C.SetX(inEvent->source_x);
+        return 0;
+    case EE_UNITS_EVENTS_X_PING_Y: gMiniMap->mU1216C.SetY(inEvent->source_y);
+        return 0;
+    case EE_UNITS_EVENTS_X_PING_ON: gMiniMap->mB12185 = true;
+        return 0;
+    case EE_UNITS_EVENTS_X_SOUND_GET: theList->mSounds[inEvent->kind - 1] = EESoundObject::Get(kEEPlayerEventSounds[inEvent->kind - 1]);
+        return 0;
+    case EE_UNITS_EVENTS_X_SOUND_LOAD: theList->mSounds[inEvent->kind - 1]->LoadMedia();
+        return 0;
+    case EE_UNITS_EVENTS_X_SOUND_UNLOAD: theList->mSounds[inEvent->kind - 1]->UnloadMedia();
+        return 0;
+    }
+    return 0;
+}
+
+void EEPPlayerEventList::AddEvent(const EETileLocation& inTile, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew)
+{
+    this->AddPlayerEvent(inTile, EETileLocation(-10000, -10000), inType, inPlayer, inTextID, inForceNew);
+}
+
+void EEPPlayerEventList::AddPlayerEvent(const EETileLocation& inTile, const EETileLocation& inFrom, long inType, EEPlayer* inPlayer,
+                                        long inTextID, bool inForceNew)
+{
+    ee_units_events_add(this->mList, this, inPlayer, &EEPPlayerEventList::Host, inTile.GetX(), inTile.GetY(), inFrom.GetX(),
+                        inFrom.GetY(), inType, inTextID, inForceNew);
+}
+
+bool EEPPlayerEventList::GetNextEventSource(EETileLocation& outSource)
+{
+    return ee_units_events_next(this->mList, &outSource.mX, &outSource.mY);   // (0, 0) without one
+}
+
+// the statistics (EEPlayerStatistics, ee/EEPlayer.h; the series are Rust's: ee_units player_stats.rs)
+// Set's gate (a shutdown, a saved game loading, the scenario editor outside the game screen) and the game time, then
+// the series' op (0 Set, 1 raised, 2 lowered)
+void EEPlayerStatistics::Record(uint32_t inOp, long inSeries, long inValue)
+{
+    ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0,
+                       UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gLoadingSavedGame ? EE_UNITS_STATS_LOADING
+                       : gUIManager->mInScenarioEditor && !gGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
+}
+
+// Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources (the plain
+// members from mColor to mIsHuman: ee_units player_stats.rs)
+static_assert(offsetof(EEStatisticsRecord, mResources) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, resources) && offsetof(EEStatisticsRecord, mSlot) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, slot) && offsetof(EEStatisticsRecord, mIsHuman) - offsetof(EEStatisticsRecord, mColor) == offsetof(EeUnitsStatsRecordTail, is_human), "EeUnitsStatsRecordTail");
+void EEStatisticsRecord::Clear()
+{
+    this->mName = gEmptyString;
+    this->mNameSuffix = gEmptyString;
+    this->mStatistics.Clear();
+    ee_units_stats_record_clear(reinterpret_cast<EeUnitsStatsRecordTail*>(&this->mColor));
+}
+
+// Clears the game history: times, map size, flags (the plain members from mStartTime to mIsCampaign: ee_units
+// player_stats.rs), campaign name and every record
+static_assert(offsetof(EEStatisticsHistory, mTeamsLocked) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, teams_locked) && offsetof(EEStatisticsHistory, mIsCampaign) - offsetof(EEStatisticsHistory, mStartTime) == offsetof(EeUnitsStatsHistoryTail, is_campaign), "EeUnitsStatsHistoryTail");
+void EEStatisticsHistory::Reset()
+{
+    ee_units_stats_history_clear(reinterpret_cast<EeUnitsStatsHistoryTail*>(&this->mStartTime));
+    this->mCampaignName.Clear();
+    this->mRecords.clear();
 }

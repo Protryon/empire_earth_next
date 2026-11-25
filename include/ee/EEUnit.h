@@ -778,7 +778,7 @@ public:
 
 // 0x16d69e (cdecl): the statistics series of inUnit, 0 for none (EEComplexUnit::GarrisonUnit passes it to
 // EEPlayerStatistics::Lower with 1) (provisional name)
-long EEAddDeadUnitStatistic(EEComplexUnit* inUnit);
+inline long EEAddDeadUnitStatistic(EEComplexUnit* inUnit) { return ee_units_dead_unit_statistic((uint64_t)(uintptr_t)static_cast<RTSUnit*>(inUnit)); }
 // 0x246c87 (cdecl): the complex unit acting on inUnit, 0 if none (SetGatheredResource) (provisional name)
 EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit);
 // 0x23d5c3 (cdecl; EEComplexUnit::ReleaseFireEffect for unit type 0x321): destroys the unit's cloaking effect, if it has
