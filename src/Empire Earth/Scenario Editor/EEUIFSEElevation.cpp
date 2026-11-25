@@ -8,32 +8,20 @@
 // is the tab's host (ee_screenscpp_seel): the controls only the tab makes and the world it reads.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GEViewport.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
 
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEMouse.h"
-#include "ee/EEGraphics.h"
-#include "ee/EEMessage.h"
-#include "ee/EEARust.h"
 #include "lle/UIESliderChange.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIShell.h"
-#include "ee/EEUIShell.h"
-#include "ee/EEStringIDs.h"
-#include "rust/game/screens.h"
 
 // ---- the tab's host (editor_elevation.rs: the ops from 900)
 

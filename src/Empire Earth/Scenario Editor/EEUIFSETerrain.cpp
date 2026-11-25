@@ -4,30 +4,21 @@
 // EESEATestScenario.cpp, before EEUIFSETRBPaintType.cpp.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETexture.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
-#include "lle/GETerrainMesh.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEAction.h"
-#include "ee/EEUIManager.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EEDatabaseTables.h"
 #include "lle/UIListBox.h"
-#include "lle/UIRadioButton.h"
 #include "lle/GEText.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESEARust.h"
@@ -39,8 +30,6 @@
 #include "ee/EETerrainColorTable.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUIShell.h"
-#include "ee/EEStringIDs.h"
-#include "rust/game/screens.h"
 
 // The terrain name order (0x1aee71): the localized terrain names compared without case (editor_setnx.rs
 // terrain_less). It has no state and returns via ret 8 (provisional name).

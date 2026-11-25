@@ -7,19 +7,11 @@
 #include <string>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 
-#include "lle/GERhombus.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
 #include "lle/GETerrainMesh.h"
-#include "lle/UResourceFile.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -27,19 +19,14 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEARust.h"
 #include "ee/EESELoadThread.h"
-#include "ee/EESEUnit.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEStringIDs.h"
 #include "ee/EESEARust.h"
 #include "ee/EEScenarioManager.h"
-#include "rust/game/screens.h"
 EESELoadThread::EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPriority)
 {
     ee_screens_selt_construct(this, inEditor, inThreadPriority);
