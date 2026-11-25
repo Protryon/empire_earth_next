@@ -41196,3 +41196,94 @@ lines, 808 classes; origin/rust 04ccdbcf3 has 109,934 / 354 / 17,218 / 810. The 
   LassoHook; EESimEditor's action and event classes; the session frame and the other C++-owned cases of
   EEPWorldHelper, EEMessage and EEServer; EERandomMap's LoadProgress; MiniMapRedraw's body; the player's host
   prologues (not reached); the civ builder cases (player/tech lane).
+
+## The player/tech lane, round 1, fork B: the civilization builder's and the CP headers' records as Rust's, their one-statement members inline, the dead declarations (ee_sim tech_consts.rs; ee_game civilization.rs, screens civ_whole_ffi.rs; branch rust-playertech1-b, 2026-11-24)
+
+The civilization builder's folder (the area effects, the manager, the files, the builder's host), ee/EECiv* and
+ee/EECP*: 943 -> 864 logic lines in the lane's scope (pl1_scope.py), 18,740 -> 18,623 in the whole tree, with no
+behaviour change (oracle 6/6 identical, the oracle, units, effects and scenario captures, saveload, the civilization
+builder's editor gate).
+
+- **A header every unit reads must not include a big Rust header.** EECivilization's members forwarded to
+  `ee_gamecpp_civ_*` (gamecpp.h, 6,500 lines, changed by most lanes); ee/EECivilization.h is included by ee/EEPlayer.h,
+  so inlining them there would have recompiled nearly every unit at each gamecpp FFI change (the object cache keys on
+  the header's text). civilization.rs became its own ee_game module instead: cbindgen writes one header per top-level
+  module, and rust/game/civilization.h is 66 lines. The same check kept CanAfford out of the class (it needs
+  `gGameOptions`, a ref to the lobby's options: `gAllowCustomCivs` is the game's, not the same object).
+- **A Rust record as the C++ name**: `struct EECPPlacement : EeCpPlacementObj {};` keeps the forward declaration
+  `struct EECPPlacement;` of ee/EEComputerPlayer.h valid (a typedef would not); the offsetof checks name the Rust
+  fields. Enums and constants: `EEAreaEffectKind` and `EECivUpgrade` with its level bits (tech_consts.rs, in the
+  cbindgen.toml export list). The bits are `u32`, not `c_ulong`: `as u32` on a `c_ulong` is clippy's
+  unnecessary_cast on Windows (32-bit long) and needed on Linux; the C++ constant changed from `unsigned long` to
+  `uint32_t`, the same values in both of its expressions.
+- **A one-line definition** (`X::X(...) { ...; }`) ends on its own line: a cutting script that looks for the next
+  column-0 `}` swallows the following function (it took EEAreaEffect::Dump and Checksum here; restored before the build).
+- **Dead code** found by a whole-tree name count (src, include, rust/crates: a name only in its own header and
+  definition, or only in Rust comments): the manager's UpgradeKey, FindUpgradeKey, GetUpgrades, `kCivKey`,
+  `EECivilizationUpgradeValue`, EECBUIListBox's `sSeparator` and `sCategory`.
+- The area effects' running state's FSFile I/O moved to Rust over gamecpp's `Pf` (the same FSFile overloads the
+  C++ switch called), so `EEAESaveRunningState`/`Load` are one-statement inlines.
+- **The civilization builder gate's flake reproduced** (round 11's, "The civilization builder gate's flake"): one
+  `--civbuilder` run in three failed at step 59 with the box round 12 predicted on top, `EEUIFError` 'Error Creating
+  File' (the overwrite's create-new after its delete, under this machine's load with seven lanes running); the
+  rerun passed. It is the file system's, not this round's code.
+- Edits outside the fork's files: the AI Thread's forwarder bodies deleted (EECPNext.cpp, EECPNextUnits.cpp,
+  EECPTrace.cpp, EEComputerPlayer.cpp), EEPlayer.cpp's empty ~EECivilization, EEWorldLayout.cpp's two offsetof
+  field names, EEVCWonder.cpp's include.
+
+## The player/tech lane, round 1: EEPlayer's and RTSPlayer's forwarders inline, the tech tree's members over ee_game tech_tree, the civilization builder's records as Rust's (ee_game tech_tree, civilization.rs; branch rust-playertech1, 2026-11-24)
+
+The lane's scope (ee/EEPlayer.h, ee/EETech*, ee/EECP*, ee/EECiv*, the Player, Tech Tree and Civilization Builder
+folders): 1,223 -> 528 (587 before batch 25, whose game core 13 made ee/EETechTreeTechID.h Rust's) logic lines; the whole tree against the merged batch 25 (04ccdbcf3, port_metrics.py): C++ lines 109,934 -> 107,975, compiled files 354 -> 353, logic 17,218 -> 16,542, classes 810 -> 800. No behaviour change (the oracle's six seeds identical, the
+capture profiles, saveload). Fork B's civilization builder has its own section above; this is the lead's part
+(the player) and fork A's (the tech tree).
+
+- **An inline member's body is compiled in the header's context**: a free function it calls must be declared before
+  the class (in-class bodies see the whole class, but namespace names only from before the definition), and every type
+  it converts must be complete there. EEPlayer.h could take 99 of EEPlayer.cpp's one-statement members once
+  `EEPlayerRefs` (the struct the Rust player's view is built by; its constructor stays in EEPlayer.cpp beside the
+  static host) and `EEPlayerUnits` (now taking a `void*` unit) were declared before EEPlayer. What could not move:
+  `UnitsSwapped` (`ioSwaps.data()` on a vector of the incomplete `EEPUnitSwap`: one error, in 66 units, from the
+  vector's arithmetic), `GetNearestArea` (an `EETown*` to `EEAIArea*` conversion), `GetNumWonderUnits`
+  (`UReferenceContainer`), `GetPopulationLimit` (gWorld), the class media setters (EEUnitStats).
+- **A unit pointer as the Rust's integer without the class**: `EEPlayerUnitArg(inUnit)` converted an `EEComplexUnit*`
+  to `RTSUnit*` first (a complete type); the inline bodies cast through `void*` instead. It is the same address only
+  because RTSUnit is the first base of EEUnit and EEUnit the first of EEComplexUnit, all with a vtable at offset 0;
+  the active group's `H(this)` already relied on it.
+- **A context made in the call's argument**: `EEPlayerSaveContext{...}.Self()` lives until the end of the full
+  expression, so the Rust call that passes the pointer back to the host may use (and write) it; Load, Save,
+  LoadUnit and SaveUnit became one statement and the units' context (the same four fields and the unit) merged into
+  the save's.
+- **A Rust record in place of a C++ struct with a zeroing constructor**: `EeRtsUnitBucket mUnitBuckets[128] = {};`
+  zeroes as RTSUnitBucket's constructor did (the original's VC6 array-ctor loop); EEPWorldHelper's one write names
+  the Rust field. `EEStatisticsSeries::mPoints` holds `EeUnitsStatPoint`, so GetSeries passes `data()` with no cast.
+- `GetNextEventSource` writes the Rust's answer straight into the tile; `ee_units_events_next` now writes (0, 0)
+  without an event, the C++ caller's old start values.
+- The metric counts a declaration line, so 'shims allowed' here means a
+  forwarder in the class rather than a declaration plus an out-of-line body; EEPlayer.cpp lost 600 lines of text
+  and EEPlayer.h's logic 393 -> ~200.
+- **A harness hook stays out of line**: tools/build.py's HARNESS_HOOKS give the test profile an overlay that marks
+  each hooked function `__declspec(noinline)` by its definition's text, and the debugger harness finds it by its
+  mangled name (no_human_defeat.py: `EEPlayer::SetGameResult`). Inlining SetGameResult failed only the test
+  profile's build ("overlay EEPlayer.cpp: ... matches 0 times"); it is back in EEPlayer.cpp. Check HARNESS_HOOKS and
+  `git grep '@Class@@' tools` before inlining a member.
+- **TaskStop of a background chain does not stop its children**: a stopped `bash chain.sh` kept running its python
+  children (a build, then the oracle) beside the restarted chain in the same worktree, and their log writes left NULs
+  in chain.log. Kill the process tree (Win32_Process by ParentProcessId) before restarting.
+- **A pure virtual nothing calls through the base**: RTSPlayer's seven (RecountPopulation, IsActive, UnitRemoved,
+  LoadUnit, RemovalsDone, RemovingUnit, SaveUnit) were only called by RTSPlayer.cpp's shims for ee_game rts
+  units.rs and its save host; EEPlayer is the only player kind, so the shims cast to it and the base lost them (the
+  vtable's slot order changes: nothing reads it by offset).
+- EEPlayer's AddPendingUnits/ReleasePendingUnits (the groups' op, then RTSPlayer's) and the event list's destructor
+  (free, then the sounds) are one Rust function each (`ee_rts_eeplayer_*`, `ee_units_events_destroy`).
+- **The tech tree (fork A)**: a new top-level ee_game module gets its own small cbindgen header
+  (rust/game/tech_tree.h): that is what let EEPlayer.h inline the tree's forwarders without including gamecpp.h
+  (6,500 lines, changed by most lanes). The epoch's node map and loaded classes are one Rust record
+  (`EeTechEpochLists`): the node walks read the list in map order with no C++ call per node (O(n) instead of a
+  `std::next` call each step). The original's inline bases RTSTechTreeNode and RTSTechTree folded into
+  EETechTreeNode/EETechTree (SetPlayerIndex no longer virtual; EEWorldLayout's offsets are offsetof/BaseOffset, so
+  they hold). The node data's containers stay C++: ee_sim's world layout reads `mUnitClasses` as a std::vector by
+  offset. Clippy's unnecessary_cast on the moved modules: the same allow as gamecpp.
+- Edits outside the lane's files: src/RTS Engine/Player/RTSPlayer.cpp (the 14 forwarders moved into the class, the
+  bucket shim's type, the shims' casts to EEPlayer), rust/crates/ee_game/src/rts/units.rs (`ee_rts_eeplayer_*`), src/Empire Earth/Persistent/EEPWorldHelper.cpp (one field name), src/Empire Earth/UI
+  Events/EEScreens.cpp (two field names), rust/crates/ee_sim/src/units/player_events.rs (`ee_units_events_next`).

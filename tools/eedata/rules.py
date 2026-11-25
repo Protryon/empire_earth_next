@@ -164,7 +164,7 @@ CIV_ATTRIBUTES = [   # the original's switch (EECivilizationManager::ApplyUpgrad
 
 def attribute_ids():
     """{level: attribute id} of the vanilla attributes (the export names dbcivilization's levels by them)."""
-    pw = _consts('EECivPowerIDs.h', 'kCivPower')
+    pw = _consts('../rust/sim/tech_consts.h', 'kCivPower')
     out = {lv: aid for aid, lv, _ in CIV_ATTRIBUTES}
     out.update({pw['kCivPowerFlamingArrows'] + k: n for k, n in enumerate(POWER_IDS)})
     return out
@@ -190,7 +190,7 @@ POWER_IDS = ['flaming_arrows', 'slavery', 'priest_tower', 'crusaders', 'fanatici
 
 
 def civbuilder(ids, spec):
-    pw = _consts('EECivPowerIDs.h', 'kCivPower')
+    pw = _consts('../rust/sim/tech_consts.h', 'kCivPower')
     s = _consts('EEStringIDs.h', 'IDS_')
     out = [HEAD.format(name='civbuilder', format=spec['format'],
                        what='What each civilization builder attribute raises.')]

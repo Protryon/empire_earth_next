@@ -66,20 +66,10 @@ std::string EECPNextAI(const EEComputerPlayer* inPlayer)
     return std::string((const char*)theAI, theLength);
 }
 
-void EECPNextSetAI(EEComputerPlayer* inPlayer, const std::string& inAI)
-{
-    ee_ai_next_state_set_ai(EECPNextGetState(inPlayer), (const uint8_t*)inAI.data(), inAI.size());
-}
-
 // The seats (ee/EECPEngine.h; the manifest and the choices are ee_game cp_engine.rs)
 long EECPEngine(const EEComputerPlayer* inPlayer)
 {
     return inPlayer != NULL && inPlayer->mEngine == kEECPEngineNext ? kEECPEngineNext : kEECPEngineClassic;
-}
-
-std::string EECPEngineAI(const EEComputerPlayer* inPlayer)
-{
-    return EECPEngine(inPlayer) != kEECPEngineNext ? std::string() : EECPNextAI(inPlayer);
 }
 
 // the seat's manifest entry (NULL: none; an empty id is in no manifest)
@@ -96,11 +86,6 @@ bool EECPEngineSeesAll(const EEComputerPlayer* inPlayer)
 bool EECPEngineFillsGarrison(const EEComputerPlayer* inPlayer)
 {
     return EECPEngineEntry(inPlayer) != NULL && EECPEngineEntry(inPlayer)->fills_garrison;
-}
-
-std::string EECPEngineName(const EEComputerPlayer* inPlayer)
-{
-    return EECPEngineAI(inPlayer).empty() ? std::string("none") : EECPEngineAI(inPlayer);
 }
 
 void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice)
@@ -122,20 +107,9 @@ bool EECPNextSaveState(EEComputerPlayer* inPlayer, std::string& outBytes)
     return ee_ai_next_save(inPlayer, &outBytes);
 }
 
-bool EECPNextLoadState(EEComputerPlayer* inPlayer, const std::string& inBytes)
-{
-    return ee_ai_next_load(inPlayer, (const uint8_t*)inBytes.data(), inBytes.size());
-}
-
 extern "C" void ee_ai_next_string_append(void* inString, const uint8_t* inData, size_t inLength)
 {
     ((std::string*)inString)->append((const char*)inData, inLength);
-}
-
-// the threat at a tile for the placement (ee_ai next_game.rs)
-long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind)
-{
-    return ee_ai_next_site_threat(inPlayer, inX, inY, inNow, outKind);
 }
 
 // (the classes' and techs' names by their data ids: ee_ai names_db.rs)
@@ -145,11 +119,6 @@ long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inN
 // the resource centres, the danger zones), a goal's target, the continent manager's areas and forests (lane C
 // re-points these), the tech nodes' methods with bodies, the trace, the game log and the files
 
-
-void EECPNextAppend(void* outBytes, const std::string& inText)
-{
-    ee_ai_next_append(outBytes, (const uint8_t*)inText.data(), inText.size());
-}
 
 extern "C" int64_t ee_ai_next_host(int32_t inOp, void* inPlayer, int64_t a, int64_t b, int64_t c, void* outRecord)
 {

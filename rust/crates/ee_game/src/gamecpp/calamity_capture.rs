@@ -656,7 +656,7 @@ fn can_cast_record(
     r.commit(b"CCAS");
 }
 
-/// EECalamityCanCastRecord: an outermost CanCastAt's CCAS record (kind 0); the result.
+/// EECalamityCanCastScope::Record: an outermost CanCastAt's CCAS record (kind 0); the result.
 ///
 /// # Safety
 /// `at` is three floats.

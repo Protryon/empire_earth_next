@@ -25,10 +25,10 @@ use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 /// An upgrade id: (category << 16) | level (ee/EECivUpgrade.h).
 pub type EeTechCivUpgrade = u32;
 /// `kCivUpgradeLevelBits`, `kCivUpgradeLevelMask`
-pub(crate) const LEVEL_BITS: u32 = 16;
-pub(crate) const LEVEL_MASK: u32 = 0xffff;
+pub(crate) const LEVEL_BITS: u32 = crate::tech_consts::kCivUpgradeLevelBits;
+pub(crate) const LEVEL_MASK: u32 = crate::tech_consts::kCivUpgradeLevelMask;
 /// `kCivPowerFlamingArrows`: the first power id (the powers' records are indexed by id - 0x26)
-pub(crate) const POWER_FIRST: i32 = 0x26;
+pub(crate) const POWER_FIRST: i32 = crate::tech_consts::EECivPowerID::kCivPowerFlamingArrows as i32;
 /// `IDS_CIV_BONUS_BASE`, `IDS_CIV_POWER_BASE` (ee/EEStringIDs.h)
 pub(crate) const IDS_CIV_BONUS_BASE: i32 = 29716;
 pub(crate) const IDS_CIV_POWER_BASE: i32 = 32780;
@@ -48,14 +48,19 @@ pub struct EeTechCivLevel {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeTechCivCategory {
+    /// +00, loader preserves/increments
     pub mDatabaseID: i32,
+    /// +04, loader preserves/increments
     pub mIndex: i32,
     /// the category name (the game never reads it)
     pub mLabel: [c_char; 100],
+    /// +6c, actual name reader281c92
     pub mNameID: i32,
     /// the extra cost per pick of the category
     pub mCost: i32,
+    /// +74, actual loader writes102
     pub mUnitSet: i32,
+    /// +78, actual1..<61 float-pair enumeration
     pub mLevels: [EeTechCivLevel; 60],
 }
 
@@ -77,13 +82,17 @@ impl Default for EeTechCivCategory {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeTechCivEntry {
+    /// +0x00
     pub mUnusedDatabaseID: i32,
+    /// +0x04
     pub mIndex: i32,
     /// the civilization's file (NUL-terminated)
     pub mFileName: [c_char; 100],
     /// the file's checksum: its name's characters, its legacy upgrade ids and their count
     pub mChecksum: i32,
+    /// +0x70 string id of the name (gResource->GetString)
     pub mNameID: i32,
+    /// +0x74
     pub mEraNameID: i32,
 }
 
@@ -97,20 +106,33 @@ impl Default for EeTechCivEntry {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeTechCivPower {
+    /// +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming Arrows" .. "Just In Time Manufacturing"; only copied whole)
     pub mLabel: [c_char; 100],
+    /// +0x64
     pub mUnusedDatabaseID: i32,
+    /// +0x68
     pub mID: i32,
     /// the powers' category's level bonus
     pub mBonus: f32,
+    /// +0x70
     pub mUnitSet: i32,
+    /// +0x74 (EEMResearchTechnology compares it with the node's +0x5c)
     pub mTechnology: i32,
+    /// +0x78
     pub mMiningLimit: i32,
+    /// +0x7c
     pub mChance: i32,
+    /// +0x80
     pub mUnused1: i32,
+    /// +0x84
     pub mAmount: f32,
+    /// +0x88
     pub mUnused2: i32,
+    /// +0x8c
     pub mUnused3: i32,
+    /// +0x90
     pub mUnused4: i32,
+    /// +0x94
     pub mUnitType: i32,
 }
 

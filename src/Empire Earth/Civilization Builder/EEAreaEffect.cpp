@@ -54,12 +54,8 @@ struct EEAEMFBBuildingInRectangle {
     }
     bool Overlaps(EEComplexUnit* inUnit) const
     {
-        long theX = inUnit->mTileX;
-        long theY = inUnit->mTileY;
-        long theSize = inUnit->mUnitClass->mTileSize;
-        long theRight = theX + theSize - 1;
-        long theBottom = theY + theSize - 1;
-        return this->mRect.mLeft <= theRight && this->mRect.mRight >= theX && this->mRect.mTop <= theBottom && this->mRect.mBottom >= theY;
+        return this->mRect.mLeft <= inUnit->mTileX + inUnit->mUnitClass->mTileSize - 1 && this->mRect.mRight >= inUnit->mTileX &&
+               this->mRect.mTop <= inUnit->mTileY + inUnit->mUnitClass->mTileSize - 1 && this->mRect.mBottom >= inUnit->mTileY;
     }
 
     U2DRectangle<long> mRect;
@@ -77,8 +73,7 @@ struct EEAEMFBBuildingInRange {
     }
     bool InRange(EEComplexUnit* inUnit) const
     {
-        U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
-        return this->mCenter.DistanceToSquaredF(theTile) <= this->mRangeSquared;
+        return this->mCenter.DistanceToSquaredF(U2DPoint<long>(inUnit->mTileX, inUnit->mTileY)) <= this->mRangeSquared;
     }
 
     U2DPoint<long> mCenter;
@@ -182,10 +177,6 @@ extern "C" void ee_screenscpp_ae_graphic_effect_dereference(uintptr_t inEffect)
 { ((EEGraphicEffect*)inEffect)->Dereference(); }
 extern "C" uintptr_t ee_screenscpp_ae_media_get(int32_t inId) { return (uintptr_t)EEMedia::Get(inId); }
 
-// The effect's and the template's members: Rust's (area_effect_obj.rs; UI lane round 12), each one forward; the
-// world calls the simulation asks are area_effect_host.rs' over the shims above
-EEAreaEffect::EEAreaEffect(EEAreaEffectTemplate* inTemplate) { ee_screens_ae_construct((uintptr_t)this, (uintptr_t)inTemplate); }
-
 // Writes the effect's location, owning unit and player to the out-of-synch dump
 void EEAreaEffect::Dump(FILE* inFile)
 {
@@ -198,14 +189,4 @@ void EEAreaEffect::Dump(FILE* inFile)
 long EEAreaEffect::Checksum()
 {
     return ee_area_effect_checksum(this, this->mLocation.mX, this->mLocation.mY, this->mUnit != NULL ? (long)this->mUnit->mUnitID : 0);
-}
-
-void EEAreaEffect::LoadMedia(bool inIsOnDemand)
-{
-    this->mTemplate->Load(inIsOnDemand);
-}
-
-void EEAreaEffect::UnloadMedia()
-{
-    this->mTemplate->Unload();
 }

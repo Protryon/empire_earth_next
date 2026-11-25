@@ -4,7 +4,7 @@
 #ifndef EE_EEVCWONDER_H
 #define EE_EEVCWONDER_H
 
-#include "rust/game/gamecpp.h"
+#include "rust/game/civilization.h"   // ee_gamecpp_wonder_* (ee_game civilization.rs)
 class EEVCWonder : public EEVictoryCondition {
 public:
     EEVCWonder(EETeam* inTeam) : EEVictoryCondition(inTeam) {}   // inline (EETeam's ctors 0x13d013..)

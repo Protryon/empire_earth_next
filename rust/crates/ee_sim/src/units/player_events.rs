@@ -533,6 +533,24 @@ pub unsafe extern "C" fn ee_units_events_sounds(list: *mut c_void, f: EeUnitsEve
     }
 }
 
+/// `EEPPlayerEventList`'s destructor: the events freed, then the alert sounds unloaded and the one playing released
+/// (`ee_units_events_sounds(list, f, false)`).
+///
+/// # Safety
+/// As [`ee_units_events_free`] and [`ee_units_events_sounds`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_events_destroy(
+    events: *mut EeUnitsPlayerEvents,
+    list: *mut c_void,
+    f: EeUnitsEventsFn,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_units_events_free(events);
+        ee_units_events_sounds(list, f, false);
+    }
+}
+
 /// The calls on a list: `what` 0 `Clear`, 1 `ShowEvents`, 2 `HideEvents`, 3 `RepairEvents`, 4 `TickEvents(elapsed)`.
 pub const EE_UNITS_EVENTS_CLEAR: u32 = 0;
 pub const EE_UNITS_EVENTS_SHOW_ALL: u32 = 1;
@@ -603,7 +621,8 @@ pub unsafe extern "C" fn ee_units_events_call(
     }
 }
 
-/// `GetNextEvent`'s source into `out_x`/`out_y`; false without an event.
+/// `GetNextEvent`'s source into `out_x`/`out_y` (0, 0 without one, as the C++ caller's start values were); false
+/// without an event.
 ///
 /// # Safety
 /// `events`, `out_x` and `out_y` are live.
@@ -614,10 +633,11 @@ pub unsafe extern "C" fn ee_units_events_next(
     out_y: *mut c_long,
 ) -> bool {
     // SAFETY: the caller's contract
-    let Some(e) = (unsafe { (*events).next_event() }) else { return false };
+    let next = unsafe { (*events).next_event() };
+    let (x, y) = next.as_ref().map_or((0, 0), |e| (e.source_x, e.source_y));
     // SAFETY: the caller's contract
-    unsafe { (*out_x, *out_y) = (e.source_x, e.source_y) };
-    true
+    unsafe { (*out_x, *out_y) = (x, y) };
+    next.is_some()
 }
 
 /// `Load` (`save` false) or `Save` (true) of the list through the save's primitives `f` on `ctx`.

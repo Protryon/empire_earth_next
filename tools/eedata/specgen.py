@@ -37,7 +37,7 @@ TYPES = {'char': ('s8', 1), 'signed char': ('s8', 1), 'unsigned char': ('u8', 1)
          'DWORD': ('u32', 4), 'BYTE': ('u8', 1)}
 RUST_TYPES = {'char': 's8', 'bool': 'bool', 'i8': 's8', 'u8': 'u8', 'i16': 's16', 'u16': 'u16', 'i32': 's32',
               'u32': 'u32', 'f32': 'f32', 'c_char': 's8', 'c_short': 's16', 'c_ushort': 'u16', 'c_int': 's32',
-              'c_uint': 'u32', 'c_uchar': 'u8'}
+              'c_uint': 'u32', 'c_uchar': 'u8', 'EeTechCivLevel': 'pair_f32'}
 RUST_FIELD = re.compile(r'^pub\s+(\w+)\s*:\s*(?:\[\s*(\w+)\s*;\s*([^\]]+)\]|(\w+))\s*,\s*(?://.*)?$')
 SIZES = {'s8': 1, 'u8': 1, 'bool': 1, 's16': 2, 'u16': 2, 's32': 4, 'u32': 4, 'f32': 4, 'pair_f32': 8, 'str': 1,
          'raw': 1, 'pad': 1}

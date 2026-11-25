@@ -20,33 +20,16 @@ class UWideString;
 // One civilization of the list (0x78 bytes: the manager's vector +0x5210, copied by GetCivilizations; operator+
 // 0x17a95e scales by 0x78). Names are provisional. The body is visible to every
 // includer (array members cost no `$E` number; the old guard changed nothing).
-struct EECivilizationEntry;
-struct EECivilizationEntry {
+// The fields are Rust's (ee_sim tech civ.rs EeTechCivEntry, with the size assert).
+struct EECivilizationEntry : EeTechCivEntry {
     // inline (EEUIEPDCS's file helper 0x1e61db: with this expansion VC6 refuses the two earlier vector operator[]s as
     // the original does; provisional name)
     const char* GetFileName() const { return this->mFileName; }
-
-    int32_t mUnusedDatabaseID;              // +0x00
-    int32_t mIndex;                         // +0x04
-    char mFileName[100];                   // +0x08 the civilization's file (EEUIEPDCS: the selected entry's file)
-    int32_t mChecksum;                     // +0x6c actual281bc5 filename/checksum record
-    int32_t mNameID;                        // +0x70 string id of the name (gResource->GetString)
-    int32_t mEraNameID;                     // +0x74
 };
-static_assert(sizeof(EECivilizationEntry) == 120, "on-disk record: 120 bytes on every target");
 
 // Actual serialized600-byte category row,35 records at manager+4. Names provisional.
-struct EECivilizationUpgradeValue { float mValue; float mBonus; };
-struct EECivilizationCategoryEntry {
-    int32_t mDatabaseID;                   // +00, loader preserves/increments
-    int32_t mIndex;                        // +04, loader preserves/increments
-    char mLabel[100];                       // +0x008 the category name (the game never reads it; the text's label)
-    int32_t mNameID;                       // +6c, actual name reader281c92
-    int32_t mCost;                         // +70, actual long281873
-    int32_t mUnitSet;                      // +74, actual loader writes102
-    EECivilizationUpgradeValue mLevels[60];// +78, actual1..<61 float-pair enumeration
-};
-static_assert(sizeof(EECivilizationCategoryEntry) == 600, "on-disk record: 600 bytes on every target");
+// The records are Rust's (ee_sim tech civ.rs EeTechCivLevel, EeTechCivCategory, with the size assert).
+typedef EeTechCivCategory EECivilizationCategoryEntry;
 
 // Whole in Rust (ee_tech civ.rs, civ_apply.rs; civilization builder lane, round 2): the tables (the categories and
 // their levels and ids, the powers' category, the premade civilizations and eras) and every query and apply; the
@@ -127,13 +110,6 @@ public:
     {
         return ee_screens_civm_to_legacy(inUpgrade, &outLegacy);
     }
-    // the keyed form `<category id>.<attribute id>` (keyed .civ files); false without ids (the binary tables)
-    bool UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const;
-    bool FindUpgradeKey(const std::string& inKey, EECivUpgrade& outUpgrade) const
-    {
-        return ee_tech_civ_find_upgrade_key(reinterpret_cast<const uint8_t*>(inKey.data()), inKey.size(), &outUpgrade);
-    }
-    std::vector<EECivUpgrade> GetUpgrades();      // 0x281ded (every upgrade of every category, in order)
     // (provisional names)
     bool MatchesPremadeCivilization(const UWideString& inFile, const UWideString& inName, std::vector<EECivUpgrade>& inUpgrades, long* outNameID)
     {
@@ -147,9 +123,8 @@ public:
 };
 
 extern EECivilizationManager gCivilizationManager;
-// EECivilizationManager.cpp's two init-chain strings, read by the civilization file unit (0x27fdfe..; extern, so the
-// definitions have external linkage)
-extern const UString kCivKey;               // 0x5654d0 ".civ"
+// EECivilizationManager.cpp's init-chain string, read by the civilization file unit (0x27fdfe..; extern, so the
+// definition has external linkage; the other, kCivKey 0x5654d0 ".civ", is civ_load.rs')
 extern const UString kCivilizationsKey;     // 0x5654c0 "Civilizations"
 
 // Civilization Builder helpers (cdecl; provisional names): 0x27ffc0 the civilizations'

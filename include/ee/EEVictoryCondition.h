@@ -4,7 +4,7 @@
 #ifndef EE_EEVICTORYCONDITION_H
 #define EE_EEVICTORYCONDITION_H
 
-#include "rust/game/gamecpp.h"
+#include "rust/game/civilization.h"   // ee_gamecpp_wonder_* (ee_game civilization.rs)
 class FSFile;
 class EEPlayer;
 class EETeam;
