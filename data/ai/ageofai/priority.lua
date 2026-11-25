@@ -10,6 +10,9 @@
 -- transports: budget.order), a warship (budget.ship: the stock but the rows marked apart). The rows' order and
 -- conditions are upstream's; what each row holds comes from the module that saves (written into the memory the
 -- step before, as the port's towns_reserve and navy_hold already did):
+--   air       airguard.lua (memory.airguard.aa_hold: the anti-air it still wants while its air threat is real, aa_urgent;
+--             defence.c STRONG ANTI-AIR). FIRST: its cost is held from every other spender, and its own AA types wait
+--             for no row (M.refuses marks them S_AIR)
 --   epoch     econ.lua M.reserve (memory.eco.epoch_reserve: the next epoch's cost, spend_reserve's horizon)
 --   farms     econ.lua farms (memory.eco.farm_hold: the first two silos' 525 wood while it is their turn, farm_first;
 --             memory.eco.fields_open: the next fields' 50 wood each up to 2 for units)
@@ -49,6 +52,9 @@ M.S_WANTED = 256     -- ... that is the wanted entry itself (no personas: never 
 -- order: its reserve is not held from it; the outpost's transport before every reserve)
 M.S_LANDING_ORDER = 512
 M.S_EXPAND_ORDER = 1024
+-- ... and the anti-air (upstream's S_AIR 512 is one of the order bits above; the port's own number): while its air
+-- threat is real, an anti-air building or unit waits for no row at all (defence.c STRONG ANTI-AIR / priority.c)
+M.S_AIR = 2048
 
 local SP_KEEP = 120000   -- econ.c SPECIAL ORDERS: a want counts this long after it was last asked
 local ECON_BUILDINGS = {b_town_center = true, b_capitol = true, b_settlement = true, b_granary = true,
@@ -56,6 +62,13 @@ local ECON_BUILDINGS = {b_town_center = true, b_capitol = true, b_settlement = t
 
 local function has(s, mask)
     return (s & mask) ~= 0
+end
+
+-- an anti-air building or unit (defence.c's land_aa and aa_building families; the name test air.lua / metal.lua /
+-- produce.lua / stats.lua already share)
+local function is_aa(t)
+    local p = string.sub(t or "", 1, 4)
+    return p == "b_aa" or string.sub(t or "", 1, 2) == "aa" or string.find(t or "", "_aa_", 1, true) ~= nil
 end
 
 local function add_cost(view, type, n, r)
@@ -79,6 +92,19 @@ end
 
 -- the rows: {name, hold(view, memory, spender, r), skip, only, apart}
 local ROWS = {
+    -- [defence.c STRONG ANTI-AIR / priority.c the row "air"] while its air threat is real - enemy aircraft seen near
+    -- its towns in the last 10 minutes, or an enemy Airport it knows - the anti-air it still wants comes before
+    -- everything: its cost is held from every other spender. airguard.lua publishes it at its look
+    -- (memory.airguard.aa_hold = the block of AA buildings' price, aa_urgent = 1); nothing is published while no
+    -- aircraft are known, so the row is empty then. Its own AA types are never held by it (skip S_AIR: M.refuses
+    -- marks them, and no row applies to them at all).
+    {name = "air", skip = M.S_AIR, only = 0, apart = false,
+     hold = function(view, memory, s, r)
+         local ag = memory.airguard
+         if ag ~= nil and ag.aa_urgent then
+             add_map(ag.aa_hold, r)
+         end
+     end},
     -- [build.c LAID, NOT PAID] the price of the foundations its own building code has laid, until they show (the
     -- map build.lua leaves in memory.build.com; zero while build_by_territory is off)
     {name = "laid", skip = 0, only = 0, apart = false,
@@ -164,6 +190,9 @@ local ROWS = {
 M.rows = ROWS
 
 local function applies(row, s)
+    if has(s, M.S_AIR) then
+        return false   -- [priority.c] anti-air under a real threat waits for nothing
+    end
     return not has(s, row.skip) and (row.only == 0 or has(s, row.only))
 end
 
@@ -202,7 +231,9 @@ end
 -- stone goes up while wood is held). -> the row's name that holds it, or nil. Traced once a minute at most.
 function M.refuses(view, memory, type, extra)
     local eco = memory.eco or {}
-    if not S.spend_tiers and (eco.farm_hold or 0) == 0 then
+    local ag = memory.airguard
+    local urgent = ag ~= nil and ag.aa_urgent
+    if not S.spend_tiers and (eco.farm_hold or 0) == 0 and not urgent then
         return nil   -- (no wants: the personality's list is not ported)
     end
     local c = V.cost(view, type)
@@ -210,6 +241,9 @@ function M.refuses(view, memory, type, extra)
         return nil
     end
     local s = M.S_BUILD | (extra or 0)
+    if urgent and is_aa(type) then
+        s = s | M.S_AIR   -- its own AA waits for no row while the threat is real (defence.c STRONG ANTI-AIR)
+    end
     if ECON_BUILDINGS[type] then
         s = s | M.S_BUILD_ECON
     end

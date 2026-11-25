@@ -6,10 +6,17 @@
 -- Bronze Age (a Siege Factory first); 3 lost within 10 minutes: no new ones for 10 minutes. They gather at home and
 -- go with the force (lib.groups: a member like any other, but with the force's attack-move the engine keeps them at
 -- their range).
--- SETTLEMENT UPGRADES (garrison_upgrades): every 20 s the drop site with the most metal mines within reach (their
--- gatherers counting) that has room - a Settlement before the rest (5 make a Town Center, 15 a Capitol) - takes up to
--- 10 spare citizens of its land, the nearest first: idle ones, then wood cutters while the wood stock is over 5000;
--- a holder ordered waits a minute. Each citizen inside raises the stone, gold and iron dropped there.
+-- SETTLEMENT UPGRADES (garrison_upgrades): every 20 s the holder with the most metal mines within reach (their
+-- gatherers counting, gold and iron double) that has room takes up to 10 spare citizens of its land, the nearest
+-- first: idle ones, then wood cutters while the wood stock is over 5000, then farmers with 10000 food in the bank;
+-- a holder ordered waits a minute (or until its citizens are in). Each citizen inside raises the stone, gold and iron
+-- dropped there. THE MINES' HOLDERS: only a holder with a stone, gold or iron mine in its bonus's reach, and the one
+-- where the next citizen raises the income most (the mines' gatherers x 50/25/15% by what is inside), the mine's own
+-- nearest holder; and only where its citizens work (a territory it holds, not being lost). A SECOND PRODUCER: food
+-- income over 1.2 x what its producers turn into citizens without a pause: a Settlement gets the citizens it lacks
+-- to 5 (the Town Center open to it). A DRAIN, NOT A COST: a Town Center or Capitol only with 10000 food in the bank
+-- and citizens beyond the work's need. A GRANARY BEFORE THE NEXT: build.lua's ask (mem.gu_gran, memory.eco) fills the
+-- fullest granary with room instead.
 -- COUNTER-FIRE (counter_fire): every 2 s (the micro step) the enemy shooters that hit own units from beyond their
 -- reach (the attacked events: the attacker further off than the victim's range + 1, its own range 5 tiles at
 -- least); shooters within 6 tiles of each other are one target; the own soldiers within 24 tiles, nearest first,
@@ -20,6 +27,8 @@ local S = require("ageofai.settings")
 local AT = require("ageofai.attack")   -- [attack.c] the siege's target and firing position
 local LA = require("lib.army")        -- [forces.c] goal_near
 local G = require("lib.groups")       -- [bunker.c] the reserve takes the force's soldiers at home
+local FR = require("ageofai.fronts")  -- [bunker.c TOWN GUARDS] the front stations, [fronts.c]
+local TV = require("ageofai.territories")   -- [work.c wk_workable / wk_beside] where its citizens may work
 local M = {}
 
 local SIEGE = {"gun_siege13_paladin_cannon", "gun_siege10_howitzer_cannon", "gun_siege09_serpentine_cannon",
@@ -184,101 +193,316 @@ function M.siege_fire(view, mem, force)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
--- Settlement upgrades
+-- Settlement upgrades (garrison.c)
 
--- the metal mines within the bonus's reach of a holder, each once and once more per gatherer
-local function mines_near(u)
+local GU_REACH2 = 20       -- GU_REACH2: a mine within this squared distance of the building (4.5 tiles)
+local GU_MINES_R = 5       -- GU_MINES_R: the box the mines are looked for in
+local GU_GRAN_MS = 60000   -- GU_GRAN_MS: how long build.lua's granary ask counts
+local GU_SAFE_R = 12       -- GU_SAFE_R: no enemy soldiers within this of the holder
+
+-- a class's garrison capacity (the most citizens inside; ai.class is a charge a call, the types are few)
+local GU_CAP = {}
+local function garrison_cap(t)
+    local c = GU_CAP[t]
+    if c == nil then
+        local k = ai.class(t)
+        c = (k and k.garrison or 0)
+        GU_CAP[t] = c
+    end
+    return c
+end
+
+-- the metal mines within the bonus's reach of a holder, each once and once more per gatherer (gu_mines)
+local function mines_near(x, y)
     local score = 0
-    local res = ai.resources{near = {u.x + 1, u.y + 1, 5}}
+    local res = ai.resources{near = {x + 1, y + 1, GU_MINES_R}}
     for _, id in ipairs(res) do
         local r = ai.unit(id)
         if r ~= nil and (r.kind == "stone" or r.kind == "gold" or r.kind == "iron") and (r.amount or 0) > 0
-                and d2(r.x, r.y, u.x + 1, u.y + 1) <= 20 then
+                and d2(r.x, r.y, x + 1, y + 1) <= GU_REACH2 then
             score = score + 1 + (r.workers or 0)
         end
     end
     return score
 end
 
+-- THE MINES' HOLDERS (garrison.c gu_gain): the mines whose drops the holder would raise - the mines' gatherers there
+-- (gold and iron double), times what a citizen inside adds at its level (5% up to 5, 2.5% up to 15, 1.5% beyond) -
+-- and only the mine's own holder: the nearest of its towns to it (the player 2026-11-15: "by near enough it picked
+-- the settlment behind the woodline here")
+local function mine_gain(t, towns)
+    local w = 0
+    for _, id in ipairs(ai.resources{near = {t.x + 1, t.y + 1, GU_MINES_R}}) do
+        local r = ai.unit(id)
+        if r ~= nil and (r.kind == "stone" or r.kind == "gold" or r.kind == "iron") and (r.amount or 0) > 0 then
+            local d = d2(r.x, r.y, t.x + 1, t.y + 1)
+            if d <= GU_REACH2 then
+                local nearer = false
+                for _, o in ipairs(towns) do
+                    if o.id ~= t.id and d2(o.x, o.y, r.x, r.y) < d then
+                        nearer = true
+                        break
+                    end
+                end
+                if not nearer then
+                    w = w + 1 + (r.workers or 0) * (r.kind == "stone" and 2 or 4)
+                end
+            end
+        end
+    end
+    local inside = t.garrisoned
+    return w * (inside < 5 and 50 or inside < 15 and 25 or 15)
+end
+
+-- its citizens' ground (work.c wk_workable): a land territory it holds and is not losing. The territories model may
+-- not be known yet (its first cells): then as before
+local function workable(x, y)
+    if TV.count() == 0 then
+        return true
+    end
+    return TV.holds(x, y) and not TV.unsafe(x, y)
+end
+
+-- the same territory, or two side by side (work.c wk_beside): nobody marches across the map to go inside
+local function beside(ax, ay, bx, by)
+    local ra, rb = TV.terr_at(ax, ay), TV.terr_at(bx, by)
+    if ra ~= nil and ra == rb then
+        return true
+    end
+    if ra == nil or rb == nil then
+        return false
+    end
+    for _, n in ipairs(TV.neighbours(ra)) do
+        if n.o == rb and n.land then
+            return true
+        end
+    end
+    return false
+end
+
+-- the food a minute that keeps every finished citizen producer training without a pause (cz_nonstop_food; 30 s a
+-- citizen, produce.lua's deviation)
+local function nonstop_food(view)
+    local c = V.cost(view, "citizen")
+    if c == nil then
+        return 0
+    end
+    return (c.producers or 0) * (c.cost.food or 0) * 2
+end
+
 function M.garrison(view, mem, order, wanted)
     if not S.garrison_upgrades or view.time - (mem.gu_t or 0) < S.gu_every then
         return
     end
-    mem.gu_t = view.time
-    -- spare citizens only (the player: "as long as it only pulls from excess"): the town at its citizens wanted
-    -- with idle ones, or the wood piled up; never under 30 citizens (on an island the citizens waiting for a drop
-    -- site are idle too: a first draft put the whole workforce into the settlements)
-    local spare = view.citizens >= 30 and ((view.idle >= 4 and view.citizens >= (wanted or 0) - 2) or view.stock.wood > S.gu_wood)
-    if not spare then
+    local now = view.time
+    mem.gu_t = now
+    local st = view.stock
+    local off = S.gu_mine_holders == nil or S.gu_mine_holders
+    -- ... only where its citizens work (work.c wk_workable / wk_beside, on the port's territories model: a switch of
+    -- the port's own, the model being a deviation from the retail split)
+    local where = off and S.gu_workable ~= false
+    -- the citizens the economy still wants (cz_wanted) and the food its producers use without a pause
+    local nons = nonstop_food(view)
+    local income_food = view.income.food or 0
+    local idle_spare = view.citizens >= (wanted or 0) or income_food >= nons
+    -- A SECOND PRODUCER: the food income over gu_kick of what its producers turn into citizens without a pause, and
+    -- the Town Center open to it
+    local kick = off and (S.gu_kick or 120) > 0 and income_food * 100 >= (S.gu_kick or 120) * nons
+        and V.cost(view, "b_town_center") ~= nil
+    -- A DRAIN, NOT A COST: a Town Center or Capitol gets citizens only while both are in excess - gu_food in the bank
+    -- and citizens beyond the work's need (the pool: those the economy does not want; a port stand-in for work.c
+    -- wk_pool, whose shares the port does not expose)
+    local pool = math.max(view.citizens - (wanted or 0), 0)
+    local rich = not off or (S.gu_food or 10000) <= 0 or (st.food >= (S.gu_food or 10000) and pool > 0)
+    local food_spare = off and ((S.gu_food or 10000) <= 0 or st.food >= (S.gu_food or 10000))
+    local wood_spare = st.wood > S.gu_wood or (off and pool > 0)
+    -- A GRANARY BEFORE THE NEXT: build.lua's ask (mem.gu_gran: when it was about to lay another granary while one of
+    -- its has room inside) - the fullest granary with room where its citizens may work takes the citizens instead
+    local ask = mem.gu_gran or nil
+    local gran_asked = off and S.gu_granary ~= false and ask ~= nil and now >= ask and now - ask < GU_GRAN_MS
+    -- spare citizens only (the player: "as long as it only pulls from excess"); never under 30 citizens (on an island
+    -- the citizens waiting for a drop site are idle too: a first draft put the whole workforce into the settlements)
+    if view.citizens < 30 then
+        return
+    end
+    if off then
+        if not (idle_spare or wood_spare or kick or gran_asked or food_spare) then
+            return
+        end
+    elseif not ((view.idle >= 4 and view.citizens >= (wanted or 0) - 2) or st.wood > S.gu_wood) then
         return
     end
     mem.gu_sent = mem.gu_sent or {}
-    local best, best_score, best_kind = nil, 0, 0
-    local holders = ai.units{category = "building", built = true}
-    for _, id in ipairs(holders) do
+    mem.gu_order = mem.gu_order or {}
+    local function key(x, y)
+        return x * 4096 + y
+    end
+    -- A DONE ORDER (garrison.c): the order stays on the holder while its citizens walk in (gu_wait at most); one whose
+    -- citizens are all in is done - unless that filled it - and the holder may be asked again. Nobody for it (below)
+    -- notes the holder too: the next one's turn.
+    local function busy(t)
+        local k = key(t.x, t.y)
+        local at = mem.gu_sent[k]
+        if at == nil or now < at or now - at >= S.gu_wait then
+            return false
+        end
+        local o = mem.gu_order[k]
+        return o == nil or t.garrisoned < o.at + o.n
+    end
+    -- its towns: the Settlements, Town Centers and Capitols
+    local towns = {}
+    for _, id in ipairs(ai.units{category = "building", built = true}) do
         local u = ai.unit(id)
         local kind = u ~= nil and TOWNS[u.type] or nil
         if kind ~= nil then
-            local c = ai.class(u.type)
-            local room = (c and c.garrison or 0) - (u.garrisoned or 0)
-            local key = u.x * 4096 + u.y
-            if room > 0 and view.time - (mem.gu_sent[key] or -100000) >= S.gu_wait then
-                local score = mines_near(u)
-                local raiders = ai.seen{enemy = true, armed = true, category = "soldier", near = {u.x, u.y, 12}, limit = 1}
-                if score > 0 and #raiders == 0
-                        and (best == nil or (kind == 1 and best_kind ~= 1) or ((kind == 1) == (best_kind == 1) and score > best_score)) then
-                    best, best_score, best_kind = u, score, kind
+            local inside = u.garrisoned or 0
+            towns[#towns + 1] = {id = id, x = u.x, y = u.y, type = u.type, kind = kind, garrisoned = inside,
+                                 room = garrison_cap(u.type) - inside}
+        end
+    end
+    local best, best_score, best_kind = nil, 0, 0
+    for _, t in ipairs(towns) do
+        local kind = t.kind
+        -- A DRAIN, NOT A COST: a Settlement still gets its 5 (it becomes a Town Center); the rest need the excess
+        if t.room > 0 and not busy(t) and (not off or rich or kind == 1) then
+            local raiders = ai.seen{enemy = true, armed = true, category = "soldier", near = {t.x, t.y, GU_SAFE_R}, limit = 1}
+            if #raiders == 0 and (not where or workable(t.x, t.y)) then
+                local score
+                if off then
+                    score = mine_gain(t, towns)   -- THE MINES' HOLDERS
+                    if kick and kind == 1 then
+                        score = 1000 + t.garrisoned * 10 + score
+                    end
+                else
+                    score = mines_near(t.x, t.y)
+                end
+                if score > 0 and (best == nil
+                        or (off and score > best_score)
+                        or (not off and ((kind == 1 and 1 or 0) > (best_kind == 1 and 1 or 0)
+                            or ((kind == 1) == (best_kind == 1) and score > best_score)))) then
+                    best, best_score, best_kind = t, score, kind
                 end
             end
+        end
+    end
+    local gran = false
+    if gran_asked then
+        -- A GRANARY BEFORE THE NEXT: the fullest granary with room where its citizens may work
+        local gb = nil
+        for _, id in ipairs(ai.units{type = {"b_granary", "b_granary_improved"}, built = true}) do
+            local u = ai.unit(id)
+            if u ~= nil then
+                local inside = u.garrisoned or 0
+                local t = {id = id, x = u.x, y = u.y, type = u.type, kind = 4, garrisoned = inside,
+                           room = garrison_cap(u.type) - inside}
+                if t.room > 0 and not busy(t)
+                        and #ai.seen{enemy = true, armed = true, category = "soldier", near = {t.x, t.y, GU_SAFE_R}, limit = 1} == 0
+                        and (not where or workable(t.x, t.y))
+                        and (gb == nil or t.garrisoned > gb.garrisoned) then
+                    gb = t
+                end
+            end
+        end
+        if gb ~= nil then
+            best, best_kind, best_score, gran = gb, 4, 0, true
         end
     end
     if best == nil then
         return
     end
-    local c = ai.class(best.type)
-    local want = math.min((c and c.garrison or 0) - (best.garrisoned or 0), S.gu_batch)
-    -- the spare citizens of its land: idle ones, then wood cutters while the wood is piled up
+    local want = math.min(best.room, S.gu_batch)
+    kick = kick and best_kind == 1
+    if off and pool > 0 and not gran and want > pool then
+        want = pool   -- THE POOL: as many as there are beyond the work's need
+    end
+    if kick then
+        want = math.max(5 - best.garrisoned, 1)
+    end
+    -- the spare citizens: idle ones first, then wood cutters while the wood is piled up (or the pool wants them), the
+    -- farmers with the food secure, and for the kick the miners last
     local land = ai.tile(best.x, best.y)
     land = land and land.continent or 0
-    local picks = {}
-    local idle = ai.units{category = "citizen", idle = true, near = {best.x, best.y, 60}}
-    for _, id in ipairs(idle) do
-        if #picks >= want then
-            break
+    local picks, picked = {}, {}
+    local function take(id, x, y)
+        if #picks >= want or picked[id] then
+            return
         end
-        local u = ai.unit(id)
-        if u ~= nil and u.held == "engine" and u.inside == nil then
-            local t = ai.tile(u.x, u.y)
-            if t ~= nil and (t.continent == land or land == 0) then
-                picks[#picks + 1] = id
-            end
+        local t = ai.tile(x, y)
+        if t == nil or (land ~= 0 and t.continent ~= land) then
+            return
         end
+        -- THE MINES' HOLDERS: its own territory or one beside it - THE POOL: from anywhere
+        if where and pool <= 0 and not beside(x, y, best.x, best.y) then
+            return
+        end
+        picks[#picks + 1] = id
+        picked[id] = true
     end
-    if #picks < want and view.stock.wood > S.gu_wood then
-        local cutters = ai.units{category = "citizen", action = "gather", near = {best.x, best.y, 40}}
-        for _, id in ipairs(cutters) do
+    if idle_spare or not off then
+        for _, id in ipairs(ai.units{category = "citizen", idle = true, near = {best.x, best.y, 60}}) do
             if #picks >= want then
                 break
             end
             local u = ai.unit(id)
-            if u ~= nil and u.held == "engine" and u.target ~= nil then
-                local r = ai.unit(u.target)
-                if r ~= nil and r.kind == "wood" then
-                    picks[#picks + 1] = id
+            if u ~= nil and u.held == "engine" and u.inside == nil then
+                take(id, u.x, u.y)
+            end
+        end
+    end
+    if #picks < want and (wood_spare or kick or food_spare) then
+        for _, id in ipairs(ai.units{category = "citizen", action = "gather", near = {best.x, best.y, 60}}) do
+            if #picks >= want then
+                break
+            end
+            local u = ai.unit(id)
+            if u ~= nil and u.held == "engine" and u.inside == nil and not picked[id] then
+                local kind = nil
+                local r = u.target ~= nil and ai.unit(u.target) or nil
+                if r ~= nil then
+                    kind = r.kind
+                    if kind == nil and (r.type == "b_farm" or r.type == "b_robotic_farm") then
+                        kind = "food"
+                    end
+                end
+                local ok
+                if kind == "wood" then
+                    ok = wood_spare or kick or gran
+                elseif kind == "food" then
+                    ok = food_spare and not gran
+                else
+                    ok = kick and (kind == "stone" or kind == "gold" or kind == "iron")   -- the miners, the kick's last
+                end
+                if ok then
+                    take(id, u.x, u.y)
                 end
             end
         end
     end
+    local k = key(best.x, best.y)
     if #picks == 0 then
+        mem.gu_sent[k] = now > 0 and now or 1   -- nobody for it: the next holder's turn
+        mem.gu_order[k] = nil
         return
     end
     local code, reason, n = ai.garrison(picks, best.id)
     if code == "ok" and n > 0 then
-        mem.gu_sent[best.x * 4096 + best.y] = view.time
+        mem.gu_sent[k] = now > 0 and now or 1
+        mem.gu_order[k] = {at = best.garrisoned, n = n}
         mem.gu_citizens = (mem.gu_citizens or 0) + n
-        print(string.format("garrison n=%d into=%s at=%d,%d inside=%d mines=%d", n, best.type, best.x, best.y, best.garrisoned or 0, best_score))
+        print(string.format("garrison n=%d into=%s at=%d,%d inside=%d mines=%d pool=%d kick=%s rich=%s gran=%s", n,
+            best.type, best.x, best.y, best.garrisoned, best_score, pool, tostring(kick), tostring(rich), tostring(gran)))
         -- the citizens are the engine's again once inside (they are used up); until then they walk on their own
         ai.release(picks)
+    end
+    -- the order notes of holders long gone (a town is a new unit on the same tile after an upgrade: the tile's note ages)
+    if now - (mem.gu_prune or 0) >= 600000 then
+        mem.gu_prune = now
+        for _, k2 in ipairs(ai.keys(mem.gu_sent)) do
+            if now >= mem.gu_sent[k2] and now - mem.gu_sent[k2] >= 600000 then
+                mem.gu_sent[k2] = nil
+                mem.gu_order[k2] = nil
+            end
+        end
     end
 end
 
@@ -602,13 +826,16 @@ end
 -- resource with the most in stock first, then of any resource at twice shelve_stock, never under max(cap / 8, 40)
 -- left out - and no new citizens are trained (econ.lua's citizens wanted); no room in the shelf: one more fortress
 -- (up to 8). Out again, a fortress at a time, once one of the four falls under half of shelve_stock or the citizens
--- out are under 3/4 of what is kept out; enemies near keep them in. Not ported: TOWN GUARDS (town_guards, off
--- upstream: a fortress at each front station - fronts.c is not ported). Deviations: the port's "free soldiers" are
+-- out are under 3/4 of what is kept out; enemies near keep them in. TOWN GUARDS (town_guards, off as upstream ships
+-- it; with the reserve): a fortress also at each front station (fronts.lua's FR.station 1 and 2) without one within
+-- TG_NEAR tiles, and the reserve fills each fortress from the free soldiers round it, not only those at the base - the
+-- one with the most - and it lets its guard out when enemies come near it. Deviations: the port's "free soldiers" are
 -- the force's at home (upstream's are the game's in no group); the room is the view's population (with the units
--- in production, which upstream's room left out); the fortress's spot is ai.find_site by the drop site.
+-- in production, which upstream's room left out); the fortress's spot is ai.find_site by the drop site or the station.
 
 -- the step's part: the fortress wanted and the quiet fortresses' unload
 local SIDES = {{0, 3}, {3, 0}, {0, -3}, {-3, 0}, {3, 3}, {-3, 3}, {3, -3}, {-3, -3}}
+local TG_NEAR = 12   -- TOWN GUARDS: a front station without a fortress within these tiles wants one
 
 local function raiders_near(x, y, r)
     return #ai.seen{enemy = true, armed = true, category = "soldier", near = {x, y, r}, limit = 1} > 0
@@ -755,6 +982,29 @@ function M.bunkers(view, mem, order, above, memory)
         if mem.shelf.want and want < nall + 1 then
             want = math.min(nall + 1, 8)
         end
+        -- TOWN GUARDS ([ai_base] town_guards, off upstream; with the reserve): a fortress at each front station
+        -- (fronts.c: its tower nearest the front, a bit back - FR.station) without one within TG_NEAR tiles. The
+        -- reserve fills it from the free soldiers round it (below) and it lets its guard out when enemies come near it.
+        local guard_at = nil
+        if S.town_guards and S.bunker_reserve and memory ~= nil and nall < 8 then
+            for k = 1, 2 do
+                local sx, sy = FR.station(memory, k)
+                if sx ~= nil and guard_at == nil then
+                    local has = false
+                    for _, f in ipairs(forts) do
+                        if d2(f.x, f.y, sx, sy) <= TG_NEAR * TG_NEAR then
+                            has = true
+                        end
+                    end
+                    if not has then
+                        guard_at = {x = sx, y = sy}
+                    end
+                end
+            end
+            if guard_at ~= nil then
+                want = math.max(want, nall + 1)
+            end
+        end
         local c = V.cost(view, "b_fortress")
         memory.eco.bunker_wood = 0
         if nall < want and c ~= nil then
@@ -762,33 +1012,43 @@ function M.bunkers(view, mem, order, above, memory)
                 memory.eco.bunker_wood = c.cost.wood   -- can't pay yet: saved for (bunker_reserve)
                 mem.bunker_wood = c.cost.wood          -- [priority.c] the fortress row reads it here
             elseif require("ageofai.priority").refuses(view, memory, "b_fortress") == nil then   -- [priority.c]
-                -- the drop site nearest the base without a fortress within 10 tiles
+                -- the drop site nearest the base without a fortress within 10 tiles; the town guard's station when one
+                -- of the front stations lacks a fortress
                 local best, bd = nil, nil
-                for _, id in ipairs(ai.units{category = "building", built = true}) do
-                    local u = ai.unit(id)
-                    if u ~= nil and (u.type == "b_town_center" or u.type == "b_capitol" or u.type == "b_settlement") then
-                        local near = false
-                        for _, f in ipairs(forts) do
-                            if math.abs(f.x - u.x) <= 10 and math.abs(f.y - u.y) <= 10 then
-                                near = true
+                if guard_at == nil then
+                    for _, id in ipairs(ai.units{category = "building", built = true}) do
+                        local u = ai.unit(id)
+                        if u ~= nil and (u.type == "b_town_center" or u.type == "b_capitol" or u.type == "b_settlement") then
+                            local near = false
+                            for _, f in ipairs(forts) do
+                                if math.abs(f.x - u.x) <= 10 and math.abs(f.y - u.y) <= 10 then
+                                    near = true
+                                end
                             end
-                        end
-                        local d = d2(u.x, u.y, view.town_x, view.town_y)
-                        if not near and (bd == nil or d < bd) then
-                            best, bd = u, d
+                            local d = d2(u.x, u.y, view.town_x, view.town_y)
+                            if not near and (bd == nil or d < bd) then
+                                best, bd = u, d
+                            end
                         end
                     end
                 end
-                if best ~= nil then
-                    local x, y = ai.find_site("b_fortress", best.x, best.y, {min = 4, max = 9, safe = true})
+                local bx, by = nil, nil
+                if guard_at ~= nil then
+                    bx, by = guard_at.x, guard_at.y
+                elseif best ~= nil then
+                    bx, by = best.x, best.y
+                end
+                if bx ~= nil then
+                    local x, y = ai.find_site("b_fortress", bx, by, {min = 4, max = 9, safe = true})
                     if x == nil then
-                        x, y = ai.find_site("b_fortress", best.x, best.y, {min = 4, max = 9})
+                        x, y = ai.find_site("b_fortress", bx, by, {min = 4, max = 9})
                     end
                     if x ~= nil then
                         order({verb = "build", type = "b_fortress", near = "tile", x = x, y = y})
                         mem.forts_ordered = (mem.forts_ordered or 0) + 1
                         print(string.format("bunker fortress at=%d,%d why=%s hurt=%d forts=%d citizens=%d", x, y,
-                            mem.shelf.want and "shelf" or air and "aircraft" or #mem.hurt >= 3 and "hurt" or "reserve",
+                            guard_at ~= nil and "town guard" or mem.shelf.want and "shelf" or air and "aircraft"
+                                or #mem.hurt >= 3 and "hurt" or "reserve",
                             #mem.hurt, nall, view.citizens))
                     end
                 end
@@ -831,27 +1091,57 @@ function M.bunkers(view, mem, order, above, memory)
             end
         end
         if room <= 1 and threat == nil then
-            -- the free soldiers at home: the force's members within 25 tiles of the base while the force is home
+            -- the free soldiers at home: the force's members on the map while the force is home
             local force = G.role(memory, "force")
-            local cands = {}
+            local free = {}
             if force ~= nil and not mem.out then
                 local cols = ai.get(force.units, {"x", "y", "inside", "speed"})
                 for k, id in ipairs(force.units) do
                     if cols.x[k] ~= nil and cols.inside[k] == nil and (cols.speed[k] or 0) > 0 and id ~= mem.sk_spotter
-                            and not M.committed(mem, id, now) and d2(cols.x[k], cols.y[k], view.town_x, view.town_y) <= 625 then
-                        cands[#cands + 1] = {id = id, x = cols.x[k], y = cols.y[k]}
+                            and not M.committed(mem, id, now) then
+                        free[#free + 1] = {id = id, x = cols.x[k], y = cols.y[k]}
                     end
                 end
             end
-            -- the fortress with the most room (not the shelf's)
-            local best, space = nil, 0
-            for _, f in ipairs(forts) do
-                local c = ai.class(f.type)
-                local rec = mem.reserve[f.id]
-                local walking = rec ~= nil and math.max(#rec.units - (f.cargo or 0), 0) or 0
-                local s = (c and c.transport or 0) - (f.cargo or 0) - walking
-                if s > space and mem.shelf.forts[f.id] == nil then
-                    best, space = f, s
+            local best, space, bx, by = nil, 0, view.town_x, view.town_y
+            if S.town_guards and #free > 0 then
+                -- TOWN GUARDS: the fortress with the most free soldiers round it (and room) takes them, not only the
+                -- base's (bunker.c bk_reserve_tick)
+                local most = 0
+                for _, f in ipairs(forts) do
+                    local c = ai.class(f.type)
+                    local rec = mem.reserve[f.id]
+                    local walking = rec ~= nil and math.max(#rec.units - (f.cargo or 0), 0) or 0
+                    local s = (c and c.transport or 0) - (f.cargo or 0) - walking
+                    if s > 0 and mem.shelf.forts[f.id] == nil and mem.shelter[f.id] == nil then
+                        local n = 0
+                        for _, w in ipairs(free) do
+                            if d2(w.x, w.y, f.x, f.y) <= 625 then
+                                n = n + 1
+                            end
+                        end
+                        if n > most then
+                            most, best, space, bx, by = n, f, s, f.x, f.y
+                        end
+                    end
+                end
+            else
+                -- the fortress with the most room (not the shelf's)
+                for _, f in ipairs(forts) do
+                    local c = ai.class(f.type)
+                    local rec = mem.reserve[f.id]
+                    local walking = rec ~= nil and math.max(#rec.units - (f.cargo or 0), 0) or 0
+                    local s = (c and c.transport or 0) - (f.cargo or 0) - walking
+                    if s > space and mem.shelf.forts[f.id] == nil then
+                        best, space = f, s
+                    end
+                end
+            end
+            -- the free soldiers within 25 tiles of it
+            local cands = {}
+            for _, w in ipairs(free) do
+                if d2(w.x, w.y, bx, by) <= 625 then
+                    cands[#cands + 1] = w
                 end
             end
             local n = math.min(#cands - 4, 10, space)
@@ -1093,3 +1383,4 @@ function M.committed(mem, id, now)
 end
 
 return M
+

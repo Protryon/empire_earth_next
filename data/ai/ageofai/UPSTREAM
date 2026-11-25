@@ -198,7 +198,12 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 Copper; a wall is never "available" the production way and ai.class has no cost, so a piece is 10
                 stone as the tech tree says). Missing: the diag logs (the open ring's objects), sf_stone (SITE
                 FORTS), game_walls (the next engine never runs the classic wall manager), ai.lock (upstream never
-                locks a gate).
+                locks a gate). From the port forward (7a17182): BUILDERS UNDER COVER (build_held -> safety.lua: a
+                builder's site holds while 4 of its soldiers and towers stand within 14 and are not losing to the
+                enemy soldiers seen within 12, or none is seen; the muster branch exempts it too), TOWN GUARDS
+                (bunker.c, below) and STRONG ANTI-AIR's priority part (airguard.lua publishes aa_hold/aa_urgent; the
+                row "air" in priority.lua, AA types S_AIR). Not ported: aa_strong's blocks, its land AA types and
+                maker.
   armies.c      PARTLY -> army.lua: the force (one land army ordered as one: home at the station, the push at the
                 The raid answer as upstream (the fidelity pass): every 4 s with 3 soldiers, the raider nearest home
                 with a band of 3 within 14 of an own building or one hitting ours, seen there twice running, the
@@ -320,8 +325,16 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 it, the way's danger or a territory being lost); the rest of the newer attack.c decisions wait for
                 the buildings, the stations and the claims they read (build.c HOLDING THE GROUND, defence.c
                 BUILDERS UNDER COVER, claims.c, the animal hunts' hurt notes).
-  garrison.c    PORTED -> tactics.lua (garrison): the settlement upgrades (spare citizens into the drop site with
-                the most metal mines near).
+  garrison.c    PORTED -> tactics.lua (garrison): the settlement upgrades. Ported: gu_mines / THE MINES' HOLDERS
+                (gu_gain: a stone, gold or iron mine in the bonus's 4.5 tiles, its gatherers with gold and iron
+                double, x 50/25/15% by what is inside; only the mine's own nearest holder; only where its citizens
+                work - work.c wk_workable / wk_beside on territories.lua), A SECOND PRODUCER (gu_kick 1.2 x
+                cz_nonstop_food and the Town Center open: a Settlement to 5), A DRAIN, NOT A COST (gu_food 10000 and
+                the pool), A GRANARY BEFORE THE NEXT (build.lua's memory.eco.gu_gran, the fullest granary with room),
+                A DONE ORDER (the sent record plus the garrisoned count), GU_HOLD, GU_SAFE_R. ENGINE: the
+                civilization manager's timers 3 and 4 (the game's own rounds) have no Lua door. Deviations: the pool
+                is citizens - cz_wanted (work.c wk_pool's per-resource shares are not exposed); GU_KICK's Settlement
+                boost applies with the mines' holders; GU_STALE (180 s) is the port's gu_wait (60 s).
   counterfire.c PORTED -> tactics.lua (counterfire): the shooters out of reach answered by the soldiers near when
                 they win by 1.5 (the micro step, 250 ms for upstream's 2 s).
   bunker.c      PARTLY -> tactics.lua (bunkers, shelter). Ported: bk_build (a Fortress by the drop site nearest the
@@ -338,13 +351,15 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 gatherers of the richest resource first, then of any at twice shelve_stock, never under max(cap / 8,
                 40) left out; out a fortress at a time under half of shelve_stock or 3/4 of what is kept out; the
                 shelter and the reserve keep off the shelf's fortresses), shelf_wanted (econ.lua: no more citizens
-                than there are while the shelf works or holds). Missing: TOWN GUARDS (town_guards, off upstream: a
-                fortress at each front station - fronts.c), bk_builders (the engine's build runner takes a
-                foundation up; the port's fortress is a verb order), the "airport part" of an earlier UPSTREAM line
-                (bk_capacity at this commit is the Fortress class alone). Deviations: the free soldiers are the
-                force's at home while the force is home (upstream's: the game's in no group); the room is cap - the
-                view's population (which counts the units in production; upstream's bk_room left them out); a
-                fortress that lets nobody out is tried again on the next side until empty (upstream cleared the
+                than there are while the shelf works or holds), TOWN GUARDS (town_guards, off as upstream ships it;
+                with the reserve: a fortress at each front station (fronts.lua FR.station 1 and 2, 12 tiles) without
+                one, the reserve filling each from the free soldiers within 25 of it and letting them out on raiders
+                within 20; ai.load, as a Fortress has transport capacity). Missing: bk_builders (the engine's build
+                runner takes a foundation up; the port's fortress is a verb order), the "airport part" of an earlier
+                UPSTREAM line (bk_capacity at this commit is the Fortress class alone). Deviations: the free soldiers
+                are the force's at home while the force is home (upstream's: the game's in no group); the room is
+                cap - the view's population (which counts the units in production; upstream's bk_room left them out);
+                a fortress that lets nobody out is tried again on the next side until empty (upstream cleared the
                 shelter flag after the first order).
   holy.c        PORTED -> holy.lua (port forward 7a17182; settings.holy, off). Ported: TRAINING (a finished Temple
                 making nothing, HL_PROPHET_EPOCHS, HL_CAP_PRIEST/HL_CAP_PROPHET, HL_BANK, the train verb), THE LOST
@@ -519,7 +534,11 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 return-to-base) and a parked aircraft cannot be ordered - an airborne fighter is ordered directly, a
                 parked flight launched by its Airport's rally (ai.rally), an Airport the bomber wing is based at is
                 left alone; sw_survives stands in with a count of the enemy anti-air within 14 of the target.
-                Missing: the logs (a summary a minute).
+                STRONG ANTI-AIR's priority part (aa_strong, off as upstream ships it; defence.c aa_strong): while
+                aircraft were seen near its towns in 10 min or an enemy Airport it knows, the AA buildings it still
+                lacks of a block (2, 4 with 8 aircraft) are published for priority.lua's first row
+                (memory.airguard.aa_hold / aa_urgent). Missing: its land AA units, their maker, the block laying at
+                each place, the threat weights (aa_weight) and aa_threat_expected; the logs (a summary a minute).
   diplo.c       PARTLY -> diplo.lua. Ported: diplo_tick (the first look takes the stances as they are; a player
                 turned hostile: opinion -40, a betrayal after 2 minutes of alliance -60, x (0.5 + pride/100);
                 ANSWER WAR 3-6 s later through ai.diplomacy; a player turned allied while at war: the peace offer
@@ -704,6 +723,9 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 buildings), S_TR_ECON (transports_economy off), S_PLAN (army.c FLOAT not ported), the upgrades row's
                 hold (the engine's line upgrades come with the epoch). Deviation: the engine checks every verb
                 against the reserve verb, so a building waits for the epoch and the towns where upstream's spent them.
+                From the port forward (7a17182): the row "air" first (airguard.lua's aa_hold while its air threat is
+                real; skip S_AIR: an AA type waits for no row - M.refuses' is_aa test, guarded by the urgency; the
+                port's S_AIR is 2048).
   forces.c      PORTED -> C++ ai.reach (area_id, cont_at, cont_ok: the continents), lib/army.lua (goal_near: the
                 unit's goal place within r, from the record's tx/ty and action; fighting (unit_fighting): an attack
                 on a target that lives; home_threat: the enemy soldiers and siege seen within 20 tiles of any own
@@ -761,16 +783,11 @@ lines answered by the model with settings.llm_ai_talk). What is still missing fo
 AIs is still unanswered - this engine gives the script no door into another AI's opinion).
 
 Still not ported of the files modified since 0ac6495 (their lines above describe the port at 0ac6495 unless they
-name a newer piece): defence.c's STRONG ANTI-AIR row, TOWN GUARDS, BUILDERS UNDER COVER and its anti-air record
-(airguard.lua builds and counts the AA itself), bunker.c's stash_by_territory, let-out-few and territory reserve,
-airstrike.c's bomber doctrine / harassment / survival / come-home / claim and the fighters' claims (air.lua and
-airguard.lua keep their own wings), navy.c's sea_fishing, sea_fleet, harbours and fleet station, fleet.c's
-harbours and station, landing.c's air transport, expand.c's FRONT GUARDS and THE LANDING AS THE PLAYER DOES IT,
-towns.c's THE PARTY, garrison.c's THE MINES' HOLDERS, A SECOND PRODUCER, A DRAIN NOT A COST and A GRANARY BEFORE
-THE NEXT (build.lua asks for the granary, tactics.lua's garrison fills any holder with room), priority.c's "air"
-row (research, laid and savings are in), packing.c's NO SHUT-IN PLACES (the engine's placement), and the newer
-parts of intel.c, cover.c, sites.c, stage.c, forces.c, stats.c, metal.c, diplo.c and skirmish.c, which are
-engine-level or named in the module that carries the decision.
+name a newer piece): defence.c's anti-air record (airguard.lua builds and counts the AA itself) and aa_strong's
+blocks, bunker.c's stash_by_territory, let-out-few and territory reserve, airstrike.c's bomber harassment,
+expand.c's FRONT GUARDS and THE LANDING AS THE PLAYER DOES IT, towns.c's THE PARTY, packing.c's NO SHUT-IN PLACES
+(the engine's placement), and the newer parts of intel.c, cover.c, sites.c, stage.c, forces.c, stats.c, metal.c,
+diplo.c and skirmish.c, which are engine-level or named in the module that carries the decision.
 
 Settings: settings.lua carries the [ai_base] defaults of config/ageofai.ini at the commit in UPSTREAM, with the
 deviations noted there (each marked why: an engine difference, or a measured call of the owner's). The keys of the

@@ -116,6 +116,12 @@ return {
     -- siege (attack.c attack_siege), settlement upgrades (garrison.c), counter-fire (counterfire.c)
     attack_siege = true,
     garrison_upgrades = true, gu_every = 20000, gu_wait = 60000, gu_batch = 10, gu_wood = 5000,
+    gu_mine_holders = true,         -- garrison.c THE MINES' HOLDERS: only a holder by a stone/gold/iron mine, scored
+                                    -- by its gatherers (gold/iron double) x 50/25/15% by what is inside
+    gu_kick = 120,                  -- ... A SECOND PRODUCER: percent of the nonstop citizen food the income needs
+    gu_food = 10000,                -- ... A DRAIN, NOT A COST: food in the bank for a Town Center/Capitol to take
+    gu_granary = true,              -- ... A GRANARY BEFORE THE NEXT (build.lua's ask)
+    gu_workable = true,             -- ... only where its citizens work (territories.lua)
     counter_fire = true,
     -- scouting (armies.c ar_look, the game's scout)
     scout_at = 120000, scouts_max = 3,
@@ -345,6 +351,9 @@ return {
     explore = true,                 -- the citizens round their town for food, the dog's rings, the scouts (explore.lua)
     -- airguard.c, airstrike.c, storms.c
     air_force_share = 25,           -- percent of the force into the AI's own air force (0 = air.lua's wing only)
+    aa_strong = false,              -- STRONG ANTI-AIR: while aircraft were seen near its towns in 10 min, or an enemy
+                                    -- Airport it knows, the AA buildings it still lacks are the first priority row
+                                    -- (defence.c/airguard.c; off as upstream ships it)
     fighter_sweeps = true,          -- the fighters sweep the enemy's ground
     air_by_worth = true,            -- the air force's parts scaled by what they bring back
     bomber_harass = false,          -- lone bomber runs while the wing gathers (off: measured no gain)

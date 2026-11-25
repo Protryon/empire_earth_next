@@ -5,7 +5,11 @@
 -- soldiers seen within 6) or a hurt one is sent back to the nearest drop site unless the town holds there
 -- (raid_held: its soldiers and towers within 8 beat the raiders by raid_held 150%); a gold or iron mine only when
 -- its citizens are being hit there (GOLD AND IRON STAY, the port forward's attack.c: not for soldiers seen near
--- it, not for the way's danger). The claimed site is released
+-- it, not for the way's danger). BUILDERS UNDER COVER (defence.c build_held): a builder (action "build"/"repair") is
+-- no gatherer - its site can't be had elsewhere, and a tower or fortress going up is what the soldiers there are for -
+-- so it stays while at least BH_MIN of its soldiers (and its towers) stand within BH_OWN tiles and match the enemy
+-- soldiers it sees within BH_FOE (raid_held's judgement without the 150%: not losing), or no enemy is seen there;
+-- alone it is sent back as a gatherer. The claimed site is released
 -- while the danger lasts, so the engine's finders send nobody there (upstream's searches refuse such sites). While
 -- the base is overrun (a muster on, army.lua): every citizen with raiders within 8 of it flees to the rally point,
 -- or 12 tiles in the clear direction nearest it when the way is raided (flee_point).
@@ -104,6 +108,26 @@ local function raid_held(x, y)
     return mine * 100 >= ai.strength(foes) * S.raid_held
 end
 
+-- BUILDERS UNDER COVER (defence.c build_held; BH_MIN 4, BH_OWN 14, the enemies within 12): a builder's site holds
+-- while at least BH_MIN of its soldiers (and towers) stand within BH_OWN tiles and are not losing against the enemy
+-- soldiers seen within BH_FOE - or no enemy is seen there (upstream's remembered-only case: the port's raiders are
+-- the seen ones, S.threat_memory has no reader yet). Alone it still goes.
+local BH_MIN = 4
+local BH_OWN = 14
+local BH_FOE = 12
+
+local function build_held(x, y)
+    local own = ai.units{armed = true, near = {x, y, BH_OWN}, limit = 40}
+    if #own < BH_MIN then
+        return false
+    end
+    local foes = raiders_near(x, y, BH_FOE)
+    if #foes == 0 then
+        return true
+    end
+    return ai.strength(own) >= ai.strength(foes)
+end
+
 -- the way from (x0,y0) to (x1,y1) raided: enemy soldiers seen within 4 of a point every 4 tiles, or within 6 of the end
 local function path_raided(x0, y0, x1, y1)
     local dx, dy = x1 - x0, y1 - y0
@@ -197,23 +221,42 @@ function M.step(mem, memory, now)
     for k = 1, #citizens do
         local id, x, y = citizens[k], cols.x[k], cols.y[k]
         if x ~= nil and not cols.inside[k] and mem.sent_back[id] == nil then
+            local builder = cols.action[k] == "build" or cols.action[k] == "repair"
+            local sx, sy = cols.tx[k] or x, cols.ty[k] or y   -- the site: the goal's tile, the citizen's spot when none
             if rally ~= nil then
                 -- the base is overrun: citizens near the enemy (or working near it) flee to the rally point
                 if d2(x, y, rally.x, rally.y) > 36 then
                     local danger = #raiders_near(x, y, 8) > 0
-                    if not danger and cols.action[k] == "gather" and cols.tx[k] ~= nil then
+                    if not danger and (cols.action[k] == "gather" or builder) and cols.tx[k] ~= nil then
                         danger = #raiders_near(cols.tx[k], cols.ty[k], 8) > 0
                     end
-                    if danger then
+                    -- BUILDERS UNDER COVER: a builder whose own soldiers hold its site stays (defence.c build_held)
+                    if danger and not (builder and cols.tx[k] ~= nil and build_held(sx, sy)) then
                         local fx, fy = flee_point(x, y, rally.x, rally.y, map)
                         ai.move({id}, fx, fy, {forced = true})
                         mem.sent_back[id] = now + 30000
                         fled = fled + 1
                     end
                 end
+            elseif builder then
+                -- BUILDERS UNDER COVER (defence.c build_held): a builder whose site (or it) has enemy soldiers near it
+                -- goes home to the nearest drop site - unless its own soldiers there win (not losing: raid_held's
+                -- judgement, at BH_MIN soldiers and 14 tiles). Its builders' orders re-send it (lib/verbs' builder
+                -- check); alone it still goes.
+                if #raiders_near(x, y, 8) > 0 or #raiders_near(sx, sy, 8) > 0 then
+                    if build_held(sx, sy) then
+                        held = held + 1
+                    else
+                        local did, dd, dx, dy = ai.drop_site(sx, sy, "food")
+                        if did ~= nil and dx ~= nil and not (math.abs(dx - x) <= 3 and math.abs(dy - y) <= 3) then
+                            ai.move({id}, dx, dy, {forced = true})
+                            mem.sent_back[id] = now + 8000
+                            sent = sent + 1
+                        end
+                    end
+                end
             elseif cols.action[k] == "gather" then
                 -- the site: where it gathers (its goal's tile; the citizen's own spot when none)
-                local sx, sy = cols.tx[k] or x, cols.ty[k] or y
                 local raided = #raiders_near(sx, sy, 6) > 0
                 local nh = 0
                 for _, h in ipairs(spots) do

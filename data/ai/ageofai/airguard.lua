@@ -18,6 +18,11 @@
 --     and one for every 4 of the anti-air it wants, 4 at most), the newest anti-air building it can build and pay
 --     (budget.build), by the drop site nearest to where the aircraft were - laid at once upstream (hook_place), here
 --     through the build verb's own placement (budget.build = the priority list's building account).
+--     STRONG ANTI-AIR (aa_strong, off upstream as shipped; defence.c aa_strong): while its air threat is real (aircraft
+--     seen near its towns in AG_SEEN, or an enemy Airport it knows) what it still lacks of the block of AA buildings is
+--     published for the priority list's FIRST row - memory.airguard.aa_hold (its cost, held from every other spender)
+--     and aa_urgent - and its AA types wait for no row (priority.lua's S_AIR). Nothing is published with no aircraft
+--     known. It trains no land AA (upstream's AA units and their maker are a gap: see the report).
 --   THE AIR FORCE'S SIZE (air_force_share) - of its military (land soldiers, fighters, bombers) that share is
 --     aircraft: fighters as many as the enemy's fighters known and AG_SPARE more, else AFS_FIGHTERS (40%) of it; the
 --     rest bombers (the wing's, air.lua: memory.airguard.bombers); an Airport for every AFS_PORT_HOLDS (15) of them,
@@ -373,7 +378,9 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- AA BUILDINGS (airguard_tick's first block): the newest anti-air building it can pay, by the aircraft
 
-local function aa_building(view, budget)
+-- the newest anti-air building the game offers it now (aa_type_of KIND_AA_BUILDING: the newest epoch, the last of a
+-- tie) - its view.costs entry, or nil
+local function aa_newest(view)
     local best, epoch = nil, -2
     for _, c in ipairs(view.costs) do
         if c.building and AIR.is_aa(c.type) then
@@ -383,6 +390,10 @@ local function aa_building(view, budget)
             end
         end
     end
+    return best
+end
+local function aa_building(view, budget)
+    local best = aa_newest(view)
     if best == nil then
         return nil
     end
@@ -440,6 +451,40 @@ local function aa_tick(view, memory, s, budget, bld, now)
         return {verb = "build", type = bt, near = "tile", x = x, y = y}
     end
     return {verb = "build", type = bt, near = "town"}
+end
+
+-- STRONG ANTI-AIR ([ai_base] aa_strong; defence.c aa_strong, priority.c's row "air"): while its air threat is real -
+-- enemy aircraft seen near its towns in the last AG_SEEN, or an enemy Airport it knows - the anti-air it still wants is
+-- the priority list's FIRST row: its cost is held from every other spender (memory.airguard.aa_hold) and its own AA
+-- types wait for no row (priority.lua marks them S_AIR). Upstream holds a round of AAS_TRAIN AA units, the block still
+-- missing and the building that makes the AA units; the port trains no AA unit (a gap named in the report), so the row
+-- holds the block of AA buildings it still lacks. Nothing is published while no aircraft are known: the row is inert.
+local AAS_BLOCK = 2      -- a block: AAS_BLOCK while the threat is below AAS_BIG, else its double (upstream 2 / 4)
+local AAS_BIG = 8
+local function aa_publish(view, s, have_aa, air)
+    s.aa_urgent, s.aa_hold = nil, nil
+    if not S.aa_strong then
+        return
+    end
+    local port = #ai.memory{buildings = true, type = "b_airport", limit = 1} > 0   -- an enemy Airport it knows
+    if air <= 0 and not port then
+        return
+    end
+    s.aa_urgent = 1   -- the threat is real: its AA types wait for no row from now on
+    local block = air >= AAS_BIG and 2 * AAS_BLOCK or AAS_BLOCK
+    local miss = block - (have_aa or 0)
+    if port and miss < 1 then
+        miss = 1   -- an airport known: static guns stand before the first wave
+    end
+    local c = aa_newest(view)
+    if miss <= 0 or c == nil then
+        return   -- the block stands (or it can build no AA): nothing to save for
+    end
+    local hold = {}
+    for _, r in ipairs(V.resources) do
+        hold[r] = (c.cost[r] or 0) * miss
+    end
+    s.aa_hold = hold
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -880,8 +925,7 @@ end
 -- The step (airguard_tick): every AG_EVERY
 
 function M.step(view, memory, orders, budget, events)
-    memory.airguard = memory.airguard or {sent = {}, sw = {}, ours = {}}
-    local s = memory.airguard
+    local s = state(memory)
     local now = view.time
     worth_note(s, events, now)
     if (s.t or 0) > 0 and now - s.t < AG_EVERY then
@@ -902,6 +946,8 @@ function M.step(view, memory, orders, budget, events)
         orders[#orders + 1] = aa_order
     end
     local air = (s.aa_seen_t or 0) > 0 and now - s.aa_seen_t < AG_SEEN and (s.aa_seen_n or 0) or 0
+    -- STRONG ANTI-AIR: what the priority list's first row holds while the threat is real (priority.lua reads it)
+    aa_publish(view, s, have_aa, air)
     -- THE AIR FORCE'S SIZE and the Airports for it
     local nm = #ids
     local pct = S.air_force_share or 0
