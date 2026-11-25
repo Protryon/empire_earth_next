@@ -9,7 +9,7 @@
 #include "rust/base/fs.h"
 
 class LLE_API FSBasicFile : public FSFile {   // its members are FSFile's (lle/FSFile.h)
-protected:
+public:
     FSBasicFile() {}
     FSBasicFile(const FSBasicFile& inFile) : FSFile(inFile) {}
 };

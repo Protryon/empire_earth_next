@@ -4,18 +4,16 @@
 // and the fields are Rust's. The members are inline forwarders. Requires lle/LowLevelEngine.h.
 #ifndef LLE_SESMINSTANCENODE_H
 #define LLE_SESMINSTANCENODE_H
+#include "lle/LLEForward.h"
 
 #include "rust/audio/sound.h"
 
-class LLE_API SESMInstanceNode {
+class LLE_API SESMInstanceNode : URustView {
 public:
     void Reference() { ee_sound_node_reference(Rec()); }
     // the last reference returns the node to the pool
     void Dereference() { ee_sound_node_dereference(Rec()); }
-private:
     EeSoundNode* Rec() { return reinterpret_cast<EeSoundNode*>(this); }
-    SESMInstanceNode() = delete;
-    ~SESMInstanceNode() = delete;
 };
 
 #endif

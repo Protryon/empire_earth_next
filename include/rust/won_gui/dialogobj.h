@@ -66,6 +66,15 @@ EeWonDialog *ee_won_dlg_new(void *component,
                             EeWonGuiHostFn host,
                             const EeWonContainer *ct);
 
+/// `Dialog::Dialog` whole (R6 WON GUI round 36): the Rust dialog and the component's flags 0x118 (grab the
+/// background, has focus, want focus).
+///
+/// # Safety
+/// As `ee_won_dlg_new`; `component` is the C++ component being constructed.
+EeWonDialog *ee_won_dlg_make(void *component,
+                             EeWonGuiHostFn host,
+                             const EeWonContainer *ct);
+
 /// The destructor's statement (the default button released), then the object freed.
 ///
 /// # Safety

@@ -7,7 +7,7 @@
 #include "rust/game/screens.h"
 
 class EEUIFMainGame;
-class GE2DPoint;
+#include "lle/LLEForward.h"
 struct EeScreensUnitHack;
 
 // Whole in Rust (ee_screens unit_hack.rs: the names, class ids and mode; the original's +0x00 mNames, +0x10

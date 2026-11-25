@@ -281,6 +281,12 @@ fn the_registry_and_initialize() {
     ee_net_pr_shutdown();
     assert_eq!(ee_net_pr_count(), 0);
     assert_eq!(log(), ["activate", "is_valid", "is_valid", "deactivate"]);
+    // NEInitialize: the same through the shutdown list's registration; the hook frees the protocol
+    assert_eq!(ee_net_initialize(), 0);
+    assert_eq!(ee_net_pr_count(), 1);
+    ee_net_pr_shutdown();
+    assert_eq!(ee_net_pr_count(), 0);
+    assert_eq!(log(), ["activate", "is_valid", "is_valid", "deactivate"]);
     // not valid: freed again (deactivate skipped while not valid), no protocol
     drop(g);
     let _g = script(&[0, 1, 1]);

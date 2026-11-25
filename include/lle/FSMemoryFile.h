@@ -4,6 +4,7 @@
 // or ICF-folded into one-instruction bodies elsewhere.
 #ifndef LLE_FSMEMORYFILE_H
 #define LLE_FSMEMORYFILE_H
+#include "lle/LLEForward.h"
 
 #include "lle/FSFileSpec.h"  // the base class
 #include "rust/base/fs.h"
@@ -29,8 +30,6 @@ public:
     virtual ~FSMemoryFile()
         { ee_fs_mem_finish(this->mState, this->mOwnsState, reinterpret_cast<void**>(&this->mStream), reinterpret_cast<const EeFsString*>(&this->mTemporaryFileName)); }
     // implicit copy ctor (0x466d) and operator= (0x46c4) dropped: they copied the raw buffer pointer (double delete)
-    FSMemoryFile(const FSMemoryFile&) = delete;
-    FSMemoryFile& operator=(const FSMemoryFile&) = delete;
 
     virtual long Create() { return this->GetData() ? kErrorOK : kErrorFailed; }   // +0x04 0x4644 (provisional names)
     virtual long Close()                                                        // +0x08 0x9fbe (and FOpen's temporary file)
@@ -115,7 +114,6 @@ public:
     long Save(FSFile& outFile, unsigned long inLength) { return ee_fs_mem_save(this->mState, &outFile, inLength); }
     long Save(FSFile& outFile) { return ee_fs_mem_save_prefixed(this->mState, &outFile); }
 
-protected:
     // the scalars' bytes (no count out)
     template <typename T> long MemRead(T& outValue)
         { return ee_fs_mem_read(this->mState, reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), NULL); }
@@ -123,7 +121,7 @@ protected:
         { return ee_fs_mem_write(this->mState, reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), NULL); }
 
     UString mTemporaryFileName;                       // +0x48
-    EeFsMemFile* mState;                              // the contents (rust/crates/ee_base/src/fs/memfile.rs)
+    URust<EeFsMemFile> mState;                              // the contents (rust/crates/ee_base/src/fs/memfile.rs)
     bool mOwnsState;                                  // false for the view a chunk wraps around its payload
 };
 

@@ -2,8 +2,8 @@
 //! deleted in WON round 22) as a kind over the Dialog shell (`WONShellDialog : Dialog`): MSDialog's background and
 //! MSMessageBox's constructor, a centred wrapped label (the title when there is no message) and up to three same-size
 //! buttons ("Ok" by default, at least 80 wide) centred below it, Escape ending with the last button's id. Showing it
-//! in its own window (`MSMessageBox::Msg`: the native window, the modal run) is the C++ host's (GuiShell.cpp
-//! `MSMessageBoxMsg`): the platform's window.
+//! in its own window (`MSMessageBox::Msg`: the native window, the modal run) is `ee_won_msgbox_run` over the shell
+//! host's statements (GuiShell.cpp's MSMessageBoxMsg until R6 WON GUI round 36).
 
 use std::cell::Cell;
 use std::ffi::CStr;
@@ -14,7 +14,8 @@ use crate::ctobj::EeWonCtCall as Ct;
 use crate::dialogobj::EeWonDlgCall as Dc;
 use crate::msbtnobj::EeWonMsBtnCall as M;
 use crate::shell::{
-    gui_string_len, EeWonShellHostOp as H, EeWonShellKind as K, EeWonShellOp as O, EeWonShellVirt as V, Sh, ShellKind,
+    gui_string_len, EeWonShellHostFn, EeWonShellHostOp as H, EeWonShellKind as K, EeWonShellOp as O,
+    EeWonShellVirt as V, Sh, ShellKind,
 };
 
 const HALIGN_CENTER: isize = 1;
@@ -152,6 +153,41 @@ impl ShellKind for MsMessageBox {
             }
         }
     }
+}
+
+/// `MSMessageBox::Msg` (GuiShell.cpp's MSMessageBoxMsg until R6 WON GUI round 36): the box made from `texts`, a
+/// native window with the parent, the title, style 0x59 and the box's size, the box added, its first button
+/// focused, the modal run, the window closed; the box's and the window's references (the original's two SmartPtrs)
+/// given back, the window's first. Returns the run's result.
+///
+/// # Safety
+/// `texts` is the box's texts (`EeWonMsgBoxTexts`, live through the call); `host` the C++ shell host.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_msgbox_run(
+    host: EeWonShellHostFn,
+    parent: isize,
+    texts: *const EeWonMsgBoxTexts,
+) -> i32 {
+    let sh = Sh::detached(host);
+    let msg_box = sh.host(H::MsgBoxNew, texts as isize, 0, 0, 0);
+    sh.host(H::Ref, msg_box, 1, 0, 0);
+    let win = sh.host(H::MsgWinNew, 0, 0, 0, 0);
+    sh.host(H::RefObj, win, 1, 0, 0);
+    // SAFETY: the contract (the texts outlive the call)
+    let title = unsafe { (*texts).title };
+    sh.host(H::MsgWinParent, win, parent, 0, 0);
+    sh.host(H::MsgWinTitle, win, title, 0, 0);
+    sh.host(H::MsgWinStyle, win, 0x59, 0, 0);
+    let size = crate::compmem::get(msg_box).bounds;
+    sh.host(H::MsgWinCreate, win, size.width as isize, size.height as isize, 0);
+    sh.host(H::MsgWinAdd, win, msg_box, 0, 0);
+    let button = sh.host(H::MsgShellOp, msg_box, O::GetButton1 as isize, 0, 0);
+    sh.host(H::MsgFocus, button, 0, 0, 0);
+    let result = sh.host(H::MsgRunDialog, win, msg_box, 0, 0) as i32;
+    sh.host(H::MsgWinClose, win, 0, 0, 0);
+    sh.host(H::RefObj, win, 0, 0, 0);
+    sh.host(H::Ref, msg_box, 0, 0, 0);
+    result
 }
 
 #[cfg(test)]

@@ -56,8 +56,8 @@ extern "C" intptr_t ee_won_guicpp_skin_call(void* inMe, EeWonGuiOp op, intptr_t 
     if (op != EeWonGuiOp::SkinLay) return 0;
     switch ((SL)a) {
     case SL::Part: return SkinPart(m, (SK)b, c);
-    case SL::SetPosSize: { const int* r = (const int*)c; x->SetPosSize(r[0], r[1], r[2], r[3]); return 0; }
-    case SL::DesiredSize: { int* wh = (int*)c; x->GetDesiredSize(wh[0], wh[1]); return 0; }
+    case SL::SetPosSize: x->SetPosSize(((const int*)c)[0], ((const int*)c)[1], ((const int*)c)[2], ((const int*)c)[3]); return 0;
+    case SL::DesiredSize: x->GetDesiredSize(((int*)c)[0], ((int*)c)[1]); return 0;
     case SL::SetLeftPad: static_cast<InputBox*>(x)->SetLeftPad((int)c); return 0;
     case SL::ListCount: return static_cast<ListArea*>(x)->GetNumItems();
     case SL::ListTotalWidth: return static_cast<ListArea*>(x)->GetTotalWidth();

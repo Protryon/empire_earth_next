@@ -126,6 +126,16 @@ enum class EeWonLeafOp : uint32_t {
   CompItemBaseSetPos,
   /// `t->mComponent->SetPos(a, b)`.
   CompItemSetPos,
+  /// `t->mIsSizable` (0 or 1).
+  CompItemSizable,
+  /// `((ListArea*)a)->GetPaintWidth()`.
+  CompItemListPaintWidth,
+  /// `t->mComponent->SetSize(a, b)`.
+  CompItemSetSize,
+  /// `t->mComponent->MarkInvalid()`.
+  CompItemMarkInvalid,
+  /// `t->mComponent->Paint(*(Graphics*)a)`.
+  CompItemPaint,
 };
 
 /// The inward calls.
@@ -148,6 +158,8 @@ enum class EeWonLeafCall : uint32_t {
   ComponentItemViewport,
   /// `ComponentListItem::SetPos(a, b)`.
   ComponentItemSetPos,
+  /// `ComponentListItem::Paint(*(Graphics*)a, (ListArea*)b)`.
+  ComponentItemPaint,
 };
 
 /// The host: `me` the C++ object, `op`, two arguments.

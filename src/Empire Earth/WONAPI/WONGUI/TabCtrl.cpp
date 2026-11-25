@@ -31,11 +31,7 @@ extern "C" intptr_t ee_won_guicpp_tab_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::ChildRight: return Comp(a)->Right();
     case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
     case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* r = (const EeWonRect4*)b;
-        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
-        return 0;
-    }
+    case Op::ChildSetPosSize: Container::Place(Comp(a), *(const EeWonRect4*)b); return 0;
     case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
     case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
     case Op::ChildSetControlId: Comp(a)->mControlId = (int)b; return 0;

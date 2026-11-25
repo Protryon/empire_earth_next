@@ -27,6 +27,7 @@ impl UuOps for Mock {
         match which {
             US_TOP_POINT => out[..3].copy_from_slice(&[1.0, 2.0, 3.0]),
             US_SCALE => out[0] = 2.0,
+            US_BOX_TOP => out[..3].copy_from_slice(&[0.0, 0.0, -7.0]),
             US_APPLY => {
                 for k in 0..3 {
                     out[3 + k] = out[k] + 10.0;
@@ -157,13 +158,14 @@ fn wall_rise_of_a_gate_and_of_a_site() {
     m.world_any.insert(UW_COMPLEX_BUILT, 1);
     m.floats.insert(UWF_STATS_SCALE, 2.0);
     assert_eq!(wall_rise(&mut m, 5), 2.4);
-    assert!(!m.which().contains(&UWF_BOX_TOP_Z));
+    assert!(!m.log.iter().any(|l| l.1 == US_BOX_TOP));
     let mut m = Mock::default();
-    m.floats.insert(UWF_BOX_TOP_Z, 3.0);
     m.floats.insert(UWF_STATS_SCALE, 2.0);
     m.floats.insert(UWF_HIT_POINTS, 1.0);
     m.floats.insert(UWF_MAX_HIT_POINTS, 4.0);
+    // the box top (0, 0, -7) through the location (+10): z 3
     assert_eq!(wall_rise(&mut m, 5), 1.5);
+    assert_eq!(m.log.iter().filter(|l| l.0 == 's').map(|l| l.1).collect::<Vec<_>>(), vec![US_BOX_TOP, US_APPLY]);
 }
 
 #[test]

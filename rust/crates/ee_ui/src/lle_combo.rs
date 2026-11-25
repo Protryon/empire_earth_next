@@ -11,7 +11,7 @@ use core::ffi::c_ulong;
 use crate::comboobj::{
     ee_ui_combo_drop_rect, ee_ui_combo_list_rect, ee_ui_combo_text_rect, EeUiComboAct as Act, EeUiComboQuery as Query,
 };
-use crate::lle_cpp::{lle_host, Cpp, EeUiShimF32Out as F32Out, EeUiShimULongOut as ULongOut, HostArgs};
+use crate::lle_cpp::{Cpp, EeUiShimF32Out as F32Out, EeUiShimULongOut as ULongOut, HostArgs};
 use crate::obj::EeUiOp as Op;
 use crate::rect::UiRect;
 
@@ -137,10 +137,36 @@ fn act<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs, combo: usize) -> Option<isize> 
     Some(0)
 }
 
-lle_host!(
-    /// The combo box's host: [`combo_call`], then `UIComboBox::Rust::Op`.
-    ee_ui_combo_host => combo_call, [crate::lle_hosts::base, crate::lle_hosts::part, crate::lle_hosts::combo]
-);
+/// The combo box's host: [`combo_call`], then `UIComboBox::Rust::Op`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_combo_host(
+    obj: *mut core::ffi::c_void,
+    op: crate::obj::EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the host contract, the arguments as given
+    unsafe {
+        crate::lle_cpp::host(
+            combo_call,
+            &[crate::lle_hosts::base, crate::lle_hosts::part, crate::lle_hosts::combo],
+            obj,
+            op,
+            a,
+            b,
+            c,
+            d,
+            f,
+        )
+    }
+}
 
 /// The constructor's arguments past the combo box (`UIComboBox::UIComboBox`).
 pub(crate) struct ComboArgs {

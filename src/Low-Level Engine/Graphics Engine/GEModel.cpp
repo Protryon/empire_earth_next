@@ -278,4 +278,3 @@ static intptr_t TerrainMeshHost(void*, EeGeTmOp inOp, void* inObj, intptr_t a, i
 
 GETerrainMesh::GETerrainMesh() { this->mRust = ee_ge_tm_new(TerrainMeshHost, this); }
 
-GETerrainMesh::~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }

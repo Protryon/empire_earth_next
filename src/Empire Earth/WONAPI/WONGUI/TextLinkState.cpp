@@ -13,11 +13,7 @@
 #include "ee/wonapi/WONLobbyRichText.h"
 namespace WONAPI {
 // Creates an unpressed link that turns red while pressed (emitted at 0x007114f0)
-TextLink::TextLink()
-{
-    this->mDownColor=0xff0000;
-    this->mPressed=false;
-}
+TextLink::TextLink() : mPressed(false), mDownColor(0xff0000) {}
 // Returns the parameter delivered when the link is activated
 const GUIString& TextLink::GetLinkParam() { return this->mLinkParam; }
 // Marks the link pressed and switches it to its pressed colour, remembering the normal colour

@@ -18,10 +18,8 @@
 #include "rust/net/net.h"
 
 
-enum {                                      // slot values (ctor ESVERIFY text "inMaxPlayers < knessPlayerSlotNotAvailable+1")
-    kSlotNotAvailable = 0xff,      // Provisional enum name; 0xfe is the server's own slot
-    knessPlayerSlotNotAvailable = kSlotNotAvailable   // spelled this way in the original's assert strings
-};
+// (the slot values are NESlot, rust/net/msgid.h; 0xff, no slot, was knessPlayerSlotNotAvailable in the original's
+// assert texts and had no user left.)
 
 class LLE_API NESynchronousServer : public NESynchronousCommunications {
 public:
@@ -29,8 +27,17 @@ public:
     NESynchronousServer(EeNetSvHostFn inHost, EeNetMmHostFn inMessageManagerHost, unsigned char inMaxPlayers, unsigned long inDefaultSendInterval, unsigned char inPTsPerCT, unsigned long inMaxPhysicsTicksPerSecond,
                         unsigned long inMinPhysicsTicksPerSecond, float inPhysicsTickCostFactor, unsigned long inMaxSendInterval, unsigned long inSendIntervalIncrement, unsigned long inSendIntervalDecrement,
                         unsigned long inCurrentCommunicationsTick, unsigned long inCurrentPhysicsTick,
-                        UWideString& inName, bool inAllowNewConnections, bool inAnnounce, unsigned long inNetworkAdapter);
-    virtual ~NESynchronousServer();
+                        UWideString& inName, bool inAllowNewConnections, bool inAnnounce, unsigned long inNetworkAdapter)
+        : NESynchronousCommunications(inCurrentCommunicationsTick)
+    {
+        this->mServer = ee_net_sv_new_game(this, inHost, inMessageManagerHost, NESynchronousServer::QueueHost, this->mComms,
+                                           inMaxPlayers, inDefaultSendInterval, inPTsPerCT, inMaxPhysicsTicksPerSecond,
+                                           inMinPhysicsTicksPerSecond, inPhysicsTickCostFactor, inMaxSendInterval,
+                                           inSendIntervalIncrement, inSendIntervalDecrement, inCurrentCommunicationsTick,
+                                           inCurrentPhysicsTick, static_cast<const char*>(inName), inAllowNewConnections,
+                                           inAnnounce, inNetworkAdapter);
+    }
+    virtual ~NESynchronousServer() { ee_net_sv_free(this->mServer); }
 
     void AllowNewPlayers(bool inAllow) { ee_net_sv_allow_new_players(this->mServer, inAllow); }
     void ClearSendToSlotArray() { ee_net_sv_clear_send_to_slot_array(this->mServer); }
@@ -122,7 +129,6 @@ public:
     void StartThreads() { ee_net_sv_start_threads(this->mServer); }
     void StopThreads() { ee_net_sv_stop_threads(this->mServer); }
 
-protected:
     // The server's calls out to the game (the original's pure virtuals, vtable 0x9891c slots 9..27; LLE round 13:
     // the subclass's members by name, no slots), then the engine's (Host): the subclass passes GameHost<itself>
     template <class Game> static Game* As(void* inServer) { return static_cast<Game*>(static_cast<NESynchronousServer*>(inServer)); }
@@ -175,7 +181,6 @@ protected:
     // the message manager's calls out that reach the C++ (ee_net's EeNetMmOp): the messages, the server, the files
     static ptrdiff_t MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d);
 
-private:
     EeNetProtocol* Protocol() const { return static_cast<EeNetProtocol*>(ee_net_sv_protocol(this->mServer)); }   // protocol 0 (ee_net ffi_protocol.rs)
     void* Server() const { return ee_net_sv_server(this->mServer); }   // the published server (the plug-in's handle)
     // the queues' common calls out (ee_net's EeNetQOp)

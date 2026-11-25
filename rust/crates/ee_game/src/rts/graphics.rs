@@ -121,7 +121,7 @@ ee_base::cpp_shims! {
     fn surf_bytes_per_row(surface: usize) -> c_ulong = ee_rtsgcpp_surf_bytes_per_row;
     fn surf_dereference(surface: usize) = ee_rtsgcpp_surf_dereference;
     fn surf_copy(from: usize, to: usize, source: *mut f32, destination: *mut f32) -> c_long = ee_rtsgcpp_surf_copy;
-    fn pack_row(source: *const u8, row: *mut u8, width: c_ulong, format: c_ulong) = ee_rtsgcpp_pack_row;
+    fn pack_row(source: *const u8, row: *mut u8, width: c_ulong, format: c_ulong) = ee_ge_pack_bgrx_row;
     fn lobby_surface_size(width: ShimOut<c_int>, height: ShimOut<c_int>) = ee_rtsgcpp_lobby_surface_size;
     fn lobby_set_presentation(scale: f32, left: f32, top: f32, width: f32, height: f32) = ee_rtsgcpp_lobby_set_presentation;
     fn lobby_lock_frame(frame: *mut EeRtsLobbyFrame) -> bool = ee_rtsgcpp_lobby_lock_frame;

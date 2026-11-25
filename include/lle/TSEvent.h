@@ -4,6 +4,7 @@
 // every member forwards.
 #ifndef LLE_TSEVENT_H
 #define LLE_TSEVENT_H
+#include "lle/LLEForward.h"
 
 #include "platform/PlatThread.h"
 #include "rust/base/ts.h"
@@ -16,8 +17,7 @@ enum TSWaitResult {
     kTSWaitFailed = PLAT_WAIT_FAILED,
 };
 
-class LLE_API TSEvent {
-    friend class TSScheduler;
+class LLE_API TSEvent : URustView {
 public:
     long Set() { return ee_ts_event_set(this->Rust()); }
     long Clear() { return ee_ts_event_clear(this->Rust()); }
@@ -30,9 +30,6 @@ public:
     operator void*() const { return ee_ts_event_handle(this->Rust()); }
     // the platform event (TMTimer's event timers set it)
     PlatEvent* GetHandle() const { return static_cast<PlatEvent*>(ee_ts_event_handle(this->Rust())); }
-private:
-    TSEvent() = delete;
-    ~TSEvent() = delete;
     const EeTsEvent* Rust() const { return reinterpret_cast<const EeTsEvent*>(this); }
 };
 

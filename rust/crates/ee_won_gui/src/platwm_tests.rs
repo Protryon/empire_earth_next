@@ -114,7 +114,7 @@ fn focus_moves_and_removal_picks_the_topmost() {
     m.add(p(1));
     log();
     m.set_focus(p(1));
-    assert_eq!(log(), vec!["QueueInput w1 0 0 0".to_string()]);
+    assert_eq!(log(), vec!["QueueInput w1 11 0 0".to_string()]);
     m.remove(p(1));
     // the parent (none) -> the topmost visible window that is not a popup
     assert_eq!(m.focus(), p(0));
@@ -134,7 +134,7 @@ fn mouse_goes_to_the_window_under_the_pointer_in_client_coordinates() {
     e.data[1] = 250;
     assert!(!m.handle(&e));
     assert_eq!(m.mouse(), (200, 200, true));
-    assert_eq!(log(), vec!["mouse w1 0 [200, 200, 0, 0]".to_string()]);
+    assert_eq!(log(), vec!["mouse w1 2 [200, 200, 0, 0]".to_string()]);
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn keys_make_control_characters_and_alt_is_left_alone() {
     e.data[1] = b'C' as u32;
     e.data[2] = MOD_CONTROL;
     m.handle(&e);
-    assert_eq!(log(), vec!["QueueKey w0 0 67 4".to_string(), "QueueKey w0 2 3 4".to_string()]);
+    assert_eq!(log(), vec!["QueueKey w0 8 67 4".to_string(), "QueueKey w0 10 3 4".to_string()]);
     e.data[2] = MOD_ALT;
     m.handle(&e);
     assert!(log().is_empty());
@@ -207,12 +207,12 @@ fn control_characters_and_double_clicks() {
     for (key, ch) in [(VK_BACK, 8), (VK_TAB, 9), (VK_RETURN, 13), (VK_ESCAPE, 27)] {
         e.data[1] = key;
         m.handle(&e);
-        assert_eq!(log(), vec![format!("QueueKey w0 0 {key} 0"), format!("QueueKey w0 2 {ch} 0")]);
+        assert_eq!(log(), vec![format!("QueueKey w0 8 {key} 0"), format!("QueueKey w0 10 {ch} 0")]);
     }
-    // the press: 1 click a press, 2 a double click, 3 a press again, 4 a double click
+    // the press: 1 click a press (MouseDown 3), 2 a double click (4), 3 a press again, 4 a double click
     let mut e = EeWonPlatEvent { kind: EV_MOUSE_DOWN, time: 0, window: 7 as *mut c_void, data: [0; 18] };
     e.data[4] = 1;
-    for (clicks, kind) in [(1, 1), (2, 2), (3, 1), (4, 2), (0, 1)] {
+    for (clicks, kind) in [(1, 3), (2, 4), (3, 3), (4, 4), (0, 3)] {
         e.data[5] = clicks;
         m.handle(&e);
         assert_eq!(log(), vec![format!("mouse w0 {kind} [0, 0, 0, 0]")]);

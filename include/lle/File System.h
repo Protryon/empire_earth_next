@@ -6,7 +6,7 @@
 #ifndef LLE_FILESYSTEM_H
 #define LLE_FILESYSTEM_H
 
-class UString;
+#include "lle/LLEForward.h"
 
 LLE_API void FSInitialize(const UString& inPath);     // proven ?FSInitialize@@YAXABVUString@@@Z (exe import)
 

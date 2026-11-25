@@ -41,10 +41,9 @@
 
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
-    : EeScreensMainGroupFields(), mOwner(inOwner)
+    : EeScreensMainGroupFields(), mOwner(inOwner), mStatusBox(new EEUIFMGStatusBox(inOwner))
 {
     ee_screens_main_group_fields(this, static_cast<EeScreensMainGroupFields*>(this));   // (the record zeroed)
-    this->mStatusBox = new EEUIFMGStatusBox(inOwner);
 }
 
 // Destroys the main panel group and its status box
@@ -55,12 +54,6 @@ EEUIFMGMainGroup::~EEUIFMGMainGroup()
 
 // (EETechTreeNode::GetHotKey and EEButtonObject::GetHotKey, the inline COMDATs the original emitted here: their
 // classes' units, Tech Tree/EETechTreeNode.cpp and Database/EEButtonObject.cpp)
-
-// Returns the citizen's queued build target at an index
-EEUnit* EEComplexUnit::GetCitizenBuildTarget(unsigned long inIndex)
-{
-    return this->mCitizenBuildQueue[inIndex];
-}
 
 // The panel groups' values (ee_screens panel_groups_ffi.rs, which prints their texts): each one call, no logic
 extern "C" int32_t ee_screenscpp_group_conversions() { return gWorld.GetCurrentPlayer()->mSavedGroups.GetLastValue(5); }

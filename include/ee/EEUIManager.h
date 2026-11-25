@@ -43,6 +43,16 @@ inline void EEUIFErrorDisplay(UIManager* inManager, unsigned long inKind, const 
 
 // the own members (the main game and scenario editor forms, the editor flags) are the Rust record
 // EeScreensUiManagerFields (ee_screens ui_objects.rs), under their names
+// The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
+// UpdateMouse's location)
+struct EEUIManagerCall : public EeScreensManagerCallObjects {   // the pointers: the Rust record (hud_fields.rs)
+    explicit EEUIManagerCall(class EEUIManager* inManager, const GE2DPoint* inMouse = NULL)
+        : EeScreensManagerCallObjects{inManager, inMouse} {}
+    UWideString mNames[2];
+    // the record of a call (a temporary's, for the full expression)
+    EEUIManagerCall* Ptr() { return this; }
+};
+
 class EEUIManager : public UIManager, public EeScreensUiManagerFields {
 public:
     // UIManager's (protected) updates, for the ee_screens ui_manager.rs host's shims (EEUIManager.cpp)
@@ -72,8 +82,14 @@ public:
     {
         return reinterpret_cast<UIForm*>(ee_screens_um_create_form((uintptr_t)this, (uintptr_t)&inData));
     }
-    virtual long UpdateKeyboard();
-    virtual long UpdateMouse(const GE2DPoint& inMouseLocation);
+    // F9 screenshots outside text entry; then the keys (ee_screens ui_manager.rs; the original first stopped a playing
+    // movie on Escape, Return or Space)
+    virtual long UpdateKeyboard() { return (long)ee_screens_ui_manager_update_keyboard(EEUIManagerCall(this).Ptr()); }
+    // the mouse (ee_screens ui_manager.rs; the original first stopped a playing movie on a click)
+    virtual long UpdateMouse(const GE2DPoint& inMouseLocation)
+    {
+        return (long)ee_screens_ui_manager_update_mouse(EEUIManagerCall(this, &inMouseLocation).Ptr());
+    }
     // 0x274d79 / 0x274e2d: a new message box with the cancel / yes-no-cancel buttons (provisional names).
     // inAlignment: EEUIFError::Display*'s (pushed as a dword)
     void DisplayCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inCallback,
@@ -109,7 +125,8 @@ public:
     {
         EEUIFErrorDisplay(this, EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
     }
-    void StartScenarioEditor();             // 0x274e69 (sets +0x13c, starts a local server)
+    // 0x274e69: the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
+    void StartScenarioEditor() { ee_screens_ui_manager_start_editor(EEUIManagerCall(this).Ptr()); }
     // Deletes the scenario editor form
     void DeleteScenarioEditor() { ee_screens_um_delete_editor((uintptr_t)this); }            // 0x274d24 (deletes +0x130 through its vtable; the main screen's Open)
     // 0x26fa55 / 0x26fa6a: the main group's mL1C = 0 / 1 and its mB25 (EEUIFMGStatusButton::Command's buttons 1 and

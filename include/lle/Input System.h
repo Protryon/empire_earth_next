@@ -6,8 +6,7 @@
 #include "lle/ISKeyboard.h"
 #include "lle/ISMouse.h"
 
-class GEWindow;
-class UResourceFile;
+#include "lle/LLEForward.h"
 
 LLE_API long ISInitialize(HINSTANCE inInstance, GEWindow* inWindow, UResourceFile* inResources,
                           unsigned long inFirstStringID, unsigned long inDoublePressTimeDelta);

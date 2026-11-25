@@ -6,7 +6,7 @@
 #include <vector>
 #include "lle/GERust.h"
 
-class FSFile;
+#include "lle/LLEForward.h"
 
 class GERectangle : public EeGeRectangle {   // the Rust record (mBottom, mLeft, mRight, mTop; rust/base/math.h)
 public:

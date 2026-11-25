@@ -4,39 +4,34 @@
 #include "rust/won_gui/cfgkind.h"
 namespace WONAPI {
 
-// Image configuration classes (their instructions are their kinds' tables: ee_won_gui cfgkind.rs, cfgtab.rs).
-// ImageFilterConfig: ImageConfig (0x7c) + raw image pointer at +0x7c + bool at +0x80 = 0x84 bytes.
-class ImageConfig : public ComponentConfig {
+// The media configs (R6 WON GUI round 36): the original's ImageConfig, StretchImageConfig, StretchCenterImageConfig,
+// ImageFilterConfig, FontConfig, PercentLayoutConfig and ColorSchemeConfig are one class, MediaConfig, their kind
+// (mKind) the original's class; their instructions are their kinds' tables (ee_won_gui cfgkind.rs, cfgtab.rs), their
+// bodies cfgbody.rs's (WONCfgBody.inl). It holds every kind's members; each kind uses its own (the image's, the
+// stretch images' raw aliases of it, the filter's raw image, the font's, the percent layout's, the scheme's).
+class MediaConfig : public ComponentConfig {
 public:
-    // 0x0078b2b0: marked as having no child components to create
-    explicit ImageConfig(EeWonCfgKind inKind = EeWonCfgKind::Image) : ComponentConfig(inKind) { this->mHaveInitedComponents=true; }
-    virtual bool PostParse(ConfigParser*) { return true; } // at 0x007099f0: skips ComponentConfig::PostParse
-    virtual bool GetNamedValue(const std::string&,int&); //38b370
-    virtual Image* GetImage() { return this->mImage.get(); } // slot 0x38, at 0x0078b2d0
-    virtual RawImage* GetRawImage() { return NULL; } // slot 0x3c (base behaviour), at 0x006c7b10
-    SmartPtr<Image> mImage; //78, total7c
+    explicit MediaConfig(EeWonCfgKind inKind); // the kind's constructor (ConfigTableHost.cpp)
+    virtual bool PreParse(ConfigParser*); // the percent layout's and the scheme's own; the base's for the others
+    virtual bool PostParse(ConfigParser*) { return true; } // 0x3099f0, 0x7099f0, 0x787ff0: no desired size
+    virtual bool GetNamedValue(const std::string&,int&); // the font's (0x38a580) and the images' (0x38b370)
+    bool Is(EeWonCfgKind inKind) const { return ee_won_cfg_kind_is(this->mKind,inKind); }
+    Image* GetImage(); // an image kind's (the filter's 0x38cc80 builds its native image)
+    RawImage* GetRawImage() { return this->mKind==EeWonCfgKind::ImageFilter ? this->mRawImage.get() : NULL; }
+    void SetRawImage(RawImage*); //38c6e0 (the filter)
+    Font* GetFont(); // 0x38a300; recalculates the font on demand
+    void SetFont(Font*); //38a3e0
+    SmartPtr<Image> mImage; StretchImage* mStretchImage; StretchCenterImage* mStretchCenterImage; // raw aliases
+    SmartPtr<RawImage> mRawImage; bool mImageIsRawImage;
+    SmartPtr<Font> mFont; FontDescriptor mDescriptor; bool mNeedRecalcFont;
+    Component* target; Component* refs[4]; int params[8]; // the percent layout's, borrowed
+    SmartPtr<ColorScheme> mColorScheme; // the scheme's, owned
 };
-// 0x80-byte configs; the raw pointer at +0x7c aliases the inherited image pointer at +0x78.
-class StretchImageConfig : public ImageConfig {
-public:
-    //38b4e0: a new empty stretch image
-    StretchImageConfig() : ImageConfig(EeWonCfgKind::StretchImage) { this->mStretchImage=new StretchImage(NULL,0,0,0,0); this->mImage=this->mStretchImage; }
-    StretchImage* mStretchImage; // offset 0x7c, raw alias; class size 0x80
-};
-class StretchCenterImageConfig : public ImageConfig {
-public:
-    //38bf90: a new empty stretch-center image
-    StretchCenterImageConfig() : ImageConfig(EeWonCfgKind::StretchCenterImage) { this->mStretchCenterImage=new StretchCenterImage; this->mImage=this->mStretchCenterImage; }
-    StretchCenterImage* mStretchCenterImage; // offset 0x7c, raw alias; class size 0x80
-};
-class ImageFilterConfig : public ImageConfig {
-public:
-    ImageFilterConfig() : ImageConfig(EeWonCfgKind::ImageFilter) { this->mImageIsRawImage=false; } // at 0x0078c260
-    virtual Image* GetImage(); //38cc80 slot38
-    virtual RawImage* GetRawImage() { return this->mRawImage.get(); } // slot 0x3c, at 0x0078c280
-    void SetRawImage(RawImage*); //38c6e0
-    SmartPtr<RawImage> mRawImage; //7c
-    bool mImageIsRawImage; //80 naturalpad, total84
-};
+// the original classes' names
+typedef MediaConfig ImageConfig; typedef MediaConfig StretchImageConfig; typedef MediaConfig StretchCenterImageConfig;
+typedef MediaConfig ImageFilterConfig; typedef MediaConfig FontConfig;
+// whether a config is of a media kind (a world's stand-ins answer by their classes: WONCompCfg.inl)
+template<class T> bool WONCfgIs(ConfigObject* inConfig, EeWonCfgKind inKind)
+{ MediaConfig* m = dynamic_cast<MediaConfig*>(inConfig); return m != NULL && m->Is(inKind); }
 }
 #endif

@@ -13,10 +13,16 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "rust/won_gui/guitext.h"
-// The format's parse is ee_won's guitext module (rust/crates/ee_won_gui/src/guitext.rs, format_ops); this unit adds
-// the segments it names.
+// The format's parse and its run are ee_won's guitext module (rust/crates/ee_won_gui/src/guitext.rs, format_ops and
+// ee_won_gui_text_append_formatted: the pending text, the colour and the font; R6 WON GUI round 36); this unit is
+// the area's four calls it makes.
 namespace WONAPI {
-static inline void AppendRange(GUIString& text,const GUIString& f,int s,int l) { text.append(f,(unsigned short)s,(unsigned short)l); }
+static void FmtAddText(void* area,const void* units,size_t len,int color,void* font,bool lineBreak)
+{ ((TextArea*)area)->AddSegment(GUIString(std::wstring((const wchar_t*)units,len)),color,(Font*)font,lineBreak); }
+static void FmtLineBreak(void* area) { ((TextArea*)area)->LineBreak(0); }
+static void FmtAddString(void* area,const void* string,int color,void* font) { ((TextArea*)area)->AddSegment(*(const GUIString*)string,color,(Font*)font,false); }
+static void FmtAddSegment(void* area,void* segment) { ((TextArea*)area)->AddSegment((TextSegmentBase*)segment); }
+static const EeWonFormatSink kFormatSink = { FmtAddText, FmtLineBreak, FmtAddString, FmtAddSegment };
 // Appends format text to a text area, expanding <n> line breaks, <cN>/<fN> colour and font changes and
 // <sN>/<lN> inserted strings and segments (1-based indices; "<<" is a literal '<')
 void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
@@ -24,33 +30,7 @@ void LobbyAppendFormattedText(TextArea* area,const GUIString& format,
     Font*const* fonts,int numFonts,TextSegmentBase*const* segments,int numSegments,
     bool lineBreak)
 {
-    int color=area->mTextColor;
-    Font* font=area->mFont.get();
-    GUIString text;
-    std::vector<EeWonFormatOp> ops(2*format.length()+2);
-    size_t count=ee_won_gui_text_format(format.mData->mText,format.length(),sizeof(wchar_t),numStrings,numColors,
-                                        numFonts,numSegments,lineBreak,&ops[0],ops.size());
-    if(count>ops.size())
-    {
-        ops.resize(count);
-        count=ee_won_gui_text_format(format.mData->mText,format.length(),sizeof(wchar_t),numStrings,numColors,numFonts,
-                                     numSegments,lineBreak,&ops[0],ops.size());
-    }
-    for(size_t i=0;i<count && i<ops.size();i++)
-    {
-        const EeWonFormatOp& op=ops[i];
-        switch(op.kind)
-        {
-        case 0: AppendRange(text,format,op.a,op.b); break;
-        case 1: text.append(L'<'); break;
-        case 2: area->AddSegment(text,color,font,false); text.erase(); break;
-        case 3: area->LineBreak(0); break;
-        case 4: color=colors[op.a]; break;
-        case 5: if(fonts[op.a]!=NULL) font=fonts[op.a]; break;
-        case 6: if(strings[op.a]!=NULL) area->AddSegment(*strings[op.a],color,font,false); break;
-        case 7: if(segments[op.a]!=NULL) area->AddSegment(segments[op.a]); break;
-        case 8: area->AddSegment(text,color,font,op.b!=0); break;
-        }
-    }
+    EeWonFormatArgs args = { (const void*const*)strings,numStrings,colors,numColors,(void*const*)fonts,numFonts,(void*const*)segments,numSegments };
+    ee_won_gui_text_append_formatted(area,&kFormatSink,format.mData->mText,format.length(),&args,lineBreak,area->mTextColor,area->mFont.get());
 }
 }

@@ -1692,18 +1692,6 @@ void EEPlayer::ApplyMapRestrictions()
     ee_units_player_body(this, EE_UNITS_PLAYER_DO_MAP_RESTRICTIONS, 0, 0, 0, 0.0f);   // player_body.rs
 }
 
-// Sets whether the unit and its following parts can cloak; turning it off also uncloaks them
-void EEComplexUnit::SetCloakableChain(bool inValue)
-{
-    ee_units_cloak_chain((uint64_t)EEPlayerUnitArg(this), 0, inValue);   // ee_units player_rest.rs
-}
-
-// Cloaks or uncloaks the unit and its following parts
-void EEComplexUnit::SetCloakedChain(bool inValue)
-{
-    ee_units_cloak_chain((uint64_t)EEPlayerUnitArg(this), 1, inValue);
-}
-
 // Records a media warning when a unit class's buttons were not preloaded for the player
 void EEPlayer::CheckButtonsPreloaded(long inUnitClass)
 {

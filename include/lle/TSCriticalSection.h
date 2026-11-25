@@ -4,19 +4,16 @@
 // Rust section TSScheduler made, and every member forwards.
 #ifndef LLE_TSCRITICALSECTION_H
 #define LLE_TSCRITICALSECTION_H
+#include "lle/LLEForward.h"
 
 #include "platform/PlatThread.h"
 #include "rust/base/ts.h"
 
-class LLE_API TSCriticalSection {
-    friend class TSScheduler;               // only the scheduler creates/destroys
+class LLE_API TSCriticalSection : URustView {
 public:
     void Enter() { ee_ts_section_enter(this->Rust()); }
     void Leave() { ee_ts_section_leave(this->Rust()); }
     bool TryEnter() { return ee_ts_section_try_enter(this->Rust()); }  // port: Enter without waiting (the harness)
-private:
-    TSCriticalSection() = delete;
-    ~TSCriticalSection() = delete;
     const EeTsSection* Rust() const { return reinterpret_cast<const EeTsSection*>(this); }
 };
 

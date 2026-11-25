@@ -8,10 +8,7 @@
 #include "rust/render/ge.h"   // the font bitmap (ee_ge fbobj.rs), its host's EeGeFbOp
 #include "lle/GERust.h"
 
-class GEFont;
-class GERasterizer;
-class GERectangle;
-class GEText;
+#include "lle/LLEForward.h"
 
 // port (R4.3, tenth part): the glyph cells (the original's GEFBCharacter, sizeof 0x2c: texture coordinates, the cell
 // rectangle, the referenced texture, the scales) live in the Rust object (EeGeFbCharacter).
@@ -26,17 +23,13 @@ public:
         { return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen); }
     long Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer, unsigned long inScreen)
         { return ee_ge_fb_draw(this->mRust, inText, GERust(inRectangle), inRasterizer, inScreen); }
-    GEFontBitmap(const GEFontBitmap&) = delete;
-    GEFontBitmap& operator=(const GEFontBitmap&) = delete;
-protected:
     // 0x159ac (protected: released through Dereference): its drawing bitmap released
     virtual ~GEFontBitmap() { ee_ge_fb_destroy(this->mRust); }
-private:
     // (CreateNewFontTexture 0x100159cd and CreateSurfaceAlpha 0x10015ac5 are the Rust object's)
     // The calls the font bitmap makes on other objects (EeGeFbOp), in the original's statements
     static intptr_t Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t a, intptr_t b);
 
-    EeGeFontBitmap* mRust;                  // the cells, the drawing bitmap, the first character (ee_ge fbobj.rs)
+    URust<EeGeFontBitmap> mRust;                  // the cells, the drawing bitmap, the first character (ee_ge fbobj.rs)
 };
 
 #endif

@@ -6,7 +6,7 @@
 // the logic is the FFI hosts' (absent with no_cpp: a crate's tests that call the toolkit)
 #![cfg_attr(feature = "no_cpp", allow(dead_code))]
 
-use crate::lle_cpp::{lle_host, Cpp, EeUiShimPtrOut, EeUiShimText, HostArgs};
+use crate::lle_cpp::{Cpp, EeUiShimPtrOut, EeUiShimText, HostArgs};
 use crate::lle_manager::ui_texture_stages;
 use crate::obj::EeUiOp;
 
@@ -29,10 +29,24 @@ pub(crate) fn background_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Optio
     }
 }
 
-lle_host!(
-    /// The backgrounds' host: [`background_call`], then `UIBackgroundHost::Op`.
-    ee_ui_background_host => background_call, [crate::lle_hosts::background]
-);
+/// The backgrounds' host: [`background_call`], then `UIBackgroundHost::Op`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_background_host(
+    obj: *mut core::ffi::c_void,
+    op: crate::obj::EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the host contract, the arguments as given
+    unsafe { crate::lle_cpp::host(background_call, &[crate::lle_hosts::background], obj, op, a, b, c, d, f) }
+}
 
 /// The keyboard keys of `EditKey` 14..16 (`kKeyA`, `kKeyL`, `kKeyReturn` just pressed).
 const EDIT_KEY_A: isize = 14;
@@ -73,10 +87,36 @@ pub(crate) fn edit_call<C: Cpp + ?Sized>(c: &mut C, h: &HostArgs) -> Option<isiz
     })
 }
 
-lle_host!(
-    /// The edit boxes' host: [`edit_call`], then `UIEditBoxRust::Op`.
-    ee_ui_edit_host => edit_call, [crate::lle_hosts::base, crate::lle_hosts::media, crate::lle_hosts::part, crate::lle_hosts::edit]
-);
+/// The edit boxes' host: [`edit_call`], then `UIEditBoxRust::Op`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+#[cfg(not(any(test, feature = "no_cpp")))]
+#[no_mangle]
+pub unsafe extern "C" fn ee_ui_edit_host(
+    obj: *mut core::ffi::c_void,
+    op: crate::obj::EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    // SAFETY: the host contract, the arguments as given
+    unsafe {
+        crate::lle_cpp::host(
+            edit_call,
+            &[crate::lle_hosts::base, crate::lle_hosts::media, crate::lle_hosts::part, crate::lle_hosts::edit],
+            obj,
+            op,
+            a,
+            b,
+            c,
+            d,
+            f,
+        )
+    }
+}
 
 #[cfg(test)]
 mod tests {

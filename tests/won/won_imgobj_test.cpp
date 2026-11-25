@@ -31,7 +31,7 @@
 #include <filesystem>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
-#include "ee/wonapi/WONSurface.h"
+#include "won_surface_shell.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONStringCompare.h"
@@ -95,8 +95,8 @@ struct Graphics {
     }
 };
 struct DisplayContext : RefCount {
-    DisplayContext(SurfaceBase* s = NULL) : mSurface(s), mGraphics(NULL), mPixelScale(1.0f) {}
-    SurfaceBase* mSurface;
+    DisplayContext(EeWonSurface* s = NULL) : mSurface(s), mGraphics(NULL), mPixelScale(1.0f) {}
+    EeWonSurface* mSurface; // the game's: the Rust surface (R6 WON GUI round 36)
     Graphics* mGraphics;
     float mPixelScale;
 };
@@ -200,26 +200,13 @@ static intptr_t Host(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, intp
         case H::Wrap: return (intptr_t)new PImg((EeWonImage*)a);
         case H::RustOf: return (intptr_t)((PImg*)a)->r;
         case H::CtxGraphics: return ctx != NULL ? (intptr_t)ctx->mGraphics : 0;
-        case H::CtxSurface: return ctx != NULL && ctx->mSurface != NULL ? (intptr_t)ctx->mSurface->GetRust() : 0;
-        case H::CtxScale: { uint32_t s; memcpy(&s, &ctx->mPixelScale, 4); return (intptr_t)s; }
+        case H::CtxSurface: return ctx != NULL ? (intptr_t)ctx->mSurface : 0;
+        case H::CtxScale: *(float*)b = ctx->mPixelScale; return 0;
         case H::GfxTrans: ((int*)b)[0] = g->mTransX; ((int*)b)[1] = g->mTransY; return 0;
         case H::GfxContext: return (intptr_t)g->mDisplayContext;
         case H::GfxRun: RunOps(*g, (const EeWonDrawOp*)b, (size_t)c, (void* const*)d, PortSize); return 0;
         case H::GfxDrawImage: g->DrawImage((void*)b, ((int*)c)[0], ((int*)c)[1]); return 0;
-        case H::NewSurface: {
-            SmartPtr<SurfaceBase> s = SurfaceBase::GetNewSurface(SurfaceFormat_32);
-            int w = a < 0 ? 0 : (int)a, h = b < 0 ? 0 : (int)b;
-            s->Create(w, h);
-            if (s->GetPixelsBase() != NULL) memset(s->GetPixelsBase(), 0, (size_t)s->GetBytesPerRow() * h);
-            return Held(s.get());
-        }
-        case H::SurfaceRust: return (intptr_t)((SurfaceBase*)a)->GetRust();
-        case H::NewContext: {
-            DisplayContext* n = new DisplayContext((SurfaceBase*)a);
-            uint32_t s = (uint32_t)b;
-            memcpy(&n->mPixelScale, &s, 4);
-            return Held(n);
-        }
+        case H::NewContext: { DisplayContext* n = new DisplayContext((EeWonSurface*)a); n->mPixelScale = *(const float*)b; return Held(n); }
         case H::NewGraphics: { Graphics* n = new Graphics(PortDraw); n->Attach(ctx); return (intptr_t)n; }
         case H::FreeGraphics: delete g; return 0;
         case H::CreateImage: return Held(new PImg(ee_won_image_new_native(Host, (int)b, (int)c, sWmScale)));
@@ -237,6 +224,11 @@ static unsigned long long Fnv(const void* p, size_t n, unsigned long long h = 14
     return h;
 }
 static std::string Hex(unsigned long long v) { char s[32]; snprintf(s, sizeof s, "%016llx", v); return s; }
+static unsigned long long SurfaceHash(EeWonSurface* s) // the Rust image's own surface
+{
+    if (s == NULL || ee_won_surface_pixels(s) == NULL) return 0;
+    return Fnv(ee_won_surface_pixels(s), (size_t)ee_won_surface_get(s, EeWonSurfaceField::BytesPerRow) * ee_won_surface_get(s, EeWonSurfaceField::Height));
+}
 static unsigned long long SurfaceHash(SurfaceBase* s)
 {
     if (s == NULL || s->GetPixelsBase() == NULL) return 0;
@@ -251,7 +243,7 @@ struct Probe {
         s = SurfaceBase::GetNewSurface(SurfaceFormat_32);
         s->Create(20, 20);
         Fill((uint32_t*)s->GetPixelsBase(), s->GetPixelsPerRow(), 20, 20, seed);
-        c = new DisplayContext(s.get());
+        c = new DisplayContext(s->GetRust());
     }
 };
 
@@ -328,7 +320,7 @@ static std::string DescPort(PImg* i)
         snprintf(b, sizeof b, " native %d %d %g mask %d", (int)i->Get(F::PixelWidth), (int)i->Get(F::PixelHeight), sc,
                  (int)raw->Get(F::HasTransparency));
         o += b;
-        o += " px " + Hex(SurfaceHash((SurfaceBase*)i->Get(F::Surface)));
+        o += " px " + Hex(SurfaceHash((EeWonSurface*)i->Get(F::Surface)));
         o += " raw " + Hex(Fnv((void*)raw->Get(F::Pixels), (size_t)raw->W() * raw->H() * 4)) + (raw->Get(F::HasTransparency) ? " t" : " o");
         Probe p(i->W() * 31 + i->H());
         ee_won_image_draw(i->r, (intptr_t)p.c.get(), 2, 3, 0, 0, i->W(), i->H());
@@ -421,7 +413,7 @@ struct Screen {
         s = SurfaceBase::GetNewSurface(SurfaceFormat_32);
         s->Create(40, 40);
         Fill((uint32_t*)s->GetPixelsBase(), s->GetPixelsPerRow(), 40, 40, seed);
-        c = new DisplayContext(s.get());
+        c = new DisplayContext(s->GetRust());
         c->mPixelScale = scale;
         g = new Graphics(d);
         g->Attach(c.get());

@@ -17,10 +17,12 @@ struct World {
     root: (i32, i32),
     focus: isize,
     capture: isize,
-    parent_visible: isize,
-    popup_hit: bool,
+    parent_plat: isize,
+    popup_window: isize,
+    popup_flags: isize,
     invalid: bool,
     plat_window: isize,
+    offscreen: isize,
 }
 
 thread_local! { static ME_PTR: std::cell::RefCell<isize> = const { std::cell::RefCell::new(0) }; }
@@ -83,18 +85,20 @@ extern "C" fn host(me: *mut c_void, op: EeWonPlatWinOp, a: isize, b: isize, c: i
         O::InvalidateRoot => "InvalidateRoot".into(),
         O::MouseIn => return isize::from(w.mouse_in),
         O::RootContains => return isize::from(a >= 0 && b >= 0 && a < w.root.0 as isize && b < w.root.1 as isize),
-        O::Paint => {
-            if !w.invalid {
-                return 0;
-            }
-            w.log.push("paint".into());
-            return 1;
-        }
-        O::ParentVisible => return w.parent_visible,
+        O::RootInvalid => return isize::from(w.invalid),
+        O::Offscreen => return w.offscreen,
+        O::Paint => "prepaint".into(),
+        O::RootPaint => "paint".into(),
+        O::NewContext => "new context".into(),
+        O::OffscreenOfRoot => "offscreen of root".into(),
+        O::CopyOffscreen => format!("copy offscreen {a}x{b}"),
+        O::RootInvalidate => "root Invalidate".into(),
+        O::ParentPlat => return w.parent_plat,
         O::WindowClose => "Window::PlatformClose".into(),
         O::WindowTimer => format!("Window::TimerEvent {a}"),
         O::ApplyCursor => format!("cursor {a:x}"),
-        O::PopupHit => return isize::from(w.popup_hit),
+        O::PopupWindow => return w.popup_window,
+        O::PopupFlags => return w.popup_flags,
         O::CursorShow => format!("PlatCursorShow {a}"),
         O::PlatMinimize => format!("PlatWindowMinimize {a:x}"),
     };
@@ -139,13 +143,24 @@ fn a_framed_window_from_its_client_rect_is_centred_and_shown() {
     assert_eq!(rect(w, true), [103, 71, 200, 120]);
     assert_eq!(
         world.log,
-        ["Window::Create 103,71,200,120", "wm Add me", "Center 1", "SetIsShowing 1", "PlatformShow 1"]
+        [
+            "Window::Create 103,71,200,120",
+            "new context",
+            "offscreen of root",
+            "wm Add me",
+            "Center 1",
+            "SetIsShowing 1",
+            "PlatformShow 1"
+        ]
     );
     // a hidden start (0x02) and the default position (0x80); without 0x40 the rectangle is the window's
     world.log.clear();
     world.style = 0x82;
     create(w, [100, 50, 200, 120]);
-    assert_eq!(world.log, ["Window::Create 103,71,194,96", "wm Add me", "Center 0", "SetIsShowing 0"]);
+    assert_eq!(
+        world.log,
+        ["Window::Create 103,71,194,96", "new context", "offscreen of root", "wm Add me", "Center 0", "SetIsShowing 0"]
+    );
     free(w);
 }
 
@@ -198,9 +213,21 @@ fn hiding_the_focus_window_moves_the_focus_to_its_visible_parent() {
     assert_eq!(world.log, ["wm SetDirty 0", "InvalidateRoot", "wm BringToFront me", "wm SetFocus me"]);
     assert_eq!(run(w, EeWonPlatWinCall::IsVisible, 0, 0, 0, 0), 1);
     world.log.clear();
-    world.parent_visible = 0x55;
+    // a hidden parent takes no focus, a visible one does
+    let mut pworld = World { has_wm: true, open: true, style: 0x22, ..World::default() };
+    let pme = &mut pworld as *mut World as isize;
+    let pw = ee_won_plat_win_new(pme as *mut c_void, host);
+    world.parent_plat = pw as isize;
     run(w, EeWonPlatWinCall::Show, 0, 0, 0, 0);
-    assert_eq!(world.log, ["wm SetDirty 0", "wm SetFocus 55"]);
+    assert_eq!(world.log, ["wm SetDirty 0", "wm SetFocus 0"]);
+    run(w, EeWonPlatWinCall::Show, 1, 0, 0, 0);
+    run(pw, EeWonPlatWinCall::Show, 1, 0, 0, 0);
+    world.log.clear();
+    run(w, EeWonPlatWinCall::Show, 0, 0, 0, 0);
+    assert_eq!(world.log, ["wm SetDirty 0", format!("wm SetFocus {pme:x}").as_str()]);
+    world.parent_plat = 0;
+    // SAFETY: the parent made here
+    unsafe { ee_won_plat_win_free(pw) };
     // showing a popup does not take the focus; showing twice does nothing
     world.popup = true;
     world.log.clear();
@@ -224,11 +251,18 @@ fn the_timer_queues_a_mouse_exit_once_the_pointer_left() {
     assert_eq!(world.log, ["Window::TimerEvent 7"]);
     // over another window that is the popup not wanting the mouse: nothing
     world.hit = 0x99;
-    world.popup_hit = true;
+    world.popup_window = 0x99;
+    world.popup_flags = 0x4000;
     world.log.clear();
     run(w, EeWonPlatWinCall::Timer, 7, 0, 0, 0);
     assert_eq!(world.log, ["Window::TimerEvent 7"]);
-    world.popup_hit = false;
+    // another window is the popup, or the popup wants the mouse: the exit
+    world.popup_window = 0x98;
+    world.log.clear();
+    run(w, EeWonPlatWinCall::Timer, 7, 0, 0, 0);
+    assert_eq!(world.log, ["Window::TimerEvent 7", "exit"]);
+    world.popup_window = 0x99;
+    world.popup_flags = 0x2000;
     world.log.clear();
     run(w, EeWonPlatWinCall::Timer, 7, 0, 0, 0);
     assert_eq!(world.log, ["Window::TimerEvent 7", "exit"]);
@@ -270,11 +304,13 @@ fn cursors_minimize_close_and_mouse_events() {
     world.log.clear();
     run(w, EeWonPlatWinCall::QueueMouse, p.as_ptr() as isize, 0, 0, 0);
     world.invalid = true;
+    run(w, EeWonPlatWinCall::Paint, 0, 0, 0, 0); // no offscreen image: nothing
+    world.offscreen = 1;
     run(w, EeWonPlatWinCall::Paint, 0, 0, 0, 0);
     run(w, EeWonPlatWinCall::Close, 0, 0, 0, 0);
     assert_eq!(
         world.log,
-        ["mouse [3, 100, 50, 4, 1]", "paint", "wm SetDirty 0", "Window::PlatformClose", "wm Remove me"]
+        ["mouse [3, 100, 50, 4, 1]", "prepaint", "paint", "wm SetDirty 0", "Window::PlatformClose", "wm Remove me"]
     );
     assert_eq!(run(w, EeWonPlatWinCall::IsVisible, 0, 0, 0, 0), 0);
     // the manager's fields
@@ -325,9 +361,66 @@ fn focus_moves_and_exits_at_the_edges() {
     // over this window but outside its root: the exit, whatever the popup is
     world.mouse = Some((500, 500));
     world.hit = me_ptr();
-    world.popup_hit = true;
+    world.popup_window = me_ptr();
+    world.popup_flags = 0x4000;
     world.log.clear();
     run(w, EeWonPlatWinCall::Timer, 2, 0, 0, 0);
     assert_eq!(world.log, ["Window::TimerEvent 2", "exit"]);
     free(w);
+}
+
+extern "C" fn no_image_host(_: crate::imgobj::EeWonImageHost, _: isize, _: isize, _: isize, _: isize) -> isize {
+    0
+}
+
+/// FollowPixelScale (Window.cpp's until R6 WON GUI round 36): only an open window with a manager and an offscreen
+/// image at another scale gets a new image (the old one's logical size), the root invalidated and the manager dirty.
+#[test]
+fn follow_pixel_scale() {
+    let mut world = World { has_wm: true, open: true, ..Default::default() };
+    let w = win(&mut world);
+    let follow = |k: f32| run(w, EeWonPlatWinCall::FollowPixelScale, k.to_bits() as isize, 0, 0, 0);
+    follow(2.0); // no offscreen image
+    let img = crate::imgobj::ee_won_image_new_native(no_image_host, 30, 20, 1.5);
+    world.offscreen = img as isize;
+    follow(1.5); // the same scale
+    world.open = false;
+    follow(2.0);
+    world.open = true;
+    world.has_wm = false;
+    follow(2.0);
+    assert!(world.log.is_empty(), "{:?}", world.log);
+    world.has_wm = true;
+    follow(2.0);
+    assert_eq!(world.log, ["copy offscreen 30x20", "root Invalidate", "wm SetDirty 0"]);
+    // SAFETY: the test's image and window
+    unsafe {
+        crate::imgobj::ee_won_image_free(img);
+        ee_won_plat_win_free(w);
+    }
+}
+
+/// The title (Window::mTitle until R6 WON GUI round 36): "Sierra App" first, then what SetTitle gave.
+#[test]
+fn the_title_is_the_windows() {
+    let mut world = World::default();
+    let w = win(&mut world);
+    let title = |w: *mut EeWonPlatWin| {
+        let mut n = 0;
+        // SAFETY: the test's window
+        let p = unsafe { ee_won_plat_win_title(w, &mut n) };
+        // SAFETY: n units
+        unsafe { std::slice::from_raw_parts(p as *const WChar, n as usize) }.to_vec()
+    };
+    let wide = |t: &str| -> Vec<WChar> { t.encode_utf16().map(|c| c as WChar).collect() };
+    assert_eq!(title(w), wide("Sierra App"));
+    let t = wide("Lobby \u{e9}");
+    // SAFETY: the test's window and units
+    unsafe { ee_won_plat_win_set_title(w, t.as_ptr() as *const c_void, t.len()) };
+    assert_eq!(title(w), t);
+    // SAFETY: as above
+    unsafe { ee_won_plat_win_set_title(w, std::ptr::null(), 0) };
+    assert!(title(w).is_empty());
+    // SAFETY: the test's window
+    unsafe { ee_won_plat_win_free(w) };
 }

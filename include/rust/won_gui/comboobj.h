@@ -87,6 +87,15 @@ EeWonComboBox *ee_won_combo_new(void *component,
                                 EeWonGuiHostFn host,
                                 const EeWonContainer *ct);
 
+/// `ComboBox::ComboBox` whole (R6 WON GUI round 36): the Rust combo box, the component's want-focus flag and the
+/// container's only-child-input flag.
+///
+/// # Safety
+/// As `ee_won_combo_new`; `component` is the C++ component being constructed.
+EeWonComboBox *ee_won_combo_make(void *component,
+                                 EeWonGuiHostFn host,
+                                 const EeWonContainer *ct);
+
 /// The destructor's statement (the list box's listener dropped), then the object freed.
 ///
 /// # Safety

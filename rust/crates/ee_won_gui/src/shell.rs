@@ -371,6 +371,29 @@ pub enum EeWonShellHostOp {
     GetNamedFont,
     /// `((RefCount*)a)->AddRef()` when `b` > 0, else its `Release()` (an image or a font).
     RefObj,
+    // ---- MSMessageBox::Msg's statements (GuiShell.cpp's MSMessageBoxMsg until R6 WON GUI round 36: shell_msgbox.rs)
+    /// `WONShellNew(EeWonShellKind::MsMessageBox, a)` (not held).
+    MsgBoxNew,
+    /// `CreateNativeWindow()` (not held).
+    MsgWinNew,
+    /// `((Window*)a)->SetParent((Window*)b)`.
+    MsgWinParent,
+    /// `((Window*)a)->SetTitle(*(const GUIString*)b)`.
+    MsgWinTitle,
+    /// `((Window*)a)->SetStyle(b)`.
+    MsgWinStyle,
+    /// `((Window*)a)->Create(WONRectangle(0, 0, b, c))`.
+    MsgWinCreate,
+    /// `((Window*)a)->AddComponent((Component*)b)`.
+    MsgWinAdd,
+    /// `WONShell::Op((Component*)a, (EeWonShellOp)b)`.
+    MsgShellOp,
+    /// `((Component*)a)->RequestFocus()`.
+    MsgFocus,
+    /// `((Window*)a)->RunDialog((Component*)b)`.
+    MsgRunDialog,
+    /// `((Window*)a)->Close()`.
+    MsgWinClose,
 }
 
 /// The C++ host: `(shell, op, a, b, c, d) -> result`, `shell` the C++ `WONShell*` the kind belongs to.

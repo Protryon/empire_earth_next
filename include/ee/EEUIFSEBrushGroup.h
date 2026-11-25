@@ -5,11 +5,7 @@
 #ifndef EE_EEUIFSEBRUSHGROUP_H
 #define EE_EEUIFSEBRUSHGROUP_H
 
-class UIControl;
-class UITextLabel;
-class GEFont;
-class GE2DPoint;
-class UIForm;
+#include "lle/LLEForward.h"
 
 class EEUIFSEBrushGroup {
 public:

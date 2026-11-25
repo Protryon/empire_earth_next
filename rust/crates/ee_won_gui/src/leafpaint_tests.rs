@@ -77,3 +77,39 @@ fn the_desired_size_is_the_largest_state_image_and_the_paint_falls_back_to_the_n
     b.image_button_paint(1);
     assert_eq!(log(), ["BtnBasePaint 1 0"]);
 }
+
+unsafe extern "C" fn item_host(_me: *mut c_void, op: EeWonLeafOp, a: isize, b: isize) -> isize {
+    use EeWonLeafOp::*;
+    W.with(|w| {
+        let mut w = w.borrow_mut();
+        match op {
+            CompItemHasComponent => w.checked as isize,
+            CompItemSizable => w.stretch as isize,
+            CompItemListPaintWidth => 300 + a,
+            CompItemHeight => w.size.1 as isize,
+            _ => {
+                w.log.push(format!("{op:?} {a} {b}"));
+                0
+            }
+        }
+    })
+}
+
+#[test]
+fn a_component_item_paints_its_component_stretched_to_the_list_when_sizable() {
+    let item = EeWonLeaf::new(std::ptr::null_mut(), Some(item_host));
+    // no component: nothing
+    item.component_item_paint(9, 5);
+    assert!(log().is_empty());
+    W.with(|w| {
+        let mut w = w.borrow_mut();
+        w.checked = true;
+        w.size = (40, 17);
+    });
+    item.component_item_paint(9, 5);
+    assert_eq!(log(), ["CompItemMarkInvalid 0 0", "CompItemPaint 9 0"]);
+    W.with(|w| w.borrow_mut().stretch = true);
+    item.component_item_paint(9, 5);
+    // the list's paint width, the component's own height
+    assert_eq!(log(), ["CompItemSetSize 305 17", "CompItemMarkInvalid 0 0", "CompItemPaint 9 0"]);
+}

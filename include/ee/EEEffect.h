@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include "lle/GE3DPoint.h"
 #include "rust/render/gfx.h"            // effect_obj.rs, effect_state.rs
+#include "rust/sim/world.h"             // EEEffectHandle (unit_fields.rs EeUnitsEffectHandle)
 
 class EEUnit;
 class EEGraphicEffect;
@@ -24,12 +25,11 @@ template <class T> class U2DRectangle;
 
 // An effect's handle (provisional name). A struct, not an integer: the "no effect" constant is a real .rdata object
 // in every unit that uses it, compared and copied through memory.
-struct EEEffectHandle {
-    bool operator==(const EEEffectHandle& inHandle) const { return this->mValue == inHandle.mValue; }
-    bool operator!=(const EEEffectHandle& inHandle) const { return this->mValue != inHandle.mValue; }
-
-    uint32_t mValue;                        // (EECalamity Load/Save use FSFile Read/Write on it; 32 bits, the record's)
-};
+// New (units round 12): the struct is the Rust record EeUnitsEffectHandle (rust/sim/world.h, a cbindgen rename: a
+// unit's handles are fields of its record); its one member is mValue (EECalamity Load/Save use FSFile Read/Write
+// on it; 32 bits).
+inline bool operator==(const EEEffectHandle& inA, const EEEffectHandle& inB) { return inA.mValue == inB.mValue; }
+inline bool operator!=(const EEEffectHandle& inA, const EEEffectHandle& inB) { return inA.mValue != inB.mValue; }
 
 static const EEEffectHandle kNoEffectHandle = {0};
 
