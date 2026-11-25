@@ -197,6 +197,10 @@ fn the_rest() {
     f.answer("manager_form_control", &[3]);
     put(&mut f, FORM, EE_SCREENS_TEXT_LABEL_LINES, 0x0001_0002, b"L");
     assert_eq!(f.calls(), "manager_form_control(1, 2)\nlabel_delete_array(3)\nlabel_append_text(3, \"L\")");
+    // a closed form's label (NULL: its database controls deleted): nothing written
+    let mut f = Fake::default();
+    put(&mut f, FORM, EE_SCREENS_TEXT_LABEL_LINES, 0x0001_0002, b"L");
+    assert_eq!(f.calls(), "manager_form_control(1, 2)");
     let mut f = Fake::default();
     put(&mut f, FORM, EE_SCREENS_TEXT_PGS_SEND, 80, b"host\0pay\0load");
     assert_eq!(f.calls(), "pgs_send(\"host\", 80, \"pay\\0load\")");
