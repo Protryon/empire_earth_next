@@ -16,10 +16,10 @@ use std::sync::Mutex;
 
 use crate::guihost::EeWonGuiOp as Op;
 use crate::platwin::{ee_won_plat_win, EeWonPlatWin, EeWonPlatWinCall as P, EeWonPlatWinOp};
+use crate::platwm::EeWonPlatWm;
 use crate::platwm::EeWonPlatWmOp;
 use crate::rootobj::EeWonRoot;
 use crate::winobj::{EeWonWinCall as C, EeWonWinField as F, EeWonWinPlat, EeWonWindow};
-use crate::platwm::EeWonPlatWm;
 use crate::wmobj::{EeWonWm, EeWonWmCall, EeWonWmField, EeWonWmWin};
 
 /// A game window's Rust parts.

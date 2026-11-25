@@ -905,7 +905,11 @@ impl EeWonWindow {
 /// # Safety
 /// `win` is live; `event` is a live record.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_win_event(win: *const EeWonWindow, call: EeWonWinCall, event: *const EeWonWinEvent) -> isize {
+pub unsafe extern "C" fn ee_won_win_event(
+    win: *const EeWonWindow,
+    call: EeWonWinCall,
+    event: *const EeWonWinEvent,
+) -> isize {
     // SAFETY: live (the contract)
     unsafe { (*win).call(call, event as isize, 0) }
 }
@@ -915,7 +919,14 @@ pub unsafe extern "C" fn ee_won_win_event(win: *const EeWonWindow, call: EeWonWi
 ///
 /// # Safety
 /// `comp` is the live root and `obj` its Rust root.
-pub(crate) unsafe fn game_root(comp: isize, obj: *const crate::rootobj::EeWonRoot, call: EeWonWinRoot, b: isize, c: isize, d: isize) -> isize {
+pub(crate) unsafe fn game_root(
+    comp: isize,
+    obj: *const crate::rootobj::EeWonRoot,
+    call: EeWonWinRoot,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
     use crate::compobj::{ee_won_comp_call, host, EeWonCompCall as K};
     use crate::ctobj::{ee_won_ct_call, EeWonContainer, EeWonCtCall as T, EeWonCtField};
     use crate::rootobj::{ee_won_root_call, EeWonRootCall as R};
@@ -923,7 +934,8 @@ pub(crate) unsafe fn game_root(comp: isize, obj: *const crate::rootobj::EeWonRoo
     // SAFETY (the three): the contract; each call re-enters through its object's own entry
     let rc = |k: R, a: isize, b: isize, c: isize| unsafe { ee_won_root_call(obj, k, a, b, c) };
     let kc = |k: K, a: isize, b: isize| unsafe { ee_won_comp_call(comp as *mut c_void, host(), k, a, b, 0) };
-    let ct = |k: T, a: isize| unsafe { ee_won_ct_call(crate::compmem::get(comp).ct as *const EeWonContainer, k, a, 0, 0) };
+    let ct =
+        |k: T, a: isize| unsafe { ee_won_ct_call(crate::compmem::get(comp).ct as *const EeWonContainer, k, a, 0, 0) };
     let m = crate::compmem::get(comp);
     match call {
         W::SetSize => kc(K::SetSize, b, c),

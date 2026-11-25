@@ -664,8 +664,10 @@ mod tests {
         let (_, log) = run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Mouse as isize, 6, mp, o), rec);
         assert_eq!((m.window, m.x, m.y, m.button), (70, 11, 12, 2));
         assert_eq!(log, [format!("WmEvent {} 6 0 0", EeWonWmEvent::Window as isize), "WmInputRec 6 0 0 0".into()]);
-        m.x = 21;
-        m.y = 22;
+        // SAFETY: the test's own record
+        unsafe { (*(mp as *mut EeWonWmMouse)).x = 21 };
+        // SAFETY: as above
+        unsafe { (*(mp as *mut EeWonWmMouse)).y = 22 };
         let (_, log) = run(|o| wm_op(Op::WmEvent, EeWonWmEvent::SetMouse as isize, 6, mp, o), rec);
         assert_eq!(log, [format!("WmEvent {} 6 70 0", EeWonWmEvent::SetWindow as isize), "WmInputRec 6 0 0 0".into()]);
         assert_eq!((e.x, e.y), (21, 22));
@@ -677,7 +679,8 @@ mod tests {
         let rp = &mut r as *mut EeWonRect4 as isize;
         run(|o| wm_op(Op::WmEvent, EeWonWmEvent::Size as isize, 6, rp, o), rec);
         assert_eq!((r.x, r.y, r.w, r.h), (21, 22, 0, 0));
-        r = EeWonRect4 { x: 1, y: 2, w: 3, h: 4 };
+        // SAFETY: the test's own record
+        unsafe { *(rp as *mut EeWonRect4) = EeWonRect4 { x: 1, y: 2, w: 3, h: 4 } };
         run(|o| wm_op(Op::WmEvent, EeWonWmEvent::SetSize as isize, 6, rp, o), rec);
         assert_eq!((e.x, e.y, e.width, e.height), (1, 2, 3, 4));
         // other events are the C++ host's
