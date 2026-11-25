@@ -110,8 +110,8 @@ pub fn checksum_text() -> String {
     let physics = super::sim_host::physics_record();
     format!(
         "pt={} tick={} ms={} rng={} oos={} units={}/{} ai={} inputs={}\n",
-        physics.mNumTicksDone as u32,
-        physics.mCurrentTick as u32,
+        lu(physics.mNumTicksDone as i64),
+        lu(physics.mCurrentTick as i64),
         ld(gc::h(gc::O::DwGameTime, 0, &[])),
         x8(h(O::DmPhysSeed, 0, &[])),
         x8(checksum),
@@ -182,7 +182,7 @@ pub fn dump_state(path: &str) {
     o.push(&format!(
         "physics clock={} tickrandom={} tickstoprocess={}\n",
         hexf(f64::from(physics.mGameClock)),
-        physics.mTickRandom as i32,
+        ld(i64::from(physics.mTickRandom)),
         physics.mTicksToProcess as i32
     ));
     // the stepped units and the (de)activation queues, in order (EEPWorldHelper's unit order) (ee_sim app active.rs)
@@ -341,7 +341,7 @@ fn dump_unit(o: &mut Out, u: usize) {
     let waypoints = h(O::DmCxWpCount, x, &[]);
     s.push_str(&format!(
         " upd={} cmd={} grp={} loc={},{},{} h={} c1={} c2={} wp={} pathdone={} arrived={} vel={} blocked={}",
-        unsafe { (*r).mTimesUpdated } as u32,
+        lu(unsafe { (*r).mTimesUpdated } as i64),
         ld(h(O::DmCxCommand, x, &[])),
         i64::from(!unsafe { (*r).mActiveGroup }.is_null()),
         f(O::DmCxLocX, x, &[]),
@@ -358,11 +358,11 @@ fn dump_unit(o: &mut Out, u: usize) {
     ));
     s.push_str(&format!(
         " anim={}/{}/{}/{} reload={}",
-        unsafe { (*r).mAnimation } as u32,
+        lu(unsafe { (*r).mAnimation } as i64),
         lu(h(O::DmCxFrame, x, &[])),
-        unsafe { (*r).mAnimationTime } as u32,
+        lu(unsafe { (*r).mAnimationTime } as i64),
         i64::from(unsafe { (*r).mIsAnimationPaused }),
-        unsafe { (*r).mReloadTimer } as i32
+        ld(i64::from(unsafe { (*r).mReloadTimer }))
     ));
     s.push_str(" wps="); // the path's points (location, distance, start distance)
     for w in 0..waypoints {

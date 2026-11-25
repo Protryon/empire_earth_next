@@ -207,7 +207,7 @@ mod editor_elevation_ffi;
 pub mod editor_events;
 pub mod editor_form;
 #[cfg(not(test))]
-pub(crate) mod editor_form_ffi;
+mod editor_form_ffi;
 pub mod editor_groups;
 #[cfg(not(test))]
 mod editor_groups_ffi;
@@ -342,7 +342,7 @@ pub mod ping;
 mod dialog_inputs_ffi;
 // the wall and gate placements' start and end, absent from a test binary
 #[cfg(not(test))]
-pub(crate) mod placement_ffi;
+mod placement_ffi;
 // the screens' question answers (the C++ question shims' callbacks), absent from a test binary
 pub mod portrait;
 #[cfg(not(test))]

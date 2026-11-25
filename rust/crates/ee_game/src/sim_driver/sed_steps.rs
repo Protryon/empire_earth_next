@@ -24,7 +24,6 @@ use crate::screens::editor_form::{
 use crate::screens::editor_tscreen::EE_SCREENS_SETS_SCREEN_REFRESH;
 use crate::screens::hud_ctl::EeScreensPoint;
 use crate::screens::mouse_modes::{EeScreensBuildGateFields, EeScreensBuildWallFields};
-use crate::screens::placement_ffi as placement;
 use crate::screens::shells::EE_SCREENS_SKOP_SET_SELECTED_PLAYER;
 
 // the editor's long-lived actions (the tabs keep one of each and post it again)
@@ -818,21 +817,21 @@ pub fn step(w: &[String]) -> Step {
                     let wall = h(O::UnitBuildWall, s, &[]) as usize as *mut EeScreensBuildWallFields;
                     (*wall).start = EeScreensPoint { x: f(2), y: f(3) };
                     (*wall).end = EeScreensPoint { x: f(4), y: f(5) };
-                    placement::ee_screens_wall_build(wall); // PlaceWall
+                    x::ee_screens_wall_build(wall); // PlaceWall
                 },
                 "gate" => unsafe {
                     let gate = h(O::UnitBuildGate, s, &[]) as usize as *mut EeScreensBuildGateFields;
                     (*gate).tile_x = l(2) as i32;
                     (*gate).tile_y = l(3) as i32;
                     (*gate).direction = l(4) as i32;
-                    placement::ee_screens_gate_build(gate, f(2), f(3), l(4) as i32); // PlaceGate
+                    x::ee_screens_gate_build(gate, f(2), f(3), l(4) as i32); // PlaceGate
                 },
                 _ => unsafe {
                     if flags & 2 != 0 {
-                        placement::ee_screens_wall_cancel(h(O::UnitBuildWall, s, &[]) as usize as *mut _); // EndWall
+                        x::ee_screens_wall_cancel(h(O::UnitBuildWall, s, &[]) as usize as *mut _); // EndWall
                     }
                     if x::ee_screens_seun_get(x::unit_tab(), SEUN_GET_FLAGS) & 4 != 0 {
-                        placement::ee_screens_gate_cancel(h(O::UnitBuildGate, s, &[]) as usize as *mut _); // EndGate
+                        x::ee_screens_gate_cancel(h(O::UnitBuildGate, s, &[]) as usize as *mut _); // EndGate
                     }
                 },
             }

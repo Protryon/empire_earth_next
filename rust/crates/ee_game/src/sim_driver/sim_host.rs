@@ -689,7 +689,7 @@ fn missile_sweep() {
                 // onto the map, as the next tick's EEPhysics::FlushWorld puts a launched shot
                 let world = core::ptr::addr_of_mut!(crate::gamecpp::global_objects::gWorld);
                 // SAFETY: the live world, under the world lock
-                unsafe { crate::rts::world::ffi::ee_rts_world_flush_queued_placements(world.cast()) };
+                unsafe { super::sed_host::ee_rts_world_flush_queued_placements(world.cast()) };
                 h(O::PlayerAddPendingUnits, owner, &[]);
                 let mut t = 0;
                 while t < 120

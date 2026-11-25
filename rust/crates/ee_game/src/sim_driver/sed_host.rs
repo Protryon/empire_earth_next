@@ -4,7 +4,6 @@
 //! the editor's Rust objects (ee_screens) called directly.
 
 use crate::gamecpp as gc;
-use crate::screens::editor_form_ffi::{self as sefm, EeScreensSeForm};
 use std::ffi::{c_long, c_ulong, c_void, CStr, CString};
 
 /// The host operations (`p` the object, `a` and `f` the integer and float arguments, `s` a text). A pointer is
@@ -446,6 +445,28 @@ mod screens_sys {
         pub fn ee_screens_cb_civilization_query(what: u32, index: u32) -> i64;
         pub fn ee_screens_cb_civilization_name(out: *mut u8, capacity: usize) -> usize;
         pub fn ee_screens_cb_last_file(out: *mut u8, capacity: usize) -> usize;
+        // the editor form's record (screens editor_form_ffi.rs)
+        pub fn ee_screens_sefm_get(form: *const core::ffi::c_void, slot: u32) -> usize;
+        pub fn ee_screens_sefm_selected(form: *const core::ffi::c_void, index: isize) -> u32;
+        pub fn ee_screens_sefm_call(
+            form: *const core::ffi::c_void,
+            what: u32,
+            a: i32,
+            p: *mut core::ffi::c_void,
+            r: *const f32,
+        ) -> i32;
+        // the wall and gate placements (screens placement_ffi.rs)
+        pub fn ee_screens_wall_build(wall: *mut crate::screens::mouse_modes::EeScreensBuildWallFields);
+        pub fn ee_screens_wall_cancel(wall: *mut crate::screens::mouse_modes::EeScreensBuildWallFields);
+        pub fn ee_screens_gate_build(
+            gate: *mut crate::screens::mouse_modes::EeScreensBuildGateFields,
+            x: f32,
+            y: f32,
+            direction: i32,
+        );
+        pub fn ee_screens_gate_cancel(gate: *mut crate::screens::mouse_modes::EeScreensBuildGateFields);
+        // RTSWorld::FlushQueuedPlacements (rts world.rs)
+        pub fn ee_rts_world_flush_queued_placements(world: *mut core::ffi::c_void);
     }
 }
 
@@ -566,20 +587,20 @@ pub fn editor() -> usize {
 }
 
 /// The editor form `e`'s Rust record (`mRust`).
-fn form(e: usize) -> *const EeScreensSeForm {
-    h(O::FormRust, e, &[]) as usize as *const EeScreensSeForm
+fn form(e: usize) -> *const c_void {
+    h(O::FormRust, e, &[]) as usize as *const c_void
 }
 
 /// One of the form's slots (`GetSlot`; editor_form.rs EE_SCREENS_SEFM_*).
 pub fn slot(s: u32) -> usize {
     // SAFETY: the editor form's record (or NULL)
-    unsafe { sefm::ee_screens_sefm_get(form(editor()), s) }
+    unsafe { ee_screens_sefm_get(form(editor()), s) }
 }
 
 /// The form `e`'s selected unit count (`GetSelectedUnitCount`).
 pub fn selected_count(e: usize) -> i64 {
     // SAFETY: as slot
-    i64::from(unsafe { sefm::ee_screens_sefm_selected(form(e), -1) })
+    i64::from(unsafe { ee_screens_sefm_selected(form(e), -1) })
 }
 
 /// The form `e`'s call `what` (`EEUIFScenarioEditor::Call`: editor_form.rs EE_SCREENS_SEFM_*) with `a`, the object
@@ -587,7 +608,7 @@ pub fn selected_count(e: usize) -> i64 {
 pub fn form_call(e: usize, what: u32, a: i32, p: usize, r: Option<&[f32; 4]>) -> i32 {
     let r = r.map_or(std::ptr::null(), |r| r.as_ptr());
     // SAFETY: as slot; the rectangle lives through the call
-    unsafe { sefm::ee_screens_sefm_call(form(e), what, a, p as *mut c_void, r) }
+    unsafe { ee_screens_sefm_call(form(e), what, a, p as *mut c_void, r) }
 }
 
 /// A tab group (`GetTabGroup`: kSlotGroup + the group).
