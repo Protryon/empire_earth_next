@@ -122,6 +122,7 @@ void LobbyOptionsCtrl::RefreshLanOptions() {
     char port[20]; // a 20-byte buffer, as in the original
     sprintf(port,"%d",LobbyGetLanBroadcastPort());
     this->mLANBroadcastDetailLabel->SetText(port,true);
+    this->mLocalAddressDetailLabel->SetText(IPAddr::GetLocalAddr().GetHostString(false),true);
 }
 // The notify flag differs per control as in the original (dirty-word and auto-AFK checks don't notify)
 // FUNCTION: WON 0x007bedf0

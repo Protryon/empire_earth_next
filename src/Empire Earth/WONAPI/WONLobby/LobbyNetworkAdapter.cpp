@@ -24,6 +24,9 @@ void LobbySetNetworkAdapter(long address)
         if(!IPAddr::SetLocalHost(address,true)) return;
     }
     if(WONAPI::IPAddr::GetLocalHost()!=LobbyGetNetworkAdapter()) LobbySaveNetworkAdapter();
-    if(changed) LobbyBindUDPPort();
+    if(changed) {
+        LobbyBindUDPPort();
+        LobbyBroadcastLobbyEvent(100050,true); // refresh the options local-address label
+    }
 }
 }

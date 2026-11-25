@@ -109,10 +109,22 @@ std::string IPAddr::GetHostString(bool inUseOriginal) const
     PlatSocketFormatIPv4(this->mAddr.mAddress,aText);
     return std::string(aText, std::allocator<char>());
 }
+// A 127.x.x.x address. Ubuntu puts the machine's own name on 127.0.1.1, which is not a LAN interface.
+static bool HostIsLoopback(long inHost)
+{
+    return (static_cast<uint32_t>(inHost)>>24)==127;
+}
 // FUNCTION: WON 0x006b2500
-// Returns the chosen local interface address, else this machine's host name resolved, else an invalid address
+// Returns the chosen local interface address, else a real adapter, else the host name, else an invalid address
 IPAddr IPAddr::GetLocalAddr()
 {
+    if (IPAddr::mLocalHost!=0 && !HostIsLoopback(IPAddr::mLocalHost))
+        return IPAddr(IPAddr::mLocalHost,0);
+    std::list<LobbyNetAddress> aAddresses;
+    LobbyGetNetAddresses(aAddresses,true);
+    for (std::list<LobbyNetAddress>::iterator it=aAddresses.begin(); it!=aAddresses.end(); ++it)
+        if (it->mHandle!=0 && !HostIsLoopback(it->mHandle))
+            return IPAddr(it->mHandle,0);
     if (IPAddr::mLocalHost!=0) return IPAddr(IPAddr::mLocalHost,0);
     char aHostName[1024];
     if (PlatSocketGetHostName(aHostName,1024)) return IPAddr(aHostName,0);
@@ -130,7 +142,13 @@ bool IPAddr::SetLocalHost(long inHost,bool inValidate)
         std::list<LobbyNetAddress>::iterator it=aAddresses.begin();
         for (;it!=aEnd;++it)
             if (it->mHandle==inHost) break;
-        if (it==aEnd) return false;
+        if (it==aEnd) {
+            // The host-name list on Linux is 127.0.1.1. The adapter list has the LAN address.
+            LobbyGetNetAddresses(aAddresses,true);
+            for (it=aAddresses.begin(); it!=aAddresses.end(); ++it)
+                if (it->mHandle==inHost) break;
+            if (it==aAddresses.end()) return false;
+        }
     }
     IPAddr::mLocalHost=inHost;
     return true;
