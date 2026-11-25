@@ -55,7 +55,7 @@ static int32_t RTSPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t, E
         return 0;
     case EE_UNITS_RTS_PLAYER_SAVE_NAME_LOAD: return thePlayer->mName.Load(theFile);
     case EE_UNITS_RTS_PLAYER_SAVE_LOAD_UNIT:
-        return thePlayer->LoadUnit(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+        return static_cast<EEPlayer*>(thePlayer)->LoadUnit(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
     case EE_UNITS_RTS_PLAYER_SAVE_ADD_PENDING: thePlayer->AddPendingUnits(true, false); return 0;
     case EE_UNITS_RTS_PLAYER_SAVE_COLOR_SAVE: return thePlayer->mColor.Save(theFile);
     case EE_UNITS_RTS_PLAYER_SAVE_NAME_SAVE: return thePlayer->mName.Save(theFile);
@@ -97,10 +97,10 @@ void ee_rtspcpp_killed_clear(RTSPlayer* inPlayer) { inPlayer->mKilledUnits.clear
 void ee_rtspcpp_killed_push(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->mKilledUnits.push_back(inUnit); }
 void ee_rtspcpp_add_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, bool inKeepID) { inPlayer->AddUnit(inUnit, inKeepID); }
 void ee_rtspcpp_release_pending(RTSPlayer* inPlayer) { inPlayer->ReleasePendingUnits(); }
-void ee_rtspcpp_removing_unit(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->RemovingUnit(inUnit); }
-void ee_rtspcpp_unit_removed(RTSPlayer* inPlayer, RTSUnit* inUnit) { inPlayer->UnitRemoved(inUnit); }
-void ee_rtspcpp_removals_done(RTSPlayer* inPlayer) { inPlayer->RemovalsDone(); }
-long ee_rtspcpp_save_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, unsigned long inMajor, unsigned long inMinor, FSFile* inFile) { return inPlayer->SaveUnit(inUnit, inMajor, inMinor, *inFile); }
+void ee_rtspcpp_removing_unit(RTSPlayer* inPlayer, RTSUnit* inUnit) { static_cast<EEPlayer*>(inPlayer)->RemovingUnit(inUnit); }
+void ee_rtspcpp_unit_removed(RTSPlayer* inPlayer, RTSUnit* inUnit) { static_cast<EEPlayer*>(inPlayer)->UnitRemoved(inUnit); }
+void ee_rtspcpp_removals_done(RTSPlayer* inPlayer) { static_cast<EEPlayer*>(inPlayer)->RemovalsDone(); }
+long ee_rtspcpp_save_unit(RTSPlayer* inPlayer, RTSUnit* inUnit, unsigned long inMajor, unsigned long inMinor, FSFile* inFile) { return static_cast<EEPlayer*>(inPlayer)->SaveUnit(inUnit, inMajor, inMinor, *inFile); }
 void ee_rtspcpp_name_checksum(RTSPlayer* inPlayer, ESChecksum* ioChecksum) { inPlayer->mName.GetChecksum(*ioChecksum); }
 void ee_rtspcpp_checksum_add(ESChecksum* ioChecksum, const char* inName, unsigned long inValue) { ioChecksum->AddChecksum(inName, inValue); }
 void ee_rtsucpp_store_insert(RTSUnit* inUnit, unsigned long inOwner, RTSPlayer* inPlayer) { EEUnitStoreInsert(inUnit, inOwner, inPlayer); }

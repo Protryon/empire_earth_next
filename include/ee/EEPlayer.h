@@ -536,23 +536,16 @@ public:
     // +0x04 0x16f1f3: Virtual28(each mPendingUnits unit, inArg1), then Virtual0C() if inArg2 (both tested as bytes;
     // EESELoadThread passes 0, 0; was (long, long))
     virtual void AddPendingUnits(bool inKeepID, bool inRelease) { ee_rts_player_add_pending_units(this, inKeepID, inRelease); }
-    virtual void RecountPopulation() = 0;   // +0x08 (pure)
+    // (+0x08 RecountPopulation, +0x14 IsActive and +0x2c..+0x3c UnitRemoved, LoadUnit, RemovalsDone, RemovingUnit,
+    // SaveUnit: pure in the vtable; EEPlayer's, the only player kind, and the shims below call them on an EEPlayer)
     virtual void ReleasePendingUnits() { ee_rts_player_release_pending_units(this); }     // +0x0c
     virtual void GetChecksum(ESChecksum& ioChecksum) { ee_rts_player_checksum(this, &ioChecksum); }   // +0x10 0x16f394 (EEPPlayerHelper)
-    virtual bool IsActive() = 0;            // +0x14 (pure in the vtable; RTSWorld::UpdatePlayerPopulationLimit 0x147f0d tests `al == 1`)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x16f539
     virtual void Clear() {}                 // +0x1c
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond) { return ee_rts_player_repair_pointers(this, inFirst, inSecond); }   // +0x20 0x16f6d3 (ret 8, returns 0; was Virtual20())
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x16f6f8
     // +0x28 0x16f233: adds a unit (a new id unless inKeepID), then InsertUnit (was Virtual28())
     virtual void AddUnit(RTSUnit* inUnit, bool inKeepID) { ee_rts_player_add_unit(this, inUnit, inKeepID); }
-    // +0x2c..+0x3c pure in the vtable; signatures from RTSPlayer's own calls (0x16f27f, Load 0x16f539, 0x16f7b1;
-    // were all `void ()`)
-    virtual void UnitRemoved(RTSUnit* inUnit) = 0;  // +0x2c (a unit leaves: after RemoveFromList)
-    virtual long LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) = 0;    // +0x30 (loads one unit)
-    virtual void RemovalsDone() = 0;        // +0x34 (after the mU004 removals)
-    virtual void RemovingUnit(RTSUnit* inUnit) = 0;  // +0x38 (a unit leaves: first)
-    virtual long SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) = 0;    // +0x3c (saves one unit)
 
     RTSUnit* GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_player_unit(this, inUnitID)); }   // 0x16f433: by id through the buckets (RTSWorld::GetUnit 0x14804f)
     // inline: EEMLoadMainScreen passes it through a byte temporary, like NEMessage::GetOriginatingSlot
