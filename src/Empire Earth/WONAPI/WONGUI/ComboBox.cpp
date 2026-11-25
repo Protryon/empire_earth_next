@@ -65,6 +65,7 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
 {
     ComboBox* t = static_cast<ComboBox*>((Component*)inComp);
     switch (op) {
+    // (the list area's methods and an item's width are comboobj.rs game_list_op's in the game: R6 WON GUI round 38)
     case Op::ComboPart:
         switch (a) {
         case 0: return (intptr_t)static_cast<Component*>(t->mEdit.get());
@@ -73,25 +74,9 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
         default: return (intptr_t)static_cast<Component*>(t->mListArea.get());
         }
     case Op::ComboInsertString: return (intptr_t)t->mListArea->InsertString(*(const GUIString*)a, (int)b);
-    case Op::ComboInsertItem: t->mListArea->InsertItem(Item(a), (int)b); return 0;
     case Op::ComboDropItem: { SmartPtr<TextListItem> held = Item(a); return 0; }
-    case Op::ComboDeleteItem: t->mListArea->DeleteItem((int)a); return 0;
-    case Op::ComboRefreshItem: t->mListArea->RefreshItem(Item(a)); return 0;
-    case Op::ComboListClear: t->mListArea->Clear(true); return 0;
-    case Op::ComboSelItem: return (intptr_t)t->mListArea->GetSelItem();
-    case Op::ComboItemPos: return t->mListArea->GetItemPos((ListItem*)a);
-    case Op::ComboSetSel: t->mListArea->SetSelItem((int)a, b != 0); return 0;
     case Op::ComboSetListBox: t->mListBox = static_cast<Scroller*>(Comp(a)); return 0;
     case Op::ComboBoxArea: return (intptr_t)static_cast<Component*>(static_cast<Scroller*>(Comp(a))->GetScrollArea());
-    case Op::ComboSetScroller: t->mListArea->SetScroller(t->mListBox.get()); return 0;
-    case Op::ComboSetListFlags: t->mListArea->SetListFlags((int)a, b != 0); return 0;
-    case Op::ComboListMetric:
-        switch (a) {
-        case 0: return t->mListArea->GetRightPad();
-        case 1: return t->mListArea->GetLeftPad();
-        case 2: return t->mListArea->GetTotalWidth();
-        default: return t->mListArea->GetTotalHeight();
-        }
     case Op::ComboEditClear: t->mEdit->SetText(GUIString(new GUIStringData("")), a != 0); return 0;
     case Op::ComboEditItemText: t->mEdit->SetText(Item(a)->mText, true); return 0;
     case Op::ComboEditSetText: t->mEdit->SetText(*(const GUIString*)a, b != 0); return 0;
@@ -99,11 +84,8 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
     case Op::ComboUndoSave: t->mUndoStr = t->mEdit->GetText(); return 0;
     case Op::ComboEditSelect: t->mEdit->SelectRange((int)a, (int)b); return 0;
     case Op::ComboEditAllowSelection: t->mEdit->SetAllowSelection(a != 0); return 0;
-    case Op::ComboItemWidth: return Item(a)->mWidth;
     case Op::ComboItemTextLength: return Item(a)->mText.length();
     case Op::ComboDeliverSel: t->DeliverEvent(new ComboSelChangedEvent(t, Item(a), b != 0), false); return 0;
-    case Op::ComboItemCount: return t->mListArea->GetNumItems();
-    case Op::ComboItemAt: return (intptr_t)t->mListArea->GetItem((int)a);
     case Op::ComboItemTextIs: return Item(a)->mText == (b == 0 ? t->mEdit->GetText() : *(const GUIString*)b) ? 1 : 0; // (b 0: the edit's)
     case Op::ComboOpenPopup: {
         Window* window = t->GetRoot();
@@ -116,7 +98,6 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
         window->OpenPopup(params);
         return 0;
     }
-    case Op::ComboEnsureVisible: t->mListArea->EnsureVisible((ListItem*)a); return 0;
     case Op::ComboEventButton: return static_cast<ListItemClickedEvent*>((ComponentEvent*)a)->mButton;
     case Op::ComboRelayout: t->Relayout(); return 0;
     case Op::ComboUnlisten: t->mListBox->AddListener(NULL); return 0;
