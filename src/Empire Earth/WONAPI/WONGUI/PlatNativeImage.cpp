@@ -31,7 +31,7 @@ void WONImageThrow(int inStatus) { FileReaderCheck(inStatus); }
 static NativeImage* NewOffscreen(int inWidth, int inHeight)
 {
     WindowManager* theManager = WindowManager::GetDefaultWindowManager();
-    return new NativeImage(NULL, inWidth, inHeight, theManager != NULL && theManager->mRust != NULL ? theManager->GetPixelScale() : 1.0f);
+    return new Image(ee_won_image_new_native(WONImageHost, inWidth, inHeight, theManager != NULL && theManager->mRust != NULL ? theManager->GetPixelScale() : 1.0f));
 }
 
 SmartPtr<NativeImage> DisplayContext::CreateImage(int width, int height) { return NewOffscreen(width, height); }
@@ -53,8 +53,6 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             EeWonImage* theRust = (EeWonImage*)a;
             Image* theImage;
             switch (ee_won_image_kind(theRust)) {
-                case EeWonImageKind::Raw32: case EeWonImageKind::Raw8: case EeWonImageKind::Raw1: theImage = new RawImage(theRust); break;
-                case EeWonImageKind::Native: theImage = new NativeImage(theRust); break;
                 case EeWonImageKind::Stretch: theImage = new StretchImage(theRust); break;
                 case EeWonImageKind::StretchCenter: theImage = new StretchCenterImage(theRust); break;
                 default: theImage = new Image(theRust); break;
