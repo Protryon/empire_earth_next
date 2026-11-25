@@ -45,21 +45,6 @@ const EEEpochMedia& EERules::Epoch(long inEpoch) const
     return this->mEpochs[k < this->mEpochs.size() ? k : this->mEpochs.size() - 1];
 }
 
-EERules::EERules() : mRust(ee_data_rules_new())
-{
-    this->Refresh();
-}
-
-EERules::~EERules()
-{
-    ee_data_rules_free(this->mRust);
-}
-
-void EERules::Refresh()
-{
-    ee_data_rules_mirror(this->mRust, static_cast<EERulesData*>(this));
-}
-
 void EERules::SetMusicFromFlags(long inSong, const bool* inFlags, unsigned long inCount)
 {
     ee_data_rules_set_music_from_flags(this->mRust, (int32_t)inSong, inFlags, inCount);

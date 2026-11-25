@@ -59,44 +59,6 @@ GEColor gStormColorDark(0.273f, 0.343f, 0.457f);
 
 // (the storms' route planners and shaper, EEStormModifiers.h before: ee_sim::astar modifier_obj.rs)
 
-// Returns the name of a storm type ("Rain", "Snow", "Hurricane", ...), or "Type Not defined" (ee_app storm.rs)
-UWideString EEEMStorm::GetTypeName(long inType)
-{
-    return UWideString(ee_app_storm_type_name(inType));
-}
-
-// Creates a storm of a type for the environment manager at full intensity; any known type starts at once (its
-// members and Begin: ee_game gamecpp weather.rs)
-EEEMStorm::EEEMStorm(long inType, EEEnvironmentManager* inManager)
-    : mManager(inManager)
-{
-    ee_gamecpp_storm_init(this, inType);
-}
-
-// Destroys the storm, cancelling its route request and ending its weather effect
-EEEMStorm::~EEEMStorm()
-{
-    ee_gamecpp_storm_release(this);
-}
-
-// Loads the storm's route, areas, weather effect handle, intensities, type, state and times; always returns 0
-long EEEMStorm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_storm_load(this, &inFile);
-}
-
-// Reconnects the loaded storm to its weather effect and renames it; returns 9 when the effect is missing
-long EEEMStorm::Restore()
-{
-    return ee_gamecpp_storm_restore(this);
-}
-
-// Writes the storm's route, areas, weather effect handle, intensities, type, state and times; always returns 0
-long EEEMStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_gamecpp_storm_save(this, &outFile);
-}
-
 // ------------------------------------------------------------------------- round 10, lane D: the storm
 
 int64_t EECore10OpD7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECameraControl.cpp (the environment manager's, the cheats', the civilization's and the wonder's: EEGameLog.cpp)

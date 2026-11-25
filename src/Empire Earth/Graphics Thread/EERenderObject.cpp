@@ -104,11 +104,6 @@ bool gB529066;
 bool gCameraFollowing;
 bool gB529068;
 
-// Destroys a render object (RTSRenderObject's inline destructor)
-RTSRenderObject::~RTSRenderObject()
-{
-}
-
 // The scene, the frame's lists, the lighting and the posts: gamecpp render_object.rs (EECore9OpA's cases below)
 void SetSceneFog() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::SceneFog); }
 void SetLightingOff() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Off); }

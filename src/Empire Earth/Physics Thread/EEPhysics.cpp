@@ -530,14 +530,6 @@ unsigned long EEPhysics::UpdateUnits()
 // (EndGame: the campaign progress's user; not EEUIECampaignSelectScreenEvents.cpp's gCampaignDefaultUser 0x562ee0)
 UString gCampaignUser("default");
 
-// Steps the environment manager when it is enabled and its next step time has come
-// not inline: defined here after the unit's init chain (UpdateWeather calls it)
-void EEEnvironmentManager::Tick(unsigned long inTime)
-{
-    if (this->mNextStep <= inTime && this->mIsEnabled == true)
-        this->Step(inTime);
-}
-
 // ------------------------------------------------------------------------- round 11, lane E; round 12, fork B: the world lane's leftovers (the end of the chain)
 
 // the C++ calls and members of fork B's bodies in Rust (gamecpp; EeGameCpp's round 12 fork B section): one

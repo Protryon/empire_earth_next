@@ -5,17 +5,24 @@
 #ifndef EE_EEROUNITS_H
 #define EE_EEROUNITS_H
 
+#include "rust/game/gamecpp.h"
 class EEROUnits : public EERenderObject {
 public:
-    EEROUnits();
-    virtual ~EEROUnits();                   // +0x10 dtor 0x114516 (??_G 0x1144fa)
-    virtual void FrameStarting();           // +0x00 0x114521: EERenderObject::Fn10EABE
-    virtual void SceneStarting();           // +0x04 0xe123d trivial: ret (ICF)
-    virtual void RenderScene();             // +0x08 0x118203
-    virtual void FrameDone();               // +0x0c 0x11852f
+    EEROUnits() {  }
+    // +0x10 dtor 0x114516 (??_G 0x1144fa)
+    virtual ~EEROUnits() {  }
+    // +0x00 0x114521: EERenderObject::Fn10EABE
+    virtual void FrameStarting() { this->FillRenderLists(); }
+    // +0x04 0xe123d trivial: ret (ICF)
+    virtual void SceneStarting() {  }
+    // +0x08 0x118203
+    virtual void RenderScene() { ee_gamecpp_ru_draw(false); }
+    // +0x0c 0x11852f
+    virtual void FrameDone() { ee_gamecpp_ru_frame_done(); }
 
-    static void LoadMedia();                // 0x116a97 (0x13fccb calls it; asserts) (provisional name)
-    static void ReleaseMedia();
+    // 0x116a97 (0x13fccb calls it; asserts) (provisional name)
+    static void LoadMedia() { ee_gamecpp_ru_load_media(); }
+    static void ReleaseMedia() { ee_gamecpp_ru_release_media(); }
 
 };
 

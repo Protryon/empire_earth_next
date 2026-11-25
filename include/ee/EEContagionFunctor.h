@@ -8,6 +8,7 @@
 #define EE_EECONTAGIONFUNCTOR_H
 
 #include "rust/sim/tech.h"   // EeContagionFunctorFields (ee_tech contagion_functor.rs)
+#include "rust/game/gamecpp.h"
 
 class EECalamity;
 class EECalamityClass;
@@ -22,16 +23,19 @@ class EEUnit;
 class EEContagionFunctor : public EeContagionFunctorFields {
 public:
     // the functor of inKind for the class (its record, effects and immunity flag; the fire references its effect)
-    EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind);
+    EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind) { ee_gamecpp_functor_construct(this, inClass, inKind); }
     ~EEContagionFunctor();                  // the fire's 0xb6c2f: its effect released
 
     bool CanInfectType(long inCategory, long inUnitType);   // 0xb6c4d: the unit type is in the functor's unit set
     bool CanInfect(EEUnit* inUnit);         // 0xb66f8 (EEContagionManager.cpp) (provisional name)
     // the discrete updates of the calamity in this helper update (0xb6c7c, 0xb6eae, 0xb6ff2)
-    void Update(float inElapsedTime, EECalamity* inCalamity);
-    void Infect(EEUnit* inUnit, EECalamity* inCalamity);   // a unit was infected
-    void Cure(EEUnit* inUnit, EECalamity* inCalamity);     // a unit was cured
-    void Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity);   // once per infected unit and update
+    void Update(float inElapsedTime, EECalamity* inCalamity) { ee_gamecpp_functor_update(this, inElapsedTime, inCalamity); }
+    // a unit was infected
+    void Infect(EEUnit* inUnit, EECalamity* inCalamity) { ee_gamecpp_functor_infect(this, inUnit, inCalamity); }
+    // a unit was cured
+    void Cure(EEUnit* inUnit, EECalamity* inCalamity) { ee_gamecpp_functor_cure(this, inUnit, inCalamity); }
+    // once per infected unit and update
+    void Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity) { ee_gamecpp_functor_apply(this, inUnit, inElapsedTime, inCalamity); }
 
     EEGraphicEffect* mEffect;               // the fire's burning effect (referenced), the mind control's effect
     EEGraphicEffect* mEffect2;              // the area effect's target effect

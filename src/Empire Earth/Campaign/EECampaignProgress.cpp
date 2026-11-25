@@ -91,21 +91,6 @@ long CivBuilderSaveCivilization(const UString& inName, bool inCampaign);
 // Original cdecl scenario-civilization loader (EEAResetAllPlayerInfo, 0x2806e7).
 long EEApplyCivilizationFile(UString& inName, EEPlayer* inPlayer);
 
-// The progress is Rust's whole (ee_game campaign.rs, world lane round 1: the lists, Load, RestoreCivilization and
-// SaveCompletedScenario); the class is its handle
-EECampaignProgress::EECampaignProgress() : mRust(ee_campaign_progress_new()) {}
-EECampaignProgress::~EECampaignProgress() { ee_campaign_progress_free(this->mRust); }
-void EECampaignProgress::GetCompletedScenarios(std::vector<UWideString>& outScenarios)
-    { ee_campaign_progress_completed(this->mRust, &outScenarios); }
-long EECampaignProgress::RestoreCivilization(const UWideString& inUser, const UWideString& inCampaign,
-                                             const UWideString& inScenario, unsigned long inChecksum)
-    { return ee_campaign_progress_restore(this->mRust, (const char*)inUser, (const char*)inCampaign, (const char*)inScenario, inChecksum); }
-long EECampaignProgress::Load(const UWideString& inUser, const UWideString& inCampaign, unsigned long inChecksum, bool inExtract)
-    { return ee_campaign_progress_load(this->mRust, (const char*)inUser, (const char*)inCampaign, inChecksum, inExtract); }
-long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const UWideString& inCampaign,
-                                               const UWideString& inScenario, unsigned long inChecksum)
-    { return ee_campaign_progress_save(this->mRust, (const char*)inUser, (const char*)inCampaign, (const char*)inScenario, inChecksum); }
-
 // A text into the Rust side's sink
 static void EECampaignText(int64_t inSink, const char* inText)
 {

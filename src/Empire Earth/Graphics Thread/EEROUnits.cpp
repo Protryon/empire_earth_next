@@ -58,56 +58,15 @@ static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GE3DPoint) == s
               sizeof(GERectangle) == sizeof(EeGeRectangle) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
               sizeof(GEViewport) == sizeof(EeGeViewport) && sizeof(GEColor) == sizeof(EeGfxColor), "GE mirrors");
 
-// Creates the units' render object
-EEROUnits::EEROUnits()
-{
-}
-
-// Destroys the units' render object
-EEROUnits::~EEROUnits()
-{
-}
-
-// Fills the render lists of units and objects for this frame
-void EEROUnits::FrameStarting()
-{
-    this->FillRenderLists();
-}
-
 extern std::vector<unsigned long> gU4E9230;   // EERenderObject.cpp: the rectangle's picked unit ids
 extern EERenderUnit* gU529044;               // the picked enemy's render unit
 extern UWideString gU529030;                 // its owner's name
-
-// the media, the frame's draws and the labels: gamecpp ro_units.rs
-void EEROUnits::LoadMedia()
-{
-    ee_gamecpp_ru_load_media();
-}
-
-void EEROUnits::RenderScene()
-{
-    ee_gamecpp_ru_draw(false);
-}
-
-void EEROUnits::FrameDone()
-{
-    ee_gamecpp_ru_frame_done();
-}
-
-void EEROUnits::ReleaseMedia()
-{
-    ee_gamecpp_ru_release_media();
-}
 
 // Projects a world point to window coordinates in the game view (ee_gfx units.rs)
 void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
 {
     ee_gfx_units_screen_point(reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
                               reinterpret_cast<const EeGe3DPoint*>(&inPoint), reinterpret_cast<EeGe2DPoint*>(&outPoint));
-}
-
-void EEROUnits::SceneStarting()
-{
 }
 
 // ------------------------------------------------------------------------- round 10, lane A: this file's C++ (gamecpp ro_units.rs)

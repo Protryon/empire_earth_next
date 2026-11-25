@@ -100,7 +100,8 @@ struct MMMapUnit {
     // Destroys the mini map (the base class frees its surfaces)
     // +0x00 (??_G 0x11e4da)
     virtual ~EEMiniMap() { ee_app_minimap_free(this->mRust); }
-    void RefreshView();                     // 0x11e7b1 (the editor's trigger screen after the view changes; provisional name)
+    // 0x11e7b1 (the editor's trigger screen after the view changes; provisional name)
+    void RefreshView() { if (this->mL12174) this->Refresh(); }
     // Recomputes every terrain pixel of the mini map and flags the terrain texture changed
     // +0x04 0x1200df
     virtual void RedrawAll() { ee_gamecpp_minimap_redraw_all(this); }

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "rust/data/tables.h"
+#include "rust/game/gamecpp.h"
 
 class EEMedia;
 class EEUnitClass;
@@ -16,11 +17,12 @@ class FSFileSpec;
 
 class EEAnimal : public EeDataAnimalFields {
 public:
-    EEAnimal();
-    virtual ~EEAnimal();                    // +0x00 0xd49f6 (??_G 0xd49da)
-    void ClearSounds();
-    static long Load(FSFileSpec* inFile);
-    static void Unload();
+    EEAnimal() : EeDataAnimalFields() {  }
+    // +0x00 0xd49f6 (??_G 0xd49da)
+    virtual ~EEAnimal() { ee_gamecpp_db_animal_free(this, true); }
+    void ClearSounds() { ee_gamecpp_db_animal_free(this, false); }
+    static long Load(FSFileSpec* inFile) { return ee_gamecpp_db_animal_load(inFile); }
+    static void Unload() { ee_gamecpp_db_animal_unload(); }
     EEUnitClass* GetUnitClass();
     static EEAnimal* Find(long inUnitType); // 0xd5301 (the last record of that unit type)
     // inline (out of line COMDAT 0xa53da after its first user EEHerd.cpp: cdecl, sTable[inIndex]) (provisional name)

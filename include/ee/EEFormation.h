@@ -25,7 +25,7 @@ struct EEFormationSlot {
 class EEFormation : public UReferenceCounter {
 public:
     // 0-3 short, long, loose, staggered line; 4-5 deep, shallow wedge; 6-7 inward, outward circle; NULL otherwise
-    static EEFormation* Create(long inType);
+    static EEFormation* Create(long inType) { return inType >= 0 && inType < 8 ? new EEFormation(inType) : NULL; }
 
     explicit EEFormation(long inType)
         : mHeading(0.0f), mType(inType), mB5C(true), mMinRadius(0.5f)

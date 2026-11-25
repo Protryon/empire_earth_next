@@ -61,13 +61,6 @@ EEMiniMap::EEMiniMap(GEScreen* inScreen, EEMap* inMap, EEPlayer* inPlayer)
     ee_gamecpp_minimap_construct(this, inMap);
 }
 
-// Redraws the camera's view outline when a map is attached
-void EEMiniMap::RefreshView()
-{
-    if (this->mL12174)
-        this->Refresh();
-}
-
 // ------------------------------------------------------------------------- round 9, lane B: the mini map's bodies' C++ (their
 // cases: EEMap.cpp's EECore9OpB2)
 

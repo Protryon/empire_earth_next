@@ -40,22 +40,6 @@
 // 0x524a88..0x524b34: the original's two EE-level trigonometry caller logs ("UMCos EE-Level", "UMSin EE-Level",
 // ESCallerLog, never called), deleted with the class (LLE lane round 1)
 
-// Counts a visible unit for the ambient sounds: citizens, farms, goats, eagles, attackers, and enemy bombers over
-// the local player's towns (from the atomic epochs on)
-void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit) { ee_gamecpp_ambient_count_unit(this, inUnit); }
-
-// Counts a visible tree when the unit is a wood resource
-void EEAmbientWorldAnalyzer::CountTree(EEUnit* inUnit) { ee_gamecpp_ambient_count_tree(this, inUnit); }
-
-// Counts a visible tree and, if no forest type is known yet, takes it from the AI forest at the unit
-void EEAmbientWorldAnalyzer::AddTree(EEUnit* inUnit) { ee_gamecpp_ambient_add_tree(this, inUnit); }
-
-// Resets the world analyzer's counters for the next ambient update
-void EEAmbientWorldAnalyzer::Clear()
-{
-    ee_app_ambient_clear(this);
-}
-
 // the host (ee_app ambient_ffi.rs): ee_game gamecpp ambient_io.rs; the context is the manager
 #define EE_AMBIENT_HOST this, &this->mAnalyzer, this, ee_gamecpp_ambient_host
 
@@ -71,10 +55,6 @@ EEAmbientSoundManager::~EEAmbientSoundManager()
     this->StopSounds();
     this->ClearSounds();
 }
-
-// Loads the ambient sound records from the file into their slots and seeds the random generator; returns the last
-// read status
-long EEAmbientSoundManager::Load(FSFile& inFile) { return ee_gamecpp_ambient_load(this, &inFile); }
 
 // Stops every ambient sound and pauses the manager
 void EEAmbientSoundManager::Pause()

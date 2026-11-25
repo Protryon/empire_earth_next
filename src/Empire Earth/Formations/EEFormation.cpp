@@ -18,12 +18,6 @@
 #include "rust/sim/formations.h"
 #include "rust/sim/units.h"
 
-// Creates the formation of a type (0-7; ee/EEFormation.h), NULL for any other type
-EEFormation* EEFormation::Create(long inType)
-{
-    return inType >= 0 && inType < 8 ? new EEFormation(inType) : NULL;
-}
-
 // Collects the group's units and places them into formation slots
 void EEFormation::Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlots)
 {

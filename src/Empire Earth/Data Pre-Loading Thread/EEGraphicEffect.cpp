@@ -26,18 +26,6 @@
 // init chains) and the loads are ee_gfx geffect_table.rs'
 extern std::vector<EEMedia*> gMediaTable;   // 0x4e8448 (EEGraphicObject.cpp)
 
-// Creates a graphic effect from its table record's members (ee_data tables.rs) and its graphic; LoadTable links the
-// follow-on effects
-EEGraphicEffect::EEGraphicEffect(const EeDataGraphicEffectFields& inFields, EEGraphicObject* inGraphicObject)
-    : EeDataGraphicEffectFields(inFields), mGraphicObject(inGraphicObject)
-{
-}
-
-// Destroys the graphic effect (nothing of its own to free)
-EEGraphicEffect::~EEGraphicEffect()
-{
-}
-
 // Reads the graphic effect table from the file (the record and its copy are ee_data tables.rs'; rows whose id is not
 // above 0 stay NULL) and links each effect's three follow-on effects by index; returns the last read result
 long EEGraphicEffect::LoadTable(FSFile* inFile)
