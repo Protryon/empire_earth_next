@@ -24,6 +24,7 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONCRC16.h"
 #include "ee/wonapi/EELobbySound.h"
+#include "rust/won_lobby/lobbyprv.h"
 namespace WONAPI {
 // (SDK GetDefaultTimeout)
 // Returns the default timeout for lobby network operations: 60 seconds
@@ -78,13 +79,7 @@ UDPManager* LobbyGetUDPManager()
     return gLobbyData.get()!=NULL?gLobbyData->mUDPManager.get():NULL;
 }
 // Passes out the times of the system and game terms of use; leaves them unchanged without a lobby
-void LobbyGetTOUTimes(long& systemTime,long& gameTime)
-{
-    if(gLobbyData.get()!=NULL) {
-        systemTime=gLobbyData->mSysTOUTime;
-        gameTime=gLobbyData->mGameTOUTime;
-    }
-}
+void LobbyGetTOUTimes(long& systemTime,long& gameTime) { ee_won_lobbyprv_tou_times(&systemTime, &gameTime); }
 // Stops the firewall test the lobby runs at login
 void LobbyKillFirewallTest()
 {
@@ -114,11 +109,7 @@ namespace WONAPI {
 // the SDK's GetEmptyStr (StringUtil.cpp): a shared empty string
 static const std::string& GetEmptyStr() { static const std::string anEmpty; return anEmpty; }
 // Returns the product id the lobby stamps on its game listings, or 0 without a lobby
-unsigned short GetLobbyProductId()
-{
-    if(gLobbyData.get()!=NULL) return gLobbyData->mLanProductId;
-    return 0;
-}
+unsigned short GetLobbyProductId() { return (unsigned short)ee_won_lobbyprv_get(EeWonLobbyPrvField::LanProductId); }
 // (SDK LobbyMisc::DoCDKeyCheck)
 // Returns whether the lobby configuration asks for a CD key check
 bool LobbyDoCDKeyCheck() { return gLobbyData.get()!=NULL?gLobbyData->mConfig->mCDKeyCheck:false; }

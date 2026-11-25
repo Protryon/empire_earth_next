@@ -6,6 +6,8 @@
 // include files and copy their parent's keys), and the results are compared: the trees (names, base names, every
 // key's value and default flag, the children, the slots), the parser's error, warnings and line counts, what the
 // hooks logged and any exception. Then a Reset and a CopyKeyValsFrom on each. Exit code: the mismatches.
+#include "won_cfgparser_driver.h" // ConfigParser's driver-only methods (before the game headers)
+#define EE_WON_STRINGPARSER_DRIVER // StringParser's list reads and writes (won_parser_lists.inl)
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>

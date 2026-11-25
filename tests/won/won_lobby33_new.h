@@ -35,7 +35,7 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::ParseTopLevel: return WON_GUARDED(p->mConfig->ParseTopLevel(*sPrvParser, NULL));
     case Op::ErrorParseHead: p->mInitError = GUIString(LobbyConfig::mDefaultFileName + " error: "); return 0;
     case Op::ErrorParseReason: p->mInitError.append(GUIString(sPrvParser->GetAbortReason())); return 0;
-    case Op::LobbyPortFromConfig: p->mLobbyPort = p->mConfig->mLobbyPort; return 0;
+    case Op::ConfigLobbyPort: return p->mConfig->mLobbyPort;
     case Op::ComponentConfigNew: sPrvComponentConfig = new ContainerConfig; return 0;
     case Op::LobbyContainerNew: p->mLobbyContainer = new LobbyContainer; return 0;
     case Op::SetResourceFolder: ComponentConfig::SetResourceFolder(WONAPICore::GetDefaultFileDirectory() + p->mConfig->mResourceDirectory); return 0;
@@ -50,10 +50,9 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::CrcNew: sPrvCrc = CRC16(); return 0;
     case Op::CrcPutProductName: sPrvCrc.Put(p->mConfig->mProductName.data(), p->mConfig->mProductName.length()); return 0;
     case Op::CrcPutVersion: sPrvCrc.Put(p->mConfig->mVersion.data(), p->mConfig->mVersion.length()); return 0;
-    case Op::ProductIdFromCrc: p->mProductId = sPrvCrc.Get(); return 0;
+    case Op::CrcGet: return sPrvCrc.Get();
     case Op::CrcReset: sPrvCrc.Reset(); return 0;
     case Op::CrcPutLanVersion: sPrvCrc.Put(p->mConfig->mLanVersion.data(), p->mConfig->mLanVersion.length()); return 0;
-    case Op::LanProductIdFromCrc: p->mLanProductId = sPrvCrc.Get(); return 0;
     case Op::ChatParserInitCommands: p->mChatCommandParser->InitCommands(); return 0;
     case Op::ResDone: sPrvTable = NULL; return 0;
     case Op::ComponentConfigDone: sPrvComponentConfig = NULL; return 0;
@@ -74,16 +73,10 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::CdKeySetProduct: p->mCDKey.SetProductString(p->mConfig->mProductName); return 0;
     case Op::CdKeyLoad: p->mCDKey.LoadFromRegistry(); return 0;
     case Op::AuthSetCdKey: p->mAuthContext->SetCDKey(p->mLoginCommunity, p->mCDKey); return 0;
-    case Op::LobbyPort8888: p->mLobbyPort = 8888; return 0;
-    case Op::TouTimesClear: p->mSysTOUTime = p->mGameTOUTime = 0; return 0;
-    case Op::BehindFirewallClear: p->mBehindFirewall = false; return 0;
-    case Op::FirewallTestDoneClear: p->mFirewallTestDone = false; return 0;
     case Op::SuspendedClear: p->mSuspended = false; return 0;
     case Op::CurGameTypeClear: p->mCurGameType = (LobbyGameType)0; return 0;
     case Op::LobbyStatusClear: p->mLobbyStatus = (LobbyStatus)0; return 0;
     case Op::RunModeOne: p->mRunMode = (LobbyRunMode)1; return 0;
-    case Op::ProductIdClear: p->mProductId = 0; return 0;
-    case Op::LanProductIdClear: p->mLanProductId = 0; return 0;
     case Op::SysTouPath: p->mSysTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wonsystou_m.txt"; return 0;
     case Op::GameTouPath: p->mGameTOUPath = WONAPICore::GetDefaultFileDirectory() + "_wongametou_m.txt"; return 0;
     case Op::ConfigNew: p->mConfig = LobbyConfig::mAllocator(); return 0;
@@ -96,7 +89,6 @@ static intptr_t PrvHost(void* inPrv, EeWonLobbyPrvOp inOp, intptr_t a)
     case Op::RoomDirServersNew: p->mRoomDirServers = new ServerContext; return 0;
     case Op::FirewallServersNew: p->mFirewallDetectServers = new ServerContext; return 0;
     case Op::PatchServersNew: p->mPatchServers = new ServerContext; return 0;
-    case Op::VersionStatusNone: p->mVersionStatus = WS_None; return 0;
     case Op::AuthContextNew: p->mAuthContext = new AuthContext; return 0;
     case Op::AuthSetServers: p->mAuthContext->SetServerContext(p->mAuthServers.get()); return 0;
     case Op::AccountLogicNew: p->mAccountLogic = new AccountLogic; return 0;

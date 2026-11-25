@@ -156,7 +156,7 @@ CHECKS = [
          hosts=[LOBBY / "LobbyStagingSupport.cpp"], rust=[], allowed={}),
     # running the lobby (R6 WON round 32: lobbyrun.rs; LobbyRunState.cpp's host)
     dict(enum="EeWonRunOp", header="won_lobby/lobbyrun.h",
-         hosts=[LOBBY / "LobbyRunState.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
     # the lobby's root screen (R6 WON round 32: rootscreen.rs; RootScreen.cpp's host)
     dict(enum="EeWonRootScreenOp", header="won_lobby/rootscreen.h",
          hosts=[LOBBY / "RootScreen.cpp"], rust=[], allowed={}),
@@ -192,8 +192,8 @@ CHECKS = [
     # R6 WON lobby and network round 35: the typed config values' containers, the logic manager, the error screen
     dict(enum="EeWonCfgValOp", header="won_lobby/cfgval.h",
          hosts=[ROOT / "src" / "Empire Earth" / "WONAPI" / "WONConfig" / "ConfigObject.cpp"], rust=[], allowed={}),
-    dict(enum="EeWonLogicMgrOp", header="won_lobby/logicmgr.h", hosts=[LOBBY / "LobbyLogicMgr.cpp"], rust=[], allowed={}),
-    dict(enum="EeWonErrScreenOp", header="won_lobby/errscreen.h", hosts=[LOBBY / "LobbyErrorScreen.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonLogicMgrOp", header="won_lobby/logicmgr.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
+    dict(enum="EeWonErrScreenOp", header="won_lobby/errscreen.h", hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
     # R6 WON GUI round 35: the cursors' calls out (cursorobj.rs)
     dict(enum="EeWonCursorOp", header="won_gui/cursorobj.h", hosts=[GUI / "Cursor.cpp"], rust=[], allowed={}),
 ]

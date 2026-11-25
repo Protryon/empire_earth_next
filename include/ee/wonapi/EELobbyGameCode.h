@@ -16,8 +16,6 @@
 
 namespace WONAPI {
 
-class EELobbyPlayer;
-
 // a GUIStringData from the Rust as a GUIString (0: the shared empty string)
 inline GUIString EELobbyStr(intptr_t inData)
 {
@@ -51,21 +49,9 @@ public:
 // (WONLobbyModelObj.h; R6 WON lobby and network round 37) made by the EE factory (EELobbyGameHost.cpp)
 LobbyGame* EELobbyNewGame();
 
-// a game room player (0x14 bytes in the original; EELobbyPlayer.cpp's methods are in WONLobby/EELobbyGameHost.cpp)
-class EELobbyPlayer : public LobbyPlayer {
-public:
-    EELobbyPlayer();                        // 0x299a3f (0x14 bytes)
-    virtual ~EELobbyPlayer();
-    virtual bool ReadData(ReadBuffer& inBuffer);            // +0x04 0x299a80
-    virtual void WriteData(WriteBuffer& outBuffer);         // +0x08 0x299a95
-    virtual bool IsTeammate(LobbyPlayer* inOther);          // +0x0c 0x299aa7
-    unsigned char GetTeam();
-    unsigned char GetSlot() { return this->mSlot; }  // 0x299adf (+0x10)
-
-    LobbyGame* mSlotGame;                   // +0x0c the slot's game (the original's slot pointer: NULL for none)
-    unsigned char mSlot;                    // +0x10
-    unsigned char mSlotIndex;               // the slot's number in mSlotGame (set by the Rust game with it)
-};
+// a game room player (EELobbyPlayer, 0x14 bytes; EELobbyPlayer.cpp): since R6 WON lobby and network round 38 a
+// LobbyPlayer of the model kind EePlayer (modelobj.rs: its slot number, the slot's index and game, ReadData,
+// WriteData, IsTeammate and GetTeam)
 
 // a player's colour button (EELobbyColorButton.cpp; 0x4c bytes; vtable 0x84c074): a click opens the colour
 // chooser popup, 4 x 4 swatches of the colours no other player uses (0x48 bytes; vtable 0x84c140) (provisional names).
