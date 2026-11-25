@@ -748,6 +748,34 @@ mod ffi {
         release_pending_units(&mut Ffi, player as usize)
     }
 
+    /// `EEPlayer::AddPendingUnits`: the pending groups appended to the running ones (`groups`, the player's
+    /// `mGroupLists`: ee_sim group_obj.rs), then `RTSPlayer`'s.
+    ///
+    /// # Safety
+    /// `groups` is the player's live group lists.
+    #[no_mangle]
+    pub unsafe extern "C" fn ee_rts_eeplayer_add_pending_units(
+        player: *mut c_void,
+        groups: *mut c_void,
+        keep_id: bool,
+        release: bool,
+    ) {
+        // SAFETY: the caller's contract
+        unsafe { ee_sim::units::group_obj::ee_units_player_groups_do(groups.cast(), 0) };
+        add_pending_units(&mut Ffi, player as usize, keep_id, release)
+    }
+
+    /// `EEPlayer::ReleasePendingUnits`: the pending groups cleared, then `RTSPlayer`'s.
+    ///
+    /// # Safety
+    /// As [`ee_rts_eeplayer_add_pending_units`].
+    #[no_mangle]
+    pub unsafe extern "C" fn ee_rts_eeplayer_release_pending_units(player: *mut c_void, groups: *mut c_void) {
+        // SAFETY: the caller's contract
+        unsafe { ee_sim::units::group_obj::ee_units_player_groups_do(groups.cast(), 1) };
+        release_pending_units(&mut Ffi, player as usize)
+    }
+
     /// `RTSPlayer::AddUnit`.
     #[no_mangle]
     pub extern "C" fn ee_rts_player_add_unit(player: *mut c_void, unit: *mut c_void, keep_id: bool) {

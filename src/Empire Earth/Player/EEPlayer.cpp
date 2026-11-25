@@ -477,11 +477,6 @@ static long EEPlayerImprovement(const EEPlayer* inPlayer, uint32_t inWhat, unsig
 }
 
 // Starts every pending command group running, then adds the pending units as the base player does
-void EEPlayer::AddPendingUnits(bool inKeepID, bool inReleasePending)
-{
-    ee_units_player_groups_do(this->mGroupLists, 0);   // the pending groups appended to the running ones
-    RTSPlayer::AddPendingUnits(inKeepID, inReleasePending);
-}
 
 // Adds a patrol group to the player, keeping a reference to it
 void EEPlayer::AddPatrolGroup(EEPPatrolGroup* inGroup)
@@ -579,11 +574,6 @@ void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* 
 }
 
 // Drops the pending command groups, then releases the pending units as the base player does
-void EEPlayer::ReleasePendingUnits()
-{
-    ee_units_player_groups_do(this->mGroupLists, 1);   // the pending groups cleared
-    RTSPlayer::ReleasePendingUnits();
-}
 
 // Marks the player as having met another player when it first sees a unit of a non-gaia player
 void EEPlayer::NoticeForeignUnit(EEUnit* inUnit)

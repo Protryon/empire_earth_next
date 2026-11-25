@@ -533,6 +533,24 @@ pub unsafe extern "C" fn ee_units_events_sounds(list: *mut c_void, f: EeUnitsEve
     }
 }
 
+/// `EEPPlayerEventList`'s destructor: the events freed, then the alert sounds unloaded and the one playing released
+/// (`ee_units_events_sounds(list, f, false)`).
+///
+/// # Safety
+/// As [`ee_units_events_free`] and [`ee_units_events_sounds`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_events_destroy(
+    events: *mut EeUnitsPlayerEvents,
+    list: *mut c_void,
+    f: EeUnitsEventsFn,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        ee_units_events_free(events);
+        ee_units_events_sounds(list, f, false);
+    }
+}
+
 /// The calls on a list: `what` 0 `Clear`, 1 `ShowEvents`, 2 `HideEvents`, 3 `RepairEvents`, 4 `TickEvents(elapsed)`.
 pub const EE_UNITS_EVENTS_CLEAR: u32 = 0;
 pub const EE_UNITS_EVENTS_SHOW_ALL: u32 = 1;

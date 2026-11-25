@@ -78,8 +78,9 @@ class UIHotKey;
 // (mList: ee_units player_events.rs); the C++ keeps the alert sounds and answers the world's parts (Host)
 class EEPPlayerEventList {
 public:
-    EEPPlayerEventList();                   // the alert sounds loaded
-    virtual ~EEPPlayerEventList();
+    // the alert sounds got and loaded (player_events_split.rs); unloaded, the one playing released
+    EEPPlayerEventList() : mList(ee_units_events_new()), mSound(NULL), mPlayed(NULL) { ee_units_events_sounds(this, &EEPPlayerEventList::Host, true); }
+    virtual ~EEPPlayerEventList() { ee_units_events_destroy(this->mList, this, &EEPPlayerEventList::Host); }
     // an event at inTile (EEMSendFlare: (tile, 3, the sender, -1, true)); AddPlayerEvent's with inFrom, the location
     // whose sight an attack shares (EEUCBasicPriest::UpdateConversion: the conversion, type 1)
     void AddEvent(const U2DPoint<long>& inTile, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
@@ -616,9 +617,9 @@ public:
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x165cfa
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond) { return (long)ee_units_player_body(this, EE_UNITS_PLAYER_DO_REPAIR_POINTERS, inFirst, (int64_t)inSecond, 0, 0.0f); }   // +0x20 0x1690ca
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x169c46
-    virtual void AddPendingUnits(bool inKeepID, bool inReleasePending);  // +0x04 0x16275a (mPendingGroups into mRunningGroups, then RTSPlayer's)
+    virtual void AddPendingUnits(bool inKeepID, bool inReleasePending) { ee_rts_eeplayer_add_pending_units(this, this->mGroupLists, inKeepID, inReleasePending); }  // +0x04 0x16275a (mPendingGroups into mRunningGroups, then RTSPlayer's)
     virtual void RecountPopulation() { EEPlayerUnits(this, 4); }       // +0x08 0x16379e (counts the units into mPopulationCount/mEndOfGameCount/mNumVitalBuildings)
-    virtual void ReleasePendingUnits();     // +0x0c 0x163f7e
+    virtual void ReleasePendingUnits() { ee_rts_eeplayer_release_pending_units(this, this->mGroupLists); }     // +0x0c 0x163f7e (the pending groups cleared first)
     virtual void GetChecksum(ESChecksum& ioChecksum) { ee_units_player_rest(this, EE_UNITS_PLAYER_REST_CHECKSUM, (uint64_t)(uintptr_t)&ioChecksum, 0, 0); }   // +0x10 0x164c4c (RTSPlayer's, the resources, the tech tree)
     virtual bool IsActive() { return !this->mObserverMode || this->mGameResult != 0; }                // +0x14 0x164e0c (!mObserverMode || mGameResult)
     // +0x28 0x162ba8: a unit joins the player (RTSPlayer's add plus the counts, tech nodes and statistics)

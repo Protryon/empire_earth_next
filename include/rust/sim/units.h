@@ -20449,6 +20449,15 @@ void ee_units_events_sounds(void *list,
                             EeUnitsEventsFn f,
                             bool load);
 
+/// `EEPPlayerEventList`'s destructor: the events freed, then the alert sounds unloaded and the one playing released
+/// (`ee_units_events_sounds(list, f, false)`).
+///
+/// # Safety
+/// As [`ee_units_events_free`] and [`ee_units_events_sounds`].
+void ee_units_events_destroy(EeUnitsPlayerEvents *events,
+                             void *list,
+                             EeUnitsEventsFn f);
+
 /// A new, empty list.
 EeUnitsPlayerEvents *ee_units_events_new();
 
