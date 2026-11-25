@@ -603,14 +603,9 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsStSetEnvironmentManager: ST->SetEnvironmentManager((EEEnvironmentManager*)a[0]);
         break;
-    case O::PsStRestorablePushEffects: ST->mRestorables.push_back((EEEffectManager*)a[0]);
-        break;
-    case O::PsStRestorablePushCalamities: ST->mRestorables.push_back((EEPCalamityHelper*)a[0]);
-        break;
-    case O::PsStRestorablePushEnvironment: ST->mRestorables.push_back((EEEnvironmentManager*)a[0]);
-        break;
-    case O::PsStLoadedPlayerPush: ST->mLoadedPlayers.push_back((EEPlayer*)a[0]);
-        break;
+    case O::PsRestorableOfEffects: return P64(static_cast<FSRestorable*>((EEEffectManager*)p));
+    case O::PsRestorableOfCalamities: return P64(static_cast<FSRestorable*>((EEPCalamityHelper*)p));
+    case O::PsRestorableOfEnvironment: return P64(static_cast<FSRestorable*>((EEEnvironmentManager*)p));
     case O::PsPlayerRemoveAlly: ((EEPlayer*)p)->RemoveAlly((EEPlayer*)a[0]);
         break;
     case O::PsEditorFormPresent: return gUIManager->GetScenarioEditorForm() != NULL;

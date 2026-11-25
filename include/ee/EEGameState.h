@@ -24,8 +24,6 @@ class EEScenarioManager;
 class EEEnvironmentManager;
 class EEEffectManager;
 class EEPCalamityHelper;
-class EEPlayer;
-class FSRestorable;
 
 class EEGameState : public TSLockable {
 public:
@@ -46,20 +44,14 @@ public:
     void FinishLoad(unsigned long inMajorVersion, unsigned long inMinorVersion);
     void SetCalamityHelper(EEPCalamityHelper* inHelper);   // 0x13181d (Reset and delete the old one; provisional name)
     void SetEnvironmentManager(EEEnvironmentManager* inManager);   // 0x131854 (deletes the old one; provisional name)
-    // inline (refused copies 0x13cfde / 0x13cff7 in EEWorld.cpp's template tail, its first user)
-    unsigned long GetNumPlayers() const { return this->mPlayers.size(); }
-    EEPlayer* GetPlayer(long inIndex) const { return this->mPlayers[inIndex]; }  // inline (EEWorld::CreateMiniMap 0x53a285: the player is loaded into edx and pushed from the register) (provisional name)
     void RepairRestorables();               // 0x1305bf (EEWorld::StartGame after the camera; provisional name)
 
     EEGameOptions mGameOptions;             // +0x008
     GE3DPoint mMapCenter;                   // +0x414 (Create: the map's size * 0.5, z 0)
     ESChecksum mChecksum;                   // +0x420
     FSFileSpec mFileSpec;                   // +0x438
-    EEPlayer* GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
-    std::vector<EEPlayer*> mPlayers;        // +0x480 the players (Create stores new EEHumanPlayer; Clear deletes via slot 0)
-    std::vector<EEPlayer*> mLoadedPlayers;  // +0x490 players (EEWorld 0x13a6c8 calls EEPlayer slot +0x20 RepairPointers; loader 0x14a7ab pushes EEPlayer*)
-    // +0x4a0 the loaded game's teams (std::vector<EETeam>): Rust's (ee_game gamecpp teams.rs)
-    std::vector<FSRestorable*> mRestorables;  // +0x4b0 restorables: RepairRestorables calls slot +8 RepairPointers
+    // +0x480 the players, +0x490 the loaded players past the slots, +0x4a0 the teams, +0x4b0 the restorables (four
+    // standard vectors): Rust's (ee_game gamecpp state.rs, teams.rs)
     EEMap* mMap;                            // +0x4c0 (Create: new EEMap 0x11b8d9)
     EEScenarioManager* mScenarioManager;    // +0x4c4 (new, 0x23c bytes)
     EEEnvironmentManager* mEnvironmentManager;  // +0x4c8 (new, 0x5c bytes)

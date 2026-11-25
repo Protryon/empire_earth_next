@@ -432,18 +432,13 @@ enum class EeGameCpp : uint32_t {
   StHerdIDCounter,
   StInScenarioEditor,
   StIsLoadedGame,
-  StLoadedPlayerAt,
-  StLoadedPlayerCount,
   StLocalPlayer,
   StMajorVersion,
   StMap,
   StMapCenter,
   StMinorVersion,
-  StNumPlayers,
   StNumPlayersMade,
   StOptions,
-  StPlayerAt,
-  StPlayerCount,
   StPlayerIsLocalName,
   StRandomSeed,
   StReadLock,
@@ -690,20 +685,14 @@ enum class EeGameCpp : uint32_t {
   EffDestroyedCount,
   HelperUpdate,
   StTail,
-  StLoadedPlayersClear,
   StChecksumReset,
-  StPlayersClear,
   StDeleteMap,
   StDeleteScenario,
   StDeleteEffects,
   StDeleteCalamity,
   StDeleteEnvironment,
-  StRestorablesClear,
-  StRestorableCount,
   StRestorableRepair,
   StOptionsPtr,
-  StPlayersResize,
-  StPlayerSet,
   StNewMap,
   StNewScenarioManager,
   StNewEffectManager,
@@ -2041,10 +2030,9 @@ enum class EeGameCpp : uint32_t {
   PsStSetEffectManager,
   PsStSetMap,
   PsStSetEnvironmentManager,
-  PsStRestorablePushEffects,
-  PsStRestorablePushCalamities,
-  PsStRestorablePushEnvironment,
-  PsStLoadedPlayerPush,
+  PsRestorableOfEffects,
+  PsRestorableOfCalamities,
+  PsRestorableOfEnvironment,
   PsPlayerRemoveAlly,
   PsEditorFormPresent,
   PsEditorClearSelection,
@@ -3969,6 +3957,12 @@ void ee_gamecpp_startup_load_sound(const void *name,
                                    unsigned long *sample,
                                    unsigned long *instance,
                                    unsigned long flag);
+
+/// `mRestorables.push_back(r)` (`r` an `FSRestorable*`).
+void ee_gamecpp_state_restorable_push(void *restorable);
+
+/// `gGameState.GetPlayer(i)` (CreateMiniMap's local player).
+void *ee_gamecpp_state_player(long i);
 
 /// EEGameState::Init: the settings' defaults (normal speed and zoom, no map, managers, teams or loaded players, a
 /// fresh checksum).

@@ -258,7 +258,7 @@ void EEWorld::CreateInfluenceTable(EEMap* inMap)
 void EEWorld::CreateMiniMap(EEGameState* inState)
 {
     delete gMiniMap;
-    gMiniMap = new EEMiniMap(GERasterizer::GetActiveRasterizer()->GetScreen(gScreenIndex), 0, inState->GetPlayer(inState->mLocalPlayer));
+    gMiniMap = new EEMiniMap(GERasterizer::GetActiveRasterizer()->GetScreen(gScreenIndex), 0, static_cast<EEPlayer*>(ee_gamecpp_state_player(inState->mLocalPlayer)));
     gMiniMap->SetMap(this->mMap);
     gEEGameUI.mMiniMapUpdate(gMiniMap);   // EEUIMiniMap::Update (ee/EEGameUI.h)
 }
@@ -608,17 +608,12 @@ int64_t EEWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
     case O::StScenarioManager: return P64(ST->mScenarioManager);
     case O::StEnvironmentManager: return P64(ST->mEnvironmentManager);
     case O::StCalamityHelper: return P64(ST->mCalamityHelper);
-    case O::StNumPlayers: return ST->GetNumPlayers();
-    case O::StPlayerCount: return (int64_t)ST->mPlayers.size();
-    case O::StPlayerAt: return P64(ST->mPlayers[a[0]]);
-    case O::StLoadedPlayerCount: return (int64_t)ST->mLoadedPlayers.size();
-    case O::StLoadedPlayerAt: return P64(ST->mLoadedPlayers[a[0]]);
         break;
     case O::StReadLock: ST->ReadLock();
         break;
     case O::StReadUnlock: ST->ReadUnlock();
         break;
-    case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)ST->mPlayers[a[0]]->mName), reinterpret_cast<const unsigned char*>((const char*)(a[1] ? gWonPlayerName : gPlayerName))) == 0;
+    case O::StPlayerIsLocalName: return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)PL->mName), reinterpret_cast<const unsigned char*>((const char*)(a[0] ? gWonPlayerName : gPlayerName))) == 0;
     case O::ReportGameLoaded: EEReportLoadFailure(UString("Game loaded."), false, &ST->mChecksum);
         break;
     // the players
