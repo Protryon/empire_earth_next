@@ -134,7 +134,6 @@ class GERectangle;
 // settings pass (0, 35, 1600, 1085) (provisional name)
 void EESetGameViewRectangle(const GERectangle& inRectangle);
 // (provisional names): what EEDataPreLoading::LoadGame (0xd439f) reads and calls
-void EELoadGameMedia();                    // 0x13fcbc (six resets in a row; when the first argument is false)
 extern bool& gLoadingSavedGame;
 extern bool& gWorldClearing;                // 0x5318d9 (EETown 0xac573 tests it after gLoadingSavedGame; provisional name)
 extern unsigned long& gEffectDetail;        // 0x53089c (compared with an effect's +0x84 before it plays: a detail level? EEUCProjectile::UpdateEffects; provisional name)

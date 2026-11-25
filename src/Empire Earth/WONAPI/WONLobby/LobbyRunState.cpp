@@ -50,7 +50,7 @@ static intptr_t RunHost(EeWonRunOp inOp, intptr_t a)
     case Op::MusicOn: return LobbyGetLobbyMusic() ? 1 : 0;
     case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
     case Op::NetResume: LobbyNetResume(); return 0;
-    case Op::InitLogicInit: gLobbyData->mInitLogic->Init(); return 0;
+    case Op::InitLogicInit: gLobbyData->mInitLogic->Call(EeWonLogicCall::InitInit); return 0;
     }
     return 0;
 }

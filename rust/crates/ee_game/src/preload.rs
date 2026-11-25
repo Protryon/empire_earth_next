@@ -7,6 +7,10 @@
 use std::ffi::{c_long, c_ulong, c_void};
 use std::sync::Mutex;
 
+use ee_base::util::fp;
+
+use crate::gamecpp::globals;
+
 /// The pre-loader's calls (p: the `EEDataPreLoading`, or the object a call names).
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -21,11 +25,6 @@ pub enum EePreloadCpp {
     ThreadPost,
     ThreadPriority,
     SetThreadPriority,
-    FpPrecisionIs53,
-    SetFpPrecision53,
-    FpRoundingMode,
-    SetFpRoundingNearest,
-    Sleep1,
     /// `gWorld.mPlayers[a0]`
     Player,
     /// `gUnitClassTable[a0]`
@@ -49,17 +48,14 @@ pub enum EePreloadCpp {
     TextPopulatingWorld,
     TextLoadingComplete,
     TextWaitingForPlayers,
-    LoadGameMedia,
     LoadType,
     SetLoadingSavedGame,
     GameStateCreate,
     GameStateReset,
     ReleaseScene,
-    GraphicsWait50A,
     WorldWriteLock,
     WorldWriteUnlock,
     WorldClear,
-    PhysicsClearServerMessages,
     StartGame,
     ResumeGraphics,
     IsMultiplayer,
@@ -68,7 +64,6 @@ pub enum EePreloadCpp {
     NewLoadedResponseServer,
     ProcessLocalInput,
     SetHasLoaded,
-    ExitGame,
     DisplayError,
     // ---- the constructor and destructor (round 12)
     /// `TSScheduler::CreateEvent(<a0: 0 mThreadCreated, 1 mThreadDone, 2 mMessageQueueDone>) == keseOK`
@@ -139,6 +134,8 @@ const MESSAGE_UNLOAD_TECHNOLOGY: u32 = 0x40b;
 const MESSAGE_QUEUE_DONE: u32 = 0x40c;
 /// `PLAT_PRIORITY_ABOVE_NORMAL`
 const PRIORITY_ABOVE_NORMAL: i64 = 1;
+/// `kFPPrecision53`.
+const FP_PRECISION_53: c_ulong = ee_base::lle_enums::UMFloatingPointPrecision::kFPPrecision53 as c_ulong;
 
 /// The pre-loader's state that was its `mQuit`, `mQueueing` and `mQueue`.
 struct State {
@@ -207,7 +204,7 @@ fn load_game(p: P, skip_game_media: bool, clear_world: bool) {
     hf(O::LoadProgress, 0, &[], &[0.0]);
     h0(O::TextLoadingGlobalMedia);
     if !skip_game_media {
-        h0(O::LoadGameMedia);
+        crate::gamecpp::startup::ee_gamecpp_startup_load_media();
     }
     let load_type = h0(O::LoadType);
     let saved = load_type == 4 || load_type == 1 || load_type == 2;
@@ -218,10 +215,12 @@ fn load_game(p: P, skip_game_media: bool, clear_world: bool) {
     if created {
         if clear_world {
             h0(O::ReleaseScene);
-            h0(O::GraphicsWait50A);
+            // SAFETY: gGraphics, set for the game's whole run
+            crate::gamecpp::render_to::ee_gamecpp_gfx_post_50a_and_wait(unsafe { globals::gGraphics });
             h0(O::WorldWriteLock);
             h0(O::WorldClear);
-            h0(O::PhysicsClearServerMessages);
+            // SAFETY: gPhysics, set for the game's whole run
+            crate::physics::ee_physics_clear_server_messages(unsafe { globals::gPhysics });
             h0(O::WorldWriteUnlock);
         }
         hf(O::LoadProgress, 0, &[], &[0.6]);
@@ -247,7 +246,7 @@ fn load_game(p: P, skip_game_media: bool, clear_world: bool) {
             h0(O::SetHasLoaded);
         }
     } else {
-        h0(O::ExitGame);
+        crate::gamecpp::utilities::ee_gamecpp_exit_game();
         h(O::DisplayError, error as P, &[]);
     }
     h(O::SetThreadPriority, p, &[priority]);
@@ -299,15 +298,15 @@ pub extern "C" fn ee_preload_main(p: *mut c_void) -> c_ulong {
     let p = p as P;
     receive(p);
     h(O::ThreadCreatedSet, p, &[]);
-    h0(O::SetFpPrecision53);
+    fp::ee_util_fp_set_precision(FP_PRECISION_53);
     while !state().quit {
         loop {
             let (result, message, parameter1, parameter2) = receive(p);
-            if h0(O::FpPrecisionIs53) == 0 {
-                h0(O::SetFpPrecision53);
+            if fp::ee_util_fp_precision() != FP_PRECISION_53 {
+                fp::ee_util_fp_set_precision(FP_PRECISION_53);
             }
-            if h0(O::FpRoundingMode) != 0 {
-                h0(O::SetFpRoundingNearest);
+            if fp::ee_util_fp_rounding() != 0 {
+                fp::ee_util_fp_set_rounding(0);
             }
             if result == 0 {
                 if state().queueing {
@@ -316,7 +315,7 @@ pub extern "C" fn ee_preload_main(p: *mut c_void) -> c_ulong {
                     handle_message(p, message, parameter1, parameter2);
                 }
             }
-            h0(O::Sleep1);
+            ee_base::plat_core::time::PlatSleep(1);
             if result != 0 {
                 break;
             }

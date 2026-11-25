@@ -49,38 +49,25 @@ extern "C" intptr_t ee_won_guicpp_tab_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
     // the type is Rust's map, which the golden checks against the enum
     case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
+    case Op::TabNewContainer: return (intptr_t)static_cast<Component*>(new Container);
+    case Op::TabNewBar: return (intptr_t)static_cast<Component*>(new TabBar((EeWonTabCtrl*)a));
+    case Op::TabBarOf: return (intptr_t)static_cast<TabBar*>(Comp(a))->mBar;
+    case Op::TabNewPoint: return (intptr_t)static_cast<Component*>((static_cast<TabCtrl*>(t)->mContainerLayout = new LayoutPoint, static_cast<TabCtrl*>(t)->mContainerLayout.get()));
     default: return ContainerHostCall(t, op, a, b, c, d);
     }
 }
 
 namespace WONAPI {
 // Creates a tab bar for its tab control (the Rust bar: no tab, none selected, a 4-pixel overlap)
-TabBar::TabBar(TabCtrl* inCtrl)
+TabBar::TabBar(EeWonTabCtrl* inCtrl)
 {
-    this->mBar=ee_won_tabbar_new(static_cast<Component*>(this),ee_won_guicpp_tab_call,this->mCt,
-                                 inCtrl!=NULL ? inCtrl->mTab : NULL);
+    this->mBar=ee_won_tabbar_new(static_cast<Component*>(this),ee_won_guicpp_tab_call,this->mCt,inCtrl);
 }
 // Destroys the tab bar: the Rust bar gives the buttons back
 TabBar::~TabBar() { ee_won_tabbar_free(this->mBar); }
-// Creates a tab control with 5-pixel padding and no tabs: makes its tab bars, their containers and the page area's
-// layout point, which the Rust control sets up and adds
-TabCtrl::TabCtrl()
-{
-    this->mTab=ee_won_tab_new(static_cast<Component*>(this),ee_won_guicpp_tab_call,this->mCt);
-    this->mBottomTabBarContainer=new Container;
-    this->mTopTabBarContainer=new Container;
-    this->mBottomTabBar=new TabBar(this);
-    this->mTopTabBar=new Container;
-    this->mContainerLayout=new LayoutPoint;
-    EeWonTabParts aParts;
-    aParts.bar=this->mBottomTabBar->mBar;
-    aParts.bottom_bar=(intptr_t)static_cast<Component*>(this->mBottomTabBar.get());
-    aParts.top_bar=(intptr_t)static_cast<Component*>(this->mTopTabBar.get());
-    aParts.bottom_bar_container=(intptr_t)static_cast<Component*>(this->mBottomTabBarContainer.get());
-    aParts.top_bar_container=(intptr_t)static_cast<Component*>(this->mTopTabBarContainer.get());
-    aParts.layout=(intptr_t)static_cast<Component*>(this->mContainerLayout.get());
-    ee_won_tab_init(this->mTab,&aParts);
-}
+// Creates a tab control with 5-pixel padding and no tabs: the Rust control makes its tab bars and their containers
+// (the TabNew* ops), holds them, sets them up and adds them with the page area's layout point (tabobj.rs make_parts)
+TabCtrl::TabCtrl() { ee_won_tab_make(static_cast<Component*>(this),ee_won_guicpp_tab_call,this->mCt,&this->mTab); }
 // Destroys the tab control: the Rust control gives the arrows back (its members go after)
 TabCtrl::~TabCtrl() { ee_won_tab_free(this->mTab); }
 }

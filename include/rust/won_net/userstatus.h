@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_net/ffi.h"
+#include "rust/won_net/udpops.h"
 
 /// The op's map (ids as the C++ `unsigned long`s they are: 64-bit on LP64 systems, sent as their low 32 bits).
 struct EeWonUserStatus;
@@ -64,6 +65,11 @@ int32_t ee_won_userstatus_reply(EeWonUserStatus *s,
                                 size_t len,
                                 size_t pos,
                                 size_t *out_pos);
+
+/// `RoutingGetUserStatusOp(addr, manager)`'s body (2c6630; the C++ class went in R6 WON lobby and network round 36):
+/// a new, empty map, 3 retransmits, a 1 s reply wait. The op is `new UDPManagerSendRecvOp(body, addr, manager)`; its
+/// map is `ee_won_udp_body_of(op, EE_WON_UDP_BODY_USER_STATUS)`.
+EeWonUdpBody ee_won_userstatus_body();
 
 }  // extern "C"
 

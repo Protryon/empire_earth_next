@@ -14,11 +14,11 @@ use crate::screens::game_actions_host::*;
 
 /// The headers the C++ names come from.
 const HEADERS: [&str; 8] = [
-    "include/ee/EEMessageID.h",
+    "include/rust/sim/message_ids.h",
     "include/ee/EEUnitClassIDs.h",
     "include/rust/sim/unit_ids.h",
     "include/rust/sim/game_ids.h",
-    "include/ee/EETechTreeTechID.h",
+    "include/rust/sim/tech_tree_ids.h",
     "include/rust/net/msgid.h",
     "include/rust/base/lle_enums.h",
     "include/ee/EEStringIDs.h",

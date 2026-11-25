@@ -80,7 +80,7 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
     case Op::GameProgress:
         static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(a))->UpdateTransferProgress((int)b, (int)c);
         return 0;
-    case Op::BytesRead: return (intptr_t) static_cast<RecvChunkOp*>(anOp)->GetRecvOp()->GetBytesRead();
+    case Op::BytesRead: return (intptr_t) RecvChunkOf(anOp)->GetBytesRead();
     case Op::Bind: return aSocket->Fn2B0D90((unsigned short)b, 0);
     case Op::HostValid: return aTransfer->mHost.IsValid() ? 1 : 0;
     case Op::Open: return (intptr_t)PlatFOpen(reinterpret_cast<const char*>(a), "rb");

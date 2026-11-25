@@ -281,6 +281,16 @@ pub unsafe extern "C" fn ee_won_plat_font_width(f: *const EeWonPlatFont, text: *
     unsafe { (*f).width(units(text, len)) }
 }
 
+/// `GetCharacterWidth(inChar)`: the width of the one unit `(wchar_t)inChar`.
+///
+/// # Safety
+/// `f` is a live font.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_plat_font_char_width(f: *const EeWonPlatFont, ch: i32) -> i32 {
+    // SAFETY: the contract
+    unsafe { (*f).width(&[ch as WChar]) }
+}
+
 /// `DrawString(context, text, offset, length, x, y)` once the context is known: the text drawn into the context's
 /// surface `s` (null: none) at its pixel scale in `color` (the Graphics' colour without its top byte, 0 without
 /// one); the underline to draw into `line` (x1, y, x2) and true when the font is underlined and `graphics`.

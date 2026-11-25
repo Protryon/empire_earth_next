@@ -133,6 +133,20 @@ void ee_won_routeconn_request(void *conn,
 EeWonRouteOp *ee_won_routeop_new_on(int32_t ty,
                                     void *conn);
 
+/// `RoutingOp::RunHook` (2c7d20): refused in blocking mode (`WS_BlockMode_NotSupported`), else the request sent (a
+/// firewall check listening first).
+///
+/// # Safety
+/// As [`ee_won_routeop_send`].
+void ee_won_routeop_run(EeWonRouteOp *op,
+                        void *cpp);
+
+/// `RoutingDetectFirewallOp::CleanupHook`: the listening socket closed and let go (nothing for any other op).
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_routeop_cleanup(const EeWonRouteOp *op);
+
 /// `RoutingOp::SendRequest`'s base: the op's message (when it sends one) after the connection's length field,
 /// queued on the connection as a `SendMsgOp`; the op `cpp` added to the connection's list when it waits for a reply.
 ///

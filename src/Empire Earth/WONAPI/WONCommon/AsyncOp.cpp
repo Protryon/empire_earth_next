@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONTimerThread.h"
-#include "ee/wonapi/WONRoutingDetectFirewallOp.h"
 #include <string.h>
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
@@ -57,8 +56,7 @@ static void* HookNewCompletion(EeWonCompletion* inBody)
 }
 static bool HookCallback(void* inOp,void* inChild,int32_t inParam)
 {
-    return static_cast<AsyncOpWithTracker*>(static_cast<AsyncOp*>(inOp))->CallbackHook(static_cast<AsyncOp*>(inChild),
-                                                                                      inParam);
+    return static_cast<AsyncOp*>(inOp)->CallbackHook(static_cast<AsyncOp*>(inChild),inParam);
 }
 static const EeWonAsyncOpHooks kAsyncOpHooks={HookRun,HookCleanup,HookCoreQueue,HookTimerAdd,HookTimerRemove,
                                              HookCompletionAddRef,HookCompletionRelease,HookCompletionCall,
@@ -109,9 +107,7 @@ static void* CoreNewQueueSocket(int32_t inType,bool inBlocking)
 { return static_cast<RefCount*>(inBlocking ? new BlockingSocket(inType) : new QueueSocket(inType)); }
 static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr)
 {
-    UDPManagerRecvOp* anOp=inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)))
-                                        : new UDPManagerRecvOp;
-    return static_cast<RefCount*>(anOp);
+    return static_cast<RefCount*>(inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr))) : new UDPManagerRecvOp);
 }
 static long CoreUdpCheck(void* inOp,const uint8_t* inData,size_t inLength,bool* outThrew)
 {
@@ -137,12 +133,7 @@ static const EeWonByteBuffer* CoreBytesOf(void* inBuffer)
 static SocketOp* SockOp(void* inOp) { return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))); }
 static long CoreSocketOpStart(void* inOp) { return SockOp(inOp)->Start(); }
 void SocketOp::HookAddToSocketThread(void* inOp) { WONAPICore::AddToSocketThread(SockOp(inOp)); }
-static void* CoreBytesAdopt(EeWonByteBuffer* inBytes)
-{
-    RefCount* aBuffer=new ByteBuffer(inBytes);
-    aBuffer->AddRef();
-    return aBuffer;
-}
+static void* CoreBytesAdopt(EeWonByteBuffer* inBytes) { return static_cast<RefCount*>(new ByteBuffer(inBytes)); } // (its first reference is Rust's)
 // the socket's transform chain on the message in *ioMessage (a reference held; the result's replaces it)
 static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
 {
@@ -155,26 +146,10 @@ static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
     *ioMessage=aResult;
     return aStatus;
 }
-// a progress chunk: a RecvChunkOp of the receiving op with its completion, run in the op's mode
-static void CoreProgress(void* inOp,void* inCompletion)
+// the socket's virtual Duplicate (cppcore.rs n_accept: AsyncSocket::Accept is Rust's)
+static void* CoreSocketDuplicate(void* inSocket)
 {
-    SocketOp* anOp=SockOp(inOp);
-    SmartPtr<RecvChunkOp> aChunk=new RecvChunkOp(anOp);
-    aChunk->SetCompletion(static_cast<CompletionBase<AsyncOpPtr>*>(static_cast<RefCount*>(inCompletion)));
-    long aMode=anOp->GetMode();
-    aChunk->Run(aMode,0);
-}
-// Accept (the virtual Duplicate): the accepted socket in *outSocket with a reference, on success only
-static long CoreAccept(void* inSocket,void** outSocket)
-{
-    SmartPtr<AsyncSocket> anAccepted;
-    WONStatus aStatus=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket))->Accept(anAccepted);
-    if(aStatus==0) {
-        RefCount* aResult=anAccepted.get();
-        if(aResult!=NULL) aResult->AddRef();
-        *outSocket=aResult;
-    }
-    return aStatus;
+    return static_cast<RefCount*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket))->Duplicate());
 }
 static void CoreSocketHook(void* inSocket,int32_t inWhich)
 {
@@ -189,9 +164,7 @@ static RoutingConnection* RouteConn(void* inConn)
 { return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(inConn))); }
 static void* CoreNewRouteOp(void* inConn,int32_t inType)
 {
-    RoutingConnection* aConn=inConn!=NULL ? RouteConn(inConn) : NULL;
-    RoutingOp* anOp=inType==RoutingOp_DetectFirewall ? new RoutingDetectFirewallOp(aConn) : new RoutingOp(aConn,inType);
-    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(new RoutingOp(inConn!=NULL ? RouteConn(inConn) : NULL,inType)));
 }
 static void* CoreRouteVirtual(void* inConn,int32_t inWhich,void* inOp,uint8_t inType)
 {
@@ -229,18 +202,6 @@ WONStatus AsyncSocket::RecvFrom(void* outData,int inLength,IPAddr* outAddress,in
 }
 WONStatus AsyncSocket::Bind(const IPAddr& inAddress,bool inReuse)
 { return ee_won_asyncsocket_bind(this->mSock,AddressOf(inAddress),PortOf(inAddress),inReuse); }
-WONStatus AsyncSocket::Accept(SmartPtr<AsyncSocket>& outSocket)
-{
-    AutoCrit aCrit(this->GetDataLock());
-    PlatSocket aSocket=PLAT_SOCKET_INVALID;
-    uint32_t anAddress=0;
-    uint16_t aPort=0;
-    WONStatus aStatus=ee_won_asyncsocket_accept(this->mSock,&aSocket,&anAddress,&aPort);
-    if(aStatus!=0) return aStatus;
-    outSocket=this->Duplicate();
-    ee_won_asyncsocket_adopt(outSocket->mSock,aSocket,anAddress,aPort);
-    return 0;
-}
 static long CoreSocketOpContinue(void* inOp)
 {
     return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Continue();
@@ -250,8 +211,8 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         CoreNewQueueSocket,CoreNewUdpRecvOp,CoreUdpCheck,
                                         reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
                                         CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
-                                        &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreProgress,
-                                        CoreAccept,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
+                                        &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,
+                                        CoreSocketDuplicate,CoreSocketHook,CoreNewRouteOp,CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
 }

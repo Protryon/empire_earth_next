@@ -2,8 +2,9 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // AccountLogic: login, account creation and update, lost password/user name, credits and terms of use.
 // A Rust object since R6 WONLobby round 8 (rust/crates/ee_won_lobby/src/logics.rs: the last user name, the terms-of-use
-// prompt, every decision); this unit keeps the shell (the dialogs' SmartPtrs) and the host's ops, each one the
-// original's calls on a C++ object (the ops, the dialogs, the users, the events, the authentication context).
+// prompt, every decision); the class is the RustLogic of kind Account (R6 WON round 36: its two dialogs in the
+// shell's slots); this unit keeps the host's ops, each one the original's calls on a C++ object (the ops, the
+// dialogs, the users, the events, the authentication context).
 #include <windows.h>
 #include <string>
 #include <list>
@@ -49,7 +50,7 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
 {
     typedef EeWonLogicOp O;
     typedef LobbyEvtField EF;
-    AccountLogic* aLogic = static_cast<AccountLogic*>(inObj);
+    RustLogic* aLogic = static_cast<RustLogic*>(inObj);
     switch (inOp) {
     case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case O::OpStatus: return (int)reinterpret_cast<AsyncOp*>(a)->GetStatus();
@@ -59,17 +60,17 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     case O::VersionStatus: return (int)LobbyGetVersionStatus();
     case O::YesNoRes: return LobbyDoYesNoDialog(gLobbyResources[a].mString, gLobbyResources[b].mString, true);
     case O::MessageBoxRes: LobbyMessageBox(gLobbyResources[a].mString, gLobbyResources[b].mString); return 0;
-    case O::CreditsLCall: aLogic->mCreditsDialog->LCall((EeWonLobbyDlgCall)a); return 0;
-    case O::CreditsDo: return LobbyDoDialog(aLogic->mCreditsDialog.get());
-    case O::TouLCall: aLogic->mTOUDialog->LCall((EeWonLobbyDlgCall)a); return 0;
-    case O::TouDo: return LobbyDoDialog(aLogic->mTOUDialog.get());
+    case O::CreditsLCall: aLogic->mDialog[kAccountCredits]->LCall((EeWonLobbyDlgCall)a); return 0;
+    case O::CreditsDo: return LobbyDoDialog(aLogic->mDialog[kAccountCredits].get());
+    case O::TouLCall: aLogic->mDialog[kAccountTOU]->LCall((EeWonLobbyDlgCall)a); return 0;
+    case O::TouDo: return LobbyDoDialog(aLogic->mDialog[kAccountTOU].get());
     case O::ShowCreateAccount: LobbyShowCreateAccount(); return 0;
     case O::ShowLostPassword: LobbyShowLostPassword(); return 0;
     case O::ShowLostUsername: LobbyShowLostUsername(); return 0;
     case O::AccountServers: return (intptr_t)LobbyGetAccountServers();
     case O::RunWithStatusRes: LobbyRunOpWithStatus(reinterpret_cast<AsyncOp*>(a), gLobbyResources[b].mString, gLobbyResources[c].mString, (int)(d & 0xff), (unsigned long)(d >> 8)); return 0;
     case O::OpSetNum: R(a)->SetNum((int)b, (long long)c); return 0;
-    case O::GetCertNew: return Held(new GetCertOp(A(a)));
+    case O::GetCertNew: return Held(RustServerOp::NewGetCert(A(a)));
     case O::GetAccountNew: return Held(RustServerOp::NewGetAccount(SC(a), A(b)));
     case O::PasswordEmailNew: return Held(RustServerOp::NewRequest(ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(a), (size_t)b), SC(c)));
     case O::InfoEmailNew: return Held(RustServerOp::NewRequest(ee_won_reqop_info_email(reinterpret_cast<const uint8_t*>(a), (size_t)b), SC(c)));
@@ -101,19 +102,6 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     }
 }
 
-AccountLogic::AccountLogic() : mRust(ee_won_logic_new(EeWonLogicKind::Account, this, AccountHost)) {}
-AccountLogic::~AccountLogic() { ee_won_logic_free(this->mRust); }
-// Looks up the credits and terms-of-use dialogs from the lobby layout
-void AccountLogic::InitComponent(ComponentConfig* inConfig)
-{
-    SafeGetDialog(inConfig, this->mCreditsDialog, EeWonLobbyDlgKind::Credits, "CreditsDialog", __FILE__, 43);
-    SafeGetDialog(inConfig, this->mTOUDialog, EeWonLobbyDlgKind::Tou, "TOUDialog", __FILE__, 44);
-}
-// Opens the create-account (terms of use to follow), lost-password or lost-user-name screen if the version is usable
-void AccountLogic::HandleControlEvent(int inControlId) { ee_won_logic_call(this->mRust, EeWonLogicCall::AcctControlId, inControlId, 0, 0); }
-// Routes create-account, lost password/user name, login, account query and update events to the handlers
-void AccountLogic::HandleComponentEvent(ComponentEvent* inEvent)
-{
-    ee_won_logic_call(this->mRust, EeWonLogicCall::AcctEvent, (intptr_t)inEvent, inEvent->mType, 0);
-}
+// The account logic's Rust object over the shell (its virtuals, its two dialogs' lookup: logicshell.rs)
+void* AccountLogicMake(RustLogic* inSelf) { return ee_won_logic_new(EeWonLogicKind::Account, inSelf, AccountHost); }
 }

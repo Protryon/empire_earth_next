@@ -7,6 +7,7 @@ use std::ffi::{c_char, c_void};
 use ee_base::math::types::GeRectangle;
 use ee_render::gfx::effect_orbit::ee_gfx_orbital_speed;
 
+use super::rast::rast;
 use super::{h, hf, hp, pa, ptr, O, P};
 
 /// EEOrbital::Init: attached to `model`, its speed from the model's name (degrees per second; 0 first, as the C++).
@@ -25,7 +26,7 @@ pub extern "C" fn ee_gamecpp_ov_orbital_init(orbital: *mut c_void, model: *mut c
 pub extern "C" fn ee_gamecpp_ov_effects_scene_starting() {
     let mut rect = GeRectangle::default();
     h(O::RuMainViewRectangle, 0, &[ptr(&mut rect)]);
-    hf(O::GuClearZ, 0, &[ptr(&mut rect)], &[1.0]);
+    rast().clear_z(1.0, &rect);
 }
 
 #[cfg(test)]

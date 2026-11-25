@@ -140,8 +140,6 @@ extern "C" int64_t ee_preload_mediacpp(EePreloadMediaCpp inOp, uintptr_t p, cons
         break;
     case O::LockLeave: ((TSCriticalSection*)p)->Leave();
         break;
-    case O::Sleep1: PlatSleep(1);
-        break;
     case O::MediaTableResize: gMediaTable.resize((size_t)a[0], NULL);
         break;
     case O::MediaTableSet: gMediaTable[(size_t)a[0]] = (EEMedia*)a[1];

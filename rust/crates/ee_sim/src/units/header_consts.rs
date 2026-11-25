@@ -147,6 +147,9 @@ mod tests {
         for generated in ["sim/game_ids.h", "sim/rmap_ids.h", "data/world_constants.h"] {
             files.push(root().join("include/rust").join(generated));
         }
+        // and so are the message ids and the tech tree ids (message_ids.rs, tech_tree_ids.rs)
+        files.push(root().join("include/rust/sim/message_ids.h"));
+        files.push(root().join("include/rust/sim/tech_tree_ids.h"));
         for path in files {
             if path.extension().and_then(|x| x.to_str()) != Some("h") {
                 continue;

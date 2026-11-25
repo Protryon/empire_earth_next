@@ -456,13 +456,10 @@ bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanc
 // (the U2DPoint<long> twin of 0x648ecc is gone: one tile type)
 
 // Returns a random number in [min, max]
+// (URandomIntegers::Generate's arithmetic: ee_base random.rs)
 long EEGetRandomInt(long inMin, long inMax, URandom& inRandom)
 {
-    long theEnd = inMax + 1;
-    long theResult = UMFloatToLong(inRandom.Generate() * (theEnd - inMin) + inMin);
-    if (theResult == theEnd)
-        theResult = inMax;
-    return theResult;
+    return ee_urandom_generate_int(reinterpret_cast<EeURandom*>(&inRandom), inMin, inMax);
 }
 
 // (the U2DPoint<long> twin of 0x64b556 is gone: one tile type)
@@ -476,9 +473,8 @@ float EEGetPathLengthTo(EEComplexUnit* inUnit, EETileCoordinate& ioTile, unsigne
 // Tells whether a tile lies on the diamond map's edge
 bool RTSMap::IsEdgeTile(const EETileLocation& inTile)
 {
-    long theY = inTile.mY;
-    long theX = inTile.mX;
-    return theX + theY == this->mL195608 || theY - theX == this->mL195610 || theX + theY == this->mL19560C || theX - theY == this->mL195610;
+    return inTile.mX + inTile.mY == this->mL195608 || inTile.mY - inTile.mX == this->mL195610 || inTile.mX + inTile.mY == this->mL19560C
+        || inTile.mX - inTile.mY == this->mL195610;
 }
 
 
@@ -493,9 +489,8 @@ void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoord
 // terrain heights
 void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>& outCorners, EEMap* inMap)
 {
-    std::vector<int32_t> theCorners(inTiles.size() + 1);
-    ee_units_uu_pick_wall_pieces(UUHandle(inMap), &inTiles, &theCorners[0]);
-    outCorners.assign(theCorners.begin(), theCorners.end() - 1);
+    outCorners.resize(inTiles.size());
+    ee_units_uu_pick_wall_pieces(UUHandle(inMap), &inTiles, outCorners.data());
 }
 
 
@@ -578,20 +573,16 @@ extern "C" int64_t ee_units_lf_host(int32_t inOp, uint64_t inA, uint64_t inB, in
 }
 
 // Shapes a wall ghost as the piece for a corner
+// (the ghost's SetAnimation reads no transformation: its facing is set first)
 void EEOrientWallGhost(EEGhostUnit* inGhost, long inCorner, long inRaisedCorners)
 {
-    GETransformation theTransformation(inGhost->mTransformation);
-    inGhost->SetAnimation(EEOrientWallPiece(theTransformation, inCorner, inRaisedCorners));
-    inGhost->mTransformation = theTransformation;
+    inGhost->SetAnimation(EEOrientWallPiece(inGhost->mTransformation, inCorner, inRaisedCorners));
 }
 
 // Returns the frame set of a wall piece for a corner (1..12) and sets its facing
-long EEOrientWallPiece(GETransformation& ioTransformation, long inCorner, long inRaisedCorners)
+long EEOrientWallPiece(GETransformation& ioTransformation, long inCorner, long)
 {
-    EeUnitsUuWallPiece thePiece = ee_units_uu_wall_piece(inCorner);
-    if (thePiece.turns)
-        ioTransformation.SetOrientationYPR(thePiece.yaw, 0.0f, 0.0f);
-    return thePiece.frame_set;
+    return ee_units_uu_orient_wall_piece(reinterpret_cast<EeGeTransformation*>(&ioTransformation), (int32_t)inCorner);   // uu_ffi.rs
 }
 
 // Moves a unit to a transformation, snapping to the closest tile when off the map
@@ -613,21 +604,8 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
 // ---- 0x24f0e9..0x24f932: the rest of this TU's own functions (the unit map's "EEHitPointUpgrader.cpp" slice; the
 // template COMDATs that follow, 0x24f932..0x2544e9, are instantiated by this file's functions, so the TU goes on) ----
 
-// The functor that rescales the hit points of every unit of type mUnitType by mRatio (vtable 0x449bd8, shares
-// EEUUUnitFunctor's ??_G) (provisional names)
-class EEHitPointUpgrader : public EEUUUnitFunctor {
-public:
-    EEHitPointUpgrader(unsigned long inUnitType, float inRatio) : mUnitType(inUnitType), mRatio(inRatio) {}
-    virtual void Apply(EEComplexUnit* inUnit);
-    unsigned long mUnitType;                // +0x04
-    float mRatio;                           // +0x08
-};
-
-// Scales the hit points of a living unit of the upgraded type by the ratio (at least 1)
-void EEHitPointUpgrader::Apply(EEComplexUnit* inUnit)
-{
-    ee_units_ub_body(EE_UNITS_UB_DO_HIT_POINT_APPLY, UUHandle(static_cast<EEUUUnitFunctor*>(this)), UUHandle(inUnit), 0, 0, 0);
-}
+// (EEHitPointUpgrader, the functor that rescaled the hit points of every unit of a type by a ratio (vtable 0x449bd8):
+// Rust's walk, ee_sim units uu_body.rs upgrade_hit_points and hit_point_apply; units round 11)
 
 // Tells whether a unit type can be placed at a location (the editor's own test in free camera mode)
 bool EECanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX, long inY, bool inSkipPlayerChecks, long inIgnoreOwner)
@@ -927,7 +905,6 @@ static std::vector<long> sUbCorners;
 static GEVector sUbDirection;
 static GE3DPoint sUbPoint;
 static U2DRectangle<long> sUbArea;
-static EEHitPointUpgrader sUbUpgrader(0, 0.0f);
 
 // EEMovePassengers' place for the unloaded cargo (off the map)
 static GETransformation UbOffMap()
@@ -1123,7 +1100,6 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     // EEUpgradeHitPoints', the functor's and EEForEachUnitOf's
     case EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS: return UbObj<EEUnitClassUpgrade>(inA)->mUnitClass->mHitPoints;
     case EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS: return UbObj<EEUnitClassUpgrade>(inA)->GetMaxHitPoints();
-    case EE_UNITS_UB_MAKE_UPGRADER: return UUHandle(static_cast<EEUUUnitFunctor*>(&(sUbUpgrader = EEHitPointUpgrader((unsigned long)inC, UBitsFloat(inD)))));
     case EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS: UbObj<EEUnitClassUpgrade>(inA)->mMaxHitPoints = (long)inC; return 0;
     case EE_UNITS_UB_LOADING_SAVED_GAME: return gLoadingSavedGame;
     case EE_UNITS_UB_FIRST_UNIT: return UUHandle(UbObj<EEPlayer>(inA)->mFirstUnit);
@@ -1133,8 +1109,6 @@ extern "C" int64_t ee_units_ub_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_UB_NUM_PENDING: return UbObj<EEPlayer>(inA)->GetNumPendingUnits();
     case EE_UNITS_UB_PENDING_UNIT: return UUHandle(static_cast<EEUnit*>(UbObj<EEPlayer>(inA)->GetPendingUnit((unsigned long)inC)));
     case EE_UNITS_UB_NUM_PLAYERS: return ::gWorld.mNumPlayers;
-    case EE_UNITS_UB_UPGRADER_TYPE: return static_cast<EEHitPointUpgrader*>(UbObj<EEUUUnitFunctor>(inA))->mUnitType;
-    case EE_UNITS_UB_UPGRADER_RATIO: return (int64_t)UFloatBits(static_cast<EEHitPointUpgrader*>(UbObj<EEUUUnitFunctor>(inA))->mRatio);
     // EEMovePassengers', EETakeOverLoad's, EEGetPlayerClassGraphic's
     case EE_UNITS_UB_NUM_CARGO: return UbObj<EEComplexUnit>(inA)->GetNumCargoUnits();
     case EE_UNITS_UB_UNLOAD_CARGO_AT: return UUHandle(UbObj<EEComplexUnit>(inA)->UnloadCargoAt((unsigned long)inC, sUbOffMap));

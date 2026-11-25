@@ -65,9 +65,9 @@ void RustServerOp::SetClientKeySize(unsigned char inSize, bool inUseClientKey)
 {
     ee_won_hostop_set_client_key(this->mRustOp, inSize, inUseClientKey);
 }
-RustServerOp::RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj) : mRustOp(inRustOp)
+RustServerOp::RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj, RefCount* inObj2, int inNum) : mRustOp(inRustOp)
 {
-    ee_won_hostop_bind_init(inRustOp, static_cast<AsyncOp*>(this), this->GetOpObject(), this->mTracker.GetTrackerObject(), inInit, inObj);
+    ee_won_hostop_bind_init(inRustOp, static_cast<AsyncOp*>(this), this->GetOpObject(), this->mTracker.GetTrackerObject(), inInit, inObj, inObj2, inNum);
 }
 // a request's C++ op as reqhost.rs made it (the maker's: NewHostOp above)
 static RustServerOp* MadeOp(void* inOp) { return static_cast<RustServerOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))); }
@@ -79,27 +79,18 @@ RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr)
 {
     return MadeOp(ee_won_hostop_new_request(inOp, false, NULL, reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), -1, NULL));
 }
-GetCertOp::GetCertOp(AuthContext* inContext) : RustServerOp(ee_won_hostop_getcert())
+// the certificate op of an auth context and its servers, and the two peer authentication ops (hostbase.rs's inits)
+RustServerOp* RustServerOp::NewGetCert(AuthContext* inContext)
 {
-    ee_won_hostop_set_two(this->GetRustOp(), EE_WON_REQHOST_CONTEXT, static_cast<RefCount*>(inContext->GetServerContext().get()),
-                          EE_WON_GETCERT_AUTH_CONTEXT, static_cast<RefCount*>(inContext));
+    return new RustServerOp(ee_won_hostop_getcert(), EeWonHostInit::GetCert, inContext->GetServerContext().get(), inContext);
 }
-ConstSmartPtr<AuthPeerData> GetCertOp::GetPeerData() const
+RustServerOp* RustServerOp::NewPeerAuth(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2)
 {
-    return AuthPeerData::Adopt(reinterpret_cast<EeWonAuthObj*>((intptr_t)ee_won_hostop_num(this->GetRustOp(), EE_WON_GETCERT_PEER_DATA, 0)));
+    return new RustServerOp(ee_won_hostop_peerauth(reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), inUseAuth2), EeWonHostInit::PeerAuth, inContext, inSocket, inType);
 }
-// A peer auth op for an address, auth context, auth type and socket (ee_won peerop.rs)
-PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
-                       bool inUseAuth2)
-    : RustServerOp(ee_won_hostop_peerauth(reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), inUseAuth2))
+RustServerOp* RustServerOp::NewPeerAuthServer(AuthContext* inContext, BlockingSocket* inSocket)
 {
-    ee_won_hostop_set_auth(this->GetRustOp(), inType, static_cast<RefCount*>(inContext), true, static_cast<RefCount*>(inSocket));
-}
-// A server-side peer auth op for an auth context and an accepted socket (ee_won peerop.rs)
-PeerAuthServerOp::PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket)
-    : RustServerOp(ee_won_hostop_peerauth_server())
-{
-    ee_won_hostop_set_auth(this->GetRustOp(), AUTH_TYPE_NONE, static_cast<RefCount*>(inContext), true, static_cast<RefCount*>(inSocket));
+    return new RustServerOp(ee_won_hostop_peerauth_server(), EeWonHostInit::PeerAuthServer, inContext, inSocket);
 }
 void RustServerOp::SetNum(int inWhich, long long inNum)
 {
@@ -111,14 +102,7 @@ void RustServerOp::Set(int inWhich, RefCount* inObj)
 }
 IPAddr RustServerOp::GetCurAddr() const { return this->AddrOf(EE_WON_REQHOST_CUR_ADDR); }
 IPAddr RustServerOp::GetAddr() const { return this->AddrOf(EE_WON_REQHOST_ADDR); }
-IPAddr RustServerOp::AddrOf(int inWhich) const
-{
-    std::string anAddr;
-    ee_won_hostop_bytes(this->mRustOp, inWhich, 0, StrSink, &anAddr);
-    IPAddr a;
-    if (anAddr.size() == 6) a.SetSixByte(anAddr.data());
-    return a;
-}
+IPAddr RustServerOp::AddrOf(int inWhich) const { return IPAddr::FromValue(ee_won_hostop_addr(this->mRustOp, inWhich)); }
 void RustServerOp::StrSink(void* inContext, const uint8_t* inData, size_t inLength)
 {
     static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inData), inLength);
@@ -184,9 +168,7 @@ void RustServerOp::SetBytes(int inWhich, const std::string& inBytes)
 }
 BlockingSocket* RustServerOp::GetHttpSocket() const
 {
-    BlockingSocket* aSocket = static_cast<BlockingSocket*>(reinterpret_cast<RefCount*>((intptr_t)this->GetNum(EE_WON_HTTPGET_SOCKET)));
-    if (aSocket == NULL || !aSocket->IsConnected()) return NULL;
-    return aSocket;
+    return static_cast<BlockingSocket*>(static_cast<RefCount*>(ee_won_hostop_connected_socket(this->mRustOp, EE_WON_HTTPGET_SOCKET)));
 }
 RustServerOp* RustServerOp::NewHttpDocument(const std::string& inProduct, int inType)
 {

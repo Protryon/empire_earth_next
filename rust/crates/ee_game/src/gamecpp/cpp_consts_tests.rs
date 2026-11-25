@@ -13,7 +13,7 @@ const HEADERS: [&str; 7] = [
     "include/rust/render/gestate.h",
     "include/ee/EEMap.h",
     "include/ee/EEUnitGoal.h",
-    "include/ee/EETechTreeTechID.h",
+    "include/rust/sim/tech_tree_ids.h",
 ];
 
 /// A C++ constant's value: `#define NAME value` or an enumerator `NAME = value,` of the headers.

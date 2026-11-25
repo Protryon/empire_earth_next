@@ -109,12 +109,6 @@ void EEGameState::SetScenarioManager(EEScenarioManager* inManager)
 
 // ------------------------------------------------------------------------- the loader's C++ (gamecpp persist_save.rs)
 
-double EEPHelpersOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-
-double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEPHelpersOpF(inOp, p, a, f);
-}
 
 // ------------------------------------------------------------------------- round 11, lane C: the loader's C++
 

@@ -107,7 +107,7 @@ pub unsafe extern "C" fn ee_gamecpp_ambient_host(context: *mut c_void, op: i32, 
             h(O::EaForgetSound, s, &[]);
         }
         EE_APP_AMBIENT_OP_TIME_OF_DAY => io.volume = hd(O::EaTimeOfDay, 0, &[], &[]),
-        EE_APP_AMBIENT_OP_TIME => io.n = h(O::EaTime, 0, &[]) as u32,
+        EE_APP_AMBIENT_OP_TIME => io.n = ee_base::time::ee_time_get(),
         EE_APP_AMBIENT_OP_VISIBLE_TILES => io.n = h(O::EaVisibleTiles, 0, &[]) as u32,
         EE_APP_AMBIENT_OP_VISIBLE_WATER => io.volume = hd(O::EaVisibleWater, 0, &[], &[]),
         EE_APP_AMBIENT_OP_VISIBLE_SPACE => io.volume = hd(O::EaVisibleSpace, 0, &[], &[]),

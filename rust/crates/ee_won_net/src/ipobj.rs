@@ -478,6 +478,31 @@ pub unsafe extern "C" fn ee_won_ipaddr_from_raw(a: *mut EeWonIpAddr, raw: *const
     v.host = unsafe { bytes(r.host, r.host_len) }.to_vec();
 }
 
+/// A server list's `AddAddress` (2ac4b0), `NotifyFailed` (2ac980) and `RemoveAddress` with an `IPAddr`'s value (which: 0, 1, 2);
+/// `NotifyFailed` answers false.
+///
+/// # Safety
+/// `c` is a live list, `a` a live address value.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_ctx_ip(
+    c: *const crate::servctx::ServerList,
+    which: i32,
+    a: *const EeWonIpAddr,
+) -> bool {
+    // SAFETY: the caller's contract
+    unsafe {
+        let raw = ee_won_ipaddr_to_raw(a);
+        match which {
+            0 => crate::servctx::ee_won_ctx_add(c, &raw),
+            1 => {
+                crate::servctx::ee_won_ctx_notify_failed(c, &raw);
+                false
+            }
+            _ => crate::servctx::ee_won_ctx_remove(c, &raw),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

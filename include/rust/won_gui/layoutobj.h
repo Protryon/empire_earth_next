@@ -8,6 +8,26 @@
 #include <stddef.h>
 #include "rust/won_gui/guihost.h"
 
+/// The manager's inward calls.
+enum class EeWonLayoutMgrCall : uint32_t {
+  /// `ExecuteInstructions((Component*)a)` (the container).
+  Execute = 1,
+  /// `AddInstruction(a)` (`a` the `ChildLayoutInstructionBase*`, `b` its `EeWonLayout*`).
+  AddInstruction,
+  /// `AddLayoutPoint((LayoutPoint*)a)` (as a `Component*`).
+  AddLayoutPoint,
+  /// `RemoveComponent((Component*)a)`.
+  RemoveComponent,
+  Clear,
+  /// `EnableInstructions(a, b != 0)`.
+  EnableInstructions,
+  /// `Container::AddChildLayout(a, c)` on the container `d` (`a` the instruction, `b` its `EeWonLayout*`, `c` the
+  /// group id).
+  AddChildLayout,
+  /// The number of instructions (a test read).
+  Count,
+};
+
 /// The instruction classes.
 enum class EeWonLayoutKind : uint32_t {
   /// `ChildLayoutInstructionBase` itself: Execute does nothing, UsesComponent is false.
@@ -43,26 +63,6 @@ enum class EeWonLayoutCall : uint32_t {
   GroupId,
   /// `mEnabled` (0 or 1).
   Enabled,
-};
-
-/// The manager's inward calls.
-enum class EeWonLayoutMgrCall : uint32_t {
-  /// `ExecuteInstructions((Component*)a)` (the container).
-  Execute = 1,
-  /// `AddInstruction(a)` (`a` the `ChildLayoutInstructionBase*`, `b` its `EeWonLayout*`).
-  AddInstruction,
-  /// `AddLayoutPoint((LayoutPoint*)a)` (as a `Component*`).
-  AddLayoutPoint,
-  /// `RemoveComponent((Component*)a)`.
-  RemoveComponent,
-  Clear,
-  /// `EnableInstructions(a, b != 0)`.
-  EnableInstructions,
-  /// `Container::AddChildLayout(a, c)` on the container `d` (`a` the instruction, `b` its `EeWonLayout*`, `c` the
-  /// group id).
-  AddChildLayout,
-  /// The number of instructions (a test read).
-  Count,
 };
 
 /// A child layout instruction.
@@ -106,30 +106,25 @@ EeWonLayout *ee_won_layout_new_basic(void *comp,
                                      bool horz,
                                      bool vert);
 
-/// `ChildLayoutInstruction`'s constructor: the Rust instruction.
+/// The numbers of `PercentLayout(target, PercentLayoutParam(left, top, right, bottom, px, py, pw, ph, lp, tp, rp,
+/// bp))` (R6 WON GUI round 35: the param class, its SetBorders, SetPercentages and SetPadding and the layout's
+/// constructor): `given` the four anchors as the config read them, `ints` the eight numbers.
 ///
 /// # Safety
-/// As `ee_won_layout_new`'s.
-EeWonLayout *ee_won_layout_new_child(void *comp,
-                                     EeWonGuiHostFn host,
-                                     int32_t flags,
-                                     void *child,
-                                     void *reference,
-                                     int32_t x,
-                                     int32_t y,
-                                     int32_t width,
-                                     int32_t height);
+/// `given` holds four pointers and `ints` eight integers.
+EeWonLayoutInit ee_won_layout_init_percent(void *target,
+                                           void *const *given,
+                                           const int32_t *ints);
 
-/// `PercentLayout`'s constructor: the Rust instruction (`anchors` the param's left, top, right and bottom; `ints`
-/// its px, py, pw, ph, lp, tp, rp, bp).
-///
-/// # Safety
-/// As `ee_won_layout_new`'s; `anchors` four pointers and `ints` eight integers.
-EeWonLayout *ee_won_layout_new_percent(void *comp,
-                                       EeWonGuiHostFn host,
-                                       void *target,
-                                       void *const *anchors,
-                                       const int32_t *ints);
+/// `ChildLayoutInstruction(flags, child, reference, x, y, width, height)`'s numbers (`child_init`), for the one
+/// instruction class's constructor.
+EeWonLayoutInit ee_won_layout_init_child(int32_t flags,
+                                         void *child,
+                                         void *reference,
+                                         int32_t x,
+                                         int32_t y,
+                                         int32_t width,
+                                         int32_t height);
 
 /// Frees a Rust instruction (its list held no references).
 ///

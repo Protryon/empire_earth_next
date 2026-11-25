@@ -92,16 +92,5 @@ EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
 // the C++ calls and members of lane C's bodies in Rust (gamecpp session_objs.rs, ...; EeGameCpp's round 11 lane C
 // section) are the cases of a chain of switches beside the members they read: EEServer.cpp (C2) -> EEClient.cpp (C3)
 // -> EEMessage.cpp (C4) -> lane E
-int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEServer.cpp
 
-int64_t EECore11OpC(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore11OpC2(inOp, p, a, f);
-}
 
-double EECore11OpC5F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEContagionManager.cpp
-
-double EECore11OpCF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore11OpC5F(inOp, p, a, f);
-}

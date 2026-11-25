@@ -244,17 +244,7 @@ namespace WONAPI {
 // Input filter that accepts only digits, with a leading minus sign allowed at the start of the box
 bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
 {
-    int aPos = 0;
-    if(theStr[0]=='-')
-    {
-        if(theInputBox->GetSelStart()>0)
-            return false;
-        aPos++;
-    }
-    for(;aPos<theStr.length();aPos++)
-        if(!isdigit(theStr[aPos]))
-            return false;
-    return true;
+    return ee_won_input_numeric_filter(theStr.mData->mText, theStr.length(), theInputBox->GetSelStart());
 }
 
 // Creates an empty input box with the InputBox font, system colours and the I-beam cursor (the Rust box holds the

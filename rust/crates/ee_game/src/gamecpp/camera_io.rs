@@ -132,7 +132,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_host(context: *mut c_void, op: i32, i
         }
         EE_APP_CAMERA_OP_FLAGS => {
             io.id = switches(
-                on(O::EcFreeCamera),
+                crate::gamecpp::globals::get!(gFreeCamera),
                 on(O::EcFarRearClipping),
                 on(O::EcInCinematic),
                 on(O::EcOrthographic),

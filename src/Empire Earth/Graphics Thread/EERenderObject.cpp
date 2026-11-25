@@ -110,12 +110,6 @@ RTSRenderObject::~RTSRenderObject()
 }
 
 // The scene, the frame's lists, the lighting and the posts: gamecpp render_object.rs (EECore9OpA's cases below)
-void EEInitialiseScene() { ee_gamecpp_ro_initialise_scene(); }
-void EEReleaseScene() { ee_gamecpp_ro_release_scene(); }
-void EEStartLetterboxOut(unsigned long inFrames) { ee_gamecpp_ro_letterbox(true, inFrames); }
-void EEStartLetterboxIn(unsigned long inFrames) { ee_gamecpp_ro_letterbox(false, inFrames); }
-void EEStartLightFadeIn(unsigned long inFrames) { ee_gamecpp_ro_light_fade(false, inFrames); }
-void EEStartLightFadeOut(unsigned long inFrames) { ee_gamecpp_ro_light_fade(true, inFrames); }
 void SetSceneFog() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::SceneFog); }
 void SetLightingOff() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Off); }
 void SetTerrainLighting() { ee_gamecpp_ro_lighting((uint32_t)EeGfxLighting::Terrain); }
@@ -386,10 +380,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::RoAmbientUpdate: gAmbientSoundManager.Update();
         break;
     // the terrain, the viewport, the rasterizer
-    case O::RoVisibleRowCount: return gWorld.mMap->mTerrainMesh.GetNumVisibleTileRows();
-    case O::RoVisibleRow: gWorld.mMap->mTerrainMesh.GetVisibleTileRow((unsigned long)a[0], ((long*)a[1])[0], ((long*)a[1])[1], ((long*)a[1])[2]);
-        break;
-    case O::RoMeshCliffTextureCount: return gWorld.mMap->mTerrainMesh.NumSpaceCliffTextures();
     case O::RoMeshSetCliffTextures: gWorld.mMap->mTerrainMesh.SetSpaceCliffTextures(gU4E8EF0);
         break;
     case O::RoCliffTexturesCount: return (int64_t)gU4E8EF0.size();
@@ -401,8 +391,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoRastViewport: return RO_P64(&gRasterizer->GetViewport(gScreenIndex));
     case O::RoRastLightMesh: gRasterizer->Light(gWorld.mMap->mTerrainMesh, gScreenIndex);
-        break;
-    case O::RoRastClearBlack: gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), *(const GERectangle*)a[0], gScreenIndex);
         break;
     case O::RoShowAllBackgrounds: gUIManager->GetMainGameForm()->ShowAllBackgrounds();
         break;
@@ -424,22 +412,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::RoScreenPoint: GetScreenPoint(*(const GE3DPoint*)a[0], *(GE2DPoint*)a[1]);
         break;
-    case O::RoRastFog: gRasterizer->SetFog((unsigned long)a[0], gScreenIndex);
-        break;
-    case O::RoRastFogColor: gRasterizer->SetFogColor(GEColor(f[0], f[1], f[2]), gScreenIndex);
-        break;
-    case O::RoRastFogRange: gRasterizer->SetFogRange(f[0], f[1], gScreenIndex);
-        break;
-    case O::RoRastFogType: gRasterizer->SetFogType((unsigned long)a[0], gScreenIndex);
-        break;
-    case O::RoRastAmbientColor: gRasterizer->SetAmbientColor(GEColor(f[0], f[1], f[2]), gScreenIndex);
-        break;
-    case O::RoRastAmbientIntensity: gRasterizer->SetAmbientIntensity(f[0], gScreenIndex);
-        break;
-    case O::RoRastRemoveLights: gRasterizer->RemoveAllLights(gScreenIndex);
-        break;
-    case O::RoRastLighting: gRasterizer->SetLighting((unsigned long)a[0], gScreenIndex);
-        break;
     case O::RoLightColor: gU4E9198.SetColor(GEColor(f[0], f[1], f[2]));
         break;
     case O::RoLightIntensity: gU4E9198.SetIntensity(f[0]);
@@ -452,22 +424,6 @@ int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     // the textures, the text and the screen line the raster table makes
     case O::RoLoadTexture: return RO_P64(gTextureManager->LoadTexture(UString((const char*)a[0]), *(const GETextureDescription*)a[1]));
-    case O::RoTexReference: RO_TEX->Reference();
-        break;
-    case O::RoTexAlphaMode: RO_TEX->SetStageAlphaMode((unsigned long)a[0], -1);
-        break;
-    case O::RoTexColorMode: RO_TEX->SetStageColorMode((unsigned long)a[0], -1);
-        break;
-    case O::RoTexMinFilter: RO_TEX->SetStageMinFilterMode((unsigned long)a[0], -1);
-        break;
-    case O::RoTexMagFilter: RO_TEX->SetStageMagFilterMode((unsigned long)a[0], -1);
-        break;
-    case O::RoTexMipFilter: RO_TEX->SetStageMipFilterMode((unsigned long)a[0], -1);
-        break;
-    case O::RoTexMipBias: RO_TEX->SetStageMipMapBias(f[0], -1);
-        break;
-    case O::RoTexAddressing: RO_TEX->SetStageTextureAddressingMode((unsigned long)a[0], -1);
-        break;
     case O::RoTextNew: return RO_P64(new GEText(gFontTahoma10));
     case O::RoTextDelete: delete RO_TEXT;
         break;

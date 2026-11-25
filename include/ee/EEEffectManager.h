@@ -68,8 +68,4 @@ private:
 
 extern EEEffectManager*& gEffectManager;
 
-// TEST ONLY (EE-SIM --effect-sweep; tools/sim_capture.py --profile effects): every swept effect kind made in the
-// game's world at its end, stepped, saved and loaded (ee_gfx effect_sweep.rs)
-void EEEffectCaptureSweep();
-
 #endif

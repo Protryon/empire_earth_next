@@ -71,19 +71,19 @@ static IPAddr sServerAddr;
 // the op's map read and set through its Rust object (the class's GetFriendStatusMap / SetFriendStatusMap copies, as
 // they were until R6 WON round 32 moved them to the routing logic's Rust)
 static void MapSink(void* inContext, uint64_t inId, uint8_t inStatus) { (*static_cast<StatusMap*>(inContext))[(unsigned long)inId] = inStatus; }
-static StatusMap MapOf(RoutingGetUserStatusOp* inOp)
+static StatusMap MapOf(UDPManagerSendRecvOp* inOp)
 {
     StatusMap aMap;
-    ee_won_userstatus_each(inOp->GetRust(), MapSink, &aMap);
+    ee_won_userstatus_each(UserStatusOf(inOp), MapSink, &aMap);
     return aMap;
 }
-static void SetMap(RoutingGetUserStatusOp* inOp, const StatusMap& inMap)
+static void SetMap(UDPManagerSendRecvOp* inOp, const StatusMap& inMap)
 {
-    ee_won_userstatus_clear(inOp->GetRust());
-    for (StatusMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i) ee_won_userstatus_put(inOp->GetRust(), i->first, i->second);
+    ee_won_userstatus_clear(UserStatusOf(inOp));
+    for (StatusMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i) ee_won_userstatus_put(UserStatusOf(inOp), i->first, i->second);
 }
 #else
-static StatusMap MapOf(RoutingGetUserStatusOp* inOp) { return inOp->GetFriendStatusMap(); }
+static StatusMap MapOf(UDPManagerSendRecvOp* inOp) { return inOp->GetFriendStatusMap(); }
 #endif
 
 // one query: the op made, its ids added (or its whole map set), run; the scripted replies answer its request
@@ -91,7 +91,7 @@ static void Query(const char* inName, const std::vector<unsigned long>& inIds, b
                   const std::vector<std::string>& inReplies, bool inFast = false)
 {
     Log(std::string("== ") + inName);
-    SmartPtr<RoutingGetUserStatusOp> anOp = new RoutingGetUserStatusOp(sServerAddr, sManager);
+    SmartPtr<UDPManagerSendRecvOp> anOp = new UDPManagerSendRecvOp(ee_won_userstatus_body(), sServerAddr, sManager);
     if (inWholeMap) {
         StatusMap m;
         for (size_t i = 0; i < inIds.size(); i++)
@@ -103,7 +103,7 @@ static void Query(const char* inName, const std::vector<unsigned long>& inIds, b
 #endif
     } else {
         for (size_t i = 0; i < inIds.size(); i++)
-            anOp->AddWONUserId(inIds[i]);
+            ee_won_userstatus_add(UserStatusOf(anOp.get()), inIds[i]);
     }
     Log("before " + Show(MapOf(anOp.get())) + " retransmits " + N(anOp->GetNumRetransmits()) + " timeout "
         + N((long long)anOp->GetMsgTimeout()));

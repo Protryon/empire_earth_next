@@ -62,8 +62,8 @@ bool EEParseCommandLine(const char* inCommandLine)
 
 // The command line's C++ calls and members (EeGameCpp's lane E section; Empire Earth.cpp's EECore9OpE default): one
 // statement each; the end of the chain
-int64_t EECore10OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // round 10 (EEGraphics.cpp)
 
+int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEROUnits.cpp
 int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -75,8 +75,6 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
     case O::EntryClientStartThreads: static_cast<EEClient*>(gCommunications)->StartThreads();
         break;
     case O::EntryDeleteCommunicationsKeep: delete gCommunications;
-        break;
-    case O::EntryNullCommunications: gCommunications = NULL;
         break;
     case O::EntrySetPlayerName: gPlayerName = UWideString((const char*)a[0]);
         break;
@@ -121,7 +119,7 @@ int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const flo
         break;
     case O::EntryStartLoadingInput: gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
         break;
-    default: return EECore10OpA(inOp, p, a, f);
+    default: return EERoUnitsOp(inOp, p, a, f);
     }
     return 0;
 }

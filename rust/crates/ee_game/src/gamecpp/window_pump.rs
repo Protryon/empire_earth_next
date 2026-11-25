@@ -133,7 +133,8 @@ unsafe extern "C" fn native_hook(window: *mut c_void, message: u32, _: u64, _: i
 /// EERun's set-up: the pump on this (the window's) thread, and on Windows the native message hook.
 #[cfg(not(test))]
 pub fn install() {
-    h(O::RunSetEventPump, 0, &[pa(pump as *const () as P)]);
+    // SAFETY: the platform's id of this thread
+    ee_base::ts::ee_ts_set_event_pump(Some(pump), unsafe { ee_base::plat_sys::thread::imp::PlatCurrentThreadId() });
     #[cfg(windows)]
     // SAFETY: the platform's hook slot
     unsafe {

@@ -2,6 +2,7 @@
 // unit's doppelganger (what another player last saw of it), then EEComplexUnit's Load/FinishLoad/RepairPointers/Save
 // (0x1f2452..0x1f5180; the std template COMDATs close the unit at 0x1f5180..0x1f57d3). 0x1f1f19..0x1f57d3 (after
 // EEActiveGroup.cpp; EEComplexUnit.cpp follows).
+#include <memory>
 #include <windows.h>
 #include <stdio.h>
 
@@ -71,18 +72,20 @@ static void RestoreLoadedContacts()
 static unsigned long sLoadSecond;
 static size_t sLoadSlot;
 
-// Reads the complex unit's state from the saved game, keeping units and groups as ids for RepairPointers and queueing
-// its pending path; fields newer than the file get defaults; returns the read status. port (R5b.4, round 26): the
-// body is Rust (ee_units unit_load.rs, with RTSUnit's and EEUnit's parts) over the records this class derives from,
-// EEUnitSaveOperation's parts and dop_save.rs's sections
-long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+// A unit's Load (inLoad) or Save: the Rust body (ee_units unit_load.rs, unit_save.rs) over the records of the unit's
+// parts (inDepth 0: RTSUnit's alone, 1: with EEUnit's, 2: with EEComplexUnit's, whose load has a stand-in goal queue
+// and whose versions name the live and running state) and EEUnitSaveOperation's parts
+long EEUnitFile(bool inLoad, RTSUnit* inUnit, int inDepth, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& ioFile)
 {
-    EEUnitVectorItem theGoals(this);
-    EEUnitSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, &theGoals};
+    EEUnit* theUnit = inDepth >= 1 ? static_cast<EEUnit*>(inUnit) : NULL;
+    EEComplexUnit* theComplex = inDepth >= 2 ? static_cast<EEComplexUnit*>(inUnit) : NULL;
+    std::unique_ptr<EEUnitVectorItem> theGoals(inLoad && theComplex != NULL ? new EEUnitVectorItem(theComplex) : NULL);
+    EEUnitSaveContext theContext = {inUnit, &ioFile, inMajorVersion, inMinorVersion, theGoals.get()};
     EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
-                               (uint8_t)(EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0),
-                               (uint8_t)(EESaveHasRunningState(inMajorVersion, inMinorVersion) ? 1 : 0)};
-    return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, this, this, &theIn);
+                               (uint8_t)(theComplex != NULL && EESaveHasLiveState(inMajorVersion, inMinorVersion)),
+                               (uint8_t)(theComplex != NULL && EESaveHasRunningState(inMajorVersion, inMinorVersion))};
+    return inLoad ? ee_units_unit_load(&theContext, &EEUnitSaveOperation, inUnit, theUnit, theComplex, &theIn)
+                  : ee_units_unit_save(&theContext, &EEUnitSaveOperation, inUnit, theUnit, theComplex, &theIn);
 }
 
 // RepairPointers's locals (the cargo and research kept, the new turret angles)
@@ -110,50 +113,6 @@ template <class T> static uint64_t EEDopHandle(T* inObject)
 static long sDopModelID;
 static EeUnitsFinishLoadIn sDopMaxima;   // FinishLoad's maxima (dop_more.rs)
 static std::vector<std::pair<std::pair<EEComplexUnit*, unsigned long>, std::vector<unsigned long> > > sDopContacts;
-
-// a complex doppelganger's member (dop_file.rs EE_UNITS_DOP_FIELD_*) read from the file
-static long EEDopReadField(EEComplexDoppelganger* inDop, FSFile& inFile, int64_t inField)
-{
-    switch (inField) {
-    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: return inFile.Read(inDop->mPackedHitPoints);
-    case EE_UNITS_DOP_FIELD_FRAME: return inFile.Read(inDop->mFrame);
-    case EE_UNITS_DOP_FIELD_ANIMATION: return inFile.Read(inDop->mAnimation);
-    case EE_UNITS_DOP_FIELD_SCALE: return inFile.Read(inDop->mScale);
-    case EE_UNITS_DOP_FIELD_TILE_X: return inFile.Read(inDop->mTileX);
-    case EE_UNITS_DOP_FIELD_TILE_Y: return inFile.Read(inDop->mTileY);
-    default: return inFile.Read(inDop->mIsFoundation);
-    }
-}
-
-// a complex doppelganger's member written to the file
-static long EEDopWriteField(EEComplexDoppelganger* inDop, FSFile& outFile, int64_t inField)
-{
-    switch (inField) {
-    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: return outFile.Write(inDop->mPackedHitPoints);
-    case EE_UNITS_DOP_FIELD_FRAME: return outFile.Write(inDop->mFrame);
-    case EE_UNITS_DOP_FIELD_ANIMATION: return outFile.Write(inDop->mAnimation);
-    case EE_UNITS_DOP_FIELD_SCALE: return outFile.Write(inDop->mScale);
-    case EE_UNITS_DOP_FIELD_TILE_X: return outFile.Write(inDop->mTileX);
-    case EE_UNITS_DOP_FIELD_TILE_Y: return outFile.Write(inDop->mTileY);
-    default: return outFile.Write(inDop->mIsFoundation);
-    }
-}
-
-// a complex doppelganger's member copied from another's
-static void EEDopCopyField(EEComplexDoppelganger* inDop, EEComplexDoppelganger* inOther, int64_t inField)
-{
-    switch (inField) {
-    case EE_UNITS_DOP_FIELD_MODEL: inDop->mModel = inOther->mModel; break;
-    case EE_UNITS_DOP_FIELD_FRAME: inDop->mFrame = inOther->mFrame; break;
-    case EE_UNITS_DOP_FIELD_ANIMATION: inDop->mAnimation = inOther->mAnimation; break;
-    case EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS: inDop->mPackedHitPoints = inOther->mPackedHitPoints; break;
-    case EE_UNITS_DOP_FIELD_SCALE: inDop->mScale = inOther->mScale; break;
-    case EE_UNITS_DOP_FIELD_TRANSFORMATION: inDop->mTransformation = inOther->mTransformation; break;
-    case EE_UNITS_DOP_FIELD_TILE_X: inDop->mTileX = inOther->mTileX; break;
-    case EE_UNITS_DOP_FIELD_TILE_Y: inDop->mTileY = inOther->mTileY; break;
-    default: inDop->mIsFoundation = inOther->mIsFoundation; break;
-    }
-}
 
 // The C++ of EEComplexUnit::RepairPointers's Rust body (ee_units dop_repair.rs; EE_UNITS_DOP_*): one statement of the
 // original each, in its order; inA an object, inB and inC values
@@ -313,11 +272,10 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_LOAD_TRANSFORMATION: theDop->mTransformation.Load(*theFile); return 0;
     case EE_UNITS_DOP_READ_MODEL_ID: return theFile->Read(sDopModelID);
     case EE_UNITS_DOP_SET_MODEL_FROM_ID: theDop->mModel = reinterpret_cast<EEModel*>(sDopModelID); return 0;
-    case EE_UNITS_DOP_READ_FIELD: return EEDopReadField(theDop, *theFile, inB);
+    // (the fields' reads, writes and copies: Rust over the record, dop_file.rs)
     case EE_UNITS_DOP_BASE_SAVE: return theDop->EEDoppelganger::Save((unsigned long)inB, (unsigned long)inC, *theFile);
     case EE_UNITS_DOP_SAVE_TRANSFORMATION: theDop->mTransformation.Save(*theFile); return 0;
     case EE_UNITS_DOP_WRITE_MODEL_ID: return theFile->Write((long)theDop->mModel->mMediaIndex);
-    case EE_UNITS_DOP_WRITE_FIELD: return EEDopWriteField(theDop, *theFile, inB);
     case EE_UNITS_DOP_BASE_INITIALIZE:
         theDop->EEDoppelganger::Initialize(theSeen, EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC));
         return 0;
@@ -354,7 +312,9 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOP_BASE_INITIALIZE_COPY:
         theDop->EEDoppelganger::Initialize(EEDopObject<EEDoppelganger>(inA), EEDopObject<EEPlayer>((uint64_t)inB), EEDopObject<RTSTile>((uint64_t)inC));
         return 0;
-    case EE_UNITS_DOP_COPY_FIELD: EEDopCopyField(theDop, dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA)), inB); return 0;
+    case EE_UNITS_DOP_FIELDS: return (int64_t)EEDopHandle(static_cast<EeUnitsComplexDopFields*>(theDop));
+    case EE_UNITS_DOP_OTHER_FIELDS: return (int64_t)EEDopHandle(static_cast<EeUnitsComplexDopFields*>(dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA))));
+    case EE_UNITS_DOP_COPY_TRANSFORMATION: theDop->mTransformation = dynamic_cast<EEComplexDoppelganger*>(EEDopObject<EEDoppelganger>(inA))->mTransformation; return 0;
     case EE_UNITS_DOP_CONTACTS_TAKE: sDopContacts.clear(); sDopContacts.swap(sLoadedContacts); return 0;
     case EE_UNITS_DOP_CONTACTS_COUNT: return (int64_t)sDopContacts.size();
     case EE_UNITS_DOP_CONTACTS_VALID:
@@ -412,19 +372,6 @@ extern "C" int64_t ee_units_dop_host(int32_t inOp, void* inUnit, uint64_t inA, i
     case EE_UNITS_DOPX_BASE_FINISH_LOAD: return theUnit->EEUnit::FinishLoad((long)inB, (long)inC);
     default: return 0;
     }
-}
-
-// Writes the complex unit's state to the saved game, units and groups as ids and hit points, flight time, garrison
-// and power as fractions of their maximum; returns the write status.
-// port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs, with RTSUnit's and EEUnit's parts) over the records
-// this class derives from and EEUnitSaveOperation's parts
-long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    EEUnitSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
-    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
-                               (uint8_t)(EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0),
-                               (uint8_t)(EESaveHasRunningState(inMajorVersion, inMinorVersion) ? 1 : 0)};
-    return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, this, this, &theIn);
 }
 
 // The C++ parts of the units' saves (ee_units unit_save.rs): the file's primitives with the overload the original

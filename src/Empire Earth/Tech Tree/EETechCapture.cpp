@@ -346,7 +346,6 @@ int64_t EECore11OpC7(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::TkCurrentPlayer: return P64(gWorld.GetCurrentPlayer());
     case O::TkPlayerIndex: return TREE->mPlayerIndex;
     case O::TkPlId: return (int64_t)TPL->mPlayerID;
-    case O::TkEpochTitle: return EEEpochTitleID((long)a[0]);
     case O::TkPostShowEpochName: gUserInterface->PostShowEpochName();
         break;
     case O::TkMainGameForm: return P64(gUIManager->GetMainGameForm());

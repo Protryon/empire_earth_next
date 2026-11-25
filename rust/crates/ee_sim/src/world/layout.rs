@@ -162,6 +162,8 @@ pub struct EeWorldLayout {
     /// `EEButtonObject*`)
     pub stats_unit_class: u64,
     pub stats_button: u64,
+    /// `EeUnitsUnitClassUpgradeLinks` in `EEUnitClassUpgrade` (units round 11: the two above are derived from it)
+    pub stats_links: u64,
     // ---- the physics (the units' round 1: the game time and tick of the views)
     /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
     pub physics_pointer: u64,
@@ -213,6 +215,8 @@ pub struct EeWorldLayout {
     /// `EEGraphicEffect*` members, `GetEffects()`)
     pub class_projectile_class: u64,
     pub class_effects: u64,
+    /// `EeUnitsUnitClassLinks` in `EEUnitClass` (units round 11: the two above are derived from it)
+    pub class_links: u64,
     /// `EeUnitsActiveGroupFields` in `EEActiveGroup` (its second base) and `EEActiveGroup::mGoal` (an
     /// `EEUnitGoal*`)
     pub active_group_fields: u64,
@@ -280,6 +284,23 @@ pub fn derive_record_members(l: &mut EeWorldLayout) {
     fill(&mut l.complex_mine, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mMine));
     fill(&mut l.complex_herd, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mHerd));
     fill(&mut l.complex_behavior, l.complex_unit_fields, offset_of!(EeUnitsComplexUnitFields, mBehavior));
+    {
+        use crate::world::stats_fields::EeUnitsUnitClassUpgradeLinks as S;
+        use crate::world::unit_class_fields::EeUnitsUnitClassLinks as C;
+        fill(&mut l.class_projectile_class, l.class_links, offset_of!(C, mProjectileClass));
+        fill(&mut l.class_effects, l.class_links, offset_of!(C, mAttachedEffect));
+        fill(&mut l.stats_unit_class, l.stats_links, offset_of!(S, mUnitClass));
+        fill(&mut l.stats_button, l.stats_links, offset_of!(S, mButton));
+    }
+    // a goal is its Rust object (goal_obj.rs: the C++ EEUnitGoal is EeUnitsGoalBase, asserted in EEUGRust.cpp); a build
+    // queue entry the record EeUnitsProductionEntry (units round 11)
+    use crate::units::goal_obj::EeUnitsGoalBase;
+    use crate::world::unit_fields::EeUnitsProductionEntry;
+    fill(&mut l.goal_kind, 0, offset_of!(EeUnitsGoalBase, kind));
+    fill(&mut l.goal_id, 0, offset_of!(EeUnitsGoalBase, id));
+    fill(&mut l.build_entry_stride, 0, std::mem::size_of::<EeUnitsProductionEntry>());
+    fill(&mut l.build_entry_technology, 0, offset_of!(EeUnitsProductionEntry, mTechnology));
+    fill(&mut l.build_entry_flag, 0, offset_of!(EeUnitsProductionEntry, mFlag));
 }
 
 /// The registered layout (None before the C++ registered it, as in the unit tests).

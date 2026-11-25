@@ -259,17 +259,17 @@ int main(int argc, char** argv)
         }
         SmartPtr<BlockingSocket> aPeerSocket = new BlockingSocket(AsyncSocket::TCP);
         Log("peer socket " + Fresh(R(aPeerSocket.get())));
-        SmartPtr<PeerAuthOp> aPeer = new PeerAuthOp(IPAddr("127.0.0.1", 15104), aCtx.get(), AUTH_TYPE_PERSISTENT,
+        SmartPtr<RustServerOp> aPeer = RustServerOp::NewPeerAuth(IPAddr("127.0.0.1", 15104), aCtx.get(), AUTH_TYPE_PERSISTENT,
                                                     aPeerSocket.get(), true);
         sOp = aPeer.get();
         Log("peer auth " + Fresh(R(aPeer.get())) + " socket refs " + N(Refs(R(aPeerSocket.get()))));
         Own("peer auth");
         Log("peer auth cert status " + N(Num(EE_WON_HOST_PEER_AUTH_CERT, R(aPeer.get()))));
-        SmartPtr<PeerAuthServerOp> aPeerServer = new PeerAuthServerOp(aCtx.get(), aPeerSocket.get());
+        SmartPtr<RustServerOp> aPeerServer = RustServerOp::NewPeerAuthServer(aCtx.get(), aPeerSocket.get());
         sOp = aPeerServer.get();
         Log("peer auth server " + Fresh(R(aPeerServer.get())));
         Own("peer auth server");
-        SmartPtr<GetCertOp> aCert = new GetCertOp(aCtx.get());
+        SmartPtr<RustServerOp> aCert = RustServerOp::NewGetCert(aCtx.get());
         sOp = aCert.get();
         Log("get cert " + Fresh(R(aCert.get())));
         Own("get cert");

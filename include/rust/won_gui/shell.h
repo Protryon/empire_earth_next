@@ -390,6 +390,12 @@ ptrdiff_t ee_won_shell_op(const EeWonShell *s, EeWonShellOp op, ptrdiff_t a, ptr
 /// `s` is a live shell.
 EeWonShellKind ee_won_shell_kind(const EeWonShell *s);
 
+/// [`skin_part_fits`] for the shell `s` (NULL: the component is not a shell) and the class `name`.
+///
+/// # Safety
+/// `s` is a live shell or NULL; `name` is NUL-terminated.
+bool ee_won_shell_skin_part(const EeWonShell *s, const char *name);
+
 /// The deleted class's name (NUL-terminated, static).
 ///
 /// # Safety

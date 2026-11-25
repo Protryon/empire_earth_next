@@ -240,7 +240,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ContagionCreate: return ::gWorld.GetContagionManager()->CreateContagionHelper((EEContagionFunctor*)p, (EECalamity*)a[0], (EEUnit*)a[1]);
     case O::ContagionDestroyVerify: ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper((long)a[0]), a[1]);
         break;
-    case O::HelperAddUnit: return EEContagionHelperAddUnit((EEContagionHelper*)p, (EEUnit*)a[0], a[1] != 0);
     case O::AeHas: return gAEManager.HasAreaEffect((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
     case O::AeCreate: return P64(gAEManager.CreateAreaEffect((unsigned long)a[0], (EEComplexUnit*)a[1]));
     case O::RefDereference: ((UReferenceCounter*)(EEAreaEffect*)p)->Dereference();
@@ -480,7 +479,6 @@ extern "C" int64_t ee_gamecpp(EeGameCpp inOp, uintptr_t p, const int64_t* a, con
     case O::FilePuts: fputs((const char*)a[0], (FILE*)p);
         break;
     // the calamity capture's (calamity_capture.rs, TEST ONLY)
-    case O::GfxEffectIndex: return EEGraphicEffect::IndexOf((EEGraphicEffect*)p);
     case O::SoundObjectIndex: return std::find(gSoundObjects.begin(), gSoundObjects.end(), (EESoundObject*)p) - gSoundObjects.begin();
     case O::CalamityManager: return P64(EECalamityManager::GetInstance());
     case O::MemFilePosition: return ee_gamecpp_mem_position((FSMemoryFile*)p);

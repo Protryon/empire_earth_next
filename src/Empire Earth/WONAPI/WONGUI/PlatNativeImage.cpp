@@ -24,16 +24,14 @@
 
 namespace WONAPI {
 
-PlatNativeIcon::~PlatNativeIcon() {}
-
 void WONImageThrow(int inStatus) { FileReaderCheck(inStatus); }
 
 // A blank (black) image of the given size at the lobby surface's pixel scale (the windows' offscreen images and
 // what the GUI composes for them)
 static NativeImage* NewOffscreen(int inWidth, int inHeight)
 {
-    PlatWindowManager* theManager = dynamic_cast<PlatWindowManager*>(WindowManager::GetDefaultWindowManager());
-    return new NativeImage(NULL, inWidth, inHeight, theManager != NULL ? theManager->GetPixelScale() : 1.0f);
+    WindowManager* theManager = WindowManager::GetDefaultWindowManager();
+    return new NativeImage(NULL, inWidth, inHeight, theManager != NULL && theManager->mRust != NULL ? theManager->GetPixelScale() : 1.0f);
 }
 
 SmartPtr<NativeImage> DisplayContext::CreateImage(int width, int height) { return NewOffscreen(width, height); }
@@ -57,9 +55,7 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             EeWonImage* theRust = (EeWonImage*)a;
             Image* theImage;
             switch (ee_won_image_kind(theRust)) {
-                case EeWonImageKind::Raw32: theImage = new RawImage32(theRust); break;
-                case EeWonImageKind::Raw8: theImage = new RawImage8(theRust); break;
-                case EeWonImageKind::Raw1: theImage = new RawImage(theRust); break;
+                case EeWonImageKind::Raw32: case EeWonImageKind::Raw8: case EeWonImageKind::Raw1: theImage = new RawImage(theRust); break;
                 case EeWonImageKind::Native: theImage = new NativeImage(theRust); break;
                 case EeWonImageKind::Stretch: theImage = new StretchImage(theRust); break;
                 case EeWonImageKind::StretchCenter: theImage = new StretchCenterImage(theRust); break;
@@ -101,7 +97,7 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             return Held(theNew);
         }
         case H::NewGraphics: {
-            Graphics* theNew = new PlatGraphics;
+            Graphics* theNew = new Graphics;
             theNew->Attach(theContext);
             return (intptr_t)theNew;
         }
@@ -116,8 +112,5 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
     }
     return 0;
 }
-
-const EeWonPlatCursorFns PlatCursor::kFns = {(void (*)(uint32_t))PlatCursorSetSystem, PlatCursorCreate, PlatCursorSet,
-                                             PlatCursorDestroy};
 
 } // namespace WONAPI

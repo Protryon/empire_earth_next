@@ -939,7 +939,7 @@ WON_TESTS = {
     # GUIStringData's buffer: the original's edits against guistrobj.rs (golden: rust/crates/ee_won_gui/src/golden_guistrobj.txt)
     "won_guistrobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
     # Graphics: the original's statements against gfxobj.rs under traced hooks (golden: rust/crates/ee_won_gui/src/golden_gfxobj.txt)
-    "won_gfxobj_test": [WON_SRC / "WONGUI" / f for f in ("Graphics.cpp", "GUIStringSingleton.cpp")],
+    "won_gfxobj_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],  # (Graphics.cpp as it was: won_gfxobj_port.h)
     # Window::GetFont's font cache: the original's std::map statements against fontmap.rs (no units)
     "won_fontmap_test": [],
     # ConfigObject / ConfigValue, the .cfg grammar (golden: rust/crates/ee_won_net/src/golden_cfgobj.txt)
@@ -950,6 +950,10 @@ WON_TESTS = {
     # R6 WON round 34's leaf classes (browserobj.rs, tipobj.rs, localize.rs: BrowserComponent, ListAreaToolTip,
     # StringLocalize::GetStr) against the deleted C++ over a stand-in world, real GUIStrings and real page files
     "won_leaf34_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
+    # R6 WON GUI round 35: the cursors as one Rust object (cursorobj.rs) against the original Cursor, CursorRef,
+    # ComponentCursor and PlatCursor, the standard cursors' table and the window's cursor change over a counted world;
+    # every host op mutated; the clipboard (clipobj.rs) against PlatClipboard.cpp's bodies
+    "won_win35_test": [WON_SRC / "WONGUI" / "GUIStringSingleton.cpp"],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
@@ -1031,6 +1035,15 @@ WON_TESTS["won_ctl35_test"] = []
 # the lobby logics' host cases R6 WON lobby and network round 35 composed in Rust (logicsplit.rs) against the deleted
 # cases over a stand-in world, every new op skipped in turn
 WON_TESTS["won_logic35_test"] = []
+# the lobby logics' one shell (R6 WON lobby and network round 36: logicshell.rs's routes, dialog rows and completions)
+# against the six classes as they were, every route spoiled in turn
+WON_TESTS["won_shell36_test"] = []
+# the logics' host cases R6 WON lobby and network round 36 composed in Rust (lobbyops.rs) that no LAN game reaches,
+# against the deleted cases, every new op skipped in turn
+WON_TESTS["won_host36_test"] = []
+# the lobby's ping op (R6 WON lobby and network round 36: a UDPManagerSendRecvOp with a Rust body) against the
+# original PingGameOp over a real UDPManager on 127.0.0.1, with mutations; its units are won_ops_test's
+WON_TESTS["won_ping36_test"] = WON_TESTS["won_ops_test"]
 
 
 # A WON or network test program links the game's Rust library without the game's C++ and SDL. The objects it takes

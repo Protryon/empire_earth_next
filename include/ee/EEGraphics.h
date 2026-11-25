@@ -71,12 +71,6 @@ extern EEGraphics* gGraphics;
 
 // the graphics thread's settings the messages change (EERenderObject.cpp's range, 0x10ac30..; cdecl free functions
 // or statics: provisional names)
-void EEInitialiseScene();                   // 0x10ae74 (message 0x503: resets ~40 render globals)
-void EEReleaseScene();                      // 0x10f239 (message 0x504 and ~EEGraphics)
-void EEStartLightFadeIn(unsigned long inValue);  // 0x10f37d (message 0x506: 1/inValue, or FLT_MAX for 0)
-void EEStartLightFadeOut(unsigned long inValue);  // 0x10f3c6 (message 0x507)
-void EEStartLetterboxIn(unsigned long inValue);  // 0x10b36a (message 0x508)
-void EEStartLetterboxOut(unsigned long inValue);  // 0x10b31e (message 0x509)
 extern bool gB529066;                       // 0x529066 (cleared before each frame's render objects; provisional name)
 extern bool gB529068;                       // 0x529068 (likewise)
 

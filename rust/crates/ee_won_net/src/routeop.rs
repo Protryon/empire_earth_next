@@ -1124,8 +1124,10 @@ impl RouteOp {
 // ---- the C ABI
 
 /// A routing op, as the C++ `RoutingOp` holds it.
-/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none).
-pub struct EeWonRouteOp(pub RouteOp, pub usize);
+/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none); the third a firewall
+/// check's listening socket (the deleted `RoutingDetectFirewallOp::mListenSocket`: a `BlockingSocket*` as its
+/// `RefCount*` with a reference, 0 for none; routecpp.rs, R6 WON lobby and network round 36).
+pub struct EeWonRouteOp(pub RouteOp, pub usize, pub std::cell::Cell<usize>);
 
 /// A record copied out (`ee_won_routeop_records`): the fields of its kind are set; texts are UTF-16 units and the
 /// pointers are valid only during the sink's call.
@@ -1240,7 +1242,7 @@ unsafe fn op_mut<'a>(op: *mut EeWonRouteOp) -> &'a mut RouteOp {
 /// A new op of a type (`RoutingOpType`) with its constructor's members.
 #[no_mangle]
 pub extern "C" fn ee_won_routeop_new(ty: i32) -> *mut EeWonRouteOp {
-    Box::into_raw(Box::new(EeWonRouteOp(RouteOp::new(ty), 0)))
+    Box::into_raw(Box::new(EeWonRouteOp(RouteOp::new(ty), 0, std::cell::Cell::new(0))))
 }
 
 /// Frees an op.
@@ -1251,7 +1253,10 @@ pub extern "C" fn ee_won_routeop_new(ty: i32) -> *mut EeWonRouteOp {
 pub unsafe extern "C" fn ee_won_routeop_free(op: *mut EeWonRouteOp) {
     if !op.is_null() {
         // SAFETY: the contract
-        drop(unsafe { Box::from_raw(op) });
+        let op = unsafe { Box::from_raw(op) };
+        // a firewall check's listening socket (the member's reference; closed by the clean-up)
+        crate::cppcore::ref_release(op.2.get() as *mut c_void);
+        drop(op);
     }
 }
 

@@ -44,7 +44,6 @@ EEGraphics::EEGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMo
 // ------------------------------------------------------------------------- the graphics bodies' C++ (gamecpp graphics.rs)
 
 
-int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define GFX ((EEGraphics*)p)
@@ -53,6 +52,7 @@ int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const fl
 
 // The graphics thread object's C++ calls and members (EeGameCpp's graphics section; Empire Earth.cpp's EEStartupOp
 // default): one statement each
+int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -61,8 +61,6 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::GfxQueueDoneSet: GFX->mMessageQueueDone->Set();
         break;
     case O::GfxPostRedrawUI: GFX->PostRedrawUI();
-        break;
-    case O::GfxRenderTo: GFX->RenderTo((EEScreenCapture*)a[0]);
         break;
     case O::RtsGfxFrameStarting: GFX->RTSGraphics::FrameStarting();
         break;
@@ -79,7 +77,6 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::UiUnlockForCopy: gUIManager->UnlockUIForCopyData();
         break;
     case O::AntiAliasing: return gAntiAliasing;
-    case O::RastDirtyRectangleSupport: return gRasterizer->GetDirtyRectangleSupport(gScreenIndex);
     case O::WorldReadLock: gWorld.mLock->ReadLock();
         break;
     case O::WorldReadUnlock: gWorld.mLock->ReadUnlock();
@@ -90,23 +87,11 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::SceneFlags6668Clear: gB529066 = false, gB529068 = false;
         break;
-    case O::LightFadeIn: EEStartLightFadeIn((unsigned long)a[0]);
-        break;
-    case O::LightFadeOut: EEStartLightFadeOut((unsigned long)a[0]);
-        break;
-    case O::LetterboxIn: EEStartLetterboxIn((unsigned long)a[0]);
-        break;
-    case O::LetterboxOut: EEStartLetterboxOut((unsigned long)a[0]);
-        break;
-    case O::InitialiseScene: EEInitialiseScene();
-        break;
     case O::MouseBeginFrame: gMouse->BeginFrame();
         break;
     case O::MouseLoadScreenIndex: gMouse->Load(gRasterizer->GetScreen(gScreenIndex));
         break;
     case O::MouseEndFrame: gMouse->EndFrame();
-        break;
-    case O::TimeOfDay: TMGetTimeOfDay(*(TMTime*)a[0]);
         break;
     case O::TakeJpgScreenshots: return gTakeJPGScreenshots;
     case O::CaptureIsPostGame: return CAPTURE->mIsPostGame;
@@ -140,8 +125,6 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::RtSetOrthographic: gOrthographicView = a[0] != 0;
         break;
-    case O::RtProjectionMode: gRasterizer->SetProjectionMode((unsigned long)a[0], (unsigned long)a[1]);
-        break;
     case O::RtMapL195610: return gWorld.mMap->mL195610;
     case O::RtMapL195614: return gWorld.mMap->mL195614;
     case O::RtTargetPixelFormat: return gRasterizer->GetRenderTarget((unsigned long)a[0])->GetPixelFormat();
@@ -155,31 +138,15 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::RtCopyTo: gRasterizer->GetRenderTarget((unsigned long)a[0])->CopyTo(CAPTURE->mSurface, *(GERectangle*)a[1], *(GERectangle*)a[2], false);
         break;
-    default: return EEGraphicsOpNext(inOp, p, a, f);
+    default: return EECore9OpA(inOp, p, a, f);
     }
     return 0;
 }
 
-// round 9's cases (EERenderObject.cpp's EECore9OpA, then B..E)
-int64_t EECore9OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EEGraphicsOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EECore9OpA(inOp, p, a, f);
-}
-
 // ------------------------------------------------------------------------- round 10, lane A: the Graphics Thread (EEGraphics.cpp, the EERO* units, EEMouse, EERenderSnapshot, EEUnitPicker)
-
-// the next switches of the lane (EEROUnits.cpp's, then EERenderSnapshot.cpp's and EEMouse.cpp's, whose default is
-// EECore10OpB)
-int64_t EERoUnitsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 10 lane A section): one
 // statement each
-int64_t EECore10OpA(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EERoUnitsOp(inOp, p, a, f);   // (its cases are EEGraphicsOp's)
-}
-
 double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
