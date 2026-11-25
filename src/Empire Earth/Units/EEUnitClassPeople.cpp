@@ -113,12 +113,6 @@ extern "C" int64_t ee_units_cz_host(int32_t inOp, uint64_t inA, uint64_t inB, Ee
 // alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); VirtualB8,
 // then EEComplexUnit::ContinueProduction after its first user.
 
-// Starts the next production when nothing is being produced and the build queue is not empty
-void EEComplexUnit::ContinueProduction()
-{
-    if (this->mProductionTime == 0 && this->GetBuildQueueSize() != 0)
-        this->StartProduction();
-}
 
 // ---- EEUCNavalCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval citizen's
 // unit class (a fishing boat): 0x218490..0x21880c (after EEUCNavalBuilding.cpp; EEUCNavalPriest.cpp's out-of-line
@@ -142,9 +136,8 @@ static const float kBasicPriestSoundFactor = 4.0f;     // 0x446fe4 (the conversi
 // Returns the faith a conversion by a unit costs: the world table's entry 46, at most the unit's own power (0 if none)
 long EEGetConversionCost(EEComplexUnit* inUnit)
 {
-    EeCombatConversionCostIn theIn = {(int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost),
-                                      (int32_t)inUnit->mStats->mPower};
-    return EECombatConversionCost(theIn);
+    return EECombatConversionCost(EeCombatConversionCostIn{(int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost),
+                                                           (int32_t)inUnit->mStats->mPower});
 }
 
 // Works a conversion with enough faith: stops at an ally or own unit, shows the effects and warns the target's owner,

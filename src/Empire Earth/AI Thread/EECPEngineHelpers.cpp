@@ -26,24 +26,10 @@
 // 0x43bf0c (.rdata; both neighbours are this unit's constants): declared extern in ee/EEGlobalConstants.h
 const float kHeightEpsilon = 0.01f;
 
-// Returns true when the given unit is in this unit's cargo
-bool EEComplexUnit::HasCargo(EEComplexUnit* inCargo)
-{
-    return std::find(this->mCargo.begin(), this->mCargo.end(), inCargo) != this->mCargo.end();
-}
-
 // Returns true when the player has explored the tile (visibility above 1) or sees the whole map
 bool EETile::IsSeenBy(EEPlayer* inPlayer)
 {
     return this->GetVisibility(inPlayer->mPlayerID) > 1 || inPlayer->mSeesAll;
-}
-
-// Returns the squared distance from the unit's position to a tile
-float EEComplexUnit::DistanceSquaredToTileXY(long inTileX, long inTileY)
-{
-    float theDX = this->mPhysicalModel.GetLocation().GetX() - inTileX;
-    float theDY = this->mPhysicalModel.GetLocation().GetY() - inTileY;
-    return theDY * theDY + theDX * theDX;
 }
 
 // Returns the squared tile distance from the stored centre tile to a given tile
@@ -54,20 +40,8 @@ long EETileDistanceLess::DistanceSquared(const EETileCoordinate& inTile) const
     return theDX * theDX + theDY * theDY;
 }
 
-// Returns the number of goal queues the unit has
-unsigned long EEComplexUnit::GetNumGoalQueues()
-{
-    return this->mGoalQueues.size();
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // Engine members the deleted economy managers' units emitted (stage 6, docs/AI_LUA_VERBS.md)
-
-// Returns whether a technology is in the unit's build queue
-bool EEComplexUnit::IsResearchQueued(long inTechnology)
-{
-    return std::find(this->mBuildQueue.begin(), this->mBuildQueue.end(), inTechnology) != this->mBuildQueue.end();
-}
 
 // Returns true for waypoint and path point units
 bool EEUnit::IsPathMarker()

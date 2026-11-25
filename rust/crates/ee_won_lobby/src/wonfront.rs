@@ -1448,6 +1448,39 @@ pub extern "C" fn ee_won_front_reset() {
     set_last(&ROOMS_LAST_UPDATE, 0);
 }
 
+/// The front-end call a WON screen event's ProcessEvent makes (`EEWonFrontEvent`'s), or -1 for the three events
+/// that pop the manager's form instead (ArBack, MuaCancel, SsCancel: `EEUIEWNPop`): `FrontNewEvent`'s class.
+#[no_mangle]
+pub extern "C" fn ee_won_front_event_call(event: EeWonFrontEvent) -> i32 {
+    use EeWonFrontCall as C;
+    use EeWonFrontEvent as E;
+    let call = match event {
+        E::ArBack | E::MuaCancel | E::SsCancel => return -1,
+        E::AgActivateForm => C::AgActivateForm,
+        E::AgBack => C::AgBack,
+        E::AgCheckPassword => C::AgCheckPassword,
+        E::AgClickGameFilter => C::AgClickGameFilter,
+        E::AgCloseForm => C::AgCloseForm,
+        E::AgDeactivateForm => C::AgDeactivateForm,
+        E::AgDoubleclickUser => C::AgDoubleclickUser,
+        E::AgHostOrJoinGame => C::AgHostOrJoinGame,
+        E::AgSendChat => C::AgSendChat,
+        E::AgToggleHostScreen => C::AgToggleHostScreen,
+        E::AgToggleJoinScreen => C::AgToggleJoinScreen,
+        E::AgUpdateForm => C::AgUpdateForm,
+        E::ArActivateForm => C::ArActivateForm,
+        E::ArClickUpdateAccount => C::ArClickUpdateAccount,
+        E::ArDeactivateForm => C::ArDeactivateForm,
+        E::ArDoubleClickRoom => C::ArDoubleClickRoom,
+        E::ArJoinRoom => C::ArJoinRoom,
+        E::ArUpdateForm => C::ArUpdateForm,
+        E::MuaOpenScreen => C::MuaOpenScreen,
+        E::MuaSubmit => C::MuaSubmit,
+        E::SsOk => C::SsOk,
+    };
+    call as i32
+}
+
 #[cfg(test)]
 #[path = "wonfront_tests.rs"]
 mod tests;

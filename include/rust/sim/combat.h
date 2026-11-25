@@ -246,6 +246,15 @@ constexpr static const int32_t EE_UNITS_CG_MODEL_PARTS = 5000;
 /// `mStats->GetScale()` of the unit (`f[0]`)
 constexpr static const int32_t EE_UNITS_CG_STATS_SCALE = 5001;
 
+/// turret part `c` of the unit's model: its `mPosition` into the three floats at `b` (units round 12)
+constexpr static const int32_t EE_UNITS_CG_TURRET_POSITION = 13010;
+
+/// the model's `GetTurretPartTransformation(c)` into the sixteen floats at `b`
+constexpr static const int32_t EE_UNITS_CG_TURRET_TRANSFORMATION = 13011;
+
+/// the unit's `mTurretAngles[c]` (`f[0]`)
+constexpr static const int32_t EE_UNITS_CG_TURRET_ANGLE = 13012;
+
 /// `object->mIgnoredTargets[a[0]].mTileX`
 constexpr static const int32_t EE_COMBAT_W_IGN_TILE_X = 100;
 
@@ -2833,6 +2842,15 @@ void ee_combat_capture_read_of(uint32_t which,
                                uint32_t e1,
                                uint32_t e2);
 
+/// The query host's footprint read (`EeCombatQueryHost::footprint_tile`, EECombatGoals.cpp's EEQueryHostOf): the tile
+/// of `object`'s footprint nearest to the context's unit, `mUnit->GetNearestFootprintTile(object, &x, &y)`.
+/// # Safety
+/// `context` is EECombatGoals.cpp's query context, whose first member is the call's unit; `object` a live unit;
+/// `out` two ints.
+void ee_units_cgq_footprint_tile(void *context,
+                                 uint64_t object,
+                                 int32_t (*out)[2]);
+
 /// `EECombatFacesPoint(class, unit, location, useTolerance)` (the point's x, y)
 /// # Safety
 /// Inside the game's call; the class and unit live.
@@ -3458,6 +3476,18 @@ int32_t ee_combat_regions_restore(EeCombatUnitRegions *table,
 int32_t ee_combat_screen(EeCombatScreenIn *input,
                          void *context,
                          EeCombatScreenDistance distance);
+
+/// `EEFOFindNewTargetInMeleeRange::Virtual04`/`Virtual08` (units round 12; was EEUnitClass.cpp's EEMeleeScreen): the
+/// candidate (`hit_points`) is alive and nearer to the screen's unit than `range` (`EEGetHitDistanceSquared` of the
+/// unit and the candidate, measured from the unit); TEST ONLY: the CBFS capture record (the record, then the answer
+/// as an `int32_t`, as `EECombatCapture` wrote it).
+///
+/// # Safety
+/// `unit` and `candidate` are live complex units.
+bool ee_units_melee_screen(uint64_t unit,
+                           uint64_t candidate,
+                           int32_t hit_points,
+                           float range);
 
 /// A shot's `ActionChanged` over the C++ host (`unit`: the shot, its plain reads the store's).
 ///

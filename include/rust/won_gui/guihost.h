@@ -978,6 +978,8 @@ enum class EeWonGuiOp : uint32_t {
   WmSizeEvSetW,
   /// `((SizeEvent*)a)->mHeight = b`.
   WmSizeEvSetH,
+  /// `t->AddSegment(((const GUIString*)a)->substr(b, c), d != 0)` (AddFormatedText's line, guitext.rs).
+  TextAddPart = 3400,
   /// TabCtrl's constructor: `new Container` (unheld, as a `Component*`).
   TabNewContainer = 3200,
   /// TabCtrl's constructor: `new TabBar((EeWonTabCtrl*)a)` (unheld, as a `Component*`).
@@ -1204,6 +1206,10 @@ using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
                                     ptrdiff_t d);
 
 extern "C" {
+
+/// The `Cursor*` a host op's cursor names (GuiHost.cpp's CursorOf until R6 WON GUI round 36): the standard
+/// table's cursor of its kind (cursorobj.rs), NULL for `None`, an unknown value or a kind never set.
+ptrdiff_t ee_won_gui_cursor(ptrdiff_t cursor);
 
 /// The `WindowEventType` a `FireEvent` op delivers (`ee/wonapi/WONEventTypes.h`): the host fires exactly this, so
 /// no event code needs a case of its own in the C++ (round 23's lists fired every event but InputReturn as

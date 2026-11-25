@@ -447,6 +447,18 @@ pub extern "C" fn ee_units_gq_new(unit: u64) -> *mut EeUnitsGoalQueue {
     Box::into_raw(Box::new(EeUnitsGoalQueue { unit, ..Default::default() }))
 }
 
+/// `EEUnitVectorItem(const EEUnitVectorItem&)` (0x20569d): a copy of another queue: its goals cloned (last to first)
+/// for the same unit, its timer.
+///
+/// # Safety
+/// `other` is a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_gq_copy(other: *const EeUnitsGoalQueue) -> *mut EeUnitsGoalQueue {
+    let q = ee_units_gq_new(0);
+    EeUnitsGoalQueue::assign(q, other, &mut Goals);
+    q
+}
+
 /// `~EEUnitVectorItem()`: the queue cleared (its goals deleted), then freed.
 ///
 /// # Safety

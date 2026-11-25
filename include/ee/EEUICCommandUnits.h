@@ -25,7 +25,6 @@ public:
     virtual long DrawPolygons() { return this->Rust(EE_SCREENS_CU_DO_DRAW); }
     // +0x88 0x25829c: a right button press at inLocation (EEUIFMainGame; EESEUICCommandUnits 0x197383)
     virtual void StartCommand(const GE2DPoint& inLocation) { this->Rust(EE_SCREENS_CU_DO_START, &inLocation); }
-protected:
     virtual long MouseLButtonDoublePressed() { return 0; }
     virtual long MouseMove(const GE2DPoint& inLocation) { return this->Rust(EE_SCREENS_CU_DO_MOUSE_MOVE, &inLocation); }
     virtual long MouseRButtonUp() { return this->Rust(EE_SCREENS_CU_DO_MOUSE_R_UP); }
@@ -36,7 +35,6 @@ protected:
         return (long)ee_screens_command_units(this, this->Host(), inWhich, inLocation ? inLocation->GetX() : 0.0f, inLocation ? inLocation->GetY() : 0.0f);
     }
 
-public:   // (for the shims of ee_screens command_units_calls.rs)
 };
 
 #endif

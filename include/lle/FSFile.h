@@ -24,14 +24,10 @@
 static_assert(sizeof(short) == 2 && sizeof(float) == 4 && sizeof(double) == 8 && sizeof(bool) == 1,
               "FSFile value widths");
 
-// Open() access modes (names from NERecordPlayback.cpp's assert texts; values from its calls: Open(1) to read a
-// playback file, Open(2) to write a record file; FSBasicFile +0x34 stores the mode)
-enum {                                      // FSFileAccess is Rust's (rust/base/lle_enums.h)
-    kfsaRead = kFileAccessRead,             // spelled this way in the original's assert strings
-    kfsaWrite = kFileAccessWrite
-};
+// (Open()'s access modes are FSFileAccess, rust/base/lle_enums.h: kFileAccessRead 1, kFileAccessWrite 2; the original's
+// assert texts spelled them kfsaRead and kfsaWrite.)
 
-class FSFileSpec;
+#include "lle/LLEForward.h"
 
 // The file classes are one class (LLE round 12): FSFile holds what FSBasicFile (the names, access, version, open flag)
 // and FSFileSpec (a file on disk: the platform handle and stream) had, its members whole in Rust
@@ -118,7 +114,6 @@ public:
     long Write(const long& inValue) { return this->Write(static_cast<int32_t>(inValue)); }
     long Write(const unsigned long& inValue) { return this->Write(static_cast<uint32_t>(inValue)); }
 
-protected:
     FSFile() : mVolume(256), mDirectory(256), mFile(256) { ee_fs_basic_init(Rec()); }
     // the names copied; access, version and the open flag reset; no handle or stream
     FSFile(const FSFile& inFile) : mHandle(NULL), mStream(NULL) { ee_fs_basic_init_copy(Rec(), inFile.Rec()); }

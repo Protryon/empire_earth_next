@@ -76,10 +76,6 @@ static_assert(sizeof(PlatInputEvent) == sizeof(EeWonPlatEvent), "platwm.rs reads
 
 static uint32_t TickNow() { return (uint32_t)PlatTimeMilliseconds64(); }
 
-static const int kInputTypes[] = {InputEvent_GotFocus, InputEvent_LostFocus, InputEvent_MouseExit};
-static const int kKeyTypes[] = {InputEvent_KeyDown, InputEvent_KeyUp, InputEvent_KeyChar};
-static const int kMouseTypes[] = {InputEvent_MouseMove, InputEvent_MouseDown, InputEvent_MouseDoubleClick,
-                                  InputEvent_MouseUp, InputEvent_MouseWheel};
 
 // The Rust manager's calls on the windows and the platform (EeWonPlatWmOp), each the original's statement
 static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
@@ -93,11 +89,11 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     case Op::SetRegistered: w->mRegistered = b != 0; return 0;
     case Op::FollowSurface: w->FollowSurface(); return 0;
     case Op::FollowPixelScale: w->FollowPixelScale(); return 0;
-    case Op::QueueInput: w->QueueEvent(new InputEvent(kInputTypes[b])); return 0;
-    case Op::QueueKey: w->QueueEvent(new KeyEvent(kKeyTypes[b], (int)c, (int)d)); return 0;
+    case Op::QueueInput: w->QueueEvent(new InputEvent((int)b)); return 0;
+    case Op::QueueKey: w->QueueEvent(new KeyEvent((int)b, (int)c, (int)d)); return 0;
     case Op::QueueMouse: {
         const int32_t* p = (const int32_t*)c;
-        w->QueueMouse(kMouseTypes[b], p[0], p[1], p[2], p[3]);
+        w->QueueMouse((int)b, p[0], p[1], p[2], p[3]);
         return 0;
     }
     case Op::Parent: return (intptr_t)dynamic_cast<PlatGUIWindow*>(w->GetParent());

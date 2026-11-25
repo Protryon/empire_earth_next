@@ -24,7 +24,6 @@ public:
     void Pause() { ee_time_poll_pause(&this->mState); }
     void Resume() { ee_time_poll_resume(&this->mState); }
     unsigned long Poll() { return ee_time_poll_poll(&this->mState); }
-private:
     EeTimePoll mState;                      // +0x00 start, pause remainder, unit, delay, counter, running
 };
 

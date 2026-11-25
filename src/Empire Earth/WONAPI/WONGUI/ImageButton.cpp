@@ -14,9 +14,7 @@
 using namespace WONAPI;
 // Creates an image button that takes focus but not tab focus, with stretching off
 ImageButton::ImageButton() {
-    this->SetButtonFlags(1,true);
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->SetComponentFlags(ComponentFlag_WantTabFocus,false);
+    ee_won_btn_image_init(this->mBtn,static_cast<Component*>(this));
     this->mStretch=false;
 }
 // Destroys the image button (members only)

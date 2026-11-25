@@ -81,6 +81,44 @@ pub unsafe extern "C" fn ee_input_initialize(
     0
 }
 
+/// The keys' names from the resource strings `first_id`, `first_id + 1`, ... (`ISInitialize`'s loop over
+/// `UResourceFile::GetString`): a string the table lacks records native error 1814 and keeps the name before it
+/// (the loop's one string, empty at first).
+pub fn key_names(first_id: c_ulong) -> Vec<Vec<u8>> {
+    let mut name = vec![0u8];
+    (0..super::devices::KEY_CODES.len() as c_ulong)
+        .map(|i| {
+            match crate::util::strings::resource_string_for_get((i + first_id) as u16) {
+                Some(text) => name = text,
+                None => {
+                    crate::error::ee_error_record_native(1814);
+                }
+            }
+            name.clone()
+        })
+        .collect()
+}
+
+/// `ISInitialize` whole: the keys' names from the resource strings (`has_names`: the game passed a resource file;
+/// else the English names), then [`ee_input_initialize`].
+///
+/// # Safety
+/// As [`ee_input_initialize`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_input_initialize_strings(
+    window: *mut c_void,
+    has_names: bool,
+    first_id: c_ulong,
+    double_press_delay: c_ulong,
+    keyboard: *mut *const EeInputKeyboard,
+    mouse: *mut *const EeInputMouse,
+) -> c_long {
+    let names = if has_names { key_names(first_id) } else { Vec::new() };
+    let pointers: Vec<*const c_char> = names.iter().map(|n| n.as_ptr().cast()).collect();
+    let list = if has_names { pointers.as_ptr() } else { ptr::null() };
+    ee_input_initialize(window, list, double_press_delay, keyboard, mouse)
+}
+
 /// `ISShutdown` (a shutdown-list function): the mouse and the keyboard suspended and destroyed, their globals
 /// cleared, then the devices.
 ///
@@ -160,5 +198,21 @@ mod tests {
         }
         assert_eq!(*RELATIVE_CALLS.lock().unwrap(), vec![(0x40, 1), (0x40, 0), (0x40, 1), (0x40, 0)]);
         ee_input_set_double_press_delay(250);
+    }
+
+    #[test]
+    fn the_key_names_come_from_the_strings_and_a_missing_one_repeats() {
+        let names = key_names(100);
+        assert_eq!(names.len(), crate::input::devices::KEY_CODES.len());
+        for (i, n) in names.iter().enumerate() {
+            assert_eq!(n.last(), Some(&0), "NUL-terminated");
+            match crate::util::strings::resource_string_for_get(100 + i as u16) {
+                Some(text) => assert_eq!(*n, text),
+                None if i > 0 => assert_eq!(*n, names[i - 1]),
+                None => assert_eq!(*n, [0]),
+            }
+        }
+        // past the table: every name is the empty first one
+        assert!(key_names(60000).iter().all(|n| *n == [0]));
     }
 }

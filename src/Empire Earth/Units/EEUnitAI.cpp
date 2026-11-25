@@ -81,9 +81,7 @@ static GEBoundingBox sCondSunkBox;
 
 static void CondPoint(EeUnitsCondIo* ioIo, const GE3DPoint& inPoint)
 {
-    ioIo->p[0] = inPoint.GetX();
-    ioIo->p[1] = inPoint.GetY();
-    ioIo->p[2] = inPoint.GetZ();
+    memcpy(ioIo->p, &inPoint.mX, sizeof(ioIo->p));   // (a GE3DPoint is its three floats)
 }
 
 extern "C" int64_t ee_units_cls_cond_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD, EeUnitsCondIo* ioIo)

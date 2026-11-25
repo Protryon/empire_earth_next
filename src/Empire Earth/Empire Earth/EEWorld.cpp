@@ -211,15 +211,6 @@ static void EEActiveRefs(uint32_t inID, int32_t inDelta)
         theUnit->Dereference();
 }
 
-// Resets the unit's collision state, collision tile and collision resolution count
-// (an EEComplexUnit member defined here: ReplacePlayer and the unit change call it; provisional name)
-void EEComplexUnit::ClearCollisionState()
-{
-    this->mCollisionState = 0;
-    this->mCollisionTile.mY = this->mCollisionTile.mX = -10000;
-    this->mCollisionResolutionCount = 0.0f;
-}
-
 // Adds the world's state and the game's random seed to a sync checksum
 void EEWorld::GetChecksum(ESChecksum& ioChecksum)
 {

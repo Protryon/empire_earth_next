@@ -83,6 +83,30 @@ pub unsafe extern "C" fn ee_won_fontmap_free(m: *mut EeWonFontMap) {
     }
 }
 
+/// Window::FontMap's destructor (its C++ loop until R6 WON GUI round 36): every font popped in the map's order and
+/// each one not NULL given back through `release`, then the map freed.
+///
+/// # Safety
+/// `m` is a map from `ee_won_fontmap_new` (or NULL), not used after; `release` takes the fonts the map holds.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_fontmap_free_releasing(m: *mut EeWonFontMap, release: extern "C" fn(isize)) {
+    if m.is_null() {
+        return;
+    }
+    loop {
+        // SAFETY: the caller's contract (the map stays live until the free below)
+        let font = unsafe { &mut *m }.pop();
+        if font < 0 {
+            break;
+        }
+        if font != 0 {
+            release(font);
+        }
+    }
+    // SAFETY: the caller's contract
+    unsafe { ee_won_fontmap_free(m) };
+}
+
 /// `GetFont`'s lookup of the descriptor (`face` its `n` bytes): its font, or 0 (the entry is made).
 ///
 /// # Safety
@@ -187,6 +211,28 @@ mod tests {
                 }
             }
         }
+    }
+
+    thread_local! { static RELEASED: std::cell::RefCell<Vec<isize>> = const { std::cell::RefCell::new(Vec::new()) }; }
+    extern "C" fn release(f: isize) {
+        RELEASED.with(|r| r.borrow_mut().push(f));
+    }
+
+    /// Window::FontMap's destructor: each font in the map's order given back, an entry left NULL skipped.
+    #[test]
+    fn freeing_releases_every_font_once() {
+        let m = ee_won_fontmap_new();
+        // SAFETY: the test's map
+        let mm = unsafe { &mut *m };
+        for (f, st, v) in [(&b"b"[..], 0, 0x10), (b"a", 0, 0x20), (b"c", 1, 0)] {
+            mm.lookup(f, st, 10);
+            mm.store(f, st, 10, v);
+        }
+        // SAFETY: the map, not used after
+        unsafe { ee_won_fontmap_free_releasing(m, release) };
+        RELEASED.with(|r| assert_eq!(*r.borrow(), [0x20, 0x10]));
+        // SAFETY: NULL is no map
+        unsafe { ee_won_fontmap_free_releasing(std::ptr::null_mut(), release) };
     }
 
     #[test]

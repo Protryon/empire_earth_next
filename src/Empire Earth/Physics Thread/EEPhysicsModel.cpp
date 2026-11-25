@@ -72,11 +72,6 @@ void EEInitPhysicsModels() { ee_units_pm_set_trample_min(gWorldTable.GetFloatVal
 void EEFreePhysicsModels() {}
 
 // The unit's rates (its active group's when the group moves together): ee_units pm_flight.rs rate
-float EEComplexUnit::GetMaxAngularVelocity() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_MAX_ANGULAR_VELOCITY); }
-float EEComplexUnit::GetAngularAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_ANGULAR_ACCELERATION); }
-float EEComplexUnit::GetAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_ACCELERATION); }
-float EEComplexUnit::GetInverseAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_INVERSE_ACCELERATION); }
-float EEComplexUnit::GetInverseAngularAcceleration() { return ee_units_pm_unit_rate(this, EE_UNITS_PM_RATE_INVERSE_ANGULAR_ACCELERATION); }
 
 // NEAR: register choice only (ecx vs eax for the class pointer)
 // Returns whether the unit swims: it has a swim animation, stands on deep water and cruises above the ground

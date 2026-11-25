@@ -71,9 +71,7 @@ void EEComplexUnit::SetActiveGroup(EEActiveGroup* inGroup)
 // (was EECPEngineHelpers.cpp's, out of line after its first user there)
 float EEComplexUnit::GetMaxVelocity()
 {
-    if (this->mActiveGroup)
-        return this->mActiveGroup->GetMaxVelocity(this);
-    return this->mStats->mMaxVelocity;
+    return this->mActiveGroup ? this->mActiveGroup->GetMaxVelocity(this) : this->mStats->mMaxVelocity;
 }
 
 // A unit's stat, or the group's when the group moves together (its mean speed, acceleration, turn speed, turn
@@ -119,21 +117,20 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
 {
     EEActiveGroup* theGroup = (EEActiveGroup*)(uintptr_t)inA;
     EEComplexUnit* theUnit = (EEComplexUnit*)(uintptr_t)inA;
-    EEUGRust* theGoal = (EEUGRust*)(uintptr_t)inA;
     EEUnitGoal* theOther = (EEUnitGoal*)(uintptr_t)inB;
     switch (inOp) {
     // (the goals' kinds, the gather and patrol goals' units, a unit's sphere and the regions' size: ag_host.rs)
     case EE_UNITS_AG_SEND: EESendGroupCommand(theGroup, (EEUnit*)(uintptr_t)inB, theGroup->GetPlayer()->GetPlayerID(), (long)inC, 0);
         return 0;
+    case EE_UNITS_AG_FORMATION_CENTER: theGroup->GetFormation()->mCenter = *reinterpret_cast<GE3DPoint*>(io->p);
+        return 0;
+    case EE_UNITS_AG_FORMATION_HEADING: theGroup->GetFormation()->mHeading = io->f;
+        return 0;
+    case EE_UNITS_AG_FORMATION_ORIENT: theGroup->GetFormation()->mOrientation.SetOrientationYPR(io->f, 0.0f, 0.0f);
+        return 0;
     case EE_UNITS_AG_ARRANGE: {
-        EEFormation* theFormation = theGroup->GetFormation();
         std::vector<EEFormationSlot> theSlots;
-        theFormation->mCenter = GE3DPoint(io->p[0], io->p[1], io->p[2]);
-        if (inC) {
-            theFormation->mHeading = io->f;
-            theFormation->mOrientation.SetOrientationYPR(io->f, 0.0f, 0.0f);
-        }
-        theFormation->Arrange(theGroup, theSlots);
+        theGroup->GetFormation()->Arrange(theGroup, theSlots);
         for (size_t i = 0; i < theSlots.size(); i++)
             ee_units_ag_push((EeUnitsAgListHandle*)io->list, EEObj(theSlots[i].mUnit),
                              (const float(*)[3])&theSlots[i].mPosition.mX, theSlots[i].mHeading);
@@ -159,21 +156,10 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
         return 0;
     case EE_UNITS_AG_CAN_TAKE:
         return theUnit->CanTake((EEComplexUnit*)(uintptr_t)inB, (unsigned long)inC);
-    case EE_UNITS_AG_FOOTPRINT: {
-        long theX = (long)io->a, theY = (long)io->b;
-        theUnit->GetNearestFootprintTile((EEUnit*)(uintptr_t)inB, &theX, &theY);
-        io->a = theX;
-        io->b = theY;
-        return 0;
-    }
     case EE_UNITS_AG_CAN_GET_TO:
         return gContinentManager.CanGetTo(theUnit, (long)inC, (long)inD);
-    case EE_UNITS_AG_CAN_CONVERT: {
-        bool theFlag = io->a != 0;
-        bool theResult = EECanConvert(theUnit, (EEComplexUnit*)(uintptr_t)inB, theFlag);
-        io->a = theFlag;
-        return theResult;
-    }
+    case EE_UNITS_AG_CAN_CONVERT:
+        return EECanConvert(theUnit, (EEComplexUnit*)(uintptr_t)inB, *static_cast<bool*>(io->list));
     case EE_UNITS_AG_CAN_ATTACK_CLASS:
         return theUnit->CanAttackClass((EEUnitClass*)(uintptr_t)inB);
     case EE_UNITS_AG_HAS_ACTION:
@@ -207,28 +193,8 @@ extern "C" int64_t ee_units_ag_host(int32_t inOp, uint64_t inA, uint64_t inB, in
     case EE_UNITS_AG_TILE_HEIGHT: io->f = ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1]))->GetHeight();
         return 0;
     case EE_UNITS_AG_TILE_TERRAIN: return ::gWorld.mMap->GetTile(UMFloorUnsigned(io->p[0]), UMFloorUnsigned(io->p[1]))->mTerrainType;
-    case EE_UNITS_AG_RECT_CLOSEST: {
-        U2DRectangle<float> theBounds;
-        theBounds.mTop = io->p[0];
-        theBounds.mLeft = io->p[1];
-        theBounds.mBottom = io->p[2];
-        theBounds.mRight = io->q[0];
-        U2DPoint<float> theClosest = theBounds.GetClosestPoint(U2DPoint<float>(io->q[1], io->q[2]));
-        io->p[0] = theClosest.mX;
-        io->p[1] = theClosest.mY;
-        return 0;
-    }
-    case EE_UNITS_AG_GOAL_LOCATION: {
-        GE3DPoint theLocation;
-        theGoal->GetGoalLocation(theLocation);
-        io->p[0] = theLocation.mX; io->p[1] = theLocation.mY; io->p[2] = theLocation.mZ;
-        return 0;
-    }
-    case EE_UNITS_AG_NEW_LOCATION: {
-        GE3DPoint theLocation(io->p[0], io->p[1], io->p[2]);
-        return EEObj(static_cast<EEUnitGoal*>(EEUGRust::NewLocation(&theLocation, (io->a & 1) != 0, (io->a & 2) != 0,
-            (io->a & 4) != 0, io->f, (io->a & 8) != 0, (unsigned char)io->b)));
-    }
+
+    // (the footprint tile, the rectangle's closest point, the goal's location and the new location goal: ag_host.rs)
     }
     return 0;
 }

@@ -117,46 +117,14 @@ intptr_t DX7RasterizerHost(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_
 // Creates a rasterizer with its drawing lock and a white-on-black Arial 9 debug text, not yet activated, and no device
 // (the model store gate's: loads, no draws)
 GERasterizer::GERasterizer(const UString& inName)
-{
-    this->mRust = ee_ge_rast_new(&GERasterizerHost::Call, this, &inName);
-    ee_ge_draw2d_init(&GERasterizerDraw2D, &GEVertexHost);
-}
+    : mRust(ee_ge_rast_new_drawing(&GERasterizerHost::Call, this, &inName, &GERasterizerDraw2D, &GEVertexHost)) {}
 
 // The game's: also its DX7 rasterizer with a dark blue debug colour (inTnL: the T&L rasterizer), which the 2D draw list
 // draws on in Rust
 GERasterizer::GERasterizer(const UString& inName, bool inTnL)
     : GERasterizer(inName)
 {
-    this->mDX7 = ee_dx7r_new(&DX7RasterizerHost, this, this->mRust, inTnL);
-    ee_ge_draw2d_direct(this, this->mDX7);
-}
-
-// Destroys the DX7 records, then the debug font and text and the drawing lock
-GERasterizer::~GERasterizer()
-{
-    if (this->mDX7 != NULL) {
-        ee_ge_draw2d_direct(this, NULL);
-        ee_dx7r_destroy(this->mDX7);
-    }
-    ee_ge_rast_destroy(this->mRust);
-}
-
-// Returns a model's on-screen width in pixels (its scaled bounding diameter projected through the viewport)
-float GERasterizer::GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
-                                 float inScale, bool inOrthographic)
-{
-    return ee_ge_rast_pixel_size(this->mRust, inModel, GERust(*inViewport), GERust(inTransformation), inScale, inOrthographic);
-}
-
-// Returns a placed model's on-screen width in pixels, from its location, frame and scale
-float GERasterizer::GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic)
-{
-    return ee_ge_rast_placed_pixel_size(this->mRust, &inModel, GERust(inViewport), inOrthographic);
-}
-
-void GERasterizer::SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
-{
-    ee_ge_rast_ripple_values(this->mRust, inWaterRipple0, inWaterRipple1, inWaterRipple2);
+    this->mDX7 = ee_dx7r_new_direct(&DX7RasterizerHost, this, this->mRust, inTnL);
 }
 
 // 0x1002398a: GEText's scalar deleting dtor (see ~GERasterizer). A `delete p` compiles to a ??_G call whenever the
@@ -184,22 +152,3 @@ unsigned long ee_gecpp_rast_screen_count(void* inRasterizer) { return static_cas
 void ee_gecpp_rast_deactivate(void* inRasterizer) { static_cast<GERasterizer*>(inRasterizer)->Deactivate(); }
 }
 
-// Starts the graphics engine (the directory is not read)
-long GEInitialize(FSFileSpec&, HINSTANCE__* const inInstance) { return ee_ge_initialize(inInstance); }
-
-// The pixel formats (ee_ge pixel.rs): a colour and alpha (0..1 floats, or 8 bits each) packed into a pixel, a
-// pixel's channels scaled to 8 bits
-unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor, float inAlpha)
-{
-    return ee_ge_pack_color_float(inFormat, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), inAlpha);
-}
-
-unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned long inGreen, unsigned long inBlue,
-                          unsigned long inAlpha)
-{
-    return ee_ge_pack_color(inFormat, inRed, inGreen, inBlue, inAlpha);
-}
-
-unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_red(inFormat, inColor); }
-unsigned char GEUnpackGreen(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_green(inFormat, inColor); }
-unsigned char GEUnpackBlue(unsigned long inFormat, unsigned long inColor) { return ee_ge_unpack_blue(inFormat, inColor); }

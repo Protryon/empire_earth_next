@@ -73,10 +73,7 @@ int64_t EECombatGoalHostOp(int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnit
         EECombatStep((int32_t)(ioArgs->i)[0], UnitOf(inUnit), UnitGoalOf((uint64_t)(ioArgs->i)[2]), reinterpret_cast<EEUnit*>(UnitOf((uint64_t)(ioArgs->i)[1])));
         return 0;
     case EE_COMBAT_G_PATH_ATTEMPTS: return UnitGoalOf(inUnit)->mPathAttempts;
-    case EE_COMBAT_G_CLASS_NAME: {
-        EEUnitClass* theClass = reinterpret_cast<EEUnit*>(UnitOf(inUnit))->mUnitClass;
-        return theClass != NULL ? (int64_t)(uintptr_t)(const char*)theClass->mName : 0;
-    }
+    case EE_COMBAT_G_CLASS_NAME: return UnitOf(inUnit)->mUnitClass != NULL ? (int64_t)(uintptr_t)(const char*)UnitOf(inUnit)->mUnitClass->mName : 0;
     // the heal goal's (ee_combat goal_heal.rs)
     case EE_COMBAT_G_RELEASE_HEAL_EFFECT: UnitOf(inUnit)->ReleaseHealEffect(); return 0;
     case EE_COMBAT_G_CAN_HEAL: return EECanHeal(reinterpret_cast<EEUnit*>(UnitOf(inUnit)), UnitOf((uint64_t)(ioArgs->i)[0]));

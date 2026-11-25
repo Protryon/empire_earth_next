@@ -19,14 +19,8 @@
 #include "lle/GERust.h"
 #include "rust/render/ge.h"
 
-class FSFile;
-class GE3DLine;
-class GETexture;
-class GETextureSet;
-class GETransformation;
-class GEViewport;
+#include "lle/LLEForward.h"
 struct EeGeTerrainMesh;   // the mesh (rust/ee_ge.h, ee_ge tmobj.rs)
-template <class T> class U2DPoint;
 
 class LLE_API GETerrainMesh {
 public:
@@ -39,9 +33,7 @@ public:
     GETerrainMesh();
     // the mesh's Rust object (the DX7 plug-in's terrain draws read its visible frame there: ee_dx7 draw_ffi.rs)
     EeGeTerrainMesh* GetRust() const { return this->mRust; }
-    virtual ~GETerrainMesh();
-    GETerrainMesh(const GETerrainMesh&) = delete;
-    GETerrainMesh& operator=(const GETerrainMesh&) = delete;
+    virtual ~GETerrainMesh() { ee_ge_tm_destroy(this->mRust); }
 
     void ComputeShorelines(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 7, 0); }
     void ComputeVertexNormal(unsigned long inX, unsigned long inY)
@@ -133,8 +125,7 @@ public:
         { ee_ge_tm_update_visible_terrain(this->mRust, GERust(inViewport), inOrthographic); }
     void UpdateWaterAnimation() { ee_ge_tm_update_water_animation(this->mRust); }
 
-private:
-    EeGeTerrainMesh* mRust;                 // the whole mesh (ee_ge tmobj.rs)
+    URust<EeGeTerrainMesh> mRust;                 // the whole mesh (ee_ge tmobj.rs)
 };
 
 #endif

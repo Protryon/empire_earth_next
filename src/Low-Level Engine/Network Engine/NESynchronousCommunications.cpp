@@ -12,19 +12,6 @@
 #include "lle/NESynchronousCommunications.h"
 #include "rust/net/net.h"
 
-// Creates the shared client/server state (ee_net comms.rs): the CTs processed given, the last tick received -2, the
-// rest 0. (The debug lock, the bytes-per-second meters and their clock reads went: no caller.)
-NESynchronousCommunications::NESynchronousCommunications(unsigned long inNumberOfCTsProcessedInPhysics)
-{
-    this->mComms = ee_net_comms_new((uint32_t)inNumberOfCTsProcessedInPhysics);
-}
-
-// Gives up the base's reference to the state (the Rust server or client, freed first, held its own)
-NESynchronousCommunications::~NESynchronousCommunications()
-{
-    ee_net_comms_free(this->mComms);
-}
-
 // The calls out of the lag simulator and the recorder (ee_net lagloss.rs, recplay.rs) that the original units made
 // on the engine and the Rust does not make itself (the clock, the events and the threads are its own: ee_net
 // native.rs): each op is the statement NELagLossSimulator.cpp, NERecordPlayback.cpp or NETimestampedMessage.cpp made
@@ -40,12 +27,7 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
     case EeNetQOp::FpuStart:
         UMSetFloatingPointPrecision(kFPPrecision53);
         return 0;
-    case EeNetQOp::FpuCheck:
-        if (UMGetFloatingPointPrecision() != kFPPrecision53)
-            UMSetFloatingPointPrecision(kFPPrecision53);
-        if (UMGetFloatingPointRoundingMode() != 0)
-            UMSetFloatingPointRoundingMode(0);
-        return 0;
+    case EeNetQOp::FpuCheck: ee_util_fp_check(); return 0;
     case EeNetQOp::MsgReference:
         reinterpret_cast<NEMessage*>(a)->Reference();
         return 0;

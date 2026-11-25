@@ -8,7 +8,7 @@
 #include "lle/GERust.h"
 #include "rust/render/ge.h"
 
-class GEModel;
+#include "lle/LLEForward.h"
 
 class LLE_API GEPhysicalModel {             // sizeof 0x4c
 public:
@@ -49,22 +49,12 @@ public:
         this->mLocation = inLocation;
         this->mScale = inScale;
     }
-    void SetLocationXY(float inX, float inY)
-    {
-        this->mLocation.SetX(inX);
-        this->mLocation.SetY(inY);
-    }
+    void SetLocationXY(float inX, float inY) { this->mLocation.SetPosition(inX, inY, this->mLocation.GetZ()); }
     void SetLocationXYZ(const GE3DPoint& inPoint)
-    {
-        this->mLocation.SetX(inPoint.GetX());
-        this->mLocation.SetY(inPoint.GetY());
-        this->mLocation.SetZ(inPoint.GetZ());
-    }
+        { this->mLocation.SetPosition(inPoint.GetX(), inPoint.GetY(), inPoint.GetZ()); }
     // replaces the model, keeping a reference to the new one (the old one released first)
     void SetModel(GEModel* inModel) { ee_ge_pm_set_model(reinterpret_cast<void**>(&this->mModel), inModel); }
     void SetScale(float inScale) { this->mScale = inScale; }
-    friend void EEGfxObjectLayoutRegister();   // the effects' reads of the scale and the frame (ee_gfx effect_reads.rs)
-private:
     // The walks are Rust (ee_ge physical_walk.rs) over the game's table (ee_ge_physical_table).
     // A line against a model and its sub-models: bounding sphere, then box (LOD > 0), then triangles (LOD > 1); with
     // inExact the hit must lie on the segment (line_walk)

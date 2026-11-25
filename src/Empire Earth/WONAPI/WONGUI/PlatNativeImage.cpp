@@ -65,9 +65,8 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
         }
         case H::RustOf: return (intptr_t)((Image*)a)->mRust;
         case H::CtxGraphics: return theContext != NULL ? (intptr_t)theContext->mGraphics : 0;
-        case H::CtxSurface:
-            return theContext != NULL && theContext->mSurface != NULL ? (intptr_t)theContext->mSurface->GetRust() : 0;
-        case H::CtxScale: { uint32_t s; memcpy(&s, &theContext->mPixelScale, 4); return (intptr_t)s; }
+        case H::CtxSurface: return theContext != NULL ? (intptr_t)theContext->mSurface : 0;
+        case H::CtxScale: *(float*)b = theContext->mPixelScale; return 0;
         case H::GfxTrans: ((int*)b)[0] = theGraphics->mTransX; ((int*)b)[1] = theGraphics->mTransY; return 0;
         case H::GfxContext: return (intptr_t)theGraphics->mDisplayContext.get();
         case H::GfxRun: {
@@ -80,22 +79,8 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             return 0;
         }
         case H::GfxDrawImage: theGraphics->DrawImage((Image*)b, ((int*)c)[0], ((int*)c)[1]); return 0;
-        case H::NewSurface: {
-            // black (CreateCompatibleBitmap)
-            SmartPtr<SurfaceBase> theSurface = SurfaceBase::GetNewSurface(SurfaceFormat_32);
-            int theWidth = a < 0 ? 0 : (int)a, theHeight = b < 0 ? 0 : (int)b;
-            theSurface->Create(theWidth, theHeight);
-            if (theSurface->GetPixelsBase() != NULL)
-                memset(theSurface->GetPixelsBase(), 0, (size_t)theSurface->GetBytesPerRow() * theHeight);
-            return Held(theSurface.get());
-        }
-        case H::SurfaceRust: return (intptr_t)((SurfaceBase*)a)->GetRust();
-        case H::NewContext: {
-            DisplayContext* theNew = new DisplayContext((SurfaceBase*)a);
-            uint32_t s = (uint32_t)b;
-            memcpy(&theNew->mPixelScale, &s, 4);
-            return Held(theNew);
-        }
+        // (the surface is the Rust image's own: no SurfaceBase, R6 WON GUI round 36)
+        case H::NewContext: return Held(new DisplayContext((EeWonSurface*)a, *(const float*)b));
         case H::NewGraphics: {
             Graphics* theNew = new Graphics;
             theNew->Attach(theContext);

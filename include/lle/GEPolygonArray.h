@@ -26,7 +26,6 @@ public:
     virtual unsigned long SizeOf() const { return ee_ge_pa_size(this->mRust, true); }
     const unsigned short* GetIndices() const { return this->mIndices; }   // three per triangle
 
-private:
     unsigned short* mIndices;               // the Rust array's indices
     EeGePolygonArray* mRust;
 };

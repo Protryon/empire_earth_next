@@ -5,7 +5,7 @@
 
 #include "lle/GERust.h"
 
-class FSFile;
+#include "lle/LLEForward.h"
 
 class GE2DPoint : public EeGe2DPoint {   // the Rust record (mX, mY; rust/base/math.h)
 public:

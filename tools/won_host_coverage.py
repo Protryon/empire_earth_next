@@ -174,8 +174,11 @@ CHECKS = [
     # the front end's screens (R6 WON round 32: wonfront.rs; its host's statements are ee/EEWonFrontHost.inl)
     dict(enum="EeWonFrontOp", header="won_lobby/wonfront.h",
          hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
+    # The LLE and UI floor lane, round 1: the 24 screen event classes are one, EEWonFrontEvent, whose call
+    # wonfront.rs's ee_won_front_event_call picks (no C++ case)
     dict(enum="EeWonFrontEvent", header="won_lobby/wonfront.h",
-         hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"], rust=[], allowed={}),
+         hosts=[ROOT / "include" / "ee" / "EEWonFrontHost.inl"],
+         rust=[(RS / "ee_won_lobby" / "src" / "wonfront.rs", "ee_won_front_event_call")], allowed={}),
     # R6 WON round 33 (lobby): WONLobbyPrv (lobbyprv.rs), the model's buffers (modelbuf.rs), ChatCtrl's link
     # (chatlink.rs), LobbyConfig's constructor (lobbyconf.rs), the controls' config readers (lobbycfgrd.rs: four
     # units' hosts, the reads in LobbyNetCtrlHost.cpp's)

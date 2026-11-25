@@ -35,8 +35,6 @@ public:
         { ee_util_series_set_color(this->mSeries, reinterpret_cast<const EeUtilColor*>(&inColor)); }
     void SetIsEnabled(bool inIsEnabled) { ee_util_series_set_enabled(this->mSeries, inIsEnabled); }
 
-private:
-    friend class UGraph;
     EeUtilSeries* mSeries;
 };
 
@@ -66,7 +64,6 @@ public:
     void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled)
         { ee_util_graph_set_enabled(this->mGraph, inIndex, inIsEnabled); }
 
-private:
     EeUtilGraph* mGraph;                    // the series and min/max
 };
 

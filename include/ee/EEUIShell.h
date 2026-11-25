@@ -53,7 +53,6 @@ public:
     // the control's text (inWhich 0: its own GEText, 1: its label's; a button's, a combo box's, a list's, an edit box's)
     virtual GEText* Text(int64_t inWhich) { return NULL; }
     virtual ~EEUIShell() { ee_screens_shell_free(this->mState); }
-protected:
     // the kind's destructor body now (a most derived class whose kind still needs its own members)
     void Free() { ee_screens_shell_free(std::exchange(this->mState, nullptr)); }
     // the kind made, its override mask read and its constructor body run (ee_screens_shell_make)
@@ -395,7 +394,6 @@ public:
         }
     }
     virtual void Keyboard(bool inCapture) {}
-protected:
     virtual long DrawBackground(const GERectangle& inR)
     {
         return EE_SHELL_IS(DRAW_BACKGROUND) ? (long)EE_SHELL_TO(DRAW_BACKGROUND, 0, 0, RectF(inR).f) : UIForm::DrawBackground(inR);
@@ -414,7 +412,7 @@ protected:
 
 // the file combo box (EEUIFileComboBox, shells_files.rs): "none", then inPath's files matching inPattern without their
 // extensions; CreateEntries refills it, SelectFile selects the line of a name (else "none": kErrorNotFound)
-class FSPath;
+#include "lle/LLEForward.h"
 UIComboBox* EEUIShellNewFileCombo(FSPath* inPath, const UString& inPattern, unsigned long inId, GEFont* inFont,
                                   const GE2DPoint& inLocation, unsigned long inWidth, UIForm* inForm, unsigned long inIndex);
 inline void EEUIFileComboEntries(UIControl* inList) { EEUIShell::Op(inList, EE_SCREENS_SKOP_FILE_ENTRIES); }

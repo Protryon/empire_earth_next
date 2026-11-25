@@ -38,7 +38,6 @@ public:
         return ee_error_checksum_total(this->mRust);
     }
 
-protected:
     void AddChecksum(unsigned long inChecksum)   // added to the last entry (one anonymous entry when not verbose)
     {
         ee_error_checksum_add_value(this->mRust, inChecksum);

@@ -7,6 +7,7 @@
 // Requires lle/UILayoutUtility.h, lle/GEColor.h, <vector>.
 #ifndef LLE_UICONTROLSTABLE_H
 #define LLE_UICONTROLSTABLE_H
+#include "lle/LLEForward.h"
 
 #include <vector>
 
@@ -109,12 +110,10 @@ public:
     // Fills a list with the description's string-table range (empty when the range is unset)
     void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const { ee_ui_table_setup_strings(this, inManager, &outStrings); }
     UIControlsTable(EeUiControlsTable* inRust) : mRust(inRust) {}
-    UIControlsTable(const UIControlsTable&);             // not copied (the Rust table is owned)
-    UIControlsTable& operator=(const UIControlsTable&);
     const EeUiControlsTableData& D() const { return *ee_ui_controls_table_data(this->mRust); }
     const EeUiControlsTableFields& F() const { return this->D().fields; }
 
-    EeUiControlsTable* mRust;
+    URust<EeUiControlsTable> mRust;
 };
 
 // the enum (UI round 13): rust/ui/ids.h (ee_ui ids.rs)

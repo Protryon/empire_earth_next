@@ -8,36 +8,15 @@
 
 class LLE_API TSLockable {                  // vtable 0x10097624 (dtor only); sizeof 8
 public:
-    TSLockable();
-    virtual ~TSLockable();
-    void ReadLock() const;
-    void ReadUnlock() const;
-    void WriteLock();
-    void WriteUnlock();
+    TSLockable() { ESVERIFY_AT(TSScheduler::CreateReadWriteLock(this->mLock) == keseOK, 30); }
+    virtual ~TSLockable() { TSScheduler::DestroyReadWriteLock(this->mLock); }
+    void ReadLock() const { this->mLock->ReadLock(); }
+    void ReadUnlock() const { this->mLock->ReadUnlock(); }
+    void WriteLock() { this->mLock->WriteLock(); }
+    void WriteUnlock() { this->mLock->WriteUnlock(); }
     // implicit copy ctor (0x44f8) and operator= (folded 0x43ce)
 
-protected:
     TSReadWriteLock* mLock;                 // +0x04
 };
-
-// ----------------------------------------------------------------------------------------------------------------
-// Inline members (exported COMDATs: the first includer in link order emits them)
-//
-// ----------------------------------------------------------------------------------------------------------------
-
-inline TSLockable::TSLockable()
-{
-    ESVERIFY_AT(TSScheduler::CreateReadWriteLock(this->mLock) == keseOK, 30);
-}
-
-inline TSLockable::~TSLockable()
-{
-    TSScheduler::DestroyReadWriteLock(this->mLock);
-}
-
-inline void TSLockable::ReadLock() const { this->mLock->ReadLock(); }
-inline void TSLockable::ReadUnlock() const { this->mLock->ReadUnlock(); }
-inline void TSLockable::WriteLock() { this->mLock->WriteLock(); }
-inline void TSLockable::WriteUnlock() { this->mLock->WriteUnlock(); }
 
 #endif

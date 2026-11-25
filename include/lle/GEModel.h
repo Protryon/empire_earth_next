@@ -17,16 +17,9 @@
 #include "rust/base/math.h"   // the model (ee_ge modobj.rs), its host's EeGeModOp
 #include "rust/render/ge.h"
 
-class GEMaterial;
-class GEModelManager;
-class GEPolygonArray;
-class GETexture;
-class GEVertexArray;
+#include "lle/LLEForward.h"
 
 class LLE_API GEModel : public UReferenceCounter {   // sizeof 0x188 in the original (GEModelManager: operator new(0x188))
-    friend class GEModelManager;
-    friend class GEPhysicalModel;           // Intersects reads the const model's arrays (provisional name)
-    friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
 public:
     // inline members in declaration order (the folded ones sit at other addresses)
     const GEBoundingBox& GetBoundingBox(unsigned long inLOD) const { return this->GetBoundingBoxes()[inLOD]; }
@@ -89,9 +82,6 @@ public:
         { ee_ge_mod_set_texture(this->mRust, inTexture, inIndex); }
     unsigned long SizeOf() { return ee_ge_mod_size_of(this->mRust); }
     bool Verify() const { return ee_ge_mod_verify(this->mRust); }
-    GEModel(const GEModel&) = delete;
-    GEModel& operator=(const GEModel&) = delete;
-protected:
     // an empty model owned by a model manager, with one LOD and no data allocated
     GEModel(GEModelManager* inManager) { this->mRust = ee_ge_mod_new(&GEModel::Host, this, inManager); }
     // a named model with the counts and flags of CreateModel or CreateSubModel (EeGeManOp::ModelNew), its data
@@ -100,7 +90,6 @@ protected:
         { this->mRust = ee_ge_mod_new_with_counts(&GEModel::Host, this, inArgs.counts, &inName, inArgs.flags, inManager); }
     // frees the vertex, polygon and tag point arrays (shared frames once), releases the materials and sub-models
     virtual ~GEModel() { ee_ge_mod_destroy(this->mRust); }
-private:
     // (SetParentModel, RemoveModelScale 0x1001fc00, ComputeBoundingBoxes 0x1001f544 and AllocateInternalData
     // 0x1001f080 are the Rust object's)
     void SetSubModel(GEModel* inModel, unsigned long inIndex)
@@ -130,7 +119,7 @@ private:
     // The calls the model makes on other objects (EeGeModOp), in the original's statements
     static intptr_t Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
-    EeGeModel* mRust;                       // the model (ee_ge modobj.rs)
+    URust<EeGeModel> mRust;                       // the model (ee_ge modobj.rs)
 };
 
 // (The LOD helper classes, lle/GELOD.h, followed GEModel here: deleted with 'GEModel LOD.cpp')

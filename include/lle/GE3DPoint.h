@@ -4,9 +4,7 @@
 
 #include "lle/GERust.h"
 
-class FSFile;
-class GETransformation;
-class ESChecksum;
+#include "lle/LLEForward.h"
 
 class GE3DPoint : public EeGe3DPoint {   // the Rust record (mX, mY, mZ; rust/base/math.h)
 public:
