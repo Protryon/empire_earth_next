@@ -79,17 +79,10 @@
 #include "ee/EEAnimal.h"
 #include "ee/EEStringIDs.h"
 #include "lle/ISKeyCode.h"
-// EEUnitGoal.cpp's goal counter (0x964480; Save and Load write and read it: it is not file-static in the original)
-// the main game form's blinking buttons (0x27fcf0, cdecl; EEPlayer::RepairPointers keeps its result, so not void as
-// EEPhysics.cpp declares it; inferred)
-// (EESetCivBuilderButtonBlinking: ee/EmpireEarth.h)
-
 
 // the interval of the healing units' hit-point bonus (0x4429b8, just before kTributeFee; ComputeLoadDistance)
 // (provisional name)
 static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee_units player_tick.rs)
-
-// (the effects every player loads, 0x4429c0: ee_units player_body.rs PLAYER_EFFECTS)
 
 // TEST ONLY: the player capture (tools/sim_capture.py): PLST, each player's state at every UpdatePlayer (ee_sim app
 // player_capture.rs); PLEC, the economy and improvement decisions (ee_units player_econ.rs)
@@ -99,11 +92,8 @@ static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee
 #include "ee/EEUnitStore.h"
 #include <cstring>
 
-// (a float's bits: UFloatBits and UBitsFloat, lle/LowLevelEngineCore.h)
-
 // the decisions' record measures a reason text (ee_units player_econ.rs)
 extern "C" uint32_t ee_units_player_wide_length(const void* inText) { return static_cast<const UWideString*>(inText)->GetLength(); }
-
 
 // a unit as the Rust player's operations take it: its RTSUnit address (0: none)
 static int64_t EEPlayerUnitArg(RTSUnit* inUnit)
@@ -347,7 +337,6 @@ static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
     return 0;
 }
 
-
 // Replaces each swapped old unit by its new one in all units, air traffic, the selection, control groups, wonders
 // Called when the physics replaced units (EEPhysics 0x1534d1); a new unit of another player is not added to
 // the groups, and an unbuilt wall becomes a construction site
@@ -389,21 +378,12 @@ static long EEPlayerImprovement(const EEPlayer* inPlayer, uint32_t inWhat, unsig
     return ee_units_player_improvement(EEPlayerRefs(inPlayer), inWhat, inUnitType, inImprovement, inFlag, inFlag2, inFraction, outReason);
 }
 
-// Starts every pending command group running, then adds the pending units as the base player does
-
-// (gNumPlayers 0x530e0c, which EECPAttackCommander.cpp and EECPAttackSubGroup.cpp also declare, is
-// gWorld.mNumPlayers, unsigned: `jbe`)
-
 // Records a unit leaving the map with its tile and the current game time
 void EEPlayer::AddOffMapUnit(RTSUnit* inUnit)
 {
     if (inUnit != NULL)
         ee_units_off_map(this->mLists, 0, EEPlayerUnitArg(inUnit), inUnit->mTileX, inUnit->mTileY, gPhysics != NULL ? gPhysics->mGameTime : 0);
 }
-
-// Town merge is defined after its existing patrol-goal include below.
-
-// (0x563659: EEUGPatrol::SetPatrolGroup, defined after ee/EEUGPatrol.h's include below)
 
 // Detaches a unit from the computer player's control
 void EEPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
@@ -412,67 +392,23 @@ void EEPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
         inUnit->mIsDetachedFromAI = true;
 }
 
-
-// Does nothing (the base player ignores being targeted by another player)
-// (ICF-kept empty `ret 8`, shared by the slots below; FlareReceived below (slot +0x98) is the same empty body,
-// folded into it: the base player ignores flares)
-
-
-// (slots sharing the empty body: EECPAttackFormation+0x14; EEHumanPlayer+0x58, +0x98; EECalamityClass+0x28;
-// EECCConscription, EECCLineOfSight, EECCSpecialAttack, EECCSpecialLocation +0x28; EEE3DFarm+0x20;
-// EEPlayer+0x58, +0x98; EESETSCTAlwaysTrue+0x4, +0xc; EESETSETNoEffect, EESETSETRemoveObject, EESETSETKillObject,
-// EESETSETFreezeObject, EESETSETObjectCreate +0x8, +0x10; EESETSETPVisibility, EESETSETPCameraFadeOut,
-// EESETSETPCameraFadeIn, EESETSETPlayerVictory +0x8; EEUnit+0x3c, +0x44, +0x68)
-
 // the class forwarders' upgrade of a unit class: NULL past the classes or without one
 static EEUnitStats* EEPlayerClassStats(EEPlayer* inPlayer, unsigned long inUnitClass)
 {
     return inUnitClass < EEUnitClassCount() ? inPlayer->mUnitClassUpgrades[inUnitClass] : NULL;
 }
-
-// Sets one of a unit class's acknowledgement sounds for the player
-void EEPlayer::SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->SetAcknowledgeSound(inSound, inIndex);
-}
-
-// Sets a unit class's creation sound for the player
-void EEPlayer::SetClassCreationSound(unsigned long inUnitClass, EESoundObject* inSound)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->SetCreationSound(inSound);
-}
-
-// Sets a unit class's death sound for the player
-void EEPlayer::SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSound)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->SetDeathSound(inSound);
-}
-
-// Sets a unit class's model for the player
-void EEPlayer::SetClassModel(unsigned long inUnitClass, EEModel* inModel)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->SetModel(inModel);
-}
-
-// Sets a unit class's button for the player
-void EEPlayer::SetClassButton(unsigned long inUnitClass, EEButtonObject* inButton)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->SetButton(inButton);
-}
-
-// Sets one of a unit class's selection sounds for the player
-void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->SetSelectionSound(inSound, inIndex);
-}
-
-// Drops the pending command groups, then releases the pending units as the base player does
+#define EE_PLAYER_CLASS_SET(inCall) if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass)) theStats->inCall
+// the class media setters (EEEvent's, the civilization's): the player's upgrade of the unit class, if it has one
+void EEPlayer::SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex) { EE_PLAYER_CLASS_SET(SetAcknowledgeSound(inSound, inIndex)); }
+void EEPlayer::SetClassCreationSound(unsigned long inUnitClass, EESoundObject* inSound) { EE_PLAYER_CLASS_SET(SetCreationSound(inSound)); }
+void EEPlayer::SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSound) { EE_PLAYER_CLASS_SET(SetDeathSound(inSound)); }
+void EEPlayer::SetClassModel(unsigned long inUnitClass, EEModel* inModel) { EE_PLAYER_CLASS_SET(SetModel(inModel)); }
+void EEPlayer::SetClassButton(unsigned long inUnitClass, EEButtonObject* inButton) { EE_PLAYER_CLASS_SET(SetButton(inButton)); }
+void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex) { EE_PLAYER_CLASS_SET(SetSelectionSound(inSound, inIndex)); }
+void EEPlayer::LoadUnitClassButtons(long inUnitClass) { EE_PLAYER_CLASS_SET(LoadButtons(this)); }
+void EEPlayer::SetUnitClassMedia(long inUnitClass, long inMediaFlags) { EE_PLAYER_CLASS_SET(LoadMedia(this, inMediaFlags)); }
+void EEPlayer::UnloadUnitClassButtons(long inUnitClass) { EE_PLAYER_CLASS_SET(UnloadButtons(this)); }
+void EEPlayer::UnloadUnitClassMedia(long inUnitClass) { EE_PLAYER_CLASS_SET(UnloadMedia(this)); }
 
 // Marks the player as having met another player when it first sees a unit of a non-gaia player
 void EEPlayer::NoticeForeignUnit(EEUnit* inUnit)
@@ -492,8 +428,6 @@ long EEPlayer::GetPopulationLimit(long inArg)
 {
     return this->mPopulationLimitBonus + this->mShareBonus + gWorld.mPlayerPopulationLimit;
 }
-
-
 
 // The context of EEPlayer::Load and Save's operations (EEPlayerSaveOperation) and of LoadUnit's and SaveUnit's
 // (EEPlayerUnitOperation), made in the call's argument (Self: the address the Rust passes back)
@@ -642,20 +576,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
     return kErrorOK;
 }
 
-// Loads the command buttons of one unit class for the player, if the class index is valid
-void EEPlayer::LoadUnitClassButtons(long inUnitClass)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->LoadButtons(this);
-}
-
-// Loads the media of one unit class for the player, if the class index is valid
-void EEPlayer::SetUnitClassMedia(long inUnitClass, long inMediaFlags)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->LoadMedia(this, inMediaFlags);
-}
-
 // LoadUnit's and SaveUnit's C++ parts (ee_units player_save.rs load_unit, save_unit): the file's primitives, the
 // class's fit, the loads, the saved unit's kind and its Save
 
@@ -793,7 +713,6 @@ static void EEApplySavedTowns(EEPlayer* inPlayer)
     ee_units_towns_repair(&theContext, &EETownSaveHost, (uint32_t)inPlayer->mPlayerID, true);
 }
 
-
 #include "lle/FSMemoryFile.h"
 
 // Writes the player's state to a saved game; returns the write status (some writes' errors are ignored).
@@ -812,9 +731,6 @@ long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned 
     return ee_units_player_unit(EEPlayerSaveContext{this, &outFile, inMajorVersion, inMinorVersion, inUnit, NULL}.Self(), &EEPlayerUnitOperation, true, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
-// Sets the player's game result; a new victory or defeat of another player is announced in the chat log
-// (the chat log's line of a player's victory or defeat: player_rest.rs announce_result)
-
 // VirtualBC's functor (RTTI EEPSuggestRecomputeAllAreaEffects; vtable 0x442b08: the shared ??_G 0x16b555, its
 // Virtual04 0x16b543, the base's empty Virtual08): every area effect of each complex unit recomputed
 class EEPSuggestRecomputeAllAreaEffects : public EEUUUnitFunctor {
@@ -829,23 +745,8 @@ void EEPlayer::SuggestRecomputeAllAreaEffects()
     EEForEachUnitOf(this, &theFunctor, false);
 }
 
-// Unloads the command buttons of one unit class for the player, if the class index is valid
-void EEPlayer::UnloadUnitClassButtons(long inUnitClass)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->UnloadButtons(this);
-}
-
-// Unloads the media of one unit class for the player, if the class index is valid
-void EEPlayer::UnloadUnitClassMedia(long inUnitClass)
-{
-    if (EEUnitStats* theStats = EEPlayerClassStats(this, inUnitClass))
-        theStats->UnloadMedia(this);
-}
-
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
-
 
 // The context of UpdatePlayer's operations: the player
 struct EEPlayerTickContext {
@@ -902,13 +803,6 @@ void EEPlayer::UpdatePlayer()
     EEPlayerTickContext theContext = {this};
     ee_units_player_update(&theContext, &EEPlayerTickOperation, static_cast<EeUnitsPlayerSaved*>(this), this);
 }
-
-// EETechTreeNode 0x1cf989 / 0x1cfcc9 call these through slots +0x88 / +0xcc; both slots hold the shared empty
-// `ret 4` 0x557269 (ICF), so each has an empty body (this also removes two unresolved virtuals)
-
-
-
-
 
 // The C++ of EEPlayer's Rust bodies (ee_units player_body.rs; EE_UNITS_PLAYER_BODY_*): one statement of the original
 // bodies each, in their order; inA an object or index, inB and inC values, inSwaps UnitsSwapped's vector
