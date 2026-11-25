@@ -36,6 +36,15 @@ static NativeImage* NewOffscreen(int inWidth, int inHeight)
 
 SmartPtr<NativeImage> DisplayContext::CreateImage(int width, int height) { return NewOffscreen(width, height); }
 
+// imgobj.rs reads a handle's mRust and a context's members in place (R6 WON GUI round 38)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(Image, mRust) == EE_WON_IMAGE_RUST_AT && offsetof(DisplayContext, mSurface) == EE_WON_CONTEXT_AT &&
+              offsetof(DisplayContext, mGraphics) == EE_WON_CONTEXT_AT + sizeof(void*) &&
+              offsetof(DisplayContext, mPixelScale) == EE_WON_CONTEXT_AT + 2 * sizeof(void*),
+              "imgobj.rs's EeWonDisplayContextRec");
+#pragma clang diagnostic pop
+
 static intptr_t Held(RefCount* inObject)
 {
     if (inObject != NULL)
@@ -59,10 +68,6 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
             }
             return (intptr_t)theImage;
         }
-        case H::RustOf: return (intptr_t)((Image*)a)->mRust;
-        case H::CtxGraphics: return theContext != NULL ? (intptr_t)theContext->mGraphics : 0;
-        case H::CtxSurface: return theContext != NULL ? (intptr_t)theContext->mSurface : 0;
-        case H::CtxScale: *(float*)b = theContext->mPixelScale; return 0;
         case H::GfxTrans: ((int*)b)[0] = theGraphics->mTransX; ((int*)b)[1] = theGraphics->mTransY; return 0;
         case H::GfxContext: return (intptr_t)theGraphics->mDisplayContext.get();
         case H::GfxRun: {

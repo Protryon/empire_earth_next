@@ -1229,6 +1229,7 @@ class DisplayContext : public RefCount {
 public:
     // The port draws into software surfaces (surface.rs; the backend: WONLobbyPlatform.h): a context is the
     // surface an image owns, which carries the clip. The original held the GDI device context (HDC) here.
+    // R6 WON GUI round 38: these three are imgobj.rs's EeWonDisplayContextRec, read in place (PlatNativeImage.cpp)
     DisplayContext(EeWonSurface* surface=NULL,float scale=1.0f) : mSurface(surface),mGraphics(NULL),mPixelScale(scale) {}
     virtual ~DisplayContext() {}
     EeWonSurface* mSurface; // at +0x08, not owned (the owning image's, imgobj.rs); NULL: nothing to draw into
