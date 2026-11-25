@@ -54,61 +54,10 @@
 // The thread's bodies are Rust (ee_game preload.rs, world lane round 1: the loop, the messages, the queue and its two
 // flags, the media loads, the game's load); each C++ call they make is a case of ee_preloadcpp below.
 
-// Creates the data pre-loading thread at the given priority and waits until it is running
-EEDataPreLoading::EEDataPreLoading(long inThreadPriority)
-{
-    ee_preload_construct(this, inThreadPriority);   // (preload.rs)
-}
-
-// Destroys the pre-loader: frees its events, drops every queued message and destroys the thread
-EEDataPreLoading::~EEDataPreLoading()
-{
-    ee_preload_destruct(this);
-}
-
-unsigned long EEDataPreLoading::Main(void* inThis) { return ee_preload_main(inThis); }
-void EEDataPreLoading::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-    { ee_preload_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
-void EEDataPreLoading::StartQueueing() { ee_preload_start_queueing(); }
-void EEDataPreLoading::FlushQueue() { ee_preload_flush_queue(this); }
-void EEDataPreLoading::QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-    { ee_preload_queue_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
-long EEDataPreLoading::WaitForMessageQueue() { return (long)ee_preload_wait_for_queue(this); }
-
 // Tells the user interface that loading the game failed once the error box is closed
 void EEDataPreLoading::LoadGameErrorDone(UIForm* inForm)
 {
     gUserInterface->PostLoadGameFailed(false);
-}
-
-// Asks the pre-loading thread to load the game
-void EEDataPreLoading::PostLoadGame(bool inSkipGameMedia, bool inClearWorld)
-{
-    this->mThread->Post(0x402, (void*)(inSkipGameMedia == true), (void*)(inClearWorld == true), true);
-}
-
-// Asks the pre-loading thread to load a player's technology media
-void EEDataPreLoading::PostLoadTechnology(long inPlayer, long inTechnology)
-{
-    this->mThread->Post(0x40a, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inTechnology), true);
-}
-
-// Asks the pre-loading thread to load a player's unit class media
-void EEDataPreLoading::PostLoadUnitClass(long inPlayer, long inUnitClass)
-{
-    this->mThread->Post(0x404, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inUnitClass), true);
-}
-
-// Asks the pre-loading thread to unload a player's technology media
-void EEDataPreLoading::PostUnloadTechnology(long inPlayer, long inTechnology)
-{
-    this->mThread->Post(0x40b, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inTechnology), true);
-}
-
-// Asks the pre-loading thread to unload a player's unit class media
-void EEDataPreLoading::PostUnloadUnitClass(long inPlayer, long inUnitClass)
-{
-    this->mThread->Post(0x409, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inUnitClass), true);
 }
 
 #define P64(x) ((int64_t)(intptr_t)(x))
@@ -159,16 +108,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::NewError: return P64(new UWideString());
     case O::DeleteError: delete (UWideString*)p;
         break;
-    case O::LoadProgress: gUserInterface->SetLoadProgress(f[0]);
-        break;
-    case O::TextLoadingGlobalMedia: gUserInterface->SetLoadingText(IDS_LOADING_GLOBAL_MEDIA);
-        break;
-    case O::TextPopulatingWorld: gUserInterface->SetLoadingText(IDS_POPULATING_WORLD);
-        break;
-    case O::TextLoadingComplete: gUserInterface->SetLoadingText(IDS_LOADING_COMPLETE);
-        break;
-    case O::TextWaitingForPlayers: gUserInterface->SetLoadingText(IDS_WAITING_FOR_PLAYERS);
-        break;
     case O::LoadType: return gGameOptions.mLoadType;
     case O::SetLoadingSavedGame: gLoadingSavedGame = a[0] != 0;
         break;
@@ -184,8 +123,6 @@ extern "C" int64_t ee_preloadcpp(EePreloadCpp inOp, uintptr_t p, const int64_t* 
     case O::WorldClear: gWorld.Clear();
         break;
     case O::StartGame: gWorld.StartGame(&gGameState, false);
-        break;
-    case O::ResumeGraphics: gUserInterface->ResumeGraphics();
         break;
     case O::IsMultiplayer: return gCommunications->GetIsMultiplayerSession();
     case O::IsClient: return gCommunications->IsClient();

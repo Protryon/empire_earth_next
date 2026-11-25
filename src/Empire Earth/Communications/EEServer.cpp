@@ -48,7 +48,7 @@
 #include "rust/sim/netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
 #include <list>
 #include <string>
-long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
+// (gDefaultPlayerColors, the 16 slots' default colours: gamecpp globals.rs)
 void EELobbyPostConnectStatus(bool inConnected);   // 0x295ce3 (EELobbyInit.cpp; provisional name)
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)
 
@@ -402,7 +402,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsOptionsMultiplayer: return gGameOptions.mIsMultiplayer;
     case O::SsLoadType: return gGameOptions.mLoadType;
     case O::SsGameState: return SS->GetGameState();
-    case O::SsDefaultColor: return gDefaultPlayerColors[a[0]];
     case O::SsCitizensDefault: return (long long)gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     case O::SsVersionMatch: return !(*SF->mVersion != gGameVersion);
     case O::SsBinaryChecksum: return gBinaryChecksum;
@@ -660,8 +659,6 @@ int64_t EECore11OpC2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::SsLowestCts: static_cast<NESynchronousServer*>(gCommunications)->SetMessageManagerLowestCTs((unsigned long)a[0]);
         break;
     case O::SsDisconnect: SC->Disconnect();
-        break;
-    case O::SsLocalOut: gLocalPlayerOut = a[0] != 0;
         break;
     case O::SsFrameProtocol: NEProtocol::GetProtocol(0, SF->mProtocol);
         break;

@@ -7,6 +7,18 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `EEComputerPlayer::mEngine`: the engine a computer player plays with.
+enum EECPEngineKind {
+  kEECPEngineClassic = 0,
+  kEECPEngineNext = 1,
+};
+
+/// The lobby's choices (`EEGameOptionsPlayer::mEngine`; the engine box's lines, in this order): 0 classic, 1 random,
+/// 2 + k the manifest's entry k.
+enum EECPEngineChoice {
+  kEECPChoiceClassic = 0,
+};
+
 /// An AI of the manifest as C++ reads it (`EECPAIEntry`): the texts point into the process's manifest.
 struct EeCpAiEntry {
   /// `[a-z0-9_]+`, unique

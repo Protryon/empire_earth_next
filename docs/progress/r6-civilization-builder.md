@@ -32,6 +32,24 @@ the db reads, the simulation's host, `FillCivilizationList`), EECivCapture (TEST
 gate reaches the single-player grant through the game's accept); a keyed .civ file's error box; the premade list's
 drawing.
 
+**Player/tech lane, round 1, fork B** (branch `rust-playertech1-b`; the civilization builder's folder, ee/EECiv*,
+ee/EECP*, the area effects): no behaviour change, the lane's scope 943 -> 864 logic lines (pl1_scope.py).
+- Rust records and enums as the C++ names (cbindgen): `EEAreaEffectKind`, `EECivUpgrade` and its level bits
+  (ee_sim tech_consts.rs; ee/EEAreaEffectKindIDs.h and ee/EECivUpgrade.h only include rust/sim/tech_consts.h),
+  `EECPPlacement` over `EeCpPlacementObj` (EEWorldLayout's two offsets name the Rust fields).
+- `EECivilization`: `civilization.rs` is its own ee_game module (a 66-line rust/game/civilization.h for
+  ee/EECivilization.h, which every includer of ee/EEPlayer.h reads, instead of gamecpp.h); every member but
+  CanAfford, CanAffordAll (gGameOptions), Reapply and ApplyDeferred (the player's id) is inline in the class.
+- The area effects: the ctors, LoadMedia, UnloadMedia, IsInRange, the template's Load and the running state's
+  Save and Load are inline; the running state's FSFile I/O is Rust's (civ_whole_ffi.rs `aes_io_call`, was
+  `EEAEIoCall`).
+- Dead code dropped: the manager's UpgradeKey, FindUpgradeKey and GetUpgrades, `kCivKey`,
+  `EECivilizationUpgradeValue`, the list box's statics `sSeparator`/`sCategory`.
+- The CP headers: `EECPASGFlags` over member initializers (the copy keeps not copying the player), the one-statement
+  forwarders inline (the experiment timers, `EECPNewGame`, `EECPOutOfSynchChecksum`, the next state's
+  SetAI/LoadState/Append/SiteThreat, `EECPEngineAI`/`Name`, `EECPUnitsLoad`; their AI Thread bodies deleted),
+  `EECPEngineLog` a variadic template, the unused forward declarations dropped.
+
 **Next**: `EECivilization` (Empire Earth/EECivilization.cpp, 372: the player's points, purchases, costs and the
 deferred upgrades) into Rust over a view (its numbers are this lane's data; its vectors are read by many lanes, so
 the class keeps them); `FillCivilizationList` to `civ_whole.rs`; the builder host's remaining ops.

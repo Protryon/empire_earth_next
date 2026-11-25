@@ -34,33 +34,9 @@
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
-// Creates a scenario effect with the default settings (see Reset)
-EESMEffect::EESMEffect()
-{
-    this->Reset();
-}
-
-// Destroys the effect (members only)
-EESMEffect::~EESMEffect()
-{
-}
-
-// Resets every effect setting to its default: an object Create effect, 20 s duration, empty texts and object list
-// (the numbers: ee_scenario fields.rs effect_defaults)
-void EESMEffect::Reset()
-{
-    ee_scenario_effect_reset(this);   // ee_scenario effect_copy.rs
-}
-
 #include "lle/U2DSparseArray.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
-
-// Copies another effect's settings, texts and object list
-void EESMEffect::Copy(const EESMEffect& inEffect)
-{
-    ee_scenario_effect_copy(this, &inEffect);   // ee_scenario effect_copy.rs
-}
 
 // Reset's and Copy's single statements (effect_copy.rs EE_SCENARIO_EC_*): the texts by number, the record, the objects
 extern UWideString EESMEffect::* const kSMETexts[EE_SCENARIO_EC_TEXTS];   // (EEScenarioHost.cpp reads it)
@@ -83,15 +59,6 @@ extern "C" int64_t ee_scenariocpp_effect(uint32_t inOp, void* a, const void* b, 
     return 0;
 }
 
-// Sets, raises or lowers a player value: a resource, the population cap (also queued as a pending effect), difficulty,
-// a scenario variable, a tribute or other statistic or the mining limit; any/all resources recurse per resource
-// (ee_scenario player.rs: the plan of writes, EEScenarioHost.cpp's write callback; the any/all resources come back
-// here; entry.rs adds the simulation capture's SMPA record)
-void EESMEffect::SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount)
-{
-    ee_scenario_en_effect_set_player_attribute(this, inPlayer, inAttribute, inMode, inAmount);
-}
-
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitUtilities.h"
@@ -109,36 +76,6 @@ void EEChangeUnit(unsigned long, bool, EEUnit*, long, unsigned long, bool, long)
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
-
-// Runs the effect: an object action, a player action (victory, diplomacy, tech tree, camera, flare...), trigger state,
-// media (sound, text, dialogue, chat), a game action (time of day, calamity, graphic effect, cinematic) or an AI action
-// (entry.rs: ExecuteUncaptured with the simulation capture's SMEX record)
-void EESMEffect::Execute(bool inIsCinematic)
-{
-    ee_scenario_en_effect_execute(this, inIsCinematic);
-}
-
-// Copies a message text, replacing each /#OA, /#PA or /#OC tag and its 4-digit id with an object's attribute value,
-// a player condition's current value or an object's unit count
-// (ee_scenario tokens.rs expand_tokens; entry.rs adds the simulation capture's SMTK record)
-void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
-{
-    ee_scenario_en_effect_expand_tokens(this, (void*)&inText, &outText);
-}
-
-// Reads the effect from a scenario file, renumbering player actions and unit attributes of older files; returns the
-// first read error (ee_scenario save.rs effect_load)
-long EESMEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_scenario_en_effect_io(this, &inFile, inMajorVersion, inMinorVersion, false);
-}
-
-// Writes the effect to a scenario file (civ points from minor version 0x2a, mB193 from 0x14); returns the first write
-// error (ee_scenario save.rs effect_save)
-long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_scenario_en_effect_io(this, &outFile, inMajorVersion, inMinorVersion, true);
-}
 
 
 #include "ee/EEUnitBehavior.h"

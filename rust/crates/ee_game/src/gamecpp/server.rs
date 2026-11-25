@@ -232,7 +232,7 @@ fn fact(f: P, v: &[i64; 8]) -> i64 {
         EE_NETMSG_SESS_FACT_OPTIONS_MULTIPLAYER => O::SsOptionsMultiplayer,
         EE_NETMSG_SESS_FACT_LOAD_TYPE => O::SsLoadType,
         EE_NETMSG_SESS_FACT_GAME_STATE => O::SsGameState,
-        EE_NETMSG_SESS_FACT_DEFAULT_COLOR => O::SsDefaultColor,
+        EE_NETMSG_SESS_FACT_DEFAULT_COLOR => return super::globals::get!(gDefaultPlayerColors)[v[1] as usize] as i64,
         EE_NETMSG_SESS_FACT_CITIZENS_DEFAULT => O::SsCitizensDefault,
         EE_NETMSG_SESS_FACT_VERSION_MATCH => O::SsVersionMatch,
         EE_NETMSG_SESS_FACT_BINARY_CHECKSUM => O::SsBinaryChecksum,
@@ -606,7 +606,7 @@ fn comms(f: P, v: &[i64; 8]) {
         }
         EE_NETMSG_SESS_COMMS_LOWEST_CTS => O::SsLowestCts,
         EE_NETMSG_SESS_COMMS_DISCONNECT => O::SsDisconnect,
-        EE_NETMSG_SESS_COMMS_LOCAL_OUT => O::SsLocalOut,
+        EE_NETMSG_SESS_COMMS_LOCAL_OUT => return super::globals::set!(gLocalPlayerOut, v[1] != 0),
         EE_NETMSG_SESS_COMMS_SLEEP => return ee_base::plat_core::time::PlatSleep(v[1] as u32),
         _ => O::SsFrameProtocol,
     };

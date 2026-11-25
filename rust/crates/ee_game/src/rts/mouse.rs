@@ -442,7 +442,7 @@ pub unsafe fn end_frame<C: MouseCpp>(c: &mut C, mouse: usize, leave: &mut dyn Fn
 }
 
 #[cfg(not(test))]
-mod ffi {
+pub(crate) mod ffi {
     use super::*;
     use ee_base::shim::ShimFfi as Ffi;
 

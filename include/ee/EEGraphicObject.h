@@ -27,6 +27,9 @@ class UString;
 #include "lle/GEVector.h"
 #include "lle/GEOrientation.h"
 #include "lle/GETransformation.h"
+#include "rust/game/gamecpp.h"
+#include "rust/game/preload_media.h"
+#include "rust/render/gfx.h"
 
 // Actual0x50 turret part from ctorD9AB4, allocationD76A1 and two class readers.
 // No vptr; nominal name provisional. Position0, transform0xc, model0x4c.
@@ -53,7 +56,9 @@ public:
     virtual ~EEOrbital() {}
     // 0x208ce6 (ret 4; after EEGraphicObject 0xd76a1 news one inline: vptr, mAngle 0, mModel 0): the model and the
     // speed from the name's degrees after the prefix, negative for clockwise (provisional name)
-    void Init(GEModel* inModel);
+    // Attaches the orbiting part to a model, speed from the name in degrees per second (orbital_cw_<deg>_... clockwise,
+    // orbital_ccw_ counterclockwise)
+    void Init(GEModel* inModel) { ee_gamecpp_ov_orbital_init(this, inModel); }
     float GetAngle() const { return this->mAngle; }  // inline: `mov eax,[x+0xc]` into a temp before the array's op[] (EEE3DIcon::Queue 0x4f21e5)
     void Update();                          // 0x208e28: mAngle += frame time * mSpeed, wrapped to [-pi, pi]
 
@@ -73,9 +78,10 @@ public:
     // 0xdad54: likewise with the part's own transformation inPart (a separately oriented part) first
     void GetPoint(unsigned long inFrame, const GETransformation& inTransformation, const GETransformation& inPart,
                   GE3DPoint& outPoint);
-    void GetOffset(unsigned long inFrame, GE3DPoint& outPoint);   // 0xdab97 (the point at inFrame in the model's space)
+    // 0xdab97 (the point at inFrame in the model's space)
+    void GetOffset(unsigned long inFrame, GE3DPoint& outPoint) { ee_gfx_tag_offset(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, NULL, GERust(outPoint)); }
     // 0xdac22: GetOffset with the part's own transformation inPart first (provisional name)
-    void GetOffset(unsigned long inFrame, const GETransformation& inPart, GE3DPoint& outPoint);
+    void GetOffset(unsigned long inFrame, const GETransformation& inPart, GE3DPoint& outPoint) { ee_gfx_tag_offset(reinterpret_cast<const EeGfxTagPoint*>(this), inFrame, GERust(inPart), GERust(outPoint)); }
 
     GEModel* mModel;                        // +0x00
     unsigned long mIndex;                   // +0x04
@@ -87,7 +93,7 @@ public:
 class EETagPointList {
 public:
     // 0xe1814: scales the orientation rows of ioTransformation by inScale (does not read this)
-    static void Scale(GETransformation& ioTransformation, float inScale);
+    static void Scale(GETransformation& ioTransformation, float inScale) { ee_gfx_tags_scale(GERust(ioTransformation), inScale); }
     EETagPoint* GetTagPoint(unsigned long inIndex) { return this->mPoints[inIndex]; }
     unsigned long GetNumTagPoints() const { return (unsigned long)this->mPoints.size(); }
 
@@ -109,21 +115,33 @@ public:
 // 0: EEGraphicEffect::RecordNotPreloaded records the effect's id) is EeDataMediaUse (media.rs), the third.
 class EEGraphicObject : public EEMedia, public EeDataGraphicObjectFields, public EeDataMediaUse {
 public:
-    EEGraphicObject();                      // 0xd7354 (LoadTable 0xd7833 news 0x4f0 bytes)
-    virtual ~EEGraphicObject();
+    // Creates an empty, unloaded graphic object: no names, models, textures or sounds, drawn, mip maps on (the record's
+    // members: ee_data tables.rs)
+    // 0xd7354 (LoadTable 0xd7833 news 0x4f0 bytes)
+    EEGraphicObject() : EeDataMediaUse() { ee_data_graphic_object_default(this); }
+    // Destroys the graphic object: unloads its media if loaded, frees its file names
+    virtual ~EEGraphicObject() { ee_preload_graphic_free(static_cast<EEMedia*>(this)); }
     // 0xd85ed (vtable 0x43f788 +0x04; +0x08 is UnloadMedia): loads the models, textures and sounds on the first use
     // (ee_gfx gobj_media.rs, with the part scan 0xd76a1 and the texture loads 0xd8b09)
     virtual long LoadMedia();
     // 0xd907e (vtable 0x43f788 +0x08: the EEMedia override): releases the loaded models, textures and sounds when the
     // load count is 1 (provisional name)
     virtual long UnloadMedia();
-    static long LoadTable(FSFile* inFile); // original-backed 0xd7833; caller1414a3, FSFile IO proof
+    // Reads the graphics table into the media table (each record after its 32 names; the record and its copy are ee_data
+    // tables.rs': the animation states, the sounds by id, alpha and mip settings); entries with media index 0 are dropped.
+    // Returns the last read result
+    // original-backed 0xd7833; caller1414a3, FSFile IO proof
+    static long LoadTable(FSFile* inFile) { return ee_preload_load_graphic_objects(inFile); }
     // +0x004 not decoded (the ctor 0xd7354: vectors at +0x04/+0x14/+0x24, 14 more at +0x34, a map at +0x14c, ...)
     std::vector<EETurretPart*> mTurretParts; // actual original third-party-free record/vector at+4
     std::vector<EEOrbital*> mOrbitals;      // +0x014 (EEE3DDisease copies each) (provisional name)
     // 0x138e4b (ICF-folded with EECalamityManager::GetCalamityClassCount): mOrbitals.size() (provisional name)
     unsigned long GetOrbitalCount() const { return this->mOrbitals.size(); }
-    unsigned long GetWheelCount() const;    // 0x200292 (out-of-line COMDAT, defined in EEComplexUnit.cpp): mWheels.size() (provisional name)
+    // Returns the number of wheels on the graphic object
+    // Declared out of line in ee/EEGraphicObject.h like GetOrbitalCount; its only out-of-line copy follows this
+    // unit's template block (provisional name)
+    // 0x200292 (out-of-line COMDAT, defined in EEComplexUnit.cpp): mWheels.size() (provisional name)
+    unsigned long GetWheelCount() const { return this->mWheels.size(); }
     GETexture* GetTexture(unsigned long inIndex) const { return this->mTextures[inIndex]; }  // inline: the effects' Queue tail (0x4ebfd0)
     // inline; out of line after their first user EEUnitClass::TurretsFacePoint (0x23a59b / 0x23a5ad, in this order)
     // (provisional names)
@@ -132,9 +150,11 @@ public:
     // EEModel is now a typedef of this class)
     // 0xd84ec: the tag-point list of the model part inPart (its +0x244 model) for the point kind inKind (0x12: the
     // blast wave's and the shield's; null without one) (provisional name)
-    EETagPointList* GetTagPoints(unsigned long inPart, long inKind);
+    // Returns the tag points of a kind on a part's model, or NULL when it has none (ee_gfx tags.rs)
+    EETagPointList* GetTagPoints(unsigned long inPart, long inKind) { return reinterpret_cast<EETagPointList*>(ee_gfx_tags_find(this->mTags, this->mModels[inPart], inKind)); }
     // 0xd85aa: the index of inModel among the parts (0: found; 3: not) (provisional name)
-    long FindTurretPart(GEModel* inModel, unsigned long& outIndex);
+    // Finds the turret part for a model and returns its index; returns 0 when found, else 3 (preload_media.rs)
+    long FindTurretPart(GEModel* inModel, unsigned long& outIndex) { return ee_preload_find_turret_part(this, inModel, &outIndex); }
     // the part count (ICF-folded into 0x91f11, a vector size; EEUnitClass 0x2364f3) (provisional name)
     unsigned long GetNumParts() const { return this->mTurretParts.size(); }
 

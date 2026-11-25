@@ -23,8 +23,8 @@ constexpr static const int64_t EE_FIXTURE_STATE_LOBBY = 64;
 
 constexpr static const int64_t EE_FIXTURE_STATE_UI_MANAGER = 128;
 
-/// The platform's input events ([`EeFixtureOp::Input`]'s i0; the host maps them to platform/PlatWindow.h's
-/// `PLAT_EVENT_KEY_DOWN`, `_KEY_UP`, `_MOUSE_DOWN`, `_MOUSE_UP`, `_MOUSE_WHEEL`).
+/// The platform's input events (platform/PlatWindow.h's `PLAT_EVENT_KEY_DOWN`, `_KEY_UP`, `_MOUSE_DOWN`, `_MOUSE_UP`,
+/// `_MOUSE_WHEEL`).
 constexpr static const int64_t EE_FIXTURE_KEY_DOWN = 0;
 
 constexpr static const int64_t EE_FIXTURE_KEY_UP = 1;
@@ -38,14 +38,8 @@ constexpr static const int64_t EE_FIXTURE_MOUSE_WHEEL = 4;
 /// The operations (`EeFixtureCall::op`). The arguments and answers of each are documented on it: `h`/`h2` handles,
 /// `i` and `f` numbers in and out, `s` a text in, `ids`/`n` ids in, `sink` texts and ids out.
 enum class EeFixtureOp : uint32_t {
-  /// `s` to stderr (fputs, fflush)
-  Stderr = 1,
-  /// exit(i0)
-  Exit,
-  /// PlatSimSetTimeFactor(i0, i1) -> 1 taken, 0 refused
-  SetTimeFactor,
   /// the platform switch i0 (0 the seed, 1 no human defeat, 2 the port offset) set to i1
-  SetSwitch,
+  SetSwitch = 1,
   /// the debug output and the fault handler (EETestFixtureConfigure's), or with i0 = 1 the game's test hooks
   Install,
   /// the harness clock: i0/i1 its factor, i2 PlatTimeMilliseconds
@@ -83,13 +77,8 @@ enum class EeFixtureOp : uint32_t {
   MouseFix,
   /// ForceUIUpdate
   UiUpdate,
-  /// ISHandleEvent of a platform event: i0 its kind (EE_FIXTURE_KEY_DOWN ..), i1 its key code or button, f0 the wheel
-  Input,
   /// the keyboard's Shift and Control -> 0 none, 1 Shift alone, 2 anything else
   Modifiers,
-  /// the state bits: 1 gPhysics, 2 the map, 4 the world's lock, 8 gMouse, 16 gISKeyboard, 32 gUserInterface,
-  /// 64 the WON lobby open, 128 gUIManager
-  State,
   /// the game form's selection control (form h's kMainGameSelectUnits) -> its handle, 0 none
   SelectControl,
   /// selection control h under the UI lock: i0 the form's mouse captured, i1 dragging, (f0, f1) the drag's end
@@ -163,7 +152,6 @@ enum class EeFixtureOp : uint32_t {
   LobbySnapshot,
   /// control i0 of form h: an edit box's text set to the number i1 (`SetText(unsigned long)`) -> 1, 0 not an edit box
   EditNumber,
-  FxInstallFault,
   FxInstallLasso,
   FxMessageType,
   FxMessageLocal,
@@ -222,13 +210,9 @@ enum class EeFixtureOp : uint32_t {
   FxActionDereference,
   FxStatusButtonShows,
   FxStatusButtonCenter,
-  FxWorldHasLock,
-  FxWorldLockStep,
-  FxPhysicsPresent,
   FxPhysicsValue,
   FxCommsPresent,
   FxCommsValue,
-  FxMapPresent,
   FxCameraFocus,
   FxCameraEndFocus,
   FxCameraZoom,
@@ -415,7 +399,7 @@ void ee_fixture_message(uint64_t message,
                         int32_t phase);
 
 /// The WON lobby's work on its own message loop (EETestFixture.cpp's UserEvent; lobby.rs).
-void ee_fixture_lobby_work();
+void ee_fixture_lobby_work(int _param);
 
 }  // extern "C"
 

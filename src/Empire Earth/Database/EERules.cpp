@@ -8,11 +8,8 @@
 
 #include <cstdint>
 #include <cstring>
-#include <string>
-#include <vector>
 
-#include "EEDataText.h"   // TakeBytes
-
+#include "EEDataText.h"   // the ee_data C API
 
 EERuleNumber EERuleNumber::Constant(float inValue)
 {
@@ -30,24 +27,10 @@ EERuleNumber EERuleNumber::World(long inRow, int inValue)
     return n;
 }
 
-bool EECombatRules::IsElevationAttacker(long inCategory) const { return this->mElevationAttackers.contains(inCategory); }
-bool EECombatRules::IsElevationLauncher(long inCategory) const { return this->mElevationLaunchers.contains(inCategory); }
-bool EECombatRules::IsElevationTarget(long inCategory) const { return this->mElevationTargets.contains(inCategory); }
-bool EECombatRules::IsMoraleBuilding(long inUnitType) const { return this->mMoraleBuildings.contains(inUnitType); }
-
-long EEDifficultyAILevel(unsigned long inDifficulty)
-{
-    const EERuleList<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
-    return inDifficulty < theList.size() ? theList[inDifficulty].mAILevel : (long)inDifficulty;
-}
-
 const EEEpochMedia& EERules::Epoch(long inEpoch) const
 {
-    static const EEEpochMedia kNone;
-    if (this->mEpochs.empty())
-        return kNone;
-    size_t k = inEpoch < 0 ? 0 : (size_t)inEpoch;
-    return this->mEpochs[k < this->mEpochs.size() ? k : this->mEpochs.size() - 1];
+    static const EEEpochMedia kNone = [] { EEEpochMedia theNone; ee_data_rules_epoch_none(&theNone); return theNone; }();
+    return this->mEpochs.empty() ? kNone : this->mEpochs[ee_data_rules_epoch_index(inEpoch, this->mEpochs.size())];
 }
 
 EERules::EERules() : mRust(ee_data_rules_new())
@@ -62,8 +45,7 @@ EERules::~EERules()
 
 void EERules::Refresh()
 {
-    ee_data_rules_mirror(this->mRust, static_cast<EERulesData*>(this), kEERulesMirrorSizes,
-                         sizeof(kEERulesMirrorSizes) / sizeof(kEERulesMirrorSizes[0]));
+    ee_data_rules_mirror(this->mRust, static_cast<EERulesData*>(this));
 }
 
 void EERules::SetMusicFromFlags(long inSong, const bool* inFlags, unsigned long inCount)
@@ -76,27 +58,4 @@ EERules& EEGetRules()
 {
     static EERules sRules;
     return sRules;
-}
-
-bool EERulesAddOverride(const std::string& inSpec, std::string& outError)
-{
-    EeDataBytes theError{nullptr, 0};
-    if (!ee_data_rules_add_override(reinterpret_cast<const uint8_t*>(inSpec.data()), inSpec.size(), &theError)) {
-        outError = EEDataText::TakeBytes(theError);
-        return false;
-    }
-    return true;
-}
-
-void EERulesOverrideProblems(std::vector<std::string>& out)
-{
-    out.clear();
-    EeDataBytes theBytes{nullptr, 0};
-    ee_data_rules_override_problems(&theBytes);
-    std::string theText = EEDataText::TakeBytes(theBytes);
-    for (size_t theStart = 0; theStart < theText.size();) {
-        size_t theEnd = theText.find('\n', theStart);
-        out.push_back(theText.substr(theStart, theEnd - theStart));
-        theStart = theEnd + 1;
-    }
 }

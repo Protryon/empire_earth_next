@@ -118,8 +118,6 @@ struct CivListAccess : UILBString {
     static unsigned long Drawn(const UILBString* inList) { return (inList->*(&CivListAccess::GetDrawCount))(); }
 };
 
-char sModeRead[] = "r";
-char sModeWrite[] = "w";
 std::string sText;                          // the last text answered (the UI thread's, while a step runs)
 
 }   // namespace
@@ -389,8 +387,6 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
     // the ghosts
     case O::GhostsChanged: gGhostUnitsChanged = true;
         break;
-    case O::GhostsClear: gWorld.ClearGhostUnits();
-        break;
     case O::GhostCount: return gWorld.GetNumGhostUnits();
     case O::GhostAt: return P64(gWorld.mGhostUnits[a[0]]);
     case O::GhostCreate: EEGhostUnit::Create(GE2DPoint(f[0], f[1]), (long)a[0], gWorld.mPlayers[a[1]], f[2], false);
@@ -542,8 +538,7 @@ extern "C" int64_t ee_simcpp_sed(EeSimDriverSed inOp, uintptr_t p, const int64_t
         break;
     case O::SpecOpenRead: return SP->Open(kFileAccessRead);
     case O::SpecOpenWrite: return SP->Open(kFileAccessWrite);
-    case O::SpecFOpenRead: return SP->FOpen(sModeRead);
-    case O::SpecFOpenWrite: return SP->FOpen(sModeWrite);
+    case O::SpecFOpen: return SP->FOpen(const_cast<char*>(s));
     case O::SpecClose: SP->Close();
         break;
     case O::SpecWrite: return SP->Write((const unsigned char*)a[0], (unsigned long)a[1], *(unsigned long*)a[2]);

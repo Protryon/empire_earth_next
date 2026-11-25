@@ -93,18 +93,15 @@
 #include "ee/EEGameLog.h"
 #include "rust/sim/ai.h"   // ee_ai_name_copy
 #include "rust/game/physics.h"
-#include "rust/game/gamecpp.h"   // EeGameCpp (EECore11OpE: the end of the chain)
 #include "rust/sim/app.h"
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
-UString gPhysicsDataKey("EEPhysics Data");
 
 extern UString gCampaignUser;              // 0x531cd0 (defined at the end of this unit; provisional name)
 unsigned long EEGetCivTimerLimit();         // 0x27ffae (cdecl: 300000; the civ timer limits, EEUIFMainGame.cpp's range)
 unsigned long EEGetCivTimerSecondWarning();  // 0x27ffba (270000) (provisional names)
 unsigned long EEGetCivTimerFirstWarning();  // 0x27ffb4 (240000)
 extern unsigned long& gContinentManagerChecksum;  // 0x530d10 (the continent manager's checksum; provisional name)
-extern unsigned long gCollisionPeriod;      // 0x4c237c (.data = 1 after gCollisionDetectionUnit; provisional name)
 
 // Creates the physics simulation: makes its save-game lock, resets its clocks and starts the thread's main loop
 EEPhysics::EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer)
@@ -119,49 +116,18 @@ EEPhysics::~EEPhysics()
     TSScheduler::DestroyCriticalSection(this->mSaveGameLock);
 }
 
-// The methods' bodies are Rust (ee_game physics.rs, world lane round 1); each C++ call they make is a case of
-// ee_physcpp below
-void EEPhysics::AutoSave() { ee_physics_auto_save(this); }
-void EEPhysics::ClearServerMessages() { ee_physics_clear_server_messages(this); }
-void EEPhysics::FlushWorld() { ee_physics_flush_world(this); }
-void EEPhysics::RunOwedTicks() { ee_physics_run_owed_ticks(this); }
-void EEPhysics::EndGame(bool inIsVictory) { ee_physics_end_game(this, inIsVictory); }
-unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlags)
-    { return ee_physics_out_of_synch_checksum(this, inDump, inFlags); }
-void EEPhysics::GetMinutesAndSeconds(unsigned long* outMinutes, unsigned long* outSeconds, unsigned long inTime)
-    { ee_physics_minutes_and_seconds(this, outMinutes, outSeconds, inTime); }
-long EEPhysics::GetUnitSwapKind(EEComplexUnit* inUnit) { return ee_physics_unit_swap_kind(this, inUnit); }
-void EEPhysics::Init() { ee_physics_init(this); }
 void EEPhysics::Lock() { gWorld.mLock->WriteLock(); }
-void EEPhysics::QueueServerMessage(NEMessage* inMessage) { this->mServerMessages.push_back(inMessage); }
-void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-    { ee_physics_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2); }
-void EEPhysics::Idle() { ee_physics_idle(this); }
+void EEPhysics::Unlock() { gWorld.mLock->WriteUnlock(); }
 // its own lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
 void EEPhysics::Tick()
 {
     ee_physics_tick(this);
 }
-void EEPhysics::QueueMessage(NEMessage* inMessage) { ee_physics_queue_message(this, inMessage); }
-void EEPhysics::SwapUnit(EEUnit* inOld, EEUnit* inNew) { ee_physics_swap_unit(inOld, inNew); }
-void EEPhysics::ProcessUnitSwaps() { ee_physics_process_unit_swaps(this); }
-void EEPhysics::DrainInput() { ee_physics_drain_input(this); }
 // its own lines: the test profile's harness hook (tools/build.py HARNESS_HOOKS)
 void EEPhysics::ReportStatistics()
 {
     ee_physics_report_statistics(this);
 }
-long EEPhysics::PostAutoSave() { return ee_physics_post(this, 0x50a); }
-long EEPhysics::PostShowDialogMessage() { return ee_physics_post(this, 0x508); }
-long EEPhysics::PostInit() { return ee_physics_post(this, 0x509); }
-void EEPhysics::UpdateTiming() { ee_physics_update_timing(this); }
-void EEPhysics::QueueUnitSwap(EEComplexUnit* inOld, EEComplexUnit* inNew) { ee_physics_queue_unit_swap(this, inOld, inNew); }
-void EEPhysics::Unlock() { gWorld.mLock->WriteUnlock(); }
-void EEPhysics::UpdateAreaEffectsClock() { ee_physics_update_area_effects_clock(this); }
-void EEPhysics::UpdateCivTimer() { ee_physics_update_civ_timer(this); }
-void EEPhysics::ServeLoadSaveRequests() { ee_physics_serve_load_save_requests(this); }
-void EEPhysics::CheckShiftMode() { ee_physics_check_shift_mode(this); }
-void EEPhysics::UpdateWeather() { ee_physics_update_weather(this); }
 
 // Returns the game speed and elapsed game time as text ("<speed> hh:mm:ss")
 UWideString EEPhysics::GetTimeString()
@@ -183,22 +149,6 @@ void EEAfterLoad(std::function<void()> inFixup)
 void EEAfterLoadLast(std::function<void()> inFixup)
 {
     ee_physics_after_load(true, new std::function<void()>(inFixup));
-}
-
-// Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
-// flag after version 0.0xce, the resource timer from 0xfa); returns the first read error. The original's two era
-// bodies are Rust (ee_units physics_save.rs, over the record this class derives from; physics.rs: the base's part,
-// the file's primitives, the loaded seed back at the first tick)
-long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_physics_load(this, &inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-}
-
-// Writes the physics clocks, tick counters, timing averages, civ timer state, game-over flag and resource timer
-// to the saved game; returns the first write error
-long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_physics_save(this, &outFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // TEST ONLY: the UI fixture's view of each executed input (EETestFixtureOrders.cpp: the orders' verdicts), called
@@ -260,7 +210,11 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::ThreadPost: return PH->mThread != NULL ? PH->mThread->Post((unsigned long)a[0], NULL, NULL, true) : 0;
     case O::RtsHandleMessage: PH->RTSPhysics::HandleMessage((unsigned long)a[0], (void*)a[1], (void*)a[2]);
         break;
-    case O::UpdateUnits: return PH->UpdateUnits();
+    case O::UnitOfId: return P64((EEComplexUnit*)EEUnitHandle<EEComplexUnit>::FromSavedID((uint32_t)a[0]));
+    case O::UnitStep: CX->Step();
+        break;
+    case O::PlayerUpdate: PL->UpdatePlayer();
+        break;
     case O::FixupRun: (*(std::function<void()>*)p)();
         break;
     case O::FixupDelete: delete (std::function<void()>*)p;
@@ -358,8 +312,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
     case O::NumPlayers: return gWorld.mNumPlayers;
     case O::Player: return P64(gWorld.mPlayers[a[0]]);
     case O::CurrentPlayer: return P64(gWorld.GetCurrentPlayer());
-    case O::UpdateActiveUnits: gWorld.UpdateActiveUnits();
-        break;
     case O::InCinematic: return gWorld.mInCinematic;
     case O::ScenarioResult: return gWorld.mScenarioManager->mGameResult;
     case O::SetScenarioResult: gWorld.mScenarioManager->mGameResult = (long)a[0];
@@ -446,7 +398,6 @@ extern "C" int64_t ee_physcpp(EePhysCpp inOp, uintptr_t p, const int64_t* a, con
         break;
     case O::UnitId: return ((EEUnit*)p)->mUnitID;
     // the other systems
-    case O::FreeCamera: return gFreeCamera == true;
     case O::PathManagerUpdate: gPathManager.Update();
         break;
     case O::PathManagerDump: gPathManager.DumpOutOfSynch(FP(0));
@@ -531,46 +482,7 @@ extern "C" double ee_physcpp_f(EePhysCpp inOp, uintptr_t p, const int64_t* a, co
 #undef FP
 #undef SERVER
 
-// Sets the collision period (the active units spread over gCollisionDetectionUnit ticks, at least 1), updates
-// every player, then steps each active unit (last first); returns the unit count
-// New (R5b.4 leaf 6): the loop is Rust over the stepped units' list (ee_units tick.rs update_units: the period, the
-// players' updates and each unit's Step from the last to the first, host calls); the list equals the deque in order
-// (USCK checks it), and while the capture runs each step checks the list's id against the deque's
-static void TickSetCollisionPeriod(void* inContext, uint32_t inValue)
-{
-    gCollisionPeriod = inValue;
-}
-
-static void TickUpdatePlayer(void* inContext, uint32_t inIndex)
-{
-    if (gWorld.mPlayers[inIndex] != NULL)
-        gWorld.mPlayers[inIndex]->UpdatePlayer();
-}
-
-static void TickStep(void* inContext, uint32_t inIndex, uint32_t inID)
-{
-    EEComplexUnit* theUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(inID);   // the stepped list's inIndex-th
-    gPhysicsSteppingUnit = theUnit;   // TEST ONLY: named by EE-SIM's random-draw trace
-    theUnit->Step();
-    ee_units_note_update_commit(inID);   // TEST ONLY (USST kind 12)
-}
-
-unsigned long EEPhysics::UpdateUnits()
-{
-    EeUnitsTickHost theHost;
-    theHost.ctx = NULL;
-    theHost.num_players = (uint32_t)gWorld.mNumPlayers;
-    theHost.detection_unit = (uint32_t)gCollisionDetectionUnit;
-    theHost.set_collision_period = TickSetCollisionPeriod;
-    theHost.update_player = TickUpdatePlayer;
-    theHost.step = TickStep;
-    unsigned long theCount = ee_units_update_units(&theHost);
-    gPhysicsSteppingUnit = NULL;
-    // TEST ONLY: the step leaves' records (USTM, USST; ee_sim units/notes.rs)
-    ee_units_note_step_commit(gPhysics != NULL ? (uint32_t)gPhysics->mNumTicksDone : 0);
-    return theCount;
-}
-
+// (UpdateUnits, the unit loop's host: ee_game physics.rs update_units)
 // (gPhysicsSteppingUnit and gPhysicsAfterTickHook, TEST ONLY, are EEGlobals.cpp's)
 
 // the unit's last global (0x531cd0, "default" 0x4b5210): its init chain follows the template COMDATs
@@ -583,27 +495,4 @@ void EEEnvironmentManager::Tick(unsigned long inTime)
 {
     if (this->mNextStep <= inTime && this->mIsEnabled == true)
         this->Step(inTime);
-}
-
-// ------------------------------------------------------------------------- round 11, lane E; round 12, fork B: the world lane's leftovers (the end of the chain)
-
-// the C++ calls and members of fork B's bodies in Rust (gamecpp; EeGameCpp's round 12 fork B section): one
-// statement each
-int64_t EECore11OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    typedef EeGameCpp O;
-    switch (inOp) {
-    // round 13, fork B: the world's dtor (gamecpp world.rs ee_gamecpp_world_destroy; p the world)
-    case O::C13bGhostLockFree: TSScheduler::DestroyCriticalSection(((EEWorld*)p)->mGhostUnitsLock);
-        break;
-    case O::C13bGhostAt: return P64(((EEWorld*)p)->mGhostUnits[(size_t)a[0]]);
-    default: ESVERIFY_AT(inOp == EeGameCpp::UnRts, 1);
-    }
-    return 0;
-}
-
-double EECore11OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    ESVERIFY_AT(inOp == EeGameCpp::CxEffectHeight, 1);
-    return 0.0;
 }

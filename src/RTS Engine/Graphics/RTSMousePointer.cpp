@@ -16,9 +16,6 @@
 #include "rust/base/math.h"
 #include "rust/game/rts.h"
 
-RTSMousePointer::RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inThreadPriority) : mWindow(inWindow) { ee_rts_mouse_pointer_construct(this, inMouse, inThreadPriority); }
-RTSMousePointer::~RTSMousePointer() { ee_rts_mouse_pointer_destruct(this); }
-
 // The shims mouse_pointer.rs calls (PointerCpp)
 extern "C" {
 void** ee_rtsmpcpp_thread_slot(RTSMousePointer* inPointer) { return reinterpret_cast<void**>(&inPointer->mThread); }

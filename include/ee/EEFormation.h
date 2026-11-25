@@ -50,9 +50,4 @@ public:
     float mMinRadius;                       // a circle's lower bound of the radius (0.5; EEHerd sets its own)
 };
 
-// TEST ONLY: with the capture on, EE-SIM calls this every few game minutes: every formation type Places groups of
-// each player's newest units (their real radii and positions), so that lines and wedges, which the computer players
-// never form, are captured too. Reads the world; changes nothing.
-void EEFormationCaptureSweep();
-
 #endif

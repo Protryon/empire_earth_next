@@ -14,7 +14,6 @@
 
 #include "rust/render/gfx.h"
 
-struct EERenderFrameInfo;
 
 // The render lists as ee_gfx reads them in place (rfil.rs, units_lists.rs: EEROUnits draws from them): gamecpp
 // ro_lists.rs' view

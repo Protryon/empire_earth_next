@@ -61,129 +61,10 @@ EEMap::EEMap(long inWidth, long inHeight, unsigned long inPlayerCount, long inTe
     ee_gamecpp_mx_construct(this, inWidth, inHeight, inPlayerCount, inTerrain);
 }
 
-// Destroys the map: frees its region tables, tiles and visibility words and unloads its terrain textures
-EEMap::~EEMap()
-{
-    ee_gamecpp_map_destroy(this);
-}
-
-// Hands out the next reserved tile at the given height, with its slice of the visibility words
-EEMapTile* EEMap::CreateTile(float inHeight)
-{
-    return (EEMapTile*)ee_gamecpp_map_create_tile(this, inHeight);
-}
-
-// Allocates the given number of tiles and cleared visibility words (two players per word), dropping old ones
-void EEMap::ReserveTiles(unsigned long inCount)
-{
-    ee_gamecpp_map_reserve_tiles(this, inCount);
-}
-
-// Resizes every tile's visibility words for a new player count, keeping the existing visibility
-void EEMap::SetPlayerCount(unsigned long inPlayerCount)
-{
-    ee_gamecpp_map_set_player_count(this, inPlayerCount);
-}
-
 // Drops a unit placed on the map onto the ground at its current position (camera objects excluded)
 void EEMap::PlaceUnitOnGround(EEUnit* inUnit)
 {
     ee_gamecpp_map_place_on_ground(static_cast<EEComplexUnit*>(inUnit));
-}
-
-// Refreshes the terrain type of the four tiles around a vertex, then gives the vertex the water colour set
-// when below sea level, else its terrain's colour set (ee_app map.rs)
-void EEMap::UpdateWater(long inX, long inY)
-{
-    ee_gamecpp_mx_update_water(this, inX, inY);   // (with MAPC, TEST ONLY)
-}
-
-// Builds a new map of the given size: fresh unit and effect region tables, every tile on the base terrain (the fill:
-// ee_app map.rs). The original assigned the terrain mesh to itself here, a no-op; the mesh is a Rust object now.
-void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
-{
-    ee_gamecpp_mx_create_map(this, inWidth, inHeight, inPlayerCount);   // (with MAPC, TEST ONLY)
-}
-
-// Creates an empty map for loading
-FSPersistent* EEMap::CreateDefault() const
-{
-    return new EEMap;
-}
-
-// Takes a player's own or shared sight away from the mesh-flagged tiles within a radius; if the local player sees
-// through it, updates the mini map and terrain visibility counts too (ee_app map.rs)
-void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
-{
-    ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, false);   // (with TSGT and MAPS, TEST ONLY)
-}
-
-// Sums the tile and corner-height checksums of the next 64 x 64 window and advances the window; past the right
-// edge the cursor moves to the start of the next band (ee_app map.rs)
-long EEMap::ComputeChecksum()
-{
-    return ee_gamecpp_map_checksum(this);   // (with MAPK, TEST ONLY)
-}
-
-// Adds the map's base checksum (the RTSMap part)
-void EEMap::GetChecksum(ESChecksum& ioChecksum) const
-{
-    RTSMap::GetChecksum(ioChecksum);
-}
-
-// Returns the tile under a screen point and its coordinates (in orthographic view, where the ray meets z 0)
-EETile* EEMap::GetTileAt(const GE2DPoint& inPoint, long& outX, long& outY)
-{
-    return (EETile*)ee_gamecpp_map_tile_at(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &outX, &outY);
-}
-
-// Gives the ground point at a tile's centre; returns false when there is no such tile
-bool EEMap::GetTileLocation(long inX, long inY, GE3DPoint& outLocation)
-{
-    return ee_gamecpp_map_tile_location(this, inX, inY, reinterpret_cast<EeGe3DPoint*>(&outLocation));
-}
-
-// Builds the 3D line through a screen point from the near to the far clipping plane
-void EEMap::GetScreenLine(const GE2DPoint& inPoint, GE3DLine& outLine)
-{
-    ee_gamecpp_map_screen_line(reinterpret_cast<const EeGe2DPoint*>(&inPoint), reinterpret_cast<EeGe3DLine*>(&outLine));
-}
-
-// Returns the ground's pitch under a location, from the ground heights 0.65 ahead of and behind it
-float EEMap::GetTerrainPitch(const GETransformation& inLocation)
-{
-    return ee_gamecpp_map_terrain_pitch(this, reinterpret_cast<const EeGeTransformation*>(&inLocation));
-}
-
-// Returns the ground's roll under a location, from the ground heights 0.65 to either side of it
-float EEMap::GetTerrainRoll(const GETransformation& inLocation)
-{
-    return ee_gamecpp_map_terrain_roll(this, reinterpret_cast<const EeGeTransformation*>(&inLocation));
-}
-
-// Returns the tile hit by the ray through a screen point, optionally stopping at the water surface
-EETile* EEMap::PickScreenTile(const GE2DPoint& inPoint, long& outX, long& outY, bool inHitWaterSurface)
-{
-    return (EETile*)ee_gamecpp_mx_pick_tile(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &outX, &outY, inHitWaterSurface);
-}
-
-// Returns the tile and the 3D point hit by the ray through a screen point, optionally at the water surface
-EETile* EEMap::GetLocationAt(const GE2DPoint& inPoint, GE3DPoint& outLocation, bool inHitWaterSurface)
-{
-    return (EETile*)ee_gamecpp_mx_location_at(this, reinterpret_cast<const EeGe2DPoint*>(&inPoint), reinterpret_cast<EeGe3DPoint*>(&outLocation), inHitWaterSurface);
-}
-
-// Resets the map to empty: no tiles or region tables, seeds its random generator, registers terrain sets
-void EEMap::Initialize()
-{
-    ee_gamecpp_map_initialize(this);
-}
-
-// Reads the map, its base terrain, characteristics and cliff terrain from the saved game and re-types every
-// tile (cliffs and unknown terrain become the base terrain; saves up to 0.203 have no space tiles)
-long EEMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_gamecpp_mx_load(this, &inFile, inMajorVersion, inMinorVersion);   // port: ee_units map_save.rs
 }
 
 // The C++ parts of the maps' Load and Save (ee/EEMap.h; RTSMap.cpp's too): gamecpp map_more.rs over EECore9OpB2's round 11
@@ -191,82 +72,6 @@ long EEMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSF
 int32_t EEMapSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
 {
     return ee_gamecpp_mx_save_op(inContext, inOp, inIndex, io);
-}
-
-// Reads the next tile from the saved game (saves up to 0.46 also carry its terrain); returns the tile
-EEMapTile* EEMap::LoadTile(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile, long inX,
-                            long inY)
-{
-    return (EEMapTile*)ee_gamecpp_map_load_tile(this, inMajorVersion, inMinorVersion, &inFile, inX, inY);
-}
-
-// Writes every tile's state to the out-of-sync dump file
-void EEMap::DumpOutOfSynch(FILE* inFile)
-{
-    ee_gamecpp_map_dump(this, inFile);
-}
-
-// Gives a player own or shared sight of the mesh-flagged tiles within a radius; if the local player sees through
-// it, updates the mini map and terrain visibility counts too (ee_app map.rs)
-void EEMap::AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, bool inShared)
-{
-    ee_gamecpp_mx_sight(this, inPlayer, inX, inY, inRadius, inShared, true);   // (with TSGT and MAPS, TEST ONLY)
-}
-
-// Paints a rectangle of tiles with a terrain, then recolours its vertices with the given colour type (ee_app map.rs)
-void EEMap::PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff)
-{
-    ee_gamecpp_mx_paint_rect(this, inLeft, inRight, inTop, inBottom, inTerrain, inCliff);   // (with MAPC, TEST ONLY)
-}
-
-// Sets a tile's terrain type and paints it and its lower-left neighbours' textures with the terrain (ee_app map.rs)
-void EEMap::PaintTerrain(long inX, long inY, long inTerrain)
-{
-    ee_gamecpp_mx_paint(this, inX, inY, inTerrain);   // (with MAPC, TEST ONLY)
-}
-
-// Marks steep tiles in a rectangle as cliffs, texturing them from the cliff terrain by slope direction, then makes
-// tiles with three or more cliff neighbours cliffs too (ee_app map.rs)
-void EEMap::UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop)
-{
-    ee_gamecpp_mx_update_cliffs(this, inLeft, inRight, inBottom, inTop);   // (with MAPC, TEST ONLY)
-}
-
-// Turns cliff tiles in a rectangle that are no longer steep back into the map's base terrain (ee_app map.rs)
-void EEMap::RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop)
-{
-    ee_gamecpp_mx_remove_flat_cliffs(this, inLeft, inRight, inBottom, inTop);   // (with MAPC, TEST ONLY)
-}
-
-// Registers every terrain's texture set and every terrain type's colour set with the terrain mesh, then
-// the water state and the colour table
-void EEMap::RegisterTerrainSets()
-{
-    ee_gamecpp_map_register_terrain_sets(this);
-}
-
-// Writes the map, its base terrain, characteristics and cliff terrain to the saved game; returns the first error
-long EEMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_gamecpp_mx_save(this, &outFile, inMajorVersion, inMinorVersion);   // port: ee_units map_save.rs
-}
-
-// Switches the map to another cliff terrain and re-runs cliff detection over the whole map
-void EEMap::SetCliffTexture(long inCliffTexture)
-{
-    ee_gamecpp_mx_set_cliff_texture(this, inCliffTexture);   // (with MAPC, TEST ONLY; a bad index: the first cliff terrain)
-}
-
-// Sets a tile's texture set, loading the new terrain's textures and optionally unloading the old one's
-void EEMap::SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload)
-{
-    ee_gamecpp_map_set_tile_terrain(this, inX, inY, inTextureSet, inUnload);
-}
-
-// Returns the number of tiles: the square map minus its two cut-off corner triangles (ee_app map.rs)
-unsigned long EEMap::GetTileCount()
-{
-    return ee_gamecpp_map_tile_count(this);
 }
 
 // Returns whether the other player is this player or neither of the two is at war with the other
@@ -286,7 +91,6 @@ static_assert(sizeof(GE3DLine) == sizeof(EeGe3DLine) && sizeof(GE2DPoint) == siz
 #define MPPT(i) (*(GE3DPoint*)a[i])
 #define M ((EEMap*)p)
 #define MM ((EEMiniMap*)p)
-extern GEVector gMiniMapLight;              // EEMiniMap.cpp (the terrain light)
 
 // round 11, lane A: gamecpp map_more.rs' constants and the save's context
 
@@ -331,8 +135,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MpTileSize: return sizeof(EETile);
     case O::MpRtsTile: return P64(M->mTiles[a[0]]);
     case O::MpGetTile: return P64(M->GetTile((unsigned long)a[0], (unsigned long)a[1]));
-    case O::MpGroundPoint: M->GetGroundPoint(MPPT(0), MPPT(1));
-        break;
     case O::MpRtsCreate: M->Create((long)a[0], (long)a[1], (unsigned long)a[2], true);
         break;
     case O::MpSightEnabled: return gSightUpdatesEnabled == true;
@@ -504,13 +306,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MmTerrainBytesPerRow: return MM->mTerrainTexture->GetSurface()->GetBytesPerRow();
     case O::MmUiUpdate: gEEGameUI.mMiniMapUpdate(MM);   // EEUIMiniMap::Update (ee/EEGameUI.h)
         break;
-    case O::MmLight: *(GEVector*)a[0] = gMiniMapLight;
-        break;
-    case O::MmLightSet: gMiniMapLight = GEVector(0.0f, 1.5f, 1.0f);
-        break;
-    case O::MmLightNormalize: gMiniMapLight.Normalize();
-        break;
-    case O::MmViewport: return P64(&gViewport);
     case O::MmNumPlayers: return gWorld.mNumPlayers;
     case O::MmDoppUnit: return P64(((EEDoppelganger*)p)->mUnit);
     case O::MmDoppPlayer: return P64(((EEDoppelganger*)p)->GetPlayer());

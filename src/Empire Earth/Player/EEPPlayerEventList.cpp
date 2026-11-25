@@ -25,16 +25,6 @@
 // port (the player lane, round 1): the events and every decision on them are Rust (ee_units player_events.rs, mList);
 // this is their world: the sight at an event's location and the local view of it, the local player, the alert sounds
 // (loaded with the list), the mini-map ping and the chat text
-EEPPlayerEventList::EEPPlayerEventList() : mList(ee_units_events_new()), mSound(NULL), mPlayed(NULL)
-{
-    ee_units_events_sounds(this, &EEPPlayerEventList::Host, true);   // the alert sounds got and loaded (player_events_split.rs)
-}
-
-EEPPlayerEventList::~EEPPlayerEventList()
-{
-    ee_units_events_free(this->mList);
-    ee_units_events_sounds(this, &EEPPlayerEventList::Host, false);   // unloaded, the one playing released
-}
 
 // the alert sounds (the event's kind - 1)
 static const unsigned long kEEPlayerEventSounds[5] = {kSoundUnderAttack, kSoundGarrison, kSoundFlare, 0x7d0, 0x7d0};
@@ -109,24 +99,5 @@ void EEPPlayerEventList::AddPlayerEvent(const EETileLocation& inTile, const EETi
 
 bool EEPPlayerEventList::GetNextEventSource(EETileLocation& outSource)
 {
-    long theX = 0;
-    long theY = 0;
-    bool theResult = ee_units_events_next(this->mList, &theX, &theY);
-    outSource = EETileLocation(theX, theY);
-    return theResult;
-}
-
-long EEPPlayerEventList::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_units_events_file(this->mList, &inFile, &EESaveFilePrimitive, false);
-}
-
-long EEPPlayerEventList::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_units_events_file(this->mList, &outFile, &EESaveFilePrimitive, true);
-}
-
-void EEPPlayerEventList::Call(EEPlayer* inPlayer, uint32_t inWhat, float inElapsed)
-{
-    ee_units_events_call(this->mList, this, inPlayer, &EEPPlayerEventList::Host, inWhat, inElapsed);
+    return ee_units_events_next(this->mList, &outSource.mX, &outSource.mY);   // (0, 0) without one
 }

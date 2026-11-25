@@ -396,7 +396,7 @@ impl StormHost for Host {
         }
     }
     fn game_speed(&mut self) -> f32 {
-        hd(O::DsGameSpeed, 0, &[], &[])
+        hd(O::EcGameSpeed, 0, &[], &[])
     }
     fn random_range(&mut self, min: f32, max: f32) -> f32 {
         hd(O::PhysRandomRange, 0, &[], &[min, max])
@@ -547,7 +547,7 @@ pub extern "C" fn ee_gamecpp_env_step(manager: *mut c_void, time: c_ulong) {
         *state = 0;
     }
     let interval = *em::<c_long>(O::DeInterval, m);
-    let next = um::lrintf(hd(O::DsGameSpeed, 0, &[], &[]) * interval as f32) as c_long;
+    let next = um::lrintf(hd(O::EcGameSpeed, 0, &[], &[]) * interval as f32) as c_long;
     *em::<c_ulong>(O::DeNextStep, m) = (next as c_ulong).wrapping_add(time);
 }
 

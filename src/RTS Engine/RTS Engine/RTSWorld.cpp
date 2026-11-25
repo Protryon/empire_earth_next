@@ -16,9 +16,6 @@
 #include "ee/RTSUnit.h"
 #include "rust/game/rts.h"
 
-RTSWorld::RTSWorld() { ee_rts_world_construct(this); }
-RTSWorld::~RTSWorld() { ee_rts_world_destruct(this); }
-
 // Sets the camera, deriving its view line, yaw and pitch, and reports the change
 void RTSWorld::SetCameraTransformation(const GETransformation& inTransformation)
 {

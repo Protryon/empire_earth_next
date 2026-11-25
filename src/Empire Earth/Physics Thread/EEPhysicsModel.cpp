@@ -62,8 +62,7 @@ extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EEC
 static EEPhysicsModel sPhysicsModels[12] = {EEPhysicsModel(0), EEPhysicsModel(1), EEPhysicsModel(2), EEPhysicsModel(3), EEPhysicsModel(4), EEPhysicsModel(5), EEPhysicsModel(6), EEPhysicsModel(7), EEPhysicsModel(8), EEPhysicsModel(9), EEPhysicsModel(10), EEPhysicsModel(11)};
 EEPhysicsModel* gPhysicsModels[12] = {&sPhysicsModels[0], &sPhysicsModels[1], &sPhysicsModels[2], &sPhysicsModels[3], &sPhysicsModels[4], &sPhysicsModels[5], &sPhysicsModels[6], &sPhysicsModels[7], &sPhysicsModels[8], &sPhysicsModels[9], &sPhysicsModels[10], &sPhysicsModels[11]};
 long gUnitAIWaitScale = 4000;               // 0x4c2374 (EEUnitAI 0x22eca0's wait scale; provisional name)
-unsigned long gCollisionDetectionUnit = 2000;   // 0x4c2378 (EmpireEarth.h; EEWorld resets it to 2000)
-unsigned long gCollisionPeriod = 1;         // 0x4c237c (EEPhysics.cpp's collision period; provisional name)
+extern unsigned long gCollisionPeriod;      // 0x4c237c (the collision period; it and gCollisionDetectionUnit 0x4c2378 are Rust's: gamecpp globals.rs)
 
 // Reads world table entry 79's float (the trample's minimum squared distance) for the models
 void EEInitPhysicsModels() { ee_units_pm_set_trample_min(gWorldTable.GetFloatValue(kWorldTrampleMinDistanceSquared)); }
@@ -87,14 +86,6 @@ bool EEComplexUnit::HasSwimAnimation()
 {
     return this->mUnitClass->CanMoveOnTerrain(this, 1) && this->GetModel()->mFrameCounts[2] > 1;
 }
-
-// The step of the unit's physics action (0..5), then the after-step work (not after action 2, nor for a dead unit in
-// another action) and, while the capture runs, the TEST ONLY PMST note: Rust (ee_units pm.rs step, pm_note.rs)
-void EEPhysicsModel::Step(EEComplexUnit* inUnit) { ee_units_pm_step((int32_t)this->mKind, inUnit); }
-
-void EEPhysicsModel::Step0(EEComplexUnit* inUnit) { ee_units_pm_step0((int32_t)this->mKind, inUnit); }
-
-float EEPhysicsModel::ComputeRoll(EEComplexUnit* inUnit, float inValue) { return ee_units_pm_compute_roll((int32_t)this->mKind, inUnit, inValue); }
 
 // ---- the C++ the Rust models call (ee_units pm_host.rs; each the original statement it replaces)
 

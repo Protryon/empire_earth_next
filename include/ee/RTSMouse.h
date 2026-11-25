@@ -20,7 +20,7 @@ struct EeGfxMouseFrame;                      // ee_gfx mouse_frame.rs
 // (mSensitivity, mDesktopHeight, mDesktopWidth, mWheel, mPointer, mOverlay, mShiftMode, mBA2, mIsFrozen).
 class RTSMouse : public EeRtsMouseFields {
 public:
-    RTSMouse();
+    RTSMouse() : mFrame(ee_gfx_mouse_frame_new()) { ee_rts_mouse_construct(this); }
     virtual ~RTSMouse();                    // +0x00 (??_G 0x11acbe)
     // +0x04 0x11b02b (calls inScreen's GetCurrentMode; EEGraphics passes the game screen; returns the load result)
     virtual long Load(GEScreen* inScreen) { return ee_rts_mouse_load(this, inScreen); }

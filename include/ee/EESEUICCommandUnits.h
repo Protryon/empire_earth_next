@@ -10,7 +10,7 @@
 class EESEUICCommandUnits : public EEUICCommandUnits {
 public:
     EESEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inListener);
-    virtual ~EESEUICCommandUnits();
+    virtual ~EESEUICCommandUnits() { this->mRotateAction->Dereference(); }
 protected:
     virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
 

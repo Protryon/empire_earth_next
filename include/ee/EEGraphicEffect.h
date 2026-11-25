@@ -51,39 +51,7 @@ public:
     long mNumLoads = 0;                         // +0x80
 };
 
-// dbgfxeffects.dat effects by table index (EEGraphicEffect::Get; LoadTable 0x4d6e9e fills sEffects in file order)
-enum EEGraphicEffectID {
-    kGraphicEffectLandRipple = 0xd,                           // dbgfxeffects.dat record 13 (file order = sEffects index; +0x68 = 13) name 'Land Ripple'; its sites call EEGraphicEffect::Get
-    kGraphicEffectImpactSparks = 0xf,                         // dbgfxeffects.dat record 15 (file order = sEffects index; +0x68 = 15) name 'Impact Sparks'; its sites call EEGraphicEffect::Get
-    kGraphicEffectLightningUnit = 0x15,                       // dbgfxeffects.dat record 21 (file order = sEffects index; +0x68 = 21) name 'Lightning (unit)'; its sites call EEGraphicEffect::Get
-    kGraphicEffectRain = 0x54,                                // dbgfxeffects.dat record 84 (file order = sEffects index; +0x68 = 84) name 'Rain'; its sites call EEGraphicEffect::Get
-    kGraphicEffectHorseBreathUnits = 0x56,                    // dbgfxeffects.dat record 86 (file order = sEffects index; +0x68 = 86) name 'Horse Breath (units)'; its sites call EEGraphicEffect::Get
-    kGraphicEffectPriestConversionIndiator = 0x5e,            // dbgfxeffects.dat record 94 (file order = sEffects index; +0x68 = 94) name 'Priest Conversion Indiator'; its sites call EEGraphicEffect::Get
-    kGraphicEffectBasicMarchingLine = 0x60,                   // dbgfxeffects.dat record 96 (file order = sEffects index; +0x68 = 96) name 'Basic marching line'; its sites call EEGraphicEffect::Get
-    kGraphicEffectWaypointIndicator = 0x62,                   // dbgfxeffects.dat record 98 (file order = sEffects index; +0x68 = 98) name 'Waypoint Indicator'; its sites call EEGraphicEffect::Get
-    kGraphicEffectDustEffect = 0xab,                          // dbgfxeffects.dat record 171 (file order = sEffects index; +0x68 = 171) name 'Dust - Effect'; its sites call EEGraphicEffect::Get
-    kGraphicEffectSnow = 0xac,                                // dbgfxeffects.dat record 172 (file order = sEffects index; +0x68 = 172) name 'Snow'; its sites call EEGraphicEffect::Get
-    kGraphicEffectCalamityTeleportIn = 0xb4,                  // dbgfxeffects.dat record 180 (file order = sEffects index; +0x68 = 180) name 'Calamity - Teleport In'; its sites call EEGraphicEffect::Get
-    kGraphicEffectCommandConfirmationMove = 0xb8,             // dbgfxeffects.dat record 184 (file order = sEffects index; +0x68 = 184) name 'Command Confirmation - Move'; its sites call EEGraphicEffect::Get
-    kGraphicEffectCommandConfirmationAttack = 0xb9,           // dbgfxeffects.dat record 185 (file order = sEffects index; +0x68 = 185) name 'Command Confirmation - Attack'; its sites call EEGraphicEffect::Get
-    kGraphicEffectCommandConfirmationGatherOther = 0xba,      // dbgfxeffects.dat record 186 (file order = sEffects index; +0x68 = 186) name 'Command Confirmation - Gather / Other'; its sites call EEGraphicEffect::Get
-    kGraphicEffectDisbandUnitEmitter = 0xbc,                  // dbgfxeffects.dat record 188 (file order = sEffects index; +0x68 = 188) name 'Disband Unit (emitter)'; its sites call EEGraphicEffect::Get
-    kGraphicEffectAircraftExplosion = 0xcf,                   // dbgfxeffects.dat record 207 (file order = sEffects index; +0x68 = 207) name 'Aircraft Explosion'; its sites call EEGraphicEffect::Get
-    kGraphicEffectCommandConfirmationMouseClickNoUnit = 0xd1,  // dbgfxeffects.dat record 209 (file order = sEffects index; +0x68 = 209) name 'Command Confirmation - Mouse Click No Unit'; its sites call EEGraphicEffect::Get
-    kGraphicEffectRallyFlagBuilding = 0xd2,                   // dbgfxeffects.dat record 210 (file order = sEffects index; +0x68 = 210) name 'Rally Flag - Building'; its sites call EEGraphicEffect::Get
-    kGraphicEffectCommandConfirmationMouseClickUnit = 0xd3,   // dbgfxeffects.dat record 211 (file order = sEffects index; +0x68 = 211) name 'Command Confirmation - Mouse Click Unit'; its sites call EEGraphicEffect::Get
-    kGraphicEffectRallyFlagFighter = 0xd4,                    // dbgfxeffects.dat record 212 (file order = sEffects index; +0x68 = 212) name 'Rally Flag - Fighter'; its sites call EEGraphicEffect::Get
-    kGraphicEffectRallyFlagBomber = 0xd5,                     // dbgfxeffects.dat record 213 (file order = sEffects index; +0x68 = 213) name 'Rally Flag - Bomber'; its sites call EEGraphicEffect::Get
-    kGraphicEffectRallyFlagAtomicBomber = 0xd6,               // dbgfxeffects.dat record 214 (file order = sEffects index; +0x68 = 214) name 'Rally Flag - Atomic Bomber'; its sites call EEGraphicEffect::Get
-    kGraphicEffectDisintegrationAreaEffectIntermediate = 0xec,  // dbgfxeffects.dat record 236 (file order = sEffects index; +0x68 = 236) name 'Disintegration (area effect -intermediate)'; its sites call EEGraphicEffect::Get
-    kGraphicEffectRallyFlagParatrooper = 0xf5,                // dbgfxeffects.dat record 245 (file order = sEffects index; +0x68 = 245) name 'Rally Flag - Paratrooper'; its sites call EEGraphicEffect::Get
-    kGraphicEffectPriestTowerSwirlEffect = 0xf7,              // dbgfxeffects.dat record 247 (file order = sEffects index; +0x68 = 247) name 'Priest Tower Swirl Effect'; its sites call EEGraphicEffect::Get
-    kGraphicEffectFanaticismEffect = 0xfd,                    // dbgfxeffects.dat record 253 (file order = sEffects index; +0x68 = 253) name 'Fanaticism Effect'; its sites call EEGraphicEffect::Get
-    kGraphicEffectPriestTowerSmokeGenerator = 0x100,          // dbgfxeffects.dat record 256 (file order = sEffects index; +0x68 = 256) name 'Priest Tower Smoke Generator'; its sites call EEGraphicEffect::Get
-    kGraphicEffectSpaceCitizenMiningBeam = 0x10f,             // dbgfxeffects.dat record 271 (file order = sEffects index; +0x68 = 271) name 'Space Citizen Mining Beam'; its sites call EEGraphicEffect::Get
-    kGraphicEffectSpaceGateEnergyWall = 0x112,                // dbgfxeffects.dat record 274 (file order = sEffects index; +0x68 = 274) name 'Space Gate Energy Wall'; its sites call EEGraphicEffect::Get
-    kGraphicEffectSpaceWallEnergyWall = 0x113,                // dbgfxeffects.dat record 275 (file order = sEffects index; +0x68 = 275) name 'Space Wall Energy Wall'; its sites call EEGraphicEffect::Get
-    kGraphicEffectMarketTicketTape = 0x11c,                   // dbgfxeffects.dat record 284 (file order = sEffects index; +0x68 = 284) name 'Market Ticket Tape'; its sites call EEGraphicEffect::Get
-};
+// dbgfxeffects' effects by table index (EEGraphicEffectID): Rust's enum (ee_sim game_ids.rs), emitted back as a plain C++ enum with its evidence comments.
+#include "rust/sim/game_ids.h"
 
 #endif
