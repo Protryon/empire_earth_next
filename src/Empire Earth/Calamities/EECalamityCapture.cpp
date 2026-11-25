@@ -6,23 +6,10 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/USingleton.h"
 
 #include "ee/EEEffectManager.h"
-#include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
-#include "ee/EECalamityClass.h"
-#include "ee/EECalamityManager.h"
-#include "ee/EEContagionFunctor.h"
-#include "ee/EEContagionManager.h"
-#include "ee/EEMedia.h"
-#include "ee/EEGraphicEffect.h"
-#include "ee/EESoundObject.h"
-#include "ee/EESaveGameFiles.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
 #include "ee/EECalamityCapture.h"
-#include "rust/game/gamecpp.h"
 
 // The records are Rust (ee_game gamecpp calamity_capture.rs; game core lane, round 7)
 void EECalamityCaptureClasses()
