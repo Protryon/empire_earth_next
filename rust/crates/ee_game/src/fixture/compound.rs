@@ -8,6 +8,9 @@
 use ee_base::plat_core::sim::{gPlatSimNoHumanDefeat, gPlatSimPortOffset, gPlatSimSeed, gPlatSimSeedSet};
 
 use super::host::{Call, EeFixtureCall, EeFixtureOp as Op, EeFixtureSink};
+use crate::gamecpp as gc;
+use crate::sim_driver::sed_host::{self as sed, EeSimDriverSed as E};
+use crate::sim_driver::sim_ops::{self as sim, EeSimDriverSim as S};
 
 use ee_base::plat_core::time::{PlatSimGetTimeFactor, PlatTimeMilliseconds};
 
@@ -34,10 +37,10 @@ fn fl(op: Op, h: u64, i: &[i64]) -> f32 {
 
 /// The control `k` of form `form` (0: none: no form or no such control).
 fn control_of(form: u64, k: i64) -> u64 {
-    if form == 0 || (k as u32 as i64) >= go(Op::FxFormControlCount, form, &[]) {
+    if form == 0 || (k as u32 as i64) >= sim_go(S::FormControlCount, form, &[]) {
         return 0;
     }
-    go(Op::FxFormControl, form, &[k]) as u64
+    sim_go(S::FormControl, form, &[k]) as u64
 }
 
 /// A list's first 64 lines into the sink.
@@ -45,16 +48,35 @@ fn lines(list: u64, sink: &mut EeFixtureSink) {
     if list == 0 {
         return;
     }
-    let count = go(Op::FxListLineCount, list, &[]);
+    let count = sim_go(S::ListLineCount, list, &[]);
     for k in 0..count.min(64) {
         sink.texts.extend(on(Op::FxListLine, list).i(&[k]).run().sink.texts);
     }
 }
 
 /// A combo's or list's current selection (32-bit; 0xffffffff none).
-fn selection(op: Op, h: u64) -> i64 {
-    on(op, h).i(&[0xffff_ffff]).run().i(0) as u32 as i32 as i64
+fn selection(op: S, h: u64) -> i64 {
+    let mut line: std::ffi::c_ulong = 0xffff_ffff;
+    sim_go(op, h, &[&mut line as *mut std::ffi::c_ulong as i64]) as u32 as i32 as i64
 }
+
+/// EE-SIM's operation `op` on handle `h` (sim_driver sim_ops.rs: the same C++ call; EESim.cpp is in both exes).
+fn sim_go(op: S, h: u64, i: &[i64]) -> i64 {
+    sim::h(op, h as usize, i)
+}
+
+/// The editor driver's operation `op` on handle `h` (sim_driver sed_host.rs).
+fn sed_go(op: E, h: u64, i: &[i64]) -> i64 {
+    sed::h(op, h as usize, i)
+}
+
+/// The game's operation `op` on handle `h` (gamecpp).
+fn gc_go(op: gc::O, h: u64, i: &[i64]) -> i64 {
+    gc::h(op, h as usize, i)
+}
+
+/// The controls' trigger event (UIControl::GetTriggerEvent / FireTriggerEvent's id; was EETestFixture.cpp's kTriggerEvent).
+const TRIGGER_EVENT: i64 = 0x3f0;
 
 /// The compound operations: Some(result) when `call` is one (its outputs written), None for a host operation.
 pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<i64> {
@@ -101,20 +123,20 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             0
         }
         Op::UiLock => {
-            go(if i[0] != 0 { Op::FxUiLockOn } else { Op::FxUiLockOff }, 0, &[]);
+            gc_go(if i[0] != 0 { gc::O::UiLockForCopy } else { gc::O::UiUnlockForCopy }, 0, &[]);
             0
         }
         Op::TopForm => {
             let form = go(Op::FxCurrentForm, 0, &[]) as u64;
             let over = if form != 0 { go(Op::FxFormMouseOver, form, &[]) as u64 } else { 0 };
-            c.i[0] = if form != 0 { go(Op::FxFormId, form, &[]) } else { 0 };
-            c.i[1] = if form != 0 { go(Op::FxFormControlCount, form, &[]) } else { 0 };
+            c.i[0] = if form != 0 { sim_go(S::FormId, form, &[]) } else { 0 };
+            c.i[1] = if form != 0 { sim_go(S::FormControlCount, form, &[]) } else { 0 };
             c.i[2] = if over != 0 { go(Op::FxControlIndex, over, &[]) } else { -1 };
-            let count = go(Op::FxFormCount, 0, &[]);
+            let count = sed_go(E::UiFormCount, 0, &[]);
             for k in 0..count.min(64) {
-                let stacked = go(Op::FxStackedForm, 0, &[k]) as u64;
+                let stacked = sed_go(E::UiFormStacked, 0, &[k]) as u64;
                 if stacked != 0 {
-                    sink.ids.push(go(Op::FxFormId, stacked, &[]));
+                    sink.ids.push(sim_go(S::FormId, stacked, &[]));
                 }
             }
             form as i64
@@ -137,22 +159,22 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             if control == 0 {
                 -1
             } else {
-                c.i[1] = go(Op::FxHasTrigger, control, &[]);
-                let combo = go(Op::FxAsCombo, control, &[]) as u64;
+                c.i[1] = i64::from(sim_go(S::ControlTriggerEvent, control, &[TRIGGER_EVENT]) != 0);
+                let combo = sim_go(S::ComboOf, control, &[]) as u64;
                 let check = if combo == 0 { go(Op::FxAsCheck, control, &[]) as u64 } else { 0 };
-                let list = if combo == 0 && check == 0 { go(Op::FxAsListString, control, &[]) as u64 } else { 0 };
+                let list = if combo == 0 && check == 0 { sim_go(S::ListOf, control, &[]) as u64 } else { 0 };
                 if combo != 0 {
-                    c.i[2] = selection(Op::FxComboSelection, combo);
-                    let box_ = go(Op::FxComboListBox, combo, &[]) as u64;
-                    c.i[3] = if box_ != 0 { go(Op::FxListLineCount, box_, &[]) } else { 0 };
+                    c.i[2] = selection(S::ComboSelection, combo);
+                    let box_ = sim_go(S::ComboList, combo, &[]) as u64;
+                    c.i[3] = if box_ != 0 { sim_go(S::ListLineCount, box_, &[]) } else { 0 };
                     lines(box_, sink);
                     1
                 } else if check != 0 {
-                    c.i[2] = go(Op::FxCheckIsChecked, check, &[]);
+                    c.i[2] = sed_go(E::CheckIsChecked, check, &[]);
                     2
                 } else if list != 0 {
-                    c.i[2] = selection(Op::FxListSelection, list);
-                    c.i[3] = go(Op::FxListLineCount, list, &[]);
+                    c.i[2] = selection(S::ListSelection, list);
+                    c.i[3] = sim_go(S::ListLineCount, list, &[]);
                     lines(list, sink);
                     3
                 } else {
@@ -162,31 +184,31 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
         }
         Op::Click => {
             let control = control_of(c.h, i[0]);
-            if control == 0 || go(Op::FxHasTrigger, control, &[]) == 0 {
+            if control == 0 || i64::from(sim_go(S::ControlTriggerEvent, control, &[TRIGGER_EVENT]) != 0) == 0 {
                 0
             } else {
                 let radio = go(Op::FxAsRadio, control, &[]) as u64;
                 if radio != 0 {
-                    go(Op::FxRadioCheck, radio, &[]);
+                    sed_go(E::RadioCheck, radio, &[]);
                 }
-                go(Op::FxFireTrigger, control, &[]);
+                sim_go(S::ControlFire, control, &[TRIGGER_EVENT]);
                 1
             }
         }
         Op::ComboSelect => {
-            let combo = go(Op::FxAsCombo, control_of(c.h, i[0]), &[]) as u64;
-            let box_ = if combo != 0 { go(Op::FxComboListBox, combo, &[]) as u64 } else { 0 };
-            if box_ == 0 || (i[1] as u32 as i64) >= go(Op::FxListLineCount, box_, &[]) {
+            let combo = sim_go(S::ComboOf, control_of(c.h, i[0]), &[]) as u64;
+            let box_ = if combo != 0 { sim_go(S::ComboList, combo, &[]) as u64 } else { 0 };
+            if box_ == 0 || (i[1] as u32 as i64) >= sim_go(S::ListLineCount, box_, &[]) {
                 0
             } else {
-                go(Op::FxComboSetSelection, combo, &[i[1]]);
+                sim_go(S::ComboSetSelection, combo, &[i[1]]);
                 1
             }
         }
         Op::CheckSet => {
             let check = go(Op::FxAsCheck, control_of(c.h, i[0]), &[]) as u64;
             if check != 0 {
-                go(Op::FxCheckSet, check, &[i[1]]);
+                sed_go(E::CheckSetChecked, check, &[i[1]]);
             }
             (check != 0) as i64
         }
@@ -194,27 +216,27 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             // the editor exercise's campaign name
             let edit = go(Op::FxAsEdit, control_of(c.h, i[0]), &[]) as u64;
             if edit != 0 {
-                go(Op::FxEditSetNumber, edit, &[i[1]]);
+                sed_go(E::EditSetNumber, edit, &[i[1]]);
             }
             (edit != 0) as i64
         }
         Op::ListSelect => {
-            let list = go(Op::FxAsListString, control_of(c.h, i[0]), &[]) as u64;
-            if list == 0 || (i[1] as u32 as i64) >= go(Op::FxListLineCount, list, &[]) {
+            let list = sim_go(S::ListOf, control_of(c.h, i[0]), &[]) as u64;
+            if list == 0 || (i[1] as u32 as i64) >= sim_go(S::ListLineCount, list, &[]) {
                 0
             } else {
-                go(Op::FxListChangeSelection, list, &[i[1]]);
+                sim_go(S::ListChangeSelection, list, &[i[1], 1, 0]);
                 1
             }
         }
         Op::ClickEvent => {
             // the editor exercise: the main menu's Editors, the editors' Scenario Editor
-            let count = go(Op::FxFormControlCount, c.h, &[]);
+            let count = sim_go(S::FormControlCount, c.h, &[]);
             let mut clicked = 0;
             for k in 0..count {
-                let one = go(Op::FxFormControl, c.h, &[k]) as u64;
+                let one = sim_go(S::FormControl, c.h, &[k]) as u64;
                 if one != 0 && go(Op::FxScreenEventOf, one, &[]) as u32 == i[0] as u32 {
-                    go(Op::FxFireTrigger, one, &[]);
+                    sim_go(S::ControlFire, one, &[TRIGGER_EVENT]);
                     clicked = 1;
                     break;
                 }
@@ -233,7 +255,7 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
                 let mut result = 1;
                 go(Op::FxMouseLock, 0, &[]);
                 if c.op == Op::MouseSet || fl(Op::FxMouseX, 0, &[]) != x || fl(Op::FxMouseY, 0, &[]) != y {
-                    Call::new(Op::FxMouseSetPosition).f(&[x, y]).go();
+                    gc::hf(gc::O::MouseSetPositionXY, 0, &[], &[x, y]);
                 } else {
                     result = 0;
                 }
@@ -289,11 +311,11 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
         }
         Op::StatusButton => {
             let mut found = 0;
-            go(Op::FxUiLockOn, 0, &[]);
+            gc_go(gc::O::UiLockForCopy, 0, &[]);
             let form = go(Op::FxCurrentForm, 0, &[]) as u64;
-            let count = if form != 0 { go(Op::FxFormControlCount, form, &[]) } else { 0 };
+            let count = if form != 0 { sim_go(S::FormControlCount, form, &[]) } else { 0 };
             for k in 0..count {
-                let button = go(Op::FxAsStatusButton, go(Op::FxFormControl, form, &[k]) as u64, &[]) as u64;
+                let button = go(Op::FxAsStatusButton, sim_go(S::FormControl, form, &[k]) as u64, &[]) as u64;
                 if button == 0 || go(Op::FxStatusButtonShows, button, &[i[0]]) == 0 {
                     continue;
                 }
@@ -302,7 +324,7 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
                 found = 1;
                 break;
             }
-            go(Op::FxUiLockOff, 0, &[]);
+            gc_go(gc::O::UiUnlockForCopy, 0, &[]);
             found
         }
         Op::WorldLock => {
@@ -356,8 +378,8 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
                 c.f[5] = fl(Op::FxCameraZoom, 0, &[]);
                 c.i[0] = go(Op::FxCameraMode, 0, &[]);
                 c.i[1] = go(Op::FxMapSize, 0, &[]);
-                c.i[2] = Call::new(Op::FxMeshValidPoint).f(&[c.f[0], c.f[1]]).go();
-                c.i[3] = Call::new(Op::FxMeshValidPoint).f(&[c.f[3], c.f[4]]).go();
+                c.i[2] = gc::hf(gc::O::EcValidPoint, 0, &[], &[c.f[0], c.f[1]]);
+                c.i[3] = gc::hf(gc::O::EcValidPoint, 0, &[], &[c.f[3], c.f[4]]);
                 1
             }
         }
@@ -375,7 +397,7 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
         Op::Pick => {
             let unit = Call::new(Op::FxPickUnit).i(&[i[0]]).f(&[c.f[0], c.f[1]]).go() as u64;
             if unit != 0 {
-                go(Op::FxUnitId, unit, &[])
+                gc_go(gc::O::RoUnitId, unit, &[])
             } else {
                 -1
             }
@@ -396,7 +418,7 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
             let town = go(Op::FxNearestTown, c.h, &[]) as u64;
             let route = if town != 0 { go(Op::FxTownPatrolGroup, town, &[]) as u64 } else { 0 };
             let point = if route != 0 {
-                let (x, y) = (go(Op::FxUnitTileX, c.h, &[]), go(Op::FxUnitTileY, c.h, &[]));
+                let (x, y) = (gc_go(gc::O::DkTileX, c.h, &[]), gc_go(gc::O::DkTileY, c.h, &[]));
                 // SAFETY: a live patrol group (the world's lock is the caller's)
                 let p = unsafe {
                     ee_sim::units::patrol_group::ee_units_pg_nearest(route as usize as *mut _, x as i32, y as i32)
@@ -409,7 +431,7 @@ pub(super) fn run(call: &mut EeFixtureCall, sink: &mut EeFixtureSink) -> Option<
                 -1
             } else {
                 c.h2 = go(Op::FxUnitPatrolGroup, point, &[]) as u64;
-                go(Op::FxUnitId, point, &[])
+                gc_go(gc::O::RoUnitId, point, &[])
             }
         }
         Op::Goal => goal(c),
@@ -495,7 +517,7 @@ fn goal(c: &mut EeFixtureCall) -> i64 {
         }
         _ => {}
     }
-    c.i[1] = if target != 0 { go(Op::FxUnitId, target, &[]) } else { -1 };
+    c.i[1] = if target != 0 { gc_go(gc::O::RoUnitId, target, &[]) } else { -1 };
     c.h2 = target;
     kind
 }
