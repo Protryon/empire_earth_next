@@ -287,8 +287,6 @@ extern "C" void ee_screenscpp_build_set_queued(uintptr_t inRec, bool inQueued)
 { static_cast<EEABuild*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mBuild)->mIsQueued = inQueued; }
 extern "C" void ee_screenscpp_build_at(uintptr_t inRec, float inX, float inY)
 { static_cast<EEABuild*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mBuild)->Build(GE2DPoint(inX, inY)); }
-extern "C" void ee_screenscpp_camera_clear_unit_a() { gWorld.mCameraControl.ClearUnitA(); }
-extern "C" void ee_screenscpp_camera_clear_unit_b() { gWorld.mCameraControl.ClearUnitB(); }
 extern "C" void ee_screenscpp_hack_update(uintptr_t inRec, float inX, float inY)
 { static_cast<EEUIFMGUnitHack*>(static_cast<EEUIFMainGame*>(R(inRec)->mForm)->mUnitHack)->Update(GE2DPoint(inX, inY)); }
 extern "C" void ee_screenscpp_hack_point(uintptr_t inRec, float inX, float inY)

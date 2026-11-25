@@ -1658,8 +1658,6 @@ enum class EeGameCpp : uint32_t {
   MpTileVecClear,
   MpTileVecData,
   MpTileVecSize,
-  MpCountCellOn,
-  MpCountCellOff,
   MpOrthographic,
   MpDenormalizePerspective,
   MpDenormalizeOrthographic,
@@ -2831,7 +2829,6 @@ enum class EeGameCpp : uint32_t {
   DkSetOrtho,
   DkSetWorldCamera,
   DkSetFieldOfView,
-  DkMiniMapRefresh,
   DkClearB529066,
   DkClearFollowing,
   DkClearB529068,
@@ -4614,6 +4611,18 @@ void ee_gamecpp_minimap_recolor(void *mm);
 /// Refresh: the camera's view trapezoid on the mini map (ee_gfx minimap.rs).
 void ee_gamecpp_minimap_refresh(void *mm);
 
+/// `gMiniMap`.
+size_t ee_screenscpp_mini_map();
+
+/// `gMiniMap->Refresh()`.
+void ee_screenscpp_mini_map_refresh();
+
+/// `gMiniMap->RedrawAll()`.
+void ee_screenscpp_mini_map_redraw_all();
+
+/// `gMiniMap->Redraw()`.
+void ee_screenscpp_mini_map_redraw();
+
 /// RedrawAll: every terrain pixel recomputed, the terrain texture flagged changed.
 void ee_gamecpp_minimap_redraw_all(void *mm);
 
@@ -5576,6 +5585,28 @@ void ee_gamecpp_ambient_add_tree(EeAppAmbientCounts *counts,
 /// `camera` is the EECameraControl being constructed and `rec` its record.
 void ee_gamecpp_camera_new(void *camera,
                            EeAppCameraFields *rec);
+
+/// `SetChanged`.
+void ee_screenscpp_camera_set_changed();
+
+/// `SetLocation((x, y, z), flag1, flag2)`.
+void ee_screenscpp_camera_set_location(float x,
+                                       float y,
+                                       float z,
+                                       bool immediate,
+                                       bool follow_terrain);
+
+/// `Follow(unit, follow, 1, 0, 0)`.
+void ee_screenscpp_camera_follow(size_t unit, bool flag);
+
+/// `ClearUnitA`.
+void ee_screenscpp_camera_clear_unit_a();
+
+/// `ClearUnitB`.
+void ee_screenscpp_camera_clear_unit_b();
+
+/// `Update(seconds)`.
+void ee_screenscpp_camera_update(float seconds);
 
 /// The camera's host (camera_ffi.rs `EeAppCameraFn`): the context is the camera.
 ///

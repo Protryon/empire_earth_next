@@ -65,7 +65,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEComputerPlayer.h"
-#include "ee/EEMiniMap.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EESaveLoad.h"
@@ -250,12 +249,10 @@ extern "C" void ee_screenscpp_pointer_post(uint32_t inMessage)
 extern "C" void ee_screenscpp_pointer_post_surface(uint32_t inMessage)
 { gMousePointer->mThread->Post(inMessage, gRasterizer->GetPrimarySurface(gScreenIndex), NULL, true); }
 extern "C" void ee_screenscpp_manager_relayout_all() { gUIManager->RelayoutAllForms(); }
-extern "C" uintptr_t ee_screenscpp_mini_map() { return (uintptr_t)gMiniMap; }
 extern "C" void ee_screenscpp_world_write_lock() { gWorld.mLock->WriteLock(); }
 extern "C" void ee_screenscpp_world_write_unlock() { gWorld.mLock->WriteUnlock(); }
 extern "C" void ee_screenscpp_world_read_lock() { gWorld.mLock->ReadLock(); }
 extern "C" void ee_screenscpp_world_read_unlock() { gWorld.mLock->ReadUnlock(); }
-extern "C" void ee_screenscpp_mini_map_redraw_all() { gMiniMap->RedrawAll(); }
 extern "C" void ee_screenscpp_game_window_client_origin() { gGameWindow->GetClientOrigin(); }
 extern "C" uint32_t ee_screenscpp_rasterizer_screen_count() { return (uint32_t)gRasterizer->GetScreenCount(); }
 extern "C" void ee_screenscpp_rasterizer_release_screen(uint32_t inIndex)
@@ -312,7 +309,6 @@ extern "C" void ee_screenscpp_player_refresh_resource_centres(uint32_t inPlayer)
 { gWorld.mPlayers[inPlayer]->mComputerPlayer->RefreshResourceCenters(); }
 extern "C" void ee_screenscpp_player_refresh_town_groups(uint32_t inPlayer)
 { gWorld.mPlayers[inPlayer]->RefreshTownGroups(); }
-extern "C" void ee_screenscpp_mini_map_redraw() { gMiniMap->Redraw(); }
 extern "C" void ee_screenscpp_ambient_enable_from_settings()
 { gAmbientSoundManager.SetEnabled(gGamePreferences.mSettings.mAmbientSounds); }
 extern "C" void ee_screenscpp_ambient_restart() { gAmbientSoundManager.Restart(); }
@@ -344,7 +340,6 @@ extern "C" void ee_screenscpp_fpu_set_precision_53() { UMSetFloatingPointPrecisi
 extern "C" bool ee_screenscpp_fpu_precision_is_53() { return UMGetFloatingPointPrecision() == kFPPrecision53; }
 extern "C" uint32_t ee_screenscpp_fpu_rounding_mode() { return (uint32_t)UMGetFloatingPointRoundingMode(); }
 extern "C" void ee_screenscpp_fpu_set_rounding_mode(uint32_t inMode) { UMSetFloatingPointRoundingMode(inMode); }
-extern "C" void ee_screenscpp_camera_update(float inSeconds) { gWorld.mCameraControl.Update(inSeconds); }
 extern "C" void ee_screenscpp_gfx_release_scene() { gGraphics->PostReleaseScene(); }
 extern "C" void ee_screenscpp_gfx_wait_50a() { gGraphics->PostMessage50AAndWait(); }
 extern "C" void ee_screenscpp_physics_post_init() { gPhysics->PostInit(); }

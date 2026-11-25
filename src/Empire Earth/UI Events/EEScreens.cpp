@@ -102,7 +102,6 @@
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUIShell.h"
-#include "ee/EEMiniMap.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEGraphicObject.h"
@@ -731,10 +730,6 @@ extern "C" float ee_screenscpp_hot_key_unit_y(uint32_t inIndex)
 { return EEScratch<std::vector<EEComplexUnit*>>(kScratchHotKeyUnits)[inIndex]->mPhysicalModel.GetLocation().GetY(); }
 extern "C" float ee_screenscpp_hot_key_unit_z(uint32_t inIndex)
 { return EEScratch<std::vector<EEComplexUnit*>>(kScratchHotKeyUnits)[inIndex]->mPhysicalModel.GetLocation().GetZ(); }
-extern "C" void ee_screenscpp_camera_set_changed() { gWorld.mCameraControl.SetChanged(); }
-extern "C" void ee_screenscpp_camera_set_location(float inX, float inY, float inZ, bool inFlag1, bool inFlag2)
-{ gWorld.mCameraControl.SetLocation(GE3DPoint(inX, inY, inZ), inFlag1, inFlag2); }
-extern "C" void ee_screenscpp_mini_map_refresh() { gMiniMap->Refresh(); }
 extern "C" void ee_screenscpp_set_camera_following(bool inFollowing) { gCameraFollowing = inFollowing; }
 extern "C" uintptr_t ee_screenscpp_hot_key_new() { return (uintptr_t)new UIHotKey; }
 extern "C" void ee_screenscpp_hot_key_set_key(uintptr_t inKey, uint32_t inCode)
@@ -774,8 +769,6 @@ extern "C" void ee_screenscpp_send_save_to_all(EeScreensShimText inName)
 extern "C" uintptr_t ee_screenscpp_current_player() { return (uintptr_t)gWorld.GetCurrentPlayer(); }
 extern "C" uint64_t ee_screenscpp_lead_unit_id(uint64_t inPlayer) { return ee_units_uu_lead_unit_id(inPlayer); }
 extern "C" uintptr_t ee_screenscpp_world_unit(uint64_t inId) { return (uintptr_t)gWorld.GetUnit((unsigned long)inId); }
-extern "C" void ee_screenscpp_camera_follow(uintptr_t inUnit, bool inFollow)
-{ gWorld.mCameraControl.Follow(reinterpret_cast<EEUnit*>(inUnit), inFollow, 1.0f, 0.0f, 0.0f); }
 extern "C" uintptr_t ee_screenscpp_main_group_selected_unit()
 { return (uintptr_t)gUIManager->GetMainGameForm()->mMainGroup->GetSelectedUnit(); }
 extern "C" bool ee_screenscpp_unit_has_complex(uintptr_t inUnit)
