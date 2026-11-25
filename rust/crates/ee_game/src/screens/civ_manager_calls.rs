@@ -7,6 +7,7 @@ use core::ffi::{c_long, c_ulong};
 
 use ee_sim::tech::civ;
 use ee_sim::tech::civ_apply::*;
+use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved};
 use ee_sim::world::stats_fields::EeUnitsUnitClassUpgradeFields;
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 
@@ -16,6 +17,13 @@ use crate::screens::game_cpp::{Cpp, EeScreensShimOut};
 /// The class upgrade's record (`EEUnitClassUpgrade`'s `EeUnitsUnitClassUpgradeFields`), read and written in place.
 fn upgrade_fields<C: Cpp + ?Sized>(c: &mut C, u: usize) -> *mut EeUnitsUnitClassUpgradeFields {
     c.civh_upgrade_fields(u) as *mut EeUnitsUnitClassUpgradeFields
+}
+
+/// The player's records (`EEPlayer`'s `EeUnitsPlayerSaved` and `EeUnitsPlayerFields`), read and written in place.
+fn player_records<'a, C: Cpp + ?Sized>(c: &mut C, player: i32) -> (&'a mut EeUnitsPlayerSaved, &'a mut EeUnitsPlayerFields) {
+    let pl = c.civc_player(player as i64);
+    // SAFETY: the live player's records (no other reference to them lives across the caller's use)
+    unsafe { (&mut *(c.civc_player_saved(pl) as *mut _), &mut *(c.civc_player_fields(pl) as *mut _)) }
 }
 
 /// One call of the civilization simulation's host (`EeTechCivHost`'s): its reply in `r`.
@@ -119,21 +127,23 @@ pub(crate) fn host<C: Cpp + ?Sized>(c: &mut C, call: &EeTechCivCall, r: &mut EeT
             }
         }
         EE_TECH_CIV_OP_GET_FIELD => {
+            let (saved, fields) = player_records(c, player);
             if call.a == EE_TECH_CIV_FIELD_CONVERSION as i64 {
-                r.real = c.civh_conversion(player);
+                r.real = fields.mConversionFactor;
             } else if call.a == EE_TECH_CIV_FIELD_HIGH_GROUND as i64 {
-                r.real = c.civh_high_ground(player);
+                r.real = saved.mHighGroundBonus;
             } else {
-                r.value = c.civh_share_bonus(player);
+                r.value = fields.mShareBonus as i64;
             }
         }
         EE_TECH_CIV_OP_SET_FIELD => {
+            let (saved, fields) = player_records(c, player);
             if call.a == EE_TECH_CIV_FIELD_CONVERSION as i64 {
-                c.civh_set_conversion(player, call.real);
+                fields.mConversionFactor = call.real;
             } else if call.a == EE_TECH_CIV_FIELD_HIGH_GROUND as i64 {
-                c.civh_set_high_ground(player, call.real);
+                saved.mHighGroundBonus = call.real;
             } else {
-                c.civh_set_share_bonus(player, call.b);
+                fields.mShareBonus = call.b as c_long;
             }
         }
         EE_TECH_CIV_OP_POPULATION_LIMIT => r.value = c.civh_population_limit(player),
@@ -173,7 +183,7 @@ pub(crate) fn host<C: Cpp + ?Sized>(c: &mut C, call: &EeTechCivCall, r: &mut EeT
             }
         }
         EE_TECH_CIV_OP_PULSE_SIGHT => c.civh_pulse_sight(player, call.real, kind),
-        EE_TECH_CIV_OP_MINING_LIMIT => c.civh_mining_limit(player, kind),
+        EE_TECH_CIV_OP_MINING_LIMIT => player_records(c, player).1.mMiningLimit = kind as c_long,
         EE_TECH_CIV_OP_CAMOUFLAGE => c.civh_camouflage(player),
         EE_TECH_CIV_OP_ALLOW_TECH => {
             let node = c.civh_node(player, kind);
@@ -301,12 +311,15 @@ mod tests {
 
     #[test]
     fn the_fields_by_their_code() {
+        let (mut saved, mut fields) = (EeUnitsPlayerSaved::default(), EeUnitsPlayerFields::default());
+        fields.mShareBonus = 3;
+        let (s, f) = (&mut saved as *mut _ as i64, &mut fields as *mut _ as i64);
         let mut fake = Fake::default();
-        fake.answer("civh_share_bonus", &[3]);
+        fake.answer("civc_player", &[9, 9]).answer("civc_player_saved", &[s, s]).answer("civc_player_fields", &[f, f]);
         let mut r = EeTechCivReply::default();
         host(&mut fake, &call(EE_TECH_CIV_OP_GET_FIELD, EE_TECH_CIV_FIELD_SHARE_BONUS as i64, 0), &mut r);
         assert_eq!(r.value, 3);
         host(&mut fake, &call(EE_TECH_CIV_OP_SET_FIELD, EE_TECH_CIV_FIELD_HIGH_GROUND as i64, 0), &mut r);
-        assert_eq!(fake.calls(), "civh_share_bonus(2)\ncivh_set_high_ground(2, 1.5)");
+        assert_eq!(saved.mHighGroundBonus, 1.5);
     }
 }

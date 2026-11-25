@@ -16,6 +16,7 @@ use core::ffi::{c_char, c_long};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use ee_sim::tech::civ::EeTechCivEntry;
+use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved};
 
 use crate::gamecpp::tech_capture as tc;
 use crate::screens::game_cpp::{Cpp, EeScreensShimOut, EeScreensShimText};
@@ -68,15 +69,19 @@ fn player_fields<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, player: usize) {
     if player == 0 {
         return;
     }
-    r.f32(c.civc_conversion(player));
-    r.f32(c.civc_high_ground(player));
-    r.i32(c.civc_share(player));
-    r.i32(c.civc_mining(player));
+    // SAFETY: the live player's records, copied out
+    let (saved, fields) = unsafe {
+        (*(c.civc_player_saved(player) as *const EeUnitsPlayerSaved), *(c.civc_player_fields(player) as *const EeUnitsPlayerFields))
+    };
+    r.f32(fields.mConversionFactor);
+    r.f32(saved.mHighGroundBonus);
+    r.i32(fields.mShareBonus as i64);
+    r.i32(fields.mMiningLimit as i64);
 }
 
 /// A class's upgrade record (none when the class does not exist).
 fn class_upgrade<C: Cpp + ?Sized>(c: &mut C, r: &mut Record, player: usize, kind: i64) {
-    let upgrade = if c.civc_class_exists(kind) { c.civc_class_upgrade(player, kind) } else { 0 };
+    let upgrade = if c.civh_class_listed(kind) { c.civc_class_upgrade(player, kind) } else { 0 };
     r.0.extend_from_slice(&tc::upgrade_record(upgrade));
 }
 
@@ -185,7 +190,7 @@ pub(crate) fn apply_begin<C: Cpp + ?Sized>(
         // SAFETY: a category in place, read before any C++ call
         let set = if category.is_null() { None } else { Some(unsafe { (*category).mUnitSet }) };
         if let Some(set) = set {
-            if c.civc_set_exists(set as i64) {
+            if c.civh_set_exists(set as i64) {
                 c.civc_types_clear();
                 c.civc_collect(set as i64);
                 a.types = (0..c.civc_types_count()).map(|i| c.civc_type_at(i)).collect();
@@ -213,35 +218,13 @@ pub(crate) fn apply_end<C: Cpp + ?Sized>(c: &mut C, mut a: Apply, result: bool, 
     let level = a.upgrade & LEVEL_MASK;
     if p != 0 && ee_sim::tech::civ::ee_tech_civ_is_power_level(level) {
         a.record.u32(c.civc_media_count(p) as u32);
-        let data = c.civc_purchased_data(p) as *const u32;
-        let count = c.civc_purchased_count(p);
+        let data = c.civm_purchased_data(p) as *const u32;
+        let count = c.civm_purchased_count(p);
         for id in POWER_FIRST..=POWER_JIT + 2 {
             // SAFETY: the player's purchased upgrades, unchanged across the loop
             a.record.u32(unsafe { ee_sim::tech::civ::ee_tech_civ_has_power(data, count, id) } as u32);
         }
-        let tree = c.civc_tree(p);
-        if tree != 0 {
-            a.record.0.extend_from_slice(&tc::tree_record(tree));
-            c.civc_ids_clear();
-            c.civc_ids_fill(tree);
-            let ids: Vec<i64> = (0..c.civc_ids_count()).map(|i| c.civc_id_at(i)).collect();
-            a.record.u32(ids.len() as u32);
-            for id in ids {
-                let node = c.civc_node(tree, id);
-                a.record.i32(id);
-                if node != 0 {
-                    a.record.u32(
-                        c.civc_node_researched(node) as u32
-                            | (c.civc_node_obsolete(node) as u32) << 1
-                            | (c.civc_node_available(node) as u32) << 2
-                            | (c.civc_node_allowed(node) as u32) << 3
-                            | 16,
-                    );
-                } else {
-                    a.record.u32(0);
-                }
-            }
-        }
+        a.record.0.extend_from_slice(&tc::tree_nodes_record(p));
     }
     commit(tag(b"CVAP"), &a.record.0);
 }
@@ -299,7 +282,8 @@ pub(crate) fn apply_file<C: Cpp + ?Sized>(
         r.u32(c.civc_civ_available(civ));
         r.u32(c.civc_civ_max(civ));
         r.u32(c.civc_civ_no_points(civ) as u32 | (c.civc_civ_unchanged(civ) as u32) << 1);
-        r.u32(c.civc_civ_purchased_flag(player) as u32);
+        // SAFETY: the live player's record
+        r.u32(unsafe { (*(c.civc_player_saved(player) as *const EeUnitsPlayerSaved)).mCivUpgradesPurchased } as u32);
     }
     commit(tag(b"CVAF"), &r.0);
 }

@@ -81,15 +81,6 @@ extern "C" uint64_t ee_screenscpp_civh_unit_type(uintptr_t inUnit)
 { return (uint64_t)((EEUnit*)inUnit)->mUnitClass->mUnitType; }
 extern "C" void ee_screenscpp_civh_sight_on(uintptr_t inUnit) { ((EEUnit*)inUnit)->SightOnHere(); }
 extern "C" void ee_screenscpp_civh_sight_off(uintptr_t inUnit) { ((EEUnit*)inUnit)->SightOffHere(); }
-extern "C" float ee_screenscpp_civh_conversion(int32_t inPlayer) { return CIVH_P(inPlayer)->mConversionFactor; }
-extern "C" float ee_screenscpp_civh_high_ground(int32_t inPlayer) { return CIVH_P(inPlayer)->mHighGroundBonus; }
-extern "C" int64_t ee_screenscpp_civh_share_bonus(int32_t inPlayer) { return CIVH_P(inPlayer)->mShareBonus; }
-extern "C" void ee_screenscpp_civh_set_conversion(int32_t inPlayer, float inV)
-{ CIVH_P(inPlayer)->mConversionFactor = inV; }
-extern "C" void ee_screenscpp_civh_set_high_ground(int32_t inPlayer, float inV)
-{ CIVH_P(inPlayer)->mHighGroundBonus = inV; }
-extern "C" void ee_screenscpp_civh_set_share_bonus(int32_t inPlayer, int64_t inV)
-{ CIVH_P(inPlayer)->mShareBonus = (long)inV; }
 extern "C" int64_t ee_screenscpp_civh_population_limit(int32_t inPlayer)
 { return CIVH_P(inPlayer)->GetPopulationLimit(0); }
 extern "C" void ee_screenscpp_civh_recompute_area_effects(int32_t inPlayer)
@@ -117,8 +108,6 @@ extern "C" void ee_screenscpp_civh_add_effect(int32_t inPlayer, uintptr_t inEffe
 { CIVH_P(inPlayer)->AddLoadedMedia((EEGraphicEffect*)inEffect); }
 extern "C" void ee_screenscpp_civh_pulse_sight(int32_t inPlayer, float inRadius, int64_t inKind)
 { CIVH_P(inPlayer)->PulseSight(false, inRadius, (long)inKind); }
-extern "C" void ee_screenscpp_civh_mining_limit(int32_t inPlayer, int64_t inKind)
-{ CIVH_P(inPlayer)->mMiningLimit = (long)inKind; }
 extern "C" void ee_screenscpp_civh_camouflage(int32_t inPlayer) { CIVH_P(inPlayer)->EnableCamouflagePower(); }
 extern "C" bool ee_screenscpp_cbl_tabable(uintptr_t inList) { return ((EECBUIListBox*)inList)->GetTabable(); }
 

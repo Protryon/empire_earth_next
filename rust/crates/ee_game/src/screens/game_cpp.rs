@@ -2369,10 +2369,6 @@ shims! {
     fn cbh_print_float(value: f32) = ee_screenscpp_cbh_print_float;
     fn cbh_print_text(text: EeScreensShimText) = ee_screenscpp_cbh_print_text;
     fn cbh_quote(text: EeScreensShimText, out: EeScreensShimOut) = ee_screenscpp_cbh_quote;
-    fn cbh_civ_base_cost(civ: usize, upgrade: u32) -> i32 = ee_screenscpp_cbh_civ_base_cost;
-    fn cbh_civ_extra_cost(civ: usize, upgrade: u32) -> i32 = ee_screenscpp_cbh_civ_extra_cost;
-    fn cbh_civ_compute(civ: usize, a: i32, b: i32, c: i32) -> i32 = ee_screenscpp_cbh_civ_compute;
-    fn cbh_civ_count(civ: usize, upgrade: u32) -> i32 = ee_screenscpp_cbh_civ_count;
     fn cbh_civ_available(civ: usize) -> i32 = ee_screenscpp_cbh_civ_available;
     fn cbh_civ_unchanged(civ: usize) -> i32 = ee_screenscpp_cbh_civ_unchanged;
     fn cbh_civ_max(civ: usize) -> i32 = ee_screenscpp_cbh_civ_max;
@@ -2494,12 +2490,6 @@ shims! {
     fn civh_unit_type(unit: usize) -> u64 = ee_screenscpp_civh_unit_type;
     fn civh_sight_on(unit: usize) = ee_screenscpp_civh_sight_on;
     fn civh_sight_off(unit: usize) = ee_screenscpp_civh_sight_off;
-    fn civh_conversion(player: i32) -> f32 = ee_screenscpp_civh_conversion;
-    fn civh_high_ground(player: i32) -> f32 = ee_screenscpp_civh_high_ground;
-    fn civh_share_bonus(player: i32) -> i64 = ee_screenscpp_civh_share_bonus;
-    fn civh_set_conversion(player: i32, v: f32) = ee_screenscpp_civh_set_conversion;
-    fn civh_set_high_ground(player: i32, v: f32) = ee_screenscpp_civh_set_high_ground;
-    fn civh_set_share_bonus(player: i32, v: i64) = ee_screenscpp_civh_set_share_bonus;
     fn civh_population_limit(player: i32) -> i64 = ee_screenscpp_civh_population_limit;
     fn civh_recompute_area_effects(player: i32) = ee_screenscpp_civh_recompute_area_effects;
     fn civh_show_selection_areas(player: i32) = ee_screenscpp_civh_show_selection_areas;
@@ -2516,7 +2506,6 @@ shims! {
     fn civh_effect_load(effect: usize) = ee_screenscpp_civh_effect_load;
     fn civh_add_effect(player: i32, effect: usize) = ee_screenscpp_civh_add_effect;
     fn civh_pulse_sight(player: i32, radius: f32, kind: i64) = ee_screenscpp_civh_pulse_sight;
-    fn civh_mining_limit(player: i32, kind: i64) = ee_screenscpp_civh_mining_limit;
     fn civh_camouflage(player: i32) = ee_screenscpp_civh_camouflage;
     fn cbl_tabable(list: usize) -> bool = ee_screenscpp_cbl_tabable;
     // EEUICPortrait.cpp's (portrait_calls.rs)
@@ -2943,30 +2932,14 @@ shims! {
     fn aec_active() -> bool = ee_app_capture_active;
     // the civilization capture (civ_capture.rs)
     fn civc_player(index: i64) -> usize = ee_screenscpp_civc_player;
-    fn civc_conversion(player: usize) -> f32 = ee_screenscpp_civc_conversion;
-    fn civc_high_ground(player: usize) -> f32 = ee_screenscpp_civc_high_ground;
-    fn civc_share(player: usize) -> i64 = ee_screenscpp_civc_share;
-    fn civc_mining(player: usize) -> i64 = ee_screenscpp_civc_mining;
-    fn civc_set_exists(set: i64) -> bool = ee_screenscpp_civc_set_exists;
+    fn civc_player_saved(player: usize) -> usize = ee_screenscpp_civc_player_saved;
+    fn civc_player_fields(player: usize) -> usize = ee_screenscpp_civc_player_fields;
     fn civc_types_clear() = ee_screenscpp_civc_types_clear;
     fn civc_collect(set: i64) = ee_screenscpp_civc_collect;
     fn civc_types_count() -> usize = ee_screenscpp_civc_types_count;
     fn civc_type_at(index: usize) -> i64 = ee_screenscpp_civc_type_at;
-    fn civc_class_exists(kind: i64) -> bool = ee_screenscpp_civc_class_exists;
     fn civc_class_upgrade(player: usize, kind: i64) -> usize = ee_screenscpp_civc_class_upgrade;
     fn civc_media_count(player: usize) -> u64 = ee_screenscpp_civc_media_count;
-    fn civc_purchased_count(player: usize) -> usize = ee_screenscpp_civc_purchased_count;
-    fn civc_purchased_data(player: usize) -> usize = ee_screenscpp_civc_purchased_data;
-    fn civc_tree(player: usize) -> usize = ee_screenscpp_civc_tree;
-    fn civc_ids_clear() = ee_screenscpp_civc_ids_clear;
-    fn civc_ids_fill(tree: usize) = ee_screenscpp_civc_ids_fill;
-    fn civc_ids_count() -> usize = ee_screenscpp_civc_ids_count;
-    fn civc_id_at(index: usize) -> i64 = ee_screenscpp_civc_id_at;
-    fn civc_node(tree: usize, id: i64) -> usize = ee_screenscpp_civc_node;
-    fn civc_node_researched(node: usize) -> bool = ee_screenscpp_civc_node_researched;
-    fn civc_node_obsolete(node: usize) -> bool = ee_screenscpp_civc_node_obsolete;
-    fn civc_node_available(node: usize) -> bool = ee_screenscpp_civc_node_available;
-    fn civc_node_allowed(node: usize) -> bool = ee_screenscpp_civc_node_allowed;
     fn civc_civ_load(file: EeScreensShimText) -> i64 = ee_screenscpp_civc_civ_load;
     fn civc_loaded_clear() = ee_screenscpp_civc_loaded_clear;
     fn civc_name_clear() = ee_screenscpp_civc_name_clear;
@@ -2985,7 +2958,6 @@ shims! {
     fn civc_civ_max(civ: usize) -> u32 = ee_screenscpp_civc_civ_max;
     fn civc_civ_no_points(civ: usize) -> bool = ee_screenscpp_civc_civ_no_points;
     fn civc_civ_unchanged(civ: usize) -> bool = ee_screenscpp_civc_civ_unchanged;
-    fn civc_civ_purchased_flag(player: usize) -> bool = ee_screenscpp_civc_civ_purchased_flag;
     // EEUIShell.cpp's factories and bars (shell_factories.rs, UI lane round 12)
     fn sf_shell_op(control: usize, op: u32, a: i64, b: i64, f: EeScreensShimF32Out) -> i64 = ee_screenscpp_sf_shell_op;
     fn sf_slot_set(control: usize, slot: u32, value: usize) = ee_screenscpp_sf_slot_set;

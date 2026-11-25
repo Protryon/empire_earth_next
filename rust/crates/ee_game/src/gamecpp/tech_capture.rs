@@ -173,10 +173,36 @@ pub extern "C" fn ee_gamecpp_tech_capture_sweep() {
     }
 }
 
-/// The tree's record (the civilization capture's CVAP): its player index and epochs.
-pub(crate) fn tree_record(tree: P) -> Vec<u8> {
+/// The player's tree's part of the civilization capture's CVAP (nothing without a tree): the tree's record, then its
+/// node ids (GetNodeIDs) and each node's flags (researched, obsolete, available, allowed, 16 for a node; 0 for none).
+pub(crate) fn tree_nodes_record(player: P) -> Vec<u8> {
     let mut r = TbRecord::default();
+    let tree = hp(O::TbPlayerTree, player, &[]);
+    if tree == 0 {
+        return r.0;
+    }
     tree_bytes(&mut r, tree);
+    let list = Longs::new();
+    ee_gamecpp_tech_node_ids(tree as *mut c_void, true, 0, list.0 as *mut c_void);
+    let ids = list.to_vec();
+    r.u32(ids.len() as u32);
+    for id in ids {
+        let node = hp(O::TkGet, tree, &[id as i64]);
+        r.i32(id as i32);
+        if node == 0 {
+            r.u32(0);
+            continue;
+        }
+        // SAFETY: the live node's record
+        let f = unsafe { *node_fields(node) };
+        r.u32(
+            f.mIsResearched as u32
+                | (f.mIsObsolete as u32) << 1
+                | (f.mIsAvailable as u32) << 2
+                | (f.mIsAllowed as u32) << 3
+                | 16,
+        );
+    }
     r.0
 }
 
