@@ -37,15 +37,6 @@ RTSPlayer::~RTSPlayer()
     EEUnitStoreClearPlayer(this);   // New (R5b.4): its list's records leave the unit store (ee/EEUnitStore.h)
 }
 
-void RTSPlayer::AddPendingUnits(bool inKeepID, bool inRelease) { ee_rts_player_add_pending_units(this, inKeepID, inRelease); }
-void RTSPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID) { ee_rts_player_add_unit(this, inUnit, inKeepID); }
-void RTSPlayer::RemoveKilledUnits() { ee_rts_player_remove_killed_units(this); }
-void RTSPlayer::ReleasePendingUnits() { ee_rts_player_release_pending_units(this); }
-void RTSPlayer::GetChecksum(ESChecksum& ioChecksum) { ee_rts_player_checksum(this, &ioChecksum); }
-RTSUnit* RTSPlayer::GetPendingUnit(unsigned long inIndex) { return static_cast<RTSUnit*>(ee_rts_player_pending_unit(this, inIndex)); }
-RTSUnit* RTSPlayer::GetUnit(unsigned long inUnitID) { return static_cast<RTSUnit*>(ee_rts_player_unit(this, inUnitID)); }
-void RTSPlayer::Reset() { ee_rts_player_reset(this); }
-void RTSPlayer::InsertUnit(RTSUnit* inUnit) { ee_rts_player_insert_unit(this, inUnit); }
 
 // Reads the player's vision flags, ids, color (deriving the shade color), name, units and observer mode;
 // returns the first read error.
@@ -89,8 +80,6 @@ long RTSPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
                                     (uint32_t)inMinorVersion);
 }
 
-void RTSPlayer::KillUnit(RTSUnit* inUnit, bool inForce) { ee_rts_player_kill_unit(this, inUnit, inForce); }
-long RTSPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond) { return ee_rts_player_repair_pointers(this, inFirst, inSecond); }
 
 long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -98,7 +87,6 @@ long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
     return ee_units_rts_player_save(&theContext, &RTSPlayerSaveOperation, this);
 }
 
-long RTSPlayer::SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_rts_player_save_units(this, inMajorVersion, inMinorVersion, &outFile); }
 
 void RTSPlayer::Clear()
 {
