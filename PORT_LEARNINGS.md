@@ -41022,3 +41022,57 @@ compiled behaviour), through build/lu1/chain.sh:
   (348).
 - Not run: the POSIX builds, `gates.sh --legacy`, nettest and the WON drivers (the WON changes are the events' class
   and the boxes' inline members: reached by the LAN game).
+
+## The dependencies lane, round 1: glTF, JSON, PNG, TrueType parsing, the WON crypto and UTF-8 over established crates (ee_render openformats document.rs, json.rs; ee_base png.rs, plat_ui/ttf.rs, plat_core/utf8.rs; ee_won_net md5.rs, blowfish.rs, crc16.rs, bigint.rs; branch rust-deps1, 2026-11-24)
+
+Hand-written Rust replaced by crates where every golden stays as it was: 3,943 Rust lines removed (+1,775 /
+-5,718), `Cargo.lock` 230 -> 258 packages. docs/progress/deps.md has the table per package and the deferred list.
+
+- **Prove a swap old against new before deleting the old code.** Every swap kept a test-only copy of the old module
+  and compared the two over the real inputs and their damaged forms (2,705 PNGs and 13,525 damaged variants; 12
+  fonts, 30,631 glyphs, 609,740 bitmaps; 80,000 bigint operand triples; every UTF-8 sequence up to four bytes),
+  then deleted the copy. The goldens alone cover the shipped data, not the error paths.
+- **Error texts are output.** The first PNG version gave the crate's `outofdata` for a truncated file where stb
+  said `ID`; the model decoder gate's `t1400_truncated` variant caught it. `scan_png` walks the chunks as stb did,
+  so a short file gets stb's message. The same thing stopped the AI manifest swap: serde_json's error texts (and
+  its nesting limit, `5.`, duplicate keys) moved the `ai::golden::manifest_and_seats` golden, so `ai/json.rs` stays.
+- **A crate's convenience accessor may not be the table's value.** ttf-parser's `Face::ascender` can switch to
+  OS/2's typo metrics; the old reader took hhea. Read hhea and hmtx directly when the pixels must stay.
+- **Keep a walk the crate does differently.** stb scales a scaled compound-glyph component twice; ttf-parser does
+  not. Compound glyphs keep stb's walk, simple ones come from ttf-parser (its contour walk and exact-half midpoints
+  match stb's `>> 1` after `floor`).
+- **The C structs that embed a state by value fix its size.** The C++ embeds the MD5 and Blowfish states: `Md5`
+  keeps `Md5Core` in storage of its size; Blowfish's embedded state is the 64-byte key now (was 4,232 bytes with
+  the schedule) and each Encrypt/Decrypt runs the key schedule. The generated headers changed size accordingly.
+- **serde_json's `PartialEq` impls make `x == 1.0`-style test comparisons ambiguous** once it is a dependency of
+  the crate (`gx/modes.rs` needed a type annotation).
+- **Not swappable while the C interface and the harness stay** (deferred): the thread wrappers (the handles are the
+  Win32 handles, the harness patches the wait imports, `PlatMutex` is a critical section the harness casts to),
+  the sockets (no raw socket call outside `PlatSocket`; socket2 would only re-wrap the Winsock calls) and
+  `util/pool.rs` (the allocation order is observable through the units' and lists' orders).
+- **A lobby capture taken before the repaint.** The base build's LAN run under load captured the host's staging
+  screen while the Host Game dialog still showed (210,803 pixels "differ"); a second base run was identical to the
+  round's but for the slot digit in the game's name and the create dialog's caret. Rerun the base before reading a
+  whole-screen lobby difference as a change.
+- **Gates** (run twice: on dc319617b, then on d93bf63a3, the round merged with origin/rust 04ccdbcf3, batch 25; the
+  figures are the second run's, the first was the same but for the inputs and the LAN base noted):
+
+| Gate | Result |
+|---|---|
+| `build.py -j 10 --sim`, `--test-profile windowed-software` | EE-AOC 395 inputs, EE-SIM 396, test image 395: 0 unresolved, 0 duplicates; headers current |
+| `rust_build.py gate` | PASS |
+| oracle, seeds 2-7 | identical to the main checkout's `ref` (oracle: PASS) |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal |
+| saveload plain (seeds 2-7), matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) | exit 0; expect PASS |
+| `scenario_check.py`; `sim_editor.py`, `--civbuilder` | 27/27; PASS (14,448 lines), PASS (4,062 lines) |
+| `eedata.py check`, `cppgate` | PASS, PASS |
+| `eemodel.py cppgate` (store and decoder gates) | PASS |
+| `won_host_coverage.py`; `xbuild.py wontest` | PASS; exit 0 |
+| LAN game; `lan_capture_compare.py` against the base build's (04ccdbcf3, built for it) | PASS; every lobby capture identical but the staging screen's caret (15 pixels at x 121..122) |
+| editor; `random-game --box-select --orders --seed 7` | RESULT PASS; BOX SELECT PASS, ORDERS PASS, RESULT PASS |
+| `gates.sh` (the main checkout's tree) | GATES PASS: tour; ai-game time-cap, PT 12142, units [4, 36, 37], alive_computers [2, 3], engines classic_lua x 2; lan-game |
+| `port_metrics.py` bef67ccde..HEAD | rust_lines -3,943; unsafe +2; extern_c, C++ lines, logic, classes unchanged |
+
+- **Behaviour changes**: none in a game or on the shipped data. Damaged inputs: a PNG with corrupt image data is
+  refused with the png crate's inflate text (3 the old decoder refused decode now); a glTF document without
+  `asset`, or with a non-UTF-8 name or URI, is refused.

@@ -69,6 +69,8 @@ struct Replay {
     is_async: bool,
     peers: [Option<Arc<PeerData>>; 2],
     other: PeerAuth,
+    // boxed: the ops hold the sessions' addresses (and a session is small since its Blowfish is only the key)
+    #[allow(clippy::vec_box)]
     sessions: Vec<Box<EeWonAuthSession>>,
     line: usize,
     /// the light ops' members by object
