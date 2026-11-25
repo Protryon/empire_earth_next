@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "rust/base/math.h"
 #include "rust/game/app.h"
+#include "rust/game/screens.h"
 #include "rust/render/gfx.h"
 #include "rust/sim/app.h"
 #include "rust/sim/netmsg.h"
@@ -5189,6 +5190,14 @@ uint8_t *ee_gamecpp_mrecord_field(const void *message, uint32_t index, size_t si
 void ee_gamecpp_mrecord_init(void *message,
                              const EeGamecppMrValue *values,
                              size_t count);
+
+/// A game action's record message (`new EEMRecord(kind, {values})`, seven values at most; was EEARust.cpp's).
+///
+/// # Safety
+/// `values` points at `count` values.
+void *ee_screenscpp_ga_record(uint32_t kind,
+                              const EeScreensGaValue *values,
+                              uint32_t count);
 
 /// EEMRecord::GetCodecSlots: the header's four slots, the fast selection id, then each wire member (the string's
 /// text, the list's records, the blob's bytes, the record's members).

@@ -296,7 +296,7 @@ extern "C" bool ee_screenscpp_player_is_human(uint32_t inIndex)
     return gWorld.GetPlayer(inIndex)->IsHuman();
 }
 
-// a record message (Actions/EEARust.cpp ee_screenscpp_ga_record) to the local input: the input's result (the sends
+// a record message (gamecpp mrecord.rs ee_screenscpp_ga_record) to the local input: the input's result (the sends
 // of the screens', the HUD's and the mouse modes' hosts are ee_game hud_sends.rs')
 extern "C" int64_t ee_screenscpp_send_local(void* inMessage)
 {

@@ -1,7 +1,7 @@
 //! The UI's game messages built in Rust (the UI thread lane, round 1): the host cases whose whole body was
 //! `gCommunications->ProcessLocalUserInput(new EEMRecord(kind, {values}), kSlotNone)` over their arguments are one
-//! [`Msg`] each, made by `EEMRecord`'s constructor through `ee_screenscpp_ga_record` (`EEMRecordValue`'s
-//! conversions: an integer as `long long`, a float, a point) and sent through `ee_screenscpp_send_local`: the game
+//! [`Msg`] each, made by `EEMRecord`'s constructor through `ee_screenscpp_ga_record` (gamecpp mrecord.rs;
+//! `EEMRecordValue`'s conversions: an integer as `long long`, a float, a point) and sent through `ee_screenscpp_send_local`: the game
 //! screens' (`EEScreens.cpp`: the hot keys', chat, main game form, diplomacy and options events), the icon bar's,
 //! the portrait's, the command buttons' and the main form's mouse modes'. The values keep the C++'s casts: a
 //! `(long)` of a 32- or 64-bit argument is [`long`] (32 bits on Windows), an `unsigned char` [`byte`], a `bool`
@@ -199,16 +199,15 @@ pub(crate) fn mouse_mode(which: i64, b: i64, io: &EeScreensMainFormIo) -> Option
 pub(crate) fn send(m: &Msg) -> i64 {
     /// cbindgen:ignore
     mod sys {
-        use crate::screens::game_actions::EeScreensGaValue;
         use core::ffi::c_void;
         extern "C" {
-            pub fn ee_screenscpp_ga_record(kind: u32, values: *const EeScreensGaValue, count: u32) -> *mut c_void;
             pub fn ee_screenscpp_send_local(message: *mut c_void) -> i64;
         }
     }
     // SAFETY: the values' count; the record message goes to the input, which owns it
     unsafe {
-        let message = sys::ee_screenscpp_ga_record(m.kind as u32, m.values.as_ptr(), m.values.len() as u32);
+        let message =
+            crate::gamecpp::mrecord::ee_screenscpp_ga_record(m.kind as u32, m.values.as_ptr(), m.values.len() as u32);
         sys::ee_screenscpp_send_local(message)
     }
 }
