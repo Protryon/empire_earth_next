@@ -602,7 +602,7 @@ static std::string CompletionName(CompletionBase<AsyncOpPtr>* c)
     int i = CallIndex(c);
     return std::string(routing ? "route:" : "net:") + (i < 0 ? "?" : kCallNames[i]);
 }
-static std::string CallbackName(void (*cb)(UIForm*))
+static std::string CallbackName(void (*cb)(W::UIForm*))
 {
     if (cb == NULL) return "NULL";
     if (cb == Ori::CloseMessageCallback || cb == Rus::CloseMessageCallback) return "close";
@@ -673,7 +673,7 @@ static void RunSide(Side& side, uint64_t seed, int steps)
         o->mGameInfo.mRoomGroupId = 0;
         side.o = o;
         sRoutingNow = [o]() -> RefCount* { return o->mRouting.get(); };
-        sFormArgName = [o](UIForm* f) -> std::string {
+        sFormArgName = [o](W::UIForm* f) -> std::string {
             if (f == NULL) return "NULL";
             if ((void*)f == (void*)&o->mCancelled) return "cancelled";
             if ((void*)f == (void*)&o->mJoinRoomCancelled) return "joincancelled";
@@ -686,7 +686,7 @@ static void RunSide(Side& side, uint64_t seed, int steps)
         n->O()->user = user;
         side.n = n;
         sRoutingNow = [n]() -> RefCount* { return n->Routing(); };
-        sFormArgName = [n](UIForm* f) -> std::string {
+        sFormArgName = [n](W::UIForm* f) -> std::string {
             if (f == NULL) return "NULL";
             if ((void*)f == (void*)&n->O()->cancelled) return "cancelled";
             if ((void*)f == (void*)&n->O()->join_room_cancelled) return "joincancelled";
@@ -740,7 +740,7 @@ static void RunSide(Side& side, uint64_t seed, int steps)
             if (side.orig) o->UpdateAccount(a, b, f); else call(Call::UpdateAccount, (intptr_t)(const char*)a, (intptr_t)(const char*)b, f); break; }
         case 15: if (side.orig) o->OpenUpdateAccount(); else call(Call::OpenUpdateAccount, 0, 0, 0); break;
         case 16: case 17: { ensureRouting(); UWideString t(kChats[R(15)]); if (side.orig) o->SendChat(t); else call(Call::SendChat, (intptr_t)(const char*)t, 0, 0); break; }
-        case 18: { W::EEUICWonNetRoomsBox box; UIForm* f = gUIManager->GetFormByID(kFormAvailableRooms);
+        case 18: { W::EEUICWonNetRoomsBox box; W::UIForm* f = gUIManager->GetFormByID(kFormAvailableRooms);
             W::UITextLabel* l16 = (W::UITextLabel*)f->GetControl(16); W::UITextLabel* l14 = (W::UITextLabel*)f->GetControl(14);
             if (side.orig) o->UpdateRoomList(&box, l16, l14); else call(Call::UpdateRoomList, (intptr_t)&box, (intptr_t)l16, (intptr_t)l14); break; }
         case 19: if (side.orig) o->CreateGame(); else call(Call::CreateGame, 0, 0, 0); break;
