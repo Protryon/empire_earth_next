@@ -296,6 +296,9 @@ pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_c
     // the simulation's effects on the renderer's effect manager (ee_sim world/effects.rs, ee_render sim_effects.rs)
     #[cfg(not(test))]
     ee_sim::world::effects::register(&ee_render::gfx::sim_effects::RENDER_EFFECTS);
+    // the random map's loading progress on the loading screen (ee_sim rmap object.rs)
+    #[cfg(not(test))]
+    ee_sim::rmap::object::register_load_progress(screens::ui_objects::ui_set_load_progress);
 }
 
 /// A game message's unit order (ee_netmsg bodies.rs) by the units lane's body for it (ee_units ffi.rs): the sender (or
