@@ -160,7 +160,7 @@ void EEPWorldHelper::GetChecksum(ESChecksum& ioChecksum) const
 
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
 
-int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+int64_t EECommandLineOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EECommandLine.cpp
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // EEWorld.cpp
@@ -727,7 +727,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsLoadProgress: gUserInterface->SetLoadProgress(f[0]);
         break;
-    default: return EECore9OpE(inOp, p, a, f);
+    default: return EECommandLineOp(inOp, p, a, f);
     }
     return 0;
 }

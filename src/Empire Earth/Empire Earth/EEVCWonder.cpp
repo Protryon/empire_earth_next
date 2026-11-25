@@ -18,9 +18,6 @@
 #include "ee/EEDatabaseTables.h"
 #include "rust/game/gamecpp.h"   // round 10, lane D (ee_game gamecpp civilization.rs)
 
-extern EEWorld gWorld;
-extern EEPhysics* gPhysics;
-
 // (the wonder entries, their sort and the countdown: ee_game gamecpp civilization.rs)
 
 // Returns whether the team's players together own as many wonders as the game needs to win (never when none)

@@ -34,8 +34,7 @@ class EEARust : public EEAction, public EeScreensGaFields {
 public:
     explicit EEARust(uint32_t inKind) : EEAction(false), EeScreensGaFields(), mPoll(10, 0, false)
     {
-        this->mKind = inKind;
-        ee_screens_ga_init(this);
+        ee_screens_ga_init(this, inKind);
     }
     virtual ~EEARust() { ee_screens_ga_free(this); }
     virtual void Virtual4() { ee_screens_ga_run(this); }
@@ -186,10 +185,7 @@ public:
     // posts itself (inRaise: raise, else lower; inIsInGame: by message, else the scenario editor's direct change)
     EEAUpgradeImprovement(EEUnit* inUnit, long inImprovement, bool inRaise, bool inIsInGame) : EEARust(kEEAUpgrade)
     {
-        this->mImprovement = (int32_t)inImprovement;
-        this->mRaise = inRaise;
-        this->mIsInGame = inIsInGame;
-        ee_screens_ga_upgrade_begin(this, inUnit);
+        ee_screens_ga_upgrade_begin(this, inUnit, (int32_t)inImprovement, inRaise, inIsInGame);
     }
 };
 class EEAUserPauseGame : public EEARust {
@@ -266,8 +262,6 @@ public:
 
 // the mini map's pixel-to-map transformation (EEUIMiniMap sets it)
 extern GETransformation gMiniMapTransformation;
-// the join's message box callback: a fresh client started
-void EEAJoinOrHostAGameRestartClient(UIForm* inForm);
 // a player name is non-empty and free of control, quote, backslash and @ characters (ee_screens single_player.rs)
 bool EEIsValidName(const UWideString& inName);
 // the civilization file applied to a player (EECBCivilizationFiles.cpp)

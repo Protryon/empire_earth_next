@@ -183,7 +183,8 @@ pub extern "C" fn ee_gamecpp_enumerate_display_devices() {
 fn parameters(sound: P, location: P) -> [f32; 3] {
     let mut out = [0f32; 3];
     let volume = hd(O::SoVolume, sound, &[], &[]);
-    hf(O::DuSoundParameters, 0, &[pa(location), ptr(&mut out[0]), ptr(&mut out[1]), ptr(&mut out[2])], &[volume]);
+    // the falloff: the graphic sounds' 4 (was EEGameUtilities.cpp's kGraphicSoundFalloff)
+    hf(O::DuSoundParameters, 0, &[pa(location), ptr(&mut out[0]), ptr(&mut out[1]), ptr(&mut out[2])], &[volume, 4.0]);
     out
 }
 

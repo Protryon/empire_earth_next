@@ -22,11 +22,7 @@ constexpr static const int64_t SS_SLOT_NONE = 255;
 /// A storage holds this many times its `EE_GAME_SIZE_*` bytes (ee/EEGlobalStorage.h's static_assert reads it).
 constexpr static const size_t EE_GAME_STORAGE_FACTOR = 2;
 
-constexpr static const size_t EE_GAME_SIZE_gU530BE0 = 24;
-
 constexpr static const size_t EE_GAME_SIZE_gU530BC8 = 32;
-
-constexpr static const size_t EE_GAME_SIZE_gExecutableName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gSavedGameExtension = 24;
 
@@ -101,22 +97,6 @@ constexpr static const size_t EE_GAME_SIZE_gDataPreLoadingThreadName = 24;
 constexpr static const size_t EE_GAME_SIZE_gMousePointerThreadName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gScenarioEditorThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gUserInterfaceThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommSendThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommRecvThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommMainThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommLagLossThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCommRecPlayThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gSoundScavengerThreadName = 24;
-
-constexpr static const size_t EE_GAME_SIZE_gCDAudioThreadName = 24;
 
 constexpr static const size_t EE_GAME_SIZE_gMultiplayerString = 24;
 
@@ -299,9 +279,8 @@ enum class EeGameCpp : uint32_t {
   CapStartEvent,
   CapStartPoint,
   CapContagion,
-  CxIsWarpColor,
-  CxSetWarpColor,
-  CxSetBlackColor,
+  CxIsColor,
+  CxSetColor,
   AeClearEffects,
   AiCollectComputerPlayers,
   AmbientEnable,
@@ -780,7 +759,6 @@ enum class EeGameCpp : uint32_t {
   ArchiveSet,
   DataPathAddArchive,
   DataPathFindFile,
-  SetDataPaths,
   UiSetLoadingText,
   UiRandomSeed,
   FileSpecNew,
@@ -1048,7 +1026,6 @@ enum class EeGameCpp : uint32_t {
   RastSetWaterRipple,
   PhysTimerRunning,
   CpOnAttackPlayer,
-  SetCampaignChecksum,
   RegisterShutdownMutex,
   IsInitialize,
   WindowHide,
@@ -1068,7 +1045,6 @@ enum class EeGameCpp : uint32_t {
   NewRoEffects,
   UStrFromW,
   FontCreate,
-  FontAt,
   PersistChecksum,
   PersistGeneric2,
   PersistMap,
@@ -1087,7 +1063,6 @@ enum class EeGameCpp : uint32_t {
   UiUnloadIcons,
   UiMiniMapUnloadMedia,
   NewFsPath,
-  FileSpecSetDirStartupSub,
   FileSpecSetArchiveName,
   DataArchivePresent,
   FsPathAddArchive,
@@ -1145,7 +1120,6 @@ enum class EeGameCpp : uint32_t {
   EffectTextureCount,
   EffectTextureDereference,
   TexturesRemoveAll,
-  ScreenRestoreOriginalMode,
   ScreenReleaseWindow,
   FontDereference,
   DisplayRasterizersClear,
@@ -1181,7 +1155,6 @@ enum class EeGameCpp : uint32_t {
   MouseSetWindowBounds,
   MouseLoad,
   TexturesRefreshAll,
-  IconsLoaded,
   UiReloadIcons,
   MousePointerPostSurface,
   GeInitialize,
@@ -1209,7 +1182,7 @@ enum class EeGameCpp : uint32_t {
   CreateGameWindow,
   WindowSetFixedSize,
   WindowTextInputStart,
-  SaveOriginalVideoMode,
+  ScreenCurrentModeIndex,
   SeInitialize,
   MixerGet,
   MixerUse,
@@ -1285,7 +1258,6 @@ enum class EeGameCpp : uint32_t {
   NewArtificialIntelligence,
   NewCheatCodes,
   NewGameTimer,
-  GameTimerPresent,
   DeleteGameTimer,
   ContinentsShutdown,
   DeleteCheatCodes,
@@ -2539,8 +2511,6 @@ enum class EeGameCpp : uint32_t {
   TkCostSetFactor,
   TkStatsCostScale,
   TkJitFactor,
-  RunRustInit,
-  RunFixtureConfigure,
   RunInstanceMutex,
   RunComInit,
   RunComUninit,
@@ -2554,7 +2524,6 @@ enum class EeGameCpp : uint32_t {
   RunReleaseCivilizationPath,
   EntrySpecFirstFile,
   EntrySpecNextFile,
-  EntryDecryptExcluded,
   EntrySpecFileIsNot,
   EntrySpecVecNew,
   EntrySpecVecDelete,
@@ -2569,7 +2538,6 @@ enum class EeGameCpp : uint32_t {
   EntrySpecFullPath,
   EntryUStrData,
   EntryUStrSet,
-  EntrySetNetworkFolder,
   EntryNeInitialize,
   EntryRegisterNeMessages,
   EntryRegisterEeMessages,
@@ -3025,7 +2993,6 @@ enum class EeGameCpp : uint32_t {
   DsMove,
   DsTileCount,
   DsSetIntensity,
-  DsGameSpeed,
   DsResetColor,
   DsPathAt,
   DsCenter,
@@ -3131,7 +3098,6 @@ enum class EeGameCpp : uint32_t {
   DkKeyAt,
   DkFrontClipping,
   DkRearClipping,
-  RunSplashFullScreen,
   UsgWorldWriteLock,
   UsgWorldWriteUnlock,
   UsgSetDirectory,
@@ -3346,7 +3312,6 @@ enum class EeGameCpp : uint32_t {
   OvSetModel,
   OvModelName,
   EpAssignLastOptions,
-  EpCameraMaxZoom,
   EpDefaultSettings,
   EpDeleteSettings,
   EpNarrowCopy,
@@ -3363,7 +3328,6 @@ enum class EeGameCpp : uint32_t {
   EpWideGet,
   EpWideLength,
   EpWideSet,
-  EpWindowSizeDefaulted,
   EoAssign,
   EoDifficulties,
   EoDifficultyLevel,
@@ -3668,6 +3632,9 @@ enum class EeGameCpp : uint32_t {
   C12PlayerEnemy,
   C13bGhostLockFree,
   C13bGhostAt,
+  TexturesSetPath,
+  ModelsSetPath,
+  SoundSetPath,
 };
 
 /// A `U2DRectangle<long>` as the C++ stores it: bottom, left, right, top.
@@ -4188,6 +4155,9 @@ void ee_gamecpp_startup_load_media();
 
 /// EEUnloadGameMedia: the same released.
 void ee_gamecpp_startup_unload_media();
+
+/// EESetDataPaths: the texture, model and sound managers pointed at the data search path.
+void ee_gamecpp_startup_set_data_paths();
 
 /// EEShowSinglePlayerScreen: the data search path (the game's Data folder, behind a Data\data.ssa when one is
 /// present) and the civilization path made, replacing the previous ones.

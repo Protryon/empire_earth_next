@@ -124,7 +124,7 @@ fn couldnt_open(err: P, file: P) {
 fn add_archive(archive: P, file: P) {
     h(O::ArchiveSet, archive, &[pa(file)]);
     h(O::DataPathAddArchive, archive, &[]);
-    h(O::SetDataPaths, 0, &[]);
+    super::startup::ee_gamecpp_startup_set_data_paths();
 }
 
 /// EEGameState::Init: the settings' defaults (normal speed and zoom, no map, managers, teams or loaded players, a
