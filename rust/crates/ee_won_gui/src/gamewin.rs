@@ -536,6 +536,48 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
     })
 }
 
+/// The list area's and text area's hosts' statements that are ScrollArea's and Component's non-virtual methods
+/// (guisplit.rs's game hosts for the lists, menus, multi-column lists, trees and text areas; R6 WON GUI round 38):
+/// the scroll area's Rust pane and Component's calls, directly, and the references. None for the others.
+pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize) -> Option<isize> {
+    if !crate::compobj::is_game() {
+        return None;
+    }
+    use crate::compobj::EeWonCompCall as K;
+    use crate::guihost::EeWonGuiField as Fd;
+    use crate::paneobj::{EeWonPaneCall as P, EeWonScrollPane};
+    // SAFETY: the game's live components (the ops' contracts); each call re-enters through Component's entry
+    let kc = |x: isize, k: K, p: isize, q: isize| unsafe {
+        crate::compobj::ee_won_comp_call(x as *mut c_void, crate::compobj::host(), k, p, q, 0)
+    };
+    let pane = |call: P, x: isize, y: isize| {
+        // SAFETY: the list's Rust pane lives as long as the list
+        let p = unsafe { crate::registry::get::<EeWonScrollPane>(list, crate::registry::EeWonGuiKind::Pane) }?;
+        Some(p.call(call, x, y, 0))
+    };
+    let at = |p: isize| p.wrapping_add(4);
+    match op {
+        // (list_op's own calls out: a new column viewport's and tree row's references; the text area's segments')
+        Op::ChildHold | Op::ItemHold | Op::SegHold => rf(a, true),
+        Op::ChildRelease | Op::ItemRelease | Op::SegRelease => rf(a, false),
+        Op::Get if a != Fd::Width as isize && a != Fd::Height as isize => {
+            pane(P::GetField, a, 0).map(|r| r as i32 as isize)
+        }
+        Op::Set => pane(P::SetField, a, b as i32 as isize).map(z),
+        Op::ScrollTranslate => pane(P::ScrollTranslate, a, b).map(z),
+        Op::ScrollUntranslate => pane(P::ScrollUntranslate, a, b).map(z),
+        Op::SetVertOffset => pane(P::SetVertOffset, a as i32 as isize, 0).map(z),
+        Op::OnBottom => pane(P::OnBottom, 0, 0).map(on),
+        Op::ListRoot => Some(kc(list, K::Root, 0, 0)),
+        Op::ListParent => Some(crate::compmem::parent(list)),
+        Op::ParentRootToChild => Some(z(kc(a, K::RootToChild, b, at(b)))),
+        Op::ListContains => Some(on(kc(list, K::Contains, a, b))),
+        Op::ListLocalToRoot => Some(z(kc(list, K::LocalToRoot, a, at(a)))),
+        Op::LocalToRoot => Some(z(kc(list, K::LocalToRoot, a, b))),
+        _ => None,
+    }
+}
+
 /// A WONButton's references and images' reads (`WbText`, `WbImage`, `WbFont`; wonbtnobj.rs) in the game (R6 WON GUI
 /// round 38): the game's reference function, the image handles' Rust images, the manager's default font. None in a
 /// driver's world and for the others.

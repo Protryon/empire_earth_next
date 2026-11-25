@@ -66,6 +66,11 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
                 return r;
             }
         }
+        if matches!(which, EeWonGuiSplitHost::List | EeWonGuiSplitHost::Text) {
+            if let Some(r) = crate::gamewin::list_host_op(comp as isize, op, a, b) {
+                return r;
+            }
+        }
         // SAFETY: as above
         unsafe { host(comp, op, a, b, c, d) }
     };
