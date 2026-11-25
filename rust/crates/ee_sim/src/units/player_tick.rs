@@ -363,6 +363,7 @@ struct FnHost {
     ctx: *mut c_void,
     f: EeUnitsPlayerTickFn,
     /// the player: its herds' count and a herd's kill answered here (player_lists.rs, player_rest.rs)
+    #[cfg_attr(test, allow(dead_code))]
     player: u64,
 }
 

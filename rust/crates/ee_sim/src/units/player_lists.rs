@@ -348,14 +348,19 @@ impl ListsHost for Ffi {
             let g = value as usize as *mut EeUnitsPatrolGroup;
             // SAFETY: a live patrol group of the player's list; live units through the C++ host (the callers'
             // contract)
-            unsafe {
+            return unsafe {
                 match op {
-                    EE_UNITS_LISTS_HOST_PG_REFERENCE => ee_units_pg_reference(g),
-                    EE_UNITS_LISTS_HOST_PG_DEREFERENCE => ee_units_pg_dereference(g),
-                    _ => return ee_units_lists_host(op, value),
+                    EE_UNITS_LISTS_HOST_PG_REFERENCE => {
+                        ee_units_pg_reference(g);
+                        0
+                    }
+                    EE_UNITS_LISTS_HOST_PG_DEREFERENCE => {
+                        ee_units_pg_dereference(g);
+                        0
+                    }
+                    _ => ee_units_lists_host(op, value),
                 }
-            }
-            return 0;
+            };
         }
         #[cfg(test)]
         {
