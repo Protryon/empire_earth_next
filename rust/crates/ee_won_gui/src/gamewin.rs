@@ -429,8 +429,8 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
     match op {
         Op::ChildHold | Op::CtCursorHold | Op::RootImageHold => return rf(a, true),
         Op::ChildRelease | Op::CtCursorRelease | Op::RootImageRelease => return rf(a, false),
-        Op::ItemHold => return rf(a, true),
-        Op::ItemRelease => return rf(a, false),
+        Op::ItemHold | Op::LayHold => return rf(a, true),
+        Op::ItemRelease | Op::LayRelease => return rf(a, false),
         _ => {}
     }
     if !matches!(
@@ -477,6 +477,7 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             | Op::ChildSetVisible
             | Op::ChildSetControlId
             | Op::ParentOf
+            | Op::LaySetSizeAtLeast
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -649,6 +650,7 @@ fn child_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
             0
         }
         Op::ParentOf => crate::compmem::parent(a),
+        Op::LaySetSizeAtLeast => z(kc(K::SetSizeAtLeast, b as i32 as isize, c as i32 as isize, 0)),
         _ => return None,
     })
 }

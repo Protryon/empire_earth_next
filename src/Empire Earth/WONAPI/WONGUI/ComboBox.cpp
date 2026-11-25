@@ -242,14 +242,10 @@ extern "C" intptr_t ee_won_guicpp_skin_call(void* inMe, EeWonGuiOp op, intptr_t 
 // objects.
 
 // every op a layout object makes is on a component or an instruction it is given (never on its own shell)
+// (SetSizeAtLeast and the instructions' references are gamewin.rs common_op's in the game: R6 WON GUI round 38)
 extern "C" intptr_t ee_won_guicpp_layout_call(void*, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t)
 {
-    switch (op) {
-    case Op::LaySetSizeAtLeast: Comp(a)->SetSizeAtLeast((int)b, (int)c); return 0;
-    case Op::LayHold: ((ChildLayoutInstructionBase*)a)->AddRef(); return 0;
-    case Op::LayRelease: ((ChildLayoutInstructionBase*)a)->Release(); return 0;
-    default: return CtlOp(NULL, op, a, b, c, 0);
-    }
+    return CtlOp(NULL, op, a, b, c, 0);
 }
 
 namespace WONAPI {
