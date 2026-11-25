@@ -40880,7 +40880,35 @@ under `RTSGraphics::Main`, the thread start race PORT_LEARNINGS records in earli
 GATES PASS.
 
 Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds. The fork
-worktrees are removed (their logs in build/w37/w37a, w37b); origin/rust batch 26 (a78aecdc2) is not merged.
+worktrees are removed (their logs in build/w37/w37a, w37b).
+
+### Batch 26 merged (c726324e0) and its gates
+
+origin/rust then moved to batch 26 (a78aecdc2). Its LLE and UI floor lane had made the WON screens' events one class
+too (EEWonFrontEvent, with ee_won_front_event_call mapping the old EeWonFrontEvent to its call); this round's
+(EEUIEWonNetEvent made from its EeWonFrontCall in Rust, the EeWonFrontEvent enum and the SetTrigger op gone) was kept:
+ee_won_front_event_call and its test removed, EEUIManager.cpp the floor lane's (its manager calls moved into the
+header) with this round's event class, link/exe/units.txt both sides' deletions (the floor lane's three list box
+units). The floor lane's LLE forward list (lle/LLEForward.h) declares UIForm globally, which made won_wonnet_test's
+UIForm ambiguous with its world's W::UIForm; e058b3509 names W::UIForm as origin/rust's copy of the driver does.
+
+`port_metrics.py` a78aecdc2 -> e058b3509 (the lane's change over batch 26; the floor lane's own event merge absorbed
+part of fork a's first commit): cpp_lines 107,521 -> 106,513 (**-1,008**), cpp_files 338 -> 337 (-1), logic 15,860 ->
+15,304 (**-556**), classes 790 -> 770 (-20), extern_c +22, unsafe +53.
+
+| Gate (c726324e0, build/w37/chain4.log) | Result |
+|---|---|
+| `build.py -j 6 --sim`, `--test-profile windowed-software` | 0 / 0 (EE-AOC 378 inputs, EE-SIM 379; test 378) |
+| `rust_build.py header`, `gate` | 358 headers current; PASS, 6,780 tests (0 failed) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | the full run stopped at won_wonnet_test's compile (the ambiguous UIForm) after 103 programs, each exit 0; after e058b3509 the other 82 (won_wonnet_test first: 200,000 sequences 157/158 ops and 100,000 screens 146/147, 0 mismatches) exit 0 |
+| oracle | seeds 2-7 identical, PASS |
+| the 12 capture profiles, seeds 2-3 | PASS each, the same digest counts as above |
+| saveload | plain 18/18 identical; matrix exit 0, `saveload expect: PASS` |
+| `scenario_check.py`, `sim_editor.py` and `--civbuilder`, `eedata check` and `cppgate` | 27/27; PASS 14,448 and 4,062 lines; PASS, PASS |
+| harness: editor, random-game box select and orders | PASS, PASS |
+| LAN game; `lan_capture_compare.py` against the exe built from a78aecdc2 (build/w37/base26) | `RESULT PASS lan-game` (host 2848 / joiner 2840; base 2747 / 2743); identical but four text carets (host-create-dialog at x 575..576; host-staging-host, host-staging-ready, joiner-staging-joiner at x 121..122) |
+| `gates.sh` | tour PASS, ai-game time-cap PT 12163 units [4, 36, 38] alive [2, 3] classic_lua x 2, lan-game PASS host 3107 / joiner 3112, GATES PASS |
 
 ### Left
 
