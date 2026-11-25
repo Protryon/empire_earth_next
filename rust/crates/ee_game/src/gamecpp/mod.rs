@@ -2535,7 +2535,6 @@ pub enum EeGameCpp {
     // the tech tree's host (tech_tree host.rs; EETechTree.cpp's EECore9OpD6, EETechTreeNode.cpp's EECore9OpD7)
     TkTreeFields,
     TkCurrentPlayer,
-    TkPlayerIndex,
     TkPlId,
     TkPostShowEpochName,
     TkMainGameForm,
@@ -2548,7 +2547,6 @@ pub enum EeGameCpp {
     TkSetRef,
     TkNeedsUnitMedia,
     TkTrigger,
-    TkTreePlayer,
     TkEpochReached,
     TkStatReset,
     TkStatSet,
@@ -2911,9 +2909,6 @@ pub enum EeGameCpp {
     TbButtonGet,
     TbSwapButton,
     TbGlobalTree,
-    TbSetPlayerIndex,
-    TbCopyPlayer,
-    TbSetPlayer,
     TbIsHuman,
     TbClassFamily,
     TbNodeIsObsolete,
@@ -2946,14 +2941,6 @@ pub enum EeGameCpp {
     DcCount,
     DcAt,
     DcSet,
-    TcUpgradeFirst,
-    TcUpgradeEnd,
-    TcUpgradeMediaCount,
-    TcUpgradeButtonCount,
-    TcPlayerId,
-    TcPlayerPopulationBonus,
-    TcPlayerTributeFee,
-    TcPlayerBB44,
     //
     // ---- round 10, lane C (EECore10OpC's cases)
     // the captures' C++ reads (civ_capture.rs, msg_capture.rs; EECivCapture.cpp, EEMessageCapture.cpp)

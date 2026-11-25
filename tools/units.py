@@ -70,8 +70,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS,
                        "Empire Earth/Empire Earth/EEAppCapture.cpp",
                        # TEST ONLY: its map, mini map, cheat and storm records and the --app-sweep (MAPS ... STRM)
                        "Empire Earth/Empire Earth/EEAppCaptureWorld.cpp",
-                       # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
-                       "Empire Earth/Tech Tree/EETechCapture.cpp",
                        # TEST ONLY: the units sweep of EE-SIM --unit-sweep (the capture's units profile)
                        "Empire Earth/Physics Thread/EEPhysicsSweep.cpp",
                        # TEST ONLY: the scenario manager's capture records (ee/EEScenarioCapture.h; RUST_PLAN R5b.5)

@@ -122,7 +122,7 @@ fn media(player: P, what: i32, id: i32, load: bool) {
 pub extern "C" fn ee_gamecpp_tech_update_interface(tree: *mut c_void, epoch_changed: bool) {
     let tree = tree as P;
     let current = hp(O::TkCurrentPlayer, 0, &[]);
-    if current == 0 || h(O::TkPlayerIndex, tree, &[]) != h(O::TkPlId, current, &[]) {
+    if current == 0 || load::player_index(tree) as i64 != h(O::TkPlId, current, &[]) {
         return;
     }
     if epoch_changed {
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
             }
             return all.len() as i32;
         }
-        EE_TECH_HOST_PLAYER_INDEX => v[0] = h(O::TkPlayerIndex, tree, &[]) as i32,
+        EE_TECH_HOST_PLAYER_INDEX => v[0] = load::player_index(tree) as i64 as i32,
         EE_TECH_HOST_UNIT_ID => v[0] = if unit != 0 { h(O::TkUnitId, unit, &[]) as i32 } else { -1 },
         EE_TECH_HOST_NODE => {
             let found = hp(O::TkGet, tree, &[v[0] as i64]);
@@ -206,10 +206,10 @@ pub unsafe extern "C" fn ee_gamecpp_tech_host(tree: *mut c_void, op: i32, io: *m
         }
         EE_TECH_HOST_STATISTIC => {
             if v[0] == 2 {
-                let player = hp(O::TkTreePlayer, tree, &[]);
+                let player = load::player_pointer(tree);
                 h(O::TkStatSet, player, &[v[1] as i64, v[2] as i64]);
             } else {
-                let player = if v[0] == 0 { hp(O::TkTreePlayer, tree, &[]) } else { tree_player(tree) };
+                let player = if v[0] == 0 { load::player_pointer(tree) } else { tree_player(tree) };
                 h(O::TkStatReset, player, &[v[1] as i64]);
             }
         }
@@ -440,7 +440,7 @@ fn capture_cost(node: P, kind: c_long, resource: c_long, unit_class: c_long, sca
     let tree = hp(O::TkNodeTree, node, &[]);
     let (player, epoch) = if tree != 0 {
         // SAFETY: the tree's record
-        (h(O::TkPlayerIndex, tree, &[]) as c_long, unsafe { (*tree_fields(tree)).mCurrentEpoch })
+        (load::player_index(tree) as i64 as c_long, unsafe { (*tree_fields(tree)).mCurrentEpoch })
     } else {
         (-1, -1)
     };
@@ -509,11 +509,11 @@ pub extern "C" fn ee_gamecpp_tech_tree_player(tree: *mut c_void) -> *mut c_void 
 
 /// [`ee_gamecpp_tech_tree_player`].
 pub(crate) fn tree_player(tree: P) -> P {
-    let player = hp(O::TkTreePlayer, tree, &[]);
+    let player = load::player_pointer(tree);
     if player != 0 {
         player
     } else {
-        hp(O::TbWorldPlayer, 0, &[h(O::TkPlayerIndex, tree, &[])])
+        hp(O::TbWorldPlayer, 0, &[load::player_index(tree) as i64])
     }
 }
 

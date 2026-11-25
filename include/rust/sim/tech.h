@@ -1618,6 +1618,10 @@ struct EeTechTreeFields {
   bool mIsLoaded;
   /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
   EeTechTreeSaved *mSaved;
+  /// the player's index (`SetPlayerIndex`; the original RTSTechTree's +0x04)
+  long mPlayerIndex;
+  /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
+  class EEPlayer *mPlayer;
 };
 
 /// One level of a category: its value and bonus (`EECivilizationUpgradeValue`).

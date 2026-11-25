@@ -189,6 +189,10 @@ pub struct EeTechTreeFields {
     pub mIsLoaded: bool,
     /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
     pub mSaved: *mut EeTechTreeSaved,
+    /// the player's index (`SetPlayerIndex`; the original RTSTechTree's +0x04)
+    pub mPlayerIndex: c_long,
+    /// the player (`SetPlayer`; null: `GetPlayer` finds it by index)
+    pub mPlayer: *mut crate::units::obj_fields::EeCxxPlayer,
 }
 
 impl Default for EeTechTreeFields {
@@ -202,6 +206,8 @@ impl Default for EeTechTreeFields {
             mEpochNameID: 0,
             mIsLoaded: false,
             mSaved: ptr::null_mut(),
+            mPlayerIndex: 0,
+            mPlayer: ptr::null_mut(),
         }
     }
 }

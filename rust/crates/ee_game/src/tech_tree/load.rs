@@ -28,7 +28,7 @@ use super::host::{
     tree_player,
 };
 use crate::gamecpp::persistent::Pf;
-use crate::gamecpp::{h, hp, pa, rec, O, P};
+use crate::gamecpp::{h, hp, rec, O, P};
 
 /// `kErrorOK`.
 const TB_OK: i64 = 0;
@@ -40,6 +40,18 @@ const TB_PREHISTORIC_AGE: c_long = 30145;
 pub(crate) fn tree_fields(tree: P) -> *mut EeTechTreeFields {
     // SAFETY: the tree's record (EETechTree's second base; NULL for a NULL tree)
     unsafe { rec::<EeTechTreeFields>(O::TkTreeFields, tree) }
+}
+
+/// The tree's player index (`mPlayerIndex`).
+pub(crate) fn player_index(tree: P) -> c_long {
+    // SAFETY: the tree's record
+    unsafe { (*tree_fields(tree)).mPlayerIndex }
+}
+
+/// The tree's player pointer (`mPlayer`; 0 when none is set).
+pub(crate) fn player_pointer(tree: P) -> P {
+    // SAFETY: the tree's record
+    unsafe { (*tree_fields(tree)).mPlayer as P }
 }
 
 pub(crate) fn node_fields(node: P) -> *mut EeTechNodeFields {
@@ -217,6 +229,8 @@ pub extern "C" fn ee_gamecpp_tech_tree_init(tree: *mut c_void) {
         (*t).mIsLoaded = false;
         (*t).mSaved = std::ptr::null_mut();
         (*t).mEpochsBeforeWonders = 1;
+        (*t).mPlayerIndex = 0;
+        (*t).mPlayer = std::ptr::null_mut();
     }
     h(O::TkEpochsResize, tree, &[ee_tech_epoch_count() as i64]);
 }
@@ -232,8 +246,11 @@ pub extern "C" fn ee_gamecpp_tech_tree_assign(tree: *mut c_void, other: *const c
         (*tf).mStartEpoch = (*of).mStartEpoch;
         (*tf).mEndEpoch = (*of).mEndEpoch;
     }
-    h(O::TbSetPlayerIndex, t, &[h(O::TkPlayerIndex, o, &[])]);
-    h(O::TbCopyPlayer, t, &[o as i64]);
+    // SAFETY: the two trees' records
+    unsafe {
+        (*tf).mPlayerIndex = (*of).mPlayerIndex;
+        (*tf).mPlayer = (*of).mPlayer;
+    }
     let count = h(O::TkEpochCount, o, &[]);
     h(O::TkEpochsResize, t, &[count]);
     for i in 0..count {
@@ -249,9 +266,13 @@ pub extern "C" fn ee_gamecpp_tech_tree_assign(tree: *mut c_void, other: *const c
 /// EETechTree::SetPlayer: the tree's player and, for a player, its index.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_tech_set_player(tree: *mut c_void, player: *mut c_void) {
-    h(O::TbSetPlayer, tree as P, &[player as i64]);
+    let t = tree_fields(tree as P);
+    // SAFETY: the tree's record
+    unsafe { (*t).mPlayer = player.cast() };
     if !player.is_null() {
-        h(O::TbSetPlayerIndex, tree as P, &[h(O::TkPlId, player as P, &[])]);
+        let index = h(O::TkPlId, player as P, &[]) as c_long;
+        // SAFETY: as above
+        unsafe { (*t).mPlayerIndex = index };
     }
 }
 
@@ -475,7 +496,7 @@ pub unsafe extern "C" fn ee_gamecpp_tech_sum_costs_captured(
     if ee_sim::app::capture::ee_app_capture_active() && TB_SUM_DEPTH.get() == 0 {
         TB_SUM_DEPTH.set(TB_SUM_DEPTH.get() + 1);
         let mut r = TbRecord::default();
-        r.i32(h(O::TkPlayerIndex, tree as P, &[]) as i32);
+        r.i32(player_index(tree as P) as i32);
         r.i32(id as i32);
         r.i32(unit_class as i32);
         for i in 0..7 {

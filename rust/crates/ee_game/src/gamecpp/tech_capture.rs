@@ -32,7 +32,7 @@ fn tree_bytes(r: &mut TbRecord, tree: P) {
     let mut bytes = [0u8; EE_TECH_CAPTURE_TREE_SIZE as usize];
     // SAFETY: the tree's record and a buffer of the record's size
     let n = unsafe {
-        ee_tech_capture_tree(tree_fields(tree), h(O::TkPlayerIndex, tree, &[]) as c_long, bytes.as_mut_ptr())
+        ee_tech_capture_tree(tree_fields(tree), crate::tech_tree::load::player_index(tree), bytes.as_mut_ptr())
     };
     r.bytes(&bytes[..n as usize]);
 }
@@ -214,12 +214,12 @@ pub(crate) fn upgrade_record(u: P) -> Vec<u8> {
     if u == 0 {
         return 0u32.to_le_bytes().to_vec();
     }
-    let first = hp(O::TcUpgradeFirst, u, &[]);
-    let end = hp(O::TcUpgradeEnd, u, &[]);
-    // SAFETY: the upgrade's members from mAreaEffectScale up to mIsInitialized
-    let mut bytes = unsafe { std::slice::from_raw_parts(first as *const u8, end - first) }.to_vec();
-    for field in [hp(O::TcUpgradeMediaCount, u, &[]), hp(O::TcUpgradeButtonCount, u, &[])] {
-        let at = field - first;
+    use std::mem::offset_of;
+    type F = ee_sim::world::stats_fields::EeUnitsUnitClassUpgradeFields;
+    let first = u + ee_sim::world::layout::layout().stats_fields as usize;
+    // SAFETY: the upgrade's record from mAreaEffectScale (its first member) up to mIsInitialized
+    let mut bytes = unsafe { std::slice::from_raw_parts(first as *const u8, offset_of!(F, mIsInitialized)) }.to_vec();
+    for at in [offset_of!(F, mMediaCount), offset_of!(F, mButtonLoadCount)] {
         bytes[at..at + std::mem::size_of::<c_long>()].fill(0);
     }
     let mut out = (bytes.len() as u32).to_le_bytes().to_vec();
@@ -234,11 +234,15 @@ pub(crate) fn player_record(pl: P) -> Vec<u8> {
     if pl == 0 {
         r.i32(-1);
     } else {
-        r.i32(h(O::TcPlayerId, pl, &[]) as i32);
-        r.i32(h(O::TcPlayerPopulationBonus, pl, &[]) as i32);
-        // SAFETY: the player's mTributeFee
-        r.bytes(&unsafe { *(hp(O::TcPlayerTributeFee, pl, &[]) as *const f32) }.to_le_bytes());
-        r.u32((h(O::TcPlayerBB44, pl, &[]) != 0) as u32);
+        use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsRtsPlayerFields};
+        // SAFETY: the live player's records
+        let (rts, f) = unsafe {
+            (&*super::rec::<EeUnitsRtsPlayerFields>(O::PlRts, pl), &*super::rec::<EeUnitsPlayerFields>(O::PlFields, pl))
+        };
+        r.i32(rts.mPlayerID as i32);
+        r.i32(f.mPopulationLimitBonus as i32);
+        r.bytes(&f.mTributeFee.to_le_bytes());
+        r.u32(f.mBB44 as u32);
     }
     r.0
 }
