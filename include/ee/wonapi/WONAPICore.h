@@ -1,5 +1,6 @@
 #ifndef EE_WONAPI_WONAPICORE_H
 #define EE_WONAPI_WONAPICORE_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include "ee/wonapi/WONRouting.h"
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/apicore.h"
@@ -30,11 +31,10 @@ public:
     virtual void Shutdown() { ee_won_api_shutdown(this->mCore); }  //slot 8, 2f2c80
     void Pump(unsigned long ms,int maxOps=0) { ee_won_api_pump(this->mCore,static_cast<uint32_t>(ms),maxOps); } //2f2d20
     static WONAPICore* GetInstance() { return static_cast<WONAPICore*>(ee_won_api_instance()); }
-    static bool IsStarted() { return ee_won_api_is_started(); } //2f2d00
+    #include EE_WON_DRV(ApiCore_WONAPICore) // the drivers' members
 protected:
     friend class SocketOp;
     static void AddToSocketThread(SocketOp* op) { ee_won_api_socket_op(static_cast<void*>(op),true); } //2f2ef0
-    static void RemoveFromSocketThread(SocketOp* op) { ee_won_api_socket_op(static_cast<void*>(op),false); } //2f2f20
     // 2f28d0 (Init 2f2750): version "wonapi121401", socket and timer threads on, no pump thread; Winsock started
     WONAPICore(const char*,const EeWonApiHooks* inHooks=ee_won_api_socket_hooks())
         : mCore(ee_won_api_new(static_cast<void*>(this),WonCore(),inHooks)) {}
@@ -46,11 +46,7 @@ private:
 class WONAPICoreEx : public WONAPICore {
 public:
     WONAPICoreEx(const EeWonApiHooks* inHooks=ee_won_api_socket_hooks()) : WONAPICore("",inHooks) {} //2f2f40, implicit dtor 2f2f80
-    // each before start-up only
-    void SetDefaultFileDirectory(const char* inDirectory) { ee_won_api_set_directory(this->mCore,inDirectory); }
-    // a socket thread of the core's table (the drivers' own tables only: the game sets none)
-    void SetSocketThread(void* inThread) { ee_won_api_set_socket_thread(this->mCore,inThread); }
-    void SetDoSocketAndTimerThreads(bool inOn) { ee_won_api_set(this->mCore,1,inOn); }
+    #include EE_WON_DRV(ApiCore_WONAPICoreEx) // the drivers' members
     void SetDoPumpThread(bool inOn) { ee_won_api_set(this->mCore,0,inOn); } //setter 2f2f90
 };
 }

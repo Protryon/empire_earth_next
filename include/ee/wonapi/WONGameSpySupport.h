@@ -3,6 +3,7 @@
 // this class holds it. GameSpySupport.cpp, GameSpySDK/gqueryreporting.c and GameSpySDK/nonport.c are deleted.
 #ifndef EE_WONAPI_WONGAMESPYSUPPORT_H
 #define EE_WONAPI_WONGAMESPYSUPPORT_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 #include "ee/wonapi/WONRouting.h"
 #include "rust/won_net/gamespy.h"
 #define EE_WON_GAMESPY_RUST 1 // (won_gamespy_test: the master server's host is set through the class)
@@ -23,22 +24,11 @@ public:
     }
     void Shutdown() { this->Op(EE_WON_GAMESPY_SHUTDOWN); } // sends the "gamemode" "exiting" state change
     WONStatus GetStatus() { return (WONStatus)this->Op(EE_WON_GAMESPY_STATUS); }
-    int GetGameSpyStatus() { return (int)this->Op(EE_WON_GAMESPY_GAMESPY_STATUS); }
+    #include EE_WON_DRV(GameSpy_GameSpySupport) // the drivers' members
     void Pump() { this->Op(EE_WON_GAMESPY_PUMP); }
-    void SetAutoPumpTime(unsigned long theMilliseconds) { this->Op(EE_WON_GAMESPY_SET_AUTO_PUMP, theMilliseconds); }
-    bool IsAutoPumping() { return this->Op(EE_WON_GAMESPY_IS_AUTO_PUMPING) != 0; }
     void SetKeyValue(GameSpyQueryType theType, const char* theKey, const char* theValue)
     { ee_won_gamespy_set(mRust, theType, theKey, theValue); }
     const char* GetKeyValue(GameSpyQueryType theType, const char* theKey) { return ee_won_gamespy_get(mRust, theType, theKey); }
-    bool EraseKeyValue(GameSpyQueryType theType, const std::string& theKey)
-    { return ee_won_gamespy_set(mRust, theType, theKey.c_str(), NULL); }
-    void EraseAllKeyValues(GameSpyQueryType theType) { this->Op(EE_WON_GAMESPY_ERASE_ALL, theType); }
-    // the key-value maps' lock held across several updates
-    void LockKeyValues() { this->Op(EE_WON_GAMESPY_LOCK); }
-    void UnlockKeyValues() { this->Op(EE_WON_GAMESPY_UNLOCK); }
-    void SetGameMode(const char* aGameMode) { ee_won_gamespy_set(mRust, 0, NULL, aGameMode); }
-    // the SDK's qr_hostname: the master server's host the next Startup resolves
-    static void SetMasterHost(const char* inHost) { ee_won_gamespy_set_master_host(inHost); }
 
 protected:
     ~GameSpySupport() { ee_won_gamespy_free(mRust); }

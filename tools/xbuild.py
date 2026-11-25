@@ -1067,7 +1067,9 @@ def build_won_test(t, name, units, folder="won", first_inc=None):
     # the original units' copies (tests/net/orig_*) include the Rust headers by the names they had before the crate
     # restructure: forwarding headers to the module headers, after the include path
     inc.append(ROOT / "tests" / "net" / "rust_names")
-    defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
+    # the WON classes' members only the drivers use (ee/wonapi/WONDriver.h: EE_WON_DRV)
+    inc.append(ROOT / "tests" / "won" / "drv")
+    defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS", "EE_WON_DRIVER"]
     # an engine unit gets the engine's module define (tools/ee.py MODULE_FLAGS "lle"), as tcptest's do
     lle = ROOT / "src" / "Low-Level Engine"
     unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if lle in pathlib.Path(src).parents else [])]

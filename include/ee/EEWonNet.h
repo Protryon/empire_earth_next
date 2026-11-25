@@ -5,6 +5,7 @@
 // lle/LowLevelEngine.h.
 #ifndef EE_EEWONNET_H
 #define EE_EEWONNET_H
+#include "ee/wonapi/WONDriver.h" // EE_WON_DRV
 
 #include <stdint.h>   // int32_t/uint32_t: the network fields' fixed widths
 #include "platform/PlatSocket.h"    // PlatSockAddrIn (sockaddr_in's layout)
@@ -73,8 +74,7 @@ public:
     // 2b2d50 / 2b2df0: from "host[:port]" (by DNS / dotted only), the default port if none; the validity
     bool SetWithDefaultPort(const std::string& inText, unsigned short inPort)
     { return ee_won_ipaddr_set_with_default_port(this->mAddr, Bytes(inText), inText.length(), inPort); }
-    bool SetWithDefaultPortNoDNS(const std::string& inText, unsigned short inPort)
-    { return ee_won_ipaddr_set_no_dns(this->mAddr, Bytes(inText), inText.length(), inPort); }
+    #include EE_WON_DRV(IPAddr_IPAddr) // the drivers' members
     // 2b3070: "host:port", as formatted into a 50-byte buffer (a long remembered host name is cut short)
     std::string GetHostAndPortString(bool inUseOriginal = true) const
     { std::string aText; ee_won_ipaddr_host_and_port_string(this->mAddr, inUseOriginal, TextSink, &aText); return aText; }
@@ -87,7 +87,6 @@ public:
     bool IsValid() const { return ee_won_ipaddr_valid(this->mAddr); }
     // 0x2b29c0 / 0x2b29d0: the 6-byte wire form (port then IP, network order); setting it forgets the host name
     const char* GetSixByte() const { return ee_won_ipaddr_six(this->mAddr); }
-    void SetSixByte(const void* inSix) { ee_won_ipaddr_set_six(this->mAddr, static_cast<const uint8_t*>(inSix)); }
     // 0x2b31f0 orders by the wire form (port first); 2b3220 / 2b3240 compare it
     bool operator<(const IPAddr& inOther) const { return ee_won_ipaddr_compare(this->mAddr, inOther.mAddr) < 0; }
     bool operator==(const IPAddr& inOther) const { return ee_won_ipaddr_compare(this->mAddr, inOther.mAddr) == 0; }
@@ -95,8 +94,6 @@ public:
     // 2b3260: by host-order IP, then by port
     int StringCompare(const IPAddr& inOther) const
     { return ee_won_ipaddr_string_compare_values(this->mAddr, inOther.mAddr); }
-    // ServerContext's conversions to and from servctx.rs's EeWonAddr (the host borrowed while this value lives)
-    EeWonAddr ToRaw() const { return ee_won_ipaddr_to_raw(this->mAddr); }
     void FromRaw(const EeWonAddr& inRaw) { ee_won_ipaddr_from_raw(this->mAddr, &inRaw); }
     // the Rust value, for the Rust objects that copy it (a socket's destination, an op's address)
     const EeWonIpAddr* GetValue() const { return this->mAddr; }
