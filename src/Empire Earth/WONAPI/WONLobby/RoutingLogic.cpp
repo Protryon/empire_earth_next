@@ -29,7 +29,6 @@
 #include "ee/wonapi/WONLobbyRoutingLogic.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "ee/wonapi/WONStatus.h"
-#include "ee/wonapi/WONRoutingTypes.h"
 #include "ee/wonapi/WONLobbyResourceGlobals.h"
 #include "rust/won_lobby/routelogic.h"
 #include "rust/won_net/hostop.h"

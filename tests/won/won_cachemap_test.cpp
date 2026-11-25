@@ -20,6 +20,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "won_file37_orig.h" // FileReader, FileWriter
 #include "won_cachemap_glue.h"
 #include "rust/won_net/http.h"
 

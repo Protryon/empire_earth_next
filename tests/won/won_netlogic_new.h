@@ -12,6 +12,7 @@
 #include "rust/won_net/httpdoc.h"
 #include "rust/won_net/httpget.h"
 #include "rust/won_net/reqdir.h"
+#include "rust/won_net/reqmake.h"
 #include "rust/won_net/reqops.h"
 #include "rust/won_net/routecpp.h"
 #include "rust/won_net/routeop.h"
@@ -26,12 +27,6 @@ static void UserSetTOUNow(LobbyUserInfo* inUser)
 }
 static ComponentEvent* E(intptr_t a) { return reinterpret_cast<ComponentEvent*>(a); }
 static AuthContext* A(intptr_t a) { return reinterpret_cast<AuthContext*>(a); }
-static const std::wstring* InitDirPaths(LobbyConfig* inConfig)
-{
-    static std::wstring sPaths[4] = { L"/TitanServers/Auth", L"/TitanServers/DBProxy", L"/TitanServers/Firewall" };
-    sPaths[3] = inConfig != NULL ? inConfig->mProductDirectory + L"/Patch" : std::wstring();
-    return sPaths;
-}
 static RustServerOp* R(intptr_t a) { return static_cast<RustServerOp*>(reinterpret_cast<AsyncOp*>(a)); }
 static GUIString* T(intptr_t a) { return reinterpret_cast<GUIString*>(a); }
 static ServerContext* SC(intptr_t a) { return reinterpret_cast<ServerContext*>(a); }
@@ -138,7 +133,7 @@ static intptr_t Init(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, int
     case O::HttpDocSetConfig: R(a)->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage); return 0;
     case O::HttpDocSetSession: R(a)->Set(EE_WON_HTTPDOC_SESSION, aLogic->mHTTPSession.get()); return 0;
     case O::DirServers: return (intptr_t)LobbyGetDirServers();
-    case O::DirQueryNew: return Held(RustServerOp::NewGetMultiDir(SC(a), 0x04000002, InitDirPaths(config), (int)b));
+    case O::DirQueryNew: return Held(RustServerOp::NewRequest(ee_won_reqmake_init_dirs(0x04000002, config != NULL ? config->mProductDirectory.data() : NULL, config != NULL ? config->mProductDirectory.size() : 0, sizeof(wchar_t), (int)b), SC(a)));
     case O::VersionCheckNew: return Held(RustServerOp::NewRequest(ee_won_reqop_version_check(B(config->mProductName), config->mProductName.size(), B(config->mLanguage), config->mLanguage.size(), B(config->mVersion), config->mVersion.size()), LobbyGetPatchServers()));
     case O::FirewallOpNew: return Held(new DetectFirewallOp(SC(a)));
     case O::FirewallSetListenPort: FW(a)->SetListenPort(LobbyGetLobbyPort()); return 0;

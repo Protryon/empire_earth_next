@@ -33,6 +33,7 @@
 #include "won_sockop_kinds.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
+#include "won_net37_orig.h" // the pieces only the drivers use
 #include "platform/PlatFile.h"
 #include "rust/won_net/hostop.h"
 #include "rust/won_net/httpget.h"

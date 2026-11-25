@@ -138,6 +138,16 @@ bool ee_won_auth_login_hash_files(const EeWonAuthLogin *l,
                                   const uint8_t *files,
                                   size_t files_len);
 
+/// `AuthContext::SetHashFile(community)` (2e06d0; AuthContext.cpp until R6 WON lobby and network round 37): the
+/// community's one hash file is the running executable in the data root; false without either name.
+///
+/// # Safety
+/// `l` is a login; `community` holds `count` characters of `wchar_size` bytes.
+bool ee_won_auth_login_hash_exe(const EeWonAuthLogin *l,
+                                const void *community,
+                                uint32_t wchar_size,
+                                size_t count);
+
 /// The members, one line (`Login::describe`, the drivers' form).
 ///
 /// # Safety

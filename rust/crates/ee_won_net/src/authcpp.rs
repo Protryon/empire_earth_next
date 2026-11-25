@@ -131,6 +131,31 @@ pub unsafe extern "C" fn ee_won_authctx_new_core(
     unsafe { crate::authobj::ee_won_authctx_new(&hooks, secret_file, len) }
 }
 
+/// `AuthContext::Init` (2ddb70; AuthContext.cpp until R6 WON lobby and network round 37): [`ee_won_authctx_new_core`]
+/// with the login secrets "_wonlogin.ks" in the library's file directory, the new server list `servers` (the C++
+/// `new ServerContext`) and the directory's verifier key.
+///
+/// # Safety
+/// As `ee_won_authctx_new_core`; `servers` is a live object.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_authctx_new_default(
+    ctx: *mut c_void,
+    core: *const crate::cppcore::EeWonCoreHooks,
+    new_cert_op: Option<unsafe extern "C" fn(context: *mut c_void) -> *mut c_void>,
+    servers: *mut c_void,
+) -> *const EeWonAuthCtx {
+    let mut file = crate::hostnative::file_directory();
+    file.extend_from_slice(b"_wonlogin.ks");
+    // SAFETY: the callers' contracts; the bytes above
+    unsafe {
+        let c = ee_won_authctx_new_core(ctx, core, new_cert_op, file.as_ptr(), file.len());
+        crate::authobj::ee_won_authctx_set_server_context(c, servers);
+        let dir = crate::hostnative::file_directory();
+        crate::authobj::ee_won_auth_verifier_init(dir.as_ptr(), dir.len());
+        c
+    }
+}
+
 #[cfg(test)]
 #[path = "authcpp_tests.rs"]
 mod tests;

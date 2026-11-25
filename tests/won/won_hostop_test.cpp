@@ -3000,7 +3000,7 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
         S.mDoc = true;
         string p = kDocProducts[(int)addr[1]];
         // the WON directory: none (the cache file names are the original half's DocPath)
-        r = ee_won_httpdoc_new(addr[0], reinterpret_cast<const uint8_t*>(p.data()), p.size(), NULL, 0);
+        r = ee_won_httpdoc_new(addr[0], reinterpret_cast<const uint8_t*>(p.data()), p.size(), reinterpret_cast<const uint8_t*>(""), 0); // no directory (NULL: the WON one)
     } else if (inOp == 'H') {
         S.mHttp = true;
         if (addr[1]) {

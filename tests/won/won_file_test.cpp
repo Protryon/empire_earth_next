@@ -14,6 +14,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "won_file37_orig.h" // FileReader, FileWriter
 
 using namespace WONAPI;
 

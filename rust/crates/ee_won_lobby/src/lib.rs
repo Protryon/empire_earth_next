@@ -62,6 +62,7 @@ pub mod staging;
 pub mod stagingobj;
 pub mod statusstr;
 pub mod widgets;
+pub mod wonaction;
 pub mod wonfront;
 pub mod wonnet;
 // R6 WON round 34 (the dialog lane)
