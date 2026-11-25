@@ -19,7 +19,6 @@
 #include "ee/EEMedia.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEMusicManager.h"
-#include "rust/audio/sound.h"
 #include "rust/game/gamecpp.h"   // round 11, lane B (ee_game gamecpp music_io.rs)
 
 // Creates the music manager and starts its music thread at the given priority, waiting until the thread runs

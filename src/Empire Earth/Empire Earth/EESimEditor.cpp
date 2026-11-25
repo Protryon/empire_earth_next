@@ -17,15 +17,12 @@
 #include <typeinfo>
 #include <vector>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
-#include "lle/GETexture.h"
 #include "lle/GEViewport.h"
 #include "lle/GERhombus.h"
 #include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/UITriStateCheckBox.h"
 #include "lle/GETerrainMesh.h"
@@ -48,7 +45,6 @@
 #include "ee/EESMObject.h"
 #include "ee/EESMTrigger.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEPhysics.h"
 #include "ee/EESaveLoad.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESEARust.h"
@@ -64,11 +60,9 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESERBUnitTypes.h"
 #include "ee/EESELoadThread.h"
-#include "ee/EEUnitHandle.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationBuilder.h"
-#include "rust/base/time.h"
 #include "rust/game/sim_driver.h"   // EeSimDriverSed
 
 // the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)

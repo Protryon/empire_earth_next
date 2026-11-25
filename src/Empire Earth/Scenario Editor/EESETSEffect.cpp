@@ -10,28 +10,14 @@
 #include <windows.h>
 #include <string>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
-#include "lle/UResourceFile.h"
-#include "lle/UICheckBox.h"
 
-#include "lle/UIRadioButton.h"
 
-#include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
@@ -53,11 +39,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "lle/UIESliderChange.h"
-#include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/game/screens.h"
-#include "rust/sim/scenario.h"
-#include "ee/EEUnitClassIDs.h"
 // The screen is whole in Rust (ee_screens editor_subscreens.rs) with its seven effect types (editor_effects.rs): the
 // constructor (0x582629), the destructor (0x5829a4), ChangeEffectAction (0x582a3b), ChangeEffectType (0x582a69),
 // Sort, MoveDown, MoveUp, Delete, Duplicate, Activate (0x582b22), Store (0x582b96), GetNames, Load (0x582c55), New,

@@ -10,24 +10,13 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/EEMiniMap.h"
 #include "ee/EEUnit.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEStatisticsRecord.h"
-#include "ee/EEPhysics.h"
-#include "ee/EECheatCodes.h"
-#include "ee/EEEMStorm.h"
-#include "ee/EEEnvironmentManager.h"
-#include "ee/EEStormType.h"
-#include "rust/render/ge.h"
-#include "rust/game/app.h"   // the map records
-#include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"   // round 10, lane D: the storm and cheat sweeps; round 11, lane B: the statistics
 #include "ee/EETechCapture.h"
 #include "ee/EEAppCapture.h"

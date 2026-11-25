@@ -6,7 +6,6 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
@@ -20,7 +19,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEMouse.h"
 #include "platform/PlatSim.h"
-#include "rust/game/rts.h"
 
 RTSGraphics::RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse,
                          UIManager* inUIManager, bool inIsFullScreen, long inThreadPriority)

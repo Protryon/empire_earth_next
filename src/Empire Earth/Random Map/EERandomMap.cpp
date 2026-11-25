@@ -11,7 +11,6 @@
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/UResourceFile.h"
 

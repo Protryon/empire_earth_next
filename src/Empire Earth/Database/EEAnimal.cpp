@@ -11,7 +11,6 @@
 
 #include "ee/EEAnimal.h"
 #include "ee/EEMedia.h"
-#include "ee/EEDbRecords.h"
 #include "rust/game/gamecpp.h"
 
 extern std::vector<EEUnitClass*> gUnitClassTable;   // ee/EEUnit.h

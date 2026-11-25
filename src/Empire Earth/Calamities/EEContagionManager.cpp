@@ -10,7 +10,6 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/USingleton.h"
 
@@ -24,8 +23,6 @@
 #include "rust/game/gamecpp.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEEffectKindIDs.h"
-#include "ee/EEMap.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPlayer.h"

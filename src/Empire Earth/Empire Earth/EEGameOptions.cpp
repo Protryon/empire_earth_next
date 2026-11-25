@@ -7,17 +7,12 @@
 #include <algorithm>
 #include <mbstring.h>
 #include <stdlib.h>
-#include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "ee/EEUIManager.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEGameVariant.h"
-#include "ee/EERandomMapGenerators.h"
-#include "ee/EERulesWorld.h"
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 

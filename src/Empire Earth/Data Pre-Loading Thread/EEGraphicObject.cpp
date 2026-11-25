@@ -11,33 +11,24 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/FSFileSpec.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
 
 #include "ee/EEMedia.h"
 #include "EEDatabase.h"
-#include "lle/GERenderState.h"
 
 std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount read it)
 
-#include "lle/UString.h"
 #include "lle/GEColor.h"
-#include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
 #include "ee/EEPhysics.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEGraphicObject.h"
-#include "ee/EEDbRecords.h"
 #include "ee/EEMediaUse.h"
 #include "ee/EEWheel.h"
 #include "ee/EESoundObject.h"
-#include "ee/EEGlobalConstants.h"
 #include "rust/render/gfx.h"
 #include "rust/game/preload_media.h"
 

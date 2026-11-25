@@ -8,8 +8,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GEText.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/GESurface.h"
 #include "lle/GEScreen.h"
@@ -25,9 +23,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMouse.h"
-#include "ee/RTSMousePointer.h"
 #include "ee/EEGraphics.h"
-#include "rust/render/gfx.h"
 // the two file-scope objects of the chains at 0x50972b and 0x509738 (a bool; three deques and a bool): nothing read
 // them, so the port has neither
 

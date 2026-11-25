@@ -4,11 +4,8 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GESurface.h"
 
 #include "ee/EEMouse.h"
-#include "rust/render/gfx.h"
 #include "rust/game/gamecpp.h"
 
 // the extra mouse pointers' file table (0x4be124: 14 pointers in .data): gamecpp ro_views.rs

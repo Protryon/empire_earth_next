@@ -13,15 +13,12 @@
 #include "lle/NEMessage.h"
 #include "lle/UResourceFile.h"
 #include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/GETerrainMesh.h"
-#include "lle/SESoundManager.h"
 #include "lle/Input System.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/NESynchronousServer.h"
-#include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -52,15 +49,12 @@
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEGameSound.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
-#include "rust/sim/netmsg.h"   // ee_netmsg
-#include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"   // the bodies (gamecpp message.rs)
 
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine

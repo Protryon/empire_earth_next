@@ -3,19 +3,15 @@
 // Load/Save; the load screen event is a screen code, ee_screens save_load.rs). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GERhombus.h"
 #include "lle/UIForm.h"
 #include "lle/UIEvent.h"
 
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EESEARust.h"
 #include "lle/UResourceFile.h"
 #include "ee/EEUserInterface.h"
-#include "lle/GEViewport.h"
 #include "lle/GESurface.h"
-#include "lle/GETexture.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
@@ -29,23 +25,15 @@
 
 
 
-#include "lle/GELine.h"
-#include "lle/UITextLabel.h"
-#include "lle/GETerrainMesh.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEARust.h"
-#include "ee/EEScenarioManager.h"
 #include "lle/UIListBox.h"
-#include "lle/UIRadioButton.h"
 #include "lle/GEText.h"
 #include "ee/EESEUnit.h"
-#include "lle/UIEditBox.h"
 
 
 
-#include "rust/game/screens.h"
 #include "lle/UICheckBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"

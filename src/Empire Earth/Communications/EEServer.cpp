@@ -28,8 +28,6 @@
 #include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/game/screens.h"   // EE_SCREENS_MG_*: the main game form's events (ee_screens main_game.rs)
-#include "rust/sim/netmsg.h"
 #include "ee/EEWonNet.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEARust.h"
@@ -44,8 +42,6 @@
 #include "ee/EEHumanPlayer.h"
 #include "rust/game/gamecpp.h"
 #include "ee/EEUnit.h"
-#include "ee/EESMMediaStrings.h"
-#include "rust/sim/netmsg.h"   // ee_netmsg session.rs (EESession: EEServer.cpp's host)
 #include <list>
 #include <string>
 // (gDefaultPlayerColors, the 16 slots' default colours: gamecpp globals.rs)

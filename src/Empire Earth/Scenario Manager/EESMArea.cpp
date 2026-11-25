@@ -5,7 +5,6 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "ee/EESMArea.h"
-#include "ee/EEScenarioHost.h"
 
 // Creates an unnamed rectangle-mode area with no rectangle or anchor and no cached centre tile
 EESMArea::EESMArea() : EeScenarioAreaFields(ee_scenario_area_defaults()) {}
