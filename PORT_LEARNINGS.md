@@ -40376,3 +40376,86 @@ compiles unmodified from the `lua-src` crate into the Rust library. docs/progres
 
 - **Behaviour changes**: none in a game. For a script: the list above (5.5's float text, `#` of a table with
   holes, `^`, the locale-dependent classes, frexp/ldexp, the traceback texts, the byte counts).
+
+## The LLE and UI floor lane, round 1 (LLE round 14, UI round 17): one forward list, URust and URustView, the members declared out of line inline over their Rust calls, the WON screens' events one class by their call, the WON list boxes' units gone (ee_won_lobby wonfront.rs; ee_render ge rastobj.rs, dx7 rastobj.rs, ge pixel.rs; ee_net ffi_client.rs; ee_base input system.rs, util config.rs fp.rs; ee_game screens ui_helpers.rs; ee_ui lle_*.rs; branch rust-lleui1, forks rust-lleui1-a, rust-lleui1-b, 2026-11-24)
+
+The brief: the floor of both lanes at once, -1,000 logic lines over include/lle, src/Low-Level Engine,
+src/Platform/Common, the UI thread, include/ee/EEUI*, the UI events and src/RTS Engine/Graphics (2,162 at
+fba26cc96, build/lu1/perfile.py over logic_lines.py's count). **-590** (2,162 -> 1,572): the UI half -237, the LLE
+half -353; the whole tree 19,021 -> 18,425 (-596 against origin/rust bbb0654d2, which the round merged); classes 679
+(six gone, six made: the WON event class, the call records moved into headers); .cpp 367 -> 360. Short of the
+target: what is left is declarations other lanes read, host switches, hot inlines and the built-in fonts
+(docs/progress/lle-shims.md "Round 14", ui-cluster.md "Round 17"). Pass 1 ran with two forks; pass 2 was the lead's
+alone: every relaunch of a fork was refused by the session's concurrent-agent limit (the other lanes' agents).
+
+### What moved
+
+- **One forward list, public members, two handle types** (23bc3f1b1): the LLE and UI headers' 168 scattered forward
+  declarations are lle/LLEForward.h; the private/protected sections that friends and hosts bypassed are gone; each
+  class's spelled-out deleted copy (an owned Rust object) or deleted constructor and destructor (a view of one) is
+  `URust<T>` or `URustView`.
+- **The LLE members declared out of line** (fork a, 3f7593ca5, b97ed3c87): GERasterizer's draws, pixel sizes,
+  activation, constructors and destructor; the pixel packers (GEPixelPack.h gone: `ee_ge_pack_bgrx_row`); the NE
+  constructors; TSLockable; NEInitialize as `ee_net_initialize` (Network Engine.cpp deleted); the sound engine's
+  start-up with its directory and window (three mixer functions gone); the input system's key names from the resource
+  strings in Rust; the floating-point check `ee_util_fp_check`.
+- **The UI's free helpers and hosts** (fork b): EETranslateString, the string reference, EEDisplayScenarioIntro and
+  EEPostF9Key in Rust (ui_helpers.rs); the toolkit's eight hosts declared by cbindgen (explicit exports instead of
+  `lle_host!`'s macro-made ones); two shared globals declared once.
+- **The WON screens' events** (91047865e, then 764602bc0): 29 classes, then 26 typedefs of a template by the call, are
+  one `EEWonFrontEvent` holding its `EeWonFrontCall`; the host's `EventNew` asks Rust which call an `EeWonFrontEvent`
+  makes (`ee_won_front_event_call`, -1 for the three that pop the form) instead of a 24-case switch.
+- **The WON list boxes** (0658720d8): every member of EEUICWonNetGamesBox, RoomsBox and StatBox was one call; they are
+  inline in the headers and the three units are deleted (link/exe/units.txt). The status box's five calls and the UI
+  manager's three went inline with their call records (`EEUIFMGStatusBoxCall`, `EEUIManagerCall`) moved into the
+  headers.
+
+### Lessons
+
+- An out-of-line one-statement member still costs its declaration: the body is a shim, the declaration is not. It
+  goes inline only where the header sees what the body calls; a call record a body builds (the status box's, the UI
+  manager's) can move into the header with it. When it needs a static host of the unit (GESurface's Load/Save, the
+  rasterizer's constructors), register the host in Rust once, or compose the calls in Rust (b97ed3c87).
+- A template instantiated once per enum value plus a switch that maps a second enum onto it is one class holding
+  the value, and one Rust match from the second enum to the first: the typedefs and the switch go, and the match is
+  unit-tested where the enums live.
+- A unit whose members are all one call can go whole: inline them, delete the unit and its line in
+  link/<module>/units.txt. With every virtual inline the vtable is emitted where it is used (no key function).
+- ee_render's `dx7::rastobj` is `#[cfg(not(test))]`: a ge test cannot call it; test the ge half and leave the DX7
+  half to the game's link.
+- A fork's commits that build are not ones that pass the Rust gate: pass 1's left a cast to the same type, a test
+  module above other items (clippy's items_after_test_module) and five unformatted files, found only by the round's
+  gate. Run `rust_build.py gate` (or clippy and rustfmt) on a fork's tip before merging it.
+- A resumed lane cannot count on its forks: plan the round so the lead can finish it alone.
+
+### Behaviour changes
+
+None intended. The WON events' classes changed (one class with the call as a member instead of one class per call);
+an `EventNew` value outside the Rust enum, which used to answer NULL, cannot be passed any more.
+
+### Gates
+
+On the round's code tip (e25c2b9a2 merged with origin/rust bbb0654d2; the three Rust gate fixes after it change no
+compiled behaviour), through build/lu1/chain.sh:
+
+- both builds 0/0 (EE-AOC 403 inputs, EE-SIM 404) and the test profile 0/0 (403); the headers current (348);
+- the oracle seeds 2-7 identical (6087, 5300, 6072, 7649, 7842, 6540 lines);
+- the twelve capture profiles at seeds 2-3 PASS (digests equal: oracle 212, late 214, space 210, calamity 222, units
+  175, effects 6, missile 22, app 26, scenario 43, transport 185, groups 2, placement 4);
+- the plain saveload PASS; the matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`:
+  `saveload expect: PASS`; scenario_check 27/27; sim_editor PASS (14,448 lines), `--civbuilder` PASS (4,062);
+  eedata check PASS, cppgate PASS;
+- through slot.py, the test profile, the main checkout's tree: the tour `--input-check --view-check --play-seconds
+  120 --seed 7` (F3 ok, VIEW CHECK PASS, RENDER CHECK ok: view 88.8% lit, 4,114 colours; RESULT PASS tour); the editor
+  (RESULT PASS editor); `random-game --box-select --orders --seed 7` (BOX SELECT PASS, ORDERS PASS: gather, repair,
+  repair-queued, move; RESULT PASS); `bash tools/gates.sh`: GATES PASS (tour; ai-game time-cap PT 12340, units
+  [4, 38, 38], alive [2, 3], classic_lua x 2; lan-game PT 3277/3275);
+- the Rust gate: the round's first run failed on fork commits' clippy (a same-type cast in ee_net ffi_protocol.rs, a
+  test module above items in ffi_client.rs) and rustfmt (five ee_ui/ee_game files), fixed in 938f45af2, the
+  ffi_client commit and the rustfmt commit; one run under the captures' load failed
+  `gx::gpu::tests::device_dropped_bind_groups_stay_bounded_when_the_gpu_lags` (98 live bind groups, not 2), which passed
+  alone (gx/gpu.rs is untouched by the round); two later gate runs failed the same test under other lanes' load and passed alone, and the gate on the
+  final tip (rgate6) PASS (tests, clippy, rustfmt, headers); the final tip's build `--sim` 0/0 and the headers current
+  (348).
+- Not run: the POSIX builds, `gates.sh --legacy`, nettest and the WON drivers (the WON changes are the events' class
+  and the boxes' inline members: reached by the LAN game).
