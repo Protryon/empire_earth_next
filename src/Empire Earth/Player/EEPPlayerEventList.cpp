@@ -109,9 +109,5 @@ void EEPPlayerEventList::AddPlayerEvent(const EETileLocation& inTile, const EETi
 
 bool EEPPlayerEventList::GetNextEventSource(EETileLocation& outSource)
 {
-    long theX = 0;
-    long theY = 0;
-    bool theResult = ee_units_events_next(this->mList, &theX, &theY);
-    outSource = EETileLocation(theX, theY);
-    return theResult;
+    return ee_units_events_next(this->mList, &outSource.mX, &outSource.mY);   // (0, 0) without one
 }

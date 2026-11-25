@@ -20483,11 +20483,14 @@ void ee_units_events_call(EeUnitsPlayerEvents *events,
                           uint32_t what,
                           float elapsed);
 
-/// `GetNextEvent`'s source into `out_x`/`out_y`; false without an event.
+/// `GetNextEvent`'s source into `out_x`/`out_y` (0, 0 without one, as the C++ caller's start values were); false
+/// without an event.
 ///
 /// # Safety
 /// `events`, `out_x` and `out_y` are live.
-bool ee_units_events_next(EeUnitsPlayerEvents *events, long *out_x, long *out_y);
+bool ee_units_events_next(EeUnitsPlayerEvents *events,
+                          long *out_x,
+                          long *out_y);
 
 /// `Load` (`save` false) or `Save` (true) of the list through the save's primitives `f` on `ctx`.
 ///

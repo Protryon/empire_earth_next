@@ -26,10 +26,9 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // the series' op (ee_units player_stats.rs: 0 Set, 1 raised, 2 lowered)
 void EEPlayerStatistics::Record(uint32_t inOp, long inSeries, long inValue)
 {
-    uint32_t theFlags = UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN
-                        : gLoadingSavedGame ? EE_UNITS_STATS_LOADING
-                        : gUIManager->mInScenarioEditor && !gGameScreenActive ? EE_UNITS_STATS_EDITOR : 0;
-    ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0, theFlags);
+    ee_units_stats_set(this->mStats, inOp, inSeries, inValue, gPhysics != NULL ? gPhysics->mGameTime : 0,
+                       UShutdownInProgress() ? EE_UNITS_STATS_SHUTDOWN : gLoadingSavedGame ? EE_UNITS_STATS_LOADING
+                       : gUIManager->mInScenarioEditor && !gGameScreenActive ? EE_UNITS_STATS_EDITOR : 0);
 }
 
 EEStatisticsSeries EEPlayerStatistics::GetSeries(unsigned long inSeries)

@@ -603,7 +603,8 @@ pub unsafe extern "C" fn ee_units_events_call(
     }
 }
 
-/// `GetNextEvent`'s source into `out_x`/`out_y`; false without an event.
+/// `GetNextEvent`'s source into `out_x`/`out_y` (0, 0 without one, as the C++ caller's start values were); false
+/// without an event.
 ///
 /// # Safety
 /// `events`, `out_x` and `out_y` are live.
@@ -614,10 +615,11 @@ pub unsafe extern "C" fn ee_units_events_next(
     out_y: *mut c_long,
 ) -> bool {
     // SAFETY: the caller's contract
-    let Some(e) = (unsafe { (*events).next_event() }) else { return false };
+    let next = unsafe { (*events).next_event() };
+    let (x, y) = next.as_ref().map_or((0, 0), |e| (e.source_x, e.source_y));
     // SAFETY: the caller's contract
-    unsafe { (*out_x, *out_y) = (e.source_x, e.source_y) };
-    true
+    unsafe { (*out_x, *out_y) = (x, y) };
+    next.is_some()
 }
 
 /// `Load` (`save` false) or `Save` (true) of the list through the save's primitives `f` on `ctx`.
