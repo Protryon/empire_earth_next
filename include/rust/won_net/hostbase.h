@@ -47,6 +47,13 @@ enum class EeWonHostInit {
   None = 0,
   /// `DetectFirewallOp(obj)`: the server context `obj` (`Set(EE_WON_REQHOST_CONTEXT, obj)`)
   Firewall = 1,
+  /// `GetCertOp(auth)` (the deleted subclass, R6 WON lobby and network round 36): the auth context's server
+  /// context `obj`, then the auth context `obj2`
+  GetCert = 2,
+  /// `PeerAuthOp(addr, auth, type, socket)`: the auth type `num`, the auth context `obj`, the socket `obj2`
+  PeerAuth = 3,
+  /// `PeerAuthServerOp(auth, socket)`: no auth type, the auth context `obj`, the socket `obj2`
+  PeerAuthServer = 4,
 };
 
 extern "C" {
@@ -101,7 +108,9 @@ void ee_won_hostop_bind_init(const EeWonHostOp *op,
                              const EeWonAsyncOp *self_obj,
                              const EeWonOpTracker *tracker,
                              EeWonHostInit init,
-                             void *obj);
+                             void *obj,
+                             void *obj2,
+                             int32_t num);
 
 }  // extern "C"
 

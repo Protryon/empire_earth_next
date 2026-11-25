@@ -136,7 +136,6 @@ bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
 // 0x24c627 (inTiles' units of inUnitType): ee/EEUnitUtilities.h
 
 // 0x24f8f9: after a gate is built for the current player (the new gate's piece 2) (provisional name)
-void EECreateSpaceGateEnergyWall(EEComplexUnit* inGate);
 
 // Replaces the other four pieces of a gate whose gate piece was replaced (new owner and class), turning and
 // relinking them; the posts go idle and the doors take the new gate piece's action
@@ -191,45 +190,11 @@ EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit)
 // (the yaws: cls_building.rs)
 long EETurnGatePart(GETransformation& ioTransformation, long inDirection, long inIndex)
 {
-    EEUCNote theNote(24); theNote.I(inDirection).I(inIndex);   // TEST ONLY (UCBD)
-    float theYaw;
-    bool theTurned;
-    long theResult = ee_units_cls_gate_part_turn((int32_t)inDirection, (int32_t)inIndex, &theYaw, &theTurned);
-    if (theTurned)
-        ioTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-    theNote.R(theResult);   // TEST ONLY (UCBD)
-    theNote.F(ioTransformation.GetYaw());
-    return theResult;
+    return ee_units_ucn_turn_gate_part(GERust(ioTransformation), (int32_t)inDirection, (int32_t)inIndex);   // ucn_noted.rs (UCBD note 24)
 }
 
 // Returns piece inIndex (0..4) of a gate, found along its linked chain (2 is the gate piece itself)
-EEComplexUnit* EEUnitClass::GetPart(EEComplexUnit* inGate, long inIndex)
-{
-    EEUCNote theNote(29); theNote.C(this).U(inGate).I(inIndex);   // TEST ONLY (UCBD)
-    EEComplexUnit* theResult = ([&]() -> EEComplexUnit* {
-        EEComplexUnit* theResult = NULL;
-        switch (inIndex) {
-        case 4:
-            theResult = this->GetLastLinked(inGate);
-            break;
-        case 3:
-            theResult = this->GetFourthPart(inGate);
-            break;
-        case 2:
-            theResult = inGate;
-            break;
-        case 1:
-            theResult = this->GetSecondPart(inGate);
-            break;
-        case 0:
-            theResult = this->GetLastLinkedCarrier(inGate);
-            break;
-        }
-        return theResult;
-    }());
-    theNote.U(theResult);
-    return theResult;
-}
+// (GetPart: ucn_noted.rs, UCBD note 29; inline in ee/EEUnit.h)
 
 // Lists the five tiles of a gate line through a tile: direction 1 along x, 2 along y, 3 and 4 the diagonals
 // (cls_building.rs)

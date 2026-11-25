@@ -12,35 +12,18 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "platform/PlatString.h"
 #include "platform/PlatWindow.h"
+#include "rust/won_gui/clipobj.h"
 
 namespace WONAPI {
 
+// R6 WON GUI round 35: both methods are clipobj.rs's (the conversions between the platform's UTF-8 text and the
+// GUI's wide text); these are the platform's calls it makes
+static const EeWonClipFns kClipFns = {PlatClipboardGetText, PlatClipboardSetText, free};
+
 // Returns the clipboard's text; empty when it holds none
-GUIString Clipboard::Get()
-{
-    GUIString aStr;
-    char* aText = PlatClipboardGetText();
-    if (aText == NULL)
-        return aStr;
-    uint32_t aCount = PlatUtf8ToWide(aText, PLAT_TEXT_TERMINATED, NULL, 0);
-    std::wstring aWide(aCount, L'\0');
-    if (aCount != 0)
-        PlatUtf8ToWide(aText, PLAT_TEXT_TERMINATED, &aWide[0], aCount);
-    free(aText);
-    aStr = GUIString(aWide);
-    return aStr;
-}
+GUIString Clipboard::Get() { return GUIString(std::wstring((const wchar_t*)ee_won_clip_get(&kClipFns))); }
 
 // Replaces the clipboard's contents with the string
-void Clipboard::Set(const GUIString& theStr)
-{
-    std::wstring aWide = theStr;
-    std::string aText;
-    uint32_t aCount = PlatWideToUtf8(aWide.c_str(), (uint32_t)aWide.size(), NULL, 0);
-    aText.resize(aCount);
-    if (aCount != 0)
-        PlatWideToUtf8(aWide.c_str(), (uint32_t)aWide.size(), &aText[0], aCount);
-    PlatClipboardSetText(aText.c_str());
-}
+void Clipboard::Set(const GUIString& theStr) { ee_won_clip_set(&kClipFns, theStr.mData->mText, theStr.length()); }
 
 } // namespace WONAPI

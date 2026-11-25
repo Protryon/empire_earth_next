@@ -20,8 +20,9 @@ use std::ptr::null_mut;
 
 use crate::buffer::EeWonWriteBuffer;
 use crate::cppcore::{
-    core, hold, n_bytes_adopt, n_op_completion, n_op_kill, n_op_run_async, n_op_set_completion, n_ref_add,
-    n_ref_release, object_of, op, queue, ref_release, socket, EeWonCoreObject, EeWonCoreSocketOp,
+    bind_local, core, hold, n_bytes_adopt, n_op_completion, n_op_finish, n_op_kill, n_op_mode, n_op_run_async,
+    n_op_set_completion, n_ref_add, n_ref_release, new_socket, object_of, op, queue, ref_add, ref_release, socket,
+    EeWonCoreObject, EeWonCoreSocketOp,
 };
 use crate::routeconn::{EeWonRouteConn, EeWonRouteConnHooks};
 use crate::routeop::*;
@@ -388,7 +389,73 @@ pub unsafe extern "C" fn ee_won_routeconn_request(
 /// the Rust op sends on it and leaves a group on it).
 #[no_mangle]
 pub extern "C" fn ee_won_routeop_new_on(ty: i32, conn: *mut c_void) -> *mut EeWonRouteOp {
-    Box::into_raw(Box::new(EeWonRouteOp(RouteOp::new(ty), conn as usize)))
+    Box::into_raw(Box::new(EeWonRouteOp(RouteOp::new(ty), conn as usize, std::cell::Cell::new(0))))
+}
+
+/// `RoutingDetectFirewallOp::SendRequest`'s start (the C++ class went in R6 WON lobby and network round 36): when
+/// asked to listen, a new blocking TCP socket bound to the listen port and listening (backlog 1000), a failure
+/// finishing the op `cpp` with its status (false: nothing is sent); the listen port becomes the socket's; then the
+/// op waits for the status reply. True for any other op.
+///
+/// # Safety
+/// As [`ee_won_routeop_send`].
+unsafe fn firewall_listen(op: *mut EeWonRouteOp, cpp: *mut c_void) -> bool {
+    // SAFETY: the caller's contract; no borrow is held across a C++ call
+    if unsafe { (*op).0.ty } != T_DETECT_FIREWALL {
+        return true;
+    }
+    if unsafe { (*op).0.num(EE_WON_RTF_DO_LISTEN) } != 0 {
+        let s = new_socket(0, true);
+        ref_add(s);
+        // SAFETY: as above
+        ref_release(unsafe { (*op).2.replace(s as usize) } as *mut c_void);
+        let mut status = bind_local(s, unsafe { (*op).0.num(EE_WON_RTF_LISTEN_PORT) } as u16) as crate::status::Status;
+        if status == 0 {
+            status = socket(s).map_or(crate::status::WS_ASYNC_SOCKET_INVALID_SOCKET, |x| x.listen(1000));
+        }
+        if status != 0 {
+            // SAFETY: the live C++ op
+            unsafe { n_op_finish(cpp, status as c_long) };
+            return false;
+        }
+        let port = socket(s).map_or(0, |x| x.local_port());
+        // SAFETY: as above
+        unsafe { (*op).0.set(EE_WON_RTF_LISTEN_PORT, i64::from(port)) };
+    }
+    // SAFETY: as above
+    unsafe { (*op).0.set(EE_WON_RTF_WAITING, 1) };
+    true
+}
+
+/// `RoutingOp::RunHook` (2c7d20): refused in blocking mode (`WS_BlockMode_NotSupported`), else the request sent (a
+/// firewall check listening first).
+///
+/// # Safety
+/// As [`ee_won_routeop_send`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_routeop_run(op: *mut EeWonRouteOp, cpp: *mut c_void) {
+    // SAFETY: the caller's contract
+    unsafe {
+        if n_op_mode(cpp) == 2 {
+            n_op_finish(cpp, 100009);
+        } else if firewall_listen(op, cpp) {
+            ee_won_routeop_send(op, cpp);
+        }
+    }
+}
+
+/// `RoutingDetectFirewallOp::CleanupHook`: the listening socket closed and let go (nothing for any other op).
+///
+/// # Safety
+/// `op` is a live op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_routeop_cleanup(op: *const EeWonRouteOp) {
+    // SAFETY: the caller's contract
+    let s = unsafe { (*op).2.replace(0) } as *mut c_void;
+    if let Some(x) = socket(s) {
+        x.close();
+    }
+    ref_release(s);
 }
 
 /// `RoutingOp::SendRequest`'s base: the op's message (when it sends one) after the connection's length field,

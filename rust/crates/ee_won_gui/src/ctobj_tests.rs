@@ -146,6 +146,82 @@ fn the_desired_size_encloses_the_children() {
     t.destroy();
 }
 
+thread_local! {
+    static LAYOUT_LOG: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+unsafe extern "C" fn layout_host(_: *mut c_void, op: Op, a: isize, b: isize, c: isize, _: isize) -> isize {
+    LAYOUT_LOG.with(|l| l.borrow_mut().push(format!("{op:?} {a} {b} {c}")));
+    0
+}
+
+/// R6 WON GUI round 35: the container owns its child layout manager (`Container::mChildLayout`); the layout calls
+/// no longer go out as `CtLayout` ops, and the destructor releases the manager's points and instructions where the
+/// original deleted the member (after the cursor, before the timer children and the children).
+#[test]
+fn the_container_owns_its_child_layout() {
+    use crate::layoutobj::{basic_init, EeWonLayout, EeWonLayoutKind, EeWonLayoutMgrCall as M};
+    world(4);
+    LAYOUT_LOG.with(|l| l.borrow_mut().clear());
+    let t = ct();
+    t.make_layout(Some(layout_host));
+    t.add_child(2);
+    // a size-at-least instruction on child 2 (10 x 10, pads 30 and 40), group 0: run at once on the container, then held
+    let init = basic_init(EeWonLayoutKind::SizeAtLeast, 2, 0, 30, 40, 0, false, false);
+    let lay = EeWonLayout::new(std::ptr::null_mut(), Some(layout_host), &init);
+    lay.add(2);
+    t.layout_call(M::AddChildLayout, 0x700, &lay as *const EeWonLayout as isize, 0);
+    assert!(lay.enabled() && lay.group() == 0);
+    // a layout point: its parent is the container, and the manager holds it
+    t.layout_call(M::AddLayoutPoint, 3, 0, 0);
+    assert_eq!(crate::compmem::parent(3), t.me());
+    assert_eq!(
+        LAYOUT_LOG.with(|l| l.borrow().clone()),
+        ["LaySetSizeAtLeast 2 40 50", "LayHold 1792 0 0", "ChildHold 3 0 0"]
+    );
+    // another group starts disabled; EnableLayoutInstructions turns it on
+    let other = EeWonLayout::new(std::ptr::null_mut(), Some(layout_host), &init);
+    t.layout_call(M::AddChildLayout, 0x701, &other as *const EeWonLayout as isize, 5);
+    assert!(!other.enabled() && other.group() == 5);
+    t.layout_call(M::EnableInstructions, 5, 1, 0);
+    assert!(other.enabled());
+    assert_eq!(t.layout_call(M::Count, 0, 0, 0), 2);
+    // the size-changed layout runs the instructions; no CtLayout op reaches the container's host
+    MOCK.with(|m| m.borrow_mut().log.clear());
+    LAYOUT_LOG.with(|l| l.borrow_mut().clear());
+    t.size_changed();
+    // (the second instruction lists no component: its target alone, at least the pads)
+    assert_eq!(LAYOUT_LOG.with(|l| l.borrow().clone()), ["LaySetSizeAtLeast 2 40 50", "LaySetSizeAtLeast 2 30 40"]);
+    let layout_op = format!("{} ", Op::CtLayout as u32);
+    assert!(MOCK.with(|m| m.borrow().log.iter().all(|l| !l.starts_with(&layout_op))));
+    // Relayout: the size-changed virtual, then Invalidate
+    MOCK.with(|m| m.borrow_mut().log.clear());
+    t.relayout();
+    assert_eq!(
+        MOCK.with(|m| m.borrow().log.clone()),
+        [
+            format!("{} {} 0 0 0", Op::CtVirt as u32, V::SizeChanged as u32),
+            format!("{} 0 0 0 0", Op::Invalidate as u32)
+        ]
+    );
+    // the destructor: the points, then the instructions, released; nothing through CtLayout
+    LAYOUT_LOG.with(|l| l.borrow_mut().clear());
+    MOCK.with(|m| m.borrow_mut().log.clear());
+    t.destroy();
+    assert_eq!(
+        LAYOUT_LOG.with(|l| l.borrow().clone()),
+        ["ChildRelease 3 0 0", "LayRelease 1792 0 0", "LayRelease 1793 0 0"]
+    );
+    assert!(MOCK.with(|m| m.borrow().log.iter().all(|l| !l.starts_with(&layout_op))));
+    // a container made without a manager (the drivers' worlds) still asks its host
+    let t = ct();
+    MOCK.with(|m| m.borrow_mut().log.clear());
+    t.size_changed();
+    assert!(MOCK.with(|m| m.borrow().log.iter().any(|l| *l == format!("{} 0 0 0 0", Op::CtLayout as u32))));
+    assert_eq!(t.layout_call(M::Count, 0, 0, 0), 0);
+    t.destroy();
+}
+
 #[test]
 fn the_list_survives_removals_around_an_iteration() {
     let mut l = List::new();

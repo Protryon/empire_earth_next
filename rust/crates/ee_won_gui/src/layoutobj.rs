@@ -542,27 +542,6 @@ pub fn child_init(
     }
 }
 
-/// `ChildLayoutInstruction`'s constructor: the Rust instruction.
-///
-/// # Safety
-/// As `ee_won_layout_new`'s.
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_won_layout_new_child(
-    comp: *mut c_void,
-    host: EeWonGuiHostFn,
-    flags: i32,
-    child: *mut c_void,
-    reference: *mut c_void,
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
-) -> *mut EeWonLayout {
-    let init = child_init(flags, child as isize, reference as isize, x, y, width, height);
-    Box::into_raw(Box::new(EeWonLayout::new(comp, host, &init)))
-}
-
 /// `PercentLayout(target, param)`'s numbers: the target, the param's anchors, its percentages and padding.
 pub fn percent_init(target: isize, anchors: [isize; 4], ints: [i32; 8]) -> EeWonLayoutInit {
     EeWonLayoutInit {
@@ -574,27 +553,47 @@ pub fn percent_init(target: isize, anchors: [isize; 4], ints: [i32; 8]) -> EeWon
     }
 }
 
-/// `PercentLayout`'s constructor: the Rust instruction (`anchors` the param's left, top, right and bottom; `ints`
-/// its px, py, pw, ph, lp, tp, rp, bp).
+/// `PercentLayoutParam(left, top, right, bottom, ...)`'s anchors after its `SetBorders`: a missing edge takes
+/// the opposite edge on its axis, then the last anchor given (`guilayout::percent_borders`).
+pub fn percent_anchors(given: [isize; 4]) -> [isize; 4] {
+    let idx = guilayout::percent_borders([given[0] != 0, given[1] != 0, given[2] != 0, given[3] != 0]);
+    idx.map(|i| if i < 0 { 0 } else { given[i as usize] })
+}
+
+/// The numbers of `PercentLayout(target, PercentLayoutParam(left, top, right, bottom, px, py, pw, ph, lp, tp, rp,
+/// bp))` (R6 WON GUI round 35: the param class, its SetBorders, SetPercentages and SetPadding and the layout's
+/// constructor): `given` the four anchors as the config read them, `ints` the eight numbers.
 ///
 /// # Safety
-/// As `ee_won_layout_new`'s; `anchors` four pointers and `ints` eight integers.
+/// `given` holds four pointers and `ints` eight integers.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_layout_new_percent(
-    comp: *mut c_void,
-    host: EeWonGuiHostFn,
+pub unsafe extern "C" fn ee_won_layout_init_percent(
     target: *mut c_void,
-    anchors: *const *mut c_void,
+    given: *const *mut c_void,
     ints: *const i32,
-) -> *mut EeWonLayout {
+) -> EeWonLayoutInit {
     // SAFETY: the contract
-    let (a, n) = unsafe { (std::slice::from_raw_parts(anchors, 4), std::slice::from_raw_parts(ints, 8)) };
-    let init = percent_init(
+    let (a, n) = unsafe { (std::slice::from_raw_parts(given, 4), std::slice::from_raw_parts(ints, 8)) };
+    percent_init(
         target as isize,
-        [a[0] as isize, a[1] as isize, a[2] as isize, a[3] as isize],
+        percent_anchors([a[0] as isize, a[1] as isize, a[2] as isize, a[3] as isize]),
         [n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7]],
-    );
-    Box::into_raw(Box::new(EeWonLayout::new(comp, host, &init)))
+    )
+}
+
+/// `ChildLayoutInstruction(flags, child, reference, x, y, width, height)`'s numbers (`child_init`), for the one
+/// instruction class's constructor.
+#[no_mangle]
+pub extern "C" fn ee_won_layout_init_child(
+    flags: i32,
+    child: *mut c_void,
+    reference: *mut c_void,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> EeWonLayoutInit {
+    child_init(flags, child as isize, reference as isize, x, y, width, height)
 }
 
 /// Frees a Rust instruction (its list held no references).

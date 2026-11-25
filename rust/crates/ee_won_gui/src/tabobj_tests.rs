@@ -12,6 +12,80 @@ use crate::ctobj::EeWonCtCall;
 const GOLDEN: &str = include_str!("golden_tabobj.txt");
 
 thread_local! {
+    static PARTS: RefCell<(Vec<String>, isize, isize)> = const { RefCell::new((Vec::new(), 0, 0)) };
+}
+
+/// a host that makes the constructor's parts: the containers are components 5, 6, 7 in the order asked, the bar 9,
+/// the layout point 10; the bar's Rust object is the one the test made
+unsafe extern "C" fn parts_host(c: *mut c_void, op: Op, a: isize, b: isize, _cc: isize, _d: isize) -> isize {
+    PARTS.with(|p| {
+        let mut p = p.borrow_mut();
+        let r = match op {
+            Op::TabNewContainer => {
+                p.1 += 1;
+                4 + p.1
+            }
+            Op::TabNewBar => 9,
+            Op::TabNewPoint => 10,
+            Op::TabBarOf => p.2,
+            _ => 0,
+        };
+        if c as isize == 2 {
+            let a = if op == Op::TabNewBar { (a != 0) as isize } else { a };
+            p.0.push(format!("{op:?} {a} {b}"));
+        }
+        r
+    })
+}
+
+/// R6 WON GUI round 35: `TabCtrl::TabCtrl`'s members are made and held by the Rust control, in the constructor's
+/// order, and released in the destructor in the members' reverse order.
+#[test]
+fn the_control_makes_and_holds_its_parts() {
+    let _w = crate::compmem::zeroed_world(16);
+    let bar = EeWonTabBar::new(dangling(), Some(parts_host), std::ptr::null(), std::ptr::null());
+    PARTS.with(|p| *p.borrow_mut() = (Vec::new(), 0, &bar as *const EeWonTabBar as isize));
+    let ct = crate::ctobj::EeWonContainer::new(3 as *mut c_void, Some(parts_host), false);
+    let t = EeWonTabCtrl::new(2 as *mut c_void, Some(parts_host), &ct);
+    t.make_parts();
+    let log = PARTS.with(|p| std::mem::take(&mut p.borrow_mut().0));
+    // made and held: the bottom bar's container (5), the top bar's container (6), the bottom bar (9, given the
+    // control), the top bar (7); the layout point (10, the C++ member's) not held; then the bar's object asked
+    assert_eq!(
+        &log[..9],
+        [
+            "TabNewContainer 0 0",
+            "ChildHold 5 0",
+            "TabNewContainer 0 0",
+            "ChildHold 6 0",
+            "TabNewBar 1 0",
+            "ChildHold 9 0",
+            "TabNewContainer 0 0",
+            "ChildHold 7 0",
+            "TabNewPoint 0 0",
+        ]
+    );
+    assert_eq!(log[9], "TabBarOf 9 0");
+    {
+        let s = t.st.borrow();
+        assert_eq!((s.bottom_ct, s.top_ct, s.bottom_bar, s.top_bar, s.layout), (5, 6, 9, 7, 10));
+        assert!(std::ptr::eq(s.bar, &bar) && s.owns_parts);
+    }
+    // the constructor's statements ran on them (`init`): the layout point added
+    assert!(log.contains(&"TabAddLayoutPoint 10 0".to_string()));
+    bar.ctrl.set(&t);
+    t.destroy();
+    let log = PARTS.with(|p| std::mem::take(&mut p.borrow_mut().0));
+    assert_eq!(log, ["ChildRelease 6 0", "ChildRelease 5 0", "ChildRelease 7 0", "ChildRelease 9 0"]);
+    assert!(bar.ctrl.get().is_null());
+    // a control given its parts (`init`: the drivers) releases none
+    let u = EeWonTabCtrl::new(2 as *mut c_void, Some(parts_host), &ct);
+    u.destroy();
+    assert!(PARTS.with(|p| p.borrow().0.is_empty()));
+    ct.destroy();
+}
+
+thread_local! {
     static HELD: RefCell<Vec<(u32, isize)>> = const { RefCell::new(Vec::new()) };
 }
 

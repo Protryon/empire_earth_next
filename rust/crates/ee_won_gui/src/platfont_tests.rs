@@ -95,3 +95,17 @@ fn a_scaled_font_is_smoothed_and_the_logical_one_not() {
     assert!(grey(&mut f, 2.0));
     assert!(!grey(&mut f, 1.0));
 }
+
+#[test]
+fn a_characters_width_is_its_one_unit_strings() {
+    register();
+    let f = EeWonPlatFont::new(b"Synth", 14, 0);
+    for ch in ['a', 'W', ' ', 'z'] {
+        // SAFETY: a live font
+        assert_eq!(unsafe { ee_won_plat_font_char_width(&f, ch as i32) }, f.width(&wide(&ch.to_string())), "{ch}");
+    }
+    // the original's `(wchar_t)inChar`: the int cut to a unit
+    let big = 0x1_0000 + 'a' as i32;
+    // SAFETY: a live font
+    assert_eq!(unsafe { ee_won_plat_font_char_width(&f, big) }, f.width(&[big as WChar]));
+}

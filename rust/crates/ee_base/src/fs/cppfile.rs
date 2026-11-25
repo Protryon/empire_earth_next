@@ -48,6 +48,10 @@ pub struct EeFsFileCalls {
     pub write_u16: unsafe extern "C" fn(file: *mut c_void, value: u16) -> i32,
     /// `GetIsOpen()`.
     pub is_open: unsafe extern "C" fn(file: *mut c_void) -> bool,
+    /// `Read(bool&)`: the bool comes back as a byte, 0 or 1 (in: the old value).
+    pub read_bool: unsafe extern "C" fn(file: *mut c_void, value: *mut u8) -> i32,
+    /// `Write(const bool&)`.
+    pub write_bool: unsafe extern "C" fn(file: *mut c_void, value: bool) -> i32,
 }
 
 static CALLS: AtomicPtr<EeFsFileCalls> = AtomicPtr::new(std::ptr::null_mut());
@@ -125,6 +129,19 @@ impl CppFile {
     pub fn is_open(&self) -> bool {
         // SAFETY: as `read_text`
         unsafe { (self.calls().is_open)(self.0) }
+    }
+    /// `Read(bool&)`: the status (`value` is the C++ bool after the read, whatever the file's byte).
+    pub fn read_bool(&mut self, value: &mut bool) -> i32 {
+        let mut byte = u8::from(*value);
+        // SAFETY: as `read_text`
+        let status = unsafe { (self.calls().read_bool)(self.0, &mut byte) };
+        *value = byte != 0;
+        status
+    }
+    /// `Write(const bool&)`.
+    pub fn write_bool(&mut self, value: bool) -> i32 {
+        // SAFETY: as `read_text`
+        unsafe { (self.calls().write_bool)(self.0, value) }
     }
     /// `Write(const char*, length, written)`: the status and the count.
     pub fn write_text(&mut self, data: &[u8]) -> (i32, c_ulong) {
@@ -330,6 +347,22 @@ pub(crate) mod tests {
         m.log.push("is_open".into());
         true
     }
+    unsafe extern "C" fn read_bool(f: *mut c_void, v: *mut u8) -> i32 {
+        let m = unsafe { mem(f) };
+        m.log.push("read_bool".into());
+        if m.pos >= m.data.len() {
+            return 0x12;
+        }
+        unsafe { *v = u8::from(m.data[m.pos] != 0) };
+        m.pos += 1;
+        0
+    }
+    unsafe extern "C" fn write_bool(f: *mut c_void, v: bool) -> i32 {
+        let m = unsafe { mem(f) };
+        m.log.push(format!("write_bool {v}"));
+        m.data.push(u8::from(v));
+        0
+    }
 
     static TABLE: EeFsFileCalls = EeFsFileCalls {
         read_u32,
@@ -347,6 +380,8 @@ pub(crate) mod tests {
         write_u8,
         write_u16,
         is_open,
+        read_bool,
+        write_bool,
     };
     static LOCK: Mutex<()> = Mutex::new(());
 
@@ -408,5 +443,22 @@ pub(crate) mod tests {
         });
         assert_eq!(m.log, ["is_open", "read_u8", "read_u16", "read_u8", "write_u8 5", "write_u16 770"]);
         assert_eq!(&m.data[3..], &[5, 2, 3]);
+    }
+
+    #[test]
+    fn a_bool_is_read_as_any_non_zero_byte_and_kept_on_a_short_read() {
+        let ((), m) = with_file(&[3, 0], |mut f| {
+            let mut v = false;
+            assert_eq!(f.read_bool(&mut v), 0);
+            assert!(v);
+            assert_eq!(f.read_bool(&mut v), 0);
+            assert!(!v);
+            v = true;
+            assert_eq!(f.read_bool(&mut v), 0x12);
+            assert!(v);
+            assert_eq!(f.write_bool(true), 0);
+        });
+        assert_eq!(m.log, ["read_bool", "read_bool", "read_bool", "write_bool true"]);
+        assert_eq!(&m.data[2..], &[1]);
     }
 }

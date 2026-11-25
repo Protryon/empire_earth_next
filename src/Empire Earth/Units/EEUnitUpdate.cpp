@@ -213,14 +213,9 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         break;
     case EE_UNITS_UPD_NEXT_FLIGHT_STATE:
         return (int64_t)EEUpdateClass(inContext)->GetNextFlightState(EEUpdateUnit(inContext));
-    case EE_UNITS_UPD_GOAL_QUEUES: {
-        // the started, non-empty queues' expiry and the goals' refresh (ee_units goals.rs)
-        EEGoalQueueIO theIO = {NULL, 0, 0, EEUpdateUnit(inContext)};
-        EeGoalQueueHost theHost;
-        EEGoalQueueHostOf(theIO, theHost);
-        ee_units_goal_queues_update(reinterpret_cast<uintptr_t>(EEUpdateUnit(inContext)), &theHost);
+    case EE_UNITS_UPD_GOAL_QUEUES:   // the started, non-empty queues' expiry and the goals' refresh (ee_units goals.rs)
+        ee_units_goal_queues_tick(reinterpret_cast<uintptr_t>(EEUpdateUnit(inContext)));
         break;
-    }
     case EE_UNITS_UPD_OPACITY_CHAIN:
         EEUpdateUnit(inContext)->SetOpacityChain(UBitsFloat(inA));
         break;

@@ -93,6 +93,7 @@ public:
     virtual ~AsyncOp() { ee_won_asyncop_free(this->mOp); } // 0x29f000: the completion and lock go with it
     virtual void RunHook() {}
     virtual void CleanupHook() {}
+    virtual bool CallbackHook(AsyncOp*,int) { return false; } // a tracked sub-op completed (2accc0: ignored)
     // (: AsyncOp's own vtable 0x84c834 has these three slots only; SocketOp and RoutingOp each introduce their
     // +0x0c/+0x10/+0x14: SocketOp's +0x14 returns 0, AcceptOp's a new AcceptOp; RoutingOp's +0x14 is GetType)
 
@@ -138,6 +139,8 @@ public:
     //: 0x291983 (an inline COMDAT of EELobbyFileTransfer.cpp): finished without error
     bool Succeeded() { return this->GetStatus()==0 && !this->IsKilled(); }
     EeWonAsyncOp* GetOpObject() const { return this->mOp; }
+    // a receive's progress chunk's receiving op (the original's RecvChunkOp::GetRecvOp), NULL for any other op
+    RefCount* GetSubject() const { return static_cast<RefCount*>(ee_won_asyncop_subject(this->mOp)); }
 
 private:
     AsyncOp(const AsyncOp&);
@@ -216,7 +219,9 @@ public:
     // connects: an existing stream connection dropped, opened and bound to the local host if needed
     WONStatus Fn2B0E60(const IPAddr& inAddress)
     { return ee_won_asyncsocket_connect_to(this->mSock, inAddress.GetValue(), static_cast<uint32_t>(IPAddr::GetLocalHost())); }
-    WONStatus Accept(SmartPtr<AsyncSocket>&); // a new socket of the same type (the virtual Duplicate), a reference
+    // a new socket of the same type (the virtual Duplicate) with the accepted handle (cppcore.rs n_accept)
+    WONStatus Accept(SmartPtr<AsyncSocket>& outSocket) { return ee_won_asyncsocket_accept_to(static_cast<RefCount*>(this), AcceptSink, &outSocket); }
+    static void AcceptSink(void* inPtr, void* inSocket) { *static_cast<SmartPtr<AsyncSocket>*>(inPtr) = static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket)); }
     // success, the socket error or WS_TimedOut
     WONStatus WaitForConnect(unsigned long inWaitTime)
     { return ee_won_asyncsocket_wait_for_connect(this->mSock, static_cast<uint32_t>(inWaitTime)); }
@@ -329,16 +334,10 @@ private:
     EeWonSocketOp* mSockOp;
 };
 
-// what a receive's progress completion gets: 0x2b520d news one (0x48 bytes; RTTI RecvChunkOp : AsyncOp, vtable
-// 0x84cae4) with +0x44 = the receiving op
-class RecvChunkOp : public AsyncOp {
-public:
-    RecvChunkOp(SocketOp* inOp) : mRecvOp(inOp) {}
-    SocketOp* GetRecvOp() const { return this->mRecvOp.get(); }
-    virtual void RunHook() { this->Finish(0); }  //2b5370, 8-byte override of slot 04
-private:
-    SmartPtr<SocketOp> mRecvOp;          // +0x44
-};
+// what a receive's progress completion gets (the original's RecvChunkOp, 0x48 bytes: an AsyncOp with the receiving
+// op at +0x44, its RunHook 2b5370 Finish(0)) is a plain AsyncOp whose subject is the receiving op since R6 WON lobby
+// and network round 36 (ee_won opobj.rs, cppcore.rs n_progress); NULL for an op that is no progress chunk
+inline SocketOp* RecvChunkOf(AsyncOp* inOp) { return static_cast<SocketOp*>(static_cast<AsyncOp*>(inOp->GetSubject())); }
 
 
 // the completion interface (vtable 0x43e4a0: ??_G, pure Complete)
@@ -473,6 +472,10 @@ public:
     static WONStatus StaticCheckResponse(ReadBuffer& inMessage, void* inParam)
     { return static_cast<UDPManagerSendRecvOp*>(inParam)->CheckResponse(inMessage); }
     UDPManagerSendRecvOp() : mUdp(ee_won_udpsendrecvop_new(static_cast<RefCount*>(this), WonCore())) {}
+    // a request with a Rust body (udpops.rs EeWonUdpBody: what the lobby's subclasses PingGameOp and
+    // RoutingGetUserStatusOp added, both deleted in R6 WON lobby and network round 36), its address and manager set;
+    // the body's members by kind are ee_won_udp_body_of(op, EE_WON_UDP_BODY_*)
+    UDPManagerSendRecvOp(EeWonUdpBody inBody, const IPAddr& inAddr, UDPManager* inManager);
     virtual ~UDPManagerSendRecvOp() { ee_won_udpsendrecvop_free(this->mUdp); } // the original's was implicit (2b7140)
     void SetUDPManager(UDPManager* theManager);
     void SetMsgTimeout(DWORD theTimeout) { ee_won_udpsendrecvop_set_timeout(this->mUdp, static_cast<uint32_t>(theTimeout)); }
@@ -537,6 +540,8 @@ inline UDPManager* UDPManagerRecvOp::GetUDPManager() const
 { return static_cast<UDPManager*>(static_cast<RefCount*>(ee_won_udprecvop_manager(this->mUdp))); }
 inline void UDPManagerSendRecvOp::SetUDPManager(UDPManager* theManager)
 { ee_won_udpsendrecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
+inline UDPManagerSendRecvOp::UDPManagerSendRecvOp(EeWonUdpBody inBody, const IPAddr& inAddr, UDPManager* inManager)
+    : mUdp(ee_won_udpsendrecvop_new_body(static_cast<RefCount*>(this), WonCore(), inBody, inAddr.GetValue(), static_cast<RefCount*>(inManager))) {}
 
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;
@@ -607,7 +612,6 @@ typedef WonRustRef HTTPSession; // of the kind EeWonCoreObject::HttpSession (Htt
 
 
 class RoutingConnection;
-class PeerAuthOp;
 
 // (the routing server's records, RoutingClientInfo .. RoutingBadUser, are the Rust ops' since net round 18 and
 // are read in Rust since R6 WONLobby round 12: ee_won_lobby modelobj.rs, EEWonNet.cpp and the lobby's bad user list
@@ -631,10 +635,13 @@ inline void WonStringSink(void* inContext, const uint8_t* inBytes, size_t inLeng
 class RoutingOp : public AsyncOp {
 public:
     RoutingOp(RoutingConnection* inConnection, RoutingOpType inType); // a connection-less op with NULL
-    //2c7d20: in blocking mode finishes BlockMode_NotSupported (100009), else SendRequest
-    virtual void RunHook() { if (this->GetMode() == OP_MODE_BLOCK) this->Finish(100009); else this->SendRequest(); }
-    // the op's request (Rust's), sent on the connection; added to its list when it waits for a reply
-    virtual void SendRequest() { ee_won_routeop_send(this->mRust, static_cast<RefCount*>(this)); }
+    //2c7d20: in blocking mode finishes BlockMode_NotSupported (100009), else the op's request (Rust's) sent on the
+    // connection, the op added to its list when it waits for a reply. A firewall check (the original's
+    // RoutingDetectFirewallOp, whose class went in R6 WON lobby and network round 36) listens first when asked and
+    // closes its listening socket in the clean-up (routecpp.rs); its settings are EE_WON_RTF_LISTEN_PORT,
+    // EE_WON_RTF_MAX_WAIT and EE_WON_RTF_DO_LISTEN
+    virtual void RunHook() { ee_won_routeop_run(this->mRust, static_cast<RefCount*>(this)); }
+    virtual void CleanupHook() { ee_won_routeop_cleanup(this->mRust); }
     virtual RoutingOpType GetType() const { return (RoutingOpType)ee_won_routeop_type(this->mRust); }
     RoutingConnection* GetConnection() { return this->mConnection.get(); }
 
@@ -671,40 +678,12 @@ protected:
 typedef SmartPtr<RoutingOp> RoutingOpPtr;
 #define EE_WON_ROUTE_OPS_RUST 1 // the ops are Rust objects (won_routeops_test reads them so)
 
-// The friend status map (the original's +0x88), the request datagram and the reply's read are a Rust object since
-// net round 19 (rust/crates/ee_won_net/src/userstatus.rs EeWonUserStatus); the map is read and set in Rust
-class RoutingGetUserStatusOp : public UDPManagerSendRecvOp {
-public:
-    typedef std::map<unsigned long,unsigned char> FriendStatusMap;
-    // 2c6630: a query to the server address, 3 retransmits, a 1 s message timeout
-    RoutingGetUserStatusOp(const IPAddr& inAddress, UDPManager* inManager) : mStatus(ee_won_userstatus_new())
-    { ee_won_udpsendrecvop_setup(this->GetUdpObject(), inAddress.GetValue(), static_cast<RefCount*>(inManager), 3, 1000); }
-    virtual ~RoutingGetUserStatusOp() { ee_won_userstatus_free(this->mStatus); } // (the original's implicit 2c6750)
-    // 2c6970: the datagram listing every queried id, then the send and receive
-    virtual void RunHook()
-    {
-        ByteBufferPtr aMessage;
-        ee_won_userstatus_request(this->mStatus, WonByteBufferSink, &aMessage);
-        this->SetOutgoing(aMessage);
-        UDPManagerSendRecvOp::RunHook();
-    }
-    // 2c6ab0: the reply's header, count and each user's status (a reply cut short: an unpack failure, what was
-    // read kept)
-    virtual WONStatus CheckResponse(ReadBuffer& inMessage)
-    {
-        size_t aPos = 0;
-        WONStatus aStatus = ee_won_userstatus_reply(this->mStatus, reinterpret_cast<const uint8_t*>(inMessage.data()),
-                                                    inMessage.length(), (size_t)inMessage.pos(), &aPos);
-        inMessage.SetPos((int)aPos);
-        return aStatus;
-    }
-    void AddWONUserId(unsigned long inId) { ee_won_userstatus_add(this->mStatus, inId); } //2c68c0, status 0 until the reply
-    // the friend status map, read and set by the routing logic in Rust (R6 WON round 32: netlogicops.rs; the
-    // original's GetFriendStatusMap / SetFriendStatusMap copies)
-    EeWonUserStatus* GetRust() const { return this->mStatus; }
-private:
-    EeWonUserStatus* mStatus; // owned
-};
+// RoutingGetUserStatusOp (ctor 2c6630, RunHook 2c6970, CheckResponse 2c6ab0) is a UDPManagerSendRecvOp with a Rust
+// body since R6 WON lobby and network round 36 (ee_won userstatus.rs: the friend status map, the request datagram,
+// the reply's read, 3 retransmits and a 1 s wait): new UDPManagerSendRecvOp(ee_won_userstatus_body(), addr, manager);
+// its map (AddWONUserId: ee_won_userstatus_add) is UserStatusOf(op)
+inline EeWonUserStatus* UserStatusOf(AsyncOp* inOp)
+{ return static_cast<EeWonUserStatus*>(ee_won_udp_body_of(static_cast<RefCount*>(inOp), EE_WON_UDP_BODY_USER_STATUS)); }
 #define EE_WON_USER_STATUS_RUST 1 // the map is a Rust object (won_userstatus_test sets it so)
 
 
@@ -728,10 +707,10 @@ public:
     ServerContext() : mList(ee_won_ctx_new()) {}
     virtual ~ServerContext() { ee_won_ctx_free(this->mList); }
     // a valid address not yet in the list appended; whether it was
-    bool AddAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_add(this->mList, &a); } //2ac4b0
+    bool AddAddress(const IPAddr& inAddress) { return ee_won_ctx_ip(this->mList, 0, inAddress.GetValue()); } //2ac4b0
     void Clear() { ee_won_ctx_clear(this->mList); } //2ac390: the one-time shuffle re-enabled
     // a server that failed to the end of the list
-    void NotifyFailed(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); ee_won_ctx_notify_failed(this->mList, &a); } //2ac980
+    void NotifyFailed(const IPAddr& inAddress) { ee_won_ctx_ip(this->mList, 1, inAddress.GetValue()); } //2ac980
     // the directory's services' addresses (only those of the name when one is given)
     bool AddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL) //2acab0/332
     { return ee_won_ctx_add_from_dir(this->mList, inDir.get(), inNameFilter, WideLength(inNameFilter), sizeof(wchar_t)); }
@@ -740,7 +719,7 @@ public:
     typedef std::list<IPAddr> AddrList;
     // shuffled the first time (the CRT's srand(time(NULL)) and rand, as random_shuffle drew)
     void CopyAddresses(AddrList& outCopy) { outCopy.clear(); ee_won_ctx_copy(this->mList, Rand, ToList, &outCopy); } //2ac6d0
-    bool RemoveAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_remove(this->mList, &a); }
+    bool RemoveAddress(const IPAddr& inAddress) { return ee_won_ctx_ip(this->mList, 2, inAddress.GetValue()); }
     void CopyAddresses(AddrSet& outCopy) { outCopy.clear(); ee_won_ctx_copy_sorted(this->mList, ToSet, &outCopy); }
     // cleared and refilled under the list's one lock
     bool AtomicClearAndAddAddressesFromDir(const DirList& inDir, const wchar_t* inNameFilter=NULL)
@@ -784,43 +763,28 @@ private:
     EeWonOpTracker* mTracker;               // owned
 };
 
-// an op that tracks sub-ops (the tracked sub-ops' completion is Rust's: ee_won opobj.rs EeWonAsyncOp::track; the
-// original's TrackerCompletion, 16 bytes, and its Callback, 0x2a00d0, are gone)
-class AsyncOpWithTracker : public AsyncOp {
-public:
-    // tracks a sub-op under the parameter, its completion back to this op (2a0100, protected in the SDK): while this
-    // op is pending and still tracks it, the sub-op leaves the tracker and CallbackHook runs
-    AsyncOp* Track(AsyncOp* op,int param)
-    {
-        return static_cast<AsyncOp*>(ee_won_asyncop_track(this->GetOpObject(),this->mTracker.GetTrackerObject(),op,
-                                                          op->GetOpObject(),param));
-    }
-    virtual void CleanupHook() { this->mTracker.KillAll(); } //slot08 2a0290
-    virtual bool CallbackHook(AsyncOp*,int) { return false; } //slot0c 2accc0: ignores the sub-op
-    AsyncOpTracker mTracker;                //44..78
-};
-
+// AsyncOpWithTracker (an op tracking sub-ops, Track 2a0100, CleanupHook 2a0290) and ServerOp (0x94 bytes, ctor 2acc10)
+// are folded into RustServerOp, their only subclass (R6 WON lobby and network round 36): the tracker is its member,
+// the tracking the Rust op's (opobj.rs EeWonAsyncOp::track), ServerOp's members the Rust op's since net round 24
+// (hostbase.rs). The drivers' tracking op has the old class in tests/won/won_tracker_orig.h.
 class BlockingSocket;
-// ServerOp (0x94 bytes, ctor 2acc10): the base of the server ops. RTTI: PeerAuthOp > ServerOp > AsyncOpWithTracker >
-// AsyncOp > RefCount. Its members (mSocket +0x78, mAuthContext +0x7c, mAuthType +0x80, mLengthFieldSize +0x84,
-// mClientKeySize +0x85, mUseClientKey +0x86, mMaxConnectTime, mMaxSendTime, mMaxRecvTime +0x88..+0x90) and its
-// ConnectTime 2ace50, SendTime 2ace80 and RecvTime 2aceb0 are the Rust op's since net round 24 (ee_won hostbase.rs):
-// RustServerOp's accessors. The SDK's SendMsgAsync / RecvMsgAsync (no caller) went with them: the Rust ops send and
-// receive through their own calls.
-class ServerOp : public AsyncOpWithTracker {
-protected:
-    ServerOp() {}
-};
-
 // An op of the Rust op base (rust/crates/ee_won_net/src/hostop.rs): its members and steps are the Rust op's
 // (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url;
 // the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there, and its calls
 // on the C++ objects are answered over the core table (hostcore.rs). Results and setters by number:
 // ee_won_hostop_num, ee_won_hostop_bytes, ee_won_hostop_set.
-class RustServerOp : public ServerOp {
+class RustServerOp : public AsyncOp {
 public:
     explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; its length field and time limits, no auth
-    RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj); // and the init's members (hostbase.rs)
+    // and the init's members (hostbase.rs)
+    RustServerOp(EeWonHostOp* inRustOp, EeWonHostInit inInit, RefCount* inObj, RefCount* inObj2 = NULL, int inNum = 0);
+    // GetCertOp(auth) (2e3c30; certhost.rs), PeerAuthOp(addr, auth, type, socket) (2e6a10) and
+    // PeerAuthServerOp(auth, socket) (2e8950; peerop.rs): their C++ classes went in round 36. A server op's
+    // ClientPermits(community) is GetNum(EE_WON_PEEROP_CLIENT_PERMITS, community), a certificate op's
+    // SetCreateAccount SetNum(EE_WON_GETCERT_CREATE_ACCOUNT, flag)
+    static RustServerOp* NewGetCert(AuthContext* inContext);
+    static RustServerOp* NewPeerAuth(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2 = true);
+    static RustServerOp* NewPeerAuthServer(AuthContext* inContext, BlockingSocket* inSocket);
     // DetectFirewallOp(servers) (fwhost.rs): the public address is AddrOf(EE_WON_FWOP_PUBLIC_ADDR), port 0
     static RustServerOp* NewFirewall(ServerContext* inContext)
     { return new RustServerOp(ee_won_hostop_firewall(), EeWonHostInit::Firewall, inContext); }
@@ -878,6 +842,7 @@ public:
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
+    AsyncOpTracker mTracker; // its sub-ops (the original's AsyncOpWithTracker, 44..78)
 protected:
     virtual ~RustServerOp();
 private:
@@ -903,20 +868,8 @@ inline int HttpSessionNumOps(HTTPSession* inSession) { return ee_won_http_sessio
 // DirEntityReplyParser::TakeEntity is gone with DirEntity, R6 WON round 34). GetEntityRequest, GetDirOp,
 // GetMultiDirOp, GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won_net/src/reqdir.rs).
 
-// PeerAuthOp (0x2244 bytes, ctor 2e6a10) and PeerAuthServerOp (0x2240, ctor 2e8950): Rust ops on the base (ee_won
-// peerop.rs over peerobj.rs: the address, the certificate refresh status, the peer data, the handshake of
-// PeerAuthClient / PeerAuthServer, the session and every step); these classes are their constructors (the auth
-// context, the auth type and the socket are ServerOp's members) and the accessors the game reads.
-class PeerAuthServerOp : public RustServerOp {
-public:
-    PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket);
-    // the client's certificate's VerifyPermissions(0, community, 0) after the handshake (LanLogic's check)
-    bool ClientPermits(DWORD inCommunity) const { return this->GetNum(EE_WON_PEEROP_CLIENT_PERMITS, inCommunity) != 0; }
-};
-class PeerAuthOp : public RustServerOp {
-public:
-    PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2 = true);
-};
+// PeerAuthOp (0x2244 bytes, ctor 2e6a10) and PeerAuthServerOp (0x2240, ctor 2e8950) are Rust ops on the base (ee_won
+// peerop.rs over peerobj.rs): RustServerOp::NewPeerAuth and NewPeerAuthServer.
 
 // HTTP operation, 0x15c bytes.
 class FileReader;
@@ -960,18 +913,8 @@ enum HTTPDocOwner {
 // Storage, methods and inline virtual bodies live there; no duplicate class definition.
 
 
-// AoC GetCertOp (0x11fc bytes in the original; RTTI GetCertOp > ServerRequestOp > ...): a Rust op on the base
-// (ee_won certhost.rs over getcert.rs: its members, every step and the session key; its certificates, key blocks,
-// private key and peer data are Rust handles, hostauth.rs). The class is its constructor (the auth context and its
-// server list, ServerOp.cpp) and the two accessors the game uses.
-class AuthPeerData;
-class GetCertOp : public RustServerOp {
-public:
-    explicit GetCertOp(AuthContext*); //2e3c30
-    ConstSmartPtr<AuthPeerData> GetPeerData() const; // a shim over the Rust peer data; NULL before a login
-    void SetCreateAccount(bool value) { this->SetNum(EE_WON_GETCERT_CREATE_ACCOUNT, value); }
-};
-
+// AoC GetCertOp (0x11fc bytes in the original; RTTI GetCertOp > ServerRequestOp > ...) is a Rust op on the base
+// (ee_won certhost.rs over getcert.rs): RustServerOp::NewGetCert.
 
 // DBProxyOp is a Rust op base (rust/crates/ee_won_net/src/reqop.rs DbProxy)
 // The patch server's records (VersionData 0x48, PatchData 0xa4; constructors 2d83a0/2d86f0) are Rust's: their wire
@@ -1027,15 +970,14 @@ public:
     virtual void KillHook() { ee_won_servconn_kill_hook(this->mConn); }
     // the connect's result; on success the messages and the keep-alive start (2ab1f0, virtual in the SDK; nothing
     // overrides it)
-    void ConnectCallback(PeerAuthOp* inOp)
-    { ee_won_servconn_connect_callback(this->mConn,reinterpret_cast<RefCount*>(inOp)); }
+    void ConnectCallback(AsyncOp* inOp) { ee_won_servconn_connect_callback(this->mConn,static_cast<RefCount*>(inOp)); }
     virtual void MsgCallback(const ByteBuffer*) {} //MsgCallback2fa500,ret4
     void SetAuth(AuthContext* inContext, AuthType inType)
     { ee_won_servconn_set_auth(this->mConn,reinterpret_cast<RefCount*>(inContext),inType); }
     // the socket closed and an authenticated connect started; the peer authentication op (2abc40, borrowed)
-    PeerAuthOp* ConnectAsync(const IPAddr& address, unsigned long timeout)
+    AsyncOp* ConnectAsync(const IPAddr& address, unsigned long timeout)
     {
-        return reinterpret_cast<PeerAuthOp*>(static_cast<RefCount*>(
+        return static_cast<AsyncOp*>(static_cast<RefCount*>(
             ee_won_servconn_connect_async(this->mConn,static_cast<const void*>(&address),(long)timeout)));
     }
     // the socket closed, a blocking connect, then the connect callback's report; its status
@@ -1162,18 +1104,11 @@ public:
     // 2bfb00 (the 0x258 allocation is this class): the ignore file under the WON directory, the default chat commands
     SmartRoutingConnection() : mModel(ee_won_smart_new_default(sizeof(wchar_t))) {}
     // 2c4120: this client's id and record forgotten, then the routing connection closed
-    virtual void CloseHook()
-    {
-        { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_close(this->mModel); }
-        RoutingConnection::CloseHook();
-    }
+    virtual void CloseHook() { ee_won_smart_close_hook(this->mModel, this->GetDataLock(), this->GetRouteObject()); }
     // 2c0be0: the maps updated from a finished op by its type; a chat, invitation or join attempt from an ignored
     // client loses its completion
     virtual void RoutingOpCompleteHook(RoutingOp* inOp)
-    {
-        AutoCrit aCrit(this->GetDataLock());
-        if (ee_won_smart_routeop(this->mModel, inOp->mRust, inOp->GetStatus())) inOp->SetCompletion(NULL);
-    }
+    { ee_won_smart_routeop_hook(this->mModel, this->GetDataLock(), inOp->mRust, static_cast<RefCount*>(inOp)); }
     // (each call below holds the socket's lock around the model's call, as the original's AutoCrit: ee_won_smart_locked)
     void StartClientItr() { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Start, 0, 0, 0, 0); }
     void StartGroupItr() { ee_won_smart_locked(this->GetDataLock(), this->mModel, EeWonSmartLocked::Start, 1, 0, 0, 0); }

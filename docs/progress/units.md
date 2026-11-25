@@ -462,7 +462,68 @@ Gates on the final tree (63df6887e: the forks plus origin/rust 49707901b = batch
   classic_lua x 2; lan-game PT 2936/2929).
 - Not run: the POSIX builds.
 
+## Round 11 (branch `rust-units11`, from round 10's tip b04764c69 with batch 21, 2026-11-23/24)
+
+The brief: about -1,200 logic lines and real class deletions. The round was stopped twice by a usage limit and once
+by a full disk; the lead was replaced mid-round and the three forks were resumed from uncommitted edits. Forks, in
+their own worktrees, with disjoint files and host op ranges:
+- A: the class family and EEUnit.h's EEUnitClass/EEUnitClassUpgrade parts, ops 9000-9999;
+- B: the unit objects, the store, the goal queue, EEUnit.h's EEUnit/EEComplexUnit parts, 10000-10999;
+- C: the unit utilities, goals and sight rings, 11000-11999.
+
+They merged with `--no-ff` (cbindgen.toml, layout.rs and the generated world.h conflicted). Then origin/rust
+17682d86c (batch 22) was merged.
+
+| Commit | What | Logic |
+|---|---|---|
+| abfcc2047 (A) | the unit class's and the upgrade's pointer members are the Rust records `EeUnitsUnitClassLinks` and `EeUnitsUnitClassUpgradeLinks` (bases, typed through cbindgen renames); the layout derives four offsets | -59 |
+| 8e05fb509 (A) | EEUCNote deleted (EETurnGatePart, GetPart in ucn_noted.rs); FindImpactUnit, FacesPoint, FireShot, Attacked with their CBQR/CBXA records in ucn_noted.rs; the constructor's member-pointer and record-id tables in unit_class_fields.rs; EEUnitClassImprovementTable and its entry deleted (`mImprovements` is `EeDataUpgradeFields*`); 15 one-call members inline | -182 |
+| ff04b6663 (B) | the goal queue's Load, Save and per-tick refresh in Rust over the C++ file (goals.rs); EEGoalQueueContainer.cpp deleted | |
+| 7a6718990 (B) | the unit store's entry points in Rust (us_fill.rs) | |
+| c264d9e34, 0ab3afdc9 (B) | EEDoppelganger's and the manager's one-call bodies inline, EEDoppelganger.cpp deleted; EEWheel.cpp's bodies in EEComplexUnit.cpp, EEWheel.cpp deleted | |
+| 8c8edfad9, aa0d84bd2 (B) | EEProductionEntry and EEComplexUnitAttacker are the Rust records `EeUnitsProductionEntry` and `EeUnitsIgnoredTarget`; the layout derives the build entry's and the goal's offsets | |
+| ad73efbc0, e4d6fecc9 (B) | the complex doppelganger's field reads, writes and copies in Rust (dop_file.rs); the units' six Load/Save bodies over one helper, EEUnitFile | |
+| 4c97324ae, 8c5153d53, 836fc108f, 332598ad1 (B) | eleven one-call EEComplexUnit members inline; EEGoalDeque trimmed; EEComplexUnitGrowthLess a lambda; rustfmt | B total -180 |
+| 2a959dffa (C) | GoalOp's file calls in Rust through CppFile (bool read/write added to the FSFile calls table); EEUnitGoal derives from `EeUnitsGoalBase`; EEHitPointUpgrader deleted; EEGetRandomInt, the wall piece orientation and EEPickWallPieces over Rust | |
+| 2c0e26cc5, 4d29fd82b (C) | the sight calls' capture scopes in three helpers; an unused picker member and a dead declaration; rustfmt | C total -77 |
+| lead | the merges, the regenerated world.h, one clippy allow and rustfmt (1ae2125e5) | 0 |
+
+Round total: the lane's files (perfile.py, b04764c69 -> the forks' merge 9a580dbb2) **2,177 -> 1,679 (-498)**; the
+whole tree (logic_lines.py, 56a3ada9d -> 9a580dbb2) 22,337 -> 21,804 (-533). Net C++ +351 / -1,404, Rust +1,554 /
+-191. Target -1,200: short by about 700.
+
+Classes (classes_tree.py, 56a3ada9d -> 9a580dbb2): 714 -> 707. Gone: EEUCNote, EEUnitClassImprovementTable,
+EEUnitClassImprovementEntry, EEComplexUnitAttacker, EEProductionEntry, EEGoalQueueIO, EEGoalDeque::const_iterator;
+also EEHitPointUpgrader and EEComplexUnitGrowthLess, which the script does not count.
+
+.cpp files in `src/Empire Earth/Units`: 31 -> 28 (EEGoalQueueContainer.cpp, EEDoppelganger.cpp, EEWheel.cpp).
+
+Per file (logic, b04764c69 -> 9a580dbb2): EEUnit.h 302 -> 197, EEUnitClass.cpp 159 -> 95, EEComplexUnit.cpp 150 ->
+138, EEWorldLayout.cpp 146 -> 137, EEFOFindNewTargetNearOldTarget.cpp 135 -> 110, EEUGRust.cpp 73 -> 55,
+EEComplexDoppelganger.cpp 64 -> 53, EEUnitStore.cpp 41 -> 8, EEUnitVectorItem.h 43 -> 17, EESightRings.cpp 40 -> 17,
+EEUnitClassImprovement.cpp 39 -> 15, EEUnitClassBuildings.cpp 45 -> 25, EEUnitClassKinds.cpp 24 -> 6,
+EEGoalQueueContainer.cpp 25 -> gone.
+
+Gates on 1ae2125e5 (the forks, origin/rust 17682d86c): the builds and the test profile 0/0; headers current (334);
+Rust gate PASS; oracle seeds 2-7 identical; the twelve capture profiles PASS at seeds 2-3; saveloads plain and
+matrix (`--expect`) PASS; scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS;
+the tour `random-game --box-select --orders --seed 7` PASS; gates.sh GATES PASS. Not run: the POSIX builds.
+
 ## What is left (behaviour)
+
+- **Round 11's measure** (perfile.py at 9a580dbb2, lane total 1,679):
+  - EEUnit.h 197 (declarations whose bodies need types incomplete there or live in other lanes' files; the
+    containers and value members `mIgnoredTargets`, `mBuildQueue`, the points, orientations, effect handles and
+    `mPatrolGroup`, whose users are spread over the utilities and EESim.cpp);
+  - EEComplexUnit.cpp 138, EEWorldLayout.cpp 137 (almost all offsets of other lanes' classes: EEWorld, EEPlayer,
+    EEMap, EETile), EEFOFindNewTargetNearOldTarget.cpp 110 (the ub/sr/lf hosts' statics, UUTiles/UUPairs, the deposit
+    trace), EEUnitClass.cpp 95 (host preambles, scratch statics, the melee screen's bodies, EEUcAlignYaw),
+    EECombatGoals.cpp 68 (untouched: EEQueryContext, the turret callback, EEQueryIntersects), EEUGRust.cpp 55
+    (WonderStartedChat, the sGoal statics, NewLoad's sort/unique), EEComplexDoppelganger.cpp 53;
+  - EEActiveGroup.cpp 53, EEGroup.cpp 48, EEUnitPicker.h 32, EEUnitHandle.h 31, EEUnitSetManager.h 19: not started;
+  - the rest under 40 each. Most items left save 1-10 lines.
+  - Not attempted: the goal queue's LoadGoal beyond the queue's Load, EEFOFindNewTargetInMeleeRange's bodies,
+    EECombatGoals.
 
 - **Round 10's measure** (perfile.py at 156f43c46, lane total 2,212):
   - EEUnit.h 302 (the declarations other lanes call, the containers and C++-typed members);

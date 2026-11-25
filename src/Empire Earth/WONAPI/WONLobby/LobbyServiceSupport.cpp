@@ -31,20 +31,21 @@ int LobbyGetDefaultTimeout() { return 60000; }
 // Shows an OK/Cancel dialog and returns the button pressed; 100002 (cancel) without a lobby
 int LobbyDoYesNoDialog(const GUIString& title,const GUIString& text,bool sound)
 {
-    return gLobbyData.get()!=NULL?gLobbyData->mDialogLogic->ShowOkCancel(title,text,sound):100002;
+    return gLobbyData.get()!=NULL?(int)gLobbyData->mDialogLogic->Call(EeWonDlgLogicCall::ShowOkCancel, (intptr_t)&title, (intptr_t)&text, sound):100002;
 }
 // Runs the network operation behind a status dialog with the given title and text
 void LobbyRunOpWithStatus(AsyncOp* op,const GUIString& title,const GUIString& text,int mode,unsigned long timeout)
 {
     if(gLobbyData.get()!=NULL) {
-        DialogLogic* logic=gLobbyData->mDialogLogic.get();
-        logic->RunOpWithStatus(op,LobbyGetDefaultTimeout(),title,text,mode,timeout);
+        gLobbyData->mDialogLogic->Call(EeWonDlgLogicCall::RunOpWithStatus, (intptr_t)op, (intptr_t)&title, (intptr_t)&text, mode, (intptr_t)timeout);
     }
 }
+// DialogLogic::ShowStatus (the status box with a text)
+static void LobbyShowStatus(const GUIString& title,const GUIString& text,bool cancel) { gLobbyData->mDialogLogic->Call(EeWonDlgLogicCall::ShowStatus, (intptr_t)&title, (intptr_t)&text, cancel); }
 // Shows an error dialog describing the given WON status
 void LobbyDoErrorDialog(const GUIString& title,WONStatus status)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mDialogLogic->ShowError(title,status);
+    if(gLobbyData.get()!=NULL) LobbyShowStatus(title, GetWONStatusString(status), false);
 }
 // Plays the lobby sound unless the lobby is missing or suspended
 void LobbyPlaySound(Sound* sound)
@@ -87,17 +88,17 @@ void LobbyGetTOUTimes(long& systemTime,long& gameTime)
 // Stops the firewall test the lobby runs at login
 void LobbyKillFirewallTest()
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mInitLogic->KillFirewallTest();
+    if(gLobbyData.get()!=NULL) gLobbyData->mInitLogic->Call(EeWonLogicCall::InitKillFirewall);
 }
 // Returns the list of lobby servers, or NULL without a lobby
 LobbyServerList* LobbyGetServerList()
 {
-    return gLobbyData.get()!=NULL?gLobbyData->mRoutingLogic->mServerList.get():NULL;
+    return gLobbyData.get()!=NULL?gLobbyData->mRoutingLogic->Slot<LobbyServerList>(kRoutingServerList):NULL;
 }
 // Returns the chat room the player is in, or NULL
 LobbyGroup* LobbyGetChatGroup()
 {
-    return gLobbyData.get()!=NULL?gLobbyData->mRoutingLogic->GetChatGroup():NULL;
+    return gLobbyData.get()!=NULL?reinterpret_cast<LobbyGroup*>(gLobbyData->mRoutingLogic->Call(EeWonRouteLogicCall::Field, 1)):NULL;
 }
 }
 
@@ -105,7 +106,7 @@ namespace WONAPI {
 // Returns the lobby server the player is on, or NULL
 LobbyServer* LobbyGetCurrentServer()
 {
-    return gLobbyData.get()!=NULL?gLobbyData->mRoutingLogic->GetCurrentServer():NULL;
+    return gLobbyData.get()!=NULL?reinterpret_cast<LobbyServer*>(gLobbyData->mRoutingLogic->Call(EeWonRouteLogicCall::Field, 0)):NULL;
 }
 }
 
@@ -133,7 +134,7 @@ const std::string& LobbyGetGameTOUPath() { return gLobbyData.get()!=NULL?gLobbyD
 int LobbyGetNumPingsToDo() { return gLobbyData.get()!=NULL?gLobbyData->mPingLogic->GetNumPingsToDo():0; }
 // (SDK LobbyDialog::UserCanceledLastStatusOp)
 // Returns whether the player cancelled the last operation run behind a status dialog
-bool LobbyUserCanceledLastStatusOp() { return gLobbyData.get()!=NULL?gLobbyData->mDialogLogic->GetStatusCancelled():false; }
+bool LobbyUserCanceledLastStatusOp() { return gLobbyData.get()!=NULL?gLobbyData->mDialogLogic->Call(EeWonDlgLogicCall::Field, 0)!=0:false; }
 }
 
 namespace WONAPI {
@@ -141,19 +142,19 @@ namespace WONAPI {
 // Shows the dialog modally and returns its result; -1 without a lobby
 int LobbyDoDialog(Component* inDialog)
 {
-    return gLobbyData.get()!=NULL ? gLobbyData->mDialogLogic->DoDialog(inDialog) : -1;
+    return gLobbyData.get()!=NULL ? (int)gLobbyData->mDialogLogic->Call(EeWonDlgLogicCall::DoDialog, (intptr_t)inDialog) : -1;
 }
 // (SDK LobbyDialog::DoErrorDialog)
 // Shows an error dialog with the given title and text
 void LobbyMessageBox(const GUIString& inTitle,const GUIString& inText)
 {
-    if(gLobbyData.get()!=NULL) gLobbyData->mDialogLogic->ShowError(inTitle,inText);
+    if(gLobbyData.get()!=NULL) gLobbyData->mDialogLogic->Call(EeWonDlgLogicCall::ShowError, (intptr_t)&inTitle, (intptr_t)&inText);
 }
 // (SDK LobbyDialog::DoYesNoDialog)
 // Shows a Yes/No dialog and returns the button pressed; 100002 (cancel) without a lobby
 int LobbyMessageBoxYesNo(const GUIString& inTitle,const GUIString& inText,bool inWarningSound)
 {
-    return gLobbyData.get()!=NULL ? gLobbyData->mDialogLogic->ShowYesNo(inTitle,inText,inWarningSound) : 100002;
+    return gLobbyData.get()!=NULL ? (int)gLobbyData->mDialogLogic->Call(EeWonDlgLogicCall::ShowYesNo, (intptr_t)&inTitle, (intptr_t)&inText, inWarningSound) : 100002;
 }
 // (SDK LobbyMisc::RunOp) It calls AsyncOp::RunAsync (0x69f6d0), not the timer variant RunAsTimer (0x69f610).
 // Starts the network operation asynchronously, with the default timeout when none is given

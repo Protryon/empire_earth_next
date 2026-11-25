@@ -56,7 +56,6 @@ private:
     // 0x119faa is gone with the references (R5a.3)
     EEUnit* GetEntryUnit(unsigned long inIndex);   // an entry's unit, or NULL once it has left the world
 #ifdef LLE_GEVIEWPORT_H
-    std::vector<EEComplexUnit*> mCarriers;  // +0x04 (the original's referenced carriers; unused since R5a.3)
     GEViewport mViewport;                   // +0x14 (Reset copies the main viewport 0x4e8f08)
     TSCriticalSection* mLock;               // +0x29c (named by the ctor's assert)
     EEUnitPickerEntry* mEntries;            // +0x2a0
