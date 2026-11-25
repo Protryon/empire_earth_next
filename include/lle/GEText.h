@@ -7,6 +7,7 @@
 #ifndef LLE_GETEXT_H
 #define LLE_GETEXT_H
 #include "lle/LLEForward.h"
+#include "lle/GEColor.h"     // the colour setters assign one
 
 #include "lle/UWideString.h"
 #include "lle/GEFont.h"

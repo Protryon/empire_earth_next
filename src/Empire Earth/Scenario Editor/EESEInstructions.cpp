@@ -20,6 +20,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
+#include "ee/EmpireEarth.h"   // gEmptyString
 
 // ---- the tab's host (editor_instructions.rs: the ops from 700; editor_trigx.rs composes the sequences over the
 // single statements below, EE_SCREENS_SEINX_*)
