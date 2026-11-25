@@ -198,6 +198,9 @@ mod tests {
             assert_eq!(*addr_of!(gSpaceStationHeight), 1.5f32);
             assert!(!*addr_of!(gFreeCamera));
             assert_eq!(*addr_of!(gEmptyString), [0; 4]);
+            assert_eq!(*addr_of!(gF4BE374), 1.0f32);
+            assert_eq!((*addr_of!(gDefaultPlayerColors))[..6], [0, 1, 4, 9, 2, 15]);
+            assert!(!*addr_of!(gCameraFollowing) && !*addr_of!(gLocalPlayerOut));
             assert!((*addr_of!(gPhysics)).is_null());
             assert!((*addr_of!(gFontTahoma72)).is_null());
         }
@@ -205,7 +208,7 @@ mod tests {
 
     #[test]
     fn symbols_are_msvc_names() {
-        assert_eq!(NAMES.len(), 83);
+        assert_eq!(NAMES.len(), 93);
         for (name, msvc) in NAMES {
             assert!(msvc.starts_with(&format!("?{name}@@3")), "{name}: {msvc}");
         }
