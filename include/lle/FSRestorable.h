@@ -4,8 +4,7 @@
 #ifndef LLE_FSRESTORABLE_H
 #define LLE_FSRESTORABLE_H
 
-class ESChecksum;
-class FSFile;
+#include "lle/LLEForward.h"
 
 class LLE_API FSRestorable {
 public:

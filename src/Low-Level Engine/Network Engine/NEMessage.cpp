@@ -21,7 +21,6 @@ static_assert(sizeof(NEMRecordValue) == sizeof(int64_t), "a sender's value is on
 
 // New (port): the header's members (reserved, type, target slot, originating slot) as the codec's first four slots
 // (from mType: the four bytes are consecutive, NEMessage.h)
-void NEMessage::GetHeaderSlots(EeNetMsgSlot* outSlots) { ee_netmsg_header_slots(&this->mType, outSlots); }
 
 // Builds a message from received bytes with the builder registered for its type; NULL for a type with none
 NEMessage* NEMessage::ConvertMemoryToMessage(unsigned char* inMemory)
@@ -33,10 +32,6 @@ NEMessage* NEMessage::ConvertMemoryToMessage(unsigned char* inMemory)
 
 // ---- NEMRecord: the engine messages (netrecord.rs) ----
 
-NEMRecord::NEMRecord(unsigned char* inData) { ee_ne_record_construct_from(this, inData); }
-NEMRecord::NEMRecord(unsigned char inType, std::initializer_list<NEMRecordValue> inValues, std::initializer_list<const char*> inStrings) : NEMessage(inType) { ee_ne_record_fill(this, reinterpret_cast<const int64_t*>(inValues.begin()), inValues.size(), inStrings.begin(), inStrings.size()); }
-NEMRecord::NEMRecord(unsigned char inType, const uint32_t* inValues, size_t inCount) : NEMessage(inType) { ee_ne_record_fill_u32(this, inValues, inCount); }
-NEMRecord::~NEMRecord() { ee_ne_record_destruct(this); }
 
 // The shims netrecord.rs calls (RecordCpp)
 extern "C" {

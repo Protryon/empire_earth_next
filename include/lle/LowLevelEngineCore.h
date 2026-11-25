@@ -47,7 +47,7 @@ enum {
     kErrorIOFailed = kErrorBadPath              // FSDebugFile::ReadText/WriteText: short fread/fwrite (real name unknown)
 };
 
-class UString;
+#include "lle/LLEForward.h"
 LLE_API extern UString gStartupVolume;    // (below)
 LLE_API extern UString gStartupDirectory;
 

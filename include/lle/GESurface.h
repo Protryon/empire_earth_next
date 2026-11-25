@@ -6,10 +6,7 @@
 #include "rust/render/ge.h"
 #include "rust/render/dx7.h"
 
-class FSFileSpec;
-class GEColor;
-class GERectangle;
-class GEScreen;
+#include "lle/LLEForward.h"
 class GXSurface;
 struct HDC__;
 
@@ -93,7 +90,6 @@ public:
 
     EeDx7Surface* mDX7;                     // the surface (ee_render dx7 surfobj.rs)
 
-protected:
     virtual ~GESurface() { ee_dx7sf_destroy(this->mDX7); }   // (exported protected: ??1GESurface@@MAE@XZ)
     unsigned long mLogicalShift = 0;        // port: see GetLogicalShift
     unsigned long mLogicalWidth = 0;        // port: see SetLogicalSize (0: none)

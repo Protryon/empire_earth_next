@@ -47,10 +47,8 @@ public:
     long RemoveArchive(unsigned long inIndex) { return ee_fs_path_remove(this->mRust, false, inIndex); }
     long RemoveDirectory(unsigned long inIndex) { return ee_fs_path_remove(this->mRust, true, inIndex); }   // (RemoveDirectoryA)
 
-protected:
     virtual ~FSPath() { ee_fs_path_free(this->mRust); }
 
-private:
     static const EeFsString* Text(const UString* inText) { return reinterpret_cast<const EeFsString*>(inText); }
     static const EeFsPathCalls kCalls;      // FSPath.cpp: the archives' and directories' C++ objects
     EeFsPath* mRust;

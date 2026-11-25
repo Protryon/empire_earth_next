@@ -29,14 +29,12 @@ public:
     // always NULL (there is no tracking)
     static CounterMap* GetBucketMap(unsigned long inLine) { return NULL; }
 #endif
-protected:
     // exported ??0UReferenceCounter@@IAE@XZ (0x4384): protected, the count assigned in the body (vptr stored first;
     // GEMaterial ctor 0x16b9b)
     UReferenceCounter() { this->mReferenceCount = 1; }
     // inline: the mixer's SampleData construction stores the count (1) with no call; the base vtable is
     // re-stored from the imported ??_7UReferenceCounter@@6B@ in ~SampleData. Protected (exported ??1...@@MAE@XZ).
     virtual ~UReferenceCounter() {}
-public:
 
     unsigned long mReferenceCount;            // proven +0x04
 };

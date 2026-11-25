@@ -65,7 +65,8 @@ pub struct EeGeSurfaceDescription {
     pub no_alpha: bool,
 }
 
-/// `GETextureDescription` (lle/GETextureManager.h), field for field.
+/// `GETextureDescription`: the C++ struct derives from it (lle/GETextureManager.h), so C++ names its fields.
+/// cbindgen:field-names=[mSurfaceVolatility, mFrameFormat, mPixelDepth, mNumMipLevelsToDrop, mIs3DRenderable, mIsTransparencyEnabled, mHasAlpha, mCreateMIPMaps, mUseTexturePack]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EeGeTextureDescription {

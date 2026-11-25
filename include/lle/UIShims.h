@@ -13,6 +13,12 @@
 #include "lle/UWideString.h"
 #include "rust/ui/obj.h"
 #include "rust/ui/lle_cpp.h"   // ee_ui_shim_out
+#include "rust/ui/lle_bg_edit.h"   // the hosts (ee_ui_background_host, ee_ui_edit_host; the next four likewise)
+#include "rust/ui/lle_combo.h"
+#include "rust/ui/lle_control.h"
+#include "rust/ui/lle_form.h"
+#include "rust/ui/lle_manager.h"
+#include "rust/ui/lle_table.h"
 
 
 struct EeUiShimText {
@@ -26,17 +32,7 @@ extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount);
 extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength);
 extern "C" void ee_uicpp_file_close(void* inFile);
 
-// the hosts the moved cases plug into (ee_ui lle_*.rs): each answers its moved ops and passes the others to the C++
-// host (the class's HostOp)
-#define EE_UI_HOST_ARGS void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f
-extern "C" intptr_t ee_ui_manager_host(EE_UI_HOST_ARGS);
-extern "C" intptr_t ee_ui_event_host(EE_UI_HOST_ARGS);
-extern "C" intptr_t ee_ui_form_host(EE_UI_HOST_ARGS);
-extern "C" intptr_t ee_ui_control_host(EE_UI_HOST_ARGS);
-extern "C" intptr_t ee_ui_table_host(EE_UI_HOST_ARGS);
-extern "C" intptr_t ee_ui_combo_host(EE_UI_HOST_ARGS);
-extern "C" intptr_t ee_ui_background_host(EE_UI_HOST_ARGS);
-extern "C" intptr_t ee_ui_edit_host(EE_UI_HOST_ARGS);
+// (the hosts the moved cases plug into, ee_ui_*_host: their modules' headers, included above)
 
 // a host case (ee_ui lle_hosts.rs: the Rust host's table names the op's shim): one statement on inObj, the host's
 // object, with the op's numbers a..d and floats f; EE_UI_CASE answers a number, EE_UI_VOID nothing (0)

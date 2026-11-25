@@ -6,8 +6,21 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/ui/obj.h"
 
 extern "C" {
+
+/// The table's host: [`table_call`], then `UIControlsTable::HostOp`.
+///
+/// # Safety
+/// The C++ class's host contract: `obj` its live object, `f` the live floats its op reads and writes.
+ptrdiff_t ee_ui_table_host(void *obj,
+                           EeUiOp op,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c,
+                           ptrdiff_t d,
+                           float *f);
 
 /// `UIControlsTable::SetupStringArray` (the C++ member's body).
 ///

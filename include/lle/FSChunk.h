@@ -35,7 +35,6 @@ public:
     // over the chunk's data, loading the header first if needed
     long SkipChunk(FSFile& inFile) { return ee_fs_chunk_skip(&this->mState, &inFile); }
 
-private:
     // The debug-file hooks (a never-set static text mirror, FSDebugFile) and the four static UString labels only it
     // wrote are gone (LLE lane round 1)
     EeFsChunk mState;                       // the header fields and the payload (the C++ copy copies it as before)

@@ -76,9 +76,6 @@
 #include "lle/ISModifierState.h"
 #include "rust/won_lobby/wonfront.h"
 
-// 0x27a896 (defined below, after its user)
-bool EEGetLanguageStringReference(const UWideString& inText, unsigned long& outID);
-
 // Creates the WON available-games form manager with a 3-second refresh poll
 EEWonNetAvailableGameFormManager::EEWonNetAvailableGameFormManager()
 {
@@ -94,81 +91,10 @@ EEWonNetAvailableGameFormManager::~EEWonNetAvailableGameFormManager()
 // Returns the available-games form's manager, creating and attaching it on first use (Rust: wonfront.rs)
 EEWonNetAvailableGameFormManager* EEWonNetAvailableGameFormManager::Get() { return (EEWonNetAvailableGameFormManager*)ee_won_front_call(EeWonFrontCall::FormManagerGet, NULL, 0); }
 
-// Translates a "<string id>::text" reference into the language string; other text is copied unchanged
-void EETranslateString(const UWideString& inText, UWideString& outText)
-{
-    unsigned long theID = 0;
-    if (!EEGetLanguageStringReference(inText, theID) || gResource->GetString(theID, outText) != kErrorOK)
-        outText = inText;
-}
+// the scenario intro's media from the running scenario (ui_helpers.rs display_scenario_intro)
+extern "C" void ee_screenscpp_uh_intro_media_copy() { EEUISCIFormManager::Get()->mMediaStrings = ::gWorld.mScenarioManager->mMediaStrings; }
 
-// NEAR: register choice only: the original frees esi (the hoisted GetFormByID import, reloaded after the
-// block) for the three string imports; ours keeps esi and calls the UWideString dtor through memory
-// Opens the scenario intro (pausing the game) when a single-player scenario starts with intro media; campaign
-// media paths get the campaign folder prefix
-void EEDisplayScenarioIntro()
-{
-    EESMMediaStrings theMediaStrings;
-    UIForm* theInfoForm = gUIManager->GetFormByID(kFormScenarioIntro);
-    if (!gCommunications->IsServer() || !(gCommunications->GetNumberOfCTsProcessedInPhysics() > 0)
-        || gCommunications->GetIsMultiplayerSession() || theInfoForm == NULL)
-        return;
-    EEUISCIFormManager* theManager = EEUISCIFormManager::Get();
-    if (::gWorld.mScenarioManager != NULL) {
-        theMediaStrings = ::gWorld.mScenarioManager->mMediaStrings;
-        if (::gWorld.mGameOptions.mCampaignName.GetLength() > 0 && ::gWorld.mGameOptions.mCampaignChecksum > 0) {
-            theMediaStrings.mSoundFile = gU52A280 + theMediaStrings.mSoundFile;
-            theMediaStrings.mMapFile = gU52A280 + theMediaStrings.mMapFile;
-        }
-        theManager->mMediaStrings = theMediaStrings;
-    }
-    if (!theManager->HasMedia())
-        return;
-    theManager->mIsLoadingFromGame = false;
-    theManager->mIsInGame = true;
-    dynamic_cast<EEServer*>(gCommunications)->PauseGame();
-    UIForm* theForm = gUIManager->GetFormByID(kFormGameOptions);
-    if (gUIManager->GetCurrentForm() == theForm)
-        gUserInterface->OpenForm(gUIManager->GetFormByID(kFormScenarioIntro));
-    else
-        gUserInterface->SwitchToForm(gUIManager->GetFormByID(kFormScenarioIntro));
-    gUserInterface->PostPauseInformation(true);
-}
-
-// (EEOrderAtCursor, EEMakeCalamityEffect, EEGetFirstSelectedUnit and EEPointUnitOrTile(XY), the game's helpers:
-// Empire Earth/EEGameUtilities.cpp)
-
-// Takes a screenshot on F9: Alt, Ctrl or Shift choose the in-game variants, otherwise a plain screenshot
-void EEPostF9Key()
-{
-    unsigned long theModifiers = gISKeyboard->GetModifierState();
-    bool theInGame = false;
-    if (dynamic_cast<EEUIFMainGame*>(gUIManager->GetCurrentForm()) != NULL
-        || dynamic_cast<EEUIFScenarioEditor*>(gUIManager->GetCurrentForm()) != NULL)
-        theInGame = true;
-    if (theModifiers == kModifierAlt && theInGame)
-        gUserInterface->PostScreenShot(0x1000, false, false);
-    else if (theModifiers == kModifierControl && theInGame)
-        gUserInterface->PostScreenShot(0x400, false, false);
-    else if (theModifiers == kModifierShift && theInGame)
-        gUserInterface->PostScreenShot(-1, false, false);
-    else
-        gUserInterface->PostScreenShot(-1, true, false);
-}
-
-// Parses a "<string id>::text" reference; returns its string id
-bool EEGetLanguageStringReference(const UWideString& inText, unsigned long& outID)
-{
-    std::vector<UWideString> theTokens;
-    UWideString theToken;
-    bool theResult = false;
-    bool theFound = inText.Tokenize("::", theTokens);
-    if (theFound && theTokens.size() == 2) {
-        theToken = theTokens[0];
-        if (sscanf(theToken, "%lu", &outID) == 1)
-            theResult = true;
-    }
-    return theResult;
-}
+// (EETranslateString, EEDisplayScenarioIntro, EEPostF9Key and the resource reference parser: Rust, ee_game screens
+// ui_helpers.rs)
 
 // (EEExitGame: Empire Earth/EEGameUtilities.cpp)

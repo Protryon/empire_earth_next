@@ -8,28 +8,24 @@
 #include "rust/render/ge.h"   // the manager (ee_ge texobj.rs), its host's EeGeManOp
 #include "lle/UString.h"   // LoadTexture's name
 
-class FSFileSpec;
-class FSPath;
-class GEScreen;
-class GESurface;
-class GETexture;
+#include "lle/LLEForward.h"
 
 // How a texture file is loaded (the original's sizeof 0x14, copied with `rep movsd` x5 by the User Interface
 // backgrounds, UITextureBackground 0x1005c84e; 0x18 with the port's mUseTexturePack). Fields from
 // GETextureManager::LoadTexture (0x33cd4), which turns it into a GESurfaceDescription; (provisional names)
-struct GETextureDescription {
-    unsigned long mSurfaceVolatility;       // +0x00 -> GESurfaceDescription::mSurfaceVolatility
-    unsigned long mFrameFormat;             // +0x04 GETexture::Load's frame format
-    unsigned long mPixelDepth;              // +0x08 16 or 32
-    long mNumMipLevelsToDrop;               // +0x0c
-    bool mIs3DRenderable;                   // +0x10
-    bool mIsTransparencyEnabled;            // +0x11
-    bool mHasAlpha;                         // +0x12
-    bool mCreateMIPMaps;                    // +0x13
-    // port: the texture may come from the texture pack (GETextureManager::SetTexturePack). True unless a caller
-    // clears it: a pack texture keeps the original's (logical) size for the game's code (GESurface::GetLogicalShift),
-    // so the 2D/UI code lays out as before; a caller that reads a texture's pixels as data would clear it.
-    bool mUseTexturePack = true;            // +0x14
+// The record is Rust's (EeGeTextureDescription, ee_render ge texobj.rs: mSurfaceVolatility -> GESurfaceDescription's,
+// mFrameFormat GETexture::Load's frame format, mPixelDepth 16 or 32, mNumMipLevelsToDrop, mIs3DRenderable,
+// mIsTransparencyEnabled, mHasAlpha, mCreateMIPMaps, mUseTexturePack); here its values in order, with the port's
+// mUseTexturePack true unless a caller clears it: the texture may come from the texture pack
+// (GETextureManager::SetTexturePack); a pack texture keeps the original's (logical) size for the game's code
+// (GESurface::GetLogicalShift), so the 2D/UI code lays out as before; a caller that reads a texture's pixels as data
+// would clear it.
+struct GETextureDescription : EeGeTextureDescription {
+    GETextureDescription(unsigned long inSurfaceVolatility = 0, unsigned long inFrameFormat = 0, unsigned long inPixelDepth = 0,
+                         long inNumMipLevelsToDrop = 0, bool inIs3DRenderable = false, bool inIsTransparencyEnabled = false,
+                         bool inHasAlpha = false, bool inCreateMIPMaps = false, bool inUseTexturePack = true)
+        : EeGeTextureDescription{inSurfaceVolatility, inFrameFormat, inPixelDepth, inNumMipLevelsToDrop, inIs3DRenderable,
+                                 inIsTransparencyEnabled, inHasAlpha, inCreateMIPMaps, inUseTexturePack} {}
 };
 
 // port (R4.3, seventh part): a whole Rust object (ee_ge texobj.rs); this class is its shell.
@@ -39,8 +35,6 @@ public:
     GETextureManager(FSPath* inTexturePath) { this->mRust = ee_ge_texman_new(&GETextureManager::Host, this, inTexturePath); }
     // removes every unreferenced texture, releases the path and the lock
     ~GETextureManager() { ee_ge_texman_free(this->mRust); }
-    GETextureManager(const GETextureManager&) = delete;   // port: one Rust object per manager
-    GETextureManager& operator=(const GETextureManager&) = delete;
     // Prints every loaded texture file and its reference count to a dump file
     void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_ge_texman_dump(this->mRust, &inFile); }
     // the sum of the cached textures' GetAllocatedSize()
@@ -85,14 +79,12 @@ public:
     static bool GetTexturePackName(const UString& inName, UString& outName) { return ee_ge_texpack_name(inName, &outName); }
     static long GetTexturePackLogicalShift() { return ee_ge_texpack_logical_shift(); }
     static long GetTexturePackMipLevelsToDrop() { return ee_ge_texpack_mip_levels_to_drop(); }
-private:
-    friend class GETexture;
     // Marks the texture as promoted; always succeeds
     long PromoteTexture(GETexture* inTexture) { return ee_ge_texman_promote(this->mRust, inTexture); }
     // the calls the Rust object makes on other objects (GETexture.cpp)
     static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
-    EeGeTextureManager* mRust;              // the cache (name -> texture), the lock, the path, the screen, the footprint
+    URust<EeGeTextureManager> mRust;              // the cache (name -> texture), the lock, the path, the screen, the footprint
 };
 
 #endif

@@ -35,13 +35,15 @@ RTSUnit* RTSResolveUnitID(uint32_t inUnitID);  // NULL for none (0xffffffff) or 
 void RTSRegisterUnit(RTSUnit* inUnit);         // at RTSPlayer::InsertUnit (its id is final there)
 void RTSUnregisterUnit(RTSUnit* inUnit);       // at RTSUnit::FreeNode (only if the id is still this unit's)
 
-// Typed access for the handle (RTSUnit.cpp: the casts need the complete classes)
+// Typed access for the handle (units round 12: casts here, were RTSUnit.cpp's and EEUnit.cpp's overloads). RTSUnit is
+// the first base of EEUnit and EEComplexUnit, at offset 0 (EEWorldLayoutRegister checks it at start), so a unit's
+// address is its RTSUnit's and the incomplete classes cast without their definitions. T: RTSUnit, EEUnit or
+// EEComplexUnit only.
 uint32_t EEUnitHandleID(const RTSUnit* inUnit);
-uint32_t EEUnitHandleID(const EEUnit* inUnit);
-uint32_t EEUnitHandleID(const EEComplexUnit* inUnit);
-void EEUnitHandleResolve(uint32_t inUnitID, RTSUnit*& outUnit);
-void EEUnitHandleResolve(uint32_t inUnitID, EEUnit*& outUnit);
-void EEUnitHandleResolve(uint32_t inUnitID, EEComplexUnit*& outUnit);
+inline uint32_t EEUnitHandleID(const EEUnit* inUnit) { return EEUnitHandleID(reinterpret_cast<const RTSUnit*>(inUnit)); }
+inline uint32_t EEUnitHandleID(const EEComplexUnit* inUnit) { return EEUnitHandleID(reinterpret_cast<const RTSUnit*>(inUnit)); }
+template <class T> T* EEUnitHandleResolved(uint32_t inUnitID) { return reinterpret_cast<T*>(RTSResolveUnitID(inUnitID)); }
+template <class T> void EEUnitHandleResolve(uint32_t inUnitID, T*& outUnit) { outUnit = EEUnitHandleResolved<T>(inUnitID); }
 
 // A unit of class T (RTSUnit, EEUnit or EEComplexUnit) by id. It converts to and from T*, so code written for the
 // pointer reads the same; each use resolves through the registry. Saved games store the id: FromSavedID/GetSavedID
@@ -52,30 +54,17 @@ public:
     enum { kNone = 0xffffffff };
     EEUnitHandle() : mUnitID(kNone) {}
     EEUnitHandle(T* inUnit) : mUnitID(inUnit != NULL ? EEUnitHandleID(inUnit) : (uint32_t)kNone) {}
-    EEUnitHandle& operator=(T* inUnit)
-    {
-        this->mUnitID = inUnit != NULL ? EEUnitHandleID(inUnit) : (uint32_t)kNone;
-        return *this;
-    }
-    T* Get() const
-    {
-        T* theUnit;
-        EEUnitHandleResolve(this->mUnitID, theUnit);
-        return theUnit;
-    }
+    EEUnitHandle& operator=(T* inUnit) { return *this = EEUnitHandle(inUnit); }
+    T* Get() const { return EEUnitHandleResolved<T>(this->mUnitID); }
     operator T*() const { return this->Get(); }
     T* operator->() const { return this->Get(); }
 
     // The saved-game swizzle: the id read from a file, kept unresolved until the Restore pass resolves it.
-    static EEUnitHandle FromSavedID(uint32_t inUnitID)
-    {
-        EEUnitHandle theHandle;
-        theHandle.mUnitID = inUnitID;
-        return theHandle;
-    }
+    static EEUnitHandle FromSavedID(uint32_t inUnitID) { return EEUnitHandle(inUnitID, 0); }
     uint32_t GetSavedID() const { return this->mUnitID; }
 
 private:
+    EEUnitHandle(uint32_t inUnitID, int) : mUnitID(inUnitID) {}   // FromSavedID's
     uint32_t mUnitID;
 };
 

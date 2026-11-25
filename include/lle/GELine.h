@@ -8,11 +8,7 @@
 #include "rust/base/math.h"   // the line (ee_ge prim.rs), the host's EeGeBmpOp
 #include "rust/render/ge.h"
 
-class GE2DPoint;
-class GEColor;
-class GETexture;
-class GETextureCoordinate;
-class GEVertexArray;
+#include "lle/LLEForward.h"
 
 class LLE_API GELine {
 public:
@@ -22,8 +18,6 @@ public:
         : mRust(ee_ge_game_prim_new_line(this, (const EeGe2DPoint*)&inStart, (const EeGe2DPoint*)&inEnd,
                                     &inStartColor, &inEndColor, inOpacity)) {}
     ~GELine() { ee_ge_prim_destroy(this->mRust); }
-    GELine(const GELine&) = delete;
-    GELine& operator=(const GELine&) = delete;
     void GetColorPerVertex(GEColor& outStart, GEColor& outEnd) const { this->Vertices(EeGeBmpOp::VertexGetColor, &outStart, &outEnd); }
     void GetOpacityPerVertex(float& outStart, float& outEnd) const
         { ee_ge_prim_opacities(this->mRust, &outStart, &outEnd, NULL, NULL); }
@@ -40,11 +34,10 @@ public:
     void SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_ge_prim_set_texture(this->mRust, inTexture, inScreen); }
     void SetTextureCoordinates(const GETextureCoordinate& inStart, const GETextureCoordinate& inEnd)
         { this->Vertices(EeGeBmpOp::VertexSetUv, &inStart, &inEnd); }
-private:
     void Vertices(EeGeBmpOp inOp, const void* inStart, const void* inEnd) const
         { ee_ge_prim_vertices4(this->mRust, inOp, inStart, inEnd, NULL, NULL); }
 
-    EeGePrim* mRust;                        // the line (ee_ge prim.rs)
+    URust<EeGePrim> mRust;                        // the line (ee_ge prim.rs)
 };
 
 #endif

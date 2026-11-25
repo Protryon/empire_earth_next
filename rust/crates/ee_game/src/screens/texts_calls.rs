@@ -358,7 +358,7 @@ pub(crate) fn put<C: Cpp + ?Sized>(c: &mut C, form: usize, which: u32, arg: u32,
         }
         EE_SCREENS_TEXT_CE_BG_EQUALS => c.tp_ce_bg_equals(form, arg, t) as u32,
         EE_SCREENS_TEXT_CE_TRANSLATE => {
-            c.tp_ce_translate(t);
+            crate::screens::ui_helpers::translate(c, text);
             0
         }
         _ => return None,

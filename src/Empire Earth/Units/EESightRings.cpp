@@ -65,10 +65,7 @@ static void EESightPlayer(unsigned int inKind, int inOn, int inShared, EEPlayer*
 extern "C" int64_t ee_units_tile_sight_host(int32_t inOp, uint64_t inA, uint64_t inB, int64_t inC, int64_t inD)
 {
     switch (inOp) {
-    case EE_UNITS_TILE_SIGHT_SHOWN:
-        gDoppelgangerManager.TileShown(reinterpret_cast<EETile*>((uintptr_t)inA), (long)inC, (long)inD,
-                                       reinterpret_cast<EEPlayer*>((uintptr_t)inB));
-        return 0;
+    case EE_UNITS_TILE_SIGHT_SHOWN: gDoppelgangerManager.TileShown(reinterpret_cast<EETile*>((uintptr_t)inA), (long)inC, (long)inD, reinterpret_cast<EEPlayer*>((uintptr_t)inB)); return 0;
     case EE_UNITS_TILE_SIGHT_HIDDEN:
         gDoppelgangerManager.TileHidden(reinterpret_cast<EETile*>((uintptr_t)inA), reinterpret_cast<EEPlayer*>((uintptr_t)inB));
         return 0;

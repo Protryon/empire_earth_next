@@ -31,7 +31,6 @@
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEScreensShims.h"
 
-extern unsigned long& gTexturePixelDepth;
 extern float& gCameraZoom;                   // 0x5317f0 (the arrow scale less 0.5) (provisional name)
 
 // Creates the main game view's right-drag command control, hidden, with its facing arrow: a textured quad model

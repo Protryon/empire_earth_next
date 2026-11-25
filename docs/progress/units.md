@@ -509,7 +509,55 @@ Rust gate PASS; oracle seeds 2-7 identical; the twelve capture profiles PASS at 
 matrix (`--expect`) PASS; scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS;
 the tour `random-game --box-select --orders --seed 7` PASS; gates.sh GATES PASS. Not run: the POSIX builds.
 
+## Round 12 (branch `rust-units12`, from round 11's tip 2a53f648c with batch 23, 2026-11-24)
+
+The brief: about -1,000 logic lines: EEUnit.h's containers and value members, the files round 11 did not start
+(EECombatGoals, EEActiveGroup, EEGroup, the picker, the handle, the set manager, the melee screen, the goal queue's
+LoadGoal), the layout's units offsets, and the goal context cbindgen never emitted. Two forks (A: EEUnit.h, the unit
+objects, the update host, ops 12000-12999; B: the combat queries, the groups, the unit utilities, ops 13000-13999) were
+stopped by a usage limit after their first leg; the resumed lead merged them (`--no-ff`; cbindgen.toml's list
+unioned, units.h regenerated) with origin/rust bbb0654d2 (batch 24), could not relaunch them (the session's subagent
+limit) and did the second leg alone.
+
+| Commit | What | Logic |
+|---|---|---|
+| 44639686d (A) | EEComplexUnit's small bodies in Rust (u12a_small.rs: the pool, the location setters, SetScaledModel, IsInReach, SetOwner, ClearHolder, HasEffect) or inline; the collision tile and the three effect handles fields of `EeUnitsComplexUnitFields` (`EEEffectHandle` is `EeUnitsEffectHandle`, a cbindgen rename) | -115 |
+| d405415d9, dc0ed520d, f0ee3d679 (A) | the update host's context is the Rust record; the goal queue's copy in Rust (goals.rs); rustfmt, the header | -18 |
+| bd93ca658 (B) | the combat queries' footprint read, turret part and compound reads without C++ bodies (cg_query.rs) | -37 |
+| b5a80794c, 79cd43b85 (B) | the active group host's footprint, closest point, goal location and new location, the group host's path goals in Rust (ag_host.rs, group_host.rs); the area outlines as `U2DRectangle<long>`s | -60 |
+| 6e50c4e1e, 003b5be48, 5389e9393 (B) | the unit utilities' tile lists read in place, the surrounding tiles and the tile line, EEGetUnitsInRectangle's walk, tile test and sort in Rust (uu_host.rs, uu_ffi.rs); the wall rise's box top | -73 |
+| 5d55492d4, a3dabb7e5 (B) | one-statement bodies in EEUnitKind.h, EEUnitHandle.h, EEUGRustCombat.cpp, EESightRings.cpp; clippy and rustfmt | -16 |
+| 8a03ec39b (lead) | `EeUnitsGoalContext` emitted (it belongs in cbindgen.toml's `[export] include`, not `[parse] include`); EEUGRust.cpp's mirror struct gone, a size assert | -4 |
+| 29a7c01d3 (lead) | the melee screen's test and its CBFS capture record in Rust (combat/screen.rs `ee_units_melee_screen`); the context, the distance callback and EEMeleeScreen gone | -14 |
+| 838893ba3 (lead) | the unit sets' ForEach walks in Rust (app/unit_sets.rs `ee_unit_set_for_each`, `ee_unit_sets_for_each`) | -5 |
+| 66c88c697 (lead) | the unit handle's typed halves are casts in ee/EEUnitHandle.h (RTSUnit is the first base at offset 0); the overloads in EEUnit.cpp and RTSUnit.cpp gone; FromSavedID one statement | -18 |
+| f36b7491f (lead) | EEUnitGoal::IsActive and AddLoadUnits in Rust (goal_calls.rs) | -8 |
+| aacabef72, dd2ded36d (lead) | SetInitialContactLocation, ContinueProduction inline; x/y scratch statics as arrays; EESortUnique one body; EEGetConversionCost one statement | -16 |
+
+Round total: the lane's files (perfile.py, 3b7cd6eff -> dd2ded36d) **1,679 -> 1,295 (-384)**: A -133, B -186, the
+lead -65. The whole tree (logic_lines.py) -394 without batch 24's own change (3b7cd6eff 18,496 -> the forks' merge
+5ee5420f3 18,167; the batch-24 merge 81d8780e8 18,159 -> dd2ded36d 18,094). Target -1,000: short by about 600.
+
+Classes (classes_tree.py, 3b7cd6eff -> dd2ded36d): 672 -> 669 (EEEffectHandle, now the Rust record; EEUUUnitIDLess and EEUUUnitIDEqual, the sort in Rust). .cpp files in `src/Empire Earth/Units`: 28 -> 28.
+
+Per file (logic, 3b7cd6eff -> dd2ded36d): EEUnit.h 197 -> 143, EEComplexUnit.cpp 138 -> 80,
+EEFOFindNewTargetNearOldTarget.cpp 110 -> 63, EEUnitClass.cpp 95 -> 81, EECombatGoals.cpp 68 -> 31, EEUGRust.cpp
+55 -> 51, EEActiveGroup.cpp 53 -> 12, EEGroup.cpp 48 -> 29, EEUnitHandle.h 31 -> 14, EEUnitSetManager.h 19 -> 14,
+EEUnitGoal.h 28 -> 20, EEUnitCollector.h 26 -> 0, EESightRings.cpp 17 -> 13, EEWorldLayout.cpp 137 -> 134.
+
+Gates on dd2ded36d: the builds and the test profile 0/0; headers current (347); Rust gate PASS; oracle seeds 2-7 identical; the twelve capture profiles PASS at seeds 2-3; saveloads plain and matrix (`--expect`) PASS; scenario_check 27/27; sim_editor and `--civbuilder` PASS; eedata check and cppgate PASS; the tour `random-game --box-select --orders --seed 7` and the editor PASS; gates.sh GATES PASS (ai-game units [4, 34, 36], alive_computers [2, 3], classic_lua twice; lan-game). Not run: the POSIX builds.
+
 ## What is left (behaviour)
+
+- **Round 12's measure** (perfile.py at dd2ded36d, lane total 1,295): EEUnit.h 143 (the containers, the points and
+  orientations, `mPatrolGroup`: their users are spread over the hosts and other lanes' files), EEWorldLayout.cpp 134
+  (other lanes' offsets but a few), EEUnitClass.cpp 81, EEComplexUnit.cpp 80, EEFOFindNewTargetNearOldTarget.cpp 63,
+  EEComplexDoppelganger.cpp 53, EEUGRust.cpp 51 (WonderStartedChat, the sGoal statics, NewLoad's sort/unique),
+  the class family files 15-38 each, EEUnitPicker.h 32 and .cpp 19, EECombatGoals.cpp 31 (EEQueryContext),
+  EEGhostUnit.cpp 30, EEGroup.cpp 29, EEUnitUtilities.h 29; the rest under 28. Almost all of it is host preambles,
+  scratch statics and declarations other lanes call; items save 1-10 lines each. Not attempted: the goal queue's
+  LoadGoal, EEUcAlignYaw, the containers of EEUnit.h.
+
 
 - **Round 11's measure** (perfile.py at 9a580dbb2, lane total 1,679):
   - EEUnit.h 197 (declarations whose bodies need types incomplete there or live in other lanes' files; the

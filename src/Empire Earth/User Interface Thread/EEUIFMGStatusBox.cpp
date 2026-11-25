@@ -36,7 +36,6 @@
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreensShims.h"
-extern unsigned long& gTexturePixelDepth;
 
 static GEColor kStatusColor1(0.0f, 0.0f, 1.0f);
 static GEColor kStatusColor2(1.0f, 1.0f, 0.0f);
@@ -46,18 +45,7 @@ extern bool sIconsLoaded;                           // 0x5652ec; cross-TU flag (
 
 // Creates the main panel's status box with no controls bound and no attributes shown
 
-// Existing pooled empty byte string, original reference26b6d9; no equal-content alias.
-extern char gEmptyString[];
 
-// The host's record of one status box call (ee_screens status_box.rs): the box, the unit (Fill, Refresh), the
-// complex unit (UpdateQueuedCounts), the held text (the original's `theText`), LoadIcons' description and textures
-struct EEUIFMGStatusBoxCall : public EeScreensStatusBoxCallObjects {   // the pointers: the Rust record (hud_fields.rs)
-    UWideString mText;
-    GETextureDescription mDescription;
-    // the record of a call (a temporary's, for the full expression)
-    EEUIFMGStatusBoxCall* Ptr() { return this; }
-};
-static_assert(offsetof(EEUIFMGStatusBoxCall, mText) == sizeof(EeScreensStatusBoxCallObjects), "hud_direct.rs BoxCallHead");
 // (status_box.rs' constants equal the headers': hud_cpp_consts_tests.rs)
 
 // The call's unit (an EEUnit*) for the status box's view of it (hud_views.rs status_box_view, the original's
@@ -202,38 +190,6 @@ extern "C" void ee_screenscpp_sb_bar_dirty(uintptr_t inBar)
 
 // (FillArmorAttributes 0x66ae16, UpdateArmorTexts 0x66c91d and GetAttributeText 0x66cb84 are Rust's: status_box.rs
 // fill_armor_attributes, update_armor_texts; hud.rs attribute_text)
-
-// Fills the status box for a unit: name (gate lock state), civilization, hit point / power / flight / garrison
-// bars, the improvable attribute buttons and the background panels; clears it without a unit
-void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
-{
-    ee_screens_status_box_fill(EEUIFMGStatusBoxCall{{this, inUnit, NULL}}.Ptr(), inUnit != NULL);
-}
-
-// Hides the status box's background panels (all but panel 0x7c)
-void EEUIFMGStatusBox::HideBackgrounds()
-{
-    ee_screens_status_box_hide_backgrounds(EEUIFMGStatusBoxCall{{this, NULL, NULL}}.Ptr());
-}
-
-// Loads the three unit improvement textures and points the 50 attribute icons at their cells
-void EEUIFMGStatusBox::LoadIcons()
-{
-    ee_screens_status_box_load_icons(EEUIFMGStatusBoxCall{{NULL, NULL, NULL}}.Ptr());
-}
-
-// Refreshes the status box texts for the unit: name, civilization, hit points, attributes, cargo, flight time
-// or power, garrison, and the resource it carries
-void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
-{
-    ee_screens_status_box_refresh(EEUIFMGStatusBoxCall{{this, inUnit, NULL}}.Ptr());
-}
-
-// Shows on each visible improvement button how many of its improvements the player has queued
-void EEUIFMGStatusBox::UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement)
-{
-    ee_screens_status_box_update_queued(EEUIFMGStatusBoxCall{{this, NULL, inUnit}}.Ptr());
-}
 
 // the icons' load, unload and reload as the game's media calls them (Empire Earth.cpp: ee/EEGameUI.h)
 #include "ee/EEGameUI.h"

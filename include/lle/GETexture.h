@@ -11,10 +11,7 @@
 #include "rust/base/png.h"   // the texture (ee_ge texobj_tex.rs), its host's EeGeTexOp
 #include "rust/render/ge.h"
 
-class GEScreen;
-class GESurface;
-class GETextureManager;
-struct GESurfaceDescription;
+#include "lle/LLEForward.h"
 struct EeOfTexture;                        // a texture decoded by Rust (rust/ee_openformats.h)
 
 typedef EeGeTStage GETStage;               // sizeof 0x20; the record is Rust's (ee_render ge texobj_tex.rs)
@@ -73,21 +70,15 @@ public:
     long SetSurface(GESurface* inSurface) { return ee_ge_tex_set_surface(this->mRust, inSurface); }
     // Unlocks the texture's surface
     long Unlock() { return ee_ge_tex_unlock(this->mRust); }
-protected:
     // ??1GETexture@@MAE@XZ (protected: released through Dereference): its extra animation frames, its rasterizer
     // handle and its surface released
     virtual ~GETexture() { ee_ge_tex_destroy(this->mRust); }
-private:
-    friend class GETextureManager;
-    friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
     // ??0GETexture@@AAE@PAVGETextureManager@@@Z: an empty single-frame texture for a texture manager, point
     // filtering and clamped addressing (the active rasterizer the textures' handles are made on: texobj_tex.rs)
     GETexture(GETextureManager* inManager) { this->mRust = ee_ge_tex_new(&GETexture::Host, this, inManager); }
     // private too (AAE): a texture around an existing surface (referenced), registered with the rasterizer
     GETexture(GESurface* inSurface, GETextureManager* inManager)
         { this->mRust = ee_ge_tex_new_on_surface(&GETexture::Host, this, inManager, inSurface); }
-    GETexture(const GETexture&) = delete;
-    GETexture& operator=(const GETexture&) = delete;
     unsigned long GetFrameFormat() const   // ?GetFrameFormat@GETexture@@ABEKXZ
         { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameFormat); }
     // port (D9): the frames of a texture's PNG files, decoded by Rust (GEFindTextureFile), in place of a texture file
@@ -112,7 +103,7 @@ private:
     // port: the calls the Rust texture makes on other objects (EeGeTexOp)
     static intptr_t Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
-    EeGeTexture* mRust;                     // port: the texture (ee_ge texobj_tex.rs)
+    URust<EeGeTexture> mRust;                     // port: the texture (ee_ge texobj_tex.rs)
     // (the static sRasterizer, exported ?sRasterizer@GETexture@@0PAVGERasterizer@@A, is the Rust object's)
 };
 

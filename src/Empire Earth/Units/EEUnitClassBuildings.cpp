@@ -147,19 +147,12 @@ void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, lon
                       (int64_t)(uint32_t)inTechnology | (int64_t)((uint64_t)(uint32_t)inDirection << 32), 0.0f);   // ucb_gate.rs
 }
 
-// The sort-and-unique of a vector (cdecl template 0x211ebc and its range half 0x211f07) (provisional names)
-template <class V, class L, class E> typename V::iterator EESortUniqueRange(V& ioValues, L inLess, E inEqual)
-{
-    std::sort(ioValues.begin(), ioValues.end(), inLess);
-    typename V::iterator theResult;
-    theResult = std::unique(ioValues.begin(), ioValues.end(), inEqual);
-    return theResult;
-}
-
+// The sort-and-unique of a vector (cdecl template 0x211ebc and its range half 0x211f07, here one body) (provisional
+// names)
 template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E inEqual)
 {
-    typename V::iterator theEnd = EESortUniqueRange(ioValues, inLess, inEqual);
-    ioValues.erase(theEnd, ioValues.end());
+    std::sort(ioValues.begin(), ioValues.end(), inLess);
+    ioValues.erase(std::unique(ioValues.begin(), ioValues.end(), inEqual), ioValues.end());
 }
 
 // Collects the footprint tiles of every gate piece not left out (doors and gate piece while open), sorted and unique

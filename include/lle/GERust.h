@@ -10,18 +10,7 @@
 #include "rust/base/math.h"
 #include "rust/render/geval.h"
 
-class GE2DPoint;
-class GE3DPoint;
-class GEVector;
-class GE3DLine;
-class GE3DPlane;
-class GETransformation;
-class GEOrientation;
-class GEQuaternion;
-class GEBoundingBox;
-class GERectangle;
-class GEViewport;
-class FSFile;
+#include "lle/LLEForward.h"
 
 // The C++ object as its record (the classes derive from their records: the records' fields are the classes' members),
 // and a record as its C++ object

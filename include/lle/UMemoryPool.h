@@ -24,7 +24,6 @@ public:
     void GetUsed(std::vector<T*>& outObjects) { ee_util_pool_get_used(this->mRust, &outObjects, &Push); }
     EeUtilPool* Rust() const { return this->mRust; }
 
-private:
     static void* NewArray(size_t inCount) { return new T[inCount]; }
     static void DeleteArray(void* inObjects) { delete[] static_cast<T*>(inObjects); }
     static void* NewOne() { return new T; }

@@ -6,7 +6,9 @@
 // deleted; nothing used it.
 #ifndef LLE_GETEXT_H
 #define LLE_GETEXT_H
+#include "lle/LLEForward.h"
 
+#include "lle/UWideString.h"
 #include "lle/GEFont.h"
 #include "lle/GETextAlignment.h"
 
@@ -14,7 +16,6 @@ class LLE_API GEText {
 public:
     GEText(GEFont* inFont) : mRust(ee_ge_game_text_new(this, inFont)) {}
     ~GEText() { ee_ge_text_destroy(this->mRust); }
-    GEText(const GEText&) = delete;
     void operator=(const GEText& inText) { ee_ge_text_assign(this->mRust, inText.mRust); }
     const GEColor& GetBgColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_text_color(this->mRust, false)); }
     const GEColor& GetFgColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_text_color(this->mRust, true)); }
@@ -32,8 +33,7 @@ public:
     void SetLocation(float inX, float inY) { reinterpret_cast<GE2DPoint*>(ee_ge_text_location(this->mRust))->SetXY(inX, inY); }
     void SetText(const UWideString& inText) { ee_ge_text_set_text(this->mRust, &inText); }
     EeGeText* GetRust() const { return this->mRust; }
-private:
-    EeGeText* mRust;                        // the text (ee_ge smallobj.rs)
+    URust<EeGeText> mRust;                        // the text (ee_ge smallobj.rs)
 };
 
 #endif
