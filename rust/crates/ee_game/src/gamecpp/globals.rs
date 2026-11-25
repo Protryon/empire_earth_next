@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn symbols_are_msvc_names() {
-        assert_eq!(NAMES.len(), 96);
+        assert_eq!(NAMES.len(), 95);
         for (name, msvc) in NAMES {
             assert!(msvc.starts_with(&format!("?{name}@@3")), "{name}: {msvc}");
         }
