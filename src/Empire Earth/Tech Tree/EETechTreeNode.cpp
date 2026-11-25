@@ -30,13 +30,13 @@
 
 // ------------------------------------------------------------------------- round 9, lane D: the nodes' and epochs' C++
 
-double EECore9OpEF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 #define TNODE ((EETechTreeNode*)p)
 #define TEPOCH ((EETechTreeEpoch*)p)
 #define TVARIANT EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)
 
+double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGraphics.cpp
 double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -45,6 +45,6 @@ double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::TkCostSetFactor: return TVARIANT->GetCostSetFactor();
     case O::TkStatsCostScale: return ((EEUnitStats*)p)->GetCostScale();
     case O::TkJitFactor: return gWorld.mGameOptions.mResources == 4 ? gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactorDeathmatch) : gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactor);
-    default: return EECore9OpEF(inOp, p, a, f);
+    default: return EECore10OpAF(inOp, p, a, f);
     }
 }

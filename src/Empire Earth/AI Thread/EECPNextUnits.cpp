@@ -262,8 +262,8 @@ extern "C" int64_t ee_ai_units_host_cpp(int32_t inOp, void* inPlayer, int64_t a,
     case EE_AI_UNITS_HOST_CLASS_IMPROVEMENTS:
         return (int64_t)(uintptr_t)gUnitClassTable[(long)a]->mImprovements;
     case EE_AI_UNITS_HOST_IMPROVE_MAX:
-        return ((EEUnitClassImprovementTable*)(uintptr_t)a)->GetMaxLevel();
-    case EE_AI_UNITS_HOST_IMPROVE_FACTOR: *(float*)outRecord = ((EEUnitClassImprovementTable*)(uintptr_t)a)->mEntries[(long)b].mCostFactor;
+        return ((EeDataUpgradeFields*)(uintptr_t)a)->mMaxLevel;
+    case EE_AI_UNITS_HOST_IMPROVE_FACTOR: *(float*)outRecord = ((EeDataUpgradeFields*)(uintptr_t)a)->mFactors[(long)b].mScale;
         return 0;
     case EE_AI_UNITS_HOST_IMPROVE_LEVEL:
         return me->GetImprovementLevel((unsigned long)a, (long)b);

@@ -339,8 +339,6 @@ int64_t EECore9OpB2(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::MpTileVecNew: return P64(new std::vector<EETileCoordinate>);
     case O::MpTileVecDelete: delete (std::vector<EETileCoordinate>*)p;
         break;
-    case O::MpUpdateCliffs: M->UpdateCliffs((long)a[0], (long)a[1], (long)a[2], (long)a[3]);
-        break;
     case O::MpSeedRandom: M->mRandom.SetSeed(TMGetTime());
         break;
     case O::MpGlobalWaterSet: return M->mTerrainMesh.GetGlobalWaterSetID();

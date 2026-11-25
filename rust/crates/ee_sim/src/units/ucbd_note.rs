@@ -259,27 +259,6 @@ mod game {
             eprintln!("{line}");
         }
     }
-
-    /// `EEUCNote`'s constructor: whether the note records.
-    #[no_mangle]
-    pub extern "C" fn ee_units_ucbd_begin() -> u8 {
-        u8::from(begin(&mut Game))
-    }
-
-    /// `EEUCNote`'s destructor: its words folded (`on` its constructor's answer).
-    ///
-    /// # Safety
-    /// `words` holds `count` words (or is NULL with 0).
-    #[no_mangle]
-    pub unsafe extern "C" fn ee_units_ucbd_end(on: u8, words: *const u32, count: usize) {
-        let words = if words.is_null() || count == 0 {
-            &[][..]
-        } else {
-            // SAFETY: the caller's contract
-            unsafe { std::slice::from_raw_parts(words, count) }
-        };
-        end(&mut Game, on != 0, words);
-    }
 }
 
 #[cfg(test)]

@@ -322,7 +322,6 @@ enum class EeRmapCpp : uint32_t {
   LoadProgress,
   /// `ESDebugOut("%s", a0)`
   DebugOut,
-  Time,
   FindNew,
   FindDelete,
   /// `mDirectory.GetFirstFile("*.rmv", mFile)`

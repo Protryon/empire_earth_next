@@ -46,152 +46,17 @@
 
 namespace WONAPI {
 
-class PlatGUIWindow;
+// R6 WON GUI round 35: the platform manager and window are WindowManager and Window themselves (WONLobbyGUI.h;
+// the classes folded: nothing else derived from either); the names stay for the game's glue
+typedef WindowManager PlatWindowManager;
+typedef Window PlatGUIWindow;
+// (so are the platform graphics and font: Graphics and Font)
 
-class PlatWindowManager : public WindowManager {
-public:
-    // ---- game interface (stable)
-    typedef void (*EventForwardFunc)(const PlatInputEvent& inEvent);
-    // Creates the manager (it becomes the default window manager) on the UI thread; the standard cursors are set.
-    PlatWindowManager();
-    virtual ~PlatWindowManager();
-    // The lobby surface's size in pixels (the frame LockFrame returns; the screen the windows live on). Windows
-    // without a parent follow it. Any thread: applied at once on the UI thread, otherwise at the next GetNextEvent.
-    void SetSurfaceSize(int inWidth, int inHeight);
-    // The surface's pixels per logical pixel (>= 1; the frame is the surface's size times it, rounded:
-    // PlatGUIPixels). Any thread, as SetSurfaceSize. Windows repaint at the new scale.
-    void SetPixelScale(float inScale);
-    float GetPixelScale() const;
-    // Where the game shows the frame in its window, as fractions of the window's client area (left, top, width,
-    // height): the pointer is mapped back through it (ScaleToSurface). Before the first call: the surface scaled
-    // uniformly to fit, centred. Any thread.
-    void SetPresentRect(float inLeft, float inTop, float inWidth, float inHeight);
-    // The last composited frame: 32-bit pixels 0xFFRRGGBB (B, G, R, 0xFF in memory), outWidth x outHeight pixels,
-    // outPitch bytes per row, showing outLogicalWidth x outLogicalHeight of the surface, and a serial that changes
-    // with every new frame -> false when nothing was composited yet (nothing to unlock then). Holds the frame lock
-    // until UnlockFrame: copy the pixels out and unlock. Any thread.
-    bool LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
-                   int& outLogicalHeight, uint32_t& outSerial);
-    void UnlockFrame();
-    // The platform events the game must still see while the lobby owns the event loop: QUIT, CLOSE, RESIZED,
-    // MINIMIZED, RESTORED, FOCUS_GAINED, FOCUS_LOST, EXPOSED, and KEY_DOWN/KEY_UP when they go to a window that
-    // forwards its keys (PlatGUIWindow::mForwardKeyMsgToParent; the original sent them to the game window). Called
-    // on the UI thread, after the lobby handled the event. NULL: none.
-    void SetEventForward(EventForwardFunc inFunc);
-
-    // ---- WindowManager
-    virtual void GetNextEvent();
-    virtual bool SetScreenResolutionHook(int inWidth, int inHeight);
-    virtual void GetScreenResolutionHook(int& outWidth, int& outHeight);
-    virtual void Signal();
-    virtual void GetScreenRect(WONRectangle& outRect);
-    virtual void GetSystemColorScheme();
-
-    // ---- backend (PlatGUIWindow; the Rust manager's, platwm.rs)
-    void AddPlatWindow(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::Add, (intptr_t)inWindow); }
-    void RemovePlatWindow(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::Remove, (intptr_t)inWindow); }
-    void BringToFront(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::BringToFront, (intptr_t)inWindow); }
-    void SetFocusWindow(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::SetFocus, (intptr_t)inWindow); }
-    void SetCaptureWindow(PlatGUIWindow* inWindow) { this->Call(EeWonPlatWmCall::SetCapture, (intptr_t)inWindow); }
-    PlatGUIWindow* GetCaptureWindow() { return (PlatGUIWindow*)this->Call(EeWonPlatWmCall::Capture); }
-    PlatGUIWindow* GetFocusWindow() { return (PlatGUIWindow*)this->Call(EeWonPlatWmCall::Focus); }
-    // the topmost visible window whose window rectangle holds the surface point (WindowFromPoint)
-    PlatGUIWindow* WindowFromPoint(int inX, int inY) { return (PlatGUIWindow*)this->Call(EeWonPlatWmCall::WindowFromPoint, inX, inY); }
-    bool GetMousePosition(int& outX, int& outY) { return ee_won_plat_wm_mouse(this->mRust, &outX, &outY); }
-    void SetDirty() { this->Call(EeWonPlatWmCall::SetDirty); }
-    int GetSurfaceWidth() const { return (int)this->Call(EeWonPlatWmCall::SurfaceWidth); }
-    int GetSurfaceHeight() const { return (int)this->Call(EeWonPlatWmCall::SurfaceHeight); }
-    PlatWindow* GetPlatWindow() { return (PlatWindow*)this->Call(EeWonPlatWmCall::PlatWindow); }
-    // paints every window whose root is invalid, then composites when anything changed
-    void PaintAndComposite() { this->Call(EeWonPlatWmCall::PaintAndComposite); }
-
-    intptr_t Call(EeWonPlatWmCall inCall, intptr_t a = 0, intptr_t b = 0) const;
-
-protected:
-    void HandlePlatEvent(const PlatInputEvent& inEvent);
-
-    EeWonPlatWm* mRust;                         // the manager (platwm.rs)
-    EventForwardFunc mEventForward;
-};
-
-// A WONAPI window on the lobby surface (MSWindow's replacement; CreateNativeWindow makes one).
-class PlatGUIWindow : public Window {
-public:
-    PlatGUIWindow();
-    virtual ~PlatGUIWindow();
-    virtual SmartPtr<Font> PlatformGetFont(const FontDescriptor& inDescriptor);
-    virtual bool IdleUpdate();
-    virtual void TimerEvent(DWORD inElapsed);
-    virtual void PlatformSetTitle();
-    virtual void PlatformSetIcon();
-    virtual void PlatformSetCursor(Cursor* inCursor);
-    virtual void PlatformShowNativeCursor(bool inShow);
-    virtual void PlatformShow(bool inShow);
-    virtual void PlatformMinimize(bool inMinimize);
-    virtual void PlatformSetTopMost(bool inTopMost);
-    virtual void PlatformClose();
-    virtual void Create(const WONRectangle& inRect);
-    virtual void SetPosSize(int inX, int inY, int inWidth, int inHeight);
-    virtual void GetRect(WONRectangle& outRect, bool inClientArea);
-    virtual void PlatformSetFocus();
-    virtual void PlatformSetMouseCapture(bool inOn);
-    virtual bool PlatformIsVisible();
-
-    void SetMinimizeOnAltTab(bool inMinimize) { this->Rust(EeWonPlatWinCall::SetMinimizeOnAltTab, inMinimize); }
-    void SetForwardKeyMsgToParent(bool inForward) { this->Rust(EeWonPlatWinCall::SetForwardKeys, inForward); }
-    // the window fills the surface (no parent): no frame, the surface's size, never moved
-    bool FillsSurface() const { return this->GetParent() == NULL; }
-    bool HasFrame() const { return this->GetParent() != NULL && !(this->GetStyle() & 0x20); }
-    void GetClientRect(WONRectangle& outRect);
-    void GetInfo(EeWonPlatWinInfo& outInfo);    // the fields the Rust manager reads
-    void FollowSurface();                       // a window that fills the surface takes its new size
-    void FollowPixelScale();                    // a new offscreen image at the manager's pixel scale, repainted
-    void OnPaint();                             // repaints an invalid root into the offscreen image
-    void QueueMouse(int inType, int inSurfaceX, int inSurfaceY, int inMod, int inButtonOrAmount);
-    PlatWindowManager* GetPlatManager();
-
-    // the window (platwin.rs: its rectangle in surface pixels, frame included, and its flags) and its calls
-    EeWonPlatWin* mRust;
-    intptr_t Rust(EeWonPlatWinCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0);
-};
-
-// The factory the WONAPI code uses where the original said `new MSWindow`.
 Window* CreateNativeWindow();
 
 // ---- drawing (backend internals)
 
 // Graphics on a DisplayContext's surface (MSGraphics' replacement): GDI's results per hook
-class PlatGraphics : public Graphics {
-public:
-    PlatGraphics();
-    virtual ~PlatGraphics();
-    virtual void Attach(DisplayContext* inContext);
-    virtual void Detach();
-    virtual void SetColorHook();
-    virtual DWORD GetPixelHook(int x, int y);
-    virtual void SetPixelHook(int x, int y, DWORD inColor);
-    virtual void DrawLineHook(int x1, int y1, int x2, int y2);
-    virtual void DrawRectHook(int x, int y, int width, int height);
-    virtual void DrawDottedRectHook(int x, int y, int width, int height);
-    virtual void FillRectHook(int x, int y, int width, int height);
-    virtual bool BlendSupported();
-    virtual void FillRectBlendHook(int x, int y, int width, int height, int inBlendAmount);
-    virtual void DrawPolygonHook(POINT* inPoints, int inCount);
-    virtual void FillPolygonHook(POINT* inPoints, int inCount);
-    virtual void DrawEllipseHook(int x, int y, int width, int height);
-    virtual void FillEllipseHook(int x, int y, int width, int height);
-    virtual void DrawArcHook(int x, int y, int width, int height, int inStartAngle, int inArcAngle);
-    virtual void ClearClipRectHook();
-    virtual void SetClipRectHook(int x, int y, int width, int height);
-    SurfaceBase* mSurface;                  // the context's, borrowed
-    float mScale;                           // the context's pixel scale (1: GDI's results, pixel for pixel)
-protected:
-    // the hook inOp (EeWonPlatGfx) of ee_won's platgfx.rs on the surface, the scale and the colour
-    DWORD Hook(int inOp, int a = 0, int b = 0, int c = 0, int d = 0, int e = 0, int f = 0);
-    void Polygon(POINT* inPoints, int inCount, bool inFill);
-};
-
-// a logical coordinate or size at a pixel scale (the one rounding every part of the backend and the game uses)
 inline int PlatGUIPixels(int inLogical, float inScale)
 {
     return inScale == 1.0f ? inLogical : (int)floorf((float)inLogical * inScale + 0.5f);
@@ -201,47 +66,11 @@ inline int PlatGUIPixels(int inLogical, float inScale)
 // texture pack's copies of the lobby's images are its decoder's)
 typedef NativeImage PlatNativeImage;
 
-class PlatNativeIcon : public NativeIcon {
-public:
-    PlatNativeIcon(DisplayContext* inContext, NativeImage* inImage) : NativeIcon(inContext), mImage(inImage) {}
-    virtual ~PlatNativeIcon();
-    SmartPtr<NativeImage> mImage;
-};
-
 // a pointer shape: one of the system's, or pixels (0xAARRGGBB) made into a platform cursor on first use (ee_won's
 // platcursor.rs, R6 WON round 41)
-class PlatCursor : public Cursor {
-protected:
-    virtual ~PlatCursor() { ee_won_plat_cursor_free(this->mRust); }
-public:
-    explicit PlatCursor(PlatSystemCursor inSystem) : mRust(ee_won_plat_cursor_system(&kFns, (uint32_t)inSystem)) {}
-    PlatCursor(const uint32_t* inPixels, int inWidth, int inHeight, int inHotX, int inHotY)
-        : mRust(ee_won_plat_cursor_pixels(&kFns, inPixels, inWidth, inHeight, inHotX, inHotY)) {}
-    static const EeWonPlatCursorFns kFns;   // the platform's cursor calls (PlatNativeImage.cpp)
-    virtual Cursor* GetNative() { return this; }
-    void Apply() { ee_won_plat_cursor_apply(this->mRust); }   // makes it the pointer's shape (UI thread)
-    EeWonPlatCursor* mRust;
-};
+// (PlatCursor is Cursor's platform kind: cursorobj.rs over platcursor.rs; R6 WON GUI round 35)
 
 // a font on platform/PlatFont.h (MSFont's replacement)
-class PlatGUIFont : public Font {
-public:
-    PlatGUIFont(DisplayContext* inContext, const FontDescriptor& inDescriptor);
-    virtual ~PlatGUIFont();
-    virtual void PrepareContext(DisplayContext* inContext);
-    virtual void DrawString(DisplayContext* inContext, const GUIString& inText, unsigned short inOffset,
-                            unsigned short inLength, int x, int y);
-    virtual int GetStringWidth(const GUIString& inText, unsigned short inOffset, unsigned short inLength);
-    virtual int GetCharacterWidth(int inChar);
-    virtual int GetHeight();
-    virtual int GetAscent();
-    virtual int GetDescent();
-    EeWonPlatFont* mRust;                   // the font (platfont.rs)
-};
-
-// wide text (GUIString) -> UTF-8 bytes (decision D6)
-std::string PlatGUIToUtf8(const wchar_t* inText, unsigned short inLength);
-
 } // namespace WONAPI
 
 #endif

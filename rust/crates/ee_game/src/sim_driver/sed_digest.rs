@@ -5,13 +5,42 @@
 //! their formats are the C++'s.
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
+use crate::gamecpp as gc;
 use std::ffi::{c_long, c_ulong};
 
 use ee_render::gx::cformat::format_g;
 use ee_sim::scenario::fields::{EeScenarioConditionFields, EeScenarioEffectFields};
+use ee_sim::scenario::trigger_members::{
+    ee_scenario_trigger_member, EE_SCENARIO_TRM_SET, EE_SCENARIO_TRM_SET_OPERATOR,
+};
 
 use super::digest::{hex, Hash};
 use super::sed_host::{self as x, h, ht, num, sel, EeSimDriverSed as O};
+
+/// `EESMTrigger::SetCondition(index, not, condition)` (list 0) / `SetEffect(index, delay, effect)` (list 1).
+fn trigger_set(trigger: usize, list: i64, a: [i64; 3]) {
+    let second = if list == 0 { (a[1] != 0) as i64 } else { a[1] as c_long as c_ulong as i64 };
+    ee_scenario_trigger_member(
+        trigger as *mut _,
+        EE_SCENARIO_TRM_SET,
+        list,
+        a[0] as c_ulong as i64,
+        second,
+        a[2] as c_ulong as i64,
+    );
+}
+
+/// `EESMTrigger::SetConditionOperator(index, operator)` (list 0) / `SetEffectOperator(index, type)` (list 1).
+fn trigger_set_operator(trigger: usize, list: i64, a: [i64; 2]) {
+    ee_scenario_trigger_member(
+        trigger as *mut _,
+        EE_SCENARIO_TRM_SET_OPERATOR,
+        list,
+        a[0] as c_ulong as i64,
+        a[1] as c_long as i64,
+        0,
+    );
+}
 
 /// The save's chunks that differ by run though the editor writes none of them: the checksum (1, over the players),
 /// the players (5: per player a few words the computer players' AI thread and timers write), the multiplayer helper
@@ -100,7 +129,7 @@ pub fn file_digest(name: &str, out: &mut Vec<String>) {
     h(O::SpecClose, spec, &[]);
     let done = |out: &mut Vec<String>, line: &str| {
         out.push(line.into());
-        h(O::HeaderFree, header, &[]);
+        gc::h(gc::O::SsDeleteHeader, header, &[]);
         h(O::MemFree, memory, &[]);
         h(O::SpecFree, spec, &[]);
     };
@@ -321,8 +350,8 @@ pub fn text_elements(out: &mut Vec<String>) {
         ));
     }
     let mut s = "  players".to_string();
-    for p in 0..h(O::WorldNumPlayers, 0, &[]) {
-        let player = h(O::WorldGetPlayer, 0, &[p]) as usize;
+    for p in 0..gc::h(gc::O::MmNumPlayers, 0, &[]) {
+        let player = gc::h(gc::O::TbWorldPlayer, 0, &[p]) as usize;
         s += &format!(" |{}", if player != 0 { ht(O::PlayerName, player, 0) } else { "-".into() });
     }
     out.push(s);
@@ -469,12 +498,12 @@ pub fn scenario_list_step(w: &[String], out: &mut Vec<String>) {
         let (no, na) = (objects.len() as c_ulong, h(O::SmAreaCount, m, &[]) as c_ulong);
         for (j, &t) in triggers.iter().enumerate() {
             let j = j as c_ulong;
-            h(O::TriggerSetCondition, t, &[0, 0, ((j + 1) % nc) as i64]);
-            h(O::TriggerSetConditionOperator, t, &[0, 1]);
-            h(O::TriggerSetCondition, t, &[1, 1, ((j + 2) % nc) as i64]);
-            h(O::TriggerSetEffect, t, &[0, 0, ((j + 1) % ne) as i64]);
-            h(O::TriggerSetEffectOperator, t, &[0, 1]);
-            h(O::TriggerSetEffect, t, &[1, 5, ((j + 2) % ne) as i64]);
+            trigger_set(t, 0, [0, 0, ((j + 1) % nc) as i64]);
+            trigger_set_operator(t, 0, [0, 1]);
+            trigger_set(t, 0, [1, 1, ((j + 2) % nc) as i64]);
+            trigger_set(t, 1, [0, 0, ((j + 1) % ne) as i64]);
+            trigger_set_operator(t, 1, [0, 1]);
+            trigger_set(t, 1, [1, 5, ((j + 2) % ne) as i64]);
         }
         for (j, &c) in conditions.iter().enumerate() {
             let j = j as c_ulong;
@@ -807,12 +836,12 @@ pub fn form_digest(first: c_ulong, last: c_ulong, group: c_long, out: &mut Vec<S
 pub fn players_digest(out: &mut Vec<String>) {
     let n = h(O::WorldGetNumPlayers, 0, &[]) as c_ulong;
     for p in 0..n {
-        let q = h(O::WorldGetPlayer, 0, &[p as i64]) as usize;
+        let q = gc::h(gc::O::TbWorldPlayer, 0, &[p as i64]) as usize;
         if q == 0 {
             out.push(format!("  player {p} none"));
             continue;
         }
-        let t = h(O::PlayerTechTree, q, &[]) as usize;
+        let t = gc::h(gc::O::PlTechTree, q, &[]) as usize;
         let caps: Vec<String> = (2..7).map(|i| (h(O::PlayerResourceCap, q, &[i]) as c_long).to_string()).collect();
         let enemies: String = (0..n).map(|j| (h(O::PlayerEnemy, q, &[j as i64]) as c_long).to_string()).collect();
         let mut line = format!(
@@ -835,7 +864,7 @@ pub fn players_digest(out: &mut Vec<String>) {
                 h(O::OptionsPlayerB36, 0, &[p as i64 - 1])
             );
         }
-        let c = h(O::PlayerComputer, q, &[]) as usize;
+        let c = gc::h(gc::O::PlComputerPlayer, q, &[]) as usize;
         if c != 0 {
             const FLAGS: [O; 8] = [
                 O::ComputerActive,
@@ -1074,18 +1103,18 @@ pub fn trigger_report(setup: bool, out: &mut Vec<String>) {
         h(O::TriggerSetConditionDuration, t, &[7]);
         x::hs(O::TriggerSetName, t, "Report One");
         x::hs(O::TriggerSetText, t, "A described trigger");
-        h(O::TriggerSetCondition, t, &[0, 1, 1]);
-        h(O::TriggerSetConditionOperator, t, &[0, 2]); // kSMTriggerOperatorOr
-        h(O::TriggerSetCondition, t, &[1, 0, conditions.len() as i64 + 3]);
-        h(O::TriggerSetEffect, t, &[0, 4, 1]);
-        h(O::TriggerSetEffectOperator, t, &[0, 1]); // kSMTriggerOperatorAnd
-        h(O::TriggerSetEffect, t, &[1, 0, effects.len() as i64 + 2]);
+        trigger_set(t, 0, [0, 1, 1]);
+        trigger_set_operator(t, 0, [0, 2]); // kSMTriggerOperatorOr
+        trigger_set(t, 0, [1, 0, conditions.len() as i64 + 3]);
+        trigger_set(t, 1, [0, 4, 1]);
+        trigger_set_operator(t, 1, [0, 1]); // kSMTriggerOperatorAnd
+        trigger_set(t, 1, [1, 0, effects.len() as i64 + 2]);
         effect_fields(effects[1]).mType = 1; // kSMEffectObject
         effect_fields(effects[1]).mObjectAction = 10; // kSMObjectActionClassName
         effect_fields(effects[2]).mType = 0; // kSMEffectNone
         let u = triggers[1];
         h(O::TriggerSetIsLooping, u, &[1]);
-        h(O::TriggerSetEffect, u, &[0, 0, 2]);
+        trigger_set(u, 1, [0, 0, 2]);
         let objects = sm_list(O::SmObjectCount, O::SmObjectAt);
         if objects.len() >= 4 && h(O::SmAreaCount, x::sm(), &[]) >= 4 {
             h(O::EffectPushObject, effects[1], &[1]);

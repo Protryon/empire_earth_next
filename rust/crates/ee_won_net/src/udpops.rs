@@ -17,6 +17,7 @@ use std::cell::UnsafeCell;
 use std::cmp::Ordering;
 use std::ffi::{c_long, c_void};
 
+use crate::buffer::EeWonReadBuffer;
 use crate::ipobj::EeWonIpAddr;
 use crate::status::*;
 
@@ -113,6 +114,8 @@ struct RecvState {
     msg: usize,
     verifier: usize,
     verifier_context: usize,
+    /// the request (its Rust object) whose Rust body checks this reply wait; 0 for none
+    request: usize,
 }
 
 /// `UDPManagerRecvOp`'s state and steps.
@@ -176,6 +179,12 @@ impl EeWonUdpRecvOp {
         let st = self.st();
         st.verifier = verifier;
         st.verifier_context = context;
+    }
+    pub fn set_request(&self, request: usize) {
+        self.st().request = request;
+    }
+    pub fn request(&self) -> usize {
+        self.st().request
     }
     pub fn verifier(&self) -> (usize, usize) {
         let st = self.st();
@@ -276,12 +285,49 @@ struct SendRecvState {
     timeout: u32,
 }
 
+/// What a C++ subclass of `UDPManagerSendRecvOp` added, in Rust (R6 WON lobby and network round 36: PingGameOp and
+/// RoutingGetUserStatusOp, both deleted): its members (`ctx`), the start of its `RunHook` (the request datagram set
+/// before the base's run), its `CheckResponse` and its destructor, and the constructor's settings. `op` is the C++
+/// op (`RefCount*`).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct EeWonUdpBody {
+    /// which body (`EE_WON_UDP_BODY_*`; 0: none)
+    pub kind: i32,
+    pub ctx: *mut c_void,
+    pub run: Option<unsafe extern "C" fn(ctx: *mut c_void, op: *mut c_void, r: *const EeWonUdpSendRecvOp)>,
+    /// the status, or [`EE_WON_UDP_BODY_THREW`] for a read past the reply's end (the C++ threw a
+    /// `ReadBufferException`, which the reply wait's check caught)
+    pub check: Option<unsafe extern "C" fn(ctx: *mut c_void, op: *mut c_void, reader: *mut EeWonReadBuffer) -> i64>,
+    pub free: Option<unsafe extern "C" fn(ctx: *mut c_void)>,
+    /// `SetNumRetransmits`, `SetMsgTimeout`
+    pub retry_limit: i32,
+    pub timeout: u32,
+}
+/// `RoutingGetUserStatusOp` (userstatus.rs): `ctx` an `EeWonUserStatus*`.
+pub const EE_WON_UDP_BODY_USER_STATUS: i32 = 1;
+/// `PingGameOp` (ee_won_lobby logics.rs): `ctx` an `EeWonPingOp*`.
+pub const EE_WON_UDP_BODY_PING: i32 = 2;
+/// A body's check read past the reply's end.
+pub const EE_WON_UDP_BODY_THREW: i64 = i64::MIN;
+
+const NO_BODY: EeWonUdpBody = EeWonUdpBody {
+    kind: 0,
+    ctx: std::ptr::null_mut(),
+    run: None,
+    check: None,
+    free: None,
+    retry_limit: 0,
+    timeout: 10000,
+};
+
 /// `UDPManagerSendRecvOp`'s state and steps.
 pub struct EeWonUdpSendRecvOp {
     /// the C++ `UDPManagerSendRecvOp*` as `RefCount*`
     op: usize,
     calls: Calls,
     state: UnsafeCell<SendRecvState>,
+    body: EeWonUdpBody,
 }
 
 // SAFETY: as EeWonUdpRecvOp
@@ -302,7 +348,49 @@ impl EeWonUdpSendRecvOp {
             attempts: 0,
             timeout: 10000,
         };
-        EeWonUdpSendRecvOp { op: op as usize, calls: Calls { hooks }, state: UnsafeCell::new(state) }
+        EeWonUdpSendRecvOp { op: op as usize, calls: Calls { hooks }, state: UnsafeCell::new(state), body: NO_BODY }
+    }
+
+    /// A request with a Rust body: the body's retransmits and reply wait.
+    pub fn with_body(op: *mut c_void, hooks: &'static EeWonUdpOpHooks, body: EeWonUdpBody) -> EeWonUdpSendRecvOp {
+        let mut r = EeWonUdpSendRecvOp::new(op, hooks);
+        r.body = body;
+        r.st().retry_limit = body.retry_limit;
+        r.st().timeout = body.timeout;
+        r
+    }
+
+    pub fn has_body(&self) -> bool {
+        self.body.kind != 0
+    }
+
+    /// The body's members when it is of `kind` (null otherwise).
+    pub fn body(&self, kind: i32) -> *mut c_void {
+        if kind != 0 && self.body.kind == kind {
+            self.body.ctx
+        } else {
+            std::ptr::null_mut()
+        }
+    }
+
+    /// The body's `CheckResponse` over a reply: the status and whether the read went past the end.
+    pub fn check_body(&self, data: &[u8]) -> (Status, bool) {
+        let Some(f) = self.body.check else { return (WS_SUCCESS, false) };
+        let mut reader = EeWonReadBuffer::new(data.as_ptr(), data.len() as _);
+        // SAFETY: the body's contract: its live members, the C++ op, a reader over the live bytes
+        let status = unsafe { f(self.body.ctx, self.op as *mut c_void, &mut reader) };
+        if status == EE_WON_UDP_BODY_THREW {
+            (WS_SUCCESS, true)
+        } else {
+            (status as Status, false)
+        }
+    }
+
+    /// `SetOutgoing(new ByteBuffer(bytes))`.
+    pub fn set_outgoing_bytes(&self, bytes: &[u8]) {
+        let b = crate::cppnet::new_bytes(bytes);
+        self.set_outgoing(b as usize);
+        self.calls.release(b as usize);
     }
 
     #[allow(clippy::mut_from_ref)]
@@ -399,6 +487,10 @@ impl EeWonUdpSendRecvOp {
 
     /// `RunHook`: refused blocking; the attempts start over, a socket of its own without a manager, the request sent.
     pub fn run(&self) {
+        if let Some(f) = self.body.run {
+            // SAFETY: the body's contract: its live members, the C++ op and this object
+            unsafe { f(self.body.ctx, self.op as *mut c_void, self) };
+        }
         let c = &self.calls;
         if c.mode(self.op) == OP_MODE_BLOCK {
             c.finish(self.op, WS_BLOCK_MODE_NOT_SUPPORTED);
@@ -453,6 +545,11 @@ impl EeWonUdpSendRecvOp {
 
 impl Drop for EeWonUdpSendRecvOp {
     fn drop(&mut self) {
+        // the subclass's members first
+        if let Some(f) = self.body.free {
+            // SAFETY: the body's contract: its members, freed once
+            unsafe { f(self.body.ctx) };
+        }
         // the original's member order backwards: the reply wait, the request, the socket, the manager
         let st = self.st();
         let all = [st.recv_op, st.outgoing, st.socket, st.manager];
@@ -676,6 +773,50 @@ pub unsafe extern "C" fn ee_won_udpsendrecvop_new(
 ) -> *mut EeWonUdpSendRecvOp {
     crate::cppcore::bind(core);
     Box::into_raw(Box::new(EeWonUdpSendRecvOp::new(op, &crate::cppcore::NATIVE_UDP_OP)))
+}
+/// A request op's object with a Rust body, its address and manager set (the deleted subclasses' constructors).
+///
+/// # Safety
+/// As [`ee_won_udpsendrecvop_new`]; `body` is a new body this object takes; `addr` a live address; `manager` a
+/// live `UDPManager*` (`RefCount*`) or null.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_udpsendrecvop_new_body(
+    op: *mut c_void,
+    core: *const crate::cppcore::EeWonCoreHooks,
+    body: EeWonUdpBody,
+    addr: *const EeWonIpAddr,
+    manager: *mut c_void,
+) -> *mut EeWonUdpSendRecvOp {
+    crate::cppcore::bind(core);
+    let r = EeWonUdpSendRecvOp::with_body(op, &crate::cppcore::NATIVE_UDP_OP, body);
+    // SAFETY: the caller's value
+    r.set_address(unsafe { &*addr });
+    r.set_manager(manager as usize);
+    Box::into_raw(Box::new(r))
+}
+/// The body's members of a C++ op (`RefCount*`) when it is a request with a body of `kind`; null for a null op,
+/// another class (the core table's `dynamic_cast`) or another body.
+///
+/// # Safety
+/// `op` is null or a live `RefCount*`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_udp_body_of(op: *mut c_void, kind: i32) -> *mut c_void {
+    let r = crate::cppcore::object_of(op, crate::cppcore::EeWonCoreObject::UdpSendRecv) as *const EeWonUdpSendRecvOp;
+    // SAFETY: the op's live Rust object
+    unsafe { r.as_ref() }.map_or(std::ptr::null_mut(), |r| r.body(kind))
+}
+/// `SetOutgoing` of a new buffer of the bytes.
+///
+/// # Safety
+/// `r` is live; `data` holds `length` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_udpsendrecvop_set_outgoing_bytes(
+    r: *const EeWonUdpSendRecvOp,
+    data: *const u8,
+    length: usize,
+) {
+    // SAFETY: the caller's bytes
+    obj!(r).set_outgoing_bytes(unsafe { crate::ffi::bytes(data, length) })
 }
 /// Frees the object, its references given back.
 ///

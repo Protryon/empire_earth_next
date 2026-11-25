@@ -451,36 +451,49 @@ pub unsafe extern "C" fn ee_units_upgrade_set_range(
     unsafe { set_range(&mut *upgrade, &*own, projectile.as_ref(), value) }
 }
 
-/// `ChangeLevel` over the records ([`change_level_records`]); `step_factors` the class's table's 16 (null: none).
+/// The 16 step factors of a class's improvement table (`mEntries[i].mStepFactor`: each factor's offset).
 ///
 /// # Safety
-/// The pointers name live records (`projectile`, `step_factors` may be null); `levels` points to 16 words.
+/// `table` is null or a live table.
+unsafe fn step_factors(table: *const ee_data::tables::EeDataUpgradeFields) -> Option<[f32; 16]> {
+    // SAFETY: the caller's contract
+    unsafe { table.as_ref() }.map(|t| t.mFactors.map(|f| f.mOffset))
+}
+
+/// `ChangeLevel` over the records ([`change_level_records`]); `table` the class's improvement table (null: none; its
+/// factors' offsets are the 16 step factors).
+///
+/// # Safety
+/// The pointers name live records (`projectile`, `table` may be null); `levels` points to 16 words.
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::unnecessary_cast)] // `long` is i32 on Windows, i64 elsewhere
 pub unsafe extern "C" fn ee_units_improve_change_level_records(
     class: *const EeUnitsUnitClassFields,
-    step_factors: *const f32,
+    table: *const ee_data::tables::EeDataUpgradeFields,
     upgrade: *mut EeUnitsUnitClassUpgradeFields,
     own: *const EeUnitsUnitClassFields,
     projectile: *const EeUnitsUnitClassFields,
     levels: *mut i32,
-    total_cost: *mut i32,
+    total_cost: *mut std::ffi::c_long,
     improvement: i32,
     delta: i32,
 ) {
     // SAFETY: the caller's contract
     unsafe {
+        // the points spent are a C++ `long` (`mTotalCost`): 32 bits of it, as the C++ passed them
+        let mut total = *total_cost as i32;
         change_level_records(
             &*class,
-            step_factors.cast::<[f32; 16]>().as_ref(),
+            step_factors(table).as_ref(),
             &mut *upgrade,
             &*own,
             projectile.as_ref(),
             &mut *levels.cast::<[i32; 16]>(),
-            &mut *total_cost,
+            &mut total,
             improvement,
             delta,
-        )
+        );
+        *total_cost = total as std::ffi::c_long;
     }
 }
 
@@ -491,7 +504,7 @@ pub unsafe extern "C" fn ee_units_improve_change_level_records(
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_improve_gain_records(
     class: *const EeUnitsUnitClassFields,
-    step_factors: *const f32,
+    table: *const ee_data::tables::EeDataUpgradeFields,
     upgrade: *const EeUnitsUnitClassUpgradeFields,
     levels: *const i32,
     level: i32,
@@ -500,7 +513,7 @@ pub unsafe extern "C" fn ee_units_improve_gain_records(
     // SAFETY: the caller's contract
     unsafe {
         let class = &*class;
-        let c = improve_class(class, step_factors.cast::<[f32; 16]>().as_ref());
+        let c = improve_class(class, step_factors(table).as_ref());
         let s = improve_stats(&*upgrade, class);
         gain(&c, &s, &*levels.cast::<[i32; 16]>(), level, improvement)
     }

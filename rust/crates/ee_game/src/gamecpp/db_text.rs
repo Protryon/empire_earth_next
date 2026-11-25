@@ -182,6 +182,51 @@ fn split_name(name: &[u8]) -> (Vec<u8>, Vec<u8>) {
     (directory, stem)
 }
 
+/// The db tables' file names in start-up order (startup.rs TABLES_1..3, index for index). They were EEDbObject.cpp's
+/// `kDb*File` UStrings (`kDbStartingResourcesFile` .. `kDbPremadeCivsFile`): the keys the loaders ask
+/// [`ee_gamecpp_db_find_file`] for, which serves the text form under the stem (the `.dat` and the case go).
+pub(crate) const DB_TABLE_FILES: [&CStr; 26] = [
+    c"db\\dbStartingResources.dat",
+    c"db\\dbUnitBehavior.dat",
+    c"db\\dbsounds.dat",
+    c"db\\dbgraphics.dat",
+    c"db\\dbgfxeffects.dat",
+    c"db\\dbmusic.dat",
+    c"db\\dbworld.dat",
+    c"db\\dbfamily.dat",
+    c"db\\dbButtons.dat",
+    c"db\\dbtechtree.dat",
+    c"db\\dbAnimals.dat",
+    c"db\\dbcolortable.dat",
+    c"db\\dbaiunittargeting.dat",
+    c"db\\dbterrain.dat",
+    c"db\\dbterrainType.dat",
+    c"db\\dbcliffterrain.dat",
+    c"db\\dbcivpowers.dat",
+    c"db\\dbcivilization.dat",
+    c"db\\dbweapontohit.dat",
+    c"db\\dbcalamity.dat",
+    c"db\\dbunitset.dat",
+    c"db\\dbareaeffect.dat",
+    c"db\\dbupgrade.dat",
+    c"db\\dbcpbehavior.dat",
+    c"db\\dbGameVariant.dat",
+    c"db\\dbpremadecivs.dat",
+];
+/// `kDbEventsFile`
+pub(crate) const DB_EVENTS_FILE: &CStr = c"db\\dbevents.dat";
+/// `kDbEffectsFile`
+pub(crate) const DB_EFFECTS_FILE: &CStr = c"db\\dbeffects.dat";
+/// `kDbAmbientSoundsFile`
+pub(crate) const DB_AMBIENT_SOUNDS_FILE: &CStr = c"db\\dbambientsounds.dat";
+
+/// `EEDbFindFile(gDataPath, name, file)`: the table served into `file`; the error.
+pub(crate) fn find_in_data_path(name: &CStr, file: &mut P) -> i64 {
+    // SAFETY: the game's data path, set before the tables load (a read of the pointer's storage)
+    let path = unsafe { *std::ptr::addr_of!(super::globals::gDataPath) };
+    ee_gamecpp_db_find_file(path, name.as_ptr(), file as *mut P as *mut *mut c_void) as i64
+}
+
 /// EEDbFindFile: the table's text form compiled and served as a new memory file (kErrorOK), or the game stopped.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_db_find_file(path: *mut c_void, name: *const c_char, out: *mut *mut c_void) -> c_long {
@@ -283,5 +328,19 @@ mod tests {
     #[test]
     fn taking_empty_bytes_is_empty() {
         assert!(take(&mut EeDataBytes::empty()).is_empty());
+    }
+
+    #[test]
+    fn the_table_files_have_text_forms() {
+        // every name is db\<stem>.dat with a stem ee_data knows a text form of; no name twice
+        let mut seen = std::collections::BTreeSet::new();
+        for name in DB_TABLE_FILES.iter().chain([DB_EVENTS_FILE, DB_EFFECTS_FILE, DB_AMBIENT_SOUNDS_FILE].iter()) {
+            let (directory, stem) = split_name(name.to_bytes());
+            assert_eq!(directory, b"db\\");
+            assert!(text_extension(&stem).is_some(), "{name:?}");
+            assert!(seen.insert(stem));
+        }
+        assert_eq!(DB_TABLE_FILES[0].to_bytes(), b"db\\dbStartingResources.dat");
+        assert_eq!(DB_TABLE_FILES[25].to_bytes(), b"db\\dbpremadecivs.dat");
     }
 }

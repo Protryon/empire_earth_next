@@ -76,7 +76,7 @@ pub unsafe extern "C" fn ee_astar_world_view_set_manager(r: *mut EeAStarCmRecord
 }
 
 /// The registered record to change (null before it is registered).
-pub(crate) fn cm_ptr() -> *mut EeAStarCmRecord {
+pub fn cm_ptr() -> *mut EeAStarCmRecord {
     CM_RECORD.load(Ordering::Acquire)
 }
 

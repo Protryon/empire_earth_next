@@ -50,6 +50,8 @@ static const EeFsFileCalls kFSFileCalls = {
     [](void* f, uint8_t v) { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
     [](void* f, uint16_t v) { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
     [](void* f) { return static_cast<FSFile*>(f)->GetIsOpen(); },
+    [](void* f, uint8_t* v) { bool b = *v != 0; int32_t r = (int32_t) static_cast<FSFile*>(f)->Read(b); *v = b; return r; },
+    [](void* f, bool v) { return (int32_t) static_cast<FSFile*>(f)->Write(v); },
 };
 static const bool sFSFileCallsRegistered = ee_fs_file_register(&kFSFileCalls);
 

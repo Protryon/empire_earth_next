@@ -18,7 +18,6 @@ b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
 d3ff4 d47a1 Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp
 d490f d5405 Empire Earth/Database/EEAnimal.cpp
 d5405 d5d08 Empire Earth/Database/EEButtonObject.cpp
-d61f7 d68c7 Empire Earth/Database/EEDbObject.cpp
 d6bed d72c1 Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp
 d72c1 d9b2b Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp
 d9b2b da3be Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp
@@ -116,10 +115,8 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 1ebc47 1f1f19 Empire Earth/Units/EEActiveGroup.cpp
 1f1f19 1f57d3 Empire Earth/Units/EEComplexDoppelganger.cpp
 1f57d3 201d85 Empire Earth/Units/EEComplexUnit.cpp
-201d85 201fd9 Empire Earth/Units/EEDoppelganger.cpp
 201fd9 20360e Empire Earth/Units/EEDoppelgangerManager.cpp
 20360e 20560c Empire Earth/Units/EEGhostUnit.cpp
-20560c 205eda Empire Earth/Units/EEGoalQueueContainer.cpp
 205eda 20834c Empire Earth/Units/EEGroup.cpp
 20834c 208c37 Empire Earth/Units/EESightRings.cpp
 208c37 208e6b Empire Earth/Graphics Thread/EEOrbital.cpp
@@ -129,7 +126,6 @@ ddcc6 dde43 Empire Earth/Formations/EEFormation.cpp
 22f272 23a5bf Empire Earth/Units/EEUnitClass.cpp
 23a5bf 23b61a Empire Earth/Units/EEUnitClassImprovement.cpp
 23b61a 23c332 Empire Earth/Units/EEUnitClassUpgrade.cpp
-23c83a 23ceca Empire Earth/Units/EEWheel.cpp
 23ceca 23d7c0 Empire Earth/Units/EECloakingUtilities.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp

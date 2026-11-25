@@ -114,3 +114,119 @@ fn the_contacts_are_cleared_then_added_last_first() {
     let units: Vec<i64> = h.log.iter().filter(|e| e.0 == EE_UNITS_DOP_CONTACTS_UNIT).map(|e| e.3).collect();
     assert_eq!(units, [1, 0]);
 }
+
+/// A file of bytes: reads from the front (0x12 on a short read, the value kept), writes appended.
+#[derive(Default)]
+struct Bytes {
+    data: Vec<u8>,
+    out: Vec<u8>,
+}
+
+impl Bytes {
+    fn take<const N: usize>(&mut self) -> Option<[u8; N]> {
+        if self.data.len() < N {
+            return None;
+        }
+        let bytes: [u8; N] = self.data[..N].try_into().ok()?;
+        self.data.drain(..N);
+        Some(bytes)
+    }
+}
+
+impl DopFile for Bytes {
+    fn read_i32(&mut self, v: &mut i32) -> i32 {
+        self.take::<4>().map_or(0x12, |b| {
+            *v = i32::from_le_bytes(b);
+            0
+        })
+    }
+    fn read_u32(&mut self, v: &mut u32) -> i32 {
+        self.take::<4>().map_or(0x12, |b| {
+            *v = u32::from_le_bytes(b);
+            0
+        })
+    }
+    fn read_f32(&mut self, v: &mut f32) -> i32 {
+        self.take::<4>().map_or(0x12, |b| {
+            *v = f32::from_le_bytes(b);
+            0
+        })
+    }
+    fn read_u8(&mut self, v: &mut u8) -> i32 {
+        self.take::<1>().map_or(0x12, |b| {
+            *v = b[0];
+            0
+        })
+    }
+    fn write_i32(&mut self, v: i32) -> i32 {
+        self.out.extend_from_slice(&v.to_le_bytes());
+        0
+    }
+    fn write_u32(&mut self, v: u32) -> i32 {
+        self.out.extend_from_slice(&v.to_le_bytes());
+        0
+    }
+    fn write_f32(&mut self, v: f32) -> i32 {
+        self.out.extend_from_slice(&v.to_le_bytes());
+        0
+    }
+    fn write_u8(&mut self, v: u8) -> i32 {
+        self.out.push(v);
+        0
+    }
+}
+
+const FILE_ORDER: [i64; 7] = [0, 1, 2, 3, 4, 5, EE_UNITS_DOP_FIELD_FOUNDATION];
+
+fn sample() -> EeUnitsComplexDopFields {
+    EeUnitsComplexDopFields {
+        mModel: 0x40 as *mut _,
+        mAnimation: 3,
+        mScale: 1.5,
+        mPackedHitPoints: -0x7fff_ff9c, // the built flag and 100 hit points
+        mTileX: -4,
+        mTileY: 90,
+        mFrame: 7,
+        mIsFoundation: true,
+    }
+}
+
+#[test]
+fn the_fields_written_are_the_fields_read_back() {
+    let r = sample();
+    let mut f = Bytes::default();
+    for field in FILE_ORDER {
+        assert_eq!(write_field(&mut f, &r, field), 0);
+    }
+    // a long and an unsigned long are four bytes each, the float four, the flag one
+    assert_eq!(f.out.len(), 6 * 4 + 1);
+    assert_eq!(&f.out[..4], &(-0x7fff_ff9ci32).to_le_bytes());
+    assert_eq!(f.out[24], 1);
+    let mut back = EeUnitsComplexDopFields { mModel: r.mModel, ..Default::default() };
+    f.data = std::mem::take(&mut f.out);
+    for field in FILE_ORDER {
+        assert_eq!(read_field(&mut f, &mut back, field), 0);
+    }
+    assert_eq!(back, r);
+}
+
+#[test]
+fn a_short_read_keeps_the_member_and_passes_the_status_on() {
+    let mut r = sample();
+    let mut f = Bytes::default();
+    assert_eq!(read_field(&mut f, &mut r, EE_UNITS_DOP_FIELD_TILE_X), 0x12);
+    assert_eq!(read_field(&mut f, &mut r, EE_UNITS_DOP_FIELD_FOUNDATION), 0x12);
+    assert_eq!(r, sample());
+}
+
+#[test]
+fn a_copy_takes_each_named_member() {
+    let other = sample();
+    let mut r = EeUnitsComplexDopFields::default();
+    copy_field(&mut r, &other, EE_UNITS_DOP_FIELD_FRAME);
+    assert_eq!((r.mFrame, r.mAnimation), (7, 0));
+    for field in [EE_UNITS_DOP_FIELD_MODEL, 2, 0, 3, 4, 5, EE_UNITS_DOP_FIELD_FOUNDATION] {
+        copy_field(&mut r, &other, field);
+    }
+    assert_eq!(r, other);
+}

@@ -48,6 +48,20 @@ size_t ee_won_fontmap_store(EeWonFontMap *m,
 /// `m` is a live map.
 ptrdiff_t ee_won_fontmap_pop(EeWonFontMap *m);
 
+/// `FontDescriptor::operator==`: the same size, the same style and the same face without case (`operator!=` is its
+/// negation; `operator<` is the map's `order`).
+///
+/// # Safety
+/// `a` points at `na` bytes and `b` at `nb` (or NULL with 0).
+bool ee_won_font_desc_same(const uint8_t *a,
+                           size_t na,
+                           int32_t style_a,
+                           int32_t size_a,
+                           const uint8_t *b,
+                           size_t nb,
+                           int32_t style_b,
+                           int32_t size_b);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_GUI_FONTMAP_H

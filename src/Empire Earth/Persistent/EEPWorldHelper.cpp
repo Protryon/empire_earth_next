@@ -161,7 +161,6 @@ void EEPWorldHelper::GetChecksum(ESChecksum& ioChecksum) const
 // ------------------------------------------------------------------------- the saved world's C++ (gamecpp persist_world.rs)
 
 int64_t EECore9OpE(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEPLoaderOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 #define P64(x) ((int64_t)(intptr_t)(x))
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // EEWorld.cpp
@@ -226,54 +225,15 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwStTeamsFromHelper: ((EEGameState*)p)->mTeams = ((EEPWorldHelper*)a[0])->mTeams;
         break;
-    case O::PwHasLiveState: return EESaveHasLiveState(VERSION);
     case O::PwChatLogLoad: return ee_screens_chat_log_load(&FILE_);
     case O::PwChatLogSave: return ee_screens_chat_log_save(&FILE_);
     case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
     case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
-    case O::PwPrimitive: return EESavePrimitive(FILE_, (int32_t)a[0], (EeUnitsPlayerSaveIo*)a[1]);
-    case O::PwHasRunningState: return EESaveHasRunningState(VERSION);
-    case O::PwHasRegionOrder: return EESaveHasRegionOrder(VERSION);
-    case O::PwHasExperimentTimers: return EESaveHasExperimentTimers(VERSION);
-    case O::PwHasTowns: return EESaveHasTowns(VERSION);
-    case O::PwHasTownAreas: return EESaveHasTownAreas(VERSION);
-    case O::PwHasGhosts: return EESaveHasGhosts(VERSION);
-    case O::PwHasGhostResources: return EESaveHasGhostResources(VERSION);
-    case O::PwHasGoalGhosts: return EESaveHasGoalGhosts(VERSION);
-    case O::PwHasContinentRegions: return EESaveHasContinentRegions(VERSION);
-    case O::PwHasResourceState: return EESaveHasResourceState(VERSION);
-    case O::PwHasPlayerUnitOrder: return EESaveHasPlayerUnitOrder(VERSION);
-    case O::PwHasPathSearches: return EESaveHasPathSearches(VERSION);
-    case O::PwHasActiveGroups: return EESaveHasActiveGroups(VERSION);
-    case O::PwHasGraphSearches: return EESaveHasGraphSearches(VERSION);
-    case O::PwHasTechAllowed: return EESaveHasTechAllowed(VERSION);
-    case O::PwHasTileTypes: return EESaveHasTileTypes(VERSION);
-    case O::PwPathRunningLoad: return gPathManager.LoadRunningState(FILE_);
-    case O::PwPathRunningSave: gPathManager.SaveRunningState(FILE_);
-        break;
     case O::PwAreaEffectsLoad: return EEAELoadRunningState(FILE_);
     case O::PwAreaEffectsSave: EEAESaveRunningState(FILE_);
         break;
-    case O::PwExperimentTimersLoad: return EECPLoadExperimentTimers(FILE_);
-    case O::PwExperimentTimersSave: EECPSaveExperimentTimers(FILE_);
-        break;
     case O::PwTownsLoad: return EELoadTowns(FILE_, a[0] != 0);
     case O::PwTownsSave: EESaveTowns(FILE_);
-        break;
-    case O::PwContinentRegionsLoad: return EELoadContinentRegions(FILE_);
-    case O::PwContinentRegionsSave: EESaveContinentRegions(FILE_);
-        break;
-    case O::PwResourceStateLoad: return EECPLoadResourceState(FILE_);
-    case O::PwResourceStateSave: EECPSaveResourceState(FILE_);
-        break;
-    case O::PwPathSearchesLoad: return gPathManager.LoadSearches(FILE_);
-    case O::PwPathSearchesSave: gPathManager.SaveSearches(FILE_);
-        break;
-    case O::PwActiveGroupsLoad: return EELoadActiveGroups(FILE_);
-    case O::PwActiveGroupsSave: EESaveActiveGroups(FILE_);
-        break;
-    case O::PwGraphSearchesLoad: return gPathManager.LoadGraphSearches(FILE_);
-    case O::PwGraphSearchesSave: gPathManager.SaveGraphSearches(FILE_);
         break;
     case O::PwDebugText: ESDebugOut("%s", (const char*)a[0]);
         break;
@@ -400,14 +360,10 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PphCpSetEngineNext: CP->mEngine = kEECPEngineNext;
         break;
     case O::PphCpEngine: return CP->mEngine;
-    case O::PphAiKnown: return EECPAIByID(BYTES) != NULL;
     case O::PphLogUnknownAi: EECPEngineLog("the saved game's player %lu plays the AI '%s', which Data/ai/ais.json does not list: the game cannot be loaded", PL->mPlayerID, BYTES.c_str());
         break;
     case O::PphCpSetAi: EECPNextSetAI(CP, BYTES);
         break;
-    case O::PphCpLoadState: return EECPNextLoadState(CP, BYTES);
-    case O::PphCpUnitsLoad: return EECPUnitsLoad(CP, BYTES);
-    case O::PphHasUnitsLuaState: return EESaveHasUnitsLuaState((unsigned long)a[0], (unsigned long)a[1]);
     case O::PphIsAllied: return PL->IsAlliedWith((EEPlayer*)a[0]);
     case O::PphAddAlly: PL->mAllies.push_back((EEPlayer*)a[0]);
         break;
@@ -418,7 +374,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PphStrData: return P64(STR.data());
     case O::PphCpEngineAi: *(std::string*)a[0] = EECPEngineAI(CP);
         break;
-    case O::PphClassicAiPresent: return EECPClassicAI() != NULL;
     case O::PphClassicAiId: *(std::string*)a[0] = EECPAIID(EECPClassicAI());
         break;
     case O::PphCpSaveState: EECPNextSaveState(CP, *(std::string*)a[0]);
@@ -674,8 +629,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsGameState: return P64(&gGameState);
     case O::PsValidateIntoMessage: return EEValidateSaveGameFile(FILE_, gLoadSaveErrorMessage);
-    case O::PsGraphicsPostResume: gGraphics->PostResume();
-        break;
     case O::PsUiResumeGraphics: gUserInterface->ResumeGraphics();
         break;
     case O::PsMapApplyVertexColors: gWorld.GetMap()->ApplyVertexColors();
@@ -683,8 +636,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsSetMasterVolume: gSoundManager->SetMasterVolume(f[0]);
         break;
     case O::PsSetMusicVolume: gConductor->GetConductor().SetVolume(f[0]);
-        break;
-    case O::PsSleep: PlatSleep((unsigned long)a[0]);
         break;
     case O::PsCommPresent: return gCommunications != NULL;
     case O::PsShowSplash: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
@@ -734,16 +685,11 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsEditorFormPresent: return gUIManager->GetScenarioEditorForm() != NULL;
     case O::PsEditorClearSelection: gUIManager->GetScenarioEditorForm()->ClearSelection();
         break;
-    case O::PsPreloadWaitQueue: gDataPreLoading->WaitForMessageQueue();
-        break;
     case O::PsWorldClear: gWorld.Clear();
         break;
     case O::PsWorldStartGame: gWorld.StartGame((EEGameState*)a[0], true);
         break;
     case O::PsInScenarioEditor: return gUIManager->mInScenarioEditor;
-    case O::PsTextIsUtf8: return EESaveTextIsUtf8((unsigned long)a[0], (unsigned long)a[1]);
-    case O::PsLegacyTextLoad: USetLegacyTextLoad(a[0] != 0);
-        break;
     case O::PsReportCorrupt: EEReportLoadFailure("Load game file is corrupt.", false, NULL);
         break;
     case O::PsDebugCorrupt: ESDebugOut("EE load failure: Load game file is corrupt.\n");
@@ -786,6 +732,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     return 0;
 }
 
+double EECore9OpD7F(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EETechTreeNode.cpp
 double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -795,6 +742,6 @@ double EEPWorldOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     // (EECore9OpCF)
     case O::PsMasterVolume: return gSoundManager->GetMasterVolume();
     case O::PsMusicVolume: return gConductor->GetConductor().GetVolume();
-    default: return EEPLoaderOpF(inOp, p, a, f);
+    default: return EECore9OpD7F(inOp, p, a, f);
     }
 }

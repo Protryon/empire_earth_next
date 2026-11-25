@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_gui/guihost.h"
+#include "rust/won_gui/layoutobj.h"
 
 /// The inward calls (the C++ shell's virtuals and methods; `a`, `b`, `c` as each says).
 enum class EeWonCtCall : uint32_t {
@@ -119,6 +120,29 @@ extern "C" {
 EeWonContainer *ee_won_ct_new(void *component,
                               EeWonGuiHostFn host,
                               bool wheel_to_focus);
+
+/// `Container::Container`'s child layout manager, owned by the Rust container (`host` the layout objects' host).
+///
+/// # Safety
+/// `ct` is live.
+void ee_won_ct_layout_new(const EeWonContainer *ct,
+                          EeWonGuiHostFn host);
+
+/// One of the container's layout methods (`EeWonContainer::layout_call`).
+///
+/// # Safety
+/// `ct` is live; an instruction passed with its live Rust object.
+ptrdiff_t ee_won_ct_layout_call(const EeWonContainer *ct,
+                                EeWonLayoutMgrCall call,
+                                ptrdiff_t a,
+                                ptrdiff_t b,
+                                ptrdiff_t c);
+
+/// `Container::Relayout`.
+///
+/// # Safety
+/// `ct` is live.
+void ee_won_ct_relayout(const EeWonContainer *ct);
 
 /// The destructor's statements (children told, cursor, layout, timer children and children released), then the
 /// object freed.

@@ -248,6 +248,21 @@ pub extern "C" fn ee_units_uu_wall_piece(corner: i32) -> EeUnitsUuWallPiece {
     uu_tiles::wall_piece(corner)
 }
 
+/// `EEOrientWallPiece(transformation, corner, raised)`: the piece's frame set; a turning piece faces its yaw
+/// (`SetOrientationYPR(yaw, 0, 0)`; the raised corners are unused, as in the original).
+///
+/// # Safety
+/// `t` is a live transformation.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_orient_wall_piece(t: *mut GeTransformation, corner: i32) -> std::ffi::c_long {
+    let piece = uu_tiles::wall_piece(corner);
+    if piece.turns != 0 {
+        // SAFETY: the caller's contract
+        unsafe { (*t).set_orientation(ee_base::math::transform::RotationOrder::Ypr, piece.yaw, 0.0, 0.0) };
+    }
+    piece.frame_set as std::ffi::c_long
+}
+
 /// `EEIsCornerBlocked` (23).
 #[no_mangle]
 pub extern "C" fn ee_units_uu_is_corner_blocked(x1: i32, y1: i32, x2: i32, y2: i32) -> u8 {
@@ -643,13 +658,15 @@ pub unsafe extern "C" fn ee_units_uu_extend_wall_line(
 /// `EEPickWallPieces`: one piece per tile into `out`.
 ///
 /// # Safety
-/// `tiles` a live tile vector; `out` holds as many `int32_t`s.
+/// `tiles` a live tile vector; `out` holds as many `long`s.
 #[no_mangle]
-pub unsafe extern "C" fn ee_units_uu_pick_wall_pieces(map: u64, tiles: *const c_void, out: *mut i32) {
+pub unsafe extern "C" fn ee_units_uu_pick_wall_pieces(map: u64, tiles: *const c_void, out: *mut std::ffi::c_long) {
     // SAFETY: the caller's contract
     unsafe {
         let pieces = uu::pick_wall_pieces(&mut Game, map, &tiles_of(tiles));
-        std::ptr::copy_nonoverlapping(pieces.as_ptr(), out, pieces.len());
+        for (k, p) in pieces.iter().enumerate() {
+            *out.add(k) = *p as std::ffi::c_long;
+        }
     }
 }
 

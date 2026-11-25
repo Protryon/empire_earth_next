@@ -18,16 +18,25 @@
 #include "rust/won_gui/guisplit.h"
 #include "rust/won_gui/wmcache.h"
 #include "rust/won_gui/wmobj.h"
+#include "ee/wonapi/WONLobbyPlatform.h"
+#include "platform/PlatTime.h"
+#include "rust/won_gui/platimg.h"
+#include "rust/won_gui/platwin.h"
+#include "rust/won_gui/platwm.h"
+#include "rust/won_gui/platloop.h"
 using namespace WONAPI;
 // The popup stack, the modal dialog, the message loop, focus and the caches are ee_won's Rust manager (wmobj.rs,
 // wmcache.rs; R6 WON round 33); the window set, the event list, the timers, the broadcasts, the event loop and the
 // screen resolution are its wmloop.rs (round 34). This unit keeps the colour scheme, the decoders, the font
 // helpers and the forwarders.
-static EeWonRect4 WinRect4(const WONRectangle& inRect)
-{
-    EeWonRect4 aRect = { inRect.x, inRect.y, inRect.width, inRect.height };
-    return aRect;
-}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(sizeof(WONRectangle) == sizeof(EeWonRect4) && sizeof(PopupParams) == sizeof(EeWonWmPopup) &&
+              offsetof(PopupParams, mOwnerComponent) == offsetof(EeWonWmPopup, owner) &&
+              offsetof(PopupParams, mFlags) == offsetof(EeWonWmPopup, flags) && offsetof(PopupParams, my) == offsetof(EeWonWmPopup, y) &&
+              offsetof(PopupParams, mAvoidRect) == offsetof(EeWonWmPopup, avoid),
+              "wmobj.rs reads a WONRectangle as EeWonRect4 and PopupParams as EeWonWmPopup (DoPopup, AdjustPopupPosition)");
+#pragma clang diagnostic pop
 // R6 WON rounds 33-34: the Rust manager's calls out (EeWonGuiOp's Wm* ops; rust/crates/ee_won_gui/src/wmobj.rs,
 // wmloop.rs)
 typedef EeWonGuiOp Op;
@@ -190,6 +199,62 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     }
 }
 
+// R6 WON GUI round 35: the platform manager (the port's PlatWindowManager.cpp, folded into WindowManager)
+namespace WONAPI {
+static_assert(sizeof(PlatInputEvent) == sizeof(EeWonPlatEvent), "platwm.rs reads PlatInputEvent as EeWonPlatEvent");
+
+static const int kInputTypes[] = {InputEvent_GotFocus, InputEvent_LostFocus, InputEvent_MouseExit};
+static const int kKeyTypes[] = {InputEvent_KeyDown, InputEvent_KeyUp, InputEvent_KeyChar};
+static const int kMouseTypes[] = {InputEvent_MouseMove, InputEvent_MouseDown, InputEvent_MouseDoubleClick,
+                                  InputEvent_MouseUp, InputEvent_MouseWheel};
+
+// The Rust manager's calls on the windows and the platform (EeWonPlatWmOp), each the original's statement
+static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    WindowManager* me = (WindowManager*)inMe;
+    Window* w = (Window*)a;
+    typedef EeWonPlatWmOp Op;
+    switch (inOp) {
+    case Op::IsUiThread: return PlatCurrentThreadId() == WindowManager::GetThreadId();
+    case Op::Info: w->GetInfo(*(EeWonPlatWinInfo*)b); return 0;
+    case Op::SetRegistered: w->Rust(EeWonPlatWinCall::SetRegistered, b != 0); return 0;
+    case Op::FollowSurface: w->FollowSurface(); return 0;
+    case Op::FollowPixelScale: w->FollowPixelScale(); return 0;
+    case Op::QueueInput: w->QueueEvent(new InputEvent(kInputTypes[b])); return 0;
+    case Op::QueueKey: w->QueueEvent(new KeyEvent(kKeyTypes[b], (int)c, (int)d)); return 0;
+    case Op::QueueMouse: w->Rust(EeWonPlatWinCall::QueueMouseAt, kMouseTypes[b], c); return 0;
+    case Op::Parent: return (intptr_t)w->GetParent();
+    case Op::Hold: w->AddRef(); return 0;
+    case Op::Release: w->Release(); return 0;
+    case Op::Close: w->Close(); return 0;
+    case Op::ClosePopup: w->ClosePopup(NULL); return 0;
+    case Op::NotModal: return me->NotModalWindow(w);
+    case Op::SetFocus: w->PlatformSetFocus(); return 0;
+    case Op::SetPosSize: w->SetPosSize((int)b, (int)c, -1, -1); return 0;
+    case Op::Paint: w->OnPaint(); return 0;
+    case Op::Title: {
+        static std::wstring theTitle;
+        theTitle = w->mTitle;
+        *(int32_t*)b = (int32_t)theTitle.size();
+        return (intptr_t)theTitle.c_str();
+    }
+    case Op::Offscreen: {
+        NativeImage* theImage = w->mOffscreenImage.get();
+        return theImage != NULL ? (intptr_t)theImage->GetSurface()->GetRust() : 0;
+    }
+    case Op::Modifiers: return (intptr_t)PlatModifiers();
+    case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;
+    case Op::Minimize: PlatWindowMinimize((PlatWindow*)a); return 0;
+    case Op::Wake: PlatWindowWake(); return 0;
+    }
+    return 0;
+}
+}
+
+// the platform's cursor calls (cursorobj.rs's platform cursors)
+static const EeWonPlatCursorFns kCursorFns = {(void (*)(uint32_t))PlatCursorSetSystem, PlatCursorCreate, PlatCursorSet,
+                                              PlatCursorDestroy};
+
 // Creates the window manager: becomes the default manager, sets standard colours. The original registered BMP and
 // WIM decoders here; the port reads PNG and JPEG pictures only (D9; the lobby's game code registers both), so they
 // went (round 18)
@@ -200,12 +265,22 @@ WindowManager::WindowManager() {
     this->WmSet(EeWonWmField::LastTimerTick, (intptr_t)(uint32_t)WONTickCount());
     this->mColorScheme=new ColorScheme;
     this->InitColorScheme();
+    // the platform manager and the standard cursors: the WON hand from its bits, the others the system's
+    this->mRust = ee_won_plat_wm_new(this, PlatWmHost);
+    this->mEventForward = NULL;
+    ee_won_cursor_install_standard(WONCursorHost, &kCursorFns);
     // The window set, the events, the timers, the broadcasts and the screen state start empty in the Rust manager
     // (wmloop.rs); the original left the image cache count and the full-screen size unset
 }
 
 // Destroys the window manager after closing every open window
-WindowManager::~WindowManager() { this->CloseAllWindows(); }
+WindowManager::~WindowManager()
+{
+    this->CloseAllWindows();
+    this->Call(EeWonPlatWmCall::UnregisterAll);
+    ee_won_plat_wm_free(this->mRust);
+    this->mRust = NULL;
+}
 
 // Fills the colour scheme with the 17 standard Windows-style colours (wmobj.rs's table)
 void WindowManager::InitColorScheme()
@@ -213,17 +288,11 @@ void WindowManager::InitColorScheme()
     ee_won_gui_wm_init_colors(ee_won_guicpp_wm_call, this);
 }
 
-// A font with another style and, when the size is positive, another size, from the default window (GetDefaultFontMod,
-// GetNamedFontMod)
-static Font* FontMod(WindowManager* inManager, Font* inFont, int inStyle, int inSize)
+// The default font with another style and, when the size is positive, another size, from the default window
+Font* WindowManager::GetDefaultFontMod(int inStyle, int inSize)
 {
-    FontDescriptor aDesc = inFont->mDescriptor;
-    aDesc.mStyle = inStyle;
-    if (inSize > 0)
-        aDesc.mSize = inSize;
-    return inManager->GetDefaultWindow()->GetFont(aDesc).get();
+    return this->GetDefaultWindow()->GetFont(FontDescriptor(this->GetDefaultFont()->mDescriptor.mFace, inStyle, inSize > 0 ? inSize : this->GetDefaultFont()->mDescriptor.mSize)).get();
 }
-Font* WindowManager::GetDefaultFontMod(int inStyle, int inSize) { return FontMod(this, this->GetDefaultFont(), inStyle, inSize); }
 
 // Decodes an image file for the default window's display context; NULL when there is no window
 SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
@@ -235,22 +304,6 @@ SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)
 {
     return this->mSoundDecoder.get() == NULL ? SmartPtr<Sound>(new Sound(theDesc)) : this->mSoundDecoder->DecodeDescriptor(theDesc);
-}
-// Moves a popup back inside the screen or the parent's root, flipping it to the other side of the avoid rectangle
-void WindowManager::AdjustPopupPosition(Window *theParent, Component *theComponent, bool inOwnWindow, const WONRectangle &theAvoidRect)
-{
-    EeWonRect4 anAvoid = WinRect4(theAvoidRect);
-    this->WmCall(EeWonWmCall::AdjustPopupPosition, (intptr_t)theParent, (intptr_t)theComponent, inOwnWindow ? 1 : 0,
-                 (intptr_t)&anAvoid);
-}
-// Opens a popup at the given or mouse position, in its own popup window or inside the parent window, per
-// the popup flags; ignored while another popup opens or closes, or when the parent lacks focus
-void WindowManager::DoPopup(const PopupParams &theParams)
-{
-    EeWonWmPopup aParams = { (intptr_t)theParams.mParent, (intptr_t)theParams.mPopup, (intptr_t)theParams.mInputComponent,
-                             (intptr_t)theParams.mOwnerComponent, theParams.mFlags, theParams.mx, theParams.my,
-                             WinRect4(theParams.mAvoidRect) };
-    this->WmCall(EeWonWmCall::DoPopup, (intptr_t)&aParams);
 }
 // The default window's font for a descriptor and its display context (NULL without a window; not identified in the
 // original exe)
@@ -266,3 +319,7 @@ DWORD WindowManager::mThreadId = 0;
 
 // the host behind the game's (guisplit.rs ee_won_gui_wm_game)
 [[maybe_unused]] static const bool sSplitWmHost = (ee_won_gui_split_register(EeWonGuiSplitHost::Wm, ee_won_guicpp_wm_call), true);
+
+// the platform's calls of an event pass (platloop.rs ee_won_plat_wm_next_event)
+const EeWonPlatLoopFns WindowManager::kLoopFns = {(int32_t (*)(void*, uint32_t))PlatWindowWaitEvent, PlatTimeMilliseconds64,
+                                                 PlatSleep};

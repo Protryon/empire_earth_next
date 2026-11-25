@@ -72,7 +72,7 @@ fn effect(r: &mut Record, e: P) {
         r.i32(-1);
         return;
     }
-    r.i32(h(O::GfxEffectIndex, e, &[]) as i32);
+    r.i32(ee_render::gfx::geffect_table::ee_gfx_geffect_index_of(e as *const c_void) as i32);
     r.u32(h(O::GfxEffectDuration, e, &[]) as u32);
     r.f32(hd(O::GfxEffectSize, e, &[], &[]));
     r.u32(h(O::GfxEffectTime1, e, &[]) as u32);
@@ -90,7 +90,7 @@ fn effect_index(e: P) -> i32 {
     if e == 0 {
         -1
     } else {
-        h(O::GfxEffectIndex, e, &[]) as i32
+        ee_render::gfx::geffect_table::ee_gfx_geffect_index_of(e as *const c_void) as i32
     }
 }
 

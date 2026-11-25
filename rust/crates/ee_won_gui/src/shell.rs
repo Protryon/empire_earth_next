@@ -904,6 +904,37 @@ pub unsafe extern "C" fn ee_won_shell_kind(s: *const EeWonShell) -> EeWonShellKi
     unsafe { shell(s) }.kind()
 }
 
+/// `SafeConfigGetComponent` of a WON skin class by its name: whether a shell of `kind` (`None`: not a shell) is the
+/// class `name` or one derived from it (a scroll thumb is a simple button, a list control a scroll container; the
+/// popup and dialog backs are frame components). An unknown name fits nothing.
+pub(crate) fn skin_part_fits(kind: Option<EeWonShellKind>, name: &[u8]) -> bool {
+    use EeWonShellKind as K;
+    let Some(kind) = kind else { return false };
+    match name {
+        b"WONSimpleButton" => matches!(kind, K::WonSimpleButton | K::WonScrollThumb),
+        b"WONHeaderButton" => kind == K::WonHeaderButton,
+        b"WONScrollbar" => kind == K::WonScrollbar,
+        b"WONScrollContainer" => matches!(kind, K::WonScrollContainer | K::WonListCtrl),
+        b"WONListCtrl" => kind == K::WonListCtrl,
+        b"WONTabCtrl" => kind == K::WonTabCtrl,
+        b"WONComboBox" => kind == K::WonComboBox,
+        b"WONPopupBack" | b"WONDialogBack" => kind == K::WonFrameComponent,
+        _ => false,
+    }
+}
+
+/// [`skin_part_fits`] for the shell `s` (NULL: the component is not a shell) and the class `name`.
+///
+/// # Safety
+/// `s` is a live shell or NULL; `name` is NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_shell_skin_part(s: *const EeWonShell, name: *const c_char) -> bool {
+    // SAFETY: the contract
+    let kind = if s.is_null() { None } else { Some(unsafe { shell(s) }.kind()) };
+    // SAFETY: the contract
+    skin_part_fits(kind, unsafe { CStr::from_ptr(name) }.to_bytes())
+}
+
 /// The deleted class's name (NUL-terminated, static).
 ///
 /// # Safety

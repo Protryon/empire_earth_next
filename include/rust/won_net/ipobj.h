@@ -176,6 +176,15 @@ EeWonAddr ee_won_ipaddr_to_raw(const EeWonIpAddr *a);
 /// As `ee_won_ipaddr_clone`; `raw` is valid, its host `host_len` bytes.
 void ee_won_ipaddr_from_raw(EeWonIpAddr *a, const EeWonAddr *raw);
 
+/// A server list's `AddAddress` (2ac4b0), `NotifyFailed` (2ac980) and `RemoveAddress` with an `IPAddr`'s value (which: 0, 1, 2);
+/// `NotifyFailed` answers false.
+///
+/// # Safety
+/// `c` is a live list, `a` a live address value.
+bool ee_won_ctx_ip(const EeWonServerList *c,
+                   int32_t which,
+                   const EeWonIpAddr *a);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_NET_IPOBJ_H

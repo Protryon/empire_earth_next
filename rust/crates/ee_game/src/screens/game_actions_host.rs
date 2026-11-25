@@ -32,22 +32,12 @@ pub const EE_SCREENS_GAH_U_LOC_X: u32 = EE_SCREENS_GA_OP_UNIT << 8 | 100;
 pub const EE_SCREENS_GAH_U_LOC_Y: u32 = EE_SCREENS_GA_OP_UNIT << 8 | 101;
 // the selected group's bounds into f0..f3 (the record's order: bottom, left, right, top)
 pub const EE_SCREENS_GAH_G_BOUNDS: u32 = EE_SCREENS_GA_OP_GROUP << 8 | 100;
-// the current player's next event source kept (whether there is one), its x and y
+// the current player's next event source (whether there is one): its two longs into the slots from i1
 pub const EE_SCREENS_GAH_P_EVENT: u32 = EE_SCREENS_GA_OP_PLAYER << 8 | 100;
-pub const EE_SCREENS_GAH_P_EVENT_X: u32 = EE_SCREENS_GA_OP_PLAYER << 8 | 101;
-pub const EE_SCREENS_GAH_P_EVENT_Y: u32 = EE_SCREENS_GA_OP_PLAYER << 8 | 102;
-// EEGetFirstSelectedUnit over the kept unit (i0 set; the call; the kept unit)
-pub const EE_SCREENS_GAH_FS_SET: u32 = EE_SCREENS_GA_OP_FIRST_SELECTED << 8 | 100;
+// EEGetFirstSelectedUnit over the unit in i1 (in and out)
 pub const EE_SCREENS_GAH_FS_CALL: u32 = EE_SCREENS_GA_OP_FIRST_SELECTED << 8 | 101;
-pub const EE_SCREENS_GAH_FS_GET: u32 = EE_SCREENS_GA_OP_FIRST_SELECTED << 8 | 102;
-// EEPointUnitOrTileXY over the kept tile, x and y (each set from i1, i2, i3; the call at f0, f1, i0; each read)
-pub const EE_SCREENS_GAH_PT_SET_TILE: u32 = EE_SCREENS_GA_OP_POINT_TILE << 8 | 100;
-pub const EE_SCREENS_GAH_PT_SET_X: u32 = EE_SCREENS_GA_OP_POINT_TILE << 8 | 101;
-pub const EE_SCREENS_GAH_PT_SET_Y: u32 = EE_SCREENS_GA_OP_POINT_TILE << 8 | 102;
+// EEPointUnitOrTileXY at f0, f1, i0 over the tile, x and y in i1, i2, i3 (in and out)
 pub const EE_SCREENS_GAH_PT_CALL: u32 = EE_SCREENS_GA_OP_POINT_TILE << 8 | 103;
-pub const EE_SCREENS_GAH_PT_TILE: u32 = EE_SCREENS_GA_OP_POINT_TILE << 8 | 104;
-pub const EE_SCREENS_GAH_PT_X: u32 = EE_SCREENS_GA_OP_POINT_TILE << 8 | 105;
-pub const EE_SCREENS_GAH_PT_Y: u32 = EE_SCREENS_GA_OP_POINT_TILE << 8 | 106;
 // the tile's unit list: its first node, a node's next, a node's unit
 pub const EE_SCREENS_GAH_T_FIRST: u32 = EE_SCREENS_GA_OP_TILE << 8 | 100;
 pub const EE_SCREENS_GAH_T_NEXT: u32 = EE_SCREENS_GA_OP_TILE << 8 | 101;
@@ -308,27 +298,29 @@ pub fn ee_screens_gah_run<C: GaCpp>(
             0
         }
         (EE_SCREENS_GA_OP_PLAYER, EE_SCREENS_GA_P_NEXT_EVENT) => {
-            if h.net(EE_SCREENS_GAH_P_EVENT) == 0 {
+            // the source (an EETileLocation: two longs) comes back in the slots from i1
+            let (found, o, _) = h.call(EE_SCREENS_GAH_P_EVENT, 0, &[], &[]);
+            if found == 0 {
                 return 0;
             }
-            i[0] = h.net(EE_SCREENS_GAH_P_EVENT_X);
-            i[1] = h.net(EE_SCREENS_GAH_P_EVENT_Y);
+            // SAFETY: two longs fit in the seven slots after i0
+            let source = unsafe { o[1..].as_ptr().cast::<[std::ffi::c_long; 2]>().read_unaligned() };
+            i[0] = i64::from(source[0]);
+            i[1] = i64::from(source[1]);
             1
         }
         (EE_SCREENS_GA_OP_FIRST_SELECTED, _) => {
-            h.k(EE_SCREENS_GAH_FS_SET, 0, i[0]);
-            let found = h.net(EE_SCREENS_GAH_FS_CALL);
-            i[0] = h.net(EE_SCREENS_GAH_FS_GET);
+            // the unit is in and out (EEGetFirstSelectedUnit's reference)
+            let (found, o, _) = h.call(EE_SCREENS_GAH_FS_CALL, 0, &[0, i[0]], &[]);
+            i[0] = o[1];
             found
         }
         (EE_SCREENS_GA_OP_POINT_TILE, _) => {
-            h.k(EE_SCREENS_GAH_PT_SET_TILE, 0, i[1]);
-            h.k(EE_SCREENS_GAH_PT_SET_X, 0, i[2]);
-            h.k(EE_SCREENS_GAH_PT_SET_Y, 0, i[3]);
-            let found = h.call(EE_SCREENS_GAH_PT_CALL, 0, &[i[0]], &[f[0], f[1]]).0;
-            i[1] = h.net(EE_SCREENS_GAH_PT_TILE);
-            i[2] = h.net(EE_SCREENS_GAH_PT_X);
-            i[3] = h.net(EE_SCREENS_GAH_PT_Y);
+            // the tile, x and y are in and out (EEPointUnitOrTileXY's references; x and y longs in their slots)
+            let (found, o, _) = h.call(EE_SCREENS_GAH_PT_CALL, 0, &[i[0], i[1], i[2], i[3]], &[f[0], f[1]]);
+            i[1] = o[1];
+            i[2] = i64::from(o[2] as std::ffi::c_long);
+            i[3] = i64::from(o[3] as std::ffi::c_long);
             found
         }
         (EE_SCREENS_GA_OP_TILE, EE_SCREENS_GA_T_UNIT_AT) => {
@@ -362,12 +354,10 @@ pub fn ee_screens_gah_run<C: GaCpp>(
             1
         }
         (EE_SCREENS_GA_OP_MAP, EE_SCREENS_GA_M_CLOSEST) => {
-            // the closest tile's x and y start at 0 (they are in and out)
-            h.call(EE_SCREENS_GAH_PT_SET_X, 0, &[], &[]);
-            h.call(EE_SCREENS_GAH_PT_SET_Y, 0, &[], &[]);
-            h.call(EE_SCREENS_GAH_M_CLOSEST, 0, &[], &[f[0], f[1], 0.0]);
-            i[0] = h.net(EE_SCREENS_GAH_PT_X);
-            i[1] = h.net(EE_SCREENS_GAH_PT_Y);
+            // the closest tile's x and y start at 0 (they are in and out: longs in the slots i1 and i2)
+            let o = h.call(EE_SCREENS_GAH_M_CLOSEST, 0, &[], &[f[0], f[1], 0.0]).1;
+            i[0] = i64::from(o[1] as std::ffi::c_long);
+            i[1] = i64::from(o[2] as std::ffi::c_long);
             0
         }
         (EE_SCREENS_GA_OP_MAP, EE_SCREENS_GA_M_PLANE) => {
@@ -378,8 +368,9 @@ pub fn ee_screens_gah_run<C: GaCpp>(
             0
         }
         (EE_SCREENS_GA_OP_EFFECT, _) => {
-            h.call(EE_SCREENS_GAH_FX_CREATE, p, &[i[0]], &[f[0], f[1], f[2]]);
-            h.k(EE_SCREENS_GAH_FX_LOCAL, 0, i[1]);
+            // the effect's handle (32 bits) comes back in i1 and goes to the next case in i2
+            let handle = h.call(EE_SCREENS_GAH_FX_CREATE, p, &[i[0]], &[f[0], f[1], f[2]]).1[1];
+            h.k2(EE_SCREENS_GAH_FX_LOCAL, 0, i[1], handle);
             0
         }
         (EE_SCREENS_GA_OP_TECH, EE_SCREENS_GA_K_TILE_SIZE) => {
@@ -771,25 +762,16 @@ mod tests {
 
     #[test]
     fn point_tile_round_trips_its_kept_values() {
-        let mut fake = Fake {
-            answers: vec![
-                (EE_SCREENS_GAH_PT_CALL, 1),
-                (EE_SCREENS_GAH_PT_TILE, 8),
-                (EE_SCREENS_GAH_PT_X, 5),
-                (EE_SCREENS_GAH_PT_Y, 6),
-            ],
-            ..Fake::default()
-        };
-        let (ret, i, _) = run(&mut fake, EE_SCREENS_GA_OP_POINT_TILE, 0, &[1, 7, 2, 3], &[1.0, 2.0]);
-        assert_eq!((ret, i[1], i[2], i[3]), (1, 8, 5, 6));
-        assert_eq!(
-            &fake.log[..3],
-            &[
-                (EE_SCREENS_GAH_PT_SET_TILE, 0, 7, 0),
-                (EE_SCREENS_GAH_PT_SET_X, 0, 2, 0),
-                (EE_SCREENS_GAH_PT_SET_Y, 0, 3, 0)
-            ]
-        );
+        // the fake leaves the slots as they came: the tile, x and y go in and come back in one call
+        let mut fake = Fake { answers: vec![(EE_SCREENS_GAH_PT_CALL, 1)], ..Fake::default() };
+        let (ret, i, _) = run(&mut fake, EE_SCREENS_GA_OP_POINT_TILE, 0, &[1, 7, 2, -3], &[1.0, 2.0]);
+        assert_eq!((ret, i[1], i[2], i[3]), (1, 7, 2, -3));
+        assert_eq!(fake.log, [(EE_SCREENS_GAH_PT_CALL, 0, 7, 2)]);
+        // the first selected unit likewise
+        let mut fake = Fake { answers: vec![(EE_SCREENS_GAH_FS_CALL, 1)], ..Fake::default() };
+        let (ret, i, _) = run(&mut fake, EE_SCREENS_GA_OP_FIRST_SELECTED, 0, &[9], &[]);
+        assert_eq!((ret, i[0]), (1, 9));
+        assert_eq!(fake.log, [(EE_SCREENS_GAH_FS_CALL, 0, 9, 0)]);
     }
 
     #[test]

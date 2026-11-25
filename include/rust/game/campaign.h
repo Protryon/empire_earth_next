@@ -41,8 +41,6 @@ enum class EeCampaignCpp : uint32_t {
   /// `((std::vector<UWideString>*)p)->push_back(a0)`
   WidePush,
   WideClear,
-  /// `PlatMbsICmp(a0, a1)`
-  MbsICmp,
   BuiltInCampaign,
   AvailablePoints,
   AddPoints,

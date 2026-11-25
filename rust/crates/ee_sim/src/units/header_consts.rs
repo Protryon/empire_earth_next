@@ -143,8 +143,11 @@ mod tests {
         files.sort();
         // the unit constants' enums are Rust's (unit_ids.rs), emitted back as this generated header
         files.push(root().join("include/rust/sim/unit_ids.h"));
-        // and the civilization power ids (tech_consts.rs)
+        // and the civilization power ids (tech_consts.rs), the message ids and the tech tree ids (message_ids.rs,
+        // tech_tree_ids.rs)
         files.push(root().join("include/rust/sim/tech_consts.h"));
+        files.push(root().join("include/rust/sim/message_ids.h"));
+        files.push(root().join("include/rust/sim/tech_tree_ids.h"));
         for path in files {
             if path.extension().and_then(|x| x.to_str()) != Some("h") {
                 continue;

@@ -114,5 +114,8 @@ struct EEUnitSaveContext {
     EEUnitVectorItem* mGoals;
 };
 int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsUnitSaveIo* io);
+// a unit's Load (inLoad) or Save over its parts' records (inDepth 0: RTSUnit's, 1: with EEUnit's, 2: with
+// EEComplexUnit's; EEComplexDoppelganger.cpp)
+long EEUnitFile(bool inLoad, RTSUnit* inUnit, int inDepth, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& ioFile);
 
 #endif

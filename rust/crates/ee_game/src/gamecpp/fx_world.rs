@@ -188,7 +188,7 @@ extern "C" fn screen(preferences: bool) -> u32 {
 extern "C" fn height(point: *const Ge3DPoint) -> f32 {
     // SAFETY: the caller's point
     let at = unsafe { *point };
-    hd(O::MpMeshZ, hp(O::MpWorldMap, 0, &[]), &[], &[at.x, at.y])
+    super::rast::mesh_z(super::rast::world_mesh(), at.x, at.y)
 }
 extern "C" fn mesh() -> *const EeGeTerrainMesh {
     hp(O::MpMeshRust, hp(O::MpWorldMap, 0, &[]), &[]) as *const EeGeTerrainMesh
@@ -317,7 +317,7 @@ fn world() -> EeGfxEffectWorld {
 
 // ---- the manager's world (ee_gfx ffi_manager.rs EeGfxManagerWorld)
 
-extern "C" fn current() -> *mut EeGfxEffectManager {
+pub(crate) extern "C" fn current() -> *mut EeGfxEffectManager {
     hp(O::FwManagerRust, 0, &[]) as *mut EeGfxEffectManager
 }
 extern "C" fn goal_current_player(_: *mut c_void) -> u32 {

@@ -71,13 +71,6 @@ void EEReportLoadFailure(const UString& inMessage, bool inLock, ESChecksum* inCh
     ee_gamecpp_report_load_failure((const char*)inMessage, inLock, inChecksum);
 }
 
-// Lists the display devices: every rasterizer that activates, its screens, and their 16-bit (and supported 32-bit)
-// modes of at least 640x480 that fit three buffers in video memory (at least 0x3e8000 bytes assumed)
-void EEEnumerateDisplayDevices()
-{
-    ee_gamecpp_enumerate_display_devices();
-}
-
 // Starts, restarts or updates the sound of a graphic object's animation frame at a location; returns the
 // referenced sound instance now playing (the given one when nothing changes)
 SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
@@ -185,7 +178,6 @@ int64_t EECore10OpD(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DuErrorAt: return P64((const char*)(*ERRORS)[a[0]]);
     case O::DuDebugOut: ESDebugOut("%s", (const char*)a[0]);
         break;
-    case O::DuHaveUi: return gUIManager != NULL;
     case O::DuSetErrorString: gUIManager->GetMainGameForm()->SetErrorString(UWideString((const char*)a[0]), 0x1c);
         break;
     // the display devices

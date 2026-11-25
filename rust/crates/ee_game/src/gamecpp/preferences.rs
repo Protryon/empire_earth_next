@@ -20,30 +20,31 @@ use crate::app::settings::{
 };
 use crate::app::settings_ffi::PlatConfig;
 
+use super::global_objects as gobj;
 use super::{h, hf, hp, pa, Owned, O, P};
 
 /// The resources' and the system's Korean language id.
 const KOREAN: i64 = 0x412;
 
-/// A string member of the settings: its address and whether it is a `UWideString` (else a `UString`).
+/// A string member of the settings: its offset and whether it is a `UWideString` (else a `UString`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Member {
-    pub op: O,
+    pub off: usize,
     pub wide: bool,
 }
 
 /// The string row `id`'s member (ee_game app settings.rs `EE_APP_SETTINGS_*`): the wide ones, else the narrow
 /// last game or scenario file.
 pub fn member(id: u32) -> Member {
-    let wide = |op| Member { op, wide: true };
+    let wide = |off| Member { off, wide: true };
     match id {
-        EE_APP_SETTINGS_PLAYER_NAME => wide(O::EpPlayerName),
-        EE_APP_SETTINGS_HOST_GAME_NAME => wide(O::EpHostGameName),
-        EE_APP_SETTINGS_LAST_QUICK_SAVE => wide(O::EpLastQuickSave),
-        EE_APP_SETTINGS_LAST_AUTO_SAVE => wide(O::EpLastAutoSave),
-        EE_APP_SETTINGS_MAP_TYPE => wide(O::EpMapType),
-        EE_APP_SETTINGS_LAST_GAME_FILE => Member { op: O::EpLastGameFile, wide: false },
-        _ => Member { op: O::EpLastScenarioFile, wide: false },
+        EE_APP_SETTINGS_PLAYER_NAME => wide(gobj::SET_PLAYER_NAME),
+        EE_APP_SETTINGS_HOST_GAME_NAME => wide(gobj::SET_HOST_GAME_NAME),
+        EE_APP_SETTINGS_LAST_QUICK_SAVE => wide(gobj::SET_LAST_QUICK_SAVE),
+        EE_APP_SETTINGS_LAST_AUTO_SAVE => wide(gobj::SET_LAST_AUTO_SAVE),
+        EE_APP_SETTINGS_MAP_TYPE => wide(gobj::SET_MAP_TYPE),
+        EE_APP_SETTINGS_LAST_GAME_FILE => Member { off: gobj::SET_LAST_GAME_FILE, wide: false },
+        _ => Member { off: gobj::SET_LAST_SCENARIO_FILE, wide: false },
     }
 }
 
@@ -72,14 +73,11 @@ fn copy(m: P, wide: bool, from: P) {
 
 fn fields<'a>(s: P) -> &'a mut EeAppSettingsFields {
     // SAFETY: the settings' plain members (the base), used before the next C++ call that writes them
-    unsafe { &mut *(hp(O::EpSettingsFields, s, &[]) as *mut EeAppSettingsFields) }
+    unsafe { &mut *(s as *mut EeAppSettingsFields) }
 }
 
 fn records(s: P) -> Records {
-    Records {
-        settings: hp(O::EpSettingsFields, s, &[]) as *mut EeAppSettingsFields,
-        options: hp(O::EpOptionsFields, s, &[]) as *mut EeAppOptionsFields,
-    }
+    Records { settings: s as *mut EeAppSettingsFields, options: (s + gobj::SET_OPTIONS) as *mut EeAppOptionsFields }
 }
 
 /// The settings' strings (`s`) and their defaults' (`d`).
@@ -91,15 +89,15 @@ struct Members {
 impl Strings for Members {
     fn get(&mut self, id: u32) -> Vec<u8> {
         let m = member(id);
-        get_text(hp(m.op, self.s, &[]), m.wide)
+        get_text(self.s + m.off, m.wide)
     }
     fn set(&mut self, id: u32, value: &[u8]) {
         let m = member(id);
-        set_text(hp(m.op, self.s, &[]), m.wide, value);
+        set_text(self.s + m.off, m.wide, value);
     }
     fn set_default(&mut self, id: u32) {
         let m = member(id);
-        copy(hp(m.op, self.s, &[]), m.wide, hp(m.op, self.d, &[]));
+        copy(self.s + m.off, m.wide, self.d + m.off);
     }
 }
 
@@ -108,13 +106,13 @@ impl Strings for Members {
 /// game options' assignment reads the world rules, not loaded yet).
 fn default_settings(d: P) {
     let defaults = hp(O::EpDefaultSettings, 0, &[]);
-    for op in [O::EpPlayerName, O::EpHostGameName] {
-        copy(hp(op, d, &[]), true, hp(op, defaults, &[]));
+    for off in [gobj::SET_PLAYER_NAME, gobj::SET_HOST_GAME_NAME] {
+        copy(d + off, true, defaults + off);
     }
     // SAFETY: the defaults' game options' plain members
-    let options = unsafe { &mut *(hp(O::EpOptionsFields, d, &[]) as *mut EeAppOptionsFields) };
+    let options = unsafe { &mut *((d + gobj::SET_OPTIONS) as *mut EeAppOptionsFields) };
     settings::last_options_default(options, ee_sim::tech::tech_ids::ee_tech_epoch_count() as c_long);
-    set_text(hp(O::EpMapType, d, &[]), true, b"Continental");
+    set_text(d + gobj::SET_MAP_TYPE, true, b"Continental");
 }
 
 /// `EEReadSettings`: one part's rows (the settings, or the last game options) read from config.yaml.
@@ -138,7 +136,7 @@ fn config_int(block: &CStr, key: &CStr) -> Option<i32> {
 /// `IsNotKorean`: neither the game resources' language nor the system's is Korean.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_is_not_korean() -> bool {
-    !(h(O::EpResourceLanguage, 0, &[]) == KOREAN || h(O::EpOsLanguage, 0, &[]) == KOREAN)
+    !(h(O::EpResourceLanguage, 0, &[]) == KOREAN || i64::from(ee_base::util::system::ee_util_os_language()) == KOREAN)
 }
 
 /// The texture packs (`EESetTextureResolution`; docs/DATA_FORMATS.md "Texture packs"): resolution 2 draws
@@ -178,7 +176,7 @@ pub extern "C" fn ee_gamecpp_prefs_apply_port(settings: *mut c_void) {
 /// game options -> their result.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_load(prefs: *mut c_void) -> c_long {
-    let s = hp(O::EpPrefsSettings, prefs as P, &[]);
+    let s = prefs as P + gobj::PREFS_SETTINGS;
     let defaults = hp(O::EpDefaultSettings, 0, &[]);
     // port: no saved game size: a full screen game takes the display's size (EEInitializeVideo)
     h(O::EpWindowSizeDefaulted, 0, &[config_int(c"display.resolution", c"width").is_none() as i64]);
@@ -197,17 +195,19 @@ pub extern "C" fn ee_gamecpp_prefs_load(prefs: *mut c_void) -> c_long {
         };
     }
     let kept = [
-        (O::EpRasterizerName, false),
-        (O::EpSierraUserID, true),
-        (O::EpSierraGameName, true),
-        (O::EpWonNetPassword, false),
+        (gobj::SET_RASTERIZER_NAME, false),
+        (gobj::SET_SIERRA_USER_ID, true),
+        (gobj::SET_SIERRA_GAME_NAME, true),
+        (gobj::SET_WON_NET_PASSWORD, false),
     ];
-    for (op, wide) in kept {
-        copy(hp(op, s, &[]), wide, hp(op, defaults, &[]));
+    for (off, wide) in kept {
+        copy(s + off, wide, defaults + off);
     }
     // the game's own location is where it runs from (the data root), never a stored path: a play folder can move
-    for (from, to) in [(O::EpStartupVolume, O::EpInstalledVolume), (O::EpStartupDirectory, O::EpInstalledDirectory)] {
-        let m = hp(to, s, &[]);
+    for (from, to) in
+        [(O::EpStartupVolume, gobj::SET_INSTALLED_VOLUME), (O::EpStartupDirectory, gobj::SET_INSTALLED_DIRECTORY)]
+    {
+        let m = s + to;
         h(from, m, &[]);
         h(O::EpNarrowUpper, m, &[]);
     }
@@ -219,14 +219,14 @@ pub extern "C" fn ee_gamecpp_prefs_load(prefs: *mut c_void) -> c_long {
 /// `LoadGameOptions`: the last game options from config.yaml's game_options block -> 0.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_load_options(prefs: *mut c_void) -> c_long {
-    read_settings(hp(O::EpPrefsSettings, prefs as P, &[]), true);
+    read_settings(prefs as P + gobj::PREFS_SETTINGS, true);
     0
 }
 
 /// `Save`: every setting, then the game options -> the first failure (0 when every value was written).
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_save(prefs: *mut c_void) -> c_long {
-    let result = write_settings(hp(O::EpPrefsSettings, prefs as P, &[]), false);
+    let result = write_settings(prefs as P + gobj::PREFS_SETTINGS, false);
     let options = ee_gamecpp_prefs_save_options(prefs);
     if result != 0 {
         result
@@ -238,16 +238,16 @@ pub extern "C" fn ee_gamecpp_prefs_save(prefs: *mut c_void) -> c_long {
 /// `SaveGameOptions` -> the first failure, else 0.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_save_options(prefs: *mut c_void) -> c_long {
-    write_settings(hp(O::EpPrefsSettings, prefs as P, &[]), true)
+    write_settings(prefs as P + gobj::PREFS_SETTINGS, true)
 }
 
 /// `SetLastGameOptions`: a new random-map game's options (load type 0) kept as the last ones, then the save.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_set_last_options(prefs: *mut c_void, options: *const c_void) {
     // SAFETY: the options' plain members (the base)
-    let load_type = unsafe { (*(hp(O::EoFields, options as P, &[]) as *const EeAppOptionsFields)).mLoadType };
+    let load_type = unsafe { (*(options as P as *const EeAppOptionsFields)).mLoadType };
     if load_type == 0 {
-        h(O::EpAssignLastOptions, hp(O::EpPrefsSettings, prefs as P, &[]), &[options as usize as i64]);
+        h(O::EpAssignLastOptions, prefs as P + gobj::PREFS_SETTINGS, &[options as usize as i64]);
     }
     ee_gamecpp_prefs_save(prefs);
 }
@@ -256,10 +256,10 @@ pub extern "C" fn ee_gamecpp_prefs_set_last_options(prefs: *mut c_void, options:
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_init_defaults() {
     let d = hp(O::EpDefaultSettings, 0, &[]);
-    for op in [O::EpHostGameName, O::EpPlayerName, O::EpSierraUserID, O::EpSierraGameName] {
-        h(O::EpUnknownName, hp(op, d, &[]), &[]);
+    for off in [gobj::SET_HOST_GAME_NAME, gobj::SET_PLAYER_NAME, gobj::SET_SIERRA_USER_ID, gobj::SET_SIERRA_GAME_NAME] {
+        h(O::EpUnknownName, d + off, &[]);
     }
-    set_text(hp(O::EpWonNetPassword, d, &[]), false, b"");
+    set_text(d + gobj::SET_WON_NET_PASSWORD, false, b"");
 }
 
 // The renderer's and the mixer's settings (ee_render gx, ee_audio mixer: their C ABI).
@@ -331,10 +331,13 @@ mod tests {
 
     #[test]
     fn the_string_rows_name_their_members() {
-        assert_eq!(member(EE_APP_SETTINGS_PLAYER_NAME), Member { op: O::EpPlayerName, wide: true });
-        assert_eq!(member(EE_APP_SETTINGS_MAP_TYPE), Member { op: O::EpMapType, wide: true });
-        assert_eq!(member(EE_APP_SETTINGS_LAST_GAME_FILE), Member { op: O::EpLastGameFile, wide: false });
-        assert_eq!(member(EE_APP_SETTINGS_LAST_SCENARIO_FILE), Member { op: O::EpLastScenarioFile, wide: false });
+        assert_eq!(member(EE_APP_SETTINGS_PLAYER_NAME), Member { off: gobj::SET_PLAYER_NAME, wide: true });
+        assert_eq!(member(EE_APP_SETTINGS_MAP_TYPE), Member { off: gobj::SET_MAP_TYPE, wide: true });
+        assert_eq!(member(EE_APP_SETTINGS_LAST_GAME_FILE), Member { off: gobj::SET_LAST_GAME_FILE, wide: false });
+        assert_eq!(
+            member(EE_APP_SETTINGS_LAST_SCENARIO_FILE),
+            Member { off: gobj::SET_LAST_SCENARIO_FILE, wide: false }
+        );
         assert!(member(EE_APP_SETTINGS_LAST_AUTO_SAVE).wide && member(EE_APP_SETTINGS_LAST_QUICK_SAVE).wide);
         assert!(member(EE_APP_SETTINGS_HOST_GAME_NAME).wide);
     }

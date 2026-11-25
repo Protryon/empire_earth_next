@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/base/math.h"
+#include "rust/data/tables.h"
 #include "rust/sim/astar.h"
 #include "rust/sim/world.h"
 
@@ -4622,6 +4623,15 @@ constexpr static const int32_t EE_UNITS_DOP_CONTACTS_UNIT = 343;
 /// the scratch contacts' entry `b`'s unit's `AddContact((EEComplexUnit*)a)`
 constexpr static const int32_t EE_UNITS_DOP_CONTACTS_ADD = 344;
 
+/// the doppelganger's `EeUnitsComplexDopFields` base
+constexpr static const int32_t EE_UNITS_DOP_FIELDS = 10000;
+
+/// `dynamic_cast<EEComplexDoppelganger*>(a)`'s `EeUnitsComplexDopFields` base
+constexpr static const int32_t EE_UNITS_DOP_OTHER_FIELDS = 10001;
+
+/// `mTransformation = dynamic_cast<EEComplexDoppelganger*>(a)->mTransformation`
+constexpr static const int32_t EE_UNITS_DOP_COPY_TRANSFORMATION = 10002;
+
 /// the members the loads, saves and copies name (`EE_UNITS_DOP_READ_FIELD`'s and the others' `b`)
 constexpr static const int64_t EE_UNITS_DOP_FIELD_PACKED_HIT_POINTS = 0;
 
@@ -6473,30 +6483,7 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_X_FIND_PLAIN = 602;
 /// `a->mActiveGroup->TellGroup(a, f[0..3])`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_TELL_GROUP = 603;
 
-/// the file's `Write((uint32_t)i[1])`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_U32 = 604;
-
-/// the file's `Write((int32_t)i[1])`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_I32 = 605;
-
-/// the file's `Write(float of the bits i[1])`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_F32 = 606;
-
-/// the file's `Write(i[1] != 0)`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_WRITE_BOOL = 607;
-
-/// the file's `Read` of a `uint32_t` from and into `i[1]`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_U32 = 608;
-
-/// the file's `Read` of an `int32_t`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_I32 = 609;
-
-/// the file's `Read` of a float (its bits)
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_F32 = 610;
-
-/// the file's `Read` of a `bool`
-constexpr static const int32_t EE_UNITS_GOAL_HOST_X_READ_BOOL = 611;
-
+/// (604..611: the typed file calls, Rust's: goal_obj.rs file_call)
 /// the context's `mText != NULL`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_X_HAS_TEXT = 612;
 
@@ -15352,9 +15339,6 @@ constexpr static const int32_t EE_UNITS_US_UNIT_ID = 10;
 /// unit `a`'s `GetChecksum(b)`
 constexpr static const int32_t EE_UNITS_US_CHECKSUM = 11;
 
-/// `PlayerWords(` player `a, out)` (its 17 stances)
-constexpr static const int32_t EE_UNITS_US_PLAYER_WORDS = 12;
-
 /// `gWorld.GetNumUpdateUnits()`
 constexpr static const int32_t EE_UNITS_US_ORDER_COUNT = 13;
 
@@ -15381,6 +15365,18 @@ constexpr static const int32_t EE_UNITS_US_F_LOCATION = 4003;
 
 /// the unit's `EeUnitsRtsUnitFields`, `EeUnitsUnitFields`, `EeUnitsComplexUnitFields` base subobjects (`b` 0, 1, 2)
 constexpr static const int32_t EE_UNITS_US_F_FIELDS = 4004;
+
+/// `unit->mInUnitStore`
+constexpr static const int32_t EE_UNITS_US_B_IN_STORE = 10300;
+
+/// `unit->mInUnitStore = b != 0`
+constexpr static const int32_t EE_UNITS_US_B_SET_IN_STORE = 10301;
+
+/// `unit->mPlayer` (the RTSUnit member, whatever the object's kind)
+constexpr static const int32_t EE_UNITS_US_B_RAW_PLAYER = 10302;
+
+/// `player->mEnemies[b]` as a word
+constexpr static const int32_t EE_UNITS_US_B_ENEMY = 10303;
 
 /// `gWorld.mPlayers[c]`
 constexpr static const int32_t EE_UNITS_UB_PLAYER_AT = 1;
@@ -15841,9 +15837,6 @@ constexpr static const int32_t EE_UNITS_UB_UPGRADE_BASE_HIT_POINTS = 153;
 /// upgrade `a`'s `GetMaxHitPoints()`
 constexpr static const int32_t EE_UNITS_UB_UPGRADE_MAX_HIT_POINTS = 154;
 
-/// the hit point functor = `EEHitPointUpgrader(c, the float of the bits d)`; its address
-constexpr static const int32_t EE_UNITS_UB_MAKE_UPGRADER = 155;
-
 /// upgrade `a`'s `mMaxHitPoints = c`
 constexpr static const int32_t EE_UNITS_UB_SET_UPGRADE_MAX_HIT_POINTS = 156;
 
@@ -15870,12 +15863,6 @@ constexpr static const int32_t EE_UNITS_UB_PENDING_UNIT = 163;
 
 /// `gWorld.mNumPlayers`
 constexpr static const int32_t EE_UNITS_UB_NUM_PLAYERS = 164;
-
-/// functor `a`'s (an `EEHitPointUpgrader`) `mUnitType`
-constexpr static const int32_t EE_UNITS_UB_UPGRADER_TYPE = 165;
-
-/// the bits of functor `a`'s (an `EEHitPointUpgrader`) `mRatio`
-constexpr static const int32_t EE_UNITS_UB_UPGRADER_RATIO = 166;
 
 /// complex unit `a`'s `GetNumCargoUnits()`
 constexpr static const int32_t EE_UNITS_UB_NUM_CARGO = 167;
@@ -16037,8 +16024,6 @@ constexpr static const int32_t EE_UNITS_UB_DO_UPDATE_UNIT_TILE = 11;
 constexpr static const int32_t EE_UNITS_UB_DO_WAITING_GATHERER = 12;
 
 constexpr static const int32_t EE_UNITS_UB_DO_UPGRADE_HIT_POINTS = 13;
-
-constexpr static const int32_t EE_UNITS_UB_DO_HIT_POINT_APPLY = 14;
 
 constexpr static const int32_t EE_UNITS_UB_DO_FOR_EACH_UNIT_OF = 15;
 
@@ -17241,19 +17226,21 @@ struct EeUnitsGhostWalls {
   float rotation;
 };
 
-/// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object.
+/// `EEUnitGoal`'s members (the original's +0x04..+0x1d after its vptr), the head of every goal object. The C++
+/// `class EEUnitGoal` derives from it and reads the members by their C++ names (units round 11).
+///
 struct EeUnitsGoalBase {
-  bool is_active;
-  uint8_t kind;
+  bool mIsActive;
+  uint8_t mKind;
   /// `mAction` (the action the goal starts: `kActionIdle` when made)
-  unsigned long action;
-  unsigned long start_time;
-  unsigned long creation_time;
+  unsigned long mAction;
+  unsigned long mStartTime;
+  unsigned long mCreationTime;
   /// `mID`: the goal's number (`sGoalCounter`'s value when made)
-  unsigned long id;
-  long path_attempts;
-  bool b1c;
-  bool b1d;
+  unsigned long mID;
+  long mPathAttempts;
+  bool mB1C;
+  bool mB1D;
 };
 
 /// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
@@ -17286,20 +17273,6 @@ struct EeUnitsLocationGoal {
 
 /// The world host the context-free calls use (EEUGRust.cpp's operation callback, registered at start-up).
 using EeUnitsGoalHostOp = int64_t(*)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
-
-/// The C++ host of the codec and the update (`EEGoalQueueContainer.cpp`'s table).
-struct EeGoalQueueHost {
-  void *context;
-  int32_t (*write_u32)(void *context, uint32_t value);
-  int32_t (*write_u8)(void *context, uint8_t value);
-  int32_t (*write_bool)(void *context, bool value);
-  int32_t (*read_u32)(void *context, uint32_t *value);
-  int32_t (*read_u8)(void *context, uint8_t *value);
-  int32_t (*read_bool)(void *context, bool *value);
-  int32_t (*save_goal)(void *context, uint64_t goal);
-  int32_t (*load_goal)(void *context, uint8_t kind, uint64_t *goal);
-  void (*refresh)(void *context);
-};
 
 /// One host operation's values.
 struct EeUnitsGroupIo {
@@ -19537,23 +19510,30 @@ void ee_units_gq_goal_op(EeUnitsGoalQueue *q,
 /// `q` is a live queue.
 unsigned long ee_units_gq_timer(EeUnitsGoalQueue *q, int32_t op, long time);
 
-/// The container's save (`save`): the status.
+/// `EEGoalQueueContainer::Save(major, minor, file)` (`save` over the C++ file): the status.
 ///
 /// # Safety
-/// `q` is a live queue, `host` a valid table for the call.
-int32_t ee_units_gq_save(const EeUnitsGoalQueue *q, const EeGoalQueueHost *host);
+/// `q` is a live queue, `file` a live C++ `FSFile*`.
+long ee_units_gq_save_file(const EeUnitsGoalQueue *q,
+                           void *file,
+                           unsigned long major,
+                           unsigned long minor);
 
-/// The container's load (`load`): the status.
+/// `EEGoalQueueContainer::Load(major, minor, file)` (`load` over the C++ file): the status.
 ///
 /// # Safety
-/// `q` is a live queue, `host` a valid table for the call.
-int32_t ee_units_gq_load(EeUnitsGoalQueue *q, const EeGoalQueueHost *host);
+/// `q` is a live queue, `file` a live C++ `FSFile*`.
+long ee_units_gq_load_file(EeUnitsGoalQueue *q,
+                           void *file,
+                           unsigned long major,
+                           unsigned long minor);
 
-/// The unit's goal queues' per-tick update (`update_unit`).
+/// The unit's goal queues' per-tick update (`update_unit`, the refresh the unit's `RefreshGoals` and
+/// `RefreshActiveGoal`).
 ///
 /// # Safety
-/// `unit` is a live complex unit, `host` a valid table for the call.
-void ee_units_goal_queues_update(uint64_t unit, const EeGoalQueueHost *host);
+/// `unit` is a live complex unit.
+void ee_units_goal_queues_tick(uint64_t unit);
 
 /// The length of a unit's queue `index`; -1 when it has no such queue.
 int64_t ee_units_goal_queue_len(uint64_t unit, uint32_t index);
@@ -19892,17 +19872,18 @@ void ee_units_upgrade_set_range(EeUnitsUnitClassUpgradeFields *upgrade,
                                 const EeUnitsUnitClassFields *projectile,
                                 float value);
 
-/// `ChangeLevel` over the records ([`change_level_records`]); `step_factors` the class's table's 16 (null: none).
+/// `ChangeLevel` over the records ([`change_level_records`]); `table` the class's improvement table (null: none; its
+/// factors' offsets are the 16 step factors).
 ///
 /// # Safety
-/// The pointers name live records (`projectile`, `step_factors` may be null); `levels` points to 16 words.
+/// The pointers name live records (`projectile`, `table` may be null); `levels` points to 16 words.
 void ee_units_improve_change_level_records(const EeUnitsUnitClassFields *class_,
-                                           const float *step_factors,
+                                           const EeDataUpgradeFields *table,
                                            EeUnitsUnitClassUpgradeFields *upgrade,
                                            const EeUnitsUnitClassFields *own,
                                            const EeUnitsUnitClassFields *projectile,
                                            int32_t *levels,
-                                           int32_t *total_cost,
+                                           long *total_cost,
                                            int32_t improvement,
                                            int32_t delta);
 
@@ -19911,7 +19892,7 @@ void ee_units_improve_change_level_records(const EeUnitsUnitClassFields *class_,
 /// # Safety
 /// As [`ee_units_improve_change_level_records`].
 int32_t ee_units_improve_gain_records(const EeUnitsUnitClassFields *class_,
-                                      const float *step_factors,
+                                      const EeDataUpgradeFields *table,
                                       const EeUnitsUnitClassUpgradeFields *upgrade,
                                       const int32_t *levels,
                                       int32_t level,
@@ -21425,15 +21406,6 @@ int64_t ee_units_ucb_call(int32_t what,
 /// `flag` is a live bool.
 int32_t ee_units_ucb_wall_piece_part(int32_t index, bool *flag);
 
-/// `EEUCNote`'s constructor: whether the note records.
-uint8_t ee_units_ucbd_begin();
-
-/// `EEUCNote`'s destructor: its words folded (`on` its constructor's answer).
-///
-/// # Safety
-/// `words` holds `count` words (or is NULL with 0).
-void ee_units_ucbd_end(uint8_t on, const uint32_t *words, size_t count);
-
 extern int64_t ee_units_ucg_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -21662,6 +21634,43 @@ bool ee_units_ucn_faces_target(uint64_t class_,
                                uint64_t target,
                                bool tolerance);
 
+/// `FacesPoint` within its host-read scope (slot 0); its CBQR record (the point's x and y bits, the tolerance) when
+/// outermost (units round 11; was EEUnitClass.cpp's).
+bool ee_units_ucn_faces_point(uint64_t class_,
+                              uint64_t unit,
+                              float x,
+                              float y,
+                              bool tolerance);
+
+/// `FindImpactUnit` within its host-read scope (slot 0); its CBQR record (the attack goal's target, the unit found's
+/// id, the owner's firing-high flag or all ones without an owner) when outermost (units round 11).
+uint64_t ee_units_ucn_impact_unit(uint64_t unit);
+
+/// `EETurnGatePart(transformation, direction, index)` (note 24): the piece's animation; a turning piece faces its
+/// yaw (`SetOrientationYPR(yaw, 0, 0)`).
+///
+/// # Safety
+/// `t` is a live transformation.
+long ee_units_ucn_turn_gate_part(EeGeTransformation *t,
+                                 int32_t direction,
+                                 int32_t index);
+
+/// `EEUnitClass::GetPart(gate, index)` (note 29): piece 0..4 of a gate along its linked chain (2 the gate itself, 4
+/// the last linked, 0 the one before it, 3 and 1 the fourth and second parts; 0 for another index).
+uint64_t ee_units_ucn_gate_part(uint64_t class_,
+                                uint64_t gate,
+                                long index);
+
+/// `FireShot(unit)`: the world plan's shot (ee_combat world.rs fire_shot over the world host), then its CBXA record
+/// with the shot's target.
+void ee_units_ucn_fire_shot(uint64_t class_,
+                            uint64_t unit);
+
+/// `Attacked(unit)`: the world plan's reaction (world.rs attacked), then its CBXA record with the last attacker's id
+/// from before it (0: none).
+void ee_units_ucn_attacked(uint64_t class_,
+                           uint64_t unit);
+
 extern int64_t ee_units_ucp_host(int32_t op,
                                  void *class_,
                                  void *unit,
@@ -21872,6 +21881,33 @@ uint64_t ee_units_us_check(uint64_t at);
 /// `record` is writable, `unit` a live `RTSUnit`, `player` the list's player object (or 0).
 void ee_units_store_fill(EeUnitRecord *record, uint64_t unit, uint32_t owner, uint64_t player);
 
+/// `EEUnitStoreInsert(unit, owner, player)` ([`insert`]).
+void ee_units_store_insert_object(uint64_t unit, uint32_t owner, uint64_t player);
+
+/// `EEUnitStoreInsertUnlisted(unit)` ([`insert_unlisted`]).
+void ee_units_store_insert_unlisted_object(uint64_t unit);
+
+/// `EEUnitStoreRemove(unit)` ([`remove`]).
+void ee_units_store_remove_object(uint64_t unit);
+
+/// `EEUnitStoreLinked(unit)` ([`linked`]).
+void ee_units_store_linked(uint64_t unit);
+
+/// `EEUnitStoreClearPlayer(player)`: its list's records and its diplomacy table out of the store.
+void ee_units_store_clear_player_object(uint64_t player);
+
+/// The combat reads' fill of a unit out of every list ([`object_record`]).
+///
+/// # Safety
+/// `out` is writable, `object` a live unit.
+void ee_combat_host_unit_record(uint64_t object, EeUnitRecord *out);
+
+/// The combat reads' table of a player without one: its id and enemy words.
+///
+/// # Safety
+/// `id` and `enemies` (the player count) are writable, `object` a live `EEPlayer`.
+void ee_combat_host_player_table(uint64_t object, uint32_t *id, uint32_t *enemies);
+
 /// `EEUnitOrderReset()`: the update order from the world's list.
 void ee_units_order_reset_world();
 
@@ -22076,6 +22112,14 @@ void ee_units_uu_slot_tile(int32_t x, int32_t y, int32_t direction, int32_t (*ou
 /// `EEOrientWallPiece`'s frame set and yaw.
 EeUnitsUuWallPiece ee_units_uu_wall_piece(int32_t corner);
 
+/// `EEOrientWallPiece(transformation, corner, raised)`: the piece's frame set; a turning piece faces its yaw
+/// (`SetOrientationYPR(yaw, 0, 0)`; the raised corners are unused, as in the original).
+///
+/// # Safety
+/// `t` is a live transformation.
+long ee_units_uu_orient_wall_piece(EeGeTransformation *t,
+                                   int32_t corner);
+
 /// `EEIsCornerBlocked` (23).
 uint8_t ee_units_uu_is_corner_blocked(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
@@ -22210,8 +22254,8 @@ int32_t ee_units_uu_extend_wall_line(const void *tiles,
 /// `EEPickWallPieces`: one piece per tile into `out`.
 ///
 /// # Safety
-/// `tiles` a live tile vector; `out` holds as many `int32_t`s.
-void ee_units_uu_pick_wall_pieces(uint64_t map, const void *tiles, int32_t *out);
+/// `tiles` a live tile vector; `out` holds as many `long`s.
+void ee_units_uu_pick_wall_pieces(uint64_t map, const void *tiles, long *out);
 
 /// `EEMakeWallJunctions`.
 ///

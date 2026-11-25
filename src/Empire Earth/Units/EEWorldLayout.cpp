@@ -112,11 +112,7 @@ void EEWorldLayoutRegister()
     theLayout.complex_location = offsetof(EEComplexUnit, mPhysicalModel) + theLocation;
     theLayout.complex_cargo = offsetof(EEComplexUnit, mCargo);
     theLayout.complex_build_queue = offsetof(EEComplexUnit, mBuildQueue);
-    theLayout.build_entry_stride = sizeof(EEProductionEntry);
-    theLayout.build_entry_technology = offsetof(EEProductionEntry, mTechnology);
     theLayout.complex_goal_queues = offsetof(EEComplexUnit, mGoalQueues);
-    theLayout.goal_kind = offsetof(EEUnitGoal, mKind);
-    theLayout.goal_id = offsetof(EEUnitGoal, mID);
     theLayout.action_type = offsetof(EEUnitAction, mType);
     theLayout.player_color = offsetof(EEPlayer, mColor);
     theLayout.player_first_unit = offsetof(EEPlayer, mFirstUnit);
@@ -168,8 +164,7 @@ void EEWorldLayoutRegister()
     theLayout.node_data_unit_classes = offsetof(RTSTechTreeNodeData, mUnitClasses);
     theLayout.tech_host = (uint64_t)(uintptr_t)&EETechHost;
     theLayout.cp_fields = BaseOffset<EEComputerPlayer, EeCpFields>();
-    theLayout.stats_unit_class = offsetof(EEUnitClassUpgrade, mUnitClass);
-    theLayout.stats_button = offsetof(EEUnitClassUpgrade, mButton);
+    theLayout.stats_links = BaseOffset<EEUnitClassUpgrade, EeUnitsUnitClassUpgradeLinks>();
     theLayout.physics_pointer = (uint64_t)(uintptr_t)&gPhysics;   // the units' round 1 (the game time, the tick)
     theLayout.physics_saved = BaseOffset<EEPhysics, EeUnitsPhysicsSaved>();
     // the units' saves (the units' state lane: unit_save_views.rs)
@@ -191,10 +186,8 @@ void EEWorldLayoutRegister()
     theLayout.complex_heal_effect = offsetof(EEComplexUnit, mHealEffect);
     theLayout.complex_angular_velocity = offsetof(EEComplexUnit, mAngularVelocity);
     theLayout.complex_orientation = offsetof(EEComplexUnit, mOrientation);
-    theLayout.build_entry_flag = offsetof(EEProductionEntry, mFlag);
     theLayout.herd_id = offsetof(EEHerd, mID);
-    theLayout.class_projectile_class = offsetof(EEUnitClass, mProjectileClass);
-    theLayout.class_effects = offsetof(EEUnitClass, mAttachedEffect);
+    theLayout.class_links = BaseOffset<EEUnitClass, EeUnitsUnitClassLinks>();
     theLayout.active_group_fields = offsetof(EEActiveGroup, mFields);   // the group objects (group_obj.rs)
     theLayout.active_group_goal = offsetof(EEActiveGroup, mGoal);
     theLayout.cp_placement = offsetof(EEComputerPlayer, mPlacement) - BaseOffset<EEComputerPlayer, EEPlayer>();
@@ -202,8 +195,6 @@ void EEWorldLayoutRegister()
     theLayout.placement_rust = offsetof(EECPPlacement, rust);
     theLayout.player_group_lists = offsetof(EEPlayer, mGroupLists);   // the groups lane, round 2 (group_obj.rs)
     theLayout.player_lists = offsetof(EEPlayer, mLists);   // (player_body.rs)
-    if (offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect) != 28 * sizeof(void*))
-        Fail("the class's 29 effect pointers are not contiguous");
     if (!ee_world_set_layout(&theLayout))
         Fail("Rust refused the layout (a stale rust/sim/world.h, or a second, different layout)");
 }

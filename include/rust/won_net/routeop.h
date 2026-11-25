@@ -169,7 +169,9 @@ constexpr static const int32_t EE_WON_RTR_BAD_USER = 6;
 constexpr static const int32_t EE_WON_RTR_OP_CLIENT = 7;
 
 /// A routing op, as the C++ `RoutingOp` holds it.
-/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none).
+/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none); the third a firewall
+/// check's listening socket (the deleted `RoutingDetectFirewallOp::mListenSocket`: a `BlockingSocket*` as its
+/// `RefCount*` with a reference, 0 for none; routecpp.rs, R6 WON lobby and network round 36).
 struct EeWonRouteOp;
 
 /// Receives one recipient id.

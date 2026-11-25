@@ -5,6 +5,7 @@
 //! [`super::editor`]'s; the C++ objects are reached through [`super::sed_host`].
 #![allow(clippy::unnecessary_cast)] // c_long and c_ulong are 32 bits on Windows, 64 on LP64
 
+use crate::gamecpp as gc;
 use std::ffi::{c_long, c_ulong};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -130,21 +131,21 @@ pub fn two_longs(text: &str) -> Option<(c_long, c_long)> {
 pub fn unit_ref(word: &str) -> c_ulong {
     let Some(rest) = word.strip_prefix('@') else { return strtoul_0(word) as c_ulong };
     let Some((tx, ty)) = two_longs(rest) else { return 0xffff_ffff };
-    if h(O::MapPresent, 0, &[]) == 0 {
+    if gc::h(gc::O::EcHasMap, 0, &[]) == 0 {
         return 0xffff_ffff;
     }
     let tile = h(O::MapTile, 0, &[tx as i64, ty as i64]) as usize;
     let mut id: c_ulong = 0xffff_ffff;
-    let mut n = if tile != 0 { h(O::TileFirstNode, tile, &[]) as usize } else { 0 };
+    let mut n = if tile != 0 { gc::h(gc::O::TileUnits, tile, &[]) as usize } else { 0 };
     while n != 0 {
-        let u = h(O::NodeUnit, n, &[]) as usize;
+        let u = gc::h(gc::O::MmNodeUnit, n, &[]) as usize;
         if u != 0 {
             let p = h(O::NodeUnitPlayer, u, &[]) as usize;
             if p != 0 && h(O::PlayerId, p, &[]) != 0 {
                 id = h(O::NodeUnitId, u, &[]) as c_ulong;
             }
         }
-        n = h(O::NodeNext, n, &[]) as usize;
+        n = gc::h(gc::O::MmNodeNext, n, &[]) as usize;
     }
     id
 }
@@ -153,7 +154,7 @@ pub fn unit_ref(word: &str) -> c_ulong {
 /// (a farm ghost on its slot), at the tile's centre (an even size: its corner) at the mesh's height, FillSquare
 /// deciding whether it can be placed, its tile from its class.
 fn put_ghosts(tx: c_long, ty: c_long) {
-    h(O::GhostsLock, 0, &[]);
+    gc::h(gc::O::RoGhostLock, 0, &[]);
     h(O::GhostsChanged, 0, &[]);
     let n = h(O::GhostCount, 0, &[]) as c_ulong;
     for i in 0..n {
@@ -184,13 +185,13 @@ fn put_ghosts(tx: c_long, ty: c_long) {
             h(O::GhostSetCanPlace, ghost, &[0]);
         }
     }
-    h(O::GhostsUnlock, 0, &[]);
+    gc::h(gc::O::RoGhostUnlock, 0, &[]);
 }
 
 /// The ghosts' tiles and whether each can be placed (the step's output).
 fn ghost_text() -> String {
     let mut s = "  ghosts".to_string();
-    h(O::GhostsLock, 0, &[]);
+    gc::h(gc::O::RoGhostLock, 0, &[]);
     for i in 0..h(O::GhostCount, 0, &[]) {
         let ghost = h(O::GhostAt, 0, &[i]) as usize;
         s += &format!(
@@ -201,15 +202,15 @@ fn ghost_text() -> String {
             if h(O::GhostCanPlace, ghost, &[]) != 0 { "+" } else { "-" }
         );
     }
-    h(O::GhostsUnlock, 0, &[]);
+    gc::h(gc::O::RoGhostUnlock, 0, &[]);
     s
 }
 
 /// The ghosts cleared (the move's and the placement's end).
 fn clear_ghosts() {
-    h(O::GhostsLock, 0, &[]);
+    gc::h(gc::O::RoGhostLock, 0, &[]);
     h(O::GhostsClear, 0, &[]);
-    h(O::GhostsUnlock, 0, &[]);
+    gc::h(gc::O::RoGhostUnlock, 0, &[]);
 }
 
 /// An elevation file's heights: a ridge of land rising to 300 across the middle, water down to -200 at the two
@@ -365,13 +366,13 @@ pub fn step(w: &[String]) -> Step {
         }),
         "units" => Box::new(|out: &mut Vec<String>| {
             // every unit's id, type, player and tile (no hit points: they follow the epochs)
-            h(O::PhysicsFlush, 0, &[]);
-            for i in 0..h(O::WorldNumPlayers, 0, &[]) {
-                let p = h(O::WorldPlayersAt, 0, &[i]) as usize;
+            crate::physics::ee_physics_flush_world(crate::gamecpp::globals::get!(gPhysics));
+            for i in 0..gc::h(gc::O::MmNumPlayers, 0, &[]) {
+                let p = gc::h(gc::O::SsWorldPlayer, 0, &[i]) as usize;
                 if p == 0 {
                     continue;
                 }
-                let mut u = h(O::PlayerFirstUnit, p, &[]) as usize;
+                let mut u = gc::h(gc::O::PlFirstUnit, p, &[]) as usize;
                 while u != 0 {
                     out.push(format!(
                         "  unit {} type={} player={i} tile={},{}",
@@ -380,7 +381,7 @@ pub fn step(w: &[String]) -> Step {
                         h(O::UnitTileX, u, &[]) as c_long,
                         h(O::UnitTileY, u, &[]) as c_long
                     ));
-                    u = h(O::UnitNext, u, &[]) as usize;
+                    u = gc::h(gc::O::UnNext, u, &[]) as usize;
                 }
             }
         }),
@@ -416,7 +417,7 @@ pub fn step(w: &[String]) -> Step {
             if a == 0 {
                 return;
             }
-            h(O::GhostsLock, 0, &[]);
+            gc::h(gc::O::RoGhostLock, 0, &[]);
             for k in 0..h(O::GhostCount, 0, &[]) {
                 let ghost = h(O::GhostAt, 0, &[k]) as usize;
                 let t = placed(f(3), l(1) as f32 + 0.5, l(2) as f32 + 0.5, tile_height(l(1), l(2)));
@@ -425,7 +426,7 @@ pub fn step(w: &[String]) -> Step {
                 h(O::GhostSetTileY, ghost, &[l(2) as i64]);
                 h(O::GhostSetCanPlace, ghost, &[1]);
             }
-            h(O::GhostsUnlock, 0, &[]);
+            gc::h(gc::O::RoGhostUnlock, 0, &[]);
             // SAFETY: the unit tab's and the action's Rust objects
             unsafe {
                 x::ee_screens_seun_set_under_mouse(x::unit_tab(), -1);
@@ -497,7 +498,7 @@ pub fn step(w: &[String]) -> Step {
         }),
         "placeghost" | "drop" => Box::new(|out: &mut Vec<String>| {
             // placeghost PLAYER [UNIT] | drop [UNIT]
-            h(O::PhysicsFlush, 0, &[]); // the units placed before are in the world, as a person finds them
+            crate::physics::ee_physics_flush_world(crate::gamecpp::globals::get!(gPhysics)); // the units placed before are in the world, as a person finds them
             let screen = x::unit_tab();
             let word = if c == "drop" { 1 } else { 2 };
             let under = if w.len() > word { unit_ref(&w[word]) as i32 } else { -1 };
@@ -693,7 +694,9 @@ pub fn step(w: &[String]) -> Step {
             }
             out.push(format!("  export '{}'", ht(O::SmExportFileName, m, 0)));
         }),
-        "seed" => Box::new(|out: &mut Vec<String>| out.push(format!("  seed {}", h(O::RandomSeed, 0, &[]) as c_long))),
+        "seed" => Box::new(|out: &mut Vec<String>| {
+            out.push(format!("  seed {}", gc::h(gc::O::UiRandomSeed, 0, &[]) as c_long))
+        }),
         "erefresh" => Box::new(|_: &mut Vec<String>| x::trigger_sub_slot(2, EE_SCREENS_SETS_SCREEN_REFRESH)),
         "effectstate" => Box::new(|out: &mut Vec<String>| d::effect_state(out)),
         "ui" => Box::new(|out: &mut Vec<String>| d::controls_digest(w1 == "c", out)),
@@ -929,8 +932,8 @@ pub fn step(w: &[String]) -> Step {
                     h(O::FormClearSelection, e, &[]);
                 }
                 _ => {
-                    let u =
-                        h(O::ResolveUnit, 0, &[unit_ref(w.get(2).map_or("", |s| s.as_str())) as u32 as i64]) as usize;
+                    let u = gc::h(gc::O::EcResolve, 0, &[unit_ref(w.get(2).map_or("", |s| s.as_str())) as u32 as i64])
+                        as usize;
                     if u != 0 && w1 == "add" {
                         h(O::FormSelectUnit, e, &[u as i64]);
                     } else if u != 0 {
@@ -1005,7 +1008,7 @@ pub fn step(w: &[String]) -> Step {
         }),
         "digest" => Box::new(|out: &mut Vec<String>| {
             // the world flushed first: the physics thread flushes it on its own clock otherwise
-            h(O::PhysicsFlush, 0, &[]);
+            crate::physics::ee_physics_flush_world(crate::gamecpp::globals::get!(gPhysics));
             d::digest(w1, out);
         }),
         _ => return Step::Unknown,

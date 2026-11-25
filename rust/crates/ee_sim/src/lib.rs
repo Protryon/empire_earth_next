@@ -17,16 +17,22 @@ pub mod combat;
 pub mod cp;
 /// The crate ee_formations before the restructure.
 pub mod formations;
+/// The game network message type ids for the C++ headers.
+pub mod message_ids;
 /// The crate ee_netmsg before the restructure.
 pub mod netmsg;
 /// The crate ee_rmap before the restructure.
 pub mod rmap;
+/// The save versions' predicates (EESaveHas*), under their C++ names.
+pub mod save_versions;
 /// The crate ee_scenario before the restructure.
 pub mod scenario;
 /// The crate ee_tech before the restructure.
 pub mod tech;
 /// The civilization power ids and the calamity capture event ids for the C++ headers.
 pub mod tech_consts;
+/// The tech tree's named ids (epochs, techs, prerequisite bits) for the C++ headers.
+pub mod tech_tree_ids;
 /// The units' named constants (unit types, categories, families, class flags, action and trigger ids) for the C++ headers.
 pub mod unit_ids;
 /// The crate ee_units before the restructure.

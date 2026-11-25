@@ -48,7 +48,7 @@ struct EEWonNet {
     ~EEWonNet() { ee_won_wonnet_free(this->mRust); }
     EeWonNetObjects* O() const { return ee_won_wonnet_objects(this->mRust); }
     RefCount* Routing() const { return static_cast<RefCount*>(O()->routing); }
-    AsyncOp* LoginOp() const { return static_cast<GetCertOp*>(static_cast<RefCount*>(O()->login_op)); }
+    AsyncOp* LoginOp() const { return static_cast<RustServerOp*>(static_cast<RefCount*>(O()->login_op)); }
     AsyncOp* DirOp() const { return static_cast<RustServerOp*>(static_cast<RefCount*>(O()->dir_op)); }
     void* AccountOp() const { return static_cast<RustServerOp*>(static_cast<RefCount*>(O()->account_op)); }
     // `mRouting = inNew` as the SmartPtr member was assigned
