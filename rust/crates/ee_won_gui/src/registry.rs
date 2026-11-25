@@ -329,7 +329,9 @@ mod tests {
         let pane2 = ee_won_pane_new((w + 2048) as *mut c_void, Some(rec));
         use crate::ctobj::EeWonCtCall as C;
         use crate::paneobj::EeWonPaneCall as P;
-        let ct_cases: [(O, C, [isize; 3]); 12] = [
+        // (AddedToParent is Component's own in Rust since round 38, which reads the parent the stand-in world has not:
+        // the LAN game and the tour run it)
+        let ct_cases: [(O, C, [isize; 3]); 11] = [
             (O::BaseSizeChanged, C::SizeChanged, [0, 0, 0]),
             (O::BaseMouseDown, C::MouseDown, [5, 6, 1]),
             (O::BaseMouseUp, C::MouseUp, [5, 6, 0]),
@@ -337,7 +339,6 @@ mod tests {
             (O::BaseMouseMove, C::MouseMove, [7, 9, 0]),
             (O::BaseMouseEnter, C::MouseEnter, [3, 4, 0]),
             (O::BaseMouseExit, C::MouseExit, [0, 0, 0]),
-            (O::BaseAddedToParent, C::AddedToParent, [0, 0, 0]),
             (O::BaseNotifyRootVisibility, C::NotifyRootVisibility, [1, 0, 0]),
             (O::BaseMouseWheel, C::MouseWheel, [-3, 0, 0]),
             (O::BaseKeyDown, C::KeyDown, [13, 0, 0]),
