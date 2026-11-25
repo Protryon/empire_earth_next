@@ -5,6 +5,7 @@
 //! `unsigned long`), `%ld` and `%08lx` are written as the C++ wrote them ([`hexf`], [`lu`], [`ld`], [`x8`]).
 
 use super::sim_ops::{h, hdd, hs, EeSimDriverSim as O};
+use ee_sim::units::player_lists::{player_list, EE_UNITS_LISTS_PATROLS, EE_UNITS_LISTS_TOWNS};
 use crate::gamecpp as gc;
 use ee_sim::units::patrol_group as pg;
 
@@ -226,8 +227,8 @@ fn dump_players(o: &mut Out) {
         }
         s.push('\n');
         // the towns (hull, patrol group) and the patrol groups (their points as unit@tile)
-        for t in 0..h(O::DmPlTownCount, p, &[]) {
-            let town = h(O::DmPlTownAt, p, &[t]) as usize;
+        for town in player_list(p as u64, EE_UNITS_LISTS_TOWNS) {
+            let town = town as usize;
             if town == 0 {
                 continue;
             }
@@ -247,8 +248,8 @@ fn dump_players(o: &mut Out) {
             }
             s.push('\n');
         }
-        for g in 0..h(O::DmPlPatrolCount, p, &[]) {
-            let group = h(O::DmPlPatrolAt, p, &[g]) as usize;
+        for group in player_list(p as u64, EE_UNITS_LISTS_PATROLS) {
+            let group = group as usize;
             if group == 0 {
                 continue;
             }

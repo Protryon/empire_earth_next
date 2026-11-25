@@ -657,13 +657,9 @@ struct EeWorldLayout {
   uint64_t player_selected_group;
   /// `EEPlayer::mComputerPlayer` (an `EEComputerPlayer*`, 0 for a human)
   uint64_t player_computer_player;
-  /// lane P: the `std::vector<EEPlayer*>`s `mAllies` and `mSightSharers`, `mPendingUnits` (`RTSUnit*`), `mTowns`,
-  /// `mHerds`; `mViewedUnit` (an `EEUnit*`)
-  uint64_t player_allies;
-  uint64_t player_sight_sharers;
+  /// lane P: the `std::vector<RTSUnit*>` `mPendingUnits` (the allies, sight sharers, towns and herds are the
+  /// player's Rust lists: `player_lists`)
   uint64_t player_pending_units;
-  uint64_t player_towns;
-  uint64_t player_herds;
   /// `mPlayers` (17 pointers), `mMap`, `mNumPlayers` (an `unsigned long`), `EEWorld::mCurrentPlayer` (a `long`)
   uint64_t world_players;
   uint64_t world_map;

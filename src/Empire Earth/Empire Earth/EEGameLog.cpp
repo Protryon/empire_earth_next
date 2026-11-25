@@ -228,8 +228,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EaGoalState: return P64(B_CX->mGoalState);
     case O::EaGoalKind: return ((EEUnitGoal*)p)->mKind;
     case O::EaPlayerEpoch: return B_PL->mTechnologies->mCurrentEpoch;
-    case O::EaTownCount: return (int64_t)B_PL->mTowns.size();
-    case O::EaTownHullContains: return B_PL->mTowns[a[0]]->HullContains(U2DPoint<long>((long)a[1], (long)a[2]));
+    case O::EaTownHullContains: return B_PL->GetTown((unsigned long)a[0])->HullContains(U2DPoint<long>((long)a[1], (long)a[2]));
     case O::EaForestAt: return P64(gContinentManager.GetForestAt((EEUnit*)a[0]));
     case O::EaForestKind: return ((EEAIForest*)p)->GetResourceKind();
     // the music manager (music_io.rs)
@@ -313,7 +312,6 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::DwTeamCount: return B_VC->mTeam->GetNumPlayers();
     case O::DwTeamPlayer: return B_VC->mTeam->mPlayers[a[0]];
     case O::DwNeeded: return gWorld.mNumberOfWondersToWin;
-    case O::DwWonderCount: return ((EEPlayer*)p)->GetNumWonderUnits();
     case O::DwWonderTime: return ((EEPlayer*)p)->GetWonderTime((long)a[0]);
     case O::DwVictoryTime: return gWorldTable.GetLongValue(kWorldWonderVictoryTime);
     case O::DwGameTime: return gPhysics->mGameTime;

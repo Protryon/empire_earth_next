@@ -118,11 +118,7 @@ void EEWorldLayoutRegister()
     theLayout.player_first_unit = offsetof(EEPlayer, mFirstUnit);
     theLayout.player_selected_group = offsetof(EEPlayer, mSelectedGroup);
     theLayout.player_computer_player = offsetof(EEPlayer, mComputerPlayer);
-    theLayout.player_allies = offsetof(EEPlayer, mAllies);   // lane P
-    theLayout.player_sight_sharers = offsetof(EEPlayer, mSightSharers);
     theLayout.player_pending_units = offsetof(EEPlayer, mPendingUnits);
-    theLayout.player_towns = offsetof(EEPlayer, mTowns);
-    theLayout.player_herds = offsetof(EEPlayer, mHerds);
     theLayout.world_players = offsetof(EEWorld, mPlayers);
     theLayout.world_map = offsetof(EEWorld, mMap);
     theLayout.world_num_players = offsetof(EEWorld, mNumPlayers);

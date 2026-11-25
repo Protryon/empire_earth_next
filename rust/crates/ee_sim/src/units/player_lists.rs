@@ -2,7 +2,9 @@
 //! 5): the stranded units, the units waiting to repatrol, the stand-in units' loaded ids, the saved construction sites'
 //! and wonders' ids (until `RepairPointers`), the unit classes whose media `LoadAllClassMedia` loaded, the player's
 //! loaded media, and the units taken off the map with their records (`EEWUnitsOffMapInfo`, now
-//! [`EeUnitsOffMapInfo`], with its Load, Save and RepairPointers).
+//! [`EeUnitsOffMapInfo`], with its Load, Save and RepairPointers). The player/tech lane, round 2: the player's other
+//! containers too (the towns, the herds, the allies, the sight sharers, the patrol groups, the construction sites, the
+//! wonders and the media warnings; were `std::vector`s and `UReferenceContainer<EEComplexUnit*>`s on EEPlayer).
 //!
 //! The units are `RTSUnit*` addresses; their reference counts are the C++'s (`ee_units_lists_host`: reference,
 //! dereference, a unit's id, the world's unit by id). Kept: the stranded and repatrol lists add a unit once (a
@@ -44,7 +46,18 @@ pub const EE_UNITS_LISTS_SITE_IDS: u32 = 3;
 pub const EE_UNITS_LISTS_WONDER_IDS: u32 = 4;
 pub const EE_UNITS_LISTS_SOUND_CLASSES: u32 = 5;
 pub const EE_UNITS_LISTS_MEDIA: u32 = 6;
-const LISTS: usize = 7;
+/// `mTowns` (`EETown*`, null entries kept), `mHerds` (`EEHerd*`)
+pub const EE_UNITS_LISTS_TOWNS: u32 = 7;
+pub const EE_UNITS_LISTS_HERDS: u32 = 8;
+/// `mAllies`, `mSightSharers` (`EEPlayer*`)
+pub const EE_UNITS_LISTS_ALLIES: u32 = 9;
+pub const EE_UNITS_LISTS_SIGHT_SHARERS: u32 = 10;
+/// `mPatrolGroups` (`EEPPatrolGroup*`, referenced)
+pub const EE_UNITS_LISTS_PATROLS: u32 = 11;
+/// `mConstructionSites`, `mWonders` (the original's `UReferenceContainer<EEComplexUnit*>`: referenced units)
+pub const EE_UNITS_LISTS_SITES: u32 = 12;
+pub const EE_UNITS_LISTS_WONDERS: u32 = 13;
+const LISTS: usize = 14;
 
 /// The host's operations (`ee_units_lists_host(op, value)`).
 pub const EE_UNITS_LISTS_HOST_REFERENCE: i32 = 0;
@@ -53,6 +66,9 @@ pub const EE_UNITS_LISTS_HOST_DEREFERENCE: i32 = 1;
 pub const EE_UNITS_LISTS_HOST_UNIT_ID: i32 = 2;
 /// `gWorld.GetUnit(id)` (0 none)
 pub const EE_UNITS_LISTS_HOST_UNIT_BY_ID: i32 = 3;
+/// a patrol group referenced, dereferenced (patrol_group.rs: answered in Rust)
+pub const EE_UNITS_LISTS_HOST_PG_REFERENCE: i32 = 4;
+pub const EE_UNITS_LISTS_HOST_PG_DEREFERENCE: i32 = 5;
 
 /// The C++ side: the units' reference counts and ids.
 pub trait ListsHost {
@@ -64,27 +80,119 @@ pub trait ListsHost {
 pub struct EeUnitsPlayerLists {
     pub lists: [Vec<u64>; LISTS],
     pub off_map: Vec<Box<EeUnitsOffMapInfo>>,
+    /// `mMediaWarnings` (`DumpMedia`'s lines)
+    pub warnings: Vec<std::ffi::CString>,
 }
 
-/// Lists whose entries hold a reference.
-fn referenced(list: u32) -> bool {
-    list == EE_UNITS_LISTS_STRANDED || list == EE_UNITS_LISTS_REPATROL
+/// Lists whose entries hold a unit's reference, a patrol group's (the host's reference and dereference).
+fn references(list: u32) -> Option<(i32, i32)> {
+    match list {
+        EE_UNITS_LISTS_STRANDED | EE_UNITS_LISTS_REPATROL | EE_UNITS_LISTS_SITES | EE_UNITS_LISTS_WONDERS => {
+            Some((EE_UNITS_LISTS_HOST_REFERENCE, EE_UNITS_LISTS_HOST_DEREFERENCE))
+        }
+        EE_UNITS_LISTS_PATROLS => Some((EE_UNITS_LISTS_HOST_PG_REFERENCE, EE_UNITS_LISTS_HOST_PG_DEREFERENCE)),
+        _ => None,
+    }
+}
+
+/// The containers' operations the player's bodies name ([`EeUnitsPlayerLists::apply`]; the answer a u64).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ListOp {
+    /// `size()`
+    Len,
+    /// entry `i` (0 past the end)
+    At(usize),
+    /// [`EeUnitsPlayerLists::add`] (the referenced lists' `Add`: referenced, pushed)
+    Add(u64),
+    /// whether it holds the value (`std::find`, `Contains`)
+    Has(u64),
+    /// the first match out, its reference released (`Remove`; the plain lists' `erase(find)`): whether it was there
+    Remove(u64),
+    /// `erase(begin() + i)` (no reference released)
+    EraseAt(usize),
+    /// `UReferenceContainer::Replace(old, new)`: the first `old`'s slot gets `new`, its reference moved
+    Replace(u64, u64),
+    /// emptied; `release`: each entry's reference released ([`EeUnitsPlayerLists::clear`])
+    Clear(bool),
+    /// `[i] = v`
+    Set(usize, u64),
+    /// `resize(n, NULL)`
+    Resize(usize),
+}
+
+fn call_refs(h: &mut dyn ListsHost, list: u32, value: u64, release: bool) {
+    if let Some((reference, dereference)) = references(list) {
+        h.call(if release { dereference } else { reference }, value);
+    }
 }
 
 impl EeUnitsPlayerLists {
     /// `AddStrandedUnit`, `AddUnitToRepatrol` (once, referenced), `AddLoadedMedia` (not 0), the ids' push_back.
+    /// The construction sites', wonders' and patrol groups' `Add` (referenced, pushed), the other lists' push_back.
     pub fn add(&mut self, h: &mut dyn ListsHost, list: u32, value: u64) -> bool {
         let Some(l) = self.lists.get_mut(list as usize) else { return false };
-        if referenced(list) {
-            if l.contains(&value) {
-                return false;
-            }
-            h.call(EE_UNITS_LISTS_HOST_REFERENCE, value);
-        } else if list == EE_UNITS_LISTS_MEDIA && value == 0 {
+        if (list == EE_UNITS_LISTS_STRANDED || list == EE_UNITS_LISTS_REPATROL) && l.contains(&value) {
             return false;
         }
+        if list == EE_UNITS_LISTS_MEDIA && value == 0 {
+            return false;
+        }
+        call_refs(h, list, value, false);
         l.push(value);
         true
+    }
+    /// One [`ListOp`] on list `list` (0 for a list past the last).
+    pub fn apply(&mut self, h: &mut dyn ListsHost, list: u32, op: ListOp) -> u64 {
+        if self.lists.get(list as usize).is_none() {
+            return 0;
+        }
+        if let ListOp::Add(v) = op {
+            return u64::from(self.add(h, list, v));
+        }
+        if let ListOp::Clear(release) = op {
+            self.clear(h, list, release);
+            return 0;
+        }
+        let l = &mut self.lists[list as usize];
+        match op {
+            ListOp::Len => l.len() as u64,
+            ListOp::At(i) => l.get(i).copied().unwrap_or(0),
+            ListOp::Has(v) => u64::from(l.contains(&v)),
+            ListOp::Remove(v) => match l.iter().position(|&x| x == v) {
+                Some(i) => {
+                    l.remove(i);
+                    call_refs(h, list, v, true);
+                    1
+                }
+                None => 0,
+            },
+            ListOp::EraseAt(i) => {
+                if i < l.len() {
+                    l.remove(i);
+                }
+                0
+            }
+            ListOp::Replace(old, new) => match l.iter().position(|&x| x == old) {
+                Some(i) => {
+                    l[i] = new;
+                    call_refs(h, list, old, true);
+                    call_refs(h, list, new, false);
+                    1
+                }
+                None => 0,
+            },
+            ListOp::Set(i, v) => {
+                if let Some(x) = l.get_mut(i) {
+                    *x = v;
+                }
+                0
+            }
+            ListOp::Resize(n) => {
+                l.resize(n, 0);
+                0
+            }
+            ListOp::Add(_) | ListOp::Clear(_) => 0,
+        }
     }
     /// The first `value` out (`RemoveLoadedMedia`'s erase): whether it was there.
     pub fn remove(&mut self, list: u32, value: u64) -> bool {
@@ -101,14 +209,18 @@ impl EeUnitsPlayerLists {
     pub fn has(&self, list: u32, value: u64) -> bool {
         self.lists.get(list as usize).is_some_and(|l| l.contains(&value))
     }
-    /// Emptied; `ClearUnitsToRepatrol` dereferences its units from the last (`release`).
+    /// Emptied; `release`: `ClearUnitsToRepatrol` dereferences its units from the last, the construction sites',
+    /// wonders' (`UReferenceContainer::Clear`) and patrol groups' (`EEPDereferencer`) from the first.
     pub fn clear(&mut self, h: &mut dyn ListsHost, list: u32, release: bool) {
         let Some(l) = self.lists.get_mut(list as usize) else { return };
-        let taken = std::mem::take(l);
+        let mut taken = std::mem::take(l);
         if release {
-            for &u in taken.iter().rev() {
+            if list == EE_UNITS_LISTS_REPATROL {
+                taken.reverse();
+            }
+            for &u in &taken {
                 if u != 0 {
-                    h.call(EE_UNITS_LISTS_HOST_DEREFERENCE, u);
+                    call_refs(h, list, u, true);
                 }
             }
         }
@@ -231,8 +343,20 @@ struct Ffi;
 impl ListsHost for Ffi {
     fn call(&mut self, op: i32, value: u64) -> u64 {
         #[cfg(not(test))]
-        // SAFETY: the C++ host over live units (the callers' contract)
-        return unsafe { ee_units_lists_host(op, value) };
+        {
+            use crate::units::patrol_group::{ee_units_pg_dereference, ee_units_pg_reference, EeUnitsPatrolGroup};
+            let g = value as usize as *mut EeUnitsPatrolGroup;
+            // SAFETY: a live patrol group of the player's list; live units through the C++ host (the callers'
+            // contract)
+            unsafe {
+                match op {
+                    EE_UNITS_LISTS_HOST_PG_REFERENCE => ee_units_pg_reference(g),
+                    EE_UNITS_LISTS_HOST_PG_DEREFERENCE => ee_units_pg_dereference(g),
+                    _ => return ee_units_lists_host(op, value),
+                }
+            }
+            return 0;
+        }
         #[cfg(test)]
         {
             let _ = (op, value);
@@ -250,6 +374,111 @@ impl PlayerSaveHost for FileHost {
     fn call(&mut self, op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
         // SAFETY: the C++ file primitives with their own context; io lives for the call
         unsafe { (self.f)(self.ctx, op, index, io) }
+    }
+}
+
+/// Player `p`'s lists (its `mLists`, at the layout's offset).
+#[cfg(not(test))]
+pub fn player_lists(p: u64) -> *mut EeUnitsPlayerLists {
+    // SAFETY: a live player's member, made by its constructor (the callers' contract)
+    unsafe { *((p as usize + crate::world::layout::layout().player_lists as usize) as *const *mut EeUnitsPlayerLists) }
+}
+
+/// One [`ListOp`] on player `p`'s list `list` (the game's hosts').
+#[cfg(not(test))]
+pub fn player_op(p: u64, list: u32, op: ListOp) -> u64 {
+    // SAFETY: a live player's lists; the units' and patrol groups' counts never reach them
+    unsafe { &mut *player_lists(p) }.apply(&mut Ffi, list, op)
+}
+
+/// The player host's container operations (player.rs `EE_UNITS_PLAYER_*`: were EEPlayer.cpp's `EEPlayerHost` cases)
+/// on player `p`'s lists, `i` the operation's arguments (a player 0 is `p`); None for the others.
+#[cfg(not(test))]
+pub fn answer_player(p: u64, op: i32, i: &[i64; 8]) -> Option<i64> {
+    use crate::units::player_split::{
+        EE_UNITS_PLAYER_X_ALLY_ADD, EE_UNITS_PLAYER_X_ALLY_REMOVE, EE_UNITS_PLAYER_X_SHARERS_ERASE,
+        EE_UNITS_PLAYER_X_SHARERS_HAS, EE_UNITS_PLAYER_X_SHARERS_PUSH, EE_UNITS_PLAYER_X_WONDERS_ADD,
+        EE_UNITS_PLAYER_X_WONDERS_REMOVE,
+    };
+    use crate::units::player_split_more::{
+        EE_UNITS_PLAYER_X_HERDS_ERASE, EE_UNITS_PLAYER_X_HERDS_PUSH, EE_UNITS_PLAYER_X_TOWNS_ERASE,
+        EE_UNITS_PLAYER_X_TOWNS_PUSH,
+    };
+    use crate::units::player_units::EE_UNITS_PLAYER_REMOVE_SITE;
+    let or_me = |x: i64| if x != 0 { x as u64 } else { p };
+    let (player, list, op) = match op {
+        EE_UNITS_PLAYER_REMOVE_SITE => (p, EE_UNITS_LISTS_SITES, ListOp::Remove(i[0] as u64)),
+        EE_UNITS_PLAYER_X_ALLY_ADD => (or_me(i[0]), EE_UNITS_LISTS_ALLIES, ListOp::Add(or_me(i[1]))),
+        EE_UNITS_PLAYER_X_ALLY_REMOVE => (or_me(i[0]), EE_UNITS_LISTS_ALLIES, ListOp::Remove(or_me(i[1]))),
+        EE_UNITS_PLAYER_X_SHARERS_PUSH => (p, EE_UNITS_LISTS_SIGHT_SHARERS, ListOp::Add(or_me(i[0]))),
+        EE_UNITS_PLAYER_X_SHARERS_HAS => (p, EE_UNITS_LISTS_SIGHT_SHARERS, ListOp::Has(or_me(i[0]))),
+        EE_UNITS_PLAYER_X_SHARERS_ERASE => (p, EE_UNITS_LISTS_SIGHT_SHARERS, ListOp::Remove(or_me(i[0]))),
+        EE_UNITS_PLAYER_X_WONDERS_ADD => (p, EE_UNITS_LISTS_WONDERS, ListOp::Add(i[0] as u64)),
+        EE_UNITS_PLAYER_X_WONDERS_REMOVE => (p, EE_UNITS_LISTS_WONDERS, ListOp::Remove(i[0] as u64)),
+        EE_UNITS_PLAYER_X_TOWNS_PUSH => (p, EE_UNITS_LISTS_TOWNS, ListOp::Add(i[0] as u64)),
+        EE_UNITS_PLAYER_X_HERDS_PUSH => (p, EE_UNITS_LISTS_HERDS, ListOp::Add(i[0] as u64)),
+        EE_UNITS_PLAYER_X_TOWNS_ERASE => (p, EE_UNITS_LISTS_TOWNS, ListOp::EraseAt(i[0] as usize)),
+        EE_UNITS_PLAYER_X_HERDS_ERASE => (p, EE_UNITS_LISTS_HERDS, ListOp::EraseAt(i[0] as usize)),
+        _ => return None,
+    };
+    Some(player_op(player, list, op) as i64)
+}
+
+#[cfg(test)]
+pub fn answer_player(_: u64, _: i32, _: &[i64; 8]) -> Option<i64> {
+    None
+}
+
+/// Unit `unit`'s `GetUnitID()` (the C++ host's).
+#[cfg(not(test))]
+pub fn unit_id(unit: u64) -> u64 {
+    Ffi.call(EE_UNITS_LISTS_HOST_UNIT_ID, unit)
+}
+
+/// One [`ListOp`] on a lone list `v` (kind `list`; the references' calls dropped): the test hosts'.
+#[cfg(test)]
+pub fn apply_vec(v: &mut Vec<u64>, list: u32, op: ListOp) -> u64 {
+    let mut l = EeUnitsPlayerLists::default();
+    l.lists[list as usize] = std::mem::take(v);
+    let r = l.apply(&mut Recorder(&mut Vec::new()), list, op);
+    *v = std::mem::take(&mut l.lists[list as usize]);
+    r
+}
+
+/// Player `p`'s list `list`, copied (the game's readers outside the player).
+#[cfg(not(test))]
+pub fn player_list(p: u64, list: u32) -> Vec<u64> {
+    // SAFETY: a live player's lists
+    unsafe { &*player_lists(p) }.lists.get(list as usize).cloned().unwrap_or_default()
+}
+
+/// The test hosts' lists: per player, with the references' calls (op, value) in order.
+#[cfg(test)]
+#[derive(Default)]
+pub struct FakeLists {
+    pub players: std::collections::BTreeMap<u64, EeUnitsPlayerLists>,
+    pub refs: Vec<(i32, u64)>,
+}
+
+#[cfg(test)]
+struct Recorder<'a>(&'a mut Vec<(i32, u64)>);
+
+#[cfg(test)]
+impl ListsHost for Recorder<'_> {
+    fn call(&mut self, op: i32, value: u64) -> u64 {
+        self.0.push((op, value));
+        0
+    }
+}
+
+#[cfg(test)]
+impl FakeLists {
+    pub fn op(&mut self, p: u64, list: u32, op: ListOp) -> u64 {
+        self.players.entry(p).or_default().apply(&mut Recorder(&mut self.refs), list, op)
+    }
+    /// player `p`'s list `list`
+    pub fn list(&mut self, p: u64, list: u32) -> &mut Vec<u64> {
+        &mut self.players.entry(p).or_default().lists[list as usize]
     }
 }
 

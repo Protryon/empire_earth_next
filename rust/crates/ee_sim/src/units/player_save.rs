@@ -858,6 +858,89 @@ struct FfiHost {
     f: EeUnitsPlayerSaveFn,
     /// the player's queued improvements (player.rs): the QUEUED operations are answered here
     queued: *mut EeUnitsQueued,
+    /// the player (0 for a unit's save): its containers' operations are answered from its lists ([`lists_answer`])
+    player: u64,
+}
+
+/// The player `p`'s containers' operations answered from its lists (player_lists.rs; were EEPlayerSaveOperation's
+/// cases); an element's C++ operation (a herd's load and save, a patrol group's save) gets the element in `io.i`, a
+/// new herd is stored at `index`. None for the others.
+#[cfg(not(test))]
+fn lists_answer(
+    p: u64,
+    op: i32,
+    index: u32,
+    io: &mut EeUnitsPlayerSaveIo,
+    cpp: &mut dyn FnMut(i32, u32, &mut EeUnitsPlayerSaveIo) -> i32,
+) -> Option<i32> {
+    use crate::units::player_lists::{
+        player_op, unit_id, ListOp, EE_UNITS_LISTS_HERDS, EE_UNITS_LISTS_PATROLS, EE_UNITS_LISTS_SITES,
+        EE_UNITS_LISTS_SITE_IDS, EE_UNITS_LISTS_WONDERS, EE_UNITS_LISTS_WONDER_IDS,
+    };
+    use crate::units::player_save_split::{
+        EE_UNITS_PLAYER_SAVE_X_HERD_LOAD, EE_UNITS_PLAYER_SAVE_X_HERD_NEW, EE_UNITS_PLAYER_SAVE_X_PATROL_ADD,
+        EE_UNITS_PLAYER_SAVE_X_PATROL_AT, EE_UNITS_PLAYER_SAVE_X_WONDERS_CLEAR, EE_UNITS_PLAYER_SAVE_X_WONDERS_ITEMS_CLEAR,
+    };
+    if p == 0 {
+        return None;
+    }
+    let at = |list: u32| player_op(p, list, ListOp::At(index as usize));
+    let len = |list: u32| player_op(p, list, ListOp::Len) as i64;
+    match op {
+        EE_UNITS_PLAYER_SAVE_PATROL_CLEAR => {
+            player_op(p, EE_UNITS_LISTS_PATROLS, ListOp::Clear(false));
+        }
+        EE_UNITS_PLAYER_SAVE_HERDS_RESIZE => {
+            player_op(p, EE_UNITS_LISTS_HERDS, ListOp::Resize(io.i as c_ulong as usize));
+        }
+        EE_UNITS_PLAYER_SAVE_X_HERD_NEW => {
+            cpp(op, index, io);
+            player_op(p, EE_UNITS_LISTS_HERDS, ListOp::Set(index as usize, io.i as u64));
+        }
+        EE_UNITS_PLAYER_SAVE_X_HERD_LOAD | EE_UNITS_PLAYER_SAVE_HERD_SAVE => {
+            io.i = at(EE_UNITS_LISTS_HERDS) as i64;
+            return Some(cpp(op, index, io));
+        }
+        EE_UNITS_PLAYER_SAVE_PATROL_SAVE => {
+            io.i = at(EE_UNITS_LISTS_PATROLS) as i64;
+            return Some(cpp(op, index, io));
+        }
+        EE_UNITS_PLAYER_SAVE_PATROL_SLOTS => io.i = len(EE_UNITS_LISTS_PATROLS),
+        EE_UNITS_PLAYER_SAVE_X_PATROL_AT => io.i = at(EE_UNITS_LISTS_PATROLS) as i64,
+        EE_UNITS_PLAYER_SAVE_X_PATROL_ADD => {
+            player_op(p, EE_UNITS_LISTS_PATROLS, ListOp::Add(io.i as u64));
+        }
+        EE_UNITS_PLAYER_SAVE_HERD_COUNT => io.i = len(EE_UNITS_LISTS_HERDS),
+        EE_UNITS_PLAYER_SAVE_CONSTRUCTION_COUNT => io.i = len(EE_UNITS_LISTS_SITES),
+        EE_UNITS_PLAYER_SAVE_CONSTRUCTION_ID => io.i = unit_id(at(EE_UNITS_LISTS_SITES)) as i64,
+        EE_UNITS_PLAYER_SAVE_WONDER_COUNT => io.i = len(EE_UNITS_LISTS_WONDERS),
+        EE_UNITS_PLAYER_SAVE_WONDER_ID => io.i = unit_id(at(EE_UNITS_LISTS_WONDERS)) as i64,
+        EE_UNITS_PLAYER_SAVE_X_WONDERS_CLEAR => {
+            player_op(p, EE_UNITS_LISTS_WONDERS, ListOp::Clear(true));
+        }
+        EE_UNITS_PLAYER_SAVE_X_WONDERS_ITEMS_CLEAR => {
+            player_op(p, EE_UNITS_LISTS_WONDERS, ListOp::Clear(false));
+        }
+        EE_UNITS_PLAYER_SAVE_CONSTRUCTION_PUSH => {
+            player_op(p, EE_UNITS_LISTS_SITE_IDS, ListOp::Add(io.i as c_long as u64));
+        }
+        EE_UNITS_PLAYER_SAVE_WONDER_PUSH => {
+            player_op(p, EE_UNITS_LISTS_WONDER_IDS, ListOp::Add(io.i as c_long as u64));
+        }
+        _ => return None,
+    }
+    Some(OK)
+}
+
+#[cfg(test)]
+fn lists_answer(
+    _: u64,
+    _: i32,
+    _: u32,
+    _: &mut EeUnitsPlayerSaveIo,
+    _: &mut dyn FnMut(i32, u32, &mut EeUnitsPlayerSaveIo) -> i32,
+) -> Option<i32> {
+    None
 }
 
 impl FfiHost {
@@ -869,11 +952,21 @@ impl FfiHost {
 
 impl PlayerSaveHost for FfiHost {
     fn call(&mut self, op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
-        // the compound operations as the C++'s one-statement ones (player_save_split.rs)
-        let (ctx, f) = (self.ctx, self.f);
-        // SAFETY: the C++ callback with its own context; io lives for the call
-        let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe { f(ctx, op, index, io) };
+        // the compound operations as the C++'s one-statement ones (player_save_split.rs), the containers' from the
+        // player's lists
+        let (ctx, f, player) = (self.ctx, self.f, self.player);
+        let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| {
+            // SAFETY: the C++ callback with its own context; io lives for the call
+            let mut cpp = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe { f(ctx, op, index, io) };
+            lists_answer(player, op, index, io, &mut cpp).unwrap_or_else(|| cpp(op, index, io))
+        };
         if let Some(r) = crate::units::player_save_split::split(op, index, io, &mut call) {
+            return r;
+        }
+        if let Some(r) = lists_answer(player, op, index, io, &mut |op, index, io| {
+            // SAFETY: as above
+            unsafe { f(ctx, op, index, io) }
+        }) {
             return r;
         }
         // the goals' counter is Rust's (goal_obj.rs)
@@ -933,6 +1026,11 @@ impl PlayerSaveHost for FfiHost {
     }
 }
 
+/// The player whose record (its `EeUnitsPlayerSaved` base) is `rec`.
+fn player_of(rec: *mut EeUnitsPlayerSaved) -> u64 {
+    (rec as usize).wrapping_sub(crate::world::layout::layout().player_saved as usize) as u64
+}
+
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
 /// and its C++ parts through `f`.
 ///
@@ -948,7 +1046,7 @@ pub unsafe extern "C" fn ee_units_player_load(
     major: u32,
     minor: u32,
 ) -> i32 {
-    load(&mut FfiHost { ctx, f, queued }, Rec::new(rec), major, minor)
+    load(&mut FfiHost { ctx, f, queued, player: player_of(rec) }, Rec::new(rec), major, minor)
 }
 
 /// `EEPlayer::Save`: as [`ee_units_player_load`].
@@ -964,7 +1062,7 @@ pub unsafe extern "C" fn ee_units_player_save(
     major: u32,
     minor: u32,
 ) -> i32 {
-    save(&mut FfiHost { ctx, f, queued }, Rec::new(rec), major, minor)
+    save(&mut FfiHost { ctx, f, queued, player: player_of(rec) }, Rec::new(rec), major, minor)
 }
 
 /// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) through `f` on `ctx`.
@@ -979,7 +1077,7 @@ pub unsafe extern "C" fn ee_units_player_unit(
     major: u32,
     minor: u32,
 ) -> i32 {
-    let mut h = FfiHost { ctx, f, queued: std::ptr::null_mut() };
+    let mut h = FfiHost { ctx, f, queued: std::ptr::null_mut(), player: 0 };
     if save_it {
         save_unit(&mut h, major, minor)
     } else {

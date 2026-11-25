@@ -8,6 +8,9 @@ use crate::units::player_save::{
     EE_UNITS_PLAYER_SAVE_READ_LONG, EE_UNITS_PLAYER_SAVE_READ_ULONG, EE_UNITS_PLAYER_SAVE_WRITE_BOOL,
     EE_UNITS_PLAYER_SAVE_WRITE_FLOAT, EE_UNITS_PLAYER_SAVE_WRITE_LONG, EE_UNITS_PLAYER_SAVE_WRITE_ULONG,
 };
+use crate::units::player_lists::{
+    ListOp, EE_UNITS_LISTS_PATROLS, EE_UNITS_LISTS_SITES, EE_UNITS_LISTS_TOWNS, EE_UNITS_LISTS_WONDERS,
+};
 use std::collections::{BTreeMap, VecDeque};
 use std::os::raw::c_long;
 
@@ -904,18 +907,24 @@ impl crate::units::player_body::PlayerBodyHost for World {
     fn reset_fields(&mut self, _player: u64, starting_citizens: c_long, mining_limit: c_long) {
         self.log.push(format!("fields {starting_citizens} {mining_limit}"));
     }
-    fn list_len(&mut self, _player: u64, list: u32) -> usize {
-        self.body_lists.get(&list).map_or(0, |l| l.len())
-    }
-    fn list_at(&mut self, _player: u64, list: u32, i: usize) -> u64 {
-        self.body_lists.get(&list).and_then(|l| l.get(i)).copied().unwrap_or(0)
-    }
-    fn list_clear(&mut self, _player: u64, list: u32, release: bool) {
-        self.log.push(format!("list clear {list} {release}"));
-        self.body_lists.remove(&list);
+    fn list_op(&mut self, _player: u64, list: u32, op: ListOp) -> u64 {
+        match op {
+            ListOp::Len | ListOp::At(_) | ListOp::Has(_) => {}
+            ListOp::Clear(release) => self.log.push(format!("list clear {list} {release}")),
+            _ => self.log.push(format!("list {list} {op:?}")),
+        }
+        let l = self.body_lists.entry(list).or_default();
+        crate::units::player_lists::apply_vec(l, list, op)
     }
     fn patrol_id(&mut self, group: u64) -> u64 {
         group >> 4
+    }
+    fn patrol_repair(&mut self, group: u64) {
+        self.log.push(format!("patrol repair {group:#x}"));
+    }
+    fn adopt_town_patrol(&mut self, _player: u64, town: u64) -> bool {
+        self.log.push(format!("adopt {town:#x}"));
+        false
     }
 }
 
@@ -1018,7 +1027,7 @@ fn swapped_units_move_through_the_selection_and_hot_keys() {
             "post saved 6".to_string(),
             "post selection".to_string(),
             format!("body {EE_UNITS_PLAYER_BODY_UNBUILT_WALL} 0x20 0 0"),
-            format!("body {EE_UNITS_PLAYER_BODY_WONDER_REPLACE} 0x10 32 0"),
+            format!("list {EE_UNITS_LISTS_WONDERS} {:?}", ListOp::Replace(0x10, 0x20)),
         ]
     );
     // a foreign new unit leaves the groups without joining them; an unbuilt wall becomes a site
@@ -1029,7 +1038,7 @@ fn swapped_units_move_through_the_selection_and_hot_keys() {
         assert!(!contains(active, new_unit) && !contains(active, foreign));
         assert!(!contains(h3, foreign));
     }
-    assert!(w.log.contains(&format!("body {EE_UNITS_PLAYER_BODY_ADD_SITE} 0x30 0 0")));
+    assert!(w.log.contains(&format!("list {EE_UNITS_LISTS_SITES} {:?}", ListOp::Add(0x30))));
 }
 
 #[test]
@@ -1107,16 +1116,16 @@ fn repair_pointers_answers_the_air_traffic_then_the_events() {
     w.body_lists.insert(crate::units::player_lists::EE_UNITS_LISTS_SITE_IDS, vec![9, 77]);
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_ATC_REPAIR, [0, 0, 0, 3].into());
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_EVENTS_REPAIR, [7].into());
-    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TOWN_COUNT, [2].into());
-    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TOWN_UNPATROLLED, [1, 0].into());
+    w.body_lists.insert(EE_UNITS_LISTS_TOWNS, vec![0x50, 0x60]);
+    w.body_answers.insert(EE_UNITS_PLAYER_BODY_TOWN_PATROL, [0, 1].into());
     // the player's id (PLAYER >> 8) is past 0: its towns come back as saved
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_MAKE_SAVED_TOWNS, [1].into());
     assert_eq!(repair_pointers(&mut w, PLAYER, 0, 0x100), 7);
     let b = bodies(&w.log);
-    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_CONTAINER_ADD} 0x40 0 0")));
-    // the second town (index 1) is asked first and refreshed; the first answered patrolled
-    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TOWN_REFRESH} 0x0 1 0")));
-    assert!(!b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TOWN_REFRESH} 0x0 0 0")));
+    assert!(b.contains(&format!("list {EE_UNITS_LISTS_SITES} {:?}", ListOp::Add(0x40))));
+    // the second town (0x60) is asked first and refreshed; the first answered patrolled
+    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TOWN_REFRESH} 0x60 0 0")));
+    assert!(!b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TOWN_REFRESH} 0x50 0 0")));
     // a newer save repairs the off-map records instead of rescanning the units
     assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_OFF_MAP} 0x0 3 0")));
     // no capitol: the capitol allowed; the settlement not obsolete: settlement and town center off
@@ -1243,14 +1252,12 @@ fn the_nearest_site_the_passability_and_the_team() {
     // the unit at (10, 10); sites at (19, 10) (81), (13, 14) (25), (15, 13) (34)
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_TILE_X, [10, 19, 13, 15].into());
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_TILE_Y, [10, 10, 14, 13].into());
-    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SITE_COUNT, [3].into());
-    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SITE_AT, [0xa, 0xb, 0xc].into());
+    w.body_lists.insert(EE_UNITS_LISTS_SITES, vec![0xa, 0xb, 0xc]);
     assert_eq!(nearest_construction_site(&mut w, PLAYER, 0x10), 0xb);
     // a site 10 tiles off (100) is not near
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_TILE_X, [0, 10].into());
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_TILE_Y, [0, 0].into());
-    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SITE_COUNT, [1].into());
-    w.body_answers.insert(EE_UNITS_PLAYER_BODY_SITE_AT, [0xa].into());
+    w.body_lists.insert(EE_UNITS_LISTS_SITES, vec![0xa]);
     assert_eq!(nearest_construction_site(&mut w, PLAYER, 0x10), 0);
     // land and deep water and space: 4 | 2 | 8
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_CLASS_STATS, [0x99].into());
@@ -1261,8 +1268,7 @@ fn the_nearest_site_the_passability_and_the_team() {
     w.body_answers.insert(EE_UNITS_PLAYER_BODY_TEAM_HAS, [0, 1].into());
     assert_eq!(team_index(&mut w, PLAYER), 1);
     // the patrol of id 3 (the mock's id: the address >> 4)
-    w.body_answers.insert(EE_UNITS_PLAYER_BODY_PATROL_COUNT, [2, 2].into());
-    w.body_answers.insert(EE_UNITS_PLAYER_BODY_PATROL_AT, [0x20, 0x30].into());
+    w.body_lists.insert(EE_UNITS_LISTS_PATROLS, vec![0x20, 0x30]);
     assert_eq!(patrol_group(&mut w, PLAYER, 3), 0x30);
 }
 

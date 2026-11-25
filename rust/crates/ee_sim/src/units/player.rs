@@ -843,7 +843,9 @@ impl PlayerHost for FnHost {
             crate::units::player_views::answer(player as u64, op, io)
         } {
             Some(v) => v,
-            None => unsafe { f(player, op, io) },
+            // the containers' operations on the players' lists (player_lists.rs)
+            None => crate::units::player_lists::answer_player(player as u64, op, &io.i)
+                .unwrap_or_else(|| unsafe { f(player, op, io) }),
         };
         // the compound operations as the C++'s one-statement ones (player_split.rs, player_split_more.rs)
         if let Some(v) = crate::units::player_split::split(op, io, &mut call) {
