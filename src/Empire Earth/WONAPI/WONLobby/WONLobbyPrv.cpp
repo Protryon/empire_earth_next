@@ -1,8 +1,8 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // The lobby's private state (WONLobbyPrv: its host, the resource table's factories) and the free functions over it:
-// start-up and shutdown, the server contexts, the address and firewall state, the auth context, the UDP port, the
-// screens, the event dispatch and hooks, popups and the window-thread completions (R6 WON lobby and network round 38
-// merged fifteen small units here; each part is headed by its old file name).
+// start-up and shutdown, the server contexts, the address and firewall state, the UDP port, the screens, the event
+// dispatch and hooks, popups, the window-thread completions, the error screen, the run loop and the logic manager's host
+// (R6 WON lobby and network round 38 merged seventeen small units here; each part is headed by its old file name).
 #include <windows.h>
 #include <string>
 #include <list>
@@ -40,6 +40,8 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "platform/PlatThread.h"
 #include "ee/wonapi/WONRouting.h"
+#include "rust/won_lobby/errscreen.h"
+#include "rust/won_lobby/lobbyrun.h"
 using namespace WONAPI;
 
 
@@ -357,23 +359,6 @@ IPAddr LobbyGetPublicAddress()
     return IPAddr();
 }
 
-// ---- LobbyAuthContextAccess.cpp (merged into this unit, R6 WON lobby and network round 38)
-// Access to the lobby's login (auth) context
-// Returns the login context; with CRC checks on, first gives it the files to hash for the community (once)
-AuthContext* GetLobbyAuthContext()
-{
-    if(gLobbyData.get()==NULL)
-        return NULL;
-    if(gLobbyData->mConfig->mCRCCheck && !gLobbyData->mHasSetHashFileList) {
-        gLobbyData->mHasSetHashFileList=true;
-        if(gLobbyData->mHashFileList.empty())
-            gLobbyData->mAuthContext->SetHashFile(gLobbyData->mLoginCommunity);
-        else
-            gLobbyData->mAuthContext->SetHashFileList(gLobbyData->mLoginCommunity,gLobbyData->mHashFileList);
-    }
-    return gLobbyData->mAuthContext.get();
-}
-
 // ---- LobbyUDPManager.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Binds the lobby's UDP port (pings and friend searches)
 // Binds the lobby UDP port from the config (8888 by default; + the harness slot's offset, TEST ONLY), else a random
@@ -647,4 +632,139 @@ void LobbyCompletionEvent::Deliver()
 // ---- WONLobbyPrvLifetime.cpp (merged into this unit, R6 WON lobby and network round 38)
 // Destroys the lobby's private state (members only)
 WONLobbyPrv::~WONLobbyPrv() {}
+
+// ---- LobbyErrorScreen.cpp (merged into this unit, R6 WON lobby and network round 38)
+// The lobby's top container, or the "Lobby Error" dialog shown when the lobby failed to start
+// the error dialog's locals (errscreen.rs builds it over these statements)
+static SmartPtr<Dialog> sErrDialog;
+static SmartPtr<Component> sErrBackground;
+static SmartPtr<Label> sErrLabel;
+static GUIString sErrText;
+static GUIString sErrOkText;
+static SmartPtr<Button> sErrButton;
+static CenterLayout* sErrVertical;
+static intptr_t ErrorScreenHost(EeWonErrScreenOp inOp)
+{
+    typedef EeWonErrScreenOp Op;
+    switch (inOp) {
+    case Op::PrvExists: return gLobbyData.get() != NULL ? 1 : 0;
+    case Op::PrvContainer: return (intptr_t)static_cast<Container*>(gLobbyData->mLobbyContainer.get());
+    case Op::InitFailed: return gLobbyInitFailed ? 1 : 0;
+    case Op::FailureExists: return gLobbyFailureDialog.get() != NULL ? 1 : 0;
+    case Op::FailureGet: return (intptr_t)static_cast<Container*>(gLobbyFailureDialog.get());
+    case Op::DialogNew: sErrDialog = new Dialog; return 0;
+    case Op::DialogNoEscape: sErrDialog->SetEndOnEscape(0); return 0;
+    case Op::BackgroundNew: sErrBackground = WONShellNew(EeWonShellKind::MsDlgBack); return 0;
+    case Op::LabelNew: sErrLabel = new Label; return 0;
+    case Op::LabelWrap: sErrLabel->SetWrap(true); return 0;
+    case Op::LabelCenter: sErrLabel->SetHorzAlign(HorzAlign_Center); return 0;
+    case Op::LabelFit: sErrLabel->SetAdjustHeightToFitText(true); return 0;
+    case Op::TextNew: sErrText = GUIString("Lobby Error\n\n"); return 0;
+    case Op::TextAppendError: sErrText.append(gLobbyInitError); return 0;
+    case Op::LabelSetText: sErrLabel->SetText(sErrText, true); return 0;
+    case Op::OkTextNew: sErrOkText = GUIString("Ok"); return 0;
+    case Op::ButtonNew: sErrButton = static_cast<Button*>(WONShellNew(EeWonShellKind::MsButton, (intptr_t)&sErrOkText)); return 0;
+    case Op::ButtonFlags: sErrButton->SetButtonFlags(0x100, true); return 0;
+    case Op::ButtonSize: sErrButton->SetSizeAtLeast(100, 0); return 0;
+    case Op::ButtonFocus: sErrButton->RequestFocus(); return 0;
+    case Op::LayoutBackground: sErrDialog->Fn2F6140(sErrBackground.get(), 3, sErrDialog.get(), 0, 0, 0, 0, 0); return 0;
+    case Op::LayoutLabel: sErrDialog->Fn2F6140(sErrLabel.get(), 0x1001, sErrDialog.get(), 10, 0, -20, 0, 0); return 0;
+    case Op::CenterButton: sErrDialog->AddChildLayout(new CenterLayout(sErrDialog.get(), sErrButton.get(), true, false), 0); return 0;
+    case Op::LayoutButton: sErrDialog->Fn2F6140(sErrButton.get(), 0x200, sErrLabel.get(), 0, 20, 0, 0, 0); return 0;
+    case Op::VerticalNew: sErrVertical = new CenterLayout(sErrDialog.get(), sErrLabel.get(), false, true); return 0;
+    case Op::VerticalAdd: sErrVertical->Add(sErrButton.get()); return 0;
+    case Op::VerticalLayout: sErrDialog->AddChildLayout(sErrVertical, 0); return 0;
+    case Op::AddBackground: sErrDialog->AddChild(sErrBackground.get()); return 0;
+    case Op::AddLabel: sErrDialog->AddChild(sErrLabel.get()); return 0;
+    case Op::AddButton: sErrDialog->AddChild(sErrButton.get()); return 0;
+    case Op::FailureSet: gLobbyFailureDialog = sErrDialog; return 0;
+    case Op::ButtonDrop: sErrButton = NULL; return 0;
+    case Op::OkTextDrop: sErrOkText = GUIString(); return 0;
+    case Op::TextDrop: sErrText = GUIString(); return 0;
+    case Op::LabelDrop: sErrLabel = NULL; return 0;
+    case Op::BackgroundDrop: sErrBackground = NULL; return 0;
+    case Op::DialogDrop: sErrDialog = NULL; return 0;
+    }
+    return 0;
+}
+// Returns the lobby container; after a failed start builds once and returns a dialog showing the error and Ok (the
+// choices and the order are ee_won_lobby errscreen.rs's, R6 WON lobby and network round 35)
+Container* LobbyGetContainer() { return reinterpret_cast<Container*>(ee_won_lobby_error_container(ErrorScreenHost)); }
+
+// ---- LobbyRunState.cpp (merged into this unit, R6 WON lobby and network round 38)
+// Running the lobby: start, modal message loop, exit status, suspend and resume (their bodies are Rust:
+// ee_won_lobby lobbyrun.rs, R6 WON round 32)
+void LobbyNetSuspend(); // calls the network logic's virtual at +0x44
+void LobbyNetResume(); // calls the network logic's virtual at +0x48
+
+// the functions' statements (lobbyrun.rs composes them, R6 WON round 32)
+static intptr_t RunHost(EeWonRunOp inOp, intptr_t a)
+{
+    typedef EeWonRunOp Op;
+    switch (inOp) {
+    case Op::InitFailedWithDialog: return gLobbyInitFailed && gLobbyFailureDialog.get() != NULL;
+    case Op::FailureWindow: return (intptr_t)gLobbyFailureDialog->GetRootWindow();
+    case Op::WindowVisible: return reinterpret_cast<Window*>(a)->PlatformIsVisible() ? 1 : 0;
+    case Op::WindowRunFailureDialog: reinterpret_cast<Window*>(a)->RunDialog(gLobbyFailureDialog.get()); return 0;
+    case Op::HasData: return gLobbyData.get() != NULL;
+    case Op::SetStatus: gLobbyData->mLobbyStatus = static_cast<LobbyStatus>(a); return 0;
+    case Op::Status: return gLobbyData->mLobbyStatus;
+    case Op::SetRunMode: gLobbyData->mRunMode = static_cast<LobbyRunMode>(a); return 0;
+    case Op::RunMode: return gLobbyData->mRunMode;
+    case Op::SetSuspended: gLobbyData->mSuspended = a != 0; return 0;
+    case Op::LobbyWindow: return (intptr_t)GetLobbyWindow();
+    case Op::MessageLoop: reinterpret_cast<WindowManager*>(a)->MessageLoop(); return 0;
+    case Op::ExitMessageLoop: reinterpret_cast<WindowManager*>(a)->ExitMessageLoop(); return 0;
+    case Op::BroadcastLobbyEvent: LobbyBroadcastLobbyEvent((int)a, true); return 0;
+    case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
+    case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
+    case Op::PingsToDo: return LobbyGetNumPingsToDo();
+    case Op::KillPings: LobbyKillPings(1); return 0;
+    case Op::NetSuspend: LobbyNetSuspend(); return 0;
+    case Op::MusicOn: return LobbyGetLobbyMusic() ? 1 : 0;
+    case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
+    case Op::NetResume: LobbyNetResume(); return 0;
+    case Op::InitLogicInit: gLobbyData->mInitLogic->Call(EeWonLogicCall::InitInit); return 0;
+    }
+    return 0;
+}
+
+int LobbyRun() { return (int)ee_won_lobbyrun_call(RunHost, EeWonRunCall::Run, 0); }
+void LobbyExit(int status) { ee_won_lobbyrun_call(RunHost, EeWonRunCall::Exit, status); }
+void LobbySuspend() { ee_won_lobbyrun_call(RunHost, EeWonRunCall::Suspend, 0); }
+void LobbyResume() { ee_won_lobbyrun_call(RunHost, EeWonRunCall::Resume, 0); }
+// WON SDK lobby entry point: starts the lobby's start-up sequence (connect and log in)
+void LobbyStart() { ee_won_lobbyrun_call(RunHost, EeWonRunCall::Start, 0); }
+
+// ---- LobbyLogicMgr.cpp (merged into this unit, R6 WON lobby and network round 38)
+// The lobby's logic manager: one list of logic objects that it initializes, kills and passes events to (the list and
+// every method are ee_won_lobby logicmgr.rs's since R6 WON lobby and network round 35; this is its host)
+// the manager's host (logicmgr.rs): one statement each on a logic or an event; a logic's virtual runs under WonGuard
+static intptr_t LogicMgrHost(EeWonLogicMgrOp inOp, intptr_t a, intptr_t b)
+{
+    typedef EeWonLogicMgrOp Op;
+    LobbyLogic* aLogic = reinterpret_cast<LobbyLogic*>(a);
+    ListItemClickedEvent* aClick = static_cast<ListItemClickedEvent*>(reinterpret_cast<ComponentEvent*>(a));
+    switch (inOp) {
+    case Op::AddRef: aLogic->AddRef(); return 0;
+    case Op::Release: aLogic->Release(); return 0;
+    case Op::InitComponent: return WON_GUARDED_V(aLogic->InitComponent(reinterpret_cast<ComponentConfig*>(b)));
+    case Op::Kill: return WON_GUARDED_V(aLogic->Kill());
+    case Op::HandleControlEvent: return WON_GUARDED_V(aLogic->HandleControlEvent((int)b));
+    case Op::HandleComponentEvent: return WON_GUARDED_V(aLogic->HandleComponentEvent(reinterpret_cast<ComponentEvent*>(b)));
+    case Op::Reset: return WON_GUARDED_V(aLogic->Reset());
+    case Op::ClickItem: return (intptr_t)aClick->mItem.get();
+    case Op::ClickButton: return aClick->mButton;
+    case Op::IsMenuItem: return dynamic_cast<MenuItem*>(reinterpret_cast<ListItem*>(a)) != NULL ? 1 : 0;
+    case Op::MenuId: return dynamic_cast<MenuItem*>(reinterpret_cast<ListItem*>(a))->mMenuId;
+    case Op::ControlId: return reinterpret_cast<ComponentEvent*>(a)->GetControlId();
+    }
+    return 0;
+}
+
+// The constructor (0x766b30) only builds the empty logic list; the class has no vtable (0xc bytes)
+LobbyLogicMgr::LobbyLogicMgr() : mRust(ee_won_logicmgr_new(LogicMgrHost)) {}
+LobbyLogicMgr::~LobbyLogicMgr() { ee_won_logicmgr_free(this->mRust); }
+// Turns left clicks on menu items and button presses into control events; passes other events to the logics
+void LobbyLogicMgr::HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonLogicMgrCall::HandleComponentEvent, (intptr_t)e, e->mType); }
 }
