@@ -189,10 +189,10 @@ const SWEEP_SIZES: [usize; 16] = [1, 2, 3, 4, 5, 6, 9, 10, 11, 16, 20, 21, 22, 2
 /// gets a minimum radius of its own.
 fn sweep_formation(kind: i32, size: usize, first: Vec3, yaw: f32) -> (EeFormationFrame, f32) {
     let mut orientation = GeTransformation::IDENTITY;
-    if size % 2 == 0 {
+    if size.is_multiple_of(2) {
         orientation.set_orientation(RotationOrder::Ypr, yaw, 0.0, 0.0);
     }
-    let min_radius = if is_circle(kind) && size % 3 == 0 { size as f32 * 0.75 } else { 0.5 };
+    let min_radius = if is_circle(kind) && size.is_multiple_of(3) { size as f32 * 0.75 } else { 0.5 };
     (frame_of(&orientation, first, yaw), min_radius)
 }
 

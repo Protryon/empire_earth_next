@@ -127,12 +127,6 @@ fn write_settings(s: P, game_options: bool) -> c_long {
     settings::write(&mut PlatConfig, &mut Members { s, d: s }, records(s), game_options) as c_long
 }
 
-fn config_int(block: &CStr, key: &CStr) -> Option<i32> {
-    let mut v = 0;
-    // SAFETY: NUL-ended strings and a live out value
-    (unsafe { ee_base::plat_core::config::PlatConfigGetInt(block.as_ptr(), key.as_ptr(), &mut v) } != 0).then_some(v)
-}
-
 /// `IsNotKorean`: neither the game resources' language nor the system's is Korean.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_prefs_is_not_korean() -> bool {
