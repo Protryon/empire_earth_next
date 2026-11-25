@@ -40756,3 +40756,140 @@ headers).
 
 Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds. Batch
 23 had not reached origin/rust when the round ended (origin/rust 17682d86c), so no origin merge was needed.
+
+## R6 WON lobby and network, round 37: EEAWonNet whole in Rust; the screens' 30 event classes one; EELobbyGame folded into LobbyGame; the EE dialogs, option controls and sync events Rust's; AuthContext::Init, SetHashFile, InitLogic's directory query and SaveTOU, the socket transform and the UDP bind in Rust; FileReader/FileWriter and RegKey the drivers' (ee_won_lobby wonaction.rs, eegame.rs, lobbyevt.rs, flow.rs; ee_won_net authcpp.rs, authlogin.rs, reqmake.rs, cppcore.rs, udpmgr.rs, sockops.rs, ffi.rs; branch rust-wonnet37, 2026-11-24)
+
+Two forks in hand-made worktrees from rust-wonnet37: a (the lobby and the game's WON front end) and b (the network
+library). Both forks were relaunched after their first agents stopped on a usage limit with work uncommitted (fork a:
+the EEAWonNet move; fork b: the Rust entry points whose C++ callers were not switched yet); both finished it. The lead
+merged origin/rust batch 24 (bbb0654d2: the ee_base heap fix, Lua 5.5 via mlua) first (21831aa1f, the round's base),
+the forks merged it in, then both forks were merged --no-ff (4c8a37964; conflicts only rust/cbindgen.toml's export
+list, a union, and tools/xbuild.py's two new drivers, both kept).
+
+### What moved (logic: `logic_lines.py`, per commit)
+
+| Part | What | Logic |
+|---|---|---|
+| a ec225a004 | the WON screens' 30 event classes are one, EEUIEWonNetEvent holding its EeWonFrontCall; EEWonNetUI gone | -84 |
+| a be134bc7d | EEAWonNet whole in Rust (wonaction.rs: the members, the three constructors, Virtual4 and its statics); EEAWonNet.cpp the action's host (EEAWonNetHost.inl, one statement per op); EEWonNet builds the action through one `NewWonAction` op | -165 |
+| a c61f94c8e | EELobbyGame folded into LobbyGame: `mEE`, the Rust game (eegame.rs), made by a constructor taking the EE host; the 18 hooks answer through it when set | -23 |
+| a 77328028f | EELobbyConnectDialog and EELobbyFileDialog are `NewLobbyDialog<Kind>` (found by the kind-checked `SafeGetDialog`), the two option controls `new LobbyRustCtrl(kind)`, the two sync events lobbyevt.rs kinds 43 and 44 | -5 |
+| a 37f000750 | the front end's host calls `ee_won_wonnet_call` directly; 15 EEWonNet forwards gone (three of them had no caller) | -15 |
+| a a6819ffc8 | LobbyConfig's registry read uses the Rust key; the RegKey class moves verbatim to tests/won/won_regkey.h | -23 |
+| b 26246cd34, 1fa6bbcea | (the first agent) the pieces with no user but the drivers leave the library's headers; RustServerOp, the socket and UDP shims header-only; RefCount not copyable; the HTTP document enums Rust's | |
+| b 5b7f1b76f | AuthContext::Init (authcpp.rs `ee_won_authctx_new_default`), SetHashFile(community) (authlogin.rs, header-only), CopyAddresses' rand (`ee_won_crt_rand`), InitLogic's InitDirPaths (reqmake.rs `ee_won_reqmake_init_dirs`), the socket transform (cppcore.rs n_transform; AsyncOp.cpp's CoreTransform gone), SocketOp's kind constructor, LobbyBindUDPPort (`ee_won_udpmanager_bind_lobby`) | |
+| b d612ad600 | InitLogic's SaveTOU (flow.rs `ee_won_init_save_tou`); FileReader, FileWriter, FileWriterException and FileWriterCheck, with no game user left, moved unchanged to tests/won/won_file37_orig.h | |
+| b 41728718a | the unused AuthContext(user, community, password) and RustServerOp::NewGetMultiDir gone; three persistence helpers one statement each | |
+| b 19db9439d | ElGamal's operator= and Adopt in Rust (ffi.rs `ee_won_elgamal_assign`, `ee_won_elgamal_adopt`) | |
+| b 3535d77e7, af40fd53b, 69e19e743 | the drivers 1fa6bbcea broke repaired (below); rustfmt | 0 |
+
+Fork a -315 (18,659 -> 18,344), fork b -301 (18,659 -> 18,358). Round total (`port_metrics.py`, 21831aa1f -> the merged
+tip 4c8a37964; the same numbers from origin/rust 04ccdbcf3 to the batch 25 merge 94659ef01):
+
+| cpp_lines | cpp_files | code | shim | logic | classes | extern_c | rust_hdrs | unsafe | rust_lines |
+|---|---|---|---|---|---|---|---|---|---|
+| 113,495 -> 112,044 (**-1,451**) | 369 -> 365 (-4) | 63,051 -> 62,195 (-856) | 44,392 -> 44,152 (-240) | 18,659 -> 18,043 (**-616**) | 840 -> 817 (-23) | +23 | +1 | +53 | +1,098 |
+
+Classes gone: EEWonNetUI and the 30 screen event classes (one left), EEAWonNet's members (a one-pointer shell),
+EELobbyGame, EELobbyConnectDialog, EELobbyFileDialog, EELobbyGameOptionsCtrl, EELobbyPlayerOptionsCtrl,
+EELobbySyncPlayerEvent, EELobbySyncOptionEvent; RegKey, FileReader, FileWriter and FileWriterException are the
+drivers' now.
+
+### Goldens
+
+- **won_action37a_test** (new): EEAWonNet against the class as it was (tests/won/won_action37a_orig.h) over a
+  stand-in UI with real lists and labels: 3,000 sequences, 0 mismatches, 30 of 30 host ops reached, 30 of 30 op skips
+  caught. gWonNet is never made in AoC, so a LAN game does not reach EEAWonNet or the EEWonNet trim.
+- **won_net37_test** (new): SaveTOU's original against the Rust over real files, 10 cases (0/1/2/6-byte documents, an
+  old file, a read-only file, a missing directory, an empty path, a directory): 0 mismatches; three mutations caught
+  (no read-only retry, the terminator written, a failed open counted as failed).
+- **won_authhost_test**: one golden line comparing the Rust SetHashFile(community) with the original body (kept in
+  won_net37_orig.h); golden_authhost.txt was recorded over the C++ Init, so it covers Init's effects: 175 lines, 0
+  failures; the hash file without its directory and a changed secrets file name caught. Not caught: dropping Init's
+  verifier key load (the built-in WON key masks it).
+- **won_lobbyops_test**: the netlogic world's request text now logs a request's members and first message bytes, so
+  InitDirPaths' original paths are compared with `ee_won_reqmake_init_dirs`: 237,568 + 52,472 cases, 0 mismatches;
+  "/Patc" and a count of 3 caught (1,024 mismatches each).
+- won_wonnet_test 200,000 sequences (157 of 158 ops) and its screens part 100,000 (146 of 147), 0 mismatches; the
+  routing goldens (won_routeops 555 lines, won_smartroute 668, won_routemsg 4.26 M checks) 0 failures; ElGamal's
+  assign and adopt a Rust unit test (ffi.rs keys_and_blocks).
+
+### LAN reach (by reasoning; the LAN game and lan_capture_compare below cover them)
+
+- Reached: the EELobbyGame fold (every hook of the room's game), the sync events (every slot or option change), the
+  option controls and the connect dialog, the file dialog (with a saved game only), the lobby config's UseLocalIP
+  read; LobbyBindUDPPort, SocketOp's kind constructor, the transform (the LAN peer authentication's crypt), the peer
+  authentication's AuthContext::Init and possibly ElGamal's assign.
+- Not reached (goldens): EEAWonNet and the EEWonNet forwards, SetHashFile, CopyAddresses, InitDirPaths, SaveTOU.
+
+### Behaviour changes
+
+- A plain LobbyGame's status string goes through `EELobbyStatusString(0)` (still the empty string); the EE dialogs are
+  found by kind instead of a `dynamic_cast`; the sync events' number is read through `LobbyEvtGet`.
+- The WONLobby key's query writes a `long long` truncated to a DWORD on read, as RegKey::QueryDWORD did.
+- SaveTOU reads the document's bytes before opening the file; LobbyBindUDPPort stores the lobby port once, after the
+  bind; ElGamal's assignment copies the key in place instead of swapping pointers.
+
+### Lessons
+
+- logic_lines.py counts declarations and data members, while one-statement bodies count zero: turning forwards into
+  direct calls gains only their declaration lines; the gains are in member and declaration blocks and whole classes.
+  (From this round the lane coordinator's main measure is port_metrics.py's cpp_lines and cpp_files, logic second.)
+- WONLobbyModelObj.h is included inside `namespace WONAPI` (by WONLobbyGUI.h): a header it includes first lands in
+  that namespace (WONAPI::WONAPI::WonRethrow) and later global includes are skipped. Include such headers from one
+  included at global scope first (WONLobbyResource.h here).
+- WONLobbyEvents.h `#undef`s EE_LOBBYEVT at its end: make an event elsewhere with `LobbyEvtNew`.
+- Making a class header-only breaks drivers that define its members out of line as stand-ins (won_servconn_test,
+  won_routeops_test, won_smartroute_test after 1fa6bbcea): give the stand-in a class of its own behind an overridable
+  maker (ServerConnectionCpp::gPeerAuthMaker), and run the full wontest after any header-only change.
+- Changing what a NULL argument means (the document op's directory: NULL is now the WON directory) silently changes
+  goldens recorded with NULL (hostop_tests.rs, won_hostop_test now pass an empty directory).
+- A request description that shows only its status hides its members: a surviving mutation is the sign; log the bytes.
+- A crypto check inside a seeded-random golden shifts every later line.
+- In the Bash tool, backslashes in a quoted heredoc reached Python collapsed; Python text-mode writes on Windows turn
+  LF files into CRLF: read and write bytes, use chr(92) for C escapes in edit scripts.
+- Under eight lanes' load the full wontest runs about 30 programs an hour: run the changed code's drivers by name first.
+
+### Gates
+
+On the tip with origin/rust batch 25 merged (94659ef01; build/w37/chain2.log, chain3.log). The same chain ran first
+on the forks' merge before batch 25 (4c8a37964, build/w37/chain.log): every gate PASS there too (the oracle, the 12
+profiles at seeds 2-7, saveload plain and matrix, wontest 184 programs, gates.sh on its second run).
+
+| Gate | Result |
+|---|---|
+| `build.py -j 6 --sim` | 0 / 0 (EE-AOC 391 inputs, EE-SIM 392) |
+| `build.py --test-profile windowed-software` | 0 / 0 (391 inputs) |
+| `rust_build.py header` | 356 headers current |
+| `rust_build.py gate` | PASS, 6,753 tests (0 failed) |
+| `won_host_coverage.py` | PASS |
+| `xbuild.py wontest` | exit 0, each of the 185 programs exits 0 (won_action37a 3,000 sequences 30/30, won_net37 10 cases, won_authhost 175 lines, won_lobbyops 237,568 + 52,472 cases, won_wonnet 200,000 sequences 157/158 ops) |
+| oracle against the main checkout's `ref` | seeds 2-7 identical, `oracle: PASS` |
+| the 12 capture profiles, seeds 2-3 | PASS each: oracle 212, late 214, space 210, calamity 222, units 175, effects 6, missile 22, app 26, scenario 43, groups 2, placement 4, transport 185 digests equal |
+| saveload | plain seeds 2-7 18/18 identical; matrix `--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` exit 0, `saveload expect: PASS` |
+| `scenario_check.py` | PASS 27/27 (second run; the first, beside a civbuilder run, 26/27: aocpacificeen1ve1sthereturn timed out waiting for a form) |
+| `sim_editor.py`, `--civbuilder` | PASS 14,448 lines; PASS 4,062 lines (second run, alone; the first failed at step 217 with "Error Creating File" on the overwrite) |
+| `eedata check`, `cppgate` | PASS, PASS |
+| harness (slot.py): editor, `random-game --box-select --orders --seed 7` | `RESULT PASS editor`; BOX SELECT PASS, ORDERS PASS, `RESULT PASS random-game` |
+| LAN game | `RESULT PASS lan-game` PT host 2861 / joiner 2859 (base exe 2897 / 2896) |
+| `lan_capture_compare.py` against the exe built from origin/rust 04ccdbcf3 (build/w37/base25) | every lobby capture identical but three text carets: host-create-dialog (15 pixels at x 575..576, y 299..314), host-staging-host and host-staging-ready (15 pixels each at x 121..122, y 329..344): each a white caret on in one capture and off in the other |
+| `gates.sh` | `RESULT PASS tour`, `RESULT PASS ai-game outcome time-cap PT 12650` units [4, 38, 39] alive [2, 3] engines classic_lua x 2, `RESULT PASS lan-game PT host=2788 joiner=2778`, GATES PASS |
+
+On 4c8a37964 gates.sh's first run failed its LAN game: the host faulted at start (c0000005 in `ee_ts_thread_receive`
+under `RTSGraphics::Main`, the thread start race PORT_LEARNINGS records in earlier rounds); the run again alone was
+GATES PASS.
+
+Not run: the harness self test (nothing under tools/harness changed), `gates.sh --legacy`, the POSIX builds. The fork
+worktrees are removed (their logs in build/w37/w37a, w37b); origin/rust batch 26 (a78aecdc2) is not merged.
+
+### Left
+
+NetworkAdapterListItem (needs a Compare override on the GUI lane's MultiListItem) and WONLobbyPlatform.h (the Plat*
+classes, the GUI lane's); FilterListItem, GlueText (won_eeglue_test to rework), the game host's SendFileOp and
+completion (a SocketOp kind), TransferSetSavesPath, EELobbyPlayer (a fold into LobbyPlayer), EELobbyColorButton and
+EELobbyColorChooser (no generic Rust component shell), EELobbyConfig (LobbyConfig lives in WONLobbyGUI.h), StringParser's
+list helpers (won_parse_test exercises them); WONLobbyPrv's plain members, ConfigParser's driver-only methods,
+WONLobbyCore.h's ~95 declarations, WONLobbyEvents.h's makers; in the network library WONRouting.h's remaining 145
+(structural: heads, members, dispatch hooks), SetHashFileList, CoreNewSocketOp's address wrapping, InitLogic's and
+PingLogic's multi-statement host cases, ReadBuffer's reads. tests/won/won_lobby33_new.h's copy of LobbyConfig.cpp's host
+still has the old RegKey statements.
