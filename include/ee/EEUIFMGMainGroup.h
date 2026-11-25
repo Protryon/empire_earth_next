@@ -23,7 +23,8 @@ extern GEFont* gU531930;                    // 0x531930 (a UI font; Empire Earth
 class EEUIFMGMainGroup : public EeScreensMainGroupFields {
 public:
     EEUIFMGMainGroup(EEUIFMainGame* inOwner);   // 0x267ec8 (the main game form's CreateGroup(0))
-    ~EEUIFMGMainGroup();                    // (??_G 0x267f1c)
+    // (??_G 0x267f1c)
+    ~EEUIFMGMainGroup() { delete this->mStatusBox; }
     // The group's members but ShowCommands (the original's Refresh, SetUnit, GetSelectedUnit, Open, ShowCommandButton,
     // ShowSpecialButtons, Update, WantsRefresh): ee_screens main_group.rs over the host below
     void Refresh() { ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_REFRESH, NULL, 0); }

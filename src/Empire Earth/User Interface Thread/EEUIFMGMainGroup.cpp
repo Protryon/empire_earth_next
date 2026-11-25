@@ -46,12 +46,6 @@ EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
     ee_screens_main_group_fields(this, static_cast<EeScreensMainGroupFields*>(this));   // (the record zeroed)
 }
 
-// Destroys the main panel group and its status box
-EEUIFMGMainGroup::~EEUIFMGMainGroup()
-{
-    delete this->mStatusBox;
-}
-
 // (EETechTreeNode::GetHotKey and EEButtonObject::GetHotKey, the inline COMDATs the original emitted here: their
 // classes' units, Tech Tree/EETechTreeNode.cpp and Database/EEButtonObject.cpp)
 

@@ -52,23 +52,26 @@ extern bool gB4C3220;
 
 class EEUIFScenarioEditor : public UIForm {
 public:
-    EEUIFScenarioEditor(UIManager* inManager);   // 0x19d615 (EEUIManager::CreateScenarioEditor news 0x2b8 bytes)
-    virtual ~EEUIFScenarioEditor();
-    virtual long UpdateKeyboard();          // slot 0x2c 0x19fdc8
-    virtual void Open();                    // slot 0x48 0x19f794
+    // 0x19d615 (EEUIManager::CreateScenarioEditor news 0x2b8 bytes)
+    EEUIFScenarioEditor(UIManager* inManager) : UIForm(1000, 0xf, inManager, -1, true) { ee_screens_sefm_construct(this, &this->mRust); }
+    virtual ~EEUIFScenarioEditor() { ee_screens_sefm_free(this->mRust); }
+    // slot 0x2c 0x19fdc8
+    virtual long UpdateKeyboard() { return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_KEYBOARD_WHOLE, 0, NULL, NULL); }
+    // slot 0x48 0x19f794
+    virtual void Open() { ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_OPEN, 0, NULL, NULL); }
     virtual long DrawBackground(const GERectangle& inRectangle);   // slot 0x18 0x19f501
-    virtual void Close();                   // slot 0x38 0x19e68a
-    virtual long CopyData();                // slot 0x3c 0x19e72c
-    virtual long UpdateMouse();             // slot 0x30 0x1a0083
+    // slot 0x38 0x19e68a
+    virtual void Close() { ee_screens_sefm_close(this); }
+    // slot 0x3c 0x19e72c
+    virtual long CopyData() { return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_COPY_DATA_WHOLE, 0, NULL, NULL); }
+    // slot 0x30 0x1a0083
+    virtual long UpdateMouse() { return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_MOUSE_WHOLE, 0, NULL, NULL); }
     // (DrawPolygons, slot 0x40 0x19f5b3, was UIForm's alone: no override)
     // the form's members (editor_form.rs EE_SCREENS_SEFM_*): one call each
     int32_t Call(uint32_t inWhat, int32_t inA = 0, void* inP = NULL, const float* inR = NULL) const
     {
         return ee_screens_sefm_call(this->mRust, inWhat, inA, inP, inR);
     }
-    // suspended, the object passed to the load thread, which posts it to the user interface (an event) or shows it
-    void PostLoadEvent(UReferenceCounter* inObject) { this->Call(EE_SCREENS_SEFM_POST_LOAD_EVENT, 0, inObject); }
-    void PostShowLoadedObject(UReferenceCounter* inObject) { this->Call(EE_SCREENS_SEFM_POST_SHOW_LOADED, 0, inObject); }
     // 0x19f6e9: leaves the editor through the load thread (EESEATestScenario passes true, EESEAExitScenario false)
     void ExitEditor(bool inTestScenario) { this->Call(EE_SCREENS_SEFM_EXIT_EDITOR, inTestScenario ? 1 : 0); }
     void RefreshCurrentGroup() { this->Call(EE_SCREENS_SEFM_STORE_GROUP); }   // 0x19fc97: the current group's Store
@@ -118,10 +121,6 @@ public:
         return (UIEditBox*)ee_screens_sets_control(this->GetTriggerTab(),
                                                    inText ? EE_SCREENS_SETS_TEXT_EDIT : EE_SCREENS_SETS_NAME_EDIT, 0);
     }
-    void* GetTriggerSub(long inScreen) const
-    {
-        return ee_screens_sets_sub(this->GetTriggerTab(), (uint32_t)inScreen, NULL, NULL);
-    }
     uint32_t TriggerSubOp(long inScreen, uint32_t inWhat, uint32_t inA = 0, uint32_t inB = 0) const
     {
         return ee_screens_sets_sub_op(this->GetTriggerTab(), (uint32_t)inScreen, inWhat, inA, inB);
@@ -152,11 +151,9 @@ public:
     EEAScroll* GetEdgeScroll() const { return (EEAScroll*)this->GetSlot(EE_SCREENS_SEFM_EDGE_SCROLL); }
     GEBitmap* GetPanelBackground() const { return (GEBitmap*)this->GetSlot(EE_SCREENS_SEFM_PANEL_BACKGROUND); }
     UIComboBox* GetPlayerComboBox() const { return (UIComboBox*)this->GetSlot(EE_SCREENS_SEFM_PLAYER_COMBO); }
-    UIButton* GetQuickSaveButton() const { return (UIButton*)this->GetSlot(EE_SCREENS_SEFM_QUICK_SAVE_BUTTON); }
     UIRadioButton* GetTabButton(long inTab) const { return (UIRadioButton*)this->GetSlot(EE_SCREENS_SEFM_TAB_BUTTON + inTab); }   // shells (EEUIFSEMainButton)
     bool GetIsUIHidden() const { return this->GetSlot(EE_SCREENS_SEFM_UI_HIDDEN) != 0; }
     bool GetWasUIHidden() const { return this->GetSlot(EE_SCREENS_SEFM_WAS_UI_HIDDEN) != 0; }
-    void SetExitAfterSave(bool inExit) { ee_screens_sefm_set(this->mRust, EE_SCREENS_SEFM_EXIT_AFTER_SAVE, inExit ? 1 : 0); }
 
     // the single statements of the form's host (ee_screenscpp_sefmx; a member for UIForm's protected calls)
     static int32_t Statement(uint32_t inOp, void* const* p, int32_t* i, float* f);   // editor_sefmx.rs's statements

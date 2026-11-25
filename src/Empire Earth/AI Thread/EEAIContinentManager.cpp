@@ -45,12 +45,6 @@ EEAIContinentManager::EEAIContinentManager()
     EEAIRegisterContinentState();
 }
 
-// Destroys the continent manager by shutting down the global one (Shutdown), then frees its tables
-EEAIContinentManager::~EEAIContinentManager()
-{
-    ee_astar_cm_destroy(&gContinentManager.mRecord, &this->mRecord);
-}
-
 
 // The influence table's region size (the areas' bounds), 0 without the table
 static long EEAIRegionSize()
@@ -86,12 +80,4 @@ extern "C" uint32_t ee_astar_cm_unit_host(int32_t inWhat, uint64_t inUnit)
         theUnit->mPlanetID = EEGetLandContinentOf(theUnit);
     }
     return theUnit->mPlanetID;
-}
-
-// When inTile is in the forest, creates inCount units of type 0x147 at random forest tiles within inRadius of
-// inTile (11 tries each, else inTile) flagged as regrowing; returns whether inTile is in the forest (EEUnit 0x22a3fd
-// calls it; Rust: cm_world.rs)
-bool EEAIForest::RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long inCount)
-{
-    return ee_astar_forest_regrow((uint64_t)(uintptr_t)this, inTile.mX, inTile.mY, inRadius, inCount);
 }

@@ -77,35 +77,19 @@
 #include "rust/game/screens.h"
 #include "ee/EEUIShell.h"
 #include "rust/sim/scenario.h"
+
+static_assert(sizeof(EEUIFSEBrushGroup) == sizeof(EeScreensSeBrushGroup) &&
+                  offsetof(EEUIFSEBrushGroup, mButtons) == offsetof(EeScreensSeBrushGroup, buttons) &&
+                  offsetof(EEUIFSEBrushGroup, mTitle) == offsetof(EeScreensSeBrushGroup, title) &&
+                  offsetof(EEUIFSEBrushGroup, mBrushSize) == offsetof(EeScreensSeBrushGroup, brush_size) &&
+                  offsetof(EEUIFSEBrushGroup, mIsCentered) == offsetof(EeScreensSeBrushGroup, centered),
+              "editor_seplx.rs's brush group");
 extern bool gSightUpdatesEnabled;
 
 // TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
 long EESETestSaveTriggersOnly(UIForm* inForm)
 {
     return ee_screens_sefm_call(static_cast<EEUIFScenarioEditor*>(inForm)->mRust, EE_SCREENS_SEFM_SAVE_TRIGGERS, 0, NULL, NULL);
-}
-
-// Creates the editor form (id 1000, 15 control groups): button texture, edge scroll, mini map, player combo box,
-// labels, tab groups, tool bar, hide-UI check box, camera and trigger save/load and debug hot keys; map tab on
-// (editor_form.rs)
-EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
-    : UIForm(1000, 0xf, inManager, -1, true)
-{
-    ee_screens_sefm_construct(this, &this->mRust);   // (editor_form.rs construct)
-}
-
-// Destroys the editor form, releasing its events, textures and edge scroll and deleting its tabs and controls
-// (editor_form.rs)
-EEUIFScenarioEditor::~EEUIFScenarioEditor()
-{
-    ee_screens_sefm_free(this->mRust);
-}
-
-// Prepares the frame: dirties the game view (unless full view) and mini map, moves the placement ghost, updates the
-// current tab group and the edge scroll (unless full view or a control holds the mouse) (editor_form.rs)
-long EEUIFScenarioEditor::CopyData()
-{
-    return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_COPY_DATA_WHOLE, 0, NULL, NULL);
 }
 
 // Draws the full-view background or the bottom panel, then the current tab group; returns the full view's result
@@ -115,31 +99,11 @@ long EEUIFScenarioEditor::DrawBackground(const GERectangle& inRectangle)
     return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DRAW_BACKGROUND, 0, NULL, theRectangle);
 }
 
-// Opens the editor: editor camera, backgrounds, paused music and ambient sound, editor game view and mini map,
-// enters the current tab; posts the exit action if a save asked to exit afterwards (editor_form.rs)
-void EEUIFScenarioEditor::Open()
-{
-    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_OPEN, 0, NULL, NULL);
-}
-
 // Sets the editor's game view rectangle and disables the current tab group while the UI is hidden
 void EEUIFScenarioEditor::SetGameView(const GERectangle& inRectangle, bool inIsUIHidden)
 {
     float theRectangle[4] = {inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom()};
     ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_GAME_VIEW, inIsUIHidden ? 1 : 0, NULL, theRectangle);
-}
-
-// Handles the editor keys (; quick save, / quick load, T / Shift+T grid mode, 1-8 and Alt+1-8 pick a player),
-// else the tab group's and the form's keys; nothing while suspended (editor_form.rs)
-long EEUIFScenarioEditor::UpdateKeyboard()
-{
-    return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_KEYBOARD_WHOLE, 0, NULL, NULL);
-}
-
-// Passes the mouse to the current tab group unless a control captured it; does nothing while suspended
-long EEUIFScenarioEditor::UpdateMouse()
-{
-    return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_MOUSE_WHOLE, 0, NULL, NULL);
 }
 
 // ---- the form's host (editor_form.rs: the ops from 800)
@@ -533,11 +497,4 @@ int32_t EEUIFScenarioEditor::Statement(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SEFMX_MANAGER_EDITOR: return EESEOut(i, static_cast<UIForm*>(gUIManager->GetScenarioEditorForm()));
     }
     return 0;
-}
-
-// Closes the editor form, restoring the game camera mode, the game render list and the full-window mouse bounds
-// (editor_sefmx.rs)
-void EEUIFScenarioEditor::Close()
-{
-    ee_screens_sefm_close(this);
 }

@@ -57,59 +57,9 @@ const UString EEComputerPlayer::sCPUOnlyFlag("EEComputerPlayer-CPU Only Flag");
 
 static_assert(sizeof(EeCpBehavior) == sizeof(EECPBehavior), "ee_sim::cp::init reads gCPBehaviors as EeCpBehavior");
 
-EEComputerPlayer::EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID) : EEPlayer(inName, inPlayerID)
-{
-    this->Init();
-}
-
-EEComputerPlayer::EEComputerPlayer()
-{
-    this->Init();
-}
-
-EEComputerPlayer::~EEComputerPlayer()
-{
-    ee_cp_pl_destroy(EECP_THIS);
-}
-
-void EEComputerPlayer::Init()
-{
-    ee_cp_pl_init(EECP_THIS);
-}
-
-void EEComputerPlayer::SetCombatState(unsigned long inCombatState)
-{
-    ee_cp_pl_set_combat_state(EECP_THIS, inCombatState);
-}
-
-void EEComputerPlayer::AddResource(long inIndex, long inAmount)
-{
-    ee_cp_pl_add_resource(EECP_THIS, inIndex, inAmount);
-}
-
-void EEComputerPlayer::WorkOutPopulation()
-{
-    ee_cp_pl_work_out_population(EECP_THIS);
-}
-
 void EEComputerPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
 {
     ee_cp_pl_detach_unit(EECP_UNIT(inUnit));
-}
-
-bool EEComputerPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason)
-{
-    return ee_cp_pl_can_produce(EECP_THIS, inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, (uint64_t)(uintptr_t)outReason);
-}
-
-void EEComputerPlayer::NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag)
-{
-    EEPlayer::NoticeTargetPlayer(inPlayer, inFlag);
-}
-
-void EEComputerPlayer::Virtual60()
-{
-    EEPlayer::Virtual60();
 }
 
 void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
@@ -117,65 +67,10 @@ void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
     ee_cp_pl_unit_completed(EECP_THIS, EECP_UNIT(inUnit));
 }
 
-long EEComputerPlayer::GetHeroCount(bool inByClass, bool inRequests)
-{
-    return ee_cp_pl_hero_count(EECP_THIS, inByClass, inRequests);
-}
-
-long EEComputerPlayer::ScaleCost(long inCost)
-{
-    return ee_cp_scale_cost(this, inCost);
-}
-
-bool EEComputerPlayer::IsDeathmatch()
-{
-    return ee_cp_pl_is_deathmatch(EECP_THIS);
-}
-
-long EEComputerPlayer::GetPopulationLimit(long inArg)
-{
-    return ee_cp_pl_population_limit(EECP_THIS, inArg);
-}
-
-// (50 for citizens while the classic's garrison or fortress was planned: gone in stage 6)
-long EEComputerPlayer::GetExtraPopulation(long)
-{
-    return 1;
-}
-
-long EECPPendingEpoch(EEComputerPlayer* inPlayer)
-{
-    return ee_cp_pl_pending_epoch((uint64_t)(uintptr_t)static_cast<EEPlayer*>(inPlayer));
-}
-
-bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
-{
-    return ee_cp_pl_can_afford(EECP_THIS, (uint64_t)(uintptr_t)inTechnology, inUnitType, inCount);
-}
 
 void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
 {
     ee_cp_pl_damage_taken(EECP_THIS, inPlayer, inAmount, EECP_UNIT(inUnit));
-}
-
-long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_cp_pl_load(EECP_THIS, inMajorVersion, inMinorVersion, (uint64_t)(uintptr_t)&inFile);
-}
-
-long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_cp_pl_save(EECP_THIS, inMajorVersion, inMinorVersion, (uint64_t)(uintptr_t)&outFile);
-}
-
-void EEComputerPlayer::EpochMediaLoaded(long inEpoch)
-{
-    ee_cp_pl_epoch_media(EECP_THIS, inEpoch, true);
-}
-
-void EEComputerPlayer::EpochMediaUnloaded(long inEpoch)
-{
-    ee_cp_pl_epoch_media(EECP_THIS, inEpoch, false);
 }
 
 void EEComputerPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
@@ -183,29 +78,9 @@ void EEComputerPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inT
     ee_cp_pl_flare(EECP_THIS, (uint64_t)(uintptr_t)inFrom, inTile.mX, inTile.mY);
 }
 
-void EEComputerPlayer::RefreshResourceCenters()
-{
-    ee_cp_pl_refresh_resource_centers(EECP_THIS);
-}
-
-// Let the combat personnel draft the units it deferred (stage 5: no personnel; the Lua AIs take their units)
-void EEComputerPlayer::RefreshTownGroups()
-{
-}
-
 void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 {
     ee_cp_pl_units_swapped(EECP_THIS, reinterpret_cast<const EeCpUnitSwap*>(ioSwaps.data()), ioSwaps.size(), (uint64_t)(uintptr_t)&ioSwaps);
-}
-
-void EEComputerPlayer::Clear()
-{
-    ee_cp_pl_clear(EECP_THIS);
-}
-
-long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    return ee_cp_pl_repair_pointers(EECP_THIS, inMajorVersion, inMinorVersion);
 }
 
 // port: set by EEWorld::CreatePlayers while it repairs the players of a loaded game from save version 0.260 on; the
@@ -213,10 +88,6 @@ long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned lon
 // 1350 s save: player 3's attack sub group lost its task's town, player 2 having been repaired first)
 bool gDeferComputerPlayerRestore = false;
 
-void EECPRestoreDeferredManagers(unsigned long inMajorVersion, unsigned long inMinorVersion)
-{
-    ee_cp_pl_restore_deferred(inMajorVersion, inMinorVersion);
-}
 
 // Appends a goal to one of the unit's goal queues and refreshes its goals
 void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
@@ -229,44 +100,9 @@ void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
     this->RefreshActiveGoal();
 }
 
-void EEComputerPlayer::EpochReached(long inEpoch)
-{
-    ee_cp_pl_epoch_reached(EECP_THIS, inEpoch);
-}
-
-void EEComputerPlayer::SetNextAttackTime(unsigned long inTime)
-{
-    ee_cp_pl_set_next_attack_time(EECP_THIS, inTime);
-}
-
-void EEComputerPlayer::SetActive(bool inActive)
-{
-    ee_cp_pl_set_active(EECP_THIS, inActive);
-}
-
-void EEComputerPlayer::SetCitizenPercentage(float inValue)
-{
-    ee_cp_pl_set_citizen_percentage(EECP_THIS, inValue);
-}
-
 void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit)
 {
     ee_cp_pl_unit_stranded(EECP_THIS, EECP_UNIT(inUnit));
-}
-
-void EEComputerPlayer::TakeResource(long inIndex, long inAmount)
-{
-    ee_cp_pl_take_resource(EECP_THIS, inIndex, inAmount);
-}
-
-void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
-{
-    ee_cp_pl_pay(EECP_THIS, (uint64_t)(uintptr_t)inTechnology, inUnitType, inFraction);
-}
-
-void EEComputerPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
-{
-    ee_cp_pl_pay_improvement(EECP_THIS, (uint64_t)(uintptr_t)inClass, inImprovement);
 }
 
 void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
@@ -284,25 +120,9 @@ void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
     ee_cp_pl_unit_goal_done(EECP_THIS, EECP_UNIT(inUnit));
 }
 
-void EEComputerPlayer::Update(unsigned long inTime)
-{
-    ee_cp_pl_update(EECP_THIS, inTime);
-}
-
-void EEComputerPlayer::UpdateGroups()
-{
-    ee_cp_pl_regroup(EECP_THIS, 1);
-}
-
 bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit)
 {
     return ee_cp_pl_avoids_enemies(EECP_THIS, EECP_UNIT(inUnit));
-}
-
-// port: the seat's Lua AI answers from ai.wonders (classic_lua's update_wonders; the original's combat manager
-// responded here)
-void EEComputerPlayer::WonderStarted(EEComplexUnit*)
-{
 }
 
 // Returns the tech node's unit class at the index, or its default unit class past the end (ee_sim::cp player_game.rs)

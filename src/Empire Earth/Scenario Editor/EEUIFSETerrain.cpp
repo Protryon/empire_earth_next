@@ -48,33 +48,6 @@ struct EESETerrainNameLess {
     bool operator()(EETerrainTable* inFirst, EETerrainTable* inSecond) { return ee_screens_setnx_terrain_less(inFirst->mNameID, inSecond->mNameID); }
 };
 
-// the list boxes' draws and copies (editor_setnx.rs lists: each line's colour swatches; the type list's copy with
-// its textures' references moved, the previews and the selection frame, the names right of the previews)
-long EESEUITerrainColorLB::CopyData()
-{
-    return ee_screens_setlb_call(EE_SCREENS_SETLB_COLOR_COPY, this);
-}
-
-long EESEUITerrainColorLB::DrawPolygons()
-{
-    return ee_screens_setlb_call(EE_SCREENS_SETLB_COLOR_DRAW, this);
-}
-
-long EESEUITerrainTypeLB::CopyData()
-{
-    return ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_COPY, this);
-}
-
-long EESEUITerrainTypeLB::DrawPolygons()
-{
-    return ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_DRAW, this);
-}
-
-long EESEUITerrainTypeLB::DrawTextA()
-{
-    return ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_TEXT, this);
-}
-
 // The type and colour lists' change events (EEUIETerrainTypeChange 0x1ab6d7, EEUIETerrainColorChange 0x1ab4bc) are
 // EESEERust kinds (ee_screens editor_events.rs: EE_SCREENS_SEE_TERRAIN_TYPE, _COLOR; the tab's change in Rust)
 

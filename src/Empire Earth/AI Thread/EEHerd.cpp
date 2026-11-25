@@ -40,79 +40,13 @@ const UString EEHerd::sData("EEHerd-SaveLoadData");
 // (EEWorld.cpp). Owner by placement only (EECalamity's statics start at 0x4e5e48): PROVISIONAL
 long gHerdUnreadValue = 0;
 
-static void* EEHerdSelf(EEHerd* inHerd)
-{
-    return static_cast<void*>(inHerd);
-}
-
-EEHerd::EEHerd()
-{
-    ee_cp_herd_construct_default(EEHerdSelf(this), this);
-}
-
-EEHerd::EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID)
-{
-    ee_cp_herd_construct(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inPlayer, inAnimal, inID);
-}
-
 EEHerd::~EEHerd()
 {
-    ee_cp_herd_clear(EEHerdSelf(this), this);
+    ee_cp_herd_clear(this, this);
     ee_cp_herd_free(this);
 }
 
-bool EEHerd::AddUnit(EEComplexUnit* inUnit)
-{
-    return ee_cp_herd_add_unit(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit);
-}
-
-void EEHerd::HandleUnitHit(EEComplexUnit* inUnit)
-{
-    ee_cp_herd_handle_unit_hit(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit);
-}
-
-void EEHerd::AttackBack(EEComplexUnit* inUnit, bool inAll)
-{
-    ee_cp_herd_attack_back(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit, inAll);
-}
-
-bool EEHerd::CanTake(EEComplexUnit* inUnit, bool inCheckRange)
-{
-    return ee_cp_herd_can_take(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit, inCheckRange);
-}
-
-bool EEHerd::HasUnit(EEComplexUnit* inUnit)
-{
-    return ee_cp_herd_has_unit(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit);
-}
-
-bool EEHerd::RemoveUnit(EEComplexUnit* inUnit)
-{
-    return ee_cp_herd_remove_unit(EEHerdSelf(this), this, (uint64_t)(uintptr_t)inUnit);
-}
-
-void EEHerd::Update(unsigned long inTime)
-{
-    ee_cp_herd_update(EEHerdSelf(this), this, inTime);
-}
-
 static_assert(sizeof(EeHerdPoint) == sizeof(U2DPoint<long>), "a herd point is a U2DPoint<long>");
-
-void EEHerd::Create(const std::vector<U2DPoint<long> >& inTiles)
-{
-    ee_cp_herd_create(EEHerdSelf(this), this, reinterpret_cast<const EeHerdPoint*>(inTiles.data()), inTiles.size());
-}
-
-// a Rust point as the U2DPoint it is
-static U2DPoint<long> EEHerdPointOf(const EeHerdPoint& inPoint)
-{
-    return U2DPoint<long>(inPoint.mX, inPoint.mY);
-}
-
-U2DPoint<long> EEHerd::GetRandomPoint()
-{
-    return EEHerdPointOf(ee_cp_herd_random_point(EEHerdSelf(this), this));
-}
 
 // Returns whether a unit is a placed animal or fish of a known animal type
 bool EEHerd::IsAnimalOnMap(EEUnit* inUnit)
@@ -121,22 +55,6 @@ bool EEHerd::IsAnimalOnMap(EEUnit* inUnit)
         EEAnimal::Find(inUnit->mUnitClass->mUnitType) && inUnit->mTileX != -10000 && inUnit->mTileY != -10000;
 }
 
-long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    return ee_cp_herd_load(EEHerdSelf(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, &inFile,
-                           &EESaveFilePrimitive);
-}
-
-long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    return ee_cp_herd_save(EEHerdSelf(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, &outFile,
-                           &EESaveFilePrimitive);
-}
-
-long EEHerd::RepairPointers(long inMajorVersion, long inMinorVersion)
-{
-    return ee_cp_herd_repair_pointers(EEHerdSelf(this), this, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
-}
 
 void EEHerd::GetUnits(std::vector<EEComplexUnit*>& outUnits)
 {

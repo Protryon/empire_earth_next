@@ -41,7 +41,8 @@ extern EEAIContinentManager gContinentManager;
 class EEAIContinentManager {
 public:
     EEAIContinentManager();                 // 0x1ef6b (Empire Earth.cpp's chain)
-    virtual ~EEAIContinentManager();        // +0x00 dtor 0x1f11f (??_G 0x1f103)
+    // +0x00 dtor 0x1f11f (??_G 0x1f103)
+    virtual ~EEAIContinentManager() { ee_astar_cm_destroy(&gContinentManager.mRecord, &this->mRecord); }
     // 0x22b62: the continent id of inUnit's tile (GetContinent(its (+0x1c, +0x20), inKind))
     unsigned short GetContinent(EEUnit* inUnit, long inKind)
         { return ee_astar_cmq_unit_region_id(&this->mRecord, (uint64_t)(uintptr_t)inUnit, inKind); }
@@ -76,7 +77,8 @@ public:
     EEAIPathArea* GetPathAreaAt(const EETileLocation& inTile)
         { return (EEAIPathArea*)(uintptr_t)ee_astar_cmq_area_at(&this->mRecord, 3, inTile.mX, inTile.mY); }
     unsigned short GetPathAreaIDAt(const EETileLocation& inTile);   // 0x208334 (inline COMDAT, defined in EEGroup.cpp) (provisional name)
-    unsigned short GetPathAreaIDAt(long inX, long inY);   // inline in EEGroup.cpp (Virtual38: refuses the ctor and the 0x208334 call)
+    // inline in EEGroup.cpp (Virtual38: refuses the ctor and the 0x208334 call)
+    unsigned short GetPathAreaIDAt(long inX, long inY) { return this->GetPathAreaIDAt(EETileLocation(inX, inY)); }
     // 0x2311c (ret 0xc): whether tile (inX, inY) belongs to inID (EEAIContinent::GetShoreNextTo) (provisional name)
     bool IsNextToArea(long inX, long inY, unsigned short inID) { return ee_astar_cmq_is_next_to_area(&this->mRecord, inX, inY, inID); }
     // 0x236b5 takes the map (`ret 4`; it passes it to 0x1f8ae and 0x2033f): EEUserInterface calls
@@ -152,8 +154,6 @@ public:
     template <class T> EEAIHandleView<T> Table(EeAStarCmTable inTable) const
         { return EEAIHandleView<T>(ee_astar_cm_table, &this->mRecord, inTable); }
     EEAIHandleView<EEAIContinent> GetContinents() const { return this->Table<EEAIContinent>(EeAStarCmTable::Continents); }
-    EEAIHandleView<EEAIPathSubSector> GetPathSubSectors() const
-        { return this->Table<EEAIPathSubSector>(EeAStarCmTable::PathSubSectors); }
     EEAIHandleView<EEAIForest> GetForests() const { return this->Table<EEAIForest>(EeAStarCmTable::Forests); }
     unsigned long NewSerial() { return ++this->mRecord.last_serial; }   // `++mLastSerial`
     // the continents' adjacency matrix (mTileFlags, mFlagsWidth x mFlagsWidth)
