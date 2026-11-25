@@ -270,8 +270,6 @@ extern "C" intptr_t ee_won_guicpp_tip_call(void* inMe, EeWonTipOp op, intptr_t a
     case To::ItemTop: return t->mItem->mTop;
     case To::ItemWidth: return t->mItem->mWidth;
     case To::ItemHeight: return t->mItem->mHeight;
-    case To::Scheme: return (intptr_t)g->mColorScheme;
-    case To::SetScheme: g->mColorScheme = (ColorScheme*)b; return 0;
     case To::HasOwnScheme: return t->GetOwnColorScheme() != NULL ? 1 : 0;
     case To::ListScheme: return (intptr_t)t->mListArea->GetColorScheme();
     case To::ListLeftPad: return t->mListArea->GetLeftPad();
@@ -281,7 +279,6 @@ extern "C" intptr_t ee_won_guicpp_tip_call(void* inMe, EeWonTipOp op, intptr_t a
     case To::ListWidth: return t->mListArea->Width();
     case To::Width: return t->Width();
     case To::Height: return t->Height();
-    case To::Draw: WONDrawPlain(*g, *(const EeWonDrawOp*)b); return 0;
     case To::ScrollPaint: t->mListArea->ScrollPaint(*g); return 0;
     case To::ListLocalToRoot: t->mListArea->LocalToRoot(((int*)a)[0], ((int*)a)[1]); return 0;
     case To::SetSize: t->SetSize((int)a, (int)b); return 0;

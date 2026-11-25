@@ -30,6 +30,7 @@
 #include "rust/won_gui/dialogobj.h"
 #include "rust/won_gui/fontmap.h"
 #include "rust/won_gui/gfxobj.h"
+#include "rust/won_gui/gfxrun.h"
 #include "rust/won_gui/guidraw.h" // SelectionColor
 #include "rust/won_gui/grabobj.h"
 #include "rust/won_gui/imgobj.h"
@@ -1149,13 +1150,13 @@ public:
 // Graphics: vtable 0x450fe8;
 // the field accesses at 0x326ad0/0x326ce0/0x327140 show a 0x38-byte object.
 // R6 WON GUI round 35: the one Graphics is the platform's (the original's MSGraphics, the port's PlatGraphics, folded
-// in): the virtual hooks are gone, the drawing ones answered on the surface in Rust (gfxplat.rs over platgfx.rs:
-// a software surface with the results the GDI backend had, at the surface's pixel scale); the host (Graphics.cpp)
-// answers the image draws and the text. The polygon hooks, which nothing called, are platgfx.rs's
-// ee_won_plat_gfx_polygon.
+// in): the drawing answered on the surface in Rust (gfxplat.rs over platgfx.rs at the surface's pixel scale). Round
+// 38: its leading members are gfxrun.rs's record (EeWonGraphics: checked in Graphics.cpp), which the methods, the
+// draw plans and the game's scheme and plain-draw ops run on in Rust; the host (Graphics.cpp) answers the image
+// draws, the text and the font.
 class Graphics {
 public:
-    Graphics(); //326ad0
+    Graphics() { ee_won_graphics_init(this->Rec()); } //326ad0
     ~Graphics(); //326b90
     void Attach(DisplayContext*); //326c70: the context's surface and pixel scale; the colour starts black
     void Detach();
@@ -1179,20 +1180,21 @@ public:
     void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { this->GCall(EeWonGfxCall::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
     void PushClipRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::PushClip, x, y, w, h); }
     void PopClipRect() { this->GCall(EeWonGfxCall::PopClip); }
-    SmartPtr<DisplayContext> mDisplayContext; //04
-    // R6 WONGUI B round 1: the methods are ee_won's gfxobj.rs. The translation, colour and clip rectangle are the block
-    // of members it edits in place (EeWonGfxState: the original's +08, +0c, +14, +24; checked in Graphics.cpp), the
-    // clip stack (+18) its object
+    // gfxrun.rs's record: the translation, colour and clip rectangle (EeWonGfxState: the original's +08, +0c, +14,
+    // +24), the clip stack (+18), the borrowed colour scheme (+34) and the surface
     int mTransX, mTransY;
     DWORD mColor;
     WONRectangle mClipRect;
-    const EeWonGfxState* State() const { return (const EeWonGfxState*)&this->mTransX; }
-    SmartPtr<Font> mFont; //10
-    ColorScheme* mColorScheme; //34, borrowed
     EeWonGfx* mGfx; // the clip stack, owned
+    ColorScheme* mColorScheme; // borrowed
     EeWonGfxPlat mPlat; // the context's surface (borrowed; none while detached) and its pixel scale (gfxplat.rs)
+    SmartPtr<DisplayContext> mDisplayContext; //04
+    SmartPtr<Font> mFont; //10
+    const EeWonGfxState* State() const { return (const EeWonGfxState*)&this->mTransX; }
+    EeWonGraphics* Rec() { return (EeWonGraphics*)this; }
 private:
-    DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL);
+    DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL)
+    { return ee_won_graphics_call(this->Rec(), c, a, b, cc, d, e, f, g, p); }
 };
 
 // 0x2fdcd0 / 0x2fddf0 (cdecl): a 3D frame (inPressed: sunken) and a flat frame (provisional names)

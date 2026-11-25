@@ -61,7 +61,6 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
     ComboBox* cb = static_cast<ComboBox*>(t);
     switch (op) {
     case H::Base: return s->BaseCall((EeWonShellVirt)a, b, c, d);
-    case H::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
     case H::WrapSetText: static_cast<MSButtonBase*>(t)->mText->SetText(*(const GUIString*)a); return 0;
     case H::WrapWidth: return static_cast<MSButtonBase*>(t)->mText->GetWidth();
     case H::WrapWidthOf: return static_cast<MSButtonBase*>((Component*)a)->mText->GetWidth();

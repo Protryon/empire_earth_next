@@ -421,12 +421,16 @@ pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize
 
 /// The component services every GUI object asks its host for (`ComponentOp`'s and Container's host's), answered
 /// in the game by Component's and the container's own calls (R6 WON GUI round 37); `comp` is the asking object's
-/// component. None in a driver's world and for the others (virtuals, references, the Graphics).
+/// component; the Graphics' plain draws and scheme are gfxrun.rs's (round 38). None in a driver's world and for the
+/// others (virtuals, references).
 pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
     use crate::compobj::EeWonCompCall as K;
     use crate::guihost::EeWonCtVirt as V;
     use crate::guihost::EeWonGuiField as Fd;
     match op {
+        Op::Draw | Op::CtScheme | Op::CtSetScheme => {
+            return crate::compobj::is_game().then(|| crate::gfxrun::game_op(op, a, b)).flatten()
+        }
         Op::ChildHold | Op::CtCursorHold | Op::RootImageHold => return rf(a, true),
         Op::ChildRelease | Op::CtCursorRelease | Op::RootImageRelease => return rf(a, false),
         _ => {}
@@ -538,6 +542,7 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
             | Op::RootEnsureOnTop
             | Op::ChildSetPos
             | Op::ChildSetVisible
+            | Op::RootDrawImage
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -554,6 +559,7 @@ pub(crate) fn root_op(root: isize, op: Op, a: isize, b: isize, c: isize) -> Opti
         Op::ChildSetPos => return Some(z(kc(a, K::SetPos, b, c))),
         // (no class overrides SetVisible)
         Op::ChildSetVisible => return Some(z(kc(a, K::SetVisible, on(b), 0))),
+        Op::RootDrawImage => return Some(crate::gfxrun::draw_image_part(a, b, c)),
         _ => {}
     }
     let Some(me) = window_of_root(root) else {
@@ -579,3 +585,4 @@ fn root_obj_of(root: isize) -> Option<*const EeWonRoot> {
     let m = WINDOWS.lock().ok()?;
     m.values().find(|w| w[2] == root).map(|w| w[3] as *const EeWonRoot)
 }
+

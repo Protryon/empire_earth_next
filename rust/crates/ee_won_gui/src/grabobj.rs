@@ -192,6 +192,11 @@ impl EeWonGrabber {
                 return r;
             }
         }
+        if crate::compobj::is_game() {
+            if let Some(r) = crate::gfxrun::grab_op(w, b, c, d) {
+                return r;
+            }
+        }
         match self.host {
             // SAFETY: the host was given with this grabber; no borrow of the state is live here
             Some(h) => unsafe { h(self.me, Op::Grab, w as isize, b, c, d) },

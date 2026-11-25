@@ -73,7 +73,7 @@ unsafe extern "C" fn old_host(g: *mut c_void, h: H, a: *const i32, p: *const c_v
         H::FillEllipse => hook(P::FillEllipse, &a[..4]),
         H::DrawArc => hook(P::Arc, &a[..6]),
         H::FillRectBlend => hook(P::FillRectBlend, &a[..5]),
-        H::ImageEntire | H::ImagePart | H::String => {
+        H::ImageEntire | H::ImagePart | H::String | H::SetFont | H::Text | H::ImageSize => {
             w.log.push((h as u32, a));
             0
         }

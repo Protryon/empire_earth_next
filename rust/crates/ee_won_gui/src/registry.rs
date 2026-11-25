@@ -304,12 +304,15 @@ mod tests {
         let direct = |k: K, x: isize| {
             crate::compobj::Comp::new(crate::compobj::host()).call(w2, k, x, 0, 0);
         };
+        // (a game Graphics record: the game answers its scheme and plain draws, gfxrun.rs)
+        let mut gfx = crate::gfxrun::tests_graphics();
+        let g = &mut gfx as *mut crate::gfxrun::EeWonGraphics as isize;
         let comp_cases: [(O, K, isize); 7] = [
             (O::BaseSizeChanged, K::SizeChanged, 0),
             (O::BaseGotFocus, K::GotFocus, 0),
             (O::BaseLostFocus, K::LostFocus, 0),
             (O::BaseMouseExit, K::MouseExit, 0),
-            (O::BasePaint, K::Paint, 0x40),
+            (O::BasePaint, K::Paint, g),
             (O::BaseSetEnabled, K::SetEnabled, 1),
             (O::BaseHandleEvent, K::HandleEvent, 0x50),
         ];
