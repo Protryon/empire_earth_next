@@ -404,7 +404,11 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 engine's train verb holds no room; the fleet trains through ai.train), navy_mines (the metal
                 workers for the missing warships: econ_targets), navy_nodes, the fishing boats' count (the game's
                 field passes; the engine's coast rule stands in: settings fishing_boats_*), the logs' kill
-                counts.
+                counts. From the port forward (7a17182): navy_strength (sea_fleet: a warship per 300 tiles of its
+                seas that border land or water not its own, 2 at least, all of navy_fleet_pop of the cap while no
+                land it holds borders others; sea_fleet 0 keeps the map's kind), SEA_FISHING (a boat at a dock on the
+                sea with the most fish it has seen in its waters while its food workers are short), the missile subs
+                (2 from 6 warships of the other roles, 2 more from 12), and the squadrons' mix weights.
   fleet.c       PORTED -> fleet.lua: the scan (the enemy's warships 5 minutes, prey 2, the coast), the danger
                 zones (known defences range + 2, siege 5 minutes; the engine's threat layer only through
                 ai.route), the strength ratio (Lanchester with the role factors), the guard point, the haven, the
@@ -417,10 +421,29 @@ C++ helper of this engine stands in, nothing to port) or NOT STARTED.
                 a dock under half, until 80%; retreats under the towers), fl_boats (to the dock, released after a
                 minute), fl_move round a zone, fl_flee, fl_rally_tower (in navy.lua: the newest tower on the coast by
                 the dock farthest from the enemy, every 2 minutes, 3 a game). Missing: the kill / loss counters
-                and the losing-at-sea shelter (no kill events by target).
-  squadrons.c   NOT STARTED -> squadrons.lua (port forward 7a17182). The squadrons: a main squadron per stretch of
-                valuable water that holds it and calls the others for help, scout and raid groups, hunter groups,
-                the missile submarines and the shore fire.
+                and the losing-at-sea shelter (no kill events by target). From the port forward (7a17182): FLEET
+                STATION (territories.c's sea with the longest shore along land it holds, weighted by the enemy
+                warships seen, kept unless another weighs a third more), HARBOURS (a dock for each sea territory
+                along its land that has none, a tower by every dock, a second where enemy warships were seen or with
+                600 stone, one look 45 s and one lay 90 s), THE SEAS (sea_fleet: the sea whose waters want the most
+                ships, the training at a dock on it, the rally counting its station's sea as three towers more), and
+                the hand-over to squadrons.lua.
+  squadrons.c   PORTED -> squadrons.lua (port forward 7a17182; OFF behind its own M.PORTED gate, sea_squadrons stays
+                on for when it is played). Ported: ZONES (a sea territory's coast along held land + its seen fish /
+                200, doubled where enemy warships were seen; the most valuable anchors the zone, every such water
+                within reach is its), the STEADY seats, sq_assign (frigates first to the scouts; the mains by their
+                zones' worth; a ship keeps its squadron while it has room), EACH SHIP (out of a danger zone at once,
+                a hurt one to the nearest safe dock under repair or behind the nearest main squadron), MAIN (at rest
+                at its anchor, a fight in its zone, holding under its towers or dock and calling for help, a push
+                while not weaker than the sea), HOME, HUNT (submarines and galleys after a lone enemy warship they
+                beat, away from frigates), SCOUT (raids where the prey's company does not stand a fight, the waters
+                not seen 5 minutes), STRIKE (the missile subs with frigates and a cruiser against the most worth in
+                reach, away from warships they do not beat), THE SHORE (sea_shore_fire: plain moves when quiet, a
+                land target only within reach, shelling the defences that reach the water first while it wins),
+                CONCENTRATION. Each squadron is a lib.groups manual group per sea and role. Missing/ENGINE: the
+                ferries' and pushes' escort and THE SCREEN (convoy.c/crossing.c), THE SQUADRON AHEAD, the kill and
+                loss counters by squadron (no event with a target), the claims' priority, the missile subs' own role
+                in navy's mix (navy.lua trains them), the [autotest] variants.
   storms.c      PORTED -> storms.lua (port forward 7a17182). Ported: the storm units (hurricane, anti_matter_storm:
                 9999 hit points, attack 0, so invisible to the fleet's scan), st_way_out (out 12 tiles, the way from
                 the ship first then +-30 degrees up to 150, open water of its sea, none in another storm's 5), the
