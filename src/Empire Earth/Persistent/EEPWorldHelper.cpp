@@ -38,9 +38,6 @@
 
 #include "rust/game/gamecpp.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousServer.h"
-#include "lle/NESynchronousClient.h"
-#include "ee/EECommunications.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPMultiplayerHelper.h"
 #include "ee/EEHumanPlayer.h"
@@ -163,9 +160,6 @@ void EEAfterLoadRust(void (*inRun)(uintptr_t), uintptr_t inData);  // EESaveLoad
 #define FOREST ((EEAIForest*)p)
 #define POINTS (*(std::vector<U2DPoint<long> >*)p)
 
-#define SERVER dynamic_cast<NESynchronousServer*>(gCommunications)
-#define CLIENT dynamic_cast<NESynchronousClient*>(gCommunications)
-#define COMMS dynamic_cast<NESynchronousCommunications*>(gCommunications)
 #define PPH ((EEPPlayerHelper*)p)
 #define CP ((EEComputerPlayer*)p)
 #define STR (*(std::string*)p)
@@ -210,8 +204,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PwStTeamsFromHelper: ((EEGameState*)p)->mTeams = ((EEPWorldHelper*)a[0])->mTeams;
         break;
-    case O::PwChatLogLoad: return ee_screens_chat_log_load(&FILE_);
-    case O::PwChatLogSave: return ee_screens_chat_log_save(&FILE_);
     case O::PwMainFormLoad: return gUIManager->GetMainGameForm()->Load(VERSION, FILE_);
     case O::PwMainFormSave: return gUIManager->GetMainGameForm()->Save(VERSION, FILE_);
     case O::PwAreaEffectsLoad: return EEAELoadRunningState(FILE_);
@@ -308,20 +300,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PwNodeSetAllowed: ((EETechTreeNode*)p)->mIsAllowed = a[0] != 0;
         break;
     // (EEPMultiplayerOp) The multiplayer state's C++ calls (EEPSaveGameHeader.cpp's EEPHeaderOp default): one statement each
-    case O::PmPhysicsLoad: return gPhysics->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
-    case O::PmPhysicsSave: return gPhysics->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)p);
-    case O::PmServerSetPhysicsTick: SERVER->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
-        break;
-    case O::PmClientSetPhysicsTick: CLIENT->SetCurrentPhysicsTick(*(unsigned long*)a[0]);
-        break;
-    case O::PmCommCtsProcessed: return COMMS->GetNumberOfCTsProcessedInPhysics();
-    case O::PmCommLastTick: return COMMS->GetLastTickReceived();
-    case O::PmServerLastCt: return SERVER->GetLastCTMessageID();
-    case O::PmServerCt: return SERVER->GetCurrentCommunicationsTick();
-    case O::PmServerPt: return SERVER->GetCurrentPhysicsTick();
-    case O::PmServerMessageNumber: return SERVER->GetMessageManagerCurrentMessageNumber();
-    case O::PmClientCt: return CLIENT->GetCurrentCommunicationsTick();
-    case O::PmClientPt: return CLIENT->GetCurrentPhysicsTick();
     // (EEPHelpersOp) The saved players' C++ calls and members (EEGameStateLoader.cpp's EEPLoaderOp default): one statement each
     case O::PphFields: return P64(&PPH->mLocalPlayerIndex);
     case O::PphPush: PPH->mPlayers.push_back((EEPlayer*)a[0]);
@@ -416,8 +394,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PchContagionLoad: return PCH->mContagionManager->Load((unsigned long)a[0], (unsigned long)a[1], CAFILE);
     case O::PchCount: return (int64_t)PCH->mCalamities->size();
     case O::PchAt: return P64((*PCH->mCalamities)[a[0]]);
-    case O::PchSetCaster: CL->SetCasterUnit((EEUnit*)a[0]);
-        break;
     case O::PchPlaySound: CL->PlaySound();
         break;
     case O::PchDeleteAt: delete std::exchange((*PCH->mCalamities)[a[0]], nullptr);
@@ -458,14 +434,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PvAfterLoad: EEAfterLoadRust((void (*)(uintptr_t))a[0], (uintptr_t)a[1]);
         break;
     case O::PsMajorVersion: return kSaveGameMajorVersion;
-    case O::PsListNew: return P64(new std::vector<FSPersistent*>);
-    case O::PsListDelete: delete &LIST;
-        break;
     case O::PsListPush: LIST.push_back((FSPersistent*)a[0]);
-        break;
-    case O::PsListCount: return (int64_t)LIST.size();
-    case O::PsListAt: return P64(LIST[a[0]]);
-    case O::PsListClear: LIST.clear();
         break;
     case O::PsPersistentTag: return PERSISTENT->GetTagID();
     case O::PsPersistentDelete: delete PERSISTENT;
@@ -510,8 +479,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
     case O::PsHeaderNew: return P64(new EEPSaveGameHeader);
     case O::PsHeaderDelete: delete HDR;
         break;
-    case O::PsHeaderSave: return HDR->Save((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
-    case O::PsHeaderLoad: return HDR->Load((unsigned long)a[0], (unsigned long)a[1], *(FSFile*)a[2]);
     case O::PsHdrSetName: HDR->mName = *(const UString*)a[0];
         break;
     case O::PsHdrDefaultDescription: HDR->mDescription = UString("No game description provided.");
@@ -598,10 +565,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSaveTextName: *(UString*)a[0] = GetSaveTextName(SPEC->GetFile(), a[1] != 0);
         break;
-    case O::PsReportSaved: EEReportLoadFailure(UString("Game saved.  "), false, NULL);
-        break;
-    case O::PsReportSaveError: EEReportLoadFailure(UString("Error saving game.  Please report this bug."), false, NULL);
-        break;
     case O::PsMessageString: gResource->GetString((long)a[0], gLoadSaveErrorMessage);
         break;
     case O::PsMessageStringVerify: ESVERIFY_AT(::gResource->GetString((long)a[0], ::gLoadSaveErrorMessage) == keseOK, 669);
@@ -618,7 +581,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsSetMusicVolume: gConductor->GetConductor().SetVolume(f[0]);
         break;
-    case O::PsCommPresent: return gCommunications != NULL;
     case O::PsShowSplash: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
         break;
     case O::PsShowSelectionAreas: gWorld.GetCurrentPlayer()->mActiveGroup->ShowSelectionAreas();
@@ -649,8 +611,6 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsStSetMap: ST->SetMap((EEMap*)a[0]);
         break;
-    case O::PsStSetCalamityHelper: ST->SetCalamityHelper((EEPCalamityHelper*)a[0]);
-        break;
     case O::PsStSetEnvironmentManager: ST->SetEnvironmentManager((EEEnvironmentManager*)a[0]);
         break;
     case O::PsStRestorablePushEffects: ST->mRestorables.push_back((EEEffectManager*)a[0]);
@@ -668,11 +628,7 @@ int64_t EEPWorldOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f
         break;
     case O::PsWorldClear: gWorld.Clear();
         break;
-    case O::PsWorldStartGame: gWorld.StartGame((EEGameState*)a[0], true);
-        break;
     case O::PsInScenarioEditor: return gUIManager->mInScenarioEditor;
-    case O::PsReportCorrupt: EEReportLoadFailure("Load game file is corrupt.", false, NULL);
-        break;
     case O::PsDebugCorrupt: ESDebugOut("EE load failure: Load game file is corrupt.\n");
         break;
     case O::PsDataPathFind: return gDataPath->FindFile(*(const UString*)a[0], *(FSFileSpec**)a[1]);

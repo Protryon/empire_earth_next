@@ -26,7 +26,16 @@ use ee_sim::world::player_fields::{EeUnitsPlayerFields, EeUnitsPlayerSaved, EeUn
 use ee_sim::world::unit_class_fields::EeUnitsUnitClassFields;
 use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
+use super::session_objs::{client_tail, server_tail};
 use super::{cptr, h, hf, hp, pa, ptr, rec, Owned, O, P};
+use ee_net::net::ffi_comms::EeNetCommsField;
+use ee_net::net::ffi_server::EeNetSvSet;
+use ee_sim::netmsg::session::EE_NETMSG_SESS_DO_SLOT_INFO;
+use ee_sim::units::group_host::ee_units_selection;
+use ee_sim::units::player_body::game::ee_units_player_body;
+use ee_sim::units::player_body::{EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, EE_UNITS_PLAYER_DO_UNSELECT_ALL};
+use ee_sim::units::player_rest::game::ee_units_player_rest;
+use ee_sim::units::player_rest::EE_UNITS_PLAYER_REST_SET_GAME_RESULT;
 
 // ---- the constants the bodies pass (EEMessage.cpp static_asserts them)
 /// `kGraphicEffectCommandConfirmationMove`, `...Attack`, `...GatherOther`, `kGraphicEffectDisbandUnitEmitter`.
@@ -75,27 +84,27 @@ fn rts<'a>(u: P) -> &'a mut EeUnitsRtsUnitFields {
     unsafe { &mut *rec(O::UnRts, u) }
 }
 
-fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
+pub(super) fn uf<'a>(u: P) -> &'a mut EeUnitsUnitFields {
     // SAFETY: as rts
     unsafe { &mut *rec(O::UnFields, u) }
 }
 
-fn cf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
+pub(super) fn cf<'a>(cx: P) -> &'a mut EeUnitsComplexUnitFields {
     // SAFETY: as rts
     unsafe { &mut *rec(O::CxFields, cx) }
 }
 
-fn ucf<'a>(uc: P) -> &'a mut EeUnitsUnitClassFields {
+pub(super) fn ucf<'a>(uc: P) -> &'a mut EeUnitsUnitClassFields {
     // SAFETY: as rts
     unsafe { &mut *rec(O::UcFields, uc) }
 }
 
-fn prts<'a>(pl: P) -> &'a mut EeUnitsRtsPlayerFields {
+pub(super) fn prts<'a>(pl: P) -> &'a mut EeUnitsRtsPlayerFields {
     // SAFETY: a live player's record, as rts
     unsafe { &mut *rec(O::PlRts, pl) }
 }
 
-fn psaved<'a>(pl: P) -> &'a mut EeUnitsPlayerSaved {
+pub(super) fn psaved<'a>(pl: P) -> &'a mut EeUnitsPlayerSaved {
     // SAFETY: as prts
     unsafe { &mut *rec(O::PlSaved, pl) }
 }
@@ -281,7 +290,7 @@ fn load_or_save_game(m: P) {
         result = h(O::MsgLoadSavedGame, m, &[get_bool(m, 2) as i64]);
         let response = hp(O::NewLoadSaveResponse, 0, &[get::<i32>(m, 3) as i64]);
         h(O::MsgSetOrigin, response, &[prts(current()).mSlot as i64]);
-        h(O::ServerLogResponse, response, &[]);
+        ee_net::net::ffi_server::ee_net_sv_log_response(super::net::global().server, response as *mut c_void);
     } else {
         // SAFETY: the game's physics
         crate::physics::ee_physics_queue_message(
@@ -332,11 +341,11 @@ fn migration_slot_info(m: P) {
         }
         if !prts(world_player(index)).mObserverMode {
             h(O::WRemovePlayerFromGame, world(), &[0, index]);
-            h(O::PlSetGameResult, world_player(index), &[2]);
+            set_game_result(world_player(index), 2);
         }
     }
     prts(world_player(index)).mSlot = get::<u8>(m, 2);
-    if index as c_ulong == prts(current()).mPlayerID && h(O::CommIsClient, 0, &[]) != 0 {
+    if index as c_ulong == prts(current()).mPlayerID && super::net::global().is_client() {
         res(&text, IDS_NEW_HOST_ESTABLISHED);
         chat(text.0, 0);
     }
@@ -427,8 +436,9 @@ pub extern "C" fn ee_gamecpp_msg_start_loading(m: *mut c_void) {
     h(O::LobbyReadUnlock, 0, &[]);
     h(O::PhysSetSeed, 0, &[get::<i32>(m, 2) as i64]);
     h(O::UiSetRandomSeed, 0, &[get::<i32>(m, 2) as i64]);
-    h(O::CommSetHumans, 0, &[get::<u8>(m, 1) as i64]);
-    h(O::CommSetMultiplayer, 0, &[(get::<u8>(m, 1) > 1) as i64]);
+    let comms = super::net::global();
+    comms.set(EeNetCommsField::NumHumanPlayers, get::<u8>(m, 1) as u32);
+    comms.set(EeNetCommsField::IsMultiplayerSession, (get::<u8>(m, 1) > 1) as u32);
     crate::screens::ui_objects::ui_post_start_loading();
 }
 
@@ -544,10 +554,10 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
         }
         EE_NETMSG_WACT_MIGRATING_OFF => {
             // the host migration over as the game restarts
-            if h(O::CommPresent, 0, &[]) != 0 && h(O::CommIsClient, 0, &[]) != 0 {
-                h(O::ClientSetMigrating, 0, &[0]);
-            } else if h(O::CommPresent, 0, &[]) != 0 {
-                h(O::ServerSetMigrating, 0, &[0]);
+            if super::net::present() && super::net::global().is_client() {
+                client_tail(super::globals::get!(gCommunications) as P).is_migrating = false;
+            } else if super::net::present() {
+                host_tail().is_migrating = false;
             }
         }
         EE_NETMSG_WACT_LAG => {
@@ -576,10 +586,10 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             // slow or normal playback
             h(O::GfxPostSetFlag5B, 0, &[(i[1] != 0) as i64]);
             h(O::PhysSetSlowPlayback, 0, &[(i[1] != 0) as i64]);
-            if h(O::CommIsClient, 0, &[]) != 0 && i[1] != 0 {
-                h(O::ClientSetSlowPlayback, 0, &[]);
-            } else if h(O::CommIsClient, 0, &[]) != 0 {
-                h(O::ClientSetNormalPlayback, 0, &[]);
+            if super::net::global().is_client() && i[1] != 0 {
+                ee_net::net::ffi_client::ee_net_cl_set_slow_playback(super::net::global().client);
+            } else if super::net::global().is_client() {
+                ee_net::net::ffi_client::ee_net_cl_set_normal_playback(super::net::global().client);
             }
         }
         EE_NETMSG_WACT_OPTIONS_LOCK => {
@@ -633,25 +643,43 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             // every human has shown the main screen: the start at the offset time
             let time = ee_base::time::ee_time_get() as i64;
             let message = hp(O::NewStartGameRecord, 0, &[time]);
-            h(O::ServerSetLoadState, 0, &[0]);
-            h(O::CommProcessLocal, message, &[MSG_SLOT_NONE as i64]);
-            h(O::ServerSetGameState, 0, &[2]);
+            host_tail().load_state = 0;
+            super::net::global().local_input(message as *mut c_void, MSG_SLOT_NONE);
+            super::net::global().sv_set(EeNetSvSet::GameState, 2);
         }
         EE_NETMSG_WACT_CLEAR_SEND_TO_SLOTS => {
-            h(O::ServerClearSendToSlots, 0, &[]);
+            ee_net::net::ffi_server::ee_net_sv_clear_send_to_slot_array(super::net::global().server);
         }
         EE_NETMSG_WACT_LOAD_RESPONSES => {
-            h(O::ServerSetLoadResponses, 0, &[i[1] as u8 as i64]);
+            host_tail().num_load_responses = i[1] as u8;
         }
         EE_NETMSG_WACT_SEND_TO_SLOT => {
             let to = super::session_objs::ee_gamecpp_server_send_to_slot(i[2] as u8) as i64;
-            h(O::ServerSetSendToSlotForPlayer, 0, &[i[1] as u8 as i64, to]);
+            let server = super::net::global().server;
+            ee_net::net::ffi_server::ee_net_sv_set_send_to_slot_for_player(server, i[1] as u8, to as u8);
         }
         EE_NETMSG_WACT_ALL_LOADED => {
             // every human has loaded: the slots sent, the main screen shown everywhere
-            h(O::ServerSendPlayerSlotInfo, 0, &[]);
-            h(O::ServerSetLoadState, 0, &[2]);
-            h(O::CommProcessLocal, hp(O::NewLoadMainScreenRecord, 0, &[]), &[MSG_SLOT_NONE as i64]);
+            // EEServer::SendPlayerSlotInfo: the session's member on the host's server
+            let server = super::globals::get!(gCommunications) as *mut c_void;
+            let none = core::ptr::null();
+            // SAFETY: the live server, no join request
+            unsafe {
+                super::session_objs::ee_gamecpp_session(
+                    server,
+                    true,
+                    EE_NETMSG_SESS_DO_SLOT_INFO,
+                    0,
+                    0,
+                    0,
+                    0,
+                    none,
+                    none,
+                )
+            };
+            host_tail().load_state = 2;
+            let message = hp(O::NewLoadMainScreenRecord, 0, &[]);
+            super::net::global().local_input(message as *mut c_void, MSG_SLOT_NONE);
         }
         EE_NETMSG_WACT_CHAT_LOG => {
             h(O::GameLogChat, m, &[prts(a).mPlayerID as i64]);
@@ -742,25 +770,59 @@ pub extern "C" fn ee_gamecpp_msg_sound(index: i64) {
 /// `ids` points to `count` ids.
 #[no_mangle]
 pub unsafe extern "C" fn ee_gamecpp_msg_select_list(pl: *mut c_void, how: i64, ids: *const i32, count: i64) {
-    let list = Owned(hp(O::VecLongNew, 0, &[ids as usize as i64, count]), O::VecLongDelete);
+    // the ids as the player's std::vector<long> held them
+    // SAFETY: the caller's `count` ids
+    let list: Vec<c_long> =
+        unsafe { std::slice::from_raw_parts(ids, count as usize) }.iter().map(|&id| id as c_long).collect();
+    // AddAndRemoveUnitsFromSelectedGroup, AddUnitsToSelectedGroup, SelectUnits
     let op = match how {
-        0 => O::PlAddAndRemoveSelectedIds,
-        1 => O::PlAddSelectedIds,
-        _ => O::PlSelectIds,
+        0 => 5,
+        1 => 4,
+        _ => 6,
     };
-    h(op, pl as P, &[pa(list.0)]);
+    // SAFETY: the live player and the list
+    unsafe { ee_units_selection(pl, op, core::ptr::null_mut(), 0, list.as_ptr(), list.len(), false, false) };
 }
 
 /// EE_NETMSG_OP_SELECT: one unit removed from (0), added to (1) or made (2) the selection, or none selected.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_msg_select(pl: *mut c_void, how: i64, id: i64) {
     let pl = pl as P;
+    // RemoveUnitFromSelectedGroup's long id, AddUnitToSelectedGroup's and SelectUnit's unsigned long
     match how {
-        0 => h(O::PlRemoveSelectedId, pl, &[id]),
-        1 => h(O::PlAddSelectedId, pl, &[id]),
-        2 => h(O::PlSelectId, pl, &[id]),
-        _ => h(O::PlUnselectAll, pl, &[]),
+        0 => select(pl, 8, id as c_long as i64, false, false),
+        1 => select(pl, 3, id as c_ulong as i64, true, false),
+        2 => select(pl, 2, id as c_ulong as i64, true, true),
+        _ => unselect_all(pl),
+    }
+}
+
+/// EEPlayer's one-unit selection members by id (ee_sim group_host.rs `ee_units_selection`).
+fn select(pl: P, op: i32, id: i64, flag: bool, flag2: bool) {
+    // SAFETY: the live player, no unit, no list
+    unsafe { ee_units_selection(pl as *mut c_void, op, core::ptr::null_mut(), id, core::ptr::null(), 0, flag, flag2) };
+}
+
+/// EEPlayer::SetGameResult.
+fn set_game_result(pl: P, state: i64) {
+    // SAFETY: the live player
+    unsafe {
+        ee_units_player_rest(pl as *mut c_void, EE_UNITS_PLAYER_REST_SET_GAME_RESULT, 0, state as c_long as i64, 0)
     };
+}
+
+/// The player's member `what` with one argument (EEPlayer's one-call members over ee_sim player_body.rs).
+///
+/// # Safety
+/// `pl` is a live player.
+unsafe fn player_body(pl: P, what: u32, a: u64) {
+    unsafe { ee_units_player_body(pl as *mut c_void, what, a, 0, 0, 0.0) };
+}
+
+/// EEPlayer::UnselectAllUnits.
+fn unselect_all(pl: P) {
+    // SAFETY: the live player
+    unsafe { player_body(pl, EE_UNITS_PLAYER_DO_UNSELECT_ALL, 0) };
 }
 
 /// EE_NETMSG_OP_RESOURCE: a resource added (0), taken (1), traded (2) or a tribute recorded.
@@ -949,7 +1011,8 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
             h(O::PlSavedGroupsSet, pl, &[0x15, i[2]]);
         }
         EE_NETMSG_PACT_CLEAR_SAVED => {
-            h(O::PlClearSavedGroup, pl, &[i[1] as u8 as i64]);
+            // SAFETY: the live player (EEPlayer::ClearSavedGroup)
+            unsafe { player_body(pl, EE_UNITS_PLAYER_DO_CLEAR_SAVED_GROUP, i[1] as u8 as u64) };
         }
         EE_NETMSG_PACT_ASSIGN_SAVED => {
             h(O::PlAssignSavedGroup, pl, &[i[1]]);
@@ -960,7 +1023,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
         EE_NETMSG_PACT_LOCK_CIV => psaved(pl).mCivilizationLocked = true,
         EE_NETMSG_PACT_REMOVE => {
             h(O::WRemovePlayerFromGame, world(), &[0, prts(pl).mPlayerID as i64]);
-            h(O::PlSetGameResult, pl, &[2]);
+            set_game_result(pl, 2);
         }
         EE_NETMSG_PACT_REMOVE_IMPROVEMENT => {
             let queued = h(O::PlCountQueuedImprovements, pl, &[i[1], i[2]]) != 0;
@@ -980,6 +1043,23 @@ pub unsafe extern "C" fn ee_gamecpp_msg_player_act(i: *const i64, pl: *mut c_voi
         }
         _ => {}
     }
+}
+
+/// `gCommunications`' fast-selection id and its 16 last ids (the server's or the client's plain tail).
+fn fast_selection(server: bool) -> (*mut u8, *mut u8) {
+    let comms = super::globals::get!(gCommunications) as P;
+    if server {
+        let t = server_tail(comms);
+        (&mut t.fast_selection_id, t.fast_selection.as_mut_ptr())
+    } else {
+        let t = client_tail(comms);
+        (&mut t.fast_selection_id, t.fast_selection.as_mut_ptr())
+    }
+}
+
+/// The host's server's plain tail (`gCommunications`).
+fn host_tail() -> &'static mut super::session_objs::EeGamecppServerTail {
+    server_tail(super::globals::get!(gCommunications) as P)
 }
 
 /// EE_NETMSG_OP_SELECTION: the communications object's fast-selection state (the server's or the client's).
@@ -1004,14 +1084,14 @@ pub unsafe extern "C" fn ee_gamecpp_msg_selection(i: *const i64, pl: *mut c_void
         EE_NETMSG_SEL_MARK_LOCAL => {
             *wm::<bool>(O::WExecutingLocalSelection) = i[1] != 0;
         }
-        EE_NETMSG_SEL_CURRENT_ID => return h(pick(O::ServerFastID, O::ClientFastID), 0, &[]),
+        EE_NETMSG_SEL_CURRENT_ID => return unsafe { *fast_selection(server).0 } as i64,
         EE_NETMSG_SEL_LAST_ID => {
-            let ids = hp(pick(O::ServerFastLast, O::ClientFastLast), 0, &[]) as *const u8;
+            let ids = fast_selection(server).1;
             // SAFETY: the communications object's 16 last ids
             return unsafe { *ids.add(prts(pl).mPlayerID as u8 as usize) } as i64;
         }
         EE_NETMSG_SEL_SET_LAST_ID => {
-            let ids = hp(pick(O::ServerFastLast, O::ClientFastLast), 0, &[]) as *mut u8;
+            let ids = fast_selection(server).1;
             // SAFETY: as above
             unsafe { *ids.add(prts(pl).mPlayerID as u8 as usize) = i[1] as u8 };
         }
@@ -1020,7 +1100,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_selection(i: *const i64, pl: *mut c_void
             h(O::PlSetSelectedViewedUnit, pl, &[]);
         }
         EE_NETMSG_SEL_RESET => {
-            h(O::PlUnselectAll, pl, &[]);
+            unselect_all(pl);
             h(O::PlSelectedCopyActive, pl, &[]);
         }
         EE_NETMSG_SEL_JIT_OFF => {
@@ -1066,7 +1146,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
     let mut markers: c_long = 0;
     let mut done = false;
     let mut handle: u32 = 0;
-    if h(O::CommIsGamePaused, 0, &[]) != 0 {
+    if super::net::global().get(EeNetCommsField::IsGamePaused) != 0 {
         return;
     }
     let attack_effect = hp(O::GfxEffectGet, 0, &[EFFECT_ATTACK]);
