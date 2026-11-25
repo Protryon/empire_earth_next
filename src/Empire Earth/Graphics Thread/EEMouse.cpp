@@ -23,22 +23,4 @@ EEMouse::EEMouse()
     ee_gfx_input_mouse_set(&theView);
 }
 
-EEMouse::~EEMouse()
-{
-    ee_gfx_input_mouse_set(NULL);
-}
-
-// Loads the 14 extra pointer images (convert, transport, calamity, rally, heal, patrol, garrison, flare,
-// attack ground...), then the engine's pointers; returns the first load error (gamecpp ro_views.rs)
-long EEMouse::Load(GEScreen* inScreen)
-{
-    return ee_gamecpp_mo_load(this, inScreen);
-}
-
-// Releases the extra pointer images, then the engine's; returns the engine's result (gamecpp ro_views.rs)
-long EEMouse::Release()
-{
-    return ee_gamecpp_mo_release(this);
-}
-
-// (the mouse's C++ calls: EERenderSnapshot.cpp's EERoViewsOp)
+// (the pointer loads and the frame's calls are Rust's: ee_game rts mouse.rs)

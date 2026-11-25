@@ -21,12 +21,12 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
+#include "ee/EEUnit.h"
 #include "ee/EEUIManager.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMouse.h"
 #include "ee/RTSMousePointer.h"
 #include "ee/EEGraphics.h"
-#include "ee/EERenderSnapshot.h"
 #include "rust/render/gfx.h"
 // the two file-scope objects of the chains at 0x50972b and 0x509738 (a bool; three deques and a bool): nothing read
 // them, so the port has neither
@@ -39,120 +39,6 @@ EEGraphics::EEGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMo
                   inRasterizer->GetScreen(inScreen)->GetIsFullScreen(), inThreadPriority)
 {
     ee_gamecpp_gfx_construct(this);
-}
-
-// Destroys the graphics object, releasing the scene and the message-queue-done event
-EEGraphics::~EEGraphics()
-{
-    ee_gamecpp_gfx_destruct(this);
-}
-
-// Starts a frame: redraws the whole UI when needed, then copies the frame data under the world lock (read
-// lock and UI lock for modes 0/1, write lock for 2/3; modes 1/3 keep the lock until FrameDone)
-void EEGraphics::FrameStarting()
-{
-    ee_gamecpp_gfx_frame_starting(this);
-}
-
-// Handles the game's graphics messages (fades, letterbox, scene init/release, UI redraw, screenshot, lock mode,
-// queue-done signal); passes others to RTSGraphics
-void EEGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
-{
-    ee_gamecpp_gfx_handle_message(this, (uint32_t)inMessage, inParameter1, inParameter2);
-}
-
-// Restores lost surfaces, then hides the mouse pointer, redraws the UI (and posts two more redraws), reloads
-// the mouse cursor and shows the pointer again if it was shown; returns the restore result
-long EEGraphics::RestoreSurfaces()
-{
-    return ee_gamecpp_gfx_restore_surfaces(this);
-}
-
-// Starts the scene (RTSGraphics' behaviour)
-void EEGraphics::SceneStarting()
-{
-    RTSGraphics::SceneStarting();
-}
-
-// Renders the scene (RTSGraphics' behaviour)
-void EEGraphics::RenderScene()
-{
-    RTSGraphics::RenderScene();
-}
-
-// Finishes the frame and releases the lock kept since FrameStarting (lock modes 1 and 3)
-void EEGraphics::FrameDone()
-{
-    ee_gamecpp_gfx_frame_done(this);
-}
-
-// Renders a capture into the first free file EE###.bmp (or .jpg), or EEPostGame-M-D-Y-###.jpg for the
-// post-game map, then signals the capture done
-void EEGraphics::SaveScreenShot(EEScreenCapture* inCapture)
-{
-    ee_gamecpp_gfx_screenshot(this, inCapture);
-}
-
-// Renders a capture: the current view, or the whole map top-down tile by tile into a new surface of the asked
-// width (zooming out until a tile fits the window), restoring the camera afterwards
-void EEGraphics::RenderTo(EEScreenCapture* inCapture)
-{
-    ee_gamecpp_gfx_render_to(this, inCapture);
-}
-
-// Posts the initialise-scene message (0x503) to the graphics thread
-void EEGraphics::PostInitialiseScene()
-{
-    this->mThread->Post(0x503, NULL, NULL, true);
-}
-
-// Posts the redraw-UI message (0x50b) to the graphics thread
-void EEGraphics::PostRedrawUI()
-{
-    this->mThread->Post(0x50b, NULL, NULL, true);
-}
-
-// Posts a screenshot request (0x505) for a capture to the graphics thread
-void EEGraphics::PostScreenShot(EEScreenCapture* inCapture)
-{
-    this->mThread->Post(0x505, inCapture, NULL, true);
-}
-
-// Posts the release-scene message (0x504) to the graphics thread
-void EEGraphics::PostReleaseScene()
-{
-    this->mThread->Post(0x504, NULL, NULL, true);
-}
-
-// Posts a light fade-in (0x506) of the given duration to the graphics thread
-void EEGraphics::PostFadeIn(unsigned long inValue)
-{
-    this->mThread->Post(0x506, reinterpret_cast<void*>(inValue), NULL, true);
-}
-
-// Posts a light fade-out (0x507) of the given duration to the graphics thread
-void EEGraphics::PostFadeOut(unsigned long inValue)
-{
-    this->mThread->Post(0x507, reinterpret_cast<void*>(inValue), NULL, true);
-}
-
-// Posts a letterbox-in (0x508) of the given duration to the graphics thread
-void EEGraphics::PostLetterboxIn(unsigned long inValue)
-{
-    this->mThread->Post(0x508, reinterpret_cast<void*>(inValue), NULL, true);
-}
-
-// Posts a letterbox-out (0x509) of the given duration to the graphics thread
-void EEGraphics::PostLetterboxOut(unsigned long inValue)
-{
-    this->mThread->Post(0x509, reinterpret_cast<void*>(inValue), NULL, true);
-}
-
-// Posts the queue-done message (0x50a) and waits until the graphics thread has handled every earlier
-// message; returns the post result
-long EEGraphics::PostMessage50AAndWait()
-{
-    return ee_gamecpp_gfx_post_50a_and_wait(this);
 }
 
 // ------------------------------------------------------------------------- the graphics bodies' C++ (gamecpp graphics.rs)
@@ -198,8 +84,6 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     case O::WorldWriteLock: gWorld.mLock->WriteLock();
         break;
     case O::WorldWriteUnlock: gWorld.mLock->WriteUnlock();
-        break;
-    case O::SceneFlags6668Clear: gB529066 = false, gB529068 = false;
         break;
     case O::MouseBeginFrame: gMouse->BeginFrame();
         break;
@@ -257,11 +141,11 @@ int64_t EEGraphicsOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
     return 0;
 }
 
-// ------------------------------------------------------------------------- round 10, lane A: the Graphics Thread (EEGraphics.cpp, the EERO* units, EEMouse, EERenderSnapshot, EEUnitPicker)
+// ------------------------------------------------------------------------- round 10, lane A: the Graphics Thread (EEGraphics.cpp, the EERO* units, EEMouse, EEUnitPicker)
 
 // the C++ calls and members of lane A's bodies in Rust (gamecpp; EeGameCpp's round 10 lane A section): one
 // statement each
-double EERoViewsOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
+double EECore10OpDF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);   // EEGameUtilities.cpp
 double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
 {
     typedef EeGameCpp O;
@@ -269,6 +153,8 @@ double EECore10OpAF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::RtCameraZoom: return gWorld.mCameraControl.mZoom;
     case O::RtViewportYClipping: return gViewport.GetYClippingPlane();
     case O::RuTextHeight: return RU_TEXT->GetTextExtent().GetHeight();
-    default: return EERoViewsOpF(inOp, p, a, f);
+    case O::GsClassScale: return gUnitClassTable[a[0]]->GetScale();
+    case O::SnCameraPitch: return gWorld.GetCameraPitch();
+    default: return EECore10OpDF(inOp, p, a, f);
     }
 }

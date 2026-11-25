@@ -28,7 +28,6 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEAECapture.h"
 #include "rust/game/screens.h"   // CollectEffects, FindEffect (area_effect_manager.rs)
 #include <memory>
 #include <stdint.h>
@@ -60,11 +59,6 @@ struct EEAEAliveUnit {
     bool operator()(EEComplexUnit* inUnit) const { return inUnit->mHitPoints > 0; }
 };
 
-// Creates the area-effect manager with no templates or effects
-EEAEManager::EEAEManager()
-{
-}
-
 // CollectEffects' and FindEffect's logic: area_effect_manager.rs over the one-statement shims below (UI lane
 // round 11)
 extern "C" int32_t ee_screenscpp_aem_floor(float inV) { return UMFloor(inV); }
@@ -95,48 +89,14 @@ extern "C" uintptr_t ee_screenscpp_aem_effects_at(uintptr_t inManager, uintptr_t
 extern "C" int64_t ee_screenscpp_aem_effect_player(uintptr_t inEffect)
 { return (int64_t)((EEAreaEffect*)inEffect)->mPlayer; }
 
-// Tells whether a point lies in the effect's scaled area around its location
-bool EEAreaEffect::IsInRange(const GE2DPoint& inPoint)
-{
-    return this->mTemplate->IsWithin(inPoint, this->mLocation, this->GetScale(), NULL);
-}
-
 // port (save version 0.256, EEPWorldHelper): the area effects' running state. The original saved none of it: a
 // loaded game made each unit's own effects anew (MakeAreaEffects: no location, morale from buildings to be counted)
 // and every unit's affecting list and the active list were empty until the next area-effect tick (up to 2 s: no
 // morale in the damage, no immunities, no cloaking). Saved: per unit, its own effects' location (and the
 // morale-from-buildings count), then the effects acting on it, each as its owner unit and index; then the active list
-// the same way (the record and its bytes: ee_tech area_effect_save.rs). Put back at the loaded game's first tick
-// (EEAfterLoad).
-namespace {
-// FSFile's typed reads and writes for the Rust record (the calamities' I/O ops)
-long EEAEIoCall(void* inContext, uint32_t inOp, void* ioValue)
-{
-    FSFile& theFile = *static_cast<FSFile*>(inContext);
-    switch (inOp) {
-    case EE_CALAMITY_IO_READ_ULONG: return theFile.Read(*static_cast<unsigned long*>(ioValue));
-    case EE_CALAMITY_IO_READ_LONG: return theFile.Read(*static_cast<long*>(ioValue));
-    case EE_CALAMITY_IO_READ_FLOAT: return theFile.Read(*static_cast<float*>(ioValue));
-    case EE_CALAMITY_IO_READ_BOOL: return theFile.Read(*static_cast<bool*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_ULONG: return theFile.Write(*static_cast<const unsigned long*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_LONG: return theFile.Write(*static_cast<const long*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_FLOAT: return theFile.Write(*static_cast<const float*>(ioValue));
-    case EE_CALAMITY_IO_WRITE_BOOL: return theFile.Write(*static_cast<const bool*>(ioValue));
-    }
-    return 1;
-}
-
-}
-
-void EEAESaveRunningState(FSFile& outFile)
-{
-    ee_screens_aes_save(&outFile, &EEAEIoCall);
-}
-
-long EEAELoadRunningState(FSFile& inFile)
-{
-    return ee_screens_aes_load(&inFile, &EEAEIoCall);
-}
+// the same way (the record and its bytes: ee_tech area_effect_save.rs; the FSFile's reads and writes: ee_screens
+// civ_whole_ffi.rs, ee_screens_aes_save and _load; the entry points are inline in ee/EEAEManager.h). Put back at the
+// loaded game's first tick (EEAfterLoad).
 
 // Load's, the save's and the load's fix-up's logic: area_effect_running.rs over the one-statement shims below (UI
 // lane round 11)
@@ -206,7 +166,7 @@ extern "C" uintptr_t ee_screenscpp_aem_templates_count(uintptr_t inManager)
 extern "C" uintptr_t ee_screenscpp_aem_template_at(uintptr_t inManager, uintptr_t inIndex)
 { return (uintptr_t)AEM_M(inManager)->mTemplates[inIndex]; }
 extern "C" void ee_screenscpp_aem_templates_clear(uintptr_t inManager) { AEM_M(inManager)->mTemplates.clear(); }
-extern "C" void ee_screenscpp_aem_capture_tick(float inElapsed) { EEAECaptureTick(inElapsed); }
+extern "C" void ee_screenscpp_aem_capture_tick(float inElapsed) { ee_screens_ae_capture_tick(inElapsed); }
 extern "C" uintptr_t ee_screenscpp_aem_effect_new(uintptr_t inT)
 { return (uintptr_t)new EEAreaEffect((EEAreaEffectTemplate*)inT); }
 extern "C" void ee_screenscpp_aem_set_effect_player(uintptr_t inEffect, uintptr_t inUnit)

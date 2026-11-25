@@ -4,17 +4,30 @@
 #ifndef EE_EEROGROUNDSHADOWS_H
 #define EE_EEROGROUNDSHADOWS_H
 
+#include "rust/game/gamecpp.h"
+#include "rust/render/gfx.h"
 class EEROGroundShadows : public EERenderObject {
 public:
-    EEROGroundShadows();
-    virtual ~EEROGroundShadows();           // +0x10 (??_G 0x111dc0; dtor 0x111ddc)
+    // Creates the ground shadows' render object
+    EEROGroundShadows() {  }
+    // Destroys the ground shadows' render object
+    // +0x10 (??_G 0x111dc0; dtor 0x111ddc)
+    virtual ~EEROGroundShadows() {  }
     virtual void FrameStarting();           // +0x00 0x111de7: Fn10C036, then EERenderObject::Fn10EABE
-    virtual void SceneStarting();           // +0x04 (empty, ICF-shared 0xe123d)
-    virtual void RenderScene();             // +0x08 0x11207f: the shadows and the effects of queue [0]
-    virtual void FrameDone();               // +0x0c (empty, ICF-shared 0xe123d)
+    // +0x04 (empty, ICF-shared 0xe123d)
+    virtual void SceneStarting() {  }
+    // Draws the static shadows and unit shadows (when ground shadows are on), then the effects' ground pass (queue 0)
+    // per texture (gamecpp ro_views.rs over the frame's lists; ee_gfx shadows.rs)
+    // +0x08 0x11207f: the shadows and the effects of queue [0]
+    virtual void RenderScene() { ee_gamecpp_gs_render_scene(); }
+    // +0x0c (empty, ICF-shared 0xe123d)
+    virtual void FrameDone() {  }
 
-    static void CreateShadowModel();        // 0x111df8: the static "StaticShadow" quad (0x529098) (provisional name)
-    static void ReleaseShadowModel();
+    // Creates the shared shadow quad model (StaticShadow): a unit square in the ground plane (ee_gfx shadows.rs)
+    // 0x111df8: the static "StaticShadow" quad (0x529098) (provisional name)
+    static void CreateShadowModel() { ee_gfx_ground_shadows_create(ee_gamecpp_ro_raster()); }
+    // Releases the shared shadow quad model (ee_gfx shadows.rs)
+    static void ReleaseShadowModel() { ee_gfx_ground_shadows_release(ee_gamecpp_ro_raster()); }
     // DrawShadows (0x1121c8), DrawUnitShadows (0x1122bb) and the space-tile test (0x11246b): ee_gfx shadows.rs
 };
 

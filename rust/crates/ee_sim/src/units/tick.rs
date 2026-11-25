@@ -94,6 +94,13 @@ pub fn update_units(
     count
 }
 
+/// `EEPhysics::UpdateUnits` over the stepped units' list (`order::ORDER`), for a Rust host.
+pub fn update_ordered_units(host: &mut impl TickHost, num_players: u32, detection_unit: u32) -> u32 {
+    update_units(host, num_players, detection_unit, &mut || crate::units::order::with_order(|o| o.len()), &mut |j| {
+        crate::units::order::with_order(|o| o.ids().get(j).copied())
+    })
+}
+
 /// `EEPhysics::UpdateUnits` over the stepped units' list (`order::ORDER`).
 ///
 /// # Safety
@@ -103,9 +110,7 @@ pub unsafe extern "C" fn ee_units_update_units(host: *const EeUnitsTickHost) -> 
     // SAFETY: the caller's contract
     let mut host = unsafe { &*host };
     let (players, unit) = (host.num_players, host.detection_unit);
-    update_units(&mut host, players, unit, &mut || crate::units::order::with_order(|o| o.len()), &mut |j| {
-        crate::units::order::with_order(|o| o.ids().get(j).copied())
-    })
+    update_ordered_units(&mut host, players, unit)
 }
 
 #[cfg(test)]

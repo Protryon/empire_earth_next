@@ -20,22 +20,12 @@ class EEPlayer;
 class UIForm;
 class EECalamityClass;
 
-// the kinds (EE_SCREENS_GA_*)
-enum {
-    kEEAChat = 1, kEEABoot, kEEABuild, kEEACalamity, kEEACenterCamera, kEEAJoin, kEEALasso, kEEAMiniMap, kEEAMouseClick,
-    kEEAPlayerEvent, kEEARemovePlayer, kEEAResetPlayers, kEEASaveGame, kEEAScroll, kEEAMigration, kEEAUpgrade, kEEAPause,
-    kEEAQuick, kEEAEditorQuick,
-    // the scenario editor's
-    kEEAEditorClick, kEEAEditorLasso, kEEATriggerClick, kEEATriggerLasso, kEEALoadText, kEEAEditorPaint, kEEAEditorWhole,
-    kEEAEditorUndo, kEEAEditorRedo   // the Undo and Redo buttons' (EEUIFScenarioEditor.cpp)
-};
-
+// the kinds are Rust's EE_SCREENS_GA_* (ee_game screens game_actions.rs)
 class EEARust : public EEAction, public EeScreensGaFields {
 public:
     explicit EEARust(uint32_t inKind) : EEAction(false), EeScreensGaFields(), mPoll(10, 0, false)
     {
-        this->mKind = inKind;
-        ee_screens_ga_init(this);
+        ee_screens_ga_init(this, inKind);
     }
     virtual ~EEARust() { ee_screens_ga_free(this); }
     virtual void Virtual4() { ee_screens_ga_run(this); }
@@ -100,7 +90,7 @@ public:
 // the original classes, as their constructors
 class EEAAddChatMessage : public EEARust {
 public:
-    EEAAddChatMessage(const UWideString& inText, bool inFromLocalPlayer) : EEARust(kEEAChat)
+    EEAAddChatMessage(const UWideString& inText, bool inFromLocalPlayer) : EEARust(EE_SCREENS_GA_CHAT)
     {
         this->mText = inText;
         this->mFromLocalPlayer = inFromLocalPlayer;
@@ -108,7 +98,7 @@ public:
 };
 class EEABootClientFromCanceledGame : public EEARust {
 public:
-    EEABootClientFromCanceledGame(long inStringID = 0, bool inNoPop = false) : EEARust(kEEABoot)
+    EEABootClientFromCanceledGame(long inStringID = 0, bool inNoPop = false) : EEARust(EE_SCREENS_GA_BOOT)
     {
         this->mStringID = (int32_t)inStringID;
         this->mNoPop = inNoPop;
@@ -116,20 +106,20 @@ public:
 };
 class EEABuild : public EEARust {
 public:
-    EEABuild() : EEARust(kEEABuild) {}
+    EEABuild() : EEARust(EE_SCREENS_GA_BUILD) {}
 };
 class EEACalamity : public EEARust {
 public:
-    EEACalamity() : EEARust(kEEACalamity) {}
+    EEACalamity() : EEARust(EE_SCREENS_GA_CALAMITY) {}
 };
 class EEACenterCamera : public EEARust {
 public:
-    EEACenterCamera() : EEARust(kEEACenterCamera) {}
+    EEACenterCamera() : EEARust(EE_SCREENS_GA_CENTER_CAMERA) {}
 };
 class EEAJoinOrHostAGame : public EEARust {
 public:
     // inMode 0: host, 1: join a detected game, 2/3: connect to the address inGameName, 4: host for WON
-    EEAJoinOrHostAGame(long inMode, const UWideString& inPlayerName, const UWideString& inGameName) : EEARust(kEEAJoin)
+    EEAJoinOrHostAGame(long inMode, const UWideString& inPlayerName, const UWideString& inGameName) : EEARust(EE_SCREENS_GA_JOIN)
     {
         this->mJoinMode = (int32_t)inMode;
         this->mPlayerName = inPlayerName;
@@ -138,23 +128,23 @@ public:
 };
 class EEALasso : public EEARust {
 public:
-    EEALasso(uint32_t inKind = kEEALasso) : EEARust(inKind) {}
+    EEALasso(uint32_t inKind = EE_SCREENS_GA_LASSO) : EEARust(inKind) {}
 };
 class EEAMiniMap : public EEARust {
 public:
-    EEAMiniMap() : EEARust(kEEAMiniMap) {}
+    EEAMiniMap() : EEARust(EE_SCREENS_GA_MINI_MAP) {}
 };
 class EEAMouseClick : public EEARust {
 public:
-    EEAMouseClick(uint32_t inKind = kEEAMouseClick) : EEARust(inKind) {}
+    EEAMouseClick(uint32_t inKind = EE_SCREENS_GA_MOUSE_CLICK) : EEARust(inKind) {}
 };
 class EEAPlayerEvent : public EEARust {
 public:
-    EEAPlayerEvent() : EEARust(kEEAPlayerEvent) {}
+    EEAPlayerEvent() : EEARust(EE_SCREENS_GA_PLAYER_EVENT) {}
 };
 class EEARemovePlayer : public EEARust {
 public:
-    EEARemovePlayer(unsigned char inPlayer, bool inExiting = false) : EEARust(kEEARemovePlayer)
+    EEARemovePlayer(unsigned char inPlayer, bool inExiting = false) : EEARust(EE_SCREENS_GA_REMOVE_PLAYER)
     {
         this->mPlayer = inPlayer;
         this->mIsExiting = inExiting;
@@ -162,11 +152,11 @@ public:
 };
 class EEAResetAllPlayerInfo : public EEARust {
 public:
-    EEAResetAllPlayerInfo(std::vector<unsigned long> inPlayers) : EEARust(kEEAResetPlayers) { this->mPlayers = inPlayers; }
+    EEAResetAllPlayerInfo(std::vector<unsigned long> inPlayers) : EEARust(EE_SCREENS_GA_RESET_PLAYERS) { this->mPlayers = inPlayers; }
 };
 class EEASaveGame : public EEARust {
 public:
-    EEASaveGame(const UString& inFileName, bool inFlag, UString inDescription) : EEARust(kEEASaveGame)
+    EEASaveGame(const UString& inFileName, bool inFlag, UString inDescription) : EEARust(EE_SCREENS_GA_SAVE_GAME)
     {
         this->mFileName = inFileName;
         this->mFlag = inFlag;
@@ -175,36 +165,33 @@ public:
 };
 class EEAScroll : public EEARust {
 public:
-    EEAScroll() : EEARust(kEEAScroll) {}
+    EEAScroll() : EEARust(EE_SCREENS_GA_SCROLL) {}
 };
 class EEAServerMigration : public EEARust {
 public:
-    EEAServerMigration() : EEARust(kEEAMigration) {}
+    EEAServerMigration() : EEARust(EE_SCREENS_GA_MIGRATION) {}
 };
 class EEAUpgradeImprovement : public EEARust {
 public:
     // posts itself (inRaise: raise, else lower; inIsInGame: by message, else the scenario editor's direct change)
-    EEAUpgradeImprovement(EEUnit* inUnit, long inImprovement, bool inRaise, bool inIsInGame) : EEARust(kEEAUpgrade)
+    EEAUpgradeImprovement(EEUnit* inUnit, long inImprovement, bool inRaise, bool inIsInGame) : EEARust(EE_SCREENS_GA_UPGRADE)
     {
-        this->mImprovement = (int32_t)inImprovement;
-        this->mRaise = inRaise;
-        this->mIsInGame = inIsInGame;
-        ee_screens_ga_upgrade_begin(this, inUnit);
+        ee_screens_ga_upgrade_begin(this, inUnit, (int32_t)inImprovement, inRaise, inIsInGame);
     }
 };
 class EEAUserPauseGame : public EEARust {
 public:
-    EEAUserPauseGame() : EEARust(kEEAPause) {}
+    EEAUserPauseGame() : EEARust(EE_SCREENS_GA_PAUSE) {}
 };
 // the quick save/load of EEQuickSave<inName> (mIsLoad: load, else save; mWriteToFile: the save written to disk)
 class EEAQuickSaveLoad : public EEARust {
 public:
-    EEAQuickSaveLoad(const UString& inName, uint32_t inKind = kEEAQuick) : EEARust(inKind) { this->mName = inName; }
+    EEAQuickSaveLoad(const UString& inName, uint32_t inKind = EE_SCREENS_GA_QUICK) : EEARust(inKind) { this->mName = inName; }
 };
 // the scenario editor's: its current tab resumed after
 class EESEAQuickSaveLoad : public EEAQuickSaveLoad {
 public:
-    EESEAQuickSaveLoad(const UString& inName) : EEAQuickSaveLoad(inName, kEEAEditorQuick) {}
+    EESEAQuickSaveLoad(const UString& inName) : EEAQuickSaveLoad(inName, EE_SCREENS_GA_EDITOR_QUICK) {}
 };
 
 // The scenario editor's (Scenario Editor Actions). The click and lasso apply their message to the editor's
@@ -213,34 +200,33 @@ public:
 // SelectInRectangle deselects the selected units inside the rectangle; both post themselves
 class EESEAMouseClick : public EEAMouseClick {
 public:
-    EESEAMouseClick(uint32_t inKind = kEEAEditorClick) : EEAMouseClick(inKind) {}
+    EESEAMouseClick(uint32_t inKind = EE_SCREENS_GA_EDITOR_CLICK) : EEAMouseClick(inKind) {}
 };
 class EESETSAMouseClick : public EESEAMouseClick {
 public:
-    EESETSAMouseClick() : EESEAMouseClick(kEEATriggerClick) {}
+    EESETSAMouseClick() : EESEAMouseClick(EE_SCREENS_GA_TRIGGER_CLICK) {}
 };
 class EESEALasso : public EEALasso {
 public:
-    EESEALasso(uint32_t inKind = kEEAEditorLasso) : EEALasso(inKind) {}
+    EESEALasso(uint32_t inKind = EE_SCREENS_GA_EDITOR_LASSO) : EEALasso(inKind) {}
 };
 class EESETSALasso : public EESEALasso {
 public:
-    EESETSALasso() : EESEALasso(kEEATriggerLasso) {}
+    EESETSALasso() : EESEALasso(EE_SCREENS_GA_TRIGGER_LASSO) {}
 };
 // the load thread's text (mText) shown in the editor form; Post sets it and posts the action (EESELoadThread)
 class EESEAChangeLoadText : public EEARust {
 public:
-    EESEAChangeLoadText() : EEARust(kEEALoadText) {}
+    EESEAChangeLoadText() : EEARust(EE_SCREENS_GA_LOAD_TEXT) {}
     void Post(const UWideString& inText);
 };
-// The paints (kSEAPaintTerrain: a the EETerrainTable index, b the texture (the table entry's mL68); kSEAPaintElevation:
-// a the level (a char); kSEAPaintBulldozer): Virtual4 paints each queued area, SetArea queues one when the paint
+// The paints (EE_SCREENS_SEA_PAINT_TERRAIN: a the EETerrainTable index, b the texture (the table entry's mL68); EE_SCREENS_SEA_PAINT_ELEVATION:
+// a the level (a char); EE_SCREENS_SEA_PAINT_BULLDOZER): Virtual4 paints each queued area, SetArea queues one when the paint
 // changes anything there (the terrain's: any tile on the map; the elevation's: any point off the level's height; the
 // bulldozer's: always) and says whether it did (ee_screens editor_actions.rs; the record mPaint)
-enum { kSEAPaintTerrain = 0, kSEAPaintElevation = 1, kSEAPaintBulldozer = 2 };   // EE_SCREENS_SEA_PAINT_*
 class EESEAPaint : public EEARust {
 public:
-    EESEAPaint() : EEARust(kEEAEditorPaint) {}
+    EESEAPaint() : EEARust(EE_SCREENS_GA_EDITOR_PAINT) {}
     bool SetArea(long inLeft, long inTop, long inRight, long inBottom)
     {
         return ee_screens_ga_paint_set_area(this, (int32_t)inLeft, (int32_t)inTop, (int32_t)inRight, (int32_t)inBottom);
@@ -257,7 +243,7 @@ public:
 class EESEARust : public EEARust {
 public:
     EESEARust(uint32_t inKind, void* inObject = 0, int32_t inA = 0, int32_t inB = 0, int32_t inC = 0, int32_t inD = 0)
-        : EEARust(kEEAEditorWhole)
+        : EEARust(EE_SCREENS_GA_EDITOR_WHOLE)
     {
         this->mAction = ee_screens_sew_new(static_cast<EEAction*>(this), inKind, inObject, inA, inB, inC, inD);
         ee_screens_sew_begin(this->mAction);
@@ -266,8 +252,6 @@ public:
 
 // the mini map's pixel-to-map transformation (EEUIMiniMap sets it)
 extern GETransformation gMiniMapTransformation;
-// the join's message box callback: a fresh client started
-void EEAJoinOrHostAGameRestartClient(UIForm* inForm);
 // a player name is non-empty and free of control, quote, backslash and @ characters (ee_screens single_player.rs)
 bool EEIsValidName(const UWideString& inName);
 // the civilization file applied to a player (EECBCivilizationFiles.cpp)

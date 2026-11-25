@@ -7,10 +7,10 @@
 use std::collections::HashMap;
 
 use crate::ge::model_store::{CemFrame, CemMaterial, CemModel, CemPolygons, Counts, SharedFrames};
-use crate::openformats::cgltf::{
+use crate::openformats::document::{
     self, Accessor, AttributeKind, ComponentType, Data, Interpolation, Node, PrimitiveKind, Ref, TargetPath, ValueType,
 };
-use crate::openformats::json::{self, Value};
+use crate::openformats::json::{self, JsonNumber, Value};
 use ee_base::math::types::{Ge3DPoint, GeVector};
 use ee_base::png::{fail, Failure};
 
@@ -91,13 +91,6 @@ fn is_signed_permutation(g: &Matrix) -> bool {
         && g[15] == 1.0
 }
 
-fn bad_json_string(raw: &[u8]) -> Failure {
-    let mut m = b"bad JSON string \"".to_vec();
-    m.extend_from_slice(raw);
-    m.push(b'"');
-    Failure(m)
-}
-
 fn not_utf8(s: &[u8]) -> Failure {
     let mut m = b"name \"".to_vec();
     m.extend_from_slice(s);
@@ -108,11 +101,7 @@ fn not_utf8(s: &[u8]) -> Failure {
 // gltf.py _name: Blender's ".NNN" duplicate suffix dropped; the name is the game's text, UTF-8 (decision D6), checked
 // to be well-formed. A missing name is empty.
 fn game_name(raw: Option<&[u8]>) -> Result<Vec<u8>, Failure> {
-    let raw = raw.unwrap_or(b"");
-    // the C API's string: up to a NUL
-    let end = raw.iter().position(|&c| c == 0).unwrap_or(raw.len());
-    let raw = &raw[..end];
-    let mut s = json::unescape(raw).ok_or_else(|| bad_json_string(raw))?;
+    let mut s = raw.unwrap_or(b"").to_vec();
     let n = s.len();
     if n >= 4 && s[n - 4] == b'.' && s[n - 3..].iter().all(u8::is_ascii_digit) {
         s.truncate(n - 4);
@@ -245,9 +234,9 @@ fn pair_at(p: &Value, i: usize) -> u64 {
     pair[i].index(1 << 32).unwrap_or(0)
 }
 
-fn texture_name(d: &Data, m: Option<&cgltf::Material>) -> Result<Vec<u8>, Failure> {
+fn texture_name(d: &Data, m: Option<&document::Material>) -> Result<Vec<u8>, Failure> {
     let Some(m) = m else { return Ok(Vec::new()) };
-    if !m.has_pbr || m.base_color_texture == 0 {
+    if m.base_color_texture == 0 {
         return Ok(Vec::new());
     }
     let tex = &d.textures[m.base_color_texture as usize - 1];
@@ -259,32 +248,24 @@ fn texture_name(d: &Data, m: Option<&cgltf::Material>) -> Result<Vec<u8>, Failur
         return game_name(Some(name));
     }
     if let Some(uri) = img.uri.as_deref().filter(|u| !u.is_empty() && !u.starts_with(b"data:")) {
-        let raw = json::unescape(uri).ok_or_else(|| bad_json_string(uri))?;
-        let mut s = cgltf::decode_uri(&raw);
+        let mut s = document::decode_uri(uri);
         if let Some(slash) = s.iter().rposition(|&c| c == b'/' || c == b'\\') {
             s.drain(..=slash);
         }
         if let Some(dot) = s.iter().rposition(|&c| c == b'.') {
             s.truncate(dot);
         }
-        // the C++ passes the decoded name through its raw-name path once more
         return game_name(Some(&s));
     }
     Ok(Vec::new())
 }
 
-fn extension_data(d: &Data, n: &Node) -> Result<Option<Value>, Failure> {
-    for ext in &n.extensions {
-        if ext.name == b"EE_model" {
-            let text = &d.json[ext.data.0 as usize..ext.data.1 as usize];
-            let Some(v) = json::parse(text) else { return fail("EE_model is not valid JSON") };
-            return Ok(if matches!(v, Value::Object(_)) { Some(v) } else { None });
-        }
-    }
-    Ok(None)
+// the node's EE_model extension, when it is an object
+fn extension_data(n: &Node) -> Option<&Value> {
+    n.ee_model.as_ref().filter(|v| v.is_object())
 }
 
-fn attribute(attrs: &[cgltf::Attribute], kind: AttributeKind) -> Option<&cgltf::Attribute> {
+fn attribute(attrs: &[document::Attribute], kind: AttributeKind) -> Option<&document::Attribute> {
     attrs.iter().find(|a| a.kind == kind && a.index == 0)
 }
 
@@ -304,8 +285,8 @@ impl Importer<'_, '_> {
     fn import_model(&self, node_index: usize, correction: Option<&Matrix>) -> Result<Model, Failure> {
         let d = self.data;
         let node = &d.nodes[node_index];
-        let ext = extension_data(d, node)?;
-        let ext_get = |k: &str| ext.as_ref().and_then(|e| e.get(k));
+        let ext = extension_data(node);
+        let ext_get = |k: &str| ext.and_then(|e| e.get(k));
         let mut m = Model { name: game_name(node.name.as_deref())?, ..Default::default() };
         let mesh = &d.meshes[node.mesh as usize - 1];
         if mesh.primitives.is_empty() {
@@ -475,7 +456,7 @@ impl Importer<'_, '_> {
                         };
                         idx |= (*v as usize) << (8 * b);
                     }
-                    // cgltf_validate checked the sparse indices against the count (6 per vertex)
+                    // `validate` checked the sparse indices against the count (6 per vertex)
                     let slot = 8 * (idx / 6) + idx % 6;
                     if idx >= values.len() || slot >= m.vertices[fi].len() {
                         return fail("EE_model frameFixes does not match the vertices");
@@ -588,8 +569,8 @@ impl Importer<'_, '_> {
             let mat = if p.material != 0 { Some(&d.materials[p.material as usize - 1]) } else { None };
             let mut material = Material::default();
             if let Some(mt) = mat {
-                if let Some((s, e)) = mt.extras {
-                    let Some(ex) = json::parse(&d.json[s as usize..e as usize]) else {
+                if let Some(text) = &mt.extras {
+                    let Some(ex) = json::parse(text.as_bytes()) else {
                         return fail("material extras are not valid JSON");
                     };
                     if let Some(ti) = ex.get("ee_textureIndex") {
@@ -757,13 +738,13 @@ pub type Resolver<'r> = dyn FnMut(&[u8]) -> Option<Vec<u8>> + 'r;
 
 /// A .gltf or .glb -> the imported model (gltf.py `import_`).
 fn import(input: &[u8], mut resolve: Option<&mut Resolver>) -> Result<Model, Failure> {
-    let Ok(mut d) = cgltf::parse(input) else { return fail("not a glTF 2.0 file") };
+    let Ok(mut d) = document::parse(input) else { return fail("not a glTF 2.0 file") };
     for b in d.buffers.iter_mut() {
         let Some(uri) = b.uri.as_deref() else { continue };
         if b.data.is_some() || uri.starts_with(b"data:") {
             continue;
         }
-        let name = cgltf::decode_uri(uri);
+        let name = document::decode_uri(uri);
         let mut quoted = b"buffer \"".to_vec();
         quoted.extend_from_slice(&name);
         let missing = |quoted: &mut Vec<u8>, tail: &[u8]| {
@@ -776,13 +757,13 @@ fn import(input: &[u8], mut resolve: Option<&mut Resolver>) -> Result<Model, Fai
         if (bytes.len() as u64) < b.size {
             return Err(missing(&mut quoted, b"\" is shorter than its byteLength"));
         }
-        // an empty file stays a null pointer in the C++: cgltf_load_buffers then fails on it, below
+        // an empty file stays a null pointer in the C++: `load_buffers` then fails on it, below
         b.data = if bytes.is_empty() { None } else { Some(std::borrow::Cow::Owned(bytes)) };
     }
-    if cgltf::load_buffers(&mut d).is_err() {
+    if document::load_buffers(&mut d).is_err() {
         return fail("the glTF's buffers cannot be loaded");
     }
-    if cgltf::validate(&d).is_err() {
+    if document::validate(&d).is_err() {
         return fail("the glTF is not valid (cgltf_validate)");
     }
     let mut importer = Importer { data: &d, channels: HashMap::new() };
@@ -984,11 +965,22 @@ mod tests {
     fn broken_files_are_refused_with_the_cpp_messages() {
         let fails = |doc: &[u8]| refused(doc, None);
         assert_eq!(fails(b"not json at all"), b"not a glTF 2.0 file".to_vec());
-        assert_eq!(fails(br#"{"nodes":[]}"#), b"no node with a mesh".to_vec());
+        assert_eq!(fails(br#"{"asset":{"version":"2.0"},"nodes":[]}"#), b"no node with a mesh".to_vec());
+        // a document needs its asset member (the glTF schema's; cgltf read one without)
+        assert_eq!(fails(br#"{"nodes":[]}"#), b"not a glTF 2.0 file".to_vec());
+        // a name that is not UTF-8 or has a lone surrogate escape is not JSON text for the reader
+        assert_eq!(
+            fails(b"{\"asset\":{\"version\":\"2.0\"},\"nodes\":[{\"name\":\"\xff\"}]}"),
+            b"not a glTF 2.0 file".to_vec()
+        );
+        assert_eq!(
+            fails(br#"{"asset":{"version":"2.0"},"nodes":[{"name":"\ud800"}]}"#),
+            b"not a glTF 2.0 file".to_vec()
+        );
         let mut none = triangle_gltf();
         let at = none.windows(9).position(|w| w == b"\"scenes\":").unwrap();
         none.splice(at..at + 8, *b"\"scens\": ");
-        // without "scenes" the scene index 0 is out of range: refused by cgltf
+        // without "scenes" the scene index 0 is out of range
         assert_eq!(fails(&none), b"not a glTF 2.0 file".to_vec());
     }
 
@@ -1002,7 +994,7 @@ mod tests {
 
     #[test]
     fn an_external_buffer_goes_through_the_resolver() {
-        let doc = br#"{"buffers":[{"byteLength":3,"uri":"a%20b.bin"}],"nodes":[{"mesh":0}],"meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],"accessors":[{"bufferView":0,"componentType":5121,"count":3,"type":"SCALAR"}],"bufferViews":[{"buffer":0,"byteLength":3}]}"#;
+        let doc = br#"{"asset":{"version":"2.0"},"buffers":[{"byteLength":3,"uri":"a%20b.bin"}],"nodes":[{"mesh":0}],"meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],"accessors":[{"bufferView":0,"componentType":5121,"count":3,"type":"SCALAR"}],"bufferViews":[{"buffer":0,"byteLength":3}]}"#;
         let mut asked = Vec::new();
         let mut resolve = |uri: &[u8]| -> Option<Vec<u8>> {
             asked.push(uri.to_vec());
@@ -1016,7 +1008,7 @@ mod tests {
 
     #[test]
     fn missing_and_short_external_buffers() {
-        let doc = br#"{"buffers":[{"byteLength":3,"uri":"x.bin"}]}"#;
+        let doc = br#"{"asset":{"version":"2.0"},"buffers":[{"byteLength":3,"uri":"x.bin"}]}"#;
         assert_eq!(refused(doc, None), b"buffer \"x.bin\" not found".to_vec());
         let mut none = |_: &[u8]| -> Option<Vec<u8>> { None };
         assert_eq!(refused(doc, Some(&mut none)), b"buffer \"x.bin\" not found".to_vec());
@@ -1031,7 +1023,6 @@ mod tests {
         assert_eq!(game_name(None).unwrap(), Vec::<u8>::new());
         assert_eq!(game_name(Some(b"caf\xc3\xa9")).unwrap(), "caf\u{e9}".as_bytes()); // UTF-8 kept (decision D6)
         assert_eq!(game_name(Some(b"\xe2\x82\xac")).unwrap(), "\u{20ac}".as_bytes());
-        assert_eq!(game_name(Some(br"a\tb")).unwrap(), b"a\tb".to_vec());
         assert!(game_name(Some(b"\xff")).unwrap_err().0.ends_with(b"is not UTF-8"));
         assert_eq!(game_name(Some("\u{4e2d}".as_bytes())).unwrap(), "\u{4e2d}".as_bytes());
         assert!(game_name(Some(b"\xed\xa0\x80")).unwrap_err().0.ends_with(b"is not UTF-8"), "a surrogate");

@@ -89,12 +89,6 @@ long EELoadPersistent(const UString& inFile, long inTagID, FSPersistent*& outPer
     return ee_gamecpp_ps_load_persistent(&inFile, inTagID, reinterpret_cast<void**>(&outPersistent));
 }
 
-// Centres the camera on the middle of the map, if there is one
-void EEGameState::SetDefaultMapCenter()
-{
-    ee_gamecpp_st_default_map_center(this);
-}
-
 // Replaces the game state's effect manager, deleting the old one
 void EEGameState::SetEffectManager(EEEffectManager* inManager)
 {

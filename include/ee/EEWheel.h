@@ -13,7 +13,9 @@ class EEWheel {
 public:
     EEWheel(GEModel* inModel);              // 0x23c86c (the radius: half the model's height)
     EEWheel(const EEWheel& inWheel);        // 0x23c8b1 (out of line: EEComplexUnit's wheel vector copies through it)
-    virtual ~EEWheel();                     // +0x00 0x23c8d2 (??_G 0x23c895)
+    // Destroys the wheel (nothing to release)
+    // +0x00 0x23c8d2 (??_G 0x23c895)
+    virtual ~EEWheel() {  }
     void Update(EEComplexUnit* inUnit);     // 0x23c8ff: turns the wheel by the distance the unit moved
 
     GEModel* mModel;                        // +0x04

@@ -18,7 +18,6 @@
 #include "lle/UResourceFile.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
-#include "ee/EETechRust.h"
 #include "rust/sim/scenario.h"
 #include "ee/EEScenarioHost.h"
 #include "ee/EEUnitUtilities.h"   // EEReplaceQueuedTechnology
@@ -45,11 +44,6 @@ bool gEventsEnabled = true;
 //   guarded dtor (byte ptr [0x95cf78], 1): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sEvents@EEEvent@@2PAV1@A
 
-// Creates an event with no effects
-EEEvent::EEEvent() : mEffects(NULL), mNumEffects(0), mID(0)
-{
-}
-
 // Destroys the event, freeing its effect index list
 EEEvent::~EEEvent()
 {
@@ -60,23 +54,8 @@ EEEvent::~EEEvent()
 
 std::vector<std::unique_ptr<EEEvent>> EEEvent::sEvents;
 
-// Loads every event effect and every event with its effect list (as many as the files hold: the original read
-// exactly 2000 effects and 1500 events); returns the last read's result (ee_sim scenario event.rs)
-long EEEvent::LoadEvents(FSFileSpec& inEvents, FSFileSpec& inEffects)
-{
-    return ee_scenario_ev_load(&inEvents, &inEffects);
-}
-
 // (EEUnloadBuiltInGraphicObjects 0x1ca6d9 unloaded four graphic objects outside the media table: nothing ever set
 // them, so it is gone with them; data lane round 3)
-
-// Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result.
-// RunEffect 0x1ca7cf and its handlers (the stats, button, model, sounds, research, unit conversion, with the EVRN
-// and EVAT records) are ee_sim scenario event.rs, over the statements below
-long EEEvent::Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
-{
-    return ee_scenario_ev_trigger(inEvent, inPlayerIndex, inID, inPlayer, inUnit);
-}
 
 
 namespace {

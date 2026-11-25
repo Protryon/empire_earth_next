@@ -15661,9 +15661,6 @@ struct EeScreensChatEntry {
   char *text;
 };
 
-/// The area effects' I/O op (`EEAEManager.cpp`'s `EEAEIoCall` on its `FSFile`).
-using EeScreensAesIo = long(*)(void *ctx, uint32_t op, void *value);
-
 /// A targeting mode a command starts (`Command`): the main game form's UI state, and for the attack ground and
 /// rally commands the cursor locked to a pointer first. The form then shows its cancel button and refreshes.
 struct EeScreensCommandMode {
@@ -16788,11 +16785,11 @@ void *ee_screens_aem_find(void *manager,
 /// `EEAEManager::Load(file)` on the manager -> its result (`area_effect_running.rs`).
 long ee_screens_aes_load_templates(void *manager, void *file);
 
-/// `EEAESaveRunningState`: written through `call` on the file `ctx`.
-void ee_screens_aes_save(void *ctx, EeScreensAesIo call);
+/// `EEAESaveRunningState`: written to the `FSFile` `file`.
+void ee_screens_aes_save(void *file);
 
-/// `EEAELoadRunningState`: read through `call` on the file `ctx` -> the read's result.
-long ee_screens_aes_load(void *ctx, EeScreensAesIo call);
+/// `EEAELoadRunningState`: read from the `FSFile` `file` -> the read's result.
+long ee_screens_aes_load(void *file);
 
 /// The running state's fix-up after a load (`aes_after_load`'s registered call; `state` the record).
 ///
@@ -17941,11 +17938,12 @@ long ee_screens_frame_draw(void *background,
                            uint32_t flags,
                            const void *clip);
 
-/// The constructor's members (the record value-initialised, its kind set).
+/// The constructor's members (the record value-initialised): its kind set, then the kind's defaults.
 ///
 /// # Safety
 /// `r` is the action's record.
-void ee_screens_ga_init(EeScreensGaFields *r);
+void ee_screens_ga_init(EeScreensGaFields *r,
+                        uint32_t kind);
 
 /// The destructor's releases.
 ///
@@ -18052,11 +18050,16 @@ bool ee_screens_ga_paint_set_area(EeScreensGaFields *r,
                                   int32_t right,
                                   int32_t bottom);
 
-/// The improvement's constructor: the unit (an `EEUnit*`) referenced and held, the action posted.
+/// The improvement's constructor: the improvement, raise (else lower) and in-game (else the scenario editor's)
+/// flags set, the unit (an `EEUnit*`) referenced and held, the action posted.
 ///
 /// # Safety
 /// As `ee_screens_ga_init`.
-void ee_screens_ga_upgrade_begin(EeScreensGaFields *r, void *unit);
+void ee_screens_ga_upgrade_begin(EeScreensGaFields *r,
+                                 void *unit,
+                                 int32_t improvement,
+                                 bool raise,
+                                 bool in_game);
 
 /// `EEUIBGenericBackground`'s constructor's body (`color` the `GEColor*`).
 void ee_screens_gb_construct(size_t bg,
@@ -18656,8 +18659,14 @@ void ee_screens_shell_free(EeScreensShell *s);
 /// `sUnitTypeMode` (the unit tab's host).
 int32_t ee_screens_shell_unit_type_mode();
 
-/// `EEIsValidName` over the name's `count` characters (each one's first byte).
-bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+/// `EEIsValidName`: the UWideString's text and `GetLength()` (its characters); the rule reads each character's first
+/// byte (`operator[]`, ee_base ustring wide.rs `ee_uwstring_at`; the loop was EEARust.cpp's).
+bool ee_screens_valid_name(const char *text,
+                           unsigned long length);
+
+/// EEAJoinOrHostAGameRestartClient: the join's message box callback (a `void (*)(UIForm*)`; the form is unused; was
+/// EEARust.cpp's): the communications object replaced with a freshly started client.
+void ee_screens_join_restart_client(void *_form);
 
 /// `EEUIFMGStatusBox::Fill` (`unit`: the call's unit is set).
 void ee_screens_status_box_fill(void *call, bool unit);

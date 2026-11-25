@@ -65,12 +65,7 @@ unsigned long EEGetCivTimerSecondWarning()
 // Returns the civilization folder: the user's full path (Users\default\Civilizations\) or the relative one
 UString EEGetCivilizationDirectory(bool inX)
 {
-    UString theDirectory;
-    if (inX)
-        theDirectory = gStartupDirectory + "Users\\default\\" + kCivilizationsKey + "\\";
-    else
-        theDirectory = kCivilizationsKey + "\\";
-    return theDirectory;
+    return inX ? gStartupDirectory + "Users\\default\\" + kCivilizationsKey + "\\" : kCivilizationsKey + "\\";
 }
 
 // Reads a civilization file's name and upgrade ids from the data path or the given directory, then the capture's

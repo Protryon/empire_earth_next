@@ -18,6 +18,10 @@ use crate::app::camera_ffi::{ee_app_camera_set_clipping_distances, ee_app_camera
 
 use super::{cptr, h, hd, hf, hp, ptr, O, P};
 
+/// The camera's field of view, 30 degrees in radians (was EECameraControl.cpp's `sCameraFieldOfView`, computed in
+/// float as the C++ did).
+const CAMERA_FIELD_OF_VIEW: f32 = 0.017453292f32 * 30.0f32;
+
 fn fields(c: P) -> *mut EeAppCameraFields {
     hp(O::DkFields, c, &[]) as *mut EeAppCameraFields
 }
@@ -64,7 +68,7 @@ pub unsafe extern "C" fn ee_gamecpp_camera_update(camera: *mut c_void, elapsed: 
             hf(O::DkSetOrtho, 0, &[], &[-size, -size, size, size]);
         }
         h(O::DkSetWorldCamera, c, &[]);
-        h(O::DkSetFieldOfView, 0, &[]);
+        hf(O::DkSetFieldOfView, 0, &[], &[CAMERA_FIELD_OF_VIEW]);
         // SAFETY: as above
         unsafe { ee_app_camera_set_clipping_distances(fields(c), camera, call) };
         if crate::gamecpp::globals::have!(gMiniMap) {

@@ -429,7 +429,7 @@ pub extern "C" fn ee_gamecpp_msg_start_loading(m: *mut c_void) {
     h(O::UiSetRandomSeed, 0, &[get::<i32>(m, 2) as i64]);
     h(O::CommSetHumans, 0, &[get::<u8>(m, 1) as i64]);
     h(O::CommSetMultiplayer, 0, &[(get::<u8>(m, 1) > 1) as i64]);
-    h(O::UiPostStartLoading, 0, &[]);
+    crate::screens::ui_objects::ui_post_start_loading();
 }
 
 /// The improvement queued for the unit's type if its owner can buy it; otherwise the local owner hears an error
@@ -562,7 +562,7 @@ pub unsafe extern "C" fn ee_gamecpp_msg_world_act(
             h(O::PhysPost, 0, &[i[1]]);
         }
         EE_NETMSG_WACT_COLLISION_UNIT => {
-            h(O::SetCollisionDetectionUnit, 0, &[i[1]]);
+            super::globals::set!(gCollisionDetectionUnit, i[1] as std::ffi::c_ulong);
         }
         EE_NETMSG_WACT_COLLISION_FLAGS => {
             // SAFETY: the world's member
@@ -1134,7 +1134,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
         if command == 0xb8 && h(O::GoalHasLocation, goal, &[]) != 0 {
             h(O::GoalLocation, goal, &[ptr(&mut location)]);
             if hp(O::MapTile, 0, &[location.x as c_long as i64, location.y as c_long as i64]) != 0 {
-                h(O::MapGroundPoint, 0, &[cptr(&location), ptr(&mut ground)]);
+                ground = super::map::world_ground_point(&location);
                 h(O::UcGroundLocation, unit_class(unit), &[ptr(&mut ground)]);
                 if ground.z < 0.0 {
                     ground.z = 0.0;
@@ -1216,7 +1216,7 @@ pub extern "C" fn ee_gamecpp_msg_group_command(
             continue;
         }
         h(O::GoalLocation, goal, &[ptr(&mut location)]);
-        h(O::MapGroundPoint, 0, &[cptr(&location), ptr(&mut ground)]);
+        ground = super::map::world_ground_point(&location);
         h(O::UcGroundLocation, unit_class(unit), &[ptr(&mut ground)]);
         h(O::EffAt, unit, &[cptr(&ground), pa(move_effect), ptr(&mut handle), index as i64]);
         local(handle);

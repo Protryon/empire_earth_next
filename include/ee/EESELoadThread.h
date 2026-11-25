@@ -19,10 +19,12 @@ class EEUIFScenarioEditor;
 
 class EESELoadThread {
 public:
-    EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPriority);    // 0x172125 (new'd by the editor 0x19f794)
-    ~EESELoadThread();
-    static unsigned long Main(void* inThis);                  // 0x1727ae (the thread procedure)
-    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
+    // 0x172125 (new'd by the editor 0x19f794)
+    EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPriority) { ee_screens_selt_construct(this, inEditor, inThreadPriority); }
+    ~EESELoadThread() { ee_screens_selt_destroy(this); }
+    // 0x1727ae (the thread procedure)
+    static unsigned long Main(void* inThis) { return ee_screens_selt_main(inThis); }
+    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2) { ee_screens_selt_message(this, inMessage, inParameter1, inParameter2); }
 
     // the posting side (one TSThread::Post each; provisional names by message number)
     void Post404() { this->mThread->Post(0x404, NULL, NULL, true); }   // start the scenario test and finish

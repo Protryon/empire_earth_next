@@ -10,6 +10,7 @@
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
 #include "rust/sim/tech.h"   // EeCalamityClassFields, EeCalamityClassMedia (ee_tech calamity_class.rs)
+#include "rust/game/gamecpp.h"
 
 class EECalamity;
 class EEContagionFunctor;
@@ -25,57 +26,9 @@ class GE3DPoint;
 // where a 4.0f literal would be one shared __real COMDAT.
 static const float kCalamitySoundFalloff = 4.0f;
 
-// One record of db\dbcalamity.dat (provisional name). Gap-free, from the file itself (36 records of 0xec bytes):
-// the name, then floats, ids and flags. Field names
-// are provisional unless a reader names them.
-// what EECalamityData +0x80 / EECalamityClass +0x18 hold (an enum: see mL18; values not decoded, provisional name)
-enum EECalamityKind {
-    kCalamityKindNone = -1
-};
-
-struct EECalamityData {
-    char mLabel[100];                       // +0x00 ("Undefined", "Global Warming", ... "Special Location")
-    float mFloatParam1;                     // +0x64 (line of sight: the bonus)
-    float mFloatParam2;                     // +0x68 (plague: functor argument)
-    float mQuakeMinimumStrength;            // +0x6c (earthquake Initialize 0xb0765)
-    float mQuakeStrength;                   // +0x70 (earthquake Initialize)
-    float mUnused1;                         // +0x74 (0 in every record)
-    float mRange;                           // +0x78 -> EECalamityClass +0x1c (rounded)
-    int32_t mUnusedDatabaseID;              // +0x7c (128..: the record's id)
-    EECalamityKind mID;                     // +0x80 -> +0x18 (an enum, as the class member it fills)
-    int32_t mClassEnum;                     // +0x84 -> +0x08
-    int32_t mUnusedTargetKind;              // +0x88
-    int32_t mLifeTime;                      // +0x8c -> +0x04 (as float)
-    int32_t mUnused2;                       // +0x90 (1 in every record)
-    int32_t mGraphicEffectID1;              // +0x94 EEGraphicEffect table index (area effects: +0x28)
-    int32_t mGraphicEffectID2;              // +0x98 (area effects: +0x2c)
-    int32_t mGraphicEffectID3;              // +0x9c (mind control: +0x30)
-    int32_t mGraphicEffectID4;              // +0xa0 (time warp: +0x34)
-    int32_t mUnused3;                       // +0xa4 (0 in every record)
-    int32_t mUnused4;                       // +0xa8 (0)
-    int32_t mUnused5;                       // +0xac (0)
-    int32_t mUnitClassIndex;                // +0xb0 (drop object: the unit class to drop)
-    int32_t mIntParam1;                     // +0xb4 (area effects: +0x44)
-    int32_t mIntParam2;                     // +0xb8 (area effects: +0x3c)
-    int32_t mIntParam3;                     // +0xbc (area effects: functor argument)
-    int32_t mIntParam4;                     // +0xc0 (fire: functor argument)
-    int32_t mIntParam5;                     // +0xc4 (earthquake Initialize)
-    int32_t mIntParam6;                     // +0xc8 (hurricane: the map area its location needs)
-    bool mUnused6;                          // +0xcc (1 in 31 of 36 records)
-    bool mBoolParam1;                       // +0xcd (extra damage: functor argument)
-    bool mUnused7;                          // +0xce (0 in every record)
-    bool mUnused8;                          // +0xcf (0)
-    bool mIsCastByAllSelected;              // +0xd0 -> +0x26
-    bool mIsBlockedByImmunity;              // +0xd1 -> +0x25
-    int32_t mSoundID;                       // +0xd4 EESoundObject table index (area effects: +0x34)
-    int32_t mSecondarySoundID;              // +0xd8 (plague: its second sound)
-    int32_t mCost;                          // +0xdc -> +0x20
-    uint32_t mUnitSet;                      // +0xe0 -> +0x10
-    int32_t mNameID;                        // +0xe4 -> +0x14
-    bool mUnusedClassFlag;                  // +0xe8 -> +0x24
-};
-
-static_assert(sizeof(EECalamityData) == 236, "on-disk record: 236 bytes on every target");
+// One record of db\dbcalamity.dat: Rust's EeCalamityData (ee_sim tech calamity_class.rs; the evidence for each field
+// is there)
+typedef EeCalamityData EECalamityData;
 
 // New (port): the class's effects, sounds and numbers in one place for every class (ee_tech calamity_class.rs). The
 // numbers are the Rust record EeCalamityClassFields the class derives from (the base members, then the union of the
@@ -85,31 +38,42 @@ static_assert(sizeof(EECalamityData) == 236, "on-disk record: 236 bytes on every
 // mClassEnum, and the classes' world steps are the host's (EECalamityUpdate.cpp).
 class EECalamityClass : public EeCalamityClassFields {
 public:
-    EECalamityClass();                      // 0xadcd9 (every number 0, no effect, sound or functor)
-    virtual ~EECalamityClass();             // +0x00 (0xadd15): the class's own releases (its media steps)
-    virtual bool Start(EECalamity* inCalamity);              // +0x04 (Rust: ee/EECalamityUpdate.h)
-    virtual void Stop(EECalamity* inCalamity);               // +0x08
-    virtual EEContagionFunctor* GetContagionFunctor();       // +0x0c (base 0x1ad67e: none)
-    virtual long GetCost();                 // +0x10 (0xadceb: mCost)
+    // 0xadcd9 (every number 0, no effect, sound or functor)
+    EECalamityClass() : EeCalamityClassFields(), mGraphicEffect1(NULL), mGraphicEffect2(NULL), mGraphicEffect3(NULL), mGraphicEffect4(NULL), mSound(NULL), mSecondarySound(NULL), mFunctor(NULL) {  }
+    // +0x00 (0xadd15): the class's own releases (its media steps)
+    virtual ~EECalamityClass() { ee_gamecpp_calamity_class_media_list(this, EE_CALAMITY_MEDIA_DESTROY, NULL, false); }
+    // +0x04 (Rust: ee/EECalamityUpdate.h)
+    virtual bool Start(EECalamity* inCalamity) { return ee_gamecpp_calamity_class_run(this, inCalamity, EE_CALAMITY_RUN_START, 0.0f) != 0; }
+    // +0x08
+    virtual void Stop(EECalamity* inCalamity) { ee_gamecpp_calamity_class_run(this, inCalamity, EE_CALAMITY_RUN_STOP, 0.0f); }
+    // +0x0c (base 0x1ad67e: none)
+    virtual EEContagionFunctor* GetContagionFunctor() { return this->mFunctor; }
+    // +0x10 (0xadceb: mCost)
+    virtual long GetCost() { return this->mCost; }
     // +0x14: what the class is cast at (EE_CALAMITY_TARGET_*: 1 nothing, 2 a location, 3 a unit; its base's)
     long GetTargetKind() { return (long)ee_calamity_class_target_kind((int32_t)this->mClassEnum); }
     // +0x18: a unit class's (0xb712a): the id of the unit under the mouse, -1 if none; -1 for the others (0xadcef)
-    virtual long GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool);
-    virtual unsigned long GetUnitSet();     // +0x1c (0xadcf5: mUnitSet)
-    virtual void Initialize(EECalamityData* inData);         // +0x20 (body 0xadd1c, then the class's own)
-    virtual void Reset(EECalamity* inCalamity);              // +0x24
+    virtual long GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool) { return ee_gamecpp_calamity_class_default_target(this); }
+    // +0x1c (0xadcf5: mUnitSet)
+    virtual unsigned long GetUnitSet() { return this->mUnitSet; }
+    // +0x20 (body 0xadd1c, then the class's own)
+    virtual void Initialize(EECalamityData* inData) { ee_gamecpp_calamity_class_initialize(this, reinterpret_cast<const EeCalamityData*>(inData)); }
+    // +0x24
+    virtual void Reset(EECalamity* inCalamity) { ee_gamecpp_calamity_class_reset(this, inCalamity); }
     // +0x28: EECalamity's ctor calls it with (the caster's player or player 0, true); the classes load their effects,
     // sounds and unit class media (the bool goes to EEGraphicEffect::Load)
-    virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);
-    virtual void PlaySound(EECalamity* inCalamity);   // +0x2c (EECalamity::PlaySound calls it)
+    virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand) { ee_gamecpp_calamity_class_media_list(this, EE_CALAMITY_MEDIA_LOAD, inPlayer, inIsOnDemand); }
+    // +0x2c (EECalamity::PlaySound calls it)
+    virtual void PlaySound(EECalamity* inCalamity) { ee_gamecpp_calamity_class_play_sound(this, inCalamity); }
     // +0x30 (0x2907a3: empty): the volcano's (0xb5137) makes units step aside from its site
-    virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY);
-    virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x34 (~EECalamity calls it)
-    virtual long Update(EECalamity* inCalamity, float inElapsedTime);  // +0x38 (Rust: ee/EECalamityUpdate.h)
+    virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY) { ee_gamecpp_calamity_class_place(this, inUnit, inX, inY); }
+    // +0x34 (~EECalamity calls it)
+    virtual void UnloadMedia(EEPlayer* inPlayer) { ee_gamecpp_calamity_class_media_list(this, EE_CALAMITY_MEDIA_UNLOAD, inPlayer, false); }
+    // +0x38 (Rust: ee/EECalamityUpdate.h)
+    virtual long Update(EECalamity* inCalamity, float inElapsedTime) { return ee_gamecpp_calamity_class_run(this, inCalamity, EE_CALAMITY_RUN_UPDATE, inElapsedTime); }
     // +0x3c: 1 = refused, 2 = protected by an area effect, 0 = fine (tile (inX, inY), when inCheck): the rules of the
     // class's base (a location's, a unit's or the special attack's; the global classes': 0)
-    virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
-                           EEUnit* inTargetUnit);
+    virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck, EEUnit* inTargetUnit) { return ee_gamecpp_calamity_class_can_cast(this, inUnit, (const float(*)[3])&inLocation.mX, inX, inY, inCheck, inTargetUnit); }
 #ifdef __clang__
     // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
     // forward to them (clang build only; remove once the parameters themselves are const).
@@ -119,19 +83,18 @@ public:
 #endif
     // +0x48 (0xadde9): volume/pan/pitch of one of the calamity's two sounds from its location
     // (inVolume -1: the computed volume, else inVolume clamped to 0..1; inFalloff: EEComputeSoundParameters's)
-    virtual void UpdateSound(EECalamity* inCalamity, EESoundObject* inSound, float inVolume, float inFalloff,
-                             bool inPrimary);
+    virtual void UpdateSound(EECalamity* inCalamity, EESoundObject* inSound, float inVolume, float inFalloff, bool inPrimary) { ee_gamecpp_calamity_class_update_sound(inCalamity, inSound, inVolume, inFalloff, inPrimary); }
 
     // New (port): what the Rust tables read of the class's effects and sounds (EeCalamityClassMedia)
-    void GetMedia(EeCalamityClassMedia& outMedia);
+    void GetMedia(EeCalamityClassMedia& outMedia) { ee_gamecpp_calamity_class_get_media(this, &outMedia); }
     // a location class's (+0x4c): the shared rule over the class's radius, water flag, map area, space terrain and
     // placed unit class
-    bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);
+    bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY) { return ee_gamecpp_calamity_class_valid_location(this, inUnit, inX, inY); }
     // a unit class's (+0x4c): the fire's and the plague's functor decides (CanInfect), the others' the shared rule
-    bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit);
+    bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit) { return ee_gamecpp_calamity_class_valid_target(this, inUnit, inTargetUnit); }
     // the volcano's (0xb4e74; EEUCBuilding calls it): a random location of a map tile between mMinimumRadius and
     // mMaximumRadius around inCenter, at the tile's height
-    void GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation);
+    void GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation) { ee_gamecpp_calamity_class_random_location(this, (const float(*)[3])&inCenter.mX, (float(*)[3])&outLocation.mX); }
 
     // the class's effects (record +0x94..+0xa0), sounds (+0xd4, +0xd8) and contagion functor (owned), each set as
     // its class's Initialize set it

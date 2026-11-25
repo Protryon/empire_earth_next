@@ -8,7 +8,8 @@
 
 class EECameraKey {
 public:
-    EECameraKey();                          // 0x12883b (out of line: EEScenarioManager's ctor calls it)
+    // 0x12883b (out of line: EEScenarioManager's ctor calls it)
+    EECameraKey() {  }
 
     GETransformation mT00;                  // +0x00
     GETransformation mT40;                  // +0x40

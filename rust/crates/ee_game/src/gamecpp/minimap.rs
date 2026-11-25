@@ -9,8 +9,9 @@
 
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
+use std::sync::Mutex;
 
-use ee_base::math::types::{Ge2DPoint, GeRectangle, GeTransformation};
+use ee_base::math::types::{Ge2DPoint, GeRectangle, GeTransformation, GeVector};
 use ee_render::ge::viewport::GeViewport;
 use ee_render::gfx::effects::EeGfxColor;
 use ee_render::gfx::ffi::{ee_gfx_minimap_transforms, ee_gfx_minimap_view};
@@ -214,11 +215,13 @@ unsafe extern "C" fn host_op(context: *mut c_void, op: i32, io: *mut EeAppMiniMa
     }
 }
 
+/// `gMiniMapLight`: the terrain light (each mini map's constructor sets it to (0, 1.5, 1) normalized).
+static LIGHT: Mutex<[f32; 3]> = Mutex::new([0.0; 3]);
+
 /// The host of a call over its context (the world map's mesh, the terrain light).
 fn host(ctx: &mut HostContext) -> EeAppMiniMapHost {
     let map = hp(O::MpWorldMap, 0, &[]);
-    let mut light = [0f32; 3];
-    h(O::MmLight, 0, &[ptr(&mut light)]);
+    let light = *LIGHT.lock().unwrap();
     EeAppMiniMapHost {
         call: host_op,
         ctx: ctx as *mut HostContext as *mut c_void,
@@ -255,8 +258,10 @@ pub extern "C" fn ee_gamecpp_minimap_construct(mm: *mut c_void, map: *mut c_void
     } else {
         ee_gamecpp_minimap_set_map(mm as *mut c_void, map);
     }
-    h(O::MmLightSet, 0, &[]);
-    h(O::MmLightNormalize, 0, &[]);
+    let mut light = GeVector { x: 0.0, y: 1.5, z: 1.0 };
+    // SAFETY: a local vector
+    unsafe { ee_base::math::ffi::ee_ge_vector_normalize(&mut light) };
+    *LIGHT.lock().unwrap() = [light.x, light.y, light.z];
 }
 
 /// EEMiniMap's destructor's body.
@@ -383,7 +388,7 @@ pub extern "C" fn ee_gamecpp_minimap_recolor(mm: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_minimap_refresh(mm: *mut c_void) {
     let m = mm as P;
-    let viewport = hp(O::MmViewport, 0, &[]) as *const GeViewport;
+    let viewport = super::rast::game_viewport() as *const GeViewport;
     let orthographic = h(O::MpOrthographic, 0, &[]) != 0;
     let at = hp(O::MmTransforms, m, &[]) as *const GeTransformation;
     // SAFETY: the viewport and the mini map's map/pixel transformation

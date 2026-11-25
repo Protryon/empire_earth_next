@@ -136,16 +136,19 @@ void ee_data_rules_free(EeDataRules *rules);
 /// `rules` and `content` live, `err` writable or null.
 bool ee_data_rules_load(EeDataRules *rules, EeDataContent *content, EeDataBytes *err);
 
-/// Writes the C++ `EERulesData` (ee/EERulesGen.h) of the rules in place: its lists and texts point into storage the
-/// rules own until the next call. `sizes` are the C++ structs' sizes (`kEERulesMirrorSizes`); a layout that differs
-/// from the Rust mirror's stops the game.
+/// Writes the C++ `EEEpochMedia` of an epoch the rules do not hold (`rules::epoch_none`: the defaults, no lists).
 ///
 /// # Safety
-/// `rules` live, `out` an `EERulesData` (no list or text of it read across the call), `sizes` readable for `count`.
+/// `out` an `EEEpochMedia`.
+void ee_data_rules_epoch_none(void *out);
+
+/// Writes the C++ `EERulesData` (rules_gen.rs's record, which cbindgen emits: the one layout) of the rules in place:
+/// its lists and texts point into storage the rules own until the next call.
+///
+/// # Safety
+/// `rules` live, `out` an `EERulesData` (no list or text of it read across the call).
 void ee_data_rules_mirror(EeDataRules *rules,
-                          void *out,
-                          const size_t *sizes,
-                          size_t count);
+                          void *out);
 
 /// The content dump of the rules (`"rules.<doc>":{...}` lines).
 ///
@@ -161,6 +164,19 @@ void ee_data_rules_set_music_from_flags(EeDataRules *rules,
                                         int32_t song,
                                         const bool *flags,
                                         size_t count);
+
+/// The computer players' level (0 easy .. 2 hard: their records' values) of a game option difficulty; past the
+/// list, the difficulty itself (was EERules.cpp's EEDifficultyAILevel).
+///
+/// # Safety
+/// `rules` live.
+long ee_data_rules_ai_level(const EeDataRules *rules,
+                            unsigned long difficulty);
+
+/// `EERules::Epoch`'s entry: an epoch position's index in a list of `count` epochs (before the list the first, past
+/// it the last; `count` > 0).
+size_t ee_data_rules_epoch_index(long epoch,
+                                 size_t count);
 
 /// The binary load's songs: every row of a dbmusic.dat file's per-epoch flags (the gate's and tools' path).
 ///
@@ -182,8 +198,7 @@ bool ee_data_rules_add_override(const uint8_t *spec, size_t len, EeDataBytes *er
 /// `out` writable.
 void ee_data_rules_override_problems(EeDataBytes *out);
 
-/// The names of the unit categories, for C++: `kEERuleCategoryNames[]` is generated (EERulesGen.h); this is its count
-/// source of truth for a consistency check in tests.
+/// The number of unit category names (rules_gen.rs `UNIT_CATEGORY_NAMES`), for a consistency check in tests.
 size_t ee_data_rule_category_count();
 
 }  // extern "C"

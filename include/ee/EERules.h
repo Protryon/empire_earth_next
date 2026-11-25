@@ -1,7 +1,7 @@
 // ee/EERules.h (new, not in the original game): the game rules that were literals in the code, as data
 // (docs/DATA_FORMATS.md 8.8). Rules documents next to the db tables, db\combat.yaml, db\gameoptions.yaml,
 // db\civbuilder.yaml, db\civpowers.yaml, db\aipersonalities.yaml, plus each epoch's media in db\epochs.yaml. The
-// fields and their defaults are generated from tools/eedata/rules_schema.json (ee/EERulesGen.h); the reader is Rust
+// fields and their defaults are generated from tools/eedata/rules_schema.json (ee_data rules_gen.rs); the reader is Rust
 // (rust/crates/ee_data/src/rules.rs). Every member starts at the original game's value; a document on the data path
 // sets every value it holds (references by id, resolved by the db tables' Content). Without the documents (the binary
 // db tree) the game plays with these defaults, which equal the vanilla documents tools/eedata writes (eedata.py
@@ -30,12 +30,8 @@ struct EERuleNumber {
     static EERuleNumber World(long inRow, int inValue);
 };
 
-// How a hit's damage is formed (EEUnitClass::ComputeDamage)
-enum EEDamageForm {
-    kDamageDirect,                          // a unit's or projectile's hit (EEUnitClass::ApplyHit)
-    kDamageSplash,                          // splash damage around it (EEUnitClass::ApplyAreaDamage)
-    kDamageTrample                          // a moving unit pushing a stopped enemy (EEPhysicsModel)
-};
+// How a hit's damage is formed (EEDamageForm): Rust's enums (ee_sim game_ids.rs), emitted back as plain C++ enums with their evidence comments.
+#include "rust/sim/game_ids.h"
 
 // A list the Rust rules own (ee_data rules.rs RuleListC): read like a const std::vector
 template <class T>
@@ -61,7 +57,10 @@ struct EERuleText {
     operator std::string() const { return str(); }
 };
 
-#include "ee/EERulesGen.h"
+// The rules documents' records and enums (EECombatRules .. EERulesData; EECivStat, EECivMode, EECivPowerAction,
+// EEAICheat): Rust's (ee_data generated/rules_gen.rs, from tools/eedata/rules_schema.json), emitted back by cbindgen.
+// Rust writes every value in place (EERules::Refresh); the lists and texts point into the Rust rules' storage.
+#include "rust/data/generated.h"
 
 // ------------------------------------------------------------------------------------------------ all of them
 
@@ -88,18 +87,6 @@ private:
 
 // The game's rules (constructed on first use; filled by EELoadRules at database load, EEDataTextFile.cpp)
 EERules& EEGetRules();
-
-// the computer players' level (0 easy .. 2 hard: their records' values) of a game option difficulty
-long EEDifficultyAILevel(unsigned long inDifficulty);
-
-// TEST ONLY (EE-SIM.exe --set, the headless simulation): a rules document's value changed as the document is read,
-// "doc.key.key=value". A key may name a list entry by its id: "aipersonalities.balanced.military.army_floor=0.2" is
-// the personalities entry with id balanced (the list may also be named: aipersonalities.personalities.balanced...).
-// Only an existing scalar is changed. False, with the reason, when the spec is malformed.
-bool EERulesAddOverride(const std::string& inSpec, std::string& outError);
-// the overrides that changed nothing (the document is not in the data, or the key is not in it), each with the reason.
-// An out parameter, not a return value: on Linux a returned std::string container carries libstdc++'s [abi:cxx11]
-// tag in the defining unit's mangled name but not in the Microsoft-dialect caller's, and the link failed
-void EERulesOverrideProblems(std::vector<std::string>& out);
+// (a difficulty's computer player level: ee_data_rules_ai_level, rust/data/ffi.h)
 
 #endif

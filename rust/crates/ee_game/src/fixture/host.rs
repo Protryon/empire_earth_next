@@ -11,14 +11,8 @@ use std::sync::OnceLock;
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeFixtureOp {
-    /// `s` to stderr (fputs, fflush)
-    Stderr = 1,
-    /// exit(i0)
-    Exit,
-    /// PlatSimSetTimeFactor(i0, i1) -> 1 taken, 0 refused
-    SetTimeFactor,
     /// the platform switch i0 (0 the seed, 1 no human defeat, 2 the port offset) set to i1
-    SetSwitch,
+    SetSwitch = 1,
     /// the debug output and the fault handler (EETestFixtureConfigure's), or with i0 = 1 the game's test hooks
     Install,
     /// the harness clock: i0/i1 its factor, i2 PlatTimeMilliseconds
@@ -56,13 +50,8 @@ pub enum EeFixtureOp {
     MouseFix,
     /// ForceUIUpdate
     UiUpdate,
-    /// ISHandleEvent of a platform event: i0 its kind (EE_FIXTURE_KEY_DOWN ..), i1 its key code or button, f0 the wheel
-    Input,
     /// the keyboard's Shift and Control -> 0 none, 1 Shift alone, 2 anything else
     Modifiers,
-    /// the state bits: 1 gPhysics, 2 the map, 4 the world's lock, 8 gMouse, 16 gISKeyboard, 32 gUserInterface,
-    /// 64 the WON lobby open, 128 gUIManager
-    State,
     /// the game form's selection control (form h's kMainGameSelectUnits) -> its handle, 0 none
     SelectControl,
     /// selection control h under the UI lock: i0 the form's mouse captured, i1 dragging, (f0, f1) the drag's end
@@ -138,7 +127,6 @@ pub enum EeFixtureOp {
     EditNumber,
     // ---- the compound operations' finer ones (compound.rs; one C++ statement each: EETestFixture.cpp names each
     // one's call)
-    FxInstallFault,
     FxInstallLasso,
     FxMessageType,
     FxMessageLocal,
@@ -197,13 +185,9 @@ pub enum EeFixtureOp {
     FxActionDereference,
     FxStatusButtonShows,
     FxStatusButtonCenter,
-    FxWorldHasLock,
-    FxWorldLockStep,
-    FxPhysicsPresent,
     FxPhysicsValue,
     FxCommsPresent,
     FxCommsValue,
-    FxMapPresent,
     FxCameraFocus,
     FxCameraEndFocus,
     FxCameraZoom,
@@ -457,13 +441,31 @@ impl Call {
     }
 }
 
-/// A text line to stderr through the C library's stream (the C++ fixture's `fprintf(stderr, ..)` and `fflush`).
+/// A text line to stderr through the C library's stream (the C++ fixture's `fputs(.., stderr)` and `fflush`).
 pub fn stderr(text: &str) {
-    if HOST.get().is_none() {
-        eprint!("{text}");
-        return;
+    #[cfg(not(test))]
+    crate::sim_driver::stdio::write(2, text.as_bytes(), true);
+    #[cfg(test)]
+    eprint!("{text}");
+}
+
+/// The C library's `exit(code)` (its handlers and the streams' flush run, as the C++ fixture's call).
+pub fn exit(code: i32) -> ! {
+    #[cfg(not(test))]
+    // SAFETY: the C library's exit
+    unsafe {
+        crt::exit(code)
     }
-    Call::new(EeFixtureOp::Stderr).s(text).go();
+    #[cfg(test)]
+    std::process::exit(code)
+}
+
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod crt {
+    extern "C" {
+        pub fn exit(code: std::ffi::c_int) -> !;
+    }
 }
 
 /// The world's read lock taken for the closure's time (none when the world has no lock: the closure is not run).
@@ -503,13 +505,34 @@ pub const EE_FIXTURE_STATE_UI: i64 = 32;
 pub const EE_FIXTURE_STATE_LOBBY: i64 = 64;
 pub const EE_FIXTURE_STATE_UI_MANAGER: i64 = 128;
 
-/// The state bits ([`EeFixtureOp::State`]).
+/// The state bits: 1 gPhysics, 2 the map, 4 the world's lock, 8 gMouse, 16 gISKeyboard, 32 gUserInterface, 64 the WON
+/// lobby open, 128 gUIManager (0 in a unit test).
 pub fn state() -> i64 {
-    Call::new(EeFixtureOp::State).go()
+    #[cfg(not(test))]
+    {
+        use crate::gamecpp::globals::have;
+        extern "C" {
+            fn ee_screenscpp_ui_has_keyboard() -> bool;
+        }
+        let bit = |on: bool, b: i64| if on { b } else { 0 };
+        let (map, lock) = crate::sim_driver::sim_host::world_map_and_lock();
+        // SAFETY: the C++ global's read
+        let keyboard = unsafe { ee_screenscpp_ui_has_keyboard() };
+        bit(have!(gPhysics), EE_FIXTURE_STATE_PHYSICS)
+            | bit(map != 0, EE_FIXTURE_STATE_MAP)
+            | bit(!lock.is_null(), EE_FIXTURE_STATE_LOCK)
+            | bit(have!(gMouse), EE_FIXTURE_STATE_MOUSE)
+            | bit(keyboard, EE_FIXTURE_STATE_KEYBOARD)
+            | bit(have!(gUserInterface), EE_FIXTURE_STATE_UI)
+            | bit(Call::new(EeFixtureOp::FxLobbyOpen).go() != 0, EE_FIXTURE_STATE_LOBBY)
+            | bit(have!(gUIManager), EE_FIXTURE_STATE_UI_MANAGER)
+    }
+    #[cfg(test)]
+    0
 }
 
-/// The platform's input events ([`EeFixtureOp::Input`]'s i0; the host maps them to platform/PlatWindow.h's
-/// `PLAT_EVENT_KEY_DOWN`, `_KEY_UP`, `_MOUSE_DOWN`, `_MOUSE_UP`, `_MOUSE_WHEEL`).
+/// The platform's input events (platform/PlatWindow.h's `PLAT_EVENT_KEY_DOWN`, `_KEY_UP`, `_MOUSE_DOWN`, `_MOUSE_UP`,
+/// `_MOUSE_WHEEL`).
 pub const EE_FIXTURE_KEY_DOWN: i64 = 0;
 pub const EE_FIXTURE_KEY_UP: i64 = 1;
 pub const EE_FIXTURE_MOUSE_DOWN: i64 = 2;
@@ -518,7 +541,21 @@ pub const EE_FIXTURE_MOUSE_WHEEL: i64 = 4;
 
 /// A platform event: a key's (its scan code) or a mouse button's (1 left, 3 right).
 pub fn input(kind: i64, code: i64) {
-    Call::new(EeFixtureOp::Input).i(&[kind, code]).go();
+    input_event(kind, code, 0.0);
+}
+
+/// `ISHandleEvent` of a platform event of `kind` (`EE_FIXTURE_KEY_DOWN` ..): a key's scan code, a button, or the
+/// wheel's notches (was the C++ host's Input).
+pub fn input_event(kind: i64, code: i64, wheel: f32) {
+    use ee_base::plat_ui::event::*;
+    let types =
+        [PLAT_EVENT_KEY_DOWN, PLAT_EVENT_KEY_UP, PLAT_EVENT_MOUSE_DOWN, PLAT_EVENT_MOUSE_UP, PLAT_EVENT_MOUSE_WHEEL];
+    let (scan, button, wheel) = match kind {
+        0 | 1 => (code as u32, 0, 0.0),
+        2 | 3 => (0, code as u32, 0.0),
+        _ => (0, 0, wheel),
+    };
+    ee_base::input::ffi::ee_input_handle_event(types[kind as usize], scan, 0, 0, button, wheel);
 }
 
 /// The pointer to (x, y) under the input lock -> where it is now (None: no mouse).

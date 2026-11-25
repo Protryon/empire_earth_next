@@ -9,12 +9,12 @@ use std::sync::OnceLock;
 const HEADERS: [&str; 8] = [
     "include/ee/EEUnitClassIDs.h",
     "include/rust/sim/unit_ids.h",
-    "include/ee/EEAreaEffectKindIDs.h",
+    "include/rust/sim/game_ids.h",
+    "include/rust/sim/tech_consts.h",
     "include/rust/render/gestate.h",
     "include/ee/EEMap.h",
     "include/ee/EEUnitGoal.h",
     "include/rust/sim/tech_tree_ids.h",
-    "include/ee/EEResourceType.h",
 ];
 
 /// A C++ constant's value: `#define NAME value` or an enumerator `NAME = value,` of the headers.

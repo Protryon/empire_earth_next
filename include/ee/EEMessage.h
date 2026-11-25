@@ -12,6 +12,8 @@
 
 #include "lle/U2DPoint.h"                  // EEMSendFlare's inline ctor
 #include "ee/EEMessageID.h"
+#include "rust/game/gamecpp.h"
+#include "rust/sim/netmsg.h"
 
 class EEGameOptions;
 class GE2DPoint;
@@ -32,7 +34,9 @@ public:
     // sits in EEABuild.cpp, its first user in link order)
     virtual bool GetIsAvailableToSend() const { return !gLocalPlayerOut || this->mCanSendWhenOut; }
 
-    static NEMessage* BuildEEMessage(unsigned char* inMemory);   // the factory 0xb8f8e (sConstructors[0x41..0xfd])
+    // Creates the game message object for a received buffer from its type byte (NULL and an assert for an unknown type)
+    // the factory 0xb8f8e (sConstructors[0x41..0xfd])
+    static NEMessage* BuildEEMessage(unsigned char* inMemory) { return (NEMessage*)ee_gamecpp_msg_build(inMemory); }
     static void RegisterKnownMessages();
     // the physics loop's two ways to execute a message (0x1537ba/0x1537e3; provisional names): types 0x82,
     // 0x84, 0x96 record their selection id (mU0C) per player, the rest execute only when it is the current one
@@ -45,7 +49,8 @@ public:
     // request unless its type's rule says so (IsResponse: EEMRecord's).
     virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass) = 0;
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    // a class of fixed members its constant, else the size of these members
+    virtual unsigned long ExportSize() { return ee_gamecpp_msg_export_size(static_cast<NEMessage*>(this)); }
     virtual void ImportMessage(unsigned char* inData);
     virtual bool IsResponse(NEMessage* inMessage) { return false; }
 
@@ -96,15 +101,21 @@ struct EEMRecordValue {
 // reads Get<T>(i) (i: the member's wire index, 1 = the first after the selection id) and says which in a comment.
 class EEMRecord : public EEMessage {
 public:
-    EEMRecord(unsigned char* inData);   // the factory's: the type at inData[1], then the import
+    // the import constructor: EEMessage's defaults (no send flag), as the old classes' import constructors; the record
+    // zeroed, then the import
+    // the factory's: the type at inData[1], then the import
+    EEMRecord(unsigned char* inData) : EEMessage(inData[1]) { ee_gamecpp_mrecord_import(static_cast<NEMessage*>(this), inData, true); }
     EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue> inValues = {});
-    virtual bool GetCanSendWhilePaused() const;
-    virtual bool GetSendToAllAndWaitMessageID(unsigned long& outID) const;   // the type's wait member (Load or Save)
-    virtual void SetSendToAllAndWaitMessageID(unsigned long inID);
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual bool IsResponse(NEMessage* inMessage);   // the type's response rule (Load or Save: its tick's response)
+    virtual bool GetCanSendWhilePaused() const { return (ee_netmsg_record_flags(this->mType) & EE_NETMSG_RECORD_PAUSED) != 0; }
+    // the type's wait member (Load or Save)
+    virtual bool GetSendToAllAndWaitMessageID(unsigned long& outID) const { return ee_gamecpp_mrecord_wait_id(static_cast<const NEMessage*>(this), &outID); }
+    virtual void SetSendToAllAndWaitMessageID(unsigned long inID) { ee_gamecpp_mrecord_set_wait_id(static_cast<NEMessage*>(this), inID); }
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass) { return ee_gamecpp_mrecord_slots(static_cast<NEMessage*>(this), outSlots, &outClass); }
+    // Whether a message is this one's response, by the type's rule (Load or Save: the response for its tick)
+    // the type's response rule (Load or Save: its tick's response)
+    virtual bool IsResponse(NEMessage* inMessage) { return ee_gamecpp_mrecord_is_response(static_cast<NEMessage*>(this), inMessage); }
     virtual void Execute();
-    virtual char* GetMessageLabel() const;
+    virtual char* GetMessageLabel() const { return const_cast<char*>(ee_netmsg_record_label(this->mType)); }
 
     // member inIndex (1 = the first after the selection id) as its type (the size is verified)
     template <class T> T Get(uint32_t inIndex) const
@@ -122,7 +133,8 @@ public:
             memcpy((void*)&theList[0], &this->mList[0], theList.size() * sizeof(T));
         return theList;
     }
-    unsigned char* Field(uint32_t inIndex, size_t inSize) const;
+    // member inIndex's place in the record (its kind and size verified)
+    unsigned char* Field(uint32_t inIndex, size_t inSize) const { return ee_gamecpp_mrecord_field(static_cast<const NEMessage*>(this), inIndex, inSize); }
     virtual void ImportMessage(unsigned char* inData);   // the codec, then the string's text and the list's records
 
     unsigned char mRecord[64];   // EE_NETMSG_RECORD_BYTES

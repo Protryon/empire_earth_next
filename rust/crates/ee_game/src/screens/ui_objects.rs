@@ -108,6 +108,48 @@ pub(crate) fn ui() -> Option<*mut EeScreensUserInterfaceFields> {
     (!p.is_null()).then_some(p)
 }
 
+// ---- `gUserInterface`'s members for Rust callers (the C++ calls these forward to: ee/EEUserInterface.h). A test
+// binary has no UI thread object: there they do nothing.
+
+/// `gUserInterface->SetLoadProgress(fraction)`.
+pub(crate) fn ui_set_load_progress(fraction: f32) {
+    #[cfg(not(test))]
+    if let Some(rec) = ui() {
+        // SAFETY: the registered live UI object's record
+        unsafe { super::ui_objects_ffi::ee_screens_ui_set_load_progress(rec, fraction) }
+    }
+    #[cfg(test)]
+    let _ = fraction;
+}
+
+/// `gUserInterface->SetLoadingText(id)` (0x40b).
+pub(crate) fn ui_set_loading_text(id: c_long) {
+    #[cfg(not(test))]
+    if let Some(rec) = ui() {
+        // SAFETY: as above
+        unsafe {
+            super::ui_objects_ffi::ee_screens_ui_post(rec, 0x40b, id as isize as *mut c_void, core::ptr::null_mut())
+        };
+    }
+    #[cfg(test)]
+    let _ = id;
+}
+
+/// `gUserInterface->PostStartLoading()`.
+pub(crate) fn ui_post_start_loading() {
+    #[cfg(not(test))]
+    if let Some(rec) = ui() {
+        // SAFETY: as above
+        unsafe { super::ui_objects_ffi::ee_screens_ui_post_start_loading(rec) }
+    }
+}
+
+/// `gUserInterface->ResumeGraphics()`.
+pub(crate) fn ui_resume_graphics() {
+    #[cfg(not(test))]
+    super::ui_objects_ffi::ee_screens_ui_resume_graphics();
+}
+
 /// `gUIManager->mMainGameForm` (NULL without a manager).
 pub(crate) fn main_game_form() -> *mut c_void {
     // SAFETY: the registered live manager's record (a plain read)

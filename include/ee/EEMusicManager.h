@@ -8,6 +8,8 @@
 #ifndef EE_EEMUSICMANAGER_H
 #define EE_EEMUSICMANAGER_H
 
+#include "rust/audio/sound.h"
+#include "rust/game/gamecpp.h"
 class EEMusicObject;
 class SEConductor;
 class TSEvent;
@@ -15,15 +17,19 @@ class TSThread;
 
 class EEMusicManager {
 public:
-    EEMusicManager(SEConductor* inConductor, long inThreadPriority);
-    virtual ~EEMusicManager();              // +0x00 0x131db4 (??_G 0x131d98)
+    EEMusicManager(SEConductor* inConductor, long inThreadPriority) : mConductor(inConductor) { ee_gamecpp_music_init(this, inThreadPriority); }
+    // +0x00 0x131db4 (??_G 0x131d98)
+    virtual ~EEMusicManager() { ee_gamecpp_music_destroy(this); }
 
     // (MusicManagerMain 0x131e0a, the thread function: ee_game gamecpp music_io.rs)
-    void Pause();                           // 0x131f67: mPause->Set()
+    // 0x131f67: mPause->Set()
+    void Pause() { this->mPause->Set(); }
     void SetIntensity(unsigned long inIntensity);   // 0x131f87 (then mSetIntensity->Set())
-    void Start();                           // 0x132000: mStart->Set() (the settings turn the music on)
-    void Stop();                            // 0x1321b1: mStop->Set() (the settings turn the music off)
-    void Update(unsigned long inElapsedTime);
+    // 0x132000: mStart->Set() (the settings turn the music on)
+    void Start() { this->mStart->Set(); }
+    // 0x1321b1: mStop->Set() (the settings turn the music off)
+    void Stop() { this->mStop->Set(); }
+    void Update(unsigned long inElapsedTime) { ee_music_update(this, (uint32_t)inElapsedTime); }
 
     URandom mRandom;                        // +0x04 (seeded with TMGetTime())
     SEConductor* mConductor;                // +0x14

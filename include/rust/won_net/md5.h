@@ -9,7 +9,8 @@
 
 /// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
 struct EeWonMd5 {
-  uint32_t state[4];
+  /// the `md-5` crate's `Md5Core`
+  uint64_t core[3];
   /// bytes hashed so far
   uint64_t count;
   uint8_t pending[64];

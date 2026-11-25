@@ -82,12 +82,6 @@ void EEMessage::ExecuteMessage()
     EENetMsgExecute(static_cast<EEMRecord*>(this), 2);
 }
 
-// Creates the game message object for a received buffer from its type byte (NULL and an assert for an unknown type)
-NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
-{
-    return (NEMessage*)ee_gamecpp_msg_build(inMemory);   // gamecpp msg_objs.rs (its asserts: EECore11OpC4's cases)
-}
-
 // Orders farms for EEMBuildUnit::Execute: built ones first, then paid-for ones, then the nearer to the tile. Inline
 // (header-declared); its COMDAT 0x4c995c lands among this unit's sort COMDATs after its first user, the sort
 // in EEMBuildUnit::Execute
@@ -101,20 +95,14 @@ inline bool EETileDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit
 // 0x23cc42 (cdecl): the exchange rate between a resource and the trade resource for inPlayer (provisional name)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);
 
-// inline (header-declared; the COMDAT 0x4c0894 sits here): inPoint on the terrain, its own z off
-// the mesh
-// not inline: other units call it (VC6 left an out-of-line copy of the inline for them; clang does not)
+// inline (header-declared; the COMDAT 0x4c0894 sits here): inPoint on the terrain, its own z off the mesh (gamecpp
+// map.rs); not inline: other units call it
 void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
 {
-    outPoint.SetX(inPoint.GetX());
-    outPoint.SetY(inPoint.GetY());
-    if (this->mTerrainMesh.GetIsValidTile(UMFloorUnsigned(inPoint.GetX()), UMFloorUnsigned(inPoint.GetY())))
-        outPoint.SetZ(this->mTerrainMesh.GetMeshZ(inPoint.GetX(), inPoint.GetY()));
-    else
-        outPoint.SetZ(inPoint.GetZ());
+    ee_gamecpp_map_ground_point(this->mTerrainMesh.GetRust(), reinterpret_cast<const EeGe3DPoint*>(&inPoint), reinterpret_cast<EeGe3DPoint*>(&outPoint));
 }
 
-bool gLocalPlayerOut;                      // 0x4e6099 (.bss between this unit's Execute statics 0x4e6098/0x4e609a; ee/EEMessage.h)
+// gLocalPlayerOut (0x4e6099; ee/EEMessage.h): gamecpp globals.rs
 
 #include "ee/EESaveLoad.h"
 #include <vector>
@@ -471,8 +459,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::PlaceUnit: EEPlaceUnit(CX, (EEUnitClass*)a[0], (EEPlayer*)a[1], U2DPoint<long>((long)a[2], (long)a[3]), true);
         break;
     case O::CanPlace: return EECanPlace(PL, (long)a[0], (GE3DPoint*)a[1], (long)a[2], (long)a[3], 0, 0);
-    case O::MapGroundPoint: gWorld.mMap->GetGroundPoint(*(GE3DPoint*)a[0], *(GE3DPoint*)a[1]);
-        break;
     case O::EffSetLocalTo: ((EEEffect*)p)->SetLocalTo((long)a[0]);
         break;
     case O::SoundObjectPlay: ((EESoundObject*)p)->Play();
@@ -569,8 +555,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::UiPostLobbyUpdateGameOptions: gUserInterface->PostLobbyUpdateGameOptions();
         break;
     case O::UiPostLobbyUpdatePlayer: gUserInterface->PostLobbyUpdatePlayer((long)a[0], (long)a[1]);
-        break;
-    case O::UiPostStartLoading: gUserInterface->PostStartLoading();
         break;
     case O::UiCloseForm: gUserInterface->CloseForm(NULL);
         break;

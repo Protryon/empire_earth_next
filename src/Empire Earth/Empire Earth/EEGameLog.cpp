@@ -74,13 +74,9 @@
 #include "rust/game/game_log.h"
 #include "ee/EEGameLog.h"
 
-extern EEAIContinentManager gContinentManager;
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
-extern bool gGameWindowSizeDefaulted;        // EEPreferences.cpp
-extern float gCameraMaxZoom;                 // EECameraControl.cpp
 extern bool& gInCinematic;
 extern char gEmptyString[];                  // 0x4e5b98 (pooled "")
-extern EECivilizationManager gCivilizationManager;
 
 // the members the Rust reads in place (gamecpp music_io.rs EeGamecppMusicMembers, stats_capture.rs' tails)
 static_assert(offsetof(EEMusicManager, mRequestedIntensity) - offsetof(EEMusicManager, mRandom) == 16 + 10 * sizeof(void*) + 5 * sizeof(long) &&
@@ -131,11 +127,7 @@ int64_t EECore11OpB(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::EpNewSettings: return P64(new EEGameSettings());
     case O::EpDeleteSettings: delete B_SET;
         break;
-    case O::EpWindowSizeDefaulted: gGameWindowSizeDefaulted = a[0] != 0;
-        break;
     case O::EpResourceLanguage: return gResource->GetLanguage();
-    case O::EpCameraMaxZoom: gCameraMaxZoom = f[0];
-        break;
     case O::EpWideLength: return (int64_t)strlen((const char*)*B_W);
     case O::EpWideGet: B_TEXT((const char*)*B_W);
         break;

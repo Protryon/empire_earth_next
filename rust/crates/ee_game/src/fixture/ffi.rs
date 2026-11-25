@@ -69,6 +69,6 @@ pub extern "C" fn ee_fixture_message(message: u64, kind: u64, local: bool, phase
 
 /// The WON lobby's work on its own message loop (EETestFixture.cpp's UserEvent; lobby.rs).
 #[no_mangle]
-pub extern "C" fn ee_fixture_lobby_work() {
+pub extern "C" fn ee_fixture_lobby_work(_param: std::ffi::c_int) {
     super::lobby::work();
 }

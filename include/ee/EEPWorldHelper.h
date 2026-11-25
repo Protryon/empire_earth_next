@@ -8,6 +8,8 @@
 #ifndef EE_EEPWORLDHELPER_H
 #define EE_EEPWORLDHELPER_H
 
+#include "rust/game/gamecpp.h"
+#include "ee/EEPersistentTag.h"   // kPersistentWorld
 class EEGameState;
 class EEScenarioManager;
 class EEWorld;
@@ -17,12 +19,23 @@ public:
     EEPWorldHelper();
     EEPWorldHelper(EEWorld& inWorld);
     // implicit virtual dtor: ??_G +0x10 0x14c1bc
-    virtual void GetChecksum(ESChecksum& ioChecksum) const;                     // +0x00 (empty: ICF-folded 0x157269)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x14c2bd
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x14c449
-    virtual FSPersistent* CreateDefault() const;                                // +0x14 0x14c2a6
+    // Adds nothing to the checksum (empty: folded into a shared empty function)
+    // +0x00 (empty: ICF-folded 0x157269)
+    virtual void GetChecksum(ESChecksum& ioChecksum) const {  }
+    // Reads the teams, world settings and id counters (Carbon flag from version 0.239 on), the running state (from 0.254:
+    // world_save.rs), then the chat log and the main game form; returns only the main game form's error
+    // +0x04 0x14c2bd
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_gamecpp_pwh_load(this, inMajorVersion, inMinorVersion, &inFile); }
+    // Writes the teams, world settings, id counters and Carbon flag, the running state (from 0.254: world_save.rs),
+    // then the chat log and the main game form; returns only the main game form's error
+    // +0x0c 0x14c449
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_gamecpp_pwh_save(this, inMajorVersion, inMinorVersion, &outFile); }
+    // Creates an empty saved-world chunk (persistent factory)
+    // +0x14 0x14c2a6
+    virtual FSPersistent* CreateDefault() const { return new EEPWorldHelper; }
     // 0x14c3a7: hands the saved state to the game being loaded (the loader 0x14a0a4 dynamic_casts the helper)
-    void Restore(EEGameState& ioState);
+    // Copies the loaded teams, world settings and id counters into the game state (and its scenario manager, if any)
+    void Restore(EEGameState& ioState) { ee_gamecpp_pwh_restore(this, &ioState); }
     // inline: Restore hands the floats over through the FPU (fld/fstp; provisional names from the keys)
     float GetTimeOfDay() const { return this->mTimeOfDay; }
     float GetZoom() const { return this->mZoom; }
