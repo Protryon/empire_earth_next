@@ -416,9 +416,12 @@ fn a_herd_dies_from_its_last_unit_and_the_dump_lists_what_is_there() {
     let kills: Vec<u64> = w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_KILL_KILLED).map(|c| c.1).collect();
     assert_eq!(kills, vec![0x42, 0x41]);
     assert_eq!(w.calls[1], (EE_UNITS_PLAYER_BODY_HERD_UNITS, 0x30, 0x80, 0));
-    let mut w = World::default()
-        .answer(EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS, None, None, 3)
-        .answer(EE_UNITS_PLAYER_BODY_UPGRADE_AT, None, Some(1), 0x90);
+    let mut w = World::default().answer(EE_UNITS_PLAYER_BODY_UPGRADE_SLOTS, None, None, 3).answer(
+        EE_UNITS_PLAYER_BODY_UPGRADE_AT,
+        None,
+        Some(1),
+        0x90,
+    );
     w.warnings = vec![c"one".to_owned(), c"two".to_owned()];
     dump_media(&mut w, 1, 0x500);
     assert_eq!(w.calls.iter().filter(|c| c.0 == EE_UNITS_PLAYER_BODY_DUMP_COUNT).count(), 1);

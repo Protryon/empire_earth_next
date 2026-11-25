@@ -7608,9 +7608,6 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEDIA_LOAD = 37;
 /// media `a`'s `UnloadMedia()`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD = 38;
 
-/// `ee_units_off_map(mLists, b, 0, 0, 0, 0)` (2 cleared, 3 repaired)
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_OFF_MAP = 40;
-
 /// `ee_units_queued_free(mQueued)`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_QUEUED_FREE = 43;
 
@@ -7680,17 +7677,8 @@ constexpr static const int32_t EE_UNITS_PLAYER_BODY_ADD_OFF_MAP = 71;
 /// `RecountHeroesAndTeleporters()`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_RECOUNT_HEROES = 72;
 
-/// `AddLoadedMedia(a)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_ADD_MEDIA = 73;
-
-/// `RemoveLoadedMedia(a)`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_REMOVE_MEDIA = 74;
-
 /// `UnloadAllMedia()` (virtual)
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_UNLOAD_ALL_MEDIA = 75;
-
-/// `ClearUnitsToRepatrol()`
-constexpr static const int32_t EE_UNITS_PLAYER_BODY_CLEAR_REPATROL = 76;
 
 /// complex unit `a`'s `mIsDisabled`
 constexpr static const int32_t EE_UNITS_PLAYER_BODY_DISABLED = 77;

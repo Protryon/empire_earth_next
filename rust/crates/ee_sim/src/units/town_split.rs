@@ -7,7 +7,7 @@
 
 use std::os::raw::c_long;
 
-use crate::units::player_lists::{ListOp, EE_UNITS_LISTS_TOWNS};
+use crate::units::player_lists::ListOp;
 use crate::units::player_rest::{
     EE_UNITS_PLAYER_BODY_HULL_COUNT, EE_UNITS_PLAYER_BODY_HULL_POINT, EE_UNITS_PLAYER_BODY_TOWN_ADD_AREA,
     EE_UNITS_PLAYER_BODY_TOWN_CONTINENT, EE_UNITS_PLAYER_BODY_TOWN_SERIAL,
@@ -259,7 +259,7 @@ pub mod game {
             Box::new(crate::units::save_prim::game::GameFile(io.prim.i as usize as *mut c_void))
         }
         fn towns(&mut self, player: u64, op: ListOp) -> u64 {
-            crate::units::player_lists::player_op(player, EE_UNITS_LISTS_TOWNS, op)
+            crate::units::player_lists::player_op(player, crate::units::player_lists::EE_UNITS_LISTS_TOWNS, op)
         }
     }
 

@@ -342,32 +342,29 @@ struct Ffi;
 
 impl ListsHost for Ffi {
     fn call(&mut self, op: i32, value: u64) -> u64 {
-        #[cfg(not(test))]
-        {
-            use crate::units::patrol_group::{ee_units_pg_dereference, ee_units_pg_reference, EeUnitsPatrolGroup};
-            let g = value as usize as *mut EeUnitsPatrolGroup;
-            // SAFETY: a live patrol group of the player's list; live units through the C++ host (the callers'
-            // contract)
-            return unsafe {
-                match op {
-                    EE_UNITS_LISTS_HOST_PG_REFERENCE => {
-                        ee_units_pg_reference(g);
-                        0
-                    }
-                    EE_UNITS_LISTS_HOST_PG_DEREFERENCE => {
-                        ee_units_pg_dereference(g);
-                        0
-                    }
-                    _ => ee_units_lists_host(op, value),
-                }
-            };
-        }
-        #[cfg(test)]
-        {
-            let _ = (op, value);
-            0
+        ffi_call(op, value)
+    }
+}
+
+/// The units' counts through the C++ host, the patrol groups' (patrol_group.rs) here.
+#[cfg(not(test))]
+fn ffi_call(op: i32, value: u64) -> u64 {
+    use crate::units::patrol_group::{ee_units_pg_dereference, ee_units_pg_reference, EeUnitsPatrolGroup};
+    let g = value as usize as *mut EeUnitsPatrolGroup;
+    // SAFETY: a live patrol group of the player's list; live units through the C++ host (the callers' contract)
+    unsafe {
+        match op {
+            EE_UNITS_LISTS_HOST_PG_REFERENCE => ee_units_pg_reference(g),
+            EE_UNITS_LISTS_HOST_PG_DEREFERENCE => ee_units_pg_dereference(g),
+            _ => return ee_units_lists_host(op, value),
         }
     }
+    0
+}
+
+#[cfg(test)]
+fn ffi_call(_: i32, _: u64) -> u64 {
+    0
 }
 
 struct FileHost {

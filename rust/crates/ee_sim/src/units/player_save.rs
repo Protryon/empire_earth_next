@@ -871,6 +871,7 @@ fn lists_answer(
     op: i32,
     index: u32,
     io: &mut EeUnitsPlayerSaveIo,
+    file: (*mut c_void, EeUnitsPlayerSaveFn),
     cpp: &mut dyn FnMut(i32, u32, &mut EeUnitsPlayerSaveIo) -> i32,
 ) -> Option<i32> {
     use crate::units::player_lists::{
@@ -879,7 +880,8 @@ fn lists_answer(
     };
     use crate::units::player_save_split::{
         EE_UNITS_PLAYER_SAVE_X_HERD_LOAD, EE_UNITS_PLAYER_SAVE_X_HERD_NEW, EE_UNITS_PLAYER_SAVE_X_PATROL_ADD,
-        EE_UNITS_PLAYER_SAVE_X_PATROL_AT, EE_UNITS_PLAYER_SAVE_X_WONDERS_CLEAR, EE_UNITS_PLAYER_SAVE_X_WONDERS_ITEMS_CLEAR,
+        EE_UNITS_PLAYER_SAVE_X_PATROL_AT, EE_UNITS_PLAYER_SAVE_X_WONDERS_CLEAR,
+        EE_UNITS_PLAYER_SAVE_X_WONDERS_ITEMS_CLEAR,
     };
     if p == 0 {
         return None;
@@ -927,6 +929,23 @@ fn lists_answer(
         EE_UNITS_PLAYER_SAVE_WONDER_PUSH => {
             player_op(p, EE_UNITS_LISTS_WONDER_IDS, ListOp::Add(io.i as c_long as u64));
         }
+        // the off-map records' count, save, made and load, over the save's own file primitives
+        EE_UNITS_PLAYER_SAVE_OFFMAP_COUNT
+        | EE_UNITS_PLAYER_SAVE_OFFMAP_SAVE
+        | EE_UNITS_PLAYER_SAVE_OFFMAP_RESIZE
+        | EE_UNITS_PLAYER_SAVE_OFFMAP_LOAD => {
+            let what = match op {
+                EE_UNITS_PLAYER_SAVE_OFFMAP_COUNT => 0,
+                EE_UNITS_PLAYER_SAVE_OFFMAP_SAVE => 1,
+                EE_UNITS_PLAYER_SAVE_OFFMAP_RESIZE => 2,
+                _ => 3,
+            };
+            let lists = crate::units::player_lists::player_lists(p);
+            // SAFETY: the live player's lists; the save's primitives with their context
+            return Some(unsafe {
+                crate::units::player_lists::ee_units_off_map_file(lists, what, index, file.0, file.1, io)
+            });
+        }
         _ => return None,
     }
     Some(OK)
@@ -938,6 +957,7 @@ fn lists_answer(
     _: i32,
     _: u32,
     _: &mut EeUnitsPlayerSaveIo,
+    _: (*mut c_void, EeUnitsPlayerSaveFn),
     _: &mut dyn FnMut(i32, u32, &mut EeUnitsPlayerSaveIo) -> i32,
 ) -> Option<i32> {
     None
@@ -958,12 +978,12 @@ impl PlayerSaveHost for FfiHost {
         let mut call = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| {
             // SAFETY: the C++ callback with its own context; io lives for the call
             let mut cpp = |op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo| unsafe { f(ctx, op, index, io) };
-            lists_answer(player, op, index, io, &mut cpp).unwrap_or_else(|| cpp(op, index, io))
+            lists_answer(player, op, index, io, (ctx, f), &mut cpp).unwrap_or_else(|| cpp(op, index, io))
         };
         if let Some(r) = crate::units::player_save_split::split(op, index, io, &mut call) {
             return r;
         }
-        if let Some(r) = lists_answer(player, op, index, io, &mut |op, index, io| {
+        if let Some(r) = lists_answer(player, op, index, io, (ctx, f), &mut |op, index, io| {
             // SAFETY: as above
             unsafe { f(ctx, op, index, io) }
         }) {

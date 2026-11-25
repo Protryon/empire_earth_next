@@ -3,13 +3,14 @@
 //! requests, the clusters, and the active groups' save and restore.
 
 use super::group_obj::*;
+use crate::units::player_lists::{
+    ListOp, EE_UNITS_LISTS_MEDIA, EE_UNITS_LISTS_PATROLS, EE_UNITS_LISTS_SITES, EE_UNITS_LISTS_TOWNS,
+    EE_UNITS_LISTS_WONDERS,
+};
 use crate::units::player_save::{
     EeUnitsPlayerSaveIo, PlayerSaveHost, EE_UNITS_PLAYER_SAVE_READ_BOOL, EE_UNITS_PLAYER_SAVE_READ_FLOAT,
     EE_UNITS_PLAYER_SAVE_READ_LONG, EE_UNITS_PLAYER_SAVE_READ_ULONG, EE_UNITS_PLAYER_SAVE_WRITE_BOOL,
     EE_UNITS_PLAYER_SAVE_WRITE_FLOAT, EE_UNITS_PLAYER_SAVE_WRITE_LONG, EE_UNITS_PLAYER_SAVE_WRITE_ULONG,
-};
-use crate::units::player_lists::{
-    ListOp, EE_UNITS_LISTS_PATROLS, EE_UNITS_LISTS_SITES, EE_UNITS_LISTS_TOWNS, EE_UNITS_LISTS_WONDERS,
 };
 use std::collections::{BTreeMap, VecDeque};
 use std::os::raw::c_long;
@@ -919,6 +920,9 @@ impl crate::units::player_body::PlayerBodyHost for World {
     fn patrol_id(&mut self, group: u64) -> u64 {
         group >> 4
     }
+    fn off_map(&mut self, _player: u64, what: u32) {
+        self.log.push(format!("off map {what}"));
+    }
     fn patrol_repair(&mut self, group: u64) {
         self.log.push(format!("patrol repair {group:#x}"));
     }
@@ -1093,11 +1097,11 @@ fn reset_makes_the_groups_and_runs_the_record_in_order() {
             "record 1".to_string(),
             format!("body {EE_UNITS_PLAYER_BODY_EFFECT} 0x0 271 0"),
             format!("body {EE_UNITS_PLAYER_BODY_MEDIA_LOAD} 0xe1 0 0"),
-            format!("body {EE_UNITS_PLAYER_BODY_ADD_MEDIA} 0xe1 0 0"),
+            format!("list {EE_UNITS_LISTS_MEDIA} {:?}", ListOp::Add(0xe1)),
             format!("body {EE_UNITS_PLAYER_BODY_EFFECT} 0x0 274 0"),
             format!("body {EE_UNITS_PLAYER_BODY_EFFECT} 0x0 275 0"),
             format!("body {EE_UNITS_PLAYER_BODY_MEDIA_LOAD} 0xe3 0 0"),
-            format!("body {EE_UNITS_PLAYER_BODY_ADD_MEDIA} 0xe3 0 0"),
+            format!("list {EE_UNITS_LISTS_MEDIA} {:?}", ListOp::Add(0xe3)),
         ]
     );
 }
@@ -1127,7 +1131,7 @@ fn repair_pointers_answers_the_air_traffic_then_the_events() {
     assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TOWN_REFRESH} 0x60 0 0")));
     assert!(!b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TOWN_REFRESH} 0x50 0 0")));
     // a newer save repairs the off-map records instead of rescanning the units
-    assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_OFF_MAP} 0x0 3 0")));
+    assert!(w.log.contains(&"off map 3".to_string()));
     // no capitol: the capitol allowed; the settlement not obsolete: settlement and town center off
     assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TECH_ALLOW} 0x0 1053 1")));
     assert!(b.contains(&format!("body {EE_UNITS_PLAYER_BODY_TECH_ALLOW} 0x0 1028 0")));

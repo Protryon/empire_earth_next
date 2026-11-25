@@ -85,8 +85,6 @@ pub const EE_UNITS_PLAYER_BODY_EFFECT: i32 = 36;
 pub const EE_UNITS_PLAYER_BODY_MEDIA_LOAD: i32 = 37;
 /// media `a`'s `UnloadMedia()`
 pub const EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD: i32 = 38;
-/// `ee_units_off_map(mLists, b, 0, 0, 0, 0)` (2 cleared, 3 repaired)
-pub const EE_UNITS_PLAYER_BODY_OFF_MAP: i32 = 40;
 /// `ee_units_queued_free(mQueued)`
 pub const EE_UNITS_PLAYER_BODY_QUEUED_FREE: i32 = 43;
 /// `RTSPlayer::Clear()`
@@ -133,14 +131,8 @@ pub const EE_UNITS_PLAYER_BODY_TILE_X: i32 = 70;
 pub const EE_UNITS_PLAYER_BODY_ADD_OFF_MAP: i32 = 71;
 /// `RecountHeroesAndTeleporters()`
 pub const EE_UNITS_PLAYER_BODY_RECOUNT_HEROES: i32 = 72;
-/// `AddLoadedMedia(a)`
-pub const EE_UNITS_PLAYER_BODY_ADD_MEDIA: i32 = 73;
-/// `RemoveLoadedMedia(a)`
-pub const EE_UNITS_PLAYER_BODY_REMOVE_MEDIA: i32 = 74;
 /// `UnloadAllMedia()` (virtual)
 pub const EE_UNITS_PLAYER_BODY_UNLOAD_ALL_MEDIA: i32 = 75;
-/// `ClearUnitsToRepatrol()`
-pub const EE_UNITS_PLAYER_BODY_CLEAR_REPATROL: i32 = 76;
 /// complex unit `a`'s `mIsDisabled`
 pub const EE_UNITS_PLAYER_BODY_DISABLED: i32 = 77;
 /// complex unit `a`'s `FindNearestTown()` (an `EETown*`)
@@ -307,6 +299,8 @@ pub trait PlayerBodyHost: SelectionHost {
     /// `ee_units_pg_id(group)`, `ee_units_pg_repair(group)` (patrol_group.rs)
     fn patrol_id(&mut self, group: u64) -> u64;
     fn patrol_repair(&mut self, group: u64);
+    /// the off-map records (player_lists.rs `ee_units_off_map`): `what` 2 deleted, 3 repaired
+    fn off_map(&mut self, player: u64, what: u32);
     /// `AdoptTownPatrol(town)` (player_rest.rs): whether it took a patrol
     fn adopt_town_patrol(&mut self, player: u64, town: u64) -> bool;
 }
@@ -443,7 +437,7 @@ pub fn load_player_effects<H: PlayerBodyHost>(h: &mut H, p: u64) {
             continue;
         }
         op(h, EE_UNITS_PLAYER_BODY_MEDIA_LOAD, p, media, 0, 0);
-        op(h, EE_UNITS_PLAYER_BODY_ADD_MEDIA, p, media, 0, 0);
+        h.list_op(p, EE_UNITS_LISTS_MEDIA, ListOp::Add(media));
     }
 }
 
@@ -454,7 +448,7 @@ pub fn unload_player_effects<H: PlayerBodyHost>(h: &mut H, p: u64) {
         if media == 0 {
             continue;
         }
-        if op(h, EE_UNITS_PLAYER_BODY_REMOVE_MEDIA, p, media, 0, 0) != 0 {
+        if h.list_op(p, EE_UNITS_LISTS_MEDIA, ListOp::Remove(media)) != 0 {
             op(h, EE_UNITS_PLAYER_BODY_MEDIA_UNLOAD, p, media, 0, 0);
         }
     }
@@ -524,7 +518,7 @@ pub fn restore_patrols<H: PlayerBodyHost>(h: &mut H, p: u64) {
         }
         op(h, EE_UNITS_PLAYER_BODY_PLAN, p, g as u64, 0, 0);
     }
-    op(h, EE_UNITS_PLAYER_BODY_CLEAR_REPATROL, p, 0, 0, 0);
+    h.list_clear(p, EE_UNITS_LISTS_REPATROL, true);
 }
 
 /// `Reset()`: new selections and hot-key groups, the running groups released, the record reset, the statistics
@@ -587,13 +581,13 @@ fn delete_areas<H: PlayerBodyHost>(h: &mut H, p: u64, towns: bool) {
 fn drop_areas<H: PlayerBodyHost>(h: &mut H, p: u64, destroying: bool) {
     delete_areas(h, p, true);
     if destroying {
-        op(h, EE_UNITS_PLAYER_BODY_CLEAR_REPATROL, p, 0, 0, 0);
+        h.list_clear(p, EE_UNITS_LISTS_REPATROL, true);
         delete_areas(h, p, false);
     } else {
         delete_areas(h, p, false);
-        op(h, EE_UNITS_PLAYER_BODY_CLEAR_REPATROL, p, 0, 0, 0);
+        h.list_clear(p, EE_UNITS_LISTS_REPATROL, true);
     }
-    op(h, EE_UNITS_PLAYER_BODY_OFF_MAP, p, 0, 2, 0);
+    h.off_map(p, 2);
     h.list_clear(p, EE_UNITS_LISTS_PATROLS, true);
 }
 
@@ -688,7 +682,9 @@ pub fn repair_pointers<H: PlayerBodyHost>(h: &mut H, p: u64, first: c_long, seco
     if op(h, EE_UNITS_PLAYER_BODY_CIV_POINTS, p, 0, 0, 0) != 0 {
         result = op(h, EE_UNITS_PLAYER_BODY_CIV_BLINK, p, 0, 0, 0) as c_long;
     }
-    for (list, container) in [(EE_UNITS_LISTS_SITE_IDS, EE_UNITS_LISTS_SITES), (EE_UNITS_LISTS_WONDER_IDS, EE_UNITS_LISTS_WONDERS)] {
+    for (list, container) in
+        [(EE_UNITS_LISTS_SITE_IDS, EE_UNITS_LISTS_SITES), (EE_UNITS_LISTS_WONDER_IDS, EE_UNITS_LISTS_WONDERS)]
+    {
         let mut j = 0;
         while j < h.list_len(p, list) {
             let id = h.list_at(p, list, j);
@@ -752,7 +748,7 @@ pub fn repair_pointers<H: PlayerBodyHost>(h: &mut H, p: u64, first: c_long, seco
             }
         });
     } else {
-        op(h, EE_UNITS_PLAYER_BODY_OFF_MAP, p, 0, 3, 0);
+        h.off_map(p, 3);
     }
     op(h, EE_UNITS_PLAYER_BODY_RECOUNT_HEROES, p, 0, 0, 0);
     result
@@ -1166,6 +1162,11 @@ pub mod game {
             // SAFETY: the player's live patrol group
             unsafe { crate::units::patrol_group::ee_units_pg_id(group as *mut _) as u64 }
         }
+        fn off_map(&mut self, player: u64, what: u32) {
+            let lists = crate::units::player_lists::player_lists(player);
+            // SAFETY: the live player's lists
+            unsafe { crate::units::player_lists::ee_units_off_map(lists, what, 0, 0, 0, 0) };
+        }
         fn patrol_repair(&mut self, group: u64) {
             // SAFETY: as above
             unsafe { crate::units::patrol_group::ee_units_pg_repair(group as *mut _) };
@@ -1173,7 +1174,9 @@ pub mod game {
         fn adopt_town_patrol(&mut self, player: u64, town: u64) -> bool {
             use crate::units::player_rest::{game::ee_units_player_rest, EE_UNITS_PLAYER_REST_ADOPT_TOWN_PATROL};
             // SAFETY: the live player and its town
-            unsafe { ee_units_player_rest(player as *mut c_void, EE_UNITS_PLAYER_REST_ADOPT_TOWN_PATROL, town, 0, 0) != 0 }
+            unsafe {
+                ee_units_player_rest(player as *mut c_void, EE_UNITS_PLAYER_REST_ADOPT_TOWN_PATROL, town, 0, 0) != 0
+            }
         }
     }
 

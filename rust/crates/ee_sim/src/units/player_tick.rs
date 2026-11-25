@@ -384,7 +384,9 @@ impl PlayerTickHost for FnHost {
             use crate::units::player_lists::{player_op, ListOp, EE_UNITS_LISTS_HERDS};
             use crate::units::player_rest::{game::ee_units_player_rest, EE_UNITS_PLAYER_REST_KILL_HERD_UNITS};
             match op {
-                EE_UNITS_PLAYER_TICK_HERD_COUNT => return player_op(self.player, EE_UNITS_LISTS_HERDS, ListOp::Len) as i32,
+                EE_UNITS_PLAYER_TICK_HERD_COUNT => {
+                    return player_op(self.player, EE_UNITS_LISTS_HERDS, ListOp::Len) as i32
+                }
                 EE_UNITS_PLAYER_TICK_HERD_KILL => {
                     let herd = player_op(self.player, EE_UNITS_LISTS_HERDS, ListOp::At(index as usize));
                     let player = self.player as usize as *mut c_void;
