@@ -100,8 +100,6 @@ static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee
 // player_capture.rs); PLEC, the economy and improvement decisions (ee_units player_econ.rs)
 #include "ee/EESimCapture.h"
 #include "ee/EETechCapture.h"
-#include "ee/EEStatisticsHistory.h"
-#include "ee/EEStatisticsRecord.h"
 #include <cstring>
 
 // (a float's bits: UFloatBits and UBitsFloat, lle/LowLevelEngineCore.h)

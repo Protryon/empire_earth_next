@@ -20,7 +20,6 @@ class EEComplexUnit;
 #include "ee/EEDbList.h"               // gGameVariants
 #include "ee/EECameraControl.h"        // held by value (+0x9d0)
 #include "ee/EEGameOptions.h"          // held by value (+0x110, +0x51c)
-#include "ee/EEStatisticsHistory.h"    // held by value (+0xd8)
 #include "ee/EEVoting.h"               // held by value (+0xb5c)
 #include "rust/sim/app.h"              // the active unit lists (ee_app_active_*)
 
@@ -114,7 +113,7 @@ public:
     // 0x13c5ad (thiscall, ret 0x14: the 5th argument is unused; the body names gWorld; EEUIEMGEnterScenarioEditor)
     void MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused);
 
-    EEStatisticsHistory mStatistics;        // +0x0d8 (provisional name; Reset() again at the end of the ctor)
+    // +0x0d8 the statistics history (the end-of-game records): Rust's (ee_game gamecpp stats_history.rs)
     EEGameOptions& GetGameOptions() { return this->mGameOptions; }
     // inline (the lobby reaches gGameOptions 0x53125c through it: GetPlayer(i - k) folds into `lea [eax + base -
     // k*0x38]` only with this from an accessor) (provisional name)

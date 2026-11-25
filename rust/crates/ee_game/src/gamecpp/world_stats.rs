@@ -1,14 +1,23 @@
 //! EEWorld::RecordStatistics (game core round 10): the post-game history's fields, the players as ee_sim app
 //! statistics.rs reads them, its scores, top-ups, order and play times, then the records filled. The C++ calls and
-//! members are EEWorld.cpp's EECore10OpE3 cases (p: the world).
+//! members are EEWorld.cpp's EECore10OpE3 cases (p: the world); the history and its records are stats_history.rs's.
 
-use std::ffi::{c_long, c_ulong, c_void, CString};
+use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_sim::app::statistics_ffi::{
     ee_app_record_statistics, EeAppStatsHost, EeAppStatsPlayer, EeAppStatsRecord, EeAppStatsWorld,
 };
 
-use super::{h, hd, pa, ptr, Owned, O, P};
+use ee_sim::units::player_stats::{
+    EeUnitsPlayerStats, EeUnitsStatsRecordTail, EE_UNITS_STATS_EDITOR, EE_UNITS_STATS_LOADING, EE_UNITS_STATS_SHUTDOWN,
+};
+use ee_sim::world::player_fields::EeUnitsPlayerSaved;
+
+use crate::app::game_options::{EeAppOptionsFields, EeAppOptionsPlayerFields};
+
+use super::preferences::get_text;
+use super::stats_history::{self, StatsRecord};
+use super::{global_objects as gobj, h, hd, hp, pa, ptr, rec, Owned, O, P};
 
 /// The record's name suffix (the C++'s `sprintf(" #%ld")`; none for 0).
 pub fn world_stats_suffix(suffix: c_long) -> String {
@@ -36,22 +45,93 @@ unsafe extern "C" fn set_cap(_: *mut c_void, slot: u32, resource: u32, value: c_
     h(O::WsStatsSetCap, 0, &[slot as i64, resource as i64, value as i64]);
 }
 
+/// `EEPlayerStatistics::Record`'s gate: a shutdown, a saved game loading, the scenario editor outside the game
+/// screen.
+fn record_flags(w: P) -> u32 {
+    if ee_base::util::system::ee_util_shutdown_in_progress() {
+        EE_UNITS_STATS_SHUTDOWN
+    } else if unsafe { *rec::<bool>(O::WLoadingSavedGame, w) } {
+        EE_UNITS_STATS_LOADING
+    } else if h(O::UiInScenarioEditor, 0, &[]) != 0 && !unsafe { *rec::<bool>(O::WGameScreenActive, w) } {
+        EE_UNITS_STATS_EDITOR
+    } else {
+        0
+    }
+}
+
+/// The record of the player in the world's slot `slot` (`mPlayers[slot]`), `o` its place's scores and flags.
+fn record_of(w: P, o: &EeAppStatsRecord, history_end_time: c_long) -> StatsRecord {
+    let pl = hp(O::WPlayer, w, &[o.slot as i64]);
+    let statistics = hp(O::EwPlayerStatistics, pl, &[]);
+    // SAFETY: the player's saved numbers and colour, copied; its live series
+    let (saved, color, series) = unsafe {
+        (
+            *rec::<EeUnitsPlayerSaved>(O::PlSaved, pl),
+            [hd(O::EgColorRed, pl, &[], &[]), hd(O::EgColorGreen, pl, &[], &[]), hd(O::EgColorBlue, pl, &[], &[])],
+            (*rec::<EeUnitsPlayerStats>(O::EwStatsSeries, statistics)).clone(),
+        )
+    };
+    let statistics_end_time = h(O::EwStatsEndTime, statistics, &[]) as c_ulong;
+    let id = h(O::RoPlayerId, pl, &[]) as c_ulong;
+    let options = hp(O::WOptions, w, &[]);
+    let mut name = get_text(hp(O::PlName, pl, &[]), true);
+    name.extend_from_slice(world_stats_suffix(o.suffix).as_bytes());
+    let mut resources = [0; 7];
+    for r in 2..7 {
+        resources[r] = saved.mResourceCaps[r] as c_ulong;
+    }
+    StatsRecord {
+        statistics: series,
+        statistics_end_time,
+        name,
+        name_suffix: Vec::new(),
+        tail: EeUnitsStatsRecordTail {
+            color,
+            result: saved.mGameResult as c_long,
+            // SAFETY: the options' slot of the player, its plain members
+            team: if id > 0 { unsafe { (*(gobj::opt_slot(options, id as u32 - 1) as *const EeAppOptionsPlayerFields)).mTeam } } else { 0 },
+            end_time: if statistics_end_time != 0 { statistics_end_time } else { history_end_time as c_ulong },
+            resources,
+            score: o.score as c_ulong,
+            economy_score: o.economy_score as c_ulong,
+            epoch_score: o.epoch_score as c_ulong,
+            military_score: o.military_score as c_ulong,
+            tech_score: o.tech_score as c_ulong,
+            slot: h(O::PlGetSlot, pl, &[]) as u8,
+            is_local: o.is_local,
+            is_human: o.is_human,
+        },
+    }
+}
+
 /// EEWorld::RecordStatistics on `world`.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_world_record_statistics(world: P) {
     let w = world;
-    h(O::WsStart, w, &[]);
-    h(O::WsTiles, w, &[]);
-    h(O::WsVictory, w, &[]);
-    h(O::WsTeamsLocked, w, &[]);
-    let campaign = h(O::WsCampaignOptions, w, &[]) != 0;
-    let scenario = h(O::WsScenarioGame, w, &[]) != 0 || campaign;
-    h(O::WsSetScenario, w, &[scenario as i64]);
-    h(O::WsSetCampaign, w, &[campaign as i64]);
-    let end_time = h(O::WsEndTime, w, &[]) as c_long;
-    if campaign {
-        h(O::WsCampaignName, w, &[]);
-    }
+    let options = hp(O::WOptions, w, &[]);
+    // SAFETY: the options' plain members, copied
+    let fields = unsafe { *(options as *const EeAppOptionsFields) };
+    let campaign = h(O::EpWideLength, options + gobj::OPT_CAMPAIGN_NAME, &[]) > 0 && fields.mCampaignChecksum > 0;
+    let scenario = fields.mIsScenarioGame || campaign;
+    let end_time = h(O::DwGameTime, 0, &[]) as c_long;
+    // SAFETY (each): the world's plain members
+    let (start_time, victory_enabled, teams_locked) = unsafe {
+        (*rec::<c_long>(O::WStartTime, w), *rec::<bool>(O::WVictoryEnabled, w), *rec::<bool>(O::WTeamsLocked, w))
+    };
+    let tile_count = h(O::WsTiles, w, &[]) as c_long;
+    let campaign_name = if campaign { Some(get_text(options + gobj::OPT_CAMPAIGN_NAME, true)) } else { None };
+    stats_history::with(|s| {
+        s.tail.start_time = start_time;
+        s.tail.tile_count = tile_count;
+        s.tail.victory_enabled = victory_enabled;
+        s.tail.teams_locked = teams_locked;
+        s.tail.is_scenario = scenario;
+        s.tail.is_campaign = campaign;
+        s.tail.end_time = end_time;
+        if let Some(name) = campaign_name {
+            s.campaign_name = name;
+        }
+    });
     let default_name = Owned::new(O::StrNew, O::StrFree);
     h(O::StrComputerName, default_name.0, &[]);
     let count = h(O::WsNumPlayers, w, &[]) as usize;
@@ -96,37 +176,20 @@ pub extern "C" fn ee_gamecpp_world_record_statistics(world: P) {
             &mut scenario_after,
         )
     };
-    h(O::WsRecordsAssign, w, &[n as i64]);
-    for (k, o) in order.iter().take(n).enumerate() {
-        let (k, slot) = (k as i64, o.slot as i64);
-        let suffix = CString::new(world_stats_suffix(o.suffix)).unwrap_or_default();
-        h(O::WsRecScore, w, &[k, o.score as c_ulong as i64]);
-        h(O::WsRecEconomy, w, &[k, o.economy_score as c_ulong as i64]);
-        h(O::WsRecEpoch, w, &[k, o.epoch_score as c_ulong as i64]);
-        h(O::WsRecMilitary, w, &[k, o.military_score as c_ulong as i64]);
-        h(O::WsRecTech, w, &[k, o.tech_score as c_ulong as i64]);
-        h(O::WsRecColor, w, &[k, slot]);
-        h(O::WsRecName, w, &[k, slot, pa(suffix.as_ptr() as P)]);
-        h(O::WsRecStatistics, w, &[k, slot]);
-        h(O::WsRecSlot, w, &[k, slot]);
-        h(O::WsRecResult, w, &[k, slot]);
-        h(O::WsRecEndTime, w, &[k, slot]);
-        h(O::WsRecTeam, w, &[k, slot]);
-        for r in 2..7 {
-            h(O::WsRecResource, w, &[k, slot, r]);
-        }
-        h(O::WsRecLocal, w, &[k, o.is_local as i64]);
-        h(O::WsRecHuman, w, &[k, o.is_human as i64]);
-    }
-    if current >= 0 {
-        h(O::WsSetCurrentRecord, w, &[current as i64]);
-    }
-    for (k, o) in order.iter().take(n).enumerate() {
+    let mut records: Vec<StatsRecord> = order.iter().take(n).map(|o| record_of(w, o, end_time)).collect();
+    let (time, flags) = (h(O::DwGameTime, 0, &[]) as c_ulong, record_flags(w));
+    for (record, o) in records.iter_mut().zip(&order) {
         if o.has_play_time {
-            h(O::WsRecPlayTime, w, &[k as i64, o.play_time as i64]);
+            record.statistics.set(0x18, o.play_time as c_ulong, time, flags);
         }
     }
-    h(O::WsSetScenario, w, &[scenario_after as i64]);
+    stats_history::with(|s| {
+        s.records = records;
+        if current >= 0 {
+            s.tail.current_record_index = current;
+        }
+        s.tail.is_scenario = scenario_after;
+    });
 }
 
 #[cfg(test)]

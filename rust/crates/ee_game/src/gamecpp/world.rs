@@ -322,7 +322,7 @@ pub extern "C" fn ee_gamecpp_world_init(w: *mut c_void) {
     *wm::<bool>(O::WMediaLoaded, w) = false;
     *wm::<c_long>(O::WCollisionFlags, w) = 15;
     *wm::<bool>(O::WExecutingLocalSelection, w) = false;
-    h(O::WStatisticsReset, w, &[]);
+    super::stats_history::with(|s| s.reset());
 }
 
 /// EEWorld::~EEWorld: the ghost lock freed; the influence table, effect manager, ghost units, scenario, environment
@@ -697,7 +697,7 @@ pub extern "C" fn ee_gamecpp_world_start_game(w: *mut c_void, st: *mut c_void, l
     if !locked {
         h(O::WWriteLock, w, &[]);
     }
-    h(O::WStatisticsReset, w, &[]);
+    super::stats_history::with(|s| s.reset());
     h(O::StReadLock, st, &[]);
     crate::screens::ui_objects::ui_set_load_progress(0.5);
     h(O::WCopyGameOptions, w, &[]);

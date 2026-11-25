@@ -78,7 +78,6 @@
 #include "ee/EEARust.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/RTSMousePointer.h"
-#include "ee/EEStatisticsRecord.h"
 // free functions of other units (declared where they are used, as their own units do) (provisional names)
 bool EEIsLobbyOpen();                       // 0x297eca (the external lobby is running)
 void EESetQuitFlag();
@@ -128,7 +127,6 @@ extern "C" bool ee_screenscpp_ug_free_camera() { return gFreeCamera; }
 extern "C" bool ee_screenscpp_ug_sim_run() { return gPlatSimRun; }
 extern "C" void ee_screenscpp_ug_wait_preload() { gDataPreLoading->WaitForMessageQueue(); }
 extern "C" void ee_screenscpp_ug_world_clear() { gWorld.Clear(); }
-extern "C" bool ee_screenscpp_ug_one_record() { return gWorld.mStatistics.GetRecords().size() == 1; }
 extern "C" bool ee_screenscpp_ug_has_communications() { return gCommunications != NULL; }
 extern "C" bool ee_screenscpp_ug_is_client() { return gCommunications->IsClient(); }
 extern "C" bool ee_screenscpp_ug_server_lost_after_loading()

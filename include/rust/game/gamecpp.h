@@ -540,7 +540,6 @@ enum class EeGameCpp : uint32_t {
   WSetScenarioRaw,
   WShowCollisionSpheres,
   WStartTime,
-  WStatisticsReset,
   WSunDirection,
   WTeamsLocked,
   WTimeOfDay,
@@ -2861,16 +2860,7 @@ enum class EeGameCpp : uint32_t {
   UsgFileName,
   UsgLoad,
   UsgSave,
-  WsStart,
   WsTiles,
-  WsVictory,
-  WsTeamsLocked,
-  WsScenarioGame,
-  WsCampaignOptions,
-  WsSetScenario,
-  WsSetCampaign,
-  WsEndTime,
-  WsCampaignName,
   WsNumPlayers,
   WsPlayer,
   WsCurrent,
@@ -2880,24 +2870,6 @@ enum class EeGameCpp : uint32_t {
   WsStatsSet,
   WsStatsCap,
   WsStatsSetCap,
-  WsRecordsAssign,
-  WsRecScore,
-  WsRecEconomy,
-  WsRecEpoch,
-  WsRecMilitary,
-  WsRecTech,
-  WsRecColor,
-  WsRecName,
-  WsRecStatistics,
-  WsRecSlot,
-  WsRecResult,
-  WsRecEndTime,
-  WsRecTeam,
-  WsRecResource,
-  WsRecLocal,
-  WsRecHuman,
-  WsSetCurrentRecord,
-  WsRecPlayTime,
   FwLayGobjFields,
   FwLayGobjModels,
   FwLayGobjTextures,
@@ -3191,22 +3163,11 @@ enum class EeGameCpp : uint32_t {
   EgTraceOn,
   EbEnvF40,
   EbEnvF44,
-  EwCampaignName,
-  EwColorSize,
-  EwHistory,
-  EwHistoryTail,
   EwNumPlayers,
   EwPhysicsSeed,
   EwPlayerAt,
   EwPlayerStatistics,
-  EwRecordAt,
-  EwRecordColor,
-  EwRecordCount,
-  EwRecordName,
   EwRecordStatistics,
-  EwRecordStatisticsOf,
-  EwRecordSuffix,
-  EwRecordTail,
   EwStatsEndTime,
   EwStatsSeries,
   C11ScenarioExtension,
@@ -5908,6 +5869,88 @@ void ee_gamecpp_prefs_init_defaults();
 
 /// WSTA (`EEAppCaptureStatisticsSweep`).
 void ee_gamecpp_capture_statistics_sweep();
+
+/// `gWorld.mStatistics.mCampaignName`.
+///
+/// # Safety
+/// `out` is an `EeScreensShimOut` of a live `Vec<u8>`.
+void ee_screenscpp_gt_world_campaign_name(void *out);
+
+/// The records' count.
+uint32_t ee_screenscpp_gt_record_count();
+
+/// Record `index`'s name.
+///
+/// # Safety
+/// `out` is an `EeScreensShimOut` of a live `Vec<u8>`.
+void ee_screenscpp_gt_record_name(uint32_t index, void *out);
+
+/// `gWorld.mStatistics.GetRecords().size() == 1`.
+bool ee_screenscpp_ug_one_record();
+
+uint32_t ee_screenscpp_pgs_records();
+
+int32_t ee_screenscpp_pgs_start_time();
+
+int32_t ee_screenscpp_pgs_end_time();
+
+int32_t ee_screenscpp_pgs_current_record();
+
+int32_t ee_screenscpp_pgs_tile_count();
+
+bool ee_screenscpp_pgs_victory_enabled();
+
+bool ee_screenscpp_pgs_is_scenario();
+
+bool ee_screenscpp_pgs_is_campaign();
+
+uint8_t ee_screenscpp_pgs_current_slot();
+
+float ee_screenscpp_pr_red(uint32_t record);
+
+float ee_screenscpp_pr_green(uint32_t record);
+
+float ee_screenscpp_pr_blue(uint32_t record);
+
+int32_t ee_screenscpp_pr_result(uint32_t record);
+
+uint32_t ee_screenscpp_pr_team(uint32_t record);
+
+uint32_t ee_screenscpp_pr_end_time(uint32_t record);
+
+uint32_t ee_screenscpp_pr_resource(uint32_t record, uint32_t index);
+
+uint32_t ee_screenscpp_pr_score(uint32_t record);
+
+uint32_t ee_screenscpp_pr_economy_score(uint32_t record);
+
+uint32_t ee_screenscpp_pr_epoch_score(uint32_t record);
+
+uint32_t ee_screenscpp_pr_military_score(uint32_t record);
+
+uint32_t ee_screenscpp_pr_tech_score(uint32_t record);
+
+uint8_t ee_screenscpp_pr_slot(uint32_t record);
+
+bool ee_screenscpp_pr_human(uint32_t record);
+
+/// `mStatistics.GetValue(series)`: the series' largest value.
+uint32_t ee_screenscpp_pr_value(uint32_t record, uint32_t index);
+
+/// `mStatistics.GetLastValue(series)`.
+uint32_t ee_screenscpp_pr_last_value(uint32_t record, uint32_t index);
+
+/// `mStatistics.CountIncreases(series)`.
+uint32_t ee_screenscpp_pr_increases(uint32_t record, uint32_t index);
+
+/// `mStatistics.GetSeries(series)` kept for the three reads below.
+void ee_screenscpp_pr_series_load(uint32_t record, uint32_t index);
+
+uint32_t ee_screenscpp_pr_series_count();
+
+uint32_t ee_screenscpp_pr_series_time(uint32_t index);
+
+uint32_t ee_screenscpp_pr_series_value(uint32_t index);
 
 /// EECalamity::Load (`loading`) or Save: the calamity's record read from or written to the saved game (the class by
 /// id; target and caster as ids, -1 if none); the first error.
