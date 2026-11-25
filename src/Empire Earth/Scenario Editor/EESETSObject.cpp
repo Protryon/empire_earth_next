@@ -6,44 +6,19 @@
 #include <windows.h>
 #include <string>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/NEMessage.h"
 #include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
-#include "lle/UResourceFile.h"
-#include "lle/UICheckBox.h"
 
-#include "lle/UITriStateCheckBox.h"
 
-#include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
-#include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "lle/USingleton.h"
-#include "ee/EEMedia.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEUIShell.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EESMObject.h"
-#include "ee/EEMessage.h"
 #include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
@@ -51,9 +26,6 @@
 // Unit action names are the real EEUnitAction::sActionNames table at 0x563668.
 
 // 0x563678: the unit action ids by name (the object screen's action combo box) are EEUnitAction::sActionIDs
-#include "ee/EEStringIDs.h"
-#include "rust/game/screens.h"
-#include "rust/sim/scenario.h"
 // The unit type combo box's sort (0x19330c, the std::sort instantiation 0x193077..0x19370e): type 0 first, then the
 // unit classes by name (provisional name; the comparison is ee_screens editor_trigx.rs unit_type_less)
 struct EESETSOUnitTypeNameLess {
@@ -73,10 +45,7 @@ struct EESETSOUnitTypeNameLess {
 
 namespace {
 
-EEUIFScenarioEditor* SeobEditor(void* inControl)
-{
-    return static_cast<EEUIFScenarioEditor*>(static_cast<UIControl*>(inControl)->GetForm());
-}
+EEUIFScenarioEditor* SeobEditor(void* inControl) { return static_cast<EEUIFScenarioEditor*>(static_cast<UIControl*>(inControl)->GetForm()); }
 
 // a scenario object's number field (EE_SCREENS_SEOB_F_*; the three flags and the parent aside)
 unsigned long* SeobField(EESMObject* o, int32_t inField)
@@ -137,81 +106,47 @@ extern "C" int32_t ee_screenscpp_seobx(uint32_t inOp, void* const* p, int32_t* i
     EESMObject* o = static_cast<EESMObject*>(p[0]);
     switch (inOp) {
     case EE_SCREENS_SEOB_OP_UNIT_SET_COUNT: return (int32_t)gUnitSetManager.GetSize();
-    case EE_SCREENS_SEOB_OP_UNIT_SET_SHOWN:
-        return gUnitSetManager.GetSet(i[0]) != NULL && gUnitSetManager.GetSet(i[0])->ShowInEditor() == true;
+    case EE_SCREENS_SEOB_OP_UNIT_SET_SHOWN: return gUnitSetManager.GetSet(i[0]) != NULL && gUnitSetManager.GetSet(i[0])->ShowInEditor() == true;
     case EE_SCREENS_SEOB_OP_CLEAR_SELECTION: SeobEditor(p[0])->ClearSelection(); return 0;
     case EE_SCREENS_SEOB_OP_PLAYER_COUNT: return (int32_t)SeobEditor(p[0])->PlayerCall(EE_SCREENS_SEPL_PLAYER_COUNT);
     case EE_SCREENS_SEOB_OP_GET_NAMES:
         gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_OBJECTS,
                                           *static_cast<std::vector<UWideString>*>(p[0]));
         return 0;
-    case EE_SCREENS_SEOB_OP_SELECTED_UNIT_ID:
-        return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnit(i[0])->mUnitID;
-    case EE_SCREENS_SEOB_OP_SELECTED_COUNT:
-        return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnitCount();
-    case EE_SCREENS_SEOB_OP_START_SELECTION:
-        static_cast<EESEUICTriggerSelectUnits*>(p[0])->StartSelection(GE2DPoint(f[0], f[1]));
-        return 0;
-    case EE_SCREENS_SEOBX_NEW_CLICK:
-        *theOut = new EESETSAMouseClick;
-        return 0;
-    case EE_SCREENS_SEOBX_NEW_LASSO:
-        *theOut = new EESETSALasso;
-        return 0;
+    case EE_SCREENS_SEOB_OP_SELECTED_UNIT_ID: return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnit(i[0])->mUnitID;
+    case EE_SCREENS_SEOB_OP_SELECTED_COUNT: return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnitCount();
+    case EE_SCREENS_SEOB_OP_START_SELECTION: static_cast<EESEUICTriggerSelectUnits*>(p[0])->StartSelection(GE2DPoint(f[0], f[1])); return 0;
+    case EE_SCREENS_SEOBX_NEW_CLICK: *theOut = new EESETSAMouseClick; return 0;
+    case EE_SCREENS_SEOBX_NEW_LASSO: *theOut = new EESETSALasso; return 0;
     case EE_SCREENS_SEOBX_NEW_SELECT:
         *theOut = new EESEUICTriggerSelectUnits(static_cast<UIForm*>(p[0]), EE_SCREENS_SE_TS_OBJECT_SELECT_UNITS, (unsigned long)i[0],
                                                 static_cast<EESETSAMouseClick*>(p[1]), static_cast<EESETSALasso*>(*theOut));
         return 0;
-    case EE_SCREENS_SEOBX_ADD_CONTROL:
-        static_cast<UIForm*>(p[0])->AddControl(static_cast<EESEUICTriggerSelectUnits*>(p[1]), 0);
-        return 0;
-    case EE_SCREENS_SEOBX_LASSO_RELEASE:
-        static_cast<EESETSALasso*>(p[0])->Dereference();
-        return 0;
-    case EE_SCREENS_SEOBX_CLICK_RELEASE:
-        static_cast<EESETSAMouseClick*>(p[0])->Dereference();
-        return 0;
-    case EE_SCREENS_SEOBX_TYPES_CLEAR:
-        sSeobTypes.clear();
-        return 0;
-    case EE_SCREENS_SEOBX_TYPES_PUSH:
-        sSeobTypes.push_back((unsigned long)i[0]);
-        return 0;
-    case EE_SCREENS_SEOBX_TYPES_SORT:
-        std::sort(sSeobTypes.begin(), sSeobTypes.end(), EESETSOUnitTypeNameLess());
-        return 0;
+    case EE_SCREENS_SEOBX_ADD_CONTROL: static_cast<UIForm*>(p[0])->AddControl(static_cast<EESEUICTriggerSelectUnits*>(p[1]), 0); return 0;
+    case EE_SCREENS_SEOBX_LASSO_RELEASE: static_cast<EESETSALasso*>(p[0])->Dereference(); return 0;
+    case EE_SCREENS_SEOBX_CLICK_RELEASE: static_cast<EESETSAMouseClick*>(p[0])->Dereference(); return 0;
+    case EE_SCREENS_SEOBX_TYPES_CLEAR: sSeobTypes.clear(); return 0;
+    case EE_SCREENS_SEOBX_TYPES_PUSH: sSeobTypes.push_back((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEOBX_TYPES_SORT: std::sort(sSeobTypes.begin(), sSeobTypes.end(), EESETSOUnitTypeNameLess()); return 0;
     case EE_SCREENS_SEOBX_TYPES_COUNT: return (int32_t)sSeobTypes.size();
     case EE_SCREENS_SEOBX_TYPES_AT: return (int32_t)sSeobTypes[(size_t)i[0]];
     case EE_SCREENS_SEOBX_FLAG: return *SeobFlag(o, i[0]);
     case EE_SCREENS_SEOBX_FIELD: return (int32_t)*SeobField(o, i[0]);
-    case EE_SCREENS_SEOBX_SET_FLAG:
-        *SeobFlag(o, i[0]) = i[1] != 0;
-        return 0;
-    case EE_SCREENS_SEOBX_SET_PARENT:
-        o->SetParent((long)i[1]);
-        return 0;
+    case EE_SCREENS_SEOBX_SET_FLAG: *SeobFlag(o, i[0]) = i[1] != 0; return 0;
+    case EE_SCREENS_SEOBX_SET_PARENT: o->SetParent((long)i[1]); return 0;
     case EE_SCREENS_SEOBX_SET_FIELD:   // (a none selection is all ones, as the original's unsigned long)
         *SeobField(o, i[0]) = (unsigned long)(long)i[1];
         return 0;
-    case EE_SCREENS_SEOBX_SET_NAME:
-        o->SetName(SeobBytes(p[1], i[0]));
-        return 0;
+    case EE_SCREENS_SEOBX_SET_NAME: o->SetName(SeobBytes(p[1], i[0])); return 0;
     case EE_SCREENS_SEOBX_SET_UNITS:
         o->SetUnits(std::vector<unsigned long>(static_cast<const uint32_t*>(p[1]), static_cast<const uint32_t*>(p[1]) + i[0]));
         return 0;
-    case EE_SCREENS_SEOBX_UNITS_GET:
-        o->GetUnits(sSeobUnits);
-        return 0;
+    case EE_SCREENS_SEOBX_UNITS_GET: o->GetUnits(sSeobUnits); return 0;
     case EE_SCREENS_SEOBX_UNITS_COUNT: return (int32_t)sSeobUnits.size();
     case EE_SCREENS_SEOBX_UNITS_AT: return (int32_t)sSeobUnits[(size_t)i[0]];
-    case EE_SCREENS_SEOBX_WORLD_UNIT:
-        *theOut = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)(uint32_t)i[0]));
-        return 0;
-    case EE_SCREENS_SEOBX_SELECT_UNIT:
-        SeobEditor(p[0])->SelectUnit(static_cast<EEUnit*>(p[1]));
-        return 0;
-    case EE_SCREENS_SEOBX_SELECTED_COUNT:
-        return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnitCount();
+    case EE_SCREENS_SEOBX_WORLD_UNIT: *theOut = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)(uint32_t)i[0])); return 0;
+    case EE_SCREENS_SEOBX_SELECT_UNIT: SeobEditor(p[0])->SelectUnit(static_cast<EEUnit*>(p[1])); return 0;
+    case EE_SCREENS_SEOBX_SELECTED_COUNT: return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnitCount();
     case EE_SCREENS_SEOBX_SELECTED_NAME_ID:
         return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnit(i[0])->mUnitClass->mNameStringID;
     case EE_SCREENS_SEOBX_IN_VIEW: return gViewport.GetViewRectangle().Contains(GE2DPoint(f[0], f[1]));

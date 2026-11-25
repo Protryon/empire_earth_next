@@ -6,39 +6,22 @@
 #include <windows.h>
 #include <string>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERhombus.h"
 #include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIListBox.h"
-#include "lle/GEText.h"
-#include "lle/UILBString.h"
-#include "lle/UIFileComboBox.h"
-#include "lle/UResourceFile.h"
-#include "lle/UICheckBox.h"
-#include "lle/UIRadioButton.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIShell.h"
-#include "lle/USingleton.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMiniMap.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EESEARust.h"
-#include "rust/game/screens.h"
 
 bool gB4C3220 = true;
 
@@ -85,45 +68,19 @@ extern "C" int32_t ee_screenscpp_setsx(uint32_t inOp, void* const* p, int32_t* i
                                     GERectangle(f[0], f[1], f[2], f[3]), theForm, (unsigned long)i[1], 2, true, i[0] == 0,
                                     false);
         return 0;
-    case EE_SCREENS_SETSX_UP_CHECKED_NULL:
-        t->SetUpCheckedBitmap(NULL);
-        return 0;
-    case EE_SCREENS_SETSX_DOWN_CHECKED_NULL:
-        t->SetDownCheckedBitmap(NULL);
-        return 0;
-    case EE_SCREENS_SETSX_DOWN_UNCHECKED_NULL:
-        t->SetDownUncheckedBitmap(NULL);
-        return 0;
-    case EE_SCREENS_SETSX_UP_UNCHECKED_NULL:
-        t->SetUpUncheckedBitmap(NULL);
-        return 0;
-    case EE_SCREENS_SETSX_LABEL_RECT:
-        t->GetTextLabel()->SetRectangle(GERectangle(f[0], f[1], f[2], f[3]));
-        return 0;
-    case EE_SCREENS_SETSX_BG_OPACITY:
-        t->SetBgOpacity(f[0]);
-        return 0;
-    case EE_SCREENS_SETSX_RADIO_GETEXT:
-        *theOut = t->GetTextLabel()->GetGEText();
-        return 0;
-    case EE_SCREENS_SETSX_BITMAP + 0:
-        *theOut = theForm->GetManager()->GetAlphaSortUpBitmap();
-        return 0;
-    case EE_SCREENS_SETSX_BITMAP + 1:
-        *theOut = theForm->GetManager()->GetAlphaSortDownBitmap();
-        return 0;
-    case EE_SCREENS_SETSX_BITMAP + 2:
-        *theOut = theForm->GetManager()->GetSBBitmapUpNormal();
-        return 0;
-    case EE_SCREENS_SETSX_BITMAP + 3:
-        *theOut = theForm->GetManager()->GetSBBitmapUpPressed();
-        return 0;
-    case EE_SCREENS_SETSX_BITMAP + 4:
-        *theOut = theForm->GetManager()->GetSBBitmapDownNormal();
-        return 0;
-    case EE_SCREENS_SETSX_BITMAP + 5:
-        *theOut = theForm->GetManager()->GetSBBitmapDownPressed();
-        return 0;
+    case EE_SCREENS_SETSX_UP_CHECKED_NULL: t->SetUpCheckedBitmap(NULL); return 0;
+    case EE_SCREENS_SETSX_DOWN_CHECKED_NULL: t->SetDownCheckedBitmap(NULL); return 0;
+    case EE_SCREENS_SETSX_DOWN_UNCHECKED_NULL: t->SetDownUncheckedBitmap(NULL); return 0;
+    case EE_SCREENS_SETSX_UP_UNCHECKED_NULL: t->SetUpUncheckedBitmap(NULL); return 0;
+    case EE_SCREENS_SETSX_LABEL_RECT: t->GetTextLabel()->SetRectangle(GERectangle(f[0], f[1], f[2], f[3])); return 0;
+    case EE_SCREENS_SETSX_BG_OPACITY: t->SetBgOpacity(f[0]); return 0;
+    case EE_SCREENS_SETSX_RADIO_GETEXT: *theOut = t->GetTextLabel()->GetGEText(); return 0;
+    case EE_SCREENS_SETSX_BITMAP + 0: *theOut = theForm->GetManager()->GetAlphaSortUpBitmap(); return 0;
+    case EE_SCREENS_SETSX_BITMAP + 1: *theOut = theForm->GetManager()->GetAlphaSortDownBitmap(); return 0;
+    case EE_SCREENS_SETSX_BITMAP + 2: *theOut = theForm->GetManager()->GetSBBitmapUpNormal(); return 0;
+    case EE_SCREENS_SETSX_BITMAP + 3: *theOut = theForm->GetManager()->GetSBBitmapUpPressed(); return 0;
+    case EE_SCREENS_SETSX_BITMAP + 4: *theOut = theForm->GetManager()->GetSBBitmapDownNormal(); return 0;
+    case EE_SCREENS_SETSX_BITMAP + 5: *theOut = theForm->GetManager()->GetSBBitmapDownPressed(); return 0;
     case EE_SCREENS_SETSX_NEW_IMAGE_BUTTON:
         *theOut = new UIButton(i[0], static_cast<GEBitmap*>(p[1]), NULL, static_cast<GEBitmap*>(*theOut),
                                GERectangle(GE2DPoint(305.0f, f[0]), static_cast<GEBitmap*>(p[1])->GetWidth(),
@@ -137,21 +94,11 @@ extern "C" int32_t ee_screenscpp_setsx(uint32_t inOp, void* const* p, int32_t* i
                         (float)(unsigned long)theForm->GetManager()->GetCheckOn()->GetHeight()),
             theForm, (unsigned long)i[0], 0, false));
         return 0;
-    case EE_SCREENS_SETSX_SCREEN_EVENT:
-        *theOut = EECreateScreenEvent((uint32_t)i[0]);
-        return 0;
-    case EE_SCREENS_SETSX_SET_TRIGGER:
-        static_cast<UIControl*>(p[0])->SetTriggerEvent((unsigned long)i[0], static_cast<UIEvent*>(p[1]));
-        return 0;
-    case EE_SCREENS_SETSX_EVENT_RELEASE:
-        static_cast<UIEvent*>(p[0])->Dereference();
-        return 0;
-    case EE_SCREENS_SETSX_ADD_CONTROL:
-        theForm->AddControl(static_cast<UIControl*>(p[1]), 14);
-        return 0;
-    case EE_SCREENS_SETSX_NAMES_CLEAR:
-        sSetsNames.clear();
-        return 0;
+    case EE_SCREENS_SETSX_SCREEN_EVENT: *theOut = EECreateScreenEvent((uint32_t)i[0]); return 0;
+    case EE_SCREENS_SETSX_SET_TRIGGER: static_cast<UIControl*>(p[0])->SetTriggerEvent((unsigned long)i[0], static_cast<UIEvent*>(p[1])); return 0;
+    case EE_SCREENS_SETSX_EVENT_RELEASE: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
+    case EE_SCREENS_SETSX_ADD_CONTROL: theForm->AddControl(static_cast<UIControl*>(p[1]), 14); return 0;
+    case EE_SCREENS_SETSX_NAMES_CLEAR: sSetsNames.clear(); return 0;
     case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_TRIGGER:
         ee_screens_setr_get_names(static_cast<EeScreensSeTrigger*>(p[1]), &sSetsNames);
         return 0;
@@ -164,55 +111,25 @@ extern "C" int32_t ee_screenscpp_setsx(uint32_t inOp, void* const* p, int32_t* i
     case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_OBJECT:
         ee_screens_seob_get_names(static_cast<EeScreensSeObject*>(p[1]), &sSetsNames);
         return 0;
-    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_AREA:
-        ee_screens_sear_names(static_cast<EeScreensSeArea*>(p[1]), &sSetsNames);
-        return 0;
-    case EE_SCREENS_SETSX_LIST_APPEND_NAMES:
-        static_cast<UILBString*>(p[0])->AppendStringArray(sSetsNames);
-        return 0;
-    case EE_SCREENS_SETSX_EDITOR:
-        *theOut = static_cast<EEUIFScenarioEditor*>(static_cast<UIControl*>(p[0])->GetForm());
-        return 0;
-    case EE_SCREENS_SETSX_CONTROL_BY_ID:
-        *theOut = static_cast<EEUIFScenarioEditor*>(p[0])->GetControlById((unsigned long)i[0]);
-        return 0;
-    case EE_SCREENS_SETSX_SET_DISPLAY:
-        static_cast<UIControl*>(p[0])->SetDisplayMode((unsigned long)i[0]);
-        return 0;
-    case EE_SCREENS_SETSX_SET_GAME_VIEW:
-        static_cast<EEUIFScenarioEditor*>(p[0])->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), false);
-        return 0;
-    case EE_SCREENS_SETSX_GAME_VIEW_RECT:
-        EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3]));
-        return 0;
+    case EE_SCREENS_SETSX_SUB_NAMES + EE_SCREENS_SE_TRIGGER_SCREEN_AREA: ee_screens_sear_names(static_cast<EeScreensSeArea*>(p[1]), &sSetsNames); return 0;
+    case EE_SCREENS_SETSX_LIST_APPEND_NAMES: static_cast<UILBString*>(p[0])->AppendStringArray(sSetsNames); return 0;
+    case EE_SCREENS_SETSX_EDITOR: *theOut = static_cast<EEUIFScenarioEditor*>(static_cast<UIControl*>(p[0])->GetForm()); return 0;
+    case EE_SCREENS_SETSX_CONTROL_BY_ID: *theOut = static_cast<EEUIFScenarioEditor*>(p[0])->GetControlById((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SETSX_SET_DISPLAY: static_cast<UIControl*>(p[0])->SetDisplayMode((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SETSX_SET_GAME_VIEW: static_cast<EEUIFScenarioEditor*>(p[0])->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), false); return 0;
+    case EE_SCREENS_SETSX_GAME_VIEW_RECT: EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3])); return 0;
     case EE_SCREENS_SETSX_CHECKED_EVENT:   // (the hide-UI box's event, an EESEERust: its Rust event)
         *theOut = static_cast<EESEERust*>(t->GetTriggerEvent(kControlTriggerChecked))->mEvent;
         return 0;
-    case EE_SCREENS_SETSX_SET_CHECKED:
-        static_cast<UICheckBox*>(p[0])->SetChecked(true);
-        return 0;
-    case EE_SCREENS_SETSX_GROUP_ENABLE:
-        static_cast<EEUIFScenarioEditor*>(p[0])->GetEntityGroupById((unsigned long)i[0])->Enable();
-        return 0;
-    case EE_SCREENS_SETSX_CLEAR_529066:
-        gB529066 = false;
-        return 0;
-    case EE_SCREENS_SETSX_CLEAR_FOLLOWING:
-        gCameraFollowing = false;
-        return 0;
-    case EE_SCREENS_SETSX_CLEAR_529068:
-        gB529068 = false;
-        return 0;
+    case EE_SCREENS_SETSX_SET_CHECKED: static_cast<UICheckBox*>(p[0])->SetChecked(true); return 0;
+    case EE_SCREENS_SETSX_GROUP_ENABLE: static_cast<EEUIFScenarioEditor*>(p[0])->GetEntityGroupById((unsigned long)i[0])->Enable(); return 0;
+    case EE_SCREENS_SETSX_CLEAR_529066: gB529066 = false; return 0;
+    case EE_SCREENS_SETSX_CLEAR_FOLLOWING: gCameraFollowing = false; return 0;
+    case EE_SCREENS_SETSX_CLEAR_529068: gB529068 = false; return 0;
     case EE_SCREENS_SETSX_MINIMAP: return gMiniMap != NULL;
-    case EE_SCREENS_SETSX_MINIMAP_REFRESH:
-        gMiniMap->RefreshView();
-        return 0;
-    case EE_SCREENS_SETSX_REDRAW_ALL:
-        gUIManager->RedrawAll();
-        return 0;
-    case EE_SCREENS_SETSX_ALL_DIRTY:
-        gUIManager->GetCurrentForm()->SetAllControlsDirty();
-        return 0;
+    case EE_SCREENS_SETSX_MINIMAP_REFRESH: gMiniMap->RefreshView(); return 0;
+    case EE_SCREENS_SETSX_REDRAW_ALL: gUIManager->RedrawAll(); return 0;
+    case EE_SCREENS_SETSX_ALL_DIRTY: gUIManager->GetCurrentForm()->SetAllControlsDirty(); return 0;
     case EE_SCREENS_SETSX_WAS_UI_HIDDEN: return gUIManager->GetScenarioEditorForm()->GetWasUIHidden();
     case EE_SCREENS_SETSX_CLIP_PANEL: return static_cast<const GERectangle*>(p[0])->And(kSetsPanel, sSetsClip);
     case EE_SCREENS_SETSX_DRAW_PANEL:

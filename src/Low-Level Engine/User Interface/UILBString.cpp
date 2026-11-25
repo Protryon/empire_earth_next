@@ -7,36 +7,17 @@
 #include <windows.h>
 #include <mbstring.h>
 
-#include "rust/ui/draw_ffi.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
-#include "lle/GELine.h"
-#include "lle/GEFont.h"
-#include "lle/GEText.h"
 #include "lle/TMPoll.h"
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
-#include "lle/UIObjHost.h"
-#include "lle/UIShims.h"
 
 // The Rust list box's ops that do not depend on T (ee_ui listobj.rs; UIListBoxRust<T>::Op answers the rest):
 // UIControl's, the scroll bar's (a part by address), the polls', the selection rhombi's and the focus line's

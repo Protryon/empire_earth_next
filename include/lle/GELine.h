@@ -19,8 +19,7 @@ public:
                                     &inStartColor, &inEndColor, inOpacity)) {}
     ~GELine() { ee_ge_prim_destroy(this->mRust); }
     void GetColorPerVertex(GEColor& outStart, GEColor& outEnd) const { this->Vertices(EeGeBmpOp::VertexGetColor, &outStart, &outEnd); }
-    void GetOpacityPerVertex(float& outStart, float& outEnd) const
-        { ee_ge_prim_opacities(this->mRust, &outStart, &outEnd, NULL, NULL); }
+    void GetOpacityPerVertex(float& outStart, float& outEnd) const { ee_ge_prim_opacities(this->mRust, &outStart, &outEnd, NULL, NULL); }
     GETexture* GetTexture(unsigned long inScreen) const { return (GETexture*)ee_ge_prim_texture(this->mRust, inScreen); }
     void GetTextureCoordinatesPerVertex(GETextureCoordinate& outStart, GETextureCoordinate& outEnd) const
         { this->Vertices(EeGeBmpOp::VertexGetUv, &outStart, &outEnd); }
@@ -34,8 +33,7 @@ public:
     void SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_ge_prim_set_texture(this->mRust, inTexture, inScreen); }
     void SetTextureCoordinates(const GETextureCoordinate& inStart, const GETextureCoordinate& inEnd)
         { this->Vertices(EeGeBmpOp::VertexSetUv, &inStart, &inEnd); }
-    void Vertices(EeGeBmpOp inOp, const void* inStart, const void* inEnd) const
-        { ee_ge_prim_vertices4(this->mRust, inOp, inStart, inEnd, NULL, NULL); }
+    void Vertices(EeGeBmpOp inOp, const void* inStart, const void* inEnd) const { ee_ge_prim_vertices4(this->mRust, inOp, inStart, inEnd, NULL, NULL); }
 
     URust<EeGePrim> mRust;                        // the line (ee_ge prim.rs)
 };

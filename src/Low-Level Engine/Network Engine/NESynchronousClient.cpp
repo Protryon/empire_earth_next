@@ -7,9 +7,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
-#include "lle/FSFile.h"
 #include "lle/NESynchronousClient.h"
-#include "rust/net/net.h"
 
 // The client's calls out, each the statement NESynchronousClient.cpp made (the protocol ops are the Rust's own:
 // ee_net ffi_protocol.rs)

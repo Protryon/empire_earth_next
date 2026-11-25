@@ -22,16 +22,12 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysics.h"
 #include "lle/SESoundManager.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEUserInterface.h"
-#include "lle/GETextureCoordinate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEEffectKindIDs.h"
-#include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
 #include "lle/U2DSparseArray.h"
@@ -79,14 +75,9 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEPPatrolGroup.h"
 
 #include "ee/EEHerd.h"
 
-#include "ee/EEAirTrafficControl.h"
-#include "ee/EEWUnitsOffMapInfo.h"
-#include "ee/EEUnitVectorItem.h"
-#include "rust/sim/units.h"
 
 // what one effect's run keeps between its world calls (entry.rs makes and frees it: EE_SCENARIO_WORLD_RUN_*) (ee_scenario effect.rs, effect_ai.rs, task.rs): the
 // calamity point and class, the units a calamity found in an area, the graphic effect, the expanded message, the
@@ -226,41 +217,23 @@ extern "C" int64_t ee_scenariocpp_world_class(void*, uint32_t inOp, const int64_
         return 0;
     case EE_SCENARIO_WK_EFFECT_NEW: return SMEPtr(new EESMEffect);
     case EE_SCENARIO_WK_EFFECT_FIELDS: return SMEPtr(static_cast<EeScenarioEffectFields*>((EESMEffect*)(intptr_t)a[0]));
-    case EE_SCENARIO_WK_EFFECT_ADD:
-        gWorld.mScenarioManager->AddV134Effect(*(EESMEffect*)(intptr_t)a[0]);
-        return 0;
-    case EE_SCENARIO_WK_EFFECT_FREE:
-        delete (EESMEffect*)(intptr_t)a[0];
-        return 0;
-    case EE_SCENARIO_WK_SET_RANGE:
-        SMEUpgradeOf(a[0])->SetRange(EESMFloat(a[1]));
-        return 0;
-    case EE_SCENARIO_WK_SET_VELOCITY:
-        SMEUpgradeOf(a[0])->SetMaxVelocity(EESMFloat(a[1]));
-        return 0;
+    case EE_SCENARIO_WK_EFFECT_ADD: gWorld.mScenarioManager->AddV134Effect(*(EESMEffect*)(intptr_t)a[0]); return 0;
+    case EE_SCENARIO_WK_EFFECT_FREE: delete (EESMEffect*)(intptr_t)a[0]; return 0;
+    case EE_SCENARIO_WK_SET_RANGE: SMEUpgradeOf(a[0])->SetRange(EESMFloat(a[1])); return 0;
+    case EE_SCENARIO_WK_SET_VELOCITY: SMEUpgradeOf(a[0])->SetMaxVelocity(EESMFloat(a[1])); return 0;
     case EE_SCENARIO_WK_FIRST_UNIT: return SMEPtr(SMEPlayerOf(a[0])->mFirstUnit);
     case EE_SCENARIO_WK_NEXT_UNIT: return SMEPtr(SMEUnitOf(a[0])->mNext);
     case EE_SCENARIO_WK_UNIT_COMPLEX: return SMEUnitOf(a[0])->mComplexUnit != NULL;
     case EE_SCENARIO_WK_UNIT_CLASS: return SMEPtr(SMEUnitOf(a[0])->mUnitClass);
-    case EE_SCENARIO_WK_SIGHT_OFF:
-        SMEUnitOf(a[0])->mComplexUnit->SightOffHere();
-        return 0;
-    case EE_SCENARIO_WK_SIGHT_ON:
-        SMEUnitOf(a[0])->SightOnHere();
-        return 0;
-    case EE_SCENARIO_WK_HERDS_CLEAR:
-        sSMEHerds.clear();
-        return 0;
-    case EE_SCENARIO_WK_HERDS:
-        SMEPlayerOf(a[0])->GetHerdsOfType(sSMEHerds, (long)a[1]);
-        return 0;
+    case EE_SCENARIO_WK_SIGHT_OFF: SMEUnitOf(a[0])->mComplexUnit->SightOffHere(); return 0;
+    case EE_SCENARIO_WK_SIGHT_ON: SMEUnitOf(a[0])->SightOnHere(); return 0;
+    case EE_SCENARIO_WK_HERDS_CLEAR: sSMEHerds.clear(); return 0;
+    case EE_SCENARIO_WK_HERDS: SMEPlayerOf(a[0])->GetHerdsOfType(sSMEHerds, (long)a[1]); return 0;
     case EE_SCENARIO_WK_HERD_COUNT: return (int64_t)sSMEHerds.size();
     case EE_SCENARIO_WK_HERD_AT: return SMEPtr(sSMEHerds[(size_t)a[0]]);
     case EE_SCENARIO_WK_HERD_ACTIVE: return ((EEHerd*)(intptr_t)a[0])->mIsActive = a[1] != 0;
     case EE_SCENARIO_WK_AI_FIELDS: return SMEPtr(static_cast<EeCpFields*>(static_cast<EEComputerPlayer*>(SMEPlayer(a[0]))));
-    case EE_SCENARIO_WK_AI_NEXT_ATTACK_NOW:
-        static_cast<EEComputerPlayer*>(SMEPlayer(a[0]))->SetNextAttackTime(gPhysics->mGameTime);
-        return 0;
+    case EE_SCENARIO_WK_AI_NEXT_ATTACK_NOW: static_cast<EEComputerPlayer*>(SMEPlayer(a[0]))->SetNextAttackTime(gPhysics->mGameTime); return 0;
     }
     return 0;
 }
@@ -314,9 +287,7 @@ extern "C" int64_t ee_scenariocpp_world_cu(EESMHostContext* inContext, uint32_t 
     case EE_SCENARIO_CU_RELOAD_TIMER: theComplex->mReloadTimer = (long)a[1]; break;
     case EE_SCENARIO_CU_POWER: theComplex->mPower = (long)a[1]; break;
     case EE_SCENARIO_CU_ROTTING: theComplex->mRottingAwayTime = (long)a[1]; break;
-    case EE_SCENARIO_CU_PAUSED:
-        theComplex->SetAnimation(theComplex->mAnimation, theComplex->mPhysicalModel.GetFrame(), a[1] != 0);
-        break;
+    case EE_SCENARIO_CU_PAUSED: theComplex->SetAnimation(theComplex->mAnimation, theComplex->mPhysicalModel.GetFrame(), a[1] != 0); break;
     case EE_SCENARIO_CU_BUILT: theComplex->SetBuilt(a[1] != 0, 1, 1); break;
     default: *theVariable = (long)a[1]; break;
     }
@@ -332,8 +303,7 @@ extern "C" int64_t ee_scenariocpp_world_create(EESMEffectRun* inRun, uint32_t in
     case EE_SCENARIO_WC_OBJECT_UNIT_CLASS: return SMEPtr(gWorld.GetUnit(inRun->mObject->mUnits[(unsigned long)a[0]])->GetUnitClass());
     case EE_SCENARIO_WC_FIND_PLACEMENT: return inRun->mObject->FindPlacement((unsigned long)a[0], inRun->mCreateLocation, true);
     case EE_SCENARIO_WC_TECH_NODE: return SMEPtr(gWorld.GetPlayer((unsigned long)a[0])->GetTechTree()->Get(SMEClassOf(a[1])->GetTechnology()));
-    case EE_SCENARIO_WC_TECH_KIND:
-        return gWorld.GetPlayer((unsigned long)a[0])->GetTechTree()->Get(SMEClassOf(a[1])->GetTechnology())->mData->mKind;
+    case EE_SCENARIO_WC_TECH_KIND: return gWorld.GetPlayer((unsigned long)a[0])->GetTechTree()->Get(SMEClassOf(a[1])->GetTechnology())->mData->mKind;
     case EE_SCENARIO_WC_LOCATION_X: return EESMBits(inRun->mCreateLocation.mX);
     case EE_SCENARIO_WC_LOCATION_Y: return EESMBits(inRun->mCreateLocation.mY);
     case EE_SCENARIO_WC_LOCATION_SET: inRun->mCreateLocation = GE2DPoint(EESMFloat(a[0]), EESMFloat(a[1]));
@@ -407,16 +377,12 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return inRun->mFound[a[0]]->CanGather(SMEUnit(a[1]), SMEUnit(a[1])->GetTileX(), SMEUnit(a[1])->GetTileY(), true, false);
     case EE_SCENARIO_WX_GROUP_SPREAD_AT_UNIT: inRun->mGroup->SpreadAroundTile(SMEUnit(a[0])->GetTileX(), SMEUnit(a[0])->GetTileY());
         return 0;
-    case EE_SCENARIO_WX_GROUP_SPREAD_AROUND:
-        inRun->mGroup->SpreadAroundUnit(SMEUnit(a[0]), SMEUnit(a[0])->GetTileX(), SMEUnit(a[0])->GetTileY());
-        return 0;
+    case EE_SCENARIO_WX_GROUP_SPREAD_AROUND: inRun->mGroup->SpreadAroundUnit(SMEUnit(a[0]), SMEUnit(a[0])->GetTileX(), SMEUnit(a[0])->GetTileY()); return 0;
     case EE_SCENARIO_WX_GROUP_CLEAR_GOAL: inRun->mGroup->ClearGoal();
         return 0;
     case EE_SCENARIO_WX_GOAL_GATHER: return SMEPtr(inRun->mGroupGoal = EEUGRust::NewGather(SMEUnit(a[0]), NULL, true));
-    case EE_SCENARIO_WX_GOAL_ATTACK:
-        return SMEPtr(inRun->mGroupGoal = EEUGRust::NewAttackUnit(inRun->mGroup->GetFirstUnit(), SMEUnit(a[0]), true, false));
-    case EE_SCENARIO_WX_GOAL_DROPOFF:
-        return SMEPtr(inRun->mGroupGoal = EEUGRust::NewGather(NULL, SMEUnit(a[0])->GetComplexUnit(), true));
+    case EE_SCENARIO_WX_GOAL_ATTACK: return SMEPtr(inRun->mGroupGoal = EEUGRust::NewAttackUnit(inRun->mGroup->GetFirstUnit(), SMEUnit(a[0]), true, false));
+    case EE_SCENARIO_WX_GOAL_DROPOFF: return SMEPtr(inRun->mGroupGoal = EEUGRust::NewGather(NULL, SMEUnit(a[0])->GetComplexUnit(), true));
     case EE_SCENARIO_WX_GOAL_TILE:
         return SMEPtr(inRun->mGroupGoal = EEUGRust::NewLocation(GE2DPoint((float)(long)a[0], (float)(long)a[1]), true, true, false, 0.0f, false, 0));
     case EE_SCENARIO_WX_GOAL_PATROL_POINT:
@@ -469,9 +435,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
         return 0;
     case EE_SCENARIO_WX_ORDER_REPAIR: SMEComplex(a[0])->OrderRepair(SMEUnit(a[1]));
         return 0;
-    case EE_SCENARIO_WX_ACKNOWLEDGE:
-        EEPlayForLocalPlayer(SMEPlayer(a[0]), inRun->mGroup->GetFirstUnit()->GetStats()->GetAcknowledgeSound(-1));
-        return 0;
+    case EE_SCENARIO_WX_ACKNOWLEDGE: EEPlayForLocalPlayer(SMEPlayer(a[0]), inRun->mGroup->GetFirstUnit()->GetStats()->GetAcknowledgeSound(-1)); return 0;
     case EE_SCENARIO_WX_FIRST_TILE_X: return inRun->mGroup->GetFirstUnit()->GetTileX();
     case EE_SCENARIO_WX_FIRST_TILE_Y: return inRun->mGroup->GetFirstUnit()->GetTileY();
     case EE_SCENARIO_WX_PATROL_ADD_FIRST:
@@ -558,8 +522,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_FADE_OUT: gGraphics->PostFadeOut(3000);
         return 0;
     case EE_SCENARIO_WX_TECH_MAKES_UNIT: return SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mMakesUnit;
-    case EE_SCENARIO_WX_TECH_CLASS_EXISTS:
-        return gUnitClassTable[SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass] != NULL;
+    case EE_SCENARIO_WX_TECH_CLASS_EXISTS: return gUnitClassTable[SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass] != NULL;
     case EE_SCENARIO_WX_TECH_REPLACE_QUEUED:
         EEReplaceQueuedTechnology(SMEPlayer(a[0]), gUnitClassTable[SMEPlayer(a[0])->GetTechTree()->Get(inRun->mEffect->mTechnology)->mData->mUnitClass], 100000);
         return 0;
@@ -653,8 +616,7 @@ extern "C" int64_t ee_scenariocpp_world_atom(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WX_SET_2D_FROM_T:
         SMEUnit(a[0])->GetComplexUnit()->Set2DPosition(U2DPoint<float>(inRun->mTransformation.GetX(), inRun->mTransformation.GetY()));
         return 0;
-    case EE_SCENARIO_WX_AIRPORT:
-        return SMEUnit(a[0])->GetUnitClass()->mAirTrafficType != 0 && SMEUnit(a[0])->GetComplexUnit()->GetUnitClass()->IsAirBase();
+    case EE_SCENARIO_WX_AIRPORT: return SMEUnit(a[0])->GetUnitClass()->mAirTrafficType != 0 && SMEUnit(a[0])->GetComplexUnit()->GetUnitClass()->IsAirBase();
     case EE_SCENARIO_WX_AIRPORT_REMOVE:
         ee_units_atc_remove_airport(SMEUnit(a[0])->GetComplexUnit()->GetPlayer()->mAirTraffic[SMEUnit(a[0])->GetUnitClass()->mAirTrafficType - 1], SMEUnit(a[0])->GetComplexUnit());
         return 0;
@@ -851,15 +813,10 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
 {
     switch (inOp) {
     case EE_SCENARIO_WORLD_RUN_NEW: return SMEPtr(new EESMEffectRun((EESMEffect*)(intptr_t)a[0]));
-    case EE_SCENARIO_WORLD_RUN_FREE:
-        delete inRun;
-        return 0;
-    case EE_SCENARIO_WORLD_RUN_OBJECT:
-        return SMEPtr(inRun->mObject = gWorld.mScenarioManager->GetScenarioObject(inRun->mEffect->mObject));
+    case EE_SCENARIO_WORLD_RUN_FREE: delete inRun; return 0;
+    case EE_SCENARIO_WORLD_RUN_OBJECT: return SMEPtr(inRun->mObject = gWorld.mScenarioManager->GetScenarioObject(inRun->mEffect->mObject));
     case EE_SCENARIO_WORLD_RUN_CREATED: return (int64_t)inRun->mCreatedUnits.size();
-    case EE_SCENARIO_WORLD_RUN_SET_UNITS:
-        inRun->mObject->SetUnits(inRun->mCreatedUnits);
-        return 0;
+    case EE_SCENARIO_WORLD_RUN_SET_UNITS: inRun->mObject->SetUnits(inRun->mCreatedUnits); return 0;
     // (the AI military effects' calls went with the C++ attack groups in main's stage 5: ee_scenario effect_ai.rs)
     case EE_SCENARIO_WORLD_GROUP_ADD: inRun->mGroup->AddMember(SMEUnit(a[0])->mComplexUnit, true); return 0;
     case EE_SCENARIO_WORLD_GROUP_COUNT: return (int64_t)inRun->mGroup->GetNumUnits();
@@ -895,12 +852,8 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WORLD_SET_COMMANDABLE: SMEComplex(a[0])->SetIsCommandable(a[1] != 0); return 0;
     case EE_SCENARIO_WORLD_CONVERT: EEConvertUnit(static_cast<EEComplexUnit*>(SMEUnit(a[0])), (long)a[1], 0); return 0;
     case EE_SCENARIO_WORLD_RENAME_UNIT: SMEUnit(a[0])->GetStats()->SetName(inRun->mEffect->GetNewName()); return 0;
-    case EE_SCENARIO_WORLD_RENAME_CLASS:
-        SMEPlayer(a[0])->GetUpgrade(gUnitClassTable[a[1]]->GetUnitType())->SetName(inRun->mEffect->GetNewName());
-        return 0;
-    case EE_SCENARIO_WORLD_CHANGE_UNIT:
-        EEChangeUnit((unsigned long)a[1], a[2] != 0, SMEUnitOrNull(a[0]), (long)a[3], 0, false, (long)a[4]);
-        return 0;
+    case EE_SCENARIO_WORLD_RENAME_CLASS: SMEPlayer(a[0])->GetUpgrade(gUnitClassTable[a[1]]->GetUnitType())->SetName(inRun->mEffect->GetNewName()); return 0;
+    case EE_SCENARIO_WORLD_CHANGE_UNIT: EEChangeUnit((unsigned long)a[1], a[2] != 0, SMEUnitOrNull(a[0]), (long)a[3], 0, false, (long)a[4]); return 0;
 
     case EE_SCENARIO_WORLD_COMPUTER_SET_ACTIVE: SMEPlayer(a[0])->mComputerPlayer->SetActive(a[1] != 0); return 0;
     case EE_SCENARIO_WORLD_SET_STANCE: gWorld.SetDiplomaticStance((long)a[0], (long)a[1], (unsigned long)a[2]); return 0;
@@ -912,8 +865,7 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
 
     case EE_SCENARIO_WORLD_SET_TIME_OF_DAY: gWorld.SetTimeOfDay(EESMFloat(a[0])); return 0;
     case EE_SCENARIO_WORLD_TIME_OF_DAY_RUNS: gPhysics->mTimeOfDayRuns = a[0] != 0; return 0;
-    case EE_SCENARIO_WORLD_CAL_CAN_CAST:
-        return inRun->mCalamity->CanCastAt(NULL, inRun->mPoint, (long)a[0], (long)a[1], true, SMEUnitOrNull(a[2])) == 0;
+    case EE_SCENARIO_WORLD_CAL_CAN_CAST: return inRun->mCalamity->CanCastAt(NULL, inRun->mPoint, (long)a[0], (long)a[1], true, SMEUnitOrNull(a[2])) == 0;
     case EE_SCENARIO_WORLD_CAL_GLOBAL: USingleton<EECalamityManager>::GetInstance()->CreateGlobalCalamity((unsigned long)a[0], 0, 0); return 0;
     case EE_SCENARIO_WORLD_CAL_LOCATION:
         USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity((unsigned long)a[0], -1, (long)a[1], (long)a[2], 0);
@@ -933,9 +885,7 @@ extern "C" int64_t ee_scenariocpp_host_world(EESMEffectRun* inRun, uint32_t inOp
     case EE_SCENARIO_WORLD_CAMERA_RESET: gWorld.mCameraControl.ResetPath(); return 0;
     case EE_SCENARIO_WORLD_CAMERA_TURN_RESET: gWorld.mCameraControl.mTurnYaw = 0.0f; return 0;
     case EE_SCENARIO_WORLD_CAMERA_START: gWorld.mCameraControl.StartPath(); return 0;
-    case EE_SCENARIO_WORLD_CAMERA_POINT:
-        (a[0] != 0 ? inRun->mStart : inRun->mEnd) = GE3DPoint(EESMFloat(a[1]), EESMFloat(a[2]), EESMFloat(a[3]));
-        return 0;
+    case EE_SCENARIO_WORLD_CAMERA_POINT: (a[0] != 0 ? inRun->mStart : inRun->mEnd) = GE3DPoint(EESMFloat(a[1]), EESMFloat(a[2]), EESMFloat(a[3])); return 0;
     case EE_SCENARIO_WORLD_CAMERA_MODE: gWorld.mCameraControl.SetMode(3); return 0;
     case EE_SCENARIO_WORLD_CAMERA_MOVE:
         gWorld.mCameraControl.MoveTo(SMEUnitOrNull(a[0]), inRun->mEnd, (a[2] & 1) != 0, (float)(long)a[3], SMEUnitOrNull(a[1]),

@@ -46,9 +46,6 @@ unsigned short EEAIContinentManager::GetPathAreaIDAt(const EETileLocation& inTil
     return theArea != NULL ? theArea->GetID() : (unsigned short)0;
 }
 
-// The (x, y) overload (the group path's step: UMFloor values)
-inline unsigned short EEAIContinentManager::GetPathAreaIDAt(long inX, long inY) { return this->GetPathAreaIDAt(EETileLocation(inX, inY)); }
-
 // Returns the terrain flags every unit in the group shares (ee_units group_obj.rs flags)
 EECPASGFlags EEGroup::GetFlags()
 {

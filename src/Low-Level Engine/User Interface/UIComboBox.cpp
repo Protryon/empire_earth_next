@@ -19,43 +19,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "rust/ui/comboobj.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
-#include "lle/GELine.h"
-#include "lle/GEFont.h"
-#include "lle/GEText.h"
-#include "lle/TMPoll.h"
-#include "lle/Input System.h"
-#include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/UIButton.h"
 #include "lle/UITextLabel.h"
-#include "lle/UISlider.h"
-#include "lle/UIScrollBar.h"
 #include "lle/UIListBox.h"
 #include "lle/UIEditBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
-#include "lle/UIObjHost.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_combo.h"
 
 // the one-statement shims of the host's moved queries and actions and of the constructor (ee_ui lle_combo.rs)
 #define COMBO(x) reinterpret_cast<UIComboBox*>(x)

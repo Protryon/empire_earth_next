@@ -28,7 +28,6 @@ public:
     unsigned long GetFontSize() const { return (unsigned long)ee_ge_font_value(this->mRust, EeGeFontValue::Size); }
     unsigned long GetFontStyle() const { return (unsigned long)ee_ge_font_value(this->mRust, EeGeFontValue::Style); }
     long GetHeight() const { return ee_ge_font_value(this->mRust, EeGeFontValue::Height); }
-    PlatFont* GetOSFont() const { return static_cast<PlatFont*>(ee_ge_font_os(this->mRust)); }
     EeGeFont* GetRust() const { return this->mRust; }
     URust<EeGeFont> mRust;                        // the font (ee_ge smallobj.rs)
 };

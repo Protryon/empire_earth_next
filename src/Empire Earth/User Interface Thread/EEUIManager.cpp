@@ -8,17 +8,11 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureManager.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/TMPoll.h"
 #include "lle/Input System.h"
-#include "lle/UIForm.h"
 #include "lle/UIControlsTable.h"
-#include "lle/UIManager.h"
 #include "lle/UIButton.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
@@ -30,13 +24,10 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "lle/UResourceFile.h"
-#include "lle/GEText.h"
-#include "lle/UITextLabel.h"
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEGraphics.h"
 #include "lle/NESynchronousServer.h"
 #include "ee/EEServer.h"
 #include "ee/EEUserInterface.h"
@@ -51,10 +42,8 @@
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIBGenericBackground.h"
-#include "ee/EEControlEventID.h"
 
 
-#include "lle/GELine.h"
 #include "lle/UIBackgroundTable.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEUIShell.h"
@@ -69,11 +58,8 @@
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUICWonNetGamesBox.h"
 #include "ee/EEUICWonNetStatBox.h"
-#include "lle/UGraph.h"
 #include "lle/UIGraph.h"
 #include "ee/EEStringIDs.h"
-#include "rust/game/screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
-#include "rust/ui/graphobj.h"
 #include "ee/EEScreensShims.h"
 #include "ee/EEGameState.h"   // gGameState
 
@@ -111,16 +97,10 @@ UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID)
 
 // Creates the event a form fires when it opens, closes or activates; NULL for other ids (ee_screens factories.rs;
 // WON's server select open is C++)
-UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
-{
-    return reinterpret_cast<UIEvent*>(ee_screens_um_form_event((uint32_t)inID));
-}
+UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID) { return reinterpret_cast<UIEvent*>(ee_screens_um_form_event((uint32_t)inID)); }
 
 // Creates the WON server select form's cancel event; NULL for other ids
-UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
-{
-    return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID));
-}
+UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID) { return reinterpret_cast<UIEvent*>(ee_screens_um_wns_event((uint32_t)inID)); }
 
 
 

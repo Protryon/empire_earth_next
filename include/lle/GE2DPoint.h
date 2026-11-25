@@ -18,8 +18,7 @@ public:
     GE2DPoint& operator-=(const GE2DPoint& inPoint) { return *this = GE2DPoint(this->mX - inPoint.mX, this->mY - inPoint.mY); }
     void Clear() { *this = GE2DPoint(); }
     // cross product of (inFrom - inTo) and (inTo - this): the side of the line inFrom-inTo this point lies on
-    float GetDirection(const GE2DPoint& inFrom, const GE2DPoint& inTo) const
-        { return ee_ge_2d_direction(GERust(*this), GERust(inFrom), GERust(inTo)); }
+    float GetDirection(const GE2DPoint& inFrom, const GE2DPoint& inTo) const { return ee_ge_2d_direction(GERust(*this), GERust(inFrom), GERust(inTo)); }
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     void SetX(float inX) { this->mX = inX; }
@@ -28,8 +27,7 @@ public:
     void SetY(long inY) { this->mY = (float)inY; }
     void SetXY(float inX, float inY) { *this = GE2DPoint(inX, inY); }
     float DistanceTo(const GE2DPoint& inPoint) const { return ee_ge_2d_distance(GERust(*this), GERust(inPoint)); }
-    float DistanceToSquared(const GE2DPoint& inPoint) const
-        { return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint)); }
+    float DistanceToSquared(const GE2DPoint& inPoint) const { return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint)); }
     // points every inStep along the segment to inPoint, always ending with inPoint itself
     // (Rust copies the two points before the vector is cleared: either may be one of its elements)
     void InterpolateTo(const GE2DPoint& inPoint, float inStep, std::vector<GE2DPoint>& outPoints) const

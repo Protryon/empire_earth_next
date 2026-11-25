@@ -8,9 +8,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
-#include "lle/NEProtocol.h"
 #include "lle/NESynchronousCommunications.h"
-#include "rust/net/net.h"
 
 // The calls out of the lag simulator and the recorder (ee_net lagloss.rs, recplay.rs) that the original units made
 // on the engine and the Rust does not make itself (the clock, the events and the threads are its own: ee_net

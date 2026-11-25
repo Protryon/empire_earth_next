@@ -7,19 +7,11 @@
 #include <string>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 
-#include "lle/GERhombus.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
 #include "lle/GETerrainMesh.h"
-#include "lle/UResourceFile.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
@@ -27,19 +19,14 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEARust.h"
 #include "ee/EESELoadThread.h"
-#include "ee/EESEUnit.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEStringIDs.h"
-#include "ee/EESEARust.h"
 #include "ee/EEScenarioManager.h"
-#include "rust/game/screens.h"
 
 
 void EESEImportTextAnswer(UIForm* inInfo);   // the questions' answers (EESEIAExport.cpp)
@@ -78,9 +65,7 @@ extern "C" int64_t ee_screenscpp_seltx(uint32_t inOp, const uintptr_t* p, const 
         return 0;
     case EE_SCREENS_SELTX_CREATE_EVENT_QUEUE: ESVERIFY_AT(TSScheduler::CreateEvent(T(p)->mMessageQueueDone) == keseOK, 82);
         return 0;
-    case EE_SCREENS_SELTX_CREATE_THREAD:
-        ESVERIFY_AT(TSScheduler::CreateThread(T(p)->mThread, EESELoadThread::Main, (void*)T(p)) == keseOK, 85);
-        return 0;
+    case EE_SCREENS_SELTX_CREATE_THREAD: ESVERIFY_AT(TSScheduler::CreateThread(T(p)->mThread, EESELoadThread::Main, (void*)T(p)) == keseOK, 85); return 0;
     case EE_SCREENS_SELTX_SET_PRIORITY: ESVERIFY_AT(T(p)->mThread->SetPriority((long)a[0]) == keseOK, 86);
         return 0;
     case EE_SCREENS_SELTX_WAIT_CREATED: T(p)->mThreadCreated->Wait(kTSWaitInfinite);

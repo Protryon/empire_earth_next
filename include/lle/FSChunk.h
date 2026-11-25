@@ -23,8 +23,7 @@ public:
     // the header if needed, then the chunk data read and decompressed
     long LoadChunkFromFile(FSFile& inFile) { return ee_fs_chunk_load_from_file(&this->mState, &inFile); }
     // creates the persistent object registered for the chunk's tag and loads it from the chunk data
-    long LoadPersistentFromChunk(FSPersistent*& outPersistent)
-        { return ee_fs_chunk_load_persistent(&this->mState, reinterpret_cast<void**>(&outPersistent)); }
+    long LoadPersistentFromChunk(FSPersistent*& outPersistent) { return ee_fs_chunk_load_persistent(&this->mState, reinterpret_cast<void**>(&outPersistent)); }
     // the chunk header (versions, tag, size); a size of 2 GB or more fails
     long LoadChunkHeader(FSFile& inFile) { return ee_fs_chunk_load_header(&this->mState, &inFile); }
     // the header and the data
