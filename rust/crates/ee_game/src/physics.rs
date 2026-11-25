@@ -1040,7 +1040,11 @@ fn tick(p: P) {
         drain_input(p);
         serve_load_save_requests(p);
     }
-    if get!(r, mTicksToProcess) != 0 || h0(O::IsPaused) != 0 || get!(r, mGameOver) || crate::gamecpp::camera_io::unit(0) == 0 {
+    if get!(r, mTicksToProcess) != 0
+        || h0(O::IsPaused) != 0
+        || get!(r, mGameOver)
+        || crate::gamecpp::camera_io::unit(0) == 0
+    {
         crate::gamecpp::camera_io::update(hd(O::Speed, p, &[]));
     }
     if !(get!(r, mTicksToProcess) > 0) {

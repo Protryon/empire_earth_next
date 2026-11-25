@@ -948,8 +948,8 @@ pub fn step(w: &[String]) -> Step {
                     x::form_call(e, EE_SCREENS_SEFM_CLEAR_SELECTION, 0, 0, None);
                 }
                 _ => {
-                    let u =
-                        crate::rts::units::ee_rts_unit_resolve(unit_ref(w.get(2).map_or("", |s| s.as_str())) as u32) as usize;
+                    let u = crate::rts::units::ee_rts_unit_resolve(unit_ref(w.get(2).map_or("", |s| s.as_str())) as u32)
+                        as usize;
                     if u != 0 && w1 == "add" {
                         x::form_call(e, EE_SCREENS_SEFM_SELECT_UNIT, 0, u, None);
                     } else if u != 0 {

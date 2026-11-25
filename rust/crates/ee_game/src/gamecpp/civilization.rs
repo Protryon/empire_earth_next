@@ -239,8 +239,9 @@ pub extern "C" fn ee_gamecpp_civ_apply_deferred(civilization: *mut c_void, playe
 // condition object: its state was the team; the teams are ee_sim app teams_ffi.rs's)
 
 /// The team's players' ids.
+#[allow(clippy::unnecessary_cast)] // c_ulong is u32 on Windows, u64 on LP64
 fn team_players(team: usize) -> Vec<c_ulong> {
-    teams_ffi::players(team).into_iter().map(c_ulong::from).collect()
+    teams_ffi::players(team).into_iter().map(|p| p as c_ulong).collect()
 }
 
 /// `HasEnoughWonders`: the team's players together own as many wonders as the game needs (never when none).

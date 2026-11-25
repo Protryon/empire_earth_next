@@ -718,7 +718,9 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
                 c => {
                     let manager = hp(O::PsEffectsChunkObject, c, &[]);
                     h(O::PsStSetEffectManager, st, &[pa(manager)]);
-                    super::state::ee_gamecpp_state_restorable_push(hp(O::PsRestorableOfEffects, manager, &[]) as *mut c_void);
+                    super::state::ee_gamecpp_state_restorable_push(
+                        hp(O::PsRestorableOfEffects, manager, &[]) as *mut c_void
+                    );
                     h(O::PsEffectsChunkUnown, c, &[]);
                 }
             },
@@ -764,7 +766,9 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
                 0 => r = 3,
                 c => {
                     super::state::ee_gamecpp_state_set_calamity_helper(st as *mut c_void, c as *mut c_void);
-                    super::state::ee_gamecpp_state_restorable_push(hp(O::PsRestorableOfCalamities, c, &[]) as *mut c_void);
+                    super::state::ee_gamecpp_state_restorable_push(
+                        hp(O::PsRestorableOfCalamities, c, &[]) as *mut c_void
+                    );
                     item = 0;
                 }
             },
@@ -773,7 +777,9 @@ fn restore_persistents(st: P, tags: &[c_long], file: P) -> i64 {
                 c => {
                     let manager = hp(O::PsEnvironmentChunkObject, c, &[]);
                     h(O::PsStSetEnvironmentManager, st, &[pa(manager)]);
-                    super::state::ee_gamecpp_state_restorable_push(hp(O::PsRestorableOfEnvironment, manager, &[]) as *mut c_void);
+                    super::state::ee_gamecpp_state_restorable_push(
+                        hp(O::PsRestorableOfEnvironment, manager, &[]) as *mut c_void
+                    );
                     h(O::PsEnvironmentChunkUnown, c, &[]);
                 }
             },

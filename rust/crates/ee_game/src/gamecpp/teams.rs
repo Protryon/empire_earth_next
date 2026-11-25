@@ -4,6 +4,7 @@
 //! `std::vector<EETeam>`s (EETeam, its EEVCWonder victory condition) are gone; the state's and the saved worlds'
 //! teams are kept here, the victory condition is civilization.rs's by team index.
 #![allow(clippy::missing_safety_doc)]
+#![allow(clippy::unnecessary_cast)] // c_ulong is u32 on Windows, u64 on LP64
 
 use std::ffi::{c_ulong, c_void};
 use std::sync::Mutex;
@@ -158,7 +159,7 @@ fn load_team(players: &mut Vec<u32>, major: c_ulong, minor: c_ulong, file: Pf) -
     }
     players.resize(n as usize, 0);
     for p in players.iter_mut() {
-        let mut v = c_ulong::from(*p);
+        let mut v = *p as c_ulong;
         let r = file.read_ulong(&mut v);
         *p = v as u32;
         if r != PF_OK {
@@ -179,7 +180,7 @@ pub fn helper_save(h: P, file: Pf) -> i64 {
         r = file.write_ulong(players.len() as c_ulong);
         for &p in players {
             if r == PF_OK {
-                r = file.write_ulong(c_ulong::from(p));
+                r = file.write_ulong(p as c_ulong);
             }
         }
     }

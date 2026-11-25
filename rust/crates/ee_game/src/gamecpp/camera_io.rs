@@ -127,7 +127,16 @@ pub fn follow_swapped(unit: P) {
     // SAFETY: the world's camera's record
     let c = unsafe { *fields() };
     unsafe {
-        ee_app_camera_follow(fields(), cam(), ee_gamecpp_camera_host, id, c.mIsFollowingUnitB, 1.0, c.mTurnYaw, c.mTurnPitch)
+        ee_app_camera_follow(
+            fields(),
+            cam(),
+            ee_gamecpp_camera_host,
+            id,
+            c.mIsFollowingUnitB,
+            1.0,
+            c.mTurnYaw,
+            c.mTurnPitch,
+        )
     }
 }
 
