@@ -1454,8 +1454,6 @@ public:
     void GetInfo(EeWonPlatWinInfo& outInfo) { this->Rust(EeWonPlatWinCall::Info, (intptr_t)&outInfo); } // what the manager reads
     void FollowSurface() { this->Rust(EeWonPlatWinCall::FollowSurface); } // a window that fills the surface takes its new size
     void OnPaint() { this->Rust(EeWonPlatWinCall::Paint); } // repaints an invalid root into the offscreen image
-    // the manager while its platform part lives (the original's dynamic_cast: none in the manager's last moments)
-    WindowManager* GetPlatManager() { return this->mManager != NULL && this->mManager->mRust != NULL ? this->mManager : NULL; }
     EeWonPlatWin* mRust = NULL; // the platform window (platwin.rs); none yet in the constructor, none after the destructor's body
     intptr_t Rust(EeWonPlatWinCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, intptr_t d = 0)
     { return this->mRust != NULL ? ee_won_plat_win(this->mRust, c, a, b, cc, d) : 0; }

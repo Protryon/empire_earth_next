@@ -82,7 +82,8 @@ static intptr_t CtOwnCall(Container* t, V v, intptr_t a, intptr_t b)
 }
 
 namespace WONAPI {
-// every container op, for the Rust Container
+// every container op, for the Rust Container (Component's and the container's own calls are gamewin.rs
+// common_op's in the game: R6 WON GUI round 37)
 intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     switch (op) {
@@ -95,39 +96,17 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
         return CtOwnCall(t->mParent, (V)a, (intptr_t)static_cast<Component*>(t), 0);
     case Op::CtVirt: return CtOwnCall(t, (V)a, b, c);
     case Op::CtDetach: Comp(a)->mParent->RemoveChild(Comp(a)); return 0;
-    case Op::CtAddBG: {
-        // A container not yet under a root (the lobby's tab control is laid out, and brings its page to the top, before
-        // the lobby screen joins the root) has no root container. The original called AddBG on that NULL root, which
-        // returned before reading itself when the grabber had nothing to draw; the Rust RootContainer's forwarder reads
-        // its object first, so a NULL root is skipped here (round 30: the LAN gate's crash on the MultiPlayer click).
-        RootContainer* aRoot = t->GetRootContainer();
-        if (aRoot != NULL) aRoot->AddBG((BackgroundGrabber*)a);
-        return 0;
-    }
     case Op::CtCursorHold: ((Cursor*)a)->AddRef(); return 0;
     case Op::CtCursorRelease: ((Cursor*)a)->Release(); return 0;
     case Op::CtSetScheme: ((Graphics*)a)->mColorScheme = (ColorScheme*)b; return 0;
-    case Op::CtGrabBG: return (intptr_t)Comp(a)->GetGrabBG();
-    case Op::CtOwnScheme: return (intptr_t)Comp(a)->GetOwnColorScheme();
     case Op::CtScheme: return (intptr_t)((Graphics*)a)->mColorScheme;
-    case Op::CtRoot: return (intptr_t)static_cast<Component*>(t->GetRootContainer());
-    case Op::CtRootFocused: return t->GetRoot()->mManager->GetFocusWindow() == t->GetRoot() ? 1 : 0; // (GetWindow in the SDK)
-    case Op::CtMouseInClient: return t->GetRoot()->IsMouseInClientArea() ? 1 : 0;
-    case Op::CtDefaultCursor: return (intptr_t)t->GetDefaultCursor();
-    case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
-    case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
     // (a viewport whose area was never set: no area, not visible; the forwarder would read its object through NULL)
     case Op::VpAreaRectVisible:
         return a != 0 && static_cast<ScrollArea*>(Comp(a))->IsRectVisible(*(WONRectangle*)b) ? 1 : 0;
-    case Op::CtContainerOf: return Container::ObjectOf(Comp(a));
     case Op::ChildHold: Comp(a)->AddRef(); return 0;
     case Op::ChildRelease: Comp(a)->Release(); return 0;
     case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
-    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
     case Op::Invalidate: t->Invalidate(); return 0;
-    case Op::RequestFocus: t->RequestFocus(); return 0;
-    case Op::GetMousePos: t->GetMousePos(*(int*)a, *(int*)b); return 0;
-    case Op::KeyMod: return t->GetKeyMod();
     case Op::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
     default: return 0;
     }

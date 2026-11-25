@@ -83,23 +83,15 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     case K::VSetEnabled: t->SetEnabled(c != 0); return 0;
     case K::VEnabledChanged: t->EnabledChanged(c != 0); return 0;
     case K::VSetCursor: t->SetCursor((Cursor*)c); return 0;
-    case K::PNextChild: return (intptr_t)p->NextChild((Component*)c, (d & 1) != 0, (d & 2) != 0);
     case K::PSetFocusChild: p->SetFocusChild((Component*)c); return 0;
     case K::PAddTimerChild: p->AddTimerChild((Component*)c); return 0;
     case K::PChildStateChanged: p->ChildStateChanged((Component*)c); return 0;
     case K::PChildInvalidated: p->ChildInvalidated((Component*)c); return 0;
-    case K::PIsModal: return p->IsModal();
-    case K::PEnsureOnTopOf: p->EnsureOnTopOf((Component*)c, (Component*)d); return 0;
     case K::AsRoot: return (intptr_t)dynamic_cast<RootContainer*>(t);
     case K::RootWin: return (intptr_t)((RootContainer*)b)->mWindow;
     case K::RootAddBG: ((RootContainer*)b)->AddBG((BackgroundGrabber*)c); return 0;
-    case K::DefaultWindow: return (intptr_t)Window::GetDefaultWindow();
-    case K::WState: return w->GetWindowState();
     case K::WBroadcast: w->mManager->BroadcastEvent((ComponentEvent*)c); return 0;
     case K::WQueue: w->QueueEvent((ComponentEvent*)c); return 0;
-    case K::WParent: return (intptr_t)w->GetParent();
-    case K::WRoot: return (intptr_t)(Component*)w->mRoot.get();
-    case K::WMouse: ((int*)c)[0] = w->GetMouseX(); ((int*)c)[1] = w->GetMouseY(); return 0;
     case K::WOpenTip: {
         const intptr_t* a = (const intptr_t*)c;
         PopupParams params((Component*)a[0], PopupFlag_StandardTip, (Component*)a[1], (int)a[2], (int)a[3]);
@@ -107,9 +99,6 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
         return 0;
     }
     case K::WClosePopup: w->ClosePopup((Component*)c); return 0;
-    case K::WKeyMod: return w->GetKeyMod();
-    case K::WDoubleClick: return w->CheckDoubleClick(static_cast<MouseButton>(c));
-    case K::WSubscribe: w->GetWindowManager()->SubscribeToBroadcast((Component*)c, d != 0); return 0;
     case K::WScheme: return (intptr_t)w->GetWindowManager()->mColorScheme.get();
     case K::WFontMod: {
         FontDescriptor descriptor = ((Font*)c)->mDescriptor;

@@ -1295,6 +1295,7 @@ pub unsafe extern "C" fn ee_won_wm_free(wm: *mut EeWonWm) {
             (*wm).release_loop();
             (*wm).release_members();
             (*wm).release_caches();
+            crate::gamewin::unbind_manager(wm as isize);
             drop(Box::from_raw(wm));
         }
     }

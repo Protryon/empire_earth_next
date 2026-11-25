@@ -7,8 +7,10 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rust/won_gui/platwin.h"
+#include "rust/won_gui/platwm.h"
 #include "rust/won_gui/rootobj.h"
 #include "rust/won_gui/winobj.h"
+#include "rust/won_gui/wmobj.h"
 
 extern "C" {
 
@@ -21,6 +23,14 @@ void ee_won_win_bind(void *window,
                      EeWonPlatWin *plat,
                      void *root,
                      const EeWonRoot *root_obj);
+
+/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone).
+///
+/// # Safety
+/// The parts are the manager's live objects until it binds them again.
+void ee_won_wm_bind(void *manager,
+                    const EeWonWm *wm,
+                    const EeWonPlatWm *plat);
 
 }  // extern "C"
 

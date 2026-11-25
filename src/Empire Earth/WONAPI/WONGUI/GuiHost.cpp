@@ -66,21 +66,14 @@ static GUIString sHostText;
 // QueueSubMenu's local PopupParams (borrowed pointers)
 static PopupParams sHostParams(NULL, 0, NULL);
 
-// a component's services, the same for every component object
+// a component's services, the same for every component object (the members', Component's own calls and the
+// container's are gamewin.rs common_op's in the game: R6 WON GUI round 37)
 static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
 {
     switch (op) {
-    case Op::Get: return (Fd)a == Fd::Width ? c->Width() : (Fd)a == Fd::Height ? c->Height() : 0;
     case Op::Draw: WONDrawPlain(*(Graphics*)a, *(const EeWonDrawOp*)b); return 0;
     case Op::Invalidate: c->Invalidate(); return 0;
-    case Op::RequestTimer: c->RequestTimer(a != 0); return 0;
-    case Op::RequestFocus: c->RequestFocus(); return 0;
-    case Op::GetMousePos: c->GetMousePos(*(int*)a, *(int*)b); return 0;
-    case Op::KeyMod: return c->GetKeyMod();
     case Op::SetParentCursor: c->mParent->SetCursor(CursorOf(a)); return 0;
-    case Op::SetSize: c->SetSize((int)a, (int)b); return 0;
-    case Op::SetDefaultCursor: c->SetDefaultCursor(CursorOf(a)); return 0;
-    case Op::CtorSetFlags: c->SetComponentFlags((int)a, true); return 0;
     case Op::FireEvent:
         // the type is Rust's map, which the goldens check against the enum (round 23's lists fired ListSelChanged
         // through a switch here as InputTextChanged: the LAN lobby's Join Game stayed disabled)

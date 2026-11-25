@@ -31,8 +31,6 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     Window* t = (Window*)inWin;
     switch (op) {
     case Op::WinTick: return (intptr_t)(uint32_t)WONTickCount();
-    case Op::WinScreenRect: t->mManager->GetScreenRect(*(WONRectangle*)a); return 0;
-    case Op::WinAddToManager: t->mManager->AddWindow(t); return 0;
     case Op::WinNewOffscreen: {
         SmartPtr<NativeImage> anImage = t->CreateImage((int)a, (int)b);
         Graphics &g = anImage->GetGraphics();
@@ -42,16 +40,12 @@ extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t 
     }
     case Op::WinQueueClose: t->QueueEvent(new InputEvent(InputEvent_WindowClose)); return 0;
     case Op::WinAllowClose: return 1; // (no window ever had an allow-close function)
-    case Op::WinChildSet: ((Window*)a)->WCall(EeWonWinCall::ChildSet, (intptr_t)t, b); return 0;
     case Op::WinStdArrow: return (intptr_t)Cursor::GetStandardCursor(StandardCursor_Arrow);
     case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
     case Op::WinPlatformFont: sHostFont = t->PlatformGetFont(*(const FontDescriptor*)a); return 0;
     case Op::WinHostFont: return (intptr_t)sHostFont.get();
     case Op::WinFontHold: ((Font*)a)->AddRef(); return 0;
     case Op::WinHostFontClear: sHostFont = SmartPtr<Font>(); return 0;
-    // (no window has an icon: the manager's default was never set either; R6 WON GUI round 35)
-    case Op::WinHasIcon: return 0;
-    case Op::WinIconDefault: return 0;
     default: return 0;
     }
 }
@@ -62,12 +56,8 @@ namespace WONAPI {
 static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     Window* me = (Window*)inMe;
-    WindowManager* m = me->GetPlatManager();
     typedef EeWonPlatWinOp Op;
     switch (inOp) {
-    case Op::HasWm: return m != NULL;
-    case Op::Wm: return m->Call((EeWonPlatWmCall)a, b, c);
-    case Op::Mouse: return m->GetMousePosition(((int*)a)[0], ((int*)a)[1]);
     case Op::WindowCreate: me->BaseCreate((int)c, (int)d); return 0;
     case Op::NewContext: me->mDisplayContext = new DisplayContext(NULL); return 0;
     case Op::OffscreenOfRoot: me->mOffscreenImage = me->CreateImage(me->mRoot->Width(), me->mRoot->Height()); return 0;
@@ -83,8 +73,6 @@ static intptr_t PlatWinHost(void* inMe, EeWonPlatWinOp inOp, intptr_t a, intptr_
     case Op::Paint: me->mRoot->PrePaint(me->mOffscreenImage->GetGraphics()); return 0;
     case Op::RootPaint: me->mRoot->Paint(me->mOffscreenImage->GetGraphics()); return 0;
     case Op::ApplyCursor: ee_won_cursor_apply(a != 0 ? ((Cursor*)a)->mRust : NULL, (void (*)(int32_t))PlatCursorShow); return 0;
-    case Op::PopupWindow: return (intptr_t)m->GetPopupWindow();
-    case Op::PopupFlags: return m->GetPopupFlags();
     case Op::CursorShow: PlatCursorShow((int)a); return 0;
     case Op::PlatMinimize: PlatWindowMinimize((PlatWindow*)a); return 0;
     default: return 0;

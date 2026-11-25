@@ -19,7 +19,8 @@ use crate::platwin::{ee_won_plat_win, EeWonPlatWin, EeWonPlatWinCall as P, EeWon
 use crate::platwm::EeWonPlatWmOp;
 use crate::rootobj::EeWonRoot;
 use crate::winobj::{EeWonWinCall as C, EeWonWinField as F, EeWonWinPlat, EeWonWindow};
-use crate::wmobj::EeWonWmWin;
+use crate::platwm::EeWonPlatWm;
+use crate::wmobj::{EeWonWm, EeWonWmCall, EeWonWmField, EeWonWmWin};
 
 /// A game window's Rust parts.
 #[derive(Clone, Copy)]
@@ -58,6 +59,46 @@ pub unsafe extern "C" fn ee_won_win_bind(
     }
 }
 
+// the game's window manager (the default one): its C++ object, its Rust manager and its platform manager
+static MANAGER: Mutex<[isize; 3]> = Mutex::new([0; 3]);
+
+/// The game's window manager's Rust parts (`plat` NULL: freed, as the destructor does; `wm` NULL: gone).
+///
+/// # Safety
+/// The parts are the manager's live objects until it binds them again.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wm_bind(manager: *mut c_void, wm: *const EeWonWm, plat: *const EeWonPlatWm) {
+    if let Ok(mut m) = MANAGER.lock() {
+        *m = [manager as isize, wm as isize, plat as isize];
+    }
+}
+
+/// The manager's entry gone (its Rust manager freed).
+pub(crate) fn unbind_manager(wm: isize) {
+    if let Ok(mut m) = MANAGER.lock() {
+        if m[1] == wm {
+            *m = [0; 3];
+        }
+    }
+}
+fn manager() -> Option<(*const EeWonWm, *const EeWonPlatWm)> {
+    let m = *MANAGER.lock().ok()?;
+    (m[1] != 0).then_some((m[1] as *const EeWonWm, m[2] as *const EeWonPlatWm))
+}
+/// The platform manager a bound window `window` calls (`GetPlatManager`; NULL once freed), None for a driver's window.
+pub(crate) fn plat_manager_of(window: isize) -> Option<*const EeWonPlatWm> {
+    parts(window)?;
+    Some(manager().map_or(std::ptr::null(), |m| m.1))
+}
+fn wm(c: EeWonWmCall, a: isize, b: isize) -> Option<isize> {
+    let (w, _) = manager()?;
+    // SAFETY: the manager's live Rust manager (the bind's contract)
+    Some(unsafe { crate::wmobj::ee_won_wm_call(w, c, a, b, 0, 0) })
+}
+fn wm_field(f: EeWonWmField) -> Option<isize> {
+    wm(EeWonWmCall::GetField, f as isize, 0)
+}
+
 /// The window's entry gone (its Rust window freed).
 pub(crate) fn unbind(window: isize) {
     if let Ok(mut m) = WINDOWS.lock() {
@@ -94,6 +135,19 @@ fn comp(p: &Parts, k: crate::compobj::EeWonCompCall, a: isize, b: isize) -> isiz
 /// The window `window`'s own op `op` (winobj.rs's calls out) when the game binds it: its platform window's, another
 /// window's.
 pub(crate) fn win_op(window: isize, op: Op, a: isize, b: isize, c: isize, d: isize) -> Option<isize> {
+    match op {
+        Op::WinAddToManager => return wm(EeWonWmCall::AddWindow, window, 0).map(z),
+        Op::WinScreenRect => {
+            let (_, p) = manager()?;
+            // SAFETY: the manager's live platform manager; `a` the rectangle (the op's contract)
+            unsafe { crate::platloop::ee_won_plat_wm_screen_rect(p, a as *mut i32) };
+            return Some(0);
+        }
+        // (no window has an icon, and the manager has no default one)
+        Op::WinHasIcon | Op::WinIconDefault => return parts(window).map(|_| 0),
+        Op::WinChildSet => return parts(a).map(|p| z(win(&p, C::ChildSet, window, b))),
+        _ => {}
+    }
     if !matches!(op, Op::WinPlat | Op::WinSetPosSize | Op::WinGetRect | Op::WinIsVisible | Op::WinCanClose) {
         return None;
     }
@@ -124,6 +178,22 @@ pub(crate) fn win_op(window: isize, op: Op, a: isize, b: isize, c: isize, d: isi
 pub(crate) fn plat_win_op(window: isize, op: EeWonPlatWinOp, a: isize, b: isize) -> Option<isize> {
     use crate::compobj::EeWonCompCall as K;
     use EeWonPlatWinOp as O;
+    if parts(window).is_some() {
+        // the window's manager (the default one, while its platform part lives: GetPlatManager)
+        let plat_wm = manager().map_or(std::ptr::null(), |m| m.1);
+        match op {
+            O::HasWm => return Some(isize::from(!plat_wm.is_null())),
+            // SAFETY: the manager's live platform manager; `a` the mouse's two ints (the op's contract)
+            O::Mouse => {
+                return Some(isize::from(unsafe {
+                    crate::platwm::ee_won_plat_wm_mouse(plat_wm, a as *mut i32, (a as *mut i32).add(1))
+                }))
+            }
+            O::PopupWindow => return wm(EeWonWmCall::PopupWindow, 0, 0),
+            O::PopupFlags => return wm_field(EeWonWmField::PopupFlags),
+            _ => {}
+        }
+    }
     if !matches!(
         op,
         O::Fills
@@ -219,6 +289,9 @@ pub(crate) fn wm_win_op(call: EeWonWmWin, window: isize, c: isize, d: isize) -> 
 /// The platform manager's op on the window `window` (platwm.rs's calls out) when the game binds it.
 pub(crate) fn plat_wm_op(op: EeWonPlatWmOp, window: isize, b: isize, c: isize) -> Option<isize> {
     use EeWonPlatWmOp as O;
+    if op == O::NotModal {
+        return parts(window).and_then(|_| wm(EeWonWmCall::NotModalWindow, window, 0));
+    }
     if !matches!(
         op,
         O::Info
@@ -250,4 +323,135 @@ pub(crate) fn plat_wm_op(op: EeWonPlatWmOp, window: isize, b: isize, c: isize) -
         // SAFETY: the window's live platform window; `b` the count's int (the op's contract)
         _ => unsafe { crate::platwin::ee_won_plat_win_title(me.plat, b as *mut i32) as isize },
     })
+}
+
+/// Component's calls out (compobj.rs `EeWonComp`) the game answers from its Rust parts: the parent container's
+/// non-virtual calls, the window's state and the manager's; None for the others (the C++ host's).
+pub(crate) fn comp_op(k: crate::compobj::EeWonComp, b: isize, c: isize, d: isize) -> Option<isize> {
+    use crate::compobj::EeWonComp as K;
+    use crate::ctobj::{ee_won_ct_call, EeWonContainer, EeWonCtCall as T, EeWonCtField};
+    match k {
+        K::PNextChild | K::PIsModal | K::PEnsureOnTopOf => {
+            if !crate::compobj::is_game() {
+                return None;
+            }
+            let ct = crate::compmem::get(b).ct as *const EeWonContainer;
+            if ct.is_null() {
+                return None;
+            }
+            // SAFETY: the parent's live container (`b` a game container)
+            let call = |t: T, x: isize, y: isize, w: isize| unsafe { ee_won_ct_call(ct, t, x, y, w) };
+            Some(match k {
+                K::PNextChild => call(T::NextChild, c, d & 1, (d >> 1) & 1),
+                K::PIsModal => isize::from(call(T::GetField, EeWonCtField::ModalCount as isize, 0, 0) > 0),
+                _ => z(call(T::EnsureOnTopOf, c, d, 0)),
+            })
+        }
+        K::DefaultWindow => wm_field(EeWonWmField::DefaultWindow),
+        K::WSubscribe => {
+            parts(b)?;
+            wm(EeWonWmCall::SubscribeToBroadcast, c, on(d)).map(z)
+        }
+        K::WState | K::WParent | K::WRoot | K::WMouse | K::WKeyMod | K::WDoubleClick => {
+            let me = parts(b)?;
+            Some(match k {
+                K::WState => field(&me, F::State),
+                K::WParent => field(&me, F::Parent),
+                K::WRoot => me.root,
+                K::WMouse => {
+                    let (x, y) = (field(&me, F::MouseX) as i32, field(&me, F::MouseY) as i32);
+                    // SAFETY: `c` is two ints (the op's contract)
+                    unsafe { *(c as *mut [i32; 2]) = [x, y] };
+                    0
+                }
+                K::WKeyMod => field(&me, F::KeyMod),
+                _ => on(win(&me, C::CheckDoubleClick, c, 0)),
+            })
+        }
+        _ => None,
+    }
+}
+
+/// The component services every GUI object asks its host for (`ComponentOp`'s and Container's host's), answered
+/// in the game by Component's and the container's own calls (R6 WON GUI round 37); `comp` is the asking object's
+/// component. None in a driver's world and for the others (virtuals, references, the Graphics).
+pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
+    use crate::compobj::EeWonCompCall as K;
+    use crate::guihost::EeWonGuiField as Fd;
+    if !matches!(
+        op,
+        Op::Get
+            | Op::RequestTimer
+            | Op::RequestFocus
+            | Op::GetMousePos
+            | Op::KeyMod
+            | Op::SetSize
+            | Op::SetDefaultCursor
+            | Op::CtorSetFlags
+            | Op::ChildSetFlags
+            | Op::CtGrabBG
+            | Op::CtOwnScheme
+            | Op::CtRoot
+            | Op::CtRootFocused
+            | Op::CtMouseInClient
+            | Op::CtDefaultCursor
+            | Op::CtWantFocus
+            | Op::CtNextSibling
+            | Op::CtContainerOf
+            | Op::CtAddBG
+    ) || !crate::compobj::is_game()
+    {
+        return None;
+    }
+    // SAFETY: the game's live components (the ops' contracts); each call re-enters through Component's entry
+    let kc = |x: isize, k: K, p: isize, q: isize| unsafe {
+        crate::compobj::ee_won_comp_call(x as *mut c_void, crate::compobj::host(), k, p, q, 0)
+    };
+    Some(match op {
+        Op::Get if a == Fd::Width as isize => crate::compmem::get(comp).bounds.width as isize,
+        Op::Get if a == Fd::Height as isize => crate::compmem::get(comp).bounds.height as isize,
+        Op::Get => return None,
+        Op::RequestTimer => z(kc(comp, K::RequestTimer, on(a), 0)),
+        Op::RequestFocus => z(kc(comp, K::RequestFocus, 0, 0)),
+        Op::GetMousePos => z(kc(comp, K::MousePos, a, b)),
+        Op::KeyMod => kc(comp, K::KeyMod, 0, 0),
+        Op::SetSize => z(kc(comp, K::SetSize, a, b)),
+        Op::SetDefaultCursor => z(kc(comp, K::SetDefaultCursor, crate::guihost::ee_won_gui_cursor(a), 0)),
+        Op::CtorSetFlags => z(kc(comp, K::SetFlags, a, 1)),
+        Op::ChildSetFlags => z(kc(a, K::SetFlags, b, on(c))),
+        Op::CtGrabBG => kc(a, K::GrabBG, 0, 0),
+        Op::CtOwnScheme => kc(a, K::OwnColorScheme, 0, 0),
+        Op::CtRoot => kc(comp, K::RootContainer, 0, 0),
+        Op::CtRootFocused => {
+            let w = kc(comp, K::Root, 0, 0);
+            isize::from(wm_field(EeWonWmField::FocusWindow)? == w)
+        }
+        Op::CtMouseInClient => on(field(&parts(kc(comp, K::Root, 0, 0))?, F::InClient)),
+        Op::CtDefaultCursor => kc(comp, K::DefaultCursor, 0, 0),
+        Op::CtWantFocus => on(kc(comp, K::WantFocus, 0, 0)),
+        Op::CtNextSibling => kc(a, K::NextSibling, on(b), on(c)),
+        Op::CtContainerOf => {
+            if a == 0 {
+                0
+            } else {
+                crate::compmem::get(a).ct
+            }
+        }
+        _ => {
+            // CtAddBG: the background queued on the root container (none for a container not yet under a root)
+            let r = kc(comp, K::RootContainer, 0, 0);
+            if r != 0 {
+                let obj = root_obj_of(r)?;
+                // SAFETY: the root's live Rust root
+                unsafe { crate::rootobj::ee_won_root_call(obj, crate::rootobj::EeWonRootCall::AddBG, a, 0, 0) };
+            }
+            0
+        }
+    })
+}
+
+/// The Rust root of the game's root container `root`.
+fn root_obj_of(root: isize) -> Option<*const EeWonRoot> {
+    let m = WINDOWS.lock().ok()?;
+    m.values().find(|w| w[2] == root).map(|w| w[3] as *const EeWonRoot)
 }

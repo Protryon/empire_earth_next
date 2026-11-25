@@ -487,6 +487,10 @@ impl Comp {
     }
 
     fn h(&self, k: EeWonComp, b: isize, c: isize, d: isize) -> isize {
+        // the game's Rust parts' own answers (R6 WON GUI round 37)
+        if let Some(r) = crate::gamewin::comp_op(k, b, c, d) {
+            return r;
+        }
         let f = self.host.expect("compobj: no host");
         // SAFETY: the host's contract: `b` is the op's receiver, `c` and `d` its arguments
         unsafe { f(b as *mut c_void, Op::Comp, k as isize, b, c, d) }

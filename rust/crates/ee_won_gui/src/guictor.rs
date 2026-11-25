@@ -95,7 +95,11 @@ fn construct(made: *mut c_void, component: *mut c_void, host: EeWonGuiHostFn, ki
     }
     let Some(h) = host else { return };
     // SAFETY: the component's own host, called as its Rust object calls it
-    let op = |op: Op, a: isize| unsafe { h(component, op, a, 0, 0, 0) };
+    let op = |op: Op, a: isize| match crate::gamewin::common_op(component as isize, op, a, 0, 0) {
+        Some(r) => r,
+        // SAFETY: as above
+        None => unsafe { h(component, op, a, 0, 0, 0) },
+    };
     for &(o, a) in steps(kind) {
         // the constructor's argument where the statement takes it (the columns, the list area)
         let a = if matches!(o, Op::CtorMultiColumns | Op::CtorHeaderArea) { arg } else { a };

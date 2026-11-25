@@ -24,6 +24,7 @@
 #include "rust/won_gui/platwin.h"
 #include "rust/won_gui/platwm.h"
 #include "rust/won_gui/platloop.h"
+#include "rust/won_gui/gamewin.h"
 using namespace WONAPI;
 // The popup stack, the modal dialog, the message loop, focus and the caches are ee_won's Rust manager (wmobj.rs,
 // wmcache.rs; R6 WON round 33); the window set, the event list, the timers, the broadcasts, the event loop and the
@@ -158,7 +159,6 @@ static intptr_t PlatWmHost(void* inMe, EeWonPlatWmOp inOp, intptr_t a, intptr_t 
     case Op::Hold: w->AddRef(); return 0;
     case Op::Release: w->Release(); return 0;
     case Op::ClosePopup: w->ClosePopup(NULL); return 0;
-    case Op::NotModal: return me->NotModalWindow(w);
     case Op::Offscreen: return w->mOffscreenImage.get() != NULL ? (intptr_t)w->mOffscreenImage->GetSurface() : 0;
     case Op::Modifiers: return (intptr_t)PlatModifiers();
     case Op::ClientSize: PlatWindowGetClientSize((PlatWindow*)a, (int32_t*)b, (int32_t*)b + 1); return 0;
@@ -185,6 +185,7 @@ WindowManager::WindowManager() {
     this->InitColorScheme();
     // the platform manager and the standard cursors: the WON hand from its bits, the others the system's
     this->mRust = ee_won_plat_wm_new(this, PlatWmHost);
+    ee_won_wm_bind(this, this->mWmObj.p, this->mRust); // the windows' Rust parts call it directly (gamewin.rs)
     this->mEventForward = NULL;
     ee_won_cursor_install_standard(WONCursorHost, &kCursorFns);
     // The window set, the events, the timers, the broadcasts and the screen state start empty in the Rust manager
@@ -198,6 +199,7 @@ WindowManager::~WindowManager()
     this->Call(EeWonPlatWmCall::UnregisterAll);
     ee_won_plat_wm_free(this->mRust);
     this->mRust = NULL;
+    ee_won_wm_bind(this, this->mWmObj.p, NULL);
 }
 
 // Fills the colour scheme with the 17 standard Windows-style colours (wmobj.rs's table)
