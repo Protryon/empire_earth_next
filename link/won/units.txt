@@ -8,9 +8,7 @@
 2f4890 2f4aeb WONGUI/ComponentLifetime.cpp
 2f62b0 2f7903 WONGUI/Container.cpp
 2fa2c0 2fa478 WONGUI/TextListItem.cpp
-2fdcd0 2fe6d1 WONGUI/MSGraphicsUtil.cpp
 3040d0 304ded WONGUI/RootContainer.cpp
-326540 3d0343 WONGUI/Cursor.cpp
 326ad0 32742b WONGUI/Graphics.cpp
 328450 3284f9 WONGUI/GUIStringSingleton.cpp
 328540 32b0f0 WONGUI/PopupValueAdapters.cpp

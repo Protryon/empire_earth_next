@@ -49,8 +49,6 @@ intptr_t WONImageHost(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, int
     DisplayContext* theContext = (DisplayContext*)a;
     Graphics* theGraphics = (Graphics*)a;
     switch (op) {
-        case H::Ref: ((RefCount*)a)->AddRef(); return 0;
-        case H::Unref: ((RefCount*)a)->Release(); return 0;
         case H::Wrap: {
             EeWonImage* theRust = (EeWonImage*)a;
             Image* theImage;

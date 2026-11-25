@@ -47,8 +47,6 @@ static intptr_t ImageOp(intptr_t which, intptr_t b)
 {
     Image* i = (Image*)b;
     switch ((EeWonWbImage)which) {
-    case EeWonWbImage::Hold: i->AddRef(); return 0;
-    case EeWonWbImage::Release: i->Release(); return 0;
     case EeWonWbImage::Width: return i->GetWidth();
     case EeWonWbImage::Height: return i->GetHeight();
     case EeWonWbImage::Duplicate: { SmartPtr<Image> d = i->Duplicate(); Image* p = d.get(); if (p) p->AddRef(); return (intptr_t)p; }
@@ -84,7 +82,6 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
     case H::SortType: return (intptr_t)MultiListHeader::GetSortTypeForButton(t);
     case H::New: return (intptr_t)WONShellNew((EeWonShellKind)a, b, c, d);
     case H::NewBase: return (intptr_t)NewBase((EeWonShellBaseNew)a);
-    case H::Ref: if (b > 0) ((Component*)a)->AddRef(); else ((Component*)a)->Release(); return 0;
     case H::SelfVirt: t->Virtual08(); return 0;
     case H::SkinCall: return ee_won_guicpp_skin_call(t, EeWonGuiOp::SkinLay, a, b, c, d);
     case H::Layout: { const int* r = (const int*)d; static_cast<Container*>(t)->Fn2F6140((Component*)a, (int)b, (Component*)c, r[0], r[1], r[2], r[3], r[4]); return 0; }
@@ -125,7 +122,6 @@ extern "C" intptr_t WONAPI::ee_won_guicpp_shell_call(void* inShell, EeWonShellHo
         if (f) f->AddRef();
         return (intptr_t)f;
     }
-    case H::RefObj: if (b > 0) ((RefCount*)a)->AddRef(); else ((RefCount*)a)->Release(); return 0;
     // MSMessageBox::Msg's statements (shell_msgbox.rs ee_won_msgbox_run)
     case H::MsgBoxNew: return (intptr_t)WONShellNew(EeWonShellKind::MsMessageBox, a);
     case H::MsgWinNew: return (intptr_t)CreateNativeWindow();

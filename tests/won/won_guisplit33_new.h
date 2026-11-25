@@ -83,14 +83,7 @@ static intptr_t Wm(void* inWm, Op op, intptr_t a, intptr_t b, intptr_t c, intptr
     case Op::WmHostFontClear: sHostFont = SmartPtr<Font>(); return 0;
     case Op::WmScreenResGet: t->GetScreenResolutionHook(*(int*)a, *(int*)b); return 0;
     case Op::WmScreenResSet: return t->SetScreenResolutionHook((int)a, (int)b) ? 1 : 0;
-    case Op::WmSizeEvX: return static_cast<SizeEvent*>((WindowEventBase*)a)->mx;
-    case Op::WmSizeEvY: return static_cast<SizeEvent*>((WindowEventBase*)a)->my;
-    case Op::WmSizeEvW: return static_cast<SizeEvent*>((WindowEventBase*)a)->mWidth;
-    case Op::WmSizeEvH: return static_cast<SizeEvent*>((WindowEventBase*)a)->mHeight;
-    case Op::WmSizeEvSetX: static_cast<SizeEvent*>((WindowEventBase*)a)->mx = (int)b; return 0;
-    case Op::WmSizeEvSetY: static_cast<SizeEvent*>((WindowEventBase*)a)->my = (int)b; return 0;
-    case Op::WmSizeEvSetW: static_cast<SizeEvent*>((WindowEventBase*)a)->mWidth = (int)b; return 0;
-    case Op::WmSizeEvSetH: static_cast<SizeEvent*>((WindowEventBase*)a)->mHeight = (int)b; return 0;
+    case Op::WmInputRec: return (intptr_t)&static_cast<SizeEvent*>((WindowEventBase*)a)->mEv;
     default: Unexpected(op); return 0;
     }
 }
