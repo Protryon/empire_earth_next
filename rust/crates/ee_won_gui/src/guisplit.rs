@@ -66,6 +66,18 @@ unsafe fn game(which: EeWonGuiSplitHost, comp: *mut c_void, op: Op, a: isize, b:
                 return r;
             }
         }
+        // (the component services guisplit's own statements ask for: Component's and the children's, as every
+        // Rust object's own calls; the manager is no component)
+        if which != EeWonGuiSplitHost::Wm {
+            if let Some(r) = crate::gamewin::common_op(comp as isize, op, a, b, c) {
+                return r;
+            }
+        }
+        if matches!(which, EeWonGuiSplitHost::List | EeWonGuiSplitHost::Text) {
+            if let Some(r) = crate::gamewin::list_host_op(comp as isize, op, a, b) {
+                return r;
+            }
+        }
         // SAFETY: as above
         unsafe { host(comp, op, a, b, c, d) }
     };

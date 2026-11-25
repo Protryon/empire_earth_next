@@ -95,9 +95,7 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
 {
     TextArea* t = (TextArea*)inComp;
     switch (op) {
-    case Op::Get: return (Fd)a == Fd::Width || (Fd)a == Fd::Height ? ComponentOp(t, op, a, b) : t->GetField((Fd)a);
-    case Op::Set: t->SetField((Fd)a, (int)b); return 0;
-    case Op::ScrollTranslate: t->ScrollTranslate(*(int*)a, *(int*)b); return 0;
+    // (the fields, ScrollTranslate and the segments' references are gamewin.rs list_host_op's in the game)
     case Op::SelColor: *(EeWonSelColor*)a = WONDrawSelOf(t->mSelColor); return 0;
     // LinkActivated is guisplit.rs's over these two (R6 WON round 33)
     case Op::TextSetLinkParam: t->mLinkParam = Seg(a)->GetLinkParam(); return 0;
@@ -105,8 +103,6 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::SelTextAppend: t->mSelText.append(Seg(a)->mText, (unsigned short)b, (unsigned short)c); return 0;
     case Op::SelTextBreak: t->mSelText.append("\r\n"); return 0;
     case Op::SelTextCopy: Clipboard::Set(t->mSelText); t->mSelText.erase(); return 0;
-    case Op::SegHold: Seg(a)->AddRef(); return 0;
-    case Op::SegRelease: Seg(a)->Release(); return 0;
     case Op::SegLineBreak: return Seg(a)->mLineBreak ? 1 : 0;
     case Op::SegLength: return Seg(a)->mText.length();
     case Op::SegFontStringWidth: return Seg(a)->mFont->GetStringWidth(Seg(a)->mText);
@@ -276,8 +272,7 @@ static Button* Btn(intptr_t a) { return (Button*)a; }
 static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c)
 {
     switch (op) {
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    // (the children's references, size and parent are gamewin.rs common_op's in the game: R6 WON GUI round 38)
     case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
     case Op::AddChild: t->AddChild(Comp(a)); return 0;
     case Op::EventType: return ((ComponentEvent*)a)->mType;
@@ -285,8 +280,6 @@ static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_
     case Op::NewComponent: return (intptr_t)new Component;
     case Op::ChildLayoutDrag: ((Container*)Comp(a))->Fn2F6140(Comp(b), 3, (Container*)Comp(a), 0, 0, 0, 0, 0); return 0;
     case Op::ChildAddEx: ((Container*)Comp(a))->AddChildEx(Comp(b), 0); return 0;
-    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
-    case Op::ParentOf: return (intptr_t)Comp(a)->mParent;
     case Op::AsHeader: return (intptr_t)dynamic_cast<MultiListHeader*>((Container*)a);
     case Op::HeaderDrawsArrow: return ((MultiListHeader*)a)->DrawSortArrow() ? 1 : 0;
     case Op::HeaderSortTypeOf: return ((MultiListHeader*)a)->GetSortType(((MultiListHeader*)a)->GetColumnIndex(Comp(b)));
@@ -421,32 +414,24 @@ namespace WONAPI {
 intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     switch (op) {
-    case Op::Get: return (Fd)a == Fd::Width || (Fd)a == Fd::Height ? ComponentOp(t, op, a, b) : t->GetField((Fd)a);
-    case Op::Set: t->SetField((Fd)a, (int)b); return 0;
-    case Op::ScrollTranslate: t->ScrollTranslate(*(int*)a, *(int*)b); return 0;
+    // (the fields, the scroll pane's and Component's methods, the references and the items' members are gamewin.rs's
+    // in the game: list_host_op, common_op; R6 WON GUI round 38)
     case Op::VirtAdjustPosition: t->AdjustPosition(a != 0); return 0;
     case Op::VirtSort: return t->Sort() ? 1 : 0;
     case Op::VirtNotifyMouseItemGone: t->NotifyMouseItemGone(); return 0;
     case Op::VirtListSelChangedHook: t->ListSelChangedHook(); return 0;
-    case Op::SetVertOffset: t->SetVertOffset((int)a); return 0;
-    case Op::OnBottom: return t->OnBottom() ? 1 : 0;
     case Op::FocusChildLost: t->DropFocusChild(); return 0;
     case Op::RootKeyMod: return t->GetRoot()->GetKeyMod();
     case Op::SetCursorDefault: t->SetCursor(t->GetDefaultCursor()); return 0;
     case Op::GetViewport: return (intptr_t)t->GetViewport();
     // PointerOutside, TipShow, TipHide, QueueSubMenu and QueueMouseUp are guisplit.rs's over these (R6 WON round 33)
-    case Op::ListRoot: return (intptr_t)t->GetRoot();
     case Op::WinMouseX: return ((Window*)a)->GetMouseX();
     case Op::WinMouseY: return ((Window*)a)->GetMouseY();
-    case Op::ListParent: return (intptr_t)(Component*)t->mParent;
-    case Op::ParentRootToChild: static_cast<Container*>((Component*)a)->RootToChild(((int*)b)[0], ((int*)b)[1]); return 0;
-    case Op::ListContains: return t->Contains((int)a, (int)b) ? 1 : 0;
     case Op::TipNew: t->mItemToolTip = new ListAreaToolTip(t); return 0;
     case Op::TipDo: t->mItemToolTip->DoTip(Item(a)); return 0;
     case Op::ParamsMake: sHostParams = PopupParams((PopupMenu*)a, (int)b, t, (int)c, (int)d); return 0;
     case Op::ParamsAvoid: sHostParams.mAvoidRect = WONRectangle(((const EeWonRect4*)a)->x, ((const EeWonRect4*)a)->y, ((const EeWonRect4*)a)->w, ((const EeWonRect4*)a)->h); return 0;
     case Op::QueueDoPopup: t->GetRoot()->QueueEvent(new DoPopupEvent(sHostParams)); return 0;
-    case Op::ListLocalToRoot: t->LocalToRoot(((int*)a)[0], ((int*)a)[1]); return 0;
     case Op::WinQueueMouseUp: ((Window*)a)->QueueEvent(new MouseEvent(InputEvent_MouseUp, (int)b, (int)c, ((Window*)a)->GetKeyMod(), (int)d)); return 0;
     case Op::DeliverItemClicked: {
         const EeWonItemClick* k = (const EeWonItemClick*)b;
@@ -459,14 +444,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::SortItems: std::sort((ListItem**)a, (ListItem**)a + b, ListArea::LineSortPred(t, t->GetSortFunc(), (int)c)); return 0;
     case Op::LowerBound: return std::lower_bound((ListItem**)a, (ListItem**)a + b, Item(c), ListArea::LineSortPred(t, t->GetSortFunc(), (int)d)) - (ListItem**)a;
     case Op::Less: return ListArea::LineSortPred(t, t->GetSortFunc(), (int)c)(Item(a), Item(b)) ? 1 : 0;
-    case Op::ItemTop: return Item(a)->mTop;
-    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
-    case Op::ItemHeight: return Item(a)->mHeight;
-    case Op::ItemSetHeight: Item(a)->mHeight = (int)b; return 0;
-    case Op::ItemWidth: return Item(a)->mWidth;
-    case Op::ItemSelected: return Item(a)->mSelected ? 1 : 0;
-    case Op::ItemSetSelected: Item(a)->mSelected = b != 0; return 0;
-    case Op::ItemSelectable: return Item(a)->mSelectable ? 1 : 0;
     case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
     case Op::ItemContains: return Item(a)->Contains((int)b, (int)c) ? 1 : 0;
     case Op::ItemCanSelect: return Item(a)->CanSelect(t, (int)b, (int)c) ? 1 : 0;
@@ -479,17 +456,13 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::ItemMouseDrag: Item(a)->MouseDrag(t, (int)b, (int)c); return 0;
     case Op::ItemMouseDown: Item(a)->MouseDown(t, (int)b, (int)c, (int)d); return 0;
     case Op::ItemMouseUp: Item(a)->MouseUp(t, (int)b, (int)c, (int)d); return 0;
-    case Op::ItemHold: Item(a)->AddRef(); return 0;
-    case Op::ItemRelease: Item(a)->Release(); return 0;
     // the multi-column list and its rows (multiobj.rs)
     case Op::ItemCompare: return Item(a)->Compare(Item(b), t);
     case Op::CallSortFunc: return ((ListArea::SortFunc)a)(t, Item(b), Item(c));
-    case Op::ItemSetWidth: Item(a)->mWidth = (int)b; return 0;
     case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
     case Op::SelBackground: return (intptr_t)t->GetSelColor().GetBackgroundColor(*(Graphics*)a);
     case Op::NewViewport: return (intptr_t)new ScrollAreaViewport(t);
     case Op::ViewportAddChild: t->GetViewport()->AddChild((ScrollAreaViewport*)a); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
     case Op::HeaderNotify: ((MultiListHeader*)a)->NotifyColumnChange(); return 0;
     case Op::HeaderSetSortColumn: ((MultiListHeader*)a)->SetSortColumn((int)b, (ListSortType)c); return 0;
     case Op::RowCell: return (intptr_t)((MultiListItem*)a)->GetItem((int)b);
@@ -497,7 +470,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     // the tree list and its rows (treeobj.rs)
     case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
     case Op::NewTreeItemRaw: return (intptr_t)new TreeItem;
-    case Op::ItemSetSelectable: Item(a)->mSelectable = b != 0; return 0;
     case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
     case Op::EventType: return ((ComponentEvent*)a)->mType;
     case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
@@ -505,7 +477,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::CheckDoubleClick: return t->CheckDoubleClick((int)a) ? 1 : 0;
     case Op::DeliverTreeOpened: t->DeliverEvent(new TreeItemOpenedEvent(t, (TreeItem*)a), false); return 0;
     // the popup menu (menuobj.rs)
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
     case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
     case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
     case Op::MenuSelItem: return (intptr_t)((PopupMenu*)a)->GetSelItem();
@@ -513,8 +484,6 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::MenuItemOf: return (intptr_t)dynamic_cast<MenuItem*>(Item(a));
     case Op::MenuItemSub: return (intptr_t)((MenuItem*)a)->mSubMenu.get();
     case Op::MenuItemDisabled: return ((MenuItem*)a)->mDisabled ? 1 : 0;
-    case Op::ScrollUntranslate: t->ScrollUntranslate(*(int*)a, *(int*)b); return 0;
-    case Op::LocalToRoot: t->LocalToRoot(*(int*)a, *(int*)b); return 0;
     case Op::MenuReset: ((PopupMenu*)a)->Reset(); return 0;
     case Op::MenuTryKeyDown: return ((PopupMenu*)a)->TryKeyDown((int)b) ? 1 : 0;
     // the constructors' statements (guictor.rs: the list area's, the multi-column list's, the menu's)
@@ -580,10 +549,7 @@ void PopupMenu::AddSeperator()
 extern "C" intptr_t ee_won_guicpp_mrow_call(void* /*inComp*/, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t /*c*/, intptr_t /*d*/)
 {
     switch (op) {
-    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
     case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
-    case Op::ItemHold: Item(a)->AddRef(); return 0;
-    case Op::ItemRelease: Item(a)->Release(); return 0;
     default: return 0;
     }
 }
@@ -659,12 +625,8 @@ extern "C" intptr_t ee_won_guicpp_tnode_call(void* /*inComp*/, EeWonGuiOp op, in
 {
     switch (op) {
     case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
-    case Op::ItemTop: return Item(a)->mTop;
-    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
     case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
     case Op::ItemContains: return Item(a)->Contains((int)b, (int)c) ? 1 : 0;
-    case Op::ItemHold: Item(a)->AddRef(); return 0;
-    case Op::ItemRelease: Item(a)->Release(); return 0;
     default: return 0;
     }
 }

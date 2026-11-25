@@ -94,6 +94,7 @@ struct Graphics {
         if (i != NULL) mDraw(i, mDisplayContext, x + mTransX, y + mTransY);
     }
 };
+// (the members as the game's, where imgobj.rs reads them: EE_WON_CONTEXT_AT; PImg's r at EE_WON_IMAGE_RUST_AT)
 struct DisplayContext : RefCount {
     DisplayContext(EeWonSurface* s = NULL) : mSurface(s), mGraphics(NULL), mPixelScale(1.0f) {}
     EeWonSurface* mSurface; // the game's: the Rust surface (R6 WON GUI round 36)
@@ -173,6 +174,11 @@ struct PImg : RefCount {
     int W() const { return (int)Get(EeWonImageField::Width); }
     int H() const { return (int)Get(EeWonImageField::Height); }
 };
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(PImg, r) == EE_WON_IMAGE_RUST_AT && offsetof(DisplayContext, mSurface) == EE_WON_CONTEXT_AT &&
+              offsetof(DisplayContext, mPixelScale) == EE_WON_CONTEXT_AT + 2 * sizeof(void*), "imgobj.rs's layout");
+#pragma clang diagnostic pop
 static SmartPtr<PImg> Adopt(intptr_t p) { SmartPtr<PImg> s; s.mPtr = (PImg*)p; return s; }
 static void PortDraw(void* i, DisplayContext* c, int x, int y) { PImg* p = (PImg*)i; ee_won_image_draw(p->r, (intptr_t)c, x, y, 0, 0, p->W(), p->H()); }
 static void PortSize(void* i, int w, int h) { ((PImg*)i)->Call(EeWonImageCall::SetSize, w, h); }
@@ -198,10 +204,6 @@ static intptr_t Host(EeWonImageHost op, intptr_t a, intptr_t b, intptr_t c, intp
         case H::Ref: ((RefCount*)a)->AddRef(); return 0;
         case H::Unref: ((RefCount*)a)->Release(); return 0;
         case H::Wrap: return (intptr_t)new PImg((EeWonImage*)a);
-        case H::RustOf: return (intptr_t)((PImg*)a)->r;
-        case H::CtxGraphics: return ctx != NULL ? (intptr_t)ctx->mGraphics : 0;
-        case H::CtxSurface: return ctx != NULL ? (intptr_t)ctx->mSurface : 0;
-        case H::CtxScale: *(float*)b = ctx->mPixelScale; return 0;
         case H::GfxTrans: ((int*)b)[0] = g->mTransX; ((int*)b)[1] = g->mTransY; return 0;
         case H::GfxContext: return (intptr_t)g->mDisplayContext;
         case H::GfxRun: RunOps(*g, (const EeWonDrawOp*)b, (size_t)c, (void* const*)d, PortSize); return 0;

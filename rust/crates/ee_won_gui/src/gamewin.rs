@@ -433,6 +433,8 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
         }
         Op::ChildHold | Op::CtCursorHold | Op::RootImageHold => return rf(a, true),
         Op::ChildRelease | Op::CtCursorRelease | Op::RootImageRelease => return rf(a, false),
+        Op::ItemHold | Op::LayHold => return rf(a, true),
+        Op::ItemRelease | Op::LayRelease => return rf(a, false),
         _ => {}
     }
     if !matches!(
@@ -460,6 +462,26 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             | Op::ChildInvalidate
             | Op::CtChild
             | Op::CtBase
+            | Op::BtnOf
+            | Op::SkinBtn
+            | Op::ItemTop
+            | Op::ItemSetTop
+            | Op::ItemHeight
+            | Op::ItemSetHeight
+            | Op::ItemWidth
+            | Op::ItemSetWidth
+            | Op::ItemSelected
+            | Op::ItemSetSelected
+            | Op::ItemSelectable
+            | Op::ItemSetSelectable
+            | Op::ChildRight
+            | Op::ChildSetPos
+            | Op::ChildSetSize
+            | Op::ChildSetPosSize
+            | Op::ChildSetVisible
+            | Op::ChildSetControlId
+            | Op::ParentOf
+            | Op::LaySetSizeAtLeast
     ) || !crate::compobj::is_game()
     {
         return None;
@@ -468,6 +490,12 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
     let kc = |x: isize, k: K, p: isize, q: isize| unsafe {
         crate::compobj::ee_won_comp_call(x as *mut c_void, crate::compobj::host(), k, p, q, 0)
     };
+    if let Some(r) = item_op(op, a, b) {
+        return Some(r);
+    }
+    if let Some(r) = child_op(op, a, b, c) {
+        return Some(r);
+    }
     Some(match op {
         Op::Get if a == Fd::Width as isize => crate::compmem::get(comp).bounds.width as isize,
         Op::Get if a == Fd::Height as isize => crate::compmem::get(comp).bounds.height as isize,
@@ -507,6 +535,9 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
                 crate::compmem::get(a).ct
             }
         }
+        // `dynamic_cast<Button*>(a)`'s Rust button: every game button registers its own (btnobj.rs)
+        Op::BtnOf => crate::registry::find(a, crate::registry::EeWonGuiKind::Button) as isize,
+        Op::SkinBtn => skin_btn(comp, a, b, c, &kc),
         _ => {
             // CtAddBG: the background queued on the root container (none for a container not yet under a root)
             let r = kc(comp, K::RootContainer, 0, 0);
@@ -518,6 +549,201 @@ pub(crate) fn common_op(comp: isize, op: Op, a: isize, b: isize, c: isize) -> Op
             0
         }
     })
+}
+
+/// The list area's and text area's hosts' statements that are ScrollArea's and Component's non-virtual methods
+/// (guisplit.rs's game hosts for the lists, menus, multi-column lists, trees and text areas; R6 WON GUI round 38):
+/// the scroll area's Rust pane and Component's calls, directly, and the references. None for the others.
+pub(crate) fn list_host_op(list: isize, op: Op, a: isize, b: isize) -> Option<isize> {
+    if !crate::compobj::is_game() {
+        return None;
+    }
+    use crate::compobj::EeWonCompCall as K;
+    use crate::guihost::EeWonGuiField as Fd;
+    use crate::paneobj::{EeWonPaneCall as P, EeWonScrollPane};
+    // SAFETY: the game's live components (the ops' contracts); each call re-enters through Component's entry
+    let kc = |x: isize, k: K, p: isize, q: isize| unsafe {
+        crate::compobj::ee_won_comp_call(x as *mut c_void, crate::compobj::host(), k, p, q, 0)
+    };
+    let pane = |call: P, x: isize, y: isize| {
+        // SAFETY: the list's Rust pane lives as long as the list
+        let p = unsafe { crate::registry::get::<EeWonScrollPane>(list, crate::registry::EeWonGuiKind::Pane) }?;
+        Some(p.call(call, x, y, 0))
+    };
+    let at = |p: isize| p.wrapping_add(4);
+    match op {
+        // (list_op's own calls out: a new column viewport's and tree row's references; the text area's segments')
+        Op::ChildHold | Op::ItemHold | Op::SegHold => rf(a, true),
+        Op::ChildRelease | Op::ItemRelease | Op::SegRelease => rf(a, false),
+        Op::Get if a != Fd::Width as isize && a != Fd::Height as isize => {
+            pane(P::GetField, a, 0).map(|r| r as i32 as isize)
+        }
+        Op::Set => pane(P::SetField, a, b as i32 as isize).map(z),
+        Op::ScrollTranslate => pane(P::ScrollTranslate, a, b).map(z),
+        Op::ScrollUntranslate => pane(P::ScrollUntranslate, a, b).map(z),
+        Op::SetVertOffset => pane(P::SetVertOffset, a as i32 as isize, 0).map(z),
+        Op::OnBottom => pane(P::OnBottom, 0, 0).map(on),
+        Op::ListRoot => Some(kc(list, K::Root, 0, 0)),
+        Op::ListParent => Some(crate::compmem::parent(list)),
+        Op::ParentRootToChild => Some(z(kc(a, K::RootToChild, b, at(b)))),
+        Op::ListContains => Some(on(kc(list, K::Contains, a, b))),
+        Op::ListLocalToRoot => Some(z(kc(list, K::LocalToRoot, a, at(a)))),
+        Op::LocalToRoot => Some(z(kc(list, K::LocalToRoot, a, b))),
+        _ => None,
+    }
+}
+
+/// A WONButton's references and images' reads (`WbText`, `WbImage`, `WbFont`; wonbtnobj.rs) in the game (R6 WON GUI
+/// round 38): the game's reference function, the image handles' Rust images, the manager's default font. None in a
+/// driver's world and for the others.
+pub(crate) fn wonbtn_op(op: Op, a: isize, b: isize) -> Option<isize> {
+    use crate::guihost::{EeWonWbFont as Wf, EeWonWbImage as Wi, EeWonWbText as Wt};
+    if !crate::compobj::is_game() {
+        return None;
+    }
+    match op {
+        Op::WbText if a == Wt::Hold as isize => rf(b, true),
+        Op::WbText if a == Wt::Release as isize => rf(b, false),
+        Op::WbFont if a == Wf::Hold as isize => rf(b, true),
+        Op::WbFont if a == Wf::Release as isize => rf(b, false),
+        Op::WbFont if a == Wf::Default as isize => wm(EeWonWmCall::GetDefaultFont, 0, 0),
+        Op::WbImage if a == Wi::Hold as isize => rf(b, true),
+        Op::WbImage if a == Wi::Release as isize => rf(b, false),
+        Op::WbImage => {
+            // SAFETY: the button's live image handle (the op's contract)
+            let i = unsafe { crate::imgobj::image_of(b) }?;
+            match a {
+                x if x == Wi::Width as isize => Some(i.width() as u16 as isize),
+                x if x == Wi::Height as isize => Some(i.height() as u16 as isize),
+                // a duplicate's handle with its one reference (the C++ case's SmartPtr kept one for the Rust)
+                // SAFETY: a live image
+                x if x == Wi::Duplicate as isize => Some(unsafe {
+                    crate::imgobj::ee_won_image_call(i, crate::imgobj::EeWonImageCall::Duplicate, 0, 0, 0, 0)
+                }),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// A container's or layout's statements on a child component `a` (R6 WON GUI round 38): its members in place and
+/// Component's non-virtual calls (no class overrides SetVisible).
+fn child_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
+    use crate::compobj::EeWonCompCall as K;
+    // SAFETY: the game's live child (the ops' contracts); the call re-enters through Component's entry
+    let kc = |k: K, p: isize, q: isize, r: isize| unsafe {
+        crate::compobj::ee_won_comp_call(a as *mut c_void, crate::compobj::host(), k, p, q, r)
+    };
+    Some(match op {
+        Op::ChildRight => {
+            let r = crate::compmem::bounds(a);
+            r.x.wrapping_add(r.width) as isize
+        }
+        Op::ChildSetPos => z(kc(K::SetPos, b as i32 as isize, c as i32 as isize, 0)),
+        Op::ChildSetSize => z(kc(K::SetSize, b as i32 as isize, c as i32 as isize, 0)),
+        Op::ChildSetPosSize => {
+            // SAFETY: `b` is the EeWonRect4 (the op's contract)
+            let r = unsafe { *(b as *const crate::guictl::EeWonRect4) };
+            let wh = [r.w, r.h];
+            z(kc(K::SetPosSize, r.x as isize, r.y as isize, wh.as_ptr() as isize))
+        }
+        Op::ChildSetVisible => z(kc(K::SetVisible, on(b), 0, 0)),
+        Op::ChildSetControlId => {
+            crate::compmem::edit(a, |m| m.control_id = b as i32);
+            0
+        }
+        Op::ParentOf => crate::compmem::parent(a),
+        Op::LaySetSizeAtLeast => z(kc(K::SetSizeAtLeast, b as i32 as isize, c as i32 as isize, 0)),
+        _ => return None,
+    })
+}
+
+/// A list item's members (`a` a `ListItem*`) read and set in place (leafpaint.rs's record; R6 WON GUI round 38).
+fn item_op(op: Op, a: isize, b: isize) -> Option<isize> {
+    let i = crate::leafpaint::item_rec(a);
+    // SAFETY: the game's live list item (the ops' contract); no reference outlives the statement
+    unsafe {
+        Some(match op {
+            Op::ItemTop => (*i).top as isize,
+            Op::ItemSetTop => {
+                (*i).top = b as i32;
+                0
+            }
+            Op::ItemHeight => (*i).height as isize,
+            Op::ItemSetHeight => {
+                (*i).height = b as i32;
+                0
+            }
+            Op::ItemWidth => (*i).width as isize,
+            Op::ItemSetWidth => {
+                (*i).width = b as i32;
+                0
+            }
+            Op::ItemSelected => isize::from((*i).selected != 0),
+            Op::ItemSetSelected => {
+                (*i).selected = u8::from(b != 0);
+                0
+            }
+            Op::ItemSelectable => isize::from((*i).selectable != 0),
+            Op::ItemSetSelectable => {
+                (*i).selectable = u8::from(b != 0);
+                0
+            }
+            _ => return None,
+        })
+    }
+}
+
+/// A skinned button's own state and its component's (`EeWonSkinBtn`, msbtnobj.rs's and wonbtnobj.rs's `SkinBtn`;
+/// R6 WON GUI round 38): Component's members in place, the button's Rust object, Component's calls.
+fn skin_btn(
+    comp: isize,
+    which: isize,
+    b: isize,
+    c: isize,
+    kc: &dyn Fn(isize, crate::compobj::EeWonCompCall, isize, isize) -> isize,
+) -> isize {
+    use crate::btnobj::{EeWonBtnCall as B, EeWonBtnField};
+    use crate::compobj::{EeWonCompCall as K, EE_WON_COMP_FLAG_GRAB_BG, EE_WON_COMP_FLAG_WANT_FOCUS};
+    use crate::guihost::EeWonSkinBtn as Sb;
+    let bits = |x: isize| crate::compmem::get(x).bits;
+    // SAFETY: a game button's Rust object lives as long as its C++ object, the asking one
+    let btn = |call: B, x: isize, y: isize| match unsafe {
+        crate::registry::get::<crate::btnobj::EeWonButton>(comp, crate::registry::EeWonGuiKind::Button)
+    } {
+        Some(o) => o.call(call, x, y, 0),
+        None => 0,
+    };
+    let flags = || btn(B::GetField, EeWonBtnField::Flags as isize, 0) as u32;
+    match which {
+        x if x == Sb::IsDisabled as isize => on((bits(comp) & crate::compobj::EE_WON_COMP_FLAG_DISABLED) as isize),
+        x if x == Sb::HasFocus as isize => on((bits(comp) & crate::compobj::EE_WON_COMP_FLAG_HAS_FOCUS) as isize),
+        x if x == Sb::Parent as isize => crate::compmem::parent(comp),
+        x if x == Sb::UsedDialogKeys as isize => {
+            let ct = crate::compmem::get(b).ct as *const crate::ctobj::EeWonContainer;
+            // SAFETY: the container's live Rust container (`b` a game container)
+            on(unsafe {
+                crate::ctobj::ee_won_ct_call(
+                    ct,
+                    crate::ctobj::EeWonCtCall::GetField,
+                    crate::ctobj::EeWonCtField::HasUsedDialogKeys as isize,
+                    0,
+                    0,
+                )
+            })
+        }
+        x if x == Sb::IsPressed as isize => on((flags() & 0x20) as isize),
+        x if x == Sb::IsChecked as isize => on((flags() & 0x04) as isize),
+        x if x == Sb::ButtonFlags as isize => flags() as isize,
+        x if x == Sb::IsDefaultButton as isize => on(btn(B::IsDefaultButton, 0, 0)),
+        x if x == Sb::FlagSet as isize => on((bits(b) & c as i32) as isize),
+        x if x == Sb::SetFlag as isize => z(kc(comp, K::SetFlags, b, 1)),
+        x if x == Sb::SetGrabBG as isize => z(kc(comp, K::SetFlags, EE_WON_COMP_FLAG_GRAB_BG as isize, 1)),
+        x if x == Sb::SetWantFocus as isize => z(kc(comp, K::SetFlags, EE_WON_COMP_FLAG_WANT_FOCUS as isize, on(b))),
+        x if x == Sb::SetButtonFlags as isize => z(btn(B::SetButtonFlags, b, on(c))),
+        _ => 0,
+    }
 }
 
 /// The parts of the game window whose root container is `root`.
@@ -640,3 +866,7 @@ pub(crate) fn msgbox_op(op: crate::shell::EeWonShellHostOp, window: isize, b: is
 fn win_call(p: &Parts, c: C, a: isize) -> isize {
     win(p, c, a, 0)
 }
+
+#[cfg(test)]
+#[path = "gamewin_tests.rs"]
+mod tests;
