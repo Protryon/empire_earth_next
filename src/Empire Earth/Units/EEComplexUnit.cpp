@@ -66,6 +66,9 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERules.h"
 #include "ee/EEWheel.h"
+#include "rust/sim/netmsg.h"   // ee_netmsg_trade_price (EEGetTradePrice)
+#include "ee/EEGlobalConstants.h"
+#include "ee/EEAIKindIDs.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPathManager.h"
@@ -83,7 +86,8 @@
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
 
-// Existing cdecl helper defined in EEWheel.cpp; original 0x23cd32 fills a real GE2DPoint.
+
+// EEWheel.cpp's cdecl helper (below); original 0x23cd32 fills a real GE2DPoint.
 bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint);
 
 // The genuine existing free predicate at 0x2414d2 (defined in EEFOFindNewTargetNearOldTarget.cpp).
@@ -118,10 +122,7 @@ EEComplexUnit::~EEComplexUnit()
 UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 
 // Makes the unit hold another unit, keeping the held units sorted by growth
-// the mHeldUnits order (std::sort 0x200df9: its heap code compares the units' mGrowth) (provisional name)
-struct EEComplexUnitGrowthLess {
-    bool operator()(EEComplexUnit* inA, EEComplexUnit* inB) const { return inA->GetGrowth() < inB->GetGrowth(); }
-};
+// (the mHeldUnits order, std::sort 0x200df9 by the units' mGrowth: EE_UNITS_CU_S_HELD_SORT's lambda)
 
 #include "ee/EEStringIDs.h"
 #include "ee/EEEffectManager.h"
@@ -229,9 +230,7 @@ bool EEComplexUnit::HasEffect(long inKind)
 // Returns the unit's model, or the player's foundation graphic for a foundation
 EEModel* EEComplexUnit::GetModel()
 {
-    if (!this->mIsFoundation)
-        return this->GetStats()->mModel;
-    return EEGetPlayerClassGraphic(this->GetPlayer(), this->GetUnitClass());
+    return !this->mIsFoundation ? this->GetStats()->mModel : EEGetPlayerClassGraphic(this->GetPlayer(), this->GetUnitClass());
 }
 
 
@@ -241,9 +240,8 @@ EEModel* EEComplexUnit::GetModel()
 // morale: 80% and 60% in the original)
 void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
 {
-    EeCombatMoraleIn theIn = {(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
-                              EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale};
-    outValue = EECombatMorale(theIn);
+    outValue = EECombatMorale(EeCombatMoraleIn{(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
+                                               EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale});
 }
 
 // SightOn's and SightOff's host (ee_units sight.rs, sight_host.rs; EE_UNITS_SIGHT_*): the unit's and players' reads and
@@ -374,16 +372,13 @@ static std::vector<EEComplexUnit*> sCuLeaked;
 // a build queue entry of cu_cargo.rs's (technology, flag)
 static EEProductionEntry EECuEntry(int64_t inTechnology, int64_t inFlag)
 {
-    EEProductionEntry theEntry;
-    theEntry.mTechnology = (long)inTechnology;
-    theEntry.mFlag = inFlag != 0;
-    return theEntry;
+    return EEProductionEntry{(long)inTechnology, inFlag != 0};
 }
 
-// the index of a unit in a deque (std::find; -1: not there)
-static int64_t EECuFind(const std::deque<EEUnit*>& inUnits, EEUnit* inUnit)
+// the index of a unit in a deque or vector (std::find; -1: not there)
+template <class C, class T> static int64_t EECuFind(const C& inUnits, T* inUnit)
 {
-    std::deque<EEUnit*>::const_iterator theIterator = std::find(inUnits.begin(), inUnits.end(), inUnit);
+    typename C::const_iterator theIterator = std::find(inUnits.begin(), inUnits.end(), inUnit);
     return theIterator == inUnits.end() ? -1 : (int64_t)(theIterator - inUnits.begin());
 }
 
@@ -413,12 +408,6 @@ static EEUnit* sCuBlocker;
 static long sCuBlockX;
 static long sCuBlockY;
 
-// the index of a unit in the held units (std::find; -1: not there)
-static int64_t EECuFindHeld(const std::vector<EEComplexUnit*>& inUnits, EEComplexUnit* inUnit)
-{
-    std::vector<EEComplexUnit*>::const_iterator theIterator = std::find(inUnits.begin(), inUnits.end(), inUnit);
-    return theIterator == inUnits.end() ? -1 : (int64_t)(theIterator - inUnits.begin());
-}
 
 // cu_life.rs's scratch values: SwapGraphic's new angles, orbitals and wheels, StepAside's tiles, IsNextToTile's
 // points, Init's copy of the placement (the originals' locals)
@@ -512,7 +501,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_S_REFERENCE_OTHER: theOther->Reference(); return 0;
     case EE_UNITS_CU_S_SET_HOLDER_OF: theOther->SetHolder(theUnit); return 0;
     case EE_UNITS_CU_S_HELD_PUSH: theUnit->mHeldUnits.push_back(theOther); return 0;
-    case EE_UNITS_CU_S_HELD_SORT: std::sort(theUnit->mHeldUnits.begin(), theUnit->mHeldUnits.end(), EEComplexUnitGrowthLess()); return 0;
+    case EE_UNITS_CU_S_HELD_SORT: std::sort(theUnit->mHeldUnits.begin(), theUnit->mHeldUnits.end(), [](EEComplexUnit* inA, EEComplexUnit* inB) { return inA->GetGrowth() < inB->GetGrowth(); }); return 0;
     case EE_UNITS_CU_S_NUM_GOAL_QUEUES: return (int64_t)theUnit->GetNumGoalQueues();
     case EE_UNITS_CU_S_CLEAR_GOAL_QUEUE: theUnit->ClearGoalQueue((unsigned long)inB); return 0;
     case EE_UNITS_CU_S_SIGHT_ON_HERE: theUnit->SightOn(theUnit->GetTileX(), theUnit->GetTileY()); return 0;
@@ -1137,7 +1126,7 @@ extern "C" int64_t ee_units_cu_host(int32_t inOp, void* inUnit, uint64_t inA, in
     case EE_UNITS_CU_CITIZEN_TECH_HAS_TYPE:
         return theUnit->GetPlayer()->GetTechTree()->Get(kTechCitizen)->Contains(theUnit->GetUnitClass()->GetUnitType());
     case EE_UNITS_CU_NUM_CAPITOLS: return theUnit->mPlayer->mNumCapitols;
-    case EE_UNITS_CU_HELD_FIND: return EECuFindHeld(theUnit->mHeldUnits, theOther);
+    case EE_UNITS_CU_HELD_FIND: return EECuFind(theUnit->mHeldUnits, theOther);
     case EE_UNITS_CU_HELD_ERASE: theUnit->mHeldUnits.erase(theUnit->mHeldUnits.begin() + (size_t)inB); return 0;
     case EE_UNITS_CU_HELD_COUNT: return (int64_t)theUnit->mHeldUnits.size();
     case EE_UNITS_CU_HELD_HOLDER_IS_THIS: return theUnit->mHeldUnits[(size_t)inB]->mHolder == theUnit;
@@ -1471,4 +1460,62 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
 EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
 {
     return this->mGoalQueues[inIndex].mGoals;
+}
+
+// ---- EEWheel.cpp's bodies (0x23c83a..0x23ceca: the wheels' update and some cdecl unit helpers; units round 11:
+// the file is gone)
+
+// (the wheel's construction, destruction and EEIsWheelModel: EEGraphicObject.cpp, which makes the wheels)
+
+// Rolls the wheel back by the unit's travel this tick (speed or turn rate, whichever is the larger share of its top)
+// over its scaled radius, in physics actions 0, 4 and 5 above a tenth of the top; wraps the angle by a full turn
+void EEWheel::Update(EEComplexUnit* inUnit)
+{
+    this->mAngle = ee_units_cu_wheel_angle(EeUnitsWheelIn{this->mAngle, inUnit->mPhysicalModel.GetScale(), this->mRadius,
+        (uint32_t)inUnit->mCurrentPhysicsAction, inUnit->mVelocity, inUnit->mAngularVelocity.mYaw, inUnit->mStats->GetInverseMaxVelocity(),
+        inUnit->mStats->GetInverseMaxAngularVelocity(), inUnit->mStats->GetMaxVelocity(), gPhysics->GetTickSeconds()});   // cu_wheel.rs
+}
+
+// Returns the unit's attack animation set: 0xb for the special attack of Roman Legionnaires and capital ships,
+// 8 when it fires high over walls, else 0
+long EEGetAttackFrameSet(EEComplexUnit* inUnit)
+{
+    return ee_units_cu_attack_frame_set(inUnit->mIsSpecialAttack, (uint32_t)inUnit->mUnitClass->mUnitType, inUnit->mStats->mCanFireOverWalls,
+                                        inUnit->mIsFiringHigh);   // cu_wheel.rs
+}
+
+// Replaces a target the unit can't reach: with its position when that is reachable, else with a reachable spot up to
+// 9 tiles away, halved toward the target to within half a tile (the unit's position when none is found; Rust)
+void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget)
+{
+    ee_units_find_landing_point((uint64_t)(uintptr_t)inUnit, (float(*)[3])&ioTarget->mX);   // ee_sim units landing.rs
+}
+
+// Returns a resource's market price (1..1000) from the world table's rate and the player's trade balance in it;
+// 1 lower when inBuy is set, else 1 higher
+long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy)
+{
+    float theRate = 1.0f;
+    long theTrade = inPlayer->mResourceTrade[inResource - 2];
+    switch (inResource) {
+    case 2: theRate = gWorldTable.GetFloatValue(kWorldTradeRateFoodWood); break;
+    case 3: theRate = gWorldTable.GetFloatValue2(kWorldTradeRateFoodWood); break;
+    case 4: theRate = gWorldTable.GetFloatValue(kWorldTradeRateStoneIron); break;
+    case 6: theRate = gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron); break;
+    }
+    return (long)ee_netmsg_trade_price(theRate, theTrade, inBuy);   // the price curve (ee_netmsg execute.rs)
+}
+
+// Picks a point 4..12 tiles from the unit along its goal-to-unit heading (+-20 degrees) on its land continent, up to
+// 13 tries; returns whether found, else writes its position ((0, 0) when it has no goal)
+// cdecl with a real GE2DPoint output: EEComplexUnit::FleeAfterCalamity and 0xbaab pass one (provisional name)
+bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint)
+{
+    return ee_units_random_point_ahead((uint64_t)(uintptr_t)inUnit, (float(*)[2])&outPoint->mX);   // ee_sim units landing.rs
+}
+
+// Returns the unit type of the player's farms: 0x33a once the robotic farm upgrade is researched, else 0x2a
+long EEGetFarmType(EEPlayer* inPlayer)
+{
+    return inPlayer->mTechnologies->Get(kTechRoboticFarmUpgrade)->mIsResearched ? 0x33a : 0x2a;
 }

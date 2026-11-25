@@ -119,8 +119,6 @@ pub enum EePreloadMediaCpp {
     /// `((TSCriticalSection*)p)->Enter()`
     LockEnter,
     LockLeave,
-    /// `PlatSleep(1)`
-    Sleep1,
     /// `gMediaTable.resize(a0, NULL)`
     MediaTableResize,
     /// `gMediaTable[a0] = a1`
@@ -682,7 +680,7 @@ extern "C" fn lock_leave(lock: *mut c_void) {
 }
 
 extern "C" fn lock_sleep() {
-    h(O::Sleep1, 0, &[]);
+    ee_base::plat_core::time::PlatSleep(1);
 }
 
 fn media_lock(op: O) -> EeDataMediaLock {

@@ -18,7 +18,6 @@ class UIForm;
 
 class EEDataPreLoading {
 public:
-    void Shutdown();                        // COMDAT 0x1444ac: mThread->Post(0x401), mThreadDone->Wait (inline: defined in Empire Earth.cpp, its only user)
     EEDataPreLoading(long inThreadPriority);
     virtual ~EEDataPreLoading();                            // +0x00 0xd4121 (??_G 0xd4105)
 

@@ -1130,7 +1130,7 @@ pub(crate) fn body_host(op: i32, player: u64, a: u64, b: i64, c: i64) -> i64 {
 }
 
 #[cfg(not(test))]
-mod game {
+pub mod game {
     use super::*;
     use crate::units::group_host::GameGroups;
     use crate::units::group_obj::GroupHost;

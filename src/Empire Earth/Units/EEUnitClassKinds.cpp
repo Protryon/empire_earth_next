@@ -25,15 +25,7 @@
 #include "ee/EEUGRust.h"
 
 // the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
-bool EEUnitClass::IsBuilding()
-{
-    return EEClassBody(this, EE_UNITS_BODY_IS_BUILDING) == 1;
-}
 
-long EEUnitClass::Virtual70()
-{
-    return EEClassBody(this, EE_UNITS_BODY_VIRTUAL70);   // 1 a building, 2 a resource
-}
 
 template <class T> static T* EEUckObject(uint64_t inHandle)
 {
@@ -160,46 +152,4 @@ extern "C" int64_t ee_units_uck_host(int32_t inOp, void* inClass, void* inUnit, 
     }
 }
 
-// TEST ONLY: the UCBD record (ee/EEUnitClassKinds.h EEUCNote; the unit utilities' UUTL record's pattern)
-EEUCNote::EEUCNote(unsigned int inKind) : mOn(ee_units_ucbd_begin() != 0)   // ucbd_note.rs (the depth, the record)
-{
-    this->I((long)inKind);
-}
-
-EEUCNote& EEUCNote::F(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return this->I((long)theBits);
-}
-
-EEUCNote& EEUCNote::U(const EEUnit* inUnit)
-{
-    return this->I(inUnit != NULL ? (long)((const RTSUnit*)inUnit)->mUnitID : -2);
-}
-
-EEUCNote& EEUCNote::C(const EEUnitClass* inClass)
-{
-    return this->I(inClass != NULL ? (long)inClass->mUnitType : -2);
-}
-
-EEUCNote& EEUCNote::S(EEComplexUnit* inUnit)
-{
-    if (!this->mOn || inUnit == NULL)
-        return this->I(-2);
-    this->I((long)inUnit->mWaypoints.size());
-    for (size_t i = 0; i < inUnit->mWaypoints.size(); i++)
-        this->P(inUnit->mWaypoints[i].mLocation).F(inUnit->mWaypoints[i].mDistance).F(inUnit->mWaypoints[i].mStartDistance);
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    this->F(theLocation.GetX()).F(theLocation.GetY()).F(theLocation.GetZ());
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    this->I(theGoal != NULL ? (long)theGoal->mKind : -1);
-    if (theGoal != NULL && EEGoalHasLocation(theGoal))
-        this->P(EELocationGoalPoint(theGoal));
-    return *this;
-}
-
-EEUCNote::~EEUCNote()
-{
-    ee_units_ucbd_end(this->mOn, this->mWords.empty() ? NULL : this->mWords.data(), this->mWords.size());   // ucbd_note.rs
-}
+// (TEST ONLY, the UCBD record: its notes are Rust's, ee_sim units ucn_noted.rs over ucbd_note.rs; EEUCNote is gone)

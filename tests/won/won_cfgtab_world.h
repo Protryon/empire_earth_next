@@ -196,6 +196,19 @@ struct LayoutPoint : Component { LayoutPoint() : Component(-1) {} };
 static int sNextLayout;
 struct ChildLayoutInstructionBase : Obj {
     explicit ChildLayoutInstructionBase(const std::string& d) : Obj(sNextLayout++) { tr("new layout#" + P((long long)id) + " " + d); }
+    // the game's kind constructor (R6 WON GUI round 35), traced as the class's own constructor was
+    static std::string OfKind(EeWonLayoutKind k, Component* r0, Component* r1, int i0, int i1, int i2, bool h, bool v)
+    {
+        switch (k) {
+        case EeWonLayoutKind::SameSize: return "SameSize(" + P(h) + "," + P(v) + ")";
+        case EeWonLayoutKind::SpaceEvenly: return "SpaceEvenly(" + PP(r0) + "," + P((long long)i0) + "," + P((long long)i1) + "," + P(h) + ")";
+        case EeWonLayoutKind::ClearRight: return "ClearRight(" + PP(r0) + "," + P((long long)i0) + ")";
+        case EeWonLayoutKind::SizeAtLeast: return "SizeAtLeast(" + PP(r0) + "," + P((long long)i0) + "," + P((long long)i1) + ")";
+        default: return "NoOverlap(" + PP(r1) + "," + P((long long)i0) + "," + PP(r0) + "," + P((long long)i1) + "," + P((long long)i2) + ")";
+        }
+    }
+    ChildLayoutInstructionBase(EeWonLayoutKind k, Component* r0, Component* r1 = NULL, int i0 = 0, int i1 = 0, int i2 = 0, bool h = false, bool v = false)
+        : ChildLayoutInstructionBase(OfKind(k, r0, r1, i0, i1, i2, h, v)) {}
     void AddComponent(Component* c) { tr("layout#" + P((long long)id) + ".Add(" + PP(c) + ")"); }
 };
 #define EE_CFGTAB_LAYOUT(T) T* Add(Component* c) { this->AddComponent(c); return this; }

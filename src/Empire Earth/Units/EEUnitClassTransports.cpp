@@ -100,12 +100,6 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     return 0;
 }
 
-// Returns the squared 3D distance from the unit to a point
-float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
-{
-    return ee_units_uc_rest_f(EE_UNITS_UC_DO_R_DISTANCE_3D, NULL, this, 0, inPoint.mX, inPoint.mY, inPoint.mZ);   // uc_rest.rs
-}
-
 // Finds where cargo leaves the transport: a tile around it for a unit that cannot move, else a free placement
 // near the location (water allowed for non-land units); returns whether one was found
 // Sets up a new transport as any unit, then gives it its class's resource type and amount

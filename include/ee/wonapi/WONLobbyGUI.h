@@ -81,25 +81,22 @@ class Window;
 class SurfaceBase; // WONSurface.h: the software surface a DisplayContext draws into
 class Component;
 // Cursor (RefCount, 8 bytes); the constructor 0x326540 stores only the inherited refcount and vptr
+// R6 WON GUI round 35: one class over cursorobj.rs, which is the cursor by its kind: the plain Cursor, the platform's
+// (MSCursor; the port's PlatCursor over platcursor.rs), CursorRef (holds another cursor and answers with it: what the
+// table of standard cursors holds, 0x326577) and ComponentCursor (WONLobbyWONSkinConfig.h). The table is Rust's too.
+// The host (Cursor.cpp) holds and drops the references a cursor keeps and makes the handles.
+intptr_t WONCursorHost(EeWonCursorOp op, intptr_t a, intptr_t b, intptr_t c);
 class Cursor : public RefCount {
 protected:
-    virtual ~Cursor(); // out of line
+    virtual ~Cursor() { ee_won_cursor_free(this->mRust); }
 public:
-    Cursor();
-    virtual Cursor* GetNative(); // vtable +0x04, out of line
-    virtual Component* GetComponent(int&,int&); // vtable +0x08, out of line
-    static Cursor* GetStandardCursor(StandardCursor); // 0x326550: returns a shared cursor (not owned by the caller)
-    static void SetStandardCursor(StandardCursor,Cursor*); //326560 mutable sharedreference
-};
-// Holds a cursor (0x0c bytes): SetStandardCursor (0x326577) allocates it and stores the owned cursor at +0x08
-class CursorRef : public Cursor {
-protected:
-    SmartPtr<Cursor> mCursor; //08
-public:
-    CursorRef(Cursor* cursor) : mCursor(cursor) {}
-    virtual Cursor* GetNative() { return this->mCursor->GetNative(); }
-    virtual Component* GetComponent(int& x,int& y) { return this->mCursor->GetComponent(x,y); }
-    void SetCursor(Cursor* cursor) { this->mCursor=cursor; }
+    Cursor() : mRust(ee_won_cursor_new()) {}
+    explicit Cursor(EeWonCursor* r) : mRust(r) {}
+    Cursor* GetNative() { return (Cursor*)ee_won_cursor_native(this->mRust, (intptr_t)this); } // the platform cursor, or none
+    Component* GetComponent(int& x,int& y) { return (Component*)ee_won_cursor_component(this->mRust, &x, &y); } // with its hot spot, or none
+    static Cursor* GetStandardCursor(StandardCursor t) { return (Cursor*)ee_won_cursor_standard(t); } // 0x326550: shared (not the caller's)
+    static void SetStandardCursor(StandardCursor t,Cursor* c) { ee_won_cursor_set_standard(WONCursorHost, t, (intptr_t)c); } //326560
+    EeWonCursor* mRust; // owned
 };
 
 enum { COLOR_INVALID = 0xffffffff };
@@ -116,7 +113,6 @@ class Image;
 class NativeImage;
 class NativeIcon;
 class SelectionColor;
-class RawImage32;
 class DisplayContext;
 struct FontDescriptor;
 class Button;
@@ -324,25 +320,9 @@ public:
 };
 
 // a component holding others (0x84 bytes: EELobbyGameOptionsCtrl's members start at +0x84; vtable 0x84d7cc, 51 slots)
-// ChildLayoutManager (R6 WON round 31): its instructions (held, in order) and layout points (held) are the Rust layout
-// manager (rust/crates/ee_won_gui/src/layoutobj.rs); a container owns it by pointer. The methods are forwarders
-// (ChildLayouts.cpp is the host).
-class ChildLayoutManager : public RefCount {
-public:
-    ChildLayoutManager();
-    virtual ~ChildLayoutManager(); // the layout points, then the instructions, released (the original's members)
-    void ExecuteInstructions(Component* c) { this->MCall(EeWonLayoutMgrCall::Execute,(intptr_t)c); }
-    void AddInstruction(ChildLayoutInstructionBase*);
-    void AddLayoutPoint(LayoutPoint* p) { this->MCall(EeWonLayoutMgrCall::AddLayoutPoint,(intptr_t)static_cast<Component*>(p)); }
-    void RemoveComponent(Component* c) { this->MCall(EeWonLayoutMgrCall::RemoveComponent,(intptr_t)c); }
-    void Clear() { this->MCall(EeWonLayoutMgrCall::Clear); }
-    void EnableInstructions(int g, bool e) { this->MCall(EeWonLayoutMgrCall::EnableInstructions,g,e); }
-    // Container::AddChildLayout's statements (the group, the first run, the hold)
-    void AddChildLayout(ChildLayoutInstructionBase* instr, int id, Component* container);
-    EeWonLayoutMgr* mMgr;
-private:
-    intptr_t MCall(EeWonLayoutMgrCall c,intptr_t a=0,intptr_t b=0) { return ee_won_lmgr_call(this->mMgr,c,a,b,0,0); }
-};
+// The child layout manager (R6 WON GUI round 35): a container's instructions (held, in order) and layout points
+// (held) are the Rust container's own manager (rust/crates/ee_won_gui/src/ctobj.rs `layout`, layoutobj.rs); the C++
+// ChildLayoutManager shell is gone (ChildLayouts.cpp is the layout objects' host).
 // Container (R6 WON round 26): its children (held), mouse and focus children, timer children, focus ids, current
 // cursor, flags and modal count are the Rust Container (rust/crates/ee_won_gui/src/ctobj.rs); this is the type every
 // component holds and the base of every screen, dialog, list and control group, with the child layout manager. Its
@@ -386,10 +366,10 @@ public:
     virtual Component* GetMouseChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::MouseChild); }
     // 0x2f6140 (ret 0x20): adds inChild laid out against inRef (EELobbyInterface 0x2972c6: the lobby screen, 3,
     // the root, 0, 0, 0, 0, 0; provisional name)
-    void Fn2F6140(Component* inChild, int inFlags, Component* inRef, int inA, int inB, int inC, int inD, int inE);
-    void AddChildLayout(ChildLayoutInstructionBase*,int=0); // 0x2f61d0: keeps the instruction; group id 0 runs first (the test reads the full int, the id is stored as a byte)
-    void EnableLayoutInstructions(int inId, bool inEnabled);
-    void Relayout();
+    inline void Fn2F6140(Component* inChild, int inFlags, Component* inRef, int inA, int inB, int inC, int inD, int inE);
+    inline void AddChildLayout(ChildLayoutInstructionBase*,int=0); // 0x2f61d0: keeps the instruction; group id 0 runs first (the test reads the full int, the id is stored as a byte)
+    void EnableLayoutInstructions(int inId, bool inEnabled) { ee_won_ct_layout_call(this->mCt,EeWonLayoutMgrCall::EnableInstructions,inId,inEnabled,0); }
+    void Relayout() { ee_won_ct_relayout(this->mCt); } // the size-changed layout, then Invalidate
     void EnterModal() { this->CCall(EeWonCtCall::EnterModal); } // 0x2f6210: counts the modal level and moves the focus
     void LeaveModal() { this->CCall(EeWonCtCall::LeaveModal); } // 0x2f6260: ends the modal state and moves the focus
     void RemoveAllChildren() { this->CCall(EeWonCtCall::RemoveAllChildren); }
@@ -397,7 +377,8 @@ public:
     void MouseAt() { this->CCall(EeWonCtCall::MouseAt); } // 0x2f66c0: refreshes the mouse state
     void SetOnlyChildInput(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::OnlyChildInput,v); }
     void SetIsolateTabFocus(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::IsolateTabFocus,v); }
-    void AddLayoutPoint(LayoutPoint*); // 0x2f6100: keeps the layout point as a child
+    // 0x2f6100: keeps the layout point (its parent this container)
+    void AddLayoutPoint(LayoutPoint* p) { ee_won_ct_layout_call(this->mCt,EeWonLayoutMgrCall::AddLayoutPoint,(intptr_t)static_cast<Component*>(p),0,0); }
     void AddChildEx(Component* c,int p) { this->CCall(EeWonCtCall::AddChildEx,(intptr_t)c,p); }
     void BringToTop(Component* c) { this->CCall(EeWonCtCall::BringToTop,(intptr_t)c); }
     bool HasUsedDialogKeys() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::HasUsedDialogKeys)!=0; }
@@ -422,7 +403,6 @@ public:
     virtual Component* FindChildById(int id) { return (Component*)this->CCall(EeWonCtCall::FindChildById,id); }
 
     EeWonContainer* mCt;
-    ChildLayoutManager* mChildLayout; // owned: destroyed between the cursor and the timer children, as the member was
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
     intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }
@@ -457,6 +437,11 @@ public:
 class ChildLayoutInstructionBase : public RefCount {
 public:
     ChildLayoutInstructionBase() : mLay(NULL) {} // a subclass makes its Rust instruction (Make)
+    // an instruction of class `k` (R6 WON GUI round 35: the clear-right, space-evenly, no-overlap and size-at-least
+    // classes were this constructor's callers; see EeWonLayoutKind for each class's numbers)
+    ChildLayoutInstructionBase(EeWonLayoutKind k,Component* r0,Component* r1=NULL,int i0=0,int i1=0,int i2=0,bool h=false,bool v=false) { this->Make(k,r0,r1,i0,i1,i2,h,v); }
+    // an instruction of a record Rust made (Fn2F6140's child instruction, the percentage layout)
+    explicit ChildLayoutInstructionBase(const EeWonLayoutInit& init) { this->Make(init); }
     virtual ~ChildLayoutInstructionBase();
     virtual void Execute(Component* p) { if (this->mLay) ee_won_layout_call(this->mLay,EeWonLayoutCall::Execute,(intptr_t)p,0); } // 0x30a800 (empty in the base)
     virtual bool UsesComponent(Component* c) { return this->mLay && ee_won_layout_call(this->mLay,EeWonLayoutCall::UsesComponent,(intptr_t)c,0)!=0; } // 0x3a90d0 (false in the base)
@@ -475,6 +460,10 @@ public:
     CenterLayout* Add(Component* component) { this->AddComponent(component); return this; }
     static void Center(Component* inParent, Component* inChild, bool inHorz, bool inVert); // 337690
 };
+// 0x2f61d0: the group (a byte), group 0 enabled and run at once before the manager holds it, any other disabled
+inline void Container::AddChildLayout(ChildLayoutInstructionBase* l,int id) { ee_won_ct_layout_call(this->mCt,EeWonLayoutMgrCall::AddChildLayout,(intptr_t)l,(intptr_t)l->mLay,id); }
+// the SDK's AddChildLayout overload for one child placed against a reference (flags, offsets, size)
+inline void Container::Fn2F6140(Component* child,int flags,Component* reference,int x,int y,int width,int height,int groupId) { this->AddChildLayout(new ChildLayoutInstructionBase(ee_won_layout_init_child(flags,child,reference,x,y,width,height)),groupId); }
 
 // a modal or popup dialog (0x98 bytes in the original: EELobbyConnectDialog's members start at +0x98).
 // Dialog (R6 WON round 26): its drag, Escape result and default button are the Rust Dialog
@@ -616,13 +605,8 @@ protected:
     intptr_t MCall(EeWonMsBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t d=0) { return ee_won_msbtn_call(this->mMsb,c,a,b,d); }
     void MSet(EeWonMsBtnField f,int v) { this->MCall(EeWonMsBtnCall::Set,(intptr_t)f,v); }
 };
-// SDK utility class: static functions only, never instantiated (the MS button base's check box and radio circle;
-// the frames, arrows, tabs and close X the MS kinds draw are mspaint.rs plans).
-class MSGraphicsUtil {
-public:
-    static void DrawCheck(Graphics&,int,int,int,int,bool,bool); //2fe250
-    static void DrawRadio(Graphics&,int,int,int,int,bool,bool); //2fe3b0
-};
+// (MSGraphicsUtil, the SDK's static drawing class: its check box and radio circle are mspaint.rs plans the MS button
+// base's host asks for, MSButtonBase.cpp; the frames, arrows, tabs and close X the MS kinds draw too.)
 // The concrete MS controls (MSButton, MSCheckbox, MSRadioButton, MSArrowButton, MaxSplitterButton, MSTabButton,
 // MS3DFrame, ...) are shell kinds (ee/wonapi/WONGUIShell.h, ee_won_gui shell_ms.rs).
 
@@ -760,12 +744,13 @@ public:
 // bar height and overlap, arrows, placement flags, pages and selected page are the Rust objects
 // (rust/crates/ee_won_gui/src/tabobj.rs); these are the types the configs, the skins (MSTabCtrl, WONTabCtrl) and the root
 // screen use, with one-line forwarders (TabCtrl.cpp is their host). The control's four containers and its page area's
-// layout point stay its members: its constructor makes them and gives them to the Rust control.
+// layout point are made and held by the Rust control (R6 WON GUI round 35: its constructor's statements); only the
+// layout point stays a member (the configs and the skins read it).
 class TabCtrl;
 class LayoutPoint;
 class TabBar : public Container {
 public:
-    TabBar(TabCtrl*);
+    explicit TabBar(EeWonTabCtrl*); // the Rust control it is the bar of (NULL: none)
     virtual ~TabBar(); // the implicit destructor (0x3081f0): the Rust bar gives the buttons back
     virtual void HandleComponentEvent(ComponentEvent* e) { ee_won_tabbar_call(this->mBar,EeWonTabBarCall::HandleComponentEvent,(intptr_t)e); }
     EeWonTabBar* mBar;
@@ -789,10 +774,7 @@ public:
     void RemoveTab(int id) { this->TCall(EeWonTabCall::RemoveTab,id); } // removes the tab and reselects
     // the selected tab's id and the configs' writes (TabCtrlConfig, RootScreen)
     int GetCurTabId() { return (int)this->TCall(EeWonTabCall::GetField,(intptr_t)EeWonTabField::CurTabId); }
-    SmartPtr<TabBar> mBottomTabBar; //84
-    SmartPtr<Container> mTopTabBar; //88
-    SmartPtr<Container> mBottomTabBarContainer; //8c
-    SmartPtr<Container> mTopTabBarContainer; //90
+    // the bottom bar, the top bar and their two containers (0x84..0x90) are the Rust control's (round 35)
     SmartPtr<LayoutPoint> mContainerLayout; //94 (TabCtrlConfig's CONTAINERLAYOUT, the skins' frames)
     EeWonTabCtrl* mTab;
 private:
@@ -1225,50 +1207,41 @@ public:
 class Font;
 // Graphics: vtable 0x450fe8;
 // the field accesses at 0x326ad0/0x326ce0/0x327140 show a 0x38-byte object.
+// R6 WON GUI round 35: the one Graphics is the platform's (the original's MSGraphics, the port's PlatGraphics, folded
+// in): the virtual hooks are gone, the drawing ones answered on the surface in Rust (gfxplat.rs over platgfx.rs:
+// a software surface with the results the GDI backend had, at the surface's pixel scale); the host (Graphics.cpp)
+// answers the image draws and the text. The polygon hooks, which nothing called, are platgfx.rs's
+// ee_won_plat_gfx_polygon.
 class Graphics {
 public:
-    virtual void ClearClipRectHook() {}
-    virtual void SetClipRectHook(int, int, int, int) {}
-    virtual DWORD GetPixelHook(int, int) { return 0; }
-    virtual void SetPixelHook(int, int, DWORD) {}
-    virtual void SetColorHook() {}
-    virtual void DrawLineHook(int, int, int, int) {}
-    virtual void DrawRectHook(int, int, int, int);
-    virtual void DrawDottedRectHook(int, int, int, int);
-    virtual void FillRectHook(int, int, int, int);
-    virtual void DrawPolygonHook(POINT*, int) {}
-    virtual void FillPolygonHook(POINT*, int) {}
-    virtual void DrawEllipseHook(int, int, int, int) {}
-    virtual void FillEllipseHook(int, int, int, int) {}
-    virtual void DrawArcHook(int, int, int, int, int, int) {}
-    virtual void FillRectBlendHook(int, int, int, int, int) {}
     Graphics(); //326ad0
-    virtual ~Graphics(); //326b90
-    virtual void Attach(DisplayContext*); //326c70
-    virtual void Detach();
-    virtual bool BlendSupported() { return false; }
-    void SetColor(DWORD); //326ce0
-    DWORD GetStandardColor(int);
-    void SetSysColor(int);
+    ~Graphics(); //326b90
+    void Attach(DisplayContext*); //326c70: the context's surface and pixel scale; the colour starts black
+    void Detach();
+    bool BlendSupported() { return true; }
+    void SetColor(DWORD c) { this->GCall(EeWonGfxCall::SetColor, (int)c); } //326ce0
+    DWORD GetStandardColor(int i) { return this->GCall(EeWonGfxCall::StandardColor, i); }
+    void SetSysColor(int i) { this->GCall(EeWonGfxCall::SetSysColor, i); }
     void SetFont(Font*);
-    void Translate(int, int);
+    void Translate(int dx, int dy) { this->GCall(EeWonGfxCall::Translate, dx, dy); }
     void DoTranslate(int&, int&);
-    void SetPixel(int, int, DWORD);
-    void DrawImage(Image*, int, int);
-    void DrawImage(Image*, int, int, int, int, int, int);
-    void DrawLine(int, int, int, int);
-    void DrawRect(int, int, int, int);
-    void FillRect(int, int, int, int);
-    void FillRectBlend(int, int, int, int, int);
-    void DrawDottedRect(int, int, int, int);
-    void DrawEllipse(int, int, int, int);
-    void FillEllipse(int, int, int, int);
-    void DrawArc(int, int, int, int, int, int);
-    void DrawString(const GUIString&, int, int);
-    void DrawString(const GUIString&, unsigned short, unsigned short, int, int);
-    void PerformClip();
-    void PushClipRect(int, int, int, int);
-    void PopClipRect();
+    DWORD GetPixel(int x, int y) { return ee_won_plat_gfx(this->mPlat.surface, this->mPlat.scale, this->mColor, EeWonPlatGfx::GetPixel, x, y, 0, 0, 0, 0); }
+    void SetPixel(int x, int y, DWORD c) { this->GCall(EeWonGfxCall::SetPixel, x, y, (int)c); }
+    void DrawImage(Image* i, int x, int y) { this->GCall(EeWonGfxCall::DrawImage, x, y, 0, 0, 0, 0, 0, i); }
+    void DrawImage(Image* i, int x, int y, int l, int t, int w, int h) { this->GCall(EeWonGfxCall::DrawImagePart, x, y, l, t, w, h, 0, i); }
+    void DrawLine(int x1, int y1, int x2, int y2) { this->GCall(EeWonGfxCall::DrawLine, x1, y1, x2, y2); }
+    void DrawRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawRect, x, y, w, h); }
+    void FillRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillRect, x, y, w, h); }
+    void FillRectBlend(int x, int y, int w, int h, int n) { this->GCall(EeWonGfxCall::FillRectBlend, x, y, w, h, n); }
+    void DrawDottedRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawDottedRect, x, y, w, h); }
+    void DrawEllipse(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::DrawEllipse, x, y, w, h); }
+    void FillEllipse(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::FillEllipse, x, y, w, h); }
+    void DrawArc(int x, int y, int w, int h, int s, int a) { this->GCall(EeWonGfxCall::DrawArc, x, y, w, h, s, a); }
+    void DrawString(const GUIString& s, int x, int y) { this->GCall(EeWonGfxCall::DrawString, x, y, s.length(), 0, 0, 0, 0, &s); }
+    void DrawString(const GUIString& s, unsigned short o, unsigned short n, int x, int y) { this->GCall(EeWonGfxCall::DrawStringPart, o, n, x, y, 0, 0, 0, &s); }
+    void PerformClip() { this->GCall(EeWonGfxCall::PerformClip); }
+    void PushClipRect(int x, int y, int w, int h) { this->GCall(EeWonGfxCall::PushClip, x, y, w, h); }
+    void PopClipRect() { this->GCall(EeWonGfxCall::PopClip); }
     SmartPtr<DisplayContext> mDisplayContext; //04
     // R6 WONGUI B round 1: the methods are ee_won's gfxobj.rs. The translation, colour and clip rectangle are the block
     // of members it edits in place (EeWonGfxState: the original's +08, +0c, +14, +24; checked in Graphics.cpp), the
@@ -1276,9 +1249,11 @@ public:
     int mTransX, mTransY;
     DWORD mColor;
     WONRectangle mClipRect;
+    const EeWonGfxState* State() const { return (const EeWonGfxState*)&this->mTransX; }
     SmartPtr<Font> mFont; //10
     ColorScheme* mColorScheme; //34, borrowed
     EeWonGfx* mGfx; // the clip stack, owned
+    EeWonGfxPlat mPlat; // the context's surface (borrowed; none while detached) and its pixel scale (gfxplat.rs)
 private:
     DWORD GCall(EeWonGfxCall c, int a = 0, int b = 0, int cc = 0, int d = 0, int e = 0, int f = 0, int g = 0, const void* p = NULL);
 };
@@ -1349,14 +1324,47 @@ public:
     static DWORD GetThreadId() { return WindowManager::mThreadId; }
     WindowManager(); // 0x32b660; the class is 0x148 bytes
     virtual ~WindowManager(); //32bff0
-    virtual void GetNextEvent() { PlatSleep(20); } //04 32e7c0: the base only sleeps 20 ms
-    virtual bool SetScreenResolutionHook(int,int) { return false; } //08 32c380
-    virtual void GetScreenResolutionHook(int&,int&) {} //0c 327440
-    virtual void Signal() {} //10 326b60
-    virtual bool AddWindow(Window* w) { return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)w) != 0; } //14 32d6a0
-    virtual bool RemoveWindow(Window* w) { return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)w) != 0; } //18 32d840
-    virtual void GetScreenRect(WONRectangle&) {} //1c 30a800
-    virtual void GetSystemColorScheme() {} //20 326b60
+    // R6 WON GUI round 35: the one manager is the platform's (the original's MSWindowManager, the port's
+    // PlatWindowManager, folded in; platwm.rs): the hooks are its calls, no longer virtual
+    // one platform event (at most 50 ms after the last pass; the lobby's go on to the game's forward function),
+    // the queued events, the paint (platloop.rs)
+    void GetNextEvent() { ee_won_plat_wm_next_event(this->mRust, &kLoopFns, this->mWmObj.p, (EeWonPlatForward)this->mEventForward); }
+    static const EeWonPlatLoopFns kLoopFns; // the platform's wait, clock and sleep (WindowManager.cpp)
+    bool SetScreenResolutionHook(int,int) { return true; } // the display mode is the game's
+    void GetScreenResolutionHook(int& w,int& h) { ee_won_plat_wm_surface_size(this->mRust, &w, &h); }
+    void Signal() { this->Call(EeWonPlatWmCall::Signal); }
+    bool AddWindow(Window* w) { return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)w) != 0; } //14 32d6a0
+    bool RemoveWindow(Window* w) { return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)w) != 0; } //18 32d840
+    void GetScreenRect(WONRectangle& r) { ee_won_plat_wm_screen_rect(this->mRust, &r.x); } // the lobby surface
+    void GetSystemColorScheme() { ee_won_plat_wm_classic_colors((uint32_t*)this->mColorScheme->mColors); }
+    // the game's interface and the windows' (the surface, the frame, the z order, focus and capture)
+    typedef void (*EventForwardFunc)(const PlatInputEvent& inEvent);
+    void SetSurfaceSize(int w, int h) { this->Call(EeWonPlatWmCall::SetSurfaceSize, w, h); }
+    void SetPixelScale(float s) { ee_won_plat_wm_set_scale(this->mRust, s); }
+    float GetPixelScale() const { return ee_won_plat_wm_scale(this->mRust); }
+    void SetPresentRect(float l, float t, float w, float h) { ee_won_plat_wm_present(this->mRust, l, t, w, h); }
+    bool LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
+                   int& outLogicalHeight, uint32_t& outSerial)
+    { return ee_won_plat_wm_lock_frame_out(this->mRust, &outPixels, &outWidth, &outHeight, &outPitch, &outLogicalWidth, &outLogicalHeight, &outSerial); }
+    void UnlockFrame() { this->Call(EeWonPlatWmCall::UnlockFrame); }
+    void SetEventForward(EventForwardFunc f) { this->mEventForward = f; }
+    void AddPlatWindow(Window* w) { this->Call(EeWonPlatWmCall::Add, (intptr_t)w); }
+    void RemovePlatWindow(Window* w) { this->Call(EeWonPlatWmCall::Remove, (intptr_t)w); }
+    void BringToFront(Window* w) { this->Call(EeWonPlatWmCall::BringToFront, (intptr_t)w); }
+    void SetFocusWindow(Window* w) { this->Call(EeWonPlatWmCall::SetFocus, (intptr_t)w); }
+    void SetCaptureWindow(Window* w) { this->Call(EeWonPlatWmCall::SetCapture, (intptr_t)w); }
+    Window* GetCaptureWindow() { return (Window*)this->Call(EeWonPlatWmCall::Capture); }
+    Window* GetPlatFocusWindow() { return (Window*)this->Call(EeWonPlatWmCall::Focus); }
+    Window* WindowFromPoint(int x, int y) { return (Window*)this->Call(EeWonPlatWmCall::WindowFromPoint, x, y); }
+    bool GetMousePosition(int& x, int& y) { return ee_won_plat_wm_mouse(this->mRust, &x, &y); }
+    void SetDirty() { this->Call(EeWonPlatWmCall::SetDirty); }
+    int GetSurfaceWidth() const { return (int)this->Call(EeWonPlatWmCall::SurfaceWidth); }
+    int GetSurfaceHeight() const { return (int)this->Call(EeWonPlatWmCall::SurfaceHeight); }
+    PlatWindow* GetPlatWindow() { return (PlatWindow*)this->Call(EeWonPlatWmCall::PlatWindow); }
+    void PaintAndComposite() { this->Call(EeWonPlatWmCall::PaintAndComposite); }
+    intptr_t Call(EeWonPlatWmCall c, intptr_t a = 0, intptr_t b = 0) const { return ee_won_plat_wm(this->mRust, c, a, b); }
+    EeWonPlatWm* mRust = NULL; // the platform manager (platwm.rs); none after the destructor's body
+    EventForwardFunc mEventForward;
     void InitColorScheme(); //32c230
     void NotifyLostFocus() { this->WmCall(EeWonWmCall::NotifyLostFocus); } //32c2d0
     void NotifyGotFocus(Window* w) { this->WmCall(EeWonWmCall::NotifyGotFocus, (intptr_t)w); } //32c300
@@ -1388,8 +1396,12 @@ public:
     int DoDialog(Window* w, Component* c) { return (int)this->WmCall(EeWonWmCall::DoDialog, (intptr_t)w, (intptr_t)c); } //32dc50
     void EndDialog(int r, Window* w, Component* c) { this->WmCall(EeWonWmCall::EndDialog, r, (intptr_t)w, (intptr_t)c); }
     void ExitMessageLoop() { this->WmCall(EeWonWmCall::ExitMessageLoop); } //32ddf0
-    void AdjustPopupPosition(Window*,Component*,bool,const WONRectangle&); //32de00
-    void DoPopup(const PopupParams&); //32e040
+    // moves a popup back inside the screen or the parent's root, flipping it to the other side of the avoid rectangle
+    void AdjustPopupPosition(Window* p,Component* c,bool own,const WONRectangle& avoid) { this->WmCall(EeWonWmCall::AdjustPopupPosition, (intptr_t)p, (intptr_t)c, own ? 1 : 0, (intptr_t)&avoid); } //32de00
+    // opens a popup at the given or mouse position, in its own popup window or inside the parent window, per the
+    // popup flags; ignored while another popup opens or closes, or when the parent lacks focus (the record is
+    // the Rust manager's EeWonWmPopup: WindowManager.cpp checks the layout)
+    void DoPopup(const PopupParams& p) { this->WmCall(EeWonWmCall::DoPopup, (intptr_t)&p); } //32e040
     void EndPopup(Component* c) { this->WmCall(EeWonWmCall::EndPopup, (intptr_t)c); } //32e4d0
     void CheckEndPopup(Component* c) { this->WmCall(EeWonWmCall::CheckEndPopup, (intptr_t)c); } //32e790
     int MessageLoop() { return (int)this->WmCall(EeWonWmCall::MessageLoop); } //32e7d0
@@ -1427,7 +1439,6 @@ public:
     SmartPtr<ColorScheme> mColorScheme; //20
     MultiImageDecoder mImageDecoder; // at +0x24..0x57 (0x34 bytes)
     SmartPtr<SoundDecoder> mSoundDecoder; //58
-    SmartPtr<NativeIcon> mDefaultWindowIcon; //60
     // the default font (+5c), the named fonts (+64) and the native, raw and delay-load image caches (+70, +7c, +88)
     // with their count (+94) are the Rust manager's (wmobj.rs, wmcache.rs; R6 WON round 33); so are the event lock
     // (+08), the timer and input ticks (+98, +9c), the valid and full-screen flags (+a1, +ad), the screen sizes
@@ -1440,14 +1451,8 @@ public:
 WindowManager* GetLobbyWindow();
 
 
-// a window's icon (0x0c bytes; vtable 0x85107c)
-class NativeIcon : public RefCount {
-public:
-    NativeIcon(DisplayContext* inContext);
-    virtual ~NativeIcon(); // 0x328a00; protected in the SDK, public here
-
-    SmartPtr<DisplayContext> mContext;      // +0x08
-};
+// (NativeIcon, a window's icon, is gone with PlatNativeIcon: R6 WON GUI round 35. Nothing ever made one: the lobby
+// surface has no window icons. winobj.rs keeps Window::Create's default-icon step and IconChanged.)
 
 
 struct FontDescriptor {
@@ -1456,9 +1461,10 @@ struct FontDescriptor {
     int mSize;
     FontDescriptor() : mStyle(0), mSize(0) { } // the descriptor is 0x18 bytes
     FontDescriptor(const std::string& theFace, int theStyle, int theSize) : mFace(theFace), mStyle(theStyle), mSize(theSize) { }
-    bool operator<(const FontDescriptor&) const; // ordering for font lookups
-    bool operator==(const FontDescriptor&) const; //326840
-    bool operator!=(const FontDescriptor&) const; //326880
+    // the same size, style and face without case (fontmap.rs, whose key order was operator<; R6 WON GUI round 35)
+    bool operator==(const FontDescriptor& o) const //326840
+    { return ee_won_font_desc_same((const uint8_t*)this->mFace.data(), this->mFace.size(), this->mStyle, this->mSize, (const uint8_t*)o.mFace.data(), o.mFace.size(), o.mStyle, o.mSize); }
+    bool operator!=(const FontDescriptor& o) const { return !(*this == o); } //326880
 };
 
 // Window (0xb8 bytes): constructor and destructor out of line;
@@ -1487,27 +1493,47 @@ public:
 
     Window();
     virtual ~Window();                     // 0x32a020, out of line
-    virtual SmartPtr<Font> PlatformGetFont(const FontDescriptor&) { return NULL; } // (the platform windows override these)
-    virtual bool IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
-    virtual void TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
-    virtual void PlatformSetTitle() {}
-    virtual void PlatformSetIcon() {}
-    virtual void PlatformSetCursor(Cursor*) {}
-    virtual void PlatformShowNativeCursor(bool) {}
-    virtual void PlatformShow(bool) {}
-    virtual void PlatformMinimize(bool) {}
-    virtual void PlatformSetTopMost(bool) {}
-    virtual void PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
-    virtual void Create(const WONRectangle&);
-    virtual void SetPosSize(int, int, int, int) {}
-    virtual void GetRect(WONRectangle&, bool) {}
-    virtual void PlatformSetFocus() {}
-    virtual void Show(bool s) { this->WCall(EeWonWinCall::Show, s ? 1 : 0); }
+    // R6 WON GUI round 35: the one window is the platform's (the original's MSWindow, the port's PlatGUIWindow,
+    // folded in; platwin.rs: a rectangle of the surface the manager composites): the Platform* calls are its
+    // Rust window's, no longer virtual; the Base* calls are what the platform window called on its base
+    SmartPtr<Font> PlatformGetFont(const FontDescriptor&);
+    bool IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }
+    void TimerEvent(DWORD e) { this->Rust(EeWonPlatWinCall::Timer, e); }
+    void BaseTimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); }
+    void PlatformSetTitle() { this->Rust(EeWonPlatWinCall::SetTitle); }
+    void PlatformSetIcon() {} // window icons have no place on the lobby surface
+    void PlatformSetCursor(Cursor* c) { this->Rust(EeWonPlatWinCall::SetCursor, (intptr_t)c); }
+    void PlatformShowNativeCursor(bool s) { this->Rust(EeWonPlatWinCall::ShowNativeCursor, s); }
+    void PlatformShow(bool s) { this->Rust(EeWonPlatWinCall::Show, s); }
+    void PlatformMinimize(bool m) { this->Rust(EeWonPlatWinCall::Minimize, m); }
+    void PlatformSetTopMost(bool t) { this->Rust(EeWonPlatWinCall::SetTopMost, t); }
+    void PlatformClose() { this->Rust(EeWonPlatWinCall::Close); }
+    void BasePlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }
+    void Create(const WONRectangle& r) { this->Rust(EeWonPlatWinCall::Create, (intptr_t)&r); } // (four ints)
+    void BaseCreate(int w, int h) { ee_won_win_create(this->mWinObj.p, w, h); } // the default icon, the parent, the root's size, the manager
+    void SetPosSize(int x, int y, int w, int h) { this->Rust(EeWonPlatWinCall::SetPosSize, x, y, w, h); }
+    void GetRect(WONRectangle& r, bool inClientArea) { this->Rust(EeWonPlatWinCall::GetRect, (intptr_t)&r, inClientArea); }
+    void GetClientRect(WONRectangle& r) { this->GetRect(r, true); }
+    void PlatformSetFocus() { this->Rust(EeWonPlatWinCall::SetFocus); }
+    void SetMinimizeOnAltTab(bool m) { this->Rust(EeWonPlatWinCall::SetMinimizeOnAltTab, m); }
+    void SetForwardKeyMsgToParent(bool f) { this->Rust(EeWonPlatWinCall::SetForwardKeys, f); }
+    bool FillsSurface() const { return this->GetParent() == NULL; }
+    bool HasFrame() const { return this->GetParent() != NULL && !(this->GetStyle() & 0x20); }
+    void GetInfo(EeWonPlatWinInfo& outInfo) { this->Rust(EeWonPlatWinCall::Info, (intptr_t)&outInfo); } // what the manager reads
+    void FollowSurface() { this->Rust(EeWonPlatWinCall::FollowSurface); } // a window that fills the surface takes its new size
+    void FollowPixelScale(); // a new offscreen image at the manager's pixel scale, repainted
+    void OnPaint() { this->Rust(EeWonPlatWinCall::Paint); } // repaints an invalid root into the offscreen image
+    // the manager while its platform part lives (the original's dynamic_cast: none in the manager's last moments)
+    WindowManager* GetPlatManager() { return this->mManager != NULL && this->mManager->mRust != NULL ? this->mManager : NULL; }
+    EeWonPlatWin* mRust = NULL; // the platform window (platwin.rs); none yet in the constructor, none after the destructor's body
+    intptr_t Rust(EeWonPlatWinCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, intptr_t d = 0)
+    { return this->mRust != NULL ? ee_won_plat_win(this->mRust, c, a, b, cc, d) : 0; }
+    void Show(bool s) { this->WCall(EeWonWinCall::Show, s ? 1 : 0); }
     void Minimize(bool m) { this->WCall(EeWonWinCall::Minimize, m ? 1 : 0); }
     DisplayContext* GetDisplayContext() { return this->mDisplayContext.get(); } // inline, at +0x28
-    virtual void PlatformSetMouseCapture(bool) {}
-    virtual void QueueEvent(WindowEventBase*);
-    virtual bool PlatformIsVisible() { return this->IsShowing(); } // whether last shown
+    void PlatformSetMouseCapture(bool c) { this->Rust(EeWonPlatWinCall::SetCapture, c); }
+    void QueueEvent(WindowEventBase*);
+    bool PlatformIsVisible() { return this->Rust(EeWonPlatWinCall::IsVisible) != 0; }
     static Window* GetDefaultWindow();
     SmartPtr<NativeImage> DecodeImage(const char*);
     int RunDialog(Component* c) { return this->mManager->DoDialog(this, c); } // DoDialog in the WON SDK
@@ -1522,7 +1548,6 @@ public:
     void InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }
     void SetParent(Window* p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }
     void SetTitle(const GUIString&);
-    void SetIcon(NativeIcon*);
     // R6 WON round 32: the state is the Rust window (rust/crates/ee_won_gui/src/winobj.rs); these read and set it
     int GetKeyMod() const { return (int)this->WField(EeWonWinField::KeyMod); }
     int GetWindowState() const { return (int)this->WField(EeWonWinField::State); }
@@ -1554,7 +1579,6 @@ public:
     WindowManager* mManager; // +7c
     SmartPtr<WindowEventBase> mCloseEvent; // +90
     AllowCloseFunc mAllowCloseFunc; // +94
-    SmartPtr<NativeIcon> mIcon; // +98
     GUIString mTitle; // +9c
     SmartPtr<RootContainer> mRoot; // +a4
     // GetFont's cache (+a8; ee_won fontmap.rs): each font held once; released where the map member was destroyed
@@ -1701,21 +1725,34 @@ void LobbyKickClient(LobbyClient* inClient, bool inFlag);
 
 class Font : public RefCount {
 public:
-    Font(DisplayContext*, const FontDescriptor&); //3268a0
+    // R6 WON GUI round 35: the one Font is the platform's (the original's MSFont, the port's PlatGUIFont, folded
+    // in; platfont.rs: the platform fonts at the descriptor's size and at a surface's pixel scale, the metrics, the
+    // widths, the drawing with its underline): no virtuals; the context of the constructor was never used
+    Font(DisplayContext*, const FontDescriptor& d) : mDescriptor(d), mRust(ee_won_plat_font_new(d.mFace.c_str(), d.mSize, d.mStyle)) {} //3268a0
     const FontDescriptor& GetDescriptor() { return this->mDescriptor; }
     int GetSize() { return this->mDescriptor.mSize; }
     int GetStyle() { return this->mDescriptor.mStyle; }
-    virtual ~Font();                        // 0x326a60, out of line
-    virtual void PrepareContext(DisplayContext*);
-    virtual void DrawString(DisplayContext*, const GUIString&, unsigned short, unsigned short, int, int);
+    virtual ~Font() { ee_won_plat_font_free(this->mRust); } // 0x326a60
+    void PrepareContext(DisplayContext*) {} // (selecting the font into a DC: each string names its font)
+    void DrawString(DisplayContext* c, const GUIString& s, unsigned short o, unsigned short n, int x, int y);
     int GetStringWidth(const GUIString& theStr) { return this->GetStringWidth(theStr,0,(unsigned short)theStr.length()); }
-    virtual int GetStringWidth(const GUIString&, unsigned short, unsigned short);
-    virtual int GetCharacterWidth(int inChar);
-    virtual int GetHeight();
-    virtual int GetAscent();
-    virtual int GetDescent();
+    int GetStringWidth(const GUIString& s, unsigned short o, unsigned short n) { return n == 0 ? 0 : ee_won_plat_font_width(this->mRust, s.mData->mText + o, n); }
+    int GetCharacterWidth(int inChar) { return ee_won_plat_font_char_width(this->mRust, inChar); }
+    int GetHeight() { return ee_won_plat_font_metric(this->mRust, 0); }
+    int GetAscent() { return ee_won_plat_font_metric(this->mRust, 1); }
+    int GetDescent() { return ee_won_plat_font_metric(this->mRust, 2); }
     FontDescriptor mDescriptor;             // +08..1f
+    EeWonPlatFont* mRust;                   // the font (platfont.rs)
 };
+// the text into the context's surface in its Graphics' colour, the underline with that Graphics (gfxplat.rs); nothing
+// without a context
+inline void Font::DrawString(DisplayContext* c, const GUIString& s, unsigned short o, unsigned short n, int x, int y)
+{
+    if (c != NULL)
+        ee_won_gfx_font_draw(this->mRust, c->mSurface != NULL ? c->mSurface->GetRust() : NULL, c->mPixelScale,
+                             c->mGraphics != NULL ? c->mGraphics->State() : NULL, c->mGraphics != NULL ? &c->mGraphics->mPlat : NULL,
+                             s.mData->mText + o, n, x, y);
+}
 inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
 // FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
@@ -1777,7 +1814,7 @@ public:
     // black, inWidth x inHeight logical pixels at the pixel scale (at least 1); the context is not kept
     NativeImage(DisplayContext*,int inWidth,int inHeight,float inScale=1.0f) : Image(ee_won_image_new_native(WONImageHost,inWidth,inHeight,inScale)) {}
     Graphics& GetGraphics() { return *(Graphics*)this->Call(EeWonImageCall::Graphics); }
-    SmartPtr<RawImage32> GetRaw();
+    SmartPtr<RawImage> GetRaw(); // a 32-bit copy
     uint32_t* GetPixels() { return (uint32_t*)this->Get(EeWonImageField::Pixels); }
     int GetPitchPixels() { return (int)this->Get(EeWonImageField::PitchPixels); }
     int GetPixelWidth() { return (int)this->Get(EeWonImageField::PixelWidth); }
@@ -1785,27 +1822,20 @@ public:
     float GetScale() const { uint32_t s=(uint32_t)this->Get(EeWonImageField::Scale); float f; memcpy(&f,&s,4); return f; }
     SurfaceBase* GetSurface() { return (SurfaceBase*)this->Get(EeWonImageField::Surface); }
 };
+// R6 WON GUI round 35: RawImage32 and RawImage8 were RawImage with a constructor of their kind and the 32-bit image's
+// two calls; the kind is the Rust image's (imgobj.rs), so the one class is every raw image's handle
 class RawImage : public Image {
 public:
     explicit RawImage(EeWonImage* r) : Image(r) {}
     int GetType() const { return (int)this->Get(EeWonImageField::RawType); } // 0 1-bit, 1 8-bit, 2 32-bit
     bool HasTransparency() const { return this->Get(EeWonImageField::HasTransparency)!=0; }
+    DWORD* GetImageData() { return (DWORD*)this->Get(EeWonImageField::Pixels); } // a 32-bit image's
+    void SetDoTransparency(bool v) { this->Call(EeWonImageCall::SetTransparency,v); } // a 32-bit image's
 };
-class RawImage32 : public RawImage {
-public:
-    explicit RawImage32(EeWonImage* r) : RawImage(r) {}
-    RawImage32(int w,int h) : RawImage(ee_won_image_new_raw32(WONImageHost,w,h)) {}
-    DWORD* GetImageData() { return (DWORD*)this->Get(EeWonImageField::Pixels); }
-    void SetDoTransparency(bool v) { this->Call(EeWonImageCall::SetTransparency,v); }
-};
-class RawImage8 : public RawImage {
-public:
-    explicit RawImage8(EeWonImage* r) : RawImage(r) {}
-    RawImage8(int w,int h) : RawImage(ee_won_image_new_raw8(WONImageHost,w,h)) {} // no palette
-};
+typedef RawImage RawImage32;
 inline SmartPtr<Image> Image::Duplicate() { return WONImageAdopt<Image>(this->Call(EeWonImageCall::Duplicate)); }
 inline SmartPtr<NativeImage> Image::GetNative(DisplayContext* c) { return WONImageAdopt<NativeImage>(this->Call(EeWonImageCall::Native,(intptr_t)c)); }
-inline SmartPtr<RawImage32> NativeImage::GetRaw() { return WONImageAdopt<RawImage32>(this->Call(EeWonImageCall::Raw)); }
+inline SmartPtr<RawImage> NativeImage::GetRaw() { return WONImageAdopt<RawImage>(this->Call(EeWonImageCall::Raw)); }
 // the filters (ImageFilters.cpp's crop, scale and tint and the transparent colour; imgobj.rs): a new image, or the
 // image itself (NULL for an image of a type the filter has none for)
 inline SmartPtr<RawImage> ImageCrop(RawImage* i,int x,int y,int w,int h) { return i==NULL ? SmartPtr<RawImage>() : WONImageAdopt<RawImage>(i->Call(EeWonImageCall::Crop,x,y,w,h)); }

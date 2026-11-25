@@ -264,6 +264,11 @@ fn cursors_minimize_close_and_mouse_events() {
     world.log.clear();
     let p = [3, 100, 50, 4, 1];
     run(w, EeWonPlatWinCall::QueueMouse, p.as_ptr() as isize, 0, 0, 0);
+    // the manager's form (the type, then the four ints) queues the same event
+    run(w, EeWonPlatWinCall::QueueMouseAt, 3, p[1..].as_ptr() as isize, 0, 0);
+    assert_eq!(world.log, ["mouse [3, 100, 50, 4, 1]", "mouse [3, 100, 50, 4, 1]"]);
+    world.log.clear();
+    run(w, EeWonPlatWinCall::QueueMouse, p.as_ptr() as isize, 0, 0, 0);
     world.invalid = true;
     run(w, EeWonPlatWinCall::Paint, 0, 0, 0, 0);
     run(w, EeWonPlatWinCall::Close, 0, 0, 0, 0);

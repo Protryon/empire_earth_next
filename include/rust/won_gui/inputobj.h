@@ -89,6 +89,12 @@ ptrdiff_t ee_won_input_call(const EeWonInput *input,
                             ptrdiff_t b,
                             ptrdiff_t c);
 
+/// `InputBox::NumericFilter(box, text)` over the text's `wchar_t`s and the box's selection start.
+///
+/// # Safety
+/// `text` holds `len` `wchar_t`s, or `len` is 0.
+bool ee_won_input_numeric_filter(const void *text, size_t len, int32_t sel_start);
+
 }  // extern "C"
 
 #endif  // EE_RUST_WON_GUI_INPUTOBJ_H

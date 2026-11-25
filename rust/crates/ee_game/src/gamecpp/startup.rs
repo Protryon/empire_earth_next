@@ -13,11 +13,14 @@
 use std::ffi::{c_long, c_ulong, c_void};
 
 use ee_base::math::types::GeRectangle;
+use ee_base::util::fp;
 
 use super::{cptr, h, hd, hf, hp, pa, ptr, Owned, O, P};
 
 /// `keseOK`.
 const KESE_OK: i64 = 0;
+/// float.h `_PC_53`: the FPU's 53-bit precision.
+const PRECISION_53: c_ulong = ee_base::lle_enums::UMFloatingPointPrecision::kFPPrecision53 as c_ulong;
 /// `kPixelFormatZPrefer16` (Empire Earth.cpp static_asserts it).
 const PIXEL_FORMAT_Z_PREFER_16: i64 = 12;
 /// The start-up's game view (in 1600 x 1200 layout units; .rdata 0x442090..0x4420a8) and the water ripple.
@@ -91,6 +94,26 @@ fn window_rect(origin: &[f32; 2], end: &[f32; 2]) -> GeRectangle {
     GeRectangle { bottom: end[1], left: origin[0], right: end[0], top: origin[1] }
 }
 
+/// `URegisterShutdown`: a routine run at the game's shutdown, last registered first.
+fn register_shutdown(routine: unsafe extern "C" fn(bool)) -> i64 {
+    i64::from(ee_base::util::system::ee_util_register_shutdown(routine))
+}
+
+// the shutdown routines whose argument is not read (EEGraphicsShutdown, EEShutdownThreads, EEDeleteSoundManager,
+// EEDeleteGameObjects)
+extern "C" fn graphics_shutdown(_shutdown: bool) {
+    ee_gamecpp_startup_graphics_shutdown();
+}
+extern "C" fn shutdown_threads(_shutdown: bool) {
+    ee_gamecpp_startup_shutdown_threads();
+}
+extern "C" fn delete_sound_manager(_shutdown: bool) {
+    ee_gamecpp_startup_delete_sound_manager();
+}
+extern "C" fn delete_game_objects(_shutdown: bool) {
+    ee_gamecpp_startup_delete_game_objects();
+}
+
 fn verify(ok: bool, line: i64) {
     h(O::Verify, 0, &[ok as i64, line]);
 }
@@ -130,10 +153,10 @@ fn render_states(screen: i64, projection: bool) {
 
 /// Waits for the graphics thread to pause after asking it to.
 fn pause_graphics() {
-    h(O::GfxPostPause, 0, &[]);
+    super::globals::graphics_post_pause();
     let mut started = h(O::GfxIsPaused, 0, &[]) != 0;
     while !started {
-        h(O::Sleep, 0, &[1]);
+        ee_base::plat_core::time::PlatSleep(1);
         started = h(O::GfxIsPaused, 0, &[]) != 0;
     }
 }
@@ -142,18 +165,18 @@ fn pause_graphics() {
 fn stop_physics_timer() {
     h(O::PhysPost, 0, &[0x402]);
     while h(O::PhysTimerRunning, 0, &[]) != 0 {
-        h(O::Sleep, 0, &[1]);
+        ee_base::plat_core::time::PlatSleep(1);
     }
 }
 
 /// EESetThreadFloatingPoint: the calling thread's FPU at 53-bit precision and round to nearest.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_thread_fp() {
-    if h(O::FpPrecision, 0, &[]) != h(O::FpPrecision53, 0, &[]) {
-        h(O::FpSetPrecision53, 0, &[]);
+    if fp::ee_util_fp_precision() != PRECISION_53 {
+        fp::ee_util_fp_set_precision(PRECISION_53);
     }
-    if h(O::FpRounding, 0, &[]) != 0 {
-        h(O::FpSetRoundingNearest, 0, &[]);
+    if fp::ee_util_fp_rounding() != 0 {
+        fp::ee_util_fp_set_rounding(0);
     }
 }
 
@@ -226,10 +249,10 @@ pub extern "C" fn ee_gamecpp_startup_network_settings() {
 pub extern "C" fn ee_gamecpp_startup_part1() -> bool {
     let r = h(O::RegisterShutdownMutex, 0, &[]);
     verify(r == KESE_OK, 796);
-    let r = h(O::TsInitialize, 0, &[]);
+    let r = i64::from(ee_base::ts::ee_ts_system_initialize());
     verify(r == KESE_OK, 805);
     ee_gamecpp_startup_thread_fp();
-    let r = h(O::TmInitialize, 0, &[]);
+    let r = i64::from(ee_base::time::ee_time_system_initialize());
     verify(r == KESE_OK, 810);
     ee_gamecpp_startup_thread_fp();
     let initialized = ee_gamecpp_startup_display();
@@ -249,7 +272,7 @@ pub extern "C" fn ee_gamecpp_startup_part1() -> bool {
             return false;
         }
         ee_gamecpp_startup_thread_fp();
-        h(O::InitializeNetwork, 0, &[]);
+        super::entry::ee_gamecpp_entry_initialize_network();
         ee_gamecpp_startup_thread_fp();
         ee_gamecpp_startup_database();
         ee_gamecpp_startup_thread_fp();
@@ -268,9 +291,9 @@ pub extern "C" fn ee_gamecpp_startup_graphics() {
     let resource_name = Owned::new(O::StrNew, O::StrFree);
     let font_name = Owned::new(O::UStrNew, O::UStrFree);
     h(O::NewTextureManager, 0, &[]);
-    verify(h(O::TextureManagerPresent, 0, &[]) != 0, 1332);
+    verify(crate::gamecpp::globals::have!(gTextureManager), 1332);
     h(O::NewModelManager, 0, &[]);
-    verify(h(O::ModelManagerPresent, 0, &[]) != 0, 1336);
+    verify(crate::gamecpp::globals::have!(gModelManager), 1336);
     ee_gamecpp_startup_video_mode(640, 480, h(O::PrefGameBitDepth, 0, &[]) as c_ulong, true);
     h(O::WindowResize, 0, &[640, 480]);
     // kPixelFormatZPrefer16
@@ -292,7 +315,7 @@ pub extern "C" fn ee_gamecpp_startup_graphics() {
         h(O::FontCreate, font_name.0, &[k as i64, bold as i64, size]);
         verify(h(O::FontAt, 0, &[k as i64]) != 0, line);
     }
-    let r = h(O::RegisterShutdownGraphics, 0, &[]);
+    let r = register_shutdown(graphics_shutdown);
     verify(r == KESE_OK, 1526);
 }
 
@@ -319,35 +342,36 @@ pub extern "C" fn ee_gamecpp_startup_persistents() {
     verify(r == KESE_OK, 1863);
 }
 
+/// CreatePlaneModels: the effects' plane models, made with the render objects' rasterizer.
+pub(super) fn create_plane_models() {
+    // SAFETY: the render objects' rasterizer
+    unsafe { ee_render::gfx::ffi::ee_gfx_effect_planes_create(super::ro_raster::ee_gamecpp_ro_raster()) };
+}
+
 /// EELoadGameMedia: the status box's icons, the mini map's, the effects', the units', the sky's and the ground
 /// shadows' media.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_load_media() {
-    for op in [
-        O::UiLoadIcons,
-        O::UiMiniMapLoadMedia,
-        O::CreatePlaneModels,
-        O::RoUnitsLoadMedia,
-        O::RoSkyCreate,
-        O::RoShadowCreate,
-    ] {
-        h(op, 0, &[]);
-    }
+    h(O::UiLoadIcons, 0, &[]);
+    h(O::UiMiniMapLoadMedia, 0, &[]);
+    create_plane_models();
+    h(O::RoUnitsLoadMedia, 0, &[]);
+    super::ro_views::ee_gamecpp_te_create_sky_model();
+    // SAFETY: the render objects' rasterizer
+    unsafe { ee_render::gfx::shadows::ee_gfx_ground_shadows_create(super::ro_raster::ee_gamecpp_ro_raster()) };
 }
 
 /// EEUnloadGameMedia: the same released.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_unload_media() {
-    for op in [
-        O::UiUnloadIcons,
-        O::UiMiniMapUnloadMedia,
-        O::ReleasePlaneModels,
-        O::RoUnitsReleaseMedia,
-        O::RoSkyRelease,
-        O::RoShadowRelease,
-    ] {
-        h(op, 0, &[]);
-    }
+    h(O::UiUnloadIcons, 0, &[]);
+    h(O::UiMiniMapUnloadMedia, 0, &[]);
+    // SAFETY: the render objects' rasterizer
+    unsafe { ee_render::gfx::ffi::ee_gfx_effect_planes_release(super::ro_raster::ee_gamecpp_ro_raster()) };
+    super::ro_units::ee_gamecpp_ru_release_media();
+    super::ro_views::ee_gamecpp_te_release_sky_models();
+    // SAFETY: the same
+    unsafe { ee_render::gfx::shadows::ee_gfx_ground_shadows_release(super::ro_raster::ee_gamecpp_ro_raster()) };
 }
 
 /// EEShowSinglePlayerScreen: the data search path (the game's Data folder, behind a Data\data.ssa when one is
@@ -372,10 +396,10 @@ pub extern "C" fn ee_gamecpp_startup_data_paths() {
     h(O::FileSpecSetVolumeStartup, directory.0, &[]);
     h(O::FileSpecSetCivilizationDir, directory.0, &[]);
     h(O::FsPathAddDirectory, civilizations, &[pa(directory.0)]);
-    if h(O::DataPathPresent, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gDataPath) {
         h(O::DataPathDereference, 0, &[]);
     }
-    if h(O::CivPathPresent, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gCivilizationDataPath) {
         h(O::CivPathDereference, 0, &[]);
     }
     h(O::SetCivPath, civilizations, &[]);
@@ -392,7 +416,7 @@ pub unsafe extern "C" fn ee_gamecpp_startup_game_view(rectangle: *const GeRectan
     // SAFETY: the caller's rectangle
     let input = unsafe { *rectangle };
     let mut r = GeRectangle::default();
-    if h(O::FreeCamera, 0, &[]) == 0 {
+    if !crate::gamecpp::globals::get!(gFreeCamera) {
         let width = h(O::GameWindowWidth, 0, &[]) as c_ulong as f32;
         r.left = input.left * GAME_VIEW_SCALE_X * width;
         r.right = input.right * GAME_VIEW_SCALE_X * width;
@@ -412,16 +436,16 @@ pub unsafe extern "C" fn ee_gamecpp_startup_game_view(rectangle: *const GeRectan
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_threads() {
     h(O::NewMusicManager, 0, &[]);
-    verify(h(O::MusicManagerPresent, 0, &[]) != 0, 2006);
+    verify(crate::gamecpp::globals::have!(gMusicManager), 2006);
     h(O::NewMousePointer, 0, &[]);
-    verify(h(O::MousePointerPresent, 0, &[]) != 0, 2010);
+    verify(crate::gamecpp::globals::have!(gMousePointer), 2010);
     h(O::NewGraphics, 0, &[]);
-    verify(h(O::GraphicsPresent, 0, &[]) != 0, 2018);
+    verify(crate::gamecpp::globals::have!(gGraphics), 2018);
     h(O::NewDataPreLoading, 0, &[]);
-    verify(h(O::DataPreLoadingPresent, 0, &[]) != 0, 2022);
+    verify(crate::gamecpp::globals::have!(gDataPreLoading), 2022);
     h(O::NewPhysics, 0, &[]);
-    verify(h(O::PhysicsPresent, 0, &[]) != 0, 2026);
-    let r = h(O::RegisterShutdownThreads, 0, &[]);
+    verify(crate::gamecpp::globals::have!(gPhysics), 2026);
+    let r = register_shutdown(shutdown_threads);
     verify(r == KESE_OK, 2030);
 }
 
@@ -485,7 +509,7 @@ pub extern "C" fn ee_gamecpp_startup_video_mode(width: c_ulong, height: c_ulong,
 /// EEStopAllSounds: the music, the ambient sounds (disabled) and every one-shot sound stopped.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_stop_sounds() {
-    if h(O::MusicManagerPresent, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gMusicManager) {
         h(O::MusicStop, 0, &[]);
     }
     h(O::AmbientStop, 0, &[]);
@@ -556,7 +580,7 @@ pub extern "C" fn ee_gamecpp_startup_graphics_shutdown() {
     }
     h(O::DisplayRasterizersClear, 0, &[]);
     h(O::DeleteGameWindow, 0, &[]);
-    h(O::DeleteEffectBatchBuffers, 0, &[]);
+    super::effect_host::ee_gamecpp_fx_batch_delete();
     h(O::RastDeactivate, 0, &[]);
     for op in [
         O::DeleteRoWater,
@@ -572,6 +596,29 @@ pub extern "C" fn ee_gamecpp_startup_graphics_shutdown() {
     h(O::DeleteModelManager, 0, &[]);
 }
 
+/// `kThreadMessageQuit`: every thread's message loop stops on it.
+const THREAD_MESSAGE_QUIT: c_ulong = 0x401;
+
+/// A thread's Shutdown (were RTSMousePointer's, RTSPhysics' and EEDataPreLoading's inlines): the quit message posted
+/// and queued, then the thread's done event awaited.
+///
+/// # Safety
+/// `thread` is the object's live TSThread, `done` its TSEvent (the Thread System's records).
+#[no_mangle]
+pub unsafe extern "C" fn ee_gamecpp_startup_quit_thread(thread: *mut c_void, done: *mut c_void) {
+    // SAFETY: the caller's live thread and event
+    unsafe {
+        ee_base::ts::ee_ts_thread_post(
+            thread.cast(),
+            THREAD_MESSAGE_QUIT,
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            true,
+        );
+        ee_base::ts::ee_ts_event_wait(done.cast(), ee_base::plat_sys::constants::PLAT_WAIT_INFINITE);
+    }
+}
+
 /// EEShutdownThreads: the physics stopped, the communications and the WON connection deleted, then the physics,
 /// data preloading, graphics and mouse pointer threads shut down and deleted, the music manager and the user
 /// interface deleted.
@@ -582,7 +629,7 @@ pub extern "C" fn ee_gamecpp_startup_shutdown_threads() {
     h(O::WonNetDeleteDetached, 0, &[]);
     h(O::MousePointerPost, 0, &[0x402]);
     while h(O::MousePointerShown, 0, &[]) != 0 {
-        h(O::Sleep, 0, &[1]);
+        ee_base::plat_core::time::PlatSleep(1);
     }
     pause_graphics();
     for (shutdown, delete) in [
@@ -611,9 +658,9 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
         [o[0] + h(O::WindowWidth, 0, &[]) as c_ulong as f32, o[1] + h(O::WindowHeight, 0, &[]) as c_ulong as f32]
     };
     let old_end = window_end(&origin);
-    let precision = h(O::FpPrecision, 0, &[]);
+    let precision = fp::ee_util_fp_precision();
     let mut had_pointer = false;
-    if h(O::MousePointerPresent, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gMousePointer) {
         had_pointer = true;
         h(O::MousePointerShutdown, 0, &[]);
         h(O::MousePointerDelete, 0, &[]);
@@ -623,12 +670,12 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
         h(O::RastPrimaryClear, 0, &[screen, cptr(&window_rect(&origin, &old_end))]);
         h(O::RastSecondaryClear, 0, &[screen, cptr(&window_rect(&origin, &old_end))]);
         h(O::ScreenReleaseWindow, 0, &[]);
-        h(O::DeleteEffectBatchBuffers, 0, &[]);
+        super::effect_host::ee_gamecpp_fx_batch_delete();
         h(O::RastDeactivate, 0, &[]);
     }
     let r = h(O::RastActivate, 0, &[]);
     verify(r == KESE_OK, 2978);
-    h(O::CreateEffectBatchBuffers, 0, &[]);
+    super::effect_host::ee_gamecpp_fx_batch_create();
     let r = h(O::ScreenCapture, 0, &[]);
     verify(r == KESE_OK, 2987);
     ee_gamecpp_startup_video_mode(width, height, h(O::PrefGameBitDepth, 0, &[]) as c_ulong, true);
@@ -636,7 +683,7 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
     let format = if h(O::PrefGameBitDepth, 0, &[]) == 16 { 12 } else { 13 };
     let r = h(O::RastActivateScreen, 0, &[full_screen as i64, format]);
     verify(r == KESE_OK, 3004);
-    if h(O::GraphicsPresent, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gGraphics) {
         h(O::GfxSetSecondarySurface, 0, &[]);
     }
     h(O::CameraResetZoom, 0, &[]);
@@ -652,7 +699,7 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
     h(O::MouseLoad, 0, &[]);
     let r = h(O::TexturesRefreshAll, 0, &[]);
     verify(r == KESE_OK, 3070);
-    h(O::ButtonsReload, 0, &[]);
+    super::db_media::ee_gamecpp_db_button_reload();
     if h(O::IconsLoaded, 0, &[]) != 0 {
         h(O::UiReloadIcons, 0, &[]);
         h(O::UiUnloadIcons, 0, &[]);
@@ -660,14 +707,14 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
     }
     if had_pointer {
         h(O::NewMousePointer, 0, &[]);
-        verify(h(O::MousePointerPresent, 0, &[]) != 0, 3094);
+        verify(crate::gamecpp::globals::have!(gMousePointer), 3094);
     }
-    if h(O::MousePointerPresent, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gMousePointer) {
         h(O::MousePointerPostSurface, 0, &[]);
     }
-    h(O::FpSetPrecision, 0, &[precision]);
-    if h(O::FpRounding, 0, &[]) != 0 {
-        h(O::FpSetRoundingNearest, 0, &[]);
+    fp::ee_util_fp_set_precision(precision);
+    if fp::ee_util_fp_rounding() != 0 {
+        fp::ee_util_fp_set_rounding(0);
     }
 }
 
@@ -677,7 +724,7 @@ pub extern "C" fn ee_gamecpp_startup_change_screen(width: c_ulong, height: c_ulo
 pub extern "C" fn ee_gamecpp_startup_display() -> bool {
     let r = h(O::GeInitialize, 0, &[]);
     verify(r == KESE_OK, 3369);
-    h(O::EnumerateDisplayDevices, 0, &[]);
+    super::utilities::ee_gamecpp_enumerate_display_devices();
     let count = h(O::RasterizerCount, 0, &[]) as c_ulong;
     let mut k: c_ulong = 0;
     while k < count {
@@ -731,7 +778,7 @@ pub extern "C" fn ee_gamecpp_startup_display() -> bool {
         h(O::SetGameWindowFallback, 0, &[]);
     }
     h(O::PrefSave, 0, &[]);
-    h(O::CreateEffectBatchBuffers, 0, &[]);
+    super::effect_host::ee_gamecpp_fx_batch_create();
     let mut desktop = GeRectangle::default();
     h(O::ScreenDesktopRect, 0, &[ptr(&mut desktop)]);
     let origin = [desktop.left, desktop.top];
@@ -800,7 +847,7 @@ pub extern "C" fn ee_gamecpp_startup_sounds() -> bool {
     h(O::SoundSetCategoryPriority, 0, &[0x31, 0]);
     hf(O::SoundSetCategoryPercentage, 0, &[0x31], &[1.0]);
     h(O::SoundSetLatency, 0, &[200]);
-    let r = h(O::RegisterShutdownSound, 0, &[]);
+    let r = register_shutdown(delete_sound_manager);
     verify(r == KESE_OK, 0x7c4);
     true
 }
@@ -808,17 +855,17 @@ pub extern "C" fn ee_gamecpp_startup_sounds() -> bool {
 /// EEDeleteSoundManager: the sound manager destroyed, its memory pool logged and freed with its locks.
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_startup_delete_sound_manager() {
-    for op in [O::SoundManagerDestroy, O::SoundPoolDump, O::SoundPoolCleanup] {
-        h(op, 0, &[]);
-    }
+    h(O::SoundManagerDestroy, 0, &[]);
+    h(O::SoundPoolDump, 0, &[]);
+    ee_audio::sound::objects::ee_sound_pool_cleanup();
 }
 
-/// A db table found (its text form: EEDbFindFile, the name `k` of Empire Earth.cpp's `kDbTableNames`) and loaded
+/// A db table found (its text form: EEDbFindFile, the name `k` of db_text.rs's `DB_TABLE_FILES`) and loaded
 /// by its case; a failure stops the game (ESVerify at the original's lines: `line` the find, + 1 the file, + 3 the
 /// load).
 fn load_table(k: usize, load: O, line: i64) {
     let mut file: P = 0;
-    let r = h(O::DbFindTable, 0, &[k as i64, ptr(&mut file)]);
+    let r = super::db_text::find_in_data_path(super::db_text::DB_TABLE_FILES[k], &mut file);
     verify(r == KESE_OK, line);
     verify(file != 0, line + 1);
     let r = h(load, file, &[]);
@@ -868,13 +915,13 @@ pub extern "C" fn ee_gamecpp_startup_database() {
         k += 1;
     }
     let (mut events, mut effects): (P, P) = (0, 0);
-    let r = h(O::DbFindEvents, 0, &[ptr(&mut events)]);
+    let r = super::db_text::find_in_data_path(super::db_text::DB_EVENTS_FILE, &mut events);
     verify(r == KESE_OK, 0x3e2);
     verify(events != 0, 0x3e3);
-    let r = h(O::DbFindEffects, 0, &[ptr(&mut effects)]);
+    let r = super::db_text::find_in_data_path(super::db_text::DB_EFFECTS_FILE, &mut effects);
     verify(r == KESE_OK, 0x3e5);
     verify(effects != 0, 0x3e6);
-    let r = h(O::LoadEvents, events, &[pa(effects)]);
+    let r = i64::from(ee_sim::scenario::event::ee_scenario_ev_load(events as *mut c_void, effects as *mut c_void));
     verify(r == KESE_OK, 0x3e8);
     h(O::FileSpecDelete, events, &[]);
     h(O::FileSpecDelete, effects, &[]);
@@ -909,7 +956,7 @@ pub extern "C" fn ee_gamecpp_startup_database() {
         h(O::FileSpecCreateDirectory, directory.0, &[]);
     }
     let mut file: P = 0;
-    let r = h(O::DbFindAmbientSounds, 0, &[ptr(&mut file)]);
+    let r = super::db_text::find_in_data_path(super::db_text::DB_AMBIENT_SOUNDS_FILE, &mut file);
     verify(r == KESE_OK, 0x4b3);
     verify(file != 0, 0x4b4);
     h(O::AmbientLoad, file, &[]);
@@ -920,10 +967,10 @@ pub extern "C" fn ee_gamecpp_startup_database() {
     }
     h(O::GfxEffectsSortMedia, 0, &[]);
     // (EEFn0FCA98, which returns 0, is checked here: 0x4c1)
-    h(O::CreatePlaneModels, 0, &[]);
+    create_plane_models();
     ee_gamecpp_startup_game_pools();
-    h(O::DumpRules, 0, &[]);
-    let r = h(O::RegisterShutdownDatabase, 0, &[]);
+    super::db_text::ee_gamecpp_db_dump_rules();
+    let r = register_shutdown(ee_gamecpp_startup_delete_database);
     verify(r == KESE_OK, 0x4cb);
 }
 
@@ -949,7 +996,7 @@ pub extern "C" fn ee_gamecpp_startup_game_objects() {
     h(O::WorldOptionsSetDefaults, 0, &[]);
     h(O::InitPhysicsModels, 0, &[]);
     h(O::NewMouse, 0, &[]);
-    verify(h(O::MousePresent, 0, &[]) != 0, 0x4ee);
+    verify(crate::gamecpp::globals::have!(gMouse), 0x4ee);
     let r = h(O::MouseLoad, 0, &[]);
     verify(r == KESE_OK, 0x4f2);
     h(O::MouseSetWindowBounds, 0, &[]);
@@ -963,12 +1010,12 @@ pub extern "C" fn ee_gamecpp_startup_game_objects() {
     h(O::UiSetLeftHandedPref, 0, &[]);
     hf(O::UiSetBorderColors, 0, &[], &[0.34765625, 0.39453125, 0.390625, 0.69140625, 0.76171875, 0.7578125]);
     h(O::NewArtificialIntelligence, 0, &[]);
-    verify(h(O::ArtificialIntelligencePresent, 0, &[]) != 0, 0x514);
+    verify(crate::gamecpp::globals::have!(gArtificialIntelligence), 0x514);
     h(O::NewCheatCodes, 0, &[]);
-    verify(h(O::CheatCodesPresent, 0, &[]) != 0, 0x518);
+    verify(crate::gamecpp::globals::have!(gCheatCodes), 0x518);
     h(O::NewGameTimer, 0, &[]);
     verify(h(O::GameTimerPresent, 0, &[]) != 0, 1876);
-    let r = h(O::RegisterShutdownGameObjects, 0, &[]);
+    let r = register_shutdown(delete_game_objects);
     verify(r == KESE_OK, 0x51f);
 }
 
@@ -984,14 +1031,14 @@ pub extern "C" fn ee_gamecpp_startup_delete_game_objects() {
     h(O::MouseRelease, 0, &[]);
     h(O::DeleteMouse, 0, &[]);
     h(O::WorldClear, 0, &[]);
-    if h(O::MiniMapPresent, 0, &[]) != 0 {
+    if crate::gamecpp::globals::have!(gMiniMap) {
         h(O::MiniMapDelete, 0, &[]);
         h(O::MiniMapSetNull, 0, &[]);
     }
     h(O::AeManagerClear, 0, &[]);
     h(O::GameStateClear, 0, &[]);
     h(O::FreePhysicsModels, 0, &[]);
-    h(O::ClearRandomMapGenerators, 0, &[]);
+    ee_sim::rmap::object::ee_rmap_generators_clear();
 }
 
 /// EEDeleteDatabase: every db table and its media unloaded, the calamity manager and the language resources
@@ -1002,7 +1049,7 @@ pub extern "C" fn ee_gamecpp_startup_delete_database(shutdown: bool) {
     h(O::TileReleaseUnitListPool, 0, &[]);
     h(O::DoppelgangerRelease, 0, &[]);
     h(O::ReportLeakingUnits, 0, &[]);
-    h(O::UnitActionDeleteScripts, 0, &[]);
+    ee_sim::units::script::ee_units_script_delete_all();
     h(O::ReleaseUnitClasses, 0, &[]);
     let alarm = hp(O::SoundObjectGet, 0, &[962]);
     if alarm != 0 {
@@ -1010,15 +1057,15 @@ pub extern "C" fn ee_gamecpp_startup_delete_database(shutdown: bool) {
     }
     h(O::AnimalsUnload, 0, &[]);
     h(O::AmbientClearSounds, 0, &[]);
-    h(O::DamageTablesClear, 0, &[]);
+    ee_sim::combat::damage_table::ee_combat_damage_table_clear();
     h(O::CalamityClassesDestroy, 0, &[shutdown as i64]);
+    h(O::DatabaseObjectsClear, 0, &[]);
+    h(O::ButtonsUnload, 0, &[]);
+    crate::preload_media::ee_preload_unload_effects();
+    crate::preload_media::ee_preload_delete_media_table();
+    h(O::MusicObjectsClear, 0, &[]);
+    crate::preload_media::ee_preload_unload_sounds();
     for op in [
-        O::DatabaseObjectsClear,
-        O::ButtonsUnload,
-        O::GfxEffectsUnloadTable,
-        O::DeleteMediaTable,
-        O::MusicObjectsClear,
-        O::SoundObjectsUnloadTable,
         O::ColorTableUnload,
         O::TargetingTableUnload,
         O::TerrainTableUnload,

@@ -8,7 +8,9 @@
 //! Network code: a single-player game makes a server (the constructor, the destructor) but sends nothing; the rest
 //! only a LAN game (the lead's gates) runs.
 
+use std::collections::BTreeMap;
 use std::ffi::{c_long, c_ulong, c_void};
+use std::sync::{Mutex, MutexGuard};
 
 use ee_sim::netmsg::session::{ee_netmsg_session, EeNetSessCall, EE_NETMSG_SESS_DO_CONNECTION_REQUEST};
 
@@ -18,6 +20,40 @@ use crate::app::game_options::EeAppOptionsPlayerFields;
 
 /// `kConnectionRemovedByHost` (NEMessageID.h; EEServer.cpp asserts it).
 const CONNECTION_REMOVED_BY_HOST: i64 = 5;
+
+/// The server's network slot of each lobby slot (was EEServer's `mSendToSlots`, a `std::map`: kept in key order, an
+/// insert keeps a key's first value). One server at a time: its constructor and destructor clear it.
+static SEND_TO_SLOTS: Mutex<BTreeMap<u8, u8>> = Mutex::new(BTreeMap::new());
+
+fn send_to_slots() -> MutexGuard<'static, BTreeMap<u8, u8>> {
+    SEND_TO_SLOTS.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// EEServer::GetSendToSlot: a lobby slot's network slot, 0xff when none.
+#[no_mangle]
+pub extern "C" fn ee_gamecpp_server_send_to_slot(lobby: u8) -> u8 {
+    send_to_slots().get(&lobby).copied().unwrap_or(0xff)
+}
+
+/// EEServer::GetLobbySlot: the first lobby slot (in slot order) that uses a network slot, 0 when none.
+pub fn lobby_slot(send_to: u8) -> u8 {
+    send_to_slots().iter().find(|(_, &v)| v == send_to).map_or(0, |(&k, _)| k)
+}
+
+/// The send-to slots cleared (a connection request; the server made or deleted).
+pub fn send_to_clear() {
+    send_to_slots().clear();
+}
+
+/// A lobby slot's network slot, unless it has one already (`std::map::insert`).
+pub fn send_to_insert(lobby: u8, send_to: u8) {
+    send_to_slots().entry(lobby).or_insert(send_to);
+}
+
+/// A lobby slot's network slot forgotten.
+pub fn send_to_erase(lobby: u8) {
+    send_to_slots().remove(&lobby);
+}
 
 /// EEServer's plain members from `mVoted` to `mHasLeftGame` (EEServer.cpp asserts the offsets). Written field by
 /// field, never whole (its padding is not the server's).
@@ -117,6 +153,7 @@ pub extern "C" fn ee_gamecpp_server_init(server: *mut c_void) {
         server_members(t);
         server_reset_fast(t);
     }
+    send_to_clear();
     h(O::C11SvCreateSearchLock, s, &[]);
     h(O::C11SvCreateFastLock, s, &[]);
     h(O::C11SvCreateAttemptLock, s, &[]);
@@ -130,6 +167,7 @@ pub extern "C" fn ee_gamecpp_server_drop(server: *mut c_void) {
     h(O::C11SvDestroySearchLock, s, &[]);
     h(O::C11SvDestroyFastLock, s, &[]);
     h(O::C11SvDestroyAttemptLock, s, &[]);
+    send_to_clear();
 }
 
 /// EEClient's constructor body: the members, the fast selection, the lock.
@@ -279,9 +317,9 @@ pub fn send_full_player_information(server: P, options: P) {
 pub unsafe extern "C" fn ee_gamecpp_server_refuse(server: *mut c_void, player: *mut c_void) {
     let (s, p) = (server as P, player as P);
     let slot = fields(p).mSlot as i64;
-    let send_to = h(O::C11SvSendToSlot, s, &[slot as u8 as i64]);
+    let send_to = ee_gamecpp_server_send_to_slot(slot as u8) as i64;
     send_connection_response(s, send_to, CONNECTION_REMOVED_BY_HOST, SS_SLOT_NONE, 0xff, true);
-    h(O::C11SvSendToErase, s, &[slot as u8 as i64]);
+    send_to_erase(slot as u8);
     send_full_player_information(s, p);
 }
 
@@ -317,7 +355,7 @@ pub extern "C" fn ee_gamecpp_server_warning_sound(sound: c_long) {
 #[no_mangle]
 pub extern "C" fn ee_gamecpp_server_xfer_status(server: *mut c_void, slot: u8, percent: u8, xfer_id: u32, status: u8) {
     let s = server as P;
-    let player = h(O::C11SvLobbySlot, s, &[slot as i64]);
+    let player = lobby_slot(slot) as i64;
     h(O::C11SvXferStatus, s, &[player, percent as i64, xfer_id as i64, status as i64]);
 }
 
@@ -338,6 +376,22 @@ pub fn frame_server(frame: P) -> P {
 mod tests {
     use super::super::server::SS_SLOT_SERVER;
     use super::*;
+
+    #[test]
+    fn the_send_to_slots_keep_the_maps_order_and_first_insert() {
+        send_to_clear();
+        assert_eq!(ee_gamecpp_server_send_to_slot(3), 0xff);
+        assert_eq!(lobby_slot(7), 0);
+        send_to_insert(5, 7);
+        send_to_insert(2, 7);
+        send_to_insert(5, 9);
+        assert_eq!(ee_gamecpp_server_send_to_slot(5), 7);
+        assert_eq!(lobby_slot(7), 2);
+        send_to_erase(2);
+        assert_eq!(lobby_slot(7), 5);
+        send_to_clear();
+        assert_eq!(ee_gamecpp_server_send_to_slot(5), 0xff);
+    }
 
     #[test]
     fn the_tails_have_the_cpp_offsets() {

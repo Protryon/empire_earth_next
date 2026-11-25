@@ -220,7 +220,6 @@ int64_t EECore10OpB5(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float*
         break;
     case O::DbtBitmapScale: BMP->SetXYScale(f[0], f[1]);
         break;
-    case O::DbtHotKeyCount: return (int64_t)UIHotKey::GetHotKeyCount();
     case O::DbtHotKey: return P64(UIHotKey::GetHotKey((unsigned long)a[0]));
     // (EECore10OpB4) the animals' C++ calls and members (gamecpp db_media.rs; p the animal or the medium): one statement each
     case O::DanFields: return P64(static_cast<EeDataAnimalFields*>(ANIMAL));

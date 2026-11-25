@@ -194,6 +194,8 @@ CHECKS = [
          hosts=[ROOT / "src" / "Empire Earth" / "WONAPI" / "WONConfig" / "ConfigObject.cpp"], rust=[], allowed={}),
     dict(enum="EeWonLogicMgrOp", header="won_lobby/logicmgr.h", hosts=[LOBBY / "LobbyLogicMgr.cpp"], rust=[], allowed={}),
     dict(enum="EeWonErrScreenOp", header="won_lobby/errscreen.h", hosts=[LOBBY / "LobbyErrorScreen.cpp"], rust=[], allowed={}),
+    # R6 WON GUI round 35: the cursors' calls out (cursorobj.rs)
+    dict(enum="EeWonCursorOp", header="won_gui/cursorobj.h", hosts=[GUI / "Cursor.cpp"], rust=[], allowed={}),
 ]
 
 

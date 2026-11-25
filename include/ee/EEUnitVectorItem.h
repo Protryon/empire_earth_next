@@ -17,28 +17,11 @@ class EEComplexUnit;
 class FSFile;
 
 // New (units behaviour, round 3): the goal queue is a Rust object (ee_units goals.rs EeUnitsGoalQueue: its unit, its
-// goals, its timer); this is its deque's interface over it (size, the elements, read-only iterators by index, the
-// edits). No writable reference or iterator leaves it; `Set` replaces one element.
+// goals, its timer); this is its deque's interface over it (size, the elements, push_back: what
+// its users call). No writable reference leaves it.
 class EEGoalDeque {
 public:
     typedef size_t size_type;
-    typedef EEUnitGoal* value_type;
-    class const_iterator {
-    public:
-        const_iterator() : mQueue(NULL), mIndex(0) {}
-        const_iterator(const EeUnitsGoalQueue* inQueue, size_t inIndex) : mQueue(inQueue), mIndex(inIndex) {}
-        EEUnitGoal* operator*() const { return Goal(ee_units_gq_get(this->mQueue, this->mIndex)); }
-        const_iterator& operator++() { ++this->mIndex; return *this; }
-        const_iterator& operator--() { --this->mIndex; return *this; }
-        const_iterator operator+(ptrdiff_t inBy) const { return const_iterator(this->mQueue, this->mIndex + inBy); }
-        const_iterator operator-(ptrdiff_t inBy) const { return const_iterator(this->mQueue, this->mIndex - inBy); }
-        ptrdiff_t operator-(const const_iterator& inOther) const { return (ptrdiff_t)(this->mIndex - inOther.mIndex); }
-        bool operator==(const const_iterator& inOther) const { return this->mIndex == inOther.mIndex; }
-        bool operator!=(const const_iterator& inOther) const { return this->mIndex != inOther.mIndex; }
-        const EeUnitsGoalQueue* mQueue;
-        size_t mIndex;
-    };
-    typedef const_iterator iterator;
 
     EEGoalDeque() : mQueue(NULL) {}
     EEGoalDeque(const EEGoalDeque&) = delete;
@@ -52,35 +35,9 @@ public:
     EEUnitGoal* operator[](size_type inIndex) const { return Goal(ee_units_gq_get(this->mQueue, inIndex)); }
     EEUnitGoal* front() const { return (*this)[0]; }
     EEUnitGoal* back() const { return (*this)[this->size() - 1]; }
-    const_iterator begin() const { return const_iterator(this->mQueue, 0); }
-    const_iterator end() const { return const_iterator(this->mQueue, this->size()); }
-    std::deque<EEUnitGoal*> Get() const
-    {
-        std::deque<EEUnitGoal*> theGoals;
-        for (size_type i = 0; i < this->size(); i++)
-            theGoals.push_back((*this)[i]);
-        return theGoals;
-    }
 
-    void push_back(EEUnitGoal* inGoal) { this->Edit(0, 0, 0, inGoal); }
-    void push_front(EEUnitGoal* inGoal) { this->Edit(1, 0, 0, inGoal); }
-    void pop_back() { this->Edit(2, 0, 0, NULL); }
-    void pop_front() { this->Edit(3, 0, 0, NULL); }
-    const_iterator insert(const_iterator inAt, EEUnitGoal* inGoal) { this->Edit(4, inAt.mIndex, 0, inGoal); return inAt; }
-    const_iterator erase(const_iterator inAt) { this->Edit(5, inAt.mIndex, 1, NULL); return inAt; }
-    const_iterator erase(const_iterator inFirst, const_iterator inLast)
-    {
-        this->Edit(5, inFirst.mIndex, inLast.mIndex - inFirst.mIndex, NULL);
-        return inFirst;
-    }
-    void clear() { this->Edit(6, 0, 0, NULL); }
-    void resize(size_type inSize, EEUnitGoal* inGoal) { this->Edit(7, inSize, 0, inGoal); }
-    void Set(size_type inIndex, EEUnitGoal* inGoal) { this->Edit(8, inIndex, 0, inGoal); }
+    void push_back(EEUnitGoal* inGoal) { ee_units_gq_edit(this->mQueue, 0, 0, 0, H(inGoal)); }
 
-    void Edit(int32_t inEdit, size_t inIndex, size_t inCount, EEUnitGoal* inGoal)
-    {
-        ee_units_gq_edit(this->mQueue, inEdit, inIndex, inCount, H(inGoal));
-    }
     EeUnitsGoalQueue* mQueue;
 };
 
@@ -122,9 +79,9 @@ public:
     void PopFront() { this->GoalOp(4, 0, NULL); }                        // the first goal removed and deleted
     EEUnitGoal* GetFront() { return this->mGoals.front(); }             // 0x1f8a26 (EEUICUnitIconBar 0x25ad15)
     EEUnitGoal* GetGoalAt(unsigned long inIndex) { return this->mGoals[inIndex]; }
-    // the goals (kind, then data) and the timer from and to the saved game; the first error (EEGoalQueueContainer.cpp)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    // the goals (kind, then data) and the timer from and to the saved game; the first error (ee_units goals.rs)
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_units_gq_load_file(this->mGoals.mQueue, &inFile, inMajorVersion, inMinorVersion); }
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile) { return ee_units_gq_save_file(this->mGoals.mQueue, &outFile, inMajorVersion, inMinorVersion); }
 
     void GoalOp(int32_t inOp, unsigned long inIndex, EEUnitGoal* inGoal)
     {
@@ -132,18 +89,6 @@ public:
     }
 
     EEGoalDeque mGoals;                     // the Rust queue (+0x04 of the original: its goals' deque)
-
-    static const UString sData;             // "EEGoalQueueContainer-Data" (init chain 0x20560c)
 };
-
-// the context of the queues' Rust host (EEGoalQueueContainer.cpp): the file and its version for the record, the unit
-// for the per-tick update's refresh (ee_units goals.rs)
-struct EEGoalQueueIO {
-    FSFile* mFile;
-    unsigned long mMajor;
-    unsigned long mMinor;
-    EEComplexUnit* mUnit;
-};
-void EEGoalQueueHostOf(EEGoalQueueIO& inIO, EeGoalQueueHost& outHost);
 
 #endif

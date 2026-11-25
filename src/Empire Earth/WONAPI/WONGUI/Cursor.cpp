@@ -11,42 +11,21 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyWONSkinConfig.h"
 using namespace WONAPI;
-// The standard cursors, one slot per StandardCursor value (initialised and cleaned up by the $E functions
-// listed at the end)
-static SmartPtr<CursorRef> gStandardCursors[StandardCursor_Max+1];
-// Creates a cursor (base class, no state)
-Cursor::Cursor() {}
-// Destroys the cursor (empty; emitted at 0x00728590)
-Cursor::~Cursor() {}
-// Default hooks: no Windows cursor and no attached component (the linker folds these bodies into the
-// identical ones at 0x006c7b10 and 0x00726b50)
-Cursor* Cursor::GetNative() { return NULL; }
-Component* Cursor::GetComponent(int&,int&) { return NULL; }
-// Returns the cursor currently set for a standard cursor type (NULL if none)
-Cursor* Cursor::GetStandardCursor(StandardCursor type) { return gStandardCursors[type].get(); }
-// Sets the cursor for a standard cursor type, creating its shared reference on first use
-void Cursor::SetStandardCursor(StandardCursor type,Cursor* cursor) {
-    if(gStandardCursors[type].get()==NULL)
-        gStandardCursors[type]=new CursorRef(cursor);
-    else
-        gStandardCursors[type]->SetCursor(cursor);
-}
-// ComponentCursor follows ~Cursor in the original object (VC6 then omits the -1 EH state before the base
-// destructor call in ~ComponentCursor, 0x726770).
-namespace WONAPI {
-// Creates a cursor drawn by a component, with the mouse hot spot inside it
-ComponentCursor::ComponentCursor(Component* component,int mouseX,int mouseY)
-    : mComponent(component)
+// R6 WON GUI round 35: the cursors are cursorobj.rs's (the kinds, the standard cursors' table); this is what they ask
+// of the C++: the references a cursor keeps (a CursorRef's cursor, a ComponentCursor's component), another cursor's
+// answers, and the handles
+intptr_t WONAPI::WONCursorHost(EeWonCursorOp op, intptr_t a, intptr_t b, intptr_t c)
 {
-    this->mMouseX=mouseX;
-    this->mMouseY=mouseY;
+    typedef EeWonCursorOp Op;
+    switch (op) {
+    case Op::Hold: ((Cursor*)a)->AddRef(); return 0;
+    case Op::Release: ((Cursor*)a)->Release(); return 0;
+    case Op::CompHold: ((Component*)a)->AddRef(); return 0;
+    case Op::CompRelease: ((Component*)a)->Release(); return 0;
+    case Op::Native: return (intptr_t)((Cursor*)a)->GetNative();
+    case Op::Component: return (intptr_t)((Cursor*)a)->GetComponent(*(int*)b, *(int*)c);
+    case Op::Wrap: return (intptr_t)new Cursor((EeWonCursor*)a);
+    case Op::RustOf: return (intptr_t)((Cursor*)a)->mRust;
+    }
+    return 0;
 }
-// Returns the cursor's component and its mouse hot spot
-Component* ComponentCursor::GetComponent(int& mouseX,int& mouseY)
-{
-    mouseX=this->mMouseX;
-    mouseY=this->mMouseY;
-    return this->mComponent.get();
-}
-}
-// (MSCursor's destructor, 0x007d0320, went with the GDI backend: PlatCursor is in PlatNativeImage.cpp)

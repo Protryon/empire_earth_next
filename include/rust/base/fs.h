@@ -90,6 +90,10 @@ struct EeFsFileCalls {
   int32_t (*write_u16)(void *file, uint16_t value);
   /// `GetIsOpen()`.
   bool (*is_open)(void *file);
+  /// `Read(bool&)`: the bool comes back as a byte, 0 or 1 (in: the old value).
+  int32_t (*read_bool)(void *file, uint8_t *value);
+  /// `Write(const bool&)`.
+  int32_t (*write_bool)(void *file, bool value);
 };
 
 /// The C++ calls (File System.cpp): each the one call it names. `p` is an `FSPersistent*`.

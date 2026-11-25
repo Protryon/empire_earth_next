@@ -596,7 +596,7 @@ fn cpp_enumerator(path: &str, name: &str) -> i64 {
 fn the_message_ids_and_unit_types_equal_the_cpp_enumerators() {
     // (once EESEARust.cpp's static_asserts)
     use crate::screens::editor_actions::*;
-    let m = |n| cpp_enumerator("include/ee/EEMessageID.h", n);
+    let m = |n| cpp_enumerator("include/rust/sim/message_ids.h", n);
     assert_eq!(m("kMessageSelectUnit"), EE_SCREENS_SEU_MSG_SELECT_UNIT as i64);
     assert_eq!(m("kMessageAddUnitToSelectedGroup"), EE_SCREENS_SEU_MSG_ADD_UNIT as i64);
     assert_eq!(m("kMessageAlwaysAddUnitToSelectedGroup"), EE_SCREENS_SEU_MSG_ALWAYS_ADD_UNIT as i64);

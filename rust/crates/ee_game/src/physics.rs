@@ -18,7 +18,7 @@
 )]
 
 use std::ffi::{c_char, c_long, c_ulong, c_void};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 use ee_base::math::transform::RotationOrder;
@@ -107,13 +107,9 @@ pub enum EePhysCpp {
     NewCivTimerExpired,
     // ---- the captures
     CaptureExecuted,
-    SimCaptureActive,
     UnitStoreCheck,
-    WorldViewCheck,
     TestHookSet,
     TestHookCall,
-    OrderLog,
-    GameLogOn,
     // ---- the communications
     IsServer,
     IsClient,
@@ -136,12 +132,7 @@ pub enum EePhysCpp {
     NumPlayers,
     Player,
     CurrentPlayer,
-    PlayerBySlot,
-    FlushQueuedPlacements,
-    QueueBornDeactivations,
     UpdateActiveUnits,
-    RemovePlayerFromGame,
-    CheckGameOver,
     InCinematic,
     ScenarioResult,
     SetScenarioResult,
@@ -163,7 +154,6 @@ pub enum EePhysCpp {
     WorldGameSpeed,
     /// (float)
     TimeOfDay,
-    SetTimeOfDay,
     /// (float)
     WindYaw,
     SetWindYaw,
@@ -177,7 +167,6 @@ pub enum EePhysCpp {
     UnitDump,
     ContagionSwapUnit,
     ContagionDump,
-    MapChecksum,
     MapDump,
     CampaignNameLength,
     CampaignChecksum,
@@ -188,16 +177,15 @@ pub enum EePhysCpp {
     SetGameOverFlag,
     // ---- a player (p: an EEPlayer*)
     PlayerObserver,
-    PlayerSetGameResult,
     PlayerGameResult,
     PlayerAddPendingUnits,
-    PlayerRemoveKilledUnits,
     /// `UnitsSwapped(((EEPhysics*)a0)->mUnitSwaps)`
     PlayerUnitsSwapped,
     PlayerCivChosen,
     PlayerShiftMode,
     PlayerAvailablePoints,
     PlayerSavedGroupLast,
+    CivBuilderBlink,
     PlayerId,
     PlayerSlot,
     PlayerGetSlot,
@@ -236,7 +224,6 @@ pub enum EePhysCpp {
     ResourceString,
     /// `gUserInterface->AddChatLogEntry(*(UWideString*)p, 0)`
     ChatLog,
-    CivBuilderBlink,
     IsMainGameForm,
     OptionsButtonBlink,
     CivTimerLimit,
@@ -256,15 +243,9 @@ pub enum EePhysCpp {
     FileOpen,
     FilePuts,
     FileClose,
-    AtcChecksum,
-    AtcDump,
-    CpChecksum,
     ContinentChecksum,
-    StoreChecksumFlag1,
-    StoreChecksumFlag2,
     /// the campaign user (a0 0), the game's campaign (1) or scenario (2) into the buffer a1 (room a2): its length
     CampaignText,
-    AppTeamsClear,
     Srand,
     Rand,
     Verify,
@@ -324,6 +305,32 @@ fn hd(op: O, p: P, a: &[i64]) -> f32 {
     let fi = [0f32; 4];
     // SAFETY: as hf
     unsafe { sys::ee_physcpp_f(op, p, ai.as_ptr(), fi.as_ptr()) as f32 }
+}
+
+/// `&gWorld` (constant: asked of the host once).
+fn world() -> P {
+    static WORLD: AtomicUsize = AtomicUsize::new(0);
+    let mut w = WORLD.load(Ordering::Relaxed);
+    if w == 0 {
+        w = crate::gamecpp::hp(crate::gamecpp::O::WorldAddr, 0, &[]);
+        WORLD.store(w, Ordering::Relaxed);
+    }
+    w
+}
+
+/// `EEPlayer::SetGameResult` (player_rest.rs).
+fn set_game_result(player: P, result: c_long) {
+    use ee_sim::units::player_rest as pr;
+    // SAFETY: a live player of the world, on the physics thread
+    unsafe {
+        pr::game::ee_units_player_rest(
+            player as *mut c_void,
+            pr::EE_UNITS_PLAYER_REST_SET_GAME_RESULT,
+            0,
+            result as i64,
+            0,
+        )
+    };
 }
 
 fn b(op: O, p: P, a: &[i64]) -> bool {
@@ -634,19 +641,19 @@ fn auto_save(_p: P) {
 fn flush_world(p: P) {
     let players = h0(O::NumPlayers);
     h0(O::CheckUnitList);
-    h0(O::FlushQueuedPlacements);
+    crate::gamecpp::world::rts_flush_queued(world());
     for i in 0..players {
         let player = hp(O::Player, 0, &[i]);
         if player != 0 {
             h(O::PlayerAddPendingUnits, player, &[]);
         }
     }
-    h0(O::QueueBornDeactivations);
+    crate::gamecpp::world::ee_gamecpp_world_queue_born();
     process_unit_swaps(p);
     for i in 0..players {
         let player = hp(O::Player, 0, &[i]);
         if player != 0 {
-            h(O::PlayerRemoveKilledUnits, player, &[]);
+            crate::gamecpp::world::rts_remove_killed(player);
         }
     }
 }
@@ -658,8 +665,8 @@ fn end_game(p: P, victory: bool) {
     for i in 1..h0(O::NumPlayers) {
         let player = hp(O::Player, 0, &[i]);
         if !b(O::PlayerObserver, player, &[]) {
-            h(O::RemovePlayerFromGame, 0, &[victory as i64, i]);
-            h(O::PlayerSetGameResult, hp(O::Player, 0, &[i]), &[if victory { 1 } else { 2 }]);
+            crate::gamecpp::world::ee_gamecpp_world_remove_player(world() as *mut c_void, victory, i as c_ulong);
+            set_game_result(hp(O::Player, 0, &[i]), if victory { 1 } else { 2 });
         }
     }
     if h0(O::CampaignNameLength) > 0
@@ -675,7 +682,7 @@ fn end_game(p: P, victory: bool) {
         }
     }
     h0(O::TeamsClear);
-    h0(O::AppTeamsClear);
+    ee_sim::app::teams_ffi::ee_app_teams_clear();
     if h0(O::IsServer) != 0 {
         h0(O::PauseGame);
     }
@@ -755,7 +762,13 @@ fn dump_out_of_synch(p: P, flags: c_ulong) {
             }
         }
         for k in 0..4 {
-            h(O::AtcDump, hp(O::PlayerAirTraffic, player, &[k]), &[file as i64]);
+            // SAFETY: the player's live air traffic control, the open dump file
+            unsafe {
+                ee_sim::units::atc::ee_units_atc_dump(
+                    hp(O::PlayerAirTraffic, player, &[k]) as *mut _,
+                    file as *mut c_void,
+                )
+            };
         }
     }
     h(O::PathManagerDump, 0, &[file as i64]);
@@ -823,10 +836,10 @@ fn out_of_synch_checksum(p: P, dump: bool, flags: c_ulong) -> c_ulong {
     let mut sum: c_ulong = 0;
     let add = |sum: &mut c_ulong, v: i64| *sum = sum.wrapping_add(v as c_ulong);
     if flags & 1 != 0 {
-        add(&mut sum, h0(O::StoreChecksumFlag1));
+        add(&mut sum, ee_sim::units::ffi::ee_units_store_checksum_flag1() as i64);
     }
     if flags & 2 != 0 {
-        add(&mut sum, h0(O::StoreChecksumFlag2));
+        add(&mut sum, ee_sim::units::ffi::ee_units_store_checksum_flag2() as i64);
     }
     let unit_flags = flags & !3;
     if unit_flags & (0x20 | 8) != 0 {
@@ -853,7 +866,10 @@ fn out_of_synch_checksum(p: P, dump: bool, flags: c_ulong) -> c_ulong {
             continue;
         }
         for k in 0..4 {
-            add(&mut sum, h(O::AtcChecksum, hp(O::PlayerAirTraffic, player, &[k]), &[]));
+            // SAFETY: the player's live air traffic control
+            let atc =
+                unsafe { ee_sim::units::atc::ee_units_atc_checksum(hp(O::PlayerAirTraffic, player, &[k]) as *mut _) };
+            add(&mut sum, atc as i64);
         }
     }
     let r = rec(p);
@@ -861,9 +877,10 @@ fn out_of_synch_checksum(p: P, dump: bool, flags: c_ulong) -> c_ulong {
         .wrapping_add(h(O::RandomSeed, p, &[]) as c_ulong)
         .wrapping_add(h(O::InputMessages, p, &[]) as c_ulong);
     sum = sum.wrapping_add(tick_sum);
-    add(&mut sum, h0(O::CpChecksum));
+    add(&mut sum, ee_sim::ai::next_game::trace::ee_ai_out_of_synch_checksum() as i64);
     if flags & 4 != 0 {
-        add(&mut sum, h0(O::MapChecksum));
+        let map = crate::gamecpp::hp(crate::gamecpp::O::WMap, world(), &[]);
+        add(&mut sum, crate::gamecpp::map::ee_gamecpp_map_checksum(map as *mut c_void) as i64);
     }
     if flags & 0x100 != 0 {
         add(&mut sum, h0(O::ContinentChecksum));
@@ -937,7 +954,7 @@ fn handle_message(p: P, message: u32, parameter1: usize, parameter2: usize) {
         0x503 => {
             set!(r, mTimeOfDayRuns, false);
             h0(O::WorldWriteLock);
-            hf(O::SetTimeOfDay, 0, &[], &[0.35]);
+            crate::gamecpp::world::ee_gamecpp_world_set_time_of_day(world() as *mut c_void, 0.35);
             h0(O::WorldWriteUnlock);
         }
         0x508 => {
@@ -975,10 +992,12 @@ fn idle(p: P) {
 /// effects, the units, the effects, the calamities, the AI, the scenario and the game over), then the timing averages
 /// and, on a server, the autosave clock.
 fn tick(p: P) {
-    if h0(O::SimCaptureActive) != 0 {
+    if ee_sim::app::capture::ee_app_capture_active() {
         // TEST ONLY: the unit store equals the objects; the world views' check
         h(O::UnitStoreCheck, 0, &[0]);
-        h(O::WorldViewCheck, 0, &[get!(rec(p), mNumTicksDone) as u32 as i64]);
+        let ticks = get!(rec(p), mNumTicksDone) as u32;
+        // SAFETY: the live world, on the physics thread
+        unsafe { ee_sim::world::check::ee_world_view_check(world() as u64, ticks) };
     }
     if LOADED_SEED_PENDING.swap(false, Ordering::Relaxed) {
         // a loaded game goes on from the saved seed
@@ -1035,7 +1054,7 @@ fn tick(p: P) {
     let mut new_result = if h0(O::InCinematic) != 0 { 0 } else { h0(O::ScenarioResult) };
     if new_result == 0 {
         if h0(O::InCinematic) == 0 {
-            new_result = h0(O::CheckGameOver);
+            new_result = ee_sim::units::game_over_host::ee_units_check_game_over(world() as u64) as c_long as i64;
             if new_result != 0 {
                 h(O::SetScenarioResult, 0, &[new_result]);
                 end_game(p, new_result == 1);
@@ -1091,23 +1110,27 @@ fn tick(p: P) {
 
 /// `EEPhysicsLog`: the game log's human orders and selections (TEST ONLY; ee_sim units order_log.rs).
 fn physics_log(message: P, time: c_long, select: u8) {
-    let player =
-        if h0(O::GameLogOn) != 0 { hp(O::PlayerBySlot, 0, &[h(O::MsgOriginatingSlot, message, &[])]) } else { 0 };
+    let player = if crate::game_log::ee_game_log_on() {
+        let slot = h(O::MsgOriginatingSlot, message, &[]) as u8;
+        crate::gamecpp::world::ee_gamecpp_world_player_by_slot(world() as *mut c_void, slot) as P
+    } else {
+        0
+    };
     let record = if player != 0 { hp(O::GameCast, message, &[]) } else { 0 };
     if player != 0 {
         let bytes = if record != 0 { h(O::RecordBytes, record, &[]) } else { 0 };
-        h(
-            O::OrderLog,
-            0,
-            &[
-                player as i64,
-                h(O::PlayerActiveGroup, player, &[]),
-                h(O::MsgType, message, &[]),
-                bytes,
-                time as u32 as i64,
-                select as i64,
-            ],
-        );
+        let (group, kind) = (h(O::PlayerActiveGroup, player, &[]), h(O::MsgType, message, &[]));
+        // SAFETY: the message's record bytes (or null), the live player and group
+        unsafe {
+            ee_sim::units::order_log::ee_units_order_log(
+                player as u64,
+                group as u64,
+                kind as u8,
+                bytes as usize as *const u8,
+                time as u32,
+                select,
+            )
+        };
     }
 }
 
@@ -1162,7 +1185,7 @@ fn drain_input(p: P) {
             }
             // TEST ONLY: the simulation capture's NMEX record; the unit store before the message; the UI fixture
             h(O::CaptureExecuted, input, &[]);
-            if h0(O::SimCaptureActive) != 0 {
+            if ee_sim::app::capture::ee_app_capture_active() {
                 h(O::UnitStoreCheck, 0, &[h(O::MsgType, input, &[])]);
             }
             if h0(O::TestHookSet) != 0 {
@@ -1414,7 +1437,7 @@ fn update_weather(p: P) {
             if time_of_day >= 1.0 {
                 time_of_day = 0.0;
             }
-            hf(O::SetTimeOfDay, 0, &[], &[time_of_day]);
+            crate::gamecpp::world::ee_gamecpp_world_set_time_of_day(world() as *mut c_void, time_of_day);
             t = 0.0;
         }
         set!(r, mTimeOfDayStep, t);

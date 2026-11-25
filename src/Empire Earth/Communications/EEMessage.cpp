@@ -59,7 +59,6 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEMessageCapture.h"
 #include "rust/sim/netmsg.h"   // ee_netmsg
 #include "rust/sim/units.h"
 #include "rust/game/gamecpp.h"   // the bodies (gamecpp message.rs)
@@ -230,8 +229,6 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
 // ------------------------------------------------------------------------- the message bodies' C++ (gamecpp message.rs)
 
 
-int64_t EEMessageOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEMessageOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
 
 // the constants message.rs passes
 static_assert(kGraphicEffectCommandConfirmationMove == 0xb8 && kGraphicEffectCommandConfirmationAttack == 0xb9 && kGraphicEffectCommandConfirmationGatherOther == 0xba && kGraphicEffectDisbandUnitEmitter == 0xbc && kAIKindAircraftCarrier == 0xf && kAIKindSpaceCarrier == 0x27 && kUnitTypeAirport == 0x42 && kGoalUnloadTransport == 8 && kUnitCategoryFortress == 0x1d && kActionIdle == 5000 && kSoundButton2 == 0x208 && kSoundIncomingChatMessage == 0x3ae && kSoundClockTick == 0x3a8 && kSoundCashRegister == 0xe && kEECPChoiceClassic == 0, "gamecpp message.rs");
@@ -253,24 +250,8 @@ static_assert(sizeof(EETileCoordinate) == 2 * sizeof(long) && sizeof(GE2DPoint) 
 #define MAIN_FORM gUIManager->GetMainGameForm()
 
 
-double EEMessageOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEMessageOpNextF(inOp, p, a, f);
-}
-
 // the next bodies' cases (Empire Earth.cpp)
 int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-double EEStartupOpF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f);
-int64_t EEMessageOpNext(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEStartupOp(inOp, p, a, f);   // the start-up bodies' (Empire Earth.cpp)
-}
-
-double EEMessageOpNextF(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* f)
-{
-    return EEStartupOpF(inOp, p, a, f);
-}
-
 // ------------------------------------------------------------------------- round 11, lane C: the messages' C++
 
 
@@ -511,26 +492,15 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::PhysSetSlowPlayback: gPhysics->SetSlowPlayback(a[0] != 0);
         break;
-    case O::PhysQueueMessage: gPhysics->QueueMessage(MSG);
-        break;
-    case O::PhysFlushWorld: gPhysics->FlushWorld();
-        break;
     case O::PhysSetSeed: gPhysics->mRandom.SetSeed((long)a[0]);
         break;
     case O::SimSeedSet: return gPlatSimSeedSet;
     case O::SimSeed: return (int64_t)gPlatSimSeed;
     case O::ScenarioSetLastChat: gWorld.mScenarioManager->mLastChatText = MSG->mString;
         break;
-    case O::GfxPostResume: gGraphics->PostResume();
-        break;
-    case O::GfxPostPause: gGraphics->PostPause();
-        break;
     case O::GfxIsPaused: return gGraphics->mIsPaused;
     case O::GfxPostSetFlag5B: gGraphics->PostSetFlag5B(a[0] != 0);
         break;
-    case O::Sleep: PlatSleep((unsigned long)a[0]);
-        break;
-    case O::TimeNow: return TMGetTime();
     case O::CameraUpdate: gWorld.mCameraControl.Update(f[0]);
         break;
     case O::CommPresent: return gCommunications != NULL;
@@ -574,12 +544,10 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::ServerSetLoadResponses: SERVER->mNumLoadResponses = (unsigned char)a[0];
         break;
-    case O::ServerGetSendToSlot: return SERVER->GetSendToSlot((unsigned char)a[0]);
     case O::ServerSetSendToSlotForPlayer: SERVER->SetSendToSlotForPlayer((unsigned char)a[0], (unsigned char)a[1]);
         break;
     case O::ServerSendPlayerSlotInfo: SERVER->SendPlayerSlotInfo();
         break;
-    case O::CpEngineChoiceCount: return EECPEngineChoiceCount();
     case O::LobbyOptPlayer: return P64(&gGameOptions.mPlayers[a[0]]);
     case O::LobbyReadLock: gGameOptions.mLock->ReadLock();
         break;
@@ -718,8 +686,6 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
     case O::C11MsgNewRecord: return P64(static_cast<NEMessage*>(new EEMRecord((unsigned char*)p)));
     case O::C11MsgBuildUndefined: ESVERIFY_AT("Undefined message type" == NULL, 1275);
         break;
-    case O::C11MsgCaptureImport: EEMessageCaptureImport((NEMessage*)a[0], (unsigned char*)p);   // TEST ONLY: NMIM
-        break;
     // a box selection (p the record; the picked ids a C++ vector)
     case O::C11UlongsNew: return P64(new std::vector<unsigned long>);
     case O::C11UlongsDelete: delete (std::vector<unsigned long>*)p;
@@ -792,7 +758,7 @@ int64_t EEMessageOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         break;
     case O::LcLongVecSize: return (int64_t)((std::vector<long>*)p)->size();
     case O::LcLongVecAt: return (*(std::vector<long>*)p)[a[0]];
-    default: return EEMessageOpNext(inOp, p, a, f);
+    default: return EEStartupOp(inOp, p, a, f);
     }
     return 0;
 }

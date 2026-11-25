@@ -36,6 +36,12 @@ use ee_sim::world::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields,
 
 use super::{cptr, h, hd, hf, hp, pa, position, ptr, rec, set_position, O, P};
 
+/// `EEContagionHelperAddUnit(helper, unit, true)`: the unit joins the helper's list, the functors told.
+fn helper_add_unit(helper: P, unit: P) {
+    // SAFETY: the calamity's live helper and unit
+    unsafe { ee_sim::tech::contagion_store_ffi::ee_contagion_helper_add_unit(helper as *mut _, unit as u64, true) };
+}
+
 /// The calamity classes (`EECalamityEnum`, ee/EECalamityManager.h).
 mod kind {
     pub(crate) const CAL_K_EARTHQUAKE: i32 = 3;
@@ -508,7 +514,7 @@ fn apply_effect(host: P, kl: P, c: P) {
                     eff_unit(u, effect_out, None);
                 }
             } else {
-                h(O::HelperAddUnit, helper, &[pa(u), 1]);
+                helper_add_unit(helper, u);
             }
         } else if caster(c) != 0 {
             let caster_player = unit_player(caster(c));
@@ -516,13 +522,13 @@ fn apply_effect(host: P, kl: P, c: P) {
             if (player != caster_player && enemy(caster_player, player_id(player)) != 0)
                 || klass(kl).mClassEnum as i32 == kind::CAL_K_AE_MIND_CONTROL
             {
-                h(O::HelperAddUnit, helper, &[pa(u), 1]);
+                helper_add_unit(helper, u);
             }
         } else {
             let gaia = hp(O::WorldPlayer, 0, &[0]);
             let player = unit_player(u);
             if player != gaia && enemy(gaia, player_id(player)) != 0 {
-                h(O::HelperAddUnit, helper, &[pa(u), 1]);
+                helper_add_unit(helper, u);
             }
         }
     }

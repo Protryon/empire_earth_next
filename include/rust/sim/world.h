@@ -6,6 +6,13 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "rust/data/tables.h"
+
+/// The class's 29 effects and 6 related classes in the constructor's order (the record's: EEUnitClass.cpp's member
+/// pointer tables until units round 11).
+constexpr static const size_t EE_UNIT_CLASS_EFFECTS = 29;
+
+constexpr static const size_t EE_UNIT_CLASS_RELATED = 6;
 
 /// The world's player slots (`RTSWorld::mPlayers`).
 constexpr static const size_t EE_WORLD_PLAYER_SLOTS = 17;
@@ -724,6 +731,8 @@ struct EeWorldLayout {
   /// `EEButtonObject*`)
   uint64_t stats_unit_class;
   uint64_t stats_button;
+  /// `EeUnitsUnitClassUpgradeLinks` in `EEUnitClassUpgrade` (units round 11: the two above are derived from it)
+  uint64_t stats_links;
   /// `&gPhysics` (the pointer variable's address) and `EeUnitsPhysicsSaved`'s base in `EEPhysics`
   uint64_t physics_pointer;
   uint64_t physics_saved;
@@ -773,6 +782,8 @@ struct EeWorldLayout {
   /// `EEGraphicEffect*` members, `GetEffects()`)
   uint64_t class_projectile_class;
   uint64_t class_effects;
+  /// `EeUnitsUnitClassLinks` in `EEUnitClass` (units round 11: the two above are derived from it)
+  uint64_t class_links;
   /// `EeUnitsActiveGroupFields` in `EEActiveGroup` (its second base) and `EEActiveGroup::mGoal` (an
   /// `EEUnitGoal*`)
   uint64_t active_group_fields;
@@ -786,6 +797,106 @@ struct EeWorldLayout {
   uint64_t player_group_lists;
   /// `EEPlayer::mLists` (an `EeUnitsPlayerLists*`: player_body.rs)
   uint64_t player_lists;
+};
+
+/// `EEUnitClass`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), the third base of
+/// `class EEUnitClass : public UReferenceCounter, public EeUnitsUnitClassFields, public EeUnitsUnitClassLinks`, in
+/// the original's member order (+0x060 `mAIScript` .. +0x118 `mBehavior`). A record of its own: `fill` writes the
+/// plain record whole after the constructor has set these. The C++ reads them by name, typed `class X*` (the
+/// renames in rust/cbindgen.toml). The 29 effects are contiguous from `mAttachedEffect` (`GetEffects`' array).
+struct EeUnitsUnitClassLinks {
+  /// the class's AI script (EEUnitAction::GetScript of its name: a Rust script's handle)
+  void *mAIScript;
+  class EEGraphicEffect *mAttachedEffect;
+  class EEGraphicEffect *mDeathEffect;
+  class EEGraphicEffect *mDamageEffect;
+  class EEGraphicEffect *mHealEffect;
+  class EEGraphicEffect *mFireTrailEffect;
+  class EEGraphicEffect *mTrailEffect;
+  class EEGraphicEffect *mMuzzleFlashEffect;
+  class EEGraphicEffect *mRippleEffect;
+  class EEGraphicEffect *mSplashEffect;
+  class EEGraphicEffect *mImpactSparksEffect;
+  class EEGraphicEffect *mImpactBloodEffect;
+  class EEGraphicEffect *mEffect090;
+  class EEGraphicEffect *mCreationEffect;
+  class EEGraphicEffect *mEffect098;
+  class EEGraphicEffect *mEffect09C;
+  class EEGraphicEffect *mEffect0A0;
+  class EEGraphicEffect *mEffect0A4;
+  class EEGraphicEffect *mEffect0A8;
+  class EEGraphicEffect *mSpecialAttackEffect;
+  class EEGraphicEffect *mEffect0B0;
+  class EEGraphicEffect *mShotEffect;
+  class EEGraphicEffect *mLeprosyEffect;
+  class EEGraphicEffect *mPlagueEffect;
+  class EEGraphicEffect *mPulseCannonEffect;
+  class EEGraphicEffect *mMoraleEffect;
+  class EEGraphicEffect *mBattleCryEffect;
+  class EEGraphicEffect *mShellHoleEffect;
+  class EEGraphicEffect *mEffect0D0;
+  class EEGraphicEffect *mBloodStainEffect;
+  /// the class media (LoadClassMedia, UnloadClassMedia)
+  class EEGraphicObject *mModel;
+  class EEButtonObject *mButton;
+  class EESoundObject *mCreationSound;
+  class EESoundObject *mAcknowledgeSounds[2];
+  class EESoundObject *mSelectionSounds[2];
+  class EESoundObject *mDeathSound;
+  /// the related classes (referenced; the destructor dereferences them)
+  class EEUnitClass *mProjectileClass;
+  class EEUnitClass *mScaffoldingClass;
+  /// `VirtualC4` creates a unit of it where the unit dies
+  class EEUnitClass *mDeathClass;
+  class EEUnitClass *mDeathSpawnClass;
+  class EEUnitClass *mRemainsClass;
+  /// the class it packs/unpacks into (EEMPackUnpack)
+  class EEUnitClass *mPackedClass;
+  /// the class's physics model
+  class EEPhysicsModel *mPhysicsModel;
+  /// the record's upgrade table (`EEUCUpgradeTable::sTable`'s entry: its Rust record)
+  EeDataUpgradeFields *mImprovements;
+  /// the units' default behaviour (EEUnitBehavior::sTable[record->mBehavior])
+  class EEUnitBehavior *mBehavior;
+};
+
+/// `EEUnitClassUpgrade`'s pointer members (units round 11; were C++ members of ee/EEUnit.h), its first base before
+/// [`EeUnitsUnitClassUpgradeFields`]: the class it upgrades, then the eight media members `Media()` walks as one
+/// array from `mButton` (button, model, creation and death sounds, two acknowledge and two selection sounds).
+struct EeUnitsUnitClassUpgradeLinks {
+  /// the constructor's argument (`Init` reads the class)
+  class EEUnitClass *mUnitClass;
+  /// the unit's portrait button
+  class EEButtonObject *mButton;
+  /// `EEUnit::GetModel`'s
+  class EEGraphicObject *mModel;
+  class EESoundObject *mCreationSound;
+  /// `EEUnitClass::UnitDied` plays it where the unit dies
+  class EESoundObject *mDeathSound;
+  class EESoundObject *mAcknowledgeSounds[2];
+  class EESoundObject *mSelectionSounds[2];
+};
+
+/// `EEComplexUnit::mBuildQueue`'s element (units round 11: the C++ `EEProductionEntry`, rust/cbindgen.toml's rename): a
+/// queued research or production order, its technology and its player flag (0x1f5f97 pushes the pair). The layout's
+/// build entry stride and offsets are derived from it (layout.rs).
+struct EEProductionEntry {
+  long mTechnology;
+  long mFlag;
+};
+
+/// `EEComplexUnit::mIgnoredTargets`' element (units round 11: the C++ `EEComplexUnitAttacker`, rust/cbindgen.toml's
+/// rename): an attacker the unit ignores until a game time. All zero when made (`push_front(EEComplexUnitAttacker())`).
+struct EEComplexUnitAttacker {
+  /// the attacked unit's tile
+  long mTileX;
+  long mTileY;
+  /// the attacker's tile
+  long mFromX;
+  long mFromY;
+  unsigned long mUnitID;
+  /// the game time the entry runs out (the tick's time plus 30000)
+  unsigned long mTime;
 };
 
 extern "C" {
@@ -811,6 +922,30 @@ void ee_world_read_end();
 /// `world` is the live world (`&gWorld`); the caller holds it (the physics thread at its tick).
 void ee_world_view_check(uint64_t world,
                          uint32_t ticks);
+
+/// `&class->` effect `i` (the constructor's order; EEUnitClass.cpp's host).
+///
+/// # Safety
+/// `links` is a live class's record; `i` below 29.
+class EEGraphicEffect **ee_units_uc_effect_slot(EeUnitsUnitClassLinks *links, int32_t i);
+
+/// `&class->` related class `k`.
+///
+/// # Safety
+/// `links` is a live class's record; `k` below 6.
+class EEUnitClass **ee_units_uc_related_slot(EeUnitsUnitClassLinks *links, int32_t k);
+
+/// The record's effect id `i`.
+///
+/// # Safety
+/// `record` is a live record; `i` below 29.
+int32_t ee_units_uc_record_effect(const EEUnitClassRecord *record, int32_t i);
+
+/// The record's related unit type `k`.
+///
+/// # Safety
+/// `record` is a live record; `k` below 6.
+int32_t ee_units_uc_record_related(const EEUnitClassRecord *record, int32_t k);
 
 }  // extern "C"
 

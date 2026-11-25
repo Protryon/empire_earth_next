@@ -65,9 +65,7 @@ void RTSUnit::DescribeLong(UWideString& ioString) { ioString += ee_rts_unit_desc
 // round 26): the body is Rust (ee_units unit_load.rs rts_load)
 long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    EEUnitSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
-    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
-    return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, NULL, NULL, &theIn);
+    return EEUnitFile(true, this, 0, inMajorVersion, inMinorVersion, inFile);
 }
 
 
@@ -75,9 +73,7 @@ long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, F
 // only); returns the first write error. port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs rts_save)
 long RTSUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    EEUnitSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
-    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
-    return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, NULL, NULL, &theIn);
+    return EEUnitFile(false, this, 0, inMajorVersion, inMinorVersion, outFile);
 }
 
 void RTSUnit::CopyFrom(class RTSUnit *)

@@ -42,8 +42,6 @@ pub enum EeCampaignCpp {
     /// `((std::vector<UWideString>*)p)->push_back(a0)`
     WidePush,
     WideClear,
-    /// `PlatMbsICmp(a0, a1)`
-    MbsICmp,
     BuiltInCampaign,
     AvailablePoints,
     AddPoints,
@@ -187,6 +185,12 @@ mod sys {
 }
 
 type P = usize;
+
+/// `PlatMbsICmp` of two C strings (their addresses).
+fn mbs_icmp(a: i64, b: i64) -> i32 {
+    // SAFETY: two live NUL-terminated strings
+    unsafe { ee_base::plat_core::string::PlatMbsICmp(a as usize as *const u8, b as usize as *const u8) }
+}
 
 fn h(op: O, p: P, a: &[i64]) -> i64 {
     let mut ai = [0i64; 4];
@@ -438,7 +442,7 @@ impl EeCampaignProgress {
                             available = self.points[i - 1] as c_ulong;
                         }
                         let name = C::new(&completed[i]);
-                        if h(O::MbsICmp, 0, &[name.a(), scenario_c.a()]) == 0 {
+                        if mbs_icmp(name.a(), scenario_c.a()) == 0 {
                             break;
                         }
                     }
@@ -527,11 +531,8 @@ impl EeCampaignProgress {
                 let index = i as usize;
                 set(&indexed(SCENARIO_NAME_KEY, i), &self.completed[index]);
                 let name = C::new(&self.completed[index]);
-                let points = if already && h(O::MbsICmp, 0, &[name.a(), scenario_c.a()]) == 0 {
-                    available
-                } else {
-                    self.points[index]
-                };
+                let points =
+                    if already && mbs_icmp(name.a(), scenario_c.a()) == 0 { available } else { self.points[index] };
                 set(&indexed(NUM_CIV_POINTS_AVAILABLE_KEY, i), format!("{}", points).as_bytes());
                 let file_name = cat(&[CIVILIZATIONS, b"\\", &self.keys[index], CIV_EXTENSION]);
                 let file_c = C::new(&file_name);
@@ -1154,7 +1155,7 @@ pub fn built_in_campaign(name: &[u8]) -> c_ulong {
     let mut result: c_ulong = 0;
     for index in 0..BUILT_IN_CAMPAIGNS {
         let built_in = C::new(&text(O::BuiltInName, 0, &[index]));
-        if h(O::MbsICmp, 0, &[name.a(), built_in.a()]) == 0 {
+        if mbs_icmp(name.a(), built_in.a()) == 0 {
             result = h(O::BuiltInChecksum, 0, &[index]) as c_ulong;
         }
     }

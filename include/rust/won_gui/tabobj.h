@@ -117,6 +117,19 @@ EeWonTabCtrl *ee_won_tab_new(void *component,
                              EeWonGuiHostFn host,
                              const EeWonContainer *ct);
 
+/// `TabCtrl::TabCtrl` whole (R6 WON GUI round 35): the Rust control, its members made through the host
+/// (`EeWonTabCtrl::make_parts`) and the constructor's statements.
+///
+/// The control is stored in `*out` (the C++ control's `mTab`) before its members are made, as the original's
+/// constructor had it set before their statements ran (a host call that reaches the control's virtuals finds it).
+///
+/// # Safety
+/// As `ee_won_tab_new`'s; `out` is writable; the host answers the `TabNew*` ops with live components.
+void ee_won_tab_make(void *component,
+                     EeWonGuiHostFn host,
+                     const EeWonContainer *ct,
+                     EeWonTabCtrl **out);
+
 /// The constructor's statements over its made members (`parts`).
 ///
 /// # Safety
