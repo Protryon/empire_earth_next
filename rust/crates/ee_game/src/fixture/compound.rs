@@ -57,7 +57,8 @@ fn lines(list: u64, sink: &mut EeFixtureSink) {
 /// A combo's or list's current selection (32-bit; 0xffffffff none).
 fn selection(op: S, h: u64) -> i64 {
     let mut line: std::ffi::c_ulong = 0xffff_ffff;
-    sim_go(op, h, &[&mut line as *mut std::ffi::c_ulong as i64]) as u32 as i32 as i64
+    sim_go(op, h, &[&mut line as *mut std::ffi::c_ulong as i64]);
+    line as u32 as i32 as i64
 }
 
 /// EE-SIM's operation `op` on handle `h` (sim_driver sim_ops.rs: the same C++ call; EESim.cpp is in both exes).
