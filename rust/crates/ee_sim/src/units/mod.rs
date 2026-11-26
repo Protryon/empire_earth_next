@@ -90,6 +90,7 @@ pub mod gather_world;
 pub mod ghost_body;
 pub mod ghost_make;
 pub mod ghost_more;
+mod ghost_scratch_view;
 mod ghost_view;
 pub mod goal_calls;
 pub mod goal_more;
