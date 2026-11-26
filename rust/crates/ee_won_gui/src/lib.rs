@@ -84,6 +84,7 @@ pub mod shell_msgbox;
 pub mod shell_won;
 pub mod skinlay;
 pub mod skinobj;
+pub mod soundobj;
 pub mod splitobj;
 pub mod stretchobj;
 pub mod surface;

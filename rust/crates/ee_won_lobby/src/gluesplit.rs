@@ -126,6 +126,11 @@ pub(crate) fn game_op(op: Op, v: [isize; 6], out: Out) -> Option<isize> {
             o(Op::FactoryConfig, 0, 0);
             0
         }
+        // `gEELobbyRootWindow->SetSoundDecoder(new EELobbySoundDecoder)` (R6 WON GUI round 41: eesound.rs's)
+        Op::RootSoundDecoder => {
+            crate::eesound::install_decoder();
+            0
+        }
         Op::AddResources => {
             for op in [
                 Op::ResInit,

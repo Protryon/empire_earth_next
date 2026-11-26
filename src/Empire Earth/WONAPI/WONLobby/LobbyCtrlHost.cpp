@@ -11,7 +11,6 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
-#include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyControlConfig.h"
@@ -177,10 +176,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ResetNetworkAdapter: LobbySetNetworkAdapter(LobbyGetNetworkAdapter()); return 0;
     case Op::CurrentScreen: return (intptr_t)LobbyGetCurrentScreen();
     case Op::BroadcastDown: aComp->BroadcastEventDown(new LobbyEvent((int)b)); return 0;
-    case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
-    case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
-    case Op::ClickSoundMute: LOBBY_SOUND(LobbyGlobal_ButtonClick_Sound)->SetMuted(a != 0); return 0;
-    case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
     case Op::OnLoginScreen: return LobbyOnLoginScreen() ? 1 : 0;
     case Op::OnLanScreen: return LobbyOnLanScreen() ? 1 : 0;
     case Op::FirewallTestDone: return LobbyIsFirewallTestDone() ? 1 : 0;

@@ -63,7 +63,9 @@ CHECKS = [
                (RS / "ee_won_gui" / "src" / "gfxrun.rs", "image_host_op")], allowed={}),
     # the component configs' calls out (R6 WONLobby round 25: compcfg.rs): every one the configs' host answers
     dict(enum="EeWonCcOp", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"], rust=[],
-         allowed={}),
+         allowed={v: "R6 WON GUI round 41: the game decodes its sounds in compcfg.rs (soundobj.rs); the drivers' world "
+                     "answers it (tests/won/drv/won_drv_CompCfg_Sound.inl)"
+                  for v in ("SoundDescNew", "SoundDescFlags", "SoundDescPath", "SoundDecode", "SoundDescFree")}),
     dict(enum="EeWonCcKind", header="won_gui/compcfg.h", hosts=[ROOT / "include" / "ee" / "wonapi" / "WONCompCfg.inl"],
          rust=[], allowed={v: "R6 WON round 34: compcfg.rs's ref_op picks the kind's AddRef / Release op (no C++ case)"
                            for v in ("Config", "Res", "Image", "Font", "Sound", "Component")}),
@@ -186,7 +188,9 @@ CHECKS = [
          hosts=[LOBBY / "LobbyStagingSupport.cpp"], rust=[], allowed={}),
     # running the lobby (R6 WON round 32: lobbyrun.rs; LobbyRunState.cpp's host)
     dict(enum="EeWonRunOp", header="won_lobby/lobbyrun.h",
-         hosts=[LOBBY / "WONLobbyPrv.cpp"], rust=[], allowed={}),
+         hosts=[LOBBY / "WONLobbyPrv.cpp"],
+         # the lobby music and the logon sound are soundobj.rs's in the game (R6 WON GUI round 41)
+         rust=[(RS / "ee_won_lobby" / "src" / "lobbyrun.rs", "call")], allowed={}),
     # the lobby's root screen (R6 WON round 32: rootscreen.rs; RootScreen.cpp's host)
     dict(enum="EeWonRootScreenOp", header="won_lobby/rootscreen.h",
          hosts=[LOBBY / "RootScreen.cpp"], rust=[],

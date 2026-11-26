@@ -8,7 +8,6 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyControlConfig.h"
-#include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyImageButton.h"
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONComponentFlags.h"

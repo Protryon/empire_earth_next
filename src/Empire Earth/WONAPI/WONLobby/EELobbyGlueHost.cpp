@@ -84,7 +84,6 @@
 #include "ee/RTSGraphics.h"
 #include "platform/PlatWindow.h"
 #include "ee/wonapi/EELobbyGameCode.h"
-#include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "rust/won_lobby/eecolor.h"
 #include "rust/won_lobby/eeglue.h"
@@ -176,7 +175,8 @@ static intptr_t ColorHost(void*, EeWonEeColorOp inOp, intptr_t a, intptr_t b, in
 
 // ---- the classes the lobby's factories make
 
-// ---- the lobby's sounds (EELobbySound.cpp: ee_won eesound.rs objects; each op one call on the game's managers)
+// ---- the lobby's sounds (EELobbySound.cpp: ee_won_gui soundobj.rs objects with ee_won_lobby eesound.rs hooks; each op
+// one call on the game's managers)
 
 static intptr_t EELobbySoundHost(void*, EeWonEeSoundOp inOp, intptr_t a)
 {
@@ -194,26 +194,7 @@ static intptr_t EELobbySoundHost(void*, EeWonEeSoundOp inOp, intptr_t a)
     return 0;
 }
 
-EELobbyMusic::EELobbyMusic(const SoundDescriptor& inDescriptor)
-    : Sound(inDescriptor), mRust(ee_won_eesound_new(this, EeWonEeSoundKind::Music, EELobbySoundHost, 0)) {}
-EELobbyMusic::~EELobbyMusic() { ee_won_eesound_free(this->mRust); }
-void EELobbyMusic::PlayHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Play, 0); }
-void EELobbyMusic::StopHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Stop, 0); }
-void EELobbyMusic::ResumeHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Resume, 0); }
-EELobbySound::EELobbySound(const SoundDescriptor& inDescriptor, unsigned long inSampleID)
-    : Sound(inDescriptor),
-      mRust(ee_won_eesound_new(this, EeWonEeSoundKind::Effect, EELobbySoundHost, (uint32_t)inSampleID)) {}
-EELobbySound::~EELobbySound() { ee_won_eesound_free(this->mRust); }
-void EELobbySound::PlayHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Play, 0); }
-void EELobbySound::StopHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Stop, 0); }
-// Loads a lobby sound file into the engine's sound manager; returns NULL without a sound manager
-SoundPtr EELobbySoundDecoder::Decode(const SoundDescriptor& inDescriptor)
-{
-    int64_t aSample = ee_won_eesound_load(EELobbySoundHost, reinterpret_cast<const uint8_t*>(inDescriptor.mPath.c_str()));
-    if (aSample < 0)
-        return NULL;
-    return new EELobbySound(inDescriptor, (unsigned long)aSample);
-}
+[[maybe_unused]] static const bool sEELobbySoundHost = (ee_won_eesound_register(EELobbySoundHost), true);
 
 // Creates the lobby config with the EEFileTransferPort key (default 8889)
 EELobbyConfig::EELobbyConfig() { this->KeyAdd("EEFileTransferPort", this->mFileTransferPort, 8889); }
@@ -525,8 +506,6 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
         return 0;
     case Op::RootAddPng: PNGDecoder::Add(&gEELobbyRootWindow->mImageDecoder);
         return 0;
-    case Op::RootSoundDecoder: gEELobbyRootWindow->SetSoundDecoder(new EELobbySoundDecoder);
-        return 0;
     case Op::SecondarySurface: return (intptr_t)gRasterizer->GetSecondarySurface(gScreenIndex);
     case Op::RootSetSurfaceSize: gEELobbyRootWindow->SetSurfaceSize(kEELobbySurfaceWidth, kEELobbySurfaceHeight);
         return 0;
@@ -734,7 +713,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::ResAllocFileDialog: sEELobbyResources->AddAllocator("EELobbyFileDialog", EELobbyNewDialogConfig, NewLobbyDialog<EeWonLobbyDlgKind::File>); return 0;
     case Op::ResAllocConnectDialog: sEELobbyResources->AddAllocator("EELobbyConnectDialog", EELobbyNewDialogConfig, NewLobbyDialog<EeWonLobbyDlgKind::Connect>); return 0;
     // EELobbyAddResources: the LobbyGlobal section with the lobby music
-    case Op::ResAddMusic: sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", new EELobbyMusic(SoundDescriptor("", 2))); return 0;
+    case Op::ResAddMusic: sEELobbyResources->AddConfig("LobbyGlobal", NULL)->AddSound("LobbyMusic", (Sound*)ee_won_eesound_music()); return 0;
     case Op::ResAddLoader: LobbyAddComponentLoader(sEELobbyResources.mPtr, EELobbyGetComponents); return 0;
     case Op::ResDone: sEELobbyResources = NULL; return 0;
     case Op::PlayerColorGet: sEELobbyColor = EEGetPlayerColor((long)a); return 0;

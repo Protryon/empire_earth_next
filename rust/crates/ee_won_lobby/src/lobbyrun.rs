@@ -83,7 +83,21 @@ const EVENT_LOBBY_EXIT: isize = 100013;
 const EVENT_PINGS_KILLED: isize = 100059;
 
 fn call(call: EeWonRunCall, a: isize, op: &dyn Fn(Op, isize) -> isize) -> isize {
-    let on = |o: Op| op(o, 0);
+    // the lobby music and the logon sound are soundobj.rs's in the game (R6 WON GUI round 41)
+    let on = |o: Op| {
+        use crate::resource::EeWonLobbyRes as R;
+        use ee_won_gui::soundobj::EeWonSoundCall as SC;
+        let (row, call) = match o {
+            Op::MusicStop => (R::LobbyGlobal_LobbyMusic_Sound, SC::Stop),
+            Op::MusicResume => (R::LobbyGlobal_LobbyMusic_Sound, SC::Resume),
+            Op::LogonSoundStop => (R::LobbyGlobal_SierraLogon_Sound, SC::Stop),
+            _ => return op(o, 0),
+        };
+        if !ee_won_gui::compobj::is_game() {
+            return op(o, 0);
+        }
+        crate::eesound::res_sound(row, call, 0)
+    };
     match call {
         EeWonRunCall::Run => {
             if on(Op::InitFailedWithDialog) != 0 {

@@ -13,7 +13,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyBackground.h"
 #include "ee/wonapi/WONStringCompare.h"
-#include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONEventTypes.h"
@@ -57,6 +56,10 @@
 #include "rust/won_gui/wrapobj.h"
 
 namespace WONAPI {
+
+// a sound: ee_won_gui soundobj.rs's RefCount object (rust/won_gui/soundobj.h; R6 WON GUI round 41: Sound,
+// SoundDescriptor, SoundDecoder and the game's EELobbyMusic, EELobbySound, EELobbySoundDecoder went)
+class Sound : public RefCount {};
 
 // the SDK's enums are Rust's (rust/crates/ee_won_gui/src/guienum.rs, R6 WON GUI round 34): their enumerators are
 // global, the types named here
@@ -1211,7 +1214,6 @@ public:
     // draws with is logical; the backend scales it to the surface's pixels
     float mPixelScale;
 };
-class SoundDecoder;
 
 // The decoder classes are in WONLobbyImageDecoder.h.
 // 0x3d2a20 / 0x3d24e0 (cdecl): add the JPG decoder (4 extensions) / the PNG decoder to a multi-decoder (provisional names)
@@ -1288,8 +1290,6 @@ public:
     { SmartPtr<Image> i; i.mPtr = (Image*)this->WmCall(EeWonWmCall::DecodeDelayImage, (intptr_t)p, (intptr_t)strlen(p)); return i; } //32ccf0
     SmartPtr<RawImage> DecodeImageRaw(const char* p)
     { SmartPtr<RawImage> i; i.mPtr = (RawImage*)this->WmCall(EeWonWmCall::DecodeImageRaw, (intptr_t)p, (intptr_t)strlen(p)); return i; } //32d160
-    void SetSoundDecoder(SoundDecoder* d) { this->mSoundDecoder = d; } //32d490
-    SmartPtr<Sound> DecodeSound(const SoundDescriptor&); //32d4f0
     void CloseAllWindows() { this->WmCall(EeWonWmCall::CloseAllWindows); }
     void CalcModality() { this->WmCall(EeWonWmCall::CalcModality); } //32da30
     bool NotModalWindow(Window* w) { return this->WmCall(EeWonWmCall::NotModalWindow, (intptr_t)w) != 0; }
@@ -1339,7 +1339,7 @@ public:
     void WmSet(EeWonWmField f, intptr_t v) { this->WmCall(EeWonWmCall::SetField, (intptr_t)f, v); }
     SmartPtr<ColorScheme> mColorScheme; //20
     MultiImageDecoder mImageDecoder; // at +0x24..0x57 (0x34 bytes)
-    SmartPtr<SoundDecoder> mSoundDecoder; //58
+    // (+58, the sound decoder, is soundobj.rs's: R6 WON GUI round 41)
     // the default font (+5c), the named fonts (+64) and the native, raw and delay-load image caches (+70, +7c, +88)
     // with their count (+94) are the Rust manager's (wmobj.rs, wmcache.rs; R6 WON round 33); so are the event lock
     // (+08), the timer and input ticks (+98, +9c), the valid and full-screen flags (+a1, +ad), the screen sizes

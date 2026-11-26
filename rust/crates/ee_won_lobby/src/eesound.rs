@@ -4,9 +4,11 @@
 //! volume, centred, its playing instance remembered; stopping stops that instance; freeing unloads the sample) and
 //! EELobbySoundDecoder's load (a sample of the path, or none without a sound manager).
 //!
-//! The C++ keeps the classes (WONGUI's `Sound` / `SoundDecoder` bases and their virtuals, which forward here). Every
-//! call on the game's UI manager or sound manager is one op of the host given to `ee_won_eesound_new`
-//! (`WONLobby/EELobbyGlueHost.cpp`).
+//! Since R6 WON GUI round 41 the C++ classes are gone: a lobby sound is ee_won_gui soundobj.rs's object with one of
+//! these as its hook (the music made by `ee_won_eesound_music`, the effects by the decoder `install_decoder`
+//! installs). Every call on the game's UI manager or sound manager is one op of the host
+//! (`WONLobby/EELobbyGlueHost.cpp` registers it with `ee_won_eesound_register`; the drivers pass theirs to
+//! `ee_won_eesound_new`).
 
 use std::cell::Cell;
 use std::ffi::c_void;
@@ -192,6 +194,73 @@ pub extern "C" fn ee_won_eesound_load(host: EeWonEeSoundHostFn, path: *const u8)
         return -1;
     }
     call_host(host, std::ptr::null_mut(), EeWonEeSoundOp::Load, path as isize) as u32 as i64
+}
+
+/// The game's host (`ee_won_eesound_register`).
+static HOST: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+fn game_host() -> EeWonEeSoundHostFn {
+    let h = HOST.load(std::sync::atomic::Ordering::Acquire);
+    // SAFETY: 0 or the host function `ee_won_eesound_register` stored
+    (h != 0).then(|| unsafe { std::mem::transmute::<usize, unsafe extern "C" fn(*mut c_void, EeWonEeSoundOp, isize) -> isize>(h) })
+}
+
+/// The game's host of the sounds' ops (EELobbyGlueHost.cpp, at static initialisation).
+#[no_mangle]
+pub extern "C" fn ee_won_eesound_register(host: EeWonEeSoundHostFn) {
+    HOST.store(host.map_or(0, |h| h as usize), std::sync::atomic::Ordering::Release);
+}
+
+/// A sound's hook: the game's music or effect (an effect's sample unloaded when its sound goes).
+struct Hook(EeWonEeSound);
+
+impl ee_won_gui::soundobj::SoundHook for Hook {
+    fn play(&self) {
+        self.0.call(EeWonEeSoundCall::Play, 0);
+    }
+    fn stop(&self) {
+        self.0.call(EeWonEeSoundCall::Stop, 0);
+    }
+    fn resume(&self) {
+        self.0.call(EeWonEeSoundCall::Resume, 0);
+    }
+}
+
+impl Drop for Hook {
+    fn drop(&mut self) {
+        self.0.release();
+    }
+}
+
+/// `new EELobbyMusic(SoundDescriptor("", 2))`: the lobby music, with no reference yet.
+#[no_mangle]
+pub extern "C" fn ee_won_eesound_music() -> *mut c_void {
+    let hook = Hook(EeWonEeSound::new(std::ptr::null_mut(), EeWonEeSoundKind::Music, game_host(), 0));
+    ee_won_gui::soundobj::new_sound(2, b"", Some(Box::new(hook))) as *mut c_void
+}
+
+/// EELobbySoundDecoder::Decode: an effect of the path's sample, none without a sound manager.
+fn decode_effect(path: &[u8]) -> Option<Box<dyn ee_won_gui::soundobj::SoundHook>> {
+    let mut z = path.to_vec();
+    z.push(0);
+    let host = game_host();
+    let sample = ee_won_eesound_load(host, z.as_ptr());
+    if sample < 0 {
+        return None;
+    }
+    Some(Box::new(Hook(EeWonEeSound::new(std::ptr::null_mut(), EeWonEeSoundKind::Effect, host, sample as u32))))
+}
+
+/// `LOBBY_SOUND(row)->call(a)`: a call on one of the lobby's resource sounds (nothing when it has none).
+pub(crate) fn res_sound(row: crate::resource::EeWonLobbyRes, call: ee_won_gui::soundobj::EeWonSoundCall, a: isize) -> isize {
+    let s = crate::resource::sound(row as usize) as *const ee_won_gui::soundobj::EeWonSound;
+    // SAFETY: the slot's live sound (or null)
+    unsafe { ee_won_gui::soundobj::ee_won_sound_call(s, call, a) }
+}
+
+/// `gEELobbyRootWindow->SetSoundDecoder(new EELobbySoundDecoder)`.
+pub(crate) fn install_decoder() {
+    ee_won_gui::soundobj::set_decoder(Some(decode_effect));
 }
 
 #[cfg(test)]

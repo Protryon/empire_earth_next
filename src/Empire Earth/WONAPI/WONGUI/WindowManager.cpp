@@ -159,11 +159,6 @@ SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
     Window* aWindow = this->GetDefaultWindow();
     return aWindow == NULL ? SmartPtr<NativeImage>() : this->DecodeImage(aWindow->mDisplayContext.get(), theFilePath);
 }
-// Decodes a sound with the sound decoder, or returns a plain sound for the descriptor when there is none
-SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)
-{
-    return this->mSoundDecoder.get() == NULL ? SmartPtr<Sound>(new Sound(theDesc)) : this->mSoundDecoder->DecodeDescriptor(theDesc);
-}
 
 // Class statics: the default window manager and the GUI thread id (constant-initialised)
 WindowManager* WindowManager::mDefaultWindowManager = NULL;

@@ -37,7 +37,7 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "rust/won_net/udpmgr.h"
 #include "ee/wonapi/WONLobbyEvents.h"
-#include "ee/wonapi/EELobbySound.h"
+#include "rust/won_gui/soundobj.h" // the lobby's sounds
 #include "platform/PlatThread.h"
 #include "ee/wonapi/WONRouting.h"
 #include "rust/won_lobby/errscreen.h"
@@ -268,7 +268,7 @@ void LobbyShutdown()
     LobbyLogout(false);
     gLobbyData->Destroy();
     LobbyRemoveEventHooks();
-    LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop();
+    ee_won_sound_call((EeWonSound*)LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound).get(), EeWonSoundCall::Stop, 0);
     LobbyResource_UnloadResources();
     gLobbyData=NULL;
 }
@@ -672,13 +672,10 @@ static intptr_t RunHost(EeWonRunOp inOp, intptr_t a)
     case Op::MessageLoop: reinterpret_cast<WindowManager*>(a)->MessageLoop(); return 0;
     case Op::ExitMessageLoop: reinterpret_cast<WindowManager*>(a)->ExitMessageLoop(); return 0;
     case Op::BroadcastLobbyEvent: LobbyBroadcastLobbyEvent((int)a, true); return 0;
-    case Op::MusicStop: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop(); return 0;
-    case Op::LogonSoundStop: LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop(); return 0;
     case Op::PingsToDo: return LobbyGetNumPingsToDo();
     case Op::KillPings: LobbyKillPings(1); return 0;
     case Op::NetSuspend: LobbyNetSuspend(); return 0;
     case Op::MusicOn: return LobbyGetLobbyMusic() ? 1 : 0;
-    case Op::MusicResume: LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume(); return 0;
     case Op::NetResume: LobbyNetResume(); return 0;
     case Op::InitLogicInit: gLobbyData->mInitLogic->Call(EeWonLogicCall::InitInit); return 0;
     }
