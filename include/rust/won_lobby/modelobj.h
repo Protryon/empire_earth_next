@@ -18,6 +18,9 @@ enum class EeWonModelKind : uint32_t {
   GameList,
   Server,
   ServerList,
+  /// EELobbyPlayer (R6 WON lobby and network round 38: folded into LobbyPlayer): a player with a game slot, which
+  /// its game messages carry (one byte after the ready flag) and whose team decides IsSameTeam.
+  EePlayer,
 };
 
 /// The C++ the model calls (WONLobby/LobbyModelHost.cpp's `ModelHost`).
@@ -76,6 +79,12 @@ enum class EeWonModelOp : uint32_t {
 enum class EeWonModelField : uint32_t {
   PlayerPing = 0,
   PlayerReady,
+  /// EELobbyPlayer's slot number (`mSlot`, +0x10).
+  PlayerSlot,
+  /// the slot's number in its game (`mSlotIndex`, set by the Rust game with the game).
+  PlayerSlotIndex,
+  /// the slot's game: its Rust game (`EeWonEeGame*`, not held; 0: none; the original's `mSlotGame`).
+  PlayerSlotGame,
   ClientName = 10,
   ClientId,
   ClientFlags,
@@ -147,6 +156,8 @@ enum class EeWonModelField : uint32_t {
 enum class EeWonModelCall : uint32_t {
   /// `IsSameTeam((LobbyPlayer*)a)`.
   PlayerIsSameTeam = 0,
+  /// EELobbyPlayer::GetTeam: the slot game's team option of the slot, 0 without a slot game.
+  PlayerTeam,
   /// `ClearGroup(a, b)`.
   ClientClearGroup = 10,
   ClientInChat,

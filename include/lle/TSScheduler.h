@@ -23,16 +23,13 @@ public:
         return kErrorOK;
     }
     // NULL is ignored
-    static void DestroyCriticalSection(TSCriticalSection* inSection)
-        { ee_ts_section_free(reinterpret_cast<EeTsSection*>(inSection)); }
+    static void DestroyCriticalSection(TSCriticalSection* inSection) { ee_ts_section_free(reinterpret_cast<EeTsSection*>(inSection)); }
     // an event (manual or auto reset); the native error recorded when it fails (outEvent is then unchanged).
     // Defaults proven by TCP 0x287c: the assert text passes one argument, the call pushes 1
-    static long CreateEvent(TSEvent*& outEvent, bool inManualReset = true)
-        { return ee_ts_event_new(reinterpret_cast<EeTsEvent**>(&outEvent), inManualReset); }
+    static long CreateEvent(TSEvent*& outEvent, bool inManualReset = true) { return ee_ts_event_new(reinterpret_cast<EeTsEvent**>(&outEvent), inManualReset); }
     static void DestroyEvent(TSEvent* inEvent) { ee_ts_event_free(reinterpret_cast<EeTsEvent*>(inEvent)); }
     // a write section and two events, the parts made so far destroyed on failure
-    static long CreateReadWriteLock(TSReadWriteLock*& outLock)
-        { return ee_ts_lock_new(reinterpret_cast<EeTsLock**>(&outLock)); }
+    static long CreateReadWriteLock(TSReadWriteLock*& outLock) { return ee_ts_lock_new(reinterpret_cast<EeTsLock**>(&outLock)); }
     static void DestroyReadWriteLock(TSReadWriteLock* inLock) { ee_ts_lock_free(reinterpret_cast<EeTsLock*>(inLock)); }
     // creates, registers and starts a thread object for a function.
     // Defaults proven by TCP 0x287c: the assert text passes three arguments, the call pushes 0, 0

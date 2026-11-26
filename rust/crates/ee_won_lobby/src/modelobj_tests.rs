@@ -247,3 +247,32 @@ fn freeing_gives_the_references_back() {
 fn the_golden_replays() {
     super::golden::replay();
 }
+
+#[test]
+fn the_game_player_keeps_its_slot_and_has_no_teammate_without_a_slot_game() {
+    // EELobbyPlayer folded into LobbyPlayer (R6 WON lobby and network round 38): the EePlayer kind
+    let (a, b, plain) = (
+        shell(Some(EeWonModelKind::EePlayer)),
+        shell(Some(EeWonModelKind::EePlayer)),
+        shell(Some(EeWonModelKind::Player)),
+    );
+    assert_eq!(get(a, EeWonModelField::PlayerSlot), 0);
+    assert_eq!(get(a, EeWonModelField::PlayerSlotGame), 0);
+    set(a, EeWonModelField::PlayerSlot, 0x1_05);
+    set(a, EeWonModelField::PlayerSlotIndex, 3);
+    assert_eq!((get(a, EeWonModelField::PlayerSlot), get(a, EeWonModelField::PlayerSlotIndex)), (5, 3));
+    // no slot game: team 0, which has no teammates; the player itself is always on its team
+    assert_eq!(call(a, EeWonModelCall::PlayerTeam, 0, 0, 0), 0);
+    assert_eq!(call(a, EeWonModelCall::PlayerIsSameTeam, b, 0, 0), 0);
+    assert_eq!(call(a, EeWonModelCall::PlayerIsSameTeam, a, 0, 0), 1);
+    // a plain player still asks its virtual (the host answers 1)
+    assert_eq!(call(plain, EeWonModelCall::PlayerIsSameTeam, b, 0, 0), 1);
+    // the buffers' slot: only a game player's
+    // SAFETY: live shells
+    unsafe {
+        let m = |s: isize| (*(s as *const Shell)).model as isize;
+        assert_eq!(ee_player_slot(m(a)).map(|c| c.get()), Some(5));
+        assert!(ee_player_slot(m(plain)).is_none());
+        assert!(ee_player_slot(0).is_none());
+    }
+}

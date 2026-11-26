@@ -51,12 +51,10 @@ public:
     EEUnitSetManager() {}
     ~EEUnitSetManager() { ee_unit_sets_clear(); }
     // 0xd150: set inSet (NULL past the end or for an unused record)
-    EEUnitSet* GetSet(unsigned long inSet) const
-        { return reinterpret_cast<EEUnitSet*>(const_cast<EeUnitSet*>(ee_unit_sets_get((size_t)inSet))); }
+    EEUnitSet* GetSet(unsigned long inSet) const { return reinterpret_cast<EEUnitSet*>(const_cast<EeUnitSet*>(ee_unit_sets_get((size_t)inSet))); }
     unsigned long GetSize() const { return (unsigned long)ee_unit_sets_count(); }
     // 0xacb52: whether set inSet (false if there is none) holds unit type inUnitType
-    bool Contains(long inUnitType, unsigned long inSet) const
-        { return ee_unit_sets_contains((size_t)inSet, (uint32_t)inUnitType); }
+    bool Contains(long inUnitType, unsigned long inSet) const { return ee_unit_sets_contains((size_t)inSet, (uint32_t)inUnitType); }
     // inline (COMDAT 0x2830ae): set inSet's ForEach when it exists; true
     bool ForEach(unsigned long inSet, EEUnitSetFunctor* inFunctor) const { return ee_unit_sets_for_each((size_t)inSet, inFunctor, EEUnitSetVisit); }
 };

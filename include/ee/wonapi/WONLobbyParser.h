@@ -13,43 +13,15 @@ namespace WONAPI {
 
 // Real non-polymorphic scanner used by the original command/configuration parsers.
 // Character accessors 0x2a48c0/0x2a4910 and EOF 0x2a4940 prove this representation. Every scan is ee_won's parser
-// (ffi_parse.rs) over the text, its unit size and the cursor; the class is header-only since net round 27.
+// (ffi_parse.rs) over the text, its unit size and the cursor; the class is header-only since net round 27. The list
+// reads and writes have no game caller (the hash file list is cfgval.rs's ee_won_cfgval_read_strings): R6 WON lobby
+// and network round 38 moved them to tests/won/won_parser_lists.inl.
 class StringParser {
 public:
     bool StartsWith(const char* theStr) { return ee_won_parser_starts_with(this->Text(), this->Unit(), &this->mPos, theStr); }
     // a matched prefix is not rewound when input follows it
     bool Is(const char* theStr) { return ee_won_parser_is(this->Text(), this->Unit(), &this->mPos, theStr); }
     void SkipNonWhitespace() { ee_won_parser_skip_non_whitespace(this->Text(), this->Unit(), &this->mPos); }
-    // comma-separated lists; on a failed element the ones read so far stay
-    bool ReadValue(std::list<int>& theList) { return ReadList(this, theList); }
-    bool ReadValue(std::list<std::string>& theList) { return ReadStrings(theList); }
-    bool ReadValue(std::list<std::wstring>& theList) { return ReadStrings(theList); }
-    // "(1, 2), (3)": on a failed element or a missing ')' the groups read so far stay
-    bool ReadValue(std::list<std::list<int> >& theList)
-    {
-        while (this->CheckNextChar('(')) {
-            theList.push_back(std::list<int>());
-            if (!ReadList(this, theList.back()) || !this->CheckNextChar(')')) return false;
-            if (!this->CheckNextChar(',')) break;
-        }
-        return true;
-    }
-    template<class T> static void ValueToString(const std::list<T>& theList, std::string& theStr) // ", " between
-    {
-        for (typename std::list<T>::const_iterator i = theList.begin(); i != theList.end();) {
-            StringParser::ValueToString(*i, theStr);
-            if (++i != theList.end()) theStr += ", ";
-        }
-    }
-    static void ValueToString(const std::list<std::list<int> >& theList, std::string& theStr) // "(a, b), (c)"
-    {
-        for (std::list<std::list<int> >::const_iterator i = theList.begin(); i != theList.end();) {
-            theStr += "(";
-            ValueToString(*i, theStr);
-            theStr += ")";
-            if (++i != theList.end()) theStr += ", ";
-        }
-    }
     StringParser() : mPos(0), mWide(false) { mNarrow=""; }
     void Set(const char* theStr) { mNarrow=theStr; this->mPos=0; this->mWide=false; }
     void Set(const wchar_t* theStr) { mWideText=theStr; this->mPos=0; this->mWide=true; }
@@ -118,19 +90,9 @@ private:
     { static_cast<std::string*>(inOut)->append(reinterpret_cast<const char*>(inBytes), inLength); }
     static void AppendUnits(void* inOut, const uint32_t* inUnits, size_t inCount)
     { for (size_t i = 0; i < inCount; i++) *static_cast<std::wstring*>(inOut) += (wchar_t)inUnits[i]; }
-    template<class T> static bool ReadList(StringParser* inParser, std::list<T>& theList)
-    {
-        while (true) {
-            theList.push_back(T());
-            if (!inParser->ReadValue(theList.back())) { theList.pop_back(); return false; }
-            if (!inParser->CheckNextChar(',')) return true;
-        }
-    }
-    template<class S> bool ReadStrings(std::list<S>& theList) // a string read never fails
-    {
-        do { theList.push_back(S()); this->ReadString(theList.back(), false); } while (this->CheckNextChar(','));
-        return true;
-    }
+#ifdef EE_WON_STRINGPARSER_DRIVER
+#include "won_parser_lists.inl" // the list reads and writes only the drivers call (tests/won)
+#endif
 };
 
 // ChatCommandParser (original allocation 0x54, vtable 0x851a9c; ChatCommandParser.cpp, 0x755750..0x757d67): the whole

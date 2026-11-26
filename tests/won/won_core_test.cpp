@@ -85,7 +85,7 @@ public:
 class CoreRecvOp : public UDPManagerRecvOp {
 public:
     CoreRecvOp(const char* inName) : mName(inName) {}
-    CoreRecvOp(const char* inName, const IPAddr& inAddr) : UDPManagerRecvOp(inAddr), mName(inName) {}
+    CoreRecvOp(const char* inName, const IPAddr& inAddr) : UDPManagerRecvOp(inAddr.GetValue()), mName(inName) {}
     virtual ~CoreRecvOp() { Log(this->mName + " destroyed"); }
     string mName;
 };

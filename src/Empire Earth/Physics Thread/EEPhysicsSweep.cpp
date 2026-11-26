@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 

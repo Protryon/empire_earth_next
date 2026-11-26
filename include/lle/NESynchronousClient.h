@@ -15,8 +15,7 @@
 class LLE_API NESynchronousClient : public NESynchronousCommunications {
 public:
     // the subclass's GameHost<Game> (below); the client calls the protocol itself (ee_net ffi_protocol.rs)
-    explicit NESynchronousClient(EeNetClHostFn inHost)
-        { this->mClient = ee_net_cl_new(this, inHost, NESynchronousClient::QueueHost, this->mComms, true); }
+    explicit NESynchronousClient(EeNetClHostFn inHost) { this->mClient = ee_net_cl_new(this, inHost, NESynchronousClient::QueueHost, this->mComms, true); }
     virtual ~NESynchronousClient() { ee_net_cl_free(this->mClient); }
 
     NEConnection* GetConnection() const { return static_cast<NEConnection*>(ee_net_cl_connection(this->mClient)); }
@@ -29,14 +28,8 @@ public:
     void SetSlowPlayback() { ee_net_cl_set_slow_playback(this->mClient); }
     void SetNormalPlayback() { ee_net_cl_set_normal_playback(this->mClient); }
     void SendStartConnectMessage(NEMessage* inMessage) { ee_net_cl_send_start_connect_message(this->mClient, inMessage); }
-    void SetCurrentPhysicsTick(unsigned long& inTick)
-    {
-        ee_net_cl_set_current_physics_tick(this->mClient, (uint32_t)inTick);
-    }
-    void SetMaxNumConnectionTrys(unsigned long inMax)
-    {
-        ee_net_cl_set_max_num_connection_trys(this->mClient, (uint32_t)inMax);
-    }
+    void SetCurrentPhysicsTick(unsigned long& inTick) { ee_net_cl_set_current_physics_tick(this->mClient, (uint32_t)inTick); }
+    void SetMaxNumConnectionTrys(unsigned long inMax) { ee_net_cl_set_max_num_connection_trys(this->mClient, (uint32_t)inMax); }
     void SetMySendToSlot(unsigned char inSlot) { ee_net_cl_set_my_send_to_slot(this->mClient, inSlot); }
 
     long Connect(const UString& inName, const UString& inHost, const UWideString& inAddress)

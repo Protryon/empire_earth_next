@@ -173,6 +173,8 @@ static intptr_t BufHost(void* inObj, EeWonModelBufOp inOp, intptr_t a, intptr_t 
     case Op::PlayerPing: return (intptr_t)(pl->GetPing());
     case Op::PlayerReady: return (pl->GetReady()) ? 1 : 0;
     case Op::PlayerWriteData: pl->WriteData(*wb); return 0;
+    case Op::ReadByte: return READ_OR(rb->ReadByte());
+    case Op::SelfModel: return (intptr_t)pl->mModel;
     }
     return 0;
 }

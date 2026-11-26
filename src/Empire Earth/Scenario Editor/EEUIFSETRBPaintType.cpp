@@ -11,7 +11,6 @@
 #include "ee/EESEARust.h"
 #include "lle/UResourceFile.h"
 #include "ee/EEUserInterface.h"
-#include "lle/GESurface.h"
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECivilization.h"
@@ -27,16 +26,15 @@
 
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEAIContinentManager.h"
 #include "lle/UIListBox.h"
 #include "lle/GEText.h"
 #include "ee/EESEUnit.h"
 
 
 
-#include "lle/UICheckBox.h"
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
+#include "lle/UICheckBox.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
 // moved to EEUIFSETerrain.cpp (one translation unit; its UIListBox<vector<GEColor> > /
 // UIListBox<EESEUITTData> COMDATs are what that file compiles).

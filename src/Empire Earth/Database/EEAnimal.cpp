@@ -7,11 +7,9 @@
 #include <windows.h>
 #include <vector>
 
-#include "lle/LowLevelEngine.h"
 
 #include "ee/EEAnimal.h"
 #include "ee/EEMedia.h"
-#include "rust/game/gamecpp.h"
 
 extern std::vector<EEUnitClass*> gUnitClassTable;   // ee/EEUnit.h
 // 0x4e8448: the media table (its init chain is EEGraphicObject.cpp's, guarded: probably a class static of EEMedia;
@@ -19,36 +17,6 @@ extern std::vector<EEUnitClass*> gUnitClassTable;   // ee/EEUnit.h
 extern std::vector<EEMedia*> gMediaTable;
 
 std::vector<EEAnimal*> EEAnimal::sTable;
-
-// Creates an empty animal type: no media, sounds, flags or intervals
-EEAnimal::EEAnimal() : EeDataAnimalFields()
-{
-}
-
-// Destroys the animal type, releasing its sounds and its media
-EEAnimal::~EEAnimal()
-{
-    ee_gamecpp_db_animal_free(this, true);
-}
-
-// Releases the animal type's sounds (last first) and empties its sound list
-void EEAnimal::ClearSounds()
-{
-    ee_gamecpp_db_animal_free(this, false);
-}
-
-// Loads the animal types from db\dbAnimals.dat (intervals from seconds to ms: the record and its copy are Rust's,
-// ee_data tables.rs), loading each one's media and up to three sounds; returns the last read status
-long EEAnimal::Load(FSFileSpec* inFile)
-{
-    return ee_gamecpp_db_animal_load(inFile);
-}
-
-// Destroys every loaded animal type and empties the table
-void EEAnimal::Unload()
-{
-    ee_gamecpp_db_animal_unload();
-}
 
 // Returns the unit class of the animal type's unit
 EEUnitClass* EEAnimal::GetUnitClass()

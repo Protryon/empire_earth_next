@@ -54,10 +54,7 @@ public:
     // inline (COMDAT 0x17d381, first emitted by the editor's area screen; Reset 0x1afbb1 calls it) (provisional name)
     void SetAnchor(const U2DPoint<long>& inAnchor) { ee_scenario_en_area_set_anchor(this, inAnchor.mX, inAnchor.mY); }
     // inline (COMDAT 0x17d34c, before SetAnchor's: the editor's area screen 0x17d272 calls both) (provisional name)
-    void SetRectangle(const GERectangle& inRectangle)
-    {
-        ee_scenario_en_area_set_rectangle(this, reinterpret_cast<const EeScenarioAreaRect*>(&inRectangle));
-    }
+    void SetRectangle(const GERectangle& inRectangle) { ee_scenario_en_area_set_rectangle(this, reinterpret_cast<const EeScenarioAreaRect*>(&inRectangle)); }
 
     const UWideString& GetText() const { return this->mText; }
     const GERectangle& GetRect() const { return *reinterpret_cast<const GERectangle*>(&this->mRect); }

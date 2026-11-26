@@ -95,48 +95,23 @@ inline void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, 
 {
     ee_units_ub_body(EE_UNITS_UB_DO_REPLACE_QUEUED_TECHNOLOGY, EEUUHandle(inPlayer), EEUUHandle(inClass), inNewTechnology, 0, 0);
 }
-// Creates a copy of a unit (or a new class) for a player on its tile, in its state
-inline EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClass* inClass)
-{
-    return EEUUUnit(ee_units_ub_body(EE_UNITS_UB_DO_MAKE_UNIT_COPY, EEUUHandle(inUnit), EEUUHandle(inClass), (int64_t)inPlayer, 0, 0));   // uu_body.rs
-}
 // 0x24f0e9.. (the rest of the TU) (provisional names)
 // Raises a class upgrade's hit points by a share of its base, and the player's units of that type with it
 // inUpgrade's hit points raised by inFactor of its class's base; inPlayer's units of type inType follow (inferred)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);  // (EEWorld.cpp declares it too)
 // Gives a space wall its energy wall effect
-inline void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit)  // 0x24f8c0 (after the range)
-{
-    ee_units_ub_body(EE_UNITS_UB_DO_SPACE_ENERGY_WALL, EEUUHandle(inUnit), 0, 0, 0, 0);   // uu_body.rs
-}
+inline void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit) { ee_units_ub_body(EE_UNITS_UB_DO_SPACE_ENERGY_WALL, EEUUHandle(inUnit), 0, 0, 0, 0); }  // 0x24f8c0 (after the range); uu_body.rs
 // Gives a space gate its energy wall effect
-inline void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit)  // 0x24f8f9 (after the range)
-{
-    ee_units_ub_body(EE_UNITS_UB_DO_SPACE_ENERGY_WALL, EEUUHandle(inUnit), 0, 1, 0, 0);   // uu_body.rs
-}
+inline void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit) { ee_units_ub_body(EE_UNITS_UB_DO_SPACE_ENERGY_WALL, EEUUHandle(inUnit), 0, 1, 0, 0); }  // 0x24f8f9 (after the range); uu_body.rs
 // Returns the nearest unit that attacks or gathers from the unit
 // (uu_search.rs over ee_combat's pursuer_of)
-inline EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
-{
-    return (EEComplexUnit*)(uintptr_t)ee_units_sr_pursuer_of(EEUUHandle(inUnit));   // uu_search.rs
-}
+inline EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit) { return (EEComplexUnit*)(uintptr_t)ee_units_sr_pursuer_of(EEUUHandle(inUnit)); }  // uu_search.rs
 // Runs a functor over the units of every player but nature
-inline void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor)
-{
-    ee_units_ub_body(EE_UNITS_UB_DO_FOR_EACH_PLAYERS_UNIT, EEUUHandle(inFunctor), 0, 0, 0, 0);   // uu_body.rs
-}
-// Returns the tile a distance away in a compass direction (tile form)
-inline void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance)  // 0x248ecc: the tile inDistance steps from inTile in inDirection (also in ee/EEE3DStorm.h)
-{
-    ee_units_uu_next_tile(inTile.mX, inTile.mY, inDirection, inDistance, &outTile.mX, &outTile.mY);   // uu_adapt.rs
-}
+inline void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor) { ee_units_ub_body(EE_UNITS_UB_DO_FOR_EACH_PLAYERS_UNIT, EEUUHandle(inFunctor), 0, 0, 0, 0); }  // uu_body.rs
 // Returns the world position of a unit's current attach point; false (half a tile up) without one
 // The world position of inUnit's current tag point (its model part's list, the unit's frame), scaled by its size;
 // false (and the point half a tile up) when the part has no tag points (new: ee_combat's attach_point)
-inline bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
-{
-    return ee_units_lf_attach_point(EEUUHandle(inUnit), (float(*)[3])&outPoint) != 0;   // uu_fill.rs
-}
+inline bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint) { return ee_units_lf_attach_point(EEUUHandle(inUnit), (float(*)[3])&outPoint) != 0; }  // uu_fill.rs
 // (PermuteValues, the generic permutation at 0x4eef9: ee_sim combat search.rs permute)
 // Computes the launch pitch for a shot at its speed under gravity (low or high arc); false (45 degrees) when
 // out of reach
@@ -145,7 +120,6 @@ inline bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo,
                 float* outAngle);  // 0x241a6a (before the range)
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
-class URandom;
 // 0x249201 is EEFOFindLocation (bool; its tile screen is the RTTI-named EEFOLocationScreenBase): declared in
 // ee/EEFOLocationScreenBase.h (was EEFn249201 with an EEUUTileFilter* here)
 // Returns where a unit casts its calamity from: 90% of the calamity's range from the target
@@ -174,10 +148,7 @@ long EEOrientWallPiece(GETransformation& ioTransformation, long inCorner, long i
 // Builds the text of a civilization upgrade ("category: attribute percent%"); false when a string is missing
 // The text of civilization upgrade inUpgrade ("<category>: <attribute> <percent>%"); false when a string is missing.
 // Its two function-local static strings' atexit dtors follow it (0x24e7c4 / 0x24e7cf).
-inline bool EEFn24E68F(EECivUpgrade inUpgrade, UWideString& outText)
-{
-    return ee_units_ub_body(EE_UNITS_UB_DO_UPGRADE_TEXT, 0, EEUUHandle(&outText), (int64_t)inUpgrade, 0, 0) != 0;   // uu_body.rs
-}
+inline bool EEFn24E68F(EECivUpgrade inUpgrade, UWideString& outText) { return ee_units_ub_body(EE_UNITS_UB_DO_UPGRADE_TEXT, 0, EEUUHandle(&outText), (int64_t)inUpgrade, 0, 0) != 0; }  // uu_body.rs
 class EECivilization;
 // 0x24edcf: whether inValue is in the civilization's GetPurchasedUpgrades list (0x64edcf calls GetPurchasedUpgrades
 // 0x12c738 on its first argument) (provisional name)
@@ -193,13 +164,5 @@ inline void EEMovePassengers(EEComplexUnit* inUnit, EEComplexUnit* inContainer, 
     ee_units_ub_body(EE_UNITS_UB_DO_MOVE_PASSENGERS, EEUUHandle(inUnit), EEUUHandle(inContainer), inIsConversion, 0, 0);   // uu_body.rs
 }
 // Gives a unit another unit's load (as much as its class allows), emptying the other
-inline void EETakeOverLoad(EEComplexUnit* inUnit, EEComplexUnit* inOther)
-{
-    ee_units_ub_body(EE_UNITS_UB_DO_TAKE_OVER_LOAD, EEUUHandle(inUnit), EEUUHandle(inOther), 0, 0, 0);   // uu_body.rs
-}
-// Tells whether a wall piece on a tile rises above a height
-inline bool EEIsTileTopAbove(unsigned long inX, unsigned long inY, float inHeight, EEUnit** outArg4, bool inBare)
-{
-    return ee_units_uu_tile_top_above_at((long)inX, (long)inY, inHeight, reinterpret_cast<uint64_t*>(outArg4), inBare);   // uu_adapt.rs
-}
+inline void EETakeOverLoad(EEComplexUnit* inUnit, EEComplexUnit* inOther) { ee_units_ub_body(EE_UNITS_UB_DO_TAKE_OVER_LOAD, EEUUHandle(inUnit), EEUUHandle(inOther), 0, 0, 0); }  // uu_body.rs
 #endif

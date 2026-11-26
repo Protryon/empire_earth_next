@@ -25,7 +25,6 @@ public:
     }
     virtual long DrawTextA() { return ee_ui_string_list_draw(this->mRust); }   // listobj.rs
     GEText* GetGEText() const { return this->mText; }  // ICF-folded (0x1005966a)
-    GEText* GetCopiedGEText() const { return this->mCopiedText; }   // the draw pass's text (UI round 13: for the hosts)
     virtual long UpdateTranslatedKey(const char* inKey, short inRepeat) { return ee_ui_string_list_key(this->mRust, inKey); }
     GEText* mText;                          // +0x134
     GEText* mCopiedText;                    // +0x138 drawing

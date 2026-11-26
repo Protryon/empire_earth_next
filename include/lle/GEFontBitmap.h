@@ -19,8 +19,7 @@ public:
     GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
         : mRust(NULL) { this->mRust = ee_ge_fb_new(&GEFontBitmap::Host, this, inRasterizer, inFont, inScreen); }
     bool operator==(GEFont* inFont) { return true; }
-    long Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
-        { return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen); }
+    long Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen) { return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen); }
     long Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer, unsigned long inScreen)
         { return ee_ge_fb_draw(this->mRust, inText, GERust(inRectangle), inRasterizer, inScreen); }
     // 0x159ac (protected: released through Dereference): its drawing bitmap released

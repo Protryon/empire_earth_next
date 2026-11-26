@@ -32,8 +32,10 @@ public:
     {
     }
     virtual ~EESEUITerrainColorLB() {}      // +0x00 (??_G 0x1ac32e: its own vptr first)
-    virtual long CopyData();                // +0x14 0x1ac31d (inline COMDAT): the base's, the copied focus set
-    virtual long DrawPolygons();            // +0x18 0x1aaad4 (each line's colours as rhombi)
+    // +0x14 0x1ac31d (inline COMDAT): the base's, the copied focus set
+    virtual long CopyData() { return ee_screens_setlb_call(EE_SCREENS_SETLB_COLOR_COPY, this); }
+    // +0x18 0x1aaad4 (each line's colours as rhombi)
+    virtual long DrawPolygons() { return ee_screens_setlb_call(EE_SCREENS_SETLB_COLOR_DRAW, this); }
 };
 
 // the terrain type list (RTTI EESEUITerrainTypeLB > UIListBox<EESEUITTData>; vtable 0x445c2c, sizeof 0x144)
@@ -48,9 +50,12 @@ public:
     // inline (COMDAT 0x1ac40d; ??_G 0x1ac3f1): the copied lines' textures released, the bitmap, the texts
     // (editor_setnx.rs type_free)
     virtual ~EESEUITerrainTypeLB() { ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_FREE, this); }
-    virtual long CopyData();                // +0x14 0x1aacf2
-    virtual long DrawPolygons();            // +0x18 0x1aade1 (each line's texture)
-    virtual long DrawTextA();               // +0x1c 0x1ab1a2 (the names)
+    // +0x14 0x1aacf2
+    virtual long CopyData() { return ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_COPY, this); }
+    // +0x18 0x1aade1 (each line's texture)
+    virtual long DrawPolygons() { return ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_DRAW, this); }
+    // +0x1c 0x1ab1a2 (the names)
+    virtual long DrawTextA() { return ee_screens_setlb_call(EE_SCREENS_SETLB_TYPE_TEXT, this); }
 
     GEText* mText;                          // +0x134
     GEText* mCopyText;                      // +0x138

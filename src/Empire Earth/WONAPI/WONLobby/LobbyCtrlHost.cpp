@@ -203,8 +203,8 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::ComboSetName: aCombo->SetText(EELobbyStr(b)); return 0;
     case Op::ComboSetTextColor: aCombo->mEdit->mTextColor = (unsigned long)b; return 0;
     case Op::MyPlayerReady: return GetMyLobbyPlayer()->GetReady() ? 1 : 0;
-    case Op::MyPlayer: return (intptr_t) static_cast<EELobbyPlayer*>(GetMyLobbyPlayer());
-    case Op::PlayerSlot: return reinterpret_cast<EELobbyPlayer*>(a)->GetSlot();
+    case Op::MyPlayer: return (intptr_t)GetMyLobbyPlayer();
+    case Op::PlayerSlot: return reinterpret_cast<LobbyPlayer*>(a)->MGet(LobbyMF::PlayerSlot);
     case Op::ColorSetColor: reinterpret_cast<EELobbyColorButton*>(a)->SetColor((int)b); return 0;
     case Op::ColorGetColor: return reinterpret_cast<EELobbyColorButton*>(a)->GetColor();
     default: break;

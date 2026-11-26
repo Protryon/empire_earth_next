@@ -102,7 +102,7 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
     case Op::OpSetCompletion: anOp->SetCompletion(new EELobbyTransferCompletion(aTransfer, (EeWonEeXferCall)b)); return 0;
     case Op::OpSetFilePath: static_cast<SocketOp*>(anOp)->SetFilePath(std::string(reinterpret_cast<const char*>(b), (size_t)c)); return 0;
     case Op::OpSetProgress: static_cast<SocketOp*>(anOp)->SetProgressCompletion(new EELobbyTransferCompletion(aTransfer, EeWonEeXferCall::OnProgress), 10000); return 0;
-    case Op::QueueConnect: aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Connect, NULL, NULL, &aTransfer->mHost), -1); return 0;
+    case Op::QueueConnect: aSocket->QueueOp(new SocketOp(EeWonCoreSocketOp::Connect, NULL, NULL, aTransfer->mHost.GetValue()), -1); return 0;
     case Op::QueueOpOn: aSocket->QueueOp(static_cast<SocketOp*>(reinterpret_cast<AsyncOp*>(b)), -1); return 0;
     }
     return 0;
@@ -139,38 +139,6 @@ GUIString WONAPI::EELobbyStatusString(intptr_t inStatus)
     return gEmptyGUIString;
 }
 
-// ---- the lobby player (EELobbyPlayer.cpp's)
-
-// Creates a lobby game player in slot 0 with no slot attached
-EELobbyPlayer::EELobbyPlayer()
-{
-    this->mSlot = 0;
-    this->mSlotGame = NULL;
-}
-// Destroys the lobby game player (members only)
-EELobbyPlayer::~EELobbyPlayer() {}
-// Reads the player's slot number from a game message; always succeeds
-bool EELobbyPlayer::ReadData(ReadBuffer& inBuffer)
-{
-    this->mSlot = inBuffer.ReadByte();
-    return true;
-}
-// Writes the player's slot number to a game message
-void EELobbyPlayer::WriteData(WriteBuffer& outBuffer) { outBuffer.AppendByte(this->mSlot); }
-// Returns whether another player is on the same team (the rule is ee_won's)
-bool EELobbyPlayer::IsTeammate(LobbyPlayer* inOther)
-{
-    unsigned char theTeam = static_cast<EELobbyPlayer*>(inOther)->GetTeam();
-    return ee_won_eegame_is_teammate(this->GetTeam(), theTeam);
-}
-// Returns the team of the player's slot, or 0 when the player has no slot
-unsigned char EELobbyPlayer::GetTeam()
-{
-    if (this->mSlotGame != NULL)
-        return (unsigned char)this->mSlotGame->EE(GC::SlotRawOption, this->mSlotIndex, 1);
-    return 0;
-}
-
 // ---- the host
 
 // a message's text as a new GUIStringData with one reference (ReadWString's; a short buffer throws)
@@ -189,7 +157,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     LobbyGame* aGame = static_cast<LobbyGame*>(inGame);
     WriteBuffer* aWrite = reinterpret_cast<WriteBuffer*>(a);
     LobbyClient* aClient = reinterpret_cast<LobbyClient*>(a);
-    EELobbyPlayer* aPlayer = reinterpret_cast<EELobbyPlayer*>(a);
+    LobbyPlayer* aPlayer = reinterpret_cast<LobbyPlayer*>(a);
     EELobbyFileTransfer* aTransfer = reinterpret_cast<EELobbyFileTransfer*>(a);
     switch (inOp) {
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
@@ -214,10 +182,10 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::SendToClient: LobbySendToClient(reinterpret_cast<LobbyClient*>(b), aWrite->ToByteBuffer(true).get()); return 0;
     case Op::FreeBuffer: delete aWrite; return 0;
     case Op::CurrentServer: return (intptr_t)LobbyGetCurrentServer();
-    case Op::PlayerSlot: return aPlayer->GetSlot();
-    case Op::PlayerTeam: return aPlayer->GetTeam();
-    case Op::PlayerDetach: aPlayer->mSlotGame = NULL; return 0;
-    case Op::MyPlayer: return (intptr_t) static_cast<EELobbyPlayer*>(GetMyLobbyPlayer());
+    case Op::PlayerSlot: return aPlayer->MGet(LobbyMF::PlayerSlot);
+    case Op::PlayerTeam: return aPlayer->M(LobbyMC::PlayerTeam);
+    case Op::PlayerDetach: aPlayer->MSet(LobbyMF::PlayerSlotGame, 0); return 0;
+    case Op::MyPlayer: return (intptr_t)GetMyLobbyPlayer();
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::NotifyStagingChange: LobbyNotifyStagingChange(); return 0;
     case Op::AdvertiseGame: LobbyNetAdvertiseGame(); return 0;
@@ -254,9 +222,9 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::TransferIsFileHere: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::IsFileHere, 0, 0);
     case Op::TransferDownload: return ee_won_eexfer_call(aTransfer->mRust, EeWonEeXferCall::Download, 0, 0);
     // R6 WON round 34: the statements of the compound cases eesplit.rs composes
-    case Op::PlayerSetSlotGame: aPlayer->mSlotGame = aGame; return 0;
-    case Op::PlayerSetSlotIndex: aPlayer->mSlotIndex = (unsigned char)b; return 0;
-    case Op::PlayerSetSlot: aPlayer->mSlot = (unsigned char)b; return 0;
+    case Op::PlayerSetSlotGame: aPlayer->MSet(LobbyMF::PlayerSlotGame, (intptr_t)aGame->mEE); return 0;
+    case Op::PlayerSetSlotIndex: aPlayer->MSet(LobbyMF::PlayerSlotIndex, (unsigned char)b); return 0;
+    case Op::PlayerSetSlot: aPlayer->MSet(LobbyMF::PlayerSlot, (unsigned char)b); return 0;
     case Op::TransferSetName: aTransfer->mName = EELobbyStr(b); return 0;
     case Op::TransferRust: return (intptr_t)aTransfer->mRust;
     case Op::TransferHostFromGame: aTransfer->mHost = aGame->GetAddress(); return 0;

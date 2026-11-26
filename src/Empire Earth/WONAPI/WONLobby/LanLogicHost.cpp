@@ -103,7 +103,7 @@ static void LanStagingBytes(ReadBuffer inBuffer, LobbyClient* inClient) { LobbyH
 static bool LanGameReadSummary(ReadBuffer inBuffer, LobbyGame* inGame) { return inGame->ReadSummary(inBuffer); }
 
 // a connect op to the address (the op copies it)
-static SocketOp* LanNewConnectOp(LobbyLanSocket* inSocket, IPAddr inAddress) { return new SocketOp(EeWonCoreSocketOp::Connect, inSocket, NULL, &inAddress); }
+static SocketOp* LanNewConnectOp(LobbyLanSocket* inSocket, IPAddr inAddress) { return new SocketOp(EeWonCoreSocketOp::Connect, inSocket, NULL, inAddress.GetValue()); }
 
 intptr_t LanLogicHostCall(RustLogic* inLan, EeWonLobbyOp inOp, void* inA, void* inB, intptr_t inC, intptr_t inD)
 {

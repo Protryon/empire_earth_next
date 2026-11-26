@@ -47,8 +47,7 @@ public:
 
     // the message the builder registered for its type makes from received bytes; NULL for a type with none
     static NEMessage* ConvertMemoryToMessage(unsigned char* inData);
-    static NEMessage* BuildNEMessage(unsigned char* inData)
-        { return static_cast<NEMessage*>(ee_ne_record_build(inData)); }
+    static NEMessage* BuildNEMessage(unsigned char* inData) { return static_cast<NEMessage*>(ee_ne_record_build(inData)); }
     static void RegisterKnownMessages() { NEMessage::RegisterBuilder(0x20, 0x3c, NEMessage::BuildNEMessage); }
     // New (round 6): registers a builder for the types inFirst..inLast (the original wrote sConstructors[256])
     static void RegisterBuilder(unsigned char inFirst, unsigned char inLast, NEMessage* (*inBuilder)(unsigned char*))
@@ -88,17 +87,13 @@ public:
               std::initializer_list<const char*> inStrings = {}) : NEMessage(inType)
         { ee_ne_record_fill(this, reinterpret_cast<const int64_t*>(inValues.begin()), inValues.size(), inStrings.begin(), inStrings.size()); }
     // the Rust's: fixed members only
-    NEMRecord(unsigned char inType, const uint32_t* inValues, size_t inCount) : NEMessage(inType)
-        { ee_ne_record_fill_u32(this, inValues, inCount); }
+    NEMRecord(unsigned char inType, const uint32_t* inValues, size_t inCount) : NEMessage(inType) { ee_ne_record_fill_u32(this, inValues, inCount); }
     virtual ~NEMRecord() { ee_ne_record_destruct(this); }   // releases the players' inputs
-    virtual bool GetCanSendWhilePaused() const
-        { return (ee_netmsg_ne_type(this->mType).flags & EE_NETMSG_NE_PAUSED) != 0; }
-    virtual bool GetCountsTowardsPlayerInputThrottle() const
-        { return (ee_netmsg_ne_type(this->mType).flags & EE_NETMSG_NE_THROTTLE) != 0; }
+    virtual bool GetCanSendWhilePaused() const { return (ee_netmsg_ne_type(this->mType).flags & EE_NETMSG_NE_PAUSED) != 0; }
+    virtual bool GetCountsTowardsPlayerInputThrottle() const { return (ee_netmsg_ne_type(this->mType).flags & EE_NETMSG_NE_THROTTLE) != 0; }
     virtual bool GetSendToAllAndWaitMessageID(unsigned long& outID) const { return ee_ne_record_s2aw_id(this, &outID); }
     virtual void SetSendToAllAndWaitMessageID(unsigned long inID) { ee_ne_record_set_s2aw_id(this, inID); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize)
-        { ee_ne_record_export(this, outData, &outSize); }
+    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize) { ee_ne_record_export(this, outData, &outSize); }
     virtual unsigned long ExportSize() { return ee_ne_record_export_size(this); }
     virtual void ImportMessage(unsigned char* inData) { ee_ne_record_import(this, inData); }
     virtual bool IsResponse(NEMessage* inMessage) { return ee_ne_record_is_response(this, inMessage); }
@@ -116,17 +111,14 @@ public:
     unsigned char* Field(uint32_t inIndex, size_t inSize) const { return ee_ne_record_field(this, inIndex, inSize); }
     // member inIndex for the Rust: its value zero-extended, the inputs' count, a block's address
     uintptr_t Value(uint32_t inIndex) const { return ee_ne_record_value(this, inIndex); }
-    const UWideString& GetString(uint32_t inIndex) const
-        { return *static_cast<const UWideString*>(ee_ne_record_string(this, inIndex)); }
+    const UWideString& GetString(uint32_t inIndex) const { return *static_cast<const UWideString*>(ee_ne_record_string(this, inIndex)); }
     // the transfer message's (fixed) size
-    static unsigned long XferExportSize()
-        { return ee_netmsg_fixed_size(ee_netmsg_ne_type(kNetMessageXferMessage).class_id); }
+    static unsigned long XferExportSize() { return ee_netmsg_fixed_size(ee_netmsg_ne_type(kNetMessageXferMessage).class_id); }
 
     // the players' inputs (the communications tick and its response): at most 255
     unsigned long GetNumberOfPlayerInputs() const { return this->mPlayerInputs.size(); }
     long AddPlayerInput(NEMessage* inInput) { return ee_ne_record_add_input(this, inInput); }
-    long GetPlayerInput(unsigned long inIndex, NEMessage*& outInput)
-        { return ee_ne_record_input(this, inIndex, reinterpret_cast<void**>(&outInput)); }
+    long GetPlayerInput(unsigned long inIndex, NEMessage*& outInput) { return ee_ne_record_input(this, inIndex, reinterpret_cast<void**>(&outInput)); }
 
     unsigned char* mRecord;                 // the fixed members (new[] of the type's record size)
     UWideString mStrings[2];

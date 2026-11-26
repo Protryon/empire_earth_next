@@ -9,21 +9,14 @@
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/GETerrainMesh.h"
 #include "lle/Input System.h"
 #include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMessage.h"
@@ -37,9 +30,6 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEARust.h"
 #include "ee/EEUIMiniMap.h"
-#include "rust/base/math.h"
-#include "rust/game/screens.h"
-#include "rust/render/gfx.h"
 
 
 // (EEMSendFlare's inline ctor: ee/EEMessage.h)
@@ -200,7 +190,6 @@ extern "C" void ee_screenscpp_mm_world_texture_set(uintptr_t inMinimap)
 { EEScratch<GEBitmap*>(kScratchWorldBitmap)->SetTexture(reinterpret_cast<EEMiniMap*>(inMinimap)->mWorldTexture, gScreenIndex); }
 
 // the media and the update as the game calls them (Empire Earth.cpp, the world, the mini map: ee/EEGameUI.h)
-#include "ee/EEGameUI.h"
 static const bool sMiniMapRegistered = (gEEGameUI.mMiniMapLoadMedia = EEUIMiniMap::LoadMedia,
                                         gEEGameUI.mMiniMapUnloadMedia = EEUIMiniMap::UnloadMedia,
                                         gEEGameUI.mMiniMapUpdate = EEUIMiniMap::Update, true);

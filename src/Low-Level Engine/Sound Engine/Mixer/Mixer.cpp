@@ -7,8 +7,6 @@
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
-#include "rust/audio/mixer.h"
-#include "lle/SEMixer.h"
 
 static UString gMixerName("Mixer");
 

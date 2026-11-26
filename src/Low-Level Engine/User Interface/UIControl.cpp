@@ -7,42 +7,18 @@
 // starts at 0x10065f69.
 #include <windows.h>
 
-#include "rust/ui/controlobj.h"
-#include "rust/ui/draw.h"
-#include "rust/ui/draw2d.h"
-#include "rust/ui/draw_ffi.h"
-#include "rust/ui/mouse_ffi.h"
-#include "rust/ui/obj.h"
-#include "rust/ui/rect.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/GEText.h"
-#include "lle/GELine.h"
-#include "lle/TSCriticalSection.h"
 #include "lle/UResourceFile.h"
 #include "lle/Input System.h"
 #include "lle/UIControl.h"
-#include "lle/UIEvent.h"
 #include "lle/UIEntityGroup.h"
-#include "lle/UIForm.h"
-#include "lle/UIManager.h"
-#include "lle/UIObjHost.h"
-#include "lle/UIShims.h"
-#include "rust/ui/lle_control.h"
-#include "rust/ui/lle_hosts.h"
 
 
 // the record's rectangles are read as GERectangle (bottom, left, right, top)

@@ -54,7 +54,6 @@ ChatCommandParser* LobbyGetRoomChatParser(int inRoomSpec);
 void LobbyGameDisconnected(bool inShowError);
 void LobbySetClientBlocked(LobbyClient* inClient, bool inBlocked, unsigned int inRoomSpec);
 void LobbySetClientIgnored(LobbyClient* inClient, bool inIgnored, unsigned int inRoomSpec);
-bool LobbyIsValidEmail(const std::string& inEmail) throw(); // STAND-IN (owner 2026-11-06): no unwind state around the temporary in the caller 0x7ca0a0
 void LobbyKickClient(LobbyClient* inClient, bool inIsBan);
 int LobbyGetGameScreenType();
 class Window;
