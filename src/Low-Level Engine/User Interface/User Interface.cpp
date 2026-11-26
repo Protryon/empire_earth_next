@@ -186,14 +186,6 @@ EE_UI_CASE(button_radio_of)
     UIControl* theControl = s->GetForm()->GetControl((unsigned long)a);
     return theControl && theControl->GetType() == kControlTypeRadioButton ? (intptr_t) static_cast<UIButton*>(theControl)->mRust : 0;
 }
-EE_UI_CASE(button_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
-EE_UI_VOID(button_poll_delete) { delete reinterpret_cast<TMPoll*>(a); }
-EE_UI_CASE(button_poll_running) { return reinterpret_cast<TMPoll*>(a)->GetIsRunning(); }
-EE_UI_CASE(button_poll_poll) { return (intptr_t)reinterpret_cast<TMPoll*>(a)->Poll(); }
-EE_UI_VOID(button_poll_start) { reinterpret_cast<TMPoll*>(a)->Start(); }
-EE_UI_VOID(button_poll_stop) { reinterpret_cast<TMPoll*>(a)->Stop(); }
-EE_UI_CASE(button_poll_time_left) { return (intptr_t)reinterpret_cast<TMPoll*>(a)->GetTimeLeft(); }
-EE_UI_VOID(button_poll_set_delay) { reinterpret_cast<TMPoll*>(a)->SetTimeDelay((unsigned long)b); }
 EE_UI_CASE(button_slider_value) { return reinterpret_cast<UISlider*>(a)->GetCurrentRangeValue(); }
 EE_UI_VOID(button_slider_set_value) { reinterpret_cast<UISlider*>(a)->SetCurrentRangeValue((long)b); }
 EE_UI_VOID(button_bitmap_stretch) { reinterpret_cast<GEBitmap*>(a)->ComputeStretchedCoordsAndScale(UIObjHost::Rect(f), UIObjHost::Rect(f), UIObjHost::Rect(f + 4), s->GetScreenIndex()); }
@@ -681,17 +673,10 @@ EE_UI_VOID(tbl_text_fg) { reinterpret_cast<GEText*>(a)->SetFgColor(static_cast<U
 // key dispatch (edit_keys.rs) and the drawing's ranges (edit_draw.rs) are its algorithms.
 #define e static_cast<UIEditBox*>(inObj)
 #define theBar reinterpret_cast<UIScrollBar*>(a)
-#define thePoll reinterpret_cast<TMPoll*>(a)
 #define theLine reinterpret_cast<GELine*>(a)
 #define theRhombus reinterpret_cast<GERhombus*>(a)
 #define theText reinterpret_cast<GEText*>(a)
 EE_UI_VOID(edit_button_down) { e->ButtonDown(); }
-EE_UI_CASE(edit_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
-EE_UI_VOID(edit_poll_delete) { delete thePoll; }
-EE_UI_CASE(edit_poll_running) { return thePoll->GetIsRunning(); }
-EE_UI_CASE(edit_poll_poll) { return thePoll->Poll(); }
-EE_UI_VOID(edit_poll_start) { thePoll->Start(); }
-EE_UI_VOID(edit_poll_stop) { thePoll->Stop(); }
 EE_UI_VOID(edit_text_set_bytes) { theText->SetText(UWideString(reinterpret_cast<const char*>(b))); }
 EE_UI_CASE(edit_text_font_height) { return theText->GetFont()->GetHeight(); }
 EE_UI_VOID(edit_draw_count_decrement) { e->UIControl::DrawTextA(); }
@@ -715,7 +700,6 @@ EE_UI_VOID(edit_text_set_transparent) { theText->SetIsTransparent(b != 0); }
 #undef theText
 #undef theRhombus
 #undef theLine
-#undef thePoll
 #undef theBar
 #undef e
 
@@ -906,7 +890,6 @@ EE_UI_VOID(group_set_enabled) { static_cast<UIHotKey*>(reinterpret_cast<UIEntity
 #define theKey reinterpret_cast<UIHotKey*>(a)
 #define theEvent reinterpret_cast<UIEvent*>(a)
 #define theTable reinterpret_cast<UIControlsTable*>(a)
-#define thePoll reinterpret_cast<TMPoll*>(a)
 #define theRhombus reinterpret_cast<GERhombus*>(a)
 EE_UI_CASE(form_ctl_type) { return theControl->GetType(); }
 EE_UI_CASE(form_ctl_entity_type) { return theControl->UIEntity::GetType(); }
@@ -1006,13 +989,6 @@ EE_UI_CASE(form_now) { return TMGetTime(); }
 EE_UI_VOID(form_lock_delete) { TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); }
 EE_UI_VOID(form_lock_enter) { reinterpret_cast<TSCriticalSection*>(a)->Enter(); }
 EE_UI_VOID(form_lock_leave) { reinterpret_cast<TSCriticalSection*>(a)->Leave(); }
-EE_UI_CASE(form_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
-EE_UI_VOID(form_poll_delete) { delete thePoll; }
-EE_UI_CASE(form_poll_running) { return thePoll->GetIsRunning(); }
-EE_UI_CASE(form_poll_poll) { return thePoll->Poll(); }
-EE_UI_VOID(form_poll_start) { thePoll->Start(); }
-EE_UI_VOID(form_poll_stop) { thePoll->Stop(); }
-EE_UI_VOID(form_poll_set_delay) { thePoll->SetTimeDelay((unsigned long)b); }
 EE_UI_VOID(form_virt_help_location) { theForm->SetHelpTextPopupLocation(); }
 EE_UI_CASE(form_virt_draw_background) { return theForm->DrawBackground(UIFormRect(f)); }
 EE_UI_CASE(form_rhombus_create) { return (intptr_t) new GERhombus; }
@@ -1025,7 +1001,6 @@ EE_UI_VOID(form_rhombus_label_color) { theRhombus->SetColor(static_cast<UITextLa
 #undef theKey
 #undef theEvent
 #undef theTable
-#undef thePoll
 #undef theRhombus
 
 // Records the mouse location, finds the control under it, hides a tool tip the mouse enters, updates the mouse-over
@@ -1099,15 +1074,8 @@ extern "C" const char* ee_uicpp_entity_name(void* inEntity) { return static_cast
 // UIControl's, the scroll bar's (a part by address), the polls', the selection rhombi's and the focus line's
 #define lst static_cast<UIControl*>(inObj)
 #define theBar reinterpret_cast<UIScrollBar*>(a)
-#define thePoll reinterpret_cast<TMPoll*>(a)
 #define theLine reinterpret_cast<GELine*>(a)
 #define theRhombus reinterpret_cast<GERhombus*>(a)
-EE_UI_CASE(list_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
-EE_UI_VOID(list_poll_delete) { delete thePoll; }
-EE_UI_CASE(list_poll_running) { return thePoll->GetIsRunning(); }
-EE_UI_CASE(list_poll_poll) { return thePoll->Poll(); }
-EE_UI_VOID(list_poll_start) { thePoll->Start(); }
-EE_UI_VOID(list_poll_stop) { thePoll->Stop(); }
 EE_UI_CASE(list_rhombus_create) { return (intptr_t) new GERhombus(); }
 EE_UI_VOID(list_rhombus_delete) { delete theRhombus; }
 EE_UI_CASE(list_line_create) { return (intptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f), 1.0f); }
@@ -1124,7 +1092,6 @@ EE_UI_VOID(list_bar_set_value) { theBar->SetCurrentRangeValue((unsigned long)b);
 EE_UI_VOID(list_bar_increment_by) { theBar->IncrementBy((long)b); }
 #undef theRhombus
 #undef theLine
-#undef thePoll
 #undef theBar
 #undef lst
 
@@ -1285,9 +1252,6 @@ EE_UI_VOID(mgr_part_rect) { UIObjHost::PutRect(f, reinterpret_cast<UIControl*>(a
 EE_UI_VOID(mgr_event_process) { reinterpret_cast<UIEvent*>(a)->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c)); }
 EE_UI_CASE(mgr_keyboard_should_update) { return gISKeyboard->GetShouldUpdate(); }
 EE_UI_CASE(mgr_mouse_should_update) { return gISMouse->GetShouldUpdate(); }
-// the hot keys' pressed poll (the original's UIHotKey::sPressedPoll: 50 ms), polled once per update
-static TMPoll sHotKeyPressedPoll(50, 0, true);
-EE_UI_VOID(mgr_hot_key_poll) { sHotKeyPressedPoll.Poll(); }
 EE_UI_VOID(mgr_hot_keys_delete) { UIHotKey::DeleteHotKeys(); }
 EE_UI_CASE(mgr_virt_update_keyboard) { return static_cast<UIManager*>(inObj)->UpdateKeyboard(); }
 EE_UI_CASE(mgr_virt_update_mouse) { return static_cast<UIManager*>(inObj)->UpdateMouse(GE2DPoint(f[0], f[1])); }
@@ -1402,7 +1366,6 @@ struct UITextLabelRust {
 };
 #define l static_cast<UITextLabel*>(inObj)
 #define theBar reinterpret_cast<UIScrollBar*>(a)
-#define thePoll reinterpret_cast<TMPoll*>(a)
 EE_UI_CASE(label_string_new) { return (intptr_t) new UWideString(reinterpret_cast<const char*>(a)); }
 EE_UI_VOID(label_string_delete) { delete reinterpret_cast<UWideString*>(a); }
 EE_UI_VOID(label_string_assign) { *reinterpret_cast<UWideString*>(a) = *reinterpret_cast<const UWideString*>(b); }
@@ -1418,20 +1381,10 @@ EE_UI_CASE(label_bar_value) { return theBar->GetSlider()->GetCurrentRangeValue()
 EE_UI_VOID(label_bar_increment_by) { theBar->IncrementBy((long)b); }
 EE_UI_VOID(label_bar_set_value) { theBar->SetCurrentRangeValue((unsigned long)b); }
 EE_UI_VOID(label_part_copied_draw_rect) { UIObjHost::PutRect(f, theBar->GetCopiedDrawRectangle()); }
-EE_UI_CASE(label_poll_create) { return (intptr_t) new TMPoll((unsigned long)a, 0, false); }
-EE_UI_VOID(label_poll_delete) { delete thePoll; }
-EE_UI_CASE(label_poll_running) { return thePoll->GetIsRunning(); }
-EE_UI_CASE(label_poll_poll) { return thePoll->Poll(); }
-EE_UI_VOID(label_poll_start) { thePoll->Start(); }
-EE_UI_VOID(label_poll_stop) { thePoll->Stop(); }
-EE_UI_VOID(label_poll_pause) { thePoll->Pause(); }
-EE_UI_VOID(label_poll_resume) { thePoll->Resume(); }
-EE_UI_VOID(label_poll_set_delay) { thePoll->SetTimeDelay((unsigned long)b); }
 EE_UI_VOID(label_virt_check_scroll_bar) { l->CheckScrollBar(); }
 EE_UI_VOID(label_virt_recompute) { l->RecomputeDisplayRange(); }
 EE_UI_VOID(label_virt_set_location) { l->SetLocation(GE2DPoint(f[0], f[1])); }
 EE_UI_VOID(label_virt_set_rectangle) { l->SetRectangle(UIObjHost::Rect(f)); }
-#undef thePoll
 #undef theBar
 #undef l
 

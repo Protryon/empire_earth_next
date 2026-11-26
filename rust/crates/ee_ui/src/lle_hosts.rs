@@ -1065,3 +1065,72 @@ pub unsafe extern "C" fn ee_ui_table_setup_text(table: *mut c_void, text: *mut c
         ee_uicpp_tbl_text_fg(table, text as isize, 0, 0, 0, f.as_mut_ptr());
     }
 }
+
+// ---- the ops whose C++ shim was one call on a Rust object of another crate (LLE/UI round 2): Rust's own calls
+
+/// The toolkit's polls (`TMPoll`, whose only member is ee_base's [`EeTimePoll`]): the objects' timers (the buttons',
+/// edit boxes', forms', labels' and lists' `PollCreate` .. `PollSetDelay`; `a` the poll, `b` a new delay) are Rust
+/// records made and freed here, never seen by the C++.
+#[cfg(not(any(test, feature = "no_cpp")))]
+mod polls {
+    use core::ffi::c_void;
+    use ee_base::time::{self as t, EeTimePoll};
+
+    fn p(a: isize) -> *mut EeTimePoll {
+        a as *mut EeTimePoll
+    }
+
+    /// `new TMPoll(a, 0, false)`: a stopped millisecond poll of delay `a`.
+    pub(super) unsafe fn create(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+        let poll = Box::into_raw(Box::new(EeTimePoll::default()));
+        // SAFETY: a fresh record
+        unsafe { t::ee_time_poll_init(poll, a as u32, 0, false) };
+        poll as isize
+    }
+    /// # Safety
+    /// `a` a poll [`create`] made (or NULL).
+    pub(super) unsafe fn delete(_o: *mut c_void, a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+        if a != 0 {
+            // SAFETY: the contract
+            drop(unsafe { Box::from_raw(p(a)) });
+        }
+        0
+    }
+    macro_rules! poll_ops {
+        ($( $name:ident => |$q:ident, $b:ident| $e:expr; )*) => {$(
+            /// # Safety
+            /// `a` a live poll [`create`] made.
+            pub(super) unsafe fn $name(_o: *mut c_void, a: isize, $b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+                let $q = p(a);
+                // SAFETY: the contract
+                unsafe { $e }
+            }
+        )*};
+    }
+    poll_ops! {
+        running => |q, _b| t::ee_time_poll_is_running(q) as isize;
+        poll => |q, _b| t::ee_time_poll_poll(q) as isize;
+        start => |q, _b| { t::ee_time_poll_start(q); 0 };
+        stop => |q, _b| { t::ee_time_poll_stop(q); 0 };
+        pause => |q, _b| { t::ee_time_poll_pause(q); 0 };
+        resume => |q, _b| { t::ee_time_poll_resume(q); 0 };
+        time_left => |q, _b| t::ee_time_poll_time_left(q) as isize;
+        set_delay => |q, b| { t::ee_time_poll_set_time_delay(q, b as u32); 0 };
+    }
+
+    /// The hot keys' pressed poll (the original's `UIHotKey::sPressedPoll`: 50 ms, running from the first update),
+    /// polled once per manager update (`MgrHotKeyPoll`).
+    pub(super) unsafe fn hot_key(_o: *mut c_void, _a: isize, _b: isize, _c: isize, _d: isize, _f: *mut f32) -> isize {
+        static POLL: std::sync::Mutex<Option<EeTimePoll>> = std::sync::Mutex::new(None);
+        let mut g = POLL.lock().unwrap_or_else(|e| e.into_inner());
+        let q = g.get_or_insert_with(|| {
+            let mut q = EeTimePoll::default();
+            // SAFETY: a live record
+            unsafe { t::ee_time_poll_init(&mut q, 50, 0, true) };
+            q
+        });
+        // SAFETY: a live record
+        unsafe { t::ee_time_poll_poll(q) };
+        0
+    }
+}
