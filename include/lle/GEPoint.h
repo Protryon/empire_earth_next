@@ -16,8 +16,6 @@ public:
     float GetOpacity() const { return ee_ge_prim_opacity(this->mRust, 0); }
     void GetPoint(GE2DPoint& outPoint) const { ee_ge_prim_xy(this->mRust, 0, (EeGe2DPoint*)&outPoint); }
     GETexture* GetTexture(unsigned long inScreen) const { return (GETexture*)ee_ge_prim_texture(this->mRust, inScreen); }
-    void GetTextureCoordinate(GETextureCoordinate& outCoordinate)
-        { ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexGetUv, 0, &outCoordinate); }
     GEVertexArray* GetVertexArray() { return (GEVertexArray*)ee_ge_prim_vertices(this->mRust); }
     void SetColor(const GEColor& inColor) { ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexSetColor, 0, (void*)&inColor); }
     void SetOpacity(float inOpacity) { ee_ge_prim_set_opacity(this->mRust, 0, inOpacity); }

@@ -15,12 +15,6 @@ public:
     void Define(const GE3DPoint& inStart, const GE3DPoint& inEnd) { *this = GE3DLine(inStart, inEnd); }
     void Define(const GE3DPoint& inStart, const GEVector& inDirection) { *this = GE3DLine(inStart, inDirection); }
     const GEVector& GetDirection() const { return GECpp(this->mDirection); }
-    // component by component (each reads only its own)
-    void GetPointAt(float inT, GE3DPoint& outPoint) const
-    {
-        outPoint = GE3DPoint(this->mDirection.mX * inT + this->mStart.mX, this->mDirection.mY * inT + this->mStart.mY,
-                             this->mDirection.mZ * inT + this->mStart.mZ);
-    }
     const GE3DPoint& GetStart() const { return GECpp(this->mStart); }
     // within inTolerance of a point (outT: the nearer of the two crossing parameters); two lines meeting (within 0.05
     // in the third axis; the parameters on each); a plane (false when parallel)
@@ -35,12 +29,6 @@ public:
     void SetDirection(const GEVector& inDirection) { this->mDirection = inDirection; }
     void SetStart(const GE3DPoint& inStart) { this->mStart = inStart; }
     // the parameter (and the point) where the line reaches a given x, y or z; false when it runs parallel to it
-    bool SolveForX(float inX, float& outT) const { return ee_ge_line_solve(GERust(*this), 0, inX, &outT, NULL); }
-    bool SolveForX(float inX, float& outT, GE3DPoint& outPoint) const
-        { return ee_ge_line_solve(GERust(*this), 0, inX, &outT, GERust(outPoint)); }
-    bool SolveForY(float inY, float& outT) const { return ee_ge_line_solve(GERust(*this), 1, inY, &outT, NULL); }
-    bool SolveForY(float inY, float& outT, GE3DPoint& outPoint) const
-        { return ee_ge_line_solve(GERust(*this), 1, inY, &outT, GERust(outPoint)); }
     bool SolveForZ(float inZ, float& outT) const { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, NULL); }
     bool SolveForZ(float inZ, float& outT, GE3DPoint& outPoint) const
         { return ee_ge_line_solve(GERust(*this), 2, inZ, &outT, GERust(outPoint)); }

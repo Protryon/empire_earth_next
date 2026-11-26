@@ -33,17 +33,11 @@ public:
     float DistanceTo(const GE3DPoint& inPoint) const { return ee_ge_3d_distance(GERust(*this), GERust(inPoint)); }
     float DistanceToSquared(const GE3DPoint& inPoint) const
         { return ee_ge_3d_distance_squared(GERust(*this), GERust(inPoint)); }
-    GE2DPoint Get2DPoint() const { return GE2DPoint(this->mX, this->mY); }  // inline (InterpolateTo 0xc80e)
     void GetChecksum(ESChecksum& ioChecksum) const {}
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }
-    // points every inStep along the segment to inPoint, always ending with inPoint itself (points within 0.0001 of
-    // each other but not equal: the C++ read an uninitialized end, Rust takes 0)
-    // (Rust copies the two points before the vector is cleared: either may be one of its elements)
-    void InterpolateTo(const GE3DPoint& inPoint, float inStep, std::vector<GE3DPoint>& outPoints) const
-        { ee_ge_3d_interpolate(GERust(*this), GERust(inPoint), inStep, Push, &outPoints); }
-    // the interpolation's calls: the vector cleared (no point), then each point
+    // the frustum points' calls (GEViewport): the vector cleared (no point), then each point
     static void Push(void* inPoints, const EeGe3DPoint* inPoint)
     {
         inPoint ? static_cast<std::vector<GE3DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE3DPoint*>(inPoint))

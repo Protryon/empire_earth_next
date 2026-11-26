@@ -46,8 +46,6 @@ public:
     {
         return Point(ee_sparse_closest_point(this->mPoints, (int32_t)inPoint.mX, (int32_t)inPoint.mY));
     }
-    // Rebuilds the list from the lowest and highest point of each column
-    void GetOnlyExtremeEdgePoints(std::vector<U2DPoint<long> >& outList) { List(true, 1, outList); }
     // Returns a random point (16 tries at a random column; then the first point; default point when empty)
     U2DPoint<long> GetRandomPoint(URandom& inRandom)
     {
@@ -74,7 +72,6 @@ public:
     // or 1, its size, its run count and its runs' ends (ee_sparse_raw); SetRaw makes the set from them (false, the set
     // cleared, when they are not such a list)
     void GetRaw(std::vector<long>& outRaw) const { ee_sparse_raw_into(this->mPoints, &outRaw, Resize<long>); }
-    bool SetRaw(const std::vector<long>& inRaw) { return ee_sparse_set_raw_longs(this->mPoints, inRaw.data(), inRaw.size()); }
     EeSparseArray* GetHandle() const { return this->mPoints; }   // New (port): for the AI area's record (ee_astar area.rs)
     // New (port): where the handle is (ee_sim::astar cm_io.rs reads an area's tiles from its object)
     EeSparseArray* const* GetHandleSlot() const { return &this->mPoints; }

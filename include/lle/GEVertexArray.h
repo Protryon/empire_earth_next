@@ -26,8 +26,6 @@ public:
     virtual void GetPoint(GE3DPoint& outPoint, unsigned long inIndex) const   // slot 0x14
         { this->Get(EeGeVaField::Point, inIndex, &outPoint); }
     virtual unsigned long GetSize() const { return ee_ge_va_size(this->mRust, false); }
-    virtual void GetTextureCoordinate(GETextureCoordinate& outCoordinate, unsigned long inIndex) const
-        { this->Get(EeGeVaField::Uv, inIndex, &outCoordinate); }
     virtual unsigned long GetType() const { return ee_ge_va_type(this->mRust); }
     virtual void SetColor(const GEColor& inColor, unsigned long inIndex)       // slot 0x24
         { this->Set(EeGeVaField::Color, inIndex, &inColor); }
