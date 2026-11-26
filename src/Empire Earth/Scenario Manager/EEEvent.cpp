@@ -32,25 +32,14 @@ public:
     bool mEnabled;
 };
 
-// this unit's globals (ee/EEEvent.h): the effect table (.bss 0x531ff8, 0x532018.. are this unit's) and the switch
-// (.data 0x4c5a84 = 1, between EESMObject's and EETechTree's data)
-std::vector<EEEventEffect> gEventEffects;
+// this unit's global (ee/EEEvent.h): the switch (.data 0x4c5a84 = 1, between EESMObject's and EETechTree's data); the
+// effect and event tables are ee_sim scenario event.rs'
 bool gEventsEnabled = true;
 
 // chain at 0x5ca4ee (wrapper)
 //   object 0x95cf80  ctor ??0EEEvent@@QAE@XZ  dtor ??1EEEvent@@UAE@XZ
 //   guarded dtor (byte ptr [0x95cf78], 1): a class static data member (statics of one class share the guard byte, one bit each) unless the ctor is guarded too (template static)
 //   object bound as ?sEvents@EEEvent@@2PAV1@A
-
-// Destroys the event, freeing its effect index list
-EEEvent::~EEEvent()
-{
-    if (this->mEffects != NULL) {
-        delete[] this->mEffects;
-    }
-}
-
-std::vector<std::unique_ptr<EEEvent>> EEEvent::sEvents;
 
 // (EEUnloadBuiltInGraphicObjects 0x1ca6d9 unloaded four graphic objects outside the media table: nothing ever set
 // them, so it is gone with them; data lane round 3)
@@ -72,8 +61,6 @@ UWideString sEvText;         // an upgrade's new name (EE_SCENARIO_EV_NAME_TEXT)
 extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
 {
     switch (inOp) {
-    case EE_SCENARIO_EV_EFFECTS_DATA: return R(gEventEffects.data());
-    case EE_SCENARIO_EV_EFFECTS_COUNT: return (int64_t)gEventEffects.size();
     case EE_SCENARIO_EV_EVENTS_ENABLED: return gEventsEnabled;
     case EE_SCENARIO_EV_UPGRADE: return R(P(EEPlayer, 0)->mUnitClassUpgrades[a[1]]);
     case EE_SCENARIO_EV_GET_UPGRADE: return R(P(EEPlayer, 0)->GetUpgrade(a[1]));
@@ -180,28 +167,13 @@ extern "C" int64_t ee_scenariocpp_event(uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_EV_SET_NAME_TEXT:
         P(EEUnitClassUpgrade, 0)->SetName(sEvText);
         return 0;
-    case EE_SCENARIO_EV_EVENT_COUNT: return (int64_t)EEEvent::sEvents.size();
-    case EE_SCENARIO_EV_EVENT_AT: return R(EEEvent::sEvents[(size_t)a[0]].get());
-    case EE_SCENARIO_EV_EVENT_EFFECTS: return R(P(EEEvent, 0)->mEffects);
-    case EE_SCENARIO_EV_EVENT_NUM: return (int64_t)P(EEEvent, 0)->mNumEffects;
     case EE_SCENARIO_EV_FILE_OPEN: return P(FSFileSpec, 0)->Open(kFileAccessRead);
     case EE_SCENARIO_EV_FILE_LENGTH_INTO: return P(FSFileSpec, 0)->GetLength(*P(unsigned long, 1));
-    case EE_SCENARIO_EV_EFFECTS_ASSIGN:
-        gEventEffects.assign((size_t)a[0], EEEventEffect());
-        return 0;
     case EE_SCENARIO_EV_EFFECTS_READ:
-        return P(FSFileSpec, 0)->Read((char*)&gEventEffects[0], (unsigned long)(gEventEffects.size() * sizeof(EEEventEffect)), sEvRead);
-    case EE_SCENARIO_EV_EVENTS_CLEAR:
-        EEEvent::sEvents.clear();
-        return 0;
-    case EE_SCENARIO_EV_EVENT_NEW: return R(EEEvent::sEvents.emplace_back(new EEEvent).get());
+        return P(FSFileSpec, 0)->Read(P(char, 1), (unsigned long)a[2], sEvRead);   // (the Rust table's bytes: event.rs)
     case EE_SCENARIO_EV_READ_NAME: return P(FSFileSpec, 0)->Read(sEvName, 100, sEvRead);
-    case EE_SCENARIO_EV_READ_ID: return P(FSFileSpec, 0)->Read(P(EEEvent, 1)->mID);
-    case EE_SCENARIO_EV_READ_COUNT: return P(FSFileSpec, 0)->Read(P(EEEvent, 1)->mNumEffects);
-    case EE_SCENARIO_EV_EVENT_ALLOC: return R(P(EEEvent, 0)->mEffects = new int32_t[(size_t)a[1]]);
     case EE_SCENARIO_EV_READ_EFFECTS:
         return P(FSFileSpec, 0)->Read(reinterpret_cast<char*>(P(EEEvent, 1)->mEffects), P(EEEvent, 1)->mNumEffects * 4, sEvRead);
-    case EE_SCENARIO_EV_EVENT_NO_EFFECTS: return R(P(EEEvent, 0)->mEffects = NULL);
     }
     return 0;
 }

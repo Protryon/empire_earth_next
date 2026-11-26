@@ -1048,6 +1048,114 @@ pub fn pathfinding<H: EvHost + ?Sized>(
     Ev { h }.pathfinding(player, terrain, enabled, unit_type)
 }
 
+// ---- the tables (were EEEvent.cpp's `gEventEffects` and `EEEvent::sEvents`)
+
+/// An event (`EEEvent`, ee/EEEvent.h's class over this record): its effect indices (4 bytes each in the file) and id.
+#[repr(C)]
+#[derive(Debug)]
+pub struct EeScenarioEvent {
+    /// the effect indices (null for none)
+    pub mEffects: *mut i32,
+    /// their count
+    pub mNumEffects: c_ulong,
+    pub mID: c_ulong,
+}
+
+/// Every dbeffects record and every dbevents row with its effect list (the events boxed: the C++ holds their
+/// addresses).
+#[derive(Default)]
+#[allow(clippy::vec_box)]
+pub struct EvTable {
+    effects: Vec<EeScenarioEvEffect>,
+    events: Vec<Box<EeScenarioEvent>>,
+    lists: Vec<Vec<i32>>,
+}
+
+impl EvTable {
+    /// The table's statements (`EE_SCENARIO_EV_*` on the effects and events; None for another operation). `read`
+    /// reads the C++ file `a0`'s unsigned long into the place (`FSFile::Read(unsigned long&)`).
+    pub fn op(&mut self, op: u32, a: &[i64; 4], read: &mut dyn FnMut(i64, &mut c_ulong) -> i64) -> Option<i64> {
+        let ev = |e: i64| e as usize as *mut EeScenarioEvent;
+        Some(match op {
+            EE_SCENARIO_EV_EFFECTS_DATA => self.effects.as_mut_ptr() as usize as i64,
+            EE_SCENARIO_EV_EFFECTS_COUNT => self.effects.len() as i64,
+            EE_SCENARIO_EV_EFFECTS_ASSIGN => {
+                self.effects = vec![EeScenarioEvEffect::default(); a[0] as usize];
+                0
+            }
+            EE_SCENARIO_EV_EVENT_COUNT => self.events.len() as i64,
+            EE_SCENARIO_EV_EVENT_AT => self.events.get(a[0] as usize).map_or(0, |e| &**e as *const _ as usize as i64),
+            EE_SCENARIO_EV_EVENTS_CLEAR => {
+                self.events.clear();
+                self.lists.clear();
+                0
+            }
+            EE_SCENARIO_EV_EVENT_NEW => {
+                let e = Box::new(EeScenarioEvent { mEffects: std::ptr::null_mut(), mNumEffects: 0, mID: 0 });
+                let at = &*e as *const EeScenarioEvent as usize as i64;
+                self.events.push(e);
+                at
+            }
+            // SAFETY (the event's members): `a[0]` (`a[1]` for the reads) is an event of the table
+            EE_SCENARIO_EV_EVENT_EFFECTS => unsafe { (*ev(a[0])).mEffects as usize as i64 },
+            EE_SCENARIO_EV_EVENT_NUM => unsafe { (*ev(a[0])).mNumEffects as i64 },
+            EE_SCENARIO_EV_READ_ID => read(a[0], unsafe { &mut (*ev(a[1])).mID }),
+            EE_SCENARIO_EV_READ_COUNT => read(a[0], unsafe { &mut (*ev(a[1])).mNumEffects }),
+            EE_SCENARIO_EV_EVENT_ALLOC => {
+                let mut list = vec![0i32; a[1] as usize];
+                let at = list.as_mut_ptr();
+                self.lists.push(list);
+                unsafe { (*ev(a[0])).mEffects = at };
+                at as usize as i64
+            }
+            EE_SCENARIO_EV_EVENT_NO_EFFECTS => {
+                unsafe { (*ev(a[0])).mEffects = std::ptr::null_mut() };
+                0
+            }
+            _ => return None,
+        })
+    }
+
+    /// `EEEvent::GetEventEffect(index)` (null past the table).
+    pub fn effect_at(&mut self, index: c_ulong) -> *mut EeScenarioEvEffect {
+        self.effects.get_mut(index as usize).map_or(std::ptr::null_mut(), |e| e as *mut _)
+    }
+
+    /// `EEEvent::Get(id)` (null for an id off the table).
+    pub fn event(&mut self, id: c_long) -> *mut EeScenarioEvent {
+        if id < 0 {
+            return std::ptr::null_mut();
+        }
+        self.events.get_mut(id as usize).map_or(std::ptr::null_mut(), |e| &mut **e as *mut _)
+    }
+}
+
+/// The one table (the C++'s globals: loaded once at start-up, read by the simulation's and the AI's threads as the
+/// C++ read its vectors, unlocked; a lock would also be held across an effect's run, which reads the table again).
+struct GameTable(std::cell::UnsafeCell<Option<EvTable>>);
+// SAFETY: as the C++ globals were: written by the load before the readers start
+unsafe impl Sync for GameTable {}
+static TABLE: GameTable = GameTable(std::cell::UnsafeCell::new(None));
+
+/// The game's table.
+#[allow(clippy::mut_from_ref)]
+fn table() -> &'static mut EvTable {
+    // SAFETY: see GameTable
+    unsafe { (*TABLE.0.get()).get_or_insert_with(EvTable::default) }
+}
+
+/// `EEEvent::GetEventEffect(index)`: the effect record `index` (null past the table).
+#[no_mangle]
+pub extern "C" fn ee_scenario_ev_effect_at(index: c_ulong) -> *mut EeScenarioEvEffect {
+    table().effect_at(index)
+}
+
+/// `EEEvent::Get(id)`: the event of id `id` (null off the table).
+#[no_mangle]
+pub extern "C" fn ee_scenario_ev_event(id: c_long) -> *mut EeScenarioEvent {
+    table().event(id)
+}
+
 // ---- the game's host and the C ABI (EEEvent.cpp's members forward here)
 
 #[cfg(not(test))]
@@ -1094,6 +1202,19 @@ impl EvHost for EeScenarioEvGame {
             // SAFETY: the C++ host's contract (EEEvent.cpp): the arguments its op names
             // (the world's reads answered by the views: world_views.rs event)
             ev_compose(op, a, &mut |op, a| unsafe {
+                let mut read = |file: i64, value: &mut c_ulong| {
+                    ee_base::fs::cppfile::ee_fs_read_ulong(file as usize as *mut std::ffi::c_void, value) as i64
+                };
+                if let Some(v) = table().op(op, &a, &mut read) {
+                    return v;
+                }
+                if op == EE_SCENARIO_EV_EFFECTS_READ {
+                    // the effect records' bytes into the table's (a1, a2: where and how many)
+                    let t = table();
+                    let bytes = (t.effects.len() * std::mem::size_of::<EeScenarioEvEffect>()) as i64;
+                    let args = [a[0], t.effects.as_mut_ptr() as usize as i64, bytes, 0];
+                    return sys::ee_scenariocpp_event(op, args.as_ptr());
+                }
                 crate::scenario::world_views::event(op, &a).unwrap_or_else(|| sys::ee_scenariocpp_event(op, a.as_ptr()))
             })
         }
