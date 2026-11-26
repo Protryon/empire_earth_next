@@ -49,7 +49,6 @@ static RoutingConnection* RC(intptr_t a) { return reinterpret_cast<RoutingConnec
 static AsyncOp* AO(intptr_t a) { return reinterpret_cast<AsyncOp*>(a); }
 static RustServerOp* RS(intptr_t a) { return static_cast<RustServerOp*>(AO(a)); }
 static UDPManagerSendRecvOp* US(intptr_t a) { return static_cast<UDPManagerSendRecvOp*>(AO(a)); }
-static ChatCommandParser* P(intptr_t a) { return reinterpret_cast<ChatCommandParser*>(a); }
 template <class X> static intptr_t Held(const SmartPtr<X>& inPtr)
 {
     if (inPtr.get() != NULL) inPtr->AddRef();
@@ -71,7 +70,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     typedef EeWonRouteLogicOp O;
     RustLogic* L = static_cast<RustLogic*>(inObj);
     switch (inOp) {
-    case O::TextFree: delete T(a); return 0;
     case O::DirListFree: delete reinterpret_cast<DirList*>(a); return 0;
     case O::IterFree: delete reinterpret_cast<LobbyClientIterator*>(a); return 0;
     // ---- the lobby
@@ -136,7 +134,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::GroupNum: return b == 7 ? G(a)->GetName().length() : G(a)->GetName() == LobbyGetLastRoomName();
     case O::AddFriendOfClient: return (intptr_t)LobbyAddFriend(C(a)->GetName(), C(a)->GetWONUserId());
     case O::AddFriendNamed: return (intptr_t)LobbyAddFriend(*T(a), (unsigned long)b);
-    case O::GameText: return (intptr_t) new GUIString(b == 0 ? GM(a)->GetName() : GM(a)->GetPassword());
     case O::GameCreate: return Held(SmartPtr<LobbyGame>(LobbyGame::CreateGame(LobbyGameType_Internet)));
     case O::GameList:
         switch (a) {
@@ -173,17 +170,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
     case O::ConnectOpNew: return HeldOp(new ServerConnectionConnectOp(RC(a), S(b)->GetAddress()));
     // ---- the parser, the events, the dialogs
-    case O::ParserNum:
-        switch (b) {
-        case 0: return (intptr_t)P(a)->GetRoomFlags();
-        case 1: return P(a)->GetCommand();
-        case 2: return (intptr_t)P(a)->GetDuration();
-        case 3: return (intptr_t)P(a)->GetTarget();
-        case 4: return (intptr_t)P(a)->GetClients();
-        }
-        return 0;
-    case O::ParserText: return (intptr_t) new GUIString(P(a)->GetText());
-    case O::ParserSetInput: P(a)->SetInput(C(b)->GetName()); return 0;
     case O::IterNew: return (intptr_t) new LobbyClientIterator(reinterpret_cast<LobbyClientList*>(a));
     case O::IterHasMore: return reinterpret_cast<LobbyClientIterator*>(a)->HasMore();
     case O::IterNext: return (intptr_t)reinterpret_cast<LobbyClientIterator*>(a)->Next();
@@ -208,15 +194,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         case 2: L->mDialog[kRoutingAdminAction]->LCall(EeWonLobbyDlgCall::Reset, (int)b, (intptr_t)C(c)); break;
         case 4: L->mDialog[kRoutingCreateRoom]->LCall(EeWonLobbyDlgCall::Reset, b != 0); break;
         case 5: L->mDialog[kRoutingPassword]->LCall(EeWonLobbyDlgCall::Reset); break;
-        }
-        return 0;
-    case O::DialogText:
-        switch (a) {
-        case 1: return (intptr_t) new GUIString(L->mDialog[kRoutingCreateRoom]->InputText(0));
-        case 2: return (intptr_t) new GUIString(L->mDialog[kRoutingCreateRoom]->InputTextOf(L->mDialog[kRoutingCreateRoom]->LCall(EeWonLobbyDlgCall::GetPassword)));
-        case 3: return (intptr_t) new GUIString(L->mDialog[kRoutingPassword]->InputText(0));
-        case 4: return (intptr_t) new GUIString(L->mDialog[kRoutingAdminAction]->InputText(2));
-        case 5: return (intptr_t) new GUIString(L->mDialog[kRoutingAddFriend]->InputText(0));
         }
         return 0;
     case O::DialogNum:

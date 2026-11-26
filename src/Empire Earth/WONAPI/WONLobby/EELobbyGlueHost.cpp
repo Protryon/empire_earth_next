@@ -252,19 +252,7 @@ static LobbyConfig* EELobbyNewConfig() { return new EELobbyConfig; }
 static void EELobbyGetComponents(ComponentConfig* inConfig) { Glue(GL::GetComponents, (intptr_t)inConfig); }
 static void EELobbySendConnectStatus(int inConnected) { Glue(GL::SendConnectStatus, inConnected); }
 
-// a lobby text (eeglue.rs's EeWonEeGlueText) as a GUIString
-static GUIString GlueText(intptr_t inKind, intptr_t inValue)
-{
-    char aBuffer[50];
-    switch ((EeWonEeGlueText)inKind) {
-    case EeWonEeGlueText::Resource: return EELobbyResource_GetString((int)inValue);
-    case EeWonEeGlueText::Number: sprintf(aBuffer, "%ld", (long)inValue); return GUIString(aBuffer);
-    case EeWonEeGlueText::MapType: return EELobbyToGUIString(EERMGetGeneratorDisplayName((unsigned long)inValue));
-    case EeWonEeGlueText::Data: return EELobbyStr(inValue);
-    case EeWonEeGlueText::Empty: break;
-    }
-    return gEmptyGUIString;
-}
+// (the lobby's texts, eeglue.rs's EeWonEeGlueText, are gluesplit.rs's but a map type's name: R6 WON GUI round 40)
 
 // a saved game's header, options and file (EELobbyGetSavedGameInfo's and EELobbyLoadSavedGame's locals)
 struct EELobbySavedGame {
@@ -455,18 +443,14 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
     case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
     case Op::SetColor: g->SetColor((unsigned long)b); return 0;
-    case Op::DrawText: g->DrawString(GlueText(b, c), (int)d, (int)e); return 0;
     case Op::FontHeight: return g->GetFont()->GetHeight();
     case Op::ListFontHeight: return reinterpret_cast<MultiListArea*>(a)->mFont->GetHeight();
-    case Op::TextFind: return GlueText(b, c).findNoCase(*reinterpret_cast<const GUIString*>(d), 0);
-    case Op::TextCompareNoCase: return GlueText(a, b).CompareNoCase(GlueText(c, d));
     // the column's handlers are srvlistctl.rs's calls into this glue (LobbyNetCtrlHost.cpp's EeColumn)
     case Op::SetColumnHandlers: ee_won_lobbyctl_ee_column((int)a); return 0;
-    case Op::AddGameOption: LobbyAddGameOption(a ? "MapType" : "Epoch", GlueText(b, c), true); return 0;
     case Op::NumMapTypes: return (intptr_t)EERMGetNumberOfGenerators();
     case Op::SetProductName: LobbySetProductName(L"EEAOC", NULL); return 0;
     case Op::ComboClear: reinterpret_cast<ComboBox*>(a)->Clear(true); return 0;
-    case Op::ComboAddMapType: reinterpret_cast<ComboBox*>(a)->AddString(GlueText((intptr_t)EeWonEeGlueText::MapType, b)); return 0;
+    case Op::ComboAddMapType: reinterpret_cast<ComboBox*>(a)->AddString(EELobbyToGUIString(EERMGetGeneratorDisplayName((unsigned long)b))); return 0;
     case Op::LobbyClose: EELobbyClose(); return 0;
     case Op::ResourceDestroy: EELobbyResource_Destroy(); return 0;
     case Op::Config: return (intptr_t)GetLobbyConfig();
@@ -738,7 +722,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
         return 0;
     case Op::GameAddressRef: return (intptr_t)&sEELocalAddress;
     // the statements of the cases gluesplit.rs composes (R6 WON round 32)
-    case Op::TextHeld: return HeldData(GlueText(a, b));
+    case Op::MapTypeTextHeld: return HeldData(EELobbyToGUIString(EERMGetGeneratorDisplayName((unsigned long)a)));
     case Op::GfxTextWidthHeld: return g->GetFont()->GetStringWidth(GUIString(reinterpret_cast<GUIStringData*>(b)), 0, reinterpret_cast<GUIStringData*>(b)->mLength);
     case Op::FactoryGame: LobbyGame::SetGameFactory(EELobbyNewGame); return 0;
     case Op::FactoryPlayer: LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer); return 0;
@@ -854,7 +838,6 @@ void EELobbyInit()
 void EELobbyShutdown() { Glue(GL::Shutdown); }
 unsigned short EELobbyGetFileTransferPort() { return (unsigned short)Glue(GL::FileTransferPort); }
 LobbyRustDialog* EELobbyGetFileDialog() { return reinterpret_cast<LobbyRustDialog*>(Glue(GL::FileDialog)); }
-bool EELobbyRunConnectDialog() { return Glue(GL::RunConnectDialog) != 0; }
 void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected) { Glue(GL::SetSlotConnected, inSlot, inConnected); }
 void EELobbyCancelConnectDialog() { Glue(GL::CancelConnectDialog); }
 void EELobbyPostConnectStatus(bool inConnected) { Glue(GL::PostConnectStatus, inConnected); }

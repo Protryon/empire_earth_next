@@ -44,10 +44,6 @@ public:
     bool OnLanTab();
     void EnterGameTab(bool);
     void ShowLobbyTab();
-    void HandleJoinedGame();
-    void HandleLeftGame();
-    void HandleEnteredScreen();
-    void HandleTabCtrlTabSelected(ComponentEvent*);
     bool mIsLan; // 0x84
     SmartPtr<TabCtrl> mTabCtrl; // 0x88
     GUIString mDefaultTabName; // 0x8c

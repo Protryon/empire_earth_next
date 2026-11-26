@@ -659,6 +659,27 @@ unsafe fn of<'a>(shell: isize) -> Option<&'a EeWonModel> {
     unsafe { (*((shell as usize + SHELL_MODEL) as *const *const EeWonModel)).as_ref() }
 }
 
+/// A C++ shell's member `f` (`MGet(f)`; 0 for NULL).
+///
+/// # Safety
+/// `shell` is NULL or a live `LobbyModelObject`.
+pub(crate) unsafe fn shell_get(shell: isize, f: EeWonModelField) -> isize {
+    // SAFETY: the caller's contract
+    unsafe { of(shell) }.map_or(0, |m| m.get(f))
+}
+
+/// Sets a C++ shell's member `f` (`MSet(f, v)`; nothing for NULL).
+///
+/// # Safety
+/// `shell` is NULL or a live `LobbyModelObject`; `v` as [`ee_won_model_set`] takes it.
+pub(crate) unsafe fn shell_set(shell: isize, f: EeWonModelField, v: isize) {
+    // SAFETY: the caller's contract
+    if let Some(m) = unsafe { of(shell) } {
+        // SAFETY: the caller's contract
+        unsafe { m.set(f, v) }
+    }
+}
+
 /// The slot of an EELobbyPlayer's model (modelbuf.rs reads and writes it), None for another object or NULL.
 ///
 /// # Safety

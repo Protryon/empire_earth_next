@@ -61,6 +61,16 @@ fn read(op: GRead, a: isize, other: isize, x: i32, y: i32) -> isize {
     unsafe { ee_won_gstr_read(op, a as *const EeWonGstr, other as *const c_void, x, y) as isize }
 }
 
+/// `a.findNoCase(b, 0)` of two texts.
+pub(crate) fn find_no_case(a: isize, b: isize) -> isize {
+    read(GRead::FindNoCase, a, b, 0, 0)
+}
+
+/// `a.CompareNoCase(b)` of two texts.
+pub(crate) fn compare_no_case(a: isize, b: isize) -> isize {
+    read(GRead::CompareNoCase, a, b, 0, 0)
+}
+
 /// Resource string `row`'s text (`gLobbyResources[row].mString`, read in place).
 pub(crate) fn res(row: isize) -> isize {
     crate::resource::string_data(row as usize)
@@ -207,6 +217,22 @@ fn parser(p: isize) -> *const crate::chatobj::EeWonChatParser {
     of(p + EE_WON_CHAT_PARSER_AT as isize) as *const crate::chatobj::EeWonChatParser
 }
 
+/// `((ChatCommandParser*)p)->SetInput(((LobbyClient*)client)->GetName())` (in the game).
+fn set_parser_input(p: isize, client: isize) {
+    // SAFETY: a live LobbyClient
+    let name = units(unsafe { crate::modelobj::shell_get(client, crate::modelobj::EeWonModelField::ClientName) });
+    // SAFETY: a live ChatCommandParser's Rust object; the units live for the call
+    unsafe {
+        crate::chatobj::ee_won_chatparser_set_text(
+            parser(p).cast_mut(),
+            crate::chatobj::EeWonChatParserText::Input,
+            name.as_ptr().cast(),
+            name.len(),
+            4,
+        )
+    };
+}
+
 /// `n` units at `u` (none for 0).
 fn unit_slice<'a>(u: *const u32, n: usize) -> &'a [u32] {
     if n == 0 || u.is_null() {
@@ -268,6 +294,16 @@ pub(crate) fn ctl_op(op: Op, a: isize, b: isize, c: isize) -> Option<isize> {
         Op::TextAt => units(a).get(b as usize).map_or(0, |&u| u as i32 as isize),
         Op::TextEquals => isize::from(read(GRead::Compare, a, b, 0, 0) == 0),
         Op::TextAlloc => narrow_new(a, b as usize) as isize,
+        // an input box's `GetText()`, a combo box's `mEdit->GetText()` (no reference added)
+        Op::InputText => input_text(a),
+        Op::ComboEditText => input_text(combo_edit(a)),
+        // `LobbyAddFilterValue(Txt(a), Txt(b))`, `LobbyRemoveFilterValue(Txt(a), Txt(b))`
+        Op::AddFilterValue => {
+            crate::persistobj::game_call_texts(crate::persistobj::EeWonPersistCall::AddFilterValue, a, b, 0)?
+        }
+        Op::RemoveFilterValue => {
+            crate::persistobj::game_call_texts(crate::persistobj::EeWonPersistCall::RemoveFilterValue, a, b, 0)?
+        }
         // the text's narrow bytes (UTF-8) into the buffer `b` of `c` bytes (as many as fit); their count
         Op::TextBytes => {
             let bytes = ee_won_gui::guistring::narrow(&units(a), gs::EE_WON_GSTR_WCHAR as u32);
@@ -613,13 +649,71 @@ pub(crate) fn logic_op(op: crate::logics::EeWonLogicOp, a: isize, b: isize) -> O
     Some(r)
 }
 
-/// RoutingLogic's text reads and event members (routelogic.rs, in the game; its texts are the host's).
-pub(crate) fn route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: isize) -> Option<isize> {
+/// RoutingLogic's texts and event members (routelogic.rs, in the game, for the shell `logic`): its heap texts
+/// (`new GUIString(..)` of a game's name or password, the parser's text and the dialogs' input texts) are
+/// [`gstring_new`]'s, which TextFree gives back.
+pub(crate) fn route_op(op: crate::routelogic::EeWonRouteLogicOp, logic: isize, a: isize, b: isize) -> Option<isize> {
+    use crate::lobbydlg::EeWonLobbyDlgCall as C;
+    use crate::modelobj::EeWonModelField as F;
     use crate::routelogic::EeWonRouteLogicOp as R;
     if !is_game() {
         return None;
     }
+    // a held text as a new heap GUIString
+    let boxed = |t: isize| {
+        let g = gstring_new(t);
+        release(t);
+        g
+    };
     let r = match op {
+        R::TextFree => {
+            gstring_free(a);
+            0
+        }
+        // SAFETY: a live LobbyGame
+        R::GameText => {
+            gstring_new(unsafe { crate::modelobj::shell_get(a, if b == 0 { F::GameName } else { F::GamePassword }) })
+        }
+        R::ParserText => {
+            let mut n = 0;
+            // SAFETY: a live ChatCommandParser
+            let u = unsafe {
+                crate::chatobj::ee_won_chatparser_text(parser(a), crate::chatobj::EeWonChatParserText::Text, &mut n)
+            };
+            boxed(held_units(unit_slice(u, n)))
+        }
+        // the parser's (`a`) `GetRoomFlags()`, `GetCommand()`, `GetDuration()`, `GetTarget()`, `GetClients()`
+        R::ParserNum => {
+            use crate::chatobj::{
+                ee_won_chatparser_number as num, ee_won_chatparser_object as obj, EeWonChatParserNumber as N,
+            };
+            let p = parser(a);
+            // SAFETY: a live ChatCommandParser's Rust object
+            unsafe {
+                match b {
+                    0 => num(p, N::RoomFlags) as std::ffi::c_ulong as isize,
+                    1 => num(p, N::Command) as i32 as isize,
+                    2 => num(p, N::Duration) as std::ffi::c_ulong as isize,
+                    3 => obj(p, 1) as isize,
+                    4 => obj(p, 0) as isize,
+                    _ => 0,
+                }
+            }
+        }
+        // `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`
+        R::ParserSetInput => {
+            set_parser_input(a, b);
+            0
+        }
+        // (the routing dialogs' slots: 0 add friend, 1 admin action, 3 create room, 5 password)
+        R::DialogText => gstring_new(match a {
+            1 => dialog_input(logic, 3, 0)?,
+            2 => input_text(dlg_call(logic_dialog(logic, 3), C::GetPassword, 0, 0, 0)?),
+            3 => dialog_input(logic, 5, 0)?,
+            4 => dialog_input(logic, 1, 2)?,
+            5 => dialog_input(logic, 0, 0)?,
+            _ => return None,
+        }),
         R::TextLength => len(of(a)),
         // the text's units (to `b` when not 0); 0 is the empty text
         R::TextUnits => {
@@ -639,11 +733,58 @@ pub(crate) fn route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: is
 
 /// `offsetof(LobbyRustDialog, mLobbyDlg)` (DialogLogic.cpp registers it; 0 in a driver's world).
 static DLG_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// `offsetof(RustLogic, mDialog)`, the shell's dialog slots (`SmartPtr<LobbyRustDialog>[6]`).
+static LOGIC_DIALOGS_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// `offsetof(InputBox, mRealText)`, the text `GetText()` answers.
+static INPUT_TEXT_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// `offsetof(ComboBox, mEdit)`, the combo box's input box (`SmartPtr<InputBox>`).
+static COMBO_EDIT_AT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
-/// Registers `offsetof(LobbyRustDialog, mLobbyDlg)` (the game, at static initialisation).
+/// Registers `offsetof(LobbyRustDialog, mLobbyDlg)`, `offsetof(RustLogic, mDialog)`, `offsetof(InputBox,
+/// mRealText)` and `offsetof(ComboBox, mEdit)` (the game, at static initialisation).
 #[no_mangle]
-pub extern "C" fn ee_won_lobbytext_dialog_at(at: usize) {
-    DLG_AT.store(at, std::sync::atomic::Ordering::Release);
+pub extern "C" fn ee_won_lobbytext_dialog_at(at: usize, logic_dialogs: usize, input_text: usize, combo_edit: usize) {
+    use std::sync::atomic::Ordering::Release;
+    LOGIC_DIALOGS_AT.store(logic_dialogs, Release);
+    INPUT_TEXT_AT.store(input_text, Release);
+    COMBO_EDIT_AT.store(combo_edit, Release);
+    DLG_AT.store(at, Release);
+}
+
+/// A combo box's `mEdit.get()` (0 outside the game).
+fn combo_edit(combo: isize) -> isize {
+    let at = COMBO_EDIT_AT.load(std::sync::atomic::Ordering::Acquire);
+    if at == 0 || combo == 0 {
+        return 0;
+    }
+    // SAFETY: a live ComboBox: its input box pointer at the registered offset
+    of(combo + at as isize)
+}
+
+/// The shell `logic`'s dialog in slot `k` (`L->mDialog[k].get()`; 0 outside the game).
+fn logic_dialog(logic: isize, k: usize) -> isize {
+    let at = LOGIC_DIALOGS_AT.load(std::sync::atomic::Ordering::Acquire);
+    if at == 0 || logic == 0 {
+        return 0;
+    }
+    // SAFETY: a live RustLogic: its dialog slots (one pointer each) at the registered offset
+    unsafe { *((logic as usize + at + k * std::mem::size_of::<usize>()) as *const isize) }
+}
+
+/// An input box's `GetText()` (its `mRealText`'s text; the empty text for NULL).
+fn input_text(input: isize) -> isize {
+    let at = INPUT_TEXT_AT.load(std::sync::atomic::Ordering::Acquire);
+    if input == 0 || at == 0 {
+        return ee_won_gstr_empty() as isize;
+    }
+    // SAFETY: a live InputBox: its GUIString at the registered offset
+    of(input + at as isize)
+}
+
+/// `L->mDialog[k]->InputText(member)` (`None` outside the game).
+fn dialog_input(logic: isize, k: usize, member: isize) -> Option<isize> {
+    let input = dlg_call(logic_dialog(logic, k), crate::lobbydlg::EeWonLobbyDlgCall::Slot, member, 0, 0)?;
+    Some(input_text(input))
 }
 
 /// `((LobbyRustDialog*)d)->LCall(call, a, b, c)` on the game's dialog `d` (`None` outside the game).
@@ -709,12 +850,90 @@ pub(crate) fn eegame_op(op: crate::eegame::EeWonEeGameOp, a: isize, b: isize) ->
     }
 }
 
-/// The LAN logic's event member (lanobj.rs, in the game).
-pub(crate) fn lobby_op(op: crate::lobbyhost::EeWonLobbyOp, a: isize) -> Option<isize> {
-    match op {
-        crate::lobbyhost::EeWonLobbyOp::EventComponent => Some(ev(a)?.comp),
-        _ => None,
-    }
+/// The LAN logic's event member and its dialogs' texts (lanobj.rs, in the game, for the shell `logic`; its dialog
+/// slots: 0 direct connect, 1 LAN name, 3 password).
+pub(crate) fn lobby_op(
+    op: crate::lobbyhost::EeWonLobbyOp,
+    logic: isize,
+    a: isize,
+    b: isize,
+    c: isize,
+) -> Option<isize> {
+    use crate::lobbyhost::EeWonLobbyOp as L;
+    use crate::persistobj::EeWonPersistCall as P;
+    // an object argument, read only in the game (a driver's world passes made-up values)
+    let game = |p: isize| is_game().then_some(p);
+    // `Take(b, bytes)`: the bytes given to the sink `b`
+    let take = |bytes: Vec<u8>| {
+        // SAFETY: the op's sink (a live Vec<u8>, or NULL)
+        unsafe { crate::lobbyhost::ee_won_lobby_sink(b as *mut c_void, bytes.as_ptr(), bytes.len()) };
+        0
+    };
+    let r = match op {
+        L::EventComponent => ev(a)?.comp,
+        // `l->mDialog[kLanName]->InputText(0).length()`
+        L::LanNameDialogLength => len(dialog_input(logic, 1, 0)?),
+        L::LanDirectInputLength => len(dialog_input(logic, 0, 0)?),
+        // `Take(b, LanUtf16(((LobbyClient*)a)->GetName()))`
+        // SAFETY: a live LobbyClient (in the game)
+        L::ClientNameTake => take(crate::routelogic::utf16le(&units(unsafe {
+            crate::modelobj::shell_get(game(a)?, crate::modelobj::EeWonModelField::ClientName)
+        }))),
+        // `Take(b, LanUtf16(((ChatCommandParser*)a)->GetText()))`
+        L::ParserTextTake => {
+            let mut n = 0;
+            // SAFETY: a live ChatCommandParser
+            let u = unsafe {
+                crate::chatobj::ee_won_chatparser_text(
+                    parser(game(a)?),
+                    crate::chatobj::EeWonChatParserText::Text,
+                    &mut n,
+                )
+            };
+            take(crate::routelogic::utf16le(unit_slice(u, n)))
+        }
+        // the parser's (`a`) `GetRoomFlags()`, `GetTarget()`, `GetCommand()`
+        L::ParserRoomFlags | L::ParserTarget | L::ParserCommand => {
+            use crate::chatobj::EeWonChatParserNumber as N;
+            let p = parser(game(a)?);
+            // SAFETY: a live ChatCommandParser's Rust object
+            unsafe {
+                match op {
+                    L::ParserRoomFlags => {
+                        crate::chatobj::ee_won_chatparser_number(p, N::RoomFlags) as std::ffi::c_ulong as isize
+                    }
+                    L::ParserTarget => crate::chatobj::ee_won_chatparser_object(p, 1) as isize,
+                    _ => crate::chatobj::ee_won_chatparser_number(p, N::Command) as i32 as isize,
+                }
+            }
+        }
+        // `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`
+        L::ParserSetInputName => {
+            set_parser_input(a, game(b)?);
+            0
+        }
+        // `Take(b, LanUtf16(the password dialog's InputText(0)))`
+        L::LanPasswordTake => take(crate::routelogic::utf16le(&units(dialog_input(logic, 3, 0)?))),
+        // `Take(b, std::string(the direct connect dialog's InputText(1)))`
+        L::LanDirectHostTake => {
+            take(ee_won_gui::guistring::narrow(&units(dialog_input(logic, 0, 1)?), gs::EE_WON_GSTR_WCHAR as u32))
+        }
+        // `((LobbyGame*)a)->SetName(the direct connect dialog's InputText(c))`
+        L::GameSetDirectName => {
+            let name = dialog_input(logic, 0, c)?;
+            // SAFETY: a live LobbyGame
+            unsafe { crate::modelobj::shell_set(a, crate::modelobj::EeWonModelField::GameName, name) };
+            0
+        }
+        // `LobbySetLanName(the LAN name dialog's InputText(0))`
+        L::LanSetLanNameFromDialog => crate::persistobj::game_call_text(P::SetLanName, dialog_input(logic, 1, 0)?, 0)?,
+        // `LobbyAddDirectConnect(Addr(b), the direct connect dialog's InputText(c))`
+        L::AddDirectConnectNamed => {
+            crate::persistobj::game_call_text(P::AddDirect, dialog_input(logic, 0, c)?, b as i64)?
+        }
+        _ => return None,
+    };
+    Some(r)
 }
 
 /// A record's name: a new text of `count` UTF-16 units at `units16`, held (modelobj.rs's and modelbuf.rs's
