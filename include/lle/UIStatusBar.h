@@ -23,10 +23,7 @@ public:
     virtual long CopyData() { return (long)this->Call(EeUiStatusBarCall::CopyData); }
     virtual long DrawPolygons() { return (long)this->Call(EeUiStatusBarCall::DrawPolygons); }
     virtual long DrawTextA() { return (long)this->Call(EeUiStatusBarCall::DrawText); }
-    long GetCurrentRangeValue() const { return (long)this->Call(EeUiStatusBarCall::CurrentRangeValue); }
     GEText* GetGEText() { return reinterpret_cast<GEText*>(this->Call(EeUiStatusBarCall::Text)); }
-    long GetMaxRange() const { return (long)this->Call(EeUiStatusBarCall::MaxRange); }
-    unsigned long GetRange() const { return (unsigned long)this->Call(EeUiStatusBarCall::Range); }
     virtual bool GetTabable() const { return false; }
     void SetCurrentRangeValue(long inValue) { this->Call(EeUiStatusBarCall::SetCurrentRangeValue, inValue); }
     void SetFocusedTextColor(const GEColor& inColor) { this->CallF(EeUiStatusBarCall::SetFocusedTextColor, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()); }

@@ -9,10 +9,6 @@
 
 #include "lle/LLEForward.h"
 
-// Starts the thread system: registers its shutdown (destroys the calling thread's object), then the calling (main)
-// thread as a thread object (Thread System.cpp in the original)
-inline long TSInitialize() { return ee_ts_system_initialize(); }
-
 // Whole in Rust (ee_ts): every static forwards (TSScheduler.cpp in the original)
 class LLE_API TSScheduler {
 public:
@@ -43,8 +39,6 @@ public:
     static long DestroyThread(TSThread* inThread) { return ee_ts_thread_free(reinterpret_cast<EeTsThread*>(inThread)); }
     // the calling thread's registered object, or NULL
     static TSThread* GetCurrentThread() { return reinterpret_cast<TSThread*>(ee_ts_thread_current()); }
-    // the calling thread's registry index, or -1 if it is not registered
-    static unsigned long GetCurrentThreadIndex() { return ee_ts_thread_current_index(); }
 };
 
 #endif

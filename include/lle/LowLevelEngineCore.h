@@ -102,10 +102,9 @@ template <class... A> LLE_PRINTF_TEMPLATE(1, 2) inline void ESDebugOut(const cha
 
 // ---- Timing (TM): Time Manager unit 0x53701..0x53819 (folder/file name inferred)
 typedef EeTimeOfDay TMTime;                 // filled from the local time by TMGetTimeOfDay 0x5376c (rust/base/time.h)
-// The Time Manager is Rust's (rust/crates/ee_base/src/time): TMInitialize sets 1 ms timer resolution and registers
-// the shutdown; TMGetTime is milliseconds (a time pinned on this thread instead: EE-SIM's scripted editor,
-// ee_time_pin); TMGetMicroTime microseconds; TMGetTimeOfDay the local clock (month counted from 0)
-inline long TMInitialize() { return ee_time_system_initialize(); }
+// The Time Manager is Rust's (rust/crates/ee_base/src/time): TMGetTime is milliseconds (a time pinned on this
+// thread instead: EE-SIM's scripted editor, ee_time_pin); TMGetMicroTime microseconds; TMGetTimeOfDay the local
+// clock (month counted from 0)
 inline unsigned long TMGetTime() { return ee_time_get(); }
 inline int64_t TMGetMicroTime() { return ee_time_get_micro(); }
 inline void TMGetTimeOfDay(TMTime& outTime) { ee_time_of_day(&outTime); }
@@ -114,10 +113,9 @@ inline void TMGetTimeOfDay(TMTime& outTime) { ee_time_of_day(&outTime); }
 // saw no engine-class static data members (TMPoll::sCounterFrequency was one; it is ee_time's state now). Engine units include them directly.
 
 // ---- Shutdown registry (Utilities): engine subsystems register cleanup functions
-// (rust/crates/ee_base/src/util system.rs) URegisterShutdown: always kErrorOK; UShutdown calls every registered
+// (rust/crates/ee_base/src/util system.rs) URegisterShutdown: always kErrorOK; ee_util_shutdown calls every registered
 // function, last first, and with inTerminate ends the platform's services and exits (inForced: exit(0), else abort)
 inline long URegisterShutdown(void (*inFunction)(bool)) { return ee_util_register_shutdown(inFunction); }
-inline void UShutdown(bool inForced, bool inTerminate) { ee_util_shutdown(inForced, inTerminate); }
 inline bool UShutdownInProgress() { return ee_util_shutdown_in_progress(); }
 inline unsigned short UGetOSLanguage() { return ee_util_os_language(); }   // the user's default language id
 

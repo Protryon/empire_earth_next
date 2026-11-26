@@ -55,7 +55,6 @@ public:                                                // column 3; rust/base/ma
     // inline: the exported COMDAT sits in GE3DPoint.cpp's GETransformation block (0x1000d783); GEQuaternion
     // (0x10023219) reads every element through it (fld + faddp/fsubp, no memory operands)
     float GetElement(unsigned long inRow, unsigned long inColumn) const { return this->mMatrix[inRow][inColumn]; }
-    float GetPitch() const { return ee_ge_t_pitch(GERust(*this)); }   // the angles taken from the matrix
     GE3DPoint GetPosition() const { return GE3DPoint(this->GetX(), this->GetY(), this->GetZ()); }
     void GetPosition(GE3DPoint& outPosition) const { outPosition = GE3DPoint(this->GetX(), this->GetY(), this->GetZ()); }
     float GetX() const { return this->mMatrix[0][3]; }  // exported, ICF-folded (0x10058d38)
@@ -80,9 +79,6 @@ public:                                                // column 3; rust/base/ma
     void SetY(float inY) { this->mMatrix[1][3] = inY; }
     void SetZ(float inZ) { this->mMatrix[2][3] = inZ; }
     unsigned long SizeOf() { return sizeof(GETransformation); }
-    void Translate(const GEVector& inVector) { this->Translate(inVector.GetX(), inVector.GetY(), inVector.GetZ()); }
-    void Translate(float inX, float inY, float inZ) { this->mMatrix[0][3] += inX; this->mMatrix[1][3] += inY; this->mMatrix[2][3] += inZ; }
-    bool Verify() const { return true; }    // (no consistency check in the retail build)
 };
 
 inline GE3DPoint::GE3DPoint(const GETransformation& inTransformation)

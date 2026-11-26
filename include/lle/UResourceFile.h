@@ -23,7 +23,6 @@ public:
     }
     virtual ~UResourceFile() {}
     unsigned short GetLanguage() { return this->mLanguage; }
-    HINSTANCE GetModule() const { return this->mModule; }
     // a string by id (up to 4499 bytes, as LoadStringA's buffer); a native error when it is missing
     long GetString(long inID, UWideString& outString) { return ee_util_resource_string_get((uint16_t)inID, Assign, &outString); }
     static void Assign(void* inString, const char* inText) { *static_cast<UWideString*>(inString) = inText; }

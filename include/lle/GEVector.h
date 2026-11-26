@@ -19,8 +19,6 @@ public:
         { return *this = GEVector(this->mX - inVector.mX, this->mY - inVector.mY, this->mZ - inVector.mZ); }
     bool operator==(const GEVector& inVector) const { return this->mX == inVector.mX && this->mY == inVector.mY && this->mZ == inVector.mZ; }
     bool operator!=(const GEVector& inVector) const { return this->mX != inVector.mX || this->mY != inVector.mY || this->mZ != inVector.mZ; }
-    void Add(const GEVector& inVector, GEVector& outVector) const
-        { outVector = GEVector(inVector.mX + this->mX, inVector.mY + this->mY, inVector.mZ + this->mZ); }
     float GetX() const { return this->mX; }  // inline (exported, ICF-folded with GE2DPoint's)
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }

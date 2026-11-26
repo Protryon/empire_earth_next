@@ -65,9 +65,7 @@ public:
     GEVector* GetVertexNormal(unsigned long inX, unsigned long inY) const { return (GEVector*)ee_ge_tm_point(this->mRust, inX, inY)->normal; }
     float GetVisibleSpaceTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleSpacePercentage); }
     float GetVisibleWaterTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleWaterPercentage); }
-    unsigned char GetWaterInfo(unsigned long inX, unsigned long inY) const { return ee_ge_tm_tile(this->mRust, inX, inY)->water_info; }
     float GetZ(unsigned long inX, unsigned long inY) const { return ee_ge_tm_point(this->mRust, inX, inY)->z; }
-    bool Intersects(const GE3DLine& inLine, float& outDistance) const { return ee_ge_tm_intersects(this->mRust, GERust(inLine), &outDistance); }
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile) { return ee_ge_tm_load(this->mRust, &inFile); }
     void ReferenceTile(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 0, 0); }
     long RegisterColorSet(std::vector<unsigned long>& inColorSet, unsigned long& outID)
@@ -89,10 +87,6 @@ public:
     void SetTileReferenceCount(unsigned long inX, unsigned long inY, unsigned long inCount) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 2, inCount); }
     void SetWaterColorSet(unsigned long inX, unsigned long inY) { ee_ge_tm_point_edit(this->mRust, inX, inY, 3, 0, 0.0f); }
     void SetZ(unsigned long inX, unsigned long inY, float inZ) { ee_ge_tm_point_edit(this->mRust, inX, inY, 0, 0, inZ); }
-    void UpdateFogOfWar(bool inVisible) { ee_ge_tm_update_fog_of_war(this->mRust, inVisible); }
-    void UpdateVisibleTerrain(const GETransformation& inCamera, GEViewport& inViewport, unsigned long inWidth,
-                              unsigned long inHeight, unsigned long inScreen, bool inOrthographic)
-        { ee_ge_tm_update_visible_terrain(this->mRust, GERust(inViewport), inOrthographic); }
     void UpdateWaterAnimation() { ee_ge_tm_update_water_animation(this->mRust); }
 
     URust<EeGeTerrainMesh> mRust;                 // the whole mesh (ee_ge tmobj.rs)

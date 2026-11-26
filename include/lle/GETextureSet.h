@@ -19,10 +19,6 @@ public:
     GETexture* GetTexture(unsigned long inX, unsigned long inY) { return static_cast<GETexture*>(ee_ge_tset_get(this->mRust, inX, inY, true)); }
     GETexture* GetTextureAt(unsigned long inColumn, unsigned long inRow)
         { return static_cast<GETexture*>(ee_ge_tset_get(this->mRust, inColumn, inRow, false)); }
-    void GetTextureCoordinate(unsigned long inX, unsigned long inY, GETextureCoordinate& outCoordinate)
-    {
-        ee_ge_texture_set_coordinate(inX, inY, this->GetTextureTileCoverage(), &outCoordinate.mU, &outCoordinate.mV);
-    }
     unsigned long GetTextureTileCoverage() { return ee_ge_tset_size(this->mRust, 2); }
     void SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture) { ee_ge_tset_set(this->mRust, inX, inY, inTexture); }
 

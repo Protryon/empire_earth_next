@@ -15,7 +15,6 @@ public:
     void GetColor(GEColor& outColor) const { ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexGetColor, 0, &outColor); }
     float GetOpacity() const { return ee_ge_prim_opacity(this->mRust, 0); }
     GETexture* GetTexture(unsigned long inScreen) const { return (GETexture*)ee_ge_prim_texture(this->mRust, inScreen); }
-    void SetColor(const GEColor& inColor) { ee_ge_prim_vertex(this->mRust, EeGeBmpOp::VertexSetColor, 0, (void*)&inColor); }
     void SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_ge_prim_set_texture(this->mRust, inTexture, inScreen); }
     URust<EeGePrim> mRust;                        // the point (ee_ge prim.rs)
 };

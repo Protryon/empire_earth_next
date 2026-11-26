@@ -181,10 +181,7 @@ public:
     // one (the event's index in the Rust form: formobj.rs EV_*)
     void SetFormOpenEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 0, (intptr_t)inEvent); }
     void SetFormUpdateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 13, (intptr_t)inEvent); }
-    void SetHelpTextLabel(UITextLabel* inLabel) { this->Call(EeUiFormCall::SetHelpTextLabel, (intptr_t)inLabel); }
     void SetHelpTextTimeDelay(unsigned long inTimeDelay) { this->Call(EeUiFormCall::SetHelpTextTimeDelay, (intptr_t)inTimeDelay); }
-    // Enables or disables every hot key of a group
-    void SetHotKeyGroupEnabled(unsigned long inGroup, bool inEnabled) { this->Call(EeUiFormCall::SetHotKeyGroupEnabled, (intptr_t)inGroup, inEnabled); }
     void SetLayout(UILayoutUtility& inLayout) { this->Call(EeUiFormCall::SetLayout, ee_ui_form_pack_types(inLayout.GetLeftOffsetType(), inLayout.GetRightOffsetType(), inLayout.GetTopOffsetType(), inLayout.GetBottomOffsetType()), 0, UIF4(inLayout.GetLeftOffset(), inLayout.GetRightOffset(), inLayout.GetTopOffset(), inLayout.GetBottomOffset())); }
     void SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
     void SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }

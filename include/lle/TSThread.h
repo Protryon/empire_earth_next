@@ -31,21 +31,8 @@ public:
     {
         return ee_ts_thread_receive(this->Rust(), &outMessage, &outParameter1, &outParameter2);
     }
-    long Resume() { return ee_ts_thread_resume(this->Rust()); }
-    long Suspend() { return ee_ts_thread_suspend(this->Rust()); }
-    long Terminate() { return ee_ts_thread_terminate(this->Rust()); }
     // stores the name (the debugger's thread name is a no-op in this build; nothing reads the name back)
     void SetName(const char* inName) { ee_ts_thread_set_name(this->Rust(), inName); }
-    static void SetThreadName(unsigned long inThreadID, const char* inName) {}
-    bool IsSuspended() const { return ee_ts_thread_is_suspended(this->Rust()); }
-    bool IsTerminated() { return this->GetExitCode() != PLAT_THREAD_STILL_ACTIVE; }
-    void LockMessageQueue() { ee_ts_section_enter(ee_ts_thread_message_lock(this->Rust())); }
-    void UnlockMessageQueue() { ee_ts_section_leave(ee_ts_thread_message_lock(this->Rust())); }
-    static void Yield(unsigned long inMilliseconds) { PlatSleep(inMilliseconds); }
-    // The window events' pump (platform/PlatWindow.h): Receive on inThreadID (the thread that runs the window system)
-    // dispatches one window event per call once its posted messages are drained, as the original's PeekMessage
-    // dispatched window messages. inPump returns true when it dispatched one.
-    static void SetEventPump(bool (*inPump)(), unsigned long inThreadID) { ee_ts_set_event_pump(inPump, (uint32_t)inThreadID); }
     // Dispatches the window events waiting now (on the event thread; elsewhere nothing): what Win32 sent a new window
     // during its creation (activation, focus) is handled before the game knows the window, as it was
     static void DispatchWindowEvents() { ee_ts_dispatch_window_events(); }

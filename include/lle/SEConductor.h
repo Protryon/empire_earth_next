@@ -15,7 +15,6 @@
 
 class LLE_API SEConductor : URustView {
 public:
-    unsigned long GetConductorState() const { return ee_sound_conductor_fields(Rust()).state; }
     float GetVolume() const { return ee_sound_conductor_fields(Rust()).volume; }
 
     SEScore* GetScore(long inID) const { return reinterpret_cast<SEScore*>(ee_sound_conductor_score(Rust(), (int32_t)inID)); }
@@ -28,8 +27,6 @@ public:
         return theResult;
     }
     long Play(long inID) { return ee_sound_conductor_play(Rust(), (int32_t)inID); }
-    // the engine has no segment queue: the score starts at the next measure (the game never queues)
-    long Queue(long inID) { return ee_sound_conductor_queue(Rust(), (int32_t)inID); }
     long SetChannelGroupCount(unsigned long inCount) { return ee_sound_conductor_set_channel_group_count(Rust(), (uint32_t)inCount); }
     long SetConductorState(unsigned long inState) { return ee_sound_conductor_set_state(Rust(), (uint32_t)inState); }
     long SetIntensity(unsigned long inIntensity, bool inImmediate) { return ee_sound_conductor_set_intensity(Rust(), (uint32_t)inIntensity, inImmediate); }

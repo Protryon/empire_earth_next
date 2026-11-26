@@ -16,13 +16,6 @@ public:
     void Define(const GE3DPoint& inStart, const GEVector& inDirection) { *this = GE3DLine(inStart, inDirection); }
     const GEVector& GetDirection() const { return GECpp(this->mDirection); }
     const GE3DPoint& GetStart() const { return GECpp(this->mStart); }
-    // within inTolerance of a point (outT: the nearer of the two crossing parameters); two lines meeting (within 0.05
-    // in the third axis; the parameters on each); a plane (false when parallel)
-    bool Intersects(const GE3DPoint& inPoint, float inTolerance, float& outT) const
-        { return ee_ge_line_intersects_point(GERust(*this), GERust(inPoint), inTolerance, &outT); }
-    bool Intersects(const GE3DLine& inLine, float& outT, float& outLineT) const
-        { return ee_ge_line_intersects_line(GERust(*this), GERust(inLine), &outT, &outLineT); }
-    bool Intersects(const GE3DPlane& inPlane, float& outT) const { return ee_ge_line_intersects_plane(GERust(*this), GERust(inPlane), &outT); }
     template <class F> long Load(F& inFile) { return ee_ge_3d_line_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) const { return ee_ge_3d_line_save(GERust(*this), GERustFile(inFile)); }
     void SetDirection(const GEVector& inDirection) { this->mDirection = inDirection; }

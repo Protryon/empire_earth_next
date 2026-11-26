@@ -12,7 +12,6 @@
 
 class LLE_API TSReadWriteLock : URustView {
 public:
-    long GetReadLockCount() const { return ee_ts_lock_read_count(this->Rust()); }
     void ReadLock() { ee_ts_lock_read(this->Rust()); }
     void ReadUnlock() { ee_ts_lock_read_unlock(this->Rust()); }
     void WriteLock() { ee_ts_lock_write(this->Rust()); }

@@ -183,7 +183,6 @@ class GXVertexBuffer;
 // The display device of one monitor (IDirectDraw7 + IDirect3D7)
 class GXDirectDraw {
 public:
-    unsigned long AddRef() { return gx_direct_draw_add_ref(this); }
     unsigned long Release() { return gx_direct_draw_release(this); }
     GXRESULT SetDisplayMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount, unsigned long inRefreshRate,
                             unsigned long inFlags)
@@ -205,7 +204,6 @@ inline GXRESULT GXDirectDrawCreate(GUID* inGUID, GXDirectDraw** outDirectDraw) {
 // A DirectDraw surface: primary (the window), back buffer, offscreen plain, texture (+ mip levels), Z buffer
 class GXSurface {
 public:
-    unsigned long AddRef() { return gx_surface_add_ref(this); }
     unsigned long Release() { return gx_surface_release(this); }
     GXRESULT AddAttachedSurface(GXSurface* inSurface) { return gx_surface_add_attached(this, inSurface); }
     GXRESULT GetAttachedSurface(GXSCAPS* inCaps, GXSurface** outSurface) { return gx_surface_get_attached(this, inCaps, reinterpret_cast<void**>(outSurface)); }
@@ -231,7 +229,6 @@ private:   // a handle: Rust owns the object
 
 class GXVertexBuffer {
 public:
-    unsigned long AddRef() { return gx_vertex_buffer_add_ref(this); }
     unsigned long Release() { return gx_vertex_buffer_release(this); }
     GXRESULT Lock(unsigned long inFlags, void** outData, unsigned long* outSize) { return gx_vertex_buffer_lock(this, outData, outSize); }
     GXRESULT Unlock() { return GX_OK; }
@@ -249,12 +246,9 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 // A fixed-function 3D device rendering into a target surface (IDirect3DDevice7)
 class GXDevice {
 public:
-    unsigned long AddRef() { return gx_device_add_ref(this); }
     unsigned long Release() { return gx_device_release(this); }
     GXRESULT BeginScene() { return gx_device_begin_scene(); }
     GXRESULT EndScene() { return GX_OK; }
-    GXRESULT SetViewport(GXVIEWPORT* inViewport) { return gx_device_set_viewport(this, inViewport); }
-    GXRESULT GetViewport(GXVIEWPORT* outViewport) { return gx_device_get_viewport(this, outViewport); }
     GXRESULT Clear(unsigned long inCount, GXRECT* inRects, unsigned long inFlags, unsigned long inColor, float inZ,
                    unsigned long inStencil)
         { return gx_device_clear(this, inCount, inRects, inFlags, inColor, inZ); }

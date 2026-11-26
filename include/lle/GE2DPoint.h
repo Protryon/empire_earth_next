@@ -28,12 +28,6 @@ public:
     // x and y from (to) an open file; kErrorNotOpen when it is not open, else the first read (write) error
     template <class F> long Load(F& inFile) { return ee_ge_2d_point_load(GERust(*this), GERustFile(inFile)); }
     template <class F> long Save(F& inFile) { return ee_ge_2d_point_save(GERust(*this), GERustFile(inFile)); }
-    // the interpolation's calls: the vector cleared (no point), then each point
-    static void Push(void* inPoints, const EeGe2DPoint* inPoint)
-    {
-        inPoint ? static_cast<std::vector<GE2DPoint>*>(inPoints)->push_back(*reinterpret_cast<const GE2DPoint*>(inPoint))
-                : static_cast<std::vector<GE2DPoint>*>(inPoints)->clear();
-    }
 };
 
 #endif

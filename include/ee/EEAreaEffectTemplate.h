@@ -33,11 +33,6 @@ class EEAreaEffectTemplate : public UReferenceCounter, public EeAreaEffectTempla
 public:
     EEAreaEffectTemplate() { ee_screens_aet_construct((uintptr_t)this); }
     virtual ~EEAreaEffectTemplate() { ee_screens_aet_destroy((uintptr_t)this); }        // 0x27c199 (??_G 0x27c17d): dereferences both graphic effects
-    // 0x27c5ab: EEGraphicEffect::Load(inArg) on both graphic effects, then mMedia's LoadMedia
-    // Loads the template's graphic effects and sound media
-    void Load(bool inIsOnDemand) { ee_screens_ael_template_load(this, inIsOnDemand); }
-    // Unloads the template's graphic effects and sound media
-    void Unload() { ee_screens_ael_template_unload(this); }                          // 0x27c5de: EEGraphicEffect::Unload on both, then mMedia's UnloadMedia
     // 0x27c334: inPoint lies within inScale * mRadius of inCenter (a square or a circle), and on inCenter's continent
     // unless mUnitSet is 4 (a space dock or turret inUnit carried by a unit also passes on that unit's planet)
     bool Init(const EEAreaEffectData& inData) { return ee_screens_aet_init((uintptr_t)this, (uintptr_t)&inData); }   // 0x27c489 (EEAEManager::Load): the members from inData

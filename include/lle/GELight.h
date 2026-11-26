@@ -11,7 +11,6 @@ public:
     GELight() { ee_ge_light_init(&this->mRust); }
     GELight& operator=(const GELight& inLight) { ee_ge_light_assign(&this->mRust, &inLight.mRust); return *this; }
     const GEColor& GetColor() const { return *reinterpret_cast<const GEColor*>(this->mRust.color); }
-    unsigned long GetStyle() const { return this->mRust.style; }
     void SetAttenuation0(float inAttenuation) { this->mRust.attenuation0 = inAttenuation; }
     void SetAttenuation1(float inAttenuation) { this->mRust.attenuation1 = inAttenuation; }
     void SetAttenuation2(float inAttenuation) { this->mRust.attenuation2 = inAttenuation; }

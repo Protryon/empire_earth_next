@@ -28,8 +28,6 @@ public:
     virtual ~UIFileComboBox() { ee_ui_file_list_free(this->mRust); }
     void AddValidExtension(const UString& inExtension) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::AddExtension, (intptr_t)(const char*)inExtension); }
     void CreateEntries(unsigned long inSortType) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType); }
-    long DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }
-    FSPath* GetFilePath() const { return (FSPath*)ee_ui_file_list_call(this->mRust, EeUiFileListCall::FilePath, 0); }
     void SetSearchPaths(FSPath* inPath) { ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath); }
     EeUiFileList* mRust;                    // the valid extensions (".xxx") and the path (referenced)
 };

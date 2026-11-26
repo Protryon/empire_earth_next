@@ -13,7 +13,6 @@ public:
     GERhombus() : mRust(ee_ge_game_prim_new(this, EeGePrimKind::Rhombus)) {}
     ~GERhombus() { ee_ge_prim_destroy(this->mRust); }
     const GERectangle& GetRectangle() const { return *(const GERectangle*)ee_ge_prim_rectangle(this->mRust); }
-    GEVertexArray* GetVertexArray() { return (GEVertexArray*)ee_ge_prim_vertices(this->mRust); }
     GERhombus& operator=(const GERhombus& inRhombus) { ee_ge_prim_assign(this->mRust, inRhombus.mRust); return *this; }
     void GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
                            GEColor& outBottomLeft) const
@@ -28,8 +27,6 @@ public:
     void SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
         { ee_ge_prim_set_opacities(this->mRust, 4, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
     void SetRectangle(const GERectangle& inRectangle) { ee_ge_prim_place(this->mRust, (const EeGeRectangle*)&inRectangle, 0.0f); }
-    void SetRotation(float inRotation) { ee_ge_prim_place(this->mRust, NULL, inRotation); }
-    void SetZ(float inZ) { this->SetZPerVertex(inZ, inZ, inZ, inZ); }
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
         { ee_ge_prim_set_z(this->mRust, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
     URust<EeGePrim> mRust;                        // the rhombus (ee_ge prim.rs)

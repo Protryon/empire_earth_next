@@ -39,7 +39,6 @@ public:
     void DumpAllLoadedMedia(FSFileSpec& inFile) { ee_ge_texman_dump(this->mRust, &inFile); }
     // the sum of the cached textures' GetAllocatedSize()
     unsigned long GetMemoryFootprint() { return ee_ge_texman_footprint(this->mRust); }
-    GEScreen* GetScreen() const { return (GEScreen*)ee_ge_texman_screen(this->mRust); }
     unsigned long GetTextureCount() { return ee_ge_texman_count(this->mRust); }
     // port: the cache's textures in name order (the store gate)
     GETexture* GetTextureAt(unsigned long inIndex) { return (GETexture*)ee_ge_texman_at(this->mRust, inIndex); }

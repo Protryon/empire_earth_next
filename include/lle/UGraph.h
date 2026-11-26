@@ -19,20 +19,7 @@ public:
     UGraphSeries& operator=(const UGraphSeries& inSeries)
         { ee_util_series_assign(this->mSeries, inSeries.mSeries); return *this; }
 
-    // replaces the last point if it has the same x, keeps the points sorted by x then y, recomputes min/max
-    void AddDataPoint(const U2DPoint<long>& inPoint) { ee_util_series_add_point(this->mSeries, inPoint.mX, inPoint.mY); }
-    void ClearAllDataPoints() { ee_util_series_clear(this->mSeries); }
     const GEColor& GetColor() const { return *reinterpret_cast<const GEColor*>(ee_util_series_color(this->mSeries)); }
-    const U2DPoint<long>& GetDataPoint(unsigned long inIndex) const
-        { return *reinterpret_cast<const U2DPoint<long>*>(ee_util_series_point(this->mSeries, inIndex)); }
-    const unsigned long GetDataPointCount() const { return ee_util_series_count(this->mSeries); }
-    const bool GetIsEnabled() const { return ee_util_series_enabled(this->mSeries); }
-    long GetMaxX() const { return ee_util_series_range(this->mSeries)->max_x; }
-    long GetMaxY() const { return ee_util_series_range(this->mSeries)->max_y; }
-    long GetMinX() const { return ee_util_series_range(this->mSeries)->min_x; }
-    long GetMinY() const { return ee_util_series_range(this->mSeries)->min_y; }
-    void SetColor(const GEColor& inColor) { ee_util_series_set_color(this->mSeries, reinterpret_cast<const EeUtilColor*>(&inColor)); }
-    void SetIsEnabled(bool inIsEnabled) { ee_util_series_set_enabled(this->mSeries, inIsEnabled); }
 
     EeUtilSeries* mSeries;
 };
@@ -44,21 +31,6 @@ public:
     ~UGraph() { ee_util_graph_free(this->mGraph); }
     UGraph& operator=(const UGraph& inGraph)
         { ee_util_graph_assign(this->mGraph, inGraph.mGraph); return *this; }
-
-    // adds a copy of the series and widens min/max to include it
-    void AddSeries(const UGraphSeries& inSeries) { ee_util_graph_add_series(this->mGraph, inSeries.mSeries); }
-    void ClearAllSeries() { ee_util_graph_clear(this->mGraph); }
-    // adds to outGraph, per series index of both, the sum of their values at every x either has
-    void CombineGraph(const UGraph& inGraph, UGraph& outGraph) { ee_util_graph_combine(this->mGraph, inGraph.mGraph, outGraph.mGraph); }
-    long GetMaxX() const { return ee_util_graph_range(this->mGraph)->max_x; }
-    long GetMaxY() const { return ee_util_graph_range(this->mGraph)->max_y; }
-    long GetMinX() const { return ee_util_graph_range(this->mGraph)->min_x; }
-    long GetMinY() const { return ee_util_graph_range(this->mGraph)->min_y; }
-    const UGraphSeries& GetSeries(unsigned long inIndex) const { return *reinterpret_cast<const UGraphSeries*>(ee_util_graph_series(this->mGraph, inIndex)); }
-    const unsigned long GetSeriesCount() const { return ee_util_graph_count(this->mGraph); }
-    // reduces every series to one point per x, keeping the highest y
-    void PruneGraph() { ee_util_graph_prune(this->mGraph); }
-    void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled) { ee_util_graph_set_enabled(this->mGraph, inIndex, inIsEnabled); }
 
     EeUtilGraph* mGraph;                    // the series and min/max
 };

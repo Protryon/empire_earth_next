@@ -27,12 +27,7 @@ public:
         { ee_ge_bmp_quad(this->mRust, EeGeBmpQuadCall::Colors, &outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft); }
     float GetHeight() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Height); }
     const GE2DPoint& GetLocation() const { return *(const GE2DPoint*)ee_ge_bmp_location(this->mRust); }  // exported, ICF-folded (0x38b41)
-    void GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
-                             float& outBottomLeft) const
-        { ee_ge_bmp_quad(this->mRust, EeGeBmpQuadCall::Opacities, &outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft); }
     GETexture* GetTexture(unsigned long inScreen) const { return (GETexture*)ee_ge_bmp_texture(this->mRust, inScreen); }
-    // Provisional name (GELine/GEPoint/GERhombus have it); DX7Rasterizer::Draw(GEBitmap*) 0x10002c62 reads +0x10
-    GEVertexArray* GetVertexArray() { return (GEVertexArray*)ee_ge_bmp_vertices(this->mRust); }
     void GetTextureCoordinatesPerVertex(GETextureCoordinate& outTopLeft, GETextureCoordinate& outTopRight,
                                         GETextureCoordinate& outBottomRight, GETextureCoordinate& outBottomLeft) const
         { ee_ge_bmp_quad(this->mRust, EeGeBmpQuadCall::Uvs, &outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft); }
@@ -48,7 +43,6 @@ public:
     void SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
         { ee_ge_bmp_set_values(this->mRust, false, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
     void SetRotation(float inRotation) { ee_ge_bmp_set_rotation(this->mRust, inRotation); }
-    void SetScale(float inScale) { this->SetXYScale(inScale, inScale); }
     void SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_ge_bmp_set_texture(this->mRust, inTexture, inScreen); }
     void SetTextureCoordinates(GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
                                GETextureCoordinate& inBottomRight, GETextureCoordinate& inBottomLeft)
@@ -61,7 +55,6 @@ public:
         { SetTextureCoordinates(const_cast<GETextureCoordinate&>(inTopLeft), const_cast<GETextureCoordinate&>(inTopRight), const_cast<GETextureCoordinate&>(inBottomRight), const_cast<GETextureCoordinate&>(inBottomLeft)); }
 #endif
     void SetXYScale(float inXScale, float inYScale) { ee_ge_bmp_set_xy_scale(this->mRust, inXScale, inYScale); }
-    void SetZ(float inZ) { this->SetZPerVertex(inZ, inZ, inZ, inZ); }
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
         { ee_ge_bmp_set_values(this->mRust, true, inTopLeft, inTopRight, inBottomRight, inBottomLeft); }
     EeGeBitmap* GetRust() const { return this->mRust; }
