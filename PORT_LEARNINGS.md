@@ -41452,3 +41452,56 @@ capture profiles, saveload). Fork B's civilization builder has its own section a
 - Edits outside the lane's files: src/RTS Engine/Player/RTSPlayer.cpp (the 14 forwarders moved into the class, the
   bucket shim's type, the shims' casts to EEPlayer), rust/crates/ee_game/src/rts/units.rs (`ee_rts_eeplayer_*`), src/Empire Earth/Persistent/EEPWorldHelper.cpp (one field name), src/Empire Earth/UI
   Events/EEScreens.cpp (two field names), rust/crates/ee_sim/src/units/player_events.rs (`ee_units_events_next`).
+
+## R6 WON GUI, round 38: RootContainer's overrides and Button's copies through Component's dispatch, the window event over a Rust record, Graphics a Rust record with its draw plans run in Rust, the message box, buttons, list items, combo box, list hosts, children and layouts answered in Rust in the game (ee_won_gui gamewin.rs, gfxrun.rs, wmobj.rs EeWonWmEventRec; branch rust-wongui38, 2026-11-25)
+
+The round started from rust-wongui37 (906c751aa, batch 26 in). A first lead (on another model) stopped after about 30
+minutes with fork A's work uncommitted and fork B's one commit plus uncommitted edits; the resumed lead (Opus) built both
+fork states, committed them (fork B's WindowManager.cpp `WmEvent` case got a check that only `Deliver` reaches the
+virtual), merged them and relaunched both forks into their worktrees. Both finished; their merge had one conflict
+(gamewin.rs's tail: fork A's msgbox_op beside fork B's test module, both kept), then origin/rust batch 27 (9e8714175)
+merged with the usual cbindgen.toml and PORT_LEARNINGS.md unions.
+
+### What moved (`port_metrics.py` cpp_lines, 906c751aa -> 5186a0b17, the forks' merge before batch 27)
+
+| Commit | What | Kind |
+|---|---|---|
+| ef2dbefaa | NativeImage and RawImage folded into Image (typedefs) | fold |
+| f30deaabd | Button.cpp's CtBase, references, siblings, flags, repaints, focus and timer answered by gamewin.rs common_op; RootContainer's 13 virtual overrides and RemoveChild gone: the container's Rust object links its Rust root (ctobj.rs `root`, set by ee_won_root_new) and Component's and the container's entries run the root's calls; the root's window ops in gamewin.rs root_op; ee_won_comp_base_call gone | move |
+| 29b39494a | WindowEventBase carries wmobj.rs's EeWonWmEventRec (input record, window, handler); the type, window and an input event's delivery in guisplit.rs; WmWinCall, WmEventCall, Window::HandleEvent, InputEvent::Deliver and ee_won_win_event gone | move |
+| 267be69e3 | a DisplayContext's members and an image handle's mRust read in place (EeWonDisplayContextRec at EE_WON_CONTEXT_AT); four image host ops gone (+6 lines: the layout asserts) | move |
+| 8180d4cd8 | Graphics begins with the Rust record EeWonGraphics (translation, colour, clip, clip stack, the borrowed ColorScheme*, the surface); the scheme's colours read in place (`offsetof(ColorScheme, mColors)` passed at registration: 16 under MSVC, 12 under Itanium); gfxrun.rs runs a draw plan and the skin's paints; WONDrawOne's switch, WONDrawPlain and the callback WONDrawRun gone; the plain draws, scheme save/restore, tooltip, shell, grabber and root draws answered in Rust | move |
+| 7a3bad927 | the message box's window calls through gamewin.rs msgbox_op (only SHOWPARSETIME reaches MSMessageBoxMsg: WONCfgLoad.inl's ParseTimeBox; a Rust test drives a window nobody bound) | move |
+| b20853098 | the buttons' state (SkinBtn; BtnOf from the registry, not a dynamic_cast) and the list items' members (leafpaint.rs EeWonListItemRec at EE_WON_LIST_ITEM_AT) answered in Rust; ButtonHostCall gone | move |
+| 98cd5e2be | the combo box's list-area calls on the list's Rust objects (comboobj.rs game_list_op): 14 ComboBox.cpp cases | move |
+| d6f66dbbc | the list and text areas' scroll-pane and Component statements (gamewin list_host_op) | move |
+| 7388c8534 | a child's place, size, visibility, control id, parent and references (common_op child_op); Container::Place (uncalled) gone | move |
+| ec04b6ace | the layouts' SetSizeAtLeast and instruction references | move |
+
+Total -313 cpp_lines (106,806 -> 106,493), cpp_files 0, logic -71, classes -2, extern_c +5, unsafe +66, layout +10.
+Far short of the -1,500 target: each controls- or host-side move removes a handful of switch cases (4..30 lines) and
+costs a Rust answer, a layout assert or a driver world's new case; the large blocks left (the config object model, the
+C++ smart-pointer holders: Graphics' Attach/Detach/SetFont, ImageButton's mImages written by the lobby's
+CrossPromotionButton.cpp, the GUIString- and ComponentEvent-carrying ops) are other lanes' or need those types in Rust first.
+
+### Problems met
+- f30deaabd made Container's AddedToParent Component's own call in Rust, which reads the parent's flags: the registry
+  unit test's stand-in world has no parent and crashed (0xc0000005); the world leaves AddedToParent out (3f7054afc).
+- clippy `ptr_eq` on the root link check (b39424526).
+- fork B's list_host_op first lacked the `is_game()` guard: won_guisplit33's driver world crashed. Every gamewin answer
+  must stay behind `is_game()` (a driver's world is the host's).
+- `ColorScheme::mColors` sits at a different offset under MSVC and Itanium: pass the offset from C++ (`offsetof`)
+  rather than a Rust constant.
+
+### Gates (on 9afe4158b, batch 27 merged; logs in build/w38)
+Builds `--sim` and `--test-profile windowed-software` 0/0; rust header current, rust gate PASS; won_host_coverage PASS;
+oracle 2-7 identical; captures oracle and late PASS (the WON GUI is not in EE-SIM, so no other profile covers it);
+saveload matrix PASS; scenario_check 27/27; gates.sh GATES PASS (tour, ai-game [4, 38, 39], lan-game); wontest exit 0;
+the LAN game PASS and lan_capture_compare against build/w36lanC: the known diffs only (the game name in staging and the
+LAN list, the game frames).
+
+### Left
+PlatNativeImage.cpp's GfxTrans/GfxRun/GfxDrawImage the same way (about 11 lines); Graphics' Attach, Detach and SetFont
+(smart pointers); WmSetStandardColor; ImageButton's images (the lobby writes mImages); the ListAreaToolTip item reads
+(the tip's mItem first); ComboItemTextLength and the text, edit and event ops (GUIString, ComponentEvent); CfgTabRead and
+the config object model with the lobby lane.
