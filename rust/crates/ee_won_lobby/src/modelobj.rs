@@ -1060,6 +1060,11 @@ impl EeWonModel {
 
 // ---- the methods (each the original's statements; a model object reached through its shell)
 
+/// A server shell's address (`((LobbyServer*)shell)->GetAddress()`, a copy).
+pub(crate) fn server_address(shell: isize) -> EeWonIpAddr {
+    must(shell).server().address.borrow().clone()
+}
+
 /// The model object of a shell the original dereferenced (a NULL there was a crash).
 fn must<'a>(shell: isize) -> &'a EeWonModel {
     // SAFETY: the callers pass live shells

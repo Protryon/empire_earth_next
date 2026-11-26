@@ -741,7 +741,7 @@ impl EeWonRouteLogic {
             if let Some(r) = crate::modelobj::route_op(op, g(0), g(1), g(2), g(3)) {
                 return r;
             }
-            if let Some(r) = crate::persistobj::game_route_op(op, g(0)) {
+            if let Some(r) = crate::persistobj::game_route_op(op, g(0), g(1)) {
                 return r;
             }
             if op == Op::EventNum {

@@ -1311,9 +1311,9 @@ pub(crate) fn game_ctl_op(op: crate::lobbyctl::EeWonLobbyCtlOp, a: isize, b: isi
     }
 }
 /// [`route_op`] on the lobby's object, in the game only.
-pub(crate) fn game_route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize) -> Option<isize> {
+pub(crate) fn game_route_op(op: crate::routelogic::EeWonRouteLogicOp, a: isize, b: isize) -> Option<isize> {
     if in_game() {
-        route_op(lobby(), op, a)
+        route_op(lobby(), op, a, b)
     } else {
         None
     }
@@ -1401,7 +1401,12 @@ pub(crate) fn ctl_op(p: *mut EeWonPersist, op: crate::lobbyctl::EeWonLobbyCtlOp,
 }
 
 /// RoutingLogic's ops over the saved settings (RoutingLogic.cpp's cases), for the game's logic.
-pub(crate) fn route_op(p: *mut EeWonPersist, op: crate::routelogic::EeWonRouteLogicOp, a: isize) -> Option<isize> {
+pub(crate) fn route_op(
+    p: *mut EeWonPersist,
+    op: crate::routelogic::EeWonRouteLogicOp,
+    a: isize,
+    b: isize,
+) -> Option<isize> {
     let lobby_call = |c, a, b| num_call(p, c, a, b);
     let flag = |f: F| num_call(p, EeWonPersistCall::Flag, f as i64, 0);
     use crate::routelogic::EeWonRouteLogicOp as O;
@@ -1423,6 +1428,18 @@ pub(crate) fn route_op(p: *mut EeWonPersist, op: crate::routelogic::EeWonRouteLo
         O::RemoveFriend => lobby_call(C::RemoveFriend, a as std::ffi::c_ulong as i64, 0),
         O::FriendCount => lobby_call(C::FriendCount, 0, 0),
         O::FriendAt => lobby_call(C::FriendAt, a as i64, 0),
+        // `LobbyGetReconnectId(S(a)->GetAddress())`, `LobbySetReconnectId(S(a)->GetAddress(), (unsigned long)b)`
+        // (R6 WON lobby and network round 40; the id an int)
+        O::ReconnectId | O::SetReconnectId => {
+            let addr = crate::modelobj::server_address(a);
+            let at = &addr as *const EeWonIpAddr as i64;
+            if op == O::ReconnectId {
+                lobby_call(C::ReconnectId, at, 0)
+            } else {
+                lobby_call(C::SetReconnectId, at, i64::from(b as std::ffi::c_ulong as i32));
+                0
+            }
+        }
         _ => return None,
     })
 }

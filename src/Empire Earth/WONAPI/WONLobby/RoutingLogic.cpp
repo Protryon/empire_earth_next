@@ -121,8 +121,6 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
     case O::SetBlocked: LobbySetClientBlocked(C(a), b != 0, 4); return 0;
     case O::SetIgnored: LobbySetClientIgnored(C(a), b != 0, 4); return 0;
     case O::SetLastRoom: LobbySetLastRoom(S(a)->GetName(), G(b)->GetName()); return 0;
-    case O::ReconnectId: return (intptr_t)LobbyGetReconnectId(S(a)->GetAddress());
-    case O::SetReconnectId: LobbySetReconnectId(S(a)->GetAddress(), (unsigned long)b); return 0;
     case O::ClientOptions: {
         LobbyOpenRustPopup(EeWonLobbyPopupKind::Client, (intptr_t)C(a), (intptr_t)C(b), (int)c);
         return 0;

@@ -238,9 +238,9 @@ fn the_hosts_ops_answer_from_the_object() {
     assert_eq!(ctl_op(q, O::PrefGet, P::ConnectionSpeed as isize, 0), Some(70_056 & 0xffff));
     ctl_op(q, O::PrefSet, P::AutoPingGames as isize, 5);
     assert_eq!(ctl_op(q, O::PrefGet, P::AutoPingGames as isize, 0), Some(1));
-    assert_eq!(route_op(q, crate::routelogic::EeWonRouteLogicOp::Pref, 4), Some(1));
+    assert_eq!(route_op(q, crate::routelogic::EeWonRouteLogicOp::Pref, 4, 0), Some(1));
     // the C++'s Pref values
-    assert_eq!(route_op(q, crate::routelogic::EeWonRouteLogicOp::Pref, 8), None);
+    assert_eq!(route_op(q, crate::routelogic::EeWonRouteLogicOp::Pref, 8, 0), None);
     assert_eq!(ctl_op(q, O::MGet, 0, 0), None);
     assert_eq!(lobby_op(q, crate::lobbyhost::EeWonLobbyOp::ShowConfirmations), Some(1));
     // without lobby data: the functions' defaults
