@@ -12,15 +12,12 @@
 #define EE_EEAREAEFFECT_H
 
 #include "ee/UReferenceContainer.h"
-#include "rust/sim/tech.h"
 #include <stdio.h>
-#include "rust/game/screens.h"
 
 #include "ee/EEAreaEffectTemplate.h"   // mTemplate's members (LoadMedia, UnloadMedia, IsInRange)
 
 class EEComplexUnit;
 class EEUnit;
-#include "lle/GE2DPoint.h"              // mLocation by value (every includer already includes it)
 
 // From the original: ctor 0x27bf4b (the template, referenced; mLocation = (0, 0), mUnit = 0, mPlayer = 0, then
 // LoadMedia(false)), dtor 0x27bf9f (dereferences the template and the unit, then UnloadMedia), ??_G 0x27bf83.

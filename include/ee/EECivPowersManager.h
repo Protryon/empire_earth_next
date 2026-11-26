@@ -5,7 +5,6 @@
 #define EE_EECIVPOWERSMANAGER_H
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
-#include "ee/EECivPowerIDs.h"
 #include "rust/game/screens.h"
 #include "rust/sim/tech.h"
 class FSFile;

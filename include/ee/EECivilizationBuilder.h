@@ -4,7 +4,6 @@
 // helpers, the timer, the edited civilization, the files' writing, the builder's events' ops); these forward.
 #ifndef EE_EECIVILIZATIONBUILDER_H
 #define EE_EECIVILIZATIONBUILDER_H
-#include "ee/EECivUpgrade.h"
 
 class EECivilization;
 class UString;
