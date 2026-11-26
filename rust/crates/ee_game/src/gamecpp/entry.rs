@@ -540,7 +540,7 @@ pub unsafe extern "C" fn ee_gamecpp_entry_run(instance: *mut std::ffi::c_void, c
         ee_base::util::fp::ee_util_fp_set_precision(
             ee_base::lle_enums::UMFloatingPointPrecision::kFPPrecision53 as c_ulong,
         );
-        h(O::RunSqrtTable, 0, &[]);
+        // (the original's UMFastMath::BuildSqrtTable here was empty: the square root table was not built)
         // (the original's first command-line pass here only chose whether to play the intro movies)
         h(O::RunSetInstance, 0, &[pa(instance as P)]);
         ee_base::error::ee_error_initialize();

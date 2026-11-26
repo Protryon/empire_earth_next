@@ -1036,8 +1036,6 @@ int64_t EEStartupOp(EeGameCpp inOp, uintptr_t p, const int64_t* a, const float* 
         CoUninitialize();
 #endif
         break;
-    case O::RunSqrtTable: UMFastMath::BuildSqrtTable();
-        break;
     case O::RunSetInstance: gInstance = (HINSTANCE)a[0];
         break;
     case O::RunFsInitialize: FSInitialize("");

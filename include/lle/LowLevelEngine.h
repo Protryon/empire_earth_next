@@ -22,9 +22,8 @@
 #include "lle/URandom.h"
 
 // ---- Geometry engine (GE) basic types
-// the engine's per-class headers (GE2DPoint.cpp block 0x1000c129: UMFastMath, GE2DPoint, GEVector, GE3DPoint,
-// GE3DLine; then GE3DPlane)
-#include "lle/UMFastMath.h"
+// the engine's per-class headers (GE2DPoint.cpp block 0x1000c129: UMFastMath (its empty square root table went in
+// LLE/UI round 2), GE2DPoint, GEVector, GE3DPoint, GE3DLine; then GE3DPlane)
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"
