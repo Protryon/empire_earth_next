@@ -166,9 +166,10 @@ enum class EeWonLeafCall : uint32_t {
   ComponentItemPaint,
 };
 
-/// Where the game's text list items, menu items and lists keep the members the items' measures and paints read
-/// (offsets in a `TextListItem`, a `MenuItem`, a `ListArea` and a `Font`; Button.cpp registers them; R6 WON GUI round 40).
-struct EeWonTextItemAt {
+/// Where the game's text list items, menu items, component list items, backgrounds and lists keep the members the
+/// measures and paints read (offsets in a `TextListItem`, a `MenuItem`, a `ComponentListItem`, a `Background`, a
+/// `ListArea` and a `Font`; Button.cpp registers them; R6 WON GUI round 40).
+struct EeWonLeafAt {
   /// `TextListItem::mText` (a GUIString: its text's pointer)
   size_t text;
   /// `TextListItem::mColor` (a C `long`)
@@ -187,6 +188,17 @@ struct EeWonTextItemAt {
   size_t list_pane;
   /// `Font::mRust`
   size_t font_rust;
+  /// `ComponentListItem::mComponent` (a SmartPtr), `mIsSizable` (a bool)
+  size_t comp_item_component;
+  size_t comp_item_sizable;
+  /// `Background::mImage`, `mComponent` (SmartPtrs), `mColor`, `mBorderColor` (ints), `mUseOffsets`,
+  /// `mStretchImage` (bools)
+  size_t bg_image;
+  size_t bg_component;
+  size_t bg_color;
+  size_t bg_border_color;
+  size_t bg_use_offsets;
+  size_t bg_stretch;
 };
 
 using EeWonLeafHostFn = ptrdiff_t(*)(void *me, EeWonLeafOp op, ptrdiff_t a, ptrdiff_t b);
@@ -200,7 +212,7 @@ void ee_won_leaf_imgbtn_register(size_t at);
 ///
 /// # Safety
 /// `at` points at the offsets.
-void ee_won_leaf_textitem_register(const EeWonTextItemAt *at);
+void ee_won_leaf_members_register(const EeWonLeafAt *at);
 
 /// One of the classes' methods (`EeWonLeafCall`) on the C++ object `me` through its host.
 ///

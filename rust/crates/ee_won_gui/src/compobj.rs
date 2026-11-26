@@ -672,6 +672,10 @@ impl Comp {
     pub fn v_desired_size(&self, c: isize) -> (i32, i32) {
         self.desired(c)
     }
+    /// `MarkInvalid()`.
+    pub fn v_mark_invalid(&self, c: isize) {
+        self.h(K::VMarkInvalid, c, 0, 0);
+    }
     /// `HandleComponentEvent(ev)`.
     pub fn v_handle_event(&self, c: isize, ev: isize) {
         self.h(K::VHandleEvent, c, ev, 0);

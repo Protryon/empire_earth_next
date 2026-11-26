@@ -439,13 +439,17 @@ typedef EeWonLeafOp Lo;
 static_assert(offsetof(ListItem, mSelected) == EE_WON_LIST_ITEM_AT && offsetof(ListItem, mSelectable) == EE_WON_LIST_ITEM_AT + 1 &&
               offsetof(ListItem, mTop) == EE_WON_LIST_ITEM_AT + 4 && offsetof(ListItem, mWidth) == EE_WON_LIST_ITEM_AT + 8 &&
               offsetof(ListItem, mHeight) == EE_WON_LIST_ITEM_AT + 12, "leafpaint.rs's EeWonListItemRec");
-// where leafpaint.rs reads a text item's, a menu item's and a list's members in the game (R6 WON GUI round 40)
-static const EeWonTextItemAt kTextItemAt = {offsetof(TextListItem, mText), offsetof(TextListItem, mColor),
+// where leafpaint.rs reads the text items', menu items', component items', backgrounds' and lists' members in the game
+// (R6 WON GUI round 40)
+static const EeWonLeafAt kTextItemAt = {offsetof(TextListItem, mText), offsetof(TextListItem, mColor),
     offsetof(TextListItem, mFont), offsetof(TextListItem, mImage), offsetof(MenuItem, mSubMenu), offsetof(MenuItem, mDisabled),
     offsetof(ListArea, mFont), offsetof(ListArea, mTextColor), offsetof(ListArea, mSelColor), offsetof(ListArea, mRust),
-    offsetof(ListArea, mPane), offsetof(Font, mRust)};
+    offsetof(ListArea, mPane), offsetof(Font, mRust), offsetof(ComponentListItem, mComponent),
+    offsetof(ComponentListItem, mIsSizable), offsetof(Background, mImage), offsetof(Background, mComponent),
+    offsetof(Background, mColor), offsetof(Background, mBorderColor), offsetof(Background, mUseOffsets),
+    offsetof(Background, mStretchImage)};
 #pragma clang diagnostic pop
-[[maybe_unused]] static const bool sTextItemAt = (ee_won_leaf_textitem_register(&kTextItemAt), true);
+[[maybe_unused]] static const bool sTextItemAt = (ee_won_leaf_members_register(&kTextItemAt), true);
 extern "C" intptr_t ee_won_guicpp_textitem_call(void* inMe, EeWonLeafOp op, intptr_t a, intptr_t b)
 {
     TextListItem* t = (TextListItem*)inMe;
@@ -522,17 +526,8 @@ extern "C" intptr_t ee_won_guicpp_compitem_call(void* inMe, EeWonLeafOp op, intp
 {
     ComponentListItem* t = (ComponentListItem*)static_cast<ListItem*>(inMe);
     switch (op) {
-    case Lo::CompItemHasComponent: return t->mComponent.get() != NULL ? 1 : 0;
-    case Lo::CompItemWidth: return t->mComponent->Width();
-    case Lo::CompItemHeight: return t->mComponent->Height();
-    case Lo::CompItemSetParent: t->mComponent->mParent = (Container*)a; return 0;
+    // (the members and the component's non-virtual calls are leafpaint.rs member_op's in the game: R6 WON GUI round 40)
     case Lo::CompItemAdded: t->mComponent->AddedToParent(); return 0;
-    case Lo::CompItemBaseSetPos: t->ListItem::SetPos((int)a, (int)b); return 0;
-    case Lo::CompItemSetPos: t->mComponent->SetPos((int)a, (int)b); return 0;
-    case Lo::CompItemSizable: return t->mIsSizable ? 1 : 0;
-    case Lo::CompItemListPaintWidth: return ((ListArea*)a)->GetPaintWidth();
-    case Lo::CompItemSetSize: t->mComponent->SetSize((int)a, (int)b); return 0;
-    case Lo::CompItemMarkInvalid: t->mComponent->MarkInvalid(); return 0;
     case Lo::CompItemPaint: t->mComponent->Paint(*(Graphics*)a); return 0;
     default: return 0;
     }
@@ -621,17 +616,8 @@ extern "C" intptr_t ee_won_guicpp_background_call(void* inMe, EeWonLeafOp op, in
 	Background* t = (Background*)inMe;
 	Graphics* g = (Graphics*)a;
 	switch (op) {
-	case EeWonLeafOp::BgHasImage: return t->mImage.get() != NULL ? 1 : 0;
-	case EeWonLeafOp::BgStretch: return t->mStretchImage ? 1 : 0;
-	case EeWonLeafOp::BgUseOffsets: return t->mUseOffsets ? 1 : 0;
-	case EeWonLeafOp::BgHasComponent: return t->mComponent.get() != NULL ? 1 : 0;
-	case EeWonLeafOp::BgImageWidth: return t->mImage->GetWidth();
-	case EeWonLeafOp::BgImageHeight: return t->mImage->GetHeight();
-	case EeWonLeafOp::BgColor: return t->mColor;
-	case EeWonLeafOp::BgBorderColor: return t->mBorderColor;
+	// (the members and the component's SetSize and Invalidate are leafpaint.rs member_op's in the game: R6 WON GUI round 40)
 	case EeWonLeafOp::BgDraw: WONDrawOne(*g, *(const EeWonDrawOp*)b, WONDrawSlots(NULL, NULL, t->mImage.get()), WONDrawNoCall()); return 0;
-	case EeWonLeafOp::BgCompSetSize: t->mComponent->SetSize((int)a, (int)b); return 0;
-	case EeWonLeafOp::BgCompInvalidate: t->mComponent->Invalidate(); return 0;
 	case EeWonLeafOp::BgCompPaint: t->mComponent->Paint(*g); return 0;
 	default: return 0;
 	}
